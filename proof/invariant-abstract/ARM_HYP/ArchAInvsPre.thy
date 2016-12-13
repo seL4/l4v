@@ -85,15 +85,16 @@ lemma some_get_page_info_kmapsD:
 lemma get_pd_of_thread_reachable: (* ARMHYP change? *)
   "(*get_pd_of_thread (kheap s) (arch_state s) t s \<noteq> None (* arm_global_pd (arch_state s) *)
    \<Longrightarrow> *)(\<exists>\<rhd> get_pd_of_thread (kheap s) (arch_state s) t) s"
-  by (auto simp: get_pd_of_thread_vs_lookup
+  apply (auto simp: get_pd_of_thread_vs_lookup
           split: Structures_A.kernel_object.splits split_if_asm option.splits
                  cap.splits arch_cap.splits)
+sorry
 
 lemma is_aligned_ptrFromPAddrD:
-"\<lbrakk>is_aligned (ptrFromPAddr b) a; a \<le> 24\<rbrakk> \<Longrightarrow> is_aligned b a"
+"\<lbrakk>is_aligned (ptrFromPAddr b) a; a \<le> 25\<rbrakk> \<Longrightarrow> is_aligned b a"
   apply (clarsimp simp: ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def)
   apply (erule is_aligned_addD2)
-  apply (rule is_aligned_weaken[where x = 24])
+  apply (rule is_aligned_weaken[where x = 25])
    apply (simp add: is_aligned_def)
   apply simp
   done
@@ -111,35 +112,35 @@ lemma obj_bits_data_at:
 
 lemma some_get_page_info_umapsD:
   "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, attr, r);
-    (\<exists>\<rhd> pd_ref) s; p \<notin> kernel_mappings; valid_arch_objs s; pspace_aligned s;
+    (\<exists>\<rhd> pd_ref) s; (*p \<notin> kernel_mappings;*) valid_vspace_objs s; pspace_aligned s;
     valid_asid_table (arm_asid_table (arch_state s)) s; valid_objs s\<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a \<and> is_aligned b a \<and>
              data_at sz (ptrFromPAddr b) s)"
   apply (clarsimp simp: get_page_info_def get_pd_entry_def get_arch_obj_def
-                        kernel_mappings_slots_eq
+
                  split: option.splits Structures_A.kernel_object.splits
                         arch_kernel_obj.splits)
-  apply (frule (1) valid_arch_objsD[rotated 2])
+  apply (frule (1) valid_vspace_objsD[rotated 2])
    apply (simp add: obj_at_def)
-  apply (simp add: valid_arch_obj_def)
-  apply (drule bspec, simp)
+  apply (simp add: valid_vspace_obj_def vspace_bits_defs)
+  apply (drule_tac x="ucast (p >> 21)" in spec)
   apply (simp split: pde.splits)
-    apply (rename_tac rs pd pt_ref rights w)
+    apply (rename_tac rs pd pt_ref)
     apply (subgoal_tac
         "((rs, pd_ref) \<rhd>1
-          (VSRef (ucast (ucast (p >> 20))) (Some APageDirectory) # rs,
+          (VSRef (ucast (ucast (p >> 21))) (Some APageDirectory) # rs,
            ptrFromPAddr pt_ref)) s")
      prefer 2
      apply (rule vs_lookup1I[rotated 2], simp)
       apply (simp add: obj_at_def)
      apply (simp add: vs_refs_def pde_ref_def image_def graph_of_def)
-     apply (rule exI, rule conjI, simp+)
+     apply (rule_tac x="ucast (p >> 21)" in exI, rule conjI, simp+)
     apply (frule (1) vs_lookup_step)
-    apply (drule (2) stronger_arch_objsD[where ref="x # xs" for x xs])
+    apply (drule (2) stronger_vspace_objsD[where ref="x # xs" for x xs])
     apply clarsimp
     apply (case_tac ao, simp_all add: a_type_simps obj_at_def)[1]
      apply (simp add: get_pt_info_def get_pt_entry_def)
-     apply (drule_tac x="(ucast ((p >> 12) && mask 8))" in spec)
+     apply (drule_tac x="(ucast ((p >> 12) && mask 9))" in spec)
      apply (clarsimp simp: obj_at_def valid_arch_obj_def
       split: pte.splits,intro exI conjI,simp_all)[1]
       apply (frule obj_bits_data_at)
@@ -163,7 +164,7 @@ lemma some_get_page_info_umapsD:
    apply (drule_tac x = "(ptrFromPAddr b)" in  bspec)
    apply (fastforce simp: obj_at_def)
   apply (clarsimp dest!: is_aligned_ptrFromPAddrD)
-  sorry (*FIXME: ugly proof by Xin,Gao. needs general lemmas *)
+  done (*FIXME: ugly proof by Xin,Gao. needs general lemmas *)
 
 lemma user_mem_dom_cong:
   "kheap s = kheap s' \<Longrightarrow> dom (user_mem s) = dom (user_mem s')"
@@ -197,20 +198,11 @@ lemma (* ptable_rights_imp_frame *)[AInvsPre_asms]:
                         in_device_frame_def data_at_def
                  split: option.splits)
   apply (rename_tac b a r)
-(*  apply (case_tac "x \<in> kernel_mappings")
-   apply (frule (1) some_get_page_info_kmapsD)
-     using assms
-     apply (clarsimp simp add: valid_state_def)
-    using assms
-    apply (clarsimp simp add: valid_state_def)
-   apply simp
-  apply (frule some_get_page_info_umapsD)*)
+  apply (frule some_get_page_info_umapsD)
        apply (rule get_pd_of_thread_reachable)
-       apply clarsimp
-       apply (frule get_page_info_gpd_kmaps[rotated 2])
-          using assms
-          apply (simp_all add: valid_state_def valid_pspace_def
-                               valid_arch_state_def)
+       using assms
+      apply (simp_all add: valid_state_def valid_pspace_def
+                           valid_arch_state_def)
   apply clarsimp
   apply (frule is_aligned_add_helper[OF _ and_mask_less',
                                      THEN conjunct2, of _ _ x])
@@ -225,7 +217,7 @@ lemma (* ptable_rights_imp_frame *)[AInvsPre_asms]:
    apply (rule_tac w = x in and_mask_less')
     apply (case_tac sz, simp_all add: word_bits_conv)[1]
   apply (clarsimp simp: field_simps simp: data_at_def)
-  sorry
+  done
 end
 
 global_interpretation AInvsPre?: AInvsPre

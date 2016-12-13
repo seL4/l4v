@@ -606,8 +606,6 @@ crunch typ_at[wp]: deleting_irq_handler "\<lambda>s. P (typ_at T p s)"
 context Finalise_AI_1 begin
 context begin
   declare if_cong[cong]
-  crunch typ_at[wp]: prepare_thread_delete "\<lambda>(s :: 'a state). P (typ_at T p s)"
-    (ignore: ARM_A.dissociate_vcpu_tcb)
   crunch typ_at[wp]: finalise_cap "\<lambda>(s :: 'a state). P (typ_at T p s)"
 end
 end

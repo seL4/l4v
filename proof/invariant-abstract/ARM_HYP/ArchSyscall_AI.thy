@@ -55,18 +55,38 @@ lemma getIFSR_invs[wp]:
   "valid invs (do_machine_op getIFSR) (\<lambda>_. invs)"
   by (simp add: getIFSR_def do_machine_op_def split_def select_f_returns | wp)+
 
+lemma getHDFAR_invs[wp]:
+  "valid invs (do_machine_op getHDFAR) (\<lambda>_. invs)"
+  by (simp add: getHDFAR_def do_machine_op_def split_def select_f_returns | wp)+
+
+lemma getHSR_invs[wp]:
+  "valid invs (do_machine_op getHSR) (\<lambda>_. invs)"
+  by (simp add: getHSR_def do_machine_op_def split_def select_f_returns | wp)+
+
+lemma addressTranslateS1CPR_invs[wp]:
+  "valid invs (do_machine_op (addressTranslateS1CPR w)) (\<lambda>_. invs)"
+  apply (clarsimp simp add: addressTranslateS1CPR_def do_machine_op_def machine_rest_lift_def in_monad
+                            split_def select_f_returns machine_op_lift_def
+       | wp)+
+  sorry
+
 lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
   apply (cases flt, simp_all)
   apply (wp|simp)+
-  sorry
+  done
+
+(* FIXME move to Machine_AI *)
+lemma addressTranslateS1CPR_inv: "\<lbrace>P\<rbrace> addressTranslateS1CPR w \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (simp add: addressTranslateS1CPR_def)
+sorry
 
 lemma hv_inv_ex [Syscall_AI_assms]:
   "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   apply (cases vp, simp_all)
   apply (wp dmo_inv getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv
-            det_getRestartPC as_user_inv
+            det_getRestartPC as_user_inv getHSR_inv getHDFAR_inv addressTranslateS1CPR_inv
          | wpcw | simp)+
-  sorry
+  done
 
 lemma handle_vm_fault_valid_fault[wp, Syscall_AI_assms]:
   "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"

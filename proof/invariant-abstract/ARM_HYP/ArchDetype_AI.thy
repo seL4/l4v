@@ -158,7 +158,19 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
   apply (simp add: valid_arch_state_def valid_asid_table_def
                 global_refs_def
                 cap_range_def)
-  apply (clarsimp simp: ran_def arch_state_det)
+  apply (clarsimp simp: ran_def arch_state_det split: option.split)
+  apply (rule conjI; clarsimp)
+   apply (drule vs_lookup_atI)
+   apply (drule (1) valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI])
+   apply (clarsimp simp: cte_wp_at_caps_of_state)
+   apply (drule untyped_mdbD, rule untyped, assumption)
+     apply blast
+    apply assumption
+   apply (drule descendants_range_inD[OF drange])
+     apply (simp add:cte_wp_at_caps_of_state)
+   apply (simp add:cap_range_def)
+   apply blast
+  apply (rule conjI; clarsimp)
   apply (drule vs_lookup_atI)
   apply (drule (1) valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI])
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -169,7 +181,7 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
     apply (simp add:cte_wp_at_caps_of_state)
   apply (simp add:cap_range_def)
   apply blast
-  done
+  sorry
 
 lemma global_pts: (* ARCH SPECIFIC STATEMENT*) (* ARMHYP remove? *)
   "\<And>p. \<lbrakk> p \<in> {}; p \<in> untyped_range cap \<rbrakk>  \<Longrightarrow> False"

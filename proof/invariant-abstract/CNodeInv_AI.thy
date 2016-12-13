@@ -989,7 +989,7 @@ lemma rec_del_termination:
    apply (erule use_valid [OF _ suspend_not_recursive])
    apply (erule use_valid [OF _ unbind_notification_not_recursive])
    apply simp
-(*  apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
+  apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
                         fst_cte_ptrs_def zombie_cte_bits_def
                         tcb_cnode_index_def
                  split: option.split_asm)*)

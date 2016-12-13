@@ -61,9 +61,17 @@ lemma invoke_irq_handler_bcorres[wp]: "bcorres (invoke_irq_handler a) (invoke_ir
   apply (wp | simp)+
   done
 
-crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state
+crunch (bcorres)bcorres[wp]: send_signal,arch_perform_invocation truncate_state
   (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
-         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME zipWithM_x)
+         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME zipWithM_x handle_fault_reply)
+
+crunch (bcorres)bcorres[wp]: send_ipc truncate_state
+  (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
+         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME zipWithM_x handle_fault_reply)
+
+crunch (bcorres)bcorres[wp]: do_reply_transfer truncate_state
+  (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
+         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME zipWithM_x handle_fault_reply)
 
 lemma perform_invocation_bcorres[wp]: "bcorres (perform_invocation a b c) (perform_invocation a b c)"
   apply (cases c)

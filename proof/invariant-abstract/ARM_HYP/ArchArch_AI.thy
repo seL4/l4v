@@ -24,6 +24,9 @@ definition
   is_aligned base asid_low_bits \<and> base \<le> 2^asid_bits - 1 \<and>
   arm_asid_table (arch_state s) (asid_high_bits_of base) = None"
 
+definition
+  "valid_vcpu_invocation vi \<equiv>
+    undefined"
 
 lemma safe_parent_strg:
   "cte_wp_at (\<lambda>cap. cap = UntypedCap False frame pageBits idx) p s \<and>
@@ -64,7 +67,9 @@ where
    | InvokeASIDControl aci \<Rightarrow>
        valid_aci aci
    | InvokeASIDPool ap \<Rightarrow>
-       valid_apinv ap"
+       valid_apinv ap
+   | InvokeVCPU vi \<Rightarrow>
+       valid_vcpu_invocation vi"
 
 
 lemma check_vp_wpR [wp]:
@@ -185,6 +190,8 @@ crunch typ_at [wp]: perform_page_table_invocation, perform_page_invocation,
          perform_asid_pool_invocation, perform_page_directory_invocation "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps)
 
+crunch typ_at [wp]: perform_vcpu_invocation "\<lambda>s. P (typ_at T p s)"
+  (wp: crunch_wps)
 
 lemmas perform_page_table_invocation_typ_ats [wp] =
   abs_typ_at_lifts [OF perform_page_table_invocation_typ_at]
@@ -198,6 +205,9 @@ lemmas perform_page_invocation_typ_ats [wp] =
 lemmas perform_asid_pool_invocation_typ_ats [wp] =
   abs_typ_at_lifts [OF perform_asid_pool_invocation_typ_at]
 
+lemmas perform_vcpu_invocation_typ_ats [wp] =
+  abs_typ_at_lifts [OF perform_vcpu_invocation_typ_at]
+(* ARMHYP FIXME this is not enough, add appropriate lifting rule to abs_typ_at_lifts *)
 
 lemma perform_asid_control_invocation_tcb_at:
   "\<lbrace>invs and valid_aci aci and st_tcb_at active p and
@@ -241,6 +251,11 @@ lemma ucast_asid_high_btis_of_le [simp]:
   apply (simp add: asid_high_bits_def)
   done
 
+lemma perform_vcpu_invocation_arch_tcb:
+  "\<lbrace>invs and valid_arch_inv (invokeVCPU ai) and st_tcb_at active tptr\<rbrace>
+  perform_vcpu_invocation ai
+  \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
+sorry
 
 lemma invoke_arch_tcb:
   "\<lbrace>invs and valid_arch_inv ai and st_tcb_at active tptr\<rbrace>
@@ -248,30 +263,32 @@ lemma invoke_arch_tcb:
   \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
   apply (simp add: arch_perform_invocation_def)
   apply (cases ai, simp_all)
-     apply (wp, clarsimp simp: st_tcb_at_tcb_at)+
+      apply (wp, clarsimp simp: st_tcb_at_tcb_at)+
+    defer
+    apply (wp, clarsimp simp: st_tcb_at_tcb_at)
    defer
-   apply (wp, clarsimp simp: st_tcb_at_tcb_at)
-  apply (wp perform_asid_control_invocation_tcb_at)
-  apply (clarsimp simp add: valid_arch_inv_def)
-  apply (clarsimp simp: valid_aci_def)
-  apply (frule st_tcb_ex_cap)
-    apply fastforce
-   apply (clarsimp split: Structures_A.thread_state.splits)
-   apply auto[1]
-  apply (clarsimp simp: ex_nonz_cap_to_def)
-  apply (frule invs_untyped_children)
-  apply (clarsimp simp:cte_wp_at_caps_of_state)
-  apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
-      apply (simp add: cte_wp_at_caps_of_state)+
+   apply (wp perform_asid_control_invocation_tcb_at)
+   apply (clarsimp simp add: valid_arch_inv_def)
+   apply (clarsimp simp: valid_aci_def)
+   apply (frule st_tcb_ex_cap)
      apply fastforce
-   apply (clarsimp simp: zobj_refs_to_obj_refs cte_wp_at_caps_of_state)
-   apply (drule_tac p="(aa,ba)" in caps_of_state_valid_cap, fastforce)
-   apply (clarsimp simp: valid_cap_def cap_aligned_def)
-   apply (drule_tac x=tptr in base_member_set, simp)
-    apply (simp add: pageBits_def field_simps del: atLeastAtMost_iff)
- (*  apply (metis (no_types) orthD1 x_power_minus_1)*)
-  apply simp
-  sorry
+    apply (clarsimp split: Structures_A.thread_state.splits)
+    apply auto[1]
+   apply (clarsimp simp: ex_nonz_cap_to_def)
+   apply (frule invs_untyped_children)
+   apply (clarsimp simp:cte_wp_at_caps_of_state)
+   apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
+       apply (simp add: cte_wp_at_caps_of_state)+
+      apply fastforce
+    apply (clarsimp simp: zobj_refs_to_obj_refs cte_wp_at_caps_of_state)
+    apply (drule_tac p="(aa,ba)" in caps_of_state_valid_cap, fastforce)
+    apply (clarsimp simp: valid_cap_def cap_aligned_def)
+    apply (drule_tac x=tptr in base_member_set, simp)
+     apply (simp add: vspace_bits_defs field_simps del: atLeastAtMost_iff)
+    apply (metis (no_types) orthD1 x_power_minus_1)
+   apply simp
+  apply (wp perform_vcpu_invocation_arch_tcb)
+  done
 
 end
 
@@ -344,9 +361,14 @@ lemma arch_objs':
   "valid_arch_objs s \<Longrightarrow> valid_arch_objs s'"
   using ko
   apply (clarsimp simp: valid_arch_objs_def vs_lookup')
-  apply (fastforce simp: obj_at_def)
   sorry
 
+lemma vspace_objs':
+  "valid_vspace_objs s \<Longrightarrow> valid_vspace_objs s'"
+  using ko
+  apply (clarsimp simp: valid_vspace_objs_def vs_lookup')
+(*  apply (fastforce simp: obj_at_def)*)
+  sorry
 
 lemma caps_of_state_s':
   "caps_of_state s' = caps_of_state s"
@@ -406,7 +428,7 @@ context Arch begin global_naming ARM
 lemma valid_arch_state_strg:
   "valid_arch_state s \<and> ap \<notin> ran (arm_asid_table (arch_state s)) \<and> asid_pool_at ap s \<longrightarrow>
    valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
-  apply (clarsimp simp: valid_arch_state_def)
+  apply (clarsimp simp: valid_arch_state_def split: option.split)
   apply (clarsimp simp: valid_asid_table_def ran_def)
   apply (fastforce intro!: inj_on_fun_updI)
   done
@@ -573,6 +595,20 @@ lemma valid_arch_objs_asid_upd_strg:
   apply (erule (1) asid_update.arch_objs')
   done
 
+
+lemma valid_vspace_objs_asid_upd_strg:
+  "valid_vspace_objs s \<and>
+   ko_at (ArchObj (ASIDPool empty)) ap s \<and>
+   arm_asid_table (arch_state s) asid = None \<longrightarrow>
+   valid_vspace_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+  apply clarsimp
+  apply (subgoal_tac "asid_update ap asid s")
+   prefer 2
+   apply unfold_locales[1]
+    apply assumption+
+  apply (erule (1) asid_update.vspace_objs')
+  done
+
 lemma safe_parent_cap_is_device:
   "safe_parent_for m p cap pcap \<Longrightarrow> cap_is_device cap = cap_is_device pcap"
   by (simp add: safe_parent_for_def)
@@ -593,7 +629,7 @@ lemma cap_insert_ap_invs:
                        \<lparr>arm_asid_table := (arm_asid_table \<circ> arch_state) s(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
 
   apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply (strengthen valid_arch_state_strg valid_arch_objs_asid_upd_strg
+  apply (strengthen valid_arch_state_strg valid_vspace_objs_asid_upd_strg
                     valid_asid_map_asid_upd_strg )
   apply (simp cong: conj_cong)
   apply (rule hoare_pre)
@@ -605,13 +641,12 @@ lemma cap_insert_ap_invs:
   apply (drule safe_parent_cap_range)
   apply simp
   apply (rule conjI)
-   prefer 2
-   apply (clarsimp simp: obj_at_def a_type_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (drule_tac p="(a,b)" in caps_of_state_valid_cap, fastforce)
-  apply (auto simp: obj_at_def is_tcb_def is_cap_table_def
+  apply (auto simp: obj_at_def is_tcb_def is_cap_table_def a_type_def
                     valid_cap_def [where c="cap.Zombie a b x" for a b x]
               dest: obj_ref_is_tcb obj_ref_is_cap_table split: option.splits)
+(*  apply (clarsimp simp: obj_at_def a_type_def)*)
   sorry
 
 
@@ -854,14 +889,17 @@ qed
 
 lemmas aci_invs[wp] = aci_invs'[where Q=\<top>,simplified hoare_post_taut, OF refl refl refl TrueI TrueI TrueI,simplified]
 
+lemma perform_vcpu_invs:
+  "\<lbrace>invs and valid_vcpu_invocation vi\<rbrace> perform_vcpu_invocation vi \<lbrace>\<lambda>_. invs\<rbrace>"
+sorry
 
 lemma invoke_arch_invs[wp]:
   "\<lbrace>invs and ct_active and valid_arch_inv ai\<rbrace>
    arch_perform_invocation ai
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv_def arch_perform_invocation_def)
-  apply (wp|simp)+
-  sorry (* perform_vcpu_invocation *)
+  apply (wp perform_vcpu_invs |simp)+
+  done (* perform_vcpu_invocation *)
 
 
 lemma sts_empty_pde [wp]:
@@ -905,6 +943,12 @@ lemma sts_valid_pdi_inv[wp]:
   done
 
 
+lemma sts_valid_vcpu_invocation_inv:
+  "\<lbrace>valid_vcpu_invocation vcpu_invocation\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_vcpu_invocation vcpu_invocation\<rbrace>"
+  apply (wp | simp add: valid_vcpu_invocation_def)+
+  sorry
+
+
 lemma sts_valid_arch_inv:
   "\<lbrace>valid_arch_inv ai\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_arch_inv ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv_def)
@@ -923,8 +967,8 @@ lemma sts_valid_arch_inv:
   apply (clarsimp simp: valid_apinv_def split: asid_pool_invocation.splits)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_ex_lift set_thread_state_ko)
-  apply (clarsimp simp: is_tcb_def)
-  sorry (* InvokeVCPU *)
+  apply (clarsimp simp: is_tcb_def, wp sts_valid_vcpu_invocation_inv)
+  done
 
 
 lemma ensure_safe_mapping_inv [wp]:
@@ -1556,7 +1600,8 @@ lemma arch_decode_inv_wf[wp]:
 declare word_less_sub_le [simp]
 
 crunch pred_tcb_at: perform_page_table_invocation, perform_page_invocation,
-           perform_asid_pool_invocation, perform_page_directory_invocation "pred_tcb_at proj P t"
+           perform_asid_pool_invocation, perform_vcpu_invocation,
+           perform_page_directory_invocation "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
 
@@ -1566,15 +1611,17 @@ lemma arch_pinv_st_tcb_at:
      arch_perform_invocation ai
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (cases ai, simp_all add: arch_perform_invocation_def valid_arch_inv_def)
-     apply (wp perform_page_table_invocation_pred_tcb_at,
-            fastforce elim!: pred_tcb_weakenE)
-     apply (wp perform_page_directory_invocation_pred_tcb_at, fastforce elim: pred_tcb_weakenE)
-    apply (wp perform_page_invocation_pred_tcb_at, fastforce elim!: pred_tcb_weakenE)
-   apply (wp perform_asid_control_invocation_st_tcb_at,
+      apply (wp perform_page_table_invocation_pred_tcb_at,
+             fastforce elim!: pred_tcb_weakenE)
+      apply (wp perform_page_directory_invocation_pred_tcb_at, fastforce elim: pred_tcb_weakenE)
+     apply (wp perform_page_invocation_pred_tcb_at, fastforce elim!: pred_tcb_weakenE)
+    apply (wp perform_asid_control_invocation_st_tcb_at,
+           fastforce elim!: pred_tcb_weakenE)
+   apply (wp perform_asid_pool_invocation_pred_tcb_at,
           fastforce elim!: pred_tcb_weakenE)
-  apply (wp perform_asid_pool_invocation_pred_tcb_at,
+  apply (wp perform_vcpu_invocation_pred_tcb_at,
          fastforce elim!: pred_tcb_weakenE)
-  sorry (* InvokeVCPU case *)
+  done
 
 
 lemma get_cap_diminished:

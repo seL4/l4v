@@ -60,9 +60,10 @@ lemma kernel_entry_invs:
   (kernel_entry e us) :: (register \<Rightarrow> 32 word,unit) s_monad
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   apply (simp add: kernel_entry_def)
-  by (wp akernel_invs thread_set_invs_trivial thread_set_ct_running select_wp
+  apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_running select_wp
          ct_running_machine_op static_imp_wp
-      | clarsimp simp add: tcb_cap_cases_def)+
+      | clarsimp simp add: tcb_cap_cases_def ARM_A.arch_tcb_context_set_def)+
+  done
 
 (* FIXME: move to Lib.thy *)
 lemma Collect_subseteq:

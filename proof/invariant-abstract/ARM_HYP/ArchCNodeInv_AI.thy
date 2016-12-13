@@ -23,49 +23,52 @@ lemma set_cap_in_device_frame[wp]:
 (* unused *)
 lemma derive_cap_objrefs [CNodeInv_AI_assms]:
   "\<lbrace>\<lambda>s. P (obj_refs cap)\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> P (obj_refs rv)\<rbrace>,-"
-  apply (cases cap, simp_all add: derive_cap_def is_zombie_def)
-          apply ((wp ensure_no_children_inv | simp add: o_def | rule hoare_pre)+)[11]
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap, simp_all add: arch_derive_cap_def)
-      apply (wp | simp add: o_def)+
-   apply (rename_tac word option)
-   apply (case_tac option)
+   apply (cases cap, simp_all add: derive_cap_def is_zombie_def)
+           apply ((wp ensure_no_children_inv | simp add: o_def | rule hoare_pre)+)[11]
+   apply (rename_tac arch_cap)
+   apply (case_tac arch_cap, simp_all add: arch_derive_cap_def)
+       apply (wp | simp add: o_def)+
+    apply (rename_tac word option)
+    apply (case_tac option)
+     apply simp
+     apply (rule hoare_pre, wp)
     apply simp
+    apply (rule hoare_pre, wp)
+    apply (simp add: aobj_ref_cases)
+   apply (rename_tac word option)
+   apply (case_tac option, simp)
     apply (rule hoare_pre, wp)
    apply simp
    apply (rule hoare_pre, wp)
-   apply (simp add: aobj_ref_cases)
-  apply (rename_tac word option)
-  apply (case_tac option, simp)
-   apply (rule hoare_pre, wp)
-  apply simp
+   apply clarsimp
   apply (rule hoare_pre, wp)
-  apply clarsimp
-  sorry (* add vcpu case *)
+  apply simp
+  done
 
 
 lemma derive_cap_zobjrefs [CNodeInv_AI_assms]:
   "\<lbrace>\<lambda>s. P (zobj_refs cap)\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> P (zobj_refs rv)\<rbrace>,-"
-  apply (cases cap, simp_all add: derive_cap_def is_zombie_def)
-          apply ((wp ensure_no_children_inv | simp add: o_def | rule hoare_pre)+)[11]
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap, simp_all add: arch_derive_cap_def)
-      apply (wp | simp add: o_def)+
-   apply (rename_tac option)
-   apply (case_tac option)
+   apply (cases cap, simp_all add: derive_cap_def is_zombie_def)
+           apply ((wp ensure_no_children_inv | simp add: o_def | rule hoare_pre)+)[11]
+   apply (rename_tac arch_cap)
+   apply (case_tac arch_cap, simp_all add: arch_derive_cap_def)
+       apply (wp | simp add: o_def)+
+    apply (rename_tac option)
+    apply (case_tac option)
+     apply simp
+     apply (rule hoare_pre, wp)
     apply simp
+    apply (rule hoare_pre, wp)
+    apply (simp add: aobj_ref_cases)
+   apply (rename_tac option)
+   apply (case_tac option, simp)
     apply (rule hoare_pre, wp)
    apply simp
    apply (rule hoare_pre, wp)
-   apply (simp add: aobj_ref_cases)
-  apply (rename_tac option)
-  apply (case_tac option, simp)
-   apply (rule hoare_pre, wp)
-  apply simp
+   apply clarsimp
   apply (rule hoare_pre, wp)
   apply clarsimp
-  sorry (* add vcpu case *)
-
+  done
 
 lemma update_cap_objrefs [CNodeInv_AI_assms]:
   "\<lbrakk> update_cap_data P dt cap \<noteq> NullCap \<rbrakk> \<Longrightarrow>
@@ -267,7 +270,7 @@ lemma in_preempt[simp, intro, CNodeInv_AI_assms]:
 lemma invs_irq_state_independent[intro!, simp, CNodeInv_AI_assms]:
   "invs (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
    = invs s"
-  by (clarsimp simp: irq_state_independent_A_def invs_def
+  apply (clarsimp simp: irq_state_independent_A_def invs_def
       valid_state_def valid_pspace_def valid_mdb_def valid_ioc_def valid_idle_def
       only_idle_def if_unsafe_then_cap_def valid_reply_caps_def
       valid_reply_masters_def valid_global_refs_def valid_arch_state_def
@@ -278,6 +281,7 @@ lemma invs_irq_state_independent[intro!, simp, CNodeInv_AI_assms]:
       pspace_in_kernel_window_def cap_refs_in_kernel_window_def
       cur_tcb_def sym_refs_def state_refs_of_def ARM.state_hyp_refs_of_def vspace_at_asid_def
       swp_def valid_irq_states_def)
+  sorry
 
 
 lemma cte_at_nat_to_cref_zbits [CNodeInv_AI_assms]:

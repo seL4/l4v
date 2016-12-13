@@ -90,8 +90,8 @@ bundle pagebits =
 
 lemma get_master_pde_wp:
   "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s
-        \<longrightarrow> Q (case (pd (ucast (p && ~~ mask 6 && mask pd_bits >> pde_bits))) of
-               SuperSectionPDE x xa xb \<Rightarrow> pd (ucast (p && ~~ mask 6 && mask pd_bits >> pde_bits))
+        \<longrightarrow> Q (case (pd (ucast (p && ~~ mask 7 && mask pd_bits >> pde_bits))) of
+               SuperSectionPDE x xa xb \<Rightarrow> pd (ucast (p && ~~ mask 7 && mask pd_bits >> pde_bits))
              | _ \<Rightarrow> pd (ucast (p && mask pd_bits >> pde_bits))) s\<rbrace>
    get_master_pde p
    \<lbrace>Q\<rbrace>"
@@ -134,9 +134,9 @@ lemma get_pte_inv [wp]:
 
 lemma get_master_pte_wp:
   "\<lbrace>\<lambda>s. \<forall>pt. ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits) s \<longrightarrow>
-          Q (case pt (ucast (p && ~~ mask 6 && mask pt_bits >> pte_bits)) of
+          Q (case pt (ucast (p && ~~ mask 7 && mask pt_bits >> pte_bits)) of
               LargePagePTE x xa xb \<Rightarrow>
-                pt (ucast (p && ~~ mask 6 && mask pt_bits >> pte_bits))
+                pt (ucast (p && ~~ mask 7 && mask pt_bits >> pte_bits))
               | _ \<Rightarrow> pt (ucast (p && mask pt_bits >> pte_bits)))
            s\<rbrace>
   get_master_pte p \<lbrace>Q\<rbrace>"
@@ -2554,17 +2554,6 @@ lemma kernel_base_less_observation:
   "(x < kernel_base) = (x && ~~ mask 29 \<noteq> kernel_base)"
   apply (simp add: linorder_not_le[symmetric] kernel_base_ge_observation)
   done
-
-lemma is_aligned_lookup_pd_slot':
-  "\<lbrakk>is_aligned vptr 24; is_aligned pd 6\<rbrakk>
-   \<Longrightarrow> is_aligned (lookup_pd_slot pd vptr) 6"
-   apply (clarsimp simp: lookup_pd_slot_def)
-   apply (erule aligned_add_aligned)
-    apply (rule is_aligned_shiftl)
-    apply (rule is_aligned_shiftr)
-    apply (simp add: vspace_bits_defs)
-   apply (simp add: word_bits_conv)
-   done
 
 lemma is_aligned_lookup_pd_slot:
   "\<lbrakk>is_aligned vptr 25; is_aligned pd 7\<rbrakk>

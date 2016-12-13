@@ -244,6 +244,11 @@ lemma getFAR_inv: "\<lbrace>P\<rbrace> getFAR \<lbrace>\<lambda>_. P\<rbrace>"
 lemma getIFSR_inv: "\<lbrace>P\<rbrace> getIFSR \<lbrace>\<lambda>_. P\<rbrace>"
   by (simp add: getIFSR_def)
 
+lemma getHDFAR_inv: "\<lbrace>P\<rbrace> getHDFAR \<lbrace>\<lambda>_. P\<rbrace>"
+  by (simp add: getHDFAR_def)
+
+lemma getHSR_inv: "\<lbrace>P\<rbrace> getHSR \<lbrace>\<lambda>_. P\<rbrace>"
+  by (simp add: getHSR_def)
 
 lemma no_fail_cacheRangeOp[simp, wp]:
   assumes nf: "\<And>a b. no_fail \<top> (oper a b)"

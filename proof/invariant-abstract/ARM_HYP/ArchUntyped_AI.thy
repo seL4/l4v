@@ -137,10 +137,10 @@ proof -
     apply (drule_tac x = "(obj_ref_of node_cap,nat_to_cref (bits_of node_cap) slota)" in bspec)
      apply (clarsimp simp:is_cap_simps nat_to_cref_def word_bits_def
        bits_of_def valid_cap_simps cap_aligned_def)+
-   apply (frule(1) range_cover_stuff[where sz = sz])
+(*   apply (frule(1) range_cover_stuff[where sz = sz])
      apply (clarsimp dest!:valid_cap_aligned simp:cap_aligned_def word_bits_def)+
     apply simp+
-   apply (clarsimp simp:get_free_ref_def)
+   apply (clarsimp simp:get_free_ref_def) *)
 (*   apply (frule cte_wp_at_caps_descendants_range_inI
      [where ptr = w and sz = sz and idx = 0 and cref = slot])
        subgoal by (clarsimp simp:cte_wp_at_caps_of_state is_aligned_neg_mask_eq)
@@ -148,7 +148,7 @@ proof -
      subgoal by (simp add:range_cover_def word_bits_def)
     subgoal by (simp add:is_aligned_neg_mask_eq)
    apply (clarsimp) *)
-   apply (erule disjE)
+ (*  apply (erule disjE)
     apply (drule_tac x= "cs!0" in bspec)
      subgoal by clarsimp
     subgoal by simp
@@ -157,6 +157,8 @@ proof -
    apply (rule conjI, assumption)
     by (clarsimp simp:diminished_def is_cap_simps mask_cap_def
       cap_rights_update_def , simp split:cap.splits )
+qed*)
+sorry
 qed
 
 lemma asid_bits_ge_0:

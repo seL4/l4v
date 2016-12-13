@@ -661,7 +661,7 @@ lemma valid_global_refs:
 lemma valid_arch_state:
   "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
   by (clarsimp simp: valid_arch_state_def obj_at_pres
-                     valid_asid_table_def)
+                     valid_asid_table_def split: option.split)
 
 lemma vs_refs_default [simp]:
   "vs_refs (default_object ty dev us) = {}"
@@ -1189,8 +1189,8 @@ lemma invs_irq_state_independent:
       valid_asid_map_def vspace_at_asid_def
       pspace_in_kernel_window_def cap_refs_in_kernel_window_def
       cur_tcb_def sym_refs_def state_refs_of_def state_hyp_refs_of_def
-      swp_def valid_irq_states_def)
-done
+      swp_def valid_irq_states_def split: option.split)
+  done
 
 crunch irq_masks_inv[wp]: cleanByVA_PoU, storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
   (ignore: cacheRangeOp wp: crunch_wps)

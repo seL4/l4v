@@ -597,6 +597,7 @@ lemma transfer_caps_loop_valid_mdb[wp]:
   done
 
 crunch state_refs_of [wp]: set_extra_badge "\<lambda>s. P (state_refs_of s)"
+crunch state_hyp_refs_of [wp]: set_extra_badge "\<lambda>s. P (ARM.state_hyp_refs_of s)"
 
 lemma tcl_state_refs_of[wp]:
   "\<And>P ep buffer n caps slots mi.
@@ -857,6 +858,11 @@ lemma transfer_caps_loop_irq_handlers[wp]:
 
 crunch valid_arch_objs [wp]: set_extra_badge valid_arch_objs
 
+crunch arch_objs [wp]: set_untyped_cap_as_full "valid_arch_objs"
+  (wp: crunch_wps simp: crunch_simps ignore: set_object set_cap)
+
+crunch arch_objs [wp]: cap_insert "valid_arch_objs"
+  (wp: crunch_wps simp: crunch_simps ignore: set_object set_cap)
 
 lemma transfer_caps_loop_arch_objs[wp]:
   "\<lbrace>valid_arch_objs :: 'state_ext state \<Rightarrow> bool\<rbrace>
@@ -1479,7 +1485,7 @@ crunch state_refs_of[wp]: do_ipc_transfer "\<lambda>s::'state_ext state. P (stat
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
 crunch state_hyp_refs_of[wp]: do_ipc_transfer "\<lambda>s::'state_ext state. P (ARM.state_hyp_refs_of s)"
-  (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop set_object)
+  (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
 crunch ct[wp]: do_ipc_transfer "cur_tcb :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
