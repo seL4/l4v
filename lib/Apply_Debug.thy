@@ -18,8 +18,8 @@ begin
 ML \<open>
 signature APPLY_DEBUG =
 sig
-val break : Method.method;
-val apply_debug : Method.text_range -> Proof.state -> Proof.state;
+val break : string option -> Proof.context -> Method.method;
+val apply_debug : string list -> Method.text_range -> Proof.state -> Proof.state;
 val continue : int -> Proof.state -> Proof.state;
 val finish : Proof.state -> Proof.state;
 
@@ -353,35 +353,48 @@ if is_finished_result id then peek_final_result id else
 
 structure Debug_Data = Proof_Data
 (
-  type T = debug_state Synchronized.var option  (* execution id *) *
-  int (* continuation counter *)
-  fun init _ : T = (NONE,~1)
+  type T = debug_state Synchronized.var option  (* handle on active proof thread *) *
+  int * (* continuation counter *)
+  bool * (* currently interactive context *)
+  string list (* tags to break on *)
+  fun init _ : T = (NONE,~1, false, [])
 );
 
-fun set_debug_ident ident = Debug_Data.map  (apfst (fn _ => SOME ident))
-val get_debug_ident = the o fst o Debug_Data.get
+fun set_debug_ident ident = Debug_Data.map  (@{apply 4 (1)} (fn _ => SOME ident))
+val get_debug_ident = the o #1 o Debug_Data.get
 
-val is_debug_ctxt = is_some o fst o Debug_Data.get;
-val clear_debug = Debug_Data.map (apfst (fn _ => NONE) o apsnd (fn _ => ~1));
+fun set_break_tags tags = Debug_Data.map (@{apply 4 (4)} (fn _ => tags))
+val get_break_tags = #4 o Debug_Data.get;
+
+val is_debug_ctxt = is_some o #1 o Debug_Data.get;
+val clear_debug = Debug_Data.map (fn _ => (NONE,~1,false, []));
 
 
-val get_continuation = snd o Debug_Data.get;
+val get_continuation = #2 o Debug_Data.get;
+val get_can_break = #3 o Debug_Data.get;
 
 (* Maintain pointer equality if possible *)
 fun set_continuation i ctxt = if get_continuation ctxt = i then ctxt else
-  Debug_Data.map (apsnd (fn _ => i)) ctxt;
+  Debug_Data.map (@{apply 4 (2)} (fn _ => i)) ctxt;
 
-val break = (fn _ => fn (st as (ctxt,_)) =>
+fun set_can_break b ctxt = if get_can_break ctxt = b then ctxt else
+  Debug_Data.map (@{apply 4 (3)} (fn _ => b)) ctxt;
+
+fun has_break_tag (SOME tag) ctxt = member (op =) (get_break_tags ctxt) tag
+  | has_break_tag NONE _ = true;
+
+fun break tag _ = (fn _ => (fn (st as (ctxt,_)) =>
+if not (get_can_break ctxt) orelse not (has_break_tag tag ctxt) then Seq.make_results (Seq.single st) else
   let
     val id = get_debug_ident ctxt;
 
     val st' = Seq.make (fn () =>
      SOME (pop_state id st,Seq.empty))
 
-  in Seq.make_results st' end) : Method.method
+  in Seq.make_results st' end)) : Method.method
 
 val _ = Context.>> (Context.map_theory (Method.setup @{binding break}
-  (Scan.succeed (fn _ => break)) ""))
+  (Scan.lift (Scan.option Parse.string) >> break) ""))
 
 fun map_state f state =
      let
@@ -402,7 +415,7 @@ val _ = Context.>> (Context.map_theory (Sign.print_translation
  [(@{const_syntax Trueprop}, fn ctxt => (last_click := get_latest_range ctxt; (fn [x] => x)))]))
 
 
-fun do_apply pos rng m =
+fun do_apply pos rng tags m =
 let
   val _ = Method.report m;
 
@@ -414,7 +427,12 @@ in
      val _ = if is_debug_ctxt ctxt then
       error "Cannot use apply_debug while debugging" else ();
 
-     val st = Proof.map_context (set_markup_state markup_id o set_debug_ident ident o set_continuation ~1) st;
+     val st = Proof.map_context
+      (set_can_break true
+       #> set_break_tags tags
+       #> set_markup_state markup_id
+       #> set_debug_ident ident
+       #> set_continuation ~1) st;
 
      fun do_cancel thread = (Future.cancel thread; Future.join_result thread; ());
 
@@ -463,7 +481,7 @@ in
         | RESULT st' => st'
 
        val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
-                     else st' |> apfst (set_continuation 0)
+                     else st' |> apfst (set_continuation 0) |> apfst (set_can_break false)
 
      in st''  end
 
@@ -499,16 +517,18 @@ in
    in st' end) st)
 end
 
-fun apply_debug (m', rng) =
+fun apply_debug tags (m', rng)  =
   let
       val m'' = add_debug m'
       val m = (m'',rng)
       val pos = Position.thread_data ();
-     in do_apply pos rng m end;
+     in do_apply pos rng tags m end;
 
 val _ =
   Outer_Syntax.command @{command_keyword apply_debug} "initial goal refinement step (unstructured)"
-    (Method.parse >> (fn txt => Toplevel.proof (apply_debug txt)));
+    (Scan.trace
+      (Scan.optional (Args.parens (Args.$$$ "tags" |-- Parse.enum1 "," Parse.string)) [] --  Method.parse) >>
+      (fn ((tags, (m,_)),toks) => Toplevel.proof (apply_debug tags (m,Token.range_of toks))));
 
 val finish = map_state (fn (ctxt,_) =>
       let
@@ -523,6 +543,7 @@ val _ =
 fun continue i =
 (map_state (fn (ctxt,thm) =>
       let
+        val ctxt = set_can_break true ctxt;
         val _ = if i < 1 then error "Must continue a non-zero amount" else ();
         val _ = if get_continuation ctxt < 0 then error "Cannot continue in a non-debug state" else ();
 
@@ -561,7 +582,7 @@ fun continue i =
             error "Unexpected number of existing results")
 
         val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
-                   else st' |> apfst (set_continuation cont)
+                   else st' |> apfst (set_continuation cont) |> apfst (set_can_break false)
 
       in st'' end))
 
@@ -573,6 +594,36 @@ val _ =
 end
 \<close>
 
+(*
+method_setup ba = \<open>fn (context,[tok]) => Scan.succeed
+  (fn ctxt => (Token.assign (SOME (Token.Term @{term True})) tok; @{print} tok; Method.succeed)) (context,[tok])\<close>
+ML \<open>
+structure The_Morphism = Generic_Data
+(
+  type T = Morphism.morphism
+  val empty : T = Morphism.identity
+  val extend = I;
+  fun merge (_,_) : T = Morphism.identity;
+);
+\<close>
+
+method_setup foo = \<open>Scan.state :|-- (fn context =>
+    Scan.lift (Args.text_declaration (fn source => The_Morphism.put)) >>
+    (fn j => fn ctxt => (@{print} (The_Morphism.get (Morphism.form j context)); Method.succeed)))\<close>
+
+ML \<open>Args.text_declaration\<close>
+ML \<open>Thm.trim_context\<close>
+ML \<open>Method.STATIC\<close>
+ML \<open>Morphism.form\<close>
+ML \<open>Variable.dest_fixes\<close>
+
+context fixes ZZZ begin
+method_setup show_fixes = \<open>Scan.succeed (fn ctxt =>
+  (@{print} (Variable.dest_fixes ctxt); Method.succeed))\<close>
+
+method bazz for ZZ :: bool =
+  (tactic \<open>fn st => (@{print}; (Seq.single st))\<close>,show_fixes, print_term ZZ, foo "", break)
+*)
 lemma
   assumes AB: "A \<Longrightarrow> B"
   assumes BA: "B \<Longrightarrow> A"
@@ -584,25 +635,41 @@ lemma
   assumes FE: "F \<Longrightarrow> E"
   assumes EF: "E \<Longrightarrow> F"
   shows
-  "A"
+  "A"(*
+  apply_debug (sleep 1, break, sleep 1, break)
+  apply break
+  apply -
+  apply -
+  apply -
+  continue
+  continue
+
+ oops
+ apply (bazz Q)
+ apply (subgoal_tac "A \<and> B")
+ apply_debug (bazz True)
+ finish
+ apply_debug (match premises in H: "Q \<and> P" for Q P \<Rightarrow> \<open>bazz Q, break\<close>)
+
+  ML_prf \<open>val _ = facts := Proof_Context.facts_of @{context}\<close>
+  ML_prf \<open>val m = Variable.dest_fixes @{context}\<close>
+  continue
+  ML_prf \<open>val m = Variable.dest_fixes @{context}\<close>
+  ML_prf \<open>val facts' = Proof_Context.facts_of @{context}\<close>
+  ML_prf \<open>val j = Variable.declare_term\<close>
+  ML_prf \<open>val k = Facts.dest_static true [facts'] (!facts) \<close>
+
+ oops
   (*
   apply_debug (sleep 1, break, rule BA, sleep 1, break, rule AB, sleep n)
   continue
   continue
 
   apply_debug (break, tactic \<open>fn st => raise TERM ("foo",[@{term True}])\<close>)
-    continue *)
-  apply_debug (sleep 1, rule BA, break, sleep 1,rule BA, rule CB, break, rule DC, sleep 1, break, rule ED, sleep 1, break, rule EF)
-    apply (rule AB)
-    continue
-      apply -
-      apply -
+    continue *)*)
+  apply_debug (tags "baz")
+    (sleep 1, rule BA, break "foo", sleep 1, rule CB, break, rule DC, sleep 1, break, rule ED, sleep 1, break, rule EF)
 
-    continue
-      apply -
-      apply -
-    continue
-    continue
   oops
   (*
   apply_debug (sleep 1, rule BA, break, sleep 1,rule BA, rule CB, break, rule DC, sleep 1, break, rule ED, sleep 1, break, rule EF)
