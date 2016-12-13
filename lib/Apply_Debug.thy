@@ -20,7 +20,7 @@ signature APPLY_DEBUG =
 sig
 val break : string option -> Proof.context -> Method.method;
 val apply_debug : string list -> Method.text_range -> Proof.state -> Proof.state;
-val continue : int -> Proof.state -> Proof.state;
+val continue : int option -> (context_state -> context_state option) option -> Proof.state -> Proof.state;
 val finish : Proof.state -> Proof.state;
 
 end
@@ -388,6 +388,7 @@ if not (get_can_break ctxt) orelse not (has_break_tag tag ctxt) then Seq.make_re
   let
     val id = get_debug_ident ctxt;
 
+
     val st' = Seq.make (fn () =>
      SOME (pop_state id st,Seq.empty))
 
@@ -410,10 +411,6 @@ let
 in (context,goal) end
 
 val last_click = Unsynchronized.ref (NONE : Position.range option)
-
-val _ = Context.>> (Context.map_theory (Sign.print_translation
- [(@{const_syntax Trueprop}, fn ctxt => (last_click := get_latest_range ctxt; (fn [x] => x)))]))
-
 
 fun do_apply pos rng tags m =
 let
@@ -522,6 +519,7 @@ fun apply_debug tags (m', rng)  =
       val m'' = add_debug m'
       val m = (m'',rng)
       val pos = Position.thread_data ();
+
      in do_apply pos rng tags m end;
 
 val _ =
@@ -536,15 +534,13 @@ val finish = map_state (fn (ctxt,_) =>
         val f = get_finish (get_debug_ident ctxt);
       in f |> poke_error |> apfst clear_debug end)
 
-val _ =
-  Outer_Syntax.command @{command_keyword finish} "finish debugging"
-  (Scan.succeed (Toplevel.proof finish))
 
-fun continue i =
+
+fun continue i_opt m_opt =
 (map_state (fn (ctxt,thm) =>
       let
         val ctxt = set_can_break true ctxt;
-        val _ = if i < 1 then error "Must continue a non-zero amount" else ();
+
         val _ = if get_continuation ctxt < 0 then error "Cannot continue in a non-debug state" else ();
 
         val id = get_debug_ident ctxt;
@@ -557,42 +553,74 @@ fun continue i =
 
         val _ = nth_pre_result id start_cont; (* block until we've hit the start of this continuation *)
 
-        val cont = start_cont + i; (* final number of breakpoints hit *)
+        fun get_final n st  = case (i_opt,m_opt) of
+          (SOME i,NONE) => if i < 1 then error "Can only continue a positive number of breakpoints" else
+            if n = start_cont + i then SOME st else NONE
+         | (NONE, SOME m) => m st
+         | (_, _) => error "Invalid continue arguments"
 
         val ex_results = peek_all_results id |> rev;
 
-        fun tick_up n st = if n = cont then (st,false) else
+        fun tick_up n st =
+          if n < length ex_results then error "Unexpected number of existing results"
+           (*case get_final n (#pre_state (nth ex_results n)) of SOME st' => (st', false, n)
+            | NONE => tick_up (n + 1) st *)
+          else
           let
-            val _ = set_next_state id trans_id st;
+            val _ = if n > length ex_results then set_next_state id trans_id st else ();
             val (n_r, b) = wait_break_state id trans_id;
-            val results = peek_all_results id;
-            val _ = if length results = n + 1 then () else
-              error ("Unexpected number of results. Expected: " ^ @{make_string } (n + 1)^ " but got " ^ @{make_string } (length results))
             val st' = poke_error n_r;
-          in if b then ((st',b)) else tick_up (n + 1) st' end
+          in if b then (st',b, n) else
+            case get_final n st' of SOME st'' => (st'', false, n)
+            | NONE => tick_up (n + 1) st' end
 
-        val (st',b) =
-          if length ex_results > cont then
-            (#pre_state (nth ex_results cont), false)
-          else if length ex_results = cont then
-            wait_break_state id trans_id |> apfst poke_error
-          else if length ex_results = start_cont then
-            tick_up (length ex_results) (ctxt, thm)
-          else (debug_print id; @{print} ("start_cont",start_cont); @{print} ("trans_id",trans_id);
+        val _ = if length ex_results < start_cont then
+          (debug_print id; @{print} ("start_cont",start_cont); @{print} ("trans_id",trans_id);
             error "Unexpected number of existing results")
+          else ()
+
+        val (st',b, cont) = tick_up (start_cont + 1) (ctxt, thm)
 
         val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
                    else st' |> apfst (set_continuation cont) |> apfst (set_can_break false)
 
       in st'' end))
 
+fun continue_cmd i_opt m_opt state =
+let
+  val {context,...} = Proof.simple_goal state;
+  val check = Method.map_source (Method.method_closure context)
+
+  val m_opt' = Option.map (check o Method.check_text context o fst) m_opt;
+
+  fun eval_method txt =
+    (fn (ctxt,thm) => try (fst o Seq.first_result "method") (Method.evaluate txt ctxt [] (ctxt,thm)))
+
+  val i_opt' = case (i_opt,m_opt) of (NONE,NONE) => SOME 1 | _ => i_opt;
+
+in continue i_opt' (Option.map eval_method m_opt') state end
+
 val _ =
   Outer_Syntax.command @{command_keyword continue} "step to next breakpoint"
-  (Scan.optional Parse.int 1 >> (fn i =>
-    (Toplevel.proof (continue i))))
+  (Scan.option Parse.int -- Scan.option Method.parse >> (fn (i_opt,m_opt) =>
+    (Toplevel.proof (continue_cmd i_opt m_opt))))
+
+val _ =
+  Outer_Syntax.command @{command_keyword finish} "finish debugging"
+  (Scan.succeed (Toplevel.proof (continue NONE (SOME (fn _ => NONE)))))
+
+val _ =
+  Query_Operation.register {name = "print_state", pri = Task_Queue.urgent_pri}
+    (fn {state = st, output_result, ...} =>
+      if Toplevel.is_proof st
+      then
+        (last_click := get_latest_range (Proof.context_of (Toplevel.proof_of st));
+        output_result (Markup.markup Markup.state (Toplevel.string_of_state st)))
+      else ());
 
 end
 \<close>
+
 
 (*
 method_setup ba = \<open>fn (context,[tok]) => Scan.succeed
@@ -624,16 +652,21 @@ method_setup show_fixes = \<open>Scan.succeed (fn ctxt =>
 method bazz for ZZ :: bool =
   (tactic \<open>fn st => (@{print}; (Seq.single st))\<close>,show_fixes, print_term ZZ, foo "", break)
 *)
+ML \<open>
+
+\<close>
 lemma
   assumes AB: "A \<Longrightarrow> B"
   assumes BA: "B \<Longrightarrow> A"
   assumes BC: "B \<Longrightarrow> C"
   assumes CB: "C \<Longrightarrow> B"
+  assumes CD: "C \<Longrightarrow> D"
   assumes DC: "D \<Longrightarrow> C"
   assumes DE: "D \<Longrightarrow> E"
   assumes ED: "E \<Longrightarrow> D"
   assumes FE: "F \<Longrightarrow> E"
   assumes EF: "E \<Longrightarrow> F"
+  assumes E: "E"
   shows
   "A"(*
   apply_debug (sleep 1, break, sleep 1, break)
@@ -667,9 +700,43 @@ lemma
 
   apply_debug (break, tactic \<open>fn st => raise TERM ("foo",[@{term True}])\<close>)
     continue *)*)
-  apply_debug (tags "baz")
-    (sleep 1, rule BA, break "foo", sleep 1, rule CB, break, rule DC, sleep 1, break, rule ED, sleep 1, break, rule EF)
+(*
+  apply_debug (break, rule BA, break, break, rule AB)
+    continue
+    continue
+    finish
+  apply (rule BA)
+  apply (rule AB)
 
+  apply_debug (break, rule BA, break, break, rule AB)
+    continue
+    continue
+    finish
+  *)
+  apply_debug (((rule assms,break, rule assms, break, rule assms, break, rule assms, break, rule assms)); fail)
+    continue (match conclusion in C \<Rightarrow> \<open>-\<close>)
+    oops
+    (*
+    continue
+    continue
+    finish
+    apply -
+    ML \<open>Subgoal.subgoal_cmd\<close>
+
+
+  oops
+  apply_debug (sleep 1, rule BA, break, rule BA, sleep 1, break, rule CB, break,
+        rule CD, sleep 1, break, break, break, rule ED, sleep 1, break, rule EF)
+    apply (rule AB)
+   continue (rule DC)
+
+   continue 2
+      apply -
+
+      apply (rule DC)
+    continue (rule FE)
+      apply -
+    continue
   oops
   (*
   apply_debug (sleep 1, rule BA, break, sleep 1,rule BA, rule CB, break, rule DC, sleep 1, break, rule ED, sleep 1, break, rule EF)
