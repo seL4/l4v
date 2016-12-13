@@ -68,6 +68,7 @@ CKERNEL=${CKERNEL_DIR}/kernel_all.c_pp
 NAMES_FILE=${MUN_TMP}/ckernel_names.txt
 AST_FILE=${MUN_TMP}/ckernel_ast.txt
 SEL4_CLONE=${MUN_TMP}/sel4-clone
+CPARSER_FLAGS=${CPARSER_FLAGS:-"--underscore_idents"}
 
 # Cloning seL4 repo into temporal folder
 git clone -q -n ${SEL4} ${SEL4_CLONE} || \
@@ -100,9 +101,9 @@ CPARSER="${CPARSER_DIR}/${L4V_ARCH}/c-parser"
 [ -x "${CPARSER}" ] || (echo "Building c-parser..." ; make -C "${CPARSER_DIR}")
 
 # build munge file!!
-${CPARSER} --munge_info_fname=${NAMES_FILE} ${CKERNEL}
+${CPARSER} ${CPARSER_FLAGS} --munge_info_fname=${NAMES_FILE} ${CKERNEL}
 # build ast!!
-[ -z ${BUILD_AST+x} ] || ${CPARSER} --ast ${CKERNEL} > ${AST_FILE}
+[ -z ${BUILD_AST+x} ] || ${CPARSER} ${CPARSER_FLAGS} --ast ${CKERNEL} > ${AST_FILE}
 
 # move back kernel_all.c_pp
 if [ -f ${CKERNEL}.orig ]
