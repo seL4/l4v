@@ -677,7 +677,7 @@ definition
 where
   "valid_arch_state \<equiv> \<lambda>s.
   valid_asid_table (arm_asid_table (arch_state s)) s \<and>
-  vcpu_at (fst (the (arm_current_vcpu (arch_state s)))) s \<and>
+  (case (arm_current_vcpu (arch_state s)) of Some (v, b) \<Rightarrow> vcpu_at v s | _ \<Rightarrow> True) \<and>  (* ARMHYP do we need this? *)
   is_inv (arm_hwasid_table (arch_state s))
              (option_map fst o arm_asid_map (arch_state s))"
 
@@ -760,7 +760,7 @@ definition (* ARMHYP+ *)
   global_refs :: "'z::state_ext state \<Rightarrow> obj_ref set"
 where
   "global_refs \<equiv> \<lambda>s.
-  {idle_thread s, ((fst o the o arm_current_vcpu) (arch_state s))} \<union> (* ARMHYP *)
+  {idle_thread s} \<union>
    range (interrupt_irq_node s)"
 
 definition
@@ -1335,6 +1335,8 @@ lemma valid_arch_state_lift:
   apply (simp add: valid_arch_state_def valid_asid_table_def)
   apply (rule hoare_lift_Pf[where f="\<lambda>s. arch_state s"])
    apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift )
+    apply (case_tac "arm_current_vcpu x"; simp add: split_def)
+     apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift)
   done
 
 lemma aobj_at_default_arch_cap_valid:

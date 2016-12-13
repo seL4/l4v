@@ -462,6 +462,57 @@ lemma no_irq_resetTimer: "no_irq resetTimer"
 lemma no_irq_debugPrint: "no_irq (debugPrint $ xs)"
   by (simp add: no_irq_def)
 
+lemma no_irq_writeContextIDAndPD: "no_irq (writeContextIDAndPD asid w)"
+  by (simp add: writeContextIDAndPD_def)
+
+lemma no_irq_addressTranslateS1CPR: "no_irq (addressTranslateS1CPR w)"
+  apply (clarsimp simp add: addressTranslateS1CPR_def no_irq_def, wp)
+  apply (simp only: atomize_all)
+  apply (wp machine_op_lift_no_irq[simplified no_irq_def])
+  done
+
+lemma no_irq_setHCR: "no_irq (setHCR w)"
+  by (simp add: setHCR_def)
+
+lemma no_irq_setSCTLR: "no_irq (setSCTLR w)"
+  by (simp add: setSCTLR_def)
+
+lemma no_irq_getSCTLR: "no_irq getSCTLR"
+    by (simp add: getSCTLR_def)
+
+lemma no_irq_setACTLR: "no_irq (setACTLR w)"
+  by (simp add: setACTLR_def)
+
+lemma no_irq_getACTLR: "no_irq getACTLR"
+  by (simp add: getACTLR_def)
+
+lemma no_irq_get_gic_vcpu_ctrl_vmcr: "no_irq get_gic_vcpu_ctrl_vmcr"
+  by (simp add: get_gic_vcpu_ctrl_vmcr_def)
+
+lemma no_irq_set_gic_vcpu_ctrl_vmcr: "no_irq (set_gic_vcpu_ctrl_vmcr w)"
+  by (simp add: set_gic_vcpu_ctrl_vmcr_def)
+
+lemma no_irq_get_gic_vcpu_ctrl_apr: "no_irq get_gic_vcpu_ctrl_apr"
+  by (simp add: get_gic_vcpu_ctrl_apr_def)
+
+lemma no_irq_set_gic_vcpu_ctrl_apr: "no_irq (set_gic_vcpu_ctrl_apr w)"
+  by (simp add: set_gic_vcpu_ctrl_apr_def)
+
+lemma no_irq_get_gic_vcpu_ctrl_lr: "no_irq (get_gic_vcpu_ctrl_lr n)"
+  apply (clarsimp simp add: get_gic_vcpu_ctrl_lr_def no_irq_def, wp)
+  apply (simp only: atomize_all)
+  apply (wp machine_op_lift_no_irq[simplified no_irq_def])
+  done
+
+lemma no_irq_set_gic_vcpu_ctrl_lr: "no_irq (set_gic_vcpu_ctrl_lr n w)"
+  by (simp add: set_gic_vcpu_ctrl_lr_def)
+
+lemma no_irq_get_gic_vcpu_ctrl_hcr: "no_irq get_gic_vcpu_ctrl_hcr"
+  by (simp add: get_gic_vcpu_ctrl_hcr_def)
+
+lemma no_irq_set_gic_vcpu_ctrl_hcr: "no_irq (set_gic_vcpu_ctrl_hcr w)"
+  by (simp add: set_gic_vcpu_ctrl_hcr_def)
+
 context notes no_irq[wp] begin
 
 lemma no_irq_ackInterrupt: "no_irq (ackInterrupt irq)"
@@ -700,6 +751,65 @@ lemma empty_fail_flushBTAC: "empty_fail  flushBTAC"
 lemma empty_fail_writeContextID: "empty_fail  writeContextID"
   by (simp add: writeContextID_def)
 
+lemma empty_fail_setHCR[simp, intro!]:
+  "empty_fail (setHCR w)"
+  by (simp add: setHCR_def)
+
+lemma empty_fail_addressTranslateS1CPR[simp, intro!]:
+  "empty_fail (addressTranslateS1CPR w)"
+  by (simp add: addressTranslateS1CPR_def)
+
+lemma empty_fail_writeContextIDAndPD[simp, intro!]:
+  "empty_fail (writeContextIDAndPD asid w)"
+  by (simp add: writeContextIDAndPD_def)
+
+lemma empty_fail_setSCTLR[simp, intro!]:
+  "empty_fail (setSCTLR w)"
+  by (simp add: setSCTLR_def)
+
+lemma empty_fail_getSCTLR[simp, intro!]:
+  "empty_fail getSCTLR"
+  by (simp add: getSCTLR_def)
+
+lemma empty_fail_setACTLR[simp, intro!]:
+  "empty_fail (setACTLR w)"
+  by (simp add: setACTLR_def)
+
+lemma empty_fail_getACTLR[simp, intro!]:
+  "empty_fail getACTLR"
+  by (simp add: getACTLR_def)
+
+lemma empty_fail_get_gic_vcpu_ctrl_vmcr[simp, intro!]:
+  "empty_fail get_gic_vcpu_ctrl_vmcr"
+  by (simp add: get_gic_vcpu_ctrl_vmcr_def)
+
+lemma empty_fail_set_gic_vcpu_ctrl_vmcr[simp, intro!]:
+  "empty_fail (set_gic_vcpu_ctrl_vmcr w)"
+  by (simp add: set_gic_vcpu_ctrl_vmcr_def)
+
+lemma empty_fail_get_gic_vcpu_ctrl_apr[simp, intro!]:
+  "empty_fail get_gic_vcpu_ctrl_apr"
+  by (simp add: get_gic_vcpu_ctrl_apr_def)
+
+lemma empty_fail_set_gic_vcpu_ctrl_apr[simp, intro!]:
+  "empty_fail (set_gic_vcpu_ctrl_apr w)"
+  by (simp add: set_gic_vcpu_ctrl_apr_def)
+
+lemma empty_fail_get_gic_vcpu_ctrl_lr[simp, intro!]:
+  "empty_fail (get_gic_vcpu_ctrl_lr n)"
+  by (simp add: get_gic_vcpu_ctrl_lr_def)
+
+lemma empty_fail_set_gic_vcpu_ctrl_lr[simp, intro!]:
+  "empty_fail (set_gic_vcpu_ctrl_lr n w)"
+  by (simp add: set_gic_vcpu_ctrl_lr_def)
+
+lemma empty_fail_get_gic_vcpu_ctrl_hcr[simp, intro!]:
+  "empty_fail get_gic_vcpu_ctrl_hcr"
+  by (simp add: get_gic_vcpu_ctrl_hcr_def)
+
+lemma empty_fail_set_gic_vcpu_ctrl_hcr[simp, intro!]:
+  "empty_fail (set_gic_vcpu_ctrl_hcr w)"
+  by (simp add: set_gic_vcpu_ctrl_hcr_def)
 
 
 lemma empty_fail_cacheRangeOp [simp, intro!]:
@@ -753,6 +863,7 @@ lemma empty_fail_cleanInvalidateL1Caches[simp, intro!]:
 lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"
   by (simp add: clearMemory_def mapM_x_mapM ef_storeWord)
+
 
 end
 end

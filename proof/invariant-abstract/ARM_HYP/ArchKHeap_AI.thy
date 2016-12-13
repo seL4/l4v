@@ -395,6 +395,9 @@ lemma arch_lifts:
   apply (simp add: valid_arch_state_def valid_asid_table_def)
   apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch])
   apply (wp hoare_vcg_conj_lift hoare_vcg_ball_lift | (rule aobj_at, clarsimp))+
+   apply (case_tac "arm_current_vcpu x"; simp add: split_def)
+   apply (wp, rule aobj_at, simp)
+  apply wp
   done
 
   done

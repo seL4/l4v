@@ -2628,7 +2628,7 @@ lemma valid_asid_map_update [iff]:
 
 lemma valid_arch_state_update [iff]:
   "valid_arch_state (f s) = valid_arch_state s"
-  by (simp add: valid_arch_state_def arch)
+  by (simp add: valid_arch_state_def arch split: option.split)
 
 lemma valid_idle_update [iff]:
   "valid_idle (f s) = valid_idle s"
