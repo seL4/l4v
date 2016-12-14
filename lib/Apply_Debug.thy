@@ -509,19 +509,12 @@ in
      val _ = Synchronized.change ident (map_restart (fn _ => (fn () => do_cancel thread, ~1)));
 
      val _ = do_markup rng Markup.finished;
+
      val _ = Future.fork (fn () => markup_worker markup_id ());
-     val _ = Future.fork (fn () =>
-       let
-        fun do_hilight_work () =
-          let
-            val _ =
-              case !last_click of NONE => clear_hilight (SOME markup_id)
-                | SOME rng => set_hilight (SOME markup_id) rng;
-            val _ = OS.Process.sleep (seconds 0.1)
-          in do_hilight_work () end
-        in do_hilight_work () end)
 
-
+     fun do_hilight_work () =
+           case !last_click of NONE => clear_hilight (SOME markup_id)
+             | SOME rng => set_hilight (SOME markup_id) rng;
 
      val st' =
      let
@@ -555,15 +548,21 @@ in
 
         fun main_loop () =
           let
-            val (f,trans_id) = Synchronized.guarded_access ident (fn e as {restart,next_state,...} =>
+            val r = Synchronized.timed_access ident (fn _ => SOME (seconds 0.1)) (fn e as {restart,next_state,...} =>
               if is_restarting e andalso is_none next_state then
               SOME ((fst restart, #trans_id e), restart_state (snd restart) e) else NONE);
-            val _ = f ();
-            val _ = clear_running (SOME markup_id);
-            val thread = do_fork (trans_id + 1);
-            val _ = Synchronized.change ident (map_restart (fn _ => (fn () => do_cancel thread, ~1)))
-          in main_loop () end
-      in main_loop () end)
+            val _ = OS.Process.sleep (seconds 0.1);
+            val _ = do_hilight_work ();
+            in case r of NONE => main_loop ()
+            | SOME (f,trans_id) =>
+              let
+                val _ = f ();
+                val _ = clear_running (SOME markup_id);
+                val thread = do_fork (trans_id + 1);
+                val _ = Synchronized.change ident (map_restart (fn _ => (fn () => do_cancel thread, ~1)))
+              in main_loop () end
+           end;
+       in main_loop () end)
 
    in st' end) st)
 end
