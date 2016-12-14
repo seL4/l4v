@@ -294,6 +294,11 @@ fun resolve_ruleset_tac ctxt rs used_rules_ref n t =
     | _ => FIRST (map (fn rule => fn thm => append_rule rule (resolve_tac ctxt [rule] n thm))
                       (map snd (#3 (#rules rs)) @ #splits rs)) t end;
 
+fun resolve_ruleset_ctac rs used_rules_ref n =
+  (Apply_Debug.break (SOME "wp") CONTEXT_THEN
+  (Context_Tacticals.SOME_CONTEXT_TACTIC (fn ctxt => resolve_ruleset_tac ctxt rs used_rules_ref n)))
+
+
 fun pretty_rule ctxt rule =
   Pretty.big_list (Thm.get_name_hint rule) [Thm.pretty_thm ctxt rule]
            |> Pretty.string_of;
@@ -328,7 +333,7 @@ fun warn_unsafe_thms unsafe_thms n ctxt t =
      then "Unsafe theorems that could be used: " ^ commas_quote unsafe_thm_names |> warning
      else () end;
 
-fun apply_rules_tac_n trace ctxt extras extras_ref n =
+fun apply_rules_ctac_n trace extras extras_ref n = (fn (ctxt,t) =>
 let
   val rules = get_rules ctxt extras;
   val used_rules = Unsynchronized.ref [] : thm list Unsynchronized.ref
@@ -390,11 +395,11 @@ fun apply_rules_args trace xs =
   in
     if_colon
     (sections (wp_modifiers extras_ref) >>
-      K (fn ctxt => SIMPLE_METHOD (apply_rules_tac trace ctxt [] extras_ref)))
+      K (fn ctxt => SIMPLE_METHOD (Method.NO_CONTEXT_TACTIC ctxt (apply_rules_ctac trace [] extras_ref))))
     (Attrib.thms >> curry (fn (extras, ctxt) =>
-      Method.SIMPLE_METHOD (
-        apply_rules_tac trace ctxt extras extras_ref
-      )
+      SIMPLE_METHOD (Method.NO_CONTEXT_TACTIC ctxt (
+        apply_rules_ctac trace extras extras_ref
+      ))
     ))
   end xs;
 

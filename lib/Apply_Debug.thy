@@ -16,9 +16,57 @@ theory Apply_Debug
 begin
 
 ML \<open>
+infix 1 CONTEXT_THEN;
+infix 0 CONTEXT_THEN_ELSE;
+
+signature CONTEXT_TACTICALS =
+sig
+val CONTEXT_REPEAT_DETERM_N : int -> context_tactic -> context_tactic;
+val CONTEXT_REPEAT_DETERM : context_tactic -> context_tactic;
+val CONTEXT_CHANGED : context_tactic -> context_tactic;
+val CONTEXT_THEN : context_tactic * context_tactic -> context_tactic;
+val CONTEXT_THEN_ELSE: context_tactic * (context_tactic * context_tactic) -> context_tactic;
+val SOME_CONTEXT_TACTIC: (Proof.context -> tactic) -> context_tactic;
+end
+
+structure Context_Tacticals : CONTEXT_TACTICALS =
+struct
+
+fun make_tactic r = (fn st => Seq.make_results (Seq.make (fn () => r st))) : context_tactic;
+
+fun CONTEXT_REPEAT_DETERM_N n tac =
+  let
+    fun drep 0 st = SOME (st, Seq.empty)
+      | drep n st =
+          (case Seq.pull (Seq.filter_results (tac st)) of
+            NONE => SOME(st, Seq.empty)
+          | SOME (st', _) => drep (n - 1) st');
+  in make_tactic (drep n) end;
+
+val CONTEXT_REPEAT_DETERM = CONTEXT_REPEAT_DETERM_N ~1;
+
+fun CONTEXT_CHANGED tac (ctxt,st) =
+  let fun diff (_, st') = not (Thm.eq_thm (st, st'));
+  in Seq.make_results (Seq.filter diff (Seq.filter_results (tac (ctxt, st)))) end;
+
+fun ((tac1 : context_tactic) CONTEXT_THEN (tac2 : context_tactic)) = (fn st =>
+  Seq.maps_results tac2 (tac1 st)) : context_tactic;
+
+fun (tac CONTEXT_THEN_ELSE (tac1, tac2)) st =
+  (case Seq.pull (Seq.filter_results (tac st)) of
+    NONE => tac2 st  (*failed; try tactic 2*)
+  | some => Seq.maps tac1 (Seq.make (fn () => some)));  (*succeeded; use tactic 1*)
+
+fun SOME_CONTEXT_TACTIC (tac : Proof.context -> tactic) =
+  (fn (ctxt,thm) => Method.CONTEXT ctxt (tac ctxt thm)) : context_tactic
+
+end
+
+open Context_Tacticals;
+
 signature APPLY_DEBUG =
 sig
-val break : string option -> Proof.context -> Method.method;
+val break : string option -> context_tactic;
 val apply_debug : string list -> Method.text_range -> Proof.state -> Proof.state;
 val continue : string list -> int option -> (context_state -> context_state option) option -> Proof.state -> Proof.state;
 val finish : Proof.state -> Proof.state;
@@ -308,8 +356,8 @@ let
     if not (null (#prev_results e)) then NONE else
     if is_restarting e then NONE (* TODO, what to do if we're already restarting? *)
     else if length (#results e) > n then
-     (if st_eq (#post_state (nth (rev (#results e)) n)) st then SOME (false, I)
-     else SOME (true, map_restart (apsnd (fn _ => n))))
+     (*(if st_eq (#post_state (nth (rev (#results e)) n)) st then SOME (false, I)
+     else*) SOME (true, map_restart (apsnd (fn _ => n)))
     else SOME (false, I))
 
 
@@ -387,8 +435,9 @@ fun set_can_break b ctxt = if get_can_break ctxt = b then ctxt else
 fun has_break_tag (SOME tag) tags = member (op =) tags tag
   | has_break_tag NONE _ = true;
 
-fun break tag _ = (fn _ => (fn (ctxt,thm) =>
+fun break tag = (fn (ctxt,thm) =>
 if not (get_can_break ctxt) orelse not (has_break_tag tag (get_break_tags ctxt))
+   orelse Method.detect_closure_state thm
     then Seq.make_results (Seq.single (ctxt,thm)) else
   let
     val id = get_debug_ident ctxt;
@@ -397,10 +446,10 @@ if not (get_can_break ctxt) orelse not (has_break_tag tag (get_break_tags ctxt))
     val st' = Seq.make (fn () =>
      SOME (pop_state id (ctxt',thm),Seq.empty))
 
-  in Seq.make_results st' end)) : Method.method
+  in Seq.make_results st' end) : context_tactic
 
 val _ = Context.>> (Context.map_theory (Method.setup @{binding break}
-  (Scan.lift (Scan.option Parse.string) >> break) ""))
+  (Scan.lift (Scan.option Parse.string) >> (fn tag => fn _ => fn _ => break tag)) ""))
 
 fun map_state f state =
      let

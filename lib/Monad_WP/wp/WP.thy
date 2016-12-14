@@ -12,6 +12,7 @@ theory WP
 imports
   "~~/src/HOL/Main"
   "~~/src/HOL/Eisbach/Eisbach_Tools"
+  "../../Apply_Debug"
 begin
 
 definition
