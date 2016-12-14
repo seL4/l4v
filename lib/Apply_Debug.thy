@@ -20,7 +20,7 @@ signature APPLY_DEBUG =
 sig
 val break : string option -> Proof.context -> Method.method;
 val apply_debug : string list -> Method.text_range -> Proof.state -> Proof.state;
-val continue : int option -> (context_state -> context_state option) option -> Proof.state -> Proof.state;
+val continue : string list -> int option -> (context_state -> context_state option) option -> Proof.state -> Proof.state;
 val finish : Proof.state -> Proof.state;
 
 end
@@ -356,18 +356,22 @@ structure Debug_Data = Proof_Data
   type T = debug_state Synchronized.var option  (* handle on active proof thread *) *
   int * (* continuation counter *)
   bool * (* currently interactive context *)
-  string list (* tags to break on *)
-  fun init _ : T = (NONE,~1, false, [])
+  string list * (* tags to break on *)
+  string option (* latest breakpoint tag *)
+  fun init _ : T = (NONE,~1, false, [], NONE)
 );
 
-fun set_debug_ident ident = Debug_Data.map  (@{apply 4 (1)} (fn _ => SOME ident))
+fun set_debug_ident ident = Debug_Data.map  (@{apply 5 (1)} (fn _ => SOME ident))
 val get_debug_ident = the o #1 o Debug_Data.get
 
-fun set_break_tags tags = Debug_Data.map (@{apply 4 (4)} (fn _ => tags))
+fun set_break_tags tags = Debug_Data.map (@{apply 5 (4)} (fn _ => tags))
 val get_break_tags = #4 o Debug_Data.get;
 
+fun set_last_tag tags = Debug_Data.map (@{apply 5 (5)} (fn _ => tags))
+val get_last_tag = #5 o Debug_Data.get;
+
 val is_debug_ctxt = is_some o #1 o Debug_Data.get;
-val clear_debug = Debug_Data.map (fn _ => (NONE,~1,false, []));
+val clear_debug = Debug_Data.map (fn _ => (NONE,~1,false, [], NONE));
 
 
 val get_continuation = #2 o Debug_Data.get;
@@ -375,22 +379,23 @@ val get_can_break = #3 o Debug_Data.get;
 
 (* Maintain pointer equality if possible *)
 fun set_continuation i ctxt = if get_continuation ctxt = i then ctxt else
-  Debug_Data.map (@{apply 4 (2)} (fn _ => i)) ctxt;
+  Debug_Data.map (@{apply 5 (2)} (fn _ => i)) ctxt;
 
 fun set_can_break b ctxt = if get_can_break ctxt = b then ctxt else
-  Debug_Data.map (@{apply 4 (3)} (fn _ => b)) ctxt;
+  Debug_Data.map (@{apply 5 (3)} (fn _ => b)) ctxt;
 
-fun has_break_tag (SOME tag) ctxt = member (op =) (get_break_tags ctxt) tag
+fun has_break_tag (SOME tag) tags = member (op =) tags tag
   | has_break_tag NONE _ = true;
 
-fun break tag _ = (fn _ => (fn (st as (ctxt,_)) =>
-if not (get_can_break ctxt) orelse not (has_break_tag tag ctxt) then Seq.make_results (Seq.single st) else
+fun break tag _ = (fn _ => (fn (ctxt,thm) =>
+if not (get_can_break ctxt) orelse not (has_break_tag tag (get_break_tags ctxt))
+    then Seq.make_results (Seq.single (ctxt,thm)) else
   let
     val id = get_debug_ident ctxt;
-
+    val ctxt' = set_last_tag tag ctxt;
 
     val st' = Seq.make (fn () =>
-     SOME (pop_state id st,Seq.empty))
+     SOME (pop_state id (ctxt',thm),Seq.empty))
 
   in Seq.make_results st' end)) : Method.method
 
@@ -522,10 +527,12 @@ fun apply_debug tags (m', rng)  =
 
      in do_apply pos rng tags m end;
 
+val parse_tags = Scan.optional (Args.parens (Args.$$$ "tags" |-- Parse.enum1 "," Parse.string)) []
+
 val _ =
   Outer_Syntax.command @{command_keyword apply_debug} "initial goal refinement step (unstructured)"
     (Scan.trace
-      (Scan.optional (Args.parens (Args.$$$ "tags" |-- Parse.enum1 "," Parse.string)) [] --  Method.parse) >>
+      (parse_tags --  Method.parse) >>
       (fn ((tags, (m,_)),toks) => Toplevel.proof (apply_debug tags (m,Token.range_of toks))));
 
 val finish = map_state (fn (ctxt,_) =>
@@ -535,8 +542,7 @@ val finish = map_state (fn (ctxt,_) =>
       in f |> poke_error |> apfst clear_debug end)
 
 
-
-fun continue i_opt m_opt =
+fun continue tags i_opt m_opt =
 (map_state (fn (ctxt,thm) =>
       let
         val ctxt = set_can_break true ctxt;
@@ -553,7 +559,10 @@ fun continue i_opt m_opt =
 
         val _ = nth_pre_result id start_cont; (* block until we've hit the start of this continuation *)
 
-        fun get_final n st  = case (i_opt,m_opt) of
+        fun get_final n (st as (ctxt,_))  =
+        if not (has_break_tag (get_last_tag ctxt) (get_break_tags ctxt)
+                orelse has_break_tag (get_last_tag ctxt) tags) then NONE else
+         case (i_opt,m_opt) of
           (SOME i,NONE) => if i < 1 then error "Can only continue a positive number of breakpoints" else
             if n = start_cont + i then SOME st else NONE
          | (NONE, SOME m) => m st
@@ -586,7 +595,7 @@ fun continue i_opt m_opt =
 
       in st'' end))
 
-fun continue_cmd i_opt m_opt state =
+fun continue_cmd tags i_opt m_opt state =
 let
   val {context,...} = Proof.simple_goal state;
   val check = Method.map_source (Method.method_closure context)
@@ -598,16 +607,16 @@ let
 
   val i_opt' = case (i_opt,m_opt) of (NONE,NONE) => SOME 1 | _ => i_opt;
 
-in continue i_opt' (Option.map eval_method m_opt') state end
+in continue tags i_opt' (Option.map eval_method m_opt') state end
 
 val _ =
   Outer_Syntax.command @{command_keyword continue} "step to next breakpoint"
-  (Scan.option Parse.int -- Scan.option Method.parse >> (fn (i_opt,m_opt) =>
-    (Toplevel.proof (continue_cmd i_opt m_opt))))
+  (parse_tags -- Scan.option Parse.int -- Scan.option Method.parse >> (fn ((tags, i_opt),m_opt) =>
+    (Toplevel.proof (continue_cmd tags i_opt m_opt))))
 
 val _ =
   Outer_Syntax.command @{command_keyword finish} "finish debugging"
-  (Scan.succeed (Toplevel.proof (continue NONE (SOME (fn _ => NONE)))))
+  (Scan.succeed (Toplevel.proof (continue [] NONE (SOME (fn _ => NONE)))))
 
 val _ =
   Query_Operation.register {name = "print_state", pri = Task_Queue.urgent_pri}
@@ -713,8 +722,11 @@ lemma
     continue
     finish
   *)
-  apply_debug (((rule assms,break, rule assms, break, rule assms, break, rule assms, break, rule assms)); fail)
-    continue (match conclusion in C \<Rightarrow> \<open>-\<close>)
+  apply_debug (tags "baz","foo")
+      (((rule assms,break, rule assms, break "foo", rule assms, break, rule assms, break, rule assms)); fail)
+    continue (tags "foo")
+    continue 4
+    finish
     oops
     (*
     continue
