@@ -69,14 +69,14 @@ where
 
 definition get_master_pde :: "word32 \<Rightarrow> (pde,'z::state_ext)s_monad"
   where "get_master_pde ptr \<equiv> do
-    pde \<leftarrow> (get_pde (ptr && ~~ mask 6));
+    pde \<leftarrow> (get_pde (ptr && ~~ mask 7));
     (case pde of SuperSectionPDE _ _ _ \<Rightarrow> return pde
     | _ \<Rightarrow> get_pde ptr)
   od"
 
 definition get_master_pte :: "word32 \<Rightarrow> (pte, 'z::state_ext)s_monad"
   where "get_master_pte ptr \<equiv> do
-    pte \<leftarrow> (get_pte (ptr && ~~ mask 6));
+    pte \<leftarrow> (get_pte (ptr && ~~ mask 7));
     (case pte of LargePagePTE _ _ _ \<Rightarrow> return pte
     | _ \<Rightarrow> get_pte ptr)
   od"
@@ -709,7 +709,7 @@ unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightar
             throw_on_false undefined $
                 check_mapping_pptr pptr pgsz (Inl p);
             liftE $ do
-                assert $ p && mask 6 = 0;
+                assert $ p && mask 7 = 0;
                 slots \<leftarrow> return (map (\<lambda>x. x + p) largePagePTE_offsets);
                 mapM (swp store_pte InvalidPTE) slots;
                 do_machine_op $ cleanCacheRange_PoU (hd slots) (last_byte_pte (last slots))
@@ -730,7 +730,7 @@ unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightar
             throw_on_false undefined $
                 check_mapping_pptr pptr pgsz (Inr p);
             liftE $ do
-                assert $ p && mask 6 = 0;
+                assert $ p && mask 7 = 0;
                 slots \<leftarrow> return (map (\<lambda>x. x + p) superSectionPDE_offsets);
                 mapM (swp store_pde InvalidPDE) slots;
                 do_machine_op $ cleanCacheRange_PoU (hd slots) (last_byte_pde (last slots))
