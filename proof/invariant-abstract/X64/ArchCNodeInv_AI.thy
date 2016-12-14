@@ -112,7 +112,7 @@ lemma same_object_as_def2:
                                 \<and> \<not> cp = NullCap \<and> \<not> is_untyped_cap cp
                                 \<and> \<not> is_zombie cp
                                 \<and> (is_arch_cap cp \<longrightarrow>
-                                     (case the_arch_cap cp of PageCap x rs sz v
+                                     (case the_arch_cap cp of PageCap d x rs tp sz v
                                               \<Rightarrow> x \<le> x + 2 ^ pageBitsForSize sz - 1
                                           | _ \<Rightarrow> True)))"
   apply (simp add: same_object_as_def is_cap_simps split: cap.split)

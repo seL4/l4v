@@ -57,23 +57,27 @@ where
     is_cnode_cap cap
      \<or> (is_arch_cap cap
           \<and> (is_pt_cap cap \<longrightarrow> cap_asid cap \<noteq> None)
-          \<and> (is_pd_cap cap \<longrightarrow> cap_asid cap \<noteq> None))"
+          \<and> (is_pd_cap cap \<longrightarrow> cap_asid cap \<noteq> None)
+          \<and> (is_pdpt_cap cap \<longrightarrow> cap_asid cap \<noteq> None)
+          \<and> (is_pml4_cap cap \<longrightarrow> cap_asid cap \<noteq> None))"
 
 
 definition (* arch specific *)
-  "pt_pd_asid cap \<equiv> case cap of
+  "vspace_asid cap \<equiv> case cap of
     ArchObjectCap (PageTableCap _ (Some (asid, _))) \<Rightarrow> Some asid
-  | ArchObjectCap (PageDirectoryCap _ (Some asid)) \<Rightarrow> Some asid
+  | ArchObjectCap (PageDirectoryCap _ (Some (asid, _))) \<Rightarrow> Some asid
+  | ArchObjectCap (PDPointerTableCap _ (Some (asid, _))) \<Rightarrow> Some asid
+  | ArchObjectCap (PML4Cap _ (Some asid)) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
 
-lemmas pt_pd_asid_simps [simp] = (* arch specific *)
-  pt_pd_asid_def [split_simps cap.split arch_cap.split option.split prod.split]
+lemmas vspace_asid_simps [simp] = (* arch specific *)
+  vspace_asid_def [split_simps cap.split arch_cap.split option.split prod.split]
 
 lemma checked_insert_is_derived: (* arch specific *)
   "\<lbrakk> same_object_as new_cap old_cap; is_cnode_or_valid_arch new_cap;
      obj_refs new_cap = obj_refs old_cap
          \<longrightarrow> table_cap_ref old_cap = table_cap_ref new_cap
-            \<and> pt_pd_asid old_cap = pt_pd_asid new_cap\<rbrakk>
+            \<and> vspace_asid old_cap = vspace_asid new_cap\<rbrakk>
      \<Longrightarrow> is_derived m slot new_cap old_cap"
   apply (cases slot)
   apply (frule same_object_as_cap_master)
@@ -82,17 +86,18 @@ lemma checked_insert_is_derived: (* arch specific *)
   apply (frule same_master_cap_same_types)
   apply (simp add: is_derived_def)
   apply clarsimp
-  apply (auto simp: is_cap_simps cap_master_cap_def
+  by (auto simp: is_cap_simps cap_master_cap_def
                     is_cnode_or_valid_arch_def vs_cap_ref_def
-                    table_cap_ref_def pt_pd_asid_def up_ucast_inj_eq
+                    table_cap_ref_def vspace_asid_def up_ucast_inj_eq
              split: cap.split_asm arch_cap.split_asm
                     option.split_asm)[1]
-  done
 
 lemma is_cnode_or_valid_arch_cap_asid: (* arch specific *)
   "is_cnode_or_valid_arch cap
        \<Longrightarrow> (is_pt_cap cap \<longrightarrow> cap_asid cap \<noteq> None)
-             \<and> (is_pd_cap cap \<longrightarrow> cap_asid cap \<noteq> None)"
+             \<and> (is_pd_cap cap \<longrightarrow> cap_asid cap \<noteq> None)
+             \<and> (is_pdpt_cap cap \<longrightarrow> cap_asid cap \<noteq> None)
+             \<and> (is_pml4_cap cap \<longrightarrow> cap_asid cap \<noteq> None)"
   by (auto simp add: is_cnode_or_valid_arch_def
                      is_cap_simps)
 
@@ -100,11 +105,11 @@ lemma checked_insert_tcb_invs[wp]: (* arch specific *)
   "\<lbrace>invs and cte_wp_at (\<lambda>c. c = cap.NullCap) (target, ref)
         and K (is_cnode_or_valid_arch new_cap) and valid_cap new_cap
         and tcb_cap_valid new_cap (target, ref)
-        and K (is_pt_cap new_cap \<or> is_pd_cap new_cap
+        and K (is_pt_cap new_cap \<or> is_pd_cap new_cap \<or> is_pdpt_cap new_cap \<or> is_pml4_cap new_cap
                          \<longrightarrow> cap_asid new_cap \<noteq> None)
         and (cte_wp_at (\<lambda>c. obj_refs c = obj_refs new_cap
                               \<longrightarrow> table_cap_ref c = table_cap_ref new_cap \<and>
-                                 pt_pd_asid c = pt_pd_asid new_cap) src_slot)\<rbrace>
+                                 vspace_asid c = vspace_asid new_cap) src_slot)\<rbrace>
      check_cap_at new_cap src_slot
       (check_cap_at (cap.ThreadCap target) slot
        (cap_insert new_cap src_slot (target, ref))) \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -170,15 +175,15 @@ by (unfold_locales; fact Tcb_AI_asms)
 lemma use_no_cap_to_obj_asid_strg: (* arch specific *)
   "(cte_at p s \<and> no_cap_to_obj_dr_emp cap s \<and> valid_cap cap s \<and> invs s)
          \<longrightarrow> cte_wp_at (\<lambda>c. obj_refs c = obj_refs cap
-                \<longrightarrow> table_cap_ref c = table_cap_ref cap \<and> pt_pd_asid c = pt_pd_asid cap) p s"
+                \<longrightarrow> table_cap_ref c = table_cap_ref cap \<and> vspace_asid c = vspace_asid cap) p s"
   apply (clarsimp simp: cte_wp_at_caps_of_state
                      no_cap_to_obj_with_diff_ref_def
            simp del: split_paired_All)
   apply (frule caps_of_state_valid_cap, fastforce)
   apply (erule allE)+
   apply (erule (1) impE)+
-  apply (simp add: table_cap_ref_def pt_pd_asid_def split: cap.splits arch_cap.splits option.splits prod.splits)
-  apply (fastforce simp: table_cap_ref_def valid_cap_simps elim!: asid_low_high_bits)+
+  apply (simp add: table_cap_ref_def vspace_asid_def split: cap.splits arch_cap.splits option.splits prod.splits)
+  apply (fastforce simp: table_cap_ref_def valid_cap_simps wellformed_mapdata_def elim!: asid_low_high_bits)+
   done
 
 lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
@@ -195,7 +200,6 @@ lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
               | rule obj_ref_none_no_asid)+
   done
 
-
 lemma tc_invs[Tcb_AI_asms]: 
   "\<lbrace>invs and tcb_at a
        and (case_option \<top> (valid_cap o fst) e)
@@ -207,6 +211,10 @@ lemma tc_invs[Tcb_AI_asms]:
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) e)
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) f)
        and (case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
+       (* only set prio \<le> mcp *)
+       and (\<lambda>s. case_option True (\<lambda>pr. mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) (cur_thread s) s) pr)
+       (* only set mcp \<le> prev_mcp *)
+       and (\<lambda>s. case_option True (\<lambda>mcp. mcpriority_tcb_at (\<lambda>m. mcp \<le> m) (cur_thread s) s) mcp)
        and K (case_option True (is_cnode_cap o fst) e)
        and K (case_option True (is_valid_vtable_root o fst) f)
        and K (case_option True (\<lambda>v. case_option True
@@ -214,10 +222,10 @@ lemma tc_invs[Tcb_AI_asms]:
                              and is_arch_cap and is_cnode_or_valid_arch)
                                 o fst) (snd v)) g)
        and K (case_option True (\<lambda>bl. length bl = word_bits) b)\<rbrace>
-      invoke_tcb (ThreadControl a sl b pr e f g)
+      invoke_tcb (ThreadControl a sl b mcp pr e f g)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_gen_asm)+
-  apply (simp add: split_def cong: option.case_cong)
+  apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
   apply (rule hoare_vcg_precond_imp)
    apply wp
       apply ((simp only: simp_thms
@@ -250,12 +258,14 @@ lemma tc_invs[Tcb_AI_asms]:
         | strengthen use_no_cap_to_obj_asid_strg
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+)
-  apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
-                        is_cap_simps is_valid_vtable_root_def
+  apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified] is_nondevice_page_cap_arch_def
+                        is_cap_simps is_valid_vtable_root_def is_nondevice_page_cap_simps
                         is_cnode_or_valid_arch_def tcb_cap_valid_def
                         invs_valid_objs cap_asid_def vs_cap_ref_def
-                 split: option.split_asm
-       | rule conjI)+
+                 split: option.split_asm )+
+      apply (simp add: case_bool_If valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
+                       is_nondevice_page_cap_arch_def
+                split: arch_cap.splits if_splits)+
   done
 
 
@@ -265,7 +275,7 @@ lemma check_valid_ipc_buffer_inv: (* arch_specific *)
              cong: cap.case_cong arch_cap.case_cong
              split del: split_if)
   apply (rule hoare_pre)
-   apply (wp | simp split del: split_if | wpcw)+
+   apply (wp | simp add: whenE_def split del: split_if | wpcw)+
   done
 
 lemma check_valid_ipc_buffer_wp[Tcb_AI_asms]:
@@ -279,7 +289,7 @@ lemma check_valid_ipc_buffer_wp[Tcb_AI_asms]:
              cong: cap.case_cong arch_cap.case_cong
              split del: split_if)
   apply (rule hoare_pre)
-   apply (wp | simp split del: split_if | wpc)+
+   apply (wp | simp add: whenE_def split del: split_if | wpc)+
   apply (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def
                         valid_ipc_buffer_cap_def)
   done
@@ -317,9 +327,9 @@ lemma no_cap_to_obj_with_diff_ref_update_cap_data[Tcb_AI_asms]:
    apply (simp add: no_cap_to_obj_with_diff_ref_def
                     update_cap_objrefs)
   apply (clarsimp simp: update_cap_data_closedform
-                        table_cap_ref_def
+                        table_cap_ref_def Let_def
                         arch_update_cap_data_def
-                 split: cap.split)
+                 split: cap.split arch_cap.splits)
   apply simp
   done
 
@@ -342,7 +352,7 @@ lemma update_cap_valid[Tcb_AI_asms]:
    apply (simp add: word_bits_def)
   apply (rename_tac arch_cap)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
-  apply (case_tac arch_cap, simp_all add: acap_rights_update_def
+  apply (case_tac arch_cap, simp_all add: acap_rights_update_def Let_def
                                      split: option.splits prod.splits)
   done
 
