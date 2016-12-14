@@ -296,7 +296,7 @@ fun resolve_ruleset_tac ctxt rs used_rules_ref n t =
 
 fun resolve_ruleset_ctac rs used_rules_ref n =
   (Apply_Debug.break (SOME "wp") CONTEXT_THEN
-  (Context_Tacticals.SOME_CONTEXT_TACTIC (fn ctxt => resolve_ruleset_tac ctxt rs used_rules_ref n)))
+  (Context_Tacticals.SOME_CONTEXT_TACTIC (fn ctxt => resolve_ruleset_tac ctxt (rs ctxt) used_rules_ref n)))
 
 
 fun pretty_rule ctxt rule =
@@ -333,9 +333,11 @@ fun warn_unsafe_thms unsafe_thms n ctxt t =
      then "Unsafe theorems that could be used: " ^ commas_quote unsafe_thm_names |> warning
      else () end;
 
+(* allow ad-hoc modification of wp rules by breakpoints *)
 fun apply_rules_ctac_n trace extras extras_ref n = (fn (ctxt,t) =>
 let
-  val rules = get_rules ctxt extras;
+  val static_rules = get_rules ctxt extras;
+  fun rules ctxt' = if pointer_eq (ctxt,ctxt') then static_rules else get_rules ctxt' extras;
   val used_rules = Unsynchronized.ref [] : thm list Unsynchronized.ref
   fun has_vars st = Term.exists_subterm Term.is_Var (Thm.concl_of st)
   val wp_pre_tac = COND has_vars all_tac (TRY (resolve_tac ctxt (#wp_pre rules) 1))
