@@ -1054,7 +1054,7 @@ where
 
 
 primrec
-  thread_control_target :: "tcb_invocation \<Rightarrow> word32"
+  thread_control_target :: "tcb_invocation \<Rightarrow> machine_word"
 where
  "thread_control_target (tcb_invocation.ThreadControl a b c d e f g h) = a"
 
