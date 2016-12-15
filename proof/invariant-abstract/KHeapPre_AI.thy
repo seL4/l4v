@@ -113,21 +113,6 @@ locale arch_only_obj_pred =
 
 (**)
 
-definition non_vspace_obj :: "kernel_object \<Rightarrow> bool" where
-  "non_vspace_obj \<equiv> \<lambda>ko. \<forall>ako. ko \<noteq> ArchObj ako" (* should exclude vcpu *)
-
-lemma non_vspace_objs[intro]:
-  "non_vspace_obj (Endpoint ep)"
-  "non_vspace_obj (CNode sz cnode_contents)"
-  "non_vspace_obj (TCB tcb)"
-  "non_vspace_obj (Notification notification)"
-  by (auto simp add: non_vspace_obj_def)
-
-definition vspace_obj_pred :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool" where
-  "vspace_obj_pred P \<equiv>
-    \<forall>ko ko'. non_vspace_obj ko \<longrightarrow> non_vspace_obj ko' \<longrightarrow>
-      P ko = P ko'"
-
 (*
 lemma "arch_obj_pred P \<Longrightarrow> vspace_obj_pred P"
   apply (clarsimp simp add: arch_obj_pred_def vspace_obj_pred_def)
@@ -136,57 +121,9 @@ lemma "arch_obj_pred P \<Longrightarrow> vspace_obj_pred P"
   apply
 *)
 
-
-lemma vspace_obj_predE:
-  "\<lbrakk>vspace_obj_pred P; non_vspace_obj ko; non_vspace_obj ko'\<rbrakk> \<Longrightarrow> P ko = P ko'"
-  apply (unfold vspace_obj_pred_def)
-  apply (erule allE[where ?x="ko"])
-  apply (erule allE[where ?x="ko'"])
-  by blast
-
-lemmas vspace_obj_pred_defs = non_vspace_obj_def vspace_obj_pred_def
-
-lemma vspace_obj_pred_a_type[intro, simp]: "vspace_obj_pred (\<lambda>ko. a_type ko = AArch T)"
-  by (auto simp add: vspace_obj_pred_defs a_type_def split: kernel_object.splits)
-
-lemma
-  vspace_obj_pred_arch_obj_l[intro, simp]: "vspace_obj_pred (\<lambda>ko. ArchObj ako = ko)" and
-  vspace_obj_pred_arch_obj_r[intro, simp]: "vspace_obj_pred (\<lambda>ko. ko = ArchObj ako)"
-  by (auto simp add: vspace_obj_pred_defs)
-
-lemma vspace_obj_pred_fun_lift: "vspace_obj_pred (\<lambda>ko. F (arch_obj_fun_lift P N ko))"
-  by (simp add: vspace_obj_pred_defs)
-
-lemmas vspace_obj_pred_fun_lift_id[simp]
-  = vspace_obj_pred_fun_lift[where F=id, simplified]
-
-lemmas vspace_obj_pred_fun_lift_k[intro]
-  = vspace_obj_pred_fun_lift[where F="K R" for R, simplified]
-
-lemmas vspace_obj_pred_fun_lift_el[simp]
-  = vspace_obj_pred_fun_lift[where F="\<lambda> S. x \<in> S" for x, simplified]
-
-lemma vspace_obj_pred_const_conjI[intro]:
-  "vspace_obj_pred P \<Longrightarrow>
-    vspace_obj_pred P' \<Longrightarrow>
-    vspace_obj_pred (\<lambda>ko. P ko \<and> P' ko)"
-  apply (simp only: vspace_obj_pred_def)
-  apply blast
-  done
-
-lemma vspace_obj_pred_fI:
-  "(\<And>x. vspace_obj_pred (P x)) \<Longrightarrow> vspace_obj_pred (\<lambda>ko. f (\<lambda>x :: 'a :: type. P x ko))"
-  apply (simp only: vspace_obj_pred_def)
-  apply (intro allI impI)
-  apply (rule arg_cong[where f=f])
-  by blast
-
-declare
-  vspace_obj_pred_fI[where f=All, intro]
-  vspace_obj_pred_fI[where f=Ex, intro]
-
 locale vspace_only_obj_pred =
   fixes P :: "kernel_object \<Rightarrow> bool"
+  fixes vspace_obj_pred :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool"
   assumes vspace_only: "vspace_obj_pred P"
 
 (**)

@@ -18,6 +18,8 @@ requalify_consts
   valid_ao_at
   obj_is_device
   valid_vso_at
+  non_vspace_obj
+  vspace_obj_pred
 
 requalify_facts
   pspace_in_kernel_window_atyp_lift
@@ -34,6 +36,11 @@ requalify_facts
   valid_vso_at_lift_aobj_at
   valid_arch_state_lift_aobj_at
   in_user_frame_lift
+  in_user_frame_obj_pred_lift
+
+  non_vspace_objs
+  vspace_obj_predE
+  vspace_pred_imp
 
   in_user_frame_obj_upd
   in_device_frame_obj_upd
@@ -48,6 +55,7 @@ end
 lemmas cap_is_device_obj_is_device[simp] = cap_is_device_obj_is_device
 lemmas storeWord_device_state_hoare[wp] = storeWord_device_state_inv
 
+declare non_vspace_objs[intro]
 
 context
   notes get_object_wp [wp]
@@ -1323,17 +1331,33 @@ lemma set_object_memory[wp]:
   apply wp
   by simp
 
+locale non_aobj_op = fixes f
+  assumes aobj_at: "\<And>P P' p. arch_obj_pred P' \<Longrightarrow>
+                              \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>" and
+          arch_state[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
+
+context non_aobj_op begin
+
+lemma valid_arch_state[wp]:"\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+by (rule valid_arch_state_lift; wp aobj_at; simp)
+
+end
+
+
 (* ARMHYP try non_vspace version for now, assuming that these locales are used only for vspace properties *)
 locale non_vspace_op = fixes f
   assumes (*aobj_at: "\<And>P P' p. arch_obj_pred P' \<Longrightarrow>
                               \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>" and *)
           vsobj_at: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow>
                               \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>" and
-          arch_state[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
-begin
+          arch_state'[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
 
-lemma valid_arch_state[wp]:"\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift_aobj_at; wpsimp wp: aobj_at simp: obj_at_def)
+sublocale non_aobj_op < non_vspace_op
+apply (unfold_locales)
+apply (auto simp: vspace_pred_imp arch_state aobj_at)
+done
+
+context non_vspace_op begin
 
 lemma valid_vspace_obj[wp]:"\<lbrace>valid_vspace_objs\<rbrace> f \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
 by (rule valid_vspace_objs_lift_weak; wp vsobj_at; simp)
@@ -1359,36 +1383,53 @@ by (rule valid_ao_at_lift_aobj_at; wp aobj_at; simp)
 lemma valid_vso_at[wp]:"\<lbrace>valid_vso_at p\<rbrace> f \<lbrace>\<lambda>_. valid_vso_at p\<rbrace>"
 by (rule valid_vso_at_lift_aobj_at; wp vsobj_at; simp)
 
-lemma valid_arch_state[wp]:"\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-by (rule valid_arch_state_lift; wp vsobj_at; simp)
-
 lemma in_user_frame[wp]:"\<lbrace>in_user_frame p\<rbrace> f \<lbrace>\<lambda>_. in_user_frame p\<rbrace>"
-by (rule in_user_frame_lift; wp vsobj_at; simp)
+by (rule in_user_frame_obj_pred_lift; wp vsobj_at; simp)
 
 end
 
+locale non_mem_op =
+  fixes f
+  assumes memory[wp]: "\<And>P. \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
+
 (* non_vspace_op version *)
-locale non_vspace_non_mem_op = non_vspace_op f for f +
- assumes memory[wp]: "\<And>P. \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
+locale non_vspace_non_mem_op = non_vspace_op f + non_mem_op f for f
 begin
 
 lemma valid_machine_state[wp]: "\<lbrace>valid_machine_state\<rbrace> f \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
-by (rule valid_machine_state_lift[OF memory vsobj_at])
+unfolding valid_machine_state_def
+by (wp hoare_vcg_disj_lift hoare_vcg_all_lift vsobj_at memory)
 
 end
 
+
+locale non_aobj_non_mem_op = non_aobj_op f + non_mem_op f for f
+
+sublocale non_aobj_non_mem_op < non_vspace_non_mem_op ..
+
 (* non_vspace_op version *)
-locale non_vspace_non_cap_op = non_vspace_op f for f +
+
+locale non_cap_op =
+  fixes f
   assumes caps[wp]: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+
+locale non_vspace_non_cap_op = non_vspace_op f + non_cap_op f for f
 begin
 
 lemma valid_arch_caps[wp]: "\<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"
-  by (rule valid_arch_caps_lift_weak[OF arch_state vsobj_at caps])
+  by (rule valid_arch_caps_lift_weak[OF arch_state' vsobj_at caps])
 
 end
 
+locale non_aobj_non_cap_op = non_aobj_op f + non_cap_op f for f
+
+sublocale non_aobj_non_cap_op < non_vspace_non_cap_op ..
+
 (* non_vspace_op version *)
 locale non_vspace_non_cap_non_mem_op = non_vspace_non_mem_op f + non_vspace_non_cap_op f for f
+locale non_aobj_non_cap_non_mem_op = non_aobj_non_mem_op f + non_aobj_non_cap_op f for f
+
+sublocale non_aobj_non_cap_non_mem_op < non_vspace_non_cap_non_mem_op ..
 
 lemma shows
   sts_caps_of_state[wp]:
@@ -1417,21 +1458,21 @@ lemma
   apply (safe; erule rsubst[where P=P], rule cte_wp_caps_of_lift)
   by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
 
-interpretation
-   set_endpoint: non_vspace_non_cap_non_mem_op "set_endpoint p ep" +
-   set_notification: non_vspace_non_cap_non_mem_op "set_notification p ntfn" +
-   sts: non_vspace_non_cap_non_mem_op "set_thread_state p st" +
-   sbn: non_vspace_non_cap_non_mem_op "set_bound_notification p b" +
-   as_user: non_vspace_non_cap_non_mem_op "as_user p g" +
-   thread_set: non_vspace_non_mem_op "thread_set f p" +
-   set_cap: non_vspace_non_mem_op "set_cap cap p'"
+interpretation (* TODO: need to do this for vcpu-related functions in some arch-theory *)
+   set_endpoint: non_aobj_non_cap_non_mem_op "set_endpoint p ep" +
+   set_notification: non_aobj_non_cap_non_mem_op "set_notification p ntfn" +
+   sts: non_aobj_non_cap_non_mem_op "set_thread_state p st" +
+   sbn: non_aobj_non_cap_non_mem_op "set_bound_notification p b" +
+   as_user: non_aobj_non_cap_non_mem_op "as_user p g" +
+   thread_set: non_aobj_non_mem_op "thread_set f p" +
+   set_cap: non_aobj_non_mem_op "set_cap cap p'"
    apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
-  unfolding set_endpoint_def set_notification_def set_thread_state_def 
+  unfolding set_endpoint_def set_notification_def set_thread_state_def
             set_bound_notification_def thread_set_def set_cap_def[simplified split_def]
             as_user_def set_mrs_def
   apply -
-  apply (all \<open>(wp set_object_non_pagetable get_object_wp | wpc | simp split del: split_if)+\<close>)
-  by (fastforce simp: obj_at_def[abs_def] a_type_def 
+  apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: split_if)+\<close>)
+  by (fastforce simp: obj_at_def[abs_def] a_type_def
                split: Structures_A.kernel_object.splits)+
 
 interpretation

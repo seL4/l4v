@@ -629,10 +629,18 @@ definition
 where
   "valid_ao_at p \<equiv> \<lambda>s. \<exists>ao. ko_at (ArchObj ao) p s \<and> valid_arch_obj ao s"
 
+fun
+  is_vspace_typ :: "a_type \<Rightarrow> bool"
+where
+  "is_vspace_typ (AArch AVCPU) = False"
+| "is_vspace_typ (AArch  _)    = True"
+| "is_vspace_typ  _            = False"
+
 definition
   valid_vso_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_vso_at p \<equiv> \<lambda>s. \<exists>ao. ko_at (ArchObj ao) p s \<and> valid_vspace_obj ao s"
+  "valid_vso_at p \<equiv> \<lambda>s. \<exists>ao. ko_at (ArchObj ao) p s \<and> valid_vspace_obj ao s
+                                                     \<and> is_vspace_typ (AArch (aa_type ao))"
 
 definition
   "valid_pde_mappings pde \<equiv> case pde of
@@ -2458,6 +2466,29 @@ lemma hyp_sym_refs_ko_atD:
      (\<forall>(x, tp)\<in>hyp_refs_of ko.  obj_at (\<lambda>ko. (p, symreftype tp) \<in> hyp_refs_of ko) x s)"
   by (drule(1) hyp_sym_refs_obj_atD, simp)
 
+definition
+  "vspace_obj_fun_lift P F c \<equiv> case c of
+                                  ArchObj (VCPU vcpu) \<Rightarrow> F |
+                                  ArchObj ac \<Rightarrow> P ac       |
+                                           _ \<Rightarrow> F"
+lemma vspace_obj_fun_lift_expand[simp]:
+  "(vspace_obj_fun_lift (\<lambda> ako. case ako of
+                                ASIDPool pool \<Rightarrow> P_ASIDPool pool
+                              | PageTable pt \<Rightarrow> P_PageTable pt
+                              | PageDirectory pd \<Rightarrow> P_PageDirectory pd
+                              | DataPage dev s \<Rightarrow> P_DataPage dev s
+                              | VCPU v \<Rightarrow> P_VCPU v)
+                      F) = (\<lambda>ko.
+   (case ko of
+      ArchObj (ASIDPool pool) \<Rightarrow> P_ASIDPool pool
+    | ArchObj (PageTable pt) \<Rightarrow> P_PageTable pt
+    | ArchObj (PageDirectory pd) \<Rightarrow> P_PageDirectory pd
+    | ArchObj (DataPage dev s) \<Rightarrow> P_DataPage dev s
+    | ArchObj (VCPU v) \<Rightarrow> F
+    | _ \<Rightarrow> F))"
+  apply (rule ext)
+  apply (auto simp: vspace_obj_fun_lift_def split: kernel_object.split arch_kernel_obj.split)
+  done
 
 lemma state_hyp_refs_of_pspaceI:
   "\<lbrakk> P (state_hyp_refs_of s); kheap s = kheap s' \<rbrakk> \<Longrightarrow> P (state_hyp_refs_of s')"
