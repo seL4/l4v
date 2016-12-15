@@ -10,7 +10,7 @@
  *)
 
 theory Apply_Debug
-  imports Main "~~/src/HOL/Eisbach/Eisbach_Tools"
+  imports Apply_Trace "~~/src/HOL/Eisbach/Eisbach_Tools"
   keywords "apply_debug" :: "prf_script" % "proof" and
     "continue" :: prf_script % "proof" and  "finish" :: prf_script % "proof"
 begin
@@ -66,15 +66,19 @@ open Context_Tacticals;
 
 signature APPLY_DEBUG =
 sig
+type break_opts = { tags : string list, trace : (string * Position.T) option }
+
 val break : string option -> context_tactic;
-val apply_debug : string list -> Method.text_range -> Proof.state -> Proof.state;
-val continue : string list -> int option -> (context_state -> context_state option) option -> Proof.state -> Proof.state;
+val apply_debug : break_opts -> Method.text_range -> Proof.state -> Proof.state;
+val continue : break_opts -> int option -> (context_state -> context_state option) option -> Proof.state -> Proof.state;
 val finish : Proof.state -> Proof.state;
 
 end
 
 structure Apply_Debug : APPLY_DEBUG =
 struct
+type break_opts = { tags : string list, trace : (string * Position.T) option }
+
 fun do_markup range m = Output.report [Markup.markup (Markup.properties (Position.properties_of_range range) m) ""];
 
 type markup_queue = { cur : Position.range option, next : Position.range option, clear_cur : bool }
@@ -399,27 +403,30 @@ if is_finished_result id then peek_final_result id else
 
   in peek_final_result id end
 
+
+val no_break_opts = ({tags = [], trace = NONE} : break_opts)
+
 structure Debug_Data = Proof_Data
 (
   type T = debug_state Synchronized.var option  (* handle on active proof thread *) *
   int * (* continuation counter *)
   bool * (* currently interactive context *)
-  string list * (* tags to break on *)
+  break_opts * (* global break arguments *)
   string option (* latest breakpoint tag *)
-  fun init _ : T = (NONE,~1, false, [], NONE)
+  fun init _ : T = (NONE,~1, false, no_break_opts, NONE)
 );
 
 fun set_debug_ident ident = Debug_Data.map  (@{apply 5 (1)} (fn _ => SOME ident))
 val get_debug_ident = the o #1 o Debug_Data.get
 
-fun set_break_tags tags = Debug_Data.map (@{apply 5 (4)} (fn _ => tags))
-val get_break_tags = #4 o Debug_Data.get;
+fun set_break_opts opts = Debug_Data.map (@{apply 5 (4)} (fn _ => opts))
+val get_break_opts = #4 o Debug_Data.get;
 
 fun set_last_tag tags = Debug_Data.map (@{apply 5 (5)} (fn _ => tags))
 val get_last_tag = #5 o Debug_Data.get;
 
 val is_debug_ctxt = is_some o #1 o Debug_Data.get;
-val clear_debug = Debug_Data.map (fn _ => (NONE,~1,false, [], NONE));
+val clear_debug = Debug_Data.map (fn _ => (NONE,~1,false, no_break_opts, NONE));
 
 
 val get_continuation = #2 o Debug_Data.get;
@@ -436,7 +443,7 @@ fun has_break_tag (SOME tag) tags = member (op =) tags tag
   | has_break_tag NONE _ = true;
 
 fun break tag = (fn (ctxt,thm) =>
-if not (get_can_break ctxt) orelse not (has_break_tag tag (get_break_tags ctxt))
+if not (get_can_break ctxt) orelse not (has_break_tag tag (#tags (get_break_opts ctxt)))
    orelse Method.detect_closure_state thm
     then Seq.make_results (Seq.single (ctxt,thm)) else
   let
@@ -466,9 +473,21 @@ in (context,goal) end
 
 val last_click = Unsynchronized.ref (NONE : Position.range option)
 
-fun do_apply pos rng tags m =
+fun maybe_trace (SOME (tr, pos)) (ctxt, st) =
+let
+  val deps = Apply_Trace.used_facts ctxt st;
+  val query = if tr = "" then NONE else SOME (tr, pos);
+  val pr = Apply_Trace.pretty_deps false query ctxt st deps;
+in Pretty.writeln pr end
+  | maybe_trace NONE (ctxt, st) =
+    if is_some (#trace (get_break_opts ctxt)) then
+     maybe_trace (#trace (get_break_opts ctxt)) (ctxt,st)
+    else ()
+
+fun do_apply pos rng opts m =
 let
   val _ = Method.report m;
+  val {tags, trace} = opts;
 
 in
  (fn st => map_state (fn (ctxt,_) =>
@@ -480,7 +499,7 @@ in
 
      val st = Proof.map_context
       (set_can_break true
-       #> set_break_tags tags
+       #> set_break_opts opts
        #> set_markup_state markup_id
        #> set_debug_ident ident
        #> set_continuation ~1) st;
@@ -564,24 +583,34 @@ in
            end;
        in main_loop () end)
 
+       val _ = maybe_trace trace st';
+
    in st' end) st)
 end
 
-fun apply_debug tags (m', rng)  =
+fun apply_debug opts (m', rng)  =
   let
       val m'' = add_debug m'
       val m = (m'',rng)
       val pos = Position.thread_data ();
 
-     in do_apply pos rng tags m end;
+     in do_apply pos rng opts m end;
 
-val parse_tags = Scan.optional (Args.parens (Args.$$$ "tags" |-- Parse.enum1 "," Parse.string)) []
+fun quasi_keyword x = Scan.trace (Args.$$$ x) >>
+  (fn (s,[tok]) => (Position.reports [(Token.pos_of tok, Markup.quasi_keyword)]; s))
+
+val parse_tags = Scan.optional (Args.parens (quasi_keyword "tags" |-- Parse.enum1 "," Parse.string)) [];
+val parse_trace = Scan.option (Args.parens (quasi_keyword "trace" |-- Scan.option (Parse.position Parse.cartouche))) >>
+  (fn SOME NONE => SOME ("", Position.none) | SOME (SOME x) => SOME x | _ => NONE);
+
+val parse_opts = (parse_tags -- parse_trace) >>
+  (fn (tags,trace) => {tags = tags, trace = trace} : break_opts);
 
 val _ =
   Outer_Syntax.command @{command_keyword apply_debug} "initial goal refinement step (unstructured)"
     (Scan.trace
-      (parse_tags --  Method.parse) >>
-      (fn ((tags, (m,_)),toks) => Toplevel.proof (apply_debug tags (m,Token.range_of toks))));
+      (parse_opts --  Method.parse) >>
+      (fn ((opts, (m,_)),toks) => Toplevel.proof (apply_debug opts (m,Token.range_of toks))));
 
 val finish = map_state (fn (ctxt,_) =>
       let
@@ -590,10 +619,12 @@ val finish = map_state (fn (ctxt,_) =>
       in f |> poke_error |> apfst clear_debug end)
 
 
-fun continue tags i_opt m_opt =
+fun continue opts i_opt m_opt =
 (map_state (fn (ctxt,thm) =>
       let
+        val {tags, trace} = opts;
         val ctxt = set_can_break true ctxt;
+        val thm = Apply_Trace.clear_deps thm;
 
         val _ = if get_continuation ctxt < 0 then error "Cannot continue in a non-debug state" else ();
 
@@ -608,7 +639,7 @@ fun continue tags i_opt m_opt =
         val _ = nth_pre_result id start_cont; (* block until we've hit the start of this continuation *)
 
         fun get_final n (st as (ctxt,_))  =
-        if not (has_break_tag (get_last_tag ctxt) (get_break_tags ctxt)
+        if not (has_break_tag (get_last_tag ctxt) (#tags (get_break_opts ctxt))
                 orelse has_break_tag (get_last_tag ctxt) tags) then NONE else
          case (i_opt,m_opt) of
           (SOME i,NONE) => if i < 1 then error "Can only continue a positive number of breakpoints" else
@@ -639,11 +670,13 @@ fun continue tags i_opt m_opt =
         val (st',b, cont) = tick_up (start_cont + 1) (ctxt, thm)
 
         val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
-                   else st' |> apfst (set_continuation cont) |> apfst (set_can_break false)
+                   else st' |> apfst (set_continuation cont) |> apfst (set_can_break false);
+
+        val _ = maybe_trace trace st'';
 
       in st'' end))
 
-fun continue_cmd tags i_opt m_opt state =
+fun continue_cmd opts i_opt m_opt state =
 let
   val {context,...} = Proof.simple_goal state;
   val check = Method.map_source (Method.method_closure context)
@@ -655,16 +688,16 @@ let
 
   val i_opt' = case (i_opt,m_opt) of (NONE,NONE) => SOME 1 | _ => i_opt;
 
-in continue tags i_opt' (Option.map eval_method m_opt') state end
+in continue opts i_opt' (Option.map eval_method m_opt') state end
 
 val _ =
   Outer_Syntax.command @{command_keyword continue} "step to next breakpoint"
-  (parse_tags -- Scan.option Parse.int -- Scan.option Method.parse >> (fn ((tags, i_opt),m_opt) =>
-    (Toplevel.proof (continue_cmd tags i_opt m_opt))))
+  (parse_opts -- Scan.option Parse.int -- Scan.option Method.parse >> (fn ((opts, i_opt),m_opt) =>
+    (Toplevel.proof (continue_cmd opts i_opt m_opt))))
 
 val _ =
   Outer_Syntax.command @{command_keyword finish} "finish debugging"
-  (Scan.succeed (Toplevel.proof (continue [] NONE (SOME (fn _ => NONE)))))
+  (Scan.succeed (Toplevel.proof (continue {tags = [], trace = NONE} NONE (SOME (fn _ => NONE)))))
 
 val _ =
   Query_Operation.register {name = "print_state", pri = Task_Queue.urgent_pri}
