@@ -27,7 +27,7 @@ sig
   val can_clear : theory -> bool
   val clear_deps : thm -> thm
   val join_deps : thm -> thm -> thm
-  val used_facts : thm -> (string * term) list
+  val used_facts : Proof.context -> thm -> ((string * int option) * term) list
 end
 
 structure Apply_Trace : APPLY_TRACE =
@@ -70,13 +70,71 @@ in
   Conjunction.intr pre_thm' post_thm |> Conjunction.elim |> snd
 end 
 
+fun get_ref_from_nm' nm =
+let
+  val exploded = space_explode "_" nm;
+  val base = List.take (exploded, (length exploded) - 1) |> space_implode "_"
+  val idx = List.last exploded |> Int.fromString;
+in if is_some idx andalso base <> "" then SOME (base, the idx) else NONE end
+
+fun get_ref_from_nm nm = Option.join (try get_ref_from_nm' nm);
+
+fun maybe_nth l = try (curry List.nth l)
+
+fun fact_from_derivation ctxt xnm =
+let
+
+  val facts = Proof_Context.facts_of ctxt;
+  (* TODO: Check that exported local fact is equivalent to external one *)
+
+  val idx_result =
+    let
+      val (name', idx) = get_ref_from_nm xnm |> the;
+      val entry = try (Facts.retrieve (Context.Proof ctxt) facts) (name', Position.none) |> the;
+      val thm = maybe_nth (#thms entry) (idx - 1) |> the;
+    in SOME (#name entry, thm) end handle Option => NONE;
+
+  fun non_idx_result () =
+    let
+      val entry = try (Facts.retrieve (Context.Proof ctxt) facts) (xnm, Position.none) |> the;
+      val thm = try the_single (#thms entry) |> the;
+    in SOME (#name entry, thm) end handle Option => NONE;
+
+in
+  case idx_result of
+    SOME thm => SOME thm
+  | NONE => non_idx_result ()
+end
+
+fun most_local_fact_of ctxt xnm =
+let
+  val local_name = try (fn xnm => Long_Name.explode xnm |> tl |> tl |> Long_Name.implode) xnm |> the;
+in SOME (fact_from_derivation ctxt local_name |> the) end handle Option =>
+  fact_from_derivation ctxt xnm;
+
 fun thms_of (PBody {thms,...}) = thms
 
-fun proof_body_descend' (_,("",_,body)) = fold (append o proof_body_descend') (thms_of (Future.join body)) []
-  | proof_body_descend' (_,(nm,t,_)) = [(nm,t)]
+fun proof_body_descend' f get_fact (ident,(nm,_ , body)) deptab =
+(if not (f nm) then
+  (Inttab.update_new (ident, SOME (nm, get_fact nm |> the)) deptab handle Inttab.DUP _ => deptab)
+else raise Option) handle Option =>
+  ((fold (proof_body_descend' f get_fact) (thms_of (Future.join body))
+    (Inttab.update_new (ident, NONE) deptab)) handle Inttab.DUP _ => deptab)
 
+fun used_facts' f get_fact thm =
+  let
+    val body = thms_of (Thm.proof_body_of thm);
 
-fun used_facts thm = fold (append o proof_body_descend') (thms_of (Thm.proof_body_of thm)) []
+  in fold (proof_body_descend' f get_fact) body Inttab.empty end
+
+fun used_pbody_facts ctxt thm =
+  let
+    val nm = Thm.get_name_hint thm;
+    val get_fact = most_local_fact_of ctxt;
+  in
+    used_facts' (fn nm' => nm' = "" orelse nm' = nm) get_fact thm
+    |> Inttab.dest |> map_filter snd |> map snd |> map (apsnd (Thm.prop_of))
+  end
 
 fun raw_primitive_text f = Method.Basic (fn _ => ((K (fn (ctxt, thm) => Seq.make_results (Seq.single (ctxt, f thm))))))
     
@@ -102,7 +160,13 @@ let
 in
   map_filter match_hyp hyps end
 
-
+fun used_facts ctxt thm =
+  let
+    val used_from_pbody = used_pbody_facts ctxt thm |> map (fn (nm,t) => ((nm,NONE),t))
+    val used_from_hyps = used_local_facts ctxt thm |> map (fn (nm,(i,t)) => ((nm,SOME i),t))
+  in
+    (used_from_hyps @ used_from_pbody)
+  end
 
 (* Perform refinement step, and run the given stateful function
    against computed dependencies afterwards. *)
@@ -115,18 +179,11 @@ let
 
   fun save_deps deps = f ctxt thm deps
 
-  fun get_used thm = 
-  let
-    val used_from_pbody = used_facts thm |> map (fn (nm,t) => ((nm,NONE),t))
-    val used_from_hyps = used_local_facts ctxt thm |> map (fn (nm,(i,t)) => ((nm,SOME i),t))
-  in
-    (used_from_hyps @ used_from_pbody)
-  end
   
 in
  if (can_clear (Proof.theory_of state)) then  
    Proof.refine (Method.Combinator (Method.no_combinator_info,Method.Then, [raw_primitive_text (clear_deps),text,
-	raw_primitive_text (fn thm' => (save_deps (get_used thm');join_deps thm thm'))])) state
+	raw_primitive_text (fn thm' => (save_deps (used_facts ctxt thm');join_deps thm thm'))])) state
  else
    (if (#silent_fail args) then (save_deps [];Proof.refine text state) else error "Apply_Trace theory must be imported to trace applies")
 end

@@ -158,5 +158,19 @@ lemma
   apply_trace (rule Y)
   oops
 
+(* If any locale facts are accessible their local variant is assumed to the one that is used. *)
+ML \<open>Locale.register_locale\<close>
+locale foo = fixes b a
+  assumes X: "b = a"
+begin
+
+  lemma shows "b = a" "b = a"
+   apply -
+   apply_trace (rule foo.X)
+   prefer 2
+   apply_trace (rule X)
+   oops
+end
+
 
 end
