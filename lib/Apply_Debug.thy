@@ -502,7 +502,8 @@ in
        #> set_break_opts opts
        #> set_markup_state markup_id
        #> set_debug_ident ident
-       #> set_continuation ~1) st;
+       #> set_continuation ~1) st
+       |> map_state (apsnd Apply_Trace.clear_deps);
 
      fun do_cancel thread = (Future.cancel thread; Future.join_result thread; ());
 
