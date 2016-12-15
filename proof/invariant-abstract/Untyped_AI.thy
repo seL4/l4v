@@ -3125,7 +3125,7 @@ locale Untyped_AI_nonempty_table =
   "\<And>S ko. nonempty_table S ko \<Longrightarrow> caps_of ko = {}"
   assumes init_arch_objects_nonempty_table:
   "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table {}) r s)
-         \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
+         \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>ref\<in>set refs. is_aligned ref (obj_bits_api tp us))\<rbrace>
         init_arch_objects tp ptr bits us refs
    \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. \<not> (obj_at (nonempty_table {}) r s)\<rbrace>"

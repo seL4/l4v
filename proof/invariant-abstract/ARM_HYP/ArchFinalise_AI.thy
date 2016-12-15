@@ -333,7 +333,7 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
 crunch typ_at_arch [wp]: arch_thread_set "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps set_object_typ_at)
 
-crunch typ_at[wp,Finalise_AI_asms]: dissociate_vcpu_tcb "\<lambda>s. P (typ_at T p s)"
+crunch typ_at[wp]: dissociate_vcpu_tcb "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def
         ignore: do_machine_op set_object) (* ARMHYP fix *)
 
@@ -341,7 +341,7 @@ crunch typ_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (typ_at T p
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def
         ignore: maskInterrupt set_object) (* ARMHYP fix *)
 
-crunch typ_at[wp]: prepare_thread_delete "\<lambda>s. P (typ_at T p s)"
+crunch typ_at[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (typ_at T p s)"
 
 crunch tcb_at[wp]: arch_thread_set "\<lambda>s. tcb_at p s"
 
