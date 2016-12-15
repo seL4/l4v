@@ -599,12 +599,17 @@ fun apply_debug opts (m', rng)  =
 fun quasi_keyword x = Scan.trace (Args.$$$ x) >>
   (fn (s,[tok]) => (Position.reports [(Token.pos_of tok, Markup.quasi_keyword)]; s))
 
-val parse_tags = Scan.optional (Args.parens (quasi_keyword "tags" |-- Parse.enum1 "," Parse.string)) [];
+val parse_tags = (Args.parens (quasi_keyword "tags" |-- Parse.enum1 "," Parse.string));
 val parse_trace = Scan.option (Args.parens (quasi_keyword "trace" |-- Scan.option (Parse.position Parse.cartouche))) >>
   (fn SOME NONE => SOME ("", Position.none) | SOME (SOME x) => SOME x | _ => NONE);
 
-val parse_opts = (parse_tags -- parse_trace) >>
+val parse_opts1 = (parse_tags -- parse_trace) >>
   (fn (tags,trace) => {tags = tags, trace = trace} : break_opts);
+
+val parse_opts2 = (parse_trace -- (Scan.optional parse_tags [])) >>
+  (fn (trace,tags) => {tags = tags, trace = trace} : break_opts);
+
+val parse_opts = parse_opts1 || parse_opts2;
 
 val _ =
   Outer_Syntax.command @{command_keyword apply_debug} "initial goal refinement step (unstructured)"
