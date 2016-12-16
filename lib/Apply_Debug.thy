@@ -192,18 +192,32 @@ val _ = Context.>>
 
    in traceify o tac end)) ""))
 
-fun wrap_src src =
+fun traceify_method static_ctxt src =
+let
+  val range = Token.range_of src;
+  val m = Method.method_cmd static_ctxt src;
+
+in (fn eval_ctxt => fn facts =>
   let
-    val pos = Token.range_of src |> Position.set_range;
-    val tok = Token.make_string ("", pos);
-    val tok' = Token.assign (SOME (Token.Source src)) tok;
-  in Token.closure tok' end
+    val markup_id = get_markup_id eval_ctxt;
 
+    fun tac (runtime_ctxt,thm) =
+        let val runtime_ctxt' = set_latest_range range runtime_ctxt in
+          m eval_ctxt facts (runtime_ctxt', thm)
+        end
 
-fun add_debug (Method.Source src) =
-      (Method.Source (Token.make_src ("Apply_Debug.markup", Position.none) [wrap_src src]))
-  | add_debug (Method.Combinator (x,y,txts)) = (Method.Combinator (x,y, map add_debug txts))
-  | add_debug x = x
+    fun traceify seq = Seq.make (fn () =>
+        let
+          val _ = set_running markup_id range;
+          val r = Seq.pull seq;
+          val _ = clear_running markup_id;
+        in Option.map (apsnd traceify) r end)
+   in traceify  o tac end)
+end
+
+fun add_debug ctxt (Method.Source src) = (Method.Basic (traceify_method ctxt src))
+  | add_debug ctxt (Method.Combinator (x,y,txts)) = (Method.Combinator (x,y, map (add_debug ctxt) txts))
+  | add_debug _ x = x
 
 fun st_eq (ctxt : Proof.context,st) (ctxt',st') =
   pointer_eq (ctxt,ctxt') andalso Thm.eq_thm (st,st')
@@ -486,7 +500,8 @@ in Pretty.writeln pr end
 
 fun do_apply pos rng opts m =
 let
-  val _ = Method.report m;
+
+
   val {tags, trace} = opts;
 
 in
@@ -496,6 +511,8 @@ in
      val markup_id = Synchronized.var "markup_state" init_markup_state;
      val _ = if is_debug_ctxt ctxt then
       error "Cannot use apply_debug while debugging" else ();
+
+     val m = apfst (fn f => f ctxt) m;
 
      val st = Proof.map_context
       (set_can_break true
@@ -591,7 +608,9 @@ end
 
 fun apply_debug opts (m', rng)  =
   let
-      val m'' = add_debug m'
+      val _ = Method.report (m', rng);
+
+      val m'' = (fn ctxt => add_debug ctxt m')
       val m = (m'',rng)
       val pos = Position.thread_data ();
 
