@@ -81,7 +81,7 @@ proof -
     by (clarsimp simp: entries_align_def)
   thus ?thesis using P
     by (auto simp: init_A_st_def init_kheap_def
-            elim!: ranE split: split_if_asm)
+            elim!: ranE split: if_split_asm)
 qed
 
 lemma set_object_valid_pdpt[wp]:
@@ -143,7 +143,7 @@ lemma mapM_x_store_pte_updates:
    apply wp
    apply (clarsimp simp: obj_at_def)
    apply (simp add: a_type_def fun_upd_idem
-             split: Structures_A.kernel_object.split_asm split_if_asm
+             split: Structures_A.kernel_object.split_asm if_split_asm
                     arch_kernel_obj.split_asm)
   apply (simp add: mapM_x_Cons)
   apply (rule hoare_seq_ext, assumption)
@@ -204,7 +204,7 @@ lemma mapM_x_store_invalid_pte_valid_pdpt:
      apply (erule order_le_less_trans, simp)
     apply (simp add: field_simps)
    apply (simp add: vspace_bits_defs)
-  apply (clarsimp simp: ranI elim!: ranE split: split_if_asm)
+  apply (clarsimp simp: ranI elim!: ranE split: if_split_asm)
   apply (intro conjI)
    apply (simp add: shift_0x3C_set vspace_bits_defs)
    apply (rule valid_entries_overwrite_groups
@@ -239,7 +239,7 @@ lemma mapM_x_store_pde_updates:
    apply wp
    apply (clarsimp simp: obj_at_def)
    apply (simp add: a_type_def fun_upd_idem
-             split: Structures_A.kernel_object.split_asm split_if_asm
+             split: Structures_A.kernel_object.split_asm if_split_asm
                     arch_kernel_obj.split_asm)
   apply (simp add: mapM_x_Cons)
   apply (rule hoare_seq_ext, assumption)
@@ -267,7 +267,7 @@ lemma mapM_x_store_pde_valid_pdpt_objs:
      apply (erule order_le_less_trans, simp)
     apply (simp add: field_simps)
    apply (simp add: vspace_bits_defs)
-  apply (clarsimp simp: ranI elim!: ranE split: split_if_asm)
+  apply (clarsimp simp: ranI elim!: ranE split: if_split_asm)
   apply (simp add: shift_0x3C_set vspace_bits_defs)
   apply (rule conjI)
    apply (rule_tac valid_entries_overwrite_groups
@@ -559,7 +559,7 @@ lemma retype_region_valid_pdpt[wp]:
   apply (simp add: retype_region_def split del: split_if)
   apply (wp | simp only: valid_pdpt_objs_trans_state trans_state_update[symmetric])+
   apply (clarsimp simp: retype_addrs_fold foldr_upd_app_if ranI
-                 elim!: ranE split: split_if_asm simp del:fun_upd_apply)
+                 elim!: ranE split: if_split_asm simp del:fun_upd_apply)
   apply (simp add: default_object_def default_arch_object_def
             split: Structures_A.kernel_object.splits
     Structures_A.apiobject_type.split aobject_type.split)+
@@ -613,7 +613,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
    \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (rule hoare_pre, rule invoke_untyped_Q)
       apply (wp init_arch_objects_valid_pdpt | simp)+
-     apply (auto simp: post_retype_invs_def split: split_if_asm)[1]
+     apply (auto simp: post_retype_invs_def split: if_split_asm)[1]
     apply (wp | simp)+
   done
 

@@ -132,7 +132,7 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
                               \<and> cte_wp_at (is_derived (cdt s) prod cap) prod s"
                 in hoare_post_imp)
       apply (clarsimp simp: is_cap_simps is_derived_def cte_wp_at_caps_of_state)
-      apply (simp split: split_if_asm)
+      apply (simp split: if_split_asm)
       apply (simp add: cap_master_cap_def split: cap.split_asm)
       apply (drule cte_wp_valid_cap [OF caps_of_state_cteD] | clarsimp)+
       apply (clarsimp simp: cap_master_cap_simps valid_cap_def obj_at_def is_ntfn is_tcb is_cap_table

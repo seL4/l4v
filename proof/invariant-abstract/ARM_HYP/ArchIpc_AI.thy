@@ -473,6 +473,10 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
    apply auto
    done
 
+crunch state_hyp_refs_of[wp, Ipc_AI_cont_assms]: do_ipc_transfer "\<lambda> s. P (state_hyp_refs_of s)"
+  (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
+
+
 end
 
 interpretation Ipc_AI?: Ipc_AI_cont

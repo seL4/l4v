@@ -218,7 +218,7 @@ lemma set_cap_unique_table_refs:
   apply (clarsimp split del: split_if)
   apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                         cte_wp_at_caps_of_state
-                 split: split_if_asm)
+                 split: if_split_asm)
   done
 
 lemma set_cap_valid_arch_caps:
@@ -272,7 +272,7 @@ lemma set_cap_cap_refs_in_kernel_window[wp]:
                    pred_conj_def)
   apply (rule hoare_lift_Pf2[where f=arch_state])
    apply wp
-   apply (fastforce elim!: ranE split: split_if_asm)
+   apply (fastforce elim!: ranE split: if_split_asm)
   apply wp
   done
 
@@ -308,6 +308,27 @@ lemma obj_ref_none_no_asid:
   "{} = obj_refs new_cap \<longrightarrow> None = table_cap_ref new_cap"
   "obj_refs new_cap = {} \<longrightarrow> table_cap_ref new_cap = None"
 by (simp add: table_cap_ref_def arch_cap_fun_lift_def split: cap.split arch_cap.split)+
+
+lemma set_cap_hyp_refs_of [wp]:
+ "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
+  set_cap cp p
+  \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: set_cap_def set_object_def split_def)
+  apply (rule hoare_seq_ext [OF _ get_object_sp])
+  apply (case_tac obj, simp_all split del: split_if)
+   apply wp
+   apply (rule hoare_pre, wp)
+   apply (clarsimp elim!: rsubst[where P=P])
+   apply (rule all_ext; clarsimp simp: state_hyp_refs_of_def obj_at_def hyp_refs_of_def)
+  apply (rule hoare_pre, wp)
+  apply (clarsimp simp: state_hyp_refs_of_def obj_at_def)
+  apply (clarsimp elim!: rsubst[where P=P] | rule all_ext | rule conjI |
+         clarsimp simp: state_hyp_refs_of_def obj_at_def hyp_refs_of_def)+
+  done
+
+lemma state_hyp_refs_of_revokable[simp]:
+  "state_hyp_refs_of (s \<lparr> is_original_cap := m \<rparr>) = state_hyp_refs_of s"
+  by (simp add: state_hyp_refs_of_def)
 
 
 end

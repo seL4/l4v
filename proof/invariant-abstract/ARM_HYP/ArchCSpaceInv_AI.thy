@@ -84,10 +84,10 @@ lemma replace_cap_invs:
    apply (rule conjI)
     apply (unfold reply_caps_mdb_def)[1]
     apply (erule allEI, erule allEI)
-    apply (fastforce split: split_if_asm simp: is_cap_simps)
+    apply (fastforce split: if_split_asm simp: is_cap_simps)
    apply (unfold reply_masters_mdb_def)[1]
    apply (erule allEI, erule allEI)
-   apply (fastforce split: split_if_asm simp: is_cap_simps)
+   apply (fastforce split: if_split_asm simp: is_cap_simps)
   apply (rule conjI)
    apply (erule disjE)
     apply (clarsimp)

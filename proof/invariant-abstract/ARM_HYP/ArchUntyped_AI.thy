@@ -66,7 +66,7 @@ lemma data_to_obj_type_sp[Untyped_AI_assms]:
   apply (rule hoare_pre)
    apply (wp|wpc)+
   apply clarsimp
-  apply (simp add: arch_data_to_obj_type_def split: split_if_asm)
+  apply (simp add: arch_data_to_obj_type_def split: if_split_asm)
   done
 
 lemma dui_inv_wf[wp, Untyped_AI_assms]:
@@ -432,7 +432,7 @@ lemma valid_arch_state_global_pd: (* ARMHYP restate? *)
                         pd_aligned pd_bits_def pageBits_def
                  elim!: obj_at_weakenE)
   apply (clarsimp split: Structures_A.kernel_object.split_asm
-                         arch_kernel_obj.split_asm split_if_asm)
+                         arch_kernel_obj.split_asm if_split_asm)
   done
 *)
 lemma pd_shifting':
@@ -480,7 +480,7 @@ lemma init_arch_objects_nonempty_table[Untyped_AI_assms, wp]:
 lemma nonempty_table_caps_of[Untyped_AI_assms]:
   "nonempty_table S ko \<Longrightarrow> caps_of ko = {}"
   by (auto simp: caps_of_def cap_of_def nonempty_table_def a_type_def
-          split: Structures_A.kernel_object.split split_if_asm)
+          split: Structures_A.kernel_object.split if_split_asm)
 
 
 lemma nonempty_default[simp, Untyped_AI_assms]:

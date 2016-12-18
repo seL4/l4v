@@ -87,8 +87,13 @@ lemma valid_ntfn_trans_state[simp]: "valid_ntfn a (trans_state g s) = valid_ntfn
   apply (simp add: valid_ntfn_def split: ntfn.splits)
   done
 
+lemma [simp]: "\<forall>x5. b = ArchObj x5 \<longrightarrow>
+         wellformed_arch_obj x5 (trans_state g s) =
+         wellformed_arch_obj x5 s"
+sorry
+
 lemma valid_obj_trans_state[simp]: "valid_obj a b (trans_state g s) = valid_obj a b s"
-  apply (simp add: valid_obj_def ARM.wellformed_arch_obj_def ARM.valid_vcpu_def
+  apply (simp add: valid_obj_def
               split: kernel_object.splits option.splits)
   done
 

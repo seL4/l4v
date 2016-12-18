@@ -62,7 +62,7 @@ lemma kernel_entry_invs:
   apply (simp add: kernel_entry_def)
   apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_running select_wp
          ct_running_machine_op static_imp_wp
-      | clarsimp simp add: tcb_cap_cases_def ARM_A.arch_tcb_context_set_def)+
+      | clarsimp simp add: tcb_cap_cases_def)+
   done
 
 (* FIXME: move to Lib.thy *)

@@ -36,14 +36,17 @@ requalify_facts
   cap_master_arch_cap_rights
   acap_rights_update_id
   is_nondevice_page_cap_simps
+  set_cap_hyp_refs_of
+  state_hyp_refs_of_revokable
 end
 
 lemmas [simp] = aobj_ref_acap_rights_update arch_obj_size_acap_rights_update 
   valid_validate_vm_rights cap_master_arch_inv acap_rights_update_idem
-  cap_master_arch_cap_rights acap_rights_update_id
+  cap_master_arch_cap_rights acap_rights_update_id state_hyp_refs_of_revokable
 
 lemmas [intro] = valid_arch_cap_acap_rights_update
 lemmas [intro!] = acap_rights_update_id
+lemmas [wp] = set_cap_hyp_refs_of
 
 lemma remove_rights_cap_valid[simp]:
   "s \<turnstile> c \<Longrightarrow> s \<turnstile> remove_rights S c"
@@ -592,22 +595,6 @@ lemma set_cap_refs_of [wp]:
              split: if_split_asm)
   done
 
-lemma set_cap_hyp_refs_of [wp]:
- "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace>
-  set_cap cp p
-  \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
-  apply (simp add: set_cap_def set_object_def split_def)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
-  apply (case_tac obj, simp_all split del: split_if)
-   apply wp
-   apply (rule hoare_pre, wp)
-   apply (clarsimp elim!: rsubst[where P=P])
-   apply (rule all_ext; clarsimp simp: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)
-  apply (rule hoare_pre, wp)
-  apply (clarsimp simp: ARM.state_hyp_refs_of_def obj_at_def)
-  apply (clarsimp elim!: rsubst[where P=P] | rule all_ext | rule conjI |
-         clarsimp simp: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)+
-  done
 
 lemma set_cap_distinct [wp]:
  "\<lbrace>pspace_distinct\<rbrace> set_cap c p \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
@@ -1990,7 +1977,7 @@ lemma update_cdt_refs_of[wp]:
 
 
 lemma update_cdt_hyp_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace> update_cdt f \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> update_cdt f \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: update_cdt_def set_cdt_def)
   apply wp
   apply (clarsimp elim!: state_hyp_refs_of_pspaceI)
@@ -2001,26 +1988,14 @@ lemma state_refs_of_revokable[simp]:
   "state_refs_of (s \<lparr> is_original_cap := m \<rparr>) = state_refs_of s"
   by (simp add: state_refs_of_def)
 
-lemma state_hyp_refs_of_revokable[simp]:
-  "ARM.state_hyp_refs_of (s \<lparr> is_original_cap := m \<rparr>) = ARM.state_hyp_refs_of s"
-  by (simp add: ARM.state_hyp_refs_of_def)
-
-
 crunch state_refs_of[wp]: cap_insert "\<lambda>s. P (state_refs_of s)"
   (wp: crunch_wps)
 
-crunch state_hyp_refs_of[wp]: set_untyped_cap_as_full "\<lambda>s. P (ARM.state_hyp_refs_of s)"
+crunch state_hyp_refs_of[wp]: set_untyped_cap_as_full "\<lambda>s. P (state_hyp_refs_of s)"
   (wp: crunch_wps)
 
-crunch state_hyp_refs_of[wp]: cap_insert "\<lambda>s. P (ARM.state_hyp_refs_of s)"
+crunch state_hyp_refs_of[wp]: cap_insert "\<lambda>s. P (state_hyp_refs_of s)"
   (wp: crunch_wps)
-
-
-crunch state_hyp_refs_of[wp]: set_original "\<lambda>s. P (ARM.state_hyp_refs_of s)"
-  (wp: crunch_wps simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_def)
-
-crunch state_hyp_refs_of[wp]: update_cdt "\<lambda>s. P (ARM.state_hyp_refs_of s)"
-  (wp: crunch_wps simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_def)
 
 crunch aligned[wp]: cap_insert pspace_aligned
   (wp: hoare_drop_imps)

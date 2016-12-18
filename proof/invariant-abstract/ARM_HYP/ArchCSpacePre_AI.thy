@@ -270,7 +270,7 @@ lemma arch_derived_is_device:
   apply (case_tac c)
   apply (clarsimp simp: is_derived_arch_def
     cap_range_def is_cap_simps cap_master_cap_def cap_master_arch_cap_def
-              split: split_if_asm cap.splits arch_cap.splits)+
+              split: if_split_asm cap.splits arch_cap.splits)+
   done
 
 end

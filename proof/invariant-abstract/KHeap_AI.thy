@@ -158,7 +158,6 @@ lemma valid_cap_same_type:
   by (intro hoare_to_pure_kheap_upd[OF valid_arch_cap_typ, simplified obj_at_def],
       assumption, auto)
 
-find_theorems "(?s\<lparr>kheap := kheap ?s(?p \<mapsto> ?k)\<rparr>)"
 
 lemma valid_obj_same_type:
   "\<lbrakk> valid_obj p' obj s; valid_obj p k s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>

@@ -176,7 +176,7 @@ lemma copyreg_invs:
 
 lemma out_invs_trivialT:
   assumes x: "\<And>tcb v. \<forall>(getF, setF)\<in>ran tcb_cap_cases. getF (fn v tcb) = getF tcb"
-  assumes r:  "\<And>tcb v. ARM_A.tcb_vcpu (tcb_arch (fn v tcb)) = ARM_A.tcb_vcpu (tcb_arch tcb)" (* ARMHYP *)
+  assumes r:  "\<And>tcb v. tcb_arch_ref (fn v tcb) = tcb_arch_ref tcb" (* ARMHYP *)
   assumes z: "\<And>tcb v. tcb_state  (fn v tcb) = tcb_state  tcb"
   assumes z': "\<And>tcb v. tcb_bound_notification (fn v tcb) = tcb_bound_notification tcb"
   assumes w: "\<And>tcb v. tcb_ipc_buffer (fn v tcb) = tcb_ipc_buffer tcb
@@ -567,7 +567,6 @@ lemma out_no_cap_to_trivial:
   done
 
 lemmas thread_set_no_cap_to_trivial = thread_set_no_cap_obj_ref_trivial
-
 
 lemma (in Tcb_AI_1) checked_insert_no_cap_to:
   "\<lbrace>no_cap_to_obj_with_diff_ref c' {} and

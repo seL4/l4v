@@ -12,7 +12,6 @@ theory TcbAcc_AI
 imports "$L4V_ARCH/ArchCSpace_AI"
 begin
 
-
 locale TcbAcc_AI_storeWord_invs =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes storeWord_invs[wp]:
@@ -193,9 +192,15 @@ schematic_goal tcb_ipcframe_in_cases:
 
 
 lemmas valid_ipc_buffer_cap_simps= valid_ipc_buffer_cap_def[split_simps cap.split]
+
 locale TcbAcc_AI_valid_ipc_buffer_cap_0 =
+  fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes valid_ipc_buffer_cap_0[simp]:
     "\<And>cap buf. valid_ipc_buffer_cap cap buf \<Longrightarrow> valid_ipc_buffer_cap cap 0"
+  assumes thread_set_hyp_refs_trivial:
+    "(\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb) \<Longrightarrow>
+        (\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb) \<Longrightarrow>
+         \<lbrace>\<lambda>(s::'state_ext state). P (state_hyp_refs_of s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
 
 
 context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
@@ -312,18 +317,6 @@ lemma thread_set_refs_trivial:
   apply (clarsimp simp: state_refs_of_def get_tcb_def x y
                  elim!: rsubst[where P=P]
                 intro!: ext)
-  done
-
-lemma thread_set_hyp_refs_trivial:
-  assumes x: "\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb"
-  assumes y: "\<And>tcb. ARM_A.tcb_vcpu (tcb_arch (f tcb)) = ARM_A.tcb_vcpu (tcb_arch tcb)"
-  shows      "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
-  apply (simp add: thread_set_def set_object_def)
-  apply wp
-  apply (clarsimp dest!: get_tcb_SomeD)
-  apply (clarsimp elim!: rsubst[where P=P])
-  apply (rule all_ext;
-         clarsimp simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_def ARM.tcb_hyp_refs_def get_tcb_def x y)
   done
 
 
@@ -479,7 +472,7 @@ context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 lemma thread_set_invs_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
-  assumes r:  "\<And>tcb. ARM_A.tcb_vcpu (tcb_arch (f tcb)) = ARM_A.tcb_vcpu (tcb_arch tcb)" (* ARMHYP *)
+  assumes r:  "\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb" (* ARMHYP *)
   assumes z:  "\<And>tcb. tcb_state     (f tcb) = tcb_state tcb"
   assumes z': "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
   assumes w: "\<And>tcb. tcb_ipc_buffer (f tcb) = tcb_ipc_buffer tcb
@@ -489,10 +482,10 @@ lemma thread_set_invs_trivial:
   assumes a: "\<And>tcb. tcb_fault (f tcb) \<noteq> tcb_fault tcb
                        \<longrightarrow> (case tcb_fault (f tcb) of None \<Rightarrow> True
                                                    | Some f \<Rightarrow> valid_fault f)"
-  shows      "\<lbrace>invs\<rbrace> thread_set f t \<lbrace>\<lambda>rv. invs\<rbrace>"
+  shows      "\<lbrace>invs::'state_ext state \<Rightarrow> bool\<rbrace> thread_set f t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_weaken_pre)
-   apply (wp_trace thread_set_valid_objs_triv
+   apply (wp thread_set_valid_objs_triv
              thread_set_refs_trivial
              thread_set_hyp_refs_trivial
              thread_set_iflive_trivial
@@ -609,16 +602,10 @@ proof -
     done
 qed
 
-
 context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
-lemma as_user_invs[wp]: "\<lbrace>invs\<rbrace> as_user t m \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (rule as_user_wp_thread_set_helper)
-  apply (wp thread_set_invs_trivial ball_tcb_cap_casesI | simp add: ARM_A.arch_tcb_context_set_def)+
-  done
 
 end
-
 
 lemma as_user_psp_distinct[wp]:
   "\<lbrace>pspace_distinct\<rbrace> as_user t m \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
@@ -1186,17 +1173,16 @@ lemma sts_refs_of[wp]:
   apply (simp add: get_tcb_def sts_refs_of_helper)
   done
 
+(* FIXME should be able to prove this in the generic context *)
 lemma sts_hyp_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace>
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
     set_thread_state t st
-   \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def)
-  apply (wp, simp add: ARM.state_hyp_refs_of_def, wp)
-  apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD
-                   simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_def
-                 intro!: ext)
-  apply (simp add: get_tcb_def)
-  done
+  apply (wp, simp, wp)
+  apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD)
+  apply (rule state_hyp_refs_update[symmetric])
+  sorry
 
 lemma sbn_refs_of_helper: "
           {r. (r \<in> tcb_st_refs_of ts \<or>
@@ -1218,18 +1204,17 @@ lemma sbn_refs_of[wp]:
   apply (auto simp: get_tcb_def sbn_refs_of_helper)
   done
 
-
+(* FIXME the same as the above FIXME *)
 lemma sbn_hyp_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace>
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
     set_bound_notification t ntfn
-   \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: set_bound_notification_def set_object_def)
   apply (wp, simp)
   apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD
-                   simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_def
                  intro!: ext)
   apply (auto simp: get_tcb_def)
-  done
+  sorry
 
 lemma set_thread_state_thread_set:
   "set_thread_state p st = (do thread_set (tcb_state_update (\<lambda>_. st)) p;
@@ -1825,7 +1810,7 @@ locale TcbAcc_AI_arch_tcb_context_get_eq =
 
 locale TcbAcc_AI
   = TcbAcc_AI_storeWord_invs state_ext_t
-  + TcbAcc_AI_valid_ipc_buffer_cap_0
+  + TcbAcc_AI_valid_ipc_buffer_cap_0 state_ext_t
   + TcbAcc_AI_get_cap_valid_ipc state_ext_t
   + TcbAcc_AI_st_tcb_at_cap_wp_at state_ext_t
   + TcbAcc_AI_arch_tcb_context_set_eq
@@ -1834,6 +1819,12 @@ locale TcbAcc_AI
 
 
 context TcbAcc_AI begin
+
+lemma as_user_invs[wp]: "\<lbrace>invs:: 'state_ext state \<Rightarrow> bool\<rbrace> as_user t m \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (rule as_user_wp_thread_set_helper)
+  apply (rule hoare_pre)
+  apply (wp thread_set_invs_trivial ball_tcb_cap_casesI | simp)+
+  done
 
 lemma set_mrs_invs[wp]:
   "\<And>receiver recv_buf mrs.

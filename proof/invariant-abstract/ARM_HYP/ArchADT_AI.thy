@@ -148,7 +148,7 @@ lemma get_pd_of_thread_vs_lookup: (* ARMHYP *)
 
   apply (erule swap)
   apply (clarsimp split: kernel_object.split_asm arch_kernel_obj.split_asm
-                         option.split_asm split_if_asm)
+                         option.split_asm if_split_asm)
   apply (rule vs_lookupI)
    apply (fastforce simp: vs_asid_refs_def image_def graph_of_def)
   apply (rule rtrancl_into_rtrancl)
@@ -371,7 +371,7 @@ by (auto simp add: lookup_pt_slot_def lookup_pd_slot_def liftE_def bindE_def
         returnOk_def lift_def bind_def split_def throwError_def return_def
         get_pde_def get_pd_def Union_eq get_object_def simpler_gets_def
         assert_def fail_def mask_eqs vspace_bits_defs
-      split: sum.splits split_if_asm Structures_A.kernel_object.splits
+      split: sum.splits if_split_asm Structures_A.kernel_object.splits
              arch_kernel_obj.splits pde.splits)
 
 (* FIXME: Lemma can be found in ArchAcc_R *)
@@ -418,7 +418,7 @@ by (clarsimp simp add: lookup_pt_slot_def lookup_pd_slot_def liftE_def bindE_def
         returnOk_def lift_def bind_def split_def throwError_def return_def
         get_pde_def get_pd_def Union_eq get_object_def simpler_gets_def
         assert_def fail_def mask_add_aligned vspace_bits_defs word_1FF_is_mask
-      split: sum.splits split_if_asm kernel_object.splits arch_kernel_obj.splits
+      split: sum.splits if_split_asm kernel_object.splits arch_kernel_obj.splits
              pde.splits)
 
 lemma get_page_info_pte:

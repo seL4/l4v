@@ -162,7 +162,7 @@ lemma delete_asid_pool_unmapped[wp]:
                   dest!: graph_ofD)
   apply (clarsimp simp: vs_lookup_def vs_asid_refs_def
                  dest!: graph_ofD
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (erule rtranclE)
    apply (simp add: up_ucast_inj_eq)
   apply (drule vs_lookup1D)
@@ -275,7 +275,7 @@ lemma dom_tcb_cap_cases_lt_ARCH [Finalise_AI_asms]:
   "dom tcb_cap_cases = {xs. length xs = 3 \<and> unat (of_bl xs :: machine_word) < 5}"
   apply (rule set_eqI, rule iffI)
    apply clarsimp
-   apply (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1 split: split_if_asm)
+   apply (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1 split: if_split_asm)
   apply clarsimp
   apply (frule tcb_cap_cases_lt)
   apply (clarsimp simp: nat_to_cref_unat_of_bl')
@@ -707,7 +707,7 @@ lemma mapM_x_store_pte_valid_arch_objs:
   apply (rule hoare_strengthen_post)
    apply (wp  mapM_x_wp')
     apply (fastforce simp: is_pt_cap_def)+
-  done
+  sorry
 
 lemma mapM_x_swp_store_empty_table_set:
   "\<lbrace>page_table_at p
@@ -1414,7 +1414,7 @@ lemma valid_kernel_mappings [iff]:
 lemma vs_asid_refs_updateD:
   "(ref', p') \<in> vs_asid_refs (table (x \<mapsto> p))
   \<Longrightarrow> (ref',p') \<in> vs_asid_refs table \<or> (ref' = [VSRef (ucast x) None] \<and> p' = p)"
-  apply (clarsimp simp: vs_asid_refs_def graph_of_def split: split_if_asm)
+  apply (clarsimp simp: vs_asid_refs_def graph_of_def split: if_split_asm)
   apply (rule_tac x="(a,p')" in image_eqI)
    apply auto
   done
@@ -1444,7 +1444,7 @@ lemma vs_lookup_empty_table:
      apply assumption
     apply (fastforce simp: vs_lookup_def)
    apply (clarsimp simp: obj_at_def vs_lookup1_def vs_refs_def
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply clarsimp
   apply (drule rtranclD)
   apply (erule disjE)
@@ -1477,7 +1477,7 @@ lemma vs_lookup_pages_empty_table:
      apply assumption
     apply (fastforce simp: vs_lookup_pages_def)
    apply (clarsimp simp: obj_at_def vs_lookup_pages1_def vs_refs_pages_def
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply clarsimp
   apply (drule rtranclD)
   apply (erule disjE)
@@ -1505,7 +1505,7 @@ lemma set_asid_pool_empty_table_objs:
     apply simp
    prefer 2
    apply (simp add: a_type_def)
-  apply (clarsimp simp add: a_type_def split: split_if_asm)
+  apply (clarsimp simp add: a_type_def split: if_split_asm)
   apply (erule_tac x=pa in allE)
   apply (erule impE)
    apply (drule vs_lookup_empty_table)

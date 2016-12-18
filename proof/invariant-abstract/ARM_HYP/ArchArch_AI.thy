@@ -318,7 +318,7 @@ lemma vs_asid_refs' [simp]:
   apply (simp add: s'_def)
   apply (rule set_eqI)
   apply (rule iffI)
-   apply (auto simp: vs_asid_refs_def split: split_if_asm)[1]
+   apply (auto simp: vs_asid_refs_def split: if_split_asm)[1]
   apply clarsimp
   apply (erule disjE)
    apply (auto simp: vs_asid_refs_def)[1]
@@ -563,7 +563,7 @@ lemma cap_insert_simple_arch_caps_ap:
    apply (simp add: unique_table_caps_def is_cap_simps)
   apply (subst unique_table_refs_def)
   apply (intro allI impI)
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
     apply (simp add: no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state)
    apply (simp add: no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state)
   apply (erule (3) unique_table_refsD)

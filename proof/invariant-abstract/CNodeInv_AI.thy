@@ -1091,7 +1091,7 @@ lemma cap_swap_cte_at:
 context CNodeInv_AI begin
 
 crunch typ_at: rec_del "\<lambda>s::'state_ext state. P (typ_at T p s)"
-  (ignore: preemption_point wp: preemption_point_inv ignore: ARM_A.dissociate_vcpu_tcb)
+  (ignore: preemption_point wp: preemption_point_inv)
 
 lemma rec_del_cte_at:
   "\<And>c call. \<lbrace>cte_at c :: 'state_ext state \<Rightarrow> bool\<rbrace> rec_del call \<lbrace>\<lambda>_. cte_at c\<rbrace>"
@@ -2749,10 +2749,6 @@ crunch rvk_prog: suspend "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_
 crunch rvk_prog: deleting_irq_handler "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def
      wp: crunch_wps empty_slot_rvk_prog' select_wp)
-
-crunch rvk_prog: prepare_thread_delete "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
-  (simp: crunch_simps o_def unless_def is_final_cap_def
-     wp: crunch_wps empty_slot_rvk_prog' select_wp ignore: ARM_A.dissociate_vcpu_tcb)
 
 locale CNodeInv_AI_3 = CNodeInv_AI_2 state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself" +

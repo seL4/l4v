@@ -254,7 +254,7 @@ lemma find_free_hw_asid_pd_at_uniq [wp]:
               cong: option.case_cong)
   apply (wp|wpc)+
   apply (clarsimp simp: pd_at_uniq_def ran_option_map
-                 dest!: ran_restrictD split: split_if_asm)
+                 dest!: ran_restrictD split: if_split_asm)
   apply (rule ccontr, erule notE, rule image_eqI[rotated],
          rule ranI)
    apply (fastforce simp add: restrict_map_def)
@@ -291,7 +291,7 @@ lemma invalidate_asid_asid_map [wp]:
   "\<lbrace>valid_asid_map\<rbrace> invalidate_asid asid \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
   apply (simp add: invalidate_asid_def)
   apply wp
-  apply (auto simp add: valid_asid_map_def vspace_at_asid_def graph_of_def split: split_if_asm)
+  apply (auto simp add: valid_asid_map_def vspace_at_asid_def graph_of_def split: if_split_asm)
   done
 
 
@@ -347,7 +347,7 @@ lemma page_directory_cap_pd_at_uniq:
           \<Longrightarrow> pd_at_uniq asid pd s"
   apply (frule(1) cte_wp_at_valid_objs_valid_cap)
   apply (clarsimp simp: pd_at_uniq_def restrict_map_def valid_cap_def
-                        elim!: ranE split: split_if_asm)
+                        elim!: ranE split: if_split_asm)
   apply (drule(1) valid_asid_mapD)
   apply (clarsimp simp: vspace_at_asid_def)
   apply (frule(1) valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI])
@@ -704,7 +704,7 @@ lemma vs_lookup_clear_asid_table:
   apply (rule Image_mono[OF order_refl])
   apply (simp add: vs_asid_refs_def graph_of_def)
   apply (rule image_mono)
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
   done
 
 
@@ -718,7 +718,7 @@ lemma vs_lookup_pages_clear_asid_table:
   apply (rule Image_mono[OF order_refl])
   apply (simp add: vs_asid_refs_def graph_of_def)
   apply (rule image_mono)
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
   done
 
 
@@ -1288,7 +1288,7 @@ lemma find_pd_for_asid_aligned_pd [wp]:
   apply (clarsimp simp: pspace_aligned_def obj_at_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: a_type_def vspace_bits_defs
-                  split: Structures_A.kernel_object.splits arch_kernel_obj.splits split_if_asm)
+                  split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
   done
 
 (*
@@ -1404,7 +1404,7 @@ lemma page_table_mapped_wp: (* ARMHYP *)
   apply (auto simp: pde_ref_def ucast_up_ucast_id is_up_def a_type_simps
                     source_size_def target_size_def word_size
                     addrFromPPtr_def ptrFromPAddr_def
-             split: split_if_asm
+             split: if_split_asm
              dest!: graph_ofD)
   done
 
@@ -1528,7 +1528,7 @@ lemma lookup_pt_slot_is_aligned: (* ARMHYP *)
   apply (rule is_aligned_add)
    apply (erule_tac x="ucast (lookup_pd_slot pd vptr && mask pd_bits >> pde_bits)" in allE)
    apply (clarsimp simp: obj_at_def valid_pde_def a_type_def)
-   apply (simp split: Structures_A.kernel_object.split_asm split_if_asm
+   apply (simp split: Structures_A.kernel_object.split_asm if_split_asm
                      arch_kernel_obj.split_asm)
    apply (erule is_aligned_weaken[OF pspace_alignedD], simp)
    apply (simp add: obj_bits_def pg_entry_align_def vspace_bits_defs split: vmpage_size.splits)
@@ -2224,7 +2224,7 @@ lemma vs_lookup1:
   "vs_lookup1 s' \<subseteq> vs_lookup1 s \<union> new_lookups"
   apply (simp add: vs_lookup1_def)
   apply (clarsimp simp: obj_at_def s'_def new_lookups_def)
-  apply (auto split: split_if_asm simp: refs old)
+  apply (auto split: if_split_asm simp: refs old)
   done
 
 
@@ -2301,7 +2301,7 @@ lemma set_pd_vspace_objs_map: (* ARMHYP *)
   apply (frule vs_lookup_map_some_pdes.vs_lookup2)
   apply (drule(1) subsetD)
   apply (erule UnE)
-   apply (simp only: fun_upd_apply split: split_if_asm)
+   apply (simp only: fun_upd_apply split: if_split_asm)
     apply (rule valid_vspace_obj_same_type)
       apply fastforce
      apply assumption
@@ -2312,7 +2312,7 @@ lemma set_pd_vspace_objs_map: (* ARMHYP *)
    apply (clarsimp simp: a_type_def)
   apply (clarsimp simp add: vs_lookup_map_some_pdes.new_lookups_def)
   apply (drule(1) bspec)+
-  apply (clarsimp simp add: a_type_simps  split: split_if_asm)
+  apply (clarsimp simp add: a_type_simps  split: if_split_asm)
   apply (drule mp, erule exI)+
   apply (erule(1) valid_vspace_obj_same_type)
   apply (simp add: a_type_def)
@@ -2361,7 +2361,7 @@ lemma set_pd_valid_vs_lookup_map: (* ARMHYP *)
         set_pd_valid_arch[of p pd]
   apply (clarsimp simp: valid_def simpler_set_pd_def)
   apply (drule_tac x=s in spec)+
-  apply (clarsimp simp: valid_vs_lookup_def  split: split_if_asm)
+  apply (clarsimp simp: valid_vs_lookup_def  split: if_split_asm)
   apply (subst caps_of_state_after_update[folded fun_upd_apply],
          simp add: obj_at_def)
   apply (erule (1) vs_lookup_pagesE_alt)
@@ -2376,13 +2376,13 @@ lemma set_pd_valid_vs_lookup_map: (* ARMHYP *)
                          VSRef (ucast a) None]" in spec)+
     apply simp
     apply (drule vs_lookup_pages_apI)
-      apply (simp split: split_if_asm)
+      apply (simp split: if_split_asm)
      apply (simp+)[2]
    apply (frule_tac s="s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageDirectory pd))\<rparr>"
                  in vs_lookup_pages_pdI[rotated -1])
         apply (simp del: fun_upd_apply)+
    apply (frule vs_lookup_pages_apI)
-     apply (simp split: split_if_asm)+
+     apply (simp split: if_split_asm)+
    apply (thin_tac "\<forall>r. (r \<unrhd> p) s \<longrightarrow> Q r" for Q)+
    apply (thin_tac "P \<longrightarrow> Q" for P Q)+
    apply (drule_tac x=pa in spec)
@@ -2397,14 +2397,14 @@ lemma set_pd_valid_vs_lookup_map: (* ARMHYP *)
   apply (case_tac "p=p\<^sub>2")
    apply (thin_tac "\<forall>p ref. P p ref" for P)
    apply (frule vs_lookup_pages_apI)
-     apply (simp split: split_if_asm)
+     apply (simp split: if_split_asm)
     apply simp+
    apply (drule spec, erule impE, assumption)
-   apply (clarsimp split: split_if_asm)
+   apply (clarsimp split: if_split_asm)
    apply (drule_tac x=c in spec)
    apply (simp add: pde_ref_def obj_at_def)
   apply (thin_tac "\<forall>r. (r \<unrhd> p) s \<longrightarrow> Q r" for Q)
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
   apply (drule (6) vs_lookup_pages_ptI)
   apply simp
 done
@@ -2501,7 +2501,7 @@ lemma glob_vs_refs_subset:
   apply (clarsimp simp: glob_vs_refs_def vs_refs_def)
   apply (clarsimp split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (rule pair_imageI)
-  apply (simp add: graph_of_def split:split_if_asm)
+  apply (simp add: graph_of_def split:if_split_asm)
   done
 
 lemma vs_refs_pages_pdI:
@@ -2639,7 +2639,7 @@ lemma vs_refs_add_one': (* ARMHYP does this hold for all p? *)
   apply (rule set_eqI)
   apply clarsimp
   apply (rule iffI)
-   apply (clarsimp del: disjCI dest!: graph_ofD split: split_if_asm)
+   apply (clarsimp del: disjCI dest!: graph_ofD split: if_split_asm)
    apply (rule disjI1)
    apply (rule conjI)
     apply (rule_tac x="(aa,ba)" in image_eqI)
@@ -2650,7 +2650,7 @@ lemma vs_refs_add_one': (* ARMHYP does this hold for all p? *)
    apply (clarsimp dest!: graph_ofD)
    apply (rule_tac x="(aa,ba)" in image_eqI)
     apply simp
-   apply (clarsimp simp: graph_of_def split:split_if_asm)
+   apply (clarsimp simp: graph_of_def split:if_split_asm)
   apply clarsimp
   apply (rule_tac x="(p,x)" in image_eqI)
    apply simp
@@ -2675,7 +2675,7 @@ lemma vs_refs_pages_add_one': (* AARMHYP does this hold for all p? *)
   apply (rule set_eqI)
   apply clarsimp
   apply (rule iffI)
-   apply (clarsimp del: disjCI dest!: graph_ofD split: split_if_asm)
+   apply (clarsimp del: disjCI dest!: graph_ofD split: if_split_asm)
    apply (rule disjI1)
    apply (rule conjI)
     apply (rule_tac x="(aa,ba)" in image_eqI)
@@ -2686,7 +2686,7 @@ lemma vs_refs_pages_add_one': (* AARMHYP does this hold for all p? *)
    apply (clarsimp dest!: graph_ofD)
    apply (rule_tac x="(aa,ba)" in image_eqI)
     apply simp
-   apply (clarsimp simp: graph_of_def split:split_if_asm)
+   apply (clarsimp simp: graph_of_def split:if_split_asm)
   apply clarsimp
   apply (rule_tac x="(p,x)" in image_eqI)
    apply simp
@@ -2939,7 +2939,7 @@ lemma valid_cap_obj_ref_pt_pd:
   by (auto simp: is_cap_simps valid_cap_def
                  obj_at_def is_ep is_ntfn is_cap_table
                  is_tcb a_type_def
-          split: cap.split_asm split_if_asm
+          split: cap.split_asm if_split_asm
                  arch_cap.split_asm option.split_asm)
 
 
@@ -3172,12 +3172,12 @@ lemma store_pde_invs_unmap':
 
   apply (rule conjI)
    apply (safe)[1]
-     apply (clarsimp simp add: vs_refs_def graph_of_def split: split_if_asm)
+     apply (clarsimp simp add: vs_refs_def graph_of_def split: if_split_asm)
      apply (rule pair_imageI)
      apply (clarsimp)
-    apply (clarsimp simp: vs_refs_def graph_of_def pde_bits_def split: split_if_asm)
+    apply (clarsimp simp: vs_refs_def graph_of_def pde_bits_def split: if_split_asm)
     apply (subst (asm) ucast_ucast_mask_shift_helper[simplified pde_bits_def, symmetric], simp)
-   apply (clarsimp simp: vs_refs_def graph_of_def vspace_bits_defs split: split_if_asm)
+   apply (clarsimp simp: vs_refs_def graph_of_def vspace_bits_defs split: if_split_asm)
    apply (rule_tac x="(ac, bc)" in image_eqI)
     apply clarsimp
    apply (clarsimp simp: ucast_ucast_mask_shift_helper[simplified vspace_bits_defs, simplified] ucast_id)
@@ -3186,14 +3186,14 @@ lemma store_pde_invs_unmap':
       apply (clarsimp simp: vs_refs_pages_def graph_of_def vspace_bits_defs
                             ucast_ucast_mask_shift_helper[simplified vspace_bits_defs, simplified]
                             ucast_id
-                      split: split_if_asm)
+                      split: if_split_asm)
       apply (rule_tac x="(ac, bc)" in image_eqI)
        apply clarsimp
       apply clarsimp
      apply (clarsimp simp: vs_refs_pages_def graph_of_def ucast_ucast_id vspace_bits_defs
-                     split: split_if_asm)
+                     split: if_split_asm)
     apply (clarsimp simp: vs_refs_pages_def graph_of_def
-                    split: split_if_asm)
+                    split: if_split_asm)
     apply (rule_tac x="(ac,bc)" in image_eqI)
      apply clarsimp
     apply (clarsimp simp: ucast_ucast_mask_shift_helper[simplified vspace_bits_defs, simplified]
@@ -3275,7 +3275,7 @@ lemma simpler_store_pde_def:
         | _ => ({}, True))"
   apply     (auto simp: store_pde_def simpler_set_pd_def get_object_def simpler_gets_def assert_def
                         return_def fail_def set_object_def get_def put_def bind_def get_pd_def vspace_bits_defs
-                  split: Structures_A.kernel_object.splits option.splits arch_kernel_obj.splits split_if_asm)
+                  split: Structures_A.kernel_object.splits option.splits arch_kernel_obj.splits if_split_asm)
   done
 
 lemma pde_update_valid_arch_objs:
@@ -3287,7 +3287,7 @@ lemma pde_update_valid_arch_objs:
   apply (clarsimp simp: valid_def)
   apply (erule allE[where x=s])
   apply (clarsimp simp: split_def simpler_store_pde_def obj_at_def a_type_def vspace_bits_defs
-                  split: split_if_asm option.splits Structures_A.kernel_object.splits
+                  split: if_split_asm option.splits Structures_A.kernel_object.splits
                          arch_kernel_obj.splits)
   done
 
@@ -3417,7 +3417,7 @@ lemma arch_update_cap_invs_map:
    apply simp
   apply (clarsimp simp: is_cap_simps is_pt_cap_def cap_master_cap_simps
                         cap_asid_def vs_cap_ref_def ranI
-                 dest!: cap_master_cap_eqDs split: option.split_asm split_if_asm
+                 dest!: cap_master_cap_eqDs split: option.split_asm if_split_asm
                  elim!: ranE cong: master_cap_eq_is_device_cap_eq
              | rule conjI)+
   apply (clarsimp dest!: master_cap_eq_is_device_cap_eq)
@@ -3618,7 +3618,7 @@ lemma mapM_x_swp_store_empty_table:
   apply (wp mapM_x_swp_store_empty_table')
   apply (clarsimp simp: obj_at_def a_type_def )
   apply (clarsimp split: Structures_A.kernel_object.split_asm
-                         arch_kernel_obj.split_asm split_if_asm)
+                         arch_kernel_obj.split_asm if_split_asm)
   apply (frule(1) pspace_alignedD)
   apply (clarsimp simp: vspace_bits_defs)
   apply blast
@@ -3739,7 +3739,7 @@ lemma store_pde_unmap_pt:
                  dest!: graph_ofD vs_lookup1_rtrancl_iterations)
   apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def
                  dest!: graph_ofD
-                 split: split_if_asm
+                 split: if_split_asm
                         Structures_A.kernel_object.split_asm
                         arch_kernel_obj.split_asm)
     apply (simp add: pde_ref_def)
@@ -3789,7 +3789,7 @@ lemma store_pde_unmap_page:
                  dest!: graph_ofD vs_lookup_pages1_rtrancl_iterations)
   apply (clarsimp simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def
                  dest!: graph_ofD
-                 split: split_if_asm
+                 split: if_split_asm
                         Structures_A.kernel_object.split_asm
                         arch_kernel_obj.split_asm)
     apply (simp add: pde_ref_pages_def)
@@ -3817,7 +3817,7 @@ lemma store_pte_no_lookup_pages:
   apply (erule vs_lookup_pages_step)
   by (fastforce simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def
                      graph_of_def image_def
-              split: split_if_asm)
+              split: if_split_asm)
 
 (* FIXME: move to Invariants_A *)
 lemma pde_ref_pages_invalid_None[simp]:
@@ -3836,7 +3836,7 @@ lemma store_pde_no_lookup_pages:
   apply (erule vs_lookup_pages_step)
   by (fastforce simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def
                      graph_of_def image_def
-              split: split_if_asm)
+              split: if_split_asm)
 
 crunch vs_lookup_pages[wp]:
   get_hw_asid,find_pd_for_asid,set_vm_root_for_flush "\<lambda>s. P (vs_lookup_pages s)"
@@ -3917,7 +3917,7 @@ lemma unmap_page_table_unmapped3:
   apply (erule vs_lookup_step)
   apply (clarsimp simp: obj_at_def vs_refs_def vs_lookup1_def
                         graph_of_def image_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (drule_tac x=a in spec)
   apply (auto simp: vspace_bits_defs obj_at_def valid_pde_def pde_ref_def pde_ref_pages_def data_at_def
                  split: pde.splits)
@@ -4559,7 +4559,7 @@ lemma lookup_pt_slot_cap_to_multiple2:
   apply (rule hoare_post_imp_R, rule lookup_pt_slot_cap_to_multiple1)
   apply (clarsimp simp: upto_enum_step_def image_image field_simps
                         linorder_not_le[symmetric]
-                 split: split_if_asm)
+                 split: if_split_asm)
    apply (erule notE, erule is_aligned_no_wrap')
    apply simp
   apply (fastforce simp: cte_wp_at_caps_of_state)
@@ -4677,13 +4677,13 @@ lemma store_pte_unmap_page: (* ARMHYP write with xxx_bits? *)
   apply (drule vs_lookup_pages1_rtrancl_iterations)
   apply (clarsimp simp: vs_lookup_pages1_def vs_lookup_def vs_asid_refs_def)
   apply (drule vs_lookup1_rtrancl_iterations)
-  apply (clarsimp simp: vs_lookup1_def obj_at_def split: split_if_asm)
+  apply (clarsimp simp: vs_lookup1_def obj_at_def split: if_split_asm)
          apply (clarsimp simp: vs_refs_pages_def)+
       apply (thin_tac "(VSRef a (Some AASIDPool), b) \<in> c" for a b c)
       apply (clarsimp simp: graph_of_def
                      split: Structures_A.kernel_object.split_asm
                             arch_kernel_obj.splits
-                            split_if_asm)
+                            if_split_asm)
       apply (erule_tac P="a = c" for c in swap)
       apply (rule up_ucast_inj[where 'a=9 and 'b=32])
        apply (subst ucast_ucast_len)
@@ -4705,7 +4705,7 @@ lemma store_pte_unmap_page: (* ARMHYP write with xxx_bits? *)
                         shiftl_less_t2n'[where m=9 and n=3, simplified]
                  dest!: graph_ofD ucast_up_inj[where 'a=10 and 'b=32, simplified]
                         ucast_up_inj[where 'a=6 and 'b=32, simplified]
-                 split: split_if_asm  pde.splits pte.splits if_splits)
+                 split: if_split_asm  pde.splits pte.splits if_splits)
  done
 
 
@@ -4800,12 +4800,12 @@ lemma vs_lookup_pages_pteD: (* ARMHYP rewrite with xxx_bits *)
   apply (frule vs_lookup_atD[OF iffD2[OF fun_cong[OF vs_lookup_pages_eq_at]]])
   apply (clarsimp simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def
                  dest!: graph_ofD
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (clarsimp split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
   apply (simp add: up_ucast_inj_eq graph_of_def kernel_base_def
                    not_le ucast_less_ucast[symmetric, where 'a=11 and 'b=32]
                    mask_asid_low_bits_ucast_ucast pde_ref_pages_def pte_ref_pages_def
-            split: split_if_asm)
+            split: if_split_asm)
   apply (simp add: ucast_ucast_id
             split: pde.split_asm pte.split_asm)
   done
@@ -4831,11 +4831,11 @@ lemma vs_lookup_pages_pdeD:
   apply (frule vs_lookup_atD[OF iffD2[OF fun_cong[OF vs_lookup_pages_eq_at]]])
   apply (clarsimp simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def
                  dest!: graph_ofD
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (clarsimp split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
   apply (simp add: up_ucast_inj_eq graph_of_def kernel_base_def
                    mask_asid_low_bits_ucast_ucast pde_ref_pages_def
-            split: split_if_asm)
+            split: if_split_asm)
   apply (simp add: ucast_ucast_id
             split: pde.split_asm)
   done
@@ -4850,11 +4850,11 @@ apply (clarsimp simp: vs_lookup_def vs_asid_refs_def
                  dest!: graph_ofD vs_lookup1_rtrancl_iterations)
   apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def
                  dest!: graph_ofD
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (clarsimp split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits)
   apply (simp add: up_ucast_inj_eq graph_of_def kernel_base_def
                    mask_asid_low_bits_ucast_ucast pde_ref_pages_def pte_ref_pages_def
-            split: split_if_asm)
+            split: if_split_asm)
   done
 (*
 lemma kernel_slot_impossible_vs_lookup_pages:
@@ -4869,7 +4869,7 @@ lemma kernel_slot_impossible_vs_lookup_pages:
   apply (clarsimp simp: ucast_ucast_id
                  dest!: graph_ofD
                  split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits
-                        split_if_asm)
+                        if_split_asm)
   done
 
 lemma kernel_slot_impossible_vs_lookup_pages2:
@@ -4883,7 +4883,7 @@ lemma kernel_slot_impossible_vs_lookup_pages2:
   apply (clarsimp simp: ucast_ucast_id
                  dest!: graph_ofD
                  split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits
-                        split_if_asm)
+                        if_split_asm)
   done
 *)
 lemma pt_aligned:
@@ -5285,7 +5285,7 @@ lemma perform_page_invs [wp]:
      apply (rule conjI)
       apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
       apply (clarsimp split: Structures_A.kernel_object.split_asm
-                            split_if_asm arch_kernel_obj.splits)
+                            if_split_asm arch_kernel_obj.splits)
      apply (erule ballEI)
      apply (clarsimp simp: pde_at_def obj_at_def
                             caps_of_state_cteD'[where P=\<top>, simplified])
@@ -5338,7 +5338,7 @@ lemma perform_page_invs [wp]:
                              is_ntfn_def is_cap_table_def is_tcb_def
                              is_pg_cap_def vspace_bits_defs
                      split: cap.splits Structures_A.kernel_object.splits
-                            split_if_asm
+                            if_split_asm
                             arch_kernel_obj.splits option.splits
                             arch_cap.splits))) *)
     apply (clarsimp simp: pde_at_def obj_at_def a_type_def simp del: cap_asid_simps)
@@ -5425,7 +5425,7 @@ lemma vs_lookup1:
   apply (rule set_eqI)
   apply (clarsimp simp: obj_at_def s'_def vs_refs_def graph_of_def)
   apply (rule iffI)
-   apply (clarsimp simp: image_def split: split_if_asm)
+   apply (clarsimp simp: image_def split: if_split_asm)
    apply fastforce
   apply fastforce
   done
@@ -5438,7 +5438,7 @@ lemma vs_lookup_trans:
   apply (subst (asm) new_lookups_def)
   apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def
                         empty_table_def pde_ref_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   done
 
 lemma arch_state [simp]:
@@ -5479,7 +5479,7 @@ lemma vs_lookup_pages1:
   apply (rule set_eqI)
   apply (clarsimp simp: obj_at_def s'_def vs_refs_pages_def graph_of_def)
   apply (rule iffI)
-   apply (clarsimp simp: image_def split: split_if_asm)
+   apply (clarsimp simp: image_def split: if_split_asm)
    apply fastforce
   apply fastforce
   done
@@ -5493,7 +5493,7 @@ lemma vs_lookup_pages_trans:
   apply (subst (asm) new_lookups_def)
   apply (clarsimp simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def
                         graph_of_def empty_table_def pde_ref_pages_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   done
 
 lemma vs_lookup_pages:
@@ -5598,7 +5598,7 @@ lemma set_asid_pool_valid_arch_caps_map:
   apply (clarsimp simp: obj_at_def valid_arch_caps_def
                         caps_of_state_after_update)
   apply (clarsimp simp: a_type_def
-                 split: Structures_A.kernel_object.split_asm split_if_asm
+                 split: Structures_A.kernel_object.split_asm if_split_asm
                         arch_kernel_obj.split_asm)
   apply (frule(3) asid_pool_map.intro)
   apply (simp add: fun_upd_def[symmetric])

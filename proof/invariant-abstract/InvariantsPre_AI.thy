@@ -271,4 +271,7 @@ lemma delta_sym_refs:
   apply (erule(1) y)
   done
 
+abbreviation (input)
+  "bound a \<equiv> a \<noteq> None"
+
 end

@@ -1713,8 +1713,13 @@ locale retype_region_proofs_gen
   + Retype_AI_slot_bits
   + Retype_AI_valid_untyped_helper "TYPE('state_ext)"
   for s :: "'state_ext :: state_ext state"
-  and ty us ptr sz n ps s' dev
-
+  and ty us ptr sz n ps s' dev +
+  assumes hyp_refs_eq:
+  "state_hyp_refs_of s' = state_hyp_refs_of s"
+  assumes  wellformed_default_obj:
+   "\<lbrakk> ptra \<notin> set (retype_addrs ptr ty n us);
+        kheap s ptra = Some (ArchObj x5); wellformed_arch_obj x5 s\<rbrakk> \<Longrightarrow>
+          wellformed_arch_obj x5 s'"
 
 context retype_region_proofs begin
 
@@ -1894,10 +1899,7 @@ lemma valid_objs: "valid_objs s'"
   apply (fastforce simp: valid_ntfn_def valid_bound_tcb_def
                   elim!: obj_at_pres[unfolded s'_def ps_def]
                  split: Structures_A.ntfn.splits option.splits)
-  apply (rename_tac ao)
-  apply (clarsimp simp: ARM.wellformed_arch_obj_def ARM_A.arch_kernel_obj.distinct ARM_A.arch_kernel_obj.inject ARM.valid_vcpu_def
-                  elim!: obj_at_pres[unfolded s'_def ps_def]
-                  split: ARM_A.arch_kernel_obj.splits option.splits)
+  apply (clarsimp simp: wellformed_default_obj[unfolded s'_def ps_def])
   done
 
 end
@@ -1914,22 +1916,6 @@ lemma refs_eq:
   apply (cases ty, simp_all add: tyunt default_object_def
                                  default_tcb_def default_ep_def
                                  default_notification_def default_ntfn_def)
-  done
-
-(* ARMHYP move *)
-lemma hyp_refs_eq:
-  "ARM.state_hyp_refs_of s' = ARM.state_hyp_refs_of s"
-  unfolding s'_def ps_def
-  apply (clarsimp intro!: ext simp: ARM.state_hyp_refs_of_def
-                    simp: orthr
-                   split: option.splits)
-  apply (cases ty, simp_all add: tyunt default_object_def default_tcb_def
-                                 ARM.hyp_refs_of_def ARM.tcb_hyp_refs_def ARM.tcb_vcpu_refs_def
-                                 ARM_A.default_arch_tcb_def)
-  apply (rename_tac ao)
-  apply (clarsimp simp: ARM.refs_of_a_def ARM.vcpu_tcb_refs_def ARM_A.default_arch_object_def
-                        ARM_A.arch_kernel_obj.case ARM_A.default_vcpu_def
-                  split: ARM_A.aobject_type.splits)
   done
 
 
@@ -1981,7 +1967,6 @@ lemma zombies: "zombies_final s'"
               elim!: zombies_finalD [OF _ zombies_s])
 
 end
-
 
 lemma (in retype_region_proofs_gen) valid_pspace: "valid_pspace s'"
   using vp by (simp add: valid_pspace_def valid_objs psp_al psp_dist
@@ -2201,7 +2186,7 @@ lemma use_retype_region_proofs':
   apply (rule x)
    apply (rule retype_region_proofs.intro, simp_all)[1]
 
-   apply (fastforce simp add: range_cover_def obj_bits_api_def 
+   apply (fastforce simp add: range_cover_def obj_bits_api_def
      slot_bits_def2 word_bits_def cte_level_bits_def)+
   done
 end

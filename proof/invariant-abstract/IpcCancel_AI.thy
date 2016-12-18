@@ -435,7 +435,6 @@ lemma reply_slot_not_descendant:
                         tcb_cap_cases_def)
   done
 
-
 lemma reply_cancel_ipc_invs:
   assumes delete: "\<And>p. \<lbrace>invs and emptyable p\<rbrace>
                         (cap_delete_one p :: (unit,'z::state_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -445,7 +444,7 @@ lemma reply_cancel_ipc_invs:
   apply (rule_tac Q="\<lambda>rv. invs" in hoare_post_imp)
    apply (fastforce simp: emptyable_def dest: reply_slot_not_descendant)
   apply (wp thread_set_invs_trivial)
-   apply (clarsimp simp: tcb_cap_cases_def)+
+   apply (auto simp: tcb_cap_cases_def)+
   done
 
 
@@ -826,7 +825,7 @@ lemma cancel_all_invs_helper:
           and (\<lambda>s. (\<forall>x\<in>set q. ex_nonz_cap_to x s)
                   \<and> sym_refs (\<lambda>x. if x \<in> set q then {r \<in> state_refs_of s x. snd r = TCBBound}
                                   else state_refs_of s x)
-                  \<and> sym_refs (\<lambda>x. ARM.state_hyp_refs_of s x)
+                  \<and> sym_refs (\<lambda>x. state_hyp_refs_of s x)
                   \<and> (\<forall>x\<in>set q. st_tcb_at (Not \<circ> (halted or awaiting_reply)) x s))\<rbrace>
      mapM_x (\<lambda>t. do y \<leftarrow> set_thread_state t Structures_A.thread_state.Restart;
                     do_extended_op (tcb_sched_enqueue_ext t) od) q

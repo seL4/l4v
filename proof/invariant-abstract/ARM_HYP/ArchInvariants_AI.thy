@@ -126,12 +126,12 @@ abbreviation "device_region s \<equiv> dom (device_state (machine_state s))"
 lemma typ_at_pg_user:
   "typ_at (AArch (AUserData sz)) buf s = ko_at (ArchObj (DataPage False sz)) buf s"
   unfolding obj_at_def
-  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm split_if_asm)
+  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)
 
 lemma typ_at_pg_device:
   "typ_at (AArch (ADeviceData sz)) buf s = ko_at (ArchObj (DataPage True sz)) buf s"
   unfolding obj_at_def
-  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm split_if_asm)
+  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)
 
 lemmas typ_at_pg = typ_at_pg_user typ_at_pg_device
 
@@ -459,9 +459,7 @@ lemma valid_arch_objs_lift:
   apply (rule hoare_vcg_conj_lift; assumption?)
 done
 
-
 (**)
-
 
 definition
   pde_ref_pages :: "pde \<Rightarrow> obj_ref option"
@@ -1045,11 +1043,11 @@ lemma valid_arch_obj_typ: (* ARMHYP: does this hold for vcpu? *)
      apply (rule hoare_vcg_all_lift)
      apply (rename_tac "fun" x)
      apply (case_tac "fun x"; simp_all add: data_at_def hoare_vcg_prop P)
-      apply (wp hoare_vcg_disj_lift P)
+      apply (wp hoare_vcg_disj_lift P)+
     apply (rule hoare_vcg_all_lift)
     apply (rename_tac "fun" x)
     apply (case_tac "fun x";simp_all add: data_at_def hoare_vcg_prop P)
-     apply (wp hoare_vcg_disj_lift P)
+     apply (wp hoare_vcg_disj_lift P)+
 done
 
 
@@ -1061,11 +1059,11 @@ lemma valid_vspace_obj_typ: (* ARMHYP: does this hold for vcpu? *)
      apply (rule hoare_vcg_all_lift)
      apply (rename_tac "fun" x)
      apply (case_tac "fun x"; simp_all add: data_at_def hoare_vcg_prop P)
-      apply (wp hoare_vcg_disj_lift P)
+      apply (wp hoare_vcg_disj_lift P)+
     apply (rule hoare_vcg_all_lift)
     apply (rename_tac "fun" x)
     apply (case_tac "fun x";simp_all add: data_at_def hoare_vcg_prop P)
-     apply (wp hoare_vcg_disj_lift P)
+     apply (wp hoare_vcg_disj_lift P)+
 done
 
 lemma valid_arch_obj_typ_gen: (* ARMHYP *)
@@ -1077,11 +1075,11 @@ lemma valid_arch_obj_typ_gen: (* ARMHYP *)
      apply (rule hoare_vcg_all_lift)
      apply (rename_tac "fun" x)
      apply (case_tac "fun x"; simp_all add: data_at_def hoare_vcg_prop P)
-      apply (wp hoare_vcg_disj_lift P)
+      apply (wp hoare_vcg_disj_lift P)+
     apply (rule hoare_vcg_all_lift)
     apply (rename_tac "fun" x)
     apply (case_tac "fun x";simp_all add: data_at_def hoare_vcg_prop P)
-     apply (wp hoare_vcg_disj_lift P)
+     apply (wp hoare_vcg_disj_lift P)+
   apply (rename_tac v)
   apply (case_tac "vcpu_tcb v"; simp add: valid_vcpu_def; wp t)
 done
@@ -1095,7 +1093,7 @@ lemma atyp_at_eq_kheap_obj:
   "typ_at (AArch AVCPU) p s \<longleftrightarrow> (\<exists>v. kheap s p = Some (ArchObj (VCPU v)))" (* ARMHYP *)
   apply (auto simp add: obj_at_def)
   apply (simp_all add: a_type_def
-                split: split_if_asm kernel_object.splits arch_kernel_obj.splits)
+                split: if_split_asm kernel_object.splits arch_kernel_obj.splits)
   done
 
 lemmas kernel_object_exhaust =
@@ -1120,7 +1118,7 @@ lemma shows
   "\<lbrakk>a_type ko = AArch (AUserData sz); ko = ArchObj (DataPage False sz) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R" and
    aa_type_AVCPUE:
   "\<lbrakk>a_type ko = AArch AVCPU; \<And>v. ko = ArchObj (VCPU v) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R" (* ARMHYP *)
-by (rule kernel_object_exhaust[of ko]; clarsimp simp add: a_type_simps split: split_if_asm)+
+by (rule kernel_object_exhaust[of ko]; clarsimp simp add: a_type_simps split: if_split_asm)+
 
 lemmas aa_type_elims[elim!] =
    aa_type_AASIDPoolE aa_type_APageDirectoryE aa_type_APageTableE aa_type_ADeviceDataE aa_type_AUserDataE aa_type_AVCPUE
@@ -1260,6 +1258,13 @@ lemma caps_of_state_update [iff]:
   "caps_of_state (f s) = caps_of_state s"
   by (rule ext) (auto simp: caps_of_state_def)
 
+lemma wellformed_arch_obj_update:
+  "\<And>ao. b = ArchObj ao \<Longrightarrow> wellformed_arch_obj ao (f s) = wellformed_arch_obj ao s"
+  apply (case_tac ao;
+         clarsimp simp: valid_vcpu_def obj_at_update
+                  cong: option.case_cong split: option.splits)
+  done
+
 end
 
 context Arch_arch_idle_update_eq begin
@@ -1304,6 +1309,14 @@ lemma valid_table_caps_update [iff]:
   "valid_table_caps (f s) = valid_table_caps s"
   by (simp add: valid_table_caps_def arch)
 
+lemma valid_arch_objs_update' [iff]:
+  "valid_arch_objs (f s) = valid_arch_objs s"
+  by (simp add: valid_arch_objs_def valid_vspace_objs_def)
+
+lemma valid_vspace_objs_update' [iff]:
+  "valid_vspace_objs (f s) = valid_vspace_objs s"
+  by (simp add: valid_vspace_objs_def)
+
 end
 
 context Arch begin global_naming ARM
@@ -1334,9 +1347,8 @@ lemma valid_arch_state_lift:
   shows "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   apply (simp add: valid_arch_state_def valid_asid_table_def)
   apply (rule hoare_lift_Pf[where f="\<lambda>s. arch_state s"])
-   apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift )
-    apply (case_tac "arm_current_vcpu x"; simp add: split_def)
-     apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift)
+   apply (case_tac "arm_current_vcpu x"; simp add: split_def)
+    apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift)+
   done
 
 lemma aobj_at_default_arch_cap_valid:
@@ -1384,7 +1396,7 @@ lemma page_directory_pde_atI:  (* ARMHYP: x < 2 ^ pageBits? *)
   apply (clarsimp simp: obj_at_def pde_at_def)
   apply (drule (1) pspace_alignedD[rotated])
   apply (clarsimp simp: a_type_def
-                 split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
+                 split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv pd_bits_def)
   apply (subgoal_tac "p = (p + (x << pde_bits) && ~~ mask pd_bits)")
    subgoal by (auto simp add: pd_bits_def)
@@ -1403,7 +1415,7 @@ lemma page_table_pte_atI:  (* ARMHYP: x < 2 ^ (pt_bits - 2) *)
   apply (clarsimp simp: obj_at_def pte_at_def)
   apply (drule (1) pspace_alignedD[rotated])
   apply (clarsimp simp: a_type_def
-                 split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
+                 split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv pt_bits_def)
   apply (subgoal_tac "p = (p + (x << pte_bits) && ~~ mask pt_bits)")
    subgoal by (auto simp add: pt_bits_def)
@@ -1438,7 +1450,7 @@ lemma vs_lookup1_ko_at_dest:  (* ARMHYP *)
    apply clarsimp
    apply (drule bspec, fastforce simp: ran_def)
    apply (clarsimp simp add: aa_type_def obj_at_def)
-  apply (clarsimp split: arch_kernel_obj.split_asm split_if_asm)
+  apply (clarsimp split: arch_kernel_obj.split_asm if_split_asm)
   apply (simp add: pde_ref_def aa_type_def
             split: pde.splits)
   apply (erule_tac x=a in allE)
@@ -1546,7 +1558,7 @@ lemma vs_lookup_pages_vs_lookupI: "(ref \<rhd> p) s \<Longrightarrow> (ref \<unr
   apply clarsimp
   apply (case_tac x, simp_all add: vs_refs_def vs_refs_pages_def
                             split: arch_kernel_obj.splits)
-  apply (clarsimp simp: split_def graph_of_def image_def  split: split_if_asm)
+  apply (clarsimp simp: split_def graph_of_def image_def  split: if_split_asm)
   apply (rule_tac x=a in exI, intro conjI)
    apply (simp add: pde_ref_def pde_ref_pages_def
              split: pde.splits)
@@ -1569,7 +1581,7 @@ lemma vs_lookup_pages_pdI:
   apply (erule vs_lookup_pages_step)
   by (fastforce simp: vs_lookup_pages1_def obj_at_def
                       vs_refs_pages_def graph_of_def image_def
-               split: split_if_asm)
+               split: if_split_asm)
 
 lemma vs_lookup_pages_ptI:
   "\<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
@@ -1586,7 +1598,7 @@ lemma vs_lookup_pages_ptI:
   apply (erule vs_lookup_pages_step)
   by (fastforce simp: vs_lookup_pages1_def obj_at_def
                       vs_refs_pages_def graph_of_def image_def
-               split: split_if_asm)
+               split: if_split_asm)
 
  (* ARMHYP: add VCPU? *)
 
@@ -1735,7 +1747,7 @@ lemma valid_vspace_objs_alt:
    apply (drule spec, drule spec, erule impE, assumption)
    apply (drule spec, drule spec, erule impE, assumption)
    apply (drule spec, drule spec, erule impE, assumption)
-   apply (clarsimp simp: graph_of_def  split: split_if_asm)
+   apply (clarsimp simp: graph_of_def  split: if_split_asm)
    apply (drule_tac x=ab in spec)
    apply (clarsimp simp: pde_ref_def obj_at_def
                   split: pde.splits)
@@ -1750,7 +1762,7 @@ lemma valid_vspace_objs_alt:
   apply (drule spec, drule spec, erule impE, assumption)
   apply (drule spec, drule spec, erule impE, assumption)
   apply (drule spec, drule spec, erule impE, assumption)
-  apply (clarsimp simp: graph_of_def  split: split_if_asm)
+  apply (clarsimp simp: graph_of_def  split: if_split_asm)
   apply (drule_tac x=ab in spec)
   apply (clarsimp simp: pde_ref_def obj_at_def
                  split: pde.splits)
@@ -1806,7 +1818,7 @@ proof -
      apply clarsimp
      apply (erule (3) 1)
     apply (clarsimp simp: vs_refs_def graph_of_def obj_at_def
-                   dest!: vs_lookup1D  split: split_if_asm)
+                   dest!: vs_lookup1D  split: if_split_asm)
     apply (frule_tac c= ab in vpd; (assumption|succeed))
     apply (erule converse_rtranclE)
      apply clarsimp
@@ -1871,7 +1883,7 @@ proof -
      apply clarsimp
      apply (erule (3) 1)
     apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
-                   dest!: vs_lookup_pages1D  split: split_if_asm)
+                   dest!: vs_lookup_pages1D  split: if_split_asm)
     apply (frule_tac c=ab in vpd; (assumption|succeed))
     apply (erule converse_rtranclE)
      apply clarsimp
@@ -1879,7 +1891,7 @@ proof -
     apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
                           pde_ref_pages_def data_at_def
                    dest!: vs_lookup_pages1D elim!: disjE
-                   split: split_if_asm pde.splits)
+                   split: if_split_asm pde.splits)
     apply (frule_tac d=ac in vpt, assumption+)
     apply (erule converse_rtranclE)
      apply clarsimp
@@ -1920,7 +1932,7 @@ lemma vs_refs_pdI:
 lemma aa_type_pdD:
   "aa_type ko = APageDirectory \<Longrightarrow> \<exists>pd. ko = PageDirectory pd"
   by (clarsimp simp: aa_type_def
-               split: arch_kernel_obj.splits split_if_asm)
+               split: arch_kernel_obj.splits if_split_asm)
 
 lemma empty_table_is_valid: (* ARMHYP? *)
   "\<lbrakk>empty_table {} (ArchObj ao);
@@ -2011,7 +2023,7 @@ lemma vs_ref_order: (* ARMHYP *)
    apply (frule prefix_length_le, clarsimp)
   apply (drule valid_vspace_objsD, simp add: obj_at_def, assumption)
   apply (clarsimp simp: pde_ref_def
-                 split: pde.split_asm split_if_asm)
+                 split: pde.split_asm if_split_asm)
   apply (drule_tac x=a in spec, simp)
   apply (case_tac rs; simp)
   apply (case_tac list; simp)
@@ -2061,7 +2073,7 @@ lemma valid_arch_obj_typ2:
     apply clarsimp
     apply assumption
    apply clarsimp
-  apply wp
+  apply wp+
   done
 
 
@@ -2078,7 +2090,7 @@ lemma valid_vspace_obj_typ2:
     apply clarsimp
     apply assumption
    apply clarsimp
-  apply wp
+  apply wp+
   done
 
 (*
@@ -2158,7 +2170,7 @@ lemma vs_lookup_2ConsD:
 lemma aa_type_vcpuD:
   "aa_type ko = AVCPU \<Longrightarrow> \<exists>v. ko = VCPU v"
   by (clarsimp simp: aa_type_def
-               split: arch_kernel_obj.splits split_if_asm)
+               split: arch_kernel_obj.splits if_split_asm)
 
 lemma global_refs_asid_table_update [iff]:
   "global_refs (s\<lparr>arch_state := arm_asid_table_update f (arch_state s)\<rparr>) = global_refs s"
@@ -2203,23 +2215,23 @@ lemma valid_vspace_objs_lift:
       and y: "\<And>ao p. \<lbrace>\<lambda>s. \<not> ko_at (ArchObj ao) p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> ko_at (ArchObj ao) p s\<rbrace>"
   shows      "\<lbrace>valid_vspace_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
   apply (simp add: valid_vspace_objs_def)
-  apply (wp hoare_vcg_all_lift hoare_convert_imp [OF x])
+  apply (wp hoare_vcg_all_lift hoare_convert_imp [OF x])+
   apply (rule hoare_convert_imp [OF y])
-  apply (rule valid_vspace_obj_typ [OF z])
+  apply (rule valid_vspace_obj_typ [OF z], auto)
   done
 
 (* ARMHYP unnecessary? *)
 lemma valid_arch_objs_typ_at_lift:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
   assumes z: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
-      and t: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at ATCB p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at ATCB p s)\<rbrace>"
+      and t: "\<And>P p. \<lbrace>\<lambda>s. P (typ_at ATCB p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at ATCB p s)\<rbrace>"
       and y: "\<And>ao p. \<lbrace>\<lambda>s. \<not> ko_at (ArchObj ao) p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> ko_at (ArchObj ao) p s\<rbrace>"
   shows      "\<lbrace>valid_arch_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_objs\<rbrace>"
   apply (rule valid_arch_objs_lift)
   apply (rule valid_vspace_objs_lift; wp x z y)
-  apply (wp hoare_vcg_all_lift)
+  apply (rule hoare_vcg_all_lift)+
   apply (rule hoare_convert_imp[OF y])
-  apply (case_tac "vcpu_tcb v"; simp add: valid_vcpu_def; wp t)
+  apply (case_tac "vcpu_tcb v"; simp add: valid_vcpu_def; (wp t)+)
 done
 
 lemma valid_validate_vm_rights[simp]:
@@ -2446,6 +2458,110 @@ lemma hyp_sym_refs_ko_atD:
      (\<forall>(x, tp)\<in>hyp_refs_of ko.  obj_at (\<lambda>ko. (p, symreftype tp) \<in> hyp_refs_of ko) x s)"
   by (drule(1) hyp_sym_refs_obj_atD, simp)
 
+
+lemma state_hyp_refs_of_pspaceI:
+  "\<lbrakk> P (state_hyp_refs_of s); kheap s = kheap s' \<rbrakk> \<Longrightarrow> P (state_hyp_refs_of s')"
+  unfolding state_hyp_refs_of_def
+  by simp
+
+lemma state_hyp_refs_update[iff]:
+  "kheap (f s) = kheap s \<Longrightarrow> state_hyp_refs_of (f s) = state_hyp_refs_of s"
+  by (clarsimp simp: state_hyp_refs_of_def
+                  split: option.splits cong: option.case_cong)
+
+(* ARMHYP move *)
+definition
+  arch_live :: "arch_kernel_obj \<Rightarrow> bool"
+where
+  "arch_live ao \<equiv> case ao of
+    ARM_A.VCPU v \<Rightarrow> bound (ARM_A.vcpu_tcb v)
+    | _ \<Rightarrow>  False"
+
+definition
+  hyp_live :: "kernel_object \<Rightarrow> bool"
+where
+  "hyp_live ko \<equiv> case ko of
+  (TCB tcb) \<Rightarrow> bound (tcb_vcpu (tcb_arch tcb))
+| (ArchObj ao) \<Rightarrow> arch_live ao
+|  _ \<Rightarrow> False"
+
+lemma hyp_refs_of_live:
+  "hyp_refs_of ko \<noteq> {} \<Longrightarrow> hyp_live ko"
+  apply (cases ko, simp_all add: hyp_refs_of_def)
+   apply (rename_tac tcb_ext)
+   apply (simp add: tcb_hyp_refs_def hyp_live_def)
+   apply (case_tac "tcb_vcpu (tcb_arch tcb_ext)"; clarsimp simp: tcb_vcpu_refs_def)
+  apply (rename_tac ao)
+  apply (rule arch_kernel_obj_cases;
+         simp add: refs_of_a_def arch_kernel_obj.case vcpu_tcb_refs_def hyp_live_def arch_live_def
+              split: option.splits)
+  done
+
+lemma hyp_refs_of_live_obj:
+  "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; hyp_refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at hyp_live p s"
+  by (fastforce simp: obj_at_def intro!: hyp_refs_of_live)
+
+
+(* use tcb_arch_ref to handle obj_refs in tcb_arch: currently there is a vcpu ref only *)
+
+definition tcb_arch_ref :: "tcb \<Rightarrow> obj_ref option"
+where "tcb_arch_ref t \<equiv> tcb_vcpu (tcb_arch t)"
+
+lemma tcb_arch_ref_context_update:
+  "tcb_arch_ref (t\<lparr>tcb_arch := (arch_tcb_context_set a (tcb_arch t))\<rparr>) = tcb_arch_ref t"
+  apply (simp add: tcb_arch_ref_def arch_tcb_context_set_def)
+  done
+
+lemma tcb_arch_ref_ipc_buffer_update: "\<And>tcb.
+       tcb_arch_ref (tcb_ipc_buffer_update f tcb) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def)
+
+lemma tcb_arch_ref_mcpriority_update: "\<And>tcb.
+       tcb_arch_ref (tcb_mcpriority_update f tcb) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def)
+
+lemma tcb_arch_ref_ctable_update: "\<And>tcb.
+       tcb_arch_ref (tcb_ctable_update f tcb) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def)
+
+lemma tcb_arch_ref_vtable_update: "\<And>tcb.
+       tcb_arch_ref (tcb_vtable_update f tcb) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def)
+
+lemma tcb_arch_ref_reply_update: "\<And>tcb.
+       tcb_arch_ref (tcb_reply_update f tcb) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def)
+
+lemma tcb_arch_ref_caller_update: "\<And>tcb.
+       tcb_arch_ref (tcb_caller_update f tcb) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def)
+
+lemma tcb_arch_ref_ipcframe_update: "\<And>tcb.
+       tcb_arch_ref (tcb_ipcframe_update f tcb) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def)
+
+lemma tcb_arch_ref_state_update: "\<And>tcb.
+       tcb_arch_ref (tcb_state_update f tcb) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def)
+
+lemma tcb_arch_ref_fault_handler_update: "\<And>tcb.
+       tcb_arch_ref (tcb_fault_handler_update f tcb) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def)
+
+lemma tcb_arch_ref_fault_update: "\<And>tcb.
+       tcb_arch_ref (tcb_fault_update f tcb) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def)
+
+lemma tcb_arch_ref_bound_notification_update: "\<And>tcb.
+       tcb_arch_ref (tcb_bound_notification_update f tcb) = tcb_arch_ref tcb"
+  by (simp add: tcb_arch_ref_def)
+
+
+lemmas tcb_arch_ref_simps[simp] = tcb_arch_ref_ipc_buffer_update tcb_arch_ref_mcpriority_update
+  tcb_arch_ref_ctable_update tcb_arch_ref_vtable_update tcb_arch_ref_reply_update
+  tcb_arch_ref_caller_update tcb_arch_ref_ipcframe_update tcb_arch_ref_state_update
+  tcb_arch_ref_fault_handler_update tcb_arch_ref_fault_update tcb_arch_ref_bound_notification_update
+  tcb_arch_ref_context_update
 
 end
 

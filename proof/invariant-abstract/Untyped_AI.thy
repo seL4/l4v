@@ -2971,9 +2971,9 @@ lemma set_cdt_state_refs_of[wp]:
   done
 
 lemma set_cdt_state_hyp_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace>
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
      set_cdt m
-   \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: set_cdt_def)
   apply wp
   apply (clarsimp elim!: state_hyp_refs_of_pspaceI)
@@ -2991,9 +2991,9 @@ lemma create_cap_state_refs_of[wp]:
   unfolding create_cap_def by wpsimp
 
 lemma create_cap_state_hyp_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace>
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
      create_cap tp sz p dev (cref, oref)
-   \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: create_cap_def)
   apply (wp | simp)+
   done

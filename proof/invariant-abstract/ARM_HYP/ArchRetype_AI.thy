@@ -224,7 +224,7 @@ lemma vs_refs_add_one'':
   "p \<in> {} \<Longrightarrow>
    vs_refs (ArchObj (PageDirectory (pd(p := pde)))) =
    vs_refs (ArchObj (PageDirectory pd))"
- by (auto simp: vs_refs_def graph_of_def split: split_if_asm)
+ by (auto simp: vs_refs_def graph_of_def split: if_split_asm)
 
 
 lemma glob_vs_refs_add_one':
@@ -236,7 +236,7 @@ lemma glob_vs_refs_add_one':
   apply (rule set_eqI)
   apply clarsimp
   apply (rule iffI)
-   apply (clarsimp del: disjCI dest!: graph_ofD split: split_if_asm)
+   apply (clarsimp del: disjCI dest!: graph_ofD split: if_split_asm)
    apply (rule disjI1)
    apply (rule conjI)
     apply (rule_tac x="(aa, ba)" in image_eqI)
@@ -555,20 +555,20 @@ lemma valid_untyped_helper [Retype_AI_assms]:
     apply (fastforce elim!: obj_at_pres)
    apply (fastforce elim!: obj_at_pres)
   apply (rename_tac word nat1 nat2)
-  apply (clarsimp simp:valid_untyped_def is_cap_simps obj_at_def split:split_if_asm)
+  apply (clarsimp simp:valid_untyped_def is_cap_simps obj_at_def split:if_split_asm)
     apply (thin_tac "\<forall>x. Q x" for Q)
      apply (frule retype_addrs_obj_range_subset_strong[where dev=dev, OF _ _ tyunt])
       apply (simp add: obj_bits_dev_irr tyunt)
      apply (frule usable_range_subseteq)
        apply (simp add:is_cap_simps)
-     apply (clarsimp simp:cap_aligned_def split:split_if_asm)
+     apply (clarsimp simp:cap_aligned_def split:if_split_asm)
       apply (frule aligned_ranges_subset_or_disjoint)
       apply (erule retype_addrs_aligned[where sz = sz])
          apply (simp add: range_cover_def)
         apply (simp add: range_cover_def word_bits_def)
        apply (simp add: range_cover_def)
       apply (clarsimp simp: default_obj_range Int_ac tyunt
-                     split: split_if_asm)
+                     split: if_split_asm)
      apply (elim disjE)
       apply (drule(2) subset_trans[THEN disjoint_subset2])
       apply (drule Int_absorb2)+
@@ -585,7 +585,7 @@ lemma valid_untyped_helper [Retype_AI_assms]:
         apply (simp add: range_cover_def word_bits_def)
        apply (simp add: range_cover_def)
       apply (clarsimp simp: default_obj_range Int_ac tyunt
-                     split: split_if_asm)
+                     split: if_split_asm)
    apply (erule disjE)
     apply (simp add: cte_wp_at_caps_of_state)
     apply (drule cn[unfolded caps_no_overlap_def,THEN bspec,OF ranI])
@@ -596,6 +596,40 @@ lemma valid_untyped_helper [Retype_AI_assms]:
   apply blast (* set arith  *)
   done
   qed
+
+(*
+lemma hyp_refs_eq[Retype_AI_assms]:
+  "\<forall>x obj. kheap s x = Some obj \<longrightarrow> x \<notin> set (retype_addrs ptr ty n us) \<Longrightarrow>
+    ty \<noteq> Structures_A.apiobject_type.Untyped \<Longrightarrow>
+      state_hyp_refs_of (s\<lparr>kheap :=
+                 \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
+                     then Some (default_object ty dev us) else kheap s x\<rparr>)
+           = state_hyp_refs_of s"
+  apply (clarsimp intro!: ext simp: state_hyp_refs_of_def
+                   split: option.splits)
+  apply (cases ty, simp_all add: default_object_def default_tcb_def
+                                 hyp_refs_of_def tcb_hyp_refs_def tcb_vcpu_refs_def
+                                 default_arch_tcb_def)
+  apply (rename_tac ao)
+  apply (clarsimp simp: refs_of_a_def vcpu_tcb_refs_def default_arch_object_def
+                        default_vcpu_def
+                  split: aobject_type.splits)
+  done
+
+lemma wellformed_default_obj[Retype_AI_assms]:
+   "\<lbrakk>\<forall>P x. obj_at P x s \<longrightarrow> obj_at P x (s\<lparr>kheap :=
+                 \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
+                     then Some (default_object ty dev us) else kheap s x\<rparr>);
+      ptra \<notin> set (retype_addrs ptr ty n us);
+        kheap s ptra = Some (ArchObj x5); wellformed_arch_obj x5 s\<rbrakk> \<Longrightarrow>
+          wellformed_arch_obj x5
+            (s\<lparr>kheap :=
+                 \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
+                     then Some (default_object ty dev us) else kheap s x\<rparr>)"
+  apply (clarsimp simp: wellformed_arch_obj_def valid_vcpu_def
+                  split: arch_kernel_obj.splits option.splits)
+  done
+*)
 
 end
 
@@ -679,10 +713,10 @@ lemma vs_lookup':
   "vs_lookup s' = vs_lookup s"
   apply (rule order_antisym)
    apply (rule vs_lookup_sub2)
-    apply (clarsimp simp: obj_at_def s'_def ps_def split: split_if_asm)
+    apply (clarsimp simp: obj_at_def s'_def ps_def split: if_split_asm)
    apply simp
   apply (rule vs_lookup_sub)
-   apply (clarsimp simp: obj_at_def s'_def ps_def split: split_if_asm dest!: orthr)
+   apply (clarsimp simp: obj_at_def s'_def ps_def split: if_split_asm dest!: orthr)
   apply simp
   done
 
@@ -690,11 +724,36 @@ lemma vs_lookup_pages':
   "vs_lookup_pages s' = vs_lookup_pages s"
   apply (rule order_antisym)
    apply (rule vs_lookup_pages_sub2)
-    apply (clarsimp simp: obj_at_def s'_def ps_def split: split_if_asm)
+    apply (clarsimp simp: obj_at_def s'_def ps_def split: if_split_asm)
    apply simp
   apply (rule vs_lookup_pages_sub)
-   apply (clarsimp simp: obj_at_def s'_def ps_def split: split_if_asm dest!: orthr)
+   apply (clarsimp simp: obj_at_def s'_def ps_def split: if_split_asm dest!: orthr)
   apply simp
+  done
+
+(* ARMHYP move *)
+lemma hyp_refs_eq:
+  "ARM.state_hyp_refs_of s' = ARM.state_hyp_refs_of s"
+  unfolding s'_def ps_def
+  apply (clarsimp intro!: ext simp: state_hyp_refs_of_def
+                    simp: orthr
+                   split: option.splits)
+  apply (cases ty, simp_all add: tyunt default_object_def default_tcb_def
+                                 hyp_refs_of_def tcb_hyp_refs_def tcb_vcpu_refs_def
+                                 default_arch_tcb_def)
+  apply (rename_tac ao)
+  apply (clarsimp simp: refs_of_a_def ARM.vcpu_tcb_refs_def default_arch_object_def
+                        arch_kernel_obj.case ARM_A.default_vcpu_def
+                  split: aobject_type.splits)
+  done
+
+lemma wellformed_default_obj[Retype_AI_assms]:
+   "\<lbrakk> ptra \<notin> set (retype_addrs ptr ty n us);
+        kheap s ptra = Some (ArchObj x5); wellformed_arch_obj x5 s\<rbrakk> \<Longrightarrow>
+          wellformed_arch_obj x5 s'"
+  apply (clarsimp simp: wellformed_arch_obj_def valid_vcpu_def
+                  elim!:obj_at_pres
+                  split: arch_kernel_obj.splits option.splits)
   done
 
 end
@@ -732,7 +791,7 @@ proof
   assume p: "(\<exists>\<rhd> p) s'"
   assume "ko_at (ArchObj ao) p s'"
   hence "ko_at (ArchObj ao) p s \<or> ArchObj ao = default_object ty dev us"
-    by (simp add: ps_def obj_at_def s'_def split: split_if_asm)
+    by (simp add: ps_def obj_at_def s'_def split: if_split_asm)
   moreover
   { assume "ArchObj ao = default_object ty dev us" with tyunt
     have "valid_vspace_obj ao s'" by (rule valid_vspace_obj_default)
@@ -761,8 +820,12 @@ proof (clarsimp simp add: valid_arch_objs_def)
 qed
 *)
 
+
 (* ML \<open>val pre_ctxt_0 = @{context}\<close> *)
-sublocale retype_region_proofs_gen?: retype_region_proofs_gen ..
+sublocale retype_region_proofs_gen?: retype_region_proofs_gen
+  by (unfold_locales,
+        auto simp: hyp_refs_eq[simplified s'_def ps_def]
+                  wellformed_default_obj[simplified s'_def ps_def])
 (* local_setup \<open>note_new_facts pre_ctxt_0\<close> *)
 
 end
@@ -826,14 +889,14 @@ lemma pspace_respects_device_regionI:
 
   apply (simp add: pspace_respects_device_region_def,intro conjI)
   apply (rule subsetI)
-   apply (clarsimp simp: dom_def user_mem_def obj_at_def in_user_frame_def split: split_if_asm)
+   apply (clarsimp simp: dom_def user_mem_def obj_at_def in_user_frame_def split: if_split_asm)
    apply (frule uat)
    apply (cut_tac ko = "(ArchObj (DataPage False sz))" in p_in_obj_range_internal[OF _ inv])
     prefer 2
     apply (fastforce simp: obj_bits_def)
    apply simp
   apply (rule subsetI)
-  apply (clarsimp simp: dom_def device_mem_def obj_at_def in_device_frame_def split: split_if_asm)
+  apply (clarsimp simp: dom_def device_mem_def obj_at_def in_device_frame_def split: if_split_asm)
   apply (frule dat)
   apply (cut_tac ko = "(ArchObj (DataPage True sz))" in p_in_obj_range_internal[OF _ inv])
   prefer 2
@@ -1000,7 +1063,7 @@ lemma pspace_respects_device_region:
   apply (cut_tac vp)
   apply (rule pspace_respects_device_regionI)
      apply (clarsimp simp add: pspace_respects_device_region_def s'_def ps_def
-                        split: split_if_asm )
+                        split: if_split_asm )
       apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt])
        using cover tyunt
        apply (simp add: obj_bits_api_def3 split: if_splits)
@@ -1014,7 +1077,7 @@ lemma pspace_respects_device_region:
       apply fastforce
      apply fastforce
     apply (clarsimp simp add: pspace_respects_device_region_def s'_def ps_def
-                       split: split_if_asm )
+                       split: if_split_asm )
      apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt])
       using cover tyunt
       apply (simp add: obj_bits_api_def4 split: if_splits)
@@ -1082,7 +1145,7 @@ lemma post_retype_invs:
                      pspace_respects_device_region
                      cap_refs_respects_device_region
                      cap_refs_in_kernel_window valid_irq_states
-               split: split_if_asm)
+               split: if_split_asm)
 
 (* ML \<open>val pre_ctxt_1 = @{context}\<close> *)
 
@@ -1165,7 +1228,7 @@ lemma clearMemory_um_eq_0:
   apply (wp mapM_x_wp_inv | simp)+
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps storeWord_um_eq_0)
-  apply (fastforce simp: ignore_failure_def split: split_if_asm)
+  apply (fastforce simp: ignore_failure_def split: if_split_asm)
   done
 
 

@@ -69,7 +69,7 @@ lemma arch_decode_ARMASIDControlMakePool_empty_fail:
     apply simp
    apply (subst bindE_assoc[symmetric])
    apply (rule empty_fail_bindE)
-    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: split_if_asm)
+    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: if_split_asm)
    apply (simp add: Let_def split: cap.splits arch_cap.splits option.splits bool.splits | wp | intro conjI impI allI)+
    apply (simp add: isPageFlushLabel_def isPDFlushLabel_def split: arch_cap.splits)+
   done (* needs tidying up *)
