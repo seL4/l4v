@@ -16,59 +16,11 @@ theory Apply_Debug
 begin
 
 ML \<open>
-infix 1 CONTEXT_THEN;
-infix 0 CONTEXT_THEN_ELSE;
-
-signature CONTEXT_TACTICALS =
-sig
-val CONTEXT_REPEAT_DETERM_N : int -> context_tactic -> context_tactic;
-val CONTEXT_REPEAT_DETERM : context_tactic -> context_tactic;
-val CONTEXT_CHANGED : context_tactic -> context_tactic;
-val CONTEXT_THEN : context_tactic * context_tactic -> context_tactic;
-val CONTEXT_THEN_ELSE: context_tactic * (context_tactic * context_tactic) -> context_tactic;
-val SOME_CONTEXT_TACTIC: (Proof.context -> tactic) -> context_tactic;
-end
-
-structure Context_Tacticals : CONTEXT_TACTICALS =
-struct
-
-fun make_tactic r = (fn st => Seq.make_results (Seq.make (fn () => r st))) : context_tactic;
-
-fun CONTEXT_REPEAT_DETERM_N n tac =
-  let
-    fun drep 0 st = SOME (st, Seq.empty)
-      | drep n st =
-          (case Seq.pull (Seq.filter_results (tac st)) of
-            NONE => SOME(st, Seq.empty)
-          | SOME (st', _) => drep (n - 1) st');
-  in make_tactic (drep n) end;
-
-val CONTEXT_REPEAT_DETERM = CONTEXT_REPEAT_DETERM_N ~1;
-
-fun CONTEXT_CHANGED tac (ctxt,st) =
-  let fun diff (_, st') = not (Thm.eq_thm (st, st'));
-  in Seq.make_results (Seq.filter diff (Seq.filter_results (tac (ctxt, st)))) end;
-
-fun ((tac1 : context_tactic) CONTEXT_THEN (tac2 : context_tactic)) = (fn st =>
-  Seq.maps_results tac2 (tac1 st)) : context_tactic;
-
-fun (tac CONTEXT_THEN_ELSE (tac1, tac2)) st =
-  (case Seq.pull (Seq.filter_results (tac st)) of
-    NONE => tac2 st  (*failed; try tactic 2*)
-  | some => Seq.maps tac1 (Seq.make (fn () => some)));  (*succeeded; use tactic 1*)
-
-fun SOME_CONTEXT_TACTIC (tac : Proof.context -> tactic) =
-  (fn (ctxt,thm) => Method.CONTEXT ctxt (tac ctxt thm)) : context_tactic
-
-end
-
-open Context_Tacticals;
-
 signature APPLY_DEBUG =
 sig
 type break_opts = { tags : string list, trace : (string * Position.T) option }
 
-val break : string option -> context_tactic;
+val break : Proof.context -> string option -> tactic;
 val apply_debug : break_opts -> Method.text_range -> Proof.state -> Proof.state;
 val continue : break_opts -> int option -> (context_state -> context_state option) option -> Proof.state -> Proof.state;
 val finish : Proof.state -> Proof.state;
@@ -149,8 +101,10 @@ fun set_gen get set (SOME id) rng =
   let
     val _ =
        Synchronized.guarded_access id (fn e =>
-         if is_some (#next (get e)) orelse (#clear_cur (get e)) then NONE
+         if is_some (#next (get e)) orelse (#clear_cur (get e)) then NONE else
+         if (#cur (get e)) = SOME rng then SOME ((), e)
          else (SOME ((),(set (map_next (fn _ => SOME rng)) e))))
+
     val _ = Synchronized.guarded_access id (fn e => if is_some (#next (get e)) then NONE else SOME ((),e))
   in () end
  | set_gen _ _ NONE _ = ()
@@ -168,29 +122,6 @@ val clear_running = clear_gen #running map_running
 val set_hilight = set_gen #hilight map_hilight
 val clear_hilight = clear_gen #hilight map_hilight
 
-val _ = Context.>>
-  (Context.map_theory (Method.setup @{binding "markup"}
-  (Scan.state :|-- (fn st => Scan.lift (Scan.trace (Scan.pass st Method_Closure.method_text))) >>
-   (fn (text, toks) => fn ctxt => fn facts =>
-   let
-     val range = case (Token.get_value (hd toks)) of
-     SOME (Token.Source src) => Token.range_of src
-     | _ => Position.no_range
-     val markup_id = get_markup_id ctxt;
-
-     fun tac (ctxt,thm) =
-      let val ctxt' = set_latest_range range ctxt in
-        Method_Closure.method_evaluate text ctxt' facts (ctxt',thm)
-      end
-
-     fun traceify seq = Seq.make (fn () =>
-      let
-        val _ = set_running markup_id range;
-        val r = Seq.pull seq;
-        val _ = clear_running markup_id;
-      in Option.map (apsnd traceify) r end)
-
-   in traceify o tac end)) ""))
 
 fun traceify_method static_ctxt src =
 let
@@ -199,12 +130,8 @@ let
 
 in (fn eval_ctxt => fn facts =>
   let
+    val eval_ctxt = set_latest_range range eval_ctxt;
     val markup_id = get_markup_id eval_ctxt;
-
-    fun tac (runtime_ctxt,thm) =
-        let val runtime_ctxt' = set_latest_range range runtime_ctxt in
-          m eval_ctxt facts (runtime_ctxt', thm)
-        end
 
     fun traceify seq = Seq.make (fn () =>
         let
@@ -212,7 +139,14 @@ in (fn eval_ctxt => fn facts =>
           val r = Seq.pull seq;
           val _ = clear_running markup_id;
         in Option.map (apsnd traceify) r end)
-   in traceify  o tac end)
+
+    fun tac (runtime_ctxt,thm) =
+        let
+          val runtime_ctxt' = set_latest_range range runtime_ctxt;
+          val _ = set_running markup_id range;
+          in traceify (m eval_ctxt facts (runtime_ctxt', thm)) end
+
+   in tac end)
 end
 
 fun add_debug ctxt (Method.Source src) = (Method.Basic (traceify_method ctxt src))
@@ -223,15 +157,16 @@ fun st_eq (ctxt : Proof.context,st) (ctxt',st') =
   pointer_eq (ctxt,ctxt') andalso Thm.eq_thm (st,st')
 
 type result =
-  { pre_state : (Proof.context * thm),
-    post_state : (Proof.context * thm) }
+  { pre_state : thm,
+    post_state : thm,
+    context: Proof.context}
 
 datatype final_state = RESULT of (Proof.context * thm) | ERR of (unit -> string)
 
 type debug_state =
   {results : result list, (* this execution, in order of appearance *)
-   prev_results : (Proof.context * thm) list, (* continuations needed to get thread back to some state*)
-   next_state : (Proof.context * thm) option, (* proof thread blocks waiting for this *)
+   prev_results : thm list, (* continuations needed to get thread back to some state*)
+   next_state : thm option, (* proof thread blocks waiting for this *)
    break_state : (Proof.context * thm) option, (* state of proof thread just before blocking *)
    restart : (unit -> unit) * int, (* restart function (how many previous results to keep), restart requested if non-zero *)
    final : final_state option, (* final result, maybe error *)
@@ -281,7 +216,7 @@ fun is_finished ({final,...} : debug_state) = is_some final;
 
 val drop_states = map_break_state (K NONE) o map_next_state (K NONE);
 
-fun add_result pre post = map_results (cons {pre_state = pre, post_state = post}) o drop_states;
+fun add_result ctxt pre post = map_results (cons {pre_state = pre, post_state = post, context = ctxt}) o drop_states;
 
 fun get_trans_id (id : debug_state Synchronized.var) = #trans_id (Synchronized.value id);
 
@@ -320,20 +255,20 @@ fun guarded_read id f =
 
 (* Immediate return if there are previous results available or we are ignoring breakpoints *)
 
-fun pop_state_no_block id pre = guarded_access id (fn e =>
+fun pop_state_no_block id ctxt pre = guarded_access id (fn e =>
   if is_finished e then error "Attempted to pop state from finished proof" else
-  if (#ignore_breaks e) then SOME (SOME pre, add_result pre pre) else
+  if (#ignore_breaks e) then SOME (SOME pre, add_result ctxt pre pre) else
   case #prev_results e of
      [] => SOME (NONE, I)
-   | (st :: sts) => SOME (SOME st, add_result pre st o map_prev_results (fn _ => sts)))
+   | (st :: sts) => SOME (SOME st, add_result ctxt pre st o map_prev_results (fn _ => sts)))
 
-fun pop_next_state id pre = guarded_access id (fn e =>
+fun pop_next_state id ctxt pre = guarded_access id (fn e =>
   if is_finished e then error "Attempted to pop state from finished proof" else
   if not (null (#prev_results e)) then error "Attempted to pop state when previous results exist" else
-    if (#ignore_breaks e) then SOME (pre, add_result pre pre) else
+    if (#ignore_breaks e) then SOME (pre, add_result ctxt pre pre) else
     (case #next_state e of
             NONE => NONE
-          | SOME st => SOME (st, add_result pre st)))
+          | SOME st => SOME (st, add_result ctxt pre st)))
 
 fun set_next_state id trans_id st = guarded_access id (fn e =>
   (assert_trans_id trans_id e;
@@ -346,12 +281,12 @@ fun set_break_state id st = guarded_access id (fn e =>
     SOME ((), map_break_state (fn _ => SOME st))
   else error ("Attempted to set break state in inconsistent state" ^ (@{make_string} e)))
 
-fun pop_state id pre =
-  case pop_state_no_block id pre of SOME st => st
+fun pop_state id ctxt pre =
+  case pop_state_no_block id ctxt pre of SOME st => st
   | NONE =>
   let
-    val _ = set_break_state id pre; (* wait for continue *)
-  in pop_next_state id pre end
+    val _ = set_break_state id (ctxt, pre); (* wait for continue *)
+  in pop_next_state id ctxt pre end
 
 (* block until a breakpoint is hit or method finishes *)
 fun wait_break_state id trans_id = guarded_read id
@@ -394,9 +329,11 @@ fun peek_final_result id =
 fun poke_error (RESULT st) = st
   | poke_error (ERR e) = error (e ())
 
+fun context_state e = (#context e, #pre_state e);
+
 fun nth_pre_result id i = guarded_read id
   (fn e =>
-    if length (#results e) > i then SOME (RESULT (#pre_state (nth (rev (#results e)) i)), false) else
+    if length (#results e) > i then SOME (RESULT (context_state (nth (rev (#results e)) i)), false) else
     if not (null (#prev_results e)) then NONE else
       (if length (#results e) = i then
          (case #break_state e of SOME st => SOME (RESULT st, false) | NONE => NONE) else
@@ -456,21 +393,55 @@ fun set_can_break b ctxt = if get_can_break ctxt = b then ctxt else
 fun has_break_tag (SOME tag) tags = member (op =) tags tag
   | has_break_tag NONE _ = true;
 
-fun break tag = (fn (ctxt,thm) =>
+fun break ctxt tag = (fn thm =>
 if not (get_can_break ctxt) orelse not (has_break_tag tag (#tags (get_break_opts ctxt)))
    orelse Method.detect_closure_state thm
-    then Seq.make_results (Seq.single (ctxt,thm)) else
+    then Seq.single thm else
   let
     val id = get_debug_ident ctxt;
     val ctxt' = set_last_tag tag ctxt;
 
     val st' = Seq.make (fn () =>
-     SOME (pop_state id (ctxt',thm),Seq.empty))
+     SOME (pop_state id ctxt' thm,Seq.empty))
 
-  in Seq.make_results st' end) : context_tactic
+  in st' end)
+
+structure Data = Generic_Data
+(
+  type T = (morphism * Proof.context) option;
+  val empty: T = NONE;
+  val extend = K NONE;
+  fun merge data : T = NONE;
+);
+
+
+fun foo ctxt st (_,[_,tok,_]) =
+  if Method.detect_closure_state st then
+    let
+      val _ = @{print} tok
+      val _ = @{print} (Facts.props (Proof_Context.facts_of ctxt));
+      val _ = Token.assign (SOME (Token.Declaration (fn phi => Data.put (SOME (phi,ctxt))))) tok;
+   in () end
+  else
+    let
+      val _ = @{print} tok
+      val SOME (Token.Declaration decl) = Token.get_value tok;
+      val dummy_ctxt = decl Morphism.identity (Context.Proof ctxt);
+      val SOME (phi,ctxt') = Data.get dummy_ctxt;
+      val _ = @{print} phi;
+      val k = Name_Space.fold_table
+      val facts = (Facts.dest_static false [Proof_Context.facts_of ctxt] (Proof_Context.facts_of ctxt'));
+      val facts' = map (Morphism.fact phi) (map snd facts);
+      val _ = @{print} facts'
+    in () end
+ | foo _ _ _ = ()
+
+val k = Name_Space.define
 
 val _ = Context.>> (Context.map_theory (Method.setup @{binding break}
-  (Scan.lift (Scan.option Parse.string) >> (fn tag => fn _ => fn _ => break tag)) ""))
+  (Scan.lift (Scan.option Parse.string) -- Scan.lift (Scan.trace (Args.mode "bounds")) >>
+   (fn (tag,b) => fn _ => fn _ =>
+    fn (ctxt,thm) => (Seq.make_results (Seq.map (fn thm' => (ctxt,thm')) (foo ctxt thm b; break ctxt tag thm))))) ""))
 
 fun map_state f state =
      let
@@ -674,13 +645,13 @@ fun continue opts i_opt m_opt =
 
         val ex_results = peek_all_results id |> rev;
 
-        fun tick_up n st =
+        fun tick_up n (_,thm) =
           if n < length ex_results then error "Unexpected number of existing results"
            (*case get_final n (#pre_state (nth ex_results n)) of SOME st' => (st', false, n)
             | NONE => tick_up (n + 1) st *)
           else
           let
-            val _ = if n > length ex_results then set_next_state id trans_id st else ();
+            val _ = if n > length ex_results then set_next_state id trans_id thm else ();
             val (n_r, b) = wait_break_state id trans_id;
             val st' = poke_error n_r;
           in if b then (st',b, n) else

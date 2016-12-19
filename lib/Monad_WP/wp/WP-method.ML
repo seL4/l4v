@@ -274,7 +274,7 @@ fun append_used_rule rule used_rules = used_rules := !used_rules @ [rule]
 
 fun add_extra_rule rule extra_rules = extra_rules := !extra_rules @ [rule]
 
-fun resolve_ruleset_tac ctxt rs used_rules_ref n t =
+fun resolve_ruleset_tac' ctxt rs used_rules_ref n t =
   let fun append_rule rule thm = Seq.map (fn thm => (append_used_rule rule used_rules_ref; thm)) thm;
   in case
     Thm.cprem_of t n |> Thm.term_of |> snd (#trips rs) (Thm.theory_of_thm t)
@@ -294,10 +294,8 @@ fun resolve_ruleset_tac ctxt rs used_rules_ref n t =
     | _ => FIRST (map (fn rule => fn thm => append_rule rule (resolve_tac ctxt [rule] n thm))
                       (map snd (#3 (#rules rs)) @ #splits rs)) t end;
 
-fun resolve_ruleset_ctac rs used_rules_ref n =
-  (Apply_Debug.break (SOME "wp") CONTEXT_THEN
-  (Context_Tacticals.SOME_CONTEXT_TACTIC (fn ctxt => resolve_ruleset_tac ctxt (rs ctxt) used_rules_ref n)))
-
+fun resolve_ruleset_tac ctxt rs used_rules_ref n =
+  (Apply_Debug.break ctxt (SOME "wp")) THEN (resolve_ruleset_tac' ctxt rs used_rules_ref n)
 
 fun pretty_rule ctxt rule =
   Pretty.big_list (Thm.get_name_hint rule) [Thm.pretty_thm ctxt rule]
@@ -333,11 +331,9 @@ fun warn_unsafe_thms unsafe_thms n ctxt t =
      then "Unsafe theorems that could be used: " ^ commas_quote unsafe_thm_names |> warning
      else () end;
 
-(* allow ad-hoc modification of wp rules by breakpoints *)
-fun apply_rules_ctac_n trace extras extras_ref n = (fn (ctxt,t) =>
+fun apply_rules_tac_n trace ctxt extras extras_ref n =
 let
-  val static_rules = get_rules ctxt extras;
-  fun rules ctxt' = if pointer_eq (ctxt,ctxt') then static_rules else get_rules ctxt' extras;
+  val rules = get_rules ctxt extras;
   val used_rules = Unsynchronized.ref [] : thm list Unsynchronized.ref
   fun has_vars st = Term.exists_subterm Term.is_Var (Thm.concl_of st)
   val wp_pre_tac = COND has_vars all_tac (TRY (resolve_tac ctxt (#wp_pre rules) 1))
@@ -397,11 +393,11 @@ fun apply_rules_args trace xs =
   in
     if_colon
     (sections (wp_modifiers extras_ref) >>
-      K (fn ctxt => SIMPLE_METHOD (Method.NO_CONTEXT_TACTIC ctxt (apply_rules_ctac trace [] extras_ref))))
+      K (fn ctxt => SIMPLE_METHOD (apply_rules_tac trace ctxt [] extras_ref)))
     (Attrib.thms >> curry (fn (extras, ctxt) =>
-      SIMPLE_METHOD (Method.NO_CONTEXT_TACTIC ctxt (
-        apply_rules_ctac trace extras extras_ref
-      ))
+      Method.SIMPLE_METHOD (
+        apply_rules_tac trace ctxt extras extras_ref
+      )
     ))
   end xs;
 
