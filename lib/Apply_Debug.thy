@@ -457,7 +457,7 @@ structure Data = Generic_Data
 (* Present Eisbach/Match variable binding context as normal context elements.
    Potentially shadows existing facts/binds *)
 
-fun maybe_bind ctxt st (_,[_,tok,_]) =
+fun maybe_bind st (_,[tok]) ctxt =
   if Method.detect_closure_state st then
     let
       val target = Local_Theory.target_of ctxt
@@ -515,14 +515,19 @@ fun maybe_bind ctxt st (_,[_,tok,_]) =
       |> Proof_Context.put_thms true ("match_prems", SOME (get_match_prems ctxt));
 
     in ctxt' end
- | maybe_bind ctxt _ _ = ctxt
+ | maybe_bind _ _ ctxt = ctxt
 
-val _ = Context.>> (Context.map_theory (Method.setup @{binding break}
-  (Scan.lift (Scan.option Parse.string) -- (Scan.lift (Scan.trace (Args.mode "bounds"))) >>
-   (fn (tag,b) => fn _ => fn _ =>
+val _ = Context.>> (Context.map_theory (Method.setup @{binding #}
+  (Scan.lift (Scan.trace (Scan.trace (Args.$$$ "break") -- (Scan.option Parse.string))) >>
+   (fn ((b,tag),toks) => fn _ => fn _ =>
     fn (ctxt,thm) =>
       (let
-        val ctxt' = maybe_bind ctxt thm b;
+
+        val range = Token.range_of toks;
+        val ctxt' = ctxt
+          |> maybe_bind thm b
+          |> set_latest_range range;
+
       in Seq.make_results (Seq.map (fn thm' => (ctxt',thm')) (break ctxt' tag thm)) end))) ""))
 
 fun map_state f state =
