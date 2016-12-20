@@ -1604,8 +1604,18 @@ lemma arch_decode_inv_wf[wp]:
 
 declare word_less_sub_le [simp]
 
+crunch pred_tcb_at: associate_vcpu_tcb "pred_tcb_at proj P t"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma  perform_vcpu_invocation_pred_tcb_at[wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> perform_vcpu_invocation iv \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  apply (simp add: perform_vcpu_invocation_def)
+  apply (cases iv; simp)
+  apply (wp associate_vcpu_tcb_pred_tcb_at)
+  sorry
+
 crunch pred_tcb_at: perform_page_table_invocation, perform_page_invocation,
-           perform_asid_pool_invocation, perform_vcpu_invocation,
+           perform_asid_pool_invocation,
            perform_page_directory_invocation "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 

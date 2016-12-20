@@ -41,7 +41,8 @@ lemma obj_refs_cap_rights_update[simp, Syscall_AI_assms]:
 lemma table_cap_ref_mask_cap [Syscall_AI_assms]:
   "table_cap_ref (mask_cap R cap) = table_cap_ref cap"
   by (clarsimp simp add:mask_cap_def table_cap_ref_def acap_rights_update_def
-    cap_rights_update_def split:cap.splits arch_cap.splits)
+                         cap_rights_update_def arch_cap_fun_lift_def
+                    split:cap.splits arch_cap.splits)
 
 lemma diminished_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
   "\<lbrakk> cte_wp_at (diminished cap) p s; valid_arch_caps s \<rbrakk>

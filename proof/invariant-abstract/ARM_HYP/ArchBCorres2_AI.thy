@@ -67,7 +67,7 @@ crunch (bcorres)bcorres[wp]: send_signal,arch_perform_invocation truncate_state
 
 crunch (bcorres)bcorres[wp]: send_ipc truncate_state
   (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
-         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME zipWithM_x handle_fault_reply)
+         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME zipWithM_x handle_fault_reply make_arch_fault_msg)
 
 crunch (bcorres)bcorres[wp]: do_reply_transfer truncate_state
   (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure

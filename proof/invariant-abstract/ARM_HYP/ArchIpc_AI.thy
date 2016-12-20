@@ -389,6 +389,20 @@ lemma transfer_caps_non_null_cte_wp_at:
 
 crunch cte_wp_at[wp,Ipc_AI_assms]: do_fault_transfer "cte_wp_at P p"
 
+lemma valid_arch_objs_lift: "valid_pspace s \<Longrightarrow> valid_vspace_objs s \<Longrightarrow> valid_arch_objs s"
+  apply (clarsimp simp add: valid_pspace_def valid_objs_def valid_arch_objs_def obj_at_def)
+  apply (erule_tac x=p in ballE; clarsimp simp add: valid_obj_def)
+  done
+
+lemma set_cap_valid_arch_objs [wp, Ipc_AI_assms]:
+  "\<lbrace>valid_arch_objs\<rbrace> set_cap a b \<lbrace>\<lambda>_. valid_arch_objs \<rbrace>"
+  apply (rule valid_arch_objs_typ_at_lift)
+  apply (wp set_cap_typ_at)
+  apply (rule set_cap.aobj_at)
+  apply (fastforce simp: arch_obj_pred_def non_arch_obj_def
+                   split: kernel_object.split arch_kernel_obj.splits)
+  done
+
 lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows  "\<lbrace>valid_objs and cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>
@@ -488,8 +502,37 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
    apply auto
    done
 
+lemma set_mrs_state_hyp_refs_of[wp]:
+  "\<lbrace>\<lambda> s. P (state_hyp_refs_of s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: set_mrs_def)
+  apply wp
+  apply wpc
+  apply wp
+  apply (clarsimp simp: zipWithM_x_mapM)
+  apply (rule conjI)
+  apply (rule impI)
+  apply (wp mapM_wp)
+  apply (case_tac x)
+  apply simp
+  apply wp
+  apply clarsimp
+  apply assumption
+  apply (rule impI)
+  apply (wp mapM_wp)
+  apply (case_tac x)
+  apply simp
+  apply wp
+  apply clarsimp
+  apply (wp set_object_wp)
+  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (frule state_hyp_refs_of_tcb_state_update)
+  sorry
+
+(*
 crunch state_hyp_refs_of[wp]: set_mrs "\<lambda> s. P (state_hyp_refs_of s)"
-  (wp: crunch_wps simp: zipWithM_x_mapM ignore: set_object transfer_caps_loop)
+  (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
+*)
+
 
 crunch state_hyp_refs_of[wp, Ipc_AI_cont_assms]: do_ipc_transfer "\<lambda> s. P (state_hyp_refs_of s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)

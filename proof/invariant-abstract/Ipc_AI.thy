@@ -219,6 +219,8 @@ locale Ipc_AI =
     \<lbrace>valid_vspace_objs::'state_ext state \<Rightarrow> bool\<rbrace>
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
+  assumes set_cap_valid_arch_objs[wp]:
+  "\<And> cap p. \<lbrace>valid_arch_objs ::'state_ext state \<Rightarrow> bool \<rbrace> set_cap cap p \<lbrace>\<lambda>_. valid_arch_objs \<rbrace>"
   assumes arch_get_sanitise_register_info_typ_at[wp]:
   "\<And> P T p t.
       \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
@@ -865,10 +867,10 @@ lemma transfer_caps_loop_irq_handlers[wp]:
 
 crunch valid_arch_objs [wp]: set_extra_badge valid_arch_objs
 
-crunch arch_objs [wp]: set_untyped_cap_as_full "valid_arch_objs"
+crunch arch_objs [wp]: set_untyped_cap_as_full "valid_arch_objs :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps ignore: set_object set_cap)
 
-crunch arch_objs [wp]: cap_insert "valid_arch_objs"
+crunch arch_objs [wp]: cap_insert "valid_arch_objs :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps ignore: set_object set_cap)
 
 lemma transfer_caps_loop_arch_objs[wp]:

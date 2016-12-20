@@ -281,7 +281,7 @@ lemma tc_invs[Tcb_AI_asms]:
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+)
   apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified] is_nondevice_page_cap_arch_def
                         is_cap_simps is_valid_vtable_root_def is_nondevice_page_cap_simps
-                        is_cnode_or_valid_arch_def tcb_cap_valid_def
+                        is_cnode_or_valid_arch_def tcb_cap_valid_def arch_cap_fun_lift_def
                         invs_valid_objs cap_asid_def vs_cap_ref_def
                  split: option.split_asm )+
       apply (simp add: case_bool_If valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
@@ -324,7 +324,7 @@ lemma derive_no_cap_asid[wp,Tcb_AI_asms]:
    apply (wp | simp | wpc)+
   apply (auto simp add: no_cap_to_obj_with_diff_ref_Null,
          auto simp add: no_cap_to_obj_with_diff_ref_def
-                        table_cap_ref_def)
+                        table_cap_ref_def arch_cap_fun_lift_def)
   done
 
 
