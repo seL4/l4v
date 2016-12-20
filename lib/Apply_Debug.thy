@@ -15,6 +15,39 @@ theory Apply_Debug
     "continue" :: prf_script % "proof" and  "finish" :: prf_script % "proof"
 begin
 
+(*FIXME: Add proper interface to match *)
+context
+begin
+
+private method put_prems =
+  (match premises in H:"PROP _" (multi) \<Rightarrow> \<open>insert H\<close>)
+
+ML \<open>
+fun get_match_prems ctxt =
+  let
+
+    val st = Goal.init @{cterm "PROP P"}
+
+    fun get_wrapped () =
+      let
+        val ((_,st'),_) =
+          Method_Closure.apply_method ctxt @{method put_prems} [] [] [] ctxt [] (ctxt, st)
+          |> Seq.first_result "prems";
+
+        val prems =
+          Thm.prems_of st' |> hd |> Logic.strip_imp_prems;
+
+      in prems end
+
+     val match_prems = the_default [] (try get_wrapped ());
+
+     val all_prems = Assumption.all_prems_of ctxt;
+
+   in map_filter (fn t => find_first (fn thm => t aconv (Thm.prop_of thm)) all_prems) match_prems end
+
+\<close>
+end
+
 ML \<open>
 signature APPLY_DEBUG =
 sig
@@ -406,42 +439,91 @@ if not (get_can_break ctxt) orelse not (has_break_tag tag (#tags (get_break_opts
 
   in st' end)
 
+fun init_interactive ctxt = ctxt
+  |> set_can_break false
+  |> Config.put Method.closure true;
+
+type static_info =
+  {private_dyn_facts : string list, local_facts : (string * thm list) list}
+
 structure Data = Generic_Data
 (
-  type T = (morphism * Proof.context) option;
+  type T = (morphism * Proof.context * static_info) option;
   val empty: T = NONE;
   val extend = K NONE;
   fun merge data : T = NONE;
 );
 
+(* Present Eisbach/Match variable binding context as normal context elements.
+   Potentially shadows existing facts/binds *)
 
-fun foo ctxt st (_,[_,tok,_]) =
+fun maybe_bind ctxt st (_,[_,tok,_]) =
   if Method.detect_closure_state st then
     let
-      val _ = @{print} tok
-      val _ = @{print} (Facts.props (Proof_Context.facts_of ctxt));
-      val _ = Token.assign (SOME (Token.Declaration (fn phi => Data.put (SOME (phi,ctxt))))) tok;
-   in () end
+      val target = Local_Theory.target_of ctxt
+      val local_facts = Proof_Context.facts_of ctxt;
+      val global_facts = map (Global_Theory.facts_of) (Context.parents_of (Proof_Context.theory_of ctxt));
+      val raw_facts = Facts.dest_all (Context.Proof ctxt) true global_facts local_facts |> map fst;
+
+      fun can_retrieve s = can (Facts.retrieve (Context.Proof ctxt) local_facts) (s, Position.none)
+
+      val private_dyns = raw_facts |>
+        (filter (fn s => Facts.is_concealed local_facts s andalso Facts.is_dynamic local_facts s
+                         andalso can_retrieve (Long_Name.base_name s)
+                         andalso Facts.intern local_facts (Long_Name.base_name s) = s
+                         andalso not (can_retrieve s)) )
+
+      val local_facts = Facts.dest_static true [(Proof_Context.facts_of target)] local_facts;
+
+      val _ = Token.assign (SOME (Token.Declaration (fn phi =>
+      Data.put (SOME (phi,ctxt, {private_dyn_facts = private_dyns, local_facts = local_facts}))))) tok;
+
+   in ctxt end
   else
     let
-      val _ = @{print} tok
       val SOME (Token.Declaration decl) = Token.get_value tok;
       val dummy_ctxt = decl Morphism.identity (Context.Proof ctxt);
-      val SOME (phi,ctxt') = Data.get dummy_ctxt;
-      val _ = @{print} phi;
-      val k = Name_Space.fold_table
-      val facts = (Facts.dest_static false [Proof_Context.facts_of ctxt] (Proof_Context.facts_of ctxt'));
-      val facts' = map (Morphism.fact phi) (map snd facts);
-      val _ = @{print} facts'
-    in () end
- | foo _ _ _ = ()
+      val SOME (phi,static_ctxt,{private_dyn_facts, local_facts}) = Data.get dummy_ctxt;
 
-val k = Name_Space.define
+      val old_facts = Proof_Context.facts_of static_ctxt;
+      val cur_priv_facts = map (fn s =>
+            Facts.retrieve (Context.Proof ctxt) old_facts (Long_Name.base_name s,Position.none)) private_dyn_facts;
+
+      val cur_local_facts =
+        map (fn (s,fact) => (Long_Name.dest_local s, Morphism.fact phi fact)) local_facts
+      |> map_filter (fn (s,fact) => case s of SOME s => SOME (s,fact) | _ => NONE)
+
+      val old_fixes = (Variable.dest_fixes static_ctxt)
+
+      val local_fixes =
+        filter (fn (_,f) =>
+          Variable.is_newly_fixed static_ctxt (Local_Theory.target_of static_ctxt) f) old_fixes
+        |> map_filter (fn (n,f) => case Variable.default_type static_ctxt f of SOME typ =>
+              if typ = dummyT then NONE else SOME (n, Free (f, typ))
+            | NONE => NONE)
+
+      val local_binds = (map (apsnd (Morphism.term phi)) local_fixes)
+
+      val ctxt' = ctxt
+      |> fold (fn (s,t) =>
+          Variable.bind_term ((s,0),t)
+          #> Variable.declare_constraints (Var ((s,0),Term.fastype_of t))) local_binds
+      |> fold (fn e =>
+          Proof_Context.put_thms true (Long_Name.base_name (#name e), SOME (#thms e))) cur_priv_facts
+      |> fold (fn (nm,fact) =>
+          Proof_Context.put_thms true (nm, SOME fact)) cur_local_facts
+      |> Proof_Context.put_thms true ("match_prems", SOME (get_match_prems ctxt));
+
+    in ctxt' end
+ | maybe_bind ctxt _ _ = ctxt
 
 val _ = Context.>> (Context.map_theory (Method.setup @{binding break}
-  (Scan.lift (Scan.option Parse.string) -- Scan.lift (Scan.trace (Args.mode "bounds")) >>
+  (Scan.lift (Scan.option Parse.string) -- (Scan.lift (Scan.trace (Args.mode "bounds"))) >>
    (fn (tag,b) => fn _ => fn _ =>
-    fn (ctxt,thm) => (Seq.make_results (Seq.map (fn thm' => (ctxt,thm')) (foo ctxt thm b; break ctxt tag thm))))) ""))
+    fn (ctxt,thm) =>
+      (let
+        val ctxt' = maybe_bind ctxt thm b;
+      in Seq.make_results (Seq.map (fn thm' => (ctxt',thm')) (break ctxt' tag thm)) end))) ""))
 
 fun map_state f state =
      let
@@ -533,7 +615,7 @@ in
         | RESULT st' => st'
 
        val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
-                     else st' |> apfst (set_continuation 0) |> apfst (set_can_break false)
+                     else st' |> apfst (set_continuation 0) |> apfst (init_interactive)
 
      in st''  end
 
@@ -619,7 +701,8 @@ fun continue opts i_opt m_opt =
 (map_state (fn (ctxt,thm) =>
       let
         val {tags, trace} = opts;
-        val ctxt = set_can_break true ctxt;
+        val ctxt = set_can_break true ctxt
+
         val thm = Apply_Trace.clear_deps thm;
 
         val _ = if get_continuation ctxt < 0 then error "Cannot continue in a non-debug state" else ();
@@ -666,7 +749,7 @@ fun continue opts i_opt m_opt =
         val (st',b, cont) = tick_up (start_cont + 1) (ctxt, thm)
 
         val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
-                   else st' |> apfst (set_continuation cont) |> apfst (set_can_break false);
+                   else st' |> apfst (set_continuation cont) |> apfst (init_interactive);
 
         val _ = maybe_trace trace st'';
 
