@@ -16,6 +16,7 @@ chapter "Library"
 
 theory Lib
 imports
+  String_Compare
   NICTATools
   "~~/src/HOL/Library/Prefix_Order"
 begin

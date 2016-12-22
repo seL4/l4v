@@ -9,7 +9,7 @@
  *)
 
 theory StructSupport
-imports SepCode SepInv
+imports SepCode SepInv "../../../lib/String_Compare"
 begin
 
 lemma field_lookup_list_Some2 [rule_format]:

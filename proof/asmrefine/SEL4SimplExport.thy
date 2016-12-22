@@ -16,6 +16,8 @@ imports
 
 begin
 
+declare Char_eq_Char_iff [simp del]
+
 ML {*
 val csenv = let
     val the_csenv = CalculateState.get_csenv @{theory} "c/kernel_all.c_pp" |> the

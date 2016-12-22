@@ -16,7 +16,8 @@ imports
   "SEL4SimplExport"
 begin
 
-declare ptr_add_assertion_uint[simp del]
+declare Char_eq_Char_iff [simp del]
+declare ptr_add_assertion_uint [simp del]
 
 ML {*
 val funs = ParseGraph.funs @{theory} "CFunDump.txt"
