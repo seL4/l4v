@@ -123,6 +123,7 @@ The dependencies for installing Isabelle in this repository are
  * LaTeX, for instance on Ubuntu 14.04
    `sudo apt-get install texlive-fonts-recommended texlive-latex-extra texlive-metapost texlive-bibtex-extra`     
  * 32-bit C/C++ standard libraries on 64-bit platforms (optional)
+ * [MLton](http://www.mlton.org/)
 
 For running the standalone version of the C Parser you will additionally need
 
