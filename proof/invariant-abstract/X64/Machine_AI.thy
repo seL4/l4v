@@ -367,6 +367,61 @@ lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"
   by (simp add: clearMemory_def mapM_x_mapM ef_storeWord)
 
+(* FIXME x64: move *)
+lemma setCurrentVSpaceRoot_ef[simp,wp]: "empty_fail (setCurrentVSpaceRoot a b)"
+  by (simp add: setCurrentVSpaceRoot_def)
+  
+lemma getFaultAddress_ef[simp,wp]: "empty_fail getFaultAddress"
+  by (simp add: getFaultAddress_def)
+
+(* FIXME x64: move *)
+lemma ioapicMapPinToVector_ef[simp,wp]: "empty_fail (ioapicMapPinToVector a b c d e)"
+  by (simp add: ioapicMapPinToVector_def)
+  
+(* FIXME x64: move *)
+lemma invalidateTLBEntry_ef[simp,wp]: "empty_fail (invalidateTLBEntry b)"
+  by (simp add: invalidateTLBEntry_def)
+
+(* FIXME x64: move *)
+lemma hwASIDInvalidate_ef[simp,wp]: "empty_fail (hwASIDInvalidate b)"
+  by (simp add: hwASIDInvalidate_def)
+
+(* FIXME x64: move *)
+lemma updateIRQState_ef[simp,wp]: "empty_fail (updateIRQState b c)"
+  by (simp add: updateIRQState_def)
+  
+(* FIXME x64: move *)
+lemma invalidatePageStructureCache_ef[simp,wp]: "empty_fail (invalidatePageStructureCache)"
+  by (simp add: invalidatePageStructureCache_def)
+  
+(* FIXME x64: move *)
+lemma resetCR3_ef[simp,wp]: "empty_fail (resetCR3)"
+  by (simp add: resetCR3_def)
+
+(* FIXME x64: move *)
+lemma in8_ef[simp,wp]: "empty_fail (in8 port)"
+  by (simp add: in8_def)
+
+(* FIXME x64: move *)
+lemma in16_ef[simp,wp]: "empty_fail (in16 port)"
+  by (simp add: in16_def)
+  
+(* FIXME x64: move *)
+lemma in32_ef[simp,wp]: "empty_fail (in32 port)"
+  by (simp add: in32_def)
+  
+(* FIXME x64: move *)
+lemma out8_ef[simp,wp]: "empty_fail (out8 port dat)"
+  by (simp add: out8_def)
+
+(* FIXME x64: move *)
+lemma out16_ef[simp,wp]: "empty_fail (out16 port dat)"
+  by (simp add: out16_def)
+  
+(* FIXME x64: move *)
+lemma out32_ef[simp,wp]: "empty_fail (out32 port dat)"
+  by (simp add: out32_def)
+  
 end
 end
 

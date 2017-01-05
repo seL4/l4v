@@ -17,13 +17,9 @@ context Arch begin global_naming X64
 named_theorems EmptyFail_AI_assms
 
 crunch_ignore (empty_fail)
-  (add: invalidateTLB_ASID_impl invalidateTLB_VAASID_impl cleanByVA_impl
-        cleanByVA_PoU_impl invalidateByVA_impl invalidateByVA_I_impl
-        invalidate_I_PoU_impl cleanInvalByVA_impl branchFlush_impl
-        clean_D_PoU_impl cleanInvalidate_D_PoC_impl cleanInvalidateL2Range_impl
-        invalidateL2Range_impl cleanL2Range_impl flushBTAC_impl
-        writeContextID_impl isb_impl dsb_impl dmb_impl setHardwareASID_impl
-        writeTTBR0_impl cacheRangeOp)
+  (add: setCurrentVSpaceRoot_impl invalidateTLBEntry_impl invalidatePageStructureCache_impl
+        resetCR3_impl hwASIDInvalidate_impl ioapicMapPinToVector_impl updateIRQState_impl
+        in8_impl in16_impl in32_impl out8_impl out16_impl out32_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
   loadWord, load_word_offs, storeWord, getRestartPC, get_mrs
@@ -42,6 +38,18 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def wp: zipWithM_x_empty_fail)
+  
+lemma port_out_empty_fail[simp, intro!]:
+  assumes ef: "\<And>a. empty_fail (oper a)"
+  shows "empty_fail (port_out oper w)"
+  apply (simp add: port_out_def)
+  by (wp | simp add: ef)+
+  
+lemma port_in_empty_fail[simp, intro!]:
+  assumes ef: "empty_fail oper"
+  shows "empty_fail (port_in oper)"
+  apply (simp add: port_in_def)
+  by (wp | simp add: ef)+
 
 crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notification, decode_unbind_notification
   (simp: cap.splits arch_cap.splits split_def)
@@ -49,31 +57,43 @@ crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notificati
 lemma decode_tcb_invocation_empty_fail[wp]:
   "empty_fail (decode_tcb_invocation a b (ThreadCap p) d e)"
   by (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | intro conjI impI)+
+  
+crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment,
+                   ensure_safe_mapping, get_asid_pool, lookup_pt_slot,
+                   decode_port_invocation
+  (simp: kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits 
+         pdpte.splits pml4e.splits vmpage_size.splits)
 
-crunch (empty_fail) empty_fail[wp]: find_pd_for_asid, get_master_pde, check_vp_alignment,
-                   create_mapping_entries, ensure_safe_mapping, get_asid_pool, resolve_vaddr
-  (simp: kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits)
-
+lemma create_mapping_entries_empty_fail[wp]:
+  "empty_fail (create_mapping_entries a b c d e f)"
+  by (case_tac c; simp add: create_mapping_entries_def; wp)
+  
 lemma arch_decode_X64ASIDControlMakePool_empty_fail:
   "invocation_type label = ArchInvocationLabel X64ASIDControlMakePool
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   apply (simp add: arch_decode_invocation_def Let_def)
   apply (intro impI conjI allI)
-   apply (simp add: isPageFlushLabel_def isPDFlushLabel_def split: arch_cap.splits)+
-   apply (rule impI)
+   apply (simp split: arch_cap.splits)
+   apply (intro conjI impI)
    apply (simp add: split_def)
    apply wp
     apply simp
    apply (subst bindE_assoc[symmetric])
    apply (rule empty_fail_bindE)
-    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: split_if_asm)
-   by (simp add: Let_def split: cap.splits arch_cap.splits option.splits | wp | intro conjI impI allI)+
+    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def
+                                returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: split_if_asm)
+  apply (simp add: Let_def split: cap.splits arch_cap.splits option.splits bool.splits | wp | intro conjI impI allI)+
+  by (clarsimp simp add: decode_page_invocation_def split: arch_cap.splits | wp)+
+
 
 lemma arch_decode_X64ASIDPoolAssign_empty_fail:
   "invocation_type label = ArchInvocationLabel X64ASIDPoolAssign
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
-  apply (simp add: arch_decode_invocation_def split_def Let_def isPageFlushLabel_def isPDFlushLabel_def
+  apply (simp add: arch_decode_invocation_def Let_def split: arch_cap.splits)
+  apply (intro impI allI conjI)
+  apply (simp add: arch_decode_invocation_def split_def Let_def 
             split: arch_cap.splits cap.splits option.splits | intro impI allI)+
+  apply clarsimp
   apply (rule empty_fail_bindE)
    apply simp
   apply (rule empty_fail_bindE)
@@ -87,7 +107,7 @@ lemma arch_decode_X64ASIDPoolAssign_empty_fail:
    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_def bindE_def
                                bind_def return_def returnOk_def lift_def liftE_def select_ext_def
                                gets_def get_def assert_def fail_def)
-  apply wp
+  apply (clarsimp simp: decode_page_invocation_def | wp)+
   done
 
 lemma arch_decode_invocation_empty_fail[wp]:
@@ -99,7 +119,8 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (find_goal \<open>succeeds \<open>erule arch_decode_X64ASIDControlMakePool_empty_fail\<close>\<close>)
   apply (find_goal \<open>succeeds \<open>erule arch_decode_X64ASIDPoolAssign_empty_fail\<close>\<close>)
   apply ((simp add: arch_decode_X64ASIDControlMakePool_empty_fail arch_decode_X64ASIDPoolAssign_empty_fail)+)[2]  
-  by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
+  by ((simp add: arch_decode_invocation_def decode_page_invocation_def Let_def 
+             split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
 
 end
 
@@ -111,12 +132,19 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
 
 context Arch begin global_naming X64
 
+lemma flush_table_empty_fail[simp, wp]: "empty_fail (flush_table a b c)"
+  unfolding flush_table_def
+  apply simp
+  apply (wp | wpc)+
+  done
+
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
-    setHardwareASID, setCurrentPD, finalise_cap, preemption_point,
+    finalise_cap, preemption_point,
     cap_swap_for_delete, decode_invocation
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
-         kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits)
+         kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits
+         forM_x_def empty_fail_mapM_x)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: setRegister, setNextPC
 
@@ -159,8 +187,8 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_t
          thread_state.splits endpoint.splits catch_def sum.splits cnode_invocation.splits
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
-         flush_type.splits page_directory_invocation.splits
-   ignore: resetTimer_impl ackInterrupt_impl)
+         page_directory_invocation.splits
+   ignore: resetTimer_impl)
 end
 
 global_interpretation EmptyFail_AI_call_kernel_unit?: EmptyFail_AI_call_kernel_unit
