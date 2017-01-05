@@ -250,10 +250,12 @@ definition setCurrentCR3 :: "Platform.X64.cr3 \<Rightarrow> unit machine_monad"
   where
   "setCurrentCR3 \<equiv> undefined"
   
+consts'
+  mfence_impl :: "unit machine_rest_monad"
 definition
 mfence :: "unit machine_monad"
 where
-"mfence \<equiv> undefined"
+"mfence \<equiv> machine_op_lift mfence_impl"
 
 consts'
   invalidateTLBEntry_impl :: "word64 \<Rightarrow> unit machine_rest_monad"
@@ -277,6 +279,7 @@ definition
   resetCR3 :: "unit machine_monad" where
   "resetCR3 \<equiv> machine_op_lift resetCR3_impl "
 
+(* FIXME x64: VT-d
 definition
 firstValidIODomain :: "word16"
 where
@@ -286,36 +289,44 @@ definition
 numIODomainIDBits :: "nat"
 where
 "numIODomainIDBits \<equiv> undefined"
+*)
 
+consts'
+  hwASIDInvalidate_impl :: "word64 \<Rightarrow> unit machine_rest_monad"
 definition
 hwASIDInvalidate :: "word64 \<Rightarrow> unit machine_monad"
 where
-"hwASIDInvalidate asid \<equiv> undefined"
+"hwASIDInvalidate asid \<equiv> machine_op_lift (hwASIDInvalidate_impl asid)"
 
+
+consts'
+  getFaultAddress_val :: "machine_state \<Rightarrow> machine_word"
 definition
 getFaultAddress :: "word64 machine_monad"
 where
-"getFaultAddress \<equiv> undefined"
+"getFaultAddress \<equiv> gets getFaultAddress_val"
 
+consts'
+  irqIntOffset_val :: "machine_state \<Rightarrow> machine_word"
 definition
 irqIntOffset :: "machine_word"
 where
-"irqIntOffset \<equiv> undefined"
+"irqIntOffset \<equiv> 0x20"
 
 definition
 maxPCIBus :: "machine_word"
 where
-"maxPCIBus \<equiv> undefined"
+"maxPCIBus \<equiv> 0xFF"
 
 definition
 maxPCIDev :: "machine_word"
 where
-"maxPCIDev \<equiv> undefined"
+"maxPCIDev \<equiv> 31"
 
 definition
 maxPCIFunc :: "machine_word"
 where
-"maxPCIFunc \<equiv> undefined"
+"maxPCIFunc \<equiv> 7"
 
 definition
 numIOAPICs :: "machine_word"
@@ -325,26 +336,38 @@ where
 definition
 ioapicIRQLines :: "machine_word"
 where
-"ioapicIRQLines \<equiv> undefined"
+"ioapicIRQLines \<equiv> error []"
 
+(* FIXME x64: technically this is defined in c and should be here *)
+consts'
+  ioapicMapPinToVector_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition
 ioapicMapPinToVector :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
 where
-"ioapicMapPinToVector ioapic pin level polarity vector \<equiv> undefined"
+"ioapicMapPinToVector ioapic pin level polarity vector \<equiv> machine_op_lift (ioapicMapPinToVector_impl ioapic pin level polarity vector)"
 
+datatype X64IRQState = 
+   IRQFree
+ | IRQReserved
+ | IRQMSI 
+      (MSIBus : machine_word)
+      (MSIDev : machine_word)
+      (MSIFunc : machine_word)
+      (MSIHandle : machine_word)
+ | IRQIOAPIC
+      (IRQioapic : machine_word)
+      (IRQPin : machine_word)
+      (IRQLevel : machine_word)
+      (IRQPolarity : machine_word)
+      (IRQMasked : bool)
+   
+
+consts'
+  updateIRQState_impl :: "irq \<Rightarrow> X64IRQState \<Rightarrow> unit machine_rest_monad"
 definition
-"irqStateIRQIOAPICNew \<equiv> error []"
-
-definition
-"irqStateIRQMSINew \<equiv> error []"
-
-datatype x64irqstate =
-    X64IRQState
-
-definition
-updateIRQState :: "irq \<Rightarrow> x64irqstate \<Rightarrow> unit machine_monad"
+updateIRQState :: "irq \<Rightarrow> X64IRQState \<Rightarrow> unit machine_monad"
 where
-"updateIRQState arg1 arg2 \<equiv> error []"
+"updateIRQState arg1 arg2 \<equiv> machine_op_lift (updateIRQState_impl arg1 arg2)"
 
 (*FIXME: How to deal with this directly? *)
 definition
@@ -353,36 +376,50 @@ where
 "IRQ \<equiv> id"
 
 (* FIXME x64: More underspecified operations *)
-
+consts'
+  in8_impl :: "word16 \<Rightarrow> unit machine_rest_monad"
+  in8_val :: "machine_state \<Rightarrow> machine_word"
 definition
 in8 :: "word16 \<Rightarrow> machine_word machine_monad"
 where
-"in8 \<equiv> error []"
+"in8 port \<equiv> do machine_op_lift $ in8_impl port; gets in8_val od"
 
+consts'
+  in16_impl :: "word16 \<Rightarrow> unit machine_rest_monad"
+  in16_val :: "machine_state \<Rightarrow> machine_word"
 definition
 in16 :: "word16 \<Rightarrow> machine_word machine_monad"
 where
-"in16 \<equiv> error []"
+"in16 port \<equiv> do machine_op_lift $ in16_impl port; gets in16_val od"
 
+consts'
+  in32_impl :: "word16 \<Rightarrow> unit machine_rest_monad"
+  in32_val :: "machine_state \<Rightarrow> machine_word"
 definition
 in32 :: "word16 \<Rightarrow> machine_word machine_monad"
 where
-"in32 \<equiv> error []"
+"in32 port \<equiv> do machine_op_lift $ in32_impl port; gets in32_val od"
 
+consts'
+  out8_impl :: "word16 \<Rightarrow> word8 \<Rightarrow> unit machine_rest_monad"
 definition
 out8 :: "word16 \<Rightarrow> word8 \<Rightarrow> unit machine_monad"
 where
-"out8 \<equiv> error []"
+"out8 port dat \<equiv> machine_op_lift $ out8_impl port dat"
 
+consts'
+  out16_impl :: "word16 \<Rightarrow> word16 \<Rightarrow> unit machine_rest_monad"
 definition
 out16 :: "word16 \<Rightarrow> word16 \<Rightarrow> unit machine_monad"
 where
-"out16 \<equiv> error []"
+"out16 port dat \<equiv> machine_op_lift $ out16_impl port dat"
 
+consts'
+  out32_impl :: "word16 \<Rightarrow> word32 \<Rightarrow> unit machine_rest_monad"
 definition
 out32 :: "word16 \<Rightarrow> word32 \<Rightarrow> unit machine_monad"
 where
-"out32 \<equiv> error []"
+"out32 port dat \<equiv> machine_op_lift $ out32_impl port dat"
 
 end
 
