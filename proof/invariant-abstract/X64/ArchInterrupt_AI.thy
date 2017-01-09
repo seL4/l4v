@@ -19,8 +19,9 @@ named_theorems Interrupt_AI_asms
 lemma (* decode_irq_control_invocation_inv *)[Interrupt_AI_asms]:
   "\<lbrace>P\<rbrace> decode_irq_control_invocation label args slot caps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: decode_irq_control_invocation_def Let_def arch_check_irq_def
-                   arch_decode_irq_control_invocation_def whenE_def, safe)
-  apply (wp | simp)+
+                   arch_decode_irq_control_invocation_def whenE_def split del: split_if)
+  apply (rule hoare_pre)
+   apply (wp | simp split del: split_if)+
   done
   
 lemma (* decode_irq_control_valid *)[Interrupt_AI_asms]:
@@ -78,6 +79,8 @@ lemma no_cap_to_obj_with_diff_IRQHandler_ARCH[Interrupt_AI_asms]:
   by (rule ext, simp add: no_cap_to_obj_with_diff_ref_def
                           cte_wp_at_caps_of_state
                           obj_ref_none_no_asid)  
+
+crunch valid_cap: do_machine_op "valid_cap cap"
   
 lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
   "\<lbrace>valid_cap cap\<rbrace> set_irq_state IRQSignal irq \<lbrace>\<lambda>rv. valid_cap cap\<rbrace>"

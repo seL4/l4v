@@ -361,7 +361,7 @@ where
     else if invocation_type label = ArchInvocationLabel X64PageGetAddress 
     then returnOk $ InvokePage $ PageGetAddr p
   else throwError IllegalOperation         
- | _ \<Rightarrow> undefined)"
+ | _ \<Rightarrow> fail)"
 
 definition filter_frame_attrs :: "frame_attrs \<Rightarrow> table_attrs"
 where
