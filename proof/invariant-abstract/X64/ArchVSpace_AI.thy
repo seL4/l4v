@@ -2522,8 +2522,7 @@ crunch cte_wp_at[wp]: flush_table "\<lambda>s. P (cte_wp_at P' p s)"
   (wp: mapM_x_wp_inv_weak crunch_wps simp: crunch_simps)
 
 lemma global_refs_arch_update_eq:
-  "\<lbrakk> x64_globals_frame (f (arch_state s)) = x64_globals_frame (arch_state s);
-     x64_global_pml4 (f (arch_state s)) = x64_global_pml4 (arch_state s);
+  "\<lbrakk> x64_global_pml4 (f (arch_state s)) = x64_global_pml4 (arch_state s);
      x64_global_pdpts (f (arch_state s)) = x64_global_pdpts (arch_state s);
      x64_global_pds (f (arch_state s)) = x64_global_pds (arch_state s);
      x64_global_pts (f (arch_state s)) = x64_global_pts (arch_state s)\<rbrakk>

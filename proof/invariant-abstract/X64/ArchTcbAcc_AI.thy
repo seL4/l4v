@@ -136,6 +136,26 @@ lemma pred_tcb_cap_wp_at [TcbAcc_AI_assms]:
 
 lemmas sts_typ_ats = sts_typ_ats abs_atyp_at_lifts [OF set_thread_state_typ_at]
 
+lemma arch_tcb_context_set_eq[TcbAcc_AI_assms]:
+  "arch_tcb_context_set (arch_tcb_context_get t) t = t"
+  unfolding arch_tcb_context_get_def arch_tcb_context_set_def
+  by simp
+
+lemma arch_tcb_context_get_eq[TcbAcc_AI_assms]:
+  "arch_tcb_context_get (arch_tcb_context_set uc t) = uc"
+  unfolding arch_tcb_context_get_def arch_tcb_context_set_def
+  by simp
+
+lemma arch_tcb_update_aux2: "(\<lambda>tcb. tcb\<lparr> tcb_arch := f (tcb_arch tcb) \<rparr>)  = tcb_arch_update f"
+  by (rule ext, simp)
+
+lemma arch_tcb_update_aux3: "tcb\<lparr>tcb_arch := f (tcb_arch tcb)\<rparr>  = tcb_arch_update f tcb"
+  by(simp)
+
+lemma tcb_context_update_aux: "arch_tcb_context_set (P (arch_tcb_context_get atcb)) atcb
+                               = tcb_context_update (\<lambda>ctx. P ctx) atcb"
+  by (simp add: arch_tcb_context_set_def arch_tcb_context_get_def)
+
 end
 
 global_interpretation TcbAcc_AI?: TcbAcc_AI

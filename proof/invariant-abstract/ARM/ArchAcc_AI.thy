@@ -444,9 +444,7 @@ lemma pde_shifting:
       apply (drule (1) order_le_less_trans)
       apply (drule bang_is_le)
       apply (drule order_le_less_trans[where z="2 ^ 4"], assumption)
-      apply (drule word_power_increasing)
-            apply (fold_subgoals (prefix))[4]
-      subgoal premises using prems by simp+
+      apply (drule word_power_increasing; simp)
     apply (spec "n' + 20")
     apply (frule test_bit_size[where n = "n' + 20"])
     by (simp add: word_size)

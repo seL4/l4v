@@ -478,7 +478,7 @@ lemma retype_region_no_cap_to_obj:
   "\<lbrace>valid_pspace and valid_mdb 
              and caps_overlap_reserved {ptr..ptr + 2 ^ obj_bits_api ty us - 1}
              and caps_no_overlap ptr sz
-             and pspace_no_overlap ptr sz
+             and pspace_no_overlap_range_cover ptr sz
              and no_cap_to_obj_with_diff_ref cap S
              and K (ty = CapTableObject \<longrightarrow> 0 < us)
              and K (range_cover ptr sz (obj_bits_api ty us) 1) \<rbrace>

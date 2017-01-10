@@ -26,7 +26,7 @@ This module contains the architecture-specific thread switch code for the ARM.
 
 \end{impdetails}
 
-The ARM thread switch function invalidates all caches and the TLB, and writes the IPC buffer pointer to the first word of the globals page.
+The ARM thread switch function invalidates all caches and the TLB.
 
 > switchToThread :: PPtr TCB -> Kernel ()
 > switchToThread tcb = do

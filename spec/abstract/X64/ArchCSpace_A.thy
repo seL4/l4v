@@ -83,12 +83,5 @@ definition
 (* Proofs don't want to see this definition *)
 declare same_aobject_as_def[simp]
 
-text {* Only caps with sufficient rights can be recycled. *}
-definition
-  arch_has_recycle_rights :: "arch_cap \<Rightarrow> bool" where
-  "arch_has_recycle_rights cap \<equiv> case cap of
-     PageCap _ _ R _ _ _ \<Rightarrow> {AllowRead,AllowWrite} \<subseteq> R
-   | _ \<Rightarrow> True"
-
 end
 end

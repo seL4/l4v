@@ -27,23 +27,8 @@ This module contains the architecture-specific thread switch code for X86-64bit.
 
 \end{impdetails}
 
-
-> -- Current C code doesn't work for addresses above 32 bits.
-> -- This is meant to take a base address and craft a default
-> -- gdt_data structure
-> baseToGDTDataWord :: Word -> Word
-> baseToGDTDataWord p = error "Unimplemented"
-
 > switchToThread :: PPtr TCB -> Kernel ()
-> switchToThread tcb = do
->     setVMRoot tcb
->     gdt <- gets $ x64KSGDT . ksArchState
->     base <- asUser tcb $ getRegister (Register ArchReg.TLS_BASE)
->     let gdt_tls_slot = fromIntegral (fromEnum ArchReg.GDT_TLS) `shiftL` gdteBits
->     doMachineOp $ storeWord (gdt + gdt_tls_slot) $ baseToGDTDataWord $ base
->     bufferPtr <- threadGet tcbIPCBuffer tcb
->     let gdt_ipcbuf_slot = fromIntegral (fromEnum ArchReg.GDT_IPCBUF) `shiftL` gdteBits
->     doMachineOp $ storeWord (gdt + gdt_ipcbuf_slot) $ baseToGDTDataWord $ fromVPtr bufferPtr
+> switchToThread tcb = setVMRoot tcb
 
 > configureIdleThread :: PPtr TCB -> KernelInit ()
 > configureIdleThread _ = error "Unimplemented. init code"

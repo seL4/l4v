@@ -622,16 +622,7 @@ lemma out_no_cap_to_trivial:
   apply assumption
   done
 
-lemma thread_set_no_cap_to_trivial:
-  "(\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb) \<Longrightarrow>
-   \<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
-     thread_set f t
-   \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
-  apply (simp add: no_cap_to_obj_with_diff_ref_def
-                   cte_wp_at_caps_of_state)
-  apply (wp hoare_vcg_all_lift thread_set_caps_of_state_trivial
-            | simp)+
-  done
+lemmas thread_set_no_cap_to_trivial = thread_set_no_cap_obj_ref_trivial
 
 
 lemma (in Tcb_AI_1) checked_insert_no_cap_to:
@@ -903,11 +894,6 @@ lemma (in Tcb_AI) tcbinv_invs:
   apply (wp bind_notification_invs)
   apply clarsimp
   done
-
-crunch typ_at[wp]: invoke_tcb "\<lambda>s. P (typ_at T p s)"
-  (ignore: check_cap_at setNextPC zipWithM
-       wp: hoare_drop_imps mapM_x_wp' check_cap_inv
-     simp: crunch_simps)
 
 lemma inj_ucast: "\<lbrakk> uc = ucast; is_up uc \<rbrakk> \<Longrightarrow> inj uc"
   apply simp

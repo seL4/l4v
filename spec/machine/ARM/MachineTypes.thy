@@ -21,17 +21,6 @@ begin
 
 context Arch begin global_naming ARM
 
-section "Machine Words"
-
-type_synonym machine_word = "word32"
-
-type_synonym machine_word_len = 32
-
-definition
-  word_size_bits :: "'a :: numeral"
-where
-  "word_size_bits \<equiv> 2"
-
 text {*
   An implementation of the machine's types, defining register set
   and some observable machine state.
@@ -60,6 +49,8 @@ datatype register =
   | CPSR
   | TPIDRURW
 
+type_synonym machine_word = "word32"
+
 consts'
 initContext :: "(register * machine_word) list"
 
@@ -67,6 +58,15 @@ consts'
 sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 
 (*<*)
+
+section "Machine Words"
+
+type_synonym machine_word_len = 32
+
+definition
+  word_size_bits :: "'a :: numeral"
+where
+  "word_size_bits \<equiv> 2"
 
 end
 

@@ -14,7 +14,7 @@ theory ArchInterrupt_H
 imports "../RetypeDecls_H" "../CNode_H" "../InterruptDecls_H" ArchInterruptDecls_H
 begin
 
-context X64 begin
+context Arch begin global_naming X64_H
 
 defs decodeIRQControlInvocation_def:
 "decodeIRQControlInvocation label args srcSlot extraCaps \<equiv>
@@ -75,6 +75,6 @@ defs checkIRQ_def:
 "checkIRQ irq\<equiv> rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)"
 
 
-end (* context X64 *)
+end
 
 end

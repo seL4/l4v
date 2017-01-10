@@ -15,13 +15,14 @@ The TCB and thread related specifications.
 chapter "Threads and TCBs"
 
 theory Tcb_A
-imports TcbAcc_A Schedule_A
+imports TcbAcc_A Schedule_A "$L4V_ARCH/ArchTcb_A"
 begin
 
 context begin interpretation Arch .
 
 requalify_consts
   arch_activate_idle_thread
+  arch_tcb_set_ipc_buffer
 
 end
 
@@ -177,7 +178,7 @@ where
      | Some (ptr, frame) \<Rightarrow> doE
       cap_delete (target, tcb_cnode_index 4);
       liftE $ thread_set (\<lambda>t. t \<lparr> tcb_ipc_buffer := ptr \<rparr>) target;
-      liftE $ as_user target $ set_register ARM.TPIDRURW ptr;
+      liftE $ arch_tcb_set_ipc_buffer target ptr;
       liftE $ case frame of None \<Rightarrow> return ()
        | Some (new_cap, src_slot) \<Rightarrow>
             check_cap_at new_cap src_slot
@@ -239,6 +240,10 @@ where
     unbind_notification tcb;
     return []
   od)"
+
+context Arch begin
+declare arch_tcb_set_ipc_buffer_def [simp]
+end
 
 definition
   set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> unit det_ext_monad" where

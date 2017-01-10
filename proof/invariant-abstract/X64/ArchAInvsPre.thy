@@ -84,7 +84,6 @@ lemma get_page_info_gpd_kmaps:
    \<Longrightarrow> p \<in> kernel_mappings"
    apply (clarsimp simp: valid_global_objs_def valid_arch_state_def)
    apply (thin_tac "Ball x y" for x y)
-   apply (thin_tac "typ_at data gframe s" for data gframe)
    apply (clarsimp simp add: obj_at_def valid_ao_at_def)
    apply (clarsimp simp: empty_table_def kernel_mappings_slots_eq)
    apply (drule_tac x="ucast (p >> 20)" in spec)

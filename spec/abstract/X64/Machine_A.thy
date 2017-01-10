@@ -157,6 +157,9 @@ definition
 definition
  "syscall_message \<equiv> syscallMessage"
 
+datatype arch_fault
+  = VMFault vspace_ref "machine_word list"
+
 end
 end
 

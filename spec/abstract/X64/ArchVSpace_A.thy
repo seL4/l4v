@@ -144,8 +144,8 @@ where
     addr \<leftarrow> liftE $ do_machine_op getFaultAddress;
     fault \<leftarrow> liftE $ as_user thread $ getRegister ErrorRegister;
     case fault_type of
-        X64DataFault \<Rightarrow> throwError $ VMFault addr [0, fault && mask 5]
-      | X64InstructionFault \<Rightarrow> throwError $ VMFault addr [1, fault && mask 5]
+        X64DataFault \<Rightarrow> throwError $ ArchFault $ VMFault addr [0, fault && mask 5]
+      | X64InstructionFault \<Rightarrow> throwError $ ArchFault $ VMFault addr [1, fault && mask 5]
 odE"
 
 
@@ -426,91 +426,6 @@ where
   (* FIXME: IOSpaceCap and IOPageTableCap *)
   | _ \<Rightarrow> return NullCap"
 
-
-text {* Remove record of mappings to a page cap, page table cap or page directory cap *}
-
-fun
-  arch_reset_mem_mapping :: "arch_cap \<Rightarrow> arch_cap"
-where
-  "arch_reset_mem_mapping (PageCap dev p rts mt sz mp) = PageCap dev p rts mt sz None"
-| "arch_reset_mem_mapping (PageTableCap ptr mp) = PageTableCap ptr None"
-| "arch_reset_mem_mapping (PageDirectoryCap ptr ma) = PageDirectoryCap ptr None"
-| "arch_reset_mem_mapping (PDPointerTableCap ptr ma) = PDPointerTableCap ptr None"
-| "arch_reset_mem_mapping (PML4Cap ptr ma) = PML4Cap ptr None"
-(* FIXME x64-vtd: *)
-(*
-| "arch_reset_mem_mapping (IOPageTableCap ptr lvl ma) = IOPageTableCap ptr lvl None"
-*)
-| "arch_reset_mem_mapping cap = cap"
-
-text {* Actions that must be taken to recycle x64-specific capabilities. *}
-definition
-  arch_recycle_cap :: "bool \<Rightarrow> arch_cap \<Rightarrow> (arch_cap,'z::state_ext) s_monad"
-where
-  "arch_recycle_cap is_final cap \<equiv> case cap of
-    PageCap dev p _ _ sz _ \<Rightarrow> do
-      unless dev $ do_machine_op $ clearMemory p (2 ^ pageBitsForSize sz);
-      arch_finalise_cap cap is_final;
-      return $ arch_reset_mem_mapping cap
-    od
-  | PageTableCap ptr mp \<Rightarrow> do
-      pte_bits \<leftarrow> return 3;
-      slots \<leftarrow> return [ptr, ptr + (1 << pte_bits) .e. ptr + (1 << ptTranslationBits) - 1];
-      mapM_x (swp store_pte InvalidPTE) slots;
-      case mp of 
-         None \<Rightarrow> return ()
-       | Some (a, v) \<Rightarrow> unmap_page_table a v ptr;
-      arch_finalise_cap cap is_final;
-      return (if is_final then arch_reset_mem_mapping cap else cap)
-    od
-  | PageDirectoryCap ptr ma \<Rightarrow> do
-      pde_bits \<leftarrow> return 3;
-      slots \<leftarrow> return [ptr, ptr + (1 << pde_bits) .e. ptr + (1 << ptTranslationBits) - 1];
-      mapM_x (swp store_pde InvalidPDE) slots;
-      case ma of
-        None \<Rightarrow> return ()
-      | Some (a,v) \<Rightarrow> unmap_pd a v ptr;
-      arch_finalise_cap cap is_final;
-      return (if is_final then arch_reset_mem_mapping cap else cap)
-    od
-  | PDPointerTableCap ptr ma \<Rightarrow> do
-      pdpte_bits \<leftarrow> return 3;
-      slots \<leftarrow> return [ptr, ptr + (1 << pdpte_bits) .e. ptr + (1 << ptTranslationBits) - 1];
-      mapM_x (swp store_pdpte InvalidPDPTE) slots;
-      case ma of
-        None \<Rightarrow> return ()
-      | Some (a,v) \<Rightarrow> unmap_pdpt a v ptr;
-      arch_finalise_cap cap is_final;
-      return (if is_final then arch_reset_mem_mapping cap else cap)
-    od
-  | PML4Cap ptr ma \<Rightarrow> do
-      pml4e_bits \<leftarrow> return 3;
-      slots \<leftarrow> return [ptr, ptr + (1 << pml4e_bits) .e. ptr + (1 << ptTranslationBits) - 1];
-      mapM_x (swp store_pml4e InvalidPML4E) slots;
-      arch_finalise_cap cap is_final;
-      return (if is_final then arch_reset_mem_mapping cap else cap)
-    od
-  | ASIDControlCap \<Rightarrow> return ASIDControlCap
-  | ASIDPoolCap ptr base \<Rightarrow> do
-      asid_table \<leftarrow> gets (x64_asid_table \<circ> arch_state);
-      when (asid_table (asid_high_bits_of base) = Some ptr) $ do
-          delete_asid_pool base ptr;
-          set_asid_pool ptr empty;
-          asid_table \<leftarrow> gets (x64_asid_table \<circ> arch_state);
-          asid_table' \<leftarrow> return (asid_table (asid_high_bits_of base \<mapsto> ptr));
-          modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> x64_asid_table := asid_table' \<rparr>\<rparr>)
-      od;
-      return cap
-    od
-  | IOPortCap _ _ \<Rightarrow> return cap"
-(* FIXME x64-vtd: *)
-(*
-  | IOSpaceCap _ _  \<Rightarrow> do
-     arch_finalise_cap cap is_final;
-     return cap
-    od
-  | IOPageTableCap ptr _ mp \<Rightarrow> undefined (* FIXME: TODO *)"
-*)
 
 
 text {* A thread's virtual address space capability must be to a mapped PML4 (page map level 4)

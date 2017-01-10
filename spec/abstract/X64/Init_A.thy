@@ -40,11 +40,8 @@ definition
 definition
   "init_arch_state \<equiv> undefined :: arch_state"
 
-definition
-  empty_context :: user_context where
-  "empty_context \<equiv> \<lambda>_. 0"
 
-
+(* FIXME x64: add kernel vspace mappings. *)
 definition
   "init_kheap \<equiv>
   (\<lambda>x. if \<exists>irq :: irq. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
@@ -58,10 +55,10 @@ definition
     tcb_state = IdleThreadState,
     tcb_fault_handler = replicate word_bits False,
     tcb_ipc_buffer = 0,
-    tcb_context = empty_context,
     tcb_fault = None,
     tcb_bound_notification = None,
-    tcb_mcpriority = minBound
+    tcb_mcpriority = minBound,
+    tcb_arch = init_arch_tcb
   \<rparr>
   )"
 

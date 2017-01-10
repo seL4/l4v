@@ -846,16 +846,16 @@ lemma valid_cap_ctes_pre:
                     | _ \<Rightarrow> True"
   apply (drule valid_capAligned)
   apply (simp split: capability.split zombie_type.split arch_capability.split, safe)
-     apply (clarsimp simp add: capRange_def capAligned_def objBits_simps pre_helper field_simps
-                     simp del: atLeastAtMost_iff)
+     using pre_helper[where a=4]
+     apply (clarsimp simp add: capRange_def capAligned_def objBits_simps field_simps)
     apply (clarsimp simp add: capRange_def capAligned_def
                     simp del: atLeastAtMost_iff capBits.simps)
     apply (rule pre_helper2, simp_all)[1]
    apply (clarsimp simp add: capRange_def capAligned_def
                    simp del: atLeastAtMost_iff capBits.simps)
    apply (rule pre_helper2, simp_all)[1]
-  apply (clarsimp simp add: capRange_def capAligned_def objBits_simps pre_helper field_simps
-                  simp del: atLeastAtMost_iff)
+  using pre_helper[where a=4]
+  apply (clarsimp simp add: capRange_def capAligned_def objBits_simps field_simps)
   done
 
 lemma replycap_argument:
@@ -1644,8 +1644,8 @@ proof -
    apply (clarsimp simp add: deleteObjects_def2)
    apply (simp add: freeMemory_def bind_assoc doMachineOp_bind ef_storeWord)
    apply (simp add: bind_assoc[where f="\<lambda>_. modify f" for f, symmetric])
-   apply (simp add: word_size_def mapM_x_storeWord_step doMachineOp_modify
-                   modify_modify)
+   apply (simp add: mapM_x_storeWord_step[simplified word_size_bits_def]
+                    doMachineOp_modify modify_modify)
    apply (simp add: bind_assoc intvl_range_conv'[where 'a=32, folded word_bits_def] mask_def field_simps)
    apply (wp)
   apply (simp cong: if_cong)

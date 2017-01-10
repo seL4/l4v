@@ -8,15 +8,18 @@
  * @TAG(GD_GPL)
  *)
 
-theory ArchTCB_H
-imports "../TCBDecls_H"
+(*
+  VSpace lookup code.
+*)
+
+theory ArchFault_H
+imports "../Types_H"
 begin
 
 context Arch begin global_naming X64_H
 
-#INCLUDE_HASKELL SEL4/Object/TCB/X64.lhs CONTEXT X64_H
-
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= ONLY archThreadGet archThreadSet
+#INCLUDE_HASKELL SEL4/API/Failures/X64.lhs CONTEXT X64_H decls_only
+#INCLUDE_HASKELL SEL4/API/Failures/X64.lhs CONTEXT X64_H bodies_only
 
 end
 end

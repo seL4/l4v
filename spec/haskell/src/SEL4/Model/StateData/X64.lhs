@@ -34,9 +34,12 @@ This module contains the architecture-specific kernel global data for the X86-64
 > gdteBits = 3
 
 > data KernelState = X64KernelState {
->     x64KSGDT :: PPtr Word,
->     x64KSASIDTable :: Array ASID (Maybe (PPtr ASIDPool)),
->     x64KSGlobalPML4 :: PPtr PML4E}
+>     x64KSASIDTable   :: Array ASID (Maybe (PPtr ASIDPool)),
+>     x64KSASIDMap     :: Array ASID (Maybe (PPtr PDE)),
+>     x64KSGlobalPML4  :: PPtr PML4E,
+>     x64KSGlobalPDPTs :: [PPtr PDPTE],
+>     x64KSGlobalPDs   :: [PPtr PDE],
+>     x64KSGlobalPTs   :: [PPtr PTE]}
 
 > newKernelState :: PAddr -> (KernelState, [PAddr])
 > newKernelState _ = error "No initial state defined for x64"

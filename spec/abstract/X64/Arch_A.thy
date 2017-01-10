@@ -53,24 +53,13 @@ definition
 text {* Switch to a thread's virtual address space context and write its IPC
 buffer pointer into the globals frame. Clear the load-exclusive monitor. *}
 
+(* FIXME x64: The IPC buffer pointer and TLS_BASE are stored in GS and FS register
+   in restore_user_context, which is invisible to verification.
+   Should these operations be visible? *)
 definition
   arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "arch_switch_to_thread t \<equiv> do
-     set_vm_root t;
-     gdt \<leftarrow> gets $ x64_gdt \<circ> arch_state;
-     base \<leftarrow> as_user t (getRegister TLS_BASE);
-     gdt_tls_slot \<leftarrow> return (of_nat (fromEnum GDT_TLS) >> word_size_bits);
-     do_machine_op (storeWord (gdt + gdt_tls_slot) (base_to_gdt_data_word base));
-     buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer t;
-     gdt_ipcbuf_slot \<leftarrow> return (of_nat (fromEnum GDT_IPCBUF) >> word_size_bits);
-     do_machine_op (storeWord (gdt + gdt_ipcbuf_slot) (base_to_gdt_data_word buffer_ptr))
-   od"
+  "arch_switch_to_thread t \<equiv> set_vm_root t"
 
-text {* 
-  FIXME x64: on ARM we clear the globals frame when switching to the idle thread. This is
-  specificially to ease infoflow reasoning (see also VER-207). Should be transferred
-  to TLS/GDT on x64. 
-*}
 (* x64 done *)
 definition
    arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where

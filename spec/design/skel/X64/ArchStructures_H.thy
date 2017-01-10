@@ -15,7 +15,10 @@ imports
   Hardware_H
 begin
 
-context X64 begin
+context Arch begin global_naming X64_H
+
+#INCLUDE_SETTINGS keep_constructor=asidpool
+#INCLUDE_SETTINGS keep_constructor=arch_tcb
 
 #INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64 decls_only
 #INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64 instanceproofs
@@ -39,7 +42,5 @@ where
 | "archTypeOf (KOASIDPool e) = ASIDPoolT"
 | "archTypeOf (KOIOPTE e) = IOPTET"
 
-
-end (* context X64 *)
-
+end
 end

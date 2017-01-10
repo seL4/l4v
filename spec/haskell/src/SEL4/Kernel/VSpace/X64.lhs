@@ -148,7 +148,6 @@ The following function is called before creating or modifying mappings in a page
 
 When the kernel tries to access a thread's IPC buffer, this function is called to determine whether the buffer exists and to find its physical address.
 
-> -- UNCHANGED FOR X64
 > lookupIPCBuffer :: Bool -> PPtr TCB -> Kernel (Maybe (PPtr Word))
 > lookupIPCBuffer isReceiver thread = do
 >     bufferPtr <- threadGet tcbIPCBuffer thread
@@ -191,9 +190,16 @@ Locating the page directory for a given ASID is necessary when updating or delet
 
 These checks are too expensive to run in haskell. The first funcion checks that the pointer is to a page directory, which would require testing that each entry of the table is present. The second checks that the page directory appears in x64KSASIDMap only on the ASIDs specified, which would require walking all possible ASIDs to test. In the formalisation of this specification, these functions are given alternative definitions that make the appropriate checks.
 
+> -- FIXME x64: these are all now unused.
+
+> checkPML4At :: PPtr PDE -> Kernel ()
+> checkPML4At _ = return ()
+
+> checkPDPTAt :: PPtr PDE -> Kernel ()
+> checkPDPTAt _ = return ()
+
 > checkPDAt :: PPtr PDE -> Kernel ()
 > checkPDAt _ = return ()
-
 
 > checkPTAt :: PPtr PDE -> Kernel ()
 > checkPTAt _ = return ()
@@ -263,8 +269,8 @@ If the kernel receives a VM fault from the CPU, it must determine the address an
 >     addr <- withoutFailure $ doMachineOp getFaultAddress
 >     fault <- withoutFailure $ asUser thread $ getRegister (Register ErrorRegister)
 >     case f of
->         X64DataFault -> throw $ VMFault addr [0, fault .&. mask 5] -- FSR is 5 bits in x64
->         X64InstructionFault -> throw $ VMFault addr [1, fault .&. mask 5]
+>         X64DataFault -> throw $ ArchFault $ VMFault addr [0, fault .&. mask 5] -- FSR is 5 bits in x64
+>         X64InstructionFault -> throw $ ArchFault $ VMFault addr [1, fault .&. mask 5]
 
 \subsection{Unmapping and Deletion}
 
@@ -1183,7 +1189,7 @@ Checking virtual address for page size dependent alignment:
 > performASIDControlInvocation (MakePool frame slot parent base) = do
 >     deleteObjects frame pageBits
 >     pcap <- getSlotCap parent
->     updateCap parent (pcap {capFreeIndex = maxFreeIndex (capBlockSize pcap) })
+>     updateFreeIndex parent (maxFreeIndex (capBlockSize pcap))
 >     placeNewObject frame (makeObject :: ASIDPool) 0
 >     let poolPtr = PPtr $ fromPPtr frame
 >     cteInsert (ArchObjectCap $ ASIDPoolCap poolPtr base) parent slot

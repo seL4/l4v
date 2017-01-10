@@ -20,11 +20,11 @@ imports
   "../PSpaceStorable_H"
   "../ObjectInstances_H"
 begin
-qualify X64 
+qualify X64_H (in Arch)
 
-instantiation pde :: pre_storable
+instantiation X64_H.pde :: pre_storable
 begin
-interpretation X64 .
+interpretation Arch .
 
 definition
   projectKO_opt_pde:
@@ -45,9 +45,9 @@ instance
 end
 
 
-instantiation pte :: pre_storable
+instantiation X64_H.pte :: pre_storable
 begin
-interpretation X64 .
+interpretation Arch .
 
 definition
   projectKO_opt_pte:
@@ -67,9 +67,9 @@ instance
 
 end
 
-instantiation pdpte :: pre_storable
+instantiation X64_H.pdpte :: pre_storable
 begin
-interpretation X64 .
+interpretation Arch .
 
 definition
   projectKO_opt_pdpte:
@@ -89,9 +89,9 @@ instance
 
 end
 
-instantiation pml4e :: pre_storable
+instantiation X64_H.pml4e :: pre_storable
 begin
-interpretation X64 .
+interpretation Arch .
 
 definition
   projectKO_opt_pml4e:
@@ -111,9 +111,9 @@ instance
 
 end
 
-instantiation iopte :: pre_storable
+instantiation X64_H.iopte :: pre_storable
 begin
-interpretation X64 .
+interpretation Arch .
 
 definition
   projectKO_opt_iopte:
@@ -134,9 +134,9 @@ instance
 end
 
 
-instantiation asidpool :: pre_storable
+instantiation X64_H.asidpool :: pre_storable
 begin
-interpretation X64 .
+interpretation Arch .
 
 definition
   injectKO_asidpool [simp]:
@@ -156,23 +156,33 @@ instance
 
 end
 
-lemmas projectKO_opts_defs = 
-  projectKO_opt_pde projectKO_opt_pte 
+lemmas (in Arch) projectKO_opts_defs = 
+  projectKO_opt_pte projectKO_opt_pde 
   projectKO_opt_pdpte projectKO_opt_pml4e
   projectKO_opt_iopte
   projectKO_opt_asidpool
   ObjectInstances_H.projectKO_opts_defs
 
+lemmas (in Arch) [simp] =
+  injectKO_pte koType_pte
+  injectKO_pde koType_pde
+  injectKO_pdpte koType_pdpte
+  injectKO_pml4e koType_pml4e
+  injectKO_iopte koType_iopte
+  injectKO_asidpool koType_asidpool
+
 
 -- --------------------------------------
+
+#INCLUDE_SETTINGS keep_constructor = asidpool
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/X64.lhs
 #INCLUDE_HASKELL_PREPARSE SEL4/Machine/Hardware/X64.lhs
 
 
-instantiation pde :: pspace_storable
+instantiation X64_H.pde :: pspace_storable
 begin
-interpretation X64 .
+interpretation Arch .
 
 #INCLUDE_HASKELL SEL4/Object/Instances/X64.lhs instanceproofs bodies_only ONLY PDE
 
@@ -185,9 +195,9 @@ instance
 
 end
 
-instantiation pte :: pspace_storable
+instantiation X64_H.pte :: pspace_storable
 begin
-interpretation X64 .
+interpretation Arch .
 
 #INCLUDE_HASKELL SEL4/Object/Instances/X64.lhs instanceproofs bodies_only ONLY PTE
 
@@ -201,9 +211,9 @@ instance
 end
 
 
-instantiation pdpte :: pspace_storable
+instantiation X64_H.pdpte :: pspace_storable
 begin
-interpretation X64 .
+interpretation Arch .
 
 #INCLUDE_HASKELL SEL4/Object/Instances/X64.lhs instanceproofs bodies_only ONLY PDPTE
 
@@ -216,9 +226,9 @@ instance
 
 end
 
-instantiation pml4e :: pspace_storable
+instantiation X64_H.pml4e :: pspace_storable
 begin
-interpretation X64 .
+interpretation Arch .
 
 #INCLUDE_HASKELL SEL4/Object/Instances/X64.lhs instanceproofs bodies_only ONLY PML4E
 
@@ -231,9 +241,9 @@ instance
 
 end
 
-instantiation iopte :: pspace_storable
+instantiation X64_H.iopte :: pspace_storable
 begin
-interpretation X64 .
+interpretation Arch .
 
 #INCLUDE_HASKELL SEL4/Object/Instances/X64.lhs instanceproofs bodies_only ONLY IOPTE
 
@@ -248,9 +258,9 @@ end
 
 (* This is hard coded since using funArray in haskell for 2^32 bound is risky *)
 
-instantiation asidpool :: pspace_storable
+instantiation X64_H.asidpool :: pspace_storable
 begin
-interpretation X64 .
+interpretation Arch .
 
 definition
   makeObject_asidpool: "(makeObject :: asidpool)  \<equiv> ASIDPool $
@@ -274,5 +284,19 @@ instance
   done
 
 end
+
+lemmas load_update_defs =
+  loadObject_pte updateObject_pte
+  loadObject_pde updateObject_pde
+  loadObject_pdpte updateObject_pdpte
+  loadObject_pml4e updateObject_pml4e
+  loadObject_iopte updateObject_iopte
+  loadObject_asidpool updateObject_asidpool
+
+declare load_update_defs[simp del]
+
+end_qualify
+
+declare (in Arch) load_update_defs[simp]
 
 end

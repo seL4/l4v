@@ -5276,11 +5276,8 @@ let ?ui' = "Invocations_H.untyped_invocation.Retype (cte_map cref) reset
       using cover
       apply (clarsimp simp:delete_objects_def freeMemory_def word_size_def)
       apply (subgoal_tac "is_aligned (ptr &&~~ mask sz) sz")
-       apply (subst mapM_storeWord_clear_um)
-          apply (simp)
-         apply simp
-        apply (simp add:range_cover_def word_bits_def)
-       apply clarsimp
+       apply (subst mapM_storeWord_clear_um[simplified word_size_def word_size_bits_def];
+              clarsimp simp: range_cover_def word_bits_def)
       apply (rule is_aligned_neg_mask)
       apply simp
       done

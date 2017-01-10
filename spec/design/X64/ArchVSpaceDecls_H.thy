@@ -43,6 +43,12 @@ consts'
 findVSpaceForASID :: "asid \<Rightarrow> ( lookup_failure , (machine_word) ) kernel_f"
 
 consts'
+checkPML4At :: "machine_word \<Rightarrow> unit kernel"
+
+consts'
+checkPDPTAt :: "machine_word \<Rightarrow> unit kernel"
+
+consts'
 checkPDAt :: "machine_word \<Rightarrow> unit kernel"
 
 consts'

@@ -896,6 +896,11 @@ case \x of (cap@PageCap { capVPIsDevice = isDevice }) -> (cap@PageTableCap { cap
         in ->5
     else undefined
 
+case \x of ArchObjectCap (frame@PageCap {capVPIsDevice = False}) -> _ ->  ---> let cap = \x in
+    if isPageCap cap \<and> \<not> capVPIsDevice cap
+    then ->1
+    else ->2
+
 case \x of (srcIndex:srcDepth:args, srcRootCap:_) | label < 4 -> (_, _) | label == 4 -> (_, _) | label == 5 -> (_, _) | label == 6 -> (_, _) | label == 7 -> (pivotNewData:pivotIndex:pivotDepth:srcNewData:srcIndex:srcDepth:_, pivotRootCap:srcRootCap:_) | label == 8 -> (_, _) | label > 8 -> _ ->  ---> let (\v0\, \v1\) = \x in
     case (if label < 4 then 1
           else if label = 4 then 2
@@ -1468,7 +1473,7 @@ case \x of (cap@PageCap {}) -> _ ->  ---> let cap = \x in
     then ->1
     else ->2
 
-case \x of (ArchInvocationLabel X64PDPTMap, vaddr':attr:_, (vspaceCap,_):_) -> (ArchInvocationLabel X64PageDirectoryMap, _, _) -> (ArchInvocationLabel X64PageDirectoryUnmap, _, _) -> _ ->  ---> let (label, args, extraCaps) = \x in
+case \x of (ArchInvocationLabel X64PDPTMap, vaddr':attr:_, (vspaceCap,_):_) -> (ArchInvocationLabel X64PDPTMap, _, _) -> (ArchInvocationLabel X64PDPTUnmap, _, _) -> _ ->  ---> let (label, args, extraCaps) = \x in
     case (label, args, extraCaps) of
       (ArchInvocationLabel X64PDPTMap, vaddr'#attr#_, (vspaceCap,_)#_) => ->1
     | (ArchInvocationLabel X64PageDirectoryMap, _, _) => ->2
@@ -1568,6 +1573,20 @@ case \x of (ArchInvocationLabel X64PageMap, vaddr:rightsMask:attr:_, (vspaceCap,
    | (ArchInvocationLabel X64PageGetAddress, _, _) => ->7
    | _ => ->8
 
+case \x of (ArchInvocationLabel X64IOPageTableMap, ioaddr:_, (iospaceCap,_):_) -> (ArchInvocationLabel X64IOPageTableMap, _, _) -> (ArchInvocationLabel X64IOPageTableUnmap, _, _) -> _ ->  ---> let (ilabel, args, extraCaps) = \x in
+    case (ilabel, args, extraCaps) of
+      (ArchInvocationLabel X64IOPageTableMap, ioaddr#_, (iospaceCap,_)#_) => ->1
+    | (ArchInvocationLabel X64IOPageTableMap, _, _) => ->2
+    | (ArchInvocationLabel X64IOPageTableUnmap, _, _) => ->3
+    | _ => ->4
+
+case \x of (ArchInvocationLabel X64PageMapIO, rw:ioaddr:_, (iospaceCap,_):_) -> (ArchInvocationLabel X64PageMapIO, _, _) -> (ArchInvocationLabel X64PageUnmap, _, _) -> _ ->  ---> let (ilabel, args, extraCaps) = \x in
+    case (ilabel, args, extraCaps) of
+      (ArchInvocationLabel X64PageMapIO, rw:ioaddr#_, (iospaceCap,_)#_) => ->1
+    | (ArchInvocationLabel X64PageMapIO, _, _) => ->2
+    | (ArchInvocationLabel X64PageUnmap, _, _) => ->3
+    | _ => ->4
+
 case \x of cap@(PDPointerTableCap {}) -> _ ->  ---> let cap = \x in
   if isPDPointerTableCap cap
   then ->1
@@ -1607,25 +1626,41 @@ case \x of cap@(PageCap {}) -> cap@(PDPointerTableCap {}) -> cap@(PageDirectoryC
   then ->8
   else ->9
 
-case \x of (ArchInvocationLabel X64PDPTMap, vaddr':attr:_, (vspaceCap,_):_) -> (ArchInvocationLabel X64PDPTMap, _, _) -> (ArchInvocationLabel X64PDPTUnmap, _, _) -> _ ->  ---X>
-
-
-case \x of ArchObjectCap (frame@PageCap {capVPIsDevice = False}) -> _ ->  ---X>
-
-case \x of (ArchInvocationLabel X64IOPageTableMap, ioaddr:_, (iospaceCap,_):_) -> (ArchInvocationLabel X64IOPageTableMap, _, _) -> (ArchInvocationLabel X64IOPageTableUnmap, _, _) -> _ ->  ---X>
-
-case \x of cap@(IOPageTableCap {}) -> _ ->  ---X>
-
-case \x of (ArchInvocationLabel X64PageMapIO, rw:ioaddr:_, (iospaceCap,_):_) -> (ArchInvocationLabel X64PageMapIO, _, _) -> (ArchInvocationLabel X64PageUnmap, _, _) -> _ ->  ---X>
+case \x of cap@(IOPageTableCap {}) -> _ ->  ---> let cap = \x in
+  if isIOPageTableCap
+  then ->1
+  else ->2
 
 case \x of (cap@UntypedCap {}) -> _ ->  ---> let cap = \x in
   if isUntypedCap cap
   then ->1
   else ->2
 
-case \x of cap@(PageCap {}) -> _ ->  ---X>
+case \x of cap@(PageCap {}) -> _ ->  ---> let cap = \x in
+  if isPageCap cap
+  then ->1
+  else ->2
 
-case \x of (PageMap asid cap ctSlot entries) -> (PageRemap entries) -> (PageUnmap cap ctSlot) -> (PageIOMap cap cptr vtdpte slot) -> (PageIOUnmap (ArchObjectCap cap@PageCap {}) ctSlot) -> (PageIOUnmap _ _) -> (PageGetAddr ptr) ->  ---X>
+case \x of (PageMap asid cap ctSlot entries) -> (PageRemap entries) -> (PageUnmap cap ctSlot) -> (PageIOMap cap cptr vtdpte slot) -> (PageIOUnmap (ArchObjectCap cap@PageCap {}) ctSlot) -> (PageIOUnmap _ _) -> (PageGetAddr ptr) ->  ---> let \v0\ = \x in
+    case \v0\ of
+      PageMap asid cap ct ctSlot entries => ->1
+    | PageRemap entries => ->2
+    | PageUnmap cap ctSlot => ->3
+    | PageIOMap cap cptr ctdpte slot => ->4
+    | PageIOUnmap (ArchObjectCap cap) ctSlot =>
+        if isPageCap cap
+        then ->5
+        else ->6
+    | PageIOUnmap _ _ => ->6
+    | PageGetAddr ptr => ->7
 
-case \x of (cap@IOPageTableCap {}) -> _ ->  ---X>
+case \x of UntypedCap {} | capBlockSize untyped == objBits pool -> _ ->  ---> let \v0\ = \x in
+    if isUntypedCap \v0\ \<and> capBlockSize \v0\ == objBits pool
+    then ->1
+    else ->2
+
+case \x of (cap@IOPageTableCap {}) -> _ ->  ---> let cap = \x in
+  if isIOPageTableCap cap
+  then ->1
+  else ->2
 

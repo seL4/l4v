@@ -273,14 +273,12 @@ qualify X64_A (in Arch)
 section {* Architecture-specific state *}
  
 record arch_state =
-  x64_gdt                   :: obj_ref
   x64_asid_table            :: "3 word \<rightharpoonup> obj_ref"
   x64_global_pml4           :: obj_ref
   x64_kernel_vspace         :: X64_A.x64_vspace_region_uses
   x64_global_pts            :: "obj_ref list"
   x64_global_pdpts          :: "obj_ref list"
   x64_global_pds            :: "obj_ref list"
-  x64_globals_frame         :: obj_ref
   x64_asid_map              :: "X64_A.asid \<rightharpoonup> obj_ref" (* FIXME x64: do we need this? *)
   
 (* FIXME x64-vtd:
@@ -365,4 +363,34 @@ where
          | PageMapL4 pm             \<Rightarrow> APageMapL4)"
 
 end
+
+section "Arch-specific TCB"
+
+qualify X64_A (in Arch)
+
+(* arch specific part of tcb: this must have a field for user context *)
+record arch_tcb =
+  tcb_context       :: user_context
+
+end_qualify
+
+context Arch begin global_naming X64_A
+
+definition
+  default_arch_tcb :: arch_tcb where
+  "default_arch_tcb \<equiv> \<lparr>tcb_context = new_context\<rparr>"
+
+text {* accesors for @{text "tcb_context"} inside @{text "arch_tcb"} *}
+definition
+  arch_tcb_context_set :: "user_context \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
+where
+  "arch_tcb_context_set uc a_tcb \<equiv> a_tcb \<lparr> tcb_context := uc \<rparr>"
+
+definition
+  arch_tcb_context_get :: "arch_tcb \<Rightarrow> user_context"
+where
+  "arch_tcb_context_get a_tcb \<equiv> tcb_context a_tcb"
+
+end
+
 end

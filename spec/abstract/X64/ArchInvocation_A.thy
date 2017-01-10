@@ -101,8 +101,9 @@ datatype arch_invocation
      | InvokeIOPort io_port_invocation
      | InvokeIOPT io_pt_invocation
 
-datatype arch_copy_register_sets =
-    ArchDefaultExtraRegisters
+datatype arch_copy_register_sets = X64NoExtraRegisters
+
+definition "ArchDefaultExtraRegisters \<equiv> X64NoExtraRegisters"
 
 datatype arch_irq_control_invocation
   = IssueIRQHandlerIOAPIC irq cslot_ptr cslot_ptr

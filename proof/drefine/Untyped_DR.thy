@@ -257,8 +257,8 @@ lemma freeMemory_dcorres:
                 in use_valid)
     apply (simp add: do_machine_op_def split_def)
     apply wp
-    apply (clarsimp simp: freeMemory_def word_size_def
-                          mapM_x_storeWord_step intvl_range_conv')
+    apply (clarsimp simp: freeMemory_def mapM_x_storeWord_step[simplified word_size_bits_def]
+                          intvl_range_conv')
     apply (rule conjI, fastforce)
     apply clarsimp
     apply (erule use_valid[where P=P and Q="%_. P" for P])

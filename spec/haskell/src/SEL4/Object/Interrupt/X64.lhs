@@ -44,6 +44,7 @@ This module defines the machine-specific interrupt handling routines for x64.
 >         (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerIOAPIC,
 >                  index:depth:ioapic:pin:level:polarity:irqW:_, cnode:_) -> do
 >
+>             -- FIXME: separate ranges for ISA interrupts and user interrupts
 >             rangeCheck irqW (fromEnum minIRQ) (fromEnum maxIRQ)
 >             let irq = toEnum (fromIntegral irqW) :: IRQ
 >
@@ -65,6 +66,7 @@ This module defines the machine-specific interrupt handling routines for x64.
 >         (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerMSI,
 >                  index:depth:pciBus:pciDev:pciFunc:handle:irqW:_, cnode:_) -> do
 >
+>             -- FIXME: separate ranges for ISA interrupts and user interrupts
 >             rangeCheck irqW (fromEnum minIRQ) (fromEnum maxIRQ)
 >             let irq = toEnum (fromIntegral irqW) :: IRQ
 >
@@ -101,6 +103,14 @@ This module defines the machine-specific interrupt handling routines for x64.
 >     cteInsert (IRQHandlerCap (IRQ irq)) destSlot srcSlot
 >     return ()
 
+%FIXME: separate ranges for ISA interrupts and user interrupts
 > checkIRQ :: Word -> KernelF SyscallError ()
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
+
+%FIXME: handle VTD faults
+> handleReservedIRQ :: IRQ -> Kernel ()
+> handleReservedIRQ irq = return ()
+
+> initInterruptController :: Kernel ()
+> initInterruptController = return ()
 

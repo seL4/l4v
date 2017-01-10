@@ -17,7 +17,8 @@ imports
   Hardware_H
 begin
 
-context X64 begin
+context Arch begin global_naming X64_H
+
 
 type_synonym ioasid = "word16"
 
@@ -467,7 +468,5 @@ where
 | "archTypeOf (KOASIDPool e) = ASIDPoolT"
 | "archTypeOf (KOIOPTE e) = IOPTET"
 
-
-end (* context X64 *)
-
+end
 end

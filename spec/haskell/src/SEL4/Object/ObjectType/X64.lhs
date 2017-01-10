@@ -16,7 +16,6 @@ This module contains operations on machine-specific object types for x64.
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware.X64
 > import SEL4.Model
-> import SEL4.Model.StateData.X64
 > import SEL4.API.Types
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.X64 as ArchInv
@@ -25,7 +24,6 @@ This module contains operations on machine-specific object types for x64.
 > import {-# SOURCE #-} SEL4.Object.IOPort.X64
 
 > import Data.Bits
-> import Data.Array
 > import Data.Word(Word16)
 
 \end{impdetails}
@@ -186,92 +184,6 @@ Deletion of a final capability to a page table that has been mapped requires tha
 >     (_, _) -> return NullCap
 >     
 
-\subsection{Recycling Capabilities}
-
-> resetMemMapping :: ArchCapability -> ArchCapability
-> resetMemMapping (PageCap p rts mtyp sz isdev _) = PageCap p rts mtyp sz isdev Nothing
-> resetMemMapping (PageTableCap ptr _) = PageTableCap ptr Nothing
-> resetMemMapping (PageDirectoryCap ptr _) = PageDirectoryCap ptr Nothing
-> resetMemMapping (PDPointerTableCap ptr _ ) = PDPointerTableCap ptr Nothing
-> resetMemMapping (PML4Cap ptr _) = PML4Cap ptr Nothing
-> resetMemMapping cap = cap
-
-> recycleCap :: Bool -> ArchCapability -> Kernel ArchCapability
-> recycleCap is_final (cap@PageCap {}) = do
->       doMachineOp $ clearMemory (capVPBasePtr cap)
->           (1 `shiftL` (pageBitsForSize $ capVPSize cap))
->       finaliseCap cap is_final
->       return $ resetMemMapping cap
->
-> recycleCap is_final (cap@PageTableCap { capPTBasePtr = ptr }) = do
->     let pteBits = objBits InvalidPTE
->     let slots = [ptr, ptr + bit pteBits .. ptr + bit ptTranslationBits - 1]
->     mapM_ (flip storePTE InvalidPTE) slots
->     case capPTMappedAddress cap of
->         Nothing -> return ()
->         Just (a, v) -> unmapPageTable a v ptr
->     finaliseCap cap is_final
->     return (if is_final then resetMemMapping cap else cap)
-
-> recycleCap is_final (cap@PageDirectoryCap { capPDBasePtr = ptr }) = do
->     let pdeBits = objBits InvalidPDE
->     let slots = [ptr, ptr + bit pdeBits .. ptr + bit ptTranslationBits - 1]
->     mapM_ (flip storePDE InvalidPDE) slots
->     case capPDMappedAddress cap of
->         Nothing -> return ()
->         Just (a, v) -> unmapPageDirectory a v ptr
->     finaliseCap cap is_final
->     return (if is_final then resetMemMapping cap else cap)
-
-> recycleCap is_final (cap@PDPointerTableCap { capPDPTBasePtr = ptr }) = do
->     let pdpteBits = objBits InvalidPDPTE
->     let slots = [ptr, ptr + bit pdpteBits .. ptr + bit ptTranslationBits - 1]
->     mapM_ (flip storePDPTE InvalidPDPTE) slots
->     case capPDMappedAddress cap of
->         Nothing -> return ()
->         Just (a, v) -> unmapPDPT a v ptr
->     finaliseCap cap is_final
->     return (if is_final then resetMemMapping cap else cap)
-
-> recycleCap is_final (cap@PML4Cap { capPML4BasePtr = ptr }) = do
->     let pmBits = objBits InvalidPML4E
->     let slots = [ptr, ptr + bit pmBits .. ptr + bit ptTranslationBits - 1]
->     mapM_ (flip storePML4E InvalidPML4E) slots
->     finaliseCap cap is_final
->     return (if is_final then resetMemMapping cap else cap)  
-
-> recycleCap _ (cap@IOPortCap {}) = return cap
-> recycleCap is_final (cap@IOSpaceCap {}) = do
->     finaliseCap cap is_final
->     return cap
-
-> -- FIXME x64: check that this is final implementation
-> recycleCap is_final (cap@IOPageTableCap { capIOPTBasePtr = ptr }) = do
->     let iopteBits = objBits InvalidIOPTE
->     let slots = [ptr, ptr + bit iopteBits .. ptr + bit ioptBits - 1]
->     mapM_ (flip storeIOPTE InvalidIOPTE) slots
->     finaliseCap cap is_final
->     return cap
-
-> recycleCap _ ASIDControlCap = return ASIDControlCap
-> recycleCap _ (cap@ASIDPoolCap { capASIDBase = base, capASIDPool = ptr }) = do
->     asidTable <- gets (x64KSASIDTable . ksArchState)
->     when (asidTable!(asidHighBitsOf base) == Just ptr) $ do
->         deleteASIDPool base ptr
->         setObject ptr (makeObject :: ASIDPool)
->         asidTable <- gets (x64KSASIDTable . ksArchState)
->         let asidTable' = asidTable//[(asidHighBitsOf base, Just ptr)]
->         modify (\s -> s {
->             ksArchState = (ksArchState s) { x64KSASIDTable = asidTable' }})
->     return cap
- 
- 
-> hasRecycleRights :: ArchCapability -> Bool
-
-> hasRecycleRights (PageCap { capVPRights = rights }) = rights == VMReadWrite
-> hasRecycleRights _ = True
-
-
 \subsection{Identifying Capabilities}
 
 > sameRegionAs :: ArchCapability -> ArchCapability -> Bool
@@ -312,16 +224,14 @@ Deletion of a final capability to a page table that has been mapped requires tha
 
 \subsection{Creating New Capabilities}
 
-Creates a page-sized object that consists of plain words observable to the user.
-
-> createPageObject ptr numPages = do
->     addrs <- placeNewObject ptr UserData numPages
->     doMachineOp $ initMemory (PPtr $ fromPPtr ptr) (1 `shiftL` (pageBits + numPages) )
->     return addrs
-
 Create an architecture-specific object.
 
 % FIXME: it is not clear wheather we can have large device page
+
+> placeNewDataObject :: PPtr () -> Int -> Bool -> Kernel ()
+> placeNewDataObject regionBase sz isDevice = if isDevice
+>     then placeNewObject regionBase UserDataDevice sz
+>     else placeNewObject regionBase UserData sz
 
 > createObject :: ObjectType -> PPtr () -> Int -> Bool -> Kernel ArchCapability
 > createObject t regionBase _ isDevice = 
@@ -331,21 +241,21 @@ Create an architecture-specific object.
 >         Arch.Types.APIObjectType _ ->
 >             fail "Arch.createObject got an API type"
 >         Arch.Types.SmallPageObject -> do
->             createPageObject regionBase 0
+>             placeNewDataObject regionBase 0
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just X64SmallPage)})
 >             return $! PageCap (pointerCast regionBase)
 >                   VMReadWrite VMVSpaceMap X64SmallPage isDevice Nothing
 >         Arch.Types.LargePageObject -> do 
->             createPageObject regionBase ptTranslationBits
+>             placeNewDataObject regionBase ptTranslationBits
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just X64LargePage)})
 >             return $! PageCap (pointerCast regionBase)
 >                   VMReadWrite VMVSpaceMap X64LargePage isDevice Nothing
 >         Arch.Types.HugePageObject -> do
->             createPageObject regionBase (ptTranslationBits + ptTranslationBits)
+>             placeNewDataObject regionBase (ptTranslationBits + ptTranslationBits)
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just X64HugePage)})

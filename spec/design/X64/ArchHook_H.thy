@@ -8,15 +8,23 @@
  * @TAG(GD_GPL)
  *)
 
-theory ArchTCB_H
-imports "../TCBDecls_H"
+chapter "ArchHook"
+
+theory ArchHook_H
+imports "../KernelStateData_H"
 begin
 
 context Arch begin global_naming X64_H
 
-#INCLUDE_HASKELL SEL4/Object/TCB/X64.lhs CONTEXT X64_H
+definition
+  cEntryHook :: "unit kernel"
+where
+  "cEntryHook\<equiv> return ()"
 
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= ONLY archThreadGet archThreadSet
+definition
+  cExitHook :: "unit kernel"
+where
+  "cExitHook\<equiv> return ()"
 
 end
 end

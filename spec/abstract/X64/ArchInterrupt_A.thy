@@ -8,15 +8,19 @@
  * @TAG(GD_GPL)
  *)
 
-theory ArchTCB_H
-imports "../TCBDecls_H"
+(*
+Formalisation of interrupt handling.
+*)
+
+chapter "Arch-specific Interrupts"
+
+theory ArchInterrupt_A
+imports "../Ipc_A"
 begin
 
-context Arch begin global_naming X64_H
 
-#INCLUDE_HASKELL SEL4/Object/TCB/X64.lhs CONTEXT X64_H
+definition handle_reserved_irq :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where "handle_reserved_irq irq = return ()"
 
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= ONLY archThreadGet archThreadSet
 
-end
 end

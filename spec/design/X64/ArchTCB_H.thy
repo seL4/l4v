@@ -13,9 +13,8 @@
 theory ArchTCB_H
 imports "../TCBDecls_H"
 begin
-(* FIXME: Clagged from ARM version *)
 
-context X64 begin
+context Arch begin global_naming X64_H
 
 definition
 decodeTransfer :: "word8 \<Rightarrow> ( syscall_error , copy_register_sets ) kernel_f"
@@ -28,6 +27,19 @@ where
 "performTransfer arg1 arg2 arg3 \<equiv> return ()"
 
 
-end (* context X64 *)
+definition
+archThreadGet :: "(arch_tcb \<Rightarrow> 'a) \<Rightarrow> machine_word \<Rightarrow> 'a kernel"
+where
+"archThreadGet f tptr\<equiv> liftM (f \<circ> tcbArch) $ getObject tptr"
 
+definition
+archThreadSet :: "(arch_tcb \<Rightarrow> arch_tcb) \<Rightarrow> machine_word \<Rightarrow> unit kernel"
+where
+"archThreadSet f tptr\<equiv> (do
+        tcb \<leftarrow> getObject tptr;
+        setObject tptr $ tcb \<lparr> tcbArch := f (tcbArch tcb) \<rparr>
+od)"
+
+
+end
 end

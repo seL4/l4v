@@ -67,7 +67,7 @@ session ExecSpec = Word_Lib +
   options [document = false]
   theories
     "design/API_H"
-    "design/$L4V_ARCH/Intermediate_H"
+    "design/$L4V_ARCH/ArchIntermediate_H"
 
 
 (*

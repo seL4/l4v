@@ -17,11 +17,12 @@
 theory ArchVSpace_H
 imports
   "../CNode_H"
+  "../Untyped_H"
   "../KI_Decls_H"
   ArchVSpaceDecls_H
 begin
 
-context X64 begin
+context Arch begin global_naming X64_H
 
 defs kernelBase_def:
 "kernelBase \<equiv> VPtr 0xffffffff80000000"
@@ -125,9 +126,9 @@ defs lookupIPCBuffer_def:
     bufferPtr \<leftarrow> threadGet tcbIPCBuffer thread;
     bufferFrameSlot \<leftarrow> getThreadBufferSlot thread;
     bufferCap \<leftarrow> getSlotCap bufferFrameSlot;
-    (let v14 = bufferCap in
-        if isArchObjectCap v14 \<and> isPageCap (capCap v14)
-        then let frame = capCap v14
+    (let v19 = bufferCap in
+        if isArchObjectCap v19 \<and> isPageCap (capCap v19)
+        then let frame = capCap v19
         in  (do
             rights \<leftarrow> return ( capVPRights frame);
             pBits \<leftarrow> return ( pageBitsForSize $ capVPSize frame);
@@ -164,9 +165,6 @@ defs findVSpaceForASID_def:
         | None \<Rightarrow>   throw InvalidRoot
         )
 odE)"
-
-defs checkPML4ASIDMapMembership_def:
-"checkPML4ASIDMapMembership arg1 arg2 \<equiv> return ()"
 
 defs checkPML4UniqueToASID_def:
 "checkPML4UniqueToASID pd asid \<equiv> checkPML4ASIDMapMembership pd [asid]"
@@ -526,10 +524,114 @@ defs decodeX64FrameInvocation_def:
   )"
 
 defs decodeX64IOPTInvocation_def:
-"decodeX64IOPTInvocation label args cptr x3 extraCaps\<equiv> (* case removed *) undefined"
+"decodeX64IOPTInvocation label args cptr x3 extraCaps\<equiv> (let cap = x3 in
+  if isIOPageTableCap
+  then  
+    (let (ilabel, args, extraCaps) = (invocationType label, args, extraCaps) in
+        case (ilabel, args, extraCaps) of
+        (ArchInvocationLabel X64IOPageTableMap, ioaddr#_, (iospaceCap,_)#_) =>  (doE
+            whenE (isJust $ capIOPTMappedAddress cap ) $ throw $ InvalidCapability 0;
+            whenE (Not (capVPSize cap = X64SmallPage)) $ throw $ InvalidCapability 0;
+            (deviceid,domainid) \<leftarrow> (case iospaceCap of
+                  ArchObjectCap (IOSpaceCap domainid (Some deviceid)) \<Rightarrow>   returnOk (deviceid, domainid)
+                | _ \<Rightarrow>   throw $ InvalidCapability 0
+                );
+            paddr \<leftarrow> returnOk $ addrFromPPtr $ capIOPTBasePtr cap;
+            pciRequestId \<leftarrow> withoutFailure $ pciRequestIDFromCap iospaceCap;
+            cteslot \<leftarrow>  withoutFailure $ lookupIOContextSlot pciRequestId;
+            cte  \<leftarrow> withoutFailure $ getObject cteslot;
+            (case cte of
+                  VTDCTE did rmrr aw slptr tt present \<Rightarrow>  
+                    if present then (doE
+                        vtdcte \<leftarrow> returnOk ( VTDCTE_ \<lparr> domainId= domainid,
+                            reservedMemReg= False,
+                            addressWidth= x86KSnumIOPTLevels - 2,
+                            nxtLevelPtr= paddr,
+                            translationType= NotTranslatedRequest,
+                            ctePresent= True \<rparr>
+                            cap' =  cap \<lparr> capIOPTLevel:= 0,
+                                      capIOPTMappedAddress:= Just (deviceid, VPtr ioaddr)\<rparr>);
+                        (returnOk $ InvokeIOPageTable $ IOPageTableMapContext cap' cptr vtdcte cteslot)
+                    odE)
+                    else (doE
+                        vtdpte \<leftarrow> returnOk ( ptrFromPAddr slptr);
+                        (slot, level) \<leftarrow> lookupErrorOnFailure False $ lookupIOPTSlot vtdpte ioaddr;
+                        level \<leftarrow> returnOk $ x86KSnumIOPTLevels - level;
+                        pte \<leftarrow> withoutFailure $ getObject slot;
+                        (case pte of
+                              InvalidIOPTE \<Rightarrow>   (doE
+                                vtdpte \<leftarrow> returnOk ( VTDPTE_ \<lparr>
+                                          framePtr= paddr,
+                                          rw= VMReadWrite \<rparr>
+                                    cap' =  cap \<lparr> capVPMapType:= VMIOSpaceMap,
+                                          capIOPTLevel:= level
+                                          capVMMappedAddress:= Just (deviceid, VPtr ioaddr)\<rparr>);
+                                (returnOk $ InvokeIOPageTable $ IOPageTableMap cap' cptr vtdpte slot)
+                              odE)
+                            | _ \<Rightarrow>   throw $ InvalidCapability 0
+                            )
+                    odE)
+                | _ \<Rightarrow>   throw $ InvalidCapability 0
+                )
+        odE)
+        | (ArchInvocationLabel X64IOPageTableMap, _, _) =>  throw TruncatedMessage
+        | (ArchInvocationLabel X64IOPageTableUnmap, _, _) => 
+                              (returnOk $ InvokeIOPageTable $ IOPageTableUnmap cap cptr)
+        | _ =>  throw IllegalOperation
+        )
+  else   haskell_fail []
+  )"
 
 defs decodeX64IOFrameInvocation_def:
-"decodeX64IOFrameInvocation label args cptr x3 extraCaps\<equiv> (* case removed *) undefined"
+"decodeX64IOFrameInvocation label args cptr x3 extraCaps\<equiv> (let cap = x3 in
+  if isPageCap cap
+  then   (
+    (let (ilabel, args, extraCaps) = (invocationType label, args, extraCaps) in
+        case (ilabel, args, extraCaps) of
+        (ArchInvocationLabel X64PageMapIO, rw#ioaddr#_, (iospaceCap,_)#_) =>  (doE
+            whenE (Not (capVPSize cap = X64SmallPage)) $
+                throw $ InvalidCapability 0;
+            whenE (isJust $ capVPMappedAddress cap) $
+                throw $ InvalidCapability 0;
+            (paddr,vmrights) \<leftarrow> (case cap of
+                  (PageCap frame_pptr vmrights _ _ _ _) \<Rightarrow>   returnOk (addrFromPPtr frame_pptr, vmrights)
+                | _ \<Rightarrow>   throw $ InvalidCapability 1
+                );
+            (deviceid,domainid) \<leftarrow> (case iospaceCap of
+                  ArchObjectCap (IOSpaceCap domainid (Some deviceid)) \<Rightarrow>   returnOk (deviceid, domainid)
+                | _ \<Rightarrow>   throw $ InvalidCapability 0
+                );
+            pciRequestId \<leftarrow> withoutFailure $ pciRequestIDFromCap iospaceCap;
+            cteslot \<leftarrow>  withoutFailure $ lookupIOContextSlot pciRequestId;
+            cte  \<leftarrow> withoutFailure $ getObject cteslot;
+            (slot, level) \<leftarrow> (case cte of
+                  VTDCTE did rmrr aw slptr tt True \<Rightarrow>   (doE
+                    vtdpte \<leftarrow> returnOk ( ptrFromPAddr slptr);
+                    lookupErrorOnFailure False $ lookupIOPTSlot vtdpte ioaddr
+                  odE)
+                | _ \<Rightarrow>   throw $ FailedLookup False InvalidRoot
+                );
+            whenE (Not (level = 0)) $
+                throw $ InvalidCapability 0;
+            pte \<leftarrow> withoutFailure $ getObject slot;
+            whenE (Not (pte = InvalidIOPTE)) $
+                throw DeleteFirst;
+            vtdpte \<leftarrow> returnOk ( VTDPTE_ \<lparr>
+                         framePtr= paddr,
+                         rw= getVMRights (allowRead vmrights) (allowRead (vmRightsFromBits rw)) \<rparr>
+                cap' =  cap \<lparr> capIOPTLevel:= level,
+                            capIOPTMappedAddress:= Just (deviceid, VPtr ioaddr)\<rparr>);
+            returnOk $ InvokePage $ PageIOMap (ArchObjectCap cap') cptr vtdpte slot
+        odE)
+        | (ArchInvocationLabel X64PageMapIO, _, _) =>  throw TruncatedMessage
+        | (ArchInvocationLabel X64PageUnmap, _, _) =>  (
+            (returnOk $ InvokePage $ PageIOUnmap (ArchObjectCap cap) cptr)
+        )
+        | _ =>  throw IllegalOperation
+        )
+  )
+  else   haskell_fail []
+  )"
 
 defs unmapIOPage_def:
 "unmapIOPage sz asid ioaddr baseptr\<equiv> ignoreFailure $ (doE
@@ -662,7 +764,48 @@ defs decodeX64PDPointerTableInvocation_def:
 "decodeX64PDPointerTableInvocation label args cte x3 extraCaps\<equiv> (let cap = x3 in
   if isPDPointerTableCap cap
   then   (
-    (* case removed *) undefined
+    (let (label, args, extraCaps) = (invocationType label, args, extraCaps) in
+        case (label, args, extraCaps) of
+        (ArchInvocationLabel X64PDPTMap, vaddr'#attr#_, (vspaceCap,_)#_) =>  (doE
+            whenE (isJust $ capPDPTMappedAddress cap) $
+                throw $ InvalidCapability 0;
+            (vspace,asid) \<leftarrow> (case vspaceCap of
+                  ArchObjectCap (PML4Cap vspace (Some asid)) \<Rightarrow>   returnOk (vspace,asid)
+                | _ \<Rightarrow>   throw $ InvalidCapability 1
+                );
+            shiftBits \<leftarrow> returnOk ( pageBits + ptTranslationBits + ptTranslationBits + ptTranslationBits);
+            vaddr \<leftarrow> returnOk ( vaddr' && complement (mask shiftBits));
+            whenE (VPtr vaddr \<ge> kernelBase ) $
+                throw $ InvalidArgument 0;
+            vspaceCheck \<leftarrow> lookupErrorOnFailure False $ findVSpaceForASID asid;
+            whenE (vspaceCheck \<noteq> vspace) $ throw $ InvalidCapability 1;
+            pml4Slot \<leftarrow> returnOk ( lookupPML4Slot vspace (VPtr vaddr));
+            oldpml4e \<leftarrow> withoutFailure $ getObject pml4Slot;
+            unlessE (oldpml4e = InvalidPML4E) $ throw DeleteFirst;
+            pml4e \<leftarrow> returnOk ( PDPointerTablePML4E_ \<lparr>
+                    pml4eTable= addrFromPPtr $ capPTBasePtr cap,
+                    pml4eAccessed= False,
+                    pml4eCacheDisabled= x64CacheDisabled $ attribsFromWord attr,
+                    pml4eWriteThrough= x64WriteThrough $ attribsFromWord attr,
+                    pml4eExecuteDisable= False,
+                    pml4eRights= VMReadWrite \<rparr>);
+            returnOk $ InvokePDPT $ PDPTMap_ \<lparr>
+                pdptMapCap= ArchObjectCap $ cap \<lparr> capPDPTMappedAddress:= Just (asid, (VPtr vaddr)) \<rparr>,
+                pdptMapCTSlot= cte,
+                pdptMapPML4E= pml4e,
+                pdptMapPML4Slot= pml4Slot \<rparr>
+        odE)
+        | (ArchInvocationLabel X64PageDirectoryMap, _, _) =>  throw TruncatedMessage
+        | (ArchInvocationLabel X64PageDirectoryUnmap, _, _) =>  (doE
+            cteVal \<leftarrow> withoutFailure $ getCTE cte;
+            final \<leftarrow> withoutFailure $ isFinalCapability cteVal;
+            unlessE final $ throw RevokeFirst;
+            returnOk $ InvokePDPT $ PDPTUnmap_ \<lparr>
+                pdptUnmapCap= cap,
+                pdptUnmapCapSlot= cte \<rparr>
+        odE)
+        | _ =>  throw IllegalOperation
+        )
   )
   else   haskell_fail []
   )"
@@ -776,8 +919,8 @@ defs decodeX64ASIDControlInvocation_def:
             whenE (null free) $ throw DeleteFirst;
             base \<leftarrow> returnOk ( (fst $ head free) `~shiftL~` asidLowBits);
             pool \<leftarrow> returnOk ( makeObject ::asidpool);
-            frame \<leftarrow> (let v18 = untyped in
-                if isUntypedCap v18 \<and> capBlockSize v18 = objBits pool
+            frame \<leftarrow> (let v25 = untyped in
+                if isUntypedCap v25 \<and> capBlockSize v25 = objBits pool
                 then  (doE
                     ensureNoChildren parentSlot;
                     returnOk $ capPtr untyped
@@ -981,7 +1124,63 @@ defs pdeCheckIfMapped_def:
 od)"
 
 defs performPageInvocation_def:
-"performPageInvocation x0\<equiv> (* case removed *) undefined"
+"performPageInvocation x0\<equiv> (let v32 = x0 in
+  case v32 of
+  PageMap asid cap ct ctSlot entries =>   (do
+    updateCap ctSlot cap;
+    (case entries of
+          (VMPTE pte, VMPTEPtr slot) \<Rightarrow>   storePTE slot pte
+        | (VMPDE pde, VMPDEPtr slot) \<Rightarrow>   storePDE slot pde
+        | (VMPDPTE pdpte, VMPDPTEPtr slot) \<Rightarrow>   storePDPTE slot pdpte
+        | _ \<Rightarrow>   haskell_fail []
+        )
+  od)
+  | PageRemap entries =>   (case entries of
+      (VMPTE pte, VMPTEPtr slot) \<Rightarrow>   storePTE slot pte
+    | (VMPDE pde, VMPDEPtr slot) \<Rightarrow>   storePDE slot pde
+    | (VMPDPTE pdpte, VMPDPTEPtr slot) \<Rightarrow>   storePDPTE slot pdpte
+    | _ \<Rightarrow>   haskell_fail []
+    )
+  | PageUnmap cap ctSlot =>   (do
+    (case capVPMappedAddress cap of
+          Some (asid, vaddr) \<Rightarrow>   unmapPage (capVPSize cap) asid vaddr
+                                    (capVPBasePtr cap)
+        | _ \<Rightarrow>   return ()
+        );
+ cap \<leftarrow> liftM capCap $  getSlotCap ctSlot;
+    updateCap ctSlot (ArchObjectCap $
+                          cap \<lparr> capVPMappedAddress := Nothing \<rparr>)
+  od)
+  | PageIOMap cap cptr ctdpte slot =>   (do
+    updateCap cptr cap;
+    storeIOPTE slot vtdpte
+  od)
+  | PageIOUnmap (ArchObjectCap cap) ctSlot =>
+  if isPageCap cap
+  then   (do
+    (case capVPMappedAddress cap of
+          Some (asid, vaddr) \<Rightarrow>   unmapIOPage (capVPSize cap) (fromIntegral asid) vaddr
+                                    (capVPBasePtr cap)
+        | _ \<Rightarrow>   return ()
+        );
+ cap \<leftarrow> liftM capCap $  getSlotCap ctSlot;
+    updateCap ctSlot (ArchObjectCap $
+                          cap \<lparr> capVPMappedAddress := Nothing \<rparr>)
+  od)
+  else   haskell_fail []
+  | PageIOUnmap _ _ =>   haskell_fail []
+  | PageGetAddr ptr =>   (do
+    paddr \<leftarrow> return ( fromPAddr $ addrFromPPtr ptr);
+    ct \<leftarrow> getCurThread;
+    msgTransferred \<leftarrow> setMRs ct Nothing [paddr];
+    msgInfo \<leftarrow> return $ MI_ \<lparr>
+            msgLength= msgTransferred,
+            msgExtraCaps= 0,
+            msgCapsUnwrapped= 0,
+            msgLabel= 0 \<rparr>;
+    setMessageInfo ct msgInfo
+  od)
+  )"
 
 defs performASIDControlInvocation_def:
 "performASIDControlInvocation x0\<equiv> (case x0 of
@@ -1058,7 +1257,16 @@ defs storeIORTE_def:
 od)"
 
 defs deleteIOPageTable_def:
-"deleteIOPageTable x0\<equiv> (* case removed *) undefined"
+"deleteIOPageTable x0\<equiv> (let cap = x0 in
+  if isIOPageTableCap cap
+  then  
+    (case capIOPTMappedAddress cap of
+          Some (asid, vaddr) \<Rightarrow>   unmapIOPageTable (capIOPTLevel cap) asid vaddr
+                                    (capIOPTBasePtr cap)
+        | _ \<Rightarrow>   return ()
+        )
+  else   error []
+  )"
 
 defs mapKernelWindow_def:
 "mapKernelWindow \<equiv> error []"
@@ -1104,11 +1312,11 @@ defs checkValidMappingSize_def:
     (\<lambda>s. 2 ^ pageBitsForSize sz <= gsMaxObjectSize s) []"
 
 defs asidInvalidate_def:
-"asidInvalidate asid \<equiv> doMachineOp $ hwASIDInvalidate asid"
+  "asidInvalidate asid \<equiv> doMachineOp $ hwASIDInvalidate asid"
 
 defs setCurrentVSpaceRoot_def:
-"setCurrentVSpaceRoot addr asid \<equiv> archSetCurrentVSpaceRoot addr asid"
+  "setCurrentVSpaceRoot addr asid \<equiv> archSetCurrentVSpaceRoot addr asid"
 
-end (* context X64 *) 
+end
 
 end

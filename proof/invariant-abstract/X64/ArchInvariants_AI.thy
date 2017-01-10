@@ -886,12 +886,11 @@ definition
 where
   "valid_global_pdpts \<equiv> \<lambda>s.
    \<forall>p \<in> set (x64_global_pdpts (arch_state s)). typ_at (AArch APDPointerTable) p s"
-   
+
 definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_arch_state \<equiv> \<lambda>s.
-  typ_at (AArch (AUserData X64SmallPage)) (x64_globals_frame (arch_state s)) s \<and>
   valid_asid_table (x64_asid_table (arch_state s)) s \<and>
   page_map_l4_at (x64_global_pml4 (arch_state s)) s \<and>
   valid_global_pts s \<and> valid_global_pds s \<and> valid_global_pdpts s"
@@ -1004,7 +1003,7 @@ definition
   global_refs :: "'z::state_ext state \<Rightarrow> obj_ref set"
 where
   "global_refs \<equiv> \<lambda>s.
-  {idle_thread s, x64_globals_frame (arch_state s), x64_global_pml4 (arch_state s)} \<union>
+  {idle_thread s, x64_global_pml4 (arch_state s)} \<union>
    range (interrupt_irq_node s) \<union> set (x64_global_pdpts (arch_state s)) \<union>
    set (x64_global_pds (arch_state s)) \<union> set (x64_global_pts (arch_state s))"
 
@@ -1549,7 +1548,6 @@ context Arch begin global_naming X64
 lemma global_refs_equiv:
   assumes "idle_thread s = idle_thread s'"
   assumes "interrupt_irq_node s = interrupt_irq_node s'"
-  assumes "x64_globals_frame (arch_state s) = x64_globals_frame (arch_state s')"
   assumes "x64_global_pml4 (arch_state s) = x64_global_pml4 (arch_state s')"
   assumes "set (x64_global_pts (arch_state s)) = set (x64_global_pts (arch_state s'))"
   assumes "set (x64_global_pds (arch_state s)) = set (x64_global_pds (arch_state s'))"

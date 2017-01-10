@@ -1640,13 +1640,13 @@ lemma deleteObjects_ccorres':
   apply (rule ccorres_assert)
   apply (rule ccorres_stateAssert_fwd)
   apply (subst bind_assoc[symmetric])
-  apply (unfold freeMemory_def word_size_def)
+  apply (unfold freeMemory_def)
   apply (subst ksPSpace_update_ext)
   apply (subgoal_tac "bits \<le> word_bits")
   prefer 2
    apply (clarsimp simp:cte_wp_at_ctes_of)
-  apply (clarsimp simp: mapM_x_storeWord_step intvl_range_conv
-             intvl_range_conv[where 'a=32, folded word_bits_def]
+  apply (clarsimp simp: mapM_x_storeWord_step[simplified word_size_bits_def]
+             intvl_range_conv intvl_range_conv[where 'a=32, folded word_bits_def]
              doMachineOp_modify modify_modify o_def ksPSpace_ksMSu_comm
              bind_assoc modify_machinestate_assert_cnodes_swap
              modify_modify_bind)
