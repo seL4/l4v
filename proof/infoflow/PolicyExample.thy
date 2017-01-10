@@ -209,7 +209,7 @@ lemmas subjectReads_C' = reads_lrefl[of "partition_label C"]
 
 lemma subjectReads_C:
   "subjectReads example_auth_graph (partition_label C) = {partition_label C,partition_label CTR,partition_label NTFN1, partition_label EP, partition_label RM, partition_label NTFN2}"
-  apply(clarsimp simp: example_auth_graph_def)
+  apply(clarsimp)
   apply(rule equalityI)
    apply(rule subsetI)
    apply(erule subjectReads.induct)

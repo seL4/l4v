@@ -778,7 +778,7 @@ lemma kh0_dom:
              irq_node_offs_range"
   apply (rule equalityI)
    apply (simp add: kh0_def dom_def)
-   apply (clarsimp simp: irq_node_offs_in_range irq_node_offs_distinct)
+   apply (clarsimp simp: irq_node_offs_in_range)
   apply (clarsimp simp: dom_def)
   apply (rule conjI, clarsimp simp: kh0_def)+
   apply (force simp: kh0_def cte_level_bits_def dest: irq_node_offs_range_correct)
@@ -1000,8 +1000,6 @@ lemma Sys1_pas_wellformed:
                         Sys1AuthGraph_def)
   done
 
-declare AllowSend_def[simp] AllowRecv_def[simp]
-  
 lemma domains_of_state_s0[simp]:
   "domains_of_state s0_internal = {(High_tcb_ptr, High_domain), (Low_tcb_ptr, Low_domain), (idle_tcb_ptr, default_domain)}"
   apply(rule equalityI)
@@ -1750,7 +1748,7 @@ lemma respects_device_trivial:
                         cap_range_respects_device_region_def machine_state0_def)
   apply (intro conjI impI)
    apply (drule s0_caps_of_state)
-   apply (fastforce simp: cap_is_device.simps)[1]
+   apply fastforce
   apply (clarsimp simp: s0_internal_def machine_state0_def)
   done
 
