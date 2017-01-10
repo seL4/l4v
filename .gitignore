@@ -7,6 +7,7 @@
 *.lev
 *#*#
 
+spec/cspec/c/32/
 spec/cspec/c/api/
 spec/cspec/c/arch/
 spec/cspec/c/kernel_all.c
