@@ -362,6 +362,11 @@ where
          | PDPointerTable pdpt      \<Rightarrow> APDPointerTable
          | PageMapL4 pm             \<Rightarrow> APageMapL4)"
 
+text {* For implementation reasons the badge word has differing amounts of bits *}
+definition
+  badge_bits :: nat where
+  "badge_bits \<equiv> 64"
+
 end
 
 section "Arch-specific TCB"

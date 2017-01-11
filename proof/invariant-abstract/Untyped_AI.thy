@@ -19,6 +19,8 @@ context begin interpretation Arch .
 
 requalify_consts
   region_in_kernel_window
+  arch_default_cap
+  second_level_tables
 end
 
 primrec
@@ -61,7 +63,7 @@ locale Untyped_AI_of_bl_nat_to_cref =
 lemma cnode_cap_bits_range:
   "\<lbrakk> cte_wp_at P p s; invs s \<rbrakk> \<Longrightarrow>
      (\<exists>c. P c \<and> (is_cnode_cap c \<longrightarrow>
-                 (\<lambda>n. n > 0 \<and> n < 28 \<and> is_aligned (obj_ref_of c) (n + 4)) (bits_of c)))"
+                 (\<lambda>n. n > 0 \<and> n < (word_bits - 4) \<and> is_aligned (obj_ref_of c) (n + 4)) (bits_of c)))"
   apply (frule invs_valid_objs)
   apply (drule(1) cte_wp_at_valid_objs_valid_cap)
   apply clarsimp
@@ -298,7 +300,7 @@ locale Untyped_AI_arch =
   "\<And>ptr sz s x6 us n dev. \<lbrakk>pspace_no_overlap_range_cover ptr sz (s::'state_ext state) \<and> x6 \<noteq> ASIDPoolObj \<and> range_cover ptr sz (obj_bits_api (ArchObject x6) us) n \<and> ptr \<noteq> 0(*; tp = ArchObject x6*)\<rbrakk>
             \<Longrightarrow> \<forall>y\<in>{0..<n}. s
                    \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object (ArchObject x6) dev us)) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api (ArchObject x6) us)) [0..<n])
-                              (kheap s)\<rparr> \<turnstile> ArchObjectCap (ARM_A.arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us dev)"
+                              (kheap s)\<rparr> \<turnstile> ArchObjectCap (arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us dev)"
 
   assumes init_arch_objects_descendants_range[wp]:
   "\<And>x cref ty ptr n us y. \<lbrace>\<lambda>(s::'state_ext state). descendants_range x cref s \<rbrace> init_arch_objects ty ptr n us y
@@ -388,20 +390,23 @@ qed
 
 
 lemma range_cover_stuff:
-  "\<lbrakk>0 < n;n \<le> unat ((2::word32) ^ sz - of_nat rv >> bits);
+  notes unat_power_lower_machine = unat_power_lower[where 'a=machine_word_len]
+  notes unat_of_nat_machine = unat_of_nat_eq[where 'a=machine_word_len]
+  shows
+  "\<lbrakk>0 < n;n \<le> unat ((2::machine_word) ^ sz - of_nat rv >> bits);
   rv \<le> 2^ sz; sz < word_bits; is_aligned w sz\<rbrakk> \<Longrightarrow>
    rv \<le> unat (alignUp (w + of_nat rv) bits - w) \<and>
    (alignUp (w + of_nat rv) bits) && ~~ mask sz = w \<and>
-   range_cover (alignUp (w + ((of_nat rv)::word32)) bits) sz bits n"
+   range_cover (alignUp (w + ((of_nat rv)::machine_word)) bits) sz bits n"
   apply (clarsimp simp: range_cover_def)
   proof (intro conjI)
     assume not_0 : "0<n"
-    assume bound : "n \<le> unat ((2::word32) ^ sz - of_nat rv >> bits)" "rv\<le> 2^sz" 
+    assume bound : "n \<le> unat ((2::machine_word) ^ sz - of_nat rv >> bits)" "rv\<le> 2^sz" 
       "sz < word_bits"
     assume al: "is_aligned w sz"
-    have space: "(2::word32) ^ sz - of_nat rv \<le> 2^ sz"
+    have space: "(2::machine_word) ^ sz - of_nat rv \<le> 2^ sz"
       apply (rule word_sub_le[OF word_of_nat_le])
-      apply (clarsimp simp: bound unat_power_lower32)
+      apply (clarsimp simp: bound unat_power_lower_machine)
       done
     show cmp: "bits \<le> sz"
       using not_0 bound
@@ -411,7 +416,7 @@ lemma range_cover_stuff:
       apply (drule le_trans)
       apply (rule word_le_nat_alt[THEN iffD1])
       apply (rule le_shiftr[OF space])
-      apply (subgoal_tac "(2::word32)^sz >> bits = 0")
+      apply (subgoal_tac "(2::machine_word)^sz >> bits = 0")
        apply simp
       apply (rule and_mask_eq_iff_shiftr_0[THEN iffD1])
       apply (simp add: and_mask_eq_iff_le_mask)
@@ -419,18 +424,18 @@ lemma range_cover_stuff:
        apply (simp add: word_bits_def mask_def power_overflow)
       apply (subst le_mask_iff_lt_2n[THEN iffD1])
        apply (simp add: word_bits_def)
-      apply (simp add: word_less_nat_alt[THEN iffD2] unat_power_lower32)
+      apply (simp add: word_less_nat_alt[THEN iffD2] unat_power_lower_machine)
       done
-    have shiftr_t2n[simp]:"(2::word32)^sz >> bits = 2^ (sz - bits)"
+    have shiftr_t2n[simp]:"(2::machine_word)^sz >> bits = 2^ (sz - bits)"
       using bound cmp
       apply (case_tac "sz = 0",simp)
-      apply (subgoal_tac "(1::word32) << sz >> bits = 2^ (sz -bits)")
+      apply (subgoal_tac "(1::machine_word) << sz >> bits = 2^ (sz -bits)")
        apply simp
       apply (subst shiftl_shiftr1)
       apply (simp add: word_size word_bits_def shiftl_t2n word_1_and_bl)+
      done
 
-    have cmp2[simp]: "alignUp (of_nat rv) bits < (2 :: word32) ^ sz"
+    have cmp2[simp]: "alignUp (of_nat rv) bits < (2 :: machine_word) ^ sz"
       using bound cmp not_0
       apply -
       apply (case_tac "rv = 0")
@@ -438,7 +443,7 @@ lemma range_cover_stuff:
        apply (clarsimp simp: alignUp_def2)
        apply (subst mask_eq_x_eq_0[THEN iffD1])
        apply (simp add: and_mask_eq_iff_le_mask mask_def)
-       apply (simp add: p2_gt_0[where 'a=32, folded word_bits_def])
+       apply (simp add: p2_gt_0[where 'a=machine_word_len, folded word_bits_def])
       apply (simp add: alignUp_def3)
       apply (subgoal_tac "1 \<le> unat (2 ^ sz - of_nat rv >> bits)")
       prefer 2
@@ -448,11 +453,11 @@ lemma range_cover_stuff:
       apply (simp add: shiftr_div_2n')
       apply (simp add: td_gal[symmetric])
       apply (subst (asm) unat_sub)
-       apply (simp add: word_of_nat_le unat_power_lower32)
+       apply (simp add: word_of_nat_le unat_power_lower_machine)
       apply (simp add: le_diff_conv2 word_of_nat_le unat_le_helper word_less_nat_alt)
       apply (rule le_less_trans[OF unat_plus_gt])
       apply (rule less_le_trans[where y = "2^bits + unat (of_nat rv)"])
-      apply (simp add: unat_power_lower32)
+      apply (simp add: unat_power_lower_machine)
       apply (rule le_less_trans[OF _ measure_unat])
       apply (rule word_le_nat_alt[THEN iffD1])
       apply (rule word_and_le2)
@@ -460,10 +465,10 @@ lemma range_cover_stuff:
        apply (subst word_bits_def[symmetric])
        apply (erule le_less_trans)
        apply simp
-      apply (simp add: unat_power_lower32)
+      apply (simp add: unat_power_lower_machine)
       done
     
-    show "n + unat (alignUp (w + ((of_nat rv)::word32)) bits && mask sz >> bits) \<le> 2 ^ (sz - bits)"
+    show "n + unat (alignUp (w + ((of_nat rv)::machine_word)) bits && mask sz >> bits) \<le> 2 ^ (sz - bits)"
       using not_0 bound cmp
      apply -
      apply (erule le_trans[OF add_le_mono])
@@ -508,37 +513,42 @@ lemma range_cover_stuff:
      apply (case_tac "rv = 0")
       apply simp
      apply (rule le_trans[OF _ word_le_nat_alt[THEN iffD1,OF alignUp_ge]])
-      apply (subst unat_of_nat32)
-      apply (erule le_less_trans)
-       apply simp
-       apply (simp_all add: word_bits_def)[2]
+       apply (subst unat_of_nat_machine)
+        apply (erule le_less_trans)
+        apply (rule power_strict_increasing)
+         apply (simp_all add: word_bits_def)[4]
      apply (rule alignUp_is_aligned_nz[where x = "2^sz"])
-      apply (rule is_aligned_weaken[OF is_aligned_triv2])
-      apply (simp_all add: word_bits_def)[2]
-     apply (subst word_of_nat_le)
-     apply (subst unat_power_lower32)
-     apply simp+
-    apply (erule of_nat_neq_0)
-    apply (erule le_less_trans)
-    apply (subst word_bits_def[symmetric])
-    apply simp
-    done
+        apply (rule is_aligned_weaken[OF is_aligned_triv2])
+        apply (simp_all add: word_bits_def)[2]
+      apply (subst word_of_nat_le)
+       apply (subst unat_power_lower_machine)
+        apply (simp add: word_bits_def)+
+     apply (erule of_nat_neq_0)
+     apply (erule le_less_trans)
+     apply (rule power_strict_increasing)
+      apply (simp add: word_bits_def)+
+     done
    show "alignUp (w + of_nat rv) bits && ~~ mask sz = w"
     using bound not_0 cmp al
     apply (clarsimp simp: alignUp_plus[OF is_aligned_weaken] 
                           mask_out_add_aligned[symmetric])
     apply (clarsimp simp: and_not_mask)
-    apply (subgoal_tac "alignUp ((of_nat rv)::word32) bits >> sz = 0")
+    apply (subgoal_tac "alignUp ((of_nat rv)::machine_word) bits >> sz = 0")
      apply simp
     apply (simp add: le_mask_iff[symmetric] mask_def)
     done
-   show "sz < 32" by (simp add: bound(3)[unfolded word_bits_def, simplified])
-   qed
+  qed (simp add: word_bits_def)
+
+context Arch begin
+  (*FIXME: generify proof that uses this *)
+  lemmas range_cover_stuff_arch = range_cover_stuff[unfolded word_bits_def, simplified]
+end
+
 
 lemma cte_wp_at_range_cover:
   "\<lbrakk>bits < word_bits; rv\<le> 2^ sz; invs s;
     cte_wp_at (op = (cap.UntypedCap dev w sz idx)) p s;
-    0 < n; n \<le> unat ((2::word32) ^ sz - of_nat rv >> bits)\<rbrakk>
+    0 < n; n \<le> unat ((2::machine_word) ^ sz - of_nat rv >> bits)\<rbrakk>
    \<Longrightarrow> range_cover (alignUp (w + of_nat rv) bits) sz bits n"
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (frule(1) caps_of_state_valid)
@@ -550,7 +560,7 @@ lemma cte_wp_at_range_cover:
 
 
 lemma le_mask_le_2p:
-  "\<lbrakk>idx \<le> unat ((ptr::word32) && mask sz);sz < word_bits\<rbrakk> \<Longrightarrow> idx < 2^ sz"
+  "\<lbrakk>idx \<le> unat ((ptr::machine_word) && mask sz);sz < word_bits\<rbrakk> \<Longrightarrow> idx < 2^ sz"
   apply (erule le_less_trans)
   apply (rule unat_less_helper)
   apply simp
@@ -680,18 +690,18 @@ lemma cases_imp_eq:
   by blast
 
 lemma inj_16:
-  "\<lbrakk> of_nat x * 16 = of_nat y * (16 :: word32);
+  "\<lbrakk> of_nat x * 16 = of_nat y * (16 :: machine_word);
      x < bnd; y < bnd; bnd \<le> 2 ^ (word_bits - 4) \<rbrakk>
-     \<Longrightarrow> of_nat x = (of_nat y :: word32)"
+     \<Longrightarrow> of_nat x = (of_nat y :: machine_word)"
   apply (fold shiftl_t2n [where n=4, simplified, simplified mult.commute])
   apply (simp only: word_bl.Rep_inject[symmetric]
                     bl_shiftl)
   apply (drule(1) order_less_le_trans)+
-  apply (drule of_nat_mono_maybe[rotated, where 'a=32])
+  apply (drule of_nat_mono_maybe[rotated, where 'a=machine_word_len])
    apply (rule power_strict_increasing)
     apply (simp add: word_bits_def)
    apply simp
-  apply (drule of_nat_mono_maybe[rotated, where 'a=32])
+  apply (drule of_nat_mono_maybe[rotated, where 'a=machine_word_len])
    apply (rule power_strict_increasing)
     apply (simp add: word_bits_def)
    apply simp
@@ -703,12 +713,15 @@ lemma inj_16:
 
 lemma of_nat_shiftR:
   "a < 2 ^ word_bits \<Longrightarrow>
-   unat (of_nat (shiftR a b)::word32) = unat ((of_nat a :: word32) >> b)"
+   unat (of_nat (shiftR a b)::machine_word) = unat ((of_nat a :: machine_word) >> b)"
   apply (subst shiftr_div_2n')
   apply (clarsimp simp: shiftR_nat)
-  apply (subst unat_of_nat32)
+  apply (subst unat_of_nat_eq[where 'a=machine_word_len])
+   apply (simp only: word_bits_def)
    apply (erule le_less_trans[OF div_le_dividend])
-  apply (simp add: unat_of_nat32)
+  apply (subst unat_of_nat_eq[where 'a=machine_word_len])
+   apply (simp only: word_bits_def)
+  apply simp
   done
 
 
@@ -1466,17 +1479,17 @@ lemma of_nat_shift_distinct_helper:
   done
 
 
-lemmas of_nat_shift_distinct_helper32 = of_nat_shift_distinct_helper[where 'a=32, folded word_bits_def]
+lemmas of_nat_shift_distinct_helper_machine = of_nat_shift_distinct_helper[where 'a=machine_word_len, folded word_bits_def]
 
 
 lemma ptr_add_distinct_helper:
-  "\<lbrakk> ptr_add (p :: word32) (x * 2 ^ n) = ptr_add p (y * 2 ^ n); x \<noteq> y;
+  "\<lbrakk> ptr_add (p :: machine_word) (x * 2 ^ n) = ptr_add p (y * 2 ^ n); x \<noteq> y;
      x < bnd; y < bnd; n < word_bits;
      bnd \<le> 2 ^ (word_bits - n) \<rbrakk>
      \<Longrightarrow> P"
   apply (clarsimp simp: ptr_add_def word_unat_power[symmetric]
                         shiftl_t2n[symmetric, simplified mult.commute])
-  apply (erule(5) of_nat_shift_distinct_helper32)
+  apply (erule(5) of_nat_shift_distinct_helper_machine)
   done
 
 
@@ -1637,12 +1650,12 @@ lemma retype_region_distinct_sets:
   apply (clarsimp simp: retype_addrs_def distinct_prop_map)
   apply (rule distinct_prop_distinct)
    apply simp
-  apply (subgoal_tac  "of_nat y * (2::word32) ^ obj_bits_api tp us \<noteq> of_nat x * 2 ^ obj_bits_api tp us")
+  apply (subgoal_tac  "of_nat y * (2::machine_word) ^ obj_bits_api tp us \<noteq> of_nat x * 2 ^ obj_bits_api tp us")
    apply (case_tac tp) defer
         apply (simp add:cap_range_def ptr_add_def)+
    apply (clarsimp simp: ptr_add_def word_unat_power[symmetric]
                       shiftl_t2n[simplified mult.commute, symmetric])
-   apply (erule(2) of_nat_shift_distinct_helper[where 'a=32 and n = "obj_bits_api tp us"])
+   apply (erule(2) of_nat_shift_distinct_helper[where 'a=machine_word_len and n = "obj_bits_api tp us"])
      apply simp
     apply (simp add:range_cover_def)
    apply (erule range_cover.range_cover_n_le)
@@ -2064,10 +2077,10 @@ lemma op_equal: "(\<lambda>x. x = c) = (op = c)" by (rule ext) auto
 
 
 lemma mask_out_eq_0:
-  "\<lbrakk>idx < 2^ sz;sz<word_bits\<rbrakk> \<Longrightarrow> ((of_nat idx)::word32) && ~~ mask sz = 0"
+  "\<lbrakk>idx < 2^ sz;sz<word_bits\<rbrakk> \<Longrightarrow> ((of_nat idx)::machine_word) && ~~ mask sz = 0"
   apply (clarsimp simp: mask_out_sub_mask)
   apply (subst less_mask_eq[symmetric])
-   apply (erule(1) of_nat_less_pow_32)
+   apply (erule(1) of_nat_power[where 'a=machine_word_len, folded word_bits_def])
   apply simp
   done
 
@@ -2090,7 +2103,7 @@ lemma is_aligned_neg_mask_eq':
 
 lemma neg_mask_mask_unat:
   "sz < word_bits \<Longrightarrow>
-   unat ((ptr::word32) && ~~ mask sz)  + unat (ptr && mask sz) = unat ptr"
+   unat ((ptr::machine_word) && ~~ mask sz)  + unat (ptr && mask sz) = unat ptr"
   apply (subst unat_plus_simple[THEN iffD1,symmetric])
   apply (rule is_aligned_no_wrap'[OF is_aligned_neg_mask[OF le_refl]])
   apply (rule and_mask_less')
@@ -2320,7 +2333,7 @@ proof -
     apply -
     apply (erule disjE)
     apply (erule cte_wp_at_caps_descendants_range_inI[OF _ _ _ range_cover.sz(1)
-        [where 'a=32, folded word_bits_def]])
+        [where 'a=machine_word_len, folded word_bits_def]])
        apply (simp add:cte_wp_at_caps_of_state desc_range)+
     done
   thus "descendants_range_in usable_range cref s"
@@ -2340,7 +2353,7 @@ lemma ps_no_overlap[simp]: "\<not> reset \<longrightarrow> pspace_no_overlap_ran
   using misc cte_wp_at cover idx_cases
   apply clarsimp
   apply (erule cte_wp_at_pspace_no_overlapI[OF  _ _ _
-                 range_cover.sz(1)[where 'a=32, folded word_bits_def]])
+                 range_cover.sz(1)[where 'a=machine_word_len, folded word_bits_def]])
     apply (simp add: cte_wp_at_caps_of_state)
    apply simp+
   done
@@ -2350,7 +2363,7 @@ lemma caps_no_overlap[simp]: "caps_no_overlap ptr sz s"
   apply -
   apply (erule disjE)
    apply (erule cte_wp_at_caps_no_overlapI[OF  _ _ _ range_cover.sz(1)
-       [where 'a=32, folded word_bits_def]])
+       [where 'a=machine_word_len, folded word_bits_def]])
     apply (simp add:cte_wp_at_caps_of_state)+
   apply (erule descendants_range_caps_no_overlapI)
    apply (simp add:cte_wp_at_caps_of_state desc_range)+
@@ -2415,14 +2428,14 @@ lemma usable_range_disjoint:
    {ptr..ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us - 1} = {}"
   proof -
   have idx_compare''[simp]:
-   "unat ((ptr && mask sz) + (of_nat (length slots) * (2::word32) ^ obj_bits_api tp us)) < 2 ^ sz
+   "unat ((ptr && mask sz) + (of_nat (length slots) * (2::machine_word) ^ obj_bits_api tp us)) < 2 ^ sz
     \<Longrightarrow> ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us - 1
     < ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us"
   apply (rule minus_one_helper,simp)
   apply (rule neq_0_no_wrap)
   apply (rule machine_word_plus_mono_right_split)
   apply (simp add:shiftl_t2n range_cover_unat[OF cover] field_simps)
-  apply (simp add:range_cover.sz[where 'a=32, folded word_bits_def, OF cover])+
+  apply (simp add:range_cover.sz[where 'a=machine_word_len, folded word_bits_def, OF cover])+
   done
   show ?thesis
    apply (clarsimp simp:mask_out_sub_mask blah)
@@ -2526,14 +2539,14 @@ lemma valid_untyped_cap_inc:
    apply simp
    apply (erule disjoint_subset[rotated])
    apply (frule(1) le_mask_le_2p[OF _ 
-                     range_cover.sz(1)[where 'a=32, folded word_bits_def]])
+                     range_cover.sz(1)[where 'a=machine_word_len, folded word_bits_def]])
    apply clarsimp
    apply (rule word_plus_mono_right)
    apply (rule word_of_nat_le)
-   apply (simp add: unat_of_nat32 range_cover_unat field_simps)
+   apply (simp add: unat_of_nat_eq[where 'a=machine_word_len] range_cover_unat field_simps)
    apply (rule is_aligned_no_wrap'[OF is_aligned_neg_mask[OF le_refl]])
    apply (simp add: word_less_nat_alt
-                    unat_power_lower[where 'a=32, folded word_bits_def])
+                    unat_power_lower[where 'a=machine_word_len, folded word_bits_def])
   apply (simp add: range_cover_unat range_cover.unat_of_nat_shift shiftl_t2n field_simps)
   apply (subst add.commute)
   apply (simp add: range_cover.range_cover_compare_bound)
@@ -3116,16 +3129,15 @@ lemma create_cap_irq_handlers[wp]:
 crunch valid_arch_objs[wp]: create_cap "valid_arch_objs"
   (simp: crunch_simps)
 
-
 locale Untyped_AI_nonempty_table = 
   fixes state_ext_t :: "('state_ext::state_ext) itself"
-  fixes nonempty_table :: "word32 set \<Rightarrow> Structures_A.kernel_object \<Rightarrow> bool"
+  fixes nonempty_table :: "machine_word set \<Rightarrow> Structures_A.kernel_object \<Rightarrow> bool"
   assumes create_cap_valid_arch_caps[wp]:
   "\<And>tp oref sz dev cref p.\<lbrace>valid_arch_caps
       and valid_cap (default_cap tp oref sz dev)
       and (\<lambda>(s::'state_ext state). \<forall>r\<in>obj_refs (default_cap tp oref sz dev).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> obj_refs cap) p' s)
-              \<and> \<not> obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)
+              \<and> \<not> obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
       and cte_wp_at (op = cap.NullCap) cref
       and K (tp \<noteq> ArchObject ASIDPoolObj)\<rbrace>
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
@@ -3223,7 +3235,7 @@ lemma (in Untyped_AI_nonempty_table) create_cap_invs[wp]:
       and real_cte_at cref
       and (\<lambda>(s::'state_ext state). \<forall>r\<in>obj_refs (default_cap tp oref sz dev).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> obj_refs cap) p' s)
-              \<and> \<not> obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)
+              \<and> \<not> obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
       and K (p \<noteq> cref \<and> tp \<noteq> ArchObject ASIDPoolObj)\<rbrace>
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_pre)
@@ -3256,9 +3268,9 @@ lemma create_cap_no_cap[wp]:
   done
 
 lemma (in Untyped_AI_nonempty_table) create_cap_nonempty_tables[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) p s)\<rbrace>
+  "\<lbrace>\<lambda>s. P (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) p s)\<rbrace>
      create_cap tp sz p' dev (cref, oref)
-   \<lbrace>\<lambda>rv s. P (obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) p s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) p s)\<rbrace>"
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f=arch_state, OF create_cap_arch_state])
    apply (simp add: create_cap_def set_cdt_def)
@@ -3308,7 +3320,7 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs_inv:
               real_cte_at (fst tup) s)
        \<and> (\<forall>tup \<in> set ((cref,oref)#list). \<forall>r \<in> obj_refs (default_cap tp (snd tup) sz dev).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> Structures_A.obj_refs cap) p' s)
-              \<and> \<not> obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)
+              \<and> \<not> obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
        \<and> distinct (p # (map fst ((cref,oref)#list)))
        \<and> tp \<noteq> ArchObject ASIDPoolObj) \<rbrace>
      create_cap tp sz p dev (cref,oref)
@@ -3333,7 +3345,7 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs_inv:
               real_cte_at (fst tup) s)
        \<and> (\<forall>tup \<in> set list. \<forall>r \<in> obj_refs (default_cap tp (snd tup) sz dev).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> Structures_A.obj_refs cap) p' s)
-              \<and> \<not> obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)
+              \<and> \<not> obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
        \<and> distinct (p # (map fst list))
        \<and> tp \<noteq> ArchObject ASIDPoolObj) \<rbrace>"
   apply (rule hoare_pre)
@@ -3385,7 +3397,7 @@ lemma (in Untyped_AI_nonempty_table) create_caps_invs:
               real_cte_at (fst tup) s)
        \<and> (\<forall>tup \<in> set (zip crefs orefs). \<forall>r \<in> obj_refs (default_cap tp (snd tup) sz dev).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> Structures_A.obj_refs cap) p' s)
-              \<and> \<not> obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)
+              \<and> \<not> obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
        \<and> distinct (p # (map fst (zip crefs orefs)))
        \<and> tp \<noteq> ArchObject ASIDPoolObj)
        and K (set orefs \<subseteq> set (retype_addrs ptr tp (length slots) us))\<rbrace>
@@ -3488,7 +3500,7 @@ lemma retype_region_refs_distinct[wp]:
           | drule subsetD [OF obj_refs_default_cap]
                   less_two_pow_divD)+
    apply (simp add: range_cover_def word_bits_def)
-  apply (erule range_cover.range_cover_n_le[where 'a=32, folded word_bits_def])
+  apply (erule range_cover.range_cover_n_le[where 'a=machine_word_len, folded word_bits_def])
   done
 
 
@@ -3543,9 +3555,9 @@ lemma do_machine_op_obj_at_arch_state[wp]:
   by (clarsimp simp: do_machine_op_def split_def | wp)+
 
 lemma (in Untyped_AI_nonempty_table) retype_nonempty_table[wp]:
-  "\<lbrace>\<lambda>(s::('state_ext::state_ext) state). \<not> (obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)\<rbrace>
+  "\<lbrace>\<lambda>(s::('state_ext::state_ext) state). \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>
      retype_region ptr sz us tp dev
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   apply (simp add: retype_region_def split del: split_if)
   apply (rule hoare_pre)
    apply (wp|simp del: fun_upd_apply)+
@@ -3575,9 +3587,9 @@ lemma invs_cap_refs_in_kernel_window[elim!]:
   by (simp add: invs_def valid_state_def)
 
 lemma (in Untyped_AI_nonempty_table) set_cap_nonempty_tables[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) p s)\<rbrace>
+  "\<lbrace>\<lambda>s. P (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) p s)\<rbrace>
      set_cap cap cref
-   \<lbrace>\<lambda>rv s. P (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) p s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) p s)\<rbrace>"
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f=arch_state, OF set_cap_arch])
    apply (wp set_cap_obj_at_impossible)

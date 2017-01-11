@@ -171,7 +171,8 @@ where
       ensure_port_operation_allowed cap port 1;
       output_data \<leftarrow> returnOk $ ucast $ args ! 1;
       returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortOut32 output_data
-    odE"
+      odE
+  | _ \<Rightarrow> throwError IllegalOperation"
 (*X64STUB*)
 definition
   decode_io_unmap_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> 
@@ -350,9 +351,9 @@ where
          odE
     else throwError TruncatedMessage
     else if invocation_type label = ArchInvocationLabel X64PageUnmap then 
-             case map_type of
+             (*case map_type of
                  VMIOSpaceMap \<Rightarrow> decode_io_unmap_invocation label args cte cap extra_caps
-               | _ \<Rightarrow> returnOk $ InvokePage $ PageUnmap cap cte
+               | _ \<Rightarrow>*) returnOk $ InvokePage $ PageUnmap cap cte
     (* FIXME x64-vtd:
     else if invocation_type label = ArchInvocationLabel X64PageMapIO
     then decode_io_map_invocation label args cte cap extra_caps
@@ -360,7 +361,7 @@ where
     else if invocation_type label = ArchInvocationLabel X64PageGetAddress 
     then returnOk $ InvokePage $ PageGetAddr p
   else throwError IllegalOperation         
- | _ \<Rightarrow> undefined)"
+ | _ \<Rightarrow> fail)"
 
 definition filter_frame_attrs :: "frame_attrs \<Rightarrow> table_attrs"
 where
@@ -475,7 +476,7 @@ where
       else throwError IllegalOperation
 
   | ASIDControlCap \<Rightarrow>
-      if invocation_type label = ArchInvocationLabel X64ASIDPoolAssign then
+      if invocation_type label = ArchInvocationLabel X64ASIDControlMakePool then
       if length args > 1 \<and> length extra_caps > 1
       then let index = args ! 0;
                depth = args ! 1;
@@ -497,7 +498,7 @@ where
                         else  throwError $ InvalidCapability 1);
                dest_slot \<leftarrow> lookup_target_slot root (to_bl index) (unat depth);
                ensure_empty dest_slot;
-               returnOk $ InvokeASIDControl $ MakePool undefined undefined parent_slot base
+               returnOk $ InvokeASIDControl $ MakePool frame dest_slot parent_slot base
            odE
    else throwError TruncatedMessage
    else throwError IllegalOperation
@@ -517,8 +518,9 @@ where
                     (- dom pool \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + base \<noteq> 0});
                   whenE (free_set = {}) $ throwError DeleteFirst;
                   offset \<leftarrow> liftE $ select_ext (\<lambda>_. free_asid_pool_select pool base) free_set;
-                  returnOk $ InvokeASIDPool $ Assign undefined undefined pd_cap_slot
+                  returnOk $ InvokeASIDPool $ Assign (ucast offset + base) p pd_cap_slot
               odE
+            | _ \<Rightarrow> throwError $ InvalidCapability 1  
       else throwError TruncatedMessage
       else throwError IllegalOperation
 

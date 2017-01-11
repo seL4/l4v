@@ -34,7 +34,7 @@ lemma invoke_tcb_bcorres[wp]:
   fixes a
   shows "bcorres (invoke_tcb a) (invoke_tcb a)"
   apply (cases a)
-        apply (wp | wpc | simp)+
+        apply (wp | wpc | simp add: set_mcpriority_def)+
   apply (rename_tac option)
   apply (case_tac option)
    apply (wp | wpc | simp)+
@@ -53,7 +53,7 @@ lemma transfer_caps_loop_bcorres[wp]:
 
 lemma invoke_irq_control_bcorres[wp]: "bcorres (invoke_irq_control a) (invoke_irq_control a)"
   apply (cases a)
-  apply (wp | simp add: arch_invoke_irq_control_def)+
+  apply (wp | simp add: arch_invoke_irq_control_def | wpc)+
   done
 
 lemma invoke_irq_handler_bcorres[wp]: "bcorres (invoke_irq_handler a) (invoke_irq_handler a)"
@@ -75,7 +75,7 @@ lemma decode_cnode_invocation[wp]: "bcorres (decode_cnode_invocation a b c d) (d
   apply (wp | wpc | simp add: split_def | intro impI conjI)+
   done
 
-crunch (bcorres)bcorres[wp]: decode_set_ipc_buffer,decode_set_space,decode_set_priority,decode_bind_notification,decode_unbind_notification truncate_state
+crunch (bcorres)bcorres[wp]: decode_set_ipc_buffer,decode_set_space,decode_set_priority,decode_set_mcpriority,decode_bind_notification,decode_unbind_notification truncate_state
 
 lemma decode_tcb_configure_bcorres[wp]: "bcorres (decode_tcb_configure b (cap.ThreadCap c) d e)
      (decode_tcb_configure b (cap.ThreadCap c) d e)"
@@ -111,7 +111,7 @@ lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
   apply (simp add: handle_send_def handle_call_def handle_recv_def handle_reply_def handle_yield_def handle_interrupt_def Let_def | intro impI conjI allI | wp | wpc)+
   done
 
-crunch (bcorres)bcorres[wp]: guarded_switch_to,switch_to_idle_thread truncate_state (ignore: storeWord clearExMonitor)
+crunch (bcorres)bcorres[wp]: guarded_switch_to,switch_to_idle_thread truncate_state (ignore: storeWord)
 
 lemma choose_switch_or_idle:
   "((), s') \<in> fst (choose_thread s) \<Longrightarrow>

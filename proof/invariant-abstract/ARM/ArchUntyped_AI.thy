@@ -326,7 +326,7 @@ declare store_pde_pred_tcb_at [wp]
 
 (* nonempty_table *)
 definition
-  nonempty_table :: "word32 set \<Rightarrow> Structures_A.kernel_object \<Rightarrow> bool"
+  nonempty_table :: "machine_word set \<Rightarrow> Structures_A.kernel_object \<Rightarrow> bool"
 where
  "nonempty_table S ko \<equiv>
     (a_type ko = AArch APageTable \<or> a_type ko = AArch APageDirectory)
@@ -342,7 +342,7 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
       and valid_cap (default_cap tp oref sz dev)
       and (\<lambda>(s::'state_ext::state_ext state). \<forall>r\<in>obj_refs (default_cap tp oref sz dev).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> obj_refs cap) p' s)
-              \<and> \<not> obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)
+              \<and> \<not> obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
       and cte_wp_at (op = cap.NullCap) cref
       and K (tp \<noteq> ArchObject ASIDPoolObj)\<rbrace>
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
@@ -361,7 +361,7 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
     apply (case_tac cref, fastforce)
    apply (simp add: obj_ref_none_no_asid)
   apply (rule conjI)
-   apply (auto simp: is_cap_simps valid_cap_def
+   apply (auto simp: is_cap_simps valid_cap_def second_level_tables_def
                      obj_at_def nonempty_table_def a_type_simps)[1]
   apply (clarsimp simp del: imp_disjL)
   apply (case_tac "\<exists>x. x \<in> obj_refs cap")
@@ -549,15 +549,15 @@ lemma mapM_copy_global_mappings_nonempty_table[wp]:
   done
 
 lemma init_arch_objects_nonempty_table[Untyped_AI_assms, wp]:
-  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)
+  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
          \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>ref\<in>set refs. is_aligned ref (obj_bits_api tp us))\<rbrace>
         init_arch_objects tp ptr bits us refs
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: init_arch_objects_def split del: split_if)
   apply (rule hoare_pre)
-   apply (wp hoare_unless_wp | wpc | simp add: reserve_region_def)+
+   apply (wp hoare_unless_wp | wpc | simp add: reserve_region_def second_level_tables_def)+
   apply (clarsimp simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def)
   done
 

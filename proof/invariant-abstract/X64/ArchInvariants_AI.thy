@@ -498,6 +498,8 @@ definition
 where
   "vs_lookup \<equiv> \<lambda>s. vs_lookup_trans s `` vs_asid_refs (x64_asid_table (arch_state s))"
 
+definition "second_level_tables \<equiv> arch_state.x64_global_pdpts"
+
 end
 
 context begin interpretation Arch .

@@ -21,16 +21,22 @@ begin
 
 context Arch begin global_naming ARM_A
 
+definition cnode_guard_size_bits :: "nat"
+where
+  "cnode_guard_size_bits \<equiv> 5"
+
+definition cnode_padding_bits :: "nat"
+where
+  "cnode_padding_bits \<equiv> 3"
+
 text {* On a user request to modify a cnode capability, extract new guard bits and guard. *}
 definition
   update_cnode_cap_data :: "data \<Rightarrow> nat \<times> data" where
  "update_cnode_cap_data w \<equiv>
     let
-      pad_bits = 3;
       guard_bits = 18;
-      guard_size_bits = 5;
-      guard_size' = unat ((w >> pad_bits) && mask guard_size_bits);
-      guard'' = (w >> (pad_bits + guard_size_bits)) && mask guard_bits
+      guard_size' = unat ((w >> cnode_padding_bits) && mask cnode_guard_size_bits);
+      guard'' = (w >> (cnode_padding_bits + cnode_guard_size_bits)) && mask guard_bits
     in (guard_size', guard'')"
 
 text {* For some purposes capabilities to physical objects are treated
