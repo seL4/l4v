@@ -382,7 +382,7 @@ fun modifies_invariant_tac quiet_fail ctxt n st = if Thm.nprems_of st = 0 then n
               in inst end
       | split_conv _ _ ct = Conv.no_conv ct; (* shouldn't happen *)
     in Conv.gconv_rule (split_conv (length env - 1) subgoal) n st |> Seq.single end
-    handle e as THM _ => if quiet_fail then no_tac st else reraise e;
+    handle e as THM _ => if quiet_fail then no_tac st else Exn.reraise e;
 
   (* avoid contextual rules, like split_pair_Ex, that lead simp down the garden path *)
   val globals_record_simps = maps (Proof_Context.get_thms ctxt) ["globals.ext_inject", "globals.update_convs"];

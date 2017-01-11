@@ -114,7 +114,6 @@ lemma ccorres_to_corres_no_termination:
   -- "proof for fail bit is trickier"
   apply (clarsimp simp: AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
   apply (clarsimp simp: select_f_def select_def snd_bind snd_assert get_def split: sum.splits prod.splits)
-  apply (erule disjE)
    apply (monad_eq split: xstate.splits sum.splits)
     apply (drule EHOther, fastforce)
     apply blast
