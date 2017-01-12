@@ -264,8 +264,9 @@ where
 text {* For implementation reasons the badge word has differing amounts of bits *}
 definition
   badge_bits :: nat where
-  "badge_bits \<equiv> 28"
+  badge_bits_def [simp]: "badge_bits \<equiv> 28"
 end
+
 section "Arch-specific tcb"
 
 

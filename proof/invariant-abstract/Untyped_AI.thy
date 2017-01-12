@@ -3149,11 +3149,11 @@ locale Untyped_AI_nonempty_table =
   assumes nonempty_table_caps_of:
   "\<And>S ko. nonempty_table S ko \<Longrightarrow> caps_of ko = {}"
   assumes init_arch_objects_nonempty_table:
-  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)
+  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
          \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>ref\<in>set refs. is_aligned ref (obj_bits_api tp us))\<rbrace>
         init_arch_objects tp ptr bits us refs
-   \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. \<not> (obj_at (nonempty_table (set (arch_state.arm_global_pts (arch_state s)))) r s)\<rbrace>"
+   \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
 
 crunch valid_global_objs[wp]: create_cap "valid_global_objs"
   (simp: crunch_simps)

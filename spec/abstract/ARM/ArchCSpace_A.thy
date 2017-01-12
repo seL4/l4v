@@ -23,11 +23,11 @@ context Arch begin global_naming ARM_A
 
 definition cnode_guard_size_bits :: "nat"
 where
-  "cnode_guard_size_bits \<equiv> 5"
+  cnode_guard_size_bits_def [simp]: "cnode_guard_size_bits \<equiv> 5"
 
 definition cnode_padding_bits :: "nat"
 where
-  "cnode_padding_bits \<equiv> 3"
+  cnode_padding_bits_def [simp]: "cnode_padding_bits \<equiv> 3"
 
 text {* On a user request to modify a cnode capability, extract new guard bits and guard. *}
 definition
