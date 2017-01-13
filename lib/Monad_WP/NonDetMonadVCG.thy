@@ -16,6 +16,10 @@ imports
   "Strengthen"
 begin
 
+(* Wrap up the standard usage pattern of wp/wpc/simp into its own command: *)
+method wpsimp uses wp simp =
+  ((determ \<open>wp add: wp|wpc|clarsimp simp: simp\<close>)+)[1]
+
 declare K_def [simp]
 
 section "Satisfiability"
@@ -511,7 +515,7 @@ lemma exs_valid_get [wp]:
 
 lemma exs_valid_gets [wp]:
     "\<lbrace> \<lambda>s. Q (f s) s \<rbrace> gets f \<exists>\<lbrace> Q \<rbrace>"
-  by (clarsimp simp: gets_def, wp)
+  by (clarsimp simp: gets_def) wp
 
 lemma exs_valid_put [wp]:
     "\<lbrace> Q v \<rbrace> put v \<exists>\<lbrace> Q \<rbrace>"
@@ -878,62 +882,51 @@ lemma hoare_vcg_prop:
 
 lemma return_wp:
   "\<lbrace>P x\<rbrace> return x \<lbrace>P\<rbrace>"
- apply(simp add:valid_def return_def)
-done
+  by(simp add:valid_def return_def)
 
 lemma get_wp:
   "\<lbrace>\<lambda>s. P s s\<rbrace> get \<lbrace>P\<rbrace>"
- apply(simp add:valid_def split_def get_def)
-done
+  by(simp add:valid_def split_def get_def)
 
 lemma gets_wp:
- "\<lbrace>\<lambda>s. P (f s) s\<rbrace> gets f \<lbrace>P\<rbrace>"
- apply(simp add:valid_def split_def gets_def return_def get_def bind_def)
-done
+  "\<lbrace>\<lambda>s. P (f s) s\<rbrace> gets f \<lbrace>P\<rbrace>"
+  by(simp add:valid_def split_def gets_def return_def get_def bind_def)
 
 lemma modify_wp:
- "\<lbrace>\<lambda>s. P () (f s)\<rbrace> modify f \<lbrace>P\<rbrace>"
- apply(simp add:valid_def split_def modify_def get_def put_def bind_def)
-done
+  "\<lbrace>\<lambda>s. P () (f s)\<rbrace> modify f \<lbrace>P\<rbrace>"
+  by(simp add:valid_def split_def modify_def get_def put_def bind_def)
 
 lemma put_wp:
  "\<lbrace>\<lambda>s. P () x\<rbrace> put x \<lbrace>P\<rbrace>"
- apply(simp add:valid_def put_def)
-done
+ by(simp add:valid_def put_def)
 
 lemma returnOk_wp:
   "\<lbrace>P x\<rbrace> returnOk x \<lbrace>P\<rbrace>,\<lbrace>E\<rbrace>"
- apply(simp add:validE_def2 returnOk_def return_def)
-done
+ by(simp add:validE_def2 returnOk_def return_def)
 
 lemma throwError_wp:
   "\<lbrace>E e\<rbrace> throwError e \<lbrace>P\<rbrace>,\<lbrace>E\<rbrace>"
- apply(simp add:validE_def2 throwError_def return_def)
-done
+  by(simp add:validE_def2 throwError_def return_def)
 
 lemma returnOKE_R_wp : "\<lbrace>P x\<rbrace> returnOk x \<lbrace>P\<rbrace>, -"
-  by (simp add: validE_R_def validE_def valid_def
-                returnOk_def return_def)
+  by (simp add: validE_R_def validE_def valid_def returnOk_def return_def)
 
 lemma liftE_wp:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> liftE f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
- apply(clarsimp simp:valid_def validE_def2 liftE_def split_def Let_def bind_def return_def)
-done
+  by(clarsimp simp:valid_def validE_def2 liftE_def split_def Let_def bind_def return_def)
 
 lemma catch_wp:
   "\<lbrakk> \<And>x. \<lbrace>E x\<rbrace> handler x \<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace>P\<rbrace> catch f handler \<lbrace>Q\<rbrace>"
  apply (unfold catch_def valid_def validE_def return_def)
- apply (clarsimp simp: bind_def)
- apply (fastforce split: sum.splits)
+ apply (fastforce simp: bind_def split: sum.splits)
  done
 
 lemma handleE'_wp:
   "\<lbrakk> \<And>x. \<lbrace>F x\<rbrace> handler x \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>F\<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace>P\<rbrace> f <handle2> handler \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
  apply (unfold handleE'_def valid_def validE_def return_def)
- apply (clarsimp simp: bind_def)
- apply (fastforce split: sum.splits)
+ apply (fastforce simp: bind_def split: sum.splits)
  done
 
 lemma handleE_wp:
@@ -1214,12 +1207,9 @@ lemma hoare_vcg_all_lift:
   "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x rv s\<rbrace>"
   by (fastforce simp: valid_def)
 
-(*
- * hoare_vcg_all_lift_R
- *
- * \<And>x. \<lbrace>?P x\<rbrace> ?f \<lbrace>?Q x\<rbrace>, -) \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. ?P x s\<rbrace> ?f \<lbrace>\<lambda>rv s. \<forall>x. ?Q x rv s\<rbrace>, -
- *)
-lemmas hoare_vcg_all_lift_R = hoare_vcg_const_Ball_lift_R[where S=UNIV, simplified]
+lemma hoare_vcg_all_lift_R: 
+  "(\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>, -) \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x rv s\<rbrace>, -"
+  by (rule hoare_vcg_const_Ball_lift_R[where S=UNIV, simplified])
 
 lemma hoare_vcg_const_imp_lift:
   "\<lbrakk> P \<Longrightarrow> \<lbrace>Q\<rbrace> m \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow>
@@ -1379,6 +1369,7 @@ lemmas hoare_wp_splits [wp_split] =
 lemmas [wp_comb] = hoare_wp_state_combsE hoare_wp_combsE  hoare_wp_combs
 
 lemmas [wp] = hoare_vcg_prop
+              wp_post_taut
               return_wp
               put_wp
               get_wp
@@ -1392,6 +1383,7 @@ lemmas [wp] = hoare_vcg_prop
               select_f_wp
 
 lemmas [wp_trip] = valid_is_triple validE_is_triple validE_E_is_triple validE_R_is_triple
+
 
 text {* Simplifications on conjunction *}
 
@@ -1431,8 +1423,7 @@ lemmas hoare_wp_simps [wp_split] =
   if_apply_reduct if_apply_reductE if_apply_reductE_R TrueI
 
 schematic_goal if_apply_test: "\<lbrace>?Q\<rbrace> (if A then returnOk else K fail) x \<lbrace>P\<rbrace>,\<lbrace>E\<rbrace>"
-  apply (wp | unfold K_def)+
-  done
+  by wpsimp
 
 lemma hoare_elim_pred_conj:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> Q' r s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. Q r and Q' r\<rbrace>"
@@ -1456,11 +1447,15 @@ lemmas hoare_wp_pred_conj_elims =
 
 lemmas hoare_weaken_preE = hoare_vcg_precond_impE
 
-lemmas hoare_pre =
+lemmas hoare_pre [wp_pre] =
   hoare_weaken_pre
   hoare_weaken_preE
   hoare_vcg_precond_impE_R
   hoare_weaken_preE_E
+
+declare no_fail_pre [wp_pre]
+
+bundle no_pre = hoare_pre [wp_pre del] no_fail_pre [wp_pre del]
 
 text {* Miscellaneous lemmas on hoare triples *}
 
@@ -1491,10 +1486,7 @@ lemma hoare_add_post:
 
 lemma hoare_whenE_wp:
   "(P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>) \<Longrightarrow> \<lbrace>if P then Q else R ()\<rbrace> whenE P f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>"
-  unfolding whenE_def
-  apply clarsimp
-  apply wp
-  done
+  unfolding whenE_def by clarsimp wp
 
 lemma hoare_gen_asmE:
   "(P \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>,-) \<Longrightarrow> \<lbrace>P' and K P\<rbrace> f \<lbrace>Q\<rbrace>, -"
@@ -1506,10 +1498,8 @@ lemma hoare_list_case:
   shows "\<lbrace>case xs of [] \<Rightarrow> P1 | y#ys \<Rightarrow> P2 y ys\<rbrace>
          f (case xs of [] \<Rightarrow> f1 | y#ys \<Rightarrow> f2 y ys)
          \<lbrace>Q\<rbrace>"
-  apply (cases xs)
-   apply simp
+  apply (cases xs; simp)
    apply (rule P1)
-  apply simp
   apply (rule P2)
   apply simp
   done
@@ -1524,8 +1514,7 @@ lemma hoare_use_eq:
   shows "\<lbrace>\<lambda>s. P (f s) s\<rbrace> m \<lbrace>\<lambda>rv s. Q (f s :: 'c :: type) s \<rbrace>"
   apply (rule_tac Q="\<lambda>rv s. \<exists>f'. f' = f s \<and> Q f' s" in hoare_post_imp)
    apply simp
-  apply (wp hoare_vcg_ex_lift x y)
-  apply simp
+  apply (wpsimp wp: hoare_vcg_ex_lift x y)
   done
 
 lemma hoare_return_sp:
@@ -1590,11 +1579,7 @@ lemma in_liftM:
   apply (simp add: Bex_def)
   done
 
-(*
- * handy_liftM_lemma
- *
- * ((?r, ?s') \<in> fst (liftM ?t ?f ?s)) = (\<exists>r'. (r', ?s') \<in> fst (?f ?s) \<and> ?r = ?t r')
- *)
+(* FIXME: eliminate *)
 lemmas handy_liftM_lemma = in_liftM
 
 lemma hoare_fun_app_wp[wp]:
@@ -1689,7 +1674,7 @@ lemma case_option_wp:
   assumes y: "\<lbrace>P'\<rbrace> m' \<lbrace>Q\<rbrace>"
   shows      "\<lbrace>\<lambda>s. (x = None \<longrightarrow> P' s) \<and> (x \<noteq> None \<longrightarrow> P (the x) s)\<rbrace>
                 case_option m' m x \<lbrace>Q\<rbrace>"
-  apply (cases x, simp_all)
+  apply (cases x; simp)
    apply (rule y)
   apply (rule x)
   done
@@ -1699,7 +1684,7 @@ lemma case_option_wpE:
   assumes y: "\<lbrace>P'\<rbrace> m' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   shows      "\<lbrace>\<lambda>s. (x = None \<longrightarrow> P' s) \<and> (x \<noteq> None \<longrightarrow> P (the x) s)\<rbrace>
                 case_option m' m x \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  apply (cases x, simp_all)
+  apply (cases x; simp)
    apply (rule y)
   apply (rule x)
   done
@@ -1742,11 +1727,7 @@ lemma list_cases_wp:
 (* FIXME: make wp *)
 lemma whenE_throwError_wp:
   "\<lbrace>\<lambda>s. \<not>Q \<longrightarrow> P s\<rbrace> whenE Q (throwError e) \<lbrace>\<lambda>rv. P\<rbrace>, -"
-  apply (simp add: whenE_def split del: if_split)
-  apply (rule hoare_pre)
-   apply wp
-  apply simp
-  done
+  unfolding whenE_def by wpsimp
 
 lemma select_throwError_wp:
   "\<lbrace>\<lambda>s. \<forall>x\<in>S. Q x s\<rbrace> select S >>= throwError -, \<lbrace>Q\<rbrace>"
@@ -1760,16 +1741,13 @@ subsection "Basic validNF theorems"
 
 lemma validNF [intro?]:
   "\<lbrakk> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>; no_fail P f \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>!"
-  apply (clarsimp simp: validNF_def)
-  done
+  by (clarsimp simp: validNF_def)
 
 lemma validNF_valid: "\<lbrakk> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>! \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
-  apply (clarsimp simp: validNF_def)
-  done
+  by (clarsimp simp: validNF_def)
 
 lemma validNF_no_fail: "\<lbrakk> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>! \<rbrakk> \<Longrightarrow> no_fail P f"
-  apply (clarsimp simp: validNF_def)
-  done
+  by (clarsimp simp: validNF_def)
 
 lemma snd_validNF:
   "\<lbrakk> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>!; P s \<rbrakk> \<Longrightarrow> \<not> snd (f s)"
@@ -1783,57 +1761,42 @@ subsection "validNF weakest pre-condition rules"
 
 lemma validNF_return [wp]:
   "\<lbrace> P x \<rbrace> return x \<lbrace> P \<rbrace>!"
-  apply rule
-   apply wp
-  apply (clarsimp simp: no_fail_def return_def)
-  done
+  by (wp validNF)+
 
 lemma validNF_get [wp]:
   "\<lbrace> \<lambda>s. P s s  \<rbrace> get \<lbrace> P \<rbrace>!"
-  apply rule
-   apply wp
-  apply (clarsimp simp: no_fail_def get_def)
-  done
+  by (wp validNF)+
 
 lemma validNF_put [wp]:
   "\<lbrace> \<lambda>s. P () x  \<rbrace> put x \<lbrace> P \<rbrace>!"
-  apply rule
-   apply wp
-  apply (clarsimp simp: no_fail_def put_def)
-  done
+  by (wp validNF)+
 
 lemma validNF_K_bind [wp]:
   "\<lbrace> P \<rbrace> x \<lbrace> Q \<rbrace>! \<Longrightarrow> \<lbrace> P \<rbrace> K_bind x f \<lbrace> Q \<rbrace>!"
-  apply (clarsimp simp: validNF_def)
-  done
+  by simp
 
 lemma validNF_fail [wp]:
   "\<lbrace> \<lambda>s. False \<rbrace> fail \<lbrace> Q \<rbrace>!"
   by (clarsimp simp: validNF_def fail_def no_fail_def)
 
 lemma validNF_prop [wp_unsafe]:
-    "\<lbrakk> no_fail (\<lambda>s. P) f \<rbrakk> \<Longrightarrow> \<lbrace> \<lambda>s. P \<rbrace> f \<lbrace> \<lambda>rv s. P \<rbrace>!"
-  apply rule
-   apply wp
-  apply simp
-  done
+  "\<lbrakk> no_fail (\<lambda>s. P) f \<rbrakk> \<Longrightarrow> \<lbrace> \<lambda>s. P \<rbrace> f \<lbrace> \<lambda>rv s. P \<rbrace>!"
+  by (wp validNF)+
 
 lemma validNF_post_conj [intro!]:
   "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>!; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace>! \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q And R \<rbrace>!"
-  apply (clarsimp simp: validNF_def)
-  done
+  by (clarsimp simp: validNF_def)
+
+lemma no_fail_or:
+  "\<lbrakk>no_fail P a; no_fail Q a\<rbrakk> \<Longrightarrow> no_fail (P or Q) a"
+  by (clarsimp simp: no_fail_def)
 
 lemma validNF_pre_disj [intro!]:
   "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace>!; \<lbrace> Q \<rbrace> a \<lbrace> R \<rbrace>! \<rbrakk> \<Longrightarrow> \<lbrace> P or Q \<rbrace> a \<lbrace> R \<rbrace>!"
-  apply rule
-   apply (drule validNF_valid)+
-   apply auto[1]
-  apply (drule validNF_no_fail)+
-  apply (clarsimp simp: no_fail_def)
-  done
+  by (rule validNF) (auto dest: validNF_valid validNF_no_fail intro: no_fail_or)
 
 (*
- * Setup combination rules for WP, which also requires
+ * Set up combination rules for WP, which also requires
  * a "wp_trip" rule for validNF.
  *)
 
@@ -1842,8 +1805,7 @@ definition "validNF_property Q s b \<equiv> \<not> snd (b s) \<and> (\<forall>(r
 lemma validNF_is_triple [wp_trip]:
   "validNF P f Q = triple_judgement P f (validNF_property Q)"
   apply (clarsimp simp: validNF_def triple_judgement_def validNF_property_def)
-  apply (clarsimp simp: no_fail_def valid_def)
-  apply auto
+  apply (auto simp: no_fail_def valid_def)
   done
 
 lemma validNF_weaken_pre [wp_comb]:
@@ -1896,7 +1858,7 @@ lemma validNF_vcg_disj_lift:
 lemma validNF_vcg_all_lift [wp]:
   "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>! \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x rv s\<rbrace>!"
   apply atomize
-  apply rule
+  apply (rule validNF)
    apply (clarsimp simp: validNF_def)
    apply (rule hoare_vcg_all_lift)
    apply force
@@ -1906,7 +1868,7 @@ lemma validNF_vcg_all_lift [wp]:
 lemma validNF_bind [wp_split]:
   "\<lbrakk> \<And>x. \<lbrace>B x\<rbrace> g x \<lbrace>C\<rbrace>!; \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>! \<rbrakk> \<Longrightarrow>
        \<lbrace>A\<rbrace> do x \<leftarrow> f; g x od \<lbrace>C\<rbrace>!"
-  apply rule
+  apply (rule validNF)
    apply (metis validNF_valid hoare_seq_ext)
   apply (clarsimp simp: no_fail_def validNF_def bind_def' valid_def)
   apply blast
@@ -1918,9 +1880,8 @@ subsection "validNF compound rules"
 
 lemma validNF_state_assert [wp]:
   "\<lbrace> \<lambda>s. P () s \<and> G s  \<rbrace> state_assert G \<lbrace> P \<rbrace>!"
-  apply rule
-   apply wp
-   apply simp
+  apply (rule validNF)
+   apply wpsimp
   apply (clarsimp simp: no_fail_def state_assert_def
               bind_def' assert_def return_def get_def)
   done
@@ -1952,20 +1913,18 @@ lemma validNF_alt_def:
 
 lemma validNF_assert [wp]:
     "\<lbrace> (\<lambda>s. P) and (R ()) \<rbrace> assert P \<lbrace> R \<rbrace>!"
-  apply rule
+  apply (rule validNF)
    apply (clarsimp simp: valid_def in_return)
   apply (clarsimp simp: no_fail_def return_def)
   done
 
 lemma validNF_false_pre:
   "\<lbrace> \<lambda>_. False \<rbrace> P \<lbrace> Q \<rbrace>!"
-  apply (clarsimp simp: validNF_def no_fail_def)
-  done
+  by (clarsimp simp: validNF_def no_fail_def)
 
 lemma validNF_chain:
    "\<lbrakk>\<lbrace>P'\<rbrace> a \<lbrace>R'\<rbrace>!; \<And>s. P s \<Longrightarrow> P' s; \<And>r s. R' r s \<Longrightarrow> R r s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> a \<lbrace>R\<rbrace>!"
-  apply (fastforce simp: validNF_def valid_def no_fail_def Ball_def)
-  done
+  by (fastforce simp: validNF_def valid_def no_fail_def Ball_def)
 
 lemma validNF_case_prod [wp]:
   "\<lbrakk> \<And>x y. validNF (P x y) (B x y) Q \<rbrakk> \<Longrightarrow> validNF (case_prod P v) (case_prod (\<lambda>x y. B x y) v) Q"
@@ -1979,8 +1938,7 @@ lemma validE_NF_case_prod [wp]:
   done
 
 lemma no_fail_is_validNF_True: "no_fail P s = (\<lbrace> P \<rbrace> s \<lbrace> \<lambda>_ _. True \<rbrace>!)"
-  apply (clarsimp simp: no_fail_def validNF_def valid_def)
-  done
+  by (clarsimp simp: no_fail_def validNF_def valid_def)
 
 subsection "validNF reasoning in the exception monad"
 
@@ -2033,8 +1991,7 @@ lemma validE_NF_chain:
     \<And>r' s'. R' r' s' \<Longrightarrow> R r' s';
     \<And>r'' s''. E' r'' s'' \<Longrightarrow> E r'' s''\<rbrakk> \<Longrightarrow>
   \<lbrace>\<lambda>s. P s \<rbrace> a \<lbrace>\<lambda>r' s'. R r' s'\<rbrace>,\<lbrace>\<lambda>r'' s''. E r'' s''\<rbrace>!"
-  apply (fastforce simp: validE_NF_def validE_def2 no_fail_def Ball_def split: sum.splits)
-  done
+  by (fastforce simp: validE_NF_def validE_def2 no_fail_def Ball_def split: sum.splits)
 
 lemma validE_NF_bind_wp [wp]:
   "\<lbrakk>\<And>x. \<lbrace>B x\<rbrace> g x \<lbrace>C\<rbrace>, \<lbrace>E\<rbrace>!; \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>, \<lbrace>E\<rbrace>!\<rbrakk> \<Longrightarrow> \<lbrace>A\<rbrace> f >>=E (\<lambda>x. g x) \<lbrace>C\<rbrace>, \<lbrace>E\<rbrace>!"
@@ -2042,8 +1999,7 @@ lemma validE_NF_bind_wp [wp]:
   apply (rule validNF_bind [rotated])
    apply assumption
   apply (clarsimp simp: lift_def throwError_def split: sum.splits)
-  apply wp
-  apply simp
+  apply wpsimp
   done
 
 lemma validNF_catch [wp]:
@@ -2057,33 +2013,21 @@ lemma validNF_catch [wp]:
 
 lemma validNF_throwError [wp]:
   "\<lbrace>E e\<rbrace> throwError e \<lbrace>P\<rbrace>, \<lbrace>E\<rbrace>!"
-  apply (unfold validE_NF_alt_def throwError_def o_def)
-  apply wp
-  apply simp
-  done
+  by (unfold validE_NF_alt_def throwError_def o_def) wpsimp
 
 lemma validNF_returnOk [wp]:
   "\<lbrace>P e\<rbrace> returnOk e \<lbrace>P\<rbrace>, \<lbrace>E\<rbrace>!"
-  apply (clarsimp simp: validE_NF_alt_def returnOk_def)
-  apply wp
-  apply clarsimp
-  done
+  by (clarsimp simp: validE_NF_alt_def returnOk_def) wpsimp
 
 lemma validNF_whenE [wp]:
   "(P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>!) \<Longrightarrow> \<lbrace>if P then Q else R ()\<rbrace> whenE P f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>!"
-  unfolding whenE_def
-  apply clarsimp
-  apply wp
-  done
+  unfolding whenE_def by clarsimp wp
 
 lemma validNF_nobindE [wp]:
   "\<lbrakk> \<lbrace>B\<rbrace> g \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>!;
      \<lbrace>A\<rbrace> f \<lbrace>\<lambda>r s. B s\<rbrace>,\<lbrace>E\<rbrace>! \<rbrakk> \<Longrightarrow>
    \<lbrace>A\<rbrace> doE f; g odE \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>!"
-  apply clarsimp
-  apply wp
-  apply auto
-  done
+  by clarsimp wp
 
 (*
  * Setup triple rules for validE_NF so that we can use the
@@ -2110,10 +2054,7 @@ lemma validNF_cong:
 
 lemma validE_NF_liftE [wp]:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>! \<Longrightarrow> \<lbrace>P\<rbrace> liftE f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>!"
-  apply (clarsimp simp: validE_NF_alt_def liftE_def)
-  apply wp
-  apply clarsimp
-  done
+  by (wpsimp simp: validE_NF_alt_def liftE_def)
 
 lemma validE_NF_handleE' [wp]:
   "\<lbrakk> \<And>x. \<lbrace>F x\<rbrace> handler x \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>!; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>F\<rbrace>! \<rbrakk> \<Longrightarrow>
@@ -2122,8 +2063,7 @@ lemma validE_NF_handleE' [wp]:
   apply (rule validNF_bind [rotated])
    apply assumption
   apply (clarsimp split: sum.splits)
-  apply wp
-  apply simp
+  apply wpsimp
   done
 
 lemma validE_NF_handleE [wp]:
@@ -2138,7 +2078,7 @@ lemma validE_NF_condition [wp]:
       \<Longrightarrow> \<lbrace>\<lambda>s. if C s then Q s else R s\<rbrace> condition C A B \<lbrace>P\<rbrace>,\<lbrace> E \<rbrace>!"
   apply rule
    apply (drule validE_NF_valid)+
-   apply (wp, simp, simp)
+   apply wp
   apply (drule validE_NF_no_fail)+
   apply (clarsimp simp: no_fail_def condition_def)
   done
