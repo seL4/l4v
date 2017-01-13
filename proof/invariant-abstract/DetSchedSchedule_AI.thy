@@ -551,7 +551,7 @@ lemma set_bound_notification_valid_blocked[wp]:
   apply (drule_tac x=ta in spec, clarsimp)
   apply (drule_tac x=st in spec)
   apply (simp only: st_tcb_at_kh_split_if)
-  apply (simp add: st_tcb_def2 split: split_if_asm)
+  apply (simp add: st_tcb_def2 split: if_split_asm)
   done
 
 crunch valid_blocked[wp]: get_bound_notification "valid_blocked"
@@ -1453,7 +1453,7 @@ lemma tcb_sched_action_dequeue_strong_valid_sched:
    apply (force simp: st_tcb_at_def obj_at_def)
   apply (erule_tac x=t in allE)
   apply (erule impE)
-   apply (clarsimp simp: not_queued_def split: split_if_asm)
+   apply (clarsimp simp: not_queued_def split: if_split_asm)
    apply (erule_tac x=d in allE)
    apply force
   apply force
@@ -1869,15 +1869,15 @@ lemma possible_switch_to_valid_sched':
              apply (force+)[8]
      apply (clarsimp simp: valid_blocked_except_def)
      apply (case_tac "t=target")
-      apply (force simp: not_queued_def tcb_sched_enqueue_def split: split_if_asm)
+      apply (force simp: not_queued_def tcb_sched_enqueue_def split: if_split_asm)
      apply (erule_tac x=t in allE)
-     apply (force simp: not_queued_def tcb_sched_enqueue_def split: split_if_asm)
+     apply (force simp: not_queued_def tcb_sched_enqueue_def split: if_split_asm)
     apply force
    apply (clarsimp simp: valid_blocked_except_def)
    apply (case_tac "t=target")
-    apply (force simp: not_queued_def tcb_sched_enqueue_def split: split_if_asm)
+    apply (force simp: not_queued_def tcb_sched_enqueue_def split: if_split_asm)
    apply (erule_tac x=t in allE)
-   apply (force simp: not_queued_def tcb_sched_enqueue_def split: split_if_asm)
+   apply (force simp: not_queued_def tcb_sched_enqueue_def split: if_split_asm)
   apply force
   done
 
@@ -2235,7 +2235,7 @@ lemma do_reply_transfer_valid_sched[wp]:
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wp set_thread_state_not_runnable_valid_sched sts_st_tcb_at'
-       cap_delete_one_reply_st_tcb_at do_ipc_transfer_non_null_cte_wp_at2 thread_set_not_state_valid_sched thread_set_no_change_tcb_state attempt_switch_to_valid_sched' | wpc | clarsimp split del: split_if)+
+       cap_delete_one_reply_st_tcb_at do_ipc_transfer_non_null_cte_wp_at2 thread_set_not_state_valid_sched thread_set_no_change_tcb_state attempt_switch_to_valid_sched' | wpc | clarsimp split del: if_split)+
         apply (wp set_thread_state_runnable_valid_queues
                   set_thread_state_runnable_valid_sched_action
                   set_thread_state_valid_blocked_except sts_st_tcb_at')[1]
@@ -2693,14 +2693,14 @@ lemma unbind_maybe_notification_sym_refs[wp]:
   apply (rule conjI)
    apply clarsimp
    apply (rule delta_sym_refs, assumption)
-    apply (clarsimp split: split_if_asm)
+    apply (clarsimp split: if_split_asm)
     apply (frule ko_at_state_refs_ofD, simp)
-   apply (clarsimp split: split_if_asm)
+   apply (clarsimp split: if_split_asm)
    apply (frule ko_at_state_refs_ofD, simp)
    apply (fastforce simp: symreftype_inverse' dest!: refs_in_ntfn_q_refs)
   apply clarsimp
   apply (rule delta_sym_refs, assumption)
-   apply (clarsimp split: split_if_asm, frule ko_at_state_refs_ofD, simp)+
+   apply (clarsimp split: if_split_asm, frule ko_at_state_refs_ofD, simp)+
    apply (frule_tac P="op = (Some a)" in ntfn_bound_tcb_at, simp_all add: obj_at_def)[1]
    apply (fastforce simp: ntfn_q_refs_no_NTFNBound obj_at_def is_tcb state_refs_of_def 
                           tcb_st_refs_of_no_NTFNBound tcb_bound_refs_def2 tcb_ntfn_is_bound_def 
@@ -2744,7 +2744,7 @@ crunch is_etcb_at[wp]: set_thread_state, cancel_ipc "is_etcb_at t"
 lemma set_eobject_is_etcb_at_ext[wp]:
   "\<lbrace>is_etcb_at t\<rbrace> set_eobject ptr etcb \<lbrace>\<lambda>_. is_etcb_at t\<rbrace>"
   apply (simp add: set_eobject_def | wp)+
-  apply (simp add: is_etcb_at_def split: split_if_asm)
+  apply (simp add: is_etcb_at_def split: if_split_asm)
   done
 
 crunch is_etcb_at_ext[wp]: ethread_set "is_etcb_at t"
@@ -2972,7 +2972,7 @@ lemma handle_invocation_valid_sched:
           apply wp
          apply ((clarsimp simp: st_tcb_at_def obj_at_def)+)[2]
        apply (wp ct_in_state_set set_thread_state_runnable_valid_sched
-             | simp add: split_def if_apply_def2 split del: split_if)+
+             | simp add: split_def if_apply_def2 split del: if_split)+
       apply (simp add: validE_E_def)
       apply (rule hoare_post_impErr)
         apply (rule lookup_cap_and_slot_valid_fault)
@@ -3043,7 +3043,7 @@ lemma do_reply_transfer_not_queued[wp]:
    \<lbrace>\<lambda>_. not_queued t\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wp cap_delete_one_not_queued hoare_vcg_if_lift | wpc |
-         clarsimp split del: split_if | wp_once hoare_drop_imps)+
+         clarsimp split del: if_split | wp_once hoare_drop_imps)+
    apply (simp add: invs_def valid_state_def valid_pspace_def)+ 
   done
 
@@ -3052,7 +3052,7 @@ lemma do_reply_transfer_schedact_not[wp]:
      do_reply_transfer sender receiver slot
    \<lbrace>\<lambda>_. scheduler_act_not t\<rbrace>"
   apply (simp add: do_reply_transfer_def)
-  apply (wp hoare_vcg_if_lift | wpc | clarsimp split del: split_if |
+  apply (wp hoare_vcg_if_lift | wpc | clarsimp split del: if_split |
          wp_once hoare_drop_imps)+
   done
 

@@ -49,6 +49,8 @@ end
 
 locale RPCFrom_glue = RPCFrom +
   assumes seL4_SetMR_axiom: "exec_concrete lift_global_heap (seL4_SetMR' i val) = seL4_SetMR_lifted' i val"
+  assumes swi_safe_to_ignore[simplified, simp]:
+    "asm_semantics_ok_to_ignore TYPE(nat) true (''swi '' @ x)"
 begin
 (*>*)
 

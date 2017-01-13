@@ -633,7 +633,7 @@ lemma in_bindE_L:
   (\<exists>s'' x. (Inr x, s'') \<in> fst (f s) \<and> (Inl r, s') \<in> fst (g x s'')) \<or> ((Inl r, s') \<in> fst (f s))"
   apply (simp add: bindE_def lift_def bind_def)
   apply safe
-  apply (simp add: return_def throwError_def lift_def split_def split: sum.splits split_if_asm)
+  apply (simp add: return_def throwError_def lift_def split_def split: sum.splits if_split_asm)
   apply force
   done
 
@@ -1742,7 +1742,7 @@ lemma list_cases_wp:
 (* FIXME: make wp *)
 lemma whenE_throwError_wp:
   "\<lbrace>\<lambda>s. \<not>Q \<longrightarrow> P s\<rbrace> whenE Q (throwError e) \<lbrace>\<lambda>rv. P\<rbrace>, -"
-  apply (simp add: whenE_def split del: split_if)
+  apply (simp add: whenE_def split del: if_split)
   apply (rule hoare_pre)
    apply wp
   apply simp

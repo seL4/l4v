@@ -519,7 +519,7 @@ lemma s1_caps_of_state :
   apply (case_tac p, clarsimp)
   apply (clarsimp split: if_splits)
      apply (clarsimp simp: cte_wp_at_cases tcb_cap_cases_def 
-                     split: split_if_asm)+
+                     split: if_split_asm)+
    apply (clarsimp simp: caps1_7_def split: if_splits)
   apply (clarsimp simp: caps1_6_def cte_wp_at_cases  split: if_splits)
 done
@@ -1089,7 +1089,7 @@ lemma "pas_refined Sys2PAS s2"
                                          Sys2AgentMap_simps
                                          Sys2AuthGraph_def Sys2AuthGraph_aux_def
                                          complete_AuthGraph_def
-                             split: split_if_asm)[1]
+                             split: if_split_asm)[1]
        apply (drule s2_caps_of_state, clarsimp)
        apply (elim disjE, simp_all)[1]
       apply (clarsimp simp: state_refs_of_def s2_def kh2_def kh2_obj_def 

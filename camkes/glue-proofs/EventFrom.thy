@@ -8,7 +8,7 @@
  * @TAG(NICTA_GPL)
  *)
 
-header {* Event Send *}
+chapter {* Event Send *}
 (*<*)
 theory EventFrom imports
   "../../tools/c-parser/CTranslation"
@@ -24,6 +24,8 @@ install_C_file "EventFrom.c"
 autocorres [ts_rules = nondet] "EventFrom.c"
 
 locale EventFrom_glue = EventFrom
+  + assumes swi_safe_to_ignore[simplified, simp]:
+    "asm_semantics_ok_to_ignore TYPE(nat) true (''swi '' @ x)"
 begin
 
 lemma EventFrom__run_nf: "\<lbrace>\<lambda>s. \<forall>r. P r s\<rbrace> EventFrom__run' \<lbrace>P\<rbrace>!"

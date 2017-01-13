@@ -63,7 +63,7 @@ fun convert prefix src_ctxt proc (tm as Const (name, _)) (convs, ctxt) =
       Local_Theory.abbrev Syntax.mode_default
           ((Binding.name cname, NoSyn), get_lhs def_thm) ctxt
         |> snd |> Local_Theory.note ((Binding.name (cname ^ "_def"), []), [def_thm])
-        |> snd |> Local_Theory.restore
+        |> snd |> Local_Theory.reset
     )
 
   else let
@@ -74,7 +74,7 @@ fun convert prefix src_ctxt proc (tm as Const (name, _)) (convs, ctxt) =
       val ((tm', _), ctxt) = Local_Theory.define
           ((b, NoSyn), ((Thm.def_binding b, []), rhs'')) ctxt
       val tm'' = Morphism.term (Proof_Context.export_morphism ctxt pre_def_ctxt) tm'
-      val ctxt = Local_Theory.restore ctxt
+      val ctxt = Local_Theory.reset ctxt
 
       val lhs_argTs = get_lhs def_thm |> strip_comb |> snd |> map fastype_of;
       val abs_tm = list_abs (map (pair "_") lhs_argTs, tm'')

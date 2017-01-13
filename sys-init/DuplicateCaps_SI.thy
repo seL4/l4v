@@ -256,7 +256,7 @@ lemma duplicate_caps_sep_no_rv:
     apply clarsimp
     apply (clarsimp simp: distinct_card' distinct_length_filter')
     apply (subst sep_list_conj_sep_map_set_conj, simp)
-    apply (subst (asm) sep.setprod.union_disjoint, simp+)
+    apply (subst (asm) sep.prod.union_disjoint, simp+)
      apply (simp add: drop_take)
      apply (subst add.commute)
      apply (erule distinct_take_drop_append)

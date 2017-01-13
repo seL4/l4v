@@ -311,7 +311,7 @@ lemma mod_less_self [simp]:
 
 lemma split_div_mod:
     "a = (b::nat) \<longleftrightarrow> (a div k = b div k \<and> a mod k = b mod k)"
-  by (metis mod_div_equality2)
+  by (metis mult_div_mod_eq)
 
 lemma nat_to_bl_eq:
   assumes "a < 2 ^ n \<or> b < 2 ^ n"
@@ -337,7 +337,7 @@ lemma nat_to_bl_eq:
   apply (clarsimp simp: zmod_eq_dvd_iff)
   apply (subst split_div_mod [where k=2])
   apply clarsimp
-  apply (metis int_numeral mod_2_not_eq_zero_eq_one_nat of_nat_1 of_nat_eq_iff zmod_int)
+  apply (metis of_nat_numeral mod_2_not_eq_zero_eq_one_nat of_nat_1 of_nat_eq_iff zmod_int)
   done
 
 lemma nat_to_bl_mod_n_eq [simp]:
@@ -419,8 +419,8 @@ lemma Low_caps_ran:
                    NotificationCap ntfn_ptr 0 {AllowSend},
                    NullCap}"
   apply (rule equalityI)
-   apply (clarsimp simp: Low_caps_def fun_upd_def empty_cnode_def split: split_if_asm)
-  apply (clarsimp simp: Low_caps_def fun_upd_def empty_cnode_def split: split_if_asm
+   apply (clarsimp simp: Low_caps_def fun_upd_def empty_cnode_def split: if_split_asm)
+  apply (clarsimp simp: Low_caps_def fun_upd_def empty_cnode_def split: if_split_asm
                   cong: conj_cong)
   apply (rule exI [where x="the_nat_to_bl_10 0"])
   apply simp
@@ -456,8 +456,8 @@ lemma High_caps_ran:
                     NotificationCap ntfn_ptr 0 {AllowRecv},
                     NullCap}"
   apply (rule equalityI)
-   apply (clarsimp simp: High_caps_def ran_def empty_cnode_def split: split_if_asm)
-  apply (clarsimp simp: High_caps_def ran_def empty_cnode_def split: split_if_asm
+   apply (clarsimp simp: High_caps_def ran_def empty_cnode_def split: if_split_asm)
+  apply (clarsimp simp: High_caps_def ran_def empty_cnode_def split: if_split_asm
                   cong: conj_cong)
   apply (rule exI [where x="the_nat_to_bl_10 0"])
   apply simp
@@ -805,7 +805,7 @@ lemma kh0_SomeD:
         x \<in> irq_node_offs_range \<and> y = CNode 0 (empty_cnode 0)"
   apply (frule kh0_SomeD')
   apply (erule disjE, simp add: kh0_def
-        | force simp: kh0_def split: split_if_asm)+
+        | force simp: kh0_def split: if_split_asm)+
   done
 
 lemmas kh0_obj_def =
@@ -927,13 +927,13 @@ definition Sys1PAS :: "(auth_graph_label subject_label) PAS" where
 subsubsection {* Proof of pas_refined for Sys1 *}
 
 lemma High_caps_well_formed: "well_formed_cnode_n 10 High_caps"
-  by (auto simp: High_caps_def well_formed_cnode_n_def  split: split_if_asm)
+  by (auto simp: High_caps_def well_formed_cnode_n_def  split: if_split_asm)
 
 lemma Low_caps_well_formed: "well_formed_cnode_n 10 Low_caps"
-  by (auto simp: Low_caps_def well_formed_cnode_n_def  split: split_if_asm)
+  by (auto simp: Low_caps_def well_formed_cnode_n_def  split: if_split_asm)
 
 lemma Silc_caps_well_formed: "well_formed_cnode_n 10 Silc_caps"
-  by (auto simp: Silc_caps_def well_formed_cnode_n_def  split: split_if_asm)
+  by (auto simp: Silc_caps_def well_formed_cnode_n_def  split: if_split_asm)
 
 lemma s0_caps_of_state : 
   "caps_of_state s0_internal p = Some cap \<Longrightarrow>
@@ -966,7 +966,7 @@ lemma s0_caps_of_state :
   apply (case_tac p, clarsimp)
   apply (clarsimp split: if_splits)
        apply (clarsimp simp: cte_wp_at_cases tcb_cap_cases_def
-                       split: split_if_asm)+
+                       split: if_split_asm)+
     apply (clarsimp simp: Silc_caps_def split: if_splits)
    apply (clarsimp simp: High_caps_def split: if_splits)
   apply (clarsimp simp: Low_caps_def cte_wp_at_cases split: if_splits)
@@ -1008,7 +1008,7 @@ lemma domains_of_state_s0[simp]:
    apply(rule subsetI)
    apply clarsimp
    apply (erule domains_of_state_aux.cases)
-   apply (clarsimp simp: s0_internal_def exst0_def ekh0_obj_def split: split_if_asm)
+   apply (clarsimp simp: s0_internal_def exst0_def ekh0_obj_def split: if_split_asm)
   apply clarsimp
   apply (force simp: s0_internal_def exst0_def ekh0_obj_def intro: domains_of_state_aux.domtcbs)+
   done
@@ -1117,7 +1117,7 @@ lemma silc_inv_s0:
   apply (rule conjI)
    apply (clarsimp simp: Sys1PAS_def Sys1AgentMap_def
                          s0_internal_def kh0_def obj_at_def kh0_obj_def
-                         is_cap_table_def Silc_caps_well_formed split: split_if_asm)
+                         is_cap_table_def Silc_caps_well_formed split: if_split_asm)
   apply (rule conjI)
    apply (clarsimp simp: Sys1PAS_def Sys1AuthGraph_def)
   apply (rule conjI)
@@ -1132,7 +1132,7 @@ lemma silc_inv_s0:
      apply (case_tac a, clarsimp)
      apply (clarsimp split: if_splits)
             apply ((clarsimp simp: intra_label_cap_def cte_wp_at_cases tcb_cap_cases_def
-                                   cap_points_to_label_def split: split_if_asm)+)[8]
+                                   cap_points_to_label_def split: if_split_asm)+)[8]
     apply (clarsimp simp: intra_label_cap_def cap_points_to_label_def)
     apply (drule cte_wp_at_caps_of_state' s0_caps_of_state)+
     apply ((erule disjE |
@@ -1256,7 +1256,7 @@ lemma valid_objs_s0:
   "valid_objs s0_internal"
   apply (clarsimp simp: valid_objs_def)
   apply (subst(asm) s0_internal_def kh0_def)+
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
     apply force+
   apply (clarsimp simp: valid_obj_def valid_cs_def empty_cnode_def valid_cs_size_def ran_def
                         cte_level_bits_def word_bits_def well_formed_cnode_n_def dom_def)
@@ -1390,7 +1390,7 @@ lemma valid_pspace_s0[simp]:
   apply (rule conjI)
    apply (clarsimp simp: if_live_then_nonz_cap_def)
    apply (subst(asm) s0_internal_def)
-   apply (clarsimp simp: obj_at_def kh0_def kh0_obj_def s0_ptr_defs split: split_if_asm)
+   apply (clarsimp simp: obj_at_def kh0_def kh0_obj_def s0_ptr_defs split: if_split_asm)
      apply (clarsimp simp: ex_nonz_cap_to_def)
      apply (rule_tac x="High_cnode_ptr" in exI)
      apply (rule_tac x="the_nat_to_bl_10 1" in exI)
@@ -1408,7 +1408,7 @@ lemma valid_pspace_s0[simp]:
    apply (force dest: s0_caps_of_state simp: is_zombie_def)
   apply (clarsimp simp: sym_refs_def state_refs_of_def s0_internal_def)
   apply (subst(asm) kh0_def)
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
              by (simp add: refs_of_def kh0_def s0_ptr_defs kh0_obj_def)+
 
 lemma descendants_s0[simp]:
@@ -1443,7 +1443,7 @@ lemma valid_mdb_s0[simp]:
 lemma valid_ioc_s0[simp]:
   "valid_ioc s0_internal"
   by (clarsimp simp: cte_wp_at_cases tcb_cap_cases_def valid_ioc_def
-                        s0_internal_def kh0_def kh0_obj_def split: split_if_asm)+
+                        s0_internal_def kh0_def kh0_obj_def split: if_split_asm)+
 
 lemma valid_idle_s0[simp]:
   "valid_idle s0_internal"
@@ -1615,7 +1615,7 @@ lemma valid_kernel_mappings_s0[simp]:
   apply (drule kh0_SomeD)
   apply (clarsimp simp: arch_state0_def kernel_mapping_slots_def)
   apply (erule disjE | simp add: pde_ref_def s0_ptr_defs kh0_obj_def High_pd'_def Low_pd'_def
-                          split: split_if_asm pde.splits)+
+                          split: if_split_asm pde.splits)+
   done
 
 lemma equal_kernel_mappings_s0[simp]:
@@ -1735,7 +1735,7 @@ lemma valid_sched_s0[simp]:
     apply (clarsimp simp: ct_in_cur_domain_def in_cur_domain_def etcb_at'_def ekh0_obj_def
                           s0_ptr_defs)
    apply (clarsimp simp: const_def valid_blocked_def st_tcb_at_kh_def obj_at_kh_def obj_at_def
-                         kh0_def kh0_obj_def split: split_if_asm)
+                         kh0_def kh0_obj_def split: if_split_asm)
   apply (clarsimp simp: valid_idle_etcb_def etcb_at'_def ekh0_obj_def s0_ptr_defs idle_thread_ptr_def)
   done
 

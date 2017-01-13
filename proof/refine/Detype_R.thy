@@ -142,7 +142,7 @@ lemma deleteObjects_def2:
   apply (rule ext, simp add: exec_modify stateAssert_def assert_def bind_assoc exec_get
                              NOT_eq[symmetric] mask_in_range)
   apply (clarsimp simp: simpler_modify_def)
-  apply (simp add: data_map_filterWithKey_def split: split_if_asm)
+  apply (simp add: data_map_filterWithKey_def split: if_split_asm)
   apply (rule arg_cong2[where f=gsCNodes_update])
    apply (simp add: NOT_eq[symmetric] mask_in_range ext)
   apply (rule arg_cong2[where f=gsUserPages_update])
@@ -176,7 +176,7 @@ lemma obj_relation_cuts_in_obj_range:
   "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; x \<in> obj_range x ko;
        kheap s x = Some ko; valid_objs s; pspace_aligned s \<rbrakk> \<Longrightarrow> y \<in> obj_range x ko"
   apply (cases ko, simp_all)
-   apply (clarsimp split: split_if_asm)
+   apply (clarsimp split: if_split_asm)
    apply (subgoal_tac "cte_at (x, ya) s")
     apply (drule(2) cte_at_cte_map_in_obj_bits)
     apply (simp add: obj_range_def)
@@ -294,7 +294,7 @@ proof -
           P (the (?ps x))
            (the (if y \<in> ?range then None else ksPSpace s' y))"
       using psp
-      apply (simp add: pspace_relation_def psdom_pre split del: split_if)
+      apply (simp add: pspace_relation_def psdom_pre split del: if_split)
       apply (erule conjE, rule ballI, erule DiffE, drule(1) bspec)
       apply (erule domE)
       apply (simp add: field_simps detype_def cong: conj_cong)
@@ -404,7 +404,7 @@ lemma map_to_ctes_delete:
   apply (simp (no_asm_use) add: cte_wp_at_ctes_of)
   apply (rule ext)
   apply (case_tac "map_to_ctes (\<lambda>x. if base \<le> x \<and> x \<le> base + (2 ^ magnitude - 1) then None else ksPSpace s x) x")
-   apply (fastforce split: split_if_asm)
+   apply (fastforce split: if_split_asm)
   apply simp
   done
 
@@ -576,7 +576,7 @@ lemma corres_machine_op:
 lemma ekheap_relation_detype:
   "ekheap_relation ekh kh \<Longrightarrow>
    ekheap_relation (\<lambda>x. if P x then None else (ekh x)) (\<lambda>x. if P x then None else (kh x))"
-  by (fastforce simp add: ekheap_relation_def split: split_if_asm)
+  by (fastforce simp add: ekheap_relation_def split: if_split_asm)
 
 lemma cap_table_at_gsCNodes_eq:
   "(s, s') \<in> state_relation
@@ -1110,7 +1110,7 @@ lemmas tree_to_ctes = map_to_ctes_delete [OF valid_untyped pd]
 
 lemma map_to_ctesE[elim!]:
   "\<lbrakk> ctes' x = Some cte; \<lbrakk> ctes_of s x = Some cte; x \<notin> base_bits \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
-  by (clarsimp simp: tree_to_ctes split: split_if_asm)
+  by (clarsimp simp: tree_to_ctes split: if_split_asm)
 
 lemma not_nullMDBNode:
   "\<lbrakk> ctes_of s x = Some cte; cteCap cte = NullCap; cteMDBNode cte = nullMDBNode \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
@@ -1208,13 +1208,13 @@ lemma mdb_parent_rev:
   "ctes' \<turnstile> x \<rightarrow> y \<Longrightarrow> ctes_of s \<turnstile> x \<rightarrow> y"
   apply (erule subtree.induct)
    apply (rule subtree.direct_parent)
-     apply (clarsimp simp: next_unfold' tree_to_ctes split: split_if_asm)
+     apply (clarsimp simp: next_unfold' tree_to_ctes split: if_split_asm)
     apply assumption
-   apply (clarsimp simp: parentOf_def tree_to_ctes split: split_if_asm)
+   apply (clarsimp simp: parentOf_def tree_to_ctes split: if_split_asm)
   apply (erule subtree.trans_parent)
-    apply (clarsimp simp: next_unfold' tree_to_ctes split: split_if_asm)
+    apply (clarsimp simp: next_unfold' tree_to_ctes split: if_split_asm)
    apply assumption
-    apply (clarsimp simp: parentOf_def tree_to_ctes split: split_if_asm)
+    apply (clarsimp simp: parentOf_def tree_to_ctes split: if_split_asm)
   done
 
 end
@@ -1346,7 +1346,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     apply (erule allEI)+
     apply (clarsimp simp: descendants_of'_def)
     apply (rule mdb_parent)
-    apply (clarsimp simp: tree_to_ctes split: split_if_asm)
+    apply (clarsimp simp: tree_to_ctes split: if_split_asm)
     done
 
   from badges show "valid_badges ?ctes'"
@@ -1424,7 +1424,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
   show "distinct_zombies ?ctes'"
     apply (simp add: tree_to_ctes distinct_zombies_def
                      distinct_zombie_caps_def
-                    split del: split_if)
+                    split del: if_split)
     apply (erule allEI, erule allEI)
     apply clarsimp
     done
@@ -2170,7 +2170,7 @@ proof -
    apply simp
   apply (clarsimp simp: locateCTE_def gets_def split_def
                         get_def bind_def return_def assert_opt_def fail_def assert_def
-                  split: option.splits split_if_asm)
+                  split: option.splits if_split_asm)
   apply (frule_tac dest1 = src in use_valid[OF _ cte_wp_at])
    apply simp
    apply (subst cte_wp_at_top)
@@ -2225,7 +2225,7 @@ lemma fail_empty_locateCTE:
   "snd (locateCTE src s) \<Longrightarrow> fst (locateCTE src s) = {}"
   by (auto simp: assert_def fail_def locateCTE_def bind_assoc return_def split_def gets_def
                  get_def bind_def assert_opt_def image_def
-           split:option.splits split_if_asm)+
+           split:option.splits if_split_asm)+
 
 lemma locateCTE_commute:
   assumes nf: "no_fail P0 f" "no_fail P1 (locateCTE src)"
@@ -2441,7 +2441,7 @@ lemma placeNewObject_ko_wp_at':
         pspace_aligned' s \<and> pspace_distinct' s\<rbrace>
    placeNewObject ptr val us
    \<lbrace>\<lambda>a. ko_wp_at' P slot\<rbrace>"
-  apply (clarsimp simp:valid_def split del:split_if)
+  apply (clarsimp simp:valid_def split del:if_split)
   apply (simp add:simpler_placeNewObject_def simpler_modify_def)
   apply (subst data_map_insert_def[symmetric])+
   apply (subst retype_ko_wp_at')
@@ -2575,7 +2575,7 @@ lemma placeNewObject_modify_commute:
    apply (subst pspace_aligned'_def)
    apply (rule ballI)
    apply (erule domE)
-   apply (clarsimp simp:ko_wp_at'_def split:split_if_asm)
+   apply (clarsimp simp:ko_wp_at'_def split:if_split_asm)
    apply (drule(1) pspace_alignedD')+
    apply simp
   apply (simp add:simpler_placeNewObject_def)
@@ -2714,7 +2714,7 @@ lemma getPDE_det:
    apply (clarsimp simp:image_def)
   apply (clarsimp simp:magnitudeCheck_assert assert_def
     objBits_def archObjSize_def
-    return_def fail_def lookupAround2_char2 split:option.splits split_if_asm)
+    return_def fail_def lookupAround2_char2 split:option.splits if_split_asm)
   apply (rule ccontr)
   apply (simp add:ps_clear_def field_simps)
   apply (erule_tac x = x2 in in_empty_interE)
@@ -3304,7 +3304,7 @@ lemma setCTE_modify_gsCNode_commute:
   by (auto simp: monad_commute_def setCTE_def setObject_def split_def bind_def
                  return_def simpler_modify_def simpler_gets_def assert_opt_def
                  fail_def simpler_updateObject_def
-           split: option.splits split_if_asm)
+           split: option.splits if_split_asm)
 
 lemma setCTE_modify_gsUserPages_commute:
   "monad_commute P (setCTE src (cte::cte))
@@ -3312,7 +3312,7 @@ lemma setCTE_modify_gsUserPages_commute:
   by (auto simp: monad_commute_def setCTE_def setObject_def split_def bind_def
                  return_def simpler_modify_def simpler_gets_def assert_opt_def
                  fail_def simpler_updateObject_def
-           split: option.splits split_if_asm)
+           split: option.splits if_split_asm)
 
 lemma getTCB_det:
   "ko_wp_at' (op = (KOTCB tcb)) p s
@@ -3336,7 +3336,7 @@ lemma getTCB_det:
    apply (clarsimp simp:image_def)
   apply (clarsimp simp:magnitudeCheck_assert assert_def
     objBits_def archObjSize_def
-    return_def fail_def lookupAround2_char2 split:option.splits split_if_asm)
+    return_def fail_def lookupAround2_char2 split:option.splits if_split_asm)
   apply (rule ccontr)
   apply (simp add:ps_clear_def field_simps)
   apply (erule_tac x = x2 in in_empty_interE)
@@ -3589,7 +3589,7 @@ lemma createObject_updateMDB_commute:
       K (is_aligned ptr (Types_H.getObjectSize ty us)) and
       K ((Types_H.getObjectSize ty us)< word_bits))
      (updateMDB src f) (RetypeDecls_H.createObject ty ptr us d)"
-  apply (clarsimp simp:updateMDB_def split:split_if_asm)
+  apply (clarsimp simp:updateMDB_def split:if_split_asm)
   apply (intro conjI impI)
    apply (simp add: monad_commute_guard_imp[OF return_commute])
   apply (rule monad_commute_guard_imp)
@@ -3605,7 +3605,7 @@ lemma updateMDB_pspace_no_overlap':
    updateMDB slot f
    \<lbrace>\<lambda>rv s. pspace_no_overlap' ptr sz s\<rbrace>"
   apply (rule hoare_pre)
-  apply (clarsimp simp: updateMDB_def split del: split_if)
+  apply (clarsimp simp: updateMDB_def split del: if_split)
   apply (wp setCTE_pspace_no_overlap')
   apply clarsimp
   done
@@ -3613,7 +3613,7 @@ lemma updateMDB_pspace_no_overlap':
 lemma ctes_of_ko_at:
   "ctes_of s p = Some a \<Longrightarrow> 
   (\<exists>ptr ko. (ksPSpace s ptr = Some ko \<and> p \<in> obj_range' ptr ko))"
-  apply (clarsimp simp: map_to_ctes_def Let_def split: split_if_asm)
+  apply (clarsimp simp: map_to_ctes_def Let_def split: if_split_asm)
    apply (intro exI conjI, assumption)
    apply (simp add: obj_range'_def objBits_simps is_aligned_no_wrap' field_simps)
   apply (intro exI conjI, assumption)
@@ -3906,7 +3906,7 @@ lemma new_cap_object_commute:
    apply (rename_tac cap' node')
    apply (case_tac node')
    apply (rename_tac word1 word2 bool1 bool2)
-   apply (clarsimp simp:modify_map_def split:split_if_asm)
+   apply (clarsimp simp:modify_map_def split:if_split_asm)
    apply (case_tac z)
    apply (drule_tac x = word1 in spec)
    apply (clarsimp simp:weak_valid_dlist_def)
@@ -3940,7 +3940,7 @@ proof -
                           atLeastatMost_subset_iff atLeastLessThan_iff
                           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   assume "gz = (objBitsKO val) + us"
-  thus ?thesis using assms
+  thus ?thesis
     apply -
     apply (rule hoare_gen_asm)
     apply (clarsimp simp:createObjects'_def split_def new_cap_addrs_fold')
@@ -4012,7 +4012,7 @@ lemma createNewCaps_not_nc:
    apply (rule hoare_pre)
     apply wpc
     apply wp
-    apply (simp add:Arch_createNewCaps_def split del: split_if)
+    apply (simp add:Arch_createNewCaps_def split del: if_split)
    apply (wpc|wp|clarsimp)+
 done
 
@@ -4675,13 +4675,13 @@ lemma dmo'_gets_ksPSpace_comm:
   apply (rule ext)
   apply (auto simp add: doMachineOp_def simpler_modify_def simpler_gets_def
                         return_def select_f_def bind_def split_def image_def)
-     apply (rule_tac x=X in exI, clarsimp)
-     apply (rule_tac x=ba in exI, clarsimp)
-     apply (rule_tac x="{(aa, x\<lparr>ksMachineState := bb\<rparr>)}" in exI, simp)
+     apply (rule_tac x=aa in exI; drule prod_injects; clarsimp)
+     apply (rule_tac x="snd (m (ksPSpace x) (x\<lparr>ksMachineState := bb\<rparr>))" in exI, clarsimp)
+     apply (rule_tac x="{(ab, x\<lparr>ksMachineState := bb\<rparr>)}" in exI, simp)
      apply (rule bexI[rotated], assumption, simp)
-    apply (rule_tac x=X in exI, clarsimp)
-    apply (rule_tac x=ba in exI, clarsimp)
-    apply (rule_tac x="{(aa, x\<lparr>ksMachineState := bb\<rparr>)}" in exI, simp)
+    apply (rule_tac x="fst (m (ksPSpace x) (x\<lparr>ksMachineState := bb\<rparr>))" in exI, clarsimp)
+    apply (rule_tac x="snd (m (ksPSpace x) (x\<lparr>ksMachineState := bb\<rparr>))" in exI, clarsimp)
+    apply (rule_tac x="{(ab, x\<lparr>ksMachineState := bb\<rparr>)}" in exI, simp)
     apply (rule bexI[rotated], assumption, simp)
    apply (rule_tac x=a in exI, clarsimp)
    apply (rule_tac x="{(aa, x\<lparr>ksMachineState := b\<rparr>)}" in exI, simp)
@@ -5786,7 +5786,7 @@ lemma createObject_pspace_aligned_distinct':
     | simp add:ARM_H.createObject_def 
       Retype_H.createObject_def objBits_simps
       curDomain_def placeNewDataObject_def
-          split del: split_if
+          split del: if_split
     | wpc | intro conjI impI)+
   apply (auto simp:APIType_capBits_def pdBits_def objBits_simps
     pageBits_def word_bits_def archObjSize_def ptBits_def ARM_H.toAPIType_def

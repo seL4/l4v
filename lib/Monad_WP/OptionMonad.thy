@@ -262,7 +262,7 @@ proof -
     then have ?thesis using `I s`
       by (induct arbitrary: s) (auto intro: istep) }
   then show ?thesis using assms(1)
-    by (auto simp: option_while_def option_while'_THE split: split_if_asm)
+    by (auto simp: option_while_def option_while'_THE split: if_split_asm)
 qed
 
 lemma option_while'_term:

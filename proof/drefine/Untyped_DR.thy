@@ -22,7 +22,7 @@ lemma detype_dcorres:
   apply (rule corres_modify)
   apply (clarsimp simp: transform_def Untyped_D.detype_def
                         transform_cdt_def
-             split del: split_if
+             split del: if_split
               simp del: untyped_range.simps)
   apply (simp add: Untyped_D.detype_def transform_def
                    transform_current_thread_def Retype_A.detype_def transform_asid_table_def detype_ext_def)
@@ -63,7 +63,7 @@ next
       apply auto[2]
     apply (rule sym)
     apply (rule someI2_ex, fastforce)
-    apply (clarsimp split: split_if_asm)
+    apply (clarsimp split: if_split_asm)
     apply (rule conjI)
      apply (rule someI2_ex, fastforce+)+
     done
@@ -207,9 +207,9 @@ proof -
                         get_ipc_buffer_words_def2 3
                         Suc_leI[OF msg_registers_lt_msg_max_length]
                   simp del: upt_Suc
-                  split del: split_if)
+                  split del: if_split)
   apply (case_tac "AllowRead \<in> rights",
-         simp_all del: upt_Suc  split del: split_if)
+         simp_all del: upt_Suc  split del: if_split)
   apply (cut_tac y=2 in is_aligned_weaken[OF 1])
    apply (simp add: msg_align_bits_def)
   apply (cut_tac y=2 in is_aligned_weaken[OF 4])
@@ -274,7 +274,7 @@ lemma freeMemory_dcorres:
   apply (clarsimp simp: transform_object_def transform_tcb_def
                  split: Structures_A.kernel_object.split option.splits)
   apply (rename_tac s ms tref etcb tcb)
-  apply (clarsimp simp: restrict_map_def split: split_if_asm)
+  apply (clarsimp simp: restrict_map_def split: if_split_asm)
   apply (frule(1) valid_etcbs_tcb_etcb)
   apply (case_tac "\<not> is_arch_page_cap (tcb_ipcframe tcb)")
    apply (erule transform_full_intent_no_ipc_buffer)
@@ -466,7 +466,7 @@ lemma distinct_retype_addrs:
     range_cover ptr sz (obj_bits_api type us) n\<rbrakk>
     \<Longrightarrow> distinct (retype_addrs ptr type n us)"
   apply (clarsimp simp:retype_addrs_def distinct_map ptr_add_def inj_on_def)
-  apply (simp only: shiftl_t2n[symmetric,unfolded field_simps,simplified])
+  apply (simp only: shiftl_t2n[symmetric, simplified field_simps, simplified])
   apply (drule shiftl_inj_if)
     apply (rule shiftl_shiftr_id)
      apply (simp add:range_cover_def)
@@ -590,10 +590,10 @@ lemma retype_region_dcorres:
   us (translate_object_type type) (map (retype_transform_obj_ref type us) (retype_addrs ptr type n us)))
   (Retype_A.retype_region ptr n us type dev)"
   apply (simp add: retype_region_def Untyped_D.retype_region_def
-              split del: split_if)
+              split del: if_split)
   apply (clarsimp simp:when_def generate_object_ids_def bind_assoc
-                  split del:split_if)
-  apply (simp add:retype_addrs_fold split del:split_if)
+                  split del:if_split)
+  apply (simp add:retype_addrs_fold split del:if_split)
   apply (case_tac "type = Structures_A.Untyped")
    apply (rule corres_guard_imp)
      apply (simp add:translate_object_type_def)
@@ -1299,7 +1299,7 @@ lemma reset_untyped_cap_corres:
        apply (rule_tac F="is_untyped_cap capa \<and> cap_aligned capa
                  \<and> bits_of capa > 2 \<and> free_index_of capa \<le> 2 ^ bits_of capa"
              in corres_gen_asm2)
-       apply (simp add: whenE_def if_flip split del: split_if)
+       apply (simp add: whenE_def if_flip split del: if_split)
        apply (rule corres_if)
          apply (clarsimp simp: is_cap_simps free_range_of_untyped_def
                                cap_aligned_def free_index_of_def)
@@ -1430,7 +1430,7 @@ lemma range_le_free_range_of_untyped:
              \<subseteq> free_range_of_untyped idx sz (ptr && ~~ mask sz)"
   apply (rule order_trans, erule(1) range_cover_subset')
   apply (clarsimp simp: free_range_of_untyped_def
-             split del: split_if del: subsetI)
+             split del: if_split del: subsetI)
   apply (subst if_P)
    prefer 2
    apply (rule range_subsetI, simp_all)
@@ -1530,7 +1530,7 @@ lemma invoke_untyped_corres:
                            \<and> (\<forall>slot\<in>set slots.
                                  cte_wp_at (op = cap.NullCap) slot s) \<and> valid_etcbs s"
                 in hoare_post_imp)
-            apply (simp add:post_retype_invs_def split:split_if_asm)
+            apply (simp add:post_retype_invs_def split:if_split_asm)
              apply ((clarsimp dest!:set_zip_leftD
                 simp: vslot image_def invs_def valid_state_def valid_mdb_def cte_wp_at_caps_of_state
                 | intro conjI | drule (1) bspec | drule(1) mdb_cte_atD[rotated])+)[2]
@@ -1577,7 +1577,7 @@ lemma invoke_untyped_corres:
                hoare_vcg_ex_lift)
         apply simp
        apply wp
-      apply (simp split del: split_if)
+      apply (simp split del: if_split)
       apply (wp get_cap_wp)
      apply (wp_once hoare_drop_imps)
      apply wp
@@ -1595,8 +1595,8 @@ lemma invoke_untyped_corres:
      apply (clarsimp simp: ui cte_wp_at_caps_of_state bits_of_def
                            empty_descendants_range_in exI
                            free_index_of_def untyped_range_def
-                           split_if[where P="\<lambda>x. x \<le> unat v" for v]
-                split del: split_if)
+                           if_split[where P="\<lambda>x. x \<le> unat v" for v]
+                split del: if_split)
      apply (frule(1) valid_global_refsD2[OF _ invs_valid_global_refs])
      apply (strengthen refl subseteq_set_minus
                        free_range_of_untyped_subseteq'
@@ -1605,21 +1605,21 @@ lemma invoke_untyped_corres:
      apply (simp only: word_size word_bits_def[symmetric])
      apply (clarsimp simp: conj_comms invoke_untyped_proofs.simps
                            range_le_free_range_of_untyped
-                           split_if[where P="\<lambda>x. x \<le> unat v" for v]
-                split del: split_if)
+                           if_split[where P="\<lambda>x. x \<le> unat v" for v]
+                split del: if_split)
      apply (simp add: arg_cong[OF mask_out_sub_mask, where f="\<lambda>y. x - y" for x]
                       field_simps invoke_untyped_proofs.idx_le_new_offs
                       invoke_untyped_proofs.idx_compare'
                       untyped_range_def invs_valid_idle invs_valid_pspace
                       is_aligned_neg_mask invoke_untyped_proofs.szw
                       free_range_of_untyped_pick_retype_addrs vslot
-           split del: split_if)
+           split del: if_split)
      apply (clarsimp simp:detype_clear_um_independent conj_comms not_idle_thread_def
        misc invs_valid_idle invs_valid_objs word_bits_def
        atLeastatMost_subset_iff[where b=x and d=x for x] word_and_le2
-               split del: split_if)
+               split del: if_split)
      apply (clarsimp simp: range_cover.aligned bits_of_def field_simps
-            split del: split_if)
+            split del: if_split)
 
      apply (intro conjI)
           apply (cases cref, fastforce dest: valid_idle_has_null_cap[rotated -1])
@@ -1652,7 +1652,7 @@ lemma transform_translate_type:
   "transform_type n = Some tp
       \<Longrightarrow> \<exists>v. data_to_obj_type n = returnOk v \<and> tp = translate_object_type v"
   apply (simp add: transform_type_def
-            split: split_if_asm)
+            split: if_split_asm)
   apply (simp_all add: data_to_obj_type_def arch_data_to_obj_type_def)
   apply (auto simp add: translate_object_type_def)
   done
@@ -1707,7 +1707,7 @@ lemma transform_cdt_dom_standard:
   "transform_cdt s' slot' = Some (transform_cslot_ptr b)
    \<Longrightarrow> \<exists>slot. slot' = transform_cslot_ptr slot"
   apply (case_tac b)
-  apply (fastforce simp:transform_cdt_def map_lift_over_def split:split_if_asm)
+  apply (fastforce simp:transform_cdt_def map_lift_over_def split:if_split_asm)
   done
 
 lemma descendants_of_empty_lift :
@@ -1791,7 +1791,7 @@ lemma decode_untyped_corres:
   apply (clarsimp simp: Untyped_D.decode_untyped_invocation_def
                         Decode_A.decode_untyped_invocation_def
                         unlessE_whenE
-             split del: split_if
+             split del: if_split
                  split: invocation_label.split_asm)
   apply (rename_tac a list w1 w2 w3 w4 w5 apiobject_type)
   apply (cases excaps')
@@ -1799,11 +1799,11 @@ lemma decode_untyped_corres:
                     alternative_refl)
   apply (simp add: get_index_def transform_cap_list_def throw_on_none_def
                    split_beta
-               split del: split_if)
+               split del: if_split)
   apply (clarsimp simp: corres_whenE_throwError_split_rhs
                         corres_alternate2
-             split del: split_if)
-  apply (simp add: bindE_assoc[symmetric] split del: split_if)
+             split del: if_split)
+  apply (simp add: bindE_assoc[symmetric] split del: if_split)
   apply (rule_tac r'="\<lambda>rv rv'. rv = transform_cap rv'"
               in corres_alternative_throw_splitE)
        apply (rule corres_guard_imp, rule corres_alternate1)
@@ -1818,9 +1818,9 @@ lemma decode_untyped_corres:
        apply (clarsimp simp: cte_wp_at_caps_of_state)
        apply auto[1]
       apply (rename_tac cnode_cap cnode_cap')
-      apply (simp add: bindE_assoc split del: split_if)
+      apply (simp add: bindE_assoc split del: if_split)
       apply (simp add: if_to_top_of_bindE is_cnode_cap_transform_cap[symmetric]
-                  split del: split_if)
+                  split del: if_split)
       apply (rule corres_if_rhs[rotated])
        apply (rule corres_trivial, simp add: alternative_refl)
       apply (simp add: corres_whenE_throwError_split_rhs
@@ -1830,9 +1830,9 @@ lemma decode_untyped_corres:
            apply (simp add:liftE_bindE)
            apply (rule corres_symb_exec_r)
               apply (clarsimp simp: corres_whenE_throwError_split_rhs corres_alternate2
-                         split del: split_if)
+                         split del: if_split)
               apply (rule corres_alternate1)
-              apply (simp add:gets_get split del: split_if)
+              apply (simp add:gets_get split del: if_split)
               apply (rule corres_underlying_gets_pre_lhs)
               apply (rule_tac P' = "\<lambda>s. valid_mdb s \<and> cte_at slot' s \<and> is_cnode_cap cnode_cap' \<and>
                 cap_aligned cnode_cap' \<and> invs s \<and> not_idle_thread (obj_ref_of cnode_cap') s \<and>
@@ -1852,7 +1852,7 @@ lemma decode_untyped_corres:
           apply clarsimp
           apply wp
          apply (clarsimp simp:conj_comms)
-         apply (wp mapME_x_inv_wp[OF hoare_pre(2)] | simp split del: split_if)+
+         apply (wp mapME_x_inv_wp[OF hoare_pre(2)] | simp split del: if_split)+
         apply (wp hoare_whenE_wp)
        apply (simp add:validE_def split del:if_splits)
        apply (rule_tac Q = "\<lambda>r. op = s" in hoare_strengthen_post)
@@ -1881,7 +1881,7 @@ lemma decode_untyped_corres:
      apply (rule hoare_pre)
       apply (wp hoare_drop_imp | simp)+
      apply fastforce
-    apply (clarsimp simp: conj_comms is_cnode_cap_transform_cap split del: split_if)
+    apply (clarsimp simp: conj_comms is_cnode_cap_transform_cap split del: if_split)
     apply (rule validE_R_validE)
     apply (rule_tac Q' = "\<lambda>a s. invs s \<and> valid_etcbs s \<and> valid_cap a s \<and> cte_wp_at (op = (cap.UntypedCap dev ptr sz idx)) slot' s
       \<and> (Structures_A.is_cnode_cap a \<longrightarrow> not_idle_thread (obj_ref_of a) s)"
@@ -1903,7 +1903,7 @@ lemma decode_untyped_corres:
     apply (rule ccontr)
     apply (clarsimp simp:valid_cap_simps cap_aligned_def)
    apply (rule hoare_pre,wp,simp)
-  apply (wp hoare_drop_imp mapME_x_inv_wp2 | simp add:whenE_def split del:split_if)+
+  apply (wp hoare_drop_imp mapME_x_inv_wp2 | simp add:whenE_def split del:if_split)+
   apply (rule hoare_pre,wp,simp)
   done
 

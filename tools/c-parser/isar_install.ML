@@ -23,6 +23,10 @@ sig
   val interactive_install : string -> theory -> theory
   val mk_thy_relative : theory -> string -> string
 
+  val installed_C_files : theory
+    -> {c_filename : string, locale_names : string list,
+        options: (bool * bool * bool),
+        additional_options: additional_options list} list
 end
 
 structure IsarInstall : ISAR_INSTALL =
@@ -45,6 +49,18 @@ structure C_Includes = Theory_Data
 end);
 
 datatype additional_options = MachineState of string | GhostState of string | CRoots of string list
+
+type install_data = {c_filename : string, locale_names : string list,
+        options: (bool * bool * bool),
+        additional_options: additional_options list}
+structure C_Installs = Theory_Data
+(struct
+   type T = install_data list
+   val empty = []
+   val extend = I
+   val merge = Library.merge (op =)
+end);
+val installed_C_files = C_Installs.get
 
 structure IsaPath = Path
 
@@ -142,7 +158,7 @@ fun define_function_names fninfo thy = let
         Local_Theory.define ((b, NoSyn),
                              ((Thm.def_binding b, []), mk_int_numeral n))
                             lthy
-    val lthy' = Local_Theory.restore lthy
+    val lthy' = Local_Theory.reset lthy
     val morph  = Proof_Context.export_morphism lthy lthy'
     val th'     = Morphism.thm morph th
 
@@ -172,7 +188,7 @@ end
 
 fun define_global_initializers globloc msgpfx name_munger mungedb cse globs thy = let
   open ProgramAnalysis Absyn
-  val lthy = Named_Target.init globloc thy
+  val lthy = Named_Target.init NONE globloc thy
   val globinits = let
     val inittab = get_globinits cse
     fun foldthis (gnm : MString.t, gty) defs = let
@@ -393,7 +409,7 @@ in
                                             fninfo
                                             rcdinfo
                                             ms
-      val (globloc, thy) =
+      val (loc2, thy) =
           HPInter.make_function_definitions localename
                                             cse
                                             styargs
@@ -405,13 +421,19 @@ in
                                             thy
       val thy =
           if not (Symtab.is_empty (get_defined_functions cse)) then
-            Modifies_Proofs.prove_all_modifies_goals thy cse toTranslateP styargs globloc
+            Modifies_Proofs.prove_all_modifies_goals thy cse toTranslateP styargs loc2
           else thy (* like this is ever going to happen *)
     in
-      thy
+      C_Installs.map (fn ss =>
+        {c_filename = s, locale_names = [globloc, loc2],
+          options = (ms, install_typs, install_defs),
+          additional_options = statetylist} :: ss) thy
     end
   else
-    thy
+      C_Installs.map (fn ss =>
+        {c_filename = s, locale_names = [],
+          options = (ms, install_typs, install_defs),
+          additional_options = statetylist} :: ss) thy
 end handle e as TYPE (s,tys,tms) =>
          (tracing (s ^ "\n" ^
                    Int.toString (length tms) ^ " term(s): " ^

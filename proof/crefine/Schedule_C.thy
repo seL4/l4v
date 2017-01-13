@@ -70,8 +70,9 @@ proof -
     hence allj: "\<forall>j\<in>set(to_bl w). \<not> j"
       using takeWhile_take_has_property[where n="length (to_bl w)" and xs="to_bl w" and P=Not]
       by simp
-    hence "to_bl w = replicate (length (to_bl w)) False"
-      by - (blast intro: list_of_false)
+    have "to_bl w = replicate (length (to_bl w)) False"
+      apply (rule list_of_false)
+      using allj by auto
     hence "w = 0"
      apply simp
      apply (subst (asm) to_bl_0[symmetric])
@@ -634,65 +635,63 @@ proof -
     apply (rename_tac s' d)
     apply (clarsimp simp: Let_def)
     apply (safe, simp_all add: invs_no_cicd'_max_CurDomain)
-    (*12 subgoals *)
-             apply (drule invs_no_cicd'_queues)
-             apply (clarsimp simp: rf_sr_ksReadyQueuesL1Bitmap_simp signed_word_log2)
-             apply (simp add: rf_sr_ksReadyQueuesL2Bitmap_simp signed_word_log2)
-             apply (case_tac queue, simp)
-             apply (clarsimp simp: tcb_queue_relation'_def cready_queues_index_to_C_def
-                                    numPriorities_def l1IndexToPrio_def)
-             apply (erule trans[rotated])
-             apply (subst unat_of_nat_shiftl_or_8_32)
-               apply (clarsimp simp: wordRadix_def)
-               apply (fastforce dest: ksReadyQueuesL1Bitmap_word_log2_max
-                                simp: numPriorities_def wordBits_def word_size)
-              apply (drule_tac s=s in ksReadyQueuesL1Bitmap_word_log2_max, assumption)
-              apply (rule order_less_le_trans[OF word_log2_max_word32] ; simp)
+    (*10 subgoals *)
+           apply (drule invs_no_cicd'_queues)
+           apply (clarsimp simp: rf_sr_ksReadyQueuesL1Bitmap_simp signed_word_log2)
+           apply (simp add: rf_sr_ksReadyQueuesL2Bitmap_simp signed_word_log2)
+           apply (case_tac queue, simp)
+           apply (clarsimp simp: tcb_queue_relation'_def cready_queues_index_to_C_def
+                                  numPriorities_def l1IndexToPrio_def)
+           apply (erule trans[rotated])
+           apply (subst unat_of_nat_shiftl_or_8_32)
+             apply (clarsimp simp: wordRadix_def)
+             apply (fastforce dest: ksReadyQueuesL1Bitmap_word_log2_max
+                              simp: numPriorities_def wordBits_def word_size)
+            apply (drule_tac s=s in ksReadyQueuesL1Bitmap_word_log2_max, assumption)
+            apply (rule order_less_le_trans[OF word_log2_max_word32] ; simp)
 
-             apply (frule (1) ksReadyQueuesL1Bitmap_word_log2_max)
-             apply (frule (1) lookupBitmapPriority_le_maxPriority)
-             apply (simp add: word_less_nat_alt word_le_nat_alt)
-             apply (simp add: unat_lookupBitmapPriority_32)
-             apply (subst unat_add_lem')
-              apply (simp add: word_less_nat_alt word_le_nat_alt)
-              apply (rule_tac x="unat d * 256" and xmax="unat maxDomain * 256" in nat_add_less_by_max)
-               apply (simp add: word_le_nat_alt)
-              apply (clarsimp simp: maxDomain_def numDomains_def maxPriority_def numPriorities_def)
-             apply (simp add: word_less_nat_alt word_le_nat_alt)
-
-            apply (rename_tac \<sigma>)
-            apply (drule invs_no_cicd'_queues)
-            apply (clarsimp simp: rf_sr_ksReadyQueuesL1Bitmap_simp rf_sr_ksReadyQueuesL2Bitmap_simp signed_word_log2)
-            apply (frule (1) ksReadyQueuesL1Bitmap_word_log2_max)
-            apply (frule (1) lookupBitmapPriority_le_maxPriority)
-            apply (simp add: word_less_nat_alt word_le_nat_alt unat_lookupBitmapPriority_32)
-            apply (subst unat_add_lem')
-             apply (simp add: word_less_nat_alt word_le_nat_alt)
-             apply (rule_tac x="unat d * 256" and xmax="unat maxDomain * 256" in nat_add_less_by_max)
-              apply (simp add: word_le_nat_alt)
-             apply (clarsimp simp: maxDomain_def numDomains_def maxPriority_def numPriorities_def)
+           apply (frule (1) ksReadyQueuesL1Bitmap_word_log2_max)
+           apply (frule (1) lookupBitmapPriority_le_maxPriority)
+           apply (simp add: word_less_nat_alt word_le_nat_alt)
+           apply (simp add: unat_lookupBitmapPriority_32)
+           apply (subst unat_add_lem')
             apply (simp add: word_less_nat_alt word_le_nat_alt)
-
             apply (rule_tac x="unat d * 256" and xmax="unat maxDomain * 256" in nat_add_less_by_max)
              apply (simp add: word_le_nat_alt)
-            apply (rule order_le_less_trans)
-             apply (simp add: word_le_nat_alt)
             apply (clarsimp simp: maxDomain_def numDomains_def maxPriority_def numPriorities_def)
-           apply (simp add: field_simps)
+           apply (simp add: word_less_nat_alt word_le_nat_alt)
 
-          apply (fastforce dest!: invs_no_cicd'_queues
-                           simp: rf_sr_ksReadyQueuesL1Bitmap_simp rf_sr_ksReadyQueuesL2Bitmap_simp
-                                 signed_word_log2)
+          apply (rename_tac \<sigma>)
+          apply (drule invs_no_cicd'_queues)
+          apply (clarsimp simp: rf_sr_ksReadyQueuesL1Bitmap_simp rf_sr_ksReadyQueuesL2Bitmap_simp signed_word_log2)
+          apply (frule (1) ksReadyQueuesL1Bitmap_word_log2_max)
+          apply (frule (1) lookupBitmapPriority_le_maxPriority)
+          apply (simp add: word_less_nat_alt word_le_nat_alt unat_lookupBitmapPriority_32)
+          apply (subst unat_add_lem')
+           apply (simp add: word_less_nat_alt word_le_nat_alt)
+           apply (rule_tac x="unat d * 256" and xmax="unat maxDomain * 256" in nat_add_less_by_max)
+            apply (simp add: word_le_nat_alt)
+           apply (clarsimp simp: maxDomain_def numDomains_def maxPriority_def numPriorities_def)
+          apply (simp add: word_less_nat_alt word_le_nat_alt)
 
-         apply (rename_tac \<sigma>)
-         apply (drule invs_no_cicd'_queues)
-         apply (clarsimp simp: rf_sr_ksReadyQueuesL1Bitmap_simp rf_sr_ksReadyQueuesL2Bitmap_simp signed_word_log2)
-         apply (drule word_log2_nth_same)
-         apply (drule bitmapQ_no_L1_orphansD[rotated])
-          apply (simp add: valid_queues_def)
-         apply (fastforce intro!: cguard_UNIV word_of_nat_less
-                           simp: numPriorities_def wordBits_def word_size)
-        apply (fastforce simp: field_simps)
+          apply (rule_tac x="unat d * 256" and xmax="unat maxDomain * 256" in nat_add_less_by_max)
+           apply (simp add: word_le_nat_alt)
+          apply (rule order_le_less_trans)
+           apply (simp add: word_le_nat_alt)
+          apply (clarsimp simp: maxDomain_def numDomains_def maxPriority_def numPriorities_def)
+
+         apply (fastforce dest!: invs_no_cicd'_queues
+                          simp: rf_sr_ksReadyQueuesL1Bitmap_simp rf_sr_ksReadyQueuesL2Bitmap_simp
+                                signed_word_log2)
+
+        apply (rename_tac \<sigma>)
+        apply (drule invs_no_cicd'_queues)
+        apply (clarsimp simp: rf_sr_ksReadyQueuesL1Bitmap_simp rf_sr_ksReadyQueuesL2Bitmap_simp signed_word_log2)
+        apply (drule word_log2_nth_same)
+        apply (drule bitmapQ_no_L1_orphansD[rotated])
+         apply (simp add: valid_queues_def)
+        apply (fastforce intro!: cguard_UNIV word_of_nat_less
+                          simp: numPriorities_def wordBits_def word_size)
        apply (fastforce dest: word_log2_nth_same bitmapQ_no_L1_orphansD[rotated] invs_no_cicd'_queues
                         simp: valid_queues_def)
       apply (clarsimp dest!: invs_no_cicd'_queues simp add: valid_queues_def)
@@ -924,7 +923,7 @@ lemma cep_relations_drop_fun_upd:
       \<Longrightarrow> cnotification_relation (f (x \<mapsto> v')) = cnotification_relation f"
   by (intro ext cendpoint_relation_upd_tcb_no_queues[where thread=x]
                 cnotification_relation_upd_tcb_no_queues[where thread=x]
-          | simp split: split_if)+
+          | simp split: if_split)+
 
 lemma threadSet_timeSlice_ccorres [corres]:
   "ccorres dc xfdc (tcb_at' thread) {s. thread' s = tcb_ptr_to_ctcb_ptr thread \<and> unat (v' s) = v} hs 
@@ -947,8 +946,8 @@ lemma threadSet_timeSlice_ccorres [corres]:
   apply (rule conjI)
    defer
    apply (erule cready_queues_relation_not_queue_ptrs)
-    apply (rule ext, simp split: split_if)
-   apply (rule ext, simp split: split_if)
+    apply (rule ext, simp split: if_split)
+   apply (rule ext, simp split: if_split)
   apply (drule ko_at_projectKO_opt)
   apply (erule (2) cmap_relation_upd_relI)
     apply (simp add: ctcb_relation_def)

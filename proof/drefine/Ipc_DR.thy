@@ -321,7 +321,7 @@ lemma mr_opt_cap_into_object:
 lemma monadic_rewrite_assert2:
   "\<lbrakk> Q \<Longrightarrow> monadic_rewrite F E P (f ()) g \<rbrakk>
       \<Longrightarrow> monadic_rewrite F E ((\<lambda>s. Q \<longrightarrow> P s) and (\<lambda>_. Q)) (assert Q >>= f) g"
-  apply (simp add: assert_def split: split_if)
+  apply (simp add: assert_def split: if_split)
   apply (simp add: monadic_rewrite_def fail_def)
   done
 
@@ -910,31 +910,31 @@ apply (wp not_idle_after_blocked_cancel_ipc not_idle_after_reply_cancel_ipc
   done
 
 lemma send_signal_corres:
-  notes split_if [split del]
+  notes if_split [split del]
   shows
   "ep_id = epptr \<Longrightarrow> dcorres dc \<top> (invs and valid_etcbs)
      (Endpoint_D.send_signal ep_id)
      (Ipc_A.send_signal epptr badge)"
   apply (unfold Endpoint_D.send_signal_def Ipc_A.send_signal_def invs_def)
   apply (rule dcorres_expand_pfx)
-  apply (clarsimp simp:get_notification_def get_object_def gets_def bind_assoc split: split_if)
+  apply (clarsimp simp:get_notification_def get_object_def gets_def bind_assoc split: if_split)
   apply (rule dcorres_absorb_get_r)
-  apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits split_if )
+  apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits if_split )
   apply (rename_tac ntfn_ext)
   apply (case_tac "ntfn_obj ntfn_ext", clarsimp)
     apply (case_tac "ntfn_bound_tcb ntfn_ext", clarsimp)
      -- "Idle, not bound"
      apply (rule corres_alternate1)
      apply (rule dcorres_absorb_get_l)
-     apply (clarsimp split del: split_if)
+     apply (clarsimp split del: if_split)
      apply (frule valid_objs_valid_ntfn_simp[rotated])
-      apply (simp add:valid_state_def valid_pspace_def split del: split_if)
-     apply (simp add:gets_def bind_assoc option_select_def split del: split_if)
+      apply (simp add:valid_state_def valid_pspace_def split del: if_split)
+     apply (simp add:gets_def bind_assoc option_select_def split del: if_split)
      apply (frule get_notification_pick,simp)
      apply (clarsimp simp:ntfn_waiting_set_lift valid_state_def valid_ntfn_abstract_def none_is_waiting_ntfn_def)
      apply (rule corres_guard_imp,rule corres_dummy_set_notification,simp+)[1]
     -- "Idle, bound"
-    apply (clarsimp simp: get_thread_state_def thread_get_def gets_the_def gets_def bind_assoc split del: split_if)
+    apply (clarsimp simp: get_thread_state_def thread_get_def gets_the_def gets_def bind_assoc split del: if_split)
     apply (rule dcorres_absorb_get_r)
     apply (clarsimp simp: assert_opt_def corres_free_fail split: Structures_A.kernel_object.splits option.splits)
     apply (case_tac "receive_blocked (tcb_state x2)")
@@ -944,7 +944,7 @@ lemma send_signal_corres:
      apply (clarsimp simp: send_signal_bound_def gets_def)
      apply (rule dcorres_absorb_get_l)
      apply (clarsimp simp: receive_blocked_waiting_syncs)
-     apply (clarsimp simp: IpcCancel_A.cancel_ipc_def get_thread_state_def thread_get_def gets_the_def gets_def bind_assoc split del: split_if)
+     apply (clarsimp simp: IpcCancel_A.cancel_ipc_def get_thread_state_def thread_get_def gets_the_def gets_def bind_assoc split del: if_split)
      apply (rule dcorres_absorb_get_r)
      apply (clarsimp simp: assert_opt_def corres_free_fail split: Structures_A.kernel_object.splits option.splits)
      apply (simp add: receive_blocked_def)
@@ -969,22 +969,22 @@ lemma send_signal_corres:
     apply clarsimp
     apply (rule corres_alternate1)
     apply (rule dcorres_absorb_get_l)
-    apply (clarsimp split del: split_if)
+    apply (clarsimp split del: if_split)
     apply (frule valid_objs_valid_ntfn_simp[rotated])
-     apply (simp add:valid_state_def valid_pspace_def split del: split_if)
-    apply (simp add:gets_def bind_assoc option_select_def split del: split_if)
+     apply (simp add:valid_state_def valid_pspace_def split del: if_split)
+    apply (simp add:gets_def bind_assoc option_select_def split del: if_split)
     apply (frule get_notification_pick,simp)
     apply (clarsimp simp:ntfn_waiting_set_lift valid_state_def valid_ntfn_abstract_def none_is_waiting_ntfn_def)
     apply (rule corres_guard_imp,rule corres_dummy_set_notification,simp+)[1]
    -- "Waiting"
    apply (rule corres_alternate1)
    apply (rule dcorres_absorb_get_l)
-   apply (clarsimp split del: split_if)
+   apply (clarsimp split del: if_split)
    apply (frule valid_objs_valid_ntfn_simp[rotated])
-    apply (simp add:valid_state_def valid_pspace_def split del: split_if)
+    apply (simp add:valid_state_def valid_pspace_def split del: if_split)
    apply (simp add:gets_def bind_assoc option_select_def)
    apply (frule get_notification_pick,simp)
-   apply (clarsimp simp:ntfn_waiting_set_lift valid_state_def valid_ntfn_abstract_def split: split_if)
+   apply (clarsimp simp:ntfn_waiting_set_lift valid_state_def valid_ntfn_abstract_def split: if_split)
    apply (rule conjI)
     apply (clarsimp simp: dest!:not_empty_list_not_empty_set)
    apply (clarsimp simp:neq_Nil_conv)
@@ -1000,9 +1000,9 @@ lemma send_signal_corres:
   -- "Active"
   apply (rule corres_alternate1)
   apply (rule dcorres_absorb_get_l)
-  apply (clarsimp split del: split_if)
+  apply (clarsimp split del: if_split)
   apply (frule valid_objs_valid_ntfn_simp[rotated])
-   apply (simp add:valid_state_def valid_pspace_def split del: split_if)
+   apply (simp add:valid_state_def valid_pspace_def split del: if_split)
   apply (clarsimp simp:gets_def bind_assoc option_select_def)
   apply (frule get_notification_pick,simp)
   apply (clarsimp simp:ntfn_waiting_set_lift valid_state_def valid_ntfn_abstract_def none_is_waiting_ntfn_def)
@@ -1287,7 +1287,7 @@ lemma ipc_buffer_wp_at_cap_insert_ext[wp]:
 lemma ipc_buffer_wp_at_cap_insert[wp]:
   "\<lbrace>ipc_buffer_wp_at buf t :: det_state \<Rightarrow> bool \<rbrace> cap_insert cap' (slot_ptr, slot_idx) a \<lbrace>\<lambda>r. ipc_buffer_wp_at buf t\<rbrace>"
   apply (simp add:cap_insert_def set_untyped_cap_as_full_def)
-  apply (wp|simp split del:split_if)+
+  apply (wp|simp split del:if_split)+
            apply (rule_tac Q = "\<lambda>r. ipc_buffer_wp_at buf t" in hoare_strengthen_post)
             apply wp
            apply (clarsimp simp:ipc_buffer_wp_at_def)
@@ -1317,7 +1317,7 @@ lemma cap_insert_cte_wp_at_masked_as_full:
    cap_insert cap src dest \<lbrace>\<lambda>uu. cte_wp_at P slot\<rbrace>"
   apply (simp add:cap_insert_def set_untyped_cap_as_full_def)
   apply (wp set_cap_cte_wp_at hoare_vcg_if_lift get_cap_wp static_imp_wp dxo_wp_weak
-       | simp split del:split_if)+
+       | simp split del:if_split)+
   apply (intro conjI impI allI |
     clarsimp simp:cte_wp_at_caps_of_state)+
      apply (drule assms)
@@ -1358,7 +1358,7 @@ next
   show ?case
   apply (cases p)
   apply (rename_tac cap slot_ptr slot_idx)
-  apply (clarsimp simp: const_on_failure_def split del: split_if)
+  apply (clarsimp simp: const_on_failure_def split del: if_split)
   apply (case_tac "is_ep_cap cap \<and> ep' = Some (obj_ref_of cap)")
    apply (subgoal_tac "Types_D.is_ep_cap (transform_cap cap) \<and>
                        (\<exists>z. ep' = Some z \<and> z = cap_object (transform_cap cap))")
@@ -1384,13 +1384,13 @@ next
                        (\<exists>z. ep' = Some z \<and> z = cap_object (transform_cap cap)))")
    prefer 2
    apply (clarsimp simp: is_cap_simps cap_type_simps split: cdl_cap.splits)
-  apply (simp del: de_Morgan_conj split del: split_if)
+  apply (simp del: de_Morgan_conj split del: if_split)
   apply (case_tac dests)
    apply (simp add: dest_of_def returnOk_liftE catch_liftE)
   apply (case_tac list)
    prefer 2
    apply simp
-  apply (simp (no_asm_simp) add: dest_of_def split del: split_if)
+  apply (simp (no_asm_simp) add: dest_of_def split del: if_split)
   apply (subst bindE_assoc [symmetric])
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch [where f=dc and E="\<top>\<top>" and E'="\<top>\<top>"])
@@ -1429,7 +1429,7 @@ next
         apply (clarsimp)
        apply (rule hoareE_TrueI)
       apply (rule validE_R_validE)
-      apply (simp add:conj_comms ball_conj_distrib split del:split_if)
+      apply (simp add:conj_comms ball_conj_distrib split del:if_split)
       apply (rule_tac Q' ="\<lambda>cap' s. (cap'\<noteq> cap.NullCap \<longrightarrow>(
        (cte_wp_at (is_derived (cdt s) (slot_ptr, slot_idx) cap') (slot_ptr, slot_idx) s)
        \<and> pspace_aligned s \<and> pspace_distinct s \<and> valid_objs s \<and> valid_idle s
@@ -1448,8 +1448,8 @@ next
        apply (rule derive_cap_is_derived)
       apply (rule derive_cap_is_derived_foo)
      apply wp
-   apply (simp split del: split_if)
-  apply (clarsimp split del: split_if cong: conj_cong)
+   apply (simp split del: if_split)
+  apply (clarsimp split del: if_split cong: conj_cong)
   apply (rule conjI)
    apply (clarsimp simp: valid_mdb_def mdb_cte_at_def cte_wp_at_caps_of_state)
    apply fast
@@ -1460,7 +1460,7 @@ next
    apply (case_tac "cap = capa")
     apply (clarsimp simp:cap_master_cap_simps remove_rights_def)+
    apply (clarsimp simp:masked_as_full_def is_cap_simps cap_master_cap_def)
-  apply (clarsimp split del: split_if)
+  apply (clarsimp split del: if_split)
   apply (clarsimp simp: cte_wp_at_caps_of_state not_idle_thread_def)
   apply (rule conjI)
    apply (clarsimp simp: not_idle_thread_def valid_idle_def pred_tcb_at_def
@@ -1475,11 +1475,11 @@ next
    apply (rule rev_mp[OF _ real_cte_tcb_valid])
    apply simp
   apply (rule context_conjI)
-   apply (clarsimp split:split_if_asm simp:remove_rights_def)
+   apply (clarsimp split:if_split_asm simp:remove_rights_def)
   apply (intro conjI ballI)
      apply (drule(1) bspec,clarsimp)+
   apply (case_tac "capb = aa")
-   apply (clarsimp simp:masked_as_full_def split:split_if_asm)
+   apply (clarsimp simp:masked_as_full_def split:if_split_asm)
   by (clarsimp simp:masked_as_full_def free_index_update_def is_cap_simps)
 qed
 
@@ -2249,7 +2249,7 @@ lemma dcorres_set_thread_state_Restart:
             apply ((clarsimp simp:tcb_caller_slot_def infer_tcb_pending_op_def cap_counts_def
              tcb_pending_op_slot_def tcb_cspace_slot_def tcb_replycap_slot_def
              tcb_vspace_slot_def PageTableUnmap_D.is_final_cap'_def
-             PageTableUnmap_D.is_final_cap_def split:split_if_asm Structures_A.thread_state.splits
+             PageTableUnmap_D.is_final_cap_def split:if_split_asm Structures_A.thread_state.splits
             | wp exs_valid_return exs_valid_gets)+)[1]
            apply clarsimp
            apply (subst fast_finalise_no_effect)
@@ -2260,7 +2260,7 @@ lemma dcorres_set_thread_state_Restart:
            apply (clarsimp simp:tcb_caller_slot_def infer_tcb_pending_op_def cap_counts_def
             tcb_pending_op_slot_def tcb_cspace_slot_def tcb_replycap_slot_def
             tcb_vspace_slot_def PageTableUnmap_D.is_final_cap'_def
-            PageTableUnmap_D.is_final_cap_def split:split_if_asm Structures_A.thread_state.splits
+            PageTableUnmap_D.is_final_cap_def split:if_split_asm Structures_A.thread_state.splits
            | wp exs_valid_return exs_valid_gets)+
      apply (frule(1) valid_etcbs_get_tcb_get_etcb, clarsimp simp: get_etcb_def)
      apply (subst opt_cap_tcb)
@@ -2489,7 +2489,7 @@ lemma dcorres_receive_sync:
      apply (rule corres_symb_exec_r)
         apply (rule_tac F="sender_state = tcb_state t" in corres_gen_asm2)
         apply (clarsimp dest!:get_tcb_SomeD simp:dc_def[symmetric]
-          split del:if_splits split:split_if_asm)
+          split del:if_splits split:if_split_asm)
         apply (rule corres_guard_imp)
           apply (rule corres_split[OF _ corres_complete_ipc_transfer])
              prefer 2
@@ -2701,19 +2701,19 @@ lemma send_sync_ipc_corres:
    apply (clarsimp simp: dest!: not_empty_list_not_empty_set)
   apply (rename_tac list)
   apply (drule_tac s = "set list" in sym)
-  apply (clarsimp simp: bind_assoc neq_Nil_conv split del:split_if)
+  apply (clarsimp simp: bind_assoc neq_Nil_conv split del:if_split)
   apply (rule_tac P1="\<top>" and P'="op = s'a" and x1 = y
          in dcorres_absorb_pfx[OF select_pick_corres[OF dcorres_expand_pfx]])
       defer
       apply (simp+)[3]
-  apply (simp split del:split_if)
+  apply (simp split del:if_split)
   apply (drule_tac x1 = y in iffD2[OF eqset_imp_iff], simp)
-  apply (clarsimp simp:obj_at_def dc_def[symmetric] split del:split_if)
+  apply (clarsimp simp:obj_at_def dc_def[symmetric] split del:if_split)
   apply (subst when_def)+
   apply (rule corres_guard_imp)
     apply (rule dcorres_symb_exec_r)
       apply (rule corres_symb_exec_r)
-       apply (case_tac "recv_state"; simp add: corres_free_fail split del: split_if)
+       apply (case_tac "recv_state"; simp add: corres_free_fail split del: if_split)
                  apply (rule corres_split[OF _ corres_complete_ipc_transfer])
                     apply (rule corres_split[OF _ set_thread_state_corres])
                       apply (rule dcorres_rhs_noop_above[OF attempt_switch_to_dcorres])

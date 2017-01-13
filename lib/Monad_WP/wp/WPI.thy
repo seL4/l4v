@@ -44,7 +44,7 @@ begin
 text \<open>The ML version of repeat_new is slightly faster than the Eisbach one.\<close>
 
 method_setup repeat_new =
- \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
+ \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
    let
      fun tac i st' =
        Goal.restrict i 1 st'
@@ -321,7 +321,7 @@ method post_strengthen methods wp_weak wp_strong simp' tests =
     determ \<open>make_goals \<open>wp_weak\<close> \<open>wp_strong\<close> \<open>tests\<close>,
     (elim trips_pushEs)?,
     rule trip_init\<close>,
-    (simp add: imp_conjL del: simp_dels split del: split_if)?,
+    (simp add: imp_conjL del: simp_dels split del: if_split)?,
     determ \<open>(erule trips_True_drop trips_contr_drop hoare_add_trip)\<close>,
     simp',
     rule trip_drop,
@@ -333,7 +333,7 @@ text \<open>The "wpi" named theorem is used to avoid the safety heuristics, effe
 named_theorems wpi
 
 private method final_simp =
-  (simp del: del: simp_dels split del: split_if cong: post_imp_cong) 
+  (simp del: del: simp_dels split del: if_split cong: post_imp_cong)
 
 text \<open>By default, wpi will only solve an atomic consequent if all its antecedents
       aren't preserved. Therefore "test" is simply "fail". Unpreserved antecedents
@@ -406,7 +406,7 @@ method wp_drop_imp_internal methods tests =
    determ \<open>erule trips_transport\<close>,
    ((drule trip_term_quants)+)?,
    erule strengthen_trip_term,
-   simp split del: split_if cong: post_conj_cong,
+   simp split del: if_split cong: post_conj_cong,
    rule post_conj_drop)
 
 method wp_drop_imp = wp_drop_imp_internal \<open>tests\<close>

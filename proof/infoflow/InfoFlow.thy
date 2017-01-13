@@ -1480,7 +1480,7 @@ lemma auth_ipc_buffers_mem_Write':
   apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def
                         vspace_cap_rights_to_auth_def vm_read_write_def
                         is_page_cap_def
-                 split: split_if_asm)
+                 split: if_split_asm)
    apply (auto dest: ipcframe_subset_page)
   done
 

@@ -91,7 +91,7 @@ lemma dcorres_set_untyped_cap_as_full:
   (CSpace_D.set_untyped_cap_as_full (transform_cap src_cap) (transform_cap cap) (transform_cslot_ptr src))
   (CSpace_A.set_untyped_cap_as_full src_cap cap src)"
   apply (simp add:set_untyped_cap_as_full_def CSpace_D.set_untyped_cap_as_full_def
-              split del:split_if)
+              split del:if_split)
   apply (case_tac "is_untyped_cap src_cap \<and> is_untyped_cap cap")
    apply (rule dcorres_expand_pfx)
    apply (rule corres_guard_imp)
@@ -197,7 +197,7 @@ lemma insert_cap_sibling_corres:
                 and (\<lambda>s. mdb_cte_at (swp cte_at s) (cdt s))
                 and (\<lambda>s. cdt s sibling = None)" for orig'
                 in corres_modify)
-              apply (clarsimp split del: split_if)
+              apply (clarsimp split del: if_split)
               apply (subst if_not_P, assumption)+
               apply (clarsimp simp: opt_parent_def transform_def
                 transform_objects_def transform_cdt_def
@@ -220,7 +220,7 @@ lemma insert_cap_sibling_corres:
             apply ((wp set_cap_caps_of_state2 get_cap_wp static_imp_wp
               | simp add: swp_def cte_wp_at_caps_of_state)+)
            apply (wp set_cap_idle |
-              simp add:set_untyped_cap_as_full_def split del: split_if)+
+              simp add:set_untyped_cap_as_full_def split del: if_split)+
             apply (rule_tac Q = "\<lambda>r s. cdt s sibling = None
              \<and> \<not> should_be_parent_of src_capa (is_original_cap s sibling) cap (cap_insert_dest_original cap src_capa)
              \<and> mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)"
@@ -232,7 +232,7 @@ lemma insert_cap_sibling_corres:
             apply fastforce
            apply (wp get_cap_wp set_cap_idle static_imp_wp
              | simp add:set_untyped_cap_as_full_def
-             split del: split_if)+
+             split del: if_split)+
           apply (rule_tac Q = "\<lambda>r s. cdt s sibling = None
             \<and> (\<exists>cap. caps_of_state s src = Some cap)
             \<and> \<not> should_be_parent_of src_capa (is_original_cap s src) cap (cap_insert_dest_original cap src_capa)
@@ -288,7 +288,7 @@ lemma insert_cap_child_corres:
                 and cte_at src and cte_at child
                 and (\<lambda>s. mdb_cte_at (swp cte_at s) (cdt s))" for orig orig'
                 in corres_modify)
-            apply (clarsimp split del: split_if)
+            apply (clarsimp split del: if_split)
             apply (subst if_P, assumption)+
             apply (clarsimp simp: opt_parent_def transform_def transform_asid_table_def
                                transform_objects_def transform_cdt_def
@@ -304,7 +304,7 @@ lemma insert_cap_child_corres:
            apply (wp set_cap_caps_of_state2 get_cap_wp static_imp_wp
                     | simp add: swp_def cte_wp_at_caps_of_state)+
         apply (wp set_cap_idle |
-         simp add:set_untyped_cap_as_full_def split del:split_if)+
+         simp add:set_untyped_cap_as_full_def split del:if_split)+
         apply (rule_tac Q = "\<lambda>r s. not_idle_thread (fst child) s
           \<and> should_be_parent_of src_capa (is_original_cap s child) cap (cap_insert_dest_original cap src_capa)
           \<and> mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)"
@@ -313,7 +313,7 @@ lemma insert_cap_child_corres:
          apply (clarsimp simp:mdb_cte_at_def cte_wp_at_caps_of_state)
          apply fastforce
         apply (wp get_cap_wp set_cap_idle static_imp_wp
-          | simp split del:split_if add:set_untyped_cap_as_full_def)+
+          | simp split del:if_split add:set_untyped_cap_as_full_def)+
            apply (rule_tac Q = "\<lambda>r s. not_idle_thread (fst child) s
              \<and> (\<exists>cap. caps_of_state s src = Some cap)
              \<and> should_be_parent_of src_capa (is_original_cap s src) cap (cap_insert_dest_original cap src_capa)
@@ -441,14 +441,14 @@ proof -
                 ({p, p'} \<union> dom (cdt s') \<union> ran (cdt s')) \<and> cdt s' p \<noteq> Some p")
              apply (elim conjE)
              apply (subst map_lift_over_if_eq)
-              apply (erule subset_inj_on, auto elim!: ranE split: split_if_asm)[1]
+              apply (erule subset_inj_on, auto elim!: ranE split: if_split_asm)[1]
              apply (rule sym)
-             apply (simp add: Fun.swap_def split del: split_if)
+             apply (simp add: Fun.swap_def split del: if_split)
              apply (subst map_lift_over_upd[unfolded fun_upd_def],
-                      ((erule subset_inj_on, auto elim!: ranE split: split_if_asm)[1]))+
+                      ((erule subset_inj_on, auto elim!: ranE split: if_split_asm)[1]))+
              apply (rule ext)
              apply (cases p, cases p')
-             apply (simp split del: split_if)
+             apply (simp split del: if_split)
              apply simp
              apply (subst subset_inj_on map_lift_over_f_eq[OF subset_inj_on],
                     assumption, fastforce)+
@@ -1052,7 +1052,7 @@ lemma dcorres_ep_cancel_badge_sends:
         apply (simp add:valid_pspace_def)
        apply (clarsimp simp: restrict_map_def transform_def transform_objects_def)
        apply (clarsimp simp: ep_waiting_set_recv_def restrict_map_def transform_def
-         split:split_if_asm dest!:get_tcb_rev elim!: CollectE)
+         split:if_split_asm dest!:get_tcb_rev elim!: CollectE)
        apply (frule(1) valid_etcbs_get_tcb_get_etcb)
        apply (clarsimp simp: transform_tcb_def transform_objects_def infer_tcb_bound_notification_def
                              is_thread_blocked_on_endpoint_def infer_tcb_pending_op_def infer_tcb_bound_notification_def tcb_pending_op_slot_def tcb_boundntfn_slot_def tcb_slot_defs
@@ -1089,11 +1089,11 @@ lemma transform_default_tcb:
   done
 
 lemma dcorres_list_all2_mapM_':
-  assumes w: "suffixeq xs oxs" "suffixeq ys oys"
-  assumes y: "\<And>x xs y ys. \<lbrakk> F x y; suffixeq (x # xs) oxs; suffixeq (y # ys) oys \<rbrakk>
+  assumes w: "suffix xs oxs" "suffix ys oys"
+  assumes y: "\<And>x xs y ys. \<lbrakk> F x y; suffix (x # xs) oxs; suffix (y # ys) oys \<rbrakk>
                \<Longrightarrow> dcorres dc (P (x # xs)) (P' (y # ys)) (f x) (g y)"
-  assumes z: "\<And>x y xs. \<lbrakk> F x y; suffixeq (x # xs) oxs \<rbrakk> \<Longrightarrow> \<lbrace>P (x # xs)\<rbrace> f x \<lbrace>\<lambda>rv. P xs\<rbrace>"
-             "\<And>x y ys. \<lbrakk> F x y; suffixeq (y # ys) oys \<rbrakk> \<Longrightarrow> \<lbrace>P' (y # ys)\<rbrace> g y \<lbrace>\<lambda>rv. P' ys\<rbrace>"
+  assumes z: "\<And>x y xs. \<lbrakk> F x y; suffix (x # xs) oxs \<rbrakk> \<Longrightarrow> \<lbrace>P (x # xs)\<rbrace> f x \<lbrace>\<lambda>rv. P xs\<rbrace>"
+             "\<And>x y ys. \<lbrakk> F x y; suffix (y # ys) oys \<rbrakk> \<Longrightarrow> \<lbrace>P' (y # ys)\<rbrace> g y \<lbrace>\<lambda>rv. P' ys\<rbrace>"
   assumes x: "list_all2 F xs ys"
   shows "dcorres dc (P xs) (P' ys) (mapM_x f xs) (mapM_x g ys)"
   apply (insert x w)
@@ -1104,7 +1104,7 @@ lemma dcorres_list_all2_mapM_':
   apply (clarsimp simp add: mapM_x_def sequence_x_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ y])
-         apply (clarsimp dest!: suffixeq_ConsD)
+         apply (clarsimp dest!: suffix_ConsD)
          apply (erule meta_allE, (drule(1) meta_mp)+)
          apply assumption
         apply assumption
@@ -1115,7 +1115,7 @@ lemma dcorres_list_all2_mapM_':
   done
 
 lemmas dcorres_list_all2_mapM_
-     = dcorres_list_all2_mapM_' [OF suffixeq_refl suffixeq_refl]
+     = dcorres_list_all2_mapM_' [OF suffix_refl suffix_refl]
 
 lemma set_get_set_asid_pool:
   "do _ \<leftarrow> set_asid_pool a x; ap \<leftarrow> get_asid_pool a; set_asid_pool a (y ap) od = set_asid_pool a (y x)"
@@ -1271,7 +1271,7 @@ lemma dcorres_set_asid_pool_empty:
        apply (wp get_asid_pool_triv | clarsimp simp:typ_at_eq_kheap_obj obj_at_def swp_def)+
      apply (subgoal_tac "(aa, snd (transform_asid y)) \<in> set (map (Pair a) [0..<2 ^ ARM_A.asid_low_bits])")
       apply (clarsimp simp:set_map)
-     apply (clarsimp simp del:set_map simp:suffixeq_def)
+     apply (clarsimp simp del:set_map simp: suffix_def)
     apply (wp | clarsimp simp:swp_def)+
    apply (clarsimp simp:list_all2_iff transform_asid_def asid_low_bits_def set_zip)
    apply (clarsimp simp:unat_ucast upto_enum_def unat_of_nat)
@@ -2032,7 +2032,7 @@ lemma invoke_cnode_corres:
   apply (simp add: CSpace_A.invoke_cnode_def CNode_D.invoke_cnode_def
                    translate_cnode_invocation_def
                 split: Invocations_A.cnode_invocation.split
-            split del: split_if)
+            split del: if_split)
   apply (intro allI conjI impI)
         apply (rule corres_guard_imp, rule dcorres_insert_cap_combine)
           apply (rule refl)
@@ -2078,10 +2078,10 @@ lemma invoke_cnode_corres:
    apply (rule stronger_corres_guard_imp)
      apply (rule corres_split [OF _ get_cur_thread_corres])
        apply (rule corres_split [OF _ get_cap_corres])
-          apply (simp add: transform_cap_is_Null split del: split_if)
+          apply (simp add: transform_cap_is_Null split del: if_split)
           apply (rule corres_if_rhs2)
            apply (rule corres_trivial, simp add: when_False)
-          apply (simp add: when_def split del: split_if)
+          apply (simp add: when_def split del: if_split)
           apply (rule corres_if_rhs2)
            apply (rule corres_if_rhs2)
             apply (rule corres_trivial[OF corres_free_fail])
@@ -2156,7 +2156,7 @@ lemma decode_cnode_error_corres:
   apply (elim disjE)
    apply (clarsimp split: list.split_asm
             | rule corres_symb_exec_r_dcE[OF _ corres_trivial]
-            | wp | simp split del: split_if)+
+            | wp | simp split del: if_split)+
   done
 
 lemma transform_cnode_index_and_depth_Some:

@@ -142,7 +142,7 @@ lemma cap_revoke_spec_reads_respects_f:
                apply simp
                apply (rule_tac P="\<lambda>x. is_subject aag (fst x)" in all_children_descendants_equal)
                apply (frule aag_can_read_self)
-               apply (simp add: equiv_for_def split del: split_if)+
+               apply (simp add: equiv_for_def split del: if_split)+
              apply (wp drop_spec_ev2_inv[OF liftE_ev2] gets_evrv | simp)+
      apply (wp drop_spec_ev2_inv[OF liftE_ev2] gets_evrv reads_respects_f[OF get_cap_rev, where st=st and aag=aag and Q="\<top>", simplified equiv_valid_def2]| simp)+
     apply clarsimp
@@ -198,7 +198,7 @@ lemma invoke_cnode_reads_respects_f:
             reads_respects_f[OF cap_swap_reads_respects] cap_swap_silc_inv
             cap_move_cte_wp_at_other reads_respects_f[OF get_cap_rev] get_cap_auth_wp
             cancel_badged_sends_reads_respects_f
-       | simp add:when_def split del: split_if
+       | simp add:when_def split del: if_split
        | elim conjE, assumption)+
   apply (clarsimp simp: cnode_inv_auth_derivations_def authorised_cnode_inv_def)
   apply (auto intro: real_cte_emptyable_strg[rule_format] 
@@ -1017,7 +1017,7 @@ lemma handle_invocation_globals_equiv:
   apply (wp syscall_valid handle_fault_globals_equiv
             reply_from_kernel_globals_equiv set_thread_state_globals_equiv
             hoare_vcg_all_lift
-       | simp split del: split_if
+       | simp split del: if_split
        | wp_once hoare_drop_imps)+
         apply (rule_tac Q="\<lambda>r. invs and globals_equiv st and (\<lambda>s. thread \<noteq> idle_thread s)" and E="\<lambda>_. globals_equiv st"
                          in hoare_post_impErr)

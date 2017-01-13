@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-header {* Syntax *}
+chapter {* Syntax *}
 (*<*)
 theory Syntax imports
   "../../tools/c-parser/CTranslation"

@@ -9,7 +9,7 @@
  *)
 
 theory Noninterference_Base_Alternatives
-imports Noninterference_Base
+imports Noninterference_Base "../../lib/Eisbach_Methods"
 begin
 
 
@@ -190,7 +190,9 @@ lemma ipurgx_xpurge':
       apply(drule bspec, assumption, frule_tac a=a in enabled_Step)
       apply blast
      apply clarsimp
-     apply(rule_tac s=sc and t=sd in sched_equiv_preserved)
+     apply(match conclusion in \<open>s' \<sim>schedDomain\<sim> t'\<close> for s' t' \<Rightarrow>
+             \<open>match premises in \<open>(s,s') \<in> Step a\<close> and \<open>(t,t') \<in> Step a\<close> for a s t \<Rightarrow>
+                \<open>rule sched_equiv_preserved[of s t]\<close>\<close>)
           apply assumption
          apply blast
         apply blast

@@ -218,7 +218,7 @@ text {* These list operations roughly correspond to cdt
 lemma after_can_split: "after_in_list list x = Some y \<Longrightarrow> \<exists>ys xs. list = xs @ (x # y # ys)"
   apply (induct list x rule: after_in_list.induct)
   apply simp+
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
    apply force
   apply (elim exE)
   apply simp
@@ -243,7 +243,8 @@ lemma distinct_inj_middle: "distinct list \<Longrightarrow> list = (xa @ x # xb)
   done
  
 
-lemma after_can_split_distinct: "distinct list \<Longrightarrow> after_in_list list x = Some y \<Longrightarrow> \<exists>!ys xs. list = xs @ (x # y # ys)"
+lemma after_can_split_distinct:
+  "distinct list \<Longrightarrow> after_in_list list x = Some y \<Longrightarrow> \<exists>!ys. \<exists>!xs. list = xs @ (x # y # ys)"
   apply (frule after_can_split)
   apply (elim exE)
   apply (rule ex1I)
@@ -301,9 +302,9 @@ lemma after_in_list_inj:
   apply(simp)
   apply(case_tac "a=aa")
    apply(case_tac list, simp)
-   apply(simp add: hd_not_after_in_list split: split_if_asm)
+   apply(simp add: hd_not_after_in_list split: if_split_asm)
   apply(case_tac list, simp)
-  apply(simp add: hd_not_after_in_list split: split_if_asm)
+  apply(simp add: hd_not_after_in_list split: if_split_asm)
   done
 
 lemma list_replace_ignore:"a \<notin> set list \<Longrightarrow> list_replace list a b = list"
@@ -370,7 +371,7 @@ lemma list_insert_after_after:
     \<Longrightarrow> after_in_list (list_insert_after list a b) p
     = (if p = a then Some b else if p = b then after_in_list list a else after_in_list list p)"
   apply(induct list p rule: after_in_list.induct)
-    apply (simp split: split_if_asm)+
+    apply (simp split: if_split_asm)+
   apply fastforce
   done
 
@@ -385,14 +386,14 @@ lemma remove_distinct_helper: "\<lbrakk>distinct (list_remove list x); a \<noteq
         distinct list\<rbrakk>
        \<Longrightarrow> a \<notin> set (list_remove list x)"
   apply (induct list)
-   apply (simp split: split_if_asm)+
+   apply (simp split: if_split_asm)+
   done
 
 
 lemma list_remove_distinct:
   "distinct list \<Longrightarrow>  distinct (list_remove list x)"
   apply (induct list)
-  apply (simp add: remove_distinct_helper split: split_if_asm)+
+  apply (simp add: remove_distinct_helper split: if_split_asm)+
   done
 
 lemma list_remove_none: "x \<notin> set list \<Longrightarrow> list_remove list x = list"
@@ -416,14 +417,14 @@ lemma set_list_replace_list:
 lemma after_in_list_in_list:
   "after_in_list list a = Some b \<Longrightarrow> b \<in> set list"
   apply(induct list a arbitrary: b rule: after_in_list.induct)
-  apply (simp split: split_if_asm)+
+  apply (simp split: if_split_asm)+
   done
 
 lemma list_replace_empty_after_empty:
   "\<lbrakk>after_in_list list p = Some slot; distinct list\<rbrakk>
     \<Longrightarrow> after_in_list (list_replace_list list slot []) p = after_in_list list slot"
   apply(induct list slot rule: after_in_list.induct)
-  apply (simp split: split_if_asm)+
+  apply (simp split: if_split_asm)+
    apply (case_tac xs,simp+)
   apply (case_tac xs,simp+)
   apply (auto dest!: after_in_list_in_list)
@@ -433,7 +434,7 @@ lemma list_replace_after_fst_list:
   "\<lbrakk>after_in_list list p = Some slot; distinct list\<rbrakk>
     \<Longrightarrow> after_in_list (list_replace_list list slot (x # xs)) p = Some x"
   apply(induct list p rule: after_in_list.induct)
-  apply (simp split: split_if_asm)+
+  apply (simp split: if_split_asm)+
   apply (drule after_in_list_in_list)+
   apply force
   done
@@ -451,13 +452,13 @@ lemma after_in_list_append_last_hd:
   apply(induct list' p rule: after_in_list.induct)
     apply(simp)
    apply(simp)
-  apply(simp split: split_if_asm)
+  apply(simp split: if_split_asm)
   done
 
 lemma after_in_list_append_in_hd:
   "after_in_list list p = Some a \<Longrightarrow> after_in_list (list @ list') p = Some a"
   apply(induct list p rule: after_in_list.induct)
-    apply(simp split: split_if_asm)+
+    apply(simp split: if_split_asm)+
     done
 
 lemma after_in_list_in_list': "after_in_list list a = Some y \<Longrightarrow> a \<in> set list"
@@ -479,13 +480,13 @@ lemma list_replace_after_None_notin_new:
      apply(simp)
     apply(simp)
     apply(case_tac list', simp, simp)
-   apply(simp split: split_if_asm)
+   apply(simp split: if_split_asm)
     apply(simp add: after_in_list_append_notin_hd)
    apply(simp add: after_in_list_append_notin_hd)
   apply(case_tac "list_replace_list list slot list'")
    apply(simp)
   apply(simp)
-  apply(case_tac list, simp, simp split: split_if_asm)
+  apply(case_tac list, simp, simp split: if_split_asm)
   done
  
 lemma list_replace_after_notin_new:
@@ -497,7 +498,7 @@ lemma list_replace_after_notin_new:
   apply(intro conjI impI)
    apply(simp add: after_in_list_append_notin_hd)
    apply(case_tac list, simp, simp)
-  apply(case_tac list, simp, simp split: split_if_asm)
+  apply(case_tac list, simp, simp split: if_split_asm)
   apply(insert after_in_list_append_notin_hd)
   apply(atomize)
   apply(erule_tac x=p in allE, erule_tac x="[aa]" in allE, erule_tac x="list' @ lista" in allE)
@@ -623,13 +624,13 @@ lemma distinct_after_in_list_antisym:
   apply (induct list b arbitrary: a rule: after_in_list.induct)
     apply simp+
   apply (case_tac xs)
-   apply (clarsimp split: split_if_asm | intro impI conjI)+
+   apply (clarsimp split: if_split_asm | intro impI conjI)+
   done
 
 
 lemma after_in_listD: "after_in_list list x = Some y \<Longrightarrow> \<exists>xs ys. list = xs @ (x # y # ys) \<and> x \<notin> set xs" 
   apply (induct list x arbitrary: a rule: after_in_list.induct)
-    apply (simp split: split_if_asm | elim exE | force)+
+    apply (simp split: if_split_asm | elim exE | force)+
   apply (rule_tac x="x # xsa" in exI)
   apply simp
   done
@@ -730,7 +731,7 @@ lemma list_swap_preserve_separate:
  "\<lbrakk>p \<noteq> desta; p \<noteq> srca; z \<noteq> desta; z \<noteq> srca; after_in_list list p = Some z\<rbrakk>
 \<Longrightarrow> after_in_list (list_swap list srca desta) p = Some z"
   apply (induct list p rule: after_in_list.induct)
-  apply (simp add: list_swap_def split: split_if_asm)+
+  apply (simp add: list_swap_def split: if_split_asm)+
   apply (intro impI conjI)
    apply simp+
   done
@@ -934,7 +935,7 @@ lemma prepend_after_in_list_distinct : "distinct (a # list) \<Longrightarrow> {(
      (* base case *)
     apply (drule CollectD, simp)
     apply (case_tac list, simp)
-    apply (simp split:split_if_asm)
+    apply (simp split:if_split_asm)
     apply (rule r_into_trancl)
     apply (rule CollectI, simp)
     (* Inductive case *)
@@ -1083,11 +1084,11 @@ lemma after_in_list_last_None:
    apply(simp)
   apply(case_tac list)
    apply(simp)
-  apply(fastforce split: split_if_asm)
+  apply(fastforce split: if_split_asm)
   done
 
 lemma after_in_list_None_last:
   "\<lbrakk>after_in_list list x = None; x \<in> set list\<rbrakk> \<Longrightarrow> x = last list"
-  by (induct list x rule: after_in_list.induct,(simp split: split_if_asm)+)
+  by (induct list x rule: after_in_list.induct,(simp split: if_split_asm)+)
 
 end

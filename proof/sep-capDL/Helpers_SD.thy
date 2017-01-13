@@ -50,7 +50,7 @@ lemma insert_unit_set [simp]:
 lemma restrict_map_not_empty [simp]:
   "f p = Some v \<Longrightarrow> f |` {p} \<noteq> empty"
   "f p = Some v \<Longrightarrow> empty \<noteq> f |` {p}"
-  by (clarsimp simp: restrict_map_def fun_eq_iff split: split_if_asm)+
+  by (clarsimp simp: restrict_map_def fun_eq_iff split: if_split_asm)+
 
 (* This lets us compose a total and a partial function in the obvious manner. *)
 definition
@@ -1085,7 +1085,7 @@ lemma update_slots_same [simp]:
 
 lemma dom_sub_restrict [simp]:
   "dom (m `- A) = dom m \<inter> -A"
-  by (auto simp: sub_restrict_map_def dom_def split: split_if_asm)
+  by (auto simp: sub_restrict_map_def dom_def split: if_split_asm)
 
 lemma inter_empty_not_both:
 "\<lbrakk>x \<in> A; A \<inter> B = {}\<rbrakk> \<Longrightarrow> x \<notin> B"

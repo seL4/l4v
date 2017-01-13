@@ -24,26 +24,30 @@ lemma do_extended_return_unit[simp]: "do_extended_op f = (return () :: (unit, un
   by (clarsimp simp: do_extended_op_def wrap_ext_op_unit_def mk_ef_def select_f_def bind_def get_def return_def modify_def put_def)
 
 lemma select_ext_select[simp]: "select_ext a S = (select S :: ('b, unit) s_monad)"
-  apply (clarsimp simp: select_ext_def select_switch_unit_def assert_def get_def select_def return_def bind_def fail_def image_def split: split_if_asm )
-  by blast
+  by (rule ext)
+     (auto simp: select_ext_def select_switch_unit_def assert_def get_def select_def
+                 return_def bind_def fail_def image_def
+          split: if_split_asm)
 
 lemma OR_choice_OR[simp]: "(OR_choice c (f :: ('a,unit) s_monad) g) = (f OR g)"
-  apply (clarsimp simp: OR_choice_def alternative_def get_def select_def return_def bind_def select_f_def mk_ef_def wrap_ext_unit_def wrap_ext_bool_unit_def image_def split: split_if_asm)
-  apply (rule ext)
+  apply (rule ext, rename_tac s)
+  apply (clarsimp simp: OR_choice_def alternative_def get_def select_def return_def bind_def
+                        select_f_def mk_ef_def wrap_ext_unit_def wrap_ext_bool_unit_def image_def
+                 split: if_split_asm)
   apply (case_tac "f s")
   apply (case_tac "g s")
-  apply clarsimp
-  apply blast
-  done
+  by (intro conjI set_eqI; clarsimp?; blast)
 
 lemma OR_choiceE_OR[simp]: "(OR_choiceE c (f :: ('a + 'b,unit) s_monad) g) = (f OR g)"
   apply (clarsimp simp: OR_choiceE_def bindE_def liftE_def)
-  apply (clarsimp simp add: alternative_def get_def select_def return_def bind_def select_f_def mk_ef_def wrap_ext_unit_def wrap_ext_bool_unit_def image_def split: split_if_asm)
-  apply (rule ext)
+  apply (clarsimp simp: alternative_def get_def select_def return_def bind_def select_f_def
+                            mk_ef_def wrap_ext_unit_def wrap_ext_bool_unit_def image_def
+                 split: if_split_asm)
+  apply (rule ext, rename_tac s)
   apply (case_tac "f s")
   apply (case_tac "g s")
-  apply auto
-  done
+  apply clarsimp
+  by (intro conjI set_eqI; clarsimp?; blast)
 
 (* state relation as set, in (simp split_def) normal form *)
 abbreviation

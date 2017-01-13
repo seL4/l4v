@@ -153,7 +153,7 @@ lemma set_mrs_equiv_but_for_labels:
         (\<forall>x \<in> ptr_range buf' msg_align_bits. pasObjectAbs aag x \<in> L)
                  | _ \<Rightarrow> True))" in hoare_strengthen_post)
        apply(wp mapM_x_wp' store_word_offs_equiv_but_for_labels | simp add: split_def)+
-        apply(case_tac xa, clarsimp split: split_if_asm elim!: in_set_zipE)
+        apply(case_tac xa, clarsimp split: if_split_asm elim!: in_set_zipE)
         apply(clarsimp simp: for_each_byte_of_word_def)
         apply(erule bspec)
         apply(clarsimp simp: ptr_range_def)
@@ -673,7 +673,7 @@ lemma send_signal_reads_respects:
     note visible = this
     show ?thesis
     apply (rule pre_ev)
-     apply (simp split del: split_if
+     apply (simp split del: if_split
           | rule_tac ntfnptr=ntfnptr in blocked_cancel_ipc_nosts_reads_respects
           | rule cancel_ipc_reads_respects_rewrite
           | wp_once
@@ -737,7 +737,7 @@ lemma send_signal_reads_respects:
      apply (rule ev2_invisible_simple,assumption)
      apply (rule modifies_at_mostI)
     
-     apply ( simp split del: split_if
+     apply ( simp split del: if_split
            | rule cancel_ipc_valid_rewrite
            | wp_once
                set_notification_equiv_but_for_labels
@@ -862,7 +862,7 @@ lemma lookup_ipc_buffer_has_read_auth:
     apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def vspace_cap_rights_to_auth_def vm_read_only_def)
     apply (drule bspec)
      apply (erule (3) ipcframe_subset_page)
-    apply (clarsimp split: split_if_asm simp: vspace_cap_rights_to_auth_def is_page_cap_def)
+    apply (clarsimp split: if_split_asm simp: vspace_cap_rights_to_auth_def is_page_cap_def)
    apply(simp_all)
   done
 
@@ -997,7 +997,7 @@ lemma get_mrs_rev:
   apply (wp mapM_ev'' load_word_offs_rev thread_get_rev
        | wpc
        | rule aag_has_auth_to_read_msg[where mi=mi]
-       | clarsimp split: split_if_asm)+
+       | clarsimp split: if_split_asm)+
   done
 
 lemmas get_mrs_reads_respects_g = reads_respects_g_from_inv[OF get_mrs_rev get_mrs_inv]
@@ -1088,14 +1088,14 @@ lemma transfer_caps_loop_reads_respects:
    apply simp
    apply(rule return_ev_pre)
   apply(case_tac a)
-  apply(simp split del: split_if)
+  apply(simp split del: if_split)
   apply(rule equiv_valid_guard_imp)
   apply(wp const_on_failure_ev
        | simp | intro conjI impI)+
        apply fast
       apply(wp set_extra_badge_reads_respects | simp)+
            apply fast
-          apply(wp cap_insert_reads_respects cap_insert_pas_refined whenE_throwError_wp derive_cap_rev derive_cap_cap_cur_auth | simp split del: split_if | wp_once hoare_drop_imps)+
+          apply(wp cap_insert_reads_respects cap_insert_pas_refined whenE_throwError_wp derive_cap_rev derive_cap_cap_cur_auth | simp split del: if_split | wp_once hoare_drop_imps)+
   apply(clarsimp simp: remove_rights_cur_auth)
   apply(fastforce dest: subsetD[OF set_tl_subset])
   done
@@ -1115,18 +1115,18 @@ lemma unify_failure_ev:
   done
 
 lemma lookup_slot_for_cnode_op_rev:
-  "reads_equiv_valid_inv A aag (\<lambda>s. ((depth \<noteq> 0 \<and> depth \<le> word_bits) \<longrightarrow> (pas_refined aag s \<and> (is_cnode_cap root \<longrightarrow> is_subject aag (obj_ref_of root))))) (lookup_slot_for_cnode_op is_source root ptr depth)"
+  "reads_equiv_valid_inv A aag (\<lambda>s. ((depth \<noteq> 0 \<and> depth \<le> word_bits) \<longrightarrow> (pas_refined aag s \<and> (is_cnode_cap croot \<longrightarrow> is_subject aag (obj_ref_of croot))))) (lookup_slot_for_cnode_op is_source croot ptr depth)"
   unfolding lookup_slot_for_cnode_op_def
-  apply (clarsimp split del: split_if)
+  apply (clarsimp split del: if_split)
   apply (wp resolve_address_bits_rev lookup_error_on_failure_rev
             whenE_throwError_wp
        | wpc
        | rule hoare_post_imp_R[OF hoare_True_E_R[where P="\<top>"]]
-       | simp add: split_def split del: split_if)+
+       | simp add: split_def split del: if_split)+
   done
 
 lemma lookup_slot_for_cnode_op_reads_respects:
-  "reads_respects aag l (pas_refined aag and K (is_subject aag (obj_ref_of root))) (lookup_slot_for_cnode_op is_source root ptr depth)"
+  "reads_respects aag l (pas_refined aag and K (is_subject aag (obj_ref_of croot))) (lookup_slot_for_cnode_op is_source croot ptr depth)"
   apply(rule equiv_valid_guard_imp[OF lookup_slot_for_cnode_op_rev])
   by simp
 
@@ -1406,7 +1406,7 @@ lemma mrs_in_ipc_buffer:
   apply(simp add: image_def)
   apply(rule_tac x=x in bexI)
    apply(rule refl)
-  apply (fastforce split: split_if_asm)
+  apply (fastforce split: if_split_asm)
   done
 
 lemma aag_has_auth_to_read_mrs:
@@ -1481,7 +1481,7 @@ lemma copy_mrs_reads_respects:
            load_word_offs_reads_respects as_user_set_register_reads_respects' 
            as_user_reads_respects 
        | wpc 
-       | simp add: set_register_det get_register_det split del: split_if)+
+       | simp add: set_register_det get_register_det split del: if_split)+
   apply clarsimp
   apply(rename_tac n')
   apply(subgoal_tac " ptr_range (x + of_nat n' * of_nat word_size) 2
@@ -1585,13 +1585,13 @@ lemma make_fault_msg_reads_respects:
   "reads_respects aag l (K (aag_can_read_or_affect aag l sender)) (make_fault_msg rva sender)"
   apply(case_tac rva)
      apply (wp as_user_reads_respects
-           | simp split del: split_if
+           | simp split del: if_split
                   add: getRestartPC_det getRegister_det
            | rule det_mapM
            | rule subset_refl)+
   apply (case_tac x4)
   apply (wp as_user_reads_respects
-        | simp split del: split_if
+        | simp split del: if_split
                add: getRestartPC_det getRegister_det)+
   done
 
@@ -1601,7 +1601,7 @@ lemma set_mrs_returns_a_constant:
    apply(rule exI) 
    apply((simp add: set_mrs_def | wp | rule impI)+)[1]
   apply(rule exI) 
-  apply((simp add: set_mrs_def split del: split_if | wp | rule impI)+)[1]
+  apply((simp add: set_mrs_def split del: if_split | wp | rule impI)+)[1]
   done
 
 lemma set_mrs_ret_eq:
@@ -1881,7 +1881,7 @@ lemma send_ipc_reads_respects:
   apply(simp add: send_ipc_def)
   apply (wp set_endpoint_reads_respects set_thread_state_reads_respects 
             when_ev setup_caller_cap_reads_respects thread_get_reads_respects
-        | wpc | simp split del: split_if)+
+        | wpc | simp split del: if_split)+
                apply(rename_tac list word list' rvb)
                apply(rule_tac Q="\<lambda>r s. is_subject aag (cur_thread s) \<and> 
                                        (can_grant \<longrightarrow> is_subject aag (hd list))"
@@ -1946,7 +1946,7 @@ lemma send_fault_ipc_reads_respects:
             lookup_slot_for_thread_authorised hoare_vcg_all_lift_R
             thread_get_reads_respects get_cap_auth_wp[where aag=aag] get_cap_rev
        | wpc
-       | simp add: split_def del: split_if add: tcb_cap_cases_def)+
+       | simp add: split_def del: if_split add: tcb_cap_cases_def)+
   (* clagged from Ipc_AC *)
       apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s
                           \<and> pas_cur_domain aag s
@@ -2032,7 +2032,7 @@ lemma do_reply_transfer_reads_respects_f:
             cap_delete_one_silc_inv do_ipc_transfer_silc_inv
             set_thread_state_pas_refined thread_set_fault_pas_refined'
             attempt_switch_to_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]] when_ev
-        | wpc | simp split del: split_if | wp_once reads_respects_f[where aag=aag and st=st] | elim conjE | assumption | simp split del: split_if cong: if_cong
+        | wpc | simp split del: if_split | wp_once reads_respects_f[where aag=aag and st=st] | elim conjE | assumption | simp split del: if_split cong: if_cong
  | wp_once hoare_drop_imps)+ 
          apply(rule_tac Q="\<lambda> rv s. pas_refined aag s \<and> pas_cur_domain aag s \<and> invs s \<and> is_subject aag (cur_thread s) \<and> is_subject aag sender \<and> silc_inv aag st s \<and> is_subject aag receiver" in hoare_strengthen_post)
           apply((wp_once hoare_drop_imps
@@ -2112,7 +2112,7 @@ next
   case (Cons c caps')
   show ?case
     apply(cases c)
-    apply(simp split del: split_if cong: if_cong)
+    apply(simp split del: if_split cong: if_cong)
     apply(rule hoare_pre)
      apply(wp)
        apply(erule conjE, erule subst, rule Cons.hyps)
@@ -2308,7 +2308,7 @@ lemma receive_ipc_globals_equiv:
    apply(wp set_endpoint_globals_equiv set_thread_state_globals_equiv
              setup_caller_cap_globals_equiv dxo_wp_weak as_user_globals_equiv
        | wpc
-       | simp split del: split_if)+
+       | simp split del: if_split)+
              apply (rule hoare_strengthen_post[where Q= "\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_global_objs"])
               apply (wp do_ipc_transfer_globals_equiv as_user_globals_equiv)
              apply clarsimp
@@ -2531,7 +2531,7 @@ lemma do_reply_transfer_globals_equiv:
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding do_reply_transfer_def
   apply(wp set_thread_state_globals_equiv cap_delete_one_globals_equiv  do_ipc_transfer_globals_equiv
-    thread_set_globals_equiv handle_fault_reply_globals_equiv dxo_wp_weak | wpc | simp split del: split_if)+
+    thread_set_globals_equiv handle_fault_reply_globals_equiv dxo_wp_weak | wpc | simp split del: if_split)+
     apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_objs and valid_arch_state
       and valid_global_refs and pspace_distinct and pspace_aligned and valid_global_objs and (\<lambda>s. receiver \<noteq> idle_thread s) and valid_idle" in hoare_strengthen_post)
     apply (wp gts_wp | fastforce simp: valid_arch_state_ko_at_arm pred_tcb_at_def obj_at_def valid_idle_def)+

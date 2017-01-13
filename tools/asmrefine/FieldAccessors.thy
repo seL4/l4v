@@ -22,7 +22,7 @@ lemma h_val_mono:
   using lift_t_mono[where p=p and f=f and v=v and g="\<lambda>_. True" and g'="\<lambda>_. True"
                         and t="fst tp" and n="snd tp" and 'b='b
                         and s="(hp, ptr_retyp p undefined)"]
-  by (simp add: lift_t_if ptr_retyp_h_t_valid split: split_if_asm)
+  by (simp add: lift_t_if ptr_retyp_h_t_valid split: if_split_asm)
 
 lemma h_val_mono_to_field_rewrite:
   "\<lbrakk> field_lookup (typ_info_t TYPE('a)) [s] 0

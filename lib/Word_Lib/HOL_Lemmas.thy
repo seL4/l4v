@@ -42,11 +42,11 @@ lemma strict_part_mono_reverseE:
 
 lemma takeWhile_take_has_property:
   "n \<le> length (takeWhile P xs) \<Longrightarrow> \<forall>x \<in> set (take n xs). P x"
-  by (induct xs arbitrary: n; simp split: split_if_asm) (case_tac n, simp_all)
+  by (induct xs arbitrary: n; simp split: if_split_asm) (case_tac n, simp_all)
 
 lemma takeWhile_take_has_property_nth:
   "\<lbrakk> n < length (takeWhile P xs) \<rbrakk> \<Longrightarrow> P (xs ! n)"
-  by (induct xs arbitrary: n; simp split: split_if_asm) (case_tac n, simp_all)
+  by (induct xs arbitrary: n; simp split: if_split_asm) (case_tac n, simp_all)
 
 lemma takeWhile_replicate:
   "takeWhile f (replicate len x) = (if f x then replicate len x else [])"
@@ -78,7 +78,7 @@ next
   have "a ^ n * (a ^ m div a ^ n) = a ^ m"
   proof (subst mult.commute)
     have "a ^ m = (a ^ m div a ^ n) * a ^ n + a ^ m mod a ^ n"
-      by (rule  mod_div_equality [symmetric])
+      by (rule  div_mult_mod_eq [symmetric])
 
     moreover have "a ^ m mod a ^ n = 0"
       by (subst mod_eq_0_iff, rule exI [where x = "a ^ q"],

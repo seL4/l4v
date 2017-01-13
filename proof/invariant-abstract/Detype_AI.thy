@@ -137,7 +137,7 @@ lemma valid_mdb_descendants_range_in:
    apply (clarsimp simp:cte_wp_at_caps_of_state null_filter_def descendants_of_def)
    apply (clarsimp simp:valid_mdb_no_null)
   apply (drule(1) bspec)
-  apply (clarsimp simp:cte_wp_at_caps_of_state null_filter_def cap_range_def split:split_if_asm)
+  apply (clarsimp simp:cte_wp_at_caps_of_state null_filter_def cap_range_def split:if_split_asm)
   done
 
 
@@ -411,7 +411,7 @@ lemma unique_table_refs:
              \<Longrightarrow> unique_table_refs (\<lambda>x. if P x then None else cps x)"
     apply (simp only: unique_table_refs_def option.simps
                       simp_thms
-               split: split_if)
+               split: if_split)
     apply blast
     done
     
@@ -1318,7 +1318,7 @@ lemma range_cover_offset:
    apply simp
   apply (subst diff_mult_distrib2)
   apply (simp add: add_mult_distrib2)
-  apply (simp add:shiftr_div_2n' field_simps mult_div_cancel)
+  apply (simp add:shiftr_div_2n' field_simps minus_mod_eq_mult_div[symmetric])
   apply (rule le_trans[where j = "(n-p) * 2 ^ us + unat (ptr + of_nat p * 2 ^ us && mask sz)"])
    apply (clarsimp simp:field_simps diff_mult_distrib diff_le_mono2)
   apply (subst mask_eqs[symmetric])

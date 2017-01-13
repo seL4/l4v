@@ -73,10 +73,10 @@ definition
         \<Rightarrow> (string \<Rightarrow> word32) \<Rightarrow> 'g global_data \<Rightarrow> 'g \<Rightarrow> 'g"
 where
  "global_swap g_hrs g_hrs_upd symtab gd \<equiv>
-    (case gd of GlobalData name ln n g p \<Rightarrow> \<lambda>gs.
+    (case gd of GlobalData name len n g p \<Rightarrow> \<lambda>gs.
       g_hrs_upd (\<lambda>_. hrs_mem_update (heap_update_list (symtab name)
-            (take ln (g (g_hrs_upd (K undefined) gs)))) (g_hrs gs))
-        (p (heap_list (hrs_mem (g_hrs gs)) ln (symtab name))
+            (take len (g (g_hrs_upd (K undefined) gs)))) (g_hrs gs))
+        (p (heap_list (hrs_mem (g_hrs gs)) len (symtab name))
         (g_hrs_upd (K undefined) gs))
     | _ \<Rightarrow> id)"
 
@@ -249,23 +249,34 @@ lemma ptr_set_disjoint_footprint:
     \<Longrightarrow> ({ptr_val p ..+ size_of TYPE('a)} \<inter> S = {})"
   by (auto simp add: s_footprint_intvl[symmetric])
 
-lemma disjoint_h_val_globals_swap_filter:
+lemma disjoint_heap_list_globals_swap_filter:
   "\<lbrakk> global_acc_valid g_hrs g_hrs_upd;
      globals_list_distinct D symtab (filter is_global_data xs);
-     s_footprint p \<subseteq> D \<times> UNIV \<rbrakk>
-     \<Longrightarrow> h_val (hrs_mem (g_hrs (globals_swap g_hrs g_hrs_upd symtab xs gs))) p
-            = h_val (hrs_mem (g_hrs gs)) p"
+     {p ..+ n} \<subseteq> D \<rbrakk>
+     \<Longrightarrow> heap_list (hrs_mem (g_hrs (globals_swap g_hrs g_hrs_upd symtab xs gs))) n p
+            = heap_list (hrs_mem (g_hrs gs)) n p"
   apply (clarsimp simp: globals_swap_def)
   apply (rule foldr_does_nothing_to_xf)
-  apply (clarsimp simp: global_swap_def hrs_mem_update h_val_def
+  apply (clarsimp simp: global_swap_def hrs_mem_update
                         global_acc_valid_def globals_list_distinct_def
                  split: global_data.split)
   apply (subst heap_list_update_disjoint_same, simp_all)
   apply (drule spec, drule mp, erule conjI, simp add: is_global_data_def)
   apply (simp add: Int_commute global_data_region_def)
   apply (rule disjoint_int_intvl_min)
-  apply (rule ptr_set_disjoint_footprint)
   apply blast
+  done
+
+lemma disjoint_h_val_globals_swap_filter:
+  "\<lbrakk> global_acc_valid g_hrs g_hrs_upd;
+     globals_list_distinct D symtab (filter is_global_data xs);
+     s_footprint p \<subseteq> D \<times> UNIV \<rbrakk>
+     \<Longrightarrow> h_val (hrs_mem (g_hrs (globals_swap g_hrs g_hrs_upd symtab xs gs))) p
+            = h_val (hrs_mem (g_hrs gs)) p"
+  apply (clarsimp simp: h_val_def)
+  apply (subst disjoint_heap_list_globals_swap_filter[where g_hrs=g_hrs], assumption+)
+   apply (auto simp: s_footprint_intvl[symmetric])[1]
+  apply simp
   done
 
 lemma distinct_prop_filter:
@@ -449,7 +460,7 @@ lemma globals_swap_access_mem_raw:
   apply (clarsimp simp: in_set_conv_decomp)
   apply (subst append_2nd_simp_backward)
   apply (subst globals_swap_reorder_append, simp+)
-  apply (simp add: globals_swap_def del: foldr_append split del: split_if)
+  apply (simp add: globals_swap_def del: foldr_append split del: if_split)
   apply (subgoal_tac "global_data_valid g_hrs g_hrs_upd
                              (GlobalData nm (size_of TYPE('a)) ok g s)")
    apply (subst append_assoc[symmetric], subst foldr_append)
@@ -680,6 +691,25 @@ lemma const_globals_in_memory_heap_update_global:
   apply (drule(2) distinct_prop_memD)
   apply (auto simp: global_data_region_def global_data_def
                     is_const_global_data_def)
+  done
+
+lemma const_globals_in_memory_after_swap:
+  "global_acc_valid t_hrs_' t_hrs_'_update
+    \<Longrightarrow> globals_list_distinct D symbol_table gxs
+    \<Longrightarrow> const_globals_in_memory symbol_table gxs
+            (hrs_mem (t_hrs_' (globals_swap t_hrs_' t_hrs_'_update symbol_table gxs gs)))
+        = const_globals_in_memory symbol_table gxs (hrs_mem (t_hrs_' gs))"
+  apply (simp add: const_globals_in_memory_def)
+  apply (rule ball_cong, simp_all)
+  apply (clarsimp split: global_data.split)
+  apply (subst disjoint_heap_list_globals_swap_filter[OF _ _ order_refl],
+    assumption+, simp_all)
+  apply (clarsimp simp: globals_list_distinct_def distinct_prop_map
+                        distinct_prop_filter distinct_prop_weaken)
+  apply (drule(2) distinct_prop_memD)
+  apply (clarsimp simp: is_global_data_def ball_Un distinct_prop_append
+                        global_data_region_def Int_commute
+                 split: global_data.split_asm)
   done
 
 ML {*

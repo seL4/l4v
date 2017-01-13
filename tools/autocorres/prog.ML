@@ -95,7 +95,7 @@ fun zip_progs progA progB =
     | (RecGuard (a1, body1), RecGuard (a2, body2)) =>
         RecGuard ((a1, a2), zip_progs body1 body2)
     | other =>
-        Utils.invalid_input "structurally identical programs" (PolyML.makestring other)
+        Utils.invalid_input "structurally identical programs" (@{make_string} other)
 
 (* Map the data payloads of a given program. *)
 fun map_prog node_fn expr_fn mod_fn call_fn prog =

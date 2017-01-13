@@ -64,7 +64,7 @@ lemma in_list_Some:
 lemma in_list_valid [simp]:
   "\<lbrakk> list (lift_t_c (h,d)) xs p; ptr_val q \<in> set xs \<rbrakk>
   \<Longrightarrow> d \<Turnstile>\<^sub>t (q::machine_word ptr)"
-  by (auto dest: in_list_Some simp: lift_t_if split: split_if_asm)
+  by (auto dest: in_list_Some simp: lift_t_if split: if_split_asm)
 
 lemma list_restrict:
   "\<And>s S h. Ptr`set ps \<subseteq> S \<Longrightarrow> list (h|`S) ps s = list h ps s"

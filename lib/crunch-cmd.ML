@@ -51,7 +51,7 @@ fun funkysplit [_,b,c] = [b,c]
 
 fun real_base_name name = name |> Long_Name.explode |> funkysplit |> Long_Name.implode (*Handles locales properly-ish*)
 
-fun handle_int exn func = if Exn.is_interrupt exn then reraise exn else func
+fun handle_int exn func = if Exn.is_interrupt exn then Exn.reraise exn else func
 
 val wp_sect = "wp";
 val wp_del_sect = "wp_del";
@@ -236,7 +236,7 @@ fun deep_search_thms ctxt defn const nmspce =
       val thys = thy :: Theory.ancestors_of thy;
       val filt = filter (const_is_lhs const nmspce ctxt);
 
-      fun search [] = error("not found: const: " ^ PolyML.makestring const ^ " defn: " ^ PolyML.makestring defn)
+      fun search [] = error("not found: const: " ^ @{make_string} const ^ " defn: " ^ @{make_string} defn)
         | search (t::ts) = (case (filt (thy_maybe_thms t defn)) of
               [] => search ts
 	    | thms => thms);
@@ -272,7 +272,7 @@ fun unfold ctxt const triple nmspce =
       val const_defn = const |> Long_Name.base_name |> def_of;
       val const_def = deep_search_thms ctxt const_defn const_term nmspce
                         |> hd |> Simpdata.safe_mk_meta_eq;
-      val _ = Pretty.writeln (Pretty.block [Pretty.str ("const_def: " ^ PolyML.makestring const_defn), Thm.pretty_thm ctxt const_def])
+      val _ = Pretty.writeln (Pretty.block [Pretty.str ("const_def: " ^ @{make_string} const_defn), Thm.pretty_thm ctxt const_def])
       val trivial_rule = Thm.trivial triple
       val _ = Pretty.writeln (Pretty.block [Pretty.str "trivial_rule: ", Thm.pretty_thm ctxt trivial_rule])
       val unfold_rule = trivial_rule
@@ -319,9 +319,9 @@ fun induct_inst ctxt const goal nmspce =
     let
       val _ = debug_trace "induct_inst"
       val base_const = Long_Name.base_name const;
-      val _ = debug_trace ("base_const: " ^ PolyML.makestring base_const)
+      val _ = debug_trace ("base_const: " ^ @{make_string} base_const)
       val induct_thm = base_const |> induct_of |> get_thm ctxt;
-      val _ = debug_trace ("induct_thm: " ^ PolyML.makestring induct_thm)
+      val _ = debug_trace ("induct_thm: " ^ @{make_string} induct_thm)
       val const_term = read_const ctxt const |> map_unvarifyT;
       val n = const_term |> fastype_of |> num_args;
       val t = mk_abs (Instance.magic $ mk_apps const_term n 0) n
@@ -358,7 +358,7 @@ fun unfold_data ctxt constn goal nmspce nil = (
 
 
 
-val split_if = @{thm "split_if"}
+val split_if = @{thm "if_split"}
 
 fun maybe_cheat_tac ctxt thm =
   if (Goal.skip_proofs_enabled ())

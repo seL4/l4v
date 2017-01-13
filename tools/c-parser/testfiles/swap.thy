@@ -44,7 +44,7 @@ apply(insert swap_impl)
 apply(unfold swap_body_def)
 apply(subst mem_safe_restrict)
 apply(rule intra_mem_safe)
- apply(simp_all add: restrict_map_def split: split_if_asm)
+ apply(simp_all add: restrict_map_def split: if_split_asm)
 apply(auto simp: whileAnno_def intra_sc)
 done
 

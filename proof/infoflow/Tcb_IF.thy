@@ -449,8 +449,8 @@ lemma invoke_tcb_globals_equiv:
        apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv
                  cap_insert_globals_equiv'' thread_set_globals_equiv 
                  set_mcpriority_globals_equiv
-              | clarsimp simp add: invs_valid_ko_at_arm split del: split_if)+
-       apply (simp_all del: Tcb_AI.tcb_inv_wf.simps split del: split_if)
+              | clarsimp simp add: invs_valid_ko_at_arm split del: if_split)+
+       apply (simp_all del: Tcb_AI.tcb_inv_wf.simps split del: if_split)
        apply (wp | clarsimp simp: invs_valid_ko_at_arm no_cap_to_idle_thread | intro conjI impI)+
        apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arm_copy_register_sets)
        apply (rule_tac Q="\<lambda>_. valid_ko_at_arm and globals_equiv st and (\<lambda>s. word1 \<noteq> idle_thread s) 
@@ -596,7 +596,7 @@ lemma ethread_set_priority_pas_refined[wp]:
   apply (erule_tac x="(a, b)" in ballE)
    apply force
   apply (erule notE)
-  apply (erule domains_of_state_aux.cases, simp add: get_etcb_def split: split_if_asm)
+  apply (erule domains_of_state_aux.cases, simp add: get_etcb_def split: if_split_asm)
    apply (force intro: domtcbs)+
    done
 
@@ -607,7 +607,7 @@ lemma set_priority_reads_respects: "reads_respects aag l
   apply (wp get_thread_state_rev
             gets_cur_thread_ev gts_wp hoare_vcg_all_lift
             ethread_set_reads_respects tcb_sched_action_reads_respects
-            when_ev | simp split del: split_if | wp_once hoare_drop_imps |
+            when_ev | simp split del: if_split | wp_once hoare_drop_imps |
             rule hoare_strengthen_post, rule ethread_set_priority_pas_refined | force)+
   done
 
@@ -679,7 +679,7 @@ lemma invoke_tcb_reads_respects_f:
        apply(wp as_user_reads_respects_f suspend_silc_inv when_ev suspend_reads_respects_f[where st=st] | simp | elim conjE, assumption)+
        apply(auto simp: authorised_tcb_inv_def intro!: det_mapM[OF _ subset_refl] simp: det_getRegister simp: reads_equiv_f_def)[1]
       apply(wp when_ev mapM_x_ev'' as_user_reads_respects_f[where st=st]  hoare_vcg_ball_lift mapM_x_wp' restart_reads_respects_f restart_silc_inv hoare_vcg_if_lift suspend_reads_respects_f suspend_silc_inv
-           | simp split del: split_if add: det_setRegister det_setNextPC)+
+           | simp split del: if_split add: det_setRegister det_setNextPC)+
       apply(auto simp add: authorised_tcb_inv_def simp: idle_no_ex_cap[OF invs_valid_global_refs invs_valid_objs] det_getRestartPC det_getRegister)[1]
      defer
      apply((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st]  | simp add: authorised_tcb_inv_def)+)[2]
@@ -762,7 +762,7 @@ lemma decode_tcb_invocation_authorised_extra:
                               decode_bind_notification_def
                               decode_unbind_notification_def
                               split_def decode_set_space_def
-                   split del: split_if)+
+                   split del: if_split)+
   done
 
 end

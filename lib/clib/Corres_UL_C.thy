@@ -420,8 +420,8 @@ lemma exec_handlers_Hoare_from_vcg_nofail:
   "\<Gamma> \<turnstile>\<^bsub>/F\<^esub> P c Q \<Longrightarrow> exec_handlers_Hoare \<Gamma> P (c # cs) Q A"
   apply (drule hoare_sound)
   apply (simp add: cvalid_def HoarePartialDef.valid_def
-                   exec_handlers_Hoare_def split del: split_if)
-  apply (clarsimp split del: split_if)
+                   exec_handlers_Hoare_def split del: if_split)
+  apply (clarsimp split del: if_split)
   apply (erule exec_handlers.cases, auto)
   done
 
@@ -429,8 +429,8 @@ lemma exec_handlers_Hoare_from_vcg_fails:
   "\<lbrakk> \<Gamma> \<turnstile>\<^bsub>/F\<^esub> P c {},UNIV; UNIV \<subseteq> A \<rbrakk> \<Longrightarrow> exec_handlers_Hoare \<Gamma> P (c # cs) Q A"
   apply (drule hoare_sound)
   apply (simp add: cvalid_def HoarePartialDef.valid_def
-                   exec_handlers_Hoare_def split del: split_if)
-  apply (clarsimp split del: split_if)
+                   exec_handlers_Hoare_def split del: if_split)
+  apply (clarsimp split del: if_split)
   apply (erule exec_handlers.cases, simp_all)
    apply (cases cs)
     apply (auto elim!: exec_handlers.cases)[1]
@@ -987,7 +987,7 @@ lemma ccorres_liftM_simp [simp]:
   apply (erule (5) ccorresE)
   apply (simp add: liftM_def NonDetMonad.bind_def return_def)
   apply (erule bexI [rotated])
-  apply (simp add: unif_rrel_def split: split_if_asm)
+  apply (simp add: unif_rrel_def split: if_split_asm)
   done
 
 lemma ccorres_cond_weak:  
@@ -1225,7 +1225,7 @@ lemma ccorres_gen_asm2:
    prefer 2
    apply (rule ccorres_guard_imp)
    apply (erule rl)
-    apply (simp split: split_if_asm)+
+    apply (simp split: if_split_asm)+
     done
  
 lemma ccorres_guard_imp2:

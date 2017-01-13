@@ -31,7 +31,7 @@ where
 lemma tailrec_steps:
   "g x \<Longrightarrow> tailrec f1 f2 g x = tailrec f1 f2 g (f1 x)"
   "\<not> g x \<Longrightarrow> tailrec f1 f2 g x = f2 x"
-  by (simp_all add: tailrec.simps cong: if_weak_cong split del: split_if)
+  by (simp_all add: tailrec.simps cong: if_weak_cong split del: if_split)
 
 definition
   "short_tailrec (f :: 'a \<Rightarrow> ('a + 'b) \<times> bool) \<equiv>

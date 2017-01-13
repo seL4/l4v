@@ -186,13 +186,13 @@ lemma
     apply (simp add: absHeapArch_def)
     apply (case_tac arch_kernel_object)
       apply (clarsimp split: asidpool.splits)
-     apply (clarsimp split: split_if_asm)
+     apply (clarsimp split: if_split_asm)
      using  ptes
      apply (erule_tac x=x in allE)
      apply simp
      apply (erule_tac x=y in allE)
      apply clarsimp
-    apply (clarsimp split: split_if_asm)
+    apply (clarsimp split: if_split_asm)
     using pdes
     apply (erule_tac x=x in allE)
     apply simp
@@ -206,7 +206,7 @@ lemma
      apply (clarsimp split: asidpool.splits)
     using fst_pte
     apply (erule_tac x=y in allE)
-    apply (clarsimp split: split_if_asm)
+    apply (clarsimp split: if_split_asm)
     apply (rule_tac x="(y && ~~ mask pt_bits)" in exI, simp)
     apply (simp add: is_aligned_mask mask_AND_NOT_mask)
     apply (simp add: range_composition[symmetric])
@@ -244,7 +244,7 @@ lemma
     apply (simp add: other_obj_relation_def asid_pool_relation_def o_def inv_def)
    apply simp
    apply (clarsimp simp: pte_relation_def pte_relation_aligned_def
-                  split: split_if_asm)
+                  split: if_split_asm)
    using ptes
    apply (erule_tac x=x in allE)
    apply simp
@@ -259,7 +259,7 @@ lemma
    apply -[1]
    apply (erule_tac x="x + (ucast y << 2)" in allE)+
    subgoal by fastforce
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
   using pdes
   apply (erule_tac x=x in allE)
   apply simp
@@ -629,7 +629,7 @@ proof -
 
      apply (case_tac a)
          apply (simp_all add: other_obj_relation_def
-                       split: split_if_asm Structures_H.kernel_object.splits)
+                       split: if_split_asm Structures_H.kernel_object.splits)
       apply (rename_tac sz cs)
       apply (clarsimp simp add: image_def cte_map_def
                  well_formed_cnode_n_def Collect_eq dom_def)
@@ -649,7 +649,7 @@ proof -
            apply (erule pspace_dom_relatedE[OF _ pspace_relation])
            apply clarsimp
            apply (case_tac ko, simp_all add: other_obj_relation_def)
-             apply (clarsimp simp add: cte_relation_def split: split_if_asm)
+             apply (clarsimp simp add: cte_relation_def split: if_split_asm)
             apply (clarsimp simp add: ep_relation_def EndpointMap_def
                      split: Structures_A.endpoint.splits)
            apply (clarsimp simp add: EndpointMap_def
@@ -659,11 +659,11 @@ proof -
                   simp_all add: other_obj_relation_def)
              apply (clarsimp simp add: pte_relation_def)
             apply (clarsimp simp add: pde_relation_def)
-           apply (clarsimp split: split_if_asm)+
+           apply (clarsimp split: if_split_asm)+
 
           apply (erule pspace_dom_relatedE[OF _ pspace_relation])
           apply (case_tac ko, simp_all add: other_obj_relation_def)
-            apply (clarsimp simp add: cte_relation_def split: split_if_asm)
+            apply (clarsimp simp add: cte_relation_def split: if_split_asm)
            apply (clarsimp simp add: ntfn_relation_def AEndpointMap_def
                     split: Structures_A.ntfn.splits)
           apply (clarsimp simp add: AEndpointMap_def
@@ -672,26 +672,26 @@ proof -
           apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
             apply (clarsimp simp add: pte_relation_def)
            apply (clarsimp simp add: pde_relation_def)
-          apply (clarsimp split: split_if_asm)+
+          apply (clarsimp split: if_split_asm)+
 
          apply (erule pspace_dom_relatedE[OF _ pspace_relation])
          apply (case_tac ko, simp_all add: other_obj_relation_def)
-           apply (clarsimp simp add: cte_relation_def split: split_if_asm)
+           apply (clarsimp simp add: cte_relation_def split: if_split_asm)
          apply (rename_tac arch_kernel_obj)
          apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
            apply (clarsimp simp add: pte_relation_def)
           apply (clarsimp simp add: pde_relation_def)
-         apply (clarsimp split: split_if_asm)+
+         apply (clarsimp split: if_split_asm)+
 
         apply (erule pspace_dom_relatedE[OF _ pspace_relation])
         apply (case_tac ko, simp_all add: other_obj_relation_def)
-          apply (clarsimp simp add: cte_relation_def split: split_if_asm)
+          apply (clarsimp simp add: cte_relation_def split: if_split_asm)
         apply (rename_tac arch_kernel_obj)
         apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
           apply (clarsimp simp add: pte_relation_def)
          apply (clarsimp simp add: pde_relation_def)
         apply (rename_tac vmpage_size)
-        apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: split_if_asm)
+        apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
         apply (case_tac "n=0", simp)
         apply (case_tac "kheap s (y + n * 2 ^ pageBits)")
          apply (rule ccontr)
@@ -699,7 +699,7 @@ proof -
         using pspace_aligned
         apply (simp add: pspace_aligned_def dom_def)
         apply (erule_tac x=y in allE)
-        apply (case_tac "n=0",(simp split: split_if_asm)+)
+        apply (case_tac "n=0",(simp split: if_split_asm)+)
         apply (frule (2) unaligned_page_offsets_helper)
         apply (frule_tac y="n*2^pageBits" in pspace_aligned_distinct_None'
                                           [OF pspace_aligned pspace_distinct])
@@ -711,13 +711,13 @@ proof -
           apply ((frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+)[4]
         apply (erule pspace_dom_relatedE[OF _ pspace_relation])
         apply (case_tac ko, simp_all add: other_obj_relation_def)
-          apply (clarsimp simp add: cte_relation_def split: split_if_asm)
+          apply (clarsimp simp add: cte_relation_def split: if_split_asm)
         apply (rename_tac arch_kernel_obj)
         apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
           apply (clarsimp simp add: pte_relation_def)
          apply (clarsimp simp add: pde_relation_def)
         apply (rename_tac vmpage_size)
-        apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: split_if_asm)
+        apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
         apply (case_tac "n=0", simp)
         apply (case_tac "kheap s (y + n * 2 ^ pageBits)")
          apply (rule ccontr)
@@ -737,13 +737,13 @@ proof -
           apply ((frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+)[4]
        apply (erule pspace_dom_relatedE[OF _ pspace_relation])
        apply (case_tac ko, simp_all add: other_obj_relation_def)
-         apply (clarsimp simp add: cte_relation_def split: split_if_asm)
+         apply (clarsimp simp add: cte_relation_def split: if_split_asm)
         prefer 2
         apply (rename_tac arch_kernel_obj)
         apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
           apply (clarsimp simp add: pte_relation_def)
          apply (clarsimp simp add: pde_relation_def)
-        apply (clarsimp split: split_if_asm)
+        apply (clarsimp split: if_split_asm)
        apply (clarsimp simp add: TcbMap_def tcb_relation_def valid_obj_def)
        apply (rename_tac tcb y tcb')
        apply (case_tac tcb)
@@ -765,13 +765,13 @@ proof -
       apply (simp add: absCNode_def cte_map_def)
       apply (erule pspace_dom_relatedE[OF _ pspace_relation])
       apply (case_tac ko, simp_all add: other_obj_relation_def
-                                 split: split_if_asm)
+                                 split: if_split_asm)
        prefer 2
        apply (rename_tac arch_kernel_obj)
        apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
          apply (clarsimp simp add: pte_relation_def)
         apply (clarsimp simp add: pde_relation_def)
-       apply (clarsimp split: split_if_asm)
+       apply (clarsimp split: if_split_asm)
       apply (simp add: cte_map_def)
       apply (clarsimp simp add: cte_relation_def)
       apply (cut_tac a=y and n=sz in gsCNodes, clarsimp)
@@ -833,7 +833,7 @@ proof -
     apply clarsimp
     apply (erule pspace_dom_relatedE[OF _ pspace_relation])
     apply (case_tac ko, simp_all add: other_obj_relation_def)
-     apply (clarsimp simp add: cte_relation_def split: split_if_asm)
+     apply (clarsimp simp add: cte_relation_def split: if_split_asm)
     apply (rename_tac arch_kernel_object y ko P arch_kernel_obj)
     apply (case_tac arch_kernel_object, simp_all add: absHeapArch_def
                                             split: asidpool.splits)
@@ -844,7 +844,7 @@ proof -
                           inv_def o_def)
         apply (clarsimp simp add:  pte_relation_def)
        apply (clarsimp simp add:  pde_relation_def)
-      apply (clarsimp split: split_if_asm)+
+      apply (clarsimp split: if_split_asm)+
 
      apply (case_tac arch_kernel_obj)
         apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def
@@ -887,7 +887,7 @@ proof -
        apply (rule set_eqI, clarsimp)
        apply (case_tac x, simp_all)[1]
       apply (clarsimp simp add: pde_relation_def)
-     apply (clarsimp split: split_if_asm)+
+     apply (clarsimp split: if_split_asm)+
 
     apply (case_tac arch_kernel_obj)
        apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def
@@ -933,7 +933,7 @@ proof -
      apply (clarsimp split: ARM_A.pde.splits)
      apply (rule set_eqI, clarsimp)
      apply (case_tac x, simp_all)[1]
-    apply (clarsimp simp add: pde_relation_def split: split_if_asm)
+    apply (clarsimp simp add: pde_relation_def split: if_split_asm)
     done
 qed
 
@@ -982,7 +982,7 @@ shows
   apply (erule(1) pspace_dom_relatedE)
   apply (erule(1) obj_relation_cutsE)
   apply (clarsimp simp: other_obj_relation_def
-                 split: Structures_A.kernel_object.split_asm  split_if_asm
+                 split: Structures_A.kernel_object.split_asm  if_split_asm
                         ARM_A.arch_kernel_obj.split_asm)+
   done
 
@@ -1007,7 +1007,7 @@ done
 
 lemma tcb_cap_cases_length:
   "tcb_cap_cases b = Some x \<Longrightarrow> length b = 3"
-by (simp add: tcb_cap_cases_def tcb_cnode_index_def split: split_if_asm)
+by (simp add: tcb_cap_cases_def tcb_cnode_index_def split: if_split_asm)
 
 lemma of_bl_mult_and_not_mask_eq:
   "\<lbrakk>is_aligned (a :: word32) n; length b + m \<le> n\<rbrakk>
@@ -1109,8 +1109,8 @@ proof -
     by (simp add: state_relation_def ghost_relation_def)
 
   show ?thesis
-  apply (simp add: dom_def cteMap_def  split: split_if_asm)
-  apply (clarsimp simp: caps_of_state_cte_wp_at split: split_if_asm)
+  apply (simp add: dom_def cteMap_def  split: if_split_asm)
+  apply (clarsimp simp: caps_of_state_cte_wp_at split: if_split_asm)
   apply (drule cte_wp_cte_at)
   apply (intro conjI impI)
    apply (rule some_equality)
@@ -1240,7 +1240,7 @@ proof -
     apply (rule ext)
     apply (clarsimp simp add: revokable_relation_def
                               null_filter_def absIsOriginalCap_def
-                       split: split_if_asm)
+                       split: if_split_asm)
     apply (erule_tac x=a in allE)
     apply (erule_tac x=b in allE)
     apply (case_tac "caps_of_state s (a, b)")
@@ -1483,7 +1483,7 @@ proof -
      apply (drule sym)   
      apply (simp add: mdb_cte_at_def)
      apply (simp add: absCDT_def split_def)   
-     apply (simp add: parent_of'_def split: split_if_asm)
+     apply (simp add: parent_of'_def split: if_split_asm)
      apply (intro impI)
      apply (frule_tac a=a and b=b in cnp[simplified,rule_format])
      apply simp
@@ -1565,7 +1565,7 @@ lemma has_next_slot_is_descendant :
   shows
     "next_slot slot t m = Some slot2 \<Longrightarrow> m slot2 = Some slot \<or> (\<exists>p. slot \<in> descendants_of p m)"
     apply (insert valid_list_2)
-    apply (simp add: next_slot_def next_child_def split: split_if_asm)
+    apply (simp add: next_slot_def next_child_def split: if_split_asm)
      apply (case_tac "t slot",simp+)
      apply (simp add: valid_list_2_def)
      apply (rule disjI1)
@@ -1641,10 +1641,10 @@ lemma cte_at_has_cap: "cte_at slot s \<Longrightarrow> \<exists>c. cte_wp_at (op
     apply (induct slot rule: next_sib_2_pinduct[where s=s and p=p])
     apply (cut_tac slot=slot and s=s and p=p in next_sib_2.psimps[OF next_sib_2_termination], (simp add: assms')+)
     apply (fold m_def t_def)
-      apply (simp split: split_if_asm)
+      apply (simp split: if_split_asm)
       apply (case_tac "next_slot slot t m")
        apply simp
-      apply (simp split: split_if_asm)
+      apply (simp split: if_split_asm)
        apply (rule r_into_rtrancl)
        apply (erule next_slot_mdb_next)
       apply (drule_tac x="a" in meta_spec)
@@ -1849,8 +1849,8 @@ done
 
 definition
   "absArchState s' \<equiv>
-   case s' of ARMKernelState at hwat anext am gpd gpts kvspace \<Rightarrow>
-     \<lparr>arm_asid_table = at \<circ> ucast,
+   case s' of ARMKernelState asid_tbl hwat anext am gpd gpts kvspace \<Rightarrow>
+     \<lparr>arm_asid_table = asid_tbl \<circ> ucast,
       arm_hwasid_table = hwat, arm_next_asid = anext,
       arm_asid_map = am, arm_global_pd = gpd, arm_global_pts = gpts,
       arm_kernel_vspace = kvspace\<rparr>"

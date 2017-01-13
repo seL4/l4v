@@ -26,11 +26,11 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-section {* Properties of Total Correctness Hoare Logic *}
+section \<open>Properties of Total Correctness Hoare Logic\<close>
 
 theory HoareTotalProps imports SmallStep HoareTotalDef HoarePartialProps begin
 
-subsection {* Soundness *}
+subsection \<open>Soundness\<close>
 
 lemma hoaret_sound: 
  assumes hoare: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
@@ -621,7 +621,7 @@ proof -
     by (rule hoare_complete)
 qed
 
-subsection {* Completeness *}
+subsection \<open>Completeness\<close>
 
 lemma MGT_valid:
 "\<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F \<^esub>{s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and> \<Gamma>\<turnstile>c\<down>Normal s} c 
@@ -643,8 +643,8 @@ next
     by blast
 qed
 
-text {* The consequence rule where the existential @{term Z} is instantiated
-to @{term s}. Usefull in proof of @{text "MGT_lemma"}.*}
+text \<open>The consequence rule where the existential @{term Z} is instantiated
+to @{term s}. Usefull in proof of \<open>MGT_lemma\<close>.\<close>
 lemma ConseqMGT: 
   assumes modif: "\<forall>Z::'a. \<Gamma>,\<Theta> \<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' Z::'a assn) c (Q' Z),(A' Z)"
   assumes impl: "\<And>s. s \<in> P \<Longrightarrow> s \<in> P' s \<and> (\<forall>t. t \<in> Q' s \<longrightarrow> t \<in> Q) \<and> 
@@ -2009,10 +2009,10 @@ next
 qed
 
 
-text {* To prove a procedure implementation correct it suffices to assume
+text \<open>To prove a procedure implementation correct it suffices to assume
        only the procedure specifications of procedures that actually
        occur during evaluation of the body.  
-    *}
+\<close>
 
 lemma Call_lemma:
  assumes A: 
@@ -2093,7 +2093,7 @@ lemma image_Un_conv: "f ` (\<Union>p\<in>dom \<Gamma>. \<Union>Z. {x p Z}) =  (\
   by (auto iff: not_None_eq)
 
 
-text {* Another proof of @{text MGT_Call}, maybe a little more readable *}
+text \<open>Another proof of \<open>MGT_Call\<close>, maybe a little more readable\<close>
 lemma 
 "\<forall>p \<in> dom \<Gamma>. \<forall>Z. 
   \<Gamma>,{} \<turnstile>\<^sub>t\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Call p,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and> 
@@ -2105,15 +2105,15 @@ proof -
   {
     fix p Z \<sigma>
     assume defined: "p \<in> dom \<Gamma>"
-    def Specs == "(\<Union>p\<in>dom \<Gamma>. \<Union>Z. 
+    define Specs where "Specs = (\<Union>p\<in>dom \<Gamma>. \<Union>Z. 
             {({s. s=Z \<and> 
               \<Gamma>\<turnstile>\<langle>Call p,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and> 
               \<Gamma>\<turnstile>Call p\<down>Normal s},
              p,
              {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Normal t},
              {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Abrupt t})})"
-    def Specs_wf == "(\<lambda>p \<sigma>. (\<lambda>(P,q,Q,A). 
-                       (P \<inter> {s. ((s,q),\<sigma>,p) \<in> termi_call_steps \<Gamma>}, q, Q, A)) ` Specs)"
+    define Specs_wf where "Specs_wf p \<sigma> = (\<lambda>(P,q,Q,A). 
+                       (P \<inter> {s. ((s,q),\<sigma>,p) \<in> termi_call_steps \<Gamma>}, q, Q, A)) ` Specs" for p \<sigma>
     have "\<Gamma>,Specs_wf p \<sigma>
             \<turnstile>\<^sub>t\<^bsub>/F\<^esub>({\<sigma>} \<inter>
                  {s. s = Z \<and> \<Gamma>\<turnstile>\<langle>the (\<Gamma> p),Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and> 
@@ -2181,9 +2181,9 @@ next
     by (rule ExFalso)
 qed
 
-subsection {* And Now: Some Useful Rules *}
+subsection \<open>And Now: Some Useful Rules\<close>
 
-subsubsection {* Modify Return *}
+subsubsection \<open>Modify Return\<close>
 
 lemma ProcModifyReturn_sound:
   assumes valid_call: "\<Gamma>,\<Theta> \<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P call init p return' c Q,A"
@@ -2481,7 +2481,7 @@ apply (blast intro: hoare_sound)
 done
 
 
-subsubsection {* DynCall *}
+subsubsection \<open>DynCall\<close>
 
 
 lemma dynProcModifyReturn_sound:
@@ -2823,7 +2823,7 @@ apply (rule hoare_sound [OF modif [rule_format]])
 apply assumption
 done
 
-subsubsection {* Conjunction of Postcondition *}
+subsubsection \<open>Conjunction of Postcondition\<close>
 
 lemma PostConjI_sound:
   assumes valid_Q: "\<Gamma>,\<Theta> \<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
@@ -2881,12 +2881,12 @@ proof (rule cvalidtI)
   show "t \<in> Normal ` (Q \<inter> R) \<union> Abrupt ` (A \<inter> X)"
   proof -
     from cvalidt_postD [OF validF [rule_format] ctxt exec P t_noFault]
-    have "t \<in> Normal ` Q \<union> Abrupt ` A".
-    moreover from this have "t \<notin> Fault ` G"
+    have t: "t \<in> Normal ` Q \<union> Abrupt ` A".
+    then have "t \<notin> Fault ` G"
       by auto
     from cvalidt_postD [OF validG [rule_format] ctxt' exec P' this]
     have "t \<in> Normal ` R \<union> Abrupt ` X" .
-    ultimately show ?thesis by auto
+    with t show ?thesis by auto
   qed
 next
   fix s
@@ -2912,7 +2912,7 @@ using validG apply (blast intro:hoaret_sound)
 done
 
 
-subsubsection {* Guards and Guarantees *}
+subsubsection \<open>Guards and Guarantees\<close>
 
 lemma SplitGuards_sound:
   assumes valid_c1: "\<Gamma>,\<Theta>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c\<^sub>1 Q,A"
@@ -3391,7 +3391,7 @@ apply (rule NormalizeI_sound)
 apply (iprover intro: hoaret_sound [OF deriv])
 done
 
-subsubsection {* Restricting the Procedure Environment *}
+subsubsection \<open>Restricting the Procedure Environment\<close>
 
 lemma validt_restrict_to_validt:
 assumes validt_c: "\<Gamma>|\<^bsub>M\<^esub>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
@@ -3429,7 +3429,7 @@ shows "\<Gamma>,{}\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
   apply (insert hoaret_sound [OF deriv_c])
   by (simp add: cvalidt_def)
 
-subsubsection {* Miscellaneous *}
+subsubsection \<open>Miscellaneous\<close>
 
 lemma augment_Faults:
 assumes deriv_c: "\<Gamma>,{}\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"

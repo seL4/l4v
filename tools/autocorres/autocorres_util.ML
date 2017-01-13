@@ -116,8 +116,8 @@ exception AutocorresTimeout of string list
 fun time_limit f v =
   case !max_run_time of
     SOME t =>
-      (TimeLimit.timeLimit t f ()
-      handle TimeLimit.TimeOut =>
+      (Timeout.apply t f ()
+      handle Timeout.TIMEOUT _ =>
         raise AutocorresTimeout v)
   | NONE =>
       f ()

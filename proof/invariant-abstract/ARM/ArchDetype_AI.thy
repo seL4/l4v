@@ -540,7 +540,7 @@ lemma pspace_respects_device_region_detype[detype_invs_proofs]:
     apply (intro pspace_respects_device_regionI)
     using pspace_aligned_detype valid_objs_detype invs
     apply (simp_all add: clear_um.pspace detype_def dom_def clear_um_def
-                  split: split_if_asm )
+                  split: if_split_asm )
        apply (drule pspace_respects_device_regionD[rotated -1],auto)+
     done
   qed

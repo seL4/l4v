@@ -356,7 +356,7 @@ lemma pspace_relation_tcb_at:
   apply (erule(1) pspace_dom_relatedE)
   apply (erule(1) obj_relation_cutsE)
   apply (clarsimp simp: other_obj_relation_def is_tcb obj_at_def
-                 split: Structures_A.kernel_object.split_asm split_if_asm
+                 split: Structures_A.kernel_object.split_asm if_split_asm
                         ARM_A.arch_kernel_obj.split_asm)+
   done
 
@@ -940,16 +940,16 @@ lemma threadSet_valid_queues_addToQs:
      threadSet F t
    \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
   apply (simp add: valid_queues'_def threadSet_def obj_at'_real_def
-                split del: split_if)
+                split del: if_split)
   apply (simp only: imp_conv_disj)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
      apply (wp setObject_ko_wp_at | simp add: objBits_simps)+
     apply (wp getObject_tcb_wp updateObject_default_inv
-               | simp split del: split_if)+
+               | simp split del: if_split)+
   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs
                         objBits_simps addToQs_set_def
-             split del: split_if cong: if_cong)
-  apply (fastforce simp: projectKOs split: split_if_asm)
+             split del: if_split cong: if_cong)
+  apply (fastforce simp: projectKOs split: if_split_asm)
   done
 
 lemma threadSet_valid_queues_Qf:
@@ -1328,7 +1328,7 @@ proof -
                  valid_tcb_state' (tcbState (F tcb)) = valid_tcb_state' (tcbState tcb)"
     by (auto simp: z)
   show ?thesis
-    apply (simp add: invs'_def valid_state'_def split del: split_if)
+    apply (simp add: invs'_def valid_state'_def split del: if_split)
     apply (rule hoare_pre)
      apply (wp x w v u b
               threadSet_valid_pspace'T
@@ -1978,7 +1978,7 @@ proof -
                      apply (fastforce intro: threadSet_corres_noop simp: tcb_relation_def exst_same_def)
                     apply (fastforce intro: addToBitmap_corres_noop)
                    apply wp
-                 apply (simp add: tcb_sched_enqueue_def split del: split_if)
+                 apply (simp add: tcb_sched_enqueue_def split del: if_split)
                  apply (rule_tac P=\<top> and Q="K (t \<notin> set queuea)" in corres_assume_pre)
                  apply (wp setQueue_corres[unfolded dc_def] | simp)+
               apply (wp getQueue_corres getObject_tcb_wp  | simp add: etcb_relation_def threadGet_def)+
@@ -2543,7 +2543,7 @@ apply (simp add: tcb_in_cur_domain'_def)
 apply (rule hoare_assume_pre)
 apply simp
 apply (rule_tac f="ksCurDomain" in hoare_lift_Pf)
-apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | simp add: assms)+
+apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | simp)+
 done
 
 lemma threadSet_sch_act_wf:
@@ -3661,7 +3661,7 @@ lemma get_mrs_corres:
     apply (simp add: S ARM_H.msgRegisters_def msg_registers_def)
     done
   show ?thesis
-  apply (case_tac mi, simp add: get_mrs_def getMRs_def split del: split_if)
+  apply (case_tac mi, simp add: get_mrs_def getMRs_def split del: if_split)
   apply (case_tac buf)
    apply (rule corres_guard_imp)
     apply (rule corres_split [where R = "\<lambda>_. \<top>" and R' =  "\<lambda>_. \<top>", OF _ T])
@@ -3772,7 +3772,7 @@ proof -
 
   show ?thesis using m
     unfolding setMRs_def set_mrs_def
-    apply (clarsimp  cong: option.case_cong split del: split_if)
+    apply (clarsimp  cong: option.case_cong split del: if_split)
     apply (subst bind_assoc[symmetric])
     apply (fold thread_set_def[simplified])
     apply (subst thread_set_as_user[where f="\<lambda>context. \<lambda>reg.
@@ -3788,7 +3788,7 @@ proof -
                            cong: if_cong simp del: the_index.simps)
          apply ((wp |simp)+)[5]
     -- "buf = Some a"
-    using split_if[split del]
+    using if_split[split del]
     apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_Nil zipWithM_x_modify
                           take_min_len zip_take_triv2 min.commute
                           msgMaxLength_def msgLengthBits_def)
@@ -3853,7 +3853,7 @@ proof -
     apply (rule corres_assume_pre)
     apply (simp add: copy_mrs_def copyMRs_def word_size
                cong: option.case_cong
-          split del: split_if del: upt.simps)
+          split del: if_split del: upt.simps)
     apply (cases sb)
      apply (simp add: R)
      apply (rule corres_guard_imp)
@@ -3986,7 +3986,7 @@ lemma lipcb_corres':
           apply (rule_tac P="valid_cap rv" and Q="no_0_obj'"
                     in corres_assume_pre)
           apply (simp add: Let_def split: cap.split arch_cap.split
-                         split del: split_if cong: if_cong)
+                         split del: if_split cong: if_cong)
           apply (safe, simp_all add: isCap_simps valid_ipc_buffer_cap_simps split:bool.split_asm)[1]
           apply (rename_tac word rights vmpage_size option)
           apply (subgoal_tac "word + (buffer_ptr &&
@@ -4008,7 +4008,7 @@ lemma lipcb_corres':
            apply (case_tac vmpage_size, simp_all)[1]
            apply (drule state_relation_pspace_relation)
            apply (clarsimp simp: valid_cap_def obj_at_def no_0_obj_kheap
-                                obj_relation_cuts_def3 no_0_obj'_def split:split_if_asm)
+                                obj_relation_cuts_def3 no_0_obj'_def split:if_split_asm)
          apply (simp add: cte_map_def tcb_cnode_index_def cte_level_bits_def tcbIPCBufferSlot_def)
         apply (wp get_cap_valid_ipc get_cap_aligned)
       apply (simp add: tcb_relation_def)
@@ -4135,7 +4135,7 @@ lemma gbn_sp':
 lemma tcbSchedDequeue_tcbState_obj_at'[wp]:
   "\<lbrace>obj_at' (P \<circ> tcbState) t'\<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>rv. obj_at' (P \<circ> tcbState) t'\<rbrace>"
   apply (simp add: tcbSchedDequeue_def)
-  apply (wp | simp add: o_def split del: split_if cong: if_cong)+
+  apply (wp | simp add: o_def split del: if_split cong: if_cong)+
   done
 
 crunch typ_at'[wp]: setQueue "\<lambda>s. P' (typ_at' P t s)"
@@ -4166,7 +4166,7 @@ lemma sts_st_tcb':
   \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
   apply (cases "t = t'",
          simp_all add: setThreadState_def
-                  split del: split_if)
+                  split del: if_split)
    apply ((wp threadSet_pred_tcb_at_state | simp)+)[1]
   apply (wp threadSet_obj_at'_really_strongest
               | simp add: pred_tcb_at'_def)+
@@ -4178,7 +4178,7 @@ lemma sts_bound_tcb_at':
   \<lbrace>\<lambda>_. bound_tcb_at' P t\<rbrace>"
   apply (cases "t = t'",
          simp_all add: setThreadState_def
-                  split del: split_if)
+                  split del: if_split)
    apply ((wp threadSet_pred_tcb_at_state | simp)+)[1]
    apply (wp threadSet_obj_at'_really_strongest
                | simp add: pred_tcb_at'_def)+
@@ -4190,7 +4190,7 @@ lemma sbn_st_tcb':
   \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
   apply (cases "t = t'",
          simp_all add: setBoundNotification_def
-                  split del: split_if)
+                  split del: if_split)
    apply ((wp threadSet_pred_tcb_at_state | simp)+)[1]
   apply (wp threadSet_obj_at'_really_strongest
               | simp add: pred_tcb_at'_def)+
@@ -4202,7 +4202,7 @@ lemma sbn_bound_tcb_at':
   \<lbrace>\<lambda>_. bound_tcb_at' P t\<rbrace>"
   apply (cases "t = t'",
          simp_all add: setBoundNotification_def
-                  split del: split_if)
+                  split del: if_split)
    apply ((wp threadSet_pred_tcb_at_state | simp)+)[1]
    apply (wp threadSet_obj_at'_really_strongest
                | simp add: pred_tcb_at'_def)+
@@ -4946,7 +4946,7 @@ proof -
     apply (clarsimp simp: valid_machine_state'_def pointerInUserData_def
                assert_def simpler_modify_def fail_def bind_def return_def
                pageBits_def aligned_offset_ignore
-            split: split_if_asm)
+            split: if_split_asm)
   done
 qed
 
@@ -4971,7 +4971,7 @@ proof -
     apply (clarsimp simp: valid_machine_state'_def pointerInUserData_def
                assert_def simpler_modify_def fail_def bind_def return_def
                pageBits_def aligned_offset_ignore
-            split: split_if_asm)
+            split: if_split_asm)
   done
 qed
 
@@ -5072,12 +5072,12 @@ lemma set_eobject_corres':
    apply (drule(1) bspec)
    apply (clarsimp simp: non_exst_same_def)
    apply (case_tac bb; simp)
-     apply (clarsimp simp: obj_at'_def other_obj_relation_def cte_relation_def tcb_relation_def projectKOs split: split_if_asm)+
+     apply (clarsimp simp: obj_at'_def other_obj_relation_def cte_relation_def tcb_relation_def projectKOs split: if_split_asm)+
    apply (clarsimp simp: aobj_relation_cuts_def split: ARM_A.arch_kernel_obj.splits)
    apply (rename_tac arch_kernel_obj obj d p ts)
    apply (case_tac arch_kernel_obj; simp)
      apply (clarsimp simp: pte_relation_def pde_relation_def is_tcb_def
-                    split: split_if_asm)+
+                    split: if_split_asm)+
   apply (simp only: ekheap_relation_def dom_fun_upd2 simp_thms)
   apply (frule bspec, erule domI)
   apply (rule ballI, drule(1) bspec)

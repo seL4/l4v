@@ -508,7 +508,7 @@ fun parse_l1 ctxt prog_info l1_infos l1_call_info name_map term =
                 [(target_var, read_vars, globals_read, expr)] =>
                     ((expr, read_vars, globals_read), SOME target_var)
               | [] => ((NONE, empty_set, false), NONE)
-              | x => Utils.invalid_input "single return param" (PolyML.makestring x)
+              | x => Utils.invalid_input "single return param" (@{make_string} x)
         in
           Call (term, arg_setup_exprs, ret_expr, updated_var, ())
         end
@@ -1210,7 +1210,7 @@ in
         end)
         end
     | _ => Utils.invalid_input "a parsed L1 term"
-        (l1_term |> head_of |> PolyML.makestring)
+        (l1_term |> head_of |> @{make_string})
 end
 
 (* Get the expected type of a function from its name. *)
@@ -1328,7 +1328,7 @@ fun get_l2corres_thm ctxt prog_info l1_infos l1_call_info do_opt trace_opt fn_na
     if excess_inputs <> empty_set then
       warning
           ("Input function '" ^ fn_name ^ "' has unresolved variables: "
-              ^ PolyML.makestring (dest_set excess_inputs))
+              ^ @{make_string} (dest_set excess_inputs))
     else
       ()
 

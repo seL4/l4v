@@ -477,7 +477,7 @@ apply(auto simp: h_t_valid_def valid_footprint_def Let_def)
  apply(drule_tac x="(ptr_val p + of_nat y)" in fun_cong)
  apply(clarsimp simp: restrict_s_def)
  apply(drule_tac x=a in fun_cong)
- apply(clarsimp split: split_if_asm)
+ apply(clarsimp split: if_split_asm)
  apply(erule notE)
  apply(rule s_footprintI)
   apply(simp)
@@ -519,7 +519,7 @@ lemma lift_typ_heap_if:
 
 lemma lift_typ_heap_s_valid:
   "lift_typ_heap g s p = Some x \<Longrightarrow> s,g \<Turnstile>\<^sub>s p"
-  by (simp add: lift_typ_heap_if split: split_if_asm)
+  by (simp add: lift_typ_heap_if split: if_split_asm)
 
 lemma lift_typ_heap_g:
   "lift_typ_heap g s p = Some x \<Longrightarrow> g p"
@@ -569,7 +569,7 @@ done
 lemma lift_state_proj [simp]:
   "wf_heap_val s \<Longrightarrow> lift_state (proj_h s,proj_d s) = s"
 apply(auto simp: proj_h_def proj_d_def lift_state_def fun_eq_iff
-    split: split_if_asm s_heap_index.splits option.splits)
+    split: if_split_asm s_heap_index.splits option.splits)
   apply (metis s_heap_tag.simps s_heap_value.exhaust wf_heap_val_SIndexTyp_SValue_simp)
  apply (metis id_apply s_heap_value.exhaust s_heap_value.simps(5) wf_heap_val_SIndexVal_STyp_simp)
 apply (metis s_heap_tag.simps s_heap_value.exhaust wf_heap_val_SIndexTyp_SValue_simp)
@@ -577,7 +577,7 @@ done
 
 lemma lift_state_Some:
   "lift_state (h,d) (p,SIndexTyp n) = Some t \<Longrightarrow> snd (d p) n = Some (s_heap_tag t)"
-apply (simp add: lift_state_def split: option.splits split: split_if_asm)
+apply (simp add: lift_state_def split: option.splits split: if_split_asm)
 apply(case_tac t, simp+)
 done
 
@@ -712,7 +712,7 @@ lemma lift_lift_t:
 
 lemma lift_t_lift:
   "lift_t g (h,d) (p::'a::c_type ptr) = Some v \<Longrightarrow> lift h p = v"
-  by (simp add: lift_t_if lift_def split: split_if_asm)
+  by (simp add: lift_t_if lift_def split: if_split_asm)
 
 declare word_neq_0_conv [simp add]
 
@@ -869,7 +869,7 @@ done
 lemma typ_slice_set_sub:
   "typ_slice_t s m \<le> typ_slice_t t n \<Longrightarrow>
       fst ` set (typ_slice_t s m) \<subseteq> fst ` set (typ_slice_t t n)"
-apply(clarsimp simp: image_def prefixeq_def less_eq_list_def)
+apply(clarsimp simp: image_def prefix_def less_eq_list_def)
 apply force
 done
 
@@ -909,12 +909,12 @@ lemma typ_slice_0_prefix:
 apply auto
  apply(case_tac t)
  apply (clarsimp simp: less_eq_list_def)
- apply(drule set_mono_prefixeq)
+ apply(drule set_mono_prefix)
  apply clarsimp
  apply(simp add: typ_slice_struct_nmem)
 apply(case_tac t)
 apply (clarsimp simp: less_eq_list_def)
-apply(drule set_mono_prefixeq)
+apply(drule set_mono_prefix)
 apply clarsimp
 apply(simp add: typ_slice_struct_nmem)
 done
@@ -922,11 +922,11 @@ done
 lemma map_prefix_same_cases_dom:
   "\<lbrakk> list_map xs \<subseteq>\<^sub>m f; list_map ys \<subseteq>\<^sub>m f \<rbrakk> \<Longrightarrow>
       length xs \<le> length ys \<or> length ys \<le> length xs"
-  by (auto simp: map_le_def prefixeq_def list_map_def)
+  by (auto simp: map_le_def prefix_def list_map_def)
 
 lemma prefix_eq_nth:
   "xs \<le> ys = ((\<forall>i. i < length xs \<longrightarrow> xs ! i = ys ! i) \<and> length xs \<le> length ys)"
-apply(auto simp: less_eq_list_def prefixeq_def nth_append)
+apply(auto simp: less_eq_list_def prefix_def nth_append)
 apply(rule_tac x="drop (length xs) ys" in exI)
 apply(subst list_eq_iff_nth_eq)
 apply(simp add: nth_append)
@@ -937,18 +937,18 @@ lemma map_prefix_same_cases:
 apply(frule (1) map_prefix_same_cases_dom [where xs=ys])
 apply(erule disjE)
  apply(clarsimp simp: prefix_eq_nth)
- apply(clarsimp simp: map_le_def prefixeq_def)
+ apply(clarsimp simp: map_le_def prefix_def)
  apply(drule_tac x=i in bspec, simp)+
  apply(force dest: sym)
 apply(clarsimp simp: prefix_eq_nth)
-apply(clarsimp simp: map_le_def prefixeq_def)
+apply(clarsimp simp: map_le_def prefix_def)
 apply(drule_tac x=i in bspec, simp)+
 apply(force dest: sym)
 done
 
 lemma list_map_mono:
   "xs \<le> ys \<Longrightarrow> list_map xs \<subseteq>\<^sub>m list_map ys"
-  by (auto simp: map_le_def prefixeq_def nth_append less_eq_list_def)
+  by (auto simp: map_le_def prefix_def nth_append less_eq_list_def)
 
 lemma map_list_map_trans:
   "\<lbrakk> xs \<le> ys; list_map ys \<subseteq>\<^sub>m f \<rbrakk> \<Longrightarrow> list_map xs \<subseteq>\<^sub>m f"
@@ -994,7 +994,7 @@ lemma typ_slice_True_prefix:
   "typ_slice_t s 0 \<le> typ_slice_t t k \<Longrightarrow> (s,k) \<in> td_set t 0"
 apply(insert typ_slice_self [of s])
 apply(clarsimp simp: less_eq_list_def)
-apply(drule set_mono_prefixeq)
+apply(drule set_mono_prefix)
 apply(insert typ_slice_True_set [of s t k 0])
 apply force
 done
@@ -1032,7 +1032,7 @@ lemma typ_slice_False_self:
 lemma tag_prefix_True:
   "typ_slice_t s k \<le> typ_slice_t t 0 \<Longrightarrow> k = 0"
 apply(clarsimp simp: less_eq_list_def)
-apply(drule set_mono_prefixeq)
+apply(drule set_mono_prefix)
 apply(rule ccontr)
 apply(drule_tac t=s and k=k in typ_slice_False_self)
 apply(insert typ_slice_0_True [of "(s,False)" t])
@@ -1547,7 +1547,7 @@ lemma lift_typ_heap_mono:
       export_uinfo t = typ_uinfo_t TYPE('b); guard_mono g g'
       \<rbrakk> \<Longrightarrow>
           lift_typ_heap g' s (Ptr (&(p\<rightarrow>f))::'b::mem_type ptr) = Some (from_bytes (access_ti\<^sub>0 t v))"
-apply(auto simp: lift_typ_heap_if split: split_if_asm)
+apply(auto simp: lift_typ_heap_if split: if_split_asm)
  prefer 2
  apply(drule (2) s_valid_mono)
  apply(erule impE)
@@ -1783,7 +1783,7 @@ apply(induct t and st and ts and x)
   apply(drule_tac x=f in spec)
   apply(clarsimp simp: split: option.split)
  apply(clarsimp split: option.splits)
- apply(case_tac dt_pair, clarsimp split: split_if_asm)
+ apply(case_tac dt_pair, clarsimp split: if_split_asm)
  apply(case_tac f, clarsimp+)
 apply(case_tac f, simp+)
 done
@@ -1837,7 +1837,7 @@ apply (rule conjI)
   apply clarsimp
   apply(rule ccontr, clarsimp)
   apply(erule_tac P="x \<in> dom (lift_t g (h, d))" in impE)
-  apply(clarsimp simp: lift_t_if h_t_valid_def split: split_if_asm)
+  apply(clarsimp simp: lift_t_if h_t_valid_def split: if_split_asm)
   apply clarsimp
  apply clarsimp
  apply(clarsimp simp: restrict_map_def)
@@ -1849,7 +1849,7 @@ apply(case_tac "x \<noteq> Ptr &(p\<rightarrow>a)")
  apply(clarsimp simp: restrict_map_def)
  apply(drule_tac x=x in fun_cong)
  apply clarsimp
- apply(clarsimp simp: lift_t_if split: split_if_asm)
+ apply(clarsimp simp: lift_t_if split: if_split_asm)
  apply(erule impE)
   apply clarsimp
  apply clarsimp
@@ -1899,9 +1899,9 @@ apply rule
  apply(simp add: size_of_def)
  apply(subst typ_uinfo_size [symmetric])+
  apply(drule td_set_field_lookupD, drule td_set_offset_size)
- apply(clarsimp simp: min_def split: split_if_asm)
+ apply(clarsimp simp: min_def split: if_split_asm)
  apply arith
-apply(clarsimp split: split_if_asm)
+apply(clarsimp split: if_split_asm)
 done
 
 lemma lift_t_sub_field_update:
@@ -2038,7 +2038,7 @@ lemma unat_minus:
 apply(simp add: unat_def)
 apply(subst uint_word_ariths)
 apply(subst zmod_zminus1_eq_if)
-apply(simp split: split_if_asm)
+apply(simp split: if_split_asm)
 apply(rule, clarsimp)
  apply(drule word_uint.Rep_inverse')
  apply(subst (asm) word_uint.inverse_norm)
@@ -2297,10 +2297,10 @@ lemma lift_t_super_field_update:
 apply(rule ext)
 apply(clarsimp simp: super_field_update_t_def split: option.splits)
 apply(rule, clarsimp)
- apply(simp add: lift_t_if split: split_if_asm)
+ apply(simp add: lift_t_if split: if_split_asm)
 apply clarsimp
 apply(rule, clarsimp)
- apply(simp add: lift_t_if split: split_if_asm)
+ apply(simp add: lift_t_if split: if_split_asm)
  apply(subst h_val_super_update_bs)
   apply simp
  apply(drule sym)
@@ -2499,7 +2499,7 @@ lemma dom_s_upd [simp]:
           {(p,SIndexTyp n) | n. a n \<noteq> None}"
 apply(unfold dom_s_def)
 apply(case_tac "d p")
-apply(auto split: split_if_asm)
+apply(auto split: if_split_asm)
 done
 
 lemma dom_tll_cons [simp]:
@@ -2540,7 +2540,7 @@ lemma htd_update_list_dom [rule_format, simp]:
 apply(induct_tac xs)
  apply simp
 apply clarsimp
-apply(auto split: split_if_asm)
+apply(auto split: if_split_asm)
  apply(erule notE)
  apply(clarsimp simp: dom_s_def)
 apply(case_tac y)
@@ -2616,7 +2616,7 @@ apply auto
  apply(rule_tac x=x in exI)
  apply clarsimp
  apply(subst (asm) list_map_eq)
- apply(clarsimp split: split_if_asm)
+ apply(clarsimp split: if_split_asm)
 apply(drule_tac x=x in spec)
 apply clarsimp
 apply(case_tac "typ_slice_t (typ_uinfo_t TYPE('a)) x ! n")
@@ -2994,7 +2994,7 @@ proof -
        apply simp
       apply(drule field_of_t_mem)+
       apply(case_tac h)
-      apply(clarsimp simp: lift_t_if split: split_if_asm)
+      apply(clarsimp simp: lift_t_if split: if_split_asm)
       apply(drule (1) h_t_valid_neq_disjoint)
         apply simp
        apply(clarsimp simp: field_of_t_def field_of_def)

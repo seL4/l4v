@@ -10,9 +10,9 @@
 
 theory SimplRewrite
 imports
-  "~~/src/HOL/Eisbach/Eisbach"
   "CTranslationNICTA"
   "SplitRule"
+  "~~/src/HOL/Eisbach/Eisbach"
 begin
 
 primrec
@@ -32,7 +32,7 @@ where
 
 lemma add_statefn_id1:
   "add_statefn id x = x"
-  by (induct x, simp_all add: inv_id[unfolded id_def])
+  by (induct x, simp_all add: inv_id[simplified id_def])
 
 lemma add_statefn_id[simp]:
   "add_statefn id = id"

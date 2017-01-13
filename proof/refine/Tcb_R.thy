@@ -530,16 +530,16 @@ lemma threadSet_valid_queues'_no_state:
   \<Longrightarrow> \<lbrace>valid_queues' and (\<lambda>s. \<forall>p. t \<notin> set (ksReadyQueues s p))\<rbrace>
      threadSet f t \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
   apply (simp add: valid_queues'_def threadSet_def obj_at'_real_def
-                split del: split_if)
+                split del: if_split)
   apply (simp only: imp_conv_disj)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
      apply (wp setObject_ko_wp_at | simp add: objBits_simps)+
     apply (wp getObject_tcb_wp updateObject_default_inv
-               | simp split del: split_if)+
+               | simp split del: if_split)+
   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs
                         objBits_simps addToQs_def
-             split del: split_if cong: if_cong)
-  apply (fastforce simp: projectKOs inQ_def split: split_if_asm)
+             split del: if_split cong: if_cong)
+  apply (fastforce simp: projectKOs inQ_def split: if_split_asm)
   done
 
 lemma gts_isRunnable_corres:
@@ -1669,11 +1669,11 @@ lemma bindNotification_invs':
   apply (subst delta_sym_refs, assumption)
     apply (fastforce simp: ntfn_q_refs_of'_def obj_at'_def projectKOs  
                     dest!: symreftype_inverse'
-                    split: ntfn.splits split_if_asm)
-   apply (clarsimp split: split_if_asm)
+                    split: ntfn.splits if_split_asm)
+   apply (clarsimp split: if_split_asm)
     apply (fastforce simp: tcb_st_refs_of'_def 
                     dest!: bound_tcb_at_state_refs_ofD' 
-                    split: split_if_asm thread_state.splits)
+                    split: if_split_asm thread_state.splits)
    apply (fastforce simp: obj_at'_def projectKOs state_refs_of'_def
                    dest!: symreftype_inverse')
   apply (clarsimp simp: valid_pspace'_def)
@@ -1729,7 +1729,7 @@ lemma decode_readreg_corres:
   apply (case_tac list, simp_all)
   apply (simp add: decodeTransfer_def)
   apply (simp add: range_check_def rangeCheck_def frameRegisters_def gpRegisters_def)
-  apply (simp add: unlessE_def split del: split_if, simp add: returnOk_def split del: split_if)
+  apply (simp add: unlessE_def split del: if_split, simp add: returnOk_def split del: if_split)
   apply (rule corres_guard_imp)
     apply (rule corres_split_norE)
        prefer 2
@@ -1793,7 +1793,7 @@ lemma decodeWriteReg_inv:
   "\<lbrace>P\<rbrace> decodeWriteRegisters args cap \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: decodeWriteRegisters_def whenE_def decodeTransfer_def
-                          split del: split_if
+                          split del: if_split
             | wp_once | wpcw)+
   done
 
@@ -1801,7 +1801,7 @@ lemma decodeCopyReg_inv:
   "\<lbrace>P\<rbrace> decodeCopyRegisters args cap extras \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: decodeCopyRegisters_def whenE_def decodeTransfer_def
-                          split del: split_if
+                          split del: if_split
             | wp_once | wpcw)+
   done
 
@@ -1835,7 +1835,7 @@ lemma decodeCopyReg_wf:
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
   apply (simp add: decodeCopyRegisters_def whenE_def decodeTransfer_def
              cong: list.case_cong capability.case_cong bool.case_cong
-               split del: split_if)
+               split del: if_split)
   apply (rule hoare_pre)
    apply (wp | wpc)+
   apply (clarsimp simp: null_def neq_Nil_conv
@@ -1877,7 +1877,7 @@ lemma decode_set_priority_corres:
        (decode_set_priority args cap slot)
        (decodeSetPriority args cap')"
   apply (simp    add: decode_set_priority_def decodeSetPriority_def checkPrio_def Let_def
-           split del: split_if)
+           split del: if_split)
   apply (cases args)
    apply simp
   apply (simp add: liftE_bindE Let_def)
@@ -1896,7 +1896,7 @@ lemma decode_set_mcpriority_corres:
        (decode_set_mcpriority args cap slot)
        (decodeSetMCPriority args cap')"              
   apply (simp    add: decode_set_mcpriority_def decodeSetMCPriority_def Let_def
-           split del: split_if)
+           split del: if_split)
   apply (cases args)
    apply simp
   apply (simp add: liftE_bindE Let_def)
@@ -1974,9 +1974,9 @@ lemma decodeSetPriority_wf[wp]:
   
 lemma decodeSetPriority_inv[wp]:
   "\<lbrace>P\<rbrace> decodeSetPriority args cap \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: decodeSetPriority_def Let_def split del: split_if)
+  apply (simp add: decodeSetPriority_def Let_def split del: if_split)
   apply (rule hoare_pre)
-   apply (wp checkPrio_inv | simp add: whenE_def split del: split_if
+   apply (wp checkPrio_inv | simp add: whenE_def split del: if_split
              | rule hoare_drop_imps
              | wpcw)+
   done
@@ -1994,9 +1994,9 @@ lemma decodeSetMCPriority_wf[wp]:
   
 lemma decodeSetMCPriority_inv[wp]:
   "\<lbrace>P\<rbrace> decodeSetMCPriority args cap \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: decodeSetMCPriority_def Let_def split del: split_if)
+  apply (simp add: decodeSetMCPriority_def Let_def split del: if_split)
   apply (rule hoare_pre)
-   apply (wp checkPrio_inv | simp add: whenE_def split del: split_if
+   apply (wp checkPrio_inv | simp add: whenE_def split del: if_split
              | rule hoare_drop_imps
              | wpcw)+
   done
@@ -2028,7 +2028,7 @@ lemma checkValidIPCBuffer_ArchObject_wp:
                    whenE_def unlessE_def
              cong: capability.case_cong
                    arch_capability.case_cong
-            split del: split_if)
+            split del: if_split)
   apply (rule hoare_pre)
   apply (wp whenE_throwError_wp 
     | wpc | clarsimp simp: isCap_simps is_aligned_mask msg_align_bits msgAlignBits_def)+
@@ -2044,14 +2044,14 @@ lemma decode_set_ipc_corres:
        (decode_set_ipc_buffer args cap slot extras)
        (decodeSetIPCBuffer args cap' (cte_map slot) extras')"
   apply (simp    add: decode_set_ipc_buffer_def decodeSetIPCBuffer_def
-           split del: split_if)
+           split del: if_split)
   apply (cases args)
    apply simp
   apply (cases extras)
    apply simp
   apply (clarsimp simp: list_all2_Cons1 liftME_def[symmetric]
                         is_cap_simps
-             split del: split_if)
+             split del: if_split)
   apply (clarsimp simp add: returnOk_def newroot_rel_def)
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE [OF _ derive_cap_corres])
@@ -2067,7 +2067,7 @@ lemma decodeSetIPC_wf[wp]:
      decodeSetIPCBuffer args (ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
   apply (simp   add: decodeSetIPCBuffer_def Let_def whenE_def
-          split del: split_if cong: list.case_cong prod.case_cong)
+          split del: if_split cong: list.case_cong prod.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpc | simp)+
     apply (rule checkValidIPCBuffer_ArchObject_wp)
@@ -2079,7 +2079,7 @@ lemma decodeSetIPC_wf[wp]:
 lemma decodeSetIPCBuffer_is_tc[wp]:
   "\<lbrace>\<top>\<rbrace> decodeSetIPCBuffer args cap slot extras \<lbrace>\<lambda>rv s. isThreadControl rv\<rbrace>,-"
   apply (simp add: decodeSetIPCBuffer_def Let_def
-             split del: split_if cong: list.case_cong prod.case_cong)
+             split del: if_split cong: list.case_cong prod.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpc)+
    apply (simp only: isThreadControl_def tcbinvocation.simps)
@@ -2090,7 +2090,7 @@ lemma decodeSetIPCBuffer_is_tc[wp]:
 lemma decodeSetPriority_is_tc[wp]:
   "\<lbrace>\<top>\<rbrace> decodeSetPriority args cap \<lbrace>\<lambda>rv s. isThreadControl rv\<rbrace>,-"
   apply (simp add: decodeSetPriority_def Let_def
-             split del: split_if cong: list.case_cong prod.case_cong)
+             split del: if_split cong: list.case_cong prod.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpc)+
    apply (clarsimp simp: isThreadControl_def tcbinvocation.simps)
@@ -2099,7 +2099,7 @@ lemma decodeSetPriority_is_tc[wp]:
 lemma decodeSetMCPriority_is_tc[wp]:
   "\<lbrace>\<top>\<rbrace> decodeSetMCPriority args cap \<lbrace>\<lambda>rv s. isThreadControl rv\<rbrace>,-"
   apply (simp add: decodeSetMCPriority_def Let_def
-             split del: split_if cong: list.case_cong prod.case_cong)
+             split del: if_split cong: list.case_cong prod.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpc)+
    apply (clarsimp simp: isThreadControl_def tcbinvocation.simps)
@@ -2154,20 +2154,20 @@ lemma decode_set_space_corres:
       (decodeSetSpace args cap' (cte_map slot) extras')"
   apply (simp    add: decode_set_space_def decodeSetSpace_def
                       Let_def
-           split del: split_if)
+           split del: if_split)
   apply (cases "3 \<le> length args \<and> 2 \<le> length extras'")
    apply (clarsimp simp: val_le_length_Cons list_all2_Cons2
-              split del: split_if)
+              split del: if_split)
    apply (simp add: liftE_bindE liftM_def
                     getThreadCSpaceRoot getThreadVSpaceRoot
-                 split del: split_if)
+                 split del: if_split)
    apply (rule corres_guard_imp)
      apply (rule corres_split [OF _ slot_long_running_corres])
         apply (rule corres_split [OF _ slot_long_running_corres])
            apply (rule corres_split_norE)
               apply (simp(no_asm) add: split_def unlessE_throwError_returnOk
                                        bindE_assoc cap_CNode_case_throw
-                            split del: split_if)
+                            split del: if_split)
               apply (rule corres_splitEE [OF _ derive_cap_corres])
                   apply (rule corres_split_norE)
                      apply (rule corres_splitEE [OF _ derive_cap_corres])
@@ -2196,7 +2196,7 @@ lemma decode_set_space_corres:
                    apply (unfold whenE_def, wp)[2]
                  apply (fastforce dest: list_all2_nthD2[where p=0] simp: cap_map_update_data)
                 apply (fastforce dest: list_all2_nthD2[where p=0])
-               apply ((simp split del: split_if | wp | rule hoare_drop_imps)+)[2]
+               apply ((simp split del: if_split | wp | rule hoare_drop_imps)+)[2]
              apply (rule corres_whenE)
                apply simp
               apply (rule corres_trivial, simp)
@@ -2223,15 +2223,15 @@ lemma decodeSetSpace_wf[wp]:
   apply (simp       add: decodeSetSpace_def Let_def split_def
                          unlessE_def getThreadVSpaceRoot getThreadCSpaceRoot
                          cap_CNode_case_throw
-              split del: split_if cong: if_cong list.case_cong)
+              split del: if_split cong: if_cong list.case_cong)
   apply (rule hoare_pre)
    apply (wp
              | simp    add: o_def split_def
-                 split del: split_if
+                 split del: if_split
              | wpc
              | rule hoare_drop_imps)+
   apply (clarsimp simp del: length_greater_0_conv
-                 split del: split_if)
+                 split del: if_split)
   apply (simp del: length_greater_0_conv add: valid_updateCapDataI)
   done
 
@@ -2239,10 +2239,10 @@ lemma decodeSetSpace_inv[wp]:
   "\<lbrace>P\<rbrace> decodeSetSpace args cap slot extras \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp       add: decodeSetSpace_def Let_def split_def
                          unlessE_def getThreadVSpaceRoot getThreadCSpaceRoot
-              split del: split_if cong: if_cong list.case_cong)
+              split del: if_split cong: if_cong list.case_cong)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps
-            | simp add: o_def split_def split del: split_if
+            | simp add: o_def split_def split del: if_split
             | wpcw)+
   done
 
@@ -2250,7 +2250,7 @@ lemma decodeSetSpace_is_tc[wp]:
   "\<lbrace>\<top>\<rbrace> decodeSetSpace args cap slot extras \<lbrace>\<lambda>rv s. isThreadControl rv\<rbrace>,-"
   apply (simp       add: decodeSetSpace_def Let_def split_def
                          unlessE_def getThreadVSpaceRoot getThreadCSpaceRoot
-              split del: split_if cong: list.case_cong)
+              split del: if_split cong: list.case_cong)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps
            | simp only: isThreadControl_def tcbinvocation.simps
@@ -2262,7 +2262,7 @@ lemma decodeSetSpace_tc_target[wp]:
   "\<lbrace>\<lambda>s. P (capTCBPtr cap)\<rbrace> decodeSetSpace args cap slot extras \<lbrace>\<lambda>rv s. P (tcThread rv)\<rbrace>,-"
   apply (simp       add: decodeSetSpace_def Let_def split_def
                          unlessE_def getThreadVSpaceRoot getThreadCSpaceRoot
-              split del: split_if cong: list.case_cong)
+              split del: if_split cong: list.case_cong)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps
            | simp only: tcThread.simps
@@ -2350,7 +2350,7 @@ lemma decodeTCBConf_wf[wp]:
      decodeTCBConfigure args (ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
   apply (clarsimp simp add: decodeTCBConfigure_def Let_def
-                 split del: split_if cong: list.case_cong)
+                 split del: if_split cong: list.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpc)+
      apply (rule_tac Q'="\<lambda>setSpace s. tcb_inv_wf' setSpace s \<and> tcb_inv_wf' setIPCParams s
@@ -2380,7 +2380,7 @@ lemma decodeTCBConf_wf[wp]:
 lemma decodeTCBConf_inv[wp]:
   "\<lbrace>P\<rbrace> decodeTCBConfigure args (ThreadCap t) slot extras \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (clarsimp simp add: decodeTCBConfigure_def Let_def
-                 split del: split_if cong: list.case_cong)
+                 split del: if_split cong: list.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpcw)+
   apply simp
@@ -2453,9 +2453,9 @@ notes if_cong[cong] shows
           apply (rule corres_split_norE)
              apply (rule corres_splitEE'[where r'="\<lambda>rv rv'. ((fst rv) = (fst rv')) \<and> ((snd rv') = (AllowRead \<in> (snd rv)))"])
                 apply (rule corres_split_norE)
-                   apply (clarsimp split del: split_if)
+                   apply (clarsimp split del: if_split)
                    apply (rule corres_splitEE[where r'=ntfn_relation])
-                      apply (rule corres_trivial, simp split del: split_if)
+                      apply (rule corres_trivial, simp split del: if_split)
                       apply (simp add: ntfn_relation_def
                                 split: Structures_A.ntfn.splits Structures_H.ntfn.splits 
                                        option.splits)
@@ -2463,7 +2463,7 @@ notes if_cong[cong] shows
                      apply (rule get_ntfn_corres)
                     apply wp
                   apply (rule corres_trivial, clarsimp simp: whenE_def returnOk_def)
-                 apply (wp | simp add: whenE_def split del: split_if)+
+                 apply (wp | simp add: whenE_def split del: if_split)+
                apply (rule corres_trivial, simp)
                apply (case_tac extras, simp, clarsimp simp: list_all2_Cons1)
                apply (fastforce split: cap.splits capability.splits simp: returnOk_def)
@@ -2474,7 +2474,7 @@ notes if_cong[cong] shows
         apply (simp | wp gbn_wp gbn_wp')+
       apply (rule corres_trivial)
       apply (auto simp: returnOk_def whenE_def)[1]
-     apply (simp add: whenE_def split del: split_if | wp)+
+     apply (simp add: whenE_def split del: if_split | wp)+
    apply (fastforce simp: valid_cap_def valid_cap'_def dest: hd_in_set)+
   done
 
@@ -2509,7 +2509,7 @@ lemma decode_tcb_inv_corres:
    apply (drule obj_at_aligned', simp_all add: objBits_simps)
   apply (clarsimp simp: decode_tcb_invocation_def
                         decodeTCBInvocation_def
-             split del: split_if split: invocation_label.split)
+             split del: if_split split: invocation_label.split)
   apply (simp add: returnOk_def)
   apply (intro conjI impI
              corres_guard_imp[OF decode_readreg_corres]
@@ -2543,7 +2543,7 @@ lemma decodeBindNotification_wf:
      decodeBindNotification (capability.ThreadCap t) extras
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
   apply (simp add: decodeBindNotification_def whenE_def
-             cong: list.case_cong split del: split_if)
+             cong: list.case_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wp getNotification_wp getObject_tcb_wp
         | wpc
@@ -2570,7 +2570,7 @@ lemma decodeTCBInv_wf:
      decodeTCBInvocation label args (capability.ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
   apply (simp add: decodeTCBInvocation_def Let_def
-              cong: if_cong invocation_label.case_cong split del: split_if)
+              cong: if_cong invocation_label.case_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wpc, wp decodeTCBConf_wf decodeReadReg_wf
              decodeWriteReg_wf decodeCopyReg_wf decodeBindNotification_wf decodeUnbindNotification_wf)
@@ -2622,13 +2622,13 @@ lemma invokeTCB_makes_simple':
                                    getThreadVSpaceRoot
                                    performTransfer_def split_def
                                    getThreadBufferSlot_def
-                        split del: split_if cong: if_cong option.case_cong)
+                        split del: if_split cong: if_cong option.case_cong)
         defer 3 defer 3(* thread control, ntfn control *)
         apply ((wp restart_makes_simple' suspend_makes_simple'
                   mapM_x_wp'
                      | simp cong: if_cong)+)[5]
    apply (rule hoare_pre)
-    apply ((simp split del: split_if
+    apply ((simp split del: if_split
              | wp cteDelete_makes_simple' checkCap_inv [where P="st_tcb_at' simple' t"]
                threadSet_pred_tcb_no_state mapM_x_wp' suspend_makes_simple'
              | (wp case_options_weak_wp)[1])+)[2]

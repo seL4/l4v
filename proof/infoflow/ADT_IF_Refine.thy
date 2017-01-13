@@ -1110,7 +1110,7 @@ lemma abstract_invs:
                apply (simp add: ADT_A_if_def)
               apply (simp_all add: check_active_irq_A_if_def do_user_op_A_if_def 
                                     kernel_call_A_if_def kernel_handle_preemption_if_def
-                                    kernel_schedule_if_def kernel_exit_A_if_def split del: split_if)[12]
+                                    kernel_schedule_if_def kernel_exit_A_if_def split del: if_split)[12]
               apply (rule preserves_lifts | 
                      wp check_active_irq_if_wp do_user_op_if_invs
                     | clarsimp simp add: full_invs_if_def)+
@@ -1237,7 +1237,7 @@ lemma haskell_invs:
                apply blast
               apply (simp_all add: checkActiveIRQ_H_if_def doUserOp_H_if_def
                                     kernelCall_H_if_def handlePreemption_H_if_def
-                                    schedule'_H_if_def kernelExit_H_if_def split del: split_if)[12]
+                                    schedule'_H_if_def kernelExit_H_if_def split del: if_split)[12]
               apply (rule preserves_lifts | wp | simp add: full_invs_if'_def)+
             apply (wp_once hoare_disjI1)
              apply (rule preserves_lifts | wp | simp add: full_invs_if'_def)+
@@ -1698,7 +1698,7 @@ lemma haskell_to_abs: "uop_nonempty uop \<Longrightarrow> global_automata_refine
       apply (simp add: full_invs_if_def)
      apply (simp add: full_invs_if'_def)
     apply (rule schedule'_if_empty_fail)
-   apply (simp add: kernel_exit_A_if_def kernelExit_H_if_def split del: split_if)
+   apply (simp add: kernel_exit_A_if_def kernelExit_H_if_def split del: if_split)
    apply (rule_tac S="\<top>" and S'="invs'" in step_corres_lifts(5))
        apply (rule corres_guard_imp)
          apply (rule kernel_exit_if_corres)

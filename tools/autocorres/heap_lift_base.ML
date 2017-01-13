@@ -85,11 +85,11 @@ let
   fun get_name x =
     case (dest_Type x) of
          (@{type_name "Word.word"}, [x])
-           => "w" ^ (PolyML.makestring (get_num_type x))
+           => "w" ^ (@{make_string} (get_num_type x))
        | (@{type_name "ptr"}, [x])
            => (get_name x) ^ "'ptr"
        | (@{type_name "array"}, [x,y])
-           => (get_name x) ^ "'array_" ^ (PolyML.makestring (get_num_type y))
+           => (get_name x) ^ "'array_" ^ (@{make_string} (get_num_type y))
        | (x, _) => (Long_Name.base_name x)
 in
   (get_name T)
@@ -436,7 +436,7 @@ let
    * HACK: Exit and enter the context again, so the simpset created by the new
    * record gets imported in. No idea what the "correct" way of doing this is.
    *) 
-  val lthy = Local_Theory.exit_global lthy |> Named_Target.init (the (Named_Target.locale_of lthy))
+  val lthy = Local_Theory.exit_global lthy |> Named_Target.init NONE (the (Named_Target.locale_of lthy))
 
   (* Generate a function mapping old globals to the new globals. *)
   val (lift_name, lift_def, simp_thms, lthy) = gen_heap_abs_fn

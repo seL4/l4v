@@ -333,7 +333,7 @@ Toplevel.add_hook (fn transition => fn start_state => fn end_state =>
       Synchronized.change transactions 
               (Symtab.map_default (thynm, (Postab_strict.empty, Postab_strict.empty)) 
                 (apfst (Postab_strict.update (pos, (name, entry)))))
-  in () end) handle e => if Exn.is_interrupt e then reraise e else
+  in () end) handle e => if Exn.is_interrupt e then Exn.reraise e else
     Synchronized.change transactions 
               (Symtab.map_default (thynm, (Postab_strict.empty, Postab_strict.empty)) 
                 (apsnd (Postab_strict.map_default (pos, []) (cons (@{make_string} e)))))

@@ -374,7 +374,7 @@ lemma blocked_cancel_ipc_invs:
      apply (auto elim!: delta_sym_refs pred_tcb_weaken_strongerE
                  simp: obj_at_def is_ep idle_not_queued refs_in_tcb_bound_refs
                  dest: idle_no_refs
-                 split: split_if_asm)[2]
+                 split: if_split_asm)[2]
    apply (case_tac ep, simp_all add: valid_ep_def)[1]
     apply (clarsimp, drule(1) bspec, clarsimp simp: obj_at_def is_tcb_def)+
   apply fastforce
@@ -410,7 +410,7 @@ lemma cancel_signal_invs:
   apply (rule conjI)
    apply (clarsimp split:option.split)
   apply (rule conjI, erule delta_sym_refs)
-    apply (clarsimp split: split_if_asm)+
+    apply (clarsimp split: if_split_asm)+
    apply (fastforce dest: refs_in_tcb_bound_refs refs_in_ntfn_bound_refs symreftype_inverse')
   apply (fastforce simp: obj_at_def is_ntfn idle_not_queued
                    dest: idle_no_refs elim: pred_tcb_weakenE)
@@ -849,7 +849,7 @@ lemma cancel_all_invs_helper:
                                     valid_irq_node_typ sts_only_idle)
            apply (rule sts_st_tcb_at_cases, simp)
           apply (strengthen reply_cap_doesnt_exist_strg)
-          apply (auto simp: valid_tcb_state_def idle_no_ex_cap o_def split_if_asm
+          apply (auto simp: valid_tcb_state_def idle_no_ex_cap o_def if_split_asm
                      elim!: rsubst[where P=sym_refs] st_tcb_weakenE
                     intro!: ext)
   done
@@ -927,7 +927,7 @@ lemma cancel_all_ipc_invs_helper:
   apply (clarsimp dest!:obj_at_conj_distrib)
   apply (thin_tac "obj_at (\<lambda>ko. refs_of ko = set q \<times> {k}) p s")
   apply (erule delta_sym_refs)
-   apply (clarsimp simp: split_if_asm)+
+   apply (clarsimp simp: if_split_asm)+
   apply (safe)
           apply (fastforce dest!:symreftype_inverse' ep_no_ntfn_bound)
          apply (clarsimp dest!: symreftype_inverse')
@@ -1013,12 +1013,12 @@ lemma unbind_notification_invs:
           defer 4
           apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
                        simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def)[8]
-  apply (clarsimp simp: split_if)
+  apply (clarsimp simp: if_split)
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
                    dest!: pred_tcb_at_tcb_at ko_at_state_refs_ofD
-                   split: split_if_asm)
-  apply (clarsimp split: split_if_asm)
+                   split: if_split_asm)
+  apply (clarsimp split: if_split_asm)
    apply (frule pred_tcb_at_tcb_at)
    apply (frule_tac p=t in obj_at_ko_at, clarsimp)
    apply (subst (asm) ko_at_state_refs_ofD, assumption)
@@ -1082,8 +1082,8 @@ lemma cancel_all_signals_invs:
 
   apply (rule delta_sym_refs, assumption)
    apply (fastforce dest!: refs_in_ntfn_bound_refs ko_at_state_refs_ofD
-                    split: split_if_asm)
-  apply (clarsimp split:split_if_asm)
+                    split: if_split_asm)
+  apply (clarsimp split:if_split_asm)
     apply (fastforce dest: waiting_ntfn_list_tcb_at refs_in_ntfn_bound_refs
                      simp: obj_at_def is_tcb_def)
    apply (rule conjI)
@@ -1206,7 +1206,7 @@ lemma cancel_badged_sends_filterM_helper':
   apply (erule delta_sym_refs)
    apply (auto dest!: get_tcb_ko_atD ko_at_state_refs_ofD symreftype_inverse'
                       refs_in_tcb_bound_refs
-               split: split_if_asm)
+               split: if_split_asm)
   done
 
 lemmas cancel_badged_sends_filterM_helper

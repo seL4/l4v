@@ -260,22 +260,22 @@ datatype message_info = MI length_type length_type data msg_label
 primrec
   mi_label :: "message_info \<Rightarrow> msg_label"
 where
-  "mi_label (MI ln exc unw label) = label"
+  "mi_label (MI len exc unw label) = label"
 
 primrec
   mi_length :: "message_info \<Rightarrow> length_type"
 where
-  "mi_length (MI ln exc unw label) = ln"
+  "mi_length (MI len exc unw label) = len"
 
 primrec
   mi_extra_caps :: "message_info \<Rightarrow> length_type"
 where
-  "mi_extra_caps (MI ln exc unw label) = exc"
+  "mi_extra_caps (MI len exc unw label) = exc"
 
 primrec
   mi_caps_unwrapped :: "message_info \<Rightarrow> data"
 where
- "mi_caps_unwrapped (MI ln exc unw label) = unw"
+ "mi_caps_unwrapped (MI len exc unw label) = unw"
 
 
 section {* Kernel Objects *}

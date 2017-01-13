@@ -100,7 +100,7 @@ lemma perform_invocation_respects:
        | wp_once hoare_pre_cont)+
   apply (clarsimp simp: authorised_invocation_def split: Invocations_A.invocation.splits)
   -- "EP case"
-  apply (fastforce simp: obj_at_def is_tcb split: split_if_asm)
+  apply (fastforce simp: obj_at_def is_tcb split: if_split_asm)
   -- "NTFN case"
   apply fastforce
   done
@@ -157,7 +157,7 @@ lemma decode_invocation_authorised:
     decode_arch_invocation_authorised
     | strengthen cnode_diminished_strg
     | wpc | simp add: comp_def authorised_invocation_def decode_invocation_def
-              split del: split_if del: hoare_post_taut hoare_True_E_R
+              split del: if_split del: hoare_post_taut hoare_True_E_R
     | wp_once hoare_FalseE_R)+
 
   apply (clarsimp simp: aag_has_Control_iff_owns split_def aag_cap_auth_def)
@@ -312,7 +312,7 @@ lemma handle_invocation_pas_refined:
               hoare_vcg_conj_lift hoare_vcg_all_lift
          | wpc
          | rule hoare_drop_imps
-         | simp add: if_apply_def2 conj_comms split del: split_if
+         | simp add: if_apply_def2 conj_comms split del: if_split
                del: hoare_True_E_R)+),
         ((wp lookup_extra_caps_auth lookup_extra_caps_authorised
               decode_invocation_authorised
@@ -320,7 +320,7 @@ lemma handle_invocation_pas_refined:
               lookup_cap_and_slot_cur_auth
               as_user_pas_refined
               lookup_cap_and_slot_valid_fault3
-         | simp add: split comp_def runnable_eq_active del: split_if)+),
+         | simp add: split comp_def runnable_eq_active del: if_split)+),
          (auto intro: guarded_to_cur_domain simp: ct_in_state_def st_tcb_at_def intro: if_live_then_nonz_capD)[1])+
   done
 
@@ -340,8 +340,8 @@ lemma handle_invocation_respects:
          | rule hoare_drop_imps
          | wpc | simp add: if_apply_def2
                       del: hoare_post_taut hoare_True_E_R
-                       split del: split_if)+
-  apply (simp add: conj_comms pred_conj_def comp_def if_apply_def2 split del: split_if
+                       split del: if_split)+
+  apply (simp add: conj_comms pred_conj_def comp_def if_apply_def2 split del: if_split
          | wp perform_invocation_respects set_thread_state_pas_refined
             set_thread_state_authorised
             set_thread_state_runnable_valid_sched
@@ -449,7 +449,7 @@ lemma ethread_set_time_slice_pas_refined[wp]:
   apply (erule_tac x="(a, b)" in ballE)
    apply force
   apply (erule notE)
-  apply (erule domains_of_state_aux.cases, simp add: get_etcb_def split: split_if_asm)
+  apply (erule domains_of_state_aux.cases, simp add: get_etcb_def split: if_split_asm)
    apply (force intro: domtcbs)+
   done
 
@@ -495,7 +495,7 @@ lemma timer_tick_integrity[wp]:
        \<lbrace>\<lambda>_. integrity aag X st\<rbrace>" 
   apply (simp add: timer_tick_def)
   apply (wp ethread_set_integrity_autarch gts_wp
-           | wpc | simp add: thread_set_time_slice_def split del: split_if)+
+           | wpc | simp add: thread_set_time_slice_def split del: if_split)+
   apply (clarsimp simp: ct_in_state_def st_tcb_at_def obj_at_def)
   done
 
@@ -539,7 +539,7 @@ lemma handle_interrupt_integrity:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (rule_tac s = s in hacky_ipc_Send [where irq = irq])
    apply (drule (1) cap_auth_caps_of_state)
-   apply (clarsimp simp: aag_cap_auth_def is_cap_simps cap_auth_conferred_def cap_rights_to_auth_def split: split_if_asm)
+   apply (clarsimp simp: aag_cap_auth_def is_cap_simps cap_auth_conferred_def cap_rights_to_auth_def split: if_split_asm)
   apply assumption+
   done
   
@@ -1557,7 +1557,7 @@ crunch cur_thread[wp]: cancel_badged_sends "\<lambda>s. P (cur_thread s)" (wp: c
 lemma invoke_cnode_cur_thread[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-  apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: without_preemption_def split del: split_if)+
+  apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: without_preemption_def split del: if_split)+
   done
 
 crunch cur_thread[wp]: handle_event "\<lambda>s. P (cur_thread s)"
@@ -1603,7 +1603,7 @@ lemma cap_revoke_idle_thread[wp]:"\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace
 lemma invoke_cnode_idle_thread[wp]: "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-    apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: without_preemption_def split del: split_if)+
+    apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: without_preemption_def split del: if_split)+
   done
 
 crunch idle_thread[wp]: handle_event "\<lambda>s::det_state. P (idle_thread s)"
@@ -1619,7 +1619,7 @@ crunch cur_domain[wp]:  transfer_caps_loop, ethread_set, thread_set_priority, se
 lemma invoke_cnode_cur_domain[wp]: "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (cur_domain s)\<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-   apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: without_preemption_def split del: split_if)+
+   apply (wp hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: without_preemption_def split del: if_split)+
   done
 
 crunch cur_domain[wp]: handle_event "\<lambda>s. P (cur_domain s)" (wp: syscall_valid select_wp crunch_wps check_cap_inv cap_revoke_preservation simp: crunch_simps filterM_mapM unless_def ignore: without_preemption check_cap_at filterM  getActiveIRQ resetTimer ackInterrupt const_on_failure getFAR getDFSR getIFSR)

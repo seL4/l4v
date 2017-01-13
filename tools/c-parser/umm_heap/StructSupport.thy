@@ -9,7 +9,7 @@
  *)
 
 theory StructSupport
-imports SepCode SepInv
+imports SepCode SepInv "../../../lib/String_Compare"
 begin
 
 lemma field_lookup_list_Some2 [rule_format]:
@@ -20,9 +20,9 @@ apply(induct_tac ts)
 apply(rename_tac a list)
 apply(clarsimp split: option.splits)
 apply auto
- apply(case_tac a, clarsimp split: split_if_asm)
+ apply(case_tac a, clarsimp split: if_split_asm)
   apply(simp add: ac_simps)+
-apply(case_tac a, clarsimp split: split_if_asm)
+apply(case_tac a, clarsimp split: if_split_asm)
 done
 
 lemma fnl_set:
@@ -127,7 +127,7 @@ apply(induct ti and st and ts and x)
  apply(rule, clarsimp)
   apply(case_tac dt_pair, clarsimp)
  apply clarsimp
- apply(case_tac dt_pair, clarsimp split: split_if_asm)
+ apply(case_tac dt_pair, clarsimp split: if_split_asm)
  apply(drule_tac x=fn in spec)
  apply clarsimp
  apply(fold adjust_ti_def)
@@ -256,7 +256,7 @@ lemma size_empty_typ_info [simp]:
   by (simp add: empty_typ_info_def)
 
 lemma list_size_char:
-  "size_list size_char xs = length xs"
+  "size_list (\<lambda>c. 0) xs = length xs"
   by (induct xs) auto
 
 lemma size_ti_extend_ti [simp]:

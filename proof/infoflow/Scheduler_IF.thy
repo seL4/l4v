@@ -1735,7 +1735,7 @@ lemma ethread_set_reads_respects_scheduler: "reads_respects_scheduler aag l (\<l
   apply (rule conjI)
    apply (clarsimp simp: silc_dom_equiv_def reads_scheduler_def
                          equiv_for_def
-                   split: split_if_asm)
+                   split: if_split_asm)
   apply (simp add: scheduler_affects_equiv_def)
   apply clarsimp
   apply (rule conjI)

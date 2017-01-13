@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-header {* \label{h:abbreviations}Convenience Definitions *}
+chapter {* \label{h:abbreviations}Convenience Definitions *}
 
 (*<*)
 theory Abbreviations

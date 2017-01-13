@@ -106,7 +106,7 @@ lemma bisim_rab:
    apply (auto intro!: bisim_underlyingI
                elim!: separate_cnode_capE
                simp: whenE_def in_monad Bex_def in_bindE word_bits_def in_get_cap_cte_wp_at cte_wp_at_caps_of_state 
-               simp del: add_is_0 split: split_if_asm)[1]
+               simp del: add_is_0 split: if_split_asm)[1]
   apply simp
   apply (rule bisim_underlyingI)
    apply (clarsimp )
@@ -117,14 +117,14 @@ lemma bisim_rab:
  apply (drule (2) valid_sep_cap_not_cnode [where cref = cref])
     apply simp
    apply (fastforce simp: in_monad Bex_def in_bindE word_bits_def in_get_cap_cte_wp_at cte_wp_at_caps_of_state whenE_def
-               simp del: add_is_0 split: split_if_asm)
+               simp del: add_is_0 split: if_split_asm)
   apply clarsimp
   apply (erule separate_cnode_capE)
    apply (fastforce simp: word_bits_def in_monad)
   apply (drule (2) valid_sep_cap_not_cnode [where cref = cref])
    apply simp
   apply (fastforce simp: in_monad Bex_def in_bindE word_bits_def in_get_cap_cte_wp_at cte_wp_at_caps_of_state whenE_def
-              simp del: add_is_0 split: split_if_asm)
+              simp del: add_is_0 split: if_split_asm)
   done
  
 
@@ -199,7 +199,7 @@ lemma not_empty_returnOk [wp]:
 
 lemma not_empty_if [wp_split]:
   "\<lbrakk> not_empty Pt m; not_empty Pf m' \<rbrakk> \<Longrightarrow> not_empty (\<lambda>s. (b \<longrightarrow> Pt s) \<and> ( \<not> b \<longrightarrow> Pf s)) (if b then m else m')"
-  by (clarsimp split: split_if)
+  by clarsimp
 
 lemma not_empty_lsft:
   shows "not_empty (tcb_at t and valid_objs and separate_state) (lookup_slot_for_thread t cptr)"
@@ -359,9 +359,9 @@ lemma decode_invocation_bisim:
   unfolding decode_invocation_def Decode_A.decode_invocation_def
   apply (rule bisim_guard_imp)
     apply (rule bisim_separate_cap_cases [where cap = cap])
-      apply (simp split del: split_if)
+      apply (simp split del: if_split)
       apply (rule bisim_throwError, simp)
-     apply (simp split del: split_if)
+     apply (simp split del: if_split)
      apply (rule bisim_reflE)
     apply (fastforce intro!: bisim_throwError bisim_returnOk simp: AllowRecv_def AllowSend_def)
    apply simp   
@@ -386,7 +386,7 @@ lemma decode_separate_inv:
   unfolding Decode_A.decode_invocation_def
   apply (rule hoare_gen_asmE)
   apply clarify
-  apply (erule separate_capE, simp_all split del: split_if)
+  apply (erule separate_capE, simp_all split del: if_split)
     apply (rule hoare_pre, (wp | simp add: comp_def)+)[1]
    apply (rule hoare_pre) 
    apply (wp | simp)+
@@ -516,18 +516,14 @@ lemma separate_cap_NullCap [simp]: "separate_cap NullCap" by (simp add: separate
 
 lemma set_cap_NullCap_separate_state [wp]:
   "\<lbrace>separate_state\<rbrace> set_cap NullCap cptr \<lbrace>\<lambda>_. separate_state\<rbrace>"
-  unfolding separate_state_def[abs_def] separate_tcb_def separate_cnode_cap_def
-  apply (simp add: separate_state_def[abs_def] tcb_at_typ)
+  unfolding separate_state_def separate_tcb_def separate_cnode_cap_def
+  apply (simp add: tcb_at_typ)
   apply (rule hoare_pre)
    apply wps
    apply (wp set_cap_typ_at hoare_vcg_all_lift)
-  apply (subst separate_cnode_cap_def)
-  apply (clarsimp simp: separate_cap_def) 
+  apply (clarsimp simp: separate_cap_def)
   apply (drule spec, drule (1) mp)
-  apply (clarsimp cong: option.case_cong cap.case_cong split: option.split_asm)
-  apply (erule separate_cnode_capE)
-   apply (simp add: separate_cnode_cap_def)
-  apply (clarsimp simp add: separate_cnode_cap_def split: option.splits)
+  apply (clarsimp split: cap.splits option.splits)
   done
 
 lemma separate_state_pres:
@@ -626,7 +622,7 @@ lemma handle_recv_bisim:
               apply (rule bisim_split_reflE)
                   apply (rule_tac cap = rb in bisim_separate_cap_cases)
                     apply (simp, rule bisim_throwError, rule refl)+
-                   apply (simp split del: split_if)
+                   apply (simp split del: if_split)
                    apply (rule bisim_refl [where P = \<top> and P' = \<top>])
                    apply (case_tac rc, simp_all)[1]
                    apply (wp get_cap_wp' lsft_sep | simp add: lookup_cap_def split_def del:  hoare_True_E_R)+

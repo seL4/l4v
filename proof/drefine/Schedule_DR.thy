@@ -20,12 +20,12 @@ lemma getActiveTCBs_subset:
    x \<in> all_active_tcbs (transform s')"
   apply (clarsimp simp: all_active_tcbs_def getActiveTCB_def)
   apply (clarsimp simp: transform_def transform_objects_def map_add_def domIff)
-  apply (clarsimp dest!: get_tcb_SomeD split: option.splits split_if_asm)
+  apply (clarsimp dest!: get_tcb_SomeD split: option.splits if_split_asm)
   apply (rule context_conjI)
    apply (clarsimp simp: restrict_map_def)
    apply (frule invs_valid_idle)
    apply (clarsimp simp: valid_idle_def pred_tcb_def2 get_tcb_def)
-  apply (clarsimp simp: restrict_map_def split: split_if_asm)
+  apply (clarsimp simp: restrict_map_def split: if_split_asm)
   apply (clarsimp simp: transform_object_def transform_tcb_def)
   apply (clarsimp simp: infer_tcb_pending_op_def)
   apply (frule(1) valid_etcbs_tcb_etcb)
@@ -262,7 +262,7 @@ lemma schedule_resume_cur_thread_dcorres:
     apply (auto simp: transform_def transform_current_thread_def all_active_tcbs_def transform_objects_def active_tcbs_in_domain_def etcb_at_def tcb_boundntfn_slot_def tcb_pending_op_slot_def
                           map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
                           transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def
-                    split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits)[1]
+                    split: option.splits if_split Structures_A.kernel_object.splits Structures_A.thread_state.splits)[1]
      (* cur = idle_thread s' *)
    apply (subgoal_tac "cdl_current_thread s = None")
     apply (clarsimp simp: transform_def transform_current_thread_def)+
@@ -283,7 +283,7 @@ lemma schedule_switch_thread_helper:
   apply (auto simp: transform_def transform_current_thread_def all_active_tcbs_def transform_objects_def active_tcbs_in_domain_def etcb_at_def
                         map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def pred_tcb_at_def get_tcb_def tcb_pending_op_slot_def tcb_boundntfn_slot_def
                         transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def
-                  split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits)
+                  split: option.splits if_split Structures_A.kernel_object.splits Structures_A.thread_state.splits)
   done
 
 lemma schedule_switch_thread_dcorres:
@@ -353,7 +353,7 @@ lemma schedule_choose_new_thread_helper:
                        is_etcb_at_def
                         map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
                         transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def tcb_pending_op_slot_def tcb_boundntfn_slot_def
-                  split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits)
+                  split: option.splits if_split Structures_A.kernel_object.splits Structures_A.thread_state.splits)
   done
 
 lemma idle_thread_not_in_queue:

@@ -7,7 +7,7 @@
  *
  * @TAG(NICTA_GPL)
  *)
-header {* Shared Memory *}
+chapter {* Shared Memory *}
 (*<*)
 theory DataIn imports
   "../../tools/c-parser/CTranslation"
@@ -23,6 +23,8 @@ install_C_file "DataIn.c"
 autocorres [ts_rules = nondet] "DataIn.c"
 
 locale DataIn_glue = DataIn
+  + assumes swi_safe_to_ignore[simplified, simp]:
+    "asm_semantics_ok_to_ignore TYPE(nat) true (''swi '' @ x)"
 begin
 
 lemma DataIn__run_nf: "\<lbrace>\<lambda>s. \<forall>r. P r s\<rbrace> DataIn__run' \<lbrace>P\<rbrace>!"

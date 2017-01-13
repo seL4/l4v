@@ -287,7 +287,7 @@ Outer_Syntax.command @{command_keyword "desugar_term"}
 ML {*
 Outer_Syntax.command @{command_keyword "desugar_thm"}
   "thm str str2... -> desugar str in thm"
-  (Parse.xthm -- Scan.repeat1 Parse.string >> (fn (t, s) =>
+  (Parse.thm -- Scan.repeat1 Parse.string >> (fn (t, s) =>
     Toplevel.keep (fn state => let val ctxt = Toplevel.context_of state in
       Insulin.desugar_thm ctxt (Attrib.eval_thms ctxt [t] |> hd) s |> writeln end)))
 *}

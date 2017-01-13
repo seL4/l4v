@@ -30,7 +30,7 @@ lemma exec_via_trace:
         \<and> option_map exec_final_step (trace_end tr) = Some xs)"
 proof -
   have dom_If: "\<And>n f. dom (\<lambda>i. if i \<le> n then Some (f i) else None) = {..n}"
-    by (auto split: split_if_asm)
+    by (auto split: if_split_asm)
   have end_If: "\<And>n f. trace_end (\<lambda>i. if i \<le> n then Some (f i) else None) = Some (f n)"
     apply (simp add: trace_end_def dom_If)
     apply (subst Max_eqI, simp+)
@@ -314,7 +314,7 @@ proof -
     apply (cut_tac i=n in f_induct[rule_format], clarsimp)
     apply (frule_tac step[rule_format])
     apply (clarsimp simp: fun_eq_iff restrict_map_def linorder_not_le split_def
-                   split: split_if_asm)
+                   split: if_split_asm)
     apply (drule_tac x=i in spec)
     apply (auto simp: le_Suc_eq)
     done
@@ -325,7 +325,7 @@ proof -
     apply (cut_tac i=j and j="min i j" and k="max i j" in f_eq[rule_format])
       apply (simp add: min_def linorder_not_le f_induct)
      apply simp
-    apply (simp add: min_def max_def split: split_if_asm)
+    apply (simp add: min_def max_def split: if_split_asm)
     done
 
   show "?thesis"
@@ -355,8 +355,8 @@ lemma restrict_map_eq_Some_le:
     \<Longrightarrow> tr' (m :: nat) = Some v
     \<Longrightarrow> n \<ge> m \<and> (\<forall>k \<le> m. restrict_map tr {..k} = restrict_map tr' {..k})"
   apply (frule_tac x=m in fun_cong, simp(no_asm_use) add: restrict_map_def)
-  apply (simp split: split_if_asm)
-  apply (auto simp: fun_eq_iff split: split_if_asm)
+  apply (simp split: if_split_asm)
+  apply (auto simp: fun_eq_iff split: if_split_asm)
   done
 
 lemma trace_prefixes_to_trace:
@@ -829,9 +829,12 @@ lemma simpl_to_graph_done:
                         eq_impl_def trace_end_match_def)
   done
 
-lemma simpl_to_graph_done2:
-  "simpl_to_graph SGamma GGamma gf Ret (add_cont com.Skip []) n Q P I eqs eqs"
-  by (auto intro: simpl_to_graph_done simp: eq_impl_def)
+lemma eq_impl_refl:
+  "eq_impl nn eqs eqs P"
+  by (simp add: eq_impl_def)
+
+lemmas simpl_to_graph_done2 = simpl_to_graph_done[OF eq_impl_refl]
+lemmas simpl_to_graph_creturn_void2 = simpl_to_graph_creturn_void[where nn=Ret, OF eq_impl_refl]
 
 lemma simpl_to_graph_noop_Basic:
   "\<lbrakk> GGamma gf = Some gfc; function_graph gfc m = Some (node.Basic nn upds);
@@ -937,8 +940,9 @@ lemma graph_fun_refines_from_simpl_to_graph:
     \<And>Q. simpl_to_graph SGamma GGamma fname (NextNode (entry_point gf)) (add_cont com []) 0
         [Q] UNIV I eqs
         (\<lambda>s s'. map (\<lambda>i. var_acc i s) (function_outputs gf) = map (\<lambda>i. i s') outs);
-        \<forall>gst sst. map (\<lambda>i. var_acc i gst) (function_inputs gf) = map (\<lambda>i. i sst) ins
-            \<longrightarrow> eqs gst sst;
+        eq_impl (NextNode (entry_point gf))
+          (\<lambda>gst sst. map (\<lambda>i. var_acc i gst) (function_inputs gf) = map (\<lambda>i. i sst) ins)
+          eqs I;
         distinct (function_inputs gf); length ins = length (function_inputs gf);
         length outs = length (function_outputs gf) \<rbrakk>
     \<Longrightarrow> graph_fun_refines SGamma GGamma I ins proc outs fname"
@@ -951,8 +955,9 @@ lemma graph_fun_refines_from_simpl_to_graph:
    apply (rule conjI, assumption)
    apply (simp add: suffix_tuple_closure_inter_def exec_trace_def)
    apply (rule conjI)
-    apply (erule allE, erule allE, erule mp)
-    apply (simp add: fetch_returned exec_trace_inputs_def acc_vars_def)
+    apply (erule eq_implD)
+     apply (simp add: fetch_returned exec_trace_inputs_def acc_vars_def)
+    apply simp
    apply (simp add: add_cont_Nil nat_trace_rel_def)
   apply (clarsimp simp: trace_end_match_def dest!: fun_cong[where x=0])
   apply (subgoal_tac "\<forall>st. trace_end tr'' = Some st
@@ -1279,6 +1284,88 @@ lemma simpl_to_graph_impossible:
   apply (drule(1) eq_implD, simp+)
   done
 
+definition
+  "asm_args_to_list enc xs m_ms
+    = map VarWord32 xs @ [VarMem (fst m_ms), VarMS (enc (snd m_ms))]"
+
+definition
+  "asm_rets_to_list ret enc v mem_vs
+    = (if ret then [VarWord32 v] else []) @ [VarMem (fst mem_vs), VarMS (enc (snd mem_vs))]"
+
+definition
+  asm_fun_refines
+where
+  "asm_fun_refines specname ret enc len GGamma fname
+    = (\<exists>gf. GGamma fname = Some gf
+        \<and> distinct (function_inputs gf)
+        \<and> length (function_inputs gf) = len
+        \<and> (\<forall>tr \<in> exec_trace GGamma fname. \<forall>inp_vs inp_mem_ms.
+                exec_trace_inputs gf tr = asm_args_to_list enc inp_vs inp_mem_ms
+                \<longrightarrow> (\<exists>r gst.
+                          r \<in> asm_semantics specname inp_vs inp_mem_ms
+                        \<and> trace_end tr = Some [(Ret, gst, fname)]
+                        \<and> acc_vars (function_outputs gf) gst = split (asm_rets_to_list ret enc) r)))"
+
+lemma asm_args_to_list_inj:
+  "(asm_args_to_list enc vs mem_ms = asm_args_to_list enc vs' mem_ms')
+    = (vs = vs' \<and> fst mem_ms = fst mem_ms' \<and> enc (snd mem_ms) = enc (snd mem_ms'))"
+  apply (simp add: asm_args_to_list_def)
+  apply (subst inj_map_eq_map)
+   apply (rule inj_onI, simp)
+  apply simp
+  done
+
+lemma simpl_to_graph_call_asm_fun:
+  assumes graph: "nn = NextNode m" "GGamma p = Some gfc"
+      "function_graph gfc m = Some (node.Call nn' p' args rets)"
+  and rel: "asm_fun_refines specname ret enc len GGamma p'"
+  and init: "eq_impl nn eqs (\<lambda>gst sst. sst \<in> I
+            \<and> map (\<lambda>i. i gst) args = asm_args_to_list enc (asm_args sst)
+                (asm_fetch (globals sst))
+            \<and> length args = len) (I \<inter> P)"
+  and ret: "eq_impl nn eqs (\<lambda>gst sst. (\<forall>m' v' (ms' :: 'a).
+            gdata (asm_store gdata (m', ms') (globals sst)) = gdata (globals sst)
+            \<and> (v', (m', ms')) \<in> asm_semantics specname (asm_args sst) (asm_fetch (globals sst))
+            \<longrightarrow> eqs2 (save_vals rets (asm_rets_to_list ret enc v' (m', ms')) gst)
+                 (asm_ret v' (globals_update (asm_store gdata (m', ms')) sst))
+                \<and> asm_ret v' (globals_update (asm_store gdata (m', ms')) sst) \<in> I)) I"
+  and cont: "simpl_to_graph SGamma GGamma p nn' (add_cont com.Skip con) n tS UNIV I eqs2 out_eqs"
+  shows "simpl_to_graph SGamma GGamma p nn
+        (add_cont (Spec (asm_spec (ti :: 'a itself) gdata vol specname asm_ret asm_args)) con)
+        n tS P I eqs out_eqs"
+  apply (rule simpl_to_graph_name_simpl_state)
+  apply (clarsimp simp: graph intro!: simpl_to_graphI)
+  apply (frule init[THEN eq_implD], simp+)
+  apply (cut_tac rel, clarsimp simp: asm_fun_refines_def)
+  apply (frule exec_trace_drop_n, (rule graph | assumption)+)
+  apply (drule(1) bspec)
+  apply (clarsimp simp: exec_trace_inputs_def graph)
+  apply (subst(asm) trace_drop_n_init, (assumption | rule graph)+)
+  apply (clarsimp simp: init_vars_def)
+  apply (subst(asm) fetch_returned, simp_all)
+   apply (drule arg_cong[where f=length])+
+   apply simp
+  apply (simp add: asm_args_to_list_inj)
+  apply (drule spec, drule mp, rule refl)
+  apply clarsimp
+  apply (frule trace_drop_n_end, (assumption | rule graph)+)
+  apply clarsimp
+  apply (frule(1) c_trace_may_extend_steps)
+    apply (rule add_cont_steps)
+    apply (rule exec_impl_steps_Normal)
+    apply (rule exec.Spec)
+    apply (simp add: asm_spec_def)
+    apply (erule rev_bexI)
+    apply simp
+   apply simp
+  apply clarsimp
+  apply (frule ret[THEN eq_implD], simp)
+  apply (cut_tac tr=tr and tr'=trace' and n''="n'' + ja"
+      and sst="asm_ret a b" for a b in simpl_to_graphD[OF cont])
+   apply (auto simp: return_vars_def asm_store_eq)[1]
+  apply (metis restrict_map_eq_mono[OF le_add1])
+  done
+
 lemma take_1_drop:
   "n < length xs \<Longrightarrow> take (Suc 0) (drop n xs) = [xs ! n]"
   apply (cases "drop n xs")
@@ -1306,11 +1393,11 @@ lemma heap_update_list_If1:
    apply (rule refl)
   apply (induct xs rule: rev_induct)
    apply simp
-  apply (simp split del: split_if)
+  apply (simp split del: if_split)
   apply (subst foldl_cong[OF refl refl])
    apply (clarsimp simp: nth_append)
    apply (rule refl)
-  apply (simp add: nth_append split del: split_if cong: if_cong)
+  apply (simp add: nth_append split del: if_split cong: if_cong)
   apply (auto simp: unat_of_nat addr_card linorder_not_less less_Suc_eq
               dest: word_unat.Rep_inverse')
   done
@@ -1397,7 +1484,7 @@ lemma c_guard_to_word_ineq:
    apply (drule_tac x="unat (- ptr_val p)" in spec)
    apply simp
    apply (simp add: Aligned.unat_minus word_le_nat_alt
-             split: split_if_asm)
+             split: if_split_asm)
     apply (drule of_nat_inverse, simp+)
     apply (cut_tac 'a='a in sz_nzero, simp)
    apply (simp add: word_size unat_of_nat linorder_not_le
@@ -1406,7 +1493,7 @@ lemma c_guard_to_word_ineq:
   apply (simp add: word_neq_0_conv[symmetric] del: word_neq_0_conv)
   apply (subgoal_tac "ptr_val p = (- (of_nat k))")
    apply simp
-   apply (simp add: word_le_nat_alt Aligned.unat_minus split: split_if_asm)
+   apply (simp add: word_le_nat_alt Aligned.unat_minus split: if_split_asm)
     apply (drule of_nat_inverse, simp+)
     apply (cut_tac 'a='a in sz_nzero, simp)
    apply (simp add: word_size unat_of_nat)
@@ -1558,7 +1645,7 @@ lemma store_word32s_equality_split:
   apply (safe intro!: load_word32_offset_represents[where p=p])
     apply (simp_all add: load_fold_filter_apply_store_word32)
   apply (drule_tac f="load_word32 (p + x)" in arg_cong)+
-  apply (simp add: load_fold_filter_apply_store_word32 split: split_if_asm)
+  apply (simp add: load_fold_filter_apply_store_word32 split: if_split_asm)
   done
 
 lemma apply_store_word32_over_store:
@@ -1588,9 +1675,11 @@ lemma store_word32s_equality_final:
                         load_apply_store_word32
                         apply_store_load_word32
                   dest: arg_cong[where f="load_word32 (p + x)"]
-                 split: split_if_asm simp del: word_neq_0_conv)
+                 split: if_split_asm simp del: word_neq_0_conv)
   apply (simp_all add: apply_store_word32_def del: word_neq_0_conv)
   done
+
+
 
 ML {*
 
@@ -1631,7 +1720,7 @@ val store_word32s_equality_simproc =
     Simplifier.make_simproc
       (Proof_Context.init_global @{theory})
       "store_word32s_equality_simproc"
-      {lhss = lhss, proc = proc, identifier = []}
+      {lhss = lhss, proc = proc}
   end
 
 *}
@@ -1807,12 +1896,40 @@ fun mk_graph_refines (funs : ParseGraph.funs) ctxt s = let
     $ HOLogic.mk_string s)
   end
 
+fun asm_spec_name_to_fn_name _ specname = let
+    val name = space_implode "_" (space_explode " " specname)
+  in "asm_instruction'" ^ name end
+
+fun mk_asm_refines (funs : ParseGraph.funs) ctxt specname = let
+    val s = asm_spec_name_to_fn_name true specname
+    val (xs, ys, _) = Symtab.lookup funs s |> the
+    val enc = Syntax.read_term ctxt "encode_machine_state"
+    val _ = case enc of Const _ => ()
+      | _ => raise TERM ("mk_simpl_acc: requires `encode_machine_state :: machine_state => unit \<times> nat'", [])
+  in HOLogic.mk_Trueprop (Const (@{const_name asm_fun_refines},
+        [@{typ string}, @{typ bool}, fastype_of enc, @{typ nat},
+            fastype_of standard_GG, @{typ string}] ---> @{typ bool})
+    $ HOLogic.mk_string specname
+    $ (if (length ys > 2) then @{term True} else @{term False})
+    $ enc
+    $ HOLogic.mk_number @{typ nat} (length xs)
+    $ standard_GG $ HOLogic.mk_string s)
+  end
+
 fun apply_graph_refines_ex_tac funs ctxt = SUBGOAL (fn (t, i) => case
     (Logic.strip_assums_concl (Envir.beta_eta_contract t)) of
     @{term Trueprop} $ (Const (@{const_name graph_fun_refines}, _)
         $ _ $ _ $ _ $ _ $ _ $ _ $ s)
         => (resolve0_tac [Thm.assume (Thm.cterm_of ctxt
             (mk_graph_refines funs ctxt (HOLogic.dest_string s)))] i)
+        | _ => raise TERM ("apply_graph_refines_ex_tac", [t]))
+
+fun apply_asm_refines_ex_tac funs ctxt = SUBGOAL (fn (t, i) => case
+    (Logic.strip_assums_concl (Envir.beta_eta_contract t)) of
+    @{term Trueprop} $ (Const (@{const_name asm_fun_refines}, _)
+        $ specname $ _ $ _ $ _ $ _ $ _)
+        => (resolve0_tac [Thm.assume (Thm.cterm_of ctxt
+            (mk_asm_refines funs ctxt (HOLogic.dest_string specname)))] i)
         | _ => raise TERM ("apply_graph_refines_ex_tac", [t]))
 
 fun apply_impl_thm ctxt = SUBGOAL (fn (t, i) => case
@@ -1926,6 +2043,9 @@ fun apply_simpl_to_graph_tac funs hints ctxt =
             THEN' inst_graph_tac ctxt
             THEN' apply_graph_refines_ex_tac funs ctxt
             THEN' apply_modifies_thm ctxt,
+        resolve0_tac [@{thm simpl_to_graph_call_asm_fun[OF refl]}]
+            THEN' inst_graph_tac ctxt
+            THEN' apply_asm_refines_ex_tac funs ctxt,
         resolve0_tac [@{thm simpl_to_graph_nearly_done}]
             THEN' inst_graph_tac ctxt
     ] THEN_ALL_NEW (TRY o REPEAT_ALL_NEW
@@ -1946,7 +2066,8 @@ fun simpl_to_graph_cache_tac funs hints cache nm ctxt =
             handle TERM _ => no_tac),
         resolve_tac ctxt @{thms simpl_to_graph_done2
             simpl_to_graph_Skip_immediate[where nn=Ret]
-            simpl_to_graph_Throw_immediate[where nn=Ret]},
+            simpl_to_graph_Throw_immediate[where nn=Ret]
+            simpl_to_graph_creturn_void2},
         eq_impl_assume_tac ctxt
     ]
 
@@ -2028,7 +2149,7 @@ fun trace_fail_tac2 _ = K no_tac
 
 fun simpl_to_graph_tac funs hints nm ctxt = let
     val cache = ref (Termtab.empty)
-  in REPEAT_ALL_NEW (DETERM o (full_simp_tac (simpl_ss ctxt) THEN'
+  in REPEAT_ALL_NEW (DETERM o (full_simp_tac (simpl_ss ctxt) THEN_ALL_NEW
     SUBGOAL (fn (t, i) => fn thm =>
       ((simpl_to_graph_cache_tac funs hints cache nm ctxt
     ORELSE' (eresolve0_tac [@{thm use_simpl_to_graph_While_assum}]
@@ -2179,7 +2300,7 @@ ML {*
 fun define_graph_fun_short funs s
     = ParseGraph.define_graph_fun funs (Long_Name.base_name s ^ "_graph")
         (Binding.name (Long_Name.base_name s ^ "_graph_fun")) s
-        #> Local_Theory.restore
+        #> Local_Theory.reset
 *}
 
 end

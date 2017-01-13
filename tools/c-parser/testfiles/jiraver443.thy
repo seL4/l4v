@@ -27,6 +27,8 @@ begin
   context jiraver443
   begin
     thm get__camkes_ret_tls_var_from_244_body_def
+    (* observe the UnspecifiedSyntax issue in seL4_Send, if you so desire *)
+    thm seL4_Send_body_def
   end
 
 end

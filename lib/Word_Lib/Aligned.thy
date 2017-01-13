@@ -296,7 +296,7 @@ proof cases
   have "(2::nat) ^ m dvd unat (k << m)"
   proof
     have kv: "(unat k div 2 ^ q) * 2 ^ q + unat k mod 2 ^ q = unat k" 
-      by (rule mod_div_equality)
+      by (rule div_mult_mod_eq)
     
     have "unat (k << m) = unat (2 ^ m * k)" by (simp add: shiftl_t2n)
     also have "\<dots> = (2 ^ m * unat k) mod (2 ^ len_of TYPE('a))" using mv

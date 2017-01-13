@@ -203,7 +203,7 @@ lemma sep_irq_node_dom_sep_map_predicate:
   "sep_irq_node_dom (sep_map_predicate ptr P cmps) {}"
   apply (clarsimp simp: sep_map_general_def object_to_sep_state_def
     sep_irq_node_dom_def sep_map_predicate_def
-    split:sep_state.splits split_if_asm)
+    split:sep_state.splits if_split_asm)
   done
 
 lemma sep_map_rewrite_spec:
@@ -262,7 +262,7 @@ lemma sep_spec_simps:
   apply (clarsimp simp:object_to_sep_state_def)
   apply (rule ext)
   apply (clarsimp simp: object_project_def object_slots_object_clean
-                 split: split_if_asm)
+                 split: if_split_asm)
   done
 
 lemma sep_conj_spec:
@@ -472,7 +472,7 @@ lemma set_cap_all_scheduable_tcbs:
   apply (drule in_singleton)
   apply (intro set_eqI iffI)
    apply (clarsimp simp: sep_all_scheduable_tcbs_def sep_state_projection_def
-                  split: split_if_asm option.splits)
+                  split: if_split_asm option.splits)
   apply (fastforce simp: sep_all_scheduable_tcbs_def map_add_def
                          sep_state_projection_def scheduable_cap_def
                  split: option.splits)

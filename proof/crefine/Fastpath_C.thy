@@ -232,7 +232,7 @@ where
 
 lemma obj_at_tcbs_of:
   "obj_at' P t s = (EX tcb. tcbs_of s t = Some tcb & P tcb)"
-  apply (simp add: tcbs_of_def split: split_if)
+  apply (simp add: tcbs_of_def split: if_split)
   apply (intro conjI impI)
    apply (clarsimp simp: obj_at'_def projectKOs)
   apply (clarsimp simp: obj_at'_weakenE[OF _ TrueI])
@@ -355,7 +355,7 @@ lemma of_int_sint_scast [simp]:
 lemma stateAssert_bind_out_of_if:
   "If P f (stateAssert Q xs >>= g) = stateAssert (\<lambda>s. \<not> P \<longrightarrow> Q s) [] >>= (\<lambda>_. If P f (g ()))"
   "If P (stateAssert Q xs >>= g) f = stateAssert (\<lambda>s. P \<longrightarrow> Q s) [] >>= (\<lambda>_. If P (g ()) f)"
-  by (simp_all add: fun_eq_iff stateAssert_def exec_get split: split_if)
+  by (simp_all add: fun_eq_iff stateAssert_def exec_get split: if_split)
 
 lemma isCNodeCap_capUntypedPtr_capCNodePtr:
   "isCNodeCap c \<Longrightarrow> capUntypedPtr c = capCNodePtr c"
@@ -384,7 +384,7 @@ lemma lookup_fp_ccorres':
      apply (simp add: from_bool_0 del: Collect_const cong: call_ignore_cong)
      apply (rule ccorres_Cond_rhs_Seq)
       apply (simp add: resolveAddressBits.simps split_def del: Collect_const
-                      split del: split_if)
+                      split del: if_split)
       apply (rule ccorres_drop_cutMon)
       apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
        apply vcg
@@ -462,9 +462,9 @@ lemma lookup_fp_ccorres':
      apply (rule ccorres_Guard_Seq, csymbr)
      apply (simp add: resolveAddressBits.simps bindE_assoc extra_sle_sless_unfolds
                       Collect_True
-                 split del: split_if del: Collect_const cong: call_ignore_cong)
+                 split del: if_split del: Collect_const cong: call_ignore_cong)
      apply (simp add: cutMon_walk_bindE del: Collect_const
-                         split del: split_if cong: call_ignore_cong)
+                         split del: if_split cong: call_ignore_cong)
      apply (rule ccorres_drop_cutMon_bindE, rule ccorres_assertE)
      apply (rule ccorres_cutMon)
      apply csymbr
@@ -481,7 +481,7 @@ lemma lookup_fp_ccorres':
          apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
           apply vcg
          apply (rule conseqPre, vcg)
-         apply (clarsimp simp: unlessE_def split: split_if)
+         apply (clarsimp simp: unlessE_def split: if_split)
          apply (simp add: throwError_def return_def cap_tag_defs
                           isRight_def isLeft_def
                           ccap_relation_NullCap_iff
@@ -504,7 +504,7 @@ lemma lookup_fp_ccorres':
           apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
            apply vcg
           apply (rule conseqPre, vcg)
-          apply (clarsimp simp: unlessE_def split: split_if cong: call_ignore_cong)
+          apply (clarsimp simp: unlessE_def split: if_split cong: call_ignore_cong)
           apply (simp add: throwError_def return_def cap_tag_defs isRight_def
                            isLeft_def ccap_relation_NullCap_iff)
           apply fastforce
@@ -518,7 +518,7 @@ lemma lookup_fp_ccorres':
      apply (rule ccorres_cutMon)
      apply (simp add: cutMon_walk_bindE unlessE_whenE
                  del: Collect_const
-                 split del: split_if cong: call_ignore_cong)
+                 split del: if_split cong: call_ignore_cong)
      apply (rule ccorres_drop_cutMon_bindE)
      apply csymbr+
      apply (rule ccorres_rhs_assoc2)
@@ -624,7 +624,7 @@ lemma lookup_fp_ccorres':
      apply (simp add: ccHoarePost_def del: Collect_const)
      apply vcg
     apply (clarsimp simp: Collect_const_mem if_1_0_0 of_bl_from_bool
-               split del: split_if cong: if_cong)
+               split del: if_split cong: if_cong)
     apply (clarsimp simp: cap_get_tag_isCap
                           option.split[where P="\<lambda>x. x"]
                           isCNodeCap_capUntypedPtr_capCNodePtr
@@ -823,7 +823,7 @@ lemma stored_hw_asid_get_ccorres_split':
                         add_mask_eq pdBits_def pageBits_def word_bits_def
                         valid_pde_mapping_offset'_def pd_asid_slot_def)
   apply (simp add: cpde_relation_def Let_def pde_lift_def
-            split: split_if_asm)
+            split: if_split_asm)
   done
 
 lemma ptr_add_0xFF0:
@@ -853,7 +853,7 @@ lemma pde_stored_asid_Some:
      = (pde_get_tag pde = scast pde_pde_invalid
            \<and> to_bool (stored_asid_valid_CL (pde_pde_invalid_lift pde))
            \<and> v = ucast (stored_hw_asid_CL (pde_pde_invalid_lift pde)))"
-  by (auto simp add: pde_stored_asid_def split: split_if)
+  by (auto simp add: pde_stored_asid_def split: if_split)
 
 lemma pointerInUserData_c_guard':
   "\<lbrakk> pointerInUserData ptr s; no_0_obj' s; is_aligned ptr 2 \<rbrakk>
@@ -1098,7 +1098,7 @@ lemma switchToThread_fp_ccorres:
    apply (fastforce simp: ran_def)
   apply (frule ctes_of_valid', clarsimp, clarsimp simp: valid_cap'_def)
   apply (auto simp: singleton_eq_o2s projectKOs obj_at'_def
-                    pde_stored_asid_def split: split_if_asm)
+                    pde_stored_asid_def split: if_split_asm)
   done
 
 lemma thread_state_ptr_set_tsType_np_spec:
@@ -1479,14 +1479,14 @@ lemma isValidVTableRoot_fp_lemma:
   apply (subgoal_tac "cap_get_tag ccap = scast cap_page_directory_cap
                   \<Longrightarrow> (index (cap_C.words_C ccap) 0 && 0x10 = 0x10) = to_bool (capPDIsMapped_CL (cap_page_directory_cap_lift ccap))")
    apply (clarsimp simp add: cap_get_tag_eq_x mask_def
-                             cap_page_directory_cap_def split: split_if)
+                             cap_page_directory_cap_def split: if_split)
    apply (rule conj_cong[OF refl])
    apply clarsimp
   apply (clarsimp simp: cap_lift_page_directory_cap
                         cap_to_H_simps
                         to_bool_def bool_mask[folded word_neq_0_conv]
                         cap_page_directory_cap_lift_def
-                 elim!: ccap_relationE split: split_if)
+                 elim!: ccap_relationE split: if_split)
   apply (thin_tac "P" for P)
   apply word_bitwise
   done
@@ -1496,7 +1496,7 @@ lemma isValidVTableRoot_fp_spec:
        {t. ret__unsigned_long_' t = from_bool (isValidVTableRoot_C (pd_cap_' s))}"
   apply vcg
   apply (clarsimp simp: word_sle_def word_sless_def isValidVTableRoot_fp_lemma)
-  apply (simp add: from_bool_def split: split_if)
+  apply (simp add: from_bool_def split: if_split)
   done
 
 lemma isRecvEP_endpoint_case:
@@ -1600,7 +1600,7 @@ lemma fastpath_dequeue_ccorres:
                          update_tcb_map_tos typ_heap_simps')
    apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
     apply (rule ext, simp add: tcb_null_queue_ptrs_def
-                        split: split_if)
+                        split: if_split)
    apply (rule conjI)
     apply (rule cpspace_relation_ep_update_ep, assumption+)
      apply (simp add: Let_def cendpoint_relation_def EPState_Recv_def)
@@ -1616,7 +1616,7 @@ lemma fastpath_dequeue_ccorres:
                    cmachine_state_relation_def h_t_valid_clift_Some_iff
                    update_ep_map_tos)
   apply (erule cready_queues_relation_null_queue_ptrs)
-  apply (rule ext, simp add: tcb_null_ep_ptrs_def split: split_if)
+  apply (rule ext, simp add: tcb_null_ep_ptrs_def split: if_split)
   done
 
 lemma tcb_NextPrev_C_update_swap:
@@ -1684,7 +1684,7 @@ lemma sym_refs_upd_sD:
    apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
    apply (clarsimp simp: project_inject objBits_def)
   apply (clarsimp simp: obj_at'_def ps_clear_upd projectKOs
-                 split: split_if)
+                 split: if_split)
   apply (clarsimp simp: project_inject objBits_def)
   apply auto
   done
@@ -1775,7 +1775,7 @@ lemma fastpath_enqueue_ccorres:
                           typ_heap_simps')
     apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
      apply (rule ext, simp add: tcb_null_queue_ptrs_def
-                         split: split_if)
+                         split: if_split)
     apply (rule conjI)
      apply (rule_tac S="tcb_ptr_to_ctcb_ptr ` set (ksCurThread \<sigma> # list)"
                    in cpspace_relation_ep_update_an_ep,
@@ -1806,15 +1806,15 @@ lemma fastpath_enqueue_ccorres:
      apply (fastforce dest!: map_to_ko_atI)
 
     apply (rule cnotification_relation_q_cong)
-    apply (clarsimp split: split_if)
+    apply (clarsimp split: if_split)
     apply (clarsimp simp: restrict_map_def ntfn_q_refs_of'_def
-                   split: split_if Structures_H.notification.split_asm Structures_H.ntfn.split_asm)
+                   split: if_split Structures_H.notification.split_asm Structures_H.ntfn.split_asm)
     apply (erule notE[rotated], erule_tac ntfnptr=p and ntfn=a in st_tcb_at_not_in_ntfn_queue,
            auto dest!: map_to_ko_atI)[1]
    apply (simp add: carch_state_relation_def typ_heap_simps' update_ep_map_tos
                     cmachine_state_relation_def h_t_valid_clift_Some_iff)
    apply (erule cready_queues_relation_null_queue_ptrs)
-   apply (rule ext, simp add: tcb_null_ep_ptrs_def split: split_if)
+   apply (rule ext, simp add: tcb_null_ep_ptrs_def split: if_split)
   apply (clarsimp simp: typ_heap_simps' EPState_Recv_def mask_def
                         is_aligned_weaken[OF is_aligned_tcb_ptr_to_ctcb_ptr])
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
@@ -1824,7 +1824,7 @@ lemma fastpath_enqueue_ccorres:
                          typ_heap_simps' ct_in_state'_def)
    apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
     apply (rule ext, simp add: tcb_null_queue_ptrs_def
-                        split: split_if)
+                        split: if_split)
    apply (rule conjI)
     apply (rule_tac S="{tcb_ptr_to_ctcb_ptr (ksCurThread \<sigma>)}"
                  in cpspace_relation_ep_update_an_ep, assumption+)
@@ -1836,15 +1836,15 @@ lemma fastpath_enqueue_ccorres:
    apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
    apply simp
    apply (rule cnotification_relation_q_cong)
-   apply (clarsimp split: split_if)
+   apply (clarsimp split: if_split)
    apply (clarsimp simp: restrict_map_def ntfn_q_refs_of'_def
-                  split: split_if Structures_H.notification.split_asm Structures_H.ntfn.split_asm)
+                  split: if_split Structures_H.notification.split_asm Structures_H.ntfn.split_asm)
    apply (erule notE[rotated], rule_tac ntfnptr=p and ntfn=a in st_tcb_at_not_in_ntfn_queue,
           assumption+, auto dest!: map_to_ko_atI)[1]
   apply (simp add: carch_state_relation_def typ_heap_simps' update_ep_map_tos
                    cmachine_state_relation_def h_t_valid_clift_Some_iff)
   apply (erule cready_queues_relation_null_queue_ptrs)
-  apply (rule ext, simp add: tcb_null_ep_ptrs_def split: split_if)
+  apply (rule ext, simp add: tcb_null_ep_ptrs_def split: if_split)
   done
 
 
@@ -1981,11 +1981,11 @@ lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
 lemma fastpath_copy_mrs_ccorres:
 notes nat_min_simps [simp del]
 shows
-  "ccorres dc xfdc (\<top> and (\<lambda>_. ln <= length ARM_H.msgRegisters))
-     (UNIV \<inter> {s. unat (length___unsigned_long_' s) = ln}
+  "ccorres dc xfdc (\<top> and (\<lambda>_. len <= length ARM_H.msgRegisters))
+     (UNIV \<inter> {s. unat (length___unsigned_long_' s) = len}
            \<inter> {s. src_' s = tcb_ptr_to_ctcb_ptr src}
            \<inter> {s. dest_' s = tcb_ptr_to_ctcb_ptr dest}) []
-     (forM_x (take ln ARM_H.msgRegisters)
+     (forM_x (take len ARM_H.msgRegisters)
              (\<lambda>r. do v \<leftarrow> asUser src (getRegister r);
                     asUser dest (setRegister r v) od))
      (Call fastpath_copy_mrs_'proc)"
@@ -2222,7 +2222,7 @@ lemma fastpath_call_ccorres:
            apply (drule(1) obj_at_cslift_tcb, clarsimp)
            apply (clarsimp simp: typ_heap_simps' ctcb_relation_def cfault_rel_def)
            apply (rule rev_bexI, erule threadGet_eq)
-           apply (clarsimp simp: seL4_Fault_lift_def Let_def split: split_if_asm)
+           apply (clarsimp simp: seL4_Fault_lift_def Let_def split: if_split_asm)
           apply ceqv
          apply csymbr
          apply (simp del: Collect_const cong: call_ignore_cong)
@@ -2457,8 +2457,8 @@ lemma fastpath_call_ccorres:
                             apply (simp add: ctcb_relation_def cthread_state_relation_def)
                            apply simp
                           apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                            apply (rule ext, simp split: split_if add: typ_heap_simps')
-                           apply (rule ext, simp split: split_if add: typ_heap_simps')
+                            apply (rule ext, simp split: if_split add: typ_heap_simps')
+                           apply (rule ext, simp split: if_split add: typ_heap_simps')
                           apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                            typ_heap_simps' map_comp_update projectKO_opt_tcb
                                            cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -2565,8 +2565,8 @@ lemma fastpath_call_ccorres:
                                         apply (simp add: ctcb_relation_def cthread_state_relation_def)
                                        apply simp
                                       apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                                        apply (rule ext, simp split: split_if)
-                                       apply (rule ext, simp split: split_if)
+                                        apply (rule ext, simp split: if_split)
+                                       apply (rule ext, simp split: if_split)
                                       apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                                        typ_heap_simps' map_comp_update projectKO_opt_tcb
                                                        cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -2741,7 +2741,7 @@ lemma fastpath_call_ccorres:
                         ptr_val_tcb_ptr_mask' size_of_def cte_level_bits_def
                         tcb_cnode_index_defs tcbCTableSlot_def tcbVTableSlot_def
                         tcbReplySlot_def tcbCallerSlot_def
-              simp del: Collect_const split del: split_if)
+              simp del: Collect_const split del: if_split)
   apply (drule(1) obj_at_cslift_tcb)
   apply (clarsimp simp: ccte_relation_eq_ccap_relation of_bl_from_bool from_bool_0
                         if_1_0_0 ccap_relation_case_sum_Null_endpoint
@@ -2774,7 +2774,7 @@ lemma isMasterReplyCap_fp_conv:
   apply (simp add: cap_get_tag_isCap[symmetric])
   apply (rule conj_cong)
    apply (simp add: mask_def word_bw_assocs cap_get_tag_eq_x
-                    cap_reply_cap_def split: split_if)
+                    cap_reply_cap_def split: if_split)
   apply (clarsimp simp: cap_lift_reply_cap cap_to_H_simps
                         isCap_simps
                  elim!: ccap_relationE)
@@ -2838,7 +2838,7 @@ lemma fastpath_reply_cap_check_ccorres:
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: extra_sle_sless_unfolds isMasterReplyCap_fp_conv
                         from_bool_def return_def)
-  apply (simp split: bool.split split_if)
+  apply (simp split: bool.split if_split)
   done
 
 lemma fastpath_reply_recv_ccorres:
@@ -2909,7 +2909,7 @@ lemma fastpath_reply_recv_ccorres:
            apply (drule(1) obj_at_cslift_tcb, clarsimp)
            apply (clarsimp simp: typ_heap_simps' ctcb_relation_def cfault_rel_def)
            apply (rule rev_bexI, erule threadGet_eq)
-           apply (clarsimp simp: seL4_Fault_lift_def Let_def split: split_if_asm)
+           apply (clarsimp simp: seL4_Fault_lift_def Let_def split: if_split_asm)
           apply ceqv
          apply csymbr
        apply (simp only:)
@@ -3068,7 +3068,7 @@ lemma fastpath_reply_recv_ccorres:
                    apply (clarsimp simp: obj_at_tcbs_of)
                    apply (clarsimp simp: typ_heap_simps' ctcb_relation_def cfault_rel_def
                                          ccap_relation_reply_helper)
-                   apply (clarsimp simp: seL4_Fault_lift_def Let_def split: split_if_asm)
+                   apply (clarsimp simp: seL4_Fault_lift_def Let_def split: if_split_asm)
                   apply ceqv
                  apply (simp del: Collect_const not_None_eq cong: call_ignore_cong)
                  apply (rule ccorres_Cond_rhs_Seq)
@@ -3210,8 +3210,8 @@ lemma fastpath_reply_recv_ccorres:
                                            to_bool_def if_1_0_0)
                          apply simp
                         apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                          apply (rule ext, simp split: split_if)
-                         apply (rule ext, simp split: split_if)
+                          apply (rule ext, simp split: if_split)
+                         apply (rule ext, simp split: if_split)
                         apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                          typ_heap_simps' map_comp_update projectKO_opt_tcb
                                          cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -3289,8 +3289,8 @@ lemma fastpath_reply_recv_ccorres:
                                       apply (simp add: ctcb_relation_def cthread_state_relation_def)
                                      apply simp
                                     apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)
-                                      apply (rule ext, simp split: split_if)
-                                     apply (rule ext, simp split: split_if)
+                                      apply (rule ext, simp split: if_split)
+                                     apply (rule ext, simp split: if_split)
                                     apply (simp add: carch_state_relation_def cmachine_state_relation_def
                                                      typ_heap_simps' map_comp_update projectKO_opt_tcb
                                                      cvariable_relation_upd_const ko_at_projectKO_opt)
@@ -3505,7 +3505,7 @@ lemma foldr_copy_register_tsrs:
   apply (induct rs)
    apply simp
   apply (simp add: copy_register_tsrs_def fun_eq_iff
-            split: split_if)
+            split: if_split)
   done
 
 lemma monadic_rewrite_add_lookup_both_sides:
@@ -3767,12 +3767,12 @@ lemma fastpath_callKernel_SysCall_corres:
                                    enum_register  toEnum_def
                                    msgRegisters_unfold
                               cong: if_cong)
-                   apply (clarsimp split: split_if)
+                   apply (clarsimp split: if_split)
                    apply (rule ext)
                    apply (simp add: badgeRegister_def msgInfoRegister_def
                                    ARM.badgeRegister_def
                                    ARM.msgInfoRegister_def
-                            split: split_if)
+                            split: if_split)
                   apply simp
                  apply (wp | simp cong: if_cong bool.case_cong
                            | rule getCTE_wp' gts_wp' threadGet_wp
@@ -3898,7 +3898,7 @@ lemma doReplyTransfer_simple:
 lemma monadic_rewrite_if_known:
   "monadic_rewrite F E ((\<lambda>s. C = X) and \<top>) (if C then f else g) (if X then f else g)"
   apply (rule monadic_rewrite_gen_asm)
-  apply (simp split del: split_if)
+  apply (simp split del: if_split)
   apply (rule monadic_rewrite_refl)
   done
 
@@ -3933,7 +3933,7 @@ lemma receiveIPC_simple_rewrite:
 
 lemma empty_fail_isFinalCapability:
   "empty_fail (isFinalCapability cte)"
-  by (simp add: isFinalCapability_def Let_def split: split_if)
+  by (simp add: isFinalCapability_def Let_def split: if_split)
 
 lemma cteDeleteOne_replycap_rewrite:
   "monadic_rewrite True False
@@ -3997,7 +3997,7 @@ lemma emptySlot_cnode_caps:
   apply (wp emptySlot_cteCaps_of)
   apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of
                  elim!: rsubst[where P=P] intro!: ext
-                 split: split_if)
+                 split: if_split)
   done
 
 lemma cteDeleteOne_cnode_caps:
@@ -4026,7 +4026,7 @@ lemma setCTE_obj_at_ep[wp]:
   apply (rule obj_at_setObject2)
   apply (clarsimp simp: updateObject_cte typeError_def in_monad
                  split: Structures_H.kernel_object.split_asm
-                        split_if_asm)
+                        if_split_asm)
   done
 
 lemma setCTE_obj_at_ntfn[wp]:
@@ -4035,7 +4035,7 @@ lemma setCTE_obj_at_ntfn[wp]:
   apply (rule obj_at_setObject2)
   apply (clarsimp simp: updateObject_cte typeError_def in_monad
                  split: Structures_H.kernel_object.split_asm
-                        split_if_asm)
+                        if_split_asm)
   done
 
 crunch obj_at_ep[wp]: emptySlot "obj_at' (P :: endpoint \<Rightarrow> bool) p"
@@ -4173,7 +4173,7 @@ lemma emptySlot_cte_wp_at_cteCap:
    \<lbrace>\<lambda>rv s. cte_wp_at' (\<lambda>cte. P (cteCap cte)) p s\<rbrace>"
   apply (simp add: tree_cte_cteCap_eq[unfolded o_def])
   apply (wp emptySlot_cteCaps_of)
-  apply (clarsimp split: split_if)
+  apply (clarsimp split: if_split)
   done
 
 lemma real_cte_at_tcbs_of_neq:
@@ -4181,7 +4181,7 @@ lemma real_cte_at_tcbs_of_neq:
          2 ^ cte_level_bits * offs : dom tcb_cte_cases |]
        ==> p ~= t + 2 ^ cte_level_bits * offs"
   apply (clarsimp simp: tcbs_of_def obj_at'_def projectKOs objBits_simps
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (erule notE[rotated], erule(2) tcb_ctes_clear[rotated])
   apply fastforce
   done
@@ -4194,7 +4194,7 @@ lemma setEndpoint_getCTE_pivot[unfolded K_bind_def]:
                    fun_eq_iff bind_assoc)
   apply (simp add: exec_gets assert_def assert_opt_def
                    exec_modify update_ep_map_tos
-            split: split_if option.split)
+            split: if_split option.split)
   done
 
 lemma setEndpoint_setCTE_pivot[unfolded K_bind_def]:
@@ -4230,8 +4230,8 @@ lemma setEndpoint_setCTE_pivot[unfolded K_bind_def]:
                    in monadic_rewrite_refl3)
       apply (simp add: setEndpoint_def setObject_modify_assert bind_assoc
                        exec_gets assert_def exec_modify
-                split: split_if)
-      apply (auto split: split_if simp: obj_at'_def projectKOs
+                split: if_split)
+      apply (auto split: if_split simp: obj_at'_def projectKOs
                  intro!: arg_cong[where f=f] ext kernel_state.fold_congs)[1]
      apply wp
   apply simp
@@ -4243,7 +4243,7 @@ lemma setEndpoint_updateMDB_pivot[unfolded K_bind_def]:
   by (clarsimp simp: updateMDB_def bind_assoc
                      setEndpoint_getCTE_pivot
                      setEndpoint_setCTE_pivot
-              split: split_if)
+              split: if_split)
 
 lemma setEndpoint_updateCap_pivot[unfolded K_bind_def]:
   "do setEndpoint p val; updateCap slot mf; f od =
@@ -4260,7 +4260,7 @@ lemma modify_setEndpoint_pivot[unfolded K_bind_def]:
    apply (simp add: setEndpoint_def setObject_modify_assert
                     bind_assoc fun_eq_iff
                     exec_gets exec_modify assert_def
-             split: split_if)
+             split: if_split)
   apply atomize
   apply clarsimp
   apply (drule_tac x="\<lambda>_. ksPSpace s" in spec)
@@ -4292,7 +4292,7 @@ lemma emptySlot_setEndpoint_pivot[unfolded K_bind_def]:
                    setEndpoint_updateMDB_pivot
                    case_Null_If
                    setEndpoint_clearUntypedFreeIndex_pivot
-            split: split_if
+            split: if_split
               | rule bind_apply_cong[OF refl])+
   done
 
@@ -4343,13 +4343,13 @@ lemma set_setCTE[unfolded K_bind_def]:
                                         \<and> (\<forall> f g tcb. setF f (setF g tcb) = setF (f o g) tcb)))"
                    in monadic_rewrite_gen_asm)
        apply (rule monadic_rewrite_refl2)
-       apply (simp add: exec_modify split: split_if)
+       apply (simp add: exec_modify split: if_split)
        apply (auto simp: simpler_modify_def projectKO_opt_tcb
                  intro!: kernel_state.fold_congs ext
-                  split: split_if)[1]
+                  split: if_split)[1]
       apply wp
   apply (clarsimp intro!: all_tcbI)
-  apply (auto simp: tcb_cte_cases_def split: split_if_asm)
+  apply (auto simp: tcb_cte_cases_def split: if_split_asm)
   done
 
 lemma setCTE_updateCapMDB:
@@ -4359,7 +4359,7 @@ lemma setCTE_updateCapMDB:
                    cte_overwrite set_setCTE)
   apply (simp add: getCTE_assert_opt setCTE_assert_modify bind_assoc)
   apply (rule ext, simp add: exec_gets assert_opt_def exec_modify
-                      split: split_if option.split)
+                      split: if_split option.split)
   apply (cut_tac P=\<top> and p=p and s=x in cte_wp_at_ctes_of)
   apply (cases cte)
   apply (simp add: cte_wp_at_obj_cases')
@@ -4510,7 +4510,7 @@ lemma tcbSchedEnqueue_tcbIPCBuffer:
   \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t\<rbrace>"
   apply (simp add: tcbSchedEnqueue_def unless_when)
   apply (wp threadSet_obj_at' hoare_drop_imps threadGet_wp
-        |simp split: split_if)+
+        |simp split: if_split)+
   done
 
 crunch obj_at'_tcbIPCBuffer[wp]: rescheduleRequired "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
@@ -4814,13 +4814,13 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                        enum_register toEnum_def
                                        msgRegisters_unfold
                                  cong: if_cong)
-                      apply (clarsimp split: split_if)
+                      apply (clarsimp split: if_split)
                       apply (rule ext)
                       apply (simp add: badgeRegister_def msgInfoRegister_def
                                        ARM.msgInfoRegister_def
                                        ARM.badgeRegister_def
-                                cong: if_cong
-                                split: split_if)
+                                 cong: if_cong
+                                split: if_split)
                      apply simp
                     apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps
                                           map_to_ctes_partial_overwrite)

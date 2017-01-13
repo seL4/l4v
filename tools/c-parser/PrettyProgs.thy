@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-header "Prettier Printing for Programs"
+chapter "Prettier Printing for Programs"
 
 theory PrettyProgs
 imports "Simpl/Vcg"

@@ -10,7 +10,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Function Declarations for Notifications"
+chapter "Function Declarations for Notifications"
 
 theory NotificationDecls_H imports    "FaultMonad_H"
  begin

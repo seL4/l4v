@@ -16,7 +16,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma nat_bl_to_bin_surj:
   "\<exists>bl. n = nat (bl_to_bin bl)"
-  using n_less_equal_power_2[where n=n, folded zless_int, simplified]
+  using n_less_equal_power_2[where n=n, folded of_nat_less_iff, simplified]
   apply (rule_tac x="bin_to_bl n (int n)" in exI)
   apply (simp only: bin_bl_bin bintrunc_mod2p)
   apply (simp add: int_mod_eq')
@@ -138,11 +138,11 @@ proof
       apply clarsimp
       apply (induct rule: trancl_induct)
        apply (fastforce simp: KHeap_D.cdt_parent_rel_def KHeap_D.is_cdt_parent_def s'_def
-                       split: split_if_asm
+                       split: if_split_asm
                        intro: trancl_trans)
       apply (erule trancl_trans)
       apply (fastforce simp: KHeap_D.cdt_parent_rel_def KHeap_D.is_cdt_parent_def s'_def
-                      split: split_if_asm
+                      split: if_split_asm
                       intro: trancl_trans)
       done
   }
@@ -309,7 +309,7 @@ lemma caps_of_state_transform_opt_cap:
                         transform_tcb_def tcb_slot_defs tcb_slots
                         tcb_pending_op_slot_def tcb_cap_cases_def
                         bl_to_bin_tcb_cnode_index bl_to_bin_tcb_cnode_index_le0
-                 split: split_if_asm)
+                 split: if_split_asm)
   done
 
 lemma cap_slot_cnode_property_lift:
@@ -489,7 +489,7 @@ lemma final_cap_set_map:
    apply (thin_tac "opt_cap x y = Q" for x y Q)
    apply (auto simp: transform_cap_def cap_has_object_def cap_object_simps
                      cap_counts_def cdl_cap_irq_def
-              split: cap.splits arch_cap.splits split_if_asm)
+              split: cap.splits arch_cap.splits if_split_asm)
   done
 
 lemma opt_cap_wp_at_ex_opt_cap:
@@ -594,7 +594,7 @@ lemma get_object_corres:
   apply (clarsimp simp: KHeap_A.get_object_def gets_the_def)
   apply (rule corres_split'[OF _ _ gets_sp gets_sp, where r'=dc])
    apply simp
-  apply (clarsimp simp: assert_def corres_free_fail split: split_if)
+  apply (clarsimp simp: assert_def corres_free_fail split: if_split)
   apply (rule_tac F="rv = Some (transform_object undefined 0 etcb' y)" in corres_req)
    apply (simp_all add: assert_opt_def)
   apply (clarsimp simp: opt_object_def transform_def transform_objects_def
@@ -714,7 +714,7 @@ lemma transform_full_intent_same_cap:
    apply (simp add: is_cap_simps)
    apply (cases "tcb_ipcframe tcb", simp_all)
               apply (simp add:transform_cap_def is_cap_simps
-                          split:cap.splits split_if_asm arch_cap.splits)+
+                          split:cap.splits if_split_asm arch_cap.splits)+
   done
 
 lemma set_cap_corres:
@@ -737,9 +737,9 @@ proof -
   apply (rename_tac s s')
   apply (clarsimp simp:assert_def corres_free_fail)
   apply (rename_tac obj')
-  apply (case_tac obj', simp_all add:corres_free_fail split del: split_if)
+  apply (case_tac obj', simp_all add:corres_free_fail split del: if_split)
    -- "cnode or IRQ Node case"
-   apply (clarsimp simp: corres_free_fail split: split_if)
+   apply (clarsimp simp: corres_free_fail split: if_split)
    apply (rename_tac sz cn ocap)
    apply (clarsimp simp: corres_underlying_def in_monad set_object_def cte_wp_at_cases caps_of_state_cte_wp_at)
    apply (clarsimp simp: opt_object_def)
@@ -767,7 +767,7 @@ proof -
   apply (clarsimp simp: cdl_objects_tcb opt_object_def
                         assert_opt_def has_slots_def object_slots_def
                         update_slots_def
-                  split del: split_if)
+                  split del: if_split)
   apply (case_tac "nat (bl_to_bin sl') = tcb_ipcbuffer_slot")
    apply (simp add: tcb_slots tcb_pending_op_slot_def)
    apply (clarsimp simp: bl_to_bin_tcb_cnode_index|rule conjI)+
@@ -1343,7 +1343,7 @@ lemma dcorres_gets_all_param:
 lemma empty_slot_ext_dcorres: "dcorres dc P P' (return ()) (empty_slot_ext slot v)"
   apply (clarsimp simp: empty_slot_ext_def)
   apply (auto simp: corres_underlying_def update_cdt_list_def set_cdt_list_def
-                        modify_def bind_def put_def gets_def get_def return_def  split: option.splits split_if)
+                        modify_def bind_def put_def gets_def get_def return_def  split: option.splits if_split)
   done
 
 lemma empty_slot_corres:
@@ -1868,7 +1868,6 @@ lemma set_list_modify_corres_helper:
   proof (induct update_list)
     case Nil
     show ?case
-      using assms
       apply (clarsimp simp:tcb_filter_modify_def)
       apply (clarsimp simp: return_def simpler_modify_def mapM_x_def sequence_x_def corres_underlying_def)
      done
@@ -2532,7 +2531,7 @@ lemma dcorres_ntfn_bound_tcb:
   apply (rule dcorres_absorb_get_l)
   apply (clarsimp simp: assert_def corres_free_fail  split: Structures_A.kernel_object.splits )
   apply (frule get_notification_pick, simp)
-  apply (clarsimp simp: valid_ntfn_abstract_def ntfn_bound_set_lift valid_state_def option_select_def split del: split_if)
+  apply (clarsimp simp: valid_ntfn_abstract_def ntfn_bound_set_lift valid_state_def option_select_def split del: if_split)
   done
   
 lemma option_set_option_select:
@@ -2606,12 +2605,12 @@ lemma unbind_notification_valid_state[wp]:
           defer 4
           apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
                        simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def)[8]
-  apply (clarsimp simp: split_if)
+  apply (clarsimp simp: if_split)
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
                    dest!: pred_tcb_at_tcb_at ko_at_state_refs_ofD
-                   split: split_if_asm)
-  apply (clarsimp split: split_if_asm)
+                   split: if_split_asm)
+  apply (clarsimp split: if_split_asm)
    apply (frule pred_tcb_at_tcb_at)
    apply (frule_tac p=t in obj_at_ko_at, clarsimp)
    apply (subst (asm) ko_at_state_refs_ofD, assumption)
@@ -2635,12 +2634,12 @@ lemma unbind_maybe_notification_valid_state[wp]:
           defer 4
           apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
                        simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def)[8]
-  apply (clarsimp simp: split_if)
+  apply (clarsimp simp: if_split)
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
                    dest!: pred_tcb_at_tcb_at ko_at_state_refs_ofD
-                   split: split_if_asm)
-  apply (clarsimp split: split_if_asm)
+                   split: if_split_asm)
+  apply (clarsimp split: if_split_asm)
    apply (clarsimp simp: obj_at_def)
    apply (frule_tac P="op = (Some a)" in ntfn_bound_tcb_at, simp+)
    apply (frule pred_tcb_at_tcb_at)
@@ -2952,7 +2951,7 @@ lemma delete_cap_simple_corres:
           apply (subst is_final_cap_corres)
             apply simp+
         apply (wp|clarsimp)+
-       apply (clarsimp simp:transform_cap_def split:cap.splits arch_cap.splits split_if_asm)
+       apply (clarsimp simp:transform_cap_def split:cap.splits arch_cap.splits if_split_asm)
       apply (rule get_cap_corres)
       apply simp
      apply (clarsimp simp:not_idle_thread_def |wp get_cap_cte_wp_at_rv)+
@@ -3098,7 +3097,7 @@ lemma branch_map_simp2:
      apply (subst to_bl_bin[symmetric])
      apply (rule arg_cong[where f = bl_to_bin])
      apply (simp add:word_rep_drop)+
-   apply (clarsimp simp:List.take_drop prefixeq_def less_eq_list_def)
+   apply (clarsimp simp:List.take_drop prefix_def less_eq_list_def)
    apply (rule_tac x = "(drop nata zs)" in exI)
    apply simp
   apply (simp add:word_rep_drop)
@@ -3277,7 +3276,6 @@ shows "\<lbrakk>length cref \<le> n ; length cref \<le> 32; cap = transform_cap 
 proof (induct n arbitrary: cref cap' cap)
   case 0
   show ?case
-    using assms
     apply clarify
     apply (case_tac "\<not> is_cnode_cap cap'")
      apply (subst cdl_resolve_address_bits_error_branch1,simp)

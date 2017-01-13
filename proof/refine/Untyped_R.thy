@@ -152,7 +152,7 @@ proof (cases "6 \<le> length args \<and> cs \<noteq> []
     apply (clarsimp simp: decode_untyped_invocation_def
                           decodeUntypedInvocation_def
                           whenE_whenE_body unlessE_whenE
-               split del: split_if cong: list.case_cong)
+               split del: if_split cong: list.case_cong)
     apply (auto split: list.split)
     done
 next
@@ -276,7 +276,7 @@ next
                      args cs cs' xs[symmetric] il whenE_rangeCheck_eq
                      cap_case_CNodeCap unlessE_whenE case_bool_If
                      lookup_target_slot_def lookupTargetSlot_def
-                split del: split_if cong: if_cong list.case_cong del: upt.simps)
+                split del: if_split cong: if_cong list.case_cong del: upt.simps)
     apply (rule corres_guard_imp)
       apply (rule corres_splitEE [OF _ Q])
         apply (rule whenE_throwError_corres)
@@ -340,7 +340,7 @@ next
                      apply (rule_tac F="if_res reset \<le> 2 ^ n" in corres_gen_asm)
                      apply (rule whenE_throwError_corres)
                        apply (clarsimp simp:shiftL_nat word_less_nat_alt shiftr_div_2n'
-                                  split del: split_if)+
+                                  split del: if_split)+
                       apply (simp add: word_of_nat_le another)
                       apply (drule_tac x = "if_res reset" in unat_of_nat32[OF le_less_trans])
                        apply (simp add:ty_size shiftR_nat)+
@@ -424,7 +424,7 @@ lemma decodeUntyped_inv[wp]:
        (UntypedCap d w n idx) cs \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: decodeUntypedInvocation_def whenE_def
                    split_def unlessE_def Let_def
-              split del: split_if cong: if_cong list.case_cong)
+              split del: if_split cong: if_cong list.case_cong)
   apply (rule hoare_pre)
    apply (wp mapME_x_inv_wp hoare_drop_imps constOnFailure_wp
              mapM_wp'
@@ -751,9 +751,9 @@ lemma decodeUntyped_wf[wp]:
                    unlessE_whenE rangeCheck_def whenE_def[symmetric]
                    returnOk_liftE[symmetric] Let_def
                    cap_case_CNodeCap_True_throw
-                split del: split_if cong: if_cong list.case_cong)
+                split del: if_split cong: if_cong list.case_cong)
   apply (rule list_case_throw_validE_R)
-  apply (clarsimp split del: split_if split: list.splits)
+  apply (clarsimp split del: if_split split: list.splits)
   apply (intro conjI impI allI)
    apply ((rule hoare_pre,wp)+)[6]
   apply clarify
@@ -914,11 +914,11 @@ lemma getCTE_known_cap:
   by (rule getCTE_get)
 
 lemma corres_list_all2_mapM_':
-  assumes w: "suffixeq xs oxs" "suffixeq ys oys"
-  assumes y: "\<And>x xs y ys. \<lbrakk> F x y; suffixeq (x # xs) oxs; suffixeq (y # ys) oys \<rbrakk>
+  assumes w: "suffix xs oxs" "suffix ys oys"
+  assumes y: "\<And>x xs y ys. \<lbrakk> F x y; suffix (x # xs) oxs; suffix (y # ys) oys \<rbrakk>
                \<Longrightarrow> corres dc (P (x # xs)) (P' (y # ys)) (f x) (g y)"
-  assumes z: "\<And>x y xs. \<lbrakk> F x y; suffixeq (x # xs) oxs \<rbrakk> \<Longrightarrow> \<lbrace>P (x # xs)\<rbrace> f x \<lbrace>\<lambda>rv. P xs\<rbrace>"
-             "\<And>x y ys. \<lbrakk> F x y; suffixeq (y # ys) oys \<rbrakk> \<Longrightarrow> \<lbrace>P' (y # ys)\<rbrace> g y \<lbrace>\<lambda>rv. P' ys\<rbrace>"
+  assumes z: "\<And>x y xs. \<lbrakk> F x y; suffix (x # xs) oxs \<rbrakk> \<Longrightarrow> \<lbrace>P (x # xs)\<rbrace> f x \<lbrace>\<lambda>rv. P xs\<rbrace>"
+             "\<And>x y ys. \<lbrakk> F x y; suffix (y # ys) oys \<rbrakk> \<Longrightarrow> \<lbrace>P' (y # ys)\<rbrace> g y \<lbrace>\<lambda>rv. P' ys\<rbrace>"
   assumes x: "list_all2 F xs ys"
   shows "corres dc (P xs) (P' ys) (mapM_x f xs) (mapM_x g ys)"
   apply (insert x w)
@@ -929,7 +929,7 @@ lemma corres_list_all2_mapM_':
   apply (clarsimp simp add: mapM_x_def sequence_x_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ y])
-         apply (clarsimp dest!: suffixeq_ConsD)
+         apply (clarsimp dest!: suffix_ConsD)
          apply (erule meta_allE, (drule(1) meta_mp)+)
          apply assumption
         apply assumption
@@ -940,7 +940,7 @@ lemma corres_list_all2_mapM_':
   done
 
 lemmas corres_list_all2_mapM_
-     = corres_list_all2_mapM_' [OF suffixeq_refl suffixeq_refl]
+     = corres_list_all2_mapM_' [OF suffix_refl suffix_refl]
 
 declare modify_map_id[simp]
 
@@ -1288,28 +1288,28 @@ proof -
        apply clarsimp
       apply clarsimp
       apply (rule subtree.direct_parent)
-        apply (simp add: n_direct_eq split: split_if_asm)
+        apply (simp add: n_direct_eq split: if_split_asm)
        apply simp
-      apply (clarsimp simp: parentOf_def n parent new_parent_def split: split_if_asm)
+      apply (clarsimp simp: parentOf_def n parent new_parent_def split: if_split_asm)
       done
   next
     case (trans_parent c d)
     thus ?case
       apply clarsimp
       apply (rule conjI, clarsimp)
-      apply (clarsimp split: split_if_asm)
+      apply (clarsimp split: if_split_asm)
       apply (simp add: n_direct_eq)
       apply (cases "p=parent")
        apply simp
        apply (rule subtree.direct_parent, assumption, assumption)
-       apply (clarsimp simp: parentOf_def n parent new_parent_def split: split_if_asm)
+       apply (clarsimp simp: parentOf_def n parent new_parent_def split: if_split_asm)
       apply clarsimp
       apply (erule subtree.trans_parent, assumption, assumption)
-      apply (clarsimp simp: parentOf_def n parent new_parent_def split: split_if_asm)
+      apply (clarsimp simp: parentOf_def n parent new_parent_def split: if_split_asm)
      apply (erule subtree.trans_parent)
-       apply (simp add: n_direct_eq split: split_if_asm)
+       apply (simp add: n_direct_eq split: if_split_asm)
       apply assumption
-     apply (clarsimp simp: parentOf_def n parent new_parent_def split: split_if_asm)
+     apply (clarsimp simp: parentOf_def n parent new_parent_def split: if_split_asm)
      done
  qed
 qed
@@ -1320,7 +1320,7 @@ lemma descendants:
    then descendants_of' p m \<union> {site} else descendants_of' p m)"
   apply (rule set_eqI)
   apply (simp add: descendants_of'_def)
-  apply (fastforce dest!: parent_n_m dest: parent_m_n simp: n_site_child split: split_if_asm)
+  apply (fastforce dest!: parent_n_m dest: parent_m_n simp: n_site_child split: if_split_asm)
   done
 
 end
@@ -1490,9 +1490,9 @@ shows
                                             apply (simp add: create_cap_ext_def set_cdt_list_def update_cdt_list_def bind_assoc)
                                             apply ((wp | simp)+)[1]
                                            apply (wp updateMDB_ctes_of_cases getCTE_ctes_of_weakened
-                                                  | simp add: o_def split del: split_if)+
+                                                  | simp add: o_def split del: if_split)+
             apply (clarsimp simp: cdt_relation_def cte_wp_at_ctes_of
-                     split del: split_if cong: if_cong simp del: id_apply)
+                     split del: if_split cong: if_cong simp del: id_apply)
             apply (subst if_not_P, erule(1) valid_mdbD3')
             apply (case_tac x, case_tac oldCTE)
             apply (subst bluhr_descendants_of')
@@ -1523,34 +1523,34 @@ shows
              apply (erule(1) mdb_Null_None)
             apply (subgoal_tac "cte_at (aa, bb) s")
              prefer 2
-             apply (drule not_sym, clarsimp simp: cte_wp_at_caps_of_state split: split_if_asm)
+             apply (drule not_sym, clarsimp simp: cte_wp_at_caps_of_state split: if_split_asm)
             apply (subst descendants_of_eq' [OF _ cte_wp_at_cte_at], assumption+)
                  apply (clarsimp simp: state_relation_def)
                 apply assumption+
             apply (subst cte_map_eq_subst [OF _ cte_wp_at_cte_at], assumption+)
             apply (simp add: mdb_relation_simp)
            defer
-           apply (clarsimp split del: split_if)+
+           apply (clarsimp split del: if_split)+
          apply (clarsimp simp add: revokable_relation_def cte_wp_at_ctes_of
-                        split del: split_if)
+                        split del: if_split)
          apply simp
          apply (rule conjI)
           apply clarsimp
           apply (elim modify_map_casesE)
-             apply ((clarsimp split: split_if_asm cong: conj_cong
+             apply ((clarsimp split: if_split_asm cong: conj_cong
                               simp: cte_map_eq_subst cte_wp_at_cte_at
                                     revokable_relation_simp)+)[4]
          apply clarsimp
          apply (subgoal_tac "null_filter (caps_of_state s) (aa, bb) \<noteq> None")
           prefer 2
-          apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state split: split_if_asm)
+          apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state split: if_split_asm)
          apply (subgoal_tac "cte_at (aa,bb) s")
           prefer 2
           apply clarsimp
           apply (drule null_filter_caps_of_stateD)
           apply (erule cte_wp_cte_at)
          apply (elim modify_map_casesE)
-            apply (clarsimp split: split_if_asm cong: conj_cong
+            apply (clarsimp split: if_split_asm cong: conj_cong
                             simp: cte_map_eq_subst cte_wp_at_cte_at revokable_relation_simp)+
         apply (clarsimp simp: state_relation_def ghost_relation_of_heap)+
      apply wp
@@ -1581,7 +1581,7 @@ shows
    apply (erule (2) valid_dlistEn)
    apply simp
   apply(simp only: cdt_list_relation_def valid_mdb_def2
-              del: split_paired_All split_paired_Ex split del: split_if)
+              del: split_paired_All split_paired_Ex split del: if_split)
   apply(subgoal_tac "finite_depth (cdt s)")
    prefer 2
    apply(simp add: finite_depth valid_mdb_def2[symmetric])
@@ -1604,19 +1604,19 @@ shows
   apply simp
   apply(case_tac x)
   apply(simp add: cte_wp_at_ctes_of)
-  apply(simp add: mdb_insert_abs.next_slot split del: split_if)
+  apply(simp add: mdb_insert_abs.next_slot split del: if_split)
   apply(case_tac "c=p")
    apply(simp)
    apply(clarsimp simp: modify_map_def)
    apply(case_tac z)
-   apply(fastforce split: split_if_asm)
+   apply(fastforce split: if_split_asm)
   apply(case_tac "c = (a, b)")
    apply(simp)
    apply(case_tac "next_slot p (cdt_list s) (cdt s)")
     apply(simp)
    apply(simp)
    apply(clarsimp simp: modify_map_def const_def)
-   apply(clarsimp split: split_if_asm)
+   apply(clarsimp split: if_split_asm)
     apply(drule_tac p="cte_map p" in valid_mdbD1')
       apply(simp)
      apply(simp add: valid_mdb'_def valid_mdb_ctes_def)
@@ -1640,7 +1640,7 @@ shows
    apply(rule cte_at_next_slot)
       apply(simp_all add: valid_mdb_def2)[4]
   apply(clarsimp simp: modify_map_def const_def)
-  apply(simp split: split_if_asm)
+  apply(simp split: if_split_asm)
        apply(simp add: valid_mdb'_def)
        apply(drule_tac ptr="cte_map p" in no_self_loop_next)
         apply(simp)
@@ -1669,9 +1669,9 @@ lemma insertNewCap_mdbNext:
    \<lbrace>\<lambda>rv s. \<forall>next. cte_wp_at' (\<lambda>cte. mdbNext (cteMDBNode cte) = next) parent s \<and> next \<noteq> 0
                         \<longrightarrow> cte_wp_at' (\<lambda>cte. \<not> sameRegionAs cap' (cteCap cte)) next s\<rbrace>"
   apply (simp add: insertNewCap_def cte_wp_at_ctes_of)
-  apply (wp getCTE_ctes_of updateMDB_ctes_of_cases | simp add: o_def split del: split_if)+
-  apply (clarsimp split del: split_if simp: nullPointer_def)
-  apply (erule modify_map_casesE, simp_all split del: split_if)
+  apply (wp getCTE_ctes_of updateMDB_ctes_of_cases | simp add: o_def split del: if_split)+
+  apply (clarsimp split del: if_split simp: nullPointer_def)
+  apply (erule modify_map_casesE, simp_all split del: if_split)
   apply (subst modify_map_other)
    apply assumption
   apply (subst modify_map_other)
@@ -1943,8 +1943,8 @@ lemma n'_tranclD:
    else if m \<turnstile> p \<leadsto>\<^sup>+ parent \<or> p = parent  then m \<turnstile> p \<leadsto>\<^sup>+ p' \<or> p' = site
    else m \<turnstile> p \<leadsto>\<^sup>+ p')"
   apply (erule trancl_induct)
-   apply (fastforce simp: n'_direct_eq split: split_if_asm)
-  apply (fastforce simp: n'_direct_eq split: split_if_asm elim: trancl_trans)
+   apply (fastforce simp: n'_direct_eq split: if_split_asm)
+  apply (fastforce simp: n'_direct_eq split: if_split_asm elim: trancl_trans)
   done
 
 lemma site_in_dom: "site \<in> dom n"
@@ -2097,15 +2097,15 @@ lemma n'_prev_eq:
                          else if p = parent then p' = site
                          else m \<turnstile> p \<leftarrow> p')"
   using parent site site_prev
-  apply (simp add: n'_def n mdb_prev_def new_parent_def new_site_def split del: split_if)
-  apply (clarsimp simp add: modify_map_if cong: if_cong split del: split_if)
+  apply (simp add: n'_def n mdb_prev_def new_parent_def new_site_def split del: if_split)
+  apply (clarsimp simp add: modify_map_if cong: if_cong split del: if_split)
   apply (cases "p' = site", simp)
-  apply (simp cong: if_cong split del: split_if)
+  apply (simp cong: if_cong split del: if_split)
   apply (cases "p' = parent")
    apply clarsimp
    apply (rule conjI, clarsimp simp: mdb_prev_def)
    apply (clarsimp simp: mdb_prev_def)
-  apply (simp cong: if_cong split del: split_if)
+  apply (simp cong: if_cong split del: if_split)
   apply (cases "p = site")
    apply (simp add: parent_prev)
    apply (cases "mdbNext parent_node = p'")
@@ -2124,7 +2124,7 @@ lemma n'_prev_eq:
    apply (rule valid_dlistEp [OF dlist, where p=p'], assumption)
     apply clarsimp
    apply clarsimp
-  apply (simp cong: if_cong split del: split_if)
+  apply (simp cong: if_cong split del: if_split)
   apply (cases "p = parent")
    apply clarsimp
    apply (insert site_next)
@@ -2159,7 +2159,7 @@ lemma n'_cap:
   if p = site then c = c' \<and> m p = Some (CTE NullCap site_node)
   else \<exists>node'. m p = Some (CTE c node')"
   by (auto simp: n'_def n modify_map_if new_parent_def parent
-                 new_site_def site site_cap split: split_if_asm)
+                 new_site_def site site_cap split: if_split_asm)
 
 lemma m_cap:
   "m p = Some (CTE c node) \<Longrightarrow>
@@ -2173,7 +2173,7 @@ lemma n'_badged:
   if p = site then c = c' \<and> mdbFirstBadged node
   else \<exists>node'. m p = Some (CTE c node') \<and> mdbFirstBadged node = mdbFirstBadged node'"
   by (auto simp: n'_def n modify_map_if new_parent_def parent
-                 new_site_def site site_cap split: split_if_asm)
+                 new_site_def site site_cap split: if_split_asm)
 
 lemma no_next_region:
   "\<lbrakk> m \<turnstile> parent \<leadsto> p'; m p' = Some (CTE cap' node) \<rbrakk> \<Longrightarrow> \<not>sameRegionAs c' cap'"
@@ -2187,7 +2187,7 @@ lemma valid_badges_n' [simp]: "valid_badges n'"
   apply (clarsimp simp: valid_badges_def)
   apply (simp add: n'_direct_eq)
   apply (drule n'_badged)+
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
    apply (drule (1) no_next_region)
    apply simp
   apply (erule_tac x=p in allE)
@@ -2261,7 +2261,7 @@ lemma untyped_mdb_n' [simp]: "untyped_mdb' n'"
   apply (clarsimp simp: untyped_mdb'_def descendants_of'_def)
   apply (drule n'_cap)+
   apply (simp add: parency_n')
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
     apply clarsimp
     apply (erule_tac x=parent in allE)
     apply (simp add: parent is_untyped)
@@ -2417,8 +2417,8 @@ lemma mdb_chunked_n' [simp]:
   using chunked untyped_mdb untyped_inc
   apply (clarsimp simp: mdb_chunked_def)
   apply (drule n'_cap)+
-  apply (simp add: n'_trancl_eq split del: split_if)
-  apply (simp split: split_if_asm)
+  apply (simp add: n'_trancl_eq split del: if_split)
+  apply (simp split: if_split_asm)
     apply clarsimp
     apply (frule sameRegion_parentI)
     apply (frule(1) untyped_inc_mdbD [OF _ is_untyped _ _ untyped_inc untyped_mdb no_loops, OF _ parent])
@@ -2498,7 +2498,7 @@ lemma mdb_chunked_n' [simp]:
       apply (drule (1) trancl_trans, erule loopE)
      apply (thin_tac "P \<longrightarrow> Q" for P Q)
      apply (clarsimp simp: is_chunk_def)
-     apply (simp add: n'_trancl_eq n'_rtrancl_eq split: split_if_asm)
+     apply (simp add: n'_trancl_eq n'_rtrancl_eq split: if_split_asm)
        apply (simp add: site' new_site_def)
       apply (erule_tac x=p'' in allE)
       apply clarsimp
@@ -2511,7 +2511,7 @@ lemma mdb_chunked_n' [simp]:
      apply (drule (1) trancl_trans, erule loopE)
     apply clarsimp
     apply (clarsimp simp: is_chunk_def)
-    apply (simp add: n'_trancl_eq n'_rtrancl_eq split: split_if_asm)
+    apply (simp add: n'_trancl_eq n'_rtrancl_eq split: if_split_asm)
      apply (drule (1) transitive_closure_trans, erule loopE)
     apply (subgoal_tac "m \<turnstile> p \<rightarrow> parent")
      apply (drule subtree_mdb_next)
@@ -2550,7 +2550,7 @@ lemma mdb_chunked_n' [simp]:
    apply (subgoal_tac "is_chunk n' cap p p'")
     prefer 2
     apply (clarsimp simp: is_chunk_def)
-    apply (simp add: n'_trancl_eq n'_rtrancl_eq split: split_if_asm)
+    apply (simp add: n'_trancl_eq n'_rtrancl_eq split: if_split_asm)
         apply (erule disjE)
          apply (erule_tac x=parent in allE)
          apply clarsimp
@@ -2602,7 +2602,7 @@ lemma mdb_chunked_n' [simp]:
   apply (subgoal_tac "is_chunk n' cap' p' p")
    prefer 2
    apply (clarsimp simp: is_chunk_def)
-   apply (simp add: n'_trancl_eq n'_rtrancl_eq split: split_if_asm)
+   apply (simp add: n'_trancl_eq n'_rtrancl_eq split: if_split_asm)
        apply (erule disjE)
         apply (erule_tac x=parent in allE)
         apply clarsimp
@@ -2655,7 +2655,7 @@ lemma caps_contained_n' [simp]: "caps_contained' n'"
   using caps_contained untyped_mdb untyped_inc
   apply (clarsimp simp: caps_contained'_def)
   apply (drule n'_cap)+
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
      apply (drule capRange_untyped)
      apply simp
     apply (frule capRange_untyped)
@@ -2711,7 +2711,7 @@ lemma untyped_inc_n' [simp]: "untypedRange c' \<inter> usableUntypedRange parent
   using untyped_inc
   apply (clarsimp simp: untyped_inc'_def)
   apply (drule n'_cap)+
-  apply (clarsimp simp: descendants_of'_def parency_n' split: split_if_asm)
+  apply (clarsimp simp: descendants_of'_def parency_n' split: if_split_asm)
     apply (frule untypedRange_c')
     apply (insert parent is_untyped)[1]
     apply (erule_tac x=parent in allE)
@@ -2816,7 +2816,7 @@ lemma untyped_inc_n' [simp]: "untypedRange c' \<inter> usableUntypedRange parent
 lemma ut_rev_n' [simp]: "ut_revocable' n'"
   using ut_rev
   apply (clarsimp simp: ut_revocable'_def n'_def n_def)
-  apply (clarsimp simp: modify_map_if split: split_if_asm)
+  apply (clarsimp simp: modify_map_if split: if_split_asm)
   done
 
 lemma class_links_m: "class_links m"
@@ -2831,16 +2831,16 @@ lemma class_links [simp]: "class_links n'"
   using class_links_m
   apply (clarsimp simp add: class_links_def)
   apply (simp add: n'_direct_eq
-            split: split_if_asm)
+            split: if_split_asm)
     apply (case_tac cte,
            clarsimp dest!: n'_cap simp: site' parent new_site_def phys parent_phys)
    apply (drule_tac x=parent in spec)
    apply (drule_tac x=p' in spec)
    apply (case_tac cte')
    apply (clarsimp simp: site' new_site_def parent parent_phys phys dest!: n'_cap
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply (case_tac cte, case_tac cte')
-  apply (clarsimp dest!: n'_cap split: split_if_asm)
+  apply (clarsimp dest!: n'_cap split: if_split_asm)
   apply fastforce
   done
 
@@ -2849,7 +2849,7 @@ lemma irq_control_n' [simp]:
   using irq_control phys
   apply (clarsimp simp: irq_control_def)
   apply (clarsimp simp: n'_def n_def)
-  apply (clarsimp simp: modify_map_if split: split_if_asm)
+  apply (clarsimp simp: modify_map_if split: if_split_asm)
   done
 
 lemma dist_z_m:
@@ -3199,13 +3199,13 @@ lemma createNewCaps_range_helper:
   apply (simp add: createNewCaps_def toAPIType_def
                    
                    createNewCaps_def Arch_createNewCaps_def
-               split del: split_if cong: option.case_cong)
+               split del: if_split cong: option.case_cong)
   apply (rule hoare_grab_asm)+
   apply (frule range_cover.range_cover_n_less)
   apply (frule range_cover.unat_of_nat_n)
-  apply (cases tp, simp_all split del: split_if)
+  apply (cases tp, simp_all split del: if_split)
           apply (rename_tac apiobject_type)
-          apply (case_tac apiobject_type, simp_all split del: split_if)
+          apply (case_tac apiobject_type, simp_all split del: if_split)
               apply (rule hoare_pre, wp)
               apply (frule range_cover_not_zero[rotated -1],simp)
               apply (clarsimp simp: APIType_capBits_def
@@ -3233,7 +3233,7 @@ lemma createNewCaps_range_helper:
         apply (wp createObjects_ret2
           | clarsimp simp: APIType_capBits_def objBits_if_dev archObjSize_def
                         word_bits_def pdBits_def pageBits_def ptBits_def
-                        split del: split_if
+                        split del: if_split
           | simp add: objBits_simps
           | (rule exI, fastforce))+
   done
@@ -3319,7 +3319,7 @@ lemma caps_overlap_reserved'_def2:
     apply (elim ballE impE)
       apply simp
      apply simp
-    apply (simp add:ran_def null_filter'_def split:split_if_asm option.splits)
+    apply (simp add:ran_def null_filter'_def split:if_split_asm option.splits)
   apply (elim ballE impE)
     apply simp
    apply simp
@@ -3413,7 +3413,7 @@ lemma createObjects_distinct:
   "\<lbrace>\<lambda>s. 0<n \<and> range_cover ptr sz ((objBitsKO obj) + us) n\<rbrace> createObjects ptr n obj us \<lbrace>\<lambda>rv s. distinct_prop op \<noteq> rv\<rbrace>"
   apply (simp add: createObjects_def unless_def alignError_def split_def
                    lookupAround2_pspace_no createObjects'_def
-             cong: if_cong split del: split_if)
+             cong: if_cong split del: if_split)
   apply (wp | simp only: o_def)+
   apply (clarsimp simp: upto_enum_def distinct_prop_map
               simp del: upt_Suc)
@@ -3586,7 +3586,7 @@ lemma createNewCaps_ranges':
    apply (rule createNewCaps_ranges)
   apply (simp add: distinct_sets_prop del: map_map)
   apply (erule distinct_prop_prefixE)
-  apply (rule map_prefixeqI)
+  apply (rule Sublist.map_prefixI)
   apply (rule map_snd_zip_prefix [unfolded less_eq_list_def])
   done
 
@@ -3686,7 +3686,7 @@ lemma updateFreeIndex_updateCap_caps_overlap_reserved:
   apply (wp updateCap_ctes_of_wp)
   apply (clarsimp simp:modify_map_def cte_wp_at_ctes_of)
   apply (erule ranE)
-  apply (clarsimp split:split_if_asm simp:valid_mdb'_def valid_mdb_ctes_def)
+  apply (clarsimp split:if_split_asm simp:valid_mdb'_def valid_mdb_ctes_def)
   apply (case_tac cte)
   apply (case_tac ctea)
   apply simp
@@ -3986,19 +3986,19 @@ lemma updateFreeIndex_mdb_simple':
   using cte_wp_at'
   apply (clarsimp simp:untyped_inc'_def mdb_inv_preserve.descendants_of[OF invp, symmetric]
                        descendants
-             split del: split_if)
+             split del: if_split)
   apply (case_tac "ctes_of s p")
-   apply (simp split: split_if_asm)
+   apply (simp split: if_split_asm)
   apply (case_tac "ctes_of s p'")
-   apply (simp split: split_if_asm)
+   apply (simp split: if_split_asm)
   apply (case_tac "the (ctes_of s p)", case_tac "the (ctes_of s p')")
   apply clarsimp
   apply (cut_tac p=p and p'=p' in untyped_incD'[OF _ _ _ _ unt_inc'])
       apply assumption
-     apply (clarsimp simp: isCap_simps split: split_if_asm)
+     apply (clarsimp simp: isCap_simps split: if_split_asm)
     apply assumption
-   apply (clarsimp simp: isCap_simps split: split_if_asm)
-  apply (clarsimp simp: descendants split: split_if_asm)
+   apply (clarsimp simp: isCap_simps split: if_split_asm)
+  apply (clarsimp simp: descendants split: if_split_asm)
   done
 qed
 
@@ -4006,7 +4006,7 @@ lemma pspace_no_overlap_valid_untyped':
   "\<lbrakk>  pspace_no_overlap' ptr bits s; is_aligned ptr bits; bits < word_bits;
       pspace_aligned' s \<rbrakk>
   \<Longrightarrow> valid_untyped' d ptr bits idx s"
-  apply (clarsimp simp: valid_untyped'_def ko_wp_at'_def split del: split_if)
+  apply (clarsimp simp: valid_untyped'_def ko_wp_at'_def split del: if_split)
   apply (frule(1) pspace_no_overlapD')
   apply (simp add: obj_range'_def[symmetric] is_aligned_neg_mask_eq Int_commute
             )
@@ -4014,7 +4014,7 @@ lemma pspace_no_overlap_valid_untyped':
    apply (drule base_member_set[simplified field_simps])
     apply (simp add: word_bits_def)
    apply blast
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
   apply (erule notE, erule disjoint_subset2[rotated])
   apply (clarsimp simp: is_aligned_no_wrap'[OF _ word_of_nat_less])
   done
@@ -4082,7 +4082,7 @@ lemma updateFreeIndex_clear_invs':
             | simp add: pred_tcb_at'_def)+
       apply (rule hoare_vcg_conj_lift)
        apply (simp add: ifunsafe'_def3 cteInsert_def setUntypedCapAsFull_def
-               split del: split_if)
+               split del: if_split)
        apply wp
       apply (rule hoare_vcg_conj_lift)
        apply (simp add:updateCap_def)
@@ -4709,7 +4709,7 @@ lemma update_untyped_cap_valid_objs:
 lemma valid_untyped_pspace_no_overlap:
   "pspace_no_overlap {ptr .. ptr + 2 ^ sz - 1} s
     \<Longrightarrow> valid_untyped (cap.UntypedCap dev ptr sz idx) s"
-  apply (clarsimp simp: valid_untyped_def split del: split_if)
+  apply (clarsimp simp: valid_untyped_def split del: if_split)
   apply (drule(1) pspace_no_overlap_obj_range)
   apply simp
   done
@@ -4742,11 +4742,11 @@ lemma updateFreeIndex_cte_wp_at:
       then capFreeIndex_update (\<lambda>_. idx) else id) c)) p s\<rbrace>
     updateFreeIndex slot idx
   \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
-  apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def getSlotCap_def split del: split_if)
+  apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def getSlotCap_def split del: if_split)
   apply (rule hoare_pre, wp updateCap_cte_wp_at' getCTE_wp')
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (case_tac "the (ctes_of s p)")
-  apply (auto split: split_if_asm)
+  apply (auto split: if_split_asm)
   done
 
 lemma ex_tupI:
@@ -4775,10 +4775,10 @@ lemma reset_untyped_cap_corres:
        apply (rule_tac F="cap = cap.UntypedCap dev ptr sz idx
                \<and> (\<exists>s. s \<turnstile> cap)" in corres_gen_asm)
        apply (clarsimp simp: bits_of_def free_index_of_def unlessE_def
-                  split del: split_if)
+                  split del: if_split)
        apply (rule corres_if[OF refl])
         apply (rule corres_returnOk[where P=\<top> and P'=\<top>], simp)
-       apply (simp add: liftE_bindE bits_of_def split del: split_if)
+       apply (simp add: liftE_bindE bits_of_def split del: if_split)
        apply (rule corres_split[OF _ detype_corres])
            apply (rule corres_if)
              apply (simp add: reset_chunk_bits_def resetChunkBits_def)
@@ -5019,19 +5019,19 @@ lemma resetUntypedCap_invs_etc:
    apply simp
    apply (rule getCTE_sp)
   apply (rule hoare_name_pre_stateE)
-  apply (clarsimp split del: split_if)
+  apply (clarsimp split del: if_split)
   apply (subgoal_tac "capAligned ?cap")
    prefer 2
    apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
    apply (clarsimp simp: cte_wp_at_ctes_of capAligned_def valid_cap_simps')
   apply (cases "idx = 0")
-   apply (clarsimp simp: cte_wp_at_ctes_of unlessE_def split del: split_if)
+   apply (clarsimp simp: cte_wp_at_ctes_of unlessE_def split del: if_split)
    apply wp
    apply (clarsimp simp: valid_cap_simps' capAligned_def)
    apply (rule cte_wp_at_pspace_no_overlapI'[where cref=slot],
        (simp_all add: cte_wp_at_ctes_of)+)[1]
   apply (clarsimp simp: unlessE_def cte_wp_at_ctes_of
-             split del: split_if)
+             split del: if_split)
   apply (rule_tac B="\<lambda>_. invs' and valid_untyped_inv_wcap' ?ui (Some ?cap)
         and ct_active' and ?psp" in hoare_vcg_seqE[rotated])
    apply clarsimp
@@ -5416,7 +5416,7 @@ let ?ui' = "Invocations_H.untyped_invocation.Retype (cte_map cref) reset
       ,unfolded free_index_update_def free_index_of_def,simplified]
 
     note msimp[simp add] = getObjectSize_def_eq neg_mask_add_mask
-    note split_if[split del]
+    note if_split[split del]
     show " corres (intr \<oplus> (op =)) (op = s) (op = s')
            (invoke_untyped ?ui)
            (invokeUntyped ?ui')"
@@ -5514,7 +5514,7 @@ let ?ui' = "Invocations_H.untyped_invocation.Retype (cte_map cref) reset
             (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap {ptr && ~~ mask sz..(ptr && ~~ mask sz) + 2 ^ sz - 1} s)
           " in hoare_post_imp_R)
-          apply (simp add: whenE_def split del: split_if, wp)
+          apply (simp add: whenE_def split del: if_split, wp)
            apply (rule validE_validE_R, rule hoare_post_impErr, rule reset_untyped_cap_invs_etc, auto)[1]
           apply wp
          apply (clarsimp simp: ui cte_wp_at_caps_of_state
@@ -5524,17 +5524,17 @@ let ?ui' = "Invocations_H.untyped_invocation.Retype (cte_map cref) reset
            in invoke_untyped_proofs.intro,
            simp_all add: cte_wp_at_caps_of_state)[1]
           apply (rule conjI, (assumption | rule refl))+
-          apply (simp split: split_if)
+          apply (simp split: if_split)
 
          apply (simp add: invoke_untyped_proofs.simps)
-         apply (strengthen split_if[where P="\<lambda>v. v \<le> unat x" for x, THEN iffD2]
+         apply (strengthen if_split[where P="\<lambda>v. v \<le> unat x" for x, THEN iffD2]
                            exI[where x=cref])
          apply (simp add: arg_cong[OF mask_out_sub_mask, where f="\<lambda>y. x - y" for x]
                           field_simps invoke_untyped_proofs.idx_le_new_offs
-                          split_if[where P="\<lambda>v. v \<le> unat x" for x])
+                          if_split[where P="\<lambda>v. v \<le> unat x" for x])
          apply (frule range_cover.sz(1), fold word_bits_def)
          apply (frule cte_wp_at_pspace_no_overlapI,
-           simp add: cte_wp_at_caps_of_state, simp split: split_if,
+           simp add: cte_wp_at_caps_of_state, simp split: if_split,
            simp add: invoke_untyped_proofs.szw)
          apply (simp add: field_simps conj_comms ex_in_conv
                           cte_wp_at_caps_of_state
@@ -5570,7 +5570,7 @@ let ?ui' = "Invocations_H.untyped_invocation.Retype (cte_map cref) reset
                               invokeUntyped_proofs.caps_no_overlap'
                               invokeUntyped_proofs.ps_no_overlap'
                               invokeUntyped_proofs.descendants_range
-                              split_if[where P="\<lambda>v. v \<le> getFreeIndex x y" for x y]
+                              if_split[where P="\<lambda>v. v \<le> getFreeIndex x y" for x y]
                               empty_descendants_range_in'
                               invs_pspace_aligned' invs_pspace_distinct'
                               invs_ksCurDomain_maxDomain'
@@ -5593,7 +5593,7 @@ let ?ui' = "Invocations_H.untyped_invocation.Retype (cte_map cref) reset
           apply (simp add: shiftl_t2n mult.commute)
          apply (drule invokeUntyped_proofs.subset_stuff, simp,
              erule order_trans, simp add: blah word_and_le2)
-        apply (auto split: split_if)[1]
+        apply (auto split: if_split)[1]
        apply (drule invokeUntyped_proofs.usableRange_disjoint, simp)
       apply (clarsimp simp only: pred_conj_def invs ui)
       apply (strengthen vui)
@@ -5823,7 +5823,7 @@ lemma capRange_subset_capBits:
     \<Longrightarrow> capRange cap \<noteq> {}
     \<Longrightarrow> capBits cap \<le> capBits cap'"
   apply (simp add: capRange_def capAligned_def is_aligned_no_overflow
-            split: split_if_asm del: atLeastatMost_subset_iff)
+            split: if_split_asm del: atLeastatMost_subset_iff)
   apply (frule_tac c="capUntypedPtr cap" in subsetD)
    apply (simp only: mask_in_range[symmetric])
    apply (simp add: is_aligned_neg_mask_eq)
@@ -5846,7 +5846,7 @@ lemma insertNewCap_urz[wp]:
   apply (simp add: insertNewCap_def updateNewFreeIndex_def)
   apply (wp getCTE_cteCap_wp
     | simp add: updateTrackedFreeIndex_def getSlotCap_def case_eq_if_isUntypedCap
-               split: option.split split del: split_if
+               split: option.split split del: if_split
     | wps | wp_once getCTE_wp')+
   apply (clarsimp simp: cte_wp_at_ctes_of fun_upd_def[symmetric])
   apply (strengthen untyped_ranges_zero_fun_upd[mk_strg I E])
@@ -5951,7 +5951,7 @@ lemma zipWithM_x_insertNewCap_invs':
   apply (auto simp: map_snd_zip_prefix [unfolded less_eq_list_def]
               dest!: set_zip_helper
               elim!: distinct_prop_prefixE
-              intro!: map_prefixeqI
+              intro!: Sublist.map_prefixI
               simp del: map_map)
   done
 
@@ -5959,7 +5959,7 @@ lemma createNewCaps_not_isZombie[wp]:
   "\<lbrace>\<top>\<rbrace> createNewCaps ty ptr bits sz d \<lbrace>\<lambda>rv s. (\<forall>cap \<in> set rv. \<not> isZombie cap)\<rbrace>"
   apply (simp add: createNewCaps_def toAPIType_def ARM_H.toAPIType_def
                    createNewCaps_def
-              split del: split_if cong: option.case_cong if_cong
+              split del: if_split cong: option.case_cong if_cong
                                         apiobject_type.case_cong
                                         ARM_H.object_type.case_cong)
   apply (rule hoare_pre)
@@ -6014,7 +6014,7 @@ lemma createNewCaps_IRQHandler[wp]:
   "\<lbrace>\<top>\<rbrace>
      createNewCaps tp ptr sz us d
    \<lbrace>\<lambda>rv s. IRQHandlerCap irq \<in> set rv \<longrightarrow> P rv s\<rbrace>"
-  apply (simp add: createNewCaps_def split del: split_if)
+  apply (simp add: createNewCaps_def split del: if_split)
   apply (rule hoare_pre)
    apply (wp | wpc | simp add: image_def | rule hoare_pre_cont)+
   done
@@ -6225,11 +6225,11 @@ lemma invokeUntyped_invs'':
     apply (frule invokeUntyped_proofs.idx_compare')
     apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps getFreeIndex_def
                           shiftL_nat shiftl_t2n mult.commute
-                          split_if[where P="\<lambda>x. x \<le> unat v" for v]
+                          if_split[where P="\<lambda>x. x \<le> unat v" for v]
                           invs_valid_pspace' invs_ksCurDomain_maxDomain'
                           invokeUntyped_proofs.caps_no_overlap'
                           invokeUntyped_proofs.usableRange_disjoint
-               split del: split_if)
+               split del: if_split)
     apply (strengthen refl)
     apply simp
     apply (intro conjI; assumption?)

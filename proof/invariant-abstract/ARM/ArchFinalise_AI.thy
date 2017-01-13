@@ -162,7 +162,7 @@ lemma delete_asid_pool_unmapped[wp]:
                   dest!: graph_ofD)
   apply (clarsimp simp: vs_lookup_def vs_asid_refs_def
                  dest!: graph_ofD
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (erule rtranclE)
    apply (simp add: up_ucast_inj_eq)
   apply (drule vs_lookup1D)
@@ -264,7 +264,7 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
                   set_cap_idle valid_irq_node_typ set_cap_typ_at
                   set_cap_irq_handlers set_cap_valid_arch_caps
                   set_cap_cap_refs_respects_device_region_NullCap
-                  | simp add: trans_state_update[symmetric] del: trans_state_update fun_upd_apply split del: split_if )+
+                  | simp add: trans_state_update[symmetric] del: trans_state_update fun_upd_apply split del: if_split )+
   apply (clarsimp simp: is_final_cap'_def2 simp del: fun_upd_apply)
   apply (clarsimp simp: conj_comms invs_def valid_state_def valid_mdb_def2)
   apply (subgoal_tac "mdb_empty_abs s")
@@ -295,7 +295,7 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
     apply (rule allEI, assumption)
     apply (fold reply_caps_mdb_def)[1]
     apply (case_tac "sl = ptr", simp)
-    apply (simp add: fun_upd_def split del: split_if del: split_paired_Ex)
+    apply (simp add: fun_upd_def split del: if_split del: split_paired_Ex)
     apply (erule allEI, rule impI, erule(1) impE)
     apply (erule exEI)
     apply (simp, rule ccontr)
@@ -330,7 +330,7 @@ lemma dom_tcb_cap_cases_lt_ARCH [Finalise_AI_asms]:
   "dom tcb_cap_cases = {xs. length xs = 3 \<and> unat (of_bl xs :: machine_word) < 5}"
   apply (rule set_eqI, rule iffI)
    apply clarsimp
-   apply (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1 split: split_if_asm)
+   apply (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1 split: if_split_asm)
   apply clarsimp
   apply (frule tcb_cap_cases_lt)
   apply (clarsimp simp: nat_to_cref_unat_of_bl')
@@ -371,7 +371,7 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
         \<and> cap_irqs (fst rv) = cap_irqs cap
         \<and> fst_cte_ptrs (fst rv) = fst_cte_ptrs cap
         \<and> vs_cap_ref cap = None\<rbrace>"
-  apply (cases cap, simp_all split del: split_if cong: if_cong)
+  apply (cases cap, simp_all split del: if_split cong: if_cong)
             apply (wp suspend_final_cap[where sl=slot]
                       deleting_irq_handler_final[where slot=slot]
                       | simp add: o_def is_cap_simps fst_cte_ptrs_def
@@ -395,12 +395,12 @@ lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
             apply (wp suspend_valid_cap
                      | simp add: o_def valid_cap_def cap_aligned_def
                                  valid_cap_Null_ext
-                           split del: split_if
+                           split del: if_split
                      | clarsimp | rule conjI)+
   apply (simp add: arch_finalise_cap_def)
   apply (rule hoare_pre)
   apply (wp|simp add: o_def valid_cap_def cap_aligned_def
-                 split del: split_if|clarsimp|wpc)+
+                 split del: if_split|clarsimp|wpc)+
   done
 
 lemma (* arch_finalise_cap_invs *)[wp,Finalise_AI_asms]:
@@ -526,7 +526,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
      finalise_cap cap x
    \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
   apply (cases cap, simp_all add: replaceable_def reachable_pg_cap_def
-                       split del: split_if)
+                       split del: if_split)
             prefer 10
             (* TS: this seems to be necessary for deleting_irq_handler,
                    kind of nasty, not sure how to sidestep *)
@@ -917,7 +917,7 @@ lemma page_directory_at_def2:
   apply (simp add: a_type_def obj_at_def)
   apply (rule iffI)
    apply (erule exE)
-   apply (case_tac ko, simp_all add: split_if_eq1)
+   apply (case_tac ko, simp_all add: if_split_eq1)
    apply (rename_tac arch_kernel_obj)
    apply (case_tac arch_kernel_obj, simp_all split: if_splits)
   apply (erule exE)
@@ -1283,10 +1283,10 @@ global_naming Arch
 
 lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
   shows "\<lbrace>invs and cte_wp_at (op = cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (cases cap, simp_all split del: split_if)
+  apply (cases cap, simp_all split del: if_split)
          apply (wp cancel_all_ipc_invs cancel_all_signals_invs unbind_notification_invs
                    unbind_maybe_notification_invs
-                  | simp add: o_def split del: split_if cong: if_cong
+                  | simp add: o_def split del: if_split cong: if_cong
                   | wpc )+
       apply clarsimp (* thread *)
       apply (frule cte_wp_at_valid_objs_valid_cap, clarsimp)
@@ -1453,7 +1453,7 @@ lemma valid_kernel_mappings [iff]:
 lemma vs_asid_refs_updateD:
   "(ref', p') \<in> vs_asid_refs (table (x \<mapsto> p))
   \<Longrightarrow> (ref',p') \<in> vs_asid_refs table \<or> (ref' = [VSRef (ucast x) None] \<and> p' = p)"
-  apply (clarsimp simp: vs_asid_refs_def graph_of_def split: split_if_asm)
+  apply (clarsimp simp: vs_asid_refs_def graph_of_def split: if_split_asm)
   apply (rule_tac x="(a,p')" in image_eqI)
    apply auto
   done
@@ -1483,7 +1483,7 @@ lemma vs_lookup_empty_table:
      apply assumption
     apply (fastforce simp: vs_lookup_def)
    apply (clarsimp simp: obj_at_def vs_lookup1_def vs_refs_def
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply clarsimp
   apply (drule rtranclD)
   apply (erule disjE)
@@ -1516,7 +1516,7 @@ lemma vs_lookup_pages_empty_table:
      apply assumption
     apply (fastforce simp: vs_lookup_pages_def)
    apply (clarsimp simp: obj_at_def vs_lookup_pages1_def vs_refs_pages_def
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply clarsimp
   apply (drule rtranclD)
   apply (erule disjE)
@@ -1544,7 +1544,7 @@ lemma set_asid_pool_empty_table_objs:
     apply simp
    prefer 2
    apply (simp add: a_type_def)
-  apply (clarsimp simp add: a_type_def split: split_if_asm)
+  apply (clarsimp simp add: a_type_def split: if_split_asm)
   apply (erule_tac x=pa in allE)
   apply (erule impE)
    apply (drule vs_lookup_empty_table)

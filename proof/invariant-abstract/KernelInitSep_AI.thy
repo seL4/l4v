@@ -844,7 +844,7 @@ lemma cap_of_ko_cleanD:
   unfolding cap_of_def ko_clean_def
   by (clarsimp simp: ko_override_def a_base_type_cmp_of_def tcb_cnode_map_def
                      tcb_override_index_assist
-               split: kernel_object.splits option.splits split_if_asm)
+               split: kernel_object.splits option.splits if_split_asm)
 
 lemma cap_of_ko_clean_contained_cap:
   "cmp_of ko i \<in> cmps
@@ -867,10 +867,10 @@ lemma ko_clean_one_cap_eq:
   apply (clarsimp simp: ko_clean_def a_base_type_def cap_of_def
                   split: kernel_object.splits)
    apply (fastforce simp: ko_override_def a_base_type_cmp_of_def
-                    split: split_if_asm)
+                    split: if_split_asm)
   apply (clarsimp simp: tcb_cnode_map_def a_base_type_cmp_of_def
                         ko_override_def tcb_override_index_assist
-                  split: split_if_asm)
+                  split: if_split_asm)
   done
 
 lemma tcb_override_commute:
@@ -896,7 +896,7 @@ lemma tcb_cnode_map_tcb_override_left:
   "i \<notin> cmps
    \<Longrightarrow> tcb_cnode_map (tcb_override tcb tcb' cmps) i = tcb_cnode_map tcb i"
   apply (clarsimp simp: tcb_cnode_map_def tcb_override_def
-                  split: split_if_asm option.splits)
+                  split: if_split_asm option.splits)
   apply (rule conjI | clarsimp simp: eval_nat_numeral)+
   done
 
@@ -904,7 +904,7 @@ lemma tcb_cnode_map_tcb_override_right:
   "i \<in> cmps
    \<Longrightarrow> tcb_cnode_map (tcb_override tcb tcb' cmps) i = tcb_cnode_map tcb' i"
   by (fastforce simp: tcb_cnode_map_def tcb_override_index_assist
-                split: split_if_asm option.splits)
+                split: if_split_asm option.splits)
 
 lemmas tcb_cnode_map_tcb_overrides = tcb_cnode_map_tcb_override_right
                                      tcb_cnode_map_tcb_override_left
@@ -939,14 +939,14 @@ lemma bounded_ko_clean:
   "bounded_ko ko \<Longrightarrow> bounded_ko (ko_clean ko cmps)"
   by (auto simp: bounded_ko_def ko_clean_def ko_override_def
                  bounded_cs_size_def bounded_cnode_n_def
-           split: kernel_object.splits split_if_asm)
+           split: kernel_object.splits if_split_asm)
 
 lemma bounded_ko_override:
   "\<lbrakk> bounded_ko o1 ; bounded_ko o2 ; a_base_type o1 = a_base_type o2 \<rbrakk>
        \<Longrightarrow> bounded_ko (ko_override o1 o2 cmps)"
   by (fastforce simp: bounded_ko_def ko_override_def bounded_cs_size_def
                       a_base_type_def bounded_cnode_n_def
-                split: kernel_object.splits split_if_asm)
+                split: kernel_object.splits if_split_asm)
 
 lemma bounded_ko_clean_ko_override:
   "\<lbrakk> bounded_ko (ko_clean o1 c1) ; bounded_ko (ko_clean o2 c2) ;
@@ -954,7 +954,7 @@ lemma bounded_ko_clean_ko_override:
    \<Longrightarrow> bounded_ko (ko_clean (ko_override o1 o2 c2) (c1 \<union> c2))"
   by (fastforce simp: bounded_ko_def ko_clean_def ko_override_def
                       a_base_type_def bounded_cs_size_def bounded_cnode_n_def
-                split: kernel_object.splits option.splits split_if_asm)
+                split: kernel_object.splits option.splits if_split_asm)
   (* XXX: long-running proof *)
 
 lemma sane_components_ko_clean_ko_override:
@@ -969,7 +969,7 @@ lemma bounded_ko_clean_ko_overrideD:
    \<Longrightarrow> bounded_ko (ko_clean o1 c1) \<and> bounded_ko (ko_clean o2 c2)"
   by (fastforce simp: bounded_ko_def a_base_type_def ko_clean_def
                      ko_override_def bounded_cs_size_def bounded_cnode_n_def
-               split: kernel_object.splits split_if_asm)
+               split: kernel_object.splits if_split_asm)
 
 lemma sane_components_ko_clean_ko_overrideD:
   "\<lbrakk> sane_components (ko_clean (ko_override o1 o2 c2) (c1 \<union> c2)) (c1 \<union> c2) ;
@@ -1004,9 +1004,9 @@ lemma ko_combine_commute:
   by (clarsimp simp: Un_commute ko_override_def ko_clean_def
                      check_components_def
                      tcb_override_commute ao_clean_def sane_components_def
-               split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
+               split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
      -- "ao_override_def is too much for auto/fastforce above"
-     (auto intro!: ext simp: ao_override_def split: split_if_asm)
+     (auto intro!: ext simp: ao_override_def split: if_split_asm)
 
 
 subsection {*
@@ -1059,7 +1059,7 @@ lemma a_base_type_set_ko_cap [simp]:
 lemma cap_of_set_ko_cap [simp]:
   "cap_of ko i = Some c \<Longrightarrow> cap_of (set_ko_cap ko i cap) i = Some cap"
   by (cases ko, auto simp: set_ko_cap_def cap_of_def tcb_cnode_map_def
-                     split: split_if_asm)
+                     split: if_split_asm)
 
 lemma cap_of_set_ko_cap_via_other:
   "\<lbrakk> a_base_type ko = a_base_type ko' ; cap_of ko' i = Some cap' \<rbrakk>
@@ -1081,7 +1081,7 @@ lemma bounded_ko_clean_set_ko_cap:
   by (fastforce simp: bounded_ko_def set_ko_cap_def cap_of_def ko_clean_def
                       ko_override_def tcb_cnode_map_def a_base_type_cmp_of_def
                       bounded_cs_size_def bounded_cnode_n_def
-                split: kernel_object.splits split_if_asm)
+                split: kernel_object.splits if_split_asm)
 
 lemma ko_override_is_set_ko_cap:
   "\<lbrakk> cap_of ko' i = Some cap' ; a_base_type ko = a_base_type ko' \<rbrakk>
@@ -1117,7 +1117,7 @@ lemma ko_override_set_ko_cap:
                         a_base_type_cmp_of_def cap_of_def
                   split: kernel_object.splits option.splits)
    apply (fastforce simp: set_ko_cap_def)
-  apply (clarsimp simp: set_ko_cap_def tcb_cnode_map_def split: split_if_asm)
+  apply (clarsimp simp: set_ko_cap_def tcb_cnode_map_def split: if_split_asm)
       apply (rule tcb_eq | fastforce simp: tcb_override_def)+
       (* XXX: long-running proof *)
   done
@@ -1144,8 +1144,8 @@ lemma ko_clean_set_ko_cap': (* more specific version *)
                   split: kernel_object.splits option.splits)
       apply (fastforce simp: set_ko_cap_def)
      apply (simp_all add: set_ko_cap_def)
-   apply (clarsimp split: split_if_asm)
-  apply (clarsimp split: split_if_asm)
+   apply (clarsimp split: if_split_asm)
+  apply (clarsimp split: if_split_asm)
        apply (simp add: tcb_override_index_assist tcb_cnode_map_def)+
   done
 
@@ -1158,7 +1158,7 @@ lemma ko_clean_set_ko_cap_id:
       apply fastforce
      apply (clarsimp simp: set_ko_cap_def ko_clean_def a_base_type_cmp_of_def
                            ko_override_def
-                     split: split_if_asm)
+                     split: if_split_asm)
      apply (rule conjI | rule tcb_eq | fastforce simp: tcb_override_def)+
     apply (clarsimp simp: set_ko_cap_def)+
   done
@@ -1577,7 +1577,7 @@ lemma sep_map_base_subset_explode_eq:
    \<Longrightarrow> sep_map_base p ko cmps
       = (sep_map_base p ko cmps' \<and>*
          (if cmps = cmps' then \<box> else sep_map_base p ko (cmps - cmps')))"
-  apply (simp split: split_if_asm, intro impI)
+  apply (simp split: if_split_asm, intro impI)
   apply (subst sep_map_base_implode_eq, fastforce+)
   apply (simp add: subset_union)
   done
@@ -1726,13 +1726,13 @@ lemma sep_map_base_set_ko_cap_sep_map_cap_explode:
   apply (subst (asm) sep_map_base_subset_explode_eq[where cmps'="cmps"])
     apply fastforce
    apply assumption
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
    apply fastforce
   apply (simp add: sep_map_base_set_ko_cap_id insert_subtract_new)
   apply sep_cancel
   apply (fastforce dest!: sep_map_base_sep_map_capI
                    intro: valid_cnode_index_cap_of_set_ko_cap
-                   split: split_if_asm)
+                   split: if_split_asm)
   done
 
 

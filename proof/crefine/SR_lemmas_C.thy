@@ -101,7 +101,7 @@ lemma cap_get_tag_isCap0:
   apply (erule ccap_relationE)
   apply (simp add: cap_to_H_def cap_lift_def Let_def isArchCap_tag_def2 isArchCap_def)
   apply (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def
-                 split: split_if_asm) -- "takes a while"
+                 split: if_split_asm) -- "takes a while"
   done
 
 
@@ -232,7 +232,7 @@ lemma cap_get_tag_ZombieCap:
    apply (erule ccap_relationE)
    apply (clarsimp simp add: cap_lifts cap_to_H_def)
   apply (simp add: cap_get_tag_isCap isCap_simps Let_def
-            split: split_if_asm)
+            split: if_split_asm)
   done
 
 
@@ -306,7 +306,7 @@ lemma tcb_cte_cases_in_range1:
 proof -
   from tc obtain q where yq: "y = x + q" and qv: "q < 2 ^ 9"
     unfolding tcb_cte_cases_def
-    by (simp add: diff_eq_eq split: split_if_asm)
+    by (simp add: diff_eq_eq split: if_split_asm)
    
   have "x \<le> x + 2 ^ 9 - 1" using al
     by (rule is_aligned_no_overflow)
@@ -327,7 +327,7 @@ lemma tcb_cte_cases_in_range2:
 proof -
   from tc obtain q where yq: "y = x + q" and qv: "q \<le> 2 ^ 9 - 1"
     unfolding tcb_cte_cases_def
-    by (simp add: diff_eq_eq split: split_if_asm)
+    by (simp add: diff_eq_eq split: if_split_asm)
    
   have "x + q \<le> x + (2 ^ 9 - 1)" using qv
     apply (rule word_plus_mono_right)
@@ -352,7 +352,7 @@ lemma updateObject_cte_tcb:
   apply -
   apply (clarsimp simp add: updateObject_cte Let_def 
     tcb_cte_cases_def objBits_simps tcbSlots shiftl_t2n
-    split: split_if_asm cong: if_cong)
+    split: if_split_asm cong: if_cong)
   done
 
 definition
@@ -365,7 +365,7 @@ lemma tcb_cte_cases_proj_eq [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow> 
   tcb_no_ctes_proj tcb = tcb_no_ctes_proj (setF f tcb)"
   unfolding tcb_no_ctes_proj_def tcb_cte_cases_def
-  by (auto split: split_if_asm)
+  by (auto split: if_split_asm)
 
 lemma map_to_ctes_upd_cte':
   "\<lbrakk> ksPSpace s p = Some (KOCTE cte'); is_aligned p 4; ps_clear p 4 s \<rbrakk>
@@ -392,7 +392,7 @@ lemma map_to_ctes_upd_tcb':
 lemma tcb_cte_cases_inv [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow> getF (setF (\<lambda>_. v) tcb) = v"
   unfolding tcb_cte_cases_def
-  by (simp split: split_if_asm)
+  by (simp split: if_split_asm)
   
 declare insert_dom [simp]
 
@@ -821,7 +821,7 @@ lemma cmap_relation_upd_relI:
   apply (simp add: cmap_relation_def)
   apply (case_tac "x = dest")
    apply simp
-  apply (simp add: inj_eq split: split_if_asm)
+  apply (simp add: inj_eq split: if_split_asm)
   apply (erule (2) rel)
   apply (erule (2) cmap_relation_relI)
   done
@@ -938,7 +938,7 @@ proof -
   thus ?thesis
     apply (rule cte_wp_atE')
     apply (simp add: cte_level_bits_def is_aligned_weaken)
-  apply (simp add: tcb_cte_cases_def field_simps split: split_if_asm )
+  apply (simp add: tcb_cte_cases_def field_simps split: if_split_asm )
       apply ((erule aligned_add_aligned, simp_all add: is_aligned_def word_bits_conv)[1])+
   apply (simp add: is_aligned_weaken)
   done
@@ -1213,7 +1213,7 @@ lemma ccap_relation_NullCap_iff:
   "(ccap_relation NullCap cap') = (cap_get_tag cap' = scast cap_null_cap)"
   unfolding ccap_relation_def
   apply (clarsimp simp: map_option_Some_eq2 c_valid_cap_def cl_valid_cap_def 
-            cap_to_H_def cap_lift_def Let_def cap_tag_defs split: split_if)
+            cap_to_H_def cap_lift_def Let_def cap_tag_defs split: if_split)
   done
 
 (* MOVE *)
@@ -1541,7 +1541,7 @@ lemma map_to_ctes_upd_tcb_no_ctes:
   apply (subst map_to_ctes_upd_tcb')
      apply assumption+
   apply (rule ext)
-  apply (clarsimp split: split_if)
+  apply (clarsimp split: if_split)
   apply (drule (1) bspec [OF _ ranI])
   apply simp
   done
@@ -1559,7 +1559,7 @@ lemma update_ntfn_map_tos:
   and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
-    simp: projectKOs projectKO_opts_defs split: kernel_object.splits split_if_asm)+
+    simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)+
 
 lemma update_ep_map_tos:
   fixes P :: "endpoint \<Rightarrow> bool"
@@ -1574,7 +1574,7 @@ lemma update_ep_map_tos:
   and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
-    simp: projectKOs projectKO_opts_defs split: kernel_object.splits split_if_asm)+
+    simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)+
 
 lemma update_tcb_map_tos:
   fixes P :: "tcb \<Rightarrow> bool"
@@ -1588,7 +1588,7 @@ lemma update_tcb_map_tos:
   and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
-    simp: projectKOs projectKO_opts_defs split: kernel_object.splits split_if_asm)+
+    simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)+
 
 lemma update_asidpool_map_tos:
   fixes P :: "asidpool \<Rightarrow> bool"
@@ -1605,18 +1605,18 @@ lemma update_asidpool_map_tos:
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
       simp: projectKOs projectKO_opts_defs
-     split: split_if split_if_asm Structures_H.kernel_object.split_asm
+     split: if_split if_split_asm Structures_H.kernel_object.split_asm
             arch_kernel_object.split_asm)
 
 lemma update_asidpool_map_to_asidpools:
   "map_to_asidpools (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap)))
              = (map_to_asidpools (ksPSpace s))(p \<mapsto> ap)"
-  by (rule ext, clarsimp simp: projectKOs map_comp_def split: split_if)
+  by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
 
 lemma update_pte_map_to_ptes:
   "map_to_ptes (ksPSpace s(p \<mapsto> KOArch (KOPTE pte)))
              = (map_to_ptes (ksPSpace s))(p \<mapsto> pte)"
-  by (rule ext, clarsimp simp: projectKOs map_comp_def split: split_if)
+  by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
 
 lemma update_pte_map_tos:
   fixes P :: "pte \<Rightarrow> bool"
@@ -1631,14 +1631,14 @@ lemma update_pte_map_tos:
   and     "map_to_user_data_device (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_comp_eqI map_to_ctes_upd_other
-           split: split_if_asm split_if
+           split: if_split_asm if_split
             simp: projectKOs,
        auto simp: projectKO_opts_defs)
 
 lemma update_pde_map_to_pdes:
   "map_to_pdes (ksPSpace s(p \<mapsto> KOArch (KOPDE pde)))
              = (map_to_pdes (ksPSpace s))(p \<mapsto> pde)"
-  by (rule ext, clarsimp simp: projectKOs map_comp_def split: split_if)
+  by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
 
 lemma update_pde_map_tos:
   fixes P :: "pde \<Rightarrow> bool"
@@ -1653,7 +1653,7 @@ lemma update_pde_map_tos:
   and     "map_to_user_data_device (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_comp_eqI map_to_ctes_upd_other
-           split: split_if_asm split_if
+           split: if_split_asm if_split
             simp: projectKOs,
        auto simp: projectKO_opts_defs)
 
@@ -1686,6 +1686,12 @@ lemma region_is_bytes_disjoint:
   apply (simp add: cleared[unfolded region_is_bytes'_def] not_byte size_of_def)
   done
 
+lemma region_actually_is_bytes:
+  "region_actually_is_bytes' ptr len htd
+    \<Longrightarrow> region_is_bytes' ptr len htd"
+  by (simp add: region_is_bytes'_def region_actually_is_bytes'_def
+         split: if_split)
+
 lemma zero_ranges_are_zero_update[simp]:
   "h_t_valid (hrs_htd hrs) c_guard (ptr :: 'a ptr)
     \<Longrightarrow> typ_uinfo_t TYPE('a :: wf_type) \<noteq> typ_uinfo_t TYPE(word8)
@@ -1693,6 +1699,7 @@ lemma zero_ranges_are_zero_update[simp]:
         = zero_ranges_are_zero rs hrs"
   apply (clarsimp simp: zero_ranges_are_zero_def hrs_mem_update
         intro!: ball_cong[OF refl] conj_cong[OF refl])
+  apply (drule region_actually_is_bytes)
   apply (drule(2) region_is_bytes_disjoint)
   apply (simp add: heap_update_def heap_list_update_disjoint_same Int_commute)
   done
@@ -1822,7 +1829,7 @@ lemma cmap_relation_updI2:
   and   inj: "inj f"
   shows "cmap_relation (am(dest \<mapsto> nv)) (cm(f dest \<mapsto> nv')) f rel"
   using cr cof cc inj
-  by (clarsimp simp add: cmap_relation_def inj_eq split: split_if)
+  by (clarsimp simp add: cmap_relation_def inj_eq split: if_split)
 
 definition
   user_word_at :: "word32 \<Rightarrow> word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1864,7 +1871,7 @@ lemma ko_at_projectKO_opt:
 
 lemma int_and_leR:
   "0 \<le> b \<Longrightarrow> a AND b \<le> (b :: int)"
-  by (clarsimp simp: int_and_le bin_sign_def split: split_if_asm)
+  by (clarsimp simp: int_and_le bin_sign_def split: if_split_asm)
 
 lemma int_and_leL:
   "0 \<le> a \<Longrightarrow> a AND b \<le> (a :: int)"
@@ -2038,7 +2045,7 @@ lemma cap_get_tag_isCap_ArchObject0:
   apply -
   apply (erule ccap_relationE)
   apply (simp add: cap_to_H_def cap_lift_def Let_def isArchCap_def)
-  apply (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def split: split_if_asm) -- "takes a while"
+  apply (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def split: if_split_asm) -- "takes a while"
   done
 
 lemma cap_get_tag_isCap_ArchObject:
@@ -2145,7 +2152,7 @@ lemma update_typ_at:
   using at
   by (auto elim!: obj_atE' simp: typ_at'_def ko_wp_at'_def
            dest!: tp[rule_format]
-            simp: project_inject projectKO_eq split: kernel_object.splits split_if_asm,
+            simp: project_inject projectKO_eq split: kernel_object.splits if_split_asm,
       simp_all add: objBits_def objBitsT_koTypeOf[symmetric] ps_clear_upd
                del: objBitsT_koTypeOf)
 
@@ -2162,7 +2169,7 @@ lemmas ptr_val_tcb_ptr_mask'
 
 lemma typ_uinfo_t_diff_from_typ_name:
   "typ_name (typ_info_t TYPE ('a :: c_type)) \<noteq> typ_name (typ_info_t TYPE('b :: c_type))
-    \<Longrightarrow> typ_uinfo_t (at :: 'a itself) \<noteq> typ_uinfo_t (bt :: 'b itself)"
+    \<Longrightarrow> typ_uinfo_t (aty :: 'a itself) \<noteq> typ_uinfo_t (bty :: 'b itself)"
   by (clarsimp simp: typ_uinfo_t_def td_diff_from_typ_name)
 
 declare ptr_add_assertion'[simp] typ_uinfo_t_diff_from_typ_name[simp]
@@ -2228,7 +2235,7 @@ lemma page_table_at_rf_sr:
 
 lemma gsUntypedZeroRanges_rf_sr:
   "\<lbrakk> (start, end) \<in> gsUntypedZeroRanges s; (s, s') \<in> rf_sr \<rbrakk>
-    \<Longrightarrow> region_is_zero_bytes start (unat ((end + 1) - start)) s'"
+    \<Longrightarrow> region_actually_is_zero_bytes start (unat ((end + 1) - start)) s'"
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                         zero_ranges_are_zero_def)
   apply (drule(1) bspec)
@@ -2239,7 +2246,7 @@ lemma ctes_of_untyped_zero_rf_sr:
   "\<lbrakk> ctes_of s p = Some cte; (s, s') \<in> rf_sr;
       untyped_ranges_zero' s;
       untypedZeroRange (cteCap cte) = Some (start, end) \<rbrakk>
-    \<Longrightarrow> region_is_zero_bytes start (unat ((end + 1) - start)) s'"
+    \<Longrightarrow> region_actually_is_zero_bytes start (unat ((end + 1) - start)) s'"
   apply (erule gsUntypedZeroRanges_rf_sr[rotated])
   apply (clarsimp simp: untyped_ranges_zero_inv_def)
   apply (rule_tac a=p in ranI)

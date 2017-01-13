@@ -8,7 +8,7 @@
  * @TAG(NICTA_GPL)
  *)
 
-header {* \label{sec:examples}Example Systems *}
+chapter {* \label{sec:examples}Example Systems *}
 
 (*<*)
 theory Examples_CAMKES

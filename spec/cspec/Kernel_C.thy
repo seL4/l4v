@@ -15,6 +15,8 @@ imports
   "../../tools/asmrefine/CommonOps"
 begin
 
+declare Char_eq_Char_iff [simp del]
+
 context begin interpretation Arch .
 
 requalify_types

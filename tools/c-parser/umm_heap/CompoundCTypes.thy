@@ -677,17 +677,17 @@ apply(rename_tac a list)
 apply clarsimp
 apply(drule_tac x=fn in spec)
 apply(erule impE)
- apply(clarsimp simp: field_names_list_def split: split_if_asm)
+ apply(clarsimp simp: field_names_list_def split: if_split_asm)
 apply(drule_tac x=t in spec)
 apply auto
 apply(drule lf_set_fn)
-apply(clarsimp simp: field_names_list_def prefixeq_def split: split_if_asm)
+apply(clarsimp simp: field_names_list_def prefix_def split: if_split_asm)
  apply(case_tac a, clarsimp)
  apply(drule lf_set_fn)
- apply(clarsimp simp: prefixeq_def less_eq_list_def)
+ apply(clarsimp simp: prefix_def less_eq_list_def)
 apply(case_tac a, clarsimp)
 apply(drule lf_set_fn)
-apply(clarsimp simp: prefixeq_def less_eq_list_def)
+apply(clarsimp simp: prefix_def less_eq_list_def)
 done
 
 
@@ -1065,7 +1065,7 @@ apply(case_tac typ_struct, clarsimp)
  apply(clarsimp simp: align_field_def split: option.splits)
 apply(clarsimp simp: align_field_def)
 apply(subst (asm) field_lookup_list_append)
-apply(clarsimp split: split_if_asm option.splits)
+apply(clarsimp split: if_split_asm option.splits)
  apply(case_tac f, clarsimp)
  apply clarsimp
  apply(frule field_lookup_offset2)
@@ -1097,7 +1097,7 @@ done
 
 lemma align_field_final_pad:
   "align_field ti \<Longrightarrow> align_field (final_pad ti)"
-apply(clarsimp simp: final_pad_def Let_def split: split_if_asm)
+apply(clarsimp simp: final_pad_def Let_def split: if_split_asm)
 apply(erule align_field_ti_pad_combine)
 done
 
@@ -1133,7 +1133,7 @@ apply(induct t and st and ts and x)
   apply(rule, clarsimp)
    apply(case_tac dt_pair, clarsimp)
   apply clarsimp
-  apply(case_tac dt_pair, clarsimp split: split_if_asm)
+  apply(case_tac dt_pair, clarsimp split: if_split_asm)
   apply(drule_tac x=fn in spec)
   apply clarsimp
   apply(fold adjust_ti_def)

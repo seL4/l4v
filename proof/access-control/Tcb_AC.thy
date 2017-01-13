@@ -176,7 +176,7 @@ lemma set_priority_pas_refined[wp]:
   apply (erule_tac x="(a, b)" in ballE)
    apply simp
   apply (erule domains_of_state_aux.cases)
-  apply (force intro: domtcbs split: split_if_asm)
+  apply (force intro: domtcbs split: if_split_asm)
   done
 
 lemma gts_test[wp]: "\<lbrace>\<top>\<rbrace> get_thread_state t \<lbrace>\<lambda>rv s. test rv = st_tcb_at test t s\<rbrace>"
@@ -360,7 +360,7 @@ lemma invoke_tcb_respects:
   apply (cases ti, simp_all add: hoare_conjD1 [OF invoke_tcb_tc_respects_aag [simplified simp_thms]]
                             del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps K_def)
   apply (safe intro!: hoare_gen_asm)
-  apply ((wp itr_wps mapM_x_wp' | simp add: if_apply_def2 split del: split_if
+  apply ((wp itr_wps mapM_x_wp' | simp add: if_apply_def2 split del: if_split
             | wpc | clarsimp simp: authorised_tcb_inv_def
             | rule conjI | subst(asm) idle_no_ex_cap)+)
   done
@@ -436,9 +436,9 @@ lemma decode_set_ipc_buffer_authorised:
    \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
   unfolding decode_set_ipc_buffer_def authorised_tcb_inv_def
   apply (cases "excaps ! 0")
-  apply (clarsimp cong: list.case_cong split del: split_if)
+  apply (clarsimp cong: list.case_cong split del: if_split)
   apply (rule hoare_pre)  
-  apply (clarsimp simp: ball_Un aag_cap_auth_def split del: split_if split add: prod.split 
+  apply (clarsimp simp: ball_Un aag_cap_auth_def split del: if_split split: prod.split
        | strengthen stupid_strg
        | wp_once derive_cap_obj_refs_auth derive_cap_untyped_range_subset derive_cap_clas derive_cap_cli
                  hoare_vcg_all_lift_R whenE_throwError_wp slot_long_running_inv
@@ -454,8 +454,8 @@ lemma decode_set_space_authorised:
    \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
   unfolding decode_set_space_def authorised_tcb_inv_def
   apply (rule hoare_pre)
-  apply (simp cong: list.case_cong split del: split_if)
-  apply (clarsimp simp: ball_Un split del: split_if
+  apply (simp cong: list.case_cong split del: if_split)
+  apply (clarsimp simp: ball_Un split del: if_split
        | wp_once derive_cap_obj_refs_auth derive_cap_untyped_range_subset derive_cap_clas derive_cap_cli
                  hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R whenE_throwError_wp slot_long_running_inv)+
   apply (clarsimp simp: not_less all_set_conv_all_nth dest!: P_0_1_spec)  
@@ -475,10 +475,10 @@ lemma decode_set_space_authorised':
   apply (cases set_param)  
   apply (simp_all add: is_thread_control_def decode_set_space_def authorised_tcb_inv_def
                  cong: list.case_cong option.case_cong prod.case_cong
-                split: prod.split_asm split del: split_if)
+                split: prod.split_asm split del: if_split)
   apply (cases "excaps!0")
   apply (cases "excaps!Suc 0")
-  apply (clarsimp simp: ball_Un split del: split_if split add: prod.split
+  apply (clarsimp simp: ball_Un split del: if_split split: prod.split
        | strengthen stupid_strg
        | wp_once derive_cap_obj_refs_auth derive_cap_untyped_range_subset derive_cap_clas derive_cap_cli
                  hoare_vcg_all_lift_R whenE_throwError_wp slot_long_running_inv)+

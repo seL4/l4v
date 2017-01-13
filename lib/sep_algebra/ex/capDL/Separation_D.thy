@@ -47,7 +47,7 @@ lemma sep_map_general_def2:
    apply clarsimp
   apply (clarsimp simp: fun_upd_def)
   apply (rule ext)
-  apply (fastforce simp: dom_def split:split_if)
+  apply (fastforce simp: dom_def split:if_split)
   done
 
 (* There is an object there. *)

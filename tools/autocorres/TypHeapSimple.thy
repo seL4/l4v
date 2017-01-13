@@ -118,7 +118,7 @@ lemma heap_type_tag_ptr_retyp:
    apply (erule_tac x="length (typ_slice_t (typ_uinfo_t TYPE('a)) 0)" in allE)
    apply (clarsimp simp: list_map_eq)
   apply (clarsimp simp: list_map_eq last_conv_nth [simplified, symmetric] last_typ_slice_t
-            split: option.splits split_if_asm prod.splits)
+            split: option.splits if_split_asm prod.splits)
   done
 
 lemma not_snd_last_typ_slice_t:
@@ -139,7 +139,7 @@ lemma heap_type_tag_ptr_retyp_rest:
    apply (erule_tac x="length (typ_slice_t (typ_uinfo_t TYPE('a)) (unat k))" in allE)
    apply (clarsimp simp: typ_slices_index size_of_def list_map_eq)
   apply (clarsimp simp: list_map_eq last_conv_nth [simplified, symmetric] size_of_def
-      split: option.splits split_if_asm prod.splits bool.splits)
+      split: option.splits if_split_asm prod.splits bool.splits)
    apply (metis surj_pair)
   apply (subst (asm) (2) surjective_pairing)
   apply (subst (asm) not_snd_last_typ_slice_t)
@@ -216,12 +216,12 @@ where
 
 lemma simple_lift_heap_ptr_valid:
   "simple_lift s p = Some x \<Longrightarrow> heap_ptr_valid (hrs_htd s) p"
-  apply (clarsimp simp: simple_lift_def split: split_if_asm)
+  apply (clarsimp simp: simple_lift_def split: if_split_asm)
   done
 
 lemma simple_lift_c_guard:
   "simple_lift s p = Some x \<Longrightarrow> c_guard p"
-  apply (clarsimp simp: simple_lift_def heap_ptr_valid_def split: split_if_asm)
+  apply (clarsimp simp: simple_lift_def heap_ptr_valid_def split: if_split_asm)
   done
 
 (* Two valid footprints will either overlap completely or not at all. *)
@@ -351,7 +351,7 @@ lemma simple_lift_heap_update_other:
 
 lemma h_val_simple_lift:
   "simple_lift h p = Some v \<Longrightarrow> h_val (hrs_mem h) p = v"
-  apply (clarsimp simp: simple_lift_def split: split_if_asm)
+  apply (clarsimp simp: simple_lift_def split: if_split_asm)
   done
 
 lemma h_val_field_simple_lift:
@@ -359,7 +359,7 @@ lemma h_val_field_simple_lift:
      \<exists>t. field_ti TYPE('a) f = Some t;
      export_uinfo (the (field_ti TYPE('a) f)) = export_uinfo (typ_info_t TYPE('b :: mem_type)) \<rbrakk> \<Longrightarrow>
    h_val (hrs_mem h) (Ptr &(pa\<rightarrow>f) :: 'b :: mem_type ptr) = from_bytes (access_ti\<^sub>0 (the (field_ti TYPE('a) f)) v)"
-  apply (clarsimp simp: simple_lift_def split: split_if_asm)
+  apply (clarsimp simp: simple_lift_def split: if_split_asm)
   apply (clarsimp simp: h_val_field_from_bytes)
   done
 
@@ -449,7 +449,7 @@ proof -
        apply simp
       apply (drule field_of_t_mem)+
       apply (case_tac h)
-      apply (clarsimp simp: simple_lift_def split: split_if_asm)
+      apply (clarsimp simp: simple_lift_def split: if_split_asm)
       apply (drule (1) heap_ptr_valid_neq_disjoint)
        apply simp
       apply fast
@@ -534,7 +534,7 @@ proof (rule ext)
 
   have equal_case: "?LHS ptr = ?RHS ptr"
     apply (insert cl)
-    apply (clarsimp simp: simple_lift_def split: split_if_asm)
+    apply (clarsimp simp: simple_lift_def split: if_split_asm)
     apply (clarsimp simp: hrs_mem_update)
     apply (subst h_val_super_update_bs)
      apply (rule field_of_t_field_lookup [OF fl])
@@ -565,7 +565,7 @@ proof (rule ext)
      apply (erule ssubst)
      apply (rule equal_case)
     apply (insert cl)
-    apply (clarsimp simp: simple_lift_def hrs_mem_update split: split_if_asm)
+    apply (clarsimp simp: simple_lift_def hrs_mem_update split: if_split_asm)
     apply (rule h_val_heap_update_disjoint)
     apply (insert field_tag_sub [OF fl, where p=ptr])
     apply (clarsimp simp: size_of_def)
@@ -627,11 +627,11 @@ lemma simple_lift_field_update_t:
    apply clarsimp
   apply (case_tac "ptr_val x = ptr_val ptr")
    apply clarsimp
-   apply (clarsimp simp: simple_lift_def hrs_mem_update split: split_if_asm)
+   apply (clarsimp simp: simple_lift_def hrs_mem_update split: if_split_asm)
    apply (cut_tac simple_lift_heap_ptr_valid [OF cl])
    apply (drule (1) simple_heap_diff_types_impl_diff_ptrs [OF _ _ diff])
    apply simp
-  apply (clarsimp simp: simple_lift_def hrs_mem_update split: split_if_asm)
+  apply (clarsimp simp: simple_lift_def hrs_mem_update split: if_split_asm)
   apply (rule field_ti_field_lookupE [OF fl])
   apply (frule_tac p=ptr in field_tag_sub)
   apply (clarsimp simp: h_val_def heap_update_def)
@@ -661,7 +661,7 @@ lemma simple_lift_heap_update_bytes_in_other:
      { ptr_val q ..+ size_of TYPE('a)} \<subseteq> {ptr_val p  ..+ size_of TYPE('b) }  \<rbrakk> \<Longrightarrow>
    simple_lift (hrs_mem_update (heap_update (q::'a::mem_type ptr) v) h) = ((simple_lift h)::'c::mem_type typ_heap)"
   apply (rule ext)
-  apply (clarsimp simp: simple_lift_def split: split_if_asm)
+  apply (clarsimp simp: simple_lift_def split: if_split_asm)
   apply (drule (1) heap_ptr_valid_type_neq_disjoint, simp)
   apply (clarsimp simp: hrs_mem_update)
   apply (rule h_val_heap_update_disjoint)

@@ -493,18 +493,7 @@ in
   Const(@{const_name "Pure.eq"}, ty1 --> ty1 --> prop) $ t1 $ t2
 end
 
-fun mk_char c = let
-  val i = Char.ord c
-  val hi = (i div 16) mod 16
-  val lo = i mod 16
-  val nibble_ty = Type(@{type_name "String.nibble"}, [])
-  fun mknib i =
-      Const("String.nibble.Nibble" ^ Int.fmt StringCvt.HEX i, nibble_ty)
-in
-  Const(@{const_name "String.Char"}, nibble_ty --> (nibble_ty --> char_ty)) $
-       mknib hi $ mknib lo
-end
-
+fun mk_char c = HOLogic.mk_char (Char.ord c)
 fun mk_string s = HOLogic.mk_list char_ty (map mk_char (String.explode s))
 
 fun mk_Some t = let
@@ -656,7 +645,7 @@ fun prim_mk_defn s t thy = let
   val binding0 = Binding.make(s ^ "_def", Position.none)
   val binding = (binding0, []) (* [] is a Token.src list *)
   val lthy = Named_Target.theory_init thy
-  val (_, lthy') = Specification.definition (NONE, (binding, eqn)) lthy
+  val (_, lthy') = Specification.definition NONE [] [] (binding, eqn) lthy
 in
   Local_Theory.exit_global lthy'
 end

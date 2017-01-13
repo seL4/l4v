@@ -17,9 +17,8 @@ chapter "Abstract Separation Algebra"
 
 theory Separation_Algebra
 imports
-  Main
-  "~~/src/Tools/Adhoc_Overloading"
   Arbitrary_Comm_Monoid
+  "~~/src/Tools/Adhoc_Overloading"
 begin
 
 text {* This theory is the main abstract separation algebra development *}
@@ -691,11 +690,11 @@ where
 abbreviation
   sep_map_set_conj :: "('b \<Rightarrow> 'a::sep_algebra \<Rightarrow> bool) \<Rightarrow> 'b set \<Rightarrow> ('a \<Rightarrow> bool)"
 where
-  "sep_map_set_conj g S \<equiv> sep.setprod g S"
+  "sep_map_set_conj g S \<equiv> sep.prod g S"
 
 definition
   sep_set_conj :: "('a::sep_algebra \<Rightarrow> bool) set \<Rightarrow> ('a \<Rightarrow> bool)"  where
-  "sep_set_conj S \<equiv> sep.setprod id S"
+  "sep_set_conj S \<equiv> sep.prod id S"
 
 (* Notation. *)
 consts
@@ -857,7 +856,7 @@ lemma sep_map_set_conj_restrict:
     sep_map_set_conj P xs =
    (sep_map_set_conj P {x \<in> xs. t x} \<and>*
     sep_map_set_conj P {x \<in> xs. \<not> t x})"
-  by (subst sep.setprod.union_disjoint [symmetric], (fastforce simp: union_filter)+)
+  by (subst sep.prod.union_disjoint [symmetric], (fastforce simp: union_filter)+)
 
 
 lemma sep_list_conj_map_add:
@@ -917,7 +916,7 @@ lemma sep_set_conj_empty [simp]:
 lemma sep_map_set_conj_reindex_cong:
    "\<lbrakk>inj_on f A; B = f ` A; \<And>a. a \<in> A \<Longrightarrow> g a = h (f a)\<rbrakk>
     \<Longrightarrow> sep_map_set_conj h B = sep_map_set_conj g A"
-  by (simp add: sep.setprod.reindex)
+  by (simp add: sep.prod.reindex)
 
 lemma sep_list_conj_sep_map_set_conj:
   "distinct xs
@@ -928,7 +927,7 @@ lemma sep_list_conj_sep_set_conj:
   "\<lbrakk>distinct xs; inj_on P (set xs)\<rbrakk>
   \<Longrightarrow> \<And>* (map P xs) = \<And>* (P ` set xs)"
   apply (subst sep_list_conj_sep_map_set_conj, assumption)
-  apply (clarsimp simp: sep_set_conj_def sep.setprod.reindex)
+  apply (clarsimp simp: sep_set_conj_def sep.prod.reindex)
   done
 
 lemma sep_map_set_conj_sep_list_conj:
@@ -985,7 +984,7 @@ lemma set_sub_sub:
 lemma sep_map_set_conj_sub_sub_disjoint:
   "\<lbrakk>finite xs; zs \<subseteq> ys; ys \<subseteq> xs\<rbrakk>
   \<Longrightarrow> sep_map_set_conj P (xs - zs) = (sep_map_set_conj P (xs - ys) \<and>* sep_map_set_conj P (ys - zs))"
-  apply (cut_tac sep.setprod.subset_diff [where A="xs-zs" and B="ys-zs" and g=P])
+  apply (cut_tac sep.prod.subset_diff [where A="xs-zs" and B="ys-zs" and g=P])
     apply (subst (asm) set_sub_sub, fast+)
   done
 
@@ -1001,7 +1000,7 @@ lemma sep_list_conj_filter_map:
 
 lemma sep_map_set_conj_restrict_predicate:
   "finite A \<Longrightarrow> (\<And>* x\<in>A. if T x then P x else \<box>) = (\<And>* x\<in>(Set.filter T A). P x)"
-  by (simp add: Set.filter_def sep.setprod.inter_filter)
+  by (simp add: Set.filter_def sep.prod.inter_filter)
 
 lemma distinct_filters:
   "\<lbrakk>distinct xs; \<And>x. (f x \<and> g x) = False\<rbrakk> \<Longrightarrow>
@@ -1013,14 +1012,14 @@ lemma sep_list_conj_distinct_filters:
   \<And>* map P [x\<leftarrow>xs . f x \<or> g x] = (\<And>* map P [x\<leftarrow>xs . f x] \<and>* \<And>* map P [x\<leftarrow>xs . g x])"
   apply (subst sep_list_conj_sep_map_set_conj, simp)+
   apply (subst distinct_filters, simp+)
-  apply (subst sep.setprod.union_disjoint, auto)
+  apply (subst sep.prod.union_disjoint, auto)
   done
 
 lemma sep_map_set_conj_set_disjoint:
   "\<lbrakk>finite {x. P x}; finite {x. Q x}; \<And>x. (P x \<and> Q x) = False\<rbrakk>
  \<Longrightarrow> sep_map_set_conj g {x. P x \<or> Q x} =
   (sep_map_set_conj g {x. P x} \<and>* sep_map_set_conj g {x. Q x})"
-  apply (subst sep.setprod.union_disjoint [symmetric], simp+)
+  apply (subst sep.prod.union_disjoint [symmetric], simp+)
    apply blast
   apply simp
   by (metis Collect_disj_eq)

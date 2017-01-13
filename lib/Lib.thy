@@ -16,6 +16,7 @@ chapter "Library"
 
 theory Lib
 imports
+  String_Compare
   NICTATools
   "~~/src/HOL/Library/Prefix_Order"
 begin
@@ -65,6 +66,11 @@ lemma if_apply_cong[fundef_cong]:
 lemma case_prod_apply_cong[fundef_cong]:
   "\<lbrakk> f (fst p) (snd p) s = f' (fst p') (snd p') s' \<rbrakk> \<Longrightarrow> case_prod f p s = case_prod f' p' s'"
   by (simp add: split_def)
+
+lemma prod_injects:
+  "(x,y) = p \<Longrightarrow> x = fst p \<and> y = snd p"
+  "p = (x,y) \<Longrightarrow> x = fst p \<and> y = snd p"
+  by auto
 
 definition
   pred_conj :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" (infixl "and" 35)
@@ -636,7 +642,7 @@ lemma trancl_trancl:
 
 lemma if_1_0_0:
   "((if P then 1 else 0) = (0 :: ('a :: zero_neq_one))) = (\<not> P)"
-  by (simp split: split_if)
+  by (simp split: if_split)
 
 lemma neq_Nil_lengthI:
   "Suc 0 \<le> length xs \<Longrightarrow> xs \<noteq> []"
@@ -686,11 +692,11 @@ definition
 
 lemma graph_of_None_update:
   "graph_of (f (p := None)) = graph_of f - {p} \<times> UNIV"
-  by (auto simp: graph_of_def split: split_if_asm)
+  by (auto simp: graph_of_def split: if_split_asm)
 
 lemma graph_of_Some_update:
   "graph_of (f (p \<mapsto> v)) = (graph_of f - {p} \<times> UNIV) \<union> {(p,v)}"
-  by (auto simp: graph_of_def split: split_if_asm)
+  by (auto simp: graph_of_def split: if_split_asm)
 
 lemma graph_of_restrict_map:
   "graph_of (m |` S) \<subseteq> graph_of m"
@@ -813,7 +819,7 @@ lemma UN_nth_mem:
 
 lemma Union_equal:
   "f ` A = f ` B \<Longrightarrow> (\<Union>x \<in> A. f x) = (\<Union>x \<in> B. f x)"
-  by (subst Union_image_eq [symmetric]) simp
+  by blast
 
 lemma UN_Diff_disjoint:
   "i < length xs \<Longrightarrow> (A - (\<Union>x\<in>set xs. f x)) \<inter> f (xs ! i) = {}"
@@ -847,7 +853,7 @@ lemma UN_sub_empty:
 
 lemma bij_betw_fun_updI:
   "\<lbrakk>x \<notin> A; y \<notin> B; bij_betw f A B\<rbrakk> \<Longrightarrow> bij_betw (f(x := y)) (insert x A) (insert y B)"
-  by (clarsimp simp: bij_betw_def fun_upd_image inj_on_fun_updI split: split_if_asm)
+  by (clarsimp simp: bij_betw_def fun_upd_image inj_on_fun_updI split: if_split_asm)
 
 definition
   "bij_betw_map f A B \<equiv> bij_betw f A (Some ` B)"
@@ -1015,16 +1021,16 @@ lemma fold_to_map_of:
   apply (case_tac "fold op ++ (map (\<lambda>x. [f x \<mapsto> g x]) xs) Map.empty x")
    apply clarsimp
    apply (drule fold_ignore3)
-   apply (clarsimp split:split_if_asm)
+   apply (clarsimp split:if_split_asm)
    apply (rule sym)
    apply (subst map_of_eq_None_iff)
    apply clarsimp
    apply (rename_tac xa)
    apply (erule_tac x=xa in ballE; clarsimp)
   apply clarsimp
-  apply (frule fold_ignore5; clarsimp split:split_if_asm)
+  apply (frule fold_ignore5; clarsimp split:if_split_asm)
   apply (subst map_add_map_of_foldr[where m=empty, simplified])
-  apply (induct xs arbitrary:f g; clarsimp split:split_if)
+  apply (induct xs arbitrary:f g; clarsimp split:if_split)
   apply (rule conjI; clarsimp)
    apply (drule fold_ignore9; clarsimp)
   apply (cut_tac ms="map (\<lambda>x. [f x \<mapsto> g x]) xs" and f="[f a \<mapsto> g a]" and x="f b" in fold_ignore6, clarsimp)
@@ -1033,7 +1039,7 @@ lemma fold_to_map_of:
 
 lemma if_n_0_0:
   "((if P then n else 0) \<noteq> 0) = (P \<and> n \<noteq> 0)"
-  by (simp split: split_if)
+  by (simp split: if_split)
 
 lemma insert_dom:
   assumes fx: "f x = Some y"
@@ -1297,7 +1303,7 @@ lemma insert_minus_eq:
 
 lemma modify_map_K_D:
   "modify_map m p (\<lambda>x. y) p' = Some v \<Longrightarrow> (m (p \<mapsto> y)) p' = Some v"
-  by (simp add: modify_map_def split: split_if_asm)
+  by (simp add: modify_map_def split: if_split_asm)
 
 lemma tranclE2:
   assumes trancl: "(a, b) \<in> r\<^sup>+"
@@ -1391,7 +1397,7 @@ lemma foldl_fun_upd:
 lemma all_rv_choice_fn_eq_pred:
   "\<lbrakk> \<And>rv. P rv \<Longrightarrow> \<exists>fn. f rv = g fn \<rbrakk> \<Longrightarrow> \<exists>fn. \<forall>rv. P rv \<longrightarrow> f rv = g (fn rv)"
   apply (rule_tac x="\<lambda>rv. SOME h. f rv = g h" in exI)
-  apply (clarsimp split: split_if)
+  apply (clarsimp split: if_split)
   by (meson someI_ex)
 
 lemma ex_const_function:
@@ -1400,13 +1406,13 @@ lemma ex_const_function:
 
 lemma if_Const_helper:
   "If P (Con x) (Con y) = Con (If P x y)"
-  by (simp split: split_if)
+  by (simp split: if_split)
 
 lemmas if_Some_helper = if_Const_helper[where Con=Some]
 
 lemma expand_restrict_map_eq:
   "(m |` S = m' |` S) = (\<forall>x. x \<in> S \<longrightarrow> m x = m' x)"
-  by (simp add: fun_eq_iff restrict_map_def split: split_if)
+  by (simp add: fun_eq_iff restrict_map_def split: if_split)
 
 lemma disj_imp_rhs:
   "(P \<Longrightarrow> Q) \<Longrightarrow> (P \<or> Q) = Q"
@@ -1473,7 +1479,7 @@ lemma list_case_If:
 
 lemma remove1_Nil_in_set:
   "\<lbrakk> remove1 x xs = []; xs \<noteq> [] \<rbrakk> \<Longrightarrow> x \<in> set xs"
-  by (induct xs) (auto split: split_if_asm)
+  by (induct xs) (auto split: if_split_asm)
 
 lemma remove1_empty:
   "(remove1 v xs = []) = (xs = [v] \<or> xs = [])"
@@ -1481,7 +1487,7 @@ lemma remove1_empty:
 
 lemma set_remove1:
   "x \<in> set (remove1 y xs) \<Longrightarrow> x \<in> set xs"
-  by (induct xs) (auto split: split_if_asm)
+  by (induct xs) (auto split: if_split_asm)
 
 lemma If_rearrage:
   "(if P then if Q then x else y else z) = (if P \<and> Q then x else if P then y else z)"
@@ -1626,15 +1632,15 @@ lemma Min_prop:
 
 lemma findSomeD:
   "find P xs = Some x \<Longrightarrow> P x \<and> x \<in> set xs"
-  by (induct xs) (auto split: split_if_asm)
+  by (induct xs) (auto split: if_split_asm)
 
 lemma findNoneD:
   "find P xs = None \<Longrightarrow> \<forall>x \<in> set xs. \<not>P x"
-  by (induct xs) (auto split: split_if_asm)
+  by (induct xs) (auto split: if_split_asm)
 
 lemma dom_upd:
   "dom (\<lambda>x. if x = y then None else f x) = dom f - {y}"
-  by (rule set_eqI) (auto split: split_if_asm)
+  by (rule set_eqI) (auto split: if_split_asm)
 
 
 definition
@@ -1721,7 +1727,7 @@ lemma map_comp_eq:
 
 lemma dom_If_Some:
    "dom (\<lambda>x. if x \<in> S then Some v else f x) = (S \<union> dom f)"
-  by (auto split: split_if)
+  by (auto split: if_split)
 
 lemma foldl_fun_upd_const:
   "foldl (\<lambda>s x. s(f x := v)) s xs
@@ -1767,7 +1773,7 @@ qed
 
 lemma ran_del_subset:
   "y \<in> ran (f (x := None)) \<Longrightarrow> y \<in> ran f"
-  by (auto simp: ran_def split: split_if_asm)
+  by (auto simp: ran_def split: if_split_asm)
 
 lemma trancl_sub_lift:
   assumes sub: "\<And>p p'. (p,p') \<in> r \<Longrightarrow> (p,p') \<in> r'"
@@ -1819,7 +1825,7 @@ lemma psubset_singleton:
 
 lemma length_takeWhile_ge:
   "length (takeWhile f xs) = n \<Longrightarrow> length xs = n \<or> (length xs > n \<and> \<not> f (xs ! n))"
-  by (induct xs arbitrary: n) (auto split: split_if_asm)
+  by (induct xs arbitrary: n) (auto split: if_split_asm)
 
 lemma length_takeWhile_le:
   "\<not> f (xs ! n) \<Longrightarrow> length (takeWhile f xs) \<le> n"
@@ -1828,7 +1834,7 @@ lemma length_takeWhile_le:
 lemma length_takeWhile_gt:
   "n < length (takeWhile f xs)
        \<Longrightarrow> (\<exists>ys zs. length ys = Suc n \<and> xs = ys @ zs \<and> takeWhile f xs = ys @ takeWhile f zs)"
-  apply (induct xs arbitrary: n; simp split: split_if_asm)
+  apply (induct xs arbitrary: n; simp split: if_split_asm)
   apply (case_tac n; simp)
    apply (rule_tac x="[a]" in exI)
    apply simp
@@ -1910,7 +1916,7 @@ lemma Collect_int_vars:
 
 lemma if_0_1_eq:
   "((if P then 1 else 0) = (case Q of True \<Rightarrow> of_nat 1 | False \<Rightarrow> of_nat 0)) = (P = Q)"
-  by (simp split: split_if bool.split)
+  by (simp split: if_split bool.split)
 
 lemma modify_map_exists_cte :
   "(\<exists>cte. modify_map m p f p' = Some cte) = (\<exists>cte. m p' = Some cte)"
@@ -1997,7 +2003,7 @@ lemma case_option_over_if:
         = (if G then P else Q v)"
   "case_option P Q (if G then Some v else None)
         = (if G then Q v else P)"
-  by (simp split: split_if)+
+  by (simp split: if_split)+
 
 lemma map_length_cong:
   "\<lbrakk> length xs = length ys; \<And>x y. (x, y) \<in> set (zip xs ys) \<Longrightarrow> f x = g y \<rbrakk>
@@ -2318,31 +2324,31 @@ lemma fst_last_zip_upt:
   apply (simp add: min_def zip_is_empty)
   done
 
-lemma neq_into_nprefixeq:
+lemma neq_into_nprefix:
   "\<lbrakk> x \<noteq> take (length x) y \<rbrakk> \<Longrightarrow> \<not> x \<le> y"
-  by (clarsimp simp: prefixeq_def less_eq_list_def)
+  by (clarsimp simp: prefix_def less_eq_list_def)
 
-lemma suffixeq_eqI:
-  "\<lbrakk> suffixeq xs as; suffixeq xs bs; length as = length bs;
+lemma suffix_eqI:
+  "\<lbrakk> suffix xs as; suffix xs bs; length as = length bs;
     take (length as - length xs) as \<le> take (length bs - length xs) bs\<rbrakk> \<Longrightarrow> as = bs"
-  by (clarsimp elim!: prefixE suffixeqE)
+  by (clarsimp elim!: prefixE suffixE)
 
-lemma suffixeq_Cons_mem:
-  "suffixeq (x # xs) as \<Longrightarrow> x \<in> set as"
-  by (drule suffixeq_set_subset) simp
+lemma suffix_Cons_mem:
+  "suffix (x # xs) as \<Longrightarrow> x \<in> set as"
+  by (drule suffix_set_subset) simp
 
 lemma distinct_imply_not_in_tail:
-  "\<lbrakk> distinct list; suffixeq (y # ys) list\<rbrakk> \<Longrightarrow> y \<notin> set ys"
-  by (clarsimp simp:suffixeq_def)
+  "\<lbrakk> distinct list; suffix (y # ys) list\<rbrakk> \<Longrightarrow> y \<notin> set ys"
+  by (clarsimp simp:suffix_def)
 
-lemma list_induct_suffixeq [case_names Nil Cons]:
+lemma list_induct_suffix [case_names Nil Cons]:
   assumes nilr: "P []"
-  and    consr: "\<And>x xs. \<lbrakk>P xs; suffixeq (x # xs) as \<rbrakk> \<Longrightarrow> P (x # xs)"
+  and    consr: "\<And>x xs. \<lbrakk>P xs; suffix (x # xs) as \<rbrakk> \<Longrightarrow> P (x # xs)"
   shows  "P as"
 proof -
   def as' == as
 
-  have "suffixeq as as'" unfolding as'_def by simp
+  have "suffix as as'" unfolding as'_def by simp
   then show ?thesis
   proof (induct as)
     case Nil show ?case by fact
@@ -2351,8 +2357,8 @@ proof -
 
     show ?case
     proof (rule consr)
-      from Cons.prems show "suffixeq (x # xs) as" unfolding as'_def .
-      then have "suffixeq xs as'" by (auto dest: suffixeq_ConsD simp: as'_def)
+      from Cons.prems show "suffix (x # xs) as" unfolding as'_def .
+      then have "suffix xs as'" by (auto dest: suffix_ConsD simp: as'_def)
       then show "P xs" using Cons.hyps by simp
     qed
   qed

@@ -141,7 +141,7 @@ fun apply args f text = Proof.assert_backward #> refine args f text #>
   Seq.maps_results (Proof.apply ((raw_primitive_text I),(Position.none, Position.none)));
 
 fun apply_results args f (text, range) =
-  Seq.APPEND (apply args f text, method_error "" (Position.set_range range));
+  Seq.APPEND (apply args f text, method_error "" (Position.range_position range));
 
 
 end

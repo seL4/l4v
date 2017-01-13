@@ -240,7 +240,7 @@ lemma locateSlotCNode_ccorres [corres]:
           {s. x s = 0 \<or> array_assertion (cte_Ptr cnode') (unat offset') (hrs_htd (t_hrs_' (globals s)))}
           (Basic (\<lambda>s. xfu (\<lambda>_. cte_Ptr (cnode' + offset'
               * of_nat (size_of TYPE(cte_C)))) s)))"
-  apply (simp add: locateSlot_conv split del: split_if)
+  apply (simp add: locateSlot_conv split del: if_split)
   apply (rule ccorres_guard_imp2)
    apply (rule_tac P="cnode = cnode' \<and> offset = offset'" in ccorres_gen_asm2)
    apply (rule ccorres_stateAssert)
@@ -260,7 +260,7 @@ lemma locateSlotTCB_ccorres [corres]:
     (Basic (\<lambda>s. xfu (\<lambda>_. Ptr (cnode' + offset' * of_nat (size_of TYPE(cte_C))) :: cte_C ptr) s))"
   unfolding locateSlot_conv using gl fg
   apply -
-  apply (simp add: size_of_def split del: split_if)
+  apply (simp add: size_of_def split del: if_split)
   apply (rule ccorres_return)
   apply (rule conseqPre)
    apply vcg

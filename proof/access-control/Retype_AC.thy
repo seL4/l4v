@@ -237,7 +237,7 @@ lemma init_arch_objects_integrity:
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply(rule hoare_gen_asm)+
   apply(cases new_type)
-  apply(simp_all add: init_arch_objects_def split del: split_if)
+  apply(simp_all add: init_arch_objects_def split del: if_split)
   apply(rule hoare_pre)
    apply(wpc
         | wp  mapM_x_wp[OF _ subset_refl]
@@ -334,21 +334,21 @@ lemma sta_detype:
   "state_objs_to_policy (detype R s) \<subseteq> state_objs_to_policy s"
   apply (clarsimp simp add: state_objs_to_policy_def state_refs_of_detype)
   apply (erule state_bits_to_policy.induct)
-  apply (auto intro: state_bits_to_policy.intros split: split_if_asm)
+  apply (auto intro: state_bits_to_policy.intros split: if_split_asm)
   done
 
 lemma sita_detype:
   "state_irqs_to_policy aag (detype R s) \<subseteq> state_irqs_to_policy aag s"
   apply (clarsimp)
   apply (erule state_irqs_to_policy_aux.induct)
-  apply (auto simp: detype_def  intro: state_irqs_to_policy_aux.intros split: split_if_asm)
+  apply (auto simp: detype_def  intro: state_irqs_to_policy_aux.intros split: if_split_asm)
   done
 
 lemma sata_detype:
   "state_asids_to_policy aag (detype R s) \<subseteq> state_asids_to_policy aag s"
   apply (clarsimp)
   apply (erule state_asids_to_policy_aux.induct)
-  apply (auto intro: state_asids_to_policy_aux.intros split: split_if_asm)
+  apply (auto intro: state_asids_to_policy_aux.intros split: if_split_asm)
   done
 
 (* FIXME: move *)
@@ -760,7 +760,7 @@ lemma use_retype_region_proofs_ext':
         \<and> caps_no_overlap ptr sz s \<and> pspace_no_overlap_range_cover ptr sz s
         \<and> (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s) \<and>
         P s \<and> R (retype_addrs ptr ty n us) s\<rbrace> retype_region ptr n us ty dev \<lbrace>Q\<rbrace>"
-  apply (simp add: retype_region_def split del: split_if)
+  apply (simp add: retype_region_def split del: if_split)
   apply (rule hoare_pre, (wp|simp)+)
     apply (rule retype_region_ext_kheap_update[OF y])
    apply (wp|simp)+
@@ -796,7 +796,7 @@ lemma retype_region_ext_pas_refined:
   apply (simp add: retype_region_ext_def, wp)
   apply (clarsimp simp: tcb_domain_map_wellformed_aux_def)
   apply (erule domains_of_state_aux.cases)
-  apply (clarsimp simp: foldr_upd_app_if' fun_upd_def[symmetric] split: split_if_asm)
+  apply (clarsimp simp: foldr_upd_app_if' fun_upd_def[symmetric] split: if_split_asm)
    apply (clarsimp simp: default_ext_def default_etcb_def split: apiobject_type.splits)
    defer
   apply (force intro: domtcbs)
@@ -1017,7 +1017,7 @@ lemma descendants_range_in_detype:
   apply(simp add: descendants_range_in_def)
   apply(rule ballI)
   apply(drule_tac x=p' in bspec, assumption)
-  apply(clarsimp simp: null_filter_def split: split_if_asm)
+  apply(clarsimp simp: null_filter_def split: if_split_asm)
   apply(rule conjI)
    apply(simp add: cte_wp_at_caps_of_state)
   apply(rule_tac t=a in ssubst[OF fst_conv[symmetric]])
@@ -1376,7 +1376,7 @@ lemma invoke_untyped_pas_refined:
        apply (clarsimp simp: retype_addrs_aligned_range_cover
                              cte_wp_at_caps_of_state)
        apply (drule valid_global_refsD[rotated 2])
-         apply (clarsimp simp: post_retype_invs_def split: split_if_asm)
+         apply (clarsimp simp: post_retype_invs_def split: if_split_asm)
         apply (erule caps_of_state_cteD)
        apply (erule notE, erule subsetD[rotated])
        apply (rule order_trans, erule retype_addrs_subset_ptr_bits)
@@ -1400,9 +1400,9 @@ lemma invoke_untyped_pas_refined:
 subsection{* decode *}
 
 lemma data_to_obj_type_ret_not_asid_pool:
-  "\<lbrace> \<top> \<rbrace> data_to_obj_type arg \<lbrace> \<lambda>r s. r \<noteq> ArchObject ASIDPoolObj \<rbrace>,-"
+  "\<lbrace> \<top> \<rbrace> data_to_obj_type v \<lbrace> \<lambda>r s. r \<noteq> ArchObject ASIDPoolObj \<rbrace>,-"
   apply(clarsimp simp: validE_R_def validE_def valid_def)
-  apply(auto simp: data_to_obj_type_def arch_data_to_obj_type_def throwError_def simp: returnOk_def bindE_def return_def bind_def lift_def split: split_if_asm)
+  apply(auto simp: data_to_obj_type_def arch_data_to_obj_type_def throwError_def simp: returnOk_def bindE_def return_def bind_def lift_def split: if_split_asm)
   done
 
 crunch inv[wp]: data_to_obj_type "P"
@@ -1462,11 +1462,11 @@ lemma decode_untyped_invocation_authorised:
    apply(wp dui_inv_wf | simp)+
   apply (clarsimp simp: decode_untyped_invocation_def split_def
                         authorised_untyped_inv'_def
-                  split del: split_if split: untyped_invocation.splits)
+                  split del: if_split split: untyped_invocation.splits)
   (* need to hoist the is_cnode_cap assumption into postcondition later on *)
 
   apply (simp add: unlessE_def[symmetric] whenE_def[symmetric] unlessE_whenE
-           split del: split_if)
+           split del: if_split)
   apply (wp whenE_throwError_wp  hoare_vcg_all_lift mapME_x_inv_wp
         | simp split: untyped_invocation.splits
         | (auto)[1])+

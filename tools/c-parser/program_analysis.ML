@@ -39,7 +39,8 @@ sig
   val vi_compare : var_info * var_info -> order
   val vi_nm_info : var_info -> nm_info
 
-  datatype modify_var = M of var_info | TheHeap | PhantomState | GhostState
+  datatype modify_var = M of var_info | TheHeap | PhantomState
+    | GhostState | AllGlobals
   val mvar_compare : modify_var * modify_var -> order
   val mvar_toString : modify_var -> string
   structure MVar_Table : TABLE where type key = modify_var
@@ -96,8 +97,14 @@ sig
                   return offset in bytes of field with number i (indexing from
                   zero).  offset env flds 0 always equals 0. *)
 
+  val split_asm_stmt : Absyn.statement_node
+    -> (string * bool * expr option * expr list)
+  val merge_asm_stmt : (string * bool * expr option * expr list)
+    -> Absyn.statement_node
+
   val get_globals_rcd : csenv -> senv
   val export_mungedb : csenv -> unit
+
 end
 
 structure ProgramAnalysis : PROGRAM_ANALYSIS =
@@ -214,22 +221,33 @@ fun vars_compatible vi1 vi2 =
 
    ---------------------------------------------------------------------- *)
 
-datatype modify_var = M of var_info | TheHeap | PhantomState | GhostState
-fun mvar_compare (TheHeap, TheHeap) = EQUAL
-  | mvar_compare (TheHeap, _) = GREATER
-  | mvar_compare (_, TheHeap) = LESS
-  | mvar_compare (M vi1, M vi2) = vi_compare (vi1, vi2)
-  | mvar_compare (M _, _) = GREATER
-  | mvar_compare (_, M _) = LESS
-  | mvar_compare (PhantomState, PhantomState) = EQUAL
-  | mvar_compare (PhantomState, _) = GREATER
-  | mvar_compare (_, PhantomState) = LESS
-  | mvar_compare (GhostState, GhostState) = EQUAL
+datatype modify_var = M of var_info | TheHeap | PhantomState
+  | GhostState | AllGlobals
+(* the AllGlobals summary is used in initial analysis of function bodies.
+Underspecified operations modify AllGlobals rather than listing all the
+actual globals, so that globals which are never *explicitly* modified can
+still be candidates for const promotion. AllGlobals is expanded out once that
+is done. *)
+
+fun mvar_compare (mv1, mv2) = let
+    fun mvid (M _) = 1
+      | mvid TheHeap = 2
+      | mvid PhantomState = 3
+      | mvid GhostState = 4
+      | mvid AllGlobals = 5
+    fun mvc2 (M vi1, M vi2) = vi_compare (vi1, vi2)
+      | mvc2 _ = EQUAL
+    val id1 = mvid mv1
+    val id2 = mvid mv2
+  in if id1 < id2 then LESS else (if id1 > id2
+    then GREATER
+    else mvc2 (mv1, mv2)) end
 
 fun mvar_toString TheHeap = "<the heap>"
   | mvar_toString (M vi) = MString.dest (get_mname vi)
   | mvar_toString PhantomState = "<phantom state>"
   | mvar_toString GhostState = "<ghost state>"
+  | mvar_toString AllGlobals = "<*>"
 
 structure MVar_Table = Table(struct type key = modify_var
                                     val ord = mvar_compare
@@ -1553,6 +1571,41 @@ in
   | EnumDecl eninfo => (puredecl d, process_enumdecl eninfo e)
 end
 
+fun split_asm_stmt (AsmStmt dets) = let
+  open Feedback
+  val rets = #mod1 (#asmblock dets)
+  fun str_so NONE = "NONE" | str_so (SOME s) = "SOME (" ^ s ^ ")"
+  fun str_trio (so, s, _) = "(" ^ str_so so ^ ", " ^ s ^ ")"
+  val _ = List.app (K () o (fn (so, s, ex) =>
+    (so = NONE andalso (s = "=r" orelse s = "=&r"))
+    orelse raise Fail ("Can not handle asm lval specifier: "
+            ^ str_trio (so, s, ex)))) rets
+  fun str_trios [] = ""
+    | str_trios [tr] = str_trio tr
+    | str_trios (tr :: trs) = str_trio tr ^ ", " ^ str_trios trs
+  val _ = K () (length rets <= 1
+    orelse raise Fail ("Can not handle multiple asm lval specifiers: ["
+            ^ str_trios rets ^ "]"))
+  val ret = case rets of [] => NONE | [(_, _, r)] => SOME r
+    | _ => NONE
+  val args = #mod2 (#asmblock dets)
+  val _ = List.app (K () o (fn (so, s, ex) => (so = NONE andalso s = "r")
+    orelse raise Fail ("Can not handle asm rval specifier: "
+            ^ str_trio (so, s, ex)))) args
+  val args = map #3 args
+in
+  (#head (#asmblock dets), #volatilep dets, ret, args)
+end
+  | split_asm_stmt st = raise Fail
+    ("split_asm_stmt: " ^ stmt_type (sbogwrap st))
+
+fun merge_asm_stmt (nm, vol, ret, args) = let
+in
+  AsmStmt {volatilep = vol, asmblock = {head = nm,
+    mod1 = (case ret of NONE => [] | SOME expr => [(NONE, "=r", expr)]),
+    mod2 = map (fn expr => (NONE, "r", expr)) args,
+    mod3 = []}}
+end
 
 fun process_blockitem fname e bi = let
 in
@@ -1717,7 +1770,8 @@ in
     in
       (prechaos grs [stmt], e)
     end
-  | AsmStmt _ => ([w EmptyStmt], e)
+  | AsmStmt _ => ([stmt], fold (add_modification fname) [TheHeap,
+        PhantomState, AllGlobals] e)
   | Ghostupd _ => ([stmt], add_modification fname GhostState e)
   | _ => ([stmt], e)
 end
@@ -2021,6 +2075,32 @@ in
   List.foldl process env sorted
 end
 
+fun mvar_finalise env = let
+    open Binaryset
+    val (CSE {modifies, ...}) = env
+    val un = Binaryset.union
+
+    fun mk xs = addList (empty mvar_compare, xs)
+
+    val addressed = get_addressed_vis env
+        |> map M |> mk
+
+    val all_modified = get_modified_global_locns env
+        |> MVar_Table.dest
+        |> List.filter (fn (_, mset) => not (isEmpty mset))
+        |> map (fn (m, _) => m)
+        |> List.filter (fn M v => true | _ => false)
+        |> mk
+
+    val mod_not_addr = difference (all_modified, addressed)
+
+    fun upd modif = if member (modif, AllGlobals)
+      then delete (un (mod_not_addr, modif), AllGlobals)
+      else modif
+  in
+    cse_fupdmodifies (Symtab.map (K upd)) env
+  end
+
 fun process_decls cfg (p : program) = let
   fun recurse (ds, is) (env, edecs) =
       case edecs of
@@ -2032,7 +2112,7 @@ fun process_decls cfg (p : program) = let
         end
   val (i, env) = recurse ([], []) (emptycse cfg, p)
 in
-  (i, mvar_traverse env)
+  (i, mvar_finalise (mvar_traverse env))
 end
 
 fun get_globals_rcd cse =

@@ -421,7 +421,7 @@ lemma checkIRQ_ret_good:
   "\<lbrace>\<lambda>s. (irq \<le> scast Kernel_C.maxIRQ \<longrightarrow> P s) \<and> Q s\<rbrace> checkIRQ irq \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (clarsimp simp: checkIRQ_def rangeCheck_def Platform_maxIRQ minIRQ_def)
   apply (rule hoare_pre,wp)
-  by (clarsimp simp: Kernel_C.maxIRQ_def split: split_if)
+  by (clarsimp simp: Kernel_C.maxIRQ_def split: if_split)
 
 lemma toEnum_of_ucast:
   "len_of TYPE('b) \<le> len_of TYPE('a) \<Longrightarrow> 

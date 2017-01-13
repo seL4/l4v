@@ -835,7 +835,7 @@ lemma partitioned_after_shuffling_right:
    apply (subgoal_tac "a +\<^sub>p 1 +\<^sub>p int (unat pivot_idx) +\<^sub>p
                        int (i - Suc (unat pivot_idx)) = a +\<^sub>p int i")
     apply simp
-   apply (subst zdiff_int[symmetric], unat_arith)
+   apply (subst of_nat_diff, unat_arith)
    apply (subst ptr_add_assoc[symmetric])+
    apply simp
   apply unat_arith

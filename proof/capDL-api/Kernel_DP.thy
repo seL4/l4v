@@ -164,22 +164,22 @@ where
 
 definition seL4_Untyped_Retype :: "cdl_cptr \<Rightarrow> cdl_object_type \<Rightarrow> word32 \<Rightarrow> cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool u_monad"
 where
-  "seL4_Untyped_Retype untyped_cap type size_bits root node_index node_depth node_offset node_window \<equiv>
+  "seL4_Untyped_Retype untyped_cap type size_bits croot node_index node_depth node_offset node_window \<equiv>
     do_kernel_op $ call_kernel_with_intent
       \<lparr>cdl_intent_op = Some $ UntypedIntent $ UntypedRetypeIntent type size_bits node_index node_depth node_offset node_window,
        cdl_intent_error = False,
        cdl_intent_cap = untyped_cap,
-       cdl_intent_extras = [root],
+       cdl_intent_extras = [croot],
        cdl_intent_recv_slot = None\<rparr> False"
 
 definition seL4_IRQControl_Get :: "cdl_cptr \<Rightarrow> 10 word \<Rightarrow> cdl_cptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool u_monad"
 where
-  "seL4_IRQControl_Get control_cap irq root node_index node_depth \<equiv>
+  "seL4_IRQControl_Get control_cap irq croot node_index node_depth \<equiv>
     do_kernel_op $ call_kernel_with_intent
       \<lparr>cdl_intent_op = Some $ IrqControlIntent $ IrqControlIssueIrqHandlerIntent irq node_index node_depth,
        cdl_intent_error = False,
        cdl_intent_cap = control_cap,
-       cdl_intent_extras = [root],
+       cdl_intent_extras = [croot],
        cdl_intent_recv_slot = None\<rparr> True"
 
 definition seL4_IRQHandler_SetEndpoint :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> bool u_monad"

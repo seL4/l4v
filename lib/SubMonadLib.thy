@@ -114,7 +114,7 @@ lemma select_f_stateAssert:
   apply (rule ext)
   apply (clarsimp simp: stateAssert_def bind_def select_f_def get_def
                         assert_def return_def fail_def split_def image_image)
-  apply (simp only: SUP_def image_def)
+  apply (simp only: image_def)
   apply (clarsimp simp: stateAssert_def bind_def select_f_def get_def
                         assert_def return_def fail_def split_def image_image)
   apply (simp only: image_def mem_simps empty_fail_def simp_thms)  

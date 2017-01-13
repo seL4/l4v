@@ -93,7 +93,7 @@ fun guess_var_name x =
       "globals" => globals_record
     | x => unsuffix "_'" x
 
-(* Give a record field updater function, guess the original variable name. *)
+(* Given a record field updater function, guess the original variable name. *)
 fun guess_var_name_from_setter x =
   case (Long_Name.base_name x) of
       "globals" => globals_record
@@ -107,7 +107,7 @@ let
 
   (* Guess the variable name by stripping off the suffix. *)
   val var_name = (guess_var_name_from_setter setter_name)
-    handle (RunCall.Fail _) => (Utils.invalid_term "local variable update function" setter)
+    handle Fail _ => (Utils.invalid_term "local variable update function" setter)
 
   (* Get the variable type: @{typ "(TYPE --> X) --> X --> X"} *)
   val var_type = dest_Type setter_type |> snd |> hd |> dest_Type |> snd |> hd
@@ -125,11 +125,11 @@ fun demangle_name m =
        NameGeneration.mkIdentUScoreSafe (demangle_name (NameGeneration.rmUScoreSafety m))
   else case NameGeneration.dest_embret (MString.mk m) of
            (* Return variable for function f *)
-           SOME (f, n) => "ret" ^ (if n > 1 then string_of_int n else "")
+           SOME (_, n) => "ret" ^ (if n > 1 then string_of_int n else "")
            (* Ordinary variable. Split the type suffix off if there is one. *)
          | NONE => let
              val delim = "___" (* NameGeneration.tag_name_with_type *)
-             val (prefix, suffix) = apply2 Substring.string (Utils.positionr delim (Substring.full m))
+             val (prefix, _) = apply2 Substring.string (Utils.positionr delim (Substring.full m))
              in prefix end
 
 val _ = assert (demangle_name "c___ret_int" = "c") ""

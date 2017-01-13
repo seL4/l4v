@@ -26,12 +26,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-section {* Hoare Logic for Partial Correctness *}
+section \<open>Hoare Logic for Partial Correctness\<close>
 theory HoarePartialDef imports Semantic begin
 
 type_synonym ('s,'p) quadruple = "('s assn \<times> 'p \<times> 's assn \<times> 's assn)"
 
-subsection {* Validity of Hoare Tuples: @{text "\<Gamma>,\<Theta>\<Turnstile>\<^bsub>/F\<^esub> P c Q,A"} *}
+subsection \<open>Validity of Hoare Tuples: \<open>\<Gamma>,\<Theta>\<Turnstile>\<^bsub>/F\<^esub> P c Q,A\<close>\<close>
 
 definition
   valid :: "[('s,'p,'f) body,'f set,'s assn,('s,'p,'f) com,'s assn,'s assn] => bool"
@@ -74,7 +74,7 @@ notation (ASCII)
   cnvalid  ("_,_|=_:'/_/ _ _ _,_"  [61,60,60,60,1000, 20, 1000,1000] 60)
 
 
-subsection {*Properties of Validity *}
+subsection \<open>Properties of Validity\<close>
 
 lemma valid_iff_nvalid: "\<Gamma>\<Turnstile>\<^bsub>/F\<^esub> P c Q,A = (\<forall>n. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A)"
   apply (simp only: valid_def nvalid_def exec_iff_execn )
@@ -176,12 +176,11 @@ proof (rule nvalidI)
   next
     case False
     with exec P validn
-    have "t' \<in> Normal ` Q \<union> Abrupt ` A"
+    have *: "t' \<in> Normal ` Q \<union> Abrupt ` A"
       by (auto simp add: nvalid_def)
-    moreover
-    from this t' have "t'=t"
+    with t' have "t'=t"
       by auto
-    ultimately show ?thesis
+    with * show ?thesis
       by simp
   qed
 qed
@@ -209,18 +208,17 @@ proof (rule validI)
   next
     case False
     with exec P valid
-    have "t' \<in> Normal ` Q \<union> Abrupt ` A"
+    have *: "t' \<in> Normal ` Q \<union> Abrupt ` A"
       by (auto simp add: valid_def)
-    moreover
-    from this t' have "t'=t"
+    with t' have "t'=t"
       by auto
-    ultimately show ?thesis
+    with * show ?thesis
       by simp
   qed
 qed
 
 
-subsection {* The Hoare Rules: @{text "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"} *}
+subsection \<open>The Hoare Rules: \<open>\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A\<close>\<close>
 
 lemma mono_WeakenContext: "A \<subseteq> B \<Longrightarrow>
         (\<lambda>(P, c, Q, A'). (\<Gamma>, \<Theta>, F, P, c, Q, A') \<in> A) x \<longrightarrow>
@@ -284,14 +282,14 @@ where
 
 
 | ExFalso: "\<lbrakk>\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A; \<not> \<Gamma>\<Turnstile>\<^bsub>/F\<^esub> P c Q,A\<rbrakk> \<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
-  -- {* This is a hack rule that enables us to derive completeness for
-        an arbitrary context @{text "\<Theta>"}, from completeness for an empty context.*}  
+  \<comment> \<open>This is a hack rule that enables us to derive completeness for
+        an arbitrary context \<open>\<Theta>\<close>, from completeness for an empty context.\<close>  
 
 
 
-text {* Does not work, because of rule ExFalso, the context @{text "\<Theta>"} is to blame.
+text \<open>Does not work, because of rule ExFalso, the context \<open>\<Theta>\<close> is to blame.
  A weaker version with empty context can be derived from soundness 
- and completeness later on. *}
+ and completeness later on.\<close>
 lemma hoare_strip_\<Gamma>: 
   assumes deriv: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P p Q,A"
   shows "strip (-F) \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P p Q,A"
@@ -385,7 +383,7 @@ next
 qed (blast intro: hoarep.intros)+
 
 
-subsection {* Some Derived Rules *}
+subsection \<open>Some Derived Rules\<close>
 
 lemma  Conseq': "\<forall>s. s \<in> P \<longrightarrow> 
             (\<exists>P' Q' A'. 

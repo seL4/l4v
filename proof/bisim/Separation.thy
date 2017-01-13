@@ -8,7 +8,7 @@
  * @TAG(NICTA_GPL)
  *)
 
-header "Restricted capabilities in the Separation Kernel Abstract Specification"
+chapter "Restricted capabilities in the Separation Kernel Abstract Specification"
 
 theory Separation
 imports
@@ -93,7 +93,7 @@ lemma separate_cnode_cap_rab:
                                                                      (throwError (GuardMismatch (length cref) guard))
                                        | _ \<Rightarrow> throwError InvalidRoot)"
   unfolding separate_cnode_cap_def resolve_address_bits_def
-  by (auto simp: word_bits_def split: cap.split_asm split_if)
+  by (auto simp: word_bits_def split: cap.split_asm)
 
 definition
   "separate_state s \<equiv> \<forall>p. tcb_at p s \<longrightarrow> separate_tcb p (caps_of_state s)"

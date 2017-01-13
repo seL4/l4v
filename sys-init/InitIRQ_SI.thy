@@ -173,7 +173,7 @@ lemma init_irq_sep:
   apply (frule object_at_real_object_at [where obj_id = "cap_object (the (opt_cap (cdl_irq_node spec irq, 0) spec))"],
          fastforce simp: object_at_def)
   apply (clarsimp simp: si_caps_at_def get_irq_slot_def)
-  apply (subst (asm) sep.setprod.remove [where x="cap_object (the (opt_cap (cdl_irq_node spec irq, 0) spec))"], simp)
+  apply (subst (asm) sep.prod.remove [where x="cap_object (the (opt_cap (cdl_irq_node spec irq, 0) spec))"], simp)
    apply clarsimp
   apply (clarsimp simp: si_cap_at_def sep_conj_exists)
   done
@@ -276,13 +276,13 @@ lemma init_irqs_sep:
             and Q = "sep_map_set_conj (irq_initialised spec t) (used_irqs spec) \<and>*
                      si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>* si_objects"
             and f = "init_irqs spec orig_caps irq_caps"], simp+)
-   apply (subst sep.setprod.subset_diff, assumption, simp)+
+   apply (subst sep.prod.subset_diff, assumption, simp)+
    apply (sep_wp init_irqs_bound_irqs_sep [where t=t])
    apply (simp add: si_irq_caps_at_def irqs_initialised_def irqs_empty_def sep_conj_assoc)
    apply(subgoal_tac "sep_map_set_conj (irq_empty spec t) (used_irqs spec - bound_irqs spec)
                     = sep_map_set_conj (irq_initialised spec t) (used_irqs spec - bound_irqs spec)", simp)
     apply sep_solve
-   apply (rule sep.setprod.cong, simp)
+   apply (rule sep.prod.cong, simp)
    apply (subst irq_empty_initialised, simp+)
   apply (erule hoare_chain, sep_solve, sep_solve)
   done

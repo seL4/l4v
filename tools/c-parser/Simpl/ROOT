@@ -1,6 +1,7 @@
 chapter AFP
 
 session Simpl (AFP) = HOL +
+  options [timeout = 600]
   theories
     Simpl
   document_files

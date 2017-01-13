@@ -151,12 +151,12 @@ done
 lemma lookupSlotForCNodeOp_ccorres':
   "ccorres 
    (syscall_error_rel \<currency>  (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  valid_pspace' s \<and> s  \<turnstile>' root \<and> depth < 2 ^ word_bits)
+   (\<lambda>s.  valid_pspace' s \<and> s  \<turnstile>' croot \<and> depth < 2 ^ word_bits)
    (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
             {s. to_bool (isSource_' s) = isSource}  \<inter> 
-            {s. ccap_relation root (root_' s)} \<inter>
+            {s. ccap_relation croot (root_' s)} \<inter>
             {s. depth_' s = of_nat depth} ) [] 
-  (lookupSlotForCNodeOp isSource root capptr depth) 
+  (lookupSlotForCNodeOp isSource croot capptr depth)
   (Call lookupSlotForCNodeOp_'proc)"                              
   apply (cinit lift: capptr_' isSource_' root_' depth_')
    apply csymbr -- "slot_C_update"
@@ -264,7 +264,7 @@ lemma lookupSlotForCNodeOp_ccorres':
   -- "last subgoal"
   apply (clarsimp simp: if_1_0_0  to_bool_def true_def word_size
                         fromIntegral_def integral_inv)
-  apply (case_tac "cap_get_tag roota = scast cap_cnode_cap") 
+  apply (case_tac "cap_get_tag root = scast cap_cnode_cap")
    prefer 2 apply clarsimp
   apply (clarsimp simp: unat_of_nat32 word_sle_def)
   apply (simp add: Collect_const_mem lookup_failure_rel_fault_lift)
@@ -274,12 +274,12 @@ lemma lookupSlotForCNodeOp_ccorres':
 lemma lookupSlotForCNodeOp_ccorres:
   "ccorres 
    (syscall_error_rel \<currency>  (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  invs' s \<and> s  \<turnstile>' root \<and> depth < 2 ^ word_bits)
+   (\<lambda>s.  invs' s \<and> s  \<turnstile>' croot \<and> depth < 2 ^ word_bits)
    (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
             {s. to_bool (isSource_' s) = isSource}  \<inter> 
-            {s. ccap_relation root (root_' s)} \<inter>
+            {s. ccap_relation croot (root_' s)} \<inter>
             {s. depth_' s = of_nat depth} ) [] 
-  (lookupSlotForCNodeOp isSource root capptr depth) 
+  (lookupSlotForCNodeOp isSource croot capptr depth)
   (Call lookupSlotForCNodeOp_'proc)"
   apply (rule ccorres_guard_imp2, rule lookupSlotForCNodeOp_ccorres')
   apply fastforce
@@ -288,11 +288,11 @@ lemma lookupSlotForCNodeOp_ccorres:
 lemma lookupSourceSlot_ccorres':
   "ccorres 
    (syscall_error_rel \<currency> (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  valid_pspace' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits)
+   (\<lambda>s.  valid_pspace' s \<and> s  \<turnstile>' croot \<and>  depth < 2 ^ word_bits)
    (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
-            {s. ccap_relation root (root_' s)} \<inter>
+            {s. ccap_relation croot (root_' s)} \<inter>
             {s. depth_' s = of_nat depth} ) [] 
-  (lookupSourceSlot root capptr depth) 
+  (lookupSourceSlot croot capptr depth)
   (Call lookupSourceSlot_'proc)"
   apply (cinit lift: capptr_' root_' depth_')
    apply (rule ccorres_trim_returnE)
@@ -305,11 +305,11 @@ lemma lookupSourceSlot_ccorres':
 lemma lookupSourceSlot_ccorres:
   "ccorres 
    (syscall_error_rel \<currency> (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  invs' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits)
+   (\<lambda>s.  invs' s \<and> s  \<turnstile>' croot \<and>  depth < 2 ^ word_bits)
    (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
-            {s. ccap_relation root (root_' s)} \<inter>
+            {s. ccap_relation croot (root_' s)} \<inter>
             {s. depth_' s = of_nat depth} ) [] 
-  (lookupSourceSlot root capptr depth) 
+  (lookupSourceSlot croot capptr depth)
   (Call lookupSourceSlot_'proc)"
   apply (rule ccorres_guard_imp2, rule lookupSourceSlot_ccorres')
   apply fastforce
@@ -318,11 +318,11 @@ lemma lookupSourceSlot_ccorres:
 lemma lookupTargetSlot_ccorres':
   "ccorres 
    (syscall_error_rel \<currency>  (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  valid_pspace' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits)
+   (\<lambda>s.  valid_pspace' s \<and> s  \<turnstile>' croot \<and>  depth < 2 ^ word_bits)
    (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
-            {s. ccap_relation root (root_' s)} \<inter>
+            {s. ccap_relation croot (root_' s)} \<inter>
             {s. depth_' s = of_nat depth} ) [] 
-  (lookupTargetSlot root capptr depth) 
+  (lookupTargetSlot croot capptr depth)
   (Call lookupTargetSlot_'proc)"  
   apply (cinit lift: capptr_' root_' depth_')
    apply (rule ccorres_trim_returnE)
@@ -335,11 +335,11 @@ lemma lookupTargetSlot_ccorres':
 lemma lookupTargetSlot_ccorres:
   "ccorres 
    (syscall_error_rel \<currency>  (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  invs' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits)
+   (\<lambda>s.  invs' s \<and> s  \<turnstile>' croot \<and>  depth < 2 ^ word_bits)
   (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
-            {s. ccap_relation root (root_' s)} \<inter>
+            {s. ccap_relation croot (root_' s)} \<inter>
             {s. depth_' s = of_nat depth} ) [] 
-  (lookupTargetSlot root capptr depth) 
+  (lookupTargetSlot croot capptr depth)
   (Call lookupTargetSlot_'proc)"
   apply (rule ccorres_guard_imp2, rule lookupTargetSlot_ccorres')
   apply fastforce
@@ -348,11 +348,11 @@ lemma lookupTargetSlot_ccorres:
 lemma lookupPivotSlot_ccorres:
   "ccorres 
    (syscall_error_rel \<currency>  (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  invs' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits)
+   (\<lambda>s.  invs' s \<and> s  \<turnstile>' croot \<and>  depth < 2 ^ word_bits)
    (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
-            {s. ccap_relation root (root_' s)} \<inter>
+            {s. ccap_relation croot (root_' s)} \<inter>
             {s. depth_' s = of_nat depth} ) [] 
-  (lookupPivotSlot root capptr depth) 
+  (lookupPivotSlot croot capptr depth)
   (Call lookupPivotSlot_'proc)"
   apply (cinit lift: capptr_' root_' depth_')
    apply (rule ccorres_trim_returnE)

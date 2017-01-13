@@ -162,7 +162,7 @@ let
     if String.isSuffix "_" var
        then Utils.CTERM_non_critical keep_going
                 ("autocorres: Internal var " ^ var ^ "::" ^
-                 PolyML.makestring typ ^ " is exposed.")
+                 @{make_string} typ ^ " is exposed.")
                 [ct, Thm.cterm_of ctxt rhs]
        else ()
   val _ = detect_visible_bad_vars barf_uu rhs

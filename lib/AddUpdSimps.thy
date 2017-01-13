@@ -78,7 +78,7 @@ fun add_upd_simps t exsimps ctxt = let
 val add_upd_simps_syn = Outer_Syntax.local_theory @{command_keyword "add_upd_simps"}
   "recursively show updates don't matter to constants"
   (Parse.term -- Scan.optional
-      (Parse.$$$ "(" |-- Scan.repeat Parse.xthm --| Parse.$$$ ")") []
+      (Parse.$$$ "(" |-- Scan.repeat Parse.thm --| Parse.$$$ ")") []
      >> (fn (t, simps) => fn ctxt => add_upd_simps (Syntax.read_term ctxt t)
          (Attrib.eval_thms ctxt simps) ctxt))
 *}

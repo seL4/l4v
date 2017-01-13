@@ -20,7 +20,7 @@ lemma ccorres_drop_cutMon:
     \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon Q f) g"
   apply (clarsimp simp: ccorres_underlying_def
                         cutMon_def fail_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (subst if_P, simp)
   apply fastforce
   done
@@ -30,7 +30,7 @@ lemma ccorres_drop_cutMon_bind:
     \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon Q f >>= f') g"
   apply (clarsimp simp: ccorres_underlying_def
                         cutMon_def fail_def bind_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (subst if_P, simp)+
   apply fastforce
   done
@@ -40,7 +40,7 @@ lemma ccorres_drop_cutMon_bindE:
     \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon Q f >>=E f') g"
   apply (clarsimp simp: ccorres_underlying_def
                         cutMon_def fail_def bind_def bindE_def lift_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (subst if_P, simp)+
   apply fastforce
   done
@@ -50,11 +50,11 @@ lemma ccorres_cutMon:
         \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon Q f) g"
   apply (clarsimp simp: ccorres_underlying_def
                         cutMon_def fail_def bind_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (erule meta_allE, drule(1) meta_mp)
   apply (drule(1) bspec)
   apply (clarsimp simp: fail_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (subst if_P, assumption)+
   apply fastforce
   done
@@ -67,7 +67,7 @@ lemma ccap_zombie_radix_less1:
   apply (clarsimp simp: Let_def capAligned_def
                         objBits_simps word_bits_conv word_less_nat_alt
                         word_le_nat_alt less_mask_eq
-                 split: split_if_asm)
+                 split: if_split_asm)
   done
 
 lemmas ccap_zombie_radix_less2
@@ -78,7 +78,7 @@ lemma ccap_zombie_radix_less3:
       \<Longrightarrow> get_capZombieBits_CL (cap_zombie_cap_lift ccap) < 28"
   by (clarsimp simp: get_capZombieBits_CL_def Let_def
                      less_mask_eq ccap_zombie_radix_less2
-              split: split_if)
+              split: if_split)
 
 lemmas ccap_zombie_radix_less4
   = order_less_le_trans [OF ccap_zombie_radix_less3]
@@ -99,7 +99,7 @@ lemma cap_zombie_cap_get_capZombieNumber_spec:
   apply (rule conjI)
    apply unat_arith
   apply (fold mask_2pm1)
-  apply (simp add: get_capZombieBits_CL_def Let_def split: split_if_asm)
+  apply (simp add: get_capZombieBits_CL_def Let_def split: if_split_asm)
   apply (subst unat_Suc2)
    apply clarsimp
   apply (subst less_mask_eq, erule order_less_le_trans)
@@ -122,7 +122,7 @@ lemma cap_zombie_cap_set_capZombieNumber_spec:
   apply (clarsimp simp: cap_zombie_cap_lift
                         ccap_relation_def map_option_Some_eq2
                         cap_to_H_def get_capZombieBits_CL_def
-                 split: split_if_asm)
+                 split: if_split_asm)
    apply (simp add: mask_def word_bw_assocs word_ao_dist)
    apply (rule sym, rule less_mask_eq[where n=5, unfolded mask_def, simplified])
    apply unat_arith
@@ -155,7 +155,7 @@ lemma capRemovable_spec:
   apply (clarsimp simp: get_capZombiePtr_CL_def Let_def get_capZombieBits_CL_def
                         isCap_simps unat_eq_0 unat_eq_1
                         less_mask_eq ccap_zombie_radix_less2
-             split: split_if_asm)
+             split: if_split_asm)
   done
 
 lemma capCyclicZombie_spec:
@@ -172,7 +172,7 @@ lemma capCyclicZombie_spec:
   apply (frule(1) cap_get_tag_to_H)
   apply (clarsimp simp: capCyclicZombie_def Let_def
                         get_capZombieBits_CL_def get_capZombiePtr_CL_def
-                 split: split_if_asm)
+                 split: if_split_asm)
    apply (auto simp: less_mask_eq ccap_zombie_radix_less2)
   done
 
@@ -183,7 +183,7 @@ lemma case_assertE_to_assert:
                 | _ \<Rightarrow> returnOk ())
        = liftE (assert (case cap of Zombie ptr2 x xa \<Rightarrow> P ptr2 x xa | _ \<Rightarrow> True))"
   apply (simp add: assertE_def returnOk_liftE assert_def
-            split: capability.split split_if)
+            split: capability.split if_split)
   done
 
 lemma cteDelete_ccorres1:
@@ -191,14 +191,14 @@ lemma cteDelete_ccorres1:
     "ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> irq_opt_relation irqopt irq'))
      (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.irq_C v))
                    ret__struct_finaliseSlot_ret_C_')
-     (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (exp \<or> ex_cte_cap_to' slot s))
-     (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool exp}) []
-     (cutMon (op = s) (finaliseSlot slot exp)) (Call finaliseSlot_'proc)"
+     (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (expo \<or> ex_cte_cap_to' slot s))
+     (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool expo}) []
+     (cutMon (op = s) (finaliseSlot slot expo)) (Call finaliseSlot_'proc)"
   shows
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_' )
-     (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (exp \<or> ex_cte_cap_to' slot s))
-     (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. exposed_' s = from_bool exp}) []
-     (cutMon (op = s) (cteDelete slot exp)) (Call cteDelete_'proc)"
+     (\<lambda>s. invs' s \<and> sch_act_simple s \<and> (expo \<or> ex_cte_cap_to' slot s))
+     (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. exposed_' s = from_bool expo}) []
+     (cutMon (op = s) (cteDelete slot expo)) (Call cteDelete_'proc)"
   apply (cinit' lift: slot_' exposed_' cong: call_ignore_cong)
    apply (simp add: cteDelete_def split_def cutMon_walk_bindE
                del: Collect_const cong: call_ignore_cong)
@@ -258,7 +258,7 @@ lemma zombie_rf_sr_helperE:
   apply (clarsimp simp: get_capZombiePtr_CL_def Let_def
                         get_capZombieBits_CL_def
                         isZombieTCB_C_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (simp add: less_mask_eq ccap_zombie_radix_less2
                    isZombieTCB_C_def)
   done
@@ -410,7 +410,7 @@ lemma ccorres_cutMon_locateSlotCap_Zombie:
 
 lemma reduceZombie_ccorres1:
   assumes fs_cc:
-    "\<And>slot. \<lbrakk> capZombieNumber cap \<noteq> 0; exp;
+    "\<And>slot. \<lbrakk> capZombieNumber cap \<noteq> 0; expo;
                (slot, s) \<in> fst (locateSlotCap cap
                                (fromIntegral (capZombieNumber cap - 1)) s) \<rbrakk> \<Longrightarrow>
      ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> irq_opt_relation irqopt irq'))
@@ -423,8 +423,8 @@ lemma reduceZombie_ccorres1:
   "isZombie cap \<Longrightarrow>
    ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_' )
      (invs' and sch_act_simple and cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot)
-     (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool exp}) []
-     (cutMon (op = s) (reduceZombie cap slot exp)) (Call reduceZombie_'proc)"
+     (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool expo}) []
+     (cutMon (op = s) (reduceZombie cap slot expo)) (Call reduceZombie_'proc)"
   apply (cinit' lift: slot_' immediate_')
    apply (simp add: from_bool_0
                del: Collect_const)
@@ -721,7 +721,7 @@ lemma finaliseSlot_ccorres:
      (cutMon (op = s) (finaliseSlot slot exposed)) (Call finaliseSlot_'proc)"
   apply (rule finaliseSlot_ccorres_induction_helper)
   apply (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and ?a2.0=s])
-  subgoal premises hyps for slot' exp s'
+  subgoal premises hyps for slot' expo s'
     apply (subst finaliseSlot'.simps)
     apply (fold cteDelete_def[unfolded finaliseSlot_def])
     apply (fold reduceZombie_def)
@@ -758,7 +758,7 @@ lemma finaliseSlot_ccorres:
         apply (rule ccorres_drop_cutMon_bind)
         apply (rule ccorres_move_c_guard_cte)
         apply (rule_tac A="\<lambda>s. invs' s \<and> sch_act_simple s \<and> cte_wp_at' (op = rv) slot' s
-                                \<and> (exp \<or> ex_cte_cap_to' slot' s)
+                                \<and> (expo \<or> ex_cte_cap_to' slot' s)
                                 \<and> (final_matters' (cteCap rv) \<longrightarrow> rva = isFinal (cteCap rv) slot' (cteCaps_of s))"
                     and A'=UNIV
                      in ccorres_guard_imp2)
@@ -786,7 +786,7 @@ lemma finaliseSlot_ccorres:
               apply (rule allI, rule conseqPre, vcg)
               apply (clarsimp simp: returnOk_def return_def
                                     from_bool_def true_def)
-              apply (clarsimp simp: irq_opt_relation_def split: split_if)
+              apply (clarsimp simp: irq_opt_relation_def split: if_split)
              apply vcg
             apply (simp only: cutMon_walk_if Collect_False ccorres_seq_cond_empty
                               ccorres_seq_skip)
@@ -822,7 +822,7 @@ lemma finaliseSlot_ccorres:
                   apply (clarsimp simp: returnOk_def return_def)
                   apply (drule use_valid [OF _ finaliseCap_cases, OF _ TrueI])
                   apply (simp add: from_bool_def false_def irq_opt_relation_def true_def
-                            split: split_if_asm)
+                            split: if_split_asm)
                  apply vcg
                 apply wp
                apply (simp add: guard_is_UNIV_def true_def)
@@ -901,7 +901,7 @@ lemma finaliseSlot_ccorres:
           apply (simp add: guard_is_UNIV_def)
          apply (rule hoare_strengthen_post)
           apply (rule_tac Q="\<lambda>fin s. invs' s \<and> sch_act_simple s \<and> s \<turnstile>' (fst fin)
-                                   \<and> (exp \<or> ex_cte_cap_to' slot' s)
+                                   \<and> (expo \<or> ex_cte_cap_to' slot' s)
                                    \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cteCap rv) slot' s"
                      in hoare_vcg_conj_lift) 
            apply (wp hoare_vcg_disj_lift finaliseCap_invs[where sl=slot'])[1]

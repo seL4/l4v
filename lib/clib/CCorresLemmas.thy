@@ -20,7 +20,7 @@ lemma ccorres_rel_imp2:
   apply (rule ccorresI', erule(5) ccorresE)
   apply simp
   apply (erule rev_bexI)
-  apply (simp add: unif_rrel_def split: split_if_asm)
+  apply (simp add: unif_rrel_def split: if_split_asm)
   apply (cases "hs = []", simp_all)
   done
 
@@ -66,9 +66,9 @@ lemma exec_handlers_Hoare_Post:
   "\<lbrakk> exec_handlers_Hoare \<Gamma> P c Q' A'; Q' \<subseteq> Q; A' \<subseteq> A \<rbrakk>
       \<Longrightarrow> exec_handlers_Hoare \<Gamma> P c Q A"
   apply (simp add: exec_handlers_Hoare_def
-             split del: split_if)
+             split del: if_split)
   apply (elim allEI)
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
    apply blast+
   done
 
@@ -96,7 +96,7 @@ lemma exec_handlers_Hoare_from_vcg_might_fail:
   "\<lbrakk> \<Gamma> \<turnstile>\<^bsub>/F\<^esub> P c Q, A; UNIV \<subseteq> A' \<rbrakk> 
     \<Longrightarrow> exec_handlers_Hoare \<Gamma> P (c # hs) Q A'"
   apply (clarsimp simp: exec_handlers_Hoare_def
-             split del: split_if split: split_if_asm)
+             split del: if_split split: if_split_asm)
    apply (erule exec_handlers.cases, simp_all)
     apply (case_tac hsa, simp_all)
      apply (erule exec_handlers.cases, simp_all)
@@ -303,13 +303,13 @@ lemma exec_handlers_Hoare_call_Basic:
   "\<lbrakk> \<forall>s' t x. s' \<in> P \<longrightarrow> g s' t (ret s' t) \<in> Q; UNIV \<subseteq> A \<rbrakk> \<Longrightarrow>
     exec_handlers_Hoare \<Gamma> P (call initfn p ret (\<lambda>x y. Basic (g x y)) # hs) Q A"
   apply (clarsimp simp: exec_handlers_Hoare_def
-             split del: split_if)
+             split del: if_split)
   apply (erule exec_handlers.cases)
     apply clarsimp
     apply (erule exec_call_Normal_elim, simp_all)[1]
      apply (auto elim!: exec_Normal_elim_cases)[1]
     apply (frule exec_handlers_less2, clarsimp+)
-    apply (clarsimp simp: subset_iff split: split_if_asm)
+    apply (clarsimp simp: subset_iff split: if_split_asm)
    apply (auto elim!: exec_Normal_elim_cases
                       exec_call_Normal_elim)
   done
@@ -560,12 +560,12 @@ lemma ccorres_if_lhs:
    \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf (\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not> P \<longrightarrow> R s))
                       {s. (P \<longrightarrow> s \<in> S) \<and> (\<not> P \<longrightarrow> s \<in> T)}
           hs (if P then f else g) conc"
-  by (simp split: split_if)
+  by (simp split: if_split)
 
 lemma ccorres_if_bind:
   "ccorres_underlying sr Gamm r xf arrel axf G G' hs (if a then (b >>= f) else (c >>= f)) d
   \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf G G' hs ((if a then b else c) >>= f) d"
-  by (simp split: split_if_asm)
+  by (simp split: if_split_asm)
 
 lemma ccorres_Cond_rhs:
   "\<lbrakk> P \<Longrightarrow> ccorres_underlying sr Gamm rvr xf arrel axf Q S hs absf f;

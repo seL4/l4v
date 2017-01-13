@@ -374,7 +374,7 @@ abbreviation schorr_waite'_measure where
      in (card {x \<in> R. s[x]\<rightarrow>m = 0}, card {x \<in> set stack. s[x]\<rightarrow>c = 0}, length stack)"
 
 schematic_goal schorr_waite'_prove_def:
-  "schorr_waite' root \<equiv> ?A root (s0 :: lifted_globals) (R :: node_C ptr set)"
+  "schorr_waite' root_ptr \<equiv> ?A root_ptr (s0 :: lifted_globals) (R :: node_C ptr set)"
   apply (subst schorr_waite'_def[abs_def])
   apply (subst whileLoop_add_inv
            [where I = "\<lambda>(p, cond, t) s. \<exists>stack. schorr_waite'_inv s s0 R p t cond stack"
@@ -405,18 +405,18 @@ declare validNF_whileLoop_inv_measure_twosteps [wp]
 section{*The Schorr-Waite algorithm*}
 
 theorem SchorrWaiteAlgorithm:
-"\<lbrace>\<lambda>s. R = reachable (relS {\<lambda>x. s[x]\<rightarrow>l, \<lambda>x. s[x]\<rightarrow>r}) {root} \<and>
+"\<lbrace>\<lambda>s. R = reachable (relS {\<lambda>x. s[x]\<rightarrow>l, \<lambda>x. s[x]\<rightarrow>r}) {root_ptr} \<and>
       (\<forall>x. s[x]\<rightarrow>m = 0) \<and> s0 = s \<and> (\<forall>x\<in>R. is_valid_node_C s x)
       (* \<and> finite R (* unnecessary because ptr \<approx> word32 *) *) \<rbrace>
-  schorr_waite' root
+  schorr_waite' root_ptr
  \<lbrace>\<lambda>r s. \<forall>x. (x \<in> R) = (s[x]\<rightarrow>m \<noteq> 0) \<and> s[x]\<rightarrow>l = s0[x]\<rightarrow>l \<and> s[x]\<rightarrow>r = s0[x]\<rightarrow>r\<rbrace>!"
-unfolding schorr_waite'_prove_def[of root R s0]
+unfolding schorr_waite'_prove_def[of root_ptr R s0]
 
 txt {* wp currently generates many tuples for the whileLoop state,
        we simplify them with the second simp rule. *}
 proof (tactic "wp_all_tac @{context}",
     simp_all (no_asm_use) only: split_tupled_all split_conv)
-  let "\<lbrace> ?Pre root \<rbrace> _ \<lbrace> ?Post \<rbrace>!" = ?thesis
+  let "\<lbrace> ?Pre root_ptr \<rbrace> _ \<lbrace> ?Post \<rbrace>!" = ?thesis
   fix p :: "node_C ptr" and t :: "node_C ptr" and
       s :: "lifted_globals" and cond :: "int"
   let "?cond p t s" = "p = NULL \<longrightarrow> t \<noteq> NULL \<and> s[t]\<rightarrow>m = 0"
@@ -427,9 +427,9 @@ proof (tactic "wp_all_tac @{context}",
 
   {
     fix s
-    assume "?Pre root s"
-    thus "\<forall>x. ?inv NULL root (Cbool (root \<noteq> NULL \<and> s[root]\<rightarrow>m = 0)) s \<and>
-              (root \<noteq> NULL \<longrightarrow> is_valid_node_C s root)"
+    assume "?Pre root_ptr s"
+    thus "\<forall>x. ?inv NULL root_ptr (Cbool (root_ptr \<noteq> NULL \<and> s[root_ptr]\<rightarrow>m = 0)) s \<and>
+              (root_ptr \<noteq> NULL \<longrightarrow> is_valid_node_C s root_ptr)"
       by (auto simp: reachable_def addrs_def)
   next
 

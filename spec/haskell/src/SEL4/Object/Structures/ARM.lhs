@@ -83,7 +83,7 @@ present on all platforms is stored here.
 >     atcbContext = newContext }
 
 > atcbContextSet :: UserContext -> ArchTCB -> ArchTCB
-> atcbContextSet uc at = at { atcbContext = uc }
+> atcbContextSet uc atcb = atcb { atcbContext = uc }
 >
 > atcbContextGet :: ArchTCB -> UserContext
 > atcbContextGet = atcbContext

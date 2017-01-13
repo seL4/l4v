@@ -416,7 +416,7 @@ lemma well_formed_cap_derived_cap [simp]:
  *********************************)
 lemma dom_if_0 [simp]:
   "dom (\<lambda>a. if a = 0 then Some b else None) = {0}"
-  by (auto split: split_if_asm)
+  by (auto split: if_split_asm)
 
 lemma well_formed_finite [elim!]:
   "well_formed spec \<Longrightarrow> finite (dom (slots_of obj_id spec))"
@@ -561,7 +561,7 @@ lemma well_formed_slot_object_size_bits:
    apply (clarsimp simp: object_default_state_def2 object_type_def has_slots_def
                          default_tcb_def object_size_bits_def object_slots_def
                          empty_cnode_def empty_cap_map_def pt_size_def pd_size_def
-                  split: cdl_object.splits split_if_asm)
+                  split: cdl_object.splits if_split_asm)
   apply (clarsimp simp: object_slots_slots_of)
   done
 
@@ -646,7 +646,6 @@ lemma is_fake_vm_cap_cap_type:
 lemma well_formed_irq_node_in_irq_nodes:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_irq_node obj\<rbrakk>
   \<Longrightarrow> obj_id \<in> irq_nodes spec"
-  find_theorems irq_nodes
   oops
 
 term real_object_at
@@ -996,7 +995,7 @@ lemma well_formed_tcb_opt_cap:
   apply (fastforce simp: object_default_state_def2 is_tcb_def
                          opt_cap_def slots_of_def opt_object_def object_slots_def
                          default_tcb_def dom_def tcb_pending_op_slot_def
-                  split: cdl_object.splits split_if_asm)
+                  split: cdl_object.splits if_split_asm)
   done
 
 

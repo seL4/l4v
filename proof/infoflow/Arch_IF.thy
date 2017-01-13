@@ -252,7 +252,7 @@ lemma get_asid_pool_revrv:
           is_subject_asid aag asid \<and> asid \<noteq> 0" and P'="\<lambda>s. Some a = arm_asid_table (arch_state s) (asid_high_bits_of asid) \<and>  
           is_subject_asid aag asid \<and> asid \<noteq> 0" in equiv_valid_2_bind)
       apply(clarsimp split: kernel_object.splits arch_kernel_obj.splits simp: fail_ev2_l fail_ev2_r return_ev2)
-     apply(clarsimp simp: get_object_def gets_def assert_def bind_def put_def get_def equiv_valid_2_def return_def fail_def split: split_if)
+     apply(clarsimp simp: get_object_def gets_def assert_def bind_def put_def get_def equiv_valid_2_def return_def fail_def split: if_split)
      apply(erule reads_equivE)
      apply(clarsimp simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap)
      apply(drule aag_can_read_own_asids)
@@ -758,7 +758,7 @@ lemma perform_page_directory_invocation_reads_respects:
   "reads_respects aag l (is_subject aag \<circ> cur_thread) (perform_page_directory_invocation pdi)"
   unfolding perform_page_directory_invocation_def
   apply (cases pdi)
-  apply (wp do_flush_reads_respects set_vm_root_reads_respects set_vm_root_for_flush_reads_respects | simp add: when_def requiv_cur_thread_eq split del: split_if | wp_once hoare_drop_imps | clarsimp)+
+  apply (wp do_flush_reads_respects set_vm_root_reads_respects set_vm_root_for_flush_reads_respects | simp add: when_def requiv_cur_thread_eq split del: if_split | wp_once hoare_drop_imps | clarsimp)+
   done
 
 lemma throw_on_false_reads_respects:
@@ -1055,12 +1055,12 @@ lemma set_mrs_reads_respects:
   "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread)) (set_mrs thread buf msgs)"
   apply(simp add: set_mrs_def)
   apply(wp mapM_x_ev' store_word_offs_reads_respects set_object_reads_respects
-       | wpc | simp add: split_def split del: split_if add: zipWithM_x_mapM_x)+
+       | wpc | simp add: split_def split del: if_split add: zipWithM_x_mapM_x)+
   apply(auto intro: reads_affects_equiv_get_tcb_eq)
   done
 
 lemma perform_page_invocation_reads_respects:
-  "reads_respects aag l (pas_refined aag and K (authorised_page_inv aag pi) and valid_page_inv pi and valid_arch_objs and pspace_aligned and is_subject aag \<circ> cur_thread) (perform_page_invocation pi)"
+  "reads_respects aag l (pas_refined aag and K (authorised_page_inv aag pgi) and valid_page_inv pgi and valid_arch_objs and pspace_aligned and is_subject aag \<circ> cur_thread) (perform_page_invocation pgi)"
   unfolding perform_page_invocation_def fun_app_def when_def cleanCacheRange_PoU_def
   apply(rule equiv_valid_guard_imp)
   apply wpc
@@ -1322,7 +1322,7 @@ lemma set_asid_pool_state_equal_except_kheap:
             kheap s pool_ptr = Some (ArchObj (ASIDPool asid_pool)) \<and>
             kheap s' pool_ptr = Some (ArchObj (ASIDPool asid_pool')) \<longrightarrow>
               asid_pool (ucast asid) = asid_pool' (ucast asid))))"
-  apply(clarsimp simp: set_asid_pool_def put_def bind_def get_object_def gets_def get_def return_def assert_def fail_def set_object_def split: split_if_asm)
+  apply(clarsimp simp: set_asid_pool_def put_def bind_def get_object_def gets_def get_def return_def assert_def fail_def set_object_def split: if_split_asm)
   apply(clarsimp simp: states_equal_except_kheap_asid_def equiv_for_def obj_at_def)
   apply(case_tac "pool_ptr = ptr")
    apply(clarsimp simp: a_type_def split: kernel_object.splits arch_kernel_obj.splits)
@@ -1625,7 +1625,7 @@ lemma set_vm_root_for_flush_globals_equiv[wp]:
 lemma flush_table_globals_equiv[wp]:
   "\<lbrace>globals_equiv s\<rbrace> flush_table pd asid cptr pt \<lbrace>\<lambda>rv. globals_equiv s\<rbrace>"
   unfolding flush_table_def invalidateTLB_ASID_def fun_app_def
-  apply (wp mapM_wp' dmo_mol_globals_equiv | wpc | simp add: do_machine_op_bind split del: split_if cong: if_cong)+
+  apply (wp mapM_wp' dmo_mol_globals_equiv | wpc | simp add: do_machine_op_bind split del: if_split cong: if_cong)+
   done
 
 lemma arm_global_pd_arm_asid_map_update[simp]:
@@ -1858,7 +1858,7 @@ lemma perform_page_directory_invocation_globals_equiv:
 lemma flush_page_globals_equiv[wp]:
   "\<lbrace>globals_equiv st\<rbrace> flush_page page_size pd asid vptr \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding flush_page_def invalidateTLB_VAASID_def
-  apply(wp | simp cong: if_cong split del: split_if)+
+  apply(wp | simp cong: if_cong split del: if_split)+
   done
 
 lemma flush_page_arm_global_pd[wp]:
@@ -1866,7 +1866,7 @@ lemma flush_page_arm_global_pd[wp]:
      flush_page pgsz pd asid vptr 
    \<lbrace>\<lambda>rv s. P (arm_global_pd (arch_state s))\<rbrace>"
   unfolding flush_page_def
-  apply(wp | simp cong: if_cong split del: split_if)+
+  apply(wp | simp cong: if_cong split del: if_split)+
   done
 
 lemma mapM_swp_store_pte_globals_equiv:
@@ -1960,8 +1960,8 @@ lemma cte_wp_parent_not_global_pd: "valid_global_refs s \<Longrightarrow> cte_wp
 done
 
 definition authorised_for_globals_page_inv :: "page_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-  where "authorised_for_globals_page_inv pi \<equiv>
-    \<lambda>s. case pi of PageMap asid cap ptr m \<Rightarrow>
+  where "authorised_for_globals_page_inv pgi \<equiv>
+    \<lambda>s. case pgi of PageMap asid cap ptr m \<Rightarrow>
   \<exists>slot. cte_wp_at (parent_for_refs m) slot s | PageRemap asid m \<Rightarrow>
   \<exists>slot. cte_wp_at (parent_for_refs m) slot s | _ \<Rightarrow> True"
 
@@ -2051,10 +2051,10 @@ crunch valid_ko_at_arm[wp]: set_mrs valid_ko_at_arm
   (wp: crunch_wps simp: crunch_simps arm_global_pd_not_tcb)
 
 lemma perform_page_invocation_globals_equiv:
-  "\<lbrace>authorised_for_globals_page_inv pi and valid_page_inv pi and globals_equiv st
+  "\<lbrace>authorised_for_globals_page_inv pgi and valid_page_inv pgi and globals_equiv st
     and valid_arch_state and pspace_aligned and valid_arch_objs and valid_global_objs
     and valid_vs_lookup and valid_global_refs and ct_active and valid_idle\<rbrace> 
-   perform_page_invocation pi 
+   perform_page_invocation pgi
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding perform_page_invocation_def cleanCacheRange_PoU_def
   apply(rule hoare_weaken_pre)
@@ -2283,13 +2283,13 @@ lemma decode_arch_invocation_authorised_for_globals:
   apply (rule hoare_pre)
    apply (simp add: split_def Let_def
                cong: cap.case_cong arch_cap.case_cong if_cong option.case_cong
-               split del: split_if)
+               split del: if_split)
    apply (wp select_wp select_ext_weak_wp whenE_throwError_wp check_vp_wpR unlessE_wp get_pde_wp get_master_pde_wp
              find_pd_for_asid_authority3 create_mapping_entries_parent_for_refs
            | wpc
            | simp add:  authorised_for_globals_page_inv_def
                   del: hoare_True_E_R
-                  split del: split_if)+
+                  split del: if_split)+
      apply(simp cong: if_cong)
      apply(wp hoare_vcg_if_lift2)
      apply(rule hoare_conjI)

@@ -75,7 +75,7 @@ a b c"
 
 termination
   apply (relation "measure (snd o snd)")
-  apply (auto split: split_if_asm)
+  apply (auto split: if_split_asm)
   done
 
 declare resolveAddressBitsFn.simps[simp del]
@@ -119,13 +119,13 @@ proof (induct cap capptr bits rule: resolveAddressBits.induct)
      apply (simp add: locateSlot_conv liftE_bindE unlessE_def whenE_def
                       if_to_top_of_bindE assertE_def stateAssert_def bind_assoc
                       assert_def if_to_top_of_bind getSlotCap_def
-               split del: split_if cong: if_cong)
+               split del: if_split cong: if_cong)
      apply (rule monadic_rewrite_if_lhs monadic_rewrite_symb_exec_l'[OF get_wp]
                  empty_fail_get no_fail_get impI
                  monadic_rewrite_refl get_wp
        | simp add: throwError_def returnOk_def locateSlotFun_def if_not_P
                    isCNodeCap_capUntypedPtr_capCNodePtr
-             cong: if_cong split del: split_if)+
+             cong: if_cong split del: if_split)+
           apply (rule monadic_rewrite_symb_exec_l'[OF getCTE_inv _ _ _ getCTE_cte_wp_at])
             apply simp
            apply (rule impI, rule no_fail_getCTE)
@@ -137,7 +137,7 @@ proof (induct cap capptr bits rule: resolveAddressBits.induct)
                      monadic_rewrite_refl get_wp
            | simp add: throwError_def returnOk_def locateSlotFun_def if_not_P
                        isCNodeCap_capUntypedPtr_capCNodePtr
-             cong: if_cong split del: split_if)+
+             cong: if_cong split del: if_split)+
   (* step 3, prove the non-failure conditions *)
   apply (clarsimp simp: isCap_simps)
   apply (frule(1) cte_wp_at_valid_objs_valid_cap')

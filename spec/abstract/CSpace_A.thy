@@ -236,14 +236,14 @@ definition
   lookup_slot_for_cnode_op ::
   "bool \<Rightarrow> cap \<Rightarrow> cap_ref \<Rightarrow> nat \<Rightarrow> (cslot_ptr,'z::state_ext) se_monad"
 where
- "lookup_slot_for_cnode_op is_source root ptr depth \<equiv>
-  if is_cnode_cap root then
+ "lookup_slot_for_cnode_op is_source croot ptr depth \<equiv>
+  if is_cnode_cap croot then
   doE
     whenE (depth < 1 \<or> depth > word_bits)
       $ throwError (RangeError 1 (of_nat word_bits));
     lookup_error_on_failure is_source $ doE
       ptrbits_for_depth \<leftarrow> returnOk $ drop (length ptr - depth) ptr;
-      (slot, rem) \<leftarrow> resolve_address_bits (root, ptrbits_for_depth);
+      (slot, rem) \<leftarrow> resolve_address_bits (croot, ptrbits_for_depth);
       case rem of
         [] \<Rightarrow> returnOk slot
       | _  \<Rightarrow> throwError $ DepthMismatch (length rem) 0

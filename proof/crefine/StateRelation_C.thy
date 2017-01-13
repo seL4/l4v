@@ -697,10 +697,28 @@ abbreviation
       \<and> heap_list_is_zero (hrs_mem (t_hrs_' (globals x))) ptr n"
 
 definition
+  region_actually_is_bytes' :: "addr \<Rightarrow> nat \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
+where
+  "region_actually_is_bytes' ptr len htd
+    = (\<forall>x \<in> {ptr ..+ len}. htd x
+        = (True, [0 \<mapsto> (typ_uinfo_t TYPE(8 word), True)]))"
+
+abbreviation
+  "region_actually_is_bytes ptr len s
+    \<equiv> region_actually_is_bytes' ptr len (hrs_htd (t_hrs_' (globals s)))"
+
+lemmas region_actually_is_bytes_def = region_actually_is_bytes'_def
+
+abbreviation
+  "region_actually_is_zero_bytes ptr len s
+    \<equiv> region_actually_is_bytes ptr len s
+        \<and> heap_list_is_zero (hrs_mem (t_hrs_' (globals s))) ptr len"
+
+definition
   zero_ranges_are_zero
 where
   "zero_ranges_are_zero rs hrs
-    = (\<forall>(start, end) \<in> rs. region_is_bytes' start (unat ((end + 1) - start)) (hrs_htd hrs)
+    = (\<forall>(start, end) \<in> rs. region_actually_is_bytes' start (unat ((end + 1) - start)) (hrs_htd hrs)
         \<and> heap_list_is_zero (hrs_mem hrs) start (unat ((end + 1) - start)))"
 
 definition (in state_rel)
@@ -879,7 +897,7 @@ lemma (in kernel) syscall_error_to_H_cases_rev:
   "syscall_error_to_H e lf = Some RevokeFirst \<Longrightarrow>
         type_C e = scast seL4_RevokeFirst"
   by (clarsimp simp: syscall_error_to_H_def syscall_error_type_defs
-              split: split_if_asm)+
+              split: if_split_asm)+
 
 definition 
   syscall_from_H :: "syscall \<Rightarrow> word32"

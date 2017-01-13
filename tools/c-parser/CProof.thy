@@ -360,10 +360,16 @@ datatype strictc_errortype =
        | SignedArithmetic
        | DontReach
        | GhostStateError
+       | UnspecifiedSyntax
        | OwnershipError
        | UndefinedFunction
        | AdditionalError string
        | ImpossibleSpec
+
+definition
+  unspecified_syntax_error :: "string => bool"
+where
+  "unspecified_syntax_error s = False"
 
 lemmas hrs_simps = hrs_mem_update_def hrs_mem_def hrs_htd_update_def
     hrs_htd_def
@@ -443,5 +449,59 @@ definition
            \<Rightarrow> (('c, 'd) state_scheme, 'x, 'e) com"
 where
   "lvar_nondet_init accessor upd \<equiv> Spec {(s, t). \<exists>v. t = (upd (\<lambda>_. v)) s}"
+
+axiomatization
+  asm_semantics :: "string \<Rightarrow> addr list
+    \<Rightarrow> (heap_mem \<times> 'a) \<Rightarrow> (addr \<times> (heap_mem \<times> 'a)) set"
+and
+  asm_fetch :: "'s \<Rightarrow> (heap_mem \<times> 'a)"
+and
+  asm_store :: "('s \<Rightarrow> 'b) \<Rightarrow> (heap_mem \<times> 'a) \<Rightarrow> 's \<Rightarrow> 's"
+where
+  asm_semantics_enabled:
+    "\<forall>iv. asm_semantics nm addr iv \<noteq> {}"
+and
+  asm_store_eq:
+    "\<forall>x s. ghost_data (asm_store ghost_data x s) = ghost_data s"
+
+definition
+  asm_spec :: "'a itself \<Rightarrow> ('g \<Rightarrow> 'b) \<Rightarrow> bool \<Rightarrow> string
+    \<Rightarrow> (addr \<Rightarrow> ('g, 's) state_scheme \<Rightarrow> ('g, 's) state_scheme)
+    \<Rightarrow> (('g, 's) state_scheme \<Rightarrow> addr list)
+    \<Rightarrow> (('g, 's) state_scheme \<times> ('g, 's) state_scheme) set"
+where
+  "asm_spec ti gdata vol spec lhs vs
+    = {(s, s'). \<exists>(v', (gl' :: (heap_mem \<times> 'a)))
+            \<in> asm_semantics spec (vs s) (asm_fetch (globals s)).
+        s' = lhs v' (globals_update (asm_store gdata gl') s)}"
+
+lemma asm_spec_enabled:
+  "\<exists>s'. (s, s') \<in> asm_spec ti gdata vol spec lhs vs"
+  using asm_semantics_enabled[rule_format, where nm = spec
+    and addr="vs s" and iv="asm_fetch (globals s)"]
+  by (auto simp add: asm_spec_def)
+
+lemma asm_specE:
+  assumes s: "(s, s') \<in> asm_spec (ti :: 'a itself) gdata vol spec lhs vs"
+  and concl: "\<And>v' gl'. \<lbrakk> (v', (gl' :: (heap_mem \<times> 'a))) \<in> asm_semantics spec (vs s) (asm_fetch (globals s));
+        s' = lhs v' (globals_update (asm_store gdata gl') s);
+        gdata (asm_store gdata gl' (globals s)) = gdata (globals s) \<rbrakk>
+        \<Longrightarrow> P"
+  shows "P"
+  using s concl
+  by (clarsimp simp: asm_spec_def asm_store_eq)
+
+lemmas state_eqE = arg_cong[where f="\<lambda>s. (globals s, state.more s)", elim_format]
+
+lemmas asm_store_eq_helper
+    = arg_cong2[where f="op =" and a="asm_store f v s"]
+      arg_cong2[where f="op =" and c="asm_store f v s"]
+  for f v s
+
+definition
+  asm_semantics_ok_to_ignore :: "'a itself \<Rightarrow> bool \<Rightarrow> string \<Rightarrow> bool"
+where
+  "asm_semantics_ok_to_ignore ti volatile specifier
+    = (\<forall>xs gl. snd ` asm_semantics specifier xs (gl :: (heap_mem \<times> 'a)) = {gl})"
 
 end

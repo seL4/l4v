@@ -164,7 +164,7 @@ val put_Lib_simpset =  put_simpset (Simplifier.simpset_of (Proof_Context.init_gl
 fun in_mresults_ctxt ctxt = ctxt
     |> put_Lib_simpset
     |> (fn ctxt => ctxt addsimps [@{thm in_mresults_export}, @{thm in_mresults_bind}])
-    |> Splitter.del_split @{thm split_if}
+    |> Splitter.del_split @{thm if_split}
 
 fun prove_qad ctxt term tac = Goal.prove ctxt [] [] term
   (K (if Config.get ctxt quick_and_dirty andalso false
@@ -179,7 +179,7 @@ fun preannotate_ss ctxt = ctxt
 fun in_mresults_ss ctxt = ctxt
   |> put_Lib_simpset
   |> (fn ctxt => ctxt addsimps [@{thm in_mresults_export}, @{thm in_mresults_bind}])
-  |> Splitter.del_split @{thm split_if}
+  |> Splitter.del_split @{thm if_split}
   |> simpset_of
 
 
@@ -280,7 +280,7 @@ fun postcond_ss ctxt = ctxt
 
 fun wp_default_ss ctxt = ctxt
     |> put_simpset HOL_ss
-    |> Splitter.del_split @{thm split_if}
+    |> Splitter.del_split @{thm if_split}
     |> simpset_of
 
 fun raise_tac s = all_tac THEN (fn _ => error s);

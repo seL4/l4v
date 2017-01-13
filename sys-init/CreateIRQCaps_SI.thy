@@ -119,7 +119,7 @@ lemma si_irq_nodes_def2:
   apply (rule iffI)
    apply clarsimp
    apply (rule_tac x=k_irq_table in exI, simp)
-   apply (subst (asm) sep.setprod.distrib)
+   apply (subst (asm) sep.prod.distrib)
    apply (drule sep_conj_existR, clarsimp)
     apply (erule sep_map_o_inj_on_set) (* Why doesn't sep_rule work? *)
    apply simp
@@ -287,7 +287,7 @@ lemma irq_empty_map_add:
   "\<lbrakk>dom t' = cdl_irq_node spec ` irqs\<rbrakk>
   \<Longrightarrow> irqs_empty spec t' irqs = irqs_empty spec (t++t') irqs"
   apply (clarsimp simp: irqs_empty_def)
-  apply (rule sep.setprod.cong, simp)
+  apply (rule sep.prod.cong, simp)
   apply (subst irq_empty_cong [where t'="t++t'" and t=t'], simp_all)
   by (metis imageI map_add_eval_right)
 
@@ -295,7 +295,7 @@ lemma object_empty_map_add:
   "\<lbrakk>dom t = obj_ids; map_disj t t'\<rbrakk>
   \<Longrightarrow> objects_empty spec t obj_ids = objects_empty spec (t++t') obj_ids"
   apply (clarsimp simp: objects_empty_def)
-  apply (rule sep.setprod.cong, simp)
+  apply (rule sep.prod.cong, simp)
   apply (subst object_empty_cong [where t'="t++t'" and t=t], simp_all)
   by (metis map_add_eval_left)
 
@@ -303,7 +303,7 @@ lemma si_caps_at_map_add:
   "\<lbrakk>dom t = obj_ids; map_disj t t'\<rbrakk>
   \<Longrightarrow> si_caps_at t si_caps spec dev obj_ids = si_caps_at (t++t') si_caps spec dev obj_ids"
   apply (clarsimp simp: si_caps_at_def)
-  apply (rule sep.setprod.cong, simp)
+  apply (rule sep.prod.cong, simp)
   apply (subst si_cap_at_cong [where t'="t++t'" and t=t], simp_all)
   by (metis map_add_eval_left)
 
@@ -347,8 +347,8 @@ lemma irq_empty_objects_empty_ran_distinct:
   apply (frule domI [where m=t_irq])
   apply clarsimp
   apply (rename_tac irq_obj_id obj_id irq)
-  apply (subst (asm) sep.setprod.remove, simp, assumption)
-  apply (subst (asm) sep.setprod.remove, simp, fast)
+  apply (subst (asm) sep.prod.remove, simp, assumption)
+  apply (subst (asm) sep.prod.remove, simp, fast)
   apply (clarsimp simp: sep_conj_exists sep_conj_assoc)
   apply (sep_drule sep_map_o_false, simp)
   done
@@ -367,7 +367,7 @@ lemma si_objects_extra_caps'_split:
   apply (subst take_drop_append [where a="card {obj_id. real_object_at obj_id spec}"
                                    and b="card (used_irqs spec)"])
   apply clarsimp
-  apply (subst sep.setprod.union_disjoint, (simp add: distinct_take_drop_append)+)
+  apply (subst sep.prod.union_disjoint, (simp add: distinct_take_drop_append)+)
   apply (clarsimp simp: sep_conj_ac)
   done
 

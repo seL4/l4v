@@ -4,20 +4,20 @@
     License:     LGPL
 *)
 
-section {* DPC0 standard library *}
+section \<open>DPC0 standard library\<close>
 
 theory DPC0Library imports DPC0Expressions Vcg begin
 
-text {* This theory constitutes a standard library for DPC0 programs.  At
+text \<open>This theory constitutes a standard library for DPC0 programs.  At
  first, it includes (indirectly) the C0 library and (directly) its extensions
  for DPC0 specific expressions.  Secondly, the Vcg of the verification
  environment is included and its syntax extended by the DPC0 specific
  statement constructs for contextualization.
-*}
+\<close>
 
 
 (* =================================================== *)
-section {* Auxiliary functions for the concrete syntax *}
+section \<open>Auxiliary functions for the concrete syntax\<close>
 (* =================================================== *)
 
 
@@ -34,7 +34,7 @@ where
 
 
 (* ============================================= *)
-section {* Concrete syntax for Contextualization *}
+section \<open>Concrete syntax for Contextualization\<close>
 (* ============================================= *)
 
 syntax
@@ -53,7 +53,7 @@ translations
   "_WhereElse m c s1 s2" => "(_Loc (_locinit c (p_and \<acute>c m)) s1);;
                              (_Loc (_locinit c (p_and \<acute>c (p_not m))) s2)"
 
-print_translation {*
+print_translation \<open>
   let
     fun in_tr'
           [Const (@{const_syntax list_multsel}, _) $ x $
@@ -87,9 +87,9 @@ print_translation {*
    [(@{syntax_const "_Assign"}, K in_tr'),
     (@{syntax_const "_Loc"}, K where_tr')]
   end
-*}
+\<close>
 
-print_ast_translation {*
+print_ast_translation \<open>
   let
     fun where_else_tr'
       [Appl [Constant @{syntax_const "_Where"}, m, c, s1],
@@ -98,7 +98,7 @@ print_ast_translation {*
       if c = c' andalso m = m' then Appl [Constant @{syntax_const "_WhereElse"}, m, c, s1, s2]
       else raise Match
   in [(@{syntax_const "_seq"}, K where_else_tr')] end
-*}
+\<close>
 
 
 end

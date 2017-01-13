@@ -450,7 +450,7 @@ lemma transform_intent_isnot_UntypedIntent:
   apply clarsimp
   apply (clarsimp simp: transform_intent_def transform_type_def transform_intent_untyped_retype_def)
   apply (clarsimp simp: option_map_def split: invocation_label.splits arch_invocation_label.splits option.splits list.splits)
-  apply (clarsimp simp: transform_type_def split: split_if_asm)
+  apply (clarsimp simp: transform_type_def split: if_split_asm)
   done
 
 lemma transform_cnode_index_and_depth_success:
@@ -768,7 +768,7 @@ where
     cdl_intent_cap = arch_tcb_context_get (tcb_arch tcb) cap_register,
     cdl_intent_extras = get_ipc_buffer_words ms tcb [buffer_cptr_index ..< buffer_cptr_index + (unat (mi_extra_caps mi))],
     cdl_intent_recv_slot = case (get_ipc_buffer_words ms tcb [offset ..< offset + 3]) of
-                                [root, index, depth] \<Rightarrow> Some (root, index, unat depth)
+                                [croot, index, depth] \<Rightarrow> Some (croot, index, unat depth)
                               | _                    \<Rightarrow> None
   \<rparr>"
 
@@ -969,7 +969,7 @@ lemma evalMonad_bind:
   assumes det: "det_or_fail f"
   shows "evalMonad (f >>= g) s = (if evalMonad f s = None then None else evalMonad (g (the (evalMonad f s))) s)"
   apply (case_tac "evalMonad f s")
-   apply (simp add: evalMonad_def split: split_if_asm)
+   apply (simp add: evalMonad_def split: if_split_asm)
    apply (simp add: bind_def)
   apply simp
   apply (simp add: evalMonad_def)

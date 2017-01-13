@@ -70,7 +70,7 @@ proof(induct ref arbitrary: s rule: resolve_address_bits'.induct)
     apply (cases cap')
       apply (simp_all add: drop_spec_ev throwError_ev_pre
                      cong: if_cong
-                split del: split_if)
+                split del: if_split)
    apply (wp "1.hyps")
     apply (assumption | simp add: in_monad | rule conjI)+
    apply (wp get_cap_rev get_cap_wp whenE_throwError_wp)+
@@ -248,7 +248,7 @@ lemma cap_insert_reads_respects:
   apply(subst gets_apply)
   apply (simp only: cap_insert_ext_extended.dxo_eq)
   apply (simp only: cap_insert_ext_def)
-  apply(wp set_original_reads_respects update_cdt_reads_respects set_cap_reads_respects gets_apply_ev update_cdt_list_reads_respects | simp split del: split_if | clarsimp simp: equiv_for_def split: option.splits)+
+  apply(wp set_original_reads_respects update_cdt_reads_respects set_cap_reads_respects gets_apply_ev update_cdt_list_reads_respects | simp split del: if_split | clarsimp simp: equiv_for_def split: option.splits)+
             apply (wp set_untyped_cap_as_full_reads_respects get_cap_wp get_cap_rev | simp)+
   apply (intro impI conjI allI)
                          apply(fastforce simp: reads_equiv_def2 equiv_for_def elim: states_equiv_forE_is_original_cap states_equiv_forE_cdt dest: aag_can_read_self split: option.splits)+
@@ -268,7 +268,7 @@ lemma cap_move_reads_respects:
   apply (elim conjE)
   apply(wp set_original_reads_respects gets_apply_ev update_cdt_reads_respects 
            set_cap_reads_respects update_cdt_list_reads_respects
-       | simp split del: split_if | fastforce simp: equiv_for_def split: option.splits)+
+       | simp split del: if_split | fastforce simp: equiv_for_def split: option.splits)+
   apply (intro impI conjI allI)
   apply(fastforce simp: reads_equiv_def2 equiv_for_def elim: states_equiv_forE_is_original_cap states_equiv_forE_cdt dest: aag_can_read_self split: option.splits)+
   done
@@ -295,7 +295,7 @@ lemma cap_swap_reads_respects:
   apply (fold update_cdt_def)
   apply (simp add: bind_assoc cap_swap_ext_def)
   apply (rule gen_asm_ev)
-  apply(wp set_original_reads_respects update_cdt_reads_respects gets_apply_ev set_cap_reads_respects update_cdt_list_reads_respects | simp split del: split_if | fastforce simp: equiv_for_def split: option.splits)+
+  apply(wp set_original_reads_respects update_cdt_reads_respects gets_apply_ev set_cap_reads_respects update_cdt_list_reads_respects | simp split del: if_split | fastforce simp: equiv_for_def split: option.splits)+
   apply (intro impI conjI allI)
       apply((fastforce simp: reads_equiv_def2 equiv_for_def elim: states_equiv_forE_is_original_cap states_equiv_forE_cdt dest: aag_can_read_self split: option.splits)+)[2]
     apply (frule_tac x = slot1 in equiv_forD,elim conjE,drule aag_can_read_self,simp)
@@ -687,7 +687,7 @@ lemma dmo_getActiveIRQ_wp:
 lemma only_timer_irqs:
   "\<lbrakk>domain_sep_inv False st s; valid_irq_states s; is_irq_at s irq n\<rbrakk> \<Longrightarrow>
   interrupt_states s irq = IRQTimer"
-  apply(clarsimp simp: is_irq_at_def irq_at_def Let_def split: split_if_asm)
+  apply(clarsimp simp: is_irq_at_def irq_at_def Let_def split: if_split_asm)
   apply(case_tac "interrupt_states s (irq_oracle n)")
      apply(blast elim: valid_irq_statesE)
     apply(fastforce simp: domain_sep_inv_def)

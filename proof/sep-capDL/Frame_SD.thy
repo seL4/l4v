@@ -125,7 +125,7 @@ lemma sep_map_c_conj:
     apply simp
     apply (rule ext)
     apply (clarsimp simp: dom_def map_add_def object_to_sep_state_def
-                   split: split_if_asm option.splits)
+                   split: if_split_asm option.splits)
   apply (clarsimp simp:sep_map_c_def)
   apply (rule_tac x = "SepState [(fst ptr,Slot (snd ptr))\<mapsto> (CDL_Cap (Some (reset_cap_asid cap)))]
                                 empty" in exI)

@@ -90,9 +90,9 @@ lemma sep_set_conj_map_singleton_wp:
   \<Longrightarrow> \<lbrace><P \<and>* (\<And>* x\<in>xs. I x) \<and>* R>\<rbrace> f \<lbrace>\<lambda>_. <Q \<and>* (\<And>* x\<in>xs. I x) \<and>* R>\<rbrace>"
   apply (rule hoare_chain [where P="<P \<and>* I x \<and>* (\<And>* x\<in>xs - {x}. I x) \<and>* R>" and
                                  Q="\<lambda>_. <Q \<and>* I x \<and>* (\<And>* x\<in>xs - {x}. I x) \<and>* R>"], assumption)
-   apply (subst (asm) sep.setprod.remove, assumption+)
+   apply (subst (asm) sep.prod.remove, assumption+)
    apply sep_solve
-  apply (subst sep.setprod.remove, assumption+)
+  apply (subst sep.prod.remove, assumption+)
   apply sep_solve
   done
 

@@ -86,7 +86,7 @@ lemma sep_nonimpact_valid_lift:
                         sep_state_add_def sep_disj_sep_state_def
                         sep_state_disj_def
                         map_option_case
-                 split: split_if_asm option.splits sep_state.splits)
+                 split: if_split_asm option.splits sep_state.splits)
   apply (erule rsubst [where P=Q])
   apply clarsimp
   apply (rule conjI)

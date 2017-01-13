@@ -357,7 +357,7 @@ lemma liftE_def2:
 
 text {* Left @{const returnOk} absorbtion over @{term bindE}: *}
 lemma returnOk_bindE [simp]: "(returnOk x >>=E f) = f x"
-  apply (unfold bindE_def return_def returnOk_def)
+  apply (unfold bindE_def returnOk_def)
   apply (clarsimp simp: lift_def)
   done
 

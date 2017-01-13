@@ -617,11 +617,11 @@ lemma add_to_slots_comm:
 
 lemma cdl_heap_add_none1:
   "cdl_heap_add x y obj_id = None \<Longrightarrow> (sep_heap x) obj_id = None"
-  by (clarsimp simp: cdl_heap_add_def Let_unfold split:option.splits split_if_asm)
+  by (clarsimp simp: cdl_heap_add_def Let_unfold split:option.splits if_split_asm)
 
 lemma cdl_heap_add_none2:
   "cdl_heap_add x y obj_id = None \<Longrightarrow> (sep_heap y) obj_id = None"
-  by (clarsimp simp: cdl_heap_add_def Let_unfold split:option.splits split_if_asm)
+  by (clarsimp simp: cdl_heap_add_def Let_unfold split:option.splits if_split_asm)
 
 lemma object_type_object_addL:
   "object_type obj = object_type obj'
@@ -700,7 +700,7 @@ instance
      apply (case_tac x)
      apply (clarsimp simp: cdl_heap_add_def)
      apply (rule ext)
-     apply (clarsimp simp: cdl_ghost_state_add_def split:split_if_asm)
+     apply (clarsimp simp: cdl_ghost_state_add_def split:if_split_asm)
 (* x ## y \<Longrightarrow> x + y = y + x *)
     apply (clarsimp simp: plus_sep_state_def sep_disj_sep_state_def)
     apply (erule sep_state_add_comm)

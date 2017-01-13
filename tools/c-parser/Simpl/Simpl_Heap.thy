@@ -92,13 +92,13 @@ consts Null :: ref
 definition new :: "ref set \<Rightarrow> ref" where
   "new A = (SOME a. a \<notin> {Null} \<union> A)"
 
-text {*
+text \<open>
   Constant @{const "Null"} can be defined later on.  Conceptually
-  @{const "Null"} and @{const "new"} are @{text "fixes"} of a locale
+  @{const "Null"} and @{const "new"} are \<open>fixes\<close> of a locale
   with @{prop "finite A \<Longrightarrow> new A \<notin> A \<union> {Null}"}.  But since definitions
   relative to a locale do not yet work in Isabelle2005 we use this
   workaround to avoid lots of parameters in definitions.
-*}
+\<close>
 
 lemma new_notin [simp,intro]:
  "finite A \<Longrightarrow> new (A) \<notin> A"

@@ -119,12 +119,12 @@ abbreviation "device_region s \<equiv> dom (device_state (machine_state s))"
 lemma typ_at_pg_user:
   "typ_at (AArch (AUserData sz)) buf s = ko_at (ArchObj (DataPage False sz)) buf s"
   unfolding obj_at_def
-  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm split_if_asm)
+  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)
 
 lemma typ_at_pg_device:
   "typ_at (AArch (ADeviceData sz)) buf s = ko_at (ArchObj (DataPage True sz)) buf s"
   unfolding obj_at_def
-  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm split_if_asm)
+  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)
 
 lemmas typ_at_pg = typ_at_pg_user typ_at_pg_device
 
@@ -1008,7 +1008,7 @@ lemma atyp_at_eq_kheap_obj:
   "typ_at (AArch (ADeviceData sz)) p s \<longleftrightarrow> (kheap s p = Some (ArchObj (DataPage True sz)))"
   apply (auto simp add: obj_at_def)
   apply (simp_all add: a_type_def
-                split: split_if_asm kernel_object.splits arch_kernel_obj.splits)
+                split: if_split_asm kernel_object.splits arch_kernel_obj.splits)
   done
 
 
@@ -1033,7 +1033,7 @@ lemma shows
    and
    aa_type_ADeviceDataE:
   "\<lbrakk>a_type ko = AArch (ADeviceData sz); ko = ArchObj (DataPage True sz) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
-  by (rule kernel_object_exhaust[of ko]; clarsimp simp add: a_type_simps split: split_if_asm)+
+  by (rule kernel_object_exhaust[of ko]; clarsimp simp add: a_type_simps split: if_split_asm)+
 
 lemmas aa_type_elims[elim!] =
    aa_type_AASIDPoolE aa_type_APageDirectoryE aa_type_APageTableE aa_type_AUserDataE
@@ -1278,7 +1278,7 @@ lemma page_directory_pde_atI:
   apply (clarsimp simp: obj_at_def pde_at_def)
   apply (drule (1) pspace_alignedD[rotated])
   apply (clarsimp simp: a_type_def
-                 split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
+                 split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
   apply (subgoal_tac "p = (p + (x << 2) && ~~ mask pd_bits)")
    subgoal by auto
@@ -1297,7 +1297,7 @@ lemma page_table_pte_atI:
   apply (clarsimp simp: obj_at_def pte_at_def)
   apply (drule (1) pspace_alignedD[rotated])
   apply (clarsimp simp: a_type_def
-                 split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
+                 split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
   apply (subgoal_tac "p = (p + (x << 2) && ~~ mask pt_bits)")
    subgoal by auto
@@ -1328,7 +1328,7 @@ lemma vs_lookup1_ko_at_dest:
    apply clarsimp
    apply (drule bspec, fastforce simp: ran_def)
    apply (clarsimp simp add: aa_type_def obj_at_def)
-  apply (clarsimp split: arch_kernel_obj.split_asm split_if_asm)
+  apply (clarsimp split: arch_kernel_obj.split_asm if_split_asm)
   apply (simp add: pde_ref_def aa_type_def
             split: pde.splits)
   apply (erule_tac x=a in ballE)
@@ -1423,9 +1423,6 @@ lemma vs_lookup_pdI:
   apply (simp add: pde_ref_def ptrFormPAddr_addFromPPtr)
   done
 
-(* FIXME: move *)
-lemma bexEI: "\<lbrakk>\<exists>x\<in>S. Q x; \<And>x. \<lbrakk>x \<in> S; Q x\<rbrakk> \<Longrightarrow> P x\<rbrakk> \<Longrightarrow> \<exists>x\<in>S. P x" by blast
-
 lemma vs_lookup_pages_vs_lookupI: "(ref \<rhd> p) s \<Longrightarrow> (ref \<unrhd> p) s"
   apply (clarsimp simp: vs_lookup_pages_def vs_lookup_def Image_def
                  elim!: bexEI)
@@ -1438,7 +1435,7 @@ lemma vs_lookup_pages_vs_lookupI: "(ref \<rhd> p) s \<Longrightarrow> (ref \<unr
   apply clarsimp
   apply (case_tac x, simp_all add: vs_refs_def vs_refs_pages_def
                             split: arch_kernel_obj.splits)
-  apply (clarsimp simp: split_def graph_of_def image_def  split: split_if_asm)
+  apply (clarsimp simp: split_def graph_of_def image_def  split: if_split_asm)
   apply (intro exI conjI impI, assumption)
    apply (simp add: pde_ref_def pde_ref_pages_def
              split: pde.splits)
@@ -1461,7 +1458,7 @@ lemma vs_lookup_pages_pdI:
   apply (erule vs_lookup_pages_step)
   by (fastforce simp: vs_lookup_pages1_def obj_at_def
                       vs_refs_pages_def graph_of_def image_def
-               split: split_if_asm)
+               split: if_split_asm)
 
 lemma vs_lookup_pages_ptI:
   "\<lbrakk>arm_asid_table (arch_state s) a = Some p\<^sub>1;
@@ -1478,7 +1475,7 @@ lemma vs_lookup_pages_ptI:
   apply (erule vs_lookup_pages_step)
   by (fastforce simp: vs_lookup_pages1_def obj_at_def
                       vs_refs_pages_def graph_of_def image_def
-               split: split_if_asm)
+               split: if_split_asm)
 
 lemma stronger_arch_objsD_lemma:
   "\<lbrakk>valid_arch_objs s; r \<in> vs_lookup s; (r,r') \<in> (vs_lookup1 s)\<^sup>+ \<rbrakk>
@@ -1612,7 +1609,7 @@ lemma valid_arch_objs_alt:
    apply (drule spec, drule spec, erule impE, assumption)
    apply (drule spec, drule spec, erule impE, assumption)
    apply (drule spec, drule spec, erule impE, assumption)
-   apply (clarsimp simp: graph_of_def  split: split_if_asm)
+   apply (clarsimp simp: graph_of_def  split: if_split_asm)
    apply (drule_tac x=ab in spec)
    apply (clarsimp simp: pde_ref_def obj_at_def
                   split: pde.splits)
@@ -1627,7 +1624,7 @@ lemma valid_arch_objs_alt:
   apply (drule spec, drule spec, erule impE, assumption)
   apply (drule spec, drule spec, erule impE, assumption)
   apply (drule spec, drule spec, erule impE, assumption)
-  apply (clarsimp simp: graph_of_def  split: split_if_asm)
+  apply (clarsimp simp: graph_of_def  split: if_split_asm)
   apply (drule_tac x=ab in spec)
   apply (clarsimp simp: pde_ref_def obj_at_def
                  split: pde.splits)
@@ -1684,7 +1681,7 @@ proof -
      apply clarsimp
      apply (erule (3) 1)
     apply (clarsimp simp: vs_refs_def graph_of_def obj_at_def
-                   dest!: vs_lookup1D  split: split_if_asm)
+                   dest!: vs_lookup1D  split: if_split_asm)
     apply (frule (4) vpd)
     apply (erule converse_rtranclE)
      apply clarsimp
@@ -1750,7 +1747,7 @@ proof -
      apply clarsimp
      apply (erule (3) 1)
     apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
-                   dest!: vs_lookup_pages1D  split: split_if_asm)
+                   dest!: vs_lookup_pages1D  split: if_split_asm)
     apply (frule (4) vpd)
     apply (erule converse_rtranclE)
      apply clarsimp
@@ -1758,7 +1755,7 @@ proof -
     apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
                           pde_ref_pages_def data_at_def
                    dest!: vs_lookup_pages1D elim!: disjE
-                   split: split_if_asm pde.splits)
+                   split: if_split_asm pde.splits)
     apply (frule_tac d=ac in vpt, assumption+)
     apply (erule converse_rtranclE)
      apply clarsimp
@@ -1800,7 +1797,7 @@ lemma vs_refs_pdI:
 lemma aa_type_pdD:
   "aa_type ko = APageDirectory \<Longrightarrow> \<exists>pd. ko = PageDirectory pd"
   by (clarsimp simp: aa_type_def
-               split: arch_kernel_obj.splits split_if_asm)
+               split: arch_kernel_obj.splits if_split_asm)
 
 lemma empty_table_is_valid:
   "\<lbrakk>empty_table (set (arm_global_pts (arch_state s))) (ArchObj ao);
@@ -1889,7 +1886,7 @@ lemma vs_ref_order:
    apply (frule prefix_length_le, clarsimp)
   apply (drule valid_arch_objsD, simp add: obj_at_def, assumption)
   apply (clarsimp simp: pde_ref_def
-                 split: pde.split_asm split_if_asm)
+                 split: pde.split_asm if_split_asm)
   apply (drule_tac x=a in bspec, simp)
   apply (case_tac rs; simp)
   apply (case_tac list; simp)

@@ -38,7 +38,7 @@ lemma h_t_valid_ptr_clear_region:
     apply (clarsimp simp: typ_clear_region_def)
    apply clarsimp
    apply (drule spec, drule (1) mp)
-   apply (clarsimp simp: typ_clear_region_def split: split_if_asm)
+   apply (clarsimp simp: typ_clear_region_def split: if_split_asm)
   apply clarsimp
   apply (drule spec, drule (1) mp)
   apply (subgoal_tac "ptr_val p + of_nat y \<notin> {ptr..+2 ^ bits}")
@@ -61,7 +61,7 @@ lemma map_of_le:
   apply clarsimp
   apply (clarsimp simp: map_le_def dom_map_of_conv_image_fst)
   apply (drule(1) bspec, simp)
-  apply (simp(no_asm_use) split: split_if_asm)
+  apply (simp(no_asm_use) split: if_split_asm)
    apply (fastforce simp: image_def)
   apply simp
   done
@@ -74,7 +74,7 @@ lemma list_map_le_singleton:
    apply (drule map_of_le)
     apply simp
    apply (cases xs, simp_all add: list_map_def upt_conv_Cons
-                       split: split_if_asm del: upt.simps)
+                       split: if_split_asm del: upt.simps)
    apply (case_tac list, simp_all add: upt_conv_Cons del: upt.simps)
   apply auto
   done
@@ -102,7 +102,7 @@ lemma valid_footprint_typ_region_bytes:
    apply (drule spec, drule (1) mp)
    apply (clarsimp simp: typ_region_bytes_def list_map_le_singleton neq_byte
                          neq_types_not_typ_slice_eq
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply clarsimp
   apply (drule spec, drule (1) mp)
   apply (subgoal_tac "p + of_nat y \<notin> {ptr..+2 ^ bits}")
@@ -166,7 +166,7 @@ lemma lift_t_typ_clear_region:
    apply (drule (1) orthD2)
    apply (erule contrapos_np, rule intvl_self)
    apply (simp add: size_of_def wf_size_desc_gt)
-  apply (simp add: lift_t_def lift_typ_heap_if s_valid_def h_t_valid_ptr_clear_region  del: disj_not1 split del: split_if)
+  apply (simp add: lift_t_def lift_typ_heap_if s_valid_def h_t_valid_ptr_clear_region  del: disj_not1 split del: if_split)
   apply (subst if_not_P)
    apply simp
    apply (case_tac "x \<in> (- Ptr ` {ptr..+2 ^ bits})")
@@ -206,7 +206,7 @@ lemma lift_t_typ_region_bytes:
    apply (cut_tac p=x in mem_type_self)
    apply blast
   apply (simp add: lift_t_def lift_typ_heap_if s_valid_def neq_byte
-                   h_t_valid_typ_region_bytes  del: disj_not1 split del: split_if)
+                   h_t_valid_typ_region_bytes  del: disj_not1 split del: if_split)
   apply (clarsimp simp add: restrict_map_def)
   apply (blast dest: doms)
   done
@@ -582,7 +582,7 @@ proof -
      apply simp
     apply clarsimp
     apply (drule_tac y = n in aligned_add_aligned [where m = 4])
-     apply (simp add: tcb_cte_cases_def is_aligned_def split: split_if_asm)
+     apply (simp add: tcb_cte_cases_def is_aligned_def split: if_split_asm)
     apply (simp add: word_bits_conv)
     apply simp
     done
@@ -607,7 +607,7 @@ lemma tcb_cte_cases_in_range3:
 proof -
   from tc obtain q where yq: "y = x + q" and qv: "q \<le> 2 ^ 7 - 1"
     unfolding tcb_cte_cases_def
-    by (simp add: diff_eq_eq split: split_if_asm)
+    by (simp add: diff_eq_eq split: if_split_asm)
    
   have "q + (2 ^ 4 - 1) \<le> (2 ^ 7 - 1) + (2 ^ 4 - 1)" using qv
     by (rule word_plus_mcs_3) simp
@@ -635,7 +635,7 @@ lemma tcb_cte_cases_aligned:
   "\<lbrakk>is_aligned p 9; tcb_cte_cases n = Some (getF, setF)\<rbrakk> 
   \<Longrightarrow> is_aligned (p + n) (objBits (cte :: cte))"
   apply (erule aligned_add_aligned)
-   apply (simp add: tcb_cte_cases_def is_aligned_def objBits_simps split: split_if_asm)
+   apply (simp add: tcb_cte_cases_def is_aligned_def objBits_simps split: if_split_asm)
   apply (simp add: objBits_simps)
   done
 
@@ -1341,7 +1341,7 @@ lemma heap_to_user_data_update_region:
              else heap_to_user_data psp f x)"
   apply (rule ext)
   apply (simp add: heap_to_user_data_def Let_def
-            split: split_if)
+            split: if_split)
   apply (rule conjI)
    apply (clarsimp simp: byte_to_word_heap_def Let_def add.assoc
                  intro!: ext)
@@ -1375,7 +1375,7 @@ lemma heap_to_device_data_update_region:
              else heap_to_device_data psp f x)"
   apply (rule ext)
   apply (simp add: heap_to_device_data_def Let_def
-            split: split_if)
+            split: if_split)
   apply (rule conjI)
    apply (clarsimp simp: byte_to_word_heap_def Let_def add.assoc
                  intro!: ext)
@@ -1618,7 +1618,7 @@ lemma zero_ranges_are_zero_typ_region_bytes:
     \<Longrightarrow> zero_ranges_are_zero rs (hrs_htd_update (typ_region_bytes ptr bits) hrs)"
   apply (clarsimp simp: zero_ranges_are_zero_def)
   apply (drule(1) bspec)
-  apply (clarsimp simp: region_is_bytes'_def typ_region_bytes_def hrs_htd_update)
+  apply (clarsimp simp: region_actually_is_bytes'_def typ_region_bytes_def hrs_htd_update)
   done
 
 lemma deleteObjects_ccorres':
@@ -1867,7 +1867,7 @@ proof -
       apply clarsimp
       apply (rule ccontr)
       apply (drule (2) asid)
-      apply (clarsimp simp: ran_def pd_pointer_to_asid_slot_def split: split_if_asm)
+      apply (clarsimp simp: ran_def pd_pointer_to_asid_slot_def split: if_split_asm)
       apply (subgoal_tac "armKSASIDMap (ksArchState (s\<lparr>ksPSpace := ?ks\<rparr>)) a = Some (asid, pd_ptr)")
        prefer 2
        apply simp
@@ -1908,7 +1908,7 @@ proof -
      apply (rule ext)
      apply clarsimp
     apply (simp add: map_option_def map_comp_def
-              split: split_if_asm option.splits)
+              split: if_split_asm option.splits)
     apply (frule pspace_alignedD'[OF _ pspace_aligned'])
     apply (case_tac "pageBits \<le> bits")
      apply (simp add: objBitsKO_def projectKOs  split: kernel_object.splits)
@@ -1961,7 +1961,7 @@ proof -
      apply (rule ext)
      apply clarsimp
     apply (simp add: map_option_def map_comp_def
-              split: split_if_asm option.splits)
+              split: if_split_asm option.splits)
     apply (frule pspace_alignedD'[OF _ pspace_aligned'])
     apply (case_tac "pageBits \<le> bits")
      apply (simp add: objBitsKO_def projectKOs  split: kernel_object.splits)

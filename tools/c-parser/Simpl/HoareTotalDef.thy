@@ -26,11 +26,11 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-section {* Hoare Logic for Total Correctness *}
+section \<open>Hoare Logic for Total Correctness\<close>
 
 theory HoareTotalDef imports HoarePartialDef Termination begin 
 
-subsection {* Validity of Hoare Tuples: @{text  "\<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"} *}
+subsection \<open>Validity of Hoare Tuples: \<open>\<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A\<close>\<close>
 
 definition
   validt :: "[('s,'p,'f) body,'f set,'s assn,('s,'p,'f) com,'s assn,'s assn] \<Rightarrow> bool"
@@ -52,7 +52,7 @@ notation (ASCII)
   validt  ("_|=t'/_/ _ _ _,_"  [61,60,1000, 20, 1000,1000] 60) and
   cvalidt  ("_,_|=t'/_ / _ _ _,_"  [61,60,60,1000, 20, 1000,1000] 60)
 
-subsection {* Properties of Validity *}
+subsection \<open>Properties of Validity\<close>
 
 lemma validtI: 
  "\<lbrakk>\<And>s t. \<lbrakk>\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> t;s \<in> P;t \<notin> Fault ` F\<rbrakk> \<Longrightarrow> t \<in> Normal ` Q \<union> Abrupt ` A;
@@ -87,7 +87,7 @@ lemma validt_augment_Faults:
   using valid F'
   by (auto intro: valid_augment_Faults simp add: validt_def)
 
-subsection {* The Hoare Rules: @{text "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A" } *}
+subsection \<open>The Hoare Rules: \<open>\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A\<close>\<close>
 
 inductive "hoaret"::"[('s,'p,'f) body,('s,'p) quadruple set,'f set,
                         's assn,('s,'p,'f) com,'s assn,'s assn] 
@@ -150,13 +150,13 @@ where
         \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (Call p) Q,A"
 
 | ExFalso: "\<lbrakk>\<Gamma>,\<Theta>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A; \<not> \<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A\<rbrakk> \<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
-  -- {* This is a hack rule that enables us to derive completeness for
-        an arbitrary context @{text "\<Theta>"}, from completeness for an empty context.*}
+  \<comment> \<open>This is a hack rule that enables us to derive completeness for
+        an arbitrary context \<open>\<Theta>\<close>, from completeness for an empty context.\<close>
 
   
-text {* Does not work, because of rule ExFalso, the context @{text \<Theta>} is to blame.
+text \<open>Does not work, because of rule ExFalso, the context \<open>\<Theta>\<close> is to blame.
  A weaker version with empty context can be derived from soundness 
- later on. *}
+ later on.\<close>
 lemma hoaret_to_hoarep:
   assumes hoaret: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P p Q,A"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P p Q,A"
@@ -302,7 +302,7 @@ next
     by (fastforce intro: hoaret.ExFalso simp add: cvalidt_def)
 qed (blast intro: hoaret.intros)+
 
-subsection {* Some Derived Rules *}
+subsection \<open>Some Derived Rules\<close>
 
 
 lemma  Conseq': "\<forall>s. s \<in> P \<longrightarrow> 

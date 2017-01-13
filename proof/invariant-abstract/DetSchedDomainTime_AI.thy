@@ -126,7 +126,7 @@ lemma invoke_cnode_domain_list_inv[wp]:
    \<lbrace>\<lambda>rv s. P (domain_list s) \<rbrace>"
   apply (rule hoare_pre)
    apply (wp crunch_wps cap_move_src_slot_Null hoare_drop_imps hoare_vcg_all_lift
-          | wpc | simp add: invoke_cnode_def crunch_simps split del: split_if)+
+          | wpc | simp add: invoke_cnode_def crunch_simps split del: if_split)+
   done
 
 crunch domain_list_inv[wp]: perform_invocation, handle_invocation "\<lambda>s. P (domain_list s)"
@@ -276,7 +276,7 @@ lemma invoke_cnode_domain_time_inv[wp]:
    \<lbrace>\<lambda>rv s. P (domain_time s) \<rbrace>"
   apply (rule hoare_pre)
    apply (wp crunch_wps cap_move_src_slot_Null hoare_drop_imps hoare_vcg_all_lift
-          | wpc | simp add: invoke_cnode_def crunch_simps split del: split_if)+
+          | wpc | simp add: invoke_cnode_def crunch_simps split del: if_split)+
   done
 
 crunch domain_time_inv[wp]: perform_invocation, handle_invocation "\<lambda>s. P (domain_time s)"

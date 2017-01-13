@@ -113,7 +113,7 @@ a b c"
 
 termination
   apply (relation "measure (snd o snd)")
-  apply (auto simp add: in_monad split: split_if_asm)
+  apply (auto simp add: in_monad split: if_split_asm)
   done
 
 defs

@@ -43,9 +43,9 @@ lemma findPDForASID_pd_at_wp:
             \<longrightarrow> P pd s\<rbrace> findPDForASID asid \<lbrace>P\<rbrace>,-"
   apply (simp add: findPDForASID_def assertE_def
              cong: option.case_cong
-               split del: split_if)
+               split del: if_split)
   apply (rule hoare_pre)
-   apply (wp getASID_wp | wpc | simp add: o_def split del: split_if)+
+   apply (wp getASID_wp | wpc | simp add: o_def split del: if_split)+
   apply (clarsimp simp: pd_at_asid'_def)
   apply (case_tac ko, simp)
   apply (subst(asm) inv_f_f)
@@ -78,7 +78,7 @@ lemma pspace_relation_pd:
   apply (drule(1) pspace_relation_absD)
   apply (clarsimp simp: a_type_def
                  split: Structures_A.kernel_object.split_asm
-                        split_if_asm arch_kernel_obj.split_asm)
+                        if_split_asm arch_kernel_obj.split_asm)
   apply (clarsimp simp: page_directory_at'_def pdBits_def pageBits_def
                         typ_at_to_obj_at_arches)
   apply (drule_tac x="ucast y" in spec, clarsimp)
@@ -143,7 +143,7 @@ lemma find_pd_for_asid_assert_eq:
                         a_type_def
                   cong: bind_apply_cong)
   apply (clarsimp split: Structures_A.kernel_object.splits
-                         arch_kernel_obj.splits split_if_asm)
+                         arch_kernel_obj.splits if_split_asm)
   apply (simp add: get_pde_def get_pd_def get_object_def
                    bind_assoc is_aligned_neg_mask_eq
                    pd_bits_def pdBits_def)
@@ -244,7 +244,7 @@ lemma find_pd_for_asid_assert_corres:
             apply simp
            apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
            apply (clarsimp split: Structures_A.kernel_object.splits
-                                  arch_kernel_obj.splits split_if_asm)
+                                  arch_kernel_obj.splits if_split_asm)
            apply (simp add: get_pde_def exs_valid_def bind_def return_def
                             get_pd_def get_object_def simpler_gets_def)
           apply wp
@@ -254,7 +254,7 @@ lemma find_pd_for_asid_assert_corres:
           apply (wp get_object_wp | wpc)+
          apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
          apply (clarsimp split: Structures_A.kernel_object.splits
-                                arch_kernel_obj.splits split_if_asm)
+                                arch_kernel_obj.splits if_split_asm)
         apply simp
        apply (clarsimp simp: state_relation_def)
        apply (erule(3) pspace_relation_pd)
@@ -440,7 +440,7 @@ lemma find_free_hw_asid_corres:
                     apply (rule corres_modify)
                     apply (simp add: minBound_word maxBound_word
                                      state_relation_def arch_state_relation_def)
-                    apply (wp | simp split del: split_if)+
+                    apply (wp | simp split del: if_split)+
            apply (rule corres_trivial, clarsimp)
           apply (cut_tac x=next_asid in leq_maxBound)
           apply (simp only: word_le_nat_alt)
@@ -767,7 +767,7 @@ proof -
                  apply simp
                  apply (rule arm_context_switch_corres)
                 apply (wp | simp | wp_once hoare_drop_imps)+
-               apply (simp add: whenE_def split del: split_if, wp)[1]
+               apply (simp add: whenE_def split del: if_split, wp)[1]
               apply (rule find_pd_for_asid_pd_at_asid_again)
              apply wp
             apply clarsimp
@@ -918,7 +918,7 @@ lemma delete_asid_corres:
          apply (wp | clarsimp simp: o_def)+
        apply (subgoal_tac "vspace_at_asid asid pd s")
         apply (auto simp: obj_at_def a_type_def graph_of_def
-                   split: split_if_asm)[1]
+                   split: if_split_asm)[1]
        apply (simp add: vspace_at_asid_def)
        apply (rule vs_lookupI)
         apply (simp add: vs_asid_refs_def)
@@ -949,7 +949,7 @@ lemma valid_arch_state_unmap_strg':
                         armKSASIDTable_update (\<lambda>_. (armKSASIDTable (ksArchState s))(ptr := None))
                          (ksArchState s)\<rparr>)"
   apply (simp add: valid_arch_state'_def valid_asid_table'_def)
-  apply (auto simp: ran_def split: split_if_asm)
+  apply (auto simp: ran_def split: if_split_asm)
   done
 
 crunch armKSASIDTable_inv[wp]: invalidateASIDEntry
@@ -1242,7 +1242,7 @@ lemma findFreeHWASID_valid_arch [wp]:
   apply (simp add: findFreeHWASID_def invalidateHWASIDEntry_def 
                    invalidateASID_def doMachineOp_def split_def
               cong: option.case_cong)
-  apply (wp|wpc|simp split del: split_if)+
+  apply (wp|wpc|simp split del: if_split)+
   apply (clarsimp simp: valid_arch_state'_def fun_upd_def[symmetric]
                         comp_upd_simp valid_asid_map'_def)
   apply (frule is_inv_inj)
@@ -1272,7 +1272,7 @@ lemma findFreeHWASID_None_map [wp]:
                    doMachineOp_def split_def
               cong: option.case_cong)
   apply (rule hoare_pre)
-   apply (wp|wpc|simp split del: split_if)+
+   apply (wp|wpc|simp split del: if_split)+
   apply auto
   done
 
@@ -1444,7 +1444,7 @@ lemma unmap_page_table_corres:
   apply (clarsimp simp: unmapPageTable_def unmap_page_table_def ignoreFailure_def const_def cong: option.case_cong)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ page_table_mapped_corres])
-      apply (simp add: case_option_If2 split del: split_if)
+      apply (simp add: case_option_If2 split del: if_split)
       apply (rule corres_if2[OF refl])
        apply (rule corres_split [OF _ store_pde_corres'])
           apply (rule corres_split[OF _ corres_machine_op])
@@ -1742,21 +1742,21 @@ lemma perform_page_directory_corres:
   done
 
 definition
-  "page_invocation_map pi pi' \<equiv> case pi of
+  "page_invocation_map pgi pgi' \<equiv> case pgi of
     ARM_A.PageMap a c ptr m \<Rightarrow> 
-      \<exists>c' m'. pi' = PageMap a c' (cte_map ptr) m' \<and> 
+      \<exists>c' m'. pgi' = PageMap a c' (cte_map ptr) m' \<and>
               cap_relation c c' \<and> 
               mapping_map m m'
               
   | ARM_A.PageRemap a m \<Rightarrow> 
-      \<exists>m'. pi' = PageRemap a m' \<and> mapping_map m m'
+      \<exists>m'. pgi' = PageRemap a m' \<and> mapping_map m m'
   | ARM_A.PageUnmap c ptr \<Rightarrow>
-      \<exists>c'. pi' = PageUnmap c' (cte_map ptr) \<and> 
+      \<exists>c'. pgi' = PageUnmap c' (cte_map ptr) \<and>
          acap_relation c c' 
   | ARM_A.PageFlush typ start end pstart pd asid \<Rightarrow>
-      pi' = PageFlush (flush_type_map typ) start end pstart pd asid
+      pgi' = PageFlush (flush_type_map typ) start end pstart pd asid
   | ARM_A.PageGetAddr ptr \<Rightarrow>
-      pi' = PageGetAddr ptr"
+      pgi' = PageGetAddr ptr"
 
 definition
   "valid_pde_slots' m \<equiv> case m of Inl (pte, xs) \<Rightarrow> True
@@ -1886,7 +1886,7 @@ lemma setCTE_vs_entry_align[wp]:
   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p\<rbrace>"
   apply (clarsimp simp: setCTE_def setObject_def split_def
                         valid_def in_monad ko_wp_at'_def
-             split del: split_if
+             split del: if_split
                  elim!: rsubst[where P=P])
   apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
   apply (elim exE conjE disjE)
@@ -1915,7 +1915,7 @@ lemma valid_slots_duplicated_updateCap[wp]:
   done
 
 definition
-  "valid_page_inv' pi \<equiv> case pi of 
+  "valid_page_inv' pgi \<equiv> case pgi of
     PageMap asid cap ptr m \<Rightarrow> 
       cte_wp_at' (is_arch_update' cap) ptr and valid_slots' m and valid_cap' cap
           and K (valid_pde_slots' m) and (valid_slots_duplicated' m)
@@ -2009,7 +2009,7 @@ lemma pde_check_if_mapped_corres:
       apply (clarsimp simp: pte_relation'_def split: )
       apply (case_tac pd, simp_all)[1]
      apply wp
-   apply (clarsimp simp: pte_relation_aligned_def split: split_if_asm)
+   apply (clarsimp simp: pte_relation_aligned_def split: if_split_asm)
   apply simp
   done
 
@@ -2093,7 +2093,7 @@ lemma setCTE_valid_duplicates'[wp]:
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         projectKOs pspace_aligned'_def ps_clear_upd'
                         objBits_def[symmetric] lookupAround2_char1
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = cte,simplified])
   apply (clarsimp simp:ObjectInstances_H.updateObject_cte assert_def bind_def 
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
@@ -2157,17 +2157,17 @@ lemma set_mrs_invs'[wp]:
   done
 
 lemma perform_page_corres:
-  assumes "page_invocation_map pi pi'"
-  shows "corres dc (invs and valid_etcbs and valid_page_inv pi) 
-            (invs' and valid_page_inv' pi' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))) 
-            (perform_page_invocation pi) (performPageInvocation pi')"
+  assumes "page_invocation_map pgi pgi'"
+  shows "corres dc (invs and valid_etcbs and valid_page_inv pgi)
+            (invs' and valid_page_inv' pgi' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
+            (perform_page_invocation pgi) (performPageInvocation pgi')"
 proof -
   have pull_out_P:
     "\<And>P s Q c p. P s \<and> (\<forall>c. caps_of_state s p = Some c \<longrightarrow> Q s c) \<longrightarrow> (\<forall>c. caps_of_state s p = Some c \<longrightarrow> P s \<and> Q s c)"
    by blast
   show ?thesis
   using assms
-  apply (cases pi)
+  apply (cases pgi)
        apply (rename_tac word cap prod sum)
        apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def
                              page_invocation_map_def)
@@ -2264,7 +2264,7 @@ proof -
              apply (clarsimp simp: cap_range_def)
             apply (rule conjI)
              apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
-             apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm ARM_A.arch_kernel_obj.splits)
+             apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm ARM_A.arch_kernel_obj.splits)
             apply (rule conjI[rotated], fastforce)
             apply (erule ballEI)
             apply (clarsimp simp: pde_at_def obj_at_def
@@ -2377,22 +2377,22 @@ proof -
         apply (case_tac aa, simp_all)
           apply (erule(1) data_at_pg_cap[rotated],fastforce)+
        apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
-       apply (case_tac ko, simp_all split: split_if_asm)[1]
+       apply (case_tac ko, simp_all split: if_split_asm)[1]
        apply (rename_tac arch_kernel_obj)
        apply (case_tac arch_kernel_obj, simp_all)
        apply (rule conjI)
         apply clarsimp
         apply (drule_tac ptr="(ac,bb)" in
                valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
-          apply (simp split: split_if_asm)+
+          apply (simp split: if_split_asm)+
         apply force
        apply (rule conjI[rotated], fastforce)
        apply (erule ballEI)
        apply clarsimp
        apply (drule_tac ptr="(ac,bb)" in
                valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
-       apply (force split: split_if_asm)+
-      apply (auto split: split_if_asm)[1]
+       apply (force split: if_split_asm)+
+      apply (auto split: if_split_asm)[1]
      apply (clarsimp simp: performPageInvocation_def perform_page_invocation_def
                            page_invocation_map_def)
      apply (rule corres_assume_pre)
@@ -2505,7 +2505,7 @@ lemma clear_page_table_corres:
        [p , p + 4 .e. p + 2 ^ ptBits - 1])"
   apply (rule_tac F="is_aligned p ptBits" in corres_req)
    apply (clarsimp simp: obj_at_def a_type_def)
-   apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm
+   apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm
                           arch_kernel_obj.split_asm)
    apply (drule(1) pspace_alignedD)
    apply (simp add: ptBits_def pageBits_def)
@@ -2566,7 +2566,7 @@ lemma perform_page_table_corres:
   apply (clarsimp simp: is_pt_cap_def split_def
                         pt_bits_stuff objBits_simps archObjSize_def
                   cong: option.case_cong)
-  apply (simp add: case_option_If2 getSlotCap_def split del: split_if)
+  apply (simp add: case_option_If2 getSlotCap_def split del: if_split)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
        apply (simp add: liftM_def)
@@ -2584,12 +2584,12 @@ lemma perform_page_table_corres:
           apply wp
       apply (rule corres_trivial, simp)
      apply (simp add: cte_wp_at_caps_of_state pred_conj_def
-                  split del: split_if)
+                  split del: if_split)
      apply (rule hoare_lift_Pf2[where f=caps_of_state])
       apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
-                mapM_x_wp' | simp split del: split_if)+
+                mapM_x_wp' | simp split del: if_split)+
      apply (rule hoare_pre)
-      apply (wp mapM_x_wp' | simp split del: split_if)+
+      apply (wp mapM_x_wp' | simp split del: if_split)+
    apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state
                          is_arch_diminished_def
                          cap_master_cap_simps
@@ -2713,7 +2713,7 @@ lemma findFreeHWASID_invs:
   apply (clarsimp simp: invs'_def valid_state'_def valid_arch_state'_def
              valid_global_refs'_def global_refs'_def valid_machine_state'_def
              ct_not_inQ_def
-           split del: split_if)
+           split del: if_split)
   apply (intro conjI)
     apply (fastforce dest: no_irq_use [OF no_irq_invalidateTLB_ASID])
    apply clarsimp
@@ -2737,7 +2737,7 @@ lemma findFreeHWASID_invs_no_cicd':
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_arch_state'_def
              valid_global_refs'_def global_refs'_def valid_machine_state'_def
              ct_not_inQ_def
-           split del: split_if)
+           split del: if_split)
   apply (intro conjI)
     apply (fastforce dest: no_irq_use [OF no_irq_invalidateTLB_ASID])
    apply clarsimp
@@ -2844,7 +2844,7 @@ lemma setVMRoot_invs [wp]:
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | wpcw
-          | simp add: whenE_def checkPDNotInASIDMap_def split del: split_if)+
+          | simp add: whenE_def checkPDNotInASIDMap_def split del: if_split)+
   done
 
 lemma setVMRoot_invs_no_cicd':
@@ -2854,7 +2854,7 @@ lemma setVMRoot_invs_no_cicd':
    apply (wp hoare_drop_imps armv_contextSwitch_invs_no_cicd' getHWASID_invs_no_cicd'
              dmo_setCurrentPD_invs_no_cicd'
           | wpcw
-          | simp add: whenE_def checkPDNotInASIDMap_def split del: split_if)+
+          | simp add: whenE_def checkPDNotInASIDMap_def split del: if_split)+
   done
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
@@ -2988,7 +2988,7 @@ lemma storePDE_state_refs' [wp]:
                         updateObject_default_def projectKOs objBits_simps
                         in_magnitude_check state_refs_of'_def ps_clear_upd'
                  elim!: rsubst[where P=P] intro!: ext
-             split del: split_if cong: option.case_cong if_cong)
+             split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
   done
 
@@ -3181,7 +3181,7 @@ lemma storePTE_state_refs' [wp]:
                         updateObject_default_def projectKOs objBits_simps
                         in_magnitude_check state_refs_of'_def ps_clear_upd'
                  elim!: rsubst[where P=P] intro!: ext
-             split del: split_if cong: option.case_cong if_cong)
+             split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
   done
 
@@ -3375,7 +3375,7 @@ lemma setASIDPool_state_refs' [wp]:
                         updateObject_default_def projectKOs objBits_simps
                         in_magnitude_check state_refs_of'_def ps_clear_upd'
                  elim!: rsubst[where P=P] intro!: ext
-             split del: split_if cong: option.case_cong if_cong)
+             split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
   done
 
@@ -3746,7 +3746,7 @@ lemma perform_aci_invs [wp]:
   apply (clarsimp simp: isPDCap_def valid_cap'_def capAligned_def is_arch_update'_def isCap_simps)
   apply (drule ko_at_valid_objs', fastforce, simp add: projectKOs)
   apply (clarsimp simp: valid_obj'_def ran_def mask_asid_low_bits_ucast_ucast
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (case_tac ko, clarsimp simp: inv_def)
   apply (clarsimp simp: page_directory_at'_def, drule_tac x=0 in spec)
   apply (auto elim!: invs_no_0_obj')
@@ -3765,9 +3765,9 @@ lemma diminished_valid':
   "diminished' cap cap' \<Longrightarrow> valid_cap' cap = valid_cap' cap'"
   apply (clarsimp simp add: diminished'_def)
   apply (rule ext)
-  apply (simp add: maskCapRights_def Let_def split del: split_if)
-  apply (cases cap'; simp add: isCap_simps valid_cap'_def capAligned_def split del: split_if)
-  by (simp add: ARM_H.maskCapRights_def isPageCap_def Let_def split del: split_if split: arch_capability.splits)
+  apply (simp add: maskCapRights_def Let_def split del: if_split)
+  apply (cases cap'; simp add: isCap_simps valid_cap'_def capAligned_def split del: if_split)
+  by (simp add: ARM_H.maskCapRights_def isPageCap_def Let_def split del: if_split split: arch_capability.splits)
 
 lemma diminished_isPDCap:
   "diminished' cap cap' \<Longrightarrow> isPDCap cap' = isPDCap cap"

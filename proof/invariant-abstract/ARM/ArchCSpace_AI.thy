@@ -35,7 +35,7 @@ lemma weak_derived_valid_cap [CSpace_AI_assms]:
   "\<lbrakk> s \<turnstile> c; wellformed_cap c'; weak_derived c' c\<rbrakk> \<Longrightarrow> s \<turnstile> c'"
   apply (case_tac "c = c'", simp)
   apply (clarsimp simp: weak_derived_def)
-  apply (clarsimp simp: copy_of_def split: split_if_asm)
+  apply (clarsimp simp: copy_of_def split: if_split_asm)
   apply (auto simp: is_cap_simps same_object_as_def wellformed_cap_simps
                     valid_cap_def cap_aligned_def bits_of_def
                     aobj_ref_cases Let_def cap_asid_def
@@ -49,8 +49,8 @@ lemma weak_derived_tcb_cap_valid:
                             obj_at_def is_tcb
                      split: option.split)
   apply (clarsimp simp: st_tcb_def2)
-  apply (erule disjE; simp add: copy_of_def split: split_if_asm; (solves \<open>clarsimp\<close>)?)
-  apply (clarsimp simp: tcb_cap_cases_def split: split_if_asm)
+  apply (erule disjE; simp add: copy_of_def split: if_split_asm; (solves \<open>clarsimp\<close>)?)
+  apply (clarsimp simp: tcb_cap_cases_def split: if_split_asm)
     apply (auto simp: is_cap_simps same_object_as_def
                       valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
                       is_nondevice_page_cap_arch_def
@@ -63,7 +63,7 @@ lemma copy_obj_refs [CSpace_AI_assms]:
   apply (cases cap)
   apply (auto simp: copy_of_def same_object_as_def is_cap_simps
                     aobj_ref_cases
-             split: split_if_asm cap.splits arch_cap.splits)
+             split: if_split_asm cap.splits arch_cap.splits)
   done
 
 lemma weak_derived_cap_class[simp, CSpace_AI_assms]: 
@@ -77,13 +77,13 @@ lemma weak_derived_obj_refs [CSpace_AI_assms]:
   "weak_derived dcap cap \<Longrightarrow> obj_refs dcap = obj_refs cap"
   by (cases dcap, auto simp: is_cap_simps weak_derived_def copy_of_def 
                              same_object_as_def aobj_ref_cases
-                       split: split_if_asm cap.splits arch_cap.splits)
+                       split: if_split_asm cap.splits arch_cap.splits)
 
 lemma weak_derived_obj_ref_of [CSpace_AI_assms]:
   "weak_derived dcap cap \<Longrightarrow> obj_ref_of dcap = obj_ref_of cap"
   by (cases dcap, auto simp: is_cap_simps weak_derived_def copy_of_def 
                              same_object_as_def aobj_ref_cases
-                       split: split_if_asm cap.splits arch_cap.splits)
+                       split: if_split_asm cap.splits arch_cap.splits)
 
 lemma set_free_index_invs [CSpace_AI_assms]:
   "\<lbrace>\<lambda>s. (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap) \<and>
@@ -174,7 +174,7 @@ lemma is_derived_is_cap:
   \<and> (is_zombie cap = is_zombie cap')
   \<and> (is_arch_cap cap = is_arch_cap cap')
   \<and> (cap_is_device cap = cap_is_device cap')"
-  apply (clarsimp simp: is_derived_def is_derived_arch_def split: split_if_asm)
+  apply (clarsimp simp: is_derived_def is_derived_arch_def split: if_split_asm)
   apply (clarsimp simp: cap_master_cap_def is_cap_simps
     split: cap.splits arch_cap.splits)+
   done
@@ -234,12 +234,12 @@ lemma is_derived_cap_asid_issues:
    unfolding is_derived_def
    apply (cases "is_derived_arch cap cap'")
     apply (erule is_derived_cap_arch_asid_issues)
-    apply (clarsimp split: split_if_asm)+
+    apply (clarsimp split: if_split_asm)+
    done
 
 lemma is_derived_is_pt_pd:
   "is_derived m p cap cap' \<Longrightarrow> (is_pt_cap cap = is_pt_cap cap') \<and> (is_pd_cap cap = is_pd_cap cap')"
-  apply (clarsimp simp: is_derived_def split: split_if_asm)
+  apply (clarsimp simp: is_derived_def split: if_split_asm)
   apply (clarsimp simp: cap_master_cap_def is_pt_cap_def is_pd_cap_def
     split: cap.splits arch_cap.splits)+
   done
@@ -251,7 +251,7 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
   apply (simp add: cap_insert_def)
   apply (rule hoare_pre)
    apply (wp set_cap_valid_arch_caps get_cap_wp set_untyped_cap_as_full_valid_arch_caps
-               | simp split del: split_if)+
+               | simp split del: if_split)+
       apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift set_untyped_cap_as_full_cte_wp_at_neg
                 set_untyped_cap_as_full_is_final_cap'_neg set_untyped_cap_as_full_cte_wp_at hoare_vcg_ball_lift
                 hoare_vcg_ex_lift hoare_vcg_disj_lift | wps)+
@@ -348,7 +348,7 @@ lemma cap_insert_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
      cap_insert cap src dest
    \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: cap_insert_def set_untyped_cap_as_full_def)
-  apply (wp get_cap_wp | simp split del: split_if)+
+  apply (wp get_cap_wp | simp split del: if_split)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_derived_def)
   apply (frule(1) cap_refs_in_kernel_windowD[where ptr=src])
   apply auto
@@ -450,7 +450,7 @@ lemma no_cap_to_obj_with_diff_ref_triv:
                         obj_at_def is_ep is_ntfn is_tcb is_cap_table
                         a_type_def is_cap_simps
                  split: cap.split_asm arch_cap.split_asm
-                        split_if_asm option.split_asm)
+                        if_split_asm option.split_asm)
         apply auto
   done
 
@@ -508,7 +508,7 @@ lemma cap_insert_simple_arch_caps_no_ap:
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
   apply (simp add: cap_insert_def)
   apply (wp set_cap_valid_arch_caps set_untyped_cap_as_full_valid_arch_caps get_cap_wp
-    | simp split del: split_if)+
+    | simp split del: if_split)+
   apply (wp hoare_vcg_all_lift hoare_vcg_conj_lift hoare_vcg_imp_lift hoare_vcg_ball_lift hoare_vcg_disj_lift
     set_untyped_cap_as_full_cte_wp_at_neg set_untyped_cap_as_full_is_final_cap'_neg
     set_untyped_cap_as_full_empty_table_at hoare_vcg_ex_lift

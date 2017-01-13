@@ -107,8 +107,8 @@ lemma setArchTCB_C_corres:
   apply (rule conjI)
    defer
    apply (erule cready_queues_relation_not_queue_ptrs)
-    apply (rule ext, simp split: split_if)
-   apply (rule ext, simp split: split_if)
+    apply (rule ext, simp split: if_split)
+   apply (rule ext, simp split: if_split)
   apply (drule ko_at_projectKO_opt)
   apply (erule (2) cmap_relation_upd_relI)
     apply (simp add: ctcb_relation_def carch_tcb_relation_def)
@@ -485,7 +485,7 @@ proof -
     using vms'[simplified valid_machine_state'_def]
     apply (auto simp: user_mem'_def option_to_0_def typ_at'_def ko_wp_at'_def
       option_to_ptr_def pointerInUserData_def observable_memory_def
-            split: option.splits split_if_asm)
+            split: option.splits if_split_asm)
     done
   with mach_rel[simplified cmachine_state_relation_def]
        user_mem_C_relation[OF um_rel]
@@ -566,7 +566,7 @@ lemma the_the_inv_mapI:
 
 lemma eq_restrict_map_None[simp]:
   "restrict_map m A x = None \<longleftrightarrow> x ~: (A \<inter> dom m)"
-  by (auto simp: restrict_map_def split: split_if_asm)
+  by (auto simp: restrict_map_def split: if_split_asm)
 lemma eq_the_inv_map_None[simp]: "the_inv_map m x = None \<longleftrightarrow> x\<notin>ran m"
   by (simp add: the_inv_map_def2)
 lemma is_inv_unique:
@@ -648,7 +648,7 @@ lemma (in kernel_m)
   apply (rule conjI)
    apply (frule is_inv_inj)
    apply (clarsimp simp: the_inv_map_def is_inv_def dom_option_map
-                   split: split_if)
+                   split: if_split)
    apply (intro conjI[rotated] impI domI, assumption)
    apply (rule the_equality)
     apply (clarsimp simp: ran_def dom_def Collect_eq)
@@ -730,7 +730,7 @@ lemma tcb_queue_rel'_unique:
   "hp NULL = None \<Longrightarrow>
    tcb_queue_relation' gn gp hp as pp cp \<Longrightarrow>
    tcb_queue_relation' gn gp hp as' pp cp \<Longrightarrow> as' = as"
-  apply (clarsimp simp: tcb_queue_relation'_def split: split_if_asm)
+  apply (clarsimp simp: tcb_queue_relation'_def split: if_split_asm)
     apply (clarsimp simp: neq_Nil_conv)
    apply (clarsimp simp: neq_Nil_conv)
   apply (erule(2) tcb_queue_rel_unique)
@@ -782,7 +782,7 @@ lemma cready_queues_to_H_correct:
 lemma inj_image_inv:
   assumes inj_f: "inj f"
   shows "f ` A = B \<Longrightarrow> inv f ` B = A"
-  by (drule sym) (simp add: inv_image_comp[OF inj_f])
+  by (drule sym) (simp add: image_inv_f_f[OF inj_f])
 
 lemma cmap_relation_unique:
   assumes inj_f: "inj f"
@@ -829,7 +829,7 @@ lemma ran_tcb_cte_cases:
     (Structures_H.tcbReply, tcbReply_update),
     (Structures_H.tcbCaller, tcbCaller_update),
     (tcbIPCBufferFrame, tcbIPCBufferFrame_update)}"
-  by (auto simp add: tcb_cte_cases_def split: split_if_asm)
+  by (auto simp add: tcb_cte_cases_def split: if_split_asm)
 
 (* FIXME: move *)
 lemma ps_clear_is_aligned_ksPSpace_None:
@@ -924,7 +924,7 @@ lemma map_to_ctes_tcb_ctes:
 lemma cfault_rel_imp_eq:
   "cfault_rel x a b \<Longrightarrow> cfault_rel y a b \<Longrightarrow> x=y"
   by (clarsimp simp: cfault_rel_def is_cap_fault_def
-              split: split_if_asm seL4_Fault_CL.splits)
+              split: if_split_asm seL4_Fault_CL.splits)
 
 lemma cthread_state_rel_imp_eq:
   "cthread_state_relation x z \<Longrightarrow> cthread_state_relation y z \<Longrightarrow> x=y"
@@ -1531,7 +1531,7 @@ lemma (in kernel_m) cstate_to_H_correct:
                 using cstate_rel 
                 apply (fastforce simp: cstate_relation_def cpspace_relation_def 
                   Let_def ghost_size_rel_def unat_eq_0
-                            split: split_if)
+                            split: if_split)
                using valid cstate_rel
                apply (rule cDomScheduleIdx_to_H_correct)
                using cstate_rel

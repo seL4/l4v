@@ -587,7 +587,7 @@ lemma object_slots_tcb_half:
   "object_slots (tcb_half spec obj) =
    (\<lambda>slot. if (slot = tcb_pending_op_slot \<or> slot = tcb_replycap_slot \<or> slot = tcb_boundntfn_slot) \<and> object_slots obj slot \<noteq> None
      then Some NullCap else object_slots obj slot)"
-  by (case_tac "has_slots obj", auto simp: tcb_half_def split: split_if_asm)
+  by (case_tac "has_slots obj", auto simp: tcb_half_def split: if_split_asm)
 
 lemma intent_reset_object_type:
   "intent_reset obj = intent_reset obj' \<Longrightarrow> object_type obj = object_type obj'"
@@ -895,7 +895,7 @@ lemma sep_map_exists_rewrite':
   apply (rule ext)
   apply (clarsimp simp: sep_map_S'_def sep_map_general_def intent_reset_def
                         object_slots_object_clean object_to_sep_state_def object_project_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (case_tac cdl_tcb,clarsimp)
   apply (case_tac cdl_tcb',clarsimp simp:object_slots_def)
   apply (intro conjI |

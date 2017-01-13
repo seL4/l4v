@@ -471,12 +471,12 @@ next
   case (CondTrue s P C t D) thus ?case
     by (cases t)
        (auto simp: restrict_safe_def restrict_safe_OK_def exec_fatal_Cond
-             intro: exec.intros dest: expr_htd_ind split: split_if_asm)
+             intro: exec.intros dest: expr_htd_ind split: if_split_asm)
 next
   case (CondFalse s P C t D) thus ?case
     by (cases t)
        (auto simp: restrict_safe_def restrict_safe_OK_def exec_fatal_Cond
-             intro: exec.intros dest: expr_htd_ind split: split_if_asm)
+             intro: exec.intros dest: expr_htd_ind split: if_split_asm)
 next
   case (WhileTrue P C s s' t) show ?case
   proof (cases s')
@@ -565,7 +565,7 @@ lemma mono_guard_triv2:
 
 lemma dom_restrict_s:
   "x \<in> dom_s (restrict_s d X) \<Longrightarrow> x \<in> dom_s d \<and> x \<in> X"
-apply(auto simp: restrict_s_def dom_s_def split: split_if_asm)
+apply(auto simp: restrict_s_def dom_s_def split: if_split_asm)
 done
 
 
@@ -645,23 +645,23 @@ apply(subgoal_tac "(a,b) \<notin> s_footprint (p (restrict_htd s X))")
  apply(thin_tac "P \<notin> Q" for P Q)
 apply(auto simp: restrict_htd_def  lift_state_def split_def split: s_heap_index.splits split: option.splits)
      apply(subst (asm) ptr_retyp_d_eq_fst)
-     apply(clarsimp split: split_if_asm)
+     apply(clarsimp split: if_split_asm)
      apply(erule notE)
      apply(drule intvlD, clarsimp)
      apply(erule s_footprintI2)
     apply(subst (asm) ptr_retyp_d_eq_fst)
-    apply(clarsimp split: split_if_asm)
+    apply(clarsimp split: if_split_asm)
    apply(subst (asm) ptr_retyp_d_eq_snd)
-   apply(clarsimp split: split_if_asm)
+   apply(clarsimp split: if_split_asm)
   apply(subst (asm) ptr_retyp_d_eq_snd)
-  apply(clarsimp split: split_if_asm)
+  apply(clarsimp split: if_split_asm)
   apply(erule notE)
   apply(frule intvlD, clarsimp)
   apply(rule s_footprintI)
    apply(subst (asm) ptr_retyp_footprint)
     apply simp
    apply clarsimp
-   apply(clarsimp simp: list_map_eq split: split_if_asm)
+   apply(clarsimp simp: list_map_eq split: if_split_asm)
    apply(subst (asm) unat_of_nat)
    apply(subst (asm) mod_less)
     apply(subst len_of_addr_card)
@@ -670,9 +670,9 @@ apply(auto simp: restrict_htd_def  lift_state_def split_def split: s_heap_index.
    apply fast
   apply assumption
  apply(simp add: ptr_retyp_d_eq_snd)
- apply(clarsimp split: split_if_asm)
+ apply(clarsimp split: if_split_asm)
  apply(simp add: ptr_retyp_footprint)
- apply(clarsimp simp: list_map_eq split: split_if_asm)
+ apply(clarsimp simp: list_map_eq split: if_split_asm)
  apply(erule notE)
  apply(drule intvlD, clarsimp)
  apply(rule s_footprintI)
@@ -683,9 +683,9 @@ apply(auto simp: restrict_htd_def  lift_state_def split_def split: s_heap_index.
    apply simp
   apply assumption+
 apply(simp add: ptr_retyp_d_eq_snd)
-apply(clarsimp split: split_if_asm)
+apply(clarsimp split: if_split_asm)
 apply(simp add: ptr_retyp_footprint)
-apply(clarsimp simp: list_map_eq split: split_if_asm)
+apply(clarsimp simp: list_map_eq split: if_split_asm)
 apply(erule notE)
 apply(drule intvlD, clarsimp)
 apply(rule s_footprintI)
@@ -696,9 +696,9 @@ apply(rule s_footprintI)
   apply simp
  apply assumption+
 apply(simp add: ptr_retyp_d_eq_snd)
-apply(clarsimp split: split_if_asm)
+apply(clarsimp split: if_split_asm)
 apply(simp add: ptr_retyp_footprint)
-apply(clarsimp simp: list_map_eq split: split_if_asm)
+apply(clarsimp simp: list_map_eq split: if_split_asm)
 apply(erule notE)
 apply(drule intvlD, clarsimp)
 apply(rule s_footprintI)
@@ -758,7 +758,7 @@ apply(rule ext)
 apply(clarsimp simp: map_add_def list_map_eq)
 apply(subgoal_tac "(x,SIndexTyp y) \<in> s_footprint (p s)")
  apply(drule (1) subsetD)
- apply(clarsimp simp: dom_s_def split: split_if_asm)
+ apply(clarsimp simp: dom_s_def split: if_split_asm)
 apply(drule intvlD, clarsimp)
 apply(rule s_footprintI)
  apply(subst (asm) unat_simps)
@@ -862,7 +862,7 @@ next
     show "?Z \<subseteq> ?X"
       by (split option.splits, rule, force intro: proc_deps.intros)
          (clarify, erule proc_deps.induct, (force intro: proc_deps.intros
-          split: split_if_asm)+)
+          split: if_split_asm)+)
   qed
 qed
 

@@ -114,7 +114,7 @@ lemma do_user_op_invs:
   apply (wp ct_running_machine_op select_wp dmo_invs | simp add:dom_restrict_plus_eq)+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def invs_def cur_tcb_def
-                 split: option.splits split_if_asm)
+                 split: option.splits if_split_asm)
   apply (frule ptable_rights_imp_frame)
     apply fastforce
    apply simp

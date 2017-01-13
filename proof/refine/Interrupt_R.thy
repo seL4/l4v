@@ -92,10 +92,10 @@ lemma decode_irq_handler_corres:
      (decode_irq_handler_invocation label irq caps)
      (decodeIRQHandlerInvocation label irq caps')"
   apply (simp add: decode_irq_handler_invocation_def decodeIRQHandlerInvocation_def
-                 split del: split_if)
+                 split del: if_split)
   apply (cases caps)
-   apply (simp add: returnOk_def split: invocation_label.split list.splits split del: split_if)
-  apply (clarsimp simp: list_all2_Cons1 split del: split_if)
+   apply (simp add: returnOk_def split: invocation_label.split list.splits split del: if_split)
+  apply (clarsimp simp: list_all2_Cons1 split del: if_split)
   apply (simp add: returnOk_def split: invocation_label.split list.splits)
   apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm simp: returnOk_def)
   done
@@ -113,7 +113,7 @@ lemma decode_irq_handler_valid'[wp]:
      decodeIRQHandlerInvocation label irq caps
    \<lbrace>irq_handler_inv_valid'\<rbrace>,-"
   apply (simp add: decodeIRQHandlerInvocation_def Let_def split_def
-               split del: split_if)
+               split del: if_split)
   apply (rule hoare_pre)
    apply (wp | wpc | simp)+
   apply (clarsimp simp: neq_Nil_conv isCap_simps)
@@ -160,7 +160,7 @@ lemma decode_irq_control_corres:
   apply (clarsimp simp: decode_irq_control_invocation_def decodeIRQControlInvocation_def
                         arch_check_irq_def ARM_H.checkIRQ_def
                         ARM_H.decodeIRQControlInvocation_def arch_decode_irq_control_invocation_def
-             split del: split_if cong: if_cong
+             split del: if_split cong: if_cong
                  split: invocation_label.split)
 
   apply (cases caps, simp split: list.split)
@@ -197,12 +197,12 @@ crunch inv[wp]: "InterruptDecls_H.decodeIRQControlInvocation"  "P"
 declare ensureEmptySlot_stronger [wp]
 
 lemma lsfco_real_cte_at'[wp]:
-  "\<lbrace>valid_objs' and valid_cap' root\<rbrace>
-     lookupSlotForCNodeOp is_src root ptr depth
+  "\<lbrace>valid_objs' and valid_cap' croot\<rbrace>
+     lookupSlotForCNodeOp is_src croot ptr depth
    \<lbrace>\<lambda>rv s. real_cte_at' rv s\<rbrace>,-"
   apply (simp add: lookupSlotForCNodeOp_def split_def unlessE_def
                    whenE_def
-               split del: split_if
+               split del: if_split
              cong: if_cong list.case_cong capability.case_cong)
   apply (rule hoare_pre)
    apply (wp resolveAddressBits_real_cte_at'
@@ -218,7 +218,7 @@ lemma decode_irq_control_valid'[wp]:
    \<lbrace>irq_control_inv_valid'\<rbrace>,-"
   apply (simp add: decodeIRQControlInvocation_def Let_def split_def checkIRQ_def
                    rangeCheck_def unlessE_whenE
-                split del: split_if cong: if_cong list.case_cong
+                split del: if_split cong: if_cong list.case_cong
                                           invocation_label.case_cong)
   apply (rule hoare_pre)
    apply (wp ensureEmptySlot_stronger isIRQActive_wp
@@ -714,7 +714,7 @@ lemma updateTimeSlice_sym_refs[wp]:
   apply (clarsimp simp:fun_upd_def)
   apply (rule set_eqI)
   apply (rule iffI)
-   apply (clarsimp split:option.splits split_if_asm)
+   apply (clarsimp split:option.splits if_split_asm)
    apply (intro conjI impI)
     apply simp
    apply clarsimp
@@ -723,7 +723,7 @@ lemma updateTimeSlice_sym_refs[wp]:
      in ps_clear_updE[rotated])
     apply simp
    apply (clarsimp simp:fun_upd_def)
-  apply (clarsimp split:option.splits split_if_asm)
+  apply (clarsimp split:option.splits if_split_asm)
   apply (intro conjI impI)
    apply simp
   apply clarsimp

@@ -445,6 +445,7 @@ in
   | Auxupd _ => [st]
   | Ghostupd _ => [st]
   | Spec _ => [st]
+  | AsmStmt _ => [st]
   | LocalInit _ => [st]
   | _ => raise Fail ("stmt_remove_embfncalls: Couldn't handle " ^ stmt_type st)
 end

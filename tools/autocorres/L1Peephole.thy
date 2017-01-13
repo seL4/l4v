@@ -126,7 +126,7 @@ lemma L1_while_infinite [L1opt]: "L1_while C L1_skip = L1_guard (\<lambda>s. \<n
        apply (monad_eq simp: valid_def split: sum.splits)
       apply simp
      apply (subst whileLoop_unroll)
-     apply (monad_eq simp: exs_valid_def Bex_def split: split_if_asm)
+     apply (monad_eq simp: exs_valid_def Bex_def split: if_split_asm)
     apply (rule snd_whileLoop [where I="\<lambda>_ _. True"])
       apply simp
      apply simp

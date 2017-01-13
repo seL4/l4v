@@ -13,8 +13,8 @@
 *)
 
 theory Eisbach_Methods
-imports "~~/src/HOL/Eisbach/Eisbach_Tools" 
-        "subgoal_focus/Subgoal_Methods"
+imports "subgoal_focus/Subgoal_Methods"
+        "~~/src/HOL/Eisbach/Eisbach_Tools"
 begin
 
 
@@ -28,7 +28,7 @@ method_setup print_raw_goal = \<open>Scan.succeed (fn ctxt => fn facts =>
 
 ML \<open>fun method_evaluate text ctxt facts = 
   Method.NO_CONTEXT_TACTIC ctxt
-    (Method_Closure.method_evaluate text ctxt facts)\<close>
+    (Method.evaluate_runtime text ctxt facts)\<close>
 
 
 method_setup print_headgoal = 
@@ -43,7 +43,7 @@ section \<open>Simple Combinators\<close>
 method_setup defer_tac = \<open>Scan.succeed (fn _ => SIMPLE_METHOD (defer_tac 1))\<close>
 
 method_setup all =
- \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
+ \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
    let
      fun tac i st' =
        Goal.restrict i 1 st'
@@ -54,7 +54,7 @@ method_setup all =
 \<close>
 
 method_setup determ =
- \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
+ \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
    let
      fun tac st' = method_evaluate m ctxt facts st'
 
@@ -62,7 +62,7 @@ method_setup determ =
 \<close>
 
 method_setup changed =
- \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
+ \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
    let
      fun tac st' = method_evaluate m ctxt facts st'
 
@@ -71,7 +71,7 @@ method_setup changed =
 
  
 method_setup timeit =
- \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
+ \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
    let 
      fun timed_tac st seq = Seq.make (fn () => Option.map (apsnd (timed_tac st)) 
        (timeit (fn () => (Seq.pull seq))));
@@ -84,12 +84,12 @@ method_setup timeit =
  
  
 method_setup timeout =
- \<open>Scan.lift Parse.int -- Method_Closure.method_text >> (fn (i,m) => fn ctxt => fn facts =>
+ \<open>Scan.lift Parse.int -- Method.text_closure >> (fn (i,m) => fn ctxt => fn facts =>
    let 
      fun str_of_goal th = Pretty.string_of (Goal_Display.pretty_goal ctxt th);
      
-     fun limit st f x = TimeLimit.timeLimit (Time.fromSeconds i) f x 
-       handle TimeLimit.TimeOut => error ("Method timed out:\n" ^ (str_of_goal st));
+     fun limit st f x = Timeout.apply (Time.fromSeconds i) f x
+       handle Timeout.TIMEOUT _ => error ("Method timed out:\n" ^ (str_of_goal st));
       
      fun timed_tac st seq = Seq.make (limit st (fn () => Option.map (apsnd (timed_tac st)) 
        (Seq.pull seq)));
@@ -107,7 +107,7 @@ text \<open>The following @{text fails} and @{text succeeds} methods protect the
       The @{text fails} method inverts success, only succeeding if the given method would fail.\<close>
 
 method_setup fails =
- \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
+ \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
    let
      fun fail_tac st' = 
        (case Seq.pull (method_evaluate m ctxt facts st') of
@@ -118,7 +118,7 @@ method_setup fails =
 \<close>
 
 method_setup succeeds =
- \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
+ \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
    let
      fun can_tac st' = 
        (case Seq.pull (method_evaluate m ctxt facts st') of
@@ -250,7 +250,7 @@ subsection \<open>Finding a goal based on successful application of a method\<cl
 context begin
 
 method_setup find_goal =
- \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
+ \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
    let
      fun prefer_first i = SELECT_GOAL 
        (fn st' =>

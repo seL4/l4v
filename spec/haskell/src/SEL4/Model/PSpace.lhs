@@ -152,11 +152,11 @@ requested type.
 >             | otherwise = Just (f m)
 
 > lookupAround2 :: Ord k => k -> Data.Map.Map k a -> (Maybe (k, a), Maybe k)
-> lookupAround2 ptr mp = case at of
+> lookupAround2 ptr mp = case middle of
 >                             Just v -> (Just (ptr, v), after')
 >                             Nothing -> (before, after')
 >     where
->         (before, at, after) = lookupAround ptr mp
+>         (before, middle, after) = lookupAround ptr mp
 >         after' = maybe Nothing (Just . fst) after
 
 > maybeToMonad :: Monad m => Maybe a -> m a

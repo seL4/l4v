@@ -181,7 +181,7 @@ lemma blocked_cancel_ipc_corres:
                       P'="invs' and st_tcb_at' (op = st') t" in corres_inst)
       apply (case_tac rv)
         apply (simp add: ep_relation_def)
-       apply (simp add: get_ep_queue_def ep_relation_def split del: split_if)
+       apply (simp add: get_ep_queue_def ep_relation_def split del: if_split)
        apply (rename_tac list)
        apply (case_tac "remove1 t list")
         apply simp
@@ -229,7 +229,7 @@ lemma blocked_cancel_ipc_corres:
         apply (simp add: projectKOs)
        apply (auto simp add: valid_obj'_def valid_tcb'_def 
                              valid_tcb_state'_def)[1]
-      apply (simp add: get_ep_queue_def ep_relation_def split del: split_if)
+      apply (simp add: get_ep_queue_def ep_relation_def split del: if_split)
       apply (rename_tac list)
       apply (case_tac "remove1 t list")
        apply simp
@@ -308,7 +308,7 @@ lemma ac_corres:
       apply (rule_tac F="isWaitingNtfn (ntfnObj ntfnaa)" in corres_gen_asm2)
       apply (case_tac "ntfn_obj ntfna")
         apply (simp add: ntfn_relation_def isWaitingNtfn_def)
-       apply (simp add: isWaitingNtfn_def ntfn_relation_def split del: split_if)
+       apply (simp add: isWaitingNtfn_def ntfn_relation_def split del: if_split)
        apply (rename_tac list)
        apply (rule_tac R="remove1 t list = []" in corres_cases)
         apply (simp del: dc_simp)
@@ -675,7 +675,7 @@ lemma cancelSignal_invs':
                 hoare_vcg_all_lift [OF setNotification_ksQ] sts_valid_queues
                 setThreadState_ct_not_inQ NTFNSN
                 hoare_vcg_all_lift setNotification_ksQ
-              | simp add: valid_tcb_state'_def list_case_If split del: split_if)+
+              | simp add: valid_tcb_state'_def list_case_If split del: if_split)+
       apply (rule hoare_strengthen_post)
        apply (rule get_ntfn_sp')
       apply (clarsimp simp: pred_tcb_at')
@@ -691,8 +691,8 @@ lemma cancelSignal_invs':
        apply (frule st_tcb_at_state_refs_ofD')
        apply (frule ko_at_state_refs_ofD')
        apply (rule conjI, erule delta_sym_refs)
-         apply (clarsimp simp: ntfn_bound_refs'_def split: split_if_asm)
-        apply (clarsimp split: split_if_asm)
+         apply (clarsimp simp: ntfn_bound_refs'_def split: if_split_asm)
+        apply (clarsimp split: if_split_asm)
           subgoal 
           by (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
                                tcb_bound_refs'_def ntfn_q_refs_of'_def
@@ -714,8 +714,8 @@ lemma cancelSignal_invs':
       apply (frule ko_at_state_refs_ofD')
       apply (rule conjI)
        apply (erule delta_sym_refs)
-        apply (fastforce simp: ntfn_bound_refs'_def split: split_if_asm)
-       apply (clarsimp split: split_if_asm)
+        apply (fastforce simp: ntfn_bound_refs'_def split: if_split_asm)
+       apply (clarsimp split: if_split_asm)
         apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def tcb_bound_refs'_def
                                set_eq_subset)
        apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def tcb_bound_refs'_def
@@ -833,11 +833,11 @@ proof -
               hoare_vcg_all_lift [OF setEndpoint_ksQ]
               sts_valid_queues setThreadState_ct_not_inQ EPSCHN
               hoare_vcg_all_lift setNotification_ksQ
-              | simp add: valid_tcb_state'_def split del: split_if
+              | simp add: valid_tcb_state'_def split del: if_split
               | wpc)+
     apply (rule hoare_strengthen_post [OF get_ep_sp'])
     apply (clarsimp simp: pred_tcb_at' fun_upd_def[symmetric] conj_comms
-               split del: split_if cong: if_cong)
+               split del: if_split cong: if_cong)
     apply (rule conjI, clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs)
     apply (frule obj_at_valid_objs', clarsimp)
     apply (clarsimp simp: projectKOs valid_obj'_def)
@@ -870,7 +870,7 @@ proof -
      apply (frule_tac x=t in set_remove1_eq)
      by (auto elim!: delta_sym_refs
                simp: symreftype_inverse' tcb_st_refs_of'_def tcb_bound_refs'_def 
-              split: thread_state.splits split_if_asm)
+              split: thread_state.splits if_split_asm)
   have R:
     "\<lbrace>invs' and tcb_at' t\<rbrace>
      do y \<leftarrow> threadSet (\<lambda>tcb. tcb \<lparr> tcbFault := None \<rparr>) t;
@@ -1134,7 +1134,7 @@ lemma (in delete_one_conc_pre) cancelIPC_sch_act_not:
             delete_one_sch_act_not
        | wpc
        | simp add: getThreadReplySlot_def o_def if_apply_def2
-              split del: split_if
+              split del: if_split
        | rule hoare_drop_imps)+
   done
 
@@ -1243,10 +1243,10 @@ lemma tcbSchedDequeue_corres':
   apply (simp add: unless_def when_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r'="op =", OF _ ethreadget_corres])
-       apply (simp split del: split_if)
+       apply (simp split del: if_split)
        apply (rule corres_split_eqr[OF _ ethreadget_corres])
           apply (rule corres_split_eqr[OF _ getQueue_corres])
-            apply (simp split del: split_if)
+            apply (simp split del: if_split)
             apply (subst bind_return_unit, rule corres_split[where r'=dc])
                apply (rule corres_split_noop_rhs)
                  apply (simp add: dc_def[symmetric])
@@ -2172,7 +2172,7 @@ lemma cancel_all_invs'_helper:
   apply (intro conjI)
   apply (clarsimp simp: valid_tcb_state'_def global'_no_ex_cap
                  elim!: rsubst[where P=sym_refs]
-                 dest!: suffixeq_set_subset
+                 dest!: suffix_set_subset
                 intro!: ext
        | (drule (1) bspec, clarsimp simp: valid_pspace'_def valid_tcb'_def elim!: valid_objs_valid_tcbE))+
   done
@@ -2359,7 +2359,7 @@ lemma cancelAllIPC_invs'[wp]:
            | drule(1) bspec | drule st_tcb_at_state_refs_ofD')+
   apply (drule(2) ep_q_refs_max)
   apply (erule delta_sym_refs)
-   apply (clarsimp dest!: symreftype_inverse' split: split_if_asm | drule(1) bspec subsetD)+
+   apply (clarsimp dest!: symreftype_inverse' split: if_split_asm | drule(1) bspec subsetD)+
   done
 
 lemma cancelAllSignals_invs'[wp]:
@@ -2386,8 +2386,8 @@ lemma cancelAllSignals_invs'[wp]:
    apply (drule st_tcb_at_state_refs_ofD')
    apply clarsimp
   apply (erule delta_sym_refs)
-   apply (clarsimp split: split_if_asm)
-  apply (clarsimp split: split_if_asm)
+   apply (clarsimp split: if_split_asm)
+  apply (clarsimp split: if_split_asm)
    apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def)
   apply (drule_tac x="(x, NTFNSignal)" in bspec)
    apply (clarsimp simp: st_tcb_at_refs_of_rev')+
@@ -2535,7 +2535,7 @@ lemma rescheduleRequired_unlive:
    apply (simp add: tcbSchedEnqueue_def unless_def
                     threadSet_def setQueue_def threadGet_def)
    apply (wp setObject_ko_wp_at getObject_tcb_wp
-            | simp add: objBits_simps bitmap_fun_defs split del: split_if)+
+            | simp add: objBits_simps bitmap_fun_defs split del: if_split)+
   apply (clarsimp simp: o_def)
   apply (drule obj_at_ko_at')
   apply clarsimp
@@ -2648,7 +2648,7 @@ lemma cancelBadgedSends_filterM_helper':
     apply (fastforce elim!: obj_atE' 
                       simp: state_refs_of'_def projectKOs tcb_bound_refs'_def 
                             subsetD symreftype_inverse'
-                     split: split_if_asm)+
+                     split: if_split_asm)+
   done
 
 lemmas cancelBadgedSends_filterM_helper

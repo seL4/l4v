@@ -323,7 +323,7 @@ lemma memset_spec:
                                                       (t_hrs_' (globals s))\<rparr>}"
             and V1=undefined in subst [OF whileAnno_def])
   apply vcg
-    apply (clarsimp simp add: hrs_mem_update_def split: split_if_asm)
+    apply (clarsimp simp add: hrs_mem_update_def split: if_split_asm)
     apply (subst (asm) word_mod_2p_is_mask [where n=2, simplified], simp)
     apply (subst (asm) word_mod_2p_is_mask [where n=2, simplified], simp)
     apply (rule conjI)
@@ -376,7 +376,7 @@ declare snd_gets[simp]
 
 lemma snd_when_aligneError[simp]:  
   shows "(snd ((when P (alignError sz)) s)) = P"
-  by (simp add: when_def alignError_def fail_def split: split_if)
+  by (simp add: when_def alignError_def fail_def split: if_split)
 
 lemma snd_unless_aligneError[simp]:  
   shows "(snd ((unless P (alignError sz)) s)) = (\<not> P)"
@@ -471,7 +471,7 @@ proof (rule classical)
       apply -
       apply (rule_tac x = "(typ_uinfo_t TYPE('b), b)" in image_eqI)
        apply simp
-      apply (fastforce simp add: ptr_retyp_footprint list_map_eq in_set_conv_nth split: split_if_asm)
+      apply (fastforce simp add: ptr_retyp_footprint list_map_eq in_set_conv_nth split: if_split_asm)
       done
   
     with typ_slice_set have "(typ_uinfo_t TYPE('b)) \<in> fst ` td_set (typ_uinfo_t TYPE('a)) 0" 
@@ -557,7 +557,7 @@ lemma htd_update_list_same2:
 lemma ptr_retyps_gen_out:
   fixes p :: "'a :: mem_type ptr"  
   shows "x \<notin> {ptr_val p..+n * size_of TYPE('a)} \<Longrightarrow> ptr_retyps_gen n p arr td x = td x"
-  apply (simp add: ptr_retyps_gen_def ptr_retyps_out split: split_if)
+  apply (simp add: ptr_retyps_gen_def ptr_retyps_out split: if_split)
   apply (clarsimp simp: ptr_arr_retyps_def htd_update_list_same2)
   done
 
@@ -579,7 +579,7 @@ lemma list_map_override_comono:
   apply (simp add: map_le_def list_map_eq map_add_def)
   apply (cases "length xs \<le> length ys")
    apply (simp add: prefix_eq_nth)
-  apply (simp split: split_if_asm add: prefix_eq_nth)
+  apply (simp split: if_split_asm add: prefix_eq_nth)
   done
 
 lemma list_map_plus_le_not_tag_disj:
@@ -654,20 +654,21 @@ lemma valid_call_Spec_eq_subset:
 "\<Gamma>' procname = Some (Spec R)
 \<Longrightarrow> (\<forall>x. \<Gamma>'\<Turnstile>\<^bsub>/NF\<^esub> (P x) Call procname (Q x),(A x))
   = ((\<forall>x. P x \<subseteq> fst ` R) \<and> (R \<subseteq> (\<Inter>x. (- P x) \<times> UNIV \<union> UNIV \<times> Q x)))"
-apply (safe, simp_all)
-apply (clarsimp simp: HoarePartialDef.valid_def)
-apply (rule ccontr)
-apply (elim allE, subst(asm) imageI, assumption)
-apply (drule mp, erule exec.Call, rule exec.SpecStuck)
-apply (auto simp: image_def)[2]
-apply (clarsimp simp: HoarePartialDef.valid_def)
-apply (elim allE, drule mp, erule exec.Call, erule exec.Spec)
-apply auto[1]
-apply (clarsimp simp: HoarePartialDef.valid_def)
-apply (erule exec_Normal_elim_cases, simp_all)
-apply (erule exec_Normal_elim_cases, auto simp: image_def,
-  (fastforce+)?)
-done
+  apply (safe, simp_all)
+    apply (clarsimp simp: HoarePartialDef.valid_def)
+    apply (rule ccontr)
+    apply (elim allE, subst(asm) imageI, assumption)
+    apply (drule mp, erule exec.Call, rule exec.SpecStuck)
+     apply (auto simp: image_def)[2]
+   apply (clarsimp simp: HoarePartialDef.valid_def)
+   apply (elim allE, drule mp, erule exec.Call, erule exec.Spec)
+   apply auto[1]
+  apply (clarsimp simp: HoarePartialDef.valid_def)
+  apply (erule exec_Normal_elim_cases, simp_all)
+  apply (erule exec_Normal_elim_cases, auto simp: image_def)
+   apply fastforce
+  apply (thin_tac "R \<subseteq> _", fastforce)
+  done
 
 lemma field_of_t_refl:
   "field_of_t p p' = (p = p')"
@@ -688,7 +689,7 @@ next
   from Suc.prems show ?case
     apply (simp add: upt_conv_Cons map_Suc_upt[symmetric]
                 del: upt.simps)
-    apply (split split_if, intro conjI impI)
+    apply (split if_split, intro conjI impI)
      apply auto[1]
     apply (simp add: o_def)
     apply (subst Suc.hyps)
@@ -756,7 +757,7 @@ lemma ptr_retyps_gen_not_tag_disj:
     \<Longrightarrow> 0 < n
     \<Longrightarrow> \<not> td \<bottom>\<^sub>t typ_uinfo_t TYPE('a)"
   apply (simp add: ptr_retyps_gen_def ptr_arr_retyps_def
-            split: split_if_asm)
+            split: if_split_asm)
    apply (drule_tac td'="uinfo_array_tag_n_m TYPE('a) n n"
      in htd_update_list_not_tag_disj, simp+)
     apply (clarsimp simp: mult.commute)
@@ -789,7 +790,7 @@ lemma ptr_retyps_gen_valid_footprint:
   "valid_footprint (ptr_retyps_gen n (Ptr p :: 'a :: mem_type ptr) arr htd) p' td
     = (valid_footprint htd p' td)"
   apply (cases "n = 0")
-   apply (simp add: ptr_retyps_gen_def ptr_arr_retyps_def split: split_if)
+   apply (simp add: ptr_retyps_gen_def ptr_arr_retyps_def split: if_split)
   apply (simp add: valid_footprint_def Let_def)
   apply (intro conj_cong refl, rule all_cong)
   apply (case_tac "p' + of_nat y \<in> {p ..+ n * size_of TYPE('a)}")
@@ -821,7 +822,7 @@ lemma ptr_retyp_same_cleared_region:
   shows "p = p' \<or> {ptr_val p..+ size_of TYPE('a)} \<inter> {ptr_val p' ..+ size_of TYPE('a)} = {}"
   using ht
   by (simp add: h_t_valid_ptr_retyp_eq[where p=p and p'=p'] field_of_t_refl
-         split: split_if_asm)
+         split: if_split_asm)
 
 lemma h_t_valid_ptr_retyp_inside_eq:
   fixes p :: "'a :: mem_type ptr" and p' :: "'a :: mem_type ptr"
@@ -856,7 +857,7 @@ lemma ptr_add_orth:
 lemma dom_lift_t_heap_update:
   "dom (lift_t g (hrs_mem_update v hp)) = dom (lift_t g hp)"
   by (clarsimp simp add: lift_t_def lift_typ_heap_if s_valid_def hrs_htd_def hrs_mem_update_def split_def dom_def 
-    intro!: Collect_cong split: split_if)
+    intro!: Collect_cong split: if_split)
 
 lemma h_t_valid_ptr_retyps_gen_same:
   assumes guard: "\<forall>n' < nptrs. gd (CTypesDefs.ptr_add (Ptr p :: 'a ptr) (of_nat n'))"
@@ -907,7 +908,7 @@ next
 
   have mod_split: "\<And>k. k < nptrs * size_of TYPE('a)
     \<Longrightarrow> \<exists>quot rem. k = quot * size_of TYPE('a) + rem \<and> rem < size_of TYPE('a) \<and> quot < nptrs"
-    apply (intro exI conjI, rule mod_div_equality[symmetric])
+    apply (intro exI conjI, rule div_mult_mod_eq[symmetric])
      apply simp
     apply (simp add: Word_Miscellaneous.td_gal_lt)
     done
@@ -959,7 +960,7 @@ lemma clift_ptr_retyps_gen_memset_same:
    apply (subst heap_list_update_list)
     apply (simp add: addr_card_def card_word word_bits_def)
    apply simp
-  apply (clarsimp split: split_if)
+  apply (clarsimp split: if_split)
   apply (simp add: h_val_def)
   apply (subst heap_list_update_disjoint_same, simp_all)
   apply (simp add: region_is_bytes_disjoint[OF cleared not_byte])
@@ -1002,7 +1003,7 @@ lemma clift_heap_list_update_no_heap_other:
   and not_byte: "typ_uinfo_t TYPE('a :: c_type) \<noteq> typ_uinfo_t TYPE(word8)"
   shows "clift (hrs_mem_update (heap_update_list p xs) hrs) = (clift hrs :: 'a typ_heap)"
   apply (clarsimp simp: liftt_if[folded hrs_mem_def hrs_htd_def] hrs_mem_update
-                        fun_eq_iff h_val_def split: split_if)
+                        fun_eq_iff h_val_def split: if_split)
   apply (subst heap_list_update_disjoint_same, simp_all)
   apply (clarsimp simp: set_eq_iff h_t_valid_def valid_footprint_def Let_def
                  dest!: intvlD[where n="size_of TYPE('a)"])
@@ -1482,7 +1483,7 @@ lemma cvariable_array_ptr_upd:
     \<Longrightarrow> cvariable_array_map_relation (m(x \<mapsto> y))
         ns (ptrfun :: _ \<Rightarrow> ('b :: mem_type) ptr) htd"
   by (clarsimp simp: cvariable_array_map_relation_def at
-              split: split_if)
+              split: if_split)
 
 lemma clift_eq_h_t_valid_eq:
   "clift hp = (clift hp' :: ('a :: c_type) ptr \<Rightarrow> _)
@@ -1494,14 +1495,14 @@ lemma region_is_bytes_typ_region_bytes:
   "{ptr ..+ len} \<le> {ptr' ..+ 2 ^ bits}
     \<Longrightarrow> region_is_bytes' ptr len (typ_region_bytes ptr' bits htd)"
   apply (clarsimp simp: region_is_bytes'_def typ_region_bytes_def hrs_htd_update)
-  apply (simp add: subsetD split: split_if_asm)
+  apply (simp add: subsetD split: if_split_asm)
   done
 
-lemma region_is_bytes_retyp_disjoint:
+lemma region_actually_is_bytes_retyp_disjoint:
   "{ptr ..+ sz} \<inter> {ptr_val (p :: 'a ptr)..+n * size_of TYPE('a :: mem_type)} = {}
-    \<Longrightarrow> region_is_bytes' ptr sz htd
-    \<Longrightarrow> region_is_bytes' ptr sz (ptr_retyps_gen n p arr htd)"
-  apply (clarsimp simp: region_is_bytes'_def del: impI)
+    \<Longrightarrow> region_actually_is_bytes' ptr sz htd
+    \<Longrightarrow> region_actually_is_bytes' ptr sz (ptr_retyps_gen n p arr htd)"
+  apply (clarsimp simp: region_actually_is_bytes'_def del: impI)
   apply (subst ptr_retyps_gen_out)
    apply blast
   apply simp
@@ -1524,7 +1525,7 @@ lemma zero_ranges_ptr_retyps:
   apply (clarsimp simp: zero_ranges_are_zero_def untyped_ranges_zero_inv_def
                         hrs_htd_update)
   apply (drule(1) bspec, clarsimp)
-  apply (rule region_is_bytes_retyp_disjoint, simp_all)
+  apply (rule region_actually_is_bytes_retyp_disjoint, simp_all)
   apply (clarsimp simp: map_comp_Some_iff cteCaps_of_def
                  elim!: ranE)
   apply (frule(1) ctes_of_valid')
@@ -1533,7 +1534,7 @@ lemma zero_ranges_ptr_retyps:
   apply (frule(1) untypedZeroRange_to_usableCapRange)
   apply (clarsimp simp: isCap_simps untypedZeroRange_def
                         getFreeRef_def max_free_index_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (erule disjoint_subset[rotated])
   apply (subst intvl_plus_unat_eq)
     apply clarsimp
@@ -2035,9 +2036,9 @@ lemma cmap_relation_array_add_array[OF refl]:
    apply (simp add: and_mask_less_size word_size word_bits_def)
   apply (case_tac "chp (ptrf pa)", simp_all)
    apply (drule spec, drule(1) iffD2)
-   apply (auto split: split_if)[1]
+   apply (auto split: if_split)[1]
   apply (drule_tac x=pa in spec, clarsimp)
-  apply (drule_tac x=p' in spec, clarsimp split: split_if_asm)
+  apply (drule_tac x=p' in spec, clarsimp split: if_split_asm)
   apply (clarsimp simp: new_cap_addrs_def)
   apply (subst(asm) is_aligned_add_helper, simp_all)
   apply (rule shiftl_less_t2n, rule word_of_nat_less, simp_all add: word_bits_def)
@@ -2159,11 +2160,11 @@ proof (intro impI allI)
    apply (erule cmap_relation_array_add_array[OF _ al])
         apply (simp add: foldr_upd_app_if[folded data_map_insert_def])
         apply (rule projectKO_opt_retyp_same, simp add: ko_def projectKOs)
-       apply (simp add: h_t_valid_clift_Some_iff dom_def split: split_if)
+       apply (simp add: h_t_valid_clift_Some_iff dom_def split: if_split)
        apply (subst clift_ptr_retyps_gen_prev_memset_same[where n=1, simplified, OF guard],
          simp_all only: szo refl empty, simp_all add: zero)[1]
         apply (simp add: ptBits_def pageBits_def word_bits_def)
-       apply (auto split: split_if)[1]
+       apply (auto split: if_split)[1]
       apply (simp_all add: objBits_simps archObjSize_def ptBits_def
                            pageBits_def ko_def word_bits_def)
    done
@@ -2349,11 +2350,11 @@ proof (intro impI allI)
    apply (erule cmap_relation_array_add_array[OF _ al])
         apply (simp add: foldr_upd_app_if[folded data_map_insert_def])
         apply (rule projectKO_opt_retyp_same, simp add: ko_def projectKOs)
-       apply (simp add: h_t_valid_clift_Some_iff dom_def split: split_if)
+       apply (simp add: h_t_valid_clift_Some_iff dom_def split: if_split)
        apply (subst clift_ptr_retyps_gen_prev_memset_same[where n=1, simplified, OF guard],
          simp_all only: szo empty, simp_all add: zero)[1]
         apply (simp add: pdBits_def pageBits_def word_bits_def)
-       apply (auto split: split_if)[1]
+       apply (auto split: if_split)[1]
       apply (simp_all add: objBits_simps archObjSize_def pdBits_def
                            pageBits_def ko_def word_bits_def)
    done
@@ -2399,7 +2400,7 @@ proof (intro impI allI)
       apply (simp add: pdBits_def word_bits_def pageBits_def)
      apply (simp add: zero)
     apply (rule ext)
-    apply (simp add: map_comp_def stored_asid[simplified] split: option.split split_if)
+    apply (simp add: map_comp_def stored_asid[simplified] split: option.split if_split)
     apply (simp only: o_def CTypesDefs.ptr_add_def' Abs_fnat_hom_mult)
     apply (clarsimp simp only:)
     apply (drule h_t_valid_intvl_htd_contains_uinfo_t [OF h_t_valid_clift])
@@ -2638,6 +2639,7 @@ definition
 where
   "byte_regions_unmodified hrs hrs' \<equiv> \<forall>x. (\<forall>n td b. snd (hrs_htd hrs x) n = Some (td, b)
         \<longrightarrow> td = typ_uinfo_t TYPE (word8))
+    \<longrightarrow> snd (hrs_htd hrs x) 0 \<noteq> None
     \<longrightarrow> hrs_mem hrs' x = hrs_mem hrs x"
 
 abbreviation
@@ -2736,7 +2738,7 @@ lemma mdb_node_ptr_set_mdbNext_preserves_bytes:
 lemma updateNewFreeIndex_noop_ccorres:
   "ccorres dc xfdc (valid_objs' and cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot)
       {s. (case untypedZeroRange cap of None \<Rightarrow> True
-          | Some (a, b) \<Rightarrow> region_is_zero_bytes a (unat ((b + 1) - a)) s)} hs
+          | Some (a, b) \<Rightarrow> region_actually_is_zero_bytes a (unat ((b + 1) - a)) s)} hs
       (updateNewFreeIndex slot) Skip"
   (is "ccorres _ _ ?P ?P' hs _ _")
   apply (simp add: updateNewFreeIndex_def getSlotCap_def)
@@ -2765,19 +2767,19 @@ lemma updateNewFreeIndex_noop_ccorres:
 
 lemma byte_regions_unmodified_region_is_bytes:
   "byte_regions_unmodified hrs hrs'
-    \<Longrightarrow> region_is_bytes' y n (hrs_htd hrs)
+    \<Longrightarrow> region_actually_is_bytes' y n (hrs_htd hrs)
     \<Longrightarrow> x \<in> {y ..+ n}
     \<Longrightarrow> hrs_mem hrs' x = hrs_mem hrs x"
-  apply (clarsimp simp: byte_regions_unmodified_def)
+  apply (clarsimp simp: byte_regions_unmodified_def imp_conjL[symmetric])
   apply (drule spec, erule mp)
-  apply (clarsimp simp: region_is_bytes'_def)
-  apply metis
+  apply (clarsimp simp: region_actually_is_bytes'_def)
+  apply (drule(1) bspec, simp split: if_split_asm)
   done
 
 lemma insertNewCap_ccorres1:
   "ccorres dc xfdc (pspace_aligned' and valid_mdb' and valid_objs' and valid_cap' cap)
      ({s. (case untypedZeroRange cap of None \<Rightarrow> True
-          | Some (a, b) \<Rightarrow> region_is_zero_bytes a (unat ((b + 1) - a)) s)}
+          | Some (a, b) \<Rightarrow> region_actually_is_zero_bytes a (unat ((b + 1) - a)) s)}
        \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. parent_' s = Ptr parent}
        \<inter> {s. slot_' s = Ptr slot}) []
      (insertNewCap parent slot cap) 
@@ -2813,7 +2815,7 @@ lemma insertNewCap_ccorres1:
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_ctes_of is_aligned_3_next)
   apply (clarsimp split: option.split)
-  apply (intro allI conjI impI; simp; clarsimp)
+  apply (intro allI conjI impI; simp; clarsimp simp: region_actually_is_bytes)
    apply (erule trans[OF heap_list_h_eq2, rotated])
    apply (rule byte_regions_unmodified_region_is_bytes)
       apply (erule byte_regions_unmodified_trans[rotated]
@@ -2842,8 +2844,8 @@ lemma createNewCaps_guard_helper:
   apply (erule subst)
   apply (simp add: min.assoc)
   apply (rule iffI)  
-   apply (simp add: min_def word_less_nat_alt split: split_if) 
-  apply (simp add: min_def word_less_nat_alt not_le unat_of_nat32 split: split_if_asm) 
+   apply (simp add: min_def word_less_nat_alt split: if_split)
+  apply (simp add: min_def word_less_nat_alt not_le unat_of_nat32 split: if_split_asm)
   done
 
 end
@@ -2969,7 +2971,7 @@ lemma heap_update_field':
 
 lemma h_t_valid_clift_Some_iff':
   "td \<Turnstile>\<^sub>t p = (clift (hp, td) p = Some (h_val hp p))"
-  by (simp add: lift_t_if split: split_if)
+  by (simp add: lift_t_if split: if_split)
 
 lemma option_noneI: "\<lbrakk> \<And>x. a = Some x \<Longrightarrow> False \<rbrakk> \<Longrightarrow> a = None"
   apply (case_tac a)
@@ -3029,7 +3031,7 @@ lemma cmap_relation_retype2:
   apply (case_tac "x \<in> addrs")
    apply (simp add: image_image)
   apply (simp add: image_image)
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
    apply (erule contrapos_np)
    apply (erule image_eqI [rotated])
    apply simp
@@ -3301,7 +3303,7 @@ proof -
     apply (subst(asm) ptr_retyps_gen_out)
      apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def ctcb_offset_def intvl_def)
      apply (simp add: unat_arith_simps unat_of_nat cte_C_size tcb_C_size
-               split: split_if_asm)
+               split: if_split_asm)
     apply (subst(asm) empty[unfolded region_is_bytes'_def], simp_all)
     apply (erule subsetD[rotated], rule intvl_start_le)
     apply (simp add: cte_C_size)
@@ -3356,7 +3358,7 @@ proof -
       apply (simp only: take_replicate, simp add: cte_C_size)
      apply (simp add: cte_C_size)
     apply (simp add: fun_eq_iff
-              split: split_if)
+              split: if_split)
     apply (simp add: hrs_comm packed_heap_update_collapse
                      typ_heap_simps)
     apply (subst clift_heap_update_same_td_name, simp_all,
@@ -3477,7 +3479,7 @@ proof -
   have rl_tcb: "(projectKO_opt \<circ>\<^sub>m (ks(ctcb_ptr_to_tcb_ptr p \<mapsto> KOTCB makeObject)) :: word32 \<Rightarrow> tcb option)
     = (projectKO_opt \<circ>\<^sub>m ks)(ctcb_ptr_to_tcb_ptr p \<mapsto> makeObject)" 
     apply (rule ext)
-    apply (clarsimp simp: projectKOs map_comp_def split: split_if)
+    apply (clarsimp simp: projectKOs map_comp_def split: if_split)
     done
 
   have mko: "\<And>dev. makeObjectKO dev (Inr (APIObjectType ArchTypes_H.apiobject_type.TCBObject)) = Some kotcb"
@@ -3594,7 +3596,7 @@ proof -
     apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
       lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
       eval_nat_numeral seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
-      split: split_if)+
+      split: if_split)+
     done
   
   have pks: "ks (ctcb_ptr_to_tcb_ptr p) = None"
@@ -3857,7 +3859,7 @@ lemma cslift_empty_mem_update:
   apply (rule ext)
   apply (simp only: lift_t_if hrs_mem_update_def split_def x'_def)
   apply (simp add: lift_t_if hrs_mem_update_def split_def)
-  apply (clarsimp simp: h_val_def split: split_if)
+  apply (clarsimp simp: h_val_def split: if_split)
   apply (subst heap_list_update_disjoint_same)
    apply simp
    apply (rule disjointI)
@@ -3881,7 +3883,7 @@ lemma cslift_bytes_mem_update:
   apply (rule ext)
   apply (simp only: lift_t_if hrs_mem_update_def split_def x'_def)
   apply (simp add: lift_t_if hrs_mem_update_def split_def)
-  apply (clarsimp simp: h_val_def split: split_if)
+  apply (clarsimp simp: h_val_def split: if_split)
   apply (subst heap_list_update_disjoint_same)
    apply simp
    apply (rule disjointI)
@@ -3901,7 +3903,7 @@ lemma heap_update_list_replicate_eq:
   "(heap_update_list x (replicate n v) hp y)
     = (if y \<in> {x ..+ n} then v else hp y)"
   apply (induct n arbitrary: x hp, simp_all add: intvl_Suc_right)
-  apply (simp split: split_if)
+  apply (simp split: if_split)
   done
 
 lemma zero_ranges_are_zero_update_zero[simp]:
@@ -3975,7 +3977,7 @@ next
   
     show "?thesis m x"
       apply (simp add: xin word_rsplit_0 cong: if_cong)
-      apply (simp split: split_if)
+      apply (simp split: if_split)
       done
   qed
 
@@ -4522,7 +4524,7 @@ lemma copyGlobalMappings_ccorres:
                                   cmachine_state_relation_def
                                   typ_heap_simps map_comp_eq
                                   pd_pointer_to_asid_slot_def
-                          intro!: ext split: split_if)
+                          intro!: ext split: if_split)
             apply (simp add: field_simps)
             apply (drule arg_cong[where f="\<lambda>x. x && mask pdBits"],
                    simp add: mask_add_aligned)
@@ -4666,14 +4668,14 @@ lemma placeNewObject_eq:
   ((), (s\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr (injectKOS object)) (new_cap_addrs (2 ^ groupSizeBits) ptr (injectKOS object)) (ksPSpace s)\<rparr>))
                 \<in> fst (placeNewObject ptr object groupSizeBits s)"
   apply (clarsimp simp: placeNewObject_def placeNewObject'_def)
-  apply (clarsimp simp: split_def field_simps split del: split_if)
+  apply (clarsimp simp: split_def field_simps split del: if_split)
   apply (clarsimp simp: no_fail_def)
   apply (subst lookupAround2_pspace_no)
    apply assumption
   apply (subst (asm) lookupAround2_pspace_no)
    apply assumption
   apply (clarsimp simp add: in_monad' split_def bind_assoc field_simps
-    snd_bind ball_to_all unless_def  split: option.splits split_if_asm)
+    snd_bind ball_to_all unless_def  split: option.splits if_split_asm)
   apply (clarsimp simp: data_map_insert_def new_cap_addrs_def)
   apply (subst upto_enum_red2)
    apply (fold word_bits_def, assumption)
@@ -4693,34 +4695,18 @@ lemma rf_sr_htd_safe:
   "(s, s') \<in> rf_sr \<Longrightarrow> htd_safe domain (hrs_htd (t_hrs_' (globals s')))"
   by (simp add: rf_sr_def cstate_relation_def Let_def)
 
-definition
-  "region_actually_is_bytes ptr len s
-    = (\<forall>x \<in> {ptr ..+ len}. hrs_htd (t_hrs_' (globals s)) x
-        = (True, [0 \<mapsto> (typ_uinfo_t TYPE(8 word), True)]))"
-
-abbreviation
-  "region_actually_is_zero_bytes ptr len s
-    \<equiv> region_actually_is_bytes ptr len s
-        \<and> heap_list_is_zero (hrs_mem (t_hrs_' (globals s))) ptr len"
-
 lemma region_actually_is_bytes_dom_s:
-  "region_actually_is_bytes ptr len s
+  "region_actually_is_bytes' ptr len htd
     \<Longrightarrow> S \<subseteq> {ptr ..+ len}
-    \<Longrightarrow> S \<times> {SIndexVal, SIndexTyp 0} \<subseteq> dom_s (hrs_htd (t_hrs_' (globals s)))"
-  apply (clarsimp simp: region_actually_is_bytes_def dom_s_def)
+    \<Longrightarrow> S \<times> {SIndexVal, SIndexTyp 0} \<subseteq> dom_s htd"
+  apply (clarsimp simp: region_actually_is_bytes'_def dom_s_def)
   apply fastforce
   done
 
-lemma region_actually_is_bytes:
-  "region_actually_is_bytes ptr len s
-    \<Longrightarrow> region_is_bytes ptr len s"
-  by (simp add: region_is_bytes'_def region_actually_is_bytes_def
-         split: split_if)
-
 lemma typ_region_bytes_actually_is_bytes:
-  "hrs_htd (t_hrs_' (globals s)) = typ_region_bytes ptr bits htd
-    \<Longrightarrow> region_actually_is_bytes ptr (2 ^ bits) s"
-  by (clarsimp simp: region_actually_is_bytes_def typ_region_bytes_def)
+  "htd = typ_region_bytes ptr bits htd'
+    \<Longrightarrow> region_actually_is_bytes' ptr (2 ^ bits) htd"
+  by (clarsimp simp: region_actually_is_bytes'_def typ_region_bytes_def)
 
 (* FIXME: need a way to avoid overruling the parser on this, it's ugly *)
 lemma memzero_modifies:
@@ -4823,7 +4809,7 @@ lemma htd_update_list_dom_better [rule_format]:
 apply(induct_tac xs)
  apply simp
 apply clarsimp
-apply(auto split: split_if_asm)
+apply(auto split: if_split_asm)
  apply(erule notE)
  apply(clarsimp simp: dom_s_def)
 apply(case_tac y)
@@ -5769,7 +5755,7 @@ lemma cep_relations_drop_fun_upd:
       \<Longrightarrow> cnotification_relation (f (x \<mapsto> v')) = cnotification_relation f"
   by (intro ext cendpoint_relation_upd_tcb_no_queues[where thread=x]
                 cnotification_relation_upd_tcb_no_queues[where thread=x]
-          | simp split: split_if)+
+          | simp split: if_split)+
 
 lemma threadSet_domain_ccorres [corres]:
   "ccorres dc xfdc (tcb_at' thread) {s. thread' s = tcb_ptr_to_ctcb_ptr thread \<and> d' s = ucast d} hs 
@@ -5791,8 +5777,8 @@ lemma threadSet_domain_ccorres [corres]:
   apply (rule conjI)
    defer
    apply (erule cready_queues_relation_not_queue_ptrs)
-    apply (rule ext, simp split: split_if)
-   apply (rule ext, simp split: split_if)
+    apply (rule ext, simp split: if_split)
+   apply (rule ext, simp split: if_split)
   apply (drule ko_at_projectKO_opt)
   apply (erule (2) cmap_relation_upd_relI)
     subgoal by (simp add: ctcb_relation_def)
@@ -6228,7 +6214,7 @@ lemma pspace_no_overlap_induce_notification:
 lemma ctes_of_ko_at_strong:
   "\<lbrakk>ctes_of s p = Some a;is_aligned p 4\<rbrakk> \<Longrightarrow> 
   (\<exists>ptr ko. (ksPSpace s ptr = Some ko \<and> {p ..+ 16} \<subseteq> obj_range' ptr ko))"
-  apply (clarsimp simp: map_to_ctes_def Let_def split:split_if_asm)
+  apply (clarsimp simp: map_to_ctes_def Let_def split:if_split_asm)
   apply (intro exI conjI,assumption)
    apply (simp add:obj_range'_def objBits_simps is_aligned_no_wrap' field_simps)
    apply (subst intvl_range_conv[where bits = 4,simplified])
@@ -6248,7 +6234,7 @@ lemma ctes_of_ko_at_strong:
   apply (thin_tac "P \<or> Q" for P Q)
   apply (erule order_trans)
   apply (subst word_plus_and_or_coroll2[where x = p and w = "mask 9",symmetric])
-  apply (clarsimp simp:tcb_cte_cases_def field_simps split:split_if_asm)
+  apply (clarsimp simp:tcb_cte_cases_def field_simps split:if_split_asm)
       apply (subst add.commute)
        apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
          apply simp
@@ -6399,13 +6385,13 @@ lemma typ_region_bytes_dom:
    apply (clarsimp simp: h_t_valid_def valid_footprint_def Let_def
                          hrs_htd_update_def split_def typ_region_bytes_def)
    apply (drule spec, drule(1) mp)
-   apply (simp add: size_of_def split: split_if_asm)
+   apply (simp add: size_of_def split: if_split_asm)
    apply (drule subsetD[OF equalityD1], rule IntI, erule intvlI, simp)
    apply simp
   apply (clarsimp simp: set_eq_iff)
   apply (drule(1) h_t_valid_intvl_htd_contains_uinfo_t)
   apply (clarsimp simp: hrs_htd_update_def typ_region_bytes_def split_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   done
 
 lemma lift_t_typ_region_bytes_none:
@@ -6674,7 +6660,7 @@ lemma h_t_array_first_element_at:
    apply (erule order_less_le_trans, simp add: size_of_def)
   apply (clarsimp simp: uinfo_array_tag_n_m_def upt_conv_Cons)
   apply (erule map_le_trans[rotated])
-  apply (simp add: list_map_mono split: split_if)
+  apply (simp add: list_map_mono split: if_split)
   done
 
 lemma aligned_intvl_disjointI:
@@ -6736,7 +6722,7 @@ lemma gsCNodes_typ_region_bytes:
    apply (drule_tac x="cte_Ptr p" in fun_cong)
    apply (simp add: liftt_if[folded hrs_htd_def] hrs_htd_update
                     h_t_valid_def valid_footprint_typ_region_bytes
-             split: split_if_asm)
+             split: if_split_asm)
    apply (subgoal_tac "p \<in> {p ..+ size_of TYPE(cte_C)}")
     apply (simp add: cte_C_size)
     apply blast
@@ -7019,7 +7005,6 @@ lemma createObject_untypedRange:
 
 lemma createObject_capRange:
 shows "\<lbrace>P\<rbrace>createObject ty ptr us dev \<lbrace>\<lambda>m s. capRange m = {ptr.. ptr + 2 ^ (APIType_capBits ty us) - 1}\<rbrace>"
-  using assms
   apply (simp add:createObject_def)
   apply (case_tac "ty")
     apply (simp_all add:toAPIType_def ARM_H.toAPIType_def)
@@ -7527,7 +7512,7 @@ lemma createObject_cnodes_have_size:
   apply (cases newType, simp_all add: ARM_H.toAPIType_def)
   apply (clarsimp simp: APIType_capBits_def objBits_simps
                               cnodes_retype_have_size_def cte_level_bits_def
-                       split: split_if_asm)
+                       split: if_split_asm)
   done
 
 lemma range_cover_not_in_neqD:
@@ -7622,6 +7607,16 @@ lemma copyGlobalMappings_preserves_bytes:
     (simp_all add: h_t_valid_field)+)
   done
 
+lemma cleanByVA_PoU_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanByVA_PoU_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (rule allI, rule conseqPost,
+    rule cleanByVA_PoU_preserves_kernel_bytes[rule_format])
+   apply simp_all
+  apply (clarsimp simp: byte_regions_unmodified_def)
+  done
+
 lemma cleanCacheRange_PoU_preserves_bytes:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanCacheRange_PoU_'proc
       {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
@@ -7631,7 +7626,7 @@ lemma cleanCacheRange_PoU_preserves_bytes:
   apply (subst whileAnno_def[symmetric, where V=undefined
        and I="{t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
          \<and> byte_regions_unmodified' s t}" for s])
-  apply (rule conseqPre, vcg)
+  apply (rule conseqPre, vcg exspec=cleanByVA_PoU_preserves_bytes)
   apply (safe intro!: byte_regions_unmodified_hrs_mem_update
     elim!: byte_regions_unmodified_trans byte_regions_unmodified_trans[rotated],
     (simp_all add: h_t_valid_field)+)
@@ -7661,8 +7656,9 @@ lemma Arch_createObject_preserves_bytes:
   apply (safe intro!: ptr_retyp_d ptr_retyps_out)
   apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
     split: object_type.split_asm ArchTypes_H.apiobject_type.split_asm)
-  apply (rule byte_regions_unmodified_flip,
-    simp add: hrs_htd_update hrs_htd_update_canon)
+   apply (rule byte_regions_unmodified_flip, simp)
+  apply (rule byte_regions_unmodified_trans[rotated],
+    assumption, simp_all add: hrs_htd_update_canon hrs_htd_update)
   done
 
 lemma ptr_arr_retyps_eq_outside_dom:
@@ -7670,8 +7666,6 @@ lemma ptr_arr_retyps_eq_outside_dom:
     \<Longrightarrow> ptr_arr_retyps n p htd x = htd x"
   by (simp add: ptr_arr_retyps_def htd_update_list_same2)
 
-text {* NOTE: FIXME: need a way to show that
-  createObject will preserve a zero heap list. *}
 lemma createObject_preserves_bytes:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call createObject_'proc
       {t. \<forall>nt. t_' s = object_type_from_H nt
@@ -7758,12 +7752,12 @@ lemma offset_intvl_first_chunk_subsets_unat:
   apply (simp add: word_le_nat_alt word_less_nat_alt unat_of_nat)
   done
 
-lemma retype_offs_region_is_zero_bytes:
+lemma retype_offs_region_actually_is_zero_bytes:
   "\<lbrakk> ctes_of s p = Some cte; (s, s') \<in> rf_sr; untyped_ranges_zero' s;
       cteCap cte = UntypedCap False (ptr &&~~ mask sz) sz idx;
       idx \<le> unat (ptr && mask sz);
       range_cover ptr sz (getObjectSize newType userSize) num_ret \<rbrakk>
-    \<Longrightarrow> region_is_zero_bytes ptr
+    \<Longrightarrow> region_actually_is_zero_bytes ptr
             (num_ret * 2 ^ APIType_capBits newType userSize) s'"
   using word_unat_mask_lt[where w=ptr and m=sz]
   apply -
@@ -7772,7 +7766,7 @@ lemma retype_offs_region_is_zero_bytes:
    apply (simp add: untypedZeroRange_def max_free_index_def word_size)
   apply clarify
   apply (strengthen heap_list_is_zero_mono2[mk_strg I E]
-      region_is_bytes_subset[mk_strg I E])
+      region_actually_is_bytes_subset[mk_strg I E])
   apply (simp add: getFreeRef_def word_size)
   apply (rule intvl_both_le)
    apply (rule order_trans, rule word_plus_mono_right, erule word_of_nat_le)
@@ -7815,7 +7809,7 @@ lemma insertNewCap_ccorres:
           and valid_objs' and valid_cap' cap)
      ({s. cap_get_tag (cap_' s) = scast cap_untyped_cap
          \<longrightarrow> (case untypedZeroRange (cap_to_H (the (cap_lift (cap_' s)))) of None \<Rightarrow> True
-          | Some (a, b) \<Rightarrow> region_is_zero_bytes a (unat ((b + 1) - a)) s)}
+          | Some (a, b) \<Rightarrow> region_actually_is_zero_bytes a (unat ((b + 1) - a)) s)}
        \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. parent_' s = Ptr parent}
        \<inter> {s. slot_' s = Ptr slot}) []
      (insertNewCap parent slot cap) 
@@ -7826,25 +7820,26 @@ lemma insertNewCap_ccorres:
   apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
   apply (simp add: untypedZeroRange_def Let_def)
   done
-
+find_theorems untypedZeroRange
+term zero_ranges_are_zero
 lemma createObject_untyped_region_is_zero_bytes:
   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s. let tp = (object_type_to_H (t_' s));
           sz = APIType_capBits tp (unat (userSize_' s))
       in (\<not> to_bool (deviceMemory_' s)
-              \<longrightarrow> region_is_zero_bytes (ptr_val (regionBase_' s)) (2 ^ sz) s)
+              \<longrightarrow> region_actually_is_zero_bytes (ptr_val (regionBase_' s)) (2 ^ sz) s)
           \<and> is_aligned (ptr_val (regionBase_' s)) sz
           \<and> sz < 32 \<and> (tp = APIObjectType ArchTypes_H.apiobject_type.Untyped \<longrightarrow> sz \<ge> 4)}
       Call createObject_'proc
    {t. cap_get_tag (ret__struct_cap_C_' t) = scast cap_untyped_cap
          \<longrightarrow> (case untypedZeroRange (cap_to_H (the (cap_lift (ret__struct_cap_C_' t)))) of None \<Rightarrow> True
-          | Some (a, b) \<Rightarrow> region_is_zero_bytes a (unat ((b + 1) - a)) t)}"
+          | Some (a, b) \<Rightarrow> region_actually_is_zero_bytes a (unat ((b + 1) - a)) t)}"
   apply (rule allI, rule conseqPre, vcg exspec=copyGlobalMappings_modifies
       exspec=Arch_initContext_modifies
       exspec=cleanCacheRange_PoU_modifies)
   apply (clarsimp simp: cap_tag_defs)
   apply (simp add: cap_lift_untyped_cap cap_tag_defs cap_to_H_simps
                    cap_untyped_cap_lift_def object_type_from_H_def)
-  apply (simp add: untypedZeroRange_def split: split_if)
+  apply (simp add: untypedZeroRange_def split: if_split)
   apply (clarsimp simp: getFreeRef_def Let_def object_type_to_H_def)
   apply (simp add: is_aligned_neg_mask_eq[OF is_aligned_weaken])
   apply (simp add:  APIType_capBits_def
@@ -7885,7 +7880,7 @@ shows  "ccorres dc xfdc
                                            isFrameType newType)
                     \<and> (unat num = length destSlots)
                     )))
-    ({s. (\<not> isdev \<longrightarrow> region_is_zero_bytes ptr
+    ({s. (\<not> isdev \<longrightarrow> region_actually_is_zero_bytes ptr
             (length destSlots * 2 ^ APIType_capBits newType userSize) s)}
            \<inter> {s. t_' s = object_type_from_H newType}
            \<inter> {s. parent_' s = cte_Ptr srcSlot}
@@ -7925,7 +7920,7 @@ shows  "ccorres dc xfdc
      apply simp
      apply (clarsimp simp: whileAnno_def)
      apply (rule ccorres_rel_imp)
-      apply (rule_tac Q="{s. \<not> isdev \<longrightarrow> region_is_zero_bytes
+      apply (rule_tac Q="{s. \<not> isdev \<longrightarrow> region_actually_is_zero_bytes
             (ptr + (i_' s << APIType_capBits newType userSize))
             (unat (num - i_' s) * 2 ^ APIType_capBits newType userSize) s}"
             in ccorres_zipWithM_x_while_genQ[where j=1, OF _ _ _ _ _ i_xf_for_sequence, simplified])
@@ -8007,7 +8002,7 @@ shows  "ccorres dc xfdc
                   apply (drule_tac p = n in range_cover_no_0)
                     apply (simp add:shiftl_t2n field_simps)+
                  apply (cut_tac x=num in unat_lt2p, simp)
-                 apply (simp add: unat_arith_simps unat_of_nat, simp split: split_if)
+                 apply (simp add: unat_arith_simps unat_of_nat, simp split: if_split)
                  apply (intro impI, erule order_trans[rotated], simp)
                 apply (erule pspace_no_overlap'_le)
                  apply (fold_subgoals (prefix))[2]
@@ -8051,21 +8046,17 @@ shows  "ccorres dc xfdc
               apply (simp add: unat_eq_def)
              apply (drule range_cover_sz')
              apply (simp add: unat_eq_def word_less_nat_alt)
-            apply clarsimp
-            apply (erule heap_list_is_zero_mono)
-            apply (subgoal_tac "unat (num - of_nat n) \<noteq> 0")
-             apply simp
-            apply (simp only: unat_eq_0, clarsimp simp: unat_of_nat)
-           apply (simp add: hrs_htd_update typ_region_bytes_actually_is_bytes)
+            apply (simp add: hrs_htd_update typ_region_bytes_actually_is_bytes)
+           apply clarsimp
+           apply (erule heap_list_is_zero_mono)
+           apply (subgoal_tac "unat (num - of_nat n) \<noteq> 0")
+            apply simp
+           apply (simp only: unat_eq_0, clarsimp simp: unat_of_nat)
           apply (frule range_cover_sz')
           apply (clarsimp simp: Let_def hrs_htd_update
                                 APIType_capBits_def[where ty="APIObjectType ArchTypes_H.apiobject_type.Untyped"])
           apply (subst is_aligned_add, erule range_cover.aligned)
            apply (simp add: is_aligned_shiftl)+
-          apply clarsimp
-          apply (rule region_is_bytes_typ_region_bytes)
-          apply simp
-         apply clarsimp
          apply (subst range_cover.unat_of_nat_n)
           apply (erule range_cover_le)
           subgoal by simp
@@ -8083,7 +8074,7 @@ shows  "ccorres dc xfdc
         apply clarsimp
         apply (rule context_conjI)
          apply (simp add: hrs_htd_update)
-         apply (simp add: region_is_bytes'_def, rule ballI)
+         apply (simp add: region_actually_is_bytes'_def, rule ballI)
          apply (drule bspec, erule(1) subsetD)
          apply (drule(1) orthD2)
          apply (simp add: Ball_def unat_eq_def typ_bytes_region_out)

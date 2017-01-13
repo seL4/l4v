@@ -110,7 +110,7 @@ fun with_rule_prems enabled parse =
 fun get_rule_prems ctxt = 
   let
     val (thms,b) = Data.get ctxt
-  in if (not b) then raise THM ("Rule premises not accessible here.",0,[]) else thms end 
+  in if (not b) then [] else thms end
 
 
 fun zip_subgoal assume tac (ctxt,st : thm) = if Thm.nprems_of st = 0 then Seq.single (ctxt,st) else
@@ -208,17 +208,17 @@ fun position (scan : 'a context_parser) : (('a * Position.T) context_parser) = (
   let
     val (((context',x),tr_toks),toks') = Scan.trace (Scan.pass context (Scan.state -- scan)) toks;
     val pos = Token.range_of tr_toks;
-  in ((x,Position.set_range pos),(context',toks')) end)
+  in ((x,Position.range_position pos),(context',toks')) end)
 
 val parse_flags = Args.mode "schematic" -- Args.mode "raw_prop" >> (fn (b,b') => {vars = b, prop = b'})
 
 (*TODO: Method_Closure.parse_method should do this already *)
 
-val parse_method = Method_Closure.method_text o apfst (Config.put_generic Method.old_section_parser true)
+val parse_method = Method.text_closure o apfst (Config.put_generic Method.old_section_parser true)
 
 fun tac m ctxt =
   Method.NO_CONTEXT_TACTIC ctxt
-    (Method_Closure.method_evaluate m ctxt []);
+    (Method.evaluate_runtime m ctxt []);
 
 val (rule_prems_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags => 
   position (Scan.repeat1 

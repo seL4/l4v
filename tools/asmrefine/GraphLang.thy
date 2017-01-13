@@ -453,7 +453,7 @@ lemma trace_end_NoneD:
     \<Longrightarrow> tr = (\<lambda>_. None) \<or> (\<exists>f. tr = Some o f)"
   apply (subst disj_commute, rule disjCI)
   apply (clarsimp simp: fun_eq_iff)
-  apply (simp add: trace_end_def split: split_if_asm)
+  apply (simp add: trace_end_def split: if_split_asm)
    apply (metis nat_trace_Max_dom_None not_None_eq)
   apply (rule_tac x="the o tr" in exI, simp)
   done
@@ -461,7 +461,7 @@ lemma trace_end_NoneD:
 lemma trace_end_SomeD:
   "trace_end tr = Some v \<Longrightarrow> tr \<in> nat_trace_rel cont r
     \<Longrightarrow> \<exists>n. tr n = Some v \<and> tr (Suc n) = None \<and> \<not> cont v"
-  apply (clarsimp simp: trace_end_def split: split_if_asm)
+  apply (clarsimp simp: trace_end_def split: if_split_asm)
   apply (rule exI, rule conjI, assumption)
   apply (case_tac "tr (Suc (Max (dom tr)))")
    apply (simp add: nat_trace_rel_def)
@@ -550,7 +550,7 @@ val opers = Symtab.make [
       ("Plus", @{const_name "plus"}),
       ("Minus", @{const_name "minus"}),
       ("Times", @{const_name "times"}),
-      ("Modulus", @{const_name "div_class.mod"}),
+      ("Modulus", @{const_name "modulo_class.modulo"}),
       ("DividedBy", @{const_name "divide_class.divide"}),
       ("BWAnd", @{const_name "bitAND"}),
       ("BWOr", @{const_name "bitOR"}),
@@ -735,6 +735,7 @@ fun parse_fun (["Function" :: ss]) = let
 
 fun fun_groups gp ((fs as ("Function" :: _)) :: sss) =
     (if null gp then [] else [rev gp]) @ fun_groups [fs] sss
+  | fun_groups gp ([] :: sss) = fun_groups gp sss
   | fun_groups gp (ss :: sss) = fun_groups (ss :: gp) sss
   | fun_groups gp [] = [rev gp]
 

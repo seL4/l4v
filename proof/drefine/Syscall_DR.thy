@@ -328,7 +328,7 @@ lemma decode_invocation_irqhandlercap_corres:
   apply (clarsimp simp: throw_opt_def get_irq_handler_intent_def split: option.splits)
   apply (rule conjI)
    apply (auto simp: decode_irq_handler_invocation_def transform_intent_def
-          split del: split_if 
+          split del: if_split
               split: invocation_label.splits cdl_intent.splits list.splits)[1]
   apply clarsimp
   apply (simp split: cdl_intent.splits)
@@ -343,7 +343,7 @@ lemma decode_invocation_irqhandlercap_corres:
 
 lemma transform_type_eq_None:
   "(transform_type a = None) \<Longrightarrow> (data_to_obj_type a = throwError (ExceptionTypes_A.syscall_error.InvalidArgument 0))"
-  apply (clarsimp simp:data_to_obj_type_def transform_type_def split:split_if_asm)
+  apply (clarsimp simp:data_to_obj_type_def transform_type_def split:if_split_asm)
   apply (simp add:unat_arith_simps)
   apply (clarsimp simp:arch_data_to_obj_type_def)
   apply (rule conjI,arith,clarsimp)+
@@ -358,15 +358,15 @@ lemma transform_intent_untyped_cap_None:
       (* 43 subgoals *)
       apply (clarsimp simp:Decode_A.decode_untyped_invocation_def unlessE_def)
       apply wp
-     apply (clarsimp simp:transform_intent_def Decode_A.decode_untyped_invocation_def unlessE_def split del:split_if)
-     apply (clarsimp simp:transform_intent_untyped_retype_def split del:split_if)
+     apply (clarsimp simp:transform_intent_def Decode_A.decode_untyped_invocation_def unlessE_def split del:if_split)
+     apply (clarsimp simp:transform_intent_untyped_retype_def split del:if_split)
      apply (case_tac "args")
       apply (clarsimp,wp)[1]
-     apply (clarsimp split:list.split_asm split del:split_if)
+     apply (clarsimp split:list.split_asm split del:if_split)
           apply wp[5]
-     apply (clarsimp simp: transform_type_eq_None split del:split_if split:option.splits)
+     apply (clarsimp simp: transform_type_eq_None split del:if_split split:option.splits)
      apply (wp|clarsimp simp:whenE_def|rule conjI)+
-    apply (clarsimp simp: Decode_A.decode_untyped_invocation_def unlessE_def split del:split_if,wp)+
+    apply (clarsimp simp: Decode_A.decode_untyped_invocation_def unlessE_def split del:if_split,wp)+
   done
 
 lemma transform_intent_cnode_cap_None:
@@ -522,7 +522,7 @@ lemma decode_invocation_error_branch:
   "\<lbrakk>transform_intent (invocation_type label) args = None; \<not> ep_related_cap (transform_cap cap)\<rbrakk>
     \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>x. op = s\<rbrace>"
   apply (case_tac cap)
-    apply (simp_all add:ep_related_cap_def transform_cap_def split:split_if_asm)
+    apply (simp_all add:ep_related_cap_def transform_cap_def split:if_split_asm)
     apply (clarsimp simp:Decode_A.decode_invocation_def,wp)
       apply (rule transform_intent_untyped_cap_None,fastforce+)
       apply (clarsimp simp:Decode_A.decode_invocation_def,wp)
@@ -544,7 +544,7 @@ lemma decode_invocation_ep_related_branch:
       apply (clarsimp simp:Decode_D.decode_invocation_def Decode_A.decode_invocation_def | rule conjI)+
       apply (rule corres_guard_imp[OF dcorres_returnOk],simp add:cdl_invocation_relation_def translate_invocation_def)
        apply simp+
-     apply (clarsimp simp:Decode_D.decode_invocation_def Decode_A.decode_invocation_def split:split_if_asm | rule conjI)+
+     apply (clarsimp simp:Decode_D.decode_invocation_def Decode_A.decode_invocation_def split:if_split_asm | rule conjI)+
     apply (rule corres_guard_imp[OF dcorres_returnOk])
       apply (simp add:cdl_invocation_relation_def translate_invocation_def)+
    apply (clarsimp simp:Decode_D.decode_invocation_def Decode_A.decode_invocation_def is_master_reply_cap_def | rule conjI)+
@@ -1036,7 +1036,7 @@ lemma decode_invocation_corres':
          od)
      rv')"
   apply (rule dcorres_expand_pfx)
-  apply (clarsimp split del:split_if)
+  apply (clarsimp split del:if_split)
   apply (rule_tac Q' ="\<lambda>r ns. ns = s
      \<and> r =  get_tcb_mrs (machine_state s) ctcb"
      in corres_symb_exec_r)
@@ -1278,7 +1278,7 @@ lemma invoke_cnode_valid_etcbs[wp]:
   "\<lbrace>valid_etcbs\<rbrace> invoke_cnode ci \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-   apply (wp crunch_wps hoare_vcg_all_lift | wpc | simp add: split del: split_if)+
+   apply (wp crunch_wps hoare_vcg_all_lift | wpc | simp add: split del: if_split)+
   done
 
 crunch valid_etcbs[wp]: perform_invocation valid_etcbs
@@ -1458,10 +1458,10 @@ lemma handle_recv_corres:
                  \<and> (st_tcb_at active (cur_thread s') s \<and> invs s \<and> valid_etcbs s) \<and> ko_at (TCB obj') (cur_thread s') s " and R= "\<lambda>r. \<top>"
                        in corres_splitEE[where r'="\<lambda>x y. x = transform_cap y"])
               apply (rule dcorres_expand_pfx)
-              apply (clarsimp split:cap.splits arch_cap.splits split del: split_if simp:transform_cap_def)
+              apply (clarsimp split:cap.splits arch_cap.splits split del: if_split simp:transform_cap_def)
                 apply (rename_tac word1 word2 set)
                 apply (rule corres_guard_imp)
-                  apply (case_tac "AllowRead \<in> set"; simp split del: split_if)
+                  apply (case_tac "AllowRead \<in> set"; simp split del: if_split)
                   apply (rule corres_alternate1)
                   apply clarsimp
                   apply (rule corres_split[where r'=dc])

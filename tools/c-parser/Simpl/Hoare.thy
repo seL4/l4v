@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-section {* Auxiliary Definitions/Lemmas to Facilitate Hoare Logic *}
+section \<open>Auxiliary Definitions/Lemmas to Facilitate Hoare Logic\<close>
 theory Hoare imports HoarePartial HoareTotal begin
 
 
@@ -322,9 +322,9 @@ lemma in_mlex_iff:
 lemma in_inv_image_iff: "(x,y) \<in> inv_image r f = ((f x, f y) \<in> r)" 
   by (simp add: inv_image_def)
 
-text {* This is actually the same as @{thm [source] wf_mlex}. However, this basic
+text \<open>This is actually the same as @{thm [source] wf_mlex}. However, this basic
 proof took me so long that I'm not willing to delete it.
-*}
+\<close>
 lemma wf_measure_lex_prod [simp,intro]:
   assumes wf_r: "wf r"
   shows "wf (f <*mlex*> r)"

@@ -200,6 +200,8 @@ end
 
 exception NO_GETTER_SETTER (* Not visible externally *)
 
+fun mixfix (sy, ps, p) = Mixfix (Input.string sy, ps, p, Position.no_range)
+
 (* Define getter/setter and syntax for one struct field.
    Returns the getter/setter and their definitions. *)
 fun field_syntax (heap_info : HeapLiftBase.heap_info)
@@ -247,8 +249,8 @@ let
     val field_setter = @{mk_term "?update s ptr new" (update)} new_heap_update
     val field_setter_typ = type_of (fold lambda (rev [Free state_var, Free ptr_var, Free val_var]) field_setter)
 
-    val getter_mixfix = Mixfix ("_[_]\<rightarrow>" ^ (Syntax_Ext.escape field_pname), [1000], 1000)
-    val setter_mixfix = Mixfix ("_[_\<rightarrow>" ^ (Syntax_Ext.escape field_pname) ^ " := _]", [1000], 1000)
+    val getter_mixfix = mixfix ("_[_]\<rightarrow>" ^ (Syntax_Ext.escape field_pname), [1000], 1000)
+    val setter_mixfix = mixfix ("_[_\<rightarrow>" ^ (Syntax_Ext.escape field_pname) ^ " := _]", [1000], 1000)
 
     val lthy = Specification.notation true Syntax.mode_default [
                  (new_heap_get, getter_mixfix),
@@ -294,8 +296,8 @@ let
       Utils.define_const_args new_heap_update_name false setter_def
                               [state_var, ptr_var, val_var] lthy
 
-    val getter_mixfix = Mixfix ("_[_]", [1000], 1000)
-    val setter_mixfix = Mixfix ("_[_ := _]", [1000], 1000)
+    val getter_mixfix = mixfix ("_[_]", [1000], 1000)
+    val setter_mixfix = mixfix ("_[_ := _]", [1000], 1000)
 
     val lthy = Specification.notation true Syntax.mode_default
                [(Const getter, getter_mixfix), (new_heap_update, setter_mixfix)] lthy

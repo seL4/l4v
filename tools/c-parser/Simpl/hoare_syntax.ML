@@ -115,18 +115,6 @@ fun mk_list [] = Syntax.const @{const_syntax Nil}
 fun unsuffix' sfx a = unsuffix sfx a handle Fail _ => raise Match;
 fun unsuffixI sfx a = unsuffix sfx a handle Fail _ => a;
 
-fun mk_nib n = "Nibble" ^ chr (n + (if n <= 9 then ord "0" else ord "A" - 10));
-
-fun mk_char c =
-  if Char.isAscii c andalso Char.isPrint c then
-    Syntax.const @{const_syntax Char} $
-      Syntax.const (mk_nib (Char.ord c div 16)) $
-      Syntax.const (mk_nib (Char.ord c mod 16))
-  else raise TERM ("call_tr: printable procedure name expected: " ^ str c, []);
-
-fun mk_string [] = Syntax.const @{const_syntax Nil}
-  | mk_string (c::cs) = Syntax.const @{const_syntax Cons} $ mk_char c $ mk_string cs;
-
 fun is_prefix_or_suffix s t =
   can (unprefix s) t orelse can (unsuffix s) t;
 
@@ -328,7 +316,7 @@ fun antiquote_applied_only_to P =
                else test i t andalso test i u
            | u => test i t andalso test i u)
        | test i (Abs (x, T, t)) = test (i + 1) t
-       | test i a = true;
+       | test i _ = true;
   in test 0 end;
 
 
@@ -341,12 +329,12 @@ fun antiquote_mult_tr' ctxt is_selector current old  =
                   else if is_selector t (* other quantified states *)
                   then Syntax.const old $ Bound j $ tr' i (Hoare.undeco ctxt t)
                   else  tr' i t $ tr' i u
-              | pre as ((Const (m,_) $ (s as Free _))) (* pre state *) =>
+              | pre as ((Const (m,_) $ Free _)) (* pre state *) =>
                   if (m = @{syntax_const "_bound"} orelse m = @{syntax_const "_free"})
                     andalso is_selector t
                   then Syntax.const old $ pre $ tr' i (Hoare.undeco ctxt t)
                   else tr' i t $ pre
-              | pre as ((Const (m,_) $ (s as Var _))) (* pre state *) =>
+              | pre as ((Const (m,_) $ Var _)) (* pre state *) =>
                   if m = @{syntax_const "_var"} andalso is_selector t
                   then Syntax.const old $ pre $ tr' i (Hoare.undeco ctxt t)
                   else tr' i t $ pre
@@ -463,9 +451,9 @@ fun update_tr ctxt ps off_var off_val e
   | update_tr _ _ _ _ e t = raise TERM ("update_tr", [t])
 
 
-fun app_assign_tr f ctxt (ts as [v, e]) =
+fun app_assign_tr f ctxt [v, e] =
       let
-        fun offset v = 0;
+        fun offset _ = 0;
       in f $ Abs ("s", dummyT, update_tr ctxt [] offset offset (antiquoteCur_tr ctxt e) v (Bound 0))
       end
   | app_assign_tr _ _ ts = raise TERM ("assign_tr", ts);
@@ -735,7 +723,7 @@ fun guard ctxt Ts (add as (Const (@{const_name Groups.plus},_) $ l $ r)) =
       guard ctxt Ts l & mk_imp (HOLogic.Not $ l,guard ctxt Ts r)
   | guard ctxt Ts (dv as (Const (@{const_name Rings.divide},_) $ l $ r)) =
       guard ctxt Ts l & guard ctxt Ts r & SOME (not_zero r) & SOME (in_range dv) (* FIXME: Make more concrete guard...*)
-  | guard ctxt Ts (Const (@{const_name Divides.div_class.mod},_) $ l $ r) =
+  | guard ctxt Ts (Const (@{const_name Rings.modulo},_) $ l $ r) =
       guard ctxt Ts l & guard ctxt Ts r & SOME (not_zero r)
   | guard ctxt Ts (un as (Const (@{const_name Groups.uminus},_) $ n)) =
       guard ctxt Ts n & SOME (in_range un)
@@ -960,7 +948,7 @@ fun mk_call_tr ctxt grd Call formals pn pt actuals has_args cont =
 
 (* FIXME: What is prfx for, maybe unused *)
 fun dest_procname ctxt prfx false (Const (p, _)) =
-      (prfx ^ suffix Hoare.proc_deco p, mk_string (String.explode p))
+      (prfx ^ suffix Hoare.proc_deco p, HOLogic.mk_string p)
   | dest_procname ctxt prfx false (t as Free (p, T)) =
       (prfx ^ suffix Hoare.proc_deco p, Free (suffix Hoare.proc_deco p, T))
   | dest_procname ctxt prfx false (Const (@{syntax_const "_free"},_) $ Free (p,T)) =

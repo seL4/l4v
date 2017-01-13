@@ -43,12 +43,9 @@ lemma gcd_wp [wp]:
      and M="\<lambda>((a', b'), s). a'"])
 
   (* Solve using weakest-precondition. *)
-  apply wp
-    apply clarsimp
-    apply (metis gcd_commute_nat gcd_red_nat)
-   apply clarsimp
-  apply clarsimp
-  done
+  apply (wp; clarsimp)
+   apply (metis gcd.commute gcd_red_nat)
+  using gt_or_eq_0 by fastforce
 
 lemma monad_to_gets:
     "\<lbrakk> \<And>P. \<lbrace> P \<rbrace> f \<lbrace> \<lambda>r s. P s \<and> r = v s \<rbrace>!; empty_fail f \<rbrakk> \<Longrightarrow> f = gets v"

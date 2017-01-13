@@ -32,11 +32,11 @@ imports Vcg
 begin
 
 
-text {* We introduce a syntactic variant of the let-expression so that we can
+text \<open>We introduce a syntactic variant of the let-expression so that we can
 safely unfold it during verification condition generation. With the new
-theorem attribute @{text "vcg_simp"} we can declare equalities to be used
+theorem attribute \<open>vcg_simp\<close> we can declare equalities to be used
 by the verification condition generator, while simplifying assertions.
-*}
+\<close>
 
 syntax
 "_Let'" :: "[letbinds, basicblock] => basicblock"  ("(LET (_)/ IN (_))" 23)

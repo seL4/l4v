@@ -635,10 +635,15 @@ lemma remove_free_ids_is_device[simp]:
 
 lemma list_all_conj:
   "(list_all P xs \<and> list_all Q xs) = list_all (P and Q) xs"
-  by (auto simp: pred_list_def)
+  by (induct xs) auto
 
 lemmas list_all_conjI = list_all_conj[THEN iffD1,unfolded pred_conj_def,OF conjI]
 
+lemma subset_diff_weaken: "A \<subseteq> B - C \<Longrightarrow> A \<subseteq> B"
+  by blast
+
+lemma disjoint_diff: "(A = A - B) = (A \<inter> B = {})"
+  by blast
 
 lemma retype_untyped_loop_inv_success:
  "\<lbrakk>well_formed spec;
@@ -817,9 +822,7 @@ lemma retype_untyped_loop_inv_success:
   apply (clarsimp simp: Ball_set_list_all[symmetric])
   apply (erule_tac x=x in allE)
   apply (case_tac "x=untyped_index", simp_all)
-  apply clarsimp
-  apply (drule is_full_untyped_cap_simps)
-  apply blast
+  apply (clarsimp simp: is_full_untyped_cap_simps disjoint_diff)
   done
 
 lemma retype_untyped_bij_fail:
@@ -1337,8 +1340,7 @@ lemma retype_untypeds_wp_helper:
    apply (rename_tac s untyped_caps all_available_ids t obj_id_index untyped_index)
    apply (drule bij_betw_map_imp_inj_on)
    apply (subgoal_tac "obj_id_index = length [obj\<leftarrow>obj_ids. real_object_at obj spec]")
-    apply clarsimp
-    apply blast
+    apply (clarsimp; drule subset_diff_weaken; blast)
    apply linarith
   apply clarsimp
   apply (rule_tac x=untyped_caps in exI)

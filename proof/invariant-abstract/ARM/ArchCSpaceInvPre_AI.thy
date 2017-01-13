@@ -213,12 +213,12 @@ lemma set_cap_unique_table_refs:
   apply wp
   apply clarsimp
   apply (simp add: unique_table_refs_def
-              split del: split_if del: split_paired_All)
+              split del: if_split del: split_paired_All)
   apply (erule allEI, erule allEI)
-  apply (clarsimp split del: split_if)
+  apply (clarsimp split del: if_split)
   apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                         cte_wp_at_caps_of_state
-                 split: split_if_asm)
+                 split: if_split_asm)
   done
 
 lemma set_cap_valid_arch_caps:
@@ -272,7 +272,7 @@ lemma set_cap_cap_refs_in_kernel_window[wp]:
                    pred_conj_def)
   apply (rule hoare_lift_Pf2[where f=arch_state])
    apply wp
-   apply (fastforce elim!: ranE split: split_if_asm)
+   apply (fastforce elim!: ranE split: if_split_asm)
   apply wp
   done
 

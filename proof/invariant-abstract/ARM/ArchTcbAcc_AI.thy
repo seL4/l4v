@@ -90,7 +90,7 @@ proof -
     apply (fastforce simp: valid_machine_state_def in_user_frame_def
                assert_def simpler_modify_def fail_def bind_def return_def
                pageBits_def aligned_offset_ignore
-             split: split_if_asm)
+             split: if_split_asm)
     done
 qed
 

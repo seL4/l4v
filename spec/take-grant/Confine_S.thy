@@ -313,7 +313,7 @@ lemma not_in [simp]:
 lemma extra_rights_diminish:
   "x \<in> rights (extra_rights (diminish r c))
    \<Longrightarrow> x \<in> rights (extra_rights c)"
-  by (auto simp: rights_extra_rights all_rights_def split:split_if_asm)
+  by (auto simp: rights_extra_rights all_rights_def split:if_split_asm)
 
 (* Lemmas on system operations *)
 
@@ -334,7 +334,7 @@ lemma direct_caps_of_generalOp2:
   "\<lbrakk>c' \<in> direct_caps_of (generalOperation e\<^sub>0 e\<^sub>1 c r s) x\<rbrakk> \<Longrightarrow>
    c' \<in> direct_caps_of s x \<or> (c' \<in>cap {c} \<and> x = e\<^sub>1)"
   apply (clarsimp simp: direct_caps_of_generalOp extra_rights_diminish
-           split:split_if_asm)
+           split:if_split_asm)
   apply (drule extra_rights_diminish)
   by simp
 
@@ -343,7 +343,7 @@ lemma store_connected_direct_generalOp:
    (x, y) \<in> store_connected_direct s \<or>
    (x = e\<^sub>1 \<and> y = target c \<and> Store \<in> rights (extra_rights c))"
   by (auto simp: store_connected_direct_def direct_caps_of_generalOp all_rights_def
-          split: split_if_asm)
+          split: if_split_asm)
 
 lemma store_connected_generalOp:
   "\<lbrakk>(x, y) \<in> store_connected (generalOperation e\<^sub>0 e\<^sub>1 c r s)\<rbrakk> \<Longrightarrow>
@@ -375,7 +375,7 @@ lemma store_connected_generalOp_not_new:
    (e\<^sub>0, target c) \<in> store_connected s \<or>
    Create \<in> rights c"
   apply (drule store_connected_direct_generalOp)
-  apply (clarsimp simp: rights_extra_rights split:split_if_asm)
+  apply (clarsimp simp: rights_extra_rights split:if_split_asm)
    apply (drule (1) store_caps_store_connected, simp)
   done
 
@@ -601,7 +601,7 @@ lemma copy_directly_tgs_connected:
 lemma create_conTrans:
   "\<lbrakk>s' \<in> step cmd s; (x, y) \<in> directly_tgs_connected s'; cmd = (SysCreate e c\<^sub>1 c\<^sub>2)\<rbrakk>
   \<Longrightarrow> (x, y) \<in> tgs_connected s"
-  apply(clarsimp simp: step_def split: split_if_asm)
+  apply(clarsimp simp: step_def split: if_split_asm)
    apply (erule disjE, fastforce simp: tgs_connected_def, clarsimp)
    apply (drule create_directly_tgs_connected, clarsimp, assumption)
   apply (simp add: tgs_connected_def)
@@ -610,7 +610,7 @@ lemma create_conTrans:
 lemma take_conTrans:
   "\<lbrakk>s' \<in> step cmd s; (x, y) \<in> directly_tgs_connected s'; cmd = (SysTake e c\<^sub>1 c\<^sub>2 r)\<rbrakk>
   \<Longrightarrow> (x, y) \<in> tgs_connected s"
-  apply(clarsimp simp: step_def split: split_if_asm)
+  apply(clarsimp simp: step_def split: if_split_asm)
    apply (erule disjE, fastforce simp: tgs_connected_def, clarsimp)
    apply (drule take_directly_tgs_connected, clarsimp, assumption)
   apply (simp add: tgs_connected_def)
@@ -619,7 +619,7 @@ lemma take_conTrans:
 lemma grant_conTrans:
   "\<lbrakk>s' \<in> step cmd s; (x, y) \<in> directly_tgs_connected s'; cmd = (SysGrant e c\<^sub>1 c\<^sub>2 r)\<rbrakk>
   \<Longrightarrow> (x, y) \<in> tgs_connected s"
-  apply(clarsimp simp: step_def split: split_if_asm)
+  apply(clarsimp simp: step_def split: if_split_asm)
    apply (erule disjE, fastforce simp: tgs_connected_def, clarsimp)
    apply (drule grant_directly_tgs_connected, clarsimp, assumption)
   apply (simp add: tgs_connected_def)
@@ -628,7 +628,7 @@ lemma grant_conTrans:
 lemma copy_conTrans:
   "\<lbrakk>s' \<in> step cmd s; (x, y) \<in> directly_tgs_connected s'; cmd = (SysCopy e c\<^sub>1 c\<^sub>2 r)\<rbrakk>
   \<Longrightarrow> (x, y) \<in> tgs_connected s"
-  apply(clarsimp simp: step_def split: split_if_asm)
+  apply(clarsimp simp: step_def split: if_split_asm)
    apply (erule disjE, fastforce simp: tgs_connected_def, clarsimp)
    apply (drule copy_directly_tgs_connected, clarsimp, assumption)
   apply (simp add: tgs_connected_def)
@@ -638,7 +638,7 @@ lemma copy_conTrans:
 
 lemma direct_caps_of_destroy:
   "c \<in> direct_caps_of (s(e := None)) x \<Longrightarrow> c \<in> direct_caps_of s x"
-  by (simp add: direct_caps_of_def split: option.splits split: split_if_asm)
+  by (simp add: direct_caps_of_def split: option.splits split: if_split_asm)
 
 lemma store_connected_destroy:
  "(x, y) \<in> store_connected (s(e := None)) \<Longrightarrow> (x, y) \<in> store_connected s"
@@ -673,7 +673,7 @@ lemma caps_of_destroy:
 lemma destroy_directly_tgs_connected:
   "\<lbrakk>s' \<in> step (SysDestroy e c) s; (x, y) \<in> directly_tgs_connected s'\<rbrakk> \<Longrightarrow>
   (x, y) \<in> directly_tgs_connected s"
-  apply(clarsimp simp: step_def split: split_if_asm)
+  apply(clarsimp simp: step_def split: if_split_asm)
   apply(erule disjE, simp)
   apply(simp add: directly_tgs_connected_def leak_def)
   apply (erule disjE)
@@ -701,7 +701,7 @@ lemma direct_caps_of_remove:
   "c \<in> direct_caps_of (removeOperation e c\<^sub>1 c\<^sub>2 s) x \<Longrightarrow>
   c \<in> direct_caps_of s x"
   by (clarsimp simp: removeOperation_simpler direct_caps_of_def
-              split: option.splits split_if_asm)
+              split: option.splits if_split_asm)
 
 lemma direct_caps_of_remove_eq:
   "direct_caps_of (removeOperation e c\<^sub>1 c\<^sub>2 s) x =
@@ -723,7 +723,7 @@ lemma store_connected_remove [rule_format]:
   apply (fold store_connected_def)
   apply (clarsimp simp add: store_connected_direct_def)
   apply (fastforce simp: direct_caps_of_def
-                  split: option.splits split_if_asm)
+                  split: option.splits if_split_asm)
   done
 
 lemma caps_of_remove:
@@ -742,7 +742,7 @@ lemma caps_of_remove:
 lemma caps_of_remove2:
   "caps_of (removeOperation e c\<^sub>1 c\<^sub>2 s) x \<subseteq> caps_of s x"
   apply(simp add: caps_of_def is_entity_def removeOperation_def direct_caps_of_def)
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
    apply (auto dest!: store_connected_remove)
   done
 
@@ -758,7 +758,7 @@ lemma shares_caps_remove:
 lemma remove_directly_tgs_connected:
   "\<lbrakk>s' \<in> step (SysRemove e c\<^sub>1 c\<^sub>2) s; (x, y) \<in> directly_tgs_connected s'\<rbrakk> \<Longrightarrow>
   (x, y) \<in> directly_tgs_connected s"
-  apply(simp add: step_def split: split_if_asm)
+  apply(simp add: step_def split: if_split_asm)
   apply(erule disjE, simp)
   apply(simp add: directly_tgs_connected_def leak_def)
   apply(simp add: cap_in_caps_def)
@@ -780,7 +780,7 @@ lemma direct_caps_of_removeSet:
   "c' \<in> direct_caps_of (removeSetOperation e c C s) x \<Longrightarrow>
   c' \<in> direct_caps_of s x"
   by (clarsimp simp: removeSetOperation_simpler direct_caps_of_def
-              split: option.splits split_if_asm)
+              split: option.splits if_split_asm)
 
 lemma caps_of_removeSet:
   "c' \<in> caps_of (removeSetOperation e c C s) x \<Longrightarrow>
@@ -803,7 +803,7 @@ lemma shares_caps_removeSet:
 
 lemma removeSet_connected:
   " \<lbrakk>s' \<in> step (SysRemoveSet e c C) s; s' \<turnstile> x \<leftrightarrow> y\<rbrakk> \<Longrightarrow> s \<turnstile> x \<leftrightarrow> y"
-  apply(simp add: step_def split: split_if_asm)
+  apply(simp add: step_def split: if_split_asm)
   apply(erule disjE, simp)
   apply(simp add: directly_tgs_connected_def leak_def)
   apply(simp add: cap_in_caps_def)
@@ -826,7 +826,7 @@ lemma direct_caps_of_removeSetOfCaps:
   "c' \<in> direct_caps_of (removeSetOfCaps cap_map s) x \<Longrightarrow>
   c' \<in> direct_caps_of s x"
   by (clarsimp simp: removeSetOfCaps_def direct_caps_of_def
-              split: option.splits split_if_asm)
+              split: option.splits if_split_asm)
 thm store_connected_remove
 
 lemma store_connected_removeSetOfCaps:
@@ -843,7 +843,7 @@ lemma store_connected_removeSetOfCaps:
   apply (fold store_connected_def)
   apply (clarsimp simp add: store_connected_direct_def)
   apply (fastforce simp: direct_caps_of_def
-                  split: option.splits split_if_asm)
+                  split: option.splits if_split_asm)
   done
 
 lemma caps_of_removeSetOfCaps:
@@ -860,7 +860,7 @@ lemma caps_of_revoke:
   "\<lbrakk>s' \<in> revokeOperation sub c\<^sub>1 s ;  c \<in> caps_of s' e \<rbrakk>
   \<Longrightarrow> c \<in> caps_of s e"
   apply (clarsimp simp: revokeOperation_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (drule (1) caps_of_removeSetOfCaps)
   done
 
@@ -868,7 +868,7 @@ lemma direct_caps_of_revoke:
   "\<lbrakk>s' \<in> revokeOperation e c s; c' \<in> direct_caps_of s' x\<rbrakk>
    \<Longrightarrow> c' \<in> direct_caps_of s x"
   apply (clarsimp simp: revokeOperation_def
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (drule (1) direct_caps_of_removeSetOfCaps)
   done
 
@@ -903,12 +903,12 @@ lemma removeSetOfCaps_entity_ids [simp]:
 
 lemma revoke_entities:
   "s' \<in> revokeOperation sub c\<^sub>1 s \<Longrightarrow> is_entity s' e = is_entity s e"
-  by (clarsimp simp: revokeOperation_def split: split_if_asm)
+  by (clarsimp simp: revokeOperation_def split: if_split_asm)
 
 lemma revoke_directly_tgs_connected:
   "\<lbrakk>s' \<in> step (SysRevoke n c\<^sub>1) s; (x, y) \<in> directly_tgs_connected s'\<rbrakk>
   \<Longrightarrow> (x, y) \<in>  directly_tgs_connected s"
-  apply (simp add: step_def split: split_if_asm)
+  apply (simp add: step_def split: if_split_asm)
   apply (erule disjE, simp)
   apply (simp add: directly_tgs_connected_def leak_def)
   apply (erule disjE)
@@ -940,7 +940,7 @@ lemma is_entity_grant [simp]:
 
 lemma is_entity_destroy:
   "is_entity (destroyOperation e' c s) e \<Longrightarrow> is_entity s e"
-  by (simp add: destroyOperation_def is_entity_def split: split_if_asm)
+  by (simp add: destroyOperation_def is_entity_def split: if_split_asm)
 
 
 (********************************************
@@ -1017,7 +1017,7 @@ lemma leakage_rule:
 lemma caps_of_op:
   "\<lbrakk>s' \<in> step cmd s; c' \<in> caps_of s' x\<rbrakk>
   \<Longrightarrow> \<exists>z. s \<turnstile> x \<leftrightarrow>* z \<and> c' \<in>cap caps_of s z"
-  apply (simp add: step_def split:split_if_asm)
+  apply (simp add: step_def split:if_split_asm)
    prefer 2
    apply (fastforce simp: cap_in_caps_def tgs_connected_def rights_extra_rights)
   apply (erule disjE)

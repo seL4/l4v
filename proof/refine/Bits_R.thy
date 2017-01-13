@@ -411,7 +411,7 @@ lemma modify_map_casesD:
   "modify_map m p f p' = Some cte \<Longrightarrow>
   (p \<noteq> p' \<longrightarrow> m p' = Some cte) \<and>
   (p = p' \<longrightarrow> (\<exists>cap node. m p = Some (CTE cap node) \<and> f (CTE cap node) = cte))"
-  apply (simp add: modify_map_def split: split_if_asm)
+  apply (simp add: modify_map_def split: if_split_asm)
   apply clarsimp
   apply (case_tac z)
   apply auto

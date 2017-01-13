@@ -411,11 +411,11 @@ transferCapsToSlots :: "(machine_word) option \<Rightarrow> machine_word \<Right
 where
   "transferCapsToSlots arg1 arg2 n [] arg5 mi = (
     return $ mi \<lparr> msgExtraCaps := fromIntegral n \<rparr>)"
-| "transferCapsToSlots ep rcvBuffer n (arg#caps) slots mi = (
+| "transferCapsToSlots ep rcvBuffer n (capWithSrcSlot#caps) slots mi = (
     let
        transferAgain = transferCapsToSlots ep rcvBuffer (n + 1) caps;
        miCapUnfolded = mi \<lparr> msgCapsUnwrapped := msgCapsUnwrapped mi || bit n\<rparr>;
-       (cap, srcSlot) = arg
+       (cap, srcSlot) = capWithSrcSlot
     in
     constOnFailure (mi \<lparr> msgExtraCaps := fromIntegral n \<rparr>) $ (
         (let (v21, v22, v23) = (cap, ep, slots) in

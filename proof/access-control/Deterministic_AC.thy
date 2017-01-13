@@ -89,7 +89,7 @@ lemma cap_move_list_integrity:
   notes split_paired_All[simp del]
   shows
   "\<lbrace>list_integ P st and K(P src) and K(P dest)\<rbrace> cap_move_ext src dest src_p dest_p \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
-  apply (simp add: cap_move_ext_def split del: split_if)
+  apply (simp add: cap_move_ext_def split del: if_split)
   apply (wp update_cdt_list_wp)
   apply (intro impI conjI allI | simp add: list_filter_replace list_filter_remove split: option.splits | elim conjE | simp add: list_integ_def)+
   done
@@ -98,7 +98,7 @@ lemma cap_insert_list_integrity:
   notes split_paired_All[simp del]
   shows
   "\<lbrace>list_integ P st and K(P src) and K(P dest)\<rbrace> cap_insert_ext src_parent src dest src_p dest_p \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
-  apply (simp add: cap_insert_ext_def split del: split_if)
+  apply (simp add: cap_insert_ext_def split del: if_split)
   apply (wp update_cdt_list_wp)
   apply (intro impI conjI allI | simp add: list_filter_insert_after list_filter_remove split: option.splits | elim conjE | simp add: list_integ_def)+
   done
@@ -107,7 +107,7 @@ lemma create_cap_list_integrity:
   notes split_paired_All[simp del]
   shows
   "\<lbrace>list_integ P st and K(P dest)\<rbrace> create_cap_ext untyped dest dest_p \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
-  apply (simp add: create_cap_ext_def split del: split_if)
+  apply (simp add: create_cap_ext_def split del: if_split)
   apply (wp update_cdt_list_wp)
   apply (intro impI conjI allI | simp add: list_filter_replace list_filter_remove split: option.splits | elim conjE | simp add: list_integ_def)+
   done
@@ -117,7 +117,7 @@ lemma empty_slot_list_integrity:
   notes split_paired_All[simp del]
   shows
   "\<lbrace>list_integ P st and (\<lambda>s. valid_list_2 (cdt_list s) m) and K(P slot) and K( all_children P m)\<rbrace> empty_slot_ext slot slot_p \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
-  apply (simp add: empty_slot_ext_def split del: split_if)
+  apply (simp add: empty_slot_ext_def split del: if_split)
   apply (wp update_cdt_list_wp)
   apply (intro impI conjI allI | simp add: list_filter_replace_list list_filter_remove split: option.splits | elim conjE  | simp add: list_integ_def)+
   apply (drule_tac x="the slot_p" in spec)
@@ -130,7 +130,7 @@ lemma cap_swap_list_integrity:
   notes split_paired_All[simp del]
   shows
   "\<lbrace>list_integ P st and K(P slot1) and K(P slot2)\<rbrace> cap_swap_ext slot1 slot2 slot1_p slot2_p \<lbrace>\<lambda>_. list_integ P st\<rbrace>"
-  apply (simp add: cap_swap_ext_def split del: split_if)
+  apply (simp add: cap_swap_ext_def split del: if_split)
   apply (wp update_cdt_list_wp)
   apply (intro impI conjI allI | simp add: list_filter_replace list_filter_swap split: option.splits | elim conjE | simp add: list_integ_def)+ (* slow *)
   done

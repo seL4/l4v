@@ -126,7 +126,7 @@ lemma decode_irq_handler_valid[wp]:
      decode_irq_handler_invocation label irq caps
    \<lbrace>irq_handler_inv_valid\<rbrace>,-"
   apply (simp add: decode_irq_handler_invocation_def Let_def split_def
-                  split del: split_if cong: if_cong)
+                  split del: if_split cong: if_cong)
   apply (rule hoare_pre, wp)
   apply (clarsimp simp: neq_Nil_conv)
   apply (fastforce dest: valid_irq_handlersD simp: invs_def valid_state_def)
@@ -166,7 +166,7 @@ lemma cap_delete_one_still_derived:
   apply (simp add: cap_delete_one_def empty_slot_def unless_def
                    cte_wp_at_caps_of_state set_cdt_def)
   apply (wp hoare_vcg_ex_lift)
-  apply (simp split del:split_if)
+  apply (simp split del:if_split)
   apply (wp hoare_vcg_ex_lift get_cap_wp hoare_vcg_all_lift
             hoare_vcg_disj_lift
                | simp only: cte_wp_at_caps_of_state imp_conv_disj
@@ -176,10 +176,10 @@ lemma cap_delete_one_still_derived:
      apply (simp add: is_final_cap_def | wp)+
    apply (rule get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state if_apply_def2
-             split del: split_if)
+             split del: if_split)
   apply (rule_tac x=capa in exI)
   apply (clarsimp simp only: is_derived_def simp_thms
-                      split: split_if_asm)
+                      split: if_split_asm)
    apply clarsimp
    apply (subst mdb_empty_abs.descendants[unfolded fun_upd_def])
     apply (rule mdb_empty_abs.intro)

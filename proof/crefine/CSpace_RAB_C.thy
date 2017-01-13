@@ -127,7 +127,7 @@ lemma rightsFromWord_wordFromRights:
   "rightsFromWord (wordFromRights rghts) = rghts"
   apply (cases rghts)
   apply (simp add: wordFromRights_def rightsFromWord_def
-            split: split_if)
+            split: if_split)
   done
 
 lemma wordFromRights_inj:
@@ -224,7 +224,7 @@ proof (cases "isCNodeCap cap'")
     apply (simp add: throwError_def return_def split)
     apply vcg
     apply (clarsimp simp add: exception_defs lookup_fault_lift_def)
-    apply (simp split: split_if)
+    apply (simp split: if_split)
     apply (vcg strip_guards=true)
     apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
     done
@@ -251,7 +251,7 @@ next
      apply (erule conjE)
      apply (erule_tac t = capptr in ssubst)
      apply csymbr+
-     apply (simp add: cap_get_tag_isCap split del: split_if)
+     apply (simp add: cap_get_tag_isCap split del: if_split)
      apply (thin_tac "ret__unsigned = X" for X)
      apply (rule ccorres_split_throws [where P = "?P"])
       apply (rule_tac G' = "\<lambda>w_rightsMask. ({s. nodeCap_' s = nodeCap} 
@@ -305,7 +305,7 @@ next
       "\<And>c f g. (case c of CNodeCap _ _ _ _ \<Rightarrow> f | _ \<Rightarrow> g) = (if isCNodeCap c then f else g)"
       by (case_tac c, simp_all add: isCap_simps)
 
-    note [split del] = split_if    
+    note [split del] = if_split
 
     have gbD: "\<And>guardBits cap cap'. \<lbrakk> guardBits = capCNodeGuardSize_CL (cap_cnode_cap_lift cap');
                        ccap_relation cap cap'; isCNodeCap cap \<rbrakk>
@@ -466,7 +466,7 @@ next
       apply (rule iffD1 [OF ccorres_expand_while_iff])
       apply (subst resolveAddressBits.simps)
       apply (unfold case_into_if)
-      apply (simp add: Let_def ccorres_cond_iffs split del: split_if)
+      apply (simp add: Let_def ccorres_cond_iffs split del: if_split)
       apply (rule ccorres_rhs_assoc)+
       apply (cinitlift nodeCap_' n_bits_')      
       apply (erule_tac t = nodeCapa in ssubst)
@@ -704,7 +704,7 @@ lemma lookupSlotForThread_ccorres':
   apply (clarsimp simp add: Collect_const_mem errstate_def tcbSlots
                             Kernel_C.tcbCTable_def word_size lookupSlot_raw_rel_def
                             word_sle_def
-                 split del: split_if)
+                 split del: if_split)
   done
 
 lemma lookupSlotForThread_ccorres[corres]:

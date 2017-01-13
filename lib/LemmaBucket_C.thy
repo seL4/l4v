@@ -53,7 +53,7 @@ lemma exec_Guard:
   "(G \<turnstile> \<langle>Guard Err S c, Normal s\<rangle> \<Rightarrow> s')
        = (if s \<in> S then G \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> s'
                 else s' = Fault Err)"
-  by (auto split: split_if elim!: exec_elim_cases intro: exec.intros)
+  by (auto split: if_split elim!: exec_elim_cases intro: exec.intros)
 
 lemma to_bytes_word8:
   "to_bytes (v :: word8) xs = [v]"
@@ -285,7 +285,7 @@ lemma intvl_nowrap:
   apply (drule intvlD)
   apply clarsimp
   apply (simp add: unat_arith_simps)
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
   apply (simp add: unat_of_nat)
   done
 
@@ -457,16 +457,16 @@ next
     by (simp add: map_le_def list_map_def merge_dom2 set_zip)
   
   hence "length xs < length n" and "x = n ! length xs"
-    by (auto simp add: list_map_eq split: split_if_asm)
+    by (auto simp add: list_map_eq split: if_split_asm)
   
   thus "xs @ [x] \<le> n" using xsn 
-    by (simp add: append_one_prefixeq less_eq_list_def)
+    by (simp add: append_one_prefix less_eq_list_def)
 qed
 
 lemma typ_slice_t_self:
   "td \<in> fst ` set (typ_slice_t td m)"
   apply (cases td)
-  apply (simp split: split_if)
+  apply (simp split: if_split)
   done
 
 lemma drop_heap_list_le2:
@@ -874,7 +874,7 @@ lemma typ_slice_t_array:
    typ_slice_t (export_uinfo (array_tag TYPE('a['b :: finite])))
               (y + size_of TYPE('a :: mem_type) * n)"
   apply (simp add: array_tag_def array_tag_n_eq
-               split del: split_if)
+               split del: if_split)
   apply (rule disjI2)
   apply (subgoal_tac "y + (size_of TYPE('a) * n) < CARD('b) * size_of TYPE('a)")
    apply (simp add: typ_slice_list_cut[where m="size_of TYPE('a)"]
@@ -1114,7 +1114,7 @@ lemma ptr_retyp_valid_footprint_disjoint2:
   apply (subst (asm) ptr_retyp_d)
     apply clarsimp
     apply fast
-   apply (clarsimp simp add: ptr_retyp_d_eq_fst split: split_if_asm)
+   apply (clarsimp simp add: ptr_retyp_d_eq_fst split: if_split_asm)
    apply fast
   apply (erule intvlI)
   done
@@ -1141,7 +1141,7 @@ lemma h_t_valid_ptr_retyp_eq:
   "\<not> cptr_type p <\<^sub>\<tau> cptr_type p' \<Longrightarrow> h_t_valid (ptr_retyp p td) g p'
     = (if ptr_span p \<inter> ptr_span p' = {} then h_t_valid td g p'
         else field_of_t p' p \<and> g p')"
-  apply (clarsimp simp: ptr_retyp_disjoint_iff split: split_if)
+  apply (clarsimp simp: ptr_retyp_disjoint_iff split: if_split)
   apply (cases "g p'")
    apply (rule iffI)
     apply (rule ccontr, drule h_t_valid_neq_disjoint, rule ptr_retyp_h_t_valid, simp+)
@@ -1157,10 +1157,10 @@ lemma field_lookup_list_Some_again:
     \<Longrightarrow> i < length xs
     \<Longrightarrow> f \<notin> dt_snd ` set ((take i xs))
     \<Longrightarrow> field_lookup_list xs [f] n
-        = Some (dt_fst (xs ! i), n + listsum (map (size_td o dt_fst) (take i xs)))"
+        = Some (dt_fst (xs ! i), n + sum_list (map (size_td o dt_fst) (take i xs)))"
   apply (induct xs arbitrary: i n, simp_all)
   apply (case_tac x1, simp)
-  apply (case_tac i, auto split: split_if)
+  apply (case_tac i, auto split: if_split)
   done
 
 lemma field_lookup_array:
@@ -1169,7 +1169,7 @@ lemma field_lookup_array:
         (\<lambda>x. x.[n]) (\<lambda>x f. Arrays.update f n x), i + n * size_of TYPE ('a))"
   apply (simp add: typ_info_array array_tag_def array_tag_n_eq)
   apply (subst field_lookup_list_Some_again[where i=n],
-    auto simp add: take_map o_def listsum_triv size_of_def)
+    auto simp add: take_map o_def sum_list_triv size_of_def)
   done
 
 end

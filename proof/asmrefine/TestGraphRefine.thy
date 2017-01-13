@@ -53,10 +53,20 @@ where
             (hrs_mem (t_hrs_' (globals s)))
         \<and> htd_safe domain (hrs_htd (t_hrs_' (globals s)))}"
 
-ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_after
-    funs (csenv ()) @{context} (SOME "Kernel_C.lookupPTSlot")  *}
+abbreviation(input) "ghost_assns_from_globals
+    \<equiv> (snd o snd o ghost'state_' :: globals \<Rightarrow> _)"
 
-ML {* val nm = "Kernel_C.lookupPTSlot" *}
+lemma snd_snd_gs_new_frames_new_cnodes[simp]:
+  "snd (snd (gs_new_frames sz ptr bits gs)) = snd (snd gs)"
+  "snd (snd (gs_new_cnodes sz' ptr bits gs)) = snd (snd gs)"
+  "snd (snd (gs_clear_region ptr sz' gs)) = snd (snd gs)"
+  "snd (snd ((if P then f else g) gs)) = (if P then snd (snd (f gs)) else snd (snd (g gs)))"
+  by (simp_all add: gs_new_frames_def gs_new_cnodes_def gs_clear_region_def)
+
+(* ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_after
+    funs (csenv ()) @{context} NONE  *} *)
+
+ML {* val nm = "Kernel_C.idle_thread" *}
 
 local_setup {* define_graph_fun_short funs nm *}
 
@@ -69,6 +79,8 @@ val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm
     @{context}
 *}
 
+declare [[show_types]]
+
 ML {*
 ProveSimplToGraphGoals.simpl_to_graph_thm funs (csenv ()) @{context} nm;
 *}
@@ -80,32 +92,15 @@ val full_tac = ProveSimplToGraphGoals.graph_refine_proof_full_tac
     (csenv ())
 val full_goal_tac = ProveSimplToGraphGoals.graph_refine_proof_full_goal_tac
     (csenv ())
+val debug_tac = ProveSimplToGraphGoals.debug_tac
+    (csenv ())
 *}
 
-schematic_lemma "PROP ?P"
-  apply (tactic {* rtac init_thm 1 *})
+schematic_goal "PROP ?P"
+  apply (tactic {* resolve_tac @{context} [init_thm] 1 *})
   
-  apply (tactic {* ALLGOALS (fn i => fn t => 
-    let val res = try ((full_goal_tac @{context} THEN_ALL_NEW K no_tac) i #> Seq.hd) t
-    in case res of NONE => Seq.single t | SOME r => Seq.single r
-    end) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 0) *})
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 1) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 2) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 3) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 4) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 5) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 6) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 7) *})
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 8) *})
-  
+  apply (tactic {* ALLGOALS (debug_tac @{context}) *})
+  oops
 
 end
 

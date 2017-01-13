@@ -91,15 +91,15 @@ lemma threadSet_modify_asUser:
    apply (wp getObject_obj_at' | clarsimp simp: objBits_def objBitsKO_def atcbContextSet_def)+
   done
 
-lemma atcbContext_get_eq[simp] : "atcbContextGet (atcbContextSet x at) = x"
+lemma atcbContext_get_eq[simp] : "atcbContextGet (atcbContextSet x atcb) = x"
   by(simp add: atcbContextGet_def atcbContextSet_def)
 
 lemma atcbContext_set_eq[simp] : "atcbContextSet (atcbContextGet t) t = t"
   by (cases t, simp add: atcbContextGet_def atcbContextSet_def)
 
 
-lemma atcbContext_set_set[simp] : "atcbContextSet x (atcbContextSet y at) = atcbContextSet x at"
-  by (cases at,simp add: atcbContextSet_def)
+lemma atcbContext_set_set[simp] : "atcbContextSet x (atcbContextSet y atcb) = atcbContextSet x atcb"
+  by (cases atcb ,simp add: atcbContextSet_def)
 
 lemma submonad_asUser:
   "submonad (asUser_fetch t) (asUser_replace t) (tcb_at' t) (asUser t)"

@@ -179,8 +179,8 @@ lemma helper3: "(\<Sum>(a, b) \<leftarrow> xs. Suc (f a b)) = length xs + (\<Sum
    by clarsimp+
 
 lemma helper4: "fold op + ((map (\<lambda>(a, b). f a b) xs)::nat list) 0 = (\<Sum>(a, b) \<leftarrow> xs. f a b)"
-  apply (subst fold_plus_listsum_rev)
-  apply (subst listsum_rev)
+  apply (subst fold_plus_sum_list_rev)
+  apply (subst sum_list_rev)
   by clarsimp
 
 lemma set_of_enumerate:"card (set (enumerate n xs)) = length xs"

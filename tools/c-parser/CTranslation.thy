@@ -10,6 +10,7 @@
 
 theory CTranslation
 imports
+  "../../lib/String_Compare"
   "PackedTypes"
   "PrettyProgs"
   "StaticFun"
@@ -23,6 +24,8 @@ and
   "c_types"
   "c_defs"
 begin
+
+declare Char_eq_Char_iff [simp del]
 
 lemma TWO: "Suc (Suc 0) = 2"
 by arith

@@ -634,7 +634,7 @@ lemma (in Tcb_AI_1) checked_insert_no_cap_to:
                    cte_wp_at_caps_of_state set_untyped_cap_as_full_def
                    no_cap_to_obj_with_diff_ref_def)
   apply (wp get_cap_wp
-               | simp split del: split_if)+
+               | simp split del: if_split)+
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (clarsimp dest!: same_object_obj_refs)
   apply (cases b, cases d, clarsimp)
@@ -700,7 +700,7 @@ lemma thread_set_tcb_valid:
   apply (clarsimp simp: tcb_cap_valid_def
                  dest!: get_tcb_SomeD)
   apply (simp add: obj_at_def pred_tcb_at_def is_tcb x get_tcb_def
-            split: split_if_asm cong: option.case_cong prod.case_cong)
+            split: if_split_asm cong: option.case_cong prod.case_cong)
   apply (cut_tac tcb=y in w)
   apply auto
   done
@@ -864,10 +864,10 @@ lemma bind_notification_invs:
          apply (rule impI, erule delta_sym_refs)
           apply (fastforce dest!: symreftype_inverse' 
                             simp: ntfn_q_refs_of_def obj_at_def
-                           split: ntfn.splits split_if_asm)
+                           split: ntfn.splits if_split_asm)
          apply (fastforce simp: state_refs_of_def pred_tcb_at_def2 obj_at_def 
                                tcb_st_refs_of_def 
-                        split: thread_state.splits split_if_asm)
+                        split: thread_state.splits if_split_asm)
         apply (wp | clarsimp simp: is_ntfn)+
   apply (erule (1) obj_at_valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_ntfn_def pred_tcb_at_tcb_at 
@@ -921,7 +921,7 @@ lemma decode_writereg_inv:
   "\<lbrace>P\<rbrace> decode_write_registers args (cap.ThreadCap t) \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: decode_write_registers_def whenE_def
-                          split del: split_if
+                          split del: if_split
             | wp_once | wpcw)+
   done
 
@@ -929,7 +929,7 @@ lemma decode_copyreg_inv:
   "\<lbrace>P\<rbrace> decode_copy_registers args (cap.ThreadCap t) extras \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: decode_copy_registers_def whenE_def
-                          split del: split_if
+                          split del: if_split
             | wp_once | wpcw)+
   done
 
@@ -962,7 +962,7 @@ lemma (in Tcb_AI) decode_copyreg_wf:
      decode_copy_registers args (cap.ThreadCap t) extras
    \<lbrace>tcb_inv_wf\<rbrace>,-"
   apply (simp add: decode_copy_registers_def whenE_def
-             cong: list.case_cong split del: split_if)
+             cong: list.case_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wp | wpc)+
   apply (clarsimp simp: valid_cap_def[where c="cap.ThreadCap t" for t])
@@ -1022,14 +1022,14 @@ lemma check_prio_lt_ct_weak:
 lemma (in Tcb_AI) decode_set_priority_wf[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace>
         decode_set_priority args (ThreadCap t) slot \<lbrace>tcb_inv_wf\<rbrace>,-"
-  apply (simp add: decode_set_priority_def split del: split_if)
+  apply (simp add: decode_set_priority_def split del: if_split)
   apply (rule hoare_pre)
    by (wp check_prio_lt_ct_weak | simp | wp_once check_prio_inv)+
    
 lemma (in Tcb_AI) decode_set_mcpriority_wf[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace>
         decode_set_mcpriority args (ThreadCap t) slot \<lbrace>tcb_inv_wf\<rbrace>,-"
-  apply (simp add: decode_set_mcpriority_def Let_def  split del: split_if)
+  apply (simp add: decode_set_mcpriority_def Let_def  split del: if_split)
   apply (rule hoare_pre)
    by (wp check_prio_lt_ct_weak | simp | wp_once check_prio_inv)+
 
@@ -1058,14 +1058,14 @@ lemma decode_set_priority_is_tc[wp]:
   "\<lbrace>\<top>\<rbrace> decode_set_priority args cap slot \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
   apply (rule hoare_pre)
   apply (simp    add: decode_set_priority_def Let_def check_prio_def
-           split del: split_if
+           split del: if_split
             | wp whenE_inv hoare_seq_ext)+
   done
 
 
 lemma decode_set_priority_inv[wp]:
   "\<lbrace>P\<rbrace> decode_set_priority args cap slot \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: decode_set_priority_def  Let_def split del: split_if)
+  apply (simp add: decode_set_priority_def  Let_def split del: if_split)
   apply (rule hoare_pre)
   apply (wp check_prio_inv)
   apply simp
@@ -1073,7 +1073,7 @@ lemma decode_set_priority_inv[wp]:
   
 lemma decode_set_mcpriority_inv[wp]:
   "\<lbrace>P\<rbrace> decode_set_mcpriority args cap slot \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: decode_set_mcpriority_def Let_def   split del: split_if)
+  apply (simp add: decode_set_mcpriority_def Let_def   split del: if_split)
   apply (rule hoare_pre)
   apply (wp check_prio_inv)
   apply simp
@@ -1098,7 +1098,7 @@ lemma (in Tcb_AI) decode_set_ipc_wf[wp]:
      decode_set_ipc_buffer args (cap.ThreadCap t) slot excaps
    \<lbrace>tcb_inv_wf\<rbrace>,-"
   apply (simp   add: decode_set_ipc_buffer_def whenE_def split_def
-          split del: split_if)
+          split del: if_split)
   apply (rule hoare_pre, wp check_valid_ipc_buffer_wp)
      apply simp
      apply (wp derive_cap_valid_cap hoare_drop_imps)[1]
@@ -1110,7 +1110,7 @@ lemma decode_set_ipc_is_tc[wp]:
   "\<lbrace>\<top>\<rbrace> decode_set_ipc_buffer args cap slot excaps \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
   apply (rule hoare_pre)
   apply (simp    add: decode_set_ipc_buffer_def split_def
-           split del: split_if
+           split del: if_split
             | wp)+
   apply fastforce
   done
@@ -1141,12 +1141,12 @@ lemma (in Tcb_AI) decode_set_space_wf[wp]:
      decode_set_space args (ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf\<rbrace>,-"
   apply (simp   add: decode_set_space_def whenE_def unlessE_def
-          split del: split_if)
+          split del: if_split)
   apply (rule hoare_pre)
    apply (wp derive_cap_valid_cap
-             | simp add: o_def split del: split_if
+             | simp add: o_def split del: if_split
              | rule hoare_drop_imps)+
-  apply (clarsimp split del: split_if simp: ball_conj_distrib
+  apply (clarsimp split del: if_split simp: ball_conj_distrib
                    simp del: length_greater_0_conv)
   apply (simp add: update_cap_data_validI word_bits_def
                    no_cap_to_obj_with_diff_ref_update_cap_data
@@ -1158,7 +1158,7 @@ lemma (in Tcb_AI) decode_set_space_wf[wp]:
 lemma decode_set_space_inv[wp]:
   "\<lbrace>P\<rbrace> decode_set_space args cap slot extras \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp   add: decode_set_space_def whenE_def unlessE_def
-          split del: split_if)
+          split del: if_split)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | simp)+
   done
@@ -1168,7 +1168,7 @@ lemma decode_set_space_is_tc[wp]:
   "\<lbrace>\<top>\<rbrace> decode_set_space args cap slot extras \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
   apply (rule hoare_pre)
    apply (simp   add: decode_set_space_def whenE_def unlessE_def
-           split del: split_if)
+           split del: if_split)
    apply (wp | simp only: is_thread_control_true)+
   done
 
@@ -1176,7 +1176,7 @@ lemma decode_set_mcpriority_is_tc[wp]:
   "\<lbrace>\<top>\<rbrace> decode_set_mcpriority args cap slot \<lbrace>\<lambda>rv s. is_thread_control rv\<rbrace>,-"
   apply (rule hoare_pre)
    apply (simp   add: decode_set_mcpriority_def whenE_def unlessE_def Let_def
-           split del: split_if)
+           split del: if_split)
    apply (wp | simp add: is_thread_control_true)+
   done
 
@@ -1184,7 +1184,7 @@ lemma decode_set_space_target[wp]:
   "\<lbrace>\<lambda>s. P (obj_ref_of cap)\<rbrace> decode_set_space args cap slot extras \<lbrace>\<lambda>rv s. P (thread_control_target rv)\<rbrace>,-"
   apply (rule hoare_pre)
    apply (simp   add: decode_set_space_def whenE_def unlessE_def
-           split del: split_if)
+           split del: if_split)
    apply (wp | simp only: thread_control_target.simps)+
   done
 
@@ -1215,7 +1215,7 @@ lemma (in Tcb_AI) decode_tcb_conf_wf[wp]:
                   in hoare_post_imp_R)
         apply wp
        apply (clarsimp simp: is_thread_control_def2 cong: option.case_cong)
-      apply (wp_trace | simp add: whenE_def split del: split_if)+
+      apply (wp_trace | simp add: whenE_def split del: if_split)+
   apply (clarsimp simp: linorder_not_less val_le_length_Cons
                    del: ballI)
   done
@@ -1223,7 +1223,7 @@ lemma (in Tcb_AI) decode_tcb_conf_wf[wp]:
 lemma (in Tcb_AI) decode_tcb_conf_inv[wp]:
   "\<lbrace>P::'state_ext state \<Rightarrow> bool\<rbrace> decode_tcb_configure args cap slot extras \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (clarsimp simp add: decode_tcb_configure_def Let_def whenE_def
-                 split del: split_if)
+                 split del: if_split)
   apply (rule hoare_pre, wp)
   apply simp
   done
@@ -1252,14 +1252,14 @@ lemma decode_bind_notification_inv[wp]:
   by (rule hoare_pre) 
      (wp get_ntfn_wp gbn_wp 
        | wpc 
-       | clarsimp simp: whenE_def split del: split_if)+
+       | clarsimp simp: whenE_def split del: if_split)+
 
 
 lemma (in Tcb_AI) decode_tcb_inv_inv:
   "\<lbrace>P::'state_ext state \<Rightarrow> bool\<rbrace> decode_tcb_invocation label args (cap.ThreadCap t) slot extras \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: decode_tcb_invocation_def Let_def
              cong: if_cong
-        split del: split_if)
+        split del: if_split)
   apply (rule hoare_pre)
    apply (wpc
         | wp decode_readreg_inv decode_writereg_inv
@@ -1279,7 +1279,7 @@ lemma decode_bind_notification_wf:
      decode_bind_notification (cap.ThreadCap t) extras
    \<lbrace>tcb_inv_wf\<rbrace>,-"
   apply (simp add: decode_bind_notification_def whenE_def
-             cong: list.case_cong split del: split_if)
+             cong: list.case_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wp get_ntfn_wp gbn_wp | wpc)+
   apply (fastforce simp: valid_cap_def[where c="cap.ThreadCap t" for t] is_ntfn invs_def
@@ -1308,7 +1308,7 @@ lemma decode_tcb_inv_wf:
       decode_tcb_invocation label args (cap.ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf\<rbrace>,-"
   apply (simp add: decode_tcb_invocation_def Let_def del: tcb_inv_wf_def
-              cong: if_cong split del: split_if)
+              cong: if_cong split del: if_split)
   apply (rule hoare_vcg_precond_impE_R)
    apply wpc
    apply (wp_trace decode_tcb_conf_wf decode_readreg_wf
@@ -1347,7 +1347,7 @@ lemma decode_domain_inv_inv:
   "\<lbrace>P\<rbrace>
      decode_domain_invocation label args excs
    \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: decode_domain_invocation_def whenE_def split del: split_if | wp hoare_vcg_split_ifE | wpc)+
+  by (simp add: decode_domain_invocation_def whenE_def split del: if_split | wp hoare_vcg_split_ifE | wpc)+
 
 lemma decode_domain_inv_wf:
   "\<lbrace>valid_objs and valid_global_refs and
@@ -1355,7 +1355,7 @@ lemma decode_domain_inv_wf:
      (\<lambda>s. \<forall>x\<in>set excs. \<forall>r\<in>zobj_refs (fst x). ex_nonz_cap_to r s)\<rbrace>
      decode_domain_invocation label args excs
    \<lbrace>\<lambda>(t, d) s. tcb_at t s \<and> t \<noteq> idle_thread s\<rbrace>, -"
-  apply (clarsimp simp: decode_domain_invocation_def whenE_def split del: split_if
+  apply (clarsimp simp: decode_domain_invocation_def whenE_def split del: if_split
         | wp hoare_vcg_split_ifE | wpc)+
   apply (erule ballE[where x="hd excs"])
    apply (clarsimp simp: valid_cap_simps)
@@ -1405,11 +1405,11 @@ lemma unbind_notification_sym_refs[wp]:
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def pred_tcb_at_def ntfn_q_refs_of_def
                           state_refs_of_def
-                    split: split_if_asm)
+                    split: if_split_asm)
   apply (auto simp: valid_obj_def obj_at_def ntfn_bound_refs_def2 symreftype_inverse'
                     ntfn_q_refs_of_def tcb_ntfn_is_bound_def state_refs_of_def
                     tcb_st_refs_of_def tcb_bound_refs_def2 
-              split: ntfn.splits thread_state.splits split_if_asm
+              split: ntfn.splits thread_state.splits if_split_asm
               dest!: sym_refs_bound_tcb_atD refs_in_ntfn_bound_refs
               elim!: obj_at_valid_objsE
               intro!: ntfn_q_refs_no_NTFNBound)

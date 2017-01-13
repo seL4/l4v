@@ -50,7 +50,7 @@ lemma scd:
   "store_connected_direct example_state = {(id0,id1)}"
   by (auto simp: store_connected_direct_def direct_caps_of_def
                  example_state_def id_defs entity_defs
-          split: split_if_asm option.splits
+          split: if_split_asm option.splits
            cong: conj_cong)
 
 lemma sc:

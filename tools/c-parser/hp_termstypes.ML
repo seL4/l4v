@@ -25,6 +25,8 @@ sig
   val dont_reach_error : term
   val side_effect_error : term
   val ownership_error : term
+  val unspecified_syntax_error1 : term
+  val unspecified_syntax_error2 : string -> term
 
 
   val Continue_exn : term
@@ -241,7 +243,12 @@ val side_effect_error= @{const "SideEffects"}
 val arraybound_error = @{const "ArrayBounds"}
 val signed_overflow_error = @{const "SignedArithmetic"}
 val dont_reach_error = @{const "DontReach"}
+val unspecified_syntax_error = @{const "UnspecifiedSyntax"}
 val ownership_error = @{const "OwnershipError"}
+
+val unspecified_syntax_error1 = @{const "UnspecifiedSyntax"}
+fun unspecified_syntax_error2 s = @{const "unspecified_syntax_error"}
+    $ mk_string s
 
 fun mk_guard_t tyargs =
     Const(@{const_name "Language.com.Guard"},

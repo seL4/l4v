@@ -636,7 +636,7 @@ lemma schedule_cur_domain:
        apply(rule hoare_pre_cont)
       apply wp
      apply(rule_tac Q="\<lambda>rv s. P (cur_domain s) \<and> domain_time s \<noteq> 0" in hoare_strengthen_post) 
-      apply(simp split del: split_if | wp gts_wp | wp_once hoare_drop_imps)+
+      apply(simp split del: if_split | wp gts_wp | wp_once hoare_drop_imps)+
   apply clarsimp
   done
 
@@ -648,7 +648,7 @@ lemma schedule_domain_fields:
        apply(rule hoare_pre_cont)
       apply wp
      apply(rule_tac Q="\<lambda>rv s. domain_fields P s \<and> domain_time s \<noteq> 0" in hoare_strengthen_post) 
-      apply(simp split del: split_if | wp gts_wp | wp_once hoare_drop_imps)+
+      apply(simp split del: if_split | wp gts_wp | wp_once hoare_drop_imps)+
   apply clarsimp
   done
 
@@ -1826,7 +1826,7 @@ lemma integrity_part:
      apply(fastforce intro: dest!: reachable_invs_if simp: invs_if_def Invs_def guarded_pas_domain_def guarded_is_subject_cur_thread_def current_aag_def)
     apply(frule Step_current_aag_unchanged[symmetric], simp+)
     apply(fastforce intro: dest!: reachable_invs_if[OF reachable_Step'] simp: invs_if_def Invs_def guarded_pas_domain_def guarded_is_subject_cur_thread_def current_aag_def)
-   apply(rule partsSubjectAffects_bounds_those_subject_not_allowed_to_affect, simp add: part_def split: split_if_asm add: partition_def current_aag_def)
+   apply(rule partsSubjectAffects_bounds_those_subject_not_allowed_to_affect, simp add: part_def split: if_split_asm add: partition_def current_aag_def)
   apply assumption
   done
 
@@ -1848,7 +1848,7 @@ lemma part_equiv: "(s,t) \<in> uwr PSched \<Longrightarrow> part s = part t"
 
 lemma not_PSched_big_step_R:
   "part s \<noteq> PSched \<Longrightarrow> big_step_R s t \<Longrightarrow> sys_mode_of s = KernelExit \<and> interrupted_modes (sys_mode_of t)"
-  apply(clarsimp simp: part_def big_step_R_def sys_mode_of_def split: split_if_asm)
+  apply(clarsimp simp: part_def big_step_R_def sys_mode_of_def split: if_split_asm)
   apply(case_tac s, simp, case_tac b, simp_all)
   done
 
@@ -2279,7 +2279,7 @@ lemma sameFor_current_partition_sys_mode_of_eq:
 
 lemma uwr_part_sys_mode_of_eq:
   "\<lbrakk>(s,t) \<in> uwr (part s); part t = part s; part s \<noteq> PSched\<rbrakk> \<Longrightarrow> sys_mode_of s = sys_mode_of t"
-  apply(simp add: part_def split: split_if_asm)
+  apply(simp add: part_def split: if_split_asm)
   apply(simp add: partition_def)
   apply(cut_tac x= "(cur_domain (internal_state_if s))" in pas_wellformed_noninterference_silc[OF policy_wellformed])
   apply(case_tac "pasDomainAbs initial_aag (cur_domain (internal_state_if s))")
@@ -3057,19 +3057,19 @@ lemma unit_list_as_replicate:
 
 lemma unit_lists_unequal:
   "(as::unit list) \<noteq> (as'::unit list) \<Longrightarrow> as < as' \<or> as' < as"
-  apply(simp add: less_list_def' prefix_def)
+  apply(simp add: less_list_def' strict_prefix_def)
   apply(case_tac "length as \<ge> length as'")
   apply(rule disjI2)
    apply(subst unit_list_as_replicate[where as=as])
    apply(subst unit_list_as_replicate[where as=as'])
-   apply (clarsimp simp: prefixeq_def)
+   apply (clarsimp simp: prefix_def)
    apply (rule_tac x="replicate (length as - length as') ()" in exI)
    apply(subst replicate_add[symmetric])
    apply simp
   apply(rule disjI1)
   apply(subst unit_list_as_replicate[where as=as])
   apply(subst unit_list_as_replicate[where as=as'])
-  apply (clarsimp simp: prefixeq_def)
+  apply (clarsimp simp: prefix_def)
   apply(rule_tac x="replicate (length as' - length as) ()" in exI)
   apply(subst replicate_add[symmetric])
   apply simp
@@ -3172,7 +3172,7 @@ lemma strict_prefixE'[elim?]:
   obtains z zs where "ys = xs @ z # zs"
 proof -
   from `xs < ys` obtain us where "ys = xs @ us" and "xs \<noteq> ys"
-    apply(simp add: less_list_def' prefix_def prefixeq_def)
+    apply(simp add: less_list_def' strict_prefix_def prefix_def)
     apply blast
     done
   with that show ?thesis by (auto simp add: neq_Nil_conv)
@@ -3343,9 +3343,9 @@ lemma preemption_interrupt_scheduler_invisible:
             apply (simp add: liftE_def bind_assoc)
             apply (simp only: option.case_eq_if)
             apply (rule equiv_valid_2_bind_pre[where R'="op ="])
-                 apply (simp add: when_def split del: split_if)
+                 apply (simp add: when_def split del: if_split)
                  apply (subst if_swap)
-                 apply (simp split del: split_if)
+                 apply (simp split del: if_split)
                  apply (rule equiv_valid_2_bind_pre[where R'="op =" and Q="\<top>\<top>" and Q'="\<top>\<top>"])
                       apply (rule return_ev2)
                       apply simp
@@ -3534,7 +3534,7 @@ lemma scheduler_affects_equiv_uwr:
    apply (case_tac s)
    apply fastforce
   apply simp
-  apply (clarsimp simp: scheduler_equiv_def scheduler_affects_equiv_def sameFor_def sameFor_subject_def uwr_def intro: globals_equiv_from_scheduler simp: silc_dom_equiv_def reads_scheduler_def reads_lrefl domain_fields_equiv_def split: split_if_asm)
+  apply (clarsimp simp: scheduler_equiv_def scheduler_affects_equiv_def sameFor_def sameFor_subject_def uwr_def intro: globals_equiv_from_scheduler simp: silc_dom_equiv_def reads_scheduler_def reads_lrefl domain_fields_equiv_def split: if_split_asm)
   apply (case_tac s)
   apply clarsimp
   apply (case_tac s')
@@ -3705,7 +3705,7 @@ lemma step_from_interrupt_to_schedule: "\<lbrakk>(s', evs) \<in> sub_big_steps (
    apply clarsimp
    apply (subgoal_tac "interrupted_modes (sys_mode_of s)")
    prefer 2
-   apply (clarsimp simp add: big_step_R_def part_def sys_mode_of_def split: split_if_asm)
+   apply (clarsimp simp add: big_step_R_def part_def sys_mode_of_def split: if_split_asm)
    apply (case_tac "snd s",simp_all)
    apply (case_tac "as = []")
 
@@ -3731,7 +3731,7 @@ lemma PSched_reachable_interrupted: "part s = PSched \<Longrightarrow>
        interrupted_modes (sys_mode_of s)"
   apply (drule reachable_tranclp_R)
   apply (drule  tranclp_s0)
-  apply (clarsimp simp add: part_def sys_mode_of_def split: split_if_asm)
+  apply (clarsimp simp add: part_def sys_mode_of_def split: if_split_asm)
   done
 
 lemma confidentiality_part_sched_transition:
@@ -3771,7 +3771,7 @@ lemma reachable_nonsched_exit: "system.reachable (big_step_ADT_A_if utf) s0 s \<
        part s \<noteq> PSched \<Longrightarrow> (snd s) = KernelExit"
   apply (drule reachable_tranclp_R)
   apply (drule tranclp_s0)
-  apply (clarsimp simp add: part_def split: split_if_asm)
+  apply (clarsimp simp add: part_def split: if_split_asm)
   apply (case_tac s)
   apply simp
   apply (simp add: sys_mode_of_def)
