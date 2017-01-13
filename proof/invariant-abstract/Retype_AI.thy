@@ -1368,6 +1368,9 @@ lemma set_object_no_overlap:
 lemma set_cap_no_overlap:
   "\<lbrace>pspace_no_overlap S\<rbrace> set_cap cap cte \<lbrace>\<lambda>r. pspace_no_overlap S\<rbrace>"
   unfolding set_cap_def
+  by (wpsimp wp: set_object_no_overlap get_object_wp
+           simp: split_beta obj_at_def a_type_def wf_cs_upd [unfolded fun_upd_def])
+(* FIXME: wp_cleanup
   apply (simp add: split_beta)
   apply (wp set_object_no_overlap)
    defer
@@ -1379,7 +1382,7 @@ lemma set_cap_no_overlap:
                  elim!: obj_at_weakenE)
   apply (clarsimp simp add: a_type_def wf_cs_upd)
   done
-
+*)
 
 definition
   if_unsafe_then_cap2 :: "(cslot_ptr \<rightharpoonup> cap) \<Rightarrow> (irq \<Rightarrow> obj_ref) \<Rightarrow> bool"
@@ -1562,23 +1565,14 @@ lemma retype_region_obj_at_other:
   shows "\<lbrace>obj_at P ptr\<rbrace> retype_region ptr' n us ty dev \<lbrace>\<lambda>r. obj_at P ptr\<rbrace>"
   using ptrv unfolding retype_region_def retype_addrs_def 
   apply (simp only: foldr_upd_app_if fun_app_def K_bind_def)
-  apply wp
-      apply (simp only: obj_at_kheap_trans_state)
-      apply wp
-  apply (clarsimp simp: power_sub)
-  apply (unfold obj_at_def)
-  apply (erule exEI)
-  apply (clarsimp)
+  apply (wpsimp simp: obj_at_def)
   done
 
 
 lemma retype_region_obj_at_other2:
   "\<lbrace>\<lambda>s. ptr \<notin> set (retype_addrs ptr' ty n us)
        \<and> obj_at P ptr s\<rbrace> retype_region ptr' n us ty dev \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
-  apply (rule hoare_assume_pre)
-  apply (wp retype_region_obj_at_other)
-   apply simp_all
-  done
+  by (rule hoare_assume_pre) (wpsimp wp: retype_region_obj_at_other)
 
 
 lemma retype_region_obj_at_other3:
@@ -1586,14 +1580,14 @@ lemma retype_region_obj_at_other3:
            \<and> valid_objs s \<and> pspace_aligned s\<rbrace>
      retype_region ptr n us ty dev
    \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
-   apply (rule hoare_pre)
-    apply (rule retype_region_obj_at_other2)
-   apply clarsimp
-   apply (drule subsetD [rotated, OF _ retype_addrs_subset_ptr_bits])
-     apply simp
-   apply (drule(3) pspace_no_overlap_obj_not_in_range)
-   apply (simp add: field_simps)
-done
+  apply (rule hoare_pre)
+   apply (rule retype_region_obj_at_other2)
+  apply clarsimp
+  apply (drule subsetD [rotated, OF _ retype_addrs_subset_ptr_bits])
+   apply simp
+  apply (drule(3) pspace_no_overlap_obj_not_in_range)
+  apply (simp add: field_simps)
+  done
 
 lemma retype_region_st_tcb_at:
   "\<lbrace>\<lambda>(s::'state_ext::state_ext state). pspace_no_overlap_range_cover ptr' sz s \<and> pred_tcb_at proj P t s \<and> range_cover ptr' sz (obj_bits_api ty us) n
@@ -1610,23 +1604,23 @@ lemma retype_region_cur_tcb[wp]:
    \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
   apply (rule hoare_post_imp [where Q="\<lambda>rv s. \<exists>tp. tcb_at tp s \<and> cur_thread s = tp"])
    apply (simp add: cur_tcb_def)
+  apply (wpsimp wp: hoare_vcg_ex_lift retype_region_obj_at_other3 simp: retype_region_def)
+  apply (auto simp: cur_tcb_def cong: if_cong)
+  done
+  (* FIXME: wp_cleanup
   apply (rule hoare_pre, wp hoare_vcg_ex_lift retype_region_obj_at_other3)
    apply (simp add: retype_region_def split del: if_split cong: if_cong)
    apply (wp|simp)+
   apply (clarsimp simp: cur_tcb_def cong: if_cong)
   apply auto
-  done
+  *)
 
 
 lemma retype_addrs_mem_sz_0_is_ptr:
-  assumes xv: "x \<in> set (retype_addrs ptr ty n us)"
-  and     sz: "n = 0"
+  assumes "x \<in> set (retype_addrs ptr ty n us)"
+  and     "n = 0"
   shows   "x = ptr"
-  using sz xv unfolding retype_addrs_def
-  apply (clarsimp simp add: ptr_add_def
-                  simp del: power_0
-                     dest!: less_two_pow_divD)
-  done
+  using assms unfolding retype_addrs_def by (clarsimp simp: ptr_add_def)
 
 
 locale Retype_AI_obj_bits_api_neq_0 =
@@ -2495,8 +2489,7 @@ lemma subset_not_le_trans: "\<lbrakk>\<not> A \<subset> B; C \<subseteq> B\<rbra
 
 lemma cte_wp_at_trans_state[simp]: "cte_wp_at P ptr (kheap_update f (trans_state f' s)) =
        cte_wp_at P ptr (kheap_update f s)"
-  apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-  done
+  by (simp add: trans_state_update[symmetric] del: trans_state_update)
 
 
 lemma retype_region_cte_at_other:
@@ -2507,7 +2500,7 @@ lemma retype_region_cte_at_other:
   apply (simp only: foldr_upd_app_if fun_app_def K_bind_def)
   apply wp
       apply (simp only: cte_wp_at_trans_state)
-      apply wp
+      apply wp+
   apply (subst retype_addrs_fold)
   apply clarsimp
   apply (clarsimp simp: cte_wp_at_cases del: disjCI)

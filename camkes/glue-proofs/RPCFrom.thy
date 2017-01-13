@@ -384,7 +384,7 @@ lemma RPCFrom_echo_int_nf:
   apply (simp add:RPCFrom_echo_int'_def)
   apply (wp seL4_Call_wp)
     apply (simp add:seL4_MessageInfo_new'_def)
-    apply wp
+    apply wp+
   apply (simp add:globals_frame_intact_def ipc_buffer_valid_def
                   setMRs_def setMR_def)
   done
@@ -402,7 +402,7 @@ lemma RPCFrom_echo_parameter_nf:
   apply (simp add:RPCFrom_echo_parameter'_def)
   apply (wp seL4_Call_wp)
     apply (simp add:seL4_MessageInfo_new'_def)
-    apply wp
+    apply wp+
   apply (simp add:globals_frame_intact_def ipc_buffer_valid_def
                   setMRs_def setMR_def)
   done
@@ -420,7 +420,7 @@ lemma RPCFrom_echo_char_nf:
   apply (simp add:RPCFrom_echo_char'_def)
   apply (wp seL4_Call_wp)
     apply (simp add:seL4_MessageInfo_new'_def)
-    apply wp
+    apply wp+
   apply (simp add:globals_frame_intact_def ipc_buffer_valid_def
                   setMRs_def setMR_def)
   done
@@ -438,7 +438,7 @@ lemma RPCFrom_increment_char_nf:
   apply (simp add:RPCFrom_increment_char'_def)
   apply (wp seL4_Call_wp)
     apply (simp add:seL4_MessageInfo_new'_def)
-    apply wp
+    apply wp+
   apply (simp add:globals_frame_intact_def ipc_buffer_valid_def
                   setMRs_def setMR_def)
   done
@@ -458,7 +458,7 @@ lemma RPCFrom_increment_parameter_nf:
   apply (simp add:RPCFrom_increment_parameter'_def)
   apply (wp seL4_Call_wp)
     apply (simp add:seL4_MessageInfo_new'_def)
-    apply wp
+    apply wp+
   apply (simp add:globals_frame_intact_def ipc_buffer_valid_def
                   setMRs_def setMR_def)
   done
@@ -476,7 +476,7 @@ lemma RPCFrom_increment_64_nf:
   apply (simp add:RPCFrom_increment_64'_def)
   apply (wp seL4_Call_wp)
     apply (simp add:seL4_MessageInfo_new'_def)
-    apply wp
+    apply wp+
   apply (simp add:globals_frame_intact_def ipc_buffer_valid_def
                   setMRs_def setMR_def)
   done

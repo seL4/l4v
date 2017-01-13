@@ -237,6 +237,7 @@ lemma mapME_x_wp:
    using Cons.prems
    apply (simp add: mapME_x_def sequenceE_x_def)
    apply (fold mapME_x_def sequenceE_x_def)
+   including no_pre
    apply wp
     apply (rule Cons.hyps)
     apply fastforce
@@ -346,7 +347,7 @@ lemma invoke_untyped_wp:
         apply (elim conjE)
         apply (sep_select 3,sep_select 3)
         apply assumption
-       apply wp
+       apply wp+
       apply (rule hoare_vcg_conj_lift)
        apply (rule hoare_vcg_ex_lift)
        apply (wp hoare_vcg_conj_lift)
@@ -466,9 +467,9 @@ lemma invoke_untyped_one_has_children:
         apply wp
        apply simp
       apply (clarsimp simp:neq_Nil_conv)
-      apply auto[1]
-     apply wp
-    apply (rule hoare_strengthen_post[OF generate_object_ids_rv])
+        apply auto[1]
+       apply wp+
+     apply (rule hoare_strengthen_post[OF generate_object_ids_rv])
      apply (clarsimp simp:zip_is_empty)
     apply (wp unlessE_wp hoare_drop_imps | simp)+
   done
@@ -492,7 +493,7 @@ lemma invoke_untyped_exception:
           | wpc | simp add: reset_untyped_cap_def)+
     apply (rule_tac P = "available_range cap = cap_objects cap" in hoare_gen_asmEx)
     apply (simp add: whenE_def)
-   apply wp
+   apply wp+
   apply clarsimp
   apply (cut_tac p = "(a,b)" in opt_cap_sep_imp) 
    apply sep_solve
@@ -626,7 +627,7 @@ lemma seL4_Untyped_Retype_sep:
                [where check= False and tcb = tcb,simplified,rotated -1])
                 apply assumption
                apply fastforce
-              apply (wp hoare_vcg_ex_lift set_cap_wp)[5]
+              apply ((wp hoare_vcg_ex_lift set_cap_wp)+)[5]
          apply (rule_tac P = "\<exists>has_kids. iv = InvokeUntyped (Retype (root_cnode,ucptr_slot) nt (unat ts)
                [(root_cnode, ncptr_slot)]
                has_kids 1)"
@@ -735,6 +736,7 @@ lemma unify_failure_cdt_lift:
   \<Longrightarrow> \<lbrace>\<lambda>s. P (cdl_cdt s)\<rbrace> unify_failure f \<lbrace>\<lambda>r s. Q r s \<longrightarrow> P (cdl_cdt s)\<rbrace>,
   \<lbrace>\<lambda>r s. Q' r s \<longrightarrow> P (cdl_cdt s)\<rbrace>"
   apply (simp add:unify_failure_def)
+  including no_pre
   apply (wp hoare_drop_imps)
   apply (clarsimp simp:validE_def valid_def)
   apply (case_tac a,fastforce+)
@@ -790,6 +792,7 @@ crunch cdt_inc[wp]: handle_pending_interrupts "\<lambda>s. P (cdl_cdt s)"
 lemma unify_failure_valid:
   "\<lbrace>\<lambda>s. P s\<rbrace> f \<lbrace>\<lambda>r s. P s\<rbrace>
   \<Longrightarrow> \<lbrace>\<lambda>s. P s\<rbrace> unify_failure f \<lbrace>\<lambda>r s. P s\<rbrace>"
+  including no_pre
   apply (simp add:unify_failure_def)
   apply (wp hoare_drop_imps)
   apply (clarsimp simp:validE_def valid_def)
@@ -899,8 +902,7 @@ lemma update_thread_no_pending:
     K(\<forall>x. (case cdl_tcb_caps x tcb_pending_op_slot of Some cap \<Rightarrow> \<not> is_pending_cap cap | _ \<Rightarrow> True)\<longrightarrow>
           (case cdl_tcb_caps (t x) tcb_pending_op_slot of Some cap \<Rightarrow> \<not> is_pending_cap cap | _ \<Rightarrow> True))\<rbrace> 
     update_thread thread_ptr t \<lbrace>\<lambda>rv. no_pending\<rbrace>"
-  apply (rule hoare_pre)
-  apply (simp add: update_thread_def set_object_def | wp modify_wp | wpc)+
+  apply (simp add: update_thread_def set_object_def | (wp modify_wp)+ | wpc)+
   apply (clarsimp simp: no_pending_def)
   apply (intro conjI impI allI, simp_all)
   apply (drule_tac x = oid in spec)
@@ -1007,7 +1009,7 @@ lemma invoke_untyped_preempt:
        apply simp
       apply simp
      apply sep_solve
-    apply (wp select_wp)
+    apply (wp select_wp)+
   apply clarsimp
   apply (frule opt_cap_sep_imp)
   apply (clarsimp dest!: reset_cap_asid_untyped_cap_eqD)
@@ -1147,7 +1149,7 @@ lemma reset_untyped_cap_no_pending[wp]:
   apply (wp hoare_whenE_wp)
      apply (rule_tac P = "snd cref = tcb_pending_op_slot \<longrightarrow> \<not> is_pending_cap cap" in hoare_gen_asmEx)
      apply (wp mapME_x_inv_wp alternativeE_wp | simp)+
-    apply (wp select_wp)
+    apply (wp select_wp)+
   apply (clarsimp simp: detype_no_pending)
   apply (cases cref, clarsimp simp: no_pending_def)
   done
@@ -1197,7 +1199,7 @@ lemma reset_untyped_cap_not_pending_cap[wp]:
      apply (rule_tac P = " \<not> is_pending_cap cap" in hoare_gen_asmEx)
      apply (wp mapME_x_inv_wp alternativeE_wp set_cap_opt_cap)
      apply simp
-    apply (wp select_wp)
+    apply (wp select_wp)+
   apply (clarsimp simp: detype_no_pending)
   apply (cases cref)
   apply (clarsimp simp: detype_def opt_cap_def slots_of_def opt_object_def object_slots_def
@@ -1270,7 +1272,7 @@ lemma seL4_Untyped_Retype_inc_no_preempt:
      [where check= False and tcb = tcb and Q = Q  and Perror = Q
         for Q , simplified])
                apply fastforce
-              apply (wp hoare_vcg_ex_lift set_cap_wp)[5]
+              apply ((wp hoare_vcg_ex_lift set_cap_wp)+)[5]
          apply (rule_tac P = "\<exists>has_kids. iv = InvokeUntyped (Retype (root_cnode,ucptr_slot) nt (unat ts)
                [(root_cnode, ncptr_slot)]
                has_kids 1)"

@@ -189,6 +189,7 @@ lemma create_irq_caps_sep_helper:
     and K ((map_of (zip (used_irq_list spec) free_cptrs), drop (card (used_irqs spec)) free_cptrs) = rv \<and>
     inj_on t' (used_irq_nodes spec) \<and>
     dom t' = used_irq_nodes spec)\<guillemotright> s\<rbrace>"
+  including no_pre
   apply clarsimp
   apply (rule hoare_gen_asm_conj)
   apply (clarsimp simp: create_irq_caps_def si_irq_nodes_def2 sep_conj_exists)

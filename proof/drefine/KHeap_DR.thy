@@ -306,8 +306,7 @@ lemma caps_of_state_transform_opt_cap:
                         slots_of_def opt_object_def
                         transform_def transform_objects_def object_slots_def
                         valid_irq_node_def obj_at_def is_cap_table_def
-                        transform_tcb_def tcb_slot_defs tcb_slots
-                        tcb_pending_op_slot_def tcb_cap_cases_def
+                        transform_tcb_def tcb_slots tcb_cap_cases_def
                         bl_to_bin_tcb_cnode_index bl_to_bin_tcb_cnode_index_le0
                  split: if_split_asm)
   done
@@ -769,7 +768,7 @@ proof -
                         update_slots_def
                   split del: if_split)
   apply (case_tac "nat (bl_to_bin sl') = tcb_ipcbuffer_slot")
-   apply (simp add: tcb_slots tcb_pending_op_slot_def)
+   apply (simp add: tcb_slots)
    apply (clarsimp simp: bl_to_bin_tcb_cnode_index|rule conjI)+
      apply (rule corres_guard_imp)
        apply (rule select_pick_corres)
@@ -777,8 +776,7 @@ proof -
          apply (clarsimp simp: transform_tcb_def)
          apply (rule conjI)
           apply (rule ext)
-          apply (clarsimp simp: transform_tcb_def tcb_slots
-            tcb_pending_op_slot_def)
+          apply (clarsimp simp: transform_tcb_def tcb_slots)
          apply (rule refl)
         apply assumption
        apply simp
@@ -790,7 +788,7 @@ proof -
        apply (clarsimp simp: transform_tcb_def)
        apply (rule conjI)
         apply (rule ext)
-        apply (clarsimp simp: transform_tcb_def tcb_pending_op_slot_def tcb_slots)
+        apply (clarsimp simp: transform_tcb_def tcb_slots)
        apply (erule transform_full_intent_same_cap)
       apply simp
      apply simp
@@ -799,7 +797,7 @@ proof -
   apply (rule conjI)
    apply (clarsimp simp: bl_to_bin_tcb_cnode_index)
   apply (rule conjI ext dcorres_set_object_tcb|simp|
-         clarsimp simp: transform_tcb_def tcb_slot_defs tcb_slots corres_free_fail
+         clarsimp simp: transform_tcb_def tcb_slot_defs corres_free_fail
                   cong: transform_full_intent_caps_cong_weak)+
   done
 qed
@@ -857,7 +855,7 @@ lemma set_thread_state_ext_dcorres: "dcorres dc P P' (return ()) (set_thread_sta
         apply (clarsimp simp: corres_underlying_def when_def set_scheduler_action_def
                               modify_def bind_def put_def gets_def get_def return_def
                         split: option.splits)
-       apply wp
+       apply wp+
   done
 
 (*Special set_cap case which is related to thread_state *)
@@ -890,7 +888,7 @@ lemma set_cap_null_cap_corres:
         apply (clarsimp simp:transform_cap_def)
        apply (rule refl)
       apply (rule set_original_dummy_corres)
-     apply wp
+     apply wp+
    apply clarsimp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
@@ -1333,7 +1331,7 @@ lemma set_irq_state_dcorres:
                            transform_asid_table_def)
     apply simp
     apply (rule dmo_maskIRQ_dcorres)
-   apply wp
+   apply wp+
   done
 
 lemma dcorres_gets_all_param:
@@ -1385,7 +1383,7 @@ lemma empty_slot_corres:
        apply (clarsimp simp:transform_cap_def split:cap.splits arch_cap.splits)
       apply (rule get_cap_corres)
       apply simp
-     apply wp
+     apply wp+
    apply clarsimp
   apply (simp add: not_idle_thread_def)+
   done
@@ -1393,7 +1391,7 @@ lemma empty_slot_corres:
 lemma valid_idle_fast_finalise[wp]:
   "\<lbrace>invs\<rbrace> IpcCancel_A.fast_finalise p q \<lbrace>%r. valid_idle\<rbrace>"
   apply (case_tac p)
-             apply (simp_all add:fast_finalise.simps)
+             apply simp_all
      apply (wp,simp add:valid_state_def invs_def)
     apply (rule hoare_post_imp[where Q="%r. invs"])
      apply (clarsimp simp:valid_state_def invs_def,wp cancel_all_ipc_invs)
@@ -2046,10 +2044,10 @@ lemma tcb_at_set_thread_state_wp:
   set_thread_state a Structures_A.thread_state.Restart
   \<lbrace>\<lambda>x s. (\<forall>x\<in>set list. tcb_at x s \<and> not_idle_thread x s)\<rbrace>"
   apply (rule hoare_Ball_helper)
-  apply wp
-  apply (simp add:not_idle_thread_def)
-  apply wp
-done
+   including no_pre apply wp
+   apply (simp add:not_idle_thread_def)
+   apply wp+
+ done
 
 lemma invalid_cte_wp_at_pending_slot:
   "\<lbrakk>tcb_at y s;transform_cslot_ptr (ad, bd) = (y, tcb_pending_op_slot);
@@ -2556,7 +2554,7 @@ lemma dcorres_do_unbind_notification:
       apply (clarsimp simp: tcb_slots)
       apply (rule set_bound_notification_corres[where ntfn_opt=None, unfolded infer_tcb_bound_notification_def 
                                        not_idle_thread_def tcb_slots, simplified])
-     apply wp
+     apply wp+
    apply simp
   apply (clarsimp simp: not_idle_thread_def)
   done
@@ -2580,7 +2578,7 @@ lemma dcorres_unbind_maybe_notification:
       apply (rule_tac P'="R' (the (ntfn_bound_tcb ntfna)) ntfna" for R' in corres_inst)
       apply simp
       apply (rule dcorres_do_unbind_notification[unfolded dc_def, simplified])
-     apply (wp get_ntfn_wp)
+     apply (wp get_ntfn_wp)+
    apply (clarsimp split: option.splits)
   apply (clarsimp simp: valid_state_def valid_pspace_def split: option.splits)
   apply (simp add: obj_at_def)
@@ -2588,13 +2586,10 @@ lemma dcorres_unbind_maybe_notification:
   apply (clarsimp simp: valid_idle_def pred_tcb_at_def not_idle_thread_def obj_at_def)
   done
 
-(*
-definition
-  "unbind_maybe_notification' ntfn \<equiv> do ntfn_obj \<leftarrow> get_notification ntfn; unbind_maybe_notification ntfn_obj od"
-*)
 
 lemma unbind_notification_valid_state[wp]:
   "\<lbrace>valid_state\<rbrace> IpcCancel_A.unbind_notification t \<lbrace>\<lambda>rv. valid_state\<rbrace>"
+  including no_pre
   apply (simp add: unbind_notification_def valid_state_def valid_pspace_def)
   apply (rule hoare_seq_ext [OF _ gbn_sp])
   apply (case_tac ntfnptr, clarsimp, wp, simp)
@@ -2626,6 +2621,7 @@ lemma unbind_notification_valid_state[wp]:
 
 lemma unbind_maybe_notification_valid_state[wp]:
   "\<lbrace>valid_state\<rbrace> IpcCancel_A.unbind_maybe_notification a \<lbrace>\<lambda>rv. valid_state\<rbrace>"
+  including no_pre
   apply (simp add: unbind_maybe_notification_def valid_state_def valid_pspace_def)
   apply (rule hoare_seq_ext [OF _ get_ntfn_sp])
   apply (case_tac "ntfn_bound_tcb ntfn", clarsimp, wp, simp+)
@@ -2681,7 +2677,7 @@ lemma fast_finalise_corres:
    (IpcCancel_A.fast_finalise rv' final)"
   apply (case_tac rv')
   apply (simp_all add:transform_cap_def)
-           apply (simp_all add:PageTableUnmap_D.fast_finalise_def fast_finalise.simps PageTableUnmap_D.fast_finalise.simps corres_free_fail)
+           apply (simp_all add:PageTableUnmap_D.fast_finalise_def corres_free_fail)
    apply (simp_all add:when_def)
    apply (clarsimp simp:dcorres_cancel_all_ipc)
 apply clarsimp
@@ -2753,6 +2749,7 @@ lemma get_tcb_reply_cap_wp_cte_at:
    apply (frule cte_wp_tcb_cap_valid)
     apply simp+
    apply (clarsimp simp :cte_wp_at_def tcb_cap_valid_def st_tcb_at_def obj_at_def is_master_reply_cap_def split:cap.splits)
+  including no_pre
   apply (wp get_cap_cte_wp_at_rv)
      apply (rule tcb_cap_wp_at)
         apply (simp add:dom_tcb_cap_cases)+
@@ -2914,7 +2911,7 @@ lemma always_empty_slot_corres:
           apply (rule dcorres_rhs_noop_above[OF empty_slot_ext_dcorres])
             apply (rule corres_bind_ignore_ret_rhs)
             apply (rule set_cap_null_cap_corres)
-           apply wp
+           apply wp+
          apply simp
          apply (rule remove_parent_corres)
         apply (wp get_cap_wp|simp add: set_cdt_def)+
@@ -3363,14 +3360,14 @@ lemma dcorres_injection_handler_rhs:
   apply (clarsimp simp:injection_handler_def)
   apply (clarsimp simp:handleE'_def)
   apply (rule corres_dummy_return_l)
-    apply (rule corres_guard_imp)
-      apply (rule corres_underlying_split[where P'="\<lambda>a. \<top>" and P = "\<lambda>a. \<top>"])
-      apply assumption
-      apply wp
-      apply (clarsimp simp:return_def)
-      apply (case_tac v)
-        apply (clarsimp simp:throwError_def return_def corres_underlying_def)+
-done
+  apply (rule corres_guard_imp)
+    apply (rule corres_underlying_split[where P'="\<lambda>a. \<top>" and P = "\<lambda>a. \<top>"])
+       apply assumption
+      apply wp+
+    apply (clarsimp simp:return_def)
+    apply (case_tac v)
+     apply (clarsimp simp:throwError_def return_def corres_underlying_def)+
+  done
 
 crunch valid_etcbs[wp]: resolve_address_bits "valid_etcbs"
 
@@ -3458,11 +3455,7 @@ lemma dcorres_lookup_slot:
            apply (rule corres_returnOk [where P=\<top> and P'=\<top>])
            apply clarsimp
           apply (clarsimp simp: word_bits_def)
-         apply assumption
-        apply simp
-       apply wp
-   apply simp
-  apply clarsimp
+         apply wpsimp+
   apply (erule (1) objs_valid_tcb_ctable)
   done
 

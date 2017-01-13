@@ -802,7 +802,7 @@ lemma corres_returnOk:
   apply (rule corres_noopE)
    apply wp
    apply clarsimp
-  apply (rule no_fail_pre, wp)
+  apply wp
   done
 
 lemmas corres_returnOkTT = corres_trivial [OF corres_returnOk]

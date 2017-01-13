@@ -315,12 +315,12 @@ lemma valid_blocked_lift:
       and d: "\<And>P. \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
     shows "\<lbrace>valid_blocked\<rbrace> f \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
   apply (rule hoare_pre)
-  apply (wps c e d)
-  apply (simp add: valid_blocked_def)
-  apply (wp_trace hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift static_imp_wp a)
-  apply (rule hoare_convert_imp)
-  apply (rule typ_at_st_tcb_at_lift)
-  apply (wp a t)
+   apply (wps c e d)
+   apply (simp add: valid_blocked_def)
+   apply (wp_trace hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift static_imp_wp a)
+   apply (rule hoare_convert_imp)
+    apply (rule typ_at_st_tcb_at_lift)
+     apply (wp a t)+
   apply (simp add: valid_blocked_def)
   done
 
@@ -382,7 +382,7 @@ lemma valid_sched_action_lift:
   apply (rule hoare_vcg_conj_lift)
    apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s", OF _ c])
    apply (simp add: is_activatable_def)
-   apply (wp weak_valid_sched_action_lift switch_in_cur_domain_lift static_imp_wp a b c d e)
+   apply (wp weak_valid_sched_action_lift switch_in_cur_domain_lift static_imp_wp a b c d e)+
   done
 
 lemma valid_sched_lift:
@@ -397,8 +397,8 @@ lemma valid_sched_lift:
   assumes i: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
     shows "\<lbrace>valid_sched\<rbrace> f \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: valid_sched_def)
-  apply (intro hoare_vcg_conj_lift)
-     apply (wp valid_etcbs_lift valid_queues_lift ct_not_in_q_lift ct_in_cur_domain_lift valid_sched_action_lift valid_blocked_lift a b c d e f g h i)
+  apply (wp valid_etcbs_lift valid_queues_lift ct_not_in_q_lift ct_in_cur_domain_lift
+            valid_sched_action_lift valid_blocked_lift a b c d e f g h i hoare_vcg_conj_lift)
   done
 
 lemma valid_etcbs_tcb_etcb:
@@ -414,7 +414,7 @@ lemma valid_etcbs_get_tcb_get_etcb:
 
 lemma valid_etcbs_ko_etcb:
   "\<lbrakk> valid_etcbs s; kheap s ptr = Some ko \<rbrakk> \<Longrightarrow> \<exists>tcb. (ko = TCB tcb = (\<exists>etcb. ekheap s ptr = Some etcb))"
-  apply (clarsimp simp: valid_etcbs_def valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def)
+  apply (clarsimp simp: valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def)
   apply (erule_tac x="ptr" in allE)
   apply auto
   done

@@ -68,6 +68,7 @@ lemmas exec_transformed_wp_nf [wp] =
 
 lemma exec_transformed_return_wp [wp]:
     "\<lbrace> \<lambda>s. \<forall>s''. (\<exists>s'. (s, s') \<in> sr \<and> (s'', s') \<in> sr) \<longrightarrow> P a s'' \<rbrace> exec_transformed sr (return a) \<lbrace> P \<rbrace>"
+  including no_pre
   apply wp
   apply clarsimp
   apply force
@@ -75,6 +76,7 @@ lemma exec_transformed_return_wp [wp]:
 
 lemma exec_transformed_returnOk_wp [wp]:
     "\<lbrace> \<lambda>s. \<forall>s''. (\<exists>s'. (s, s') \<in> sr \<and> (s'', s') \<in> sr) \<longrightarrow> P a s'' \<rbrace> exec_transformed sr (returnOk a) \<lbrace> P \<rbrace>,\<lbrace> E \<rbrace>"
+  including no_pre
   apply wp
   apply clarsimp
   apply force
@@ -88,9 +90,8 @@ lemma exec_transformed_fail_wp_nf [wp]:
   done
 
 lemma exec_transformed_fail_wp [wp]:
-    "\<lbrace> \<lambda>_. True \<rbrace> exec_transformed st fail \<lbrace> P \<rbrace>"
-  by wp
-
+    "\<lbrace> \<lambda>_. True \<rbrace> exec_transformed st fail \<lbrace> P \<rbrace>"    
+  including no_pre by wp
 
 (*
  * Execute the given monad with a concrete state.
@@ -149,6 +150,7 @@ lemma exec_concrete_wp_nf [wp]:
   apply rule
    apply (rule exec_concrete_wp)
    apply (erule validNF_valid)
+  including no_pre
   apply wp
   apply (erule validNF_no_fail)
   done

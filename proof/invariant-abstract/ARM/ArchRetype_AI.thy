@@ -162,8 +162,8 @@ lemma clearMemory_vms:
   apply (simp add: clearMemory_def cleanCacheRange_PoU_def machine_op_lift_def
                    machine_rest_lift_def split_def)
   apply (wp hoare_drop_imps | simp | wp mapM_x_wp_inv)+
-  apply (simp add: storeWord_def | wp)+
-  apply (simp add: word_rsplit_0)
+   apply (simp add: storeWord_def | wp)+
+   apply (simp add: word_rsplit_0)+
   done
 
 crunch device_state_inv[wp]: clearMemory "\<lambda>ms. P (device_state ms)"
@@ -486,7 +486,6 @@ lemma copy_global_invs_mappings_restricted:
   apply (rule hoare_gen_asm)
   apply (simp add: valid_pspace_def pred_conj_def)
   apply (rule hoare_conjI, wp copy_global_equal_kernel_mappings_restricted)
-    apply assumption
    apply (clarsimp simp: global_refs_def)
   apply (rule valid_prove_more, rule hoare_vcg_conj_lift, rule hoare_TrueI)
   apply (simp add: copy_global_mappings_def valid_pspace_def)
@@ -521,18 +520,18 @@ lemma copy_global_invs_mappings_restricted:
 
 lemma copy_global_mappings_valid_ioc[wp]:
  "\<lbrace>valid_ioc\<rbrace> copy_global_mappings pd \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
-  by (simp add: copy_global_mappings_def, wp mapM_x_wp[of UNIV]) simp+
+  by (wpsimp wp: mapM_x_wp[of UNIV] simp: copy_global_mappings_def)
 
 lemma copy_global_mappings_vms[wp]:
  "\<lbrace>valid_machine_state\<rbrace> copy_global_mappings pd \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
-  by (simp add: copy_global_mappings_def, wp mapM_x_wp[of UNIV]) simp+
+  by (wpsimp wp: mapM_x_wp[of UNIV] simp: copy_global_mappings_def)
 
 lemma copy_global_mappings_invs:
   "\<lbrace>invs and (\<lambda>s. pd \<notin> global_refs s)
          and K (is_aligned pd pd_bits)\<rbrace>
      copy_global_mappings pd \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (fold all_invs_but_equal_kernel_mappings_restricted_eq)
-  apply (rule hoare_pre, rule copy_global_invs_mappings_restricted)
+  apply (wp copy_global_invs_mappings_restricted)
   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def
                         restrict_map_def)
   done
@@ -548,13 +547,9 @@ lemma mapM_copy_global_invs_mappings_restricted:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (fold all_invs_but_equal_kernel_mappings_restricted_eq)
   apply (induct pds, simp_all only: mapM_x_Nil mapM_x_Cons K_bind_def)
-   apply (wp, simp)
+   apply wpsimp
   apply (rule hoare_seq_ext, assumption, thin_tac "P" for P)
-  apply (rule hoare_conjI)
-   apply (rule hoare_pre, rule copy_global_invs_mappings_restricted)
-   apply clarsimp
-  apply (rule hoare_pre, wp)
-  apply clarsimp
+  apply (wpsimp wp: copy_global_invs_mappings_restricted)
   done
 
 
@@ -1326,8 +1321,7 @@ lemma clearMemory_um_eq_0:
    \<lbrace>\<lambda>_ m. underlying_memory m p = 0\<rbrace>"
   apply (clarsimp simp: clearMemory_def)
   apply (wp mapM_x_wp_inv | simp)+
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps storeWord_um_eq_0)
+  apply (wp hoare_drop_imps storeWord_um_eq_0)
   apply (fastforce simp: ignore_failure_def split: if_split_asm)
   done
 

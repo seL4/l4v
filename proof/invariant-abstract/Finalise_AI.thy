@@ -391,7 +391,6 @@ lemma empty_slot_deletes[wp]:
   done
 
 
-
 crunch caps_of_state[wp]: deleted_irq_handler "\<lambda>s. P (caps_of_state s)"
 
 
@@ -399,11 +398,15 @@ lemma empty_slot_final_cap_at:
   "\<lbrace>(\<lambda>s. cte_wp_at (\<lambda>c. obj_refs c \<noteq> {} \<and> is_final_cap' c s) p s) and K (p \<noteq> p')\<rbrace>
       empty_slot p' opt \<lbrace>\<lambda>rv s. cte_wp_at (\<lambda>c. is_final_cap' c s) p s\<rbrace>"
   apply (rule hoare_gen_asm)
+  apply (simp add: empty_slot_def final_cap_at_eq cte_wp_at_conj cte_wp_at_caps_of_state)
+  apply (wpsimp wp: opt_return_pres_lift get_cap_wp)
+  (* FIXME: wp_cleanup
   apply (simp add: empty_slot_def final_cap_at_eq cte_wp_at_conj)
   apply (simp add: cte_wp_at_caps_of_state)
   apply (wp opt_return_pres_lift | simp split del: if_split)+
   apply (rule hoare_strengthen_post [OF get_cap_sp])
   apply (clarsimp simp: cte_wp_at_caps_of_state)
+  *)
   done
 
 
@@ -492,17 +495,17 @@ lemma cancel_ipc_caps_of_state:
    \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   apply (simp add: cancel_ipc_def reply_cancel_ipc_def
              cong: Structures_A.thread_state.case_cong)
-  apply (wp cap_delete_one_caps_of_state select_wp
-       | wpc)+
+  apply (wpsimp wp: cap_delete_one_caps_of_state select_wp)
      apply (rule_tac Q="\<lambda>_ s. (\<forall>p. cte_wp_at can_fast_finalise p s
                                 \<longrightarrow> P ((caps_of_state s) (p \<mapsto> cap.NullCap)))
                                 \<and> P (caps_of_state s)"
                   in hoare_post_imp)
       apply (clarsimp simp: fun_upd_def[symmetric] split_paired_Ball)
      apply (simp add: cte_wp_at_caps_of_state)
-     apply (wp hoare_vcg_all_lift hoare_convert_imp
-               thread_set_caps_of_state_trivial
-          | clarsimp simp: tcb_cap_cases_def)+
+     apply (wpsimp wp: hoare_vcg_all_lift hoare_convert_imp thread_set_caps_of_state_trivial
+                 simp: tcb_cap_cases_def)+
+   prefer 2
+   apply assumption
   apply (rule hoare_strengthen_post [OF gts_sp])
   apply (clarsimp simp: fun_upd_def[symmetric] cte_wp_at_caps_of_state)
   done
@@ -514,10 +517,8 @@ lemma suspend_caps_of_state:
            \<and> P (caps_of_state s)\<rbrace>
      suspend t
    \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
-  apply (simp add: suspend_def)
-  apply (wp, simp, wp cancel_ipc_caps_of_state)
-  apply (simp add: fun_upd_def[symmetric])
-  done
+  unfolding suspend_def
+  by (wpsimp wp: cancel_ipc_caps_of_state simp: fun_upd_def[symmetric])
 
 
 lemma suspend_final_cap:
@@ -701,7 +702,6 @@ lemma pred_tcb_at_def2:
 (* sseefried: 'st_tcb_at_def2' only exists to make existing proofs go through. Can use 'pred_tcb_at_def2' instead *)
 lemmas st_tcb_at_def2 = pred_tcb_at_def2[where proj=itcb_state,simplified]
 
-(* FIXME: move *)
 lemma imp_and_strg: "Q \<and> C \<longrightarrow> (A \<longrightarrow> Q \<and> C) \<and> C" by blast
 (* FIXME: move *)
 lemma cases_conj_strg: "A \<and> B \<longrightarrow> (P \<and> A) \<or> (\<not> P \<and> B)"
@@ -770,9 +770,10 @@ lemma unbind_notification_not_bound:
 lemma unbind_notification_bound_tcb_at[wp]:
   "\<lbrace>\<top>\<rbrace> unbind_notification tcbptr \<lbrace>\<lambda>_. bound_tcb_at (op = None) tcbptr\<rbrace>"
   apply (simp add: unbind_notification_def)
-  apply (wp sbn_bound_tcb_at' | wpc | clarsimp)+
-  apply (rule gbn_bound_tcb[THEN hoare_strengthen_post])
-  apply clarsimp
+  apply (wpsimp wp: sbn_bound_tcb_at')
+   apply (rule gbn_bound_tcb[THEN hoare_strengthen_post])
+   apply clarsimp
+  apply assumption
   done
 
 crunch valid_mdb[wp]: unbind_notification "valid_mdb"
@@ -785,6 +786,7 @@ lemma unbind_notification_no_cap_to_obj_ref[wp]:
   apply (simp add: no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state)
   apply (wp unbind_notification_caps_of_state)
   done
+
 
 lemma empty_slot_cte_wp_elsewhere:
   "\<lbrace>(\<lambda>s. cte_wp_at P p s) and K (p \<noteq> p')\<rbrace> empty_slot p' opt \<lbrace>\<lambda>rv s. cte_wp_at P p s\<rbrace>"
@@ -931,7 +933,7 @@ lemma cap_delete_one_deletes[wp]:
 
 context Finalise_AI_2 begin
 sublocale delete_one_abs a' for a' :: "('a :: state_ext) itself"
-  by (unfold_locales, wp cap_delete_one_deletes cap_delete_one_caps_of_state)
+  by (unfold_locales; wp cap_delete_one_deletes cap_delete_one_caps_of_state)
 end
 
 lemma cap_delete_one_deletes_reply:
@@ -949,7 +951,7 @@ lemma cap_delete_one_deletes_reply:
                          split: if_split_asm elim!: allEI)
      apply (rule hoare_vcg_all_lift)
      apply simp
-     apply (wp static_imp_wp empty_slot_deletes empty_slot_caps_of_state get_cap_wp)
+     apply (wp static_imp_wp empty_slot_deletes empty_slot_caps_of_state get_cap_wp)+
   apply (fastforce simp: cte_wp_at_caps_of_state valid_reply_caps_def
                         is_cap_simps unique_reply_caps_def
               simp del: split_paired_All)
@@ -964,8 +966,7 @@ lemma cap_delete_one_reply_st_tcb_at:
   apply (rule hoare_seq_ext [OF _ get_cap_sp])
   apply (rule hoare_assume_pre)
   apply (clarsimp simp: cte_wp_at_caps_of_state when_def)
-  apply wp
-  apply simp
+  apply wpsimp
   done
 
 lemma get_irq_slot_emptyable[wp]:
@@ -1088,10 +1089,7 @@ lemma fast_finalise_st_tcb_at:
      fast_finalise cap fin
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (cases cap, simp_all)
-     apply (wp cancel_all_ipc_st_tcb_at
-               cancel_all_signals_st_tcb_at
-             | simp)+
+  apply (cases cap; wpsimp wp: cancel_all_ipc_st_tcb_at cancel_all_signals_st_tcb_at)
   done
 
 
@@ -1099,10 +1097,8 @@ lemma cap_delete_one_st_tcb_at:
   "\<lbrace>st_tcb_at P t and K (\<forall>st. active st \<longrightarrow> P st)\<rbrace>
      cap_delete_one ptr
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
-  apply (simp add: cap_delete_one_def unless_def
-                   is_final_cap_def)
-  apply (wp fast_finalise_st_tcb_at get_cap_wp)
-  apply simp
+  apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
+  apply (wpsimp wp: fast_finalise_st_tcb_at get_cap_wp)
   done
 
 lemma can_fast_finalise_Null:
@@ -1148,6 +1144,7 @@ lemma cte_wp_at_disj:
 lemmas thread_set_final_cap =
     final_cap_lift [OF thread_set_caps_of_state_trivial]
 
+
 schematic_goal no_cap_to_obj_with_diff_ref_lift:
   "\<lbrace>\<lambda>s. ?P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. ?P (caps_of_state s)\<rbrace>
    \<Longrightarrow> \<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
@@ -1172,6 +1169,7 @@ lemma cap_not_in_valid_global_refs:
   apply blast
   done
 
+(* FIXME: move *)
 lemma gts_wp:
   "\<lbrace>\<lambda>s. \<forall>st. st_tcb_at (op = st) t s \<longrightarrow> P st s\<rbrace> get_thread_state t \<lbrace>P\<rbrace>"
   unfolding get_thread_state_def

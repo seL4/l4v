@@ -18,8 +18,6 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-declare word_neq_0_conv[simp del]
-
 lemma capUntypedPtr_simps [simp]:
   "capUntypedPtr (ThreadCap r) = r"
   "capUntypedPtr (NotificationCap r badge a b) = r"
@@ -239,7 +237,7 @@ next
   show ?case
   proof (cases "q = y")
     case True thus ?thesis using step
-      by (clarsimp intro!: r_into_rtrancl)
+      by fastforce
   next
     case False 
     have "m \<turnstile> y \<leadsto>\<^sup>* q"
@@ -557,7 +555,7 @@ lemma fresh_virt_cap_class_Physical[simp]:
 lemma fresh_virt_cap_classD:
   "\<lbrakk> m x = Some cte; fresh_virt_cap_class C m \<rbrakk>
      \<Longrightarrow> C \<noteq> PhysicalClass \<longrightarrow> capClass (cteCap cte) \<noteq> C"
-  by (auto simp: fresh_virt_cap_class_def intro: ranI)
+  by (auto simp: fresh_virt_cap_class_def)
 
 lemma capRange_untyped:
   "capRange cap' \<inter> untypedRange cap \<noteq> {} \<Longrightarrow> isUntypedCap cap"
@@ -783,14 +781,13 @@ lemma sameRegionAs_def2:
                          isCap_Master capRange_Master capClass_Master)
    apply (clarsimp simp: isCap_simps
                          capMasterCap_def[where cap="UntypedCap d p n f" for d p n f])
-   apply (simp add: capRange_def interval_empty capUntypedSize_capBits)
+   apply (simp add: capRange_def capUntypedSize_capBits)
    apply (intro impI iffI)
     apply (clarsimp del: subsetI intro!: range_subsetI)
    apply clarsimp
-   apply (simp add: range_subset_eq2 interval_empty)
+   apply (simp add: range_subset_eq2)
   apply (simp cong: conj_cong)
-  apply (simp     add: capMasterCap_def sameRegionAs_def isCap_simps
-                       capBadge_simps isArchPageCap_def
+  apply (simp     add: capMasterCap_def sameRegionAs_def isArchPageCap_def
                 split: capability.split
             split del: if_split cong: if_cong)
   apply (simp    add: ARM_H.sameRegionAs_def isCap_simps
@@ -798,8 +795,7 @@ lemma sameRegionAs_def2:
            split del: if_split cong: if_cong)
   apply (clarsimp simp: capRange_def Let_def)
   apply (simp add: range_subset_eq2 cong: conj_cong)
-  apply (simp add: interval_empty conj_comms)
-  by blast
+  by (simp add: conj_comms)
 
 lemma sameObjectAs_def2:
  "sameObjectAs cap cap' = (\<lambda>cap cap'.
@@ -2240,7 +2236,7 @@ lemma insertInitCap_valid_pspace:
         apply (erule_tac P="pspace_aligned' s \<and> pspace_distinct' s
           \<and> no_0_obj' s" in conjunct2)
        apply (simp cong: conj_cong)
-       apply (wp setCTE_map_to_ctes getCTE_ctes_wp)
+       apply (wp setCTE_map_to_ctes getCTE_ctes_wp)+
   apply clarsimp
   apply (rule conjI)
    apply (clarsimp simp: valid_mdb_ctes_def)

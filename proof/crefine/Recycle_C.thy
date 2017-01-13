@@ -911,8 +911,9 @@ lemma tcbSchedEnqueue_ep_at:
   "\<lbrace>obj_at' (P :: endpoint \<Rightarrow> bool) ep\<rbrace>
       tcbSchedEnqueue t
    \<lbrace>\<lambda>rv. obj_at' P ep\<rbrace>"
+  including no_pre
   apply (simp add: tcbSchedEnqueue_def unless_def null_def)
-  apply (wp threadGet_wp, clarsimp, wp)
+  apply (wp threadGet_wp, clarsimp, wp+)
   apply (clarsimp split: if_split, wp)
   done
 

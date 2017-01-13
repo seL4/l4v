@@ -363,11 +363,11 @@ lemma monadic_rewrite_gets_the_walk:
    apply (rule monadic_rewrite_trans)
     apply (erule(1) monadic_rewrite_bind_tail)
    apply (simp add: gets_the_def bind_assoc)
-   apply (rule monadic_rewrite_symb_exec_r, wp)
+   apply (rule monadic_rewrite_symb_exec_r, wp+)
     apply (rule monadic_rewrite_trans)
      apply (rule monadic_rewrite_bind_tail)
       apply (rule_tac rv=rv in monadic_rewrite_symb_exec_l_known,
-             wp empty_fail_gets)
+             (wp empty_fail_gets)+)
        apply (rule monadic_rewrite_refl)
       apply wp
      apply assumption

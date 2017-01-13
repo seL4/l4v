@@ -283,7 +283,7 @@ lemma L2Tcorres_exec_concrete [heap_abs]:
   apply (rule corresXF_except)
      apply assumption
     apply (rule corresXF_fail)
-   apply wp[1]
+   including no_pre apply wp
   apply simp
   done
 
@@ -303,7 +303,7 @@ lemma L2Tcorres_exec_abstract [heap_abs]:
   apply (rule corresXF_except)
      apply assumption
     apply (rule corresXF_fail)
-   apply wp[1]
+   including no_pre apply wp
   apply simp
   done
 

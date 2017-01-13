@@ -161,6 +161,7 @@ lemma set_cap_empty_tables[wp]:
   apply (clarsimp simp: empty_table_caps_of)
   done
 
+
 lemma cte_wp_at_eq_to_op_eq:
   "cte_wp_at (\<lambda>c. c = cap) = cte_wp_at (op = cap)"
   by (simp add: cte_wp_at_caps_of_state fun_eq_iff)
@@ -194,19 +195,19 @@ lemma sts_pspace_no_overlap [wp]:
   "\<lbrace>pspace_no_overlap S\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. pspace_no_overlap S\<rbrace>"
   by (wp pspace_no_overlap_typ_at_lift)
 
+
 lemma diminished_cte_wp_at_valid_cap:
   "cte_wp_at (diminished c) p s \<Longrightarrow> valid_objs s \<Longrightarrow> s \<turnstile> c"
   apply (drule(1) cte_wp_at_valid_objs_valid_cap)
   apply (clarsimp simp: diminished_def)
   done
 
+
 lemma delete_objects_st_tcb_at:
   "\<lbrace>pred_tcb_at proj P t and invs and K (t \<notin> {ptr .. ptr + 2 ^ bits - 1})\<rbrace> 
     delete_objects ptr bits
   \<lbrace>\<lambda>y. pred_tcb_at proj P t\<rbrace>"
   by (wp|simp add: delete_objects_def do_machine_op_def split_def)+
-
-
 
 
 end

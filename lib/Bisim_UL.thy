@@ -366,7 +366,7 @@ lemma bisim_symb_exec_r_det_on:
       apply fastforce
      apply (rule nf)
     apply (rule z)
-   apply (wp y)
+   apply (wp y)+
   apply simp+ 
   done
 
@@ -472,8 +472,8 @@ lemma bisim_symb_exec_r:
       apply fastforce
      apply (rule ne)
     apply (rule z)
-   apply (wp y)
-  apply simp+ 
+   apply (wp y)+
+  apply simp+
   done
 
 lemma bisim_not_empty:

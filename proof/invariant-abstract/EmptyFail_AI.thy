@@ -392,7 +392,7 @@ proof (induct rule: cap_revoke.induct)
       apply (rule spec_empty_fail_bindE',
                ((wp drop_spec_empty_fail select_ext_empty_fail | simp)+)[1])+
       apply (rule "1.hyps", simp+)
-     apply (wp drop_spec_empty_fail)
+     apply (wp drop_spec_empty_fail)+
      done
 qed
 

@@ -324,7 +324,7 @@ lemma L1corres_prepend_unknown_var':
    apply (monad_eq simp: Bex_def)
    apply metis
   apply (subst L1_init_def)
-  apply (wp select_wp)
+  including no_pre apply (wp select_wp)
   apply fastforce
   done
 

@@ -97,7 +97,7 @@ lemma derive_cap_is_derived [Ipc_AI_assms]:
                     | erule cte_wp_at_weakenE
                     | simp split: cap.split_asm)+)[11]
   apply(wp, simp add: o_def)
-  apply(rule hoare_pre, wp hoare_drop_imps arch_derive_cap_is_derived)
+  apply(wp hoare_drop_imps arch_derive_cap_is_derived)
   apply(clarify, drule cte_wp_at_eqD, clarify)
   apply(frule(1) cte_wp_at_valid_objs_valid_cap)
   apply(erule cte_wp_at_weakenE)
@@ -184,7 +184,7 @@ lemma arch_derive_cap_objrefs_iszombie [Ipc_AI_assms]:
      arch_derive_cap cap
    \<lbrace>\<lambda>rv s. P (set_option (aobj_ref rv)) False s\<rbrace>,-"
   apply(cases cap, simp_all add: is_zombie_def arch_derive_cap_def)
-      apply(rule hoare_pre, wpc?, wp, simp)+
+      apply(rule hoare_pre, wpc?, wp+, simp)+
   done
 
 lemma obj_refs_remove_rights[simp, Ipc_AI_assms]:
@@ -462,6 +462,7 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
   "\<lbrace>cap_refs_respects_device_region and tcb_at t and  valid_objs and valid_mdb\<rbrace>
    do_ipc_transfer t ep bg grt r
    \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  including no_pre
   apply (simp add: do_ipc_transfer_def)
   apply (wp|wpc)+
       apply (simp add: do_normal_transfer_def transfer_caps_def bind_assoc)
@@ -472,13 +473,13 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
          apply (subst ball_conj_distrib)
          apply (wp get_rs_cte_at2 thread_get_wp static_imp_wp grs_distinct
                    hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift | simp)+
-   apply (rule hoare_strengthen_post[where Q = "\<lambda>r s. cap_refs_respects_device_region s
-       \<and> valid_objs s \<and> valid_mdb s \<and> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb) t s"])
+  apply (rule hoare_strengthen_post[where Q = "\<lambda>r s. cap_refs_respects_device_region s
+          \<and> valid_objs s \<and> valid_mdb s \<and> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb) t s"])
    apply wp
-    apply (clarsimp simp: obj_at_def is_tcb_def)
-    apply (simp split: kernel_object.split_asm)
-   apply auto
-   done
+   apply (clarsimp simp: obj_at_def is_tcb_def)
+   apply (simp split: kernel_object.split_asm)
+  apply auto
+  done
 
 end
 
@@ -487,4 +488,5 @@ interpretation Ipc_AI?: Ipc_AI_cont
   interpret Arch .
   case 1 show ?case by (unfold_locales;(fact Ipc_AI_cont_assms)?)
   qed
+
 end

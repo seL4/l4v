@@ -575,6 +575,7 @@ lemma set_asid_wp:
     set_asid spec orig_caps obj_id
     \<lbrace>\<lambda>rv. \<guillemotleft>si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
            si_objects \<and>* R\<guillemotright>\<rbrace>"
+  including no_pre
   apply (rule hoare_gen_asm, clarsimp)
   apply (frule (1) object_at_real_object_at)
   apply (rule valid_si_caps_at_si_cap_at [where obj_id=obj_id], clarsimp+)
@@ -822,7 +823,7 @@ lemma map_page_in_pt_sep:
          si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
          si_objects \<and>*
          R\<guillemotright>\<rbrace>"
-
+  including no_pre
   apply (rule hoare_gen_asm, clarsimp)
   apply (simp add:map_page_def)
   apply (rule assert_opt_validI)+
@@ -836,8 +837,8 @@ lemma map_page_in_pt_sep:
   apply (frule (1) object_at_real_object_at [where obj_id = "cap_object pt_cap"])
   apply (frule (1) object_at_real_object_at [where obj_id = "cap_object frame_cap"])
    apply (intro conjI)
-    apply (clarsimp simp: object_at_def is_pt_def is_frame_def
-      ,simp split:cdl_object.splits)
+    apply (clarsimp simp: object_at_def is_pt_def is_frame_def,
+           simp split:cdl_object.splits)
    apply clarsimp
    apply wp
    apply (clarsimp simp: object_at_def)
@@ -1006,7 +1007,7 @@ lemma map_page_table_slots_wp':
    apply (clarsimp simp: object_at_def object_type_is_object cap_ref_object_def
                   split: cdl_cap.splits)
   apply (clarsimp simp: sep_conj_assoc)
-  apply (wp sep_wp: map_page_table_slots_wp'' [where t=t], simp+)
+  apply (wp sep_wp: map_page_table_slots_wp'' [where t=t])
   apply sep_solve
   done
 

@@ -228,6 +228,7 @@ lemma invoke_tcb_tc_respects_aag:
          and K (authorised_tcb_inv aag (ThreadControl t sl ep mcp priority croot vroot buf))\<rbrace>
      invoke_tcb (ThreadControl t sl ep mcp priority croot vroot buf)
    \<lbrace>\<lambda>rv. integrity aag X st and pas_refined aag\<rbrace>"
+  including no_pre
   apply (rule hoare_gen_asm)+
   apply (subst invoke_tcb.simps)
   apply (subst set_priority_extended.dxo_eq)
@@ -272,7 +273,7 @@ lemma invoke_tcb_tc_respects_aag:
              checked_insert_no_cap_to
              out_no_cap_to_trivial[OF ball_tcb_cap_casesI]
              thread_set_ipc_tcb_cap_valid
-             cap_delete_pas_refined[THEN valid_validE_E])
+             cap_delete_pas_refined[THEN valid_validE_E])+
         | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
                     emptyable_def
                del: hoare_post_taut hoare_True_E_R
@@ -349,7 +350,7 @@ lemma invoke_tcb_ntfn_control_respects[wp]:
      invoke_tcb (tcb_invocation.NotificationControl t ntfn)
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (case_tac ntfn, simp_all del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps K_def)
-  apply (wp invoke_tcb_bind_notification_respects invoke_tcb_unbind_notification_respects)
+   apply (wp invoke_tcb_bind_notification_respects invoke_tcb_unbind_notification_respects)+
   done
   
 lemma invoke_tcb_respects:
@@ -504,7 +505,7 @@ lemma decode_set_priority_authorised:
    \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
   unfolding decode_set_priority_def check_prio_def authorised_tcb_inv_def
   apply (cases msg; simp add: Let_def)
-   apply (wp validE_validE_R[OF throwError_wp])
+   apply (wp validE_validE_R[OF throwError_wp])+
   by simp
 
 lemma decode_set_mcpriority_authorised:
@@ -513,7 +514,7 @@ lemma decode_set_mcpriority_authorised:
    \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
   unfolding decode_set_mcpriority_def check_prio_def authorised_tcb_inv_def
   apply (cases msg; simp)
-   apply (wp validE_validE_R[OF throwError_wp])
+   apply (wp validE_validE_R[OF throwError_wp])+
   by simp
 
 lemma decode_unbind_notification_authorised:
@@ -545,12 +546,12 @@ lemma decode_tcb_invocation_authorised:
    \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>,-"
   unfolding decode_tcb_invocation_def
   apply (rule hoare_pre)
-  apply wpc
+   apply wpc
   apply (wp decode_registers_authorised decode_tcb_configure_authorised
             decode_set_priority_authorised decode_set_mcpriority_authorised
             decode_set_ipc_buffer_authorised decode_set_space_authorised
             decode_bind_notification_authorised
-            decode_unbind_notification_authorised)
+            decode_unbind_notification_authorised)+
   by (auto iff: authorised_tcb_inv_def)
 
 text{*

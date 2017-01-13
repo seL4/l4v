@@ -119,6 +119,7 @@ lemma L1_catch_lp: "
     \<And>s. E2 () s \<Longrightarrow> E () s \<rbrakk> \<Longrightarrow>
   \<lbrace>P\<rbrace> L1_catch A B \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   apply (clarsimp simp: L1_catch_def)
+  including no_pre
   apply wp
    apply (erule validE_weaken, simp+)[1]
   apply (erule validE_weaken, simp+)[1]

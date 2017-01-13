@@ -78,7 +78,7 @@ lemma cancel_badged_sends_respects[wp]:
       apply (wp sts_respects_restart_ep hoare_vcg_const_Ball_lift sts_st_tcb_at_neq|simp)+
      apply clarsimp
      apply fastforce
-    apply (wp set_endpoinintegrity hoare_vcg_const_Ball_lift get_endpoint_wp)
+    apply (wp set_endpoinintegrity hoare_vcg_const_Ball_lift get_endpoint_wp)+
   apply clarsimp
   apply (frule(1) sym_refs_ko_atD)
   apply (frule ko_at_state_refs_ofD)
@@ -137,9 +137,9 @@ lemma gbn_pas_refined[wp]:
 
 lemma set_bound_notification_ekheap[wp]:
   "\<lbrace>\<lambda>s. P (ekheap s)\<rbrace> set_bound_notification t st \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
-apply (simp add: set_bound_notification_def)
-apply (wp set_scheduler_action_wp | simp)+
-done
+  apply (simp add: set_bound_notification_def)
+  apply (wp set_scheduler_action_wp | simp)+
+  done
 
 lemma sbn_thread_states[wp]:
   "\<lbrace>\<lambda>s. P (thread_states s)\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>rv s. P (thread_states s)\<rbrace>"
@@ -191,6 +191,7 @@ crunch pas_refined[wp]: set_vm_root "pas_refined aag"
 
 lemma reply_cancel_ipc_pas_refined[wp]:
   "\<lbrace>pas_refined aag and K (is_subject aag t)\<rbrace> reply_cancel_ipc t \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
+  including no_pre
   apply (rule hoare_gen_asm)
   apply (simp add: reply_cancel_ipc_def)
   apply (wp select_wp)
@@ -451,7 +452,8 @@ lemma finalise_cap_respects[wp]:
                                          aag_cap_auth_def unbind_maybe_notification_def 
                               elim!: pas_refined_Control[symmetric])+)[3]
             (* tcb cap *)
-         apply (wp unbind_notification_respects unbind_notification_invs 
+         including no_pre
+         apply (wp unbind_notification_respects unbind_notification_invs
                  | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def 
                                   unbind_maybe_notification_def 
                            elim!: pas_refined_Control[symmetric]
@@ -501,6 +503,7 @@ lemma finalise_cap_auth':
   "\<lbrace>pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
       finalise_cap cap final
    \<lbrace>\<lambda>rv s. pas_cap_cur_auth aag (fst rv)\<rbrace>"
+  including no_pre
   apply (rule hoare_gen_asm)
   apply (cases cap, simp_all add: arch_finalise_cap_def split del: if_split)
   apply (wp
@@ -517,11 +520,7 @@ lemma finalise_cap_auth':
 lemma finalise_cap_obj_refs:
   "\<lbrace>\<lambda>s. \<forall>x \<in> obj_refs cap. P x\<rbrace> finalise_cap cap slot \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs (fst rv). P x\<rbrace>"
   apply (cases cap)
-  apply (wp | simp add: o_def | rule impI TrueI conjI)+
-  apply (simp add: arch_finalise_cap_def)
-  apply (rule hoare_pre)
-   apply (wp | wpc)+
-  apply simp
+             apply (wpsimp simp: arch_finalise_cap_def o_def|rule conjI)+
   done
 
 lemma zombie_ptr_emptyable:
@@ -609,7 +608,7 @@ next
     apply (subst rec_del.simps)
     apply (simp only: split_def)
     apply (rule hoare_pre_spec_validE)
-     apply (wp set_cap_integrity_autarch "2.hyps" static_imp_wp, assumption+)
+     apply (wp set_cap_integrity_autarch "2.hyps" static_imp_wp)
           apply ((wp preemption_point_inv' | simp add: integrity_subjects_def pas_refined_def)+)[1]
          apply (simp(no_asm))
          apply (rule spec_strengthen_postE)
@@ -653,7 +652,7 @@ next
        apply (erule_tac s = "{r}" in subst)
        apply simp
       apply (simp add: is_final_cap_def)
-      apply (wp get_cap_auth_wp [where aag = aag])
+      apply (wp get_cap_auth_wp [where aag = aag])+
     apply (clarsimp simp: pas_refined_wellformed cte_wp_at_caps_of_state conj_comms)
     apply (frule (1) caps_of_state_valid)
     apply (frule if_unsafe_then_capD [OF caps_of_state_cteD], clarsimp+)
@@ -666,7 +665,7 @@ next
   case (3 ptr bits n slot s)
   show ?case
     apply (simp add: rec_del_call.simps simp_thms spec_validE_def)
-    apply (rule hoare_pre, wp static_imp_wp)
+    apply (wp static_imp_wp)
     apply clarsimp
     done
 
@@ -803,10 +802,7 @@ lemma pas_refined_set_asid_table_empty_strg:
 
 lemma set_asid_pool_ko_at[wp]:
   "\<lbrace>\<top>\<rbrace> set_asid_pool ptr pool \<lbrace>\<lambda>rv. ko_at (ArchObj (arch_kernel_obj.ASIDPool pool)) ptr\<rbrace>"
-  apply (simp add: set_asid_pool_def set_object_def)
-  apply wp
-  apply (simp add: obj_at_def hoare_post_taut)
-  done
+  by (wpsimp simp: obj_at_def set_asid_pool_def set_object_def)
 
 (* The contents of the delete_access_control locale *)
 
@@ -840,7 +836,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
     apply (subst cap_revoke.simps)
 
     apply (rule hoare_pre_spec_validE)
-     apply (wp "1.hyps", assumption+)
+     apply (wp "1.hyps")
             apply ((wp preemption_point_inv' | simp add: integrity_subjects_def pas_refined_def)+)[1]
            apply (wp select_ext_weak_wp cap_delete_respects cap_delete_pas_refined
                     | simp split del: if_split | wp_once hoare_vcg_const_imp_lift hoare_drop_imps)+
@@ -873,6 +869,7 @@ lemma valid_specE_validE:
 lemma deleting_irq_handler_caps_of_state_nullinv:
   "\<lbrace>\<lambda>s. \<forall>p. P (caps_of_state s(p \<mapsto> cap.NullCap))\<rbrace> deleting_irq_handler irq \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   unfolding deleting_irq_handler_def
+  including no_pre
   apply (wp cap_delete_one_caps_of_state hoare_drop_imps)
   apply (rule hoare_post_imp [OF _ get_irq_slot_inv])
   apply fastforce
@@ -882,6 +879,7 @@ lemma finalise_cap_caps_of_state_nullinv:
   "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> (\<forall>p. P (caps_of_state s(p \<mapsto> cap.NullCap)))\<rbrace>
   finalise_cap cap final
   \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
+  including no_pre
   apply (cases cap, simp_all split del: if_split)
              apply (wp suspend_caps_of_state unbind_notification_caps_of_state 
                        unbind_notification_cte_wp_at 
@@ -903,6 +901,7 @@ lemma finalise_cap_cte_wp_at_nullinv:
 
 lemma finalise_cap_fst_ret:
   "\<lbrace>\<lambda>s. P cap.NullCap \<and> (\<forall>a b c. P (cap.Zombie a b c)) \<rbrace> finalise_cap cap is_final\<lbrace>\<lambda>rv s. P (fst rv)\<rbrace>"
+  including no_pre
   apply (cases cap, simp_all add: arch_finalise_cap_def split del: if_split)
   apply (wp | simp add: comp_def split del: if_split | fastforce)+
   apply (rule hoare_pre)
@@ -944,13 +943,13 @@ next
                       rec_del_call.simps)
     apply (wp static_imp_wp)
     apply (wp set_cap_cte_wp_at')[1]
-    apply (wp "2.hyps"[simplified without_preemption_def rec_del_call.simps], assumption+)
+    apply (wp "2.hyps"[simplified without_preemption_def rec_del_call.simps])
          apply ((wp preemption_point_inv | simp)+)[1]
         apply simp
         apply (rule "2.hyps"[simplified exposed_rdcall.simps slot_rdcall.simps
                                         simp_thms disj_not1], simp_all)[1]
        apply (simp add: cte_wp_at_caps_of_state)
-       apply wp
+       apply wp+
       apply (rule_tac Q = "\<lambda>rv' s. (slot \<noteq> p \<or> exposed \<longrightarrow> cte_wp_at P p s) \<and> P (fst rv')
                              \<and> cte_at slot s" in hoare_post_imp)
        apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -972,7 +971,7 @@ next
     apply (subst rec_del.simps)
     apply wp
         apply (simp add: cte_wp_at_caps_of_state)
-        apply wp
+        apply wp+
       apply simp
       apply (wp get_cap_wp)[1]
      apply (rule spec_strengthen_postE)

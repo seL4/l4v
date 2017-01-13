@@ -1333,7 +1333,7 @@ lemma retype_untypeds_wp_helper:
           apply (rule_tac x=all_available_ids in exI)
           apply (rule_tac x=t in exI)
           apply fastforce
-          apply wp
+          apply wp+
     apply (clarsimp simp: opt_object_def real_object_at_def)
     apply blast
    apply clarsimp

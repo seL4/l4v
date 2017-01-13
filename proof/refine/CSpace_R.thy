@@ -1207,8 +1207,7 @@ lemma valid_bitmapQ_lift:
   shows   "\<lbrace>Invariants_H.valid_bitmapQ\<rbrace> f \<lbrace>\<lambda>_. Invariants_H.valid_bitmapQ\<rbrace>"
   unfolding valid_bitmapQ_def bitmapQ_def 
   apply (wp hoare_vcg_all_lift)
-  apply (rule hoare_pre)
-  apply (wps prq prqL1 prqL2)
+   apply (wps prq prqL1 prqL2)
   apply (rule hoare_vcg_prop, assumption)
   done
 
@@ -1219,8 +1218,7 @@ lemma bitmapQ_no_L1_orphans_lift:
   shows   "\<lbrace> bitmapQ_no_L1_orphans \<rbrace> f \<lbrace>\<lambda>_. bitmapQ_no_L1_orphans \<rbrace>"
   unfolding valid_bitmapQ_def bitmapQ_def bitmapQ_no_L1_orphans_def
   apply (wp hoare_vcg_all_lift)
-  apply (rule hoare_pre)
-  apply (wps prq prqL1 prqL2)
+   apply (wps prq prqL1 prqL2)
   apply (rule hoare_vcg_prop, assumption)
   done
 
@@ -1231,8 +1229,7 @@ lemma bitmapQ_no_L2_orphans_lift:
   shows   "\<lbrace> bitmapQ_no_L2_orphans \<rbrace> f \<lbrace>\<lambda>_. bitmapQ_no_L2_orphans \<rbrace>"
   unfolding valid_bitmapQ_def bitmapQ_def bitmapQ_no_L2_orphans_def
   apply (wp hoare_vcg_all_lift)
-  apply (rule hoare_pre)
-  apply (wps prq prqL1 prqL2)
+   apply (wps prq prqL1 prqL2)
   apply (rule hoare_vcg_prop, assumption)
   done
 
@@ -1843,7 +1840,7 @@ lemma cteInsert_mdb_chain_0:
   apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setUntypedCapAsFull_ctes_of
     setUntypedCapAsFull_ctes_of_no_0  mdb_inv_preserve_modify_map
     setUntypedCapAsFull_mdb_chain_0 mdb_inv_preserve_fun_upd | simp del:fun_upd_apply)+
-  apply (wp getCTE_wp)
+  apply (wp getCTE_wp)+
   apply (clarsimp simp:cte_wp_at_ctes_of simp del:fun_upd_apply)
   apply (subgoal_tac "src \<noteq> 0")
    prefer 2
@@ -1882,7 +1879,7 @@ lemma cteInsert_mdb_chunked:
   apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setUntypedCapAsFull_ctes_of
     setUntypedCapAsFull_ctes_of_no_0 mdb_inv_preserve_modify_map
     setUntypedCapAsFull_mdb_chunked mdb_inv_preserve_fun_upd,simp)
-  apply (wp getCTE_wp)
+  apply (wp getCTE_wp)+
   apply (clarsimp simp:cte_wp_at_ctes_of simp del:fun_upd_apply)
   apply (subgoal_tac "src \<noteq> 0")
    prefer 2
@@ -1899,7 +1896,7 @@ lemma cteInsert_mdb_chunked:
   apply (simp add: nullPointer_def)
   apply (subgoal_tac "mdb_insert (ctes_of s) src s_cap s_node dest NullCap d_node")
    apply (drule mdb_insert.chunked_n, erule is_derived_badge_derived')
-   apply (clarsimp simp: modify_map_apply mdb_chunked_prev_update)
+   apply (clarsimp simp: modify_map_apply mdb_chunked_prev_update fun_upd_def)
   apply unfold_locales
           apply (assumption|rule refl)+
     apply (simp add: valid_mdb_ctes_def)
@@ -1920,7 +1917,7 @@ lemma cteInsert_untyped_mdb:
   apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setUntypedCapAsFull_ctes_of
     setUntypedCapAsFull_ctes_of_no_0 mdb_inv_preserve_modify_map
     setUntypedCapAsFull_untyped_mdb' mdb_inv_preserve_fun_upd,simp)
-  apply (wp getCTE_wp)
+  apply (wp getCTE_wp)+
   apply (clarsimp simp:cte_wp_at_ctes_of simp del:fun_upd_apply)
   apply (subgoal_tac "src \<noteq> 0")
    prefer 2
@@ -1951,19 +1948,19 @@ lemma cteInsert_untyped_mdb:
     apply (simp add: mdb_insert_child_def mdb_insert_child_axioms_def)
    apply (drule mdb_insert_child.untyped_mdb_n)
    apply (clarsimp simp: modify_map_apply untyped_mdb_prev_update
-                         descendants_of_prev_update)
+                         descendants_of_prev_update fun_upd_def)
   apply (subgoal_tac "mdb_insert_sib (ctes_of s) src s_cap s_node dest NullCap d_node cap")
    prefer 2
    apply (simp add: mdb_insert_sib_def mdb_insert_sib_axioms_def)
   apply (drule mdb_insert_sib.untyped_mdb_n)
   apply (clarsimp simp: modify_map_apply untyped_mdb_prev_update
-                        descendants_of_prev_update)
+                        descendants_of_prev_update fun_upd_def)
   done
 
 lemma valid_mdb_ctes_maskedAsFull:
   "\<lbrakk>valid_mdb_ctes m;m src = Some (CTE s_cap s_node)\<rbrakk>
    \<Longrightarrow> valid_mdb_ctes (m(src \<mapsto> CTE (maskedAsFull s_cap cap) s_node))"
-  apply (clarsimp simp:fun_upd_apply maskedAsFull_def)
+  apply (clarsimp simp: maskedAsFull_def)
   apply (intro conjI impI)
   apply (frule mdb_inv_preserve_updateCap
     [where m = m and slot = src and index = "max_free_index (capBlockSize cap)"])
@@ -2033,7 +2030,7 @@ lemma cteInsert_untyped_inc':
   apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setUntypedCapAsFull_ctes_of
     setUntypedCapAsFull_ctes_of_no_0 mdb_inv_preserve_modify_map
     setUntypedCapAsFull_untyped_mdb' mdb_inv_preserve_fun_upd)
-  apply (wp getCTE_wp setUntypedCapAsFull_ctes)
+  apply (wp getCTE_wp setUntypedCapAsFull_ctes)+
   apply (clarsimp simp:cte_wp_at_ctes_of simp del:fun_upd_apply)
   apply (subgoal_tac "src \<noteq> 0")
    prefer 2
@@ -2131,7 +2128,7 @@ lemma cteInsert_irq_control:
   apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setUntypedCapAsFull_ctes_of
     setUntypedCapAsFull_ctes_of_no_0 setUntypedCapAsFull_irq_control mdb_inv_preserve_fun_upd
     mdb_inv_preserve_modify_map,simp)
-  apply (wp getCTE_wp)
+  apply (wp getCTE_wp)+
   apply (clarsimp simp:cte_wp_at_ctes_of simp del:fun_upd_apply)
   apply (subgoal_tac "src \<noteq> 0")
    prefer 2
@@ -2154,7 +2151,7 @@ lemma cteInsert_irq_control:
      apply (simp add: valid_mdb_ctes_def)
     apply assumption+
   apply (drule mdb_insert_der.irq_control_n)
-  apply (clarsimp simp: modify_map_apply irq_control_prev_update)
+  apply (clarsimp simp: modify_map_apply irq_control_prev_update fun_upd_def)
   done
 
 lemma capMaster_isUntyped:
@@ -2838,17 +2835,16 @@ lemma setUntypedCapAsFull_if_live_then_nonz_cap':
    \<lbrace>\<lambda>rv s. if_live_then_nonz_cap' s\<rbrace>"
   apply (clarsimp simp:if_live_then_nonz_cap'_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)
-  apply (clarsimp simp:setUntypedCapAsFull_def split del:if_splits)
-  apply (wp hoare_vcg_split_if)
+   apply (clarsimp simp:setUntypedCapAsFull_def split del: if_split)
+   apply (wp hoare_vcg_split_if)
     apply (clarsimp simp:ex_nonz_cap_to'_def cte_wp_at_ctes_of)
-    apply (wp updateCap_ctes_of_wp)
- apply clarsimp
- apply (elim allE impE)
-  apply (assumption)
- apply (clarsimp simp:ex_nonz_cap_to'_def cte_wp_at_ctes_of modify_map_def split:if_splits)
- apply (rule_tac x = cref in exI)
- apply (intro conjI impI)
-   apply clarsimp+
+    apply (wp updateCap_ctes_of_wp)+
+  apply clarsimp
+  apply (elim allE impE)
+   apply (assumption)
+  apply (clarsimp simp:ex_nonz_cap_to'_def cte_wp_at_ctes_of modify_map_def split:if_splits)
+  apply (rule_tac x = cref in exI)
+  apply (intro conjI impI; clarsimp)
   done
 
 
@@ -2861,16 +2857,14 @@ lemma cteInsert_iflive'[wp]:
       \<and> cte_wp_at' (\<lambda>c. cteCap c = NullCap) dest s\<rbrace>
      cteInsert cap src dest
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (rule hoare_pre)
   apply (simp add: cteInsert_def split del: if_split)
   apply (wp updateCap_iflive' hoare_drop_imps)
-  apply (clarsimp simp:cte_wp_at_ctes_of)
-  apply (wp hoare_vcg_conj_lift hoare_vcg_ex_lift hoare_vcg_ball_lift getCTE_wp
-    setUntypedCapAsFull_ctes_of setUntypedCapAsFull_if_live_then_nonz_cap')
+       apply (clarsimp simp:cte_wp_at_ctes_of)
+       apply (wp hoare_vcg_conj_lift hoare_vcg_ex_lift hoare_vcg_ball_lift getCTE_wp
+                 setUntypedCapAsFull_ctes_of setUntypedCapAsFull_if_live_then_nonz_cap')+
   apply (clarsimp simp:cte_wp_at_ctes_of)
   apply (intro conjI)
   apply (rule_tac x = "case (ctes_of s dest) of Some a \<Rightarrow>a" in exI)
-    apply (intro conjI impI)
     apply (clarsimp)
     apply (case_tac cte,simp)
   apply clarsimp+
@@ -3005,7 +2999,7 @@ lemma setCTE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> setCTE p cte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (simp add: valid_idle'_def)
   apply (rule hoare_lift_Pf [where f="ksIdleThread"])
-   apply (wp setCTE_pred_tcb_at')
+   apply (wp setCTE_pred_tcb_at')+
   done
 
 crunch it[wp]: getCTE "\<lambda>s. P (ksIdleThread s)"
@@ -3074,7 +3068,7 @@ lemma setCTE_valid_globals[wp]:
     apply wp
     apply (clarsimp simp: ran_def valid_cap_sizes'_def)
     apply metis
-   apply wp
+   apply wp+
   done
 
 lemma updateMDB_global_refs [wp]:
@@ -3102,7 +3096,7 @@ crunch arch [wp]: cteInsert "\<lambda>s. P (ksArchState s)"
 
 lemma cteInsert_valid_arch [wp]:
  "\<lbrace>valid_arch_state'\<rbrace> cteInsert cap src dest \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift') wp
+  by (rule valid_arch_state_lift'; wp)
 
 lemma cteInsert_valid_irq_handlers'[wp]:
   "\<lbrace>\<lambda>s. valid_irq_handlers' s \<and> (\<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)\<rbrace>
@@ -3126,10 +3120,11 @@ done
 lemma setCTE_valid_mappings'[wp]:
   "\<lbrace>valid_pde_mappings'\<rbrace> setCTE x y \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
   apply (wp valid_pde_mappings_lift' setCTE_typ_at')
-  apply (simp add: setCTE_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_cte typeError_def in_monad
-                 split: Structures_H.kernel_object.split_asm if_split_asm)
+   apply (simp add: setCTE_def)
+   apply (rule obj_at_setObject2)
+   apply (clarsimp simp: updateObject_cte typeError_def in_monad
+                  split: Structures_H.kernel_object.split_asm if_split_asm)
+  apply assumption
   done
 
 crunch pde_mappings' [wp]: cteInsert valid_pde_mappings'
@@ -3138,13 +3133,14 @@ crunch pde_mappings' [wp]: cteInsert valid_pde_mappings'
 lemma setCTE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> setCTE x y \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (rule valid_irq_states_lift')
-  apply wp
+   apply wp
   apply (simp add: setCTE_def)
   apply (wp setObject_ksMachine)
-  apply (simp add: updateObject_cte)
-  apply (rule hoare_pre)
-  apply (wp hoare_unless_wp|wpc|simp)+
-  apply fastforce
+   apply (simp add: updateObject_cte)
+   apply (rule hoare_pre)
+    apply (wp hoare_unless_wp|wpc|simp)+
+   apply fastforce
+  apply assumption
   done
 
 crunch irq_states' [wp]: cteInsert valid_irq_states'
@@ -3273,7 +3269,7 @@ lemma cteInsert_vms'[wp]:
                    pointerInUserData_def)
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift)
    apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv |
-          intro hoare_drop_imp)+
+          intro hoare_drop_imp|assumption)+
   done
 
 crunch pspace_domain_valid[wp]: cteInsert "pspace_domain_valid"
@@ -3341,9 +3337,10 @@ crunch tcbPriority_inv[wp]: cteInsert "obj_at' (\<lambda>tcb. P (tcbPriority tcb
   (wp: crunch_simps hoare_drop_imps)
 
 
-lemma cteInsert_ct_idle_or_in_cur_domain'[wp]: "\<lbrace> ct_idle_or_in_cur_domain' \<rbrace> cteInsert a b c \<lbrace> \<lambda>_. ct_idle_or_in_cur_domain' \<rbrace>"
+lemma cteInsert_ct_idle_or_in_cur_domain'[wp]:
+  "\<lbrace> ct_idle_or_in_cur_domain' \<rbrace> cteInsert a b c \<lbrace> \<lambda>_. ct_idle_or_in_cur_domain' \<rbrace>"
   apply (rule ct_idle_or_in_cur_domain'_lift)
-  apply (wp hoare_vcg_disj_lift)
+  apply (wp hoare_vcg_disj_lift)+
   done
 
 lemma setObject_cte_domIdx:
@@ -3505,8 +3502,8 @@ lemma cteInsert_invs:
   and ex_cte_cap_to' dest and (\<lambda>s. \<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)\<rbrace>
   cteInsert cap src dest
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (rule hoare_pre)
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
+  (* FIXME: wp_cleanup
   apply (wp cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift
             valid_irq_node_lift valid_queues_lift' irqs_masked_lift
             cteInsert_norq | simp add: st_tcb_at'_def)+
@@ -3516,6 +3513,11 @@ lemma cteInsert_invs:
   apply (auto simp: invs'_def valid_state'_def valid_pspace'_def
                     cte_wp_at_ctes_of
     elim: valid_capAligned is_derived_badge_derived')
+  *)
+  apply (wpsimp wp: cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift CSpace_R.valid_queues_lift
+                    valid_irq_node_lift valid_queues_lift' irqs_masked_lift cteInsert_norq 
+              simp: st_tcb_at'_def)
+  apply (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: valid_capAligned)
   done
 
 lemma derive_cap_corres:
@@ -3528,10 +3530,11 @@ lemma derive_cap_corres:
   apply (case_tac c)
             apply (simp_all add: returnOk_def Let_def is_zombie_def isCap_simps
                           split: sum.splits)
-   apply (rule corres_initial_splitE [OF ensure_no_children_corres])
+   apply (rule_tac Q="\<lambda>_ _. True" and Q'="\<lambda>_ _. True" in 
+               corres_initial_splitE [OF ensure_no_children_corres])
       apply simp
      apply clarsimp
-    apply wp
+    apply wp+   
   apply clarsimp
   apply (rule corres_rel_imp)
    apply (rule corres_guard_imp)
@@ -3571,19 +3574,13 @@ lemma capAligned_Null [simp]:
 lemma guarded_lookup_valid_cap':
   "\<lbrace> valid_objs' \<rbrace> nullCapOnFailure (lookupCap t c) \<lbrace>\<lambda>rv. valid_cap' rv \<rbrace>"
   apply (simp add: nullCapOnFailure_def)
-  apply wp
+  apply (wp lookup_cap_valid')
   apply (simp add: valid_cap'_def)
-  apply (fold validE_R_def)
-  apply (rule lookup_cap_valid')
   done
 
 lemma setObject_tcb_tcb':
   "\<lbrace>tcb_at' p\<rbrace> setObject p (t::tcb) \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
-  apply (rule obj_at_setObject1)
-    apply (simp add: updateObject_default_def in_monad)
-   apply (simp add: projectKOs)
-  apply (simp add: objBits_simps)
-  done
+  by (rule setObject_typ_ats)
 
 lemma cte_wp_at'_conjI:
   "\<lbrakk> cte_wp_at' P p s; cte_wp_at' Q p s \<rbrakk> \<Longrightarrow> cte_wp_at' (\<lambda>c. P c \<and> Q c) p s"
@@ -3603,11 +3600,7 @@ lemma lookupSlotForCNodeOp_inv'[wp]:
 
 lemma unifyFailure_inv [wp]:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> unifyFailure f \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  unfolding unifyFailure_def
-  apply (simp add: rethrowFailure_def const_def o_def)
-  apply wp
-  apply simp
-  done
+  by (rule unifyFailure_wp)
 
 (* FIXME: move *)
 lemma loadWordUser_inv [wp]:
@@ -3668,7 +3661,7 @@ lemma lookup_cap_corres:
          apply (rule getSlotCap_corres, rule refl)
         apply (rule corres_returnOk [of _ \<top> \<top>])
         apply simp
-     apply wp
+     apply wp+
    apply auto
   done
 
@@ -3681,7 +3674,7 @@ lemma ensure_empty_corres:
     apply (rule corres_split [OF _ get_cap_corres])
       apply (rule corres_trivial)
       apply (case_tac cap, auto simp add: whenE_def returnOk_def)[1]
-     apply wp
+     apply wp+
    apply (clarsimp simp: invs_valid_objs invs_psp_aligned)
   apply fastforce
   done
@@ -3708,7 +3701,7 @@ lemma lsfc_corres:
          apply (clarsimp simp: returnOk_def lookup_failure_map_def
                          split: list.split)
         apply simp+
-     apply wp
+     apply wp+
    apply clarsimp
   apply clarsimp
   done
@@ -3742,6 +3735,7 @@ lemma deriveCap_derived:
   deriveCap slot c'
   \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow>
           cte_wp_at' (is_derived' (ctes_of s) slot rv \<circ> cteCap) slot s\<rbrace>, -"
+  including no_pre
   unfolding deriveCap_def badge_derived'_def
   apply (cases c'; (wp ensureNoChildren_wp | simp add: isCap_simps Let_def
         | clarsimp simp: badge_derived'_def vsCapRef_def
@@ -3933,7 +3927,7 @@ proof -
     apply (subst pspace_relations_def[symmetric])
     apply (rule corres_underlying_decomposition [OF x])
      apply (simp add: ghost_relation_of_heap)
-     apply (wp hoare_vcg_conj_lift mdb_wp rvk_wp list_wp u abs_irq_together)
+     apply (wp hoare_vcg_conj_lift mdb_wp rvk_wp list_wp u abs_irq_together)+
     apply (intro z[simplified o_def] conjI | simp add: state_relation_def pspace_relations_def swp_cte_at
           | (clarsimp, drule (1) z(6), simp add: state_relation_def pspace_relations_def swp_cte_at))+
     done
@@ -4288,12 +4282,11 @@ lemma setupReplyMaster_wps[wp]:
    \<lbrace>\<lambda>s. P ((cteCaps_of s)(slot \<mapsto> (capability.ReplyCap t True))) \<and> P (cteCaps_of s)\<rbrace>
       setupReplyMaster t
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
-  apply (simp_all add: setupReplyMaster_def locateSlot_conv)
-   apply (wp hoare_drop_imps
-            | simp add: o_def
-            | rule hoare_strengthen_post [OF getCTE_sp])+
-  apply (clarsimp elim!: rsubst[where P=P] intro!: ext)
-  apply (clarsimp simp: tcbReplySlot_def objBits_def objBitsKO_def
+    apply (simp_all add: setupReplyMaster_def locateSlot_conv)
+    apply (wp getCTE_wp | simp add: o_def cte_wp_at_ctes_of)+
+  apply clarsimp
+  apply (rule_tac x=cte in exI)
+  apply (clarsimp simp: tcbReplySlot_def objBits_def objBitsKO_def fun_upd_def
                         tcb_cnode_index_def2 cte_map_nat_to_cref cte_level_bits_def)
   done
 
@@ -4306,7 +4299,7 @@ lemma setupReplyMaster_valid_pspace':
    \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   apply (simp add: valid_pspace'_def)
   apply (wp setupReplyMaster_valid_mdb)
-     apply (simp_all add: valid_pspace'_def)
+   apply (simp_all add: valid_pspace'_def)
   done
 
 lemma setupReplyMaster_ifunsafe'[wp]:
@@ -4411,7 +4404,7 @@ lemma setupReplyMaster_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setupReplyMaster t \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
   apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def )
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift)
-  apply wp
+  apply wp+
   done
 
 crunch pspace_domain_valid[wp]: setupReplyMaster "pspace_domain_valid"
@@ -4673,6 +4666,7 @@ lemma arch_update_setCTE_ifunsafe:
   apply (rule hoare_lift_Pf2 [where f=irq_node'])
    prefer 2
    apply wp
+  apply wp
   apply (clarsimp simp: cte_wp_at_ctes_of is_arch_update'_def)
   apply (frule capMaster_same_refs)
   apply clarsimp
@@ -4699,7 +4693,7 @@ lemma setCTE_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setCTE ptr val \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
   apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def )
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift)
-  apply wp
+  apply wp+
   done
 
 lemma arch_update_setCTE_invs:
@@ -4707,8 +4701,7 @@ lemma arch_update_setCTE_invs:
   setCTE p (cteCap_update (\<lambda>_. cap) oldcte)
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
-  apply (rule hoare_pre)
-   apply (wp arch_update_setCTE_mdb valid_queues_lift sch_act_wf_lift tcb_in_cur_domain'_lift ct_idle_or_in_cur_domain'_lift
+  apply (wp arch_update_setCTE_mdb valid_queues_lift sch_act_wf_lift tcb_in_cur_domain'_lift ct_idle_or_in_cur_domain'_lift
              arch_update_setCTE_iflive arch_update_setCTE_ifunsafe
              valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
              valid_queues_lift' setCTE_pred_tcb_at' irqs_masked_lift
@@ -4999,27 +4992,27 @@ lemma cins_corres_simple:
          apply (erule allE)+
          apply (erule (1) impE)
          apply (simp add: nullPointer_def)
-       apply (rule corres_guard_imp)
-         apply (rule_tac R="\<lambda>r. ?P and cte_at dest and
+        apply (rule corres_guard_imp)
+          apply (rule_tac R="\<lambda>r. ?P and cte_at dest and
                             (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src c) src s) and
                             cte_wp_at (op = (masked_as_full src_cap c)) src" and
                         R'="\<lambda>r. ?P' and cte_wp_at' (op = rv') (cte_map dest)
            and cte_wp_at' (op = (CTE (maskedAsFull (cteCap srcCTE) c') (cteMDBNode srcCTE))) (cte_map src)
            and (\<lambda>s. safe_parent_for' (ctes_of s) src' c')"
                         in corres_split[where r'=dc])
-        apply (rule corres_stronger_no_failI)
-         apply (rule no_fail_pre, wp hoare_weak_lift_imp)
-         apply (clarsimp simp: cte_wp_at_ctes_of valid_mdb'_def valid_mdb_ctes_def)
-         apply (erule_tac valid_dlistEn[where p = "cte_map src"])
-           apply (simp+)[3]
-        apply (clarsimp simp: corres_underlying_def state_relation_def
-                              in_monad valid_mdb'_def valid_mdb_ctes_def)
-        apply (drule (1) pspace_relationsD)
-        apply (drule (18) set_cap_not_quite_corres)
-         apply (rule refl)
-        apply (elim conjE exE)
-        apply (rule bind_execI, assumption)
-        apply (subgoal_tac "mdb_insert_abs (cdt a) src dest")
+             apply (rule corres_stronger_no_failI)
+              apply (rule no_fail_pre, wp hoare_weak_lift_imp)
+              apply (clarsimp simp: cte_wp_at_ctes_of valid_mdb'_def valid_mdb_ctes_def)
+              apply (erule_tac valid_dlistEn[where p = "cte_map src"])
+                apply (simp+)[3]
+             apply (clarsimp simp: corres_underlying_def state_relation_def
+                                   in_monad valid_mdb'_def valid_mdb_ctes_def)
+             apply (drule (1) pspace_relationsD)
+             apply (drule (18) set_cap_not_quite_corres)
+              apply (rule refl)
+             apply (elim conjE exE)
+             apply (rule bind_execI, assumption)
+             apply (subgoal_tac "mdb_insert_abs (cdt a) src dest")
               prefer 2
               apply (clarsimp simp: cte_wp_at_caps_of_state valid_mdb_def2)
               apply (rule mdb_insert_abs.intro)
@@ -5114,39 +5107,35 @@ lemma cins_corres_simple:
              setUntypedCapAsFull_cte_wp_at setUntypedCapAsFull_safe_parent_for' | clarsimp | wps)+
           apply (clarsimp simp:cte_wp_at_caps_of_state )
          apply (case_tac rv',clarsimp simp:cte_wp_at_ctes_of maskedAsFull_def)
-        apply (wp getCTE_wp' get_cap_wp)
-     apply clarsimp
-     subgoal by (fastforce elim: cte_wp_at_weakenE)
-    subgoal by (clarsimp simp: cte_wp_at'_def)
-   apply (thin_tac "ctes_of s = t" for s t)+
-   apply (thin_tac "pspace_relation s t" for s t)+
-   apply (thin_tac "machine_state t = s" for t s)+
-   apply (case_tac "srcCTE")
-   apply (rename_tac src_cap' src_node)
-   apply (case_tac "rv'")
-   apply (rename_tac dest_node)
-   apply (clarsimp simp: in_set_cap_cte_at_swp)
-   apply (subgoal_tac "cte_at src a \<and> safe_parent_for (cdt a) src c src_cap")
-    prefer 2
-    subgoal by (fastforce simp: cte_wp_at_def safe_parent_for_masked_as_full)
-   apply (erule conjE)
+        apply (wp getCTE_wp' get_cap_wp)+
+    apply clarsimp
+    subgoal by (fastforce elim: cte_wp_at_weakenE)
+   subgoal by (clarsimp simp: cte_wp_at'_def)
+  apply (thin_tac "ctes_of s = t" for s t)+
+  apply (thin_tac "pspace_relation s t" for s t)+
+  apply (thin_tac "machine_state t = s" for t s)+
+  apply (case_tac "srcCTE")
+  apply (rename_tac src_cap' src_node)
+  apply (case_tac "rv'")
+  apply (rename_tac dest_node)
+  apply (clarsimp simp: in_set_cap_cte_at_swp)
+  apply (subgoal_tac "cte_at src a \<and> safe_parent_for (cdt a) src c src_cap")
+   prefer 2
+   subgoal by (fastforce simp: cte_wp_at_def safe_parent_for_masked_as_full)
+  apply (erule conjE)
 
-   apply (subgoal_tac "mdb_insert (ctes_of b) (cte_map src) (maskedAsFull src_cap' c') src_node
+  apply (subgoal_tac "mdb_insert (ctes_of b) (cte_map src) (maskedAsFull src_cap' c') src_node
                                   (cte_map dest) NullCap dest_node")
-    prefer 2
-    apply (rule mdb_insert.intro)
-      apply (rule mdb_ptr.intro)
-     apply (rule vmdb.intro, simp add: valid_mdb_ctes_def)
-    apply (erule mdb_ptr_axioms.intro)
+   prefer 2
+   apply (rule mdb_insert.intro)
      apply (rule mdb_ptr.intro)
-    apply (rule vmdb.intro, simp add: valid_mdb_ctes_def)
-   apply (erule mdb_ptr_axioms.intro)
-          apply (rule mdb_insert_axioms.intro)
-         apply (rule refl)
-        apply assumption
-       apply assumption
-      apply assumption
-     apply assumption
+      apply (rule vmdb.intro, simp add: valid_mdb_ctes_def)
+     apply (erule mdb_ptr_axioms.intro)
+    apply (rule mdb_ptr.intro)
+     apply (rule vmdb.intro, simp add: valid_mdb_ctes_def)
+    apply (erule mdb_ptr_axioms.intro; assumption)
+   apply (rule mdb_insert_axioms.intro; assumption?)
+    apply (rule refl)
    apply (erule (5) cte_map_inj)
   apply (rule conjI)
    apply (simp (no_asm_simp) add: cdt_relation_def split: if_split)
@@ -6428,7 +6417,7 @@ lemma updateCap_same_master:
        apply(erule_tac x=bb in allE)+
        apply(clarsimp split: if_split_asm)
        apply(case_tac rv, clarsimp)
-      apply (wp getCTE_wp')
+      apply (wp getCTE_wp')+
      apply clarsimp
     apply (rule no_fail_pre, wp)
     apply clarsimp
@@ -6465,25 +6454,23 @@ lemma updateCapFreeIndex_valid_mdb_ctes:
   apply (wp updateCap_ctes_of_wp)
   apply (subgoal_tac "mdb_inv_preserve (Q (ctes_of s)) (Q (modify_map (ctes_of s) src
               (cteCap_update (\<lambda>_. capFreeIndex_update (\<lambda>_. index) cap))))")
-    apply (clarsimp simp:valid_mdb_ctes_def)
+   apply (clarsimp simp:valid_mdb_ctes_def)
    apply (intro conjI)
-      apply ((simp add:mdb_inv_preserve.preserve_stuff
-        mdb_inv_preserve.by_products)+)[7]
-     apply (rule mdb_inv_preserve.untyped_inc')
-    apply assumption
-    apply (clarsimp simp:assoc cte_wp_at_ctes_of)
-    apply (clarsimp simp:modify_map_def split:if_splits)
-   apply (drule coin)
-    apply clarsimp
-    apply (erule(1) subsetD)
-   apply simp
-   apply (simp_all add:mdb_inv_preserve.preserve_stuff
-       mdb_inv_preserve.by_products)
+                apply ((simp add:mdb_inv_preserve.preserve_stuff mdb_inv_preserve.by_products)+)[7]
+         apply (rule mdb_inv_preserve.untyped_inc')
+           apply assumption
+          apply (clarsimp simp:assoc cte_wp_at_ctes_of)
+          apply (clarsimp simp:modify_map_def split:if_splits)
+          apply (drule coin)
+          apply clarsimp
+          apply (erule(1) subsetD)
+         apply simp
+        apply (simp_all add:mdb_inv_preserve.preserve_stuff  mdb_inv_preserve.by_products)
   apply (rule preserve)
   apply (clarsimp simp:cte_wp_at_ctes_of)
   apply (rule mdb_inv_preserve_updateCap)
-    apply (clarsimp simp:cte_wp_at_ctes_of)+
-done
+   apply (clarsimp simp:cte_wp_at_ctes_of)+
+  done
 
 lemma usableUntypedRange_mono1:
   "is_aligned ptr sz \<Longrightarrow> idx \<le> 2 ^ sz \<Longrightarrow> idx' \<le> 2 ^ sz
@@ -6543,12 +6530,12 @@ lemma updateFreeIndex_pspace':
    apply (clarsimp simp:valid_cap'_def capAligned_def valid_untyped'_def
           simp del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff usableUntypedRange.simps
-          split del:if_splits)
+          split del:if_split)
    apply (drule_tac x = ptr' in spec)
    apply (clarsimp simp:ko_wp_at'_def
           simp del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff usableUntypedRange.simps
-          split del:if_splits)
+          split del:if_split)
    apply blast
   apply (rule usableUntypedRange_mono2,
     auto simp add: isCap_simps capAligned_def valid_cap_simps')
@@ -6614,7 +6601,7 @@ lemma updateFreeIndex_forward_invs':
       apply (rule hoare_vcg_conj_lift)
        apply (simp add: ifunsafe'_def3 cteInsert_def setUntypedCapAsFull_def
                split del: if_split)
-       apply wp
+       apply wp+
       apply (rule hoare_vcg_conj_lift)
        apply (simp add:updateCap_def)
        apply wp

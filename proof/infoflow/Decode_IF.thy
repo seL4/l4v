@@ -93,20 +93,16 @@ lemma whenE_throwError_bindE_ev:
   shows "equiv_valid I A A P (whenE b (throwError x) >>=E (\<lambda>_. f))"
   apply(rule_tac Q="\<lambda> rv s. \<not> b \<and> P s" in bindE_ev_pre)
      using ev apply(fastforce simp: equiv_valid_def2 equiv_valid_2_def)
-    apply(wp whenE_throwError_sp)
+    apply(wp whenE_throwError_sp)+
   by simp
-
-lemma hoare_vcg_imp_lift_R:
-  assumes "Q \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> R \<rbrace>,-"
-  shows "\<lbrace> \<lambda>s. Q \<longrightarrow> P s \<rbrace> f \<lbrace> \<lambda> rv s. Q \<longrightarrow> R rv s \<rbrace>,-"
-  using assms
-  apply(fastforce simp: validE_R_def validE_def valid_def split: sum.splits) 
-  done
 
 lemma expand_len_gr_Suc_0:
   "Suc 0 < length xs = (xs \<noteq> [] \<and> Suc (Suc 0) \<le> length xs)"
   apply fastforce
   done
+
+(* FIXME: remove *)
+lemmas hoare_vcg_imp_lift_R = hoare_vcg_const_imp_lift_R
 
 lemma decode_cnode_invocation_rev:
   "reads_equiv_valid_inv A aag (pas_refined aag and
@@ -163,7 +159,7 @@ lemma slot_cap_long_running_delete_reads_respects_f:
   apply(wpc)
                apply(wp)[1]
               apply(fastforce simp: long_running_delete_def is_final_cap_def gets_bind_ign intro: return_ev)+
-          apply(wp is_final_cap_reads_respects[where slot=slot and st=st])[2]
+          apply((wp is_final_cap_reads_respects[where slot=slot and st=st])+)[2]
         apply(fastforce simp: long_running_delete_def is_final_cap_def gets_bind_ign intro: return_ev)+
       apply(wp is_final_cap_reads_respects[where st=st])[1]
      apply(fastforce simp: long_running_delete_def is_final_cap_def gets_bind_ign intro: return_ev)+
@@ -199,8 +195,7 @@ lemma check_valid_ipc_buffer_rev:
 lemma OR_choice_def2: "(\<And>P. \<lbrace>P\<rbrace> (c :: bool det_ext_monad) \<lbrace>\<lambda>_.P\<rbrace>)  \<Longrightarrow>
        empty_fail c \<Longrightarrow>
        (OR_choice c f g) = (do b \<leftarrow> c; if b then f else g od)" 
-  apply (simp add: OR_choice_def wrap_ext_bool_det_ext_ext_def
-                   ef_mk_ef)
+  apply (simp add: OR_choice_def wrap_ext_bool_det_ext_ext_def ef_mk_ef)
   by (subst no_state_changes[where f=c],simp,fastforce simp: bind_assoc split_def)
 
 lemma check_prio_rev:
@@ -212,14 +207,13 @@ lemma check_prio_rev:
 lemma decode_set_priority_rev:
   "reads_respects aag l (is_subject aag \<circ> cur_thread) (decode_set_priority args cap slot)"
   apply (clarsimp simp: decode_set_priority_def wp_ev)
-  apply (wp check_prio_rev)
-  by simp
+  by (wp check_prio_rev)
+  
 
 lemma decode_set_mcpriority_rev:
   "reads_respects aag l (is_subject aag \<circ> cur_thread) (decode_set_mcpriority args cap slot)"
   apply (clarsimp simp: decode_set_mcpriority_def wp_ev)
-  apply (wp check_prio_rev)
-  by simp
+  by (wp check_prio_rev)+
 
 lemma decode_tcb_invocation_reads_respects_f:
   notes respects_f = reads_respects_f[where st=st and Q=\<top>]
@@ -727,7 +721,9 @@ lemma decode_invocation_reads_respects_f:
 
 crunch globals_equiv: decode_invocation "globals_equiv st"
 
-lemmas decode_invocation_reads_respects_f_g = reads_respects_f_g[OF decode_invocation_reads_respects_f doesnt_touch_globalsI, where Q="\<top>", simplified, OF decode_invocation_globals_equiv]
+lemmas decode_invocation_reads_respects_f_g =
+       reads_respects_f_g[OF decode_invocation_reads_respects_f doesnt_touch_globalsI,
+                          where Q="\<top>", simplified, OF decode_invocation_globals_equiv]
 
 end
 

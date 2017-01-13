@@ -977,8 +977,8 @@ lemma valid_arch_objs_stateI:
 lemma valid_arch_cap_typ:
   assumes P: "\<And>T p. \<lbrace>\<lambda>s. (typ_at (AArch T) p s )\<rbrace> f \<lbrace>\<lambda>rv s. (typ_at (AArch T) p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_arch_cap c s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_cap c s\<rbrace>"
-  apply (simp add: valid_arch_cap_def)
-  apply (case_tac c, simp_all)
+  unfolding valid_arch_cap_def
+  apply (case_tac c; simp)
   apply (wp P hoare_vcg_ball_lift hoare_vcg_imp_lift hoare_vcg_conj_lift | clarsimp)+
   done
 
@@ -990,11 +990,11 @@ lemma valid_arch_obj_typ:
     apply (rule hoare_vcg_all_lift)
     apply (rename_tac "fun" x)
     apply (case_tac "fun x",simp_all add: data_at_def hoare_vcg_prop P)
-    apply (wp hoare_vcg_disj_lift P)
+    apply (wp hoare_vcg_disj_lift P)+
   apply (rule hoare_vcg_ball_lift)
   apply (rename_tac "fun" x)
   apply (case_tac "fun x", simp_all add: data_at_def hoare_vcg_prop P)
-  apply (wp hoare_vcg_disj_lift P)
+   apply (wp hoare_vcg_disj_lift P)+
   done
 
 
@@ -1228,7 +1228,7 @@ lemma valid_arch_state_lift:
   apply (simp add: valid_arch_state_def valid_asid_table_def
                    valid_global_pts_def)
   apply (rule hoare_lift_Pf[where f="\<lambda>s. arch_state s"])
-   apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift )
+   apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift)+
   done
 
 lemma aobj_at_default_arch_cap_valid:

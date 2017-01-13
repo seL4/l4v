@@ -278,7 +278,7 @@ lemma loadHWASID_ccorres:
        apply simp
       apply wp[1]
      apply (rule findPDForASIDAssert_pd_at_wp2)
-    apply wp
+    apply wp+
   apply (clarsimp simp: asidLowBits_handy_convs word_sless_def word_sle_def
                         Collect_const_mem asid_shiftr_low_bits_less)
   done
@@ -498,7 +498,7 @@ lemma handleVMFault_ccorres:
      apply (clarsimp simp: errstate_def)
      apply (clarsimp simp: EXCEPTION_FAULT_def EXCEPTION_NONE_def)
      apply (simp add: seL4_Fault_VMFault_lift false_def)
-    apply wp
+    apply wp+
    apply (simp add: vm_fault_type_from_H_def Kernel_C.ARMDataAbort_def Kernel_C.ARMPrefetchAbort_def)
    apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff)
    apply (rule ccorres_rhs_assoc)+
@@ -507,13 +507,13 @@ lemma handleVMFault_ccorres:
    apply (ctac (no_vcg) pre: ccorres_liftE_Seq)
     apply (ctac (no_vcg) add: getIFSR_ccorres pre: ccorres_liftE_Seq)
      apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
-     apply (clarsimp simp add: throwError_def throw_def return_def)   
+     apply (clarsimp simp add: throwError_def throw_def return_def)
      apply (rule conseqPre)
       apply vcg
      apply (clarsimp simp: errstate_def)
      apply (clarsimp simp: EXCEPTION_FAULT_def EXCEPTION_NONE_def)
      apply (simp add: seL4_Fault_VMFault_lift true_def mask_def)
-    apply wp
+    apply wp+
   apply simp
   done
 
@@ -930,11 +930,7 @@ lemma ccorres_pre_getObject_asidpool:
        apply (rule_tac Q="ko_at' rv p s" in conjunct1)
        apply assumption
       apply assumption
-     apply (wp getASID_wp empty_fail_getObject | simp)
-     apply (wp getASID_wp empty_fail_getObject | simp)
-     apply (wp getASID_wp empty_fail_getObject | simp)
-     apply (wp getASID_wp empty_fail_getObject | simp)
-  apply clarsimp
+     apply (wpsimp wp: getASID_wp empty_fail_getObject)+
   apply (erule cmap_relationE1 [OF rf_sr_cpspace_asidpool_relation],
          erule ko_at_projectKO_opt)
   apply simp
@@ -1138,11 +1134,9 @@ lemma flushSpace_ccorres:
              rule invalidateTLB_ASID_ccorres [simplified dc_def xfdc_def],
              simp+)[1]
      apply vcg
-    apply wp
-   apply simp
-done
-
-
+    apply wp+
+  apply simp
+  done
 
 
 
@@ -1424,7 +1418,7 @@ lemma getHWASID_ccorres:
      apply (ctac(no_vcg) add: findFreeHWASID_ccorres)
       apply (ctac(no_vcg) add: storeHWASID_ccorres)
        apply (rule ccorres_return_C, simp+)[1]
-      apply wp
+      apply wp+
      apply (strengthen all_invs_but_ct_idle_or_in_cur_domain_valid_pde_mappings')
      apply (wp findFreeHWASID_invs_no_cicd')
     apply (rule ccorres_cond_true)
@@ -1751,7 +1745,7 @@ lemma doFlush_ccorres:
        apply (ctac (no_vcg) add: invalidateCacheRange_I_ccorres)
         apply (ctac (no_vcg) add: branchFlushRange_ccorres)
          apply (ctac (no_vcg) add: isb_ccorres)
-        apply wp
+        apply wp+
     apply simp
    apply (clarsimp simp: Collect_const_mem)
   apply (auto simp: flushtype_relation_def o_def
@@ -1805,7 +1799,7 @@ lemma performPageFlush_ccorres:
      apply (simp add: cur_tcb'_def[symmetric])
      apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
       apply (simp add: invs'_invs_no_cicd)
-     apply (wp)
+     apply wp+
    apply (simp)
    apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
    apply (rule allI, rule conseqPre, vcg)
@@ -1995,7 +1989,7 @@ lemma performPageDirectoryInvocationFlush_ccorres:
      apply (simp add: cur_tcb'_def[symmetric])
      apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
       apply (simp add: invs'_invs_no_cicd)
-     apply (wp)
+     apply wp+
    apply (simp)
    apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
    apply (rule allI, rule conseqPre, vcg)

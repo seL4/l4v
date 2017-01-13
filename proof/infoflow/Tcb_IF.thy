@@ -60,12 +60,9 @@ crunch globals_equiv[wp]: get_notification "globals_equiv st"
 lemma cancel_signal_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace> cancel_signal a b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding cancel_signal_def
-  apply (wp set_thread_state_globals_equiv get_notification_valid_ko_at_arm
-            set_notification_globals_equiv set_notification_valid_ko_at_arm | wpc | clarsimp simp: crunch_simps hoare_drop_imps)+
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps)
-  apply simp
-done
+  by (wpsimp wp: set_thread_state_globals_equiv get_notification_valid_ko_at_arm
+                 set_notification_globals_equiv set_notification_valid_ko_at_arm hoare_drop_imps
+           simp: crunch_simps)
 
 crunch globals_equiv[wp]: cancel_ipc "globals_equiv st"
   (wp: mapM_x_wp select_inv hoare_drop_imps hoare_vcg_if_lift2 cancel_signal_valid_ko_at_arm
@@ -85,18 +82,7 @@ lemma as_user_globals_equiv[wp]:
   apply (wp set_object_globals_equiv | simp add: split_def)+
   apply (simp add: valid_ko_at_arm_def)
   apply (clarsimp simp: get_tcb_def obj_at_def)
-done
-
-lemma as_user_valid_ko_at_arm[wp]:
-  "\<lbrace> valid_ko_at_arm \<rbrace>
-  as_user thread f
-  \<lbrace> \<lambda>_. valid_ko_at_arm\<rbrace>"
-  unfolding as_user_def
-  apply wp
-     apply (case_tac x)
-     apply (simp | wp select_wp)+
-  apply(fastforce simp: valid_ko_at_arm_def get_tcb_ko_at obj_at_def)
-done
+  done
 
 lemma cap_ne_global_pd : "ex_nonz_cap_to word s \<Longrightarrow> valid_global_refs s \<Longrightarrow> word \<noteq> arm_global_pd (arch_state s)"
   unfolding ex_nonz_cap_to_def
@@ -107,7 +93,7 @@ lemma cap_ne_global_pd : "ex_nonz_cap_to word s \<Longrightarrow> valid_global_r
   apply clarsimp
   apply (unfold cap_range_def)
   apply blast
-done
+  done
 
 lemma globals_equiv_ioc_update[simp]: "globals_equiv st (is_original_cap_update f s) = globals_equiv st s"  
   apply (simp add: globals_equiv_def idle_equiv_def)
@@ -193,14 +179,14 @@ next
     apply (simp only: split_def)
     apply (rule hoare_pre_spec_validE)
     apply wp
-     apply (wp set_cap_P set_cap_Q "2.hyps", assumption+)
+     apply (wp set_cap_P set_cap_Q "2.hyps")+
           apply ((wp preemption_point_Q preemption_point_P | simp | wp_once preemption_point_inv)+)[1]
          apply (simp(no_asm))
          apply (rule spec_strengthen_postE)
           apply (rule spec_valid_conj_liftE1, rule valid_validE_R, rule rec_del_invs)
           apply (rule spec_valid_conj_liftE1, rule reduce_zombie_cap_to)
           apply (rule spec_valid_conj_liftE1, rule rec_del_emptyable)
-          apply (rule "2.hyps", assumption+)
+          apply (rule "2.hyps")
          apply simp
          apply (simp add: conj_comms)
          apply (wp set_cap_P set_cap_Q replace_cap_invs
@@ -302,24 +288,23 @@ lemma rec_del_globals_equiv:
   apply (wp rec_del_preservation2[where Q="valid_ko_at_arm" and R="valid_global_objs and valid_arch_state and pspace_aligned and valid_arch_objs and
  valid_global_refs and
  valid_vs_lookup"] finalise_cap_globals_equiv)
-  apply simp
-  apply (wp set_cap_globals_equiv'')
-  apply simp
-  apply (wp set_cap_valid_ko_at_arm empty_slot_globals_equiv)
-  apply simp
-  apply (wp empty_slot_valid_ko_at_arm)
-  apply simp
-  apply (simp add: invs_valid_ko_at_arm) 
-  apply (simp add: invs_def valid_state_def valid_arch_caps_def valid_pspace_def)
-  apply (wp preemption_point_inv | simp)+
-done
+             apply simp
+            apply (wp set_cap_globals_equiv'')
+            apply simp
+           apply (wp set_cap_valid_ko_at_arm empty_slot_globals_equiv)+
+          apply simp
+         apply (wp empty_slot_valid_ko_at_arm)+
+       apply simp
+      apply (simp add: invs_valid_ko_at_arm)
+     apply (simp add: invs_def valid_state_def valid_arch_caps_def valid_pspace_def)
+    apply (wp preemption_point_inv | simp)+
+  done
 
 lemma cap_delete_globals_equiv : "\<lbrace>globals_equiv st and invs and emptyable a\<rbrace> (cap_delete a) \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding cap_delete_def 
-  apply (rule hoare_pre)
-   apply (wp rec_del_globals_equiv)
+  apply (wp rec_del_globals_equiv)
   apply simp
-done
+  done
 
 lemma no_cap_to_idle_thread': "valid_global_refs s \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
   apply (clarsimp simp add: ex_nonz_cap_to_def valid_global_refs_def valid_refs_def)
@@ -434,7 +419,7 @@ lemma invoke_tcb_NotificationControl_globals_equiv:
    invoke_tcb (NotificationControl t ntfn)
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (case_tac ntfn, simp_all)
-  apply (wp unbind_notification_globals_equiv bind_notification_globals_equiv)
+  apply (wp unbind_notification_globals_equiv bind_notification_globals_equiv)+
   done
 
 crunch globals_equiv: set_mcpriority "globals_equiv st"
@@ -443,6 +428,7 @@ lemma invoke_tcb_globals_equiv:
   "\<lbrace> invs and globals_equiv st and Tcb_AI.tcb_inv_wf ti\<rbrace>
    invoke_tcb ti
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  including no_pre
   apply(case_tac ti)
        prefer 4
        apply (simp del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps)
@@ -673,6 +659,7 @@ lemma invoke_tcb_reads_respects_f:
         static_imp_wp [wp]
   shows
   "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and pas_refined aag and pas_cur_domain aag and Tcb_AI.tcb_inv_wf ti and (\<lambda>s. is_subject aag (cur_thread s)) and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti)) (invoke_tcb ti)"
+  including no_pre
   apply(case_tac ti)
         apply(wp when_ev restart_reads_respects_f as_user_reads_respects_f static_imp_wp | simp)+
         apply(auto intro: requiv_cur_thread_eq intro!: det_zipWithM simp: det_setRegister det_getRestartPC det_setNextPC authorised_tcb_inv_def simp: reads_equiv_f_def)[1]

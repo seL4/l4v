@@ -36,15 +36,15 @@ lemma decode_cnode_copy_same_parent_rvu:
   apply (clarsimp simp:user_pointer_at_def Let_def)
   apply (clarsimp simp: decode_cnode_invocation_def split_def split: sum.splits)
   apply (wp hoare_whenE_wp | simp)+
-       apply (rule validE_validE_R)
-       apply (wp derive_cap_invE)
-     apply (rule validE_validE_R)
-     apply (rule lookup_slot_for_cnode_op_rvu' [where r=sz and cap=src_cap])
-    apply simp
-    apply wp
+        apply (rule validE_validE_R)
+        apply (wp derive_cap_invE)+
+      apply (rule validE_validE_R)
+      apply (rule lookup_slot_for_cnode_op_rvu' [where r=sz and cap=src_cap])
+     apply simp
+     apply wp+
     apply (rule validE_validE_R)
-   apply (rule lookup_slot_for_cnode_op_rvu'[where r=sz and cap=NullCap])
-  apply (simp, wp throw_on_none_rv validE_R_validE)
+    apply (rule lookup_slot_for_cnode_op_rvu'[where r=sz and cap=NullCap])
+   apply (simp, wp throw_on_none_rv validE_R_validE)
   apply (clarsimp split: option.splits)
   apply (intro conjI)
     apply (clarsimp dest!: mapu_dest_opt_cap simp:conj_comms)
@@ -332,7 +332,8 @@ lemma seL4_CNode_Mutate_sep:
             apply (rule hoare_post_imp[OF _
               set_cap_wp])
             apply (sep_select 5,assumption)
-           apply wp[2]
+           apply wp
+          apply wp
          apply (rule_tac P = "\<exists>dcap.
            reset_cap_asid dcap = reset_cap_asid src_cap \<and>
            iv = InvokeCNode
@@ -372,7 +373,7 @@ lemma seL4_CNode_Mutate_sep:
           apply (clarsimp simp:sep_any_exist sep_conj_assoc
             sep_map_c_conj sep_map_f_conj Let_def
             split:if_splits option.splits,fastforce)
-        apply (wp set_cap_wp set_cap_all_scheduable_tcbs)[1]
+        apply (wp set_cap_wp set_cap_all_scheduable_tcbs)
        apply (rule_tac P = "is_cnode_cap c" in hoare_gen_asmEx)
        apply (simp add:decode_invocation_simps)
        apply (rule liftME_wp)
@@ -380,7 +381,7 @@ lemma seL4_CNode_Mutate_sep:
       apply (simp add:lookup_extra_caps_def Let_def
         mapME_def sequenceE_def get_index_def)
       apply (rule wp_no_exception_seq)
-       apply wp[1]
+       apply wp
       apply (rule lookup_cap_and_slot_rvu[where r = root_size])
      apply (rule lookup_cap_and_slot_rvu[where r = root_size])
     apply (rule validE_validE_R)
@@ -495,7 +496,8 @@ lemma seL4_CNode_Move_sep:
             apply (clarsimp simp:sep_conj_assoc)
             apply (rule hoare_post_imp[OF _ set_cap_wp])
             apply (sep_select 5,assumption)
-           apply wp[2]
+           apply wp
+          apply wp
          apply (rule_tac P = "\<exists>dcap. reset_cap_asid dcap = reset_cap_asid src_cap \<and>
                                 iv = InvokeCNode (MoveCall dcap
                                                     (cap_object cnode_cap', offset src_index root_size)
@@ -529,7 +531,7 @@ lemma seL4_CNode_Move_sep:
           in hoare_strengthen_post[rotated])
          apply (clarsimp)
            apply (sep_select 3,assumption)
-        apply (wp set_cap_wp set_cap_all_scheduable_tcbs)[1]
+        apply (wp set_cap_wp set_cap_all_scheduable_tcbs)
        apply (rule_tac P = "is_cnode_cap c" in hoare_gen_asmEx)
        apply (simp add:decode_invocation_simps)
        apply (rule liftME_wp)
@@ -537,7 +539,7 @@ lemma seL4_CNode_Move_sep:
       apply (simp add:lookup_extra_caps_def Let_def
         mapME_def sequenceE_def get_index_def)
       apply (rule wp_no_exception_seq)
-       apply wp[1]
+       apply wp
       apply (rule lookup_cap_and_slot_rvu[where r = root_size])
      apply (rule lookup_cap_and_slot_rvu[where r = root_size])
     apply (rule validE_validE_R)

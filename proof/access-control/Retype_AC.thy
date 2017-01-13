@@ -152,9 +152,9 @@ lemma copy_global_mappings_integrity:
   apply (rule hoare_gen_asm)
   apply (simp add: copy_global_mappings_def)
   apply (wp mapM_x_wp[OF _ subset_refl] store_pde_integrity)
-  apply (drule subsetD[OF copy_global_mappings_index_subset])
-   apply (fastforce simp: pd_shifting')
-  apply(wp)
+    apply (drule subsetD[OF copy_global_mappings_index_subset])
+    apply (fastforce simp: pd_shifting')
+   apply wpsimp+
   done
 
 lemma dmo_mol_respects:
@@ -164,7 +164,7 @@ lemma dmo_mol_respects:
   apply wp
   apply clarsimp
   apply (erule use_valid)
-  apply (wp mol_respects)
+   apply (wp mol_respects)
   apply simp
   done
 
@@ -182,11 +182,8 @@ lemma dmo_mapM_wp:
   shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> do_machine_op (mapM f xs) \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (induct xs)
    apply (simp add: mapM_def sequence_def)
-  apply (simp add: mapM_Cons)
-  apply (simp add: dmo_bind_valid dmo_bind_valid')
-  apply wp
-   apply assumption
-  apply (simp add: x)
+  apply (simp add: mapM_Cons dmo_bind_valid dmo_bind_valid')
+  apply (wpsimp | rule x)+
   done
 
 lemma dmo_mapM_x_wp:
@@ -207,7 +204,7 @@ lemma dmo_cacheRangeOp_lift:
     \<Longrightarrow> \<lbrace>P\<rbrace> do_machine_op (cacheRangeOp oper x y z) \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: cacheRangeOp_def)
   apply (wp dmo_mapM_x_wp_inv)
-  apply (simp add: split_def)
+   apply (simp add: split_def)+
   done
 
 lemma dmo_cleanCacheRange_PoU_respects [wp]:
@@ -428,7 +425,7 @@ lemma dmo_clearMemory_respects':
   apply (erule use_valid)
   apply wp
    apply (simp add: cleanByVA_PoU_def)
-   apply (wp mol_respects mapM_x_wp' storeWord_respects)
+   apply (wp mol_respects mapM_x_wp' storeWord_respects)+
    apply simp
    apply (clarsimp simp add: word_size_def upto_enum_step_shift_red [where us = 2, simplified])
    apply (erule bspec)
@@ -476,7 +473,7 @@ lemma reset_untyped_cap_integrity:
       apply (simp add: word_bits_def)
      apply clarsimp
     apply (simp add: if_apply_def2)
-    apply (wp hoare_vcg_const_imp_lift get_cap_wp)
+    apply (wp hoare_vcg_const_imp_lift get_cap_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (frule caps_of_state_valid_cap, clarsimp+)
   apply (clarsimp simp: cap_aligned_def is_cap_simps valid_cap_simps bits_of_def)
@@ -791,6 +788,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma retype_region_ext_pas_refined:
   "\<lbrace>pas_refined aag and pas_cur_domain aag and K (\<forall>x\<in> set xs. is_subject aag x)\<rbrace> retype_region_ext xs ty \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  including no_pre
   apply (subst and_assoc[symmetric])
   apply (wp retype_region_ext_extended.pas_refined_tcb_domain_map_wellformed')
   apply (simp add: retype_region_ext_def, wp)
@@ -817,12 +815,12 @@ lemma retype_region_pas_refined:
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
-  apply(rule use_retype_region_proofs_ext)
-     apply(erule (1) retype_region_proofs'.pas_refined[OF retype_region_proofs'.intro])
-    apply (wp retype_region_ext_pas_refined)
-    apply simp
-   apply auto
-   done
+   apply(rule use_retype_region_proofs_ext)
+      apply(erule (1) retype_region_proofs'.pas_refined[OF retype_region_proofs'.intro])
+     apply (wp retype_region_ext_pas_refined)
+     apply simp
+    apply auto
+  done
 
 (* MOVE *)
 lemma retype_region_aag_bits:
@@ -919,8 +917,8 @@ lemma freeMemory_vms:
   apply (simp add: freeMemory_def machine_op_lift_def
                    machine_rest_lift_def split_def)
   apply (wp hoare_drop_imps | simp | wp mapM_x_wp_inv)+
-  apply (simp add: storeWord_def | wp)+
-  apply (simp add: word_rsplit_0)
+   apply (simp add: storeWord_def | wp)+
+   apply (simp add: word_rsplit_0)+
   done
 
 
@@ -1481,7 +1479,7 @@ lemma decode_untyped_invocation_authorised:
            apply (fastforce simp: nonzero_unat_simp)
           apply(clarsimp simp: K_def)
           apply(wp lookup_slot_for_cnode_op_authorised
-                   lookup_slot_for_cnode_op_inv whenE_throwError_wp)
+                   lookup_slot_for_cnode_op_inv whenE_throwError_wp)+
      apply(rule hoare_drop_imps)+
      apply(clarsimp)
      apply(rule_tac Q'="\<lambda>rv s. rv \<noteq> ArchObject ASIDPoolObj \<and>
@@ -1495,7 +1493,7 @@ lemma decode_untyped_invocation_authorised:
                  in hoare_post_imp_R)
       apply(wp data_to_obj_type_ret_not_asid_pool data_to_obj_type_inv2)
      apply(case_tac "excaps ! 0", simp_all, fastforce simp: nonzero_unat_simp)[1]
-    apply(wp whenE_throwError_wp)
+    apply(wp whenE_throwError_wp)+
   apply(auto dest!: bang_0_in_set
               simp: valid_cap_def cap_aligned_def obj_ref_of_def is_cap_simps
                     cap_auth_conferred_def pas_refined_all_auth_is_owns

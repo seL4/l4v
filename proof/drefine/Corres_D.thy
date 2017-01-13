@@ -38,7 +38,7 @@ lemma OR_choice_OR[simp]: "(OR_choice c (f :: ('a,unit) s_monad) g) = (f OR g)"
   apply (case_tac "g s")
   by (intro conjI set_eqI; clarsimp?; blast)
 
-lemma OR_choiceE_OR[simp]: "(OR_choiceE c (f :: ('a + 'b,unit) s_monad) g) = (f OR g)"
+lemma OR_choiceE_OR[simp]: "(OR_choiceE c (f :: ('a + 'b,unit) s_monad) g) = (f \<sqinter> g)"
   apply (clarsimp simp: OR_choiceE_def bindE_def liftE_def)
   apply (clarsimp simp: alternative_def get_def select_def return_def bind_def select_f_def
                             mk_ef_def wrap_ext_unit_def wrap_ext_bool_unit_def image_def
@@ -218,7 +218,7 @@ lemma dcorres_get:
   apply (rule dcorres_expand_pfx)
   apply (rule_tac r'="\<lambda>r r'. s=r \<and> s'=r'" and P="%x. op=s" and P'="%x. op=s'" in corres_underlying_split)
     apply (clarsimp simp: corres_underlying_def get_def)
-    apply wp
+    apply wp+
   apply (drule A)
   apply clarsimp+
 done
@@ -278,7 +278,6 @@ lemma hoare_mapM_idempotent: "\<lbrakk> \<And> a R. \<lbrace> R \<rbrace> x a \<
   apply (erule_tac x=R in allE)
   apply (rule hoare_seq_ext)
    apply wp
-   apply assumption
   apply assumption
   done
 

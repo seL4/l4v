@@ -28,6 +28,7 @@ lemma throw_on_false_wp[wp]:
     \<Longrightarrow> \<lbrace>P\<rbrace> throw_on_false x f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   apply (simp add: throw_on_false_def unlessE_def)
   apply wp
+   apply simp
   apply simp
   done
 
@@ -51,9 +52,7 @@ lemma dmo_asid_map [wp]:
 crunch caps_of_state[wp]: do_machine_op "\<lambda>s. P (caps_of_state s)"
 
 interpretation dmo: non_arch_non_cap_op "do_machine_op f"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 declare not_Some_eq_tuple[simp]
 

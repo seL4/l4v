@@ -212,6 +212,7 @@ lemma L1_fail_noreturn [simp,L1except]: "no_return \<top> L1_fail"
 
 lemma L1_seq_noreturn_lhs: "no_return \<top> L \<Longrightarrow> no_return \<top> (L1_seq L R)"
   apply (clarsimp simp: L1_defs no_return_def)
+  including no_pre
   apply wp
   apply clarsimp
   done

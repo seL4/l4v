@@ -323,9 +323,10 @@ lemma schedule_domain_time_left:
   apply (simp add: schedule_def)
   apply (wp|wpc)+
      apply (rule_tac Q="\<lambda>_. valid_domain_list" in hoare_post_imp, fastforce)
-     apply wp
+     apply wp+
    apply (rule_tac Q="\<lambda>_. ?P" in hoare_post_imp, fastforce)
-   apply wp
+   apply wp+
+  apply assumption
   done
 
 lemma reschedule_required_valid_domain_time:
@@ -352,7 +353,7 @@ lemma handle_interrupt_valid_domain_time:
        apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
        apply wp
       apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
-      apply wp
+      apply wp+
      apply simp (* dxo_eq *)
      apply (clarsimp simp: timer_tick_def num_domains_def)
      apply (wp reschedule_required_valid_domain_time
@@ -377,11 +378,10 @@ lemma call_kernel_domain_time_inv_det_ext:
     apply wp
    apply fastforce+
   (* now non-interrupt case; may throw but does not touch domain_time in handle_event *)
-  apply (rule hoare_pre)
-   apply (wp schedule_domain_time_left without_preemption_wp handle_interrupt_valid_domain_time)
+  apply (wp schedule_domain_time_left without_preemption_wp handle_interrupt_valid_domain_time)
     apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s \<and> valid_domain_list s" in hoare_post_imp)
      apply fastforce
-    apply (wp handle_event_domain_time_inv)
+    apply (wp handle_event_domain_time_inv)+
    apply (rule_tac Q'="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp_R)
     apply (wp handle_event_domain_time_inv)
    apply fastforce+

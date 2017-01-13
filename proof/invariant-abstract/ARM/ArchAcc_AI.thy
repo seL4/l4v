@@ -31,6 +31,7 @@ bundle unfold_objects =
   obj_at_def[simp]
   kernel_object.splits[split]
   arch_kernel_obj.splits[split]
+  get_object_wp [wp]
   
 bundle unfold_objects_asm =
   obj_at_def[simp]
@@ -64,10 +65,7 @@ lemmas set_asid_pool_typ_ats [wp] = abs_typ_at_lifts [OF set_asid_pool_typ_at]
 
 lemma get_pd_wp [wp]:
   "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PageDirectory pd)) p s \<longrightarrow> Q pd s\<rbrace> get_pd p \<lbrace>Q\<rbrace>"
-  apply (simp add: get_pd_def get_object_def)
-  apply (wp|wpc)+
-  apply (clarsimp simp: obj_at_def)
-  done
+  unfolding get_pd_def including unfold_objects by wpsimp
 
 
 lemma get_pde_wp:
@@ -79,7 +77,7 @@ lemma get_pde_wp:
 
 
 lemma get_pde_inv [wp]: "\<lbrace>P\<rbrace> get_pde p \<lbrace>\<lambda>_. P\<rbrace>"
-  by (wp get_pde_wp) simp
+  by (wpsimp wp: get_pde_wp)
 
 bundle pagebits = 
   pd_bits_def[simp] pt_bits_def[simp]
@@ -103,8 +101,7 @@ lemma get_master_pde_wp:
 lemma store_pde_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> store_pde ptr pde \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   apply (simp add: store_pde_def set_pd_def set_object_def get_object_def)
-  apply wp
-  apply (clarsimp simp: obj_at_def a_type_def)
+  apply (wpsimp simp: obj_at_def a_type_def)
   done
 
 
@@ -114,8 +111,7 @@ lemmas store_pde_typ_ats [wp] = abs_typ_at_lifts [OF store_pde_typ_at]
 lemma get_pt_wp [wp]:
   "\<lbrace>\<lambda>s. \<forall>pt. ko_at (ArchObj (PageTable pt)) p s \<longrightarrow> Q pt s\<rbrace> get_pt p \<lbrace>Q\<rbrace>"
   apply (simp add: get_pt_def get_object_def)
-  apply (wp|wpc)+
-  apply (clarsimp simp: obj_at_def)
+  apply (wpsimp simp: obj_at_def)
   done
 
 
@@ -129,7 +125,7 @@ lemma get_pte_wp:
 
 lemma get_pte_inv [wp]:
   "\<lbrace>P\<rbrace> get_pte p \<lbrace>\<lambda>_. P\<rbrace>"
-  by (wp get_pte_wp) simp
+  by (wpsimp wp: get_pte_wp)
 
 
 lemma get_master_pte_wp:
@@ -148,8 +144,7 @@ lemma get_master_pte_wp:
 lemma store_pte_typ_at:
     "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> store_pte ptr pte \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   apply (simp add: store_pte_def set_pt_def set_object_def get_object_def)
-  apply wp
-  apply (clarsimp simp: obj_at_def a_type_def)
+  apply (wpsimp simp: obj_at_def a_type_def)
   done
 
 
@@ -166,8 +161,8 @@ lemma lookup_pt_slot_inv:
 lemma lookup_pt_slot_inv_any:
   "\<lbrace>\<lambda>s. \<forall>x. Q x s\<rbrace> lookup_pt_slot pd vptr \<lbrace>Q\<rbrace>,-"
   "\<lbrace>E\<rbrace> lookup_pt_slot pd vptr -, \<lbrace>\<lambda>ft. E\<rbrace>"
-  apply (simp_all add: lookup_pt_slot_def)
-  apply (wp get_pde_wp | simp | wpc)+
+   apply (simp_all add: lookup_pt_slot_def)
+   apply (wpsimp wp: get_pde_wp)+
   done
 
 crunch cte_wp_at[wp]: set_irq_state "\<lambda>s. P (cte_wp_at P' p s)"
@@ -209,27 +204,21 @@ lemma set_asid_pool_cte_wp_at:
 lemma set_pt_pred_tcb_at[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_pt_def set_object_def)
-  apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
 
 
 lemma set_pd_pred_tcb_at[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pd ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_pd_def set_object_def)
-  apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
 
 
 lemma set_asid_pool_pred_tcb_at[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
-  apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
 
 lemmas word_simps = 
@@ -354,7 +343,7 @@ lemma arch_derive_cap_valid_cap:
   \<lbrace>valid_cap \<circ> cap.ArchObjectCap\<rbrace>, -"
   apply(simp add: arch_derive_cap_def)
   apply(cases arch_cap, simp_all add: arch_derive_cap_def o_def)
-      apply(rule hoare_pre, wpc?, wp,
+      apply(rule hoare_pre, wpc?, wp+;
             clarsimp simp add: cap_aligned_def valid_cap_def split: option.splits)+
   done
 
@@ -362,7 +351,7 @@ lemma arch_derive_cap_valid_cap:
 lemma arch_derive_cap_inv:
   "\<lbrace>P\<rbrace> arch_derive_cap arch_cap \<lbrace>\<lambda>rv. P\<rbrace>"
   apply(simp add: arch_derive_cap_def, cases arch_cap, simp_all)
-      apply(rule hoare_pre, wpc?, wp, simp)+
+      apply(rule hoare_pre, wpc?, wp+; simp)+
   done
 
 definition
@@ -412,21 +401,18 @@ lemma ucast_ucast_asid_high_bits [simp]:
 
 lemma mask_asid_low_bits_ucast_ucast:
   "((asid::word32) && mask asid_low_bits) = ucast (ucast asid :: 10 word)"
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast asid_low_bits_def)
-  done
-
+  by (rule word_eqI) (simp add: word_size nth_ucast asid_low_bits_def)
 
 
 lemma set_asid_pool_cur [wp]:
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
-  unfolding set_asid_pool_def by (wp get_object_wp) simp
+  unfolding set_asid_pool_def by (wpsimp wp: get_object_wp)
 
 
 lemma set_asid_pool_cur_tcb [wp]:
   "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
   unfolding cur_tcb_def
-  by (rule hoare_lift_Pf [where f=cur_thread]) wp
+  by (rule hoare_lift_Pf [where f=cur_thread]; wp)
 
 
 crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
@@ -435,7 +421,7 @@ crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
 
 lemma set_asid_pool_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) (wp set_asid_pool_typ_at)
+  by (rule valid_arch_state_lift) (wp set_asid_pool_typ_at)+
 
 
 lemma set_asid_pool_valid_objs [wp]:
@@ -776,10 +762,6 @@ lemma create_mapping_entries_valid [wp]:
   apply (cases sz)
      apply (rule hoare_pre)
       apply (wp|simp add: valid_mapping_entries_def)+
-    apply (rule hoare_pre)
-     apply (wp|simp add: valid_mapping_entries_def)+
-   apply (rule hoare_pre)
-    apply wp
    apply clarsimp
    apply (erule (1) page_directory_pde_at_lookupI)
   apply (rule hoare_pre)
@@ -935,10 +917,7 @@ lemma set_asid_pool_distinct [wp]:
 
 lemma store_pde_arch [wp]:
   "\<lbrace>\<lambda>s. P (arch_state s)\<rbrace> store_pde p pde \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
-  apply (simp add: store_pde_def set_pd_def get_object_def)
-  apply (wp|wpc)+
-  apply clarsimp
-  done
+  by (simp add: store_pde_def set_pd_def get_object_def) wpsimp
 
 
 lemma store_pte_valid_pte [wp]:
@@ -954,8 +933,7 @@ lemma store_pde_valid_pde [wp]:
 lemma set_pd_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_pd ptr pd \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   apply (simp add: set_pd_def set_object_def get_object_def)
-  apply wp
-  apply clarsimp
+  apply wpsimp
   apply (erule rsubst [where P=P])
   including unfold_objects
   by (clarsimp simp: a_type_def)
@@ -1005,13 +983,8 @@ lemma set_pd_zombies_state_refs:
 
 
 lemma set_pd_cdt:
-  "\<lbrace>\<lambda>s. P (cdt s)\<rbrace>
-  set_pd p pd
-  \<lbrace>\<lambda>_ s. P (cdt s)\<rbrace>"
-  apply (clarsimp simp: set_pd_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
+  "\<lbrace>\<lambda>s. P (cdt s)\<rbrace> set_pd p pd \<lbrace>\<lambda>_ s. P (cdt s)\<rbrace>"
+  unfolding set_pd_def by (wpsimp wp: get_object_wp)
 
 
 lemma set_pd_valid_mdb:
@@ -1019,32 +992,22 @@ lemma set_pd_valid_mdb:
   set_pd p pd
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
   apply (rule valid_mdb_lift)
-    apply (wp set_pd_cdt)
+    apply (wp set_pd_cdt)+
   apply (clarsimp simp: set_pd_def)
-  apply (wp get_object_wp)
-  apply simp
+  apply (wpsimp wp: get_object_wp)
   done
 
 
 lemma set_pd_valid_idle:
-  "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
-  set_pd p pd
-  \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  apply (wp valid_idle_lift)
-  apply (simp add: set_pd_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
-
+  "\<lbrace>\<lambda>s. valid_idle s\<rbrace> set_pd p pd \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
+ by (wpsimp wp: valid_idle_lift get_object_wp simp: set_pd_def)
 
 lemma set_pd_ifunsafe:
   "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace>
   set_pd p pd
   \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
-  apply (simp add: set_pd_def)
-  apply (wp get_object_wp set_object_ifunsafe)
-  including unfold_objects
-  by clarsimp
+  unfolding set_pd_def including unfold_objects
+  by (wpsimp wp: get_object_wp set_object_ifunsafe)
 
 
 lemma set_pd_reply_caps:
@@ -1102,7 +1065,6 @@ lemma set_pd_cur:
   \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
   apply (simp add: cur_tcb_def set_pd_def set_object_def)
   apply (wp get_object_wp)
-  apply clarsimp
   apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: obj_at_def is_tcb_def)
   done
@@ -1129,8 +1091,7 @@ declare graph_of_Some_update[simp]
 lemma set_pt_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_pt ptr pt \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   apply (simp add: set_pt_def set_object_def get_object_def)
-  apply wp
-  apply clarsimp
+  apply wpsimp
   apply (erule rsubst [where P=P])
   including unfold_objects
   by (clarsimp simp: a_type_def)
@@ -1153,92 +1114,55 @@ lemma set_pt_iflive:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
   set_pt p pt
   \<lbrace>\<lambda>_ s. if_live_then_nonz_cap s\<rbrace>"
-  apply (simp add: set_pt_def)
-  apply (wp get_object_wp set_object_iflive)
-  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
-  apply (clarsimp simp: obj_at_def)
-  done
+  unfolding set_pt_def including unfold_objects
+  by (wpsimp wp: get_object_wp)
 
 
 lemma set_pt_zombies:
   "\<lbrace>\<lambda>s. zombies_final s\<rbrace>
   set_pt p pt
   \<lbrace>\<lambda>_ s. zombies_final s\<rbrace>"
-  apply (simp add: set_pt_def)
-  apply (wp get_object_wp set_object_zombies)
-  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
-  apply (clarsimp simp: obj_at_def)
-  done
+  unfolding set_pt_def including unfold_objects
+  by (wpsimp wp: get_object_wp)
 
 
 lemma set_pt_zombies_state_refs:
   "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>
   set_pt p pt
   \<lbrace>\<lambda>_ s. P (state_refs_of s)\<rbrace>"
-  apply (clarsimp simp: set_pt_def set_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
+  unfolding set_pt_def set_object_def including unfold_objects
+  apply wpsimp
   apply (erule rsubst [where P=P])
   apply (rule ext)
-  apply (clarsimp simp: obj_at_def state_refs_of_def split: option.splits)
+  apply (clarsimp simp: state_refs_of_def split: option.splits)
   done
 
 
 lemma set_pt_cdt:
-  "\<lbrace>\<lambda>s. P (cdt s)\<rbrace>
-  set_pt p pt
-  \<lbrace>\<lambda>_ s. P (cdt s)\<rbrace>"
-  apply (clarsimp simp: set_pt_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
+  "\<lbrace>\<lambda>s. P (cdt s)\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. P (cdt s)\<rbrace>"
+  unfolding set_pt_def including unfold_objects by wpsimp
 
 
 lemma set_pt_valid_mdb:
-  "\<lbrace>\<lambda>s. valid_mdb s\<rbrace>
-  set_pt p pt
-  \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
-  apply (rule valid_mdb_lift)
-    apply (wp set_pt_cdt)
-  apply (clarsimp simp: set_pt_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
-
+  "\<lbrace>\<lambda>s. valid_mdb s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
+  including unfold_objects
+  by (wpsimp wp: set_pt_cdt valid_mdb_lift simp: set_pt_def)
 
 lemma set_pt_valid_idle:
-  "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
-  set_pt p pt
-  \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  apply (wp valid_idle_lift)
-  apply (simp add: set_pt_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
-
+  "\<lbrace>\<lambda>s. valid_idle s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
+  including unfold_objects
+  by (wpsimp wp: valid_idle_lift simp: set_pt_def)
 
 lemma set_pt_ifunsafe:
-  "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace>
-  set_pt p pt
-  \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
-  apply (simp add: set_pt_def)
-  apply (wp get_object_wp set_object_ifunsafe)
-  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
-  apply (clarsimp simp: obj_at_def)
-  done
-
+  "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
+  including unfold_objects by (wpsimp simp: set_pt_def)
 
 lemma set_pt_reply_caps:
-  "\<lbrace>\<lambda>s. valid_reply_caps s\<rbrace>
-  set_pt p pt
-  \<lbrace>\<lambda>_ s. valid_reply_caps s\<rbrace>"
+  "\<lbrace>\<lambda>s. valid_reply_caps s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. valid_reply_caps s\<rbrace>"
   by (wp valid_reply_caps_st_cte_lift)
 
-
 lemma set_pt_reply_masters:
-  "\<lbrace>valid_reply_masters\<rbrace>
-   set_pt p pt
-   \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
+  "\<lbrace>valid_reply_masters\<rbrace>  set_pt p pt  \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
   by (wp valid_reply_masters_cte_lift)
 
 
@@ -1331,7 +1255,7 @@ lemma set_pt_vs_lookup [wp]:
 
 lemma store_pte_vs_lookup [wp]:
   "\<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace> store_pte x pte \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
-  unfolding store_pte_def by wp simp
+  unfolding store_pte_def by wpsimp
 
 
 lemma unique_table_caps_ptD:
@@ -1607,7 +1531,7 @@ lemma set_pt_asid_map [wp]:
   "\<lbrace>valid_asid_map\<rbrace> set_pt p pt \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
   apply (simp add: valid_asid_map_def vspace_at_asid_def)
   apply (rule hoare_lift_Pf2 [where f="arch_state"])
-   apply wp
+   apply wp+
   done
 
 
@@ -1945,56 +1869,41 @@ lemma set_asid_pool_cdt [wp]:
   "\<lbrace>\<lambda>s. P (cdt s)\<rbrace>
   set_asid_pool p ap
   \<lbrace>\<lambda>_ s. P (cdt s)\<rbrace>"
-  apply (clarsimp simp: set_asid_pool_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
-
+  unfolding set_asid_pool_def including unfold_objects
+  by wpsimp
 
 lemma set_asid_pool_caps_of_state [wp]:
   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  apply (simp add: set_asid_pool_def get_object_def bind_assoc set_object_def)
-  apply wp
-  apply clarsimp
+  unfolding set_asid_pool_def set_object_def including unfold_objects
+  apply wpsimp
   apply (subst cte_wp_caps_of_lift)
    prefer 2
    apply assumption
-   subgoal for _ y
-    by (cases y, auto simp: cte_wp_at_cases)
+  subgoal for _ _ y by (cases y, auto simp: cte_wp_at_cases)
   done
 
 lemma set_asid_pool_valid_mdb [wp]:
   "\<lbrace>\<lambda>s. valid_mdb s\<rbrace>
   set_asid_pool p ap
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
-  apply (rule valid_mdb_lift)
-    apply wp
-  apply (clarsimp simp: set_asid_pool_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
+  including unfold_objects
+  by (wpsimp wp: valid_mdb_lift simp: set_asid_pool_def)
 
 
 lemma set_asid_pool_valid_idle [wp]:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
   set_asid_pool p ap
   \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  apply (wp valid_idle_lift)
-  apply (simp add: set_asid_pool_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
+  including unfold_objects
+  by (wpsimp wp: valid_idle_lift simp: set_asid_pool_def)
 
 
 lemma set_asid_pool_ifunsafe [wp]:
   "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace>
   set_asid_pool p ap
   \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
-  apply (simp add: set_asid_pool_def)
-  apply (wp get_object_wp set_object_ifunsafe)
-  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
-  apply (clarsimp simp: obj_at_def)
-  done
+  including unfold_objects
+  by (wpsimp simp: set_asid_pool_def)
 
 
 lemma set_asid_pool_reply_caps [wp]:
@@ -2044,13 +1953,9 @@ lemma set_asid_pool_arch_objs_unmap':
   "\<lbrace>valid_arch_objs and (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj (ASIDPool ap) s) and
     obj_at (\<lambda>ko. \<exists>ap'. ko = ArchObj (ASIDPool ap') \<and> graph_of ap \<subseteq> graph_of ap') p\<rbrace>
   set_asid_pool p ap \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-  apply (simp add: set_asid_pool_def)
-  apply (wp get_object_wp set_object_arch_objs)
-  apply (clarsimp simp: obj_at_def obj_at_def)
-  apply (rule conjI)
-   apply (clarsimp simp: a_type_def split: kernel_object.splits arch_kernel_obj.splits)
-  apply (clarsimp simp: vs_refs_def)
-  apply fastforce
+  unfolding set_asid_pool_def including unfold_objects
+  apply (wpsimp wp: set_object_arch_objs)
+  apply (fastforce simp: a_type_def vs_refs_def)
   done
 
 

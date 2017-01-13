@@ -239,24 +239,17 @@ crunch all_but_exst[wp]: set_scheduler_action,tcb_sched_action,next_domain,
 crunch (empty_fail) empty_fail[wp]: cap_move_ext
 
 global_interpretation set_scheduler_action_extended: is_extended "set_scheduler_action a"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 global_interpretation tcb_sched_action_extended: is_extended "tcb_sched_action a b"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 global_interpretation next_domain_extended: is_extended "next_domain"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 global_interpretation cap_move_ext: is_extended "cap_move_ext a b c d"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
+
 
 lemmas rec_del_simps_ext =
     rec_del.simps [THEN ext[where f="rec_del args" for args]]
@@ -355,37 +348,35 @@ lemma resolve_address_bits_bcorres[wp]: "bcorres (resolve_address_bits a) (resol
 
 lemma bcorres_cap_fault_on_failure[wp]: "bcorres f f' \<Longrightarrow> bcorres (cap_fault_on_failure a b f) (cap_fault_on_failure a b f')"
   apply (simp add: cap_fault_on_failure_def)
-  apply (wp | wpc | simp)+
+  apply wpsimp
   done
 
 lemmas in_use_frame_truncate[simp] = more_update.in_user_frame_update[where f="\<lambda>_.()"]
 
 lemma lookup_error_on_failure_bcorres[wp]: "bcorres b b' \<Longrightarrow> bcorres (lookup_error_on_failure a b) (lookup_error_on_failure a b')"
   apply (simp add: lookup_error_on_failure_def)
-  apply (wp | wpc | simp)+
+  apply wpsimp
   done
 
 lemma empty_on_failure_bcorres[wp]: "bcorres f f' \<Longrightarrow> bcorres (empty_on_failure f) (empty_on_failure f')"
   apply (simp add: empty_on_failure_def)
-  apply (wp | simp)+
+  apply wpsimp
   done
 
 lemma unify_failure_bcorres[wp]: "bcorres f f' \<Longrightarrow> bcorres (unify_failure f) (unify_failure f')"
   apply (simp add: unify_failure_def)
-  apply (wp | simp)+
+  apply wpsimp
   done
 
 lemma const_on_failure_bcorres[wp]: "bcorres f f' \<Longrightarrow> bcorres (const_on_failure c f) (const_on_failure c f')"
   apply (simp add: const_on_failure_def)
-  apply (wp | simp)+
+  apply wpsimp
   done
 
 crunch (bcorres)bcorres[wp]: lookup_target_slot,lookup_cap,load_cap_transfer truncate_state (simp: gets_the_def ignore: loadWord)
 
 lemma get_receive_slots_bcorres[wp]: "bcorres (get_receive_slots a b) (get_receive_slots a b)"
-  apply (cases b)
-  apply (wp | simp)+
-  done
+  by (cases b; wpsimp)
 
 lemma (in BCorres2_AI) make_fault_msg_bcorres[wp]:
   "bcorres (make_fault_msg a b :: 'a state \<Rightarrow> _) (make_fault_msg a b)"

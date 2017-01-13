@@ -12,6 +12,7 @@ theory ArchVSpaceEntries_AI
 imports "../VSpaceEntries_AI"
 begin
 
+
 context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 lemma a_type_pdD:
@@ -378,14 +379,15 @@ lemma unmap_page_valid_pdpt[wp]:
   apply (wp)
     prefer 2
     apply (rule valid_validE[OF find_pd_for_asid_inv])
-  apply (rule hoare_pre)
-   apply (wp get_object_wp get_pte_wp get_pde_wp lookup_pt_slot_inv_any
-             store_invalid_pte_valid_pdpt
-             store_invalid_pde_valid_pdpt
-             mapM_x_store_invalid_pte_valid_pdpt mapM_x_store_pde_valid_pdpt_objs
-                | simp add: mapM_x_map
-                | wpc | simp add: check_mapping_pptr_def)+
-  apply (simp add: fun_upd_def[symmetric] is_aligned_mask[symmetric])
+   apply (rule hoare_pre)
+    apply (wp get_object_wp get_pte_wp get_pde_wp lookup_pt_slot_inv_any
+              store_invalid_pte_valid_pdpt
+              store_invalid_pde_valid_pdpt
+              mapM_x_store_invalid_pte_valid_pdpt mapM_x_store_pde_valid_pdpt_objs
+                 | simp add: mapM_x_map
+                 | wpc | simp add: check_mapping_pptr_def)+
+   apply (simp add: fun_upd_def[symmetric] is_aligned_mask[symmetric])
+  apply assumption
   done
 
 crunch valid_pdpt_objs[wp]: flush_table "valid_pdpt_objs"
@@ -395,7 +397,8 @@ crunch kheap[wp]: flush_table "\<lambda>s. P (kheap s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma unmap_page_table_valid_pdpt_objs[wp]:
-  "\<lbrace>valid_pdpt_objs\<rbrace> unmap_page_table asid vptr pt \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
+  notes hoare_pre [wp_pre del]
+  shows "\<lbrace>valid_pdpt_objs\<rbrace> unmap_page_table asid vptr pt \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (simp add: unmap_page_table_def)
   apply (wp get_object_wp store_invalid_pde_valid_pdpt | wpc)+
   apply (simp add: obj_at_def)
@@ -442,11 +445,10 @@ lemma mapM_x_copy_pde_updates:
    apply (clarsimp simp: obj_at_def fun_upd_idem dest!: a_type_pdD)
   apply (simp add: mapM_x_Cons)
   apply wp
-   apply assumption
-  apply (thin_tac "valid P f Q" for P f Q)
-  apply (simp add: store_pde_def set_pd_def set_object_def
-             cong: bind_cong split del: if_split)
-  apply (wp get_object_wp get_pde_wp)
+   apply (thin_tac "valid P f Q" for P f Q)
+   apply (simp add: store_pde_def set_pd_def set_object_def
+              cong: bind_cong split del: if_split)
+   apply (wp get_object_wp get_pde_wp)
   apply (clarsimp simp: obj_at_def a_type_simps mask_out_add_aligned[symmetric]
              split del: if_split)
   apply (simp add: a_type_simps, safe)
@@ -461,6 +463,8 @@ lemma mapM_x_copy_pde_updates:
   done
 
 lemma copy_global_mappings_valid_pdpt_objs[wp]:
+  notes hoare_pre [wp_pre del]
+  shows
   "\<lbrace>valid_pdpt_objs and valid_arch_state and pspace_aligned
             and K (is_aligned p pd_bits)\<rbrace>
        copy_global_mappings p \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"

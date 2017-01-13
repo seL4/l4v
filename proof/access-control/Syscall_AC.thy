@@ -1161,6 +1161,7 @@ lemma dxo_current_ipc_buffer_register[wp]:
 
 lemma dxo_current_ipc_buffer_register_kheap_upd:
   "\<lbrace>\<lambda>s. P (current_ipc_buffer_register (s\<lparr>kheap:=kh\<rparr>))\<rbrace> do_extended_op eop  \<lbrace>\<lambda>r s. P (current_ipc_buffer_register (s\<lparr>kheap:=kh\<rparr>))\<rbrace>"
+  including no_pre
   apply (simp | wp dxo_wp_weak)+
   apply (rule arg_cong[where f = P])
   apply (simp add: trans_state_def current_ipc_buffer_register_def get_tcb_def)
@@ -1224,6 +1225,7 @@ lemma retype_region_current_ipc_buffer_register:
 
 lemma cancel_signal_current_ipc_buffer_register[wp]:
   "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> cancel_signal a b \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  including no_pre
   apply (clarsimp simp: cancel_signal_def get_notification_def)
   apply (wp | wpc)+
   apply (clarsimp simp:  get_object_def set_object_def valid_def put_def
@@ -1237,6 +1239,7 @@ crunch current_ipc_buffer_register [wp]: blocked_cancel_ipc "\<lambda>s. P (curr
 
 lemma reply_cancel_ipc_current_ipc_buffer_register[wp]:
   "\<lbrace>\<lambda>s. P (current_ipc_buffer_register s)\<rbrace> reply_cancel_ipc a \<lbrace>\<lambda>r s. P (current_ipc_buffer_register s)\<rbrace>"
+  including no_pre
   apply (clarsimp simp: reply_cancel_ipc_def)
   apply (wp select_wp| wpc)+
   apply (rule_tac Q = "\<lambda>r s. P (current_ipc_buffer_register s)" in hoare_post_imp)
@@ -1275,11 +1278,7 @@ abbreviation (input)
 
 lemma rec_del_current_ipc_buffer_register [wp]:
   "invariant (rec_del call) (\<lambda>s. P (current_ipc_buffer_register s))"
-  apply (rule rec_del_preservation)
-  apply wp
-  apply (wp preemption_point_inv)
-   apply simp+
-  done
+  by (rule rec_del_preservation; wpsimp wp: preemption_point_inv)
 
 crunch current_ipc_buffer_register [wp]: cap_delete "\<lambda>s. P (current_ipc_buffer_register s)"
    (wp: crunch_wps simp: crunch_simps)
@@ -1287,9 +1286,7 @@ crunch current_ipc_buffer_register [wp]: cap_delete "\<lambda>s. P (current_ipc_
 lemma cap_revoke_current_ipc_buffer_register [wp]:
   "invariant (cap_revoke slot) (\<lambda>s. P (current_ipc_buffer_register s))"
   apply (rule validE_valid)
-  apply (rule cap_revoke_preservation)
-  apply (wp preemption_point_inv)
-   apply simp+
+  apply (rule cap_revoke_preservation; wpsimp wp: preemption_point_inv)
   done
 
 end
@@ -1510,12 +1507,11 @@ lemma cancel_all_ipc_ct_active[wp]:
   "\<lbrace>ct_active\<rbrace>
     cancel_all_ipc ptr
    \<lbrace>\<lambda>_. ct_active \<rbrace>"
-  apply (rule hoare_pre)
-   apply (wp mapM_x_wp | wps | simp add: cancel_all_ipc_def | wpc)+
+  apply (wp mapM_x_wp | wps | simp add: cancel_all_ipc_def | wpc)+
        apply force
-      apply (wp mapM_x_wp)
+      apply (wp mapM_x_wp)+
       apply force
-     apply (wp hoare_drop_imps hoare_vcg_conj_lift hoare_vcg_all_lift)
+     apply (wp hoare_drop_imps hoare_vcg_conj_lift hoare_vcg_all_lift)+
   apply simp
   done
 
@@ -1596,9 +1592,7 @@ crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_d
     ignore: without_preemption filterM rec_del check_cap_at cap_revoke )
  
 lemma cap_revoke_idle_thread[wp]:"\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> cap_revoke a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
-  apply (rule cap_revoke_preservation2)
-   apply wp
-  done
+  by (rule cap_revoke_preservation2; wp)
 
 lemma invoke_cnode_idle_thread[wp]: "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> invoke_cnode a \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
   apply (simp add: invoke_cnode_def)
@@ -1643,6 +1637,7 @@ lemma call_kernel_integrity':
                     and K (pasMayActivate aag \<and> pasMayEditReadyQueues aag)\<rbrace>
                call_kernel ev
              \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  including no_pre
   apply (simp add: call_kernel_def getActiveIRQ_def )
   apply (simp add: spec_valid_def)
   apply (wp activate_thread_respects schedule_integrity_pasMayEditReadyQueues
@@ -1653,10 +1648,9 @@ lemma call_kernel_integrity':
          rule_tac Q = "integrity aag X st and pas_refined aag and einvs and guarded_pas_domain aag and domain_sep_inv (pasMaySendIrqs aag) st'
                         and is_subject aag \<circ> cur_thread
                         and (\<lambda>_. pasMayActivate aag \<and> pasMayEditReadyQueues aag)" in valid_validE)
-    apply (rule hoare_pre)
-     apply ((wp handle_event_integrity he_invs handle_event_pas_refined
-               handle_event_cur_thread handle_event_cur_domain
-               handle_event_domain_sep_inv handle_event_valid_sched | simp)+)[1]
+    apply (wp handle_event_integrity he_invs handle_event_pas_refined
+              handle_event_cur_thread handle_event_cur_domain
+              handle_event_domain_sep_inv handle_event_valid_sched | simp)+
       apply (fastforce simp:  domain_sep_inv_def)+
   apply(fastforce simp: domain_sep_inv_def guarded_pas_domain_def)
   done
@@ -1687,10 +1681,10 @@ lemma call_kernel_pas_refined:
   apply (simp add: call_kernel_def getActiveIRQ_def)
   apply (wp activate_thread_pas_refined schedule_pas_refined handle_interrupt_pas_refined
             do_machine_op_pas_refined dmo_wp alternative_wp select_wp)
-  apply simp
-  apply (rule hoare_post_impErr [OF valid_validE [where Q = "pas_refined aag and invs"]])
-    apply (wp he_invs handle_event_pas_refined)
-     apply auto
+   apply simp
+   apply (rule hoare_post_impErr [OF valid_validE [where Q = "pas_refined aag and invs"]])
+     apply (wp he_invs handle_event_pas_refined)
+    apply auto
   done
 
 end

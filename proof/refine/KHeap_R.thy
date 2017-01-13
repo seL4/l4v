@@ -1201,27 +1201,23 @@ lemma setObject_ko_wp_at:
 
 lemma typ_at'_valid_obj'_lift:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
+  notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_const_Ball_lift typ_at_lifts [OF P]
   shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
-  apply (cases obj, simp_all add: valid_obj'_def)
-       apply (rename_tac endpoint)
-       apply (case_tac endpoint; simp add: valid_ep'_def)
-         apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
-      apply (rename_tac notification)
-      apply (case_tac "ntfnObj notification"; simp add: valid_ntfn'_def valid_bound_tcb'_def)
-        prefer 3
-        apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
-        apply ((case_tac "ntfnBoundTCB notification", simp_all, wp typ_at_lifts[OF P])+)[3]
-     apply wp
-   apply (rename_tac tcb)
+  apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
+      apply (rename_tac endpoint)
+      apply (case_tac endpoint; simp add: valid_ep'_def, wp)
+     apply (rename_tac notification)
+     apply (case_tac "ntfnObj notification";
+             simp add: valid_ntfn'_def valid_bound_tcb'_def split: option.splits,
+             (wpsimp|rule conjI)+)
+    apply (rename_tac tcb)
     apply (case_tac "tcbState tcb";
-           simp add: valid_tcb'_def valid_tcb_state'_def split_def valid_bound_ntfn'_def)
-           apply ((wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P]
-                | case_tac "tcbBoundNotification tcb"; simp)+)[8]
-   apply (simp add: valid_cte'_def)
-   apply (wp typ_at_lifts[OF P])
+           simp add: valid_tcb'_def valid_tcb_state'_def split_def valid_bound_ntfn'_def
+              split: option.splits,
+           wpsimp)
+   apply (wpsimp simp: valid_cte'_def)
   apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object; simp)
-    apply (wp typ_at_lifts[OF P])
+  apply (case_tac arch_kernel_object; wpsimp)
   done
 
 lemmas setObject_valid_obj = typ_at'_valid_obj'_lift [OF setObject_typ_at']
@@ -1480,10 +1476,10 @@ lemma set_ep_valid_pspace'[wp]:
   \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
   apply (simp add: valid_pspace'_def)
   apply (wp set_ep_aligned' [simplified] set_ep_valid_objs')
-    apply (wp hoare_vcg_conj_lift)
-      apply (simp add: setEndpoint_def)
-      apply (wp setEndpoint_valid_mdb')
-     apply auto
+   apply (wp hoare_vcg_conj_lift)
+    apply (simp add: setEndpoint_def)
+    apply (wp setEndpoint_valid_mdb')+
+  apply auto
   done
 
 lemma set_ep_valid_bitmapQ[wp]:
@@ -1513,8 +1509,7 @@ lemma set_ep_bitmapQ_no_L2_orphans[wp]:
 lemma set_ep_valid_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> setEndpoint epptr ep \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
   apply (simp add: Invariants_H.valid_queues_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_vcg_conj_lift)
+  apply (wp hoare_vcg_conj_lift)
     apply (simp add: setEndpoint_def valid_queues_no_bitmap_def)
     apply (wp hoare_Ball_helper hoare_vcg_all_lift)
       apply (rule obj_at_setObject2)
@@ -1528,8 +1523,7 @@ lemma set_ep_valid_queues'[wp]:
   apply (unfold setEndpoint_def)
   apply (simp only: valid_queues'_def imp_conv_disj
                     obj_at'_real_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
+  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
     apply (rule setObject_ko_wp_at)
       apply simp
      apply (simp add: objBits_simps)
@@ -1560,10 +1554,10 @@ lemma sch_act_wf_lift:
   apply (clarsimp simp: valid_def)
   apply (frule (1) use_valid [OF _ ksA])
   apply (case_tac "ksSchedulerAction b", simp_all)
-   apply (drule (2) use_valid [OF _ ct_in_state_thread_state_lift' [OF kCT tcb]])
+  apply (drule (2) use_valid [OF _ ct_in_state_thread_state_lift' [OF kCT tcb]])
   apply (clarsimp)
   apply (rule conjI)
-   apply (drule (2) use_valid [OF _ tcb])
+  apply (drule (2) use_valid [OF _ tcb])
   apply (drule (2) use_valid [OF _ tcb_cd])
   done
 
@@ -1573,7 +1567,7 @@ lemma tcb_in_cur_domain'_lift:
   shows "\<lbrace> tcb_in_cur_domain' t \<rbrace> f \<lbrace> \<lambda>_. tcb_in_cur_domain' t \<rbrace>"
   apply (simp add: tcb_in_cur_domain'_def)
   apply (rule_tac f="ksCurDomain" in  hoare_lift_Pf)
-  apply (rule b)
+   apply (rule b)
   apply (rule a)
   done
 
@@ -1588,15 +1582,15 @@ lemma ct_idle_or_in_cur_domain'_lift:
   shows "\<lbrace> ct_idle_or_in_cur_domain' \<rbrace> f \<lbrace> \<lambda>_. ct_idle_or_in_cur_domain' \<rbrace>"
   apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
   apply (rule_tac f="ksCurThread" in  hoare_lift_Pf)
-  apply (rule_tac f="ksIdleThread" in hoare_lift_Pf)
-  apply (rule_tac f="ksSchedulerAction" in  hoare_lift_Pf)
-  apply (rule_tac f="ksCurDomain" in  hoare_lift_Pf)
-  apply (wp hoare_vcg_imp_lift)
-  apply (rule e)
-   apply simp
-  apply (rule a)
-  apply (rule b)
-  apply (rule c)
+   apply (rule_tac f="ksIdleThread" in hoare_lift_Pf)
+    apply (rule_tac f="ksSchedulerAction" in  hoare_lift_Pf)
+     apply (rule_tac f="ksCurDomain" in  hoare_lift_Pf)
+      apply (wp hoare_vcg_imp_lift)
+       apply (rule e)
+      apply simp
+     apply (rule a)
+    apply (rule b)
+   apply (rule c)
   apply (rule d)
   done
 
@@ -1616,22 +1610,20 @@ lemma setObject_ep_cur_domain[wp]:
 lemma setEndpoint_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t\<rbrace> setEndpoint epptr ep \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
   apply (clarsimp simp: setEndpoint_def)
-  apply (rule tcb_in_cur_domain'_lift)
-  apply wp
+  apply (rule tcb_in_cur_domain'_lift; wp)
   done
 
 lemma setEndpoint_obj_at'_tcb[wp]:
   "\<lbrace>obj_at' (P :: tcb \<Rightarrow> bool) t \<rbrace> setEndpoint ptr (e::endpoint) \<lbrace>\<lambda>_. obj_at' (P :: tcb \<Rightarrow> bool) t\<rbrace>"
-  apply (clarsimp simp: setEndpoint_def, wp)
-  done
+  by (clarsimp simp: setEndpoint_def, wp)
 
 lemma set_ep_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
      setEndpoint epptr ep
    \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (wp sch_act_wf_lift)
-   apply (simp add: setEndpoint_def split_def setObject_def
-        | wp updateObject_default_inv)+
+    apply (simp add: setEndpoint_def split_def setObject_def
+              | wp updateObject_default_inv)+
   done
 
 lemma setObject_state_refs_of':
@@ -1805,8 +1797,7 @@ lemma setNotification_ksCurDomain[wp]:
 lemma setNotification_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t\<rbrace> setNotification epptr ep \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
   apply (clarsimp simp: setNotification_def)
-  apply (rule tcb_in_cur_domain'_lift)
-  apply wp
+  apply (rule tcb_in_cur_domain'_lift; wp)
   done
 
 lemma set_ntfn_sch_act_wf[wp]:
@@ -1957,7 +1948,7 @@ lemma valid_global_refs_lift':
    apply (rule hoare_lift_Pf [where f="ksIdleThread"])
     apply (rule hoare_lift_Pf [where f="irq_node'"])
      apply (rule hoare_lift_Pf [where f="gsMaxObjectSize"])
-      apply (wp ctes hoare_vcg_const_Ball_lift arch idle irqn maxObj)
+      apply (wp ctes hoare_vcg_const_Ball_lift arch idle irqn maxObj)+
   done
 
 lemma valid_arch_state_lift':
@@ -1969,16 +1960,16 @@ lemma valid_arch_state_lift':
                    page_table_at'_def
                    All_less_Ball)
   apply (rule hoare_lift_Pf [where f="ksArchState"])
-  apply (wp typs hoare_vcg_const_Ball_lift arch typ_at_lifts)
+   apply (wp typs hoare_vcg_const_Ball_lift arch typ_at_lifts)+
   done
 
 lemma set_ep_global_refs'[wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
-  by (rule valid_global_refs_lift') wp
+  by (rule valid_global_refs_lift'; wp)
 
 lemma set_ep_valid_arch' [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift') wp
+  by (rule valid_arch_state_lift'; wp)
 
 lemma setObject_ep_ct:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::endpoint) \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
@@ -2071,13 +2062,13 @@ lemma set_ntfn_maxObj [wp]:
 
 lemma set_ntfn_global_refs' [wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
-  by (rule valid_global_refs_lift') wp
+  by (rule valid_global_refs_lift'; wp)
 
 crunch typ_at' [wp]: setNotification "\<lambda>s. P (typ_at' T p s)"
 
 lemma set_ntfn_valid_arch' [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift') wp
+  by (rule valid_arch_state_lift'; wp)
 
 lemmas valid_irq_node_lift =
     hoare_use_eq_irq_node' [OF _ typ_at_lift_valid_irq_node']
@@ -2289,7 +2280,7 @@ lemma dmo_inv':
   shows "\<lbrace>P\<rbrace> doMachineOp f \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
   apply (wp select_wp)
-  apply (clarsimp simp del: )
+  apply clarsimp
   apply (drule in_inv_by_hoareD [OF R])
   apply simp
   done  

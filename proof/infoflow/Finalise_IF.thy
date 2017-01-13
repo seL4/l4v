@@ -62,10 +62,9 @@ lemma empty_slot_reads_respects:
   apply (simp add: bind_assoc empty_slot_ext_def cong: if_cong)
   apply(rule gen_asm_ev)
   apply (wp deleted_irq_handler_reads_respects set_cap_reads_respects set_original_reads_respects update_cdt_list_reads_respects | wpc | simp | (frule aag_can_read_self,fastforce simp: equiv_for_def split: option.splits))+
-        apply (wp update_cdt_reads_respects get_cap_wp get_cap_rev)
+        apply (wp update_cdt_reads_respects get_cap_wp get_cap_rev)+
   apply(intro impI allI conjI)
-        apply(fastforce simp: reads_equiv_def2 equiv_for_def elim: states_equiv_forE_cdt dest: aag_can_read_self split: option.splits)+
-  done
+        apply(fastforce simp: reads_equiv_def2 equiv_for_def elim: states_equiv_forE_cdt dest: aag_can_read_self split: option.splits)+ done
 
 lemma requiv_get_tcb_eq':
   "\<lbrakk>reads_equiv aag s t; aag_can_read aag thread\<rbrakk> \<Longrightarrow>
@@ -124,9 +123,8 @@ lemma set_thread_state_ext_reads_respects:
       apply (simp add: equiv_valid_def2[symmetric] | wp)+
       apply (clarsimp simp: reads_equiv_def)
      apply (subst equiv_valid_def2[symmetric])
-     apply wp
-   apply force
-  apply (simp add: reads_equiv_def)
+     apply wp+
+  apply force
   done
 
 lemma set_thread_state_reads_respects:
@@ -468,7 +466,7 @@ lemma get_endpoint_revrv:
   unfolding get_endpoint_def
   apply(rule_tac Q="\<lambda> rv. ko_at rv epptr and pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of and (K ((pasSubject aag, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag))" in equiv_valid_rv_bind)
     apply(rule equiv_valid_rv_guard_imp[OF equiv_valid_rv_trivial])
-     apply wp
+     apply wp+
    apply(case_tac "\<exists> ep. rv = Endpoint ep")
     apply(case_tac "\<exists> ep. rv' = Endpoint ep")
      apply (clarsimp split: kernel_object.splits)
@@ -483,35 +481,16 @@ lemma get_endpoint_revrv:
 lemma gen_asm_ev2_r:
   "\<lbrakk>P' \<Longrightarrow> equiv_valid_2 I A B R P \<top> f f'\<rbrakk> \<Longrightarrow>
    equiv_valid_2 I A B R P (\<lambda>s. P') f f'"
-  apply(fastforce simp: equiv_valid_2_def)
-  done
+  by (rule gen_asm_ev2_r')
 
 lemma gen_asm_ev2_l:
   "\<lbrakk>P \<Longrightarrow> equiv_valid_2 I A B R \<top> P' f f'\<rbrakk> \<Longrightarrow>
    equiv_valid_2 I A B R (\<lambda>s. P) P' f f'"
-  apply(fastforce simp: equiv_valid_2_def)
-  done
-
-(*
-lemma scheduler_action_equiv_but_for_labels[simp]: "equiv_but_for_labels aag A (scheduler_action_update f st) (scheduler_action_update f s) = equiv_but_for_labels aag A st s"
-  apply (simp add: equiv_but_for_labels_def equiv_for_def equiv_asids_def equiv_asid_def)
-  done
-
-crunch equiv_but_for_labels[wp]: set_thread_state_ext "equiv_but_for_labels aag L st"
-*)
-
-(*
-lemma set_thread_state_equiv_but_for:
-  "invariant (set_thread_state ptr ts) (equiv_but_for_labels aag {pasObjectAbs aag ptr} st)"
-  unfolding set_thread_state_def
-  apply (wp set_object_equiv_but_for_labels hoare_drop_imps | simp | auto dest!: get_tcb_not_asid_pool_at)+
-  done
-*)
+  by (rule gen_asm_ev2_l')
 
 lemma bind_return_unit2:
   "f = return () >>= (\<lambda>_. f)"
-  apply simp
-  done
+  by simp
 
 lemma mapM_x_ev2_invisible:
   assumes
@@ -742,7 +721,7 @@ lemma tcb_sched_action_reads_respects:
          apply (rule set_tcb_queue_modifies_at_most)
         apply (simp | wp)+
        apply (clarsimp simp: equiv_valid_2_def gets_apply_def get_def bind_def return_def labels_are_invisible_def)
-      apply wp
+      apply wp+
   apply clarsimp
   apply (rule conjI, force)
   apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
@@ -1428,7 +1407,7 @@ lemma suspend_reads_respects_f:
   (K (is_subject aag thread))) (suspend thread)"
   unfolding suspend_def
   apply(wp reads_respects_f[OF set_thread_state_owned_reads_respects, where st=st and Q="\<top>"] reads_respects_f[OF tcb_sched_action_reads_respects, where st=st and Q=\<top>] set_thread_state_pas_refined| simp)+
-    apply(wp cancel_ipc_reads_respects_f[where st=st] cancel_ipc_silc_inv)
+    apply(wp cancel_ipc_reads_respects_f[where st=st] cancel_ipc_silc_inv)+
   apply(simp)
   done
 
@@ -1938,18 +1917,13 @@ crunch globals_equiv[wp]: deleted_irq_handler "globals_equiv st"
 lemma transfer_caps_valid_ko_at_arm[wp]:
   "\<lbrace> valid_ko_at_arm \<rbrace> transfer_caps a b c d e \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
   unfolding transfer_caps_def
-  apply (wp | wpc)+
-  apply (wp transfer_caps_loop_pres cap_insert_valid_ko_at_arm)
-  apply (simp)
-  done
+  by (wpsimp wp: transfer_caps_loop_pres cap_insert_valid_ko_at_arm)
 
 lemma empty_slot_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace> empty_slot s b\<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding empty_slot_def
-  apply (wp set_cap_globals_equiv'' set_original_globals_equiv hoare_vcg_if_lift2
-    set_cdt_globals_equiv dxo_wp_weak
-    hoare_drop_imps hoare_vcg_all_lift | wpc| simp)+
-done
+  by (wpsimp wp: set_cap_globals_equiv'' set_original_globals_equiv hoare_vcg_if_lift2
+                 set_cdt_globals_equiv dxo_wp_weak hoare_drop_imps hoare_vcg_all_lift)
 
 crunch globals_equiv: cap_delete_one "globals_equiv st"
   (wp: set_cap_globals_equiv'' hoare_drop_imps simp: crunch_simps unless_def)
@@ -2021,8 +1995,7 @@ lemma mapM_x_swp_store_kernel_base_globals_equiv:
   apply (simp add: cte_wp_at_page_directory_not_in_globals
                    cte_wp_at_page_directory_not_in_kernel_mappings
                    not_in_global_not_arm
-                   pde_ref_def
-  )+
+                   pde_ref_def)+
 done
 
 end

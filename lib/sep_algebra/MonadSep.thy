@@ -28,6 +28,7 @@ lemma hoare_gen_lifted_asm:
   by (auto intro: hoare_assume_pre)
 
 lemma mapM_x_sep_inv':
+  includes no_pre
   assumes f:
    "\<And>R x. x \<in> S \<Longrightarrow>
      \<lbrace>\<lambda>s.<P x \<and>* I \<and>* R> s \<and> I' s\<rbrace>

@@ -230,8 +230,7 @@ lemma thread_set_cap_to:
   "(\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb)
   \<Longrightarrow> \<lbrace>ex_nonz_cap_to p\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
   apply (clarsimp simp add: ex_nonz_cap_to_def)
-  apply (wp hoare_ex_wp thread_set_cte_wp_at_trivial)
-  apply (clarsimp)
+  apply (wpsimp wp: hoare_ex_wp thread_set_cte_wp_at_trivial)
   done
 
 
@@ -239,16 +238,13 @@ lemma thread_set_has_no_reply_cap:
   "(\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb)
   \<Longrightarrow> \<lbrace>\<lambda>s. \<not>has_reply_cap tt s\<rbrace> thread_set f t \<lbrace>\<lambda>_ s. \<not>has_reply_cap tt s\<rbrace>"
   apply (clarsimp simp add: has_reply_cap_def)
-  apply (wp hoare_vcg_all_lift thread_set_cte_wp_at_trivial)
-  apply (clarsimp)
+  apply (wpsimp wp: hoare_vcg_all_lift thread_set_cte_wp_at_trivial)
   done
 
 
 lemma set_object_cte_wp_at2:
   "\<lbrace>\<lambda>s. P (cte_wp_at P' p (s\<lparr>kheap := kheap s(ptr \<mapsto> ko)\<rparr>))\<rbrace> set_object ptr ko \<lbrace>\<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"
-  unfolding set_object_def
-  apply (wp)
-  done
+  unfolding set_object_def by wp
 
 
 lemma (in Systemcall_AI_Pre) handle_fault_reply_cte_wp_at:
@@ -292,8 +288,7 @@ lemma (in Systemcall_AI_Pre) handle_fault_reply_cte_wp_at:
 lemma (in Systemcall_AI_Pre) handle_fault_reply_has_no_reply_cap:
   "\<lbrace>\<lambda>s :: 'state_ext state. \<not>has_reply_cap t s\<rbrace> handle_fault_reply f t d dl \<lbrace>\<lambda>_ s. \<not>has_reply_cap t s\<rbrace>"
   apply (clarsimp simp add: has_reply_cap_def)
-  apply (wp hoare_allI handle_fault_reply_cte_wp_at)
-  apply (clarsimp)
+  apply (wpsimp wp: hoare_vcg_all_lift handle_fault_reply_cte_wp_at)
   done
 
 locale Systemcall_AI_Pre2 = Systemcall_AI_Pre itcb_state state_ext_t
@@ -365,7 +360,7 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
       apply (clarsimp)
       apply (erule pred_tcb_weakenE)
       apply (clarsimp)
-     apply (wp cap_delete_one_deletes_reply cap_delete_one_reply_st_tcb_at)
+     apply (wp cap_delete_one_deletes_reply cap_delete_one_reply_st_tcb_at)+
     apply (clarsimp)
     apply (wp hoare_drop_imp hoare_allI)[1]
    apply (wp assert_wp)
@@ -484,17 +479,17 @@ lemma sts_cte_wp_cdt [wp]:
   "\<lbrace>\<lambda>s. cte_wp_at (P (cdt s)) p s\<rbrace> 
   set_thread_state t st 
   \<lbrace>\<lambda>rv s. cte_wp_at (P (cdt s)) p s\<rbrace>"
-  apply (rule cte_wp_cdt_lift)
-   apply wp
-  done
+  by (rule cte_wp_cdt_lift; wp)
 
 lemma sts_nasty_bit:
+  notes hoare_pre [wp_pre del]
+  shows
   "\<lbrace>\<lambda>s. \<forall>r\<in>obj_refs cap. \<forall>a b. ptr' \<noteq> (a, b) \<and> cte_wp_at (\<lambda>cap'. r \<in> obj_refs cap') (a, b) s
               \<longrightarrow> cte_wp_at (Not \<circ> is_zombie) (a, b) s \<and> \<not> is_zombie cap\<rbrace>
      set_thread_state t st
    \<lbrace>\<lambda>rv s. \<forall>r\<in>obj_refs cap. \<forall>a b. ptr' \<noteq> (a, b) \<and> cte_wp_at (\<lambda>cap'. r \<in> obj_refs cap') (a, b) s
               \<longrightarrow> cte_wp_at (Not \<circ> is_zombie) (a, b) s \<and> \<not> is_zombie cap\<rbrace>"
-  apply (wp hoare_vcg_const_Ball_lift hoare_vcg_all_lift
+  apply (wpsimp wp: hoare_vcg_const_Ball_lift hoare_vcg_all_lift
             hoare_vcg_imp_lift hoare_vcg_disj_lift valid_cte_at_neg_typ
           | simp add: cte_wp_at_neg2[where P="\<lambda>c. x \<in> obj_refs c" for x])+
   apply (clarsimp simp: o_def cte_wp_at_def)
@@ -545,11 +540,10 @@ lemma sts_valid_inv[wp]:
            (wp set_thread_state_valid_cap sts_nasty_bit hoare_vcg_const_imp_lift            
               | simp)+)
    apply (rename_tac irq_control_invocation)
-   apply (case_tac irq_control_invocation,
-           (wp | simp)+)
+   apply (case_tac irq_control_invocation; wpsimp)
   apply (rename_tac irq_handler_invocation)
-  apply (case_tac irq_handler_invocation, simp_all)
-  apply (wp ex_cte_cap_to_pres hoare_vcg_ex_lift set_thread_state_valid_cap)
+  apply (case_tac irq_handler_invocation; 
+         wpsimp wp: ex_cte_cap_to_pres hoare_vcg_ex_lift set_thread_state_valid_cap)
   done
 
 
@@ -564,6 +558,8 @@ lemma sts_Restart_stay_simple:
 
 
 lemma decode_inv_inv[wp]:
+  notes hoare_pre [wp_pre del]
+  shows
   "\<lbrace>P\<rbrace> decode_invocation label args cap_index slot cap excaps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (case_tac cap, simp_all add: decode_invocation_def)
           apply (wp decode_tcb_inv_inv decode_domain_inv_inv | rule conjI | clarsimp
@@ -672,31 +668,20 @@ lemma lcs_valid [wp]:
 lemma lec_valid_cap [wp]:
   "\<lbrace>invs\<rbrace> lookup_extra_caps t xa mi \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. s \<turnstile> fst x)\<rbrace>, -"
   unfolding lookup_extra_caps_def
-  apply simp
-  apply (wp mapME_set)
-    apply clarsimp
-   apply wp
-  done
+  by (wpsimp wp: mapME_set)
 
 lemma lcs_ex_cap_to [wp]:
   "\<lbrace>invs\<rbrace> lookup_cap_and_slot t xs \<lbrace>\<lambda>x s. \<forall>r\<in>cte_refs (fst x) (interrupt_irq_node s). ex_cte_cap_to r s\<rbrace>, -"
-  unfolding lookup_cap_and_slot_def
-  apply (rule hoare_pre)
-   apply (wp | simp add: split_def)+
-  done
+  unfolding lookup_cap_and_slot_def by wpsimp
 
 lemma lcs_ex_nonz_cap_to [wp]:
   "\<lbrace>invs\<rbrace> lookup_cap_and_slot t xs \<lbrace>\<lambda>x s. \<forall>r\<in>zobj_refs (fst x). ex_nonz_cap_to r s\<rbrace>, -"
-  unfolding lookup_cap_and_slot_def
-  apply (rule hoare_pre)
-   apply (wp | simp add: split_def)+
-  done
+  unfolding lookup_cap_and_slot_def by wpsimp
 
 lemma lcs_cte_at[wp]:
   "\<lbrace>valid_objs\<rbrace> lookup_cap_and_slot t xs \<lbrace>\<lambda>rv. cte_at (snd rv)\<rbrace>,-"
-  apply (simp add: lookup_cap_and_slot_def split_def)
-  apply (rule hoare_pre)
-   apply (wp | simp)+
+  apply (simp add: lookup_cap_and_slot_def split_def) 
+  apply (wp | simp)+
   done
 
 lemma lec_ex_cap_to [wp]:
@@ -754,9 +739,7 @@ lemma mapME_wp:
    apply (simp add: mapME_def sequenceE_def)
    apply wp
   apply (simp add: mapME_Cons)
-  apply wp
-   apply simp
-  apply (simp add: x)
+  apply (wpsimp wp: x|assumption)+
   done
 
 lemmas mapME_wp' = mapME_wp [OF _ subset_refl] 
@@ -896,10 +879,9 @@ lemma lookup_cap_and_slot_dimished [wp]:
    \<lbrace>\<lambda>x. cte_wp_at (diminished (fst x)) (snd x)\<rbrace>, -"
   apply (simp add: lookup_cap_and_slot_def split_def)
   apply (wp get_cap_wp)
-  apply (rule hoare_post_impErr
-              [where Q="\<lambda>_. valid_objs" and E="\<lambda>_. valid_objs"])
+   apply (rule hoare_post_imp_R [where Q'="\<lambda>_. valid_objs"])
     apply wp
-    apply simp
+   apply simp
    apply (clarsimp simp: cte_wp_at_caps_of_state diminished_def)
    apply (rule exI, rule cap_mask_UNIV[symmetric])
    apply (drule (1) caps_of_state_valid_cap, simp add: valid_cap_def2)
@@ -1128,7 +1110,7 @@ lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_recv is_blocking
       apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
       apply wp
        apply (simp add: split_def)
-       apply (wp resolve_address_bits_valid_fault2)
+       apply (wp resolve_address_bits_valid_fault2)+
      apply (simp add: valid_fault_def)
      apply ((wp hoare_vcg_all_lift_R lookup_cap_ex_cap
           | simp add: obj_at_def
@@ -1268,7 +1250,7 @@ lemma do_reply_transfer_nonz_cap:
             | strengthen ex_nonz_cap_to_tcb_strg)+
      apply (clarsimp simp add: tcb_cap_cases_def is_cap_simps can_fast_finalise_def)
     apply (strengthen ex_tcb_cap_to_tcb_at_strg)
-    apply (wp hoare_drop_imp hoare_allI)
+    apply (wp hoare_drop_imp hoare_allI)+
   apply (clarsimp)
   done
 
@@ -1278,7 +1260,7 @@ lemma handle_reply_nonz_cap:
    \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   apply (simp add: handle_reply_def)
   apply (wp delete_caller_cap_nonz_cap do_reply_transfer_nonz_cap | wpc)+
-   apply (wp get_cap_wp)
+   apply (wp get_cap_wp)+
   apply clarsimp
   apply (drule(1) cte_wp_valid_cap)
   apply (clarsimp simp: valid_cap_def)
@@ -1306,7 +1288,7 @@ lemma do_reply_transfer_st_tcb_at_active:
             hoare_drop_imps thread_set_no_change_tcb_state
             do_ipc_transfer_non_null_cte_wp_at2
        | wpc | clarsimp)+
-  apply (wp hoare_allI hoare_drop_imp)
+  apply (wp hoare_allI hoare_drop_imp)+
   apply (fastforce simp add: st_tcb_def2)
   done
 

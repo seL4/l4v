@@ -391,7 +391,7 @@ lemma kernel_entry_if_integrity:
           | simp add: tcb_cap_cases_def schact_is_rct_def arch_tcb_update_aux2)+
    apply(wp_once prop_of_two_valid[where f="ct_active" and g="cur_thread"])
      apply (wp | simp)+
-   apply(wp thread_set_tcb_context_update_wp)
+   apply(wp thread_set_tcb_context_update_wp)+
   apply(clarsimp simp: schact_is_rct_def)
   apply(rule conjI)
    apply(erule integrity_update_reference_state[where blah="the (kheap st (cur_thread st))", OF _ integrity_refl])
@@ -634,7 +634,7 @@ lemma schedule_cur_domain:
   \<lbrace>\<lambda> r s. P (cur_domain s)\<rbrace>"
   apply(simp add: schedule_def | wp | wpc)+
        apply(rule hoare_pre_cont)
-      apply wp
+      apply wp+
      apply(rule_tac Q="\<lambda>rv s. P (cur_domain s) \<and> domain_time s \<noteq> 0" in hoare_strengthen_post) 
       apply(simp split del: if_split | wp gts_wp | wp_once hoare_drop_imps)+
   apply clarsimp
@@ -646,7 +646,7 @@ lemma schedule_domain_fields:
   \<lbrace>\<lambda> r. domain_fields P\<rbrace>"
   apply(simp add: schedule_def | wp | wpc)+
        apply(rule hoare_pre_cont)
-      apply wp
+      apply wp+
      apply(rule_tac Q="\<lambda>rv s. domain_fields P s \<and> domain_time s \<noteq> 0" in hoare_strengthen_post) 
       apply(simp split del: if_split | wp gts_wp | wp_once hoare_drop_imps)+
   apply clarsimp
@@ -2084,7 +2084,7 @@ lemma tcb_sched_action_reads_respects_g':
              apply (rule set_tcb_queue_modifies_at_most)
             apply (rule doesnt_touch_globalsI | simp | wp)+
        apply (clarsimp simp: equiv_valid_2_def gets_apply_def get_def bind_def return_def labels_are_invisible_def)
-      apply wp
+      apply wp+
   apply clarsimp
   apply (rule conjI, force)
   apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
@@ -2099,11 +2099,12 @@ lemma switch_to_thread_reads_respects_g:
   apply(subst bind_assoc[symmetric])
   apply(rule equiv_valid_guard_imp)
    apply(rule bind_ev)
-     apply (wp bind_ev_general cur_thread_update_reads_respects_g' tcb_sched_action_reads_respects_g' arch_switch_to_thread_reads_respects_g')[1]
+     apply (wp bind_ev_general cur_thread_update_reads_respects_g' tcb_sched_action_reads_respects_g'
+               arch_switch_to_thread_reads_respects_g')
     apply(simp add: equiv_valid_def2)
     apply(rule_tac R'="\<top>\<top>" in equiv_valid_2_bind)
        apply(rule assert_ev2 | simp)+
-      apply(rule equiv_valid_rv_trivial, wp)
+      apply(rule equiv_valid_rv_trivial, wp+)
   apply fastforce
   done
 
@@ -2237,7 +2238,7 @@ lemma schedule_reads_respects_g:
             get_thread_state_reads_respects_g 
         | wpc | simp)+
          apply(wp_once hoare_drop_imps)
-         apply(wp get_thread_state_reads_respects_g gts_wp)
+         apply(wp get_thread_state_reads_respects_g gts_wp)+
   apply(clarsimp simp: invs_valid_idle)
   by(fastforce intro: requiv_g_cur_thread_eq simp: reads_equiv_g_def reads_equiv_def globals_equiv_idle_thread_ptr dest: scheduler_action_switch_thread_is_subject simp: not_cur_thread_2_def st_tcb_at_def obj_at_def valid_sched_2_def)
 
@@ -2539,6 +2540,7 @@ lemma do_user_op_A_if_confidentiality:
     (t_aux,yy,fst t') \<in> do_user_op_A_if utf; snd s' = f xx; snd t' = f yy\<rbrakk> \<Longrightarrow>
    xx = yy \<and>
    (s', t') \<in> uwr u \<and> (s', t') \<in> uwr PSched \<and> (s', t') \<in> uwr (part s)"
+  including no_pre
   apply(frule (1) uwr_part_sys_mode_of_user_context_of_eq)
   apply(clarsimp simp: check_active_irq_A_if_def)
   apply(case_tac s, case_tac t, simp_all)
@@ -2551,7 +2553,7 @@ lemma do_user_op_A_if_confidentiality:
       apply (clarsimp dest!: invs_if_Invs simp: Invs_def)
      apply (drule uwr_PSched_cur_domain)
      apply (clarsimp dest!: invs_if_Invs simp: Invs_def)
-     apply(clarsimp simp: current_aag_def)
+     subgoal by(clarsimp simp: current_aag_def)
     apply simp
    apply fastforce
   apply(simp add: do_user_op_A_if_def | elim exE conjE)+

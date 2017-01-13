@@ -204,7 +204,7 @@ lemma decodeInvocation_ccorres:
       apply simp
       apply (rule hoare_use_eq[where f=ksCurThread])
        apply (wp sts_invs_minor' sts_st_tcb_at'_cases
-                 setThreadState_ct' hoare_vcg_all_lift sts_ksQ')
+                 setThreadState_ct' hoare_vcg_all_lift sts_ksQ')+
      apply simp
      apply (vcg exspec=setThreadState_modifies)
     apply vcg
@@ -536,7 +536,7 @@ lemma handleDoubleFault_ccorres:
    apply (ctac (no_vcg))
     apply (rule ccorres_symb_exec_l)
        apply (rule ccorres_return_Skip)
-      apply (wp asUser_inv getRestartPC_inv)
+      apply (wp asUser_inv getRestartPC_inv)+
     apply (rule empty_fail_asUser)
     apply (simp add: getRestartPC_def)
    apply wp
@@ -781,6 +781,7 @@ lemma handleFault_ccorres:
 
 lemma getMessageInfo_less_4:
   "\<lbrace>\<top>\<rbrace> getMessageInfo t \<lbrace>\<lambda>rv s. msgExtraCaps rv < 4\<rbrace>"
+  including no_pre
   apply (simp add: getMessageInfo_def)
   apply wp
   apply (rule hoare_strengthen_post, rule hoare_vcg_prop)
@@ -815,7 +816,7 @@ lemma getMRs_length:
   apply (simp add: getMRs_def)
   apply (rule hoare_pre, wp)
     apply simp
-    apply (wp mapM_length asUser_const_rv mapM_length)
+    apply (wp mapM_length asUser_const_rv mapM_length)+
   apply (clarsimp simp: length_msgRegisters)
   apply (simp add: min_def split: if_splits)
   apply (clarsimp simp: word_le_nat_alt)
@@ -824,6 +825,7 @@ lemma getMRs_length:
 
 lemma getMessageInfo_msgLength':
   "\<lbrace>\<top>\<rbrace> getMessageInfo t \<lbrace>\<lambda>rv s. msgLength rv \<le> 0x78\<rbrace>"
+  including no_pre
   apply (simp add: getMessageInfo_def)
   apply wp
   apply (rule hoare_strengthen_post, rule hoare_vcg_prop)
@@ -925,7 +927,7 @@ lemma handleInvocation_ccorres:
                        apply (ctac(no_vcg) add: replyFromKernel_success_empty_ccorres)
                         apply (ctac(no_vcg) add: setThreadState_ccorres)
                          apply (rule ccorres_return_CE[folded return_returnOk], simp+)[1]
-                        apply (wp)
+                        apply wp+
                        apply (rule hoare_strengthen_post, rule rfk_invs')
                        apply auto[1]
                       apply simp
@@ -1028,7 +1030,7 @@ lemma handleInvocation_ccorres:
        apply clarsimp 
        apply (vcg exspec= lookupCapAndSlot_modifies)
       apply simp
-      apply (wp getMessageInfo_less_4 getMessageInfo_le3 getMessageInfo_msgLength')
+      apply (wp getMessageInfo_less_4 getMessageInfo_le3 getMessageInfo_msgLength')+
      apply (simp add: msgMaxLength_def, wp getMessageInfo_msgLength')[1]
     apply simp
     apply wp
@@ -1214,7 +1216,7 @@ lemma deleteCallerCap_ccorres [corres]:
              gs_set_assn_Delete_cstate_relation[unfolded o_def])
           apply (wp | simp)+
       apply (simp add: getSlotCap_def)
-      apply (wp getCTE_wp)
+      apply (wp getCTE_wp)+
    apply clarsimp
    apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
                         ghost_assertion_data_set_def)
@@ -1639,7 +1641,7 @@ lemma getIRQSlot_ccorres3:
     apply (clarsimp simp: getIRQSlot_ccorres_stuff
                           objBits_simps cte_level_bits_def
                           ucast_nat_def uint_ucast uint_up_ucast is_up)
-   apply wp
+   apply wp+
   done
 
 lemma ucast_eq_0[OF refl]:
@@ -1851,7 +1853,7 @@ lemma handleInterrupt_ccorres:
          apply (ctac (no_vcg) add: sendSignal_ccorres)
           apply (ctac (no_vcg) add: maskInterrupt_ccorres)
            apply (ctac add: ackInterrupt_ccorres [unfolded dc_def])
-          apply wp
+          apply wp+
         apply (simp del: Collect_const)
         apply (rule ccorres_cond_true_seq)
         apply (rule ccorres_rhs_assoc)+
@@ -1884,7 +1886,7 @@ lemma handleInterrupt_ccorres:
     apply (ctac (no_vcg) add: timerTick_ccorres)
      apply (ctac (no_vcg) add: resetTimer_ccorres)
       apply (ctac add: ackInterrupt_ccorres )
-     apply wp
+     apply wp+
    apply (simp add: Platform_maxIRQ maxIRQ_def del: Collect_const)
    apply (rule ccorres_move_const_guards)+
    apply (rule ccorres_cond_false_seq)

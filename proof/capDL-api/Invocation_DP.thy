@@ -139,9 +139,7 @@ lemma corrupt_tcb_intent_sep_inv[wp]:
   "\<lbrace>\<lambda>s. < P >  s\<rbrace>
   corrupt_tcb_intent thread
   \<lbrace>\<lambda>rv s. < P > s\<rbrace>"
-  apply (rule sep_nonimpact_valid_lift)
-   apply wp
-  done
+  by (rule sep_nonimpact_valid_lift; wp)
 
 lemma corrupt_frame_sep_helper[wp]:
   "\<lbrace>\<lambda>s. A (object_at (\<lambda>obj. P (object_clean obj)) ptr s)\<rbrace>
@@ -185,7 +183,7 @@ lemma update_thread_intent_update:
 lemma liftE_wp_no_exception:
   "\<lbrakk>\<And>r. \<lbrace>P' r\<rbrace> g r \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>r s. False\<rbrace>;\<lbrace>P\<rbrace>f\<lbrace>\<lambda>r. P' r\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> liftE f >>=E g \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>r s. False\<rbrace>"
   apply (simp add:liftE_bindE validE_def)
-  apply wp
+  including no_pre apply wp
    apply assumption
   apply simp
   done
@@ -194,7 +192,7 @@ lemma handle_event_no_exception:
   "\<lbrace>P\<rbrace> handle_event  (SyscallEvent SysCall) \<lbrace>\<lambda>r. Q\<rbrace>,\<lbrace>\<lambda>r s. False\<rbrace>
    \<Longrightarrow> \<lbrace>P\<rbrace> handle_event (SyscallEvent SysCall) <handle> handler \<lbrace>\<lambda>r. Q\<rbrace>"
   apply (rule validE_cases_valid)
-  apply (wp)
+  including no_pre apply (wp)
    apply (rule hoare_FalseE)
   apply simp
   done
@@ -306,6 +304,7 @@ lemma decode_invocation_nonep:
   "\<lbrace>\<lambda>s. \<not> ep_related_cap cap \<rbrace>
    decode_invocation cap cap_ref extra_caps intent
    \<lbrace>\<lambda>rv s. nonep_invocation rv\<rbrace>, -"
+  including no_pre
   apply (case_tac cap,simp_all add:ep_related_cap_def decode_invocation_def)
                           apply wp[1]
                          apply wp
@@ -313,21 +312,21 @@ lemma decode_invocation_nonep:
                           apply (simp add:nonep_invocation_def)
                          apply wp
                         apply (intro conjI impI)
-                         apply (wp hoare_FalseE)
-                       apply (intro conjI impI,wp hoare_FalseE)[2]
-                     apply wp[1]
+                         apply (wp hoare_FalseE)+
+                       apply (intro conjI impI,(wp hoare_FalseE)+)[2]
+                     apply wp
                     apply wp
                      apply (rule hoare_post_imp_R[OF validE_validE_R,OF hoareE_TrueI])
                      apply (simp add:nonep_invocation_def)
-                    apply wp[1]
+                    apply wp
                    apply (wp,rule hoare_post_imp_R[OF validE_validE_R,OF hoareE_TrueI],
-                     simp add:nonep_invocation_def,wp)+
+                     simp add:nonep_invocation_def,wp+)+
               apply (rule hoare_post_imp_R[OF validE_validE_R,OF hoareE_TrueI])
               apply (simp add:nonep_invocation_def)
-             apply wp[1]
-            apply (wp,rule hoare_post_imp_R[OF validE_validE_R,OF hoareE_TrueI],
+             apply wp
+            apply (wp+, rule hoare_post_imp_R[OF validE_validE_R,OF hoareE_TrueI],
               simp add:nonep_invocation_def)+
-       apply wp
+       apply wp+
   done
 
 lemma ep_related_cap_reset_simp[simp]:
@@ -339,6 +338,7 @@ lemma ep_related_cap_reset_simp[simp]:
 lemma liftE_wp_split_r:
   "\<lbrakk>\<And>r. \<lbrace>P' r\<rbrace> g r \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>r. R\<rbrace>;\<lbrace>P\<rbrace>f\<lbrace>\<lambda>r. P' r\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> liftE f >>=E g \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>r. R\<rbrace>"
   apply (simp add:liftE_bindE validE_def)
+  including no_pre
   apply wp
    apply assumption
   apply simp
@@ -396,7 +396,7 @@ lemma handle_event_syscall_no_decode_exception:
        apply (rule wp_no_exception_seq_r)
         apply (rule liftE_wp_no_exception)
          apply (rule hoare_whenE_wp)
-         apply (simp add:liftE_validE)
+         apply simp
          apply wp
            apply (rule_tac P = "y = cur_thread" in hoare_gen_asm)
            apply simp
@@ -509,9 +509,9 @@ lemma send_signal_no_pending:
      apply (rule hoare_pre_cont)
     apply (rule_tac P = "waiters = {}" in hoare_gen_asm)
     apply (clarsimp simp: option_select_def)
-    apply wp
+    apply wp+
       apply (rule hoare_pre_cont)
-     apply wp
+     apply wp+
   apply (clarsimp simp: get_waiting_ntfn_recv_threads_def get_waiting_sync_bound_ntfn_threads_def
                         no_pending_def opt_cap_def)
   apply (intro allI impI conjI)
@@ -638,7 +638,7 @@ lemma call_kernel_with_intent_no_fault_helper:
        apply (clarsimp simp: isLeft_def)
        apply (rule_tac P = "thread_ptr = root_tcb_id" in hoare_gen_asm)
    apply simp
-   apply (wp upd_thread update_thread_wp)
+   apply (wp upd_thread update_thread_wp)+
   apply auto
   done
 
@@ -677,7 +677,8 @@ lemma decode_invocation_simps:
 lemma liftME_wp:
   "\<lbrace>P\<rbrace> m \<lbrace>\<lambda>r. Q (f r)\<rbrace>,\<lbrace>Q'\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> liftME f m \<lbrace>Q\<rbrace>,\<lbrace>Q'\<rbrace>"
   apply wp
-  apply (simp add:Fun.comp_def)
+   apply (simp add:Fun.comp_def)
+  apply assumption
   done
 
 lemma sep_normal_conj_absorb:
@@ -886,10 +887,10 @@ lemma syscall_valid_helper_allow_error:
    apply simp
   apply (rule hoare_vcg_handle_elseE)
     apply assumption
-   apply wp
+   including no_pre apply wp
     apply (wp mark_tcb_intent_error_no_error)
     apply (rule hoare_drop_imp,simp)
-    apply simp
+   apply simp
   apply (rule hoare_post_impErr)
     apply fastforce
    apply simp
@@ -967,7 +968,7 @@ lemma handle_event_syscall_allow_error:
        apply (rule wp_no_exception_seq_r)
         apply (rule liftE_wp_no_exception)
          apply (rule hoare_whenE_wp)
-         apply (simp add:liftE_validE)
+         apply (simp)
          apply wp
            apply (rule_tac P = "y = cur_thread" in hoare_gen_asm)
            apply simp
@@ -1094,7 +1095,7 @@ lemma call_kernel_with_intent_allow_error_helper:
         apply (rule hoare_pre,(wp hoare_vcg_imp_lift|wpc|simp cong: if_cong)+)[1]
         apply (wp | wpc | simp)+
         apply (rule hoare_pre_cont)
-       apply (wp has_restart_cap_sep_wp[where cap = RunningCap])
+       apply (wp has_restart_cap_sep_wp[where cap = RunningCap])+
        apply simp
       apply (rule_tac current_thread1=root_tcb_id and current_domain1=minBound in
                         hoare_strengthen_post[OF schedule_no_choice_wp])
@@ -1153,7 +1154,7 @@ lemma call_kernel_with_intent_allow_error_helper:
     apply (clarsimp simp: isLeft_def)
    apply (rule_tac P = "thread_ptr = root_tcb_id" in hoare_gen_asm)
    apply simp
-   apply (wp upd_thread update_thread_wp)
+   apply (wp upd_thread update_thread_wp)+
   apply (clarsimp)
   apply (clarsimp simp:sep_map_c_conj sep_map_f_conj object_at_def
     object_project_def sep_state_projection_def

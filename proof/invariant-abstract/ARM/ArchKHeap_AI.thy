@@ -267,7 +267,7 @@ lemma valid_vs_lookup_lift:
   apply (rule hoare_lift_Pf [where f=vs_lookup_pages])
    apply (rule hoare_lift_Pf [where f="\<lambda>s. (caps_of_state s)"])
     apply (rule hoare_lift_Pf [where f="\<lambda>s. arm_global_pts (arch_state s)"])
-     apply (wp lookup cap pts)
+     apply (wp lookup cap pts)+
   done
 
 
@@ -279,7 +279,7 @@ lemma valid_table_caps_lift:
   unfolding valid_table_caps_def
    apply (rule hoare_lift_Pf [where f="\<lambda>s. (caps_of_state s)"])
     apply (rule hoare_lift_Pf [where f="\<lambda>s. arm_global_pts (arch_state s)"])
-     apply (wp cap pts hoare_vcg_all_lift hoare_vcg_const_imp_lift obj)
+     apply (wp cap pts hoare_vcg_all_lift hoare_vcg_const_imp_lift obj)+
   done
 
 lemma valid_arch_caps_lift:
@@ -364,7 +364,7 @@ lemma arch_lifts:
 
   subgoal
   apply (rule valid_global_objs_lift)
-      apply (wp arch)
+      apply (wp arch)+
     apply (simp add: valid_ao_at_def)
     apply (rule hoare_vcg_ex_lift)
     apply (rule hoare_vcg_conj_lift)
@@ -407,6 +407,7 @@ lemma arch_lifts:
   apply (simp add: valid_arch_state_def valid_asid_table_def)
   apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch])
   apply (wp hoare_vcg_conj_lift hoare_vcg_ball_lift valid_global_pts | (rule aobj_at, clarsimp))+
+  apply simp
   done
 
   done
@@ -420,7 +421,7 @@ lemma equal_kernel_mappings_lift:
   apply (rule hoare_convert_imp)
    apply simp
    apply (rule hoare_convert_imp)
-    apply (wp aobj_at[OF arch_obj_pred_arch_obj_l])
+    apply (wp aobj_at[OF arch_obj_pred_arch_obj_l])+
   done
 
 lemma valid_machine_state_lift:
@@ -432,24 +433,8 @@ lemma valid_machine_state_lift:
   apply (rule hoare_vcg_all_lift)
   apply (rule hoare_vcg_disj_lift[OF _ hoare_vcg_prop])
   apply (rule in_user_frame_lift)
-  apply (wp aobj_at)
-  apply simp
+  apply (wp aobj_at; simp)
   done
-
-(*
-lemma bool_pred_exhaust: 
-  "(P = (\<lambda>x. x)) \<or> (P = (\<lambda>x. \<not>x)) \<or> (P = (\<lambda>_. True)) \<or> (P = (\<lambda>_. False))"
-  apply (cases "P True"; cases "P False")
-  apply (rule disjI2, rule disjI2, rule disjI1, rule ext)
-  defer
-  apply (rule disjI1, rule ext)
-  defer
-  apply (rule disjI2, rule disjI1, rule ext)
-  defer
-  apply (rule disjI2, rule disjI2, rule disjI2, rule ext)
-  apply (match conclusion in "P x = _" for x \<Rightarrow> \<open>cases x; fastforce\<close>)+
-  done
-*)
 
 lemma valid_ao_at_lift:
   assumes z: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"

@@ -304,6 +304,7 @@ lemma dmo_um_upd_machine_state:
   "\<lbrace>\<lambda>s. P (device_state (machine_state s))\<rbrace>
        do_machine_op (user_memory_update ms)
    \<lbrace>\<lambda>_ s. P (device_state (machine_state s))\<rbrace>"
+  including no_pre
   apply (wp dmo_wp)
   by (simp add:user_memory_update_def simpler_modify_def valid_def)
 
@@ -313,20 +314,20 @@ lemma do_user_op_respects:
   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: do_user_op_def)
   apply (wp | simp | wpc)+
-   apply (rule dmo_device_update_respects_Write)
-   apply (wp dmo_um_upd_machine_state
-             dmo_user_memory_update_respects_Write hoare_vcg_all_lift hoare_vcg_imp_lift
-        | wpc | clarsimp)+
-       apply (rule hoare_pre_cont)
-      apply (wp   select_wp | wpc | clarsimp)+
+           apply (rule dmo_device_update_respects_Write)
+          apply (wp dmo_um_upd_machine_state
+                    dmo_user_memory_update_respects_Write hoare_vcg_all_lift hoare_vcg_imp_lift
+                  | wpc | clarsimp)+
+          apply (rule hoare_pre_cont)
+         apply (wp   select_wp | wpc | clarsimp)+
   apply (simp add: restrict_map_def split:if_splits)
   apply (rule conjI)
    apply (clarsimp split: if_splits)
    apply (drule_tac auth=Write in user_op_access')
-      apply (simp add: vspace_cap_rights_to_auth_def)+
+       apply (simp add: vspace_cap_rights_to_auth_def)+
   apply (rule conjI,simp)
   apply (clarsimp split: if_splits)
-   apply (drule_tac auth=Write in user_op_access')
+  apply (drule_tac auth=Write in user_op_access')
       apply (simp add: vspace_cap_rights_to_auth_def)+
   done
 

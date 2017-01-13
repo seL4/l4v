@@ -189,13 +189,14 @@ lemma cap_delete_one_still_derived:
   apply auto
   done
 
+
 lemma cap_delete_one_cte_cap_to[wp]:
   "\<lbrace>ex_cte_cap_wp_to P ptr\<rbrace> cap_delete_one ptr' \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P ptr\<rbrace>"
   apply (simp add: ex_cte_cap_wp_to_def)
   apply (wp hoare_vcg_ex_lift
             hoare_use_eq_irq_node [OF cap_delete_one_irq_node
                                       cap_delete_one_cte_wp_at_preserved])
-  apply (clarsimp simp: can_fast_finalise_def split: cap.split_asm)
+  apply (clarsimp simp: can_fast_finalise_def split: cap.split_asm)+
   done
 
 
@@ -243,16 +244,16 @@ lemmas (in Interrupt_AI)
                                                              , OF TrueI TrueI TrueI
                                                              , simplified
                                                         ]
+
 crunch interrupt_states[wp]: update_waiting_ntfn, cancel_signal, blocked_cancel_ipc "\<lambda>s. P (interrupt_states s)" (wp: mapM_x_wp_inv)
 
 lemma cancel_ipc_noreply_interrupt_states:
   "\<lbrace>\<lambda>s. st_tcb_at (\<lambda>st. st \<noteq> BlockedOnReply) t s \<and> P (interrupt_states s) \<rbrace> cancel_ipc t \<lbrace> \<lambda>_ s. P (interrupt_states s) \<rbrace>"
   apply (simp add: cancel_ipc_def)
-  apply (wp | wpc | simp)+
+  apply wpsimp 
      apply (rule hoare_pre_cont)
     apply (wp)
-  apply (rule hoare_pre)
-   apply (wp gts_wp)
+   apply (wp gts_wp)+
   apply (auto simp: pred_tcb_at_def obj_at_def)
   done
 

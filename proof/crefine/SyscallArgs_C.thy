@@ -48,11 +48,11 @@ lemmas replyOnRestart_typ_ats[wp] = typ_at_lifts [OF replyOnRestart_typ_at']
 
 lemma replyOnRestart_invs'[wp]:
   "\<lbrace>invs'\<rbrace> replyOnRestart thread reply isCall \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  including no_pre
   apply (simp add: replyOnRestart_def)
   apply (wp setThreadState_nonqueued_state_update rfk_invs' static_imp_wp)
   apply (rule hoare_vcg_all_lift)
   apply (wp setThreadState_nonqueued_state_update rfk_invs' hoare_vcg_all_lift rfk_ksQ)
- 
    apply (rule hoare_strengthen_post, rule gts_sp')
   apply (clarsimp simp: pred_tcb_at')
   apply (auto elim!: pred_tcb'_weakenE st_tcb_ex_cap''
@@ -173,7 +173,7 @@ lemma preemptionPoint_ccorres:
         apply (simp add: from_bool_0 whenE_def returnOk_def throwError_def
                          return_def split: option.splits)
         apply (clarsimp simp: cintr_def exception_defs)
-       apply wp
+       apply wp+
      apply vcg
     apply (unfold modifyWorkUnits_def)[1]
     apply wp
@@ -557,7 +557,7 @@ lemma is_nondet_refinement_bind:
   "\<lbrakk> is_nondet_refinement a c; \<And>rv. is_nondet_refinement (b rv) (d rv) \<rbrakk>
      \<Longrightarrow> is_nondet_refinement (a >>= b) (c >>= d)"
   apply (clarsimp simp: is_nondet_refinement_def bind_def split_def)
-  apply blast
+  apply fast
   done
 
 lemma is_nondet_refinement_bindE:
@@ -643,10 +643,10 @@ lemma asUser_cur_obj_at':
           asUser t f \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. Q rv (atcbContextGet (tcbArch tcb))) (ksCurThread s) s\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp)
-    apply (rule hoare_lift_Pf2 [where f=ksCurThread])
-    apply (wp threadSet_obj_at'_really_strongest)
-  apply (clarsimp simp: threadGet_def)
-  apply (wp getObject_tcb_wp)
+     apply (rule hoare_lift_Pf2 [where f=ksCurThread])
+      apply (wp threadSet_obj_at'_really_strongest)+
+   apply (clarsimp simp: threadGet_def)
+   apply (wp getObject_tcb_wp)
   apply clarsimp
   apply (drule obj_at_ko_at')
   apply clarsimp
@@ -683,16 +683,15 @@ lemma getMRs_tcbContext:
   apply (elim conjE)
   apply (thin_tac "thread = t" for t)
   apply (clarsimp simp add: getMRs_def)
-  apply (rule hoare_pre)
-   apply (wp|wpc)+
-     apply (rule_tac P="n < length x" in hoare_gen_asm)
-     apply (clarsimp simp: nth_append)
-     apply (wp mapM_wp' static_imp_wp)
+  apply (wp|wpc)+
+    apply (rule_tac P="n < length x" in hoare_gen_asm)
+    apply (clarsimp simp: nth_append)
+    apply (wp mapM_wp' static_imp_wp)+
     apply simp 
     apply (rule asUser_cur_obj_at')
     apply (simp add: getRegister_def msgRegisters_unfold)
     apply (simp add: mapM_Cons bind_assoc mapM_empty)
-    apply wp[1]
+    apply wp
    apply (wp hoare_drop_imps hoare_vcg_all_lift)
    apply (wp asUser_cur_obj_at')
     apply (simp add: getRegister_def msgRegisters_unfold)
@@ -1069,8 +1068,7 @@ lemma getMRs_user_word:
     defer
     apply simp
     apply (wp asUser_const_rv)
-    apply (simp add: msgRegisters_unfold n_msgRegisters_def)
-   apply simp
+   apply (simp add: msgRegisters_unfold n_msgRegisters_def)
   apply (erule_tac x="unat i - unat n_msgRegisters" in allE)
   apply (erule impE) 
    apply (simp add: msgRegisters_unfold
@@ -1169,7 +1167,7 @@ lemma getMRs_length:
   apply (simp add: getMRs_def)
   apply (rule hoare_pre, wp)
     apply simp
-    apply (wp mapM_length asUser_const_rv mapM_length)
+    apply (wp mapM_length asUser_const_rv mapM_length)+
   apply (clarsimp simp: length_msgRegisters)
   apply (simp add: min_def split: if_splits)
   apply (clarsimp simp: word_le_nat_alt)

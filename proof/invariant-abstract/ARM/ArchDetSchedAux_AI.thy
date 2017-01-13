@@ -79,11 +79,10 @@ lemma invoke_untyped_etcb_at [DetSchedAux_AI_assms]:
   apply (cases ui)
   apply (simp add: mapM_x_def[symmetric] invoke_untyped_def whenE_def
            split del: if_split)
-  apply (rule hoare_pre)
-   apply (wp retype_region_etcb_at mapM_x_wp'
-             create_cap_no_pred_tcb_at typ_at_pred_tcb_at_lift
-             hoare_convert_imp[OF create_cap_no_pred_tcb_at]
-             hoare_convert_imp[OF _ init_arch_objects_exst]
+  apply (wp retype_region_etcb_at mapM_x_wp'
+            create_cap_no_pred_tcb_at typ_at_pred_tcb_at_lift
+            hoare_convert_imp[OF create_cap_no_pred_tcb_at]
+            hoare_convert_imp[OF _ init_arch_objects_exst]
       | simp
       | (wp_once hoare_drop_impE_E))+
   done
@@ -123,10 +122,10 @@ lemma perform_asid_control_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and val
           \<lbrace>\<lambda>r s. st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
   apply (simp add: perform_asid_control_invocation_def)
   apply (rule hoare_pre)
-   apply ( wp | wpc | simp)+
+   apply (wp | wpc | simp)+
        apply (wp hoare_imp_lift_something typ_at_pred_tcb_at_lift)[1]
       apply (rule hoare_drop_imps)
-      apply (wp retype_region_etcb_at)
+      apply (wp retype_region_etcb_at)+
   apply simp
   done
 
@@ -150,15 +149,15 @@ lemma perform_asid_control_invocation_valid_sched:
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (rule hoare_pre)
    apply (rule_tac I="invs and ct_active and valid_aci aci" in valid_sched_tcb_state_preservation)
-       apply (wp perform_asid_control_invocation_st_tcb_at)
-       apply simp
-      apply (wp perform_asid_control_etcb_at)
-      apply (rule hoare_strengthen_post, rule aci_invs)
-  apply (simp add: invs_def valid_state_def)
+          apply (wp perform_asid_control_invocation_st_tcb_at)
+          apply simp
+         apply (wp perform_asid_control_etcb_at)+
+    apply (rule hoare_strengthen_post, rule aci_invs)
+    apply (simp add: invs_def valid_state_def)
    apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s"])
     apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_domain s"])
      apply (rule hoare_lift_Pf[where f="\<lambda>s. idle_thread s"])
-      apply wp
+      apply wp+
   apply simp
   done
 

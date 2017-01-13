@@ -694,7 +694,7 @@ lemma lookupSlotForThread_ccorres':
        apply (ctac add: ccorres_return_CE)
       apply csymbr+
       apply (ctac add: ccorres_return_C_errorE)
-     apply wp
+     apply wp+
    apply vcg
   apply (rule conjI)
    apply (clarsimp simp add: conj_comms word_size tcbSlots Kernel_C.tcbCTable_def)

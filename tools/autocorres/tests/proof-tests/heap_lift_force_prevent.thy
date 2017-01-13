@@ -43,7 +43,7 @@ lemma unlifted_a_wp [wp]:
 lemma lifted_b_wp [wp]:
     "\<lbrace> \<lambda>s. is_valid_w32 s p \<and> (\<exists>a. heap_w32 s p = a \<and> P (a * 3) s) \<rbrace> lifted_b' p \<lbrace> \<lambda>r s. P r s \<rbrace>"
   apply (clarsimp simp: lifted_b'_def)
-  apply wp
+  including no_pre apply wp
   apply (auto simp: simple_lift_c_guard lift_global_heap_def field_simps)
   done
 

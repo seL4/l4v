@@ -852,16 +852,14 @@ crunch cur_domain[wp]: do_user_op_if "\<lambda>s. P (cur_domain s)" (wp: select_
 crunch idle_thread[wp]: do_user_op_if "\<lambda>s. P (idle_thread s)" (wp: select_wp ignore: user_memory_update)
 
 lemma do_use_op_guarded_pas_domain[wp]: "\<lbrace>guarded_pas_domain aag\<rbrace> do_user_op_if f tc \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
-  apply (rule guarded_pas_domain_lift)
-  apply wp
-  done
+  by (rule guarded_pas_domain_lift; wp)
 
 crunch domain_fields[wp]: do_user_op_if "domain_fields P" (wp: select_wp ignore: user_memory_update)
 
 definition
   do_user_op_A_if :: "user_transition_if \<Rightarrow>
                    ((user_context \<times> det_state) \<times> event option \<times> (user_context \<times> det_state)) set"
-  where
+where
   "do_user_op_A_if uop \<equiv> {(s,e,(tc,s'))| s e tc s'. ((e,tc),s') \<in> fst (split (do_user_op_if uop) s)}"
 
 text {*
@@ -871,7 +869,7 @@ text {*
 *}
 definition
   kernel_entry_if :: "event \<Rightarrow> user_context \<Rightarrow> (((interrupt + unit) \<times> user_context),det_ext) s_monad"
-  where
+where
   "kernel_entry_if e tc \<equiv> do
     t \<leftarrow> gets cur_thread;
     thread_set (\<lambda>tcb. tcb \<lparr> tcb_arch := arch_tcb_context_set tc (tcb_arch tcb)\<rparr>) t;
@@ -1147,9 +1145,7 @@ crunch cur_domain[wp]: handle_preemption_if " \<lambda>s. P (cur_domain s)"
 crunch idle_thread[wp]: handle_preemption_if "\<lambda>s. P (idle_thread s)"
 
 lemma handle_preemption_if_guarded_pas_domain[wp]: "\<lbrace>guarded_pas_domain aag\<rbrace> handle_preemption_if tc \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
-  apply (rule guarded_pas_domain_lift)
-  apply wp
-  done
+  by (rule guarded_pas_domain_lift; wp)
 
 crunch valid_sched[wp]: handle_preemption_if "valid_sched"
   (wp: crunch_wps simp: crunch_simps ignore: getActiveIRQ)
@@ -1205,9 +1201,7 @@ crunch cur_domain[wp]: activate_thread "\<lambda>s. P (cur_domain s)"
 crunch idle_thread[wp]: activate_thread "\<lambda>s. P (idle_thread s)"
 
 lemma activate_thread_guarded_pas_domain[wp]: "\<lbrace>guarded_pas_domain aag\<rbrace> activate_thread \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
-  apply (rule guarded_pas_domain_lift)
-  apply (wp activate_thread_cur_thread)
-  done
+  by (rule guarded_pas_domain_lift; wp activate_thread_cur_thread)
 
 lemma guarded_pas_domain_arch_state_update[simp]: "guarded_pas_domain aag (s\<lparr>arch_state := x\<rparr>) = guarded_pas_domain aag s"
   apply (simp add: guarded_pas_domain_def)
@@ -1696,18 +1690,17 @@ lemma schedule_if_domain_time_nonzero':
    schedule_if tc
    \<lbrace>(\<lambda>_ s. domain_time s > 0)\<rbrace>"
   apply(simp add: schedule_if_def schedule_def)
-  apply (rule hoare_pre)
   apply (wp next_domain_domain_time_nonzero
         | wpc | simp add: crunch_simps guarded_switch_to_def switch_to_thread_def 
                               choose_thread_def switch_to_idle_thread_def
                               arch_switch_to_idle_thread_def)+
        apply(wp hoare_drop_imps)
         apply(simp add: choose_thread_def switch_to_idle_thread_def arch_switch_to_idle_thread_def guarded_switch_to_def switch_to_thread_def | wp)+
-          apply(wp hoare_drop_imps)
+          apply(wp hoare_drop_imps)+
        apply simp
-       apply(wp next_domain_domain_time_nonzero)
+       apply(wp next_domain_domain_time_nonzero)+
        apply (clarsimp simp: if_apply_def2)
-  apply(wp gts_wp)
+  apply(wp gts_wp)+
   apply (auto)
   done
 
@@ -1877,33 +1870,19 @@ lemma ptrFromPAddr_add_helper:
   done
 
 lemma dmo_user_memory_update_idle_equiv:
-  "\<lbrace>idle_equiv st\<rbrace>
-          do_machine_op
-           (user_memory_update um) 
-   \<lbrace>\<lambda>y. idle_equiv st\<rbrace>"
-  apply(wp dmo_wp)
-  apply(simp add: user_memory_update_def)
-  apply(wp modify_wp)
-  done
+  "\<lbrace>idle_equiv st\<rbrace> do_machine_op (user_memory_update um) \<lbrace>\<lambda>y. idle_equiv st\<rbrace>"
+  by (wpsimp wp: dmo_wp)
 
 lemma dmo_device_memory_update_idle_equiv:
-  "\<lbrace>idle_equiv st\<rbrace>
-          do_machine_op
-           (device_memory_update um) 
-   \<lbrace>\<lambda>y. idle_equiv st\<rbrace>"
-  apply(wp dmo_wp)
-  apply(simp add: device_memory_update_def)
-  apply(wp modify_wp)
-  done
+  "\<lbrace>idle_equiv st\<rbrace> do_machine_op (device_memory_update um) \<lbrace>\<lambda>y. idle_equiv st\<rbrace>"
+  by (wpsimp wp: dmo_wp)
 
 lemma do_user_op_if_idle_equiv[wp]:
   "\<lbrace>idle_equiv st and invs\<rbrace>
    do_user_op_if tc uop
    \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
-  apply (simp add: do_user_op_if_def)
-  apply (wp dmo_user_memory_update_idle_equiv dmo_device_memory_update_idle_equiv
-    select_wp | wpc | simp)+
-  done
+  unfolding do_user_op_if_def
+  by (wpsimp wp: dmo_user_memory_update_idle_equiv dmo_device_memory_update_idle_equiv select_wp)
 
 lemma ct_active_not_idle': "ct_active s \<Longrightarrow> \<not> ct_idle s"
   apply (clarsimp simp add: ct_in_state_def st_tcb_at_def obj_at_def)
@@ -1911,15 +1890,11 @@ lemma ct_active_not_idle': "ct_active s \<Longrightarrow> \<not> ct_idle s"
 
 lemma Init_Fin_serial_weak_strengthen:
   "Init_Fin_serial_weak A s0 I \<Longrightarrow> A [> J \<Longrightarrow> J \<subseteq> I \<Longrightarrow> Init A s0 \<subseteq> J \<Longrightarrow> Init_Fin_serial_weak A s0 J"
-  apply (simp add: Init_Fin_serial_weak_def serial_system_weak_def Init_Fin_serial_weak_axioms_def)
-  apply safe
-   apply force+
-   done
+  by (force simp: Init_Fin_serial_weak_def serial_system_weak_def Init_Fin_serial_weak_axioms_def)
 
 lemma rel_terminate_weaken:
   "rel_terminate A s0 R I measuref \<Longrightarrow> J \<subseteq> I \<Longrightarrow> rel_terminate A s0 R J measuref"
-  apply (force simp: rel_terminate_def)
-  done
+  by (force simp: rel_terminate_def)
 
 end
 
@@ -2071,7 +2046,7 @@ lemma kernel_entry_if_was_not_Interrupt:
    apply wp
      apply simp
      apply(rule handle_event_was_not_Interrupt[simplified validE_E_def validE_def])
-    apply wp
+    apply wp+
   done
 
 lemma ct_idle_lift:
@@ -2779,7 +2754,7 @@ lemma cap_revoke_irq_state_inv'':
   apply(subst cap_revoke.simps)
   apply(rule hoare_spec_gen_asm)
   apply(rule hoare_pre_spec_validE)
-   apply (wp "1.hyps", assumption+)
+   apply (wp "1.hyps")
            apply(wp spec_valid_conj_liftE2 | simp)+
            apply(wp drop_spec_validE[OF preemption_point_irq_state_inv[simplified validE_R_def]]
                     drop_spec_validE[OF preemption_point_irq_state_inv'[where irq=irq]]
@@ -2954,6 +2929,7 @@ lemma perform_invocation_irq_state_inv:
      domain_sep_inv False sta and
      valid_invocation oper and K (irq_is_recurring irq st)\<rbrace> 
    perform_invocation x y oper \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
+  including no_pre
   apply(case_tac oper)
           apply(simp | wp)+
           apply((wp invoke_untyped_irq_state_inv[where irq=irq] irq_state_inv_triv | simp)+)[4]

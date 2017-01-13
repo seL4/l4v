@@ -234,11 +234,12 @@ lemma tcbFault_submonad_args:
 
 lemma threadGet_stateAssert_gets:
   "threadGet ext t = do stateAssert (tcb_at' t) []; gets (thread_fetch ext t) od"
+  including no_pre
   apply (rule is_stateAssert_gets [OF _ _ empty_fail_threadGet no_fail_threadGet])
-    apply (clarsimp simp: threadGet_def liftM_def, wp)[1]
-   apply (simp add: threadGet_def liftM_def, wp getObject_tcb_at')
-  apply (simp add: threadGet_def liftM_def, wp)
-  apply (rule hoare_strengthen_post, wp getObject_obj_at')
+    apply (clarsimp simp: threadGet_def liftM_def, wp+)[1]
+   apply (simp add: threadGet_def liftM_def, (wp getObject_tcb_at')+)
+  apply (simp add: threadGet_def liftM_def, wp+)
+  apply (rule hoare_strengthen_post, (wp getObject_obj_at')+)
      apply (simp add: objBits_def objBitsKO_def)+
   apply (clarsimp simp: obj_at'_def thread_fetch_def projectKOs)
   done
@@ -516,7 +517,7 @@ lemma stateAssert_mapM_loadWordUser_comm:
    do y \<leftarrow> mapM loadWordUser ptrs; x \<leftarrow> stateAssert P []; n od"
   apply (rule bind_inv_inv_comm)
      apply (wp stateAssert_inv)
-    apply (wp mapM_wp_inv)
+    apply (wp mapM_wp_inv)+
   apply simp
   done
 
@@ -622,7 +623,7 @@ lemma handleFaultReply':
                             zip_Cons ARM_H.exceptionMessage_def
                             ARM.exceptionMessage_def
                             mapM_x_Cons mapM_x_Nil)
-      apply (rule monadic_rewrite_symb_exec_l, wp)
+      apply (rule monadic_rewrite_symb_exec_l, wp+)
        apply (rule_tac P="tcb_at' s and tcb_at' r" in monadic_rewrite_inst)
        apply (case_tac rv; (case_tac "msgLength tag < scast n_msgRegisters",
                (erule disjE[OF word_less_cases],
@@ -639,7 +640,7 @@ lemma handleFaultReply':
                  | wp asUser_tcb_at' lookupIPCBuffer_inv')+)+))
       apply wp
      (* capFault *)
-     apply (rule monadic_rewrite_symb_exec_l, wp empty_fail_asUser)+
+     apply (rule monadic_rewrite_symb_exec_l, (wp empty_fail_asUser)+)+
           apply(case_tac rv)
           apply (clarsimp
                 | rule monadic_rewrite_bind_tail monadic_rewrite_refl
@@ -752,7 +753,7 @@ lemma handleFaultReply':
                   fromIntegral_simp1 fromIntegral_simp2 shiftL_word)
     apply (clarsimp simp: mapM_def sequence_def bind_assoc asUser_bind_distrib
                           asUser_return submonad_asUser.fn_stateAssert bit_def)
-   apply wp
+   apply wp+
   done
 
 end
@@ -952,7 +953,7 @@ lemma replyFromKernel_success_empty_ccorres [corres]:
        apply vcg
       apply wp
      apply vcg
-    apply wp
+    apply wp+
   apply (simp add: ARM_H.msgInfoRegister_def ARM.msgInfoRegister_def
                    Kernel_C.msgInfoRegister_def Kernel_C.R1_def
                    ARM_H.badgeRegister_def ARM.badgeRegister_def
@@ -1518,10 +1519,9 @@ lemma exceptionMessage_ccorres:
              = index exceptionMessageC n"
   apply (simp add: exceptionMessageC_def ARM_H.exceptionMessage_def
                    ARM.exceptionMessage_def MessageID_Exception_def)
-  apply (simp add: Arrays.update_def n_exceptionMessage_def fcp_beta nth_Cons'
-                   fupdate_def
-            split: if_split)
-  done
+  by (simp add: Arrays.update_def n_exceptionMessage_def fcp_beta nth_Cons'
+                fupdate_def
+         split: if_split)
 
 lemma asUser_obj_at_elsewhere:
   "\<lbrace>obj_at' (P :: tcb \<Rightarrow> bool) t' and (\<lambda>_. t \<noteq> t')\<rbrace> asUser t m \<lbrace>\<lambda>rv. obj_at' P t'\<rbrace>"
@@ -1633,6 +1633,7 @@ proof -
   have mapM_x_return_gen: "\<And>v w xs. mapM_x (\<lambda>_. return v) xs = return w" (* FIXME mapM_x_return *)
     by (induct_tac xs; simp add: mapM_x_Nil mapM_x_Cons)
   show ?thesis
+  including no_pre
   apply (unfold K_def)
   apply (intro ccorres_gen_asm)
   apply (cinit' lift: sender_' receiver_' receiveIPCBuffer_'
@@ -1958,7 +1959,7 @@ proof -
               apply (ctac(no_vcg) add: setMRs_lookup_failure_ccorres[unfolded msgMaxLength_unfold])
                apply simp
                apply (rule ccorres_return_C, simp+)[1]
-              apply (wp setMR_tcbFault_obj_at hoare_case_option_wp)
+              apply (wp setMR_tcbFault_obj_at hoare_case_option_wp)+
             apply (clarsimp simp: option_to_ptr_def Collect_const_mem guard_is_UNIV_def)
             apply (rule conjI)
              apply (simp add: seL4_CapFault_InRecvPhase_def)
@@ -2275,14 +2276,14 @@ lemma loadCapTransfer_ctReceiveDepth:
      apply simp
      apply (simp only: word_bits_len_of[symmetric])
      apply (subst unat_lt2p, simp) 
-    apply wp
-done
+    apply wp+
+  done
+
 (* FIXME: move *)
 lemma cte_at_0' [dest!]:
   "\<lbrakk> cte_at' 0 s; no_0_obj' s \<rbrakk> \<Longrightarrow> False"
   apply (clarsimp simp: cte_wp_at_obj_cases')
-  apply (auto simp: tcb_cte_cases_def is_aligned_def dest!:tcb_aligned' split: if_split_asm)
-  done
+  by (auto simp: tcb_cte_cases_def is_aligned_def dest!:tcb_aligned' split: if_split_asm)
 
 lemma getReceiveSlots_ccorres:
   "ccorres (\<lambda>a c. (a = [] \<or> (\<exists>slot. a = [slot])) \<and> 
@@ -2354,7 +2355,7 @@ lemma getReceiveSlots_ccorres:
   apply (simp add: cct_relation_def)
   apply (case_tac rv, clarsimp)
   apply (rule UNIV_I)  -- "still a schematic here ..."
-done 
+  done
 
 
 lemma setExtraBadge_ccorres:
@@ -3088,7 +3089,7 @@ lemma transferCaps_ccorres [corres]:
         apply (rule_tac R'=UNIV in ccorres_split_throws [OF ccorres_return_C], simp_all)[1]
         apply vcg
         apply simp
-       apply (wp empty_fail_getReceiveSlots)[3]
+       apply ((wp empty_fail_getReceiveSlots)+)[3]
     apply (simp add: message_info_to_H_def word_sless_def word_sle_def)
    apply (simp add: option_to_0_def ccorres_cond_iffs
                     interpret_excaps_test_null excaps_map_def
@@ -3139,6 +3140,7 @@ lemma transferCaps_ccorres [corres]:
 (* FIXME: move *)
 lemma getMessageInfo_le3:
   "\<lbrace>\<top>\<rbrace> getMessageInfo sender \<lbrace>\<lambda>rv s. unat (msgExtraCaps rv) \<le> 3\<rbrace>"
+  including no_pre
   apply (simp add: getMessageInfo_def)
   apply wp
   apply (rule_tac Q="\<lambda>_. \<top>" in hoare_strengthen_post)
@@ -3146,10 +3148,11 @@ lemma getMessageInfo_le3:
   apply (simp add: messageInfoFromWord_def Let_def msgExtraCapBits_def)
   apply (cut_tac y="r >> Types_H.msgLengthBits" in word_and_le1 [where a=3])
   apply (simp add: word_le_nat_alt)
-  done  
+  done
 
 lemma getMessageInfo_msgLength:
   "\<lbrace>\<top>\<rbrace> getMessageInfo sender \<lbrace>\<lambda>rv. K (unat (msgLength rv) \<le> msgMaxLength)\<rbrace>"
+  including no_pre
   apply (simp add: getMessageInfo_def)
   apply wp
   apply (rule_tac Q="\<lambda>_. \<top>" in hoare_strengthen_post)
@@ -3336,7 +3339,7 @@ proof -
                                             unat_of_nat32[unfolded word_bits_conv]
                                             word_of_nat_less)
                           apply (simp add: word_less_nat_alt)
-                         apply wp
+                         apply wp+
                        apply (clarsimp simp: ccorres_cond_iffs)
                        apply (rule_tac  P= \<top>
                                 and P'="{x. errstate x= lu_ret___struct_lookupSlot_raw_ret_C \<and>
@@ -5217,9 +5220,9 @@ lemma sendIPC_ccorres [corres]:
              apply (fastforce simp: weak_sch_act_wf_def valid_tcb_state'_def
                               elim: obj_at'_weakenE)
             apply (wp attemptSwitchTo_sch_act_not sts_st_tcb' hoare_vcg_all_lift
-                      attemptSwitchTo_ksQ sts_valid_queues sts_ksQ')
+                      attemptSwitchTo_ksQ sts_valid_queues sts_ksQ')+
           apply (clarsimp simp: valid_tcb_state'_def)
-          apply (wp weak_sch_act_wf_lift_linear tcb_in_cur_domain'_lift)
+          apply (wp weak_sch_act_wf_lift_linear tcb_in_cur_domain'_lift)+
         apply (rule_tac Q="\<lambda>rv. valid_queues and valid_pspace' and valid_objs'
                             and valid_mdb' and tcb_at' dest and cur_tcb'
                             and tcb_at' thread and K (dest \<noteq> thread)
@@ -5229,8 +5232,8 @@ lemma sendIPC_ccorres [corres]:
                      in hoare_post_imp)
          apply (clarsimp simp: st_tcb_at'_def obj_at'_def is_tcb weak_sch_act_wf_def)
         apply (wp setEndpoint_ksQ hoare_vcg_all_lift set_ep_valid_objs'
-                  setEndpoint_valid_mdb')
-apply (clarsimp simp: guard_is_UNIV_def ThreadState_Inactive_def
+                  setEndpoint_valid_mdb')+
+  apply (clarsimp simp: guard_is_UNIV_def ThreadState_Inactive_def
                                ThreadState_Running_def mask_def from_bool_def
                                option_to_ptr_def option_to_0_def
                         split: bool.split_asm)

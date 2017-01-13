@@ -23,7 +23,7 @@ declare static_imp_wp[wp_split del]
 lemma corres_gets_pre_lhs:
   "(\<And>x. corres r (P x) P' (g x) g') \<Longrightarrow>
   corres r (\<lambda>s. P (f s) s) P' (gets f >>= (\<lambda>x. g x)) g'"
-  by (simp add: corres_underlying_gets_pre_lhs)
+  by (rule corres_underlying_gets_pre_lhs)
 
 (* FIXME: move *)
 lemma corres_if_lhs:
@@ -71,18 +71,18 @@ lemma findM_awesome':
   assumes x: "\<And>x xs. suffix (x # xs) xs' \<Longrightarrow>
                   corres (\<lambda>a b. if b then (\<exists>a'. a = Some a' \<and> r a' (Some x)) else a = None)
                       P (P' (x # xs))
-                      ((f >>= (\<lambda>x. return (Some x))) OR (return None)) (g x)"
+                      ((f >>= (\<lambda>x. return (Some x))) \<sqinter> (return None)) (g x)"
   assumes y: "corres r P (P' []) f (return None)"
   assumes z: "\<And>x xs. suffix (x # xs) xs' \<Longrightarrow>
                  \<lbrace>P' (x # xs)\<rbrace> g x \<lbrace>\<lambda>rv s. \<not> rv \<longrightarrow> P' xs s\<rbrace>"
   assumes p: "suffix xs xs'"
   shows      "corres r P (P' xs) f (findM g xs)"
 proof -
-  have P: "f = do x \<leftarrow> (do x \<leftarrow> f; return (Some x) od) OR return None; if x \<noteq> None then return (the x) else f od"
+  have P: "f = do x \<leftarrow> (do x \<leftarrow> f; return (Some x) od) \<sqinter> return None; if x \<noteq> None then return (the x) else f od"
     apply (rule ext)
     apply (auto simp add: bind_def alternative_def return_def split_def prod_eq_iff)
     done
-  have Q: "\<lbrace>P\<rbrace> (do x \<leftarrow> f; return (Some x) od) OR return None \<lbrace>\<lambda>rv. if rv \<noteq> None then \<top> else P\<rbrace>"
+  have Q: "\<lbrace>P\<rbrace> (do x \<leftarrow> f; return (Some x) od) \<sqinter> return None \<lbrace>\<lambda>rv. if rv \<noteq> None then \<top> else P\<rbrace>"
     by (wp alternative_wp | simp)+
   show ?thesis using p
     apply (induct xs)
@@ -115,16 +115,16 @@ lemma corres_rhs_disj_division:
 
 lemma findM_alternative_awesome:
   assumes x: "\<And>x. corres (\<lambda>a b. if b then (\<exists>a'. a = Some a') else a = None)
-                      P (P' and (\<lambda>s. x \<in> fn s)) ((f >>= (\<lambda>x. return (Some x))) OR (return None)) (g x)"
+                      P (P' and (\<lambda>s. x \<in> fn s)) ((f >>= (\<lambda>x. return (Some x))) \<sqinter> (return None)) (g x)"
   assumes z: "\<And>x xs. \<lbrace>\<lambda>s. P' s \<and> x \<in> fn s \<and> set xs \<subseteq> fn s\<rbrace> g x \<lbrace>\<lambda>rv s. \<not> rv \<longrightarrow> P' s \<and> set xs \<subseteq> fn s\<rbrace>"
   assumes on_none: "corres dc P P' f g'"
   shows      "corres dc P (P' and (\<lambda>s. set xs \<subseteq> fn s)) f (findM g xs >>= (\<lambda>x. when (x = None) g'))"
 proof -
-  have P: "f = do x \<leftarrow> (do x \<leftarrow> f; return (Some x) od) OR return None; if x \<noteq> None then return (the x) else f od"
+  have P: "f = do x \<leftarrow> (do x \<leftarrow> f; return (Some x) od) \<sqinter> return None; if x \<noteq> None then return (the x) else f od"
     apply (rule ext)
     apply (auto simp add: bind_def alternative_def return_def split_def prod_eq_iff)
     done
-  have Q: "\<lbrace>P\<rbrace> (do x \<leftarrow> f; return (Some x) od) OR return None \<lbrace>\<lambda>rv. if rv \<noteq> None then \<top> else P\<rbrace>"
+  have Q: "\<lbrace>P\<rbrace> (do x \<leftarrow> f; return (Some x) od) \<sqinter> return None \<lbrace>\<lambda>rv. if rv \<noteq> None then \<top> else P\<rbrace>"
     by (wp alternative_wp | simp)+
   have R: "\<And>P x g xs. (do x \<leftarrow> if P then return (Some x) else findM g xs;
                          when (x = None) g'
@@ -152,7 +152,7 @@ qed
 lemma awesome_case1:
   assumes x: "corres op = P P' (return False) (g x)"
   shows      "corres (\<lambda>a b. if b then (\<exists>a'. a = Some a' \<and> r a' (Some x)) else a = None)
-            P P' ((f >>= (\<lambda>x. return (Some x))) OR (return None)) (g x)"
+            P P' ((f >>= (\<lambda>x. return (Some x))) \<sqinter> (return None)) (g x)"
 proof -
   have P: "return None = liftM (\<lambda>x. None) (return False)"
     by (simp add: liftM_def)
@@ -169,7 +169,7 @@ qed
 lemma awesome_case2:
   assumes x: "corres (\<lambda>a b. r a (Some x) \<and> b) P P' f (g x)"
   shows      "corres (\<lambda>a b. if b then (\<exists>a'. a = Some a' \<and> r a' (Some x)) else a = None)
-            P P' ((f >>= (\<lambda>x. return (Some x))) OR (return None)) (g x)"
+            P P' ((f >>= (\<lambda>x. return (Some x))) \<sqinter> (return None)) (g x)"
   apply (rule corres_alternate1)
   apply (fold liftM_def)
   apply (simp add: o_def)
@@ -247,7 +247,7 @@ lemma tcbSchedAppend_corres:
   apply (case_tac queued)
    apply (simp add: unless_def when_def)
    apply (rule corres_no_failI)
-    apply (rule no_fail_pre, wp)
+    apply wp+
    apply (clarsimp simp: in_monad ethread_get_def gets_the_def bind_assoc
                          assert_opt_def exec_gets is_etcb_at_def get_etcb_def get_tcb_queue_def
                          set_tcb_queue_def simpler_modify_def)
@@ -270,7 +270,7 @@ lemma tcbSchedAppend_corres:
                 apply (rule corres_split_noop_rhs2)
                    apply (rule threadSet_corres_noop, simp_all add: tcb_relation_def exst_same_def)[1]
                   apply (rule addToBitmap_if_null_corres_noop)
-                 apply wp
+                 apply wp+
                apply (simp add: tcb_sched_append_def)
                apply (intro conjI impI)
                 apply (rule corres_guard_imp)
@@ -426,14 +426,13 @@ lemma tcbSchedDequeue_valid_queues_weak:
    \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
 proof -
   show ?thesis
-    unfolding tcbSchedDequeue_def null_def valid_queues_def
-  apply (rule hoare_pre)
-   apply wp (* stops on threadSet *)
+  unfolding tcbSchedDequeue_def null_def valid_queues_def
+  apply wp (* stops on threadSet *)
           apply (rule hoare_post_eq[OF _ threadSet_valid_queues_dequeue_wp],
                  simp add: valid_queues_def)
-         apply (wp hoare_vcg_if_lift hoare_vcg_conj_lift hoare_vcg_imp_lift)
+         apply (wp hoare_vcg_if_lift hoare_vcg_conj_lift hoare_vcg_imp_lift)+
              apply (wp hoare_vcg_imp_lift setQueue_valid_queues_no_bitmap_except_dequeue_wp
-                       setQueue_valid_bitmapQ threadGet_const_tcb_at)
+                       setQueue_valid_bitmapQ threadGet_const_tcb_at)+
   (* wp done *)
   apply (normalise_obj_at')
   apply (clarsimp simp: correct_queue_def)
@@ -534,7 +533,7 @@ lemma tcbSchedDequeue_valid_queues'[wp]:
        apply (wp | clarsimp simp: bitmap_fun_defs)+
       apply (wp hoare_vcg_all_lift setQueue_ksReadyQueues_lift)
      apply clarsimp
-     apply (wp threadGet_obj_at' threadGet_const_tcb_at)
+     apply (wp threadGet_obj_at' threadGet_const_tcb_at)+
    apply clarsimp
    apply (rule context_conjI, clarsimp simp: obj_at'_def)
    apply (clarsimp simp: valid_queues'_def obj_at'_def projectKOs inQ_def|wp)+
@@ -660,9 +659,7 @@ lemma tcbSchedEnqueue_tcb_in_cur_domain'[wp]:
   apply (rule tcb_in_cur_domain'_lift)
    apply wp
   apply (clarsimp simp: tcbSchedEnqueue_def)
-  apply wp
-   apply (case_tac queued, simp_all add: unless_def when_def)
-    apply (wp | simp)+
+  apply (wpsimp simp: unless_def)+
   done
 
 lemma ct_idle_or_in_cur_domain'_lift2:
@@ -674,7 +671,8 @@ lemma ct_idle_or_in_cur_domain'_lift2:
   apply (unfold ct_idle_or_in_cur_domain'_def)
   apply (rule hoare_lift_Pf2[where f=ksCurThread])
   apply (rule hoare_lift_Pf2[where f=ksSchedulerAction])
-  apply (wp static_imp_wp hoare_vcg_disj_lift )
+  including no_pre
+  apply (wp static_imp_wp hoare_vcg_disj_lift)
   apply simp+
   done
 
@@ -709,15 +707,16 @@ lemma tcbSchedEnqueue_in_ksQ:
                              obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s"
            in hoare_pre_imp)
    apply (clarsimp simp: tcb_at'_has_tcbPriority tcb_at'_has_tcbDomain)
+  including no_pre
   apply (wp hoare_vcg_ex_lift)
   apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply (wp)
+  apply wp
     apply clarsimp
-    apply wp
+    apply wp+
     apply (rule_tac Q="\<lambda>rv s. tdom = d \<and> rv = p \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s
                             \<and> obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s"
              in hoare_post_imp, clarsimp)
-    apply (wp, wp threadGet_const)
+    apply (wp, (wp threadGet_const)+)
   apply (rule_tac Q="\<lambda>rv s.
              obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s \<and>
              obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s \<and>
@@ -765,8 +764,8 @@ lemma tcbSchedAppend_ct_not_inQ:
     show ?thesis
       apply (simp add: tcbSchedAppend_def unless_def)
       apply (wp ts sq | clarsimp)+
-      apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_post_imp, clarsimp)
-      apply (wp)
+       apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_post_imp, clarsimp)
+       apply (wpsimp)+
       done
   qed
 
@@ -784,9 +783,7 @@ lemma tcbSchedAppend_tcbDomain[wp]:
      tcbSchedAppend t
    \<lbrace> \<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>"
   apply (clarsimp simp: tcbSchedAppend_def)
-  apply wp
-   apply (case_tac queued, simp_all add: unless_def when_def)
-    apply (wp | simp)+
+  apply (wpsimp simp: unless_def)+
   done
 
 lemma tcbSchedAppend_tcbPriority[wp]:
@@ -794,15 +791,13 @@ lemma tcbSchedAppend_tcbPriority[wp]:
      tcbSchedAppend t
    \<lbrace> \<lambda>_. obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace>"
   apply (clarsimp simp: tcbSchedAppend_def)
-  apply wp
-   apply (case_tac queued, simp_all add: unless_def when_def)
-    apply (wp | simp)+
+  apply (wpsimp simp: unless_def)+
   done
 
 lemma tcbSchedAppend_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t'\<rbrace> tcbSchedAppend t \<lbrace>\<lambda>_. tcb_in_cur_domain' t' \<rbrace>"
   apply (rule tcb_in_cur_domain'_lift)
-   apply wp
+   apply wp+
   done
 
 
@@ -987,7 +982,7 @@ proof -
 
   show ?thesis
     apply -
-    apply (simp add: switch_to_thread_def Thread_H.switchToThread_def K_bind_def)
+    apply (simp add: switch_to_thread_def Thread_H.switchToThread_def)
     apply (rule corres_symb_exec_l [where Q = "\<lambda> s rv. (?PA and op = rv) s",
                                     OF corres_symb_exec_l [OF mainpart]])
     apply (auto intro: no_fail_pre [OF no_fail_assert]
@@ -1028,7 +1023,7 @@ lemma switch_idle_thread_corres:
         apply (unfold setCurThread_def)
         apply (rule corres_trivial, rule corres_modify)
         apply (simp add: state_relation_def cdt_relation_def)
-       apply (wp, simp+)
+       apply (wp+, simp+)
   apply (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_pspace'_def)
   done
 
@@ -1283,7 +1278,7 @@ lemma Arch_swichToThread_tcbPriority_triv[wp]:
 lemma Arch_switchToThread_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_in_cur_domain' t' \<rbrace>"
   apply (rule tcb_in_cur_domain'_lift)
-   apply wp
+   apply wp+
   done
 
 lemma tcbSchedDequeue_not_tcbQueued:
@@ -1425,11 +1420,10 @@ lemma tcbSchedDequeue_invs_no_cicd'[wp]:
      tcbSchedDequeue t
    \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
   unfolding all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def
-  apply (rule hoare_pre)
-   apply (wp tcbSchedDequeue_ct_not_inQ sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
-             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-             tcbSchedDequeue_valid_queues_weak
-             untyped_ranges_zero_lift
+  apply (wp tcbSchedDequeue_ct_not_inQ sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
+            valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
+            tcbSchedDequeue_valid_queues_weak
+            untyped_ranges_zero_lift
         | simp add: cteCaps_of_def o_def)+
   apply clarsimp
   apply (fastforce simp: valid_pspace'_def valid_queues_def
@@ -1438,11 +1432,10 @@ lemma tcbSchedDequeue_invs_no_cicd'[wp]:
 
 lemma switchToThread_invs_no_cicd':
   "\<lbrace>invs_no_cicd' and st_tcb_at' runnable' t and tcb_in_cur_domain' t \<rbrace> ThreadDecls_H.switchToThread t \<lbrace>\<lambda>rv. invs' \<rbrace>"
-  apply (simp add: Thread_H.switchToThread_def )
-  apply (wp setCurThread_invs_no_cicd'
-             Arch_switchToThread_invs_no_cicd' Arch_switchToThread_pred_tcb'
-              tcbSchedDequeue_not_tcbQueued)
-  apply (clarsimp elim!: pred_tcb'_weakenE)+
+  apply (simp add: Thread_H.switchToThread_def)
+  apply (wp setCurThread_invs_no_cicd' tcbSchedDequeue_not_tcbQueued
+            Arch_switchToThread_invs_no_cicd' Arch_switchToThread_pred_tcb')
+  apply (auto elim!: pred_tcb'_weakenE)
   done
 
 lemma switchToThread_invs[wp]:
@@ -1451,7 +1444,7 @@ lemma switchToThread_invs[wp]:
   apply (wp threadSet_timeslice_invs setCurThread_invs
              Arch_switchToThread_invs dmo_invs'
              doMachineOp_obj_at tcbSchedDequeue_not_tcbQueued)
-  by (clarsimp elim!: pred_tcb'_weakenE)+
+  by (auto elim!: pred_tcb'_weakenE)
 
 lemma setCurThread_ct_in_state:
   "\<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace> setCurThread t \<lbrace>\<lambda>rv. ct_in_state' P\<rbrace>"
@@ -1503,7 +1496,7 @@ lemma sct_cap_to'[wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace> setCurThread t \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
   apply (simp add: setCurThread_def)
   apply (wp ex_nonz_cap_to_pres')
-  apply (clarsimp elim!: cte_wp_at'_pspaceI)
+   apply (clarsimp elim!: cte_wp_at'_pspaceI)+
   done
 
 
@@ -2405,7 +2398,7 @@ lemma guarded_switch_to_chooseThread_fragment_corres:
       apply (rule corres_assert_assume_l)
       apply (rule corres_assert_assume_r)
       apply (rule switch_thread_corres)
-     apply (wp gts_st_tcb_at)
+     apply (wp gts_st_tcb_at)+
    apply (clarsimp simp: st_tcb_at_tcb_at invs_def valid_state_def valid_pspace_def valid_sched_def
                           invs_valid_vs_lookup invs_unique_refs)
   apply (auto elim!: pred_tcb'_weakenE split: thread_state.splits
@@ -2621,13 +2614,13 @@ lemma schedule_ChooseNewThread_fragment_corres:
   apply (subst bind_dummy_ret_val)
   apply (subst bind_dummy_ret_val)
   apply (rule corres_guard_imp)
-  apply (rule corres_split[OF _ corres_when])
-  apply (simp add: K_bind_def)
-  apply (rule chooseThread_corres)
-  apply simp
-  apply (rule next_domain_corres)
-  apply (wp nextDomain_invs_no_cicd')
-  apply (clarsimp simp: valid_sched_def invs'_def valid_state'_def all_invs_but_ct_idle_or_in_cur_domain'_def)+
+    apply (rule corres_split[OF _ corres_when])
+        apply simp
+        apply (rule chooseThread_corres)
+       apply simp
+      apply (rule next_domain_corres)
+     apply (wp nextDomain_invs_no_cicd')+
+   apply (clarsimp simp: valid_sched_def invs'_def valid_state'_def all_invs_but_ct_idle_or_in_cur_domain'_def)+
   done
 
 lemma schedule_corres:
@@ -2918,9 +2911,9 @@ lemma schedule_ChooseNewThread_fragment_invs':
     obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s \<and>
     (ksCurThread s = ksIdleThread s \<or> tcb_in_cur_domain' (ksCurThread s) s) \<rbrace>"
   apply (rule hoare_seq_ext)
-  apply (wp chooseThread_ct_not_queued_2 chooseThread_activatable_2 chooseThread_invs_no_cicd')
-  apply (wp chooseThread_in_cur_domain' nextDomain_invs_no_cicd')
-   apply (simp add:nextDomain_def)
+   apply (wp chooseThread_ct_not_queued_2 chooseThread_activatable_2 chooseThread_invs_no_cicd')
+   apply (wp chooseThread_in_cur_domain' nextDomain_invs_no_cicd')+
+  apply (simp add:nextDomain_def)
   apply (clarsimp simp: invs'_def all_invs_but_ct_idle_or_in_cur_domain'_def Let_def valid_state'_def)
   done
 
@@ -2932,12 +2925,12 @@ lemma schedule_invs': "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\
       apply (wp)[1]
      -- "action = ChooseNewThread"
      apply (rule_tac hoare_seq_ext, rename_tac r)
-      apply (rule hoare_seq_ext, simp add: K_bind_def)
+      apply (rule hoare_seq_ext, simp)
       apply (rule hoare_seq_ext)
       apply (rule seq_ext[OF schedule_ChooseNewThread_fragment_invs' _, simplified bind_assoc])
       apply (wp ssa_invs' chooseThread_invs_no_cicd')
        apply clarsimp
-       apply (wp)[3]
+       apply (wp+)[3]
     -- "action = SwitchToThread"
     apply (rename_tac word)
     apply (rule_tac hoare_seq_ext, rename_tac r)
@@ -2948,12 +2941,12 @@ lemma schedule_invs': "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\
               and (\<lambda>s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s)"
               in hoare_post_imp)
        apply simp
-      apply (wp switchToThread_tcb_in_cur_domain' switchToThread_ct_not_queued)
+      apply (wp switchToThread_tcb_in_cur_domain' switchToThread_ct_not_queued)+
      apply (rule_tac Q="\<lambda>_. (\<lambda>s. st_tcb_at' activatable' word s) and invs'
               and (\<lambda>s. tcb_in_cur_domain' word s)"
               in hoare_post_imp)
       apply (clarsimp simp:st_tcb_at'_def valid_state'_def obj_at'_def)
-     apply (wp)
+     apply (wp)+
   apply (frule invs_sch_act_wf')
   apply (auto elim!: obj_at'_weakenE simp: pred_tcb_at'_def)
   done
@@ -3030,9 +3023,9 @@ lemma schedule_ct_activatable'[wp]: "\<lbrace>invs'\<rbrace> ThreadDecls_H.sched
       apply (rule hoare_seq_ext, simp)
       apply (rule hoare_seq_ext)
       apply (rule seq_ext[OF schedule_ChooseNewThread_fragment_invs' _, simplified bind_assoc])
-      apply (wp ssa_invs')
+      apply (wp ssa_invs')+
        apply (clarsimp simp: ct_in_state'_def, simp)
-       apply (wp)[3]
+       apply (wp+)[3]
     -- "action = SwitchToThread"
     apply (rename_tac word)
     apply (rule_tac hoare_seq_ext, rename_tac r)
@@ -3043,7 +3036,7 @@ lemma schedule_ct_activatable'[wp]: "\<lbrace>invs'\<rbrace> ThreadDecls_H.sched
               in hoare_post_imp)
       apply (fastforce simp: st_tcb_at'_def elim!: obj_at'_weakenE)
      apply (clarsimp simp: )
-     apply (wp)
+     apply (wp)+
   apply (frule invs_sch_act_wf')
   apply (auto elim!: obj_at'_weakenE simp: st_tcb_at'_def )
   done
@@ -3065,6 +3058,7 @@ lemma tcbSchedDequeue_sch_act_sane[wp]:
 lemma sts_sch_act_sane:
   "\<lbrace>sch_act_sane\<rbrace> setThreadState st t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
   apply (simp add: setThreadState_def)
+  including no_pre
   apply (wp hoare_drop_imps
            | simp add: threadSet_sch_act_sane sane_update)+
   done

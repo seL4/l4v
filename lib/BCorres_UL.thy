@@ -145,21 +145,18 @@ lemma fail_bcorres_underlying[wp]: "bcorres_underlying t fail fail"
 
 lemma assertE_bcorres_underlying[wp]: "bcorres_underlying t (assertE P) (assertE P)"
   apply (clarsimp simp add: assertE_def returnOk_def)
-  apply (intro impI conjI)
-   apply wp
+  apply (intro impI conjI; wp)
   done
 
 lemmas assertE_s_bcorres_underlying[wp] = drop_sbcorres_underlying[OF assertE_bcorres_underlying]
 
-lemma when_s_bcorres_underlying[wp]: "(P \<Longrightarrow> s_bcorres_underlying t f f' s) \<Longrightarrow> s_bcorres_underlying t (when P f) (when P f') s"
-  apply (simp add: when_def)
-  apply (intro impI conjI)
-  apply wp
-  done
+lemma when_s_bcorres_underlying[wp]:
+  "(P \<Longrightarrow> s_bcorres_underlying t f f' s) \<Longrightarrow> s_bcorres_underlying t (when P f) (when P f') s"
+  by (simp add: return_s_bcorres_underlying when_def)
 
-lemma when_bcorres_underlying[wp]: "(P \<Longrightarrow> bcorres_underlying t f f') \<Longrightarrow> bcorres_underlying t (when P f) (when P f')"
-  apply (simp add: bcorres_underlying_def when_s_bcorres_underlying)
-  done
+lemma when_bcorres_underlying[wp]:
+  "(P \<Longrightarrow> bcorres_underlying t f f') \<Longrightarrow> bcorres_underlying t (when P f) (when P f')"
+  by (simp add: bcorres_underlying_def when_s_bcorres_underlying)
 
 lemma put_bcorres_underlying[wp]:
   "t f = f' \<Longrightarrow>  bcorres_underlying t (put f) (put f')" 
@@ -200,31 +197,26 @@ lemma mapM_x_bcorres_underlying[wp]:
 
 lemma mapM_bcorres_underlying[wp]:
   "(\<And>x. bcorres_underlying t (f x) (f' x)) \<Longrightarrow> bcorres_underlying t (mapM f xs) (mapM f' xs)"
-  apply (simp add: mapM_def | wp)+
-  done
-
+  by (simp add: mapM_def | wp)+
+ 
 lemma gets_s_bcorres_underlyingE': "s_bcorres_underlying t (f (x s)) (f' (x' (t s))) s \<Longrightarrow> s_bcorres_underlying t (liftE (gets x) >>=E f) (liftE (gets x') >>=E f') s"
-  apply (simp add: gets_def liftE_def lift_def bindE_def)
-  apply wp
-  apply simp
-  done
+  by (simp add: gets_def liftE_def lift_def bindE_def) wp
 
 lemma bcorres_underlying_filterM[wp]:
   "(\<And>x. bcorres_underlying t (a x) (a' x)) \<Longrightarrow> bcorres_underlying t (filterM a b) (filterM a' b)"
   apply (induct b)
-  apply (simp add: filterM_def)
-  apply (wp | simp)+
+   apply (simp add: filterM_def)
+   apply (wp | simp)+
   done
 
 lemma option_rec_bcorres_underlying[wp_split]:
   "(\<And>x y. bcorres_underlying t (g x y) (g' x y)) \<Longrightarrow> (\<And>x. bcorres_underlying t (f x) (f' x))
     \<Longrightarrow> bcorres_underlying t (rec_option f g a b) (rec_option f' g' a b)"
-  apply (cases a,simp+)
-  done
+  by (cases a,simp+)
 
 lemma bcorres_underlying_mapME[wp]: "(\<And>x. bcorres_underlying t (f x) (f' x)) \<Longrightarrow>  bcorres_underlying t (mapME f r) (mapME f' r)"
   apply (induct r)
-  apply (simp add: mapME_def sequenceE_def | wp)+
+   apply (simp add: mapME_def sequenceE_def | wp)+
   done
 
 lemma handle2_bcorres_underlying[wp]: "bcorres_underlying t f f' \<Longrightarrow>  (\<And>x. bcorres_underlying t (g x) (g' x)) \<Longrightarrow>  bcorres_underlying t (f <handle2> g) (f' <handle2> g')"
