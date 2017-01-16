@@ -49,7 +49,6 @@ lemma upto_enum_inc_1:
    apply simp
  done
 
-          "P s"
 lemma unat_of_nat_minus_1:
   "\<lbrakk>n < 2^len_of TYPE('a);n\<noteq> 0\<rbrakk> \<Longrightarrow> (unat (((of_nat n):: 'a :: len word) - 1)) = n - 1"
   apply (subst unat_minus_one)

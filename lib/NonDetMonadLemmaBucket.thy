@@ -2927,49 +2927,24 @@ lemma hoare_assume_preNF:
   "(\<And>s. P s \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!"
   by (metis validNF_alt_def)
 
-lemma monad_eq_split:
-  assumes tail:"\<And>r s. Q r s \<Longrightarrow> f r s = f' r s"
-  and hoare:   "\<lbrace>P\<rbrace>g\<lbrace>\<lambda>r s. Q r s\<rbrace>" "P s"
-  shows "(g>>=f) s = (g>>= f') s"
+lemma bexEI: "\<lbrakk>\<exists>x\<in>S. Q x; \<And>x. \<lbrakk>x \<in> S; Q x\<rbrakk> \<Longrightarrow> P x\<rbrakk> \<Longrightarrow> \<exists>x\<in>S. P x" by blast
+
+lemma monad_eq_split: 
+  assumes "\<And>r s. Q r s \<Longrightarrow> f r s = f' r s"
+          "\<lbrace>P\<rbrace> g \<lbrace>\<lambda>r s. Q r s\<rbrace>"
+          "P s"
+  shows "(g >>= f) s = (g >>= f') s"
 proof -
-  have pre: "\<And>aa bb. \<lbrakk>(aa, bb) \<in> fst (g s)\<rbrakk> \<Longrightarrow> Q aa bb"
-  using hoare
-  apply (clarsimp simp:valid_def)
-  apply (erule_tac x = s in allE)
-  apply simp
-  apply (drule bspec)
-   apply simp
-  apply simp
-  done
+  have pre: "\<And>rv s'. \<lbrakk>(rv, s') \<in> fst (g s)\<rbrakk> \<Longrightarrow> f rv s' = f' rv s'"
+    using assms unfolding valid_def
+    by (erule_tac x=s in allE) auto
   show ?thesis
-  apply (simp add:bind_def image_def)
+  apply (simp add: bind_def image_def)
   apply (intro conjI)
-   apply (rule set_eqI)+
-   apply (clarsimp simp:Union_eq)
-   apply (rule iffI)
-    apply clarsimp
-    apply (rule_tac x=x in exI)
-    apply (clarsimp simp: tail[OF pre])
-    apply (rule exI)
-    apply (rule_tac x = "(aa,bb)" in bexI)
-     apply simp
-    apply clarsimp+
-   apply (rule_tac x=x in exI)
-   apply (clarsimp simp: tail[symmetric,OF pre])
-   apply (rule exI)
-   apply (rule_tac x = "(aa,bb)" in bexI)
-    apply simp
-   apply clarsimp
-  apply (rule iffI)
-   apply (clarsimp simp: tail[OF pre])
-   apply (rule exI)
-   apply (rule_tac x = "(aa,b)" in bexI)
-    apply simp
-   apply (clarsimp simp: tail[symmetric,OF pre])+
-  apply (rule exI)
-  apply (rule_tac x = "(aa,b)" in bexI)
-   apply simp
-  apply clarsimp
+   apply (rule set_eqI)
+   apply (clarsimp simp: Union_eq)
+   apply (rule iffI; elim exEI conjE; simp; elim exEI bexEI; clarsimp simp: pre)
+  apply (rule iffI; cases "snd (g s)"; simp; elim exEI bexEI; clarsimp simp: pre)
   done
 qed
 
