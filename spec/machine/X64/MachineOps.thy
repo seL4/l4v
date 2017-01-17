@@ -331,12 +331,12 @@ where
 definition
 numIOAPICs :: "machine_word"
 where
-"numIOAPICs \<equiv> error []"
+"numIOAPICs \<equiv> 1" (* FIXME x64: bc adrian said so *)
 
 definition
 ioapicIRQLines :: "machine_word"
 where
-"ioapicIRQLines \<equiv> error []"
+"ioapicIRQLines \<equiv> 24"
 
 (* FIXME x64: technically this is defined in c and should be here *)
 consts'

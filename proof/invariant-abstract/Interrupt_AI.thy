@@ -39,18 +39,21 @@ where
             \<and> cte_wp_at (interrupt_derived cap) cte_ptr s
             \<and> s \<turnstile> cap \<and> is_ntfn_cap cap)"
 
+consts
+  arch_irq_control_inv_valid :: "arch_irq_control_invocation \<Rightarrow> ('a :: state_ext) state \<Rightarrow> bool"
 
 primrec
-  irq_control_inv_valid :: "irq_control_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  irq_control_inv_valid :: "irq_control_invocation \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
 where
-  "irq_control_inv_valid (Invocations_A.ArchIRQControl ivk) = \<bottom>"
+  "irq_control_inv_valid (Invocations_A.ArchIRQControl ivk) = (arch_irq_control_inv_valid ivk)"
 | "irq_control_inv_valid (Invocations_A.IRQControl irq ptr ptr') =
        (cte_wp_at (op = cap.NullCap) ptr and
         cte_wp_at (op = cap.IRQControlCap) ptr'
         and ex_cte_cap_wp_to is_cnode_cap ptr and real_cte_at ptr
         and K (irq \<le> maxIRQ))"
 
-locale Interrupt_AI =
+
+locale Interrupt_AI =  
   fixes state_ext_type1 :: "('a :: state_ext) itself"
   assumes decode_irq_control_invocation_inv[wp]:
     "\<And>(P  :: 'a state \<Rightarrow> bool) args slot label caps.
@@ -108,7 +111,7 @@ locale Interrupt_AI =
     "\<And> f irq. empty_fail (maskInterrupt f irq)"
   assumes handle_interrupt_invs [wp]: 
     "\<And> irq. \<lbrace>invs :: 'a state \<Rightarrow> bool\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
-    
+
 crunch inv[wp]: decode_irq_handler_invocation "P"
   (simp: crunch_simps)
 
