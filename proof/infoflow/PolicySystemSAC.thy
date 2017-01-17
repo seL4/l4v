@@ -163,11 +163,11 @@ lemma abd_reads_all_bw : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> {partitio
   (* non refl cases *)
   apply (case_tac "xa \<in> RMControls")
     apply (rule reads_all_rm_controlled_subjects, rule abd_reads_rm, simp, simp)
-  apply (erule_tac a = xa in insertE, simp add:RMControls_def)
+  apply (erule_tac a = xa in insertE, simp)
   apply (erule_tac a = xa in insertE, simp only:, rule abd_reads_rm, simp)
-  apply (erule_tac a = xa in insertE, simp add:RMControls_def)
-  apply (erule_tac a = xa in insertE, simp add:RMControls_def)
-  apply (erule_tac a = xa in insertE, simp add:RMControls_def)
+  apply (erule_tac a = xa in insertE, simp)
+  apply (erule_tac a = xa in insertE, simp)
+  apply (erule_tac a = xa in insertE, simp)
   apply (erule_tac a = xa in insertE, simp only:, rule abdrm_reads_ep, simp, blast)
   apply (erule_tac a = xa in insertE, simp only:, rule abdrm_reads_sc, simp, blast)
   apply (erule_tac a = xa in insertE, simp only:, rule abd_reads_c, simp)
@@ -625,7 +625,7 @@ lemma ep_affects: "subjectAffects SACAuthGraph (partition_label EP) = {partition
   (* forward *)
   apply (rule subsetI)
   apply (erule subjectAffects.induct)
-  by (simp add:SACAuthGraph_def, blast?)+
+  by (simp, blast?)+
 
 subsection {* NTFN1,2,3 *}
 
@@ -899,8 +899,6 @@ lemma t_affects : "subjectAffects SACAuthGraph (partition_label T) = {partition_
 
 subsection {* Policy *}
 
-declare SACAuthGraph_def [simp del] 
-
 lemmas SAC_reads = sc_reads ep_reads c_reads rm_reads r_reads abd_reads ntfn123_reads t_reads
 
 lemmas SAC_affects = sc_affects ep_affects c_affects rm_affects r_affects abd_affects ntfn1_affects ntfn2_affects ntfn3_affects t_affects
@@ -961,7 +959,7 @@ lemma SAC_policyFlows : "policyFlows SACAuthGraph = SACPolicyFlows"
     (* scheduler flows to all *)
     apply (simp add:PSched_flows_to_all)
     (* all subjects flow to all subjects *)
-    apply (clarify, simp del:SACAuthGraph_def)
+    apply (clarify, simp)
     apply (rule policy_affects)
     apply (case_tac l, case_tac[1-12] k, auto simp:SAC_partsSubjectAffects_T SAC_partsSubjectAffects_exceptT)
 done

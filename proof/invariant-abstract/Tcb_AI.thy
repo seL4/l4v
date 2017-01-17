@@ -81,19 +81,16 @@ lemma setup_reply_master_reply_master[wp]:
   "\<lbrace>valid_objs and tcb_at t\<rbrace> setup_reply_master t
    \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t) (t, tcb_cnode_index 2)\<rbrace>"
   apply (simp add: setup_reply_master_def)
-  apply (wp set_cap_cte_wp_at')
-  apply (rule hoare_strengthen_post, rule get_cap_sp)
-  apply clarsimp
-  apply (frule(1) cte_wp_tcb_cap_valid[simplified cte_wp_at_eq_simp])
-  apply (clarsimp simp: tcb_cap_valid_def st_tcb_def2)
-  apply (auto simp: cte_wp_at_caps_of_state is_cap_simps)
+  apply (wp set_cap_cte_wp_at' get_cap_wp)
+  apply (auto simp: tcb_cap_valid_def st_tcb_def2 cte_wp_at_caps_of_state is_cap_simps
+              dest: tcb_cap_valid_caps_of_stateD)
   done
 
 lemma setup_reply_master_has_reply[wp]:
   "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> setup_reply_master t' \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
   apply (simp add: has_reply_cap_def cte_wp_at_caps_of_state
                    setup_reply_master_def)
-  apply (rule hoare_pre, wp get_cap_wp)
+  apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state elim!: rsubst[where P=P])
   apply (intro arg_cong[where f=Ex] ext)
   apply auto
@@ -112,7 +109,6 @@ lemma restart_invs[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace> restart t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: restart_def)
   apply (rule hoare_seq_ext [OF _ gts_sp])
-  apply (rule hoare_pre)
   apply (wp sts_invs_minor cancel_ipc_ex_nonz_cap_to_tcb
             hoare_vcg_disj_lift cancel_ipc_simple2 
        | simp add: if_apply_def2
@@ -136,10 +132,7 @@ lemma restart_tcb[wp]:
 lemma copyAreaToRegs_typ_at:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> copyAreaToRegs regs a b \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   apply (simp add: copyAreaToRegs_def)
-  apply (wp thread_set_typ_at)
-   apply (rule mapM_wp [where S=UNIV, simplified])
-   apply (simp add: load_word_offs_def)
-   apply wp
+  apply (wp thread_set_typ_at mapM_wp')
   done
 
 lemma copyAreaToRegs_tcb'[wp]:
@@ -149,9 +142,7 @@ lemma copyAreaToRegs_tcb'[wp]:
 lemma copyRegsToArea_typ_at:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> copyRegsToArea regs a b \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   apply (simp add: copyRegsToArea_def)
-  apply (wp zipWithM_x_inv)
-   apply simp
-  apply wp
+  apply (wpsimp wp: zipWithM_x_inv)
   done
 
 lemma copyRegsToArea_tcb'[wp]:
@@ -162,20 +153,14 @@ lemma copyRegsToArea_tcb'[wp]:
 lemma copyRegsToArea_invs[wp]:
   "\<lbrace>invs\<rbrace> copyRegsToArea regs a b \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: copyRegsToArea_def)
-  apply (wp zipWithM_x_inv)
-   apply simp
-  apply wp
+  apply (wpsimp wp: zipWithM_x_inv)
   done
 
 
 lemma copyAreaToRegs_invs[wp]:
   "\<lbrace>invs and tcb_at b\<rbrace> copyAreaToRegs regs a b \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: copyAreaToRegs_def)
-  apply wp
-    apply (rule thread_set_invs_trivial, (simp add: tcb_cap_cases_def)+)
-   apply (rule mapM_wp [where S=UNIV, simplified])
-   apply wp
-  apply simp
+  apply (wpsimp wp: mapM_wp' thread_set_invs_trivial simp: tcb_cap_cases_def)
   done
 
 
@@ -201,7 +186,7 @@ lemma writereg_invs:
   "\<lbrace>invs and tcb_at dest and ex_nonz_cap_to dest\<rbrace>
      invoke_tcb (tcb_invocation.WriteRegisters dest resume values arch)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (clarsimp | rule conjI | wp)+
+  by (wpsimp|rule conjI)+
 
 lemma copyreg_invs:
   "\<lbrace>invs and tcb_at src and tcb_at dest and ex_nonz_cap_to dest and
@@ -328,26 +313,11 @@ lemma hf_cte_at[wp]:
   by (wp valid_cte_at_typ)
 
 
-lemma do_ipc_transfer_cte_at[wp]:
-  "\<lbrace>cte_at p\<rbrace> do_ipc_transfer s ep b g r \<lbrace>\<lambda>_. cte_at p\<rbrace>"
-  by (wp valid_cte_at_typ)
-
-
 lemma cancel_all_ipc_tcb:
   "\<lbrace>tcb_at t\<rbrace> cancel_all_ipc ptr \<lbrace>\<lambda>_. tcb_at t\<rbrace>"
   by (simp add: tcb_at_typ, wp cancel_all_ipc_typ_at)
 
-
-lemma get_notification_sp:
-  "\<lbrace>P\<rbrace> get_notification p \<lbrace>\<lambda>ntfn. ko_at (Notification ntfn) p and P\<rbrace>"
-  apply (simp add: get_notification_def)
-  apply wp
-   prefer 2
-   apply (rule get_object_sp)
-  apply (case_tac kobj)
-  apply (simp|wp)+
-  done
-
+lemmas get_notification_sp = get_ntfn_sp
 
 lemma thread_set_valid_objs':
   "\<lbrace>valid_objs and (\<lambda>s. \<forall>p t. valid_tcb p t s \<longrightarrow> valid_tcb p (f t) s)\<rbrace>
@@ -496,33 +466,32 @@ next
   case (2 slot exposed s')
   note hyps = "2.hyps"[simplified slot_rdcall.simps rec_del_call.simps simp_thms]
   show ?case
-    apply (simp add: split_def cong: if_cong)
-    apply (rule hoare_pre_spec_validE)
-     apply (wp hyps, simp+)
-          apply ((wp irq_state_independent_AI preemption_point_inv | simp)+)[1]
-         apply (simp only: simp_thms)
-         apply (wp hyps, simp+)
-        apply wp
-       apply (rule hoare_strengthen_post)
-        apply (rule hoare_vcg_conj_lift)
-         apply (rule finalise_cap_cases[where slot=slot])
-        apply (rule hoare_vcg_conj_lift)
-         apply (rule finalise_cap_equal_cap[where sl=slot])
-        apply (rule finalise_cap_not_cte_wp_at[where P=P, OF x])
-       apply (clarsimp simp: cte_wp_at_caps_of_state)
-       apply (erule disjE)
-        apply clarsimp
-       apply (clarsimp simp: is_cap_simps ball_ran_eq)
-       apply (subgoal_tac "P rv")
-        apply (case_tac rv, simp_all add: fst_cte_ptrs_def)[1]
-          apply (simp add: z)
-         apply (simp add: y)
-        apply (simp split: option.split_asm, simp_all add: w)[1]
-       apply (cases slot, fastforce)
-      apply (simp add: is_final_cap_def)
-      apply (wp get_cap_wp)
-    apply clarsimp
-    done
+  apply (simp add: split_def cong: if_cong)
+  apply (wp hyps, simp+)
+       apply ((wp irq_state_independent_AI preemption_point_inv | simp)+)[1]
+      apply (simp only: simp_thms)
+      apply (wp hyps, simp+)
+     apply wp+
+    apply (rule hoare_strengthen_post)
+     apply (rule hoare_vcg_conj_lift)
+      apply (rule finalise_cap_cases[where slot=slot])
+     apply (rule hoare_vcg_conj_lift)
+      apply (rule finalise_cap_equal_cap[where sl=slot])
+     apply (rule finalise_cap_not_cte_wp_at[where P=P, OF x])
+    apply (clarsimp simp: cte_wp_at_caps_of_state)
+    apply (erule disjE)
+     apply clarsimp
+    apply (clarsimp simp: is_cap_simps ball_ran_eq)
+    apply (subgoal_tac "P rv")
+     apply (case_tac rv, simp_all add: fst_cte_ptrs_def)[1]
+       apply (simp add: z)
+      apply (simp add: y)
+     apply (simp split: option.split_asm, simp_all add: w)[1]
+    apply (cases slot, fastforce)
+   apply (simp add: is_final_cap_def)
+   apply (wp get_cap_wp)+
+  apply clarsimp
+  done
 next
   case (3 ptr bits n slot s')
   show ?case
@@ -618,8 +587,7 @@ lemma out_no_cap_to_trivial:
          option_update_thread a f t
       \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
   apply (simp add: no_cap_to_obj_with_diff_ref_def)
-  apply (wp hoare_vcg_const_Ball_lift out_cte_wp_at_trivialT)
-  apply assumption
+  apply (wpsimp wp: hoare_vcg_const_Ball_lift out_cte_wp_at_trivialT)
   done
 
 lemmas thread_set_no_cap_to_trivial = thread_set_no_cap_obj_ref_trivial
@@ -735,8 +703,7 @@ lemma update_mcpriority_valid_tcb[simp]:
 lemma set_mcpriority_valid_objs[wp]:
   "\<lbrace>invs\<rbrace> set_mcpriority t x \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   unfolding set_mcpriority_def
-  apply (rule hoare_pre)
-   apply (wp thread_set_cte_at ts_cur thread_set_valid_objs')
+  apply (wp thread_set_cte_at thread_set_valid_objs')
   apply (simp add: Invariants_AI.invs_valid_objs)
   done
 
@@ -845,6 +812,8 @@ lemma unbind_notification_has_reply[wp]:
 
 
 lemma bind_notification_invs:
+  notes hoare_pre [wp_pre del]
+  shows
   "\<lbrace>bound_tcb_at (op = None) tcbptr 
     and obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> (ntfn_bound_tcb ntfn = None) 
                            \<and> (\<forall>q. ntfn_obj ntfn \<noteq> WaitingNtfn q)) ntfnptr
@@ -1102,7 +1071,7 @@ lemma (in Tcb_AI) decode_set_ipc_wf[wp]:
   apply (rule hoare_pre, wp check_valid_ipc_buffer_wp)
      apply simp
      apply (wp derive_cap_valid_cap hoare_drop_imps)[1]
-    apply wp
+    apply wp+
   apply (clarsimp simp: neq_Nil_conv)
   done
 
@@ -1313,7 +1282,7 @@ lemma decode_tcb_inv_wf:
    apply wpc
    apply (wp_trace decode_tcb_conf_wf decode_readreg_wf
              decode_writereg_wf decode_copyreg_wf
-             decode_bind_notification_wf decode_unbind_notification_wf decode_set_priority_wf)
+             decode_bind_notification_wf decode_unbind_notification_wf decode_set_priority_wf)+
   apply (clarsimp simp: real_cte_at_cte)
   apply (fastforce simp: real_cte_at_not_tcb_at)
   done

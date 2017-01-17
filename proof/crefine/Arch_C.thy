@@ -478,7 +478,7 @@ shows
                 apply simp
                apply (clarsimp simp: option_to_ptr_def option_to_0_def)
               apply (clarsimp simp: asid_high_bits_def)
-             apply wp
+             apply wp+
             apply (strengthen valid_pspace_mdb' vp_strgs' valid_pspace_valid_objs')
             apply (clarsimp simp: is_simple_cap'_def isCap_simps conj_comms placeNewObject_def2)
             apply (wp createObjects_valid_pspace'[where ty="Inl (KOArch (KOASIDPool f))" and sz = pageBits]
@@ -826,7 +826,7 @@ lemma decodeARMPageTableInvocation_ccorres:
                   apply (rule ccorres_alternative2)
                   apply (rule ccorres_return_CE, simp+)[1]
                  apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-                apply wp
+                apply wp+
               apply simp
               apply (vcg exspec=setThreadState_modifies)
              apply simp
@@ -1666,7 +1666,7 @@ lemma performPageInvocationMapPTE_ccorres:
       apply (clarsimp simp: valid_pte_slots'2_def del: disjCI)
       apply (erule disjE, simp_all add: unat_arith_simps)[1]
       apply (clarsimp simp: upt_conv_Cons[where i=0])
-     apply (wp valid_pte_slots_lift2)
+     apply (wp valid_pte_slots_lift2)+
    apply (clarsimp simp: pte_range_relation_def map_is_Nil_conv hd_map_simp
                          ptr_range_to_list_def valid_pte_slots'2_def
                          word_le_nat_alt power_increasing[where a="2 :: nat" and N=4, simplified])
@@ -2174,7 +2174,7 @@ lemma performPageInvocationRemapPTE_ccorres:
          apply simp
         apply (simp add: objBits_simps archObjSize_def)
        apply (simp add: typ_at_to_obj_at_arches[symmetric])
-       apply (wp mapM_x_wp_inv valid_pte_slots_lift2)
+       apply (wp mapM_x_wp_inv valid_pte_slots_lift2)+
      apply clarsimp
      apply (simp add: typ_at_to_obj_at_arches)
      apply (frule bspec, erule hd_in_set)
@@ -2642,7 +2642,7 @@ lemma decodeARMFrameInvocation_ccorres:
            apply (rule ccorres_alternative2)
            apply (rule ccorres_return_CE, simp+)[1]
           apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-         apply wp
+         apply wp+
        apply (vcg exspec=setThreadState_modifies)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr+             
@@ -3151,7 +3151,7 @@ lemma decodeARMFrameInvocation_ccorres:
                         apply (rule ccorres_alternative2)
                         apply (rule ccorres_return_CE, simp+)[1]
                        apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-                      apply (wp sts_invs_minor' valid_pte_slots_lift2)
+                      apply (wp sts_invs_minor' valid_pte_slots_lift2)+
                     apply simp
                     apply (vcg exspec=setThreadState_modifies)
                    apply simp
@@ -4086,10 +4086,10 @@ lemma Arch_decodeInvocation_ccorres:
                               list_case_If2 split_def
                          del: Collect_const)
               apply (simp add: if_1_0_0 from_bool_0 hd_conv_nth length_ineq_not_Nil
-                          del: Collect_const )
+                          del: Collect_const)
               apply (clarsimp simp: eq_Nil_null[symmetric] asid_high_bits_word_bits hd_conv_nth
                 ThreadState_Restart_def mask_def)
-              apply wp
+              apply wp+
             apply (simp add: cap_get_tag_isCap)
             apply (rule HoarePartial.SeqSwap)
              apply (rule_tac I="\<lbrace>Prop \<acute>ksCurThread \<acute>root\<rbrace>"

@@ -323,15 +323,16 @@ lemma kernelEntry_corres_C:
            apply simp
           apply (rule_tac P="\<top>" and P'="\<top>" in corres_inst)
           apply (clarsimp simp: prod_lift_def split: if_split)
-         apply wp
+         apply wp+
        apply (rule hoare_strengthen_post)
         apply (subst archTcbUpdate_aux2[symmetric])
         apply (rule threadSet_all_invs_triv'[where e=e])
        apply (clarsimp simp: all_invs'_def)
-       apply force
+       apply (rule exI, (rule conjI, assumption)+)
+       subgoal by force
       apply simp
       apply (rule hoare_post_taut[where P=\<top>])
-     apply wp
+     apply wp+
    apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def)
    apply fastforce
   done
@@ -427,13 +428,13 @@ lemma corres_dmo_getExMonitor_C:
              apply clarsimp
             apply (rule corres_modify)
             apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def cmachine_state_relation_def Let_def)
-           apply (wp hoare_TrueI)
+           apply (wp hoare_TrueI)+
          apply (rule corres_select_f')
           apply (clarsimp simp: getExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def get_def return_def modify_def put_def select_f_def)
          apply (clarsimp simp: getExMonitor_no_fail[simplified no_fail_def])
-        apply (wp hoare_TrueI)
+        apply (wp hoare_TrueI)+
       apply (clarsimp simp: corres_gets rf_sr_def cstate_relation_def cmachine_state_relation_def Let_def)
-     apply (wp hoare_TrueI)
+     apply (wp hoare_TrueI)+
   apply (rule TrueI conjI | clarsimp simp: getExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def get_def return_def modify_def put_def select_f_def)+
   done
 
@@ -451,9 +452,9 @@ lemma corres_dmo_setExMonitor_C:
          apply (rule corres_select_f')
           apply (clarsimp simp: setExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def get_def return_def modify_def put_def select_f_def)
          apply (clarsimp simp: setExMonitor_no_fail[simplified no_fail_def])
-        apply (wp hoare_TrueI)
+        apply (wp hoare_TrueI)+
       apply (clarsimp simp: corres_gets rf_sr_def cstate_relation_def cmachine_state_relation_def Let_def)
-     apply (wp hoare_TrueI)
+     apply (wp hoare_TrueI)+
   apply (rule TrueI conjI | clarsimp simp: setExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def get_def return_def modify_def put_def select_f_def)+
   done
 
@@ -753,7 +754,7 @@ lemma kernel_exit_corres_C:
        apply simp
       apply (rule_tac P="\<top>" and P'="\<top>" in corres_inst)
       apply (clarsimp simp: getCurThread_def rf_sr_def cstate_relation_def Let_def)
-     apply wp
+     apply wp+
    apply clarsimp+
   done
 
@@ -888,7 +889,7 @@ lemma c_to_haskell: "uop_nonempty uop \<Longrightarrow> global_automata_refine c
        apply (fastforce simp: full_invs_if'_def ex_abs_def)
       apply simp+
     apply (simp add: ct_running'_C)
-   apply wp
+   apply wp+
   apply (clarsimp simp: full_invs_if'_def)
   apply (clarsimp)
   apply (drule use_valid[OF _ kernelEntry_if_no_preempt]; simp)

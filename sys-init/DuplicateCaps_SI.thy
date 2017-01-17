@@ -109,6 +109,7 @@ lemma duplicate_cap_sep_helper:
    \<guillemotleft>si_cap_at t (map_of (zip [obj\<leftarrow>obj_ids. cnode_or_tcb_at obj spec] free_cptrs))
                 spec dev obj_id \<and>*
     si_cap_at t orig_caps spec dev obj_id \<and>* si_objects \<and>* R\<guillemotright> s\<rbrace>"
+  including no_pre
   apply (rule hoare_assume_pre)
   apply (clarsimp simp: duplicate_cap_def si_cap_at_def sep_conj_exists)
   apply (rule_tac x=free_cptr in hoare_exI)
@@ -181,7 +182,8 @@ lemma duplicate_caps_sep_helper:
     duplicate_caps spec orig_caps obj_ids free_cptrs
   \<lbrace>\<lambda>dup_caps.
     \<guillemotleft>si_caps_at t dup_caps spec dev {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
-     si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
+    si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
+  including no_pre
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: duplicate_caps_def si_caps_at_def)
   apply (wp)

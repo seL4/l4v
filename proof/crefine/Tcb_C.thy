@@ -13,17 +13,18 @@ imports Move Delete_C Ipc_C
 begin
 
 lemma asUser_obj_at' :
-  " \<lbrace> K(t\<noteq>t') and obj_at' P t' \<rbrace> asUser t f \<lbrace> \<lambda>_.  obj_at' (P::Structures_H.tcb \<Rightarrow> bool) t' \<rbrace>"
-  apply (simp add: asUser_def )
+  "\<lbrace> K(t\<noteq>t') and obj_at' P t' \<rbrace> asUser t f \<lbrace> \<lambda>_.  obj_at' (P::Structures_H.tcb \<Rightarrow> bool) t' \<rbrace>"
+  including no_pre
+  apply (simp add: asUser_def)
   apply wp
-  apply (simp add: split_def)
-  apply (wp threadSet_obj_at'_strongish) 
+    apply (simp add: split_def)
+    apply (wp threadSet_obj_at'_strongish)+
   apply (case_tac "t=t'")
    apply clarsimp
   apply clarsimp
   apply (rule hoare_drop_imps)+
   apply wp
-done
+  done
 
 
 lemma getObject_sched:
@@ -355,8 +356,10 @@ lemma getMRs_rel_state:
   apply (erule doMachineOp_state)
   done
 
+(* FIXME: move *)
 lemma setTCB_cur:
   "\<lbrace>cur_tcb'\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
+  including no_pre
   apply (wp cur_tcb_lift)
   apply (simp add: setObject_def split_def updateObject_default_def)
   apply wp
@@ -985,7 +988,7 @@ lemma restart_ccorres:
        apply (wp sts_valid_queues setThreadState_st_tcb)[1]
       apply (simp add: valid_tcb_state'_def)
       apply wp
-      apply (wp_once sch_act_wf_lift, wp tcb_in_cur_domain'_lift)
+      apply (wp_once sch_act_wf_lift, (wp tcb_in_cur_domain'_lift)+)
      apply (rule hoare_strengthen_post)
       apply (rule hoare_vcg_conj_lift)
        apply (rule delete_one_conc_fr.cancelIPC_invs)
@@ -1092,7 +1095,7 @@ lemma invokeTCB_CopyRegisters_ccorres:
              apply simp
             apply (ctac(no_vcg) add: getRestartPC_ccorres)
              apply (ctac add: setNextPC_ccorres)
-            apply wp
+            apply wp+
           apply (clarsimp simp: guard_is_UNIV_def)
          apply (rule ccorres_split_nothrow_novcg_dc)
             apply (rule ccorres_when[where R=\<top>])
@@ -1367,7 +1370,7 @@ lemma asUser_getMRs_rel:
      apply wp
      apply (simp del: fun_upd_apply)
      apply (wp getObject_tcb_wp)
-   apply (wp threadGet_wp)
+   apply (wp threadGet_wp)+
   apply (clarsimp simp del: fun_upd_apply)
   apply (drule obj_at_ko_at')+
   apply (clarsimp simp del: fun_upd_apply)
@@ -1508,12 +1511,12 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
                 apply (rule ccorres_return_CE, simp+)[1]
                apply wp
               apply (simp add: guard_is_UNIV_def)
-             apply wp
-             apply (simp del: hoare_post_taut)
+             apply wp+
+             apply simp
             apply (rule mapM_x_wp')
             apply (rule hoare_pre, wp)
             apply clarsimp
-           apply (simp del: hoare_post_taut)
+           apply simp
            apply wp
           apply (simp add: guard_is_UNIV_def)
          apply (rule hoare_drop_imps)
@@ -1521,8 +1524,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
          apply (wp mapM_x_wp')
           apply (rule hoare_pre, wp asUser_sysargs_rel)
           apply clarsimp
-         apply (rule hoare_pre, wp)
-         apply simp
+         apply wpsimp
         apply (simp add: guard_is_UNIV_def)
        apply (wp)
       apply vcg
@@ -2004,11 +2006,11 @@ shows
                 apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                 apply (rule allI, rule conseqPre, vcg)
                 apply (simp add: return_def)
-               apply wp
+               apply wp+
              apply (simp cong: rev_conj_cong)
              apply wp
              apply (wp asUser_inv mapM_wp' getRegister_inv
-                      asUser_get_registers[simplified] static_imp_wp)
+                      asUser_get_registers[simplified] static_imp_wp)+
             apply (rule hoare_strengthen_post, rule asUser_get_registers)
             apply (clarsimp simp: obj_at'_def genericTake_def
                                   frame_gp_registers_convs)
@@ -2966,7 +2968,7 @@ lemma decodeTCBConfigure_ccorres:
                                 apply (rule ccorres_cond_true_seq)
                                 apply (rule syscall_error_throwError_ccorres_n)
                                 apply (simp add: syscall_error_to_H_cases)
-                               apply wp
+                               apply wp+
                              apply (rule ccorres_rhs_assoc)+
                              apply csymbr
                              apply (simp del: Collect_const)
@@ -3986,7 +3988,7 @@ lemma decodeSetSpace_ccorres:
                   apply (rule ccorres_cond_true_seq)
                   apply (rule syscall_error_throwError_ccorres_n)
                   apply (simp add: syscall_error_to_H_cases)
-                 apply wp
+                 apply wp+
                apply (rule ccorres_rhs_assoc)+
                apply csymbr
               apply (simp add: tcb_cnode_index_defs[THEN ptr_add_assertion_positive[OF ptr_add_assertion_positive_helper]]
@@ -4074,7 +4076,7 @@ lemma decodeSetSpace_ccorres:
                            apply (rule ccorres_split_throws, rule ccorres_return_C_errorE, simp+)
                            apply vcg
                           apply simp
-                          apply (wp hoare_drop_imps)[1]
+                          apply (wp hoare_drop_imps)
                          apply (wp injection_wp_E [OF refl])
                         apply (simp add: Collect_const_mem cintr_def intr_and_se_rel_def
                                          all_ex_eq_helper syscall_error_rel_def

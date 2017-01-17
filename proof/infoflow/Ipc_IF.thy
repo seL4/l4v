@@ -223,7 +223,7 @@ lemma set_thread_state_ext_runnable_equiv_but_for_labels:
   apply (simp add: set_thread_state_ext_def)
   apply wp
      apply (rule hoare_pre_cont)
-    apply (wp gts_wp)
+    apply (wp gts_wp)+
   apply (force simp: st_tcb_at_def obj_at_def)
   done
 
@@ -233,7 +233,7 @@ lemma set_thread_state_runnable_equiv_but_for_labels:
     \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   unfolding set_thread_state_def
   apply (wp set_object_equiv_but_for_labels set_thread_state_ext_runnable_equiv_but_for_labels | simp add: split_def)+
-   apply (simp add: set_object_def, wp)
+   apply (simp add: set_object_def, wp+)
   apply (fastforce dest: get_tcb_not_asid_pool_at simp: st_tcb_at_def obj_at_def)
   done
 
@@ -266,8 +266,8 @@ lemma possible_switch_to_equiv_but_for_labels:
     \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   apply (simp add: possible_switch_to_def)
   apply (wp tcb_sched_action_equiv_but_for_labels)
-         apply (rule hoare_pre_cont)
-        apply wp
+          apply (rule hoare_pre_cont)
+         apply wp+
   apply (clarsimp simp: etcb_at_def split: option.splits)
   done
 
@@ -436,9 +436,9 @@ lemma sts_noop:
     apply (rule_tac x="tcb_state (the (get_tcb tcb x))" in monadic_rewrite_symb_exec)
        apply (wp gts_wp | simp)+
     apply (rule monadic_rewrite_symb_exec)
-       apply wp
+       apply wp+
     apply (rule monadic_rewrite_symb_exec)
-       apply wp
+       apply wp+
     apply (simp only: when_def)
     apply (rule monadic_rewrite_trans)
      apply (rule monadic_rewrite_if)
@@ -530,7 +530,7 @@ lemma cancel_ipc_to_blocked_nosts:
        apply (simp add: modify_modify)
        apply (rule monadic_rewrite_refl2)
        apply (fastforce simp add: simpler_modify_def o_def get_tcb_def)
-      apply (wp gts_wp)
+      apply (wp gts_wp)+
   apply (simp add: set_thread_state_def bind_assoc gets_the_def)
   apply (clarsimp simp add: pred_tcb_at_def receive_blocked_def obj_at_def is_tcb_def split: thread_state.splits)
   by (case_tac "tcb_state tcba";fastforce)
@@ -1337,7 +1337,7 @@ lemma mapM_ev''':
   shows "equiv_valid_inv D A (\<lambda> s. Q s \<and> (\<forall>x\<in>set lst. P x s)) (mapM m lst)"
   apply(rule mapM_ev)
   apply(rule equiv_valid_guard_imp[OF reads_res], simp+)
-  apply(wp inv, simp)
+  apply(wpsimp wp: inv)
   done
 
 lemma cancel_badged_sends_reads_respects:
@@ -2117,7 +2117,7 @@ next
      apply(wp)
        apply(erule conjE, erule subst, rule Cons.hyps)
       apply(clarsimp)
-      apply(wp set_extra_badge_globals_equiv)
+      apply(wp set_extra_badge_globals_equiv)+
          apply(rule Cons.hyps)
         apply(simp)
         apply(wp cap_insert_globals_equiv'')
@@ -2127,7 +2127,7 @@ next
          apply(simp add: whenE_def, rule conjI)
           apply(rule impI, wp)+
          apply(simp)+
-       apply wp
+       apply wp+
     apply(fastforce)
     done
 qed
@@ -2144,12 +2144,12 @@ lemma copy_mrs_globals_equiv:
   "\<lbrace>globals_equiv s and valid_ko_at_arm and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
     copy_mrs sender sbuf receiver rbuf n
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding copy_mrs_def
+  unfolding copy_mrs_def including no_pre
   apply(wp | wpc)+
     apply(rule_tac Q="\<lambda>_. globals_equiv s"
          in hoare_strengthen_post)
      apply(wp mapM_wp' | wpc)+
-      apply(wp store_word_offs_globals_equiv)
+      apply(wp store_word_offs_globals_equiv)+
      apply fastforce
     apply simp
    apply(rule_tac Q="\<lambda>_. globals_equiv s and valid_ko_at_arm and (\<lambda>sa. receiver \<noteq> idle_thread sa)"
@@ -2180,8 +2180,6 @@ lemma do_normal_transfer_globals_equiv:
      apply(wp | rule impI)+
   apply(clarsimp)
   done
-
-
 
 
 
@@ -2231,7 +2229,7 @@ lemma do_ipc_transfer_globals_equiv:
     and pspace_distinct and pspace_aligned and valid_global_objs and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
     do_ipc_transfer sender ep badge grant receiver
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding do_ipc_transfer_def
+  unfolding do_ipc_transfer_def including no_pre
   apply(wp do_normal_transfer_globals_equiv do_fault_transfer_globals_equiv | wpc)+
    apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_global_objs and
            (\<lambda>sa. receiver \<noteq> idle_thread sa) and
@@ -2260,10 +2258,10 @@ lemma send_ipc_globals_equiv:
          apply(fastforce)
         apply(wp set_thread_state_globals_equiv dxo_wp_weak | simp)+
         apply wpc
-      apply(wp do_ipc_transfer_globals_equiv)
+      apply(wp do_ipc_transfer_globals_equiv)+
     apply(clarsimp)
     apply(rule hoare_drop_imps)
-    apply(wp set_endpoint_globals_equiv)
+    apply(wp set_endpoint_globals_equiv)+
   apply(rule_tac Q="\<lambda>ep. ko_at (Endpoint ep) epptr and globals_equiv st and valid_objs 
         and valid_arch_state and valid_global_refs and pspace_distinct and pspace_aligned
         and valid_global_objs and (\<lambda>s. sym_refs (state_refs_of s)) and valid_idle"
@@ -2274,17 +2272,8 @@ lemma send_ipc_globals_equiv:
    apply(rule valid_ep_recv_dequeue')
     apply(simp)+
   apply (frule_tac x=xa in receive_endpoint_threads_blocked,simp+)
-  by (clarsimp simp add: valid_idle_def pred_tcb_at_def obj_at_def)
+  by (clarsimp simp add: valid_idle_def pred_tcb_at_def obj_at_def)+
 
-lemma valid_ep_recv_dequeue':
-  "\<lbrakk> ko_at (Endpoint (Structures_A.endpoint.RecvEP (t # ts))) epptr s;
-     valid_objs s\<rbrakk>
-     \<Longrightarrow> valid_ep (case ts of [] \<Rightarrow> Structures_A.endpoint.IdleEP
-                            | b # bs \<Rightarrow> Structures_A.endpoint.RecvEP ts) s"
-  unfolding valid_objs_def valid_obj_def valid_ep_def obj_at_def
-  apply (drule bspec)
-  apply (auto split: list.splits)
-  done
 
 lemma valid_ep_send_enqueue: "\<lbrakk>ko_at (Endpoint (SendEP (t # ts))) a s; valid_objs s\<rbrakk>
        \<Longrightarrow> valid_ep (case ts of [] \<Rightarrow> IdleEP | b # bs \<Rightarrow> SendEP (b # bs)) s"
@@ -2302,7 +2291,7 @@ lemma receive_ipc_globals_equiv:
      and pspace_aligned and valid_global_objs and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> 
      receive_ipc thread cap is_blocking
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding receive_ipc_def thread_get_def
+  unfolding receive_ipc_def thread_get_def including no_pre
   apply(wp)
    apply(simp add: split_def)
    apply(wp set_endpoint_globals_equiv set_thread_state_globals_equiv
@@ -2315,17 +2304,16 @@ lemma receive_ipc_globals_equiv:
             apply (wp gts_wp get_endpoint_sp | wpc)+
           apply (wp hoare_vcg_all_lift hoare_drop_imps)[1]
            apply(wp set_endpoint_globals_equiv | wpc)+
-      apply(wp set_thread_state_globals_equiv)
-     apply (wp get_ntfn_wp gbn_wp get_endpoint_wp as_user_globals_equiv | wpc | simp)+
+       apply(wp set_thread_state_globals_equiv)
+      apply (wp get_ntfn_wp gbn_wp get_endpoint_wp as_user_globals_equiv | wpc | simp)+
   apply (rule hoare_pre)
    apply(wpc)
               apply(rule fail_wp | rule return_wp)+
   by (auto intro: valid_arch_state_ko_at_arm valid_ep_send_enqueue
           simp: neq_Nil_conv cong: case_list_cons_cong)
 
+
 subsection "Notifications"
-
-
 
 lemma valid_ntfn_dequeue:
   "\<lbrakk> ko_at (Notification ntfn) ntfnptr s; ntfn_obj ntfn = (WaitingNtfn (t # ts));
@@ -2464,27 +2452,27 @@ lemma send_ipc_valid_global_objs:
     \<lbrace>\<lambda>_. valid_global_objs\<rbrace>"
   unfolding send_ipc_def
   apply(wp | wpc)+
-        apply(rule_tac Q="\<lambda>_. valid_global_objs" in hoare_strengthen_post)
-         apply(wp, simp, (wp dxo_wp_weak |simp)+)
-     apply(wpc)
-            apply(rule fail_wp | rule return_wp | wp)+
-    apply(simp)
-    apply(rule hoare_drop_imps)
-    apply(wp)
-  apply(rule_tac Q="\<lambda>_. valid_global_objs" in hoare_strengthen_post)
-   apply(wp, simp)
-   done
+         apply(rule_tac Q="\<lambda>_. valid_global_objs" in hoare_strengthen_post)
+          apply(wp, simp, (wp dxo_wp_weak |simp)+)
+      apply(wpc)
+             apply(rule fail_wp | rule return_wp | wp)+
+     apply(simp)
+     apply(rule hoare_drop_imps)
+     apply(wp)+
+   apply(rule_tac Q="\<lambda>_. valid_global_objs" in hoare_strengthen_post)
+    apply(wp, simp+)
+  done
 
 lemma send_fault_ipc_valid_global_objs:
   "\<lbrace>valid_global_objs \<rbrace> send_fault_ipc tptr fault
     \<lbrace>\<lambda>_. valid_global_objs\<rbrace>"
   unfolding send_fault_ipc_def
   apply(wp)
-    apply(simp add: Let_def)
-    apply(wp send_ipc_valid_global_objs | wpc)+
-   apply(rule_tac Q'="\<lambda>_. valid_global_objs" in hoare_post_imp_R)
-    apply(wp | simp)+
-    done
+     apply(simp add: Let_def)
+     apply(wp send_ipc_valid_global_objs | wpc)+
+    apply(rule_tac Q'="\<lambda>_. valid_global_objs" in hoare_post_imp_R)
+     apply(wp | simp)+
+  done
 
 crunch valid_ko_at_arm[wp]: send_ipc "valid_ko_at_arm"
   (wp: hoare_drop_imps hoare_vcg_if_lift2 dxo_wp_weak

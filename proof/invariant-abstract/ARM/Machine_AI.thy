@@ -223,10 +223,7 @@ lemma no_fail_resetTimer[wp]: "no_fail \<top> resetTimer"
 
 
 lemma loadWord_inv: "\<lbrace>P\<rbrace> loadWord x \<lbrace>\<lambda>x. P\<rbrace>"
-  apply (simp add: loadWord_def)
-  apply wp
-  apply simp
-  done
+  unfolding loadWord_def by wpsimp
 
 
 lemma getRestartPC_inv: "\<lbrace>P\<rbrace> getRestartPC \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -248,10 +245,7 @@ lemma getIFSR_inv: "\<lbrace>P\<rbrace> getIFSR \<lbrace>\<lambda>_. P\<rbrace>"
 lemma no_fail_cacheRangeOp[simp, wp]:
   assumes nf: "\<And>a b. no_fail \<top> (oper a b)"
   shows "no_fail \<top> (cacheRangeOp oper s e p)"
-  apply (simp add: cacheRangeOp_def mapM_x_mapM)
-  apply (rule no_fail_pre)
-   apply (wp_trace no_fail_mapM nf | wpc | clarsimp)+
-  done
+  by (simp add: cacheRangeOp_def mapM_x_mapM) (wpsimp wp: no_fail_mapM nf)
 
 lemma no_fail_cleanCacheRange_PoU[simp, wp]:
   "no_fail \<top> (cleanCacheRange_PoU s e p)"
@@ -487,8 +481,7 @@ lemma no_irq_mapM:
   apply (rule mapM_wp)
    prefer 2
    apply (rule order_refl)
-  apply wp
-  apply simp
+  apply (wp; simp)
   done
 
 
@@ -499,8 +492,7 @@ lemma no_irq_mapM_x:
   apply (rule mapM_x_wp)
    prefer 2
    apply (rule order_refl)
-  apply wp
-  apply simp
+  apply (wp; simp)
   done
   
 

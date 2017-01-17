@@ -202,7 +202,7 @@ lemma seL4_Page_Table_Map:
      [where check = True and Perror = \<top>,simplified])
                 apply fastforce
                apply (rule set_cap_wp)
-              apply wp[4]
+              apply (wp+)[4]
           apply (rule_tac P = "\<exists>asid'. iv = InvokePageTable (PageTableMap
             (PageTableCap ptr Real asid') (PageTableCap ptr Fake None)
             (cnode_id,pt_offset) (cdl_lookup_pd_slot pd_ptr vaddr))"
@@ -243,7 +243,7 @@ lemma seL4_Page_Table_Map:
            apply assumption
           apply clarsimp
          apply (rule hoare_vcg_E_elim)
-          apply wp[1]
+          apply wp
          apply wp
          apply (rule validE_validE_R)
          apply (rule hoare_weaken_preE[where P = \<top>])
@@ -254,7 +254,7 @@ lemma seL4_Page_Table_Map:
         apply (sep_solve)
        apply (simp add:lookup_extra_caps_def conj_comms mapME_singleton)
        apply (rule wp_no_exception_seq)
-        apply wp[1]
+        apply wp
        apply (rule lookup_cap_and_slot_rvu[where r = root_size
        and cap' = "PageDirectoryCap pd_ptr real_type None"])
       apply (rule hoare_pre)
@@ -268,35 +268,28 @@ lemma seL4_Page_Table_Map:
       hoare_vcg_imp_lift)
    apply clarsimp
    defer
-  apply clarsimp
-  using misc sz
-  apply (intro conjI impI allI,
-    simp_all add:
-    reset_cap_asid_simps2)
+   apply clarsimp
+   using misc sz
+   apply (intro conjI impI allI, simp_all add: reset_cap_asid_simps2)
         apply (sep_solve)
        apply simp
        apply sep_solve
-      apply (clarsimp simp:user_pointer_at_def Let_def
-        word_bits_def sep_conj_assoc)
+      apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def sep_conj_assoc)
       apply sep_solve
-     apply (clarsimp dest!:reset_cap_asid_simps2
-       simp:ep_related_cap_def)
-    apply (clarsimp simp:user_pointer_at_def Let_def
-          word_bits_def sep_conj_assoc)
+     apply (clarsimp dest!:reset_cap_asid_simps2 simp: ep_related_cap_def)
+    apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def sep_conj_assoc)
     apply (sep_solve)
-  apply (clarsimp dest!:reset_cap_asid_simps2
-       simp:ep_related_cap_def)
-  apply (clarsimp simp:user_pointer_at_def Let_def
-          word_bits_def sep_conj_assoc)
-  apply (sep_solve)
+   apply (clarsimp dest!:reset_cap_asid_simps2 simp: ep_related_cap_def)
+   apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def sep_conj_assoc)
+   apply (sep_solve)
   apply (drule_tac x = "PageTableCap ptr Real None"  in spec)
-   apply clarsimp
+  apply clarsimp
   apply (erule impE)
    apply (rule_tac x = "PageDirectoryCap pd_ptr real_type None" in exI)
    apply simp
   apply clarsimp
- apply (sep_solve)
-done
+  apply (sep_solve)
+  done
 
 lemma seL4_Section_Map_wp:
   notes split_paired_Ex[simp del]
@@ -326,8 +319,7 @@ lemma seL4_Section_Map_wp:
     \<and>* (cnode_id, pd_offset) \<mapsto>c (PageDirectoryCap pd_ptr real_type None)
     \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size)
     \<and>* R \<guillemotright> s \<rbrace>"
-  apply (simp add:seL4_Page_Map_def sep_state_projection2_def
-   del:split_paired_Ex)
+  apply (simp add:seL4_Page_Map_def sep_state_projection2_def)
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
    apply (rule do_kernel_op_pull_back)
@@ -335,7 +327,7 @@ lemma seL4_Section_Map_wp:
      [where check = True and Perror = \<top>,simplified])
                  apply fastforce
                 apply (rule set_cap_wp)
-               apply wp[4]
+               apply (wp+)[4]
            apply (rule_tac P = "\<exists>asid'. iv = InvokePage
              (PageMap (FrameCap dev frame_ptr rights n Real asid')
              (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) (cnode_id,frame_offset)
@@ -380,7 +372,7 @@ lemma seL4_Section_Map_wp:
          in hoare_post_impErr[rotated -1])
           apply assumption
          apply (rule hoare_vcg_E_elim)
-          apply wp[1]
+          apply wp
          apply wp
          apply (rule validE_validE_R)
          apply (rule hoare_weaken_preE[where P = \<top>])
@@ -474,7 +466,7 @@ lemma seL4_Page_Map_wp:
      [where check = True and Perror = \<top>,simplified])
                  apply fastforce
                 apply (rule set_cap_wp)
-               apply wp[4]
+               apply (wp+)[4]
            apply (rule_tac P = "\<exists>asid'. iv = InvokePage
              (PageMap (FrameCap dev frame_ptr rights n Real asid')
              (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) (cnode_id,frame_offset)
@@ -521,7 +513,7 @@ lemma seL4_Page_Map_wp:
          in hoare_post_impErr[rotated -1])
           apply assumption
          apply (rule hoare_vcg_E_elim)
-          apply wp[1]
+          apply wp
          apply wp
          apply (rule validE_validE_R)
          apply (rule_tac P = "<P>" for P in hoare_weaken_preE)
@@ -543,32 +535,30 @@ lemma seL4_Page_Map_wp:
       hoare_vcg_imp_lift)
    apply clarsimp
    defer
-  apply clarsimp
-  using misc sz
-  apply (intro conjI impI allI, simp_all add: reset_cap_asid_simps2)
+   apply clarsimp
+   using misc sz
+   apply (intro conjI impI allI, simp_all add: reset_cap_asid_simps2)
          apply (sep_solve)
         apply (simp add:cdl_lookup_pd_slot_def)
         apply sep_solve
        apply simp
        apply sep_solve
-      apply (clarsimp simp:user_pointer_at_def Let_def
-        word_bits_def sep_conj_assoc)
+      apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def sep_conj_assoc)
       apply sep_solve
-     apply (clarsimp dest!:reset_cap_asid_simps2
-       simp:ep_related_cap_def)
+     apply (clarsimp dest!:reset_cap_asid_simps2 simp: ep_related_cap_def)
     apply (clarsimp simp:user_pointer_at_def Let_def
           word_bits_def sep_conj_assoc)
     apply (sep_solve)
    apply sep_solve
   apply clarsimp
   apply (drule_tac x = "FrameCap dev frame_ptr rights n Real None"  in spec)
-   apply clarsimp
+  apply clarsimp
   apply (erule impE)
    apply (rule_tac x = "PageDirectoryCap pd_ptr real_type None" in exI)
    apply simp
   apply clarsimp
- apply (sep_solve)
-done
+  apply (sep_solve)
+  done
 
 lemma decode_invocation_asid_pool_assign:
   "\<lbrace> \<lambda>s. (c = AsidPoolCap p base) \<rbrace>
@@ -622,9 +612,9 @@ lemma invoke_asid_pool_wp:
          apply simp
          apply (rule hoare_strengthen_post[OF set_cap_wp])
          apply (sep_solve)
-        apply wp
+        apply wp+
   apply clarsimp
-  apply (safe,fastforce+)
+  apply (safe; fastforce?)
    apply (subst (asm) set_split_single[where A = "(Collect (\<lambda>off. off < 2 ^ asid_low_bits))"])
     apply simp
    apply (subst (asm) sep.prod.union_disjoint)
@@ -675,7 +665,7 @@ lemma seL4_ASIDPool_Assign_wp:
    apply (rule call_kernel_with_intent_allow_error_helper[where check = True and Perror = \<top>,simplified])
                 apply fastforce
                apply (rule set_cap_wp)
-             apply wp[4]
+             apply (wp+)[4]
             apply (rule_tac P = "\<exists>x. x < 2 ^ asid_low_bits
               \<and> iv =  (InvokeAsidPool (Assign (base, x) (cnode_id,pd_offset) (p, x)))"
               in hoare_gen_asmEx)
@@ -703,7 +693,7 @@ lemma seL4_ASIDPool_Assign_wp:
           apply (rule decode_invocation_asid_pool_assign)
          apply (clarsimp simp:conj_comms lookup_extra_caps_def mapME_singleton)
          apply (rule wp_no_exception_seq)
-          apply wp[1]
+          apply wp
          apply (rule lookup_cap_and_slot_rvu[where r = root_size
            and cap' = "PageDirectoryCap pd Real None"])
         apply (rule hoare_pre)
@@ -727,7 +717,7 @@ lemma seL4_ASIDPool_Assign_wp:
    apply (sep_solve)
   apply clarsimp
   apply (drule_tac x = "AsidPoolCap p base" in spec)
-   apply clarsimp
+  apply clarsimp
   apply (erule impE)
    apply (rule_tac x = "PageDirectoryCap pd Real None" in exI)
    apply simp

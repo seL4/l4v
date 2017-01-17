@@ -343,13 +343,7 @@ lemmas corres_unify_failure =
 lemma ignoreFailure_wp[wp_split]:
   "\<lbrace>P\<rbrace> v \<lbrace>\<lambda>rv. Q ()\<rbrace>,\<lbrace>\<lambda>rv. Q ()\<rbrace> \<Longrightarrow>
     \<lbrace>P\<rbrace> ignoreFailure v \<lbrace>Q\<rbrace>"
-  apply (simp add: ignoreFailure_def const_def)
-  apply wp
-  apply assumption
-  done
-
-
-
+  by (simp add: ignoreFailure_def const_def) wp
 
 lemma ep'_cases_weak_wp:
   assumes "\<lbrace>P_A\<rbrace> a \<lbrace>Q\<rbrace>"
@@ -489,22 +483,16 @@ lemma corres_empty_on_failure:
     apply (rule corres_split_catch)
        apply (rule corres_trivial, simp)
       apply (erule corres_rel_imp)
-      apply (case_tac x)
-       apply simp
-      apply simp
-     apply wp
+      apply (case_tac x; simp)
+     apply wp+
    apply simp+
   done
 
 
 
 lemma emptyOnFailure_wp[wp]:
-  "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv. Q []\<rbrace>
-    \<Longrightarrow> \<lbrace>P\<rbrace> emptyOnFailure m \<lbrace>Q\<rbrace>"
-  apply (simp add: emptyOnFailure_def)
-  apply wp
-  apply assumption
-  done
+  "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv. Q []\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> emptyOnFailure m \<lbrace>Q\<rbrace>"
+  by (simp add: emptyOnFailure_def) wp
 
 lemma withoutPreemption_lift:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> withoutPreemption f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
@@ -569,7 +557,7 @@ lemma corres_const_on_failure:
       apply (case_tac xa)
        apply (clarsimp simp: const_def)
       apply simp
-     apply wp
+     apply wp+
    apply simp+
   done
 

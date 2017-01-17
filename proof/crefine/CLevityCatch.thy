@@ -141,7 +141,7 @@ lemma asUser_get_registers:
     apply (wp mapM_wp')
    apply clarsimp
    apply (erule(1) obj_at_conj')
-  apply (rule hoare_pre, wp)
+  apply (wp)
    apply (simp add: asUser_def split_def threadGet_def)
    apply (wp getObject_tcb_wp)
   apply (clarsimp simp: getRegister_def simpler_gets_def

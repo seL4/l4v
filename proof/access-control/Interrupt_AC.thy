@@ -30,10 +30,8 @@ lemma invoke_irq_control_pas_refined:
      invoke_irq_control irq_ctl_inv
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (cases irq_ctl_inv, simp_all add: arch_invoke_irq_control_def)
-  apply (wp cap_insert_pas_refined | simp)+
-   apply (clarsimp simp add: clas_no_asid cap_links_irq_def
-                             authorised_irq_ctl_inv_def aag_cap_auth_def)
-  apply simp
+  apply (wpsimp wp: cap_insert_pas_refined)
+  apply (clarsimp simp: clas_no_asid cap_links_irq_def authorised_irq_ctl_inv_def aag_cap_auth_def)
   done
 
 definition
@@ -90,7 +88,7 @@ lemma decode_irq_control_invocation_authorised [wp]:
    apply (simp add: Let_def split del: if_split cong: if_cong)
    apply (wp whenE_throwError_wp hoare_vcg_imp_lift hoare_drop_imps
               | strengthen  aag_Control_owns_strg
-              | simp add: o_def del: hoare_post_taut hoare_True_E_R)+
+              | simp add: o_def del: hoare_True_E_R)+
   apply (cases args, simp_all)
   apply (cases caps, simp_all)
     apply (simp add: ucast_mask_drop)

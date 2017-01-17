@@ -476,7 +476,7 @@ proof -
           apply (rule corres_gets_the)
           apply simp
           apply (rule corres_trivial, rule gets_symb_exec_l)
-         apply (wp set_cap_caps_of_state2 set_cap_idle)
+         apply (wp set_cap_caps_of_state2 set_cap_idle)+
      apply clarsimp
      apply (clarsimp simp: cte_wp_at_caps_of_state
                            caps_of_state_transform_opt_cap
@@ -522,18 +522,18 @@ lemma delete_cap_corres:
   apply (simp add:bindE_assoc)
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE[OF _ dcorres_finalise_slot])
-    apply (clarsimp simp:bindE_assoc when_def)
-    apply (rule empty_slot_corres)
-    apply wp
+      apply (clarsimp simp:bindE_assoc when_def)
+      apply (rule empty_slot_corres)
+     apply wp+
     apply (rule validE_validE_R)
     apply (simp add:validE_def weak_valid_mdb_def)
     apply (rule hoare_drop_imp)
     apply (rule_tac Q = "\<lambda>r. invs and not_idle_thread a and valid_etcbs" in hoare_strengthen_post)
-      apply (wp rec_del_invs)
-      apply (simp add:not_idle_thread_def validE_def)
-      apply wp
-      apply (clarsimp simp:invs_def valid_state_def valid_mdb_def)
-    apply clarsimp+
+     apply (wp rec_del_invs)
+     apply (simp add:not_idle_thread_def validE_def)
+     apply wp
+    apply (clarsimp simp:invs_def valid_state_def valid_mdb_def)
+   apply clarsimp+
   apply (simp add:cap_table_at_cte_at)
   apply (clarsimp simp:emptyable_def obj_at_def is_cap_table_def)
   apply (clarsimp simp:is_tcb_def split:Structures_A.kernel_object.splits)
@@ -551,18 +551,18 @@ lemma delete_cap_corres':
   apply (simp add:bindE_assoc)
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE[OF _ dcorres_finalise_slot])
-    apply (clarsimp simp:bindE_assoc when_def)
-    apply (rule empty_slot_corres)
-    apply wp
+      apply (clarsimp simp:bindE_assoc when_def)
+      apply (rule empty_slot_corres)
+     apply wp+
     apply (rule validE_validE_R)
     apply (simp add:validE_def weak_valid_mdb_def)
     apply (rule hoare_drop_imp)
     apply (rule_tac Q = "\<lambda>r. invs and not_idle_thread a and valid_etcbs" in hoare_strengthen_post)
-      apply (wp rec_del_invs)
-      apply (simp add:not_idle_thread_def validE_def)
-      apply wp
-      apply (clarsimp simp:invs_def valid_state_def valid_mdb_def)
-    apply (clarsimp simp:not_idle_thread_def)+
+     apply (wp rec_del_invs)
+     apply (simp add:not_idle_thread_def validE_def)
+     apply wp
+    apply (clarsimp simp:invs_def valid_state_def valid_mdb_def)
+   apply (clarsimp simp:not_idle_thread_def)+
   done
 
 definition boolean_exception :: "'c + bool \<Rightarrow> 'a+'b \<Rightarrow> bool"
@@ -1029,7 +1029,7 @@ lemma dcorres_ep_cancel_badge_sends:
            apply (clarsimp simp: valid_etcbs_2_def)
            apply (drule_tac x=ptr in spec)
            apply (clarsimp simp: st_tcb_at_kh_def obj_at_kh_def st_tcb_at_def obj_at_def)
-          apply wp
+          apply wp+
         apply (clarsimp)
         apply (rule corres_guard_imp)
           apply (rule corres_split_noop_rhs[OF _ corres_dummy_set_sync_ep])
@@ -1328,29 +1328,7 @@ lemma dcorres_clear_object_caps_asid_pool:
 lemma valid_idle_invs_strg:
   "invs s \<longrightarrow> valid_idle s" by fastforce
 
-lemma store_hw_asid_idle[wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> store_hw_asid a xa \<lbrace>\<lambda>xb a. P (idle_thread a)\<rbrace>"
-  apply (simp add:store_hw_asid_def)
-  apply wp
-  apply (rule_tac Q = "\<lambda>r s. P (idle_thread s)" in hoare_strengthen_post)
-    apply wp
-  apply simp
-done
-
-lemma invalidate_hw_asid_enty_idle[wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> invalidate_hw_asid_entry xb \<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
- by (simp add:invalidate_hw_asid_entry_def | wp)+
-
-lemma invalidate_asid_idle[wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> invalidate_asid x \<lbrace>\<lambda>y s. P (idle_thread s)\<rbrace>"
-  by (simp add:invalidate_asid_def | wp)+
-
-crunch idle[wp] : flush_space "\<lambda>s. P (idle_thread s)"
 crunch idle[wp] : invalidate_tlb_by_asid "\<lambda>s. P (idle_thread s)"
-crunch idle[wp] : page_table_mapped  "\<lambda>s. P (idle_thread s)"
-crunch idle[wp] : store_pte "\<lambda>s. P (idle_thread s)"
-crunch idle[wp] : copy_global_mappings "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps  simp: crunch_simps)
 
 crunch st_tcb_at[wp]: invalidate_tlb_by_asid "st_tcb_at P thread"
 crunch st_tcb_at[wp] : copy_global_mappings "st_tcb_at P thread"
@@ -1358,16 +1336,7 @@ crunch st_tcb_at[wp] : copy_global_mappings "st_tcb_at P thread"
 
 lemma delete_asid_pool_idle [wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> ARM_A.delete_asid_pool p q\<lbrace>\<lambda>r s. P (idle_thread s)\<rbrace>"
-  apply (simp add:delete_asid_pool_def)
-  apply wp
-  apply (rule mapM_wp)
-  apply wp
-  apply (rule_tac Q = "\<lambda>r s. P (idle_thread s)" in hoare_strengthen_post)
-  apply (clarsimp simp:load_hw_asid_def find_free_hw_asid_def invalidate_asid_entry_def arm_context_switch_def get_hw_asid_def | wp | wpc)+
-  apply fastforce
-  apply wp
-  apply clarsimp
-done
+  by (rule delete_asid_pool_idle_thread)
 
 crunch idle [wp]: cancel_badged_sends "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps dxo_wp_weak filterM_preserved simp: crunch_simps)
@@ -1402,7 +1371,7 @@ lemma dcorres_storeWord_mapM_x_cvt:
       apply (rule_tac Cons.hyps)
       using Cons
       apply simp
-      apply wp
+      apply wp+
       using Cons
       apply fastforce
       apply (wp|clarsimp|force)+
@@ -1904,7 +1873,7 @@ lemma dcorres_thread_get_get_object_split:
         apply (drule opt_object_tcb, simp, simp add: not_idle_thread_def)
         apply (simp add: transform_tcb_def obj_tcb_def)
        apply (rule c)
-      apply wp
+      apply wp+
      apply clarsimp
     apply simp
    apply simp
@@ -2059,7 +2028,7 @@ lemma invoke_cnode_corres:
        apply (erule corres_if)
         apply (rule swap_cap_corres)
        apply (rule corres_split_nor [OF move_cap_corres move_cap_corres])
-        apply wp
+        apply wp+
        apply (simp add: cte_wp_at_caps_of_state not_idle_thread_def)
        apply (wp cap_move_caps_of_state)
       apply simp
@@ -2090,7 +2059,7 @@ lemma invoke_cnode_corres:
            apply (rule move_cap_corres)
           apply (rule corres_trivial[OF corres_free_fail])
          apply (simp add: transform_tcb_slot_simp)
-        apply (wp get_cap_wp)
+        apply (wp get_cap_wp)+
     apply (auto simp: transform_def transform_current_thread_def
                       ct_in_state_def not_idle_thread_def
                       cte_wp_at_caps_of_state
@@ -2148,7 +2117,7 @@ lemma decode_cnode_error_corres:
         apply (rule corres_trivial)
         apply (simp split: invocation_label.split list.split)
         apply auto[1]
-       apply wp
+       apply wp+
   apply (elim disjE, simp_all)
     apply (simp add: whenE_def)
    apply (clarsimp simp: whenE_def)
@@ -2196,7 +2165,7 @@ lemma lookup_slot_for_cnode_op_corres:
      apply clarsimp
      apply (rule corres_returnOk, rule refl)
     apply (clarsimp simp: neq_Nil_conv)
-   apply wp
+   apply wp+
   done
 
 lemma dcorres_ensure_empty:
@@ -2228,7 +2197,7 @@ lemma derive_cap_dummy:
      apply (rule corres_split [OF _ ensure_no_children_dummy, where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
        apply (clarsimp simp: corres_underlying_def lift_def return_def split: sum.splits)
        apply (fastforce simp: in_monad)
-      apply wp
+      apply wp+
     apply simp
    apply simp
   apply (simp add: liftME_def)
@@ -2294,7 +2263,8 @@ lemma derive_cap_dcorres:
         apply (rule dcorres_returnOk)
         apply simp
        apply (rule dcorres_ensure_no_children)
-      apply wp[2]
+      apply wp
+     apply wp
     apply simp
    apply fastforce
   apply (simp add: arch_derive_cap_def)
@@ -2534,9 +2504,9 @@ lemma decode_cnode_corres:
                                     apply (simp add:translate_cnode_invocation_def)
                                    apply simp
                                   apply (rule dcorres_throw)
-                                 apply wp
+                                 apply wp+
                                apply simp
-                              apply wp
+                              apply wp+
                              apply (rule hoare_post_imp_R[OF validE_validE_R])
                              apply (rule hoareE_TrueI[where P = \<top>])
                              apply (wp|simp)+
@@ -2608,7 +2578,8 @@ lemma decode_cnode_corres:
             apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
            apply (rule dcorres_returnOk)
            apply (simp add: translate_cnode_invocation_def)
-          apply wp[2]
+          apply wp
+         apply wp
         apply simp
        apply fastforce
       apply (clarsimp simp: defns split: splits)
@@ -2618,7 +2589,7 @@ lemma decode_cnode_corres:
            apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
           apply (rule dcorres_returnOk)
           apply (simp add: translate_cnode_invocation_def)
-         apply wp[2]
+         apply (wp+)[2]
        apply simp
       apply fastforce
      apply (clarsimp simp: defns split: splits)
@@ -2632,7 +2603,7 @@ lemma decode_cnode_corres:
             apply (rule dcorres_ensure_empty)
            apply (rule dcorres_returnOk)
            apply (simp add: translate_cnode_invocation_def)
-          apply (wp lsfco_not_idle)
+          apply (wp lsfco_not_idle)+
       apply simp
      apply fastforce
     apply (clarsimp simp: defns split: splits)
@@ -2734,7 +2705,7 @@ lemma decode_cnode_corres:
                              in hoare_post_imp_R)
          apply (wp lsfco_not_idle)
         apply (clarsimp simp:Invariants_AI.cte_wp_valid_cap)
-       apply (wp lsfco_not_idle)
+       apply (wp lsfco_not_idle)+
     apply simp
    apply fastforce
   apply (erule disjE)

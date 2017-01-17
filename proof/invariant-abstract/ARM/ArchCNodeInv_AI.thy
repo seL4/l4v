@@ -23,6 +23,7 @@ lemma set_cap_in_device_frame[wp]:
 (* unused *)
 lemma derive_cap_objrefs [CNodeInv_AI_assms]:
   "\<lbrace>\<lambda>s. P (obj_refs cap)\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> P (obj_refs rv)\<rbrace>,-"
+  including no_pre
   apply (cases cap, simp_all add: derive_cap_def is_zombie_def)
           apply ((wp ensure_no_children_inv | simp add: o_def | rule hoare_pre)+)[11]
   apply (rename_tac arch_cap)
@@ -31,21 +32,21 @@ lemma derive_cap_objrefs [CNodeInv_AI_assms]:
    apply (rename_tac word option)
    apply (case_tac option)
     apply simp
-    apply (rule hoare_pre, wp)
+    apply (rule hoare_pre, wp+)
    apply simp
-   apply (rule hoare_pre, wp)
+   apply (rule hoare_pre, wp+)
    apply (simp add: aobj_ref_cases)
   apply (rename_tac word option)
   apply (case_tac option, simp)
-   apply (rule hoare_pre, wp)
+   apply (rule hoare_pre, wp+)
   apply simp
   apply (rule hoare_pre, wp)
   apply clarsimp
   done
 
-
 lemma derive_cap_zobjrefs [CNodeInv_AI_assms]:
   "\<lbrace>\<lambda>s. P (zobj_refs cap)\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> P (zobj_refs rv)\<rbrace>,-"
+  including no_pre
   apply (cases cap, simp_all add: derive_cap_def is_zombie_def)
           apply ((wp ensure_no_children_inv | simp add: o_def | rule hoare_pre)+)[11]
   apply (rename_tac arch_cap)
@@ -54,13 +55,13 @@ lemma derive_cap_zobjrefs [CNodeInv_AI_assms]:
    apply (rename_tac option)
    apply (case_tac option)
     apply simp
-    apply (rule hoare_pre, wp)
+    apply (rule hoare_pre, wp+)
    apply simp
-   apply (rule hoare_pre, wp)
+   apply (rule hoare_pre, wp+)
    apply (simp add: aobj_ref_cases)
   apply (rename_tac option)
   apply (case_tac option, simp)
-   apply (rule hoare_pre, wp)
+   apply (rule hoare_pre, wp+)
   apply simp
   apply (rule hoare_pre, wp)
   apply clarsimp
@@ -611,7 +612,7 @@ next
     apply (rule hoare_pre_spec_validE)
      apply (wp replace_cap_invs | simp)+
         apply (erule finalise_cap_not_reply_master)
-       apply (wp "2.hyps", assumption+)
+       apply (wp "2.hyps")
          apply (wp preemption_point_Q | simp)+
          apply (wp preemption_point_inv, simp+)
          apply (wp preemption_point_Q)
@@ -625,7 +626,7 @@ next
                 | wp replace_cap_invs set_cap_sets final_cap_same_objrefs
                      set_cap_cte_cap_wp_to static_imp_wp
                 | erule finalise_cap_not_reply_master)+
-       apply (wp hoare_vcg_const_Ball_lift)
+       apply (wp hoare_vcg_const_Ball_lift)+
       apply (rule hoare_strengthen_post)
        apply (rule_tac Q="\<lambda>fin s. Q s \<and> invs s \<and> replaceable s slot (fst fin) rv
                                  \<and> cte_wp_at (op = rv) slot s \<and> s \<turnstile> (fst fin)
@@ -851,7 +852,7 @@ next
     apply (rule hoare_pre_spec_validE)
      apply wp
          apply ((wp | simp)+)[1]
-        apply (wp wp, assumption+)
+        apply (wp wp)
           apply ((wp preemption_point_inv | simp)+)[1]
          apply (simp(no_asm))
          apply (rule wp, assumption+)
@@ -955,6 +956,7 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
          and K (\<not> is_master_reply_cap cap)\<rbrace>
      cap_move cap ptr ptr'
    \<lbrace>\<lambda>rv. invs\<rbrace>"
+  including no_pre
   unfolding invs_def valid_state_def valid_pspace_def
   apply (simp add: pred_conj_def conj_comms [where Q = "valid_mdb S" for S])
   apply wp

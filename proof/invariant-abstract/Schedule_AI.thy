@@ -52,8 +52,8 @@ lemma findM_inv'':
   apply (frule suffix_ConsD)
   apply simp
   apply wp
-   apply assumption
-  apply (erule x)
+   apply (erule x)
+  apply simp
   done
 
 lemmas findM_inv' = findM_inv''[OF suffix_refl]
@@ -139,7 +139,7 @@ lemma (in Schedule_AI) stt_invs [wp]:
                           valid_irq_node_def valid_machine_state_def)
     apply (fastforce simp: cur_tcb_def obj_at_def
                      elim: valid_pspace_eqI ifunsafe_pspaceI)
-   apply wp
+   apply wp+
   apply clarsimp
   apply (simp add: is_tcb_def)
   done
@@ -148,10 +148,11 @@ lemma (in Schedule_AI) stt_activatable:
   "\<lbrace>st_tcb_at runnable t\<rbrace> switch_to_thread t \<lbrace>\<lambda>rv . (ct_in_state activatable :: 'a state \<Rightarrow> bool) \<rbrace>"
   apply (simp add: switch_to_thread_def)
   apply (wp | simp add: ct_in_state_def)+
-    apply (rule hoare_post_imp [OF _ arch_stt_runnable])
-    apply (clarsimp elim!: pred_tcb_weakenE)
-   apply (rule assert_inv)
-  apply wp
+     apply (rule hoare_post_imp [OF _ arch_stt_runnable])
+     apply (clarsimp elim!: pred_tcb_weakenE)
+    apply (rule assert_inv)
+   apply wp
+  apply assumption
   done
 
 

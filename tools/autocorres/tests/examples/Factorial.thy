@@ -94,7 +94,6 @@ proof (induct n arbitrary: m)
       apply wp
        apply (simp del: One_nat_def)
        apply (wp induct_asm)
-       apply assumption
       apply unat_arith
      apply assumption
     done

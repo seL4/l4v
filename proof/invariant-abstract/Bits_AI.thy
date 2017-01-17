@@ -104,9 +104,6 @@ lemma NullCap_valid [simp]: "s \<turnstile> cap.NullCap"
 lemma empty_on_failure_wp[wp]:
   "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv. Q []\<rbrace>
     \<Longrightarrow> \<lbrace>P\<rbrace> empty_on_failure m \<lbrace>Q\<rbrace>"
-  apply (simp add: empty_on_failure_def)
-  apply wp
-  apply assumption
-  done
+  by (simp add: empty_on_failure_def) wp
 
 end

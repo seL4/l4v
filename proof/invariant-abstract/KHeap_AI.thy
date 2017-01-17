@@ -55,15 +55,19 @@ lemma get_object_wp:
   apply (clarsimp simp: obj_at_def)
   done
 
+context
+  notes get_object_wp [wp]
+begin
+
 lemma get_ntfn_wp:
   "\<lbrace>\<lambda>s. \<forall>ntfn. ko_at (Notification ntfn) ntfnptr s \<longrightarrow> P ntfn s\<rbrace> get_notification ntfnptr \<lbrace>P\<rbrace>"
   apply (simp add: get_notification_def)
-  apply (wp get_object_wp | wpc)+
+  apply (wp | wpc)+
   apply clarsimp
   done
 
 lemma get_object_inv [wp]: "\<lbrace>P\<rbrace> get_object t \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (wp get_object_wp) simp
+  by wpsimp
 
 
 lemma get_tcb_rev:
@@ -72,8 +76,9 @@ lemma get_tcb_rev:
 
 
 lemma get_tcb_SomeD: "get_tcb t s = Some v \<Longrightarrow> kheap s t = Some (TCB v)"
-  apply (case_tac "kheap s t", simp_all add: get_tcb_def)
-  apply (case_tac a, simp_all)
+  apply (cases "kheap s t"; simp add: get_tcb_def)
+  apply (rename_tac obj)
+  apply (case_tac obj; simp)
   done
 
 
@@ -232,7 +237,6 @@ shows
   apply (simp add: xopv[simplified trans_state_update'])
 done
 
-
 crunch ct[wp]: set_thread_state "\<lambda>s. P (cur_thread s)"
 
 lemma sts_ep_at_inv[wp]:
@@ -318,14 +322,8 @@ lemma obj_at_ko_atD:
 
 lemma get_endpoint_sp:
   "\<lbrace>P\<rbrace> get_endpoint p \<lbrace>\<lambda>ep. ko_at (Endpoint ep) p and P\<rbrace>"
-  apply (simp add: get_endpoint_def)
-  apply wp
-   prefer 2
-   apply (rule get_object_sp)
-  apply (case_tac kobj)
-  apply (simp|wp)+
-  done
-
+  unfolding get_endpoint_def
+  by (wp|wpc)+ clarsimp
 
 lemma set_object_ko:
   "\<lbrace>ko_at obj ptr and K (x \<noteq> ptr)\<rbrace> set_object x ko \<lbrace>\<lambda>rv. ko_at obj ptr\<rbrace>"
@@ -350,21 +348,13 @@ lemma set_object_ko_at:
   done
 
 lemma get_ep_inv[wp]: "\<lbrace>P\<rbrace> get_endpoint ep \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: get_endpoint_def)
-  apply wp
-   defer
-   apply (rule get_object_inv)
-  apply (case_tac kobj, simp_all)
-  done
+  unfolding get_endpoint_def
+  by (wp|wpc)+ clarsimp
 
 
 lemma get_ntfn_inv[wp]: "\<lbrace>P\<rbrace> get_notification ep \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: get_notification_def)
-  apply wp
-   defer
-   apply (rule get_object_inv)
-  apply (case_tac kobj, simp_all)
-  done
+  unfolding get_notification_def
+  by (wp|wpc)+ clarsimp
 
 lemma get_ep_actual_ep[wp]:
   "\<lbrace> invs and ep_at ep \<rbrace> 
@@ -374,7 +364,7 @@ lemma get_ep_actual_ep[wp]:
                              valid_def gets_def get_def return_def fail_def 
                              assert_def obj_at_def is_ep_def)
    apply (case_tac y, simp_all add: return_def)
-done
+   done
 
 lemma get_object_valid [wp]:
   "\<lbrace>valid_objs\<rbrace> get_object oref \<lbrace> valid_obj oref \<rbrace>"
@@ -422,31 +412,25 @@ done
 
 lemma set_ep_valid_objs[wp]:
   "\<lbrace>valid_ep v and valid_objs\<rbrace> set_endpoint ep v \<lbrace>\<lambda>rv s. valid_objs s\<rbrace>"
-  apply (simp add: set_endpoint_def)
+  unfolding set_endpoint_def
   apply (wp set_object_valid_objs)
-  apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp add: valid_obj_def obj_at_def)
-  apply (case_tac r, simp_all add: a_type_def)
+  apply (clarsimp simp: valid_obj_def obj_at_def a_type_def split: kernel_object.splits)
   done
 
 
 lemma set_ep_aligned[wp]:
  "\<lbrace>pspace_aligned\<rbrace> set_endpoint ep v \<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
-  apply (simp add: set_endpoint_def)
+  unfolding set_endpoint_def
   apply (wp set_object_aligned)
-  apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp add: obj_at_def a_type_def)
-  apply (case_tac r, simp_all)
+  apply (clarsimp simp: valid_obj_def obj_at_def a_type_def split: kernel_object.splits)
   done
-
 
 lemma set_endpoint_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_endpoint p' ep \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   apply (simp add: set_endpoint_def set_object_def)
   apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (case_tac r, simp_all)
   apply (clarsimp simp: obj_at_def a_type_def)
+  apply (case_tac ko; simp)
   done
 
 
@@ -464,9 +448,8 @@ lemma set_ntfn_valid_objs:
   \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (simp add: set_notification_def)
   apply (wp set_object_valid_objs)
-  apply (rule hoare_strengthen_post [OF get_object_sp])
   apply (clarsimp simp: valid_obj_def obj_at_def is_ntfn)
-  apply (case_tac r, simp_all add: a_type_def)
+  apply (case_tac ko; simp add: a_type_def)
   done
 
 
@@ -474,9 +457,8 @@ lemma set_ntfn_aligned[wp]:
   "\<lbrace>pspace_aligned\<rbrace> set_notification p ntfn \<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
   apply (simp add: set_notification_def)
   apply (wp set_object_aligned)
-  apply (rule hoare_strengthen_post [OF get_object_sp])
   apply (clarsimp simp add: obj_at_def is_ntfn)
-  apply (case_tac r, simp_all add: a_type_def)
+  apply (case_tac ko, simp_all add: a_type_def)
   done
 
 
@@ -484,9 +466,8 @@ lemma set_notification_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_notification p' ntfn \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   apply (simp add: set_notification_def set_object_def)
   apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (case_tac r, simp_all)
-  apply (clarsimp simp: obj_at_def a_type_def)
+  apply clarsimp
+  apply (case_tac ko; clarsimp simp: obj_at_def a_type_def)
   done
 
 
@@ -501,11 +482,8 @@ lemma set_notification_cte_wp_at[wp]:
 lemma get_ntfn_ko:
   "\<lbrace>\<top>\<rbrace> get_notification ep \<lbrace>\<lambda>rv. ko_at (Notification rv) ep\<rbrace>"
   apply (simp add: get_notification_def)
-  apply wp
-   prefer 2
-   apply (rule get_object_sp)
-  apply (case_tac kobj)
-  apply (wp|simp)+
+  apply (wp|wpc)+
+  apply clarsimp
   done
 
 
@@ -520,7 +498,6 @@ lemma obj_set_prop_at:
 lemma get_ntfn_sp: 
   "\<lbrace>P\<rbrace> get_notification p \<lbrace>\<lambda>ntfn. ko_at (Notification ntfn) p and P\<rbrace>"
   apply wp
-  apply (rule hoare_weaken_pre)
    apply (rule hoare_vcg_conj_lift)
     apply (rule get_ntfn_ko)
    apply (rule get_ntfn_inv)
@@ -562,16 +539,15 @@ lemma set_ep_distinct[wp]:
   "\<lbrace>pspace_distinct\<rbrace> set_endpoint ep v \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
   apply (simp add: set_endpoint_def)
   apply (wp set_object_distinct)
-  apply (rule hoare_strengthen_post [OF get_object_sp])
   apply (clarsimp elim!: obj_at_weakenE)
-  apply (case_tac ko, simp_all add: a_type_def)
+  apply (rename_tac ko)
+  apply (case_tac ko; simp add: a_type_def)
   done
 
 lemma set_ep_cur_tcb[wp]:
   "\<lbrace>cur_tcb\<rbrace> set_endpoint ep v \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
   apply (simp add: set_endpoint_def set_object_def)
   apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
   apply (auto simp: cur_tcb_def obj_at_def is_tcb is_ep)
   done
 
@@ -605,7 +581,7 @@ lemma set_object_pspace_respect_device_region:
 lemma set_ntfn_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_notification ptr val \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   apply (simp add: set_notification_def)
-  apply (wp set_object_pspace_in_kernel_window get_object_wp)
+  apply (wp set_object_pspace_in_kernel_window)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: Structures_A.kernel_object.split_asm)
   done
@@ -621,7 +597,7 @@ lemma set_ntfn_respect_device_region[wp]:
 lemma set_ep_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_endpoint ptr val \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   apply (simp add: set_endpoint_def)
-  apply (wp set_object_pspace_in_kernel_window get_object_wp)
+  apply (wp set_object_pspace_in_kernel_window)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: Structures_A.kernel_object.split_asm)
   done
@@ -752,7 +728,6 @@ lemma set_ep_iflive[wp]:
      set_endpoint p ep \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: set_endpoint_def)
   apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
   apply (clarsimp elim!: obj_at_weakenE
                   split: Structures_A.kernel_object.splits
                   simp: is_ep_def)
@@ -763,7 +738,6 @@ lemma set_ep_ifunsafe[wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> set_endpoint p val \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
   apply (simp add: set_endpoint_def)
   apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
   apply (clarsimp elim!: obj_at_weakenE simp: is_ep_def)
   done
 
@@ -772,7 +746,6 @@ lemma set_ep_zombies[wp]:
   "\<lbrace>zombies_final\<rbrace> set_endpoint p val \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (simp add: set_endpoint_def)
   apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
   apply (clarsimp elim!: obj_at_weakenE simp: is_ep_def)
   done
 
@@ -783,9 +756,9 @@ lemma set_ntfn_distinct[wp]:
   \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
   apply (simp add: set_notification_def)
   apply (wp set_object_distinct)
-  apply (rule hoare_strengthen_post [OF get_object_sp])
   apply clarsimp
   apply (erule obj_at_weakenE)
+  apply (rename_tac ko)
   apply (case_tac ko, simp_all add: a_type_def)
   done
 
@@ -805,7 +778,6 @@ lemma set_ntfn_cur_tcb[wp]:
   "\<lbrace>cur_tcb\<rbrace> set_notification ntfn v \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
   apply (simp add: set_notification_def set_object_def)
   apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
   apply (auto simp: cur_tcb_def obj_at_def is_tcb is_ntfn)
   done
 
@@ -864,7 +836,6 @@ lemma set_ntfn_iflive[wp]:
      set_notification p ntfn \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: set_notification_def)
   apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
   apply (clarsimp elim!: obj_at_weakenE simp: is_ntfn_def
                   split: Structures_A.kernel_object.splits)
   done
@@ -874,7 +845,6 @@ lemma set_ntfn_ifunsafe[wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> set_notification p val \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
   apply (simp add: set_notification_def)
   apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
   apply (clarsimp elim!: obj_at_weakenE simp: is_ntfn_def)
   done
 
@@ -883,7 +853,6 @@ lemma set_ntfn_zombies[wp]:
   "\<lbrace>zombies_final\<rbrace> set_notification p val \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (simp add: set_notification_def)
   apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
   apply (clarsimp elim!: obj_at_weakenE simp: is_ntfn_def)
   done
 
@@ -1082,14 +1051,8 @@ lemma set_ep_pred_tcb_at [wp]:
    set_endpoint ep v 
    \<lbrace> \<lambda>rv. pred_tcb_at proj f t \<rbrace>"
   apply (simp add: set_endpoint_def pred_tcb_at_def)
-  apply wp
-    defer
-    apply (rule assert_sp)
-   apply (rule get_object_sp)
-  apply simp
-  apply (case_tac obj, simp_all)
-  apply (rule set_object_at_obj2 [unfolded pred_conj_def])
-  apply clarsimp
+  apply (wp set_object_at_obj2|simp)+
+  apply (clarsimp simp: obj_at_def)
   done
 
 lemma set_endpoint_ep_at[wp]:
@@ -1099,19 +1062,11 @@ lemma set_endpoint_ep_at[wp]:
 
 lemma set_endpoint_obj_at:
   "\<lbrace>\<lambda>s. P (Endpoint ep)\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
-  apply (simp add: set_endpoint_def)
-  apply (wp obj_set_prop_at)
-  apply (rule hoare_drop_imps, wp)
-  done
-
+  unfolding set_endpoint_def by (wpsimp wp: obj_set_prop_at)
 
 lemma set_notification_obj_at:
   "\<lbrace>\<lambda>s. P (Notification ep)\<rbrace> set_notification ptr ep \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
-  apply (simp add: set_notification_def)
-  apply (wp obj_set_prop_at)
-  apply (rule hoare_drop_imps, wp)
-  done
-
+  unfolding set_notification_def by (wpsimp wp: obj_set_prop_at)
 
 lemma cte_wp_at_neg2:
   "(\<not> cte_wp_at P p s) = (cte_at p s \<longrightarrow> cte_wp_at (\<lambda>cap. \<not> P cap) p s)"
@@ -1206,7 +1161,7 @@ crunch arch[wp]: set_notification "\<lambda>s. P (arch_state s)"
 
 lemma set_notification_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> set_notification ntfn p \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) wp
+  by (rule valid_arch_state_lift) wp+
 
 
 crunch irq_node_inv[wp]: set_notification "\<lambda>s. P (interrupt_irq_node s)"
@@ -1215,7 +1170,7 @@ crunch irq_node_inv[wp]: set_notification "\<lambda>s. P (interrupt_irq_node s)"
 
 lemma set_notification_global_refs [wp]:
   "\<lbrace>valid_global_refs\<rbrace> set_notification ntfn p \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
-  by (rule valid_global_refs_cte_lift) wp
+  by (rule valid_global_refs_cte_lift) wp+
 
 
 lemma set_notification_idle[wp]:
@@ -1251,7 +1206,7 @@ crunch arch[wp]: set_endpoint "\<lambda>s. P (arch_state s)"
 
 lemma set_endpoint_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> set_endpoint ep p \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) wp
+  by (rule valid_arch_state_lift) wp+
 
 
 crunch irq_node_inv[wp]: set_endpoint "\<lambda>s. P (interrupt_irq_node s)"
@@ -1264,7 +1219,7 @@ crunch it[wp]: set_endpoint "\<lambda>s. P (idle_thread s)"
 
 lemma set_ep_global_refs [wp]:
   "\<lbrace>valid_global_refs\<rbrace> set_endpoint ep p \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
-  by (rule valid_global_refs_cte_lift) wp
+  by (rule valid_global_refs_cte_lift) wp+
 
 
 lemma set_endpoint_reply[wp]:
@@ -1313,6 +1268,7 @@ lemma set_object_memory[wp]:
   apply wp
   by simp
 
+end
 
 locale non_arch_op = fixes f
   assumes aobj_at: "\<And>P P' p. arch_obj_pred P' \<Longrightarrow>
@@ -1321,47 +1277,48 @@ locale non_arch_op = fixes f
 begin
 
 lemma valid_arch_obj[wp]:"\<lbrace>valid_arch_objs\<rbrace> f \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-by (rule valid_arch_objs_lift_weak; wp aobj_at; simp)
+  by (rule valid_arch_objs_lift_weak; wp aobj_at; simp)
 
 lemma vs_lookup[wp]: "\<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
-by (rule vs_lookup_arch_obj_at_lift; wp aobj_at; simp)
+  by (rule vs_lookup_arch_obj_at_lift; wp aobj_at; simp)
 
 lemma vs_lookup_pages[wp]: "\<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
-by (rule vs_lookup_pages_arch_obj_at_lift; wp aobj_at; simp)
+  by (rule vs_lookup_pages_arch_obj_at_lift; wp aobj_at; simp)
 
 lemma valid_global_objs[wp]: "\<lbrace>valid_global_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-by (rule valid_global_objs_lift_weak, wp aobj_at)
+  by (rule valid_global_objs_lift_weak; wp aobj_at)
 
 lemma valid_asid_map[wp]: "\<lbrace>valid_asid_map\<rbrace> f \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-by (rule valid_asid_map_lift, wp aobj_at)
+  by (rule valid_asid_map_lift; wp aobj_at)
 
 lemma valid_kernel_mappings[wp]: "\<lbrace>valid_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. valid_kernel_mappings\<rbrace>"
-by (rule valid_kernel_mappings_lift, wp aobj_at)
+  by (rule valid_kernel_mappings_lift; wp aobj_at)
 
 lemma equal_kernel_mappings[wp]: "\<lbrace>equal_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. equal_kernel_mappings\<rbrace>"
-by (rule equal_kernel_mappings_lift, wp aobj_at)
+  by (rule equal_kernel_mappings_lift; wp aobj_at)
 
 lemma valid_global_vspace_mappings[wp]: "\<lbrace>valid_global_vspace_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
-by (rule valid_global_vspace_mappings_lift, wp aobj_at)
+  by (rule valid_global_vspace_mappings_lift; wp aobj_at)
 
 lemma valid_ao_at[wp]:"\<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>_. valid_ao_at p\<rbrace>"
-by (rule valid_ao_at_lift_aobj_at; wp aobj_at; simp)
+  by (rule valid_ao_at_lift_aobj_at; wp aobj_at; simp)
 
 lemma valid_arch_state[wp]:"\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-by (rule valid_arch_state_lift; wp aobj_at; simp)
+  by (rule valid_arch_state_lift; wp aobj_at; simp)
 
 lemma in_user_frame[wp]:"\<lbrace>in_user_frame p\<rbrace> f \<lbrace>\<lambda>_. in_user_frame p\<rbrace>"
-by (rule in_user_frame_lift; wp aobj_at; simp)
+  by (rule in_user_frame_lift; wp aobj_at; simp)
 
 end
 
 
 locale non_arch_non_mem_op = non_arch_op f for f +
- assumes memory[wp]: "\<And>P. \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
+ assumes memory[wp]:
+   "\<And>P. \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
 begin
 
 lemma valid_machine_state[wp]: "\<lbrace>valid_machine_state\<rbrace> f \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
-by (rule valid_machine_state_lift[OF memory aobj_at])
+  by (rule valid_machine_state_lift[OF memory aobj_at])
 
 end
 
@@ -1477,7 +1434,7 @@ crunch interrupt_states[wp]: set_notification "\<lambda>s. P (interrupt_states s
 
 
 lemmas set_notification_irq_handlers[wp] =
-    valid_irq_handlers_lift [OF set_ntfn_caps_of_state set_notification_interrupt_states]
+  valid_irq_handlers_lift [OF set_ntfn_caps_of_state set_notification_interrupt_states]
 
 
 lemma set_notification_only_idle [wp]:
@@ -1719,7 +1676,7 @@ lemma do_machine_op_arch [wp]:
 
 lemma do_machine_op_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) wp
+  by (rule valid_arch_state_lift) wp+
 
 
 lemma do_machine_op_vs_lookup [wp]:
@@ -1778,8 +1735,6 @@ lemma tcb_cap_valid_caps_of_stateD:
   apply assumption
   done
 
-
-   
 
 lemma add_mask_eq:
   "\<lbrakk>is_aligned (w::'a::len word) n; x \<le> 2 ^ n - 1; n < len_of TYPE('a)\<rbrakk>

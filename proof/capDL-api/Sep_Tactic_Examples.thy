@@ -104,9 +104,9 @@ lemma move_cap_wp_old:
  "\<lbrace><dest \<mapsto>c - \<and>* src \<mapsto>c cap \<and>* R>\<rbrace>
     move_cap cap' src dest
   \<lbrace>\<lambda>_. <dest \<mapsto>c cap'  \<and>* src \<mapsto>c NullCap \<and>* R>\<rbrace>"
+  including no_pre
   apply (simp add: move_cap_def)
   apply (wp swap_parents_wp)
-thm set_cap_wp[no_vars]
    apply (rule hoare_strengthen_post)
     apply (wp set_cap_wp)
    apply (sep_select 2)
@@ -124,6 +124,7 @@ lemma invoke_cnode_rotate2_wp_old:
      invoke_cnode (RotateCall cap1 cap2 dest src rnd)
   \<lbrace>\<lambda>_. <dest \<mapsto>c NullCap \<and>* src \<mapsto>c cap1 \<and>*
     rnd \<mapsto>c cap2 \<and>* R>\<rbrace>"
+  including no_pre
   apply (clarsimp simp: invoke_cnode_def)
   apply (wp)
    apply (rule hoare_strengthen_post)
@@ -294,7 +295,6 @@ lemma sep_drule_side_condition_lemma:
 schematic_goal "(P \<and>* ?A) s \<Longrightarrow> (A \<and>* B \<and>* P) s"
   apply (sep_solve)
   done
-
 
 
 end

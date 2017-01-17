@@ -622,7 +622,7 @@ lemma retype_region_dcorres:
           apply clarsimp
          apply simp
         apply assumption
-       apply wp
+       apply wp+
      apply fastforce
     apply simp
    apply (case_tac type, simp_all add:translate_object_type_def)
@@ -1052,7 +1052,7 @@ lemma create_caps_loop_dcorres:
     apply (erule corres_split_nor)
       apply (rule create_cap_dcorres)
      apply (wp create_cap_invs hoare_vcg_const_Ball_lift
-               create_cap_mdb_cte_at[unfolded swp_def])
+               create_cap_mdb_cte_at[unfolded swp_def])+
    apply simp
   apply (clarsimp simp: not_idle_thread_def swp_def)
   apply (auto simp: cte_wp_at_caps_of_state image_def)
@@ -1358,7 +1358,7 @@ lemma reset_untyped_cap_corres:
                        apply (rule throw_or_return_preemption_corres[where P=\<top> and P'=\<top>])
                       apply (clarsimp simp: is_cap_simps bits_of_def)
                      apply simp
-                    apply wp
+                    apply wp+
                   apply (clarsimp simp add: is_cap_simps cap_aligned_def bits_of_def
                                             aligned_add_aligned is_aligned_shiftl)
                  apply (simp add: reset_chunk_bits_def)
@@ -1373,14 +1373,12 @@ lemma reset_untyped_cap_corres:
             apply (rule shiftl_less_t2n[OF word_of_nat_less])
              apply simp
             apply (simp add: word_bits_def)
-           apply (rule hoare_pre, wp)
-           apply simp
-          apply (rule hoare_pre)
-           apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
-                     update_untyped_cap_valid_objs set_cap_no_overlap
-                     set_cap_idle preemption_point_inv'
-                     set_cap_cte_wp_at
-             | simp)+
+           apply wpsimp
+          apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                    update_untyped_cap_valid_objs set_cap_no_overlap
+                    set_cap_idle preemption_point_inv'
+                    set_cap_cte_wp_at
+                 | simp)+
           apply (clarsimp simp: cte_wp_at_caps_of_state exI
                                 is_cap_simps bits_of_def)
           apply (frule(1) cte_wp_at_valid_objs_valid_cap[OF caps_of_state_cteD])
@@ -1535,7 +1533,7 @@ lemma invoke_untyped_corres:
                 simp: vslot image_def invs_def valid_state_def valid_mdb_def cte_wp_at_caps_of_state
                 | intro conjI | drule (1) bspec | drule(1) mdb_cte_atD[rotated])+)[2]
            apply (wp retype_region_cte_at_other'[where sz= sz] retype_region_post_retype_invs[where sz = sz]
-              hoare_vcg_const_Ball_lift retype_region_aligned_for_init)
+              hoare_vcg_const_Ball_lift retype_region_aligned_for_init)+
          apply (clarsimp simp:conj_comms misc cover)
          apply (rule_tac Q="\<lambda>r s.
                 cte_wp_at (\<lambda>cp. \<exists>idx. cp = (cap.UntypedCap dev ptr' sz idx)) cref s \<and>
@@ -1578,9 +1576,9 @@ lemma invoke_untyped_corres:
         apply simp
        apply wp
       apply (simp split del: if_split)
-      apply (wp get_cap_wp)
+      apply (wp get_cap_wp)+
      apply (wp_once hoare_drop_imps)
-     apply wp
+     apply wp+
     apply (rule validE_validE_R, rule_tac E="\<top>\<top>" and Q="\<lambda>_. valid_etcbs and invs
         and valid_untyped_inv_wcap untyped_invocation
           (Some (cap.UntypedCap dev ptr' sz (if reset then 0 else idx))) and ct_active
@@ -1782,6 +1780,7 @@ lemma decode_untyped_corres:
            and (\<lambda>s. \<forall>x \<in> set excaps'. cte_wp_at (diminished (fst x)) (snd x) s) and valid_etcbs)
      (Untyped_D.decode_untyped_invocation cap slot excaps ui)
      (Decode_A.decode_untyped_invocation label' args' slot' cap' (map fst excaps'))"
+  including no_pre
   apply (simp add: transform_intent_def map_option_Some_eq2
                    transform_intent_untyped_retype_def
             split: invocation_label.split_asm arch_invocation_label.split_asm list.split_asm
@@ -1850,13 +1849,13 @@ lemma decode_untyped_corres:
             apply simp
            apply (simp add:const_on_failure_def)
           apply clarsimp
-          apply wp
+          apply wp+
          apply (clarsimp simp:conj_comms)
          apply (wp mapME_x_inv_wp[OF hoare_pre(2)] | simp split del: if_split)+
-        apply (wp hoare_whenE_wp)
+        apply (wp hoare_whenE_wp)+
        apply (simp add:validE_def split del:if_splits)
        apply (rule_tac Q = "\<lambda>r. op = s" in hoare_strengthen_post)
-        apply wp
+        apply wp+
         apply fastforce
        apply (case_tac r,clarsimp+)
       apply (rule corres_alternate1)

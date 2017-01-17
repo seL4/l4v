@@ -96,7 +96,7 @@ lemma delete_asid_pool_invs[wp]:
   apply (rule hoare_vcg_conj_lift,
            (rule mapM_invalidate[where ptr=pptr])?,
            ((wp mapM_wp' | simp add: if_apply_def2)+)[1])+
-    apply wp
+    apply wp+
   apply (clarsimp simp: is_aligned_mask[symmetric])
   apply (rule conjI)
    apply (rule vs_lookupI)
@@ -112,7 +112,7 @@ lemma delete_asid_invs[wp]:
   apply (simp add: delete_asid_def cong: option.case_cong)
   apply (wp set_asid_pool_invs_unmap | wpc)+
      apply (simp add: invalidate_asid_entry_def invalidate_asid_def invalidate_hw_asid_entry_def)
-     apply (wp load_hw_asid_wp)
+     apply (wp load_hw_asid_wp)+
     apply (simp add: flush_space_def)
     apply (wp load_hw_asid_wp|wpc)+
   apply (clarsimp simp del: fun_upd_apply)
@@ -148,9 +148,9 @@ lemma delete_asid_pool_unmapped[wp]:
   apply (simp add: delete_asid_pool_def)
   apply wp
     apply (rule hoare_strengthen_post [where Q="\<lambda>_. \<top>"])
-     apply wp
+     apply wp+
     defer
-    apply wp
+    apply wp+
    apply (clarsimp simp: vs_lookup_def vs_asid_refs_def
                   dest!: graph_ofD)
    apply (erule rtranclE)
@@ -228,7 +228,7 @@ lemma unmap_page_tcb_cap_valid:
   apply (rule tcb_cap_valid_typ_st)
     apply wp
    apply (simp add: pred_tcb_at_def2)
-  apply (wp unmap_page_tcb_at hoare_vcg_ex_lift hoare_vcg_all_lift)
+   apply (wp unmap_page_tcb_at hoare_vcg_ex_lift hoare_vcg_all_lift)+
   done
 
 global_naming Arch
@@ -525,6 +525,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                                valid_arch_state s)\<rbrace>
      finalise_cap cap x
    \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
+  including no_pre
   apply (cases cap, simp_all add: replaceable_def reachable_pg_cap_def
                        split del: if_split)
             prefer 10
@@ -898,17 +899,17 @@ lemma delete_asid_empty_table_pd:
       \<and> obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>
     delete_asid a word
    \<lbrace>\<lambda>_ s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>"
-   apply (simp add: delete_asid_def)
-   apply (wp | wpc)+
-         apply wps
-         apply wp
-       apply (simp add: set_asid_pool_def)
-       apply wp
-         apply (case_tac "x2 = word")
-          defer
+  apply (simp add: delete_asid_def)
+  apply (wp | wpc)+
           apply wps
-          apply (rule set_object_at_obj)
-         apply (wp get_object_ret | wps)+
+          apply wp+
+        apply (simp add: set_asid_pool_def)
+        apply wp
+          apply (case_tac "x2 = word")
+           defer
+           apply wps
+           apply (rule set_object_at_obj)
+          apply (wp get_object_ret | wps)+
    apply (clarsimp simp: obj_at_def empty_table_def)+
   done
 
@@ -1655,7 +1656,7 @@ lemma delete_asid_pool_unmapped2:
       apply simp
      apply (wp mapM_wp')
      apply clarsimp
-    apply wp
+    apply wp+
   apply clarsimp
   done
 

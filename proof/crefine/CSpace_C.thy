@@ -1213,7 +1213,7 @@ thm cteInsert_body_def
                    apply (ctac ccorres:ccorres_updateMDB_set_mdbPrev)
                   apply (simp add:dc_def[symmetric])
                   apply (ctac ccorres: ccorres_updateMDB_skip)
-                 apply (wp static_imp_wp)
+                 apply (wp static_imp_wp)+
                apply (clarsimp simp: Collect_const_mem dc_def split del: if_split)
                apply vcg
               apply (wp static_imp_wp)

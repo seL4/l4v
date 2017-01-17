@@ -1144,7 +1144,7 @@ proof -
              apply (simp only: dc_def[symmetric])
              apply ctac
             prefer 2
-            apply (wp, clarsimp, wp)
+            apply (wp, clarsimp, wp+)
            apply (rule_tac P="\<lambda>s. valid_queues s \<and> (\<forall>p. t \<notin> set (ksReadyQueues s p))
                                   \<and> (\<exists>tcb. ko_at' tcb t s \<and> tcbDomain tcb =rva
                                   \<and> tcbPriority tcb = rvb \<and> valid_tcb' tcb s)"
@@ -1497,7 +1497,7 @@ proof -
              apply (simp only: dc_def[symmetric])
              apply ctac
             prefer 2
-            apply (wp, clarsimp, wp)
+            apply (wp, clarsimp, wp+)
            apply (rule_tac P="(\<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s)
                                        \<and> distinct(ksReadyQueues s (d, p)))
                                and valid_queues' and obj_at' (inQ rva rvb) t
@@ -1862,7 +1862,7 @@ proof -
              apply (simp only: dc_def[symmetric])
              apply ctac
             prefer 2
-            apply (wp, clarsimp, wp)
+            apply (wp, clarsimp, wp+)
            apply (rule_tac P="\<lambda>s. valid_queues s \<and> (\<forall>p. t \<notin> set (ksReadyQueues s p))
                                   \<and> (\<exists>tcb. ko_at' tcb t s \<and> tcbDomain tcb =rva
                                   \<and> tcbPriority tcb = rvb \<and> valid_tcb' tcb s)"
@@ -2041,7 +2041,7 @@ lemma rescheduleRequired_ccorres:
                               max_word_def)
        apply wp
       apply (simp add: guard_is_UNIV_def)
-     apply wp
+     apply wp+
    apply (simp add: getSchedulerAction_def)
   apply (clarsimp simp: weak_sch_act_wf_def rf_sr_def cstate_relation_def
                         Let_def cscheduler_action_relation_def)
@@ -2197,9 +2197,9 @@ lemma scheduleTCB_ccorres':
                            split: scheduler_action.split_asm)
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
-          apply wp
+          apply wp+
         apply (simp add: getSchedulerAction_def)
-       apply wp
+       apply wp+
      apply (simp add: isRunnable_def isBlocked_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
@@ -2255,9 +2255,9 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
                                 split: scheduler_action.split_asm)+
            apply (clarsimp simp: rf_sr_def cstate_relation_def cscheduler_action_relation_def
                            split: scheduler_action.split_asm)
-          apply wp
+          apply wp+
         apply (simp add: getSchedulerAction_def)
-       apply wp
+       apply wp+
      apply (simp add: isRunnable_def isBlocked_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
@@ -2293,7 +2293,7 @@ lemma rescheduleRequired_ccorres_valid_queues'_simple:
                               max_word_def)
        apply wp
       apply (simp add: guard_is_UNIV_def)
-     apply wp
+     apply wp+
    apply (simp add: getSchedulerAction_def)
   apply (clarsimp simp: weak_sch_act_wf_def rf_sr_def cstate_relation_def
                         Let_def cscheduler_action_relation_def)
@@ -2348,9 +2348,9 @@ lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
                            split: scheduler_action.split_asm)
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
-          apply wp
+          apply wp+
         apply (simp add: getSchedulerAction_def)
-       apply wp
+       apply wp+
      apply (simp add: isRunnable_def isBlocked_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)

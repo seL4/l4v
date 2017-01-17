@@ -81,16 +81,17 @@ lemma change_current_domain_and_switch_to_idle_thread_dcorres:
                     Schedule_D.switch_to_thread None
                  od)
                 switch_to_idle_thread"
+  including no_pre
   apply (clarsimp simp: Schedule_D.switch_to_thread_def switch_to_idle_thread_def)
   apply (rule dcorres_symb_exec_r)
   apply (rule corres_guard_imp)
   apply (rule corres_symb_exec_l)
-  apply (rule corres_split_noop_rhs)
+  apply (rule_tac R=\<top> in corres_split_noop_rhs)
         apply (clarsimp simp: corres_underlying_def gets_def modify_def get_def put_def do_machine_op_def select_f_def split_def bind_def in_return)
         apply (clarsimp simp: transform_def transform_current_thread_def transform_asid_table_def)
         apply assumption
        apply (rule dcorres_arch_switch_to_idle_thread_return)
-      apply (wp change_current_domain_same| simp)+
+      apply (wp change_current_domain_same | simp)+
   done
 
 lemma arch_switch_to_thread_dcorres:
@@ -116,22 +117,21 @@ crunch idle_thread [wp]: arch_switch_to_thread "\<lambda>s. P (idle_thread s)"
 lemma switch_to_thread_corres:
   "dcorres dc \<top> (invs and (\<lambda>s. idle_thread s \<noteq> x) and valid_etcbs)
            (Schedule_D.switch_to_thread (Some x)) (Schedule_A.switch_to_thread x)"
-  apply (clarsimp simp: Schedule_D.switch_to_thread_def
-                        Schedule_A.switch_to_thread_def)
+  apply (clarsimp simp: Schedule_D.switch_to_thread_def Schedule_A.switch_to_thread_def)
   apply (rule corres_dummy_return_pl)
   apply (rule corres_symb_exec_r)
-       apply (rule corres_symb_exec_r)
-          apply (rule corres_guard_imp)
-            apply (rule corres_split [OF _ arch_switch_to_thread_dcorres])
-              apply simp
-              apply (rule dcorres_rhs_noop_above[OF tcb_sched_action_dcorres])
+     apply (rule corres_symb_exec_r)
+        apply (rule corres_guard_imp)
+          apply (rule corres_split [OF _ arch_switch_to_thread_dcorres])
+            apply simp
+            apply (rule dcorres_rhs_noop_above[OF tcb_sched_action_dcorres])
               apply (rule corres_modify [where P=\<top> and P'="\<lambda>s. idle_thread s \<noteq> x"])
               apply (clarsimp simp: transform_def)
               apply (simp add: transform_current_thread_def transform_asid_table_def)
-             apply wp[4]
-           apply simp
-          apply assumption
-         apply (clarsimp|wp)+
+             apply (wp+)[4]
+         apply simp
+        apply assumption
+       apply (clarsimp|wp)+
   done
 
 lemma corrupt_intents_current_thread:
@@ -174,7 +174,7 @@ lemma switch_to_thread_same_corres:
               apply (rule corres_modify [where P'="\<lambda>s. idle_thread s \<noteq> x"])
               apply (clarsimp simp: transform_def transform_current_thread_def transform_asid_table_def)
               apply (simp add: transform_current_thread_def transform_asid_table_def)
-             apply wp[4]
+             apply (wp+)[4]
          apply simp
         apply assumption
        apply (clarsimp|wp)+
@@ -455,7 +455,7 @@ lemma schedule_choose_new_thread_dcorres_fragment:
     apply (simp only: schedule_def_2)
     apply (rule corres_guard_imp)
       apply (rule_tac r'="\<lambda>_ _. True" and  P=\<top> and P'=\<top> and R="\<lambda>_. \<top>" and R'="\<lambda>_ s. valid_etcbs s \<and> valid_sched_except_blocked s \<and> invs s \<and> scheduler_action s = choose_new_thread" in corres_split)
-         apply (clarsimp simp: K_bind_def)
+         apply (clarsimp)
          apply (rule dcorres_symb_exec_r)
            apply (rule dcorres_symb_exec_r, rename_tac rq)
              apply (fold dc_def, rule dcorres_rhs_noop_below_True[OF set_scheduler_action_dcorres])
@@ -658,7 +658,7 @@ lemma activate_thread_corres:
            apply (rule dcorres_symb_exec_r)
              apply (rule set_thread_state_corres[unfolded tcb_pending_op_slot_def])
             apply simp
-            apply (wp dcorres_to_wp[OF as_user_setNextPC_corres,simplified])
+            apply (wp dcorres_to_wp[OF as_user_setNextPC_corres,simplified])+
        apply (simp add:invs_mdb pred_tcb_at_def obj_at_def invs_valid_idle
          generates_pending_def not_idle_thread_def)
       apply (clarsimp simp:infer_tcb_pending_op_def arch_activate_idle_thread_def

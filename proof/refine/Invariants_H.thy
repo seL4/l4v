@@ -2628,11 +2628,15 @@ lemma typ_at_lift_valid_untyped':
   apply (drule_tac p = ptr' in koType_obj_range')
   apply (clarsimp split:if_splits)
   done
-declare capability.splits[split del]
-print_attributes
+
+lemma typ_at_lift_asid_at':
+  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow> \<lbrace>asid_pool_at' p\<rbrace> f \<lbrace>\<lambda>_. asid_pool_at' p\<rbrace>"
+  by assumption
+
 lemma typ_at_lift_valid_cap':
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_cap' cap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap' cap s\<rbrace>"
+  including no_pre
   apply (simp add: valid_cap'_def)
   apply wp
   apply (case_tac cap;
@@ -2642,21 +2646,16 @@ lemma typ_at_lift_valid_cap':
                    hoare_vcg_conj_lift [OF typ_at_lift_cte_at'])
      apply (rename_tac zombie_type nat)
      apply (case_tac zombie_type; simp)
-      apply (wp typ_at_lift_tcb' P hoare_vcg_all_lift typ_at_lift_cte')
+      apply (wp typ_at_lift_tcb' P hoare_vcg_all_lift typ_at_lift_cte')+
     apply (rename_tac arch_capability)
     apply (case_tac arch_capability,
            simp_all add: P [where P=id, simplified] page_table_at'_def
                          hoare_vcg_prop page_directory_at'_def All_less_Ball
               split del: if_splits)
-     apply (wp hoare_vcg_const_Ball_lift P)
-   apply (wp typ_at_lift_valid_untyped' [OF P])
-  apply (wp hoare_vcg_all_lift typ_at_lift_cte' P)
+       apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped'
+                 hoare_vcg_all_lift typ_at_lift_cte')+
   done
 
-lemma typ_at_lift_asid_at':
-  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow>
-  \<lbrace>asid_pool_at' p\<rbrace> f \<lbrace>\<lambda>_. asid_pool_at' p\<rbrace>"
-  by simp
 
 lemma typ_at_lift_valid_irq_node':
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
@@ -3633,3 +3632,4 @@ add_upd_simps "invs' (gsUntypedZeroRanges_update f s)
   (obj_at'_real_def)
 declare upd_simps[simp]
 end
+  

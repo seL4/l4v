@@ -273,7 +273,7 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
     apply (erule iffD2[OF caps_of_state_cteD'])
   apply (wp set_untyped_cap_as_full_cte_wp_at hoare_vcg_all_lift hoare_vcg_imp_lift
          set_untyped_cap_as_full_cte_wp_at_neg hoare_vcg_ex_lift | clarsimp)+
-  apply (wp get_cap_wp)
+  apply (wp get_cap_wp)+
   apply (intro conjI allI impI disj_subst)
           apply simp
          apply clarsimp
@@ -514,7 +514,7 @@ lemma cap_insert_simple_arch_caps_no_ap:
     set_untyped_cap_as_full_empty_table_at hoare_vcg_ex_lift
     set_untyped_cap_as_full_caps_of_state_diff[where dest=dest]
     | wps)+
-  apply (wp get_cap_wp)
+      apply (wp get_cap_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (intro conjI impI allI)
   by (auto simp:is_simple_cap_def[simplified is_simple_cap_arch_def] is_cap_simps)

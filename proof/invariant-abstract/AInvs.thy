@@ -53,7 +53,7 @@ lemma ct_running_machine_op:
   "\<lbrace>ct_running\<rbrace> do_machine_op f \<lbrace>\<lambda>_. ct_running\<rbrace>"
   apply (simp add: ct_in_state_def pred_tcb_at_def obj_at_def)
   apply (rule hoare_lift_Pf [where f=cur_thread])
-  by wp
+  by wp+
 
 lemma kernel_entry_invs:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
@@ -102,7 +102,6 @@ lemma user_memory_update[wp]:
    \<lbrace>\<lambda>rv s. P (device_region s)\<rbrace>"
   by (simp add: do_machine_op_def user_memory_update_def simpler_modify_def
                 valid_def bind_def gets_def return_def get_def select_f_def)
-
 
 
 lemma do_user_op_invs:

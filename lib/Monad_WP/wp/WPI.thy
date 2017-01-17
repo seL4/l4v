@@ -430,7 +430,6 @@ notepad begin
           f x 
         \<lbrace>\<lambda>r s. D'' x \<and> (R D r s \<longrightarrow> (Q s \<and> Q' s \<and> D \<and> (y x \<longrightarrow> D''' y) \<and> (D''''  \<longrightarrow> y x))) \<and> 
                 (\<not> R D r s \<longrightarrow> (Q s \<and> Q'' s))\<rbrace>"
-  apply (rule hoare_pre)
   apply wp
   apply (wpi wpi: Q')
   apply (wpi wpi: Q)

@@ -537,7 +537,7 @@ lemma cap_insert_simple_arch_caps_ap:
                  hoare_vcg_disj_lift set_cap_reachable_pg_cap set_cap.vs_lookup_pages 
               | clarsimp)+
       apply (wp set_cap_arch_obj set_cap_valid_table_caps hoare_vcg_ball_lift
-                get_cap_wp static_imp_wp)
+                get_cap_wp static_imp_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
   apply (rule conjI)
    apply (clarsimp simp: vs_cap_ref_def)
@@ -649,12 +649,13 @@ lemma perform_asid_control_invocation_st_tcb_at:
     and ct_active and invs and valid_aci aci\<rbrace> 
     perform_asid_control_invocation aci 
   \<lbrace>\<lambda>y. st_tcb_at P t\<rbrace>"
+  including no_pre
   apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
   apply (rename_tac word1 a b aa ba word2)
   apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at set_cap_no_overlap|simp)+
     apply (strengthen invs_valid_objs invs_psp_aligned)
     apply (clarsimp simp:conj_comms)
-    apply (wp max_index_upd_invs_simple get_cap_wp)
+    apply (wp max_index_upd_invs_simple get_cap_wp)+
    apply (rule hoare_name_pre_state)
    apply (subgoal_tac "is_aligned word1 page_bits")
    prefer 2
@@ -939,6 +940,7 @@ lemma sts_valid_arch_inv:
 
 lemma ensure_safe_mapping_inv [wp]:
   "\<lbrace>P\<rbrace> ensure_safe_mapping m \<lbrace>\<lambda>_. P\<rbrace>"
+  including no_pre
   apply (cases m, simp_all)
    apply (case_tac a, simp)
    apply (case_tac aa, simp_all)[1]
@@ -952,9 +954,7 @@ lemma ensure_safe_mapping_inv [wp]:
 (* the induct rule matches the wrong parameters first -> crunch blows up *)
 lemma create_mapping_entries_inv [wp]: 
   "\<lbrace>P\<rbrace> create_mapping_entries base vptr vmsz R A pd \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (induct vmsz)
-     apply (simp, wp lookup_pt_slot_inv)+
-  done
+  by (induct vmsz; wpsimp wp: lookup_pt_slot_inv)
 
 
 crunch_ignore (add: select_ext)
@@ -965,13 +965,7 @@ crunch inv [wp]: arch_decode_invocation "P"
 
 lemma create_mappings_empty [wp]:
   "\<lbrace>\<top>\<rbrace> create_mapping_entries base vptr vmsz R A pd \<lbrace>\<lambda>m s. empty_refs m\<rbrace>, -"
-  apply (cases vmsz, simp_all add: empty_refs_def)
-     apply (wp|simp)+
-   apply (rule hoare_pre)
-    apply (wp|simp add: pde_ref_def)+
-  apply (rule hoare_pre)
-   apply (wp|simp add: pde_ref_def)+
-  done
+  by (cases vmsz; wpsimp simp: pde_ref_def empty_refs_def)
 
 
 lemma empty_pde_atI:

@@ -1179,10 +1179,10 @@ lemma init_cnode_slot_move_not_original_inv:
   \<Longrightarrow> \<lbrace>P\<rbrace> init_cnode_slot spec orig_caps dup_caps irq_caps Move obj_id slot \<lbrace>\<lambda>_. P\<rbrace>"
   apply (clarsimp simp: init_cnode_slot_def cap_at_def)
   apply wp
+         apply (rule hoare_pre_cont)
         apply (rule hoare_pre_cont)
-       apply (rule hoare_pre_cont)
-      apply clarsimp
-      apply wp
+       apply clarsimp
+       apply wp+
   apply clarsimp
   done
 
@@ -1206,7 +1206,7 @@ lemma init_cnode_slot_move_not_original_sep:
         si_spec_irq_null_cap_at irq_caps spec obj_id slot \<and>*
         si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
-  apply (wp init_cnode_slot_move_not_original_inv, simp)
+  apply (wp init_cnode_slot_move_not_original_inv)
   apply (subst (asm) cnode_slot_half_initialised_not_original_slot, assumption+)
   apply (subst (asm) si_obj_cap_at_si_spec_obj_null_cap_at_not_original, assumption)
   apply (clarsimp simp: si_spec_irq_cap_at_def si_spec_irq_null_cap_at_def original_cap_at_def)
@@ -1226,8 +1226,8 @@ lemma init_cnode_slot_move_sep:
         si_cap_at t dup_caps spec dev obj_id \<and>*
         object_fields_empty spec t obj_id \<and>* si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (case_tac "original_cap_at (obj_id, slot) spec")
-   apply (wp init_cnode_slot_move_original_sep, simp+)
-  apply (wp init_cnode_slot_move_not_original_sep, simp+)
+   apply (wp init_cnode_slot_move_original_sep)
+  apply (wp init_cnode_slot_move_not_original_sep)
   done
 
 lemma init_cnode_slots_move_sep:
@@ -1680,9 +1680,9 @@ lemma init_cspace_sep':
         si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (unfold init_cspace_def)
-  apply wp
-    apply (wp init_cspace_move_sep, simp+)
-   apply (wp init_cspace_copy_sep, simp+)
+  apply (wp init_cspace_move_sep)
+    apply (wp init_cspace_copy_sep)+
+  apply simp
   done
 
 lemma hoare_subst:

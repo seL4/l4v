@@ -44,7 +44,6 @@ lemma const_on_failure_wp :
   "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>rv. Q n\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> const_on_failure n m \<lbrace>Q\<rbrace>"
   apply (simp add: const_on_failure_def)
   apply wp
-  apply simp
   done
 
 lemma get_cap_id:

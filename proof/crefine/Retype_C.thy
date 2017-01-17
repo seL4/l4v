@@ -6993,14 +6993,15 @@ lemma createObject_untypedRange:
                             Q {ptr..ptr + 2 ^ us - 1} s) \<and>
             (toAPIType ty \<noteq> Some apiobject_type.Untyped \<longrightarrow> Q {} s)\<rbrace>"
   shows "\<lbrace>P\<rbrace> createObject ty ptr us dev\<lbrace>\<lambda>m s. Q (untypedRange m) s\<rbrace>"
+  including no_pre
   using split
   apply (simp add: createObject_def)
   apply (case_tac "toAPIType ty")
-   apply (simp add: split untypedRange.simps | wp)+
+   apply (simp add: split | wp)+
    apply (simp add: valid_def return_def bind_def split_def)
   apply (case_tac a, simp_all)
-      apply (simp add: untypedRange.simps valid_def return_def simpler_gets_def
-                       simpler_modify_def bind_def split_def curDomain_def)+
+      apply (simp add: valid_def return_def simpler_gets_def simpler_modify_def
+                       bind_def split_def curDomain_def)+
   done
 
 lemma createObject_capRange:
@@ -7206,8 +7207,7 @@ lemma insertNewCap_untypedRange:
     insertNewCap srcSlot destSlot x
    \<lbrace>\<lambda>rv s. cte_wp_at' (\<lambda>cte. isUntypedCap (cteCap cte) \<and> P untypedRange (cteCap cte)) srcSlot s\<rbrace>"
   apply (simp add:insertNewCap_def)
-  apply (wp updateMDB_weak_cte_wp_at )
-  apply (wp setCTE_cte_wp_at_other getCTE_wp)
+  apply (wp updateMDB_weak_cte_wp_at setCTE_cte_wp_at_other getCTE_wp)
   apply (clarsimp simp:cte_wp_at_ctes_of)
   done
 
@@ -7820,8 +7820,7 @@ lemma insertNewCap_ccorres:
   apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
   apply (simp add: untypedZeroRange_def Let_def)
   done
-find_theorems untypedZeroRange
-term zero_ranges_are_zero
+
 lemma createObject_untyped_region_is_zero_bytes:
   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s. let tp = (object_type_to_H (t_' s));
           sz = APIType_capBits tp (unat (userSize_' s))
@@ -8133,7 +8132,7 @@ shows  "ccorres dc xfdc
                   hoare_vcg_prop createObject_gsCNodes_p createObject_cnodes_have_size)
         apply (rule hoare_vcg_conj_lift[OF createObject_capRange_helper])
          apply (wp createObject_cte_wp_at' createObject_ex_cte_cap_wp_to
-                   createObject_no_inter[where sz = sz] hoare_vcg_all_lift static_imp_wp)
+                   createObject_no_inter[where sz = sz] hoare_vcg_all_lift static_imp_wp)+
        apply (clarsimp simp:invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace'
          field_simps range_cover.sz conj_comms range_cover.aligned range_cover_sz'
          is_aligned_shiftl_self aligned_add_aligned[OF range_cover.aligned])

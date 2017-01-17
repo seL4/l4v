@@ -166,15 +166,13 @@ lemma decode_irq_control_corres:
   apply (cases caps, simp split: list.split)
   apply (case_tac "\<exists>n. length args = Suc (Suc (Suc n))")
    apply (clarsimp simp: list_all2_Cons1 Let_def split_def liftE_bindE
-                         lookup_target_slot_def lookupTargetSlot_def
                          whenE_rangeCheck_eq length_Suc_conv checkIRQ_def)
    apply (rule corres_guard_imp)
      apply (rule whenE_throwError_corres)
        apply (simp add: minIRQ_def maxIRQ_def)
       apply (simp add: minIRQ_def ucast_nat_def)
      apply (simp add: linorder_not_less)
-     apply (simp add: maxIRQ_def word_le_nat_alt toEnum_of_nat)
-
+     apply (simp add: maxIRQ_def word_le_nat_alt)
      apply (simp add: ucast_nat_def)
      apply (rule corres_split_eqr [OF _ is_irq_active_corres])
        apply (rule whenE_throwError_corres, simp, simp)
@@ -225,8 +223,7 @@ lemma decode_irq_control_valid'[wp]:
              whenE_throwError_wp
                 | simp add: ARM_H.decodeIRQControlInvocation_def | wpc
                 | wp_once hoare_drop_imps)+
-  apply (clarsimp simp: minIRQ_def maxIRQ_def
-                        toEnum_of_nat word_le_nat_alt unat_of_nat)
+  apply (clarsimp simp: minIRQ_def maxIRQ_def word_le_nat_alt unat_of_nat)
   done
 
 lemma irq_nodes_global_refs:
@@ -270,11 +267,11 @@ lemma invoke_irq_handler_corres:
                                   \<and> cte_wp_at (is_derived (cdt s) (a, b) cap) (a, b) s"
                       in hoare_post_imp)
          apply fastforce
-        apply (wp cap_delete_one_still_derived)
+        apply (wp cap_delete_one_still_derived)+
        apply (strengthen invs_mdb_strengthen')
-       apply wp
+       apply wp+
       apply (simp add: conj_comms eq_commute)
-      apply (wp get_irq_slot_different hoare_drop_imps)
+      apply (wp get_irq_slot_different hoare_drop_imps)+
     apply (clarsimp simp: valid_state_def invs_def)
     apply (erule cte_wp_at_weakenE, simp add: is_derived_use_interrupt)
    apply fastforce
@@ -282,7 +279,7 @@ lemma invoke_irq_handler_corres:
     apply (rule corres_split [OF _ get_irq_slot_corres])
       apply simp
       apply (rule cap_delete_one_corres)
-     apply wp
+     apply wp+
    apply simp+
   done
 
@@ -329,12 +326,13 @@ lemma invoke_irq_handler_invs'[wp]:
     apply (clarsimp simp add: invs'_def valid_state'_def valid_irq_masks'_def
       valid_machine_state'_def ct_not_inQ_def
       ct_in_current_domain_ksMachineState)
-   apply (wp cteInsert_invs)
+   apply (wp cteInsert_invs)+
    apply (strengthen ntfn_badge_derived_enough_strg isnt_irq_handler_strg)
-   apply (wp cteDeleteOne_other_cap cteDeleteOne_other_cap[unfolded o_def])[1]
+   apply (wp cteDeleteOne_other_cap cteDeleteOne_other_cap[unfolded o_def])
   apply (rename_tac word1 cap word2)
   apply (simp add: getInterruptState_def getIRQSlot_def locateSlot_conv)
   apply wp
+  apply (rename_tac word1 cap word2 s)
   apply (clarsimp simp: ucast_nat_def)
   apply (drule_tac irq=word1 in valid_globals_ex_cte_cap_irq)
     apply clarsimp+
@@ -504,9 +502,9 @@ lemma timerTick_corres:
              apply (rule corres_split[OF _ domain_time_corres])
                apply (rule corres_when,simp)
                apply (rule rescheduleRequired_corres)
-              apply (wp hoare_drop_imp)
+              apply (wp hoare_drop_imp)+
             apply (simp add:dec_domain_time_def)
-            apply wp
+            apply wp+
            apply (simp add:decDomainTime_def)
           apply wp
           apply (rule corres_if[where Q = \<top> and Q' = \<top>])
@@ -531,12 +529,10 @@ lemma timerTick_corres:
                      apply (simp add: sch_act_wf_weak etcb_relation_def
                        time_slice_def timeSlice_def pred_conj_def)+
                  apply (wp threadSet_timeslice_invs threadSet_valid_queues
-                   threadSet_valid_queues'
-                   threadSet_pred_tcb_at_state)
+                           threadSet_valid_queues' threadSet_pred_tcb_at_state)+
                apply (simp add:etcb_relation_def)
               apply (wp threadSet_timeslice_invs threadSet_valid_queues
-                threadSet_valid_queues'
-                threadSet_pred_tcb_at_state)
+                        threadSet_valid_queues' threadSet_pred_tcb_at_state)
              apply simp
             apply (wp|wpc|unfold Let_def|simp)+
             apply (wp static_imp_wp threadSet_timeslice_invs threadSet_valid_queues  threadSet_valid_queues'
@@ -548,13 +544,13 @@ lemma timerTick_corres:
            apply simp
            apply (wp threadSet_valid_queues threadSet_pred_tcb_at_state threadSet_sch_act
             threadSet_tcbDomain_triv threadSet_valid_queues' threadSet_valid_objs'| simp)+
-         apply (wp threadGet_wp gts_wp gts_wp')
+         apply (wp threadGet_wp gts_wp gts_wp')+
        apply (clarsimp simp: cur_tcb_def tcb_at_is_etcb_at valid_sched_def valid_sched_action_def)
        apply (subgoal_tac "is_etcb_at thread s \<and> tcb_at thread s \<and> valid_etcbs s \<and> weak_valid_sched_action s")
         prefer 2
         apply assumption
        apply clarsimp
-      apply (wp gts_wp')
+      apply (wp gts_wp')+
      apply (clarsimp simp add:cur_tcb_def valid_sched_def
          valid_sched_action_def valid_etcbs_def is_tcb_def
          is_etcb_at_def st_tcb_at_def obj_at_def
@@ -605,7 +601,7 @@ apply (rule corres_split)
                                  where R="\<lambda>rv. einvs and valid_cap rv"
                                   and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
          apply (rule corres_split'[where r'=dc])
-            apply (case_tac xb, simp_all add: when_False doMachineOp_return )[1]
+            apply (case_tac xb, simp_all add: doMachineOp_return)[1]
              apply (clarsimp simp add: when_def doMachineOp_return)
              apply (rule corres_guard_imp, rule send_signal_corres)
               apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind)+
@@ -614,9 +610,6 @@ apply (rule corres_split)
             apply ((wp |simp)+)
             apply clarsimp
    apply fastforce
-        
-            
-
    apply (rule corres_guard_imp)
    apply (rule corres_split)
    apply simp
@@ -624,17 +617,14 @@ apply (rule corres_split)
        apply (rule corres_eq_trivial, simp+)
        apply (rule corres_machine_op)
        apply (rule corres_eq_trivial, (simp add: no_fail_ackInterrupt)+)
-       apply wp
+       apply wp+
     apply clarsimp
    apply clarsimp
-
   done
 
 lemma invs_ChooseNewThread:
   "invs' s \<Longrightarrow> invs' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
-  by (auto simp add: invs'_def valid_state'_def valid_queues'_def 
-                     valid_queues_def valid_irq_node'_def cur_tcb'_def
-                     ct_not_inQ_def bitmapQ_defs valid_queues_no_bitmap_def)
+  by (rule invs'_update_cnt)
 
 lemma ksDomainTime_invs[simp]:
   "invs' (a\<lparr>ksDomainTime := t\<rparr>) = invs' a"
@@ -705,8 +695,7 @@ lemma updateTimeSlice_sym_refs[wp]:
   apply (rule ext)
   apply (subst option.sel)
   apply (subst fst_conv)+
-  apply (clarsimp simp:projectKO_eq option.sel
-    projectKO_opt_tcb split:Structures_H.kernel_object.splits)
+  apply (clarsimp simp:projectKO_eq projectKO_opt_tcb split:Structures_H.kernel_object.splits)
   apply (simp add:objBits_simps)
   apply (frule_tac s' = s and 
     v' = "(KOTCB (tcbTimeSlice_update (\<lambda>_. ts') obj))" in ps_clear_updE)
@@ -756,7 +745,7 @@ lemma updateTimeSlice_if_unsafe_then_cap'[wp]:
    threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread   
   \<lbrace>\<lambda>r s. if_unsafe_then_cap' s\<rbrace>"
   apply (wp threadSet_ifunsafe'T)
-  apply (simp add:tcb_cte_cases_def)
+   apply (simp add:tcb_cte_cases_def)+
   done
 
 lemma updateTimeSlice_valid_idle'[wp]:
@@ -851,7 +840,7 @@ lemma timerTick_invs'[wp]:
              threadSet_valid_objs' threadSet_timeslice_invs
              | simp)+
           apply (wp threadGet_wp)
-   apply (wp gts_wp')
+   apply (wp gts_wp')+
   apply (clarsimp simp:invs'_def st_tcb_at'_def obj_at'_def
     valid_state'_def numDomains_def)
   done

@@ -80,7 +80,7 @@ lemma memcpy_char:
 
   (* The remaining loop is never encountered *)
        apply (rule validNF_false_pre)
-      apply wp
+      apply wp+
 
   (* Finally we're left with the single assignment *)
   apply (clarsimp simp:hrs_mem_update h_val_heap_update)

@@ -98,7 +98,7 @@ lemma kernel_entry_if_valid_domain_time:
            | clarsimp | wpc)+
    -- "strengthen post of do_machine_op; we know interrupt occurred"
    apply (rule_tac Q="\<lambda>_ s. 0 < domain_time s" in hoare_post_imp, fastforce)
-   apply (wp, simp)
+   apply (wp+, simp)
    done
 
 lemma kernel_entry_if_no_preempt:
@@ -332,7 +332,7 @@ lemma do_user_op_if_corres:
          apply (clarsimp simp: select_def corres_underlying_def)
          apply (simp only: comp_def | wp hoare_TrueI)+
       apply (rule corres_underlying_trivial)
-     apply (wp hoare_TrueI)
+     apply (wp hoare_TrueI)+
    apply clarsimp
    apply force
   apply force
@@ -378,7 +378,7 @@ lemma doUserOp_if_invs'[wp]:
   apply (simp add: doUserOp_if_def split_def ex_abs_def)
   apply (wp device_update_invs' dmo_setExMonitor_wp' dmo_invs' | simp)+
          apply (clarsimp simp add: no_irq_modify user_memory_update_def)
-        apply (wp doMachineOp_ct_running' doMachineOp_sch_act select_wp)
+        apply (wp doMachineOp_ct_running' doMachineOp_sch_act select_wp)+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def
                   split: option.splits)
@@ -573,7 +573,7 @@ lemma check_active_irq_if_corres:
   apply (simp add: checkActiveIRQ_if_def check_active_irq_if_def)
   apply (rule corres_underlying_split[where r'="op ="])
   apply (rule dmo_getActiveIRQ_corres)
-  apply (wp del: dmo_silc_dom add: do_machine_op_domain_list)
+  apply (wp del: dmo_silc_dom add: do_machine_op_domain_list)+
   apply clarsimp
   done
 
@@ -721,7 +721,7 @@ lemma schedule_if_corres:
          apply (rule activate_corres)
         apply (rule hoare_post_taut[where P=\<top>])+
       apply (rule schedule_corres)
-     apply (wp schedule_invs')
+     apply (wp schedule_invs')+
    apply clarsimp+
   done
 
@@ -748,7 +748,6 @@ lemma schedule_if'_rct[wp]:
   "\<lbrace>invs'\<rbrace> schedule'_if tc \<lbrace>\<lambda>r s. ksSchedulerAction s = ResumeCurrentThread\<rbrace>"
   apply (simp add: schedule'_if_def)
   apply (wp activate_sch_act schedule_sch)
-  apply simp
   done
 
 
@@ -770,7 +769,7 @@ lemma schedule_if_domain_time_left:
                              \<and> (domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)"
                      in hoare_post_imp)
      apply fastforce
-    apply wp
+    apply wp+
   apply simp
   done
 
@@ -810,9 +809,9 @@ lemma kernel_exit_if_corres:
        apply (clarsimp simp: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
       apply (rule gct_corres)
-     apply wp
+     apply wp+
    apply clarsimp+
-    done
+  done
 
 lemma kernelExit_inv[wp]:
   "\<lbrace>P\<rbrace> kernelExit_if tc \<lbrace>\<lambda>_. P\<rbrace>"
@@ -1231,6 +1230,7 @@ lemma haskell_invs:
   "global_automaton_invs checkActiveIRQ_H_if (doUserOp_H_if uop)
                          kernelCall_H_if handlePreemption_H_if
                          schedule'_H_if kernelExit_H_if full_invs_if' (ADT_H_if uop) UNIV"
+  including no_pre
   supply conj_cong[cong]
   apply (unfold_locales)
                apply (simp add: ADT_H_if_def)
@@ -1248,7 +1248,7 @@ lemma haskell_invs:
                 apply (rule hoare_drop_imps)
                 apply wp
                apply (wp_once hoare_disjI1)
-                apply wp
+                apply wp+
               apply (clarsimp simp: active_from_running')+
         apply (rule preserves_lifts)
         apply (simp add: full_invs_if'_def)

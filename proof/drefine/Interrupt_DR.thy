@@ -76,25 +76,25 @@ lemma decode_irq_control_corres:
      apply (simp add: get_index_def transform_cap_list_def throw_on_none_def)
      apply (cases "excaps' = []", simp_all)
      apply (rule corres_alternative_throw_splitE)
-        apply (rule corres_alternate1)
-        apply (rule lookup_slot_for_cnode_op_corres)
-          apply simp+
-        apply (clarsimp simp: split_def,simp)
-       apply (rule corres_throw_skip_r)
-         apply (rule corres_alternate1)
-         apply (rule corres_returnOk [where P=\<top> and P'=\<top>])
-         apply (simp add: cdl_irq_control_invocation_relation_def)
-         apply (subst ucast_mask_drop)
-          apply simp
+          apply (rule corres_alternate1)
+          apply (rule lookup_slot_for_cnode_op_corres)
+             apply simp+
+           apply (clarsimp simp: split_def,simp)
+         apply (rule corres_throw_skip_r)
+           apply (rule corres_alternate1)
+           apply (rule corres_returnOk [where P=\<top> and P'=\<top>])
+           apply (simp add: cdl_irq_control_invocation_relation_def)
+           apply (subst ucast_mask_drop)
+            apply simp
+           apply simp
+          apply wp[1]
          apply simp
-        apply wp[1]
-       apply simp
-       apply wp[3]
-    apply simp
-    apply (rule hoare_pre, wp)
-    apply simp
-   apply wp
-   apply (cases excaps', auto)[1]
+        apply (wp+)[3]
+     apply simp
+     apply (rule hoare_pre, wp)
+     apply simp
+    apply wp
+    apply (cases excaps', auto)[1]
    apply wp[1]
   apply (clarsimp simp: arch_decode_irq_control_invocation_def transform_intent_def)
   apply (rule corres_guard_imp)
@@ -208,13 +208,10 @@ lemma ackInterrupt_underlying_memory[wp]:
 lemma resetTimer_underlying_memory[wp]:
   "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> resetTimer \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
   apply (simp add:resetTimer_def machine_op_lift_def)
-  apply (simp add:machine_rest_lift_def ignore_failure_def)
+  apply (simp add:machine_rest_lift_def ignore_failure_def split_def)
   apply wp
-    apply (clarsimp simp:valid_def simpler_modify_def)
-    apply simp
-    apply (simp add:select_f_def | rule conjI)+
-      apply (clarsimp simp:valid_def,simp)+
-done
+  apply (clarsimp simp:valid_def simpler_modify_def)
+  done
 
 lemma valid_state_get_cap_wp:
   "\<lbrace>valid_state\<rbrace> CSpaceAcc_A.get_cap xa \<lbrace>\<lambda>rv s. (is_ntfn_cap rv \<longrightarrow> ntfn_at (obj_ref_of rv) s)\<rbrace>"
@@ -281,6 +278,7 @@ lemma timer_tick_dcorres: "dcorres dc P P' (return ()) timer_tick"
 
 lemma handle_interrupt_corres:
   "dcorres dc \<top> (invs and valid_etcbs) (Interrupt_D.handle_interrupt x) (Interrupt_A.handle_interrupt x)"
+  including no_pre
   apply (clarsimp simp:Interrupt_A.handle_interrupt_def)
   apply (clarsimp simp:get_irq_state_def gets_def bind_assoc)
   apply (rule conjI; rule impI)
@@ -365,11 +363,11 @@ lemma set_irq_state_dwp:
          set_irq_state irq_state.IRQSignal word \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
   apply (simp add:set_irq_state_def)
   apply (wp do_machine_op_wp)
-  apply clarsimp
-  apply (wp maskInterrupt_underlying_memory)
+    apply clarsimp
+    apply (wp maskInterrupt_underlying_memory)+
   apply (clarsimp simp:transform_def transform_objects_def transform_cdt_def
                        transform_current_thread_def transform_asid_table_def)
-done
+  done
 
 lemma dcorres_invoke_irq_control:
   "dcorres dc \<top> (invs and irq_control_inv_valid irq_control_invocation and valid_etcbs)
@@ -462,18 +460,18 @@ lemma cte_wp_at_neq_slot_cap_delete_one:
             \<lbrace>\<lambda>rv. cte_wp_at P slot\<rbrace>"
   apply (clarsimp simp:cap_delete_one_def unless_def)
   apply (wp hoare_when_wp)
-  apply (clarsimp simp:empty_slot_def)
-  apply (wp cte_wp_at_neq_slot_set_cap)
-  apply clarsimp
-  apply (wp dxo_wp_weak | simp)+
-  apply (clarsimp simp:set_cdt_def)
-  apply (wp | clarsimp)+
-  apply (rule_tac Q = "\<lambda>r s. cte_wp_at P slot s \<and> cte_at slot' s" in hoare_strengthen_post)
-  apply (rule hoare_vcg_conj_lift)
-  apply wp_once
-  apply (wp get_cap_cte)
-  apply (clarsimp|wp)+
-done
+      apply (clarsimp simp:empty_slot_def)
+      apply (wp cte_wp_at_neq_slot_set_cap)
+           apply clarsimp
+           apply (wp dxo_wp_weak | simp)+
+         apply (clarsimp simp:set_cdt_def)
+         apply (wp | clarsimp)+
+      apply (rule_tac Q = "\<lambda>r s. cte_wp_at P slot s \<and> cte_at slot' s" in hoare_strengthen_post)
+       apply (rule hoare_vcg_conj_lift)
+        apply wp_once
+       apply (wp get_cap_cte)
+      apply (clarsimp|wp)+
+  done
 
 lemma cap_delete_one_not_idle [wp]:
   "\<lbrace>not_idle_thread t\<rbrace> cap_delete_one slot \<lbrace>\<lambda>_. not_idle_thread t\<rbrace>"

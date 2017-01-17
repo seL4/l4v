@@ -176,11 +176,7 @@ next
   have IH: "\<lbrace>P\<rbrace> zipWithM_x m as bs \<lbrace>\<lambda>rv. P\<rbrace>"
     by fact
   show ?case
-    apply (simp add: zipWithM_x_Cons)
-    apply wp
-     apply (rule IH)
-    apply (rule x)
-    done
+    by (simp add: zipWithM_x_Cons) (wp IH x)
 qed
 
 lemma K_valid[wp]:
@@ -193,10 +189,9 @@ lemma mapME_wp:
   apply (induct xs)
    apply (simp add: mapME_def sequenceE_def)
    apply wp
-  apply (simp add: mapME_Cons)
-  apply wp
    apply simp
-  apply (simp add: x)
+  apply (simp add: mapME_Cons)
+  apply (wp x|simp)+
   done
 
 lemmas mapME_wp' = mapME_wp [OF _ subset_refl]
@@ -229,8 +224,8 @@ lemma mapM_wp:
    apply (simp add: mapM_def sequence_def)
   apply (simp add: mapM_Cons)
   apply wp
-   apply assumption
-  apply (simp add: x)
+   apply (rule x, clarsimp)
+  apply simp
   done
 
 lemma mapM_x_mapM:
@@ -242,12 +237,7 @@ lemma mapM_x_mapM:
 lemma mapM_x_wp:
   assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
   shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapM_x f xs \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (subst mapM_x_mapM)
-  apply wp
-  apply (rule mapM_wp)
-   apply (rule x)
-   apply assumption+
-  done
+  by (subst mapM_x_mapM) (wp mapM_wp x)
 
 lemma mapM_x_Nil:
   "mapM_x f [] = return ()"
@@ -282,8 +272,7 @@ next
   thus ?case
     apply (simp add: mapM_x_Cons)
     apply wp
-    apply assumption
-    apply (wp hr)
+     apply (wp hr)
     apply assumption
     done
 qed
@@ -321,12 +310,12 @@ proof (induct xs rule: rev_induct)
 next
   case (snoc x xs)
   show ?case
-    apply -
     apply (simp add: mapM_append_single)
     apply (wp snoc.prems)
-    apply simp
-    apply (rule snoc.hyps [OF snoc.prems])
-    apply simp
+      apply simp
+     apply (rule snoc.hyps [OF snoc.prems])
+     apply simp
+    apply assumption
     done
 qed
 
@@ -351,8 +340,8 @@ lemma mapME_x_inv_wp:
   apply (simp add: mapME_x_def sequenceE_x_def)
   apply (fold mapME_x_def sequenceE_x_def)
   apply wp
-   apply assumption
-  apply (rule x)
+   apply (rule x)
+  apply assumption
   done
 
 lemma liftM_return [simp]:
@@ -632,10 +621,7 @@ lemma no_fail_throwError [wp]:
 
 lemma no_fail_liftE [wp]:
   "no_fail P f \<Longrightarrow> no_fail P (liftE f)"
-  apply (simp add: liftE_def)
-  apply (rule no_fail_pre, (wp | assumption)+)
-  apply simp
-  done
+  unfolding liftE_def by wpsimp
 
 lemma bind_return_eq:
   "(a >>= return) = (b >>= return) \<Longrightarrow> a = b"
@@ -733,8 +719,7 @@ lemma in_returns [monad_eq]:
 
 lemma assertE_sp:
   "\<lbrace>P\<rbrace> assertE Q \<lbrace>\<lambda>rv s. Q \<and> P s\<rbrace>,\<lbrace>E\<rbrace>"
-  by (clarsimp simp: assertE_def, wp)
-
+  by (clarsimp simp: assertE_def) wp
 
 lemma catch_liftE:
   "catch (liftE g) h = g"
@@ -957,8 +942,7 @@ next
   case (Cons z zs)
   show ?case
     apply (clarsimp simp: mapM_Cons)
-    apply (rule no_fail_pre)
-     apply (wp Cons.prems Cons.hyps hoare_vcg_const_Ball_lift|simp)+
+    apply (wp Cons.prems Cons.hyps hoare_vcg_const_Ball_lift|simp)+
     done
 qed
 
@@ -1103,13 +1087,7 @@ lemma no_fail_mapM:
   apply (induct xs)
    apply (simp add: mapM_def sequence_def)
   apply (simp add: mapM_Cons)
-  apply (rule no_fail_pre)
-  apply (rule no_fail_bind)
-     apply fastforce
-    apply (erule no_fail_bind)
-     apply (rule no_fail_return)
-    apply wp
-  apply simp
+  apply (wp|fastforce)+
   done
 
 lemma gets_inv [simp]:
@@ -1151,8 +1129,7 @@ lemma injection_wp:
   "\<lbrakk> t = injection_handler f; \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>ft. E (f ft)\<rbrace> \<rbrakk>
     \<Longrightarrow> \<lbrace>P\<rbrace> t m \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   apply (simp add: injection_handler_def)
-  apply wp
-  apply simp
+  apply (wp|simp)+
   done
 
 lemma injection_wp_E:
@@ -1374,10 +1351,7 @@ lemma whenE_whenE_same:
   apply simp
   done
 
-lemma gets_the_inv: "\<lbrace>P\<rbrace> gets_the V \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply wp
-  apply simp
-  done
+lemma gets_the_inv: "\<lbrace>P\<rbrace> gets_the V \<lbrace>\<lambda>rv. P\<rbrace>" by wpsimp
 
 lemma select_f_inv:
   "\<lbrace>P\<rbrace> select_f S \<lbrace>\<lambda>_. P\<rbrace>"
@@ -1393,7 +1367,7 @@ lemma validI:
 lemma opt_return_pres_lift:
   assumes x: "\<And>v. \<lbrace>P\<rbrace> f v \<lbrace>\<lambda>rv. P\<rbrace>"
   shows      "\<lbrace>P\<rbrace> case x of None \<Rightarrow> return () | Some v \<Rightarrow> f v \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (rule hoare_pre, wpcw, wp x, simp)
+  by (rule hoare_pre, (wpcw; wp x), simp)
 
 lemma exec_select_f_singleton:
   "(select_f ({v},False) >>= f) = f v"
@@ -1431,8 +1405,9 @@ lemma filterM_preserved:
   "\<lbrakk> \<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> m x \<lbrace>\<lambda>rv. P\<rbrace> \<rbrakk>
       \<Longrightarrow> \<lbrace>P\<rbrace> filterM m xs \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (induct xs)
-   apply (wp | simp | erule meta_mp)+
+   apply (wp | simp | erule meta_mp | drule meta_spec)+
   done
+
 lemma filterM_append:
   "filterM f (xs @ ys) = (do
      xs' \<leftarrow> filterM f xs;
@@ -2057,14 +2032,12 @@ next
   show ?case
     apply (simp add: mapME_Cons)
     apply (wp)
-     apply (rule_tac Q' = "\<lambda>xs s. (R s \<and> (\<forall>x \<in> set xs. P x s)) \<and> P x s" in
-       hoare_post_imp_R)
+     apply (rule_tac Q' = "\<lambda>xs s. (R s \<and> (\<forall>x \<in> set xs. P x s)) \<and> P x s" in hoare_post_imp_R)
       apply (wp Cons.hyps minvp)
      apply simp
     apply (fold validE_R_def)
     apply simp
-    apply (rule hoare_pre)
-     apply (wp invr est)
+    apply (wp invr est)
     apply simp
     done
 qed clarsimp
@@ -2126,7 +2099,7 @@ lemma list_case_throw_validE_R:
   "\<lbrakk> \<And>y ys. xs = y # ys \<Longrightarrow> \<lbrace>P\<rbrace> f y ys \<lbrace>Q\<rbrace>,- \<rbrakk> \<Longrightarrow>
    \<lbrace>P\<rbrace> case xs of [] \<Rightarrow> throwError e | x # xs \<Rightarrow> f x xs \<lbrace>Q\<rbrace>,-"
   apply (case_tac xs, simp_all)
-  apply (rule hoare_pre, wp)
+  apply wp
   done
 
 lemma validE_R_sp:
@@ -2145,8 +2118,7 @@ lemma valid_set_take_helper:
 lemma whenE_throwError_sp:
   "\<lbrace>P\<rbrace> whenE Q (throwError e) \<lbrace>\<lambda>rv s. \<not> Q \<and> P s\<rbrace>, -"
   apply (simp add: whenE_def validE_R_def)
-  apply (intro conjI impI)
-   apply wp
+  apply (intro conjI impI; wp)
   done
 
 lemma no_fail_bindE [wp]:
@@ -2163,10 +2135,6 @@ lemma no_fail_bindE [wp]:
   apply (erule hoare_strengthen_post)
   apply clarsimp
   done
-
-lemma when_False:
-  "when False f = return ()"
-  by (simp add: when_def)
 
 lemma empty_fail_mapM_x [simp]:
   "(\<And>x. empty_fail (a x)) \<Longrightarrow> empty_fail (mapM_x a xs)"
@@ -2631,7 +2599,9 @@ lemma no_throw_bindE_simple: "\<lbrakk> no_throw \<top> L; \<And>x. no_throw \<t
   apply wp
   done
 
-lemma no_throw_handleE_simple: "\<lbrakk> \<And>x. no_throw \<top> L \<or> no_throw \<top> (R x) \<rbrakk> \<Longrightarrow> no_throw \<top> (L <handle> R)"
+lemma no_throw_handleE_simple: 
+  notes hoare_pre [wp_pre del]
+  shows "\<lbrakk> \<And>x. no_throw \<top> L \<or> no_throw \<top> (R x) \<rbrakk> \<Longrightarrow> no_throw \<top> (L <handle> R)"
   apply (clarsimp simp: no_throw_def)
   apply atomize
   apply clarsimp

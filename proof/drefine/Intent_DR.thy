@@ -1363,56 +1363,56 @@ lemma get_ipc_buffer_words_helper:
   apply (clarsimp dest!:get_tcb_SomeD simp:get_ipc_buffer_words_def split:cap.splits arch_cap.splits)
   apply (frule ipc_frame_ptr_at_frame_at[where buf = obuf],simp+)
   apply (frule valid_tcb_obj_ipc_align_etc[where buf = obuf],simp+)
-    apply (erule get_tcb_rev)
+   apply (erule get_tcb_rev)
   apply (rule arg_cong[where f = the])
   apply (rule evalMonad_mapM)
-  defer
-  apply (simp_all add:empty_when_fail_loadWord weak_det_spec_loadWord)
-  apply (wp loadWord_inv)
+        defer
+        apply (simp_all add:empty_when_fail_loadWord weak_det_spec_loadWord)
+    apply (wp loadWord_inv)+
   apply (clarsimp simp:obj_at_def ipc_frame_wp_at_def)
   apply (drule_tac x = r in bspec,simp)
   apply (clarsimp simp:evalMonad_loadWord get_tcb_SomeD | rule conjI)+
   apply (rule arg_cong[where f = word_rcat])
-    apply clarsimp
+  apply clarsimp
   apply (clarsimp simp:|rule conjI)
-    apply (rule underlying_memory_storeWord)
-    apply simp_all
+   apply (rule underlying_memory_storeWord)
+      apply simp_all
     apply (rule aligned_add_aligned)+
-      apply simp+
-      apply (rule is_aligned_after_mask)
-      apply simp+
-    apply (rule ipc_buffer_within_frame[where buf =obuf and buf'=buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
+        apply simp+
+       apply (rule is_aligned_after_mask)
+        apply simp+
+   apply (rule ipc_buffer_within_frame[where buf =obuf and buf'=buf])
+         apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (rule conjI)
-    apply (subst add.assoc[symmetric])+
-    apply (rule underlying_memory_storeWord)
+   apply (subst add.assoc[symmetric])+
+   apply (rule underlying_memory_storeWord)
       apply (simp_all)
-      apply (rule aligned_add_aligned)+
-      apply simp+
-      apply (subst is_aligned_after_mask)
-      apply simp+
-    apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
+    apply (rule aligned_add_aligned)+
+        apply simp+
+       apply (subst is_aligned_after_mask)
+        apply simp+
+   apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
+         apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (rule conjI)
-    apply (subst add.assoc[symmetric])+
-    apply (rule underlying_memory_storeWord)
+   apply (subst add.assoc[symmetric])+
+   apply (rule underlying_memory_storeWord)
       apply (simp_all)
-      apply (rule aligned_add_aligned)+
-      apply simp+
-      apply (subst is_aligned_after_mask)
-      apply simp+
-    apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
+    apply (rule aligned_add_aligned)+
+        apply simp+
+       apply (subst is_aligned_after_mask)
+        apply simp+
+   apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
+         apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (subst add.assoc[symmetric])+
   apply (rule underlying_memory_storeWord[where n = 0,simplified])
     apply (simp_all)
-    apply (rule aligned_add_aligned)+
-    apply simp+
-    apply (subst is_aligned_after_mask)
-    apply simp+
-    apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-    apply ((simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+)[7]
-done
+   apply (rule aligned_add_aligned)+
+       apply simp+
+      apply (subst is_aligned_after_mask)
+       apply simp+
+  apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
+        apply ((simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+)[7]
+  done
 
 lemma get_ipc_buffer_words_separate_frame:
   "\<lbrakk>valid_objs s;
@@ -1429,64 +1429,64 @@ lemma get_ipc_buffer_words_separate_frame:
   apply (frule ipc_frame_ptr_at_frame_at[where buf = buf],simp+)
   apply (frule ipc_frame_ptr_at_frame_at[where buf = obuf],simp+)
   apply (frule valid_tcb_obj_ipc_align_etc[where buf = obuf],simp+)
-    apply (erule get_tcb_rev)
+   apply (erule get_tcb_rev)
   apply (subgoal_tac "\<exists>tcb. get_tcb s_id s = Some tcb")
-    prefer 2
-    apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def)
-    apply (rule exI)
-    apply (erule get_tcb_rev)
+   prefer 2
+   apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def)
+   apply (rule exI)
+   apply (erule get_tcb_rev)
   apply clarify
   apply (frule valid_tcb_obj_ipc_align_etc[where buf = buf],simp+)
   apply (rule arg_cong[where f = the])
   apply (rule evalMonad_mapM)
-  defer
-  apply (simp_all add:empty_when_fail_loadWord weak_det_spec_loadWord)
-  apply (wp loadWord_inv)
+        defer
+        apply (simp_all add:empty_when_fail_loadWord weak_det_spec_loadWord)
+    apply (wp loadWord_inv)+
   apply (clarsimp simp:obj_at_def ipc_frame_wp_at_def)
   apply (drule_tac x = r in bspec,simp)
   apply (clarsimp split:cap.split_asm arch_cap.split_asm)
   apply (clarsimp simp:evalMonad_loadWord get_tcb_SomeD | rule conjI)+
   apply (rule arg_cong[where f = word_rcat])
-    apply clarsimp
+  apply clarsimp
   apply (clarsimp simp:|rule conjI)
-    apply (rule underlying_memory_storeWord)
-    apply simp_all
+   apply (rule underlying_memory_storeWord)
+      apply simp_all
     apply (rule aligned_add_aligned)+
-      apply simp+
-      apply (rule is_aligned_after_mask)
-      apply simp+
-    apply (rule ipc_buffer_within_frame[where buf =obuf and buf'=buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
+        apply simp+
+       apply (rule is_aligned_after_mask)
+        apply simp+
+   apply (rule ipc_buffer_within_frame[where buf =obuf and buf'=buf])
+         apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (rule conjI)
-    apply (subst add.assoc[symmetric])+
-    apply (rule underlying_memory_storeWord)
+   apply (subst add.assoc[symmetric])+
+   apply (rule underlying_memory_storeWord)
       apply (simp_all)
-      apply (rule aligned_add_aligned)+
-      apply simp+
-      apply (subst is_aligned_after_mask)
-      apply simp+
-    apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
+    apply (rule aligned_add_aligned)+
+        apply simp+
+       apply (subst is_aligned_after_mask)
+        apply simp+
+   apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
+         apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (rule conjI)
-    apply (subst add.assoc[symmetric])+
-    apply (rule underlying_memory_storeWord)
+   apply (subst add.assoc[symmetric])+
+   apply (rule underlying_memory_storeWord)
       apply (simp_all)
-      apply (rule aligned_add_aligned)+
-      apply simp+
-      apply (subst is_aligned_after_mask)
-      apply simp+
-    apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
+    apply (rule aligned_add_aligned)+
+        apply simp+
+       apply (subst is_aligned_after_mask)
+        apply simp+
+   apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
+         apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (subst add.assoc[symmetric])+
   apply (rule underlying_memory_storeWord[where n = 0,simplified])
     apply (simp_all)
-    apply (rule aligned_add_aligned)+
-    apply simp+
-    apply (subst is_aligned_after_mask)
-    apply simp+
-    apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-    apply ((simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+)[7]
-done
+   apply (rule aligned_add_aligned)+
+       apply simp+
+      apply (subst is_aligned_after_mask)
+       apply simp+
+  apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
+        apply ((simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+)[7]
+  done
 
 lemma mask_inj_if:
   "\<lbrakk>a && mask n = a; b && mask n = b; a && mask n = b && mask n\<rbrakk>\<Longrightarrow> a = b"
@@ -1500,21 +1500,21 @@ lemma bound_preserve_mask:
   "\<lbrakk>is_aligned (x::word32) n; x\<le> mask k; (z::word32)\<le> mask n;
     n < 32;k<32;n\<le> k\<rbrakk> \<Longrightarrow> x+z \<le> mask k"
   apply (rule less_less_trans[where b = "(mask k && ~~ mask n) + mask n"])
-    apply (rule less_less_trans[where b = "x + mask n"])
-      apply (erule word_plus_mono_right)
-      apply (rule is_aligned_no_wrap')
-        apply simp
-      apply (rule mask_lt_2pn)
-      apply (simp add:word_size)
-    apply (rule word_plus_mono_left)
+   apply (rule less_less_trans[where b = "x + mask n"])
+    apply (erule word_plus_mono_right)
+    apply (rule is_aligned_no_wrap')
+     apply simp
+    apply (rule mask_lt_2pn)
+    apply (simp add:word_size)
+   apply (rule word_plus_mono_left)
     apply (rule less_less_trans[where b = "x && ~~ mask n"])
-      apply (simp add:mask_out_sub_mask is_aligned_mask)
+     apply (simp add:mask_out_sub_mask is_aligned_mask)
     apply (erule neg_mask_mono_le)
-    apply (simp add:mask_out_sub_mask mask_and_mask min_def)
-    apply (rule word_leI)
-    apply (clarsimp simp:word_size)
+   apply (simp add:mask_out_sub_mask mask_and_mask min_def)
+   apply (rule word_leI)
+   apply (clarsimp simp:word_size)
   apply (simp add:mask_out_sub_mask mask_and_mask min_def)
-done
+  done
 
 lemma nat_less_le:
   "(a::nat) < b \<Longrightarrow> a \<le> b - 1"
@@ -1526,7 +1526,7 @@ lemma within_page_ipc_buf:
       \<Longrightarrow> within_page buf (buf + (bptr && mask (pageBitsForSize sz)) + of_nat x * of_nat word_size) sz"
   apply (clarsimp simp:ipc_buffer_wp_at_def obj_at_def)
   apply (frule valid_tcb_obj_ipc_align_etc,simp+)
-    apply (erule get_tcb_rev)
+   apply (erule get_tcb_rev)
   apply (clarsimp simp: ipc_frame_wp_at_def obj_at_def within_page_def)
   apply (clarsimp split: cap.split_asm arch_cap.split_asm)
   apply (frule valid_tcb_objs, erule get_tcb_rev)
@@ -1534,18 +1534,18 @@ lemma within_page_ipc_buf:
   apply (subst add.assoc)
   apply (erule is_aligned_add_helper[THEN conjunct2])
   apply (rule iffD1[OF le_mask_iff_lt_2n[where n = "pageBitsForSize sz"],THEN iffD1])
-    apply (simp add:word_size)
-    apply (case_tac sz,simp_all)
+   apply (simp add:word_size)
+   apply (case_tac sz,simp_all)
   apply (rule bound_preserve_mask[where n = msg_align_bits])
-    apply (rule is_aligned_after_mask)
-    apply (simp add:word_and_le1)+
-    apply (simp add:msg_align_bits mask_2pm1)
-    apply (rule div_le_mult)
-    apply (simp add:word_size_def)
-    apply (rule word_of_nat_le)
-    apply (simp add:word_size_def msg_align_bits)+
-    apply (cases sz,auto)
-done
+       apply (rule is_aligned_after_mask)
+        apply (simp add:word_and_le1)+
+     apply (simp add:msg_align_bits mask_2pm1)
+     apply (rule div_le_mult)
+      apply (simp add:word_size_def)
+      apply (rule word_of_nat_le)
+      apply (simp add:word_size_def msg_align_bits)+
+   apply (cases sz,auto)
+  done
 
 lemma eq_sym_helper: "(A = B)  \<Longrightarrow> (B = A)"
   by auto
@@ -1838,7 +1838,7 @@ lemma zip_cpy_word_corres:
             apply (rule Cons.hyps)
             using Cons
             apply clarsimp
-           apply wp
+           apply wp+
          apply (rule corres_symb_exec_r)
             apply (simp add: store_word_offs_def bind_assoc[symmetric]
                              state_assert_def[symmetric])
@@ -1852,11 +1852,10 @@ lemma zip_cpy_word_corres:
             apply (rule_tac x=sz in exI)
             apply (frule (2) ipc_frame_ptr_at_frame_at)
             apply (simp add: obj_at_def a_type_simps)
-           apply wp
+           apply wp+
          apply clarsimp+
        apply (wp store_word_offs_ipc_frame_wp)
-      apply (fastforce simp:ipc_frame_wp_at_def)+
-     done
+      by (fastforce simp:ipc_frame_wp_at_def)+
  qed
 
 lemma zip_store_word_corres:
@@ -1894,7 +1893,7 @@ lemma zip_store_word_corres:
       apply (rule_tac x=sz in exI)
       apply (frule (2) ipc_frame_ptr_at_frame_at)
       apply (simp add: obj_at_def a_type_simps)
-     apply (wp store_word_offs_ipc_frame_wp)
+     apply (wp store_word_offs_ipc_frame_wp)+
    apply clarsimp+
   done
 
@@ -1998,7 +1997,7 @@ lemma set_mrs_corres:
          apply (clarsimp simp del:upt.simps)
          apply (rule within_page_ipc_buf)
                apply ((simp add:msg_align_bits msg_max_length_def)+)[7]
-        apply wp
+        apply wp+
       apply (clarsimp, drule(1) valid_etcbs_get_tcb_get_etcb)
       apply (rule_tac s'=s' in set_cxt_none_det_intent_corres)
          apply (clarsimp dest!:get_tcb_SomeD get_etcb_SomeD)+
@@ -2055,7 +2054,7 @@ lemma copy_mrs_corres:
            apply (rule corres_free_return[where P="\<top>" and P'="\<top>"])
           apply (rule dcorres_dummy_corrupt_frame)
          apply wp
-       apply (clarify,simp del:upt.simps )
+        apply (clarify,simp del:upt.simps )
        apply (rule corres_dummy_return_l)
        apply (rule corres_split[where r'="dc"])
           apply (rule corres_free_return[where P="\<top>" and P'="\<top>"])
@@ -2069,7 +2068,7 @@ lemma copy_mrs_corres:
           apply (rule iffD2[OF Suc_le_mono])
           apply (erule iffD1[OF word_le_nat_alt])
          apply simp
-        apply wp
+        apply wp+
       apply (rule set_registers_corres)
      apply ((clarsimp|wp)+)[1]
     apply (rule mapM_wp_inv)
@@ -2079,7 +2078,7 @@ lemma copy_mrs_corres:
     apply (clarsimp|rule conjI)+
     apply ((wp|clarsimp)+)[3]
   apply (case_tac rv)
-   apply (clarsimp simp: ipc_buffer_wp_at_def obj_at_def tcb_at_def)+
+   apply (fastforce simp: ipc_buffer_wp_at_def obj_at_def tcb_at_def)+
   done
 
 lemmas transform_cap_simps [simp] = transform_cap_def [split_simps cap.split arch_cap.split]
@@ -2200,7 +2199,7 @@ lemma dcorres_store_word_conservative:
       pspace_aligned and valid_etcbs)
      (corrupt_frame obuf) (do_machine_op (storeWord ptr b))"
   apply (rule dcorres_expand_pfx,clarsimp)
-  apply (case_tac  "\<forall>buf. (\<exists>thread. ipc_frame_ptr_at buf thread s') \<longrightarrow> buf \<noteq> obuf")
+  apply (case_tac "\<forall>buf. (\<exists>thread. ipc_frame_ptr_at buf thread s') \<longrightarrow> buf \<noteq> obuf")
    apply (rule corres_dummy_return_pl)
    apply (rule corres_dummy_return_r)
    apply (rule corres_underlying_split)

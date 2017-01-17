@@ -283,7 +283,6 @@ lemma handleInterrupt_valid_domain_time:
     apply (rule hoare_pre, (wp | wpc)+)
      apply (rule_tac Q="\<lambda>_ s. 0 < ksDomainTime s" in hoare_post_imp, clarsimp)
      apply wp
-    apply assumption
     (* IRQTimer : tick occurs *) (* IRQReserved : trivial *)
     apply (wp timerTick_valid_domain_time
           | clarsimp simp: handleReservedIRQ_def
@@ -316,6 +315,7 @@ lemma callKernel_domain_time_left:
   "\<lbrace> (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s) \<rbrace>
    callKernel e
    \<lbrace>\<lambda>_ s. 0 < ksDomainTime s \<rbrace>"
+  including no_pre
   unfolding callKernel_def
   supply word_neq_0_conv[simp]
   apply (case_tac "e = Interrupt")

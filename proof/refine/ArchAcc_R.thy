@@ -132,9 +132,7 @@ lemma storePDE_state_refs_of[wp]:
      storePDE ptr val
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   unfolding storePDE_def
-  apply (wp setObject_state_refs_of_eq)
-  apply (clarsimp simp: updateObject_default_def in_monad projectKOs)
-  done
+  by (wp setObject_state_refs_of_eq; clarsimp simp: updateObject_default_def in_monad projectKOs)
 
 lemma storePTE_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
@@ -155,8 +153,8 @@ lemma storePTE_state_refs_of[wp]:
      storePTE ptr val
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   unfolding storePTE_def
-  apply (wp setObject_state_refs_of_eq)
-  apply (clarsimp simp: updateObject_default_def in_monad
+  apply (wp setObject_state_refs_of_eq;
+         clarsimp simp: updateObject_default_def in_monad
                         projectKOs)
   done
 
@@ -1098,11 +1096,7 @@ lemma lookup_pt_slot_corres:
      apply simp
     apply clarsimp
     apply (rule page_table_at_state_relation)
-       apply simp+
-   apply (wp | simp)+
-  apply (rule hoare_pre)
-   apply (wp getPDE_wp)
-  apply simp
+       apply (wp getPDE_wp | simp)+
   done
 
 declare in_set_zip_refl[simp]
@@ -1186,7 +1180,7 @@ lemma copy_global_mappings_corres:
        apply (wp getPDE_wp)
        apply clarsimp
       apply clarsimp
-     apply wp
+     apply wp+
    apply (clarsimp simp: valid_arch_state_def obj_at_def dest!:pspace_alignedD)
    apply (intro conjI)
     apply (erule is_aligned_weaken,simp)+
@@ -1234,11 +1228,7 @@ lemma arch_derive_corres:
          (Arch.deriveCap slot c')"
   unfolding arch_derive_cap_def ARM_H.deriveCap_def Let_def
   apply (cases c, simp_all add: isCap_simps split: option.splits split del: if_split)
-      apply (rule corres_noopE, wp, simp, rule no_fail_pre, wp)+
-   apply clarsimp
-   apply (rule corres_noopE, wp, simp, rule no_fail_pre, wp)
-  apply clarsimp
-  apply (rule corres_noopE, wp, simp, rule no_fail_pre, wp)
+      apply (clarify?, rule corres_noopE; wpsimp)+
   done
 
 definition
@@ -1268,7 +1258,7 @@ lemma create_mapping_entries_corres:
           apply (clarsimp simp: vmattributes_map_def)
          apply (rule corres_lookup_error)
          apply (rule lookup_pt_slot_corres)
-        apply wp
+        apply wp+
       apply clarsimp
       apply (drule(1) less_kernel_base_mapping_slots,simp)
      apply simp+
@@ -1278,7 +1268,7 @@ lemma create_mapping_entries_corres:
          apply (clarsimp simp: vmattributes_map_def)
         apply (rule corres_lookup_error)
         apply (rule lookup_pt_slot_corres)
-       apply wp
+       apply wp+
      apply clarsimp
      apply (drule(1) less_kernel_base_mapping_slots,simp)
     apply simp+
@@ -1514,15 +1504,15 @@ lemma setObject_PTE_arch [wp]:
 
 lemma setObject_ASID_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::asidpool) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift') wp
+  by (rule valid_arch_state_lift'; wp)
 
 lemma setObject_PDE_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pde) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift') (wp setObject_typ_at')
+  by (rule valid_arch_state_lift') (wp setObject_typ_at')+
 
 lemma setObject_PTE_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pte) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift') (wp setObject_typ_at')
+  by (rule valid_arch_state_lift') (wp setObject_typ_at')+
 
 lemma setObject_ASID_ct [wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::asidpool) \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
@@ -1546,21 +1536,21 @@ lemma setObject_ASID_cur_tcb' [wp]:
   "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> setObject p (e::asidpool) \<lbrace>\<lambda>_ s. cur_tcb' s\<rbrace>"
   apply (simp add: cur_tcb'_def)
   apply (rule hoare_lift_Pf [where f=ksCurThread])
-  apply wp
+   apply wp+
   done
 
 lemma setObject_PDE_cur_tcb' [wp]:
   "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> setObject p (e::pde) \<lbrace>\<lambda>_ s. cur_tcb' s\<rbrace>"
   apply (simp add: cur_tcb'_def)
   apply (rule hoare_lift_Pf [where f=ksCurThread])
-  apply wp
+   apply wp+
   done
 
 lemma setObject_pte_cur_tcb' [wp]:
   "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> setObject p (e::pte) \<lbrace>\<lambda>_ s. cur_tcb' s\<rbrace>"
   apply (simp add: cur_tcb'_def)
   apply (rule hoare_lift_Pf [where f=ksCurThread])
-  apply wp
+   apply wp+
   done
 
 lemma getASID_wp:

@@ -121,16 +121,13 @@ lemma typ_at_pred_tcb_at_lift:
 lemma create_cap_no_pred_tcb_at: "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P t s\<rbrace>
           create_cap apiobject_type nat' prod' dev x
           \<lbrace>\<lambda>r s. \<not> pred_tcb_at proj P t s\<rbrace>"
-  apply (rule typ_at_pred_tcb_at_lift)
-  apply wp
-  done
+  by (rule typ_at_pred_tcb_at_lift; wp)
 
-lemma cap_insert_no_pred_tcb_at: "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P t s\<rbrace>
-          cap_insert cap src dest
-          \<lbrace>\<lambda>r s. \<not> pred_tcb_at proj P t s\<rbrace>"
-  apply (rule typ_at_pred_tcb_at_lift)
-  apply wp
-  done
+lemma cap_insert_no_pred_tcb_at: 
+  "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P t s\<rbrace>
+     cap_insert cap src dest
+   \<lbrace>\<lambda>r s. \<not> pred_tcb_at proj P t s\<rbrace>"
+  by (rule typ_at_pred_tcb_at_lift; wp)
 
 
 locale DetSchedAux_AI =
@@ -161,11 +158,7 @@ locale DetSchedAux_AI_det_ext = DetSchedAux_AI "TYPE(det_ext)" +
 
 lemma delete_objects_valid_etcbs[wp]: "\<lbrace>valid_etcbs\<rbrace> delete_objects a b \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   apply (simp add: delete_objects_def)
-  apply wp
-  apply (simp add: detype_def detype_ext_def wrap_ext_det_ext_ext_def)
-  apply (rule hoare_pre)
-   apply (simp add: do_machine_op_def)
-   apply (wp|wpc)+
+  apply (wpsimp simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def do_machine_op_def)
   apply (simp add: valid_etcbs_def st_tcb_at_kh_def obj_at_kh_def obj_at_def is_etcb_at_def)
   done
 
@@ -208,11 +201,7 @@ lemma retype_region_valid_blocked[wp]:
 
 lemma delete_objects_valid_blocked[wp]: "\<lbrace>valid_blocked\<rbrace> delete_objects a b \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: delete_objects_def)
-  apply wp
-  apply (simp add: detype_def detype_ext_def wrap_ext_det_ext_ext_def)
-  apply (rule hoare_pre)
-   apply (simp add: do_machine_op_def)
-   apply (wp|wpc)+
+  apply (wpsimp simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def do_machine_op_def)
   apply (simp add: valid_blocked_def st_tcb_at_kh_def obj_at_kh_def obj_at_def is_etcb_at_def)
   done
 
@@ -276,11 +265,9 @@ lemma valid_sched_tcb_state_preservation:
     apply (simp add: ct_in_state_def)
     apply (erule pred_tcb_weakenE)
     apply simp
-    apply (case_tac "itcb_state tcb")
-           apply simp+
+    apply (case_tac "itcb_state tcb"; simp)
    apply (erule pred_tcb_weakenE)
-   apply (case_tac "itcb_state tcb")
-          apply simp+
+   apply (case_tac "itcb_state tcb"; simp)
   apply (rule conjI)
    apply clarsimp
    apply (rule_tac use_valid[OF _ st_tcb],assumption)
@@ -330,24 +317,24 @@ lemma invoke_untyped_valid_sched:
   "\<lbrace>invs and valid_untyped_inv ui and ct_active and valid_sched and valid_idle \<rbrace>
      invoke_untyped ui
    \<lbrace> \<lambda>_ . valid_sched \<rbrace>"
+  including no_pre
   apply (rule hoare_pre)
    apply (rule_tac I="invs and valid_untyped_inv ui and ct_active"
      in valid_sched_tcb_state_preservation)
           apply (wp invoke_untyped_st_tcb_at)
           apply simp
-         apply (wp invoke_untyped_etcb_at)
+         apply (wp invoke_untyped_etcb_at)+
     apply (rule hoare_post_impErr, rule hoare_pre, rule invoke_untyp_invs,
         simp_all add: invs_valid_idle)[1]
    apply (rule_tac f="\<lambda>s. P (scheduler_action s)" in hoare_lift_Pf)
     apply (rule_tac f="\<lambda>s. x (ready_queues s)" in hoare_lift_Pf)
-     apply wp
-  apply simp
+     apply wp+
+  apply simp+
   done
 
 end
+
 lemmas hoare_imp_lift_something = hoare_convert_imp
-
-
 
 crunch valid_queues[wp]: create_cap,cap_insert valid_queues
   (wp: valid_queues_lift)

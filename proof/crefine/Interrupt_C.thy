@@ -168,7 +168,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
       apply (simp add: liftE_alternative returnOk_liftE[symmetric])
       apply (rule ccorres_alternative2)
       apply (rule ccorres_return_CE, simp+)[1]
-     apply (wp sts_invs_minor')
+     apply (wp sts_invs_minor')+
    apply (rule ccorres_Cond_rhs)
     apply (rule ccorres_rhs_assoc)+
     apply csymbr
@@ -252,7 +252,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
       apply (simp add: liftE_alternative returnOk_liftE[symmetric])
       apply (rule ccorres_alternative2)
       apply (rule ccorres_return_CE, simp+)[1]
-     apply (wp sts_invs_minor')
+     apply (wp sts_invs_minor')+
    apply (rule ccorres_Cond_rhs)
     apply (rule ccorres_equals_throwError)
      apply (fastforce simp: invocationCatch_def throwError_bind split: invocation_label.split)
@@ -307,7 +307,7 @@ lemma invokeIRQControl_ccorres:
      apply csymbr
      apply (ctac(no_vcg) add: cteInsert_ccorres)
       apply (rule ccorres_return_CE, simp+)[1]
-     apply wp
+     apply wp+
    apply (simp add: Collect_const_mem)
    apply (vcg exspec=setIRQState_modifies)
   apply (rule conjI)
@@ -535,7 +535,7 @@ lemma decodeIRQControlInvocation_ccorres:
                            apply (rule ccorres_alternative2)
                            apply (rule ccorres_return_CE, simp+)[1]
                           apply (rule ccorres_return_C_errorE, simp+)[1]
-                         apply (wp sts_invs_minor')
+                         apply (wp sts_invs_minor')+
                        apply (simp add: Collect_const_mem)
                        apply (vcg exspec=setThreadState_modifies)
                       apply simp

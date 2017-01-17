@@ -99,13 +99,13 @@ lemma list_integ_lift:
   assumes rq: "\<And>P. \<lbrace> \<lambda>s. P (ready_queues s) \<rbrace> f \<lbrace> \<lambda>rv s. P (ready_queues s) \<rbrace>"
   shows "\<lbrace>integrity aag X st and Q\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_pre)
-  apply (unfold integrity_def[abs_def])
-  apply (simp only: integrity_cdt_list_as_list_integ)
-   apply (rule hoare_lift_Pf2[where f="ekheap"])
-   apply (simp add: tcb_states_of_state_def get_tcb_def)
-   apply (wp li ekh rq)
+   apply (unfold integrity_def[abs_def])
    apply (simp only: integrity_cdt_list_as_list_integ)
-   apply (simp add: tcb_states_of_state_def get_tcb_def)
+   apply (rule hoare_lift_Pf2[where f="ekheap"])
+    apply (simp add: tcb_states_of_state_def get_tcb_def)
+    apply (wp li ekh rq)+
+  apply (simp only: integrity_cdt_list_as_list_integ)
+  apply (simp add: tcb_states_of_state_def get_tcb_def)
   done
 
 end
@@ -157,7 +157,7 @@ proof (induct arbitrary: s rule: resolve_address_bits'.induct)
     apply (cases cap', simp_all add: P split del: if_split)
     apply (rule hoare_pre_spec_validE)
      apply (wp "1.hyps", (assumption | simp add: in_monad | rule conjI)+)
-          apply (wp get_cap_wp)
+          apply (wp get_cap_wp)+
     apply (auto simp: cte_wp_at_caps_of_state is_cap_simps cap_auth_conferred_def
                 dest: caps_of_state_pasObjectAbs_eq)
     done
@@ -562,11 +562,11 @@ interpretation Arch . (*FIXME: arch_split*)
 lemma pas_refined_tcb_domain_map_wellformed[wp]:
   assumes tdmw: "\<lbrace>tcb_domain_map_wellformed aag\<rbrace> f \<lbrace>\<lambda>_. tcb_domain_map_wellformed aag\<rbrace>"
   shows "\<lbrace>pas_refined aag\<rbrace> f \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-apply (simp add: pas_refined_def)
-apply (wp tdmw)
-apply (wp lift_inv)
-apply simp
-done
+  apply (simp add: pas_refined_def)
+  apply (wp tdmw)
+   apply (wp lift_inv)
+   apply simp+
+  done
 
 end
 
@@ -1207,8 +1207,7 @@ crunch integrity_autarch: set_asid_pool "integrity aag X st"
 (* FIXME: move *)
 lemma a_type_arch_object_not_tcb[simp]:
   "a_type (ArchObj arch_kernel_obj) \<noteq> ATCB"
-  apply (auto simp: a_type_def)
-  done
+  by auto
 
 crunch cur_domain[wp]: cap_swap_for_delete, empty_slot, finalise_cap  "\<lambda>s. P (cur_domain s)"
   (wp: crunch_wps select_wp hoare_vcg_if_lift2 simp: unless_def)
@@ -1219,17 +1218,13 @@ lemma preemption_point_cur_domain[wp]:
 
 lemma rec_del_cur_domain[wp]:
   "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> rec_del call \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
-  apply (rule rec_del_preservation)
-      apply wp
-      done
+  by (rule rec_del_preservation; wp)
 
 crunch cur_domain[wp]: cap_delete  "\<lambda>s. P (cur_domain s)"
 
 lemma cap_revoke_cur_domain[wp]:
   "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrace> cap_revoke slot \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
-  apply (rule cap_revoke_preservation2)
-   apply wp
-   done
+  by (rule cap_revoke_preservation2; wp)
 
 lemma cnode_inv_auth_derivations_If_Insert_Move:
   "cnode_inv_auth_derivations ((if P then MoveCall else InsertCall) cap src_slot dest_slot)

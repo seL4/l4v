@@ -183,18 +183,6 @@ lemma mapME_x_mapME:
   apply (induct l, simp_all add: Let_def bindE_assoc)
   done
 
-lemma mapME_wp:
-  assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"
-  shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapME f xs \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"
-  apply (induct xs)
-   apply (simp add: mapME_def sequenceE_def)
-   apply wp
-  apply (simp add: mapME_Cons)
-  apply wp
-   apply simp
-  apply (simp add: x)
-  done
-
 lemma mapME_x_wp:
   assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"
   shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapME_x f xs \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"

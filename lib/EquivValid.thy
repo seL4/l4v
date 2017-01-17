@@ -286,7 +286,7 @@ lemma get_bind_ev2:
   apply(rule_tac R'="I And A" in equiv_valid_2_bind_general)
        apply(rule assms, simp+)
       apply(rule get_evrv)
-     apply(wp get_sp)
+     apply(wp get_sp)+
    by(auto)
 
 
@@ -900,8 +900,8 @@ lemma mapM_ev'':
   assumes inv: "\<And> x. x \<in> set lst \<Longrightarrow> \<lbrace> \<lambda>s. \<forall>x\<in>set lst. P x s \<rbrace> m x \<lbrace> \<lambda>_ s. \<forall>x\<in>set lst. P x s \<rbrace>"
   shows "equiv_valid_inv D A (\<lambda> s. \<forall>x\<in>set lst. P x s) (mapM m lst)"
   apply(rule mapM_ev)
-  apply(rule equiv_valid_guard_imp[OF reads_res], simp+)
-  apply(wp inv, simp)
+  apply(rule equiv_valid_guard_imp[OF reads_res]; simp)
+  apply(wpsimp wp: inv)
   done
 
 lemma mapM_x_ev'':
@@ -909,8 +909,8 @@ lemma mapM_x_ev'':
   assumes inv: "\<And> x. x \<in> set lst \<Longrightarrow> \<lbrace> \<lambda>s. \<forall>x\<in>set lst. P x s \<rbrace> m x \<lbrace> \<lambda>_ s. \<forall>x\<in>set lst. P x s \<rbrace>"
   shows "equiv_valid_inv D A (\<lambda> s. \<forall>x\<in>set lst. P x s) (mapM_x m lst)"
   apply(rule mapM_x_ev)
-  apply(rule equiv_valid_guard_imp[OF reads_res], simp+)
-  apply(wp inv, simp)
+  apply(rule equiv_valid_guard_imp[OF reads_res]; simp)
+  apply(wpsimp wp: inv)
   done
 
 lemma catch_ev[wp]:

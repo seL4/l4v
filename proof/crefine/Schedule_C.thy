@@ -101,9 +101,7 @@ qed
 (* FIXME move *)
 lemma setVMRoot_valid_queues':
   "\<lbrace> valid_queues' \<rbrace> setVMRoot a \<lbrace> \<lambda>_. valid_queues' \<rbrace>"
-  apply (rule valid_queues_lift')
-    apply wp
-  done
+  by (rule valid_queues_lift'; wp)
 
 (* FIXME move to REFINE *)
 crunch valid_queues'[wp]: "Arch.switchToThread" valid_queues'
@@ -180,7 +178,7 @@ lemma switchToIdleThread_ccorres:
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                              carch_state_relation_def cmachine_state_relation_def)
       apply (simp add: ARM_H.switchToIdleThread_def)
-      apply wp
+      apply wp+
    apply simp
   apply simp
   done
@@ -223,7 +221,7 @@ lemma switchToThread_ccorres:
      apply (clarsimp simp: setCurThread_def simpler_modify_def)
      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def 
                            carch_state_relation_def cmachine_state_relation_def)
-    apply wp
+    apply wp+
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def)
   done
 
@@ -629,7 +627,7 @@ proof -
          apply clarsimp
          apply vcg_step (* vcg creates a state that's not printable in a sane amount of time *)
          apply clarsimp
-        apply wp
+        apply wp+
       apply (simp add: isRunnable_def)
      apply wp
     apply (rename_tac s' d)
@@ -809,7 +807,7 @@ lemma schedule_ccorres:
                 apply (ctac (no_vcg) add: chooseThread_ccorres)
                 apply (rule ccorres_setSchedulerAction[unfolded dc_def])
               apply (simp add: cscheduler_action_relation_def)
-             apply (wp nextDomain_invs_no_cicd')
+             apply (wp nextDomain_invs_no_cicd')+
              apply clarsimp
              apply assumption
 (* else branch for rvb *)
@@ -839,7 +837,7 @@ lemma schedule_ccorres:
                 apply (ctac (no_vcg) add: chooseThread_ccorres)
                 apply (rule ccorres_setSchedulerAction[unfolded dc_def])
               apply (simp add: cscheduler_action_relation_def)
-             apply (wp nextDomain_invs_no_cicd')
+             apply (wp nextDomain_invs_no_cicd')+
              apply clarsimp
              apply assumption
 (* else branch for rv *)

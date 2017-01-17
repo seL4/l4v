@@ -2011,7 +2011,7 @@ lemma finaliseCap_ccorres:
         apply (simp add: ctcb_offset_def)
        apply (simp add: mask_def irq_opt_relation_def)
       apply (simp add: cap_get_tag_isCap)
-     apply wp
+     apply wp+
    apply (rule ccorres_if_lhs)
     apply (simp add: Let_def)
     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
@@ -2098,4 +2098,5 @@ lemma finaliseCap_ccorres:
   apply (clarsimp simp add:mask_eq_ucast_eq)
   done
   end
+
 end

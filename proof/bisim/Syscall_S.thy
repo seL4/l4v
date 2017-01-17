@@ -278,7 +278,7 @@ lemma send_fault_ipc_bisim:
       apply (rule hoare_vcg_seqE)
        apply (rule hoare_vcg_seqE)
         apply wpc
-                  apply wp
+                  apply wp+
        apply simp
        apply (rule hoare_post_imp_R [OF lc_sep])
        apply (clarsimp simp: separate_cap_def)
@@ -293,7 +293,7 @@ lemma send_fault_ipc_bisim:
     apply (wp not_empty_lc)
       apply (rule_tac P = "separate_cap xa" in not_empty_gen_asm)
       apply (erule separate_capE, simp_all)[1]
-        apply wp
+        apply wp+
   apply simp
   done
 
@@ -304,11 +304,7 @@ lemma handle_fault_bisim:
     apply (rule bisim_symb_exec_r [where Pe = \<top>])
        apply simp
        apply (rule send_fault_ipc_bisim)
-      apply wp
-     apply simp
-    apply (simp add: gets_the_def)
-    apply wp
-  apply (simp add: tcb_at_def)
+      apply (wpsimp simp: gets_the_def tcb_at_def)+
   done
 
 lemmas bisim_throwError_dc = bisim_throwError [where f = dc, OF dc_refl]
@@ -414,14 +410,14 @@ lemma handle_invocation_bisim:
           apply (rule syscall_bisim)
                   apply (rule bisim_split_reflE_dc [where Q = "\<lambda>_. \<top>" and Q' = "\<lambda>_. \<top>"])+
                         apply (rule bisim_reflE_dc)
-                       apply wp
+                       apply wp+
                  apply (rule bisim_when [OF _ refl])
                  apply (rule handle_fault_bisim)
                 apply simp
                 apply (rule bisim_split_reflE_eq)
                   apply simp
                   apply (rule decode_invocation_bisim)
-                 apply wp
+                 apply wp+
                apply (simp, rule bisim_refl') 
               apply simp
               apply (rule bisim_split_reflE_dc)
@@ -491,15 +487,7 @@ lemma bisim_injection:
        apply (simp add: z)
       apply clarsimp
       apply (rule bisim_return)
-      apply simp
-     apply wp
-   apply simp+
-  done
-
-lemma cap_fault_injection:
- "cap_fault_on_failure addr b = injection_handler (ExceptionTypes_A.CapFault addr b)"
-  apply (rule ext)
-  apply (simp add: cap_fault_on_failure_def injection_handler_def o_def)
+      apply wpsimp+
   done
 
 lemma separate_state_cdt [simp]:
@@ -563,14 +551,14 @@ lemma cap_delete_one_sep [wp]:
         apply (wps set_cdt_typ_at)
         apply (wp)
        apply assumption
-      apply (wp get_cap_inv hoare_drop_imps)
+      apply (wp get_cap_inv hoare_drop_imps)+
     apply (simp add: conj_comms)
     apply (rule separate_state_pres)
     apply (rule hoare_pre)
-     apply (wps )
+     apply (wps)
      apply wp
     apply simp
-   apply (wp get_cap_wp')
+   apply (wp get_cap_wp')+
   apply simp
   done
 
@@ -582,7 +570,7 @@ lemma bisim_caller_cap:
   apply (rule_tac F = "rv = NullCap" in bisim_gen_asm_r)
    apply simp
    apply (rule bs)
-  apply (wp get_cap_wp')
+  apply (wp get_cap_wp')+
   apply fastforce
   apply wp
   apply simp
@@ -653,62 +641,57 @@ lemma handle_event_bisim:
                              handle_reply_def
                         cong: syscall.case_cong)
   
-  apply (rename_tac syscall)
-  apply (case_tac syscall, simp_all)[1]
+      apply (rename_tac syscall)
+      apply (case_tac syscall, simp_all)[1]
 
-  apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
-  apply (rule bisim_guard_imp_both)
-   apply (rule bisim_symb_exec_r_bs)
-    apply (rule handle_reply_bisim)
-   apply (rule handle_recv_bisim)
-  apply simp 
+             apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
+            apply (rule bisim_guard_imp_both)
+             apply (rule bisim_symb_exec_r_bs)
+              apply (rule handle_reply_bisim)
+             apply (rule handle_recv_bisim)
+            apply simp
 
-  apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
-  apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
-  apply (rule bisim_guard_imp_both, rule handle_recv_bisim, simp)
-  apply (rule bisim_guard_imp_both, rule handle_reply_bisim, simp)
+           apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
+          apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
+         apply (rule bisim_guard_imp_both, rule handle_recv_bisim, simp)
+        apply (rule bisim_guard_imp_both, rule handle_reply_bisim, simp)
 
+       apply (simp add: handle_yield_def Syscall_A.handle_yield_def)
+       apply (rule bisim_guard_imp_both, rule bisim_refl', simp)
 
-  
-  apply (simp add: handle_yield_def Syscall_A.handle_yield_def)
-  apply (rule bisim_guard_imp_both, rule bisim_refl', simp)
-  
-  apply (rule bisim_guard_imp_both, rule handle_recv_bisim, simp)
+      apply (rule bisim_guard_imp_both, rule handle_recv_bisim, simp)
 
-  apply (rule bisim_split_refl)
-  apply (rule handle_fault_bisim)
-  apply wp
-  apply (simp add: cur_tcb_def)
+     apply (rule bisim_split_refl)
+       apply (rule handle_fault_bisim)
+      apply wp+
+     apply (simp add: cur_tcb_def)
 
-  apply (rule bisim_split_refl)
-  apply (rule handle_fault_bisim)
-  apply wp
-  apply (simp add: cur_tcb_def)
-  
-  apply (rule bisim_refl)
-  apply simp
+    apply (rule bisim_split_refl)
+      apply (rule handle_fault_bisim)
+     apply wp+
+    apply (simp add: cur_tcb_def)
+
+   apply (rule bisim_refl)
+   apply simp
 
   apply (rename_tac vmfault_type)
   apply (rule bisim_guard_imp_both)
-  apply (rule bisim_split_refl)
-  apply (rule bisim_split_catch_req)
-  apply (rule bisim_reflE)
-  apply (rule handle_fault_bisim)
-  apply wp
-  apply (case_tac vmfault_type, simp_all)[1]
-  apply (wp separate_state_pres)
-  apply (rule hoare_pre, wps, wp, simp)
-  apply wp
-  apply (rule hoare_pre, wps, wp, simp)
-  apply simp
+   apply (rule bisim_split_refl)
+     apply (rule bisim_split_catch_req)
+       apply (rule bisim_reflE)
+      apply (rule handle_fault_bisim)
+     apply wp
+     apply (case_tac vmfault_type, simp_all)[1]
+      apply (wp separate_state_pres)
+        apply (rule hoare_pre, wps, wp, simp)
+       apply wp
+        apply (rule hoare_pre, wps, wp, simp)
+       apply simp
 
-  apply (wp separate_state_pres)
-  apply (rule hoare_pre, wps, wp, simp)
-  apply wp
-  apply simp
-
-  apply wp
-  apply (simp_all add: cur_tcb_def)
+      apply (wp separate_state_pres)+
+       apply (rule hoare_pre, wps, wp+, simp)
+      apply wp+
+  apply (simp add: cur_tcb_def)
   done
 
 lemma call_kernel_bisim:
@@ -721,10 +704,9 @@ lemma call_kernel_bisim:
          apply (rule handle_event_bisim)
         apply simp
         apply (rule bisim_refl')
-       apply wp
-      apply (rule bisim_refl')
-  apply wp
-  apply simp
+       apply wp+
+     apply (rule bisim_refl')
+    apply wpsimp+
   done
 
 
@@ -787,10 +769,7 @@ lemma decode_invocation_separate_state [wp]:
   "\<lbrace> separate_state \<rbrace>
   Decode_SA.decode_invocation param_a param_b param_c param_d param_e param_f
   \<lbrace> \<lambda>_. separate_state \<rbrace>"
-  unfolding decode_invocation_def
-  apply (rule hoare_pre, wpc, wp)
-  apply simp
-  done
+  unfolding decode_invocation_def by wpsimp
 
 lemma separate_state_machine_state:
   "separate_state (s\<lparr>machine_state := ms\<rparr>) = separate_state s"

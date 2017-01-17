@@ -213,13 +213,11 @@ lemma store_word_offs_respects:
   done
 
 
-
-
 lemma ipc_buffer_has_auth_None [simp]:
   "ipc_buffer_has_auth aag receiver None"
   unfolding ipc_buffer_has_auth_def by simp
 
-(* MOVE *)
+(* FIXME: MOVE *)
 lemma cap_auth_caps_of_state:
   "\<lbrakk> caps_of_state s p = Some cap; pas_refined aag s\<rbrakk> 
   \<Longrightarrow> aag_cap_auth aag (pasObjectAbs aag (fst p)) cap"
@@ -338,7 +336,7 @@ lemma set_mrs_respects_in_signalling':
   apply (wp mapM_x_wp' dmo_storeWord_respects_ipc [where thread = thread and ep = ep])
    apply (fastforce simp add: set_zip nth_append simp: msg_align_bits msg_max_length_def
                        split: if_split_asm)
-   apply wp
+   apply wp+
   apply (rule impI)
   apply (subgoal_tac "\<forall>c'. integrity aag X st
           (s\<lparr>kheap := kheap s(thread \<mapsto>
@@ -705,7 +703,7 @@ next
            | assumption | simp split del: if_split)+
    
       apply (rule cap_insert_assume_null)
-      apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at)
+      apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at)+
       (* cannot blindly use derive_cap_is_derived_foo here , need to first hoist 
          out of the postcondition the conjunct that the return value is derived,
          and solve this using derived_cap_is_derived, and then solve the rest
@@ -716,7 +714,7 @@ next
      prefer 2
      apply clarsimp
      apply assumption
-    apply(wp derive_cap_is_derived_foo)
+    apply(wp derive_cap_is_derived_foo)+
   apply (simp only: tl_drop_1[symmetric])
   apply (clarsimp simp: cte_wp_at_caps_of_state
                         ex_cte_cap_to_cnode_always_appropriate_strg
@@ -802,7 +800,7 @@ lemma get_receive_slots_authorised:
        | rule hoare_drop_imps
        | simp add: add: lookup_cap_def split_def)+
    apply (strengthen cnode_cap_all_auth_owns, simp add: aag_cap_auth_def)
-   apply (wp hoare_vcg_all_lift_R hoare_drop_imps)
+   apply (wp hoare_vcg_all_lift_R hoare_drop_imps)+
   apply clarsimp
   apply (fastforce simp: is_cap_simps)
   done
@@ -858,15 +856,14 @@ next
   show ?case using Cons.prems
     apply (cases c)
     apply (simp split del: if_split cong: if_cong)
-    apply (rule hoare_pre)
     apply (wp)
-    apply (elim conjE, erule subst, rule Cons.hyps)
-    apply fastforce
-    apply (wp hoare_vcg_ball_lift Cons.hyps)
-    apply (fastforce dest: in_set_dropD in_set_dropD[where n=1, folded tl_drop_1])
-    apply (wp cap_insert_pas_refined hoare_vcg_ball_lift hoare_whenE_wp hoare_drop_imps
-      derive_cap_aag_caps 
-      | simp split del: if_split add: if_apply_def2)+
+       apply (elim conjE, erule subst, rule Cons.hyps)
+       apply fastforce
+      apply (wp hoare_vcg_ball_lift Cons.hyps)+
+         apply (fastforce dest: in_set_dropD in_set_dropD[where n=1, folded tl_drop_1])
+        apply (wp cap_insert_pas_refined hoare_vcg_ball_lift hoare_whenE_wp hoare_drop_imps
+                  derive_cap_aag_caps 
+               | simp split del: if_split add: if_apply_def2)+
     done
 qed
 
@@ -941,10 +938,7 @@ lemma lcs_valid':
 lemma lec_valid_cap':
   "\<lbrace>valid_objs\<rbrace> lookup_extra_caps thread xa mi \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. s \<turnstile> fst x)\<rbrace>, -"
   unfolding lookup_extra_caps_def
-  apply (wp mapME_set lcs_valid')
-    apply clarsimp
-   apply wp
-  done
+  by (wpsimp wp: mapME_set lcs_valid')
 
 
 lemma do_normal_transfer_pas_refined:
@@ -1010,29 +1004,22 @@ lemma send_ipc_pas_refined:
   apply (simp add: send_ipc_def)
   apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
   apply (rule hoare_pre)
-
-     apply wpc
-     apply wpc
-     apply (wp set_thread_state_pas_refined)
-     apply wpc
-     apply (wp set_thread_state_pas_refined)
-     apply wpc
-     apply (wp set_thread_state_pas_refined)
-     apply (simp add: hoare_if_r_and split del:if_split)
-         apply (rename_tac list x xs recv_state)
-         apply (rule_tac Q="\<lambda>rv. pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))"
+   apply (wpc | wp set_thread_state_pas_refined)+
+        apply (simp add: hoare_if_r_and split del:if_split)
+        apply (rename_tac list x xs recv_state)
+        apply (rule_tac Q="\<lambda>rv. pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))"
                          in hoare_strengthen_post[rotated])
-          apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
-         apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp
-                 | wpc
-                 | simp add: hoare_if_r_and)+
-     apply (rename_tac list x xs)
-     apply (rule_tac Q="\<lambda>rv. valid_objs and  pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
-      apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
-     apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp
-             | wpc
-             | simp add: hoare_if_r_and
-             | rule hoare_drop_imps)+ 
+         apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
+        apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp
+                | wpc
+                | simp add: hoare_if_r_and)+
+    apply (rename_tac list x xs)
+    apply (rule_tac Q="\<lambda>rv. valid_objs and  pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
+     apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
+    apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp
+            | wpc
+            | simp add: hoare_if_r_and
+            | rule hoare_drop_imps)+ 
   apply clarsimp
   apply (rule obj_at_valid_objsE, assumption+)
   apply (clarsimp cong: conj_cong imp_cong simp: tcb_at_st_tcb_at conj_comms)
@@ -1264,7 +1251,7 @@ lemma get_mi_valid':
   "\<lbrace>\<top>\<rbrace> get_message_info a \<lbrace>\<lambda>rv s. valid_message_info rv\<rbrace>"
   apply (simp add: get_message_info_def)
   apply (wp, rule hoare_post_imp, rule data_to_message_info_valid)
-  apply wp
+   apply wp+
   done
 
 lemma lookup_extra_caps_length:
@@ -1728,6 +1715,7 @@ lemma cap_insert_ext_integrity_in_ipc:
    apply (clarsimp simp: integrity_tcb_in_ipc_def integrity_def
                          tcb_states_of_state_def get_tcb_def
               split del: if_split cong: if_cong)
+   including no_pre
    apply wp
    apply (rule hoare_vcg_conj_lift)
     apply (simp add: list_integ_def del: split_paired_All)
@@ -1855,7 +1843,7 @@ lemma set_mrs_respects_in_ipc:
    apply (simp add: length_msg_registers)
    apply arith
    apply simp
-   apply wp
+   apply wp+
   apply (fastforce intro: update_tcb_context_in_ipc [unfolded fun_upd_def])
   done
 

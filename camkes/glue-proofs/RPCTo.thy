@@ -461,8 +461,8 @@ lemma echo_int_internal_wp[wp_unsafe]:
    \<lbrace>P48'\<rbrace>!"
   apply (simp add:echo_int_internal'_def)
   apply wp
-       apply (wp RPCTo_echo_int_wp)
-     apply (wp get_echo_int_i_wp)
+       apply (wp RPCTo_echo_int_wp)+
+     apply (wp get_echo_int_i_wp)+
   apply (clarsimp simp:globals_frame_intact_def ipc_buffer_valid_def
     tls_valid_def tls_def tls_ptr_def thread_count_def setMR_def ucast_id
     update_global_w32_def)
@@ -492,9 +492,9 @@ lemma echo_parameter_internal_wp[wp_unsafe]:
    \<lbrace>P51'\<rbrace>!"
   apply (simp add:echo_parameter_internal'_def)
   apply wp
-       apply (wp RPCTo_echo_parameter_wp)
+       apply (wp RPCTo_echo_parameter_wp)+
      apply (wp get_echo_parameter_pout_wp)
-     apply (wp get_echo_parameter_pin_wp)
+     apply (wp get_echo_parameter_pin_wp)+
   apply (clarsimp simp:globals_frame_intact_def ipc_buffer_valid_def
     tls_valid_def tls_def tls_ptr_def thread_count_def setMR_def ucast_id
     update_global_w32_def)
@@ -519,8 +519,8 @@ lemma echo_char_internal_wp[wp_unsafe]:
    \<lbrace>P54'\<rbrace>!"
   apply (simp add:echo_char_internal'_def)
   apply wp
-       apply (wp RPCTo_echo_char_wp)
-     apply (wp get_echo_char_i_wp)
+       apply (wp RPCTo_echo_char_wp)+
+     apply (wp get_echo_char_i_wp)+
   apply (clarsimp simp:globals_frame_intact_def ipc_buffer_valid_def
     tls_valid_def tls_def tls_ptr_def thread_count_def setMR_def ucast_id
     update_global_w8_def)
@@ -546,8 +546,8 @@ lemma increment_char_internal_wp[wp_unsafe]:
    \<lbrace>P57'\<rbrace>!"
   apply (simp add:increment_char_internal'_def)
   apply wp
-       apply (wp RPCTo_increment_char_wp)
-     apply (wp get_increment_char_x_wp)
+       apply (wp RPCTo_increment_char_wp)+
+     apply (wp get_increment_char_x_wp)+
   apply (clarsimp simp:globals_frame_intact_def ipc_buffer_valid_def
     tls_valid_def tls_def tls_ptr_def thread_count_def setMR_def ucast_id
     update_global_w8_def)
@@ -573,8 +573,8 @@ lemma increment_parameter_internal_wp[wp_unsafe]:
    \<lbrace>P60'\<rbrace>!"
   apply (simp add:increment_parameter_internal'_def)
   apply wp
-       apply (wp RPCTo_increment_parameter_wp)
-     apply (wp get_increment_parameter_x_wp)
+       apply (wp RPCTo_increment_parameter_wp)+
+     apply (wp get_increment_parameter_x_wp)+
   apply (clarsimp simp:globals_frame_intact_def ipc_buffer_valid_def
     tls_valid_def tls_def tls_ptr_def thread_count_def setMR_def ucast_id
     update_global_w32_def)
@@ -601,8 +601,8 @@ lemma increment_64_internal_wp[wp_unsafe]:
    \<lbrace>P63'\<rbrace>!"
   apply (simp add:increment_64_internal'_def)
   apply wp
-       apply (wp RPCTo_increment_64_wp)
-     apply (wp get_increment_64_x_wp)
+       apply (wp RPCTo_increment_64_wp)+
+     apply (wp get_increment_64_x_wp)+
   apply (clarsimp simp:globals_frame_intact_def ipc_buffer_valid_def
     tls_valid_def tls_def tls_ptr_def thread_count_def setMR_def ucast_id
     update_global_w64_def update_global_w64_high_def)
@@ -682,7 +682,7 @@ lemma RPCTo_run_internal_wp[wp_unsafe]:
       apply (simp add:seL4_MessageInfo_new'_def)
       apply wp
      apply (wp increment_64_internal_wp)
-    apply (wp seL4_Wait_wp)
+    apply (wp seL4_Wait_wp)+
   apply (clarsimp simp:globals_frame_intact_def ipc_buffer_valid_def
     tls_valid_def tls_def tls_ptr_def ucast_id seL4_GetIPCBuffer'_def
     thread_count_def setMR_def setMRs_def update_global_w32_def

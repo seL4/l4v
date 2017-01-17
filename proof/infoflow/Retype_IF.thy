@@ -326,17 +326,13 @@ lemma get_pde_rev:
   "reads_equiv_valid_inv A aag (K (is_subject aag (ptr && ~~ mask pd_bits)))
                                  (get_pde ptr)"
   unfolding get_pde_def fun_app_def
-  apply(wp get_pd_rev)
-  apply(clarsimp)
-  done
+  by (wp get_pd_rev)
 
 lemma get_pde_revg:
   "reads_equiv_valid_g_inv A aag (\<lambda> s. (ptr && ~~ mask pd_bits) = arm_global_pd (arch_state s))
                                  (get_pde ptr)"
   unfolding get_pde_def fun_app_def
-  apply(wp get_pd_revg)
-  apply(clarsimp)
-  done
+  by (wp get_pd_revg)
 
 lemma copy_global_mappings_reads_respects_g:
   "is_aligned x pd_bits \<Longrightarrow> 
@@ -564,7 +560,7 @@ lemma copy_global_mappings_globals_equiv:
   "\<lbrace> globals_equiv s and (\<lambda> s. x \<noteq> arm_global_pd (arch_state s) \<and> is_aligned x pd_bits)\<rbrace> 
    copy_global_mappings x
    \<lbrace> \<lambda>_. globals_equiv s \<rbrace>"
-  unfolding copy_global_mappings_def
+  unfolding copy_global_mappings_def including no_pre
   apply simp
   apply wp
    apply(rule_tac Q="\<lambda>_. globals_equiv s and (\<lambda> s. x \<noteq> arm_global_pd (arch_state s) \<and>  is_aligned x pd_bits)" in hoare_strengthen_post)
@@ -1304,7 +1300,7 @@ lemma reset_untyped_cap_globals_equiv:
     apply (clarsimp simp: reset_chunk_bits_def)
     apply (strengthen invs_valid_global_objs)
     apply (wp delete_objects_invs_ex
-       hoare_vcg_const_imp_lift get_cap_wp)
+       hoare_vcg_const_imp_lift get_cap_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state
                         descendants_range_def2
                         is_cap_simps bits_of_def

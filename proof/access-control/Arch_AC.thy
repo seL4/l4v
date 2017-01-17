@@ -622,7 +622,7 @@ lemma set_mrs_integrity_autarch:
      apply (fastforce simp add: le_eq_less_or_eq)
     apply (simp add: msg_max_length_def msg_align_bits)
    apply simp
-   apply (wp set_object_integrity_autarch hoare_drop_imps hoare_vcg_all_lift)
+   apply (wp set_object_integrity_autarch hoare_drop_imps hoare_vcg_all_lift)+
   apply simp
   done
 
@@ -1264,11 +1264,8 @@ lemma delete_asid_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and invs and K (is_subject aag pd)\<rbrace>
      delete_asid asid pd
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: delete_asid_def)
-  apply (wp set_asid_pool_respects_clear | simp | wpc)+
-     apply (wp hoare_vcg_all_lift)
-  apply (clarsimp simp: obj_at_def pas_refined_refl)
-  done
+  by (wpsimp wp: set_asid_pool_respects_clear hoare_vcg_all_lift
+           simp: obj_at_def pas_refined_refl delete_asid_def)
 
 end
 

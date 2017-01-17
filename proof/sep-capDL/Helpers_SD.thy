@@ -976,7 +976,7 @@ lemma derive_cap_non_exclusive:
   apply (clarsimp simp: validE_R_def derive_cap_def
     safe_for_derive_def
     split:cdl_cap.splits)
-  apply (intro conjI allI impI,wp)
+  apply (intro conjI allI impI, wp+)
   done
 
 lemma derived_cap_safe_for_derive[simp]:

@@ -222,11 +222,11 @@ lemma weak_derived_DomainCap:
 
 lemma cte_wp_at_weak_derived_domain_sep_inv_cap:
   "\<lbrakk>domain_sep_inv irqs st s; cte_wp_at (weak_derived cap) slot s\<rbrakk> \<Longrightarrow> domain_sep_inv_cap irqs cap"
-apply (cases slot)
-apply (force simp: domain_sep_inv_def domain_sep_inv_cap_def
-            split: cap.splits
-             dest: cte_wp_at_eqD weak_derived_irq_handler weak_derived_DomainCap)
-done
+  apply (cases slot)
+  apply (force simp: domain_sep_inv_def domain_sep_inv_cap_def
+              split: cap.splits
+               dest: cte_wp_at_eqD weak_derived_irq_handler weak_derived_DomainCap)
+  done
 
 lemma is_derived_IRQHandlerCap:
   "is_derived m src (IRQHandlerCap irq) cap \<Longrightarrow> (cap = IRQHandlerCap irq)"
@@ -313,7 +313,7 @@ lemma deleted_irq_handler_domain_sep_inv:
   apply(simp add: deleted_irq_handler_def)
   apply(simp add: set_irq_state_def)
   apply wp
-   apply(rule domain_sep_inv_triv, wp)
+    apply(rule domain_sep_inv_triv, wp+)
   apply(simp add: domain_sep_inv_def)
   done
 
@@ -321,12 +321,9 @@ lemma empty_slot_domain_sep_inv:
   "\<lbrace>\<lambda>s. domain_sep_inv irqs st s \<and> (\<not> irqs \<longrightarrow> b = None)\<rbrace>
    empty_slot a b
    \<lbrace>\<lambda>_ s. domain_sep_inv irqs st s\<rbrace>"
-  apply(simp add: empty_slot_def)
-  apply (wp | wpc)+
-
-         apply(wp get_cap_wp set_cap_domain_sep_inv set_original_wp dxo_wp_weak static_imp_wp deleted_irq_handler_domain_sep_inv | simp | blast)+
-  done
-
+  unfolding empty_slot_def
+  by (wpsimp wp: get_cap_wp set_cap_domain_sep_inv set_original_wp dxo_wp_weak static_imp_wp
+                 deleted_irq_handler_domain_sep_inv)
 
 lemma set_endpoint_neg_cte_wp_at[wp]:
   "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace> set_endpoint a b \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
@@ -486,6 +483,7 @@ crunch domain_sep_inv[wp]: finalise_cap "domain_sep_inv irqs st"
 
 lemma finalise_cap_domain_sep_inv_cap:
   "\<lbrace>\<lambda>s. domain_sep_inv_cap irqs cap\<rbrace> finalise_cap cap b \<lbrace>\<lambda>rv s. domain_sep_inv_cap irqs (fst rv)\<rbrace>"
+  including no_pre
   apply(case_tac cap)
             apply(wp | simp add: o_def split del: if_split  split: cap.splits arch_cap.splits | fastforce split: if_splits simp: domain_sep_inv_cap_def)+
       apply(rule hoare_pre, wp, fastforce)
@@ -589,7 +587,7 @@ lemma cap_revoke_domain_sep_inv':
   show ?case
   apply(subst cap_revoke.simps)
   apply(rule hoare_pre_spec_validE)
-   apply (wp "1.hyps", assumption+)
+   apply (wp "1.hyps")
            apply(wp spec_valid_conj_liftE2 | simp)+
            apply(wp drop_spec_validE[OF valid_validE[OF preemption_point_domain_sep_inv]]
                     drop_spec_validE[OF valid_validE[OF cap_delete_domain_sep_inv]]
@@ -916,6 +914,7 @@ lemma invoke_control_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and irq_control_inv_valid blah\<rbrace>
     invoke_irq_control blah
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
+  including no_pre
   apply(case_tac blah)
     apply(wp cap_insert_domain_sep_inv' | simp )+
    apply(case_tac irqs)
@@ -965,13 +964,9 @@ lemma transfer_caps_domain_sep_inv:
                real_cte_at (snd x) s))\<rbrace>
   transfer_caps mi caps endpoint receiver receive_buffer
   \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply (simp add: transfer_caps_def)
-  apply (wpc | wp)+
-   apply(rule transfer_caps_loop_pres_dest)
-    apply(wp cap_insert_domain_sep_inv | simp )+
-   apply(wp hoare_vcg_all_lift hoare_vcg_imp_lift | simp)+
-   apply(fastforce elim: cte_wp_at_weakenE)
-  apply simp
+  unfolding transfer_caps_def
+  apply (wpsimp wp: transfer_caps_loop_pres_dest cap_insert_domain_sep_inv hoare_vcg_all_lift hoare_vcg_imp_lift)
+  apply (fastforce elim: cte_wp_at_weakenE)
   done
 
 
@@ -1014,8 +1009,8 @@ lemma send_ipc_domain_sep_inv:
   apply (wp setup_caller_cap_domain_sep_inv | wpc | simp)+
         apply(rule_tac Q="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
          apply(wp do_ipc_transfer_domain_sep_inv dxo_wp_weak | wpc | simp)+
-    apply(wp_once hoare_drop_imps)
-    apply (wp get_endpoint_wp)
+    apply (wp_once hoare_drop_imps)
+    apply (wp get_endpoint_wp)+
   apply clarsimp
   apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def ep_q_refs_of_def
                          ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong
@@ -1120,9 +1115,7 @@ lemma thread_set_tcb_ipc_buffer_update_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
    thread_set (tcb_ipc_buffer_update f) t
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply(rule domain_sep_inv_triv)
-  apply wp
-  done
+  by (rule domain_sep_inv_triv; wp)
 
 lemma thread_set_tcb_fault_handler_update_neg_cte_wp_at[wp]:
   "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>
@@ -1147,9 +1140,7 @@ lemma thread_set_tcb_fault_handler_update_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
    thread_set (tcb_fault_handler_update blah) t
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply(rule domain_sep_inv_triv)
-  apply wp
-  done
+  by (rule domain_sep_inv_triv; wp)
 
 lemma thread_set_tcb_tcb_mcpriority_update_neg_cte_wp_at[wp]:
   "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>
@@ -1174,9 +1165,7 @@ lemma thread_set_tcb_tcp_mcpriority_update_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
    thread_set (tcb_mcpriority_update blah) t
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply(rule domain_sep_inv_triv)
-  apply wp
-  done
+  by (rule domain_sep_inv_triv; wp)
 
 lemma same_object_as_domain_sep_inv_cap:
   "\<lbrakk>same_object_as a cap; domain_sep_inv_cap irqs cap\<rbrakk>

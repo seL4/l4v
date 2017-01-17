@@ -234,10 +234,10 @@ lemma set_thread_state_sched_act:
               in hoare_strengthen_post)
        apply wp
       apply force
-     apply (wp gts_st_tcb_at)
+     apply (wp gts_st_tcb_at)+
      apply (rule_tac Q="\<lambda>rv. st_tcb_at (op = state) thread and (\<lambda>s. runnable state) and (\<lambda>s. P (scheduler_action s))" in hoare_strengthen_post)
      apply (simp add: st_tcb_at_def)
-     apply (wp obj_set_prop_at)
+     apply (wp obj_set_prop_at)+
     apply (force simp: st_tcb_at_def obj_at_def)
   apply wp
   apply clarsimp
@@ -247,7 +247,8 @@ lemma activate_thread_sched_act:
   "\<lbrace>ct_in_state activatable and (\<lambda>s. P (scheduler_action s))\<rbrace>
   activate_thread
   \<lbrace>\<lambda>rs s. P (scheduler_action (s::det_state))\<rbrace>"
-  by (simp add: activate_thread_def set_thread_state_def arch_activate_idle_thread_def | wp set_thread_state_sched_act gts_wp | wpc)+
+  by (simp add: activate_thread_def set_thread_state_def arch_activate_idle_thread_def 
+      | (wp set_thread_state_sched_act gts_wp)+ | wpc)+
 
 lemma schedule_sched_act_rct[wp]:
   "\<lbrace>\<top>\<rbrace> Schedule_A.schedule
@@ -553,10 +554,10 @@ lemma doUserOp_invs':
         (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
   apply (wp device_update_invs')
-  apply (wp dmo_invs' doMachineOp_ct_running')
-        apply (clarsimp simp add: no_irq_modify device_memory_update_def
-                                  user_memory_update_def)
-       apply (wp doMachineOp_ct_running' doMachineOp_sch_act select_wp)
+             apply (wp dmo_invs' doMachineOp_ct_running')+
+             apply (clarsimp simp add: no_irq_modify device_memory_update_def
+                                       user_memory_update_def)
+            apply (wp doMachineOp_ct_running' doMachineOp_sch_act select_wp)+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def
                  split: option.splits)
@@ -609,7 +610,7 @@ lemma kernel_corres:
           apply simp
          apply (wp doMachineOp_getActiveIRQ_IRQ_active handle_event_valid_sched | simp)+
        apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_post_impErr)
-         apply wp
+         apply wp+
        apply (simp add: invs'_def valid_state'_def)
       apply (rule corres_split [OF _ schedule_corres])
         apply (rule activate_corres)
@@ -659,8 +660,7 @@ lemma entry_corres:
             apply (rule threadget_corres)
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
-           apply wp
-
+           apply wp+
          apply (rule hoare_strengthen_post, rule akernel_invs_det_ext, simp add: invs_def cur_tcb_def)
         apply (rule hoare_strengthen_post, rule ckernel_invs, simp add: invs'_def cur_tcb'_def)
        apply (wp thread_set_invs_trivial thread_set_ct_running

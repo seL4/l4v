@@ -114,7 +114,7 @@ lemma getRegister_ccorres [corres]:
           apply (rule refl)
          apply (erule threadSet_eq)
         apply (clarsimp simp: ctcb_relation_def ccontext_relation_def carch_tcb_relation_def)
-       apply (wp threadGet_obj_at2)
+       apply (wp threadGet_obj_at2)+
    apply simp
   apply simp
   apply (erule obj_atE')

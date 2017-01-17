@@ -12,7 +12,8 @@ signature WP =
 sig
   type wp_rules = {trips: thm list * (theory -> term -> term),
     rules: (int * thm) Net.net * int * (int * thm) list,
-    splits: thm list, combs: thm list, unsafe_rules: thm list};
+    splits: thm list, combs: thm list, unsafe_rules: thm list,
+    wp_pre: thm list};
 
   val debug_get: Proof.context -> wp_rules;
 
@@ -43,6 +44,8 @@ sig
   val combs_del: Thm.attribute;
   val wp_unsafe_add: Thm.attribute;
   val wp_unsafe_del: Thm.attribute;
+  val wp_pre_add: Thm.attribute;
+  val wp_pre_del: Thm.attribute;
 end;
 
 structure WeakestPre =
@@ -50,7 +53,8 @@ struct
 
 type wp_rules = {trips: thm list * (theory -> term -> term),
     rules: (int * thm) Net.net * int * (int * thm) list,
-    splits: thm list, combs: thm list, unsafe_rules: thm list};
+    splits: thm list, combs: thm list, unsafe_rules: thm list,
+    wp_pre: thm list};
 
 fun accum_last_occurence' [] _ = ([], Termtab.empty)
   | accum_last_occurence' ((t, v) :: ts) tt1 = let
@@ -107,13 +111,14 @@ fun rules_merge (wp_rules, wp_rules') = let
         rules = mk_rules trip_conv rules,
         splits = Thm.merge_thms (#splits wp_rules, #splits wp_rules'),
         combs = Thm.merge_thms (#combs wp_rules, #combs wp_rules'),
-        unsafe_rules = Thm.merge_thms (#unsafe_rules wp_rules, #unsafe_rules wp_rules')} end
+        unsafe_rules = Thm.merge_thms (#unsafe_rules wp_rules, #unsafe_rules wp_rules'),
+        wp_pre = Thm.merge_thms (#wp_pre wp_rules, #wp_pre wp_rules')} end
 
 structure WPData = Generic_Data
 (struct
     type T = wp_rules;
     val empty = {trips = ([], K I), rules = no_rules,
-      splits = [], combs = [], unsafe_rules = []};
+      splits = [], combs = [], unsafe_rules = [], wp_pre = []};
     val extend = I;
 
     val merge = rules_merge;
@@ -142,63 +147,91 @@ fun get_combined_rules rules' combs' =
 fun add_rule rule rs =
     {trips = #trips rs,
       rules = add_rule_inner (snd (#trips rs)) rule (#rules rs),
-      splits = #splits rs, combs = #combs rs,
-      unsafe_rules = #unsafe_rules rs};
+      splits = #splits rs,
+      combs = #combs rs,
+      unsafe_rules = #unsafe_rules rs,
+      wp_pre = #wp_pre rs
+    }
 
 fun del_rule rule rs =
     {trips = #trips rs,
       rules = del_rule_inner (snd (#trips rs)) rule (#rules rs),
-      splits = #splits rs, combs = #combs rs,
-      unsafe_rules = #unsafe_rules rs};
+      splits = #splits rs,
+      combs = #combs rs,
+      unsafe_rules = #unsafe_rules rs,
+      wp_pre = #wp_pre rs
+    }
 
 fun add_trip rule (rs : wp_rules) = let
     val trips = Thm.add_thm rule (fst (#trips rs));
     val trip_conv = mk_trip_conv trips
   in {trips = (trips, trip_conv),
       rules = mk_rules trip_conv (dest_rules (#rules rs)),
-      splits = #splits rs, combs = #combs rs,
-      unsafe_rules = #unsafe_rules rs} end;
+      splits = #splits rs,
+      combs = #combs rs,
+      unsafe_rules = #unsafe_rules rs,
+      wp_pre = #wp_pre rs}
+  end
 
 fun del_trip rule (rs : wp_rules) = let
     val trips = Thm.del_thm rule (fst (#trips rs));
     val trip_conv = mk_trip_conv trips
   in {trips = (trips, trip_conv),
       rules = mk_rules trip_conv (dest_rules (#rules rs)),
-      splits = #splits rs, combs = #combs rs,
-      unsafe_rules = #unsafe_rules rs} end;
+      splits = #splits rs,
+      combs = #combs rs,
+      unsafe_rules = #unsafe_rules rs,
+      wp_pre = #wp_pre rs}
+  end
 
 fun add_split rule (rs : wp_rules) =
-    {trips = #trips rs, rules = #rules rs,
-      splits = Thm.add_thm rule (#splits rs), combs = #combs rs,
-      unsafe_rules = #unsafe_rules rs};
+    {trips = #trips rs,
+      rules = #rules rs,
+      splits = Thm.add_thm rule (#splits rs),
+      combs = #combs rs,
+      unsafe_rules = #unsafe_rules rs,
+      wp_pre = #wp_pre rs}
 
 fun add_comb rule (rs : wp_rules) =
     {trips = #trips rs, rules = #rules rs,
       splits = #splits rs, combs = Thm.add_thm rule (#combs rs),
-      unsafe_rules = #unsafe_rules rs};
+      unsafe_rules = #unsafe_rules rs, wp_pre = #wp_pre rs}
 
 fun del_split rule rs =
     {trips = #trips rs, rules = #rules rs,
       splits = Thm.del_thm rule (#splits rs), combs = #combs rs,
-      unsafe_rules = #unsafe_rules rs};
+      unsafe_rules = #unsafe_rules rs, wp_pre = #wp_pre rs}
 
 fun del_comb rule rs =
     {trips = #trips rs, rules = #rules rs,
       splits = #splits rs, combs = Thm.del_thm rule (#combs rs),
-      unsafe_rules = #unsafe_rules rs};
+      unsafe_rules = #unsafe_rules rs, wp_pre = #wp_pre rs}
 
 fun add_unsafe_rule rule rs =
     {trips = #trips rs, rules = #rules rs,
       splits = #splits rs, combs = #combs rs,
-      unsafe_rules = Thm.add_thm rule (#unsafe_rules rs)};
+      unsafe_rules = Thm.add_thm rule (#unsafe_rules rs),
+      wp_pre = #wp_pre rs}
 
 fun del_unsafe_rule rule rs =
     {trips = #trips rs, rules = #rules rs,
       splits = #splits rs, combs = #combs rs,
-      unsafe_rules = Thm.del_thm rule (#unsafe_rules rs)};
+      unsafe_rules = Thm.del_thm rule (#unsafe_rules rs),
+      wp_pre = #wp_pre rs}
 
-fun gen_att m = Thm.declaration_attribute (fn thm => fn context =>
-    WPData.map (m thm) context);
+fun add_wp_pre rule rs =
+    {trips = #trips rs, rules = #rules rs,
+      splits = #splits rs, combs = #combs rs,
+      unsafe_rules = #unsafe_rules rs,
+      wp_pre = Thm.add_thm rule (#wp_pre rs)}
+
+fun del_wp_pre rule rs =
+    {trips = #trips rs, rules = #rules rs,
+      splits = #splits rs, combs = #combs rs,
+      unsafe_rules = #unsafe_rules rs,
+      wp_pre = Thm.del_thm rule (#wp_pre rs)}
+
+fun gen_att m = Thm.declaration_attribute (fn thm => fn context => WPData.map (m thm) context);
 
 val wp_add = gen_att add_rule;
 val wp_del = gen_att del_rule;
@@ -210,6 +243,8 @@ val combs_add = gen_att add_comb;
 val combs_del = gen_att del_comb;
 val wp_unsafe_add = gen_att add_unsafe_rule;
 val wp_unsafe_del = gen_att del_unsafe_rule;
+val wp_pre_add = gen_att add_wp_pre;
+val wp_pre_del = gen_att del_wp_pre;
 
 val setup =
       Attrib.setup @{binding "wp"}
@@ -227,6 +262,9 @@ val setup =
       #> Attrib.setup @{binding "wp_unsafe"}
           (Attrib.add_del wp_unsafe_add wp_unsafe_del)
           "unsafe monadic weakest precondition rules"
+      #> Attrib.setup @{binding "wp_pre"}
+          (Attrib.add_del wp_pre_add wp_pre_del)
+          "initial weakening rules for wp"
 
 fun debug_get ctxt = WPData.get (Context.Proof ctxt);
 
@@ -294,23 +332,34 @@ fun apply_rules_tac_n trace ctxt extras extras_ref n =
 let
   val rules = get_rules ctxt extras;
   val used_rules = Unsynchronized.ref [] : thm list Unsynchronized.ref
+  fun has_vars st = Term.exists_subterm Term.is_Var (Thm.concl_of st)
+  val wp_pre_tac = COND has_vars all_tac (TRY (resolve_tac ctxt (#wp_pre rules) 1))
+  val cleanup_tac = TRY (REPEAT
+                      (resolve_tac ctxt [@{thm TrueI}, @{thm conj_TrueI}, @{thm conj_TrueI2}] 1
+                       ORELSE assume_tac ctxt 1))
+  val steps_tac = (CHANGED (REPEAT_DETERM (resolve_ruleset_tac ctxt rules used_rules 1)))
+                  THEN cleanup_tac
 in
+  SELECT_GOAL (
   (fn t => Seq.map (fn thm => (warn_unused_thms ctxt extras extras_ref used_rules;
                                trace_used_thms trace used_rules ctxt; thm))
-    (CHANGED (REPEAT_DETERM (resolve_ruleset_tac ctxt rules used_rules n)) t)) THEN_ELSE
-  (fn t => (warn_unsafe_thms (#unsafe_rules rules) n ctxt t; all_tac t),
-  fn t => (warn_unsafe_thms (#unsafe_rules rules) n ctxt t; no_tac t))
-end;
+    ((wp_pre_tac THEN steps_tac) t)) THEN_ELSE
+  (fn t => (warn_unsafe_thms (#unsafe_rules rules) 1 ctxt t; all_tac t),
+  fn t => (warn_unsafe_thms (#unsafe_rules rules) 1 ctxt t; no_tac t))) n
+end
 
-fun apply_rules_tac trace ctxt extras extras_ref = apply_rules_tac_n trace ctxt extras extras_ref 1;
+fun apply_rules_tac trace ctxt extras extras_ref =
+  apply_rules_tac_n trace ctxt extras extras_ref 1;
+
 fun apply_once_tac trace ctxt extras extras_ref t =
-  let val used_rules = Unsynchronized.ref [] : thm list Unsynchronized.ref;
+  let
+    val used_rules = Unsynchronized.ref [] : thm list Unsynchronized.ref;
   in Seq.map (fn thm => (warn_unused_thms ctxt extras extras_ref used_rules;
                          trace_used_thms trace used_rules ctxt; thm))
-    (resolve_ruleset_tac ctxt (get_rules ctxt extras) used_rules 1 t) end
+    (SELECT_GOAL (resolve_ruleset_tac ctxt (get_rules ctxt extras) used_rules 1) 1 t) end
 
-fun clear_rules ({combs, rules, trips, splits, unsafe_rules}) =
-  {combs=combs, rules=no_rules, trips=trips, splits=splits, unsafe_rules=unsafe_rules}
+fun clear_rules ({combs, rules, trips, splits, unsafe_rules, wp_pre}) =
+  {combs=combs, rules=no_rules, trips=trips, splits=splits, unsafe_rules=unsafe_rules, wp_pre=wp_pre}
 
 fun wp_modifiers extras_ref =
  [Args.add -- Args.colon >> K (I, fn att => (add_extra_rule (#2 att) extras_ref; wp_add att)),

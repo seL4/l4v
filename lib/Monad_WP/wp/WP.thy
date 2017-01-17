@@ -9,7 +9,9 @@
  *)
 
 theory WP
-imports "~~/src/HOL/Main"
+imports
+  "~~/src/HOL/Main"
+  "~~/src/HOL/Eisbach/Eisbach_Tools"
 begin
 
 definition
@@ -28,6 +30,9 @@ definition
 where
  "postconditions P Q = (\<lambda>a b. P a b \<and> Q a b)"
 
+lemma conj_TrueI: "P \<Longrightarrow> True \<and> P" by simp
+lemma conj_TrueI2: "P \<Longrightarrow> P \<and> True" by simp
+
 ML_file "WP-method.ML"
 
 declare [[wp_warn_unused = false]]
@@ -45,5 +50,6 @@ method_setup wp_trace = {* WeakestPre.apply_rules_args true *}
 
 method_setup wp_once_trace = {* WeakestPre.apply_once_args true *}
   "applies one weakest precondition rule with tracing"
+
 
 end

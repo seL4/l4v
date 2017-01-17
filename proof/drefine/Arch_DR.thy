@@ -192,18 +192,16 @@ lemma lookup_pt_slot_aligned_6':
   apply (rule hoare_gen_asmE)
   apply (simp add:lookup_pt_slot_def)
   apply (wp|wpc)+
-  apply clarsimp
-  apply (rule hoare_strengthen_post[where Q = "\<lambda>r. valid_pde r and pspace_aligned"] )
-  apply wp
+   apply clarsimp
+   apply (rule hoare_strengthen_post[where Q = "\<lambda>r. valid_pde r and pspace_aligned"] )
+    apply wp
+   apply simp+
+   apply (clarsimp simp:valid_pde_def dest!:pt_aligned split:ARM_A.pde.splits)
+   apply (erule aligned_add_aligned)
+    apply (rule is_aligned_shiftl)
+    apply (rule is_aligned_andI1)
+    apply (rule is_aligned_shiftr)
     apply simp+
-  apply (clarsimp simp:valid_pde_def dest!:pt_aligned
-    split:ARM_A.pde.splits)
-  apply (erule aligned_add_aligned)
-   apply (rule is_aligned_shiftl)
-   apply (rule is_aligned_andI1)
-   apply (rule is_aligned_shiftr)
-   apply simp
-  apply simp
   done
 
 lemma create_mapping_entries_dcorres:
@@ -253,7 +251,7 @@ proof -
              apply assumption
             apply (clarsimp)
            apply (rule dcorres_lookup_pt_slot)
-          apply wp
+          apply wp+
          apply simp
         apply (clarsimp simp:
           dest!:page_directory_at_aligned_pd_bits )
@@ -278,7 +276,7 @@ proof -
              apply assumption
             apply (clarsimp)
            apply (rule dcorres_lookup_pt_slot)
-          apply (wp lookup_pt_slot_aligned_6')
+          apply (wp lookup_pt_slot_aligned_6')+
          apply simp
         apply (clarsimp simp:
           dest!:page_directory_at_aligned_pd_bits )
@@ -705,6 +703,7 @@ next
 next
   case (PageCap dev base rights pgsz asid)
   thus ?case
+    including no_pre
     apply (simp add: Decode_D.decode_invocation_def
                      decode_invocation_def arch_decode_invocation_def
                split del: if_split)
@@ -731,7 +730,7 @@ next
        apply (rule_tac r'=dc and P'="I" and Q'="\<lambda>rv. I and (\<exists>\<rhd> (lookup_pd_slot rv x21 && ~~ mask pd_bits))" for I
                 in corres_alternative_throw_splitE[OF _ _ returnOk_wp[where x="()"], simplified])
            apply (rule corres_from_rdonly, simp_all)[1]
-             apply (wp | simp)+
+             apply (wp+ | simp)+
            apply (rule hoare_strengthen_post, rule hoare_post_taut)
            apply (case_tac r, auto simp add: in_monad)[1]
           apply (simp add: corres_whenE_throwError_split_rhs corres_alternate2
@@ -749,16 +748,16 @@ next
                 apply simp
                apply (fastforce simp: neq_Nil_conv valid_cap_simps dest!:page_directory_at_rev)
               apply (rule corres_from_rdonly[where P=\<top> and P'=\<top>], simp_all)[1]
-                apply (wp | simp)+
+                apply (wp+ | simp)+
               apply (rule validE_cases_valid, rule hoare_pre)
-               apply (wp | simp)+
+               apply (wp+ | simp)+
               apply (clarsimp simp add: in_monad conj_disj_distribR[symmetric])
               apply (simp add: conj_disj_distribR cong: conj_cong)
               apply (simp add: arch_invocation_relation_def translate_arch_invocation_def
                                transform_page_inv_def update_cap_rights_def
                                update_mapping_cap_status_def Types_D.cap_rights_def
                                mask_vm_rights_def transform_mapping_def)
-             apply wp
+             apply wp+
           apply (rule hoare_pre, wp, simp)
          apply (rule hoare_pre, wp, auto)[1]
         apply (wp | simp add: whenE_def split del: if_split)+
@@ -803,7 +802,7 @@ next
                               transform_page_inv_def update_cap_rights_def
                               update_mapping_cap_status_def Types_D.cap_rights_def
                               mask_vm_rights_def)
-            apply wp
+            apply wp+
          apply (rule hoare_pre, wp, simp)
         apply (rule hoare_pre, wp, auto)[1]
        apply (wp | simp add: whenE_def split del: if_split)+
@@ -814,8 +813,7 @@ next
     apply (clarsimp)
     apply (rule corres_from_rdonly)
     apply (wp, clarsimp)
-    apply ( simp only: Let_unfold, wp, clarsimp, rule valid_validE, wp whenE_inv, clarsimp, wp)
-    apply (assumption)
+    apply (simp only: Let_unfold, wp+, clarsimp, rule valid_validE, (wp whenE_inv)+, clarsimp, wp+)
     apply (rule validE_cases_valid, rule hoare_pre)
      apply (wp | simp add: Let_unfold arch_invocation_relation_def translate_arch_invocation_def
                             transform_page_inv_def)+
@@ -825,8 +823,7 @@ next
     apply (metis flush.exhaust)
     apply (rule corres_from_rdonly)
     apply (wp, clarsimp)
-    apply ( simp only: Let_unfold, wp, clarsimp, rule valid_validE, wp whenE_inv, clarsimp, wp)
-    apply (assumption)
+    apply (simp only: Let_unfold, wp+, clarsimp, rule valid_validE, (wp whenE_inv)+, clarsimp, wp+)
     apply (rule validE_cases_valid, rule hoare_pre)
      apply (wp | simp add: Let_unfold arch_invocation_relation_def translate_arch_invocation_def
                             transform_page_inv_def)+
@@ -836,8 +833,7 @@ next
     apply (metis flush.exhaust)
     apply (rule corres_from_rdonly)
     apply (wp, clarsimp)
-    apply ( simp only: Let_unfold, wp, clarsimp, rule valid_validE, wp whenE_inv, clarsimp, wp)
-    apply (assumption)
+    apply (simp only: Let_unfold, wp, clarsimp, rule valid_validE, (wp whenE_inv)+, clarsimp, wp+)
     apply (rule validE_cases_valid, rule hoare_pre)
      apply (wp | simp add: Let_unfold arch_invocation_relation_def translate_arch_invocation_def
                             transform_page_inv_def)+
@@ -847,8 +843,7 @@ next
     apply (metis flush.exhaust)
     apply (rule corres_from_rdonly)
     apply (wp, clarsimp)
-    apply (simp only: Let_unfold, wp, clarsimp, rule valid_validE, wp whenE_inv, clarsimp, wp)
-    apply (assumption)
+    apply (simp only: Let_unfold, wp, clarsimp, rule valid_validE, (wp whenE_inv)+, clarsimp, wp)
     apply (rule validE_cases_valid, rule hoare_pre)
      apply (wp | simp add: Let_unfold arch_invocation_relation_def translate_arch_invocation_def
                             transform_page_inv_def)+
@@ -1323,7 +1318,7 @@ lemma invoke_page_table_corres:
           apply (wp store_pte_cte_wp_at)
          apply fastforce
         apply (clarsimp simp:valid_cap_def vmsz_aligned_def mask_2pm1)+
-     apply (wp hoare_post_taut)
+     apply (wp hoare_post_taut)+
     apply (rule_tac Q="\<lambda>rv s. invs s \<and> valid_etcbs s \<and> a \<noteq> idle_thread s \<and> cte_wp_at \<top> (a,b) s \<and>
                               caps_of_state s' = caps_of_state s" in hoare_strengthen_post)
      apply wp
@@ -1348,14 +1343,14 @@ lemma set_vm_root_for_flush_dwp[wp]:
   "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> set_vm_root_for_flush word1 word2 \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
   apply (simp add:set_vm_root_for_flush_def)
   apply (wp do_machine_op_wp|clarsimp simp:arm_context_switch_def get_hw_asid_def)+
-  apply (wpc)
-    apply wp
-    apply (rule hoare_conjI,rule hoare_drop_imp)
-      apply (wp do_machine_op_wp|clarsimp simp:load_hw_asid_def)+
-    apply (wpc|wp)+
-  apply (rule_tac Q="\<lambda>rv s. transform s = cs" in hoare_strengthen_post)
-    apply (wp|clarsimp)+
-done
+        apply (wpc)
+         apply wp+
+       apply (rule hoare_conjI,rule hoare_drop_imp)
+        apply (wp do_machine_op_wp|clarsimp simp:load_hw_asid_def)+
+     apply (wpc|wp)+
+    apply (rule_tac Q="\<lambda>rv s. transform s = cs" in hoare_strengthen_post)
+     apply (wp|clarsimp)+
+  done
 
 lemma diminished_page_is_page:
   "diminished (cap.ArchObjectCap (arch_cap.PageCap dev x rs sz mp)) c
@@ -1555,27 +1550,26 @@ lemma invoke_page_directory_corres:
     (invoke_page_directory ip) (perform_page_directory_invocation ip')" 
   apply (clarsimp simp:invoke_page_directory_def)
   apply (case_tac ip')
-  apply (simp_all add:perform_page_invocation_def)
-     apply (simp_all add: when_def  transform_page_dir_inv_def)
-  apply safe
-  apply (clarsimp)
+   apply (simp_all add:perform_page_invocation_def)
+   apply (simp_all add: when_def  transform_page_dir_inv_def)
+   apply safe
+   apply (clarsimp)
+   apply (rule corres_dummy_return_r)
+   apply (rule dcorres_symb_exec_r[OF corres_free_return[where P=\<top> and P'=\<top>]])
+    apply wp
+   apply (clarsimp simp: perform_page_directory_invocation_def)
+   apply (wp)
+       apply (rule dcorres_to_wp, rule dcorres_set_vm_root)
+      apply (wp)
+     apply (clarsimp)
+     apply (wp do_machine_op_wp, clarsimp, wp+)
+   apply (clarsimp)
   apply (rule corres_dummy_return_r)
   apply (rule dcorres_symb_exec_r[OF corres_free_return[where P=\<top> and P'=\<top>]])
    apply wp
   apply (clarsimp simp: perform_page_directory_invocation_def)
-   apply (wp)
-  apply (rule dcorres_to_wp, rule dcorres_set_vm_root)
-  apply (wp)
-  apply (clarsimp)
-  apply (wp do_machine_op_wp, clarsimp, wp)
-  apply (clarsimp)
-  apply (rule corres_dummy_return_r)
-  apply (rule dcorres_symb_exec_r[OF corres_free_return[where P=\<top> and P'=\<top>]])
-   apply wp
-   apply (clarsimp simp: perform_page_directory_invocation_def)
-done 
+  done 
 
-(* NOONE EVER SEES THIS OK *)
 lemma pte_check_if_mapped_corres:
   "dcorres dc \<top> \<top> (return a) (pte_check_if_mapped pte)"
   apply (clarsimp simp add: pte_check_if_mapped_def get_master_pte_def get_pte_def get_pt_def bind_assoc  in_monad get_object_def corres_underlying_def)
@@ -1785,7 +1779,7 @@ lemma invoke_page_corres:
          apply (erule notE)
          apply (rule dcorres_symb_exec_r)+
            apply (rule dcorres_set_vm_root)
-          apply (wp)
+          apply (wp)+
         apply (erule notE)+
         apply (clarsimp)
        apply (wp do_machine_op_wp | clarsimp)+
@@ -1897,7 +1891,7 @@ proof -
                                        transform_current_thread_def)
                     apply (clarsimp simp:transform_asid_table_def transform_asid_def
                       fun_upd_def[symmetric] unat_map_upd)
-                   apply wp
+                   apply wp+
                 apply (rule_tac Q="\<lambda>rv s. cte_wp_at (\<lambda>c. \<exists>idx. c = (cap.UntypedCap False frame pageBits idx))
                                              cref s
                                 \<and> asid_pool_at frame s

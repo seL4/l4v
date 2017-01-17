@@ -3253,10 +3253,8 @@ locale invs_locale =
 
 lemma invs_locale_trivial:
   "invs_locale \<top>"
-  apply unfold_locales
-  apply wp
-done
-
+  by (unfold_locales; wp)
+  
 lemma in_dxo_pspaceD:
   "((), s') \<in> fst (do_extended_op f s) \<Longrightarrow> kheap s' = kheap s"
   by (clarsimp simp: do_extended_op_def select_f_def in_monad)

@@ -963,7 +963,7 @@ lemma decodeCNodeInvocation_ccorres:
                                  apply (rule ccorres_alternative2)
                                  apply (rule ccorres_return_CE, simp+)[1]
                                 apply (rule ccorres_return_C_errorE, simp+)[1]
-                               apply (wp sts_valid_pspace_hangers)
+                               apply (wp sts_valid_pspace_hangers)+
                              apply (simp add: Collect_const_mem)
                              apply (vcg exspec=setThreadState_modifies)
                             apply (simp add: Collect_const_mem exception_defs)
@@ -1028,7 +1028,7 @@ lemma decodeCNodeInvocation_ccorres:
                 apply (rule ccorres_alternative2)
                 apply (rule ccorres_return_CE, simp+)[1]
                apply (rule ccorres_return_C_errorE, simp+)[1]
-              apply (wp sts_invs_minor')
+              apply (wp sts_invs_minor')+
             apply (simp add: Collect_const_mem)
             apply (vcg exspec=setThreadState_modifies)
            apply (vcg exspec=setThreadState_modifies exspec=invokeCNodeRevoke_modifies)
@@ -1043,7 +1043,7 @@ lemma decodeCNodeInvocation_ccorres:
                 apply (rule ccorres_alternative2)
                 apply (rule ccorres_return_CE, simp+)[1]
                apply (rule ccorres_return_C_errorE, simp+)[1]
-              apply (wp sts_invs_minor')
+              apply (wp sts_invs_minor')+
             apply (simp add: Collect_const_mem)
             apply (vcg exspec=setThreadState_modifies)
            apply (vcg exspec=setThreadState_modifies exspec=invokeCNodeDelete_modifies)
@@ -1062,7 +1062,7 @@ lemma decodeCNodeInvocation_ccorres:
                    apply (rule ccorres_alternative2)
                    apply (rule ccorres_return_CE, simp+)[1]
                   apply (rule ccorres_return_C_errorE, simp+)[1]
-                 apply (wp sts_valid_pspace_hangers)
+                 apply (wp sts_valid_pspace_hangers)+
                apply (simp add: Collect_const_mem)
                apply (vcg exspec=setThreadState_modifies)
               apply (simp add: dc_def[symmetric])
@@ -1111,7 +1111,7 @@ lemma decodeCNodeInvocation_ccorres:
                     apply (rule ccorres_alternative2)
                     apply (rule ccorres_return_CE, simp+)[1]
                    apply (rule ccorres_return_C_errorE, simp+)[1]
-                  apply (wp sts_invs_minor')
+                  apply (wp sts_invs_minor')+
                 apply (simp add: Collect_const_mem)
                 apply (vcg exspec=setThreadState_modifies)
                apply (simp add: Collect_const_mem)
@@ -1296,7 +1296,7 @@ lemma decodeCNodeInvocation_ccorres:
                                             apply (rule ccorres_return_C_errorE, simp+)[1]
                                            apply wp
                                           apply (vcg exspec=invokeCNodeRotate_modifies)
-                                         apply (wp static_imp_wp)
+                                         apply (wp static_imp_wp)+
                                        apply (simp add: Collect_const_mem)
                                        apply (vcg exspec=setThreadState_modifies)
                                       apply (simp add: Collect_const_mem)
@@ -1407,7 +1407,6 @@ lemma decodeCNodeInvocation_ccorres:
                          cte_wp_at_ctes_of excaps_in_mem_def slotcap_in_mem_def
                          sysargs_rel_def length_ineq_not_Nil
                   dest!: interpret_excaps_eq)
-   (* why does auto with these rules take ten times as long? *)
     apply ((rule conjI | clarsimp simp:split_def neq_Nil_conv
                       | erule pred_tcb'_weakenE disjE
                       | drule st_tcb_at_idle_thread')+)[1]
@@ -1476,7 +1475,7 @@ lemma resetUntypedCap_gsCNodes_at_pt:
    apply (wp mapME_x_wp' | simp add: unless_def)+
     apply (wp hoare_vcg_const_imp_lift
               deleteObjects_gsCNodes_at_pt
-              getSlotCap_wp)
+              getSlotCap_wp)+
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   apply (frule(1) ctes_of_valid')
   apply (clarsimp simp: valid_cap_simps' capAligned_def)
@@ -2757,9 +2756,9 @@ lemma mapME_ensureEmptySlot':
   "\<lbrace>P\<rbrace> 
   mapME (\<lambda>x. injection_handler Inl (ensureEmptySlot (f x))) slots
   \<lbrace>\<lambda>rva s. P s \<and> (\<forall>slot \<in> set slots. (\<exists>cte. cteCap cte = capability.NullCap \<and> ctes_of s (f slot) = Some cte))\<rbrace>, -"
+  including no_pre
   apply (induct slots arbitrary: P)
-   apply simp
-   apply wp 
+   apply wpsimp
   apply (rename_tac a slots P)
   apply (simp add: mapME_def sequenceE_def Let_def)
   apply (rule_tac Q="\<lambda>rv. P and (\<lambda>s. \<exists>cte. cteCap cte = capability.NullCap \<and> ctes_of s (f a) = Some cte)" in validE_R_sp) 

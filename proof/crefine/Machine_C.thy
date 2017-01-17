@@ -523,7 +523,7 @@ lemma cleanCacheRange_RAM_ccorres:
      apply (rule ccorres_Guard_Seq)
      apply (rule ccorres_basic_srnoop2, simp)
      apply (ctac (no_vcg) add: cleanL2Range_ccorres[unfolded dc_def])
-    apply wp
+    apply wp+
   apply clarsimp
   apply (auto dest: ghost_assertion_size_logic simp: o_def)
   done
@@ -693,7 +693,7 @@ lemma cleanCaches_PoU_ccorres:
      apply (ctac (no_vcg) add: dsb_ccorres)
       apply (ctac (no_vcg) add: invalidate_I_PoU_ccorres)
        apply (ctac (no_vcg) add: dsb_ccorres)
-      apply wp
+      apply wp+
   apply clarsimp
   done
 
@@ -710,7 +710,7 @@ lemma setCurrentPD_ccorres:
    apply (ctac (no_vcg) add: dsb_ccorres)
     apply (ctac (no_vcg) add: writeTTBR0_ccorres)
      apply (ctac (no_vcg) add: isb_ccorres)
-    apply wp
+    apply wp+
   apply clarsimp
   done
 

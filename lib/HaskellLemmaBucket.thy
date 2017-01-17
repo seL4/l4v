@@ -209,8 +209,8 @@ lemma findM_on_outcome':
   apply (induct xs)
    apply (simp, wp)
   apply (simp, wp)
-   apply assumption
-  apply (rule x)
+   apply (rule x)
+  apply simp
   done
 
 

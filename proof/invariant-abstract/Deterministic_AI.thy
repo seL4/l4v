@@ -1503,25 +1503,13 @@ definition valid_mdb_weak where
 "valid_mdb_weak s \<equiv> mdb_cte_at (swp (cte_wp_at (op \<noteq> NullCap)) s) (cdt s) \<and> no_mloop (cdt s)"
 
 lemma self_parent_eq: "m src = Some src \<Longrightarrow> m(dest \<mapsto> src) = m (dest := m src)"
-  apply simp
-  done
+  by simp
 
-lemma "\<lbrakk>\<exists>!x. P x; (THE x. P x) = a; y \<noteq> a\<rbrakk> \<Longrightarrow> \<not>P y"
-  apply (rule notI)
-  apply (frule(1) the1_equality)
-  apply simp
-  done
-
-
-lemma ex1_False: "(\<And>x. \<not>P x) \<Longrightarrow> \<not> (\<exists>!x. P x)"
-  apply (rule notI)
-  apply (erule ex1E)
-  apply simp
-  done
+lemma ex1_False: "(\<And>x. \<not>P x) \<Longrightarrow> \<not> (\<exists>!x. P x)" by auto
 
 lemma set_cap_match: "(\<And>s x. P s = P (s\<lparr>kheap := x\<rparr>)) \<Longrightarrow> \<lbrace>P\<rbrace> set_cap a b \<lbrace>\<lambda>_.P\<rbrace>"
   apply (simp add: set_cap_def split_def set_object_def get_object_def)
-  apply (wp| wpc | simp)+
+  apply wpsimp
   done
 
 crunch all_but_exst[wp]: cap_insert_ext "all_but_exst P"
@@ -1529,9 +1517,7 @@ crunch all_but_exst[wp]: cap_insert_ext "all_but_exst P"
 crunch (empty_fail) empty_fail[wp]: cap_insert_ext
 
 interpretation cap_insert_ext_extended: is_extended "cap_insert_ext a b c d e"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 
 lemma cap_insert_valid_list [wp]:
@@ -1555,7 +1541,7 @@ lemma cap_insert_valid_list [wp]:
        apply (wp set_cap_caps_of_state3)
       apply (simp only:)
       apply (simp del: fun_upd_apply split del: if_split)
-     apply (wp get_cap_wp)
+     apply (wp get_cap_wp)+
   apply(intro allI impI conjI)
   apply (case_tac "src = dest")
    apply (simp add: cte_wp_at_caps_of_state fun_upd_idem del: fun_upd_apply)
@@ -2214,7 +2200,7 @@ lemma cap_move_valid_list [wp]:
                     update_cdt_list_def set_cdt_list_def del: fun_upd_apply split del: if_split)
    apply(wp)
     apply (simp del: fun_upd_apply cong: option.case_cong)
-    apply (wp set_cap_caps_of_state3)
+    apply (wp set_cap_caps_of_state3)+
    apply (case_tac "cdt s dest")
     apply (fastforce simp: valid_list_2_def list_remove_removed intro: list_remove_distinct)+
   apply (simp add: cap_move_def)
@@ -2224,13 +2210,11 @@ lemma cap_move_valid_list [wp]:
    apply (simp del: fun_upd_apply split del: if_split)
    apply (unfold valid_list_2_def)
    apply (simp del: fun_upd_apply cong: option.case_cong split del: if_split)
-   apply (wp set_cap_caps_of_state3)
+   apply (wp set_cap_caps_of_state3)+
   apply (fold valid_list_2_def)
   apply (rule mdb_move_abs_simple.valid_list_post)
-  apply (rule mdb_move_abs_simple.intro)
-   apply simp
-  apply (simp)
-   done
+  apply (rule mdb_move_abs_simple.intro; simp)
+  done
 
 declare if_cong[cong]
 
@@ -2581,7 +2565,7 @@ lemma (in mdb_empty_abs') next_sib:
     apply(simp add: n_def)
    apply(simp)
    apply(intro conjI impI notI)
-    apply(simp add: no_mdb_loop)
+    apply simp
    apply(drule_tac list="t slot_p" and slot=slot in list_replace_after_None_notin_old)
      apply(simp add: valid_list_2_def)
     apply(simp add: valid_list_2_def)
@@ -2604,7 +2588,7 @@ lemma (in mdb_empty_abs') next_sib:
    apply(rule next_sibI)
     apply(simp add: n_def)
    apply(simp)
-   apply(fastforce intro: list_replace_after_notin_old simp: valid_list_2_def no_mdb_loop)
+   apply(fastforce intro: list_replace_after_notin_old simp: valid_list_2_def)
   apply(simp)
   apply(rule next_sibI)
    apply(simp add: n_def)
@@ -3144,9 +3128,7 @@ crunch all_but_exst[wp]: empty_slot_ext "all_but_exst P"
 crunch (empty_fail) empty_fail[wp]: empty_slot_ext
 
 interpretation empty_slot_extended: is_extended "empty_slot_ext a b"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 
 lemma empty_slot_valid_list[wp]:
@@ -3177,12 +3159,12 @@ lemma set_cap_exst_update:
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
   apply (case_tac y)
       apply (auto simp add: in_monad set_object_def split: if_split_asm)
-      done
+  done
 
 lemma no_parent_not_next_slot:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows "\<lbrakk>m slot = None; valid_list_2 t m; finite_depth m; no_mloop m\<rbrakk>
-    \<Longrightarrow> next_slot p t m \<noteq> Some slot"
+          \<Longrightarrow> next_slot p t m \<noteq> Some slot"
   apply(rule notI)
   apply(simp add: next_slot_def split: if_split_asm)
    apply(drule(1) next_childD)
@@ -3310,8 +3292,7 @@ lemma findepth:
 
 lemma finite_depth:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
-  shows
-  "finite_depth n"
+  shows "finite_depth n"
   apply (insert findepth)
   apply(simp add: finite_depth_def descendants split del: if_split)
   apply(simp add: n_def n'_def split del: if_split)
@@ -3321,57 +3302,51 @@ lemma finite_depth:
    apply(elim exE conjE)
    apply(case_tac "p=src")
     apply(rule_tac x=dest in exI, simp add: s_d_swap_def)
-    apply(case_tac "p = dest")
-      apply(rule_tac x ="src" in exI, simp add: s_d_swap_def)
-      apply(rule_tac x=p in exI, simp add: s_d_swap_def)
-   apply (case_tac "slot=dest")
-     apply(erule_tac x=src in allE)
-     apply (elim exE conjE)
-     apply (case_tac "p=src")
-       apply (rule_tac x =dest in exI, simp add: s_d_swap_def)
-       apply (case_tac "p=dest")
-         apply (simp add: descendants_of_def)
-          apply (intro conjI impI)
-           apply (rule_tac x = "src" in exI, intro conjI, rule impI, simp+)
-           apply (rule_tac x = "src" in exI)
-           apply (intro conjI impI)
-           apply (simp,simp,simp,simp,simp,simp,simp,simp)
-         apply (rule_tac x = "p" in exI)
-           apply (simp add: descendants_of_def s_d_swap_def)
-   apply (erule_tac x = slot in allE)
+   apply(case_tac "p = dest")
+    apply(rule_tac x ="src" in exI, simp add: s_d_swap_def)
+   apply(rule_tac x=p in exI, simp add: s_d_swap_def)
+  apply (case_tac "slot=dest")
+   apply(erule_tac x=src in allE)
    apply (elim exE conjE)
-   apply (case_tac "p = dest")
-     apply (rule_tac x = "src" in exI, simp add: descendants_of_def s_d_swap_def)
-     apply (case_tac "p = src")
-       apply (rule_tac x = "dest" in exI, simp add: descendants_of_def s_d_swap_def)
-       apply (rule_tac x ="p" in exI, simp add: descendants_of_def s_d_swap_def)
-       done
-
-
+   apply (case_tac "p=src")
+    apply (rule_tac x =dest in exI, simp add: s_d_swap_def)
+   apply (case_tac "p=dest")
+    apply (simp add: descendants_of_def)
+    apply (intro conjI impI)
+     apply (rule_tac x = "src" in exI, intro conjI, rule impI, simp+)
+    apply (rule_tac x = "src" in exI)
+    apply (intro conjI impI; simp)
+   apply (rule_tac x = "p" in exI)
+   apply (simp add: descendants_of_def s_d_swap_def)
+  apply (erule_tac x = slot in allE)
+  apply (elim exE conjE)
+  apply (case_tac "p = dest")
+   apply (rule_tac x = "src" in exI, simp add: descendants_of_def s_d_swap_def)
+  apply (case_tac "p = src")
+   apply (rule_tac x = "dest" in exI, simp add: descendants_of_def s_d_swap_def)
+  apply (rule_tac x ="p" in exI, simp add: descendants_of_def s_d_swap_def)
+  done
 
 lemma parency_antisym: "\<And>x y. m x = Some y \<Longrightarrow> m y \<noteq> Some x"
-      apply (frule parent_not_descendant[OF no_mloop])
-      apply (rule notI)
-      apply (frule_tac src=y and src_p=x in child_descendant,simp)
-      done
+  apply (frule parent_not_descendant[OF no_mloop])
+  apply (rule notI)
+  apply (frule_tac src=y and src_p=x in child_descendant,simp)
+  done
 
 lemma parent_not_next_child: "x \<notin> set (t x)"
   apply (insert no_mloop valid_list)
   apply (simp add: valid_list_2_def no_mloop_def del: split_paired_All)
   done
 
-
 lemma valid_list_post:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   notes parency_antisym[where x=src and y = dest,simp]
   notes parent_not_next_child[simp]
-  shows
-  "valid_list_2 t' n"
-    proof -
-    show ?thesis
-    apply (insert valid_list)
+  shows "valid_list_2 t' n"
+  proof -
+    from valid_list show ?thesis
     apply (simp add: t'_def t''_def n_def n'_def cong: option.case_cong)
-    apply (simp add: replace_distinct[OF parent_not_next_child]
+    by (simp add: replace_distinct[OF parent_not_next_child]
                      replace_distinct list_replace_set
                      list_swap_both insert_Collect remove_collect
                      swap_distinct
@@ -3381,7 +3356,6 @@ lemma valid_list_post:
            | simp split: option.splits
            | (rule ccontr,simp,elim impE,rule notI)
            | simp only: valid_list_2_def  )+ (*slow*)
-  done
 qed
 
 lemma next_child_antisym: "next_child x t = Some y \<Longrightarrow> next_child y t \<noteq> Some x"
@@ -3413,7 +3387,7 @@ lemma next_child:
   notes next_child_antisym[where x=src and y = dest,simp]
   notes next_childD' = next_childD[OF _ valid_list]
   notes rdefs = t'_def t''_def n_def n'_def
-  shows
+  shows 
   "next_child p t'
     = (if p = src then
         (if next_child dest t = Some src then Some dest
@@ -3426,9 +3400,9 @@ lemma next_child:
       else next_child p t)"
   apply (simp add: rdefs split: option.splits)
   apply (intro impI conjI,simp_all)
-  apply ((intro impI conjI allI | drule next_child_NoneD next_childD'  next_childD'' | rule next_childI'' | simp add: list_replace_def list_swap_def | elim exE conjE disjE | simp add: next_child_def)+) (*slow*)
-  done
-
+  by ((intro impI conjI allI | drule next_child_NoneD next_childD'  next_childD'' | 
+       rule next_childI'' | simp add: list_replace_def list_swap_def | elim exE conjE disjE |
+       simp add: next_child_def)+) (*slow*)
 
 
 lemma next_sib_antisym:
@@ -3442,7 +3416,6 @@ lemma next_sib_antisym:
   apply (elim exE conjE)
   apply (simp add: valid_list[simplified valid_list_2_def] distinct_after_in_list_antisym)
   done
-
 
 
 lemma after_in_listD': "after_in_list (t p) x = Some y \<Longrightarrow> (\<exists>xs ys. xs @ (x # y # ys) = (t p) \<and> x \<notin> set xs) \<and> (m y = Some p \<and> m x = Some p) \<and> x \<noteq> y"
@@ -3461,31 +3434,33 @@ lemma after_in_listD': "after_in_list (t p) x = Some y \<Longrightarrow> (\<exis
   apply (simp add: valid_list[simplified valid_list_2_def])+
   done
 
-lemma optionD: "x \<noteq> Some y \<Longrightarrow>
-                   x = None \<or> (\<exists>z. x = Some z \<and> z \<noteq> y)"
-  apply (case_tac "x",simp+)
-  done
+lemma optionD: "x \<noteq> Some y \<Longrightarrow> x = None \<or> (\<exists>z. x = Some z \<and> z \<noteq> y)"
+  by (case_tac "x"; simp)
 
-lemma t_distinct[simp]: "distinct (t x)"
-  apply (simp add: valid_list[simplified valid_list_2_def])
-  done
+lemma t_distinct: "distinct (t x)"
+  by (simp add: valid_list[simplified valid_list_2_def])
 
 lemma t_some[simp]: "set (t x) = {c. m c = Some x}"
-  apply (simp add: valid_list[simplified valid_list_2_def])
-  done
+  by (simp add: valid_list[simplified valid_list_2_def])
 
+declare t_distinct [simp]
 
-lemmas list_swap_preservation_t = list_swap_preserve_after list_swap_preserve_after list_swap_preserve_after' list_swap_preserve_after'' list_swap_preserve_None list_swap_preserve_None' list_swap_preserve_Some_other' list_swap_preserve_Some_other_distinct[OF t_distinct] list_swap_preserve_Some_other_distinct[OF t_distinct, simplified list_swap_symmetric] list_swap_does_swap[OF t_distinct] list_swap_does_swap[OF t_distinct,simplified list_swap_symmetric] list_swap_preserve_after_None list_swap_preserve_separate list_swap_does_swap'
+lemmas list_swap_preservation_t = 
+  list_swap_preserve_after list_swap_preserve_after'
+  list_swap_preserve_after'' list_swap_preserve_None list_swap_preserve_None'
+  list_swap_preserve_Some_other' list_swap_preserve_Some_other_distinct[OF t_distinct]
+  list_swap_preserve_Some_other_distinct[OF t_distinct, simplified list_swap_symmetric]
+  list_swap_does_swap[OF t_distinct]
+  list_swap_does_swap[OF t_distinct,simplified list_swap_symmetric] 
+  list_swap_preserve_after_None list_swap_preserve_separate list_swap_does_swap'
 
 lemma next_sibD':
- notes split_paired_All[simp del] split_paired_Ex[simp del]
-  shows
- "next_sib slot t m = Some child \<Longrightarrow>
-\<exists>p. m slot = Some p \<and> m child = Some p \<and> after_in_list (t p) slot = Some child"
+  notes split_paired_All[simp del] split_paired_Ex[simp del]
+  shows "next_sib slot t m = Some child \<Longrightarrow>
+         \<exists>p. m slot = Some p \<and> m child = Some p \<and> after_in_list (t p) slot = Some child"
   apply (frule next_sib_same_parent[OF valid_list])
   apply (drule next_sibD)
-  apply (elim exE conjE)
-  apply simp
+  apply clarsimp
   done
 
 lemma next_sib:
@@ -3508,14 +3483,14 @@ lemma next_sib:
       else next_sib p t m)"
   apply simp
   apply (intro impI conjI allI,simp_all)
-  apply ((intro impI conjI allI
+  by ((intro impI conjI allI
    | drule next_sib_NoneD next_sibD'
    | simp add: next_sib_def rdefs split: option.splits
-   | simp add: after_in_list_append_notin_hd replace_list_preserve_after replace_list_preserve_after' list_swap_preservation_t replace_distinct swap_distinct
+   | simp add: after_in_list_append_notin_hd replace_list_preserve_after replace_list_preserve_after'
+               list_swap_preservation_t replace_distinct swap_distinct
    | rule after_in_list_list_replace
    | drule optionD after_in_listD'
    | elim exE conjE disjE | force )+) (*slow*)
-  done
 
 lemma next_not_child:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
@@ -3775,13 +3750,11 @@ lemma t'_empty:
   "(t' src = []) = (t dest = [])"
   "(t' dest = []) = (t src = [])"
   "p\<noteq>src \<and> p\<noteq>dest \<Longrightarrow> (t' p = []) = (t p = [])"
-  apply(fastforce simp: n_def n'_def t''_def t'_def list_swap_def
-        split: option.splits split: if_split_asm)+
-  done
+  by(fastforce simp: n_def n'_def t''_def t'_def list_swap_def
+              split: option.splits split: if_split_asm)+
 
 lemma next_slot:
-  notes split_paired_All[simp del] split_paired_Ex[simp del]
-  shows "next_slot p t' n
+  "next_slot p t' n
     = (if p = src then
         (if next_slot dest t m = Some src then Some dest
          else next_slot dest t m)
@@ -3809,15 +3782,12 @@ lemma next_slot:
 end
 
 
-
 crunch all_but_exst[wp]: cap_swap_ext "all_but_exst P"
 
 crunch (empty_fail) empty_fail[wp]: cap_swap_ext
 
 interpretation cap_swap_ext_extended: is_extended "cap_swap_ext a b c d"
-  apply (unfold_locales)
-  apply (wp cap_swap_ext_all_but_exst)
-  done
+  by (unfold_locales; wp cap_swap_ext_all_but_exst)
 
 
 lemma cap_swap_valid_list [wp]:
@@ -3828,9 +3798,9 @@ lemma cap_swap_valid_list [wp]:
   apply (simp only: cap_swap_ext_def update_cdt_list_def set_cdt_list_def set_cdt_def bind_assoc)
   apply wp
   apply (simp del: fun_upd_apply split del: if_split cong: option.case_cong)
-        apply (wp set_cap_caps_of_state3)
+        apply (wp set_cap_caps_of_state3)+
   apply (case_tac "a = b")
-  apply (simp split: option.splits)
+   apply (simp split: option.splits)
   apply(subgoal_tac "mdb_swap_abs_simple (cdt s) (cdt_list s)")
    prefer 2
    apply(rule mdb_swap_abs_simple.intro)
@@ -3838,7 +3808,6 @@ lemma cap_swap_valid_list [wp]:
   apply(frule mdb_swap_abs_simple.valid_list_post[where src=a and dest=b])
   apply(simp add: fun_upd_def split del: if_split cong: option.case_cong)
   done
-
 
 
 lemma exst_set_cap:
@@ -3850,9 +3819,7 @@ crunch all_but_exst[wp]: create_cap_ext "all_but_exst P"
 crunch (empty_fail) empty_fail[wp]: create_cap_ext
 
 interpretation create_cap_extended: is_extended "create_cap_ext a b c"
-  apply (unfold_locales)
-  apply (wp)
-  done
+  by (unfold_locales; wp)
 
 lemma create_cap_valid_list[wp]:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
@@ -3861,7 +3828,7 @@ lemma create_cap_valid_list[wp]:
       create_cap tp sz p dev x \<lbrace>\<lambda>rv. valid_list\<rbrace>"
   apply (case_tac x)
   apply (simp add: create_cap_def)
-  apply(simp add: set_cdt_def update_cdt_list_def set_cdt_list_def bind_assoc create_cap_ext_def bind_assoc)
+  apply(simp add: set_cdt_def update_cdt_list_def set_cdt_list_def create_cap_ext_def bind_assoc)
   apply (rule hoare_pre)
    apply (simp add: valid_list_2_def)
    apply (wp | simp cong: option.case_cong if_cong del: fun_upd_apply split del: if_split)+
@@ -3874,56 +3841,44 @@ lemma create_cap_valid_list[wp]:
 
 crunch valid_list[wp]: set_extra_badge valid_list
 
+lemmas transfer_caps_loop_ext_valid[wp] =
+  transfer_caps_loop_pres[OF cap_insert_valid_list set_extra_badge_valid_list]
 
-lemmas transfer_caps_loop_ext_valid[wp] = transfer_caps_loop_pres[OF cap_insert_valid_list set_extra_badge_valid_list]
-
-
-crunch valid_list[wp]: tcb_sched_action,reschedule_required,set_thread_state_ext "valid_list" (simp: unless_def)
+crunch valid_list[wp]: tcb_sched_action,reschedule_required,set_thread_state_ext "valid_list"
+  (simp: unless_def)
 
 crunch all_but_exst[wp]: set_thread_state_ext "all_but_exst P"
 
 crunch (empty_fail) empty_fail[wp]: set_thread_state_ext
 
 interpretation set_thread_state_ext_extended: is_extended "set_thread_state_ext a"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 crunch all_but_exst[wp]: reschedule_required "all_but_exst P"
 
 interpretation reschedule_required_ext_extended: is_extended "reschedule_required"
-  apply (unfold_locales)
-  apply wp
-  done
-
+  by (unfold_locales; wp)
 
 crunch valid_list[wp]: fast_finalise valid_list (wp: crunch_wps)
 
 lemma cap_delete_one_valid_list[wp]: "\<lbrace>valid_list\<rbrace> cap_delete_one a \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  unfolding cap_delete_one_def
-  apply (wp | simp add: unless_def)+
-  done
+  unfolding cap_delete_one_def by (wpsimp simp: unless_def)
 
 crunch valid_list[wp]: thread_set valid_list
 
 lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cancel_ipc a \<lbrace>\<lambda>_. valid_list\<rbrace>"
   unfolding reply_cancel_ipc_def
-  apply (wp select_wp hoare_drop_imps thread_set_mdb | simp)+
-  done
+  by (wp select_wp hoare_drop_imps thread_set_mdb | simp)+
 
 crunch all_but_exst[wp]: update_work_units "all_but_exst P"
 
 crunch all_but_exst[wp]: reset_work_units "all_but_exst P"
 
 global_interpretation update_work_units_ext_extended: is_extended "update_work_units"
-  apply (unfold_locales)
-  apply wp
-  done
-
+  by (unfold_locales; wp)
+ 
 global_interpretation reset_work_units_ext_extended: is_extended "reset_work_units"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 lemma preemption_point_inv':
   "\<lbrakk>irq_state_independent_A P; \<And>f s. P (work_units_completed_update f s) = P s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>"
@@ -3958,8 +3913,7 @@ crunch valid_list[wp]: cap_delete valid_list
 end
 
 lemma irq_state_independent_A_valid_list[simp]: "irq_state_independent_A valid_list"
-  apply (simp add: irq_state_independent_A_def)
-  done
+  by (simp add: irq_state_independent_A_def)
 
 context Deterministic_AI_1 begin
 
@@ -3977,9 +3931,7 @@ crunch all_but_exst[wp]: ethread_set "all_but_exst P"
 crunch (empty_fail) empty_fail[wp]: ethread_set
 
 global_interpretation ethread_set_extended: is_extended "ethread_set a b"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 crunch valid_list[wp]: cancel_badged_sends valid_list
   (wp: crunch_wps preemption_point_inv' simp: crunch_simps filterM_mapM unless_def
@@ -3987,9 +3939,8 @@ crunch valid_list[wp]: cancel_badged_sends valid_list
 
 context Deterministic_AI_1 begin
 
-lemma invoke_cnode_valid_list[wp]: "\<lbrace>valid_list\<rbrace>
-           invoke_cnode ci
-       \<lbrace>\<lambda>_.valid_list\<rbrace>"
+lemma invoke_cnode_valid_list[wp]: 
+  "\<lbrace>valid_list\<rbrace> invoke_cnode ci \<lbrace>\<lambda>_.valid_list\<rbrace>"
   apply (rule hoare_pre)
    apply (wp crunch_wps cap_move_src_slot_Null hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: invoke_cnode_def crunch_simps split del: if_split)+
   done
@@ -4009,44 +3960,32 @@ lemma empty_fail_possible_switch_to[wp]: "empty_fail (possible_switch_to a b)"
 crunch (empty_fail)empty_fail[wp]: switch_if_required_to
 
 global_interpretation possible_switch_to_extended: is_extended "possible_switch_to a b"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 global_interpretation switch_if_required_to_extended: is_extended "switch_if_required_to a"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 crunch all_but_exst[wp]: set_priority "all_but_exst P" (simp: ethread_get_def)
 
 crunch (empty_fail)empty_fail[wp]: set_priority,set_mcpriority
 
 global_interpretation set_priority_extended: is_extended "set_priority a b"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 crunch all_but_exst[wp]: set_domain "all_but_exst P" (simp: ethread_get_def)
 
 global_interpretation set_domain_extended: is_extended "set_domain a b"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 global_interpretation thread_set_domain_extended: is_extended "thread_set_domain a b"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 crunch all_but_exst[wp]: dec_domain_time "all_but_exst P" (simp: ethread_get_def)
 
 crunch (empty_fail) empty_fail[wp]: dec_domain_time
 
 global_interpretation dec_domain_time_extended: is_extended "dec_domain_time"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 context Deterministic_AI_1 begin
 crunch valid_list[wp]: invoke_tcb valid_list
@@ -4061,18 +4000,14 @@ lemma delete_objects_valid_list[wp]: "\<lbrace>valid_list\<rbrace> delete_object
 lemmas mapM_x_def_bak = mapM_x_def[symmetric]
 
 lemma retype_region_ext_valid_list_ext[wp]: "\<lbrace>valid_list\<rbrace> retype_region_ext a b \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  apply (rule hoare_pre)
-  apply (simp add: retype_region_ext_def|wp|wpc)+
-  done
+  by (wpsimp simp: retype_region_ext_def)
 
 crunch all_but_exst[wp]: retype_region_ext "all_but_exst P" (simp: ethread_get_def)
 
 crunch (empty_fail)empty_fail[wp]: retype_region_ext
 
 global_interpretation retype_region_ext_extended: is_extended "retype_region_ext a b"
-  apply (unfold_locales)
-  apply wp
-  done
+  by (unfold_locales; wp)
 
 crunch valid_list[wp]: invoke_irq_handler valid_list
 
@@ -4091,10 +4026,7 @@ crunch (empty_fail)empty_fail[wp]: timer_tick
   (simp: thread_state.splits)
 
 global_interpretation timer_tick_extended: is_extended "timer_tick"
-  apply (unfold_locales)
-  apply wp
-  done
-
+  by (unfold_locales; wp)
 
 locale Deterministic_AI_2 = Deterministic_AI_1 +
   assumes handle_interrupt_valid_list[wp]:
@@ -4118,15 +4050,8 @@ locale Deterministic_AI_2 = Deterministic_AI_1 +
 context Deterministic_AI_2 begin
 
 lemma handle_event_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace>
-        handle_event e
-   \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  apply (case_tac e, simp_all)
-      apply (rename_tac syscall)
-      apply (case_tac syscall, simp_all)
-          apply ((rule hoare_pre, wp) |
-                 wpc | wp hoare_drop_imps hoare_vcg_all_lift | simp)+
-  done
+  "\<lbrace>valid_list\<rbrace> handle_event e \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  by (case_tac e; wpsimp wp: hoare_drop_imps)
 
 end
 
@@ -4270,10 +4195,8 @@ definition next_sib_set :: "cslot_ptr \<Rightarrow> cdt_list \<Rightarrow> cdt \
 lemma next_sib_set_same_parent:
   "\<lbrakk>next \<in> next_sib_set slot t m; valid_list_2 t m\<rbrakk>
     \<Longrightarrow> \<exists>p. m slot = Some p \<and> m next = Some p"
-  apply(simp add: next_sib_set_def)
-  apply(induct_tac "next" slot rule: trancl.induct)
-    apply(fastforce dest: next_sib_same_parent)+
-    done
+  apply (simp add: next_sib_set_def)
+  by (induct "next" slot rule: trancl.induct; fastforce dest: next_sib_same_parent)
 
 lemma next_slot_setD:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
@@ -4354,9 +4277,9 @@ lemma list_eq_after_in_list:
   apply (erule conjE)
   apply (drule_tac x = p in spec)+
   apply (subgoal_tac "x \<in> set (t p)")
-    apply (drule_tac in_set_conv_nth[THEN iffD1], erule exE)
-    apply (auto simp: in_set_conv_nth list_eq_after_in_list')
-done
+   apply (drule_tac in_set_conv_nth[THEN iffD1], erule exE)
+   apply (auto simp: in_set_conv_nth list_eq_after_in_list')
+  done
 
 lemma next_sib_set_eq_after_in_list_set_Some:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
@@ -4366,8 +4289,7 @@ lemma next_sib_set_eq_after_in_list_set_Some:
    apply(simp add: next_sib_set_def)
    apply(drule trancl_Collect_rev)
    apply(rule trancl_Collect_rev)
-   apply(induct_tac xa rule: trancl_induct)
-     apply(assumption)
+   apply(erule trancl_induct)
     apply(fastforce simp: next_sib_def split: option.splits)
    apply(rule trancl_into_trancl)
     apply(simp)
@@ -4377,8 +4299,7 @@ lemma next_sib_set_eq_after_in_list_set_Some:
    apply(fastforce simp: next_sib_def split: option.splits dest: next_sib_set_same_parent)
   apply(simp)
   apply(drule trancl_Collect_rev)
-  apply(induct_tac xa rule: trancl_induct)
-    apply(assumption)
+  apply(erule trancl_induct)
    apply(fastforce simp: next_sib_set_def next_sib_def split: option.splits)
   apply(simp add: next_sib_set_def)
   apply(subgoal_tac "y \<in> next_sib_set x t m")
@@ -4508,8 +4429,7 @@ lemma next_sib_2_termination:
   "\<lbrakk>valid_mdb s; valid_list s\<rbrakk> \<Longrightarrow> next_sib_2_dom (slot, p, s)"
   apply(induct_tac slot rule: next_slot_induct[where s=s])
      apply(fastforce intro: next_sib_2_domintros)+
-     done
-
+  done
 
 lemma next_sib_2_pinduct':
   "\<lbrakk>next_sib_2_dom (slot, p, s);
@@ -4691,9 +4611,8 @@ function (domintros) last_last_child where
   by auto
 
 
-
 lemma last_childD:
-  notes split_paired_All[simp del] split_paired_Ex[simp del]
+  notes split_paired_All[simp del]
   shows "\<lbrakk>last_child slot t = Some child; valid_list_2 t m\<rbrakk>
     \<Longrightarrow> m child = Some slot \<and> next_sib child t m = None"
   apply(rule context_conjI)
@@ -4711,8 +4630,7 @@ lemma last_childD:
 lemma last_child_set_in_desc:
   "\<lbrakk>valid_list_2 t m; c \<in> last_child_set p t\<rbrakk> \<Longrightarrow> c \<in> descendants_of p m"
   apply(simp add: last_child_set_def)
-  apply(induct_tac p rule: trancl_induct)
-    apply(assumption)
+  apply(erule trancl_induct)
    apply(fastforce simp: child_descendant dest: last_childD)
   apply(simp)
   apply(drule(1) last_childD)
@@ -4720,7 +4638,7 @@ lemma last_child_set_in_desc:
   apply(drule child_descendant)
   apply(rule descendants_trans)
    apply(simp)+
-   done
+  done
 
 lemma last_child_no_loop:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
@@ -4733,10 +4651,7 @@ lemma last_child_no_loop:
 
 
 lemma wf_last_child:
-  notes split_paired_All[simp del] split_paired_Ex[simp del]
-  shows
-  "\<lbrakk>valid_mdb s; valid_list s\<rbrakk>
-    \<Longrightarrow> wf {(next, p). last_child p (cdt_list s) = Some next}"
+  "\<lbrakk>valid_mdb s; valid_list s\<rbrakk> \<Longrightarrow> wf {(next, p). last_child p (cdt_list s) = Some next}"
   apply(rule finite_acyclic_wf)
    apply(insert cte_wp_at_set_finite)[1]
    apply(rule_tac B="{p. cte_wp_at \<top> p s} \<times> {p. cte_wp_at \<top> p s}" in finite_subset)
@@ -4750,8 +4665,6 @@ lemma wf_last_child:
   done
 
 lemma last_child_induct:
-  notes split_paired_All[simp del] split_paired_Ex[simp del]
-  shows
   "\<lbrakk>\<And>x. last_child x (cdt_list s) = None \<Longrightarrow> P x; \<And>x y. \<lbrakk>last_child x (cdt_list s) = Some y; P y\<rbrakk> \<Longrightarrow> P x;
     valid_mdb s; valid_list s\<rbrakk>
     \<Longrightarrow> P slot"
@@ -4760,22 +4673,20 @@ lemma last_child_induct:
   apply(fastforce split: if_split_asm)
   done
 
-
 lemma last_last_child_termination:
   "\<lbrakk>valid_mdb s; valid_list s\<rbrakk> \<Longrightarrow> last_last_child_dom (slot, (cdt_list s))"
   apply(induct_tac slot rule: last_child_induct[where s=s])
      apply(fastforce intro: last_last_child.domintros)+
-     done
+  done
 
 declare last_last_child.psimps[simp]
 
 lemma last_child_NoneD:
   "\<lbrakk>last_child x t = None; valid_list_2 t m\<rbrakk> \<Longrightarrow> descendants_of x m = {}"
-  apply(simp add: last_child_def empty_list_empty_desc split: if_split_asm)
-  done
+  by(simp add: last_child_def empty_list_empty_desc split: if_split_asm)
 
 lemma last_last_child_NoneD:
-  notes split_paired_All[simp del] split_paired_Ex[simp del]
+  notes split_paired_Ex[simp del]
   assumes "last_last_child slot (cdt_list s) = None" "valid_list s" "valid_mdb s"
   shows "descendants_of slot (cdt s) = {}"
   apply(insert assms)
@@ -4795,7 +4706,7 @@ lemma last_last_child_NoneD:
     apply(fastforce dest: child_descendant)
    using assms
    apply(simp+)
-   done
+  done
 
 lemma last_child_None_empty_desc:
   "\<lbrakk>last_child slot t = None; valid_list_2 t m\<rbrakk> \<Longrightarrow> descendants_of slot m = {}"
@@ -5089,8 +5000,7 @@ lemma next_sib_in_next_slot_set:
    apply(rule subsetI)
    apply(simp add: next_slot_set_def)
    apply(drule trancl_Collect_rev)
-   apply(induct_tac x rule: trancl_induct)
-     apply(assumption)
+   apply(erule trancl_induct)
     apply(simp add: empty_list_empty_desc next_slot_def)
     apply(drule(1) next_childD, simp add: child_descendant)
    apply(simp)

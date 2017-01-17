@@ -19,7 +19,7 @@ lemma det_wp_doMachineOp [wp]:
   apply (simp add: doMachineOp_def split_def)
   apply (rule det_wp_pre, wp)
       apply (erule det_wp_select_f)
-     apply wp
+     apply wp+
   apply simp
   done
 
@@ -123,7 +123,7 @@ lemma det_wp_asUser [wp]:
    apply wp
       apply (drule det_wp_det)
       apply (erule det_wp_select_f)
-     apply wp
+     apply wp+
    apply (rule_tac Q="\<lambda>_. tcb_at' t" in hoare_post_imp)
     apply simp
    apply wp

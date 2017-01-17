@@ -359,7 +359,7 @@ lemma set_cdl_tcb_field_wp:
              apply (simp add:object_type_simps object_wipe_slots_object_clean)+
           apply (drule_tac tcb = cdl_tcb in fields_cong)
           apply simp
-         apply wp
+         apply wp+
   apply (clarsimp simp:opt_object_def object_at_def)
   done
 

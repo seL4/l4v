@@ -691,7 +691,7 @@ lemma entry_corres_C:
              prefer 2
              apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
             apply (rule getContext_corres, simp)
-           apply (wp threadSet_all_invs_triv' callKernel_cur)
+           apply (wp threadSet_all_invs_triv' callKernel_cur)+
    apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def)
   apply simp
   done

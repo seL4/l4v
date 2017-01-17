@@ -1,11 +1,8 @@
-Built from git repo at /home/matthewb/verification/x64/l4v/spec/haskell by matthewb
+Built from git repo at /Users/kleing/verification/l4v/spec/haskell by kleing
 
 Generated from changeset:
-46a1cace9 oops
+9668464 cleanup: remove accidentally declared const
 
 
 Warning - uncomitted changes used:
- M ../design/X64/ArchVSpace_H.thy
  M ../design/version
- M ../../tools/haskell-translator/caseconvs
-?? ../cspec/c/32/
