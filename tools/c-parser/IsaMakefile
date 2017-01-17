@@ -42,12 +42,12 @@ $(HEAPS): .FORCE
 # We dynamically generate a ROOT file containing all the test files, and
 # then build it using Isabelle.
 #
-cparser_test: testfiles/ROOT .FORCE
-	$(ISABELLE_TOOL) build -d ../.. -d testfiles -b -v CParserTest
-testfiles/ROOT: testfiles testfiles/*.c testfiles/*.thy ../../misc/scripts/gen_isabelle_root.py
-	python ../../misc/scripts/gen_isabelle_root.py -i testfiles -o testfiles/ROOT -s CParserTest -b CParser
-all_tests.thy: testfiles testfiles/*.c ../../misc/scripts/gen_isabelle_root.py
-	python ../../misc/scripts/gen_isabelle_root.py -T -o $@ -b CParser -i testfiles
+cparser_test: testfiles/$(L4V_ARCH)/ROOT .FORCE
+	$(ISABELLE_TOOL) build -d ../.. -d testfiles/$(L4V_ARCH) -b -v CParserTest
+testfiles/$(L4V_ARCH)/ROOT: testfiles testfiles/*.c testfiles/*.thy ../../misc/scripts/gen_isabelle_root.py
+	python ../../misc/scripts/gen_isabelle_root.py -i testfiles -i testfiles/$(L4V_ARCH) -o testfiles/$(L4V_ARCH)/ROOT -s CParserTest -b CParser
+all_tests_$(L4V_ARCH).thy: testfiles testfiles/*.c ../../misc/scripts/gen_isabelle_root.py
+	python ../../misc/scripts/gen_isabelle_root.py -T -o $@ -b CParser -i testfiles -i testfiles/$(L4V_ARCH)
 
 GRAMMAR_PRODUCTS = l4c.lex.sml l4c.grm.sml l4c.grm.sig
 

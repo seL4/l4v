@@ -9,7 +9,7 @@
  *)
 
 theory MachineWords
-imports "../../CTranslation"
+imports "../../../CTranslation"
 begin
 
 type_synonym machine_word_len = "32"

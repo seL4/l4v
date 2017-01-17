@@ -2,3 +2,16 @@
 *.minfo
 umm_types.txt
 globalmakevars.local
+
+/StrictC.grm.desc
+
+/standalone-parser/table.ML
+/standalone-parser/ARM/
+/standalone-parser/X64/
+
+/tools/mllex/mllex
+/tools/mlyacc/mlyacc
+/tools/mlyacc/src/yacc.lex.sml
+
+/testfiles/**/ROOT
+/testfiles/modifies_speed.c

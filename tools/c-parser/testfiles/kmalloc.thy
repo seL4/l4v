@@ -9,7 +9,7 @@
  *)
 
 theory kmalloc
-imports "../CTranslation" "$L4V_ARCH/MachineWords"
+imports "../CTranslation" "$L4V_ARCH/imports/MachineWords"
 begin
 
 (* no proof here, just testing the parser *)
