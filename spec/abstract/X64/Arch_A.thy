@@ -30,13 +30,13 @@ definition
       irq_state \<leftarrow> return $ IRQIOAPIC ioapic pin level polarity True;
       do_machine_op $ updateIRQState irq irq_state;
       set_irq_state IRQSignal (IRQ irq);
-      cap_insert (IRQHandlerCap (IRQ irq)) dest src
+      cap_insert (IRQHandlerCap (IRQ irq)) src dest
     od) |
     IssueIRQHandlerMSI irq dest src bus dev func handle \<Rightarrow> without_preemption (do
       irq_state \<leftarrow> return $ IRQMSI bus dev func handle;
       do_machine_op $ updateIRQState irq irq_state;
       set_irq_state IRQSignal (IRQ irq);
-      cap_insert (IRQHandlerCap (IRQ irq)) dest src
+      cap_insert (IRQHandlerCap (IRQ irq)) src dest
     od)
    )"
 

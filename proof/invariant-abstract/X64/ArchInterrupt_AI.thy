@@ -12,7 +12,29 @@ theory ArchInterrupt_AI
 imports "../Interrupt_AI"
 begin
 
-context Arch begin
+context Arch begin global_naming X64
+
+thm irq_control_inv_valid.simps arch_decode_irq_control_invocation_def
+primrec arch_irq_control_inv_valid_real :: "arch_irq_control_invocation \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
+where 
+  "arch_irq_control_inv_valid_real (IssueIRQHandlerIOAPIC irq dest_slot src_slot 
+                    ioapic pin level polarity vector) = 
+                    (cte_wp_at (op = NullCap) dest_slot and 
+                    cte_wp_at (op = IRQControlCap) src_slot and
+                    ex_cte_cap_wp_to is_cnode_cap dest_slot and
+                    real_cte_at dest_slot and 
+                    K (irq \<le> maxIRQ \<and> ioapic < numIOAPICs \<and> 
+                       pin < ioapicIRQLines \<and> level < 2 \<and> 
+                       polarity < 2))"
+| "arch_irq_control_inv_valid_real (IssueIRQHandlerMSI irq dest_slot src_slot bus dev func handle)
+      = (cte_wp_at (op = NullCap) dest_slot and 
+                    cte_wp_at (op = IRQControlCap) src_slot and
+                    ex_cte_cap_wp_to is_cnode_cap dest_slot and
+                    real_cte_at dest_slot and 
+                    K (irq \<le> maxIRQ \<and> bus \<le> maxPCIBus \<and> dev \<le> maxPCIDev \<and> func \<le> maxPCIFunc))"
+
+defs arch_irq_control_inv_valid_def: 
+  "arch_irq_control_inv_valid \<equiv> arch_irq_control_inv_valid_real"
 
 named_theorems Interrupt_AI_asms
 
@@ -23,6 +45,40 @@ lemma (* decode_irq_control_invocation_inv *)[Interrupt_AI_asms]:
   apply (rule hoare_pre)
    apply (wp | simp split del: split_if)+
   done
+ 
+lemma irq_control_inv_valid_ArchIRQControl[simp]:
+  "irq_control_inv_valid \<circ> ArchIRQControl = arch_irq_control_inv_valid"
+  by auto
+
+context begin
+
+private method cap_hammer = (((drule_tac x="caps ! 0" in bspec)+, (rule nth_mem, fastforce)+),
+                        solves \<open>(clarsimp simp: cte_wp_at_eq_simp)\<close>)
+
+private method word_hammer = solves \<open>(clarsimp simp: not_less maxIRQ_def numIOAPICs_def ioapicIRQLines_def
+                                    maxPCIDev_def maxPCIBus_def maxPCIFunc_def, 
+                                    (word_bitwise, auto?)?)[1]\<close>
+
+  
+lemma arch_decode_irq_control_valid[wp]:
+  "\<lbrace>\<lambda>s. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> cap)
+        \<and> (\<forall>cap \<in> set caps. is_cnode_cap cap \<longrightarrow>
+                (\<forall>r \<in> cte_refs cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s))
+        \<and> cte_wp_at (op = cap.IRQControlCap) slot s\<rbrace>
+     arch_decode_irq_control_invocation label args slot caps
+   \<lbrace>arch_irq_control_inv_valid\<rbrace>,-"
+  apply (simp add: arch_decode_irq_control_invocation_def Let_def whenE_def 
+                   arch_irq_control_inv_valid_def
+        split del: split_if 
+             cong: if_cong)
+  apply (rule hoare_pre)
+   apply (wp ensure_empty_stronger hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift
+              | simp add: cte_wp_at_eq_simp split del: split_if 
+              | wpc | wp_once hoare_drop_imps)+
+  apply clarsimp
+  by (safe; (cap_hammer | word_hammer))
+   
+end
   
 lemma (* decode_irq_control_valid *)[Interrupt_AI_asms]:
   "\<lbrace>\<lambda>s. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> cap)
@@ -32,8 +88,7 @@ lemma (* decode_irq_control_valid *)[Interrupt_AI_asms]:
      decode_irq_control_invocation label args slot caps
    \<lbrace>irq_control_inv_valid\<rbrace>,-"
   apply (simp add: decode_irq_control_invocation_def Let_def split_def
-                   whenE_def arch_check_irq_def
-                   arch_decode_irq_control_invocation_def
+                   whenE_def arch_check_irq_def 
                  split del: split_if cong: if_cong)
   apply (rule hoare_pre)
    apply (wp ensure_empty_stronger | simp add: cte_wp_at_eq_simp
@@ -150,6 +205,18 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
   done
 qed
 
+lemma arch_invoke_irq_control_invs[wp]:
+  "\<lbrace>invs and arch_irq_control_inv_valid i\<rbrace> arch_invoke_irq_control i \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (simp add: arch_invoke_irq_control_def)
+  apply (rule hoare_pre)
+   apply (wp cap_insert_simple_invs | wpc 
+         | simp add: IRQHandler_valid is_cap_simps no_cap_to_obj_with_diff_IRQHandler_ARCH
+         | strengthen real_cte_tcb_valid)+
+  by (auto simp: cte_wp_at_caps_of_state IRQ_def arch_irq_control_inv_valid_def
+                        is_simple_cap_def is_cap_simps is_pt_cap_def
+                        safe_parent_for_def
+                        ex_cte_cap_to_cnode_always_appropriate_strg)
+
 lemma (* invoke_irq_control_invs *) [Interrupt_AI_asms]:
   "\<lbrace>invs and irq_control_inv_valid i\<rbrace> invoke_irq_control i \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (cases i, simp_all)
@@ -157,12 +224,14 @@ lemma (* invoke_irq_control_invs *) [Interrupt_AI_asms]:
    apply (wp cap_insert_simple_invs
              | simp add: IRQHandler_valid is_cap_simps  no_cap_to_obj_with_diff_IRQHandler_ARCH
              | strengthen real_cte_tcb_valid)+
-  apply (clarsimp simp: cte_wp_at_caps_of_state
-                        is_simple_cap_def is_cap_simps is_pt_cap_def
-                        safe_parent_for_def
-                        ex_cte_cap_to_cnode_always_appropriate_strg)
-  done
+   apply (clarsimp simp: cte_wp_at_caps_of_state
+                         is_simple_cap_def is_cap_simps is_pt_cap_def
+                         safe_parent_for_def
+                         ex_cte_cap_to_cnode_always_appropriate_strg)
+  by wp
 
+crunch device_state_inv[wp]: resetTimer "\<lambda>ms. P (device_state ms)"
+  
 lemma resetTimer_invs_ARCH[Interrupt_AI_asms]:
   "\<lbrace>invs\<rbrace> do_machine_op resetTimer \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wp dmo_invs)
@@ -200,7 +269,9 @@ lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]:
 
 end
 
-interpretation Interrupt_AI?: Interrupt_AI 
+
+
+interpretation Interrupt_AI?: Interrupt_AI
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales, simp_all add: Interrupt_AI_asms)?) 
