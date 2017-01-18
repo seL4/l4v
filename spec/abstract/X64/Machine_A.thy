@@ -138,7 +138,7 @@ context Arch begin global_naming X64_A
 (* is nat_to_cref arch specific ? *)
 definition
   nat_to_cref :: "nat \<Rightarrow> nat \<Rightarrow> cap_ref" where
-  "nat_to_cref ln n \<equiv> drop (word_bits - ln)
+  "nat_to_cref len n \<equiv> drop (word_bits - len)
                            (to_bl (of_nat n :: machine_word))"
 definition
  "msg_info_register \<equiv> msgInfoRegister"

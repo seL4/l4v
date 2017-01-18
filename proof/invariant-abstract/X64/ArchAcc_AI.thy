@@ -288,42 +288,32 @@ lemma set_asid_pool_cte_wp_at:
 lemma set_pt_pred_tcb_at[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_pt_def set_object_def)
-  apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
 
 
 lemma set_pd_pred_tcb_at[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pd ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_pd_def set_object_def)
-  apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
 
 lemma set_pdpt_pred_tcb_at[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pdpt ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_pdpt_def set_object_def)
-  apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
   
 lemma set_pml4_pred_tcb_at[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pml4 ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_pml4_def set_object_def)
-  apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
   
 lemma set_asid_pool_pred_tcb_at[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
-  apply wp
-  apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
 
 
@@ -377,7 +367,7 @@ lemma arch_derive_cap_valid_cap:
   \<lbrace>valid_cap \<circ> cap.ArchObjectCap\<rbrace>, -"
   apply(simp add: arch_derive_cap_def)
   apply(cases arch_cap, simp_all add: arch_derive_cap_def o_def)
-      apply(rule hoare_pre, wpc?, wp,
+      apply(rule hoare_pre, wpc?, wp+,
             clarsimp simp add: cap_aligned_def valid_cap_def split: option.splits)+
   done
 
@@ -385,7 +375,7 @@ lemma arch_derive_cap_valid_cap:
 lemma arch_derive_cap_inv:
   "\<lbrace>P\<rbrace> arch_derive_cap arch_cap \<lbrace>\<lambda>rv. P\<rbrace>"
   apply(simp add: arch_derive_cap_def, cases arch_cap, simp_all)
-      apply(rule hoare_pre, wpc?, wp, simp)+
+      apply(rule hoare_pre, wpc?, wp+, simp)+
   done
 
 (* FIXME x64: *)
@@ -459,7 +449,7 @@ lemma set_asid_pool_cur [wp]:
 lemma set_asid_pool_cur_tcb [wp]:
   "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
   unfolding cur_tcb_def
-  by (rule hoare_lift_Pf [where f=cur_thread]) wp
+  by (rule hoare_lift_Pf [where f=cur_thread]) wp+
 
 
 crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
@@ -468,7 +458,7 @@ crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
 
 lemma set_asid_pool_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) (wp set_asid_pool_typ_at)
+  by (rule valid_arch_state_lift) (wp set_asid_pool_typ_at)+
 
 
 lemma set_asid_pool_valid_objs [wp]:
@@ -489,7 +479,7 @@ private lemma aligned_base_split_mask_redundant_right:
   "b + (w && mask m << s) && mask (m + s) >> s = w && mask m"
   using w_size b_align
   apply (subst mask_add_aligned[OF b_align])
-  by (auto simp: assms and_mask is_aligned_shiftl_self is_aligned_shiftr_shiftl
+  by (auto simp: and_mask is_aligned_shiftl_self is_aligned_shiftr_shiftl
                  shiftl_shiftl shiftr_shiftr word_size)
 
 private lemma aligned_base_split_mask_redundant_left:
@@ -885,12 +875,7 @@ lemma create_mapping_entries_valid [wp]:
    \<lbrace>valid_mapping_entries\<rbrace>,-"
   apply (cases sz)
     apply (rule hoare_pre)
-     apply (wp|simp add: valid_mapping_entries_def)+
-   apply (rule hoare_pre)
-    apply (wp|simp add: valid_mapping_entries_def)+
-  apply (rule hoare_pre)
-   apply wp
-  apply clarsimp
+     apply (wpsimp simp: valid_mapping_entries_def)+
   done
 
 end
@@ -1250,9 +1235,9 @@ lemma set_pml4_valid_mdb:
   set_pml4 p pml4
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
   apply (rule valid_mdb_lift)
-    apply (wp set_pml4_cdt)
+    apply (wp set_pml4_cdt)+
   apply (clarsimp simp: set_pml4_def)
-  apply (wp get_object_wp)
+  apply (wp get_object_wp)+
   apply simp
   done
 
@@ -1261,11 +1246,7 @@ lemma set_pml4_valid_idle:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
   set_pml4 p pml4
   \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  apply (wp valid_idle_lift)
-  apply (simp add: set_pml4_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
+  by (wpsimp wp: get_object_wp valid_idle_lift simp: set_pml4_def)+
 
 
 lemma set_pml4_ifunsafe:
@@ -1359,7 +1340,7 @@ lemma set_pdpt_valid_mdb:
   set_pdpt p pdpt
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
   apply (rule valid_mdb_lift)
-    apply (wp set_pdpt_cdt)
+    apply (wp set_pdpt_cdt)+
   apply (clarsimp simp: set_pdpt_def)
   apply (wp get_object_wp)
   apply simp
@@ -1370,11 +1351,7 @@ lemma set_pdpt_valid_idle:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
   set_pdpt p pdpt
   \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  apply (wp valid_idle_lift)
-  apply (simp add: set_pdpt_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
+  by (wpsimp wp: valid_idle_lift get_object_wp simp: set_pdpt_def)+
 
 
 lemma set_pdpt_ifunsafe:
@@ -1468,7 +1445,7 @@ lemma set_pd_valid_mdb:
   set_pd p pd
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
   apply (rule valid_mdb_lift)
-    apply (wp set_pd_cdt)
+    apply (wp set_pd_cdt)+
   apply (clarsimp simp: set_pd_def)
   apply (wp get_object_wp)
   apply simp
@@ -1479,11 +1456,7 @@ lemma set_pd_valid_idle:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
   set_pd p pd
   \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  apply (wp valid_idle_lift)
-  apply (simp add: set_pd_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
+  by (wpsimp wp: valid_idle_lift get_object_wp simp: set_pd_def)
 
 
 lemma set_pd_ifunsafe:
@@ -1714,7 +1687,7 @@ lemma set_pt_valid_mdb:
   set_pt p pt
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
   apply (rule valid_mdb_lift)
-    apply (wp set_pt_cdt)
+    apply (wp set_pt_cdt)+
   apply (clarsimp simp: set_pt_def)
   apply (wp get_object_wp)
   apply simp
@@ -1725,11 +1698,7 @@ lemma set_pt_valid_idle:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
   set_pt p pt
   \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  apply (wp valid_idle_lift)
-  apply (simp add: set_pt_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
+  by (wpsimp wp: valid_idle_lift get_object_wp simp: set_pt_def)
 
 
 lemma set_pt_ifunsafe:
@@ -1838,7 +1807,7 @@ lemma set_pt_vs_lookup [wp]:
     apply (clarsimp simp: obj_at_def vs_refs_def)
    apply simp
   apply (rule vs_lookup_sub)
-   apply (clarsimp simp: obj_at_def vs_refs_def split: split_if_asm)
+   apply (clarsimp simp: obj_at_def vs_refs_def split: if_split_asm)
   apply simp
   done
 
@@ -1904,7 +1873,7 @@ lemma valid_set_ptI:
   "(!!s opt. \<lbrakk>P s; kheap s p = Some (ArchObj (PageTable opt))\<rbrakk>
          \<Longrightarrow> Q () (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageTable pt))\<rparr>))
    \<Longrightarrow> \<lbrace>P\<rbrace> set_pt p pt \<lbrace>Q\<rbrace>"
-  by (rule validI) (clarsimp simp: simpler_set_pt_def split: split_if_asm)
+  by (rule validI) (clarsimp simp: simpler_set_pt_def split: if_split_asm)
 
 lemma set_pt_table_caps [wp]:
   "\<lbrace>valid_table_caps and (\<lambda>s. valid_caps (caps_of_state s) s) and
@@ -1989,7 +1958,7 @@ lemma set_pt_valid_arch_objs[wp]:
        apply (prove "(b \<rhd>1 c) s")
         apply (thin_tac "_ : rtrancl _")+
         apply (clarsimp simp add: vs_lookup1_def obj_at_def vs_refs_def
-                            split: split_if_asm)
+                            split: if_split_asm)
        by simp
     apply simp
     apply (spec ao)
@@ -2030,7 +1999,7 @@ lemma set_pt_valid_vs_lookup [wp]:
   using set_pt_valid_arch_objs[of p pt] set_pt_valid_arch_state[of p pt]
   apply (clarsimp simp: valid_def simpler_set_pt_def)
   apply (drule_tac x=s in spec)+
-  apply (clarsimp simp: valid_vs_lookup_def split: split_if_asm)
+  apply (clarsimp simp: valid_vs_lookup_def split: if_split_asm)
   apply (erule (1) vs_lookup_pagesE_alt)
         apply (clarsimp simp: valid_arch_state_def valid_asid_table_def fun_upd_def)
        apply (drule_tac x=pa in spec)
@@ -2045,7 +2014,7 @@ lemma set_pt_valid_vs_lookup [wp]:
                            VSRef (ucast a) None]" in spec)+
       apply simp
       apply (drule vs_lookup_pages_apI)
-        apply (simp split: split_if_asm)
+        apply (simp split: if_split_asm)
        apply simp+
       apply (subst caps_of_state_after_update, simp add: obj_at_def)
       apply simp
@@ -2055,7 +2024,7 @@ lemma set_pt_valid_vs_lookup [wp]:
                           VSRef (ucast a) None]" in spec)+
      apply simp
      apply (drule vs_lookup_pages_pml4I)
-          apply (simp split: split_if_asm)+
+          apply (simp split: if_split_asm)+
      apply (subst caps_of_state_after_update, simp add: obj_at_def)
      apply fastforce
     apply (drule_tac x=pa in spec)
@@ -2065,7 +2034,7 @@ lemma set_pt_valid_vs_lookup [wp]:
                          VSRef (ucast a) None]" in spec)+
     apply simp
     apply (drule vs_lookup_pages_pdptI)
-           apply (simp split: split_if_asm)+
+           apply (simp split: if_split_asm)+
     apply (subst caps_of_state_after_update, simp add: obj_at_def)
     apply fastforce
    apply (drule_tac x=pa in spec)
@@ -2076,10 +2045,10 @@ lemma set_pt_valid_vs_lookup [wp]:
                         VSRef (ucast a) None]" in spec)+
    apply simp
    apply (drule vs_lookup_pages_pdI)
-            apply (simp split: split_if_asm)+
+            apply (simp split: if_split_asm)+
    apply (subst caps_of_state_after_update, simp add: obj_at_def)
    apply fastforce
-  apply (clarsimp simp: fun_upd_def split: split_if_asm)
+  apply (clarsimp simp: fun_upd_def split: if_split_asm)
    apply (thin_tac "valid_arch_objs s" for s, thin_tac "valid_arch_state s" for s)
    apply (subst caps_of_state_after_update, simp add: obj_at_def)
    apply (thin_tac "\<forall>p ref. P p ref" for P)
@@ -2170,7 +2139,7 @@ lemma set_pt_asid_map [wp]:
   "\<lbrace>valid_asid_map\<rbrace> set_pt p pt \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
   apply (simp add: valid_asid_map_def vspace_at_asid_def)
   apply (rule hoare_lift_Pf2 [where f="arch_state"])
-   apply wp
+   apply wp+
   done
 
 
@@ -2538,7 +2507,7 @@ lemma invs_valid_asid_table [elim!]:
 
 (* FIXME: move to Invariants_A *)
 lemma valid_asid_table_ran:
-  "valid_asid_table at s \<Longrightarrow> \<forall>p\<in>ran at. asid_pool_at p s"
+  "valid_asid_table asid_tbl s \<Longrightarrow> \<forall>p\<in>ran asid_tbl. asid_pool_at p s"
   by (simp add: invs_def valid_state_def valid_arch_state_def
                 valid_asid_table_def)
 
@@ -2694,7 +2663,7 @@ lemma set_asid_pool_valid_mdb [wp]:
   set_asid_pool p ap
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
   apply (rule valid_mdb_lift)
-    apply wp
+    apply wp+
   apply (clarsimp simp: set_asid_pool_def)
   apply (wp get_object_wp)
   apply simp
@@ -2705,11 +2674,7 @@ lemma set_asid_pool_valid_idle [wp]:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
   set_asid_pool p ap
   \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  apply (wp valid_idle_lift)
-  apply (simp add: set_asid_pool_def)
-  apply (wp get_object_wp)
-  apply simp
-  done
+  by (wpsimp wp: valid_idle_lift get_object_wp simp: set_asid_pool_def)
 
 
 lemma set_asid_pool_ifunsafe [wp]:
@@ -2824,7 +2789,7 @@ lemma set_asid_pool_vs_lookup_unmap':
     apply (spec ref)
     apply (erule impE)
      apply (erule vs_lookup_pages_stateI)
-      by (clarsimp simp: obj_at_def vs_refs_pages_def split: split_if_asm)
+      by (clarsimp simp: obj_at_def vs_refs_pages_def split: if_split_asm)
          fastforce+
   done
 
@@ -3063,7 +3028,7 @@ lemma valid_slots_typ_at:
   apply (cases m; clarsimp)
   apply (case_tac a; clarsimp)
   apply (wp x y hoare_vcg_const_Ball_lift valid_pte_lift valid_pde_lift valid_pdpte_lift valid_pml4e_lift
-             pte_at_atyp pde_at_atyp pdpte_at_atyp pml4e_at_atyp)
+             pte_at_atyp pde_at_atyp pdpte_at_atyp pml4e_at_atyp)+
   done
 
 
@@ -3224,7 +3189,7 @@ lemma store_pml4e_arch_objs_unmap:
    apply simp
   apply (clarsimp simp add: obj_at_def vs_refs_def)
   apply (rule pair_imageI)
-  apply (simp add: graph_of_def split: split_if_asm)
+  apply (simp add: graph_of_def split: if_split_asm)
   done
   
 lemma store_pdpte_arch_objs_unmap:
@@ -3241,7 +3206,7 @@ lemma store_pdpte_arch_objs_unmap:
    apply simp
   apply (clarsimp simp add: obj_at_def vs_refs_def)
   apply (rule pair_imageI)
-  apply (simp add: graph_of_def split: split_if_asm)
+  apply (simp add: graph_of_def split: if_split_asm)
   done
   
 lemma store_pde_arch_objs_unmap:
@@ -3258,7 +3223,7 @@ lemma store_pde_arch_objs_unmap:
    apply simp
   apply (clarsimp simp add: obj_at_def vs_refs_def)
   apply (rule pair_imageI)
-  apply (simp add: graph_of_def split: split_if_asm)
+  apply (simp add: graph_of_def split: if_split_asm)
   done
 
 
@@ -3342,7 +3307,7 @@ lemma set_pml4_vs_lookup_unmap:
   apply (erule allE)+
   apply (erule impE)
    apply (erule vs_lookup_pages_stateI)
-    apply (clarsimp simp: obj_at_def split: split_if_asm)
+    apply (clarsimp simp: obj_at_def split: if_split_asm)
    apply simp
   apply simp
   done
@@ -3363,7 +3328,7 @@ lemma set_pdpt_vs_lookup_unmap:
   apply (erule allE)+
   apply (erule impE)
    apply (erule vs_lookup_pages_stateI)
-    apply (clarsimp simp: obj_at_def split: split_if_asm)
+    apply (clarsimp simp: obj_at_def split: if_split_asm)
    apply simp
   apply simp
   done
@@ -3384,7 +3349,7 @@ lemma set_pd_vs_lookup_unmap:
   apply (erule allE)+
   apply (erule impE)
    apply (erule vs_lookup_pages_stateI)
-    apply (clarsimp simp: obj_at_def split: split_if_asm)
+    apply (clarsimp simp: obj_at_def split: if_split_asm)
    apply simp
   apply simp
   done
@@ -3847,9 +3812,9 @@ lemma store_pml4e_invs_unmap:
   apply (rule conjI)
    apply (clarsimp intro!: pair_imageI
                    simp: obj_at_def vs_refs_def vs_refs_pages_def map_conv_upd graph_of_def pml4e_ref_def pml4e_ref_pages_def
-                   split: split_if_asm)+
+                   split: if_split_asm)+
   apply (clarsimp simp: empty_table_def)
-  apply (cases pml4e, (auto simp: pml4e_ref_def  split:split_if_asm))
+  apply (cases pml4e, (auto simp: pml4e_ref_def  split:if_split_asm))
   done
 
 lemma store_pml4e_state_refs_of:

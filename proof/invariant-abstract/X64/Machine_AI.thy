@@ -262,8 +262,7 @@ lemma no_irq_mapM:
   apply (rule mapM_wp)
    prefer 2
    apply (rule order_refl)
-  apply wp
-  apply simp
+  apply (wp; simp)
   done
 
 
@@ -274,8 +273,7 @@ lemma no_irq_mapM_x:
   apply (rule mapM_x_wp)
    prefer 2
    apply (rule order_refl)
-  apply wp
-  apply simp
+  apply (wp; simp)
   done
   
 

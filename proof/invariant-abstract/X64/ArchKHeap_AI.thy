@@ -119,7 +119,7 @@ lemma set_object_neg_lookup:
   apply (erule_tac x=rs in allE)
   apply (erule notE)
   apply (erule vs_lookup_stateI)
-   apply (clarsimp simp: obj_at_def split: split_if_asm)
+   apply (clarsimp simp: obj_at_def split: if_split_asm)
   apply simp
   done
 
@@ -137,7 +137,7 @@ lemma set_object_vs_lookup:
     apply (clarsimp simp: obj_at_def)
    apply simp
   apply (rule vs_lookup_sub)
-   apply (clarsimp simp: obj_at_def split: split_if_asm)
+   apply (clarsimp simp: obj_at_def split: if_split_asm)
   apply simp
   done
 
@@ -163,7 +163,7 @@ lemma set_object_pt_not_vs_lookup_pages:
    apply (erule converse_rtrancl_induct)
     apply simp
    apply (drule vs_lookup_pages1D)
-   apply (clarsimp simp: obj_at_def split:split_if_asm)
+   apply (clarsimp simp: obj_at_def split:if_split_asm)
    apply (case_tac "pa=p")
     apply (clarsimp simp: vs_refs_pages_def graph_of_def)
     apply (erule_tac x=ab in allE)
@@ -184,7 +184,7 @@ lemma set_object_pt_not_vs_lookup_pages:
   apply (erule rtrancl_induct)
    apply simp
   apply (drule vs_lookup_pages1D)
-  apply (clarsimp simp: obj_at_def split:split_if_asm)
+  apply (clarsimp simp: obj_at_def split:if_split_asm)
   apply (case_tac "pa=p")
    apply (clarsimp simp: vs_refs_pages_def graph_of_def)
    apply (erule_tac x=rs in allE)
@@ -209,7 +209,7 @@ lemma set_object_vs_lookup_pages:
     apply (clarsimp simp: obj_at_def)
    apply simp
   apply (rule vs_lookup_pages_sub)
-   apply (clarsimp simp: obj_at_def split: split_if_asm)
+   apply (clarsimp simp: obj_at_def split: if_split_asm)
   apply simp
   done
 
@@ -253,7 +253,7 @@ lemma set_object_valid_kernel_mappings:
   apply (simp add: set_object_def)
   apply wp
   apply (clarsimp simp: valid_kernel_mappings_def
-                 elim!: ranE split: split_if_asm)
+                 elim!: ranE split: if_split_asm)
   apply fastforce
   done
 
@@ -265,7 +265,7 @@ lemma valid_vs_lookup_lift:
   unfolding valid_vs_lookup_def
   apply (rule hoare_lift_Pf [where f=vs_lookup_pages])
    apply (rule hoare_lift_Pf [where f="\<lambda>s. (caps_of_state s)"])
-     apply (wp lookup cap)
+     apply (wp lookup cap)+
   done
 
 lemma valid_table_caps_lift:
@@ -276,7 +276,7 @@ lemma valid_table_caps_lift:
   unfolding valid_table_caps_def
    apply (rule hoare_lift_Pf [where f="\<lambda>s. (caps_of_state s)"])
     apply (rule hoare_lift_Pf [where f="\<lambda>s. x64_global_pdpts (arch_state s)"])
-     apply (wp cap pts hoare_vcg_all_lift hoare_vcg_const_imp_lift obj)
+     apply (wp cap pts hoare_vcg_all_lift hoare_vcg_const_imp_lift obj)+
   done
 
 lemma valid_arch_caps_lift:
@@ -391,7 +391,7 @@ lemma arch_lifts:
 
   subgoal
   apply (rule valid_global_objs_lift)
-      apply (wp arch)
+      apply (wp arch)+
     apply (simp add: valid_ao_at_def)
     apply (rule hoare_vcg_ex_lift)
     apply (rule hoare_vcg_conj_lift)
@@ -452,6 +452,7 @@ lemma arch_lifts:
   apply (wp hoare_vcg_conj_lift hoare_vcg_ball_lift
             valid_global_pts valid_global_pds valid_global_pdpts
         | (rule aobj_at, clarsimp))+
+  apply simp
   done
   done
 
@@ -464,7 +465,7 @@ lemma equal_kernel_mappings_lift:
   apply (rule hoare_convert_imp)
    apply simp
    apply (rule hoare_convert_imp)
-    apply (wp aobj_at[OF arch_obj_pred_arch_obj_l])
+    apply (wp aobj_at[OF arch_obj_pred_arch_obj_l])+
   done
 
 lemma valid_machine_state_lift:
@@ -476,8 +477,7 @@ lemma valid_machine_state_lift:
   apply (rule hoare_vcg_all_lift)
   apply (rule hoare_vcg_disj_lift[OF _ hoare_vcg_prop])
   apply (rule in_user_frame_lift)
-  apply (wp aobj_at)
-  apply simp
+  apply (wp aobj_at; simp)
   done
 
 (*
@@ -542,8 +542,8 @@ lemma set_object_equal_mappings:
    \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
   apply (simp add: set_object_def, wp)
   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def
-             split del: split_if)
-  apply (simp split: split_if_asm)
+             split del: if_split)
+  apply (simp split: if_split_asm)
   done
 
 context begin
@@ -692,14 +692,14 @@ lemma in_user_frame_obj_upd:
    in_user_frame x (s\<lparr>kheap := \<lambda>a. if a = p then Some k else kheap s a\<rparr>)
    = in_user_frame x s"
   apply (rule iffI)
-  apply (clarsimp simp: in_user_frame_def obj_at_def split: split_if_asm)
+  apply (clarsimp simp: in_user_frame_def obj_at_def split: if_split_asm)
    apply (elim disjE)
     apply clarsimp
     apply (intro exI)
     apply (rule conjI,assumption)
     apply (simp add: a_type_def)
    apply (fastforce simp: a_type_def)
-  apply (clarsimp simp: in_user_frame_def obj_at_def split: split_if_asm)
+  apply (clarsimp simp: in_user_frame_def obj_at_def split: if_split_asm)
   apply (rule_tac x = sz in exI)
   apply (intro conjI impI)
     apply (fastforce simp: a_type_def)+
@@ -716,14 +716,14 @@ lemma in_device_frame_obj_upd:
    in_device_frame x (s\<lparr>kheap := \<lambda>a. if a = p then Some k else kheap s a\<rparr>)
    = in_device_frame x s"
   apply (rule iffI)
-  apply (clarsimp simp: in_device_frame_def obj_at_def split: split_if_asm)
+  apply (clarsimp simp: in_device_frame_def obj_at_def split: if_split_asm)
    apply (elim disjE)
     apply clarsimp
     apply (intro exI)
     apply (rule conjI,assumption)
     apply (simp add: a_type_def)
    apply (fastforce simp: a_type_def)
-  apply (clarsimp simp: in_device_frame_def obj_at_def split: split_if_asm)
+  apply (clarsimp simp: in_device_frame_def obj_at_def split: if_split_asm)
   apply (rule_tac x = sz in exI)
   apply (intro conjI impI)
     apply (fastforce simp: a_type_def)+

@@ -400,7 +400,7 @@ lemma arch_lifts:
   apply (rule aobj_at)
   apply clarsimp
   done
-  
+
   subgoal
   apply (simp add: valid_arch_state_def valid_asid_table_def)
   apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch])

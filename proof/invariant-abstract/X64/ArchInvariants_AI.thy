@@ -144,12 +144,12 @@ abbreviation "device_region s \<equiv> dom (device_state (machine_state s))"
 lemma typ_at_pg_user:
   "typ_at (AArch (AUserData sz)) buf s = ko_at (ArchObj (DataPage False sz)) buf s"
   unfolding obj_at_def
-  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm split_if_asm)
+  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)
 
 lemma typ_at_pg_device:
   "typ_at (AArch (ADeviceData sz)) buf s = ko_at (ArchObj (DataPage True sz)) buf s"
   unfolding obj_at_def
-  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm split_if_asm)
+  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)
 
 lemmas typ_at_pg = typ_at_pg_user typ_at_pg_device
 
@@ -1296,7 +1296,7 @@ lemma valid_arch_obj_typ:
    apply (rule hoare_vcg_all_lift)
    apply (rename_tac "fun" x)
    apply (case_tac "fun x", simp_all add: data_at_def hoare_vcg_prop P)
-   apply (wp hoare_vcg_disj_lift hoare_vcg_const_Ball_lift P)
+   apply (wp hoare_vcg_disj_lift hoare_vcg_const_Ball_lift P)+
   apply (rename_tac "fun" x)
   apply (case_tac "fun x", simp_all add: hoare_vcg_prop P)
   done
@@ -1311,7 +1311,7 @@ lemma atyp_at_eq_kheap_obj:
   "typ_at (AArch (ADeviceData sz)) p s \<longleftrightarrow> (kheap s p = Some (ArchObj (DataPage True sz)))"
   apply (auto simp add: obj_at_def)
   apply (simp_all add: a_type_def
-                split: split_if_asm kernel_object.splits arch_kernel_obj.splits)
+                split: if_split_asm kernel_object.splits arch_kernel_obj.splits)
   done
 
 
@@ -1344,7 +1344,7 @@ lemma shows
   and
    aa_type_ADeviceDataE:
   "\<lbrakk>a_type ko = AArch (ADeviceData sz); ko = ArchObj (DataPage True sz) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
-  by (rule kernel_object_exhaust[of ko]; clarsimp simp add: a_type_simps split: split_if_asm)+
+  by (rule kernel_object_exhaust[of ko]; clarsimp simp add: a_type_simps split: if_split_asm)+
 
 lemmas aa_type_elims[elim!] =
    aa_type_AASIDPoolE aa_type_AUserDataE aa_type_ADeviceDataE
@@ -1577,7 +1577,7 @@ lemma valid_arch_state_lift:
   apply (simp add: valid_arch_state_def valid_asid_table_def
                    valid_global_pts_def valid_global_pds_def valid_global_pdpts_def)
   apply (rule hoare_lift_Pf[where f="\<lambda>s. arch_state s"])
-   apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift )
+   apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift)+
   done
 
 lemma aobj_at_default_arch_cap_valid:
@@ -1663,7 +1663,7 @@ lemma page_directory_pde_atI:
   apply (clarsimp simp: obj_at_def pde_at_def)
   apply (drule (1) pspace_alignedD[rotated])
   apply (clarsimp simp: a_type_def bit_simps
-                 split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
+                 split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
   apply (subgoal_tac "p = (p + (x << word_size_bits) && ~~ mask pd_bits)")
    subgoal by (auto simp: bit_simps)
@@ -1681,7 +1681,7 @@ lemma page_table_pte_atI:
   apply (clarsimp simp: obj_at_def pte_at_def)
   apply (drule (1) pspace_alignedD[rotated])
   apply (clarsimp simp: a_type_def bit_simps
-                 split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
+                 split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
   apply (subgoal_tac "p = (p + (x << word_size_bits) && ~~ mask pt_bits)")
    subgoal by (auto simp: bit_simps)
@@ -1699,7 +1699,7 @@ lemma pd_pointer_table_pdpte_atI:
   apply (clarsimp simp: obj_at_def pdpte_at_def)
   apply (drule (1) pspace_alignedD[rotated])
   apply (clarsimp simp: a_type_def bit_simps
-                 split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
+                 split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
   apply (subgoal_tac "p = (p + (x << word_size_bits) && ~~ mask pdpt_bits)")
    subgoal by (auto simp: bit_simps)
@@ -1717,7 +1717,7 @@ lemma page_map_l4_pml4e_atI:
   apply (clarsimp simp: obj_at_def pml4e_at_def)
   apply (drule (1) pspace_alignedD[rotated])
   apply (clarsimp simp: a_type_def bit_simps
-                 split: kernel_object.splits arch_kernel_obj.splits split_if_asm)
+                 split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
   apply (simp add: aligned_add_aligned is_aligned_shiftl_self word_bits_conv)
   apply (subgoal_tac "p = (p + (x << word_size_bits) && ~~ mask pml4_bits)")
    subgoal by (auto simp: bit_simps)
@@ -1747,17 +1747,17 @@ lemma vs_lookup1_ko_at_dest:
      apply clarsimp
      apply (drule bspec, fastforce simp: ran_def)
      apply (clarsimp simp: aa_type_def obj_at_def)
-    apply (clarsimp split: arch_kernel_obj.split_asm split_if_asm)
+    apply (clarsimp split: arch_kernel_obj.split_asm if_split_asm)
     apply (simp add: pde_ref_def aa_type_def
               split: pde.splits)
     apply (drule_tac x=a in spec)
     apply (clarsimp simp: valid_pde_def obj_at_def aa_type_def)
-   apply (clarsimp split: arch_kernel_obj.split_asm split_if_asm)
+   apply (clarsimp split: arch_kernel_obj.split_asm if_split_asm)
    apply (simp add: pdpte_ref_def aa_type_def 
              split: pdpte.splits)
    apply (drule_tac x=a in spec)
    apply (clarsimp simp: valid_pdpte_def obj_at_def aa_type_def)
-  apply (clarsimp split: arch_kernel_obj.split_asm split_if_asm)
+  apply (clarsimp split: arch_kernel_obj.split_asm if_split_asm)
   apply (simp add: pml4e_ref_def aa_type_def 
             split: pml4e.splits)
   apply (erule_tac x=a in ballE)
@@ -1868,7 +1868,7 @@ lemma vs_lookup_pdptI:
   apply (frule (5) vs_lookup_pml4I)
   apply (erule vs_lookup_step)
   apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def image_def 
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (rule_tac x=d in exI)
   by (clarsimp simp: pdpte_ref_def ptrFormPAddr_addFromPPtr)
   
@@ -1891,7 +1891,7 @@ lemma vs_lookup_pdI:
   apply (frule (7) vs_lookup_pdptI)
   apply (erule vs_lookup_step)
   apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def image_def 
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (rule_tac x=e in exI)
   by (clarsimp simp: pde_ref_def ptrFormPAddr_addFromPPtr)
 
@@ -1910,13 +1910,13 @@ lemma vs_lookup_pages_vs_lookupI: "(ref \<rhd> p) s \<Longrightarrow> (ref \<unr
   apply clarsimp
   apply (case_tac x, simp_all add: vs_refs_def vs_refs_pages_def
                             split: arch_kernel_obj.splits)
-    apply (clarsimp simp: split_def graph_of_def image_def  split: split_if_asm)
+    apply (clarsimp simp: split_def graph_of_def image_def  split: if_split_asm)
     apply (rule_tac x=a in exI)
     apply (simp add: pde_ref_def pde_ref_pages_def split: pde.splits)
-   apply (clarsimp simp: split_def graph_of_def image_def split: split_if_asm)
+   apply (clarsimp simp: split_def graph_of_def image_def split: if_split_asm)
    apply (rule_tac x=a in exI)
    apply (simp add: pdpte_ref_def pdpte_ref_pages_def split: pdpte.splits)
-  apply (clarsimp simp: split_def graph_of_def image_def split: split_if_asm)
+  apply (clarsimp simp: split_def graph_of_def image_def split: if_split_asm)
   apply (intro exI conjI impI, assumption)
    apply (simp add: pml4e_ref_def pml4e_ref_pages_def split: pml4e.splits)
   apply (rule refl)
@@ -1938,7 +1938,7 @@ lemma vs_lookup_pages_pml4I:
   apply (erule vs_lookup_pages_step)
   by (fastforce simp: vs_lookup_pages1_def obj_at_def
                       vs_refs_pages_def graph_of_def image_def
-               split: split_if_asm)
+               split: if_split_asm)
   
 lemma vs_lookup_pages_pdptI:
   "\<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
@@ -1954,7 +1954,7 @@ lemma vs_lookup_pages_pdptI:
   apply (erule vs_lookup_pages_step)
   by (fastforce simp: vs_lookup_pages1_def obj_at_def
                       vs_refs_pages_def graph_of_def image_def
-               split: split_if_asm)
+               split: if_split_asm)
 
 lemma vs_lookup_pages_pdI:
   "\<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
@@ -1973,7 +1973,7 @@ lemma vs_lookup_pages_pdI:
   apply (erule vs_lookup_pages_step)
   by (fastforce simp: vs_lookup_pages1_def obj_at_def
                       vs_refs_pages_def graph_of_def image_def
-               split: split_if_asm)
+               split: if_split_asm)
   
 lemma vs_lookup_pages_ptI:
   "\<lbrakk>x64_asid_table (arch_state s) a = Some p\<^sub>1;
@@ -1994,7 +1994,7 @@ lemma vs_lookup_pages_ptI:
   apply (erule vs_lookup_pages_step)
   by (fastforce simp: vs_lookup_pages1_def obj_at_def
                       vs_refs_pages_def graph_of_def image_def
-               split: split_if_asm)
+               split: if_split_asm)
 
 lemma stronger_arch_objsD_lemma:
   "\<lbrakk>valid_arch_objs s; r \<in> vs_lookup s; (r,r') \<in> (vs_lookup1 s)\<^sup>+ \<rbrakk>
@@ -2169,7 +2169,7 @@ lemma valid_arch_objs_alt:
   apply (erule converse_rtranclE)
    apply (clarsimp simp: obj_at_def ran_def)
   apply (drule vs_lookup1D)
-  apply (clarsimp simp: obj_at_def vs_refs_def graph_of_def split: split_if_asm)
+  apply (clarsimp simp: obj_at_def vs_refs_def graph_of_def split: if_split_asm)
   apply (drule spec, erule impE, assumption)+
   apply (clarsimp simp: pml4e_ref_def split: pml4e.splits)
   apply (erule converse_rtranclE)
@@ -2264,7 +2264,7 @@ proof -
      apply clarsimp
      apply (erule (3) 1)
     apply (clarsimp simp: vs_refs_def graph_of_def obj_at_def
-                   dest!: vs_lookup1D  split: split_if_asm)
+                   dest!: vs_lookup1D  split: if_split_asm)
     apply (frule (4) vpm)
     apply (erule converse_rtranclE)
      apply clarsimp
@@ -2272,7 +2272,7 @@ proof -
      apply (simp add: valid_pml4e_def pml4e_ref_def split: pml4e.splits)+
     apply (clarsimp simp: vs_refs_def graph_of_def obj_at_def 
                    dest!: vs_lookup1D 
-                   split: split_if_asm)
+                   split: if_split_asm)
     apply (frule_tac d=ac in vpdpt, assumption+)
     apply (erule converse_rtranclE)
      apply clarsimp
@@ -2280,7 +2280,7 @@ proof -
      apply (simp add: valid_pdpte_def pdpte_ref_def split: pdpte.splits)+
     apply (clarsimp simp: vs_refs_def graph_of_def obj_at_def 
                    dest!: vs_lookup1D 
-                   split: split_if_asm)
+                   split: if_split_asm)
     apply (frule_tac e=ad in vpd, assumption+)
     apply (erule converse_rtranclE)
      apply (clarsimp)
@@ -2372,7 +2372,7 @@ proof -
      apply clarsimp
      apply (erule (3) 1)
     apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
-                   dest!: vs_lookup_pages1D  split: split_if_asm)
+                   dest!: vs_lookup_pages1D  split: if_split_asm)
     apply (frule (4) vpm)
     apply (erule converse_rtranclE)
      apply clarsimp
@@ -2380,7 +2380,7 @@ proof -
     apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
                           pml4e_ref_pages_def 
                    dest!: vs_lookup_pages1D
-                   split: split_if_asm pml4e.splits)
+                   split: if_split_asm pml4e.splits)
     apply (frule_tac d=ac in vpdpt, assumption+)
     apply (erule converse_rtranclE)
      apply clarsimp
@@ -2459,7 +2459,7 @@ lemma vs_refs_pdI:
 lemma aa_type_pdD:
   "aa_type ko = APageDirectory \<Longrightarrow> \<exists>pd. ko = PageDirectory pd"
   by (clarsimp simp: aa_type_def
-               split: arch_kernel_obj.splits split_if_asm)
+               split: arch_kernel_obj.splits if_split_asm)
 
 lemma empty_table_is_valid:
   "\<lbrakk>empty_table (set (x64_global_pdpts (arch_state s))) (ArchObj ao);
@@ -2573,7 +2573,7 @@ lemma vs_ref_order:
    apply (case_tac listc; simp)
    apply (frule prefix_length_le, clarsimp)
   apply (drule valid_arch_objsD, simp add: obj_at_def, assumption)
-  apply (clarsimp simp: pml4e_ref_def split: pml4e.split_asm split_if_asm)
+  apply (clarsimp simp: pml4e_ref_def split: pml4e.split_asm if_split_asm)
   apply (drule_tac x=a in bspec, simp)
   apply (case_tac rs; simp)
   apply (case_tac list; simp)
