@@ -9,6 +9,10 @@ case \x of root@(CNodeCap {}) -> _ ->  ---> let root = \x in
  if isCNodeCap root
  then ->1 else ->2
 
+case \x of rt@(CNodeCap {}) -> _ ->  ---> let rt = \x in
+ if isCNodeCap rt
+ then ->1 else ->2
+
 case \x of cap@(EndpointCap { capEPCanSend = True }) -> cap@(NotificationCap { capNtfnCanSend = True }) -> cap ->  ---> let cap = \x in
  if isEndpointCap cap \<and> capEPCanSend cap
  then ->1 else if isNotificationCap cap \<and> capNtfnCanSend cap
@@ -616,13 +620,13 @@ case \x of (0, vaddr:rightsMask:attr:_, (pdCap,_):_) -> (0, _, _) -> (1, rightsM
     then ->6
     else ->7
 
-case \x of (0, index:depth:_, (untyped,parentSlot):(root,_):_) -> (0, _, _) -> _ ->  ---> let (\v0\, \v1\, \v2\) = \x in
+case \x of (0, index:depth:_, (untyped,parentSlot):(croot,_):_) -> (0, _, _) -> _ ->  ---> let (\v0\, \v1\, \v2\) = \x in
     if \v0\ = 0 then
         if length \v1\ > 1 \<and> length \v2\ > 1
         then let index = \v1\ !! 0;
             depth = \v1\ !! 1;
             (untyped, parentSlot) = \v2\ !! 0;
-            root = fst (\v2\ !! 1)
+            croot = fst (\v2\ !! 1)
         in ->1
         else ->2
     else ->3
@@ -1490,9 +1494,9 @@ case \x of (ArchInvocationLabel X64PageTableMap, vaddr':attr:_, (pml4Cap,_):_) -
     | _ => ->4
 
 
-case \x of (ArchInvocationLabel X64ASIDControlMakePool, index:depth:_, (untyped,parentSlot):(root,_):_) -> (ArchInvocationLabel X64ASIDControlMakePool, _, _) -> _ ->  ---> let (label, args, extraCaps) = \x in 
+case \x of (ArchInvocationLabel X64ASIDControlMakePool, index:depth:_, (untyped,parentSlot):(croot,_):_) -> (ArchInvocationLabel X64ASIDControlMakePool, _, _) -> _ ->  ---> let (label, args, extraCaps) = \x in
     case (label, args, extraCaps) of
-      (ArchInvocationLabel X64ASIDControlMakePool, index#depth#_, (untyped,parentSlot)#(root,_):_) => ->1
+      (ArchInvocationLabel X64ASIDControlMakePool, index#depth#_, (untyped,parentSlot)#(croot,_):_) => ->1
     | (ArchInvocationLabel X64ASIDControlMakePool, _, _) => ->2
     | _ => ->3
 
@@ -1845,9 +1849,13 @@ case \x of cap@(PageDirectoryCap {}) -> cap@(PageTableCap {}) -> cap@(PageCap {}
 
 case \x of UntypedCap { capIsDevice = False } | capBlockSize untyped == objBits pool -> _ ->  ---> let \v0\ = \x in
     if isUntypedCap \v0\ \<and> capBlockSize \v0\ == objBits pool \<and> \<not> capIsDevice \v0\
-        then ->1
-	    else ->2
+    then ->1
+    else ->2
 
 case \x of UntypedCap {capIsDevice = False} | capBlockSize untyped == objBits pool -> _ ->  ---> if isUntypedCap \x \<and> (\<not> capIsDevice \x) \<and> (capBlockSize \x = objBits pool)
     then ->1
-        else ->2
+    else ->2
+
+
+
+

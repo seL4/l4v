@@ -96,7 +96,7 @@ lemma derive_cap_is_derived [Ipc_AI_assms]:
                     | fold validE_R_def
                     | erule cte_wp_at_weakenE
                     | simp split: cap.split_asm)+)[11]
-  apply(wp, simp add: o_def)
+  including no_pre apply(wp, simp add: o_def)
   apply(rule hoare_pre, wp hoare_drop_imps arch_derive_cap_is_derived)
   apply(clarify, drule cte_wp_at_eqD, clarify)
   apply(frule(1) cte_wp_at_valid_objs_valid_cap)
@@ -183,7 +183,7 @@ lemma arch_derive_cap_objrefs_iszombie [Ipc_AI_assms]:
      arch_derive_cap cap
    \<lbrace>\<lambda>rv s. P (set_option (aobj_ref rv)) False s\<rbrace>,-"
   apply(cases cap, simp_all add: is_zombie_def arch_derive_cap_def)
-      apply(rule hoare_pre, wpc?, wp, simp)+
+      apply(rule hoare_pre, wpsimp+)+
   done
 
 lemma obj_refs_remove_rights[simp, Ipc_AI_assms]:
@@ -273,7 +273,7 @@ lemma make_arch_fault_msg_invs[wp]: "\<lbrace>P\<rbrace> make_arch_fault_msg f t
 
 lemma make_fault_message_inv[wp, Ipc_AI_assms]:
   "\<lbrace>P\<rbrace> make_fault_msg ft t \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (cases ft, simp_all split del: split_if)
+  apply (cases ft, simp_all split del: if_split)
      apply (wp as_user_inv getRestartPC_inv mapM_wp'
               | simp add: getRegister_def)+
   done
@@ -317,16 +317,16 @@ lemma transfer_caps_loop_cte_wp_at:
    apply (simp, wp, simp)
   apply (clarsimp simp: Let_def split_def whenE_def
                   cong: if_cong list.case_cong
-             split del: split_if)
+             split del: if_split)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift
               derive_cap_is_derived_foo
              hoare_drop_imps
-        | assumption | simp split del: split_if)+
+        | assumption | simp split del: if_split)+
       apply (wp hoare_vcg_conj_lift cap_insert_weak_cte_wp_at2)
        apply (erule imp)
       apply (wp hoare_vcg_ball_lift
-             | clarsimp simp: is_cap_simps split del:split_if
+             | clarsimp simp: is_cap_simps split del:if_split
              | unfold derive_cap_def arch_derive_cap_def
              | wpc
              | rule conjI
@@ -397,7 +397,7 @@ lemma valid_arch_objs_lift: "valid_pspace s \<Longrightarrow> valid_vspace_objs 
 lemma set_cap_valid_arch_objs [wp, Ipc_AI_assms]:
   "\<lbrace>valid_arch_objs\<rbrace> set_cap a b \<lbrace>\<lambda>_. valid_arch_objs \<rbrace>"
   apply (rule valid_arch_objs_typ_at_lift)
-  apply (wp set_cap_typ_at)
+  apply (wp set_cap_typ_at)+
   apply (rule set_cap.aobj_at)
   apply (fastforce simp: arch_obj_pred_def non_arch_obj_def
                    split: kernel_object.split arch_kernel_obj.splits)
@@ -457,12 +457,12 @@ lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
   apply (induct caps arbitrary: slots n mi, simp)
   apply (clarsimp simp: Let_def split_def whenE_def
                   cong: if_cong list.case_cong
-             split del: split_if)
+             split del: if_split)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift
               derive_cap_is_derived_foo
              hoare_drop_imps
-        | assumption | simp split del: split_if)+
+        | assumption | simp split del: if_split)+
   done
 
 end
@@ -484,46 +484,30 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
   "\<lbrace>cap_refs_respects_device_region and tcb_at t and  valid_objs and valid_mdb\<rbrace>
    do_ipc_transfer t ep bg grt r
    \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
-  apply (simp add: do_ipc_transfer_def)
-  apply (wp|wpc)+
-      apply (simp add: do_normal_transfer_def transfer_caps_def bind_assoc)
-      apply (wp|wpc)+
-         apply (rule hoare_vcg_all_lift)
-         apply (rule hoare_drop_imps)
-         apply wp
+  including no_pre
+  apply (wpsimp simp: do_ipc_transfer_def do_normal_transfer_def transfer_caps_def bind_assoc
+                wp: hoare_vcg_all_lift hoare_drop_imps)+
          apply (subst ball_conj_distrib)
-         apply (wp get_rs_cte_at2 thread_get_wp static_imp_wp grs_distinct
-                   hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift | simp)+
-   apply (rule hoare_strengthen_post[where Q = "\<lambda>r s. cap_refs_respects_device_region s
-       \<and> valid_objs s \<and> valid_mdb s \<and> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb) t s"])
-   apply wp
-    apply (clarsimp simp: obj_at_def is_tcb_def)
-    apply (simp split: kernel_object.split_asm)
-   apply auto
+         apply (wpsimp wp: get_rs_cte_at2 thread_get_wp static_imp_wp grs_distinct
+                           hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift
+                       simp: obj_at_def is_tcb_def)+
+   apply (simp split: kernel_object.split_asm)
    done
 
 lemma set_mrs_state_hyp_refs_of[wp]:
   "\<lbrace>\<lambda> s. P (state_hyp_refs_of s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (simp add: set_mrs_def)
-  apply wp
-  apply wpc
-  apply wp
-  apply (clarsimp simp: zipWithM_x_mapM)
-  apply (rule conjI)
-  apply (rule impI)
-  apply (wp mapM_wp)
-  apply (case_tac x)
-  apply simp
-  apply wp
-  apply clarsimp
-  apply assumption
-  apply (rule impI)
-  apply (wp mapM_wp)
-  apply (case_tac x)
-  apply simp
-  apply wp
-  apply clarsimp
-  apply (wp set_object_wp)
+  apply (wpsimp simp: set_mrs_def zipWithM_x_mapM)
+     apply (rule conjI)
+      apply (rule impI)
+       apply (wp mapM_wp)
+       apply (case_tac x; wpsimp)
+      apply clarsimp
+      apply assumption
+     apply (rule impI)
+     apply (wp mapM_wp)
+      apply (case_tac x; wpsimp)
+     apply clarsimp
+    apply (wp set_object_wp)+
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (frule state_hyp_refs_of_tcb_state_update)
   sorry

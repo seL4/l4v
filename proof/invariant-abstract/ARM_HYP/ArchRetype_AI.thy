@@ -154,8 +154,9 @@ lemma clearMemory_vms:
   apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = 0"
          in use_valid[where P=P and Q="\<lambda>_. P" for P], simp_all)
   apply (simp add: clearMemory_def cleanCacheRange_PoU_def machine_op_lift_def
-                   machine_rest_lift_def split_def)
-  apply (wp hoare_drop_imps | simp | wp mapM_x_wp_inv)+
+                   machine_rest_lift_def
+                   split_def)
+  including no_pre apply (wpsimp wp: hoare_drop_imps mapM_x_wp_inv)+
   apply (simp add: storeWord_def | wp)+
   apply (simp add: word_rsplit_0)
   done
@@ -314,10 +315,10 @@ lemma mapM_x_store_pde_eq_kernel_mappings_restr:
   apply (erule hoare_seq_ext[rotated])
   apply (simp add: store_pde_def set_pd_def set_object_def cong: bind_cong)
   apply (wp get_object_wp get_pde_wp)
-  apply (clarsimp simp: obj_at_def split del: split_if)
+  apply (clarsimp simp: obj_at_def split del: if_split)
   apply (frule shiftl_less_t2n)
    apply (simp add: vspace_bits_defs)
-  apply (simp add: is_aligned_add_helper split del: split_if)
+  apply (simp add: is_aligned_add_helper split del: if_split)
   apply (cut_tac x=x and n=3 in shiftl_shiftr_id)
     apply (simp add: word_bits_def)
    apply (simp add: word_bits_def vspace_bits_defs)
@@ -466,7 +467,7 @@ lemma init_arch_objects_invs_from_restricted:
          and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api new_type obj_sz))\<rbrace>
      init_arch_objects new_type ptr bits obj_sz refs
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: init_arch_objects_def split del: split_if)
+  apply (simp add: init_arch_objects_def split del: if_split)
   apply (rule hoare_pre)
    apply (wp mapM_copy_global_invs_mappings_restricted
              hoare_vcg_const_Ball_lift
@@ -1225,7 +1226,7 @@ lemma clearMemory_um_eq_0:
     clearMemory ptr bits
    \<lbrace>\<lambda>_ m. underlying_memory m p = 0\<rbrace>"
   apply (clarsimp simp: clearMemory_def)
-  apply (wp mapM_x_wp_inv | simp)+
+  including no_pre apply (wpsimp wp: mapM_x_wp_inv)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps storeWord_um_eq_0)
   apply (fastforce simp: ignore_failure_def split: if_split_asm)

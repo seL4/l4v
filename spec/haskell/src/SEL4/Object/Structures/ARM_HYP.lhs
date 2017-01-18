@@ -124,7 +124,7 @@ present on all platforms is stored here.
 >     }
 
 > atcbContextSet :: UserContext -> ArchTCB -> ArchTCB
-> atcbContextSet uc at = at { atcbContext = uc }
+> atcbContextSet uc atcb = atcb { atcbContext = uc }
 >
 > atcbContextGet :: ArchTCB -> UserContext
 > atcbContextGet = atcbContext

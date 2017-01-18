@@ -1619,7 +1619,7 @@ lemma sbn_invs_minor:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
-   apply (wp_trace valid_irq_node_typ sbn_only_idle | simp)+
+   apply (wp valid_irq_node_typ sbn_only_idle | simp)+
   apply clarsimp
   apply (rule conjI)
    apply (simp add: pred_tcb_at_def, erule(1) obj_at_valid_objsE)

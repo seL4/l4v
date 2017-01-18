@@ -1257,7 +1257,7 @@ lemma set_object_vspace_objs_non_pagetable:
   apply (rule assert_pre)
   apply (rule hoare_pre)
   apply (rule valid_vspace_objs_lift_weak)
-  apply (wp set_object_non_pagetable | clarsimp)+
+  apply (wpsimp wp: set_object_non_pagetable)+
   done
 
 lemma set_object_memory[wp]:
@@ -1267,6 +1267,8 @@ lemma set_object_memory[wp]:
   unfolding set_object_def
   apply wp
   by simp
+
+end
 
 locale non_aobj_op = fixes f
   assumes aobj_at: "\<And>P P' p. arch_obj_pred P' \<Longrightarrow>
@@ -1306,10 +1308,10 @@ lemma vs_lookup_pages[wp]: "\<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> 
 by (rule vs_lookup_pages_vspace_obj_at_lift; wp vsobj_at; simp)
 
 lemma valid_asid_map[wp]: "\<lbrace>valid_asid_map\<rbrace> f \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-by (rule valid_asid_map_lift, wp vsobj_at)
+by (rule valid_asid_map_lift, (wp vsobj_at)+)
 
 lemma valid_kernel_mappings[wp]: "\<lbrace>valid_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. valid_kernel_mappings\<rbrace>"
-by (rule valid_kernel_mappings_lift, wp vsobj_at)
+by (rule valid_kernel_mappings_lift, (wp vsobj_at)+)
 
 lemma equal_kernel_mappings[wp]: "\<lbrace>equal_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. equal_kernel_mappings\<rbrace>"
 by (rule equal_kernel_mappings_lift, wp vsobj_at)
@@ -1405,7 +1407,7 @@ interpretation (* TODO: need to do this for vcpu-related functions in some arch-
             set_bound_notification_def thread_set_def set_cap_def[simplified split_def]
             as_user_def set_mrs_def
   apply -
-  apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: split_if)+\<close>)
+  apply (all \<open>(wp set_object_non_arch get_object_wp | wpc | simp split del: if_split)+\<close>)
   by (fastforce simp: obj_at_def[abs_def] a_type_def
                split: Structures_A.kernel_object.splits)+
 
@@ -1597,7 +1599,7 @@ lemma set_ntfn_minor_invs:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre,
-         wp_trace set_ntfn_valid_objs valid_irq_node_typ
+         wp set_ntfn_valid_objs valid_irq_node_typ
             valid_irq_handlers_lift)
   apply (clarsimp elim!: rsubst[where P=sym_refs]
                  intro!: ext

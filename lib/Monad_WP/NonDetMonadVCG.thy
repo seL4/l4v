@@ -939,12 +939,12 @@ lemma handleE_wp:
   shows      "\<lbrace>P\<rbrace> f <handle> handler \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   by (simp add: handleE_def handleE'_wp [OF x y])
 
-lemma hoare_vcg_split_if:
+lemma hoare_vcg_if_split:
  "\<lbrakk> P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>S\<rbrace>; \<not>P \<Longrightarrow> \<lbrace>R\<rbrace> g \<lbrace>S\<rbrace> \<rbrakk> \<Longrightarrow>
   \<lbrace>\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not>P \<longrightarrow> R s)\<rbrace> if P then f else g \<lbrace>S\<rbrace>"
   by simp
 
-lemma hoare_vcg_split_ifE:
+lemma hoare_vcg_if_splitE:
  "\<lbrakk> P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>S\<rbrace>,\<lbrace>E\<rbrace>; \<not>P \<Longrightarrow> \<lbrace>R\<rbrace> g \<lbrace>S\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow>
   \<lbrace>\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not>P \<longrightarrow> R s)\<rbrace> if P then f else g \<lbrace>S\<rbrace>,\<lbrace>E\<rbrace>"
   by simp
@@ -1364,8 +1364,8 @@ lemmas hoare_wp_splits [wp_split] =
   validE_validE_R [OF hoare_vcg_seqE [OF validE_R_validE]]
   validE_validE_R [OF handleE'_wp [OF validE_R_validE]]
   validE_validE_R [OF handleE_wp [OF validE_R_validE]]
-  catch_wp hoare_vcg_split_if hoare_vcg_split_ifE
-  validE_validE_R [OF hoare_vcg_split_ifE [OF validE_R_validE validE_R_validE]]
+  catch_wp hoare_vcg_if_split hoare_vcg_if_splitE
+  validE_validE_R [OF hoare_vcg_if_splitE [OF validE_R_validE validE_R_validE]]
   liftM_wp liftME_wp
   validE_validE_R [OF liftME_wp [OF validE_R_validE]]
   validE_valid
@@ -1623,7 +1623,7 @@ lemma validE_E_validE:
  * \<lbrakk>?P1 \<Longrightarrow> \<lbrace>?Q1\<rbrace> ?f1 -, \<lbrace>?E\<rbrace>; \<not> ?P1 \<Longrightarrow> \<lbrace>?R1\<rbrace> ?g1 -, \<lbrace>?E\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. (?P1 \<longrightarrow> ?Q1 s) \<and> (\<not> ?P1 \<longrightarrow> ?R1 s)\<rbrace> if ?P1 then ?f1 else ?g1 -, \<lbrace>?E\<rbrace>
  *)
 lemmas if_validE_E [wp_split] =
-  validE_validE_E [OF hoare_vcg_split_ifE [OF validE_E_validE validE_E_validE]]
+  validE_validE_E [OF hoare_vcg_if_splitE [OF validE_E_validE validE_E_validE]]
 
 lemma returnOk_E [wp]:
   "\<lbrace>\<top>\<rbrace> returnOk r -, \<lbrace>Q\<rbrace>"
@@ -1838,7 +1838,7 @@ lemma validNF_post_comb_conj:
   apply force
   done
 
-lemma validNF_split_if [wp_split]:
+lemma validNF_if_split [wp_split]:
   "\<lbrakk>P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>S\<rbrace>!; \<not> P \<Longrightarrow> \<lbrace>R\<rbrace> g \<lbrace>S\<rbrace>!\<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not> P \<longrightarrow> R s)\<rbrace> if P then f else g \<lbrace>S\<rbrace>!"
   by simp
 

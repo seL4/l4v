@@ -129,15 +129,11 @@ crunch typ_at[wp]: setup_reply_master "\<lambda>s. P (typ_at T p s)"
 
 lemma restart_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> Tcb_A.restart t \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: Tcb_A.restart_def)
-  apply (wp cancel_ipc_typ_at | simp)+
-  done
-
+  by (wpsimp simp: Tcb_A.restart_def wp: cancel_ipc_typ_at)
 
 lemma restart_tcb[wp]:
   "\<lbrace>tcb_at t'\<rbrace> Tcb_A.restart t \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
-  by (simp add: tcb_at_typ, wp restart_typ_at)
-
+  by (wpsimp simp: tcb_at_typ wp: restart_typ_at)
 
 lemmas suspend_tcb_at[wp] = tcb_at_typ_at [OF suspend_typ_at]
 
@@ -827,7 +823,7 @@ lemma (in Tcb_AI) tcbinv_invs:
      invoke_tcb ti
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac ti, simp_all only:)
-        apply ((wp_trace writereg_invs readreg_invs copyreg_invs tc_invs
+        apply ((wp writereg_invs readreg_invs copyreg_invs tc_invs
              | simp
              | clarsimp simp: invs_def valid_state_def valid_pspace_def
                        dest!: idle_no_ex_cap
@@ -1161,7 +1157,7 @@ lemma (in Tcb_AI) decode_tcb_conf_wf[wp]:
                   in hoare_post_imp_R)
         apply wp
        apply (clarsimp simp: is_thread_control_def2 cong: option.case_cong)
-      apply (wp_trace | simp add: whenE_def split del: if_split)+
+      apply (wp | simp add: whenE_def split del: if_split)+
   apply (clarsimp simp: linorder_not_less val_le_length_Cons
                    del: ballI)
   done
@@ -1257,7 +1253,7 @@ lemma decode_tcb_inv_wf:
               cong: if_cong split del: if_split)
   apply (rule hoare_vcg_precond_impE_R)
    apply wpc
-   apply (wp_trace decode_tcb_conf_wf decode_readreg_wf
+   apply (wp decode_tcb_conf_wf decode_readreg_wf
              decode_writereg_wf decode_copyreg_wf
              decode_bind_notification_wf decode_unbind_notification_wf decode_set_priority_wf)+
   apply (clarsimp simp: real_cte_at_cte)
@@ -1293,7 +1289,7 @@ lemma decode_domain_inv_inv:
   "\<lbrace>P\<rbrace>
      decode_domain_invocation label args excs
    \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: decode_domain_invocation_def whenE_def split del: if_split | wp hoare_vcg_split_ifE | wpc)+
+  by (simp add: decode_domain_invocation_def whenE_def split del: if_split | wp hoare_vcg_if_splitE | wpc)+
 
 lemma decode_domain_inv_wf:
   "\<lbrace>valid_objs and valid_global_refs and
@@ -1302,7 +1298,7 @@ lemma decode_domain_inv_wf:
      decode_domain_invocation label args excs
    \<lbrace>\<lambda>(t, d) s. tcb_at t s \<and> t \<noteq> idle_thread s\<rbrace>, -"
   apply (clarsimp simp: decode_domain_invocation_def whenE_def split del: if_split
-        | wp hoare_vcg_split_ifE | wpc)+
+        | wp hoare_vcg_if_splitE | wpc)+
   apply (erule ballE[where x="hd excs"])
    apply (clarsimp simp: valid_cap_simps)
    apply (drule(1) idle_no_ex_cap)

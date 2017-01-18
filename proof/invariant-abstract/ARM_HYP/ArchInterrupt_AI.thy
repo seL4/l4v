@@ -33,7 +33,7 @@ lemma (* decode_irq_control_valid *)[Interrupt_AI_asms]:
   apply (simp add: decode_irq_control_invocation_def Let_def split_def
                    whenE_def arch_check_irq_def
                    arch_decode_irq_control_invocation_def
-                 split del: split_if cong: if_cong)
+                 split del: if_split cong: if_cong)
   apply (rule hoare_pre)
    apply (wp ensure_empty_stronger | simp add: cte_wp_at_eq_simp
                  | wp_once hoare_drop_imps)+
@@ -85,7 +85,7 @@ lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
   apply (wp do_machine_op_valid_cap)
   apply (auto simp: valid_cap_def valid_untyped_def
              split: cap.splits option.splits arch_cap.splits
-         split del: split_if)
+         split del: if_split)
   done
 
 crunch valid_global_refs[Interrupt_AI_asms]: set_irq_state "valid_global_refs"
@@ -120,7 +120,7 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
    done
   show ?thesis
   apply (cases i, simp_all)
-    apply (wp maskInterrupt_invs_ARCH)
+    including no_pre apply (wp maskInterrupt_invs_ARCH)
      apply simp
     apply simp
    apply (rename_tac irq cap prod)

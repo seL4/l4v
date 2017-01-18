@@ -47,10 +47,9 @@ lemma valid_vspace_objs_lift:
   assumes z: "\<And>p T. \<lbrace>(K (is_vspace_typ (AArch T))) and typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   shows      "\<lbrace>valid_vspace_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
   apply (simp add: valid_vspace_objs_def)
-  apply (wp hoare_vcg_all_lift hoare_convert_imp [OF x])
+  apply (rule hoare_vcg_all_lift, wp hoare_convert_imp [OF x]; (rule hoare_vcg_all_lift | assumption))
   apply (case_tac "\<exists>vcpu. ao = VCPU vcpu")
-   apply clarsimp
-   apply wp
+   apply wpsimp
   apply clarsimp
   apply (rule hoare_convert_imp)
    apply (rule y)
@@ -474,7 +473,7 @@ lemma valid_vs_lookup_lift:
   unfolding valid_vs_lookup_def
   apply (rule hoare_lift_Pf [where f=vs_lookup_pages])
    apply (rule hoare_lift_Pf [where f="\<lambda>s. (caps_of_state s)"])
-    apply (wp lookup cap)
+    apply (wp lookup cap)+
   done
 
 
@@ -484,7 +483,7 @@ lemma valid_table_caps_lift:
   shows "\<lbrace>valid_table_caps\<rbrace> f \<lbrace>\<lambda>_. valid_table_caps\<rbrace>"
   unfolding valid_table_caps_def
    apply (rule hoare_lift_Pf [where f="\<lambda>s. (caps_of_state s)"])
-    apply (wp cap hoare_vcg_all_lift hoare_vcg_const_imp_lift obj)
+    apply (wp cap hoare_vcg_all_lift hoare_vcg_const_imp_lift obj)+
   done
 
 lemma valid_arch_caps_lift:
@@ -539,7 +538,7 @@ lemma valid_arch_state_lift_aobj_at:
     "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   apply (simp add: valid_arch_state_def valid_asid_table_def)
   apply (rule hoare_lift_Pf[where f="arch_state", OF _ arch])
-  apply (wp hoare_vcg_conj_lift hoare_vcg_ball_lift | (rule aobj_at, clarsimp))+
+  apply (rule hoare_vcg_conj_lift hoare_vcg_ball_lift hoare_vcg_prop | (rule aobj_at, clarsimp))+
    apply (case_tac "arm_current_vcpu x"; simp add: split_def)
    apply wp
    apply (rule aobj_at)
@@ -562,44 +561,33 @@ lemma valid_machine_state_lift:
   shows "\<lbrace>valid_machine_state\<rbrace> f \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   unfolding valid_machine_state_def
   apply (rule hoare_lift_Pf[where f="\<lambda>s. underlying_memory (machine_state s)", OF _ memory])
-  apply (rule hoare_vcg_all_lift)
-  apply (rule hoare_vcg_disj_lift[OF _ hoare_vcg_prop])
-  apply (rule in_user_frame_lift)
-  apply (wp aobj_at)
-  apply simp
-  done
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift[OF _ hoare_vcg_prop]
+                 in_user_frame_lift aobj_at)+
 
 lemma valid_vso_at_lift:
   assumes z: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
       and y: "\<And>ao. \<lbrace>\<lambda>s. ko_at (ArchObj ao) p s\<rbrace> f \<lbrace>\<lambda>rv s. ko_at (ArchObj ao) p s\<rbrace>"
   shows      "\<lbrace>valid_vso_at p\<rbrace> f \<lbrace>\<lambda>rv. valid_vso_at p\<rbrace>"
   unfolding valid_vso_at_def
-  apply (wp hoare_vcg_ex_lift y valid_vspace_is_vspace_lift z)
-  apply (simp add: obj_at_split[symmetric] a_type_def)
-  apply wp
-  done
+  by (wpsimp wp: hoare_vcg_ex_lift y valid_vspace_is_vspace_lift z)+
 
 lemma valid_vso_at_lift_aobj_at:
   assumes aobj_at: "\<And>P' pd. vspace_obj_pred P' \<Longrightarrow> \<lbrace>obj_at P' pd\<rbrace> f \<lbrace>\<lambda>r s. obj_at P' pd s\<rbrace>"
   shows      "\<lbrace>valid_vso_at p\<rbrace> f \<lbrace>\<lambda>rv. valid_vso_at p\<rbrace>"
   unfolding valid_vso_at_def
-  apply (wp hoare_vcg_ex_lift)
+  apply (rule hoare_vcg_ex_lift)
   apply (case_tac "\<exists>vcpu. ao = VCPU vcpu")
    apply (clarsimp simp: aa_type_def)
   apply clarsimp
-  apply (wp aobj_at)
+  apply (rule hoare_vcg_conj_lift aobj_at)+
    apply (clarsimp simp: vspace_obj_pred_def)
    apply (rule iffI)
     apply (case_tac ao, clarsimp+,blast)+
-  apply (wp valid_vspace_is_vspace_lift)
-   apply (case_tac "T = AVCPU"; simp)
-   apply (wp aobj_at)
-    apply (clarsimp simp: vspace_obj_pred_def)
-    apply (case_tac "\<exists>ako. ko = ArchObj ako")
-     subgoal by (auto simp: a_type_def aa_type_def split: kernel_object.splits arch_kernel_obj.splits)
-    subgoal by (auto simp: a_type_def aa_type_def split: kernel_object.splits arch_kernel_obj.splits)
-   apply clarsimp
-  apply wp
+  apply (wpsimp wp: valid_vspace_is_vspace_lift)
+    apply (case_tac "T = AVCPU", simp)
+    apply (wpsimp wp: aobj_at)
+   apply wp
+  apply assumption
   done
 
 lemmas set_object_v_ker_map
@@ -633,7 +621,7 @@ lemma set_object_equal_mappings:
    \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
   apply (simp add: set_object_def, wp)
   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def
-             split del: split_if)
+             split del: if_split)
   done
 
 lemma valid_table_caps_ptD:

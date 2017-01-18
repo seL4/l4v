@@ -85,7 +85,7 @@ lemma unify_failure_empty_fail[wp]:
   "empty_fail f \<Longrightarrow> empty_fail (unify_failure f)"
   by (simp add: unify_failure_def | wp)+
 
-lemma split_if_empty_fail[wp]:
+lemma if_split_empty_fail[wp]:
   "\<lbrakk>P \<Longrightarrow> empty_fail f; \<not> P \<Longrightarrow> empty_fail g\<rbrakk> \<Longrightarrow> empty_fail (if P then f else g)"
   by simp
 

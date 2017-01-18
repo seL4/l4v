@@ -1741,7 +1741,7 @@ lemma set_cap_valid_mdb_simple:
   apply (rule hoare_pre)
   apply (wp set_cap_mdb_cte_at)
   apply (wps set_cap_rvk_cdt_ct_ms)
-  apply wp_trace
+  apply wp
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps 
     reply_master_revocable_def irq_revocable_def reply_mdb_def)
   unfolding fun_upd_def[symmetric]
@@ -3520,7 +3520,7 @@ lemma (in Untyped_AI_nonempty_table) retype_nonempty_table[wp]:
   "\<lbrace>\<lambda>(s::('state_ext::state_ext) state). \<not> (obj_at (nonempty_table {}) r s)\<rbrace>
      retype_region ptr sz us tp dev
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table {}) r s)\<rbrace>"
-  apply (simp add: retype_region_def split del: split_if)
+  apply (simp add: retype_region_def split del: if_split)
   apply (rule hoare_pre)
    apply (wp|simp del: fun_upd_apply)+
   apply (clarsimp simp del: fun_upd_apply)

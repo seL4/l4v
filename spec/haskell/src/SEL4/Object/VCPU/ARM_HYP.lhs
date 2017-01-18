@@ -157,8 +157,8 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
     does, but it is the value that is stored inside of lr in the vgic
 
 > makeVIRQ :: Word -> Word -> Word -> VIRQ
-> makeVIRQ group prio irq =
->     (group `shiftL` groupShift) .|. (prio `shiftL` prioShift) .|. irq .|.
+> makeVIRQ grp prio irq =
+>     (grp `shiftL` groupShift) .|. (prio `shiftL` prioShift) .|. irq .|.
 >         irqPending .|. eoiirqen
 >     where groupShift = 30
 >           prioShift = 23
@@ -171,12 +171,12 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 >     let vcpuPtr = capVCPUPtr cap
 >     let vid = mr0 .&. 0xffff
 >     let priority = (mr0 `shiftR` 16) .&. 0xff
->     let group = (mr0 `shiftR` 24) .&. 0xff
+>     let grp = (mr0 `shiftR` 24) .&. 0xff
 >     let index = mr1 .&. 0xff
 >
 >     rangeCheck vid (0::Int) ((1 `shiftL` 10) - 1)
 >     rangeCheck priority (0::Int) 31
->     rangeCheck group (0::Int) 1
+>     rangeCheck grp (0::Int) 1
 >     gic_vcpu_num_list_regs <- withoutFailure $
 >         gets (armKSGICVCPUNumListRegs . ksArchState)
 >     rangeCheck index 0 gic_vcpu_num_list_regs
@@ -185,7 +185,7 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 >     when (vcpuLR ! (fromIntegral index) .&. vgicIRQMask == vgicIRQActive) $
 >         throw DeleteFirst
 >
->     let virq = makeVIRQ (fromIntegral group) (fromIntegral priority) (fromIntegral vid)
+>     let virq = makeVIRQ (fromIntegral grp) (fromIntegral priority) (fromIntegral vid)
 >     return $ InvokeVCPU $ VCPUInjectIRQ vcpuPtr (fromIntegral index) virq
 > decodeVCPUInjectIRQ _ _ = throw TruncatedMessage
 

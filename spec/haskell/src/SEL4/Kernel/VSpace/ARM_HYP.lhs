@@ -969,7 +969,7 @@ The ASID control capability refers to the top level of a global two-level table 
 > decodeARMMMUInvocation label args _ _ ASIDControlCap extraCaps =
 >     case (invocationType label, args, extraCaps) of
 >         (ArchInvocationLabel ARMASIDControlMakePool, index:depth:_,
->                 (untyped,parentSlot):(root,_):_) -> do
+>                 (untyped,parentSlot):(croot,_):_) -> do
 >             asidTable <- withoutFailure $ gets (armKSASIDTable . ksArchState)
 >             let free = filter (\(x,y) -> x <= (bit asidHighBits) - 1 && isNothing y) $ assocs asidTable
 >             when (null free) $ throw DeleteFirst
@@ -981,7 +981,7 @@ The ASID control capability refers to the top level of a global two-level table 
 >                     return $ capPtr untyped
 >                 _ -> throw $ InvalidCapability 1
 >             destSlot <- lookupTargetSlot
->                 root (CPtr index) (fromIntegral depth)
+>                 croot (CPtr index) (fromIntegral depth)
 >             ensureEmptySlot destSlot
 >             return $ InvokeASIDControl $ MakePool {
 >                 makePoolFrame = frame,

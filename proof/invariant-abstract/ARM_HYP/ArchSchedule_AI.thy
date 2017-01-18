@@ -103,7 +103,7 @@ lemma stt_invs [wp,Schedule_AI_asms]:
                           valid_irq_node_def valid_machine_state_def)
     apply (fastforce simp: cur_tcb_def obj_at_def
                      elim: valid_pspace_eqI ifunsafe_pspaceI)
-   apply wp
+   apply wp+
   apply clarsimp
   apply (simp add: is_tcb_def)
   done

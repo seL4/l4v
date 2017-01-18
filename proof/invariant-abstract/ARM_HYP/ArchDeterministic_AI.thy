@@ -82,6 +82,8 @@ sorry
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_send,handle_reply valid_list
 
+crunch valid_list[wp, Deterministic_AI_assms]: handle_hypervisor_fault valid_list
+
 end
 
 global_interpretation Deterministic_AI_2?: Deterministic_AI_2

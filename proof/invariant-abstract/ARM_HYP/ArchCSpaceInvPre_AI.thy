@@ -213,9 +213,9 @@ lemma set_cap_unique_table_refs:
   apply wp
   apply clarsimp
   apply (simp add: unique_table_refs_def
-              split del: split_if del: split_paired_All)
+              split del: if_split del: split_paired_All)
   apply (erule allEI, erule allEI)
-  apply (clarsimp split del: split_if)
+  apply (clarsimp split del: if_split)
   apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                         cte_wp_at_caps_of_state
                  split: if_split_asm)
@@ -315,9 +315,8 @@ lemma set_cap_hyp_refs_of [wp]:
   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: set_cap_def set_object_def split_def)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
-  apply (case_tac obj, simp_all split del: split_if)
-   apply wp
-   apply (rule hoare_pre, wp)
+  apply (case_tac obj, simp_all split del: if_split)
+   apply wp+
    apply (clarsimp elim!: rsubst[where P=P])
    apply (rule all_ext; clarsimp simp: state_hyp_refs_of_def obj_at_def hyp_refs_of_def)
   apply (rule hoare_pre, wp)

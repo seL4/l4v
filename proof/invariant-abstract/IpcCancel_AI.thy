@@ -211,7 +211,7 @@ lemma blocked_cancel_ipc_tcb_at [wp]:
 
 crunch typ_at[wp]: cancel_ipc, reply_cancel_ipc, unbind_maybe_notification
                    "\<lambda>s. P (typ_at T p s)" 
-  (wp: crunch_wps hoare_vcg_split_ifE select_wp
+  (wp: crunch_wps hoare_vcg_if_splitE select_wp
      simp: crunch_simps unless_def)
 
 lemma cancel_ipc_tcb [wp]:

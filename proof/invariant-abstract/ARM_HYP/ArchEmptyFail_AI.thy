@@ -71,7 +71,6 @@ lemma arch_decode_ARMASIDControlMakePool_empty_fail:
    apply (rule empty_fail_bindE)
     subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: if_split_asm)
    apply (simp add: Let_def split: cap.splits arch_cap.splits option.splits bool.splits | wp | intro conjI impI allI)+
-   apply (simp add: isPageFlushLabel_def isPDFlushLabel_def split: arch_cap.splits)+
   done (* needs tidying up *)
 
 lemma arch_decode_ARMASIDPoolAssign_empty_fail:
@@ -93,7 +92,7 @@ lemma arch_decode_ARMASIDPoolAssign_empty_fail:
    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_def bindE_def
                                bind_def return_def returnOk_def lift_def liftE_def select_ext_def
                                gets_def get_def assert_def fail_def)
-  apply wp
+  apply wp+
   done
 
 lemma arch_decode_invocation_empty_fail[wp]:

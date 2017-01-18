@@ -4096,7 +4096,7 @@ lemma cap_insert_invs[wp]:
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: invs_def valid_state_def)
   apply (rule hoare_pre)
-   apply (wp_trace cap_insert_valid_pspace cap_insert_ifunsafe cap_insert_idle
+   apply (wp cap_insert_valid_pspace cap_insert_ifunsafe cap_insert_idle
              valid_irq_node_typ cap_insert_valid_arch_caps)
   apply (auto simp: cte_wp_at_caps_of_state is_derived_cap_is_device
                         is_derived_cap_range valid_pspace_def)

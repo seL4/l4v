@@ -255,7 +255,7 @@ lemma no_fail_cacheRangeOp[simp, wp]:
   shows "no_fail \<top> (cacheRangeOp oper s e p)"
   apply (simp add: cacheRangeOp_def mapM_x_mapM)
   apply (rule no_fail_pre)
-   apply (wp_trace no_fail_mapM nf | wpc | clarsimp)+
+   apply (wp no_fail_mapM nf | wpc | clarsimp)+
   done
 
 lemma no_fail_cleanCacheRange_PoU[simp, wp]:
@@ -473,7 +473,7 @@ lemma no_irq_writeContextIDAndPD: "no_irq (writeContextIDAndPD asid w)"
 lemma no_irq_addressTranslateS1CPR: "no_irq (addressTranslateS1CPR w)"
   apply (clarsimp simp add: addressTranslateS1CPR_def no_irq_def, wp)
   apply (simp only: atomize_all)
-  apply (wp machine_op_lift_no_irq[simplified no_irq_def])
+  apply (wp machine_op_lift_no_irq[simplified no_irq_def], simp)
   done
 
 lemma no_irq_setHCR: "no_irq (setHCR w)"
@@ -506,7 +506,7 @@ lemma no_irq_set_gic_vcpu_ctrl_apr: "no_irq (set_gic_vcpu_ctrl_apr w)"
 lemma no_irq_get_gic_vcpu_ctrl_lr: "no_irq (get_gic_vcpu_ctrl_lr n)"
   apply (clarsimp simp add: get_gic_vcpu_ctrl_lr_def no_irq_def, wp)
   apply (simp only: atomize_all)
-  apply (wp machine_op_lift_no_irq[simplified no_irq_def])
+  apply (wp machine_op_lift_no_irq[simplified no_irq_def], simp)
   done
 
 lemma no_irq_set_gic_vcpu_ctrl_lr: "no_irq (set_gic_vcpu_ctrl_lr n w)"
@@ -543,10 +543,8 @@ lemma no_irq_mapM:
   apply (rule mapM_wp)
    prefer 2
    apply (rule order_refl)
-  apply wp
-  apply simp
+  apply wpsimp
   done
-
 
 lemma no_irq_mapM_x:
   "(\<And>x. x \<in> set xs \<Longrightarrow> no_irq (f x)) \<Longrightarrow> no_irq (mapM_x f xs)"
@@ -555,8 +553,7 @@ lemma no_irq_mapM_x:
   apply (rule mapM_x_wp)
    prefer 2
    apply (rule order_refl)
-  apply wp
-  apply simp
+  apply wpsimp
   done
 
 
@@ -617,7 +614,7 @@ lemma no_irq_cacheRangeOp[simp, wp]:
   assumes nf: "\<And>a b. no_irq (oper a b)"
   shows "no_irq (cacheRangeOp oper s e p)"
   apply (simp add: cacheRangeOp_def)
-   apply (wp_trace no_irq_mapM_x nf | wpc | clarsimp)+
+   apply (wp no_irq_mapM_x nf | wpc | clarsimp)+
   done
 
 lemma no_irq_cleanCacheRange_PoU[simp, wp]:

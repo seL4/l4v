@@ -317,7 +317,7 @@ lemma valid_blocked_lift:
   apply (rule hoare_pre)
    apply (wps c e d)
    apply (simp add: valid_blocked_def)
-   apply (wp_trace hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift static_imp_wp a)
+   apply (wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift static_imp_wp a)
    apply (rule hoare_convert_imp)
     apply (rule typ_at_st_tcb_at_lift)
      apply (wp a t)+

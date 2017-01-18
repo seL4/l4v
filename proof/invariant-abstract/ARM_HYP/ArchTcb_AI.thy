@@ -196,7 +196,7 @@ lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
   apply (rule use_spec)
   apply (rule rec_del_all_caps_in_range)
        apply (simp add: atomize_imp)
-     apply_trace (simp add: table_cap_ref_def[simplified, split_simps cap.split]
+     apply (simp add: table_cap_ref_def[simplified, split_simps cap.split]
                              vspace_bits_defs
                        del: arch_cap_fun_lift_non_arch
                        split del: arch_cap.split
@@ -249,7 +249,7 @@ lemma tc_invs[Tcb_AI_asms]:
   apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
   apply (rule hoare_vcg_precond_imp)
    apply wp
-      apply_trace ((simp only: simp_thms
+      apply ((simp only: simp_thms
         | rule wp_split_const_if wp_split_const_if_R
                    hoare_vcg_all_lift_R
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
@@ -293,9 +293,9 @@ lemma check_valid_ipc_buffer_inv: (* arch_specific *)
   "\<lbrace>P\<rbrace> check_valid_ipc_buffer vptr cap \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: check_valid_ipc_buffer_def whenE_def
              cong: cap.case_cong arch_cap.case_cong
-             split del: split_if)
+             split del: if_split)
   apply (rule hoare_pre)
-   apply (wp | simp add: whenE_def split del: split_if | wpcw)+
+   apply (wp | simp add: whenE_def split del: if_split | wpcw)+
   done
 
 lemma check_valid_ipc_buffer_wp[Tcb_AI_asms]:
@@ -307,9 +307,9 @@ lemma check_valid_ipc_buffer_wp[Tcb_AI_asms]:
    \<lbrace>\<lambda>rv. P\<rbrace>,-"
   apply (simp add: check_valid_ipc_buffer_def whenE_def
              cong: cap.case_cong arch_cap.case_cong
-             split del: split_if)
+             split del: if_split)
   apply (rule hoare_pre)
-   apply (wp | simp add: whenE_def split del: split_if | wpc)+
+   apply (wp | simp add: whenE_def split del: if_split | wpc)+
   apply (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def
                         valid_ipc_buffer_cap_def)
   done
@@ -332,7 +332,7 @@ lemma decode_set_ipc_inv[wp,Tcb_AI_asms]:
   "\<lbrace>P::'state_ext::state_ext state \<Rightarrow> bool\<rbrace> decode_set_ipc_buffer args cap slot excaps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp   add: decode_set_ipc_buffer_def whenE_def
                      split_def
-          split del: split_if)
+          split del: if_split)
   apply (rule hoare_pre, wp check_valid_ipc_buffer_inv)
   apply simp
   done
@@ -366,7 +366,7 @@ lemma update_cap_valid[Tcb_AI_asms]:
                        is_cap_defs Let_def split_def valid_cap_def
                        badge_update_def the_cnode_cap_def cap_aligned_def
                        arch_update_cap_data_def
-            split del: split_if)
+            split del: if_split)
      apply (simp add: badge_update_def cap_rights_update_def)
     apply (simp add: badge_update_def)
    apply simp

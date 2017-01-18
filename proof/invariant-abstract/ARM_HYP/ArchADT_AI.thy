@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header {* ARM-specific definitions for abstract datatype for the abstract specification *}
+chapter {* ARM-specific definitions for abstract datatype for the abstract specification *}
 
 theory ArchADT_AI
 imports
@@ -286,7 +286,7 @@ lemma get_pt_entry_Some_eq_get_pte:
   apply (clarsimp simp add: get_pt_entry_def get_arch_obj_def
              split: option.splits Structures_A.kernel_object.splits
                     arch_kernel_obj.splits)
-  apply_trace (clarsimp simp add: get_pte_def get_pt_def bind_def return_def
+  apply (clarsimp simp add: get_pte_def get_pt_def bind_def return_def
             assert_def get_object_def simpler_gets_def fail_def split_def
             mask_out_sub_mask mask_eqs)
   apply (subgoal_tac "pt_ref + ((vptr >> 12) && mask 9 << 3) -

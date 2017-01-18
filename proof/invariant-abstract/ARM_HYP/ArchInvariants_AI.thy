@@ -2347,14 +2347,14 @@ text {* arch specific symrefs *}
 definition
   tcb_vcpu_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
 where
-  "tcb_vcpu_refs at \<equiv> case at of
+  "tcb_vcpu_refs atcb \<equiv> case atcb of
      Some vc \<Rightarrow> {(vc, TCBHypRef)}
    | None \<Rightarrow> {}"
 
 definition
   tcb_hyp_refs :: "arch_tcb \<Rightarrow> (obj_ref \<times> reftype) set"
 where
-  "tcb_hyp_refs at \<equiv> tcb_vcpu_refs (tcb_vcpu at)"
+  "tcb_hyp_refs atcb \<equiv> tcb_vcpu_refs (tcb_vcpu atcb)"
 
 definition vcpu_tcb_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
 where
@@ -2363,7 +2363,7 @@ where
   | Some tcb \<Rightarrow> {(tcb, HypTCBRef)}"
 
 lemma tcb_hyp_refs_of_simps[simp]:
-  "tcb_hyp_refs at = tcb_vcpu_refs (tcb_vcpu at)"
+  "tcb_hyp_refs atcb = tcb_vcpu_refs (tcb_vcpu atcb)"
   by (auto simp: tcb_hyp_refs_def)
 
 lemma tcb_vcpu_refs_of_simps[simp]:
