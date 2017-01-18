@@ -111,6 +111,11 @@ locale Interrupt_AI =
     "\<And> f irq. empty_fail (maskInterrupt f irq)"
   assumes handle_interrupt_invs [wp]: 
     "\<And> irq. \<lbrace>invs :: 'a state \<Rightarrow> bool\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
+  assumes sts_arch_irq_control_inv_valid [wp]:
+    "\<And>i t st.
+      \<lbrace>arch_irq_control_inv_valid i :: 'a state \<Rightarrow> bool\<rbrace>
+        set_thread_state t st
+      \<lbrace>\<lambda>rv. arch_irq_control_inv_valid i\<rbrace>"
 
 crunch inv[wp]: decode_irq_handler_invocation "P"
   (simp: crunch_simps)
