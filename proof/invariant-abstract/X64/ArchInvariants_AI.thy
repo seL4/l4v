@@ -1083,7 +1083,6 @@ definition
   obj_refs cap' = obj_refs cap \<longrightarrow>
   table_cap_ref cap' = table_cap_ref cap"
 
-(* FIXME x64: should this be pdpts \<union> pds \<union> pts? *)
 definition
   valid_kernel_mappings :: "'z::state_ext state \<Rightarrow> bool"
 where

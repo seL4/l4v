@@ -4988,7 +4988,7 @@ lemma set_asid_pool_valid_arch_caps_map:
   apply (wp get_object_wp)
   apply clarsimp
   apply (frule obj_at_not_pt_not_in_global_pts[where p=pd], clarsimp+)
-   apply (simp add: a_type_def)
+  apply (simp add: a_type_def)
   apply (frule obj_at_not_pt_not_in_global_pts[where p=ap], clarsimp+)
   apply (clarsimp simp: obj_at_def valid_arch_caps_def
                         caps_of_state_after_update)
