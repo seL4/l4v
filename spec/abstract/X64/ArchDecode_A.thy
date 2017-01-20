@@ -324,7 +324,7 @@ where
                                                (attribs_from_word attr) vspace;
              ensure_safe_mapping entries;
              returnOk $ InvokePage $ PageMap  
-                       (ArchObjectCap $ PageCap dev p R map_type pgsz (Some (asid,vaddr))) cte entries
+                       (ArchObjectCap $ PageCap dev p R map_type pgsz (Some (asid,vaddr))) cte entries vspace
           odE
     else throwError TruncatedMessage
     else if invocation_type label = ArchInvocationLabel X64PageRemap then
@@ -347,7 +347,7 @@ where
              check_vp_alignment pgsz vaddr;
              entries \<leftarrow> create_mapping_entries (addrFromPPtr p) vaddr pgsz vm_rights
                                                (attribs_from_word attr) vspace;
-             returnOk $ InvokePage $ PageRemap entries
+             returnOk $ InvokePage $ PageRemap entries asid vspace
          odE
     else throwError TruncatedMessage
     else if invocation_type label = ArchInvocationLabel X64PageUnmap then 
@@ -395,7 +395,7 @@ where
                unlessE (old_pdpte = InvalidPDPTE) $ throwError DeleteFirst; 
                pdpte \<leftarrow> returnOk (PageDirectoryPDPTE (addrFromPPtr p) 
                           (filter_frame_attrs $ attribs_from_word attr) vm_read_write);
-               returnOk $ InvokePageDirectory $ PageDirectoryMap cap' cte pdpte pdpt_slot
+               returnOk $ InvokePageDirectory $ PageDirectoryMap cap' cte pdpte pdpt_slot pml
         odE
       else throwError TruncatedMessage
       else if invocation_type label = ArchInvocationLabel X64PageDirectoryUnmap then doE
@@ -430,7 +430,7 @@ where
                returnOk $ InvokePageTable $ 
                    PageTableMap
                    (ArchObjectCap $ PageTableCap p (Some (asid,vaddr')))
-                   cte pde pd_slot
+                   cte pde pd_slot pml
             odE
       else throwError TruncatedMessage
       else if invocation_type label = ArchInvocationLabel X64PageTableUnmap then doE
@@ -454,18 +454,18 @@ where
                     + ptTranslationBits + ptTranslationBits;
                vaddr' \<leftarrow> returnOk $ vaddr && ~~ mask shift_bits;
                whenE (vaddr' \<ge> kernel_base) $ throwError IllegalOperation;
-               (pml,asid) \<leftarrow> (case vspace_cap of
+               (vspace,asid) \<leftarrow> (case vspace_cap of
                        ArchObjectCap (PML4Cap pml (Some asid)) \<Rightarrow> returnOk (pml,asid)
                        | _ \<Rightarrow> throwError $ InvalidCapability 0);
-               pml' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid (asid);
-               whenE (pml \<noteq> pml) $ throwError $ InvalidCapability 0;
-               pml_slot \<leftarrow> returnOk $ lookup_pml4_slot pml vaddr;
+               vspace' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid (asid);
+               whenE (vspace' \<noteq> vspace) $ throwError $ InvalidCapability 0;
+               pml_slot \<leftarrow> returnOk $ lookup_pml4_slot vspace vaddr;
                old_pml4e \<leftarrow> liftE $ get_pml4e pml_slot;
                cap' <- returnOk $ ArchObjectCap $ PDPointerTableCap p $ Some (asid,vaddr');
                unlessE (old_pml4e = InvalidPML4E) $ throwError DeleteFirst; 
                pml4e \<leftarrow> returnOk (PDPointerTablePML4E (addrFromPPtr p) 
                           (filter_frame_attrs $ attribs_from_word attr) vm_read_write);
-               returnOk $ InvokePDPT $ PDPTMap cap' cte pml4e pml_slot
+               returnOk $ InvokePDPT $ PDPTMap cap' cte pml4e pml_slot vspace
             odE
       else throwError TruncatedMessage
       else if invocation_type label = ArchInvocationLabel X64PDPTUnmap then doE

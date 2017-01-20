@@ -20,8 +20,8 @@ begin
 section "Wrapping and Lifting Machine Operations"
 
 text {*
-  Most of the machine operations below work on the underspecified 
-  part of the machine state @{typ machine_state_rest} and cannot fail. 
+  Most of the machine operations below work on the underspecified
+  part of the machine state @{typ machine_state_rest} and cannot fail.
   We could express the latter by type (leaving out the failure flag),
   but if we later wanted to implement them,
   we'd have to set up a new hoare-logic
@@ -77,7 +77,7 @@ definition
 
 definition
   storeWord :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-  where "storeWord p w \<equiv> do 
+  where "storeWord p w \<equiv> do
                             assert (p && mask 3 = 0);
                             modify (underlying_memory_update (
                                       fold (\<lambda>i m. m((p + (of_int i)) := word_rsplit w ! (nat i))) [0 .. 7]))
@@ -89,7 +89,7 @@ lemma upto0_7_def:
 lemma loadWord_storeWord_is_return:
   "p && mask 3 = 0 \<Longrightarrow> (do w \<leftarrow> loadWord p; storeWord p w od) = return ()"
   apply (rule ext)
-  by (simp add: loadWord_def storeWord_def bind_def assert_def return_def 
+  by (simp add: loadWord_def storeWord_def bind_def assert_def return_def
     modify_def gets_def get_def eval_nat_numeral put_def upto0_7_def
     word_rsplit_rcat_size word_size)
 
@@ -106,7 +106,7 @@ consts'
 definition
   configureTimer :: "irq machine_monad"
 where
-  "configureTimer \<equiv> do 
+  "configureTimer \<equiv> do
     machine_op_lift configureTimer_impl;
     gets configureTimer_val
   od"
@@ -142,10 +142,10 @@ where
 
 -- "Interrupt controller operations"
 
-text {* 
+text {*
   @{term getActiveIRQ} is now derministic.
   It 'updates' the irq state to the reflect the passage of
-  time since last the irq was gotten, then it gets the active 
+  time since last the irq was gotten, then it gets the active
   IRQ (if there is one).
 *}
 definition
@@ -163,7 +163,7 @@ where
 definition
   maskInterrupt :: "bool \<Rightarrow> irq \<Rightarrow> unit machine_monad"
 where
-  "maskInterrupt m irq \<equiv> 
+  "maskInterrupt m irq \<equiv>
   modify (\<lambda>s. s \<lparr> irq_masks := (irq_masks s) (irq := m) \<rparr>)"
 
 text {* Does nothing on imx31 *}
@@ -185,7 +185,7 @@ definition
   clearMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
   where
  "clearMemory ptr bytelength \<equiv> mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size .e. ptr + (of_nat bytelength) - 1]"
-                                                                          
+
 definition
   clearMemoryVM :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
   where
@@ -221,35 +221,34 @@ type_synonym user_context = "register \<Rightarrow> machine_word"
 type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
 
 definition
-  getRegister :: "register \<Rightarrow> machine_word user_monad" 
+  getRegister :: "register \<Rightarrow> machine_word user_monad"
 where
   "getRegister r \<equiv> gets (\<lambda>uc. uc r)"
 
 definition
-  setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> unit user_monad" 
+  setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> unit user_monad"
 where
   "setRegister r v \<equiv> modify (\<lambda>uc. uc (r := v))"
 
 definition
-  "getRestartPC \<equiv> getRegister FaultInstruction" 
+  "getRestartPC \<equiv> getRegister FaultInstruction"
 
 definition
   "setNextPC \<equiv> setRegister NextIP"
- 
+
 consts'
   initL2Cache_impl :: "unit machine_rest_monad"
 definition
   initL2Cache :: "unit machine_monad"
 where "initL2Cache \<equiv> machine_op_lift initL2Cache_impl"
- 
-definition getCurrentCR3 :: "Platform.X64.cr3 machine_monad"
+
+consts'
+  writeCR3_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+
+definition writeCR3 :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
   where
-  "getCurrentCR3 \<equiv> undefined"
-  
-definition setCurrentCR3 :: "Platform.X64.cr3 \<Rightarrow> unit machine_monad"
-  where
-  "setCurrentCR3 \<equiv> undefined"
-  
+  "writeCR3 vspace pcid \<equiv> machine_op_lift (writeCR3_impl vspace pcid)"
+
 consts'
   mfence_impl :: "unit machine_rest_monad"
 definition
@@ -266,15 +265,24 @@ where
 "invalidateTLBEntry vptr \<equiv> machine_op_lift (invalidateTLBEntry_impl vptr)"
 
 consts'
-  invalidatePageStructureCache_impl :: "unit machine_rest_monad"
-  
+  invalidateTranslationSingleASID_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+
 definition
-  invalidatePageStructureCache :: "unit machine_monad" where
-  "invalidatePageStructureCache \<equiv> machine_op_lift invalidatePageStructureCache_impl"
-  
+  invalidateTranslationSingleASID :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+where
+  "invalidateTranslationSingleASID vptr asid \<equiv> machine_op_lift (invalidateTranslationSingleASID_impl vptr asid)"
+
+consts'
+  invalidateASID_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+
+definition
+  invalidateASID :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+where
+  "invalidateASID vspace asid \<equiv> machine_op_lift (invalidateASID_impl vspace asid)"
+
 consts'
   resetCR3_impl :: "unit machine_rest_monad"
-  
+
 definition
   resetCR3 :: "unit machine_monad" where
   "resetCR3 \<equiv> machine_op_lift resetCR3_impl "
@@ -291,12 +299,10 @@ where
 "numIODomainIDBits \<equiv> undefined"
 *)
 
-consts'
-  hwASIDInvalidate_impl :: "word64 \<Rightarrow> unit machine_rest_monad"
 definition
-hwASIDInvalidate :: "word64 \<Rightarrow> unit machine_monad"
+  hwASIDInvalidate :: "word64 \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
 where
-"hwASIDInvalidate asid \<equiv> machine_op_lift (hwASIDInvalidate_impl asid)"
+  "hwASIDInvalidate \<equiv> invalidateASID"
 
 
 consts'
@@ -346,10 +352,10 @@ ioapicMapPinToVector :: "machine_word \<Rightarrow> machine_word \<Rightarrow> m
 where
 "ioapicMapPinToVector ioapic pin level polarity vector \<equiv> machine_op_lift (ioapicMapPinToVector_impl ioapic pin level polarity vector)"
 
-datatype X64IRQState = 
+datatype X64IRQState =
    IRQFree
  | IRQReserved
- | IRQMSI 
+ | IRQMSI
       (MSIBus : machine_word)
       (MSIDev : machine_word)
       (MSIFunc : machine_word)
@@ -360,7 +366,7 @@ datatype X64IRQState =
       (IRQLevel : machine_word)
       (IRQPolarity : machine_word)
       (IRQMasked : bool)
-   
+
 
 consts'
   updateIRQState_impl :: "irq \<Rightarrow> X64IRQState \<Rightarrow> unit machine_rest_monad"

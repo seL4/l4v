@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Entry point for architecture dependent definitions.
 *)
 
@@ -91,10 +91,10 @@ text {* The ASIDPool capability confers the authority to assign a virtual ASID
 to a page directory. *}
 definition
 perform_asid_pool_invocation :: "asid_pool_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"perform_asid_pool_invocation iv \<equiv> case iv of Assign asid pool_ptr ct_slot \<Rightarrow> 
+"perform_asid_pool_invocation iv \<equiv> case iv of Assign asid pool_ptr ct_slot \<Rightarrow>
 do
     pml4_cap \<leftarrow> get_cap ct_slot;
-    case pml4_cap of 
+    case pml4_cap of
       ArchObjectCap (PML4Cap pml4_base _) \<Rightarrow> do
         pool \<leftarrow> get_asid_pool pool_ptr;
         pool' \<leftarrow> return (pool (ucast asid \<mapsto> pml4_base));
@@ -128,19 +128,25 @@ in. *}
 definition
 perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "perform_page_invocation iv \<equiv> (case iv of
-    PageMap cap ct_slot entries \<Rightarrow> do
+    PageMap cap ct_slot entries vspace \<Rightarrow> do
       set_cap cap ct_slot;
-      case entries
+      (case entries
        of (VMPTE pte, slot) \<Rightarrow> store_pte slot pte
         | (VMPDE pde, slot) \<Rightarrow> store_pde slot pde
         | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte
-        | _ \<Rightarrow> fail
+        | _ \<Rightarrow> fail);
+      asid <- case cap of ArchObjectCap (PageCap _ _ _ _ _ (Some (as, _))) \<Rightarrow> return as
+              | _ \<Rightarrow> fail;
+      invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
       od
-  | PageRemap entries \<Rightarrow> (case entries
+  | PageRemap entries asid vspace \<Rightarrow> do
+      (case entries
        of (VMPTE pte, slot) \<Rightarrow> store_pte slot pte
         | (VMPDE pde, slot) \<Rightarrow> store_pde slot pde
         | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte
-        | _ \<Rightarrow> fail)
+        | _ \<Rightarrow> fail);
+      invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
+    od
   | PageUnmap cap ct_slot \<Rightarrow>
       (case cap
          of PageCap dev base rights map_type sz mapped \<Rightarrow>
@@ -160,11 +166,13 @@ text {* PageTable capabilities confer the authority to map and unmap page
 tables. *}
 definition
 perform_page_table_invocation :: "page_table_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"perform_page_table_invocation iv \<equiv> 
-case iv of PageTableMap cap ct_slot pde pd_slot \<Rightarrow> do
+"perform_page_table_invocation iv \<equiv>
+case iv of PageTableMap cap ct_slot pde pd_slot vspace \<Rightarrow> do
     set_cap cap ct_slot;
     store_pde pd_slot pde;
-    do_machine_op $ invalidatePageStructureCache
+    asid <- case cap of ArchObjectCap (PageTableCap  _ (Some (as, _))) \<Rightarrow> return as
+            | _ \<Rightarrow> fail;
+    invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
   od
   | PageTableUnmap (ArchObjectCap (PageTableCap p mapped_address)) ct_slot \<Rightarrow> do
     case mapped_address of Some (asid, vaddr) \<Rightarrow> do
@@ -182,18 +190,20 @@ text {* PageDirectory capabilities confer the authority to map and unmap page
 tables. *}
 definition
 perform_page_directory_invocation :: "page_directory_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"perform_page_directory_invocation iv \<equiv> 
-case iv of PageDirectoryMap cap ct_slot pdpte pdpt_slot \<Rightarrow> do
+"perform_page_directory_invocation iv \<equiv>
+case iv of PageDirectoryMap cap ct_slot pdpte pdpt_slot vspace \<Rightarrow> do
     set_cap cap ct_slot;
     store_pdpte pdpt_slot pdpte;
-    do_machine_op $ invalidatePageStructureCache
+    asid <- case cap of ArchObjectCap (PageDirectoryCap _ (Some (as, _))) \<Rightarrow> return as
+            | _ \<Rightarrow> fail;
+    invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
   od
   | PageDirectoryUnmap (ArchObjectCap (PageDirectoryCap p mapped_address)) ct_slot \<Rightarrow> do
     case mapped_address of Some (asid, vaddr) \<Rightarrow> do
       unmap_pd asid vaddr p;
       pde_bits \<leftarrow> return word_size_bits;
       slots \<leftarrow> return [p, p + (1 << pde_bits) .e. p + (1 << pd_bits) - 1];
-      mapM_x (swp store_pde InvalidPDE) slots                  
+      mapM_x (swp store_pde InvalidPDE) slots
     od | None \<Rightarrow> return ();
     cap \<leftarrow> liftM the_arch_cap $ get_cap ct_slot;
     set_cap (ArchObjectCap $ update_map_data cap None) ct_slot
@@ -204,11 +214,13 @@ text {* PageDirectory capabilities confer the authority to map and unmap page
 tables. *}
 definition
 perform_pdpt_invocation :: "pdpt_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"perform_pdpt_invocation iv \<equiv> 
-case iv of PDPTMap cap ct_slot pml4e pml4_slot \<Rightarrow> do
+"perform_pdpt_invocation iv \<equiv>
+case iv of PDPTMap cap ct_slot pml4e pml4_slot vspace \<Rightarrow> do
     set_cap cap ct_slot;
     store_pml4e pml4_slot pml4e;
-    do_machine_op $ invalidatePageStructureCache
+    asid <- case cap of ArchObjectCap (PDPointerTableCap _ (Some (as, _))) \<Rightarrow> return as
+            | _ \<Rightarrow> fail;
+    invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
   od
   | PDPTUnmap (ArchObjectCap (PDPointerTableCap p mapped_address)) ct_slot \<Rightarrow> do
     case mapped_address of Some (asid, vaddr) \<Rightarrow> do

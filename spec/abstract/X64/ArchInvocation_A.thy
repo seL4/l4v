@@ -45,15 +45,15 @@ x64-specific system calls. Selectors are defined for various fields
 for convenience elsewhere. *}
 
 datatype pdpt_invocation =
-    PDPTMap cap cslot_ptr pml4e obj_ref
+    PDPTMap cap cslot_ptr pml4e obj_ref obj_ref
   | PDPTUnmap cap cslot_ptr
 
 datatype page_directory_invocation =
-    PageDirectoryMap cap cslot_ptr pdpte obj_ref
+    PageDirectoryMap cap cslot_ptr pdpte obj_ref obj_ref
   | PageDirectoryUnmap cap cslot_ptr
 
 datatype page_table_invocation = 
-    PageTableMap cap cslot_ptr pde obj_ref
+    PageTableMap cap cslot_ptr pde obj_ref obj_ref
   | PageTableUnmap cap cslot_ptr
 
 datatype asid_control_invocation = 
@@ -67,8 +67,11 @@ datatype page_invocation
          (page_map_cap: cap)
          (page_map_ct_slot: cslot_ptr)
          (page_map_entries: "vm_page_entry \<times> obj_ref")
+         (page_map_vspace: obj_ref)
      | PageRemap
          (page_remap_entries: "vm_page_entry \<times> obj_ref")
+         (page_remap_asid: asid)
+         (page_remap_vspace: obj_ref)
      | PageUnmap 
          (page_unmap_cap: arch_cap)
          (page_unmap_cap_slot: cslot_ptr)

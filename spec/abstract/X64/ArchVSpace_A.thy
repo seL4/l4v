@@ -148,14 +148,42 @@ where
       | X64InstructionFault \<Rightarrow> throwError $ ArchFault $ VMFault addr [1, fault && mask 5]
 odE"
 
-
-(* FIXME x64: should be a machine interface op/imported from Haskell *)
-consts'
-  setCurrentVSpaceRoot_impl :: "machine_word \<Rightarrow> asid \<Rightarrow> unit machine_rest_monad"
 definition
-  setCurrentVSpaceRoot :: "machine_word \<Rightarrow> asid \<Rightarrow> unit machine_monad" where 
-  "setCurrentVSpaceRoot pml4 asid = machine_op_lift (setCurrentVSpaceRoot_impl pml4 asid)"
+  getCurrentCR3 :: "(CR3, 'z::state_ext) s_monad"
+where
+  "getCurrentCR3 \<equiv> gets (x64_current_cr3 \<circ> arch_state)"
 
+definition
+  setCurrentCR3 :: "CR3 \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "setCurrentCR3 cr3 \<equiv> do
+     modify (\<lambda>s. s \<lparr>arch_state := (arch_state s) \<lparr>x64_current_cr3 := cr3\<rparr>\<rparr>);
+     do_machine_op $ writeCR3 (CR3BaseAddress cr3) (CR3pcid cr3)
+   od"
+
+definition
+  invalidateLocalPageStructureCacheASID :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "invalidateLocalPageStructureCacheASID vspace asid \<equiv> do
+     curCR3 \<leftarrow> getCurrentCR3;
+     setCurrentCR3 (CR3 vspace asid);
+     setCurrentCR3 curCR3
+   od"
+
+abbreviation "invalidatePageStructureCacheASID \<equiv> invalidateLocalPageStructureCacheASID"
+
+definition
+  getCurrentVSpaceRoot :: "(obj_ref, 'z::state_ext) s_monad"
+where
+  "getCurrentVSpaceRoot \<equiv> do
+      cur \<leftarrow> getCurrentCR3;
+      return $ CR3BaseAddress cur
+   od"
+
+definition
+  setCurrentVSpaceRoot :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "setCurrentVSpaceRoot vspace asid \<equiv> setCurrentCR3 $ CR3 vspace asid"
 
 text {* Switch into the address space of a given thread or the global address
 space if none is correctly configured. *}
@@ -168,12 +196,14 @@ definition
        ArchObjectCap (PML4Cap pml4 (Some asid)) \<Rightarrow> doE
            pml4' \<leftarrow> find_vspace_for_asid asid;
            whenE (pml4 \<noteq> pml4') $ throwError InvalidRoot;
-           liftE $ do_machine_op $ setCurrentVSpaceRoot (addrFromPPtr pml4) asid
+           curCR3 \<leftarrow> liftE $ getCurrentCR3;
+           whenE (CR3BaseAddress curCR3 \<noteq> pml4 \<and> CR3pcid curCR3 \<noteq> asid) $
+              liftE $ setCurrentCR3 $ CR3 (addrFromPPtr pml4) asid
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do
        global_pml4 \<leftarrow> gets (x64_global_pml4 \<circ> arch_state);
-       do_machine_op $ setCurrentVSpaceRoot (addrFromKPPtr global_pml4) 0
+       setCurrentVSpaceRoot (addrFromKPPtr global_pml4) 0
     od)
 od"
 
@@ -196,7 +226,7 @@ definition
 delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "delete_asid asid pml4 \<equiv> do
   asid_table \<leftarrow> gets (x64_asid_table \<circ> arch_state);
-  do_machine_op $ hwASIDInvalidate asid;
+  do_machine_op $ hwASIDInvalidate asid pml4;
   case asid_table (asid_high_bits_of asid) of
     None \<Rightarrow> return ()
   | Some pool_ptr \<Rightarrow>  do
@@ -211,40 +241,30 @@ delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_
 od"
 
 definition
-  flush_all :: "(unit,'z::state_ext) s_monad" where
-  "flush_all = do_machine_op resetCR3"
+  flush_all :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "flush_all vspace asid \<equiv> do_machine_op $ invalidateASID vspace asid "
 
 abbreviation
-  flush_pdpt :: "(unit,'z::state_ext) s_monad" where
+  flush_pdpt :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "flush_pdpt \<equiv> flush_all"
 
 abbreviation
-  flush_pd :: "(unit,'z::state_ext) s_monad" where
+  flush_pd :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "flush_pd \<equiv> flush_all"
 
 text {* Flush mappings associated with a page table. *}
 definition
-flush_table :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"flush_table pml4_ref vptr pt_ref \<equiv> do
+flush_table :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
+"flush_table pml4_ref vptr pt_ref asid \<equiv> do
     assert (vptr && mask (ptTranslationBits + pageBits) = 0);
-    tcb \<leftarrow> gets cur_thread;
-    thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
-    thread_root \<leftarrow> get_cap thread_root_slot;
-    case thread_root of
-       ArchObjectCap (PML4Cap pml4_ref' (Some _)) \<Rightarrow>
-         when (pml4_ref = pml4_ref') $ do
            pt \<leftarrow> get_pt pt_ref;
            forM_x [0 .e. (-1::9 word)] (\<lambda>index. do
              pte \<leftarrow> return $ pt index;
              case pte of
                InvalidPTE \<Rightarrow> return ()
-             | _ \<Rightarrow> do_machine_op $ invalidateTLBEntry (vptr + (ucast index << pageBits))
+             | _ \<Rightarrow> do_machine_op $ invalidateTranslationSingleASID (vptr + (ucast index << pageBits)) asid
            od)
-         od
-       | _ \<Rightarrow> return ()
 od"
-
-
 
 
 text {* Unmap a Page Directory Pointer Table from a PML4. *}
@@ -255,11 +275,11 @@ unmap_pdpt :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow>
   pm_slot \<leftarrow> returnOk $ lookup_pml4_slot vspace vaddr;
   pml4e \<leftarrow> liftE $ get_pml4e pm_slot;
   case pml4e of
-    PDPointerTablePML4E pt' _ _ \<Rightarrow> 
+    PDPointerTablePML4E pt' _ _ \<Rightarrow>
       if pt' = addrFromPPtr pdpt then returnOk () else throwError InvalidRoot
     | _ \<Rightarrow> throwError InvalidRoot;
   liftE $ do
-    flush_pdpt;
+    flush_pdpt vspace asid;
     store_pml4e pm_slot InvalidPML4E
   od
 odE <catch> (K $ return ())"
@@ -272,13 +292,13 @@ unmap_pd :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (
   pdpt_slot \<leftarrow> lookup_pdpt_slot vspace vaddr;
   pdpte \<leftarrow> liftE $ get_pdpte pdpt_slot;
   case pdpte of
-    PageDirectoryPDPTE pd' _ _ \<Rightarrow> 
+    PageDirectoryPDPTE pd' _ _ \<Rightarrow>
       if pd' = addrFromPPtr pd then returnOk () else throwError InvalidRoot
     | _ \<Rightarrow> throwError InvalidRoot;
   liftE $ do
-    flush_pd;
+    flush_pd vspace asid;
     store_pdpte pdpt_slot InvalidPDPTE;
-    do_machine_op invalidatePageStructureCache
+    invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
   od
 odE <catch> (K $ return ())"
 
@@ -290,13 +310,13 @@ unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Right
     pd_slot \<leftarrow> lookup_pd_slot vspace vaddr;
     pde \<leftarrow> liftE $ get_pde pd_slot;
     case pde of
-      PageTablePDE addr _ _ \<Rightarrow> 
+      PageTablePDE addr _ _ \<Rightarrow>
         if addrFromPPtr pt = addr then returnOk () else throwError InvalidRoot
       | _ \<Rightarrow> throwError InvalidRoot;
-    liftE $ do 
-      flush_table vspace vaddr pt;
+    liftE $ do
+      flush_table vspace vaddr pt asid;
       store_pde pd_slot InvalidPDE;
-      do_machine_op $ invalidatePageStructureCache
+      invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
     od
 odE <catch> (K $ return ())"
 
@@ -339,16 +359,7 @@ unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightar
             unlessE (check_mapping_pptr pptr (VMPDPTE pdpte)) $ throwError InvalidRoot;
             liftE $ store_pdpte pdpt_slot InvalidPDPTE
           odE;
-    liftE $ do
-      tcb \<leftarrow> gets cur_thread;
-      (* FIXME: duplication, pull this pattern out into a function; also in Haskell/C *) 
-      thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
-      thread_root \<leftarrow> get_cap thread_root_slot;
-      case thread_root of
-        ArchObjectCap (PML4Cap vspace' (Some _ )) \<Rightarrow> 
-          when (vspace' = vspace) $ do_machine_op $ invalidateTLBEntry vptr
-        | _ \<Rightarrow> return ()
-    od
+    liftE $ do_machine_op $ invalidateTranslationSingleASID vptr asid
 odE <catch> (K $ return ())"
 
 
@@ -502,7 +513,7 @@ attribs_from_word :: "machine_word \<Rightarrow> frame_attrs" where
 text {* Update the mapping data saved in a page or page table capability. *}
 definition
   update_map_data :: "arch_cap \<Rightarrow> (asid \<times> vspace_ref) option \<Rightarrow> arch_cap" where
-  "update_map_data cap m \<equiv> case cap of 
+  "update_map_data cap m \<equiv> case cap of
      PageCap dev p R mt sz _ \<Rightarrow> PageCap dev p R mt sz m
    | PageTableCap p _ \<Rightarrow> PageTableCap p m
    | PageDirectoryCap p _ \<Rightarrow> PageDirectoryCap p m

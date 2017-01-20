@@ -64,7 +64,7 @@ definition
   maxIRQ :: "irq" where
   "maxIRQ \<equiv> 63"
   
-datatype cr3 = X64CR3 word64 word64
+datatype cr3 = X64CR3 word64 (*pml4*) word64 (*asid*)
 
 primrec CR3BaseAddress where
 "CR3BaseAddress (X64CR3 v0 _) = v0"
