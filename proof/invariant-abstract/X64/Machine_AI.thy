@@ -242,6 +242,9 @@ context notes no_irq[wp] begin
 lemma no_irq_ackInterrupt: "no_irq (ackInterrupt irq)"
   by (wp | clarsimp simp: no_irq_def ackInterrupt_def)+
 
+lemma no_irq_writeCR3: "no_irq (writeCR3 vs asid)"
+  by (wp | clarsimp simp: no_irq_def writeCR3_def)+
+
 lemma no_irq_loadWord: "no_irq (loadWord x)"
   apply (clarsimp simp: no_irq_def)
   apply (rule loadWord_inv)
@@ -311,15 +314,9 @@ lemma no_irq_modify:
   apply (clarsimp simp: in_monad)
   done
   
-lemma no_irq_setCurrentVSpaceRoot: "no_irq (setCurrentVSpaceRoot pm addr)"
-  by (clarsimp simp: setCurrentVSpaceRoot_def)
-  
 lemma no_irq_invalidateTLBEntry: "no_irq (invalidateTLBEntry a)"
   by (clarsimp simp: invalidateTLBEntry_def)
   
-lemma no_irq_invalidatePageStructureCache: "no_irq invalidatePageStructureCache"
-  by (clarsimp simp: invalidatePageStructureCache_def)
-
 lemma no_irq_resetCR3: "no_irq resetCR3"
   by (clarsimp simp: resetCR3_def)
   
@@ -365,10 +362,6 @@ lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"
   by (simp add: clearMemory_def mapM_x_mapM ef_storeWord)
 
-(* FIXME x64: move *)
-lemma setCurrentVSpaceRoot_ef[simp,wp]: "empty_fail (setCurrentVSpaceRoot a b)"
-  by (simp add: setCurrentVSpaceRoot_def)
-  
 lemma getFaultAddress_ef[simp,wp]: "empty_fail getFaultAddress"
   by (simp add: getFaultAddress_def)
 
@@ -380,8 +373,11 @@ lemma ioapicMapPinToVector_ef[simp,wp]: "empty_fail (ioapicMapPinToVector a b c 
 lemma invalidateTLBEntry_ef[simp,wp]: "empty_fail (invalidateTLBEntry b)"
   by (simp add: invalidateTLBEntry_def)
 
+lemma invalidateASID_ef[simp,wp]: "empty_fail (invalidateASID a b)"
+  by (simp add: invalidateASID_def)
+
 (* FIXME x64: move *)
-lemma hwASIDInvalidate_ef[simp,wp]: "empty_fail (hwASIDInvalidate b)"
+lemma hwASIDInvalidate_ef[simp,wp]: "empty_fail (hwASIDInvalidate b a)"
   by (simp add: hwASIDInvalidate_def)
 
 (* FIXME x64: move *)
@@ -389,12 +385,12 @@ lemma updateIRQState_ef[simp,wp]: "empty_fail (updateIRQState b c)"
   by (simp add: updateIRQState_def)
   
 (* FIXME x64: move *)
-lemma invalidatePageStructureCache_ef[simp,wp]: "empty_fail (invalidatePageStructureCache)"
-  by (simp add: invalidatePageStructureCache_def)
-  
-(* FIXME x64: move *)
 lemma resetCR3_ef[simp,wp]: "empty_fail (resetCR3)"
   by (simp add: resetCR3_def)
+
+(* FIXME x64: move *)
+lemma writeCR3_ef[simp,wp]: "empty_fail (writeCR3 a b)"
+  by (simp add: writeCR3_def)
 
 (* FIXME x64: move *)
 lemma in8_ef[simp,wp]: "empty_fail (in8 port)"
