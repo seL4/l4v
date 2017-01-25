@@ -58,7 +58,11 @@ lemma Suc_unat_mask_div_obfuscated:
 lemma word_size_size_bits_nat:
   "2^word_size_bits = (word_size :: nat)"
   by (simp add: word_size_bits_def word_size_def)
-  
+
+lemma word_size_size_bits_word:
+  "2^word_size_bits = (word_size :: 'a :: len word)"
+  by (simp add: word_size_bits_def word_size_def)
+
 end
 
 end

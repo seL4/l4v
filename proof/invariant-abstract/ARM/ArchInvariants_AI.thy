@@ -864,6 +864,11 @@ lemma vs_lookup1I:
           rs' = r # rs \<rbrakk> \<Longrightarrow> ((rs,p) \<rhd>1 (rs',p')) s"
   by (fastforce simp add: vs_lookup1_def)
 
+lemma vs_lookup_pages1I:
+  "\<lbrakk> ko_at ko p s; (r, p') \<in> vs_refs_pages ko;
+          rs' = r # rs \<rbrakk> \<Longrightarrow> ((rs,p) \<unrhd>1 (rs',p')) s"
+  by (fastforce simp add: vs_lookup_pages1_def)
+
 lemma vs_lookup1D:
   "(x \<rhd>1 y) s \<Longrightarrow> \<exists>rs r p p' ko. x = (rs,p) \<and> y = (r # rs,p')
                           \<and> ko_at ko p s \<and> (r,p') \<in> vs_refs ko"

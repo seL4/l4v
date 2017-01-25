@@ -1374,4 +1374,9 @@ lemma range_cover_sz':
 lemma if3_fold2:
   "(if P then x else if Q then x else y) = (if P \<or> Q then x else y)" by simp
 
+(* FIXME: move *)
+lemma not_emptyI:
+  "\<And>x A B. \<lbrakk>x\<in>A; x\<in>B\<rbrakk> \<Longrightarrow> A \<inter> B\<noteq> {}"
+  by auto
+
 end

@@ -240,87 +240,34 @@ lemma vs_lookup_pages_preserved:
   apply (fastforce intro: global_pts no_obj_refs)
   done
 
-(* FIXME: This is really horrible but I can't get the automated methods
-          to "get it". *)
+context begin
+
+private method crush for i =
+  (simp add: data_at_def obj_at_def;
+   elim disjE exE conjE;
+   clarsimp;
+   erule vs_lookup_pages_preserved;
+   erule vs_lookup_pages_step;
+   clarsimp simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def;
+   strengthen image_eqI;
+   clarsimp simp: graph_of_def pte_ref_pages_def pde_ref_pages_def;
+   rule exI;
+   strengthen refl;
+   simp;
+   rule exI[of _ i];
+   fastforce)
+
 lemma valid_arch_obj:
   "\<And>ao p. \<lbrakk> valid_arch_obj ao s; ko_at (ArchObj ao) p s; (\<exists>\<rhd>p) s \<rbrakk> \<Longrightarrow>
        valid_arch_obj ao (detype (untyped_range cap) s)"
- apply (case_tac ao)
-    apply (clarsimp simp: ran_def)
-    apply (erule vs_lookup_preserved)
-    apply (erule vs_lookup_step)
-    apply (erule vs_lookup1I[OF _ _ refl])
-    apply (simp add: vs_refs_def)
-    apply (rule image_eqI[rotated])
-     apply (erule graph_ofI)
-    apply fastforce
-   apply (rename_tac "fun")
-   apply clarsimp
-   apply (erule_tac x=x in allE)
-   apply (case_tac "fun x", simp_all)[1]
-    apply (rename_tac word attr rights)
-    apply (drule_tac p'="(ptrFromPAddr word)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
-     apply (clarsimp simp: vs_lookup_pages1_def)
-     apply (rule exI, erule conjI)
-     apply (rule_tac x="VSRef (ucast x) (Some APageTable)" in exI)
-     apply (rule conjI[OF refl])
-     apply (clarsimp simp: vs_refs_pages_def graph_of_def pte_ref_pages_def)
-     apply (rule_tac x="(x, (ptrFromPAddr word))" in image_eqI)
-      apply (simp add: split_def)
-     apply simp
-    apply (force dest!: vs_lookup_pages_preserved simp: data_at_def)
-   apply (rename_tac word attr rights)
-   apply (drule_tac p'="(ptrFromPAddr word)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
-    apply (clarsimp simp: vs_lookup_pages1_def)
-    apply (rule exI, erule conjI)
-    apply (rule_tac x="VSRef (ucast x) (Some APageTable)" in exI)
-    apply (rule conjI[OF refl])
-    apply (clarsimp simp: vs_refs_pages_def graph_of_def pte_ref_pages_def)
-    apply (rule_tac x="(x, (ptrFromPAddr word))" in image_eqI)
-     apply (simp add: split_def)
-    apply simp
-   apply (force dest!: vs_lookup_pages_preserved simp: data_at_def)
-  apply (rename_tac "fun")
-  apply clarsimp
-  apply (case_tac "fun x", simp_all)[1]
-    apply (rename_tac word1 attr word2)
-    apply (drule bspec, simp)
-    apply (clarsimp simp: valid_pde_def)
-    apply (drule_tac p'="(ptrFromPAddr word1)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
-    apply (clarsimp simp: vs_lookup_pages1_def)
-     apply (rule exI, erule conjI)
-     apply (rule_tac x="VSRef (ucast x) (Some APageDirectory)" in exI)
-     apply (rule conjI[OF refl])
-     apply (clarsimp simp: vs_refs_pages_def graph_of_def pde_ref_pages_def)
-     apply (rule_tac x="(x, (ptrFromPAddr word1))" in image_eqI)
-      apply (simp add: split_def)
-     apply (simp add: pde_ref_pages_def)
-    apply (force dest!: vs_lookup_pages_preserved)
-   apply (rename_tac word1 attr word2 rights)
-   apply (drule_tac p'="(ptrFromPAddr word1)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
-    apply (clarsimp simp: vs_lookup_pages1_def)
-    apply (rule exI, erule conjI)
-    apply (rule_tac x="VSRef (ucast x) (Some APageDirectory)" in exI)
-    apply (rule conjI[OF refl])
-    apply (clarsimp simp: vs_refs_pages_def graph_of_def pde_ref_pages_def)
-    apply (rule_tac x="(x, (ptrFromPAddr word1))" in image_eqI)
-     apply (simp add: split_def)
-    apply (simp add: pde_ref_pages_def)
-   apply (force dest!: vs_lookup_pages_preserved simp: data_at_def)
-  apply (rename_tac word attr rights)
-  apply (drule_tac p'="(ptrFromPAddr word)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
-   apply (clarsimp simp: vs_lookup_pages1_def)
-   apply (rule exI, erule conjI)
-   apply (rule_tac x="VSRef (ucast x) (Some APageDirectory)" in exI)
-   apply (rule conjI[OF refl])
-    apply (clarsimp simp: vs_refs_pages_def graph_of_def pde_ref_pages_def)
-    apply (rule_tac x="(x, (ptrFromPAddr word))" in image_eqI)
-     apply (simp add: split_def)
-    apply (simp add: pde_ref_pages_def)
-   apply (force dest!: vs_lookup_pages_preserved simp: data_at_def)
-  apply clarsimp
+  apply (case_tac ao; simp; erule allEI ballEI; clarsimp simp: ran_def;
+         drule vs_lookup_pages_vs_lookupI)
+  subgoal for p t r ref i by (crush i)
+  subgoal for p t i ref by (cases "t i"; crush i)
+  subgoal for p t i ref by (cases "t i"; crush i)
   done
 
+end
 
 lemma valid_arch_obj_detype[detype_invs_proofs]: "valid_arch_objs (detype (untyped_range cap) s)"
   proof -
@@ -369,7 +316,7 @@ lemma valid_table_caps:
   apply (simp add: valid_table_caps_def del: imp_disjL)
   apply (elim allEI | rule impI)+
   apply clarsimp
-  apply (metis detype_arch_state no_obj_refs) (* METIS USED *)
+  apply (metis detype_arch_state no_obj_refs)
   done
 
 
@@ -453,43 +400,28 @@ proof -
     done
 qed
 
-(* FIXME: move *)
-lemma not_emptyI:
-  "\<And>x A B. \<lbrakk>x\<in>A; x\<in>B\<rbrakk> \<Longrightarrow> A \<inter> B\<noteq> {}"
-  by auto
-
 lemma in_user_frame_eq:
-  notes blah[simp del] =  atLeastAtMost_iff
-          atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          order_class.Icc_eq_Icc
-     and  p2pm1[simp] = p2pm1_to_mask
-  shows  "p \<notin> untyped_range cap \<Longrightarrow> in_user_frame p
+  notes [simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+                     order_class.Icc_eq_Icc
+    and [simp] = p2pm1_to_mask
+  shows "p \<notin> untyped_range cap \<Longrightarrow> in_user_frame p
               (trans_state (\<lambda>_. detype_ext (untyped_range cap) (exst s)) s
                \<lparr>kheap := \<lambda>x. if x \<in> untyped_range cap then None else kheap s x\<rparr>)
          = in_user_frame p s"
     using cap_is_valid untyped
-    apply (clarsimp simp: in_user_frame_def)
-    apply (case_tac cap,simp_all)
-    subgoal for dev ptr n f
-      apply (clarsimp simp: valid_untyped_def valid_cap_def)
-      apply (rule iffI)
-       apply (clarsimp simp: obj_at_def)
-       apply (elim allE, erule impE)
-        apply (fastforce split: if_splits)
-       apply (intro exI conjI,(fastforce simp: a_type_simps split: if_splits)+)[1]
-      apply (clarsimp simp: obj_at_def)
-      apply (elim allE, erule impE)
-       apply (fastforce split: if_splits)
-      apply (rule_tac x = sz in exI)
-      apply (frule valid_pspace_aligned[OF valid_pspace])
-      apply (clarsimp simp: a_type_simps obj_range_def cap_aligned_def)
+    apply (cases cap; simp add: in_user_frame_def valid_untyped_def valid_cap_def obj_at_def)
+    apply (rule iffI; erule exEI; elim conjE exE; simp)
+    subgoal for dev ptr n f sz ko
+      apply (elim allE; erule (1) impE)
+      apply (drule valid_pspace_aligned[OF valid_pspace])
+      apply (clarsimp simp: obj_range_def)
       apply (erule impE)
        apply (erule not_emptyI[rotated])
-       apply (rule mask_in_range[THEN iffD1,simplified])
+       apply (rule mask_in_range[THEN iffD1, simplified])
         apply (simp add: is_aligned_neg_mask)
        apply (simp add: mask_lower_twice)
-      apply (cut_tac mask_in_range[THEN iffD1,simplified,OF is_aligned_neg_mask[OF le_refl] refl])
+      apply (cut_tac mask_in_range[THEN iffD1, simplified, OF is_aligned_neg_mask[OF le_refl] refl])
       apply fastforce
       done
     done
@@ -505,28 +437,20 @@ lemma in_device_frame_eq:
               (trans_state (\<lambda>_. detype_ext (untyped_range cap) (exst s)) s
                \<lparr>kheap := \<lambda>x. if x \<in> untyped_range cap then None else kheap s x\<rparr>)
          = in_device_frame p s"
-    using untyped cap_is_valid
-    apply (clarsimp simp: in_device_frame_def)
-    apply (case_tac cap,simp_all)
-    subgoal for dev ptr n f
-      apply (clarsimp simp: valid_untyped_def valid_cap_def)
-      apply (rule iffI)
-       apply (clarsimp simp: obj_at_def)
-       apply (elim allE, erule impE)
-        apply (fastforce split: if_splits)
-       apply (intro exI conjI,(fastforce simp: a_type_simps split: if_splits)+)[1]
-      apply (clarsimp simp: obj_at_def)
-      apply (elim allE, erule impE)
-       apply (fastforce split: if_splits)
-      apply (rule_tac x = sz in exI)
-      apply (frule valid_pspace_aligned[OF valid_pspace])
-      apply (clarsimp simp: a_type_simps obj_range_def cap_aligned_def)
+    using cap_is_valid untyped
+    unfolding in_device_frame_def
+    apply (cases cap; simp add: in_device_frame_def valid_untyped_def valid_cap_def obj_at_def)
+    apply (rule iffI; erule exEI; elim conjE exE; simp)
+    subgoal for dev ptr n f sz ko
+      apply (elim allE; erule (1) impE)
+      apply (drule valid_pspace_aligned[OF valid_pspace])
+      apply (clarsimp simp: obj_range_def)
       apply (erule impE)
        apply (erule not_emptyI[rotated])
-       apply (rule mask_in_range[THEN iffD1,simplified])
+       apply (rule mask_in_range[THEN iffD1, simplified])
         apply (simp add: is_aligned_neg_mask)
        apply (simp add: mask_lower_twice)
-      apply (cut_tac mask_in_range[THEN iffD1,simplified,OF is_aligned_neg_mask[OF le_refl] refl])
+      apply (cut_tac mask_in_range[THEN iffD1, simplified, OF is_aligned_neg_mask[OF le_refl] refl])
       apply fastforce
       done
     done
