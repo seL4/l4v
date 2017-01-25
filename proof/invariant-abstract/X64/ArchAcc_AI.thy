@@ -1510,7 +1510,7 @@ lemma set_pml4_valid_global:
   by (wp valid_global_refs_cte_lift)
 
 
-lemma set_pml4_valid_arch:
+lemma set_pml4_valid_arch [wp]:
   "\<lbrace>\<lambda>s. valid_arch_state s\<rbrace>
   set_pml4 p pml4
   \<lbrace>\<lambda>_ s. valid_arch_state s\<rbrace>"
@@ -1535,7 +1535,7 @@ lemma set_pdpt_valid_global:
   by (wp valid_global_refs_cte_lift)
 
 
-lemma set_pdpt_valid_arch:
+lemma set_pdpt_valid_arch [wp]:
   "\<lbrace>\<lambda>s. valid_arch_state s\<rbrace>
   set_pdpt p pdpt
   \<lbrace>\<lambda>_ s. valid_arch_state s\<rbrace>"
@@ -1560,7 +1560,7 @@ lemma set_pd_valid_global:
   by (wp valid_global_refs_cte_lift)
 
 
-lemma set_pd_valid_arch:
+lemma set_pd_valid_arch [wp]:
   "\<lbrace>\<lambda>s. valid_arch_state s\<rbrace>
   set_pd p pd
   \<lbrace>\<lambda>_ s. valid_arch_state s\<rbrace>"

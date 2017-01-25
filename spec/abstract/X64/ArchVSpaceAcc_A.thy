@@ -233,7 +233,7 @@ copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" whe
     global_pm \<leftarrow> gets (x64_global_pml4 \<circ> arch_state);
     base \<leftarrow> return $ get_pml4_index pptr_base;
     pme_bits \<leftarrow> return word_size_bits;
-    pm_size \<leftarrow> return (1 << table_size);
+    pm_size \<leftarrow> return (1 << ptTranslationBits);
     mapM_x (\<lambda>index. do
         offset \<leftarrow> return (index << pme_bits);
         pme \<leftarrow> get_pml4e (global_pm + offset);

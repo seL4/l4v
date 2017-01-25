@@ -1134,7 +1134,6 @@ lemma simpler_set_pml4_def:
                  return_def fail_def set_object_def get_def put_def bind_def
           split: Structures_A.kernel_object.split arch_kernel_obj.split)
 
-(* FIXME x64: this needs fleshing out with PD, PT levels *)
 lemma set_pml4_valid_vs_lookup_map:
   "\<lbrace>valid_vs_lookup and valid_arch_state and valid_arch_objs and
     obj_at (\<lambda>ko. vs_refs (ArchObj (PageMapL4 pml4)) =
@@ -1239,7 +1238,7 @@ lemma set_pml4_valid_vs_lookup_map:
   apply (clarsimp split: if_split_asm)
   apply (drule (7) vs_lookup_pages_pdptI)
   apply simp
-  oops
+  sorry
 
 lemma set_pml4_valid_arch_caps:
   "\<lbrace>valid_arch_caps and valid_arch_state and valid_arch_objs and
@@ -1331,7 +1330,7 @@ lemma set_pml4_valid_arch_caps:
   apply (frule_tac cap=cap and cap'=capa and cs="caps_of_state s" in unique_table_caps_pml4D)
         apply (simp add: is_pml4_cap_def)+
     apply (clarsimp simp: is_pml4_cap_def)+
-  done *) oops
+  done *) sorry
 
 (* FIXME: move to wellformed *)
 lemma global_pml4e_graph_ofI:
@@ -1651,6 +1650,34 @@ lemma ref_is_unique:
   apply (clarsimp simp: is_pt_cap_def table_cap_ref_simps vs_cap_ref_simps)
   done
 
+lemma pml4_translation_bits:
+  fixes p :: machine_word
+  shows "p && mask pml4_bits >> word_size_bits < 2 ^ ptTranslationBits"
+  apply (rule shiftr_less_t2n)
+  apply (simp add: pml4_bits_def simple_bit_simps)
+  apply (rule and_mask_less'[of 12 p, simplified])
+  done
+
+lemma ucast_ucast_mask_shift_helper:
+  "ucast (ucast (p && mask pml4_bits >> word_size_bits :: machine_word) :: 9 word)
+        = (p && mask pml4_bits >> word_size_bits :: machine_word)"
+  apply (rule ucast_ucast_len)
+  using pml4_translation_bits by (auto simp: ptTranslationBits_def)
+
+lemma unat_ucast_pml4_bits_shift:
+  "unat (ucast (p && mask pml4_bits >> word_size_bits :: machine_word) :: 9 word)
+        = unat (p && mask pml4_bits >> word_size_bits)"
+  apply (simp only: unat_ucast)
+  apply (rule mod_less[OF unat_less_power])
+  using pml4_translation_bits by (auto simp: ptTranslationBits_def)
+
+lemma kernel_vsrefs_kernel_mapping_slots:
+  "(ucast (p && mask pml4_bits >> word_size_bits) \<in> kernel_mapping_slots) =
+    (VSRef (p && mask pml4_bits >> word_size_bits) (Some APageMapL4) \<in> kernel_vsrefs)"
+  apply (clarsimp simp: kernel_mapping_slots_def kernel_vsrefs_def
+                        word_le_nat_alt unat_ucast_pml4_bits_shift)
+  apply (clarsimp simp: pptr_base_def pptrBase_def bit_simps mask_def)
+  done
 
 lemma vs_lookup_typI:
   "\<lbrakk>(r \<rhd> p) s; valid_arch_objs s; valid_asid_table (x64_asid_table (arch_state s)) s\<rbrakk>
@@ -3390,6 +3417,11 @@ lemma find_vspace_for_asid_cap_to_multiple2[wp]:
   done
 *) sorry
 
+lemma unat_ucast_kernel_base_rshift:
+  "unat (ucast (pptr_base >> pml4_shift_bits) :: 9 word)
+    = unat ((pptr_base >> pml4_shift_bits) && mask ptTranslationBits)"
+  by (simp add: pptr_base_def pptrBase_def bit_simps mask_def)
+
 (*
 lemma lookup_pd_slot_kernel_mappings_set_strg:
   "is_aligned pd pd_bits \<and> vmsz_aligned vptr ARMSuperSection
@@ -4486,12 +4518,10 @@ lemma perform_asid_pool_invs [wp]:
 
 lemma invs_aligned_pml4D:
   "\<lbrakk> pspace_aligned s; valid_arch_state s \<rbrakk> \<Longrightarrow> is_aligned (x64_global_pml4 (arch_state s)) pml4_bits"
-(*
   apply (clarsimp simp: valid_arch_state_def)
-  apply (drule (1) pml4_aligned)
+  apply (drule (1) is_aligned_pml4)
   apply (simp add: pml4_bits_def pageBits_def)
   done
-*) sorry
 
 end
 end
