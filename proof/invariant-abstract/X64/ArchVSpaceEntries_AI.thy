@@ -81,7 +81,7 @@ proof -
     by (clarsimp simp: entries_align_def)
   thus ?thesis using P
     by (auto simp: init_A_st_def init_kheap_def
-            elim!: ranE split: split_if_asm)
+            elim!: ranE split: if_split_asm)
 qed
 
 lemma set_object_valid_pdpt[wp]:
@@ -143,7 +143,7 @@ lemma mapM_x_store_pte_updates:
    apply wp
    apply (clarsimp simp: obj_at_def)
    apply (simp add: a_type_def fun_upd_idem
-             split: Structures_A.kernel_object.split_asm split_if_asm
+             split: Structures_A.kernel_object.split_asm if_split_asm
                     arch_kernel_obj.split_asm)
   apply (simp add: mapM_x_Cons)
   apply (rule hoare_seq_ext, assumption)
@@ -204,7 +204,7 @@ lemma mapM_x_store_invalid_pte_valid_pdpt:
      apply (erule order_le_less_trans, simp)
     apply (simp add: field_simps)
    apply (simp add: pt_bits_def pageBits_def)
-  apply (clarsimp simp: ranI elim!: ranE split: split_if_asm)
+  apply (clarsimp simp: ranI elim!: ranE split: if_split_asm)
   apply (intro conjI)
    apply (simp add: shift_0x3C_set pt_bits_def pageBits_def)
    apply (rule valid_entries_overwrite_groups
@@ -239,7 +239,7 @@ lemma mapM_x_store_pde_updates:
    apply wp
    apply (clarsimp simp: obj_at_def)
    apply (simp add: a_type_def fun_upd_idem
-             split: Structures_A.kernel_object.split_asm split_if_asm
+             split: Structures_A.kernel_object.split_asm if_split_asm
                     arch_kernel_obj.split_asm)
   apply (simp add: mapM_x_Cons)
   apply (rule hoare_seq_ext, assumption)
@@ -267,7 +267,7 @@ lemma mapM_x_store_pde_valid_pdpt_objs:
      apply (erule order_le_less_trans, simp)
     apply (simp add: field_simps)
    apply (simp add: pd_bits_def pageBits_def)
-  apply (clarsimp simp: ranI elim!: ranE split: split_if_asm)
+  apply (clarsimp simp: ranI elim!: ranE split: if_split_asm)
   apply (simp add: shift_0x3C_set pd_bits_def pageBits_def)
   apply (rule conjI)
    apply (rule_tac valid_entries_overwrite_groups
@@ -446,10 +446,10 @@ lemma mapM_x_copy_pde_updates:
    apply assumption
   apply (thin_tac "valid P f Q" for P f Q)
   apply (simp add: store_pde_def set_pd_def set_object_def
-             cong: bind_cong split del: split_if)
+             cong: bind_cong split del: if_split)
   apply (wp get_object_wp get_pde_wp)
   apply (clarsimp simp: obj_at_def a_type_simps mask_out_add_aligned[symmetric]
-             split del: split_if)
+             split del: if_split)
   apply (simp add: a_type_simps, safe)
    apply (erule rsubst[where P=Q])
    apply (rule abstract_state.fold_congs[OF refl refl])
@@ -476,7 +476,7 @@ lemma copy_global_mappings_valid_pdpt_objs[wp]:
    apply (drule plus_one_helper2, simp+)
   apply wp
   apply (clarsimp simp: invs_aligned_pdD ranI
-                 elim!: ranE split: split_if_asm)
+                 elim!: ranE split: if_split_asm)
   apply (intro conjI)
    apply (rule_tac S="{x. ucast x \<ge> (kernel_base >> 20)}"
                  in valid_entries_partial_copy)
@@ -612,7 +612,7 @@ lemma arch_recycle_cap_valid_pdpt[wp]:
          and pspace_aligned and valid_arch_state\<rbrace>
       arch_recycle_cap is_final cap \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (simp add: arch_recycle_cap_def
-             cong: arch_cap.case_cong split del: split_if)
+             cong: arch_cap.case_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wp |wpc | simp)+
      apply (simp add:swp_def)
@@ -662,7 +662,7 @@ lemma invoke_cnode_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs and invs and valid_cnode_inv i\<rbrace> invoke_cnode i \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-   apply (wp get_cap_wp | wpc | simp split del: split_if)+
+   apply (wp get_cap_wp | wpc | simp split del: if_split)+
   apply (clarsimp)
   done
 
@@ -695,10 +695,10 @@ lemma valid_pdpt_objs_trans_state[simp]: "valid_pdpt_objs (trans_state f s) = va
 
 lemma retype_region_valid_pdpt[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> retype_region ptr bits o_bits type \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  apply (simp add: retype_region_def split del: split_if)
+  apply (simp add: retype_region_def split del: if_split)
   apply (wp | simp only: valid_pdpt_objs_trans_state trans_state_update[symmetric])+
   apply (clarsimp simp: retype_addrs_fold foldr_upd_app_if ranI
-                 elim!: ranE split: split_if_asm simp del:fun_upd_apply)
+                 elim!: ranE split: if_split_asm simp del:fun_upd_apply)
   apply (simp add: default_object_def default_arch_object_def
             split: Structures_A.kernel_object.splits
     Structures_A.apiobject_type.split aobject_type.split)+
@@ -1787,7 +1787,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
   show ?thesis
   apply (simp add: arch_decode_invocation_def
               Let_def split_def get_master_pde_def
-              split del: split_if
+              split del: if_split
                    cong: arch_cap.case_cong if_cong cap.case_cong
                          option.case_cong)
   apply (rule hoare_pre)
@@ -1802,7 +1802,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
                          mask_lower_twice pd_bits_def bitwise pageBits_def
                          not_le sz
                     del: hoare_True_E_R
-                     split del: split_if
+                     split del: if_split
              | simp only: obj_at_def)+)
          apply (rule_tac Q'="\<lambda>rv. \<exists>\<rhd> rv and K (is_aligned rv pd_bits) and
                   (\<exists>\<rhd> (lookup_pd_slot rv (args ! 0) && ~~ mask pd_bits)) and
@@ -1822,7 +1822,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
                          mask_lower_twice pd_bits_def bitwise pageBits_def
                          not_le sz
                     del: hoare_True_E_R
-                     split del: split_if
+                     split del: if_split
              | simp only: obj_at_def)+)
          apply (rule_tac Q'="\<lambda>rv. \<exists>\<rhd> rv and K (is_aligned rv pd_bits) and
                   (\<exists>\<rhd> (lookup_pd_slot rv (snd pa) && ~~ mask pd_bits)) and
@@ -1843,7 +1843,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
                          mask_lower_twice pd_bits_def bitwise pageBits_def
                          not_le sz
                     del: hoare_True_E_R
-                     split del: split_if
+                     split del: if_split
              | simp only: obj_at_def)+)
          apply (rule hoare_post_imp_R[where P=\<top>])
           apply (rule hoare_True_E_R)
@@ -1853,7 +1853,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
              | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
                          pti_duplicates_valid_def page_inv_duplicates_valid_def
                      del: hoare_True_E_R
-                     split del: split_if
+                     split del: if_split
              | simp only: obj_at_def)+)
   apply (auto simp:valid_cap_simps)
   done
@@ -1862,7 +1862,7 @@ qed
 lemma decode_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and valid_cap cap and valid_pdpt_objs\<rbrace> decode_invocation label args cap_index slot cap excaps
    \<lbrace>invocation_duplicates_valid\<rbrace>,-"
-  apply (simp add: decode_invocation_def split del: split_if)
+  apply (simp add: decode_invocation_def split del: if_split)
   apply (rule hoare_pre)
    apply (wp | wpc
             | simp only: invocation_duplicates_valid_def o_def uncurry_def split_def

@@ -41,9 +41,9 @@ named_theorems Interrupt_AI_asms
 lemma (* decode_irq_control_invocation_inv *)[Interrupt_AI_asms]:
   "\<lbrace>P\<rbrace> decode_irq_control_invocation label args slot caps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: decode_irq_control_invocation_def Let_def arch_check_irq_def
-                   arch_decode_irq_control_invocation_def whenE_def split del: split_if)
+                   arch_decode_irq_control_invocation_def whenE_def split del: if_split)
   apply (rule hoare_pre)
-   apply (wp | simp split del: split_if)+
+   apply (wp | simp split del: if_split)+
   done
  
 lemma irq_control_inv_valid_ArchIRQControl[simp]:
@@ -69,11 +69,11 @@ lemma arch_decode_irq_control_valid[wp]:
    \<lbrace>arch_irq_control_inv_valid\<rbrace>,-"
   apply (simp add: arch_decode_irq_control_invocation_def Let_def whenE_def 
                    arch_irq_control_inv_valid_def
-        split del: split_if 
+        split del: if_split
              cong: if_cong)
   apply (rule hoare_pre)
    apply (wp ensure_empty_stronger hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift
-              | simp add: cte_wp_at_eq_simp split del: split_if 
+              | simp add: cte_wp_at_eq_simp split del: if_split
               | wpc | wp_once hoare_drop_imps)+
   apply clarsimp
   by (safe; (cap_hammer | word_hammer))
@@ -89,7 +89,7 @@ lemma (* decode_irq_control_valid *)[Interrupt_AI_asms]:
    \<lbrace>irq_control_inv_valid\<rbrace>,-"
   apply (simp add: decode_irq_control_invocation_def Let_def split_def
                    whenE_def arch_check_irq_def 
-                 split del: split_if cong: if_cong)
+                 split del: if_split cong: if_cong)
   apply (rule hoare_pre)
    apply (wp ensure_empty_stronger | simp add: cte_wp_at_eq_simp
                  | wp_once hoare_drop_imps)+
@@ -143,7 +143,7 @@ lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
   apply (wp do_machine_op_valid_cap)
   apply (auto simp: valid_cap_def valid_untyped_def 
              split: cap.splits option.splits arch_cap.splits 
-         split del: split_if)
+         split del: if_split)
   done
 
 crunch valid_global_refs[Interrupt_AI_asms]: set_irq_state "valid_global_refs"
@@ -190,7 +190,7 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
                               \<and> cte_wp_at (is_derived (cdt s) prod cap) prod s"
                 in hoare_post_imp)
       apply (clarsimp simp: is_cap_simps is_derived_def cte_wp_at_caps_of_state)
-      apply (simp split: split_if_asm)
+      apply (simp split: if_split_asm)
       apply (simp add: cap_master_cap_def split: cap.split_asm)
       apply (drule cte_wp_valid_cap [OF caps_of_state_cteD] | clarsimp)+
       apply (clarsimp simp: cap_master_cap_simps valid_cap_def obj_at_def is_ntfn is_tcb is_cap_table

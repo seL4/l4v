@@ -66,7 +66,7 @@ lemma data_to_obj_type_sp[Untyped_AI_assms]:
   apply (rule hoare_pre)
    apply (wp|wpc)+
   apply clarsimp
-  apply (simp add: arch_data_to_obj_type_def split: split_if_asm)
+  apply (simp add: arch_data_to_obj_type_def split: if_split_asm)
   done
 
 lemma dui_inv_wf[wp, Untyped_AI_assms]:
@@ -99,7 +99,7 @@ proof -
   show ?thesis
   apply (simp add: decode_untyped_invocation_def unlessE_def[symmetric]
                    unlessE_whenE
-           split del: split_if)
+           split del: if_split)
   apply (rule validE_R_sp[OF whenE_throwError_sp]
               validE_R_sp[OF data_to_obj_type_sp]
               validE_R_sp[OF dui_sp_helper] validE_R_sp[OF map_ensure_empty])+
@@ -367,7 +367,7 @@ lemma invoke_untyped_st_tcb_at[Untyped_AI_assms]: (*FIXME: move *)
      invoke_untyped ui
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (cases ui, simp add: mapM_x_def[symmetric]
-                  split del: split_if)
+                  split del: if_split)
   apply (rename_tac cslot_ptr word1 word2 apiobject_type nat list)
   apply (rule hoare_name_pre_state)
   apply (clarsimp)
@@ -482,7 +482,7 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
   apply (simp add: create_cap_def set_cdt_def)
   apply (wp set_cap_valid_arch_caps hoare_vcg_disj_lift
       hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift
-    | simp add: trans_state_update[symmetric] del: trans_state_update split_paired_All split_paired_Ex imp_disjL split del: split_if)+
+    | simp add: trans_state_update[symmetric] del: trans_state_update split_paired_All split_paired_Ex imp_disjL split del: if_split)+
   apply (clarsimp simp del: split_paired_All split_paired_Ex
                             imp_disjL
                       simp: cte_wp_at_caps_of_state)
@@ -621,7 +621,7 @@ lemma valid_arch_state_global_pd:
                         pd_aligned pd_bits_def pageBits_def
                  elim!: obj_at_weakenE)
   apply (clarsimp split: Structures_A.kernel_object.split_asm
-                         arch_kernel_obj.split_asm split_if_asm)
+                         arch_kernel_obj.split_asm if_split_asm)
   done
 
 lemma pd_shifting':
@@ -702,7 +702,7 @@ lemma init_arch_objects_nonempty_table[wp]:
 lemma nonempty_table_caps_of[Untyped_AI_assms]:
   "nonempty_table S ko \<Longrightarrow> caps_of ko = {}"
   by (auto simp: caps_of_def cap_of_def nonempty_table_def a_type_def
-          split: Structures_A.kernel_object.split split_if_asm)
+          split: Structures_A.kernel_object.split if_split_asm)
 
 
 lemma nonempty_default[simp, Untyped_AI_assms]:
@@ -804,7 +804,7 @@ interpretation Arch .
 lemma invoke_untyp_invs'' : 
   "\<lbrace>(invs ::'state_ext::state_ext state \<Rightarrow> bool) and Q and valid_untyped_inv ui and ct_active\<rbrace> 
   invoke_untyped ui \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
-  apply (cases ui, simp split del: split_if del:invoke_untyped.simps)
+  apply (cases ui, simp split del: if_split del:invoke_untyped.simps)
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp del:split_paired_All split_paired_Ex split_paired_Ball invoke_untyped.simps)
   apply (rename_tac cref oref ptr tp us slots s sz idx)

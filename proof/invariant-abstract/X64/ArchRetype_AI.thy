@@ -234,7 +234,7 @@ lemma vs_refs_add_one'':
   "p \<in> kernel_mapping_slots \<Longrightarrow>
    vs_refs (ArchObj (PageMapL4 (pml4(p := pml4e)))) =
    vs_refs (ArchObj (PageMapL4 pml4))"
- by (auto simp: vs_refs_def graph_of_def split: split_if_asm)
+ by (auto simp: vs_refs_def graph_of_def split: if_split_asm)
 
 lemma glob_vs_refs_add_one':
   "glob_vs_refs (ArchObj (PageDirectory (pd(p := pde)))) =
@@ -245,7 +245,7 @@ lemma glob_vs_refs_add_one':
   apply (rule set_eqI)
   apply clarsimp
   apply (rule iffI)
-   apply (clarsimp del: disjCI dest!: graph_ofD split: split_if_asm)
+   apply (clarsimp del: disjCI dest!: graph_ofD split: if_split_asm)
    apply (rule disjI1)
    apply (rule conjI)
     apply (rule_tac x="(aa, ba)" in image_eqI)
@@ -384,10 +384,10 @@ lemma mapM_x_store_pde_eq_kernel_mappings_restr:
   apply (erule hoare_seq_ext[rotated])
   apply (simp add: store_pde_def set_pd_def set_object_def cong: bind_cong)
   apply (wp get_object_wp get_pde_wp)
-  apply (clarsimp simp: obj_at_def split del: split_if)
+  apply (clarsimp simp: obj_at_def split del: if_split)
   apply (frule shiftl_less_t2n)
    apply (simp add: pd_bits_def pageBits_def)
-  apply (simp add: is_aligned_add_helper split del: split_if)
+  apply (simp add: is_aligned_add_helper split del: if_split)
   apply (cut_tac x=x and n=2 in shiftl_shiftr_id)
     apply (simp add: word_bits_def)
    apply (simp add: word_bits_def pd_bits_def pageBits_def)
@@ -455,7 +455,7 @@ lemma copy_global_equal_kernel_mappings_restricted:
   apply (simp add: ucast_down_ucast_id word_size source_size_def
                    target_size_def is_down_def)
   apply (drule_tac x=p' in spec)
-  apply (simp split: split_if_asm)
+  apply (simp split: if_split_asm)
   done
 
 lemma store_pde_valid_global_pd_mappings[wp]:
@@ -707,19 +707,19 @@ lemma valid_untyped_helper [Retype_AI_assms]:
     apply (fastforce elim!: obj_at_pres)
    apply (fastforce elim!: obj_at_pres)
   apply (rename_tac word nat1 nat2)
-  apply (clarsimp simp:valid_untyped_def is_cap_simps obj_at_def split:split_if_asm)
+  apply (clarsimp simp:valid_untyped_def is_cap_simps obj_at_def split: if_split_asm)
     apply (thin_tac "\<forall>x. Q x" for Q)
      apply (frule retype_addrs_obj_range_subset_strong[OF _ cover' tyunt])
      apply (frule usable_range_subseteq)
        apply (simp add:is_cap_simps)
-     apply (clarsimp simp:cap_aligned_def split:split_if_asm)
+     apply (clarsimp simp:cap_aligned_def split: if_split_asm)
       apply (frule aligned_ranges_subset_or_disjoint)
       apply (erule retype_addrs_aligned[where sz = sz])
          apply (simp add:range_cover_def)
         apply (simp add:range_cover_def word_bits_def)
        apply (simp add:range_cover_def)
       apply (clarsimp simp:obj_range_def[symmetric] obj_bits_api_def3 Int_ac tyunt
-        split:split_if_asm)
+        split: if_split_asm)
      apply (elim disjE)
       apply (drule(2) subset_trans[THEN disjoint_subset2])
       apply (drule Int_absorb2)+
@@ -736,7 +736,7 @@ lemma valid_untyped_helper [Retype_AI_assms]:
         apply (simp add:range_cover_def word_bits_def)
        apply (simp add:range_cover_def)
       apply (clarsimp simp:obj_range_def[symmetric] obj_bits_api_def3 Int_ac tyunt
-        split:split_if_asm)
+        split: if_split_asm)
    apply (case_tac "{word..word + 2 ^ nat1 - 1} = obj_range p (default_object ty us)")
      apply simp
    apply (erule disjE)
@@ -832,10 +832,10 @@ lemma vs_lookup':
   "vs_lookup s' = vs_lookup s"
   apply (rule order_antisym)
    apply (rule vs_lookup_sub2)
-    apply (clarsimp simp: obj_at_def s'_def ps_def split: split_if_asm)
+    apply (clarsimp simp: obj_at_def s'_def ps_def split: if_split_asm)
    apply simp
   apply (rule vs_lookup_sub)
-   apply (clarsimp simp: obj_at_def s'_def ps_def split: split_if_asm dest!: orthr)
+   apply (clarsimp simp: obj_at_def s'_def ps_def split: if_split_asm dest!: orthr)
   apply simp
   done
 
@@ -843,10 +843,10 @@ lemma vs_lookup_pages':
   "vs_lookup_pages s' = vs_lookup_pages s"
   apply (rule order_antisym)
    apply (rule vs_lookup_pages_sub2)
-    apply (clarsimp simp: obj_at_def s'_def ps_def split: split_if_asm)
+    apply (clarsimp simp: obj_at_def s'_def ps_def split: if_split_asm)
    apply simp
   apply (rule vs_lookup_pages_sub)
-   apply (clarsimp simp: obj_at_def s'_def ps_def split: split_if_asm dest!: orthr)
+   apply (clarsimp simp: obj_at_def s'_def ps_def split: if_split_asm dest!: orthr)
   apply simp
   done
 
@@ -880,7 +880,7 @@ proof
   assume p: "(\<exists>\<rhd> p) s'"
   assume "ko_at (ArchObj ao) p s'"
   hence "ko_at (ArchObj ao) p s \<or> ArchObj ao = default_object ty us"
-    by (simp add: ps_def obj_at_def s'_def split: split_if_asm)
+    by (simp add: ps_def obj_at_def s'_def split: if_split_asm)
   moreover
   { assume "ArchObj ao = default_object ty us" with tyunt
     have "valid_arch_obj ao s'" by (rule valid_arch_obj_default)
@@ -1187,9 +1187,8 @@ lemma clearMemory_um_eq_0:
    \<lbrace>\<lambda>_ m. underlying_memory m p = 0\<rbrace>"
   apply (clarsimp simp: clearMemory_def)
   apply (wp mapM_x_wp_inv | simp)+
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps storeWord_um_eq_0)
-  apply (fastforce simp: ignore_failure_def split: split_if_asm)
+  apply (wp hoare_drop_imps storeWord_um_eq_0)
+  apply (fastforce simp: ignore_failure_def split: if_split_asm)
   done
 
 

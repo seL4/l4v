@@ -261,7 +261,7 @@ lemma copy_mrs_in_user_frame[wp, Ipc_AI_assms]:
 
 lemma make_fault_message_inv[wp, Ipc_AI_assms]:
   "\<lbrace>P\<rbrace> make_fault_msg ft t \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (cases ft, simp_all split del: split_if)
+  apply (cases ft, simp_all split del: if_split)
      apply (wp as_user_inv getRestartPC_inv mapM_wp'
               | simp add: getRegister_def)+
   done
@@ -278,7 +278,7 @@ lemma lookup_ipc_buffer_in_user_frame[wp, Ipc_AI_assms]:
    \<lbrace>case_option (\<lambda>_. True) in_user_frame\<rbrace>"
   apply (simp add: lookup_ipc_buffer_def)
   apply (wp get_cap_wp thread_get_wp | wpc | simp)+
-  apply (clarsimp simp add: obj_at_def is_tcb split: split_if_asm)
+  apply (clarsimp simp add: obj_at_def is_tcb split: if_split_asm)
   apply (rename_tac dev p R tp sz m)
   apply (subgoal_tac "in_user_frame (p + (tcb_ipc_buffer tcb &&
                                            mask (pageBitsForSize sz))) s", simp)
@@ -305,16 +305,16 @@ lemma transfer_caps_loop_cte_wp_at:
    apply (simp, wp, simp)
   apply (clarsimp simp: Let_def split_def whenE_def
                   cong: if_cong list.case_cong
-             split del: split_if)
+             split del: if_split)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift 
               derive_cap_is_derived_foo
              hoare_drop_imps
-        | assumption | simp split del: split_if)+
+        | assumption | simp split del: if_split)+
       apply (wp hoare_vcg_conj_lift cap_insert_weak_cte_wp_at2)
        apply (erule imp)
       by (wp hoare_vcg_ball_lift            
-             | clarsimp simp: is_cap_simps split del:split_if
+             | clarsimp simp: is_cap_simps split del:if_split
              | unfold derive_cap_def arch_derive_cap_def
              | wpc 
              | rule conjI

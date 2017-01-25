@@ -21,7 +21,7 @@ lemma (* obj_at_not_live_valid_arch_cap_strg *) [Finalise_AI_asms]:
         \<longrightarrow> obj_at (\<lambda>ko. \<not> live ko) r s"
   by (clarsimp simp: valid_cap_def obj_at_def
                      a_type_arch_live
-              split: arch_cap.split_asm split_if_asm)
+              split: arch_cap.split_asm if_split_asm)
 
 global_naming X64
 
@@ -158,7 +158,7 @@ lemma delete_asid_pool_unmapped[wp]:
                   dest!: graph_ofD)
   apply (clarsimp simp: vs_lookup_def vs_asid_refs_def
                  dest!: graph_ofD
-                 split: split_if_asm)
+                 split: if_split_asm)
   apply (erule rtranclE)
    apply (simp add: up_ucast_inj_eq)
   apply (drule vs_lookup1D)
@@ -258,7 +258,7 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
         apply (wp replace_cap_valid_pspace set_cap_caps_of_state2
                   replace_cap_ifunsafe get_cap_wp
                   set_cap_idle valid_irq_node_typ set_cap_typ_at
-                  set_cap_irq_handlers set_cap_valid_arch_caps | simp add: trans_state_update[symmetric] del: trans_state_update fun_upd_apply split del: split_if )+
+                  set_cap_irq_handlers set_cap_valid_arch_caps | simp add: trans_state_update[symmetric] del: trans_state_update fun_upd_apply split del: if_split )+
   apply (clarsimp simp: is_final_cap'_def2 simp del: fun_upd_apply)
   apply (clarsimp simp: conj_comms invs_def valid_state_def valid_mdb_def2)
   apply (subgoal_tac "mdb_empty_abs s")
@@ -289,7 +289,7 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
     apply (rule allEI, assumption)
     apply (fold reply_caps_mdb_def)[1]
     apply (case_tac "sl = ptr", simp)
-    apply (simp add: fun_upd_def split del: split_if del: split_paired_Ex)
+    apply (simp add: fun_upd_def split del: if_split del: split_paired_Ex)
     apply (erule allEI, rule impI, erule(1) impE)
     apply (erule exEI)
     apply (simp, rule ccontr)
@@ -324,7 +324,7 @@ lemma dom_tcb_cap_cases_lt_ARCH [Finalise_AI_asms]:
   "dom tcb_cap_cases = {xs. length xs = 3 \<and> unat (of_bl xs :: machine_word) < 5}"
   apply (rule set_eqI, rule iffI)
    apply clarsimp
-   apply (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1 split: split_if_asm)
+   apply (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1 split: if_split_asm)
   apply clarsimp
   apply (frule tcb_cap_cases_lt)
   apply (clarsimp simp: nat_to_cref_unat_of_bl')
@@ -365,7 +365,7 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
         \<and> cap_irqs (fst rv) = cap_irqs cap
         \<and> fst_cte_ptrs (fst rv) = fst_cte_ptrs cap
         \<and> vs_cap_ref cap = None\<rbrace>"
-  apply (cases cap, simp_all split del: split_if cong: if_cong)
+  apply (cases cap, simp_all split del: if_split cong: if_cong)
             apply (wp suspend_final_cap[where sl=slot]
                       deleting_irq_handler_final[where slot=slot]
                       | simp add: o_def is_cap_simps fst_cte_ptrs_def
@@ -389,12 +389,12 @@ lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
             apply (wp suspend_valid_cap
                      | simp add: o_def valid_cap_def cap_aligned_def
                                  valid_cap_Null_ext
-                           split del: split_if
+                           split del: if_split
                      | clarsimp | rule conjI)+
   apply (simp add: arch_finalise_cap_def)
   apply (rule hoare_pre)
   apply (wp|simp add: o_def valid_cap_def cap_aligned_def
-                 split del: split_if|clarsimp|wpc)+
+                 split del: if_split|clarsimp|wpc)+
   done
 
 lemma (* arch_finalise_cap_invs *)[wp,Finalise_AI_asms]:
@@ -520,7 +520,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
      finalise_cap cap x
    \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
   apply (cases cap, simp_all add: replaceable_def reachable_pg_cap_def
-                       split del: split_if)
+                       split del: if_split)
             prefer 10
             (* TS: this seems to be necessary for deleting_irq_handler,
                    kind of nasty, not sure how to sidestep *)
@@ -1297,10 +1297,10 @@ global_naming Arch
 
 lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
   shows "\<lbrace>invs and cte_wp_at (op = cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (cases cap, simp_all split del: split_if)
+  apply (cases cap, simp_all split del: if_split)
          apply (wp cancel_all_ipc_invs cancel_all_signals_invs unbind_notification_invs
                    unbind_maybe_notification_invs
-                  | simp add: o_def split del: split_if cong: if_cong
+                  | simp add: o_def split del: if_split cong: if_cong
                   | wpc )+
       apply clarsimp (* thread *)
       apply (frule cte_wp_at_valid_objs_valid_cap, clarsimp)
@@ -1416,7 +1416,7 @@ interpretation Finalise_AI_3?: Finalise_AI_3
 context Arch begin global_naming X64
 
 lemma arch_cap_recycle_replaceable:
-  notes split_if [split del]
+  notes if_split [split del]
   and   arch_reset_mem_mapping.simps [simp del]
   shows "\<lbrace>cte_wp_at (op = (ArchObjectCap cap)) slot
     and invs
@@ -1658,7 +1658,7 @@ lemma valid_kernel_mappings [iff]:
 lemma vs_asid_refs_updateD:
   "(ref', p') \<in> vs_asid_refs (table (x \<mapsto> p))
   \<Longrightarrow> (ref',p') \<in> vs_asid_refs table \<or> (ref' = [VSRef (ucast x) None] \<and> p' = p)"
-  apply (clarsimp simp: vs_asid_refs_def graph_of_def split: split_if_asm)
+  apply (clarsimp simp: vs_asid_refs_def graph_of_def split: if_split_asm)
   apply (rule_tac x="(a,p')" in image_eqI)
    apply auto
   done
@@ -1688,7 +1688,7 @@ lemma vs_lookup_empty_table:
      apply assumption
     apply (fastforce simp: vs_lookup_def)
    apply (clarsimp simp: obj_at_def vs_lookup1_def vs_refs_def
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply clarsimp
   apply (drule rtranclD)
   apply (erule disjE)
@@ -1721,7 +1721,7 @@ lemma vs_lookup_pages_empty_table:
      apply assumption
     apply (fastforce simp: vs_lookup_pages_def)
    apply (clarsimp simp: obj_at_def vs_lookup_pages1_def vs_refs_pages_def
-                  split: split_if_asm)
+                  split: if_split_asm)
   apply clarsimp
   apply (drule rtranclD)
   apply (erule disjE)
@@ -1749,7 +1749,7 @@ lemma set_asid_pool_empty_table_objs:
     apply simp
    prefer 2
    apply (simp add: a_type_def)
-  apply (clarsimp simp add: a_type_def split: split_if_asm)
+  apply (clarsimp simp add: a_type_def split: if_split_asm)
   apply (erule_tac x=pa in allE)
   apply (erule impE)
    apply (drule vs_lookup_empty_table)
@@ -1932,7 +1932,7 @@ crunch valid_cap [wp]: unmap_page_table, invalidate_tlb_by_asid,
   (wp: mapM_wp_inv mapM_x_wp')
 
 lemma recycle_cap_cases:
-  notes split_if [split del]
+  notes if_split [split del]
   shows "\<lbrace>\<top>\<rbrace>
     recycle_cap is_final cap
    \<lbrace>\<lambda>rv s. rv = cap
@@ -1952,7 +1952,7 @@ lemma recycle_cap_cases:
   apply (clarsimp simp: is_cap_simps arch_recycle_cap_def)
   apply (rule hoare_pre)
    apply (wp | wpc | simp)+
-  apply (fastforce split: split_if_asm)
+  apply (fastforce split: if_split_asm)
   done
 
 global_naming Arch
@@ -1973,7 +1973,7 @@ lemma (* clearMemory_invs *) [wp,Finalise_AI_asms]:
   done
 
 lemma arch_recycle_cap_invs_ARCH [Finalise_AI_asms]:
-  notes split_if [split del]
+  notes if_split [split del]
   shows "\<lbrace>invs and cte_wp_at (op = (ArchObjectCap cap)) slot\<rbrace>
          arch_recycle_cap is_final cap
          \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -1996,7 +1996,7 @@ lemma arch_recycle_cap_invs_ARCH [Finalise_AI_asms]:
   apply (frule valid_cap_aligned, clarsimp simp: cap_aligned_def)
   apply (intro conjI)
      (* ASID pool case *)
-     apply ((fastforce simp: valid_cap_def mask_def split: split_if
+     apply ((fastforce simp: valid_cap_def mask_def split: if_split
                      elim!: vs_lookup_atE)+)[2]
    (* PageTable case*)
    apply clarsimp
@@ -2011,11 +2011,11 @@ lemma arch_recycle_cap_invs_ARCH [Finalise_AI_asms]:
     apply (clarsimp simp: valid_cap_simps)
    apply (clarsimp simp: is_cap_simps valid_cap_simps mask_def asid_bits_def
      vmsz_aligned_def upto_enum_step_def pt_bits_def pageBits_def
-     image_image word_shift_by_2 split: split_if_asm)
+     image_image word_shift_by_2 split: if_split_asm)
     apply (erule order_le_less_trans, simp)+
    apply (rule_tac x=a in exI, rule_tac x=b in exI)
    apply (clarsimp simp: upto_enum_step_def pt_bits_def pageBits_def is_cap_simps
-                         image_image word_shift_by_2 split: split_if_asm)
+                         image_image word_shift_by_2 split: if_split_asm)
   apply (frule_tac d="xb << 2" in is_aligned_add_helper)
     apply (rule shiftl_less_t2n)
      apply (erule order_le_less_trans, simp)

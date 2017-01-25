@@ -69,7 +69,7 @@ lemma update_cap_objrefs [CNodeInv_AI_assms]:
      obj_refs (update_cap_data P dt cap) = obj_refs cap"
   by (case_tac cap,
       simp_all add: update_cap_data_closedform
-             split: split_if_asm)
+             split: if_split_asm)
 
 
 lemma update_cap_zobjrefs [CNodeInv_AI_assms]:
@@ -77,7 +77,7 @@ lemma update_cap_zobjrefs [CNodeInv_AI_assms]:
      zobj_refs (update_cap_data P dt cap) = zobj_refs cap"
   apply (case_tac cap,
       simp_all add: update_cap_data_closedform arch_update_cap_data_def
-             split: split_if_asm)
+             split: if_split_asm)
   done
 
 
@@ -100,7 +100,7 @@ lemma update_cap_data_mask_Null [simp, CNodeInv_AI_assms]:
 lemma cap_master_update_cap_data [CNodeInv_AI_assms]:
   "\<lbrakk> update_cap_data P x c \<noteq> NullCap \<rbrakk>
         \<Longrightarrow> cap_master_cap (update_cap_data P x c) = cap_master_cap c"
-  apply (simp add: update_cap_data_def split del: split_if split: split_if_asm)
+  apply (simp add: update_cap_data_def split del: if_split split: if_split_asm)
   apply (auto simp: is_cap_simps Let_def the_cnode_cap_def cap_master_cap_def
                     badge_update_def arch_update_cap_data_def
              split: arch_cap.split)
@@ -131,7 +131,7 @@ lemma same_object_as_cap_master [CNodeInv_AI_assms]:
 lemma cap_asid_update_cap_data [CNodeInv_AI_assms]:
   "update_cap_data P x c \<noteq> NullCap
          \<Longrightarrow> cap_asid (update_cap_data P x c) = cap_asid c"
-  apply (simp add: update_cap_data_def split del: split_if split: split_if_asm)
+  apply (simp add: update_cap_data_def split del: if_split split: if_split_asm)
   apply (auto simp: is_cap_simps Let_def the_cnode_cap_def cap_master_cap_def
                     badge_update_def arch_update_cap_data_def
              split: arch_cap.split)
@@ -140,7 +140,7 @@ lemma cap_asid_update_cap_data [CNodeInv_AI_assms]:
 lemma cap_vptr_update_cap_data [CNodeInv_AI_assms]:
   "update_cap_data P x c \<noteq> NullCap
          \<Longrightarrow> cap_vptr (update_cap_data P x c) = cap_vptr c"
-  apply (simp add: update_cap_data_def split del: split_if split: split_if_asm)
+  apply (simp add: update_cap_data_def split del: if_split split: if_split_asm)
   apply (auto simp: is_cap_simps Let_def the_cnode_cap_def cap_master_cap_def
                     badge_update_def arch_update_cap_data_def
              split: arch_cap.split)
@@ -149,7 +149,7 @@ lemma cap_vptr_update_cap_data [CNodeInv_AI_assms]:
 lemma cap_asid_base_update_cap_data [CNodeInv_AI_assms]:
   "update_cap_data P x c \<noteq> NullCap
          \<Longrightarrow> cap_asid_base (update_cap_data P x c) = cap_asid_base c"
-  apply (simp add: update_cap_data_def split del: split_if split: split_if_asm)
+  apply (simp add: update_cap_data_def split del: if_split split: if_split_asm)
   apply (auto simp: is_cap_simps Let_def the_cnode_cap_def cap_master_cap_def
                     badge_update_def arch_update_cap_data_def
              split: arch_cap.split)
@@ -159,9 +159,9 @@ lemma same_object_as_update_cap_data [CNodeInv_AI_assms]:
   "\<lbrakk> update_cap_data P x c \<noteq> NullCap; same_object_as c' c \<rbrakk> \<Longrightarrow> 
   same_object_as c' (update_cap_data P x c)"
   apply (clarsimp simp: same_object_as_def is_cap_simps 
-                  split: cap.split_asm arch_cap.splits split_if_asm)
+                  split: cap.split_asm arch_cap.splits if_split_asm)
   apply (simp add: update_cap_data_def badge_update_def cap_rights_update_def is_cap_simps arch_update_cap_data_def
-                   Let_def split_def the_cnode_cap_def bits_of_def split: split_if_asm cap.splits)+
+                   Let_def split_def the_cnode_cap_def bits_of_def split: if_split_asm cap.splits)+
   done
 
 lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:
@@ -171,9 +171,9 @@ lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:
                    cap_master_update_cap_data cap_asid_update_cap_data 
                    cap_asid_base_update_cap_data
                    cap_vptr_update_cap_data
-              split del: split_if cong: if_cong)  
+              split del: if_split cong: if_cong)
   apply (erule disjE)
-   apply (clarsimp split: split_if_asm)
+   apply (clarsimp split: if_split_asm)
    apply (erule disjE)
     apply (clarsimp simp: is_cap_simps)
     apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
@@ -184,12 +184,12 @@ lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:
    apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
    apply (erule (1) same_object_as_update_cap_data)
   apply clarsimp
-  apply (rule conjI, clarsimp simp: is_cap_simps update_cap_data_def split del: split_if)+
+  apply (rule conjI, clarsimp simp: is_cap_simps update_cap_data_def split del: if_split)+
   apply clarsimp
   apply (clarsimp simp: same_object_as_def is_cap_simps 
-                  split: cap.split_asm arch_cap.splits split_if_asm)
+                  split: cap.split_asm arch_cap.splits if_split_asm)
   apply (simp add: update_cap_data_def badge_update_def cap_rights_update_def is_cap_simps arch_update_cap_data_def
-                   Let_def split_def the_cnode_cap_def bits_of_def split: split_if_asm cap.splits)+
+                   Let_def split_def the_cnode_cap_def bits_of_def split: if_split_asm cap.splits)+
   done
 
 lemma cap_badge_update_cap_data [CNodeInv_AI_assms]:
@@ -197,7 +197,7 @@ lemma cap_badge_update_cap_data [CNodeInv_AI_assms]:
        \<longrightarrow> (bdg, cap_badge (update_cap_data False x c)) \<in> capBadge_ordering False"
   apply clarsimp
   apply (erule capBadge_ordering_trans)
-  apply (simp add: update_cap_data_def split del: split_if split: split_if_asm)
+  apply (simp add: update_cap_data_def split del: if_split split: if_split_asm)
   apply (auto simp: is_cap_simps Let_def the_cnode_cap_def cap_master_cap_def
                     badge_update_def arch_update_cap_data_def
              split: arch_cap.split)
@@ -285,7 +285,7 @@ lemma cte_at_nat_to_cref_zbits [CNodeInv_AI_assms]:
 
 lemma copy_of_cap_range [CNodeInv_AI_assms]:
   "copy_of cap cap' \<Longrightarrow> cap_range cap = cap_range cap'"
-  apply (clarsimp simp: copy_of_def split: split_if_asm)
+  apply (clarsimp simp: copy_of_def split: if_split_asm)
   apply (cases cap', simp_all add: same_object_as_def)
        apply (clarsimp simp: is_cap_simps bits_of_def cap_range_def
                       split: cap.split_asm)+
@@ -297,7 +297,7 @@ lemma copy_of_cap_range [CNodeInv_AI_assms]:
 
 lemma copy_of_zobj_refs [CNodeInv_AI_assms]:
   "copy_of cap cap' \<Longrightarrow> zobj_refs cap = zobj_refs cap'"
-  apply (clarsimp simp: copy_of_def split: split_if_asm)
+  apply (clarsimp simp: copy_of_def split: if_split_asm)
   apply (cases cap', simp_all add: same_object_as_def)
        apply (clarsimp simp: is_cap_simps bits_of_def
                       split: cap.split_asm)+
@@ -323,13 +323,13 @@ lemma weak_derived_vs_cap_ref [CNodeInv_AI_assms]:
   "weak_derived c c' \<Longrightarrow> vs_cap_ref c = vs_cap_ref c'"
   by (auto simp: weak_derived_def copy_of_def
                  same_object_as_def2
-          split: split_if_asm elim: vs_cap_ref_master[OF sym])
+          split: if_split_asm elim: vs_cap_ref_master[OF sym])
 
 lemma weak_derived_table_cap_ref [CNodeInv_AI_assms]:
   "weak_derived c c' \<Longrightarrow> table_cap_ref c = table_cap_ref c'"
   apply (clarsimp simp: weak_derived_def copy_of_def
                  same_object_as_def2 
-          split: split_if_asm)
+          split: if_split_asm)
    apply (elim disjE,simp_all add:is_cap_simps)
   apply (elim disjE,simp_all)
   apply clarsimp
@@ -347,7 +347,7 @@ lemma weak_derived_pd_pt_asid:
   by (auto simp: weak_derived_def copy_of_def is_cap_simps
                  same_object_as_def2 is_pt_cap_def
                  cap_master_cap_simps
-          split: split_if_asm
+          split: if_split_asm
           dest!: cap_master_cap_eqDs)
 
 lemma weak_derived_ASIDPool1:
@@ -356,7 +356,7 @@ lemma weak_derived_ASIDPool1:
   apply (rule iffI)
    prefer 2
    apply simp
-  apply (clarsimp simp: weak_derived_def copy_of_def split: split_if_asm)
+  apply (clarsimp simp: weak_derived_def copy_of_def split: if_split_asm)
   apply (clarsimp simp: same_object_as_def2 cap_master_cap_simps dest!: cap_master_cap_eqDs)
   done
   
@@ -366,7 +366,7 @@ lemma weak_derived_ASIDPool2:
   apply (rule iffI)
    prefer 2
    apply simp
-  apply (clarsimp simp: weak_derived_def copy_of_def split: split_if_asm)
+  apply (clarsimp simp: weak_derived_def copy_of_def split: if_split_asm)
   apply (auto simp: same_object_as_def2 cap_master_cap_simps dest!: cap_master_cap_eqDs)
   done
 
@@ -408,15 +408,15 @@ lemma swap_of_caps_valid_arch_caps [CNodeInv_AI_assms]:
                 del: split_paired_Ex split_paired_All imp_disjL)
    apply (simp add: unique_table_caps_def
                del: split_paired_Ex split_paired_All imp_disjL
-                    split del: split_if)
+                    split del: if_split)
    apply (erule allfEI[where f="id (a := b, b := a)"])
    apply (erule allfEI[where f="id (a := b, b := a)"])
-   apply (clarsimp split del: split_if split: split_if_asm)
+   apply (clarsimp split del: if_split split: if_split_asm)
   apply (simp add: unique_table_refs_def
-              del: split_paired_All split del: split_if)
+              del: split_paired_All split del: if_split)
   apply (erule allfEI[where f="id (a := b, b := a)"])
   apply (erule allfEI[where f="id (a := b, b := a)"])
-  apply (clarsimp split del: split_if split: split_if_asm dest!:vs_cap_ref_to_table_cap_ref
+  apply (clarsimp split del: if_split split: if_split_asm dest!:vs_cap_ref_to_table_cap_ref
                       dest!: weak_derived_table_cap_ref)
   done
 
@@ -440,7 +440,7 @@ lemma cap_swap_cap_refs_in_kernel_window[wp, CNodeInv_AI_assms]:
      cap_swap c a c' b \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: cap_swap_def)
   apply (rule hoare_pre)
-   apply (wp | simp split del: split_if)+
+   apply (wp | simp split del: if_split)+
   apply (auto dest!: cap_refs_in_kernel_windowD
                simp: cte_wp_at_caps_of_state weak_derived_cap_range)
   done
@@ -518,7 +518,7 @@ lemma finalise_cap_not_reply_master_unlifted [CNodeInv_AI_assms]:
    \<not> is_master_reply_cap (fst rv)"
   by (case_tac cap, auto simp: is_cap_simps in_monad liftM_def 
                                arch_finalise_cap_def
-                        split: split_if_asm arch_cap.split_asm bool.split_asm option.split_asm)
+                        split: if_split_asm arch_cap.split_asm bool.split_asm option.split_asm)
 
 
 lemma nat_to_cref_0_replicate [CNodeInv_AI_assms]:
@@ -632,7 +632,7 @@ next
       apply (erule disjE)
        apply clarsimp
        apply (clarsimp simp: cap_irq_opt_def cte_wp_at_def
-                      split: cap.split_asm split_if_asm
+                      split: cap.split_asm if_split_asm
                       elim!: ranE dest!: caps_of_state_cteD)
        apply (drule(2) final_cap_duplicate_irq)
          apply simp+
@@ -922,7 +922,7 @@ lemma weak_derived_appropriate [CNodeInv_AI_assms]:
   "weak_derived cap cap' \<Longrightarrow> appropriate_cte_cap cap = appropriate_cte_cap cap'"
   by (auto simp: weak_derived_def copy_of_def same_object_as_def2
                  appropriate_cte_master
-          split: split_if_asm
+          split: if_split_asm
           dest!: arg_cong[where f=appropriate_cte_cap])
 
 end
@@ -1004,7 +1004,7 @@ lemma recycle_cap_appropriateness [CNodeInv_AI_assms]:
   apply (simp add: recycle_cap_def)
   apply (rule hoare_pre)
    apply (wp thread_get_wp gts_wp | wpc | simp add: get_bound_notification_def)+
-   apply (simp add: arch_recycle_cap_def o_def split del: split_if)   
+   apply (simp add: arch_recycle_cap_def o_def split del: if_split)
    apply (wp | wpc | simp add: | wp_once hoare_drop_imps)+
   apply (auto simp: appropriate_cte_cap_def fun_eq_iff valid_cap_def tcb_at_st_tcb_at pred_tcb_at_def)
   done

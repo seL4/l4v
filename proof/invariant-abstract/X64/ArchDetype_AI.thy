@@ -466,7 +466,7 @@ lemma valid_machine_state_detype[detype_invs_proofs]:
       apply (elim exEI exE conjE, simp)
       apply (frule valid_pspace_aligned[OF valid_pspace])
       apply (drule_tac ptr'=p in mask_in_range)
-      apply (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
+      apply (case_tac ko, simp_all add: a_type_simps split: if_split_asm)
       apply (rename_tac arch_kernel_obj)
       apply (case_tac arch_kernel_obj, simp_all add: a_type_simps)
       apply clarsimp using untyped cap_is_valid
