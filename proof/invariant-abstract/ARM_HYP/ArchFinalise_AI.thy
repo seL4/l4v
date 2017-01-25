@@ -16,20 +16,42 @@ context Arch begin
 
 named_theorems Finalise_AI_asms
 
+(* FIXME: move, probalby needed much earlier *)
+lemma arch_thread_set_caps_of_state [wp]:
+  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> arch_thread_set f t \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  apply (simp add: arch_thread_set_def set_object_def)
+  apply wp
+  apply (clarsimp elim!: rsubst[where P=P]
+                 intro!: ext
+                  dest!: get_tcb_SomeD)
+  apply (subst caps_of_state_after_update)
+   apply (clarsimp simp: obj_at_def get_tcb_def tcb_cap_cases_def)
+  apply simp
+  done
+
+(* FIXME: move, probalby needed much earlier *)
+lemma get_vcpu_wp:
+  "\<lbrace>\<lambda>s. \<forall>v. ko_at (ArchObj (VCPU v)) p s \<longrightarrow> Q v s\<rbrace> get_vcpu p \<lbrace>Q\<rbrace>"
+  by (wpsimp simp: get_vcpu_def wp: get_object_wp)
+
+(* FIXME: move, probalby needed much earlier *)
+lemma arch_thread_get_wp:
+  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at (TCB tcb) t s \<longrightarrow> Q (f (tcb_arch tcb)) s\<rbrace> arch_thread_get f t \<lbrace>Q\<rbrace>"
+  apply (wpsimp simp: arch_thread_get_def)
+  apply (auto dest!: get_tcb_ko_atD)
+  done
+
+
 crunch caps_of_state[wp]: arch_thread_get "\<lambda>s. P (caps_of_state s)"
 
-lemma dissociate_vcpu_tcb_caps_of_state:
-  "\<lbrace>(\<lambda>s. P (caps_of_state s)) and
-     ((\<lambda>s. \<not> tcb_at param_a s) and (\<lambda>s. \<nexists>n. cap_table_at n param_a s))\<rbrace>
-    dissociate_vcpu_tcb param_a param_b \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_conj_lift simp: dissociate_vcpu_tcb_def)+
-  sorry
+lemma dissociate_vcpu_tcb_caps_of_state [wp]:
+  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> dissociate_vcpu_tcb param_a param_b \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_conj_lift get_vcpu_wp arch_thread_get_wp
+           simp: dissociate_vcpu_tcb_def)
 
 lemma [wp, Finalise_AI_asms]: "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> prepare_thread_delete param_a
   \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  apply (wpsimp wp: dissociate_vcpu_tcb_caps_of_state simp: prepare_thread_delete_def)+
-  sorry
-
+  by (wpsimp wp: dissociate_vcpu_tcb_caps_of_state simp: prepare_thread_delete_def)
 
 lemma (* obj_at_not_live_valid_arch_cap_strg *) [Finalise_AI_asms]:
   "(s \<turnstile> ArchObjectCap cap \<and> aobj_ref cap = Some r)
@@ -380,12 +402,7 @@ lemma deleting_irq_handler_final [Finalise_AI_asms]:
 
 lemma arch_thread_set_final_cap[wp]:
   "\<lbrace>is_final_cap' cap\<rbrace> arch_thread_set v t \<lbrace>\<lambda>rv. is_final_cap' cap\<rbrace>"
-  apply (simp add: arch_thread_set_def is_final_cap'_def2 cte_wp_at_caps_of_state)
-  apply wp
-  apply (wpsimp simp: set_object_def)+
-  apply (case_tac "get_tcb t s"; simp)
-  apply (clarsimp simp add:  split: option.splits)
-  sorry
+  by (wpsimp simp: is_final_cap'_def2 cte_wp_at_caps_of_state)
 
 lemma arch_thread_get_final_cap[wp]:
   "\<lbrace>is_final_cap' cap\<rbrace> arch_thread_get v t \<lbrace>\<lambda>rv. is_final_cap' cap\<rbrace>"
@@ -395,10 +412,7 @@ lemma arch_thread_get_final_cap[wp]:
 
 lemma dissociate_vcpu_tcb_final_cap[wp]:
   "\<lbrace>is_final_cap' cap\<rbrace> dissociate_vcpu_tcb v t \<lbrace>\<lambda>rv. is_final_cap' cap\<rbrace>"
-  apply (simp add: dissociate_vcpu_tcb_def)
-  apply wp
-  sorry
-
+  by (wpsimp simp: is_final_cap'_def2 cte_wp_at_caps_of_state)
 
 lemma prepare_thread_delete_final[wp]:
   "\<lbrace>is_final_cap' cap\<rbrace> prepare_thread_delete t \<lbrace> \<lambda>rv. is_final_cap' cap\<rbrace>"
@@ -939,19 +953,17 @@ lemma dissociate_vcpu_tcb_no_cap_to_obj_ref[wp]:
   "\<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
      dissociate_vcpu_tcb v t
    \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
-  unfolding dissociate_vcpu_tcb_def
-  apply wp
-sorry
+  by (wpsimp simp: no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state)
 
 lemma prepare_thread_delete_no_cap_to_obj_ref[wp]:
   "\<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
      prepare_thread_delete t
    \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
-  unfolding prepare_thread_delete_def
-  apply (wp hoare_drop_imp hoare_vcg_all_lift | wpc)+
-  apply auto
-  sorry
+  unfolding prepare_thread_delete_def by wpsimp
 
+(* not true like this; also "live" needs redefinition for VCPU;
+   medium can of worms; prepare_thread_delete makes the tcb less live,
+   i.e. removes VCPU. Does make the corresponding VCPU unlive. *)
 lemma prepare_thread_delete_unlive[wp]:
   "\<lbrace>\<lambda>_. True\<rbrace> prepare_thread_delete ptr \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) ptr\<rbrace>"
   sorry
@@ -2189,14 +2201,14 @@ crunch valid_cap [wp]: unmap_page_table, invalidate_tlb_by_asid,
   "valid_cap c"
   (wp: mapM_wp_inv mapM_x_wp')
 
+lemmas vcpu_finalise_typ_ats [wp] = abs_typ_at_lifts [OF vcpu_finalise_typ_at]
+lemmas delete_asid_typ_ats [wp] = abs_typ_at_lifts [OF delete_asid_typ_at]
+
 lemma arch_finalise_cap_valid_cap [wp]:
   "\<lbrace>valid_cap c\<rbrace> arch_finalise_cap cap b \<lbrace>\<lambda>_. valid_cap c\<rbrace>"
   apply (simp add: arch_finalise_cap_def)
   apply (wp | wpc | clarsimp simp: split: arch_cap.split option.split bool.split | safe)+
-  defer
-  apply (wp | wpc | clarsimp)+
-  sorry
-
+  done
 
 global_naming Arch
 
