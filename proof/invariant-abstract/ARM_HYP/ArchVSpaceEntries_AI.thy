@@ -406,10 +406,22 @@ crunch valid_pdpt_objs[wp]: flush_table "valid_pdpt_objs"
 crunch kheap[wp]: vcpu_restore,vcpu_enable,get_vcpu "\<lambda>s. P (kheap s)"
   (wp: crunch_wps simp: crunch_simps ignore: set_object set_vcpu)
 
-lemma vcpu_switch_kheap[wp]:"\<lbrace>\<lambda>s. P (kheap s)\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_ s. P (kheap s)\<rbrace>"
-  sorry
+(*
+
+NOTE: This isn't true, but is the main reason flush_table_kheap does not work now,
+      I guess it is possible to prove this for a P that does not care about VCPU
+      but let's wait and see where and how this lemma is used.
+
+lemma vcpu_switch_kheap[wp]:"\<lbrace>\<lambda>s. P (kheap s)\<rbrace> vcpu_switch v \<lbrace>\<lambda>_ s. P (kheap s)\<rbrace>"
+
 
 crunch kheap[wp]: flush_table "\<lambda>s. P (kheap s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+FIXME: Delete
+*)
+
+crunch kheap[wp]: get_cap "\<lambda>s. P (kheap s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma unmap_page_table_valid_pdpt_objs[wp]:
@@ -1138,11 +1150,17 @@ lemma ensure_safe_mapping_ensures[wp]:
     apply (simp add: vspace_bits_defs mask_def)
     apply word_bitwise
     done
+    have pt_offset_bitwise_pt_bits[simp]:"\<And>a. (ucast ((a::word32) && mask pt_bits && ~~ mask 7  >> pte_bits)::9 word)
+      = (ucast (a  && mask pt_bits >> 3)::9 word) && ~~ mask 4"
+    by (simp add: pte_bits_def)
     have pd_offset_bitwise[simp]:"\<And>a. (ucast ((a::word32) && mask pd_bits && ~~ mask 7  >> 3)::11 word)
       = (ucast (a  && mask pd_bits >> 3)::11 word) && ~~ mask 4"
     apply (simp add: vspace_bits_defs mask_def)
     apply word_bitwise
     done
+    have pd_offset_bitwise_pt_bits[simp]:"\<And>a. (ucast ((a::word32) && mask pd_bits && ~~ mask 7  >> pde_bits)::11 word)
+      = (ucast (a  && mask pd_bits >> 3)::11 word) && ~~ mask 4"
+    by (simp add: pde_bits_def)
     have mask_neq_0:
       "\<And>z zs xa p g. \<lbrakk>[0 :: word32, 8 .e. 0x78] = z # zs; xa \<in> set zs; is_aligned p 7; 7 \<le> g\<rbrakk>
          \<Longrightarrow> (p + xa && mask g >> 3) && mask 4 \<noteq> 0"
@@ -1252,8 +1270,8 @@ lemma ensure_safe_mapping_ensures[wp]:
                  pt (ucast (x && mask pt_bits >> 3)) = pte.InvalidPTE)
                 (hd (slot # slots) && ~~ mask pt_bits) s" in hoare_post_imp_R)
       apply (wp mapME_x_accumulate_checks[where Q = "\<lambda>s. valid_pdpt_objs s"] )
-          apply (wp get_master_pte_wp| wpc | simp add: vspace_bits_defs)+
-         apply (clarsimp simp: word_bw_assocs[symmetric] shiftr_mask2[of 7 3] )
+          apply (wp get_master_pte_wp| wpc | simp)+
+         apply clarsimp
          apply (frule_tac x = xa in mask_out_same_pt)
           apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2)
           apply (erule notE)
@@ -1263,20 +1281,22 @@ lemma ensure_safe_mapping_ensures[wp]:
           apply simp
          apply (frule_tac x = z in mask_out_same_pt)
           apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2)
-         apply (clarsimp simp:field_simps obj_at_def vspace_bits_defs
+         apply (clarsimp simp:field_simps obj_at_def
            split:pte.splits)
          apply (intro conjI impI)
-           apply (clarsimp)
-           apply (drule(1) valid_pdpt_objs_ptD)
-           apply (frule align_entry_ptD,simp)
- (*          apply (simp add:is_aligned_neg_mask_eq)
-          apply clarsimp
-          apply (drule(1) valid_pdpt_objs_ptD,clarify)
-          apply (erule(4) invalid_pteI[OF _ neq_pt_offset])
-         apply clarsimp
-         apply (drule(1) valid_pdpt_objs_ptD,clarify)
+             apply (clarsimp simp: pte_bits_def)
+            apply (drule(1) valid_pdpt_objs_ptD)
+            apply (clarsimp simp:  word_bool_alg.conj_assoc)
+            apply (frule align_entry_ptD,simp)
+            apply (clarsimp simp: is_aligned_neg_mask_eq[of _ 4] pte_bits_def)
+           apply clarsimp
+           apply (drule(1) valid_pdpt_objs_ptD,clarify)
+           apply (erule(4) invalid_pteI[OF _ neq_pt_offset])
+          apply (clarsimp simp: pte_bits_def)
+         apply (clarsimp simp:  pte_bits_def)
+         apply (drule(1) valid_pdpt_objs_ptD)
          apply (frule align_entry_ptD,simp)
-         apply (simp add:is_aligned_neg_mask_eq)
+         apply (simp add: is_aligned_neg_mask_eq)
         apply (wp hoare_drop_imps |wpc|simp)+
       apply (clarsimp simp:upto_enum_def upto_enum_step_def
         upto_0_to_n2 Fun.comp_def distinct_map)
@@ -1299,7 +1319,7 @@ lemma ensure_safe_mapping_ensures[wp]:
     apply wp[1]
    apply (simp split:list.splits add:page_inv_entries_pre_def mapME_singleton)
    apply (wp get_master_pde_wp | wpc | simp)+
-   apply (clarsimp simp:obj_at_def page_inv_entries_safe_def
+   apply (clarsimp simp:obj_at_def page_inv_entries_safe_def pde_bits_def
      split:pde.splits)
   apply (simp split:list.splits if_splits
     add:page_inv_entries_pre_def Let_def page_inv_entries_safe_def)
@@ -1317,7 +1337,7 @@ lemma ensure_safe_mapping_ensures[wp]:
        apply (frule_tac x = xa in mask_out_same_pd)
         apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2)
         apply (erule notE)
-        apply (subst shiftl_t2n[where n = 2,simplified field_simps,simplified,symmetric])
+        apply (subst shiftl_t2n[where n = 3,simplified field_simps,simplified,symmetric])
         apply (rule shiftl_less_t2n[where m = 7,simplified])
          apply (simp add:word_of_nat_less)
         apply simp
@@ -1326,17 +1346,14 @@ lemma ensure_safe_mapping_ensures[wp]:
        apply (clarsimp simp:field_simps obj_at_def
            split:pde.splits)
        apply (drule(1) valid_pdpt_objs_pdD)
-       apply (intro conjI impI)
-          apply clarsimp
-          apply (frule(1) align_entry_pdD)
-          apply (simp add:is_aligned_neg_mask_eq)
-         apply clarsimp
+       apply (intro conjI impI; clarsimp simp: pde_bits_def)
+          apply (frule align_entry_pdD,simp)
+          apply (clarsimp simp: is_aligned_neg_mask_eq pde_bits_def)
          apply (frule(1) align_entry_pdD)
          apply (simp add:is_aligned_neg_mask_eq)
-        apply clarsimp
         apply (frule(1) align_entry_pdD)
         apply (simp add:is_aligned_neg_mask_eq)
-       apply clarsimp
+       apply (frule(1) align_entry_pdD)
        apply (erule(4) invalid_pdeI[OF _ neq_pd_offset])
       apply (wp hoare_drop_imps |wpc|simp)+
     apply (clarsimp simp:upto_enum_def upto_enum_step_def
@@ -1345,8 +1362,8 @@ lemma ensure_safe_mapping_ensures[wp]:
    apply (simp add:obj_at_def hd_map_simp
      upto_0_to_n2 upto_enum_def upto_enum_step_def)
    apply (frule_tac x = 1 in bspec,fastforce+)
-  apply (wp get_master_pde_wp | simp | wpc)+ *)
-  sorry
+  apply (wp get_master_pde_wp | simp | wpc)+
+  done
 qed
 
 lemma create_mapping_entries_safe[wp]:
@@ -1388,42 +1405,38 @@ lemma create_mapping_entries_safe[wp]:
   apply (drule_tac ref = refa in valid_vspace_objsD)
     apply (simp add:obj_at_def)
    apply simp
-  apply (simp add: )
+  apply (simp add: vspace_bits_defs)
   apply (drule_tac x = "ucast (lookup_pd_slot pd vptr && mask pd_bits >> 3)"
     in spec)
-   apply (simp add: vspace_bits_defs)
-  apply (clarsimp simp:not_less[symmetric] vspace_bits_defs split:list.splits)
+  apply (simp add: vspace_bits_defs)
+  apply (clarsimp simp:not_less[symmetric] split:list.splits)
   apply (clarsimp simp:page_inv_entries_pre_def
     Let_def upto_enum_step_def upto_enum_def)
   apply (subst (asm) upto_0_to_n2)
    apply simp
-  apply (clarsimp simp:not_less[symmetric] vspace_bits_defs)
+  apply (clarsimp simp:not_less[symmetric])
   apply (subgoal_tac
     "(\<exists>xa xb. pda (ucast (lookup_pd_slot pd vptr && mask pd_bits >> 3))
      = pde.PageTablePDE x)
      \<longrightarrow> is_aligned (ptrFromPAddr x + ((vptr >> 12) && 0x1FF << 3)) 7")
    apply (clarsimp simp: vspace_bits_defs)
-   apply (subgoal_tac "
-     ptrFromPAddr x + ((vptr >> 12) && 0x1FF << 3) \<le>
-     ptrFromPAddr x + ((vptr >> 12) && 0x1FF << 3) + 0x78")
-    apply (clarsimp simp:not_less[symmetric] vspace_bits_defs word_1FF_is_mask[symmetric])
-  (* apply (erule is_aligned_no_wrap')
-   apply simp
+   apply (rule_tac x="ptrFromPAddr x + ((vptr >> 12) && 0x1FF << 3)" in exI)
+   apply (subst map_upt_append[where x=15 and y=16]; simp add: mask_def)
   apply clarsimp
   apply (rule aligned_add_aligned)
     apply (erule(1) pt_aligned)
    apply (rule is_aligned_shiftl[OF is_aligned_andI1])
    apply (rule is_aligned_shiftr)
    apply (simp add:vmsz_aligned_def)
-  apply simp *)
-  sorry
+  apply simp
+  done
 
-lemma arch_decode_invocation_valid_pdpt[wp]:
+lemma decode_mmu_invocation_valid_pdpt[wp]:
   notes find_pd_for_asid_inv[wp del]
   shows
   "\<lbrace>invs and valid_cap (cap.ArchObjectCap cap) and valid_pdpt_objs \<rbrace>
-   arch_decode_invocation label args cap_index slot cap excaps
-   \<lbrace>invocation_duplicates_valid o Invocations_A.InvokeArchObject\<rbrace>,-"
+     decode_mmu_invocation label args cap_index slot cap excaps
+   \<lbrace>invocation_duplicates_valid o Invocations_A.InvokeArchObject\<rbrace>, -"
   proof -
     have bitwise:"\<And>a. (ucast (((a::word32) && ~~ mask 7) && mask 14 >> 3)::11 word)
       = (ucast (a  && mask 14 >> 3)::11 word) && ~~ mask 4"
@@ -1439,7 +1452,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
       apply simp
       done
   show ?thesis
-  apply (simp add: arch_decode_invocation_def
+  apply (simp add: decode_mmu_invocation_def
               Let_def split_def get_master_pde_def
               split del: if_split
                    cong: arch_cap.case_cong if_cong cap.case_cong
@@ -1458,13 +1471,14 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
                     del: hoare_True_E_R
                      split del: if_split
              | simp only: obj_at_def)+)
-(*         apply (rule_tac Q'="\<lambda>rv. \<exists>\<rhd> rv and K (is_aligned rv pd_bits) and
+         apply (rule_tac Q'="\<lambda>rv. \<exists>\<rhd> rv and K (is_aligned rv pd_bits) and
                   (\<exists>\<rhd> (lookup_pd_slot rv (args ! 0) && ~~ mask pd_bits)) and
                      valid_arch_objs and pspace_aligned and valid_pdpt_objs"
                      and f="find_pd_for_asid p" for p
                     in hoare_post_imp_R)
           apply (wp| simp)+
-         apply (fastforce simp:pd_bits_def pageBits_def)
+          apply (fastforce  simp:pd_bits_def pageBits_def pde_bits_def
+                            intro: valid_arch_imp_valid_vspace_objs)
         apply ((wp get_pde_wp
              ensure_safe_mapping_ensures[THEN hoare_post_imp_R]
              create_mapping_entries_safe check_vp_wpR
@@ -1485,7 +1499,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
                      and f="find_pd_for_asid p" for p
                     in hoare_post_imp_R)
           apply (wp| simp)+
-         apply (auto simp:pd_bits_def pageBits_def)[1]
+         apply (auto simp:pd_bits_def pageBits_def intro: valid_arch_imp_valid_vspace_objs)[1]
         apply ((wp get_pde_wp
              ensure_safe_mapping_ensures[THEN hoare_post_imp_R]
              create_mapping_entries_safe check_vp_wpR
@@ -1499,9 +1513,10 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
                     del: hoare_True_E_R
                      split del: if_split
              | simp only: obj_at_def)+)
+         apply (simp add: vspace_bits_defs)
          apply (rule hoare_post_imp_R[where P=\<top>])
           apply (rule hoare_True_E_R)
-         apply auto[1]
+         apply (auto simp: bitwise)[1]
         apply ((wp
              | wpc
              | simp add: invocation_duplicates_valid_def unlessE_def whenE_def
@@ -1509,8 +1524,46 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
                      del: hoare_True_E_R
                      split del: if_split
              | simp only: obj_at_def)+)
-  apply (auto simp:valid_cap_simps) *)
-  sorry
+  apply (auto simp:valid_cap_simps intro: valid_arch_objs_lift)
+done
+qed
+
+lemma returnOk_lift :
+  assumes P': "\<forall>s. P rv s"
+  shows "\<lbrace>Q\<rbrace> (doE y \<leftarrow> f ; returnOk rv odE) \<lbrace>P\<rbrace>, -"
+  by (wp,auto simp: returnOk_def return_def validE_R_def validE_def valid_def P')
+
+lemma decode_vcpu_invocation_valid_pdpt[wp]:
+  "\<lbrace>Q\<rbrace>
+     decode_vcpu_invocation label args vcap excaps
+   \<lbrace>invocation_duplicates_valid o Invocations_A.InvokeArchObject\<rbrace>, -"
+  apply (simp add: decode_vcpu_invocation_def)
+  apply (cases vcap;
+         cases " invocation_type label";
+         wpsimp;
+         rename_tac arch_label;
+         case_tac arch_label;
+         wpsimp)
+     apply ((fold bindE_assoc, rule returnOk_lift) | wp | wpc | intro conjI
+            | clarsimp simp: invocation_duplicates_valid_def decode_vcpu_set_tcb_def
+                             decode_vcpu_inject_irq_def decode_vcpu_read_register_def
+                             decode_vcpu_write_register_def
+                       split: list.split cap.split)+
+  done
+
+lemma arch_decode_invocation_valid_pdpt[wp]:
+  notes find_pd_for_asid_inv[wp del]
+  shows
+  "\<lbrace>invs and valid_cap (cap.ArchObjectCap cap) and valid_pdpt_objs \<rbrace>
+   arch_decode_invocation label args cap_index slot cap excaps
+   \<lbrace>invocation_duplicates_valid o Invocations_A.InvokeArchObject\<rbrace>,-"
+  proof -
+  show ?thesis
+    apply (simp add: arch_decode_invocation_def)
+    apply (rule hoare_pre)
+     apply (wp | wpc)+
+    apply auto
+    done
 qed
 
 lemma decode_invocation_valid_pdpt[wp]:
