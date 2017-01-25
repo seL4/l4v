@@ -99,9 +99,13 @@ crunch valid_pdpt_objs[wp]: vcpu_save,vcpu_restore,vcpu_enable,get_vcpu,set_vcpu
   (wp: crunch_wps simp: crunch_simps ignore: set_object do_machine_op)
 
 lemma vcpu_switch_valid_pdpt_objs[wp]:
-  "\<lbrace>\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_ s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace>"
-  sorry
-
+  "\<lbrace>valid_pdpt_objs\<rbrace>
+     vcpu_switch v
+   \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
+  apply (simp add: vcpu_switch_def)
+  apply (rule hoare_pre)
+  apply (wp | wpc | clarsimp)+
+  done
 
 crunch valid_pdpt_objs[wp]: flush_page "valid_pdpt_objs"
   (wp: crunch_wps simp: crunch_simps ignore: set_object)
