@@ -72,7 +72,7 @@ definition
   loadWord :: "machine_word \<Rightarrow> machine_word machine_monad"
   where "loadWord p \<equiv> do m \<leftarrow> gets underlying_memory;
                          assert (p && mask 3 = 0);
-                         return (word_rcat (map (\<lambda>i. m (p + (of_int i))) [0 .. 7]))
+                         return (word_rcat (map (\<lambda>i. m (p + (7 - of_int i))) [0 .. 7]))
                       od"
 
 definition
@@ -80,7 +80,7 @@ definition
   where "storeWord p w \<equiv> do
                             assert (p && mask 3 = 0);
                             modify (underlying_memory_update (
-                                      fold (\<lambda>i m. m((p + (of_int i)) := word_rsplit w ! (nat i))) [0 .. 7]))
+                                      fold (\<lambda>i m. m((p + (of_int i)) := word_rsplit w ! (7 - nat i))) [0 .. 7]))
                          od"
 
 lemma upto0_7_def:
