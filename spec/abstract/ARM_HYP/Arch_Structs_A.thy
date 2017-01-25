@@ -332,7 +332,6 @@ record arch_state =
   arm_hwasid_table  :: "ARM_A.hw_asid \<rightharpoonup> ARM_A.asid"
   arm_next_asid     :: ARM_A.hw_asid
   arm_asid_map      :: "ARM_A.asid \<rightharpoonup> (ARM_A.hw_asid \<times> obj_ref)"
-  arm_global_pt     :: obj_ref
   arm_current_vcpu    :: "(obj_ref \<times> bool) option"
   arm_gicvcpu_numlistregs :: nat
   arm_kernel_vspace :: ARM_A.arm_vspace_region_uses

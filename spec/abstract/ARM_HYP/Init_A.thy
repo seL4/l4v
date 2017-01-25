@@ -54,7 +54,6 @@ definition
     arm_hwasid_table = empty,
     arm_next_asid = 0,
     arm_asid_map = empty,
-    arm_global_pt = init_global_pt,
     arm_current_vcpu = None,
     arm_gicvcpu_numlistregs = undefined,
     arm_kernel_vspace = \<lambda>ref.
@@ -84,10 +83,7 @@ definition
     tcb_bound_notification = None,
     tcb_mcpriority = minBound,
     tcb_arch = init_arch_tcb
-  \<rparr>,
-  init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage),
-  init_global_pt \<mapsto> ArchObj (PageDirectory global_pd)
-  )"
+  \<rparr>)"
 
 definition
   "init_cdt \<equiv> empty"
