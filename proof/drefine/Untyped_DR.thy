@@ -257,8 +257,8 @@ lemma freeMemory_dcorres:
                 in use_valid)
     apply (simp add: do_machine_op_def split_def)
     apply wp
-    apply (clarsimp simp: freeMemory_def word_size_def
-                          mapM_x_storeWord_step intvl_range_conv')
+    apply (clarsimp simp: freeMemory_def mapM_x_storeWord_step[simplified word_size_bits_def]
+                          intvl_range_conv')
     apply (rule conjI, fastforce)
     apply clarsimp
     apply (erule use_valid[where P=P and Q="%_. P" for P])
@@ -947,7 +947,7 @@ lemma retype_transform_ref_subseteq_strong:
           apply (simp add:unat_of_nat_m1 less_imp_le)
          using cover
          apply (simp add:range_cover_def word_bits_def)
-        apply (rule word32_plus_mono_right_split[where sz = sz])
+        apply (rule machine_word_plus_mono_right_split[where sz = sz])
         using range_cover.range_cover_compare[OF cover,where p = "unat (of_nat n - (1::word32))"]
         apply (clarsimp simp:unat_of_nat_m1)
        using cover

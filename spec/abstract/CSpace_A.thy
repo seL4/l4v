@@ -32,11 +32,13 @@ requalify_consts
   arch_is_physical
   arch_same_region_as
   same_aobject_as
-
   msg_max_length
   cap_transfer_data_size
   msg_max_extra_caps
   msg_align_bits
+  update_cnode_cap_data
+  cnode_padding_bits
+  cnode_guard_size_bits
 
 end
 
@@ -96,7 +98,7 @@ where
   "max_free_index_update cap \<equiv> cap \<lparr> free_index:= max_free_index (untyped_sz_bits cap) \<rparr>"
 
 definition
-  set_untyped_cap_as_full :: "cap \<Rightarrow> cap \<Rightarrow> obj_ref \<times> bool list\<Rightarrow> (unit,'z::state_ext) s_monad"
+  set_untyped_cap_as_full :: "cap \<Rightarrow> cap \<Rightarrow> obj_ref \<times> bool list \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_untyped_cap_as_full src_cap new_cap src_slot \<equiv>
    if (is_untyped_cap src_cap \<and> is_untyped_cap new_cap
@@ -136,11 +138,7 @@ definition
   else if is_cnode_cap cap then
     let
         (oref, bits, guard) = the_cnode_cap cap;
-        rights_bits = 3;
-        guard_bits = 18;
-        guard_size_bits = 5;
-        guard_size' = unat ((w >> rights_bits) && mask guard_size_bits);
-        guard'' = (w >> (rights_bits + guard_size_bits)) && mask guard_bits;
+        (guard_size', guard'') = update_cnode_cap_data w;
         guard' = drop (size guard'' - guard_size') (to_bl guard'')
     in
         if guard_size' + bits > word_bits
@@ -856,6 +854,6 @@ definition
 section "Cap classification used to define invariants"
 
 datatype capclass =
-  PhysicalClass | ReplyClass "obj_ref" | IRQClass | ASIDMasterClass | NullClass | DomainClass
+  PhysicalClass | ReplyClass "obj_ref" | IRQClass | ASIDMasterClass | NullClass | DomainClass | IOPortClass
 
 end

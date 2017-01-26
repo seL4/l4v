@@ -202,7 +202,7 @@ lemma decode_invocation_corres:
         apply (rule corres_guard_imp)
           apply (rule_tac F="length list \<le> 32" in corres_gen_asm)
           apply (rule dec_cnode_inv_corres, simp+)
-         apply (simp add: valid_cap_def)
+         apply (simp add: valid_cap_def word_bits_def)
         apply simp
        -- "ThreadCap"
        apply (simp add: isCap_defs Let_def CanModify_def

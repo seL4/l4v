@@ -522,29 +522,22 @@ lemma sts_mcpriority_tcb_at_ct[wp]:
   apply clarsimp
   done  
 
-  
+
+lemma sts_tcb_inv_wf [wp]:
+  "\<lbrace>tcb_inv_wf i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. tcb_inv_wf i\<rbrace>"
+  apply (case_tac i)
+  apply (wp set_thread_state_valid_cap hoare_vcg_all_lift hoare_vcg_const_imp_lift
+         | simp add: tcb_at_typ split: option.split
+         | safe
+         | wp sts_obj_at_impossible)+
+  done
+
 lemma sts_valid_inv[wp]:
   "\<lbrace>valid_invocation i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_invocation i\<rbrace>"
-  apply (case_tac i, simp_all add: ntfn_at_typ ep_at_typ 
-                                   sts_valid_untyped_inv sts_valid_arch_inv)
-         apply (wp | simp)+
-      apply (rename_tac tcb_invocation)
-      apply (case_tac tcb_invocation, 
-             (wp set_thread_state_valid_cap hoare_vcg_all_lift hoare_vcg_const_imp_lift|
-              simp add: tcb_at_typ  split: option.split|
-              safe | 
-             wp sts_obj_at_impossible )+)
-    apply (rename_tac cnode_invocation)
-    apply (case_tac cnode_invocation, simp_all)[1]
-    apply (case_tac cnode_invocation,
-           (wp set_thread_state_valid_cap sts_nasty_bit hoare_vcg_const_imp_lift            
-              | simp)+)
-   apply (rename_tac irq_control_invocation)
-   apply (case_tac irq_control_invocation; wpsimp)
-  apply (rename_tac irq_handler_invocation)
-  apply (case_tac irq_handler_invocation; 
-         wpsimp wp: ex_cte_cap_to_pres hoare_vcg_ex_lift set_thread_state_valid_cap)
-  done
+  by (cases i; wpsimp simp: sts_valid_untyped_inv sts_valid_arch_inv;
+      rename_tac i'; case_tac i'; simp;
+      wpsimp wp: set_thread_state_valid_cap sts_nasty_bit
+                 hoare_vcg_const_imp_lift hoare_vcg_ex_lift)
 
 
 lemma sts_Restart_stay_simple:
@@ -766,7 +759,7 @@ proof (induct param rule: resolve_address_bits'.induct)
     apply (elim conjE exE disjE)
         apply ((clarsimp simp: whenE_def bindE_def bind_def lift_def liftE_def
                     throwError_def returnOk_def return_def valid_fault_def
-                    valid_cap_def2 wellformed_cap_def
+                    valid_cap_def2 wellformed_cap_def word_bits_def
                   split: if_split_asm cap.splits)+)[4]
     apply (split if_split_asm)
      apply (clarsimp simp: whenE_def bindE_def bind_def lift_def liftE_def

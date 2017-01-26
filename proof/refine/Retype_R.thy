@@ -836,7 +836,7 @@ lemma new_cap_addrs_subset:
                      dest!: less_two_pow_divD)
   apply (intro conjI)
   apply (insert range_cover)
-  apply (rule word32_plus_mono_right_split[OF range_cover.range_cover_compare])
+  apply (rule machine_word_plus_mono_right_split[OF range_cover.range_cover_compare])
     apply assumption
     apply simp
     apply (simp add:range_cover_def word_bits_def)
@@ -3216,7 +3216,7 @@ lemma obj_range'_subset_strong:
           apply (simp add:unat_of_nat_m1 less_imp_le)
          using cover
          apply (simp add:range_cover_def word_bits_def)
-        apply (rule word32_plus_mono_right_split[where sz = sz])
+        apply (rule machine_word_plus_mono_right_split[where sz = sz])
         using range_cover.range_cover_compare[OF cover,where p = "unat (of_nat n - (1::word32))"]
         apply (clarsimp simp:unat_of_nat_m1)
        using cover
@@ -3646,7 +3646,7 @@ proof -
      apply unat_arith
    using upbound
    apply (simp add:word_bits_def)
-   apply (rule word32_plus_mono_right_split[where sz = sz])
+   apply (rule machine_word_plus_mono_right_split[where sz = sz])
     apply (rule less_le_trans[rotated -1])
      apply (rule range_cover.range_cover_compare_bound[OF cover'])
     apply (simp add: unat_minus_one[OF not_0'])

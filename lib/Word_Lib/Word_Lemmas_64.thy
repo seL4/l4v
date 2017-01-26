@@ -84,6 +84,23 @@ lemma unat_less_word_bits:
 lemmas unat_mask_word64' = unat_mask[where 'a=64]
 lemmas unat_mask_word64 = unat_mask_word64'[folded word_bits_def]
 
+lemma Suc_unat_mask_div:
+  "Suc (unat (mask sz div word_size::word64)) = 2 ^ (min sz word_bits - 3)"
+  apply (case_tac "sz < word_bits")
+   apply (case_tac "3\<le>sz")
+    apply (clarsimp simp: word_size_def word_bits_def min_def mask_def)
+    apply (drule (2) Suc_div_unat_helper
+           [where 'a=64 and sz=sz and us=3, simplified, symmetric])
+   apply (simp add: not_le word_size_def word_bits_def)
+   apply (case_tac sz, simp add: unat_word_ariths)
+   apply (case_tac nat, simp add: unat_word_ariths
+                                  unat_mask_word64 min_def word_bits_def)
+   apply (case_tac nata, simp add: unat_word_ariths unat_mask_word64 word_bits_def)
+   apply simp
+  apply (simp add: unat_word_ariths
+                   unat_mask_word64 min_def word_bits_def word_size_def)
+  done
+
 lemmas word64_minus_one_le' = word_minus_one_le[where 'a=64]
 lemmas word64_minus_one_le = word64_minus_one_le'[simplified]
 

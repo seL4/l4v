@@ -590,7 +590,6 @@ lemma out_no_cap_to_trivial:
   apply (wpsimp wp: hoare_vcg_const_Ball_lift out_cte_wp_at_trivialT)
   done
 
-(* FIXME: eliminate *)
 lemmas thread_set_no_cap_to_trivial = thread_set_no_cap_obj_ref_trivial
 
 
@@ -865,11 +864,6 @@ lemma (in Tcb_AI) tcbinv_invs:
   apply clarsimp
   done
 
-crunch typ_at[wp]: invoke_tcb "\<lambda>s. P (typ_at T p s)"
-  (ignore: check_cap_at setNextPC zipWithM
-       wp: hoare_drop_imps mapM_x_wp' check_cap_inv
-     simp: crunch_simps)
-
 lemma inj_ucast: "\<lbrakk> uc = ucast; is_up uc \<rbrakk> \<Longrightarrow> inj uc"
   apply simp
   apply (rule inj_on_inverseI)
@@ -1015,7 +1009,7 @@ where
 
 
 primrec
-  thread_control_target :: "tcb_invocation \<Rightarrow> word32"
+  thread_control_target :: "tcb_invocation \<Rightarrow> machine_word"
 where
  "thread_control_target (tcb_invocation.ThreadControl a b c d e f g h) = a"
 

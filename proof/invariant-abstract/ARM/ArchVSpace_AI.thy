@@ -116,20 +116,14 @@ lemma pd_at_asid_unique:
      valid_arch_state s; asid < 2 ^ asid_bits; asid' < 2 ^ asid_bits \<rbrakk>
        \<Longrightarrow> asid = asid'"
   apply (clarsimp simp: vspace_at_asid_def)
-  apply (subgoal_tac "pd \<notin> set (arm_global_pts (arch_state s))")
-   apply (drule(1) valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI])+
-   apply (clarsimp simp: table_cap_ref_ap_eq[symmetric])
-   apply (clarsimp simp: table_cap_ref_def
-                  split: cap.split_asm arch_cap.split_asm option.split_asm)
-   apply (drule(2) unique_table_refsD,
-          simp+, clarsimp simp: table_cap_ref_def,
-          erule(1) asid_low_high_bits)
-    apply simp+
-  apply clarsimp
-  apply (drule(2) vs_ref_order)
-  apply clarsimp
-  apply (drule(1) valid_global_ptsD)
-  apply (clarsimp simp: obj_at_def a_type_def)
+  apply (drule(1) valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI])+
+  apply (clarsimp simp: table_cap_ref_ap_eq[symmetric])
+  apply (clarsimp simp: table_cap_ref_def
+                 split: cap.split_asm arch_cap.split_asm option.split_asm)
+  apply (drule(2) unique_table_refsD,
+         simp+, clarsimp simp: table_cap_ref_def,
+         erule(1) asid_low_high_bits)
+   apply simp+
   done
 
 lemma pd_at_asid_unique2:
@@ -4994,7 +4988,7 @@ lemma set_asid_pool_valid_arch_caps_map:
   apply (wp get_object_wp)
   apply clarsimp
   apply (frule obj_at_not_pt_not_in_global_pts[where p=pd], clarsimp+)
-   apply (simp add: a_type_def)
+  apply (simp add: a_type_def)
   apply (frule obj_at_not_pt_not_in_global_pts[where p=ap], clarsimp+)
   apply (clarsimp simp: obj_at_def valid_arch_caps_def
                         caps_of_state_after_update)

@@ -216,7 +216,7 @@ where
 subsection "Valid caps and objects"
 
 primrec
-  untyped_range :: "cap \<Rightarrow> word32 set"
+  untyped_range :: "cap \<Rightarrow> machine_word set"
 where
   "untyped_range (cap.UntypedCap dev p n f)             = {p..p + (1 << n) - 1}"
 | "untyped_range (cap.NullCap)                          = {}"
@@ -231,10 +231,10 @@ where
 | "untyped_range (cap.Zombie r b n)                     = {}"
 | "untyped_range (cap.ArchObjectCap cap)                = {}"
 
-primrec
-  usable_untyped_range :: "cap \<Rightarrow> word32 set"
+primrec (nonexhaustive)
+  usable_untyped_range :: "cap \<Rightarrow> machine_word set"
 where
- "usable_untyped_range (cap.UntypedCap _ p n f) =
+ "usable_untyped_range (UntypedCap _ p n f) =
   (if f < 2^n  then {p+of_nat f .. p + 2 ^ n - 1} else {})"
 
 definition
@@ -300,7 +300,7 @@ where
   case c of
     UntypedCap dev p sz idx \<Rightarrow> sz \<ge> 4
   | NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
-  | CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> 32
+  | CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
   | Zombie r b n \<Rightarrow> (case b of None \<Rightarrow> n \<le> 5
                                           | Some b \<Rightarrow> n \<le> 2 ^ b \<and> b \<noteq> 0)
@@ -336,7 +336,7 @@ where
   | NotificationCap r badge rights \<Rightarrow>
          ntfn_at r s \<and> AllowGrant \<notin> rights
   | CNodeCap r bits guard \<Rightarrow>
-         cap_table_at bits r s \<and> bits \<noteq> 0 \<and> length guard \<le> 32
+         cap_table_at bits r s \<and> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | ThreadCap r \<Rightarrow> tcb_at r s
   | DomainCap \<Rightarrow> True
   | ReplyCap r m \<Rightarrow> tcb_at r s

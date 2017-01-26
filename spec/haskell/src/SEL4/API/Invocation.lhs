@@ -126,11 +126,14 @@ The following data type defines the parameters expected for invocations of Untyp
 
 The following data type defines the set of possible invocations for interrupt controller capabilities.
 
+%FIXME IssueIRQHandler is not really handled on x64, instead it has two arch-specific ones
+
 > data IRQControlInvocation
 >         = ArchIRQControl { archIRQControl :: Arch.IRQControlInvocation }
 >         | IssueIRQHandler {
 >             issueHandlerIRQ :: IRQ,
->             issueHandlerSlot, issueHandlerControllerSlot :: PPtr CTE }
+>             issueHandlerSlot,
+>             issueHandlerControllerSlot :: PPtr CTE }
 >         deriving Show
 
 \subsubsection{IRQ Handler Invocations}

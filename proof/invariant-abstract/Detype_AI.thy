@@ -23,10 +23,10 @@ locale Detype_AI =
          cap_range cap = {} \<or> 
          (\<forall>ptr \<in> cap_range cap. \<exists>ko. kheap s ptr = Some ko)"
   assumes mapM_x_storeWord:
-   "\<And>ptr. is_aligned ptr 2 
-     \<Longrightarrow> mapM_x (\<lambda>x. storeWord (ptr + of_nat x * 4) 0) [0..<n]
+   "\<And>ptr. is_aligned ptr word_size_bits
+     \<Longrightarrow> mapM_x (\<lambda>x. storeWord (ptr + of_nat x * word_size) 0) [0..<n]
          = modify (underlying_memory_update
-                (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * 4 then 0 else m x))"
+                (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * word_size then 0 else m x))"
   assumes empty_fail_freeMemory:
     "empty_fail (freeMemory ptr bits)"
 
@@ -73,7 +73,7 @@ lemma state_refs_of_detype:
 
 
 definition
-  obj_reply_refs :: "cap \<Rightarrow> word32 set"
+  obj_reply_refs :: "cap \<Rightarrow> machine_word set"
 where
  "obj_reply_refs cap \<equiv> obj_refs cap \<union>
    (case cap of cap.ReplyCap t m \<Rightarrow> {t} | _ \<Rightarrow> {})"
@@ -897,15 +897,14 @@ lemma of_nat_le_pow:
   apply simp
   done
 
-(* FIXME: move, fix underlying -1 problem *)
-lemma maxword_32_conv: "(x::32 word) + 0xFFFFFFFF = x - 1" by simp
+lemma maxword_len_conv': "(x::machine_word) + max_word = x - 1" by (simp add: max_word_def)
 
 (* FIXME: copied from Retype_C and slightly adapted. *)
 lemma (in Detype_AI) mapM_x_storeWord_step:
   assumes al: "is_aligned ptr sz"
-  and    sz2: "2 \<le> sz"
+  and    sz2: "word_size_bits \<le> sz"
   and     sz: "sz <= word_bits"
-  shows "mapM_x (\<lambda>p. storeWord p 0) [ptr , ptr + 4 .e. ptr + 2 ^ sz - 1] = 
+  shows "mapM_x (\<lambda>p. storeWord p 0) [ptr , ptr + word_size .e. ptr + 2 ^ sz - 1] =
   modify (underlying_memory_update
     (\<lambda>m x. if x \<in> {x. \<exists>k. x = ptr + of_nat k \<and> k < 2 ^ sz} then 0 else m x))"
   using al sz
@@ -913,21 +912,20 @@ lemma (in Detype_AI) mapM_x_storeWord_step:
   apply (subst if_not_P)
    apply (subst not_less)
    apply (erule is_aligned_no_overflow)
-  apply (simp add: mapM_x_map comp_def upto_enum_word maxword_32_conv del: upt.simps)
-  apply (simp add:Suc_unat_mask_div[simplified mask_2pm1 word_size_def] min_def)
+  apply (simp add: mapM_x_map comp_def upto_enum_word maxword_len_conv' del: upt.simps)
+  apply (simp add: Suc_unat_mask_div_obfuscated[simplified mask_2pm1] min_def)
   apply (subst mapM_x_storeWord) 
    apply (erule is_aligned_weaken [OF _ sz2])
   apply (rule arg_cong)
-  apply (subgoal_tac "2^2 = (4::nat)")
-   apply (cut_tac power_add[symmetric,of "2::nat" "sz - 2" 2])
-   apply (simp only: le_add_diff_inverse2[OF sz2])   
-  apply simp
+  apply (subgoal_tac "2^word_size_bits = (word_size :: nat)")
+   apply (cut_tac power_add[symmetric,of "2::nat" "sz - word_size_bits" word_size_bits])
+   apply (simp only: le_add_diff_inverse2[OF sz2])
+  apply (simp add: word_size_size_bits_nat)
   done
 
-
 lemma (in Detype_AI) mapM_storeWord_clear_um:
-  "is_aligned p n \<Longrightarrow> 2\<le>n \<Longrightarrow> n<=word_bits \<Longrightarrow>
-   do_machine_op (mapM_x (\<lambda>p. storeWord p 0) [p, p + 4 .e. p + 2 ^ n - 1]) =
+  "is_aligned p n \<Longrightarrow> word_size_bits\<le>n \<Longrightarrow> n<=word_bits \<Longrightarrow>
+   do_machine_op (mapM_x (\<lambda>p. storeWord p 0) [p, p + word_size .e. p + 2 ^ n - 1]) =
    modify (clear_um {x.  \<exists>k. x = p + of_nat k \<and> k < 2 ^ n})"
   apply (simp add: mapM_x_storeWord_step)
   apply (rule ext)
@@ -1000,7 +998,7 @@ lemma dom_known_length:
 
 
 lemma of_bl_length2:
-  "length xs < word_bits - cte_level_bits \<Longrightarrow> of_bl xs * 16 < (2 :: word32) ^ (length xs + 4)"
+  "length xs < word_bits - cte_level_bits \<Longrightarrow> of_bl xs * 16 < (2 :: machine_word) ^ (length xs + 4)"
   apply (simp add: power_add)
   apply (rule word_mult_less_mono1)
     apply (rule of_bl_length, simp add: word_bits_def)
@@ -1122,9 +1120,9 @@ lemma refl_spec[simp]:
   by clarsimp
 
 lemma pre_helper:
-  "\<And>base x n. \<lbrakk> is_aligned (base :: word32) (n + 4); n + 4 < word_bits \<rbrakk>
-  \<Longrightarrow> base + (x && mask n) * 16 \<in> {base .. base + 2 ^ (n + 4) - 1}"
-    apply (subgoal_tac "(x && mask n) * 0x10 < 2 ^ (n + 4)")
+  "\<And>base x n. \<lbrakk> is_aligned (base :: machine_word) (n + (a::nat)); n + a < word_bits \<rbrakk>
+  \<Longrightarrow> base + (x && mask n) * 2^a \<in> {base .. base + 2 ^ (n + a) - 1}"
+    apply (subgoal_tac "(x && mask n) * bit(a) < 2 ^ (n + a)")
      apply simp
      apply (rule context_conjI)
       apply (erule(1) is_aligned_no_wrap')
@@ -1136,13 +1134,14 @@ lemma pre_helper:
     apply (simp add: power_add)
     apply (rule word_mult_less_mono1)
       apply (rule and_mask_less_size, simp add: word_size word_bits_def)
-     apply simp
+     apply (simp add: p2_gt_0 word_bits_def)
     apply (simp add: word_bits_def)
     apply (drule power_strict_increasing[where a="2 :: nat"], simp_all)
+    apply (simp add: power_add[where a="2::nat"])
     done
 
 lemma pre_helper2:
-    "\<And>base x n. \<lbrakk> is_aligned (base :: word32) n; n < word_bits; 2 \<le> n; x < 2 ^ (n - 2) \<rbrakk>
+    "\<And>base x n. \<lbrakk> is_aligned (base :: machine_word) n; n < word_bits; 2 \<le> n; x < 2 ^ (n - 2) \<rbrakk>
              \<Longrightarrow> base + x * 4 \<in> {base .. base + 2 ^ n  - 1}"
     apply (subgoal_tac "x * 4 < 2 ^ n")
      apply simp
@@ -1166,19 +1165,10 @@ lemma pre_helper2:
 
 lemmas ucast_ucast_mask_8 = ucast_ucast_mask[where 'a=8, simplified, symmetric]
 
-
-lemma subset_eq_notI: "\<lbrakk>a\<in> B;a\<notin> C\<rbrakk> \<Longrightarrow> \<not> B \<subseteq> C" by auto
-
-
 lemma pspace_no_overlap_obj_range:
   "\<lbrakk> pspace_no_overlap S s; kheap s p = Some obj \<rbrakk>
      \<Longrightarrow> obj_range p obj \<inter> S = {}"
   by (auto simp add: pspace_no_overlap_def obj_range_def field_simps)
-
-lemma commute_grab_asm:
-  "(F \<Longrightarrow> monad_commute P f g) \<Longrightarrow> (monad_commute (P and (K F)) f g)"
-  by (clarsimp simp: monad_commute_def)
-
 
 (* FIXME: generalised version of Arch_AI.range_cover_full *)
 lemma range_cover_full:
@@ -1190,68 +1180,6 @@ lemma range_cover_plus_us:
   "range_cover ptr sz (m + us) (Suc 0) \<Longrightarrow> range_cover ptr sz m (2^us)"
   apply (erule range_cover_rel)
    apply simp+
-  done
-
-lemma commute_name_pre_state:
-assumes "\<And>s. P s \<Longrightarrow> monad_commute (op = s) f g"
-shows "monad_commute P f g"
-  using assms
-  by (clarsimp simp:monad_commute_def)
-
-lemma commute_rewrite:
-assumes rewrite: "\<And>s. Q s \<Longrightarrow> f s = t s"
-  and   hold  : "\<lbrace>P\<rbrace> g \<lbrace>\<lambda>x. Q\<rbrace>"
- shows  "monad_commute R t g \<Longrightarrow> monad_commute (P and Q and R) f g"
-   apply (clarsimp simp:monad_commute_def bind_def split_def return_def)
-   apply (drule_tac x = s in spec)
-   apply (clarsimp simp:rewrite[symmetric])
-    apply (intro conjI)
-     apply (rule set_eqI)
-     apply (rule iffI)
-      apply clarsimp
-      apply (rule bexI[rotated],assumption)
-      apply (subst rewrite)
-      apply (rule use_valid[OF _ hold])
-     apply simp+
-    apply (erule bexI[rotated],simp)
-   apply clarsimp
-   apply (rule bexI[rotated],assumption)
-   apply (subst rewrite[symmetric])
-    apply (rule use_valid[OF _ hold])
-   apply simp+
-   apply (erule bexI[rotated],simp)
-  apply (intro iffI)
-   apply clarsimp
-   apply (rule bexI[rotated],assumption)
-   apply simp
-   apply (subst rewrite)
-    apply (erule(1) use_valid[OF _ hold])
-   apply simp
-  apply (clarsimp)
-  apply (drule bspec,assumption)
-  apply clarsimp
-  apply (metis rewrite use_valid[OF _ hold])
-  done
-
-lemma mapM_x_commute:
-assumes commute:
-  "\<And>r. monad_commute (P r) a (b r)"
-and   single:
-  "\<And>r x. \<lbrace>P r and K (f r \<noteq> f x) and P x\<rbrace> b x \<lbrace>\<lambda>v. P r \<rbrace>"
-shows
-  "monad_commute (\<lambda>s. (distinct (map f list)) \<and> (\<forall>r\<in> set list. P r s)) a (mapM_x b list)"
-  apply (induct list)
-   apply (clarsimp simp:mapM_x_Nil return_def bind_def monad_commute_def)
-  apply (clarsimp simp:mapM_x_Cons)
-  apply (rule monad_commute_guard_imp)
-   apply (rule monad_commute_split)
-     apply assumption
-    apply (rule monad_commute_guard_imp[OF commute])
-   apply assumption
-   apply (wp hoare_vcg_ball_lift)
-   apply (rule single)
-  apply (clarsimp simp: image_def)
-  apply auto
   done
 
 lemma mask_sub: "n \<le> m \<Longrightarrow> mask m - mask n = mask m && ~~ mask n"
@@ -1331,29 +1259,6 @@ lemma range_cover_tail_mask:
    apply (simp add:word_arith_nat_Suc shiftl_t2n power_add[symmetric] field_simps)
   apply simp
   done
-
-
-lemma monad_eq_split2: 
-assumes eq: " g' s = g s"
-assumes tail:"\<And>r s. Q r s \<Longrightarrow> f r s = f' r s"
-and hoare:   "\<lbrace>P\<rbrace>g\<lbrace>\<lambda>r s. Q r s\<rbrace>" "P s"
-shows "(g>>=f) s = (g'>>= f') s"
-proof -
-have pre: "\<And>aa bb. \<lbrakk>(aa, bb) \<in> fst (g s)\<rbrakk> \<Longrightarrow> Q aa bb"
-  using hoare by (auto simp: valid_def)
-show ?thesis
-  apply (simp add:bind_def eq split_def image_def)
-  apply (rule conjI)
-   apply (rule set_eqI)
-   apply (clarsimp simp:Union_eq)
-   apply (metis pre surjective_pairing tail)
-  apply (metis pre surjective_pairing tail)
-  done
-qed
-
-lemma monad_eq_split_tail:
-  "\<lbrakk>f = g;a s = b s\<rbrakk> \<Longrightarrow> (a >>= f) s = ((b >>= g) s)"
-  by (simp add:bind_def)
 
 
 lemma shift_distinct_helper:

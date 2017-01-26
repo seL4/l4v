@@ -8,16 +8,16 @@
  * @TAG(NICTA_BSD)
  */
 
-typedef unsigned int word_t;
+typedef unsigned long word_t;
 
 /** FNSPEC reverse_spec:
   "\<Gamma> \<turnstile>
     \<lbrace> (list zs \<acute>i)\<^bsup>sep\<^esup> \<rbrace>
-      \<acute>ret__int :== PROC reverse(\<acute>i)
-    \<lbrace> (list (rev zs) (Ptr (scast \<acute>ret__int)))\<^bsup>sep\<^esup> \<rbrace>"
+      \<acute>ret__long :== PROC reverse(\<acute>i)
+    \<lbrace> (list (rev zs) (Ptr (scast \<acute>ret__long)))\<^bsup>sep\<^esup> \<rbrace>"
 */
 
-int reverse(word_t *i)
+long reverse(word_t *i)
 {
   word_t j = 0;
 

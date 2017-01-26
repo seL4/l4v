@@ -1030,7 +1030,7 @@ lemma dcorres_tcb_update_ipc_buffer:
                          (\<lambda>ptr frame.
                              doE cap_delete (obj_id', tcb_cnode_index 4);
                                  liftE $ thread_set (tcb_ipc_buffer_update (\<lambda>_. ptr)) obj_id';
-                                 liftE $ as_user obj_id' $ set_register TPIDRURW ptr;
+                                 liftE $ arch_tcb_set_ipc_buffer obj_id' ptr;
                                  liftE $
                                  case_option (return ())
                                   (case_prod

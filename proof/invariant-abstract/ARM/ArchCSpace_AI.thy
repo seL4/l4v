@@ -38,25 +38,24 @@ lemma weak_derived_valid_cap [CSpace_AI_assms]:
   apply (clarsimp simp: copy_of_def split: if_split_asm)
   apply (auto simp: is_cap_simps same_object_as_def wellformed_cap_simps
                     valid_cap_def cap_aligned_def bits_of_def
-                     aobj_ref_cases Let_def cap_asid_def
-               split: cap.splits arch_cap.splits option.splits)
+                    aobj_ref_cases Let_def cap_asid_def
+             split: cap.splits arch_cap.splits option.splits)
   done
 
-lemma weak_derived_tcb_cap_valid [CSpace_AI_assms]:
+(* FIXME: unused *)
+lemma weak_derived_tcb_cap_valid:
   "\<lbrakk> tcb_cap_valid cap p s; weak_derived cap cap' \<rbrakk> \<Longrightarrow> tcb_cap_valid cap' p s"
   apply (clarsimp simp add: tcb_cap_valid_def weak_derived_def
                             obj_at_def is_tcb
                      split: option.split)
   apply (clarsimp simp: st_tcb_def2)
-  apply (erule disjE, simp_all add: copy_of_def split: if_split_asm)
-    apply clarsimp
-   apply (clarsimp simp: tcb_cap_cases_def split: if_split_asm)
-   apply (auto simp: is_cap_simps same_object_as_def
-                     valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
-                     is_nondevice_page_cap_arch_def
-              split: cap.split_asm arch_cap.split_asm
-                     Structures_A.thread_state.split_asm)[3]
-  apply clarsimp
+  apply (erule disjE; simp add: copy_of_def split: if_split_asm; (solves \<open>clarsimp\<close>)?)
+  apply (clarsimp simp: tcb_cap_cases_def split: if_split_asm)
+    apply (auto simp: is_cap_simps same_object_as_def
+                      valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
+                      is_nondevice_page_cap_arch_def
+               split: cap.split_asm arch_cap.split_asm
+                      thread_state.split_asm)
   done
 
 lemma copy_obj_refs [CSpace_AI_assms]:
@@ -268,12 +267,12 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
     prefer 2
     apply (erule iffD2[OF caps_of_state_cteD'])
   apply (wp set_untyped_cap_as_full_cte_wp_at hoare_vcg_all_lift hoare_vcg_imp_lift
-    set_untyped_cap_as_full_cte_wp_at_neg hoare_vcg_ex_lift | clarsimp)+
+            set_untyped_cap_as_full_cte_wp_at_neg hoare_vcg_ex_lift | clarsimp)+
   apply (rule hoare_strengthen_post)
     prefer 2
     apply (erule iffD2[OF caps_of_state_cteD'])
   apply (wp set_untyped_cap_as_full_cte_wp_at hoare_vcg_all_lift hoare_vcg_imp_lift
-    set_untyped_cap_as_full_cte_wp_at_neg hoare_vcg_ex_lift | clarsimp)+
+         set_untyped_cap_as_full_cte_wp_at_neg hoare_vcg_ex_lift | clarsimp)+
   apply (wp get_cap_wp)+
   apply (intro conjI allI impI disj_subst)
           apply simp
@@ -406,7 +405,7 @@ lemma update_cap_data_validI [CSpace_AI_assms]:
   apply (simp_all add: is_cap_defs update_cap_data_def Let_def split_def)
      apply (simp add: valid_cap_def cap_aligned_def)
     apply (simp add: valid_cap_def cap_aligned_def)
-   apply (simp add: the_cnode_cap_def valid_cap_def cap_aligned_def)
+   apply (simp add: the_cnode_cap_def valid_cap_def cap_aligned_def word_bits_def)
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
       apply (simp_all add: is_cap_defs arch_update_cap_data_def)
@@ -523,7 +522,7 @@ lemma cap_insert_simple_arch_caps_no_ap:
 end
 
 
-global_interpretation CSpace_AI?: CSpace_AI_7
+global_interpretation CSpace_AI?: CSpace_AI
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact CSpace_AI_assms)?)

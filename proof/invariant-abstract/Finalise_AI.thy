@@ -984,7 +984,7 @@ crunch tcb_at[wp]: unbind_notification "tcb_at t"
 locale Finalise_AI_3 = Finalise_AI_2 a b
   for a :: "('a :: state_ext) itself"
   and b :: "('b :: state_ext) itself" +
-  fixes replaceable_or_arch_update :: "'a state \<Rightarrow> 32 word \<times> bool list \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
+  fixes replaceable_or_arch_update :: "'a state \<Rightarrow> machine_word \<times> bool list \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
   fixes c :: "'c itself"
   assumes finalise_cap_invs:
     "\<And> cap slot x.

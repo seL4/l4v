@@ -18,12 +18,6 @@ imports "../SubMonad_AI"
 begin
 
   
-(*FIXME: Move or remove *)
-
-method spec for x :: "_ :: type" = (erule allE[of _ x])
-method bspec for x :: "_ :: type" = (erule ballE[of _ _ x])
-method prove for x :: "prop" = (rule revcut_rl[of "PROP x"])
-
 context Arch begin global_naming ARM
 
 
@@ -221,105 +215,30 @@ lemma set_asid_pool_pred_tcb_at[wp]:
   apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
 
-lemmas word_simps = 
-  word_size word_ops_nth_size nth_ucast nth_shiftr nth_shiftl
-  pd_bits_def pageBits_def
-  
+
 lemma mask_pd_bits_inner_beauty:
   "is_aligned p 2 \<Longrightarrow>
   (p && ~~ mask pd_bits) + (ucast ((ucast (p && mask pd_bits >> 2))::12 word) << 2) = (p::word32)"
-  apply (simp add: is_aligned_nth)
-  apply (subst word_plus_and_or_coroll; rule word_eqI)
-  subgoal
-    by (clarsimp simp: word_simps)
-  subgoal for n
-    apply (clarsimp simp: word_simps)
-    apply (rule iffI, (erule disjE;clarsimp))
-    subgoal by (clarsimp simp: SucSucMinus)
-    apply (spec n)
-    apply (clarsimp simp: SucSucMinus)
-    by arith
-  done
-
+  by (rule mask_split_aligned; simp add: pd_bits_def pageBits_def)
 
 lemma more_pd_inner_beauty:
   fixes x :: "12 word"
   fixes p :: word32
   assumes x: "x \<noteq> ucast (p && mask pd_bits >> 2)"
   shows "(p && ~~ mask pd_bits) + (ucast x << 2) = p \<Longrightarrow> False"
-  apply (subst (asm) word_plus_and_or_coroll)
-   apply (clarsimp simp: word_simps bang_eq)
-  subgoal for n
-    apply (drule test_bit_size)
-    apply (clarsimp simp: word_simps)
-    by arith
-  apply (insert x)
-  apply (erule notE)
-  apply (rule word_eqI)
-  subgoal for n
-    apply (clarsimp simp: word_simps bang_eq)
-    apply (spec "n+2")
-    by (clarsimp simp: word_ops_nth_size word_size)
-  done
-
-lemma mask_alignment_ugliness:
-  "\<lbrakk> x \<noteq> x + z && ~~ mask m;
-     is_aligned (x + z && ~~ mask m) m;
-     is_aligned x m;
-     \<forall>n \<ge> m. \<not>z !! n\<rbrakk>
-  \<Longrightarrow> False"
-  apply (erule notE)
-  apply (rule word_eqI)
-  apply (clarsimp simp: is_aligned_nth word_ops_nth_size word_size pd_bits_def pageBits_def)
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: word_size)
-   
-   subgoal for \<dots> na
-    apply (spec na)+
-    by simp
-  by auto
-
+  by (rule mask_split_aligned_neg[OF _ _ x]; simp add: pd_bits_def pageBits_def)
 
 lemma mask_pt_bits_inner_beauty:
   "is_aligned p 2 \<Longrightarrow>
   (p && ~~ mask pt_bits) + (ucast ((ucast (p && mask pt_bits >> 2))::word8) << 2) = (p::word32)"
-  apply (simp add: is_aligned_nth)
-  apply (subst word_plus_and_or_coroll; rule word_eqI)
-  subgoal by (clarsimp simp: word_simps)
-  apply (clarsimp simp: word_simps)
-  subgoal for n
-   apply (rule iffI)
-    apply (erule disjE;clarsimp)
-    subgoal by (prove "Suc (Suc (n - 2)) = n") simp+
-   apply clarsimp
-  apply (rule context_conjI)
-   apply (rule leI)
-   subgoal by clarsimp
-   apply (prove "Suc (Suc (n - 2)) = n") subgoal by arith
-   by (simp add: pt_bits_def pageBits_def)
-  done
-
+  by (rule mask_split_aligned; simp add: pt_bits_def pageBits_def)
 
 lemma more_pt_inner_beauty:
   fixes x :: "word8"
   fixes p :: word32
   assumes x: "x \<noteq> ucast (p && mask pt_bits >> 2)"
   shows "(p && ~~ mask pt_bits) + (ucast x << 2) = p \<Longrightarrow> False"
-  apply (subst (asm) word_plus_and_or_coroll)
-   apply (clarsimp simp: word_size word_ops_nth_size nth_ucast
-                         nth_shiftl bang_eq)
-   apply (drule test_bit_size)
-   apply (clarsimp simp: word_size pt_bits_def pageBits_def)
-   apply arith
-   apply (rule x[THEN notE])
-  apply (rule word_eqI)
-  subgoal for n
-    apply (clarsimp simp: bang_eq word_simps)
-    apply (spec "n+2")
-    apply (clarsimp simp: word_ops_nth_size word_size)
-    by (clarsimp simp: pt_bits_def pageBits_def)
-  done
+  by (rule mask_split_aligned_neg[OF _ _ x]; simp add: pt_bits_def pageBits_def)
 
 
 lemma set_pd_aligned [wp]:
@@ -511,9 +430,7 @@ lemma pde_shifting:
       apply (drule (1) order_le_less_trans)
       apply (drule bang_is_le)
       apply (drule order_le_less_trans[where z="2 ^ 4"], assumption)
-      apply (drule word_power_increasing)
-            apply (fold_subgoals (prefix))[4]
-      subgoal premises using prems by simp+
+      apply (drule word_power_increasing; simp)
     apply (spec "n' + 20")
     apply (frule test_bit_size[where n = "n' + 20"])
     by (simp add: word_size)

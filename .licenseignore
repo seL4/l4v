@@ -65,9 +65,12 @@ spec/haskell/src/SEL4/Object/CNode.lhs-boot
 spec/haskell/src/SEL4/Object/Endpoint.lhs-boot
 spec/haskell/src/SEL4/Object/ObjectType.lhs-boot
 spec/haskell/src/SEL4/Object/TCB.lhs-boot
+spec/haskell/src/SEL4/Object/IOPort/X64.lhs-boot
 
 spec/design/version
 
+spec/cspec/c/32/*
+spec/cspec/c/64/*
 spec/cspec/c/api/*
 spec/cspec/c/arch/*
 spec/cspec/c/kernel_all.c
@@ -151,9 +154,10 @@ tools/c-parser/standalone-parser/*/tokenizer
 tools/c-parser/tools/mllex/mllex
 tools/c-parser/tools/mlyacc/mlyacc
 tools/c-parser/tools/mlyacc/src/yacc.lex.sml
-tools/c-parser/testfiles/jiraver473.minfo
-tools/c-parser/testfiles/ROOT
+tools/c-parser/testfiles/**/*.minfo
+tools/c-parser/testfiles/**/ROOT
 tools/c-parser/testfiles/umm_types.txt
+tools/c-parser/testfiles/modifies_speed.c
 
 tools/haskell-translator/caseconvs-useful
 tools/haskell-translator/primrecs

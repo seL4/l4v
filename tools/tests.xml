@@ -23,6 +23,7 @@
     <sequence cwd="c-parser">
       <test name="CParser">../../isabelle/bin/isabelle env make -f IsaMakefile CParser</test>
       <test name="CParserTest" cpu-timeout="7200">../../isabelle/bin/isabelle env make -f IsaMakefile cparser_test</test>
+      <test name="CParserTestX64" cpu-timeout="7200">L4V_ARCH=X64 ../../isabelle/bin/isabelle env make -f IsaMakefile cparser_test</test>
       <test name="CParserTools">../../isabelle/bin/isabelle env make -f IsaMakefile cparser_tools</test>
     </sequence>
 

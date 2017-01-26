@@ -1665,6 +1665,9 @@ lemma set_mcpriority_valid_sched[wp]:
 crunch simple_sched_action[wp]: set_priority,set_mcpriority simple_sched_action
 
 context begin interpretation Arch . (*FIXME: arch_split*)
+
+crunch valid_sched[wp]: arch_tcb_set_ipc_buffer valid_sched
+
 lemma tc_valid_sched[wp]:
   "\<lbrace>valid_sched and simple_sched_action\<rbrace>
       invoke_tcb (ThreadControl a sl b mcp pr e f g)
@@ -1675,6 +1678,7 @@ lemma tc_valid_sched[wp]:
    apply (wp check_cap_inv thread_set_not_state_valid_sched hoare_vcg_all_lift gts_wp static_imp_wp
          | wpc | simp add: option_update_thread_def)+
    done
+
 end
 
 lemma set_scheduler_action_swt_weak_valid_sched:

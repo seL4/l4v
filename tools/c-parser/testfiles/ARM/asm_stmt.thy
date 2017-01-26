@@ -10,7 +10,7 @@
 
 theory asm_stmt
 
-imports "../CTranslation"
+imports "../../CTranslation"
 
 begin
 

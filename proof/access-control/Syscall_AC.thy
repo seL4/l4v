@@ -202,18 +202,6 @@ lemma set_thread_state_authorised[wp]:
           apply (wp sts_valid_untyped_inv ct_in_state_set
                     hoare_vcg_ex_lift sts_obj_at_impossible
                   | simp)+
-      apply (rename_tac tcb_invocation)
-      apply (case_tac tcb_invocation, simp_all)
-            apply (wp hoare_case_option_wp sts_typ_ats set_thread_state_cte_wp_at
-                      hoare_vcg_conj_lift static_imp_wp
-                 | wp_once valid_case_option_post_wp
-                 | simp)+
-           apply ((clarsimp split: option.splits)+)[3]
-        apply ((wp
-             | simp)+)[2]
-      apply (rename_tac option)
-      apply (case_tac option, simp_all)[1]
-       apply (wp set_thread_state_tcb_at sts_obj_at_impossible | simp add: authorised_tcb_inv_def)+
      apply (rename_tac cnode_invocation)
      apply (case_tac cnode_invocation,
             simp_all add: cnode_inv_auth_derivations_def authorised_cnode_inv_def)[1]
