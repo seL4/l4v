@@ -7,3 +7,4 @@ tools
 camkes
 sys-init
 lib/Word_Lib
+lib/sep_algebra
