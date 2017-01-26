@@ -1556,42 +1556,6 @@ lemma pd_shifting_global_refs:
   apply simp
   done
 
-lemma mapM_x_store_pde_InvalidPDE_empty:
-  "\<lbrace>(invs and  (\<lambda>s. word \<notin> global_refs s)) and K(is_aligned word pd_bits)\<rbrace>
-    mapM_x (swp store_pde InvalidPDE)
-           (map (\<lambda>a. (a << 3) + word) [0.e.(kernel_base >> 21) - 1])
-   \<lbrace>\<lambda>_ s. obj_at (empty_table {}) word s\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (rule hoare_post_imp)
-   apply (erule obj_at_empty_tableI)
-  apply (wp hoare_vcg_conj_lift)
-    apply (rule mapM_x_swp_store_pde_invs_unmap)
-   apply (simp add: mapM_x_map)
-   apply (rule hoare_strengthen_post)
-    apply (rule mapM_x_accumulate_checks[OF store_pde_pde_wp_at])
-    defer
-    apply (rule allI)
-    apply (erule_tac x="ucast x" in ballE)
-(*     apply (rule impI)*)
-     apply (frule_tac pd="word" and ae="x" in pd_shifting_again3)
-     apply (frule_tac pd="word" and ae="x" in pd_shifting_again5)
-      apply ((simp add: kernel_base_def)+)[3]
-
-
-(*    apply (subst word_not_le) *)
-    apply (subst (asm) word_not_le)
-    apply (cut_tac x="ucast x" and y="kernel_base >> 21" in le_m1_iff_lt)
-    apply (simp add: le_m1_iff_lt word_less_nat_alt unat_ucast)
-(*    apply (simp add: pde_ref_def) *)
-(*   apply (rule conjI, rule allI, rule impI)
-    apply (rule pd_shifting_kernel_mapping_slots)
-     apply simp+*)
-(*   apply (rule allI, rule impI)
-   apply (rule pd_shifting_global_refs)
-     apply simp+
-  apply (wp store_pde_pde_wp_at2) *)
-  sorry
-
 lemma word_aligned_pt_slots:
   "\<lbrakk>is_aligned word pt_bits;
     x \<in> set [word , word + 4 .e. word + 2 ^ pt_bits - 1]\<rbrakk>
@@ -1744,16 +1708,6 @@ lemma store_pde_vspace_objs_invalid:
   "\<lbrace>valid_vspace_objs\<rbrace> store_pde p InvalidPDE \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   apply (wp store_pde_arch_objs_unmap)
   apply (simp add: pde_ref_def)
-  done
-
-lemma mapM_x_store_pde_InvalidPDE_empty2:
-  "\<lbrace>invs and (\<lambda>s. word \<notin> global_refs s) and K (is_aligned word pd_bits) and K (slots = (map (\<lambda>a. (a << 3) + word) [0.e.(kernel_base >> 21) - 1])) \<rbrace>
-  mapM_x (\<lambda>x. store_pde x InvalidPDE) slots
-  \<lbrace>\<lambda>_ s. obj_at (empty_table {}) word s\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (simp add: vspace_bits_defs)
-  apply (wp mapM_x_store_pde_InvalidPDE_empty [unfolded swp_def])
-  apply (clarsimp simp add: vspace_bits_defs)
   done
 
 crunch valid_cap: invalidate_tlb_by_asid "valid_cap cap"
