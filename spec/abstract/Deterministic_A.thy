@@ -50,6 +50,8 @@ text {* Translate a state of type @{typ "'a state"} to one of type @{typ "'b sta
 definition trans_state :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a state \<Rightarrow> 'b state" where
 "trans_state t s = \<lparr>kheap = kheap s, cdt = cdt s, is_original_cap = is_original_cap s,
                      cur_thread = cur_thread s, idle_thread = idle_thread s,
+                     consumed_time = consumed_time s, cur_time = cur_time s,
+                     cur_sc = cur_sc s, reprogram_timer = reprogram_timer s,
                      machine_state = machine_state s,
                      interrupt_irq_node = interrupt_irq_node s,
                      interrupt_states = interrupt_states s, arch_state = arch_state s,
@@ -63,8 +65,12 @@ lemma trans_state[simp]: "kheap (trans_state t s) = kheap s"
                             "idle_thread (trans_state t s) = idle_thread s"
                             "machine_state (trans_state t s) = machine_state s"
                             "interrupt_irq_node (trans_state t s) = interrupt_irq_node s"
-                           "interrupt_states (trans_state t s) = interrupt_states s"
+                            "interrupt_states (trans_state t s) = interrupt_states s"
                             "arch_state (trans_state t s) = arch_state s"
+                            "consumed_time (trans_state t s) = consumed_time s"
+                            "cur_time (trans_state t s) = cur_time s"
+                            "cur_sc (trans_state t s) = cur_sc s"
+                            "reprogram_timer (trans_state t s) = reprogram_timer s"
                             "exst (trans_state t s) = (t (exst s))"
                             "exst (trans_state (\<lambda>_. e) s) = e"
   apply (simp add: trans_state_def)+
@@ -79,6 +85,10 @@ lemma trans_state_update[simp]:
  "trans_state t (machine_state_update k s) = machine_state_update k (trans_state t s)"
  "trans_state t (interrupt_irq_node_update l s) = interrupt_irq_node_update l (trans_state t s)"
  "trans_state t (arch_state_update m s) = arch_state_update m (trans_state t s)"
+ "trans_state t (consumed_time_update x s) = consumed_time_update x (trans_state t s)"
+ "trans_state t (cur_time_update y s) = cur_time_update y (trans_state t s)"
+ "trans_state t (cur_sc_update z s) = cur_sc_update z (trans_state t s)"
+ "trans_state t (reprogram_timer_update a s) = reprogram_timer_update a (trans_state t s)"
  "trans_state t (interrupt_states_update p s) = interrupt_states_update p (trans_state t s)"
   apply (simp add: trans_state_def)+
   done
@@ -118,14 +128,10 @@ type_synonym domain = word8
 
 record etcb =
  tcb_priority :: "priority"
- tcb_time_slice :: "nat"
  tcb_domain :: "domain"
 
 definition num_domains :: nat where
   "num_domains \<equiv> 16"
-
-definition time_slice :: "nat" where
-  "time_slice \<equiv> 5"
 
 definition default_priority :: "priority" where
   "default_priority \<equiv> minBound"
@@ -134,9 +140,10 @@ definition default_domain :: "domain" where
   "default_domain \<equiv> minBound"
 
 definition default_etcb :: "etcb" where
-  "default_etcb \<equiv> \<lparr>tcb_priority = default_priority, tcb_time_slice = time_slice, tcb_domain = default_domain\<rparr>"
+  "default_etcb \<equiv> \<lparr>tcb_priority = default_priority, tcb_domain = default_domain\<rparr>"
 
 type_synonym ready_queue = "obj_ref list"
+type_synonym release_queue = "obj_ref list"
 
 text {*
   For each entry in the CDT, we record an ordered list of its children.
@@ -153,12 +160,13 @@ record det_ext =
    work_units_completed_internal :: "machine_word"
    scheduler_action_internal :: scheduler_action
    ekheap_internal :: "obj_ref \<Rightarrow> etcb option"
-   domain_list_internal :: "(domain \<times> machine_word) list"
+   domain_list_internal :: "(domain \<times> time) list"
    domain_index_internal :: nat
    cur_domain_internal :: domain
-   domain_time_internal :: "machine_word"
+   domain_time_internal :: time
    ready_queues_internal :: "domain \<Rightarrow> priority \<Rightarrow> ready_queue"
    cdt_list_internal :: cdt_list
+   release_queue_internal :: release_queue
 
 text {*
   The state of the deterministic abstract specification extends the
@@ -223,7 +231,105 @@ abbreviation
 abbreviation
   "cdt_list_update f (s::det_state) \<equiv> trans_state (cdt_list_internal_update f) s"
 
+abbreviation
+  "release_queue (s::det_state) \<equiv> release_queue_internal (exst s)"
+
+abbreviation
+  "release_queue_update f (s::det_state) \<equiv> trans_state (release_queue_internal_update f) s"
+
 type_synonym 'a det_ext_monad = "(det_state,'a) nondet_monad"
+
+
+section \<open>Type Class\<close>
+
+text {*
+  A type class for all instantiations of the abstract specification. In
+  practice, this is restricted to basically allow only two sensible
+  implementations at present: the deterministic abstract specification and
+  the nondeterministic one.
+*}
+class state_ext =
+ fixes unwrap_ext :: "'a state \<Rightarrow> det_ext state"
+ fixes wrap_ext :: "(det_ext \<Rightarrow> det_ext) \<Rightarrow> ('a \<Rightarrow> 'a)"
+ fixes wrap_ext_op :: "unit det_ext_monad \<Rightarrow> ('a state,unit) nondet_monad"
+ fixes wrap_ext_bool :: "bool det_ext_monad \<Rightarrow> ('a state,bool) nondet_monad"
+ fixes select_switch :: "'a \<Rightarrow> bool"
+ fixes ext_init :: "'a"
+
+definition detype_ext :: "obj_ref set \<Rightarrow> 'z::state_ext \<Rightarrow> 'z" where
+ "detype_ext S \<equiv> wrap_ext (\<lambda>s. s\<lparr>ekheap_internal := (\<lambda>x. if x \<in> S then None else ekheap_internal s x)\<rparr>)"
+
+
+section \<open>Type Class Instances\<close>
+
+subsection "Deterministic Abstract Specification"
+
+instantiation  det_ext_ext :: (type) state_ext
+begin
+
+definition "unwrap_ext_det_ext_ext == (\<lambda>x. x) :: det_ext state \<Rightarrow> det_ext state"
+
+definition "wrap_ext_det_ext_ext == (\<lambda>x. x) ::
+  (det_ext \<Rightarrow> det_ext) \<Rightarrow> det_ext \<Rightarrow> det_ext"
+
+definition "wrap_ext_op_det_ext_ext == (\<lambda>x. x) ::
+  (det_ext state \<Rightarrow> ((unit \<times> det_ext state) set) \<times> bool)
+  \<Rightarrow> det_ext state  \<Rightarrow> ((unit \<times> det_ext state) set) \<times> bool"
+
+definition "wrap_ext_bool_det_ext_ext == (\<lambda>x. x) ::
+  (det_ext state \<Rightarrow> ((bool \<times> det_ext state) set) \<times> bool)
+  \<Rightarrow> det_ext state \<Rightarrow> ((bool \<times> det_ext state) set) \<times> bool"
+
+definition "select_switch_det_ext_ext == (\<lambda>_. True)  :: det_ext\<Rightarrow> bool"
+
+(* this probably doesn't satisfy the invariants *)
+definition "ext_init_det_ext_ext \<equiv>
+     \<lparr>work_units_completed_internal = 0,
+      scheduler_action_internal = resume_cur_thread,
+      ekheap_internal = Map.empty (idle_thread_ptr \<mapsto> default_etcb),
+      domain_list_internal = [(0,15)],
+      domain_index_internal = 0,
+      cur_domain_internal = 0,
+      domain_time_internal = 15,
+      ready_queues_internal = const (const []),
+      cdt_list_internal = const [],
+      release_queue_internal = []\<rparr> :: det_ext"
+
+instance ..
+
+end
+
+subsection "Nondeterministic Abstract Specification"
+
+text {* \label{s:nondet-spec} 
+The nondeterministic abstract specification instantiates the extended state
+with the unit type -- i.e. it doesn't have any meaningful extended state.
+*}
+
+instantiation unit :: state_ext
+begin
+
+definition "unwrap_ext_unit == (\<lambda>_. undefined) :: unit state \<Rightarrow> det_ext state"
+
+definition "wrap_ext_unit == (\<lambda>f s. ()) :: (det_ext \<Rightarrow> det_ext) \<Rightarrow> unit \<Rightarrow> unit"
+
+
+definition "wrap_ext_op_unit == (\<lambda>m. return ()) ::
+  (det_ext state \<Rightarrow> ((unit \<times> det_ext state) set) \<times> bool) \<Rightarrow> unit state \<Rightarrow> ((unit \<times> unit state) set) \<times> bool"
+
+definition "wrap_ext_bool_unit == (\<lambda>m. select UNIV) ::
+  (det_ext state \<Rightarrow> ((bool \<times> det_ext state ) set) \<times> bool) \<Rightarrow> unit state \<Rightarrow> ((bool \<times> unit state) set) \<times> bool"
+
+definition "select_switch_unit == (\<lambda>s. False) :: unit \<Rightarrow> bool"
+
+definition "ext_init_unit \<equiv> () :: unit"
+
+instance ..
+
+end
+
+
+section \<open>Basic Deterministic Monadic Accessors\<close>
 
 text {*
   Basic monadic functions for operating on the extended state of the
@@ -276,10 +382,6 @@ definition
   "thread_set_priority tptr prio \<equiv> ethread_set (\<lambda>tcb. tcb\<lparr>tcb_priority := prio\<rparr>) tptr"
 
 definition
-  thread_set_time_slice :: "obj_ref \<Rightarrow> nat \<Rightarrow> unit det_ext_monad" where
-  "thread_set_time_slice tptr time \<equiv> ethread_set (\<lambda>tcb. tcb\<lparr>tcb_time_slice := time\<rparr>) tptr"
-
-definition
   thread_set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> unit det_ext_monad" where
   "thread_set_domain tptr domain \<equiv> ethread_set (\<lambda>tcb. tcb\<lparr>tcb_domain := domain\<rparr>) tptr"
 
@@ -319,21 +421,93 @@ definition
   tcb_sched_dequeue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
   "tcb_sched_dequeue thread queue \<equiv> filter (\<lambda>x. x \<noteq> thread) queue"
 
+definition
+  in_release_queue :: "obj_ref \<Rightarrow> det_state \<Rightarrow> bool"
+where
+  "in_release_queue tcb_ptr \<equiv> \<lambda>s. tcb_ptr \<in> set (release_queue s)"
+
+definition
+  tcb_release_dequeue :: "unit det_ext_monad"
+where
+  "tcb_release_dequeue =
+    modify (\<lambda>s. s\<lparr> release_queue := tl (release_queue s), reprogram_timer := True \<rparr>)"
+  
+definition
+  tcb_release_remove :: "obj_ref \<Rightarrow> unit det_ext_monad"
+where
+  "tcb_release_remove tcb_ptr = modify (release_queue_update (tcb_sched_dequeue tcb_ptr))"
+
+definition
+  thread_get_det :: "(tcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> 'a det_ext_monad"
+where
+  "thread_get_det f tptr \<equiv> do
+     hp \<leftarrow> gets kheap;
+     assert (\<exists>tcb. hp tptr = Some (TCB tcb));
+     case the (hp tptr) of TCB tcb \<Rightarrow> return $ f tcb
+   od"
+
+definition
+  is_cur_domain_expired :: "det_ext state \<Rightarrow> bool"
+where
+  "is_cur_domain_expired = (\<lambda>s. domain_time  s < consumed_time s + kernelWCET_ticks)"
+
+definition
+  commit_domain_time :: "unit det_ext_monad"
+where
+  "commit_domain_time = do
+    domain_time \<leftarrow> gets domain_time;
+    consumed \<leftarrow> gets consumed_time;
+    time' \<leftarrow> return (if domain_time < consumed then 0 else domain_time - consumed);
+    modify (\<lambda>s. s\<lparr>domain_time := time'\<rparr>)
+  od"
+
+definition
+  get_tcb :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> tcb option"
+where
+  "get_tcb tcb_ref state \<equiv>
+   case kheap state tcb_ref of
+      None      \<Rightarrow> None
+    | Some kobj \<Rightarrow> (case kobj of
+        TCB tcb \<Rightarrow> Some tcb
+      | _       \<Rightarrow> None)"
+
+
+definition
+  is_schedulable_opt :: "obj_ref \<Rightarrow> bool \<Rightarrow> 'z::state_ext state \<Rightarrow> bool option"
+where 
+  "is_schedulable_opt tcb_ptr in_release_q \<equiv> \<lambda>s.
+    case get_tcb tcb_ptr s of None \<Rightarrow> None | Some tcb \<Rightarrow>
+      Some (runnable (tcb_state tcb) \<and> tcb_sched_context tcb \<noteq> None \<and> \<not>in_release_q)"
+
+definition
+  is_schedulable :: "obj_ref \<Rightarrow> bool \<Rightarrow> ('z::state_ext state, bool) nondet_monad"
+where
+  "is_schedulable tcb_ptr in_release_q \<equiv> gets_the $ is_schedulable_opt tcb_ptr in_release_q"
 
 definition reschedule_required :: "unit det_ext_monad" where
   "reschedule_required \<equiv> do
      action \<leftarrow> gets scheduler_action;
-     case action of switch_thread t \<Rightarrow> tcb_sched_action (tcb_sched_enqueue) t | _ \<Rightarrow> return ();
-     set_scheduler_action choose_new_thread
+     case action of 
+       switch_thread t \<Rightarrow> do
+         in_release_q \<leftarrow> gets $ in_release_queue t;
+         sched \<leftarrow> is_schedulable t in_release_q;
+         when sched $ tcb_sched_action (tcb_sched_enqueue) t
+       od
+     | _ \<Rightarrow> return ();
+     set_scheduler_action choose_new_thread;
+     modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>)
    od"
-
+(*
 definition
   possible_switch_to :: "obj_ref \<Rightarrow> unit det_ext_monad" where
   "possible_switch_to target \<equiv> do
+     sc_opt \<leftarrow> thread_get tcb_sched_context target;
+     inq \<leftarrow> gets $ in_release_queue target;
+     when (sc_opt \<noteq> None \<and> \<not>inq) $ do
+
      cur_dom \<leftarrow> gets cur_domain;
      target_dom \<leftarrow> ethread_get tcb_domain target;
      action \<leftarrow> gets scheduler_action;
-
      if (target_dom \<noteq> cur_dom) then
        tcb_sched_action tcb_sched_enqueue target
      else if (action \<noteq> resume_cur_thread) then
@@ -343,7 +517,22 @@ definition
        od
      else
        set_scheduler_action $ switch_thread target
+   od
+
    od"
+*)
+definition
+  schedule_tcb :: "obj_ref \<Rightarrow> unit det_ext_monad"
+where
+  "schedule_tcb tcb_ptr \<equiv> do
+    cur \<leftarrow> gets cur_thread;
+    sched_act \<leftarrow> gets scheduler_action;
+    in_release_q \<leftarrow> gets $ in_release_queue tcb_ptr;
+    schedulable \<leftarrow> is_schedulable tcb_ptr in_release_q;
+    when (tcb_ptr = cur \<and> sched_act = resume_cur_thread \<and> \<not>schedulable) $ reschedule_required
+  od"
+
+definition "\<mu>s_to_ms = 1000"
 
 definition
   next_domain :: "unit det_ext_monad" where
@@ -353,12 +542,23 @@ definition
       let next_dom = (domain_list s)!domain_index'
       in s\<lparr> domain_index := domain_index',
             cur_domain := fst next_dom,
-            domain_time := snd next_dom,
-            work_units_completed := 0\<rparr>)"
+            domain_time := us_to_ticks (snd next_dom * \<mu>s_to_ms),
+            work_units_completed := 0,
+            reprogram_timer := True\<rparr>)"
 
 definition
   dec_domain_time :: "unit det_ext_monad" where
   "dec_domain_time = modify (\<lambda>s. s\<lparr>domain_time := domain_time s - 1\<rparr>)"
+
+definition
+  set_next_timer_interrupt :: "time \<Rightarrow> unit det_ext_monad"
+where
+  "set_next_timer_interrupt thread_time = do
+     cur_tm \<leftarrow> gets cur_time;
+     domain_tm \<leftarrow> gets domain_time;
+     new_domain_tm \<leftarrow> return $ cur_tm + domain_tm;
+     do_machine_op $ setDeadline (min thread_time new_domain_tm - timerPrecision)
+  od"
 
 definition set_cdt_list :: "cdt_list \<Rightarrow> (det_state, unit) nondet_monad" where
   "set_cdt_list t \<equiv> do
@@ -529,86 +729,6 @@ definition work_units_limit_reached where
      return (work_units_limit \<le> work_units)
    od"
 
-text {*
-  A type class for all instantiations of the abstract specification. In
-  practice, this is restricted to basically allow only two sensible
-  implementations at present: the deterministic abstract specification and
-  the nondeterministic one.
-*}
-class state_ext =
- fixes unwrap_ext :: "'a state \<Rightarrow> det_ext state"
- fixes wrap_ext :: "(det_ext \<Rightarrow> det_ext) \<Rightarrow> ('a \<Rightarrow> 'a)"
- fixes wrap_ext_op :: "unit det_ext_monad \<Rightarrow> ('a state,unit) nondet_monad"
- fixes wrap_ext_bool :: "bool det_ext_monad \<Rightarrow> ('a state,bool) nondet_monad"
- fixes select_switch :: "'a \<Rightarrow> bool"
- fixes ext_init :: "'a"
-
-definition detype_ext :: "obj_ref set \<Rightarrow> 'z::state_ext \<Rightarrow> 'z" where
- "detype_ext S \<equiv> wrap_ext (\<lambda>s. s\<lparr>ekheap_internal := (\<lambda>x. if x \<in> S then None else ekheap_internal s x)\<rparr>)"
-
-instantiation  det_ext_ext :: (type) state_ext
-begin
-
-definition "unwrap_ext_det_ext_ext == (\<lambda>x. x) :: det_ext state \<Rightarrow> det_ext state"
-
-definition "wrap_ext_det_ext_ext == (\<lambda>x. x) ::
-  (det_ext \<Rightarrow> det_ext) \<Rightarrow> det_ext \<Rightarrow> det_ext"
-
-definition "wrap_ext_op_det_ext_ext == (\<lambda>x. x) ::
-  (det_ext state \<Rightarrow> ((unit \<times> det_ext state) set) \<times> bool)
-  \<Rightarrow> det_ext state  \<Rightarrow> ((unit \<times> det_ext state) set) \<times> bool"
-
-definition "wrap_ext_bool_det_ext_ext == (\<lambda>x. x) ::
-  (det_ext state \<Rightarrow> ((bool \<times> det_ext state) set) \<times> bool)
-  \<Rightarrow> det_ext state \<Rightarrow> ((bool \<times> det_ext state) set) \<times> bool"
-
-definition "select_switch_det_ext_ext == (\<lambda>_. True)  :: det_ext\<Rightarrow> bool"
-
-(* this probably doesn't satisfy the invariants *)
-definition "ext_init_det_ext_ext \<equiv>
-     \<lparr>work_units_completed_internal = 0,
-      scheduler_action_internal = resume_cur_thread,
-      ekheap_internal = Map.empty (idle_thread_ptr \<mapsto> default_etcb),
-      domain_list_internal = [(0,15)],
-      domain_index_internal = 0,
-      cur_domain_internal = 0,
-      domain_time_internal = 15,
-      ready_queues_internal = const (const []),
-      cdt_list_internal = const []\<rparr> :: det_ext"
-
-instance ..
-
-end
-
-section "Nondeterministic Abstract Specification"
-
-text {* \label{s:nondet-spec}
-The nondeterministic abstract specification instantiates the extended state
-with the unit type -- i.e. it doesn't have any meaningful extended state.
-*}
-
-instantiation unit :: state_ext
-begin
-
-
-definition "unwrap_ext_unit == (\<lambda>_. undefined) :: unit state \<Rightarrow> det_ext state"
-
-definition "wrap_ext_unit == (\<lambda>f s. ()) :: (det_ext \<Rightarrow> det_ext) \<Rightarrow> unit \<Rightarrow> unit"
-
-
-definition "wrap_ext_op_unit == (\<lambda>m. return ()) ::
-  (det_ext state \<Rightarrow> ((unit \<times> det_ext state) set) \<times> bool) \<Rightarrow> unit state \<Rightarrow> ((unit \<times> unit state) set) \<times> bool"
-
-definition "wrap_ext_bool_unit == (\<lambda>m. select UNIV) ::
-  (det_ext state \<Rightarrow> ((bool \<times> det_ext state ) set) \<times> bool) \<Rightarrow> unit state \<Rightarrow> ((bool \<times> unit state) set) \<times> bool"
-
-definition "select_switch_unit == (\<lambda>s. False) :: unit \<Rightarrow> bool"
-
-definition "ext_init_unit \<equiv> () :: unit"
-
-instance ..
-
-end
 
 text {* Run an extended operation over the extended state without
   modifying it and use the return value to choose between two computations

@@ -45,16 +45,6 @@ where
 section "TCBs"
 
 definition
-  get_tcb :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> tcb option"
-where
-  "get_tcb tcb_ref state \<equiv>
-   case kheap state tcb_ref of
-      None      \<Rightarrow> None
-    | Some kobj \<Rightarrow> (case kobj of
-        TCB tcb \<Rightarrow> Some tcb
-      | _       \<Rightarrow> None)"
-
-definition
   thread_get :: "(tcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) s_monad"
 where
   "thread_get f tptr \<equiv> do
@@ -104,39 +94,20 @@ where
      set_object ref (TCB (tcb \<lparr> tcb_bound_notification := ntfn \<rparr>))
    od"
 
-definition set_thread_state_ext :: "obj_ref \<Rightarrow> unit det_ext_monad" where
-  "set_thread_state_ext t \<equiv> do
-     ts \<leftarrow> get_thread_state t;
-     cur \<leftarrow> gets cur_thread;
-     action \<leftarrow> gets scheduler_action;
-     when (\<not> (runnable ts) \<and> cur = t \<and> action = resume_cur_thread) (set_scheduler_action choose_new_thread)
-   od"
-
 definition
   set_thread_state :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_thread_state ref ts \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb ref;
      set_object ref (TCB (tcb \<lparr> tcb_state := ts \<rparr>));
-     do_extended_op (set_thread_state_ext ref)
-   od"
-
-definition
-  set_priority :: "obj_ref \<Rightarrow> priority \<Rightarrow> unit det_ext_monad" where
-  "set_priority tptr prio \<equiv> do
-     tcb_sched_action tcb_sched_dequeue tptr;
-     thread_set_priority tptr prio;
-     ts \<leftarrow> get_thread_state tptr;
-     when (runnable ts) $ do
-       tcb_sched_action tcb_sched_enqueue tptr;
-       reschedule_required
-     od
+     do_extended_op (schedule_tcb ref)
    od"
 
 definition
   set_mcpriority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad"  where
   "set_mcpriority ref mcp \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_mcpriority:=mcp\<rparr>) ref "
 
+section {* Synchronous and Asyncronous Endpoints *}
 
 section "simple kernel objects"
 (* to be used for abstraction unifying kernel objects other than TCB and CNode *)
@@ -186,26 +157,49 @@ where
      set_object ptr (f ep)
    od"
 
+section {* Scheduling Contexts *}
+
+definition
+  get_sched_context :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad"
+where
+  "get_sched_context ptr \<equiv> do
+     kobj \<leftarrow> get_object ptr;
+     case kobj of SchedContext sc \<Rightarrow> return sc
+                 | _ \<Rightarrow> fail
+   od"
+
+definition
+  set_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_sched_context ptr sc \<equiv> do
+     obj \<leftarrow> get_object ptr;
+     assert (case obj of SchedContext sc \<Rightarrow> True | _ \<Rightarrow> False);
+     set_object ptr (SchedContext sc)
+   od"
 
 
-section {* Synchronous and Asyncronous Endpoints *}
+section {* Reply Objects *}
 
+definition
+  get_reply :: "obj_ref \<Rightarrow> reply det_ext_monad"
+where
+  "get_reply ptr \<equiv> do
+     kobj \<leftarrow> get_object ptr;
+     (case kobj of Reply r \<Rightarrow> return r
+                 | _ \<Rightarrow> fail)
+   od"
+  
+definition
+  set_reply :: "obj_ref \<Rightarrow> reply \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_reply ptr r \<equiv> do
+     obj \<leftarrow> get_object ptr;
+     assert (case obj of Reply _ \<Rightarrow> True | _ \<Rightarrow> False);
+     set_object ptr (Reply r)
+   od"
 
 abbreviation
-  get_endpoint :: "obj_ref \<Rightarrow> (endpoint,'z::state_ext) s_monad" where
-  "get_endpoint \<equiv> get_simple_ko Endpoint"
-
-abbreviation
-  set_endpoint :: "obj_ref \<Rightarrow> endpoint \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "set_endpoint \<equiv> set_simple_ko Endpoint"
-
-abbreviation
-  get_notification :: "obj_ref \<Rightarrow> (notification,'z::state_ext) s_monad" where
-  "get_notification \<equiv> get_simple_ko Notification"
-
-abbreviation
-  set_notification :: "obj_ref \<Rightarrow> notification \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "set_notification \<equiv> set_simple_ko Notification"
+  "get_reply_caller r \<equiv> liftM reply_caller (get_reply r)"
 
 abbreviation
   ntfn_set_bound_tcb :: "notification \<Rightarrow> obj_ref option \<Rightarrow> notification" where

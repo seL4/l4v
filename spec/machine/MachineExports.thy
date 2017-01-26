@@ -41,14 +41,25 @@ requalify_consts
   syscallMessage
   gpRegisters
   frameRegisters
+  replyRegister
+  syscallNoRegister
+  nbsendRecvDest
   ackInterrupt
+  ackDeadlineIRQ
   resetTimer
+  getCurrentTime
   maxIRQ
   minIRQ
   word_size_bits
   clearMemory
   non_kernel_IRQs
   tlsBaseRegister
+  kernelWCET_us
+  kernelWCET_ticks
+  maxTimer_us
+  us_to_ticks
+  setDeadline
+  timerPrecision
 
 (* HERE IS THE PLACE FOR GENERIC WORD LEMMAS FOR ALL ARCHITECTURES *)
 

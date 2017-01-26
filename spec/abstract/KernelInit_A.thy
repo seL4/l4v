@@ -262,15 +262,6 @@ definition
     set_original dest_slot dest_original
   od"
 
-definition
-  "setup_reply_master_local thread \<equiv> do
-     old_cap <- get_cap_local (thread, tcb_cnode_index 2);
-     when (old_cap = NullCap) $ do
-         set_original (thread, tcb_cnode_index 2) True;
-         set_cap_local (ReplyCap thread True) (thread, tcb_cnode_index 2)
-     od
-  od"
-
 
 
 
@@ -776,7 +767,6 @@ definition
      as_user tcb_pptr $ setNextPC ui_v_entry;
 
      (* TCB priority not in abstract spec *)
-     setup_reply_master_local tcb_pptr;
      set_thread_state tcb_pptr Running;
      (* scheduler action not in abstract spec *)
      idle_thread \<leftarrow> gets idle_thread;

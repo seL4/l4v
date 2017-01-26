@@ -49,7 +49,7 @@ delivered when Notification capabilities are installed in the relevant per-IRQ
 slot. The IRQHandler operations load or clear those capabilities. *}
 
 fun
-  invoke_irq_handler :: "irq_handler_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
+  invoke_irq_handler :: "irq_handler_invocation \<Rightarrow> unit det_ext_monad"
 where
   "invoke_irq_handler (ACKIrq irq) = (do_machine_op $ maskInterrupt False irq)"
 | "invoke_irq_handler (SetIRQHandler irq cap slot) = (do
@@ -62,56 +62,41 @@ where
      cap_delete_one irq_slot
    od)"
 
-text {* Handle an interrupt occurence. Timing and scheduling details are not
+text {* Handle an interrupt occurrence. Timing and scheduling details are not
 included in this model, so no scheduling action needs to be taken on timer
 ticks. If the IRQ has a valid Notification cap loaded a message is
 delivered. *}
 
-definition timer_tick :: "unit det_ext_monad" where
-  "timer_tick \<equiv> do
-     cur \<leftarrow> gets cur_thread;
-     state \<leftarrow> get_thread_state cur;
-     case state of Running \<Rightarrow> do
-       ts \<leftarrow> ethread_get tcb_time_slice cur;
-       let ts' = ts - 1 in
-       if (ts' > 0) then thread_set_time_slice cur ts' else do
-         thread_set_time_slice cur time_slice;
-         tcb_sched_action tcb_sched_append cur;
-         reschedule_required
-       od
-     od
-     | _ \<Rightarrow> return ();
-     when (num_domains > 1) (do
-       dec_domain_time;
-       dom_time \<leftarrow> gets domain_time;
-       when (dom_time = 0) reschedule_required
-     od)
-   od"
-
 definition
-  handle_interrupt :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad" where
- "handle_interrupt irq \<equiv>
+  handle_interrupt :: "irq \<Rightarrow> unit det_ext_monad" where
+ "handle_interrupt irq \<equiv> 
    if (irq > maxIRQ) then do_machine_op $ do
     maskInterrupt True irq;
     ackInterrupt irq
-    od
+  od
   else do
    st \<leftarrow> get_irq_state irq;
    case st of
      IRQSignal \<Rightarrow> do
+       update_time_stamp;
        slot \<leftarrow> get_irq_slot irq;
        cap \<leftarrow> get_cap slot;
        when (is_ntfn_cap cap \<and> AllowSend \<in> cap_rights cap)
-         $ send_signal (obj_ref_of cap) (cap_ep_badge cap);
-       do_machine_op $ maskInterrupt True irq
+         $ send_signal (obj_ref_of cap) (cap_ep_badge cap); 
+       do_machine_op $ maskInterrupt True irq;
+       commit \<leftarrow> check_budget;
+       when commit commit_time
      od
    | IRQTimer \<Rightarrow> do
-       do_extended_op timer_tick;
-       do_machine_op resetTimer
+       update_time_stamp;
+       do_machine_op ackDeadlineIRQ;
+       commit \<leftarrow> check_budget;
+       when commit commit_time;
+       modify $ reprogram_timer_update (K True)
      od
    | IRQInactive \<Rightarrow> fail \<comment> \<open>not meant to be able to get IRQs from inactive lines\<close>
    | IRQReserved \<Rightarrow> handle_reserved_irq irq;
    do_machine_op $ ackInterrupt irq
-   od"
+ od"
 
 end

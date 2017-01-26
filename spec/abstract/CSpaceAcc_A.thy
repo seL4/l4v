@@ -58,11 +58,7 @@ where
                        return $ TCB $ tcb \<lparr> tcb_ctable := cap \<rparr>
                    else if cref = tcb_cnode_index 1 then
                        return $ TCB $ tcb \<lparr> tcb_vtable := cap \<rparr>
-                   else if cref = tcb_cnode_index 2 then
-                       return $ TCB $ tcb \<lparr> tcb_reply := cap \<rparr>
-                   else if cref = tcb_cnode_index 3 then
-                       return $ TCB $ tcb \<lparr> tcb_caller := cap \<rparr>
-                   else if cref = tcb_cnode_index 4 then
+                   else if cref = tcb_cnode_index 2 then 
                        return $ TCB $ tcb \<lparr> tcb_ipcframe := cap \<rparr>
                    else
                        fail

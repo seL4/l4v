@@ -35,7 +35,6 @@ datatype cnode_invocation =
   | RevokeCall cslot_ptr
   | DeleteCall cslot_ptr
   | RotateCall cap cap cslot_ptr cslot_ptr cslot_ptr
-  | SaveCall cslot_ptr
   | CancelBadgedSendsCall cap
 
 datatype untyped_invocation =
@@ -52,10 +51,19 @@ datatype tcb_invocation =
                   (tc_new_croot: "(cap * cslot_ptr) option")
                   (tc_new_vroot: "(cap * cslot_ptr) option")
                   (tc_new_buffer: "(vspace_ref * (cap * cslot_ptr) option) option")
+                  (tc_new_sc: "obj_ref option option")
   | Suspend "obj_ref"
   | Resume "obj_ref"
   | NotificationControl "obj_ref" "obj_ref option"
   | SetTLSBase obj_ref machine_word
+
+datatype sched_context_invocation =
+    InvokeSchedContextBind obj_ref cap
+  | InvokeSchedContextUnbindObject obj_ref cap
+  | InvokeSchedContextUnbind obj_ref
+
+datatype sched_control_invocation =
+    InvokeSchedControlConfigure obj_ref ticks ticks nat
 
 datatype irq_control_invocation =
     IRQControl irq cslot_ptr cslot_ptr
@@ -70,9 +78,11 @@ datatype invocation =
     InvokeUntyped untyped_invocation
   | InvokeEndpoint obj_ref machine_word bool
   | InvokeNotification obj_ref machine_word
-  | InvokeReply obj_ref cslot_ptr
+  | InvokeReply obj_ref
   | InvokeTCB tcb_invocation
   | InvokeDomain obj_ref word8
+  | InvokeSchedContext sched_context_invocation
+  | InvokeSchedControl sched_control_invocation
   | InvokeCNode cnode_invocation
   | InvokeIRQControl irq_control_invocation
   | InvokeIRQHandler irq_handler_invocation

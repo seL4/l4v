@@ -104,20 +104,39 @@ definition
   storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
   where "storeWordVM w p \<equiv> return ()"
 
-consts'
-  configureTimer_impl :: "unit machine_rest_monad"
-  configureTimer_val :: "machine_state \<Rightarrow> irq"
-
+consts' kernelWCET_us :: "64 word"
+consts' maxTimer_us :: "64 word"
+consts' timerPrecision :: "64 word"
+consts' us_to_ticks :: "64 word \<Rightarrow> 64 word"
 definition
-  configureTimer :: "irq machine_monad"
+  "kernelWCET_ticks = us_to_ticks (kernelWCET_us)"
+
+text \<open>
+This encodes the following assumptions:
+  a) time increases monotonically,
+  b) global 64-bit time does not overflow during the lifetime of the system.
+\<close>
+definition
+  getCurrentTime :: "64 word machine_monad"
 where
-  "configureTimer \<equiv> do
-    machine_op_lift configureTimer_impl;
-    gets configureTimer_val
+  "getCurrentTime = do
+    modify (\<lambda>s. s \<lparr> time_state := time_state s + 1 \<rparr>);
+    passed \<leftarrow> gets $ time_oracle o time_state;
+    last \<leftarrow> gets last_machine_time;
+    current \<leftarrow> return (if last + passed + kernelWCET_ticks < last then -(kernelWCET_ticks+1) else last + passed);
+    modify (\<lambda>s. s\<lparr>last_machine_time := current\<rparr>);
+    return current
   od"
 
-consts' (* XXX: replaces configureTimer in new boot code
-          TODO: remove configureTimer when haskell updated *)
+consts'
+  setDeadline_impl :: "64 word \<Rightarrow> unit machine_rest_monad"
+
+definition
+  setDeadline :: "64 word \<Rightarrow> unit machine_monad"
+where
+  "setDeadline d \<equiv> machine_op_lift (setDeadline_impl d)"
+
+consts'
   initTimer_impl :: "unit machine_rest_monad"
 definition
   initTimer :: "unit machine_monad"
@@ -327,6 +346,11 @@ definition
 where
   "ackInterrupt irq \<equiv> machine_op_lift (ackInterrupt_impl irq)"
 
+consts' deadlineIRQ :: irq
+
+definition
+  "ackDeadlineIRQ \<equiv> ackInterrupt deadlineIRQ"
+
 
 \<comment> \<open>Interrupt controller operations\<close>
 
@@ -337,8 +361,8 @@ text {*
 definition
   "non_kernel_IRQs = {}"
 
-text {*
-  @{term getActiveIRQ} is now derministic.
+text {* 
+  @{term getActiveIRQ} is now deterministic.
   It 'updates' the irq state to the reflect the passage of
   time since last the irq was gotten, then it gets the active
   IRQ (if there is one).
@@ -354,6 +378,7 @@ where
     then return None
     else return ((Some active_irq) :: irq option)
   od"
+
 
 definition
   maskInterrupt :: "bool \<Rightarrow> irq \<Rightarrow> unit machine_monad"

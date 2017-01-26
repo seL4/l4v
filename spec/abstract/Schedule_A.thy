@@ -33,11 +33,10 @@ text {* Gets the TCB at an address if the thread can be scheduled. *}
 definition
   getActiveTCB :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> tcb option"
 where
-  "getActiveTCB tcb_ref state \<equiv>
-   case (get_tcb tcb_ref state)
-     of None           \<Rightarrow> None
-      | Some tcb       \<Rightarrow> if (runnable $ tcb_state tcb)
-                         then Some tcb else None"
+  "getActiveTCB tcb_ref s \<equiv>
+   case get_tcb tcb_ref s
+     of None     \<Rightarrow> None
+      | Some tcb \<Rightarrow> if is_schedulable_opt tcb_ref False s = Some True then Some tcb else None"
 
 text {* Gets all schedulable threads in the system. *}
 definition
@@ -58,12 +57,14 @@ definition
      modify (\<lambda>s. s \<lparr> cur_thread := t \<rparr>)
    od"
 
-text {* Asserts that a thread is runnable before switching to it. *}
-definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"guarded_switch_to thread \<equiv> do ts \<leftarrow> get_thread_state thread;
-                    assert (runnable ts);
-                    switch_to_thread thread
-                 od"
+text {* Asserts that a thread is schedulable before switching to it. *}
+definition guarded_switch_to :: "obj_ref \<Rightarrow> unit det_ext_monad" where
+  "guarded_switch_to thread \<equiv> do
+     inq \<leftarrow> gets $ in_release_queue thread;
+     sched \<leftarrow> is_schedulable thread inq;
+     assert sched;
+     switch_to_thread thread
+   od"
 
 text {* Switches to the idle thread. *}
 definition
@@ -73,6 +74,160 @@ definition
      arch_switch_to_idle_thread;
      modify (\<lambda>s. s \<lparr> cur_thread := thread \<rparr>)
    od"
+
+definition
+  end_timeslice :: "(unit,'z::state_ext) s_monad"
+where
+  "end_timeslice = do
+     sc_ptr \<leftarrow> gets cur_sc;
+     ready \<leftarrow> refill_ready sc_ptr;
+     sufficient \<leftarrow> refill_sufficient sc_ptr 0;
+     if ready \<and> sufficient then do
+       cur \<leftarrow> gets cur_thread;
+       do_extended_op $ tcb_sched_action tcb_sched_append cur
+     od
+     else
+       postpone sc_ptr
+  od"
+
+definition
+  set_next_interrupt :: "unit det_ext_monad"
+where
+  "set_next_interrupt = do
+     cur_tm \<leftarrow> gets cur_time;
+     cur_th \<leftarrow> gets cur_thread;
+     sc_opt \<leftarrow> thread_get tcb_sched_context cur_th;
+     sc_ptr \<leftarrow> assert_opt sc_opt;
+     sc \<leftarrow> get_sched_context sc_ptr;
+     new_thread_time \<leftarrow> return $ cur_tm + r_amount (refill_hd sc);
+     rq \<leftarrow> gets release_queue;
+     new_thread_time \<leftarrow> if rq = [] then return new_thread_time else do
+       sc_opt \<leftarrow> thread_get tcb_sched_context (hd rq);
+       sc_ptr \<leftarrow> assert_opt sc_opt;
+       sc \<leftarrow> get_sched_context sc_ptr;
+       return $ min (r_time (refill_hd sc)) new_thread_time
+     od;
+     set_next_timer_interrupt new_thread_time
+  od"
+
+definition
+  check_budget :: "bool det_ext_monad"
+where
+  "check_budget = do
+    ct \<leftarrow> gets cur_thread;
+    it \<leftarrow> gets idle_thread;
+    if ct = it then return True else do
+      csc \<leftarrow> gets cur_sc;
+      consumed \<leftarrow> gets consumed_time;
+      capacity \<leftarrow> refill_capacity csc consumed;
+      if capacity < MIN_BUDGET then do
+        when (capacity = 0) $ do
+          cs' \<leftarrow> refill_budget_check csc consumed;
+          modify $ consumed_time_update (K cs')
+        od;
+        consumed \<leftarrow> gets consumed_time;
+        when (0 < consumed) $ refill_split_check csc consumed;
+        modify $ consumed_time_update (K 0);
+        st \<leftarrow> get_thread_state ct;
+        when (runnable st) $ do
+          end_timeslice;
+          reschedule_required
+        od;
+        return False
+      od
+      else do
+        dom_exp \<leftarrow> gets is_cur_domain_expired;
+        if dom_exp then do
+          commit_time;
+          reschedule_required;
+          return False
+        od
+        else return True
+      od
+    od
+  od"
+
+definition
+  check_budget_restart :: "bool det_ext_monad"
+where
+  "check_budget_restart = do
+     cont \<leftarrow> check_budget;
+     when (\<not>cont) $ do
+       cur \<leftarrow> gets cur_thread;
+       set_thread_state cur Restart
+     od;
+     return cont
+  od"
+
+definition
+  switch_sched_context :: "(unit,'z::state_ext) s_monad"
+where
+  "switch_sched_context = do
+    cur_sc \<leftarrow> gets cur_sc;
+    cur_th \<leftarrow> gets cur_thread;
+    sc_opt \<leftarrow> thread_get tcb_sched_context cur_th;
+    sc \<leftarrow> assert_opt sc_opt;
+    if sc \<noteq> cur_sc
+    then do
+      modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
+      commit_time;
+      refill_unblock_check sc
+    od
+    else
+      rollback_time;
+    modify (\<lambda>s. s\<lparr> cur_sc:= sc \<rparr>)
+  od"
+
+definition
+  sc_and_timer :: "(unit, 'z::state_ext) s_monad"
+where
+  "sc_and_timer = do
+    switch_sched_context;
+    reprogram \<leftarrow> gets reprogram_timer;
+    when reprogram $ do
+      do_extended_op set_next_interrupt;
+      modify (\<lambda>s. s\<lparr>reprogram_timer:= False\<rparr>)
+    od
+  od"
+
+definition
+  fun_of_m :: "('s, 'a) nondet_monad \<Rightarrow> 's \<Rightarrow> 'a option"
+where
+  "fun_of_m m \<equiv> \<lambda>s. if \<exists>x s'. m s = ({(x,s')}, False)
+                    then Some (THE x. \<exists>s'. m s = ({(x,s')}, False))
+                    else None"
+
+definition
+  refill_ready_tcb :: "obj_ref \<Rightarrow> bool det_ext_monad"
+where
+  "refill_ready_tcb t = do
+     sc_opt \<leftarrow> thread_get tcb_sched_context t;
+     sc_ptr \<leftarrow> assert_opt sc_opt;
+     refill_ready sc_ptr
+   od"
+
+definition
+  awaken :: "unit det_ext_monad"
+where
+  "awaken \<equiv> do
+    rq \<leftarrow> gets release_queue;
+    s \<leftarrow> get;
+    rq1 \<leftarrow> return $ takeWhile (\<lambda>t. the (fun_of_m (refill_ready_tcb t) s)) rq;
+    rq2 \<leftarrow> return $ drop (length rq1) rq;
+    modify $ release_queue_update (K rq);
+    mapM_x (\<lambda>t. do
+      sc_opt \<leftarrow> thread_get tcb_sched_context t;
+      sc_ptr \<leftarrow> assert_opt sc_opt;
+      refill_unblock_check sc_ptr;
+      ready \<leftarrow> refill_ready sc_ptr;
+      if \<not>ready then
+        tcb_release_enqueue t
+      else do
+        tcb_sched_action tcb_sched_append t;
+        possible_switch_to t
+      od
+    od) rq1
+  od"
 
 class state_ext_sched = state_ext +
   fixes schedule :: "(unit,'a) s_monad"
@@ -115,22 +270,24 @@ definition
 
 definition
   "schedule_det_ext_ext \<equiv> do
+     reprogram \<leftarrow> gets reprogram_timer;
+     when reprogram awaken;
      ct \<leftarrow> gets cur_thread;
-     ct_st \<leftarrow> get_thread_state ct;
-     ct_runnable \<leftarrow> return $ runnable ct_st;
+     inq \<leftarrow> gets $ in_release_queue ct;
+     ct_schedulable \<leftarrow> is_schedulable ct inq;
      action \<leftarrow> gets scheduler_action;
      (case action
        of resume_cur_thread \<Rightarrow> do
             id \<leftarrow> gets idle_thread;
-            assert (ct_runnable \<or> ct = id);
+            assert (ct_schedulable \<or> ct = id);
             return ()
          od
        | choose_new_thread \<Rightarrow> do
-           when ct_runnable (tcb_sched_action tcb_sched_enqueue ct);
+           when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct);
            schedule_choose_new_thread
          od
        | switch_thread candidate \<Rightarrow> do
-           when ct_runnable (tcb_sched_action tcb_sched_enqueue ct);
+           when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct);
 
            it \<leftarrow> gets idle_thread;
            target_prio \<leftarrow> ethread_get tcb_priority candidate;
@@ -150,7 +307,7 @@ definition
                set_scheduler_action choose_new_thread;
                schedule_choose_new_thread
              od
-           else if (ct_runnable \<and> ct_prio = target_prio)
+           else if (ct_schedulable \<and> ct_prio = target_prio)
            then do
                \<comment> \<open>Current thread was runnable and candidate is not strictly better
                   want current thread to run next, so append the candidate to end of queue
@@ -164,8 +321,9 @@ definition
              \<comment> \<open>Duplication assists in wp proof under different scheduler actions\<close>
              set_scheduler_action resume_cur_thread
            od
-        od)
-    od"
+        od);
+     sc_and_timer
+   od"
 
 instance ..
 end
@@ -184,7 +342,8 @@ text {*
   idle thread is the current thread.
 *}
 definition schedule_unit :: "(unit,unit) s_monad" where
-"schedule_unit \<equiv> (do
+"schedule_unit \<equiv> do
+ (do
    cur \<leftarrow> gets cur_thread;
    threads \<leftarrow> allActiveTCBs;
    thread \<leftarrow> select threads;
@@ -199,7 +358,9 @@ definition schedule_unit :: "(unit,unit) s_monad" where
    if idl = cur then
      return () \<sqinter> switch_to_idle_thread
    else switch_to_idle_thread
-  od)"
+  od);
+  sc_and_timer
+  od"
 
 instance ..
 end
