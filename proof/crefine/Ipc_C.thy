@@ -3725,6 +3725,7 @@ proof -
              apply (intro ccorres_rhs_assoc)
              apply (rule ccorres_symb_exec_r)
                apply ctac
+                 apply (rule ccorres_move_c_guard_tcb)
                  apply (rule ccorres_symb_exec_r)
                    apply ctac
                   apply vcg
@@ -3754,7 +3755,7 @@ proof -
            apply (vcg spec=TrueI)
            apply clarsimp
           apply wp
-          apply simp
+            apply simp+
          apply (clarsimp simp: ARM_H.exceptionMessage_def
                                ARM.exceptionMessage_def
                                word_bits_def)
@@ -3773,7 +3774,7 @@ proof -
      apply (clarsimp simp: guard_is_UNIV_def message_info_to_H_def
                            Collect_const_mem
                     split: if_split)
-    apply simp
+    apply (fastforce intro: obj_tcb_at')
     done
 qed
 
@@ -3830,6 +3831,7 @@ lemma copyMRsFaultReply_ccorres_syscall:
              apply (intro ccorres_rhs_assoc)
              apply (rule ccorres_symb_exec_r)
                apply ctac
+                 apply (rule ccorres_move_c_guard_tcb)
                  apply (rule ccorres_symb_exec_r)
                    apply ctac
                   apply vcg
@@ -3860,7 +3862,7 @@ lemma copyMRsFaultReply_ccorres_syscall:
            apply (vcg spec=TrueI)
            apply clarsimp
           apply wp
-          apply simp
+            apply simp+
          apply (clarsimp simp: length_syscallMessage
                                length_msgRegisters
                                n_msgRegisters_def n_syscallMessage_def
@@ -3868,7 +3870,7 @@ lemma copyMRsFaultReply_ccorres_syscall:
                          split: if_split)
         apply ceqv
        apply (rule_tac P'="if 4 < len then _ else _" in ccorres_inst)
-       apply (cases "4 < len")
+       apply (cases "4 < len" ; simp)
         apply (clarsimp simp: unat_ucast_less_no_overflow n_syscallMessage_def
                               length_syscallMessage msgRegisters_unfold
                               word_of_nat_less unat_of_nat unat_less_helper)
@@ -3890,8 +3892,10 @@ lemma copyMRsFaultReply_ccorres_syscall:
           apply (drule_tac s="sb" in sym)
           apply (simp only: zipWithM_x_mapM_x)
           apply ccorres_rewrite
-          apply (rule_tac F="\<lambda>_. valid_pspace' and (case sb of None \<Rightarrow> \<top>
-                                                             | Some x \<Rightarrow> valid_ipc_buffer_ptr' x)"
+          apply (rule_tac F="\<lambda>_. valid_pspace'
+                                   and (case sb of None \<Rightarrow> \<top>
+                                                 | Some x \<Rightarrow> valid_ipc_buffer_ptr' x)
+                                   and tcb_at' r"
                           in ccorres_mapM_x_while')
               apply clarsimp
               apply (rule ccorres_guard_imp2)
@@ -3901,6 +3905,7 @@ lemma copyMRsFaultReply_ccorres_syscall:
                  apply (rule ccorres_move_array_assertion_ipc_buffer
                              ccorres_Guard_Seq[where S="{s. h_t_valid (htd s) c_guard (ptr s)}" for ptr htd])+
                  apply (rule ccorres_symb_exec_r)
+                   apply (rule ccorres_move_c_guard_tcb)
                    apply (rule ccorres_symb_exec_r)
                      apply ctac
                     apply vcg
@@ -3971,11 +3976,12 @@ lemma copyMRsFaultReply_ccorres_syscall:
            apply (wp mapM_x_wp_inv user_getreg_inv'
                  | clarsimp simp: zipWithM_x_mapM_x split: prod.split)+
      apply (cases  "4 < len")
-      apply (clarsimp simp: guard_is_UNIV_def
+      apply (fastforce simp: guard_is_UNIV_def
                             msgRegisters_unfold
                             syscallMessage_unfold
                             n_syscallMessage_def
-                            n_msgRegisters_def)+
+                            n_msgRegisters_def
+                       intro: obj_tcb_at')+
   done
 qed
 

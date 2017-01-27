@@ -1135,22 +1135,25 @@ lemma mapM_x_append:
   apply (simp add: bind_assoc)
   done
 
-
+(* ARMHYP note: this works on ARM for all t since the that argument of sanitiseRegister is
+   discarded. On arm-hyp, the argument is used, needing changes to arch-common code in higher-level
+   specs.  *)
 lemma invokeTCB_WriteRegisters_ccorres_helper:
   "\<lbrakk> unat (f (of_nat n)) = incn
          \<and> g (of_nat n) = register_from_H reg \<and> n'=incn
          \<and> of_nat n < bnd \<and> of_nat n < bnd2 \<rbrakk> \<Longrightarrow>
-   ccorres dc xfdc (sysargs_rel args buffer and sysargs_rel_n args buffer n' and P) \<lbrace>\<acute>i = of_nat n\<rbrace> hs
+   ccorres dc xfdc (sysargs_rel args buffer and sysargs_rel_n args buffer n' and tcb_at' dst and P) \<lbrace>\<acute>i = of_nat n\<rbrace> hs
      (asUser dst (setRegister reg
           (sanitiseRegister reg (args ! incn))))
      (\<acute>ret__unsigned_long :== CALL getSyscallArg(f (\<acute>i),option_to_ptr buffer);;
       Guard ArrayBounds \<lbrace>\<acute>i < bnd\<rbrace>
-        (\<acute>unsigned_long_eret_2 :== CALL sanitiseRegister(g (\<acute>i),\<acute>ret__unsigned_long));;
+        (Guard C_Guard {s. s \<Turnstile>\<^sub>c tcb_ptr_to_ctcb_ptr dst}
+          (\<acute>unsigned_long_eret_2 :== CALL sanitiseRegister(g (\<acute>i),\<acute>ret__unsigned_long,t)));;
       Guard ArrayBounds \<lbrace>\<acute>i < bnd2\<rbrace>
         (CALL setRegister(tcb_ptr_to_ctcb_ptr dst,g (\<acute>i),\<acute>unsigned_long_eret_2)))"
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_add_return)
-   apply (rule ccorres_rhs_assoc)+ 
+   apply (rule ccorres_rhs_assoc)+
    apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n="incn" and buffer=buffer])
      apply (rule ccorres_symb_exec_r)
        apply (ctac add: setRegister_ccorres)
@@ -1159,7 +1162,7 @@ lemma invokeTCB_WriteRegisters_ccorres_helper:
     apply wp
    apply simp
    apply (vcg exspec=getSyscallArg_modifies)
-  apply clarsimp
+  apply (clarsimp simp: tcb_at_h_t_valid)
   done
 
 lemma doMachineOp_context:
@@ -1439,7 +1442,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
         apply (rule ccorres_stateAssert)
         apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg) 
             apply (rule_tac F="\<lambda>n. sysargs_rel args buffer and sysargs_rel_n args buffer (n + 2)
-                                     and (\<lambda>s. dst \<noteq> ksCurThread s)"
+                                     and tcb_at' dst and (\<lambda>s. dst \<noteq> ksCurThread s)"
                         and Q=UNIV
                          in ccorres_mapM_x_whileQ)
                  apply clarsimp
@@ -1467,6 +1470,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
           apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg) 
               apply (rule_tac F="\<lambda>n. sysargs_rel args buffer 
                                      and sysargs_rel_n args buffer (n + length ARM_H.frameRegisters + 2)
+                                     and tcb_at' dst
                                      and (\<lambda>s. dst \<noteq> ksCurThread s)"
                           and Q=UNIV
                            in ccorres_mapM_x_whileQ)
