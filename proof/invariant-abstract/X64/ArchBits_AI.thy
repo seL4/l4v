@@ -23,7 +23,7 @@ lemma invs_unique_refs[elim!]:
   by (simp add: invs_def valid_state_def valid_arch_caps_def)
 
 
-lemma invs_pd_caps:
+lemma invs_valid_table_caps[elim!]:
   "invs s \<Longrightarrow> valid_table_caps s"
   by (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
 

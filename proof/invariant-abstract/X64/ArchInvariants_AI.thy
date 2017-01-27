@@ -95,10 +95,20 @@ lemmas a_type_simps = a_type_def[split_simps kernel_object.split arch_kernel_obj
 definition
   "vmsz_aligned ref sz \<equiv> is_aligned ref (pageBitsForSize sz)"
 
+(* Current x86-64 processors allow the use of only 48 bits of the 64 bits of virtual
+   address space provided by the instruction set architecture, and require that the
+   most significant 17 bits of any virtual address are identical. *)
+
+definition canonical_address :: "obj_ref \<Rightarrow> bool"
+where
+  "canonical_address x \<equiv> ((scast ((ucast x) :: 48 word)) :: 64 word) = x"
+
 definition
   "wellformed_mapdata sz \<equiv>
    \<lambda>(asid, vref). 0 < asid \<and> asid \<le> 2^asid_bits - 1
-                \<and> vmsz_aligned vref sz \<and> vref < kernel_base"
+                \<and> vmsz_aligned vref sz
+                \<and> vref < pptr_base
+                \<and> canonical_address vref"
 
 definition
   wellformed_acap :: "arch_cap \<Rightarrow> bool"
@@ -115,7 +125,7 @@ where
      wellformed_mapdata X64HugePage mapdata
    | PDPointerTableCap r (Some (asid,vref)) \<Rightarrow>
      0 < asid \<and> asid \<le> 2^asid_bits - 1
-     \<and> is_aligned vref pml4_shift_bits \<and> vref < kernel_base
+     \<and> is_aligned vref pml4_shift_bits \<and> vref < pptr_base
    | PML4Cap r (Some asid) \<Rightarrow>
      0 < asid \<and> asid \<le> 2^asid_bits - 1
    | _ \<Rightarrow> True"
@@ -211,12 +221,12 @@ where
             else (typ_at (AArch (AUserData sz)) r s)) \<and>
     (rghts \<in> valid_vm_rights) \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le> 2^asid_bits - 1
-                                             \<and> vmsz_aligned ref sz \<and> ref < kernel_base)
+                                             \<and> vmsz_aligned ref sz \<and> ref < pptr_base \<and> canonical_address ref)
   | PageTableCap r mapdata \<Rightarrow>
     typ_at (AArch APageTable) r s \<and>
     (case mapdata of None \<Rightarrow> True
        | Some (asid, vref) \<Rightarrow> 0 < asid \<and> asid \<le> 2 ^ asid_bits - 1
-                                \<and> vref < kernel_base
+                                \<and> vref < pptr_base \<and> canonical_address vref
                                 \<and> is_aligned vref (pageBitsForSize X64LargePage))
   | PageDirectoryCap r mapdata \<Rightarrow>
     typ_at (AArch APageDirectory) r s \<and>
@@ -226,7 +236,7 @@ where
     typ_at (AArch APDPointerTable) r s \<and>
     (case mapdata of None \<Rightarrow> True
        | Some (asid, vref) \<Rightarrow> 0 < asid \<and> asid \<le> 2 ^ asid_bits - 1
-                                \<and> vref < kernel_base
+                                \<and> vref < pptr_base
                                 \<and> is_aligned vref (pml4_shift_bits))
   | PML4Cap r mapdata \<Rightarrow>
     typ_at (AArch APageMapL4) r s \<and>
@@ -1032,7 +1042,7 @@ definition
             r \<in> obj_refs cap \<longrightarrow>
             obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) r s"
 
-  (* needed to preserve valid_table_caps in map
+(* needed to preserve valid_table_caps in map
      enforces no sharing of tables *)
 definition
   "unique_table_caps \<equiv> \<lambda>cs. \<forall>p p' cap cap'.
@@ -2472,15 +2482,15 @@ lemma empty_table_pml4e_refD:
   by (simp add: empty_table_def)
 
 lemma valid_global_pdptsD:
-  "\<lbrakk>r \<in> set (x64_global_pdpts (arch_state s)); valid_global_objs s\<rbrakk>
-    \<Longrightarrow> \<exists>pdpt. ko_at (ArchObj (PDPointerTable pdpt)) r s \<and> (\<forall>x. aligned_pdpte (pdpt x)) 
+  "\<lbrakk>r \<in> set (x64_global_pdpts (arch_state s)); valid_global_objs s;  ko_at (ArchObj (PDPointerTable pdpt)) r s\<rbrakk>
+    \<Longrightarrow>  (\<forall>x. aligned_pdpte (pdpt x))
              \<and> (\<forall>r. pdpte_ref (pdpt x) = Some r 
                      \<longrightarrow> r \<in> set (x64_global_pds (arch_state s))) 
              \<and> valid_global_pdpt pdpt"
   apply (clarsimp simp: valid_global_objs_def)
   apply (drule_tac x=r in bspec, assumption)
-  by auto
-  
+  by (auto simp: obj_at_def)
+
 lemma valid_table_caps_pdD:
   "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PageDirectoryCap pd None));
      valid_table_caps s \<rbrakk> \<Longrightarrow>
