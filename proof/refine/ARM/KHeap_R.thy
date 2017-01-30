@@ -10,7 +10,7 @@
 
 theory KHeap_R
 imports
-  "../invariant-abstract/DetSchedSchedule_AI"
+  "../../invariant-abstract/DetSchedSchedule_AI"
   Machine_R
 begin
 

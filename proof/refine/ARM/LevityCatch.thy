@@ -11,7 +11,7 @@
 theory LevityCatch
 imports
   Include
-  "../../lib/LemmaBucket"
+  "../../../lib/LemmaBucket"
 begin
 
 (* Try again, clagged from Include *)

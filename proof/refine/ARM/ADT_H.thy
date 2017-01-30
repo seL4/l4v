@@ -12,7 +12,7 @@ chapter {* Abstract datatype for the executable specification *}
 
 theory ADT_H
 imports
-  "../invariant-abstract/ADT_AI"
+  "../../invariant-abstract/ADT_AI"
   Syscall_R
 begin
 

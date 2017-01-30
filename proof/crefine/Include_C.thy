@@ -11,7 +11,7 @@
 theory Include_C
 imports
   "../../spec/cspec/KernelInc_C"
-  "../refine/Refine"
+  "../refine/$L4V_ARCH/Refine"
 begin
 
 end
