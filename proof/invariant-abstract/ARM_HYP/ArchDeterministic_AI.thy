@@ -16,9 +16,15 @@ context Arch begin global_naming ARM
 
 named_theorems Deterministic_AI_assms
 
+crunch valid_list[wp, Deterministic_AI_assms]: vcpu_save, vcpu_enable, vcpu_disable, vcpu_restore valid_list
+  (wp: crunch_wps simp: unless_def crunch_simps)
+
 lemma vcpu_switch_valid_list[wp, Deterministic_AI_assms]:
   "\<lbrace>valid_list\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  sorry
+  apply (simp add: vcpu_switch_def)
+  apply (rule hoare_pre)
+    apply(wpsimp)+
+  done
 
 crunch valid_list[wp, Deterministic_AI_assms]: cap_swap_for_delete,set_cap,finalise_cap valid_list
   (wp: crunch_wps simp: unless_def crunch_simps)
