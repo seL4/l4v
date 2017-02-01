@@ -16,5 +16,6 @@
 
 # cabal dependencies 
 
+/.stack-work/
 /.cabal-sandbox/
 /cabal.sandbox.config

@@ -51,6 +51,7 @@ internal/*
 
 spec/haskell/cabal.sandbox.config
 spec/haskell/.cabal-sandbox/*
+spec/haskell/.stack-work/*
 spec/haskell/Setup.hs
 spec/haskell/configure
 spec/haskell/dist/*

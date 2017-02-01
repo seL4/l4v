@@ -8,7 +8,7 @@
 -- @TAG(GD_GPL)
 --
 
-name:                   SEL4-ARM
+name:                   SEL4
 version:                1.4-pre
 cabal-version:          >= 1.18
 build-type:             Custom
