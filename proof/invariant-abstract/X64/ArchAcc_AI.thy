@@ -1527,8 +1527,8 @@ lemma pte_ref_pagesD:
   by (auto simp: pte_ref_pages_def vs_refs_pages_def graph_of_def)
 
 lemma vs_ref_lvl_obj_same_type:
-  "a_type ko = a_type ko'  \<Longrightarrow> vs_ref_lvl_obj (Some ko) = vs_ref_lvl_obj (Some ko')"
-  by (simp add: a_type_def vs_ref_lvl_obj_def vs_ref_lvl_def aa_type_simps
+  "a_type ko = a_type ko'  \<Longrightarrow> vs_ref_lvl (Some ko) = vs_ref_lvl (Some ko')"
+  by (simp add: a_type_def vs_ref_lvl_def vs_ref_lvl_arch_def aa_type_simps
       split: kernel_object.splits if_splits arch_kernel_obj.splits)
 
 lemma valid_arch_obj_kheap_upd:
@@ -1565,9 +1565,9 @@ lemma update_object_valid_arch_objs[wp]:
     (* Lattice Preserving *)
     \<and> (\<forall>nref np nq stepref. ((nref, np) \<in> (vs_lookup1 s)\<^sup>* `` refs_diff vs_lookup1_on_heap_obj obj ptr s
         \<and>  (([], np), [stepref], nq) \<in> vs_lookup1 s)
-        \<longrightarrow> vs_ref_lvl_obj (kheap s np) < vs_ref_lvl_obj (kheap s nq))
+        \<longrightarrow> vs_ref_lvl (kheap s np) < vs_ref_lvl (kheap s nq))
     \<and> (\<forall>nref np. (nref, np) \<in> refs_diff vs_lookup1_on_heap_obj obj ptr s
-        \<longrightarrow> vs_ref_lvl_obj (Some (ArchObj obj)) < vs_ref_lvl_obj (kheap s np))
+        \<longrightarrow> vs_ref_lvl (Some (ArchObj obj)) < vs_ref_lvl (kheap s np))
 
     (* New reachable objs are valid *)
     \<and> (\<forall>rs. (rs \<rhd> ptr) s \<longrightarrow> valid_arch_obj obj s)
@@ -1629,9 +1629,9 @@ lemma update_object_valid_vs_lookup[wp]:
     (* Lattice Preserving *)
     \<and> (\<forall>nref np nq stepref. ((nref, np) \<in> (vs_lookup_pages1 s)\<^sup>* `` refs_diff vs_lookup_pages1_on_heap_obj obj ptr s
         \<and>  (([], np), [stepref], nq) \<in> vs_lookup_pages1 s)
-        \<longrightarrow> vs_ref_lvl_obj (kheap s np) < vs_ref_lvl_obj (kheap s nq))
+        \<longrightarrow> vs_ref_lvl (kheap s np) < vs_ref_lvl (kheap s nq))
     \<and> (\<forall>nref np. (nref, np) \<in> refs_diff vs_lookup_pages1_on_heap_obj obj ptr s
-        \<longrightarrow> vs_ref_lvl_obj (Some (ArchObj obj)) < vs_ref_lvl_obj (kheap s np))
+        \<longrightarrow> vs_ref_lvl (Some (ArchObj obj)) < vs_ref_lvl (kheap s np))
 
     (* New reachable objs are valid *)
     \<and> (\<forall>rs p pobj. ((rs, p)
@@ -1679,9 +1679,9 @@ lemma update_object_valid_arch_caps[wp]:
     (* Lattice Preserving *)
     \<and> (\<forall>nref np nq stepref. ((nref, np) \<in> (vs_lookup_pages1 s)\<^sup>* `` refs_diff vs_lookup_pages1_on_heap_obj obj ptr s
         \<and>  (([], np), [stepref], nq) \<in> vs_lookup_pages1 s)
-        \<longrightarrow> vs_ref_lvl_obj (kheap s np) < vs_ref_lvl_obj (kheap s nq))
+        \<longrightarrow> vs_ref_lvl (kheap s np) < vs_ref_lvl (kheap s nq))
     \<and> (\<forall>nref np. (nref, np) \<in> refs_diff vs_lookup_pages1_on_heap_obj obj ptr s
-        \<longrightarrow> vs_ref_lvl_obj (Some (ArchObj obj)) < vs_ref_lvl_obj (kheap s np))
+        \<longrightarrow> vs_ref_lvl (Some (ArchObj obj)) < vs_ref_lvl (kheap s np))
 
     (* New reachable objs are valid *)
     \<and> (\<forall>rs p pobj. ((rs, p)
@@ -1709,14 +1709,14 @@ lemma update_object_invs[wp]:
     (* Lattice Preserving *)
     \<and> (\<forall>nref np nq stepref. ((nref, np) \<in> (vs_lookup1 s)\<^sup>* `` refs_diff vs_lookup1_on_heap_obj obj ptr s
     \<and>  (([], np), [stepref], nq) \<in> vs_lookup1 s)
-        \<longrightarrow> vs_ref_lvl_obj (kheap s np) < vs_ref_lvl_obj (kheap s nq))
+        \<longrightarrow> vs_ref_lvl (kheap s np) < vs_ref_lvl (kheap s nq))
     \<and> (\<forall>nref np. (nref, np) \<in> refs_diff vs_lookup1_on_heap_obj obj ptr s
-        \<longrightarrow> vs_ref_lvl_obj (Some (ArchObj obj)) < vs_ref_lvl_obj (kheap s np))
+        \<longrightarrow> vs_ref_lvl (Some (ArchObj obj)) < vs_ref_lvl (kheap s np))
     \<and> (\<forall>nref np nq stepref. ((nref, np) \<in> (vs_lookup_pages1 s)\<^sup>* `` refs_diff vs_lookup_pages1_on_heap_obj obj ptr s
         \<and>  (([], np), [stepref], nq) \<in> vs_lookup_pages1 s)
-        \<longrightarrow> vs_ref_lvl_obj (kheap s np) < vs_ref_lvl_obj (kheap s nq))
+        \<longrightarrow> vs_ref_lvl (kheap s np) < vs_ref_lvl (kheap s nq))
     \<and> (\<forall>nref np. (nref, np) \<in> refs_diff vs_lookup_pages1_on_heap_obj obj ptr s
-        \<longrightarrow> vs_ref_lvl_obj (Some (ArchObj obj)) < vs_ref_lvl_obj (kheap s np))
+        \<longrightarrow> vs_ref_lvl (Some (ArchObj obj)) < vs_ref_lvl (kheap s np))
 
     (* New reachable objs are arch valid *)
 
@@ -2496,35 +2496,35 @@ lemma valid_obj_from_invs:
   "\<lbrakk>kheap s p = Some (ArchObj ao); invs s\<rbrakk> \<Longrightarrow> wellformed_arch_obj ao"
   by (auto simp: valid_obj_def valid_objs_def obj_at_def dom_def dest!:invs_valid_objs)
 
-lemmas vs_ref_lvl_obj_simps[simp] = vs_ref_lvl_obj_def[split_simps kernel_object.split option.split]
-lemmas vs_ref_lvl_simps[simp] = vs_ref_lvl_def[split_simps arch_kernel_obj.split aa_type.split option.split]
+lemmas vs_ref_lvl_obj_simps[simp] = vs_ref_lvl_def[split_simps kernel_object.split option.split]
+lemmas vs_ref_lvl_simps[simp] = vs_ref_lvl_arch_def[split_simps arch_kernel_obj.split aa_type.split option.split]
 
 lemma valid_pde_vs_ref_lvl_simps[simp]:
-  "\<lbrakk>valid_pde pde s; pde_ref pde = Some ptr\<rbrakk> \<Longrightarrow> 4 < vs_ref_lvl_obj (kheap s ptr)"
+  "\<lbrakk>valid_pde pde s; pde_ref pde = Some ptr\<rbrakk> \<Longrightarrow> 4 < vs_ref_lvl (kheap s ptr)"
   by (clarsimp simp: valid_pde_def pde_ref_def obj_at_def aa_type_simps split: pde.split_asm)
 
 lemma valid_pml4e_vs_ref_page_lvl_simps[simp]:
-  "\<lbrakk>valid_pml4e pml4e s; pml4e_ref_pages pml4e = Some ptr\<rbrakk> \<Longrightarrow> 2 < vs_ref_lvl_obj (kheap s ptr)"
+  "\<lbrakk>valid_pml4e pml4e s; pml4e_ref_pages pml4e = Some ptr\<rbrakk> \<Longrightarrow> 2 < vs_ref_lvl (kheap s ptr)"
   by (fastforce simp: valid_pml4e_def pml4e_ref_pages_def obj_at_def data_at_def aa_type_simps split: pml4e.split_asm)
 
 lemma valid_pml4e_vs_ref_lvl_simps[simp]:
-  "\<lbrakk>valid_pml4e pml4e s; pml4e_ref pml4e = Some ptr\<rbrakk> \<Longrightarrow> 2 < vs_ref_lvl_obj (kheap s ptr)"
+  "\<lbrakk>valid_pml4e pml4e s; pml4e_ref pml4e = Some ptr\<rbrakk> \<Longrightarrow> 2 < vs_ref_lvl (kheap s ptr)"
   by (clarsimp simp: valid_pml4e_def pml4e_ref_def obj_at_def aa_type_simps split: pml4e.split_asm)
 
 lemma valid_pdpte_vs_ref_page_lvl_simps[simp]:
-  "\<lbrakk>valid_pdpte pdpte s; pdpte_ref_pages pdpte = Some ptr\<rbrakk> \<Longrightarrow> 3 < vs_ref_lvl_obj (kheap s ptr)"
+  "\<lbrakk>valid_pdpte pdpte s; pdpte_ref_pages pdpte = Some ptr\<rbrakk> \<Longrightarrow> 3 < vs_ref_lvl (kheap s ptr)"
   by (fastforce simp: valid_pdpte_def pdpte_ref_pages_def obj_at_def data_at_def aa_type_simps split: pdpte.split_asm)
 
 lemma valid_pdpte_vs_ref_lvl_simps[simp]:
-  "\<lbrakk>valid_pdpte pdpte s; pdpte_ref pdpte = Some ptr\<rbrakk> \<Longrightarrow> 3 < vs_ref_lvl_obj (kheap s ptr)"
+  "\<lbrakk>valid_pdpte pdpte s; pdpte_ref pdpte = Some ptr\<rbrakk> \<Longrightarrow> 3 < vs_ref_lvl (kheap s ptr)"
   by (clarsimp simp: valid_pdpte_def pdpte_ref_def obj_at_def aa_type_simps split: pdpte.split_asm)
 
 lemma valid_pde_vs_ref_page_lvl_simps[simp]:
-  "\<lbrakk>valid_pde pde s; pde_ref_pages pde = Some ptr\<rbrakk> \<Longrightarrow> 4 < vs_ref_lvl_obj (kheap s ptr)"
+  "\<lbrakk>valid_pde pde s; pde_ref_pages pde = Some ptr\<rbrakk> \<Longrightarrow> 4 < vs_ref_lvl (kheap s ptr)"
   by (fastforce simp: valid_pde_def pde_ref_pages_def data_at_def obj_at_def aa_type_simps split: pde.split_asm)
 
 lemma valid_pte_vs_ref_page_lvl_simps[simp]:
-  "\<lbrakk>valid_pte pte s; pte_ref_pages pte = Some ptr\<rbrakk> \<Longrightarrow> 5 < vs_ref_lvl_obj (kheap s ptr)"
+  "\<lbrakk>valid_pte pte s; pte_ref_pages pte = Some ptr\<rbrakk> \<Longrightarrow> 5 < vs_ref_lvl (kheap s ptr)"
   by (fastforce simp: valid_pte_def pte_ref_pages_def data_at_def obj_at_def aa_type_simps split: pte.split_asm)
 
 lemma valid_pde_ref_obj_at_weakD:

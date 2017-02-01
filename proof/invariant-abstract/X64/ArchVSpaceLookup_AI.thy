@@ -958,21 +958,18 @@ primrec vsref_of :: "vs_ref \<Rightarrow> word64"
 where
   "vsref_of (VSRef x _ ) = x"
 
-definition vs_ref_lvl :: "aa_type option \<Rightarrow> nat"
-where "vs_ref_lvl atype \<equiv> case atype of
-    None \<Rightarrow> 0
-  | Some AASIDPool \<Rightarrow> 1
-  | Some APageMapL4 \<Rightarrow> 2
-  | Some APDPointerTable \<Rightarrow> 3
-  | Some APageDirectory \<Rightarrow> 4
-  | Some APageTable \<Rightarrow> 5
-  | Some (AUserData vmpage_size) \<Rightarrow> 6
-  | Some (ADeviceData vmpage_size) \<Rightarrow> 6"
+definition vs_ref_lvl_arch :: "arch_kernel_obj \<Rightarrow> nat"
+where "vs_ref_lvl_arch atype \<equiv> case aa_type atype of
+    AASIDPool \<Rightarrow> 1
+  | APageMapL4 \<Rightarrow> 2
+  | APDPointerTable \<Rightarrow> 3
+  | APageDirectory \<Rightarrow> 4
+  | APageTable \<Rightarrow> 5
+  | (AUserData vmpage_size) \<Rightarrow> 6
+  | (ADeviceData vmpage_size) \<Rightarrow> 6"
 
 definition
-  "vs_ref_lvl_obj objop \<equiv> case objop of None \<Rightarrow> 7
-                          | Some obj \<Rightarrow>
-    ((arch_obj_fun_lift (\<lambda>aobj. vs_ref_lvl (Some (aa_type aobj))) 7 obj))"
+  "vs_ref_lvl obj_opt \<equiv> case_option 7 (arch_obj_fun_lift vs_ref_lvl_arch 7) obj_opt"
 
 definition "vs_lookup1_on_heap_obj \<equiv> \<lambda>obj q h. (\<exists>ko. obj = Some ko \<and> (\<exists>r. h = [r] \<and> (r, q) \<in> vs_refs ko))"
 
@@ -1001,7 +998,7 @@ lemma vs_lookup_pages1_is_wellformed_lookup:
 
 lemma vs_lookup1_wellformed_order:
   "valid_arch_objs s \<Longrightarrow> wellformed_order_lookup (vs_lookup1 s) (kheap s) vs_lookup1_on_heap_obj
-                         vs_ref_lvl_obj (vs_asid_refs (x64_asid_table (arch_state s)))"
+                         vs_ref_lvl (vs_asid_refs (x64_asid_table (arch_state s)))"
   apply (intro wellformed_order_lookup.intro[OF vs_lookup1_is_wellformed_lookup])
   apply (intro wellformed_order_lookup_axioms.intro)
   apply (clarsimp simp: Image_def)
@@ -1015,34 +1012,35 @@ lemma vs_lookup1_wellformed_order:
   apply clarsimp
   apply (drule(2) valid_arch_objsD)
   apply (case_tac aobj)
-       apply (clarsimp simp: valid_arch_obj_def vs_ref_lvl_obj_def vs_ref_lvl_def
+       apply (clarsimp simp: valid_arch_obj_def vs_ref_lvl_def vs_ref_lvl_arch_def
                              obj_at_def vs_refs_def graph_of_def aa_type_simps arch_obj_fun_lift_def
                       split: option.splits arch_kernel_obj.splits kernel_object.splits
              | (drule bspec,fastforce))+
     apply (drule_tac x = aa in spec)
-    apply (clarsimp simp: valid_pde_def pde_ref_def obj_at_def vs_ref_lvl_obj_def
-                          vs_ref_lvl_def aa_type_simps
+    apply (clarsimp simp: valid_pde_def pde_ref_def obj_at_def vs_ref_lvl_def
+                          vs_ref_lvl_arch_def aa_type_simps
                    split: pde.split_asm)
-   apply (clarsimp simp: obj_at_def vs_ref_lvl_obj_def vs_ref_lvl_def vs_refs_def graph_of_def)
+   apply (clarsimp simp: obj_at_def vs_ref_lvl_def vs_ref_lvl_arch_def vs_refs_def graph_of_def)
    apply (drule_tac x = aa in spec)
-   apply (clarsimp simp: valid_pde_def pdpte_ref_def obj_at_def vs_ref_lvl_obj_def
-                         vs_ref_lvl_def aa_type_simps
+   apply (clarsimp simp: valid_pde_def pdpte_ref_def obj_at_def vs_ref_lvl_def
+                         vs_ref_lvl_arch_def aa_type_simps
                   split: pdpte.split_asm)
-   apply (clarsimp simp: valid_arch_obj_def vs_ref_lvl_obj_def vs_ref_lvl_def
+   apply (clarsimp simp: valid_arch_obj_def vs_ref_lvl_def vs_ref_lvl_arch_def
                              obj_at_def vs_refs_def graph_of_def aa_type_simps arch_obj_fun_lift_def
                       split: option.splits if_splits arch_kernel_obj.splits kernel_object.splits)+
    apply (drule_tac x = aa in bspec, clarsimp)
-   apply (clarsimp simp: valid_pde_def pml4e_ref_def obj_at_def vs_ref_lvl_obj_def
-                        vs_ref_lvl_def aa_type_simps
+   apply (clarsimp simp: valid_pde_def pml4e_ref_def obj_at_def vs_ref_lvl_def
+                        vs_ref_lvl_arch_def aa_type_simps
                  split: pml4e.split_asm)
-  apply (clarsimp simp: valid_arch_obj_def obj_at_def vs_ref_lvl_obj_def vs_ref_lvl_def
+  apply (clarsimp simp: valid_arch_obj_def obj_at_def vs_ref_lvl_def vs_ref_lvl_arch_def
                         aa_type_simps vs_refs_def
                  split: option.splits)
   done
 
 lemma vs_lookup_pages1_wellformed_order:
-  "\<lbrakk>valid_vs_lookup s; valid_arch_objs s\<rbrakk> \<Longrightarrow> wellformed_order_lookup (vs_lookup_pages1 s) (kheap s) vs_lookup_pages1_on_heap_obj
-                         vs_ref_lvl_obj (vs_asid_refs (x64_asid_table (arch_state s)))"
+  "\<lbrakk>valid_vs_lookup s; valid_arch_objs s\<rbrakk>
+    \<Longrightarrow> wellformed_order_lookup (vs_lookup_pages1 s) (kheap s) vs_lookup_pages1_on_heap_obj
+                                vs_ref_lvl (vs_asid_refs (x64_asid_table (arch_state s)))"
   apply (intro wellformed_order_lookup.intro[OF vs_lookup_pages1_is_wellformed_lookup])
   apply (intro wellformed_order_lookup_axioms.intro)
   sorry (*
@@ -1062,27 +1060,27 @@ lemma vs_lookup_pages1_wellformed_order:
   apply clarsimp
   apply (drule(2) valid_arch_objsD)
   apply (case_tac aobj)
-       apply (clarsimp simp: valid_arch_obj_def vs_ref_lvl_obj_def vs_ref_lvl_def
+       apply (clarsimp simp: valid_arch_obj_def vs_ref_lvl_def vs_ref_lvl_arch_def
                              obj_at_def vs_refs_def graph_of_def aa_type_simps arch_obj_fun_lift_def
                       split: option.splits arch_kernel_obj.splits kernel_object.splits
              | (drule bspec,fastforce))+
     apply (drule_tac x = aa in spec)
-    apply (clarsimp simp: valid_pde_def pde_ref_def obj_at_def vs_ref_lvl_obj_def
-                          vs_ref_lvl_def aa_type_simps
+    apply (clarsimp simp: valid_pde_def pde_ref_def obj_at_def vs_ref_lvl_def
+                          vs_ref_lvl_arch_def aa_type_simps
                    split: pde.split_asm)
-   apply (clarsimp simp: obj_at_def vs_ref_lvl_obj_def vs_ref_lvl_def vs_refs_def graph_of_def)
+   apply (clarsimp simp: obj_at_def vs_ref_lvl_def vs_ref_lvl_arch_def vs_refs_def graph_of_def)
    apply (drule_tac x = aa in spec)
-   apply (clarsimp simp: valid_pde_def pdpte_ref_def obj_at_def vs_ref_lvl_obj_def
-                         vs_ref_lvl_def aa_type_simps
+   apply (clarsimp simp: valid_pde_def pdpte_ref_def obj_at_def vs_ref_lvl_def
+                         vs_ref_lvl_arch_def aa_type_simps
                   split: pdpte.split_asm)
-   apply (clarsimp simp: valid_arch_obj_def vs_ref_lvl_obj_def vs_ref_lvl_def
+   apply (clarsimp simp: valid_arch_obj_def vs_ref_lvl_def vs_ref_lvl_arch_def
                              obj_at_def vs_refs_def graph_of_def aa_type_simps arch_obj_fun_lift_def
                       split: option.splits if_splits arch_kernel_obj.splits kernel_object.splits)+
    apply (drule_tac x = aa in bspec, clarsimp)
-   apply (clarsimp simp: valid_pde_def pml4e_ref_def obj_at_def vs_ref_lvl_obj_def
-                        vs_ref_lvl_def aa_type_simps
+   apply (clarsimp simp: valid_pde_def pml4e_ref_def obj_at_def vs_ref_lvl_def
+                        vs_ref_lvl_arch_def aa_type_simps
                  split: pml4e.split_asm)
-  apply (clarsimp simp: valid_arch_obj_def obj_at_def vs_ref_lvl_obj_def vs_ref_lvl_def
+  apply (clarsimp simp: valid_arch_obj_def obj_at_def vs_ref_lvl_def vs_ref_lvl_arch_def
                         aa_type_simps vs_refs_def
                  split: option.splits)
                  *)
