@@ -973,7 +973,7 @@ lemma update_asid_map_invs:
   done
 
 lemma update_asid_map_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> update_asid_map a b \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> update_asid_map a \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   by (clarsimp simp: pred_tcb_at_def update_asid_map_def | wp)+
 
 lemma svr_invs [wp]:
@@ -1161,23 +1161,12 @@ lemma kernel_vsrefs_kernel_mapping_slots:
 
 lemma vs_lookup_typI:
   "\<lbrakk>(r \<rhd> p) s; valid_arch_objs s; valid_asid_table (x64_asid_table (arch_state s)) s\<rbrakk>
-   \<Longrightarrow> page_table_at p s
-    \<or> page_directory_at p s
-    \<or> pd_pointer_table_at p s
-    \<or> page_map_l4_at p s
-    \<or> asid_pool_at p s"
+   \<Longrightarrow> asid_pool_at p s \<or> vspace_table_at p s"
   apply (erule (1) vs_lookupE_alt)
      apply (clarsimp simp: ran_def)
      apply (drule (2) valid_asid_tableD)
     apply simp+
   done
-
-(* FIXME: Looks Correct and needs to be correct !  *)
-lemma vs_lookup_vs_lookup_pagesI':
-  "\<lbrakk>(r \<unrhd> p) s; page_table_at p s \<or> page_directory_at p s \<or> pd_pointer_table_at p s \<or> page_map_l4_at p s \<or> asid_pool_at p s;
-    valid_arch_objs s; valid_asid_table (x64_asid_table (arch_state s)) s\<rbrakk>
-   \<Longrightarrow> (r \<rhd> p) s"
-  sorry (* Matt is working on that and this will be moved to ArchVSLookup_AI*)
 
 lemma vs_lookup_vs_lookup_pagesI:
   "\<lbrakk>(r \<rhd> p) s; (r' \<unrhd> p) s; valid_arch_objs s; valid_asid_table (x64_asid_table (arch_state s)) s\<rbrakk>
@@ -3060,14 +3049,12 @@ lemma perform_asid_pool_invs [wp]:
   apply (fastforce dest!: invs_valid_global_objs simp: valid_global_objs_def obj_at_def)
   done
 
-(* FIXME: Strange lemma
-lemma invs_aligned_pdD:
-  "\<lbrakk> pspace_aligned s; valid_arch_state s \<rbrakk> \<Longrightarrow> is_aligned (x64_global_pml4 (arch_state s)) pd_bits"
+lemma invs_aligned_pml4D:
+  "\<lbrakk> pspace_aligned s; valid_arch_state s \<rbrakk> \<Longrightarrow> is_aligned (x64_global_pml4 (arch_state s)) pml4_bits"
   apply (clarsimp simp: valid_arch_state_def)
   apply (drule (1) is_aligned_pml4)
   apply (simp add: pml4_bits_def pageBits_def)
   done
-*)
 
 end
 end

@@ -20,7 +20,7 @@ context begin interpretation Arch .
 requalify_facts
    pspace_respects_device_region_dmo
    cap_refs_respects_device_region_dmo
-(* Nothing to see here. *)
+
 end
 
 lemmas device_region_dmos = pspace_respects_device_region_dmo

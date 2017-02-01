@@ -279,7 +279,7 @@ lemma update_object_iflive[wp]:
 
 lemma typ_at_pspace_aligned:
   assumes type_invs: "\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>_. typ_at T p\<rbrace>"
-  assumes dom_shrink: "\<And>P x. \<lbrace>\<lambda>s. x \<notin> dom (kheap s)\<rbrace> f \<lbrace>\<lambda>_ s. x \<notin> dom (kheap s)\<rbrace>"
+  assumes dom_shrink: "\<And>x. \<lbrace>\<lambda>s. x \<notin> dom (kheap s)\<rbrace> f \<lbrace>\<lambda>_ s. x \<notin> dom (kheap s)\<rbrace>"
   shows "\<lbrace>pspace_aligned\<rbrace> f \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
   apply (clarsimp simp: valid_def pspace_aligned_def)
   apply (drule_tac x = x in bspec)
@@ -296,12 +296,7 @@ lemma typ_at_pspace_aligned:
   apply (simp add: obj_at_def)
   done
 
-lemma update_obj_typ_at[wp]:
-  "\<lbrace>typ_at T p\<rbrace> update_object pt obj \<lbrace>\<lambda>_. typ_at T p\<rbrace>"
-  apply (simp add: update_object_def)
-  apply (wp set_object_typ_at get_object_wp)
-  apply (clarsimp simp: obj_at_def)
-  done
+lemmas update_obj_typ_at[wp] = update_object_typ_at[where P="\<lambda>x. x"]
 
 lemma update_obj_dom_shrink[wp]:
   "\<lbrace>\<lambda>s. p \<notin> dom (kheap s) \<rbrace> update_object pt obj \<lbrace>\<lambda>_ s. p \<notin> dom (kheap s)\<rbrace>"
@@ -1396,7 +1391,7 @@ lemma set_pt_asid_map [wp]:
    apply (simp add: vs_lookup_def)
    apply (rule image_in_rtrancl_image)
   apply (clarsimp simp: vs_lookup_def)
-  apply (erule wellformed_lookup.lookupE[OF vs_lookup1_is_wellformed_lookup])
+  apply (erule vs_lookup1_wellformed.lookupE)
    apply (clarsimp simp: vs_lookup1_def vs_asid_refs_def)
   apply (clarsimp simp: Image_def vs_asid_refs_def dest!: vs_lookup1D)
   apply (rule bexI[rotated])
@@ -1407,9 +1402,9 @@ lemma set_pt_asid_map [wp]:
      apply simp
     apply (simp add: obj_at_def)
    apply (clarsimp simp: lookup_leaf_def obj_at_def
-                  dest!: wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup1_is_wellformed_lookup] vs_lookup1D)
+                  dest!: vs_lookup1_wellformed.lookup_rtrancl_stepD vs_lookup1D)
   apply (clarsimp simp: lookup_leaf_def obj_at_def
-                 dest!: wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup1_is_wellformed_lookup] vs_lookup1D)
+                 dest!: vs_lookup1_wellformed.lookup_rtrancl_stepD vs_lookup1D)
   apply (clarsimp simp: vs_lookup1_def)
   apply (drule_tac x = a in spec)
   apply (clarsimp simp: obj_at_def dest!:a_type_is_aobj)
@@ -1583,13 +1578,13 @@ lemma update_object_valid_arch_objs[wp]:
   \<lbrace> \<lambda>_. valid_arch_objs \<rbrace>"
   unfolding refs_diff_def
   apply (rule hoare_pre)
-  apply (clarsimp simp: update_object_def set_object_def)
-  apply (wp get_object_wp)
+   apply (clarsimp simp: update_object_def set_object_def)
+   apply (wp get_object_wp)
   apply (subst valid_arch_objs_def)
   apply (clarsimp simp: vs_lookup_def del:ImageE)
   apply (drule subsetD[rotated, OF _ wellformed_order_lookup.khupd_graph_subset])
-     apply (erule vs_lookup1_wellformed_order)
-    apply (rule_tac obj = "Some (ArchObj obj)" in wellformed_order_lookup.khupd_wellformed_order_lookup)
+    apply (erule vs_lookup1_wellformed_order)
+   apply (rule_tac obj = "Some (ArchObj obj)" in wellformed_order_lookup.khupd_wellformed_order_lookup)
         apply (erule vs_lookup1_wellformed_order)
        apply fastforce
       apply fastforce
@@ -1598,11 +1593,12 @@ lemma update_object_valid_arch_objs[wp]:
      apply (clarsimp simp: obj_at_def)
      apply (erule_tac s = "kheap s ptr" in subst)
      apply (erule wellformed_order_lookup.lookup1_trans_increase[OF vs_lookup1_wellformed_order])
-     apply (clarsimp simp: Image_def)
-     apply (erule bexI[rotated])
+      apply (clarsimp simp: Image_def)
+      apply (erule bexI[rotated])
       apply simp
      apply simp
-    apply (rule vs_lookup1_is_wellformed_lookup[where s = "s\<lparr>kheap := kheap s(ptr \<mapsto> ArchObj obj)\<rparr>" for s,simplified])
+    apply (rule vs_lookup1_wellformed.wellformed_lookup_axioms
+                  [where s = "s\<lparr>kheap := kheap s(ptr \<mapsto> ArchObj obj)\<rparr>" for s,simplified])
    apply (clarsimp simp: obj_at_def cong:vs_ref_lvl_obj_same_type)
   apply clarsimp
   apply (rule valid_arch_obj_kheap_upd)
@@ -1628,7 +1624,7 @@ lemma valid_vs_lookup_fullD:
   by (simp add: valid_vs_lookup_def)
 
 lemma update_object_valid_vs_lookup[wp]:
-  "\<lbrace> \<lambda>s. valid_arch_objs s \<and> valid_vs_lookup s
+  "\<lbrace> \<lambda>s. valid_arch_objs s \<and> valid_vs_lookup s \<and> valid_asid_table (x64_asid_table (arch_state s)) s
 
     (* Lattice Preserving *)
     \<and> (\<forall>nref np nq stepref. ((nref, np) \<in> (vs_lookup_pages1 s)\<^sup>* `` refs_diff vs_lookup_pages1_on_heap_obj obj ptr s
@@ -1666,7 +1662,8 @@ lemma update_object_valid_vs_lookup[wp]:
      apply (erule bexI[rotated])
       apply simp
      apply simp
-    apply (rule vs_lookup_pages1_is_wellformed_lookup[where s = "s\<lparr>kheap := kheap s(ptr \<mapsto> ArchObj obj)\<rparr>" for s,simplified])
+    apply (rule vs_lookup_pages1_wellformed.wellformed_lookup_axioms
+                  [where s = "s\<lparr>kheap := kheap s(ptr \<mapsto> ArchObj obj)\<rparr>" for s, simplified])
    apply (clarsimp simp: obj_at_def cong:vs_ref_lvl_obj_same_type)
   apply (clarsimp simp: fun_upd_def)
   apply (subst caps_of_state_after_update)
@@ -1678,7 +1675,10 @@ lemma update_object_valid_vs_lookup[wp]:
   done
 
 lemma update_object_valid_arch_caps[wp]:
-  "\<lbrace> \<lambda>s. valid_arch_objs s \<and> valid_arch_caps s \<and> valid_table_caps_aobj (caps_of_state s) (arch_state s) (ArchObj obj) ptr
+  "\<lbrace> \<lambda>s. valid_arch_objs s \<and> valid_arch_caps s
+
+    \<and> valid_table_caps_aobj (caps_of_state s) (arch_state s) (ArchObj obj) ptr
+    \<and> valid_asid_table (x64_asid_table (arch_state s)) s
 
     (* Lattice Preserving *)
     \<and> (\<forall>nref np nq stepref. ((nref, np) \<in> (vs_lookup_pages1 s)\<^sup>* `` refs_diff vs_lookup_pages1_on_heap_obj obj ptr s
@@ -1739,7 +1739,7 @@ lemma update_object_invs[wp]:
   \<lbrace> \<lambda>_. invs \<rbrace>"
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
   apply (wp valid_irq_node_typ valid_irq_handlers_lift update_aobj_valid_global_vspace_mappings)
-   apply (elim conjE, assumption | intro conjI | simp)+
+   apply (elim conjE, assumption | intro conjI | simp add: valid_arch_state_def)+
   done
 
 lemma valid_global_refsD2:
@@ -2575,7 +2575,7 @@ lemma store_pte_invs:
       apply simp
      apply (clarsimp simp: obj_at_def)
      apply (erule(1) empty_refs_pages_cap_lookup_refs_pages_empty[OF _ rtrancl_into_trancl1])
-     apply (drule wellformed_lookup.lookup1_cut[OF vs_lookup_pages1_is_wellformed_lookup],fastforce,fastforce)
+     apply (drule vs_lookup_pages1_wellformed.lookup1_cut, fastforce, fastforce)
     apply (clarsimp simp: aa_type_simps split: option.split_asm if_split_asm)+
    apply (clarsimp split: if_split_asm option.split_asm dest!:ref_pages_Some simp: lookupable_refs_def)
    apply (drule valid_pte_ref_obj_at_empty_vs_refs_pages)
@@ -2639,12 +2639,12 @@ lemma store_pde_invs:
         apply (rule ccontr)
         apply (clarsimp dest!: ref_pages_Some)
         apply (erule(1) empty_refs_cap_lookup_refs_empty[OF vs_refs_empty_from_pages_empty rtrancl_into_trancl1])
-         apply (drule wellformed_lookup.lookup1_cut[OF vs_lookup1_is_wellformed_lookup],fastforce,fastforce)
+         apply (drule vs_lookup1_wellformed.lookup1_cut, fastforce, fastforce)
        apply (clarsimp simp: aa_type_simps split: option.split_asm if_split_asm)+
       apply (rule ccontr)
       apply (erule empty_refs_pages_cap_lookup_refs_pages_empty[OF _ ])
        apply (erule rtrancl_into_trancl1)
-       apply (drule wellformed_lookup.lookup1_cut[OF vs_lookup_pages1_is_wellformed_lookup],fastforce,fastforce)
+       apply (drule vs_lookup_pages1_wellformed.lookup1_cut, fastforce, fastforce)
      apply (clarsimp split: option.split_asm if_split_asm simp: aa_type_simps)
      apply (drule(1) valid_pde_vs_ref_page_lvl_simps, simp)
     apply (clarsimp split: if_split_asm option.split_asm dest!:ref_pages_Some simp: lookupable_refs_def)
@@ -2684,12 +2684,12 @@ lemma store_pdpte_invs:
        apply (rule ccontr)
        apply (clarsimp dest!: ref_pages_Some)
         apply (erule(1) empty_refs_cap_lookup_refs_empty[OF vs_refs_empty_from_pages_empty rtrancl_into_trancl1])
-       apply (drule wellformed_lookup.lookup1_cut[OF vs_lookup1_is_wellformed_lookup],fastforce,fastforce)
+       apply (drule vs_lookup1_wellformed.lookup1_cut, fastforce, fastforce)
       apply (clarsimp simp: aa_type_simps split: option.split_asm if_split_asm)+
      apply (rule ccontr)
      apply (erule empty_refs_pages_cap_lookup_refs_pages_empty[OF _ ])
      apply (erule rtrancl_into_trancl1)
-     apply (drule wellformed_lookup.lookup1_cut[OF vs_lookup_pages1_is_wellformed_lookup],fastforce,fastforce)
+     apply (drule vs_lookup_pages1_wellformed.lookup1_cut, fastforce, fastforce)
     apply (clarsimp split: option.split_asm if_split_asm simp: aa_type_simps)
     apply (drule(1) valid_pdpte_vs_ref_page_lvl_simps, simp)
    apply (clarsimp split: if_split_asm option.split_asm dest!:ref_pages_Some simp: lookupable_refs_def)
@@ -2736,12 +2736,12 @@ lemma store_pml4e_invs:
        apply (rule ccontr)
        apply (clarsimp dest!: ref_pages_Some)
        apply (erule(1) unmapped_cap_lookup_refs_empty[OF _ rtrancl_into_trancl1])
-       apply (drule wellformed_lookup.lookup1_cut[OF vs_lookup1_is_wellformed_lookup],fastforce,fastforce)
+       apply (drule vs_lookup1_wellformed.lookup1_cut, fastforce, fastforce)
       apply (clarsimp simp: aa_type_simps split: option.split_asm if_split_asm)+
      apply (rule ccontr)
      apply (erule unmapped_cap_lookup_refs_pages_empty[OF _ ])
      apply (erule rtrancl_into_trancl1)
-     apply (drule wellformed_lookup.lookup1_cut[OF vs_lookup_pages1_is_wellformed_lookup],fastforce,fastforce)
+     apply (drule vs_lookup_pages1_wellformed.lookup1_cut, fastforce, fastforce)
     apply (clarsimp split: option.split_asm if_split_asm simp: aa_type_simps)
     apply (drule(1) valid_pml4e_vs_ref_page_lvl_simps, simp)
    apply (clarsimp split: if_split_asm option.split_asm dest!:ref_pages_Some simp: lookupable_refs_def)

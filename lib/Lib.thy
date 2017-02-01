@@ -714,6 +714,9 @@ lemma graph_of_empty :
   "graph_of empty = {}"
   by (simp add: graph_of_def)
 
+lemma graph_of_in_ranD: "\<forall>y \<in> ran f. P y \<Longrightarrow> (x,y) \<in> graph_of f \<Longrightarrow> P y"
+  by (auto simp: graph_of_def ran_def)
+
 lemma in_set_zip_refl :
   "(x,y) \<in> set (zip xs xs) = (y = x \<and> x \<in> set xs)"
   by (induct xs) auto
@@ -1796,6 +1799,16 @@ lemma trancl_step_lift:
   apply (fastforce simp: y_new dest: x_step)
   done
 
+lemma rtrancl_simulate_weak:
+  assumes r: "(x,z) \<in> R\<^sup>*"
+  assumes s: "\<And>y. (x,y) \<in> R \<Longrightarrow> (y,z) \<in> R\<^sup>* \<Longrightarrow> (x,y) \<in> R' \<and> (y,z) \<in> R'\<^sup>*"
+  shows "(x,z) \<in> R'\<^sup>*"
+  apply (rule converse_rtranclE[OF r])
+   apply simp
+  apply (frule (1) s)
+  apply clarsimp
+  by (rule converse_rtrancl_into_rtrancl)
+
 lemma nat_le_Suc_less_imp:
   "x < y \<Longrightarrow> x \<le> y - Suc 0"
   by arith
@@ -2450,5 +2463,8 @@ qed
 lemma rsubst:
   "\<lbrakk> P s; s = t \<rbrakk> \<Longrightarrow> P t"
   by simp
+
+lemma ex_impE: "((\<exists>x. P x) \<longrightarrow> Q) \<Longrightarrow> P x \<Longrightarrow> Q"
+  by blast
 
 end

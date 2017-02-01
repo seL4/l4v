@@ -983,139 +983,129 @@ end
 abbreviation "vs_lookup_leaf ptr s \<equiv> lookup_leaf ptr (vs_lookup1 s)"
 
 context Arch begin global_naming X64
+
 primrec vsref_of :: "vs_ref \<Rightarrow> word64"
 where
   "vsref_of (VSRef x _ ) = x"
 
-definition vs_ref_lvl_arch :: "arch_kernel_obj \<Rightarrow> nat"
-where "vs_ref_lvl_arch atype \<equiv> case aa_type atype of
-    AASIDPool \<Rightarrow> 1
-  | APageMapL4 \<Rightarrow> 2
-  | APDPointerTable \<Rightarrow> 3
-  | APageDirectory \<Rightarrow> 4
-  | APageTable \<Rightarrow> 5
-  | (AUserData vmpage_size) \<Rightarrow> 6
-  | (ADeviceData vmpage_size) \<Rightarrow> 6"
+definition
+  vs_ref_lvl_arch :: "arch_kernel_obj \<Rightarrow> nat"
+where
+  "vs_ref_lvl_arch atype \<equiv> case aa_type atype of
+      AASIDPool \<Rightarrow> 1
+    | APageMapL4 \<Rightarrow> 2
+    | APDPointerTable \<Rightarrow> 3
+    | APageDirectory \<Rightarrow> 4
+    | APageTable \<Rightarrow> 5
+    | _ \<Rightarrow> 6"
 
 definition
   "vs_ref_lvl obj_opt \<equiv> case_option 7 (arch_obj_fun_lift vs_ref_lvl_arch 7) obj_opt"
 
-definition "vs_lookup1_on_heap_obj \<equiv> \<lambda>obj q h. (\<exists>ko. obj = Some ko \<and> (\<exists>r. h = [r] \<and> (r, q) \<in> vs_refs ko))"
+lemma vs_ref_lvl_arch_obj [simp]:
+  "vs_ref_lvl (Some (ArchObj aobj)) = vs_ref_lvl_arch aobj"
+  by (simp add: vs_ref_lvl_def)
 
-lemma vs_refs_aobj_not_empty:
-  "ref \<in> vs_refs ko \<Longrightarrow> \<exists>aobj. ko = ArchObj aobj"
-  by (clarsimp simp: vs_refs_def split: kernel_object.splits)
+lemma vs_ref_lvl_arch_simps [simp]:
+  "vs_ref_lvl_arch (ASIDPool ap) = 1"
+  "vs_ref_lvl_arch (PageMapL4 pm) = 2"
+  "vs_ref_lvl_arch (PDPointerTable pdpt) = 3"
+  "vs_ref_lvl_arch (PageDirectory pd) = 4"
+  "vs_ref_lvl_arch (PageTable pt) = 5"
+  "vs_ref_lvl_arch (DataPage dev sz) = 6"
+  by (auto simp: vs_ref_lvl_arch_def aa_type_def)
 
-lemma vs_lookup1_is_wellformed_lookup:
-  "wellformed_lookup (vs_lookup1 s) (kheap s) vs_lookup1_on_heap_obj"
-  apply (intro wellformed_lookup.intro)
-    apply ((clarsimp simp: trans_depends_def vs_lookup1_def obj_at_def vs_lookup1_on_heap_obj_def)+)
+definition
+  "vs_lookup1_on_heap_obj \<equiv> \<lambda>obj q h. (\<exists>ko. obj = Some ko \<and> (\<exists>r. h = [r] \<and> (r, q) \<in> vs_refs ko))"
+
+definition
+  "vs_lookup_pages1_on_heap_obj \<equiv> \<lambda>obj q h. (\<exists>ko. obj = Some ko \<and> (\<exists>r. h = [r] \<and> (r, q) \<in> vs_refs_pages ko))"
+
+sublocale vs_lookup1_wellformed:
+  wellformed_lookup "vs_lookup1 s" "kheap s" vs_lookup1_on_heap_obj
+  apply unfold_locales
+       apply (clarsimp simp: trans_depends_def vs_lookup1_def obj_at_def vs_lookup1_on_heap_obj_def)+
    apply (clarsimp simp: vs_refs_def up_ucast_inj_eq graph_of_def
                   split: kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: vs_lookup1_on_heap_obj_def)
   done
 
-definition "vs_lookup_pages1_on_heap_obj \<equiv> \<lambda>obj q h. (\<exists>ko. obj = Some ko \<and> (\<exists>r. h = [r] \<and> (r, q) \<in> vs_refs_pages ko))"
-lemma vs_lookup_pages1_is_wellformed_lookup:
-  "wellformed_lookup (vs_lookup_pages1 s) (kheap s) vs_lookup_pages1_on_heap_obj"
-  apply (intro wellformed_lookup.intro)
-    apply ((clarsimp simp: trans_depends_def vs_lookup_pages1_def obj_at_def vs_lookup_pages1_on_heap_obj_def)+)
+lemmas vs_lookup1_is_wellformed_lookup
+  = vs_lookup1_wellformed.wellformed_lookup_axioms
+
+sublocale vs_lookup_pages1_wellformed:
+  wellformed_lookup "vs_lookup_pages1 s" "kheap s" vs_lookup_pages1_on_heap_obj
+  apply unfold_locales
+       apply (clarsimp simp: trans_depends_def vs_lookup_pages1_def obj_at_def vs_lookup_pages1_on_heap_obj_def)+
    apply (clarsimp simp: vs_refs_pages_def up_ucast_inj_eq graph_of_def
                   split: kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: vs_lookup_pages1_on_heap_obj_def)
   done
 
+lemmas vs_lookup_pages1_is_wellformed_lookup
+  = vs_lookup_pages1_wellformed.wellformed_lookup_axioms
+
+lemma vs_refs_pages_vs_ref_lvl:
+  "\<lbrakk> ko_at (ArchObj aobj) p s; (r, q) \<in> vs_refs_pages (ArchObj aobj); valid_arch_obj aobj s \<rbrakk>
+     \<Longrightarrow> vs_ref_lvl (kheap s p) < vs_ref_lvl (kheap s q)"
+  apply (cases aobj;
+         clarsimp simp: vs_refs_pages_def graph_of_def ball_ran_eq obj_at_def
+                        pte_ref_pages_def pde_ref_pages_def pdpte_ref_pages_def pml4e_ref_pages_def
+                 split: if_splits pte.splits pde.splits pdpte.splits pml4e.splits;
+         match premises in H [thin]: "\<forall>i. P (t i)" and J: "t i = v" for P t i v \<Rightarrow>
+                              \<open>insert spec[where x=i, OF H]\<close>
+                         \<bar> H [thin]: "\<forall>i \<in> S. P (t i)" and J: "t i = v" for P S t i v \<Rightarrow>
+                              \<open>insert bspec[where x=i, OF H]\<close>)
+  by (auto simp: obj_at_def data_at_def)
+
+lemmas vs_refs_vs_ref_lvl = vs_refs_pages_vs_ref_lvl[OF _ vs_refs_vs_refs_pages]
+
 lemma vs_lookup1_wellformed_order:
-  "valid_arch_objs s \<Longrightarrow> wellformed_order_lookup (vs_lookup1 s) (kheap s) vs_lookup1_on_heap_obj
-                         vs_ref_lvl (vs_asid_refs (x64_asid_table (arch_state s)))"
-  apply (intro wellformed_order_lookup.intro[OF vs_lookup1_is_wellformed_lookup])
-  apply (intro wellformed_order_lookup_axioms.intro)
-  apply (clarsimp simp: Image_def)
-  apply (frule(1) vs_lookupI)
-  apply (frule vs_lookup_step)
-   apply (drule wellformed_lookup.lookup1_cut_singleton[OF vs_lookup1_is_wellformed_lookup])
-   apply simp
-  apply (drule(1) vs_lookupI[rotated])
-  apply (clarsimp simp: vs_lookup1_def)
-  apply (frule vs_refs_aobj_not_empty)
-  apply clarsimp
-  apply (drule(2) valid_arch_objsD)
-  apply (case_tac aobj)
-       apply (clarsimp simp: valid_arch_obj_def vs_ref_lvl_def vs_ref_lvl_arch_def
-                             obj_at_def vs_refs_def graph_of_def aa_type_simps arch_obj_fun_lift_def
-                      split: option.splits arch_kernel_obj.splits kernel_object.splits
-             | (drule bspec,fastforce))+
-    apply (drule_tac x = aa in spec)
-    apply (clarsimp simp: valid_pde_def pde_ref_def obj_at_def vs_ref_lvl_def
-                          vs_ref_lvl_arch_def aa_type_simps
-                   split: pde.split_asm)
-   apply (clarsimp simp: obj_at_def vs_ref_lvl_def vs_ref_lvl_arch_def vs_refs_def graph_of_def)
-   apply (drule_tac x = aa in spec)
-   apply (clarsimp simp: valid_pde_def pdpte_ref_def obj_at_def vs_ref_lvl_def
-                         vs_ref_lvl_arch_def aa_type_simps
-                  split: pdpte.split_asm)
-   apply (clarsimp simp: valid_arch_obj_def vs_ref_lvl_def vs_ref_lvl_arch_def
-                             obj_at_def vs_refs_def graph_of_def aa_type_simps arch_obj_fun_lift_def
-                      split: option.splits if_splits arch_kernel_obj.splits kernel_object.splits)+
-   apply (drule_tac x = aa in bspec, clarsimp)
-   apply (clarsimp simp: valid_pde_def pml4e_ref_def obj_at_def vs_ref_lvl_def
-                        vs_ref_lvl_arch_def aa_type_simps
-                 split: pml4e.split_asm)
-  apply (clarsimp simp: valid_arch_obj_def obj_at_def vs_ref_lvl_def vs_ref_lvl_arch_def
-                        aa_type_simps vs_refs_def
-                 split: option.splits)
+  "valid_arch_objs s
+    \<Longrightarrow> wellformed_order_lookup (vs_lookup1 s) (kheap s) vs_lookup1_on_heap_obj
+                                vs_ref_lvl (vs_asid_refs (x64_asid_table (arch_state s)))"
+  apply (intro wellformed_order_lookup.intro vs_lookup1_wellformed.wellformed_lookup_axioms
+               wellformed_order_lookup_axioms.intro)
+  apply (simp only: vs_lookup_def2[symmetric])
+  apply (clarsimp simp add: vs_lookup1_def)
+  apply (case_tac ko; (clarsimp simp: vs_refs_def; fail)?; rename_tac ako; clarsimp)
+  apply (frule (2) valid_arch_objsD)
+  apply (case_tac ako; clarsimp simp: vs_refs_def)
+     apply (drule (1) graph_of_in_ranD; clarsimp simp: obj_at_def)
+    apply (match premises in "(i,_) \<in> graph_of _" for i \<Rightarrow>
+            \<open>match premises in H[thin]: "\<forall>i. P i" for P \<Rightarrow> \<open>insert spec[where x=i, OF H]\<close>
+                             \<bar> H[thin]: "\<forall>i\<in>_. P i" for P \<Rightarrow> \<open>insert bspec[where x=i, OF H]\<close>\<close>;
+           fastforce simp: graph_of_def obj_at_def
+                           pde_ref_def pdpte_ref_def pml4e_ref_def
+                    split: pde.splits pdpte.splits pml4e.splits if_splits)+
   done
 
 lemma vs_lookup_pages1_wellformed_order:
-  "\<lbrakk>valid_vs_lookup s; valid_arch_objs s\<rbrakk>
+  "\<lbrakk> valid_arch_objs s; valid_asid_table (x64_asid_table (arch_state s)) s \<rbrakk>
     \<Longrightarrow> wellformed_order_lookup (vs_lookup_pages1 s) (kheap s) vs_lookup_pages1_on_heap_obj
                                 vs_ref_lvl (vs_asid_refs (x64_asid_table (arch_state s)))"
-  apply (intro wellformed_order_lookup.intro[OF vs_lookup_pages1_is_wellformed_lookup])
-  apply (intro wellformed_order_lookup_axioms.intro)
-  sorry (*
-  thm valid_vs_lookup_def
-  thm valid_arch_caps_def
-  thm unique_table_caps_def
-  thm valid_table_caps_def
-  thm vs_cap_ref_def vs_cap_ref_arch_def
-  apply (clarsimp simp: Image_def)
-  apply (frule(1) vs_lookup_pagesI)
-  apply (frule vs_lookup_pages_step)
-   apply (drule wellformed_lookup.lookup1_cut_singleton[OF vs_lookup_pages1_is_wellformed_lookup])
-   apply simp
-  apply (drule(1) vs_lookup_pagesI[rotated])
-  apply (clarsimp simp: vs_lookup1_def)
-  apply (frule vs_refs_aobj_not_empty)
-  apply clarsimp
-  apply (drule(2) valid_arch_objsD)
-  apply (case_tac aobj)
-       apply (clarsimp simp: valid_arch_obj_def vs_ref_lvl_def vs_ref_lvl_arch_def
-                             obj_at_def vs_refs_def graph_of_def aa_type_simps arch_obj_fun_lift_def
-                      split: option.splits arch_kernel_obj.splits kernel_object.splits
-             | (drule bspec,fastforce))+
-    apply (drule_tac x = aa in spec)
-    apply (clarsimp simp: valid_pde_def pde_ref_def obj_at_def vs_ref_lvl_def
-                          vs_ref_lvl_arch_def aa_type_simps
-                   split: pde.split_asm)
-   apply (clarsimp simp: obj_at_def vs_ref_lvl_def vs_ref_lvl_arch_def vs_refs_def graph_of_def)
-   apply (drule_tac x = aa in spec)
-   apply (clarsimp simp: valid_pde_def pdpte_ref_def obj_at_def vs_ref_lvl_def
-                         vs_ref_lvl_arch_def aa_type_simps
-                  split: pdpte.split_asm)
-   apply (clarsimp simp: valid_arch_obj_def vs_ref_lvl_def vs_ref_lvl_arch_def
-                             obj_at_def vs_refs_def graph_of_def aa_type_simps arch_obj_fun_lift_def
-                      split: option.splits if_splits arch_kernel_obj.splits kernel_object.splits)+
-   apply (drule_tac x = aa in bspec, clarsimp)
-   apply (clarsimp simp: valid_pde_def pml4e_ref_def obj_at_def vs_ref_lvl_def
-                        vs_ref_lvl_arch_def aa_type_simps
-                 split: pml4e.split_asm)
-  apply (clarsimp simp: valid_arch_obj_def obj_at_def vs_ref_lvl_def vs_ref_lvl_arch_def
-                        aa_type_simps vs_refs_def
-                 split: option.splits)
-                 *)
+  apply (intro wellformed_order_lookup.intro vs_lookup_pages1_wellformed.wellformed_lookup_axioms
+               wellformed_order_lookup_axioms.intro)
+  apply (simp only: vs_lookup_pages_def2[symmetric])
+  apply (clarsimp simp add: vs_lookup_pages1_def)
+  apply (case_tac ko; (clarsimp simp: vs_refs_pages_def; fail)?; rename_tac ako; clarsimp)
+  apply (frule (3) valid_arch_objsD')
+  apply (case_tac ako; clarsimp simp: vs_refs_pages_def)
+      apply (drule (1) graph_of_in_ranD; clarsimp simp: obj_at_def)
+     apply (match premises in "(x,y) \<in> graph_of f" for f x y \<Rightarrow>
+             \<open>match premises in H[thin]: "\<forall>i. P i" for P \<Rightarrow> \<open>insert spec[where x=x, OF H]\<close>
+                              \<bar> H[thin]: "\<forall>i\<in>_. P i" for P \<Rightarrow> \<open>insert bspec[where x=x, OF H]\<close>\<close>;
+            fastforce simp: graph_of_def obj_at_def data_at_def
+                            pte_ref_pages_def pde_ref_pages_def pdpte_ref_pages_def pml4e_ref_pages_def
+                     split: pte.splits pde.splits pdpte.splits pml4e.splits if_splits)+
+  done
 
-definition refs_diff :: "(kernel_object option \<Rightarrow> 'b \<Rightarrow> 'a list \<Rightarrow> bool) \<Rightarrow> arch_kernel_obj \<Rightarrow> 64 word \<Rightarrow> 'c abstract_state_scheme \<Rightarrow> ('a list \<times> 'b) set"
-where  "refs_diff lf obj ptr s = (lookup_refs (Some (ArchObj obj)) lf - lookup_refs (kheap s ptr) lf)"
+definition
+  refs_diff :: "(kernel_object option \<Rightarrow> 'b \<Rightarrow> 'a list \<Rightarrow> bool)
+                  \<Rightarrow> arch_kernel_obj \<Rightarrow> 64 word \<Rightarrow> 'c abstract_state_scheme \<Rightarrow> ('a list \<times> 'b) set"
+where
+  "refs_diff lf obj ptr s = (lookup_refs (Some (ArchObj obj)) lf - lookup_refs (kheap s ptr) lf)"
+
 end
 
 end

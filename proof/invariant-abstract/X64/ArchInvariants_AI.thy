@@ -167,6 +167,7 @@ lemmas typ_at_pg = typ_at_pg_user typ_at_pg_device
    the rest should have been defined.. *)
 abbreviation
   "asid_pool_at \<equiv> typ_at (AArch AASIDPool)"
+
 abbreviation
   "page_table_at \<equiv> typ_at (AArch APageTable)"
 abbreviation
@@ -175,6 +176,10 @@ abbreviation
   "pd_pointer_table_at \<equiv> typ_at (AArch APDPointerTable)"
 abbreviation
   "page_map_l4_at \<equiv> typ_at (AArch APageMapL4)"
+
+abbreviation
+  "vspace_table_at p s \<equiv> page_map_l4_at p s \<or> pd_pointer_table_at p s
+                         \<or> page_directory_at p s \<or> page_table_at p s"
 
 definition
   "pde_at p \<equiv> page_directory_at (p && ~~ mask pd_bits)
@@ -294,6 +299,8 @@ definition "data_at \<equiv>
   \<lambda>sz p s. typ_at (AArch (AUserData sz)) p s
          \<or> typ_at (AArch (ADeviceData sz)) p s"
 
+(* Validity of vspace table entries, defined shallowly. *)
+
 primrec
   valid_pte :: "pte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -325,6 +332,33 @@ where
   "valid_pml4e (InvalidPML4E) = \<top>"
 | "valid_pml4e (PDPointerTablePML4E ptr x y) =
    (typ_at (AArch APDPointerTable) (ptrFromPAddr ptr))"
+
+(* Validity of vspace table entries, defined deeply. *)
+
+primrec
+  valid_pde_rec :: "pde \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_pde_rec (InvalidPDE) = \<top>"
+| "valid_pde_rec (LargePagePDE p _ _) =
+   (\<lambda>s. vmsz_aligned p X64LargePage \<and> data_at X64LargePage (ptrFromPAddr p) s)"
+| "valid_pde_rec (PageTablePDE p _ _) =
+   (\<lambda>s. \<exists>pt. ako_at (PageTable pt) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pte (pt i) s))"
+
+primrec
+  valid_pdpte_rec :: "pdpte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_pdpte_rec (InvalidPDPTE) = \<top>"
+| "valid_pdpte_rec (HugePagePDPTE p _ _) =
+   (\<lambda>s. vmsz_aligned p X64HugePage \<and> data_at X64HugePage (ptrFromPAddr p) s)"
+| "valid_pdpte_rec (PageDirectoryPDPTE p _ _) =
+   (\<lambda>s. \<exists>pd. ako_at (PageDirectory pd) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pde_rec (pd i) s))"
+
+primrec
+  valid_pml4e_rec :: "pml4e \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_pml4e_rec (InvalidPML4E) = \<top>"
+| "valid_pml4e_rec (PDPointerTablePML4E p _ _) =
+   (\<lambda>s. \<exists>pdpt. ako_at (PDPointerTable pdpt) (ptrFromPAddr p) s \<and> (\<forall>i. valid_pdpte_rec (pdpt i) s))"
 
 (* Kernel mappings in x64 go from pptr base to the top of memory
    but weird x64 conventions to do with having only 48 bits
@@ -1170,6 +1204,11 @@ lemma vs_lookup1I:
           rs' = r # rs \<rbrakk> \<Longrightarrow> ((rs,p) \<rhd>1 (rs',p')) s"
   by (fastforce simp add: vs_lookup1_def)
 
+lemma vs_lookup_pages1I:
+  "\<lbrakk> ko_at ko p s; (r, p') \<in> vs_refs_pages ko;
+          rs' = r # rs \<rbrakk> \<Longrightarrow> ((rs,p) \<unrhd>1 (rs',p')) s"
+  by (fastforce simp add: vs_lookup_pages1_def)
+
 lemma vs_lookup1D:
   "(x \<rhd>1 y) s \<Longrightarrow> \<exists>rs r p p' ko. x = (rs,p) \<and> y = (r # rs,p')
                           \<and> ko_at ko p s \<and> (r,p') \<in> vs_refs ko"
@@ -1774,6 +1813,33 @@ lemma vs_lookup1_ko_at_dest:
   apply simp
   done
 
+lemma vs_refs_vs_refs_pages:
+  "r \<in> vs_refs obj \<Longrightarrow> r \<in> vs_refs_pages obj"
+  apply (cases obj; simp add: vs_refs_def)
+  apply (rename_tac aobj)
+  apply (case_tac aobj;
+         clarsimp simp: vs_refs_def vs_refs_pages_def graph_of_def image_def
+                        pde_ref_def pde_ref_pages_def
+                        pdpte_ref_def pdpte_ref_pages_def
+                        pml4e_ref_def pml4e_ref_pages_def
+                 split: pde.splits pdpte.splits pml4e.splits if_splits)
+    apply blast
+   apply blast
+  apply (frule pml4e.discI; fastforce)
+  done
+
+lemma vs_lookup1_vs_lookup_pages1:
+  "arc \<in> vs_lookup1 s \<Longrightarrow> arc \<in> vs_lookup_pages1 s"
+  apply (clarsimp simp: vs_lookup1_def vs_lookup_pages1_def)
+  apply (drule vs_refs_vs_refs_pages)
+  by blast
+
+lemma vs_refs_pages_aobj_not_empty:
+  "ref \<in> vs_refs_pages ko \<Longrightarrow> \<exists>aobj. ko = ArchObj aobj"
+  by (clarsimp simp: vs_refs_pages_def split: kernel_object.splits)
+
+lemmas vs_refs_aobj_not_empty = vs_refs_pages_aobj_not_empty[OF vs_refs_vs_refs_pages]
+
 lemma vs_lookup1_is_arch:
   "(a \<rhd>1 b) s \<Longrightarrow> \<exists>ao'. ko_at (ArchObj ao') (snd a) s"
   apply (clarsimp simp: vs_lookup1_def)
@@ -1904,31 +1970,12 @@ lemma vs_lookup_pdI:
   apply (rule_tac x=e in exI)
   by (clarsimp simp: pde_ref_def ptrFormPAddr_addFromPPtr)
 
-(* FIXME: move *)
-lemma bexEI: "\<lbrakk>\<exists>x\<in>S. Q x; \<And>x. \<lbrakk>x \<in> S; Q x\<rbrakk> \<Longrightarrow> P x\<rbrakk> \<Longrightarrow> \<exists>x\<in>S. P x" by blast
-
 lemma vs_lookup_pages_vs_lookupI: "(ref \<rhd> p) s \<Longrightarrow> (ref \<unrhd> p) s"
   apply (clarsimp simp: vs_lookup_pages_def vs_lookup_def Image_def
                  elim!: bexEI)
   apply (erule rtrancl.induct, simp_all)
-  apply (rename_tac a b c)
-  apply (subgoal_tac "(b \<unrhd>1 c) s", erule (1) rtrancl_into_rtrancl)
-  apply (thin_tac "x : rtrancl r" for x r)+
-  apply (simp add: vs_lookup1_def vs_lookup_pages1_def split_def)
-  apply (erule exEI)
-  apply clarsimp
-  apply (case_tac x, simp_all add: vs_refs_def vs_refs_pages_def
-                            split: arch_kernel_obj.splits)
-    apply (clarsimp simp: split_def graph_of_def image_def  split: if_split_asm)
-    apply (rule_tac x=a in exI)
-    apply (simp add: pde_ref_def pde_ref_pages_def split: pde.splits)
-   apply (clarsimp simp: split_def graph_of_def image_def split: if_split_asm)
-   apply (rule_tac x=a in exI)
-   apply (simp add: pdpte_ref_def pdpte_ref_pages_def split: pdpte.splits)
-  apply (clarsimp simp: split_def graph_of_def image_def split: if_split_asm)
-  apply (intro exI conjI impI, assumption)
-   apply (simp add: pml4e_ref_def pml4e_ref_pages_def split: pml4e.splits)
-  apply (rule refl)
+  apply (drule vs_lookup1_vs_lookup_pages1)
+  apply (erule (1) rtrancl_into_rtrancl)
   done
 
 lemmas
@@ -2198,6 +2245,108 @@ lemma valid_arch_objs_alt:
   apply (drule vs_lookup1D)
   apply (clarsimp simp: obj_at_def vs_refs_def)
   done
+
+context begin
+
+private lemma simulate_vs_lookup_pages1_vs_lookup1:
+  assumes r: "((rs, p), t) \<in> (vs_lookup_pages1 s)\<^sup>*"
+  assumes k: "ko_at ko p s"
+  assumes t: "\<And>r p'. (r, p') \<in> vs_refs_pages ko \<Longrightarrow> ((r # rs, p'), t) \<in> (vs_lookup_pages1 s)\<^sup>*
+                     \<Longrightarrow> (r, p') \<in> vs_refs ko \<and> ((r # rs, p'), t) \<in> (vs_lookup1 s)\<^sup>*"
+  shows "((rs, p), t) \<in> (vs_lookup1 s)\<^sup>*"
+  apply (rule rtrancl_simulate_weak[OF r])
+  using k t by (clarsimp simp: vs_lookup_pages1_def vs_lookup1_def obj_at_def)
+
+private lemma exI_conj1: "P x \<and> Q \<Longrightarrow> (\<exists>x. P x) \<and> Q" by auto
+private lemmas exIs = exI exI_conj1
+
+context
+  fixes s :: "'a::state_ext state"
+  assumes valid_objs: "valid_arch_objs s"
+  assumes asid_table: "\<forall>p\<in>ran (x64_asid_table (arch_state s)). asid_pool_at p s"
+begin
+
+(* Yet another way of breaking down valid_arch_objs. This one makes it easier
+   than valid_arch_objs_alt to maintain a clean context, since it exposes only
+   a single quantifier at a time. *)
+lemma valid_arch_objs_alt2:
+  "\<forall> i p\<^sub>0. x64_asid_table (arch_state s) i = Some p\<^sub>0 \<longrightarrow>
+           (\<exists> ap. ako_at (ASIDPool ap) p\<^sub>0 s
+                  \<and> (\<forall> j p\<^sub>1. ap j = Some p\<^sub>1 \<longrightarrow>
+                             (\<exists> pm. ako_at (PageMapL4 pm) p\<^sub>1 s
+                                    \<and> (\<forall> k. k \<notin> kernel_mapping_slots \<longrightarrow> valid_pml4e_rec (pm k) s))))"
+  using iffD1[OF valid_arch_objs_alt, OF conjI[OF asid_table valid_objs]]
+  apply (clarsimp simp: valid_pml4e_def valid_pdpte_def valid_pde_def valid_pte_def)
+  apply (drule_tac x=i in spec; clarsimp simp: obj_at_def)+
+  apply (drule_tac x=j in spec; clarsimp simp: obj_at_def pml4e_ref_def split: pml4e.splits)+
+  apply (case_tac "pm k"; (drule_tac x=k in spec; clarsimp simp: obj_at_def pdpte_ref_def split: pdpte.splits)+)
+  apply (rename_tac l; case_tac "pdpt l"; (drule_tac x=l in spec; clarsimp simp: obj_at_def pde_ref_def split: pde.splits)+)
+  apply (rename_tac m; case_tac "pd m"; (drule_tac x=m in spec; clarsimp simp: obj_at_def)+)
+  apply (rename_tac n; case_tac "pt n"; drule_tac x=n in spec; clarsimp)
+  done
+
+context
+  fixes p :: machine_word
+  assumes table_objs: "asid_pool_at p s \<or> vspace_table_at p s"
+begin
+
+private lemma not_data:
+  "((r', p'), r, p) \<in> (vs_lookup_pages1 s)\<^sup>* \<Longrightarrow> data_at sz p' s \<Longrightarrow> P"
+  apply (erule converse_rtranclE)
+  using table_objs by (auto simp: data_at_def obj_at_def vs_lookup_pages1_def vs_refs_pages_def)
+
+private method not_data =
+  (match premises in H: "((VSRef (ucast i) _ # _, _), _) \<in> _\<^sup>*" and J: "\<forall> i. R i" for i R \<Rightarrow>
+    \<open>insert spec[of _ i, OF J]\<close>; clarsimp; erule (1) not_data; fail)
+
+private method step =
+  (match premises in H[thin]: "((VSRef (ucast i) _ # _, _), _) \<in> _\<^sup>*" and J[thin]: "\<forall> i. R i" for i R \<Rightarrow>
+    \<open>match premises in K[thin]: _ (multi) \<Rightarrow>
+      \<open>insert spec[of _ i, OF J]; rule exIs[where x=i]; clarsimp simp: K;
+       match premises in L[thin]: "ko_at _ _ _" \<Rightarrow> \<open>rule simulate_vs_lookup_pages1_vs_lookup1[OF H L]\<close>\<close>\<close>;
+       clarsimp simp: vs_refs_pages_def;
+       clarsimp simp: vs_refs_def graph_of_def image_def
+                      pml4e_ref_pages_def pml4e_ref_def pdpte_ref_pages_def pdpte_ref_def
+                      pde_ref_pages_def pde_ref_def pte_ref_pages_def
+               split: pml4e.splits pdpte.splits pde.splits pte.splits if_splits; not_data?)
+
+lemma vs_lookup_vs_lookup_pagesI'': "(r \<unrhd> p) s \<Longrightarrow> (r \<rhd> p) s"
+  using valid_arch_objs_alt2
+  by (clarsimp simp: vs_lookup_pages_def vs_lookup_def vs_asid_refs_def graph_of_def Image_def) step+
+
+end
+end
+end
+
+lemma vs_lookup_vs_lookup_pagesI':
+  assumes "(r \<unrhd> p) s"
+          "asid_pool_at p s \<or> vspace_table_at p s"
+          "valid_arch_objs s"
+          "valid_asid_table (x64_asid_table (arch_state s)) s"
+  shows "(r \<rhd> p) s"
+  using assms by (simp add: valid_asid_table_def vs_lookup_vs_lookup_pagesI'')
+
+lemma valid_arch_objsD':
+  assumes lkp: "(ref \<unrhd> p) s"
+  assumes koa: "ko_at (ArchObj ako) p s"
+  assumes vao: "valid_arch_objs s"
+  assumes vat: "valid_asid_table (x64_asid_table (arch_state s)) s"
+  shows "valid_arch_obj ako s"
+  proof -
+    note lku = vs_lookup_vs_lookup_pagesI'[OF lkp _ vao vat]
+    note vao = valid_arch_objsD[OF lku koa vao]
+    show ?thesis using koa
+      by - (cases ako; (rule vao; clarsimp simp: obj_at_def a_type_def; fail)?; clarsimp)
+  qed
+
+lemma vs_lookup_def2:
+  "(ref \<rhd> p) s = ((ref, p) \<in> (vs_lookup1 s)\<^sup>* `` vs_asid_refs (x64_asid_table (arch_state s)))"
+  by (simp add: vs_lookup_def)
+
+lemma vs_lookup_pages_def2:
+  "(ref \<unrhd> p) s = ((ref, p) \<in> (vs_lookup_pages1 s)\<^sup>* `` vs_asid_refs (x64_asid_table (arch_state s)))"
+  by (simp add: vs_lookup_pages_def)
+
 
 lemma vs_lookupE:
   "\<lbrakk> (ref \<rhd> p) s;
