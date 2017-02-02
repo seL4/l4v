@@ -69,6 +69,13 @@ definition
   arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_activate_idle_thread t \<equiv> return ()"
 
+definition
+  "store_asid_pool_entry pool_ptr asid pml4base \<equiv> do
+    pool \<leftarrow> get_asid_pool pool_ptr;
+    pool' \<leftarrow> return (pool(ucast asid := pml4base));
+    set_asid_pool pool_ptr pool'
+  od"
+
 text {* The ASIDControl capability confers the authority to create a new ASID
 pool object. This operation creates the new ASID pool, provides a capability
 to it and connects it to the global virtual ASID table. *}
@@ -96,10 +103,8 @@ do
     pml4_cap \<leftarrow> get_cap ct_slot;
     case pml4_cap of
       ArchObjectCap (PML4Cap pml4_base _) \<Rightarrow> do
-        pool \<leftarrow> get_asid_pool pool_ptr;
-        pool' \<leftarrow> return (pool (ucast asid \<mapsto> pml4_base));
         set_cap (ArchObjectCap $ PML4Cap pml4_base (Some asid)) ct_slot;
-        set_asid_pool pool_ptr pool'
+        store_asid_pool_entry pool_ptr asid (Some pml4_base)
       od
     | _ \<Rightarrow> fail
 od"

@@ -524,6 +524,7 @@ definition
                   else True
   | PageTable pt \<Rightarrow> if ptr \<in> set (x64_global_pts ast) then (\<forall>x. aligned_pte (pt x))
                   else True
+  | _ \<Rightarrow> True
   "
 
 lemma aa_type_pml4D:
@@ -1378,11 +1379,12 @@ lemma image_in_rtrancl_image:
   by auto
 
 definition "set_diff A B \<equiv> A - B \<union> (B - A)"
-
+thm vs_lookup_def
 lemma set_pt_asid_map [wp]:
   "\<lbrace>valid_asid_map  and
     (\<lambda>s. (\<forall>a aobj ptr. aa_type nobj = AASIDPool \<and> ((a, ptr) \<in> graph_of (x64_asid_map (arch_state s)) \<and> ko_at (ArchObj aobj) p s)
-      \<longrightarrow> (VSRef (a && mask asid_low_bits) (Some AASIDPool), ptr) \<notin> set_diff (vs_refs (ArchObj nobj)) (vs_refs (ArchObj aobj))))
+      \<longrightarrow>  ([VSRef (ucast (asid_high_bits_of a)) None], p) \<in> vs_asid_refs (x64_asid_table (arch_state s))
+      \<longrightarrow>  (VSRef (a && mask asid_low_bits) (Some AASIDPool), ptr) \<notin> set_diff (vs_refs (ArchObj nobj)) (vs_refs (ArchObj aobj))))
     \<rbrace> update_object p (ArchObj nobj) \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
   apply (simp add: valid_asid_map_def vspace_at_asid_def update_object_def set_object_def)
   apply (wp get_object_wp)
@@ -1397,7 +1399,8 @@ lemma set_pt_asid_map [wp]:
   apply (erule wellformed_lookup.lookupE[OF vs_lookup1_is_wellformed_lookup])
    apply (clarsimp simp: vs_lookup1_def vs_asid_refs_def)
   apply (clarsimp simp: Image_def vs_asid_refs_def dest!: vs_lookup1D)
-  apply (erule bexI[rotated])
+  apply (rule bexI[rotated])
+   apply simp
   apply clarsimp
   apply (case_tac "pa \<noteq> p")
    apply (rule vs_lookup1I[rotated -1])
@@ -1419,7 +1422,8 @@ lemma set_pt_asid_map [wp]:
         apply ((fastforce simp: aa_type_simps a_type_def vs_refs_def image_def
                  split: kernel_object.split_asm if_split_asm arch_kernel_obj.split_asm)+)[6]
    apply fastforce
-  apply (fastforce simp: set_diff_def)
+  apply (clarsimp simp: image_def graph_of_def)
+  apply (fastforce simp: set_diff_def image_def)
   done
 
 declare graph_of_None_update[simp]
@@ -1700,6 +1704,7 @@ lemma update_object_invs[wp]:
   "\<lbrace> \<lambda>s. invs s \<and> valid_table_caps_aobj (caps_of_state s) (arch_state s) (ArchObj obj) ptr
     \<and> (aa_type obj \<noteq> AASIDPool \<longrightarrow> ptr \<notin> global_refs s)
     \<and> (\<forall>a aobj p. (aa_type obj = AASIDPool \<and> ((a, p) \<in> graph_of (x64_asid_map (arch_state s)) \<and> ko_at (ArchObj aobj) ptr s))
+      \<longrightarrow> ([VSRef (ucast (asid_high_bits_of a)) None], ptr) \<in> vs_asid_refs (x64_asid_table (arch_state s))
       \<longrightarrow> (VSRef (a && mask asid_low_bits) (Some AASIDPool), p) \<notin> set_diff (vs_refs (ArchObj obj)) (vs_refs (ArchObj aobj)))
     \<and> obj_at (\<lambda>ko. case obj of PageMapL4 pm \<Rightarrow> \<exists>pm'. ko = ArchObj (PageMapL4 pm') \<and> (\<forall>x\<in>kernel_mapping_slots. pm x = pm' x) | _ \<Rightarrow> True) ptr s
     \<and> valid_kernel_mappings_if_pm (set (x64_global_pdpts (arch_state s))) (ArchObj obj)

@@ -228,6 +228,35 @@ lemma lookupE:
    apply simp+
   done
 
+lemma lookup_forwardE:
+  assumes rcl: "(([], p), ref, q) \<in> cs\<^sup>*"
+  assumes eq: "\<lbrakk>ref = []; p = q\<rbrakk> \<Longrightarrow> P ref p q cs"
+  and neq1: "\<And>r. \<lbrakk>ref = [r]; (([], p), [r], q) \<in> cs\<rbrakk> \<Longrightarrow> P ref p q cs"
+  and neq: "\<And>r ptr ref'. \<lbrakk>ref \<noteq> []; ref = r @ [ref'];  (([],p),[ref'],ptr) \<in> cs; (([], ptr), r, q) \<in> cs\<^sup>*\<rbrakk> \<Longrightarrow> P ref p q cs"
+  shows "P ref p q cs"
+  apply (insert rcl)
+  apply (erule converse_rtranclE)
+   apply (rule eq)
+    apply (simp add: eq)
+   apply simp
+  apply clarsimp
+  apply (frule lookup_ref_step)
+  apply (frule lookup1_is_append)
+  apply (elim exE)+
+  apply (case_tac r)
+    apply (rule neq1)
+    apply simp
+   apply clarsimp
+   apply (erule rtranclE, simp)
+   apply (clarsimp dest!: lookup1_is_append)
+   apply (erule rtranclE, simp)
+   apply (clarsimp dest!: lookup1_is_append)
+  apply clarsimp
+  apply (drule lookup_trancl_append[where ra = "[]" and r = "h # g" for h g,simplified])
+  apply (drule neq[rotated 2])
+    apply simp+
+  done
+
 lemma lookup_rtrancl_stepD:
   "(([],p), [r], q) \<in> cs^* \<Longrightarrow> (([],p),[r],q) \<in> cs"
   apply (erule rtranclE)

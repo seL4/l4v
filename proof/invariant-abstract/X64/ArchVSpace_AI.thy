@@ -937,8 +937,7 @@ lemma getCurrentCR3_rewrite_lift[wp]:
 (* FIXME x64: cr3 invariants *)
 lemma setCurrentCR3_invs[wp]:
   "\<lbrace>invs\<rbrace> setCurrentCR3 cr3 \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: setCurrentCR3_def)
-  apply (wp)
+  apply (wpsimp simp: setCurrentCR3_def)
   sorry
 
 lemma setCurrentVSpaceRoot_invs[wp]:
@@ -972,6 +971,10 @@ lemma update_asid_map_invs:
                    valid_machine_state_def valid_vs_lookup_arch_update)
   apply (simp add: valid_asid_map_def fun_upd_def[symmetric] vspace_at_asid_arch_up)
   done
+
+lemma update_asid_map_pred_tcb_at[wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> update_asid_map a b \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  by (clarsimp simp: pred_tcb_at_def update_asid_map_def | wp)+
 
 lemma svr_invs [wp]:
   "\<lbrace>invs\<rbrace> set_vm_root t' \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -1174,46 +1177,7 @@ lemma vs_lookup_vs_lookup_pagesI':
   "\<lbrakk>(r \<unrhd> p) s; page_table_at p s \<or> page_directory_at p s \<or> pd_pointer_table_at p s \<or> page_map_l4_at p s \<or> asid_pool_at p s;
     valid_arch_objs s; valid_asid_table (x64_asid_table (arch_state s)) s\<rbrakk>
    \<Longrightarrow> (r \<rhd> p) s"
-  sorry (*
-  apply (erule (1) vs_lookup_pagesE_alt)
-      apply (clarsimp simp:ran_def)
-      apply (drule (2) valid_asid_tableD)
-     apply (rule vs_lookupI)
-      apply (fastforce simp: vs_asid_refs_def graph_of_def)
-     apply simp
-    apply (rule vs_lookupI)
-     apply (fastforce simp: vs_asid_refs_def graph_of_def)
-    apply (rule rtrancl_into_rtrancl[OF rtrancl.intros(1)])
-    apply (fastforce simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def)
-   apply (rule vs_lookupI)
-    apply (fastforce simp: vs_asid_refs_def graph_of_def)
-   apply (rule_tac y="([VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None], p\<^sub>2)" in rtrancl_trans)
-    apply (rule rtrancl_into_rtrancl[OF rtrancl.intros(1)])
-    apply (fastforce simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def)
-   apply (rule rtrancl_into_rtrancl[OF rtrancl.intros(1)])
-   apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def)
-   apply (rule_tac x="(c, p)" in image_eqI)
-    apply simp
-   apply (clarsimp simp: pml4e_ref_def pml4e_ref_pages_def valid_pde_def obj_at_def
-                         a_type_def
-                   split:pml4e.splits )
-  apply (rule vs_lookupI)
-   apply (fastforce simp: vs_asid_refs_def graph_of_def)
-  apply (rule_tac y="([VSRef (ucast b) (Some AASIDPool), VSRef (ucast a) None], p\<^sub>2)" in rtrancl_trans)
-   apply (rule rtrancl_into_rtrancl[OF rtrancl.intros(1)])
-   apply (fastforce simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def)
-  apply (rule_tac y="([VSRef (ucast c) (Some APageMapL4), VSRef (ucast b) (Some AASIDPool),
-           VSRef (ucast a) None], (ptrFromPAddr addr))" in rtrancl_trans)
-   apply (rule rtrancl_into_rtrancl[OF rtrancl.intros(1)])
-   apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def)
-   apply (rule_tac x="(c,(ptrFromPAddr addr))" in image_eqI)
-    apply simp
-   apply (clarsimp simp: pml4e_ref_def)
-  apply (rule rtrancl_into_rtrancl[OF rtrancl.intros(1)])
-  apply (clarsimp simp: vs_lookup1_def obj_at_def vs_refs_def graph_of_def pdpte_ref_pages_def a_type_def
-                  split: pdpte.splits )
-  done
-*)
+  sorry (* Matt is working on that and this will be moved to ArchVSLookup_AI*)
 
 lemma vs_lookup_vs_lookup_pagesI:
   "\<lbrakk>(r \<rhd> p) s; (r' \<unrhd> p) s; valid_arch_objs s; valid_asid_table (x64_asid_table (arch_state s)) s\<rbrakk>
@@ -1813,11 +1777,18 @@ lemma flush_all_invs[wp]:
   apply (erule (1) use_valid[OF _ invalidateASID_irq_masks])
   done
 
+lemma valid_asid_table_inverse_injD:
+  "\<lbrakk>(a,b) \<in> vs_asid_refs (x64_asid_table (arch_state s)); (a,c) \<in> vs_asid_refs (x64_asid_table (arch_state s))\<rbrakk>
+  \<Longrightarrow> c = b"
+  by (clarsimp simp: vs_asid_refs_def graph_of_def valid_asid_table_def up_ucast_inj_eq)
+
 lemma valid_asid_table_injD:
-  "\<lbrakk>(a,b) \<in> vs_asid_refs (x64_asid_table (arch_state s)); (a,c) \<in> vs_asid_refs (x64_asid_table (arch_state s));
+  "\<lbrakk>(b,a) \<in> vs_asid_refs (x64_asid_table (arch_state s)); (c,a) \<in> vs_asid_refs (x64_asid_table (arch_state s));
     valid_asid_table (x64_asid_table (arch_state s)) s\<rbrakk>
   \<Longrightarrow> c = b"
-  sorry
+  apply (clarsimp simp: vs_asid_refs_def graph_of_def valid_asid_table_def up_ucast_inj_eq)
+  apply (drule(2) inj_on_domD,fastforce)
+  done
 
 lemma update_aobj_not_reachable:
   "\<lbrace>\<lambda>s. lookup_refs (Some (ArchObj aobj)) vs_lookup_pages1_on_heap_obj \<subseteq> lookup_refs (kheap s p) vs_lookup_pages1_on_heap_obj
@@ -1846,7 +1817,7 @@ lemma update_aobj_not_reachable:
    apply (clarsimp simp: obj_at_def)
   apply (subgoal_tac "a = ab")
    apply simp
-   apply (drule(1) valid_asid_table_injD)
+   apply (drule valid_asid_table_inverse_injD)
     apply simp
    apply simp
    apply (erule wellformed_lookup.lookupable_is_unique[OF vs_lookup_pages1_is_wellformed_lookup])
@@ -1901,19 +1872,60 @@ lemma vs_lookup_pages_current_cr3[iff]:
 crunch vs_lookup_pages[wp]: invalidateLocalPageStructureCacheASID "\<lambda>s. P (vs_lookup_pages s)"
   (simp: crunch_simps wp: crunch_wps)
 
+lemma vs_ref_pages_simps:
+  "vs_refs_pages (ArchObj aobj) = vs_refs_pages_arch aobj"
+  by (simp add: vs_refs_pages_def)
+
+lemma pml4e_ref_pages_SomeD:
+  "pml4e_ref_pages c = Some b \<Longrightarrow> \<exists>x21 x22 x23. c = PDPointerTablePML4E x21 x22 x23 \<and> b = ptrFromPAddr x21"
+  by (clarsimp simp: pml4e_ref_pages_def split: pml4e.split_asm)
+
+lemma get_pml4_index_bit_def:
+  "get_pml4_index vaddr = (vaddr >> 39) && mask 9"
+   by (simp add: get_pml4_index_def bit_simps)
+
+lemma get_pdpt_index_bit_def:
+  "get_pdpt_index vaddr = (vaddr >> 30) && mask 9"
+   by (simp add: get_pdpt_index_def bit_simps)
+thm arch_perform_invocation_def
+
 (* FIXME x64: unmap_pdpt_vs_lookup_pages_pre might also needed here*)
 lemma unmap_pd_vs_lookup_pages_pre:
   "\<lbrace>pspace_aligned and valid_arch_objs and valid_arch_state\<rbrace>unmap_pd asid vaddr pd
    \<lbrace>\<lambda>r s. (the (vs_cap_ref (ArchObjectCap (PageDirectoryCap pd (Some (asid,vaddr))))),pd) \<notin> vs_lookup_pages s\<rbrace>"
+  proof -
+  note ref_simps[simp] = pdpte_ref_pages_def[split_simps pdpte.split] pte_ref_pages_def[split_simps pte.split]
+                         pml4e_ref_pages_def[split_simps pml4e.split]
+                         pde_ref_pages_def[split_simps pde.split] vs_cap_ref_simps vs_ref_pages_simps
+  note ucast_simps[simp] = up_ucast_inj_eq ucast_up_ucast mask_asid_low_bits_ucast_ucast ucast_ucast_id
+  show ?thesis
   apply (clarsimp simp: unmap_pd_def vs_cap_ref_simps store_pdpte_def)
   apply wp
         apply (rule update_aobj_not_reachable[where b = "[b,c,d]" for b c d,simplified])
   apply (strengthen lookup_refs_pdpt_shrink_strg valid_arch_state_asid_table_strg not_in_vs_refs_pages_strg
          | clarsimp )+
-      apply (strengthen imp_consequent | wp hoare_vcg_all_lift  | clarsimp simp: conj_ac)+
-     apply (wpc | wp get_pdpte_wp get_pml4e_wp assertE_wp | clarsimp simp: lookup_pdpt_slot_def find_vspace_for_asid_def)+
-  apply auto
+        apply (strengthen | wp hoare_vcg_imp_lift hoare_vcg_all_lift  | clarsimp simp: conj_ac)+
+      apply (wpc | wp get_pdpte_wp get_pml4e_wp )+
+    apply ((simp add: lookup_pdpt_slot_def | wp get_pml4e_wp | wpc)+)[1]
+   apply (simp add: find_vspace_for_asid_def | wp | wpc)+
+     apply (wpc | wp get_pdpte_wp get_pml4e_wp assertE_wp | clarsimp simp: lookup_pdpt_slot_def find_vspace_for_asid_def)
+   apply (intro conjI impI allI)
+      apply (((erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup]
+               | erule wellformed_lookup.lookupE[OF vs_lookup_pages1_is_wellformed_lookup]
+               | clarsimp simp: vs_asid_refs_def graph_of_def obj_at_def lookup_leaf_def
+                   vs_ref_pages_simps vs_lookup_pages_def
+                   dest!: vs_lookup_pages1D split: if_split_asm
+               | clarsimp simp: vs_refs_pages_def obj_at_def graph_of_def pdpte_ref_pages_def
+                    split: arch_kernel_obj.split_asm kernel_object.split_asm if_split_asm pdpte.split_asm
+                    dest!: vs_lookup_pages1D pml4e_ref_pages_SomeD
+
+            ))+)
+    apply (clarsimp simp: get_pml4_index_bit_def[symmetric] get_pdpt_index_bit_def[symmetric])
+thm pml4_shifting[folded lookup_pml4_slot_def[unfolded Let_def]]
+apply (subst (asm) pml4_shifting[folded lookup_pml4_slot_def[unfolded Let_def]])
+thm pspace_alignedD
   sorry  (* OK, need a better way to apply vs_lookup_pagesE_alt for all the subgoals *)
+qed
 
 lemma unmap_pt_vs_lookup_pages_pre:
   "\<lbrace>pspace_aligned and valid_arch_objs and valid_arch_state\<rbrace>unmap_page_table asid vaddr pt
@@ -2862,48 +2874,191 @@ lemma not_kernel_slot_not_global_pml4:
    apply (simp split: arch_kernel_obj.split_asm)
   done
 
+lemma valid_table_caps_asid_upd:
+  "\<lbrakk>invs s; typ_at (AArch AASIDPool) p s\<rbrakk>
+  \<Longrightarrow> valid_table_caps_aobj (caps_of_state s) (arch_state s) (ArchObj (ASIDPool (pool(ucast asid := pml4base)))) p"
+  by (fastforce dest!: caps_of_state_valid_cap[OF _ invs_valid_objs]
+                 simp: valid_table_caps_aobj_def is_cap_simps valid_cap_simps obj_at_def)
+
+lemma vs_refs_of_set_diff:
+  "set_diff (vs_refs (ArchObj (ASIDPool (pool(ucast asid := pml4base))))) (vs_refs (ArchObj (ASIDPool pool)))
+   \<subseteq> (case pml4base of Some a \<Rightarrow> {(VSRef (ucast (ucast asid :: 9 word)) (Some AASIDPool), a)} | _ \<Rightarrow> {})
+     \<union> (case pool (ucast asid) of Some a \<Rightarrow> {(VSRef (ucast (ucast asid :: 9 word)) (Some AASIDPool), a)} | _ \<Rightarrow> {})"
+  by (fastforce simp: set_diff_def vs_refs_def graph_of_def image_def ucast_ucast_id split: if_split_asm)
+
+lemma asid_lvl_lookup1D:
+  "([VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> p) s \<Longrightarrow> ([VSRef (ucast (asid_high_bits_of asid)) None], p) \<in> vs_asid_refs (x64_asid_table (arch_state s))"
+  apply (clarsimp simp: vs_lookup_def)
+  apply (erule rtranclE)
+   apply clarsimp
+  apply (erule rtranclE)
+   apply (clarsimp simp: vs_asid_refs_def vs_lookup1_def)
+  apply (clarsimp dest!: wellformed_lookup.lookup1_is_append[OF vs_lookup1_is_wellformed_lookup])
+  done
+
+lemma valid_kernel_mappings_if_pm_asid:
+  "\<lbrakk>valid_kernel_mappings s; kheap s p = Some (ArchObj (ASIDPool pool))\<rbrakk>
+    \<Longrightarrow> valid_kernel_mappings_if_pm (set (x64_global_pdpts (arch_state s))) (ArchObj (ASIDPool (pool(ucast asid := pml4base))))"
+  by (fastforce simp: pml4e_ref_def valid_kernel_mappings_if_pm_def valid_kernel_mappings_def
+                  dest!: bspec split: option.split_asm pml4e.split_asm)
+
+lemma valid_global_objs_upd_invalid_asid_slot:
+  "\<lbrakk>valid_global_objs s; kheap s p = Some (ArchObj (ASIDPool pool))\<rbrakk>
+    \<Longrightarrow> valid_global_objs_upd p (ASIDPool (pool(slot := e))) (arch_state s)"
+  by (clarsimp simp: valid_global_objs_def valid_global_objs_upd_def obj_at_def valid_ao_at_def
+                     empty_table_def global_refs_def)
+
+
+lemma refs_diff_empty_simps_vslookup1_asid[simp]:
+  "kheap s p = Some (ArchObj (ASIDPool pool)) \<Longrightarrow>
+    (refs_diff vs_lookup1_on_heap_obj (ASIDPool (pool(a := b))) p s) = (case b of None \<Rightarrow> {}
+     | Some x \<Rightarrow>
+         if b = (pool a)
+         then {}
+         else {([VSRef (ucast a)
+                  (Some AASIDPool)],
+                x)})"
+  apply (clarsimp simp: refs_diff_def vs_lookup1_on_heap_obj_def lookup_refs_def vs_refs_def)
+  apply (auto simp: graph_of_def image_def split: if_splits option.splits)
+  done
+
+lemma refs_diff_empty_simps_vslookup_pages1_asid[simp]:
+  "kheap s p = Some (ArchObj (ASIDPool pool)) \<Longrightarrow>
+    (refs_diff vs_lookup_pages1_on_heap_obj (ASIDPool (pool(a := b))) p s) = (case b of None \<Rightarrow> {}
+     | Some x \<Rightarrow>
+         if b = (pool a)
+         then {}
+         else {([VSRef (ucast a)
+                  (Some AASIDPool)],
+                x)})"
+  apply (clarsimp simp: refs_diff_def vs_lookup_pages1_on_heap_obj_def lookup_refs_def vs_refs_pages_def)
+  apply (auto simp: graph_of_def image_def split: if_splits option.splits)
+  done
+
+lemma asid_is_zeroI:
+  "\<lbrakk>asid \<le> mask asid_bits; ucast (ucast asid :: 9 word) = (0 :: word64); ucast (asid_high_bits_of asid) = (0 :: word64)\<rbrakk> \<Longrightarrow> (asid :: word64) = 0"
+  apply (clarsimp simp: asid_high_bits_of_def bit_simps asid_low_bits_def asid_bits_def mask_def)
+  apply word_bitwise
+  apply simp
+  done
+
+lemma store_asid_pool_entry_invs:
+  "\<lbrace>invs and K (asid \<le> mask asid_bits \<and> 0 < asid) and
+    (\<lambda>s. case pml4base of None \<Rightarrow> x64_asid_map (arch_state s) asid = None
+    | Some ptr \<Rightarrow> obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) ptr s
+          \<and> typ_at (AArch APageMapL4) ptr s \<and> (\<forall>pool. ko_at (ArchObj (ASIDPool pool)) p s \<longrightarrow> pool (ucast asid) = None)
+          \<and> p \<notin> set (x64_global_pdpts (arch_state s))
+          \<and> (\<exists>slot. cte_wp_at (\<lambda>cap. is_pml4_cap cap \<and>  ptr \<in> obj_refs cap \<and> cap_asid cap = Some asid) slot s))
+    and  [VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> p
+   \<rbrace>
+  store_asid_pool_entry p asid pml4base \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (simp add: store_asid_pool_entry_def)
+  apply (wp)
+  apply (intro impI allI conjI valid_table_caps_aobj_upd_invalid_pml4e invs_valid_table_caps , simp_all add: obj_at_def)
+              apply (clarsimp simp: obj_at_def aa_type_simps aobj_upd_invalid_slots_simps ucast_ucast_mask a_type_simps
+                             split: if_split_asm option.split_asm dest:valid_arch_obj_from_invs valid_obj_from_invs
+                     | intro valid_table_caps_asid_upd)+
+             apply (drule subsetD[OF vs_refs_of_set_diff])
+             apply (frule invs_valid_asid_map)
+             apply (clarsimp dest!:  asid_lvl_lookup1D
+                             split: option.splits simp: ucast_ucast_id graph_of_def ucast_ucast_mask)
+             apply (clarsimp simp: asid_low_bits_def[symmetric])
+             apply (drule asid_low_high_bits)
+               apply (drule(2) valid_asid_table_injD[OF _ _ invs_valid_asid_table])
+               apply ((clarsimp dest!: valid_asid_mapD simp: mask_def)+)[4]
+            apply (drule subsetD[OF vs_refs_of_set_diff])
+            apply (frule invs_valid_asid_map)
+            apply (clarsimp dest!:  asid_lvl_lookup1D valid_asid_mapD
+                            split: option.splits simp: ucast_ucast_id graph_of_def ucast_ucast_mask)
+            apply (clarsimp simp: asid_low_bits_def[symmetric] vspace_at_asid_def vs_lookup_def)
+            apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup1_is_wellformed_lookup]
+                     | erule wellformed_lookup.lookupE[OF vs_lookup1_is_wellformed_lookup]
+                     | clarsimp simp: vs_asid_refs_def up_ucast_inj_eq obj_at_def
+                               dest!: vs_lookup1D graph_ofD)+
+            apply (clarsimp simp: lookup_leaf_def vs_refs_def mask_asid_low_bits_ucast_ucast dest!: graph_ofD)
+           apply (clarsimp simp: obj_at_def aa_type_simps aobj_upd_invalid_slots_simps ucast_ucast_mask
+                          split: if_split_asm option.split_asm dest:valid_arch_obj_from_invs valid_obj_from_invs
+                     | intro valid_kernel_mappings_if_pm_asid invs_valid_kernel_mappings valid_global_objs_upd_invalid_asid_slot
+                     | fastforce)+
+          apply (fastforce dest!: valid_arch_obj_from_invs valid_arch_obj_from_invs ran_del_subset simp: obj_at_def)+
+        apply (clarsimp simp: obj_at_def aa_type_simps aobj_upd_invalid_slots_simps ucast_ucast_mask
+                        split: if_split_asm option.split_asm dest:valid_arch_obj_from_invs valid_obj_from_invs)
+        apply (rule ccontr)
+        apply (erule(1) unmapped_cap_lookup_refs_empty[OF _ rtrancl_into_trancl1])
+        apply (drule wellformed_lookup.lookup1_cut[OF vs_lookup1_is_wellformed_lookup],fastforce,fastforce)
+       apply (clarsimp simp: aa_type_simps obj_at_def split: option.split_asm if_split_asm)
+      apply (clarsimp simp: obj_at_def aa_type_simps aobj_upd_invalid_slots_simps ucast_ucast_mask
+                        split: if_split_asm option.split_asm dest:valid_arch_obj_from_invs valid_obj_from_invs)
+      apply (rule ccontr)
+      apply (erule unmapped_cap_lookup_refs_pages_empty[OF _ ])
+      apply (erule rtrancl_into_trancl1)
+      apply (drule wellformed_lookup.lookup1_cut[OF vs_lookup_pages1_is_wellformed_lookup],fastforce,fastforce)
+     apply (clarsimp split: option.split_asm if_split_asm simp: aa_type_simps obj_at_def)
+    apply (clarsimp split: if_split_asm option.split_asm dest!:ref_pages_Some simp: lookupable_refs_def obj_at_def)
+    apply (frule(2) empty_table_lookup_refs_refl)
+    apply (clarsimp simp: empty_table_def)
+   apply (clarsimp split: if_split_asm option.split_asm dest!:ref_pages_Some simp: lookupable_refs_def obj_at_def)
+   apply (frule(2) empty_table_lookup_refs_pages_refl)
+   apply clarsimp
+   apply (drule vs_lookup_vs_lookup_pagesI')
+      apply (clarsimp simp: obj_at_def aa_type_simps a_type_simps)
+     apply force
+    apply force
+   apply (drule(1) ref_is_unique)
+          apply force+
+      apply (clarsimp dest!: invs_valid_objs valid_objs_caps)
+     apply clarsimp
+   apply (drule asid_is_zeroI, simp+)
+  apply (clarsimp simp: lookupable_refs_def obj_at_def split: option.split_asm if_split_asm)
+  apply (frule(2) empty_table_lookup_refs_pages_refl)
+  apply clarsimp
+  apply (drule vs_lookup_vs_lookup_pagesI')
+     apply (clarsimp simp: obj_at_def aa_type_simps a_type_simps)
+    apply force
+   apply force
+  apply (drule(1) ref_is_unique)
+    apply force+
+   apply (clarsimp dest!: invs_valid_objs valid_objs_caps)
+  apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
+  apply (intro exI conjI)
+    apply assumption
+   apply (fastforce simp: vs_cap_ref_def cap_asid_def split: option.split_asm)+
+  apply (clarsimp simp: vs_cap_ref_def cap_asid_def mask_asid_low_bits_ucast_ucast split: option.splits)
+  done
+
+lemma valid_table_caps_pml4D:
+  "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PML4Cap pool None));
+     valid_table_caps s \<rbrakk> \<Longrightarrow>
+    obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) pool s"
+  apply (clarsimp simp: valid_table_caps_def simp del: split_paired_All)
+  apply (erule allE)+
+  apply (erule (1) impE)
+  apply (fastforce simp add: is_cap_simps cap_asid_def)
+  done
+
 lemma perform_asid_pool_invs [wp]:
   "\<lbrace>invs and valid_apinv api\<rbrace> perform_asid_pool_invocation api \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (clarsimp simp: perform_asid_pool_invocation_def split: asid_pool_invocation.splits)
-  apply (wp arch_update_cap_invs_map
+  apply (wp arch_update_cap_invs_map store_asid_pool_entry_invs
             get_cap_wp set_cap_typ_at empty_table_lift
-            set_cap_obj_at_other
-               |wpc|simp|wp_once hoare_vcg_ex_lift)+
-  sorry (* FIXME: check store_pml4e_invs in ArchAcc_AI, more strengthen rules needed ...
-  apply (clarsimp simp: valid_apinv_def cte_wp_at_caps_of_state is_arch_update_def is_cap_simps cap_master_cap_simps)
+            set_cap_obj_at_other hoare_vcg_all_lift set_cap_cte_wp_at_ex
+         | wpc | simp del: split_paired_Ex)+
+  apply (rename_tac asid pml4base a b s)
+  apply (clarsimp simp: valid_apinv_def cap_asid_def cte_wp_at_caps_of_state is_arch_update_def
+                        is_cap_simps cap_master_cap_simps vs_cap_ref_simps
+                 split: option.split_asm)
   apply (frule caps_of_state_cteD)
   apply (drule cte_wp_valid_cap, fastforce)
-  apply (simp add: valid_cap_def cap_aligned_def)
-  apply (clarsimp simp: cap_asid_def split: option.splits)
-  apply (rule conjI)
-   apply (clarsimp simp: vs_cap_ref_def)
-  apply clarsimp
-  apply (rule conjI)
-   apply (erule vs_lookup_atE)
-   apply clarsimp
-   apply (drule caps_of_state_cteD)
-   apply (clarsimp simp: cte_wp_at_cases obj_at_def)
-  apply (rule conjI)
-   apply (rule exI)
-   apply (rule conjI, assumption)
-   apply (rule conjI)
-    apply (rule_tac x=a in exI)
-    apply (rule_tac x=b in exI)
-    apply (clarsimp simp: vs_cap_ref_def mask_asid_low_bits_ucast_ucast)
-   apply (clarsimp simp: asid_low_bits_def[symmetric] ucast_ucast_mask
-                         word_neq_0_conv[symmetric])
-   apply (erule notE, rule asid_low_high_bits, simp_all)[1]
-   apply (simp add: asid_high_bits_of_def)
-  apply (rule conjI)
-   apply (erule(1) valid_table_caps_pdD [OF _ invs_pd_caps])
-  apply (rule conjI)
-   apply clarsimp
-   apply (drule caps_of_state_cteD)
-   apply (clarsimp simp: obj_at_def cte_wp_at_cases a_type_def)
-   apply (clarsimp split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (clarsimp simp: obj_at_def)
+  apply (frule valid_table_caps_pml4D)
+   apply force
+  apply (simp add: valid_cap_def cap_aligned_def obj_at_def
+                   le_mask_iff_lt_2n[where 'a = "64",simplified, THEN iffD1,
+                     OF asid_word_bits[unfolded word_bits_def, simplified]])
+  apply (drule caps_of_state_cteD)
+  apply (clarsimp simp: obj_at_def cte_wp_at_cases a_type_def)
+  apply (clarsimp split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
+  apply (fastforce dest!: invs_valid_global_objs simp: valid_global_objs_def obj_at_def)
   done
-  *)
 
 (* FIXME: Strange lemma
 lemma invs_aligned_pdD:
