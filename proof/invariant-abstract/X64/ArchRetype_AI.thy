@@ -57,19 +57,19 @@ lemma retype_region_ret_folded [Retype_AI_assms]:
    apply (simp add:retype_addrs_def)
   done
 
-lemmas [wp] = store_pml4e_state_refs_of hoare_unless_wp
+lemmas [wp] =  hoare_unless_wp
 
 (* These also prove facts about copy_global_mappings *)
 crunch pspace_aligned[wp]: init_arch_objects "pspace_aligned"
   (ignore: clearMemory wp: crunch_wps simp: crunch_simps unless_def)
 crunch pspace_distinct[wp]: init_arch_objects "pspace_distinct"
-  (ignore: clearMemory wp: crunch_wps simp: crunch_simps unless_def)
+  (ignore: clearMemory update_object set_pml4 wp: crunch_wps update_obj_pspace_distinct simp: crunch_simps unless_def)
 crunch mdb_inv[wp]: init_arch_objects "\<lambda>s. P (cdt s)"
-  (ignore: clearMemory wp: crunch_wps simp: crunch_simps unless_def)
+  (ignore: clearMemory set_pml4 wp: crunch_wps simp: crunch_simps unless_def)
 crunch valid_mdb[wp]: init_arch_objects "valid_mdb"
-  (ignore: clearMemory wp: crunch_wps simp: crunch_simps unless_def)
+  (ignore: clearMemory set_pml4 wp: crunch_wps simp: crunch_simps unless_def)
 crunch cte_wp_at[wp]: init_arch_objects "\<lambda>s. P (cte_wp_at P' p s)"
-  (ignore: clearMemory wp: crunch_wps simp: crunch_simps unless_def)
+  (ignore: clearMemory set_pml4 wp: crunch_wps update_aobj_cte_wp_at simp: crunch_simps unless_def)
 crunch typ_at[wp]: init_arch_objects "\<lambda>s. P (typ_at T p s)"
   (ignore: clearMemory wp: crunch_wps simp: crunch_simps unless_def)
 
@@ -105,7 +105,7 @@ crunch valid_objs[wp]: init_arch_objects "valid_objs"
   (ignore: clearMemory wp: crunch_wps simp: unless_def)
 
 crunch valid_arch_state[wp]: init_arch_objects "valid_arch_state"
-  (ignore: clearMemory set_object wp: crunch_wps simp: unless_def crunch_simps)
+  (ignore: clearMemory set_pml4 set_object wp: crunch_wps simp: unless_def crunch_simps)
 
 lemmas init_arch_objects_valid_cap[wp] = valid_cap_typ [OF init_arch_objects_typ_at]
 
@@ -120,31 +120,31 @@ crunch cap_refs_respects_device_region[wp]: reserve_region cap_refs_respects_dev
 crunch invs [wp]: reserve_region "invs"
 
 crunch iflive[wp]: copy_global_mappings "if_live_then_nonz_cap"
-  (wp: crunch_wps)
+  (wp: crunch_wps ignore: set_pml4)
 
 crunch zombies[wp]: copy_global_mappings "zombies_final"
   (wp: crunch_wps)
 
 crunch state_refs_of[wp]: copy_global_mappings "\<lambda>s. P (state_refs_of s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps ignore: set_pml4)
 
 crunch valid_idle[wp]: copy_global_mappings "valid_idle"
-  (wp: crunch_wps)
+  (wp: crunch_wps ignore: set_pml4)
 
 crunch only_idle[wp]: copy_global_mappings "only_idle"
-  (wp: crunch_wps)
+  (wp: crunch_wps ignore: set_pml4)
 
 crunch ifunsafe[wp]: copy_global_mappings "if_unsafe_then_cap"
   (wp: crunch_wps)
 
 crunch reply_caps[wp]: copy_global_mappings "valid_reply_caps"
-  (wp: crunch_wps)
+  (wp: crunch_wps ignore: set_pml4)
 
 crunch reply_masters[wp]: copy_global_mappings "valid_reply_masters"
-  (wp: crunch_wps)
+  (wp: crunch_wps ignore: set_pml4)
 
 crunch valid_global[wp]: copy_global_mappings "valid_global_refs"
-  (wp: crunch_wps)
+  (wp: crunch_wps ignore: set_pml4)
 
 crunch irq_node[wp]: copy_global_mappings "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
@@ -162,7 +162,7 @@ crunch cap_refs_in_kernel_window[wp]: copy_global_mappings "cap_refs_in_kernel_w
   (wp: crunch_wps)
 
 crunch pspace_respects_device_region[wp]: copy_global_mappings "pspace_respects_device_region"
-  (wp: crunch_wps)
+  (wp: crunch_wps ignore: set_pml4)
 
 crunch cap_refs_respects_device_region[wp]: copy_global_mappings "cap_refs_respects_device_region"
   (wp: crunch_wps)
@@ -201,103 +201,6 @@ lemma glob_vs_refs_add_one':
   apply (clarsimp simp: graph_of_def)
   done
 
-
-lemma store_pml4e_map_global_valid_arch_caps:
-  "\<lbrace>valid_arch_caps and valid_objs and valid_arch_objs
-        and valid_arch_state and valid_global_objs
-        and K (VSRef (p && mask pml4_bits >> word_size_bits) (Some APageMapL4) \<in> kernel_vsrefs)
-        and (\<lambda>s. \<forall>p. pml4e_ref pml4e = Some p \<longrightarrow> p \<in> set (x64_global_pdpts (arch_state s)))\<rbrace>
-     store_pml4e p pml4e
-   \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"
-(*
-  apply (simp add: store_pml4e_def)
-  apply (wp set_pml4_valid_arch_caps
-            [where T="{}" and S="{}" and T'="{}" and S'="{}"])
-  apply (clarsimp simp:obj_at_def kernel_vsrefs_kernel_mapping_slots[symmetric])
-  apply (intro conjI)
-       apply (erule vs_refs_add_one'')
-      apply (rule set_eqI)
-      apply (clarsimp simp add:  vs_refs_pages_def graph_of_def image_def)
-      apply (rule arg_cong[where f=Ex], rule ext, fastforce)
-     apply clarsimp
-     apply (rule conjI, clarsimp)
-     apply (drule valid_arch_objsD, simp add: obj_at_def, simp+)[1]
-    apply (rule impI, rule disjI2)
-    apply (simp add: empty_table_def)
-   apply clarsimp
-   apply (rule conjI, clarsimp)
-   apply (thin_tac "All P" for P)
-   apply clarsimp
-   apply (frule_tac ref'="VSRef (ucast c) (Some APageMapL4) # r" and
-                    p'=q in vs_lookup_pages_step)
-    apply (clarsimp simp: vs_lookup_pages1_def vs_refs_pages_def
-                          obj_at_def graph_of_def image_def)
-   apply (clarsimp simp: valid_arch_caps_def valid_vs_lookup_def)
-  apply clarsimp
-  apply (rule conjI, clarsimp)
-  apply (thin_tac "All P" for P)
-  apply clarsimp
-  apply (drule_tac ref'="VSRef (ucast c) (Some APageMapL4) # r" and
-                   p'=q in vs_lookup_pages_step)
-   apply (clarsimp simp: vs_lookup_pages1_def vs_refs_pages_def
-                         obj_at_def graph_of_def image_def)
-  apply (drule_tac ref'="VSRef (ucast d) (Some APageTable) #
-                         VSRef (ucast c) (Some APageMapL4) # r" and
-                   p'=q' in vs_lookup_pages_step)
-   apply (fastforce simp: vs_lookup_pages1_def vs_refs_pages_def
-                         obj_at_def graph_of_def image_def)
-  apply (clarsimp simp: valid_arch_caps_def valid_vs_lookup_def)
-  done
-*) sorry
-
-lemma store_pml4e_map_global_valid_arch_objs:
-  "\<lbrace>valid_arch_objs and valid_arch_state and valid_global_objs
-        and K (VSRef (p && mask pml4_bits >> word_size_bits) (Some APageMapL4) \<in> kernel_vsrefs)\<rbrace>
-     store_pml4e p pml4e
-   \<lbrace>\<lambda>rv. valid_arch_objs\<rbrace>"
-  apply (simp add: store_pml4e_def)
-  apply (wp set_pml4_arch_objs_map[where T="{}" and S="{}"])
-  apply (clarsimp simp: obj_at_def kernel_vsrefs_kernel_mapping_slots[symmetric])
-  apply (intro conjI)
-   apply (erule vs_refs_add_one'')
-  apply clarsimp
-  apply (drule valid_arch_objsD, simp add: obj_at_def, simp+)
-  apply clarsimp
-  done
-
-
-lemma store_pml4e_global_objs[wp]:
-  "\<lbrace>valid_global_objs and valid_global_refs and
-    valid_arch_state and
-    (\<lambda>s. (\<forall>pm. (obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) (p && ~~ mask pml4_bits) s
-                    \<and> ko_at (ArchObj (PageMapL4 pm)) (p && ~~ mask pml4_bits) s
-                  \<longrightarrow> empty_table (set (x64_global_pdpts (arch_state s)))
-                                 (ArchObj (PageMapL4 (pm(ucast (p && mask pml4_bits >> word_size_bits) := pml4e))))))
-        \<or> (\<exists>slot. cte_wp_at (\<lambda>cap. p && ~~ mask pml4_bits \<in> obj_refs cap) slot s))\<rbrace>
-     store_pml4e p pml4e \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-  apply (simp add: store_pml4e_def)
-  apply wp
-  apply clarsimp
-  done
-
-
-lemma store_pml4e_valid_kernel_mappings_map_global:
-  "\<lbrace>valid_kernel_mappings and valid_arch_state and valid_global_objs
-     and K (VSRef (p && mask pml4_bits >> word_size_bits) (Some APageMapL4) \<in> kernel_vsrefs)
-     and (\<lambda>s. \<forall>p. pml4e_ref pml4e = Some p \<longrightarrow> p \<in> set (x64_global_pdpts (arch_state s)))\<rbrace>
-     store_pml4e p pml4e
-   \<lbrace>\<lambda>rv. valid_kernel_mappings\<rbrace>"
-  apply (simp add: store_pml4e_def)
-  apply (wp set_pml4_valid_kernel_mappings_map)
-  apply (clarsimp simp: obj_at_def)
-  apply (rule conjI, rule glob_vs_refs_add_one')
-  apply (clarsimp simp: ucast_ucast_mask_shift_helper)
-  done
-
-
-crunch valid_asid_map[wp]: store_pml4e "valid_asid_map"
-crunch cur[wp]: store_pml4e "cur_tcb"
-
 lemma mapM_x_store_pml4e_eq_kernel_mappings_restr:
   "pm \<in> S \<and> is_aligned pm pml4_bits \<and> is_aligned pm' pml4_bits
         \<and> set xs \<subseteq> {..< 2 ^ (pml4_bits - word_size_bits)}
@@ -323,7 +226,7 @@ lemma mapM_x_store_pml4e_eq_kernel_mappings_restr:
    apply (erule less_le_trans)
    apply (simp add: pml4_bits_def simple_bit_simps)
   apply (clarsimp simp: fun_upd_def[symmetric] is_aligned_add_helper)
-  done
+  sorry
 
 
 lemma equal_kernel_mappings_specific_def:
@@ -389,7 +292,7 @@ lemma store_pde_valid_global_pd_mappings[wp]:
      store_pml4e p pml4e
    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: store_pml4e_def set_pml4_def)
-  apply (wp set_object_global_vspace_mappings get_object_wp)
+  apply (wp update_aobj_valid_global_vspace_mappings)
   apply simp
   done
 
@@ -401,8 +304,6 @@ lemma store_pde_valid_ioc[wp]:
 lemma store_pde_vms[wp]:
  "\<lbrace>valid_machine_state\<rbrace> store_pml4e ptr pml4e \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   by (wpsimp simp: store_pml4e_def)
-
-crunch valid_irq_states[wp]: store_pml4e "valid_irq_states"
 
 lemma copy_global_invs_mappings_restricted:
   "\<lbrace>(\<lambda>s. all_invs_but_equal_kernel_mappings_restricted (insert pm S) s)
@@ -423,10 +324,7 @@ lemma copy_global_invs_mappings_restricted:
     apply simp_all
    apply (rule hoare_pre)
     apply (wp valid_irq_node_typ valid_irq_handlers_lift
-              store_pml4e_map_global_valid_arch_caps
-              store_pml4e_map_global_valid_arch_objs
-              store_pml4e_valid_kernel_mappings_map_global
-              get_pml4e_wp)
+              get_pml4e_wp | simp add: store_pml4e_def)+
    apply (clarsimp simp: valid_global_objs_def)
    apply (frule(1) invs_aligned_pml4D)
    apply (frule shiftl_less_t2n)
