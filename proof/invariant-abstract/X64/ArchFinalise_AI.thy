@@ -89,17 +89,61 @@ lemma invs_x64_asid_table_unmap:
   apply (simp add: valid_table_caps_def valid_machine_state_def)
   done
 
+crunch asid_map[wp]: do_machine_op "valid_asid_map"
+
+lemma mapM_invalidate:
+  "\<lbrace>[VSRef (ucast (asid_high_bits_of base)) None] \<rhd> ptr and
+    ko_at (ArchObj (arch_kernel_obj.ASIDPool pool)) ptr and
+    valid_asid_map and K (is_aligned base asid_low_bits)\<rbrace>
+       mapM (\<lambda>offset. when (\<exists>y. pool (ucast offset) = Some y) $
+                           invalidate_asid_entry (base + offset) (the (pool (ucast offset))))
+        [0.e.2 ^ asid_low_bits - 1]
+       \<lbrace>\<lambda>rv s. \<forall>x\<le>2 ^ asid_low_bits - 1. x64_asid_map (arch_state s) (base + x) = None\<rbrace>"
+proof -
+  have ball: "\<And>P w::machine_word. (\<forall>x\<le>w. P x) = (\<forall>x \<in> set [0.e.w]. P x)" by simp
+  show ?thesis
+    apply (subst ball)
+    apply (rule mapM_set)
+      apply (wp, simp)
+     apply (wp | simp add: invalidate_asid_entry_def invalidate_asid_def
+                     cong: if_cong)+
+     apply clarsimp
+     apply (rule ccontr)
+     apply clarsimp
+     apply (clarsimp simp: valid_asid_map_def)
+     apply (drule bspec, erule graph_ofI)
+     apply (erule vs_lookup_atE)
+     apply (clarsimp simp: vspace_at_asid_def)
+     apply (drule vs_lookup_2ConsD)
+     apply clarsimp
+     apply (erule vs_lookup_atE)
+     apply (drule vs_lookup1D)
+     apply clarsimp
+     apply (subgoal_tac "p' = ptr")
+      apply (clarsimp simp: obj_at_def vs_refs_def graph_of_def)
+      apply (subgoal_tac "base + x && mask asid_low_bits = x")
+       apply (simp add: ucast_ucast_mask)
+       apply (subgoal_tac "aa && mask 32 = aa")
+        apply simp
+       apply (rule word_eqI)
+       apply (simp add: word_size)
+      apply (subst add_mask_eq, assumption+)
+       apply (simp add: asid_low_bits_def word_bits_def)
+      apply (rule refl)
+     apply (subst (asm) asid_high_bits_of_add, assumption+)
+     apply simp
+    apply (wp invalidate_asid_entry_asid_map_None_inv)
+    apply simp
+    done
+qed
+
 lemma delete_asid_pool_invs[wp]:
   "\<lbrace>invs and K (base \<le> mask asid_bits)\<rbrace>
      delete_asid_pool base pptr
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: delete_asid_pool_def)
-  apply_trace wp
-  apply (clarsimp simp: if_apply_def2 invs_x64_asid_table_unmap[rule_format])
-  thm invs_x64_asid_table_unmap[rule_format, simplified]
-  apply (rule invs_x64_asid_table_unmap[rule_format])
-  apply clarsimp
-  sorry
+  apply wp
+
 
 lemma delete_asid_invs[wp]:
   "\<lbrace>invs and K (asid \<le> mask asid_bits)\<rbrace>

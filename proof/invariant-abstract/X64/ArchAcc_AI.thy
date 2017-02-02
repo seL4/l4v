@@ -1270,7 +1270,7 @@ lemma update_aobj_kernel_window[wp]:
                         arch_kernel_obj.split_asm)
   done
 
-lemma update_aobj_valid_global_vspace_mappings:
+lemma update_aobj_valid_global_vspace_mappings[wp]:
   "\<lbrace>\<lambda>s. valid_global_vspace_mappings s \<and> valid_global_objs s \<and> (aa_type obj \<noteq> AASIDPool \<longrightarrow> p \<notin> global_refs s)\<rbrace>
       update_object p (ArchObj obj)
    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"

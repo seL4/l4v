@@ -947,21 +947,54 @@ lemma setCurrentVSpaceRoot_invs[wp]:
   apply (wp)
   done
 
+lemma update_asid_map_valid_arch:
+  notes hoare_pre [wp_pre del]
+  shows "\<lbrace>valid_arch_state\<rbrace>
+  update_asid_map asid
+  \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  apply (simp add: update_asid_map_def)
+  apply (wp find_vspace_for_asid_assert_wp)
+  apply (simp add: valid_arch_state_def fun_upd_def[symmetric] comp_upd_simp)
+  done
+
+lemma update_asid_map_invs:
+  "\<lbrace>invs and K (asid \<le> mask asid_bits)\<rbrace> update_asid_map asid  \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (rule hoare_add_post)
+    apply (rule update_asid_map_valid_arch)
+   apply fastforce
+  apply (simp add: update_asid_map_def)
+  apply (wp find_vspace_for_asid_assert_wp)
+  apply (clarsimp simp: invs_def valid_state_def)
+  apply (simp add: valid_global_refs_def global_refs_def
+                   valid_irq_node_def valid_arch_objs_arch_update
+                   valid_global_objs_def valid_arch_caps_def
+                   valid_table_caps_def valid_kernel_mappings_def
+                   valid_machine_state_def valid_vs_lookup_arch_update)
+  apply (simp add: valid_asid_map_def fun_upd_def[symmetric] vspace_at_asid_arch_up)
+  done
+
 lemma svr_invs [wp]:
   "\<lbrace>invs\<rbrace> set_vm_root t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: set_vm_root_def)
   apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp find_vspace_for_asid_inv hoare_vcg_all_lift
+   apply (wp hoare_whenE_wp find_vspace_for_asid_inv hoare_vcg_all_lift update_asid_map_invs
               | wpc
-              | simp add: split_def if_apply_def2 cong: if_cong
-              | wp_once hoare_drop_imps)+
-  done
+              | simp add: split_def if_apply_def2 cong: if_cong)+
+    apply (rule_tac Q'="\<lambda>_ s. invs s \<and> x2 \<le> mask asid_bits" in hoare_post_imp_R)
+     prefer 2
+     apply simp
+    apply (rule valid_validE_R)
+    apply (wp find_vspace_for_asid_inv | simp add: split_def)+
+   apply (rule_tac Q="\<lambda>c s. invs s \<and> s \<turnstile> c" in hoare_strengthen_post)
+    apply wp
+   apply (clarsimp simp: valid_cap_def mask_def)
+  by (fastforce)
 
-crunch pred_tcb_at[wp]: setCurrentVSpaceRoot "pred_tcb_at proj P t"
+crunch pred_tcb_at[wp]: setCurrentVSpaceRoot, update_asid_map "pred_tcb_at proj P t"
 
 lemma svr_pred_st_tcb[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_vm_root t \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
-  apply (simp add: set_vm_root_def)
+  apply (simp add: set_vm_root_def )
   by (wp get_cap_wp | wpc | simp add: whenE_def split del: if_split)+
 
 crunch typ_at [wp]: getCurrentCR3, set_vm_root "\<lambda>s. P (typ_at T p s)"
