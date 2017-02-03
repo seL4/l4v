@@ -72,7 +72,7 @@ It is not possible to dissociate a VCPU and a TCB by using SetTCB. Final outcome
 >     setObject vcpuPtr $ vcpu { vcpuTCBPtr = Nothing }
 >     archThreadSet (\atcb -> atcb { atcbVCPUPtr = Nothing }) tcbPtr
 
-> associateVCPUTCB :: PPtr VCPU -> PPtr TCB -> Kernel ()
+> associateVCPUTCB :: PPtr VCPU -> PPtr TCB -> Kernel [Word]
 > associateVCPUTCB vcpuPtr tcbPtr = do
 >     tcbVCPU <- archThreadGet atcbVCPUPtr tcbPtr
 >     case tcbVCPU of
@@ -84,6 +84,7 @@ It is not possible to dissociate a VCPU and a TCB by using SetTCB. Final outcome
 >         _ -> return ()
 >     archThreadSet (\atcb -> atcb { atcbVCPUPtr = Just vcpuPtr }) tcbPtr
 >     setObject vcpuPtr $ vcpu { vcpuTCBPtr = Just tcbPtr }
+>     return []
 
 \subsection{VCPU: Read/Write Registers}
 
@@ -121,7 +122,7 @@ Currently, there is only one VCPU register available for reading/writing by the 
 >             setObject vcpuPtr $ vcpu { vcpuSCTLR = val }
 >         else fail "VCPU register out of range"
 
-> invokeVCPUReadReg :: PPtr VCPU -> HyperReg -> Kernel ()
+> invokeVCPUReadReg :: PPtr VCPU -> HyperReg -> Kernel [Word]
 > invokeVCPUReadReg vcpuPtr reg = do
 >     ct <- getCurThread
 >     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
@@ -130,17 +131,9 @@ Currently, there is only one VCPU register available for reading/writing by the 
 >            vcpuCleanInvalidateActive
 >         _ -> return ()
 >     val <- readVCPUReg vcpuPtr reg
->     asUser ct $ setRegister (msgRegisters !! 0) $ fromIntegral val
->     let msgInfo = MI {
->             msgLength = 1,
->             msgExtraCaps = 0,
->             msgCapsUnwrapped = 0,
->             msgLabel = 0 }
->     setMessageInfo ct msgInfo
->     -- prevent kernel from generating a reply to ct since we already did
->     setThreadState Running ct
+>     return [val]
 
-> invokeVCPUWriteReg :: PPtr VCPU -> HyperReg -> HyperRegVal -> Kernel ()
+> invokeVCPUWriteReg :: PPtr VCPU -> HyperReg -> HyperRegVal -> Kernel [Word]
 > invokeVCPUWriteReg vcpuPtr reg val = do
 >     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
 >     case hsCurVCPU of
@@ -148,8 +141,7 @@ Currently, there is only one VCPU register available for reading/writing by the 
 >             vcpuCleanInvalidateActive
 >         _ -> return ()
 >     writeVCPUReg vcpuPtr reg val
->     ct <- getCurThread
->     setThreadState Restart ct
+>     return []
 
 \subsection{VCPU: inject IRQ}
 
@@ -189,7 +181,7 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 >     return $ InvokeVCPU $ VCPUInjectIRQ vcpuPtr (fromIntegral index) virq
 > decodeVCPUInjectIRQ _ _ = throw TruncatedMessage
 
-> invokeVCPUInjectIRQ :: PPtr VCPU -> Int -> VIRQ -> Kernel ()
+> invokeVCPUInjectIRQ :: PPtr VCPU -> Int -> VIRQ -> Kernel [Word]
 > invokeVCPUInjectIRQ vcpuPtr index virq = do
 >     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
 >     case hsCurVCPU of
@@ -199,13 +191,12 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 >              vcpu <- getObject vcpuPtr
 >              let vcpuLR = (vgicLR . vcpuVGIC $ vcpu) // [(index, virq)]
 >              setObject vcpuPtr $ vcpu { vcpuVGIC = (vcpuVGIC vcpu) { vgicLR = vcpuLR }}
->     ct <- getCurThread
->     setThreadState Restart ct
+>     return []
 
 
 \subsection{VCPU: perform and decode main functions}
 
-> performARMVCPUInvocation :: VCPUInvocation -> Kernel ()
+> performARMVCPUInvocation :: VCPUInvocation -> Kernel [Word]
 > performARMVCPUInvocation (VCPUSetTCB vcpuPtr tcbPtr) =
 >     associateVCPUTCB vcpuPtr tcbPtr
 > performARMVCPUInvocation (VCPUReadRegister vcpuPtr reg) =
