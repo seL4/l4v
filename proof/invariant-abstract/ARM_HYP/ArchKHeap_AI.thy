@@ -825,5 +825,13 @@ lemma wellformed_arch_obj_same_type:
          clarsimp simp: valid_arch_obj.simps typ_at_same_type valid_vcpu_same_type)
 
 
+lemma default_arch_object_not_live: "\<not> live (ArchObj (default_arch_object aty dev us))"
+  by (clarsimp simp: default_arch_object_def live_def hyp_live_def arch_live_def default_vcpu_def
+               split: aobject_type.splits)
+
+lemma default_tcb_not_live: "\<not> live (TCB default_tcb)"
+  by (clarsimp simp: default_tcb_def default_arch_tcb_def live_def hyp_live_def)
+
+
 end
 end

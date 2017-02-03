@@ -122,17 +122,6 @@ lemma state_hyp_refs_of_detype:
   "state_hyp_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else state_hyp_refs_of s x)"
   by (rule ext, simp add: state_hyp_refs_of_def detype_def)
 
-lemma hyp_live_okE:
-    "\<And>P p. \<lbrakk> obj_at P p s; \<And>obj. P obj \<Longrightarrow> hyp_live obj \<rbrakk>
-    \<Longrightarrow> p \<notin> untyped_range cap"
-sorry
-
-lemma state_hyp_refs: "state_hyp_refs_of (detype (untyped_range cap) s) = state_hyp_refs_of s"
-  apply (rule ext, clarsimp simp add: state_hyp_refs_of_detype)
-  apply (rule sym, rule equals0I, drule state_hyp_refs_of_elemD)
-  apply (drule hyp_live_okE, rule hyp_refs_of_live, clarsimp)
-  sorry
-
 end
 
 interpretation Detype_AI?: Detype_AI
@@ -146,11 +135,19 @@ context detype_locale_arch begin
 
 named_theorems detype_invs_proofs
 
+
+lemma state_hyp_refs: "state_hyp_refs_of (detype (untyped_range cap) s) = state_hyp_refs_of s"
+  apply (rule ext, clarsimp simp add: state_hyp_refs_of_detype)
+  apply (rule sym, rule equals0I, drule state_hyp_refs_of_elemD)
+  apply (drule live_okE, rule hyp_refs_of_live, clarsimp)
+  apply simp
+  done
+
 lemma hyp_refsym : "sym_refs (state_hyp_refs_of s)"
   using invs by (simp add: invs_def valid_state_def valid_pspace_def)
 
 lemma hyp_refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightarrow> hyp_refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
-  by (fastforce intro: hyp_refs_of_live dest!: hyp_sym_refs_ko_atD[OF _ hyp_refsym] hyp_live_okE)
+  by (fastforce intro: hyp_refs_of_live dest!: hyp_sym_refs_ko_atD[OF _ hyp_refsym] live_okE)
 
 lemma wellformed_arch_obj[detype_invs_proofs]:
     "\<And>p ao. \<lbrakk>ko_at (ArchObj ao) p s; wellformed_arch_obj ao s\<rbrakk>
@@ -204,6 +201,7 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
    apply (simp add:cap_range_def)
    apply blast
   apply (clarsimp split: option.splits)
+
   sorry
 
 lemma global_pts: (* ARCH SPECIFIC STATEMENT*) (* ARMHYP remove? *)

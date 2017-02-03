@@ -185,7 +185,7 @@ lemma out_invs_trivialT:
   shows      "\<lbrace>invs\<rbrace> option_update_thread t fn v \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac v, simp_all add: option_update_thread_def)
   apply (rule thread_set_invs_trivial [OF x r z z' w y a])
-  apply auto
+  apply (auto intro: r)
   done
 
 lemmas out_invs_trivial = out_invs_trivialT [OF ball_tcb_cap_casesI]

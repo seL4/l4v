@@ -1935,15 +1935,17 @@ lemma cte_retype:
 
 lemma iflive_s: "if_live_then_nonz_cap s" by (rule valid_pspaceE [OF vp])
 
+lemma default_object_not_live: "\<not> live (default_object ty dev us)"
+  apply (cases ty, simp_all add: tyunt default_object_def default_tcb_not_live default_arch_object_not_live)
+  apply (simp add: live_def default_ep_def default_notification_def default_ntfn_def)+
+  done
 
 lemma iflive:
   "if_live_then_nonz_cap s'"
   using iflive_s unfolding if_live_then_nonz_cap_def s'_def ps_def
   apply -
-  apply (clarsimp elim!: obj_atE split: if_split_asm)
-   apply (cases ty, simp_all add: default_object_def tyunt
-                                  default_tcb_def default_ep_def
-                                  default_notification_def default_ntfn_def)
+  apply (clarsimp elim!: obj_atE simp: default_object_not_live split: if_split_asm)
+
   apply (frule(1) if_live_then_nonz_capD2[OF iflive_s])
   apply (simp add: ex_nonz_cap_to_def
                    cte_retype[unfolded s'_def ps_def])

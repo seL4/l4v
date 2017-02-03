@@ -55,6 +55,8 @@ requalify_facts
   state_hyp_refs_of_tcb_state_update
   state_hyp_refs_of_tcb_bound_ntfn_update
   wellformed_arch_obj_same_type
+  default_arch_object_not_live
+  default_tcb_not_live
 end
 
 lemmas cap_is_device_obj_is_device[simp] = cap_is_device_obj_is_device

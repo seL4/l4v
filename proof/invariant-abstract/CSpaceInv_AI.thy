@@ -38,6 +38,7 @@ requalify_facts
   is_nondevice_page_cap_simps
   set_cap_hyp_refs_of
   state_hyp_refs_of_revokable
+  set_cap_hyp_refs_of
 end
 
 lemmas [simp] = aobj_ref_acap_rights_update arch_obj_size_acap_rights_update 
@@ -624,15 +625,7 @@ lemma set_cap_live[wp]:
      set_cap cap p \<lbrace>\<lambda>rv s. P (obj_at live p' s)\<rbrace>"
   apply (simp add: set_cap_def split_def set_object_def)
   apply (wp get_object_wp | wpc)+
-  apply (auto simp: obj_at_def)
-  (*
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
-  apply (case_tac obj, simp_all split del: if_split)
-   apply (rule hoare_pre, wp)
-   apply (clarsimp simp: obj_at_def)
-  apply (rule hoare_pre, wp)
-  apply (clarsimp simp: obj_at_def)
-  *)
+  apply (auto simp: obj_at_def live_def) (* FIXME: ARMHYP *)
   done
 
 

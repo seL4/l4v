@@ -269,20 +269,22 @@ lemma thread_set_cur_tcb:
   apply (clarsimp dest!: get_tcb_SomeD simp: obj_at_def is_tcb)
   done
 
-
 lemma thread_set_iflive_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
   assumes z: "\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb"
   assumes y: "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
+  assumes a: "\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb"
   shows      "\<lbrace>if_live_then_nonz_cap\<rbrace> thread_set f t \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: thread_set_def)
   apply (wp set_object_iflive)
   apply (clarsimp dest!: get_tcb_SomeD)
-  apply (clarsimp simp: obj_at_def get_tcb_def z y
+  apply (clarsimp simp: obj_at_def get_tcb_def
                         split_paired_Ball
                         bspec_split [OF x])
-  apply (fastforce elim:if_live_then_nonz_capD2)
+  apply (subgoal_tac "live (TCB y)")
+   apply (fastforce elim: if_live_then_nonz_capD2)
+  apply (clarsimp simp: live_def hyp_live_tcb_def z y a)
   done
 
 
@@ -482,6 +484,7 @@ lemma thread_set_invs_trivial:
   assumes a: "\<And>tcb. tcb_fault (f tcb) \<noteq> tcb_fault tcb
                        \<longrightarrow> (case tcb_fault (f tcb) of None \<Rightarrow> True
                                                    | Some f \<Rightarrow> valid_fault f)"
+  assumes arch: "\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb"
   shows      "\<lbrace>invs::'state_ext state \<Rightarrow> bool\<rbrace> thread_set f t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_weaken_pre)
@@ -504,7 +507,7 @@ lemma thread_set_invs_trivial:
              thread_set_cap_refs_in_kernel_window
              thread_set_cap_refs_respects_device_region
              thread_set_aligned
-             | rule x r z z' w y a | erule bspec_split [OF x] | simp add: z')+
+             | rule x r z z' w y a arch | erule bspec_split [OF x] | simp add: z')+
   apply (simp add: z)
   done
 
@@ -671,7 +674,7 @@ lemma as_user_irq_handlers[wp]:
 lemma as_user_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> as_user t f \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
   by (wp as_user_wp_thread_set_helper thread_set_iflive_trivial
-         ball_tcb_cap_casesI | simp)+
+         ball_tcb_cap_casesI | simp add:)+
 
 
 lemma as_user_ifunsafe[wp]:
@@ -1107,9 +1110,9 @@ lemma sts_iflive[wp]:
      set_thread_state t st
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wp|simp)+
+  apply wpsimp+
   by (fastforce dest: get_tcb_SomeD if_live_then_nonz_capD2
-                simp: tcb_cap_cases_def
+                simp: tcb_cap_cases_def live_def
                 split: Structures_A.thread_state.splits)
  
 lemma sbn_iflive[wp]:
@@ -1118,9 +1121,9 @@ lemma sbn_iflive[wp]:
      set_bound_notification t ntfn
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: set_bound_notification_def)
-  apply (wp, simp)
+  apply wpsimp
   apply (fastforce dest: get_tcb_SomeD if_live_then_nonz_capD2
-                   simp: tcb_cap_cases_def
+                   simp: tcb_cap_cases_def live_def
                    split: Structures_A.thread_state.splits)
   done
 
@@ -1368,18 +1371,17 @@ crunch arch [wp]: set_thread_state, set_bound_notification "\<lambda>s. P (arch_
 
 lemma st_tcb_ex_cap:
   "\<lbrakk> st_tcb_at P t s; if_live_then_nonz_cap s;
-      \<And>st. P st \<Longrightarrow> \<not> halted st \<rbrakk>
+      \<And>st. P st \<Longrightarrow> \<not> halted st\<rbrakk>
      \<Longrightarrow> ex_nonz_cap_to t s"
   unfolding pred_tcb_at_def
-  by (erule (1) if_live_then_nonz_capD, fastforce)
+  by (erule (1) if_live_then_nonz_capD, fastforce simp: live_def)
 
 lemma bound_tcb_ex_cap:
   "\<lbrakk> bound_tcb_at P t s; if_live_then_nonz_cap s;
       \<And>ntfn. P ntfn \<Longrightarrow> bound ntfn \<rbrakk>
      \<Longrightarrow> ex_nonz_cap_to t s"
   unfolding pred_tcb_at_def
-  by (erule (1) if_live_then_nonz_capD, fastforce)
-
+  by (erule (1) if_live_then_nonz_capD, fastforce simp: live_def)
 
 locale TcbAcc_AI_pred_tcb_cap_wp_at =
   fixes proj :: "itcb \<Rightarrow> 'proj"

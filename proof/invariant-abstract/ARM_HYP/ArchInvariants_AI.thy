@@ -2530,21 +2530,25 @@ where
 | (ArchObj ao) \<Rightarrow> arch_live ao
 |  _ \<Rightarrow> False"
 
-lemma hyp_refs_of_live:
+lemma hyp_refs_of_live':
   "hyp_refs_of ko \<noteq> {} \<Longrightarrow> hyp_live ko"
   apply (cases ko, simp_all add: hyp_refs_of_def)
    apply (rename_tac tcb_ext)
    apply (simp add: tcb_hyp_refs_def hyp_live_def)
    apply (case_tac "tcb_vcpu (tcb_arch tcb_ext)"; clarsimp simp: tcb_vcpu_refs_def)
-  apply (rename_tac ao)
-  apply (rule arch_kernel_obj_cases;
-         simp add: refs_of_a_def arch_kernel_obj.case vcpu_tcb_refs_def hyp_live_def arch_live_def
-              split: option.splits)
+  apply (clarsimp simp: hyp_live_def arch_live_def refs_of_a_def vcpu_tcb_refs_def
+                  split: arch_kernel_obj.splits option.splits)
   done
 
-lemma hyp_refs_of_live_obj:
+lemma hyp_refs_of_live_iff:
+  "hyp_refs_of ko \<noteq> {} = hyp_live ko"
+  apply (rule, clarsimp simp: hyp_refs_of_live')
+  apply (cases ko; clarsimp simp add: hyp_live_def arch_live_def split: arch_kernel_obj.splits)
+  done
+
+lemma hyp_refs_of_hyp_live_obj:
   "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; hyp_refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at hyp_live p s"
-  by (fastforce simp: obj_at_def intro!: hyp_refs_of_live)
+  by (fastforce simp: obj_at_def hyp_refs_of_live')
 
 
 (* use tcb_arch_ref to handle obj_refs in tcb_arch: currently there is a vcpu ref only *)
@@ -2607,6 +2611,23 @@ lemmas tcb_arch_ref_simps[simp] = tcb_arch_ref_ipc_buffer_update tcb_arch_ref_mc
   tcb_arch_ref_caller_update tcb_arch_ref_ipcframe_update tcb_arch_ref_state_update
   tcb_arch_ref_fault_handler_update tcb_arch_ref_fault_update tcb_arch_ref_bound_notification_update
   tcb_arch_ref_context_update
+
+lemma hyp_live_tcb_def: "hyp_live (TCB tcb) = bound (tcb_arch_ref tcb)"
+  by (clarsimp simp: hyp_live_def tcb_arch_ref_def)
+
+lemma hyp_live_tcb_simps[simp]:
+"\<And>tcb f. hyp_live (TCB (tcb_ipc_buffer_update f tcb)) = hyp_live (TCB tcb)"
+"\<And>tcb f. hyp_live (TCB (tcb_mcpriority_update f tcb)) = hyp_live (TCB tcb)"
+"\<And>tcb f. hyp_live (TCB (tcb_ctable_update f tcb)) = hyp_live (TCB tcb)"
+"\<And>tcb f. hyp_live (TCB (tcb_vtable_update f tcb)) = hyp_live (TCB tcb)"
+"\<And>tcb f. hyp_live (TCB (tcb_reply_update f tcb)) = hyp_live (TCB tcb)"
+"\<And>tcb f. hyp_live (TCB (tcb_caller_update f tcb)) = hyp_live (TCB tcb)"
+"\<And>tcb f. hyp_live (TCB (tcb_ipcframe_update f tcb)) = hyp_live (TCB tcb)"
+"\<And>tcb f. hyp_live (TCB (tcb_state_update f tcb)) = hyp_live (TCB tcb)"
+"\<And>tcb f. hyp_live (TCB (tcb_fault_handler_update f tcb)) = hyp_live (TCB tcb)"
+"\<And>tcb f. hyp_live (TCB (tcb_fault_update f tcb)) = hyp_live (TCB tcb)"
+"\<And>tcb f. hyp_live (TCB (tcb_bound_notification_update f tcb)) = hyp_live (TCB tcb)"
+  by (simp_all add: hyp_live_tcb_def)
 
 end
 

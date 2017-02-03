@@ -363,7 +363,7 @@ lemma blocked_cancel_ipc_invs:
    apply (wp valid_irq_node_typ)
   apply (subgoal_tac "ep \<noteq> Structures_A.IdleEP")
    apply (clarsimp simp: ep_redux_simps2 cong: if_cong)
-   apply (frule(1) if_live_then_nonz_capD, clarsimp+)
+   apply (frule(1) if_live_then_nonz_capD, (clarsimp simp: live_def)+)
    apply (frule ko_at_state_refs_ofD)
    apply (erule(1) obj_at_valid_objsE, clarsimp simp: valid_obj_def)
    apply (frule st_tcb_at_state_refs_ofD)
@@ -396,7 +396,7 @@ lemma cancel_signal_invs:
            | strengthen reply_cap_doesnt_exist_strg
            | wpc)+
   apply (clarsimp simp: ep_redux_simps cong: list.case_cong if_cong)
-  apply (frule(1) if_live_then_nonz_capD, clarsimp+)
+  apply (frule(1) if_live_then_nonz_capD, (clarsimp simp: live_def)+)
   apply (frule ko_at_state_refs_ofD)
   apply (frule st_tcb_at_state_refs_ofD)
   apply (erule(1) obj_at_valid_objsE, clarsimp simp: valid_obj_def valid_ntfn_def)
@@ -797,16 +797,16 @@ crunch bound_tcb_at[wp]: cancel_ipc "bound_tcb_at P t"
 (ignore: set_object thread_set wp: mapM_x_wp_inv)
 
 
-lemma suspend_unlive: 
+lemma suspend_unlive:
   "\<lbrace>bound_tcb_at (op = None) t and valid_mdb and valid_objs and tcb_at t \<rbrace>
       suspend t
-   \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
+   \<lbrace>\<lambda>rv. obj_at (Not \<circ> live') t\<rbrace>"
   apply (simp add: suspend_def set_thread_state_def set_object_def)
   apply (wp | simp only: obj_at_exst_update)+
   apply (simp add: obj_at_def)
   apply (rule_tac Q="\<lambda>_. bound_tcb_at (op = None) t" in hoare_strengthen_post)
   apply wp
-  apply (auto simp: pred_tcb_def2)
+  apply (auto simp: pred_tcb_def2 dest: refs_of_live)
   done
 
 
@@ -883,7 +883,8 @@ lemma ep_no_ntfn_bound:
 
 lemma cancel_all_ipc_invs_helper:
   assumes x: "\<And>x ko. (x, symreftype k) \<in> refs_of ko
-                      \<Longrightarrow> refs_of ko = {(x, symreftype k)} \<or> (\<exists>y. refs_of ko = {(x, symreftype k), (y, TCBBound)})"
+                \<Longrightarrow> (refs_of ko = {(x, symreftype k)} \<or>
+                          (\<exists>y. refs_of ko = {(x, symreftype k), (y, TCBBound)}))"
   shows
   "\<lbrace>invs and obj_at (\<lambda>ko. is_ep ko \<and> refs_of ko = set q \<times> {k}) p\<rbrace>
      do y \<leftarrow> set_endpoint p Structures_A.endpoint.IdleEP;
@@ -897,19 +898,19 @@ lemma cancel_all_ipc_invs_helper:
    apply simp
   apply (rule hoare_pre)
    apply (wp cancel_all_invs_helper hoare_vcg_const_Ball_lift valid_irq_node_typ)
-  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_ep_def)
+  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_ep_def live_def)
   apply (rule conjI)
-   apply (clarsimp elim!: obj_at_weakenE)
+   apply (clarsimp simp: live_def elim!: obj_at_weakenE)
   apply (rule conjI)
-   apply (clarsimp elim!: obj_at_weakenE)
+   apply (clarsimp simp: live_def elim!: obj_at_weakenE)
   apply (rule conjI)
    apply clarsimp
    apply (drule(1) sym_refs_obj_atD, clarsimp)
    apply (drule(1) bspec, erule(1) if_live_then_nonz_capD)
    apply (rule refs_of_live, clarsimp)
-  apply (rule conjI[rotated]) 
+  apply (rule conjI[rotated])
    apply (subgoal_tac "\<exists>ep. ko_at (Endpoint ep) p s", clarsimp)
-    apply (subgoal_tac "\<exists>rt. (x, rt) \<in> ep_q_refs_of ep", clarsimp)
+  apply (subgoal_tac "\<exists>rt. (x, rt) \<in> ep_q_refs_of ep", clarsimp)
      apply (fastforce elim!: ep_queued_st_tcb_at)
     apply (clarsimp simp: obj_at_def is_ep_def)+
    apply (case_tac ko, simp_all)
@@ -1004,7 +1005,7 @@ lemma unbind_notification_invs:
        | clarsimp)+
           defer 5
           apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
-                       simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def)[9]
+                       simp: live_def valid_ntfn_set_bound_None is_ntfn valid_obj_def)[9]
   apply (clarsimp simp: if_split)
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
@@ -1057,16 +1058,16 @@ lemma cancel_all_signals_invs:
    apply (wp cancel_all_invs_helper set_ntfn_valid_objs valid_irq_node_typ
              hoare_vcg_const_Ball_lift
         | wpc
-        | simp)+
+        | simp add: live_def)+
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
   apply (rule conjI)
    apply (fastforce simp: valid_obj_def valid_ntfn_def elim!: obj_at_valid_objsE)
   apply (rule conjI)
-   apply (fastforce elim!: if_live_then_nonz_capD)
+   apply (fastforce simp: live_def elim!: if_live_then_nonz_capD)
   apply (rule conjI)
    apply (fastforce simp: is_ntfn elim!: ko_at_weakenE)
   apply (rule conjI)
-   apply (fastforce simp: st_tcb_at_refs_of_rev
+  apply (fastforce simp: st_tcb_at_refs_of_rev
                     dest: bspec sym_refs_ko_atD
                     elim: st_tcb_ex_cap)
   apply (rule conjI[rotated])
@@ -1109,11 +1110,11 @@ lemma cancel_all_ipc_unlive[wp]:
   apply (rule hoare_seq_ext [OF _ get_endpoint_sp])
   apply (case_tac ep, simp_all add: set_endpoint_def get_ep_queue_def)
     apply wp
-    apply (clarsimp elim!: obj_at_weakenE)
+    apply (clarsimp simp: live_def elim!: obj_at_weakenE)
    apply (wp cancel_all_unlive_helper set_object_at_obj3 | simp only: obj_at_exst_update)+
-   apply clarsimp
+   apply (clarsimp simp: live_def)
   apply (wp cancel_all_unlive_helper set_object_at_obj3 | simp only: obj_at_exst_update)+
-  apply clarsimp
+  apply (clarsimp simp: live_def)
   done
 
 
@@ -1134,7 +1135,7 @@ lemma cancel_all_signals_unlive[wp]:
           | simp add: is_ntfn)+
     apply (simp add: set_notification_def)
     apply (wp get_object_wp obj_set_prop_at)
-  apply (auto simp: pred_tcb_at_def obj_at_def)
+  apply (auto simp: live_def pred_tcb_at_def obj_at_def)
   done
 
 
@@ -1184,7 +1185,8 @@ lemma cancel_badged_sends_filterM_helper':
   apply (thin_tac "tcb_at x s" for x s)
   apply (thin_tac "sym_refs (state_hyp_refs_of s)" for s)
   apply (frule singleton_eqD, clarify, drule state_refs_of_elemD)
-  apply (frule(1) if_live_then_nonz_capD, rule refs_of_live, clarsimp)
+  apply (frule(1) if_live_then_nonz_capD)
+  apply (rule refs_of_live, clarsimp)
   apply (clarsimp simp: st_tcb_at_refs_of_rev)
   apply (clarsimp simp: pred_tcb_def2 valid_idle_def)
   apply (rule conjI, clarsimp)
@@ -1195,7 +1197,7 @@ lemma cancel_badged_sends_filterM_helper':
   apply (erule delta_sym_refs)
    apply (auto dest!: get_tcb_ko_atD ko_at_state_refs_ofD symreftype_inverse'
                       refs_in_tcb_bound_refs
-               split: if_split_asm)
+               split: if_split_asm)[2]
   done
 
 lemmas cancel_badged_sends_filterM_helper
@@ -1226,7 +1228,7 @@ lemma cancel_badged_sends_invs[wp]:
    apply (subst obj_at_weakenE[where P'=is_ep], assumption)
     apply (clarsimp simp: is_ep_def)
    apply (frule(1) sym_refs_ko_atD, clarsimp)
-   apply (frule(1) if_live_then_nonz_capD, clarsimp+)
+   apply (frule(1) if_live_then_nonz_capD, (clarsimp simp: live_def)+)
    apply (erule(1) obj_at_valid_objsE)
    apply (clarsimp simp: valid_obj_def valid_ep_def st_tcb_at_refs_of_rev)
    apply (simp add: fun_upd_idem obj_at_def is_ep_def | subst fun_upd_def[symmetric])+

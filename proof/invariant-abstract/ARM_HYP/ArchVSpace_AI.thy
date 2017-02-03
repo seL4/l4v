@@ -2381,11 +2381,25 @@ lemma set_vcpu_zombies_final[wp]: "\<lbrace>zombies_final\<rbrace> set_vcpu p v 
   apply (clarsimp simp: obj_at_def)
   done
 
-lemma set_vcpu_if_live_then_nonz_cap[wp]:
-  "\<lbrace>if_live_then_nonz_cap\<rbrace> set_vcpu p v \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+lemma set_vcpu_if_live_then_nonz_cap_hyp_refs_of:
+  "\<lbrace>if_live_then_nonz_cap and obj_at (\<lambda>ko'. hyp_refs_of ko' = hyp_refs_of (ArchObj (VCPU v))) p\<rbrace>
+    set_vcpu p v \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: set_vcpu_def)
   apply (wp get_object_wp set_object_iflive)
-  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
+  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits, rule conjI, clarsimp)
+   apply (rule if_live_then_nonz_capD; simp add: obj_at_def)
+   apply (clarsimp simp: live_def hyp_live_def arch_live_def, rule_tac x=y in exI,
+         clarsimp simp: vcpu_tcb_refs_def split: option.splits)
+  apply (clarsimp simp: obj_at_def)
+  done
+
+lemma set_vcpu_if_live_then_nonz_cap[wp]:
+  "\<lbrace>if_live_then_nonz_cap and obj_at (\<lambda>ko'. live ko' = live (ArchObj (VCPU v))) p\<rbrace>
+    set_vcpu p v \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  apply (simp add: set_vcpu_def)
+  apply (wp get_object_wp set_object_iflive)
+  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits, rule conjI, clarsimp)
+   apply (rule if_live_then_nonz_capD; simp add: obj_at_def)
   apply (clarsimp simp: obj_at_def)
   done
 
@@ -2472,18 +2486,14 @@ lemma set_vcpu_sym_refs_refs_hyp[wp] :
   apply (clarsimp simp: hyp_refs_of_def)
   done
 
-lemma set_vcpu_vali_pspace[wp]:
+
+lemma set_vcpu_valid_pspace[wp]:
   "\<lbrace>valid_obj p (ArchObj (VCPU v))
     and valid_pspace
     and obj_at (\<lambda>ko'. hyp_refs_of ko' = hyp_refs_of (ArchObj (VCPU v))) p\<rbrace>
      set_vcpu p v
    \<lbrace>\<lambda>rv. valid_pspace\<rbrace>"
-  apply (simp add: valid_pspace_def pred_conj_def)
-  apply (subst conj_left_commute)
-  apply (subst conj_assoc[symmetric])
-  apply ((rule hoare_vcg_conj_lift[rotated])+ ; wp?)
-  apply simp+
-  done
+  by (wpsimp simp: valid_pspace_def pred_conj_def wp: set_vcpu_if_live_then_nonz_cap_hyp_refs_of)
 
 
 lemma set_vcpu_inv[wp]:

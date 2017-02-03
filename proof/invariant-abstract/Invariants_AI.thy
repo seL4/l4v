@@ -92,16 +92,20 @@ requalify_facts
   hyp_sym_refs_ko_atD
   state_hyp_refs_of_pspaceI
   state_hyp_refs_update
-  hyp_refs_of_live
-  hyp_refs_of_live_obj
+  hyp_refs_of_live'
+  hyp_refs_of_hyp_live_obj
+  hyp_refs_of_simps
   tcb_arch_ref_simps
+  hyp_live_tcb_simps
+  hyp_live_tcb_def
   wellformed_arch_pspace
   wellformed_arch_typ
 end
 
 lemmas [intro!] =  idle_global acap_rights_update_id
 
-lemmas [simp] =  acap_rights_update_id state_hyp_refs_update tcb_arch_ref_simps
+lemmas [simp] =  acap_rights_update_id state_hyp_refs_update
+                 tcb_arch_ref_simps hyp_live_tcb_simps hyp_refs_of_simps
 
 (* Checking that vs_lookup notation is installed *)
 
@@ -575,12 +579,18 @@ where
    | Notification ntfn => ntfn_q_refs_of (ntfn_obj ntfn) \<union> ntfn_bound_refs (ntfn_bound_tcb ntfn)
    | ArchObj ao        => {}"
 
-
-
 definition
   state_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set"
 where
  "state_refs_of s \<equiv> \<lambda>x. case (kheap s x) of Some ko \<Rightarrow> refs_of ko | None \<Rightarrow> {}"
+
+definition all_refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set"
+where "all_refs_of x \<equiv> refs_of x \<union> hyp_refs_of x"
+
+definition
+  state_all_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+ "state_all_refs_of s \<equiv> \<lambda>x. case (kheap s x) of Some ko \<Rightarrow> refs_of ko | None \<Rightarrow> {}"
 
 text "objects live in device_region or non_device_region"
 
@@ -592,14 +602,23 @@ where
 
 
 primrec
-  live :: "kernel_object \<Rightarrow> bool"
+  live' :: "kernel_object \<Rightarrow> bool"
 where
-  "live (CNode sz fun)      = False"
-| "live (TCB tcb)           = (bound (tcb_bound_notification tcb) \<or> (tcb_state tcb \<noteq> Inactive \<and>
+  "live' (CNode sz fun)      = False"
+| "live' (TCB tcb)           = (bound (tcb_bound_notification tcb) \<or> (tcb_state tcb \<noteq> Inactive \<and>
                                tcb_state tcb \<noteq> IdleThreadState))"
-| "live (Endpoint ep)       = (ep \<noteq> IdleEP)"
-| "live (Notification ntfn) = (bound (ntfn_bound_tcb ntfn) \<or> (\<exists>ts. ntfn_obj ntfn = WaitingNtfn ts))"
-| "live (ArchObj ao)        = False"
+| "live' (Endpoint ep)       = (ep \<noteq> IdleEP)"
+| "live' (Notification ntfn) = (bound (ntfn_bound_tcb ntfn) \<or> (\<exists>ts. ntfn_obj ntfn = WaitingNtfn ts))"
+| "live' (ArchObj ao)        = False"
+
+definition live :: "kernel_object \<Rightarrow> bool"
+where
+ "live ko \<equiv> case ko of
+     CNode sz fun      => False
+   | TCB tcb           => live' ko \<or> hyp_live ko
+   | Endpoint ep       => live' ko
+   | Notification ntfn => live' ko
+   | ArchObj ao        => hyp_live ko"
 
 fun
   zobj_refs :: "cap \<Rightarrow> obj_ref set"
@@ -1330,16 +1349,25 @@ lemma refs_of_live:
   "refs_of ko \<noteq> {} \<Longrightarrow> live ko"
   apply (cases ko, simp_all)
     apply (rename_tac tcb_ext)
-     apply (case_tac "tcb_state tcb_ext", simp_all)
+     apply (case_tac "tcb_state tcb_ext", simp_all add: live_def)
     apply (fastforce simp: tcb_bound_refs_def)+
   apply (rename_tac notification)
   apply (case_tac "ntfn_obj notification", simp_all)
    apply (fastforce simp: ntfn_bound_refs_def)+
   done
 
+lemma hyp_refs_of_live:
+  "hyp_refs_of ko \<noteq> {} \<Longrightarrow> live ko"
+  by (cases ko, simp_all add: live_def hyp_refs_of_live')
+
 lemma refs_of_live_obj:
   "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at live p s"
   by (fastforce simp: obj_at_def intro!: refs_of_live)
+
+lemma hyp_refs_of_live_obj:
+  "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; hyp_refs_of ko = {}\<rbrakk> \<Longrightarrow> False  \<rbrakk> \<Longrightarrow> obj_at live p s"
+  by (fastforce simp: obj_at_def intro!: hyp_refs_of_live)
+
 
 lemma if_live_then_nonz_capD:
   assumes x: "if_live_then_nonz_cap s" "obj_at P p s"
@@ -2309,7 +2337,7 @@ lemma a_type_ACapTableE:
     (!!cs. \<lbrakk>ko = CNode n cs; well_formed_cnode_n n cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: if_split_asm)
-  
+
 lemma a_type_AGarbageE:
   "\<lbrakk>a_type ko = AGarbage n;
     (!!cs. \<lbrakk>n \<ge> cte_level_bits; ko = CNode (n - cte_level_bits) cs; \<not>well_formed_cnode_n (n - cte_level_bits) cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>

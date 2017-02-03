@@ -970,7 +970,7 @@ lemma set_pd_iflive:
   set_pd p pd
   \<lbrace>\<lambda>_ s. if_live_then_nonz_cap s\<rbrace>"
   including unfold_objects
-  by (wpsimp simp: set_pd_def wp: get_object_wp set_object_iflive)
+  by (wpsimp simp: set_pd_def live_def hyp_live_def arch_live_def wp: get_object_wp set_object_iflive)
 
 
 lemma set_pd_zombies:
@@ -1140,7 +1140,7 @@ lemma set_pt_iflive:
   apply (simp add: set_pt_def)
   apply (wp get_object_wp set_object_iflive)
   apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
-  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: obj_at_def live_def hyp_live_def arch_live_def)
   done
 
 
@@ -1876,7 +1876,7 @@ lemma set_asid_pool_iflive [wp]:
   \<lbrace>\<lambda>_ s. if_live_then_nonz_cap s\<rbrace>"
   apply (wpsimp simp: set_asid_pool_def wp: get_object_wp set_object_iflive)
   apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
-  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: obj_at_def live_def hyp_live_def arch_live_def)
   done
 
 

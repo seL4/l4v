@@ -496,31 +496,10 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
 
 lemma set_mrs_state_hyp_refs_of[wp]:
   "\<lbrace>\<lambda> s. P (state_hyp_refs_of s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wpsimp simp: set_mrs_def zipWithM_x_mapM)
-     apply (rule conjI)
-      apply (rule impI)
-       apply (wp mapM_wp)
-       apply (case_tac x; wpsimp)
-      apply clarsimp
-      apply assumption
-     apply (rule impI)
-     apply (wp mapM_wp)
-      apply (case_tac x; wpsimp)
-     apply clarsimp
-    apply (wp set_object_wp)+
-  apply (clarsimp dest!: get_tcb_SomeD)
-  apply (frule state_hyp_refs_of_tcb_state_update)
-  sorry
-
-(*
-crunch state_hyp_refs_of[wp]: set_mrs "\<lambda> s. P (state_hyp_refs_of s)"
-  (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
-*)
-
+  by (wp set_mrs_thread_set_dmo thread_set_hyp_refs_trivial | simp)+
 
 crunch state_hyp_refs_of[wp, Ipc_AI_cont_assms]: do_ipc_transfer "\<lambda> s. P (state_hyp_refs_of s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)
-
 
 end
 

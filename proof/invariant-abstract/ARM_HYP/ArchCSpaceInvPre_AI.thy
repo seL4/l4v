@@ -314,15 +314,11 @@ lemma set_cap_hyp_refs_of [wp]:
   set_cap cp p
   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: set_cap_def set_object_def split_def)
-  apply (rule hoare_seq_ext [OF _ get_object_sp])
-  apply (case_tac obj, simp_all split del: if_split)
-   apply wp+
-   apply (clarsimp elim!: rsubst[where P=P])
-   apply (rule all_ext; clarsimp simp: state_hyp_refs_of_def obj_at_def hyp_refs_of_def)
-  apply (rule hoare_pre, wp)
-  apply (clarsimp simp: state_hyp_refs_of_def obj_at_def)
-  apply (clarsimp elim!: rsubst[where P=P] | rule all_ext | rule conjI |
-         clarsimp simp: state_hyp_refs_of_def obj_at_def hyp_refs_of_def)+
+  apply (wp get_object_wp | wpc)+
+  apply (auto elim!: rsubst[where P=P]
+               simp: ARM.state_hyp_refs_of_def obj_at_def
+             intro!: ext
+             split: if_split_asm)
   done
 
 lemma state_hyp_refs_of_revokable[simp]:

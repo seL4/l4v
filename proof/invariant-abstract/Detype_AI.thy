@@ -71,6 +71,7 @@ lemma state_refs_of_detype:
   "state_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else state_refs_of s x)"
   by (rule ext, simp add: state_refs_of_def detype_def)
 
+
 definition
   obj_reply_refs :: "cap \<Rightarrow> machine_word set"
 where
@@ -329,8 +330,8 @@ lemma descendants_range_imply_no_descendants:
   apply auto
   done
 
-locale detype_locale =   
-  fixes cap and ptr and s 
+locale detype_locale =
+  fixes cap and ptr and s
   assumes cap: "cte_wp_at (op = cap) ptr s"
   and untyped: "is_untyped_cap cap"
   and  nodesc: "descendants_range cap ptr s"
@@ -366,7 +367,9 @@ lemma ifunsafe: "if_unsafe_then_cap s"
 
 lemma globals: "valid_global_refs s"
   using invs by (simp add: invs_def valid_state_def)
-  
+
+
+(* this is should be true *)
 lemma state_refs: "state_refs_of (detype (untyped_range cap) s) = state_refs_of s"
   apply (rule ext, clarsimp simp add: state_refs_of_detype)
   apply (rule sym, rule equals0I, drule state_refs_of_elemD)
@@ -379,7 +382,7 @@ lemma idle: "idle_thread (detype (untyped_range cap) s) = idle_thread s"
 
 lemma valid_arch_caps: "valid_arch_caps s"
   using invs by (simp add: invs_def valid_state_def)
-    
+
   (* moreover *)
 lemma valid_arch_state: "valid_arch_state s" using invs
   by clarsimp
@@ -529,20 +532,23 @@ lemma valid_cap2:
     apply (drule has_reply_cap_cte_wpD)
     apply (drule valid_reply_capsD [OF _ vreply])
     apply (simp add: pred_tcb_at_def)
-    apply (fastforce dest: live_okE)
+    apply (fastforce simp: live_def dest: live_okE)
     done
-  
+
 (* invariants BEGIN *)
 
 named_theorems detype_invs_lemmas
 
 lemma refsym : "sym_refs (state_refs_of s)"
   using invs by (simp add: invs_def valid_state_def valid_pspace_def)
-  
+
+lemma hyprefsym : "sym_refs (state_hyp_refs_of s)"
+  using invs by (simp add: invs_def valid_state_def valid_pspace_def)
+
 lemma refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightarrow> refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
-  by (fastforce intro: refs_of_live dest!: sym_refs_ko_atD[OF _ refsym] live_okE)
-  
-lemma refs_of2: "\<And>obj p. kheap s p = Some obj 
+ by (fastforce intro: refs_of_live dest!: sym_refs_ko_atD[OF _ refsym] live_okE)
+
+lemma refs_of2: "\<And>obj p. kheap s p = Some obj
                      \<Longrightarrow> refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
   by (simp add: refs_of obj_at_def)
 
@@ -591,18 +597,16 @@ lemma pspace_aligned_detype[detype_invs_lemmas] :  "pspace_aligned (detype (unty
   apply (clarsimp simp: detype_def)
   done
 
-lemma sym_refs_detype[detype_invs_lemmas] : "sym_refs (state_refs_of (detype (untyped_range cap) s))"
+lemma sym_refs_detype[detype_invs_lemmas] :
+  "sym_refs (state_refs_of (detype (untyped_range cap) s))"
   using refsym by (simp add: state_refs)
 
 lemmas [detype_invs_lemmas] = sym_hyp_refs_detype
-(*
-lemma sym_hyp_refs_detype[detype_invs_lemmas] : "sym_refs (state_hyp_refs_of (detype (untyped_range cap) s))"
-  using hyp_refsym by (simp add: state_hyp_refs)
-  *)
+
 lemma pspace_distinct_detype[detype_invs_lemmas]: "pspace_distinct (detype (untyped_range cap) s)"
   apply (insert invs, drule invs_distinct)
   apply (auto simp: pspace_distinct_def)
-  done  
+  done
 
 lemma cut_tcb_detype[detype_invs_lemmas]: 
   assumes ct_act: "ct_active s" 
@@ -611,15 +615,13 @@ lemma cut_tcb_detype[detype_invs_lemmas]:
     apply (drule tcb_at_invs)
     apply (simp add: cur_tcb_def ct_in_state_def)
     apply (clarsimp simp: detype_def pred_tcb_at_def)
-    apply (drule live_okE)
-     apply fastforce
-    apply simp
+    apply (fastforce simp: live_def dest: live_okE)
     done
 
 lemma live_okE2: "\<And>obj p. \<lbrakk> kheap s p = Some obj; live obj \<rbrakk>
                       \<Longrightarrow> p \<notin> untyped_range cap"
   by (simp add: live_okE[where P=live] obj_at_def)
-  
+
 lemma untyped_mdb : "\<And>m. untyped_mdb m (caps_of_state s)
                     \<Longrightarrow> untyped_mdb m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
   apply (simp only: untyped_mdb_def)
@@ -723,7 +725,8 @@ lemma valid_refs_detype[detype_invs_lemmas]: "valid_global_refs (detype (untyped
   using globals
   by (simp add: valid_global_refs_def valid_refs_def glob_det)
     
-lemma valid_reply_caps_detype[detype_invs_lemmas]: "valid_reply_caps (detype (untyped_range cap) s)"
+lemma valid_reply_caps_detype[detype_invs_lemmas]:
+  "valid_reply_caps (detype (untyped_range cap) s)"
     using vreply
     apply (clarsimp simp: valid_reply_caps_def has_reply_cap_def)
     apply (rule conjI)
@@ -731,7 +734,7 @@ lemma valid_reply_caps_detype[detype_invs_lemmas]: "valid_reply_caps (detype (un
      apply (rule impI)
      apply (elim impE exE conjE, intro exI, assumption)
      apply (simp add: pred_tcb_at_def)
-     apply (fastforce dest: live_okE)
+     apply (fastforce simp: live_def dest: live_okE)
     apply (clarsimp simp: unique_reply_caps_def)
     done
 

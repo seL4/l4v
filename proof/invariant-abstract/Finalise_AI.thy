@@ -98,9 +98,9 @@ locale Finalise_AI_1 =
   "\<And> cap final.\<lbrace>invs and (valid_cap (ArchObjectCap cap) :: 'a state \<Rightarrow> bool)\<rbrace>
      arch_finalise_cap cap final
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  assumes obj_at_not_live_valid_arch_cap_strg:
+(*  assumes obj_at_not_live_valid_arch_cap_strg:
     "\<And>(s :: 'a state) cap r. (s \<turnstile> ArchObjectCap cap \<and> aobj_ref cap = Some r)
-          \<longrightarrow> obj_at (\<lambda>ko. \<not> live ko) r s"
+          \<longrightarrow> obj_at (\<lambda>ko. \<not> live ko) r s"*)
   assumes deleting_irq_handler_slot_not_irq_node:
     "\<And> irq sl.
     \<lbrace>if_unsafe_then_cap and valid_global_refs
@@ -146,6 +146,10 @@ text {* Properties about empty_slot *}
 definition
  "halted_if_tcb \<equiv> \<lambda>t s. tcb_at t s \<longrightarrow> st_tcb_at halted t s"
 
+definition
+ "dissociated_if_tcb \<equiv>
+     \<lambda>t s. tcb_at t s \<longrightarrow>
+          obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> (\<not> bound (tcb_arch_ref tcb))) t s"
 
 lemma halted_emptyable:
   "\<And>ref. halted_if_tcb t s \<Longrightarrow> emptyable (t, ref) s"
@@ -639,7 +643,7 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
   apply safe
   defer 3 defer 6
           apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
-                       simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def)[6]
+                       simp: live_def valid_ntfn_set_bound_None is_ntfn valid_obj_def)[6]
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
                    dest!: pred_tcb_at_tcb_at ko_at_state_refs_ofD
@@ -667,7 +671,7 @@ crunch (in Finalise_AI_1) invs[wp]: fast_finalise "invs"
 
 lemma cnode_at_unlive[elim!]:
   "s \<turnstile> cap.CNodeCap ptr bits gd \<Longrightarrow> obj_at (\<lambda>ko. \<not> live ko) ptr s"
-  by (clarsimp simp: valid_cap_def is_cap_table
+  by (clarsimp simp: live_def valid_cap_def is_cap_table
               elim!: obj_at_weakenE)
 
 
@@ -695,7 +699,7 @@ lemma tcb_cap_valid_imp_NullCap:
   done
 
 lemma a_type_arch_live:
-  "a_type ko = AArch tp \<Longrightarrow> \<not> live ko"
+  "a_type ko = AArch tp \<Longrightarrow> \<not> live' ko"
   by (simp add: a_type_def
          split: Structures_A.kernel_object.split_asm)
 
