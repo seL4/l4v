@@ -791,7 +791,7 @@ lemma get_vcpu_ko: "\<lbrace>Q\<rbrace> get_vcpu p \<lbrace>\<lambda>rv s. ko_at
   done
 
 lemma arch_thread_sym_refs_hyp[wp]:
-  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> dissociate_vcpu_tcb t vr \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> dissociate_vcpu_tcb vr t \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: dissociate_vcpu_tcb_def)
   apply (wp arch_thread_set_wp set_vcpu_wp)
   apply (clarsimp simp: if_apply_def2)
@@ -812,11 +812,11 @@ lemma arch_thread_sym_refs_hyp[wp]:
   done
 
 lemma dissociate_vcpu_tcb_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> dissociate_vcpu_tcb t vr \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  "\<lbrace>valid_objs\<rbrace> dissociate_vcpu_tcb vr t \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   by (clarsimp simp: dissociate_vcpu_tcb_def if_apply_def2 valid_obj_def valid_vcpu_def
      | wp hoare_drop_imp)+
 
-lemma dissociate_vcpu_tcb_invs[wp]: "\<lbrace>invs\<rbrace> dissociate_vcpu_tcb t vr \<lbrace>\<lambda>_. invs\<rbrace>"
+lemma dissociate_vcpu_tcb_invs[wp]: "\<lbrace>invs\<rbrace> dissociate_vcpu_tcb vr t \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (simp add: pred_conj_def)
   apply (rule hoare_vcg_conj_lift[rotated])+
