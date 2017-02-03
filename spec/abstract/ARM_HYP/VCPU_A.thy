@@ -87,7 +87,7 @@ where
     (val # _, VCPUCap p) \<Rightarrow> returnOk $ InvokeVCPU $ VCPUWriteRegister p val
   | (_, _) \<Rightarrow> throwError TruncatedMessage"
 
-definition invoke_vcpu_read_register :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+definition invoke_vcpu_read_register :: "obj_ref \<Rightarrow> (data list, 'z::state_ext) s_monad"
 where "invoke_vcpu_read_register v \<equiv> do
    ct \<leftarrow> gets cur_thread;
    cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
@@ -95,10 +95,7 @@ where "invoke_vcpu_read_register v \<equiv> do
       Some (vr, _) \<Rightarrow> vcpu_clean_invalidate_active
     | None \<Rightarrow> return ());
    val \<leftarrow> read_vcpu_register v;
-   as_user ct $ set_register (hd msg_registers) $ val;
-   let msg = MI 1 0 0 0 (* FIXME ARMHYP: is this correct? *)
-   in do set_message_info ct msg;
-         set_thread_state ct Running od
+   return [val]
 od"
 
 definition invoke_vcpu_write_register :: "obj_ref \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad"
@@ -107,9 +104,7 @@ where "invoke_vcpu_write_register v val \<equiv> do
    (case cur_v of
       Some (vr, _) \<Rightarrow> vcpu_clean_invalidate_active
     | None \<Rightarrow> return ());
-   write_vcpu_register v val;
-   ct \<leftarrow> gets cur_thread;
-   set_thread_state ct Restart
+   write_vcpu_register v val
    od"
 
 text {* VCPU : inject IRQ *}
@@ -157,20 +152,18 @@ where "invoke_vcpu_inject_irq vr index virq \<equiv> do
            vcpu \<leftarrow> get_vcpu vr;
            vcpuLR \<leftarrow> return (fun_upd (vgicLR $ vcpu_VGIC $ vcpu) index (Some virq));
            set_vcpu vr $ vcpu \<lparr> vcpu_VGIC := (vcpu_VGIC vcpu) \<lparr> vgicLR := vcpuLR \<rparr>\<rparr>
-           od);
-   ct \<leftarrow> gets cur_thread;
-   set_thread_state ct Restart
+           od)
    od"
 
 text {* VCPU perform and decode main functions *}
 
 
 definition
-perform_vcpu_invocation :: "vcpu_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
+perform_vcpu_invocation :: "vcpu_invocation \<Rightarrow> (data list,'z::state_ext) s_monad" where
 "perform_vcpu_invocation iv \<equiv> case iv of
-    VCPUSetTCB vcpu tcb \<Rightarrow> associate_vcpu_tcb tcb vcpu
+    VCPUSetTCB vcpu tcb \<Rightarrow> do associate_vcpu_tcb tcb vcpu ; return [] od
   | VCPUReadRegister vcpu \<Rightarrow> invoke_vcpu_read_register vcpu
-  | VCPUWriteRegister vcpu val \<Rightarrow> invoke_vcpu_write_register vcpu val
+  | VCPUWriteRegister vcpu val \<Rightarrow> do invoke_vcpu_write_register vcpu val ; return [] od
   | VCPUInjectIRQ vcpu _ _ \<Rightarrow> fail" (* FIXME ARMHYP: TODO *)
 
 
