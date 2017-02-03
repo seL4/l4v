@@ -164,7 +164,7 @@ perform_vcpu_invocation :: "vcpu_invocation \<Rightarrow> (data list,'z::state_e
     VCPUSetTCB vcpu tcb \<Rightarrow> do associate_vcpu_tcb tcb vcpu ; return [] od
   | VCPUReadRegister vcpu \<Rightarrow> invoke_vcpu_read_register vcpu
   | VCPUWriteRegister vcpu val \<Rightarrow> do invoke_vcpu_write_register vcpu val ; return [] od
-  | VCPUInjectIRQ vcpu _ _ \<Rightarrow> fail" (* FIXME ARMHYP: TODO *)
+  | VCPUInjectIRQ vcpu index vir \<Rightarrow> do invoke_vcpu_inject_irq vcpu index vir ; return [] od"
 
 
 definition decode_vcpu_invocation ::
