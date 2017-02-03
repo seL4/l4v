@@ -128,9 +128,10 @@ For running the standalone version of the C Parser you will additionally need
 
  * [MLton][7] ML compiler (package `mlton-compiler` on Ubuntu)
 
-For building the Haskell kernel model, GHC 7.8.x is currently required.
-Note that this repository does not contain the QEmu interface for actually
-running the model.
+For building the Haskell kernel model, the Haskell build tool [stack][] is
+required. The Haskell kernel `Makefile` will use `stack` to obtain appropriate
+versions of `ghc` and `cabal-install`. Note that this repository does not
+contain the QEmu interface for actually running the model.
 
 For running the C proofs, you need a working C preprocessor setup for the seL4
 repository.
@@ -167,6 +168,7 @@ need a gcc-compatible C pre-processor and python. Try the following steps:
 [7]: http://mlton.org                               "MLton ML compiler"
 [8]: http://sel4.systems/Info/GettingStarted/DebianToolChain.pml  "seL4 tool chain setup"
 [9]: https://pypi.python.org/pypi/setuptools        "python package installer"
+[stack]: https://haskellstack.org/
 
 
 Isabelle Setup
