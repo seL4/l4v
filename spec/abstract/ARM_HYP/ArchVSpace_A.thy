@@ -326,7 +326,7 @@ The only way to get lasting dissociation is to delete the TCB or the VCPU. *}
 (* ARMHYP: maybe these vcpu related definitions can go into a separate file? *)
 
 definition dissociate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where "dissociate_vcpu_tcb t vr \<equiv> do
+where "dissociate_vcpu_tcb vr t \<equiv> do
   t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
   v \<leftarrow> get_vcpu vr;
   when (t_vcpu \<noteq> Some vr \<or> vcpu_tcb v \<noteq> Some t) $ fail; (* TCB and VCPU not associated *)
@@ -335,14 +335,14 @@ where "dissociate_vcpu_tcb t vr \<equiv> do
 od"
 
 definition associate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where "associate_vcpu_tcb t vr \<equiv> do
+where "associate_vcpu_tcb vr t \<equiv> do
   t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
   case t_vcpu of
-    Some p \<Rightarrow> dissociate_vcpu_tcb t p
+    Some p \<Rightarrow> dissociate_vcpu_tcb p t
   | _ \<Rightarrow> return ();
   v \<leftarrow> get_vcpu vr;
   case vcpu_tcb v of
-    Some p \<Rightarrow> dissociate_vcpu_tcb p vr
+    Some p \<Rightarrow> dissociate_vcpu_tcb vr p
   | _ \<Rightarrow> return ();
   arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := Some vr \<rparr>) t;
   set_vcpu vr (v\<lparr> vcpu_tcb := Some t \<rparr>)
@@ -495,7 +495,7 @@ where
   "vcpu_finalise vr \<equiv> do
     v \<leftarrow> get_vcpu vr;
     case vcpu_tcb v of
-      Some t \<Rightarrow> dissociate_vcpu_tcb t vr
+      Some t \<Rightarrow> dissociate_vcpu_tcb vr t
     | None \<Rightarrow> return ();
     cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
     case cur_v of
