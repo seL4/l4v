@@ -2523,10 +2523,10 @@ crunch pspace_respects_device_region[wp]: as_user "pspace_respects_device_region
   (simp: crunch_simps wp: crunch_wps set_object_pspace_respect_device_region pspace_respects_device_region_dmo)
 
 context Ipc_AI_cont begin
-declare hyp_refs_of_simps[simp del]
 lemma ri_invs':
   fixes Q t cap is_blocking
   notes if_split[split del]
+  notes hyp_refs_of_simps[simp del]
   assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes set_notification_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> complete_signal a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"

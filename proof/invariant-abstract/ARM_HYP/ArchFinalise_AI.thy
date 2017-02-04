@@ -799,7 +799,7 @@ lemma dissociate_vcpu_tcb_valid_objs[wp]:
      | wp hoare_drop_imp)+
 
 
-lemma dissociate_vcpu_tcb_unlive:
+lemma dissociate_vcpu_tcb_unlive_hyp:
   "\<lbrace>tcb_at t\<rbrace> dissociate_vcpu_tcb vr t
        \<lbrace> \<lambda>_. obj_at (Not \<circ> hyp_live) vr and obj_at (Not \<circ> hyp_live) t \<rbrace>"
   apply (wpsimp simp: dissociate_vcpu_tcb_def arch_thread_set_def hyp_live_def
@@ -883,7 +883,7 @@ lemma vcpu_invalidate_active_ivs[wp]: "\<lbrace>invs\<rbrace> vcpu_invalidate_ac
 crunch invs[wp]: vcpu_finalise invs
   (ignore: dissociate_vcpu_tcb)
 
-lemma (* arch_finalise_cap_invs *)[wp,Finalise_AI_asms]: (* ARMHYP check *)
+lemma (* arch_finalise_cap_invs *)[wp,Finalise_AI_asms]:
   "\<lbrace>invs and valid_cap (ArchObjectCap cap)\<rbrace>
      arch_finalise_cap cap final
    \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -893,6 +893,74 @@ lemma (* arch_finalise_cap_invs *)[wp,Finalise_AI_asms]: (* ARMHYP check *)
   apply (clarsimp simp: valid_cap_def cap_aligned_def)
   apply (auto simp: mask_def vmsz_aligned_def)
   done
+
+crunch unlive[wp]: do_machine_op "obj_at (Not \<circ> live) r"
+
+lemma set_vcpu_unlive[wp]:
+   "\<lbrace> obj_at (Not \<circ> live) r and K (\<not> live (ArchObj (VCPU vcpu)))\<rbrace>
+     set_vcpu r (vcpu \<lparr>vcpu_sctlr := sctlr,
+                        vcpu_VGIC := vcpu_VGIC vcpu\<lparr>vgicHCR := hcr\<rparr>\<rparr>)
+     \<lbrace>\<lambda>_. obj_at (Not \<circ> live) r\<rbrace>"
+  apply (wpsimp wp: set_object_wp get_object_wp simp: set_vcpu_def)+
+  by (clarsimp simp: obj_at_def live_def hyp_live_def arch_live_def
+                  split: kernel_object.splits arch_kernel_obj.splits option.splits)
+
+
+lemma vcpu_diable_unlive_Some[wp]:
+  "\<lbrace>obj_at (Not \<circ> live) r \<rbrace>
+    vcpu_disable (Some r) \<lbrace>\<lambda>_. obj_at (Not \<circ> live) r\<rbrace>"
+  by (simp add: vcpu_disable_def | wpsimp wp: get_vcpu_wp simp: obj_at_def o_def)+
+
+lemma vcpu_diable_unlive_None[wp]:
+  "\<lbrace>obj_at (Not \<circ> live) r\<rbrace> vcpu_disable None \<lbrace>\<lambda>_. obj_at (Not \<circ> live) r \<rbrace>"
+  by (wpsimp wp: simp: vcpu_disable_def)+
+
+lemma vcpu_invalidate_active_unlive[wp]:
+  "\<lbrace>obj_at (Not \<circ> live) r\<rbrace> vcpu_invalidate_active \<lbrace>\<lambda>_. obj_at (Not \<circ> live) r\<rbrace>"
+  apply (simp add: vcpu_invalidate_active_def)
+  apply (wpsimp)+
+  by (clarsimp simp: o_def)
+
+lemma dissociate_vcpu_tcb_unlive_v:
+  "\<lbrace>\<top>\<rbrace> dissociate_vcpu_tcb vr t
+       \<lbrace> \<lambda>_. obj_at (Not \<circ> live) vr\<rbrace>"
+  apply (wpsimp simp: dissociate_vcpu_tcb_def arch_thread_set_def live_def hyp_live_def
+                wp: set_object_wp hoare_drop_imp set_vcpu_wp get_vcpu_wp arch_thread_get_wp)
+  apply (clarsimp simp: obj_at_def live_def hyp_live_def arch_live_def)
+  done
+
+lemma vcpu_finalise_unlive:
+  "\<lbrace>obj_at \<top> r\<rbrace> vcpu_finalise r
+       \<lbrace> \<lambda>_. obj_at (Not \<circ> live) r \<rbrace>"
+  apply (wpsimp simp: vcpu_finalise_def)
+  apply (wp dissociate_vcpu_tcb_unlive_v
+         hoare_vcg_conj_lift hoare_drop_imp)
+  apply (wp hoare_vcg_conj_lift hoare_vcg_imp_lift get_vcpu_wp)
+  apply (auto simp: obj_at_def live_def hyp_live_def arch_live_def)
+  done
+
+
+lemma arch_finalise_cap_vcpu:
+  notes strg = tcb_cap_valid_imp_NullCap
+               vcpu_finalise_unlive[simplified o_def]
+  notes simps = replaceable_def
+                is_cap_simps vs_cap_ref_def
+                no_cap_to_obj_with_diff_ref_Null o_def
+  notes wps = hoare_drop_imp[where R="%_. is_final_cap' cap" for cap]
+              valid_cap_typ
+  shows
+  "cap = VCPUCap r \<Longrightarrow> \<lbrace>\<lambda>s. s \<turnstile> cap.ArchObjectCap cap \<and>
+          x = is_final_cap' (cap.ArchObjectCap cap) s \<and>
+          pspace_aligned s \<and> valid_vspace_objs s \<and> valid_objs s \<and>
+          valid_asid_table (arm_asid_table (arch_state s)) s\<rbrace>
+     arch_finalise_cap cap x
+   \<lbrace>\<lambda>rv s. replaceable s sl rv (cap.ArchObjectCap cap)\<rbrace>"
+  apply (simp add: arch_finalise_cap_def)
+  apply (rule hoare_pre)
+  apply (wp wps | simp add: simps reachable_pg_cap_def| wpc | strengthen strg)+
+  apply (auto simp: valid_cap_simps obj_at_def)
+  done
+
 
 lemma obj_at_not_live_valid_arch_cap_strg [Finalise_AI_asms]:
   "(s \<turnstile> ArchObjectCap cap \<and> aobj_ref cap = Some r \<and> \<not> typ_at (AArch AVCPU) r s)
@@ -910,15 +978,6 @@ lemma obj_at_not_live_valid_arch_cap_strg' [Finalise_AI_asms]:
                      hyp_live_def arch_live_def
               split: arch_cap.split_asm if_splits)
 
-
-lemma arch_finalise_cap_vcpu:
-  "cap = VCPUCap r \<Longrightarrow> \<lbrace>\<lambda>s. s \<turnstile> cap.ArchObjectCap cap \<and>
-          x = is_final_cap' (cap.ArchObjectCap cap) s \<and>
-          pspace_aligned s \<and> valid_vspace_objs s \<and> valid_objs s \<and>
-          valid_asid_table (arm_asid_table (arch_state s)) s\<rbrace>
-     arch_finalise_cap cap x
-   \<lbrace>\<lambda>rv s. replaceable s sl rv (cap.ArchObjectCap cap)\<rbrace>"
-  sorry
 
 
 lemma arch_finalise_cap_replaceable[wp]:
@@ -1040,7 +1099,7 @@ lemma prepare_thread_delete_unlive_hyp:
      prepare_thread_delete ptr \<lbrace>\<lambda>rv. obj_at (Not \<circ> hyp_live) ptr\<rbrace>"
   apply (simp add: prepare_thread_delete_def set_thread_state_def set_object_def)
   apply (wpsimp wp:| simp only: obj_at_exst_update)+
-  apply (rule hoare_strengthen_post, (wpsimp wp: dissociate_vcpu_tcb_unlive)+)
+  apply (rule hoare_strengthen_post, (wpsimp wp: dissociate_vcpu_tcb_unlive_hyp)+)
   apply (wp arch_thread_get_wp , clarsimp simp: obj_at_def is_tcb_def hyp_live_def)
   done
 
