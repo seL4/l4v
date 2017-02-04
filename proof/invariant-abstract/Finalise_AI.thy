@@ -146,11 +146,6 @@ text {* Properties about empty_slot *}
 definition
  "halted_if_tcb \<equiv> \<lambda>t s. tcb_at t s \<longrightarrow> st_tcb_at halted t s"
 
-definition
- "dissociated_if_tcb \<equiv>
-     \<lambda>t s. tcb_at t s \<longrightarrow>
-          obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> (\<not> bound (tcb_arch_ref tcb))) t s"
-
 lemma halted_emptyable:
   "\<And>ref. halted_if_tcb t s \<Longrightarrow> emptyable (t, ref) s"
   by (simp add: halted_if_tcb_def emptyable_def)

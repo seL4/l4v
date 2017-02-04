@@ -471,15 +471,11 @@ lemma zombie_is_cap_toE_pre[CNodeInv_AI_assms]:
 
 crunch st_tcb_at_halted[wp]: prepare_thread_delete "st_tcb_at halted t"
 
-lemma prepare_thread_delited_dissociated_if_tcb[wp]:
-  "\<lbrace> tcb_at t \<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. dissociated_if_tcb t\<rbrace>"
-  sorry
-
-lemma finalise_cap_makes_halted_proof':
+lemma finalise_cap_makes_halted_proof:
   "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)
          and cte_wp_at (op = cap) slot\<rbrace>
     finalise_cap cap ex
-   \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs (fst rv). (halted_if_tcb t and dissociated_if_tcb t) s\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
   apply (case_tac cap, simp_all)
             apply (wp unbind_notification_valid_objs hoare_vcg_conj_lift
                  | clarsimp simp: o_def valid_cap_def cap_table_at_typ
@@ -487,27 +483,19 @@ lemma finalise_cap_makes_halted_proof':
                  | clarsimp simp: halted_if_tcb_def
                            split: option.split
                  | intro impI conjI
-                 | rule hoare_drop_imp
-                 | clarsimp simp: dissociated_if_tcb_def)+
+                 | rule hoare_drop_imp)+
    apply (drule_tac final_zombie_not_live; (assumption | simp add: invs_iflive)?)
    apply (clarsimp simp: pred_tcb_at_def is_tcb obj_at_def live_def, elim disjE)
-    apply (clarsimp; case_tac "tcb_state tcb"; simp)
-defer
+    apply (clarsimp; case_tac "tcb_state tcb"; simp)+
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all add: arch_finalise_cap_def)
       apply (wp
            | clarsimp simp: valid_cap_def obj_at_def is_tcb_def is_cap_table_def
                       split: option.splits bool.split
            | intro impI conjI)+
-  sorry
+  done
 
-
-lemma finalise_cap_makes_halted_proof [CNodeInv_AI_assms]:
-  "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)
-         and cte_wp_at (op = cap) slot\<rbrace>
-    finalise_cap cap ex
-   \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
-sorry
+lemmas finalise_cap_makes_halted = finalise_cap_makes_halted_proof
 
 crunch emptyable[wp, CNodeInv_AI_assms]: finalise_cap "emptyable sl"
   (simp: crunch_simps rule: emptyable_lift

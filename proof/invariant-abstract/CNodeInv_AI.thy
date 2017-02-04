@@ -186,12 +186,12 @@ locale CNodeInv_AI =
     "\<And>(s::'state_ext state) ptr zbits n m irqn.
       \<lbrakk> s \<turnstile> Zombie ptr zbits n; invs s; m < n \<rbrakk>
         \<Longrightarrow> (ptr, nat_to_cref (zombie_cte_bits zbits) m) \<in> cte_refs (Zombie ptr zbits n) irqn"
-  assumes finalise_cap_makes_halted:
+(*  assumes finalise_cap_makes_halted:
     "\<And>cap ex slot.
       \<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)
             and cte_wp_at (op = cap) slot\<rbrace>
         finalise_cap cap ex
-      \<lbrace>\<lambda>rv (s::'state_ext state). \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
+      \<lbrace>\<lambda>rv (s::'state_ext state). \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>" *)
   assumes finalise_cap_emptyable[wp]:
     "\<And>sl c f.
       \<lbrace>emptyable sl and (invs and valid_mdb)\<rbrace>
