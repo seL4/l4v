@@ -1831,6 +1831,20 @@ case \x of ((ASIDPoolCap { capASIDBase = b, capASIDPool = ptr }), True) -> ((Pag
 	in ->5
     else ->6
 
+case \x of ((ASIDPoolCap { capASIDBase = b, capASIDPool = ptr }), True) -> ((PageDirectoryCap { capPDMappedASID = Just a, capPDBasePtr = ptr }), True) -> ((PageTableCap { capPTMappedAddress = Just (a, v), capPTBasePtr = ptr }), True) -> ((cap@PageCap { capVPMappedAddress = Just (a, v), capVPSize = s, capVPBasePtr = ptr }), _) -> (_, _) ->  ---> let (cap, bl) = \x in
+    if isASIDPoolCap cap \<and> bl
+    then let b = capASIDBase cap; ptr = capASIDPool cap
+	in ->1
+    else if isPageDirectoryCap cap \<and> bl \<and> capPDMappedASID cap \<noteq> None
+    then let a = the (capPDMappedASID cap); ptr = capPDBasePtr cap
+	in ->2
+    else if isPageTableCap cap \<and> bl \<and> capPTMappedAddress cap \<noteq> None
+    then let (a, v) = the (capPTMappedAddress cap); ptr = capPTBasePtr cap
+        in ->3
+    else if isPageCap cap \<and> capVPMappedAddress cap \<noteq> None
+    then let (a, v) = the (capVPMappedAddress cap); s = capVPSize cap; ptr = capVPBasePtr cap
+        in ->4
+    else ->5
 
 case \x of cap@(PageDirectoryCap {}) -> cap@(PageTableCap {}) -> cap@(PageCap {}) -> ASIDControlCap -> cap@(ASIDPoolCap {}) -> (VCPUCap {}) ->   ---> let cap = \x in
     if isPageDirectoryCap cap
@@ -1855,7 +1869,4 @@ case \x of UntypedCap { capIsDevice = False } | capBlockSize untyped == objBits 
 case \x of UntypedCap {capIsDevice = False} | capBlockSize untyped == objBits pool -> _ ->  ---> if isUntypedCap \x \<and> (\<not> capIsDevice \x) \<and> (capBlockSize \x = objBits pool)
     then ->1
     else ->2
-
-
-
 
