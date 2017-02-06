@@ -28,7 +28,9 @@ This module contains operations on machine-specific object types for the ARM.
 > import SEL4.API.Invocation.ARM_HYP as ArchInv
 > import SEL4.Object.Structures
 > import SEL4.Kernel.VSpace.ARM_HYP
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > import SEL4.Object.VCPU.ARM_HYP
+#endif
 > import {-# SOURCE #-} SEL4.Object.TCB
 
 > import Data.Bits
@@ -111,7 +113,7 @@ Deletion of a final capability to a page table that has been mapped requires tha
 Deletion of any mapped frame capability requires the page table slot to be located and cleared, and the unmapped address to be flushed from the caches.
 
 > finaliseCap (cap@PageCap { capVPMappedAddress = Just (a, v),
->                        capVPSize = s, capVPBasePtr = ptr }) _ =
+>                            capVPSize = s, capVPBasePtr = ptr }) _ =
 #ifdef CONFIG_ARM_SMMU
 >     if capVPisIOSpace cap
 >       then error "FIXME ARMHYP TODO IO"
@@ -173,6 +175,7 @@ All other capabilities need no finalisation action.
 > sameObjectAs (a@PageCap { capVPBasePtr = ptrA }) (b@PageCap {}) =
 >     (ptrA == capVPBasePtr b) && (capVPSize a == capVPSize b)
 >         && (ptrA <= ptrA + bit (pageBitsForSize $ capVPSize a) - 1)
+>         && (capVPIsDevice a == capVPIsDevice b)
 > sameObjectAs a b = sameRegionAs a b
 
 \subsection{Creating New Capabilities}
@@ -297,9 +300,9 @@ Create an architecture-specific object.
 
 > capUntypedSize :: ArchCapability -> Word
 > capUntypedSize (PageCap {capVPSize = sz}) = bit (pageBitsForSize sz)
-> capUntypedSize (PageTableCap {}) = bit (ptBits + pteBits)
-> capUntypedSize (PageDirectoryCap {}) = bit (pdBits + pdeBits)
-> capUntypedSize (ASIDControlCap {}) = bit (asidHighBits + 2) -- FIXME ARMHYP C code returns 0... er what?
+> capUntypedSize (PageTableCap {}) = bit ptBits
+> capUntypedSize (PageDirectoryCap {}) = bit pdBits
+> capUntypedSize (ASIDControlCap {}) = bit (asidHighBits + 2)
 > capUntypedSize (ASIDPoolCap {}) = bit (asidLowBits + 2)
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > capUntypedSize (VCPUCap {}) = bit vcpuBits

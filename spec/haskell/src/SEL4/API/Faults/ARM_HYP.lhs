@@ -24,6 +24,10 @@ This module defines the encoding of arch-specific faults.
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.Object.TCB(asUser)
+> import Data.Bits
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> import SEL4.Machine.Hardware.ARM_HYP(addressTranslateS1CPR)
+#endif
 
 \end{impdetails}
 
@@ -35,10 +39,10 @@ in handleVMFault?
 > makeArchFaultMessage :: ArchFault -> PPtr TCB -> Kernel (Word, [Word])
 > makeArchFaultMessage (VMFault vptr archData) thread = do
 >     pc <- asUser thread getRestartPC
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->     return (4, pc:fromVPtr vptr:archData)
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     return (5, pc:fromVPtr vptr:archData)
 #else
->     upc <- withoutFailure $ doMachineOp (addressTranslateS1CPR pc)
+>     upc <- doMachineOp (addressTranslateS1CPR $ VPtr pc)
 >     let faddr = (upc .&. complement (mask pageBits)) .|.
 >                 (VPtr pc .&. mask pageBits)
 >     return (5, fromVPtr faddr:fromVPtr vptr:archData)
