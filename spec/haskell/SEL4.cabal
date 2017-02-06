@@ -170,6 +170,7 @@ Library
                             -fno-spec-constr -fno-warn-name-shadowing
                             -fno-warn-unrecognised-pragmas
                             -fno-warn-unused-binds
+                            -fno-warn-unused-imports -fno-warn-unused-matches
 
     cpp-options:
                             -- set via Setup.hs hook

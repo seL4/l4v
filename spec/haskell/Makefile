@@ -22,8 +22,8 @@ CUSTOM_BOOT_FILES = src/SEL4/Object/Structures.lhs-boot
 # GHC_PACKAGE_PATH first.
 CABAL=stack exec -- ./stack-path cabal
 
-# these warnings are useless during large Haskell updates
-GHC_DEV_OPTS=--ghc-options="-fno-warn-unused-matches -fno-warn-unused-imports"
+# warnings that are useless during large Haskell updates
+GHC_DEV_OPTS=--ghc-options=""
 
 all: build-arm-hyp-nosmmu
 # original value: build-arm pdf
@@ -40,13 +40,13 @@ build-arm: sandbox $(BOOT_FILES)
 
 build-arm-hyp: sandbox $(BOOT_FILES) $(CUSTOM_BOOT_FILES)
 	$(CABAL) configure --configure-option="arm-tk1" \
-	    --flags="ArchArmHyp -FFI" $(GHC_DEV_OPTS) \
+	    --flags="ArchArmHyp -FFI" \
 	    --builddir="dist/arm-hyp"
 	$(CABAL) build --builddir="dist/arm-hyp"
 
 build-arm-hyp-nosmmu: sandbox $(BOOT_FILES) $(CUSTOM_BOOT_FILES)
 	$(CABAL) configure --configure-option="arm-tk1-nosmmu" \
-	    --flags="ArchArmHyp -FFI" $(GHC_DEV_OPTS) \
+	    --flags="ArchArmHyp -FFI" \
 	    --builddir="dist/arm-hyp-nosmmu"
 	$(CABAL) build --builddir="dist/arm-hyp-nosmmu"
 
