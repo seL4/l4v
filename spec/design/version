@@ -1,8 +1,9 @@
 Built from git repo at /Users/kleing/verification/l4v/spec/haskell by kleing
 
 Generated from changeset:
-9668464 cleanup: remove accidentally declared const
+d08ee04 haskell: update documentation for building the Haskell kernel
 
 
 Warning - uncomitted changes used:
  M ../design/version
+ M src/SEL4.lhs

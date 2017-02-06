@@ -32,21 +32,5 @@ where
     activateThread
 od)"
 
-definition
-putUC :: "user_context \<Rightarrow> unit kernel"
-where
-"putUC uc\<equiv> (do
-    thread \<leftarrow> getCurThread;
-    asUser thread $ put uc
-od)"
-
-definition
-getUC :: "user_context kernel"
-where
-"getUC\<equiv> (do
-    thread \<leftarrow> getCurThread;
-    asUser thread get
-od)"
-
 
 end
