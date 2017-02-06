@@ -10,6 +10,12 @@
 
 This module defines instances of "PSpaceStorable" for ARM-specific kernel objects. This includes page table and page directory entries, and ASID pools.
 
+\begin{impdetails}
+
+> {-# LANGUAGE CPP, EmptyDataDecls, GeneralizedNewtypeDeriving #-}
+
+\end{impdetails}
+
 > module SEL4.Object.Instances.ARM where
 
 \begin{impdetails}

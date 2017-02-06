@@ -11,6 +11,12 @@
 This module defines the machine-specific interrupt handling routines for the ARM.
 Apparently ARM does not have any.
 
+\begin{impdetails}
+
+> {-# LANGUAGE CPP #-}
+
+\end{impdetails}
+
 > module SEL4.Object.Interrupt.ARM where
 
 \begin{impdetails}
@@ -20,6 +26,7 @@ Apparently ARM does not have any.
 > import SEL4.Object.Structures
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.ARM as ArchInv
+> import {-# SOURCE #-} SEL4.Object.Interrupt (setIRQState)
 
 \end{impdetails}
 
@@ -34,8 +41,10 @@ Apparently ARM does not have any.
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
 
 > handleReservedIRQ :: IRQ -> Kernel ()
-> handleReservedIRQ _ = return () -- handleReservedIRQ does nothing on ARM
+> handleReservedIRQ irq = do
+>     return () -- handleReservedIRQ does nothing on ARM
 
 > initInterruptController :: Kernel ()
-> initInterruptController = return ()
+> initInterruptController = do
+>     return ()
 

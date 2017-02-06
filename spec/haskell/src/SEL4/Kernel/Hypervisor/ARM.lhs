@@ -10,6 +10,12 @@
 
 The ARM target does not have any hypervisor support.
 
+\begin{impdetails}
+
+> {-# LANGUAGE CPP #-}
+
+\end{impdetails}
+
 > module SEL4.Kernel.Hypervisor.ARM where
 
 \begin{impdetails}

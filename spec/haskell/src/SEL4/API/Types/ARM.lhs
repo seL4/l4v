@@ -10,10 +10,13 @@
 
 This module contains an instance of the machine-specific kernel API for the ARM architecture.
 
+> {-# LANGUAGE CPP #-}
 > module SEL4.API.Types.ARM where
 
 > import SEL4.API.Types.Universal(APIObjectType, apiGetObjectSize)
 > import SEL4.Machine.Hardware.ARM
+> import Data.List (elemIndex)
+> import Data.Maybe (fromJust)
 
 There are three ARM-specific object types: virtual pages, page tables, and page directories.
 
@@ -32,23 +35,27 @@ There are three ARM-specific object types: virtual pages, page tables, and page 
 >     maxBound = PageDirectoryObject
 
 > instance Enum ObjectType where
->     fromEnum e = case e of
->         APIObjectType a -> fromEnum a
->         SmallPageObject -> apiMax + 1
->         LargePageObject -> apiMax + 2
->         SectionObject -> apiMax + 3
->         SuperSectionObject -> apiMax + 4
->         PageTableObject -> apiMax + 5
->         PageDirectoryObject -> apiMax + 6
->         where apiMax = fromEnum (maxBound :: APIObjectType)
+>     fromEnum e =
+>       case e of
+>           APIObjectType a -> fromEnum a
+>           _ -> apiMax + 1 + archToIndex e
+>           where apiMax = fromEnum (maxBound :: APIObjectType)
+>                 archToIndex c = fromJust $ elemIndex c
+>                     [SmallPageObject
+>                     ,LargePageObject
+>                     ,SectionObject
+>                     ,SuperSectionObject
+>                     ,PageTableObject
+>                     ,PageDirectoryObject
+>                     ]
 >     toEnum n
 >         | n <= apiMax = APIObjectType $ toEnum n
->         | n == apiMax + 1 = SmallPageObject
->         | n == apiMax + 2 = LargePageObject
->         | n == apiMax + 3 = SectionObject
->         | n == apiMax + 4 = SuperSectionObject
->         | n == apiMax + 5 = PageTableObject
->         | n == apiMax + 6 = PageDirectoryObject
+>         | n == fromEnum SmallPageObject = SmallPageObject
+>         | n == fromEnum LargePageObject = LargePageObject
+>         | n == fromEnum SectionObject = SectionObject
+>         | n == fromEnum SuperSectionObject = SuperSectionObject
+>         | n == fromEnum PageTableObject = PageTableObject
+>         | n == fromEnum PageDirectoryObject = PageDirectoryObject
 >         | otherwise = error "toEnum out of range for ARM.ObjectType"
 >         where apiMax = fromEnum (maxBound :: APIObjectType)
 

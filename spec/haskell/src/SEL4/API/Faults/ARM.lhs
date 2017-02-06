@@ -10,6 +10,7 @@
 
 This module defines the encoding of arch-specific faults.
 
+> {-# LANGUAGE CPP #-}
 > module SEL4.API.Faults.ARM where
 
 \begin{impdetails}
@@ -18,6 +19,7 @@ This module defines the encoding of arch-specific faults.
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.Object.TCB(asUser)
+> import Data.Bits
 
 \end{impdetails}
 

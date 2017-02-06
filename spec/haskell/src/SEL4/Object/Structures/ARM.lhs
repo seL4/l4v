@@ -14,7 +14,7 @@ This module contains the physical memory model's representations of the ARM-spec
 
 This module makes use of the GHC extension allowing declaration of types with no constructors, so GHC language extensions are enabled.
 
-> {-# LANGUAGE EmptyDataDecls, GeneralizedNewtypeDeriving #-}
+> {-# LANGUAGE CPP, EmptyDataDecls, GeneralizedNewtypeDeriving #-}
 
 \end{impdetails}
 
@@ -25,8 +25,10 @@ This module makes use of the GHC extension allowing declaration of types with no
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware.ARM
 > import Data.Array
-> import Data.Word(Word32)
+> import Data.Helpers
+> import Data.Word(Word32, Word16)
 > import Data.Bits
+> import {-# SOURCE #-} SEL4.Object.Structures
 
 \end{impdetails}
 
@@ -66,8 +68,8 @@ The ARM kernel stores one ARM-specific type of object in the PSpace: ASID pools,
 > archObjSize ::  ArchKernelObject -> Int
 > archObjSize a = case a of 
 >                 KOASIDPool _ -> pageBits
->                 KOPTE _ -> 2 
->                 KOPDE _ -> 2
+>                 KOPTE _ -> pteBits
+>                 KOPDE _ -> pdeBits
 
 \subsection{Threads}
 
@@ -76,11 +78,13 @@ this state. The thread's saved user-level context, which is expected to be
 present on all platforms is stored here.
 
 > data ArchTCB = ArchThread {
->         atcbContext :: UserContext }
+>         atcbContext :: UserContext
+>         }
 >     deriving Show
 
 > newArchTCB = ArchThread {
->     atcbContext = newContext }
+>     atcbContext = newContext
+>     }
 
 > atcbContextSet :: UserContext -> ArchTCB -> ArchTCB
 > atcbContextSet uc atcb = atcb { atcbContext = uc }

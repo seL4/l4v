@@ -24,7 +24,7 @@ This module defines the low-level ARM hardware interface.
 
 > import Control.Monad.Reader
 > import Data.Bits
-> import Data.Word(Word8)
+> import Data.Word(Word8, Word32)
 > import Data.Ix
 
 \end{impdetails}
@@ -524,11 +524,15 @@ The following types are Haskell representations of an entry in an ARMv6 page tab
 
 ARM page directories and page tables occupy four frames and one quarter of a frame, respectively.
 
-> pdBits :: Int
-> pdBits = pageBits + 2
+> pteBits = (2 :: Int)
+> pdeBits = (2 :: Int)
+> pdBits = (12 :: Int) + pdeBits
+> ptBits = (8 :: Int) + pteBits
 
-> ptBits :: Int
-> ptBits = pageBits - 2
+> pteSize :: Int
+> pteSize = bit pteBits
+> pdeSize :: Int
+> pdeSize = bit pdeBits
 
 > cacheLineBits = Platform.cacheLineBits
 > cacheLine = Platform.cacheLine

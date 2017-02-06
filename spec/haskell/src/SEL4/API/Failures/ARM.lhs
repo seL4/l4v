@@ -10,6 +10,7 @@
 
 This module defines the encoding of arch-specific faults.
 
+> {-# LANGUAGE CPP #-}
 > module SEL4.API.Failures.ARM where
 
 \begin{impdetails}

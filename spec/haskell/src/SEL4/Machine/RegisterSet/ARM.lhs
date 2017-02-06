@@ -10,6 +10,12 @@
 
 This module defines the ARM register set.
 
+\begin{impdetails}
+
+> {-# LANGUAGE CPP, GeneralizedNewtypeDeriving #-}
+
+\end{impdetails}
+
 > module SEL4.Machine.RegisterSet.ARM where
 
 \begin{impdetails}

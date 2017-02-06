@@ -14,7 +14,7 @@ This module defines the machine-specific invocations for the ARM.
 
 This module makes use of the GHC extension allowing data types with no constructors.
 
-> {-# LANGUAGE EmptyDataDecls #-}
+> {-# LANGUAGE EmptyDataDecls, CPP #-}
 
 \end{impdetails}
 
@@ -27,6 +27,8 @@ This module makes use of the GHC extension allowing data types with no construct
 > import SEL4.Object.Structures
 > import SEL4.API.InvocationLabels
 > import SEL4.API.InvocationLabels.ARM
+
+> import Data.Word(Word8,Word16,Word32)
 
 \end{impdetails}
 

@@ -9,7 +9,13 @@
 %
 
 This module contains the architecture-specific kernel global data for the ARM architecture.
- 
+
+\begin{impdetails}
+
+> {-# LANGUAGE CPP #-}
+
+\end{impdetails}
+
 > module SEL4.Model.StateData.ARM where
 
 \begin{impdetails}

@@ -14,7 +14,7 @@ This module defines the machine-specific invocations for the ARM.
 
 This module makes use of the GHC extension allowing data types with no constructors.
 
-> {-# LANGUAGE EmptyDataDecls #-}
+> {-# LANGUAGE CPP, EmptyDataDecls #-}
 
 \end{impdetails}
 

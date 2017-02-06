@@ -10,6 +10,12 @@
 
 This module contains operations on machine-specific object types for the ARM.
 
+\begin{impdetails}
+
+> {-# LANGUAGE CPP #-}
+
+\end{impdetails}
+
 > module SEL4.Object.ObjectType.ARM where
 
 \begin{impdetails}
@@ -22,6 +28,7 @@ This module contains operations on machine-specific object types for the ARM.
 > import SEL4.API.Invocation.ARM as ArchInv
 > import SEL4.Object.Structures
 > import SEL4.Kernel.VSpace.ARM
+> import {-# SOURCE #-} SEL4.Object.TCB
 
 > import Data.Bits
 
@@ -93,11 +100,11 @@ Deletion of a final capability to a page table that has been mapped requires tha
 
 Deletion of any mapped frame capability requires the page table slot to be located and cleared, and the unmapped address to be flushed from the caches.
 
-> finaliseCap (PageCap { capVPMappedAddress = Just (a, v),
->                        capVPSize = s, capVPBasePtr = ptr }) _
->     = do
->         unmapPage s a v ptr
->         return NullCap
+> finaliseCap (cap@PageCap { capVPMappedAddress = Just (a, v),
+>                            capVPSize = s, capVPBasePtr = ptr }) _ =
+>            do
+>               unmapPage s a v ptr
+>               return NullCap
 
 All other capabilities need no finalisation action.
 
@@ -146,7 +153,8 @@ Create an architecture-specific object.
 > createObject :: ObjectType -> PPtr () -> Int -> Bool -> Kernel ArchCapability
 > createObject t regionBase _ isDevice =
 >     let funupd = (\f x v y -> if y == x then v else f y) in
->     let pointerCast = PPtr . fromPPtr
+>     let pointerCast = PPtr . fromPPtr in
+>     let mkPageCap = \sz -> PageCap isDevice (pointerCast regionBase) VMReadWrite sz Nothing
 >     in case t of
 >         Arch.Types.APIObjectType _ ->
 >             fail "Arch.createObject got an API type"
@@ -155,29 +163,25 @@ Create an architecture-specific object.
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSmallPage)})
->             return $! PageCap isDevice (pointerCast regionBase)
->                   VMReadWrite ARMSmallPage Nothing
+>             return $! mkPageCap ARMSmallPage
 >         Arch.Types.LargePageObject -> do
 >             placeNewDataObject regionBase 4 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMLargePage)})
->             return $! PageCap isDevice (pointerCast regionBase)
->                   VMReadWrite ARMLargePage Nothing
+>             return $! mkPageCap ARMLargePage
 >         Arch.Types.SectionObject -> do
 >             placeNewDataObject regionBase 8 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSection)})
->             return $! PageCap isDevice (pointerCast regionBase)
->                   VMReadWrite ARMSection Nothing
+>             return $! mkPageCap ARMSection
 >         Arch.Types.SuperSectionObject -> do
 >             placeNewDataObject regionBase 12 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSuperSection)})
->             return $! PageCap isDevice (pointerCast regionBase)
->                   VMReadWrite ARMSuperSection Nothing
+>             return $! mkPageCap ARMSuperSection
 >         Arch.Types.PageTableObject -> do
 >             let ptSize = ptBits - objBits (makeObject :: PTE)
 >             placeNewObject regionBase (makeObject :: PTE) ptSize
@@ -198,10 +202,14 @@ Create an architecture-specific object.
 > decodeInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError ArchInv.Invocation
-> decodeInvocation = decodeARMMMUInvocation
+> decodeInvocation label args capIndex slot cap extraCaps =
+>     case cap of
+>        _ -> decodeARMMMUInvocation label args capIndex slot cap extraCaps
 
 > performInvocation :: ArchInv.Invocation -> KernelP [Word]
-> performInvocation = performARMMMUInvocation
+> performInvocation i =
+>     case i of
+>                  _ -> performARMMMUInvocation i
 
 \subsection{Helper Functions}
 
@@ -213,11 +221,11 @@ Create an architecture-specific object.
 > capUntypedPtr (ASIDPoolCap { capASIDPool = PPtr p }) = PPtr p
 
 > capUntypedSize :: ArchCapability -> Word
-> capUntypedSize (PageCap {capVPSize = sz}) = 1 `shiftL` pageBitsForSize sz
-> capUntypedSize (PageTableCap {}) = 1 `shiftL` 10
-> capUntypedSize (PageDirectoryCap {}) = 1 `shiftL` 14
-> capUntypedSize (ASIDControlCap {}) = 1 `shiftL` (asidHighBits + 2)
-> capUntypedSize (ASIDPoolCap {}) = 1 `shiftL` (asidLowBits + 2)
+> capUntypedSize (PageCap {capVPSize = sz}) = bit (pageBitsForSize sz)
+> capUntypedSize (PageTableCap {}) = bit ptBits
+> capUntypedSize (PageDirectoryCap {}) = bit pdBits
+> capUntypedSize (ASIDControlCap {}) = bit (asidHighBits + 2)
+> capUntypedSize (ASIDPoolCap {}) = bit (asidLowBits + 2)
 
 
 No arch-specific thread deletion operations needed on ARM platform.

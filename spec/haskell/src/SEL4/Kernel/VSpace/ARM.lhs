@@ -10,6 +10,8 @@
 
 This module defines the handling of the ARM hardware-defined page tables.
 
+> {-# LANGUAGE CPP #-}
+
 > module SEL4.Kernel.VSpace.ARM where
 
 \begin{impdetails}
@@ -83,8 +85,6 @@ However we assume that the result of getMemoryRegions is actually [0,1<<24] and 
 
 >     let baseoffset = kernelBase `shiftR` pageBitsForSize (ARMSection)
 
->     let pdeBits = objBits (undefined :: PDE)
->     let pteBits = objBits (undefined :: PTE)
 >     let ptSize = ptBits - pteBits
 >     let pdSize = pdBits - pdeBits
 >     globalPD <- gets $ armKSGlobalPD . ksArchState
@@ -122,8 +122,6 @@ Helper function used above to create PDE for Section:
 
 > createSectionPDE :: VPtr -> Kernel () 
 > createSectionPDE offset = do
->     let pdeBits = objBits (undefined :: PDE)
->     let pteBits = objBits (undefined :: PTE)
 >     globalPD <- gets $ armKSGlobalPD . ksArchState
 >     let virt = fromVPtr $ offset `shiftL` pageBitsForSize (ARMSection)
 >     let phys = addrFromPPtr $ PPtr virt
@@ -417,7 +415,6 @@ When a new page directory is created, the kernel copies all of the global mappin
 > copyGlobalMappings :: PPtr PDE -> Kernel ()
 > copyGlobalMappings newPD = do
 >     globalPD <- gets (armKSGlobalPD . ksArchState)
->     let pdeBits = objBits (undefined :: PDE)
 >     let pdSize = 1 `shiftL` (pdBits - pdeBits)
 >     forM_ [fromVPtr kernelBase `shiftR` 20 .. pdSize - 1] $ \index -> do
 >         let offset = PPtr index `shiftL` pdeBits
@@ -427,6 +424,13 @@ When a new page directory is created, the kernel copies all of the global mappin
 \subsection{Creating and Updating Mappings}
 
 When a frame is being mapped, or an existing mapping updated, the following function is used to locate the page table or page directory slots that will be updated and to construct the entry that will be written into them.
+
+> largePagePTEOffsets :: [PPtr PTE]
+> largePagePTEOffsets = [0, PPtr pts .. PPtr (15 `shiftL` pteBits)]
+>     where pts = bit pteBits
+> superSectionPDEOffsets :: [PPtr PDE]
+> superSectionPDEOffsets = [0, PPtr pds .. PPtr (15 `shiftL` pdeBits)]
+>     where pds = bit pdeBits
 
 > createMappingEntries :: PAddr -> VPtr ->
 >     VMPageSize -> VMRights -> VMAttributes -> PPtr PDE ->
@@ -447,7 +451,7 @@ When a frame is being mapped, or an existing mapping updated, the following func
 >         pteCacheable = armPageCacheable attrib,
 >         pteGlobal = False,
 >         pteExecuteNever = armExecuteNever attrib,
->         pteRights = vmRights }, [p, p + 4 .. p + 60])
+>         pteRights = vmRights }, map (+p) largePagePTEOffsets)
 >
 > createMappingEntries base vptr ARMSection vmRights attrib pd = do
 >     let p = lookupPDSlot pd vptr
@@ -468,7 +472,7 @@ When a frame is being mapped, or an existing mapping updated, the following func
 >         pdeCacheable = armPageCacheable attrib,
 >         pdeGlobal = False,
 >         pdeExecuteNever = armExecuteNever attrib,
->         pdeRights = vmRights }, [p, p + 4 .. p + 60])
+>         pdeRights = vmRights }, map (+p) superSectionPDEOffsets)
 
 The following function is called before creating or modifying mappings in a page table or page directory, and is responsible for ensuring that the mapping is safe --- that is, that inserting it will behave predictably and will not damage the hardware. The ARMv6 specifications require that there are never two mappings of different sizes at any virtual address in the active address space, so this function will throw a fault if the requested operation would change the size of the mapping of any existing valid entry.
 
@@ -608,8 +612,8 @@ The "lookupPTSlot" function locates the page table slot that maps a given virtua
 
 > lookupPTSlotFromPT :: PPtr PTE -> VPtr -> Kernel (PPtr PTE)
 > lookupPTSlotFromPT pt vptr = do
->     let ptIndex = fromVPtr $ vptr `shiftR` 12 .&. 0xff
->     let ptSlot = pt + (PPtr $ ptIndex `shiftL` 2)
+>     let ptIndex = fromVPtr $ vptr `shiftR` pageBits .&. mask (ptBits - pteBits)
+>     let ptSlot = pt + (PPtr $ ptIndex `shiftL` pteBits)
 >     checkPTAt pt
 >     return ptSlot
 
@@ -617,8 +621,8 @@ Similarly, "lookupPDSlot" locates a slot in the top-level page directory. Howeve
 
 > lookupPDSlot :: PPtr PDE -> VPtr -> PPtr PDE
 > lookupPDSlot pd vptr =
->     let pdIndex = fromVPtr $ vptr `shiftR` 20
->     in pd + (PPtr $ pdIndex `shiftL` 2)
+>     let pdIndex = fromVPtr $ vptr `shiftR` (pageBits + ptBits - pteBits)
+>     in pd + (PPtr $ pdIndex `shiftL` pdeBits)
 
 \subsubsection{Handling Faults}
 
@@ -716,11 +720,11 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >             p <- lookupPTSlot pd vptr
 >             checkMappingPPtr ptr size (Left p)
 >             withoutFailure $ do
->                 let slots = map (+p) [0, 4 .. 60]
+>                 let slots = map (+p) largePagePTEOffsets
 >                 mapM (flip storePTE InvalidPTE) slots
 >                 doMachineOp $
 >                     cleanCacheRange_PoU (VPtr $ fromPPtr $ (head slots))
->                                         (VPtr $ (fromPPtr (last slots)) + (bit (objBits (undefined :: PTE)) - 1 ))
+>                                         (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1 ))
 >                                         (addrFromPPtr (head slots))
 >         ARMSection -> do
 >             let p = lookupPDSlot pd vptr
@@ -732,11 +736,11 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >             let p = lookupPDSlot pd vptr
 >             checkMappingPPtr ptr size (Right p)
 >             withoutFailure $ do
->                 let slots = map (+p) [0, 4 .. 60]
+>                 let slots = map (+p) superSectionPDEOffsets
 >                 mapM (flip storePDE InvalidPDE) slots
 >                 doMachineOp $
 >                     cleanCacheRange_PoU (VPtr $ fromPPtr $ (head slots))
->                                         (VPtr $ (fromPPtr  (last slots)) + (bit (objBits (undefined :: PDE)) - 1))
+>                                         (VPtr $ (fromPPtr  (last slots)) + (bit pdeBits - 1))
 >                                         (addrFromPPtr (head slots))
 >     withoutFailure $ flushPage size pd asid vptr
 
@@ -791,7 +795,8 @@ If the current thread has no page directory, or if it has an invalid ASID, the h
 >                 pd' <- findPDForASID asid
 >                 when (pd /= pd') $ do
 >                     throw InvalidRoot
->                 withoutFailure $ armv_contextSwitch pd asid
+>                 withoutFailure $ do
+>                     armv_contextSwitch pd asid
 >             _ -> throw InvalidRoot)
 >         (\_ -> do
 >             case threadRoot of
@@ -1105,15 +1110,16 @@ Note that these capabilities cannot be copied until they have been mapped, so an
 >                 throw $ InvalidArgument 0
 >             pdCheck <- lookupErrorOnFailure False $ findPDForASID asid
 >             when (pdCheck /= pd) $ throw $ InvalidCapability 1
->             let pdIndex = vaddr `shiftR` 20
->             let vaddr' = pdIndex `shiftL` 20
->             let pdSlot = pd + (PPtr $ pdIndex `shiftL` 2)
+>             let pdIndex = vaddr `shiftR` (pageBits + ptBits - pteBits)
+>             let vaddr' = pdIndex `shiftL` (pageBits + ptBits - pteBits)
+>             let pdSlot = pd + (PPtr $ pdIndex `shiftL` pdeBits)
 >             oldpde <- withoutFailure $ getObject pdSlot
 >             unless (oldpde == InvalidPDE) $ throw DeleteFirst
 >             let pde = PageTablePDE {
->                     pdeTable = addrFromPPtr $ capPTBasePtr cap,
->                     pdeParity = armParityEnabled $ attribsFromWord attr,
->                     pdeDomain = 0 }
+>                     pdeTable = addrFromPPtr $ capPTBasePtr cap
+>                     ,pdeParity = armParityEnabled $ attribsFromWord attr
+>                     ,pdeDomain = 0
+>                     }
 >             return $ InvokePageTable $ PageTableMap {
 >                 ptMapCap = ArchObjectCap $
 >                     cap { capPTMappedAddress = Just (asid, VPtr vaddr') },
@@ -1185,9 +1191,11 @@ Virtual page capabilities may each represent a single mapping into a page table.
 >                 pageRemapASID = asidCheck,
 >                 pageRemapEntries = entries }
 >         (ArchInvocationLabel ARMPageRemap, _, _) -> throw TruncatedMessage
->         (ArchInvocationLabel ARMPageUnmap, _, _) -> return $ InvokePage $ PageUnmap {
->                 pageUnmapCap = cap,
->                 pageUnmapCapSlot = cte }
+>         (ArchInvocationLabel ARMPageUnmap, _, _) ->
+>                 return $
+>                               InvokePage $ PageUnmap {
+>                                              pageUnmapCap = cap,
+>                                              pageUnmapCapSlot = cte }
 >         (ArchInvocationLabel ARMPageClean_Data, _, _) -> decodeARMPageFlush label args cap
 >         (ArchInvocationLabel ARMPageInvalidate_Data, _, _) -> decodeARMPageFlush label args cap
 >         (ArchInvocationLabel ARMPageCleanInvalidate_Data, _, _) -> decodeARMPageFlush label args cap
@@ -1203,7 +1211,7 @@ The ASID control capability refers to the top level of a global two-level table 
 >         (ArchInvocationLabel ARMASIDControlMakePool, index:depth:_,
 >                 (untyped,parentSlot):(croot,_):_) -> do
 >             asidTable <- withoutFailure $ gets (armKSASIDTable . ksArchState)
->             let free = filter (\(x,y) -> x <= (1 `shiftL` asidHighBits) - 1 && isNothing y) $ assocs asidTable
+>             let free = filter (\(x,y) -> x <= (bit asidHighBits) - 1 && isNothing y) $ assocs asidTable
 >             when (null free) $ throw DeleteFirst
 >             let base = (fst $ head free) `shiftL` asidLowBits
 >             let pool = makeObject :: ASIDPool
@@ -1238,7 +1246,7 @@ ASID pool capabilities are used to allocate unique address space identifiers for
 >                     let Just p = poolPtr
 >                     when (p /= capASIDPool cap) $ throw $ InvalidCapability 0
 >                     ASIDPool pool <- withoutFailure $ getObject $ p
->                     let free = filter (\(x,y) -> x <=  (1 `shiftL` asidLowBits) - 1
+>                     let free = filter (\(x,y) -> x <=  (bit asidLowBits) - 1
 >                                                  && x + base /= 0 && isNothing y) $ assocs pool
 >                     when (null free) $ throw DeleteFirst
 >                     let asid = fst $ head free
@@ -1257,7 +1265,7 @@ ASID pool capabilities are used to allocate unique address space identifiers for
 >         pd <- lookupErrorOnFailure False $ findPDForASID asid
 >         when (end <= start) $ 
 >             throw $ InvalidArgument 1
->         let pageSize = 1 `shiftL` pageBitsForSize (capVPSize cap)
+>         let pageSize = bit (pageBitsForSize (capVPSize cap))
 >         let pageBase = addrFromPPtr $ capVPBasePtr cap
 >         when (start >= pageSize || end > pageSize) $
 >             throw $ InvalidArgument 0
@@ -1328,12 +1336,11 @@ Don't flush an empty range.
 >         Just (asid, vaddr) -> do
 >             unmapPageTable asid vaddr (capPTBasePtr cap)
 >             let ptr = capPTBasePtr cap
->             let pteBits = objBits InvalidPTE
 >             let slots = [ptr, ptr + bit pteBits .. ptr + bit ptBits - 1]
 >             mapM_ (flip storePTE InvalidPTE) slots
 >             doMachineOp $
 >                 cleanCacheRange_PoU (VPtr $ fromPPtr $ ptr)
->                                     (VPtr $ fromPPtr $ (ptr + (1 `shiftL` ptBits) - 1))
+>                                     (VPtr $ fromPPtr $ (ptr + bit ptBits - 1))
 >                                     (addrFromPPtr ptr)
 >         Nothing -> return ()
 >     ArchObjectCap cap <- getSlotCap ctSlot
@@ -1364,7 +1371,7 @@ the PT/PD is consistent.
 >             mapM (flip storePTE pte) slots
 >             doMachineOp $
 >                 cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
->                                     (VPtr $ (fromPPtr (last slots)) + (bit (objBits (undefined::PTE)) - 1))
+>                                     (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1))
 >                                     (addrFromPPtr (head slots))
 >             when tlbFlush $ invalidateTLBByASID asid
 >         Right (pde, slots) -> do
@@ -1372,7 +1379,7 @@ the PT/PD is consistent.
 >             mapM (flip storePDE pde) slots
 >             doMachineOp $
 >                 cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
->                                     (VPtr $ (fromPPtr (last slots)) + (bit (objBits (undefined::PDE)) - 1))
+>                                     (VPtr $ (fromPPtr (last slots)) + (bit pdeBits - 1))
 >                                     (addrFromPPtr (head slots))
 >             when tlbFlush $ invalidateTLBByASID asid
 >
@@ -1381,7 +1388,7 @@ the PT/PD is consistent.
 >     mapM (flip storePTE pte) slots
 >     doMachineOp $
 >         cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
->                             (VPtr $ (fromPPtr (last slots)) + (bit (objBits (undefined::PTE)) - 1))
+>                             (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1))
 >                             (addrFromPPtr (head slots))
 >     when tlbFlush $ invalidateTLBByASID asid
 >
@@ -1390,7 +1397,7 @@ the PT/PD is consistent.
 >     mapM (flip storePDE pde) slots
 >     doMachineOp $
 >         cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
->                             (VPtr $ (fromPPtr (last slots)) + (bit (objBits (undefined::PDE)) - 1))
+>                             (VPtr $ (fromPPtr (last slots)) + (bit pdeBits - 1))
 >                             (addrFromPPtr (head slots))
 >     when tlbFlush $ invalidateTLBByASID asid
 >
