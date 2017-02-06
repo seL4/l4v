@@ -2011,24 +2011,27 @@ crunch nosch[wp]: doIPCTransfer "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma handle_fault_reply_registers_corres:
   "corres (op =) (tcb_at t) (tcb_at' t)
-           (do y \<leftarrow> as_user t
+           (do t' \<leftarrow> thread_get id t;
+               y \<leftarrow> as_user t
                 (zipWithM_x
                   (\<lambda>r v. set_register r
-                          (ARM.sanitiseRegister r v))
+                          (sanitise_register t' r v))
                   msg_template msg);
                return (label = 0)
             od)
-           (do y \<leftarrow> asUser t
+           (do t' \<leftarrow> threadGet id t;
+               y \<leftarrow> asUser t
                 (zipWithM_x
-                  (\<lambda>r v. setRegister r (ARM_H.sanitiseRegister r v))
+                  (\<lambda>r v. setRegister r (sanitiseRegister t' r v))
                   msg_template msg);
                return (label = 0)
             od)"
   apply (rule corres_guard_imp)
-    apply (rule corres_split)
+    apply (rule corres_split [OF _ threadget_corres, where r'=tcb_relation])
+       apply (rule corres_split)
        apply (rule corres_trivial, simp)
       apply (rule corres_as_user')
-      apply(simp add: set_register_def setRegister_def
+      apply(simp add: set_register_def setRegister_def sanitise_register_def
                       sanitiseRegister_def syscallMessage_def)
       apply(subst zipWithM_x_modify)+
       apply(rule corres_modify')

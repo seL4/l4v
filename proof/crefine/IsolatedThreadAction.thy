@@ -117,12 +117,7 @@ lemma isolate_thread_actions_bind:
   apply (simp add: exec_gets exec_modify)
   done
 
-lemma setEndpoint_obj_at_tcb':
-  "\<lbrace>obj_at' (P :: tcb \<Rightarrow> bool) p\<rbrace> setEndpoint p' val \<lbrace>\<lambda>rv. obj_at' P p\<rbrace>"
-  apply (simp add: setEndpoint_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
+lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
 lemma tcbSchedEnqueue_obj_at_unchangedT:
   assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
@@ -184,14 +179,7 @@ lemmas setThreadState_obj_at_unchanged
 lemmas setBoundNotification_obj_at_unchanged
     = setBoundNotification_obj_at_unchangedT[OF all_tcbI]
 
-lemma setNotification_tcb:
-  "\<lbrace>obj_at' (\<lambda>tcb::tcb. P tcb) t\<rbrace>
-  setNotification ntfn e
-  \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
-  apply (simp add: setNotification_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
+lemmas setNotification_tcb = set_ntfn_tcb_obj_at'
 
 (* FIXME: move *)
 lemmas threadSet_obj_at' = threadSet_obj_at'_strongish

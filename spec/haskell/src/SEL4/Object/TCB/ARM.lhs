@@ -16,11 +16,14 @@ There are presently no ARM-specific register subsets defined, but in future this
 
 \begin{impdetails}
 
-> import SEL4.Machine
+> import SEL4.Machine(PPtr)
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.ARM
+> import SEL4.Machine.RegisterSet.ARM
+> import Data.Bits
+
 
 > import Data.Word(Word8)
 
@@ -31,4 +34,8 @@ There are presently no ARM-specific register subsets defined, but in future this
 
 > performTransfer :: CopyRegisterSets -> PPtr TCB -> PPtr TCB -> Kernel ()
 > performTransfer _ _ _ = return ()
+
+> sanitiseRegister :: TCB -> Register -> Word -> Word
+> sanitiseRegister _ CPSR v = (v .&. 0xf8000000) .|. 0x150
+> sanitiseRegister _ _ v = v
 

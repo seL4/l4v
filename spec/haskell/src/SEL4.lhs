@@ -32,7 +32,6 @@ This is the top-level module; it defines the interface between the kernel and th
 > import SEL4.Object.TCB(asUser)
 > import SEL4.Object.Interrupt(handleInterrupt)
 > import Control.Monad.Error
-> import Control.Monad.State
 > import Data.Maybe
 
 \subsection{Kernel Entry Point}
@@ -50,3 +49,4 @@ faults, and system calls; the set of possible events is defined in
 >                       when (isJust irq) $ handleInterrupt (fromJust irq))
 >     schedule
 >     activateThread
+

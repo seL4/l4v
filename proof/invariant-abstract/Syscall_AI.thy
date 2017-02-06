@@ -274,10 +274,10 @@ lemma (in Systemcall_AI_Pre) handle_fault_reply_cte_wp_at:
       apply (case_tac f)
          apply (clarsimp)+
        apply (clarsimp simp add: as_user_def)
-       apply (wp set_object_cte_wp_at2 | simp add: split_def)+     
+       apply (wp set_object_cte_wp_at2 thread_get_wp' | simp add: split_def)+
        apply (clarsimp simp add: NC)
       apply (clarsimp simp add: as_user_def)
-      apply (wp set_object_cte_wp_at2 | simp add: split_def)+
+      apply (wp set_object_cte_wp_at2 thread_get_wp' | simp add: split_def)+
       apply (clarsimp simp add: NC)
       apply simp
       apply wp

@@ -793,7 +793,7 @@ lemma bind_notification_invs:
   apply (wp valid_irq_node_typ set_ntfn_valid_objs set_notification_obj_at 
          | clarsimp simp:idle_no_ex_cap)+
             apply (clarsimp simp: obj_at_def is_ntfn)
-           apply (wp | clarsimp)+ 
+           apply (wp | clarsimp)+
          apply (rule conjI, rule impI)
           apply (clarsimp simp: obj_at_def pred_tcb_at_def2)
          apply (rule impI, erule delta_sym_refs)

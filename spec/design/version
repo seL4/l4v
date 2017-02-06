@@ -1,9 +1,8 @@
 Built from git repo at /Users/kleing/verification/l4v/spec/haskell by kleing
 
 Generated from changeset:
-d08ee04 haskell: update documentation for building the Haskell kernel
+697758d provide TCB argument for sanitiseRegister
 
 
 Warning - uncomitted changes used:
  M ../design/version
- M src/SEL4.lhs

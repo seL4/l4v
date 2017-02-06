@@ -654,6 +654,8 @@ lemma bind_notification_reads_respects:
   apply (clarsimp dest!: reads_ep)
   done
 
+lemmas thread_get_reads_respects_f = reads_respects_f[OF thread_get_reads_respects, where Q="\<top>", simplified, OF thread_get_silc_inv]
+
 lemma invoke_tcb_reads_respects_f:
   notes validE_valid[wp del]
         static_imp_wp [wp]
@@ -661,7 +663,7 @@ lemma invoke_tcb_reads_respects_f:
   "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and pas_refined aag and pas_cur_domain aag and Tcb_AI.tcb_inv_wf ti and (\<lambda>s. is_subject aag (cur_thread s)) and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti)) (invoke_tcb ti)"
   including no_pre
   apply(case_tac ti)
-        apply(wp when_ev restart_reads_respects_f as_user_reads_respects_f static_imp_wp | simp)+
+        apply(wp thread_get_reads_respects_f when_ev restart_reads_respects_f as_user_reads_respects_f static_imp_wp thread_get_wp'| simp)+
         apply(auto intro: requiv_cur_thread_eq intro!: det_zipWithM simp: det_setRegister det_getRestartPC det_setNextPC authorised_tcb_inv_def simp: reads_equiv_f_def)[1]
        apply(wp as_user_reads_respects_f suspend_silc_inv when_ev suspend_reads_respects_f[where st=st] | simp | elim conjE, assumption)+
        apply(auto simp: authorised_tcb_inv_def intro!: det_mapM[OF _ subset_refl] simp: det_getRegister simp: reads_equiv_f_def)[1]

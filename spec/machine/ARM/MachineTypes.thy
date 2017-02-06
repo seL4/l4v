@@ -54,9 +54,6 @@ type_synonym machine_word = "word32"
 consts'
 initContext :: "(register * machine_word) list"
 
-consts'
-sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_word"
-
 (*<*)
 
 section "Machine Words"
@@ -170,12 +167,6 @@ definition
 
 defs initContext_def:
 "initContext\<equiv> [(CPSR,0x150)]"
-
-defs sanitiseRegister_def:
-"sanitiseRegister x0 v\<equiv> (case x0 of
-    CPSR \<Rightarrow>    (v && 0xf8000000) || 0x150
-  | _ \<Rightarrow>    v
-  )"
 
 
 section "Machine State"

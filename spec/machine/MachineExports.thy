@@ -35,7 +35,6 @@ requalify_consts
   getRestartPC
   setRegister
   getRegister
-  sanitiseRegister
   initContext
   exceptionMessage
   syscallMessage

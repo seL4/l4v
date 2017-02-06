@@ -64,14 +64,16 @@ This function returns "True" if the faulting thread should be restarted after th
 > handleFaultReply (CapFault {}) _ _ _ = return True
 > 
 > handleFaultReply (UnknownSyscallException _) thread label msg = do
+>     t <- threadGet id thread
 >     asUser thread $ zipWithM_
->         (\r v -> setRegister r $ sanitiseRegister r v)
+>         (\r v -> setRegister r $ sanitiseRegister t r v)
 >         syscallMessage msg
 >     return (label == 0)
 
 > handleFaultReply (UserException _ _) thread label msg = do
+>     t <- threadGet id thread
 >     asUser thread $ zipWithM_
->         (\r v -> setRegister r $ sanitiseRegister r v)
+>         (\r v -> setRegister r $ sanitiseRegister t r v)
 >         exceptionMessage msg
 >     return (label == 0)
 

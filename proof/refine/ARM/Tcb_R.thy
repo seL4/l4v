@@ -327,24 +327,25 @@ lemma writereg_corres:
         (invokeTCB (tcbinvocation.WriteRegisters dest resume values arch'))"
   apply (simp add: invokeTCB_def performTransfer_def
                    frameRegisters_def gpRegisters_def
-                   sanitiseRegister_def)
+                   sanitiseRegister_def sanitise_register_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gct_corres])
-      apply (rule corres_split_nor)
-         prefer 2
-         apply (rule corres_as_user)
-         apply (simp add: zipWithM_mapM getRestartPC_def setNextPC_def)
-         apply (rule corres_Id, simp+)
-         apply (rule no_fail_pre, wp no_fail_mapM)
-            apply clarsimp
-            apply (wp no_fail_setRegister | simp)+
-        apply (rule corres_split_nor)
-           apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
-           apply simp
-          apply (rule corres_when [OF refl])
-          apply (rule restart_corres)
-         apply (wp static_imp_wp | clarsimp simp: invs'_def valid_state'_def
-                              dest!: global'_no_ex_cap)+
+      apply (rule corres_split [OF _ threadget_corres, where r'=tcb_relation])
+         apply (rule corres_split_nor)
+            prefer 2
+            apply (rule corres_as_user)
+            apply (simp add: zipWithM_mapM getRestartPC_def setNextPC_def)
+            apply (rule corres_Id, simp+)
+            apply (rule no_fail_pre, wp no_fail_mapM)
+               apply clarsimp
+               apply (wp no_fail_setRegister | simp)+
+           apply (rule corres_split_nor)
+              apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
+              apply simp
+             apply (rule corres_when [OF refl])
+             apply (rule restart_corres)
+            apply (wp static_imp_wp | clarsimp simp: invs'_def valid_state'_def
+                                               dest!: global'_no_ex_cap)+
   done
 
 crunch it[wp]: suspend "\<lambda>s. P (ksIdleThread s)"

@@ -23,6 +23,7 @@ context begin interpretation Arch .
 requalify_consts
   arch_activate_idle_thread
   arch_tcb_set_ipc_buffer
+  sanitise_register
 
 end
 
@@ -219,8 +220,9 @@ where
 | "invoke_tcb (WriteRegisters dest resume_target values arch) =
   (liftE $ do
     self \<leftarrow> gets cur_thread;
+    t \<leftarrow> thread_get id dest;
     as_user dest $ do
-        zipWithM (\<lambda>r v. setRegister r (sanitiseRegister r v))
+        zipWithM (\<lambda>r v. setRegister r (sanitise_register t r v))
             (frameRegisters @ gpRegisters) values;
         pc \<leftarrow> getRestartPC;
         setNextPC pc

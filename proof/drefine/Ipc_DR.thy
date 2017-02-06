@@ -2114,16 +2114,18 @@ lemma dcorres_handle_fault_reply:
    (corrupt_tcb_intent y)
    (handle_fault_reply a y mi mrs)"
   apply (case_tac a)
-    apply (simp_all)
-    apply (rule dummy_corrupt_tcb_intent_corres)+
+     apply (simp_all)
+     apply (rule dummy_corrupt_tcb_intent_corres)+
     apply (rule corres_dummy_return_l)
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF corres_trivial[OF corres_free_return] corrupt_tcb_intent_as_user_corres])
-        apply (wp|clarsimp)+
-    apply (rule corres_dummy_return_l)
-    apply (rule corres_guard_imp)
-      apply (rule corres_split[OF corres_trivial[OF corres_free_return] corrupt_tcb_intent_as_user_corres])
-        apply (wp|clarsimp)+
+      apply (rule corres_symb_exec_r)
+         apply (rule corres_split[OF corres_trivial[OF corres_free_return] corrupt_tcb_intent_as_user_corres])
+          apply (wp|clarsimp)+
+   apply (rule corres_dummy_return_l)
+   apply (rule corres_guard_imp)
+     apply (rule corres_symb_exec_r)
+        apply (rule corres_split[OF corres_trivial[OF corres_free_return] corrupt_tcb_intent_as_user_corres])
+         apply (wp|clarsimp)+
   apply (rule dcorres_handle_arch_fault_reply)
   done
 

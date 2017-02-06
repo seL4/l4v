@@ -105,13 +105,6 @@ tpidrurwRegister :: "register"
 where
 "tpidrurwRegister \<equiv> Register ARM.tpidrurwRegister"
 
-definition
-sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_word"
-where
-"sanitiseRegister x0 x1\<equiv> (case (x0, x1) of
-    (((* Register *) r), ((* Word *) w)) \<Rightarrow>    Word $ ARM.sanitiseRegister r w
-  )"
-
 
 definition
   PPtr :: "machine_word \<Rightarrow> machine_word"
