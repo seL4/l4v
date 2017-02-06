@@ -389,11 +389,6 @@ lemma transfer_caps_non_null_cte_wp_at:
 
 crunch cte_wp_at[wp,Ipc_AI_assms]: do_fault_transfer "cte_wp_at P p"
 
-lemma valid_arch_objs_lift: "valid_pspace s \<Longrightarrow> valid_vspace_objs s \<Longrightarrow> valid_arch_objs s"
-  apply (clarsimp simp add: valid_pspace_def valid_objs_def valid_arch_objs_def obj_at_def)
-  apply (erule_tac x=p in ballE; clarsimp simp add: valid_obj_def)
-  done
-
 lemma set_cap_valid_arch_objs [wp, Ipc_AI_assms]:
   "\<lbrace>valid_arch_objs\<rbrace> set_cap a b \<lbrace>\<lambda>_. valid_arch_objs \<rbrace>"
   apply (rule valid_arch_objs_typ_at_lift)

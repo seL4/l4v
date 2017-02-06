@@ -251,11 +251,7 @@ lemma ucast_asid_high_btis_of_le [simp]:
   apply (simp add: asid_high_bits_def)
   done
 
-lemma perform_vcpu_invocation_arch_tcb:
-  "\<lbrace>invs and valid_arch_inv (invokeVCPU ai) and st_tcb_at active tptr\<rbrace>
-  perform_vcpu_invocation ai
-  \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
-sorry
+crunch tcb_at[wp]: perform_vcpu_invocation "tcb_at p"
 
 lemma invoke_arch_tcb:
   "\<lbrace>invs and valid_arch_inv ai and st_tcb_at active tptr\<rbrace>
@@ -287,7 +283,8 @@ lemma invoke_arch_tcb:
      apply (simp add: vspace_bits_defs field_simps del: atLeastAtMost_iff)
     apply (metis (no_types) orthD1 x_power_minus_1)
    apply simp
-  apply (wp perform_vcpu_invocation_arch_tcb)
+  apply (wp perform_vcpu_invocation_tcb_at)
+  apply (clarsimp simp: st_tcb_at_def tcb_at_def obj_at_def is_tcb_def)
   done
 
 end
@@ -356,19 +353,27 @@ lemma obj_at [simp]:
   "obj_at P p s' = obj_at P p s"
   by (simp add: s'_def)
 
-
-lemma arch_objs':
-  "valid_arch_objs s \<Longrightarrow> valid_arch_objs s'"
-  using ko
-  apply (clarsimp simp: valid_arch_objs_def vs_lookup')
-  sorry
+lemma vs_lookup_neq: "\<lbrakk>(rs \<rhd> p) s' ; p \<noteq> ap\<rbrakk> \<Longrightarrow>  (rs \<rhd> p) s"
+   by (clarsimp simp: vs_lookup')
 
 lemma vspace_objs':
   "valid_vspace_objs s \<Longrightarrow> valid_vspace_objs s'"
   using ko
-  apply (clarsimp simp: valid_vspace_objs_def vs_lookup')
-(*  apply (fastforce simp: obj_at_def split: arch_kernel_obj.splits) *)
-  sorry
+  apply (clarsimp simp: valid_vspace_objs_def)
+  apply (erule_tac x=p in allE)
+  apply (case_tac "p = ap";
+         case_tac ao;
+         fastforce simp: obj_at_def s'_def
+                   intro: vs_lookup_neq)
+  done
+
+lemma arch_objs':
+  "valid_arch_objs s \<Longrightarrow> valid_arch_objs s'"
+  by (fastforce simp: valid_arch_objs_def
+                      valid_vcpu_def
+                      vspace_objs'
+                      vs_lookup'
+                split: option.split)
 
 lemma caps_of_state_s':
   "caps_of_state s' = caps_of_state s"
@@ -638,17 +643,16 @@ lemma cap_insert_ap_invs:
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_ap)
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state is_cap_simps)
+  apply (frule safe_parent_cap_is_device)
   apply (drule safe_parent_cap_range)
-  apply simp
+  apply (simp add: cap_range_def)
   apply (rule conjI)
-  apply (clarsimp simp: cte_wp_at_caps_of_state)
-  apply (drule_tac p="(a,b)" in caps_of_state_valid_cap, fastforce)
-  apply (auto simp: obj_at_def is_tcb_def is_cap_table_def a_type_def
-                    valid_cap_def [where c="cap.Zombie a b x" for a b x]
-              dest: obj_ref_is_tcb obj_ref_is_cap_table split: option.splits)
-(*  apply (fastforce simp: obj_at_def a_type_def)*)
-  sorry
-
+  apply clarsimp
+   apply (drule_tac p="(a,b)" in caps_of_state_valid_cap, fastforce)
+   apply (auto simp: obj_at_def is_tcb_def is_cap_table_def a_type_def
+                     valid_cap_def [where c="cap.Zombie a b x" for a b x]
+               dest: obj_ref_is_tcb obj_ref_is_cap_table split: option.splits)
+  done
 
 lemma max_index_upd_no_cap_to:
   "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref cap {slot} s \<and>
@@ -890,9 +894,105 @@ qed
 
 lemmas aci_invs[wp] = aci_invs'[where Q=\<top>,simplified hoare_post_taut, OF refl refl refl TrueI TrueI TrueI,simplified]
 
-lemma perform_vcpu_invs:
-  "\<lbrace>invs and valid_vcpu_invocation vi\<rbrace> perform_vcpu_invocation vi \<lbrace>\<lambda>_. invs\<rbrace>"
-sorry
+lemma dissociate_vcpu_tcb_obj_at_hyp_refs[wp]:
+  "\<lbrace>\<lambda>s. p \<notin> {t, vr} \<longrightarrow> obj_at (\<lambda>ko. hyp_refs_of ko = {}) p s \<rbrace>
+     dissociate_vcpu_tcb t vr
+   \<lbrace>\<lambda>rv s. obj_at (\<lambda>ko. hyp_refs_of ko = {}) p s\<rbrace>"
+  apply (cases "p \<notin> {t, vr}" ; clarsimp)
+  apply (simp add: dissociate_vcpu_tcb_def)
+  apply (wp arch_thread_set_wp set_vcpu_wp)
+  apply (clarsimp simp: obj_at_def if_apply_def2)
+  apply (rule hoare_drop_imp)+
+  apply (subst obj_at_def[symmetric])
+  apply (wp arch_thread_get_inv | simp)+
+  apply (erule disjE;
+          (wp arch_thread_set_wp set_vcpu_wp
+          | clarsimp simp: dissociate_vcpu_tcb_def obj_at_def if_apply_def2)+)
+  done
+
+lemma associate_vcpu_tcb_sym_refs_hyp[wp]:
+  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> associate_vcpu_tcb vr t \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: associate_vcpu_tcb_def)
+  apply (wp arch_thread_set_wp set_vcpu_wp | clarsimp)+
+      apply (rule_tac P="\<lambda>s. ko_at (ArchObj (VCPU v)) vr s \<and>
+                             obj_at (\<lambda>ko. hyp_refs_of ko = {} ) t s  \<and>
+                             sym_refs (state_hyp_refs_of s)"
+                          in hoare_triv)
+      apply (rule_tac Q="\<lambda>rv s. obj_at (\<lambda>ko. hyp_refs_of ko = {} ) vr s \<and>
+                                obj_at (\<lambda>ko. hyp_refs_of ko = {} ) t s  \<and>
+                                sym_refs (state_hyp_refs_of s)"
+                             in hoare_post_imp)
+       apply (clarsimp dest!: get_tcb_SomeD simp: obj_at_def)
+       apply (clarsimp simp add: sym_refs_def)
+       apply (case_tac "x = t"; case_tac "x = vr"; clarsimp simp add: state_hyp_refs_of_def obj_at_def
+                                                                 dest!: get_tcb_SomeD)
+       apply fastforce
+      apply (rule hoare_pre)
+       apply (wp | wpc | clarsimp)+
+      apply (simp add: obj_at_def)
+     apply (wp  get_vcpu_ko | wpc | clarsimp)+
+   apply (rule_tac Q="\<lambda>rv s. (\<exists>t'. obj_at (\<lambda>tcb. tcb = TCB t' \<and> rv = tcb_vcpu (tcb_arch t')) t s) \<and>
+                             sym_refs (state_hyp_refs_of s)"
+                          in hoare_post_imp)
+    apply (clarsimp simp: obj_at_def)
+   apply (wp arch_thread_get_tcb)
+  apply simp
+  done
+
+lemma associate_vcpu_tcb_if_live_then_nonz_cap[wp]:
+  "\<lbrace>if_live_then_nonz_cap\<rbrace> associate_vcpu_tcb vcpu tcb \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
+  sorry
+
+lemma associate_vcpu_tcb_invs[wp]:
+  "\<lbrace>invs\<rbrace> associate_vcpu_tcb vcpu tcb \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (simp add: invs_def valid_state_def valid_pspace_def)
+  apply (simp add: pred_conj_def)
+  apply (rule hoare_vcg_conj_lift[rotated])+
+  apply (wp weak_if_wp
+        | wpc
+        | clarsimp
+        | simp add: dissociate_vcpu_tcb_def associate_vcpu_tcb_def
+                    obj_at_def valid_obj_def[abs_def] valid_vcpu_def
+        | wp arch_thread_set_wp)+
+  done
+
+lemma write_vcpu_register_invs[wp]:
+  "\<lbrace>invs\<rbrace> write_vcpu_register vcpu val \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (simp add: write_vcpu_register_def)
+  apply (wp)
+   apply (rule_tac Q="\<lambda>rv s. ko_at (ArchObj (VCPU rv)) vcpu s  \<and> invs s" in hoare_post_imp)
+    apply (rule conjI)
+     apply (clarsimp simp: invs_def valid_state_def obj_at_def)
+    apply (clarsimp simp: invs_def valid_state_def)
+  apply (frule valid_arch_objs_lift, simp)
+    apply (clarsimp simp: valid_arch_objs_def valid_obj_def valid_vcpu_def)
+   apply (wp get_vcpu_ko)
+  apply simp
+  done
+
+lemma invoke_vcpu_inject_irq_invs[wp]:
+  "\<lbrace>invs\<rbrace> invoke_vcpu_inject_irq vcpu indx t \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (simp add: invoke_vcpu_inject_irq_def)
+  apply (wp | wpc | clarsimp)+
+  apply (rule_tac Q="\<lambda>rv s. ko_at (ArchObj (VCPU rv)) vcpu s  \<and> invs s" in hoare_post_imp)
+      apply (rule conjI)
+       apply (clarsimp simp: invs_def valid_state_def obj_at_def)
+      apply (clarsimp simp: invs_def valid_state_def)
+      apply (frule valid_arch_objs_lift, simp)
+      apply (clarsimp simp: valid_arch_objs_def valid_obj_def valid_vcpu_def)
+     apply (wp get_vcpu_ko)
+  apply (wp | wpc | clarsimp)+
+  done
+
+lemma perform_vcpu_invs[wp]:
+  "\<lbrace>invs\<rbrace> perform_vcpu_invocation vi \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (simp add: perform_vcpu_invocation_def)
+  apply (rule hoare_pre)
+   apply (wp | wpc
+         | clarsimp simp: invoke_vcpu_read_register_def read_vcpu_register_def
+                          invoke_vcpu_write_register_def
+                          vcpu_clean_invalidate_active_def[abs_def])+
+  done
 
 lemma invoke_arch_invs[wp]:
   "\<lbrace>invs and ct_active and valid_arch_inv ai\<rbrace>
@@ -1598,15 +1698,23 @@ lemma arch_decode_inv_wf[wp]:
 
 declare word_less_sub_le [simp]
 
-crunch pred_tcb_at: associate_vcpu_tcb "pred_tcb_at proj P t"
+crunch pred_tcb_at[wp]: associate_vcpu_tcb "pred_tcb_at proj P t"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunch pred_tcb_at[wp]: invoke_vcpu_inject_irq "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma  perform_vcpu_invocation_pred_tcb_at[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> perform_vcpu_invocation iv \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: perform_vcpu_invocation_def)
-  apply (cases iv; simp)
-  apply (wp associate_vcpu_tcb_pred_tcb_at)
-  sorry
+  apply (rule hoare_pre)
+  apply (wp associate_vcpu_tcb_pred_tcb_at | wpc
+        | clarsimp simp: invoke_vcpu_read_register_def
+                         read_vcpu_register_def
+                         vcpu_clean_invalidate_active_def
+                         invoke_vcpu_write_register_def
+                         write_vcpu_register_def)+
+  done
 
 crunch pred_tcb_at: perform_page_table_invocation, perform_page_invocation,
            perform_asid_pool_invocation,

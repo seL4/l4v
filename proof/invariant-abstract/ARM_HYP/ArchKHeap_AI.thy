@@ -37,6 +37,11 @@ lemma valid_vspace_is_vspace_lift:
       apply (rule hoare_vcg_conj_lift hoare_vcg_disj_lift | wp P | simp )+
   done
 
+lemma valid_arch_objs_lift: "valid_pspace s \<Longrightarrow> valid_vspace_objs s \<Longrightarrow> valid_arch_objs s"
+  apply (clarsimp simp add: valid_pspace_def valid_objs_def valid_arch_objs_def obj_at_def)
+  apply (erule_tac x=p in ballE; clarsimp simp add: valid_obj_def)
+  done
+
 lemma obj_at_split: "(obj_at (P xo) p s \<and> (Q xo)) = obj_at (\<lambda>ko. P xo ko \<and> Q xo) p s"
   by (auto simp: obj_at_def)
 
