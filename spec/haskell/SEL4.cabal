@@ -29,6 +29,10 @@ Flag ArchArmHyp
     description:        Include ARM (with Hypervisor Extensions) modules and platforms
     default:            False
 
+Flag ArchX64
+    description:        Include x86 64-bit modules and platforms
+    default:            False
+
 Library
     exposed-modules:        SEL4
                             SEL4.Machine.Target
@@ -141,7 +145,7 @@ Library
                             SEL4.Machine.RegisterSet.ARM_HYP
                             SEL4.Machine.Hardware.ARM_HYP
 
-    else
+    if flag(ArchX64)
         -- FIXME: should be a flag also, or some other way to conditionally compile
         -- Setup.hs hooks can handle this, but do we want to do that?
         other-modules:
