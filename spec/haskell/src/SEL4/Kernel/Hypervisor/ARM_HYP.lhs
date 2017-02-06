@@ -10,6 +10,12 @@
 
 FIXME ARMHYP TODO handleHypervisorFault
 
+\begin{impdetails}
+
+> {-# LANGUAGE CPP #-}
+
+\end{impdetails}
+
 > module SEL4.Kernel.Hypervisor.ARM_HYP where
 
 \begin{impdetails}
@@ -22,5 +28,9 @@ FIXME ARMHYP TODO handleHypervisorFault
 \end{impdetails}
 
 > handleHypervisorFault :: PPtr TCB -> Arch.HypFaultType -> Kernel ()
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > handleHypervisorFault _ Arch.ARMNoHypFaults = fail "FIXME ARMHYP handleHypervisorFault"
+#else
+> handleHypervisorFault _ Arch.ARMNoHypFaults = fail "No hypervisor on this architecture"
+#endif
 

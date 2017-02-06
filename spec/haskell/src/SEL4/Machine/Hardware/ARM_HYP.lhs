@@ -244,8 +244,12 @@ FIXME ARMHYP this uses ARM\_HYP config option in C, in which case it calls setCu
 >     cbptr <- ask
 >     liftIO $ Platform.setHardwareASID cbptr hw_asid
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
 > writeContextIDAndPD :: HardwareASID -> PAddr -> MachineMonad ()
 > writeContextIDAndPD = error "FIXME ARMHYP  machine callback unimplemented"
+
+#endif
 
 \subsubsection{Memory Barriers}
 
@@ -434,17 +438,19 @@ implementation assumes the monitor is not modelled in our simulator.
 > getDFSR = do
 >     cbptr <- ask
 >     liftIO $ Platform.getDFSR cbptr
+>
+> getFAR :: MachineMonad VPtr
+> getFAR = do
+>     cbptr <- ask
+>     liftIO $ Platform.getFAR cbptr
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
 > getHSR :: MachineMonad Word
 > getHSR = error "FIXME ARMHYP machine callback unimplemented"
 
 > setHCR :: Word -> MachineMonad ()
 > setHCR _hcr = error "FIXME ARMHYP machine callback unimplemented"
-
-> getFAR :: MachineMonad VPtr
-> getFAR = do
->     cbptr <- ask
->     liftIO $ Platform.getFAR cbptr
 
 > getHDFAR :: MachineMonad VPtr
 > getHDFAR = error "FIXME ARMHYP machine callback unimplemented"
@@ -464,6 +470,7 @@ implementation assumes the monitor is not modelled in our simulator.
 > setACTLR :: Word -> MachineMonad ()
 > setACTLR _actlr = error "FIXME ARMHYP machine callback unimplemented"
 
+#endif
 
 \subsubsection{Page Table Structure}
 

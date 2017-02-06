@@ -29,7 +29,9 @@ This module defines the machine-specific interrupt handling routines.
 
 \end{impdetails}
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > import SEL4.Machine.Hardware.ARM_HYP.PLATFORM (irqVGICMaintenance, irqSMMU)
+#endif
 
 > decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
 >     KernelF SyscallError ArchInv.IRQControlInvocation
@@ -44,7 +46,12 @@ This module defines the machine-specific interrupt handling routines.
 FIXME ARMHYP INTERRUPT_VGIC_MAINTENANCE and INTERRUPT_SMMU
 
 > handleReservedIRQ :: IRQ -> Kernel ()
-> handleReservedIRQ irq = fail "FIXME ARMHYP handleReservedIRQ"
+> handleReservedIRQ irq = do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     fail "FIXME ARMHYP handleReservedIRQ"
+#else
+>     return () -- handleReservedIRQ does nothing on ARM
+#endif
 
 > initInterruptController :: Kernel ()
 > initInterruptController = do
