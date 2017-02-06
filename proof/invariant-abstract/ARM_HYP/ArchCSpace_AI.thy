@@ -42,8 +42,8 @@ lemma weak_derived_valid_cap [CSpace_AI_assms]:
                split: cap.splits arch_cap.splits option.splits)
   done
 
-
-lemma weak_derived_tcb_cap_valid [CSpace_AI_assms]:
+(* FIXME: unused *)
+lemma weak_derived_tcb_cap_valid:
   "\<lbrakk> tcb_cap_valid cap p s; weak_derived cap cap' \<rbrakk> \<Longrightarrow> tcb_cap_valid cap' p s"
   apply (clarsimp simp add: tcb_cap_valid_def weak_derived_def
                             obj_at_def is_tcb
@@ -410,7 +410,7 @@ lemma update_cap_data_validI [CSpace_AI_assms]:
    apply (simp add: the_cnode_cap_def valid_cap_def cap_aligned_def)
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
-      apply (simp_all add: is_cap_defs arch_update_cap_data_def)
+      apply (simp_all add: is_cap_defs arch_update_cap_data_def word_bits_def)
   done
 
 
@@ -524,7 +524,7 @@ lemma cap_insert_simple_arch_caps_no_ap:
 end
 
 
-global_interpretation CSpace_AI?: CSpace_AI_7
+global_interpretation CSpace_AI?: CSpace_AI
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact CSpace_AI_assms)?)

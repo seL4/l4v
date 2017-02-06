@@ -12,7 +12,12 @@ theory ArchInterrupt_AI
 imports "../Interrupt_AI"
 begin
 
-context Arch begin
+context Arch begin global_naming ARM_HYP
+
+defs arch_irq_control_inv_valid_def:
+  "arch_irq_control_inv_valid irq_inv \<equiv> \<bottom>"
+
+declare arch_irq_control_inv_valid_def [simp]
 
 named_theorems Interrupt_AI_asms
 

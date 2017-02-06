@@ -28,23 +28,23 @@ GHC_DEV_OPTS=--ghc-options="-fno-warn-unused-matches -fno-warn-unused-imports"
 all: build-arm-hyp-nosmmu
 # original value: build-arm pdf
 
-sandbox:
+sandbox: .stack-work
 	$(CABAL) sandbox init
 	$(CABAL) install --dependencies-only
 
-build-arm: .stack-work sandbox $(BOOT_FILES)
+build-arm: sandbox $(BOOT_FILES)
 	$(CABAL) configure --configure-option="arm-kzm" \
 	    --flags="ArchArm" \
 	    --builddir="dist/arm"
 	$(CABAL) build --builddir="dist/arm"
 
-build-arm-hyp: .stack_work sandbox $(BOOT_FILES) $(CUSTOM_BOOT_FILES)
+build-arm-hyp: sandbox $(BOOT_FILES) $(CUSTOM_BOOT_FILES)
 	$(CABAL) configure --configure-option="arm-tk1" \
 	    --flags="ArchArmHyp -FFI" $(GHC_DEV_OPTS) \
 	    --builddir="dist/arm-hyp"
 	$(CABAL) build --builddir="dist/arm-hyp"
 
-build-arm-hyp-nosmmu: .stack_work sandbox $(BOOT_FILES) $(CUSTOM_BOOT_FILES)
+build-arm-hyp-nosmmu: sandbox $(BOOT_FILES) $(CUSTOM_BOOT_FILES)
 	$(CABAL) configure --configure-option="arm-tk1-nosmmu" \
 	    --flags="ArchArmHyp -FFI" $(GHC_DEV_OPTS) \
 	    --builddir="dist/arm-hyp-nosmmu"
@@ -60,6 +60,7 @@ pdf:
 # every build.
 # However, this means that if .stack-work exists, but the
 # cabal package database is missing, the build will fail.
+
 .stack-work:
 	stack --install-ghc build cabal-install
 	$(CABAL) update

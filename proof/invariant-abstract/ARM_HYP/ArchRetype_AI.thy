@@ -59,13 +59,6 @@ lemma retype_region_ret_folded [Retype_AI_assms]:
 
 declare store_pde_state_refs_of [wp]
 
-(* FIXME: move to Machine_R.thy *)
-lemma clearMemory_corres:
-  "corres_underlying Id False True dc \<top> (\<lambda>_. is_aligned y 2)
-     (clearMemory y a) (clearMemory y a)"
-  apply (rule corres_Id)
-   apply simp+
-  done
 
 (* These also prove facts about copy_global_mappings *)
 crunch pspace_aligned[wp]: init_arch_objects "pspace_aligned"
@@ -144,30 +137,11 @@ lemmas init_arch_objects_valid_cap[wp] = valid_cap_typ [OF init_arch_objects_typ
 
 lemmas init_arch_objects_cap_table[wp] = cap_table_at_lift_valid [OF init_arch_objects_typ_at]
 
-lemma clearMemory_vms:
-  "valid_machine_state s \<Longrightarrow>
-   \<forall>x\<in>fst (clearMemory ptr bits (machine_state s)).
-     valid_machine_state (s\<lparr>machine_state := snd x\<rparr>)"
-  apply (clarsimp simp: valid_machine_state_def
-                        disj_commute[of "in_user_frame p s" for p s])
-  apply (drule_tac x=p in spec, simp)
-  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = 0"
-         in use_valid[where P=P and Q="\<lambda>_. P" for P], simp_all)
-  apply (simp add: clearMemory_def cleanCacheRange_PoU_def machine_op_lift_def
-                   machine_rest_lift_def
-                   split_def)
-  including no_pre apply (wpsimp wp: hoare_drop_imps mapM_x_wp_inv)+
-  apply (simp add: storeWord_def | wp)+
-  apply (simp add: word_rsplit_0)
-  done
-
 crunch device_state_inv[wp]: clearMemory "\<lambda>ms. P (device_state ms)"
   (wp: mapM_x_wp)
 
 crunch pspace_respects_device_region[wp]: reserve_region pspace_respects_device_region
 crunch cap_refs_respects_device_region[wp]: reserve_region cap_refs_respects_device_region
-
-crunch invs [wp]: reserve_region "invs"
 
 crunch invs [wp]: reserve_region "invs"
 
@@ -272,11 +246,8 @@ lemma store_pde_map_global_valid_arch_caps:
 
 lemma store_pde_map_global_valid_arch_objs:
   "\<lbrace>valid_vspace_objs and valid_arch_state
-     and K (valid_pde_mappings pde)
      and K (VSRef (p && mask pd_bits >> 3) (Some APageDirectory)
-                \<in> kernel_vsrefs)
-     and (\<lambda>s. \<forall>p. pde_ref pde = Some p
-             \<longrightarrow> p \<in> {})\<rbrace>
+                \<in> kernel_vsrefs)\<rbrace>
         store_pde p pde
    \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
   apply (simp add: kernel_vsrefs_def)

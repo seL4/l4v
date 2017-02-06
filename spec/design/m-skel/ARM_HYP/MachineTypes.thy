@@ -30,6 +30,11 @@ section "Types"
 
 type_synonym machine_word_len = 32
 
+definition
+  word_size_bits :: "'a :: numeral"
+where
+  "word_size_bits \<equiv> 2"
+
 end
 
 context begin interpretation Arch .

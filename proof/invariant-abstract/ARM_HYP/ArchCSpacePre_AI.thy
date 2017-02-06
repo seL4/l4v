@@ -200,7 +200,8 @@ lemma same_aobject_as_commute:
   "same_aobject_as x y \<Longrightarrow> same_aobject_as y x"
   by (cases x; cases y; clarsimp)
 
-lemmas wellformed_cap_simps = wellformed_cap_simps[simplified wellformed_acap_def, split_simps arch_cap.split]
+lemmas wellformed_cap_simps = wellformed_cap_def
+  [simplified wellformed_acap_def, split_simps cap.split arch_cap.split]
 
 lemma same_master_cap_same_types:
   "cap_master_cap cap = cap_master_cap cap' \<Longrightarrow>

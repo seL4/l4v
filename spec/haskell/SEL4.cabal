@@ -141,6 +141,28 @@ Library
                             SEL4.Machine.RegisterSet.ARM_HYP
                             SEL4.Machine.Hardware.ARM_HYP
 
+    else
+        -- FIXME: should be a flag also, or some other way to conditionally compile
+        -- Setup.hs hooks can handle this, but do we want to do that?
+        other-modules:
+
+                            SEL4.API.Types.X64
+                            SEL4.API.InvocationLabels.X64
+                            SEL4.API.Invocation.X64
+                            SEL4.Kernel.VSpace.X64
+                            SEL4.Kernel.Thread.X64
+                            SEL4.Object.ObjectType.X64
+                            SEL4.Object.Structures.X64
+                            SEL4.Object.Interrupt.X64
+                            SEL4.Object.Instances.X64
+                            SEL4.Object.IOPort.X64
+                            SEL4.Object.TCB.X64
+                            SEL4.Model.StateData.X64
+                            SEL4.Machine.RegisterSet.X64
+                            SEL4.Machine.Hardware.X64
+
+                            SEL4.Machine.Hardware.X64.PC99
+
     hs-source-dirs:         src
     ghc-prof-options:       -auto-all -prof -fprof-auto
     ghc-options:            -Wall -Werror -O2 -fno-warn-unused-do-bind

@@ -39,7 +39,7 @@ requalify_facts
   loadWord_inv
   valid_global_refsD2
   arch_derived_is_device
-  valid_ao_at_lift
+(*  valid_ao_at_lift *) (* not used in ARMHYP *)
   update_cnode_cap_data_def
 
 end

@@ -50,7 +50,7 @@ lemma update_cap_data_closedform:
                         the_cnode_cap_def fst_conv snd_conv fun_app_def the_arch_cap_def
                         arch_update_cap_data_def
                   cong: if_cong)
-  apply auto
+  apply (auto simp: word_bits_def)
   done
 
 lemma cap_asid_PageCap_None [simp]:

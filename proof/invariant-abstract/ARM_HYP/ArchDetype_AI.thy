@@ -44,10 +44,10 @@ lemma caps_of_state_ko[Detype_AI_asms]:
 
 lemma mapM_x_storeWord[Detype_AI_asms]:
 (* FIXME: taken from Retype_C.thy and adapted wrt. the missing intvl syntax. *)
-  assumes al: "is_aligned ptr 2"
-  shows "mapM_x (\<lambda>x. storeWord (ptr + of_nat x * 4) 0) [0..<n]
+  assumes al: "is_aligned ptr word_size_bits"
+  shows "mapM_x (\<lambda>x. storeWord (ptr + of_nat x * word_size) 0) [0..<n]
   = modify (underlying_memory_update
-             (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * 4 then 0 else m x))"
+             (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * word_size then 0 else m x))"
 proof (induct n)
   case 0
   thus ?case
@@ -85,13 +85,13 @@ next
   from al have "is_aligned (ptr + of_nat n' * 4) 2"
     apply (rule aligned_add_aligned)
     apply (rule is_aligned_mult_triv2 [where n = 2, simplified])
-    apply (simp add: word_bits_conv)+
+    apply (simp add: word_bits_conv word_size_bits_def)+
     done
 
   thus ?case
     apply (simp add: mapM_x_append bind_assoc Suc.hyps mapM_x_singleton)
     apply (simp add: storeWord_def assert_def is_aligned_mask modify_modify
-                     comp_def)
+                     comp_def word_size_def)
     apply (simp only: funs_eq)
     done
 qed
@@ -615,16 +615,17 @@ lemma delete_objects_invs[wp]:
   apply (simp add: freeMemory_def word_size_def bind_assoc
                    empty_fail_mapM_x ef_storeWord)
    apply (rule hoare_pre)
-   apply (rule_tac G="is_aligned ptr bits \<and> 2 \<le> bits \<and> bits \<le> word_bits"
+   apply (rule_tac G="is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits"
                 in hoare_grab_asm)
-   apply (simp add: mapM_storeWord_clear_um intvl_range_conv[where 'a=32, folded word_bits_def])
+   apply (simp add: mapM_storeWord_clear_um[unfolded word_size_def]
+                    intvl_range_conv[where 'a=machine_word_len, folded word_bits_def])
    apply wp
   apply clarsimp
   apply (frule invs_untyped_children)
   apply (frule detype_invariants, clarsimp+)
   apply (drule invs_valid_objs)
   apply (drule (1) cte_wp_valid_cap)
-  apply (simp add: valid_cap_def cap_aligned_def)
+  apply (simp add: valid_cap_def cap_aligned_def word_size_bits_def)
   done
 end
 

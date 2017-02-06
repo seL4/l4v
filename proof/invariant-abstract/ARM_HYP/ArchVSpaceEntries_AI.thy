@@ -110,6 +110,8 @@ lemma vcpu_switch_valid_pdpt_objs[wp]:
 crunch valid_pdpt_objs[wp]: flush_page "valid_pdpt_objs"
   (wp: crunch_wps simp: crunch_simps ignore: set_object)
 
+lemma add_3_eq_Suc'[simp]: "n + 3 = Suc (Suc (Suc n))" by simp
+
 lemma shift_0x3C_set:
   "\<lbrakk> is_aligned p 7; 8 \<le> bits; bits < 32; len_of TYPE('a) = bits - 3 \<rbrakk> \<Longrightarrow>
    (\<lambda>x. ucast (x + p && mask bits >> 3) :: ('a :: len) word) ` set [0 :: word32 , 8 .e. 0x78]

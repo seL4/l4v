@@ -363,7 +363,7 @@ lemma update_cap_valid[Tcb_AI_asms]:
             split del: if_split)
      apply (simp add: badge_update_def cap_rights_update_def)
     apply (simp add: badge_update_def)
-   apply simp
+   apply (simp add: word_bits_def)
   apply (rename_tac arch_cap)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
   apply (case_tac arch_cap, simp_all add: acap_rights_update_def
@@ -374,11 +374,16 @@ lemma update_cap_valid[Tcb_AI_asms]:
 crunch pred_tcb_at: switch_to_thread "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
+crunch typ_at[wp]: invoke_tcb "\<lambda>s. P (typ_at T p s)"
+  (ignore: check_cap_at setNextPC zipWithM
+       wp: hoare_drop_imps mapM_x_wp' check_cap_inv
+     simp: crunch_simps)
 
 end
 
 context begin interpretation Arch .
 requalify_consts is_cnode_or_valid_arch
+requalify_facts invoke_tcb_typ_at
 end
 
 global_interpretation Tcb_AI?: Tcb_AI

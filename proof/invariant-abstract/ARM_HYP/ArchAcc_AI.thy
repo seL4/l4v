@@ -17,13 +17,6 @@ imports "../SubMonad_AI"
  "../../../lib/Crunch"
 begin
 
-
-(*FIXME: Move or remove *)
-
-method spec for x :: "_ :: type" = (erule allE[of _ x])
-method bspec for x :: "_ :: type" = (erule ballE[of _ _ x])
-method prove for x :: "prop" = (rule revcut_rl[of "PROP x"])
-
 context Arch begin global_naming ARM
 
 
@@ -232,29 +225,15 @@ lemma set_asid_pool_pred_tcb_at[wp]:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
-lemmas word_simps =
-  word_size word_ops_nth_size nth_ucast nth_shiftr nth_shiftl
-  pd_bits_def pageBits_def
 
-(* FIXME move *)
+(* FIXME move *
 lemma add_3_eq_Suc'[simp]: "n + 3 = Suc (Suc (Suc n))" by simp
-(***)
+***)
 
 lemma mask_pd_bits_inner_beauty: (* ARMHYP *)  (* 11 = pd_bits - pde_bits *)
   "is_aligned p pde_bits \<Longrightarrow>
   (p && ~~ mask pd_bits) + (ucast ((ucast (p && mask pd_bits >> pde_bits))::11 word) << pde_bits) = (p::word32)"
-  apply (simp add: is_aligned_nth pde_bits_def)
-  apply (subst word_plus_and_or_coroll; rule word_eqI)
-  subgoal
-    by (clarsimp simp: word_simps)
-  subgoal for n
-    apply (clarsimp simp: word_simps )
-    apply (rule iffI, (erule disjE;clarsimp))
-    subgoal by (prove "Suc (Suc (Suc (n - 3))) = n") simp+
-    apply (spec n)
-    apply (prove "Suc (Suc (Suc (n - 3))) = n") subgoal by arith
-    by (clarsimp simp: pde_bits_def)
-done
+   by (rule mask_split_aligned; simp add: vspace_bits_defs)
 
 
 lemma more_pd_inner_beauty:
@@ -262,58 +241,13 @@ lemma more_pd_inner_beauty:
   fixes p :: word32
   assumes x: "x \<noteq> ucast (p && mask pd_bits >> 3)"
   shows "(p && ~~ mask pd_bits) + (ucast x << 3) = p \<Longrightarrow> False"
-  apply (subst (asm) word_plus_and_or_coroll)
-   apply (clarsimp simp: word_simps bang_eq)
-  subgoal for n
-    apply (drule test_bit_size)
-    apply (clarsimp simp: word_simps vspace_bits_defs)
-    by arith
-  apply (insert x)
-  apply (erule notE)
-  apply (rule word_eqI)
-  subgoal for n
-    apply (clarsimp simp: word_simps bang_eq)
-    apply (spec "n+3")
-    by (clarsimp simp: word_ops_nth_size word_size vspace_bits_defs)
-done
-
-lemma mask_alignment_ugliness:
-  "\<lbrakk> x \<noteq> x + z && ~~ mask m;
-     is_aligned (x + z && ~~ mask m) m;
-     is_aligned x m;
-     \<forall>n \<ge> m. \<not>z !! n\<rbrakk>
-  \<Longrightarrow> False"
-  apply (erule notE)
-  apply (rule word_eqI)
-  apply (clarsimp simp: is_aligned_nth word_ops_nth_size word_size pd_bits_def pageBits_def)
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: word_size)
-
-   subgoal for \<dots> na
-    apply (spec na)+
-    by simp
-  by auto
+  by (rule mask_split_aligned_neg[OF _ _ x]; simp add: vspace_bits_defs)
 
 
 lemma mask_pt_bits_inner_beauty:
   "is_aligned p pte_bits \<Longrightarrow>
   (p && ~~ mask pt_bits) + (ucast ((ucast (p && mask pt_bits >> pte_bits))::9 word) << pte_bits) = (p::word32)"
-  apply (simp add: is_aligned_nth)
-  apply (subst word_plus_and_or_coroll; rule word_eqI)
-  subgoal by (clarsimp simp: word_simps)
-  apply (clarsimp simp: word_simps vspace_bits_defs)
-  subgoal for n
-   apply (rule iffI)
-    apply (erule disjE;clarsimp)
-    subgoal by (prove "Suc (Suc (Suc (n - 3))) = n") simp+
-   apply clarsimp
-  apply (rule context_conjI)
-   apply (rule leI)
-   subgoal by clarsimp
-   apply (prove "Suc (Suc (Suc (n - 3))) = n") subgoal by arith
-   by (simp add: vspace_bits_defs)
-  done
+ by (rule mask_split_aligned; simp add: vspace_bits_defs)
 
 
 lemma more_pt_inner_beauty:
@@ -321,20 +255,7 @@ lemma more_pt_inner_beauty:
   fixes p :: word32
   assumes x: "x \<noteq> ucast (p && mask pt_bits >> pte_bits)"
   shows "(p && ~~ mask pt_bits) + (ucast x << pte_bits) = p \<Longrightarrow> False"
-  apply (subst (asm) word_plus_and_or_coroll)
-   apply (clarsimp simp: word_size word_ops_nth_size nth_ucast
-                         nth_shiftl bang_eq)
-   apply (drule test_bit_size)
-   apply (clarsimp simp: word_size vspace_bits_defs)
-   apply arith
-   apply (rule x[THEN notE])
-  apply (rule word_eqI)
-  subgoal for n
-    apply (clarsimp simp: bang_eq word_simps)
-    apply (spec "n+3")
-    apply (clarsimp simp: word_ops_nth_size word_size)
-    by (clarsimp simp: vspace_bits_defs)
-  done
+  by (rule mask_split_aligned_neg[OF _ _ x]; simp add: vspace_bits_defs)
 
 
 lemma set_pd_aligned [wp]:
@@ -531,9 +452,7 @@ lemma pde_shifting:  (* ARMHYP >> 20? *)
      apply (drule (1) order_le_less_trans)
      apply (drule bang_is_le)
      apply (drule order_le_less_trans[where z="2 ^ 4"], assumption)
-     apply (drule word_power_increasing)
-        apply (fold_subgoals (prefix))[4]
-     subgoal premises using prems by simp+
+     apply (drule word_power_increasing; simp)
     apply (spec "n' + 21")
     apply (frule test_bit_size[where n = "n' + 21"])
     by (simp add: word_size)
