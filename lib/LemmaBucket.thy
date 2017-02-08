@@ -443,4 +443,9 @@ lemma in_set_enumerate_eq2:"(a, b) \<in> set (enumerate n xs) \<Longrightarrow> 
 lemma subset_eq_notI: "\<lbrakk>a\<in> B;a\<notin> C\<rbrakk> \<Longrightarrow> \<not> B \<subseteq> C"
   by auto
 
+lemma nat_divide_less_eq:
+  fixes b :: nat
+  shows "0 < c \<Longrightarrow> (b div c < a) = (b < a * c)"
+  using td_gal_lt by blast
+
 end
