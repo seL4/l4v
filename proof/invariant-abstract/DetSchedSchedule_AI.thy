@@ -1930,6 +1930,16 @@ lemma transfer_caps_not_cur_thread[wp]:
 context begin interpretation Arch . (*FIXME: arch_split*)
 crunch not_cur_thread[wp]: do_ipc_transfer, as_user "not_cur_thread t"
   (wp: crunch_wps simp: crunch_simps ignore: const_on_failure)
+
+crunch valid_sched[wp]: handle_hypervisor_fault valid_sched
+  (ignore: getFAR getDFSR getIFSR)
+
+crunch not_queued[wp]: handle_hypervisor_fault "not_queued t"
+  (ignore: getFAR getDFSR getIFSR)
+
+crunch sched_act_not[wp]: handle_hypervisor_fault "scheduler_act_not t"
+  (ignore: getFAR getDFSR getIFSR)
+
 end
 
 lemma switch_if_required_to_valid_sched':

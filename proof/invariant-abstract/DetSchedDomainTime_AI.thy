@@ -135,7 +135,7 @@ crunch domain_list_inv[wp]: perform_invocation, handle_invocation "\<lambda>s. P
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch domain_list_inv[wp]:
-  handle_recv, handle_yield, handle_call, handle_reply, handle_vm_fault
+  handle_recv, handle_yield, handle_call, handle_reply, handle_vm_fault, handle_hypervisor_fault
     "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -285,7 +285,7 @@ crunch domain_time_inv[wp]: perform_invocation, handle_invocation "\<lambda>s. P
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch domain_time_inv[wp]:
-  handle_recv, handle_yield, handle_call, handle_reply, handle_vm_fault
+  handle_recv, handle_yield, handle_call, handle_reply, handle_vm_fault, handle_hypervisor_fault
     "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps simp: crunch_simps)
 
