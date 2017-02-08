@@ -1,7 +1,7 @@
-Built from git repo at /Users/kleing/verification/l4v/spec/haskell by kleing
+Built from git repo at /home/mikit/temprepo/l4v/spec/haskell by mikit
 
 Generated from changeset:
-697758d provide TCB argument for sanitiseRegister
+6330a0a update invariants for prepare_thread_delete
 
 
 Warning - uncomitted changes used:

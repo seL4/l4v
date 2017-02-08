@@ -26,7 +26,7 @@ requalify_consts
   hasCancelSendRights sameRegionAs isPhysicalCap
   sameObjectAs updateCapData maskCapRights
   createObject capUntypedPtr capUntypedSize
-  performInvocation decodeInvocation
+  performInvocation decodeInvocation prepareThreadDelete
 
 context begin global_naming global
 
@@ -95,6 +95,7 @@ defs finaliseCap_def:
     cte_ptr \<leftarrow> getThreadCSpaceRoot tcb;
     unbindNotification tcb;
     suspend tcb;
+    Arch.prepareThreadDelete tcb;
     return (Zombie cte_ptr ZombieTCB 5, Nothing)
   od)
   else if isZombie v13 \<and> v14

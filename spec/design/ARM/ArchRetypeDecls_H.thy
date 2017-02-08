@@ -657,6 +657,9 @@ capUntypedPtr :: "arch_capability \<Rightarrow> machine_word"
 consts'
 capUntypedSize :: "arch_capability \<Rightarrow> machine_word"
 
+consts'
+prepareThreadDelete :: "machine_word \<Rightarrow> unit kernel"
+
 
 end
 end
