@@ -129,40 +129,6 @@ lemma restart_tcb[wp]:
   "\<lbrace>tcb_at t'\<rbrace> Tcb_A.restart t \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
   by (simp add: tcb_at_typ, wp restart_typ_at)
 
-lemma copyAreaToRegs_typ_at:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> copyAreaToRegs regs a b \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: copyAreaToRegs_def)
-  apply (wp thread_set_typ_at mapM_wp')
-  done
-
-lemma copyAreaToRegs_tcb'[wp]:
-  "\<lbrace>tcb_at t\<rbrace> copyAreaToRegs regs a b \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
-  by (simp add: tcb_at_typ, wp copyAreaToRegs_typ_at)
-
-lemma copyRegsToArea_typ_at:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> copyRegsToArea regs a b \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: copyRegsToArea_def)
-  apply (wpsimp wp: zipWithM_x_inv)
-  done
-
-lemma copyRegsToArea_tcb'[wp]:
-  "\<lbrace>tcb_at t\<rbrace> copyRegsToArea regs a b \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
-  by (simp add: tcb_at_typ, wp copyRegsToArea_typ_at)
-
-
-lemma copyRegsToArea_invs[wp]:
-  "\<lbrace>invs\<rbrace> copyRegsToArea regs a b \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: copyRegsToArea_def)
-  apply (wpsimp wp: zipWithM_x_inv)
-  done
-
-
-lemma copyAreaToRegs_invs[wp]:
-  "\<lbrace>invs and tcb_at b\<rbrace> copyAreaToRegs regs a b \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: copyAreaToRegs_def)
-  apply (wpsimp wp: mapM_wp' thread_set_invs_trivial simp: tcb_cap_cases_def)
-  done
-
 
 lemmas suspend_tcb_at[wp] = tcb_at_typ_at [OF suspend_typ_at]
 
