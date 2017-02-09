@@ -2790,11 +2790,13 @@ lemma caps_of_state_pspace_no_overlapD:
     apply (simp add: cte_wp_at_caps_of_state is_aligned_neg_mask_eq)
    apply (simp add: is_aligned_neg_mask_eq)
    apply (simp add: mask_out_sub_mask)
+sorry (* word proof needed for unat_of_nat32
    apply (subst unat_of_nat32, erule order_less_le_trans, simp_all)
   apply (rule word_of_nat_less)
   apply (erule order_less_le_trans)
   apply simp
   done
+*)
 
 lemma set_untyped_cap_invs_simple:
   "\<lbrace>\<lambda>s. descendants_range_in {ptr .. ptr+2^sz - 1} cref s

@@ -269,6 +269,13 @@ lemma lookup_rtrancl_stepD:
   apply (clarsimp dest!: lookup_ref_step lookup1_is_append)
   done
 
+lemma lookup_rtrancl_stepsD:
+  "(([], p), r @ [ref'], q) \<in> cs\<^sup>* \<Longrightarrow> \<exists>ptr. (([],p),[ref'],ptr) \<in> cs \<and> (([], ptr), r, q) \<in> cs\<^sup>*"
+  apply (erule lookup_forwardE)
+  apply clarsimp+
+  apply force+
+  done
+
 lemma lookup_trancl_cut_1:
   (* This is true because the lengh of the lookup is always increased by 1 *)
   "((ra, q), r, p) \<in> cs\<^sup>* \<Longrightarrow> ((ra @ [b], q), r @ [b], p) \<in> cs\<^sup>*"

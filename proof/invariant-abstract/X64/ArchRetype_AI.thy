@@ -215,7 +215,7 @@ lemma mapM_x_store_pml4e_eq_kernel_mappings_restr:
                       \<and> pmv (ucast x) = pmv' (ucast x)))\<rbrace>"
   apply (induct xs rule: rev_induct, simp_all add: mapM_x_Nil mapM_x_append mapM_x_singleton)
   apply (erule hoare_seq_ext[rotated])
-  apply (simp add: store_pml4e_def set_pml4_def set_object_def cong: bind_cong)
+  apply (simp add: store_pml4e_def set_object_def update_object_def cong: bind_cong)
   apply (wp get_object_wp get_pml4e_wp)
   apply (clarsimp simp: obj_at_def split del: if_split)
   apply (frule shiftl_less_t2n)
@@ -226,7 +226,7 @@ lemma mapM_x_store_pml4e_eq_kernel_mappings_restr:
    apply (erule less_le_trans)
    apply (simp add: pml4_bits_def simple_bit_simps)
   apply (clarsimp simp: fun_upd_def[symmetric] is_aligned_add_helper)
-  sorry
+  done
 
 
 lemma equal_kernel_mappings_specific_def:
@@ -239,6 +239,26 @@ lemma equal_kernel_mappings_specific_def:
   apply (subgoal_tac "pm' w = pm w \<and> pm'' w = pm w")
    apply (erule conjE, erule(1) trans[OF _ sym])
   by blast
+
+lemma invs_aligned_pml4D:
+  "\<lbrakk> pspace_aligned s; valid_arch_state s \<rbrakk> \<Longrightarrow> is_aligned (x64_global_pml4 (arch_state s)) pml4_bits"
+  apply (clarsimp simp: valid_arch_state_def)
+  apply (drule (1) is_aligned_pml4)
+  apply (simp add: pml4_bits_def pageBits_def)
+  done
+
+(* FIXME: MOVE ? *)
+lemma unat_ucast_below_64:
+  fixes x :: "'a :: len word"
+  shows "LENGTH ('a) < 64 \<Longrightarrow> unat (ucast x :: word64) = unat x"
+  unfolding ucast_def unat_def
+  apply (subst int_word_uint)
+  apply (subst mod_pos_pos_trivial)
+    apply simp
+   apply (rule lt2p_lem)
+   apply simp
+  apply simp
+  done
 
 lemma copy_global_equal_kernel_mappings_restricted:
   "is_aligned pm pml4_bits \<Longrightarrow>
@@ -271,11 +291,7 @@ lemma copy_global_equal_kernel_mappings_restricted:
   apply (drule_tac x="ucast w" in spec, drule mp)
    apply (clarsimp simp: kernel_mapping_slots_def get_pml4_index_def)
    apply (rule conjI)
-    apply (simp add: word_le_nat_alt unat_ucast_kernel_base_rshift)
-    apply (simp only: unat_ucast, subst mod_less)
-     apply (rule order_less_le_trans, rule unat_lt2p)
-     apply simp
-    apply simp
+    apply (simp add: pptr_base_shift_cast_le)
    apply (rule minus_one_helper3)
    apply (rule order_less_le_trans, rule ucast_less)
     apply simp
@@ -305,6 +321,47 @@ lemma store_pde_vms[wp]:
  "\<lbrace>valid_machine_state\<rbrace> store_pml4e ptr pml4e \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   by (wpsimp simp: store_pml4e_def)
 
+lemma valid_arch_caps_table_caps:
+  "valid_arch_caps s \<Longrightarrow> valid_table_caps s"
+  by (simp add: valid_arch_caps_def)
+
+lemma valid_table_caps_aobj_upd_invalid_pml4e2:
+  "\<lbrakk>valid_table_caps s; kheap s p = Some (ArchObj (PageMapL4 pml4)); valid_objs s;
+    pml4e_ref_pages pml4e = None \<or> (\<forall>slot cap. caps_of_state s slot = Some cap \<longrightarrow> is_pml4_cap cap \<longrightarrow> p \<in> obj_refs cap \<longrightarrow>
+         (entry \<in> kernel_mapping_slots \<and> the (pml4e_ref_pages pml4e) \<in> set (x64_global_pdpts (arch_state s))))\<rbrakk>
+    \<Longrightarrow> valid_table_caps_aobj (caps_of_state s) (arch_state s) (ArchObj (PageMapL4 (pml4(entry := pml4e)))) p"
+  apply (clarsimp simp: valid_table_caps_def valid_table_caps_aobj_def all_comm
+                        empty_table_def
+                 split: option.splits
+              simp del: split_paired_All )
+  apply (drule_tac x = cap in spec)
+  apply (erule impE)
+   apply fastforce
+  apply (drule_tac x = p in spec)
+  apply (intro impI allI conjI)
+      apply ((clarsimp simp: obj_at_def dest!: invs_valid_objs caps_of_state_valid | drule(2) valid_cap_typ_at)+)[12]
+     apply (clarsimp simp: obj_at_def dest!: ref_pages_Some pml4e_ref_pages_SomeD ref_pages_NoneD)
+     apply (fastforce simp: pml4e_ref_pages_def)
+     apply (clarsimp simp: pml4e_ref_pages_def pml4e_ref_def[split_simps pml4e.split])
+    apply (fastforce simp: obj_at_def dest!: ref_pages_Some pml4e_ref_pages_SomeD ref_pages_NoneD split: pml4e.split_asm)
+   apply (fastforce simp: obj_at_def)
+  apply (clarsimp simp: obj_at_def dest!: invs_valid_objs caps_of_state_valid | drule(2) valid_cap_typ_at)+
+  done
+
+lemmas pml4e_ref_simps[simp] = pml4e_ref_def[split_simps pml4e.split]
+lemmas pml4e_ref_pages_simps[simp] = pml4e_ref_pages_def[split_simps pml4e.split]
+
+lemma pml4e_ref_pages_eq_refs: 
+  "pml4e_ref_pages a = pml4e_ref a"
+  by (clarsimp simp: pml4e_ref_pages_def split: pml4e.splits)
+
+lemma in_kernel_mapping_slotsI:
+  "\<lbrakk>get_pml4_index pptr_base \<le> x; (x::word64) << word_size_bits < 2 ^ pml4_bits; x << word_size_bits >> word_size_bits = x\<rbrakk> \<Longrightarrow> ucast x \<in> kernel_mapping_slots"
+  apply (clarsimp simp: kernel_mapping_slots_def pptr_base_def bit_simps pptrBase_def get_pml4_index_def mask_def)
+  apply word_bitwise
+  apply auto
+  done
+
 lemma copy_global_invs_mappings_restricted:
   "\<lbrace>(\<lambda>s. all_invs_but_equal_kernel_mappings_restricted (insert pm S) s)
           and (\<lambda>s. insert pm S \<inter> global_refs s = {})
@@ -324,7 +381,7 @@ lemma copy_global_invs_mappings_restricted:
     apply simp_all
    apply (rule hoare_pre)
     apply (wp valid_irq_node_typ valid_irq_handlers_lift
-              get_pml4e_wp | simp add: store_pml4e_def)+
+              get_pml4e_wp | simp add: store_pml4e_def )+
    apply (clarsimp simp: valid_global_objs_def)
    apply (frule(1) invs_aligned_pml4D)
    apply (frule shiftl_less_t2n)
@@ -334,10 +391,24 @@ lemma copy_global_invs_mappings_restricted:
      apply (simp add: word_size_bits_def)
     apply (erule order_less_le_trans)
     apply (simp add: pml4_bits_def simple_bit_simps)
-   apply (clarsimp simp: obj_at_def empty_table_def kernel_vsrefs_def get_pml4_index_def)
-  apply clarsimp
+   apply (clarsimp simp: obj_at_def empty_table_def kernel_vsrefs_def get_pml4_index_def aa_type_simps)
+  apply (intro conjI)
+           apply (clarsimp split: option.split_asm if_split_asm)+
+          apply (drule valid_arch_objsD, (fastforce simp: obj_at_def)+)[1]
+         apply (clarsimp split: option.split_asm if_split_asm)+
+         apply (erule(2) valid_table_caps_aobj_upd_invalid_pml4e2[OF valid_arch_caps_table_caps])
+         apply (clarsimp simp: pml4e_ref_pages_eq_refs in_kernel_mapping_slotsI[unfolded get_pml4_index_def])
+        apply (clarsimp simp: valid_arch_state_asid_table_strg)
+       apply (clarsimp split: option.split_asm if_split_asm)+
+    apply (clarsimp simp: valid_global_objs_upd_def global_refs_def)
+   apply (erule(1) valid_kernel_mappings_if_pm_pml4e)
+   apply clarsimp
+   apply (rule ccontr)
+   apply (drule_tac x = "(ucast x)" in spec)
+   apply (clarsimp split: option.split_asm if_split_asm simp: pml4e_ref_def[split_simps pml4e.split])+
   apply (drule minus_one_helper5[rotated])
-  by (auto simp: pml4_bits_def simple_bit_simps)
+  apply (auto simp: pml4_bits_def simple_bit_simps)
+  done
 
 lemma copy_global_mappings_valid_ioc[wp]:
  "\<lbrace>valid_ioc\<rbrace> copy_global_mappings pm \<lbrace>\<lambda>_. valid_ioc\<rbrace>"

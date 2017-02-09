@@ -949,7 +949,7 @@ lemma setCurrentVSpaceRoot_invs[wp]:
 lemma update_asid_map_valid_arch:
   notes hoare_pre [wp_pre del]
   shows "\<lbrace>valid_arch_state\<rbrace>
-  update_asid_map asid
+  update_asid_map asid 
   \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   apply (simp add: update_asid_map_def)
   apply (wp find_vspace_for_asid_assert_wp)
@@ -957,7 +957,7 @@ lemma update_asid_map_valid_arch:
   done
 
 lemma update_asid_map_invs:
-  "\<lbrace>invs and K (asid \<le> mask asid_bits)\<rbrace> update_asid_map asid  \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "\<lbrace>invs and K (asid \<le> mask asid_bits)\<rbrace> update_asid_map asid \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_add_post)
     apply (rule update_asid_map_valid_arch)
    apply fastforce
@@ -1459,12 +1459,6 @@ lemma arch_update_cap_invs_map:
   apply (clarsimp dest!: master_cap_eq_is_device_cap_eq)
   done
 
-    (* Want something like
-       cte_wp_at (\<lambda>c. \<forall>p'\<in>obj_refs c. \<not>(vs_cap_ref c \<unrhd> p') s \<and> is_arch_update cap c) p
-       So that we know the new cap isn't clobbering a cap with necessary mapping info.
-       invs is fine here (I suspect) because we unmap the page BEFORE we replace the cap.
-    *)
-
 lemma arch_update_cap_invs_unmap_page:
   "\<lbrace>(\<lambda>s. cte_wp_at (\<lambda>c. (\<forall>p'\<in>obj_refs c. \<forall>ref. vs_cap_ref c = Some ref \<longrightarrow> \<not> (ref \<unrhd> p') s) \<and> is_arch_update cap c) p s)
              and invs and valid_cap cap
@@ -1876,16 +1870,231 @@ lemma get_pml4_index_bit_def:
 lemma get_pdpt_index_bit_def:
   "get_pdpt_index vaddr = (vaddr >> 30) && mask 9"
    by (simp add: get_pdpt_index_def bit_simps)
-thm arch_perform_invocation_def
+
+lemma get_pd_index_bit_def:
+  "get_pd_index vaddr = (vaddr >> 21) && mask 9"
+   by (simp add: get_pd_index_def bit_simps)
+
+lemma obj_bits_from_vs_refs_pagesD:
+  "(VSRef A (Some G), pd) \<in> vs_refs_pages ko \<Longrightarrow> if G = AASIDPool then  obj_bits ko = pageBits else obj_bits ko =  table_size"
+  by (clarsimp simp: vs_refs_pages_def split: kernel_object.split_asm arch_kernel_obj.split_asm option.splits
+                 dest!: graph_ofD)
+
+lemma vs_lookup_pages1I:
+  "\<lbrakk>ko_at ko p s; (r, q) \<in> vs_refs_pages ko\<rbrakk> \<Longrightarrow> ((a,p),r # a, q) \<in> vs_lookup_pages1 s"
+  by (clarsimp simp: vs_lookup_pages1_def obj_at_def)
+
+lemma asid_pool_refs_pagesD:
+   "pool (ucast asid) = Some xa
+       \<Longrightarrow> (VSRef (ucast (ucast asid :: 9 word)) (Some AASIDPool) ,xa) \<in> vs_refs_pages (ArchObj (ASIDPool pool))"
+  by (clarsimp simp: vs_refs_pages_def graph_of_def image_def)
+
+lemma asid_pool_refsD:
+   "pool (ucast (asid :: word64)) = Some xa
+       \<Longrightarrow> (VSRef (ucast (ucast asid :: 9 word)) (Some AASIDPool) ,xa) \<in> vs_refs (ArchObj (ASIDPool pool))"
+  by (clarsimp simp: vs_refs_def graph_of_def image_def)
+
+lemma context_vs_lookup_pages_step:
+  "\<lbrakk>(ref \<rhd> p) s \<Longrightarrow> ((ref, p), ref', p') \<in> vs_lookup_pages1 s; (ref \<rhd> p) s\<rbrakk>
+    \<Longrightarrow> (ref' \<unrhd> p') s"
+  apply (rule vs_lookup_pages_step)
+   apply (intro vs_lookup_pages_vs_lookupI | simp)+
+  done
+
+lemma context_vs_lookup_step:
+  "\<lbrakk>(ref \<rhd> p) s \<Longrightarrow> ((ref, p), ref', p') \<in> vs_lookup1 s; (ref \<rhd> p) s\<rbrakk>
+    \<Longrightarrow> (ref' \<rhd>  p') s"
+  apply (rule vs_lookup_step)
+   apply (intro vs_lookup_pages_vs_lookupI | simp)+
+  done
+
+lemmas entry_ref_pages_simps = pdpte_ref_pages_def[split_simps pdpte.split] pte_ref_pages_def[split_simps pte.split]
+                   pml4e_ref_pages_def[split_simps pml4e.split]
+                   pde_ref_pages_def[split_simps pde.split]
+
+method rewrite_lookup_when_aligned
+   = (match premises in M: "P (lookup_pml4_slot p _)" and L: "pspace_aligned s"
+            and KS : "kheap s p = Some _" for s p P \<Rightarrow> \<open>rule revcut_rl[OF pspace_alignedD[OF KS L]]\<close>
+      , clarsimp simp: pml4_bits_def pml4_shifting[folded lookup_pml4_slot_def[unfolded Let_def], unfolded pml4_bits_def])
+   | (match premises in M: "P (p + _)" and L: "pspace_aligned s"
+            and TP : "typ_at (AArch APDPointerTable) p s" for s p P \<Rightarrow> \<open>rule revcut_rl[OF is_aligned_pdpt[OF TP L]]\<close>
+      , clarsimp simp: pdpt_bits_def pdpt_shifting[folded lookup_pdpt_slot_def[unfolded Let_def], unfolded pdpt_bits_def])
+   | (match premises in M: "P (p + _)" and L: "pspace_aligned s"
+            and TP : "typ_at (AArch APageDirectory) p s" for s p P \<Rightarrow> \<open>rule revcut_rl[OF is_aligned_pd[OF TP L]]\<close>
+      , clarsimp simp: pd_bits_def pd_shifting[folded lookup_pd_slot_def[unfolded Let_def], unfolded pd_bits_def])
+   | (match premises in M: "P (lookup_pml4_slot p _)" and L: "pspace_aligned s"
+            and TP : "typ_at (AArch APageMapL4) p s" for s p P \<Rightarrow> \<open>rule revcut_rl[OF is_aligned_pml4[OF TP L]]\<close>
+      , clarsimp simp: pml4_bits_def pml4_shifting[folded lookup_pml4_slot_def[unfolded Let_def], unfolded pml4_bits_def])
+
+lemma valid_arch_objs_asidpoolD:
+  "\<lbrakk>valid_arch_obj (ASIDPool pool) s; pool (ucast asid) = Some x\<rbrakk>  \<Longrightarrow> typ_at (AArch APageMapL4) x s"
+  by fastforce
+
+lemma vs_refs_get_pml4_index:
+  "\<lbrakk>pm (ucast (get_pml4_index vaddr)) = PDPointerTablePML4E a b c; vaddr < pptr_base; canonical_address vaddr\<rbrakk>
+  \<Longrightarrow> (VSRef (get_pml4_index vaddr) (Some APageMapL4), ptrFromPAddr a) \<in> vs_refs (ArchObj (PageMapL4 pm))"
+  apply (clarsimp simp: vs_refs_def graph_of_def image_def)
+  apply (drule(1) kernel_base_kernel_mapping_slots)
+  apply (intro exI conjI)
+  apply assumption
+  apply (clarsimp simp: pml4e_ref_def get_pml4_index_def pml4_shift_bits_def bit_simps)
+  apply word_bitwise
+  apply (clarsimp simp: mask_def)
+  done
+
+lemma vs_refs_pages_pdpt:
+  "\<lbrakk>pdpte_ref_pages (pdpta a) = Some pd\<rbrakk> \<Longrightarrow> (VSRef (ucast a) (Some APDPointerTable),pd) \<in> vs_refs_pages (ArchObj (PDPointerTable pdpta))"
+  by (clarsimp simp: vs_refs_pages_def image_def graph_of_def)
+
+lemma vs_refs_get_pdpt_index:
+  "\<lbrakk>pdpt (ucast (get_pdpt_index vaddr)) = PageDirectoryPDPTE a b c\<rbrakk>
+  \<Longrightarrow> (VSRef (get_pdpt_index vaddr) (Some APDPointerTable), ptrFromPAddr a) \<in> vs_refs (ArchObj (PDPointerTable pdpt))"
+  apply (clarsimp simp: vs_refs_def graph_of_def image_def)
+  apply (rule_tac x = "ucast (get_pdpt_index vaddr)" in exI)
+   apply (clarsimp simp: pdpte_ref_def)
+  apply (clarsimp simp: get_pdpt_index_def bit_simps)
+  apply word_bitwise
+  apply (clarsimp simp: mask_def)
+  done
+
+lemma vs_refs_get_pd_index:
+  "\<lbrakk>pd (ucast (get_pd_index vaddr)) = PageTablePDE pt a b\<rbrakk>
+  \<Longrightarrow> (VSRef (get_pd_index vaddr) (Some APageDirectory), (ptrFromPAddr pt)) \<in> vs_refs (ArchObj (PageDirectory pd))"
+  apply (clarsimp simp: vs_refs_def graph_of_def image_def)
+  apply (rule_tac x = "(ucast (get_pd_index vaddr))" in exI)
+  apply (clarsimp simp: pdpte_ref_def)
+  apply (clarsimp simp: get_pd_index_def bit_simps)
+  apply word_bitwise
+  apply (clarsimp simp: mask_def)
+  done
+
+lemma valid_arch_objs_pml4D:
+  "\<lbrakk>valid_arch_obj (PageMapL4 pm) s; pm (ucast (get_pml4_index vaddr)) = PDPointerTablePML4E a b c;
+     vaddr < pptr_base; canonical_address vaddr\<rbrakk>  \<Longrightarrow> typ_at (AArch APDPointerTable) (ptrFromPAddr a) s"
+  apply (clarsimp)
+  apply (drule bspec)
+    apply (drule kernel_base_kernel_mapping_slots, simp+)
+  done
+  
+lemma valid_arch_objs_pdptD:
+  "\<lbrakk>valid_arch_obj (PDPointerTable pdpt) s; pdpt x = PageDirectoryPDPTE a b c\<rbrakk>
+    \<Longrightarrow> typ_at (AArch APageDirectory) (ptrFromPAddr a) s"
+  apply (clarsimp)
+  apply (drule_tac x = x in  spec)
+    apply fastforce
+  done
+
+method extract_vs_lookup =
+  (match premises in at[thin]: "x64_asid_table (arch_state s) a = Some p" for s a p \<Rightarrow> \<open>rule revcut_rl[OF vs_lookup_atI[OF at]]\<close>)
+  | (match premises in path[thin]: "(_ \<rhd> p) s" 
+         and ko_at: "ko_at (ArchObj (ASIDPool pool)) p s"
+         and pool: "pool (ucast (_ :: word64)) = Some _"
+         and vs : "valid_arch_objs s"  for pool p s
+      \<Rightarrow> \<open>cut_tac vs_lookup_step[OF path vs_lookup1I[OF ko_at asid_pool_refsD refl], OF pool]
+          , cut_tac valid_arch_objs_asidpoolD[OF valid_arch_objsD,OF path ko_at vs pool]\<close>)
+  | (match premises in path[thin]: "(_ \<rhd> p) s" 
+         and ko_at: "ko_at (ArchObj (PageMapL4 pm)) p s"
+         and pm:  "pm _ = _"
+         and vaddr: "vaddr < pptr_base"
+         and cano: "canonical_address vaddr"
+         and vs : "valid_arch_objs s"  for pm p s vaddr
+      \<Rightarrow> \<open>cut_tac vs_lookup_step[OF path vs_lookup1I[OF ko_at vs_refs_get_pml4_index refl],OF pm vaddr cano]
+          , cut_tac valid_arch_objs_pml4D[OF valid_arch_objsD,OF path ko_at vs pm vaddr cano]\<close>)
+  | (match premises in path[thin]: "(_ \<rhd> p) s" 
+         and ko_at: "ko_at (ArchObj (PDPointerTable pdpt)) p s"
+         and pdpt:  "pdpt (ucast (_::word64)) = PageDirectoryPDPTE _ _ _"
+         and vs : "valid_arch_objs s"  for pdpt p s
+      \<Rightarrow> \<open>cut_tac vs_lookup_step[OF path vs_lookup1I[OF ko_at vs_refs_get_pdpt_index refl],OF pdpt]
+          , cut_tac valid_arch_objs_pdptD[OF valid_arch_objsD,OF path ko_at vs pdpt]\<close>)
+
+lemma in_vs_asid_refsD:
+  "(a,b)\<in> vs_asid_refs table \<Longrightarrow> \<exists>p. table p = Some b \<and> a = [VSRef (ucast p) None]"
+  by (fastforce simp: vs_asid_refs_def dest!: graph_ofD)
+
+lemma unmap_pt_vs_lookup_pages_pre:
+  "\<lbrace>pspace_aligned and valid_arch_objs and valid_arch_state and typ_at (AArch APageTable) pt and K(vaddr < pptr_base \<and> canonical_address vaddr)\<rbrace>unmap_page_table asid vaddr pt
+   \<lbrace>\<lambda>r s. (the (vs_cap_ref (ArchObjectCap (PageTableCap pt (Some (asid,vaddr))))),pt) \<notin> vs_lookup_pages s\<rbrace>"
+  proof -
+  note ref_simps[simp] = vs_cap_ref_simps vs_ref_pages_simps
+  note ucast_simps[simp] = up_ucast_inj_eq ucast_up_ucast mask_asid_low_bits_ucast_ucast ucast_ucast_id
+  show ?thesis
+    apply (clarsimp simp: unmap_page_table_def vs_cap_ref_simps)
+    apply wp
+      apply (clarsimp simp: unmap_pd_def vs_cap_ref_simps store_pde_def)
+    apply wp
+          apply (rule update_aobj_not_reachable[where b = "[b,c,d,e]" for b c d e,simplified])
+    apply (strengthen lookup_refs_pd_shrink_strg valid_arch_state_asid_table_strg not_in_vs_refs_pages_strg
+           | clarsimp )+
+        apply (strengthen | wp hoare_vcg_imp_lift hoare_vcg_all_lift  | clarsimp simp: conj_ac)+
+      apply (wpc | wp get_pdpte_wp get_pml4e_wp get_pde_wp)+
+    apply ((simp add: lookup_pdpt_slot_def lookup_pd_slot_def | wp get_pdpte_wp get_pml4e_wp | wpc)+)[1]
+   apply (simp add: find_vspace_for_asid_def | wp | wpc)+
+     apply (wpc | wp get_pdpte_wp get_pml4e_wp assertE_wp | clarsimp simp: lookup_pdpt_slot_def find_vspace_for_asid_def)
+  apply clarsimp
+  apply (case_tac "([VSRef ((vaddr >> 21) && mask 9) (Some APageDirectory), VSRef ((vaddr >> 30) && mask 9) (Some APDPointerTable)
+                      , VSRef ((vaddr >> 39) && mask 9) (Some APageMapL4), VSRef (ucast (ucast asid :: 9 word)) (Some AASIDPool), VSRef (ucast (asid_high_bits_of asid)) None],
+                      pt)  \<notin> vs_lookup_pages s")
+   apply (clarsimp simp: graph_of_def split: if_splits)
+   apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+   apply (clarsimp simp: get_pml4_index_def bit_simps vs_lookup_pages_vs_lookupI obj_at_def get_pdpt_index_def
+                  split: if_splits)
+   apply (drule vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI vs_lookup_pages1I])
+     apply (simp add: obj_at_def)
+    apply (erule subsetD[OF vs_refs_pages_subset vs_refs_get_pd_index])
+   apply (clarsimp simp: get_pd_index_def bit_simps vs_lookup_pages_def Image_def ptrFormPAddr_addFromPPtr)
+  apply (clarsimp split:if_splits simp: vs_lookup_pages_def graph_of_def dest!: in_vs_asid_refsD)
+  apply (erule wellformed_lookup.lookupE[OF vs_lookup_pages1_is_wellformed_lookup], simp)
+  apply (clarsimp dest!: vs_lookup_pages1D graph_ofD simp: lookup_leaf_def)
+  apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+  apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+  apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+  apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                         wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
+                   simp: obj_at_def)
+  apply (fold ko_at_def2 get_pml4_index_bit_def get_pdpt_index_bit_def get_pd_index_bit_def)
+  apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+  apply (clarsimp simp: obj_at_def pml4e_ref_pages_def dest!: graph_ofD split: if_splits pml4e.split_asm)
+  apply (fold ko_at_def2 vs_asid_refs_def)
+  apply (drule eq_ucast_ucast_eq[rotated], simp)
+  apply clarsimp
+  apply (extract_vs_lookup, rewrite_lookup_when_aligned)+
+  apply (clarsimp simp: obj_at_def pdpte_ref_pages_def image_def vs_lookup_pages_def
+                 dest!: graph_ofD split: if_splits pdpte.split_asm)
+  apply (fold ko_at_def2 vs_asid_refs_def)
+  apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
+  apply clarsimp
+  apply (extract_vs_lookup, rewrite_lookup_when_aligned)+
+  apply (clarsimp simp: obj_at_def pde_ref_pages_def image_def vs_lookup_pages_def
+                 dest!: graph_ofD split: if_splits pde.split_asm)
+   apply (frule vs_lookup_pages_vs_lookupI)
+   apply (clarsimp simp: obj_at_def pdpte_ref_pages_def image_def vs_lookup_pages_def
+                 dest!: graph_ofD split: if_splits pdpte.split_asm)
+    apply (fastforce simp: ucast_ucast_mask get_pml4_index_bit_def Image_def get_pdpt_index_def bit_simps)
+   apply (clarsimp dest!: in_vs_asid_refsD wellformed_lookup.lookup_ref_step[OF vs_lookup_pages1_is_wellformed_lookup])
+   apply (drule valid_arch_objsD)
+     apply (simp add: ko_at_def2)
+    apply simp
+   apply clarsimp
+   apply (drule_tac x = a in spec)
+   apply (clarsimp simp: data_at_def obj_at_def a_type_simps)
+  apply (clarsimp dest!: in_vs_asid_refsD wellformed_lookup.lookup_ref_step[OF vs_lookup_pages1_is_wellformed_lookup])
+  apply (drule valid_arch_objsD)
+    apply (simp add: ko_at_def2)
+   apply simp
+  apply clarsimp
+  apply (drule_tac x = a in spec)
+  apply (clarsimp simp: data_at_def obj_at_def a_type_simps vs_refs_pages_def
+                 split: kernel_object.split_asm arch_kernel_obj.split_asm)
+  done
+qed
 
 (* FIXME x64: unmap_pdpt_vs_lookup_pages_pre might also needed here*)
 lemma unmap_pd_vs_lookup_pages_pre:
-  "\<lbrace>pspace_aligned and valid_arch_objs and valid_arch_state\<rbrace>unmap_pd asid vaddr pd
+  "\<lbrace>pspace_aligned and valid_arch_objs and valid_arch_state and typ_at (AArch APageDirectory) pd and K(vaddr < pptr_base \<and> canonical_address vaddr)\<rbrace>
+   unmap_pd asid vaddr pd
    \<lbrace>\<lambda>r s. (the (vs_cap_ref (ArchObjectCap (PageDirectoryCap pd (Some (asid,vaddr))))),pd) \<notin> vs_lookup_pages s\<rbrace>"
   proof -
-  note ref_simps[simp] = pdpte_ref_pages_def[split_simps pdpte.split] pte_ref_pages_def[split_simps pte.split]
-                         pml4e_ref_pages_def[split_simps pml4e.split]
-                         pde_ref_pages_def[split_simps pde.split] vs_cap_ref_simps vs_ref_pages_simps
+  note ref_simps[simp] = vs_cap_ref_simps vs_ref_pages_simps
   note ucast_simps[simp] = up_ucast_inj_eq ucast_up_ucast mask_asid_low_bits_ucast_ucast ucast_ucast_id
   show ?thesis
   apply (clarsimp simp: unmap_pd_def vs_cap_ref_simps store_pdpte_def)
@@ -1898,42 +2107,55 @@ lemma unmap_pd_vs_lookup_pages_pre:
     apply ((simp add: lookup_pdpt_slot_def | wp get_pml4e_wp | wpc)+)[1]
    apply (simp add: find_vspace_for_asid_def | wp | wpc)+
      apply (wpc | wp get_pdpte_wp get_pml4e_wp assertE_wp | clarsimp simp: lookup_pdpt_slot_def find_vspace_for_asid_def)
-   apply (intro conjI impI allI)
-      apply (((erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup]
-               | erule wellformed_lookup.lookupE[OF vs_lookup_pages1_is_wellformed_lookup]
-               | clarsimp simp: vs_asid_refs_def graph_of_def obj_at_def lookup_leaf_def
-                   vs_ref_pages_simps vs_lookup_pages_def
-                   dest!: vs_lookup_pages1D split: if_split_asm
-               | clarsimp simp: vs_refs_pages_def obj_at_def graph_of_def pdpte_ref_pages_def
-                    split: arch_kernel_obj.split_asm kernel_object.split_asm if_split_asm pdpte.split_asm
-                    dest!: vs_lookup_pages1D pml4e_ref_pages_SomeD
-
-            ))+)
-    apply (clarsimp simp: get_pml4_index_bit_def[symmetric] get_pdpt_index_bit_def[symmetric])
-thm pml4_shifting[folded lookup_pml4_slot_def[unfolded Let_def]]
-apply (subst (asm) pml4_shifting[folded lookup_pml4_slot_def[unfolded Let_def]])
-thm pspace_alignedD
-  sorry  (* OK, need a better way to apply vs_lookup_pagesE_alt for all the subgoals *)
+  apply clarsimp
+  apply (case_tac "([VSRef ((vaddr >> 30) && mask 9) (Some APDPointerTable), VSRef ((vaddr >> 39) && mask 9) (Some APageMapL4),
+                             VSRef (ucast (ucast asid :: 9 word)) (Some AASIDPool), VSRef (ucast (asid_high_bits_of asid)) None],
+                            pd)
+                           \<notin> vs_lookup_pages s")
+   apply (clarsimp simp: graph_of_def split: if_splits)
+   apply (extract_vs_lookup | rewrite_lookup_when_aligned)
+   apply (extract_vs_lookup | rewrite_lookup_when_aligned)
+   apply (extract_vs_lookup | rewrite_lookup_when_aligned)
+   apply (extract_vs_lookup | rewrite_lookup_when_aligned)
+   apply (extract_vs_lookup | rewrite_lookup_when_aligned)
+   apply (clarsimp simp: get_pml4_index_def bit_simps vs_lookup_pages_vs_lookupI obj_at_def entry_ref_pages_simps
+                 split: if_splits)
+   apply (drule vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI vs_lookup_pages1I[OF _ vs_refs_pages_pdpt ]])
+     apply (simp add: obj_at_def)
+    apply assumption
+   apply simp
+  apply (clarsimp split:if_splits simp: vs_lookup_pages_def graph_of_def dest!: in_vs_asid_refsD)
+  apply (erule wellformed_lookup.lookupE[OF vs_lookup_pages1_is_wellformed_lookup], simp)
+  apply (clarsimp dest!: vs_lookup_pages1D graph_ofD simp: lookup_leaf_def)
+  apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+  apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+  apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                         wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
+                   simp: obj_at_def)
+  apply (fold ko_at_def2 get_pml4_index_bit_def get_pdpt_index_bit_def)
+  apply (extract_vs_lookup)+
+  apply (rewrite_lookup_when_aligned)
+  apply (clarsimp simp: obj_at_def pml4e_ref_pages_def dest!: graph_ofD split: if_splits pml4e.split_asm)
+  apply (fold ko_at_def2 vs_asid_refs_def)
+  apply (drule eq_ucast_ucast_eq[rotated], simp)
+  apply clarsimp
+  apply (extract_vs_lookup, rewrite_lookup_when_aligned)
+  apply (frule vs_lookup_pages_vs_lookupI)
+  apply (clarsimp simp: obj_at_def pdpte_ref_pages_def image_def vs_lookup_pages_def
+                 dest!: graph_ofD split: if_splits pdpte.split_asm)
+   apply (fastforce simp: ucast_ucast_mask get_pml4_index_bit_def Image_def)
+  apply (clarsimp dest!: in_vs_asid_refsD wellformed_lookup.lookup_ref_step[OF vs_lookup_pages1_is_wellformed_lookup])
+  apply (drule valid_arch_objsD)
+    apply (simp add: ko_at_def2)
+   apply simp
+  apply clarsimp
+  apply (drule_tac x = aa in spec)
+  apply (clarsimp simp: data_at_def obj_at_def a_type_simps)
+  done
 qed
 
-lemma unmap_pt_vs_lookup_pages_pre:
-  "\<lbrace>pspace_aligned and valid_arch_objs and valid_arch_state\<rbrace>unmap_page_table asid vaddr pt
-   \<lbrace>\<lambda>r s. (the (vs_cap_ref (ArchObjectCap (PageTableCap pt (Some (asid,vaddr))))),pt) \<notin> vs_lookup_pages s\<rbrace>"
-  apply (clarsimp simp: unmap_page_table_def vs_cap_ref_simps)
-  apply wp
-    apply (clarsimp simp: unmap_pd_def vs_cap_ref_simps store_pde_def)
-  apply wp
-        apply (rule update_aobj_not_reachable[where b = "[b,c,d,e]" for b c d e,simplified])
-  apply (strengthen lookup_refs_pd_shrink_strg valid_arch_state_asid_table_strg not_in_vs_refs_pages_strg
-         | clarsimp )+
-      apply (strengthen imp_consequent | wp hoare_vcg_all_lift  | clarsimp simp: conj_ac)+
-     apply (wpc | wp get_pdpte_wp get_pml4e_wp get_pde_wp assertE_wp
-                | clarsimp simp: lookup_pdpt_slot_def find_vspace_for_asid_def lookup_pd_slot_def)+
-  apply auto
-  sorry (* OK, need a better way to apply vs_lookup_pagesE_alt for all the subgoals *)
-
 lemma unmap_pd_vs_lookup_pages:
-  "\<lbrace>pspace_aligned and valid_arch_objs and valid_arch_state\<rbrace> unmap_pd asid vaddr pd
+  "\<lbrace>pspace_aligned and valid_arch_objs and valid_arch_state and typ_at (AArch APageDirectory) pd and K(vaddr < pptr_base \<and> canonical_address vaddr)\<rbrace> unmap_pd asid vaddr pd
   \<lbrace>\<lambda>r s. ([VSRef ((vaddr >> 30) && mask 9) (Some APDPointerTable), VSRef ((vaddr >> 39) && mask 9) (Some APageMapL4),
                        VSRef (asid && mask asid_low_bits) (Some AASIDPool), VSRef (ucast (asid_high_bits_of asid)) None],
         pd)
@@ -1945,7 +2167,7 @@ lemma unmap_pd_vs_lookup_pages:
   done
 
 lemma unmap_pt_vs_lookup_pages:
-  "\<lbrace>pspace_aligned and valid_arch_objs and valid_arch_state\<rbrace> unmap_page_table asid vaddr pt
+  "\<lbrace>pspace_aligned and valid_arch_objs and valid_arch_state and typ_at (AArch APageTable) pt and K(vaddr < pptr_base \<and> canonical_address vaddr)\<rbrace> unmap_page_table asid vaddr pt
            \<lbrace>\<lambda>rv s. ([VSRef ((vaddr >> 21) && mask 9) (Some APageDirectory), VSRef ((vaddr >> 30) && mask 9) (Some APDPointerTable),
                      VSRef ((vaddr >> 39) && mask 9) (Some APageMapL4), VSRef (asid && mask asid_low_bits) (Some AASIDPool),
                      VSRef (ucast (asid_high_bits_of asid)) None],
@@ -2382,13 +2604,40 @@ crunch global_refs[wp]: unmap_pdpt "\<lambda>s. P (global_refs s)"
 crunch global_refs[wp]: unmap_page_table "\<lambda>s. P (global_refs s)"
 
 lemma range_neg_mask_strengthen:
-  "P ptr \<Longrightarrow> (\<forall>x\<in>set [ptr , ptr + 2 ^ word_size_bits .e. ptr + 2 ^ table_size - 1]. P (x && ~~ mask table_size))"
-  sorry (* word proof *)
+  "\<lbrakk>is_aligned ptr table_size; P ptr\<rbrakk> \<Longrightarrow> (\<forall>x\<in>set [ptr , ptr + 2 ^ word_size_bits .e. ptr + 2 ^ table_size - 1]. P (x && ~~ mask table_size))"
+  apply clarsimp
+  apply (drule subsetD[OF upto_enum_step_subset])
+  apply (fastforce dest!: mask_in_range)
+  done
 
 lemma vtable_range_univ:
-  "{y. \<exists>x\<in>set [ptr , ptr + 2 ^ word_size_bits .e. ptr + 2 ^ table_size - 1].
-                          (y :: 9 word) = ucast (x && mask table_size >> word_size_bits)} = UNIV"
-  sorry (* word proof *)
+  "is_aligned (ptr :: word64) table_size \<Longrightarrow> 
+    {y. \<exists>x\<in>set [ptr , ptr + 2 ^ word_size_bits .e. ptr + 2 ^ table_size - 1]. 
+      (y :: 9 word) = ucast (x && mask table_size >> word_size_bits)} = UNIV"
+  apply (intro set_eqI iffI | clarsimp)+
+  apply (rule_tac x = "ptr + (ucast x << word_size_bits)" in bexI)
+   apply (clarsimp simp: mask_add_aligned)
+   apply (subst  le_mask_imp_and_mask)
+    apply (subst le_mask_iff_lt_2n[THEN iffD1])
+     apply (clarsimp simp: bit_simps)
+    apply (rule shiftl_less_t2n)
+    apply (clarsimp simp: bit_simps)
+     apply word_bitwise
+    apply (simp add: bit_simps)
+   apply (simp add: shiftl_shiftr3 word_size bit_simps)
+   apply word_bitwise
+   apply (simp add: mask_def)
+  apply (simp add: upto_enum_step_subtract[OF is_aligned_no_overflow])
+  apply (clarsimp simp: upto_enum_step_def image_def)
+  apply (rule_tac x = "ucast x" in exI)
+  apply (clarsimp simp: shift_times_fold[where m= 0,simplified])
+  apply word_bitwise
+  apply (auto simp: bit_simps)
+  done
+
+lemma subset_refl_subst:
+  "y = x \<Longrightarrow> x \<subseteq> y"
+  by simp
 
 lemma empty_refs_strg:
   "empty_table {} a \<longrightarrow> (vs_refs_pages a = {})"
@@ -2478,9 +2727,9 @@ lemma perform_page_directory_invocation_invs[wp]:
    apply (clarsimp simp: valid_cap_def)
    apply (drule valid_table_caps_pdD, force)
    apply (clarsimp simp: obj_at_def empty_table_def)
-  apply (strengthen  range_neg_mask_strengthen[mk_strg])
+  apply (strengthen  range_neg_mask_strengthen[mk_strg] vtable_range_univ[THEN subset_refl_subst, mk_strg])
     apply (frule valid_global_refsD2, force)
-  apply (clarsimp simp: valid_cap_def wellformed_mapdata_def image_def le_mask_iff_lt_2n
+  apply (clarsimp simp: valid_cap_def wellformed_mapdata_def image_def le_mask_iff_lt_2n cap_aligned_def
                         cap_range_def invs_arch_objs pd_bits_def vtable_range_univ invs_arch_state)
   apply (simp add: mask_def)
   done
@@ -2577,7 +2826,7 @@ lemma perform_page_table_invocation_invs[wp]:
   apply (strengthen  range_neg_mask_strengthen[mk_strg])
     apply (frule valid_global_refsD2, force)
   apply (clarsimp simp: valid_cap_def wellformed_mapdata_def image_def le_mask_iff_lt_2n cap_range_def
-                        invs_arch_objs vtable_range_univ invs_arch_state)
+                        invs_arch_objs vtable_range_univ invs_arch_state cap_aligned_def)
   apply (simp add: mask_def)
   done
 
