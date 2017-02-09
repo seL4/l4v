@@ -93,6 +93,7 @@ method corres_once declares corres_split corres corres_simp =
    | (simp only: corres_simp; corres_once)
    ))
 
+
 method corres declares corres_split corres corres_simp =
   (corres_pre, (corres_once)+)[1]
 
@@ -133,17 +134,15 @@ definition
   "corres_underlyingL \<equiv> corres_underlying"
 
 lemma wpc_helper_corres1:
-  "corres_underlyingL sr nf nf' r Q A f f' \<Longrightarrow>
-     wpc_helper (P, P') (Q, Q') (corres_underlying sr nf nf' r P A f f')"
+  "corres_underlyingL sr nf nf' r Q A f f' \<Longrightarrow> wpc_helper (P, P') (Q, Q') (corres_underlying sr nf nf' r P A f f')"
   by (clarsimp simp: wpc_helper_def corres_underlyingL_def elim!: corres_guard_imp)
 
 lemma wpc_helper_corres2:
-  "corres_underlying sr nf nf' r A Q f f' \<Longrightarrow>
-     wpc_helper (P, P') (Q, Q') (corres_underlyingL sr nf nf' r A P f f')"
+  "corres_underlying sr nf nf' r A Q f f' \<Longrightarrow> wpc_helper (P, P') (Q, Q') (corres_underlyingL sr nf nf' r A P f f')"
   by (clarsimp simp: wpc_helper_def corres_underlyingL_def elim!: corres_guard_imp)
 
 wpc_setup "\<lambda>f. corres_underlying sr nf nf' r P P' f f'" wpc_helper_corres1
-wpc_setup "\<lambda>f'. corres_underlying sr nf nf' r P P' f f'" wpc_helper_corres2
+wpc_setup "\<lambda>f'. corres_underlyingL sr nf nf' r P P' f f'" wpc_helper_corres2
 
 lemma
   wpc_contr_helper:
@@ -184,8 +183,6 @@ lemma corres_symb_exec_l_str:
   apply (drule_tac x=a in spec)+
   by (auto split: prod.splits; fastforce)
 
-
-
 lemma corres_symb_exec_r_str:
   "\<lbrakk>\<And>rv. corres_underlying sr nf nf' r (P rv) (Q' rv) x (y rv);
  \<And>s. \<lbrace>PP' s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>; \<lbrace>P'\<rbrace> m \<lbrace>Q'\<rbrace>; nf' \<Longrightarrow> no_fail R m\<rbrakk>
@@ -212,18 +209,39 @@ private lemma corres_symb_exec_r_search:
   by auto
 
 private method corres_search_wp = solves \<open>((wp | wpc | simp)+)[1]\<close>
-(* Poor man's let binding *)
-private method corres_search_frame methods solver m =
-  (solver
-   | (corres_once, m)
+
+text \<open>
+  Depth-first search via symbolic execution of both left and right hand
+  sides, handling case statements and
+  potentially mismatched if statements. The find_goal
+  method handles searching each branch of case or if statements, while
+  we rely on backtracking to guess the order of left/right executions.
+
+  According to the above rules, a symbolic execution step can be taken
+  when the function can be shown to not modify the state. Questions
+  of wellformedness (i.e. empty_fail or no_fail) are deferred to the user
+  after the search concludes.
+\<close>
+
+private method corres_search_frame methods m uses search =
+   ((corres?, corres_once corres: search)
    | (corresc, find_goal \<open>m\<close>)[1]
    | (rule corres_if_str, find_goal \<open>m\<close>)[1]
    | (rule corres_if_str_rev, find_goal \<open>m\<close>)[1]
    | (rule corres_symb_exec_l_search, corres_search_wp, m)
    | (rule corres_symb_exec_r_search, corres_search_wp, m))
 
+text \<open>
+   Set up local context where we make sure we don't know how to
+   corres our given rule. The search is finished when we can only
+   make corres progress once we add our rule back in
+\<close>
+
 method corres_search uses search =
-  (corres_search_frame \<open>rule search\<close> \<open>corres_search search: search\<close>)
+  (corres_search_frame
+    \<open>use search[corres del] in
+      \<open>use in
+       \<open>corres_search search: search\<close>\<close>\<close> search: search)
 
 end
 
