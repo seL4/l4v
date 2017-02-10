@@ -14,7 +14,10 @@ theory Apply_Debug
   keywords "apply_debug" :: "prf_script" % "proof" and
     "continue" :: prf_script % "proof" and  "finish" :: prf_script % "proof"
 begin
-ML \<open>val start_max_threads = Multithreading.max_threads ();\<close>
+ML \<open>
+val start_max_threads = Multithreading.max_threads ();
+val needs_max_threads_hook = Unsynchronized.ref false;
+\<close>
 (*FIXME: Add proper interface to match *)
 context
 begin
@@ -55,7 +58,7 @@ type break_opts = { tags : string list, trace : (string * Position.T) option }
 
 val break : Proof.context -> string option -> tactic;
 val apply_debug : break_opts -> Method.text_range -> Proof.state -> Proof.state;
-val continue : break_opts -> int option -> (context_state -> context_state option) option -> Proof.state -> Proof.state;
+val continue : int option -> (context_state -> context_state option) option -> Proof.state -> Proof.state;
 val finish : Proof.state -> Proof.state;
 
 end
@@ -401,7 +404,8 @@ structure Debug_Data = Proof_Data
 );
 
 fun set_debug_ident ident = Debug_Data.map  (@{apply 5 (1)} (fn _ => SOME ident))
-val get_debug_ident = the o #1 o Debug_Data.get
+val get_debug_ident = #1 o Debug_Data.get;
+val get_the_debug_ident = the o get_debug_ident;
 
 fun set_break_opts opts = Debug_Data.map (@{apply 5 (4)} (fn _ => opts))
 val get_break_opts = #4 o Debug_Data.get;
@@ -427,11 +431,12 @@ fun has_break_tag (SOME tag) tags = member (op =) tags tag
   | has_break_tag NONE _ = true;
 
 fun break ctxt tag = (fn thm =>
-if not (get_can_break ctxt) orelse not (has_break_tag tag (#tags (get_break_opts ctxt)))
+if not (get_can_break ctxt)
    orelse Method.detect_closure_state thm
+   orelse not (has_break_tag tag (#tags (get_break_opts ctxt)))
     then Seq.single thm else
   let
-    val id = get_debug_ident ctxt;
+    val id = get_the_debug_ident ctxt;
     val ctxt' = set_last_tag tag ctxt;
 
     val st' = Seq.make (fn () =>
@@ -556,10 +561,7 @@ let
   val query = if tr = "" then NONE else SOME (tr, pos);
   val pr = Apply_Trace.pretty_deps false query ctxt st deps;
 in Pretty.writeln pr end
-  | maybe_trace NONE (ctxt, st) =
-    if is_some (#trace (get_break_opts ctxt)) then
-     maybe_trace (#trace (get_break_opts ctxt)) (ctxt,st)
-    else ()
+  | maybe_trace NONE (ctxt, st) = ()
 
 val active_debug_threads = Synchronized.var "active_debug_threads" ([] : unit future list);
 
@@ -572,7 +574,66 @@ let
   val _ = Multithreading.max_threads_update (start_max_threads + ((n_active + extra) * 3));
 in () end
 
-val _ = Toplevel.add_hook (fn _ => fn _ => fn _ => update_max_threads 0)
+
+val _ = if (!needs_max_threads_hook) then
+  (needs_max_threads_hook := false; Toplevel.add_hook (fn _ => fn _ => fn _ => update_max_threads 0))
+  else ()
+
+fun continue i_opt m_opt =
+(map_state (fn (ctxt,thm) =>
+      let
+
+        val ctxt = set_can_break true ctxt
+
+        val thm = Apply_Trace.clear_deps thm;
+
+        val _ = if is_none (get_debug_ident ctxt) then error "Cannot continue in a non-debug state" else ();
+
+        val id = get_the_debug_ident ctxt;
+
+        val start_cont = get_continuation ctxt; (* how many breakpoints so far *)
+        val trans_id = maybe_restart id start_cont (ctxt,thm);
+          (* possibly restart if the thread has made too much progress.
+             trans_id is the current number of restarts, used to avoid manipulating
+             stale states *)
+
+        val _ = nth_pre_result id start_cont; (* block until we've hit the start of this continuation *)
+
+        fun get_final n (st as (ctxt,_))  =
+         case (i_opt,m_opt) of
+          (SOME i,NONE) => if i < 1 then error "Can only continue a positive number of breakpoints" else
+            if n = start_cont + i then SOME st else NONE
+         | (NONE, SOME m) => (m (apfst init_interactive st))
+         | (_, _) => error "Invalid continue arguments"
+
+        val ex_results = peek_all_results id |> rev;
+(* TODO: remove per-continue tag filtering *)
+        fun tick_up n (_,thm) =
+          if n < length ex_results then error "Unexpected number of existing results"
+           (*case get_final n (#pre_state (nth ex_results n)) of SOME st' => (st', false, n)
+            | NONE => tick_up (n + 1) st *)
+          else
+          let
+            val _ = if n > length ex_results then set_next_state id trans_id thm else ();
+            val (n_r, b) = wait_break_state id trans_id;
+            val st' = poke_error n_r;
+          in if b then (st',b, n) else
+            case get_final n st' of SOME st'' => (st'', false, n)
+            | NONE => tick_up (n + 1) st' end
+
+        val _ = if length ex_results < start_cont then
+          (debug_print id; @{print} ("start_cont",start_cont); @{print} ("trans_id",trans_id);
+            error "Unexpected number of existing results")
+          else ()
+
+        val (st',b, cont) = tick_up (start_cont + 1) (ctxt, thm)
+
+        val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
+                   else st' |> apfst (set_continuation cont) |> apfst (init_interactive);
+
+        val _ = maybe_trace (#trace (get_break_opts ctxt)) st'';
+
+      in st'' end))
 
 fun do_apply pos rng opts m =
 let
@@ -580,7 +641,7 @@ let
   val _ = update_max_threads 1;
 
 in
- (fn st => map_state (fn (ctxt,_) =>
+ (fn st => map_state (fn (ctxt,thm) =>
   let
      val ident = Synchronized.var "debug_state" init_state;
      val markup_id = Synchronized.var "markup_state" init_markup_state;
@@ -601,11 +662,16 @@ in
 
      fun do_fork trans_id = Future.fork (fn () =>
        let
+        val (ctxt,thm) = get_state st;
 
-        val r = case Exn.interruptible_capture (fn st => (case (Seq.pull o Proof.apply m) st
+        val _ = Seq.pull (break ctxt NONE thm)
+
+        val r = case Exn.interruptible_capture (fn st =>
+        let  in
+        (case (Seq.pull o Proof.apply m) st
           of (SOME (Seq.Result st', _)) => RESULT (get_state st')
            | (SOME (Seq.Error e, _)) => ERR e
-           | _ => ERR (fn _ => "No results"))) st
+           | _ => ERR (fn _ => "No results")) end) st
            of Exn.Res (RESULT r) => RESULT r
              | Exn.Res (ERR e) => ERR e
             | Exn.Exn e => ERR (fn _ => Runtime.exn_message e)
@@ -628,6 +694,8 @@ in
            case !last_click of NONE => clear_hilight (SOME markup_id)
              | SOME rng => set_hilight (SOME markup_id) rng;
 
+     val st' = get_state (continue (SOME 1) NONE (Proof.map_context (set_continuation 0) st));
+(*
      val st' =
      let
        val (r,b) = wait_break_state ident 0;
@@ -640,6 +708,7 @@ in
                      else st' |> apfst (set_continuation 0) |> apfst (init_interactive)
 
      in st''  end
+*)
 
      val _ = do_markup rng Markup.joined;
 
@@ -716,70 +785,14 @@ val _ =
 
 val finish = map_state (fn (ctxt,_) =>
       let
-        val _ = if get_continuation ctxt < 0 then error "Cannot finish in a non-debug state" else ();
-        val f = get_finish (get_debug_ident ctxt);
+        val _ = if is_none (get_debug_ident ctxt) then error "Cannot finish in a non-debug state" else ();
+        val f = get_finish (get_the_debug_ident ctxt);
       in f |> poke_error |> apfst clear_debug end)
 
 
-fun continue opts i_opt m_opt =
-(map_state (fn (ctxt,thm) =>
-      let
-        val {tags, trace} = opts;
-        val ctxt = set_can_break true ctxt
 
-        val thm = Apply_Trace.clear_deps thm;
 
-        val _ = if get_continuation ctxt < 0 then error "Cannot continue in a non-debug state" else ();
-
-        val id = get_debug_ident ctxt;
-
-        val start_cont = get_continuation ctxt; (* how many breakpoints so far *)
-        val trans_id = maybe_restart id start_cont (ctxt,thm);
-          (* possibly restart if the thread has made too much progress.
-             trans_id is the current number of restarts, used to avoid manipulating
-             stale states *)
-
-        val _ = nth_pre_result id start_cont; (* block until we've hit the start of this continuation *)
-
-        fun get_final n (st as (ctxt,_))  =
-        if not (has_break_tag (get_last_tag ctxt) (#tags (get_break_opts ctxt))
-                orelse has_break_tag (get_last_tag ctxt) tags) then NONE else
-         case (i_opt,m_opt) of
-          (SOME i,NONE) => if i < 1 then error "Can only continue a positive number of breakpoints" else
-            if n = start_cont + i then SOME st else NONE
-         | (NONE, SOME m) => (m (apfst init_interactive st))
-         | (_, _) => error "Invalid continue arguments"
-
-        val ex_results = peek_all_results id |> rev;
-
-        fun tick_up n (_,thm) =
-          if n < length ex_results then error "Unexpected number of existing results"
-           (*case get_final n (#pre_state (nth ex_results n)) of SOME st' => (st', false, n)
-            | NONE => tick_up (n + 1) st *)
-          else
-          let
-            val _ = if n > length ex_results then set_next_state id trans_id thm else ();
-            val (n_r, b) = wait_break_state id trans_id;
-            val st' = poke_error n_r;
-          in if b then (st',b, n) else
-            case get_final n st' of SOME st'' => (st'', false, n)
-            | NONE => tick_up (n + 1) st' end
-
-        val _ = if length ex_results < start_cont then
-          (debug_print id; @{print} ("start_cont",start_cont); @{print} ("trans_id",trans_id);
-            error "Unexpected number of existing results")
-          else ()
-
-        val (st',b, cont) = tick_up (start_cont + 1) (ctxt, thm)
-
-        val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
-                   else st' |> apfst (set_continuation cont) |> apfst (init_interactive);
-
-        val _ = maybe_trace trace st'';
-
-      in st'' end))
-
-fun continue_cmd opts i_opt m_opt state =
+fun continue_cmd i_opt m_opt state =
 let
   val {context,...} = Proof.simple_goal state;
   val check = Method.map_source (Method.method_closure (init_interactive context))
@@ -791,16 +804,16 @@ let
 
   val i_opt' = case (i_opt,m_opt) of (NONE,NONE) => SOME 1 | _ => i_opt;
 
-in continue opts i_opt' (Option.map eval_method m_opt') state end
+in continue i_opt' (Option.map eval_method m_opt') state end
 
 val _ =
   Outer_Syntax.command @{command_keyword continue} "step to next breakpoint"
-  (parse_opts -- Scan.option Parse.int -- Scan.option Method.parse >> (fn ((opts, i_opt),m_opt) =>
-    (Toplevel.proof (continue_cmd opts i_opt m_opt))))
+  (Scan.option Parse.int -- Scan.option Method.parse >> (fn (i_opt,m_opt) =>
+    (Toplevel.proof (continue_cmd i_opt m_opt))))
 
 val _ =
   Outer_Syntax.command @{command_keyword finish} "finish debugging"
-  (Scan.succeed (Toplevel.proof (continue {tags = [], trace = NONE} NONE (SOME (fn _ => NONE)))))
+  (Scan.succeed (Toplevel.proof (continue NONE (SOME (fn _ => NONE)))))
 
 val _ =
   Query_Operation.register {name = "print_state", pri = Task_Queue.urgent_pri}
