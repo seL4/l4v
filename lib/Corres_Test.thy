@@ -39,6 +39,19 @@ lemma invalidate_asid_entry_corres:
              (invalidate_asid_entry asid) (invalidateASIDEntry asid)"
   apply (simp add: invalidate_asid_entry_def invalidateASIDEntry_def)
   apply corres
+   (* Uncomment to step through corres application *)
+  (* apply_debug (trace) (* apply_trace between steps *)
+      (tags "corres") (* break at breakpoints labelled "corres" *)
+      corres (* weaken precondition *)
+      continue (* split *)
+      continue (* solve load_hw_asid *)
+      continue (* split *)
+      continue (* apply corres_when *)
+      continue (* trivial simplification *)
+      continue (* invalidate _hw_asid_entry *)
+      continue (* invalidate_asid *)
+      finish
+  *)
   apply (wp load_hw_asid_wp | simp)+
   apply (fastforce simp: pd_at_asid_uniq)
   done
@@ -60,6 +73,7 @@ crunch pspace_distinct'[wp]: invalidateASIDEntry "pspace_distinct'"
 crunch ksCurThread[wp]: invalidateASIDEntry, flushSpace "\<lambda>s. P (ksCurThread s)"
 crunch obj_at'[wp]: invalidateASIDEntry, flushSpace "obj_at' P p"
 
+
 lemma delete_asid_corresb:
   notes [where pd=pd, corres] =
     flush_space_corres invalidate_asid_entry_corres
@@ -80,6 +94,39 @@ lemma delete_asid_corresb:
           (delete_asid asid pd) (deleteASID asid pd)"
   apply (simp add: delete_asid_def deleteASID_def)
   apply (corres | corresc)+
+
+  (* Uncomment to see trace *)
+  (*
+  apply_debug (trace) (* apply_trace between steps *)
+    (tags "corres") (* break at breakpoints labelled "corres" *)
+    (corres | (corresc, #break))+ (* weaken precondition *)
+    continue (* split *)
+    continue (* gets rule *)
+    continue (* simplification *)
+    continue (* backtracking (no corres progress after simp) *)
+    continue (* continue backtracking *)
+    continue (* case split with corresc *)
+    continue (* focus on first goal *)
+    continue (* trivially solved *)
+    continue (* split *)
+    continue (* simplification *)
+    continue (* successful corres_once with liftM after simplification *)
+    continue (* get_asid_pool applied *)
+    continue (* simplification *)
+    continue (* when rule *)
+    continue (* split *)
+    continue (* flush_space corres rule *)
+    continue (* split *)
+    continue (* apply invalidate_asid_entry_corres (issue with tracing?) *)
+    continue (* split *)
+    continue (* set_asid_pool (issue with tracing?) *)
+    continue (* split *)
+    continue (* gets rule *)
+    continue (* simplification *)
+    finish (* set_vm_root *)
+  *)
+
+
   apply (wp | simp add: mask_asid_low_bits_ucast_ucast | fold cur_tcb_def | wps)+
   apply (rule conjI)
   apply (intro impI allI)
@@ -153,6 +200,20 @@ lemma set_vm_root_for_flush_corres:
   apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
   apply corres
   apply (corres_search search: arm_context_switch_corres)
+
+  (*Uncomment to see corres_search trace *)
+
+  (*
+  apply_debug (trace) (tags "corres_search")
+     (corres_search search: arm_context_switch_corres)
+    continue (* step left *)
+    continue (* if rule *)
+    continue (* failed corres on first subgoal, trying next *)
+    continue (* fail corres on last subgoal, trying reverse if rule *)
+    continue (* successful goal discharged by corres *)
+    finish (* successful terminal goal discharged by corres_once with given rule *)
+  *)
+
   apply corres+
   apply (wp get_cap_wp getSlotCap_wp | wpc| simp)+
   apply (rule context_conjI)
