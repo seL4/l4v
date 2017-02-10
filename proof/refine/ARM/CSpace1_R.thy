@@ -15,7 +15,7 @@
 theory CSpace1_R
 imports
   CSpace_I
-  "../../invariant-abstract/DetSchedSchedule_AI"
+  "../../invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
 begin
 
 context Arch begin global_naming ARM_A (*FIXME: arch_split*)

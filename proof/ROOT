@@ -47,7 +47,7 @@ session AInvs = ASpec +
   theories
     "invariant-abstract/AInvs"
     "invariant-abstract/KernelInit_AI"
-    "invariant-abstract/DetSchedSchedule_AI"
+    "invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
 
 
 (*
