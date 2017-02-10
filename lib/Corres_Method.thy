@@ -87,11 +87,12 @@ private method corres_fold_dc =
     "corres_underlying _ _ _ (\<lambda>_ _. True) _ _ _ _" \<Rightarrow> \<open>rule corres_fold_dc\<close>)
 
 method corres_once declares corres_split corres corres_simp =
-   (check_corres,corres_fold_dc?,
-   ( determ \<open>rule corres\<close>
-   | (rule corres_split, corres_once)
-   | (simp only: corres_simp; corres_once)
-   ))
+   (#break "corres",
+    (check_corres,corres_fold_dc?,
+    ( determ \<open>rule corres\<close>
+    | (rule corres_split, corres_once)
+    | (simp only: corres_simp; corres_once)
+    )))
 
 
 method corres declares corres_split corres corres_simp =
@@ -224,12 +225,13 @@ text \<open>
 \<close>
 
 private method corres_search_frame methods m uses search =
-   ((corres?, corres_once corres: search)
-   | (corresc, find_goal \<open>m\<close>)[1]
-   | (rule corres_if_str, find_goal \<open>m\<close>)[1]
-   | (rule corres_if_str_rev, find_goal \<open>m\<close>)[1]
-   | (rule corres_symb_exec_l_search, corres_search_wp, m)
-   | (rule corres_symb_exec_r_search, corres_search_wp, m))
+   (#break "corres_search",
+    ((corres?, corres_once corres: search)
+    | (corresc, find_goal \<open>m\<close>)[1]
+    | (rule corres_if_str, find_goal \<open>m\<close>)[1]
+    | (rule corres_if_str_rev, find_goal \<open>m\<close>)[1]
+    | (rule corres_symb_exec_l_search, corres_search_wp, m)
+    | (rule corres_symb_exec_r_search, corres_search_wp, m)))
 
 text \<open>
    Set up local context where we make sure we don't know how to
