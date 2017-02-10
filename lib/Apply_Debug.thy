@@ -728,7 +728,7 @@ fun continue opts i_opt m_opt =
          case (i_opt,m_opt) of
           (SOME i,NONE) => if i < 1 then error "Can only continue a positive number of breakpoints" else
             if n = start_cont + i then SOME st else NONE
-         | (NONE, SOME m) => m st
+         | (NONE, SOME m) => (m (apfst init_interactive st))
          | (_, _) => error "Invalid continue arguments"
 
         val ex_results = peek_all_results id |> rev;
@@ -763,7 +763,7 @@ fun continue opts i_opt m_opt =
 fun continue_cmd opts i_opt m_opt state =
 let
   val {context,...} = Proof.simple_goal state;
-  val check = Method.map_source (Method.method_closure context)
+  val check = Method.map_source (Method.method_closure (init_interactive context))
 
   val m_opt' = Option.map (check o Method.check_text context o fst) m_opt;
 
