@@ -48,8 +48,8 @@ lemma
   oops
 
 (* If any locale facts are accessible their local variant is assumed to the one that is used. *)
-ML \<open>Locale.register_locale\<close>
-locale foo = fixes b a
+
+locale Apply_Trace_foo = fixes b a
   assumes X: "b = a"
 begin
 
