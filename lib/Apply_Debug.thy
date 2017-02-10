@@ -457,6 +457,11 @@ structure Data = Generic_Data
 (* Present Eisbach/Match variable binding context as normal context elements.
    Potentially shadows existing facts/binds *)
 
+fun dest_local s =
+  let
+    val ["local",s'] = Long_Name.explode s;
+  in SOME s' end handle Bind => NONE
+
 fun maybe_bind st (_,[tok]) ctxt =
   if Method.detect_closure_state st then
     let
@@ -490,7 +495,7 @@ fun maybe_bind st (_,[tok]) ctxt =
             Facts.retrieve (Context.Proof ctxt) old_facts (Long_Name.base_name s,Position.none)) private_dyn_facts;
 
       val cur_local_facts =
-        map (fn (s,fact) => (Long_Name.dest_local s, Morphism.fact phi fact)) local_facts
+        map (fn (s,fact) => (dest_local s, Morphism.fact phi fact)) local_facts
       |> map_filter (fn (s,fact) => case s of SOME s => SOME (s,fact) | _ => NONE)
 
       val old_fixes = (Variable.dest_fixes static_ctxt)
