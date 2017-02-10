@@ -87,11 +87,11 @@ private method corres_fold_dc =
     "corres_underlying _ _ _ (\<lambda>_ _. True) _ _ _ _" \<Rightarrow> \<open>rule corres_fold_dc\<close>)
 
 method corres_once declares corres_split corres corres_simp =
-   (#break "corres",
-    (check_corres,corres_fold_dc?,
+   ((check_corres,corres_fold_dc?,
+    #break "corres",
     ( determ \<open>rule corres\<close>
     | (rule corres_split, corres_once)
-    | (simp only: corres_simp; corres_once)
+    | (simp only: corres_simp, corres_once)
     )))
 
 
