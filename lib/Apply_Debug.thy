@@ -14,7 +14,7 @@ theory Apply_Debug
   keywords "apply_debug" :: "prf_script" % "proof" and
     "continue" :: prf_script % "proof" and  "finish" :: prf_script % "proof"
 begin
-
+ML \<open>val start_max_threads = Multithreading.max_threads ();\<close>
 (*FIXME: Add proper interface to match *)
 context
 begin
@@ -561,11 +561,23 @@ in Pretty.writeln pr end
      maybe_trace (#trace (get_break_opts ctxt)) (ctxt,st)
     else ()
 
+val active_debug_threads = Synchronized.var "active_debug_threads" ([] : unit future list);
+
+fun update_max_threads extra =
+let
+  val n_active = Synchronized.change_result active_debug_threads (fn ts =>
+    let
+      val ts' = List.filter (not o Future.is_finished) ts;
+    in (length ts',ts') end)
+  val _ = Multithreading.max_threads_update (start_max_threads + ((n_active + extra) * 3));
+in () end
+
+val _ = Toplevel.add_hook (fn _ => fn _ => fn _ => update_max_threads 0)
+
 fun do_apply pos rng opts m =
 let
-
-
   val {tags, trace} = opts;
+  val _ = update_max_threads 1;
 
 in
  (fn st => map_state (fn (ctxt,_) =>
@@ -631,7 +643,7 @@ in
 
      val _ = do_markup rng Markup.joined;
 
-     val _ = if get_continuation (fst st') < 0 then
+     val main_thread = if get_continuation (fst st') < 0 then
       (do_markup rng Markup.running;do_markup rng Markup.forked; Future.fork (fn () => ())) else
       Execution.fork {name = "apply_debug_main", pos = pos, pri = ~1} (fn () =>
       let
@@ -663,6 +675,8 @@ in
               in main_loop () end
            end;
        in main_loop () end)
+
+       val _ = Synchronized.change active_debug_threads (cons main_thread);
 
        val _ = maybe_trace trace st';
 
