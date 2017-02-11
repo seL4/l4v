@@ -2216,6 +2216,18 @@ lemma hrw_corres:
   apply (fastforce elim: pred_tcb'_weakenE)
   done
 
+lemma hh_corres: 
+  "corres dc (einvs and  st_tcb_at active thread and ex_nonz_cap_to thread
+                   and (%_. valid_fault f))
+             (invs' and sch_act_not thread
+                    and (\<lambda>s. \<forall>p. thread \<notin> set(ksReadyQueues s p))
+                    and st_tcb_at' simple' thread and ex_nonz_cap_to' thread)
+          (do y \<leftarrow> handle_hypervisor_fault w fault;
+                return ()
+             od) (handleHypervisorFault w fault)"
+  apply (cases fault; clarsimp simp add: handleHypervisorFault_def returnOk_def2)
+  done
+
 (* FIXME: move *)
 lemma he_corres: 
   "corres (intr \<oplus> dc) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
@@ -2307,16 +2319,29 @@ proof -
       apply wp
       apply (clarsimp)
       apply (frule(1) ct_not_ksQ)
-      apply (auto simp: simple_sane_strg sch_act_simple_def ct_in_state'_def
+      apply (fastforce simp: simple_sane_strg sch_act_simple_def ct_in_state'_def
                   elim: st_tcb_ex_cap'' pred_tcb'_weakenE)
+         apply (rule corres_split')
+            apply (rule corres_guard_imp[OF gct_corres], simp+)
+           apply (rule hh_corres)
+          apply (simp add: valid_fault_def)
+          apply wp
+          apply (fastforce elim!: st_tcb_ex_cap st_tcb_weakenE
+                           simp: ct_in_state_def)
+         apply wp
+         apply (clarsimp)
+         apply (frule(1) ct_not_ksQ)
+         apply (auto simp: ct_in_state'_def sch_act_simple_def
+                           sch_act_sane_def
+                     elim: pred_tcb'_weakenE st_tcb_ex_cap'')[1]
       done
   qed
 
-crunch st_tcb_at'[wp]: handleVMFault "st_tcb_at' P t"
+crunch st_tcb_at'[wp]: handleVMFault,handleHypervisorFault "st_tcb_at' P t"
   (ignore: getFAR getDFSR getIFSR)
-crunch cap_to'[wp]: handleVMFault "ex_nonz_cap_to' t"
+crunch cap_to'[wp]: handleVMFault,handleHypervisorFault "ex_nonz_cap_to' t"
   (ignore: getFAR getDFSR getIFSR)
-crunch ksit[wp]: handleVMFault "\<lambda>s. P (ksIdleThread s)"
+crunch ksit[wp]: handleVMFault,handleHypervisorFault "\<lambda>s. P (ksIdleThread s)"
   (ignore: getFAR getDFSR getIFSR)
 
 lemma hv_inv':
@@ -2326,6 +2351,12 @@ lemma hv_inv':
    apply (wp dmo_inv' getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv 
              det_getRestartPC asUser_inv
           |wpc|simp)+
+  done
+
+lemma hh_inv':
+  "\<lbrace>P\<rbrace> handleHypervisorFault p t \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (simp add: ARM_H.handleHypervisorFault_def)
+  apply (cases t; clarsimp)
   done
 
 lemma ct_not_idle':
@@ -2383,7 +2414,7 @@ proof -
                rule hy_invs')
          apply (simp add: active_from_running')
         apply simp
-       apply (wp hv_inv'
+       apply (wp hv_inv' hh_inv'
                  | rule conjI
                  | erule pred_tcb'_weakenE st_tcb_ex_cap''
                  | clarsimp simp: tcb_at_invs ct_in_state'_def simple_sane_strg sch_act_simple_def
