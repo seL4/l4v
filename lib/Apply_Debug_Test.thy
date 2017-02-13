@@ -28,8 +28,7 @@ text \<open>
  the proof state at the break point. This can allow for debugging methods without necessarily rewriting
  their implementation.
 
- Some interactive markup is given in jEdit: in real-time the currently executing
- method has the "running" markup (similar to a forked proof), clicking on
+ Some interactive markup is given in jEdit: clicking on
  an apply_debug or continue command will show the subsequent breakpoint that was hit (and
  the method in the original expression that hit it),
  clicking on a breakpoint will highlight all "continue" commands which stopped at that breakpoint.
@@ -42,6 +41,7 @@ text \<open>
  (either finish or continue) will exit the debugger and print "Final Result".
 \<close>
 
+
 method some_break = #break
 
 lemma assumes B: B
@@ -51,8 +51,10 @@ lemma assumes B: B
   continue
   continue
     apply (rule B) (* this effect is saved *)
-  finish
+  continue
+  continue
   apply assumption
+  finish
   done
 
 section \<open>Tags\<close>
@@ -202,6 +204,35 @@ lemma assumes A: A and B: B
   finish
   done
 
+section \<open>Show currently-executing method\<close>
+
+text \<open>
+ Internally, apply_debug manages a proof thread that is restarted periodically depending on
+ how far along it is in its execution when "continue" is invoked. This allows us to seamlessly
+ interact with it in jEdit where we might want to rewind time by editing a previous continue
+ statement.
+
+ We can observe this internal state by passing the flag "show_running" to apply_debug, which
+ will give jEdit markup to show which method is currently being executed by the internal thread.
+ Note that this is not necessarily the "continue" that is currently in focus in jEdit.
+
+ This can be particularly useful to discover which method is causing the whole execution to fail
+ or time out (even in the absence of any breakpoints).
+
+ In the following example, try making whitespace edits to the continues to see how the proof thread
+ is affected (edits force the continue command to re-execute).
+\<close>
+
+
+lemma "A \<Longrightarrow> A \<and> A \<and> A \<and> A"
+  apply_debug (show_running)
+               (rule conjI,
+               sleep 0.5, #break, sleep 0.5, assumption, sleep 0.5, #break, sleep 0.5, rule conjI,
+               sleep 0.5, #break,
+               assumption, sleep 0.5, #break, sleep 0.5, rule conjI, sleep 0.5, #break, sleep 0.5,
+               assumption)
+  continue
+  done
 
 section \<open>Final Notes\<close>
 
@@ -217,11 +248,11 @@ text \<open>
 \<close>
 
 text \<open>
- The proof thread for the method is "stateful", shown by the "forked" markup in jEdit. Although
- clicking on a continue will show you which breakpoint it hit, the actual state of the proof thread
- could be further in the future. Any modifications to the proof state in the past
- require this thread to be restarted in order to "rewind time" and account for the changes. This will
- be reflected in the markup for the method.
+ The jEdit markup is limited in its ability to descend into higher-order method syntax (e.g. in match).
+ The highlighted breakpoint/currently executing method will therefore simply show an entire match
+ execution being executed, rather than any particular sub-method. This is not a fundamental
+ limitation, but requires more cooperation from the Method module to make the method stack trace
+ known as context data.
 \<close>
 
 end

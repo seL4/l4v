@@ -57,7 +57,7 @@ end
 ML \<open>
 signature APPLY_DEBUG =
 sig
-type break_opts = { tags : string list, trace : (string * Position.T) option }
+type break_opts = { tags : string list, trace : (string * Position.T) option, show_running : bool }
 
 val break : Proof.context -> string option -> tactic;
 val apply_debug : break_opts -> Method.text_range -> Proof.state -> Proof.state;
@@ -68,9 +68,10 @@ end
 
 structure Apply_Debug : APPLY_DEBUG =
 struct
-type break_opts = { tags : string list, trace : (string * Position.T) option }
+type break_opts = { tags : string list, trace : (string * Position.T) option, show_running : bool }
 
 fun do_markup range m = Output.report [Markup.markup (Markup.properties (Position.properties_of_range range) m) ""];
+fun do_markup_pos pos m = Output.report [Markup.markup (Markup.properties (Position.properties_of pos) m) ""];
 
 type markup_queue = { cur : Position.range option, next : Position.range option, clear_cur : bool }
 
@@ -102,7 +103,7 @@ structure Markup_Data = Proof_Data
 val init_queue = ({cur = NONE, next = NONE, clear_cur = false}: markup_queue)
 val init_markup_state = ({running = init_queue} : markup_state)
 
-fun set_markup_state id = Markup_Data.map (@{apply 3 (1)} (K (SOME id)));
+fun set_markup_state id = Markup_Data.map (@{apply 3 (1)} (K id));
 fun get_markup_id ctxt = #1 (Markup_Data.get ctxt);
 
 fun set_latest_range range = Markup_Data.map (@{apply 3 (2)} (K (SOME range)));
@@ -127,7 +128,7 @@ in
              else NONE
 end
 
-fun markup_worker (id : markup_state Synchronized.var) =
+fun markup_worker (SOME (id : markup_state Synchronized.var)) =
 let
   fun main_loop () =
     let val _ = Synchronized.guarded_access id (fn e =>
@@ -136,6 +137,7 @@ let
     | NONE => NONE)
      in main_loop () end
 in main_loop () end
+ | markup_worker NONE = (fn () => ())
 
 fun set_gen get set (SOME id) rng =
   let
@@ -163,11 +165,12 @@ val clear_running = clear_gen #running map_running
 fun traceify_method static_ctxt src =
 let
   val range = Token.range_of src;
+  val head_range = Token.range_of [hd src];
   val m = Method.method_cmd static_ctxt src;
 
 in (fn eval_ctxt => fn facts =>
   let
-    val eval_ctxt = set_latest_range range eval_ctxt;
+    val eval_ctxt = set_latest_range head_range eval_ctxt;
     val markup_id = get_markup_id eval_ctxt;
 
     fun traceify seq = Seq.make (fn () =>
@@ -179,7 +182,7 @@ in (fn eval_ctxt => fn facts =>
 
     fun tac (runtime_ctxt,thm) =
         let
-          val runtime_ctxt' = set_latest_range range runtime_ctxt;
+          val runtime_ctxt' = set_latest_range head_range runtime_ctxt;
           val _ = set_running markup_id range;
           in traceify (m eval_ctxt facts (runtime_ctxt', thm)) end
 
@@ -346,8 +349,7 @@ let
     if not (null (#prev_results e)) then NONE else
     if is_restarting e then NONE (* TODO, what to do if we're already restarting? *)
     else if length (#results e) > n then
-     (*(if st_eq (#post_state (nth (rev (#results e)) n)) st then SOME (false, I)
-     else*) SOME (true, map_restart (apsnd (fn _ => n)))
+      (SOME (true, map_restart (apsnd (fn _ => n))))
     else SOME (false, I))
 
 
@@ -392,7 +394,7 @@ if is_finished_result id then peek_final_result id else
   in peek_final_result id end
 
 
-val no_break_opts = ({tags = [], trace = NONE} : break_opts)
+val no_break_opts = ({tags = [], trace = NONE, show_running = false} : break_opts)
 
 structure Debug_Data = Proof_Data
 (
@@ -557,7 +559,6 @@ let
   val {context,goal} = Proof.simple_goal state;
 in (context,goal) end
 
-val last_click = Unsynchronized.ref (NONE : Position.range option)
 
 fun maybe_trace (SOME (tr, pos)) (ctxt, st) =
 let
@@ -596,6 +597,7 @@ fun continue i_opt m_opt =
         val id = get_the_debug_ident ctxt;
 
         val start_cont = get_continuation ctxt; (* how many breakpoints so far *)
+
         val trans_id = maybe_restart id start_cont (ctxt,thm);
           (* possibly restart if the thread has made too much progress.
              trans_id is the current number of restarts, used to avoid manipulating
@@ -630,6 +632,7 @@ fun continue i_opt m_opt =
             error "Unexpected number of existing results")
           else ()
 
+
         val (st',b, cont) = tick_up (start_cont + 1) (ctxt, thm)
 
         val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
@@ -659,14 +662,17 @@ fun continue i_opt m_opt =
 
 fun do_apply pos rng opts m =
 let
-  val {tags, trace} = opts;
+  val {tags, trace, show_running} = opts;
   val _ = update_max_threads 1;
 
 in
  (fn st => map_state (fn (ctxt,thm) =>
   let
      val ident = Synchronized.var "debug_state" init_state;
-     val markup_id = Synchronized.var "markup_state" init_markup_state;
+     val markup_id = if show_running then SOME (Synchronized.var "markup_state" init_markup_state)
+       else NONE;
+     fun maybe_markup m = if show_running then do_markup rng m else ();
+
      val _ = if is_debug_ctxt ctxt then
       error "Cannot use apply_debug while debugging" else ();
 
@@ -686,10 +692,8 @@ in
        let
         val (ctxt,thm) = get_state st;
 
-        val _ = Seq.pull (break ctxt NONE thm)
-
         val r = case Exn.interruptible_capture (fn st =>
-        let  in
+        let val _ = Seq.pull (break ctxt NONE thm) in
         (case (Seq.pull o Proof.apply m) st
           of (SOME (Seq.Result st', _)) => RESULT (get_state st')
            | (SOME (Seq.Error e, _)) => ERR e
@@ -699,7 +703,7 @@ in
             | Exn.Exn e => ERR (fn _ => Runtime.exn_message e)
         val _ = set_finished_result ident trans_id r;
 
-        val _ = clear_running (SOME markup_id);
+        val _ = clear_running markup_id;
 
        in () end)
 
@@ -707,17 +711,15 @@ in
      val thread = do_fork 0;
      val _ = Synchronized.change ident (map_restart (fn _ => (fn () => do_cancel thread, ~1)));
 
-     val _ = do_markup rng Markup.finished;
+     val _ = maybe_markup Markup.finished;
 
      val _ = Future.fork (fn () => markup_worker markup_id ());
 
-     val st' = get_state (continue (SOME 1) NONE (Proof.map_context (set_continuation 0) st));
+     val st' = get_state (continue (SOME 1) NONE (Proof.map_context (set_continuation 0) st))
 
-     val _ = do_markup rng Markup.joined;
+     val _ = maybe_markup Markup.joined;
 
-     val main_thread = if get_continuation (fst st') < 0 then
-      (do_markup rng Markup.running;do_markup rng Markup.forked; Future.fork (fn () => ())) else
-      Execution.fork {name = "apply_debug_main", pos = pos, pri = ~1} (fn () =>
+     val main_thread = Future.fork (fn () =>
       let
 
         fun restart_state gls e = e
@@ -740,12 +742,15 @@ in
             | SOME (f,trans_id) =>
               let
                 val _ = f ();
-                val _ = clear_running (SOME markup_id);
+                val _ = clear_running markup_id;
                 val thread = do_fork (trans_id + 1);
                 val _ = Synchronized.change ident (map_restart (fn _ => (fn () => do_cancel thread, ~1)))
               in main_loop () end
            end;
-       in main_loop () end)
+       in main_loop () end);
+
+       val _ = maybe_markup Markup.running;
+       val _ = maybe_markup Markup.forked;
 
        val _ = Synchronized.change active_debug_threads (cons main_thread);
 
@@ -770,12 +775,15 @@ val parse_trace = Scan.option (Args.parens (quasi_keyword "trace" |-- Scan.optio
   (fn SOME NONE => SOME ("", Position.none) | SOME (SOME x) => SOME x | _ => NONE);
 
 val parse_opts1 = (parse_tags -- parse_trace) >>
-  (fn (tags,trace) => {tags = tags, trace = trace} : break_opts);
+  (fn (tags,trace) => {tags = tags, trace = trace});
 
 val parse_opts2 = (parse_trace -- (Scan.optional parse_tags [])) >>
-  (fn (trace,tags) => {tags = tags, trace = trace} : break_opts);
+  (fn (trace,tags) => {tags = tags, trace = trace});
 
-val parse_opts = parse_opts1 || parse_opts2;
+fun mode s = Scan.optional (Args.parens (quasi_keyword s) >> (K true)) false
+
+val parse_opts = ((parse_opts1 || parse_opts2) -- mode "show_running") >>
+  (fn ({tags, trace}, show_running) => {tags = tags, trace = trace, show_running = show_running} : break_opts) ;
 
 val _ =
   Outer_Syntax.command @{command_keyword apply_debug} "initial goal refinement step (unstructured)"
