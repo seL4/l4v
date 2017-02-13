@@ -14,10 +14,13 @@ theory Apply_Debug
   keywords "apply_debug" :: "prf_script" % "proof" and
     "continue" :: prf_script % "proof" and  "finish" :: prf_script % "proof"
 begin
+
+(* Small hack to keep enough available threads around to support ongoing apply_debug sessions *)
 ML \<open>
 val start_max_threads = Multithreading.max_threads ();
 val needs_max_threads_hook = Unsynchronized.ref false;
 \<close>
+
 (*FIXME: Add proper interface to match *)
 context
 begin
@@ -81,15 +84,12 @@ fun map_clear_cur f ({cur, next, clear_cur} : markup_queue) =
   ({cur = cur, next = next, clear_cur = f clear_cur} : markup_queue)
 
 type markup_state =
-  { running : markup_queue,
-    hilight : markup_queue
+  { running : markup_queue
   }
 
-fun map_running f ({running, hilight} : markup_state) =
-  {running = f running, hilight = hilight}
+fun map_running f ({running} : markup_state) =
+  {running = f running}
 
-fun map_hilight f ({running, hilight} : markup_state) =
-  {running = running, hilight = f hilight}
 
 structure Markup_Data = Proof_Data
 (
@@ -99,13 +99,15 @@ structure Markup_Data = Proof_Data
 );
 
 val init_queue = ({cur = NONE, next = NONE, clear_cur = false}: markup_queue)
-val init_markup_state = ({running = init_queue, hilight = init_queue} : markup_state)
+val init_markup_state = ({running = init_queue} : markup_state)
 
 fun set_markup_state id = Markup_Data.map (apfst (K (SOME id)));
 fun get_markup_id ctxt = fst (Markup_Data.get ctxt);
 
 fun set_latest_range range = Markup_Data.map (apsnd (K (SOME range)));
 fun get_latest_range ctxt = snd (Markup_Data.get ctxt);
+
+val clear_latest_range = Markup_Data.map (apsnd (K NONE));
 
 fun swap_markup queue startm endm =
 if is_some (#next queue) andalso #next queue = #cur queue then SOME (map_next (K NONE) queue) else
@@ -127,9 +129,7 @@ let
     let val _ = Synchronized.guarded_access id (fn e =>
     case swap_markup (#running e) Markup.running Markup.finished of
       SOME queue' => SOME ((),map_running (fn _ => queue') e)
-    | NONE => case swap_markup (#hilight e) Markup.forked Markup.joined of
-        SOME queue' => SOME ((), map_hilight (fn _ => queue') e)
-       | NONE => NONE)
+    | NONE => NONE)
      in main_loop () end
 in main_loop () end
 
@@ -154,9 +154,6 @@ fun clear_gen get set (SOME id) =
 
 val set_running = set_gen #running map_running
 val clear_running = clear_gen #running map_running
-
-val set_hilight = set_gen #hilight map_hilight
-val clear_hilight = clear_gen #hilight map_hilight
 
 
 fun traceify_method static_ctxt src =
@@ -414,7 +411,10 @@ fun set_last_tag tags = Debug_Data.map (@{apply 5 (5)} (fn _ => tags))
 val get_last_tag = #5 o Debug_Data.get;
 
 val is_debug_ctxt = is_some o #1 o Debug_Data.get;
-val clear_debug = Debug_Data.map (fn _ => (NONE,~1,false, no_break_opts, NONE));
+
+fun clear_debug ctxt = ctxt
+ |> Debug_Data.map (fn _ => (NONE,~1,false, no_break_opts, NONE))
+ |> clear_latest_range
 
 
 val get_continuation = #2 o Debug_Data.get;
@@ -607,7 +607,7 @@ fun continue i_opt m_opt =
          | (_, _) => error "Invalid continue arguments"
 
         val ex_results = peek_all_results id |> rev;
-(* TODO: remove per-continue tag filtering *)
+
         fun tick_up n (_,thm) =
           if n < length ex_results then error "Unexpected number of existing results"
            (*case get_final n (#pre_state (nth ex_results n)) of SOME st' => (st', false, n)
@@ -630,6 +630,20 @@ fun continue i_opt m_opt =
 
         val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
                    else st' |> apfst (set_continuation cont) |> apfst (init_interactive);
+
+        val _ = case (get_latest_range (fst st'')) of SOME rng =>
+          let
+            val sr = serial ();
+          in
+            (Output.report
+              [Markup.markup (Markup.entity "breakpoint" ""
+               |> Markup.properties (Position.entity_properties_of true sr
+                    (Position.range_position rng))) ""]);
+            (Context_Position.report ctxt (Position.thread_data ())
+             (Markup.entity "breakpoint" ""
+              |> Markup.properties (Position.entity_properties_of false sr Position.none)))
+          end
+        | NONE => ()
 
         val _ = maybe_trace (#trace (get_break_opts ctxt)) st'';
 
@@ -682,7 +696,6 @@ in
        in () end)
 
 
-
      val thread = do_fork 0;
      val _ = Synchronized.change ident (map_restart (fn _ => (fn () => do_cancel thread, ~1)));
 
@@ -690,25 +703,7 @@ in
 
      val _ = Future.fork (fn () => markup_worker markup_id ());
 
-     fun do_hilight_work () =
-           case !last_click of NONE => clear_hilight (SOME markup_id)
-             | SOME rng => set_hilight (SOME markup_id) rng;
-
      val st' = get_state (continue (SOME 1) NONE (Proof.map_context (set_continuation 0) st));
-(*
-     val st' =
-     let
-       val (r,b) = wait_break_state ident 0;
-
-       val st' = case r of ERR e =>
-          (do_markup rng Markup.running; error (e ()))
-        | RESULT st' => st'
-
-       val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
-                     else st' |> apfst (set_continuation 0) |> apfst (init_interactive)
-
-     in st''  end
-*)
 
      val _ = do_markup rng Markup.joined;
 
@@ -733,7 +728,6 @@ in
               if is_restarting e andalso is_none next_state then
               SOME ((fst restart, #trans_id e), restart_state (snd restart) e) else NONE);
             val _ = OS.Process.sleep (seconds 0.1);
-            val _ = do_hilight_work ();
             in case r of NONE => main_loop ()
             | SOME (f,trans_id) =>
               let
@@ -746,8 +740,6 @@ in
        in main_loop () end)
 
        val _ = Synchronized.change active_debug_threads (cons main_thread);
-
-       val _ = maybe_trace trace st';
 
    in st' end) st)
 end
@@ -814,15 +806,6 @@ val _ =
 val _ =
   Outer_Syntax.command @{command_keyword finish} "finish debugging"
   (Scan.succeed (Toplevel.proof (continue NONE (SOME (fn _ => NONE)))))
-
-val _ =
-  Query_Operation.register {name = "print_state", pri = Task_Queue.urgent_pri}
-    (fn {state = st, output_result, ...} =>
-      if Toplevel.is_proof st
-      then
-        (last_click := get_latest_range (Proof.context_of (Toplevel.proof_of st));
-        output_result (Markup.markup Markup.state (Toplevel.string_of_state st)))
-      else ());
 
 end
 \<close>
