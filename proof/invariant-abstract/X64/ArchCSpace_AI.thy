@@ -64,7 +64,7 @@ lemma copy_obj_refs [CSpace_AI_assms]:
              split: if_split_asm cap.splits arch_cap.splits)
   done
 
-lemma weak_derived_cap_class[simp, CSpace_AI_assms]: 
+lemma weak_derived_cap_class[simp, CSpace_AI_assms]:
   "weak_derived cap src_cap \<Longrightarrow> cap_class cap = cap_class src_cap"
   apply (simp add:weak_derived_def)
   apply (auto simp:copy_of_def same_object_as_def is_cap_simps cap_asid_base_def
@@ -73,20 +73,20 @@ lemma weak_derived_cap_class[simp, CSpace_AI_assms]:
 
 lemma weak_derived_obj_refs [CSpace_AI_assms]:
   "weak_derived dcap cap \<Longrightarrow> obj_refs dcap = obj_refs cap"
-  by (cases dcap, auto simp: is_cap_simps weak_derived_def copy_of_def 
+  by (cases dcap, auto simp: is_cap_simps weak_derived_def copy_of_def
                              same_object_as_def aobj_ref_cases
                        split: if_split_asm cap.splits arch_cap.splits)
 
 lemma weak_derived_obj_ref_of [CSpace_AI_assms]:
   "weak_derived dcap cap \<Longrightarrow> obj_ref_of dcap = obj_ref_of cap"
-  by (cases dcap, auto simp: is_cap_simps weak_derived_def copy_of_def 
+  by (cases dcap, auto simp: is_cap_simps weak_derived_def copy_of_def
                              same_object_as_def aobj_ref_cases
                        split: if_split_asm cap.splits arch_cap.splits)
 
 lemma set_free_index_invs [CSpace_AI_assms]:
   "\<lbrace>\<lambda>s. (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap) \<and>
         invs s \<and> cte_wp_at (op = cap ) cref s\<rbrace>
-   set_cap (free_index_update (\<lambda>_. idx) cap) cref 
+   set_cap (free_index_update (\<lambda>_. idx) cap) cref
    \<lbrace>\<lambda>rv s'. invs s'\<rbrace>"
   apply (rule hoare_grab_asm)+
   apply (simp add:invs_def valid_state_def)
@@ -128,7 +128,7 @@ lemma set_free_index_invs [CSpace_AI_assms]:
 
 lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
   "\<lbrace>valid_arch_caps and cte_wp_at (op = src_cap) src\<rbrace>
-   set_untyped_cap_as_full src_cap cap src 
+   set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>ya. valid_arch_caps\<rbrace>"
   apply (clarsimp simp:valid_arch_caps_def set_untyped_cap_as_full_def)
   apply (intro conjI impI)
@@ -146,20 +146,20 @@ lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
 
 lemma set_untyped_cap_as_full[wp, CSpace_AI_assms]:
   "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref a b s \<and> cte_wp_at (op = src_cap) src s\<rbrace>
-   set_untyped_cap_as_full src_cap cap src 
+   set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. no_cap_to_obj_with_diff_ref a b s\<rbrace>"
   apply (clarsimp simp:no_cap_to_obj_with_diff_ref_def)
   apply (wp hoare_vcg_ball_lift set_untyped_cap_as_full_cte_wp_at_neg)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (drule_tac x=src in bspec, simp)
   apply (erule_tac x=src_cap in allE)
-  apply (auto simp: table_cap_ref_def masked_as_full_def 
-             split: Structures_A.cap.splits arch_cap.splits option.splits 
+  apply (auto simp: table_cap_ref_def masked_as_full_def
+             split: Structures_A.cap.splits arch_cap.splits option.splits
                     vmpage_size.splits)
   done
 
 lemma is_derived_is_cap:
-  "is_derived m p cap cap' \<Longrightarrow> 
+  "is_derived m p cap cap' \<Longrightarrow>
     (is_pg_cap cap = is_pg_cap cap')
   \<and> (is_pt_cap cap = is_pt_cap cap')
   \<and> (is_pd_cap cap = is_pd_cap cap')
@@ -332,7 +332,7 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
       apply (frule is_derived_is_same_vspace_table_type)
       apply (frule is_derived_obj_refs)
       apply (frule is_derived_cap_asid_issues)
-      apply (clarsimp simp: is_cap_simps valid_arch_caps_def cap_master_cap_def 
+      apply (clarsimp simp: is_cap_simps valid_arch_caps_def cap_master_cap_def
                             is_derived_def is_derived_arch_def)
       apply (drule_tac ptr = src and ptr' = "(x,xa)" in unique_table_capsD)
            apply (simp add:is_cap_simps)+
@@ -340,7 +340,7 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
      apply (frule is_derived_is_same_vspace_table_type)
      apply (frule is_derived_obj_refs)
      apply (frule is_derived_cap_asid_issues)
-     apply (clarsimp simp: is_cap_simps valid_arch_caps_def cap_master_cap_def 
+     apply (clarsimp simp: is_cap_simps valid_arch_caps_def cap_master_cap_def
                            is_derived_def is_derived_arch_def)
      apply (drule_tac ptr = src and ptr' = "(x,xa)" in unique_table_capsD)
           apply (simp add:is_cap_simps)+
@@ -348,7 +348,7 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
     apply (frule is_derived_is_same_vspace_table_type)
     apply (frule is_derived_obj_refs)
     apply (frule is_derived_cap_asid_issues)
-    apply (clarsimp simp: is_cap_simps valid_arch_caps_def cap_master_cap_def 
+    apply (clarsimp simp: is_cap_simps valid_arch_caps_def cap_master_cap_def
                           is_derived_def is_derived_arch_def)
     apply (drule_tac ptr = src and ptr' = "(x,xa)" in unique_table_capsD)
          apply (simp add:is_cap_simps)+
@@ -356,7 +356,7 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
    apply (frule is_derived_is_same_vspace_table_type)
    apply (frule is_derived_obj_refs)
    apply (frule is_derived_cap_asid_issues)
-   apply (clarsimp simp: is_cap_simps valid_arch_caps_def cap_master_cap_def 
+   apply (clarsimp simp: is_cap_simps valid_arch_caps_def cap_master_cap_def
                          is_derived_def is_derived_arch_def)
    apply (drule_tac ptr = src and ptr' = "(x,xa)" in unique_table_capsD)
         apply (simp add:is_cap_simps)+
@@ -564,15 +564,15 @@ lemma cap_insert_simple_invs:
   "\<lbrace>invs and valid_cap cap and tcb_cap_valid cap dest and
     ex_cte_cap_wp_to (appropriate_cte_cap cap) dest and
     cte_wp_at (\<lambda>c. is_untyped_cap c \<longrightarrow> usable_untyped_range c = {}) src and
-    cte_wp_at (\<lambda>c. c = cap.NullCap) dest and 
+    cte_wp_at (\<lambda>c. c = cap.NullCap) dest and
     no_cap_to_obj_with_diff_ref cap {dest} and
     (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src cap) src s) and
     K (is_simple_cap cap \<and> \<not>is_ap_cap cap) and (\<lambda>s. \<forall>irq \<in> cap_irqs cap. irq_issued irq s)\<rbrace>
   cap_insert cap src dest \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
-   apply (wp cap_insert_simple_mdb cap_insert_iflive 
-             cap_insert_zombies cap_insert_ifunsafe 
+   apply (wp cap_insert_simple_mdb cap_insert_iflive
+             cap_insert_zombies cap_insert_ifunsafe
              cap_insert_valid_global_refs cap_insert_idle
              valid_irq_node_typ cap_insert_simple_arch_caps_no_ap)
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state)
@@ -591,5 +591,43 @@ lemma cap_insert_simple_invs:
 lemmas is_derived_def = is_derived_def[simplified is_derived_arch_def]
 
 end
+
+(* FIXME x64: these needs to be available globally but uses Arch facts *)
+lemma set_cap_valid_arch_caps_simple:
+  "\<lbrace>\<lambda>s. valid_arch_caps s
+      \<and> valid_objs s
+      \<and> cte_wp_at (Not o is_arch_cap) ptr s
+      \<and> (obj_refs cap \<noteq> {} \<longrightarrow> s \<turnstile> cap)
+      \<and> \<not> (is_arch_cap cap)\<rbrace>
+     set_cap cap ptr
+   \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
+  apply (wp X64.set_cap_valid_arch_caps)
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
+  apply (frule(1) caps_of_state_valid_cap)
+  apply (rename_tac cap')
+  apply (subgoal_tac "\<forall>x \<in> {cap, cap'}. \<not> X64.is_pt_cap x \<and> \<not> X64.is_pd_cap x \<and> \<not> X64.is_pdpt_cap x \<and> \<not> X64.is_pml4_cap x")
+   apply simp
+   apply (rule conjI)
+    apply (clarsimp simp: X64.vs_cap_ref_def is_cap_simps)
+   apply (erule impCE)
+    apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
+                          cte_wp_at_caps_of_state
+                          X64.obj_ref_none_no_asid)
+   apply (rule X64.no_cap_to_obj_with_diff_ref_triv, simp_all)
+   apply (rule ccontr, clarsimp simp: X64.table_cap_ref_def is_cap_simps)
+  apply (auto simp: X64.is_cap_simps)
+  done
+
+lemma set_cap_kernel_window_simple:
+  "\<lbrace>\<lambda>s. cap_refs_in_kernel_window s
+      \<and> cte_wp_at (\<lambda>cap'. cap_range cap' = cap_range cap) ptr s\<rbrace>
+     set_cap cap ptr
+   \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
+  apply (wp X64.set_cap_cap_refs_in_kernel_window)
+  apply (clarsimp simp: cte_wp_at_caps_of_state
+                        X64.cap_refs_in_kernel_windowD)
+  done
+
+
 
 end
