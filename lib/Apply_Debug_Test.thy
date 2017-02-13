@@ -220,18 +220,23 @@ text \<open>
  or time out (even in the absence of any breakpoints).
 
  In the following example, try making whitespace edits to the continues to see how the proof thread
- is affected (edits force the continue command to re-execute).
+ is affected.
 \<close>
 
 
 lemma "A \<Longrightarrow> A \<and> A \<and> A \<and> A"
   apply_debug (show_running)
                (rule conjI,
-               sleep 0.5, #break, sleep 0.5, assumption, sleep 0.5, #break, sleep 0.5, rule conjI,
-               sleep 0.5, #break,
-               assumption, sleep 0.5, #break, sleep 0.5, rule conjI, sleep 0.5, #break, sleep 0.5,
+               sleep 0.1, #break, sleep 0.1, assumption, sleep 0.1, #break, sleep 0.1, rule conjI,
+               sleep 0.1, #break,
+               assumption, sleep 0.1, #break, sleep 0.1, rule conjI, sleep 0.1, #break, sleep 0.1,
                assumption)
   continue
+  continue
+  continue
+  continue
+  continue
+  apply assumption
   done
 
 section \<open>Final Notes\<close>
