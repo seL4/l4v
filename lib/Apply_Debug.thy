@@ -94,20 +94,24 @@ fun map_running f ({running} : markup_state) =
 structure Markup_Data = Proof_Data
 (
   type T = markup_state Synchronized.var option *
-    Position.range option (* latest method location *)
-  fun init _ : T = (NONE, NONE)
+    Position.range option (* latest method location *) *
+    Position.range option (* latest breakpoint location *)
+  fun init _ : T = (NONE, NONE, NONE)
 );
 
 val init_queue = ({cur = NONE, next = NONE, clear_cur = false}: markup_queue)
 val init_markup_state = ({running = init_queue} : markup_state)
 
-fun set_markup_state id = Markup_Data.map (apfst (K (SOME id)));
-fun get_markup_id ctxt = fst (Markup_Data.get ctxt);
+fun set_markup_state id = Markup_Data.map (@{apply 3 (1)} (K (SOME id)));
+fun get_markup_id ctxt = #1 (Markup_Data.get ctxt);
 
-fun set_latest_range range = Markup_Data.map (apsnd (K (SOME range)));
-fun get_latest_range ctxt = snd (Markup_Data.get ctxt);
+fun set_latest_range range = Markup_Data.map (@{apply 3 (2)} (K (SOME range)));
+fun get_latest_range ctxt = #2 (Markup_Data.get ctxt);
 
-val clear_latest_range = Markup_Data.map (apsnd (K NONE));
+fun set_breakpoint_range range = Markup_Data.map (@{apply 3 (3)} (K (SOME range)));
+fun get_breakpoint_range ctxt = #3 (Markup_Data.get ctxt);
+
+val clear_ranges = Markup_Data.map (@{apply 3 (3)} (K NONE) o @{apply 3 (2)} (K NONE));
 
 fun swap_markup queue startm endm =
 if is_some (#next queue) andalso #next queue = #cur queue then SOME (map_next (K NONE) queue) else
@@ -414,7 +418,7 @@ val is_debug_ctxt = is_some o #1 o Debug_Data.get;
 
 fun clear_debug ctxt = ctxt
  |> Debug_Data.map (fn _ => (NONE,~1,false, no_break_opts, NONE))
- |> clear_latest_range
+ |> clear_ranges
 
 
 val get_continuation = #2 o Debug_Data.get;
@@ -536,7 +540,7 @@ val _ = Context.>> (Context.map_theory (Method.setup @{binding #}
         val range = Token.range_of toks;
         val ctxt' = ctxt
           |> maybe_bind thm b
-          |> set_latest_range range;
+          |> set_breakpoint_range range;
 
       in Seq.make_results (Seq.map (fn thm' => (ctxt',thm')) (break ctxt' tag thm)) end))) ""))
 
@@ -631,19 +635,23 @@ fun continue i_opt m_opt =
         val st'' = if b then (Output.writeln "Final Result."; st' |> apfst clear_debug)
                    else st' |> apfst (set_continuation cont) |> apfst (init_interactive);
 
-        val _ = case (get_latest_range (fst st'')) of SOME rng =>
-          let
-            val sr = serial ();
-          in
-            (Output.report
+        (* markup for matching breakpoints to continues *)
+
+        val sr = serial ();
+
+        fun markup_def rng =
+          (Output.report
               [Markup.markup (Markup.entity "breakpoint" ""
                |> Markup.properties (Position.entity_properties_of true sr
                     (Position.range_position rng))) ""]);
-            (Context_Position.report ctxt (Position.thread_data ())
+
+        val _ = Option.map markup_def (get_latest_range (fst st''));
+        val _ = Option.map markup_def (get_breakpoint_range (fst st''));
+
+        val _ =
+          (Context_Position.report ctxt (Position.thread_data ())
              (Markup.entity "breakpoint" ""
               |> Markup.properties (Position.entity_properties_of false sr Position.none)))
-          end
-        | NONE => ()
 
         val _ = maybe_trace (#trace (get_break_opts ctxt)) st'';
 

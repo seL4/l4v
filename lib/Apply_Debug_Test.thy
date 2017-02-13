@@ -30,7 +30,8 @@ text \<open>
 
  Some interactive markup is given in jEdit: in real-time the currently executing
  method has the "running" markup (similar to a forked proof), clicking on
- an apply_debug or continue command will show the subsequent breakpoint that was hit,
+ an apply_debug or continue command will show the subsequent breakpoint that was hit (and
+ the method in the original expression that hit it),
  clicking on a breakpoint will highlight all "continue" commands which stopped at that breakpoint.
  Note that breakpoints inside of Eisbach definitions are highlighted as well.
 
