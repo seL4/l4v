@@ -57,10 +57,10 @@ text {*
   the user memory is a mapping from addresses to bytes.
   A virtual-memory view will later on be built on top of that.
 *}
-type_synonym user_mem = "word32 \<Rightarrow> word8 option"
+type_synonym user_mem = "machine_word \<Rightarrow> word8 option"
 
 (* This is a temperary solution to model the user device memory *)
-type_synonym device_state = "word32 \<Rightarrow> word8 option"
+type_synonym device_state = "machine_word \<Rightarrow> word8 option"
 
 text {*
   A user state consists of a register context and (physical) user memory.
@@ -68,10 +68,10 @@ text {*
 type_synonym user_state = "user_context \<times> user_mem \<times> device_state"
 
 text {* Virtual-memory mapping: translates virtual to physical addresses *}
-type_synonym vm_mapping = "word32 \<rightharpoonup> word32"
+type_synonym vm_mapping = "machine_word \<rightharpoonup> machine_word"
 
 text {* Memory rights for each virtual adress *}
-type_synonym mem_rights = "word32 \<Rightarrow> vm_rights"
+type_synonym mem_rights = "machine_word \<Rightarrow> vm_rights"
 
 text {*
   A user transition is characterized by a function
