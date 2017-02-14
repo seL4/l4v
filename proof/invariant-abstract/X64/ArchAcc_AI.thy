@@ -165,6 +165,120 @@ lemma get_pde_wp:
 lemma get_pde_inv [wp]: "\<lbrace>P\<rbrace> get_pde p \<lbrace>\<lambda>_. P\<rbrace>"
   by (wp get_pde_wp) simp
 
+lemma set_asid_pool_typ_at [wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_asid_pool ptr pool \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  apply (simp add: set_asid_pool_def set_object_def get_object_def update_object_def)
+  apply wp
+  including unfold_objects
+  by clarsimp
+
+lemmas set_asid_pool_typ_ats [wp] = abs_typ_at_lifts [OF set_asid_pool_typ_at]
+
+lemma set_asid_pool_arch_objs_unmap':
+  "\<lbrace>valid_arch_objs and (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj (ASIDPool ap) s) and
+    obj_at (\<lambda>ko. \<exists>ap'. ko = ArchObj (ASIDPool ap') \<and> graph_of ap \<subseteq> graph_of ap') p\<rbrace>
+  set_asid_pool p ap \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
+  unfolding set_asid_pool_def including unfold_objects
+  apply (wpsimp wp: set_object_arch_objs get_object_wp)
+  apply (fastforce simp: a_type_def vs_refs_def)
+  done
+
+
+lemma set_asid_pool_arch_objs_unmap:
+  "\<lbrace>valid_arch_objs and ko_at (ArchObj (ASIDPool ap)) p\<rbrace>
+  set_asid_pool p (ap |` S)  \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
+  apply (wp set_asid_pool_arch_objs_unmap')
+  apply (clarsimp simp: obj_at_def graph_of_restrict_map)
+  apply (drule valid_arch_objsD, simp add: obj_at_def, assumption)
+  apply simp
+  by (auto simp: obj_at_def dest!: ran_restrictD)
+
+lemma set_asid_pool_iflive [wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
+  set_asid_pool p ap
+  \<lbrace>\<lambda>_ s. if_live_then_nonz_cap s\<rbrace>"
+  apply (simp add: set_asid_pool_def update_object_def)
+  apply (wp get_object_wp set_object_iflive)
+  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
+  apply (clarsimp simp: obj_at_def a_type_simps)
+  done
+
+
+lemma set_asid_pool_zombies [wp]:
+  "\<lbrace>\<lambda>s. zombies_final s\<rbrace>
+  set_asid_pool p ap
+  \<lbrace>\<lambda>_ s. zombies_final s\<rbrace>"
+  apply (simp add: set_asid_pool_def update_object_def)
+  apply (wp get_object_wp set_object_zombies)
+  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
+  apply (clarsimp simp: obj_at_def a_type_simps)
+  done
+
+lemma set_asid_pool_zombies_state_refs [wp]:
+  "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>
+  set_asid_pool p ap
+  \<lbrace>\<lambda>_ s. P (state_refs_of s)\<rbrace>"
+  apply (clarsimp simp: set_asid_pool_def set_object_def update_object_def)
+  apply (wp get_object_wp)
+  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
+  apply (erule rsubst [where P=P])
+  apply (rule ext)
+  apply (clarsimp simp: obj_at_def state_refs_of_def a_type_simps split: option.splits)
+  done
+
+lemma set_asid_pool_cdt [wp]:
+  "\<lbrace>\<lambda>s. P (cdt s)\<rbrace>
+  set_asid_pool p ap
+  \<lbrace>\<lambda>_ s. P (cdt s)\<rbrace>"
+  unfolding set_asid_pool_def including unfold_objects
+  by (wpsimp wp: get_object_wp)
+
+lemma set_asid_pool_caps_of_state [wp]:
+  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  unfolding set_asid_pool_def set_object_def including unfold_objects
+  apply (wpsimp wp: get_object_wp)
+  apply (subst cte_wp_caps_of_lift)
+   prefer 2
+   apply assumption
+  subgoal for _ _ y by (cases y, auto simp: cte_wp_at_cases)
+  done
+
+lemma set_asid_pool_valid_mdb [wp]:
+  "\<lbrace>\<lambda>s. valid_mdb s\<rbrace>
+  set_asid_pool p ap
+  \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
+  including unfold_objects
+  by (wpsimp wp: valid_mdb_lift get_object_wp simp: set_asid_pool_def update_object_def)
+
+
+
+lemma set_asid_pool_reply_masters [wp]:
+  "\<lbrace>valid_reply_masters\<rbrace>
+   set_asid_pool p ap
+   \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
+  by (wp valid_reply_masters_cte_lift)
+
+crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
+  (wp: crunch_wps)
+
+crunch idle [wp]: set_asid_pool "\<lambda>s. P (idle_thread s)"
+  (wp: crunch_wps)
+
+crunch irq [wp]: set_asid_pool "\<lambda>s. P (interrupt_irq_node s)"
+  (wp: crunch_wps)
+
+crunch valid_irq_states[wp]: set_asid_pool "valid_irq_states"
+  (wp: crunch_wps)
+
+lemma set_asid_pool_valid_global [wp]:
+  "\<lbrace>\<lambda>s. valid_global_refs s\<rbrace>
+  set_asid_pool p ap
+  \<lbrace>\<lambda>_ s. valid_global_refs s\<rbrace>"
+  by (wp valid_global_refs_cte_lift)
+
+crunch interrupt_states[wp]: set_asid_pool "\<lambda>s. P (interrupt_states s)"
+  (wp: crunch_wps)
+
 bundle pagebits = 
   pd_bits_def[simp] pd_shift_bits_def [simp]
   pt_bits_def[simp] pt_shift_bits_def[simp]
@@ -2595,6 +2709,261 @@ lemma store_pte_invs:
    apply fastforce
   apply (clarsimp simp: cte_wp_at_caps_of_state ucast_ucast_mask ptTranslationBits_def)
   done
+
+lemma set_asid_pool_valid_idle [wp]:
+  "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
+  set_asid_pool p ap
+  \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
+  including unfold_objects
+  by (wpsimp wp: valid_idle_lift  simp: set_asid_pool_def)
+
+
+lemma set_asid_pool_ifunsafe [wp]:
+  "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace>
+  set_asid_pool p ap
+  \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
+  including unfold_objects
+  by (wpsimp simp: set_asid_pool_def)
+
+lemma set_asid_pool_pred_tcb_at[wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  apply (simp add: set_asid_pool_def set_object_def)
+  apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
+  done
+
+lemma set_asid_pool_reply_caps [wp]:
+  "\<lbrace>\<lambda>s. valid_reply_caps s\<rbrace>
+  set_asid_pool p ap
+  \<lbrace>\<lambda>_ s. valid_reply_caps s\<rbrace>"
+  by (wp valid_reply_caps_st_cte_lift)
+
+crunch global_ref [wp]: set_asid_pool "\<lambda>s. P (global_refs s)"
+  (wp: crunch_wps)
+
+
+lemma set_asid_pool_vs_lookup_unmap':
+  "\<lbrace>valid_vs_lookup and
+    obj_at (\<lambda>ko. \<exists>ap'. ko = ArchObj (ASIDPool ap') \<and> graph_of ap \<subseteq> graph_of ap') p\<rbrace>
+  set_asid_pool p ap \<lbrace>\<lambda>_. valid_vs_lookup\<rbrace>"
+  apply (simp add: valid_vs_lookup_def pred_conj_def)
+  apply (rule hoare_lift_Pf2 [where f=caps_of_state];wp?)
+  apply (simp add: set_asid_pool_def set_object_def update_object_def)
+  apply (wp get_object_wp)
+  apply (clarsimp simp: obj_at_def simp del: fun_upd_apply del: disjCI
+                  split: kernel_object.splits arch_kernel_obj.splits)
+  subgoal for \<dots> pa ref
+    apply (spec pa)
+    apply (spec ref)
+    apply (erule impE)
+     apply (erule vs_lookup_pages_stateI)
+      by (clarsimp simp: obj_at_def vs_refs_pages_def split: if_split_asm)
+         fastforce+
+  done
+
+
+lemma set_asid_pool_vs_lookup_unmap:
+  "\<lbrace>valid_vs_lookup and ko_at (ArchObj (ASIDPool ap)) p\<rbrace>
+  set_asid_pool p (ap |` S) \<lbrace>\<lambda>_. valid_vs_lookup\<rbrace>"
+  apply (wp set_asid_pool_vs_lookup_unmap')
+  by (clarsimp simp: obj_at_def
+                 elim!: subsetD [OF graph_of_restrict_map])
+
+crunch v_ker_map[wp]: set_asid_pool "valid_kernel_mappings"
+  (ignore: set_object wp: set_object_v_ker_map crunch_wps)
+
+
+lemma set_asid_pool_restrict_asid_map:
+  "\<lbrace>valid_asid_map and ko_at (ArchObj (ASIDPool ap)) p and
+    (\<lambda>s. \<forall>asid. asid \<le> mask asid_bits \<longrightarrow> ucast asid \<notin> S \<longrightarrow>
+                x64_asid_table (arch_state s) (asid_high_bits_of asid) = Some p \<longrightarrow>
+                x64_asid_map (arch_state s) asid = None)\<rbrace>
+  set_asid_pool p (ap |` S) \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
+  apply (simp add: set_asid_pool_def valid_asid_map_def set_object_def update_object_def)
+  apply (wp get_object_wp)
+  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits
+                  simp del: fun_upd_apply)
+  apply (drule(1) bspec)
+  apply (clarsimp simp: vspace_at_asid_def obj_at_def graph_of_def)
+  apply (drule subsetD, erule domI)
+  apply simp
+  apply (drule spec, drule(1) mp)
+  apply simp
+  apply (erule vs_lookupE)
+  apply (rule vs_lookupI, simp)
+  apply (clarsimp simp: vs_asid_refs_def graph_of_def)
+  apply (drule rtranclD)
+  apply (erule disjE, clarsimp)
+  apply clarsimp
+  apply (drule tranclD)
+  apply clarsimp
+  apply (rule r_into_rtrancl)
+  apply (drule vs_lookup1D)
+  apply clarsimp
+  apply (subst vs_lookup1_def)
+  apply (clarsimp simp: obj_at_def)
+  apply (erule rtranclE)
+   apply (clarsimp simp: vs_refs_def graph_of_def)
+   apply (rule image_eqI[where x="(_, _)"])
+    apply (simp add: split_def)
+   apply (clarsimp simp: restrict_map_def)
+   apply (drule ucast_up_inj, simp)
+   apply (simp add: mask_asid_low_bits_ucast_ucast)
+  apply clarsimp
+  apply (drule vs_lookup1_trans_is_append)
+  apply clarsimp
+  apply (drule vs_lookup1D)
+  by clarsimp
+
+lemma set_asid_pool_cur [wp]:
+  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  unfolding set_asid_pool_def by (wpsimp wp: get_object_wp)
+
+
+lemma set_asid_pool_cur_tcb [wp]:
+  "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
+  unfolding cur_tcb_def
+  by (rule hoare_lift_Pf [where f=cur_thread]; wp)
+
+
+crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
+  (wp: get_object_wp)
+
+
+lemma set_asid_pool_valid_arch [wp]:
+  "\<lbrace>valid_arch_state\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  by (rule valid_arch_state_lift) (wp set_asid_pool_typ_at)+
+
+
+lemma set_asid_pool_valid_objs [wp]:
+  "\<lbrace>valid_objs\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  apply (simp add: set_asid_pool_def)
+  apply (wp set_object_valid_objs get_object_wp)
+  including unfold_objects
+  by (clarsimp simp: a_type_def valid_obj_def wellformed_arch_obj_def)
+
+lemma set_asid_pool_global_objs [wp]:
+  "\<lbrace>valid_global_objs and valid_arch_state\<rbrace>
+   set_asid_pool p ap
+   \<lbrace>\<lambda>_. valid_global_objs\<rbrace>"
+  apply (simp add: set_asid_pool_def set_object_def update_object_def)
+  apply (wp get_object_wp)
+  apply (clarsimp simp del: fun_upd_apply
+                  split: kernel_object.splits arch_kernel_obj.splits)
+  apply (clarsimp simp: valid_global_objs_def valid_ao_at_def simp del: fun_upd_apply)
+  apply (rule conjI)
+   apply (clarsimp simp: obj_at_def)
+   apply (rule conjI)
+    subgoal by (clarsimp simp: valid_arch_state_def obj_at_def a_type_def)
+   apply clarsimp
+   apply (erule (1) valid_arch_obj_same_type[simplified])
+   subgoal by (simp add: a_type_def)
+  apply (rule conjI)
+   subgoal by (clarsimp simp: obj_at_def valid_arch_state_def a_type_def)
+  apply (clarsimp simp: obj_at_def)
+  by ((rule conjI)?, clarsimp, drule (1) bspec, clarsimp simp: aa_type_simps a_type_simps)+
+
+lemma set_asid_pool_aligned [wp]:
+  "\<lbrace>pspace_aligned\<rbrace> set_asid_pool p ptr \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
+  apply (simp add: set_asid_pool_def get_object_def)
+  apply (wp set_object_aligned|wpc)+
+  done
+
+lemma set_asid_pool_distinct [wp]:
+  "\<lbrace>pspace_distinct\<rbrace> set_asid_pool p ptr \<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
+  apply (simp add: set_asid_pool_def get_object_def)
+  apply (wp set_object_distinct|wpc)+
+  done
+
+lemma set_asid_pool_only_idle [wp]:
+  "\<lbrace>only_idle\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>_. only_idle\<rbrace>"
+  by (wp only_idle_lift set_asid_pool_typ_at)
+
+
+lemma set_asid_pool_equal_mappings [wp]:
+  "\<lbrace>equal_kernel_mappings\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
+  by (simp add: set_asid_pool_def update_object_def | wp set_object_equal_mappings get_object_wp)+
+
+lemma set_asid_pool_valid_global_vspace_mappings[wp]:
+  "\<lbrace>valid_global_vspace_mappings\<rbrace>
+      set_asid_pool p ap \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
+  apply (simp add: set_asid_pool_def update_object_def)
+  apply (wp set_object_global_vspace_mappings get_object_wp)
+  apply (clarsimp simp: obj_at_def a_type_simps)
+  done
+
+lemma set_asid_pool_kernel_window[wp]:
+  "\<lbrace>pspace_in_kernel_window\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
+  apply (simp add: set_asid_pool_def)
+  apply (wp set_object_pspace_in_kernel_window get_object_wp)
+  done
+
+lemma set_asid_pool_pspace_respects_device_region[wp]:
+  "\<lbrace>pspace_respects_device_region\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
+  apply (simp add: set_asid_pool_def)
+  apply (wp set_object_pspace_respect_device_region get_object_wp)
+  done
+
+lemma set_asid_pool_caps_kernel_window[wp]:
+  "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
+  apply (simp add: set_asid_pool_def)
+  apply (wp set_object_cap_refs_in_kernel_window get_object_wp)
+  done
+
+lemma set_asid_pool_caps_respects_device_region[wp]:
+  "\<lbrace>cap_refs_respects_device_region\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: set_asid_pool_def)
+  apply (wp set_object_cap_refs_respects_device_region get_object_wp)
+  done
+
+lemma set_asid_pool_valid_ioc[wp]:
+  "\<lbrace>valid_ioc\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
+  apply (simp add: set_asid_pool_def)
+  apply (wp set_object_valid_ioc_no_caps get_object_inv)
+  done
+
+lemma set_asid_pool_vms[wp]:
+  "\<lbrace>valid_machine_state\<rbrace> set_asid_pool p S \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
+  apply (simp add: set_asid_pool_def set_object_def update_object_def)
+  apply (wp get_object_wp)
+  apply clarify
+  apply (erule valid_machine_state_heap_updI)
+  apply (fastforce simp: a_type_def obj_at_def
+                  split: kernel_object.splits arch_kernel_obj.splits)+
+  done
+
+lemma set_asid_pool_table_caps [wp]:
+  "\<lbrace>valid_table_caps\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>_. valid_table_caps\<rbrace>"
+  apply (simp add: valid_table_caps_def)
+  apply (rule hoare_lift_Pf2 [where f=caps_of_state];wp?)
+  apply (simp add: set_asid_pool_def set_object_def update_object_def)
+  apply (wp get_object_wp)
+  by (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
+     (fastforce simp: obj_at_def empty_table_def a_type_simps)
+
+lemma set_asid_pool_invs_restrict:
+  "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and
+    (\<lambda>s. \<forall>asid. asid \<le> mask asid_bits \<longrightarrow> ucast asid \<notin> S \<longrightarrow>
+                x64_asid_table (arch_state s) (asid_high_bits_of asid) = Some p \<longrightarrow>
+                x64_asid_map (arch_state s) asid = None)\<rbrace>
+       set_asid_pool p (ap |` S) \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (simp add: invs_def valid_state_def valid_pspace_def
+                   valid_arch_caps_def del: set_asid_pool_def set_arch_obj_simps(5))
+  apply (rule hoare_pre,
+         wp add: valid_irq_node_typ set_asid_pool_typ_at
+            set_asid_pool_arch_objs_unmap  valid_irq_handlers_lift
+            set_asid_pool_vs_lookup_unmap set_asid_pool_restrict_asid_map
+       | simp del: set_arch_obj_simps(5))+
+  done
+
+lemma set_asid_pool_invs_unmap:
+  "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and
+    (\<lambda>s. \<forall>asid. asid \<le> mask asid_bits \<longrightarrow> ucast asid = x \<longrightarrow>
+                x64_asid_table (arch_state s) (asid_high_bits_of asid) = Some p \<longrightarrow>
+                x64_asid_map (arch_state s) asid = None)\<rbrace>
+       set_asid_pool p (ap(x := None)) \<lbrace>\<lambda>_. invs\<rbrace>"
+  using set_asid_pool_invs_restrict[where S="- {x}"]
+  by (simp add: restrict_map_def fun_upd_def if_flip)
+
 
 lemma vs_refs_empty_from_pages_empty:
   "vs_refs_pages a = {} \<Longrightarrow> vs_refs a = {}"
