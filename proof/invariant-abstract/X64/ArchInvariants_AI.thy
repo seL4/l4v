@@ -125,7 +125,7 @@ where
      wellformed_mapdata X64HugePage mapdata
    | PDPointerTableCap r (Some (asid,vref)) \<Rightarrow>
      0 < asid \<and> asid \<le> 2^asid_bits - 1
-     \<and> is_aligned vref pml4_shift_bits \<and> vref < pptr_base
+     \<and> is_aligned vref pml4_shift_bits \<and> vref < pptr_base \<and> canonical_address vref
    | PML4Cap r (Some asid) \<Rightarrow>
      0 < asid \<and> asid \<le> 2^asid_bits - 1
    | _ \<Rightarrow> True"
@@ -241,7 +241,7 @@ where
     typ_at (AArch APDPointerTable) r s \<and>
     (case mapdata of None \<Rightarrow> True
        | Some (asid, vref) \<Rightarrow> 0 < asid \<and> asid \<le> 2 ^ asid_bits - 1
-                                \<and> vref < pptr_base
+                                \<and> vref < pptr_base \<and> canonical_address vref
                                 \<and> is_aligned vref (pml4_shift_bits))
   | PML4Cap r mapdata \<Rightarrow>
     typ_at (AArch APageMapL4) r s \<and>

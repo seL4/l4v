@@ -643,7 +643,7 @@ where
 | "cte_refs (DomainCap) f                        = {}"
 | "cte_refs (Zombie r b n) f                     =
      {r} \<times> {xs. length xs = (zombie_cte_bits b) \<and>
-                unat (of_bl xs :: word32) < n}"
+                unat (of_bl xs :: machine_word) < n}"
 | "cte_refs (IRQControlCap) f                    = {}"
 | "cte_refs (IRQHandlerCap irq) f                = {(f irq, [])}"
 | "cte_refs (ReplyCap tcb master) f              = {}"
