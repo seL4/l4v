@@ -589,6 +589,16 @@ lemma cap_insert_simple_invs:
   done
 
 lemmas is_derived_def = is_derived_def[simplified is_derived_arch_def]
+lemma set_cap_kernel_window_simple:
+  "\<lbrace>\<lambda>s. cap_refs_in_kernel_window s
+      \<and> cte_wp_at (\<lambda>cap'. cap_range cap' = cap_range cap) ptr s\<rbrace>
+     set_cap cap ptr
+   \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
+  apply (wp X64.set_cap_cap_refs_in_kernel_window)
+  apply (clarsimp simp: cte_wp_at_caps_of_state
+                        X64.cap_refs_in_kernel_windowD)
+  done
+
 
 end
 

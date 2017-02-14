@@ -3554,5 +3554,32 @@ lemma invs_aligned_pml4D:
   apply (simp add: pml4_bits_def pageBits_def)
   done
 
+(* is this the right way? we need this fact globally but it's proven with
+   ARM defns. *)
+lemma set_cap_valid_arch_caps_simple:
+  "\<lbrace>\<lambda>s. valid_arch_caps s
+      \<and> valid_objs s
+      \<and> cte_wp_at (Not o is_arch_cap) ptr s
+      \<and> (obj_refs cap \<noteq> {} \<longrightarrow> s \<turnstile> cap)
+      \<and> \<not> (is_arch_cap cap)\<rbrace>
+     set_cap cap ptr
+   \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
+  apply (wp set_cap_valid_arch_caps)
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
+  apply (frule(1) caps_of_state_valid_cap)
+  apply (rename_tac cap')
+  apply (subgoal_tac "\<forall>x \<in> {cap, cap'}. \<not> is_pt_cap x \<and> \<not> X64.is_pd_cap x")
+   apply simp
+   apply (rule conjI)
+    apply (clarsimp simp: vs_cap_ref_def is_cap_simps split: cap.splits)
+   apply (erule impCE)
+    apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
+                          cte_wp_at_caps_of_state is_cap_simps
+                          obj_ref_none_no_asid)
+   apply (clarsimp simp: is_cap_simps)
+   apply (rule no_cap_to_obj_with_diff_ref_triv, simp_all)
+   apply (rule ccontr, clarsimp simp: table_cap_ref_def is_cap_simps)
+  apply (auto simp: is_cap_simps table_cap_ref_def split: cap.splits)
+  done
 end
 end

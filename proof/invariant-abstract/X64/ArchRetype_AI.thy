@@ -1175,6 +1175,62 @@ lemma clearMemory_um_eq_0:
   apply (fastforce simp: ignore_failure_def split: if_split_asm)
   done
 
+lemma invs_irq_state_independent:
+  "invs (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
+   = invs s"
+  by (clarsimp simp: irq_state_independent_A_def invs_def
+      valid_state_def valid_pspace_def valid_mdb_def valid_ioc_def valid_idle_def
+      only_idle_def if_unsafe_then_cap_def valid_reply_caps_def
+      valid_reply_masters_def valid_global_refs_def valid_arch_state_def
+      valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
+      valid_arch_objs_def valid_arch_caps_def valid_global_objs_def
+      valid_kernel_mappings_def equal_kernel_mappings_def
+      valid_asid_map_def vspace_at_asid_def
+      pspace_in_kernel_window_def cap_refs_in_kernel_window_def
+      cur_tcb_def sym_refs_def state_refs_of_def
+      swp_def valid_irq_states_def)
+
+lemma caps_region_kernel_window_imp:
+  "caps_of_state s p = Some cap
+    \<Longrightarrow> cap_refs_in_kernel_window s
+    \<Longrightarrow> S \<subseteq> cap_range cap
+    \<Longrightarrow> region_in_kernel_window S s"
+  apply (simp add: region_in_kernel_window_def)
+  apply (drule(1) cap_refs_in_kernel_windowD)
+  apply blast
+  done
+
+(* make these available in the generic theory? *)
+crunch irq_node[wp]: init_arch_objects "\<lambda>s. P (interrupt_irq_node s)"
+  (wp: crunch_wps)
+
+lemma init_arch_objects_excap[wp]:
+  "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> init_arch_objects tp ptr bits us refs \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
+  by (wp ex_cte_cap_to_pres )
+
+crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at P t"
+  (wp: crunch_wps ignore: update_object set_pml4)
+
+
 end
 
+
+lemmas invs_irq_state_independent[intro!, simp]
+    = X64.invs_irq_state_independent
+
+lemmas caps_region_kernel_window_imp
+    = X64.caps_region_kernel_window_imp
+
+
+lemmas init_arch_objects_invs_from_restricted
+    = X64.init_arch_objects_invs_from_restricted
+
+
+
+lemmas init_arch_objects_wps
+    = X64.init_arch_objects_cte_wp_at
+      X64.init_arch_objects_valid_cap
+      X64.init_arch_objects_cap_table
+      X64.init_arch_objects_excap
+      X64.init_arch_objects_st_tcb_at
 end

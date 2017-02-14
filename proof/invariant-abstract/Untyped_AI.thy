@@ -21,6 +21,10 @@ requalify_consts
   region_in_kernel_window
   arch_default_cap
   second_level_tables
+
+requalify_facts
+  set_cap_valid_arch_caps_simple
+  set_cap_kernel_window_simple
 end
 
 primrec
@@ -57,8 +61,8 @@ lemma valid_untyped_inv_wcap:
 
 locale Untyped_AI_of_bl_nat_to_cref =
   assumes of_bl_nat_to_cref:
-    "\<lbrakk> x < 2 ^ bits; bits < 32 \<rbrakk>
-      \<Longrightarrow> (of_bl (nat_to_cref bits x) :: word32) = of_nat x"
+    "\<lbrakk> x < 2 ^ bits; bits < word_bits \<rbrakk>
+      \<Longrightarrow> (of_bl (nat_to_cref bits x) :: machine_word) = of_nat x"
 
 lemma cnode_cap_bits_range:
   "\<lbrakk> cte_wp_at P p s; invs s \<rbrakk> \<Longrightarrow>
@@ -295,7 +299,7 @@ locale Untyped_AI_arch =
    init_arch_objects ty ptr n us y
    \<lbrace>\<lambda>rv s. caps_overlap_reserved S s\<rbrace>"
   assumes delete_objects_rewrite:
-  "\<And>sz ptr.\<lbrakk>2\<le> sz; sz\<le> word_bits;ptr && ~~ mask sz = ptr\<rbrakk> \<Longrightarrow> delete_objects ptr sz =
+  "\<And>sz ptr.\<lbrakk>word_size_bits \<le> sz; sz\<le> word_bits;ptr && ~~ mask sz = ptr\<rbrakk> \<Longrightarrow> delete_objects ptr sz =
     do y \<leftarrow> modify (clear_um {ptr + of_nat k |k. k < 2 ^ sz});
     modify ((detype {ptr && ~~ mask sz..ptr + 2 ^ sz - 1})::'state_ext state \<Rightarrow> 'state_ext state)
     od"
@@ -2779,6 +2783,9 @@ lemma ct_in_state_trans_state[simp]:
   "ct_in_state P (trans_state a s) = ct_in_state P s"
   by (simp add: ct_in_state_def)
 
+(* FIXME: XIN move to Word_Lemmas 64 *)
+lemmas unat_of_nat_word_bits = unat_of_nat_eq[where 'a = 64,unfolded word_bits_len_of, simplified]
+
 lemma caps_of_state_pspace_no_overlapD:
   "\<lbrakk> caps_of_state s cref = Some (cap.UntypedCap dev ptr sz idx); invs s;
     idx < 2 ^ sz \<rbrakk>
@@ -2790,8 +2797,7 @@ lemma caps_of_state_pspace_no_overlapD:
     apply (simp add: cte_wp_at_caps_of_state is_aligned_neg_mask_eq)
    apply (simp add: is_aligned_neg_mask_eq)
    apply (simp add: mask_out_sub_mask)
-   apply (subst unat_of_nat_eq[where 'a=machine_word_len, unfolded word_bits_len_of],
-           erule order_less_le_trans, simp_all)
+   apply (subst unat_of_nat_word_bits, erule order_less_le_trans, simp_all)
   apply (rule word_of_nat_less)
   apply (erule order_less_le_trans)
   apply simp
@@ -2897,6 +2903,7 @@ lemma reset_untyped_cap_invs_etc:
     apply (frule caps_of_state_valid_cap, clarsimp+)
     apply (simp add: valid_cap_def)
    apply simp
+sorry (*
   apply (clarsimp simp: bits_of_def free_index_of_def)
   apply (rule hoare_pre, rule hoare_post_impErr,
     rule_tac P="\<lambda>i. invs and ?psp and ct_active and valid_untyped_inv_wcap ?ui
@@ -2926,7 +2933,7 @@ lemma reset_untyped_cap_invs_etc:
    apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
-
+*)
 lemma get_cap_prop_known:
   "\<lbrace>cte_wp_at (\<lambda>cp. f cp = v) slot and Q v\<rbrace> get_cap slot \<lbrace>\<lambda>rv. Q (f rv)\<rbrace>"
   apply (wp get_cap_wp)
