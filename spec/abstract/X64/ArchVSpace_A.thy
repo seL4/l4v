@@ -208,7 +208,7 @@ definition
            whenE (pml4 \<noteq> pml4') $ throwError InvalidRoot;
            liftE $ update_asid_map asid;
            curCR3 \<leftarrow> liftE $ getCurrentCR3;
-           whenE (CR3BaseAddress curCR3 \<noteq> pml4 \<or> CR3pcid curCR3 \<noteq> asid) $
+           whenE (curCR3 \<noteq> CR3 (addrFromPPtr pml4) asid) $
               liftE $ setCurrentCR3 $ CR3 (addrFromPPtr pml4) asid
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
