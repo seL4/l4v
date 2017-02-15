@@ -181,7 +181,7 @@ locale CNodeInv_AI =
       \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>"
   assumes unat_of_bl_nat_to_cref:
     "\<And>n ln. \<lbrakk> n < 2 ^ ln; ln < word_bits \<rbrakk>
-      \<Longrightarrow> unat (of_bl (nat_to_cref ln n) :: word32) = n"
+      \<Longrightarrow> unat (of_bl (nat_to_cref ln n) :: machine_word) = n"
   assumes zombie_is_cap_toE_pre:
     "\<And>(s::'state_ext state) ptr zbits n m irqn.
       \<lbrakk> s \<turnstile> Zombie ptr zbits n; invs s; m < n \<rbrakk>
@@ -2203,13 +2203,13 @@ lemma word_same_bl_memo_unify_word_type:
 
 lemma word_and_bl_proof:
   "\<lbrakk> invs s; kheap s x = Some (CNode sz cs);
-     unat (of_bl y :: word32) = 0; unat (of_bl z :: word32) = 0;
+     unat (of_bl y :: machine_word) = 0; unat (of_bl z :: machine_word) = 0;
      y \<in> dom cs; z \<in> dom cs \<rbrakk> \<Longrightarrow> y = z"
   apply (simp add: unat_eq_0)
   apply (frule invs_valid_objs, erule(1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_cs_def
                         valid_cs_size_def well_formed_cnode_n_def)
-  apply (rule word_same_bl_memo_unify_word_type[where 'a=32])
+  apply (rule word_same_bl_memo_unify_word_type[where 'a=machine_word_len])
     apply simp
    apply simp
   apply (simp add: word_bits_def)
