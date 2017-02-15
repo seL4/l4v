@@ -29,8 +29,8 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
   apply (erule use_valid)
    apply (simp add: storeWord_def word_rsplit_0)
    apply wp
-  apply simp
-  sorry
+  apply (simp add: upto0_7_def split: if_splits)
+  done
   
 global_naming Arch  
 
