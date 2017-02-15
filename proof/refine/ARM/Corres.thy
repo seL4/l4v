@@ -9,7 +9,7 @@
  *)
 
 theory Corres
-imports StateRelation
+imports StateRelation "../../../lib/Corres_Method"
 begin
 
 text {* Instantiating the corres framework to this particular state relation. *}

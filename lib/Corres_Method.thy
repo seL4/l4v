@@ -54,7 +54,7 @@ section \<open>Corres Method\<close>
 text \<open>Handles structured decomposition of corres goals\<close>
 
 named_theorems
-  corres_split and
+  corres_splits and
   corres_simp and (* conservative simplification rules applied when no progress can be made *)
   corres (* solving terminal corres subgoals *)
 
@@ -86,16 +86,16 @@ private method corres_fold_dc =
   (match conclusion in
     "corres_underlying _ _ _ (\<lambda>_ _. True) _ _ _ _" \<Rightarrow> \<open>rule corres_fold_dc\<close>)
 
-method corres_once declares corres_split corres corres_simp =
+method corres_once declares corres_splits corres corres_simp =
    ((check_corres,corres_fold_dc?,
     #break "corres",
     ( determ \<open>rule corres\<close>
-    | (rule corres_split, corres_once)
+    | (rule corres_splits, corres_once)
     | (simp only: corres_simp, corres_once)
     )))
 
 
-method corres declares corres_split corres corres_simp =
+method corres declares corres_splits corres corres_simp =
   (corres_pre, (corres_once)+)[1]
 
 end
@@ -116,7 +116,7 @@ lemma corres_return_eq:
   by simp
 
 
-lemmas [corres_split] =
+lemmas [corres_splits] =
   corres_split_str
 
 lemmas [corres] =
