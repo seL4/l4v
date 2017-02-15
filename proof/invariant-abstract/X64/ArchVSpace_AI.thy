@@ -620,6 +620,12 @@ lemma valid_vs_lookup_arch_update:
      \<Longrightarrow> valid_vs_lookup (arch_state_update f s) = valid_vs_lookup s"
   by (simp add: valid_vs_lookup_def vs_lookup_pages_arch_update)
 
+lemma valid_asid_map_arch_update:
+  assumes "x64_asid_table (f (arch_state s)) = x64_asid_table (arch_state s)"
+  assumes "x64_asid_map (f (arch_state s)) = x64_asid_map (arch_state s)"
+  shows "valid_asid_map (arch_state_update f s) = valid_asid_map s"
+  by (simp add: assms valid_asid_map_def vspace_at_asid_def vs_lookup_arch_update)
+
 crunch typ_at [wp]: find_vspace_for_asid "\<lambda>s. P (typ_at T p s)"
 
 lemmas find_vspace_for_asid_typ_ats [wp] = abs_typ_at_lifts [OF find_vspace_for_asid_typ_at]
@@ -1103,6 +1109,7 @@ definition
 
 crunch device_state_inv[wp]: ackInterrupt, writeCR3 "\<lambda>ms. P (device_state ms)"
 
+
 lemma dmo_ackInterrupt[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ackInterrupt irq) \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
   apply safe
@@ -1132,11 +1139,29 @@ lemma getCurrentCR3_rewrite_lift[wp]:
   apply (wp hoare_drop_imps)
   done
 
-(* FIXME x64: cr3 invariants *)
+lemma arch_state_update_invs:
+  assumes "invs s"
+  assumes "x64_asid_table (f (arch_state s)) = x64_asid_table (arch_state s)"
+  assumes "x64_asid_map (f (arch_state s)) = x64_asid_map (arch_state s)"
+  assumes "valid_global_refs s \<Longrightarrow> valid_global_refs (arch_state_update f s)"
+  assumes "valid_arch_state s \<Longrightarrow> valid_arch_state (arch_state_update f s)"
+  assumes "valid_table_caps s \<Longrightarrow> valid_table_caps (arch_state_update f s)"
+  assumes "valid_global_objs s \<Longrightarrow> valid_global_objs (arch_state_update f s)"
+  assumes "valid_kernel_mappings s \<Longrightarrow> valid_kernel_mappings (arch_state_update f s)"
+  assumes "valid_global_vspace_mappings s \<Longrightarrow> valid_global_vspace_mappings (arch_state_update f s)"
+  assumes "pspace_in_kernel_window s \<Longrightarrow> pspace_in_kernel_window (arch_state_update f s)"
+  assumes "cap_refs_in_kernel_window s \<Longrightarrow> cap_refs_in_kernel_window (arch_state_update f s)"
+  shows "invs (arch_state_update f s)"
+  using assms by (simp add: invs_def valid_state_def valid_irq_node_def valid_irq_states_def
+                            valid_machine_state_def valid_arch_caps_def
+                            valid_arch_objs_arch_update valid_vs_lookup_arch_update
+                            valid_asid_map_arch_update)
+
 lemma setCurrentCR3_invs[wp]:
   "\<lbrace>invs\<rbrace> setCurrentCR3 cr3 \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wpsimp simp: setCurrentCR3_def)
-  sorry
+  apply (wpsimp simp: setCurrentCR3_def; erule arch_state_update_invs)
+  by (auto simp: valid_global_refs_def global_refs_def valid_arch_state_def valid_table_caps_def
+                 valid_global_objs_def valid_kernel_mappings_def)
 
 lemma setCurrentVSpaceRoot_invs[wp]:
   "\<lbrace>invs\<rbrace> setCurrentVSpaceRoot vspace asid \<lbrace>\<lambda>rv. invs\<rbrace>"
