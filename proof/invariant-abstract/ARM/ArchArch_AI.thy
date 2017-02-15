@@ -663,7 +663,7 @@ lemma perform_asid_control_invocation_st_tcb_at:
     apply (drule(1) caps_of_state_valid[rotated])+
     apply (simp add:valid_cap_simps cap_aligned_def page_bits_def)
    apply (subst delete_objects_rewrite)
-      apply (simp add:page_bits_def word_bits_def pageBits_def)+
+      apply (simp add:page_bits_def word_bits_def pageBits_def word_size_bits_def)+
     apply (simp add:is_aligned_neg_mask_eq)
    apply wp
   apply (clarsimp simp: valid_aci_def)
@@ -797,7 +797,7 @@ lemma aci_invs':
       | simp split del: if_split | wp_once hoare_vcg_ex_lift)+
     apply (rule_tac P = "is_aligned word1 page_bits" in hoare_gen_asm)
     apply (subst delete_objects_rewrite)
-       apply (simp add:page_bits_def pageBits_def)
+       apply (simp add:page_bits_def pageBits_def word_size_bits_def)
       apply (simp add:page_bits_def pageBits_def word_bits_def)
      apply (simp add:is_aligned_neg_mask_eq)
     apply wp

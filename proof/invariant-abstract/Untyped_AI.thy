@@ -299,10 +299,11 @@ locale Untyped_AI_arch =
    init_arch_objects ty ptr n us y
    \<lbrace>\<lambda>rv s. caps_overlap_reserved S s\<rbrace>"
   assumes delete_objects_rewrite:
-  "\<And>sz ptr.\<lbrakk>word_size_bits \<le> sz; sz\<le> word_bits;ptr && ~~ mask sz = ptr\<rbrakk> \<Longrightarrow> delete_objects ptr sz =
-    do y \<leftarrow> modify (clear_um {ptr + of_nat k |k. k < 2 ^ sz});
-    modify ((detype {ptr && ~~ mask sz..ptr + 2 ^ sz - 1})::'state_ext state \<Rightarrow> 'state_ext state)
-    od"
+  "\<And>sz ptr. \<lbrakk> word_size_bits \<le> sz; sz\<le> word_bits; ptr && ~~ mask sz = ptr \<rbrakk>
+      \<Longrightarrow> delete_objects ptr sz =
+            do y \<leftarrow> modify (clear_um {ptr + of_nat k |k. k < 2 ^ sz});
+               modify (detype {ptr && ~~ mask sz..ptr + 2 ^ sz - 1} :: 'state_ext state \<Rightarrow> 'state_ext state)
+            od"
   assumes obj_is_device_vui_eq:
   "valid_untyped_inv ui (s :: 'state_ext state)
     \<Longrightarrow> case ui of
@@ -2783,8 +2784,8 @@ lemma ct_in_state_trans_state[simp]:
   "ct_in_state P (trans_state a s) = ct_in_state P s"
   by (simp add: ct_in_state_def)
 
-(* FIXME: XIN move to Word_Lemmas 64 *)
-lemmas unat_of_nat_word_bits = unat_of_nat_eq[where 'a = 64,unfolded word_bits_len_of, simplified]
+lemmas unat_of_nat_word_bits
+  = unat_of_nat_eq[where 'a = machine_word_len, unfolded word_bits_len_of, simplified]
 
 lemma caps_of_state_pspace_no_overlapD:
   "\<lbrakk> caps_of_state s cref = Some (cap.UntypedCap dev ptr sz idx); invs s;
