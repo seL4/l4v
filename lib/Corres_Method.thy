@@ -240,10 +240,8 @@ text \<open>
 \<close>
 
 method corres_search uses search =
-  (corres_search_frame
-    \<open>use search[corres del] in
-      \<open>use in
-       \<open>corres_search search: search\<close>\<close>\<close> search: search)
+  (use search[corres del] in
+   \<open>use in \<open>corres_search_frame \<open>corres_search search: search\<close> search: search\<close>\<close>)
 
 end
 
