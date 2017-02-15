@@ -1639,38 +1639,7 @@ crunch valid_cap [wp]: unmap_page_table,
   (wp: mapM_wp_inv mapM_x_wp' crunch_wps simp: crunch_simps
    ignore: set_pd set_pt set_pdpt set_pml4 update_object)
 
-lemma invs_irq_state_independent:
-  "invs (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
-   = invs s"
-  by (clarsimp simp: irq_state_independent_A_def invs_def
-      valid_state_def valid_pspace_def valid_mdb_def valid_ioc_def valid_idle_def
-      only_idle_def if_unsafe_then_cap_def valid_reply_caps_def
-      valid_reply_masters_def valid_global_refs_def valid_arch_state_def
-      valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
-      valid_arch_objs_def valid_arch_caps_def valid_global_objs_def
-      valid_kernel_mappings_def equal_kernel_mappings_def
-      valid_asid_map_def vspace_at_asid_def
-      pspace_in_kernel_window_def cap_refs_in_kernel_window_def
-      cur_tcb_def sym_refs_def state_refs_of_def
-      swp_def valid_irq_states_def)
-
-crunch irq_masks_inv[wp]: storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
-  (ignore:  wp: crunch_wps)
-
-crunch underlying_mem_0[wp]: clearMemory
-    "\<lambda>s. underlying_memory s p = 0"
-  (ignore: wp: crunch_wps storeWord_um_eq_0)
-
-lemma clearMemory_invs[wp, Finalise_AI_asms]:
-  "\<lbrace>invs\<rbrace> do_machine_op (clearMemory w sz) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs1)
-  apply clarsimp
-  apply (intro conjI impI allI)
-   apply (clarsimp simp: invs_def valid_state_def)
-   apply (erule_tac p=p in valid_machine_stateE)
-   apply (clarsimp simp: use_valid[OF _ clearMemory_underlying_mem_0])
-  apply (clarsimp simp: use_valid[OF _ clearMemory_irq_masks_inv[where P="op = v" for v], OF _ refl])
-  done
+lemmas clearMemory_invs[wp, Finalise_AI_asms] = clearMemory_invs
 
 lemma valid_idle_has_null_cap_ARCH[Finalise_AI_asms]:
   "\<lbrakk> if_unsafe_then_cap s; valid_global_refs s; valid_idle s; valid_irq_node s\<rbrakk>

@@ -2903,7 +2903,6 @@ lemma reset_untyped_cap_invs_etc:
     apply (frule caps_of_state_valid_cap, clarsimp+)
     apply (simp add: valid_cap_def)
    apply simp
-sorry (*
   apply (clarsimp simp: bits_of_def free_index_of_def)
   apply (rule hoare_pre, rule hoare_post_impErr,
     rule_tac P="\<lambda>i. invs and ?psp and ct_active and valid_untyped_inv_wcap ?ui
@@ -2933,7 +2932,7 @@ sorry (*
    apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
-*)
+
 lemma get_cap_prop_known:
   "\<lbrace>cte_wp_at (\<lambda>cp. f cp = v) slot and Q v\<rbrace> get_cap slot \<lbrace>\<lambda>rv. Q (f rv)\<rbrace>"
   apply (wp get_cap_wp)

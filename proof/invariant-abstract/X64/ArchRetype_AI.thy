@@ -1190,6 +1190,24 @@ lemma invs_irq_state_independent:
       cur_tcb_def sym_refs_def state_refs_of_def
       swp_def valid_irq_states_def)
 
+crunch irq_masks_inv[wp]: storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
+  (ignore:  wp: crunch_wps)
+
+crunch underlying_mem_0[wp]: clearMemory
+    "\<lambda>s. underlying_memory s p = 0"
+  (ignore: wp: crunch_wps storeWord_um_eq_0)
+
+lemma clearMemory_invs[wp]:
+  "\<lbrace>invs\<rbrace> do_machine_op (clearMemory w sz) \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (wp dmo_invs1)
+  apply clarsimp
+  apply (intro conjI impI allI)
+   apply (clarsimp simp: invs_def valid_state_def)
+   apply (erule_tac p=p in valid_machine_stateE)
+   apply (clarsimp simp: use_valid[OF _ clearMemory_underlying_mem_0])
+  apply (clarsimp simp: use_valid[OF _ clearMemory_irq_masks_inv[where P="op = v" for v], OF _ refl])
+  done
+
 lemma caps_region_kernel_window_imp:
   "caps_of_state s p = Some cap
     \<Longrightarrow> cap_refs_in_kernel_window s
@@ -1214,6 +1232,7 @@ crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at P t"
 
 end
 
+lemmas clearMemory_invs[wp] = X64.clearMemory_invs
 
 lemmas invs_irq_state_independent[intro!, simp]
     = X64.invs_irq_state_independent
