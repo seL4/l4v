@@ -195,6 +195,9 @@ where
     od
   "
 
+definition handle_hypervisor_fault :: "unit k_monad"
+where "handle_hypervisor_fault \<equiv> return ()"
+
 definition
   handle_syscall :: "syscall \<Rightarrow> unit preempt_monad"
 where
@@ -221,6 +224,7 @@ where
     | UserLevelFault a b \<Rightarrow> liftE $ handle_fault
     | VMFaultEvent c \<Rightarrow> liftE $ handle_fault
     | Interrupt \<Rightarrow> liftE $ handle_pending_interrupts
+    | HypervisorEvent w \<Rightarrow> liftE $ handle_hypervisor_fault
     "
 
 definition
