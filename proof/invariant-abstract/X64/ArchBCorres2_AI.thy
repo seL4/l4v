@@ -18,17 +18,17 @@ context Arch begin global_naming X64
 named_theorems BCorres2_AI_assms
 
 crunch (bcorres)bcorres[wp, BCorres2_AI_assms]: invoke_cnode truncate_state
-  (simp: swp_def ignore: clearMemory without_preemption filterM ethread_set recycle_cap_ext)
+  (simp: swp_def ignore: clearMemory without_preemption filterM ethread_set)
 
 crunch (bcorres)bcorres[wp]: create_cap,init_arch_objects,retype_region,delete_objects truncate_state
   (ignore: freeMemory clearMemory retype_region_ext)
 
 crunch (bcorres)bcorres[wp]: set_extra_badge,derive_cap truncate_state (ignore: storeWord)
 
-lemma invoke_untyped_bcorres[wp]:" bcorres (invoke_untyped a) (invoke_untyped a)"
-  apply (cases a)
-  apply (wp | simp)+
-  done
+crunch (bcorres)bcorres[wp]: invoke_untyped truncate_state
+  (ignore: sequence_x)
+
+crunch (bcorres)bcorres[wp]: set_mcpriority,arch_tcb_set_ipc_buffer truncate_state
 
 lemma invoke_tcb_bcorres[wp]:
   fixes a
@@ -61,9 +61,28 @@ lemma invoke_irq_handler_bcorres[wp]: "bcorres (invoke_irq_handler a) (invoke_ir
   apply (wp | simp)+
   done
 
+lemma make_arch_fault_msg_bcorres[wp,BCorres2_AI_assms]:
+  "bcorres (make_arch_fault_msg a b) (make_arch_fault_msg a b)"
+  by (cases a; simp ; wp)
+
+lemma  handle_arch_fault_reply_bcorres[wp,BCorres2_AI_assms]:
+  "bcorres ( handle_arch_fault_reply a b c d) (handle_arch_fault_reply a b c d)"
+  by (cases a; simp add: handle_arch_fault_reply_def; wp)
+
+end
+
+interpretation BCorres2_AI?: BCorres2_AI
+  proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (unfold_locales; (fact BCorres2_AI_assms)?)
+  qed
+
+context Arch begin global_naming X64
+
 crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state
-  (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
-         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME)
+  (simp: gets_the_def swp_def update_object_def
+ ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
+         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME )
 
 lemma perform_invocation_bcorres[wp]: "bcorres (perform_invocation a b c) (perform_invocation a b c)"
   apply (cases c)
@@ -108,7 +127,8 @@ lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fau
 
 lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
   apply (cases e)
-  apply (simp add: handle_send_def handle_call_def handle_recv_def handle_reply_def handle_yield_def handle_interrupt_def Let_def | intro impI conjI allI | wp | wpc)+
+  apply (simp add: handle_send_def handle_call_def handle_recv_def handle_reply_def handle_yield_def
+                   handle_interrupt_def Let_def handle_reserved_irq_def | intro impI conjI allI | wp | wpc)+
   done
 
 crunch (bcorres)bcorres[wp]: guarded_switch_to,switch_to_idle_thread truncate_state (ignore: storeWord)
