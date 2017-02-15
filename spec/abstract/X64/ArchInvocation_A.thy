@@ -89,10 +89,11 @@ datatype io_port_invocation_data
 
 datatype io_port_invocation = IOPortInvocation io_port io_port_invocation_data
 
+(*
 datatype io_pt_invocation 
      = IOPageTableMapContext cap cslot_ptr iocte obj_ref
      | IOPageTableMap cap cslot_ptr iopte obj_ref
-     | IOPageTableUnmap cap cslot_ptr
+     | IOPageTableUnmap cap cslot_ptr *)
 
 datatype arch_invocation
      = InvokePageTable page_table_invocation
@@ -102,7 +103,7 @@ datatype arch_invocation
      | InvokeASIDControl asid_control_invocation
      | InvokeASIDPool asid_pool_invocation
      | InvokeIOPort io_port_invocation
-     | InvokeIOPT io_pt_invocation
+     (*| InvokeIOPT io_pt_invocation*)
 
 datatype arch_copy_register_sets = X64NoExtraRegisters
 
