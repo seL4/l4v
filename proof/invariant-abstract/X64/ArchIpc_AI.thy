@@ -98,7 +98,7 @@ lemma derive_cap_is_derived [Ipc_AI_assms]:
                     | erule cte_wp_at_weakenE
                     | simp split: cap.split_asm)+)[11]
   apply(wp, simp add: o_def)
-  apply(rule hoare_pre, wp hoare_drop_imps arch_derive_cap_is_derived)
+  apply(wp hoare_drop_imps arch_derive_cap_is_derived)
   apply(clarify, drule cte_wp_at_eqD, clarify)
   apply(frule(1) cte_wp_at_valid_objs_valid_cap)
   apply(erule cte_wp_at_weakenE)
@@ -185,7 +185,7 @@ lemma arch_derive_cap_objrefs_iszombie [Ipc_AI_assms]:
      arch_derive_cap cap
    \<lbrace>\<lambda>rv s. P (set_option (aobj_ref rv)) False s\<rbrace>,-"
   apply(cases cap, simp_all add: is_zombie_def arch_derive_cap_def)
-      apply(rule hoare_pre, wpc?, wp, simp)+
+      apply(rule hoare_pre, wpc?, wp+, simp)+
   done
 
 lemma obj_refs_remove_rights[simp, Ipc_AI_assms]:
@@ -200,7 +200,7 @@ lemma storeWord_um_inv:
    \<lbrace>\<lambda>_ s. is_aligned a 3 \<and> x \<in> {a,a+1,a+2,a+3,a+4,a+5,a+6,a+7} \<or> underlying_memory s x = um x\<rbrace>"
   apply (simp add: storeWord_def is_aligned_mask)
   apply wp
-  apply simp
+  apply (simp add: upto0_7_def)
   done
 
 lemma store_word_offs_vms[wp, Ipc_AI_assms]:
@@ -258,6 +258,20 @@ lemma valid_msg_length_strengthen [Ipc_AI_assms]:
 lemma copy_mrs_in_user_frame[wp, Ipc_AI_assms]:
   "\<lbrace>in_user_frame p\<rbrace> copy_mrs t buf t' buf' n \<lbrace>\<lambda>rv. in_user_frame p\<rbrace>"
   by (simp add: in_user_frame_def) (wp hoare_vcg_ex_lift)
+
+lemma get_register_eq : "getRegister r = get_register r"
+  apply (simp add: getRegister_def get_register_def)
+  done
+
+lemma as_user_getRestart_invs[wp]: "\<lbrace>P\<rbrace> as_user t getRestartPC \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (simp add: get_register_eq getRestartPC_def ; rule user_getreg_inv)
+  done
+
+lemma make_arch_fault_msg_invs[wp]: "\<lbrace>P\<rbrace> make_arch_fault_msg f t \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (cases f)
+  apply simp
+  apply wp
+  done
 
 lemma make_fault_message_inv[wp, Ipc_AI_assms]:
   "\<lbrace>P\<rbrace> make_fault_msg ft t \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -374,6 +388,8 @@ lemma transfer_caps_non_null_cte_wp_at:
   apply (auto simp: cte_wp_at_caps_of_state)
   done
 
+crunch cte_wp_at[wp,Ipc_AI_assms]: do_fault_transfer "cte_wp_at P p"
+
 lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows  "\<lbrace>valid_objs and cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>
@@ -425,7 +441,7 @@ lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_assms]:
    apply (wp sts_obj_at_impossible | simp add: tcb_not_empty_table)+
   done
 
-
+crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply "P (typ_at T p s)"
 
 end
 

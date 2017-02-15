@@ -18,7 +18,7 @@ theory ArchFault_A
 imports "../Structures_A" "../Tcb_A"
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming X64_A
 
 fun make_arch_fault_msg :: "arch_fault \<Rightarrow> obj_ref \<Rightarrow> (data \<times> data list,'z::state_ext) s_monad"
 where
