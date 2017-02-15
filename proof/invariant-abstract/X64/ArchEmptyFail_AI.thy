@@ -17,12 +17,12 @@ context Arch begin global_naming X64
 named_theorems EmptyFail_AI_assms
 
 crunch_ignore (empty_fail)
-  (add: setCurrentVSpaceRoot_impl invalidateTLBEntry_impl invalidatePageStructureCache_impl
-        resetCR3_impl hwASIDInvalidate_impl ioapicMapPinToVector_impl updateIRQState_impl
+  (add: invalidateTLBEntry_impl invalidateTranslationSingleASID_impl
+        resetCR3_impl invalidateASID_impl ioapicMapPinToVector_impl updateIRQState_impl
         in8_impl in16_impl in32_impl out8_impl out16_impl out32_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
-  loadWord, load_word_offs, storeWord, getRestartPC, get_mrs
+  loadWord, load_word_offs, storeWord, getRestartPC, get_mrs, invalidateLocalPageStructureCacheASID
 
 end
 
@@ -132,10 +132,10 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
 
 context Arch begin global_naming X64
 
-lemma flush_table_empty_fail[simp, wp]: "empty_fail (flush_table a b c)"
+lemma flush_table_empty_fail[simp, wp]: "empty_fail (flush_table a b c d)"
   unfolding flush_table_def
   apply simp
-  apply (wp | wpc)+
+  apply (wp | wpc | simp)+
   done
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
@@ -144,7 +144,7 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slo
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits
-         forM_x_def empty_fail_mapM_x)
+         forM_x_def empty_fail_mapM_x update_object_def)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: setRegister, setNextPC
 
@@ -187,7 +187,7 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_t
          thread_state.splits endpoint.splits catch_def sum.splits cnode_invocation.splits
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
-         page_directory_invocation.splits
+         page_directory_invocation.splits update_object_def
    ignore: resetTimer_impl)
 end
 

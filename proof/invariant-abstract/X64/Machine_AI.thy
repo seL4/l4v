@@ -376,6 +376,9 @@ lemma invalidateTLBEntry_ef[simp,wp]: "empty_fail (invalidateTLBEntry b)"
 lemma invalidateASID_ef[simp,wp]: "empty_fail (invalidateASID a b)"
   by (simp add: invalidateASID_def)
 
+lemma invalidateTranslationSingleASID_ef[simp,wp]: "empty_fail (invalidateTranslationSingleASID a b)"
+  by (simp add: invalidateTranslationSingleASID_def)
+
 (* FIXME x64: move *)
 lemma hwASIDInvalidate_ef[simp,wp]: "empty_fail (hwASIDInvalidate b a)"
   by (simp add: hwASIDInvalidate_def)
