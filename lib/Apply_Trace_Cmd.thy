@@ -55,7 +55,7 @@ begin
 
   lemma shows "b = a" "b = a"
    apply -
-   apply_trace (rule foo.X)
+   apply_trace (rule Apply_Trace_foo.X)
    prefer 2
    apply_trace (rule X)
    oops
