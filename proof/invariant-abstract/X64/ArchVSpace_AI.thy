@@ -18,6 +18,21 @@ begin
 
 context Arch begin global_naming X64
 
+(* FIXME: should go in Machine_AI, but needs dmo_invs from KHeap_AI. *)
+lemmas machine_op_lift_irq_masks = no_irq[OF machine_op_lift_no_irq]
+
+lemma machine_op_lift_underlying_memory:
+  "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> machine_op_lift m \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
+  by (wpsimp simp: machine_op_lift_def machine_rest_lift_def split_def)
+
+lemma do_machine_op_lift_invs:
+  "\<lbrace>invs\<rbrace> do_machine_op (machine_op_lift m) \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule use_valid[OF _ machine_op_lift_underlying_memory]; fastforce)
+  apply (erule (1) use_valid[OF _ machine_op_lift_irq_masks])
+  done
+
 abbreviation "canonicalise x \<equiv> (scast ((ucast x) :: 48 word)) :: 64 word"
 
 (* FIXME x64: this needs canonical_address shenanigans *)
@@ -222,8 +237,7 @@ lemma invalidateTLB_underlying_memory:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace>
    invalidateTLB
    \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (clarsimp simp: invalidateTLB_def machine_op_lift_def
-                     machine_rest_lift_def split_def | wp)+
+  by (simp add: invalidateTLB_def machine_op_lift_underlying_memory)
 
 
 lemma vspace_at_asid_arch_up':
@@ -502,8 +516,7 @@ lemma hwASIDInvalidate_underlying_memory:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace>
    hwASIDInvalidate a b
    \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (clarsimp simp: hwASIDInvalidate_def invalidateASID_def machine_op_lift_def
-                     machine_rest_lift_def split_def | wp)+
+  by (simp add: hwASIDInvalidate_def invalidateASID_def machine_op_lift_underlying_memory)
 
 (* FIXME x64: move to Machine_AI *)
 lemma no_irq_hwASIDInvalidate: "no_irq (hwASIDInvalidate a b)"
@@ -516,17 +529,10 @@ crunch device_state_inv[wp]: hwASIDInvalidate "\<lambda>ms. P (device_state ms)"
 
 lemma dmo_hwASIDInvalidate_invs[wp]:
   "\<lbrace>invs\<rbrace> do_machine_op (hwASIDInvalidate a b) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule hwASIDInvalidate_underlying_memory)
-    apply (fastforce+)
-  apply (erule (1) use_valid[OF _ hwASIDInvalidate_irq_masks])
-  done
+  by (simp add: hwASIDInvalidate_def invalidateASID_def do_machine_op_lift_invs)
 
 lemma invalidate_asid_entry_invs[wp]: "\<lbrace>invs\<rbrace> invalidate_asid_entry asid vspace \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: invalidate_asid_entry_def)
-  by wp
+  by (wpsimp simp: invalidate_asid_entry_def)
 
 lemma mapM_invalidate:
   "\<lbrace>[VSRef (ucast (asid_high_bits_of base)) None] \<rhd> ptr and
@@ -1111,33 +1117,18 @@ crunch device_state_inv[wp]: ackInterrupt, writeCR3 "\<lambda>ms. P (device_stat
 
 
 lemma dmo_ackInterrupt[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ackInterrupt irq) \<lbrace>\<lambda>y. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-          in use_valid)
-     apply ((clarsimp simp: ackInterrupt_def machine_op_lift_def
-                           machine_rest_lift_def split_def | wp)+)[3]
-  apply(erule (1) use_valid[OF _ ackInterrupt_irq_masks])
-  done
+  by (simp add: ackInterrupt_def do_machine_op_lift_invs)
 
 lemmas writeCR3_irq_masks = no_irq[OF no_irq_writeCR3]
 
 lemma dmo_writeCR3[wp]: "\<lbrace>invs\<rbrace> do_machine_op (writeCR3 vs asid) \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-          in use_valid)
-     apply ((clarsimp simp: writeCR3_def machine_op_lift_def
-                           machine_rest_lift_def split_def | wp)+)[3]
-  apply(erule (1) use_valid[OF _ writeCR3_irq_masks])
-  done
+  by (simp add: writeCR3_def do_machine_op_lift_invs)
 
 crunch inv[wp]: getCurrentCR3 P
 
 lemma getCurrentCR3_rewrite_lift[wp]:
   "\<lbrace>P\<rbrace> getCurrentCR3 \<lbrace>\<lambda>rv s. Q rv \<longrightarrow> P s\<rbrace>"
-  apply (wp hoare_drop_imps)
-  done
+  by (wp hoare_drop_imps)
 
 lemma arch_state_update_invs:
   assumes "invs s"
@@ -1897,8 +1888,7 @@ lemma invalidateTLBEntry_underlying_memory:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace>
    invalidateTLBEntry a
    \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (clarsimp simp: invalidateTLBEntry_def machine_op_lift_def
-                     machine_rest_lift_def split_def | wp)+
+  by (simp add: invalidateTLBEntry_def machine_op_lift_underlying_memory)
 
 lemmas invalidateTLBEntry_irq_masks = no_irq[OF no_irq_invalidateTLBEntry]
 
@@ -1907,19 +1897,13 @@ crunch device_state_inv[wp]: invalidateTLBEntry "\<lambda>ms. P (device_state ms
 
 lemma dmo_invalidateTLBEntry_invs[wp]:
   "\<lbrace>invs\<rbrace> do_machine_op (invalidateTLBEntry a) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule invalidateTLBEntry_underlying_memory)
-    apply (fastforce+)
-  apply (erule (1) use_valid[OF _ invalidateTLBEntry_irq_masks])
-  done
+  by (simp add: invalidateTLBEntry_def do_machine_op_lift_invs)
 
 crunch device_state[wp]: invalidateTranslationSingleASID "\<lambda>ms. P (device_state ms)"
 
 lemma invalidatePageStructureCache_invs[wp]:
-  "\<lbrace>invs\<rbrace>do_machine_op (invalidateTranslationSingleASID a b)\<lbrace>\<lambda>_. invs\<rbrace>"
-  sorry (* invalidatePageStructureCache invs *)
+  "\<lbrace>invs\<rbrace> do_machine_op (invalidateTranslationSingleASID a b)\<lbrace>\<lambda>_. invs\<rbrace>"
+  by (simp add: invalidateTranslationSingleASID_def do_machine_op_lift_invs)
 
 lemma flush_table_invs[wp]:
   "\<lbrace>invs\<rbrace> flush_table pm vaddr pt vspace \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -1961,11 +1945,11 @@ crunch device_state_inv[wp]: invalidateASID,resetCR3 "\<lambda>s. P (device_stat
 
 lemma resetCR3_underlying_memory[wp]:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> resetCR3 \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (clarsimp simp: resetCR3_def machine_op_lift_def machine_rest_lift_def split_def | wp)+
+  by (simp add: resetCR3_def machine_op_lift_underlying_memory)
 
 lemma invalidateASID_underlying_memory[wp]:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> invalidateASID vspace asid \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (clarsimp simp: invalidateASID_def machine_op_lift_def machine_rest_lift_def split_def | wp)+
+  by (simp add: invalidateASID_def machine_op_lift_underlying_memory)
 
 lemma no_irq_invalidateASID: "no_irq (invalidateASID vpsace asid)"
   by (clarsimp simp: invalidateASID_def)
@@ -1975,13 +1959,7 @@ lemmas invalidateASID_irq_masks = no_irq[OF no_irq_invalidateASID]
 
 lemma flush_all_invs[wp]:
   "\<lbrace>invs\<rbrace> flush_all vspace asid \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: flush_all_def)
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid[OF _ invalidateASID_underlying_memory])
-    apply fastforce+
-  apply (erule (1) use_valid[OF _ invalidateASID_irq_masks])
-  done
+  by (simp add: flush_all_def invalidateASID_def do_machine_op_lift_invs)
 
 lemma valid_asid_table_inverse_injD:
   "\<lbrakk>(a,b) \<in> vs_asid_refs (x64_asid_table (arch_state s)); (a,c) \<in> vs_asid_refs (x64_asid_table (arch_state s))\<rbrakk>
