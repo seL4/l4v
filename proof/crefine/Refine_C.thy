@@ -40,6 +40,12 @@ lemma ucast_not_helper_cheating:
   shows "ucast a \<noteq> (0xFFFF::32 signed word)"
   by (word_bitwise,simp)
 
+lemma Arch_finaliseInterrupt_ccorres:
+  "ccorres dc xfdc \<top> UNIV [] (return a) (Call Arch_finaliseInterrupt_'proc)"
+  apply (cinit')
+   apply (rule ccorres_return_Skip)
+  apply clarsimp
+  done
 
 lemma handleInterruptEntry_ccorres:
   "ccorres dc xfdc 
@@ -74,14 +80,16 @@ lemma handleInterruptEntry_ccorres:
      apply vcg
     apply (clarsimp simp: irqInvalid_def ucast_ucast_b 
       is_up ucast_not_helper_cheating)
+    apply (rule ccorres_rhs_assoc)
     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-     apply (ctac (no_vcg) add: schedule_ccorres)
-      apply (rule ccorres_add_return2)
-      apply (ctac (no_vcg) add: activateThread_ccorres)
-       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-       apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: return_def)
-      apply (wp schedule_sch_act_wf schedule_invs'
+     apply (rule ccorres_add_return, ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres)
+      apply (ctac (no_vcg) add: schedule_ccorres)
+       apply (rule ccorres_add_return2)
+       apply (ctac (no_vcg) add: activateThread_ccorres)
+        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: return_def)
+       apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
    apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
     apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
@@ -263,7 +271,9 @@ lemma handleSyscall_ccorres:
                       apply (case_tac rv, clarsimp, 
                         clarsimp simp: ucast_not_helper_cheating ucast_ucast_b
                           is_up)
+                     apply (rule ccorres_add_return2)
                      apply (ctac (no_vcg) add: handleInterrupt_ccorres)
+                      apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                     apply ceqv
                    apply (rule_tac r=dc and xf=xfdc in ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                   apply wp
@@ -301,7 +311,9 @@ lemma handleSyscall_ccorres:
                      apply (case_tac rv, clarsimp, 
                        clarsimp simp: ucast_not_helper_cheating is_up 
                          ucast_ucast_b)
+                     apply (rule ccorres_add_return2)
                     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
+                     apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                    apply ceqv
                   apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                  apply wp
@@ -338,7 +350,9 @@ lemma handleSyscall_ccorres:
                     apply (case_tac rv, clarsimp)
                     apply (clarsimp simp: ucast_not_helper_cheating ucast_ucast_b is_up)
                    apply clarsimp
+                   apply (rule ccorres_add_return2)
                    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
+                    apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                   apply ceqv
                  apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                 apply wp
