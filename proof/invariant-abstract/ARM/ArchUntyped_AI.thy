@@ -348,9 +348,9 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
       and K (tp \<noteq> ArchObject ASIDPoolObj)\<rbrace>
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
   apply (simp add: create_cap_def set_cdt_def)
-  apply (wp set_cap_valid_arch_caps hoare_vcg_disj_lift
-      hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift
-    | simp add: trans_state_update[symmetric] del: trans_state_update split_paired_All split_paired_Ex imp_disjL split del: if_split)+
+  apply (wp set_cap_valid_arch_caps)
+  apply (simp add: trans_state_update[symmetric] del: trans_state_update)
+  apply (wp hoare_vcg_disj_lift hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift | simp)+
   apply (clarsimp simp del: split_paired_All split_paired_Ex
                             imp_disjL
                       simp: cte_wp_at_caps_of_state)

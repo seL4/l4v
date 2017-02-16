@@ -324,7 +324,7 @@ definition
   nonempty_table :: "machine_word set \<Rightarrow> Structures_A.kernel_object \<Rightarrow> bool"
 where
  "nonempty_table S ko \<equiv>
-    (a_type ko = AArch APageTable \<or> a_type ko = AArch APageDirectory)
+    (a_type ko \<in> AArch ` { APageTable, APageDirectory, APDPointerTable, APageMapL4 })
        \<and> \<not> empty_table S ko"
 
 lemma reachable_pg_cap_exst_update[simp]:
@@ -349,10 +349,10 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
       and K (tp \<noteq> ArchObject ASIDPoolObj)\<rbrace>
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
   apply (simp add: create_cap_def set_cdt_def)
-  apply (wp set_cap_valid_arch_caps hoare_vcg_disj_lift
-      hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift
-    | simp add: trans_state_update[symmetric] del: trans_state_update split_paired_All split_paired_Ex imp_disjL
-           split del: if_split)+
+  apply (wp set_cap_valid_arch_caps)
+  apply (simp add: trans_state_update[symmetric] del: trans_state_update)
+  apply (wp hoare_vcg_disj_lift hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift | simp)+
+
   apply (clarsimp simp del: split_paired_All split_paired_Ex
                             imp_disjL
                       simp: cte_wp_at_caps_of_state)
@@ -364,18 +364,15 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
     apply (case_tac cref, fastforce)
    apply (simp add: obj_ref_none_no_asid)
   apply (rule conjI)
-sorry (* FIXME: This is a bit hard at the moment
    apply (auto simp: is_cap_simps valid_cap_def second_level_tables_def
-                     obj_at_def nonempty_table_def a_type_simps cap_asid_def
-              dest!: default_PDPT_capD
-              split: option.split_asm)[1]
+                     obj_at_def nonempty_table_def a_type_simps)[1]
   apply (clarsimp simp del: imp_disjL)
   apply (case_tac "\<exists>x. x \<in> obj_refs cap")
    apply (clarsimp dest!: obj_ref_elemD)
    apply fastforce
   apply (auto simp: is_cap_simps)[1]
   done
-*)
+
 
 lemma create_cap_cap_refs_in_kernel_window[wp, Untyped_AI_assms]:
   "\<lbrace>cap_refs_in_kernel_window and cte_wp_at (\<lambda>c. cap_range (default_cap tp oref sz dev) \<subseteq> cap_range c) p\<rbrace>
@@ -449,7 +446,7 @@ lemma store_pml4e_nonempty_table:
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (x64_global_pdpts (arch_state s)))) r s)\<rbrace>"
   apply (simp add: store_pml4e_def update_object_def set_object_def)
   apply (wp get_object_wp)
-  apply (clarsimp simp: obj_at_def nonempty_table_def a_type_def)
+  apply (clarsimp simp: obj_at_def nonempty_table_def a_type_def word_size_bits_def empty_table_def)
   done
 
 lemma store_pml4e_global_global_objs:
@@ -476,11 +473,7 @@ lemma valid_arch_state_global_pml4:
   apply (clarsimp dest!: pspace_alignedD simp: pml4_bits_def)
   done
 
-(* STRANGE
-lemma pd_shifting':
-  "is_aligned (pd :: word64) pd_bits \<Longrightarrow> pd + (get_pd_index vptr >> 20 << 2) && ~~ mask pd_bits = pd"
-  by (drule pd_shifting, simp add: pd_bits_def bit_simps)
-*)
+lemmas pml4_shifting' = pml4_shifting(2)
 
 lemma pml4_bits_ptTranslationBits_diff:
   "pml4_bits - word_size_bits = ptTranslationBits"
@@ -608,11 +601,10 @@ end
 
 global_interpretation Untyped_AI? : Untyped_AI
   where nonempty_table = X64.nonempty_table
- proof goal_cases
-  interpret Arch .
-  case 1 show ?case
-  by (unfold_locales; (fact Untyped_AI_assms)?)
-qed
+  proof goal_cases
+    interpret Arch .
+    case 1 show ?case
+    by (unfold_locales; (fact Untyped_AI_assms)?)
+  qed
 
 end
-
