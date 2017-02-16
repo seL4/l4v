@@ -201,7 +201,6 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
    apply (simp add:cap_range_def)
    apply blast
   apply (clarsimp split: option.splits)
-
   sorry
 
 lemma global_pts: (* ARCH SPECIFIC STATEMENT*) (* ARMHYP remove? *)
