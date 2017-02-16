@@ -1054,7 +1054,7 @@ definition
         and valid_pml4e pml4e and empty_pml4e_at p
         and cte_wp_at (\<lambda>c. is_arch_update cap c \<and> cap_asid c = None) cptr
         and (\<lambda>s. \<exists>x ref. (pml4e_ref_pages pml4e = Some x)
-                 \<and> x \<in> obj_refs cap (*\<and> x \<notin> (set (x64_global_pdpts (arch_state s))) FIXME x64: this needs to be an invariant, or Xin needs to tell me how to get it *)
+                 \<and> x \<in> obj_refs cap
                  \<and> obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) x s
                  \<and> (ref \<rhd> (p && ~~ mask pml4_bits)) s
                  \<and> vs_cap_ref cap =
@@ -3926,7 +3926,7 @@ lemma invs_aligned_pml4D:
   done
 
 (* is this the right way? we need this fact globally but it's proven with
-   ARM defns. *)
+   X64 defns. *)
 lemma set_cap_valid_arch_caps_simple:
   "\<lbrace>\<lambda>s. valid_arch_caps s
       \<and> valid_objs s
@@ -3951,6 +3951,84 @@ lemma set_cap_valid_arch_caps_simple:
    apply (rule no_cap_to_obj_with_diff_ref_triv, simp_all)
    apply (rule ccontr, clarsimp simp: table_cap_ref_def is_cap_simps)
   apply (auto simp: is_cap_simps table_cap_ref_def split: cap.splits)
+  done
+
+crunch device_state_inv[wp]: in8, in16, in32, out8, out16, out32 "\<lambda>ms. P (device_state ms)"
+
+lemmas in8_irq_masks = no_irq[OF no_irq_in8]
+lemmas in16_irq_masks = no_irq[OF no_irq_in16]
+lemmas in32_irq_masks = no_irq[OF no_irq_in32]
+
+lemmas out8_irq_masks = no_irq[OF no_irq_out8]
+lemmas out16_irq_masks = no_irq[OF no_irq_out16]
+lemmas out32_irq_masks = no_irq[OF no_irq_out32]
+
+lemma dmo_in8[wp]: "\<lbrace>invs\<rbrace> do_machine_op (in8 irq) \<lbrace>\<lambda>y. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: in8_def machine_op_lift_def
+                           machine_rest_lift_def split_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ in8_irq_masks])
+  done
+
+lemma dmo_in16[wp]: "\<lbrace>invs\<rbrace> do_machine_op (in16 irq) \<lbrace>\<lambda>y. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: in16_def machine_op_lift_def
+                           machine_rest_lift_def split_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ in16_irq_masks])
+  done
+
+lemma dmo_in32[wp]: "\<lbrace>invs\<rbrace> do_machine_op (in32 irq) \<lbrace>\<lambda>y. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: in32_def machine_op_lift_def
+                           machine_rest_lift_def split_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ in32_irq_masks])
+  done
+
+lemma dmo_out8[wp]: "\<lbrace>invs\<rbrace> do_machine_op (out8 irq b) \<lbrace>\<lambda>y. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: out8_def machine_op_lift_def
+                           machine_rest_lift_def split_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ out8_irq_masks])
+  done
+
+lemma dmo_out16[wp]: "\<lbrace>invs\<rbrace> do_machine_op (out16 irq b) \<lbrace>\<lambda>y. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: out16_def machine_op_lift_def
+                           machine_rest_lift_def split_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ out16_irq_masks])
+  done
+
+lemma dmo_out32[wp]: "\<lbrace>invs\<rbrace> do_machine_op (out32 irq b) \<lbrace>\<lambda>y. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: out32_def machine_op_lift_def
+                           machine_rest_lift_def split_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ out32_irq_masks])
+  done
+
+lemma perform_io_port_invocation_invs:
+  "\<lbrace>invs\<rbrace> perform_io_port_invocation iopinv \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (clarsimp simp: perform_io_port_invocation_def)
+  apply (rule hoare_pre)
+   apply (wpsimp simp: port_in_def port_out_def)
+  apply (clarsimp simp: tcb_at_invs)
   done
 end
 end

@@ -335,6 +335,24 @@ lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
   apply (wp no_irq_mapM_x no_irq_storeWord)
   done
 
+lemma no_irq_in8: "no_irq (in8 irq)"
+  by (wp | clarsimp simp: in8_def)+
+
+lemma no_irq_in16: "no_irq (in16 irq)"
+  by (wp | clarsimp simp: in16_def)+
+
+lemma no_irq_in32: "no_irq (in32 irq)"
+  by (wp | clarsimp simp: in32_def)+
+
+lemma no_irq_out8: "no_irq (out8 irq b)"
+  by (wp | clarsimp simp: out8_def)+
+
+lemma no_irq_out16: "no_irq (out16 irq b)"
+  by (wp | clarsimp simp: out16_def)+
+
+lemma no_irq_out32: "no_irq (out32 irq b)"
+  by (wp | clarsimp simp: out32_def)+
+
 lemma getActiveIRQ_le_maxIRQ':
   "\<lbrace>\<lambda>s. \<forall>irq > maxIRQ. irq_masks s irq\<rbrace> getActiveIRQ \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: getActiveIRQ_def)
