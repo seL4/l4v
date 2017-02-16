@@ -3994,34 +3994,13 @@ lemma dmo_in32[wp]: "\<lbrace>invs\<rbrace> do_machine_op (in32 irq) \<lbrace>\<
   done
 
 lemma dmo_out8[wp]: "\<lbrace>invs\<rbrace> do_machine_op (out8 irq b) \<lbrace>\<lambda>y. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-          in use_valid)
-     apply ((clarsimp simp: out8_def machine_op_lift_def
-                           machine_rest_lift_def split_def | wp)+)[3]
-  apply(erule (1) use_valid[OF _ out8_irq_masks])
-  done
+  by (clarsimp simp: out8_def do_machine_op_lift_invs)
 
 lemma dmo_out16[wp]: "\<lbrace>invs\<rbrace> do_machine_op (out16 irq b) \<lbrace>\<lambda>y. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-          in use_valid)
-     apply ((clarsimp simp: out16_def machine_op_lift_def
-                           machine_rest_lift_def split_def | wp)+)[3]
-  apply(erule (1) use_valid[OF _ out16_irq_masks])
-  done
+  by (clarsimp simp: out16_def do_machine_op_lift_invs)
 
 lemma dmo_out32[wp]: "\<lbrace>invs\<rbrace> do_machine_op (out32 irq b) \<lbrace>\<lambda>y. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-          in use_valid)
-     apply ((clarsimp simp: out32_def machine_op_lift_def
-                           machine_rest_lift_def split_def | wp)+)[3]
-  apply(erule (1) use_valid[OF _ out32_irq_masks])
-  done
+  by (clarsimp simp: out32_def do_machine_op_lift_invs)
 
 lemma perform_io_port_invocation_invs:
   "\<lbrace>invs\<rbrace> perform_io_port_invocation iopinv \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -4030,5 +4009,6 @@ lemma perform_io_port_invocation_invs:
    apply (wpsimp simp: port_in_def port_out_def)
   apply (clarsimp simp: tcb_at_invs)
   done
+
 end
 end
