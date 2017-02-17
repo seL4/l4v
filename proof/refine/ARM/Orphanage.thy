@@ -1577,7 +1577,7 @@ lemma flushTable_no_orphans [wp]:
   apply (wp hoare_drop_imps | wpc | clarsimp)+
   done
 
-crunch no_orphans [wp]: unmapPageTable "no_orphans"
+crunch no_orphans [wp]: unmapPageTable, prepareThreadDelete "no_orphans"
 
 lemma setASIDPool_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>

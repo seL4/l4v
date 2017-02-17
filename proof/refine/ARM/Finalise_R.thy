@@ -2176,7 +2176,7 @@ lemmas cteDeleteOne_def'
 lemmas cteDeleteOne_def
     = cteDeleteOne_def'[folded finaliseCapTrue_standin_simple_def]
 
-crunch typ_at'[wp]: cteDeleteOne, suspend "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at'[wp]: cteDeleteOne, suspend, prepareThreadDelete "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv
    simp: crunch_simps unless_def ignore: getObject)
 
@@ -2504,7 +2504,7 @@ lemmas threadSet_cteCaps_of = ctes_of_cteCaps_of_lift [OF threadSet_ctes_of]
 crunch isFinal: setSchedulerAction "\<lambda>s. isFinal cap slot (cteCaps_of s)"
   (simp: cteCaps_of_def)
 
-crunch isFinal: suspend "\<lambda>s. isFinal cap slot (cteCaps_of s)"
+crunch isFinal: suspend, prepareThreadDelete "\<lambda>s. isFinal cap slot (cteCaps_of s)"
   (ignore: setObject getObject threadSet
        wp: threadSet_cteCaps_of crunch_wps
      simp: crunch_simps unless_def)
@@ -2745,7 +2745,7 @@ lemma cancelIPC_bound_tcb_at'[wp]:
    apply (wp threadSet_pred_tcb_no_state | simp)+
   done
 
-crunch bound_tcb_at'[wp]: suspend "bound_tcb_at' P t"
+crunch bound_tcb_at'[wp]: suspend, prepareThreadDelete "bound_tcb_at' P t"
   (wp: sts_bound_tcb_at' cancelIPC_bound_tcb_at'
    ignore: getObject setObject threadSet)
 
@@ -2788,6 +2788,10 @@ lemma unbindMaybeNotification_tcb_at'[wp]:
   apply (wp gbn_wp' | wpc | simp)+
   done
 
+crunch cte_wp_at'[wp]: prepareThreadDelete "cte_wp_at' P p"
+crunch valid_cap'[wp]: prepareThreadDelete "valid_cap' cap"
+crunch invs[wp]: prepareThreadDelete "invs'"
+
 end
 
 lemma (in delete_one_conc_pre) finaliseCap_replaceable:
@@ -2815,7 +2819,8 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   apply (rule hoare_pre)
    apply (wp prepares_delete_helper'' [OF cancelAllIPC_unlive]
              prepares_delete_helper'' [OF cancelAllSignals_unlive]
-             suspend_isFinal
+             suspend_isFinal prepareThreadDelete_unqueued prepareThreadDelete_nonq
+             prepareThreadDelete_inactive prepareThreadDelete_isFinal
              suspend_makes_inactive suspend_nonq
              deletingIRQHandler_removeable'
              deletingIRQHandler_final[where slot=slot ]
@@ -3708,9 +3713,10 @@ lemma finalise_cap_corres:
                                dc_def[symmetric])
      apply (rule corres_guard_imp)
        apply (rule corres_split[OF _ unbind_notification_corres])
-         apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
-         apply (rule suspend_corres)
-        apply (wp unbind_notification_invs)+
+         apply (rule corres_split[OF _ suspend_corres])
+            apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
+          apply (rule prepareThreadDelete_corres)
+        apply (wp unbind_notification_invs ARM.unbind_notification_simple_sched_action)+
       apply (simp add: valid_cap_def)
      apply (simp add: valid_cap'_def)
     apply (simp add: final_matters'_def liftM_def[symmetric]
