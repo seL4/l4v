@@ -167,7 +167,9 @@ definition
    | _ \<Rightarrow> return ())
   od"
 
-
+definition
+  prepare_thread_delete ::"cdl_object_id \<Rightarrow> unit k_monad"
+  where "prepare_thread_delete ptr \<equiv> return ()" (* for ARM it does nothing *)
 
 text {* Actions that must be taken when a capability is deleted. Returns a
 Zombie capability if deletion requires a long-running operation and also a
@@ -194,7 +196,8 @@ where
       (do
          when final $ (do unbind_notification r;
          cancel_ipc r;
-         KHeap_D.set_cap (r, tcb_pending_op_slot) cdl_cap.NullCap od);
+         KHeap_D.set_cap (r, tcb_pending_op_slot) cdl_cap.NullCap;
+         prepare_thread_delete r od);
          return (if final then (ZombieCap r) else NullCap, None)
        od)"
 | "finalise_cap (PendingSyncSendCap r _ _ _ _) final = return (NullCap, None)"
