@@ -2128,12 +2128,23 @@ method rewrite_lookup_when_aligned
    | (match premises in M: "P (p + _)" and L: "pspace_aligned s"
             and TP : "typ_at (AArch APDPointerTable) p s" for s p P \<Rightarrow> \<open>rule revcut_rl[OF is_aligned_pdpt[OF TP L]]\<close>
       , clarsimp simp: pdpt_bits_def pdpt_shifting[folded lookup_pdpt_slot_def[unfolded Let_def], unfolded pdpt_bits_def])
+   | (match conclusion in "P ((p::64 word) + _ && ~~ mask pdpt_bits)" for p P \<Rightarrow> \<open>(match premises in L: "pspace_aligned s"
+            and TP : "typ_at (AArch APDPointerTable) p s" for s  \<Rightarrow> \<open>rule revcut_rl[OF is_aligned_pdpt[OF TP L]]\<close>
+      , clarsimp simp: pdpt_bits_def pdpt_shifting[folded lookup_pdpt_slot_def[unfolded Let_def], unfolded pdpt_bits_def])\<close>)
    | (match premises in M: "P (p + _)" and L: "pspace_aligned s"
             and TP : "typ_at (AArch APageDirectory) p s" for s p P \<Rightarrow> \<open>rule revcut_rl[OF is_aligned_pd[OF TP L]]\<close>
       , clarsimp simp: pd_bits_def pd_shifting[folded lookup_pd_slot_def[unfolded Let_def], unfolded pd_bits_def])
+   | (match conclusion in "P ((p::64 word) + _ && ~~ mask pd_bits)" for p P \<Rightarrow> \<open>(match premises in L: "pspace_aligned s"
+            and TP : "typ_at (AArch APageDirectory) p s" for s \<Rightarrow> \<open>rule revcut_rl[OF is_aligned_pd[OF TP L]]\<close>
+      , clarsimp simp: pd_bits_def pd_shifting[folded lookup_pd_slot_def[unfolded Let_def], unfolded pd_bits_def])\<close>)
+
    | (match premises in M: "P (p + _)" and L: "pspace_aligned s"
             and TP : "typ_at (AArch APageTable) p s" for s p P \<Rightarrow> \<open>rule revcut_rl[OF is_aligned_pt[OF TP L]]\<close>
       , clarsimp simp: pt_bits_def pt_shifting[folded lookup_pt_slot_def[unfolded Let_def], unfolded pt_bits_def])
+   | (match conclusion in "P ((p::64 word) + _ && ~~ mask pt_bits)" for p P \<Rightarrow> \<open>(match premises in L: "pspace_aligned s"
+            and TP : "typ_at (AArch APageTable) p s" for s  \<Rightarrow> \<open>rule revcut_rl[OF is_aligned_pt[OF TP L]]\<close>
+      , clarsimp simp: pt_bits_def pt_shifting[folded lookup_pt_slot_def[unfolded Let_def], unfolded pt_bits_def])\<close>)
+
    | (match premises in M: "P (lookup_pml4_slot p _)" and L: "pspace_aligned s"
             and TP : "typ_at (AArch APageMapL4) p s" for s p P \<Rightarrow> \<open>rule revcut_rl[OF is_aligned_pml4[OF TP L]]\<close>
       , clarsimp simp: pml4_bits_def pml4_shifting[folded lookup_pml4_slot_def[unfolded Let_def], unfolded pml4_bits_def])
@@ -2196,6 +2207,40 @@ lemma valid_arch_objs_pdptD:
     apply fastforce
   done
 
+lemma valid_arch_objs_pdD:
+  "\<lbrakk>valid_arch_obj (PageDirectory pd) s; pd x = PageTablePDE a b c\<rbrakk>
+    \<Longrightarrow> typ_at (AArch APageTable) (ptrFromPAddr a) s"
+  apply (clarsimp)
+  apply (drule_tac x = x in  spec)
+    apply fastforce
+  done
+
+lemma valid_arch_objs_largePage:
+  "\<lbrakk>valid_arch_obj (PageDirectory pd) s; pd x = LargePagePDE a b c; ko_at ko (ptrFromPAddr a) s\<rbrakk>
+    \<Longrightarrow> vs_refs_pages ko = {}"
+  apply (clarsimp)
+  apply (drule_tac x = x in  spec)
+    apply clarsimp
+  apply (auto simp: data_at_def obj_at_def vs_refs_pages_def)
+  done
+
+lemma valid_arch_objs_hugePage:
+  "\<lbrakk>valid_arch_obj (PDPointerTable pdpt) s; pdpt x = HugePagePDPTE a b c; ko_at ko (ptrFromPAddr a) s\<rbrakk>
+    \<Longrightarrow> vs_refs_pages ko = {}"
+  apply (clarsimp)
+  apply (drule_tac x = x in  spec)
+    apply clarsimp
+  apply (auto simp: data_at_def obj_at_def vs_refs_pages_def)
+  done
+
+lemma ucast_ucast_get_index_simps[simp]: 
+  "(ucast (ucast (get_pml4_index vaddr):: 9 word)) = get_pml4_index vaddr"
+  "(ucast (ucast (get_pdpt_index vaddr):: 9 word)) = get_pdpt_index vaddr"
+  "(ucast (ucast (get_pd_index vaddr):: 9 word)) = get_pd_index vaddr"
+  "(ucast (ucast (get_pt_index vaddr):: 9 word)) = get_pt_index vaddr"
+  by (auto simp: get_pdpt_index_def get_pd_index_def get_pt_index_def get_pml4_index_def bit_simps mask_def ucast_ucast_mask)
+
+
 method extract_vs_lookup =
   (match premises in at[thin]: "x64_asid_table (arch_state s) a = Some p" for s a p \<Rightarrow> \<open>rule revcut_rl[OF vs_lookup_atI[OF at]]\<close>)
   | (match premises in path[thin]: "(_ \<rhd> p) s"
@@ -2218,6 +2263,12 @@ method extract_vs_lookup =
          and vs : "valid_arch_objs s"  for pdpt p s
       \<Rightarrow> \<open>cut_tac vs_lookup_step[OF path vs_lookup1I[OF ko_at vs_refs_get_pdpt_index refl],OF pdpt]
           , cut_tac valid_arch_objs_pdptD[OF valid_arch_objsD,OF path ko_at vs pdpt]\<close>)
+  | (match premises in path[thin]: "(_ \<rhd> p) s"
+         and ko_at: "ko_at (ArchObj (PageDirectory pd)) p s"
+         and pd:  "pd (ucast (_::word64)) = PageTablePDE _ _ _"
+         and vs : "valid_arch_objs s"  for pd p s
+      \<Rightarrow> \<open>cut_tac vs_lookup_step[OF path vs_lookup1I[OF ko_at vs_refs_get_pd_index refl],OF pd]
+          , cut_tac valid_arch_objs_pdD[OF valid_arch_objsD,OF path ko_at vs pd]\<close>)
 
 lemma in_vs_asid_refsD:
   "(a,b)\<in> vs_asid_refs table \<Longrightarrow> \<exists>p. table p = Some b \<and> a = [VSRef (ucast p) None]"
@@ -2259,7 +2310,7 @@ lemma unmap_pdpt_vs_lookup_pages_pre:
          | clarsimp )+
         apply (strengthen | wp hoare_vcg_imp_lift hoare_vcg_all_lift  | clarsimp simp: conj_ac)+
       apply_trace (wpc | wp)+
-apply (wp get_pml4e_wp)
+  apply (wp get_pml4e_wp)
    apply (simp add: find_vspace_for_asid_def | wp | wpc)+
      apply (wpc | wp get_pdpte_wp get_pml4e_wp assertE_wp | clarsimp simp: lookup_pml4_slot_def find_vspace_for_asid_def)
   apply clarsimp
@@ -2337,7 +2388,11 @@ lemma unmap_pt_vs_lookup_pages_pre:
                       , VSRef ((vaddr >> 39) && mask 9) (Some APageMapL4), VSRef (ucast (ucast asid :: 9 word)) (Some AASIDPool), VSRef (ucast (asid_high_bits_of asid)) None],
                       pt)  \<notin> vs_lookup_pages s")
    apply (clarsimp simp: graph_of_def split: if_splits)
-   apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+   apply (extract_vs_lookup)+
+   apply (rewrite_lookup_when_aligned)+
+   apply (extract_vs_lookup)+
+   apply (rewrite_lookup_when_aligned)+
+   apply (extract_vs_lookup, rewrite_lookup_when_aligned)
    apply (clarsimp simp: get_pml4_index_def bit_simps vs_lookup_pages_vs_lookupI obj_at_def get_pdpt_index_def
                   split: if_splits)
    apply (drule vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI vs_lookup_pages1I])
@@ -2371,7 +2426,6 @@ lemma unmap_pt_vs_lookup_pages_pre:
    apply (frule vs_lookup_pages_vs_lookupI)
    apply (clarsimp simp: obj_at_def pdpte_ref_pages_def image_def vs_lookup_pages_def
                  dest!: graph_ofD split: if_splits pdpte.split_asm)
-    apply (fastforce simp: ucast_ucast_mask get_pml4_index_bit_def Image_def get_pdpt_index_def bit_simps)
    apply (clarsimp dest!: in_vs_asid_refsD wellformed_lookup.lookup_ref_step[OF vs_lookup_pages1_is_wellformed_lookup])
    apply (drule valid_arch_objsD)
      apply (simp add: ko_at_def2)
@@ -2390,6 +2444,11 @@ lemma unmap_pt_vs_lookup_pages_pre:
   done
 qed
 
+lemma get_index_neq:
+  "((a :: 9 word) \<noteq> ucast (get_pt_index vaddr)) \<Longrightarrow> ((get_pt_index vaddr) \<noteq> ucast a)"
+  "((a :: 9 word) \<noteq> ucast (get_pdpt_index vaddr)) \<Longrightarrow> ((get_pdpt_index vaddr) \<noteq> ucast a)"
+  by (auto simp: get_pt_index_def bit_simps up_ucast_inj_eq ucast_up_ucast ucast_ucast_id)
+
 lemma unmap_page_vs_lookup_pages_pre:
   "\<lbrace>pspace_aligned and valid_arch_objs and valid_arch_state
      and data_at sz pg and K (vaddr < pptr_base \<and> canonical_address vaddr)\<rbrace>
@@ -2397,7 +2456,7 @@ lemma unmap_page_vs_lookup_pages_pre:
    \<lbrace>\<lambda>r s. (the (vs_cap_ref (ArchObjectCap (PageCap dev pg R typ sz (Some (asid,vaddr))))),pg) \<notin> vs_lookup_pages s\<rbrace>"
   proof -
   note ref_simps[simp] = vs_cap_ref_simps vs_ref_pages_simps
-  note ucast_simps[simp] = up_ucast_inj_eq ucast_up_ucast mask_asid_low_bits_ucast_ucast ucast_ucast_id
+  note ucast_simps[simp] = up_ucast_inj_eq ucast_up_ucast mask_asid_low_bits_ucast_ucast ucast_ucast_id get_index_neq
   show ?thesis
     apply (clarsimp simp: unmap_page_def vs_cap_ref_simps)
     apply (wp | wpc)+
@@ -2438,62 +2497,161 @@ lemma unmap_page_vs_lookup_pages_pre:
    apply (simp add: find_vspace_for_asid_def | wp | wpc)+
      apply (wpc | wp get_pdpte_wp get_pml4e_wp assertE_wp | clarsimp simp: lookup_pdpt_slot_def find_vspace_for_asid_def)
   apply clarsimp
-  sorry (*
   apply (case_tac "(the (vs_cap_ref (ArchObjectCap (PageCap dev pg R typ sz (Some (asid, vaddr))))), pg)
                        \<notin> vs_lookup_pages s")
-   apply (clarsimp simp: graph_of_def split: if_splits)
-apply (rule conjI, clarsimp simp: graph_of_def split: if_splits)
+   apply (clarsimp simp: graph_of_def vs_cap_ref_def split: if_splits vmpage_size.splits)
+     apply (clarsimp simp: image_def pte_ref_pages_def[split_simps pte.split])
+     apply (fold get_pt_index_def[simplified bit_simps])
+     apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+     apply (clarsimp simp: obj_at_def bit_simps get_pd_index_def get_pml4_index_def get_pdpt_index_def
+                    dest!: vs_lookup_pages_vs_lookupI)
+    apply (clarsimp simp: image_def pde_ref_pages_def[split_simps pte.split])
+    apply (fold get_pd_index_def[simplified bit_simps])
+    apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+    apply (clarsimp simp: obj_at_def bit_simps get_pd_index_def get_pml4_index_def get_pdpt_index_def
+                    dest!: vs_lookup_pages_vs_lookupI)
+   apply (clarsimp simp: image_def pdpte_ref_pages_def[split_simps pte.split] split: pdpte.splits)
+   apply (fold get_pdpt_index_def[simplified bit_simps])
    apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
-   apply (clarsimp simp: get_pml4_index_def bit_simps vs_lookup_pages_vs_lookupI obj_at_def get_pdpt_index_def get_pt_index_def
-                  split: if_splits)
-   apply (drule vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI vs_lookup_pages1I])
-     apply (simp add: obj_at_def)
-    apply (erule subsetD[OF vs_refs_pages_subset vs_refs_get_pd_index])
-   apply (clarsimp simp: get_pd_index_def bit_simps vs_lookup_pages_def Image_def ptrFormPAddr_addFromPPtr)
+   apply (clarsimp simp: obj_at_def bit_simps get_pd_index_def ucast_ucast_mask 
+                         get_pml4_index_def get_pdpt_index_def
+                   dest!: vs_lookup_pages_vs_lookupI
+                   split: pdpte.split_asm)
   apply (clarsimp split:if_splits simp: vs_lookup_pages_def graph_of_def dest!: in_vs_asid_refsD)
   apply (erule wellformed_lookup.lookupE[OF vs_lookup_pages1_is_wellformed_lookup], simp)
-  apply (clarsimp dest!: vs_lookup_pages1D graph_ofD simp: lookup_leaf_def)
-  apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
-  apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
-  apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+  apply (clarsimp dest!: vs_lookup_pages1D graph_ofD simp: lookup_leaf_def vs_cap_ref_def split: vmpage_size.splits)+
+    apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+    apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                           wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
+                     simp: obj_at_def)
+    apply (fold ko_at_def2 get_pml4_index_bit_def get_pdpt_index_bit_def get_pd_index_bit_def)
+    apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+    apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+    apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                    simp:  obj_at_def pml4e_ref_pages_def
+                    split: if_split_asm pml4e.split_asm)
+    apply (fold ko_at_def2 get_pml4_index_bit_def get_pdpt_index_bit_def get_pd_index_bit_def)
+    apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
+    apply clarsimp
+    apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+    apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+    apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                    simp:  obj_at_def pdpte_ref_pages_def
+                    split: if_split_asm pdpte.split_asm)
+     apply (fold ko_at_def2 get_pml4_index_bit_def get_pdpt_index_bit_def get_pd_index_bit_def)
+     apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
+     apply clarsimp
+     apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+     apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+     apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                     simp:  obj_at_def pde_ref_pages_def
+                     split: if_split_asm pde.split_asm)
+      apply (fold ko_at_def2 get_pml4_index_bit_def get_pdpt_index_bit_def get_pd_index_bit_def)
+      apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
+      apply clarsimp
+      apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+      apply (clarsimp simp: obj_at_def image_def pte_ref_pages_def[split_simps pte.split] 
+                     dest!: graph_ofD wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup] 
+                     split: if_splits)
+      apply (strengthen vs_lookup_pages_vs_lookupI[mk_strg, simplified vs_lookup_pages_def])
+      apply (clarsimp simp: check_mapping_pptr_def get_pd_index_def get_pml4_index_def get_pdpt_index_def
+                            ucast_ucast_mask bit_simps obj_at_def
+                     dest!: vs_lookup_pages1D graph_ofD split: pte.split_asm)
+       apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
+       apply (clarsimp simp: get_pt_index_def bit_simps pte_ref_pages_def)
+      apply (clarsimp simp: get_pt_index_def bit_simps
+                     dest!: graph_ofD split: pte.split_asm)
+      apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
+      apply (clarsimp simp: pte_ref_pages_def)
+     apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
+     apply (clarsimp simp: check_mapping_pptr_def get_pd_index_def get_pml4_index_def get_pdpt_index_def
+                           ucast_ucast_mask bit_simps obj_at_def
+                    dest!: vs_lookup_pages1D graph_ofD wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup] 
+                    split: pte.split_asm)
+     apply (drule valid_arch_objs_largePage[OF valid_arch_objsD])
+       apply (simp add: ko_at_def2)+
+    apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
+    apply (clarsimp simp: check_mapping_pptr_def get_pd_index_def get_pml4_index_def get_pdpt_index_def
+                          ucast_ucast_mask bit_simps obj_at_def
+                   dest!: vs_lookup_pages1D graph_ofD wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
+                          wellformed_lookup.lookup_rtrancl_stepsD[where r = "[a]" for a, simplified,OF vs_lookup_pages1_is_wellformed_lookup] 
+                   split: pte.split_asm)
+    apply (drule valid_arch_objs_hugePage[OF valid_arch_objsD])
+      apply (simp add: ko_at_def2)+
+   apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+   apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                          wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
+                    simp: obj_at_def)
+   apply (fold ko_at_def2 get_pml4_index_bit_def get_pdpt_index_bit_def get_pd_index_bit_def)
+   apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+   apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+   apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                  simp:  obj_at_def pml4e_ref_pages_def
+                  split: if_split_asm pml4e.split_asm)
+   apply (fold ko_at_def2 get_pml4_index_bit_def get_pdpt_index_bit_def get_pd_index_bit_def)
+   apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
+   apply clarsimp
+   apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+   apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+   apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                    simp:  obj_at_def pdpte_ref_pages_def
+                   split: if_split_asm pdpte.split_asm)
+    apply (fold ko_at_def2 get_pml4_index_bit_def get_pdpt_index_bit_def get_pd_index_bit_def)
+    apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
+    apply clarsimp
+      apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+      apply (clarsimp simp: obj_at_def image_def pte_ref_pages_def[split_simps pte.split] 
+                     dest!: graph_ofD wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup] 
+                     split: if_splits)
+     apply (strengthen vs_lookup_pages_vs_lookupI[mk_strg, simplified vs_lookup_pages_def])
+     apply (clarsimp simp: check_mapping_pptr_def get_pd_index_def get_pml4_index_def get_pdpt_index_def
+                            ucast_ucast_mask obj_at_def bit_simps
+                     dest!: vs_lookup_pages1D graph_ofD split: pde.split_asm)
+     apply (fold ko_at_def2 get_pml4_index_bit_def get_pdpt_index_bit_def get_pd_index_bit_def ptTranslationBits_def)
+     apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
+     apply (clarsimp simp: pde_ref_pages_def split: pde.split_asm)
+     apply (extract_vs_lookup)+
+     apply (clarsimp simp: obj_at_def data_at_def a_type_simps)
+    apply (clarsimp simp: mask_def)
+   apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                          wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
+                    simp: obj_at_def)
+   apply (drule valid_arch_objs_hugePage[OF valid_arch_objsD])
+     apply (simp add: ko_at_def2)+
+   apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+   apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                          wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
+                    simp: obj_at_def)
+   apply (fold ko_at_def2 get_pml4_index_bit_def get_pdpt_index_bit_def get_pd_index_bit_def)
+   apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+   apply (erule wellformed_lookup.lookup_forwardE[OF vs_lookup_pages1_is_wellformed_lookup], (simp+)[2])
+   apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                  simp:  obj_at_def pml4e_ref_pages_def
+                  split: if_split_asm pml4e.split_asm)
+   apply (fold ko_at_def2 get_pml4_index_bit_def get_pdpt_index_bit_def get_pd_index_bit_def)
+   apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
+   apply clarsimp
+   apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
+   apply (strengthen vs_lookup_pages_vs_lookupI[mk_strg, simplified vs_lookup_pages_def])
+   apply (clarsimp simp: check_mapping_pptr_def obj_at_def image_def pdpte_ref_pages_def[split_simps pdpte.split]
+                  split: pdpte.splits)
+   apply (clarsimp simp: check_mapping_pptr_def get_pd_index_def get_pml4_index_def get_pdpt_index_def
+                         ucast_ucast_mask obj_at_def image_def bit_simps pdpte_ref_pages_def[split_simps pdpte.split]
+                  dest!: vs_lookup_pages1D graph_ofD split: pdpte.splits)
+  apply (intro conjI impI)
+    apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                            wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
+                      simp: obj_at_def pdpte_ref_pages_def[split_simps pdpte.split])
+   apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
+                          wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
+                    simp: obj_at_def pdpte_ref_pages_def[split_simps pdpte.split])
+   apply (drule valid_arch_objs_pdptD[OF valid_arch_objsD])
+     apply (simp add: ko_at_def2)+
+   apply (clarsimp simp: obj_at_def data_at_def a_type_simps)
   apply (clarsimp dest!: vs_lookup_pages1D graph_ofD
                          wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
-                   simp: obj_at_def)
-  apply (fold ko_at_def2 get_pml4_index_bit_def get_pdpt_index_bit_def get_pd_index_bit_def)
-  apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
-  apply (clarsimp simp: obj_at_def pml4e_ref_pages_def dest!: graph_ofD split: if_splits pml4e.split_asm)
-  apply (fold ko_at_def2 vs_asid_refs_def)
-  apply (drule eq_ucast_ucast_eq[rotated], simp)
-  apply clarsimp
-  apply (extract_vs_lookup, rewrite_lookup_when_aligned)+
-  apply (clarsimp simp: obj_at_def pdpte_ref_pages_def image_def vs_lookup_pages_def
-                 dest!: graph_ofD split: if_splits pdpte.split_asm)
-  apply (fold ko_at_def2 vs_asid_refs_def)
-  apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
-  apply clarsimp
-  apply (extract_vs_lookup, rewrite_lookup_when_aligned)+
-  apply (clarsimp simp: obj_at_def pde_ref_pages_def image_def vs_lookup_pages_def
-                 dest!: graph_ofD split: if_splits pde.split_asm)
-   apply (frule vs_lookup_pages_vs_lookupI)
-   apply (clarsimp simp: obj_at_def pdpte_ref_pages_def image_def vs_lookup_pages_def
-                 dest!: graph_ofD split: if_splits pdpte.split_asm)
-    apply (fastforce simp: ucast_ucast_mask get_pml4_index_bit_def Image_def get_pdpt_index_def bit_simps)
-   apply (clarsimp dest!: in_vs_asid_refsD wellformed_lookup.lookup_ref_step[OF vs_lookup_pages1_is_wellformed_lookup])
-   apply (drule valid_arch_objsD)
-     apply (simp add: ko_at_def2)
-    apply simp
-   apply clarsimp
-   apply (drule_tac x = a in spec)
-   apply (clarsimp simp: data_at_def obj_at_def a_type_simps)
-  apply (clarsimp dest!: in_vs_asid_refsD wellformed_lookup.lookup_ref_step[OF vs_lookup_pages1_is_wellformed_lookup])
-  apply (drule valid_arch_objsD)
-    apply (simp add: ko_at_def2)
-   apply simp
-  apply clarsimp
-  apply (drule_tac x = a in spec)
-  apply (clarsimp simp: data_at_def obj_at_def a_type_simps vs_refs_pages_def
-                 split: kernel_object.split_asm arch_kernel_obj.split_asm)
-  done *)
+                   simp: obj_at_def pdpte_ref_pages_def[split_simps pdpte.split])
+  done
 qed
 
 (* FIXME x64: unmap_pdpt_vs_lookup_pages_pre might also needed here*)
@@ -2551,7 +2709,6 @@ lemma unmap_pd_vs_lookup_pages_pre:
   apply (frule vs_lookup_pages_vs_lookupI)
   apply (clarsimp simp: obj_at_def pdpte_ref_pages_def image_def vs_lookup_pages_def
                  dest!: graph_ofD split: if_splits pdpte.split_asm)
-   apply (fastforce simp: ucast_ucast_mask get_pml4_index_bit_def Image_def)
   apply (clarsimp dest!: in_vs_asid_refsD wellformed_lookup.lookup_ref_step[OF vs_lookup_pages1_is_wellformed_lookup])
   apply (drule valid_arch_objsD)
     apply (simp add: ko_at_def2)
