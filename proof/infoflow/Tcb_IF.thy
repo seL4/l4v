@@ -124,7 +124,7 @@ lemma flush_space_valid_arch_state[wp]: "\<lbrace>valid_arch_state \<rbrace> flu
   apply (wp load_hw_asid_wp | wpc | simp)+
 done
 
-crunch globals_equiv[wp]: suspend "globals_equiv st"
+crunch globals_equiv[wp]: suspend,prepare_thread_delete "globals_equiv st"
   (wp: dxo_wp_weak)
 
 lemma finalise_cap_globals_equiv:

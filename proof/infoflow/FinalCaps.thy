@@ -1295,7 +1295,7 @@ lemma set_asid_pool_silc_inv[wp]:
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-crunch silc_inv[wp]: arch_finalise_cap "silc_inv aag st"
+crunch silc_inv[wp]: arch_finalise_cap,prepare_thread_delete "silc_inv aag st"
   (wp: crunch_wps modify_wp simp: crunch_simps ignore: set_object)
 
 lemma finalise_cap_silc_inv:

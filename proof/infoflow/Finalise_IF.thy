@@ -1411,6 +1411,11 @@ lemma suspend_reads_respects_f:
   apply(simp)
   done
 
+lemma prepare_thread_delete_reads_respects_f:
+  "reads_respects_f aag l \<top> (prepare_thread_delete thread)"
+  unfolding prepare_thread_delete_def
+  by wp
+
 lemma arch_finalise_cap_reads_respects:
   "reads_respects aag l (pas_refined aag and invs and
     cte_wp_at (op = (ArchObjectCap cap)) slot and
@@ -1450,6 +1455,7 @@ lemma finalise_cap_reads_respects:
                             _ \<Rightarrow> True))) (finalise_cap cap final)"
   apply(case_tac cap, simp_all split del: if_split)
             apply ((wp cancel_all_ipc_reads_respects cancel_all_signals_reads_respects
+                      prepare_thread_delete_reads_respects_f
                       suspend_reads_respects_f[where st=st] deleting_irq_handler_reads_respects
                       unbind_notification_is_subj_reads_respects
                       unbind_maybe_notification_reads_respects
@@ -1465,7 +1471,8 @@ lemma finalise_cap_reads_respects:
                   | blast
                   | clarsimp)+)[11]
   apply (rule equiv_valid_guard_imp)
-   by (wp arch_finalise_cap_reads_respects reads_respects_f[where st=st] arch_finalise_cap_silc_inv | simp | elim conjE)+
+  by ((wp arch_finalise_cap_reads_respects reads_respects_f[where st=st] arch_finalise_cap_silc_inv | simp | elim conjE)+)[2]
+
 
 lemma cap_swap_for_delete_reads_respects:
   "reads_respects aag l (K (is_subject aag (fst slot1) \<and> is_subject aag (fst slot2))) (cap_swap_for_delete slot1 slot2)"

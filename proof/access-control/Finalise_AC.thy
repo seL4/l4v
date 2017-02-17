@@ -207,7 +207,7 @@ lemma deleting_irq_handler_pas_refined[wp]:
   apply (clarsimp simp: pas_refined_def irq_map_wellformed_aux_def)
   done
 
-crunch pas_refined[wp]: "suspend", arch_finalise_cap "pas_refined aag"
+crunch pas_refined[wp]: "suspend", arch_finalise_cap,prepare_thread_delete "pas_refined aag"
 
 lemma finalise_cap_pas_refined[wp]:
   "\<lbrace>pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
@@ -429,6 +429,8 @@ lemma arch_finalise_cap_respects[wp]:
                     cap_links_asid_slot_def label_owns_asid_slot_def
              dest!: pas_refined_Control intro: pas_refined_Control_into_is_subject_asid)
   done
+
+crunch respects[wp]: prepare_thread_delete "integrity aag X st"
 
 lemma finalise_cap_respects[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and valid_cap cap
