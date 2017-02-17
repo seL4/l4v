@@ -23,6 +23,8 @@ lemma (* obj_at_not_live_valid_arch_cap_strg *) [Finalise_AI_asms]:
                      a_type_arch_live
               split: arch_cap.split_asm if_splits)
 
+crunch caps_of_state[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (caps_of_state s)"
+
 global_naming ARM
 
 lemma valid_global_refs_asid_table_udapte [iff]:
@@ -354,6 +356,8 @@ lemma deleting_irq_handler_final [Finalise_AI_asms]:
   apply simp
   done
 
+crunch is_final_cap'[wp]: prepare_thread_delete "is_final_cap' cap"
+
 lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. final \<longrightarrow> is_final_cap' cap s
          \<and> cte_wp_at (op = cap) slot s\<rbrace>
@@ -385,9 +389,11 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
    apply (wp | wpc | simp only: simp_thms)+
   done
 
-crunch typ_at_arch[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (typ_at T p s)"
+crunch typ_at_arch[wp,Finalise_AI_asms]: arch_finalise_cap,prepare_thread_delete "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def
         ignore: maskInterrupt )
+
+crunch tcb_at[wp]: prepare_thread_delete "\<lambda>s. tcb_at p s"
 
 lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
   "\<lbrace>valid_cap cap\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
@@ -539,7 +545,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                       unbind_notification_valid_objs
                    | clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
                                      ran_tcb_cap_cases is_cap_simps
-                                     cap_range_def
+                                     cap_range_def prepare_thread_delete_def
                                      can_fast_finalise_def
                                      obj_irq_refs_subset
                                      vs_cap_ref_def
@@ -578,6 +584,9 @@ lemma (* deleting_irq_handler_cte_preserved *)[Finalise_AI_asms]:
 
 
 crunch cte_wp_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (cte_wp_at P' p s)"
+  (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
+
+crunch cte_wp_at[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
 
 end
@@ -631,6 +640,8 @@ context Arch begin global_naming ARM
 
 crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps select_wp simp: crunch_simps)
+
+crunch irq_node[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (interrupt_irq_node s)"
 
 crunch pred_tcb_at[wp]: arch_finalise_cap "pred_tcb_at proj P t"
   (simp: crunch_simps wp: crunch_wps)
@@ -1236,6 +1247,8 @@ lemma mapM_x_swp_store_invalid_pde_invs:
   done
 
 global_naming Arch
+
+crunch invs[wp]: prepare_thread_delete invs
 
 lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
   shows "\<lbrace>invs and cte_wp_at (op = cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. invs\<rbrace>"
