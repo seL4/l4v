@@ -175,7 +175,8 @@ type export_params = {cons_field_upds: term -> term,
 
 fun get_all_export_params ctxt csenv : export_params = let
     (* assuming DefineGlobalsList has already run *)
-    val defs = Proof_Context.get_thms ctxt "global_data_defs"
+    val defs = if (can (Proof_Context.get_thms ctxt) "no_global_data_defs")
+      then [] else Proof_Context.get_thms ctxt "global_data_defs"
     val rhss = map (Thm.concl_of #> Logic.dest_equals #> snd) defs
     val const_globals = map_filter
       (fn (Const (@{const_name const_global_data}, _) $ nm $ v)

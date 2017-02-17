@@ -74,6 +74,7 @@ lemma unat_mono_thms:
 lemma unat_mono_intro:
   "unat a \<le> x \<Longrightarrow> x < b \<Longrightarrow> unat a < b"
   "unat a \<le> x \<Longrightarrow> x \<le> b \<Longrightarrow> unat a \<le> b"
+  "unat a \<le> x \<Longrightarrow> x \<le> 0 \<Longrightarrow> unat a = 0"
   by simp_all
 
 lemma word_neq_0_conv_neg_conv:

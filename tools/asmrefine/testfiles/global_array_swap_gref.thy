@@ -158,7 +158,7 @@ ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
 
 text {* Manual test for debugging. *}
 
-ML {* val nm = "global_array_swap.add_a_thing" *}
+ML {* val nm = "global_array_swap.get_reference_val" *}
 
 local_setup {* define_graph_fun_short funs nm *}
 
@@ -191,6 +191,8 @@ val debug_tac = ProveSimplToGraphGoals.debug_tac
 schematic_goal "PROP ?P"
   apply (tactic {* resolve_tac @{context} [init_thm] 1 *})
   apply (tactic {* ALLGOALS (TRY o (debug_tac @{context} THEN_ALL_NEW K no_tac)) *})
+
+  apply (tactic {* ALLGOALS (debug_tac @{context}) *})
   oops
 
 end
