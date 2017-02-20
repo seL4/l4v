@@ -75,27 +75,14 @@ lemma getHSR_invs[wp]:
 
 lemma addressTranslateS1CPR_invs[wp]:
   "valid invs (do_machine_op (addressTranslateS1CPR w)) (\<lambda>_. invs)"
-  apply (clarsimp simp add: addressTranslateS1CPR_def do_machine_op_def machine_rest_lift_def in_monad
-                            split_def select_f_returns machine_op_lift_def
-       | wp)+
-  sorry
+  apply (wp dmo_invs)
+  apply (clarsimp simp add: addressTranslateS1CPR_def machine_rest_lift_def in_monad
+                            machine_op_lift_def select_f_def)
+  done
 
 lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
   apply (cases flt, simp_all)
   apply (wp|simp)+
-  done
-
-(* FIXME move to Machine_AI *)
-lemma addressTranslateS1CPR_inv: "\<lbrace>P\<rbrace> addressTranslateS1CPR w \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: addressTranslateS1CPR_def)
-sorry
-
-lemma hv_inv_ex [Syscall_AI_assms]:
-  "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (cases vp, simp_all)
-  apply (wp dmo_inv getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv
-            det_getRestartPC as_user_inv getHSR_inv getHDFAR_inv addressTranslateS1CPR_inv
-         | wpcw | simp)+
   done
 
 lemma handle_vm_fault_valid_fault[wp, Syscall_AI_assms]:
@@ -123,9 +110,9 @@ lemma hh_invs[wp, Syscall_AI_assms]:
 end
 
 global_interpretation Syscall_AI?: Syscall_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Syscall_AI_assms)?)
-  qed
+qed
 
 end
