@@ -16,79 +16,12 @@ context Arch begin
 
 global_naming ARM
 
-
-(*
-lemma kernel_mappings_slots_eq:
-  "p \<in> kernel_mappings \<longleftrightarrow> ucast (p >> 20) \<in> kernel_mapping_slots"
-  apply (simp add: kernel_mappings_def kernel_mapping_slots_def word_le_nat_alt
-                   shiftr_20_unat_ucast unat_ucast_kernel_base_rshift)
-  apply (fold word_le_nat_alt)
-  apply (rule iffI)
-   apply (simp add: le_shiftr)
-  apply (simp add: kernel_base_def)
-  apply word_bitwise
-  done
-*)
-(*
-lemma valid_global_pd_mappingsE:
-  "\<lbrakk>valid_global_vspace_mappings s;
-    \<And>pd. \<lbrakk>kheap s (arm_global_pd (arch_state s)) =
-             Some (ArchObj (PageDirectory pd));
-           \<forall>x. valid_pd_kernel_mappings (arm_kernel_vspace (arch_state s)) s
-                 (ArchObj (PageDirectory pd))\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
-  apply (clarsimp simp add: valid_global_vspace_mappings_def obj_at_def)
-  apply (case_tac ko, simp_all add: valid_pd_kernel_mappings_def
-                             split: arch_kernel_obj.splits)
-  done*)
-
-(* NOTE: we could probably add "is_aligned b (pageBitsForSize sz)"
-         if we assumed "valid_global_objs s", additionally.
-lemma some_get_page_info_kmapsD:
-  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, attr, r);
-    p \<in> kernel_mappings; equal_kernel_mappings s\<rbrakk>
-   \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a) \<and> r = {}"
-   apply (clarsimp simp: get_page_info_def get_pd_entry_def get_arch_obj_def
-                  split: option.splits Structures_A.kernel_object.splits
-                         arch_kernel_obj.splits)
-   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def)
-   apply (drule_tac x=pd_ref in spec,
-          drule_tac x="arm_global_pd (arch_state s)" in spec, simp)
-   apply (drule bspec, assumption)
-   apply (clarsimp simp: valid_pd_kernel_mappings_def pde_mapping_bits_def)
-   apply (drule_tac x="ucast (p >> 20)" in spec)
-   apply (clarsimp simp: get_page_info_def get_pd_entry_def get_arch_obj_def
-                         get_pt_info_def get_pt_entry_def
-                         kernel_mappings_slots_eq
-                  split: option.splits Structures_A.kernel_object.splits
-                         arch_kernel_obj.splits
-                         pde.splits pte.splits)
-      apply (rule conjI, rule_tac x=ARMLargePage in exI, simp)
-      apply (simp add: valid_pde_kernel_mappings_def obj_at_def
-                       valid_pt_kernel_mappings_def)
-      apply (drule_tac x="ucast ((p >> 12) && mask 8)" in spec)
-      apply (clarsimp simp: valid_pte_kernel_mappings_def)
-     apply (rule conjI, rule_tac x=ARMSmallPage in exI, simp)
-     apply (simp add: valid_pde_kernel_mappings_def obj_at_def
-                      valid_pt_kernel_mappings_def)
-     apply (drule_tac x="ucast ((p >> 12) && mask 8)" in spec)
-     apply (clarsimp simp: valid_pte_kernel_mappings_def)
-    apply (rule conjI, rule_tac x=ARMSection in exI, simp)
-    apply (simp add: valid_pde_kernel_mappings_def)
-   apply (rule conjI, rule_tac x=ARMSuperSection in exI, simp)
-   apply (simp add: valid_pde_kernel_mappings_def)
-   done
-
-*)
-
-
-
-lemma get_pd_of_thread_reachable: (* ARMHYP change? *)
-  "(*get_pd_of_thread (kheap s) (arch_state s) t s \<noteq> None (* arm_global_pd (arch_state s) *)
-   \<Longrightarrow> *)(\<exists>\<rhd> get_pd_of_thread (kheap s) (arch_state s) t) s"
-  apply (auto simp: get_pd_of_thread_vs_lookup
+lemma get_pd_of_thread_reachable:
+  "get_pd_of_thread (kheap s) (arch_state s) t \<noteq> 0
+   \<Longrightarrow> (\<exists>\<rhd> get_pd_of_thread (kheap s) (arch_state s) t) s"
+  by (auto simp: get_pd_of_thread_vs_lookup
           split: Structures_A.kernel_object.splits if_split_asm option.splits
                  cap.splits arch_cap.splits)
-sorry
 
 lemma is_aligned_ptrFromPAddrD:
 "\<lbrakk>is_aligned (ptrFromPAddr b) a; a \<le> 25\<rbrakk> \<Longrightarrow> is_aligned b a"
@@ -112,14 +45,13 @@ lemma obj_bits_data_at:
 
 lemma some_get_page_info_umapsD:
   "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, attr, r);
-    (\<exists>\<rhd> pd_ref) s; (*p \<notin> kernel_mappings;*) valid_vspace_objs s; pspace_aligned s;
+    (\<exists>\<rhd> pd_ref) s; valid_vspace_objs s; pspace_aligned s;
     valid_asid_table (arm_asid_table (arch_state s)) s; valid_objs s\<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a \<and> is_aligned b a \<and>
              data_at sz (ptrFromPAddr b) s)"
   apply (clarsimp simp: get_page_info_def get_pd_entry_def get_arch_obj_def
-
                  split: option.splits Structures_A.kernel_object.splits
-                        arch_kernel_obj.splits)
+                        arch_kernel_obj.splits if_splits)
   apply (frule (1) valid_vspace_objsD[rotated 2])
    apply (simp add: obj_at_def)
   apply (simp add: valid_vspace_obj_def vspace_bits_defs)
@@ -164,7 +96,7 @@ lemma some_get_page_info_umapsD:
    apply (drule_tac x = "(ptrFromPAddr b)" in  bspec)
    apply (fastforce simp: obj_at_def)
   apply (clarsimp dest!: is_aligned_ptrFromPAddrD)
-  done (*FIXME: ugly proof by Xin,Gao. needs general lemmas *)
+  done
 
 lemma user_mem_dom_cong:
   "kheap s = kheap s' \<Longrightarrow> dom (user_mem s) = dom (user_mem s')"
@@ -187,7 +119,9 @@ lemma is_aligned_physMappingOffset:
 global_naming Arch
 named_theorems AInvsPre_asms
 
-
+lemma get_page_info_0[simp]:
+  "get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) 0 x = None"
+  by (simp add: get_page_info_def)
 
 lemma (* ptable_rights_imp_frame *)[AInvsPre_asms]:
   assumes "valid_state s"
@@ -199,8 +133,8 @@ lemma (* ptable_rights_imp_frame *)[AInvsPre_asms]:
                  split: option.splits)
   apply (rename_tac b a r)
   apply (frule some_get_page_info_umapsD)
-       apply (rule get_pd_of_thread_reachable)
-       using assms
+       apply (rule get_pd_of_thread_reachable, clarsimp)
+      using assms
       apply (simp_all add: valid_state_def valid_pspace_def
                            valid_arch_state_def)
   apply clarsimp

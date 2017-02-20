@@ -33,7 +33,7 @@ text {*
   Note that this function is total.
   If the traversal stops before a page directory can be found
   (e.g. because the VTable entry is not set or a reference has been invalid),
-  the function returns the global kernel mapping.
+  the function returns 0.
 
   Looking up the page directory for a thread reference involves the following
   steps:
@@ -47,24 +47,24 @@ text {*
 *}
 definition
   get_pd_of_thread :: "kheap \<Rightarrow> arch_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref"
-where (* ARMHYP *) (* change to return an option instead of global kernel mapping? *)
+where
   get_pd_of_thread_def:
   "get_pd_of_thread khp astate tcb_ref \<equiv>
    case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
      (case tcb_vtable tcb of
         ArchObjectCap (PageDirectoryCap pd_ref (Some asid))
           \<Rightarrow> (case arm_asid_table astate (asid_high_bits_of asid) of
-                None \<Rightarrow> undefined
+                None \<Rightarrow> 0
               | Some p \<Rightarrow> (case khp p of
                             Some (ArchObj ako) \<Rightarrow>
                                if (VSRef (asid && mask asid_low_bits)
                                          (Some AASIDPool), pd_ref)
                                   \<in> vs_refs_arch ako
                                  then pd_ref
-                               else undefined
-                             | _ \<Rightarrow> undefined))
-      | _ \<Rightarrow>  undefined)
-   | _ \<Rightarrow>  undefined"
+                               else 0
+                             | _ \<Rightarrow> 0))
+      | _ \<Rightarrow>  0)
+   | _ \<Rightarrow> 0"
 
 
 lemma VSRef_AASIDPool_in_vs_refs:
@@ -87,7 +87,7 @@ context
 notes vs_refs_arch_def[simp del]
 begin
 
-lemma get_pd_of_thread_def2: (* ARMHYP *) (* change to return an option instead of global kernel mapping? *)
+lemma get_pd_of_thread_def2:
   "get_pd_of_thread khp astate tcb_ref \<equiv>
         case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
           (case tcb_vtable tcb of
@@ -97,9 +97,9 @@ lemma get_pd_of_thread_def2: (* ARMHYP *) (* change to return an option instead 
                         khp p = Some (ArchObj (ASIDPool apool)) \<and>
                         apool (ucast (asid && mask asid_low_bits)) = Some pd_ref)
                     then pd_ref
-                    else undefined
-           | _ \<Rightarrow>  undefined)
-        | _ \<Rightarrow>  undefined"
+                    else 0
+           | _ \<Rightarrow>  0)
+        | _ \<Rightarrow>  0"
   apply (rule eq_reflection)
   apply (clarsimp simp: get_pd_of_thread_def
                  split: kernel_object.splits option.splits)
@@ -113,16 +113,16 @@ lemma get_pd_of_thread_def2: (* ARMHYP *) (* change to return an option instead 
 lemma the_arch_cap_simp[simp]: "the_arch_cap (ArchObjectCap x) = x"
   by (simp add: the_arch_cap_def)
 
-lemma get_pd_of_thread_vs_lookup: (* ARMHYP *)
+lemma get_pd_of_thread_vs_lookup:
   "get_pd_of_thread (kheap s) (arch_state s) tcb_ref =
    (case kheap s tcb_ref of
       Some (TCB tcb) \<Rightarrow>
         (case tcb_vtable tcb of
            ArchObjectCap (PageDirectoryCap pd_ref (Some asid)) \<Rightarrow>
              if (the (vs_cap_ref (tcb_vtable tcb)) \<rhd> pd_ref) s then pd_ref
-             else undefined
-         | _ \<Rightarrow> undefined)
-    | _ \<Rightarrow> undefined)"
+             else 0
+         | _ \<Rightarrow> 0)
+    | _ \<Rightarrow> 0)"
   apply (clarsimp simp: get_pd_of_thread_def split: option.splits)
   apply (case_tac "the (kheap s tcb_ref)", simp_all, clarsimp)
   apply (rename_tac tcb)
@@ -161,7 +161,7 @@ end
 (* NOTE: This statement would clearly be nicer for a partial function
          but later on, we really want the function to be total. *)
 lemma get_pd_of_thread_eq: (* ARMHYP *)
-  "pd_ref \<noteq> undefined \<Longrightarrow>
+  "pd_ref \<noteq> 0 \<Longrightarrow>
    get_pd_of_thread (kheap s) (arch_state s) tcb_ref = pd_ref \<longleftrightarrow>
    (\<exists>tcb. kheap s tcb_ref = Some (TCB tcb) \<and>
           (\<exists>asid. tcb_vtable tcb =
@@ -278,7 +278,7 @@ apply (simp add: mask_add_aligned pt_bits_def pageBits_def pte_bits_def)
 apply (cut_tac and_mask_shiftl_comm[of 9 3 "vptr >> 12"])
  apply (simp_all add: word_size mask_def AND_twice)
 done
-term pt_bits
+
 lemma get_pt_entry_Some_eq_get_pte:
   "is_aligned pt_ref pt_bits \<Longrightarrow>
    get_pt_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pt_ref vptr = Some x \<longleftrightarrow>
@@ -329,6 +329,7 @@ definition
 where
   get_page_info_def:
   "get_page_info ahp pd_ref vptr \<equiv>
+   if pd_ref = 0 then None else
    case get_pd_entry ahp pd_ref vptr of
      Some (PageTablePDE p) \<Rightarrow>
        get_pt_info ahp (ptrFromPAddr p) vptr
@@ -427,7 +428,8 @@ lemma get_page_info_pte:
    is_aligned (x - ((vptr >> 12) && 0x1FF << 3)) pt_bits \<Longrightarrow>
    get_pte x s = ({(pte,s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
-   (case pte of
+   (if pd_ref = 0 then None else
+    case pte of
      SmallPagePTE base attrs rights \<Rightarrow> Some (base, 12, attrs, rights)
    | LargePagePTE base attrs rights \<Rightarrow> Some (base, 16, attrs, rights)
    | _ \<Rightarrow> None)"
@@ -457,7 +459,7 @@ lemma get_page_info_section:
    get_pde (lookup_pd_slot pd_ref vptr) s =
      ({(SectionPDE base attrs rights, s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
-     Some (base, 21, attrs, rights)"
+     (if pd_ref = 0 then None else Some (base, 21, attrs, rights))"
   apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
   apply (intro conjI impI allI)
    apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
@@ -471,7 +473,7 @@ lemma get_page_info_super_section:
    get_pde (lookup_pd_slot pd_ref vptr) s =
      ({(SuperSectionPDE base attrs rights,s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
-     Some (base, 25, attrs, rights)"
+     (if pd_ref = 0 then None else Some (base, 25, attrs, rights))"
   apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
   apply (intro conjI impI allI)
    apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
