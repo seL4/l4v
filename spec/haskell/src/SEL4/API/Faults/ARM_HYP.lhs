@@ -50,7 +50,7 @@ in handleVMFault?
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > makeArchFaultMessage (VCPUFault hsr) thread = return (7, [hsr])
 > makeArchFaultMessage (VGICMaintenance archData) thread = do
->     return (6, archData) -- FIXME ARMHYP check vgic index here?
+>     return (6, archData)
 #endif
 
 > handleArchFaultReply :: ArchFault -> PPtr TCB -> Word -> [Word] -> Kernel Bool

@@ -24,8 +24,6 @@ This module defines the encoding of arch-specific faults.
 
 \end{impdetails}
 
-FIXME ARMHYP VCPU and VGIC faults should be handled here
-
 > data ArchFault
 >     = VMFault {
 >             vmFaultAddress :: VPtr,
