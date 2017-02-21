@@ -233,6 +233,11 @@ where
     return ()
   od)"
 
+| "handle_event (HypervisorEvent fault_type) = (without_preemption $ do
+    thread \<leftarrow> gets cur_thread;
+    handle_hypervisor_fault thread fault_type;
+    return ()
+  od)"
 
 section {* Kernel entry point  *}
 

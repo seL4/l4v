@@ -391,7 +391,7 @@ crunch irq_masks[wp]: handle_reply "\<lambda>s. P (irq_masks_of_state s)"
 crunch irq_masks[wp]: handle_recv "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch irq_masks[wp]: handle_vm_fault "\<lambda>s. P (irq_masks_of_state s)"
+crunch irq_masks[wp]: handle_vm_fault, handle_hypervisor_fault "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp no_irq ignore: getFAR getDFSR getIFSR simp: no_irq_getDFSR no_irq_getFAR no_irq_getIFSR)
 
 lemma dmo_getActiveIRQ_irq_masks[wp]:

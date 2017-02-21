@@ -3073,6 +3073,8 @@ lemma handle_vm_fault_silc_inv:
    apply(wp | simp)+
   done
 
+crunch silc_inv: handle_hypervisor_fault "silc_inv aag st"
+
 lemma handle_event_silc_inv:
   "\<lbrace> silc_inv aag st and einvs and simple_sched_action and
       (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and 
@@ -3087,7 +3089,7 @@ lemma handle_event_silc_inv:
                  handle_interrupt_silc_inv handle_vm_fault_silc_inv hy_inv
             | simp add: invs_valid_objs invs_mdb invs_sym_refs)+
      apply(rule_tac E="\<lambda>rv s. silc_inv aag st s \<and> invs s \<and> valid_fault rv \<and> is_subject aag thread" and R="Q" and Q=Q for Q in hoare_post_impErr)
-     apply(wp handle_vm_fault_silc_inv | simp add: invs_valid_objs invs_mdb invs_sym_refs)+
+     apply(wp handle_vm_fault_silc_inv handle_hypervisor_fault_silc_inv | simp add: invs_valid_objs invs_mdb invs_sym_refs)+
   done
 
 crunch silc_inv[wp]: activate_thread "silc_inv aag st"

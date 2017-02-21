@@ -1346,7 +1346,7 @@ lemma handle_recv_domain_sep_inv:
 crunch domain_sep_inv[wp]: handle_interrupt "domain_sep_inv irqs st"
   (wp: dxo_wp_weak ignore: getActiveIRQ resetTimer ackInterrupt ignore: timer_tick)
 
-crunch domain_sep_inv[wp]: handle_vm_fault "domain_sep_inv irqs st"
+crunch domain_sep_inv[wp]: handle_vm_fault, handle_hypervisor_fault "domain_sep_inv irqs st"
   (ignore: getFAR getDFSR getIFSR)
 
 lemma handle_event_domain_sep_inv:
