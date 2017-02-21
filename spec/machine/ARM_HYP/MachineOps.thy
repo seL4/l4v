@@ -623,20 +623,28 @@ where
 "set_gic_vcpu_ctrl_vtr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_vtr_impl w)"
 
 consts'
-get_gic_vcpu_ctrl_eisr1_impl :: "machine_word machine_rest_monad"
-gic_vcpu_ctrl_eisr1_val :: "machine_state \<Rightarrow> machine_word"
-definition
-get_gic_vcpu_eisr1_vtr :: "machine_word machine_monad"
-where
-"get_gic_vcpu_eisr1_vtr \<equiv> gets gic_vcpu_ctrl_eisr1_val"
-
-consts'
 get_gic_vcpu_ctrl_misr_impl :: "machine_word machine_rest_monad"
 gic_vcpu_ctrl_misr_val :: "machine_state \<Rightarrow> machine_word"
 definition
 get_gic_vcpu_ctrl_misr :: "machine_word machine_monad"
 where
 "get_gic_vcpu_ctrl_misr \<equiv> gets gic_vcpu_ctrl_misr_val"
+
+consts'
+get_gic_vcpu_ctrl_eisr0_impl :: "machine_word machine_rest_monad"
+gic_vcpu_ctrl_eisr0_val :: "machine_state \<Rightarrow> machine_word"
+definition
+get_gic_vcpu_ctrl_eisr0 :: "machine_word machine_monad"
+where
+"get_gic_vcpu_ctrl_eisr0 \<equiv> gets gic_vcpu_ctrl_eisr0_val"
+
+consts'
+get_gic_vcpu_ctrl_eisr1_impl :: "machine_word machine_rest_monad"
+gic_vcpu_ctrl_eisr1_val :: "machine_state \<Rightarrow> machine_word"
+definition
+get_gic_vcpu_ctrl_eisr1 :: "machine_word machine_monad"
+where
+"get_gic_vcpu_ctrl_eisr1 \<equiv> gets gic_vcpu_ctrl_eisr0_val"
 
 consts'
 get_gic_vcpu_ctrl_lr_impl :: "nat \<Rightarrow> unit machine_rest_monad"
