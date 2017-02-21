@@ -144,7 +144,6 @@ For platforms running in hypervisor mode, many fault handlers are wrapped and re
 > handleEvent (HypervisorEvent hypType) = withoutPreemption $ do
 >     thread <- getCurThread
 >     handleHypervisorFault thread hypType
->     return ()
 
 \subsection{System Calls}
 
