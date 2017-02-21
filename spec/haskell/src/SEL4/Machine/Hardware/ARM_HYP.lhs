@@ -233,13 +233,15 @@ caches must be done separately.
 >     cbptr <- ask
 >     liftIO $ Platform.writeTTBR0 cbptr pd
 
-FIXME ARMHYP this uses ARM\_HYP config option in C, in which case it calls setCurrentPDPL2(addr) instead of what is currently here
-
 > setCurrentPD :: PAddr -> MachineMonad ()
 > setCurrentPD pd = do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     setCurrentPDPL2 pd
+#else
 >     dsb
 >     writeTTBR0 pd
 >     isb
+#endif
 
 > setHardwareASID :: HardwareASID -> MachineMonad ()
 > setHardwareASID (HardwareASID hw_asid) = do
@@ -247,6 +249,9 @@ FIXME ARMHYP this uses ARM\_HYP config option in C, in which case it calls setCu
 >     liftIO $ Platform.setHardwareASID cbptr hw_asid
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+> setCurrentPDPL2 :: PAddr -> MachineMonad ()
+> setCurrentPDPL2 = error "FIXME ARMHYP machine callback unimplemented"
 
 > writeContextIDAndPD :: HardwareASID -> PAddr -> MachineMonad ()
 > writeContextIDAndPD = error "FIXME ARMHYP  machine callback unimplemented"
