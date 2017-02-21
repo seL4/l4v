@@ -15,19 +15,19 @@
 theory ArchHypervisor_H
 imports
   "../CNode_H"
+  "../FaultHandlerDecls_H"
 (*  "../KI_Decls_H"
   ArchVSpaceDecls_H *)
 begin
 context Arch begin global_naming ARM_HYP_H
 
+#INCLUDE_HASKELL SEL4/Object/VCPU/ARM_HYP.lhs CONTEXT ARM_HYP_H decls_only ONLY countTrailingZeros
+#INCLUDE_HASKELL SEL4/Object/VCPU/ARM_HYP.lhs CONTEXT ARM_HYP_H bodies_only ONLY countTrailingZeros
+
+#INCLUDE_HASKELL SEL4/Object/VCPU/ARM_HYP.lhs CONTEXT ARM_HYP_H ArchInv=Arch ONLY vcpuDisable vcpuEnable vcpuRestore vcpuSave vcpuSwitch vcpuInvalidateActive vcpuCleanInvalidateActive virqSetEOIIRQEN vgicMaintenance
 
 #INCLUDE_HASKELL SEL4/Kernel/Hypervisor/ARM_HYP.lhs Arch= CONTEXT ARM_HYP_H decls_only
-
-defs handleHypervisorFault_def:
-"handleHypervisorFault arg1 hyp \<equiv> case hyp of ARMNoHypFaults \<Rightarrow> haskell_fail []"
-
-#INCLUDE_HASKELL SEL4/Object/VCPU/ARM_HYP.lhs CONTEXT ARM_HYP_H ArchInv=Arch ONLY vcpuDisable vcpuEnable vcpuRestore vcpuSave vcpuSwitch vcpuInvalidateActive vcpuCleanInvalidateActive
-
+#INCLUDE_HASKELL SEL4/Kernel/Hypervisor/ARM_HYP.lhs Arch= CONTEXT ARM_HYP_H bodies_only
 
 end
 end

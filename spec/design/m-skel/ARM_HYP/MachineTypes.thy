@@ -18,6 +18,8 @@ imports
 begin
 context Arch begin global_naming ARM_HYP
 
+#INCLUDE_SETTINGS keep_constructor=hyp_fault_type
+
 text {*
   An implementation of the machine's types, defining register set
   and some observable machine state.
