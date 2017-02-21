@@ -21,12 +21,18 @@ The ARM target does not have any hypervisor support.
 \begin{impdetails}
 
 > import SEL4.Machine (PPtr(..))
+> import SEL4.Machine (PPtr (..))
 > import SEL4.Model
 > import SEL4.Object.Structures
-> import SEL4.Machine.Hardware.ARM (HypFaultType(..))
+> import SEL4.API.Failures
+> import SEL4.Kernel.FaultHandler
+> import SEL4.API.Failures.TARGET
+> import SEL4.Machine.Hardware.TARGET
 
 \end{impdetails}
 
 > handleHypervisorFault :: PPtr TCB -> HypFaultType -> Kernel ()
-> handleHypervisorFault _ (ARMNoHypFaults) = return ()
+> handleHypervisorFault _ (ARMNoHypFaults) =
+>     -- no hypervisor faults on this platform
+>     return ()
 
