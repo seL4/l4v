@@ -146,8 +146,6 @@ Library
                             SEL4.Machine.Hardware.ARM_HYP
 
     if flag(ArchX64)
-        -- FIXME: should be a flag also, or some other way to conditionally compile
-        -- Setup.hs hooks can handle this, but do we want to do that?
         other-modules:
 
                             SEL4.API.Types.X64
