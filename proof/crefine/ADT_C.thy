@@ -36,13 +36,17 @@ where
 context kernel_m
 begin
 
+definition
+  "handleHypervisorEvent_C = (CALL schedule();; CALL activateThread())"
+
 definition 
   "callKernel_C e \<equiv> case e of
     SyscallEvent n \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleSyscall(syscall_from_H n))
   | UnknownSyscall n \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleUnknownSyscall(of_nat n))
   | UserLevelFault w1 w2 \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleUserLevelFault(w1,w2))
   | Interrupt \<Rightarrow> exec_C \<Gamma> (Call handleInterruptEntry_'proc)
-  | VMFaultEvent t \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleVMFaultEvent(vm_fault_type_from_H t))"
+  | VMFaultEvent t \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleVMFaultEvent(vm_fault_type_from_H t))
+  | HypervisorEvent t \<Rightarrow> exec_C \<Gamma> handleHypervisorEvent_C"
 
 definition
   "callKernel_withFastpath_C e \<equiv>
@@ -1662,13 +1666,18 @@ locale kernel_global = state_rel + kernel_all_global_addresses
 (* note we're in the c-parser's locale now, not the substitute *)
 begin
 
+
+definition
+  "handleHypervisorEvent_C = (CALL schedule();; CALL activateThread())"
+
 definition 
   "callKernel_C e \<equiv> case e of
     SyscallEvent n \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleSyscall(syscall_from_H n))
   | UnknownSyscall n \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleUnknownSyscall(of_nat n))
   | UserLevelFault w1 w2 \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleUserLevelFault(w1,w2))
   | Interrupt \<Rightarrow> exec_C \<Gamma> (Call handleInterruptEntry_'proc)
-  | VMFaultEvent t \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleVMFaultEvent(kernel_m.vm_fault_type_from_H t))"
+  | VMFaultEvent t \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleVMFaultEvent(kernel_m.vm_fault_type_from_H t))
+  | HypervisorEvent t \<Rightarrow> exec_C \<Gamma> handleHypervisorEvent_C"
 
 definition
   "callKernel_withFastpath_C e \<equiv>

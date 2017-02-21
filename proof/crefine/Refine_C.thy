@@ -517,6 +517,23 @@ lemma no_fail_callKernel:
   apply metis
   done
 
+lemma handleHypervisorEvent_ccorres:
+  "ccorres dc xfdc 
+           (invs' and sch_act_simple)
+           UNIV []
+           (callKernel (HypervisorEvent t)) handleHypervisorEvent_C"
+  apply (simp add: callKernel_def handleEvent_def handleHypervisorEvent_C_def)
+  apply (simp add: liftE_def bind_assoc)
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       apply (cases t; simp add: handleHypervisorFault_def)
+       apply (ctac (no_vcg) add: schedule_ccorres)
+        apply (ctac (no_vcg) add: activateThread_ccorres)
+       apply (wp schedule_sch_act_wf schedule_invs'
+              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
+    apply clarsimp+
+  done
+
 lemma callKernel_corres_C:
   "corres_underlying rf_sr False True dc
            (all_invs' e)
@@ -557,7 +574,12 @@ lemma callKernel_corres_C:
      apply (rule ccorres_call)
         apply (rule handleSyscall_ccorres)
        apply (clarsimp simp: all_invs'_def sch_act_simple_def)+
-done
+   apply (rule ccorres_corres_u [rotated], assumption)
+    apply (rule ccorres_guard_imp)
+         apply (rule handleHypervisorEvent_ccorres)
+        apply (clarsimp simp: all_invs'_def sch_act_simple_def)
+       apply simp
+  done
 
 lemma ccorres_add_gets:
   "ccorresG rf_sr \<Gamma> rv xf P P' hs (do v \<leftarrow> gets f; m od) c
@@ -699,8 +721,8 @@ lemma entry_corres_C:
         apply (rule corres_split)
            prefer 2
            apply (rule corres_cases[where R=fp], simp_all add: dc_def[symmetric])[1]
-            apply (rule callKernel_withFastpath_corres_C)
-           apply (rule callKernel_corres_C)
+            apply (rule callKernel_withFastpath_corres_C, simp)
+           apply (rule callKernel_corres_C[unfolded dc_def], simp)
           apply (rule corres_split [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
              prefer 2
              apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
@@ -1135,6 +1157,7 @@ lemma kernel_all_subset_kernel:
            apply (simp add: callKernel_C_def callKernel_withFastpath_C_def
                             kernel_global.callKernel_C_def
                             kernel_global.callKernel_withFastpath_C_def
+                            handleHypervisorEvent_C_def kernel_global.handleHypervisorEvent_C_def
                        split: event.split if_split)
            apply (intro allI impI conjI monadic_rewrite_\<Gamma>)[1]
           apply ((wp | simp)+)[3]
