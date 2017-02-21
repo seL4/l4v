@@ -367,12 +367,9 @@ where
   "vcpu_invalidate_active \<equiv> do
     cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
     case cur_v of
-      Some (vr, True) \<Rightarrow>
-         do
-         vcpu_disable None;
-         modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := None \<rparr>\<rparr>)
-         od
-    | _ \<Rightarrow> return ()
+      Some (vr, True) \<Rightarrow> vcpu_disable None
+    | _ \<Rightarrow> return ();
+    modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := None \<rparr>\<rparr>)
   od"
 
 
