@@ -8,8 +8,6 @@
 % @TAG(GD_GPL)
 %
 
-FIXME ARMHYP TODO handleHypervisorFault
-
 \begin{impdetails}
 
 > {-# LANGUAGE CPP #-}
@@ -20,17 +18,23 @@ FIXME ARMHYP TODO handleHypervisorFault
 
 \begin{impdetails}
 
-> import SEL4.Machine
+> import SEL4.Machine (PPtr (..))
 > import SEL4.Model
 > import SEL4.Object.Structures
-> import SEL4.Machine.Hardware.ARM_HYP as Arch
+> import SEL4.API.Failures
+> import SEL4.Kernel.FaultHandler
+> import SEL4.API.Failures.TARGET
+> import SEL4.Machine.Hardware.TARGET
 
 \end{impdetails}
 
-> handleHypervisorFault :: PPtr TCB -> Arch.HypFaultType -> Kernel ()
+> handleHypervisorFault :: PPtr TCB -> HypFaultType -> Kernel ()
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> handleHypervisorFault _ Arch.ARMNoHypFaults = fail "FIXME ARMHYP handleHypervisorFault"
+> handleHypervisorFault thread (ARMVCPUFault hsr) = do
+>     handleFault thread (ArchFault $ VCPUFault $ fromIntegral hsr)
 #else
-> handleHypervisorFault _ Arch.ARMNoHypFaults = fail "No hypervisor on this architecture"
+> handleHypervisorFault _ (ARMNoHypFaults) =
+>     -- no hypervisor faults on this platform
+>     return ()
 #endif
 

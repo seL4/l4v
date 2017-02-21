@@ -70,10 +70,12 @@ ARM virtual memory faults are handled by one of two trap handlers: one for data 
 
 \subsection{Hypervisor}
 
-FIXME ARMHYP TODO VCPUFault
-
 > data HypFaultType
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     = ARMVCPUFault Word32 -- HSR
+#else
 >     = ARMNoHypFaults
+#endif
 >     deriving Show
 
 \subsubsection{Physical Memory}

@@ -18,7 +18,7 @@ hypervisor extensions on ARM.
 
 \end{impdetails}
 
-> module SEL4.Object.VCPU.ARM_HYP(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, dissociateVCPUTCB) where
+> module SEL4.Object.VCPU.ARM_HYP(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, dissociateVCPUTCB, vgicMaintenance) where
 
 \begin{impdetails}
 
@@ -35,6 +35,8 @@ hypervisor extensions on ARM.
 > import SEL4.API.Invocation.ARM_HYP as ArchInv
 > import SEL4.API.Types
 > import SEL4.API.InvocationLabels
+> import SEL4.API.Failures.TARGET
+> import {-# SOURCE #-} SEL4.Kernel.FaultHandler
 > import {-# SOURCE #-} SEL4.Object.TCB
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 
@@ -161,6 +163,14 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 >           irqPending = bit 28
 >           eoiirqen = bit 19
 
+> virqType :: Word -> Int
+> virqType virq = fromIntegral $ (virq `shiftR` 28) .&. 3
+
+> -- this is identical for pending/active/invalid VIRQs
+> virqSetEOIIRQEN :: VIRQ -> Word -> VIRQ
+> virqSetEOIIRQEN virq v =
+>     (virq .&. complement 0x80000) .|. ((v `shiftL` 19) .&. 0x80000)
+
 > decodeVCPUInjectIRQ :: [Word] -> ArchCapability ->
 >         KernelF SyscallError ArchInv.Invocation
 > decodeVCPUInjectIRQ (mr0:mr1:_) cap@(VCPUCap {}) = do
@@ -236,6 +246,45 @@ For initialisation, see makeVCPUObject.
 >     case vcpuTCBPtr vcpu of
 >         Just tcbPtr -> dissociateVCPUTCB vcpuPtr tcbPtr
 >         Nothing -> return ()
+
+\subsection{VGICMaintenance}
+
+> countTrailingZeros :: (Bits b, FiniteBits b) => b -> Int
+> countTrailingZeros w =
+>     length . takeWhile not . map (testBit w) $ [0 .. finiteBitSize w - 1]
+
+> vgicMaintenance :: Kernel ()
+> vgicMaintenance = do
+>     eisr0 <- doMachineOp $ get_gic_vcpu_ctrl_eisr0
+>     eisr1 <- doMachineOp $ get_gic_vcpu_ctrl_eisr1
+>     flags <- doMachineOp $ get_gic_vcpu_ctrl_misr
+>     let vgic_misr_eoi = 1 -- defined to be VGIC_HCR_EN
+>
+>     fault <-
+>         if (flags .&. vgic_misr_eoi /= 0)
+>         then
+>             if (eisr0 == 0 && eisr1 == 0) -- irq_idx invalid
+>                 then return $ VGICMaintenance [0, 0]
+>                 else (do
+>                     let irq_idx = irqIndex eisr0 eisr1
+>                     gic_vcpu_num_list_regs <-
+>                         gets (armKSGICVCPUNumListRegs . ksArchState)
+>                     when (irq_idx < gic_vcpu_num_list_regs) (badIndex irq_idx)
+>                     return $ VGICMaintenance [fromIntegral irq_idx, 1]
+>                     )
+>         else return $ VGICMaintenance [0, 0]
+>
+>     ct <- getCurThread
+>     handleFault ct $ ArchFault fault
+>
+>     where
+>         irqIndex eisr0 eisr1 =
+>             if eisr0 /= 0 then countTrailingZeros eisr0
+>                           else countTrailingZeros eisr1
+>         badIndex irq_idx = doMachineOp $ (do
+>               virq <- get_gic_vcpu_ctrl_lr irq_idx
+>               set_gic_vcpu_ctrl_lr irq_idx $ virqSetEOIIRQEN virq 0
+>               )
 
 \subsection{VCPU State Control}
 
@@ -323,10 +372,6 @@ For initialisation, see makeVCPUObject.
 >         setACTLR (vcpuACTLR vcpu)
 >
 >     vcpuEnable vcpuPtr
-
-% FIXME ARMHYP TODO
-% TODO ARMHYP VGICMaintenance
-% TODO ARMHYP handleVCPUFault
 
 > vcpuInvalidateActive :: Kernel ()
 > vcpuInvalidateActive = do
