@@ -116,6 +116,10 @@ definition
   pptr_base :: "machine_word" where
   "pptr_base = Platform.X64.pptrBase"
 
+(* Virtual address space available to users. *)
+definition
+  user_vtop :: "machine_word" where
+  "user_vtop = 0x00007fffffffffff"
 
 text {* The lowest virtual address in the kernel window. The kernel reserves the
 virtual addresses from here up in every virtual address space. *}

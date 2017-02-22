@@ -1016,9 +1016,12 @@ lemmas is_vspace_table_cap_defs = is_pt_cap_def is_pd_cap_def is_pdpt_cap_def is
 abbreviation
   "is_vspace_table_cap c \<equiv> is_pt_cap c \<or> is_pd_cap c \<or> is_pdpt_cap c \<or> is_pml4_cap c"
 
+definition
+  "is_asid_pool_cap c \<equiv> \<exists>ptr asid. c = ArchObjectCap (ASIDPoolCap ptr asid)"
+
 
 lemmas is_arch_cap_simps [simplified atomize_eq] =
-  is_pg_cap_def is_pd_cap_def is_pt_cap_def is_pdpt_cap_def is_pml4_cap_def
+  is_pg_cap_def is_pd_cap_def is_pt_cap_def is_pdpt_cap_def is_pml4_cap_def is_asid_pool_cap_def
   is_nondevice_page_cap
 
 

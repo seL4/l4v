@@ -33,7 +33,7 @@ lemma  ptrFormPAddr_addFromPPtr :
 
 lemma asid_high_bits_of_add_ucast:
   "is_aligned w asid_low_bits \<Longrightarrow> 
-  asid_high_bits_of (ucast (x::8 word) + w) = asid_high_bits_of w"
+  asid_high_bits_of (ucast (x::9 word) + w) = asid_high_bits_of w"
   apply (rule word_eqI)
   apply (simp add: word_size asid_high_bits_of_def nth_ucast nth_shiftr is_aligned_nth)
   apply (subst word_plus_and_or_coroll)

@@ -1043,6 +1043,12 @@ lemma page_map_l4_at_def2:
   apply simp
   done
 
+lemma
+  shows pd_pointer_table_at_def2: "pd_pointer_table_at p s = (\<exists> pdpt. ako_at (PDPointerTable pdpt) p s)"
+    and page_directory_at_def2: "page_directory_at p s = (\<exists> pd. ako_at (PageDirectory pd) p s)"
+    and page_table_at_def2: "page_table_at p s = (\<exists> pt. ako_at (PageTable pt) p s)"
+  by (auto simp: obj_at_def) (auto simp: a_type_def)
+
 definition
   pml4e_wp_at :: "(pml4e \<Rightarrow> bool) \<Rightarrow> machine_word \<Rightarrow> 9 word \<Rightarrow> 'z state \<Rightarrow> bool"
   where

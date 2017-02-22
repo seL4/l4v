@@ -1064,11 +1064,6 @@ lemma kernel_base_kernel_mapping_slots:
   apply word_bitwise
   by blast
 
-private lemma kernel_base_kernel_mapping_slots_hoare_pre:
-  assumes "ucast (get_pml4_index vptr) \<notin> kernel_mapping_slots \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>,-"
-  shows "\<lbrace> P and K (vptr < pptr_base \<and> canonical_address vptr) \<rbrace> f \<lbrace> Q \<rbrace>,-"
-  by (rule hoare_gen_asmE; simp add: assms kernel_base_kernel_mapping_slots)
-
 private lemma vtable_index_mask:
   fixes r :: word64
   shows "(r && mask table_size >> word_size_bits) && mask 9
@@ -1083,25 +1078,25 @@ private lemma vtable_index_mask:
 
 private abbreviation (input)
   "pre pm_lookup \<equiv> pspace_aligned and valid_arch_objs and valid_arch_state
-                      and equal_kernel_mappings and valid_global_objs
-                      and page_map_l4_at pm and pm_lookup
-                      and K (vptr < pptr_base \<and> canonical_address vptr)"
+                      and equal_kernel_mappings and valid_global_objs and pm_lookup
+                      and K (is_aligned pm pml4_bits \<and> vptr < pptr_base \<and> canonical_address vptr)"
 
 private abbreviation (input)
   "pdpt_ref pm_ref \<equiv> VSRef (get_pml4_index vptr) (Some APageMapL4) # pm_ref"
 
-private lemma lookup_pdpt_slot_rv [simplified pred_and_true_var]:
-  "\<And>pm_ref.
-    \<lbrace> pre (pm_ref \<rhd> pm) \<rbrace>
-      lookup_pdpt_slot pm vptr
-    \<lbrace> \<lambda>rv s. pdpte_at rv s
-              \<and> (pdpt_ref pm_ref \<rhd> (rv && ~~ mask pdpt_bits)) s
-              \<and> (get_pdpt_index vptr = rv && mask pdpt_bits >> word_size_bits) \<rbrace>,-"
-  apply (rule kernel_base_kernel_mapping_slots_hoare_pre)
+lemma lookup_pdpt_slot_wp:
+  "\<lbrace> \<lambda>s. \<forall>rv. (\<forall>pm_ref. pre (pm_ref \<rhd> pm) s \<longrightarrow>
+                          pdpte_at rv s
+                            \<and> (pdpt_ref pm_ref \<rhd> (rv && ~~ mask pdpt_bits)) s
+                            \<and> get_pdpt_index vptr = rv && mask pdpt_bits >> word_size_bits)
+              \<longrightarrow> Q rv s \<rbrace>
+     lookup_pdpt_slot pm vptr
+   \<lbrace> Q \<rbrace>, -"
   apply (clarsimp simp: lookup_pdpt_slot_def)
   apply (wp get_pml4e_wp | wpc)+
-  apply (clarsimp simp: lookup_pml4_slot_def Let_def)
-  apply (simp add: pml4_shifting_at)
+  apply (clarsimp, drule spec, erule mp)
+  apply (clarsimp simp: lookup_pml4_slot_def pml4_shifting)
+  apply (frule (1) kernel_base_kernel_mapping_slots)
   apply (frule (2) valid_arch_objsD; clarsimp)
   apply (bspec "ucast (get_pml4_index vptr)"; clarsimp)
   apply (rule conjI)
@@ -1119,64 +1114,87 @@ private lemma lookup_pdpt_slot_rv [simplified pred_and_true_var]:
 private abbreviation (input)
   "pd_ref pm_ref \<equiv> VSRef (get_pdpt_index vptr) (Some APDPointerTable) # pdpt_ref pm_ref"
 
-private lemma lookup_pd_slot_rv [simplified pred_and_true_var]:
+lemma lookup_pd_slot_wp:
+  "\<lbrace> \<lambda>s. \<forall>rv. (\<forall>pm_ref. pre (pm_ref \<rhd> pm) s \<longrightarrow>
+                          pde_at rv s
+                            \<and> (pd_ref pm_ref \<rhd> (rv && ~~ mask pd_bits)) s
+                            \<and> get_pd_index vptr = rv && mask pd_bits >> word_size_bits)
+              \<longrightarrow> Q rv s \<rbrace>
+     lookup_pd_slot pm vptr
+   \<lbrace> Q \<rbrace>, -"
+  apply (clarsimp simp: lookup_pd_slot_def)
+  apply (wp get_pdpte_wp lookup_pdpt_slot_wp | wpc | simp)+
+  apply (clarsimp; drule spec; erule mp; clarsimp)
+  apply (drule spec; erule (1) impE; clarsimp)
+  apply (frule (2) valid_arch_objsD; clarsimp)
+  apply (drule_tac x="ucast (rv && mask pdpt_bits >> word_size_bits)" in spec; clarsimp)
+  apply (rule conjI)
+   apply (erule page_directory_pde_atI, simp_all)
+   apply (simp add: get_pd_index_def bit_simps mask_def)
+   apply (rule order_le_less_trans, rule word_and_le1, simp)
+  apply (frule vs_lookup_step, rule vs_lookup1I[OF _ _ refl], assumption)
+   apply (simp add: vs_refs_def)
+   apply (rule image_eqI[rotated])
+    apply (rule_tac x="ucast (rv && mask pdpt_bits >> word_size_bits)" in graph_ofI)
+    by (simp add: pdpte_ref_def pd_shifting_at ucast_ucast_mask pdpt_bits_def vtable_index_mask)+
+
+private abbreviation (input)
+  "pt_ref pm_ref \<equiv> VSRef (get_pd_index vptr) (Some APageDirectory) # pd_ref pm_ref"
+
+lemma lookup_pt_slot_wp:
+  "\<lbrace> \<lambda>s. \<forall>rv. (\<forall>pm_ref. pre (pm_ref \<rhd> pm) s \<longrightarrow>
+                          pte_at rv s
+                            \<and> (pt_ref pm_ref \<rhd> (rv && ~~ mask pt_bits)) s
+                            \<and> get_pt_index vptr = rv && mask pt_bits >> word_size_bits)
+              \<longrightarrow> Q rv s \<rbrace>
+     lookup_pt_slot pm vptr
+   \<lbrace> Q \<rbrace>, -"
+  apply (clarsimp simp: lookup_pt_slot_def)
+  apply (wp get_pde_wp lookup_pd_slot_wp | wpc | simp)+
+  apply (clarsimp; drule spec; erule mp; clarsimp)
+  apply (drule spec; erule (1) impE; clarsimp)
+  apply (frule (2) valid_arch_objsD; clarsimp)
+  apply (drule_tac x="ucast (rv && mask pd_bits >> word_size_bits)" in spec; clarsimp)
+  apply (rule conjI)
+   apply (erule page_table_pte_atI, simp_all)
+   apply (simp add: get_pt_index_def bit_simps mask_def)
+   apply (rule order_le_less_trans, rule word_and_le1, simp)
+  apply (frule vs_lookup_step, rule vs_lookup1I[OF _ _ refl], assumption)
+   apply (simp add: vs_refs_def)
+   apply (rule image_eqI[rotated])
+    apply (rule_tac x="ucast (rv && mask pd_bits >> word_size_bits)" in graph_ofI)
+    by (simp add: pde_ref_def pt_shifting_at ucast_ucast_mask pd_bits_def vtable_index_mask)+
+
+(* The following older lemmas are kept for a few existing proofs.
+   They are weaker than the above lookup_*_slot_wp rules, and harder to use.
+   New proofs should use the lookup_*_slot_wp rules. *)
+
+private lemma lookup_pd_slot_rv:
   "\<And>pm_ref.
     \<lbrace> pre (pm_ref \<rhd> pm) \<rbrace>
       lookup_pd_slot pm vptr
     \<lbrace> \<lambda>rv s. pde_at rv s
               \<and> (pd_ref pm_ref \<rhd> (rv && ~~ mask pd_bits)) s
               \<and> (get_pd_index vptr = rv && mask pd_bits >> word_size_bits) \<rbrace>,-"
-  apply (simp add: lookup_pd_slot_def)
-  apply (rule hoare_pre)
-   apply (wp get_pdpte_wp hoare_vcg_all_lift_R | wpc | simp)+
-   apply (rule hoare_post_imp_R)
-    apply (rule_tac Q="\<lambda>_. valid_arch_objs and pspace_aligned" in hoare_vcg_conj_lift_R)
-     apply (rule lookup_pdpt_slot_inv_any)
-    apply (rule lookup_pdpt_slot_rv)
-   apply clarsimp
-   apply (frule (2) valid_arch_objsD; clarsimp)
-   apply (drule_tac x="ucast (r && mask pdpt_bits >> word_size_bits)" in spec; clarsimp)
-   apply (rule conjI)
-    apply (erule page_directory_pde_atI, simp_all)
-    apply (simp add: get_pd_index_def bit_simps mask_def)
-    apply (rule order_le_less_trans, rule word_and_le1, simp)
-   apply (frule vs_lookup_step)
-    apply (rule vs_lookup1I[OF _ _ refl], assumption)
-    apply (simp add: vs_refs_def)
-    apply (rule image_eqI[rotated])
-     apply (rule_tac x="ucast (r && mask pdpt_bits >> word_size_bits)" in graph_ofI)
-     by (simp add: pdpte_ref_def pd_shifting_at ucast_ucast_mask pdpt_bits_def vtable_index_mask)+
+  by (rule hoare_pre, rule lookup_pd_slot_wp, clarsimp)
 
-private abbreviation (input)
-  "pt_ref pm_ref \<equiv> VSRef (get_pd_index vptr) (Some APageDirectory) # pd_ref pm_ref"
+private lemma lookup_pdpt_slot_rv:
+  "\<And>pm_ref.
+    \<lbrace> pre (pm_ref \<rhd> pm) \<rbrace>
+      lookup_pdpt_slot pm vptr
+    \<lbrace> \<lambda>rv s. pdpte_at rv s
+              \<and> (pdpt_ref pm_ref \<rhd> (rv && ~~ mask pdpt_bits)) s
+              \<and> (get_pdpt_index vptr = rv && mask pdpt_bits >> word_size_bits) \<rbrace>,-"
+  by (rule hoare_pre, rule lookup_pdpt_slot_wp, clarsimp)
 
-private lemma lookup_pt_slot_rv [simplified pred_and_true_var]:
+private lemma lookup_pt_slot_rv:
   "\<And>pm_ref.
     \<lbrace> pre (pm_ref \<rhd> pm) \<rbrace>
       lookup_pt_slot pm vptr
     \<lbrace>\<lambda>rv s. pte_at rv s
              \<and> (pt_ref pm_ref \<rhd> (rv && ~~ mask pt_bits)) s
              \<and> (get_pt_index vptr = rv && mask pt_bits >> word_size_bits) \<rbrace>,-"
-  apply (simp add: lookup_pt_slot_def)
-  apply (rule hoare_pre)
-   apply (wp get_pde_wp hoare_vcg_all_lift_R | wpc | simp)+
-   apply (rule hoare_post_imp_R)
-    apply (rule_tac Q="\<lambda>rv. valid_arch_objs and pspace_aligned" in hoare_vcg_conj_lift_R)
-     apply (rule lookup_pd_slot_inv_any)
-    apply (rule lookup_pd_slot_rv)
-   apply clarsimp
-   apply (frule (2) valid_arch_objsD; clarsimp)
-   apply (drule_tac x="ucast (r && mask pd_bits >> word_size_bits)" in spec; clarsimp)
-   apply (rule conjI)
-    apply (erule page_table_pte_atI, simp_all)
-    apply (simp add: get_pt_index_def bit_simps mask_def)
-    apply (rule order_le_less_trans, rule word_and_le1, simp)
-   apply (frule vs_lookup_step)
-    apply (rule vs_lookup1I[OF _ _ refl], assumption)
-    apply (simp add: vs_refs_def)
-    apply (rule image_eqI[rotated])
-     apply (rule_tac x="ucast (r && mask pd_bits >> word_size_bits)" in graph_ofI)
-     by (simp add: pde_ref_def pt_shifting_at ucast_ucast_mask pd_bits_def vtable_index_mask)+
+  by (rule hoare_pre, rule lookup_pt_slot_wp, clarsimp)
 
 (* It's awkward to prove the following more generally, since these are probably only true
    when the vs_lookups are only under conjunctions. *)
@@ -1198,25 +1216,18 @@ private lemmas get_ent_pm = validE_R_post_conjD1
 private lemmas get_ent_ex = vs_lookup_all_ex_convert_pre[OF get_ent_pm]
 private lemmas get_lookup = validE_R_post_conjD1[OF validE_R_post_conjD2]
 private lemmas get_lkp_ex = vs_lookup_all_ex_convert_post[OF get_lookup]
-private lemmas get_vindex = validE_R_post_conjD2[OF validE_R_post_conjD2]
 
-lemmas lookup_pdpt_slot_pdpte             = get_ent_pm[OF lookup_pdpt_slot_rv]
 lemmas lookup_pdpt_slot_pdpte_ex     [wp] = get_ent_ex[OF lookup_pdpt_slot_rv]
 lemmas lookup_pdpt_slot_vs_lookup    [wp] = get_lookup[OF lookup_pdpt_slot_rv]
 lemmas lookup_pdpt_slot_vs_lookup_ex [wp] = get_lkp_ex[OF lookup_pdpt_slot_rv]
-lemmas lookup_pdpt_slot_vs_index          = get_vindex[OF lookup_pdpt_slot_rv]
 
-lemmas lookup_pd_slot_pde                 = get_ent_pm[OF lookup_pd_slot_rv]
 lemmas lookup_pd_slot_pde_ex         [wp] = get_ent_ex[OF lookup_pd_slot_rv]
 lemmas lookup_pd_slot_vs_lookup      [wp] = get_lookup[OF lookup_pd_slot_rv]
 lemmas lookup_pd_slot_vs_lookup_ex   [wp] = get_lkp_ex[OF lookup_pd_slot_rv]
-lemmas lookup_pd_slot_vs_index            = get_vindex[OF lookup_pd_slot_rv]
 
-lemmas lookup_pt_slot_pte                 = get_ent_pm[OF lookup_pt_slot_rv]
 lemmas lookup_pt_slot_pte_ex         [wp] = get_ent_ex[OF lookup_pt_slot_rv]
 lemmas lookup_pt_slot_vs_lookup      [wp] = get_lookup[OF lookup_pt_slot_rv]
 lemmas lookup_pt_slot_vs_lookup_ex   [wp] = get_lkp_ex[OF lookup_pt_slot_rv]
-lemmas lookup_pt_slot_vs_index            = get_vindex[OF lookup_pt_slot_rv]
 
 lemma create_mapping_entries_valid [wp]:
   "\<lbrace> pre (\<exists>\<rhd> pm) \<rbrace>
@@ -1229,16 +1240,65 @@ lemma create_mapping_entries_valid [wp]:
 
 end
 
+context begin
+
+method finish =
+  (simp?; erule is_aligned_weaken[rotated]; simp add: is_aligned_def pptrBase_def)
+
+lemma is_aligned_addrFromPPtr_eq: "n \<le> 39 \<Longrightarrow> is_aligned (addrFromPPtr p) n = is_aligned p n"
+  apply (simp add: addrFromPPtr_def; rule iffI)
+   apply (drule aligned_sub_aligned[where y="-pptrBase"]; finish)
+  apply (erule aligned_sub_aligned; finish)
+  done
+
+lemma is_aligned_ptrFromPAddr_eq: "n \<le> 39 \<Longrightarrow> is_aligned (ptrFromPAddr p) n = is_aligned p n"
+  apply (simp add: ptrFromPAddr_def; rule iffI)
+   apply (drule aligned_add_aligned[where y="-pptrBase"]; finish)
+  apply (erule aligned_add_aligned; finish)
+  done
+
+end
+
+lemma is_aligned_addrFromPPtr_n:
+  "\<lbrakk> is_aligned p n; n \<le> 39 \<rbrakk> \<Longrightarrow> is_aligned (addrFromPPtr p) n"
+  by (simp add: is_aligned_addrFromPPtr_eq)
+
+lemma is_aligned_ptrFromPAddr_n:
+  "\<lbrakk>is_aligned x sz; sz \<le> 39\<rbrakk> \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"
+  by (simp add: is_aligned_ptrFromPAddr_eq)
+
+lemma is_aligned_addrFromPPtr:
+  "is_aligned p pageBits \<Longrightarrow> is_aligned (addrFromPPtr p) pageBits"
+  by (simp add: is_aligned_addrFromPPtr_n pageBits_def)
+
+lemma is_aligned_ptrFromPAddr:
+  "is_aligned p pageBits \<Longrightarrow> is_aligned (ptrFromPAddr p) pageBits"
+  by (simp add: is_aligned_ptrFromPAddr_n pageBits_def)
+
+lemma is_aligned_addrFromPPtr_pageBitsForSize:
+  "is_aligned (addrFromPPtr p) (pageBitsForSize sz) = is_aligned p (pageBitsForSize sz)"
+  by (cases sz; simp add: is_aligned_addrFromPPtr_eq bit_simps)
+
+lemma is_aligned_ptrFromPAddr_pageBitsForSize:
+  "is_aligned (ptrFromPAddr p) (pageBitsForSize sz) = is_aligned p (pageBitsForSize sz)"
+  by (cases sz; simp add: is_aligned_ptrFromPAddr_eq bit_simps)
+
+lemma data_at_vmsz_aligned:
+  "data_at sz (ptrFromPAddr base) s \<Longrightarrow> pspace_aligned s \<Longrightarrow> vmsz_aligned base sz"
+  by (cases sz)
+     (auto simp: data_at_def obj_at_def vmsz_aligned_def bit_simps
+          dest!: pspace_alignedD
+          elim!: iffD1[OF is_aligned_ptrFromPAddr_eq, rotated])
 
 lemma create_mapping_entries_valid_slots [wp]:
   "\<lbrace> pspace_aligned and valid_arch_objs and valid_arch_state and equal_kernel_mappings
-        and valid_global_objs and page_map_l4_at pm and (\<exists>\<rhd> pm) and data_at sz (ptrFromPAddr base)
-        and K (vptr < pptr_base \<and> canonical_address vptr \<and> vmsz_aligned base sz
+        and valid_global_objs and (\<exists>\<rhd> pm) and data_at sz (ptrFromPAddr base)
+        and K (is_aligned pm pml4_bits \<and> vptr < pptr_base \<and> canonical_address vptr
                 \<and> vm_rights \<in> valid_vm_rights) \<rbrace>
      create_mapping_entries base vptr sz vm_rights attrib pm
    \<lbrace>\<lambda>m. valid_slots m\<rbrace>,-"
   apply (cases sz; simp; rule hoare_pre)
-       apply (wp | simp add: valid_slots_def
+       apply (wp | clarsimp simp: valid_slots_def elim!: data_at_vmsz_aligned
                  | rule lookup_pt_slot_inv_any lookup_pd_slot_inv_any lookup_pdpt_slot_inv_any)+
   done
 
@@ -2085,34 +2145,6 @@ lemma lookup_pml4_slot_eq:
    apply simp+
   done
 
-  
-lemma is_aligned_addrFromPPtr_n:
-  "\<lbrakk> is_aligned p n; n \<le> 39 \<rbrakk> \<Longrightarrow> is_aligned (Platform.X64.addrFromPPtr p) n"
-  apply (simp add: Platform.X64.addrFromPPtr_def)
-  apply (erule aligned_sub_aligned, simp_all)
-  apply (simp add: pptrBase_def
-                   pageBits_def)
-  apply (erule is_aligned_weaken[rotated])
-  apply (simp add: is_aligned_def)
-  done
-
-lemma is_aligned_addrFromPPtr:
-  "is_aligned p pageBits \<Longrightarrow> is_aligned (Platform.X64.addrFromPPtr p) pageBits"
-  by (simp add: is_aligned_addrFromPPtr_n pageBits_def)
-
-lemma is_aligned_ptrFromPAddr_n:
-  "\<lbrakk>is_aligned x sz; sz \<le> 39\<rbrakk> \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"
-  apply (simp add: ptrFromPAddr_def pptrBase_def)
-  apply (erule aligned_add_aligned)
-   apply (erule is_aligned_weaken[rotated])
-   apply (simp add:is_aligned_def)
-  apply (simp add:word_bits_def)
-  done
-
-lemma is_aligned_ptrFromPAddr:
-  "is_aligned p pageBits \<Longrightarrow> is_aligned (ptrFromPAddr p) pageBits"
-  by (simp add: is_aligned_ptrFromPAddr_n pageBits_def)
-
 lemma vs_lookup_arch_update:
   "x64_asid_table (f (arch_state s)) = x64_asid_table (arch_state s) \<Longrightarrow>
   vs_lookup (arch_state_update f s) = vs_lookup s"
@@ -2485,7 +2517,18 @@ lemma valid_cap_typ_at:
   "\<lbrakk>is_pt_cap cap; p \<in> obj_refs cap;  s \<turnstile> cap\<rbrakk> \<Longrightarrow> typ_at (AArch APageTable) p s"
   "\<lbrakk>is_pdpt_cap cap; p \<in> obj_refs cap;  s \<turnstile> cap\<rbrakk> \<Longrightarrow> typ_at (AArch APDPointerTable) p s"
   "\<lbrakk>is_pml4_cap cap; p \<in> obj_refs cap;  s \<turnstile> cap\<rbrakk> \<Longrightarrow> typ_at (AArch APageMapL4) p s"
+  "\<lbrakk>is_asid_pool_cap cap; p \<in> obj_refs cap;  s \<turnstile> cap\<rbrakk> \<Longrightarrow> typ_at (AArch AASIDPool) p s"
   by (auto simp: is_cap_simps valid_cap_def)
+
+lemma valid_arch_cap_typ_at [elim]:
+  "\<And>s p r t sz asid. s \<turnstile> ArchObjectCap (PageCap True p r t sz asid) \<Longrightarrow> typ_at (AArch (ADeviceData sz)) p s"
+  "\<And>s p r t sz asid. s \<turnstile> ArchObjectCap (PageCap False p r t sz asid) \<Longrightarrow> typ_at (AArch (AUserData sz)) p s"
+  "\<And>s p asid. s \<turnstile> ArchObjectCap (PageTableCap p asid) \<Longrightarrow> typ_at (AArch APageTable) p s"
+  "\<And>s p asid. s \<turnstile> ArchObjectCap (PageDirectoryCap p asid) \<Longrightarrow> typ_at (AArch APageDirectory) p s"
+  "\<And>s p asid. s \<turnstile> ArchObjectCap (PDPointerTableCap p asid) \<Longrightarrow> typ_at (AArch APDPointerTable) p s"
+  "\<And>s p asid. s \<turnstile> ArchObjectCap (PML4Cap p asid) \<Longrightarrow> typ_at (AArch APageMapL4) p s"
+  "\<And>s p asid. s \<turnstile> ArchObjectCap (ASIDPoolCap p asid) \<Longrightarrow> typ_at (AArch AASIDPool) p s"
+  by (auto simp: valid_cap_def)
 
 lemma is_cap_disjoint[simp]:
   "\<lbrakk>is_pd_cap cap; is_pdpt_cap cap\<rbrakk>\<Longrightarrow> False"

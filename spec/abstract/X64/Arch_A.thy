@@ -278,11 +278,11 @@ definition
     case i of
           InvokePageTable oper \<Rightarrow> perform_page_table_invocation oper
         | InvokePageDirectory oper \<Rightarrow> perform_page_directory_invocation oper
+        | InvokePDPT oper \<Rightarrow> perform_pdpt_invocation oper
         | InvokePage oper \<Rightarrow> perform_page_invocation oper
         | InvokeASIDControl oper \<Rightarrow> perform_asid_control_invocation oper
         | InvokeASIDPool oper \<Rightarrow> perform_asid_pool_invocation oper
-        | InvokeIOPort oper \<Rightarrow> perform_io_port_invocation oper
-        | _ \<Rightarrow> fail;
+        | InvokeIOPort oper \<Rightarrow> perform_io_port_invocation oper;
     return $ []
 od"
 
