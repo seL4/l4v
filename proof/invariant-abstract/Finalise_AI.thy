@@ -694,7 +694,7 @@ lemma tcb_cap_valid_imp_NullCap:
   done
 
 lemma a_type_arch_live:
-  "a_type ko = AArch tp \<Longrightarrow> \<not> live' ko"
+  "a_type ko = AArch tp \<Longrightarrow> \<not> live0 ko"
   by (simp add: a_type_def
          split: Structures_A.kernel_object.split_asm)
 

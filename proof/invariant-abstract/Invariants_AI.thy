@@ -92,7 +92,7 @@ requalify_facts
   hyp_sym_refs_ko_atD
   state_hyp_refs_of_pspaceI
   state_hyp_refs_update
-  hyp_refs_of_live'
+  hyp_refs_of_hyp_live
   hyp_refs_of_hyp_live_obj
   hyp_refs_of_simps
   tcb_arch_ref_simps
@@ -602,22 +602,22 @@ where
 
 
 primrec
-  live' :: "kernel_object \<Rightarrow> bool"
+  live0 :: "kernel_object \<Rightarrow> bool"
 where
-  "live' (CNode sz fun)      = False"
-| "live' (TCB tcb)           = (bound (tcb_bound_notification tcb) \<or> (tcb_state tcb \<noteq> Inactive \<and>
+  "live0 (CNode sz fun)      = False"
+| "live0 (TCB tcb)           = (bound (tcb_bound_notification tcb) \<or> (tcb_state tcb \<noteq> Inactive \<and>
                                tcb_state tcb \<noteq> IdleThreadState))"
-| "live' (Endpoint ep)       = (ep \<noteq> IdleEP)"
-| "live' (Notification ntfn) = (bound (ntfn_bound_tcb ntfn) \<or> (\<exists>ts. ntfn_obj ntfn = WaitingNtfn ts))"
-| "live' (ArchObj ao)        = False"
+| "live0 (Endpoint ep)       = (ep \<noteq> IdleEP)"
+| "live0 (Notification ntfn) = (bound (ntfn_bound_tcb ntfn) \<or> (\<exists>ts. ntfn_obj ntfn = WaitingNtfn ts))"
+| "live0 (ArchObj ao)        = False"
 
 definition live :: "kernel_object \<Rightarrow> bool"
 where
  "live ko \<equiv> case ko of
      CNode sz fun      => False
-   | TCB tcb           => live' ko \<or> hyp_live ko
-   | Endpoint ep       => live' ko
-   | Notification ntfn => live' ko
+   | TCB tcb           => live0 ko \<or> hyp_live ko
+   | Endpoint ep       => live0 ko
+   | Notification ntfn => live0 ko
    | ArchObj ao        => hyp_live ko"
 
 fun
@@ -1358,7 +1358,7 @@ lemma refs_of_live:
 
 lemma hyp_refs_of_live:
   "hyp_refs_of ko \<noteq> {} \<Longrightarrow> live ko"
-  by (cases ko, simp_all add: live_def hyp_refs_of_live')
+  by (cases ko, simp_all add: live_def hyp_refs_of_hyp_live)
 
 lemma refs_of_live_obj:
   "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at live p s"

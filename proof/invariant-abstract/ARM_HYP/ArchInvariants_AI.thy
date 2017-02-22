@@ -2530,7 +2530,7 @@ where
 | (ArchObj ao) \<Rightarrow> arch_live ao
 |  _ \<Rightarrow> False"
 
-lemma hyp_refs_of_live':
+lemma hyp_refs_of_hyp_live:
   "hyp_refs_of ko \<noteq> {} \<Longrightarrow> hyp_live ko"
   apply (cases ko, simp_all add: hyp_refs_of_def)
    apply (rename_tac tcb_ext)
@@ -2540,15 +2540,15 @@ lemma hyp_refs_of_live':
                   split: arch_kernel_obj.splits option.splits)
   done
 
-lemma hyp_refs_of_live_iff:
+lemma hyp_refs_of_hyp_live_iff:
   "hyp_refs_of ko \<noteq> {} = hyp_live ko"
-  apply (rule, clarsimp simp: hyp_refs_of_live')
+  apply (rule, clarsimp simp: hyp_refs_of_hyp_live)
   apply (cases ko; clarsimp simp add: hyp_live_def arch_live_def split: arch_kernel_obj.splits)
   done
 
 lemma hyp_refs_of_hyp_live_obj:
   "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; hyp_refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at hyp_live p s"
-  by (fastforce simp: obj_at_def hyp_refs_of_live')
+  by (fastforce simp: obj_at_def hyp_refs_of_hyp_live)
 
 
 (* use tcb_arch_ref to handle obj_refs in tcb_arch: currently there is a vcpu ref only *)

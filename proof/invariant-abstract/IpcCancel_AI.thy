@@ -800,7 +800,7 @@ crunch bound_tcb_at[wp]: cancel_ipc "bound_tcb_at P t"
 lemma suspend_unlive:
   "\<lbrace>bound_tcb_at (op = None) t and valid_mdb and valid_objs and tcb_at t \<rbrace>
       suspend t
-   \<lbrace>\<lambda>rv. obj_at (Not \<circ> live') t\<rbrace>"
+   \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) t\<rbrace>"
   apply (simp add: suspend_def set_thread_state_def set_object_def)
   apply (wp | simp only: obj_at_exst_update)+
   apply (simp add: obj_at_def)

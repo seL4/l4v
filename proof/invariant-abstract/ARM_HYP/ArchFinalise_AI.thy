@@ -852,20 +852,20 @@ lemma dissociate_vcpu_tcb_unlive_hyp_t[wp]:
   unfolding dissociate_vcpu_tcb_def
   by (wpsimp wp: hoare_vcg_imp_lift get_vcpu_wp)
 
-lemma arch_thread_set_unlive'[wp]:
-  "\<lbrace>obj_at (Not \<circ> live') vr\<rbrace> arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>\<lambda>_. obj_at (Not \<circ> live') vr\<rbrace>"
+lemma arch_thread_set_unlive0[wp]:
+  "\<lbrace>obj_at (Not \<circ> live0) vr\<rbrace> arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>\<lambda>_. obj_at (Not \<circ> live0) vr\<rbrace>"
   apply (wpsimp simp: arch_thread_set_def wp: set_object_wp)
   apply (clarsimp simp: obj_at_def get_tcb_def split: kernel_object.splits)
   done
 
-lemma set_vcpu_unlive'[wp]:
- "\<lbrace>obj_at (Not \<circ> live') t\<rbrace> set_vcpu vr v \<lbrace>\<lambda>rv. obj_at (Not \<circ> live') t\<rbrace>"
+lemma set_vcpu_unlive0[wp]:
+ "\<lbrace>obj_at (Not \<circ> live0) t\<rbrace> set_vcpu vr v \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) t\<rbrace>"
   by (wpsimp wp: set_vcpu_wp simp: obj_at_def)
 
 lemma o_def_not: "obj_at (\<lambda>a. \<not> P a) t s =  obj_at (Not o P) t s"
   by (simp add: obj_at_def)
 
-crunch unlive': dissociate_vcpu_tcb "obj_at (Not \<circ> live') t"
+crunch unlive0: dissociate_vcpu_tcb "obj_at (Not \<circ> live0) t"
   (wp: crunch_wps simp: o_def_not)
 
 lemma arch_thread_set_if_live_then_nonz_cap':
@@ -1205,16 +1205,16 @@ lemma prepare_thread_delete_unlive_hyp:
   apply (clarsimp simp: obj_at_def is_tcb_def hyp_live_def)
   done
 
-lemma prepare_thread_delete_unlive':
-  "\<lbrace>obj_at (Not \<circ> live') ptr\<rbrace> prepare_thread_delete ptr \<lbrace>\<lambda>rv. obj_at (Not \<circ> live') ptr\<rbrace>"
+lemma prepare_thread_delete_unlive0:
+  "\<lbrace>obj_at (Not \<circ> live0) ptr\<rbrace> prepare_thread_delete ptr \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) ptr\<rbrace>"
   apply (simp add: prepare_thread_delete_def set_thread_state_def set_object_def)
-  apply (wpsimp wp: dissociate_vcpu_tcb_unlive'| simp only: obj_at_exst_update)+
+  apply (wpsimp wp: dissociate_vcpu_tcb_unlive0| simp only: obj_at_exst_update)+
   done
 
 lemma prepare_thread_delete_unlive[wp]:
-  "\<lbrace>obj_at (Not \<circ> live') ptr\<rbrace> prepare_thread_delete ptr \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) ptr\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv. obj_at (Not \<circ> live') ptr and obj_at (Not \<circ> hyp_live) ptr" in hoare_strengthen_post)
-  apply (wpsimp wp: hoare_vcg_conj_lift prepare_thread_delete_unlive_hyp prepare_thread_delete_unlive')+
+  "\<lbrace>obj_at (Not \<circ> live0) ptr\<rbrace> prepare_thread_delete ptr \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) ptr\<rbrace>"
+  apply (rule_tac Q="\<lambda>rv. obj_at (Not \<circ> live0) ptr and obj_at (Not \<circ> hyp_live) ptr" in hoare_strengthen_post)
+  apply (wpsimp wp: hoare_vcg_conj_lift prepare_thread_delete_unlive_hyp prepare_thread_delete_unlive0)+
   apply (clarsimp simp: obj_at_def, case_tac ko, simp_all add: is_tcb_def live_def)
   done
 
