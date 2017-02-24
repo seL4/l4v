@@ -18,7 +18,6 @@ begin
 (* Small hack to keep enough available threads around to support ongoing apply_debug sessions *)
 ML \<open>
 val start_max_threads = Multithreading.max_threads ();
-val needs_max_threads_hook = Unsynchronized.ref false;
 \<close>
 
 (*FIXME: Add proper interface to match *)
@@ -580,10 +579,6 @@ let
 in () end
 
 
-val _ = if (!needs_max_threads_hook) then
-  (needs_max_threads_hook := false; Toplevel.add_hook (fn _ => fn _ => fn _ => update_max_threads 0))
-  else ()
-
 fun continue i_opt m_opt =
 (map_state (fn (ctxt,thm) =>
       let
@@ -663,7 +658,10 @@ fun continue i_opt m_opt =
 fun do_apply pos rng opts m =
 let
   val {tags, trace, show_running} = opts;
-  val _ = update_max_threads 1;
+  val batch_mode = is_some (Position.line_of (fst rng));
+  val show_running = if batch_mode then false else show_running;
+
+  val _ = if batch_mode then () else update_max_threads 1;
 
 in
  (fn st => map_state (fn (ctxt,thm) =>
@@ -719,7 +717,8 @@ in
 
      val _ = maybe_markup Markup.joined;
 
-     val main_thread = Future.fork (fn () =>
+
+     val main_thread = if batch_mode then Future.fork (fn () => ()) else Future.fork (fn () =>
       let
 
         fun restart_state gls e = e
