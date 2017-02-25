@@ -98,6 +98,7 @@ lemmas typ_at_to_obj_at_arches
     typ_at_to_obj_at'[where 'a=asidpool, simplified]
     typ_at_to_obj_at'[where 'a=user_data, simplified]
     typ_at_to_obj_at'[where 'a=user_data_device, simplified]
+    typ_at_to_obj_at'[where 'a=vcpu, simplified]
 
 lemmas page_table_at_obj_at'
   = page_table_at'_def[unfolded typ_at_to_obj_at_arches]
@@ -171,7 +172,7 @@ lemma koType_objBitsKO:
   "koTypeOf k = koTypeOf k' \<Longrightarrow> objBitsKO k = objBitsKO k'"
   by (auto simp: objBitsKO_def archObjSize_def
           split: Structures_H.kernel_object.splits
-                 ARM_H.arch_kernel_object.splits)
+                 ARM_HYP_H.arch_kernel_object.splits)
 
 lemma updateObject_objBitsKO:
     "(ko', t') \<in> fst (updateObject (val :: 'a :: pspace_storable) ko p q n t)
@@ -183,9 +184,9 @@ lemma updateObject_objBitsKO:
 lemma objBitsKO_bounded:
   "objBitsKO ko \<le> word_bits"
   apply (cases ko)
-  apply (simp_all add: word_bits_def pageBits_def
-                       objBitsKO_simps archObjSize_def
-                split: ARM_H.arch_kernel_object.splits)
+  apply (simp_all add: word_bits_def vspace_bits_defs
+                       objBitsKO_simps archObjSize_def vcpu_bits_def
+                split: ARM_HYP_H.arch_kernel_object.splits)
   done
 
 lemma updateObject_cte_is_tcb_or_cte:
@@ -980,14 +981,15 @@ lemma obj_relation_cut_same_type:
     (y', P') \<in> obj_relation_cuts ko' x'; P' ko' z \<rbrakk>
      \<Longrightarrow> (a_type ko = a_type ko') \<or> (\<exists>n n'. a_type ko = ACapTable n \<and> a_type ko' = ACapTable n')
          \<or> (\<exists>sz sz'. a_type ko = AArch (AUserData sz) \<and> a_type ko' = AArch (AUserData sz'))
-         \<or> (\<exists>sz sz'. a_type ko = AArch (ADeviceData sz) \<and> a_type ko' = AArch (ADeviceData sz'))"
+         \<or> (\<exists>sz sz'. a_type ko = AArch (ADeviceData sz) \<and> a_type ko' = AArch (ADeviceData sz'))
+         \<or> (a_type ko = AArch AVCPU \<and> a_type ko' = AArch AVCPU)"
   apply (rule ccontr)
   apply (simp add: obj_relation_cuts_def2 a_type_def)
   apply (auto simp: other_obj_relation_def cte_relation_def
                     pte_relation_def pde_relation_def
              split: Structures_A.kernel_object.split_asm if_split_asm
                     Structures_H.kernel_object.split_asm
-                    ARM_A.arch_kernel_obj.split_asm)
+                    ARM_A.arch_kernel_obj.split_asm arch_kernel_object.split_asm)
   done
 
 definition exst_same :: "Structures_H.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"
@@ -1054,8 +1056,10 @@ lemma set_other_obj_corres:
    apply (erule disjE)
     apply (insert t,
        clarsimp simp: is_other_obj_relation_type_UserData a_type_def)
-   apply (insert t,
-      clarsimp simp: is_other_obj_relation_type_DeviceData a_type_def)
+   apply (erule disjE)
+    apply (insert t,
+       clarsimp simp: is_other_obj_relation_type_DeviceData a_type_def)
+   apply (simp add: is_other_obj_relation_type t)
   apply (simp only: ekheap_relation_def)
   apply (rule ballI, drule(1) bspec)
   apply (drule domD)
@@ -1353,7 +1357,7 @@ lemma setObject_no_0_obj' [wp]:
 
 lemma valid_updateCapDataI:
   "s \<turnstile>' c \<Longrightarrow> s \<turnstile>' updateCapData b x c"
-  apply (unfold updateCapData_def Let_def ARM_H.updateCapData_def)
+  apply (unfold updateCapData_def Let_def ARM_HYP_H.updateCapData_def)
   apply (cases c)
   apply (simp_all add: isCap_defs valid_cap'_def capUntypedPtr_def isCap_simps
                        capAligned_def word_size word_bits_def word_bw_assocs)
@@ -1669,6 +1673,50 @@ lemma set_ep_state_refs_of'[wp]:
   by (wp setObject_state_refs_of',
       simp_all add: objBits_simps fun_upd_def[symmetric])
 
+lemma setObject_state_hyp_refs_of':
+  assumes x: "updateObject val = updateObject_default val"
+  assumes y: "(1 :: word32) < 2 ^ objBits val"
+  shows
+  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s) (ptr := hyp_refs_of' (injectKO val)))\<rbrace>
+     setObject ptr val
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (clarsimp simp: setObject_def valid_def in_monad split_def
+                        updateObject_default_def x in_magnitude_check
+                        projectKOs y
+                 elim!: rsubst[where P=P] intro!: ext
+             split del: if_split cong: option.case_cong if_cong)
+  apply (clarsimp simp: state_hyp_refs_of'_def objBits_def[symmetric]
+                        ps_clear_upd
+                  cong: if_cong option.case_cong)
+  done
+
+lemma setObject_state_hyp_refs_of_eq:
+  assumes x: "\<And>s s' obj obj' ptr' ptr''.
+                  (obj', s') \<in> fst (updateObject val obj ptr ptr' ptr'' s)
+                    \<Longrightarrow> hyp_refs_of' obj' = hyp_refs_of' obj"
+  shows
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>
+     setObject ptr val
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (clarsimp simp: setObject_def valid_def in_monad split_def
+                        updateObject_default_def in_magnitude_check
+                        projectKOs lookupAround2_char1
+                 elim!: rsubst[where P=P] intro!: ext
+             split del: if_split cong: option.case_cong if_cong)
+  apply (frule x, drule updateObject_objBitsKO)
+  apply (simp add: state_hyp_refs_of'_def ps_clear_upd
+             cong: option.case_cong if_cong)
+  done
+
+lemma set_ep_state_hyp_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s))\<rbrace>
+     setEndpoint epptr ep
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  unfolding setEndpoint_def
+  apply (wp setObject_state_hyp_refs_of',
+      simp_all add: objBits_simps fun_upd_def[symmetric])
+  sorry
+
 lemma set_ntfn_ctes_of[wp]:
   "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setNotification p val \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   apply (simp add: setNotification_def)
@@ -1768,6 +1816,15 @@ lemma set_ntfn_state_refs_of'[wp]:
   by (wp setObject_state_refs_of',
       simp_all add: objBits_simps fun_upd_def)
 
+lemma set_ntfn_state_hyp_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s))\<rbrace>
+     setNotification epptr ntfn
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  unfolding setNotification_def
+  apply (wp setObject_state_hyp_refs_of',
+      simp_all add: objBits_simps fun_upd_def)
+  sorry
+
 lemma setNotification_pred_tcb_at'[wp]:
   "\<lbrace>pred_tcb_at' proj P t\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
   apply (simp add: pred_tcb_at'_def setNotification_def)
@@ -1852,7 +1909,7 @@ lemma setEndpoint_iflive'[wp]:
     apply (clarsimp simp: updateObject_default_def in_monad projectKOs)
    apply (clarsimp simp: updateObject_default_def in_monad
                          projectKOs bind_def)
-  apply clarsimp
+  apply (clarsimp simp: live'_def)
   done
 
 declare setEndpoint_cte_wp_at'[wp]
@@ -1961,7 +2018,7 @@ lemma valid_arch_state_lift':
                    All_less_Ball)
   apply (rule hoare_lift_Pf [where f="ksArchState"])
    apply (wp typs hoare_vcg_const_Ball_lift arch typ_at_lifts)+
-  done
+  sorry
 
 lemma set_ep_global_refs'[wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"

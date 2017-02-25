@@ -124,7 +124,7 @@ lemma same_arch_region_as_relation:
   arch_same_region_as c c' =
   sameRegionAs (ArchObjectCap d) (ArchObjectCap d')"
   apply (cases c)
-  apply ((cases c', auto simp: ARM_H.sameRegionAs_def sameRegionAs_def Let_def isCap_simps)[1])+
+  apply ((cases c', auto simp: ARM_HYP_H.sameRegionAs_def sameRegionAs_def Let_def isCap_simps)[1])+
   done
 
 lemma is_phyiscal_relation:
@@ -145,7 +145,7 @@ lemma obj_size_relation:
                          split: option.splits sum.splits)
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap,
-    simp_all add: objBits_def ARM_H.capUntypedSize_def asid_low_bits_def
+    simp_all add: objBits_def ARM_HYP_H.capUntypedSize_def asid_low_bits_def
                   pageBits_def)
   done
 
@@ -347,7 +347,7 @@ lemma maskCapRights [simp]:
 lemma maskCap_valid [simp]:
   "s \<turnstile>' RetypeDecls_H.maskCapRights R cap = s \<turnstile>' cap"
   by (simp    add: valid_cap'_def maskCapRights_def isCap_simps
-                   capAligned_def ARM_H.maskCapRights_def
+                   capAligned_def ARM_HYP_H.maskCapRights_def
             split: capability.split arch_capability.split
         split del: if_split)
 
@@ -447,7 +447,7 @@ proof -
    apply (rename_tac arch_cap)
    apply (case_tac arch_cap)
         apply (simp_all add: simps arch_update_cap_data_def
-                             ARM_H.updateCapData_def)[5]
+                             ARM_HYP_H.updateCapData_def)[6]
   -- CNodeCap
   apply (simp add: simps word_bits_def the_cnode_cap_def andCapRights_def
                    rightsFromWord_def data_to_rights_def nth_ucast)
@@ -1523,7 +1523,7 @@ lemma capASID_update [simp]:
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
          simp_all add: updateCapData_def
-                       ARM_H.updateCapData_def
+                       ARM_HYP_H.updateCapData_def
                        isCap_simps Let_def)
   done
 
@@ -1534,7 +1534,7 @@ lemma cap_vptr_update' [simp]:
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
          simp_all add: updateCapData_def
-                       ARM_H.updateCapData_def
+                       ARM_HYP_H.updateCapData_def
                        isCap_simps Let_def)
   done
 
@@ -1545,7 +1545,7 @@ lemma cap_asid_base_update' [simp]:
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
          simp_all add: updateCapData_def
-                       ARM_H.updateCapData_def
+                       ARM_HYP_H.updateCapData_def
                        isCap_simps Let_def)
   done
 
@@ -1555,7 +1555,7 @@ lemma updateCapData_Master:
   apply (cases cap, simp_all add: updateCapData_def isCap_simps Let_def
                            split: if_split_asm)
   apply (rename_tac arch_capability)
-  apply (case_tac arch_capability, simp_all add: ARM_H.updateCapData_def)
+  apply (case_tac arch_capability, simp_all add: ARM_HYP_H.updateCapData_def)
   done
 
 lemma updateCapData_Reply:
@@ -1591,7 +1591,7 @@ lemma capASID_mask [simp]:
   apply (cases c, simp_all add: maskCapRights_def isCap_simps Let_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
-         simp_all add: maskCapRights_def ARM_H.maskCapRights_def isCap_simps Let_def)
+         simp_all add: maskCapRights_def ARM_HYP_H.maskCapRights_def isCap_simps Let_def)
   done
 
 lemma cap_vptr_mask' [simp]:
@@ -1600,7 +1600,7 @@ lemma cap_vptr_mask' [simp]:
   apply (cases c, simp_all add: maskCapRights_def isCap_simps Let_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
-         simp_all add: maskCapRights_def ARM_H.maskCapRights_def isCap_simps Let_def)
+         simp_all add: maskCapRights_def ARM_HYP_H.maskCapRights_def isCap_simps Let_def)
   done
 
 lemma cap_asid_base_mask' [simp]:
@@ -1609,7 +1609,7 @@ lemma cap_asid_base_mask' [simp]:
   apply (cases c, simp_all add: maskCapRights_def isCap_simps Let_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
-         simp_all add: maskCapRights_def ARM_H.maskCapRights_def isCap_simps Let_def)
+         simp_all add: maskCapRights_def ARM_HYP_H.maskCapRights_def isCap_simps Let_def)
   done
 
 lemma weak_derived_maskCapRights:
@@ -2271,13 +2271,15 @@ lemma obj_refs_relation_Master:
                     else if capClass (capMasterCap cap') = PhysicalClass
                     then {capUntypedPtr (capMasterCap cap')}
                     else {})"
-  by (simp add: isCap_simps
+  apply (simp add: isCap_simps
          split: cap_relation_split_asm arch_cap.split_asm)
+  done
 
 lemma cap_irqs_relation_Master:
   "cap_relation cap cap' \<Longrightarrow>
    cap_irqs cap = (case capMasterCap cap' of IRQHandlerCap irq \<Rightarrow> {irq} | _ \<Rightarrow> {})"
-  by (simp split: cap_relation_split_asm arch_cap.split_asm)
+  apply (simp split: cap_relation_split_asm arch_cap.split_asm)
+  done
 
 lemma is_final_cap_unique_sym:
   assumes cte: "ctes_of s' (cte_map slot) = Some cte"
@@ -2726,7 +2728,7 @@ lemma capRange_cap_relation:
   "\<lbrakk> cap_relation cap cap'; cap_relation cap cap' \<Longrightarrow> capClass cap' = PhysicalClass \<rbrakk>
     \<Longrightarrow> capRange cap' = {obj_ref_of cap .. obj_ref_of cap + obj_size cap - 1}"
   by (simp add: capRange_def objBits_simps cte_level_bits_def
-                asid_low_bits_def pageBits_def zbits_map_def
+                asid_low_bits_def zbits_map_def vspace_bits_defs vcpu_bits_def
          split: cap_relation_split_asm arch_cap.split_asm
                 option.split sum.split)
 
@@ -3157,25 +3159,25 @@ where
      Some [VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | ArchObjectCap (PageTableCap _ (Some (asid, vptr))) \<Rightarrow>
-     Some [VSRef (vptr >> 20) (Some APageDirectory),
+     Some [VSRef (vptr >> 21) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | ArchObjectCap (PageCap _ _ _ ARMSmallPage (Some (asid, vptr))) \<Rightarrow>
-     Some [VSRef ((vptr >> 12) && mask 8) (Some APageTable),
-           VSRef (vptr >> 20) (Some APageDirectory),
+     Some [VSRef ((vptr >> 12) && mask 9) (Some APageTable),
+           VSRef (vptr >> 21) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | ArchObjectCap (PageCap _ _ _ ARMLargePage (Some (asid, vptr))) \<Rightarrow>
-     Some [VSRef ((vptr >> 12) && mask 8) (Some APageTable),
-           VSRef (vptr >> 20) (Some APageDirectory),
+     Some [VSRef ((vptr >> 12) && mask 9) (Some APageTable),
+           VSRef (vptr >> 21) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | ArchObjectCap (PageCap _ _ _ ARMSection (Some (asid, vptr))) \<Rightarrow>
-     Some [VSRef (vptr >> 20) (Some APageDirectory),
+     Some [VSRef (vptr >> 21) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | ArchObjectCap (PageCap _ _ _ ARMSuperSection (Some (asid, vptr))) \<Rightarrow>
-     Some [VSRef (vptr >> 20) (Some APageDirectory),
+     Some [VSRef (vptr >> 21) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | _ \<Rightarrow> None"
@@ -3243,22 +3245,22 @@ lemma is_reply_master_relation:
 
 lemma cap_asid_cap_relation:
   "cap_relation c c' \<Longrightarrow> capASID c' = cap_asid c"
-  by (auto simp: capASID_def cap_asid_def split: cap.splits arch_cap.splits)
+  by (auto simp: capASID_def cap_asid_def arch_cap_fun_lift_def split: cap.splits arch_cap.splits)
 
 lemma vs_cap_ref_cap_relation:
   "cap_relation c c' \<Longrightarrow> vsCapRef c' = vs_cap_ref c"
-  apply (simp add: vsCapRef_def vs_cap_ref_def
+  apply (simp add: vsCapRef_def vs_cap_ref_def arch_cap_fun_lift_def vspace_bits_defs
          split: cap_relation_split_asm option.splits
                 arch_cap.splits vmpage_size.splits)
   done
 
 lemma cap_asid_base_cap_relation:
   "cap_relation c c' \<Longrightarrow> cap_asid_base' c' = cap_asid_base c"
-  by (auto simp: cap_asid_base_def cap_asid_base'_def split: cap.splits arch_cap.splits)
+  by (auto simp: cap_asid_base_def cap_asid_base'_def arch_cap_fun_lift_def split: cap.splits arch_cap.splits)
 
 lemma cap_vptr_cap_relation:
   "cap_relation c c' \<Longrightarrow> cap_vptr' c' = cap_vptr c"
-  by (auto simp: cap_vptr'_def cap_vptr_def split: cap.splits arch_cap.splits)
+  by (auto simp: cap_vptr'_def cap_vptr_def arch_cap_fun_lift_def split: cap.splits arch_cap.splits)
 
 lemma isIRQControlCap_relation:
   "cap_relation c c' \<Longrightarrow> isIRQControlCap c' = (c = cap.IRQControlCap)"
@@ -3282,13 +3284,13 @@ lemma is_derived_eq:
   apply (erule allE, erule impE, simp)
   apply (clarsimp simp: is_derived_def is_derived'_def badge_derived'_def)
   apply (rule conjI)
-   apply (clarsimp simp: is_cap_simps isCap_simps)
+   apply (clarsimp simp: is_cap_simps isCap_simps arch_cap_fun_lift_def)
    apply (cases c, auto simp: isCap_simps cap_master_cap_def capMasterCap_def)[1]
   apply (simp add:vsCapRef_def)
   apply (simp add:vs_cap_ref_def)
   apply (case_tac "isIRQControlCap d'")
    apply (frule(1) master_cap_relation)
-   apply (clarsimp simp: isCap_simps cap_master_cap_def
+   apply (clarsimp simp: isCap_simps cap_master_cap_def arch_cap_fun_lift_def
                          is_zombie_def is_reply_cap_def is_master_reply_cap_def
                   split: cap_relation_split_asm arch_cap.split_asm)[1]
   apply (frule(1) master_cap_relation)
@@ -3297,17 +3299,18 @@ lemma is_derived_eq:
   apply (frule(1) capBadge_ordering_relation)
   apply (case_tac d)
    apply (simp_all add: isCap_simps is_cap_simps cap_master_cap_def
-     vs_cap_ref_def vsCapRef_def capMasterCap_def
+     vs_cap_ref_def vsCapRef_def capMasterCap_def arch_cap_fun_lift_def
      split: cap_relation_split_asm arch_cap.split_asm)
    apply fastforce
   apply ((auto split:arch_cap.splits arch_capability.splits)[3])
   apply (clarsimp split:option.splits arch_cap.splits arch_capability.splits)
-  apply (intro conjI|clarsimp)+
+  apply (intro conjI|clarsimp simp: vspace_bits_defs)+
     apply fastforce
    apply clarsimp+
   apply (clarsimp split:option.splits arch_cap.splits arch_capability.splits)
-  apply (intro conjI|clarsimp)+
+  apply (intro conjI|clarsimp simp: vspace_bits_defs)+
    apply fastforce
+  apply (auto split:arch_cap.splits arch_capability.splits)
   done
 end
 
@@ -4291,7 +4294,7 @@ lemma maskedAsFull_revokable:
   apply (case_tac c')
     apply (simp_all add:maskedAsFull_def is_derived'_def isCap_simps vsCapRef_def)
     apply (simp_all add:badge_derived'_def capMasterCap_simps split:arch_capability.splits)
-  apply (clarsimp split:if_splits simp:revokable'_def isCap_simps)
+  apply (clarsimp split:if_splits simp:revokable'_def isCap_simps)+
   done
 
 lemma parentOf_preserve_oneway:

@@ -40,7 +40,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemmas makeObject_simps =
   makeObject_endpoint makeObject_notification makeObject_cte
   makeObject_tcb makeObject_user_data makeObject_pde makeObject_pte
-  makeObject_asidpool
+  makeObject_asidpool makeObject_vcpu
 end
 definition
   "diminished' cap cap' \<equiv> \<exists>R. cap = maskCapRights R cap'"

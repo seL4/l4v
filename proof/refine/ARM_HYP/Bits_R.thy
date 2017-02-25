@@ -98,6 +98,7 @@ lemma isCap_simps:
   "isASIDControlCap w = (w = ASIDControlCap)"
   "isASIDPoolCap w = (\<exists>v0 v1. w = ASIDPoolCap v0 v1)"
   "isArchPageCap cap = (\<exists>d ref rghts sz data. cap = ArchObjectCap (PageCap d ref rghts sz data))"
+  "isVCPUCap w = (\<exists>v. w = VCPUCap v)"
   by (auto simp: isCap_defs split: capability.splits arch_capability.splits)
 
 lemma untyped_not_null [simp]:
@@ -146,9 +147,13 @@ lemma projectKO_user_data_device:
   by (cases ko)
      (auto simp: projectKO_opts_defs split: arch_kernel_object.splits)
 
+lemma projectKO_VCPU:
+  "(projectKO_opt ko = Some t) = (ko = KOArch (KOVCPU t))"
+  by (cases ko)
+     (auto simp: projectKO_opts_defs split: arch_kernel_object.splits)
 
 lemmas projectKOs =
-  projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb
+  projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb projectKO_VCPU
   projectKO_ASID projectKO_PTE projectKO_PDE projectKO_user_data projectKO_user_data_device
   projectKO_eq projectKO_eq2
 

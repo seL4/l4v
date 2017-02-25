@@ -323,6 +323,9 @@ fun
 | "CapabilityMap (capability.ArchObjectCap
                     (arch_capability.PageDirectoryCap word data)) =
   cap.ArchObjectCap (arch_cap.PageDirectoryCap word data)"
+| "CapabilityMap (capability.ArchObjectCap
+                    (arch_capability.VCPUCap v)) =
+  cap.ArchObjectCap (arch_cap.VCPUCap v)"
 
 lemma cap_relation_CapabilityMap:
   "\<lbrakk>\<forall>dev w r s d. c = capability.ArchObjectCap (arch_capability.PageCap dev w r s d) \<longrightarrow>

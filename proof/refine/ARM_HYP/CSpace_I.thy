@@ -27,12 +27,13 @@ lemma capUntypedPtr_simps [simp]:
   "capUntypedPtr (UntypedCap d r n f) = r"
   "capUntypedPtr (CNodeCap r n g n2) = r"
   "capUntypedPtr (ReplyCap r m) = r"
-  "Arch.capUntypedPtr (ARM_H.ASIDPoolCap r asid) = r"
-  "Arch.capUntypedPtr (ARM_H.PageCap d r rghts sz mapdata) = r"
-  "Arch.capUntypedPtr (ARM_H.PageTableCap r mapdata2) = r"
-  "Arch.capUntypedPtr (ARM_H.PageDirectoryCap r mapdata3) = r"
+  "Arch.capUntypedPtr (ARM_HYP_H.ASIDPoolCap r asid) = r"
+  "Arch.capUntypedPtr (ARM_HYP_H.PageCap d r rghts sz mapdata) = r"
+  "Arch.capUntypedPtr (ARM_HYP_H.PageTableCap r mapdata2) = r"
+  "Arch.capUntypedPtr (ARM_HYP_H.PageDirectoryCap r mapdata3) = r"
+  "Arch.capUntypedPtr (ARM_HYP_H.VCPUCap r) = r"
   by (auto simp: capUntypedPtr_def
-                 ARM_H.capUntypedPtr_def)
+                 ARM_HYP_H.capUntypedPtr_def)
 
 lemma rights_mask_map_UNIV [simp]:
   "rights_mask_map UNIV = allRights"
@@ -43,7 +44,7 @@ declare insert_UNIV[simp]
 lemma maskCapRights_allRights [simp]:
   "maskCapRights allRights c = c"
   unfolding maskCapRights_def isCap_defs allRights_def
-            ARM_H.maskCapRights_def maskVMRights_def
+            ARM_HYP_H.maskCapRights_def maskVMRights_def
   by (cases c) (simp_all add: Let_def split: arch_capability.split vmrights.split)
 
 lemma diminished_refl'[simp]:
@@ -613,7 +614,7 @@ lemma isDomainCap [simp]:
 
 lemma isPhysicalCap[simp]:
   "isPhysicalCap cap = (capClass cap = PhysicalClass)"
-  by (simp add: isPhysicalCap_def ARM_H.isPhysicalCap_def
+  by (simp add: isPhysicalCap_def ARM_HYP_H.isPhysicalCap_def
          split: capability.split arch_capability.split)
 
 definition
@@ -635,6 +636,8 @@ where
          PageTableCap ptr None
     | PageDirectoryCap ptr data \<Rightarrow>
          PageDirectoryCap ptr None
+    | VCPUCap ptr \<Rightarrow>
+         VCPUCap ptr
     | _ \<Rightarrow> acap)
  | _ \<Rightarrow> cap"
 
@@ -657,6 +660,8 @@ lemma capMasterCap_simps[simp]:
             capability.ArchObjectCap (arch_capability.PageTableCap word None)"
   "capMasterCap (capability.ArchObjectCap (arch_capability.PageDirectoryCap word pddata)) =
             capability.ArchObjectCap (arch_capability.PageDirectoryCap word None)"
+  "capMasterCap (capability.ArchObjectCap (arch_capability.VCPUCap vref)) =
+            capability.ArchObjectCap (arch_capability.VCPUCap vref)"
   "capMasterCap (capability.UntypedCap d word n f) = capability.UntypedCap d word n 0"
   "capMasterCap capability.IRQControlCap = capability.IRQControlCap"
   "capMasterCap (capability.ReplyCap word m) = capability.ReplyCap word True"
@@ -698,6 +703,8 @@ lemma capMasterCap_eqDs1:
      \<Longrightarrow> data = None \<and> (\<exists>data. cap = ArchObjectCap (PageTableCap ptr data))"
   "capMasterCap cap = ArchObjectCap (PageDirectoryCap ptr data2)
      \<Longrightarrow> data2 = None \<and> (\<exists>data2. cap = ArchObjectCap (PageDirectoryCap ptr data2))"
+  "capMasterCap cap = ArchObjectCap (VCPUCap v)
+     \<Longrightarrow> cap = ArchObjectCap (VCPUCap v)"
   by (clarsimp simp: capMasterCap_def
               split: capability.split_asm arch_capability.split_asm)+
 
@@ -759,7 +766,7 @@ lemma isCap_Master:
 lemma capUntypedSize_capBits:
   "capClass cap = PhysicalClass \<Longrightarrow> capUntypedSize cap = 2 ^ (capBits cap)"
   apply (simp add: capUntypedSize_def objBits_simps
-                   ARM_H.capUntypedSize_def
+                   ARM_HYP_H.capUntypedSize_def vspace_bits_defs vcpu_bits_def
             split: capability.splits arch_capability.splits
                    zombie_type.splits)
   apply fastforce
@@ -790,7 +797,7 @@ lemma sameRegionAs_def2:
   apply (simp     add: capMasterCap_def sameRegionAs_def isArchPageCap_def
                 split: capability.split
             split del: if_split cong: if_cong)
-  apply (simp    add: ARM_H.sameRegionAs_def isCap_simps
+  apply (simp    add: ARM_HYP_H.sameRegionAs_def isCap_simps
                split: arch_capability.split
            split del: if_split cong: if_cong)
   apply (clarsimp simp: capRange_def Let_def)
@@ -810,9 +817,9 @@ lemma sameObjectAs_def2:
   apply (simp add: sameObjectAs_def sameRegionAs_def2
                    isCap_simps capMasterCap_def
             split: capability.split)
-  apply (clarsimp simp: ARM_H.sameObjectAs_def isCap_simps
+  apply (clarsimp simp: ARM_HYP_H.sameObjectAs_def isCap_simps
                  split: arch_capability.split cong: if_cong)
-  apply (clarsimp simp: ARM_H.sameRegionAs_def isCap_simps
+  apply (clarsimp simp: ARM_HYP_H.sameRegionAs_def isCap_simps
              split del: if_split cong: if_cong)
   apply (simp add: capRange_def interval_empty)
   apply fastforce
@@ -952,7 +959,7 @@ lemma capMasterCap_maskCapRights[simp]:
          simp add: maskCapRights_def Let_def isCap_simps capMasterCap_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
-         simp add: ARM_H.maskCapRights_def Let_def isCap_simps)
+         simp add: ARM_HYP_H.maskCapRights_def Let_def isCap_simps)
   done
 
 lemma capBadge_maskCapRights[simp]:
@@ -962,7 +969,7 @@ lemma capBadge_maskCapRights[simp]:
          simp add: maskCapRights_def Let_def isCap_simps capBadge_def)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
-         simp add: ARM_H.maskCapRights_def Let_def isCap_simps)
+         simp add: ARM_HYP_H.maskCapRights_def Let_def isCap_simps)
   done
 
 lemma maskCapRights_region [simp]:
@@ -1042,11 +1049,11 @@ lemma capUntypedSize_range:
    apply simp
   apply (clarsimp simp add: capAligned_def)
   apply (erule is_aligned_get_word_bits)
-   apply (simp add: capUntypedSize_def ARM_H.capUntypedSize_def objBits_simps
+   apply (simp add: capUntypedSize_def ARM_HYP_H.capUntypedSize_def objBits_simps
                  isCap_simps
           split: capability.splits arch_capability.split
                  zombie_type.splits)
-   apply (auto simp: is_aligned_no_overflow objBits_simps word_bits_def)
+   apply (auto simp: is_aligned_no_overflow objBits_simps word_bits_def vspace_bits_defs vcpu_bits_def)
   done
 
 lemma caps_no_overlap'_no_region:

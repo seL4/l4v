@@ -109,7 +109,7 @@ lemma empty_fail_getNotification [intro!, wp, simp]:
 
 lemma empty_fail_lookupIPCBuffer [intro!, wp, simp]:
   "empty_fail (lookupIPCBuffer a b)"
-  by (clarsimp simp: lookupIPCBuffer_def ARM_H.lookupIPCBuffer_def
+  by (clarsimp simp: lookupIPCBuffer_def ARM_HYP_H.lookupIPCBuffer_def
                      Let_def getThreadBufferSlot_def locateSlot_conv
               split: capability.splits arch_capability.splits | wp | wpc)+
 
