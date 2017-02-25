@@ -422,13 +422,13 @@ by (simp add: vspace_bits_defs)
 
 lemma pde_shifting:  (* ARMHYP >> 20? *)
   "\<lbrakk>is_aligned (vptr::word32) 25; x \<le> 0xF\<rbrakk>
-   \<Longrightarrow> x + (vptr >> pageBits + pt_bits - pte_bits) < 0x1000"
+   \<Longrightarrow> x + (vptr >> pageBits + pt_bits - pte_bits) < 2 ^ (pd_bits - pde_bits)"
   apply (rule order_less_le_trans)
-   apply (subst upper_bits_unset_is_l2p_32 [where n=12, symmetric])
-    apply (clarsimp simp: word_bits_def)
+   apply (subst upper_bits_unset_is_l2p_32 [where n=11, symmetric])
+    apply (clarsimp simp: word_bits_def vspace_bits_defs)
    prefer 2
-   apply simp
-  apply (clarsimp simp: word_bits_def)
+   apply (simp add: vspace_bits_defs)
+  apply (clarsimp simp: word_bits_def vspace_bits_defs)
   subgoal premises prems for n'
   proof -
   have H: "(0xF::word32) < 2 ^ 4" by simp
