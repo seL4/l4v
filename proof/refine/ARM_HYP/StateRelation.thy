@@ -32,9 +32,11 @@ where
   | ExceptionTypes_A.GuardMismatch n g      \<Rightarrow> Fault_H.GuardMismatch n (of_bl g) (length g)"
 
 primrec
-  arch_fault_map :: "Machine_A.ARM_A.arch_fault \<Rightarrow> ArchFault_H.ARM_H.arch_fault"
+  arch_fault_map :: "Machine_A.ARM_A.arch_fault \<Rightarrow> ArchFault_H.ARM_HYP_H.arch_fault"
 where
- "arch_fault_map (Machine_A.ARM_A.VMFault ptr msg) = ArchFault_H.ARM_H.VMFault ptr msg"
+  "arch_fault_map (Machine_A.ARM_A.VMFault ptr msg) = ArchFault_H.ARM_HYP_H.VMFault ptr msg"
+| "arch_fault_map (Machine_A.ARM_A.VGICMaintenance datalist) = VGICMaintenance datalist "
+| "arch_fault_map (Machine_A.ARM_A.VCPUFault data) = VCPUFault data"
 
 primrec
   fault_map :: "ExceptionTypes_A.fault \<Rightarrow> Fault_H.fault"
@@ -85,6 +87,8 @@ where
         arch_capability.PageTableCap word data)"
 | "acap_relation (arch_cap.PageDirectoryCap word data) c  = (c =
         arch_capability.PageDirectoryCap word data)"
+| "acap_relation (arch_cap.VCPUCap vcpu) c  = (c =
+        arch_capability.VCPUCap vcpu)"
 
 primrec
   cap_relation :: "cap \<Rightarrow> capability \<Rightarrow> bool"
@@ -126,6 +130,18 @@ definition
   asid_pool_relation :: "(10 word \<rightharpoonup> word32) \<Rightarrow> asidpool \<Rightarrow> bool"
 where
   "asid_pool_relation \<equiv> \<lambda>p p'. p = inv ASIDPool p' o ucast"
+
+definition
+  vgic_map :: "ARM_A.GICVCPUInterface \<Rightarrow> gicvcpuinterface"
+where "vgic_map \<equiv> \<lambda>v. VGICInterface (ARM_A.vgicHCR v) (ARM_A.vgicVMCR v) (ARM_A.vgicAPR v)
+                                     (\<lambda>n. case (ARM_A.vgicLR v) n of Some x \<Rightarrow> x | None \<Rightarrow> undefined)"
+
+definition
+  vcpu_relation :: "ARM_A.vcpu \<Rightarrow> vcpu \<Rightarrow> bool"
+where
+  "vcpu_relation \<equiv> \<lambda>v v'. vcpu_tcb v = vcpuTCBPtr v' \<and> vcpu_sctlr v = vcpuSCTLR v' \<and>
+                          vcpu_actlr v = vcpuACTLR v' \<and>
+                           vgic_map (vcpu_VGIC v) = vcpuVGIC v'"
 
 definition
   ntfn_relation :: "Structures_A.notification \<Rightarrow> Structures_H.notification \<Rightarrow> bool"
@@ -204,47 +220,49 @@ where
       | (Notification ntfn, KONotification ntfn') \<Rightarrow> ntfn_relation ntfn ntfn'
       | (ArchObj (ARM_A.ASIDPool pool), KOArch (KOASIDPool pool'))
              \<Rightarrow> asid_pool_relation pool pool'
+      | (ArchObj (ARM_A.VCPU vcpu), KOArch (KOVCPU vcpu'))
+             \<Rightarrow> vcpu_relation vcpu vcpu'
       | _ \<Rightarrow> False)"
 
 primrec
-   pde_relation' :: "ARM_A.pde \<Rightarrow> ARM_H.pde \<Rightarrow> bool"
+   pde_relation' :: "ARM_A.pde \<Rightarrow> ARM_HYP_H.pde \<Rightarrow> bool"
 where
-  "pde_relation'  ARM_A.InvalidPDE x = (x = ARM_H.InvalidPDE)"
-| "pde_relation' (ARM_A.PageTablePDE ptr atts domain) x
-      = (x = ARM_H.PageTablePDE ptr (ParityEnabled \<in> atts) domain)"
-| "pde_relation' (ARM_A.SectionPDE ptr atts domain rghts) x
-      = (x = ARM_H.SectionPDE ptr (ParityEnabled \<in> atts) domain
-               (PageCacheable \<in> atts) (Global \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
+  "pde_relation'  ARM_A.InvalidPDE x = (x = ARM_HYP_H.InvalidPDE)"
+| "pde_relation' (ARM_A.PageTablePDE ptr) x
+      = (x = ARM_HYP_H.PageTablePDE ptr)"
+| "pde_relation' (ARM_A.SectionPDE ptr atts rghts) x
+      = (x = ARM_HYP_H.SectionPDE ptr
+               (PageCacheable \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
 | "pde_relation' (ARM_A.SuperSectionPDE ptr atts rghts) x
-      = (x = ARM_H.SuperSectionPDE ptr (ParityEnabled \<in> atts)
-               (PageCacheable \<in> atts) (Global \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
+      = (x = ARM_HYP_H.SuperSectionPDE ptr
+               (PageCacheable \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
 
 
 primrec
-   pte_relation' :: "ARM_A.pte \<Rightarrow> ARM_H.pte \<Rightarrow> bool"
+   pte_relation' :: "ARM_A.pte \<Rightarrow> ARM_HYP_H.pte \<Rightarrow> bool"
 where
-  "pte_relation'  ARM_A.InvalidPTE x = (x = ARM_H.InvalidPTE)"
+  "pte_relation'  ARM_A.InvalidPTE x = (x = ARM_HYP_H.InvalidPTE)"
 | "pte_relation' (ARM_A.LargePagePTE ptr atts rghts) x
-      = (x = ARM_H.LargePagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts)
+      = (x = ARM_HYP_H.LargePagePTE ptr (PageCacheable \<in> atts)
                                          (XNever \<in> atts) (vmrights_map rghts))"
 | "pte_relation' (ARM_A.SmallPagePTE ptr atts rghts) x
-      = (x = ARM_H.SmallPagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts)
+      = (x = ARM_HYP_H.SmallPagePTE ptr (PageCacheable \<in> atts)
                                          (XNever \<in> atts) (vmrights_map rghts))"
 
 
 definition
-  pde_align' :: "ARM_H.pde \<Rightarrow> nat"
+  pde_align' :: "ARM_HYP_H.pde \<Rightarrow> nat"
 where
  "pde_align' pde \<equiv>
-  case pde of ARM_H.pde.SuperSectionPDE _ _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
+  case pde of ARM_HYP_H.pde.SuperSectionPDE _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
 
 lemmas pde_align_simps[simp] =
   pde_align'_def[split_simps ARM_A.pde.split]
 
 definition
-  pte_align' :: "ARM_H.pte \<Rightarrow> nat"
+  pte_align' :: "ARM_HYP_H.pte \<Rightarrow> nat"
 where
- "pte_align' pte \<equiv> case pte of ARM_H.pte.LargePagePTE _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
+ "pte_align' pte \<equiv> case pte of ARM_HYP_H.pte.LargePagePTE _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
 
 lemmas pte_align_simps[simp] =
   pte_align'_def[split_simps ARM_A.pte.split]
@@ -275,9 +293,11 @@ where
 | "aobj_relation_cuts (ARM_A.ASIDPool pool) x =
      {(x, other_obj_relation)}"
 | "aobj_relation_cuts (PageTable pt) x =
-     (\<lambda>y. (x + (ucast y << 2), pte_relation y)) ` UNIV"
+     (\<lambda>y. (x + (ucast y << pte_bits), pte_relation y)) ` UNIV"
 | "aobj_relation_cuts (PageDirectory pd) x =
-     (\<lambda>y. (x + (ucast y << 2), pde_relation y)) ` UNIV"
+     (\<lambda>y. (x + (ucast y << pde_bits), pde_relation y)) ` UNIV"
+| "aobj_relation_cuts (ARM_A.VCPU v) x =
+     {(x, other_obj_relation)}"
 
 primrec
   obj_relation_cuts :: "Structures_A.kernel_object \<Rightarrow> word32 \<Rightarrow> obj_relation_cuts"
@@ -297,10 +317,10 @@ lemma obj_relation_cuts_def2:
    (case ko of CNode sz cs \<Rightarrow> if well_formed_cnode_n sz cs
                              then {(cte_map (x, y), cte_relation y) | y. y \<in> dom cs}
                              else {(x, \<bottom>\<bottom>)}
-             | ArchObj (PageTable pt) \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pte_relation y))
-                                           ` (UNIV :: word8 set)
-             | ArchObj (PageDirectory pd) \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pde_relation y))
-                                           ` (UNIV :: 12 word set)
+             | ArchObj (PageTable pt) \<Rightarrow> (\<lambda>y. (x + (ucast y << pte_bits), pte_relation y))
+                                           ` (UNIV :: (9 word) set)
+             | ArchObj (PageDirectory pd) \<Rightarrow> (\<lambda>y. (x + (ucast y << pde_bits), pde_relation y))
+                                           ` (UNIV :: (11 word) set)
              | ArchObj (DataPage dev sz)      \<Rightarrow>
                  {(x + n * 2 ^ pageBits,  \<lambda>_ obj. obj =(if dev then KOUserDataDevice else KOUserData)) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
              | _ \<Rightarrow> {(x, other_obj_relation)})"
@@ -311,10 +331,10 @@ lemma obj_relation_cuts_def3:
   "obj_relation_cuts ko x =
   (case (a_type ko) of
      ACapTable n \<Rightarrow> {(cte_map (x, y), cte_relation y) | y. length y = n}
-   | AArch APageTable \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pte_relation y))
-                            ` (UNIV :: word8 set)
-   | AArch APageDirectory \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pde_relation y))
-                            ` (UNIV :: 12 word set)
+   | AArch APageTable \<Rightarrow> (\<lambda>y. (x + (ucast y << pte_bits), pte_relation y))
+                            ` (UNIV :: (9 word) set)
+   | AArch APageDirectory \<Rightarrow> (\<lambda>y. (x + (ucast y << pde_bits), pde_relation y))
+                            ` (UNIV :: (11 word) set)
    | AArch (AUserData sz)  \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = KOUserData) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
    | AArch (ADeviceData sz)  \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = KOUserDataDevice ) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
    | AGarbage _ \<Rightarrow> {(x, \<bottom>\<bottom>)}
@@ -441,17 +461,16 @@ where
               \<and> (\<forall>irq. irq_state_relation (irqs irq) (irqs' irq)))"
 
 definition
-  arch_state_relation :: "(arch_state \<times> ARM_H.kernel_state) set"
+  arch_state_relation :: "(arch_state \<times> ARM_HYP_H.kernel_state) set"
 where
   "arch_state_relation \<equiv> {(s, s') .
          arm_asid_table s = armKSASIDTable s' o ucast
-       \<and> arm_global_pd s = armKSGlobalPD s'
        \<and> arm_hwasid_table s = armKSHWASIDTable s'
-       \<and> arm_global_pts s = armKSGlobalPTs s'
        \<and> arm_next_asid s = armKSNextASID s'
        \<and> arm_asid_map s = armKSASIDMap s'
+       \<and> arm_current_vcpu s = armHSCurVCPU s'
+       \<and> arm_gicvcpu_numlistregs s = armKSGICVCPUNumListRegs s'
        \<and> arm_kernel_vspace s = armKSKernelVSpace s'}"
-
 
 definition
   (* NOTE: this map discards the Ident right, needed on endpoints only *)
@@ -465,10 +484,10 @@ lemma obj_relation_cutsE:
      \<And>sz cs z cap cte. \<lbrakk> ko = CNode sz cs; well_formed_cnode_n sz cs; y = cte_map (x, z);
                       ko' = KOCTE cte; cs z = Some cap; cap_relation cap (cteCap cte) \<rbrakk>
               \<Longrightarrow> R;
-     \<And>pt (z :: word8) pte'. \<lbrakk> ko = ArchObj (PageTable pt); y = x + (ucast z << 2);
+     \<And>pt (z :: 9 word) pte'. \<lbrakk> ko = ArchObj (PageTable pt); y = x + (ucast z << pte_bits);
                               ko' = KOArch (KOPTE pte'); pte_relation_aligned z (pt z) pte' \<rbrakk>
               \<Longrightarrow> R;
-     \<And>pd (z :: 12 word) pde'. \<lbrakk> ko = ArchObj (PageDirectory pd); y = x + (ucast z << 2);
+     \<And>pd (z :: 11 word) pde'. \<lbrakk> ko = ArchObj (PageDirectory pd); y = x + (ucast z << pde_bits);
                               ko' = KOArch (KOPDE pde'); pde_relation_aligned z (pd z) pde' \<rbrakk>
               \<Longrightarrow> R;
      \<And>sz dev n. \<lbrakk> ko = ArchObj (DataPage dev sz); ko' = (if dev then KOUserDataDevice else KOUserData);
@@ -533,7 +552,7 @@ where
 | "syscall_error_map (ExceptionTypes_A.NotEnoughMemory n)       = Fault_H.syscall_error.NotEnoughMemory n"
 
 definition
-  APIType_map :: "Structures_A.apiobject_type \<Rightarrow> ARM_H.object_type"
+  APIType_map :: "Structures_A.apiobject_type \<Rightarrow> ARM_HYP_H.object_type"
 where
   "APIType_map ty \<equiv> case ty of
                     Structures_A.Untyped \<Rightarrow> APIObjectType ArchTypes_H.Untyped
@@ -547,7 +566,8 @@ where
        | SectionObj       \<Rightarrow> SectionObject
        | SuperSectionObj  \<Rightarrow> SuperSectionObject
        | PageTableObj     \<Rightarrow> PageTableObject
-       | PageDirectoryObj \<Rightarrow> PageDirectoryObject)"
+       | PageDirectoryObj \<Rightarrow> PageDirectoryObject
+       | ARM_A.VCPUObj          \<Rightarrow> VCPUObject)"
 
 lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb t s = Some tcb)"
   by (simp add: tcb_at_def)
@@ -669,11 +689,11 @@ lemma objBits_obj_bits:
   shows   "obj_bits obj = objBitsKO obj'"
   using rel
   by (simp add: other_obj_relation_def objBitsKO_simps pageBits_def
-                archObjSize_def
+                archObjSize_def vcpuBits_def vcpu_bits_def
          split: Structures_A.kernel_object.split_asm
                 ARM_A.arch_kernel_obj.split_asm
                 Structures_H.kernel_object.split_asm
-                ARM_H.arch_kernel_object.split_asm)
+                ARM_HYP_H.arch_kernel_object.split_asm)
 
 lemma replicate_length_cong:
   "x = y \<Longrightarrow> replicate x n = replicate y n" by simp
@@ -685,7 +705,7 @@ lemmas isCap_defs =
   isIRQHandlerCap_def isIRQControlCap_def isReplyCap_def
   isPageCap_def isPageTableCap_def isPageDirectoryCap_def
   isASIDControlCap_def isASIDPoolCap_def isArchPageCap_def
-  isDomainCap_def
+  isDomainCap_def isVCPUCap_def
 
 lemma isCNodeCap_cap_map [simp]:
   "cap_relation c c' \<Longrightarrow> isCNodeCap c' = is_cnode_cap c"

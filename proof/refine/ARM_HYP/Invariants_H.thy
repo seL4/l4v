@@ -386,10 +386,10 @@ where
   "acapBits (ASIDPoolCap x y) = asidLowBits + 2"
 | "acapBits ASIDControlCap = asidHighBits + 2"
 | "acapBits (PageCap d x y sz z) = pageBitsForSize sz"
-| "acapBits (PageTableCap x y) = 10"
+| "acapBits (PageTableCap x y) = 12"
 | "acapBits (PageDirectoryCap x y) = 14"
+| "acapBits (VCPUCap v) = 12"
 end
-
 
 primrec
   zBits :: "zombie_type \<Rightarrow> nat"
@@ -439,16 +439,19 @@ definition
   page_table_at' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "page_table_at' x \<equiv> \<lambda>s. is_aligned x ptBits
-                      \<and> (\<forall>y < 2 ^ 8. typ_at' (ArchT PTET) (x + (y << 2)) s)"
+                      \<and> (\<forall>y < 2 ^ 9. typ_at' (ArchT PTET) (x + (y << 3)) s)"
 
 definition
   page_directory_at' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "page_directory_at' x \<equiv> \<lambda>s. is_aligned x pdBits
-                      \<and> (\<forall>y < 2 ^ 12. typ_at' (ArchT PDET) (x + (y << 2)) s)"
+                      \<and> (\<forall>y < 2 ^ 11. typ_at' (ArchT PDET) (x + (y << 3)) s)"
 
 abbreviation
   "asid_pool_at' \<equiv> typ_at' (ArchT ASIDPoolT)"
+
+abbreviation
+  "vcpu_at' \<equiv> typ_at' (ArchT VCPUT)"
 
 (* FIXME: duplicated with vmsz_aligned *)
 definition
@@ -497,7 +500,8 @@ where valid_cap'_def:
             0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < kernelBase)
   | PageDirectoryCap ref mapdata \<Rightarrow>
     page_directory_at' ref s \<and>
-    case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
+    case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
+  | VCPUCap v \<Rightarrow> typ_at' (ArchT VCPUT) v s))"
 
 abbreviation (input)
   valid_cap'_syn :: "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>' _" [60, 60] 61)
@@ -582,19 +586,19 @@ where
                             \<and> ptrFromPAddr x \<noteq> 0"
 
 primrec
-  valid_pte' :: "ARM_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_pte' :: "ARM_HYP_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_pte' (InvalidPTE) = \<top>"
-| "valid_pte' (LargePagePTE ptr _ _ _ _) = (valid_mapping' ptr ARMLargePage)"
-| "valid_pte' (SmallPagePTE ptr _ _ _ _) = (valid_mapping' ptr ARMSmallPage)"
+| "valid_pte' (LargePagePTE ptr _ _ _) = (valid_mapping' ptr ARMLargePage)"
+| "valid_pte' (SmallPagePTE ptr _ _ _) = (valid_mapping' ptr ARMSmallPage)"
 
 primrec
-  valid_pde' :: "ARM_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_pde' :: "ARM_HYP_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_pde' (InvalidPDE) = \<top>"
-| "valid_pde' (SectionPDE ptr _ _ _ _ _ _) = (valid_mapping' ptr ARMSection)"
-| "valid_pde' (SuperSectionPDE ptr _ _ _ _ _) = (valid_mapping' ptr ARMSuperSection)"
-| "valid_pde' (PageTablePDE ptr _ _) = (\<lambda>_. is_aligned ptr ptBits)"
+| "valid_pde' (SectionPDE ptr _ _ _) = (valid_mapping' ptr ARMSection)"
+| "valid_pde' (SuperSectionPDE ptr _ _ _) = (valid_mapping' ptr ARMSuperSection)"
+| "valid_pde' (PageTablePDE ptr) = (\<lambda>_. is_aligned ptr ptBits)"
 
 primrec
   valid_asid_pool' :: "asidpool \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -604,11 +608,19 @@ where
            \<and> 0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pdBits))"
 
 primrec
+  valid_vcpu' :: "vcpu \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "valid_vcpu' (VCPUObj v _ _ _) = (case v of
+  None \<Rightarrow> \<top>
+| Some vt \<Rightarrow> typ_at' (TCBT) vt)"
+
+primrec
   valid_arch_obj' :: "arch_kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_arch_obj' (KOASIDPool pool) = valid_asid_pool' pool"
 | "valid_arch_obj' (KOPDE pde) = valid_pde' pde"
 | "valid_arch_obj' (KOPTE pte) = valid_pte' pte"
+| "valid_arch_obj' (KOVCPU vcpu) = valid_vcpu' vcpu"
 
 definition
   valid_obj' :: "Structures_H.kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -718,6 +730,8 @@ where
 | "acapClass (PageCap d x y sz z)   = PhysicalClass"
 | "acapClass (PageTableCap x y)     = PhysicalClass"
 | "acapClass (PageDirectoryCap x y) = PhysicalClass"
+| "acapClass (VCPUCap x) = PhysicalClass"
+
 
 primrec
   capClass :: "capability \<Rightarrow> capclass"
@@ -893,8 +907,8 @@ definition
 definition
   vs_ptr_align :: "Structures_H.kernel_object \<Rightarrow> nat" where
  "vs_ptr_align obj \<equiv>
-  case obj of KOArch (KOPTE (pte.LargePagePTE _ _ _ _ _)) \<Rightarrow> 6
-            | KOArch (KOPDE (pde.SuperSectionPDE _ _ _ _ _ _)) \<Rightarrow> 6
+  case obj of KOArch (KOPTE (pte.LargePagePTE _ _ _ _)) \<Rightarrow> 7
+            | KOArch (KOPDE (pde.SuperSectionPDE _ _ _ _)) \<Rightarrow> 7
             | _ \<Rightarrow> 0"
 
 definition "vs_valid_duplicates' \<equiv> \<lambda>h.
@@ -1056,20 +1070,18 @@ where
 definition
   page_directory_refs' :: "word32 \<Rightarrow> word32 set"
 where
-  "page_directory_refs' x \<equiv> (\<lambda>y. x + (y << 2)) ` {y. y < 2 ^ 12}"
+  "page_directory_refs' x \<equiv> (\<lambda>y. x + (y << 3)) ` {y. y < 2 ^ 11}"
 
 definition
   page_table_refs' :: "word32 \<Rightarrow> word32 set"
 where
-  "page_table_refs' x \<equiv> (\<lambda>y. x + (y << 2)) ` {y. y < 2 ^ 8}"
+  "page_table_refs' x \<equiv> (\<lambda>y. x + (y << 3)) ` {y. y < 2 ^ 9}"
 
 definition
   global_refs' :: "kernel_state \<Rightarrow> obj_ref set"
 where
   "global_refs' \<equiv> \<lambda>s.
   {ksIdleThread s} \<union>
-   page_directory_refs' (armKSGlobalPD (ksArchState s)) \<union>
-   (\<Union>pt \<in> set (armKSGlobalPTs (ksArchState s)). page_table_refs' pt) \<union>
    range (\<lambda>irq :: irq. irq_node' s + 16 * ucast irq)"
 
 definition
@@ -1112,8 +1124,7 @@ definition
 where
   "valid_arch_state' \<equiv> \<lambda>s.
   valid_asid_table' (armKSASIDTable (ksArchState s)) s \<and>
-  page_directory_at' (armKSGlobalPD (ksArchState s)) s \<and>
-  valid_global_pts' (armKSGlobalPTs (ksArchState s)) s \<and>
+  (case (armHSCurVCPU (ksArchState s)) of Some (v, b) \<Rightarrow> vcpu_at' v s | _ \<Rightarrow> True) \<and>
   is_inv (armKSHWASIDTable (ksArchState s))
             (option_map fst o armKSASIDMap (ksArchState s)) \<and>
   valid_asid_map' (armKSASIDMap (ksArchState s))"
@@ -1201,7 +1212,7 @@ definition
   valid_state' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_state' \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-                      \<and> valid_queues s \<and> sym_refs (state_refs_of' s)
+                      \<and> valid_queues s \<and> sym_refs (state_refs_of' s) \<and>sym_refs (state_hyp_refs_of' s)
                       \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
                       \<and> valid_idle' s
                       \<and> valid_global_refs' s \<and> valid_arch_state' s
@@ -1251,7 +1262,8 @@ definition
                     | ArchT atp \<Rightarrow> (case atp of
                                           PDET \<Rightarrow> injectKO (makeObject :: pde)
                                         | PTET \<Rightarrow> injectKO (makeObject :: pte)
-                                        | ASIDPoolT \<Rightarrow> injectKO (makeObject :: asidpool))"
+                                        | ASIDPoolT \<Rightarrow> injectKO (makeObject :: asidpool)
+                                        | VCPUT \<Rightarrow> injectKO (makeObject :: vcpu))"
 
 definition
   objBitsT :: "kernel_object_type \<Rightarrow> nat"
@@ -1289,7 +1301,7 @@ abbreviation(input)
 abbreviation(input)
  "all_invs_but_ct_not_inQ'
     \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-           \<and> valid_queues s \<and> sym_refs (state_refs_of' s)
+           \<and> valid_queues s \<and> sym_refs (state_refs_of' s) \<and> sym_refs (state_hyp_refs_of' s)
            \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
@@ -1300,7 +1312,7 @@ abbreviation(input)
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
 lemma all_invs_but_sym_refs_not_ct_inQ_check':
-  "(all_invs_but_sym_refs_ct_not_inQ' and sym_refs \<circ> state_refs_of' and ct_not_inQ) = invs'"
+  "(all_invs_but_sym_refs_ct_not_inQ' and sym_refs \<circ> state_refs_of' and sym_refs \<circ> state_hyp_refs_of' and ct_not_inQ) = invs'"
   by (simp add: pred_conj_def conj_commute conj_left_commute invs'_def valid_state'_def)
 
 lemma all_invs_but_not_ct_inQ_check':
@@ -1310,7 +1322,7 @@ lemma all_invs_but_not_ct_inQ_check':
 definition
   "all_invs_but_ct_idle_or_in_cur_domain'
     \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-           \<and> valid_queues s \<and> sym_refs (state_refs_of' s)
+           \<and> valid_queues s \<and> sym_refs (state_refs_of' s) \<and> sym_refs (state_hyp_refs_of' s)
            \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
@@ -1722,6 +1734,53 @@ lemma refs_of_rev':
                  Structures_H.notification.splits
                  Structures_H.ntfn.splits)+
 
+lemma tcb_hyp_refs_of'_simps[simp]:
+  "tcb_hyp_refs' atcb = tcb_vcpu_refs' (atcbVCPUPtr atcb)"
+  by (auto simp: tcb_hyp_refs'_def)
+
+lemma tcb_vcpu_refs_of'_simps[simp]:
+  "tcb_vcpu_refs' (Some vc) = {(vc, TCBHypRef)}"
+  "tcb_vcpu_refs' None = {}"
+  by (auto simp: tcb_vcpu_refs'_def)
+
+lemma vcpu_tcb_refs_of'_simps[simp]:
+  "vcpu_tcb_refs' (Some tcb) = {(tcb, HypTCBRef)}"
+  "vcpu_tcb_refs' None = {}"
+  by (auto simp: vcpu_tcb_refs'_def)
+
+lemma refs_of_a'_simps[simp]:
+  "refs_of_a' (KOASIDPool p) = {}"
+  "refs_of_a' (KOPTE pt) = {}"
+  "refs_of_a' (KOPDE pd) = {}"
+  "refs_of_a' (KOVCPU v) = vcpu_tcb_refs' (vcpuTCBPtr v)"
+ by (auto simp: refs_of_a'_def)
+
+lemma refs_of_a_rev':
+ "(x, HypTCBRef) \<in> refs_of_a' ao =
+    (\<exists>v. ao = KOVCPU v \<and> vcpuTCBPtr v = Some x)"
+  by (auto simp: refs_of_a'_def vcpu_tcb_refs'_def split: arch_kernel_object.splits option.split)
+
+
+lemma hyp_refs_of'_simps[simp]:
+  "hyp_refs_of' (KOCTE cte) = {}"
+  "hyp_refs_of' (KOTCB tcb) = tcb_hyp_refs' (tcbArch tcb)"
+  "hyp_refs_of' (KOEndpoint ep) = {}"
+  "hyp_refs_of' (KONotification ntfn) = {}"
+  "hyp_refs_of' (KOUserData) = {}"
+  "hyp_refs_of' (KOUserDataDevice) = {}"
+  "hyp_refs_of' (KOKernelData) = {}"
+  "hyp_refs_of' (KOArch ao) = refs_of_a' ao"
+  by (auto simp: hyp_refs_of'_def)
+
+lemma hyp_refs_of_rev':
+ "(x, TCBHypRef) \<in> hyp_refs_of' ko =
+    (\<exists>tcb. ko = KOTCB tcb \<and> (atcbVCPUPtr (tcbArch tcb) = Some x))"
+ "(x, HypTCBRef) \<in> hyp_refs_of' ko =
+    (\<exists>v. ko = KOArch (KOVCPU v) \<and> (vcpuTCBPtr v = Some x))"
+  by (auto simp: hyp_refs_of'_def tcb_hyp_refs'_def tcb_vcpu_refs'_def
+                    vcpu_tcb_refs'_def refs_of_a'_def
+              split: kernel_object.splits arch_kernel_object.splits option.split)
+
 lemma ko_wp_at'_weakenE:
   "\<lbrakk> ko_wp_at' P p s; \<And>ko. P ko \<Longrightarrow> Q ko \<rbrakk> \<Longrightarrow> ko_wp_at' Q p s"
   by (clarsimp simp: ko_wp_at'_def)
@@ -1827,6 +1886,44 @@ lemma sym_refs_bound_tcb_atD':
   apply auto
   done
 
+lemma state_hyp_refs_of'_elemD:
+  "\<lbrakk> ref \<in> state_hyp_refs_of' s x \<rbrakk> \<Longrightarrow> ko_wp_at' (\<lambda>obj. ref \<in> hyp_refs_of' obj) x s"
+  by (clarsimp simp add: state_hyp_refs_of'_def ko_wp_at'_def
+                  split: option.splits if_split_asm)
+
+lemma state_hyp_refs_of'_eqD:
+  "\<lbrakk> state_hyp_refs_of' s x = S; S \<noteq> {} \<rbrakk> \<Longrightarrow> ko_wp_at' (\<lambda>obj. hyp_refs_of' obj = S) x s"
+  by (clarsimp simp add: state_hyp_refs_of'_def ko_wp_at'_def
+                  split: option.splits if_split_asm)
+
+lemma obj_at_state_hyp_refs_ofD':
+  "obj_at' P p s \<Longrightarrow> \<exists>ko. P ko \<and> state_hyp_refs_of' s p = hyp_refs_of' (injectKO ko)"
+  apply (clarsimp simp: obj_at'_real_def project_inject ko_wp_at'_def conj_commute)
+  apply (rule exI, erule conjI)
+  apply (clarsimp simp: state_hyp_refs_of'_def)
+  done
+
+lemma ko_at_state_hyp_refs_ofD':
+  "ko_at' ko p s \<Longrightarrow> state_hyp_refs_of' s p = hyp_refs_of' (injectKO ko)"
+  by (clarsimp dest!: obj_at_state_hyp_refs_ofD')
+
+lemma hyp_sym_refs_obj_atD':
+  "\<lbrakk> obj_at' P p s; sym_refs (state_hyp_refs_of' s) \<rbrakk> \<Longrightarrow>
+     \<exists>ko. P ko \<and> state_hyp_refs_of' s p = hyp_refs_of' (injectKO ko) \<and>
+        (\<forall>(x, tp)\<in>hyp_refs_of' (injectKO ko). ko_wp_at' (\<lambda>ko. (p, symreftype tp) \<in> hyp_refs_of' ko) x s)"
+  apply (drule obj_at_state_hyp_refs_ofD')
+  apply (erule exEI, clarsimp)
+  apply (drule sym, simp)
+  apply (drule(1) sym_refsD)
+  apply (erule state_hyp_refs_of'_elemD)
+  done
+
+lemma hyp_sym_refs_ko_atD':
+  "\<lbrakk> ko_at' ko p s; sym_refs (state_hyp_refs_of' s) \<rbrakk> \<Longrightarrow>
+     state_hyp_refs_of' s p = hyp_refs_of' (injectKO ko) \<and>
+     (\<forall>(x, tp)\<in>hyp_refs_of' (injectKO ko). ko_wp_at' (\<lambda>ko. (p, symreftype tp) \<in> hyp_refs_of' ko) x s)"
+  by (drule(1) hyp_sym_refs_obj_atD', simp)
+
 lemma ex_nonz_cap_toE':
   "\<lbrakk> ex_nonz_cap_to' p s; \<And>cref. cte_wp_at' (\<lambda>c. p \<in> zobj_refs' (cteCap c)) cref s \<Longrightarrow> Q \<rbrakk>
     \<Longrightarrow> Q"
@@ -1834,12 +1931,26 @@ lemma ex_nonz_cap_toE':
 
 lemma refs_of_live':
   "refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
-  apply (cases ko, simp_all)
+  apply (cases ko, simp_all add: live'_def)
     apply clarsimp
    apply (rename_tac notification)
    apply (case_tac "ntfnObj notification"; simp)
     apply fastforce+
   done
+
+lemma hyp_refs_of_hyp_live':
+  "hyp_refs_of' ko \<noteq> {} \<Longrightarrow>   hyp_live' ko"
+  apply (cases ko, simp_all)
+   apply (rename_tac tcb_ext)
+   apply (simp add: tcb_hyp_refs'_def hyp_live'_def)
+   apply (case_tac "atcbVCPUPtr (tcbArch tcb_ext)"; clarsimp)
+  apply (clarsimp simp: hyp_live'_def arch_live'_def refs_of_a'_def vcpu_tcb_refs'_def
+                  split: arch_kernel_object.splits option.splits)
+  done
+
+lemma hyp_refs_of_live':
+  "hyp_refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
+  by (cases ko, simp_all add: live'_def hyp_refs_of_hyp_live')
 
 lemma if_live_then_nonz_capE':
   "\<lbrakk> if_live_then_nonz_cap' s; ko_wp_at' live' p s \<rbrakk>
@@ -1859,6 +1970,13 @@ lemma if_live_state_refsE:
   by (clarsimp simp: state_refs_of'_def ko_wp_at'_def
               split: option.splits if_split_asm
               elim!: refs_of_live' if_live_then_nonz_capE')
+
+lemma if_live_state_hyp_refsE:
+  "\<lbrakk> if_live_then_nonz_cap' s;
+     state_hyp_refs_of' s p \<noteq> {} \<rbrakk> \<Longrightarrow> ex_nonz_cap_to' p s"
+  by (clarsimp simp: state_hyp_refs_of'_def ko_wp_at'_def
+              split: option.splits if_split_asm
+              elim!: hyp_refs_of_live' if_live_then_nonz_capE')
 
 lemmas ex_cte_cap_to'_def = ex_cte_cap_wp_to'_def
 
@@ -1927,11 +2045,11 @@ lemma objBits_cte_conv:
 
 lemma valid_pde_mapping'_simps[simp]:
  "valid_pde_mapping' offset (InvalidPDE) = True"
- "valid_pde_mapping' offset (SectionPDE ptr a b c d e w)
+ "valid_pde_mapping' offset (SectionPDE ptr a b c)
      = valid_pde_mapping_offset' offset"
- "valid_pde_mapping' offset (SuperSectionPDE ptr a' b' c' d' w)
+ "valid_pde_mapping' offset (SuperSectionPDE ptr a' b' c')
      = valid_pde_mapping_offset' offset"
- "valid_pde_mapping' offset (PageTablePDE ptr x z'')
+ "valid_pde_mapping' offset (PageTablePDE ptr)
      = valid_pde_mapping_offset' offset"
   by (clarsimp simp: valid_pde_mapping'_def)+
 
@@ -2038,7 +2156,7 @@ lemma valid_arch_obj'_pspaceI:
   apply (case_tac pde;
          auto simp: page_table_at'_def valid_mapping'_def
              intro: typ_at'_pspaceI[rotated])
-  done
+  sorry
 
 lemma valid_obj'_pspaceI:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
@@ -2066,6 +2184,10 @@ lemma valid_mdb'_pspaceI:
 lemma state_refs_of'_pspaceI:
   "P (state_refs_of' s) \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> P (state_refs_of' s')"
   unfolding state_refs_of'_def ps_clear_def by simp
+
+lemma state_hyp_refs_of'_pspaceI:
+  "P (state_hyp_refs_of' s) \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> P (state_hyp_refs_of' s')"
+  unfolding state_hyp_refs_of'_def ps_clear_def by simp
 
 lemma if_live_then_nonz_cap'_pspaceI:
   "if_live_then_nonz_cap' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> if_live_then_nonz_cap' s'"
@@ -2757,6 +2879,11 @@ lemma valid_bound_tcb_lift:
   \<lbrace>valid_bound_tcb' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_tcb' tcb\<rbrace>"
   by (auto simp: valid_bound_tcb'_def valid_def typ_at_tcb'[symmetric] split: option.splits)
 
+lemma valid_vcpu_lift':
+  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_vcpu' vcpu s\<rbrace> f \<lbrace>\<lambda>rv s. valid_vcpu' vcpu s\<rbrace>"
+  by (cases vcpu; clarsimp simp: valid_vcpu'_def split: option.split, intro conjI; wpsimp wp:x)
+
 lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       typ_at_lift_ntfn' typ_at_lift_cte'
                       typ_at_lift_cte_at'
@@ -2769,6 +2896,7 @@ lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       valid_pte_lift'
                       valid_asid_pool_lift'
                       valid_bound_tcb_lift
+                      valid_vcpu_lift'
 
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"
@@ -2957,6 +3085,10 @@ lemma state_refs_of'_eq[iff]:
   "state_refs_of' (f s) = state_refs_of' s"
   by (rule state_refs_of'_pspaceI [OF _ pspace], rule refl)
 
+lemma state_hyp_refs_of'_eq[iff]:
+  "state_hyp_refs_of' (f s) = state_hyp_refs_of' s"
+  by (rule state_hyp_refs_of'_pspaceI [OF _ pspace], rule refl)
+
 lemma valid_space_update [iff]:
   "valid_pspace' (f s) = valid_pspace' s"
   by (fastforce simp: valid_pspace' pspace)
@@ -3010,6 +3142,10 @@ lemma typ_at_update' [iff]:
 lemma valid_asid_table_update' [iff]:
   "valid_asid_table' t (f s) = valid_asid_table' t s"
   by (simp add: valid_asid_table'_def)
+
+lemma valid_vcpu_update' [iff]:
+  "valid_vcpu' v (f s) = valid_vcpu' v s"
+  sorry
 
 lemma page_table_at_update' [iff]:
   "page_table_at' p (f s) = page_table_at' p s"
@@ -3239,12 +3375,12 @@ lemma ex_cte_cap_to'_pres:
   done
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma page_directory_pde_atI':
-  "\<lbrakk> page_directory_at' p s; x < 2 ^ pageBits \<rbrakk> \<Longrightarrow> pde_at' (p + (x << 2)) s"
-  by (simp add: page_directory_at'_def pageBits_def)
+  "\<lbrakk> page_directory_at' p s; x < 2 ^ (pdBits - pdeBits) \<rbrakk> \<Longrightarrow> pde_at' (p + (x << pdeBits)) s"
+  by (simp add: page_directory_at'_def pageBits_def pdBits_def pdeBits_def)
 
 lemma page_table_pte_atI':
-  "\<lbrakk> page_table_at' p s; x < 2^(ptBits - 2) \<rbrakk> \<Longrightarrow> pte_at' (p + (x << 2)) s"
-  by (simp add: page_table_at'_def pageBits_def ptBits_def)
+  "\<lbrakk> page_table_at' p s; x < 2^(ptBits - pteBits) \<rbrakk> \<Longrightarrow> pte_at' (p + (x << pteBits)) s"
+  by (simp add: page_table_at'_def pageBits_def ptBits_def pteBits_def)
 
 lemma valid_global_refsD':
   "\<lbrakk> ctes_of s p = Some cte; valid_global_refs' s \<rbrakk> \<Longrightarrow>
@@ -3423,9 +3559,10 @@ lemma objBitsT_simps:
   "objBitsT UserDataT = pageBits"
   "objBitsT UserDataDeviceT = pageBits"
   "objBitsT KernelDataT = pageBits"
-  "objBitsT (ArchT PDET) = 2"
-  "objBitsT (ArchT PTET) = 2"
+  "objBitsT (ArchT PDET) =pdeBits"
+  "objBitsT (ArchT PTET) = pteBits"
   "objBitsT (ArchT ASIDPoolT) = pageBits"
+  "objBitsT (ArchT VCPUT) = vcpuBits"
   unfolding objBitsT_def makeObjectT_def
   by (simp_all add: makeObject_simps objBits_simps archObjSize_def)
 
@@ -3552,6 +3689,10 @@ lemma invs_sym' [elim!]:
   "invs' s \<Longrightarrow> sym_refs (state_refs_of' s)"
   by (simp add: invs'_def valid_state'_def)
 
+lemma invs_sym_hyp' [elim!]:
+  "invs' s \<Longrightarrow> sym_refs (state_hyp_refs_of' s)"
+  by (simp add: invs'_def valid_state'_def)
+
 lemma invs_sch_act_wf' [elim!]:
   "invs' s \<Longrightarrow> sch_act_wf (ksSchedulerAction s) s"
   by (simp add: invs'_def valid_state'_def)
@@ -3659,6 +3800,28 @@ lemma valid_bitmap_valid_bitmapQ_exceptI[intro]:
   "valid_bitmapQ s \<Longrightarrow> valid_bitmapQ_except d p s"
   unfolding valid_bitmapQ_except_def valid_bitmapQ_def
   by simp
+
+lemma pdeBits_eq[simp]: "pdeBits = pde_bits"
+  by (simp add: pde_bits_def pdeBits_def)
+
+lemma pteBits_eq[simp]: "pteBits = pte_bits"
+  by (simp add: pte_bits_def pteBits_def)
+
+lemma pdBits_eq[simp]: "pdBits = pd_bits"
+  by (simp add: pd_bits_def pdBits_def)
+
+lemma ptBits_eq[simp]: "ptBits = pt_bits"
+  by (simp add: pt_bits_def ptBits_def)
+
+lemma vcpuBits_eq[simp]: "vcpuBits = vcpu_bits"
+  by (simp add: vcpu_bits_def vcpuBits_def)
+
+lemma largePagePTE_offset_eq[simp]:  "largePagePTE_offsets = largePagePTEOffsets"
+  by (simp add: largePagePTE_offsets_def largePagePTEOffsets_def)
+
+lemma superSectionPDE_offsets_eq[simp]:  "superSectionPDE_offsets = superSectionPDEOffsets"
+  by (simp add: superSectionPDE_offsets_def superSectionPDEOffsets_def)
+
 end
 (* The normalise_obj_at' tactic was designed to simplify situations similar to:
   ko_at' ko p s \<Longrightarrow>
