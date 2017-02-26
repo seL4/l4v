@@ -3798,10 +3798,7 @@ lemma cap_insert_valid_global_refs[wp]:
 
 crunch irq_node[wp]: cap_insert "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
-(*
-crunch arch_objs [wp]: cap_insert "valid_arch_objs"
-  (wp: crunch_wps simp: crunch_simps)
-*)
+
 crunch vspace_objs [wp]: cap_insert "valid_vspace_objs"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -4607,9 +4604,7 @@ lemma setup_reply_master_globals[wp]:
 
 crunch arch[wp]: setup_reply_master "valid_arch_state"
   (simp: crunch_simps)
-(*
-crunch arch_objs[wp]: setup_reply_master "valid_arch_objs"
-*)
+
 crunch vspace_objs[wp]: setup_reply_master "valid_vspace_objs"
 
 

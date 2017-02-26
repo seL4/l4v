@@ -100,7 +100,7 @@ where
      wellformed_mapdata ARMSection mapdata
    | PageDirectoryCap r (Some asid) \<Rightarrow>
      0 < asid \<and> asid \<le> 2^asid_bits - 1
-   | _ \<Rightarrow> True" (* ARMHYP vcpu? *)
+   | _ \<Rightarrow> True"
 
 lemmas wellformed_acap_simps =
   wellformed_mapdata_def wellformed_acap_def[split_simps arch_cap.split]
@@ -328,7 +328,7 @@ definition
 where
   "wellformed_arch_obj ao s \<equiv> case ao of
     VCPU v \<Rightarrow> valid_vcpu v s
-   | _ \<Rightarrow> wellformed_vspace_obj ao" (* ARMHYP: add condition for vcpu? *)
+   | _ \<Rightarrow> wellformed_vspace_obj ao"
 
 
 lemmas
@@ -685,19 +685,42 @@ where
   "valid_asid_table table \<equiv> \<lambda>s. (\<forall>p \<in> ran table. asid_pool_at p s) \<and>
                                 inj_on table (dom table)"
 
+
+definition
+  arch_live :: "arch_kernel_obj \<Rightarrow> bool"
+where
+  "arch_live ao \<equiv> case ao of
+    ARM_A.VCPU v \<Rightarrow> bound (ARM_A.vcpu_tcb v)
+    | _ \<Rightarrow>  False"
+
+definition
+  hyp_live :: "kernel_object \<Rightarrow> bool"
+where
+  "hyp_live ko \<equiv> case ko of
+  (TCB tcb) \<Rightarrow> bound (tcb_vcpu (tcb_arch tcb))
+| (ArchObj ao) \<Rightarrow> arch_live ao
+|  _ \<Rightarrow> False"
+
+
+definition
+  is_vcpu :: "kernel_object \<Rightarrow> bool"
+where
+  "is_vcpu \<equiv> \<lambda>ko. \<exists>vcpu. ko = ArchObj (VCPU vcpu)"
+
 definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_arch_state \<equiv> \<lambda>s.
   valid_asid_table (arm_asid_table (arch_state s)) s \<and>
-  (case (arm_current_vcpu (arch_state s)) of Some (v, b) \<Rightarrow> vcpu_at v s | _ \<Rightarrow> True) \<and>  (* ARMHYP do we need this? *)
-  is_inv (arm_hwasid_table (arch_state s))
-             (option_map fst o arm_asid_map (arch_state s))"
+  (case arm_current_vcpu (arch_state s) of
+     Some (v, b) \<Rightarrow> obj_at (is_vcpu and hyp_live) v s
+   | _ \<Rightarrow> True) \<and>
+  is_inv (arm_hwasid_table (arch_state s)) (option_map fst o arm_asid_map (arch_state s))"
 
 definition
   vs_cap_ref_arch :: "arch_cap \<Rightarrow> vs_ref list option"
 where
-  "vs_cap_ref_arch \<equiv> \<lambda> cap. case cap of  (* ARMHYP check the numbers!! *)
+  "vs_cap_ref_arch \<equiv> \<lambda> cap. case cap of
    ASIDPoolCap _ asid \<Rightarrow>
      Some [VSRef (ucast (asid_high_bits_of asid)) None]
  | PageDirectoryCap _ (Some asid) \<Rightarrow>
@@ -1365,12 +1388,13 @@ lemma global_refs_lift:
 
 lemma valid_arch_state_lift:
   assumes typs: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>_. typ_at (AArch T) p\<rbrace>"
+  assumes vcpus: "\<And>p. \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace> f \<lbrace>\<lambda>_. obj_at (is_vcpu and hyp_live) p\<rbrace>"
   assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   apply (simp add: valid_arch_state_def valid_asid_table_def)
   apply (rule hoare_lift_Pf[where f="\<lambda>s. arch_state s"])
    apply (case_tac "arm_current_vcpu x"; simp add: split_def)
-    apply (wp arch typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift)+
+    apply (wp arch vcpus typs hoare_vcg_conj_lift hoare_vcg_const_Ball_lift)+
   done
 
 lemma aobj_at_default_arch_cap_valid:
@@ -2513,22 +2537,6 @@ lemma state_hyp_refs_update[iff]:
   "kheap (f s) = kheap s \<Longrightarrow> state_hyp_refs_of (f s) = state_hyp_refs_of s"
   by (clarsimp simp: state_hyp_refs_of_def
                   split: option.splits cong: option.case_cong)
-
-(* ARMHYP move *)
-definition
-  arch_live :: "arch_kernel_obj \<Rightarrow> bool"
-where
-  "arch_live ao \<equiv> case ao of
-    ARM_A.VCPU v \<Rightarrow> bound (ARM_A.vcpu_tcb v)
-    | _ \<Rightarrow>  False"
-
-definition
-  hyp_live :: "kernel_object \<Rightarrow> bool"
-where
-  "hyp_live ko \<equiv> case ko of
-  (TCB tcb) \<Rightarrow> bound (tcb_vcpu (tcb_arch tcb))
-| (ArchObj ao) \<Rightarrow> arch_live ao
-|  _ \<Rightarrow> False"
 
 lemma hyp_refs_of_hyp_live:
   "hyp_refs_of ko \<noteq> {} \<Longrightarrow> hyp_live ko"

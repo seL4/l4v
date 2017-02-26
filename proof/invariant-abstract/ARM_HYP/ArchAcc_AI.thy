@@ -359,8 +359,11 @@ crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
 
 lemma set_asid_pool_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) (wp set_asid_pool_typ_at)+
-
+  apply (rule valid_arch_state_lift; (wp set_asid_pool_typ_at)?)
+  apply (simp add: set_asid_pool_def)
+  apply (wp set_object_wp get_object_wp)
+  apply (clarsimp simp: obj_at_def is_vcpu_def)
+  done
 
 lemma set_asid_pool_valid_objs [wp]:
   "\<lbrace>valid_objs\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_. valid_objs\<rbrace>"
@@ -993,6 +996,10 @@ lemma set_pd_valid_global:
   \<lbrace>\<lambda>_ s. valid_global_refs s\<rbrace>"
   by (wp valid_global_refs_cte_lift)
 
+lemma set_pd_no_vcpu[wp]:
+  "\<lbrace>obj_at (is_vcpu and P) p'\<rbrace> set_pd p pd \<lbrace>\<lambda>_. obj_at (is_vcpu and P) p'\<rbrace>"
+  unfolding set_pd_def
+  by (wpsimp wp: set_object_wp get_object_wp simp: obj_at_def is_vcpu_def)
 
 lemma set_pd_valid_arch:
   "\<lbrace>\<lambda>s. valid_arch_state s\<rbrace>
@@ -1179,6 +1186,10 @@ lemma set_pt_valid_global:
   \<lbrace>\<lambda>_ s. valid_global_refs s\<rbrace>"
   by (wp valid_global_refs_cte_lift)
 
+lemma set_pt_no_vcpu[wp]:
+  "\<lbrace>obj_at (is_vcpu and P) p'\<rbrace> set_pt p pt \<lbrace>\<lambda>_. obj_at (is_vcpu and P) p'\<rbrace>"
+  unfolding set_pt_def
+  by (wpsimp wp: set_object_wp get_object_wp simp: obj_at_def is_vcpu_def)
 
 lemma set_pt_valid_arch_state[wp]:
   "\<lbrace>\<lambda>s. valid_arch_state s\<rbrace>

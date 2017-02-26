@@ -547,7 +547,7 @@ lemma valid_arch_state_lift_aobj_at:
    apply (case_tac "arm_current_vcpu x"; simp add: split_def)
    apply wp
    apply (rule aobj_at)
-   apply simp
+   apply (clarsimp simp: arch_obj_pred_def non_arch_obj_def is_vcpu_def)
   apply wp
   done
 
@@ -836,7 +836,6 @@ lemma default_arch_object_not_live: "\<not> live (ArchObj (default_arch_object a
 
 lemma default_tcb_not_live: "\<not> live (TCB default_tcb)"
   by (clarsimp simp: default_tcb_def default_arch_tcb_def live_def hyp_live_def)
-
 
 end
 end

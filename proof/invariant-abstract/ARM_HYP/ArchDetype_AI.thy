@@ -181,6 +181,14 @@ lemma valid_idle_detype[detype_invs_proofs]: "valid_idle (detype (untyped_range 
 lemma valid_vs_lookup: "valid_vs_lookup s"
     using valid_arch_caps by (simp add: valid_arch_caps_def)
 
+lemma hyp_live_strg:
+  "hyp_live ko \<Longrightarrow> live ko"
+  by (cases ko; simp add: live_def hyp_live_def)
+
+lemma obj_at_hyp_live_strg:
+  "obj_at hyp_live p s \<Longrightarrow> obj_at live p s"
+  by (erule obj_at_weakenE, rule hyp_live_strg)
+
 lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
   using valid_vs_lookup valid_arch_state ut_mdb valid_global_refsD [OF globals cap] cap
@@ -200,10 +208,12 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
      apply (simp add:cte_wp_at_caps_of_state)
    apply (simp add:cap_range_def)
    apply blast
-  apply (clarsimp split: option.splits)
-  sorry
+  apply (clarsimp simp: obj_at_conj_distrib split: option.splits)
+  apply (drule obj_at_hyp_live_strg)
+  apply (clarsimp simp: live_okE)
+  done
 
-lemma global_pts: (* ARCH SPECIFIC STATEMENT*) (* ARMHYP remove? *)
+lemma global_pts: (* ARCH SPECIFIC STATEMENT *)
   "\<And>p. \<lbrakk> p \<in> {}; p \<in> untyped_range cap \<rbrakk>  \<Longrightarrow> False"
   using valid_global_refsD [OF globals cap] by (simp add: cap_range_def global_refs_def)
 
@@ -410,7 +420,7 @@ lemma valid_table_caps:
   apply (simp add: valid_table_caps_def del: imp_disjL)
   apply (elim allEI | rule impI)+
   apply clarsimp
-  apply (metis detype_arch_state no_obj_refs) (* METIS USED *)
+  apply (metis no_obj_refs)
   done
 
 
@@ -421,11 +431,6 @@ lemma valid_arch_caps_detype[detype_invs_proofs]: "valid_arch_caps (detype (unty
                                        unique_table_refs
                                        valid_table_caps)
 
-
-(* (* ARMHYP restate? *)
-lemma pd_at_global_pd: "page_directory_at (arm_global_pd (arch_state s)) s"
-  using valid_arch_state by (simp add: valid_arch_state_def)
-*)
 
 lemma valid_kernel_mappings_detype[detype_invs_proofs]: "valid_kernel_mappings (detype (untyped_range cap) s)"
   proof -

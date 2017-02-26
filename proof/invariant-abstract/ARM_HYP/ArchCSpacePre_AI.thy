@@ -274,5 +274,12 @@ lemma arch_derived_is_device:
               split: if_split_asm cap.splits arch_cap.splits)+
   done
 
+lemma set_cap_no_vcpu[wp]:
+  "\<lbrace>obj_at (is_vcpu and P) p\<rbrace> set_cap cap cref \<lbrace>\<lambda>_. obj_at (is_vcpu and P) p\<rbrace>"
+  unfolding set_cap_def2 split_def
+  apply (wpsimp wp: set_object_wp get_object_wp get_cap_wp)
+  apply (auto simp: obj_at_def is_vcpu_def)
+  done
+
 end
 end

@@ -993,6 +993,15 @@ lemma associate_vcpu_tcb_if_live_then_nonz_cap[wp]:
   unfolding associate_vcpu_tcb_def
   by (wpsimp wp: arch_thread_set_inv_neq hoare_disjI1 get_vcpu_wp hoare_vcg_all_lift hoare_drop_imps)
 
+lemma set_vcpu_valid_arch_Some[wp]:
+  "\<lbrace>valid_arch_state\<rbrace> set_vcpu vcpu (v\<lparr>vcpu_tcb := Some tcb\<rparr>) \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  apply (wp set_vcpu_wp)
+  apply (clarsimp simp: valid_arch_state_def)
+  apply (rule conjI)
+   apply (fastforce simp: valid_asid_table_def obj_at_def)
+  apply (clarsimp simp: obj_at_def is_vcpu_def hyp_live_def arch_live_def split: option.splits)
+  done
+
 lemma associate_vcpu_tcb_invs[wp]:
   "\<lbrace>invs and ex_nonz_cap_to vcpu and ex_nonz_cap_to tcb\<rbrace> associate_vcpu_tcb vcpu tcb \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
@@ -1017,7 +1026,7 @@ lemma valid_obj_vcpu_sctlr_update[simp]:
 lemma write_vcpu_register_invs[wp]:
   "\<lbrace>invs\<rbrace> write_vcpu_register vcpu val \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding write_vcpu_register_def invs_def valid_state_def
-  apply (wp get_vcpu_wp set_vcpu_valid_pspace)
+  apply (wp get_vcpu_wp set_vcpu_valid_pspace set_vcpu_valid_arch_eq_hyp)
   apply (clarsimp simp: obj_at_def valid_pspace_def)
   apply (erule (2) valid_objsE)
   done
@@ -1034,6 +1043,7 @@ lemma invoke_vcpu_inject_irq_invs[wp]:
                     dmo_machine_state_lift device_region_dmos
                     cap_refs_respects_device_region_dmo
                     hoare_vcg_all_lift hoare_vcg_disj_lift
+                    set_vcpu_valid_arch_eq_hyp
               simp: set_gic_vcpu_ctrl_lr_def valid_machine_state_def)
   apply (clarsimp simp: obj_at_def valid_pspace_def)
   apply (erule (2) valid_objsE)

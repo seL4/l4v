@@ -16,31 +16,6 @@ context Arch begin
 
 named_theorems Finalise_AI_asms
 
-(* FIXME: move, probalby needed much earlier *)
-lemma arch_thread_set_caps_of_state [wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> arch_thread_set f t \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  apply (simp add: arch_thread_set_def set_object_def)
-  apply wp
-  apply (clarsimp elim!: rsubst[where P=P]
-                 intro!: ext
-                  dest!: get_tcb_SomeD)
-  apply (subst caps_of_state_after_update)
-   apply (clarsimp simp: obj_at_def get_tcb_def tcb_cap_cases_def)
-  apply simp
-  done
-
-(* FIXME: move, probably needed much earlier *)
-lemma get_vcpu_wp:
-  "\<lbrace>\<lambda>s. \<forall>v. ko_at (ArchObj (VCPU v)) p s \<longrightarrow> Q v s\<rbrace> get_vcpu p \<lbrace>Q\<rbrace>"
-  by (wpsimp simp: get_vcpu_def wp: get_object_wp)
-
-(* FIXME: move, probably needed much earlier *)
-lemma arch_thread_get_wp:
-  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at (TCB tcb) t s \<longrightarrow> Q (f (tcb_arch tcb)) s\<rbrace> arch_thread_get f t \<lbrace>Q\<rbrace>"
-  apply (wpsimp simp: arch_thread_get_def)
-  apply (auto dest!: get_tcb_ko_atD)
-  done
-
 crunch caps_of_state[wp]: prepare_thread_delete "\<lambda>s. P (caps_of_state s)"
   (wp: crunch_wps)
 
@@ -704,32 +679,6 @@ lemma arch_thread_sym_refs[wp]:
   apply assumption
   done
 
-lemma set_object_wp:
-  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> v)\<rparr>) \<rbrace> set_object p v \<lbrace>\<lambda>_. Q\<rbrace>"
-  apply (simp add: set_object_def)
-  apply wp
-  done
-
-lemma arch_thread_set_wp:
-  "\<lbrace>\<lambda>s. get_tcb p s \<noteq> None \<longrightarrow> Q (s\<lparr>kheap := kheap s(p \<mapsto> TCB (the (get_tcb p s)\<lparr>tcb_arch := f (tcb_arch (the (get_tcb p s)))\<rparr>))\<rparr>) \<rbrace>
-    arch_thread_set f p
-   \<lbrace>\<lambda>_. Q\<rbrace>"
-  apply (simp add: arch_thread_set_def)
-  apply (wp set_object_wp)
-  apply simp
-  done
-
-lemma a_type_VCPU [simp]:
-  "a_type (ArchObj (VCPU v)) = AArch AVCPU"
-  by (simp add: a_type_def)
-
-lemma set_vcpu_wp:
-  "\<lbrace>\<lambda>s. vcpu_at p s \<longrightarrow> Q (s\<lparr>kheap := kheap s(p \<mapsto> (ArchObj (VCPU vcpu))) \<rparr>) \<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_. Q\<rbrace>"
-  unfolding set_vcpu_def
-  apply (wp set_object_wp get_object_wp)
-  apply (clarsimp simp: obj_at_def split: kernel_object.splits arch_kernel_obj.splits)
-  done
-
 lemma arch_thread_get_tcb:
   "\<lbrace> \<top> \<rbrace> arch_thread_get tcb_vcpu p \<lbrace>\<lambda>rv s. \<exists>t. obj_at (\<lambda>tcb. tcb = (TCB t) \<and> rv = tcb_vcpu (tcb_arch t)) p s\<rbrace>"
   apply (simp add: arch_thread_get_def)
@@ -750,14 +699,6 @@ lemma get_vcpu_ko: "\<lbrace>Q\<rbrace> get_vcpu p \<lbrace>\<lambda>rv s. ko_at
    apply (subst conj_commute)
    apply (wp get_object_sp[simplified pred_conj_def], simp)
   done
-
-lemma get_tcb_None_tcb_at:
-  "(get_tcb p s = None) = (\<not>tcb_at p s)"
-  by (auto simp: get_tcb_def obj_at_def is_tcb_def split: kernel_object.splits option.splits)
-
-lemma get_tcb_Some_ko_at:
-  "(get_tcb p s = Some t) = ko_at (TCB t) p s"
-  by (auto simp: get_tcb_def obj_at_def is_tcb_def split: kernel_object.splits option.splits)
 
 lemma vcpu_disable_sym_refs_hyp [wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> vcpu_disable vcpu_opt \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
@@ -993,6 +934,21 @@ lemma valid_arch_state_vcpu_update_str:
 lemma valid_global_refs_vcpu_update_str:
   "valid_global_refs s \<Longrightarrow> valid_global_refs (s\<lparr>arch_state := arm_current_vcpu_update f (arch_state s)\<rparr>)"
   by (simp add: valid_global_refs_def global_refs_def)
+
+lemma set_vcpu_None_valid_arch[wp]:
+  "\<lbrace>valid_arch_state and (\<lambda>s. \<forall>a. arm_current_vcpu (arch_state s) \<noteq> Some (vr, a))\<rbrace>
+  set_vcpu vr (vcpu_tcb_update Map.empty v) \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  apply (wp set_vcpu_wp)
+  apply (clarsimp simp: valid_arch_state_def)
+  apply (rule conjI)
+   apply (fastforce simp: valid_asid_table_def obj_at_def)
+  apply (clarsimp simp: obj_at_def split: option.splits)
+  done
+
+lemma dissociate_vcpu_valid_arch[wp]:
+  "\<lbrace>valid_arch_state\<rbrace> dissociate_vcpu_tcb vr t \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  unfolding dissociate_vcpu_tcb_def vcpu_invalidate_active_def
+  by (wpsimp wp: get_vcpu_wp arch_thread_get_wp | strengthen valid_arch_state_vcpu_update_str)+
 
 lemma dissociate_vcpu_tcb_invs[wp]: "\<lbrace>invs\<rbrace> dissociate_vcpu_tcb vr t \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)

@@ -45,7 +45,7 @@ lemma get_object_sp:
   done
 
 definition non_arch_obj :: "kernel_object \<Rightarrow> bool" where
-  "non_arch_obj \<equiv> \<lambda>ko. \<forall>ako. ko \<noteq> ArchObj ako"  (* ARMHYP *) (* symref? *)
+  "non_arch_obj \<equiv> \<lambda>ko. \<forall>ako. ko \<noteq> ArchObj ako"
 
 lemma non_arch_objs[intro]:
   "non_arch_obj (Endpoint ep)"

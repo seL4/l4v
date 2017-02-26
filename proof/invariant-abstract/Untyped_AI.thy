@@ -20,7 +20,6 @@ context begin interpretation Arch .
 requalify_consts
   region_in_kernel_window
   arch_default_cap
-(*  second_level_tables *) (* not used in ARMHYP *)
 end
 
 primrec
