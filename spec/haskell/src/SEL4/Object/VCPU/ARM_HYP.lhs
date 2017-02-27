@@ -332,10 +332,9 @@ For initialisation, see makeVCPUObject.
 > vcpuInvalidateActive = do
 >     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
 >     case hsCurVCPU of
->         Just (vcpuPtr, True) -> do
->             vcpuDisable Nothing
->             modifyArchState (\s -> s { armHSCurVCPU = Just (vcpuPtr, False) })
+>         Just (vcpuPtr, True) -> vcpuDisable Nothing
 >         _ -> return ()
+>     modifyArchState (\s -> s { armHSCurVCPU = Nothing })
 
 > vcpuCleanInvalidateActive = do
 >     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
