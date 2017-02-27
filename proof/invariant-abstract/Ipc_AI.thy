@@ -202,11 +202,23 @@ locale Ipc_AI =
         \<lbrace>valid_objs and cte_wp_at P (t, ref) and tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>
           do_ipc_transfer st ep b gr rt
         \<lbrace>\<lambda>rv. cte_wp_at P (t, ref)\<rbrace>"
+  assumes handle_arch_fault_reply_typ_at[wp]:
+    "\<And> P T p x4 t label msg.
+      \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
+        handle_arch_fault_reply x4 t label msg
+      \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  assumes do_fault_transfer_cte_wp_at[wp]:
+  "\<And> P p x t label msg.
+      \<lbrace>cte_wp_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>
+        do_fault_transfer x t label msg
+      \<lbrace> \<lambda>rv. cte_wp_at P p \<rbrace>"
   assumes arch_get_sanitise_register_info_typ_at[wp]:
-    "\<And> P T p t.
+  "\<And> P T p t.
       \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
         arch_get_sanitise_register_info t
       \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+
+
 
 context Ipc_AI begin
 
@@ -591,6 +603,13 @@ lemma tcl_state_refs_of[wp]:
     \<lbrace>\<lambda>s::'state_ext state. P (state_refs_of s)\<rbrace>
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  by (wp transfer_caps_loop_pres)
+
+lemma tcl_state_hyp_refs_of[wp]:
+  "\<And>P ep buffer n caps slots mi.
+    \<lbrace>\<lambda>s::'state_ext state. P (ARM.state_hyp_refs_of s)\<rbrace>
+      transfer_caps_loop ep buffer n caps slots mi
+    \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
 crunch if_live [wp]: set_extra_badge if_live_then_nonz_cap
@@ -1459,6 +1478,9 @@ crunch iflive[wp]: do_ipc_transfer "if_live_then_nonz_cap :: 'state_ext state \<
 crunch state_refs_of[wp]: do_ipc_transfer "\<lambda>s::'state_ext state. P (state_refs_of s)"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
+crunch state_hyp_refs_of[wp]: do_ipc_transfer "\<lambda>s::'state_ext state. P (ARM.state_hyp_refs_of s)"
+  (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop set_object)
+
 crunch ct[wp]: do_ipc_transfer "cur_tcb :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
@@ -1559,7 +1581,10 @@ context Ipc_AI begin
 crunch irq_handlers[wp]: do_ipc_transfer "valid_irq_handlers :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift simp: zipWithM_x_mapM crunch_simps ball_conj_distrib )
 
-crunch arch_objs[wp]: do_ipc_transfer "valid_arch_objs :: 'state_ext state \<Rightarrow> bool"
+crunch vspace_objs[wp]: transfer_caps_loop "valid_vspace_objs :: 'state_ext state \<Rightarrow> bool"
+  (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
+
+crunch vspace_objs[wp]: do_ipc_transfer "valid_vspace_objs :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
 
 crunch arch_caps[wp]: do_ipc_transfer "valid_arch_caps :: 'state_ext state \<Rightarrow> bool"
@@ -2133,6 +2158,7 @@ crunch "distinct"[wp]: setup_caller_cap "pspace_distinct"
 
 crunch cur_tcb[wp]: setup_caller_cap "cur_tcb"
 
+crunch state_hyp_refs_of[wp]: setup_caller_cap "\<lambda>s. P (ARM.state_hyp_refs_of s)"
 
 lemma setup_caller_cap_state_refs_of[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s) (sender := {r \<in> state_refs_of s sender. snd r = TCBBound}))\<rbrace>
@@ -2142,7 +2168,6 @@ lemma setup_caller_cap_state_refs_of[wp]:
   apply wp
   apply (simp add: fun_upd_def cong: if_cong)
   done
-
 
 lemma setup_caller_cap_objs[wp]:
   "\<lbrace>valid_objs and pspace_aligned and
@@ -2321,8 +2346,10 @@ end
 
 crunch irq_handlers[wp]: set_endpoint "valid_irq_handlers"
   (wp: crunch_wps)
-
+(*
 crunch arch_objs [wp]: setup_caller_cap "valid_arch_objs"
+*)
+crunch vspace_objs [wp]: setup_caller_cap "valid_vspace_objs"
 
 crunch v_ker_map[wp]: setup_caller_cap "valid_kernel_mappings"
 
@@ -2527,7 +2554,9 @@ lemma ri_invs':
          | (wp hoare_vcg_conj_lift | wp dxo_wp_weak | simp)+)+
     apply (clarsimp simp: st_tcb_at_tcb_at neq_Nil_conv)
     apply (frule(1) sym_refs_obj_atD)
+    apply (frule(1) ARM.hyp_sym_refs_obj_atD)
     apply (frule ko_at_state_refs_ofD)
+    apply (frule ARM.ko_at_state_hyp_refs_ofD)
     apply (erule(1) obj_at_valid_objsE)
     apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_tcb_at
                           valid_obj_def ep_redux_simps

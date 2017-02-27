@@ -307,7 +307,9 @@ lemma acap_rights_update_id [intro!, simp]:
 lemma obj_ref_none_no_asid:
   "{} = obj_refs new_cap \<longrightarrow> None = table_cap_ref new_cap"
   "obj_refs new_cap = {} \<longrightarrow> table_cap_ref new_cap = None"
-  by (simp add: table_cap_ref_def split: cap.split arch_cap.split)+
+by (simp add: table_cap_ref_def arch_cap_fun_lift_def split: cap.split arch_cap.split)+
+
+
 end
 
 end

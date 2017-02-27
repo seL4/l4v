@@ -17,10 +17,6 @@ imports
 begin
 context Arch begin global_naming ARM
 
-(* FIXME copied from ArchAcc_AI; should be moved to ArchInvariants_AI *)
-
-lemmas vspace_bits_defs = pd_bits_def pde_bits_def pt_bits_def pte_bits_def pageBits_def
-
 lemma word_1FF_is_mask:
   "0x1FF = mask 9"
   by (simp add: mask_def)

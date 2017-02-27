@@ -512,6 +512,7 @@ definition
 where
   "valid_objs s \<equiv> \<forall>ptr \<in> dom $ kheap s. \<exists>obj. kheap s ptr = Some obj \<and> valid_obj ptr obj s"
 
+(* moved to InvariantsPre_AI
 datatype reftype
   = TCBBlockedSend | TCBBlockedRecv
      | TCBSignal | TCBBound | EPSend | EPRecv | NTFNSignal | NTFNBound
@@ -530,6 +531,8 @@ where
 | "symreftype NTFNBound       = TCBBound"
 | "symreftype TCBHypRef = HypTCBRef"
 | "symreftype HypTCBRef = TCBHypRef"
+
+*)
 
 definition
   tcb_st_refs_of :: "thread_state  \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -592,12 +595,6 @@ definition
 where
  "state_refs_of s \<equiv> \<lambda>x. case (kheap s x) of Some ko \<Rightarrow> refs_of ko | None \<Rightarrow> {}"
 
-definition
-  sym_refs :: "(obj_ref \<Rightarrow> (obj_ref \<times> reftype) set) \<Rightarrow> bool"
-where
- "sym_refs st \<equiv> \<forall>x. \<forall>(y, tp) \<in> st x. (x, symreftype tp) \<in> st y"
-
-
 text "objects live in device_region or non_device_region"
 
 definition
@@ -605,6 +602,24 @@ definition
 where
  "pspace_respects_device_region \<equiv> \<lambda>s. (dom (user_mem s)) \<subseteq> - (device_region s)
  \<and> (dom (device_mem s)) \<subseteq> (device_region s)"
+
+
+(* ARMHYP move *)
+definition
+  arch_live :: "arch_kernel_obj \<Rightarrow> bool"
+where
+  "arch_live ao \<equiv> case ao of
+    ARM_A.VCPU v \<Rightarrow> bound (ARM_A.vcpu_tcb v)
+    | _ \<Rightarrow>  False"
+
+definition
+  hyp_live :: "kernel_object \<Rightarrow> bool"
+where
+  "hyp_live ko \<equiv> case ko of
+  (TCB tcb) \<Rightarrow> bound (ARM_A.tcb_vcpu (tcb_arch tcb))
+| (ArchObj ao) \<Rightarrow> arch_live ao
+|  _ \<Rightarrow> False"
+
 
 primrec
   live :: "kernel_object \<Rightarrow> bool"
@@ -1294,6 +1309,26 @@ lemma ko_at_state_refs_ofD:
   "ko_at ko p s \<Longrightarrow> state_refs_of s p = refs_of ko"
   by (clarsimp dest!: obj_at_state_refs_ofD)
 
+lemma state_hyp_refs_of_elemD:
+  "\<lbrakk> ref \<in> ARM.state_hyp_refs_of s x \<rbrakk> \<Longrightarrow> obj_at (\<lambda>obj. ref \<in> ARM.hyp_refs_of obj) x s"
+  by (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def
+                  split: option.splits)
+
+lemma state_hyp_refs_of_eqD:
+  "\<lbrakk> ARM.state_hyp_refs_of s x = S; S \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>obj. ARM.hyp_refs_of obj = S) x s"
+  by (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def
+                  split: option.splits)
+
+lemma obj_at_state_hyp_refs_ofD:
+  "obj_at P p s \<Longrightarrow> \<exists>ko. P ko \<and> ARM.state_hyp_refs_of s p = ARM.hyp_refs_of ko"
+  apply (clarsimp simp: obj_at_def ARM.state_hyp_refs_of_def)
+  apply fastforce
+  done
+
+lemma ko_at_state_hyp_refs_ofD:
+  "ko_at ko p s \<Longrightarrow> ARM.state_hyp_refs_of s p = ARM.hyp_refs_of ko"
+  by (clarsimp dest!: obj_at_state_hyp_refs_ofD)
+
 definition
   "tcb_ntfn_is_bound ntfn ko = (case ko of TCB tcb \<Rightarrow> tcb_bound_notification tcb = ntfn | _ \<Rightarrow> False)"
 
@@ -1368,20 +1403,20 @@ lemma refs_of_live_obj:
 
 (* ARMHYP *)
 lemma hyp_refs_of_live:
-  "ARM.hyp_refs_of ko \<noteq> {} \<Longrightarrow> live ko"
+  "ARM.hyp_refs_of ko \<noteq> {} \<Longrightarrow> hyp_live ko"
   apply (cases ko, simp_all add: ARM.hyp_refs_of_def)
-    apply (rename_tac tcb_ext)
-     apply (case_tac "tcb_state tcb_ext", simp_all)
-    apply (fastforce simp: tcb_bound_refs_def)+
-  apply (rename_tac notification)
-  apply (case_tac "ntfn_obj notification", simp_all)
-   apply (fastforce simp: ntfn_bound_refs_def)+
-  sorry
+   apply (rename_tac tcb_ext)
+   apply (simp add: ARM.tcb_hyp_refs_def hyp_live_def)
+   apply (case_tac "ARM_A.tcb_vcpu (tcb_arch tcb_ext)"; clarsimp simp: ARM.tcb_vcpu_refs_def)
+  apply (rename_tac ao)
+  apply (rule ARM_A.arch_kernel_obj_cases;
+         simp add: ARM.refs_of_a_def ARM_A.arch_kernel_obj.case ARM.vcpu_tcb_refs_def hyp_live_def arch_live_def
+              split: option.splits)
+  done
 
 lemma hyp_refs_of_live_obj:
-  "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; ARM.hyp_refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at live p s"
+  "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; ARM.hyp_refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at hyp_live p s"
   by (fastforce simp: obj_at_def intro!: hyp_refs_of_live)
-(**)
 
 lemma if_live_then_nonz_capD:
   assumes x: "if_live_then_nonz_cap s" "obj_at P p s"
@@ -1620,19 +1655,20 @@ lemma valid_obj_pspaceI:
   "\<lbrakk> valid_obj ptr obj s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_obj ptr obj s'"
   unfolding valid_obj_def
   apply (cases obj)
-      apply (auto simp add: valid_ntfn_def valid_cs_def valid_tcb_def valid_ep_def 
-                           valid_tcb_state_def pred_tcb_at_def valid_bound_ntfn_def valid_bound_tcb_def
+      apply (auto simp add: valid_ntfn_def valid_cs_def valid_tcb_def valid_ep_def
+                            valid_tcb_state_def pred_tcb_at_def valid_bound_ntfn_def
+                            valid_bound_tcb_def
                  intro: obj_at_pspaceI valid_cap_pspaceI valid_arch_obj_pspaceI
                  split: ntfn.splits endpoint.splits
                         thread_state.splits option.split
           | auto split: kernel_object.split)+
   apply (rename_tac ao)
-  apply (rule ARM_A.arch_kernel_obj_cases; clarsimp simp add: ARM.wellformed_arch_obj_def)
-  apply (simp add: ARM.wellformed_arch_obj_def ARM.valid_vcpu_def obj_at_def)
-
-
-  (* ARMHYP need more info re vcpu *)
-sorry
+  apply (rule ARM_A.arch_kernel_obj_cases;
+        clarsimp simp add: ARM_A.arch_kernel_obj.simps ARM.wellformed_arch_obj_def
+                 split: ARM_A.arch_kernel_obj.split)
+  apply (auto simp add: ARM.valid_vcpu_def obj_at_def
+                     split: option.split)
+done
 
 lemma valid_objs_pspaceI:
   "\<lbrakk> valid_objs s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_objs s'"
@@ -2258,11 +2294,12 @@ lemma valid_obj_typ:
   apply (case_tac ob, simp_all add: valid_obj_def P P [where P=id, simplified]
          valid_cs_typ valid_tcb_typ valid_ep_typ valid_ntfn_typ valid_arch_obj_typ_gen)
   apply (rename_tac ao)
-  apply (case_tac "ao=ARM_A.VCPU v"; clarsimp simp add: "ARM.wellformed_arch_obj_def")
-
-(*  apply wp *)
-  (* ARMHYP need lemma for wellformed vcpu or valid_vcpu*)
-sorry
+  apply (rule ARM_A.arch_kernel_obj_cases;
+          clarsimp simp add: "ARM.wellformed_arch_obj_def" ARM_A.arch_kernel_obj.simps)
+  apply wp+
+  apply (auto simp add: ARM.valid_vcpu_def split: option.split, wp)
+  apply (rule P)
+done
 
 lemma valid_irq_node_typ:
   assumes P: "\<And>p. \<lbrace>\<lambda>s. typ_at (ACapTable 0) p s\<rbrace> f \<lbrace>\<lambda>rv s. typ_at (ACapTable 0) p s\<rbrace>"
@@ -3000,6 +3037,7 @@ lemma (in pspace_update_eq) state_hyp_refs_update:
 
 
 declare more_update.state_refs_update[iff]
+declare more_update.state_hyp_refs_update[iff]
 
 lemma zombies_final_arch_update [iff]:
   "zombies_final (arch_state_update f s) = zombies_final s"

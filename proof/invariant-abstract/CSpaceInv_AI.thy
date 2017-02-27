@@ -2015,6 +2015,13 @@ crunch state_hyp_refs_of[wp]: set_untyped_cap_as_full "\<lambda>s. P (ARM.state_
 crunch state_hyp_refs_of[wp]: cap_insert "\<lambda>s. P (ARM.state_hyp_refs_of s)"
   (wp: crunch_wps)
 
+
+crunch state_hyp_refs_of[wp]: set_original "\<lambda>s. P (ARM.state_hyp_refs_of s)"
+  (wp: crunch_wps simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_def)
+
+crunch state_hyp_refs_of[wp]: update_cdt "\<lambda>s. P (ARM.state_hyp_refs_of s)"
+  (wp: crunch_wps simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_def)
+
 crunch aligned[wp]: cap_insert pspace_aligned
   (wp: hoare_drop_imps)
 

@@ -46,6 +46,9 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
 crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notification, decode_unbind_notification
   (simp: cap.splits arch_cap.splits split_def)
 
+crunch (empty_fail) empty_fail[wp]: decode_vcpu_invocation
+  (simp: cap.splits arch_cap.splits split_def)
+
 lemma decode_tcb_invocation_empty_fail[wp]:
   "empty_fail (decode_tcb_invocation a b (ThreadCap p) d e)"
   by (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | intro conjI impI)+
@@ -58,22 +61,25 @@ lemma arch_decode_ARMASIDControlMakePool_empty_fail:
   "invocation_type label = ArchInvocationLabel ARMASIDControlMakePool
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   apply (simp add: arch_decode_invocation_def Let_def)
-  apply (intro impI conjI allI)
+  apply (cases e; simp add: decode_vcpu_invocation_def decode_mmu_invocation_def Let_def; intro impI conjI allI)
+  prefer 2
    apply (simp add: isPageFlushLabel_def isPDFlushLabel_def split: arch_cap.splits)+
-   apply (rule impI)
    apply (simp add: split_def)
    apply wp
     apply simp
    apply (subst bindE_assoc[symmetric])
    apply (rule empty_fail_bindE)
     subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: split_if_asm)
-   by (simp add: Let_def split: cap.splits arch_cap.splits option.splits bool.splits | wp | intro conjI impI allI)+
+   apply (simp add: Let_def split: cap.splits arch_cap.splits option.splits bool.splits | wp | intro conjI impI allI)+
+   apply (simp add: isPageFlushLabel_def isPDFlushLabel_def split: arch_cap.splits)+
+  done (* needs tidying up *)
 
 lemma arch_decode_ARMASIDPoolAssign_empty_fail:
   "invocation_type label = ArchInvocationLabel ARMASIDPoolAssign
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
-  apply (simp add: arch_decode_invocation_def split_def Let_def isPageFlushLabel_def isPDFlushLabel_def
-            split: arch_cap.splits cap.splits option.splits | intro impI allI)+
+  apply (simp add: arch_decode_invocation_def decode_mmu_invocation_def
+                   split_def Let_def isPageFlushLabel_def isPDFlushLabel_def
+            split: arch_cap.splits cap.splits option.splits | intro impI allI conjI)+
   apply (rule empty_fail_bindE)
    apply simp
   apply (rule empty_fail_bindE)
@@ -99,7 +105,8 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDControlMakePool_empty_fail\<close>\<close>)
   apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDPoolAssign_empty_fail\<close>\<close>)
   apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]
-  by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
+  by ((simp add: arch_decode_invocation_def decode_mmu_invocation_def Let_def
+               split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
 
 end
 
@@ -116,7 +123,10 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slo
     cap_swap_for_delete, decode_invocation
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
-         kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits)
+         kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits
+   ignore: do_machine_op writeContextIDAndPD_impl set_gic_vcpu_ctrl_hcr_impl setSCTLR_impl setHCR_impl
+           set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl set_gic_vcpu_ctrl_lr_impl setACTLR
+           get_gic_vcpu_ctrl_lr_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: setRegister, setNextPC
 
@@ -160,7 +170,7 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_t
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
          flush_type.splits page_directory_invocation.splits
-   ignore: resetTimer_impl ackInterrupt_impl)
+   ignore: resetTimer_impl ackInterrupt_impl addressTranslateS1CPR_impl)
 end
 
 global_interpretation EmptyFail_AI_call_kernel_unit?: EmptyFail_AI_call_kernel_unit

@@ -72,6 +72,11 @@ lemma state_refs_of_detype:
   by (rule ext, simp add: state_refs_of_def detype_def)
 
 
+lemma state_hyp_refs_of_detype:
+  "ARM.state_hyp_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else ARM.state_hyp_refs_of s x)"
+  by (rule ext, simp add: ARM.state_hyp_refs_of_def detype_def)
+
+
 definition
   obj_reply_refs :: "cap \<Rightarrow> machine_word set"
 where
@@ -362,6 +367,12 @@ lemma live_okE:
     apply (simp add:untyped)
     done
 
+
+lemma hyp_live_okE:
+    "\<And>P p. \<lbrakk> obj_at P p s; \<And>obj. P obj \<Longrightarrow> hyp_live obj \<rbrakk>
+    \<Longrightarrow> p \<notin> untyped_range cap"
+sorry
+
 lemma ifunsafe: "if_unsafe_then_cap s"
   using invs by (simp add: invs_def valid_state_def valid_pspace_def)
 
@@ -372,6 +383,13 @@ lemma state_refs: "state_refs_of (detype (untyped_range cap) s) = state_refs_of 
   apply (rule ext, clarsimp simp add: state_refs_of_detype)
   apply (rule sym, rule equals0I, drule state_refs_of_elemD)
   apply (drule live_okE, rule refs_of_live, clarsimp)
+  apply simp
+  done
+
+lemma state_hyp_refs: "ARM.state_hyp_refs_of (detype (untyped_range cap) s) = ARM.state_hyp_refs_of s"
+  apply (rule ext, clarsimp simp add: state_hyp_refs_of_detype)
+  apply (rule sym, rule equals0I, drule state_hyp_refs_of_elemD)
+  apply (drule hyp_live_okE, rule hyp_refs_of_live, clarsimp)
   apply simp
   done
 
@@ -545,9 +563,9 @@ lemma refs_of2: "\<And>obj p. kheap s p = Some obj
 (* ARMHYP *)
 lemma hyp_refsym : "sym_refs (ARM.state_hyp_refs_of s)"
   using invs by (simp add: invs_def valid_state_def valid_pspace_def)
-  
+
 lemma hyp_refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightarrow> ARM.hyp_refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
-  by (fastforce intro: hyp_refs_of_live dest!: sym_hyp_refs_ko_atD[OF _ refsym] live_okE)
+  by (fastforce intro: hyp_refs_of_live dest!: ARM.hyp_sym_refs_ko_atD[OF _ hyp_refsym] hyp_live_okE)
 
 lemma hyp_refs_of2: "\<And>obj p. kheap s p = Some obj
                      \<Longrightarrow> ARM.hyp_refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
@@ -581,14 +599,11 @@ lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbra
      apply (rename_tac notification ntfn_ext)
      apply (case_tac "ntfn_obj ntfn_ext")
        apply (auto simp: valid_ntfn_def ntfn_bound_refs_def split: option.splits)
-    apply (frule refs_of)
-    apply (simp add: ARM.vcpu_tcb_refs_def)
-    apply (auto simp: ARM.wellformed_arch_obj_def ARM.vcpu_tcb_refs_def ARM_A.arch_kernel_obj.distinct ARM_A.arch_kernel_obj.inject
+    apply (frule hyp_refs_of)
+    apply (auto simp: ARM.wellformed_arch_obj_def ARM_A.arch_kernel_obj.simps
                 split: ARM_A.arch_kernel_obj.splits option.splits)
-
-(* add vcpu case *)
-    done
-sorry
+   apply (auto simp: ARM.valid_vcpu_def ARM.vcpu_tcb_refs_def ARM.hyp_refs_of_simps ARM.refs_of_a_simps split: option.splits)
+  done
 
 lemma valid_objs_detype[detype_invs_lemmas] : "valid_objs (detype (untyped_range cap) s)"
   using invs_valid_objs[OF invs]
@@ -608,6 +623,9 @@ lemma pspace_aligned_detype[detype_invs_lemmas] :  "pspace_aligned (detype (unty
 lemma sym_refs_detype[detype_invs_lemmas] : "sym_refs (state_refs_of (detype (untyped_range cap) s))"
   using refsym by (simp add: state_refs)
   
+lemma sym_hyp_refs_detype[detype_invs_lemmas] : "sym_refs (ARM.state_hyp_refs_of (detype (untyped_range cap) s))"
+  using hyp_refsym by (simp add: state_hyp_refs)
+
 lemma pspace_distinct_detype[detype_invs_lemmas]: "pspace_distinct (detype (untyped_range cap) s)"
   apply (insert invs, drule invs_distinct)
   apply (auto simp: pspace_distinct_def)
@@ -815,7 +833,7 @@ lemma invariants:
          (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
 using detype_invs_lemmas detype_invs_assms ct_act
 by (simp add: invs_def valid_state_def valid_pspace_def valid_arch_imp_valid_vspace_objs
-                 detype_clear_um_independent clear_um.state_refs_update)    
+                 detype_clear_um_independent clear_um.state_refs_update clear_um.state_hyp_refs_update)
 end
 
 

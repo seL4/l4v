@@ -18,7 +18,7 @@ context Arch begin global_naming ARM
 named_theorems BCorres2_AI_assms
 
 crunch (bcorres)bcorres[wp, BCorres2_AI_assms]: invoke_cnode truncate_state
-  (simp: swp_def ignore: clearMemory without_preemption filterM ethread_set recycle_cap_ext)
+  (simp: swp_def ignore: clearMemory without_preemption filterM ethread_set)
 
 crunch (bcorres)bcorres[wp]: create_cap,init_arch_objects,retype_region,delete_objects truncate_state
   (ignore: freeMemory clearMemory retype_region_ext)
@@ -63,7 +63,7 @@ lemma invoke_irq_handler_bcorres[wp]: "bcorres (invoke_irq_handler a) (invoke_ir
 
 crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state
   (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
-         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME)
+         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME zipWithM_x)
 
 lemma perform_invocation_bcorres[wp]: "bcorres (perform_invocation a b c) (perform_invocation a b c)"
   apply (cases c)
@@ -110,9 +110,15 @@ lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fau
   apply (simp | wp)+
   done
 
+lemma handle_hypervisor_fault_bcorres[wp]: "bcorres (handle_hypervisor_fault a b) (handle_hypervisor_fault a b)"
+  apply (cases b)
+  apply (simp | wp)+
+  done
+
 lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
   apply (cases e)
-  apply (simp add: handle_send_def handle_call_def handle_recv_def handle_reply_def handle_yield_def handle_interrupt_def Let_def | intro impI conjI allI | wp | wpc)+
+  apply (simp add: handle_send_def handle_call_def handle_recv_def handle_reply_def handle_yield_def handle_interrupt_def
+                   handle_reserved_irq_def handle_hypervisor_fault.simps Let_def | intro impI conjI allI | wp | wpc)+
   done
 
 crunch (bcorres)bcorres[wp]: guarded_switch_to,switch_to_idle_thread truncate_state (ignore: storeWord clearExMonitor)

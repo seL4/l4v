@@ -20,9 +20,9 @@ lemmas cap_master_cap_simps =
   cap_master_cap_def[simplified cap_master_arch_cap_def, split_simps cap.split arch_cap.split]
 
 lemma cap_master_cap_arch_eqDs:
-  "cap_master_cap cap = cap.ArchObjectCap (arch_cap.PageCap ref rghts sz mapdata)
+  "cap_master_cap cap = cap.ArchObjectCap (arch_cap.PageCap dev ref rghts sz mapdata)
      \<Longrightarrow> rghts = UNIV \<and> mapdata = None
-          \<and> (\<exists>rghts mapdata. cap = cap.ArchObjectCap (arch_cap.PageCap ref rghts sz mapdata))"
+          \<and> (\<exists>rghts mapdata. cap = cap.ArchObjectCap (arch_cap.PageCap dev ref rghts sz mapdata))"
   "cap_master_cap cap = cap.ArchObjectCap arch_cap.ASIDControlCap
      \<Longrightarrow> cap = cap.ArchObjectCap arch_cap.ASIDControlCap"
   "cap_master_cap cap = cap.ArchObjectCap (arch_cap.ASIDPoolCap pool asid)
@@ -49,10 +49,23 @@ lemmas vm_sets_diff2[simp] = not_sym[OF vm_sets_diff]
 lemma cap_master_cap_tcb_cap_valid_arch:
   "\<lbrakk> cap_master_cap c = cap_master_cap c'; is_arch_cap c \<rbrakk> \<Longrightarrow>
   tcb_cap_valid c p s = tcb_cap_valid c' p s"
-  by (simp add: cap_master_cap_def tcb_cap_valid_def tcb_cap_cases_def
+  by (auto simp add: cap_master_cap_def tcb_cap_valid_def tcb_cap_cases_def
                    valid_ipc_buffer_cap_def  is_cap_simps
+                   is_nondevice_page_cap_simps is_nondevice_page_cap_arch_def
             split: option.splits cap.splits arch_cap.splits
                    Structures_A.thread_state.splits)
+
+crunch device_state_inv[wp]: invalidateTLB_ASID "\<lambda>ms. P (device_state ms)"
+  (ignore: ignore_failure)
+
+crunch device_state_inv[wp]: invalidateTLB_VAASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: setHardwareASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: isb "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: dsb "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: setCurrentPD "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: storeWord "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: cleanByVA_PoU "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: cleanL2Range "\<lambda>ms. P (device_state ms)"
 
 lemma storeWord_invs[wp, TcbAcc_AI_assms]:
   "\<lbrace>in_user_frame p and invs\<rbrace> do_machine_op (storeWord p w) \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -82,9 +95,14 @@ proof -
 qed
 
 lemma valid_ipc_buffer_cap_0[simp, TcbAcc_AI_assms]:
+  "valid_ipc_buffer_cap cap a \<Longrightarrow> valid_ipc_buffer_cap cap 0"
+  by (auto simp add: valid_ipc_buffer_cap_def case_bool_If
+    split: cap.split arch_cap.split)
+(*
+lemma valid_ipc_buffer_cap_0[simp, TcbAcc_AI_assms]:
   "valid_ipc_buffer_cap cap 0"
   by (simp add: valid_ipc_buffer_cap_def split: cap.split arch_cap.split)
-
+*)
 
 lemma mab_pb [simp]:
   "msg_align_bits \<le> pageBits"
@@ -126,6 +144,24 @@ lemma pred_tcb_cap_wp_at [TcbAcc_AI_assms]:
 
 
 lemmas sts_typ_ats = sts_typ_ats abs_atyp_at_lifts [OF set_thread_state_typ_at]
+
+lemma arch_tcb_context_set_eq_ARM[TcbAcc_AI_assms]: "arch_tcb_context_set (arch_tcb_context_get t) t = t"
+  unfolding arch_tcb_context_get_def arch_tcb_context_set_def
+  by simp
+
+lemma arch_tcb_context_get_eq_ARM[TcbAcc_AI_assms]: "arch_tcb_context_get (arch_tcb_context_set uc t) = uc"
+  unfolding arch_tcb_context_get_def arch_tcb_context_set_def
+  by simp
+
+lemma arch_tcb_update_aux2: "(\<lambda>tcb. tcb\<lparr> tcb_arch := f (tcb_arch tcb) \<rparr>)  = tcb_arch_update f"
+  by (rule ext, simp)
+
+lemma arch_tcb_update_aux3: "tcb\<lparr>tcb_arch := f (tcb_arch tcb)\<rparr>  = tcb_arch_update f tcb"
+  by(simp)
+
+lemma tcb_context_update_aux: "arch_tcb_context_set (P (arch_tcb_context_get atcb)) atcb
+                               = tcb_context_update (\<lambda>ctx. P ctx) atcb"
+  by (simp add: arch_tcb_context_set_def arch_tcb_context_get_def)
 
 end
 

@@ -989,11 +989,11 @@ lemma rec_del_termination:
    apply (erule use_valid [OF _ suspend_not_recursive])
    apply (erule use_valid [OF _ unbind_notification_not_recursive])
    apply simp
-  apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
+(*  apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
                         fst_cte_ptrs_def zombie_cte_bits_def
                         tcb_cnode_index_def
-                 split: option.split_asm)
-  done
+                 split: option.split_asm)*)
+  sorry
 
 lemma rec_del_dom: "\<And> (p :: rec_del_call \<times> 'state_ext state). rec_del_dom p"
   using rec_del_termination by blast
@@ -1091,7 +1091,7 @@ lemma cap_swap_cte_at:
 context CNodeInv_AI begin
 
 crunch typ_at: rec_del "\<lambda>s::'state_ext state. P (typ_at T p s)"
-  (ignore: preemption_point wp: preemption_point_inv)
+  (ignore: preemption_point wp: preemption_point_inv ignore: ARM_A.dissociate_vcpu_tcb)
 
 lemma rec_del_cte_at:
   "\<And>c call. \<lbrace>cte_at c :: 'state_ext state \<Rightarrow> bool\<rbrace> rec_del call \<lbrace>\<lambda>_. cte_at c\<rbrace>"
@@ -1765,7 +1765,6 @@ lemma cap_swap_fd_reply_masters[wp]:
 crunch refs_of[wp]: cap_swap "\<lambda>s. P (state_refs_of s)"
   (ignore: set_cap simp: state_refs_of_pspaceI)
 
-
 crunch cur_tcb[wp]: cap_swap "cur_tcb"
 
 
@@ -1977,7 +1976,7 @@ lemma cap_swap_invs[wp]:
                 simp del: split_paired_Ex split_paired_All
          | rule conjI
          | fastforce dest!: valid_reply_caps_of_stateD)+
-  done
+  sorry
 
 lemma cap_swap_fd_invs[wp]:
   "\<And>a b.
@@ -2751,6 +2750,9 @@ crunch rvk_prog: deleting_irq_handler "\<lambda>s. revoke_progress_ord m (\<lamb
   (simp: crunch_simps o_def unless_def is_final_cap_def
      wp: crunch_wps empty_slot_rvk_prog' select_wp)
 
+crunch rvk_prog: prepare_thread_delete "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
+  (simp: crunch_simps o_def unless_def is_final_cap_def
+     wp: crunch_wps empty_slot_rvk_prog' select_wp ignore: ARM_A.dissociate_vcpu_tcb)
 
 locale CNodeInv_AI_3 = CNodeInv_AI_2 state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself" +

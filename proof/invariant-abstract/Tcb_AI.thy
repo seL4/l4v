@@ -176,6 +176,7 @@ lemma copyreg_invs:
 
 lemma out_invs_trivialT:
   assumes x: "\<And>tcb v. \<forall>(getF, setF)\<in>ran tcb_cap_cases. getF (fn v tcb) = getF tcb"
+  assumes r:  "\<And>tcb v. ARM_A.tcb_vcpu (tcb_arch (fn v tcb)) = ARM_A.tcb_vcpu (tcb_arch tcb)" (* ARMHYP *)
   assumes z: "\<And>tcb v. tcb_state  (fn v tcb) = tcb_state  tcb"
   assumes z': "\<And>tcb v. tcb_bound_notification (fn v tcb) = tcb_bound_notification tcb"
   assumes w: "\<And>tcb v. tcb_ipc_buffer (fn v tcb) = tcb_ipc_buffer tcb
@@ -187,7 +188,7 @@ lemma out_invs_trivialT:
                                                    | Some f \<Rightarrow> valid_fault f)"
   shows      "\<lbrace>invs\<rbrace> option_update_thread t fn v \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac v, simp_all add: option_update_thread_def)
-  apply (rule thread_set_invs_trivial [OF x z z' w y a])
+  apply (rule thread_set_invs_trivial [OF x r z z' w y a])
   apply auto
   done
 
@@ -604,6 +605,7 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
   apply (rule hoare_pre)
    apply (wp thread_set_valid_objs''
              thread_set_refs_trivial
+             thread_set_hyp_refs_trivial
              thread_set_iflive_trivial
              thread_set_mdb
              thread_set_ifunsafe_trivial
@@ -690,6 +692,7 @@ lemma set_mcpriority_invs[wp]:
   unfolding set_mcpriority_def
   by (wp thread_set_valid_objs''
              thread_set_refs_trivial
+             thread_set_hyp_refs_trivial
              thread_set_iflive_trivial
              thread_set_mdb
              thread_set_ifunsafe_trivial

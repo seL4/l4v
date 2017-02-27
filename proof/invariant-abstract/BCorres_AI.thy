@@ -209,10 +209,10 @@ lemma gets_the_get_tcb_bcorres[wp]: "bcorres (gets_the (get_tcb a)) (gets_the (g
   apply (simp add: gets_s_bcorres_underlying)
 done
 
-crunch (bcorres)bcorres[wp]:thread_set
-truncate_state ( simp: swp_def ignore: maskInterrupt)
 
-crunch (bcorres)bcorres[wp]: arch_finalise_cap,prepare_thread_delete truncate_state (simp: swp_def ignore: forM_x)
+crunch (bcorres)bcorres[wp]: arch_finalise_cap truncate_state (simp: swp_def ignore: forM_x) (* FIXME ARMHYP *)
+
+crunch (bcorres)bcorres[wp]: prepare_thread_delete truncate_state (simp: swp_def)
 
 end
 

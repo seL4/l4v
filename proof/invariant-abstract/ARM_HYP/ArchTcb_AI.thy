@@ -153,7 +153,7 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
     apply (wp delete_one_caps_of_state
          | rule impI
          | simp add: deleting_irq_handler_def get_irq_slot_def x ball_ran_eq)+
-    done
+    sorry (* prepare_thread_delete *)
 
 
 lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_asms]:
@@ -191,10 +191,26 @@ lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
   apply simp
   apply (rule use_spec)
   apply (rule rec_del_all_caps_in_range)
-     apply (simp add: table_cap_ref_def[simplified, split_simps cap.split]
+     apply_trace (simp add: table_cap_ref_def[simplified, split_simps cap.split]
+                       del: arch_cap_fun_lift_simps
               | rule obj_ref_none_no_asid)+
-  done
+  sorry
 
+lemma as_user_valid_cap[wp]:
+  "\<lbrace>valid_cap c\<rbrace> as_user a b \<lbrace>\<lambda>rv. valid_cap c\<rbrace>"
+  by (wp valid_cap_typ)
+
+lemma as_user_ipc_tcb_cap_valid4[wp]:
+  "\<lbrace>\<lambda>s. tcb_cap_valid cap (t, tcb_cnode_index 4) s\<rbrace>
+    as_user a b
+   \<lbrace>\<lambda>rv. tcb_cap_valid cap (t, tcb_cnode_index 4)\<rbrace>"
+  apply (simp add: as_user_def set_object_def)
+  apply (wp | wpc | simp)+
+  apply (clarsimp simp: tcb_cap_valid_def obj_at_def
+                        pred_tcb_at_def is_tcb
+                 dest!: get_tcb_SomeD)
+  apply (clarsimp simp: get_tcb_def)
+  done
 
 lemma tc_invs[Tcb_AI_asms]:
   "\<lbrace>invs and tcb_at a
@@ -207,6 +223,10 @@ lemma tc_invs[Tcb_AI_asms]:
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) e)
        and (case_option \<top> (no_cap_to_obj_dr_emp o fst) f)
        and (case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
+       (* only set prio \<le> mcp *)
+       and (\<lambda>s. case_option True (\<lambda>pr. mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) (cur_thread s) s) pr)
+       (* only set mcp \<le> prev_mcp *)
+       and (\<lambda>s. case_option True (\<lambda>mcp. mcpriority_tcb_at (\<lambda>m. mcp \<le> m) (cur_thread s) s) mcp)
        and K (case_option True (is_cnode_cap o fst) e)
        and K (case_option True (is_valid_vtable_root o fst) f)
        and K (case_option True (\<lambda>v. case_option True
@@ -214,10 +234,10 @@ lemma tc_invs[Tcb_AI_asms]:
                              and is_arch_cap and is_cnode_or_valid_arch)
                                 o fst) (snd v)) g)
        and K (case_option True (\<lambda>bl. length bl = word_bits) b)\<rbrace>
-      invoke_tcb (ThreadControl a sl b pr e f g)
+      invoke_tcb (ThreadControl a sl b mcp pr e f g)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (rule hoare_gen_asm)+
-  apply (simp add: split_def cong: option.case_cong)
+ apply (rule hoare_gen_asm)+
+  apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
   apply (rule hoare_vcg_precond_imp)
    apply wp
       apply ((simp only: simp_thms
@@ -250,14 +270,15 @@ lemma tc_invs[Tcb_AI_asms]:
         | strengthen use_no_cap_to_obj_asid_strg
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+)
-  apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
-                        is_cap_simps is_valid_vtable_root_def
+  apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified] is_nondevice_page_cap_arch_def
+                        is_cap_simps is_valid_vtable_root_def is_nondevice_page_cap_simps
                         is_cnode_or_valid_arch_def tcb_cap_valid_def
                         invs_valid_objs cap_asid_def vs_cap_ref_def
-                 split: option.split_asm
-       | rule conjI)+
+                 split: option.split_asm )+
+      apply (simp add: case_bool_If valid_ipc_buffer_cap_def is_nondevice_page_cap_simps
+                       is_nondevice_page_cap_arch_def
+                split: arch_cap.splits if_splits)+
   done
-
 
 lemma check_valid_ipc_buffer_inv: (* arch_specific *)
   "\<lbrace>P\<rbrace> check_valid_ipc_buffer vptr cap \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -265,7 +286,7 @@ lemma check_valid_ipc_buffer_inv: (* arch_specific *)
              cong: cap.case_cong arch_cap.case_cong
              split del: split_if)
   apply (rule hoare_pre)
-   apply (wp | simp split del: split_if | wpcw)+
+   apply (wp | simp add: whenE_def split del: split_if | wpcw)+
   done
 
 lemma check_valid_ipc_buffer_wp[Tcb_AI_asms]:
@@ -279,7 +300,7 @@ lemma check_valid_ipc_buffer_wp[Tcb_AI_asms]:
              cong: cap.case_cong arch_cap.case_cong
              split del: split_if)
   apply (rule hoare_pre)
-   apply (wp | simp split del: split_if | wpc)+
+   apply (wp | simp add: whenE_def split del: split_if | wpc)+
   apply (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def
                         valid_ipc_buffer_cap_def)
   done

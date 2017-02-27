@@ -20,6 +20,12 @@ context Arch begin global_naming ARM
 
 named_theorems Retype_AI_assms
 
+lemma arch_kobj_size_cong[Retype_AI_assms]:
+"\<lbrakk>a = a1; c=c1\<rbrakk> \<Longrightarrow> arch_kobj_size (default_arch_object a b c)
+  = arch_kobj_size (default_arch_object a1 b1 c1)"
+  by (simp add: default_arch_object_def split: aobject_type.splits)
+
+
 lemma clearMemoryVM_return[simp, Retype_AI_assms]:
   "clearMemoryVM a b = return ()"
   by (simp add: clearMemoryVM_def)
@@ -43,7 +49,7 @@ lemma no_gs_types_simps [simp, Retype_AI_assms]:
   by (simp_all add: no_gs_types_def)
 
 lemma retype_region_ret_folded [Retype_AI_assms]:
-  "\<lbrace>\<top>\<rbrace> retype_region y n bits ty
+  "\<lbrace>\<top>\<rbrace> retype_region y n bits ty dev
    \<lbrace>\<lambda>r s. r = retype_addrs y ty n bits\<rbrace>"
   unfolding retype_region_def
   apply (simp add: pageBits_def)
@@ -154,57 +160,11 @@ lemma clearMemory_vms:
   apply (simp add: word_rsplit_0)
   done
 
-lemma create_word_objects_vms[wp]:
-  "\<lbrace>valid_machine_state\<rbrace>
-   create_word_objects ptr bits sz
-   \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
-  apply (clarsimp simp: create_word_objects_def
-    reserve_region_def mapM_x_mapM do_machine_op_return_foo)
-  apply (rule hoare_pre)
-  apply wp
-  apply (subst dom_mapM)
-    apply ((simp add:clearMemory_def
-      | wp empty_fail_cleanCacheRange_PoU ef_storeWord
-      empty_fail_mapM_x empty_fail_bind)+)[1]
-   apply (wp mapM_wp')
-  apply (clarsimp simp: create_word_objects_def reserve_region_def
-    clearMemory_vms
-    do_machine_op_def split_def | wp)+
-  done
+crunch device_state_inv[wp]: clearMemory "\<lambda>ms. P (device_state ms)"
+  (wp: mapM_x_wp)
 
-lemma create_word_objects_valid_irq_states[wp]:
-  "\<lbrace>valid_irq_states\<rbrace>
-   create_word_objects ptr bits sz
-   \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
-  apply (clarsimp simp: create_word_objects_def
-    reserve_region_def mapM_x_mapM do_machine_op_return_foo)
-  apply (rule hoare_pre)
-  apply wp
-  apply (subst dom_mapM)
-    apply ((simp add:clearMemory_def
-      | wp empty_fail_cleanCacheRange_PoU ef_storeWord
-      empty_fail_mapM_x empty_fail_bind)+)[1]
-   apply (wp mapM_wp' | simp add: do_machine_op_def | wpc)+
-   apply clarsimp
-   apply (erule use_valid)
-   apply (simp add: valid_irq_states_def | wp no_irq_clearMemory no_irq)+
-  done
-
-lemma create_word_objects_invs[wp]:
-  "\<lbrace>invs\<rbrace> create_word_objects ptr bits sz \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add:invs_def valid_state_def)
-  apply (rule hoare_pre)
-   apply (rule hoare_strengthen_post)
-    apply (rule hoare_vcg_conj_lift[OF create_word_objects_vms])
-    apply (rule hoare_vcg_conj_lift[OF create_word_objects_valid_irq_states])
-    prefer 2
-    apply clarsimp
-    apply assumption
-   apply (clarsimp simp: create_word_objects_def reserve_region_def
-                        split_def do_machine_op_def)
-   apply wp
-  apply (simp add: invs_def cur_tcb_def valid_state_def)
-  done
+crunch pspace_respects_device_region[wp]: reserve_region pspace_respects_device_region
+crunch cap_refs_respects_device_region[wp]: reserve_region cap_refs_respects_device_region
 
 crunch invs [wp]: reserve_region "invs"
 
@@ -250,6 +210,12 @@ crunch pspace_in_kernel_window[wp]: copy_global_mappings "pspace_in_kernel_windo
   (wp: crunch_wps)
 
 crunch cap_refs_in_kernel_window[wp]: copy_global_mappings "cap_refs_in_kernel_window"
+  (wp: crunch_wps)
+
+crunch pspace_respects_device_region[wp]: copy_global_mappings "pspace_respects_device_region"
+  (wp: crunch_wps)
+
+crunch cap_refs_respects_device_region[wp]: copy_global_mappings "cap_refs_respects_device_region"
   (wp: crunch_wps)
 
 
@@ -400,7 +366,7 @@ lemma copy_global_invs_mappings_restricted:
           and K (is_aligned pd pd_bits)\<rbrace>
      copy_global_mappings pd
    \<lbrace>\<lambda>rv. all_invs_but_equal_kernel_mappings_restricted S\<rbrace>"
-  apply (simp add: copy_global_mappings_def valid_pspace_def equal_kernel_mappings_def, wp, simp)
+  apply (simp add: copy_global_mappings_def equal_kernel_mappings_def, wp, auto)
   done
 
 lemma copy_global_mappings_valid_ioc[wp]:
@@ -500,7 +466,7 @@ lemma init_arch_objects_invs_from_restricted:
          and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api new_type obj_sz))\<rbrace>
      init_arch_objects new_type ptr bits obj_sz refs
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: init_arch_objects_def)
+  apply (simp add: init_arch_objects_def split del: split_if)
   apply (rule hoare_pre)
    apply (wp mapM_copy_global_invs_mappings_restricted
              hoare_vcg_const_Ball_lift
@@ -564,11 +530,11 @@ lemma valid_untyped_helper [Retype_AI_assms]:
   and     tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
   and   cover  : "range_cover ptr sz (obj_bits_api ty us) n"
   and   range  : "is_untyped_cap c \<Longrightarrow> usable_untyped_range c \<inter> {ptr..ptr + of_nat (n * 2 ^ (obj_bits_api ty us)) - 1} = {}"
-  and     pn   : "pspace_no_overlap ptr sz s"
+  and     pn   : "pspace_no_overlap_range_cover ptr sz s"
   and     cn   : "caps_no_overlap ptr sz s"
   and     vp   : "valid_pspace s"
   shows "valid_cap c
-           (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us) then Some (default_object ty us) else kheap s x\<rparr>)"
+           (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us) then Some (default_object ty dev us) else kheap s x\<rparr>)"
   (is "valid_cap c ?ns")
   proof -
   have obj_at_pres: "\<And>P x. obj_at P x s \<Longrightarrow> obj_at P x ?ns"
@@ -576,9 +542,9 @@ lemma valid_untyped_helper [Retype_AI_assms]:
    (erule pspace_no_overlapC [OF pn _ _ cover vp])
   note blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
         Int_atLeastAtMost atLeastatMost_empty_iff
-  have cover':"range_cover ptr sz (obj_bits (default_object ty us)) n"
+  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us)) n"
     using cover tyunt
-    by (clarsimp simp:obj_bits_api_def3)
+    by (clarsimp simp:obj_bits_dev_irr)
 
   show ?thesis
   using cover valid_c range usable_range_emptyD[where cap = c] cte_at
@@ -591,17 +557,18 @@ lemma valid_untyped_helper [Retype_AI_assms]:
   apply (rename_tac word nat1 nat2)
   apply (clarsimp simp:valid_untyped_def is_cap_simps obj_at_def split:split_if_asm)
     apply (thin_tac "\<forall>x. Q x" for Q)
-     apply (frule retype_addrs_obj_range_subset_strong[OF _ cover' tyunt])
+     apply (frule retype_addrs_obj_range_subset_strong[where dev=dev, OF _ _ tyunt])
+      apply (simp add: obj_bits_dev_irr tyunt)
      apply (frule usable_range_subseteq)
        apply (simp add:is_cap_simps)
      apply (clarsimp simp:cap_aligned_def split:split_if_asm)
       apply (frule aligned_ranges_subset_or_disjoint)
       apply (erule retype_addrs_aligned[where sz = sz])
-         apply (simp add:range_cover_def)
-        apply (simp add:range_cover_def word_bits_def)
-       apply (simp add:range_cover_def)
-      apply (clarsimp simp:obj_range_def[symmetric] obj_bits_api_def3 Int_ac tyunt
-        split:split_if_asm)
+         apply (simp add: range_cover_def)
+        apply (simp add: range_cover_def word_bits_def)
+       apply (simp add: range_cover_def)
+      apply (clarsimp simp: default_obj_range Int_ac tyunt
+                     split: split_if_asm)
      apply (elim disjE)
       apply (drule(2) subset_trans[THEN disjoint_subset2])
       apply (drule Int_absorb2)+
@@ -614,21 +581,19 @@ lemma valid_untyped_helper [Retype_AI_assms]:
    apply (clarsimp simp:cap_aligned_def)
     apply (frule aligned_ranges_subset_or_disjoint)
      apply (erule retype_addrs_aligned[where sz = sz])
-         apply (simp add:range_cover_def)
-        apply (simp add:range_cover_def word_bits_def)
-       apply (simp add:range_cover_def)
-      apply (clarsimp simp:obj_range_def[symmetric] obj_bits_api_def3 Int_ac tyunt
-        split:split_if_asm)
-   apply (case_tac "{word..word + 2 ^ nat1 - 1} = obj_range p (default_object ty us)")
-     apply simp
+          apply (simp add: range_cover_def)
+        apply (simp add: range_cover_def word_bits_def)
+       apply (simp add: range_cover_def)
+      apply (clarsimp simp: default_obj_range Int_ac tyunt
+                     split: split_if_asm)
    apply (erule disjE)
-     apply (simp add:subset_iff_psubset_eq)
-     apply (simp add:subset_iff_psubset_eq[symmetric])
-     apply (drule(1) psubset_subset_trans)
-    apply (simp add:cte_wp_at_caps_of_state)
+    apply (simp add: cte_wp_at_caps_of_state)
     apply (drule cn[unfolded caps_no_overlap_def,THEN bspec,OF ranI])
-    apply simp
-  apply blast+
+   apply (simp add: p_assoc_help[symmetric])
+    apply (erule impE)
+     apply blast (* set arith *)
+    apply blast (* set arith *)
+  apply blast (* set arith  *)
   done
   qed
 
@@ -643,10 +608,10 @@ global_interpretation Retype_AI_valid_untyped_helper?: Retype_AI_valid_untyped_h
 
 
 locale retype_region_proofs_arch
-  = retype_region_proofs s ty us ptr sz n ps s'
+  = retype_region_proofs s ty us ptr sz n ps s' dev
   + Arch
   for s :: "'state_ext :: state_ext state"
-  and ty us ptr sz n ps s'
+  and ty us ptr sz n ps s' dev
 
 
 context retype_region_proofs begin
@@ -660,9 +625,9 @@ lemma valid_cap:
   proof -
   note blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
         Int_atLeastAtMost atLeastatMost_empty_iff
-  have cover':"range_cover ptr sz (obj_bits (default_object ty us)) n"
+  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us)) n"
     using cover tyunt
-    by (clarsimp simp:obj_bits_api_def3)
+    by (clarsimp simp: obj_bits_dev_irr)
   show ?thesis
   using cap
   apply (case_tac cap)
@@ -674,11 +639,11 @@ lemma valid_cap:
      apply (intro conjI)
        apply clarsimp
        apply (drule disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt]])
-        apply (simp add:Int_ac)
+        apply (simp add:Int_ac p_assoc_help[symmetric])
        apply simp
       apply clarsimp
      apply (drule disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt]])
-      apply (simp add:Int_ac)
+      apply (simp add:Int_ac  p_assoc_help[symmetric])
      apply simp
      using cover tyunt
      apply (simp add: obj_bits_api_def2 split:Structures_A.apiobject_type.splits)
@@ -699,13 +664,13 @@ lemma valid_arch_state:
                      valid_asid_table_def)
 
 lemma vs_refs_default [simp]:
-  "vs_refs (default_object ty us) = {}"
+  "vs_refs (default_object ty dev us) = {}"
   by (simp add: default_object_def default_arch_object_def tyunt vs_refs_def
                 o_def pde_ref_def graph_of_def
            split: Structures_A.apiobject_type.splits aobject_type.splits)
 
 lemma vs_refs_pages_default [simp]:
-  "vs_refs_pages (default_object ty us) = {}"
+  "vs_refs_pages (default_object ty dev us) = {}"
   by (simp add: default_object_def default_arch_object_def tyunt vs_refs_pages_def
                 o_def pde_ref_pages_def pte_ref_pages_def graph_of_def
            split: Structures_A.apiobject_type.splits aobject_type.splits)
@@ -740,12 +705,17 @@ context retype_region_proofs_arch begin
 lemma obj_at_valid_pte:
   "\<lbrakk>valid_pte pte s; \<And>P p. obj_at P p s \<Longrightarrow> obj_at P p s'\<rbrakk>
    \<Longrightarrow> valid_pte pte s'"
-  by (cases pte, auto simp: obj_at_def)
+  apply (cases pte, simp_all add: valid_pte_def data_at_def)
+  apply (clarsimp | elim disjE)+
+  done
 
 lemma obj_at_valid_pde:
   "\<lbrakk>valid_pde pde s; \<And>P p. obj_at P p s \<Longrightarrow> obj_at P p s'\<rbrakk>
    \<Longrightarrow> valid_pde pde s'"
-  by (cases pde, auto simp: obj_at_def)
+  apply (cases pde, simp_all add: valid_pte_def data_at_def)
+  apply (clarsimp | elim disjE)+
+  done
+
 
 end
 
@@ -761,10 +731,10 @@ proof
   fix p ao
   assume p: "(\<exists>\<rhd> p) s'"
   assume "ko_at (ArchObj ao) p s'"
-  hence "ko_at (ArchObj ao) p s \<or> ArchObj ao = default_object ty us"
+  hence "ko_at (ArchObj ao) p s \<or> ArchObj ao = default_object ty dev us"
     by (simp add: ps_def obj_at_def s'_def split: split_if_asm)
   moreover
-  { assume "ArchObj ao = default_object ty us" with tyunt
+  { assume "ArchObj ao = default_object ty dev us" with tyunt
     have "valid_vspace_obj ao s'" by (rule valid_vspace_obj_default)
   }
   moreover
@@ -788,7 +758,7 @@ lemma valid_arch_objs':
   assumes va: "valid_arch_objs s"
   shows "valid_arch_objs s'"
 proof (clarsimp simp add: valid_arch_objs_def)
-qed sorry
+qed
 *)
 
 (* ML \<open>val pre_ctxt_0 = @{context}\<close> *)
@@ -846,7 +816,80 @@ where
  "region_in_kernel_window S \<equiv>
      \<lambda>s. \<forall>x \<in> S. arm_kernel_vspace (arch_state s) x = ArmVSpaceKernelWindow"
 
+lemma pspace_respects_device_regionI:
+  assumes uat: "\<And>ptr sz. kheap s ptr = Some (ArchObj (DataPage False sz))
+                \<Longrightarrow> obj_range ptr (ArchObj $ DataPage False sz) \<subseteq> - device_region s"
+      and dat: "\<And>ptr sz. kheap s ptr = Some (ArchObj (DataPage True sz))
+                \<Longrightarrow> obj_range ptr (ArchObj $ DataPage True sz) \<subseteq> device_region s"
+      and inv:  "pspace_aligned s" "valid_objs s"
+  shows "pspace_respects_device_region s"
+
+  apply (simp add: pspace_respects_device_region_def,intro conjI)
+  apply (rule subsetI)
+   apply (clarsimp simp: dom_def user_mem_def obj_at_def in_user_frame_def split: split_if_asm)
+   apply (frule uat)
+   apply (cut_tac ko = "(ArchObj (DataPage False sz))" in p_in_obj_range_internal[OF _ inv])
+    prefer 2
+    apply (fastforce simp: obj_bits_def)
+   apply simp
+  apply (rule subsetI)
+  apply (clarsimp simp: dom_def device_mem_def obj_at_def in_device_frame_def split: split_if_asm)
+  apply (frule dat)
+  apply (cut_tac ko = "(ArchObj (DataPage True sz))" in p_in_obj_range_internal[OF _ inv])
+  prefer 2
+   apply (fastforce simp: obj_bits_def)
+  apply simp
+  done
+
+lemma obj_range_respect_device_range:
+  "\<lbrakk>kheap s ptr = Some (ArchObj (DataPage dev sz));pspace_aligned s\<rbrakk> \<Longrightarrow>
+  obj_range ptr (ArchObj $ DataPage dev sz) \<subseteq> (if dev then dom (device_mem s) else dom (user_mem s))"
+  apply (drule(1) pspace_alignedD[rotated])
+  apply (clarsimp simp: user_mem_def in_user_frame_def obj_at_def obj_range_def device_mem_def in_device_frame_def)
+  apply (intro impI conjI)
+   apply clarsimp
+   apply (rule exI[where x = sz])
+   apply (simp add: mask_in_range[symmetric,THEN iffD1] a_type_def)
+  apply clarsimp
+  apply (rule exI[where x = sz])
+  apply (simp add: mask_in_range[symmetric,THEN iffD1] a_type_def)
+  done
+
+lemma pspace_respects_device_regionD:
+  assumes inv:  "pspace_aligned s" "valid_objs s" "pspace_respects_device_region s"
+  shows uat: "\<And>ptr sz. kheap s ptr = Some (ArchObj (DataPage False sz))
+                \<Longrightarrow> obj_range ptr (ArchObj $ DataPage False sz) \<subseteq> - device_region s"
+      and dat: "\<And>ptr sz. kheap s ptr = Some (ArchObj (DataPage True sz))
+                \<Longrightarrow> obj_range ptr (ArchObj $ DataPage True sz) \<subseteq> device_region s"
+  using inv
+  apply (simp_all add: pspace_respects_device_region_def)
+  apply (rule subsetI)
+   apply (drule obj_range_respect_device_range[OF _ inv(1)])
+   apply (clarsimp split: if_splits)
+   apply (drule(1) subsetD[rotated])
+   apply (drule(1) subsetD[rotated])
+   apply (simp add: dom_def)
+  apply (rule subsetI)
+  apply (drule obj_range_respect_device_range[OF _ inv(1)])
+  apply (clarsimp split: if_splits)
+  apply (drule(1) subsetD[rotated])
+  apply (drule(1) subsetD[rotated])
+   apply (simp add: dom_def)
+  done
+
+
+lemma default_obj_dev:
+  "\<lbrakk>ty \<noteq> Untyped;default_object ty dev us = ArchObj (DataPage dev' sz)\<rbrakk> \<Longrightarrow> dev = dev'"
+  by (clarsimp simp: default_object_def default_arch_object_def
+              split: apiobject_type.split_asm aobject_type.split_asm)
+
 end
+
+
+lemma cap_range_respects_device_region_cong[cong]:
+  "device_state (machine_state s) = device_state (machine_state s')
+  \<Longrightarrow> cap_range_respects_device_region cap s = cap_range_respects_device_region cap s'"
+  by (clarsimp simp: cap_range_respects_device_region_def)
 
 
 context begin interpretation Arch .
@@ -942,8 +985,69 @@ lemma pspace_in_kernel_window:
   apply (clarsimp simp: region_in_kernel_window_def
                    del: ballI)
   apply (drule retype_addrs_mem_subset_ptr_bits[OF cover tyunt])
-  apply (fastforce simp: field_simps obj_bits_api_default_object[OF tyunt])
+  apply (fastforce simp: field_simps obj_bits_dev_irr tyunt)
   done
+
+lemma pspace_respects_device_region:
+  assumes psp_resp_dev: "pspace_respects_device_region s"
+      and cap_refs_resp_dev: "cap_refs_respects_device_region s"
+  shows "pspace_respects_device_region s'"
+  proof -
+    note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
+          atLeastatMost_subset_iff atLeastLessThan_iff
+          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  show ?thesis
+  apply (cut_tac vp)
+  apply (rule pspace_respects_device_regionI)
+     apply (clarsimp simp add: pspace_respects_device_region_def s'_def ps_def
+                        split: split_if_asm )
+      apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt])
+       using cover tyunt
+       apply (simp add: obj_bits_api_def3 split: if_splits)
+      apply (frule default_obj_dev[OF tyunt],simp)
+      apply (drule(1) subsetD)
+      apply (rule exE[OF dev])
+      apply (drule cap_refs_respects_device_region_cap_range[OF _ cap_refs_resp_dev])
+      apply (fastforce split: if_splits)
+     apply (drule pspace_respects_device_regionD[OF _ _ psp_resp_dev, rotated -1])
+       apply fastforce
+      apply fastforce
+     apply fastforce
+    apply (clarsimp simp add: pspace_respects_device_region_def s'_def ps_def
+                       split: split_if_asm )
+     apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt])
+      using cover tyunt
+      apply (simp add: obj_bits_api_def4 split: if_splits)
+     apply (frule default_obj_dev[OF tyunt],simp)
+      apply (drule(1) subsetD)
+      apply (rule exE[OF dev])
+      apply (drule cap_refs_respects_device_region_cap_range[OF _ cap_refs_resp_dev])
+      apply (fastforce split: if_splits)
+     apply (drule pspace_respects_device_regionD[OF _ _ psp_resp_dev, rotated -1])
+       apply fastforce
+      apply fastforce
+     apply fastforce
+  using valid_pspace
+  apply fastforce+
+  done
+qed
+
+
+
+lemma cap_refs_respects_device_region:
+  assumes psp_resp_dev: "pspace_respects_device_region s"
+      and cap_refs_resp_dev: "cap_refs_respects_device_region s"
+  shows "cap_refs_respects_device_region s'"
+  using cap_refs_resp_dev
+  apply (clarsimp simp: cap_refs_respects_device_region_def
+              simp del: split_paired_All split_paired_Ex)
+  apply (drule_tac x = "(a,b)" in spec)
+  apply (erule notE)
+  apply (subst(asm) cte_retype)
+   apply (simp add: cap_range_respects_device_region_def cap_range_def)
+  apply (clarsimp simp: cte_wp_at_caps_of_state s'_def dom_def)
+  done
+
 
 lemma vms:
   "valid_machine_state s \<Longrightarrow> valid_machine_state s'"
@@ -975,7 +1079,10 @@ lemma post_retype_invs:
                      valid_kernel_mappings valid_asid_map
                      valid_ioc vms
                      pspace_in_kernel_window
-                     cap_refs_in_kernel_window valid_irq_states)
+                     pspace_respects_device_region
+                     cap_refs_respects_device_region
+                     cap_refs_in_kernel_window valid_irq_states
+               split: split_if_asm)
 
 (* ML \<open>val pre_ctxt_1 = @{context}\<close> *)
 
@@ -1029,13 +1136,14 @@ global_interpretation Retype_AI?: Retype_AI
 context Arch begin global_naming ARM
 
 lemma retype_region_plain_invs:
-  "\<lbrace>invs and caps_no_overlap ptr sz and pspace_no_overlap ptr sz
+  "\<lbrace>invs and caps_no_overlap ptr sz and pspace_no_overlap_range_cover ptr sz
       and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
       and region_in_kernel_window {ptr .. (ptr &&~~ mask sz) + 2 ^ sz - 1}
+      and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
       and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
       and K (range_cover ptr sz (obj_bits_api ty us) n)
       and K (ty \<noteq> ArchObject PageDirectoryObj)\<rbrace>
-      retype_region ptr n us ty \<lbrace>\<lambda>rv. invs\<rbrace>"
+      retype_region ptr n us ty dev \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_strengthen_post[OF retype_region_post_retype_invs])
   apply (simp add: post_retype_invs_def)
@@ -1068,6 +1176,80 @@ lemma cleanCacheRange_PoU_um_inv[wp]:
   by (simp add: cleanCacheRange_PoU_def cleanByVA_PoU_def machine_op_lift_def machine_rest_lift_def
                 split_def | wp)+
 
+lemma invs_irq_state_independent:
+  "invs (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
+   = invs s"
+  apply (clarsimp simp: irq_state_independent_A_def invs_def
+      valid_state_def valid_pspace_def valid_mdb_def valid_ioc_def valid_idle_def
+      only_idle_def if_unsafe_then_cap_def valid_reply_caps_def
+      valid_reply_masters_def valid_global_refs_def valid_arch_state_def
+      valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
+      valid_vspace_objs_def valid_arch_caps_def
+      valid_kernel_mappings_def equal_kernel_mappings_def
+      valid_asid_map_def vspace_at_asid_def
+      pspace_in_kernel_window_def cap_refs_in_kernel_window_def
+      cur_tcb_def sym_refs_def state_refs_of_def
+      swp_def valid_irq_states_def)
+sorry
+
+crunch irq_masks_inv[wp]: cleanByVA_PoU, storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
+  (ignore: cacheRangeOp wp: crunch_wps)
+
+crunch underlying_mem_0[wp]: cleanByVA_PoU, clearMemory
+    "\<lambda>s. underlying_memory s p = 0"
+  (ignore: cacheRangeOp wp: crunch_wps storeWord_um_eq_0)
+
+lemma clearMemory_invs:
+  "\<lbrace>invs\<rbrace> do_machine_op (clearMemory w sz) \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (wp dmo_invs1)
+  apply clarsimp
+  apply (intro conjI impI allI)
+   apply (clarsimp simp: invs_def valid_state_def)
+   apply (erule_tac p=p in valid_machine_stateE)
+   apply (clarsimp simp: use_valid[OF _ clearMemory_underlying_mem_0])
+  apply (clarsimp simp: use_valid[OF _ clearMemory_irq_masks_inv[where P="op = v" for v], OF _ refl])
+  done
+
+lemma caps_region_kernel_window_imp:
+  "caps_of_state s p = Some cap
+    \<Longrightarrow> cap_refs_in_kernel_window s
+    \<Longrightarrow> S \<subseteq> cap_range cap
+    \<Longrightarrow> region_in_kernel_window S s"
+  apply (simp add: region_in_kernel_window_def)
+  apply (drule(1) cap_refs_in_kernel_windowD)
+  apply blast
+  done
+
+crunch irq_node[wp]: init_arch_objects "\<lambda>s. P (interrupt_irq_node s)"
+  (wp: crunch_wps)
+
+lemma init_arch_objects_excap:
+  "\<lbrace>ex_cte_cap_wp_to P p\<rbrace>
+      init_arch_objects tp ptr bits us refs
+   \<lbrace>\<lambda>rv s. ex_cte_cap_wp_to P p s\<rbrace>"
+  by (wp ex_cte_cap_to_pres)
+
+crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at P t"
+  (wp: crunch_wps)
+
 end
+
+lemmas clearMemory_invs[wp] = ARM.clearMemory_invs
+
+lemmas invs_irq_state_independent[intro!, simp]
+    = ARM.invs_irq_state_independent
+
+lemmas init_arch_objects_invs_from_restricted
+    = ARM.init_arch_objects_invs_from_restricted
+
+lemmas caps_region_kernel_window_imp
+    = ARM.caps_region_kernel_window_imp
+
+lemmas init_arch_objects_wps
+    = ARM.init_arch_objects_cte_wp_at
+      ARM.init_arch_objects_valid_cap
+      ARM.init_arch_objects_cap_table
+      ARM.init_arch_objects_excap
+      ARM.init_arch_objects_st_tcb_at
 
 end

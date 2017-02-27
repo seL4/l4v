@@ -16,6 +16,12 @@ context Arch begin global_naming ARM
 
 named_theorems Ipc_AI_assms
 
+
+crunch pspace_respects_device_region[wp]: set_extra_badge "pspace_respects_device_region"
+
+crunch cap_refs_respects_device_region[wp]: set_extra_badge "cap_refs_respects_device_region"
+  (wp: crunch_wps cap_refs_respects_device_region_dmo)
+
 lemma update_cap_data_closedform:
   "update_cap_data pres w cap =
    (case cap of
@@ -29,7 +35,7 @@ lemma update_cap_data_closedform:
        else CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> 3) && mask 5)) (to_bl g'')) ((w >> 8) && mask 18))
    | ThreadCap r \<Rightarrow> ThreadCap r
    | DomainCap \<Rightarrow> DomainCap
-   | UntypedCap p n idx \<Rightarrow> UntypedCap p n idx
+   | UntypedCap dev p n idx \<Rightarrow> UntypedCap dev p n idx
    | NullCap \<Rightarrow> NullCap
    | ReplyCap t m \<Rightarrow> ReplyCap t m
    | IRQControlCap \<Rightarrow> IRQControlCap
@@ -48,7 +54,7 @@ lemma update_cap_data_closedform:
   done
 
 lemma cap_asid_PageCap_None [simp]:
-  "cap_asid (ArchObjectCap (PageCap r R pgsz None)) = None"
+  "cap_asid (ArchObjectCap (PageCap dev r R pgsz None)) = None"
   by (simp add: cap_asid_def)
 
 lemma arch_derive_cap_is_derived:
@@ -137,7 +143,6 @@ lemma get_extra_cptrs_length[wp, Ipc_AI_assms]:
 lemma cap_asid_rights_update [simp, Ipc_AI_assms]:
   "cap_asid (cap_rights_update R c) = cap_asid c"
   apply (simp add: cap_rights_update_def acap_rights_update_def split: cap.splits arch_cap.splits)
-  apply (clarsimp simp: cap_asid_def)
   done
 
 lemma cap_rights_update_vs_cap_ref[simp, Ipc_AI_assms]:
@@ -252,6 +257,20 @@ lemma copy_mrs_in_user_frame[wp, Ipc_AI_assms]:
   "\<lbrace>in_user_frame p\<rbrace> copy_mrs t buf t' buf' n \<lbrace>\<lambda>rv. in_user_frame p\<rbrace>"
   by (simp add: in_user_frame_def) (wp hoare_vcg_ex_lift)
 
+lemma get_register_eq : "getRegister r = get_register r"
+  apply (simp add: getRegister_def get_register_def)
+  done
+
+lemma as_user_getRestart_invs[wp]: "\<lbrace>P\<rbrace> as_user t getRestartPC \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (simp add: get_register_eq getRestartPC_def ; rule user_getreg_inv)
+  done
+
+lemma make_arch_fault_msg_invs[wp]: "\<lbrace>P\<rbrace> make_arch_fault_msg f t \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (cases f)
+  apply simp
+  apply wp
+  sorry (* add ARMHYP specific cases *)
+
 lemma make_fault_message_inv[wp, Ipc_AI_assms]:
   "\<lbrace>P\<rbrace> make_fault_msg ft t \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (cases ft, simp_all split del: split_if)
@@ -272,17 +291,21 @@ lemma lookup_ipc_buffer_in_user_frame[wp, Ipc_AI_assms]:
   apply (simp add: lookup_ipc_buffer_def)
   apply (wp get_cap_wp thread_get_wp | wpc | simp)+
   apply (clarsimp simp add: obj_at_def is_tcb)
-  apply (subgoal_tac "in_user_frame (xa + (tcb_ipc_buffer tcb &&
-                                           mask (pageBitsForSize xc))) s", simp)
-  apply (drule (1) cte_wp_valid_cap)
+  apply (rename_tac dev p R sz m)
+  apply (subgoal_tac "in_user_frame (p + (tcb_ipc_buffer tcb &&
+                                           mask (pageBitsForSize sz))) s", simp)
+  apply (frule (1) cte_wp_valid_cap)
   apply (clarsimp simp add: valid_cap_def cap_aligned_def in_user_frame_def)
   apply (thin_tac "case_option a b c" for a b c)
-  apply (rule_tac x=xc in exI)
-  apply (subgoal_tac "(xa + (tcb_ipc_buffer tcb && mask (pageBitsForSize xc)) &&
-            ~~ mask (pageBitsForSize xc)) = xa", simp)
-  apply (rule is_aligned_add_helper[THEN conjunct2], assumption)
-  apply (rule and_mask_less')
-  apply (case_tac xc, simp_all)
+  apply (rule_tac x=sz in exI)
+  apply (subst is_aligned_add_helper[THEN conjunct2])
+   apply simp
+  apply (simp add: and_mask_less' word_bits_def)
+  apply (clarsimp simp: caps_of_state_cteD'[where P = "\<lambda>x. True",simplified,symmetric])
+  apply (drule(1) CSpace_AI.tcb_cap_slot_regular)
+   apply simp
+  apply (simp add: is_nondevice_page_cap_def is_nondevice_page_cap_arch_def case_bool_If
+            split: if_splits)
   done
 
 lemma transfer_caps_loop_cte_wp_at:
@@ -364,6 +387,8 @@ lemma transfer_caps_non_null_cte_wp_at:
   apply (auto simp: cte_wp_at_caps_of_state)
   done
 
+crunch cte_wp_at[wp,Ipc_AI_assms]: do_fault_transfer "cte_wp_at P p"
+
 lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows  "\<lbrace>valid_objs and cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>
@@ -409,6 +434,8 @@ lemma do_ipc_transfer_tcb_caps [Ipc_AI_assms]:
   done
 
 
+crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply "P (typ_at T p s)"
+
 end
 
 interpretation Ipc_AI?: Ipc_AI
@@ -417,4 +444,40 @@ interpretation Ipc_AI?: Ipc_AI
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
   qed
 
+context Arch begin global_naming ARM
+
+named_theorems Ipc_AI_cont_assms
+
+crunch pspace_respects_device_region[wp, Ipc_AI_cont_assms]: do_ipc_transfer "pspace_respects_device_region"
+  (wp: crunch_wps ignore: const_on_failure simp: crunch_simps)
+
+lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
+  "\<lbrace>cap_refs_respects_device_region and tcb_at t and  valid_objs and valid_mdb\<rbrace>
+   do_ipc_transfer t ep bg grt r
+   \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
+  apply (simp add: do_ipc_transfer_def)
+  apply (wp|wpc)+
+      apply (simp add: do_normal_transfer_def transfer_caps_def bind_assoc)
+      apply (wp|wpc)+
+         apply (rule hoare_vcg_all_lift)
+         apply (rule hoare_drop_imps)
+         apply wp
+         apply (subst ball_conj_distrib)
+         apply (wp get_rs_cte_at2 thread_get_wp static_imp_wp grs_distinct
+                   hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift | simp)+
+   apply (rule hoare_strengthen_post[where Q = "\<lambda>r s. cap_refs_respects_device_region s
+       \<and> valid_objs s \<and> valid_mdb s \<and> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb) t s"])
+   apply wp
+    apply (clarsimp simp: obj_at_def is_tcb_def)
+    apply (simp split: kernel_object.split_asm)
+   apply auto
+   done
+
+end
+
+interpretation Ipc_AI?: Ipc_AI_cont
+  proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (unfold_locales;(fact Ipc_AI_cont_assms)?)
+  qed
 end

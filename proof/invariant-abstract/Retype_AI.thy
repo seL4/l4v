@@ -1629,7 +1629,7 @@ lemma valid_obj_default_object:
 
 lemma valid_vspace_obj_default:
   assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
-  shows "ArchObj ao = default_object ty us \<Longrightarrow> valid_vspace_obj ao s'"
+  shows "ArchObj ao = default_object ty dev us \<Longrightarrow> valid_vspace_obj ao s'"
   apply (cases ty, simp_all add: default_object_def tyunt)
   apply (simp add: valid_vspace_obj_default')
   done
@@ -1899,7 +1899,7 @@ lemma valid_objs: "valid_objs s'"
                   elim!: obj_at_pres[unfolded s'_def ps_def]
                   split: ARM_A.arch_kernel_obj.splits option.splits)
   done
-sorry
+
 end
 
 

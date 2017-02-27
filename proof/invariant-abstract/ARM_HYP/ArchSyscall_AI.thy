@@ -58,7 +58,7 @@ lemma getIFSR_invs[wp]:
 lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
   apply (cases flt, simp_all)
   apply (wp|simp)+
-  done
+  sorry
 
 lemma hv_inv_ex [Syscall_AI_assms]:
   "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
@@ -66,7 +66,7 @@ lemma hv_inv_ex [Syscall_AI_assms]:
   apply (wp dmo_inv getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv
             det_getRestartPC as_user_inv
          | wpcw | simp)+
-  done
+  sorry
 
 lemma handle_vm_fault_valid_fault[wp, Syscall_AI_assms]:
   "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"

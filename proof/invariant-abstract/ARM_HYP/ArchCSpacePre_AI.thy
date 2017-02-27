@@ -103,7 +103,7 @@ lemma aobj_ref_cases:
   (case acap of
     arch_cap.ASIDPoolCap w1 w2 \<Rightarrow> Some w1
   | arch_cap.ASIDControlCap \<Rightarrow> None
-  | arch_cap.PageCap _ w s sz opt \<Rightarrow> Some w
+  | arch_cap.PageCap dev w s sz opt \<Rightarrow> Some w
   | arch_cap.PageTableCap w opt \<Rightarrow> Some w
   | arch_cap.PageDirectoryCap w opt \<Rightarrow> Some w
   | arch_cap.VCPUCap v \<Rightarrow> Some v)"
@@ -132,8 +132,7 @@ lemma ups_of_heap_typ_at:
   "ups_of_heap (kheap s) p = Some sz \<longleftrightarrow> data_at sz p s"
   apply (simp add: typ_at_eq_kheap_obj ups_of_heap_def data_at_def
       split: option.splits Structures_A.kernel_object.splits
-             arch_kernel_obj.splits)
-  by force
+             arch_kernel_obj.splits) by blast
 
 lemma ups_of_heap_typ_at_def:
   "ups_of_heap (kheap s) \<equiv> \<lambda>p.
@@ -148,7 +147,7 @@ lemma ups_of_heap_typ_at_def:
   apply safe
    apply (fastforce simp: ups_of_heap_typ_at)
   apply (clarsimp simp add: obj_at_def data_at_def)
-  apply force
+  apply auto
   done
 
 lemma ups_of_heap_non_arch_upd:
@@ -169,9 +168,8 @@ crunch inv[wp]: lookup_ipc_buffer "I"
 
 lemma vs_cap_ref_to_table_cap_ref:
   "\<not> is_pg_cap cap \<Longrightarrow> vs_cap_ref cap = table_cap_ref cap"
-  by (simp add: is_pg_cap_def table_cap_ref_def vs_cap_ref_simps
+by (simp add: is_pg_cap_def table_cap_ref_def vs_cap_ref_simps arch_cap_fun_lift_def
          split: cap.splits arch_cap.splits)
-
 
 lemma cap_master_cap_pg_cap:
  "\<lbrakk>cap_master_cap cap = cap_master_cap capa\<rbrakk>
@@ -274,5 +272,6 @@ lemma arch_derived_is_device:
     cap_range_def is_cap_simps cap_master_cap_def cap_master_arch_cap_def
               split: split_if_asm cap.splits arch_cap.splits)+
   done
+
 end
 end

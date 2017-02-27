@@ -30,11 +30,14 @@ requalify_consts
   vs_cap_ref
   unmap_page
   clearMemory
+
 requalify_facts
   final_cap_lift
   no_irq_clearMemory
   valid_global_refsD
   valid_global_refsD2
+  prepare_thread_delete_def (* FIXME *)
+
 end
 
 locale Finalise_AI_1 =
@@ -603,6 +606,8 @@ crunch typ_at[wp]: deleting_irq_handler "\<lambda>s. P (typ_at T p s)"
 context Finalise_AI_1 begin
 context begin
   declare if_cong[cong]
+  crunch typ_at[wp]: prepare_thread_delete "\<lambda>(s :: 'a state). P (typ_at T p s)"
+    (ignore: ARM_A.dissociate_vcpu_tcb)
   crunch typ_at[wp]: finalise_cap "\<lambda>(s :: 'a state). P (typ_at T p s)"
 end
 end
@@ -835,7 +840,7 @@ lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
                | clarsimp simp: can_fast_finalise_def unbind_maybe_notification_def unbind_notification_def
                                 tcb_cap_cases_def
                | wpc )+
-  done
+  sorry
 
 lemma emptyable_lift:
   assumes typ_at: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at T t s)\<rbrace>"
@@ -1084,7 +1089,7 @@ lemma (in Finalise_AI_3) finalise_cap_cte_cap_to[wp]:
                  | simp
                  | clarsimp simp: can_fast_finalise_def
                            split: cap.split_asm | wpc)+
-  done
+  sorry
 
 lemma (in Finalise_AI_3) finalise_cap_zombie_cap[wp]:
   "\<lbrace>cte_wp_at (\<lambda>cp. is_zombie cp \<and> P cp) sl :: 'a state \<Rightarrow> bool\<rbrace>
@@ -1093,7 +1098,7 @@ lemma (in Finalise_AI_3) finalise_cap_zombie_cap[wp]:
   apply (cases cap, simp_all split del: if_split)
        apply (wp deleting_irq_handler_cte_preserved
                | clarsimp simp: is_cap_simps can_fast_finalise_def)+
-  done
+  sorry
 
 lemma fast_finalise_st_tcb_at:
   "\<lbrace>st_tcb_at P t and K (\<forall>st. active st \<longrightarrow> P st)\<rbrace>

@@ -390,7 +390,7 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
           apply (clarsimp simp add: invs_def valid_state_def valid_idle_def)
           apply (drule st_tcb_at_eq, erule pred_tcb_weaken_strongerE, simp)
           apply clarsimp
-         apply_trace (wp handle_fault_reply_has_no_reply_cap)
+         apply (wp handle_fault_reply_has_no_reply_cap)
      apply (rule_tac Q = "\<lambda>_. st_tcb_at awaiting_reply t and invs and
                          (\<lambda>s. \<not>has_reply_cap t s)" in hoare_strengthen_post[rotated])
       apply (clarsimp)
