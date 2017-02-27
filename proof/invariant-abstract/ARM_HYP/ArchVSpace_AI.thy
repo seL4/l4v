@@ -116,11 +116,11 @@ definition
   "glob_vs_refs \<equiv> arch_obj_fun_lift glob_vs_refs_arch {}"
 
 crunch_ignore (add: writeContextIDAndPD_impl addressTranslateS1CPR_impl
-           setSCTLR_impl setHCR_impl getSCTLR_impl setACTLR_impl getACTLR_impl
-           get_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_vmcr_impl
-           get_gic_vcpu_ctrl_apr_impl set_gic_vcpu_ctrl_apr_impl
+           setSCTLR_impl setHCR_impl setACTLR_impl
+           set_gic_vcpu_ctrl_vmcr_impl
+           set_gic_vcpu_ctrl_apr_impl
            get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_lr_impl
-           get_gic_vcpu_ctrl_hcr_impl set_gic_vcpu_ctrl_hcr_impl
+           set_gic_vcpu_ctrl_hcr_impl
            dsb_impl)
 
 crunch pspace_in_kerbel_window[wp]: do_machine_op "pspace_in_kernel_window"
