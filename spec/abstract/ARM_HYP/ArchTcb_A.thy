@@ -29,7 +29,8 @@ definition
   sanitise_register :: "tcb \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 where
   "sanitise_register t r v \<equiv> case r of
-      CPSR \<Rightarrow> (v && 0xf8000000) || 0x150
+      CPSR \<Rightarrow>
+        if v && 0x1f = 0x1f then v else (v && 0xf8000000) || 0x150
     | _    \<Rightarrow> v"
 
 end
