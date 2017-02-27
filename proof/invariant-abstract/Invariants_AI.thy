@@ -95,7 +95,8 @@ requalify_facts
   hyp_refs_of_live
   hyp_refs_of_live_obj
   tcb_arch_ref_simps
-
+  wellformed_arch_pspace
+  wellformed_arch_typ
 end
 
 lemmas [intro!] =  idle_global acap_rights_update_id
@@ -1572,11 +1573,6 @@ lemma valid_cap_pspaceI:
             simp: obj_range_def valid_untyped_def pred_tcb_at_def
            split: option.split sum.split)
 
-(* FIXME move to ArchInvariants and requalify *)
-lemma wellformed_arch_pspace: "\<And>ao. \<lbrakk>wellformed_arch_obj ao s; kheap s = kheap s'\<rbrakk>
-          \<Longrightarrow> wellformed_arch_obj ao s'"
-sorry
-
 (* FIXME-NTFN: ugly proof *)
 lemma valid_obj_pspaceI:
   "\<lbrakk> valid_obj ptr obj s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_obj ptr obj s'"
@@ -2203,12 +2199,6 @@ lemma valid_ntfn_typ:
   apply (case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_post_taut tcb_at_typ P)
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop], simp add: P)
   done
-
-(* FIXME move to ArchInvariants and requalify *)
-lemma wellformed_arch_typ:
-   "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace> \<Longrightarrow>
-        \<lbrace>wellformed_arch_obj ao\<rbrace> f \<lbrace>\<lambda>rv. wellformed_arch_obj ao\<rbrace>"
-sorry
 
 lemma valid_obj_typ:
   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"

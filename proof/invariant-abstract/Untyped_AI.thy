@@ -3847,7 +3847,7 @@ lemma invoke_untyp_invs':
                    distinct_tuple_helper
                    init_arch_objects_wps
                    init_arch_objects_nonempty_table
-              | wp_once retype_region_ret_folded_general)
+              | wp_once retype_region_ret_folded_general)+
         apply ((wp hoare_vcg_const_imp_lift hoare_drop_imp
                    retype_region_invs_extras[where sz = sz]
                    retype_region_aligned_for_init[where sz = sz]
@@ -3858,7 +3858,7 @@ lemma invoke_untyp_invs':
                          distinct_map_fst_zip
             | simp add: ptr_base
             | wp_once retype_region_ret_folded_general)+)[1]
- (*      apply (clarsimp simp:conj_comms,simp cong:conj_cong)
+       apply (clarsimp simp:conj_comms,simp cong:conj_cong)
        apply (simp add:ball_conj_distrib conj_comms)
        apply (strengthen invs_mdb invs_valid_pspace
                 caps_region_kernel_window_imp[where p="(cref, oref)"]
@@ -3943,8 +3943,7 @@ lemma invoke_untyp_invs':
       apply (frule untyped_mdb_descendants_range, clarsimp+,
         erule invoke_untyped_proofs.descendants_range, simp_all+)[1]
       apply (simp add: untyped_range_def atLeastatMost_subset_iff word_and_le2)
-*)
-      sorry
+      done
 qed
 
 lemmas invoke_untyp_invs[wp] = 

@@ -267,9 +267,9 @@ lemma as_user_getRestart_invs[wp]: "\<lbrace>P\<rbrace> as_user t getRestartPC \
 
 lemma make_arch_fault_msg_invs[wp]: "\<lbrace>P\<rbrace> make_arch_fault_msg f t \<lbrace>\<lambda>_. P\<rbrace>"
   apply (cases f)
-  apply simp
+  apply simp_all
   apply wp
-  sorry (* add ARMHYP specific cases *)
+  done
 
 lemma make_fault_message_inv[wp, Ipc_AI_assms]:
   "\<lbrace>P\<rbrace> make_fault_msg ft t \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -436,6 +436,21 @@ lemma do_ipc_transfer_tcb_caps [Ipc_AI_assms]:
 
 crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply "P (typ_at T p s)"
 
+lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
+  "\<lbrace>valid_vspace_objs\<rbrace>
+      transfer_caps_loop ep buffer n caps slots mi
+    \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
+  apply (induct caps arbitrary: slots n mi, simp)
+  apply (clarsimp simp: Let_def split_def whenE_def
+                  cong: if_cong list.case_cong
+             split del: split_if)
+  apply (rule hoare_pre)
+   apply (wp hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift
+              derive_cap_is_derived_foo
+             hoare_drop_imps
+        | assumption | simp split del: split_if)+
+  done
+
 end
 
 interpretation Ipc_AI?: Ipc_AI
@@ -473,8 +488,11 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
    apply auto
    done
 
+crunch state_hyp_refs_of[wp]: set_mrs "\<lambda> s. P (state_hyp_refs_of s)"
+  (wp: crunch_wps simp: zipWithM_x_mapM ignore: set_object transfer_caps_loop)
+
 crunch state_hyp_refs_of[wp, Ipc_AI_cont_assms]: do_ipc_transfer "\<lambda> s. P (state_hyp_refs_of s)"
-  (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
+  (wp: crunch_wps simp: zipWithM_x_mapM)
 
 
 end

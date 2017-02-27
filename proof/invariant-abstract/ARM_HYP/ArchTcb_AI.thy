@@ -138,6 +138,8 @@ lemma checked_insert_tcb_invs[wp]: (* arch specific *)
   apply (auto simp: is_cnode_or_valid_arch_def is_cap_simps)
   done
 
+crunch caps_of_state[wp]: prepare_thread_delete "\<lambda>s. P (caps_of_state s)"
+  (wp: mapM_x_wp' crunch_wps)
 
 lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
   assumes x: "P cap.NullCap"
@@ -145,15 +147,16 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
                 finalise_cap cap fin
               \<lbrace>\<lambda>rv s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>"
   apply (cases cap, simp_all)
-       apply (wp suspend_caps_of_state hoare_vcg_all_lift
+       apply (wp prepare_thread_delete_caps_of_state hoare_vcg_all_lift
+                 suspend_caps_of_state
             | simp
             | rule impI
             | rule hoare_drop_imps)+
-     apply (clarsimp simp: ball_ran_eq x)
+(*     apply (clarsimp simp: ball_ran_eq x)
     apply (wp delete_one_caps_of_state
          | rule impI
          | simp add: deleting_irq_handler_def get_irq_slot_def x ball_ran_eq)+
-    sorry (* prepare_thread_delete *)
+*)  sorry
 
 
 lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_asms]:
@@ -181,6 +184,7 @@ lemma use_no_cap_to_obj_asid_strg: (* arch specific *)
   apply (fastforce simp: table_cap_ref_def valid_cap_simps elim!: asid_low_high_bits)+
   done
 
+declare arch_cap_fun_lift_simps [simp del]
 lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
   "\<lbrace>no_cap_to_obj_dr_emp cap\<rbrace>
      cap_delete slot
@@ -191,9 +195,14 @@ lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
   apply simp
   apply (rule use_spec)
   apply (rule rec_del_all_caps_in_range)
+       apply (simp add: atomize_imp)
      apply_trace (simp add: table_cap_ref_def[simplified, split_simps cap.split]
-                       del: arch_cap_fun_lift_simps
-              | rule obj_ref_none_no_asid)+
+                             vspace_bits_defs
+                       del: arch_cap_fun_lift_non_arch
+                       split del: arch_cap.split
+                       cong: cap.case_cong_weak)+
+(*     apply (rule_tac obj_ref_none_no_asid) *)
+
   sorry
 
 lemma as_user_valid_cap[wp]:
@@ -240,7 +249,7 @@ lemma tc_invs[Tcb_AI_asms]:
   apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
   apply (rule hoare_vcg_precond_imp)
    apply wp
-      apply ((simp only: simp_thms
+      apply_trace ((simp only: simp_thms
         | rule wp_split_const_if wp_split_const_if_R
                    hoare_vcg_all_lift_R
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R

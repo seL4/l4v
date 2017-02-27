@@ -283,18 +283,6 @@ lemma vs_lookup_pages_vspace_obj_at_lift:
   by (auto simp: vs_refs_pages.vspace_only
            intro!: vspace_obj_pred_fI[where f=Ex])
 
-(* ARMHYP not needed?
-lemma valid_arch_objs_lift_weak:
-  assumes obj_at: "\<And>P P' p. arch_obj_pred P' \<Longrightarrow>
-                             \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>"
-  assumes arch_state: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
-  shows "\<lbrace>valid_arch_objs\<rbrace> f \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>" (* ARMHYP *)
-  apply (rule valid_arch_objs_lift)
-   apply (rule valid_vspace_objs_lift)
-     apply (rule vs_lookup_arch_obj_at_lift)
-      apply (rule obj_at arch_state; simp)+
-  apply (simp add: obj_at_def)
- done *)
 
 lemma valid_vspace_objs_lift_weak:
   assumes obj_at: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow>
@@ -581,34 +569,6 @@ lemma valid_machine_state_lift:
   apply simp
   done
 
-(*
-lemma bool_pred_exhaust:
-  "(P = (\<lambda>x. x)) \<or> (P = (\<lambda>x. \<not>x)) \<or> (P = (\<lambda>_. True)) \<or> (P = (\<lambda>_. False))"
-  apply (cases "P True"; cases "P False")
-  apply (rule disjI2, rule disjI2, rule disjI1, rule ext)
-  defer
-  apply (rule disjI1, rule ext)
-  defer
-  apply (rule disjI2, rule disjI1, rule ext)
-  defer
-  apply (rule disjI2, rule disjI2, rule disjI2, rule ext)
-  apply (match conclusion in "P x = _" for x \<Rightarrow> \<open>cases x; fastforce\<close>)+
-  done
-*)
-(*
-lemma valid_ao_at_lift:
-  assumes z: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
-      and y: "\<And>ao. \<lbrace>\<lambda>s. ko_at (ArchObj ao) p s\<rbrace> f \<lbrace>\<lambda>rv s. ko_at (ArchObj ao) p s\<rbrace>"
-  shows      "\<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>rv. valid_ao_at p\<rbrace>"
-  unfolding valid_ao_at_def
-  by (wp hoare_vcg_ex_lift y valid_arch_obj_typ z)
-
-lemma valid_ao_at_lift_aobj_at:
-  assumes aobj_at: "\<And>P' pd. arch_obj_pred P' \<Longrightarrow> \<lbrace>obj_at P' pd\<rbrace> f \<lbrace>\<lambda>r s. obj_at P' pd s\<rbrace>"
-  shows      "\<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>rv. valid_ao_at p\<rbrace>"
-  unfolding valid_ao_at_def
-  by (wp hoare_vcg_ex_lift valid_arch_obj_typ aobj_at | clarsimp)+
-*)
 lemma valid_vso_at_lift:
   assumes z: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
       and y: "\<And>ao. \<lbrace>\<lambda>s. ko_at (ArchObj ao) p s\<rbrace> f \<lbrace>\<lambda>rv s. ko_at (ArchObj ao) p s\<rbrace>"
@@ -800,6 +760,82 @@ lemma cap_is_device_obj_is_device[simp]:
          split: apiobject_type.splits aobject_type.splits)
 
 crunch device_state_inv: storeWord "\<lambda>ms. P (device_state ms)"
+
+
+(* some hyp_ref invariants *)
+
+lemma state_hyp_refs_of_ep_update: "\<And>s ep val. typ_at AEndpoint ep s \<Longrightarrow>
+       state_hyp_refs_of (s\<lparr>kheap := kheap s(ep \<mapsto> Endpoint val)\<rparr>) = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)
+  done
+
+lemma state_hyp_refs_of_ntfn_update: "\<And>s ep val. typ_at ANTFN ep s \<Longrightarrow>
+       state_hyp_refs_of (s\<lparr>kheap := kheap s(ep \<mapsto> Notification val)\<rparr>) = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)
+  done
+
+lemma state_hyp_refs_of_tcb_bound_ntfn_update:
+       "kheap s t = Some (TCB tcb) \<Longrightarrow>
+          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_bound_notification := ntfn\<rparr>))\<rparr>)
+            = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def split: option.splits)
+  done
+
+lemma state_hyp_refs_of_tcb_state_update:
+       "kheap s t = Some (TCB tcb) \<Longrightarrow>
+          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_state := ts\<rparr>))\<rparr>)
+            = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def split: option.splits)
+  done
+
+lemma valid_arch_obj_same_type:
+  "\<lbrakk>valid_arch_obj ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
+  \<Longrightarrow> valid_arch_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)"
+  apply (induction ao rule: arch_kernel_obj.induct;
+         clarsimp simp: valid_arch_obj.simps typ_at_same_type)
+    apply (rule hoare_to_pure_kheap_upd; assumption?)
+      apply (rule valid_pte_lift, assumption)
+     apply blast
+    apply (simp add: obj_at_def)
+   apply (rule hoare_to_pure_kheap_upd; assumption?)
+     apply (rule valid_pde_lift, assumption)
+    apply blast
+   apply (simp add: obj_at_def)
+  apply (simp add: valid_vcpu_def split: option.splits)
+  apply (drule typ_at_same_type[rotated]; assumption)
+done
+
+lemma valid_vcpu_lift:
+  assumes x: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
+  assumes t: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_vcpu v s\<rbrace> f \<lbrace>\<lambda>rv s. valid_vcpu v s\<rbrace>"
+  apply (cases v)
+  apply (simp add: valid_vcpu_def | wp x hoare_vcg_disj_lift)+
+  apply (case_tac vcpu_tcb; simp, wp t)
+  done
+
+
+lemma valid_vcpu_update: "\<And>s ep val. typ_at ANTFN ep s \<Longrightarrow>
+       state_hyp_refs_of (s\<lparr>kheap := kheap s(ep \<mapsto> Notification val)\<rparr>) = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)
+  done
+
+lemma valid_vcpu_same_type:
+  "\<lbrakk> valid_vcpu v s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
+   \<Longrightarrow> valid_vcpu v (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+  by (cases v; case_tac vcpu_tcb; clarsimp simp: valid_vcpu_def typ_at_same_type)
+
+lemma wellformed_arch_obj_same_type:
+  "\<lbrakk> wellformed_arch_obj ao s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
+   \<Longrightarrow> wellformed_arch_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+  by (induction ao rule: arch_kernel_obj.induct;
+         clarsimp simp: valid_arch_obj.simps typ_at_same_type valid_vcpu_same_type)
+
 
 end
 end

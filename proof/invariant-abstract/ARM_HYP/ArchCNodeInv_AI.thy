@@ -280,8 +280,8 @@ lemma invs_irq_state_independent[intro!, simp, CNodeInv_AI_assms]:
       valid_asid_map_def
       pspace_in_kernel_window_def cap_refs_in_kernel_window_def
       cur_tcb_def sym_refs_def state_refs_of_def state_hyp_refs_of_def vspace_at_asid_def
-      swp_def valid_irq_states_def)
-  sorry
+      swp_def valid_irq_states_def split: option.splits)
+  done
 
 
 lemma cte_at_nat_to_cref_zbits [CNodeInv_AI_assms]:
@@ -523,9 +523,10 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all add: arch_finalise_cap_def)
       apply (wp
-           | clarsimp simp: valid_cap_def split: option.split bool.split
+           | clarsimp simp: valid_cap_def obj_at_def is_tcb_def is_cap_table_def
+                      split: option.splits bool.split
            | intro impI conjI)+
-  sorry (* add vcpu case *)
+  done
 
 
 crunch emptyable[wp, CNodeInv_AI_assms]: finalise_cap "emptyable sl"
@@ -689,7 +690,7 @@ next
     apply (clarsimp simp add: invs_def valid_state_def
       invs_valid_objs invs_psp_aligned)
     apply (drule(1) if_unsafe_then_capD, clarsimp+)
-    sorry
+    done
 next
   have replicate_helper:
     "\<And>x n. True \<in> set x \<Longrightarrow> replicate n False \<noteq> x"
@@ -1010,7 +1011,7 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
             | simp del: split_paired_Ex split_paired_All
             | simp add: valid_irq_node_def valid_machine_state_def
                    del: split_paired_All split_paired_Ex)+
-(*   apply (clarsimp simp: tcb_cap_valid_def cte_wp_at_caps_of_state)
+   apply (clarsimp simp: tcb_cap_valid_def cte_wp_at_caps_of_state)
    apply (frule(1) valid_global_refsD2[where ptr=ptr])
    apply (frule(1) cap_refs_in_kernel_windowD[where ptr=ptr])
    apply (frule weak_derived_cap_range)
@@ -1019,11 +1020,12 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
    apply (simp add: is_cap_simps)
    apply (subgoal_tac "tcb_cap_valid cap.NullCap ptr s")
     apply (simp add: tcb_cap_valid_def)
+    defer
    apply (rule tcb_cap_valid_NullCapD)
     apply (erule(1) tcb_cap_valid_caps_of_stateD)
    apply (simp add: is_cap_simps)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
-  done *)sorry (* hyp_ref *)
+  sorry
 
 end
 

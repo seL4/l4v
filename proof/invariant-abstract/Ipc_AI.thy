@@ -214,6 +214,11 @@ locale Ipc_AI =
       \<lbrace>cte_wp_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>
         do_fault_transfer x t label msg
       \<lbrace> \<lambda>rv. cte_wp_at P p \<rbrace>"
+  assumes transfer_caps_loop_valid_vspace_objs:
+  "\<And>ep buffer n caps slots mi.
+    \<lbrace>valid_vspace_objs::'state_ext state \<Rightarrow> bool\<rbrace>
+      transfer_caps_loop ep buffer n caps slots mi
+    \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
   assumes arch_get_sanitise_register_info_typ_at[wp]:
   "\<And> P T p t.
       \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
@@ -1045,11 +1050,19 @@ lemma transfer_caps_loop_invs[wp]:
           \<and> transfer_caps_srcs caps s\<rbrace> 
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>rv. invs\<rbrace>"
-  unfolding invs_def valid_state_def valid_pspace_def by (wpsimp wp: valid_irq_node_typ)
+  unfolding invs_def valid_state_def valid_pspace_def by (wpsimp wp: valid_irq_node_typ transfer_caps_loop_valid_vspace_objs)
 
 end
 
 (* FIXME: move *)
+crunch valid_vspace_objs [wp]: set_extra_badge valid_vspace_objs
+
+crunch vspace_objs [wp]: set_untyped_cap_as_full "valid_vspace_objs"
+  (wp: crunch_wps simp: crunch_simps ignore: set_object set_cap)
+
+crunch vspace_objs [wp]: cap_insert "valid_vspace_objs"
+  (wp: crunch_wps simp: crunch_simps ignore: set_object set_cap)
+
 lemma zipWith_append2:
   "length ys + 1 < n \<Longrightarrow>
    zipWith f [0 ..< n] (ys @ [y]) = zipWith f [0 ..< n] ys @ [f (length ys) y]"
@@ -1588,10 +1601,10 @@ crunch irq_handlers[wp]: do_ipc_transfer "valid_irq_handlers :: 'state_ext state
   (wp: crunch_wps hoare_vcg_const_Ball_lift simp: zipWithM_x_mapM crunch_simps ball_conj_distrib )
 
 crunch vspace_objs[wp]: transfer_caps_loop "valid_vspace_objs :: 'state_ext state \<Rightarrow> bool"
-  (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
+  (wp: crunch_wps transfer_caps_loop_valid_vspace_objs simp: zipWithM_x_mapM crunch_simps)
 
 crunch vspace_objs[wp]: do_ipc_transfer "valid_vspace_objs :: 'state_ext state \<Rightarrow> bool"
-  (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
+  (wp: crunch_wps transfer_caps_loop_valid_vspace_objs simp: zipWithM_x_mapM crunch_simps)
 
 crunch arch_caps[wp]: do_ipc_transfer "valid_arch_caps :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift transfer_caps_loop_valid_arch_caps
@@ -2584,9 +2597,10 @@ lemma ri_invs':
        conj_comms tcb_at_cte_at_2)
      apply (erule delta_sym_refs)
       apply (clarsimp split: if_split_asm)
-       apply ((clarsimp simp: pred_tcb_at_def2 tcb_bound_refs_def2 is_tcb
+     apply (clarsimp split: if_split_asm if_split) (* FIXME *)
+       apply ((fastforce simp: pred_tcb_at_def2 tcb_bound_refs_def2 is_tcb
                        dest!: symreftype_inverse')+)[3]
-(*    apply (rule conjI)
+    apply (rule conjI)
      apply (clarsimp simp: pred_tcb_at_def2 tcb_bound_refs_def2
                      split: if_split_asm)
      apply (simp add: set_eq_subset)
@@ -2623,7 +2637,7 @@ lemma ri_invs':
   apply (rule hoare_pre)
    apply (wp get_ntfn_wp | wpc | clarsimp)+
   apply (clarsimp simp: pred_tcb_at_tcb_at)
-  done *) sorry
+  done
 
 lemmas ri_invs[wp]
   = ri_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI,simplified]

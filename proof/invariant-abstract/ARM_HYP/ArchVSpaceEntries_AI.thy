@@ -840,13 +840,9 @@ lemma perform_page_directory_valid_pdpt[wp]:
    apply (wp | wpc | simp)+
   done
 
-lemma perform_vcpu_valid_pdpt[wp]:
-  "\<lbrace>valid_pdpt_objs and valid_vcpu_invocation vi\<rbrace>
-      perform_vcpu_invocation vi \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  apply (simp add: perform_vcpu_invocation_def split_def)
-  apply (rule hoare_pre)
-   apply (wp | wpc | simp)+
-  sorry
+crunch valid_pdpt_objs[wp]: perform_vcpu_invocation "valid_pdpt_objs"
+  (ignore: delete_objects wp: delete_objects_valid_pdpt static_imp_wp)
+
 
 lemma perform_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and valid_pdpt_objs
@@ -1190,22 +1186,22 @@ lemma create_mapping_entries_safe[wp]:
   apply (drule_tac x = "ucast (lookup_pd_slot pd vptr && mask pd_bits >> 3)"
     in spec)
    apply (simp add: vspace_bits_defs)
-(*  apply (clarsimp simp:not_less[symmetric] split:list.splits)
+  apply (clarsimp simp:not_less[symmetric] vspace_bits_defs split:list.splits)
   apply (clarsimp simp:page_inv_entries_pre_def
     Let_def upto_enum_step_def upto_enum_def)
   apply (subst (asm) upto_0_to_n2)
    apply simp
-  apply (clarsimp simp:not_less[symmetric])
+  apply (clarsimp simp:not_less[symmetric] vspace_bits_defs)
   apply (subgoal_tac
     "(\<exists>xa xb. pda (ucast (lookup_pd_slot pd vptr && mask pd_bits >> 3))
-     = pde.PageTablePDE x xa xb)
-     \<longrightarrow> is_aligned (ptrFromPAddr x + ((vptr >> 12) && 0xFF << 3)) 7")
-   apply clarsimp
+     = pde.PageTablePDE x)
+     \<longrightarrow> is_aligned (ptrFromPAddr x + ((vptr >> 12) && 0x1FF << 3)) 7")
+   apply (clarsimp simp: vspace_bits_defs)
    apply (subgoal_tac "
-     ptrFromPAddr x + ((vptr >> 12) && 0xFF << 3) \<le>
-     ptrFromPAddr x + ((vptr >> 12) && 0xFF << 3) + 0x3C")
-    apply (clarsimp simp:not_less[symmetric])
-   apply (erule is_aligned_no_wrap')
+     ptrFromPAddr x + ((vptr >> 12) && 0x1FF << 3) \<le>
+     ptrFromPAddr x + ((vptr >> 12) && 0x1FF << 3) + 0x78")
+    apply (clarsimp simp:not_less[symmetric] vspace_bits_defs word_1FF_is_mask[symmetric])
+  (* apply (erule is_aligned_no_wrap')
    apply simp
   apply clarsimp
   apply (rule aligned_add_aligned)

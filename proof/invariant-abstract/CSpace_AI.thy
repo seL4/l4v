@@ -4639,7 +4639,7 @@ crunch empty_table_at[wp]: setup_reply_master "obj_at (empty_table S) p"
 
 
 lemmas setup_reply_master_valid_vso_at[wp]
-    = ARM.valid_vso_at_lift [OF setup_reply_master_typ_at setup_reply_master_arch_ko_at]
+    = valid_vso_at_lift [OF setup_reply_master_typ_at setup_reply_master_arch_ko_at]
 
 
 crunch v_ker_map[wp]: setup_reply_master "valid_kernel_mappings"

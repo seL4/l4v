@@ -367,7 +367,7 @@ lemma vspace_objs':
   "valid_vspace_objs s \<Longrightarrow> valid_vspace_objs s'"
   using ko
   apply (clarsimp simp: valid_vspace_objs_def vs_lookup')
-(*  apply (fastforce simp: obj_at_def)*)
+(*  apply (fastforce simp: obj_at_def split: arch_kernel_obj.splits) *)
   sorry
 
 lemma caps_of_state_s':
@@ -646,7 +646,7 @@ lemma cap_insert_ap_invs:
   apply (auto simp: obj_at_def is_tcb_def is_cap_table_def a_type_def
                     valid_cap_def [where c="cap.Zombie a b x" for a b x]
               dest: obj_ref_is_tcb obj_ref_is_cap_table split: option.splits)
-(*  apply (clarsimp simp: obj_at_def a_type_def)*)
+(*  apply (fastforce simp: obj_at_def a_type_def)*)
   sorry
 
 
@@ -1035,7 +1035,6 @@ lemma shiftr_irrelevant:
   apply simp
   done
 
-
 lemma create_mapping_entries_parent_for_refs:
   "\<lbrace>invs and \<exists>\<rhd> pd and page_directory_at pd
            and K (is_aligned pd pd_bits) and K (vmsz_aligned vptr pgsz)
@@ -1044,7 +1043,7 @@ lemma create_mapping_entries_parent_for_refs:
                  rights attribs pd
    \<lbrace>\<lambda>rv s. \<exists>a b. cte_wp_at (parent_for_refs rv) (a, b) s\<rbrace>, -"
   apply (rule hoare_gen_asmE)+
-  apply (cases pgsz, simp_all add: vmsz_aligned_def)
+  apply (cases pgsz, simp_all add: vmsz_aligned_def largePagePTE_offsets_def superSectionPDE_offsets_def)
      apply (rule hoare_pre)
       apply wp
       apply (rule hoare_post_imp_R, rule lookup_pt_slot_cap_to)
@@ -1055,22 +1054,28 @@ lemma create_mapping_entries_parent_for_refs:
      apply wp
      apply (rule hoare_post_imp_R)
       apply (rule lookup_pt_slot_cap_to_multiple1)
+     apply (simp only: add.commute)
      apply (elim conjE exEI cte_wp_at_weakenE)
-     apply (clarsimp simp: cte_wp_at_caps_of_state parent_for_refs_def
-                           subset_iff p_0x3C_shift vspace_bits_defs largePagePTE_offsets_def
-                     split: ARM_A.arch_cap.splits)
-(*   apply (rule hoare_pre, wp)
+     apply_trace (simp add: pte_bits_def del: set_map cap_asid_simps not_None_eq)
+     apply_trace (clarsimp simp: cte_wp_at_caps_of_state parent_for_refs_def
+                           subset_iff p_0x3C_shift
+                     simp del: cap_asid_simps set_map del: imageE)
+     apply (erule_tac x=t in allE)
+     apply (subgoal_tac "map (op + r) [0 , 8 .e. 0x78] = [r , r + 8 .e. r + 0x78]", simp)
+defer
+   apply simp
+   apply (rule hoare_pre, wp)
    apply (clarsimp dest!:vs_lookup_pages_vs_lookupI)
    apply (drule valid_vs_lookupD, clarsimp)
    apply (simp, elim exEI)
    apply (clarsimp simp: cte_wp_at_caps_of_state parent_for_refs_def
                          lookup_pd_slot_def Let_def)
-   apply (subst pd_shifting, simp add: pd_bits_def pageBits_def)
-   apply (clarsimp simp: vs_cap_ref_def
+   apply (subst pd_shifting, simp add: vspace_bits_defs)
+   apply (clarsimp simp: vs_cap_ref_def simp del: cap_asid_simps
                   split: cap.split_asm arch_cap.split_asm option.split_asm)
      apply (auto simp: valid_cap_def obj_at_def is_cap_simps cap_asid_def
                 dest!: caps_of_state_valid_cap)[3]
-     apply (frule(1) caps_of_state_valid)
+(*     apply (frule(1) caps_of_state_valid)
      apply (clarsimp simp:valid_cap_def obj_at_def)
    apply (simp add:is_cap_simps)
   apply (rule hoare_pre, wp)

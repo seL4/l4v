@@ -1002,10 +1002,10 @@ lemma unbind_notification_invs:
   apply (rule hoare_seq_ext [OF _ get_ntfn_sp])
   apply (wp valid_irq_node_typ set_ntfn_valid_objs
        | clarsimp)+
-          defer 4
+          defer 5
           apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
-                       simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def)[10]
-(*  apply (clarsimp simp: if_split) *)
+                       simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def)[9]
+  apply (clarsimp simp: if_split)
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
                    dest!: pred_tcb_at_tcb_at ko_at_state_refs_ofD
@@ -1017,12 +1017,12 @@ lemma unbind_notification_invs:
    apply (fastforce simp: obj_at_def is_tcb ntfn_q_refs_no_NTFNBound tcb_at_no_ntfn_bound refs_of_rev
                           tcb_ntfn_is_bound_def
                    dest!: pred_tcb_at_tcb_at bound_tcb_at_state_refs_ofD)
-(*  apply (subst (asm) ko_at_state_refs_ofD, assumption)
+  apply (subst (asm) ko_at_state_refs_ofD, assumption)
   apply (fastforce simp: ntfn_bound_refs_def obj_at_def ntfn_q_refs_no_TCBBound
                   elim!: pred_tcb_weakenE
-                  dest!: bound_tcb_bound_notification_at refs_in_ntfn_bound_refs symreftype_inverse' 
-                  split: option.splits) *)
-  sorry
+                  dest!: bound_tcb_bound_notification_at refs_in_ntfn_bound_refs symreftype_inverse'
+                  split: option.splits)
+  done
 
 
 crunch bound_tcb_at[wp]: cancel_all_signals "bound_tcb_at P t"
@@ -1147,7 +1147,7 @@ crunch cte_wp_at[wp]: cancel_all_signals "cte_wp_at P p"
 
 lemma cancel_badged_sends_filterM_helper':
   "\<forall>ys.
-   \<lbrace>\<lambda>s. all_invs_but_sym_refs s \<and> distinct (xs @ ys) \<and> ep_at epptr s
+   \<lbrace>\<lambda>s. all_invs_but_sym_refs s  \<and> sym_refs (state_hyp_refs_of s) \<and> distinct (xs @ ys) \<and> ep_at epptr s
            \<and> ex_nonz_cap_to epptr s
            \<and> sym_refs ((state_refs_of s) (epptr := ((set (xs @ ys)) \<times> {EPSend})))
            \<and> (\<forall>x \<in> set (xs @ ys). {r \<in> state_refs_of s x. snd r \<noteq> TCBBound} = {(epptr, TCBBlockedSend)})\<rbrace>
@@ -1159,7 +1159,7 @@ lemma cancel_badged_sends_filterM_helper':
                       od
                       else return True
                    od) xs
-   \<lbrace>\<lambda>rv s. all_invs_but_sym_refs s
+   \<lbrace>\<lambda>rv s. all_invs_but_sym_refs s \<and> sym_refs (state_hyp_refs_of s)
             \<and> ep_at epptr s \<and> (\<forall>x \<in> set (xs @ ys). tcb_at x s)
             \<and> ex_nonz_cap_to epptr s
             \<and> (\<forall>y \<in> set ys. {r \<in> state_refs_of s y. snd r \<noteq> TCBBound} = {(epptr, TCBBlockedSend)})
@@ -1182,6 +1182,7 @@ lemma cancel_badged_sends_filterM_helper':
   apply clarsimp
   apply (thin_tac "ep_at epptr s" for s)
   apply (thin_tac "tcb_at x s" for x s)
+  apply (thin_tac "sym_refs (state_hyp_refs_of s)" for s)
   apply (frule singleton_eqD, clarify, drule state_refs_of_elemD)
   apply (frule(1) if_live_then_nonz_capD, rule refs_of_live, clarsimp)
   apply (clarsimp simp: st_tcb_at_refs_of_rev)
@@ -1218,8 +1219,9 @@ lemma cancel_badged_sends_invs[wp]:
                 cong: list.case_cong)
      apply (rule hoare_strengthen_post,
             rule cancel_badged_sends_filterM_helper[where epptr=epptr])
+
      apply (auto intro:obj_at_weakenE)[1]
-(*    apply (wp valid_irq_node_typ)
+    apply (wp valid_irq_node_typ)
    apply (clarsimp simp: valid_ep_def conj_comms)
    apply (subst obj_at_weakenE[where P'=is_ep], assumption)
     apply (clarsimp simp: is_ep_def)
@@ -1232,8 +1234,8 @@ lemma cancel_badged_sends_invs[wp]:
    apply (drule st_tcb_at_state_refs_ofD)
    apply (clarsimp simp only: cancel_badged_sends_invs_helper Un_iff, clarsimp)
    apply (simp add: set_eq_subset)
-  apply wpsimp *)
-  sorry
+  apply wpsimp
+  done
 
 
 lemma real_cte_emptyable_strg:

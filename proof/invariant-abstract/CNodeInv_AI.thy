@@ -1765,6 +1765,9 @@ lemma cap_swap_fd_reply_masters[wp]:
 crunch refs_of[wp]: cap_swap "\<lambda>s. P (state_refs_of s)"
   (ignore: set_cap simp: state_refs_of_pspaceI)
 
+crunch hyp_refs_of[wp]: cap_swap "\<lambda>s. P (state_hyp_refs_of s)"
+  (ignore: set_cap simp: state_refs_of_pspaceI)
+
 crunch cur_tcb[wp]: cap_swap "cur_tcb"
 
 
@@ -1853,12 +1856,15 @@ lemma cap_swap_irq_handlers[wp]:
   done
 
 
+crunch vspace_objs [wp]: cap_swap "valid_vspace_objs"
+
+(*
 crunch arch_objs [wp]: cap_swap "valid_arch_objs"
 
 crunch arch_objs [wp]: cap_move "valid_arch_objs"
 
 crunch arch_objs [wp]: empty_slot "valid_arch_objs"
-
+*)
 
 context CNodeInv_AI begin
 
@@ -1976,7 +1982,7 @@ lemma cap_swap_invs[wp]:
                 simp del: split_paired_Ex split_paired_All
          | rule conjI
          | fastforce dest!: valid_reply_caps_of_stateD)+
-  sorry
+  done
 
 lemma cap_swap_fd_invs[wp]:
   "\<And>a b.

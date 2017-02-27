@@ -1173,16 +1173,21 @@ lemma sts_refs_of[wp]:
   apply (simp add: get_tcb_def sts_refs_of_helper)
   done
 
+lemma kheap_Some_state_hyp_refs_ofD:
+  "kheap s p = Some ko \<Longrightarrow> state_hyp_refs_of s p = hyp_refs_of ko"
+  by (rule ko_at_state_hyp_refs_ofD; simp add: obj_at_def)
+
 (* FIXME should be able to prove this in the generic context *)
 lemma sts_hyp_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
     set_thread_state t st
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def)
-  apply (wp, simp, wp)
-  apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD)
-  apply (rule state_hyp_refs_update[symmetric])
-  sorry
+  apply (wp | simp del: fun_upd_apply)+
+  apply (clarsimp simp: get_tcb_def split: option.splits kernel_object.splits
+                  simp del: fun_upd_apply)
+  apply (subst state_hyp_refs_of_tcb_state_update; assumption)
+  done
 
 lemma sbn_refs_of_helper: "
           {r. (r \<in> tcb_st_refs_of ts \<or>
@@ -1204,17 +1209,18 @@ lemma sbn_refs_of[wp]:
   apply (auto simp: get_tcb_def sbn_refs_of_helper)
   done
 
+
 (* FIXME the same as the above FIXME *)
 lemma sbn_hyp_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
     set_bound_notification t ntfn
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: set_bound_notification_def set_object_def)
-  apply (wp, simp)
-  apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD
-                 intro!: ext)
-  apply (auto simp: get_tcb_def)
-  sorry
+  apply (wp, simp del: fun_upd_apply)
+  apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD simp del: fun_upd_apply
+                  intro!: ext)
+  apply (subst state_hyp_refs_of_tcb_bound_ntfn_update; auto simp: get_tcb_def)
+  done
 
 lemma set_thread_state_thread_set:
   "set_thread_state p st = (do thread_set (tcb_state_update (\<lambda>_. st)) p;

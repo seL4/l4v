@@ -347,6 +347,13 @@ lemmas
   wellformed_arch_obj_simps[simp] =
   wellformed_arch_obj_def[split_simps arch_kernel_obj.split]
 
+lemma wellformed_arch_pspace: "\<And>ao. \<lbrakk>wellformed_arch_obj ao s; kheap s = kheap s'\<rbrakk>
+          \<Longrightarrow> wellformed_arch_obj ao s'"
+  apply (case_tac ao, simp_all)
+  apply (simp add: obj_at_def valid_vcpu_def split: option.splits)
+  done
+
+
 section "Virtual Memory"
 
 definition (* ARMHYP *)
@@ -1130,6 +1137,13 @@ by (rule kernel_object_exhaust[of ko]; clarsimp simp add: a_type_simps split: if
 
 lemmas aa_type_elims[elim!] =
    aa_type_AASIDPoolE aa_type_APageDirectoryE aa_type_APageTableE aa_type_ADeviceDataE aa_type_AUserDataE aa_type_AVCPUE
+
+lemma wellformed_arch_typ:
+   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+   shows   "\<lbrace>\<lambda>s. wellformed_arch_obj ao s\<rbrace> f \<lbrace>\<lambda>rv s. wellformed_arch_obj ao s\<rbrace>"
+  apply (cases ao; clarsimp simp: valid_vcpu_def split: option.splits; wp?)
+  apply (rule conjI; clarsimp; wp P)
+done
 
 lemma valid_arch_obj_pspaceI:
   "\<lbrakk> valid_arch_obj obj s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_obj obj s'"

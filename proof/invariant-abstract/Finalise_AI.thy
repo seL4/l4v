@@ -36,7 +36,6 @@ requalify_facts
   no_irq_clearMemory
   valid_global_refsD
   valid_global_refsD2
-  prepare_thread_delete_def (* FIXME *)
 
 end
 
@@ -123,7 +122,7 @@ locale Finalise_AI_1 =
           \<and> cte_wp_at (op = cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s)
           \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
           \<and> (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and>
-                                 valid_arch_objs s \<and>
+                                 valid_vspace_objs s \<and>
                                  valid_arch_state s)\<rbrace>
        finalise_cap cap x
      \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
@@ -826,19 +825,19 @@ lemma cap_delete_one_cte_wp_at_preserved:
 interpretation delete_one_pre
   by (unfold_locales, wp cap_delete_one_cte_wp_at_preserved)
 
-
 lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
   "\<lbrace>cte_wp_at (op = cap) sl :: 'a state \<Rightarrow> bool\<rbrace>
      finalise_cap cap fin
    \<lbrace>\<lambda>rv. cte_wp_at (op = cap) sl\<rbrace>"
   apply (cases cap, simp_all split del: if_split)
     apply (wp suspend_cte_wp_at_preserved
-                 deleting_irq_handler_cte_preserved
+                 deleting_irq_handler_cte_preserved prepare_thread_delete_cte_wp_at
                  hoare_drop_imp thread_set_cte_wp_at_trivial
-               | clarsimp simp: can_fast_finalise_def unbind_maybe_notification_def unbind_notification_def
+               | clarsimp simp: can_fast_finalise_def unbind_maybe_notification_def
+                                unbind_notification_def
                                 tcb_cap_cases_def
                | wpc )+
-  sorry
+  done
 
 lemma emptyable_lift:
   assumes typ_at: "\<And>P T t. \<lbrace>\<lambda>s. P (typ_at T t s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at T t s)\<rbrace>"
@@ -1082,12 +1081,13 @@ lemma (in Finalise_AI_3) finalise_cap_cte_cap_to[wp]:
   "\<lbrace>ex_cte_cap_wp_to P sl :: 'a state \<Rightarrow> bool\<rbrace> finalise_cap cap fin \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P sl\<rbrace>"
   apply (cases cap, simp_all add: ex_cte_cap_wp_to_def split del: if_split)
        apply (wp hoare_vcg_ex_lift hoare_drop_imps
+                 prepare_thread_delete_cte_preserved_irqn
                  deleting_irq_handler_cte_preserved_irqn
                  prepare_thread_delete_cte_preserved_irqn
                  | simp
                  | clarsimp simp: can_fast_finalise_def
                            split: cap.split_asm | wpc)+
-  sorry
+  done
 
 lemma (in Finalise_AI_3) finalise_cap_zombie_cap[wp]:
   "\<lbrace>cte_wp_at (\<lambda>cp. is_zombie cp \<and> P cp) sl :: 'a state \<Rightarrow> bool\<rbrace>
@@ -1096,7 +1096,7 @@ lemma (in Finalise_AI_3) finalise_cap_zombie_cap[wp]:
   apply (cases cap, simp_all split del: if_split)
        apply (wp deleting_irq_handler_cte_preserved
                | clarsimp simp: is_cap_simps can_fast_finalise_def)+
-  sorry
+  done
 
 lemma fast_finalise_st_tcb_at:
   "\<lbrace>st_tcb_at P t and K (\<forall>st. active st \<longrightarrow> P st)\<rbrace>

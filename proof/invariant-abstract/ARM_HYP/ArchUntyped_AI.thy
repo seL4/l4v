@@ -134,31 +134,26 @@ proof -
       apply (erule range_cover.sz)
      apply (simp add:range_cover_def)
     apply (clarsimp simp:get_free_ref_def is_aligned_neg_mask_eq empty_descendants_range_in)
+    apply (rule conjI[rotated], blast, clarsimp)
     apply (drule_tac x = "(obj_ref_of node_cap,nat_to_cref (bits_of node_cap) slota)" in bspec)
      apply (clarsimp simp:is_cap_simps nat_to_cref_def word_bits_def
        bits_of_def valid_cap_simps cap_aligned_def)+
-(*   apply (frule(1) range_cover_stuff[where sz = sz])
+   apply (simp add: free_index_of_def)
+   apply (frule(1) range_cover_stuff[where sz = sz])
      apply (clarsimp dest!:valid_cap_aligned simp:cap_aligned_def word_bits_def)+
     apply simp+
-   apply (clarsimp simp:get_free_ref_def) *)
-(*   apply (frule cte_wp_at_caps_descendants_range_inI
-     [where ptr = w and sz = sz and idx = 0 and cref = slot])
-       subgoal by (clarsimp simp:cte_wp_at_caps_of_state is_aligned_neg_mask_eq)
-      subgoal by simp
-     subgoal by (simp add:range_cover_def word_bits_def)
-    subgoal by (simp add:is_aligned_neg_mask_eq)
-   apply (clarsimp) *)
- (*  apply (erule disjE)
+   apply (clarsimp simp:get_free_ref_def)
+   apply (erule disjE)
     apply (drule_tac x= "cs!0" in bspec)
      subgoal by clarsimp
     subgoal by simp
-   apply (clarsimp simp:cte_wp_at_caps_of_state ex_cte_cap_wp_to_def)
+   apply (clarsimp simp: cte_wp_at_caps_of_state ex_cte_cap_wp_to_def)
    apply (rule_tac x=aa in exI,rule exI,rule exI)
    apply (rule conjI, assumption)
-    by (clarsimp simp:diminished_def is_cap_simps mask_cap_def
-      cap_rights_update_def , simp split:cap.splits )
-qed*)
-sorry
+    apply (clarsimp simp: diminished_def is_cap_simps mask_cap_def
+                          cap_rights_update_def,
+              simp split: cap.splits )
+   done
 qed
 
 lemma asid_bits_ge_0:
@@ -262,7 +257,7 @@ lemma init_arch_objects_caps_overlap_reserved[wp,Untyped_AI_assms]:
 
 lemma set_untyped_cap_invs_simple[Untyped_AI_assms]:
   "\<lbrace>\<lambda>s. descendants_range_in {ptr .. ptr+2^sz - 1} cref s \<and> pspace_no_overlap_range_cover ptr sz s \<and> invs s
-  \<and> cte_wp_at (\<lambda>c. is_untyped_cap c \<and> cap_bits c = sz \<and> obj_ref_of c = ptr) cref s \<and> idx \<le> 2^ sz\<rbrace>
+  \<and> cte_wp_at (\<lambda>c. is_untyped_cap c \<and> cap_bits c = sz \<and> obj_ref_of c = ptr \<and> cap_is_device c = dev) cref s \<and> idx \<le> 2^ sz\<rbrace>
   set_cap (cap.UntypedCap dev ptr sz idx) cref
  \<lbrace>\<lambda>rv s. invs s\<rbrace>"
   apply (rule hoare_name_pre_state)
@@ -276,10 +271,16 @@ lemma set_untyped_cap_invs_simple[Untyped_AI_assms]:
     set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at
     set_untyped_cap_refs_respects_device_simple)
   apply (clarsimp simp:cte_wp_at_caps_of_state is_cap_simps)
+  apply (intro conjI, clarsimp)
+        apply (rule ext, clarsimp simp:is_cap_simps)
+       apply (clarsimp split:cap.splits simp:is_cap_simps appropriate_cte_cap_def)
       apply (drule(1) if_unsafe_then_capD[OF caps_of_state_cteD])
        apply clarsimp
       apply (clarsimp simp:is_cap_simps ex_cte_cap_wp_to_def appropriate_cte_cap_def cte_wp_at_caps_of_state)
      apply (clarsimp dest!:valid_global_refsD2 simp:cap_range_def)
+    apply (simp add:valid_irq_node_def)
+   apply (clarsimp simp:valid_irq_node_def)
+  apply (clarsimp simp:no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state vs_cap_ref_def)
   apply (case_tac cap)
    apply (simp_all add:vs_cap_ref_def table_cap_ref_def)
   apply (rename_tac arch_cap)
@@ -289,8 +290,8 @@ lemma set_untyped_cap_invs_simple[Untyped_AI_assms]:
               valid_refs_def simp del:split_paired_All)
   apply (drule_tac x = cref in spec)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
-(*  apply fastforce *)
-  sorry
+  apply fastforce
+  done
 
 
 lemma pbfs_atleast_pageBits':
@@ -409,7 +410,7 @@ lemma store_pde_weaken:
             split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   done
 
-(* ARMHYP not needed anymore? *)
+(* ARMHYP not needed anymore?
 lemma store_pde_nonempty_table:
   "\<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table {}) r s)
            \<and> (\<forall>rf. pde_ref pde = Some rf \<longrightarrow>
@@ -421,7 +422,7 @@ lemma store_pde_nonempty_table:
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def nonempty_table_def a_type_def)
   apply (clarsimp simp add: empty_table_def vspace_bits_defs)
-  sorry
+  done *)
 
 (*
 lemma valid_arch_state_global_pd: (* ARMHYP restate? *)

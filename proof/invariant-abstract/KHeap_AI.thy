@@ -23,7 +23,6 @@ requalify_consts
 
 requalify_facts
   pspace_in_kernel_window_atyp_lift
-(*  valid_arch_objs_lift_weak *)
   valid_vspace_objs_lift_weak
   vs_lookup_vspace_obj_at_lift
   vs_lookup_pages_vspace_obj_at_lift
@@ -32,7 +31,7 @@ requalify_facts
   valid_kernel_mappings_lift
   equal_kernel_mappings_lift
   valid_machine_state_lift
-(*  valid_ao_at_lift_aobj_at*)
+  valid_vso_at_lift
   valid_vso_at_lift_aobj_at
   valid_arch_state_lift_aobj_at
   in_user_frame_lift
@@ -50,6 +49,12 @@ requalify_facts
   pspace_respects_region_cong
   cap_is_device_obj_is_device
   storeWord_device_state_inv
+
+  state_hyp_refs_of_ep_update
+  state_hyp_refs_of_ntfn_update
+  state_hyp_refs_of_tcb_state_update
+  state_hyp_refs_of_tcb_bound_ntfn_update
+  wellformed_arch_obj_same_type
 end
 
 lemmas cap_is_device_obj_is_device[simp] = cap_is_device_obj_is_device
@@ -76,14 +81,6 @@ lemma get_tcb_rev:
   "kheap s p = Some (TCB t)\<Longrightarrow> get_tcb p s = Some t"
   by (clarsimp simp:get_tcb_def)
 
-(* moved to KHeapPre_AI
-lemma get_tcb_SomeD: "get_tcb t s = Some v \<Longrightarrow> kheap s t = Some (TCB v)"
-  apply (cases "kheap s t"; simp add: get_tcb_def)
-  apply (rename_tac obj)
-  apply (case_tac obj; simp)
-  done
-*)
-
 lemma get_tcb_obj_atE[elim!]:
   "\<lbrakk> get_tcb t s = Some tcb; get_tcb t s = Some tcb \<Longrightarrow> P (TCB tcb) \<rbrakk> \<Longrightarrow> obj_at P t s"
   by (clarsimp dest!: get_tcb_SomeD simp: obj_at_def)
@@ -106,13 +103,6 @@ lemma pspace_aligned_obj_update:
   done
 
 
-lemma typ_at_same_type:
-  assumes "typ_at T p s" "a_type k = a_type ko" "kheap s p' = Some ko"
-  shows "typ_at T p (s\<lparr>kheap := kheap s(p' \<mapsto> k)\<rparr>)"
-  using assms 
-  by (clarsimp simp: obj_at_def)
-
-
 lemma cte_at_same_type:
   "\<lbrakk>cte_at t s; a_type k = a_type ko; kheap s p = Some ko\<rbrakk>
   \<Longrightarrow> cte_at t (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
@@ -133,29 +123,6 @@ lemma untyped_same_type:
   unfolding valid_untyped_def
   by (clarsimp simp: obj_range_def obj_bits_T)
 
-lemma hoare_to_pure_kheap_upd:
-  assumes hoare[rule_format]:
-    "\<And>f. (\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace>
-      f \<lbrace>\<lambda>r s. P (typ_at (AArch T) p s)\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
-  assumes typ_eq: "a_type k = a_type ko"
-  assumes valid: "P (s :: ('z :: state_ext) state)"
-  assumes at: "ko_at ko p s"
-  shows "P (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
-  apply (rule use_valid[where f="
-      do
-        s' <- get;
-        assert (s' = s);
-        (modify (\<lambda>s. s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>));
-        return undefined
-      od", OF _ hoare valid])
-  apply (fastforce simp add: simpler_modify_def get_def bind_def
-                             assert_def return_def[abs_def] fail_def)[1]
-  apply wp
-  apply (insert typ_eq at)
-  apply clarsimp
-  apply (erule_tac P=P in rsubst)
-  by (auto simp add: obj_at_def a_type_def split: kernel_object.splits if_splits)
-
 lemma valid_cap_same_type:
   "\<lbrakk> s \<turnstile> cap; a_type k = a_type ko; kheap s p = Some ko \<rbrakk> 
   \<Longrightarrow> s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr> \<turnstile> cap"
@@ -166,6 +133,11 @@ lemma valid_cap_same_type:
   by (intro hoare_to_pure_kheap_upd[OF valid_arch_cap_typ, simplified obj_at_def],
       assumption, auto)
 
+
+lemma wellformed_arch_obj_same_type:
+  "\<lbrakk> wellformed_arch_obj obj s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
+   \<Longrightarrow> wellformed_arch_obj obj (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+oops
 
 lemma valid_obj_same_type:
   "\<lbrakk> valid_obj p' obj s; valid_obj p k s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
@@ -187,33 +159,9 @@ lemma valid_obj_same_type:
    apply (auto elim: typ_at_same_type
                    simp: tcb_at_typ
                   split: Structures_A.ntfn.splits option.splits)
-
-  apply (simp add: valid_obj_def "ARM.wellformed_arch_obj_def"
-                 ARM_A.arch_kernel_obj.distinct
-                 ARM_A.arch_kernel_obj.inject
-            split: ARM_A.arch_kernel_obj.splits)
-  apply (rename_tac v)
-  apply (case_tac "ARM_A.vcpu_tcb v"; simp add: ARM.valid_vcpu_def)
-  apply (drule typ_at_same_type[rotated]; assumption)
-done
-
-lemma valid_arch_obj_same_type:
-  "\<lbrakk>valid_arch_obj ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
-  \<Longrightarrow> valid_arch_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)"
-  apply (induction ao rule: ARM_A.arch_kernel_obj.induct;
-         clarsimp simp: ARM.valid_arch_obj.simps typ_at_same_type)
-    apply (rule hoare_to_pure_kheap_upd; assumption?)
-      apply (rule ARM.valid_pte_lift, assumption)
-     apply blast
-    apply (simp add: obj_at_def)
-   apply (rule hoare_to_pure_kheap_upd; assumption?)
-     apply (rule ARM.valid_pde_lift, assumption)
-    apply blast
-   apply (simp add: obj_at_def)
-  apply (rename_tac v)
-  apply (case_tac "ARM_A.vcpu_tcb v"; simp add: ARM.valid_vcpu_def)
-  apply (drule typ_at_same_type[rotated]; assumption)
-done
+  apply (clarsimp simp add: valid_obj_def)
+  apply (auto intro: wellformed_arch_obj_same_type)
+  done
 
 lemma valid_vspace_obj_same_type:
   "\<lbrakk>valid_vspace_obj ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
@@ -543,16 +491,15 @@ lemma set_ep_refs_of[wp]:
 
 
 lemma set_ep_hyp_refs_of[wp]:
- "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace>
+ "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
     set_endpoint ep val
-  \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+  \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: set_endpoint_def set_object_def)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
-  apply wp
-  apply clarsimp
-  apply (drule_tac ARM.ko_at_state_hyp_refs_ofD)
-  apply (case_tac obj; clarsimp elim!: rsubst[where P=P])
-  apply (rule all_ext; clarsimp simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_simps ARM.hyp_refs_of_def)
+  apply (wp, clarsimp)
+  apply (subst state_hyp_refs_of_ep_update[of ep _ val, simplified fun_upd_def])
+  apply (case_tac obj; clarsimp simp: typ_at_eq_kheap_obj obj_at_def)
+  apply assumption
   done
 
 
@@ -815,17 +762,17 @@ lemma set_ntfn_refs_of[wp]:
   done
 
 lemma set_ntfn_hyp_refs_of[wp]: (* ARMHYP *)
-  "\<lbrace>\<lambda>s. P ((ARM.state_hyp_refs_of s))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of s))\<rbrace>
      set_notification ntfnptr ntfn
-   \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: set_notification_def set_object_def)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
-  apply wp
-  apply clarsimp
-  apply (drule_tac ARM.ko_at_state_hyp_refs_ofD)
-  apply (case_tac obj; clarsimp elim!: rsubst[where P=P])
-  apply (rule all_ext; clarsimp simp: ARM.state_hyp_refs_of_def ARM.hyp_refs_of_simps ARM.hyp_refs_of_def)
+  apply (wp, clarsimp)
+  apply (subst state_hyp_refs_of_ntfn_update[of ntfnptr _ ntfn, simplified fun_upd_def])
+  apply (case_tac obj; clarsimp simp: typ_at_eq_kheap_obj obj_at_def)
+  apply assumption
   done
+
 
 lemma set_ntfn_cur_tcb[wp]:
   "\<lbrace>cur_tcb\<rbrace> set_notification ntfn v \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
@@ -1302,16 +1249,6 @@ lemma set_object_non_pagetable:
   apply (clarsimp simp: obj_at_def)
   by (rule vspace_obj_predE)
 
-(*
-lemma set_object_arch_objs_non_arch:
-  "\<lbrace>valid_arch_objs and K (non_arch_obj ko) and obj_at non_arch_obj p\<rbrace>
-  set_object p ko
-  \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-  apply (rule assert_pre)
-  apply (rule hoare_pre)
-  apply (rule valid_arch_objs_lift_weak)
-  apply (wp set_object_non_arch | clarsimp)+
-  done *)
 
 lemma set_object_vspace_objs_non_pagetable:
   "\<lbrace>valid_vspace_objs and K (non_vspace_obj ko) and obj_at non_vspace_obj p\<rbrace>
@@ -1376,10 +1313,7 @@ by (rule valid_kernel_mappings_lift, wp vsobj_at)
 
 lemma equal_kernel_mappings[wp]: "\<lbrace>equal_kernel_mappings\<rbrace> f \<lbrace>\<lambda>_. equal_kernel_mappings\<rbrace>"
 by (rule equal_kernel_mappings_lift, wp vsobj_at)
-(*
-lemma valid_ao_at[wp]:"\<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>_. valid_ao_at p\<rbrace>"
-by (rule valid_ao_at_lift_aobj_at; wp aobj_at; simp)
-*)
+
 lemma valid_vso_at[wp]:"\<lbrace>valid_vso_at p\<rbrace> f \<lbrace>\<lambda>_. valid_vso_at p\<rbrace>"
 by (rule valid_vso_at_lift_aobj_at; wp vsobj_at; simp)
 
@@ -1662,7 +1596,7 @@ lemma set_ntfn_minor_invs:
      set_notification ptr val
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply_trace (rule hoare_pre,
+  apply (rule hoare_pre,
          wp_trace set_ntfn_valid_objs valid_irq_node_typ
             valid_irq_handlers_lift)
   apply (clarsimp elim!: rsubst[where P=sym_refs]
@@ -1725,9 +1659,9 @@ lemma dmo_refs_of[wp]:
 
 
 lemma dmo_hyp_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (ARM.state_hyp_refs_of s)\<rbrace>
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
      do_machine_op oper
-   \<lbrace>\<lambda>rv s. P (ARM.state_hyp_refs_of s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply wp
   apply (clarsimp elim!: state_hyp_refs_of_pspaceI)
