@@ -22,7 +22,6 @@ This module defines the ARM register set.
 
 > import qualified Data.Word
 > import Data.Array
-> import Data.Bits
 
 \end{impdetails}
 
@@ -49,13 +48,4 @@ This module defines the ARM register set.
 
 > initContext :: [(Register, Word)]
 > initContext = [(CPSR,0x150)] -- User mode
-
-> sanitiseRegister :: Register -> Word -> Word
-#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
-> sanitiseRegister CPSR v = (v .&. 0xf8000000) .|. 0x150
-#else
-> sanitiseRegister CPSR v =
->     if v .&. 0x1f == 0x1f then v else (v .&. 0xf8000000) .|. 0x150
-#endif
-> sanitiseRegister _ v = v
 
