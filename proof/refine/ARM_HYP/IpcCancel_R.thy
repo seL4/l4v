@@ -1421,6 +1421,11 @@ lemma (in delete_one) suspend_corres:
   apply (clarsimp simp add: invs'_def valid_state'_def valid_queues_inQ_queues)
   done
 
+lemma (in delete_one) prepareThreadDelete_corres:
+  "corres dc (tcb_at t) (tcb_at' t)
+        (prepare_thread_delete t) (ArchRetypeDecls_H.ARM_H.prepareThreadDelete t)"
+  by (simp add: ArchVSpace_A.ARM_A.prepare_thread_delete_def ArchRetype_H.ARM_H.prepareThreadDelete_def)
+
 lemma no_refs_simple_strg':
   "st_tcb_at' simple' t s' \<and> P {} \<longrightarrow> st_tcb_at' (\<lambda>st. P (tcb_st_refs_of' st)) t s'"
   by (fastforce elim!: pred_tcb'_weakenE)+
@@ -2760,6 +2765,10 @@ lemma suspend_unqueued:
    apply (rule hoare_post_taut)
   apply (rule TrueI)
   done
+
+crunch unqueued: prepareThreadDelete "obj_at' (Not \<circ> tcbQueued) t"
+crunch inactive: prepareThreadDelete "st_tcb_at' (op = Inactive) t'"
+crunch nonq: prepareThreadDelete " \<lambda>s. \<forall>d p. t' \<notin> set (ksReadyQueues s (d, p))"
 
 end
 end

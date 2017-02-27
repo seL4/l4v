@@ -238,7 +238,7 @@ crunch ksDomainTime_inv[wp]: handleCall "(\<lambda>s. P (ksDomainTime s))"
    simp: crunch_simps unless_def
    ignore: syscall setObject loadObject getObject constOnFailure )
 
-crunch domain_time'_inv[wp]: activateThread "\<lambda>s. P (ksDomainTime s)"
+crunch domain_time'_inv[wp]: activateThread,handleHypervisorFault "\<lambda>s. P (ksDomainTime s)"
   (wp: hoare_drop_imps)
 
 lemma nextDomain_domain_time_left'[wp]:
