@@ -477,6 +477,70 @@ implementation assumes the monitor is not modelled in our simulator.
 > setACTLR :: Word -> MachineMonad ()
 > setACTLR _actlr = error "FIXME ARMHYP machine callback unimplemented"
 
+Hypervisor banked registers
+
+> set_lr_svc :: Word -> MachineMonad ()
+> set_lr_svc _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_sp_svc :: Word -> MachineMonad ()
+> set_sp_svc _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_lr_abt :: Word -> MachineMonad ()
+> set_lr_abt _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_sp_abt :: Word -> MachineMonad ()
+> set_sp_abt _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_lr_und :: Word -> MachineMonad ()
+> set_lr_und _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_sp_und :: Word -> MachineMonad ()
+> set_sp_und _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_lr_irq :: Word -> MachineMonad ()
+> set_lr_irq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_sp_irq :: Word -> MachineMonad ()
+> set_sp_irq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_lr_fiq :: Word -> MachineMonad ()
+> set_lr_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_sp_fiq :: Word -> MachineMonad ()
+> set_sp_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_r8_fiq :: Word -> MachineMonad ()
+> set_r8_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_r9_fiq :: Word -> MachineMonad ()
+> set_r9_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_r10_fiq :: Word -> MachineMonad ()
+> set_r10_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_r11_fiq :: Word -> MachineMonad ()
+> set_r11_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_r12_fiq :: Word -> MachineMonad ()
+> set_r12_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+
+> get_lr_svc :: MachineMonad Word
+> get_lr_svc = error "FIXME ARMHYP machine callback unimplemented"
+> get_sp_svc :: MachineMonad Word
+> get_sp_svc = error "FIXME ARMHYP machine callback unimplemented"
+> get_lr_abt :: MachineMonad Word
+> get_lr_abt = error "FIXME ARMHYP machine callback unimplemented"
+> get_sp_abt :: MachineMonad Word
+> get_sp_abt = error "FIXME ARMHYP machine callback unimplemented"
+> get_lr_und :: MachineMonad Word
+> get_lr_und = error "FIXME ARMHYP machine callback unimplemented"
+> get_sp_und :: MachineMonad Word
+> get_sp_und = error "FIXME ARMHYP machine callback unimplemented"
+> get_lr_irq :: MachineMonad Word
+> get_lr_irq = error "FIXME ARMHYP machine callback unimplemented"
+> get_sp_irq :: MachineMonad Word
+> get_sp_irq = error "FIXME ARMHYP machine callback unimplemented"
+> get_lr_fiq :: MachineMonad Word
+> get_lr_fiq = error "FIXME ARMHYP machine callback unimplemented"
+> get_sp_fiq :: MachineMonad Word
+> get_sp_fiq = error "FIXME ARMHYP machine callback unimplemented"
+> get_r8_fiq :: MachineMonad Word
+> get_r8_fiq = error "FIXME ARMHYP machine callback unimplemented"
+> get_r9_fiq :: MachineMonad Word
+> get_r9_fiq = error "FIXME ARMHYP machine callback unimplemented"
+> get_r10_fiq :: MachineMonad Word
+> get_r10_fiq = error "FIXME ARMHYP machine callback unimplemented"
+> get_r11_fiq :: MachineMonad Word
+> get_r11_fiq = error "FIXME ARMHYP machine callback unimplemented"
+> get_r12_fiq :: MachineMonad Word
+> get_r12_fiq = error "FIXME ARMHYP machine callback unimplemented"
+
 #endif
 
 \subsubsection{Page Table Structure}
