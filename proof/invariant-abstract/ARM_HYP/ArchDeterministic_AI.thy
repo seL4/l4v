@@ -16,8 +16,9 @@ context Arch begin global_naming ARM
 
 named_theorems Deterministic_AI_assms
 
-crunch valid_list[wp, Deterministic_AI_assms]: vcpu_switch valid_list
-  (wp: crunch_wps simp: unless_def crunch_simps)
+lemma vcpu_switch_valid_list[wp, Deterministic_AI_assms]:
+  "\<lbrace>valid_list\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  sorry
 
 crunch valid_list[wp, Deterministic_AI_assms]: cap_swap_for_delete,set_cap,finalise_cap valid_list
   (wp: crunch_wps simp: unless_def crunch_simps)
@@ -77,8 +78,10 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
   "\<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding handle_interrupt_def ackInterrupt_def
   apply (rule hoare_pre)
-   apply (wp get_cap_wp  do_machine_op_valid_list | wpc | simp add: get_irq_slot_def | wp_once hoare_drop_imps)+
-sorry
+   apply (wp get_cap_wp do_machine_op_valid_list | wpc
+        | simp add: get_irq_slot_def handle_reserved_irq_def
+        | wp_once hoare_drop_imps)+
+  done
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_send,handle_reply valid_list
 

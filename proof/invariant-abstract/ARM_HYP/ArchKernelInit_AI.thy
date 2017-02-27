@@ -226,7 +226,7 @@ lemma caps_of_state_init_A_st_Null:
   apply (subgoal_tac "\<not> cte_wp_at (op \<noteq> cap.NullCap) x init_A_st")
    apply (auto simp add: cte_wp_at_caps_of_state)[1]
   apply (clarsimp, erule cte_wp_atE)
-   apply (auto simp add: state_defs tcb_cap_cases_def split: split_if_asm)
+   apply (auto simp add: state_defs tcb_cap_cases_def split: if_split_asm)
   done
 
 lemmas cte_wp_at_caps_of_state_eq
@@ -254,7 +254,7 @@ lemma invs_A:
                            cap_aligned_def word_bits_def)+
     apply (clarsimp simp: valid_cs_def word_bits_def cte_level_bits_def
                           init_irq_ptrs_all_ineqs valid_tcb_def
-                   split: split_if_asm)
+                   split: if_split_asm)
    apply (rule conjI)
     apply (clarsimp simp: pspace_aligned_def state_defs wf_obj_bits [OF wf_empty_bits]
                           dom_if_Some cte_level_bits_def)
@@ -281,7 +281,7 @@ lemma invs_A:
    apply (simp add: valid_ioc_def init_A_st_def init_ioc_def cte_wp_at_cases2)
    apply (intro allI impI, elim exE conjE)
    apply (case_tac obj, simp_all add: cap_of_def)
-   apply (clarsimp simp: init_kheap_def split: split_if_asm)
+   apply (clarsimp simp: init_kheap_def split: if_split_asm)
   apply (rule conjI)
    apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def state_defs)
   apply (rule conjI)
@@ -342,7 +342,7 @@ lemma invs_A:
    apply (simp add: valid_kernel_mappings_def state_defs
                          valid_kernel_mappings_if_pd_def pde_ref_def
                          ran_def)
-   apply (auto simp: pde_ref_def split: split_if_asm)[1]
+   apply (auto simp: pde_ref_def split: if_split_asm)[1]
   apply (rule conjI)
    apply (clarsimp simp: equal_kernel_mappings_def state_defs obj_at_def)
   apply (rule conjI)

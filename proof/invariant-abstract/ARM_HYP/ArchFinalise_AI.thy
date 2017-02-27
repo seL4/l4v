@@ -16,6 +16,21 @@ context Arch begin
 
 named_theorems Finalise_AI_asms
 
+crunch caps_of_state[wp]: arch_thread_get "\<lambda>s. P (caps_of_state s)"
+
+lemma dissociate_vcpu_tcb_caps_of_state:
+  "\<lbrace>(\<lambda>s. P (caps_of_state s)) and
+     ((\<lambda>s. \<not> tcb_at param_a s) and (\<lambda>s. \<nexists>n. cap_table_at n param_a s))\<rbrace>
+    dissociate_vcpu_tcb param_a param_b \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_conj_lift simp: dissociate_vcpu_tcb_def)+
+  sorry
+
+lemma [wp, Finalise_AI_asms]: "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> prepare_thread_delete param_a
+  \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  apply (wpsimp wp: dissociate_vcpu_tcb_caps_of_state simp: prepare_thread_delete_def)+
+  sorry
+
+
 lemma (* obj_at_not_live_valid_arch_cap_strg *) [Finalise_AI_asms]:
   "(s \<turnstile> ArchObjectCap cap \<and> aobj_ref cap = Some r)
         \<longrightarrow> obj_at (\<lambda>ko. \<not> live ko) r s"

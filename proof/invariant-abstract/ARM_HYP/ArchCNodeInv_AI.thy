@@ -522,6 +522,12 @@ lemma nat_to_cref_0_replicate [CNodeInv_AI_assms]:
   done
 
 
+lemma prepare_thread_delete_thread_cap [CNodeInv_AI_assms]:
+  "\<lbrace>\<lambda>s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>
+     prepare_thread_delete t
+   \<lbrace>\<lambda>rv s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>"
+  by (wpsimp simp: prepare_thread_delete_def)
+
 end
 
 
@@ -945,31 +951,14 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
   unfolding invs_def valid_state_def valid_pspace_def including no_pre
   apply (simp add: pred_conj_def conj_comms [where Q = "valid_mdb S" for S])
   apply wp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_zombies_final)
-    apply clarsimp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_if_live)
-    apply clarsimp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_if_unsafe)
-    apply clarsimp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_irq_handlers)
-    apply clarsimp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_replies)
-    apply clarsimp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_valid_arch_caps)
-    apply clarsimp
-   apply (rule hoare_vcg_mp)
-(*    apply (rule hoare_pre, rule cap_move_valid_global_objs)
-    apply clarsimp
-   apply (rule hoare_vcg_mp) *)
-    apply (rule hoare_pre, rule cap_move_valid_ioc)
-    apply clarsimp
-   apply simp
+  apply (rule hoare_vcg_mp, wpsimp wp: cap_move_zombies_final)
+  apply (rule hoare_vcg_mp, wpsimp wp: cap_move_if_live)
+  apply (rule hoare_vcg_mp, wpsimp wp: cap_move_if_unsafe)
+  apply (rule hoare_vcg_mp, wpsimp wp: cap_move_irq_handlers)
+  apply (rule hoare_vcg_mp, wpsimp wp: cap_move_replies)
+  apply (rule hoare_vcg_mp, wpsimp wp: cap_move_valid_arch_caps)
+  apply (rule hoare_vcg_mp, wpsimp wp: cap_move_valid_ioc)
+   apply clarsimp
    apply (rule hoare_drop_imps)+
    apply (simp add: cap_move_def set_cdt_def)
    apply (rule hoare_pre)
@@ -989,13 +978,12 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
    apply (simp add: cap_range_NullCap valid_ipc_buffer_cap_def[where c=cap.NullCap])
    apply (simp add: is_cap_simps)
    apply (subgoal_tac "tcb_cap_valid cap.NullCap ptr s")
-    apply (simp add: tcb_cap_valid_def)
-    defer
+    apply (simp add: tcb_cap_valid_def weak_derived_cap_is_device)
    apply (rule tcb_cap_valid_NullCapD)
     apply (erule(1) tcb_cap_valid_caps_of_stateD)
    apply (simp add: is_cap_simps)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
-  sorry
+  done
 
 end
 

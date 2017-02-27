@@ -791,6 +791,7 @@ lemma prepare_thread_delete_not_recursive:
   apply (wp prepare_thread_delete_caps_of_state)
   done
 
+
 lemma suspend_not_recursive:
   "\<lbrace>\<lambda>s. P (not_recursive_cspaces s)\<rbrace>
      IpcCancel_A.suspend t
@@ -917,6 +918,7 @@ lemma suspend_thread_cap:
    apply (simp add: cte_wp_at_caps_of_state)+
   done
 
+
 lemma emptyable_irq_state_independent[intro!, simp]:
   "emptyable x (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
    = emptyable x s"
@@ -992,8 +994,8 @@ lemma rec_del_termination:
   apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
                         fst_cte_ptrs_def zombie_cte_bits_def
                         tcb_cnode_index_def
-                 split: option.split_asm)*)
-  sorry
+                 split: option.split_asm)
+  done
 
 lemma rec_del_dom: "\<And> (p :: rec_del_call \<times> 'state_ext state). rec_del_dom p"
   using rec_del_termination by blast

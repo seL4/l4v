@@ -61,17 +61,30 @@ lemma invoke_irq_handler_bcorres[wp]: "bcorres (invoke_irq_handler a) (invoke_ir
   apply (wp | simp)+
   done
 
+lemma make_arch_fault_msg_bcorres[wp,BCorres2_AI_assms]:
+  "bcorres (make_arch_fault_msg a b) (make_arch_fault_msg a b)"
+  by (cases a; wpsimp)
+
+lemma  handle_arch_fault_reply_bcorres[wp,BCorres2_AI_assms]:
+  "bcorres ( handle_arch_fault_reply a b c d) (handle_arch_fault_reply a b c d)"
+  by (cases a; wpsimp simp: handle_arch_fault_reply_def)
+
+end
+
+interpretation BCorres2_AI?: BCorres2_AI
+  proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (unfold_locales; (fact BCorres2_AI_assms)?)
+  qed
+
+context Arch begin global_naming ARM
+
 crunch (bcorres)bcorres[wp]: send_signal,arch_perform_invocation truncate_state
-  (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
-         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME zipWithM_x handle_fault_reply)
 
 crunch (bcorres)bcorres[wp]: send_ipc truncate_state
-  (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
-         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME zipWithM_x handle_fault_reply make_arch_fault_msg)
+  (simp: ignore: getRegister mapME cap_fault_on_failure)
 
 crunch (bcorres)bcorres[wp]: do_reply_transfer truncate_state
-  (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure
-         set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME zipWithM_x handle_fault_reply)
 
 lemma perform_invocation_bcorres[wp]: "bcorres (perform_invocation a b c) (perform_invocation a b c)"
   apply (cases c)
@@ -117,6 +130,9 @@ lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fau
   apply (cases b)
   apply (simp | wp)+
   done
+
+lemma handle_reserved_irq_bcorres[wp]: "bcorres (handle_reserved_irq a) (handle_reserved_irq a)"
+  by (simp add: handle_reserved_irq_def; wp)
 
 lemma handle_hypervisor_fault_bcorres[wp]: "bcorres (handle_hypervisor_fault a b) (handle_hypervisor_fault a b)"
   apply (cases b)

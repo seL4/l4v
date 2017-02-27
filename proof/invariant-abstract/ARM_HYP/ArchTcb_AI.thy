@@ -152,11 +152,11 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
             | simp
             | rule impI
             | rule hoare_drop_imps)+
-(*     apply (clarsimp simp: ball_ran_eq x)
+     apply (clarsimp simp: ball_ran_eq x)
     apply (wp delete_one_caps_of_state
          | rule impI
          | simp add: deleting_irq_handler_def get_irq_slot_def x ball_ran_eq)+
-*)  sorry
+  done
 
 
 lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_asms]:
@@ -192,18 +192,12 @@ lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
   apply (simp add: cap_delete_def
                    no_cap_to_obj_with_diff_ref_ran_caps_form)
   apply wp
-  apply simp
-  apply (rule use_spec)
-  apply (rule rec_del_all_caps_in_range)
-       apply (simp add: atomize_imp)
-     apply (simp add: table_cap_ref_def[simplified, split_simps cap.split]
-                             vspace_bits_defs
-                       del: arch_cap_fun_lift_non_arch
-                       split del: arch_cap.split
-                       cong: cap.case_cong_weak)+
-(*     apply (rule_tac obj_ref_none_no_asid) *)
-
-  sorry
+   apply simp
+   apply (rule use_spec)
+   apply (rule rec_del_all_caps_in_range)
+      apply (rule mp[OF _ obj_ref_none_no_asid(1)[of cap]], simp)
+      apply (simp add: table_cap_ref_def[simplified, split_simps cap.split])+
+  done
 
 lemma as_user_valid_cap[wp]:
   "\<lbrace>valid_cap c\<rbrace> as_user a b \<lbrace>\<lambda>rv. valid_cap c\<rbrace>"

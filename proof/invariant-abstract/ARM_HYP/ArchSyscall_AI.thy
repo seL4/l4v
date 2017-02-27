@@ -116,6 +116,10 @@ lemma hvmf_ex_cap[wp, Syscall_AI_assms]:
    apply (wp | simp)+
   done
 
+lemma hh_invs[wp, Syscall_AI_assms]:
+  "\<lbrace>invs and ct_active\<rbrace> handle_hypervisor_fault thread fault \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (cases fault; wpsimp)
+
 end
 
 global_interpretation Syscall_AI?: Syscall_AI

@@ -90,12 +90,12 @@ lemma device_update_invs:
   apply (erule cte_wp_at_weakenE)
   apply clarsimp
   apply (fastforce split: if_splits) (* takes 20 secs *)
-  done   
+  done
 
 crunch device_state_inv[wp]: user_memory_update "\<lambda>ms. P (device_state ms)"
 
-lemma dom_restrict_plus_eq: 
-  "a \<inter> b \<union> b = b" 
+lemma dom_restrict_plus_eq:
+  "a \<inter> b \<union> b = b"
   by auto
 
 lemma user_memory_update[wp]:
