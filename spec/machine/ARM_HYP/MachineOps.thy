@@ -485,7 +485,7 @@ definition
  "freeMemory ptr bits \<equiv>
   mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size  .e.  ptr + 2 ^ bits - 1]"
 
-section "ARMHYP specific definitions"
+section "Platform specific definitions for TK1 (ARM with Hypervisor extensions)"
 
 consts'
   writeContextIDAndPD_impl :: "hardware_asid \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
@@ -501,11 +501,11 @@ consts'
 
 definition
   getHSR :: "machine_word machine_monad"
-where "getHSR \<equiv> gets HSR_val" (* ARMHYP machine callback *)
+where "getHSR \<equiv> gets HSR_val"
 
 definition
   getHDFAR :: "machine_word machine_monad"
-where "getHDFAR \<equiv> gets HDFAR_val" (* ARMHYP machine callback *)
+where "getHDFAR \<equiv> gets HDFAR_val"
 
 consts'
   setHCR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -514,7 +514,7 @@ definition
 where
   "setHCR w \<equiv> machine_op_lift (setHCR_impl w)"
 
-consts'
+consts' (* FIXME ARMHYP this makes no sense *)
   addressTranslateS1CPR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
   addressTranslateS1CPR_val :: "machine_state \<Rightarrow> machine_word"
 definition
@@ -525,153 +525,142 @@ where
     gets addressTranslateS1CPR_val
   od"
 
-consts'
-  getSCTLR_impl :: "machine_word machine_rest_monad"
 definition
   getSCTLR :: "machine_word machine_monad"
 where "getSCTLR \<equiv> gets SCTLR_val"
 
 consts'
-setSCTLR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+  setSCTLR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 definition
-setSCTLR :: "machine_word \<Rightarrow> unit machine_monad"
+  setSCTLR :: "machine_word \<Rightarrow> unit machine_monad"
 where
-"setSCTLR w \<equiv> machine_op_lift (setSCTLR_impl w)"
+  "setSCTLR w \<equiv> machine_op_lift (setSCTLR_impl w)"
 
-consts'
-  getACTLR_impl :: "machine_word machine_rest_monad"
 definition
   getACTLR :: "machine_word machine_monad"
 where
   "getACTLR \<equiv> gets ACTLR_val"
 
 consts'
-setACTLR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+  setACTLR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 definition
-setACTLR :: "machine_word \<Rightarrow> unit machine_monad"
+  setACTLR :: "machine_word \<Rightarrow> unit machine_monad"
 where
-"setACTLR w \<equiv> machine_op_lift (setACTLR_impl w)"
+  "setACTLR w \<equiv> machine_op_lift (setACTLR_impl w)"
 
 definition
-vgic_irq_active :: "machine_word"
+  vgic_irq_active :: "machine_word"
 where
-"vgic_irq_active \<equiv> 2 << 28"
+  "vgic_irq_active \<equiv> 2 << 28"
 
 definition
-vgic_irq_mask :: "machine_word"
+  vgic_irq_mask :: "machine_word"
 where
-"vgic_irq_mask \<equiv> 3 << 28"
-
-consts' (* ARMHYP is this okay? *)
-get_gic_vcpu_ctrl_hcr_impl :: "machine_word machine_rest_monad"
-gic_vcpu_ctrl_hcr_val :: "machine_state \<Rightarrow> machine_word"
-definition
-get_gic_vcpu_ctrl_hcr :: "machine_word machine_monad"
-where
-"get_gic_vcpu_ctrl_hcr \<equiv> gets gic_vcpu_ctrl_hcr_val"
+  "vgic_irq_mask \<equiv> 3 << 28"
 
 consts'
-set_gic_vcpu_ctrl_hcr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+  gic_vcpu_ctrl_hcr_val :: "machine_state \<Rightarrow> machine_word"
 definition
-set_gic_vcpu_ctrl_hcr :: "machine_word \<Rightarrow> unit machine_monad"
+  get_gic_vcpu_ctrl_hcr :: "machine_word machine_monad"
 where
-"set_gic_vcpu_ctrl_hcr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_hcr_impl w)"
+  "get_gic_vcpu_ctrl_hcr \<equiv> gets gic_vcpu_ctrl_hcr_val"
 
 consts'
-get_gic_vcpu_ctrl_vmcr_impl :: "machine_word machine_rest_monad"
-gic_vcpu_ctrl_vmcr_val :: "machine_state \<Rightarrow> machine_word"
+  set_gic_vcpu_ctrl_hcr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 definition
-get_gic_vcpu_ctrl_vmcr :: "machine_word machine_monad"
+  set_gic_vcpu_ctrl_hcr :: "machine_word \<Rightarrow> unit machine_monad"
 where
-"get_gic_vcpu_ctrl_vmcr \<equiv> gets gic_vcpu_ctrl_vmcr_val"
+  "set_gic_vcpu_ctrl_hcr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_hcr_impl w)"
 
 consts'
-set_gic_vcpu_ctrl_vmcr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+  gic_vcpu_ctrl_vmcr_val :: "machine_state \<Rightarrow> machine_word"
 definition
-set_gic_vcpu_ctrl_vmcr :: "machine_word \<Rightarrow> unit machine_monad"
+  get_gic_vcpu_ctrl_vmcr :: "machine_word machine_monad"
 where
-"set_gic_vcpu_ctrl_vmcr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_vmcr_impl w)"
+  "get_gic_vcpu_ctrl_vmcr \<equiv> gets gic_vcpu_ctrl_vmcr_val"
 
 consts'
-get_gic_vcpu_ctrl_apr_impl :: "machine_word machine_rest_monad"
-gic_vcpu_ctrl_apr_val :: "machine_state \<Rightarrow> machine_word"
+  set_gic_vcpu_ctrl_vmcr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 definition
-get_gic_vcpu_ctrl_apr :: "machine_word machine_monad"
+  set_gic_vcpu_ctrl_vmcr :: "machine_word \<Rightarrow> unit machine_monad"
 where
-"get_gic_vcpu_ctrl_apr \<equiv> gets gic_vcpu_ctrl_apr_val"
+  "set_gic_vcpu_ctrl_vmcr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_vmcr_impl w)"
 
 consts'
-set_gic_vcpu_ctrl_apr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+  gic_vcpu_ctrl_apr_val :: "machine_state \<Rightarrow> machine_word"
 definition
-set_gic_vcpu_ctrl_apr :: "machine_word \<Rightarrow> unit machine_monad"
+  get_gic_vcpu_ctrl_apr :: "machine_word machine_monad"
 where
-"set_gic_vcpu_ctrl_apr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_apr_impl w)"
+  "get_gic_vcpu_ctrl_apr \<equiv> gets gic_vcpu_ctrl_apr_val"
 
 consts'
-get_gic_vcpu_ctrl_vtr_impl :: "machine_word machine_rest_monad"
-gic_vcpu_ctrl_vtr_val :: "machine_state \<Rightarrow> machine_word"
+  set_gic_vcpu_ctrl_apr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 definition
-get_gic_vcpu_ctrl_vtr :: "machine_word machine_monad"
+  set_gic_vcpu_ctrl_apr :: "machine_word \<Rightarrow> unit machine_monad"
 where
-"get_gic_vcpu_ctrl_vtr \<equiv> gets gic_vcpu_ctrl_vtr_val"
+  "set_gic_vcpu_ctrl_apr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_apr_impl w)"
 
 consts'
-set_gic_vcpu_ctrl_vtr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+  gic_vcpu_ctrl_vtr_val :: "machine_state \<Rightarrow> machine_word"
 definition
-set_gic_vcpu_ctrl_vtr :: "machine_word \<Rightarrow> unit machine_monad"
+  get_gic_vcpu_ctrl_vtr :: "machine_word machine_monad"
 where
-"set_gic_vcpu_ctrl_vtr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_vtr_impl w)"
+  "get_gic_vcpu_ctrl_vtr \<equiv> gets gic_vcpu_ctrl_vtr_val"
 
 consts'
-get_gic_vcpu_ctrl_misr_impl :: "machine_word machine_rest_monad"
-gic_vcpu_ctrl_misr_val :: "machine_state \<Rightarrow> machine_word"
+  set_gic_vcpu_ctrl_vtr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 definition
-get_gic_vcpu_ctrl_misr :: "machine_word machine_monad"
+  set_gic_vcpu_ctrl_vtr :: "machine_word \<Rightarrow> unit machine_monad"
 where
-"get_gic_vcpu_ctrl_misr \<equiv> gets gic_vcpu_ctrl_misr_val"
+  "set_gic_vcpu_ctrl_vtr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_vtr_impl w)"
 
 consts'
-get_gic_vcpu_ctrl_eisr0_impl :: "machine_word machine_rest_monad"
-gic_vcpu_ctrl_eisr0_val :: "machine_state \<Rightarrow> machine_word"
+  gic_vcpu_ctrl_misr_val :: "machine_state \<Rightarrow> machine_word"
 definition
-get_gic_vcpu_ctrl_eisr0 :: "machine_word machine_monad"
+  get_gic_vcpu_ctrl_misr :: "machine_word machine_monad"
 where
-"get_gic_vcpu_ctrl_eisr0 \<equiv> gets gic_vcpu_ctrl_eisr0_val"
+  "get_gic_vcpu_ctrl_misr \<equiv> gets gic_vcpu_ctrl_misr_val"
 
 consts'
-get_gic_vcpu_ctrl_eisr1_impl :: "machine_word machine_rest_monad"
-gic_vcpu_ctrl_eisr1_val :: "machine_state \<Rightarrow> machine_word"
+  gic_vcpu_ctrl_eisr0_val :: "machine_state \<Rightarrow> machine_word"
 definition
-get_gic_vcpu_ctrl_eisr1 :: "machine_word machine_monad"
+  get_gic_vcpu_ctrl_eisr0 :: "machine_word machine_monad"
 where
-"get_gic_vcpu_ctrl_eisr1 \<equiv> gets gic_vcpu_ctrl_eisr0_val"
+  "get_gic_vcpu_ctrl_eisr0 \<equiv> gets gic_vcpu_ctrl_eisr0_val"
 
 consts'
-get_gic_vcpu_ctrl_lr_impl :: "nat \<Rightarrow> unit machine_rest_monad"
-gic_vcpu_ctrl_lr_val :: "machine_state \<Rightarrow> machine_word"
+  gic_vcpu_ctrl_eisr1_val :: "machine_state \<Rightarrow> machine_word"
 definition
-get_gic_vcpu_ctrl_lr :: "nat \<Rightarrow> machine_word machine_monad"
+  get_gic_vcpu_ctrl_eisr1 :: "machine_word machine_monad"
 where
-"get_gic_vcpu_ctrl_lr n \<equiv> do
-    machine_op_lift (get_gic_vcpu_ctrl_lr_impl n);
-    gets gic_vcpu_ctrl_lr_val
-  od"
+  "get_gic_vcpu_ctrl_eisr1 \<equiv> gets gic_vcpu_ctrl_eisr0_val"
+
+consts' (* FIXME ARMHYP this doesn't seem to make sense *)
+  get_gic_vcpu_ctrl_lr_impl :: "nat \<Rightarrow> unit machine_rest_monad"
+  gic_vcpu_ctrl_lr_val :: "machine_state \<Rightarrow> machine_word"
+definition
+  get_gic_vcpu_ctrl_lr :: "nat \<Rightarrow> machine_word machine_monad"
+where
+  "get_gic_vcpu_ctrl_lr n \<equiv> do
+      machine_op_lift (get_gic_vcpu_ctrl_lr_impl n);
+      gets gic_vcpu_ctrl_lr_val
+    od"
 
 consts'
-set_gic_vcpu_ctrl_lr_impl :: "nat \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+  set_gic_vcpu_ctrl_lr_impl :: "nat \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition
-set_gic_vcpu_ctrl_lr :: "nat \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+  set_gic_vcpu_ctrl_lr :: "nat \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
 where
-"set_gic_vcpu_ctrl_lr n w  \<equiv> machine_op_lift (set_gic_vcpu_ctrl_lr_impl n w)"
+  "set_gic_vcpu_ctrl_lr n w  \<equiv> machine_op_lift (set_gic_vcpu_ctrl_lr_impl n w)"
 
 subsection "Hypervisor Banked Registers"
 
 consts'
-  get_lr_svc_val :: "machine_state \<Rightarrow> machine_word"
+  lr_svc_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_lr_svc :: "machine_word machine_monad"
 where
-  "get_lr_svc \<equiv> gets get_lr_svc_val"
+  "get_lr_svc \<equiv> gets lr_svc_val"
 
 consts'
   set_lr_svc_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -681,11 +670,11 @@ where
   "set_lr_svc w \<equiv> machine_op_lift (set_lr_svc_impl w)"
 
 consts'
-  get_sp_svc_val :: "machine_state \<Rightarrow> machine_word"
+  sp_svc_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_sp_svc :: "machine_word machine_monad"
 where
-  "get_sp_svc \<equiv> gets get_sp_svc_val"
+  "get_sp_svc \<equiv> gets sp_svc_val"
 
 consts'
   set_sp_svc_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -695,11 +684,11 @@ where
   "set_sp_svc w \<equiv> machine_op_lift (set_sp_svc_impl w)"
 
 consts'
-  get_lr_abt_val :: "machine_state \<Rightarrow> machine_word"
+  lr_abt_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_lr_abt :: "machine_word machine_monad"
 where
-  "get_lr_abt \<equiv> gets get_lr_abt_val"
+  "get_lr_abt \<equiv> gets lr_abt_val"
 
 consts'
   set_lr_abt_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -709,11 +698,11 @@ where
   "set_lr_abt w \<equiv> machine_op_lift (set_lr_abt_impl w)"
 
 consts'
-  get_sp_abt_val :: "machine_state \<Rightarrow> machine_word"
+  sp_abt_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_sp_abt :: "machine_word machine_monad"
 where
-  "get_sp_abt \<equiv> gets get_sp_abt_val"
+  "get_sp_abt \<equiv> gets sp_abt_val"
 
 consts'
   set_sp_abt_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -723,11 +712,11 @@ where
   "set_sp_abt w \<equiv> machine_op_lift (set_sp_abt_impl w)"
 
 consts'
-  get_lr_und_val :: "machine_state \<Rightarrow> machine_word"
+  lr_und_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_lr_und :: "machine_word machine_monad"
 where
-  "get_lr_und \<equiv> gets get_lr_und_val"
+  "get_lr_und \<equiv> gets lr_und_val"
 
 consts'
   set_lr_und_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -737,11 +726,11 @@ where
   "set_lr_und w \<equiv> machine_op_lift (set_lr_und_impl w)"
 
 consts'
-  get_sp_und_val :: "machine_state \<Rightarrow> machine_word"
+  sp_und_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_sp_und :: "machine_word machine_monad"
 where
-  "get_sp_und \<equiv> gets get_sp_und_val"
+  "get_sp_und \<equiv> gets sp_und_val"
 
 consts'
   set_sp_und_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -751,11 +740,11 @@ where
   "set_sp_und w \<equiv> machine_op_lift (set_sp_und_impl w)"
 
 consts'
-  get_lr_irq_val :: "machine_state \<Rightarrow> machine_word"
+  lr_irq_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_lr_irq :: "machine_word machine_monad"
 where
-  "get_lr_irq \<equiv> gets get_lr_irq_val"
+  "get_lr_irq \<equiv> gets lr_irq_val"
 
 consts'
   set_lr_irq_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -765,11 +754,11 @@ where
   "set_lr_irq w \<equiv> machine_op_lift (set_lr_irq_impl w)"
 
 consts'
-  get_sp_irq_val :: "machine_state \<Rightarrow> machine_word"
+  sp_irq_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_sp_irq :: "machine_word machine_monad"
 where
-  "get_sp_irq \<equiv> gets get_sp_irq_val"
+  "get_sp_irq \<equiv> gets sp_irq_val"
 
 consts'
   set_sp_irq_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -779,11 +768,11 @@ where
   "set_sp_irq w \<equiv> machine_op_lift (set_sp_irq_impl w)"
 
 consts'
-  get_lr_fiq_val :: "machine_state \<Rightarrow> machine_word"
+  lr_fiq_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_lr_fiq :: "machine_word machine_monad"
 where
-  "get_lr_fiq \<equiv> gets get_lr_fiq_val"
+  "get_lr_fiq \<equiv> gets lr_fiq_val"
 
 consts'
   set_lr_fiq_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -793,11 +782,11 @@ where
   "set_lr_fiq w \<equiv> machine_op_lift (set_lr_fiq_impl w)"
 
 consts'
-  get_sp_fiq_val :: "machine_state \<Rightarrow> machine_word"
+  sp_fiq_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_sp_fiq :: "machine_word machine_monad"
 where
-  "get_sp_fiq \<equiv> gets get_sp_fiq_val"
+  "get_sp_fiq \<equiv> gets sp_fiq_val"
 
 consts'
   set_sp_fiq_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -807,11 +796,11 @@ where
   "set_sp_fiq w \<equiv> machine_op_lift (set_sp_fiq_impl w)"
 
 consts'
-  get_r8_fiq_val :: "machine_state \<Rightarrow> machine_word"
+  r8_fiq_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_r8_fiq :: "machine_word machine_monad"
 where
-  "get_r8_fiq \<equiv> gets get_r8_fiq_val"
+  "get_r8_fiq \<equiv> gets r8_fiq_val"
 
 consts'
   set_r8_fiq_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -821,11 +810,11 @@ where
   "set_r8_fiq w \<equiv> machine_op_lift (set_r8_fiq_impl w)"
 
 consts'
-  get_r9_fiq_val :: "machine_state \<Rightarrow> machine_word"
+  r9_fiq_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_r9_fiq :: "machine_word machine_monad"
 where
-  "get_r9_fiq \<equiv> gets get_r9_fiq_val"
+  "get_r9_fiq \<equiv> gets r9_fiq_val"
 
 consts'
   set_r9_fiq_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -835,11 +824,11 @@ where
   "set_r9_fiq w \<equiv> machine_op_lift (set_r9_fiq_impl w)"
 
 consts'
-  get_r10_fiq_val :: "machine_state \<Rightarrow> machine_word"
+  r10_fiq_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_r10_fiq :: "machine_word machine_monad"
 where
-  "get_r10_fiq \<equiv> gets get_r10_fiq_val"
+  "get_r10_fiq \<equiv> gets r10_fiq_val"
 
 consts'
   set_r10_fiq_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -849,11 +838,11 @@ where
   "set_r10_fiq w \<equiv> machine_op_lift (set_r10_fiq_impl w)"
 
 consts'
-  get_r11_fiq_val :: "machine_state \<Rightarrow> machine_word"
+  r11_fiq_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_r11_fiq :: "machine_word machine_monad"
 where
-  "get_r11_fiq \<equiv> gets get_r11_fiq_val"
+  "get_r11_fiq \<equiv> gets r11_fiq_val"
 
 consts'
   set_r11_fiq_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
@@ -863,11 +852,11 @@ where
   "set_r11_fiq w \<equiv> machine_op_lift (set_r11_fiq_impl w)"
 
 consts'
-  get_r12_fiq_val :: "machine_state \<Rightarrow> machine_word"
+  r12_fiq_val :: "machine_state \<Rightarrow> machine_word"
 definition
   get_r12_fiq :: "machine_word machine_monad"
 where
-  "get_r12_fiq \<equiv> gets get_r12_fiq_val"
+  "get_r12_fiq \<equiv> gets r12_fiq_val"
 
 consts'
   set_r12_fiq_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
