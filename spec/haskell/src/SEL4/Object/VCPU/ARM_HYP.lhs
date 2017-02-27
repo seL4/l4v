@@ -69,6 +69,10 @@ It is not possible to dissociate a VCPU and a TCB by using SetTCB. Final outcome
 >     let vcpuTCB = vcpuTCBPtr vcpu
 >     when (tcbVCPU /= Just vcpuPtr || vcpuTCB /= Just tcbPtr) $
 >         fail "TCB and VCPU not associated"
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     case hsCurVCPU of
+>         Just (curVCPU, _) -> when (curVCPU == vcpuPtr) vcpuInvalidateActive
+>         _ -> return ()
 >     setObject vcpuPtr $ vcpu { vcpuTCBPtr = Nothing }
 >     archThreadSet (\atcb -> atcb { atcbVCPUPtr = Nothing }) tcbPtr
 
@@ -232,10 +236,6 @@ For initialisation, see makeVCPUObject.
 >     case vcpuTCBPtr vcpu of
 >         Just tcbPtr -> dissociateVCPUTCB vcpuPtr tcbPtr
 >         Nothing -> return ()
->     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
->     case hsCurVCPU of
->         Just (vcpuPtr, _) -> vcpuInvalidateActive
->         _ -> return ()
 
 \subsection{VCPU State Control}
 
