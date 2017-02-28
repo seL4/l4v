@@ -55,9 +55,11 @@
   -->
 <testsuite>
 
-    <!-- Build Isabelle and common theories (Pure, HOL, HOL-Word, Word). -->
+  <!-- Build Isabelle and common theories (Pure, HOL, HOL-Word, Word). -->
+  <sequence>
     <test name="isabelle" cwd="../.." cpu-timeout="3600">isabelle/bin/isabelle build -d . -vb Word_Lib</test>
     <test name="isabelle_ARM" cwd="../.." cpu-timeout="3600">L4V_ARCH=ARM isabelle/bin/isabelle build -d . -vb Word_Lib</test>
+  </sequence>
 
     <!-- Ensure that all of our XML files are strictly correct. -->
     <test name="tests-xml-correct" cwd="../../" cpu-timeout="60">
