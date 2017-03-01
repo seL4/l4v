@@ -1086,11 +1086,6 @@ lemma transfer_cap_typ_at[wp]:
     \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
       transfer_caps mi caps ep receiver recv_buf
     \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-	(* FIXME: wp_cleanup 
-  apply (simp add: transfer_caps_def split_def split del: if_split |
-         wp cap_insert_typ_at hoare_drop_imps|wpc)+
-  done
-  *)
   by (wpsimp wp: cap_insert_typ_at hoare_drop_imps simp: transfer_caps_def)
 
 lemma transfer_cap_tcb[wp]:
@@ -1245,21 +1240,6 @@ lemma store_word_offs_invs[wp]:
 lemma copy_mrs_invs[wp]:
   "\<lbrace> invs and tcb_at r and tcb_at s \<rbrace> copy_mrs s sb r rb n \<lbrace>\<lambda>rv. invs \<rbrace>"
   unfolding copy_mrs_redux by (wpsimp wp: mapM_wp')
-  (* FIXME: wp_cleanup
-  apply (simp add: copy_mrs_redux)
-  apply wp
-   apply (rule_tac P="invs" in hoare_triv)
-   apply (case_tac sb, simp)
-   apply (case_tac rb, simp)
-   apply (simp split del: if_split)
-   apply (rule mapM_wp [where S=UNIV, simplified])
-   apply wp
-  apply (rule hoare_strengthen_post)
-   apply (rule mapM_wp [where S=UNIV, simplified])
-   apply wp
-   apply simp+
-  done
-  *)
 
 lemma set_mrs_valid_objs [wp]:
   "\<lbrace>valid_objs\<rbrace> set_mrs t a msgs \<lbrace>\<lambda>rv. valid_objs\<rbrace>"

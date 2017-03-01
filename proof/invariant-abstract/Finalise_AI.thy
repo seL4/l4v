@@ -409,13 +409,6 @@ lemma empty_slot_final_cap_at:
   apply (rule hoare_gen_asm)
   apply (simp add: empty_slot_def final_cap_at_eq cte_wp_at_conj cte_wp_at_caps_of_state)
   apply (wpsimp wp: opt_return_pres_lift get_cap_wp)
-  (* FIXME: wp_cleanup
-  apply (simp add: empty_slot_def final_cap_at_eq cte_wp_at_conj)
-  apply (simp add: cte_wp_at_caps_of_state)
-  apply (wp opt_return_pres_lift | simp split del: if_split)+
-  apply (rule hoare_strengthen_post [OF get_cap_sp])
-  apply (clarsimp simp: cte_wp_at_caps_of_state)
-  *)
   done
 
 

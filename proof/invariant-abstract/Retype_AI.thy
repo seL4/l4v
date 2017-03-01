@@ -1237,19 +1237,6 @@ lemma set_cap_no_overlap:
   unfolding set_cap_def
   by (wpsimp wp: set_object_no_overlap get_object_wp
            simp: split_beta obj_at_def a_type_def wf_cs_upd [unfolded fun_upd_def])
-(* FIXME: wp_cleanup
-  apply (simp add: split_beta)
-  apply (wp set_object_no_overlap)
-   defer
-   apply (rule get_object_sp)
-  apply (rule validI)
-  apply (clarsimp simp: in_monad return_def fail_def 
-                 split: Structures_A.kernel_object.splits if_split_asm
-                  cong: if_cong
-                 elim!: obj_at_weakenE)
-  apply (clarsimp simp add: a_type_def wf_cs_upd)
-  done
-*)
 
 definition
   if_unsafe_then_cap2 :: "(cslot_ptr \<rightharpoonup> cap) \<Rightarrow> (irq \<Rightarrow> obj_ref) \<Rightarrow> bool"
@@ -1474,13 +1461,6 @@ lemma retype_region_cur_tcb[wp]:
   apply (wpsimp wp: hoare_vcg_ex_lift retype_region_obj_at_other3 simp: retype_region_def)
   apply (auto simp: cur_tcb_def cong: if_cong)
   done
-  (* FIXME: wp_cleanup
-  apply (rule hoare_pre, wp hoare_vcg_ex_lift retype_region_obj_at_other3)
-   apply (simp add: retype_region_def split del: if_split cong: if_cong)
-   apply (wp|simp)+
-  apply (clarsimp simp: cur_tcb_def cong: if_cong)
-  apply auto
-  *)
 
 
 lemma retype_addrs_mem_sz_0_is_ptr:

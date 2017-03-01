@@ -3048,12 +3048,6 @@ lemma create_cap_valid_global_refs[wp]:
   apply (simp add: valid_global_refs_def valid_refs_def
                    cte_wp_at_caps_of_state create_cap_def pred_conj_def)
   apply (simp only: imp_conv_disj)
-  (* FIXME: wp_cleanup 
-  apply (rule hoare_pre)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
-                | simp split del: if_split)+
-  apply clarsimp
-  *)
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift)
   apply (subgoal_tac "global_refs s \<inter> cap_range (default_cap tp oref sz dev) = {}")
    apply auto[1]
