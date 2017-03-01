@@ -2310,7 +2310,7 @@ proof -
            apply (erule hf_corres)
           apply (rule hv_corres)
          apply (rule hoare_elim_pred_conjE2)
-         apply (rule hoare_vcg_E_conj, rule validE_validE_E[OF hv_inv_ex])
+         apply (rule hoare_vcg_E_conj, rule valid_validE_E, wp)
          apply (wp handle_vm_fault_valid_fault)
         apply (rule hv_inv_ex')
        apply wp

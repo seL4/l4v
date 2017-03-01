@@ -417,8 +417,6 @@ locale Syscall_AI = Systemcall_AI_Pre:Systemcall_AI_Pre _ state_ext_t
         \<Longrightarrow> no_cap_to_obj_with_diff_ref cap S s"
   assumes hv_invs[wp]:
     "\<And>t' flt. \<lbrace>invs :: 'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
-  assumes hv_inv_ex:
-    "\<And>P t vp. \<lbrace>P :: 'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   assumes handle_vm_fault_valid_fault[wp]:
     "\<And>thread ft.
       \<lbrace>\<top>::'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
