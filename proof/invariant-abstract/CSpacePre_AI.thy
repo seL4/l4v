@@ -124,4 +124,23 @@ lemma set_untyped_cap_as_full_is_final_cap'_neg:
    apply (clarsimp simp:is_final_cap'_def2)
   done
 
+lemma set_cap_def2:
+  "set_cap cap = (\<lambda>(oref, cref). do
+     obj \<leftarrow> get_object oref;
+     obj' \<leftarrow> (case (obj, tcb_cap_cases cref) of
+     (CNode sz cs, _) \<Rightarrow> if cref \<in> dom cs \<and> well_formed_cnode_n sz cs
+         then return $ CNode sz $ cs(cref \<mapsto> cap)
+         else fail
+   | (TCB tcb, Some (getF, setF, restr)) \<Rightarrow> return $ TCB (setF (\<lambda>x. cap) tcb)
+   | _ \<Rightarrow> fail);
+     set_object oref obj'
+   od)"
+  apply (rule ext, simp add: set_cap_def split_def)
+  apply (intro bind_cong bind_apply_cong refl)
+  apply (simp split: Structures_A.kernel_object.split)
+  apply (simp add: tcb_cap_cases_def)
+  done
+
+lemmas cap_insert_typ_ats [wp] = abs_typ_at_lifts [OF cap_insert_typ_at]
+
 end

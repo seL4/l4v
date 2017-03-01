@@ -756,12 +756,23 @@ lemma transfer_caps_loop_arch[wp]:
     \<lbrace>\<lambda>rv s. P (arch_state s)\<rbrace>"
   by (rule transfer_caps_loop_pres) wp+
 
+
+lemma transfer_caps_loop_aobj_at:
+  "arch_obj_pred P' \<Longrightarrow>
+  \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> transfer_caps_loop ep buffer n caps slots mi \<lbrace>\<lambda>r s::'state_ext state. P (obj_at P' pd s)\<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule transfer_caps_loop_presM[where em=False and ex=False and vo=False, simplified, where P="\<lambda>s. P (obj_at P' pd s)"])
+    apply (wp cap_insert_aobj_at)
+   apply (wpsimp simp: set_extra_badge_def)
+  apply assumption
+  done
+
 lemma transfer_caps_loop_valid_arch[wp]:
   "\<And>ep buffer n caps slots mi.
     \<lbrace>valid_arch_state::'state_ext state \<Rightarrow> bool\<rbrace>
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) wp+
+  by (rule valid_arch_state_lift_aobj_at; wp transfer_caps_loop_aobj_at)
 
 lemma tcl_reply':
   "\<And>slots caps ep buffer n mi.
@@ -1533,12 +1544,27 @@ crunch typ_at[wp]: do_ipc_transfer "\<lambda>s::'state_ext state. P (typ_at T p 
 crunch irq_node[wp]: do_ipc_transfer "\<lambda>s::'state_ext state. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
 
+(* FIXME: move to KHeap_AI? *)
+interpretation
+  set_mrs: non_arch_op "set_mrs t buf msg"
+  unfolding set_mrs_def
+  apply (unfold_locales)
+  by (wpsimp wp: set_object_non_arch get_object_wp mapM_wp'
+           simp: zipWithM_x_mapM non_arch_obj_def
+         | rule conjI)+
+
+lemma do_ipc_transfer_aobj_at:
+  "arch_obj_pred P' \<Longrightarrow>
+  \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> do_ipc_transfer s ep bg grt r \<lbrace>\<lambda>r s :: 'state_ext state. P (obj_at P' pd s)\<rbrace>"
+  unfolding
+    do_ipc_transfer_def do_normal_transfer_def set_message_info_def transfer_caps_def
+    copy_mrs_def do_fault_transfer_def
+  by (wpsimp wp: as_user.aobj_at set_mrs.aobj_at hoare_drop_imps mapM_wp' transfer_caps_loop_aobj_at)
+
 lemma do_ipc_transfer_valid_arch[wp]:
-  "\<And>s ep bg grt r.
-    \<lbrace>valid_arch_state::'state_ext state \<Rightarrow> bool\<rbrace>
-      do_ipc_transfer s ep bg grt r
-    \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift; wp)
+  "\<lbrace>valid_arch_state\<rbrace>
+    do_ipc_transfer s ep bg grt r \<lbrace>\<lambda>rv. valid_arch_state :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  by (rule valid_arch_state_lift_aobj_at; wp do_ipc_transfer_aobj_at)
 
 end
 
@@ -2274,7 +2300,9 @@ crunch Pmdb[wp]: set_thread_state "\<lambda>s. P (cdt s)"
 
 lemma setup_caller_cap_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> setup_caller_cap x y \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift; wp)
+  apply (rule valid_arch_state_lift_aobj_at; wp?)
+  unfolding setup_caller_cap_def cap_insert_def update_cdt_def set_cdt_def set_untyped_cap_as_full_def
+  by (wpsimp wp: set_cap.aobj_at get_cap_wp hoare_drop_imps sts.aobj_at)
 
 
 lemma setup_caller_cap_reply[wp]:
@@ -2615,7 +2643,10 @@ crunch arch[wp]: set_message_info "\<lambda>s. P (arch_state s)"
 
 lemma set_message_info_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> set_message_info a b \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift; wp)
+  apply (rule valid_arch_state_lift_aobj_at; wp?)
+  unfolding set_message_info_def
+  apply (wp as_user.aobj_at)
+  done
 
 crunch caps[wp]: set_message_info "\<lambda>s. P (caps_of_state s)"
 
@@ -3134,9 +3165,7 @@ lemma rai_makes_simple:
   "\<lbrace>st_tcb_at simple t' and K (t \<noteq> t')\<rbrace>
      receive_signal t cap is_blocking
    \<lbrace>\<lambda>rv. st_tcb_at simple t'\<rbrace>"
-   unfolding receive_signal_def
-   apply (rule hoare_gen_asm)
-   by (wpsimp wp: get_ntfn_wp sts_st_tcb_at_cases simp: do_nbrecv_failed_transfer_def)
+   by (rule rai_pred_tcb_neq)
 
 
 lemma thread_set_Pmdb:

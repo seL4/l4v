@@ -2819,7 +2819,7 @@ lemma tcb_fault_update_valid_state[wp]:
    apply (wp thread_set_valid_idle_trivial thread_set_valid_ioc_trivial
           | simp add: ran_tcb_cap_cases)+
     apply (wp thread_set_only_idle thread_set_ifunsafe_trivial
-              thread_set_arch_state thread_set_valid_reply_caps_trivial
+              thread_set_valid_reply_caps_trivial
               thread_set_valid_reply_masters_trivial
               thread_set_global_refs_triv
            | clarsimp simp: tcb_cap_cases_def)+

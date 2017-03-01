@@ -494,24 +494,6 @@ lemma well_formed_cnode_invsI:
   done
 
 
-lemma set_cap_def2:
-  "set_cap cap = (\<lambda>(oref, cref). do
-     obj \<leftarrow> get_object oref;
-     obj' \<leftarrow> (case (obj, tcb_cap_cases cref) of
-     (CNode sz cs, _) \<Rightarrow> if cref \<in> dom cs \<and> well_formed_cnode_n sz cs
-         then return $ CNode sz $ cs(cref \<mapsto> cap)
-         else fail
-   | (TCB tcb, Some (getF, setF, restr)) \<Rightarrow> return $ TCB (setF (\<lambda>x. cap) tcb)
-   | _ \<Rightarrow> fail);
-     set_object oref obj'
-   od)"
-  apply (rule ext, simp add: set_cap_def split_def)
-  apply (intro bind_cong bind_apply_cong refl)
-  apply (simp split: Structures_A.kernel_object.split)
-  apply (simp add: tcb_cap_cases_def)
-  done
-
-
 lemma set_cap_cte_eq:
   "(x,t) \<in> fst (set_cap c p' s) \<Longrightarrow> 
   cte_at p' s \<and> cte_wp_at P p t = (if p = p' then P c else cte_wp_at P p s)"
@@ -3655,9 +3637,6 @@ crunch it [wp]: cap_insert "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps)
 
 
-lemmas cap_insert_typ_ats [wp] = abs_typ_at_lifts [OF cap_insert_typ_at]
-
-
 lemma cap_insert_idle [wp]:
   "\<lbrace>valid_idle\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   by (rule valid_idle_lift; wp)
@@ -3784,9 +3763,14 @@ lemma cap_insert_reply_masters [wp]:
   done
 
 
+lemma cap_insert_aobj_at:
+  "arch_obj_pred P' \<Longrightarrow> \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
+  unfolding cap_insert_def update_cdt_def set_cdt_def set_untyped_cap_as_full_def
+  by (wpsimp wp: set_cap.aobj_at get_cap_wp)
+
 lemma cap_insert_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>_. valid_arch_state\<rbrace>" 
-  by (rule valid_arch_state_lift; wp)
+  by (rule valid_arch_state_lift_aobj_at; wp cap_insert_aobj_at)
 
 
 crunch caps [wp]: update_cdt "\<lambda>s. P (caps_of_state s)"

@@ -48,12 +48,6 @@ end
 lemmas cap_is_device_obj_is_device[simp] = cap_is_device_obj_is_device
 lemmas storeWord_device_state_hoare[wp] = storeWord_device_state_inv
 
-lemma get_object_wp:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q ko s\<rbrace> get_object p \<lbrace>Q\<rbrace>"
-  apply (clarsimp simp: get_object_def)
-  apply wp
-  apply (clarsimp simp: obj_at_def)
-  done
 
 context
   notes get_object_wp [wp]
@@ -1159,11 +1153,6 @@ crunch arch[wp]: set_notification "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
 
-lemma set_notification_valid_arch [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> set_notification ntfn p \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) wp+
-
-
 crunch irq_node_inv[wp]: set_notification "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
@@ -1202,11 +1191,6 @@ lemma obj_at_ko_atE:
 
 crunch arch[wp]: set_endpoint "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: crunch_simps)
-
-
-lemma set_endpoint_valid_arch [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> set_endpoint ep p \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) wp+
 
 
 crunch irq_node_inv[wp]: set_endpoint "\<lambda>s. P (interrupt_irq_node s)"
@@ -1276,6 +1260,9 @@ locale non_arch_op = fixes f
           arch_state[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
 begin
 
+lemma valid_arch_state[wp]:"\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  by (rule valid_arch_state_lift_aobj_at; wpsimp wp: aobj_at simp: obj_at_def)
+
 lemma valid_arch_obj[wp]:"\<lbrace>valid_arch_objs\<rbrace> f \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
   by (rule valid_arch_objs_lift_weak; wp aobj_at; simp)
 
@@ -1302,9 +1289,6 @@ lemma valid_global_vspace_mappings[wp]: "\<lbrace>valid_global_vspace_mappings\<
 
 lemma valid_ao_at[wp]:"\<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>_. valid_ao_at p\<rbrace>"
   by (rule valid_ao_at_lift_aobj_at; wp aobj_at; simp)
-
-lemma valid_arch_state[wp]:"\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift; wp aobj_at; simp)
 
 lemma in_user_frame[wp]:"\<lbrace>in_user_frame p\<rbrace> f \<lbrace>\<lambda>_. in_user_frame p\<rbrace>"
   by (rule in_user_frame_lift; wp aobj_at; simp)

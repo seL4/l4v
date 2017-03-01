@@ -1145,10 +1145,6 @@ crunch cte_wp_at[wp]: cancel_all_signals "cte_wp_at P p"
   (wp: crunch_wps mapM_x_wp thread_set_cte_wp_at_trivial
    simp: tcb_cap_cases_def)
 
-lemma get_tcb_ko_atD:
-  "get_tcb t s = Some tcb \<Longrightarrow> ko_at (TCB tcb) t s"
-  by auto
-
 lemma cancel_badged_sends_filterM_helper':
   "\<forall>ys.
    \<lbrace>\<lambda>s. all_invs_but_sym_refs s \<and> distinct (xs @ ys) \<and> ep_at epptr s

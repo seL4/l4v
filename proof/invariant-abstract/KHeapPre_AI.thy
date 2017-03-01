@@ -130,4 +130,53 @@ lemma set_object_neg_ko:
   apply (simp add: pred_neg_def obj_at_def)
   done
 
+lemma get_tcb_SomeD: "get_tcb t s = Some v \<Longrightarrow> kheap s t = Some (TCB v)"
+  apply (case_tac "kheap s t", simp_all add: get_tcb_def)
+  apply (case_tac a, simp_all)
+  done
+
+
+lemma typ_at_same_type:
+  assumes "typ_at T p s" "a_type k = a_type ko" "kheap s p' = Some ko"
+  shows "typ_at T p (s\<lparr>kheap := kheap s(p' \<mapsto> k)\<rparr>)"
+  using assms
+  by (clarsimp simp: obj_at_def)
+
+
+lemma hoare_to_pure_kheap_upd:
+  assumes hoare[rule_format]:
+    "\<And>f. (\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace>
+      f \<lbrace>\<lambda>r s. P (typ_at (AArch T) p s)\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
+  assumes typ_eq: "a_type k = a_type ko"
+  assumes valid: "P (s :: ('z :: state_ext) state)"
+  assumes at: "ko_at ko p s"
+  shows "P (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+  apply (rule use_valid[where f="
+      do
+        s' <- get;
+        assert (s' = s);
+        (modify (\<lambda>s. s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>));
+        return undefined
+      od", OF _ hoare valid])
+  apply (fastforce simp add: simpler_modify_def get_def bind_def
+                             assert_def return_def[abs_def] fail_def)[1]
+  apply wp
+  apply (insert typ_eq at)
+  apply clarsimp
+  apply (erule_tac P=P in rsubst)
+  by (auto simp add: obj_at_def a_type_def split: kernel_object.splits if_splits)
+
+lemma set_object_wp:
+  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> v)\<rparr>) \<rbrace> set_object p v \<lbrace>\<lambda>_. Q\<rbrace>"
+  apply (simp add: set_object_def)
+  apply wp
+  done
+
+lemma get_object_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q ko s\<rbrace> get_object p \<lbrace>Q\<rbrace>"
+  apply (clarsimp simp: get_object_def)
+  apply wp
+  apply (clarsimp simp: obj_at_def)
+  done
+
 end
