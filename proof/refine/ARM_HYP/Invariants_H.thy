@@ -913,7 +913,7 @@ definition
 
 definition "vs_valid_duplicates' \<equiv> \<lambda>h.
     \<forall>x y. case h x of None \<Rightarrow> True
-         | Some ko \<Rightarrow> is_aligned y 2 \<longrightarrow>
+         | Some ko \<Rightarrow> is_aligned y 3 \<longrightarrow>
               x && ~~ mask (vs_ptr_align ko) = y && ~~ mask (vs_ptr_align ko) \<longrightarrow>
               h x = h y"
 
@@ -1555,7 +1555,7 @@ lemmas objBitsKO_simps = objBits_simps
 lemmas wordRadix_def' = wordRadix_def[simplified]
 
 lemma valid_duplicates'_D:
-  "\<lbrakk>vs_valid_duplicates' m; m (p::word32) = Some ko;is_aligned p' 2;
+  "\<lbrakk>vs_valid_duplicates' m; m (p::word32) = Some ko;is_aligned p' 3;
   p && ~~ mask (vs_ptr_align ko) = p' && ~~ mask (vs_ptr_align ko)\<rbrakk>
   \<Longrightarrow> m p' = Some ko "
   apply (clarsimp simp:vs_valid_duplicates'_def)

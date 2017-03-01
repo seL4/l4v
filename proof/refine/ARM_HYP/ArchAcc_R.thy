@@ -125,7 +125,7 @@ lemma storePDE_cte_wp_at'[wp]:
    apply (clarsimp simp: updateObject_default_def in_monad
                          projectKOs projectKO_opts_defs)
   apply simp
-  done*) sorry
+  done*) sorry (* storePDE *)
 
 lemma storePDE_state_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
@@ -133,7 +133,7 @@ lemma storePDE_state_refs_of[wp]:
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   unfolding storePDE_def
 (*  by (wp setObject_state_refs_of_eq; clarsimp simp: updateObject_default_def in_monad projectKOs)*)
-  sorry
+  sorry (* storePDE *)
 
 lemma storePDE_state_hyp_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
@@ -141,7 +141,7 @@ lemma storePDE_state_hyp_refs_of[wp]:
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   unfolding storePDE_def
 (*  by (wp setObject_state_refs_of_eq; clarsimp simp: updateObject_default_def in_monad projectKOs) *)
-  sorry
+  sorry (* storePDE *)
 
 lemma storePTE_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
@@ -155,7 +155,7 @@ lemma storePTE_cte_wp_at'[wp]:
    apply (clarsimp simp: updateObject_default_def in_monad
                          projectKOs projectKO_opts_defs)
   apply simp
-  done *) sorry
+  done *) sorry (* storePTE *)
 
 lemma storePTE_state_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
@@ -165,7 +165,7 @@ lemma storePTE_state_refs_of[wp]:
 (*  apply (wp setObject_state_refs_of_eq;
          clarsimp simp: updateObject_default_def in_monad
                         projectKOs)
-  done *) sorry
+  done *) sorry (* storePTE *)
 
 crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch inv[wp]: getIRQSlot "P"
@@ -247,15 +247,17 @@ lemma get_pde_corres:
   apply (clarsimp simp add: a_type_def return_def
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
+  apply (frule_tac s'=ba in in_magnitude_check, simp add: objBits_simps archObjSize_def vspace_bits_defs)
+   apply assumption
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def vspace_bits_defs)
   apply (clarsimp simp: bind_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def pde_relation_def)
   apply (erule_tac x="(ucast (p && mask pd_bits >> pde_bits))" in allE)
-  apply (clarsimp simp: mask_pd_bits_inner_beauty)
-  apply (clarsimp simp: obj_at_def pde_relation_aligned_simp)
-  sorry
+  apply (clarsimp simp: vspace_bits_defs mask_pd_bits_inner_beauty[simplified vspace_bits_defs, simplified])
+  apply (clarsimp simp: obj_at_def pde_relation_aligned_simp[simplified vspace_bits_defs, simplified])
+  done
 
 lemmas aligned_distinct_pde_atI'
     = aligned_distinct_obj_atI'[where 'a=pde,
@@ -372,7 +374,6 @@ lemma get_master_pde_corres:
                       split: if_splits ARM_HYP_H.pde.splits)
        apply (drule_tac p' = "p && ~~ mask 7" in valid_duplicates'_D[rotated], simp)
           apply (rule is_aligned_neg_mask, simp add: pde_bits_def)
-(*          apply (simp add: is_aligned_weaken[where y = pde_bits])
          apply (clarsimp simp: vs_ptr_align_def and_not_mask_twice)
         apply simp
        apply (frule_tac x = "(ucast ((p && ~~ mask 7) && mask pd_bits >> pde_bits))"
@@ -381,32 +382,34 @@ lemma get_master_pde_corres:
         apply (simp add:expand)
         apply (subst mask_pd_bits_inner_beauty)
          apply (rule is_aligned_neg_mask, simp add: pde_bits_def)
-         apply (simp add: pde_bits_def)
-        apply assumption
-       apply (clarsimp simp: pde_relation_aligned_def
-                  is_aligned_mask[where 'a=32, symmetric])
+         apply (simp add: vspace_bits_defs)
+         apply clarsimp
+       apply (clarsimp simp: pde_bits_def pde_relation_aligned_def is_aligned_neg_mask is_aligned_shiftr
+                             is_aligned_mask[where 'a=32, symmetric])
 
   -- "master_pde = PageTablePDE"
       apply (clarsimp simp add: a_type_def return_def get_pd_def
         bind_def get_pde_def get_object_def gets_def get_def
         split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
       apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-      apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+       apply (frule_tac s'=ba in in_magnitude_check)
+         apply (simp add: objBits_simps archObjSize_def pde_bits_def, assumption, clarsimp)
+       apply (simp add: objBits_simps archObjSize_def)
       apply (clarsimp simp:state_relation_def)
-      apply (frule_tac x = "(ucast (p && mask pd_bits >> 2))" in pde_relation_alignedD)
+      apply (frule_tac x = "(ucast (p && mask pd_bits >> pde_bits))" in pde_relation_alignedD)
         apply assumption
        apply (simp add:mask_pd_bits_inner_beauty)
       apply (clarsimp simp:pde_relation_aligned_def
         split:if_splits ARM_HYP_H.pde.splits)
-      apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
-         apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = 2])
+      apply (drule_tac p' = "p && ~~ mask 7" in valid_duplicates'_D[rotated])
+         apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = pde_bits])
         apply (clarsimp simp: vs_ptr_align_def)
        apply (simp add:and_not_mask_twice)
-      apply (drule_tac x = "(ucast ((p && ~~ mask 6) && mask pd_bits >> 2))" in pde_relation_alignedD)
+      apply (drule_tac x = "(ucast ((p && ~~ mask 7) && mask pd_bits >> pde_bits))" in pde_relation_alignedD)
         apply assumption
        apply (simp add:expand)
        apply (subst mask_pd_bits_inner_beauty)
-        apply (simp add:is_aligned_neg_mask)
+        apply (simp add:is_aligned_neg_mask pde_bits_def)
        apply assumption
       apply (clarsimp simp:pde_relation_aligned_def
          is_aligned_mask[symmetric])
@@ -415,22 +418,24 @@ lemma get_master_pde_corres:
        bind_def get_pde_def get_object_def gets_def get_def
        split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
      apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-     apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+       apply (frule_tac s'=ba in in_magnitude_check)
+         apply (simp add: objBits_simps archObjSize_def pde_bits_def, assumption, clarsimp)
+       apply (simp add: objBits_simps archObjSize_def)
      apply (clarsimp simp:state_relation_def)
-     apply (frule_tac x = "(ucast (p && mask pd_bits >> 2))" in pde_relation_alignedD)
+     apply (frule_tac x = "(ucast (p && mask pd_bits >> pde_bits))" in pde_relation_alignedD)
        apply assumption
       apply (simp add:mask_pd_bits_inner_beauty)
      apply (clarsimp simp:pde_relation_aligned_def
        split:if_splits ARM_HYP_H.pde.splits)
-     apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
-        apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = 2])
+     apply (drule_tac p' = "p && ~~ mask 7" in valid_duplicates'_D[rotated])
+        apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = pde_bits])
        apply (clarsimp simp: vs_ptr_align_def)
       apply (simp add:and_not_mask_twice)
-     apply (drule_tac x = "(ucast ((p && ~~ mask 6) && mask pd_bits >> 2))" in pde_relation_alignedD)
+     apply (drule_tac x = "(ucast ((p && ~~ mask 7) && mask pd_bits >> pde_bits))" in pde_relation_alignedD)
        apply assumption
       apply (simp add: expand)
       apply (subst mask_pd_bits_inner_beauty)
-       apply (simp add:is_aligned_neg_mask)
+       apply (simp add:is_aligned_neg_mask pde_bits_def)
       apply assumption
      apply (clarsimp simp:pde_relation_aligned_def
          is_aligned_mask[symmetric])
@@ -439,11 +444,13 @@ lemma get_master_pde_corres:
       bind_def get_pde_def get_object_def gets_def get_def
       split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
     apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-    apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+       apply (frule_tac s'=ba in in_magnitude_check)
+         apply (simp add: objBits_simps archObjSize_def pde_bits_def, assumption, clarsimp)
+       apply (simp add: objBits_simps archObjSize_def)
     apply (clarsimp simp:state_relation_def)
     apply (drule_tac s = a and s' = b and p = "p && ~~ mask 7"
       in aligned_distinct_relation_pde_atI'[rotated -1])
-       apply (clarsimp simp:pde_at_def obj_at_def
+       apply (clarsimp simp:pde_at_def obj_at_def pde_bits_def
          and_not_mask_twice a_type_simps is_aligned_neg_mask)
       apply simp
      apply simp
@@ -452,22 +459,22 @@ lemma get_master_pde_corres:
     apply (rename_tac arch_kernel_object)
     apply (case_tac arch_kernel_object; simp add: projectKOs)
     apply clarsimp
-    apply (frule_tac x = "(ucast ((p && ~~ mask 6 )&& mask pd_bits >> 2))" in pde_relation_alignedD)
+    apply (frule_tac x = "(ucast ((p && ~~ mask 7 )&& mask pd_bits >> pde_bits))" in pde_relation_alignedD)
       apply assumption
      apply (simp add: expand)
      apply (subst mask_pd_bits_inner_beauty)
-      apply (simp add:is_aligned_neg_mask)
+      apply (simp add:is_aligned_neg_mask pde_bits_def)
      apply assumption
     apply (rename_tac pde)
     apply (case_tac pde)
      apply (simp add: pde_relation_aligned_def
                       is_aligned_mask[where 'a=32, symmetric])+
      apply clarsimp
-    apply (drule_tac p = "p && ~~ mask 6" and p' = p  in valid_duplicates'_D)
+    apply (drule_tac p = "p && ~~ mask 7" and p' = p  in valid_duplicates'_D)
        apply assumption
-      apply simp
+      apply (simp add: pde_bits_def)
      apply (clarsimp simp: vs_ptr_align_def and_not_mask_twice)
-    apply simp*)
+    apply simp
     sorry
   qed
 
@@ -655,18 +662,20 @@ lemma get_master_pte_corres:
         apply (simp add: pte_bits_def)
         apply (simp add:is_aligned_neg_mask pte_bits_def)
        apply assumption
-      apply (clarsimp simp: pte_relation_aligned_def
+      apply (clarsimp simp: pte_relation_aligned_def is_aligned_neg_mask is_aligned_shiftr pte_bits_def
                  is_aligned_mask[where 'a=32, symmetric] split: if_splits)
   -- "master_pde = LargePagePTE"
-(*     apply (clarsimp simp add: a_type_def return_def get_pt_def
+     apply (clarsimp simp add: a_type_def return_def get_pt_def
        bind_def get_pte_def get_object_def gets_def get_def
        split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
      apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-     apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+     apply (drule_tac s'=ba in in_magnitude_check)
+     apply (simp add: objBits_simps archObjSize_def pte_bits_def, assumption, clarsimp)
+     apply (clarsimp simp: objBits_simps archObjSize_def pageBits_def)
      apply (clarsimp simp:state_relation_def)
-     apply (drule_tac s = a and s' = b and p = "p && ~~ mask 6"
+     apply (drule_tac s = a and s' = b and p = "p && ~~ mask 7"
       in aligned_distinct_relation_pte_atI'[rotated -1])
-        apply (clarsimp simp:pte_at_def obj_at_def
+        apply (clarsimp simp:pte_at_def obj_at_def pte_bits_def
           and_not_mask_twice a_type_simps is_aligned_neg_mask)
        apply simp
       apply simp
@@ -675,18 +684,18 @@ lemma get_master_pte_corres:
      apply (rename_tac arch_kernel_object)
      apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
      apply clarsimp
-     apply (frule_tac x = "(ucast ((p && ~~ mask 6 )&& mask pt_bits >> 2))" in pte_relation_alignedD)
+     apply (frule_tac x = "(ucast ((p && ~~ mask 7 )&& mask pt_bits >> pte_bits))" in pte_relation_alignedD)
        apply assumption
       apply (simp add: expand)
       apply (subst mask_pt_bits_inner_beauty)
-       apply (simp add:is_aligned_neg_mask)
+       apply (simp add:is_aligned_neg_mask pte_bits_def)
       apply assumption
      apply (rename_tac pte)
      apply (case_tac pte)
        apply (simp_all add:pte_relation_aligned_def is_aligned_mask[symmetric])
-     apply (drule_tac p = "p && ~~ mask 6" and p' = p  in valid_duplicates'_D)
+     apply (drule_tac p = "p && ~~ mask 7" and p' = p  in valid_duplicates'_D)
         apply assumption
-       apply simp
+       apply (simp add: pte_bits_def)
       apply (clarsimp simp: vs_ptr_align_def and_not_mask_twice)
      apply (clarsimp simp: if_bool_eq_disj)
   -- "master_pde = SmallPagePTE"
@@ -695,29 +704,30 @@ lemma get_master_pte_corres:
             split: if_split_asm Structures_A.kernel_object.splits
                    arch_kernel_obj.splits)
    apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-   apply (clarsimp simp: in_magnitude_check objBits_simps
-                         archObjSize_def pageBits_def)
+   apply (drule_tac s'=ba in in_magnitude_check)
+   apply (simp add: objBits_simps archObjSize_def pte_bits_def, assumption, clarsimp)
+   apply (clarsimp simp: objBits_simps archObjSize_def pageBits_def)
    apply (clarsimp simp:state_relation_def)
-   apply (frule_tac x = "(ucast (p && mask pt_bits >> 2))"
+   apply (frule_tac x = "(ucast (p && mask pt_bits >> pte_bits))"
                  in pte_relation_alignedD)
      apply assumption
     apply (simp add:mask_pt_bits_inner_beauty)
    apply (clarsimp simp:pte_relation_aligned_def
      split:if_splits ARM_HYP_H.pte.splits)
-   apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
+   apply (drule_tac p' = "p && ~~ mask 7" in valid_duplicates'_D[rotated])
       apply (simp add:is_aligned_weaken[where y = 2] is_aligned_neg_mask)
      apply (clarsimp simp: vs_ptr_align_def)
     apply (simp add:and_not_mask_twice)
-   apply (drule_tac x = "(ucast ((p && ~~ mask 6) && mask pt_bits >> 2))"
+   apply (drule_tac x = "(ucast ((p && ~~ mask 7) && mask pt_bits >> pte_bits))"
                  in pte_relation_alignedD)
      apply assumption
     apply (simp add: expand)
     apply (subst mask_pt_bits_inner_beauty)
-     apply (simp add:is_aligned_neg_mask)
+     apply (simp add:is_aligned_neg_mask pte_bits_def)
     apply assumption
    apply (clarsimp simp: pte_relation_aligned_def
                          is_aligned_mask[where 'a=32, symmetric])
-*)   sorry
+   done
   qed
 
 lemma get_pte_corres':
@@ -778,7 +788,9 @@ lemma set_pd_corres:
    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
    apply (simp add: objBits_simps archObjSize_def word_bits_def)
   apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def projectKOs)
-  apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+   apply (drule_tac s'=s'' in in_magnitude_check)
+   apply (simp add: objBits_simps archObjSize_def pde_bits_def, assumption)
+   apply (clarsimp simp: objBits_simps archObjSize_def pageBits_def)
   apply (clarsimp simp: obj_at_def exec_gets)
   apply (clarsimp simp: set_object_def bind_assoc exec_get)
   apply (clarsimp simp: put_def)
@@ -856,7 +868,9 @@ lemma set_pt_corres:
    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
    apply (simp add: objBits_simps archObjSize_def word_bits_def)
   apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def projectKOs)
-  apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+  apply (drule_tac s'=s'' in in_magnitude_check)
+  apply (simp add: objBits_simps archObjSize_def vspace_bits_defs)
+  apply assumption
   apply (clarsimp simp: obj_at_def exec_gets)
   apply (clarsimp simp: set_object_def bind_assoc exec_get)
   apply (clarsimp simp: put_def)
@@ -869,9 +883,9 @@ lemma set_pt_corres:
     apply (auto simp: dom_def)[1]
    apply (rule conjI)
     apply (drule bspec, blast)
-    apply (clarsimp simp: pte_relation_def mask_pt_bits_inner_beauty pte_relation_aligned_simp
+    apply (clarsimp simp: pte_bits_def pte_relation_def mask_pt_bits_inner_beauty pte_relation_aligned_simp
       dest!: more_pt_inner_beauty)
-   apply (rule ballI)
+(*   apply (rule ballI)
    apply (drule (1) bspec)
    apply clarsimp
    apply (rule conjI)
@@ -892,7 +906,7 @@ lemma set_pt_corres:
        apply clarsimp
        apply (clarsimp simp: nth_ucast nth_shiftl)
        apply (drule test_bit_size)
-       apply (clarsimp simp: word_size pt_bits_def pageBits_def)
+       apply (clarsimp simp: word_size vspace_bits_defs)
        apply arith
       apply simp
      apply (simp split: if_split_asm)
@@ -909,11 +923,11 @@ lemma set_pt_corres:
   apply (rule conjI)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
-(*   apply fastforce
+   apply fastforce
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
- *) sorry
+*)  sorry
 
 lemma store_pde_corres:
   "pde_relation_aligned (p >> pde_bits) pde pde' \<Longrightarrow>
@@ -931,7 +945,7 @@ lemma store_pde_corres:
                         get_object_def bind_assoc exec_gets)
   apply (clarsimp simp: a_type_def return_def
                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
-*)  sorry
+*)  sorry (* storePDE *)
 
 lemma store_pde_corres':
   "pde_relation_aligned (p >> pde_bits) pde pde' \<Longrightarrow>
@@ -959,7 +973,7 @@ lemma store_pte_corres:
                         get_object_def bind_assoc exec_gets)
   apply (clarsimp simp: a_type_def return_def
                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
-*)  sorry
+*)  sorry  (* storePTE *)
 
 lemma store_pte_corres':
   "pte_relation_aligned (p >> pte_bits) pte pte' \<Longrightarrow>
@@ -1093,7 +1107,7 @@ lemma getPTE_wp:
 
 lemma lookup_pt_slot_corres:
   "corres (lfr \<oplus> op =)
-          (pde_at (lookup_pd_slot pd vptr) and pspace_aligned and valid_arch_objs
+          (pde_at (lookup_pd_slot pd vptr) and pspace_aligned and valid_vspace_objs
           and (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits)) and
           K (is_aligned pd pd_bits \<and> vptr < kernel_base))
           (pspace_aligned' and pspace_distinct')
@@ -1221,7 +1235,7 @@ lemma create_mapping_entries_corres:
   \<Longrightarrow> corres (ser \<oplus> mapping_map)
           (\<lambda>s. (pgsz = ARMSmallPage \<or> pgsz = ARMLargePage \<longrightarrow> pde_at (lookup_pd_slot pd vptr) s)
            \<and> (is_aligned pd pd_bits \<and> vmsz_aligned vptr pgsz \<and> vptr < kernel_base \<and> vm_rights \<in> valid_vm_rights)
-           \<and> valid_arch_objs s \<and> pspace_aligned s \<and> (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits)) s)
+           \<and> valid_vspace_objs s \<and> pspace_aligned s \<and> (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits)) s)
           (pspace_aligned' and pspace_distinct')
           (create_mapping_entries base vptr pgsz vm_rights attrib pd)
           (createMappingEntries base vptr pgsz vm_rights' attrib' pd)"
@@ -1353,7 +1367,7 @@ lemma asidHighBitsOf [simp]:
 
 lemma find_pd_for_asid_corres'':
   "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s)
-                           and valid_arch_objs and pspace_aligned
+                           and valid_vspace_objs and pspace_aligned
                            and K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
                        (find_pd_for_asid asid) (findPDForASID asid)"
@@ -1416,7 +1430,6 @@ lemma find_pd_for_asid_corres'':
      apply (clarsimp dest!: vs_lookup1D)
     apply (clarsimp dest!: vs_lookup1D)
    apply clarsimp
-   apply (drule valid_arch_imp_valid_vspace_objs)
    apply (drule(1) valid_vspace_objsD[rotated])
     apply (rule vs_lookupI)
      apply (rule vs_asid_refsI)
@@ -1428,7 +1441,7 @@ lemma find_pd_for_asid_corres'':
   done
 
 lemma find_pd_for_asid_corres:
-  "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s) and valid_arch_objs
+  "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s) and valid_vspace_objs
                            and pspace_aligned and K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
                        (find_pd_for_asid asid) (findPDForASID asid)"
@@ -1436,7 +1449,7 @@ lemma find_pd_for_asid_corres:
   done
 
 lemma find_pd_for_asid_corres':
-  "corres (lfr \<oplus> op =) (vspace_at_asid asid pd and valid_arch_objs
+  "corres (lfr \<oplus> op =) (vspace_at_asid asid pd and valid_vspace_objs
                            and pspace_aligned and  K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
                        (find_pd_for_asid asid) (findPDForASID asid)"
@@ -1625,7 +1638,7 @@ lemma storePDE_valid_objs [wp]:
    apply assumption
   apply (clarsimp simp: updateObject_default_def in_monad)
   apply (clarsimp simp: valid_obj'_def)
-*)  sorry
+*)  sorry (* storePDE *)
 
 lemma setObject_ASID_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
