@@ -209,7 +209,7 @@ lemma table_cap_ref_ap_eq:
 lemma pd_at_asid_unique:
   "\<lbrakk> vspace_at_asid asid pd s; vspace_at_asid asid' pd s;
      unique_table_refs (caps_of_state s);
-     valid_vs_lookup s; valid_arch_objs s;
+     valid_vs_lookup s; valid_vspace_objs s;
      valid_arch_state s; asid < 2 ^ asid_bits; asid' < 2 ^ asid_bits \<rbrakk>
        \<Longrightarrow> asid = asid'"
   apply (clarsimp simp: vspace_at_asid_def)
@@ -241,7 +241,7 @@ lemma pd_at_asid_unique2:
 lemma pd_at_asid_uniq:
   "\<lbrakk> vspace_at_asid asid pd s; asid \<le> mask asid_bits; valid_asid_map s;
       unique_table_refs (caps_of_state s); valid_vs_lookup s;
-      valid_arch_objs s; valid_arch_state s \<rbrakk>
+      valid_vspace_objs s; valid_arch_state s \<rbrakk>
        \<Longrightarrow> pd_at_uniq asid pd s"
   apply (clarsimp simp: pd_at_uniq_def ran_option_map
                  dest!: ran_restrictD)
