@@ -1139,8 +1139,7 @@ lemma invokeTCB_WriteRegisters_ccorres_helper:
           (sanitiseRegister tcb reg (args ! incn))))
      (\<acute>ret__unsigned_long :== CALL getSyscallArg(f (\<acute>i),option_to_ptr buffer);;
       Guard ArrayBounds \<lbrace>\<acute>i < bnd\<rbrace>
-        (Guard C_Guard {s. s \<Turnstile>\<^sub>c tcb_ptr_to_ctcb_ptr dst}
-          (\<acute>unsigned_long_eret_2 :== CALL sanitiseRegister(g (\<acute>i),\<acute>ret__unsigned_long,t)));;
+          (\<acute>unsigned_long_eret_2 :== CALL sanitiseRegister(g (\<acute>i),\<acute>ret__unsigned_long,tcb_ptr_to_ctcb_ptr dst));;
       Guard ArrayBounds \<lbrace>\<acute>i < bnd2\<rbrace>
         (CALL setRegister(tcb_ptr_to_ctcb_ptr dst,g (\<acute>i),\<acute>unsigned_long_eret_2)))"
   apply (rule ccorres_guard_imp2)
@@ -1154,7 +1153,7 @@ lemma invokeTCB_WriteRegisters_ccorres_helper:
     apply wp
    apply simp
    apply (vcg exspec=getSyscallArg_modifies)
-  apply (fastforce simp: tcb_at_h_t_valid)
+  apply (fastforce)
   done
 
 lemma doMachineOp_context:
@@ -1449,7 +1448,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
                                      and tcb_at' dst and (\<lambda>s. dst \<noteq> ksCurThread s)"
                            and Q=UNIV in ccorres_mapM_x_whileQ)
                    apply clarsimp
-                   apply (rule_tac invokeTCB_WriteRegisters_ccorres_helper [where args=args])
+                   apply (rule invokeTCB_WriteRegisters_ccorres_helper [where args=args])
                    apply (simp add: unat_word_ariths frame_gp_registers_convs n_frameRegisters_def
                                     unat_of_nat32 word_bits_def word_of_nat_less)
                   apply (simp add: n_frameRegisters_def n_gpRegisters_def

@@ -3798,7 +3798,6 @@ proof -
              apply (intro ccorres_rhs_assoc)
              apply (rule ccorres_symb_exec_r)
                apply ctac
-                 apply (rule ccorres_move_c_guard_tcb)
                  apply (rule ccorres_symb_exec_r)
                    apply ctac
                   apply vcg
@@ -3907,7 +3906,6 @@ lemma copyMRsFaultReply_ccorres_syscall:
              apply (intro ccorres_rhs_assoc)
              apply (rule ccorres_symb_exec_r)
                apply ctac
-                 apply (rule ccorres_move_c_guard_tcb)
                  apply (rule ccorres_symb_exec_r)
                    apply ctac
                   apply vcg
@@ -3982,7 +3980,6 @@ lemma copyMRsFaultReply_ccorres_syscall:
                     apply (rule ccorres_move_array_assertion_ipc_buffer
                                 ccorres_Guard_Seq[where S="{s. h_t_valid (htd s) c_guard (ptr s)}" for ptr htd])+
                     apply (rule ccorres_symb_exec_r)
-                      apply (rule ccorres_move_c_guard_tcb)
                       apply (rule ccorres_symb_exec_r)
                         apply ctac
                        apply vcg
