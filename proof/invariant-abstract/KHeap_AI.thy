@@ -1280,7 +1280,7 @@ locale non_aobj_op = fixes f
 context non_aobj_op begin
 
 lemma valid_arch_state[wp]:"\<lbrace>valid_arch_state\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-by (rule valid_arch_state_lift; wp aobj_at; simp)
+  by (rule valid_arch_state_lift_aobj_at; wp aobj_at; simp)
 
 end
 

@@ -1558,7 +1558,7 @@ crunch irq_node[wp]: do_ipc_transfer "\<lambda>s::'state_ext state. P (interrupt
 
 (* FIXME: move to KHeap_AI? *)
 interpretation
-  set_mrs: non_arch_op "set_mrs t buf msg"
+  set_mrs: non_aobj_op "set_mrs t buf msg"
   unfolding set_mrs_def
   apply (unfold_locales)
   by (wpsimp wp: set_object_non_arch get_object_wp mapM_wp'
