@@ -113,59 +113,64 @@ lemma get_asid_pool_corres':
    apply auto
   done
 
+crunch inv[wp]: headM P
+crunch inv[wp]: tailM P
+
 lemma storePDE_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
      storePDE ptr val
    \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
   apply (simp add: storePDE_def)
-  apply (wp setObject_cte_wp_at2'[where Q="\<top>"])
+  apply (wp headM_inv hoare_drop_imps setObject_cte_wp_at2'[where Q="\<top>"])
     apply (clarsimp simp: updateObject_default_def in_monad
-                          projectKO_opts_defs projectKOs)
-(*   apply (rule equals0I)
+                         projectKO_opts_defs projectKOs)
+   apply (rule equals0I)
    apply (clarsimp simp: updateObject_default_def in_monad
                          projectKOs projectKO_opts_defs)
   apply simp
-  done*) sorry (* storePDE *)
+  done
 
 lemma storePDE_state_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
      storePDE ptr val
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  unfolding storePDE_def
-(*  by (wp setObject_state_refs_of_eq; clarsimp simp: updateObject_default_def in_monad projectKOs)*)
-  sorry (* storePDE *)
+  by (wpsimp wp: headM_inv hoare_drop_imps setObject_state_refs_of_eq
+             simp: storePDE_def updateObject_default_def in_monad projectKOs)
 
 lemma storePDE_state_hyp_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>
      storePDE ptr val
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
-  unfolding storePDE_def
-(*  by (wp setObject_state_refs_of_eq; clarsimp simp: updateObject_default_def in_monad projectKOs) *)
-  sorry (* storePDE *)
+  by (wpsimp wp: headM_inv hoare_drop_imps setObject_state_hyp_refs_of_eq
+             simp: storePDE_def updateObject_default_def in_monad projectKOs)
 
 lemma storePTE_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
      storePTE ptr val
    \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
   apply (simp add: storePTE_def)
-  apply (wp setObject_cte_wp_at2'[where Q="\<top>"])
+  apply (wp headM_inv hoare_drop_imps setObject_cte_wp_at2'[where Q="\<top>"])
     apply (clarsimp simp: updateObject_default_def in_monad
                           projectKO_opts_defs projectKOs)
-(*   apply (rule equals0I)
+   apply (rule equals0I)
    apply (clarsimp simp: updateObject_default_def in_monad
                          projectKOs projectKO_opts_defs)
   apply simp
-  done *) sorry (* storePTE *)
+  done
 
 lemma storePTE_state_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
      storePTE ptr val
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  unfolding storePTE_def
-(*  apply (wp setObject_state_refs_of_eq;
-         clarsimp simp: updateObject_default_def in_monad
-                        projectKOs)
-  done *) sorry (* storePTE *)
+  by (wpsimp wp: headM_inv hoare_drop_imps setObject_state_refs_of_eq
+             simp: storePTE_def updateObject_default_def in_monad projectKOs)
+
+lemma storePTE_state_hyp_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>
+     storePTE ptr val
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  by (wpsimp wp: headM_inv hoare_drop_imps setObject_state_hyp_refs_of_eq
+             simp: storePTE_def updateObject_default_def in_monad projectKOs)
 
 crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch inv[wp]: getIRQSlot "P"
@@ -467,15 +472,15 @@ lemma get_master_pde_corres:
      apply assumption
     apply (rename_tac pde)
     apply (case_tac pde)
-     apply (simp add: pde_relation_aligned_def
+     apply (simp add: pde_relation_aligned_def vspace_bits_defs
                       is_aligned_mask[where 'a=32, symmetric])+
-     apply clarsimp
+    apply clarsimp
     apply (drule_tac p = "p && ~~ mask 7" and p' = p  in valid_duplicates'_D)
        apply assumption
       apply (simp add: pde_bits_def)
      apply (clarsimp simp: vs_ptr_align_def and_not_mask_twice)
-    apply simp
-    sorry
+    apply (clarsimp simp: if_bool_eq_disj)
+    done
   qed
 
 lemma get_pde_corres':
@@ -788,8 +793,8 @@ lemma set_pd_corres:
    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
    apply (simp add: objBits_simps archObjSize_def word_bits_def)
   apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def projectKOs)
-   apply (drule_tac s'=s'' in in_magnitude_check)
-   apply (simp add: objBits_simps archObjSize_def pde_bits_def, assumption)
+   apply (frule_tac s'=s'' in in_magnitude_check)
+   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pde_bits_def, assumption)
    apply (clarsimp simp: objBits_simps archObjSize_def pageBits_def)
   apply (clarsimp simp: obj_at_def exec_gets)
   apply (clarsimp simp: set_object_def bind_assoc exec_get)
@@ -805,14 +810,14 @@ lemma set_pd_corres:
     apply (drule bspec, blast)
     apply clarsimp
     apply (drule_tac x = x in spec)
-    apply (clarsimp simp: pde_relation_def mask_pd_bits_inner_beauty pde_relation_aligned_simp
-      dest!: more_pd_inner_beauty)
-(*   apply (rule ballI)
+      apply (clarsimp simp: pde_relation_def mask_pd_bits_inner_beauty pde_relation_aligned_simp
+                      dest!: more_pd_inner_beauty[simplified pde_bits_def[symmetric]])
+   apply (rule ballI)
    apply (drule (1) bspec)
    apply clarsimp
    apply (rule conjI)
     apply (clarsimp simp: pde_relation_def mask_pd_bits_inner_beauty pde_relation_aligned_simp
-      dest!: more_pd_inner_beauty)
+      dest!: more_pd_inner_beauty[simplified pde_bits_def[symmetric]])
    apply clarsimp
    apply (drule bspec, assumption)
    apply clarsimp
@@ -849,7 +854,7 @@ lemma set_pd_corres:
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
-*)  sorry
+  done
 
 lemma set_pt_corres:
   "pte_relation_aligned (p >> pte_bits) pte pte' \<Longrightarrow>
@@ -868,9 +873,8 @@ lemma set_pt_corres:
    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
    apply (simp add: objBits_simps archObjSize_def word_bits_def)
   apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def projectKOs)
-  apply (drule_tac s'=s'' in in_magnitude_check)
-  apply (simp add: objBits_simps archObjSize_def vspace_bits_defs)
-  apply assumption
+  apply (frule_tac s'=s'' in in_magnitude_check ; simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+   apply (simp add: pte_bits_def)
   apply (clarsimp simp: obj_at_def exec_gets)
   apply (clarsimp simp: set_object_def bind_assoc exec_get)
   apply (clarsimp simp: put_def)
@@ -883,9 +887,9 @@ lemma set_pt_corres:
     apply (auto simp: dom_def)[1]
    apply (rule conjI)
     apply (drule bspec, blast)
-    apply (clarsimp simp: pte_bits_def pte_relation_def mask_pt_bits_inner_beauty pte_relation_aligned_simp
-      dest!: more_pt_inner_beauty)
-(*   apply (rule ballI)
+    apply (clarsimp simp: pte_relation_def mask_pt_bits_inner_beauty pte_relation_aligned_simp
+                    dest!: more_pt_inner_beauty)
+   apply (rule ballI)
    apply (drule (1) bspec)
    apply clarsimp
    apply (rule conjI)
@@ -919,7 +923,7 @@ lemma set_pt_corres:
    apply clarsimp
    apply (drule_tac x=p in bspec, erule domI)
    apply (simp add: other_obj_relation_def
-           split: Structures_A.kernel_object.splits)
+               split: Structures_A.kernel_object.splits)
   apply (rule conjI)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
@@ -927,14 +931,19 @@ lemma set_pt_corres:
   apply (simp add: map_to_ctes_upd_other)
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
-*)  sorry
+  done
+
+lemma wordsFromPDEis2: "\<exists>a b . wordsFromPDE pde = [a , b]"
+  by (cases pde ; clarsimp simp: wordsFromPDE_def tailM_def headM_def)
 
 lemma store_pde_corres:
   "pde_relation_aligned (p >> pde_bits) pde pde' \<Longrightarrow>
   corres dc (pde_at p and pspace_aligned and valid_etcbs) (pde_at' p) (store_pde p pde) (storePDE p pde')"
   apply (simp add: store_pde_def storePDE_def)
+  apply (insert wordsFromPDEis2[of pde'])
+  apply (clarsimp simp: tailM_def headM_def)
   apply (rule corres_symb_exec_l)
-(*     apply (erule set_pd_corres)
+     apply (erule set_pd_corres)
     apply (clarsimp simp: exs_valid_def get_pd_def get_object_def exec_gets bind_assoc
                           obj_at_def pde_at_def)
     apply (clarsimp simp: a_type_def return_def
@@ -945,7 +954,7 @@ lemma store_pde_corres:
                         get_object_def bind_assoc exec_gets)
   apply (clarsimp simp: a_type_def return_def
                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
-*)  sorry (* storePDE *)
+  done
 
 lemma store_pde_corres':
   "pde_relation_aligned (p >> pde_bits) pde pde' \<Longrightarrow>
@@ -957,12 +966,17 @@ lemma store_pde_corres':
    apply auto
   done
 
+lemma wordsFromPTEis2: "\<exists>a b . wordsFromPTE pte = [a , b]"
+  by (cases pte ; clarsimp simp: wordsFromPTE_def tailM_def headM_def)
+
 lemma store_pte_corres:
   "pte_relation_aligned (p>>pte_bits) pte pte' \<Longrightarrow>
   corres dc (pte_at p and pspace_aligned and valid_etcbs) (pte_at' p) (store_pte p pte) (storePTE p pte')"
   apply (simp add: store_pte_def storePTE_def)
+  apply (insert wordsFromPTEis2[of pte'])
+  apply (clarsimp simp: tailM_def headM_def)
   apply (rule corres_symb_exec_l)
-(*     apply (erule set_pt_corres)
+     apply (erule set_pt_corres)
     apply (clarsimp simp: exs_valid_def get_pt_def get_object_def
                           exec_gets bind_assoc obj_at_def pte_at_def)
     apply (clarsimp simp: a_type_def return_def
@@ -973,7 +987,7 @@ lemma store_pte_corres:
                         get_object_def bind_assoc exec_gets)
   apply (clarsimp simp: a_type_def return_def
                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
-*)  sorry  (* storePTE *)
+  done
 
 lemma store_pte_corres':
   "pte_relation_aligned (p >> pte_bits) pte pte' \<Longrightarrow>
@@ -1633,12 +1647,12 @@ lemma storePDE_valid_objs [wp]:
   apply (simp add: storePDE_def doMachineOp_def split_def)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps|wpc|simp)+
-(*   apply (rule setObject_valid_objs')
+   apply (rule setObject_valid_objs')
    prefer 2
    apply assumption
   apply (clarsimp simp: updateObject_default_def in_monad)
   apply (clarsimp simp: valid_obj'_def)
-*)  sorry (* storePDE *)
+  done
 
 lemma setObject_ASID_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
