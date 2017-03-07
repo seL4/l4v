@@ -2286,7 +2286,7 @@ lemma as_user_valid_etcbs[wp]:
   apply (fastforce simp: valid_sched_def valid_etcbs_def valid_queues_def
                          valid_sched_action_def is_activatable_def
                          weak_valid_sched_action_def
-                         st_tcb_at_kh_split_if st_tcb_def2)
+                         st_tcb_at_kh_if_split st_tcb_def2)
   done
 
 crunch sch_act_wf[wp]: unbindNotification "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"

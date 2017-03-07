@@ -399,7 +399,7 @@ lemma get_tcb_st_tcb_at:
               split: option.splits kernel_object.splits)
   done
 
-lemma st_tcb_at_kh_split_if:
+lemma st_tcb_at_kh_if_split:
   "st_tcb_at_kh P ptr (\<lambda>t. if t = ref then x else kh t)
      = (if ptr = ref then (\<exists>tcb. x = Some (TCB tcb) \<and> P (tcb_state tcb))
         else st_tcb_at_kh P ptr kh)"
@@ -409,7 +409,7 @@ lemma set_thread_state_valid_etcbs[wp]:
   "\<lbrace>valid_etcbs\<rbrace> set_thread_state ref ts \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (wp | wpc | simp add: set_thread_state_ext_def set_object_def)+
-  apply (fastforce simp: valid_etcbs_def st_tcb_at_kh_split_if
+  apply (fastforce simp: valid_etcbs_def st_tcb_at_kh_if_split
                    dest: get_tcb_st_tcb_at)
   done
 
@@ -417,7 +417,7 @@ lemma set_bound_notification_valid_etcbs[wp]:
   "\<lbrace>valid_etcbs\<rbrace> set_bound_notification ref ntfn \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (wp | wpc | simp add: set_object_def)+
-  apply (fastforce simp: valid_etcbs_def st_tcb_at_kh_split_if
+  apply (fastforce simp: valid_etcbs_def st_tcb_at_kh_if_split
                    dest: get_tcb_st_tcb_at)
   done
 
@@ -425,14 +425,14 @@ lemma set_thread_state_runnable_valid_queues:
   "\<lbrace>valid_queues and K (runnable ts)\<rbrace> set_thread_state ref ts \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (wp | wpc | simp add: set_thread_state_ext_def set_object_def)+
-  apply (clarsimp simp: valid_queues_def st_tcb_at_kh_split_if)
+  apply (clarsimp simp: valid_queues_def st_tcb_at_kh_if_split)
   done
 
 lemma set_bound_notification_valid_queues:
   "\<lbrace>valid_queues\<rbrace> set_bound_notification ref ntfn \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (wp | wpc | simp add: set_object_def)+
-  apply (clarsimp simp: valid_queues_def st_tcb_at_kh_split_if)
+  apply (clarsimp simp: valid_queues_def st_tcb_at_kh_if_split)
   apply (drule_tac x=d in spec)
   apply (drule_tac x=p in spec)
   apply clarsimp
@@ -458,7 +458,7 @@ lemma set_thread_state_cur_is_activatable[wp]:
   apply (simp add: set_thread_state_def)
   apply (simp add: set_thread_state_ext_def set_object_def |
          wp set_scheduler_action_wp gts_wp)+
-  apply (clarsimp simp: is_activatable_def st_tcb_at_kh_split_if
+  apply (clarsimp simp: is_activatable_def st_tcb_at_kh_if_split
                         pred_tcb_at_def obj_at_def)
   done
 
@@ -468,7 +468,7 @@ lemma set_bound_notification_cur_is_activatable[wp]:
    \<lbrace>\<lambda>_ (s::det_state). is_activatable (cur_thread s) s\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (simp add: set_object_def | wp set_scheduler_action_wp)+
-  apply (clarsimp simp: is_activatable_def st_tcb_at_kh_split_if pred_tcb_at_def
+  apply (clarsimp simp: is_activatable_def st_tcb_at_kh_if_split pred_tcb_at_def
                         obj_at_def get_tcb_def)
   done
 
@@ -478,7 +478,7 @@ lemma set_thread_state_runnable_weak_valid_sched_action:
    \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (simp add: set_thread_state_ext_def set_object_def | wp gts_wp)+
-  apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_kh_split_if)
+  apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_kh_if_split)
   done
 
 lemma set_thread_state_switch_in_cur_domain[wp]:
@@ -501,7 +501,7 @@ lemma set_bound_notification_weak_valid_sched_action:
    \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (simp add: set_object_def | wp)+
-  apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_kh_split_if 
+  apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_kh_if_split
                         st_tcb_def2)
   done
 
@@ -550,7 +550,7 @@ lemma set_bound_notification_valid_blocked[wp]:
   apply (clarsimp simp: valid_blocked_def)
   apply (drule_tac x=ta in spec, clarsimp)
   apply (drule_tac x=st in spec)
-  apply (simp only: st_tcb_at_kh_split_if)
+  apply (simp only: st_tcb_at_kh_if_split)
   apply (simp add: st_tcb_def2 split: if_split_asm)
   done
 
@@ -583,11 +583,11 @@ context Arch begin global_naming ARM (*FIXME: arch_split*)
 
 lemma as_user_valid_etcbs[wp]: "\<lbrace>valid_etcbs\<rbrace> as_user ptr s \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
-  by (fastforce simp: valid_etcbs_def st_tcb_at_kh_split_if dest: get_tcb_st_tcb_at)
+  by (fastforce simp: valid_etcbs_def st_tcb_at_kh_if_split dest: get_tcb_st_tcb_at)
 
 lemma as_user_valid_queues[wp]: "\<lbrace>valid_queues\<rbrace> as_user ptr s \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
-  apply (clarsimp simp: valid_queues_def st_tcb_at_kh_split_if st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: valid_queues_def st_tcb_at_kh_if_split st_tcb_at_def obj_at_def)
   apply (drule_tac x=d in spec)
   apply (drule_tac x=p in spec)
   apply clarsimp
@@ -597,21 +597,21 @@ lemma as_user_valid_queues[wp]: "\<lbrace>valid_queues\<rbrace> as_user ptr s \<
 
 lemma as_user_weak_valid_sched_action[wp]: "\<lbrace>weak_valid_sched_action\<rbrace> as_user ptr s \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
-  apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_kh_split_if st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_kh_if_split st_tcb_at_def obj_at_def)
   by (drule get_tcb_SomeD, auto)
 
 lemma as_user_is_activatable[wp]: "\<lbrace>is_activatable t\<rbrace> as_user ptr s \<lbrace>\<lambda>_. is_activatable t\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
-  apply (clarsimp simp: is_activatable_def st_tcb_at_kh_split_if st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: is_activatable_def st_tcb_at_kh_if_split st_tcb_at_def obj_at_def)
   by (drule get_tcb_SomeD, auto)
 
 lemma as_user_valid_sched_action[wp]: "\<lbrace>valid_sched_action\<rbrace> as_user ptr s \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
   apply (clarsimp simp: valid_sched_action_def st_tcb_at_def obj_at_def)
   apply (rule conjI)
-   apply (clarsimp simp: is_activatable_def st_tcb_at_def obj_at_def st_tcb_at_kh_split_if)
+   apply (clarsimp simp: is_activatable_def st_tcb_at_def obj_at_def st_tcb_at_kh_if_split)
    apply (drule get_tcb_SomeD, clarsimp)
-  apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_def obj_at_def st_tcb_at_kh_split_if)
+  apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_def obj_at_def st_tcb_at_kh_if_split)
   apply (drule get_tcb_SomeD, clarsimp)
   done
 
@@ -623,7 +623,7 @@ lemma as_user_valid_idle_etcb[wp]: "\<lbrace>valid_idle_etcb\<rbrace> as_user pt
 
 lemma as_user_valid_blocked[wp]: "\<lbrace>valid_blocked\<rbrace> as_user ptr s \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
-  apply (clarsimp simp: valid_blocked_def st_tcb_at_kh_split_if st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: valid_blocked_def st_tcb_at_kh_if_split st_tcb_at_def obj_at_def)
   apply (drule_tac x=ptr in spec)
   by (drule get_tcb_SomeD, auto)
 
@@ -708,7 +708,7 @@ lemma as_user_valid_sched[wp]:
   apply clarsimp
   apply (fastforce simp: valid_sched_def valid_etcbs_def valid_queues_def
                          valid_sched_action_def is_activatable_def
-                         weak_valid_sched_action_def st_tcb_at_kh_split_if
+                         weak_valid_sched_action_def st_tcb_at_kh_if_split
                          st_tcb_def2 valid_blocked_def)
   done
 
@@ -857,7 +857,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma as_user_valid_blocked[wp]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> as_user tp S \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
   apply (simp add: as_user_def set_object_def | wpc | wp)+
-  apply (clarsimp simp: valid_blocked_def st_tcb_at_kh_split_if st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: valid_blocked_def st_tcb_at_kh_if_split st_tcb_at_def obj_at_def)
   apply (drule_tac x=tp in spec)
   apply (drule get_tcb_SomeD, simp)
   apply (simp add: ct_in_q_def)
@@ -1364,7 +1364,7 @@ lemma set_thread_state_not_runnable_valid_queues:
    \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (simp add: set_thread_state_ext_def set_object_def | wp)+
-  apply (fastforce simp: valid_queues_def st_tcb_at_kh_split_if ct_not_in_q_def
+  apply (fastforce simp: valid_queues_def st_tcb_at_kh_if_split ct_not_in_q_def
                          st_tcb_at_not)
   done
 
@@ -1373,7 +1373,7 @@ lemma set_thread_state_not_runnable_weak_valid_sched_action:
       set_thread_state ref ts \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (simp add: set_thread_state_ext_def set_object_def | wp gts_wp)+
-  apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_kh_split_if
+  apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_kh_if_split
                         st_tcb_at_not)
   done
 
@@ -1493,7 +1493,7 @@ apply (rule seq_ext)
                      reschedule_required_def set_scheduler_action_def
                      tcb_sched_action_def set_object_def)+
     apply (simp only: st_tcb_at_kh_simp[symmetric])
-    apply (clarsimp simp: valid_sched_def valid_queues_def st_tcb_at_kh_split_if
+    apply (clarsimp simp: valid_sched_def valid_queues_def st_tcb_at_kh_if_split
                           valid_sched_action_def simple_sched_action_def
                           is_activatable_def valid_blocked_def
                     split: scheduler_action.splits)+
@@ -1776,7 +1776,7 @@ lemma as_user_valid_sched[wp]:
   apply clarsimp
   by (fastforce simp: valid_sched_def valid_etcbs_def valid_queues_def
                       valid_sched_action_def is_activatable_def
-                      weak_valid_sched_action_def st_tcb_at_kh_split_if
+                      weak_valid_sched_action_def st_tcb_at_kh_if_split
                       st_tcb_def2 valid_blocked_def)
 
 crunch valid_sched[wp]: bind_notification "valid_sched"
@@ -2129,7 +2129,7 @@ lemma thread_set_state_eq_valid_queues:
    \<lbrace>valid_queues and st_tcb_at (op = ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
   apply (simp add: thread_set_def set_object_def)
   apply wp
-  apply (fastforce simp: valid_queues_def st_tcb_at_kh_split_if st_tcb_def2)
+  apply (fastforce simp: valid_queues_def st_tcb_at_kh_if_split st_tcb_def2)
   done
 
 lemma thread_set_state_eq_valid_sched_action:
@@ -2138,7 +2138,7 @@ lemma thread_set_state_eq_valid_sched_action:
   apply (simp add: thread_set_def set_object_def)
   apply wp
   apply (fastforce simp: valid_sched_action_def weak_valid_sched_action_def
-                         is_activatable_def st_tcb_at_kh_split_if st_tcb_def2)
+                         is_activatable_def st_tcb_at_kh_if_split st_tcb_def2)
   done
 
 lemma thread_set_state_eq_ct_in_cur_domain:
@@ -2146,7 +2146,7 @@ lemma thread_set_state_eq_ct_in_cur_domain:
    \<lbrace>ct_in_cur_domain and st_tcb_at (op = ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. ct_in_cur_domain\<rbrace>"
   apply (simp add: thread_set_def set_object_def)
   apply wp
-  apply (fastforce simp: ct_in_cur_domain_def st_tcb_at_kh_split_if st_tcb_def2)
+  apply (fastforce simp: ct_in_cur_domain_def st_tcb_at_kh_if_split st_tcb_def2)
   done
 
 lemma thread_set_state_eq_valid_blocked:
@@ -2154,7 +2154,7 @@ lemma thread_set_state_eq_valid_blocked:
    \<lbrace>valid_blocked and st_tcb_at (op = ts) tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
   apply (simp add: thread_set_def set_object_def)
   apply wp
-  apply (fastforce simp: valid_blocked_def st_tcb_at_kh_split_if st_tcb_def2)
+  apply (fastforce simp: valid_blocked_def st_tcb_at_kh_if_split st_tcb_def2)
   done
 
 crunch etcb_at[wp]: thread_set "etcb_at P t"
@@ -2280,7 +2280,7 @@ lemma set_thread_state_not_queued_valid_queues:
    \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (wp | simp add: set_thread_state_ext_def set_object_def)+
-  apply (fastforce simp: valid_queues_def st_tcb_at_kh_split_if not_queued_def)
+  apply (fastforce simp: valid_queues_def st_tcb_at_kh_if_split not_queued_def)
   done
 
 lemma set_scheduler_action_cnt_is_activatable'[wp]:
@@ -2300,11 +2300,11 @@ lemma set_thread_state_sched_act_not_valid_sched_action:
   apply (simp add: valid_sched_action_def set_thread_state_def)
   apply (rule hoare_conjI)
    apply (wp gts_wp | simp add:  set_thread_state_ext_def set_object_def)+
-   apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_kh_split_if
+   apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_kh_if_split
                          scheduler_act_not_def is_activatable_def pred_tcb_at_def
                          obj_at_def)
   apply (wp gts_wp | simp add: set_thread_state_ext_def set_object_def)+
-  apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_kh_split_if
+  apply (clarsimp simp: weak_valid_sched_action_def st_tcb_at_kh_if_split
                         scheduler_act_not_def is_activatable_def)
   done
 
@@ -2408,7 +2408,7 @@ lemma send_ipc_valid_sched:
     apply (wp hoare_vcg_imp_lift get_object_wp | simp add: get_endpoint_def | wpc |
            wp_once hoare_vcg_all_lift)+
   apply (subst st_tcb_at_kh_simp[symmetric])
-  apply (clarsimp simp: st_tcb_at_kh_split_if pred_tcb_at_def2 obj_at_def
+  apply (clarsimp simp: st_tcb_at_kh_if_split pred_tcb_at_def2 obj_at_def
                         valid_sched_def valid_sched_action_def weak_valid_sched_action_def)+
   apply (clarsimp simp: scheduler_act_not_def)
   apply (subgoal_tac "xb \<noteq> idle_thread s")
@@ -2445,7 +2445,7 @@ lemma handle_double_fault_valid_queues:
    \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
   apply (simp add: handle_double_fault_def set_thread_state_def)
   apply (wp | simp add:  set_thread_state_ext_def set_object_def)+
-  apply (fastforce simp: valid_queues_def st_tcb_at_kh_split_if not_queued_def)
+  apply (fastforce simp: valid_queues_def st_tcb_at_kh_if_split not_queued_def)
   done
 
 lemma handle_double_fault_valid_sched_action:
@@ -2456,7 +2456,7 @@ lemma handle_double_fault_valid_sched_action:
   apply (wp gts_wp | simp add: set_thread_state_ext_def set_object_def)+
   apply (clarsimp simp: valid_sched_action_def weak_valid_sched_action_def
                         is_activatable_def pred_tcb_at_def obj_at_def
-                        st_tcb_at_kh_split_if scheduler_act_not_def
+                        st_tcb_at_kh_if_split scheduler_act_not_def
                   split: scheduler_action.splits)
   done
 
@@ -2578,7 +2578,7 @@ lemma receive_ipc_valid_sched:
                | wpc
                | wp_once hoare_vcg_all_lift hoare_vcg_ex_lift)+
   apply (subst st_tcb_at_kh_simp[symmetric])+
-  apply (clarsimp simp: st_tcb_at_kh_split_if default_notification_def default_ntfn_def isActive_def)
+  apply (clarsimp simp: st_tcb_at_kh_if_split default_notification_def default_ntfn_def isActive_def)
   apply (drule_tac t="hd xh" and P'="\<lambda>ts. \<not> active ts" in st_tcb_weakenE)
    apply clarsimp
   apply (simp only: st_tcb_at_not)
