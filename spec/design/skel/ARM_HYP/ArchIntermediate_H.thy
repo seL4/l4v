@@ -46,9 +46,9 @@ defs Arch_createNewCaps_def:
         | LargePageObject \<Rightarrow>
             createNewPageCaps regionBase numObjects dev 4 ARMLargePage
         | SectionObject \<Rightarrow>
-            createNewPageCaps regionBase numObjects dev 8 ARMSection
+            createNewPageCaps regionBase numObjects dev 9 ARMSection
         | SuperSectionObject \<Rightarrow>
-            createNewPageCaps regionBase numObjects dev 12 ARMSuperSection
+            createNewPageCaps regionBase numObjects dev 13 ARMSuperSection
         | PageTableObject \<Rightarrow>
             createNewTableCaps regionBase numObjects ptBits (makeObject::pte) PageTableCap
               (\<lambda>pts. return ())
@@ -60,6 +60,10 @@ defs Arch_createNewCaps_def:
                                                     (x + (fromIntegral objSize) - 1)
                                                     (addrFromPPtr x)) pds
                      od)
+        | VCPUObject \<Rightarrow> (do
+            addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject :: vcpu)) 0;
+            return $ map (\<lambda> addr. VCPUCap addr) addrs
+            od)
         )"
 
 end
