@@ -293,6 +293,7 @@ definition
   else if n = 3 then Some SuperSectionObj
   else if n = 4 then Some PageTableObj
   else if n = 5 then Some PageDirectoryObj
+  else if n = 6 then Some VCPUObj
   else None"
 
 end
