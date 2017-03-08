@@ -214,13 +214,21 @@ Create an architecture-specific object.
 >                      (fromPPtr regionBase) (Just ARMLargePage)})
 >             return $! mkPageCap ARMLargePage
 >         Arch.Types.SectionObject -> do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>             placeNewDataObject regionBase 9 isDevice
+#else
 >             placeNewDataObject regionBase 8 isDevice
+#endif
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSection)})
 >             return $! mkPageCap ARMSection
 >         Arch.Types.SuperSectionObject -> do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>             placeNewDataObject regionBase 13 isDevice
+#else
 >             placeNewDataObject regionBase 12 isDevice
+#endif
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSuperSection)})
