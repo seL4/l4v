@@ -164,6 +164,8 @@ lemma valid_machine_state[wp]: "I valid_machine_state" by (rule lift_inv,simp)
 
 lemma valid_arch_objs[wp]: "I valid_arch_objs" by (rule lift_inv,simp)
 
+lemma valid_vspace_objs[wp]: "I valid_vspace_objs" by (rule lift_inv,simp)
+
 lemma valid_arch_caps[wp]: "I valid_arch_caps" by (rule lift_inv,simp)
 
 lemma valid_kernel_mappings[wp]: "I valid_kernel_mappings" by (rule lift_inv,simp)
