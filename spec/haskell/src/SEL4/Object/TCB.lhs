@@ -35,7 +35,7 @@ This module uses the C preprocessor to select a target architecture.
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.API.Types SEL4.API.Failures SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Invocation #-}
-% {-# BOOT-EXPORTS: threadGet threadSet asUser setMRs setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB setupCallerCap getThreadCallerSlot getThreadReplySlot getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet #-}
+% {-# BOOT-EXPORTS: threadGet threadSet asUser setMRs setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB setupCallerCap getThreadCallerSlot getThreadReplySlot getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister #-}
 
 > import SEL4.Config (numDomains)
 > import SEL4.API.Types
