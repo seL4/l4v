@@ -16,6 +16,9 @@ context Arch begin
 
 global_naming ARM
 
+definition
+  "kernel_mappings \<equiv> {x. x \<ge> kernel_base}"
+
 lemma kernel_mappings_slots_eq:
   "p \<in> kernel_mappings \<longleftrightarrow> ucast (p >> 20) \<in> kernel_mapping_slots"
   apply (simp add: kernel_mappings_def kernel_mapping_slots_def word_le_nat_alt

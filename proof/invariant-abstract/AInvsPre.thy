@@ -21,7 +21,4 @@ locale AInvsPre =
        ptable_lift t s x = Some (addrFromPPtr y) \<Longrightarrow>
          in_user_frame y s \<or> in_device_frame y s"
 
-definition
-  "kernel_mappings \<equiv> {x. x \<ge> kernel_base}"
-
 end
