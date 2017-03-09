@@ -8,6 +8,12 @@
 % @TAG(GD_GPL)
 %
 
+\begin{impdetails}
+
+> {-# LANGUAGE CPP, GeneralizedNewtypeDeriving #-}
+
+\end{impdetails}
+
 This module contains the architecture-specific thread switch code for the ARM.
 
 > module SEL4.Kernel.Thread.ARM_HYP where
@@ -22,6 +28,9 @@ This module contains the architecture-specific thread switch code for the ARM.
 > import SEL4.Kernel.VSpace.ARM_HYP
 > import qualified SEL4.Machine.Hardware.ARM_HYP as ARMHardware
 > import {-# SOURCE #-} SEL4.Kernel.Init
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> import SEL4.Object.VCPU.ARM_HYP
+#endif
 
 \end{impdetails}
 
@@ -43,7 +52,12 @@ The ARM idle thread runs in system mode with interrupts enabled, with the PC poi
 Since the idle thread only accesses global mappings, there is nothing to be done when switching to it.
 
 > switchToIdleThread :: Kernel ()
-> switchToIdleThread = return ()
+> switchToIdleThread = do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>    vcpuSwitch Nothing
+#else
+>    return ()
+#endif
 
 There is nothing special about idle thread activation on ARM.
 
