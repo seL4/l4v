@@ -2710,6 +2710,18 @@ qed
 crunch state_refs_of'[wp]: cteInsert "\<lambda>s. P (state_refs_of' s)"
   (wp: crunch_wps)
 
+lemma setCTE_state_hyp_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> setCTE p cte \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  unfolding setCTE_def
+  apply (rule setObject_state_hyp_refs_of_eq)
+  apply (clarsimp simp: updateObject_cte in_monad typeError_def
+                        in_magnitude_check objBits_simps
+                 split: kernel_object.split_asm if_split_asm)
+  done
+
+crunch state_hyp_refs_of'[wp]: cteInsert "\<lambda>s. P (state_hyp_refs_of' s)"
+  (wp: crunch_wps)
+
 crunch aligned'[wp]: cteInsert pspace_aligned'
   (wp: crunch_wps)
 
@@ -2740,11 +2752,11 @@ lemma setCTE_ko_wp_at_live[wp]:
                  elim!: rsubst[where P=P])
   apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
   apply (elim exE conjE disjE)
-   apply (clarsimp simp: ps_clear_upd' objBits_simps
+   apply (clarsimp simp: ps_clear_upd' objBits_simps live'_def hyp_live'_def
                          lookupAround2_char1)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
-  apply (clarsimp simp: ps_clear_upd' objBits_simps)
-  sorry
+  apply (clarsimp simp: ps_clear_upd' objBits_simps live'_def)
+  done
 
 lemma setCTE_iflive':
   "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte'. \<forall>p'\<in>zobj_refs' (cteCap cte')
@@ -2801,11 +2813,11 @@ lemma setCTE_ko_wp_at_not_live[wp]:
                  elim!: rsubst[where P=P])
   apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
   apply (elim exE conjE disjE)
-   apply (clarsimp simp: ps_clear_upd' objBits_simps
+   apply (clarsimp simp: ps_clear_upd' objBits_simps live'_def hyp_live'_def
                          lookupAround2_char1)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
-  apply (clarsimp simp: ps_clear_upd' objBits_simps)
-  sorry
+  apply (clarsimp simp: ps_clear_upd' objBits_simps live'_def)
+ done
 
 lemma setUntypedCapAsFull_ko_wp_not_at'[wp]:
   "\<lbrace>\<lambda>s. P (ko_wp_at' (Not \<circ> live') p' s)\<rbrace>
@@ -2836,7 +2848,7 @@ lemma setUntypedCapAsFull_if_live_then_nonz_cap':
   apply (clarsimp simp:if_live_then_nonz_cap'_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)
    apply (clarsimp simp:setUntypedCapAsFull_def split del: if_split)
-(*   apply (wp hoare_vcg_split_if)
+   apply (wp hoare_vcg_if_split)
     apply (clarsimp simp:ex_nonz_cap_to'_def cte_wp_at_ctes_of)
     apply (wp updateCap_ctes_of_wp)+
   apply clarsimp
@@ -2845,8 +2857,7 @@ lemma setUntypedCapAsFull_if_live_then_nonz_cap':
   apply (clarsimp simp:ex_nonz_cap_to'_def cte_wp_at_ctes_of modify_map_def split:if_splits)
   apply (rule_tac x = cref in exI)
   apply (intro conjI impI; clarsimp)
-  done*) sorry
-
+  done
 
 lemma maskedAsFull_simps[simp]:
   "maskedAsFull capability.NullCap cap =  capability.NullCap"
@@ -3165,6 +3176,8 @@ crunch norq[wp]: setupReplyMaster "\<lambda>s. P (ksReadyQueues s)"
 crunch ct[wp]: setupReplyMaster "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps)
 crunch state_refs_of'[wp]: setupReplyMaster "\<lambda>s. P (state_refs_of' s)"
+  (wp: crunch_wps)
+crunch state_hyp_refs_of'[wp]: setupReplyMaster "\<lambda>s. P (state_hyp_refs_of' s)"
   (wp: crunch_wps)
 crunch it[wp]: setupReplyMaster "\<lambda>s. P (ksIdleThread s)"
   (wp: setCTE_it')
@@ -3743,7 +3756,7 @@ lemma deriveCap_derived:
         | rule is_derived'_def[THEN meta_eq_to_obj_eq, THEN iffD2])+)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
-         simp add: ARM_H.deriveCap_def Let_def isCap_simps
+         simp add: ARM_HYP_H.deriveCap_def Let_def isCap_simps
               split: if_split,
          safe)
         apply ((wp throwError_validE_R undefined_validE_R
@@ -6189,7 +6202,7 @@ lemma cte_refs_maskCapRights[simp]:
   "cte_refs' (maskCapRights rghts cap) = cte_refs' cap"
   by (rule ext, cases cap,
       simp_all add: maskCapRights_def isCap_defs Let_def
-                    ARM_H.maskCapRights_def
+                    ARM_HYP_H.maskCapRights_def
          split del: if_split
              split: arch_capability.split)
 
@@ -6438,7 +6451,7 @@ lemma diminished_Untyped' :
    (* 6 subgoals *)
    apply (rename_tac arch_capability R)
    apply (case_tac arch_capability)
-    apply (clarsimp simp: isCap_simps ARM_H.maskCapRights_def maskCapRights_def
+    apply (clarsimp simp: isCap_simps ARM_HYP_H.maskCapRights_def maskCapRights_def
                           diminished'_def Let_def)+
 done
 

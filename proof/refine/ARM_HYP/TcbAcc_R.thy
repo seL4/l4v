@@ -762,6 +762,16 @@ lemmas threadSet_state_refs_of'T =
 lemmas threadSet_state_refs_of' =
     threadSet_state_refs_of'T [OF all_tcbI all_tcbI]
 
+lemma threadSet_state_hyp_refs_of':
+  assumes y: "\<And>tcb. atcbVCPUPtr (tcbArch (F tcb)) = atcbVCPUPtr (tcbArch tcb)"
+  shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (simp add: threadSet_def)
+  apply (wpsimp wp: setObject_state_hyp_refs_of' getObject_tcb_wp
+    simp: objBits_simps obj_at'_def projectKOs state_hyp_refs_of'_def)
+  apply (clarsimp simp:objBits_simps y state_hyp_refs_of'_def
+                 elim!: rsubst[where P=P] intro!: ext)+
+  done
+
 lemma threadSet_iflive'T:
   assumes x: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
   shows
@@ -773,18 +783,19 @@ lemma threadSet_iflive'T:
               \<and> tcbState (F tcb) \<noteq> IdleThreadState
               \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
       \<and> ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)
+              \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
+      \<and>((\<exists>tcb. \<not> bound (atcbVCPUPtr (tcbArch tcb)) \<and> bound (atcbVCPUPtr (tcbArch (F tcb)))
               \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
      threadSet F t
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: threadSet_def)
   apply (wp setObject_tcb_iflive' getObject_tcb_wp)
-  apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (subst conj_assoc[symmetric], subst imp_disjL[symmetric])
-  apply (subst conj_assoc[symmetric], subst imp_disjL[symmetric])
+  apply (clarsimp simp: obj_at'_def projectKOs live'_def hyp_live'_def)
+  apply (subst conj_assoc[symmetric], subst imp_disjL[symmetric])+
   apply (rule conjI)
    apply (rule impI, clarsimp)
    apply (erule if_live_then_nonz_capE')
-   apply (clarsimp simp: ko_wp_at'_def)
+   apply (clarsimp simp: ko_wp_at'_def live'_def hyp_live'_def)
   apply (clarsimp simp: bspec_split [OF spec [OF x]])
   done
 
@@ -1299,6 +1310,7 @@ lemma threadSet_invs_trivialT:
   assumes v: "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
   assumes u: "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
   assumes b: "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
+  assumes r: "\<forall>tcb. atcbVCPUPtr (tcbArch (F tcb)) = atcbVCPUPtr (tcbArch tcb)"
   shows
   "\<lbrace>\<lambda>s. invs' s \<and>
        tcb_at' t s \<and>
@@ -1322,6 +1334,7 @@ proof -
               threadSet_sch_actT_P[where P=False, simplified]
               threadSet_valid_queues
               threadSet_state_refs_of'T[where f'=id]
+              threadSet_state_hyp_refs_of'
               threadSet_iflive'T
               threadSet_ifunsafe'T
               threadSet_idle'T
@@ -1336,10 +1349,11 @@ proof -
               threadSet_valid_queues'
               threadSet_cur
               untyped_ranges_zero_lift
-           |clarsimp simp: y z a domains cteCaps_of_def |rule refl)+
+           |clarsimp simp: y z a r domains cteCaps_of_def |rule refl)+
    apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
    apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def o_def)
-   by (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a)
+  apply (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a)
+  done
 qed
 
 lemmas threadSet_invs_trivial =
@@ -1494,8 +1508,7 @@ lemma asUser_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp hoare_drop_imps | simp)+
-
-  apply (wp threadSet_invs_trivial hoare_drop_imps | simp)+
+  apply (wp threadSet_invs_trivial hoare_drop_imps | simp add: atcbContextSet_def)+
   done
 
 lemma asUser_nosch[wp]:
@@ -1544,10 +1557,20 @@ lemma asUser_st_refs_of'[wp]:
   apply (wp threadSet_state_refs_of' hoare_drop_imps | simp)+
   done
 
+lemma asUser_st_hyp_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>
+     asUser t m
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wp threadSet_state_hyp_refs_of' hoare_drop_imps | simp add: atcbContextSet_def atcbVCPUPtr_atcbContext_update)+
+  done
+
 lemma asUser_iflive'[wp]:
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> asUser t m \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: asUser_def split_def)
-  apply (wp threadSet_iflive' hoare_drop_imps | clarsimp | auto)+
+  apply (wpsimp wp: threadSet_iflive' hoare_drop_imps
+         simp: atcbContextGet_def threadGet_def getObject_def split_def loadObject_default_def projectKO_def2)+
+  apply (auto simp: atcbContextSet_def atcbVCPUPtr_atcbContext_update)
   done
 
 lemma asUser_cur_tcb[wp]:
@@ -3576,9 +3599,9 @@ lemma store_word_corres:
   done
 
 lemmas msgRegisters_unfold
-  = ARM_H.msgRegisters_def
+  = ARM_HYP_H.msgRegisters_def
     msg_registers_def
-    ARM.msgRegisters_def
+    ARM_HYP.msgRegisters_def
         [unfolded upto_enum_def, simplified,
          unfolded fromEnum_def enum_register, simplified,
          unfolded toEnum_def enum_register, simplified]
@@ -3591,12 +3614,12 @@ lemma get_mrs_corres:
   have S: "get = gets id"
     by (simp add: gets_def)
   have T: "corres (\<lambda>con regs. regs = map con msg_registers) (tcb_at t) (tcb_at' t)
-     (thread_get (arch_tcb_context_get o tcb_arch) t) (asUser t (mapM getRegister ARM_H.msgRegisters))"
+     (thread_get (arch_tcb_context_get o tcb_arch) t) (asUser t (mapM getRegister ARM_HYP_H.msgRegisters))"
     apply (subst thread_get_as_user)
     apply (rule corres_as_user')
     apply (subst mapM_gets)
      apply (simp add: getRegister_def)
-    apply (simp add: S ARM_H.msgRegisters_def msg_registers_def)
+    apply (simp add: S ARM_HYP_H.msgRegisters_def msg_registers_def)
     done
   show ?thesis
   apply (case_tac mi, simp add: get_mrs_def getMRs_def split del: if_split)
@@ -3913,7 +3936,7 @@ lemma lipcb_corres':
                (tcb_at' t and valid_objs' and pspace_aligned'
                 and pspace_distinct' and no_0_obj')
                (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
-  apply (simp add: lookup_ipc_buffer_def ARM_H.lookupIPCBuffer_def)
+  apply (simp add: lookup_ipc_buffer_def ARM_HYP_H.lookupIPCBuffer_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ threadget_corres])
        apply (simp add: getThreadBufferSlot_def locateSlot_conv)
@@ -4175,6 +4198,17 @@ lemma setThreadState_state_refs_of'[wp]:
   by (simp add: setThreadState_def fun_upd_def
         | wp threadSet_state_refs_of')+
 
+crunch hyp_refs_of'[wp]: rescheduleRequired "\<lambda>s. P (state_hyp_refs_of' s)"
+  (simp: unless_def crunch_simps wp: threadSet_state_hyp_refs_of' ignore: threadSet)
+
+lemma setThreadState_state_hyp_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s))\<rbrace>
+     setThreadState st t
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (simp add: setThreadState_def fun_upd_def
+        | wp threadSet_state_hyp_refs_of')+
+  done
+
 lemma setBoundNotification_state_refs_of'[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_bound_refs' ntfn
                                  \<union> {r \<in> state_refs_of' s t. snd r \<noteq> TCBBound}))\<rbrace>
@@ -4182,6 +4216,13 @@ lemma setBoundNotification_state_refs_of'[wp]:
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   by (simp add: setBoundNotification_def Un_commute fun_upd_def
         | wp threadSet_state_refs_of' )+
+
+lemma setBoundNotification_state_hyp_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>
+     setBoundNotification ntfn t
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  by (simp add: setBoundNotification_def fun_upd_def
+        | wp threadSet_state_hyp_refs_of')+
 
 lemma sts_cur_tcb'[wp]:
   "\<lbrace>cur_tcb'\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
@@ -4215,7 +4256,7 @@ lemma rescheduleRequired_iflive'[wp]:
   apply (wp | wpc | simp)+
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def)
   apply (erule(1) if_live_then_nonz_capD')
-  apply (fastforce simp: projectKOs)
+  apply (fastforce simp: projectKOs live'_def)
   done
 
 lemma tcbSchedDequeue_iflive'[wp]:
@@ -4238,7 +4279,7 @@ lemma sts_iflive'[wp]:
        apply clarsimp
       apply (wp threadSet_iflive' | simp)+
    apply auto
- done
+  done
 
 lemma sbn_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
@@ -4257,14 +4298,14 @@ crunch ifunsafe'[wp]: setThreadState, setBoundNotification "if_unsafe_then_cap'"
 lemma st_tcb_ex_cap'':
   "\<lbrakk> st_tcb_at' P t s; if_live_then_nonz_cap' s;
      \<And>st. P st \<Longrightarrow> st \<noteq> Inactive \<and> \<not> idle' st \<rbrakk> \<Longrightarrow> ex_nonz_cap_to' t s"
-  by (clarsimp simp: pred_tcb_at'_def obj_at'_real_def projectKOs
+  by (clarsimp simp: pred_tcb_at'_def obj_at'_real_def projectKOs live'_def
               elim!: ko_wp_at'_weakenE
                      if_live_then_nonz_capE')
 
 lemma bound_tcb_ex_cap'':
   "\<lbrakk> bound_tcb_at' P t s; if_live_then_nonz_cap' s;
      \<And>ntfn. P ntfn \<Longrightarrow> bound ntfn \<rbrakk> \<Longrightarrow> ex_nonz_cap_to' t s"
-  by (clarsimp simp: pred_tcb_at'_def obj_at'_real_def projectKOs
+  by (clarsimp simp: pred_tcb_at'_def obj_at'_real_def projectKOs live'_def
               elim!: ko_wp_at'_weakenE
                      if_live_then_nonz_capE')
 

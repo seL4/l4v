@@ -320,7 +320,7 @@ where
 | "zobj_refs' (CNodeCap r b g gsz)           = {}"
 | "zobj_refs' (ThreadCap r)                  = {r}"
 | "zobj_refs' (Zombie r b n)                 = {}"
-| "zobj_refs' (ArchObjectCap ac)             = {}"
+| "zobj_refs' (ArchObjectCap ac)             = {}" (* is this ok? *)
 | "zobj_refs' (IRQControlCap)                = {}"
 | "zobj_refs' (IRQHandlerCap irq)            = {}"
 | "zobj_refs' (ReplyCap tcb m)               = {}"

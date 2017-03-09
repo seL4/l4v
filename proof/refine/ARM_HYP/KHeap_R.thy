@@ -11,7 +11,7 @@
 theory KHeap_R
 imports
   "../../invariant-abstract/DetSchedSchedule_AI"
-  Machine_R
+  Machine_R Eisbach
 begin
 
 lemma lookupAround2_known1:
@@ -1709,13 +1709,13 @@ lemma setObject_state_hyp_refs_of_eq:
   done
 
 lemma set_ep_state_hyp_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s)(epptr := {}))\<rbrace>
      setEndpoint epptr ep
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   unfolding setEndpoint_def
   apply (wp setObject_state_hyp_refs_of',
       simp_all add: objBits_simps fun_upd_def[symmetric])
-  sorry
+  done
 
 lemma set_ntfn_ctes_of[wp]:
   "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setNotification p val \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
@@ -1817,13 +1817,13 @@ lemma set_ntfn_state_refs_of'[wp]:
       simp_all add: objBits_simps fun_upd_def)
 
 lemma set_ntfn_state_hyp_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s)(epptr := {}))\<rbrace>
      setNotification epptr ntfn
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   unfolding setNotification_def
   apply (wp setObject_state_hyp_refs_of',
       simp_all add: objBits_simps fun_upd_def)
-  sorry
+  done
 
 lemma setNotification_pred_tcb_at'[wp]:
   "\<lbrace>pred_tcb_at' proj P t\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
@@ -2260,9 +2260,15 @@ lemma set_ntfn_minor_invs':
   apply (clarsimp simp add: invs'_def valid_state'_def cteCaps_of_def)
   apply (wp irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift,
     simp_all add: o_def)
+  apply clarsimp
+  apply (rule conjI)
   apply (clarsimp elim!: rsubst[where P=sym_refs]
                  intro!: ext
-                  dest!: obj_at_state_refs_ofD')+
+                  dest!: obj_at_state_refs_ofD')
+  apply (thin_tac "sym_refs (state_refs_of' s)" for s)
+  apply (clarsimp elim!: rsubst[where P=sym_refs]
+                 intro!: ext
+                  dest!: obj_at_state_hyp_refs_ofD')
   done
 
 lemma getEndpoint_wp:
