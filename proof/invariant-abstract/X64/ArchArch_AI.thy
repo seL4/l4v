@@ -1073,7 +1073,7 @@ lemma create_mapping_entries_parent_for_refs:
         simp)+
 
 (*
-lemma find_pd_for_asid_shifting_voodoo:
+lemma find_vspace_for_asid_shifting_voodoo:
   "\<lbrace>pspace_aligned and valid_arch_objs\<rbrace>
      find_vspace_for_asid asid
    \<lbrace>\<lambda>rv s. v >> pml4_shift_bits = rv + (get_pml4_index v << word_size_bits) && mask pml4_bits >> word_size_bits\<rbrace>,-"
@@ -1088,7 +1088,7 @@ lemma find_pd_for_asid_shifting_voodoo:
   done
 *)
 
-lemma find_pd_for_asid_ref_offset_voodoo:
+lemma find_vspace_for_asid_ref_offset_voodoo:
   "\<lbrace>pspace_aligned and valid_arch_objs and
          K (ref = [VSRef (asid && mask asid_low_bits) (Some AASIDPool),
                   VSRef (ucast (asid_high_bits_of asid)) None])\<rbrace>

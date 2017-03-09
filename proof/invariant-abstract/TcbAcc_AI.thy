@@ -415,7 +415,7 @@ lemma thread_set_pspace_in_kernel_window[wp]:
   done
 
 crunch pspace_respects_device_region[wp]: thread_set "pspace_respects_device_region"
-  (wp: set_object_pspace_respect_device_region)
+  (wp: set_object_pspace_respects_device_region)
 
 lemma thread_set_cap_refs_in_kernel_window:
   assumes y: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
@@ -1472,7 +1472,7 @@ lemma set_thread_state_pspace_in_kernel_window[wp]:
   by (simp add: set_thread_state_thread_set, wp, simp, wp)
 
 crunch pspace_respects_device_region[wp]: set_thread_state pspace_respects_device_region
-(wp: set_object_pspace_respect_device_region)
+(wp: set_object_pspace_respects_device_region)
 
 lemma set_thread_state_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace>
@@ -1499,7 +1499,7 @@ lemma set_bound_notification_pspace_in_kernel_window[wp]:
   by (simp add: set_bound_notification_thread_set, wp)
 
 crunch pspace_respects_device_region[wp]: set_bound_notification pspace_respects_device_region
-  (wp: set_object_pspace_respect_device_region)
+  (wp: set_object_pspace_respects_device_region)
 
 lemma set_bound_notification_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace>

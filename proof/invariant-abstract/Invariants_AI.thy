@@ -425,7 +425,7 @@ definition
 where
   "valid_fault f \<equiv>
    \<forall>mw b n g. f = (ExceptionTypes_A.CapFault mw b
-                     (ExceptionTypes_A.GuardMismatch n g)) \<longrightarrow> length g\<le>32"
+                     (ExceptionTypes_A.GuardMismatch n g)) \<longrightarrow> length g\<le>word_bits"
 
 definition
   valid_bound_ntfn :: "machine_word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"

@@ -567,7 +567,7 @@ lemma set_object_pspace_in_kernel_window:
   by simp
 
 
-lemma set_object_pspace_respect_device_region:
+lemma set_object_pspace_respects_device_region:
   "\<lbrace>pspace_respects_device_region and obj_at (\<lambda>ko. a_type k = a_type ko) p\<rbrace> 
   set_object p k
   \<lbrace>\<lambda>r. pspace_respects_device_region\<rbrace>"
@@ -589,7 +589,7 @@ lemma set_ntfn_kernel_window[wp]:
 lemma set_ntfn_respect_device_region[wp]:
   "\<lbrace>pspace_respects_device_region\<rbrace> set_notification ptr val \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
   apply (simp add: set_notification_def)
-  apply (wp set_object_pspace_respect_device_region get_object_wp)
+  apply (wp set_object_pspace_respects_device_region get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: Structures_A.kernel_object.split_asm)
   done
@@ -605,7 +605,7 @@ lemma set_ep_kernel_window[wp]:
 lemma set_ep_respects_device_region[wp]:
   "\<lbrace>pspace_respects_device_region\<rbrace> set_endpoint ptr val \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
   apply (simp add: set_endpoint_def)
-  apply (wp set_object_pspace_respect_device_region get_object_wp)
+  apply (wp set_object_pspace_respects_device_region get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: Structures_A.kernel_object.split_asm)
   done

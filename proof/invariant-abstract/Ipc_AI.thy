@@ -2498,7 +2498,7 @@ lemma complete_signal_invs:
   done
 
 crunch pspace_respects_device_region[wp]: as_user "pspace_respects_device_region"
-  (simp: crunch_simps wp: crunch_wps set_object_pspace_respect_device_region pspace_respects_device_region_dmo)
+  (simp: crunch_simps wp: crunch_wps set_object_pspace_respects_device_region pspace_respects_device_region_dmo)
 
 context Ipc_AI_cont begin
 lemma ri_invs':

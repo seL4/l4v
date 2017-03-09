@@ -1545,7 +1545,7 @@ lemma set_cap_kernel_window[wp]:
 lemma set_cap_pspace_respects_device[wp]:
   "\<lbrace>pspace_respects_device_region\<rbrace> set_cap cap p \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
   apply (simp add: set_cap_def split_def)
-  apply (wp set_object_pspace_respect_device_region get_object_wp | wpc)+
+  apply (wp set_object_pspace_respects_device_region get_object_wp | wpc)+
   apply (clarsimp simp: obj_at_def)
   apply (clarsimp simp: fun_upd_def[symmetric]
                         a_type_def wf_cs_upd)

@@ -115,8 +115,8 @@ lemma delete_asid_invs[wp]:
   apply (simp add: delete_asid_def cong: option.case_cong del: set_arch_obj_simps(5))
   apply_trace (wp set_asid_pool_invs_unmap hoare_vcg_all_lift | wpc)+
      apply (simp add: invalidate_asid_entry_def)
-     apply (wp invalidate_asid_invalidates gets_wp hoare_vcg_const_imp_lift hoare_vcg_all_lift hoare_vcg_imp_lift invalidate_asid_asid_map_None_inv)
-   apply (rule gets_wp) (*FIXME x64: wtf *)
+     apply (wp invalidate_asid_invalidates gets_wp hoare_vcg_const_imp_lift hoare_vcg_all_lift
+               hoare_vcg_imp_lift invalidate_asid_asid_map_None_inv)+
   apply (clarsimp simp del: fun_upd_apply simp: invs_valid_asid_map)
   done
 

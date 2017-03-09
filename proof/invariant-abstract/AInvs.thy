@@ -57,7 +57,7 @@ lemma ct_running_machine_op:
 
 lemma kernel_entry_invs:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
-  (kernel_entry e us) :: (register \<Rightarrow> 32 word,unit) s_monad
+  (kernel_entry e us) :: (register \<Rightarrow> machine_word,unit) s_monad
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   apply (simp add: kernel_entry_def)
   by (wp akernel_invs thread_set_invs_trivial thread_set_ct_running select_wp

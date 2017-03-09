@@ -3592,7 +3592,7 @@ crunch pspace_in_kernel_window[wp]: perform_page_invocation "pspace_in_kernel_wi
   (simp: crunch_simps wp: crunch_wps)
 
 crunch pspace_respects_device_region[wp]: perform_page_invocation "pspace_respects_device_region"
-  (simp: crunch_simps wp: crunch_wps set_object_pspace_respect_device_region pspace_respects_device_region_dmo)
+  (simp: crunch_simps wp: crunch_wps set_object_pspace_respects_device_region pspace_respects_device_region_dmo)
 
 
 lemma perform_page_directory_invocation_invs[wp]:
