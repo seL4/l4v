@@ -200,7 +200,7 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 >     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
 >     case hsCurVCPU of
 >         Just (vcpuPtr, _) ->
->             doMachineOp $ set_gic_vcpu_ctrl_lr index virq
+>             doMachineOp $ set_gic_vcpu_ctrl_lr (fromIntegral index) virq
 >         _ -> do
 >              vcpu <- getObject vcpuPtr
 >              let vcpuLR = (vgicLR . vcpuVGIC $ vcpu) // [(index, virq)]
@@ -282,8 +282,8 @@ For initialisation, see makeVCPUObject.
 >             if eisr0 /= 0 then countTrailingZeros eisr0
 >                           else countTrailingZeros eisr1
 >         badIndex irq_idx = doMachineOp $ (do
->               virq <- get_gic_vcpu_ctrl_lr irq_idx
->               set_gic_vcpu_ctrl_lr irq_idx $ virqSetEOIIRQEN virq 0
+>               virq <- get_gic_vcpu_ctrl_lr (fromIntegral irq_idx)
+>               set_gic_vcpu_ctrl_lr (fromIntegral irq_idx) $ virqSetEOIIRQEN virq 0
 >               )
 
 \subsection{VCPU State Control}
@@ -339,7 +339,7 @@ For initialisation, see makeVCPUObject.
 >
 >     numListRegs <- gets (armKSGICVCPUNumListRegs . ksArchState)
 >     let gicIndices = [0..numListRegs-1]
->     lrVals <- doMachineOp $ mapM get_gic_vcpu_ctrl_lr gicIndices
+>     lrVals <- doMachineOp $ mapM (get_gic_vcpu_ctrl_lr . fromIntegral) gicIndices
 >     let vcpuLR = (vgicLR . vcpuVGIC $ vcpu) // zip gicIndices lrVals
 >
 >     setObject vcpuPtr $ vcpu {
@@ -367,7 +367,7 @@ For initialisation, see makeVCPUObject.
 >         set_gic_vcpu_ctrl_vmcr (vgicVMCR vgic)
 >         set_gic_vcpu_ctrl_apr (vgicAPR vgic)
 >
->         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (i, (vgicLR vgic) ! i)) [0..gicVCPUMaxNumLR-1])
+>         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (fromIntegral i, (vgicLR vgic) ! i)) [0..gicVCPUMaxNumLR-1])
 >
 >         setACTLR (vcpuACTLR vcpu)
 >

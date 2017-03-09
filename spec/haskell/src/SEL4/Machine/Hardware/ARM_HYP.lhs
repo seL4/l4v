@@ -860,10 +860,10 @@ FIXME ARMHYP consider moving to platform code?
 > get_gic_vcpu_ctrl_misr :: MachineMonad Word
 > get_gic_vcpu_ctrl_misr = error "FIXME ARMHYP Unimplemented callback"
 
-> get_gic_vcpu_ctrl_lr :: Int -> MachineMonad Word
+> get_gic_vcpu_ctrl_lr :: Word -> MachineMonad Word
 > get_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
 
-> set_gic_vcpu_ctrl_lr :: Int -> Word -> MachineMonad ()
+> set_gic_vcpu_ctrl_lr :: Word -> Word -> MachineMonad ()
 > set_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
 
 #endif
