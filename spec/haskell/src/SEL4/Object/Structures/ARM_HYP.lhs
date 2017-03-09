@@ -29,6 +29,9 @@ This module makes use of the GHC extension allowing declaration of types with no
 > import Data.Word(Word32,Word16)
 > import Data.Bits
 > import {-# SOURCE #-} SEL4.Object.Structures
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> import SEL4.Machine.RegisterSet.ARM_HYP (VCPUReg(..))
+#endif
 
 \end{impdetails}
 
@@ -182,9 +185,9 @@ FIXME ARMHYP move to platform
 
 > data VCPU = VCPUObj {
 >                 vcpuTCBPtr :: Maybe (PPtr TCB)
->                 ,vcpuSCTLR :: Word
 >                 ,vcpuACTLR :: Word
 >                 ,vcpuVGIC :: GICVCPUInterface
+>                 ,vcpuRegs :: Array VCPUReg Word
 >                 }
 >     deriving Show
 
@@ -193,6 +196,8 @@ FIXME ARMHYP move to platform
 > vgicHCREN = (0x1 :: Word) -- VGIC_HCR_EN
 > sctlrDefault = (0xc5187c :: Word) -- SCTLR_DEFAULT
 > actlrDefault = (0x40 :: Word) -- ACTLR_DEFAULT
+>
+> vcpuSCTLR vcpu = vcpuRegs vcpu ! VCPURegSCTLR
 
 makeObject specialised to VCPUs.
 
@@ -201,7 +206,6 @@ makeObject specialised to VCPUs.
 >     let vgicLR = funPartialArray (const (0 :: Word)) (0, gicVCPUMaxNumLR-1) in
 >     VCPUObj {
 >           vcpuTCBPtr = Nothing
->         , vcpuSCTLR = sctlrDefault
 >         , vcpuACTLR = actlrDefault
 >         , vcpuVGIC = VGICInterface {
 >                           vgicHCR = vgicHCREN
@@ -209,6 +213,7 @@ makeObject specialised to VCPUs.
 >                         , vgicAPR = 0
 >                         , vgicLR = vgicLR
 >                         }
+>         , vcpuRegs = funArray (const 0) // [(VCPURegSCTLR, sctlrDefault)]
 >         }
 
 #endif

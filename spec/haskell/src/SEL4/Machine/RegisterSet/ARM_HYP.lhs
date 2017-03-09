@@ -44,6 +44,28 @@ This module defines the ARM register set.
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > elr_hyp = LR_svc
+
+\subsection{VCPU-saved Registers}
+
+> data VCPUReg =
+>       VCPURegSCTLR
+>     | VCPURegLRsvc
+>     | VCPURegSPsvc
+>     | VCPURegLRabt
+>     | VCPURegSPabt
+>     | VCPURegLRund
+>     | VCPURegSPund
+>     | VCPURegLRirq
+>     | VCPURegSPirq
+>     | VCPURegLRfiq
+>     | VCPURegSPfiq
+>     | VCPURegR8fiq
+>     | VCPURegR9fiq
+>     | VCPURegR10fiq
+>     | VCPURegR11fiq
+>     | VCPURegR12fiq
+>     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
+
 #endif
 
 > initContext :: [(Register, Word)]

@@ -33,6 +33,7 @@ hypervisor extensions on ARM.
 > import SEL4.API.InvocationLabels.ARM_HYP
 > import SEL4.API.Invocation
 > import SEL4.API.Invocation.ARM_HYP as ArchInv
+> import SEL4.Machine.RegisterSet.ARM_HYP (Register(..), VCPUReg(..))
 > import SEL4.API.Types
 > import SEL4.API.InvocationLabels
 > import SEL4.API.Failures.TARGET
@@ -77,6 +78,11 @@ It is not possible to dissociate a VCPU and a TCB by using SetTCB. Final outcome
 >         _ -> return ()
 >     setObject vcpuPtr $ vcpu { vcpuTCBPtr = Nothing }
 >     archThreadSet (\atcb -> atcb { atcbVCPUPtr = Nothing }) tcbPtr
+>     tcb <- getObject tcbPtr
+>     asUser tcbPtr $ (do
+>         cpsr <- getRegister (Register CPSR)
+>         setRegister (Register CPSR) $ sanitiseRegister tcb (Register CPSR) cpsr
+>         )
 
 > associateVCPUTCB :: PPtr VCPU -> PPtr TCB -> Kernel [Word]
 > associateVCPUTCB vcpuPtr tcbPtr = do
@@ -99,53 +105,94 @@ Currently, there is only one VCPU register available for reading/writing by the 
 > decodeVCPUReadReg :: [Word] -> ArchCapability ->
 >         KernelF SyscallError ArchInv.Invocation
 > decodeVCPUReadReg (field:_) cap@(VCPUCap {}) = do
->     when (field /= 0) $ throw (InvalidArgument 1)
+>     let reg = fromIntegral field
+>     when (reg > (fromEnum (maxBound :: VCPUReg))) $ throw (InvalidArgument 1)
 >     return $ InvokeVCPU $
->         VCPUReadRegister (capVCPUPtr cap) (fromIntegral field)
+>         VCPUReadRegister (capVCPUPtr cap) (toEnum reg)
 > decodeVCPUReadReg _ _ = throw TruncatedMessage
 
 > decodeVCPUWriteReg :: [Word] -> ArchCapability ->
 >         KernelF SyscallError ArchInv.Invocation
 > decodeVCPUWriteReg (field:val:_) cap@(VCPUCap {}) = do
->     when (field /= 0) $ throw (InvalidArgument 1)
+>     let reg = fromIntegral field
+>     when (reg > (fromEnum (maxBound :: VCPUReg))) $ throw (InvalidArgument 1)
 >     return $ InvokeVCPU $ VCPUWriteRegister (capVCPUPtr cap)
->                 (fromIntegral field) (fromIntegral val)
+>                 (toEnum reg) (fromIntegral val)
 > decodeVCPUWriteReg _ _ = throw TruncatedMessage
 
 > readVCPUReg :: PPtr VCPU -> HyperReg -> Kernel HyperRegVal
 > readVCPUReg vcpuPtr reg = do
->     if reg == 0
->         then do
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     (onCurVCPU, active) <- return $ case hsCurVCPU of
+>         Just (curVCPU, a) -> (curVCPU == vcpuPtr, a)
+>         _ -> (False, False)
+>
+>     if onCurVCPU
+>         then case reg of
+>                  VCPURegSCTLR -> if active then doMachineOp getSCTLR
+>                                            else do
+>                                                vcpu <- getObject vcpuPtr
+>                                                return $ vcpuRegs vcpu ! reg
+>                  VCPURegLRsvc -> doMachineOp get_lr_svc
+>                  VCPURegSPsvc -> doMachineOp get_sp_svc
+>                  VCPURegLRabt -> doMachineOp get_lr_abt
+>                  VCPURegSPabt -> doMachineOp get_sp_abt
+>                  VCPURegLRund -> doMachineOp get_lr_und
+>                  VCPURegSPund -> doMachineOp get_sp_und
+>                  VCPURegLRirq -> doMachineOp get_lr_irq
+>                  VCPURegSPirq -> doMachineOp get_sp_irq
+>                  VCPURegLRfiq -> doMachineOp get_lr_fiq
+>                  VCPURegSPfiq -> doMachineOp get_sp_fiq
+>                  VCPURegR8fiq -> doMachineOp get_r8_fiq
+>                  VCPURegR9fiq -> doMachineOp get_r9_fiq
+>                  VCPURegR10fiq -> doMachineOp get_r10_fiq
+>                  VCPURegR11fiq -> doMachineOp get_r11_fiq
+>                  VCPURegR12fiq -> doMachineOp get_r12_fiq
+>         else do
 >             vcpu <- getObject vcpuPtr
->             return $ vcpuSCTLR vcpu
->         else fail "VCPU register out of range"
+>             return $ vcpuRegs vcpu ! reg
 
 > writeVCPUReg :: PPtr VCPU -> HyperReg -> HyperRegVal -> Kernel ()
-> writeVCPUReg vcpuPtr reg val =
->     if reg == 0
->         then do
+> writeVCPUReg vcpuPtr reg val = do
+>     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
+>     (onCurVCPU, active) <- return $ case hsCurVCPU of
+>         Just (curVCPU, a) -> (curVCPU == vcpuPtr, a)
+>         _ -> (False, False)
+>
+>     if onCurVCPU
+>         then case reg of
+>                  VCPURegSCTLR -> if active then doMachineOp $ setSCTLR val
+>                                            else do
+>                                                vcpu <- getObject vcpuPtr
+>                                                setObject vcpuPtr $ vcpu { vcpuRegs = vcpuRegs vcpu // [(reg, val)] }
+>                  VCPURegLRsvc -> doMachineOp $ set_lr_svc val
+>                  VCPURegSPsvc -> doMachineOp $ set_sp_svc val
+>                  VCPURegLRabt -> doMachineOp $ set_lr_abt val
+>                  VCPURegSPabt -> doMachineOp $ set_sp_abt val
+>                  VCPURegLRund -> doMachineOp $ set_lr_und val
+>                  VCPURegSPund -> doMachineOp $ set_sp_und val
+>                  VCPURegLRirq -> doMachineOp $ set_lr_irq val
+>                  VCPURegSPirq -> doMachineOp $ set_sp_irq val
+>                  VCPURegLRfiq -> doMachineOp $ set_lr_fiq val
+>                  VCPURegSPfiq -> doMachineOp $ set_sp_fiq val
+>                  VCPURegR8fiq -> doMachineOp $ set_r8_fiq val
+>                  VCPURegR9fiq -> doMachineOp $ set_r9_fiq val
+>                  VCPURegR10fiq -> doMachineOp $ set_r10_fiq val
+>                  VCPURegR11fiq -> doMachineOp $ set_r11_fiq val
+>                  VCPURegR12fiq -> doMachineOp $ set_r12_fiq val
+>         else do
 >             vcpu <- getObject vcpuPtr
->             setObject vcpuPtr $ vcpu { vcpuSCTLR = val }
->         else fail "VCPU register out of range"
+>             setObject vcpuPtr $ vcpu { vcpuRegs = vcpuRegs vcpu // [(reg, val)] }
 
 > invokeVCPUReadReg :: PPtr VCPU -> HyperReg -> Kernel [Word]
 > invokeVCPUReadReg vcpuPtr reg = do
 >     ct <- getCurThread
->     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
->     case hsCurVCPU of
->         Just (vcpuPtr, _) ->
->            vcpuCleanInvalidateActive
->         _ -> return ()
 >     val <- readVCPUReg vcpuPtr reg
 >     return [val]
 
 > invokeVCPUWriteReg :: PPtr VCPU -> HyperReg -> HyperRegVal -> Kernel [Word]
 > invokeVCPUWriteReg vcpuPtr reg val = do
 >     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
->     case hsCurVCPU of
->         Just (vcpuPtr, _) ->
->             vcpuCleanInvalidateActive
->         _ -> return ()
 >     writeVCPUReg vcpuPtr reg val
 >     return []
 
@@ -292,7 +339,7 @@ For initialisation, see makeVCPUObject.
 > vcpuEnable vcpuPtr = do
 >     vcpu <- getObject vcpuPtr
 >     doMachineOp $ do
->         setSCTLR (vcpuSCTLR vcpu)
+>         setSCTLR (vcpuRegs vcpu ! VCPURegSCTLR)
 >         setHCR hcrVCPU
 >         isb
 >         set_gic_vcpu_ctrl_hcr (vgicHCR . vcpuVGIC $ vcpu)
@@ -306,9 +353,10 @@ For initialisation, see makeVCPUObject.
 >            vcpu <- getObject vcpuPtr
 >            hcr <- doMachineOp get_gic_vcpu_ctrl_hcr
 >            sctlr <- doMachineOp getSCTLR
+>            let regs' = vcpuRegs vcpu // [(VCPURegSCTLR, sctlr)]
 >            setObject vcpuPtr $ vcpu {
->                  vcpuSCTLR = sctlr
->                , vcpuVGIC = (vcpuVGIC vcpu) { vgicHCR = hcr }
+>                  vcpuVGIC = (vcpuVGIC vcpu) { vgicHCR = hcr }
+>                , vcpuRegs = regs'
 >                }
 >         Nothing -> return ()
 >
@@ -342,13 +390,48 @@ For initialisation, see makeVCPUObject.
 >     lrVals <- doMachineOp $ mapM (get_gic_vcpu_ctrl_lr . fromIntegral) gicIndices
 >     let vcpuLR = (vgicLR . vcpuVGIC $ vcpu) // zip gicIndices lrVals
 >
+>     -- save banked registers
+>     lr_svc <- doMachineOp get_lr_svc
+>     sp_svc <- doMachineOp get_sp_svc
+>     lr_abt <- doMachineOp get_lr_abt
+>     sp_abt <- doMachineOp get_sp_abt
+>     lr_und <- doMachineOp get_lr_und
+>     sp_und <- doMachineOp get_sp_und
+>     lr_irq <- doMachineOp get_lr_irq
+>     sp_irq <- doMachineOp get_sp_irq
+>     lr_fiq <- doMachineOp get_lr_fiq
+>     sp_fiq <- doMachineOp get_sp_fiq
+>     r8_fiq <- doMachineOp get_r8_fiq
+>     r9_fiq <- doMachineOp get_r9_fiq
+>     r10_fiq <- doMachineOp get_r10_fiq
+>     r11_fiq <- doMachineOp get_r11_fiq
+>     r12_fiq <- doMachineOp get_r12_fiq
+>
+>     let regs' = (vcpuRegs vcpu) // [(VCPURegSCTLR, sctlr)
+>                                    ,(VCPURegLRsvc, lr_svc)
+>                                    ,(VCPURegSPsvc, sp_svc)
+>                                    ,(VCPURegLRabt, lr_abt)
+>                                    ,(VCPURegSPabt, sp_abt)
+>                                    ,(VCPURegLRund, lr_und)
+>                                    ,(VCPURegSPund, sp_und)
+>                                    ,(VCPURegLRirq, lr_irq)
+>                                    ,(VCPURegSPirq, sp_irq)
+>                                    ,(VCPURegLRfiq, lr_fiq)
+>                                    ,(VCPURegSPfiq, sp_fiq)
+>                                    ,(VCPURegR8fiq, r8_fiq)
+>                                    ,(VCPURegR9fiq, r9_fiq)
+>                                    ,(VCPURegR10fiq, r10_fiq)
+>                                    ,(VCPURegR11fiq, r11_fiq)
+>                                    ,(VCPURegR12fiq, r12_fiq)
+>                                    ]
+>
 >     setObject vcpuPtr $ vcpu {
->           vcpuSCTLR = sctlr
->         , vcpuACTLR = actlr
+>           vcpuACTLR = actlr
 >         , vcpuVGIC = (vcpuVGIC vcpu) { vgicHCR = hcr
 >                                      , vgicVMCR = vmcr
 >                                      , vgicAPR = apr
 >                                      , vgicLR = vcpuLR }
+>         , vcpuRegs = regs'
 >         }
 >     doMachineOp isb
 > vcpuSave _ = fail "vcpuSave: no VCPU to save"
@@ -369,6 +452,23 @@ For initialisation, see makeVCPUObject.
 >
 >         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (fromIntegral i, (vgicLR vgic) ! i)) [0..gicVCPUMaxNumLR-1])
 >
+>         -- restore banked VCPU registers except SCTLR (that's in VCPUEnable)
+>         set_lr_svc (vcpuRegs vcpu ! VCPURegLRsvc)
+>         set_sp_svc (vcpuRegs vcpu ! VCPURegSPsvc)
+>         set_lr_abt (vcpuRegs vcpu ! VCPURegLRabt)
+>         set_sp_abt (vcpuRegs vcpu ! VCPURegSPabt)
+>         set_lr_und (vcpuRegs vcpu ! VCPURegLRund)
+>         set_sp_und (vcpuRegs vcpu ! VCPURegSPund)
+>         set_lr_irq (vcpuRegs vcpu ! VCPURegLRirq)
+>         set_sp_irq (vcpuRegs vcpu ! VCPURegSPirq)
+>         set_lr_fiq (vcpuRegs vcpu ! VCPURegLRfiq)
+>         set_sp_fiq (vcpuRegs vcpu ! VCPURegSPfiq)
+>         set_r8_fiq (vcpuRegs vcpu ! VCPURegR8fiq)
+>         set_r9_fiq (vcpuRegs vcpu ! VCPURegR9fiq)
+>         set_r10_fiq (vcpuRegs vcpu ! VCPURegR10fiq)
+>         set_r11_fiq (vcpuRegs vcpu ! VCPURegR11fiq)
+>         set_r12_fiq (vcpuRegs vcpu ! VCPURegR12fiq)
+>
 >         setACTLR (vcpuACTLR vcpu)
 >
 >     vcpuEnable vcpuPtr
@@ -380,11 +480,6 @@ For initialisation, see makeVCPUObject.
 >         Just (vcpuPtr, True) -> vcpuDisable Nothing
 >         _ -> return ()
 >     modifyArchState (\s -> s { armHSCurVCPU = Nothing })
-
-> vcpuCleanInvalidateActive = do
->     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
->     vcpuSave hsCurVCPU
->     vcpuInvalidateActive
 
 > vcpuSwitch :: Maybe (PPtr VCPU) -> Kernel ()
 > vcpuSwitch Nothing = do

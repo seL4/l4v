@@ -27,6 +27,9 @@ This module makes use of the GHC extension allowing data types with no construct
 > import SEL4.Object.Structures
 > import SEL4.API.InvocationLabels
 > import SEL4.API.InvocationLabels.ARM_HYP
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> import SEL4.Machine.RegisterSet.ARM_HYP (Register(..), VCPUReg(..))
+#endif
 
 > import Data.Word(Word8,Word16,Word32)
 
@@ -123,7 +126,7 @@ IO pages are invoked using InvokePage (cap contains a bit indicating it is an IO
 
 FIXME ARMHYP move HyperReg definition (to Hardware?)
 
-> type HyperReg = Int
+> type HyperReg = VCPUReg
 > type HyperRegVal = Word
 
 > data VCPUInvocation
