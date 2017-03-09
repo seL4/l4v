@@ -67,7 +67,12 @@ def compare_arm_and_hyp(common_path):
     a = preprocess(path_arm)
     h = preprocess(path_hyp)
 
-    print(diff('-w', a.name, h.name, _ok_code=[0,1]))
+    # now change all mentions of ".ARM_HYP" to ".ARM" to compact the diff
+    # note: this will not catch an accidental .ARM import in .ARM_HYP, but that
+    #       should not compile anyway
+    h2 = dump_temp_lines((l.replace(b'.ARM_HYP', b'.ARM') for l in h.readlines()))
+
+    print(diff('-w', a.name, h2.name, _ok_code=[0,1]))
 
     a.close()
     h.close()
