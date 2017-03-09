@@ -86,7 +86,7 @@ lemma same_object_as_def2:
                                 \<and> (is_arch_cap cp \<longrightarrow>
                                      (case the_arch_cap cp of
                                          PageCap d x rs tp sz v \<Rightarrow> x \<le> x + 2 ^ pageBitsForSize sz - 1
-                                       | IOPortCap f l \<Rightarrow> False
+                                       | IOPortCap f l \<Rightarrow> case cp' of ArchObjectCap (IOPortCap _ _) \<Rightarrow> True | _ \<Rightarrow> False
                                        | _ \<Rightarrow> True)))"
   apply (simp add: same_object_as_def is_cap_simps split: cap.split)
   apply (auto simp: cap_master_cap_def bits_of_def is_cap_simps
@@ -135,7 +135,6 @@ lemma cap_asid_base_update_cap_data [CNodeInv_AI_assms]:
 lemma same_object_as_update_cap_data [CNodeInv_AI_assms]:
   "\<lbrakk> update_cap_data P x c \<noteq> NullCap; same_object_as c' c \<rbrakk> \<Longrightarrow>
   same_object_as c' (update_cap_data P x c)"
-thm same_object_as_def same_aobject_as_def arch_same_region_as.simps arch_update_cap_data_def
   apply (clarsimp simp: same_object_as_def is_cap_simps
                   split: cap.split_asm arch_cap.splits if_split_asm)
   apply (auto simp: update_cap_data_def badge_update_def cap_rights_update_def is_cap_simps
@@ -154,22 +153,23 @@ lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:
               split del: if_split cong: if_cong)
   apply (erule disjE)
    apply (clarsimp split: if_split_asm)
-   apply (erule disjE)
+    apply (erule disjE)
+     apply (clarsimp simp: is_cap_simps)
+     apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
+    apply (erule disjE)
+     apply (clarsimp simp: is_cap_simps)
+     apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
     apply (clarsimp simp: is_cap_simps)
     apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
-   apply (erule disjE)
-    apply (clarsimp simp: is_cap_simps)
-    apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
-   apply (clarsimp simp: is_cap_simps)
-   apply (simp add: update_cap_data_def arch_update_cap_data_def is_cap_simps)
    apply (erule (1) same_object_as_update_cap_data)
   apply clarsimp
   apply (rule conjI, clarsimp simp: is_cap_simps update_cap_data_def split del: if_split)+
   apply clarsimp
   apply (clarsimp simp: same_object_as_def is_cap_simps
-                  split: cap.split_asm arch_cap.splits if_split_asm)
-  apply (auto simp: update_cap_data_def badge_update_def cap_rights_update_def is_cap_simps arch_update_cap_data_def
-                   Let_def split_def the_cnode_cap_def bits_of_def
+                 split: cap.split_asm arch_cap.splits if_split_asm)
+  apply (auto simp: update_cap_data_def badge_update_def cap_rights_update_def is_cap_simps
+                    arch_update_cap_data_def
+                    Let_def split_def the_cnode_cap_def bits_of_def
              split: if_split_asm cap.splits arch_cap.splits)
   done
 

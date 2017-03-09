@@ -82,7 +82,7 @@ definition
       (PageCap dev ref _ _ pgsz _, PageCap dev' ref' _ _ pgsz' _)
           \<Rightarrow> (dev, ref, pgsz) = (dev', ref', pgsz')
               \<and> ref \<le> ref + 2 ^ pageBitsForSize pgsz - 1
-    | (IOPortCap _ _, _) \<Rightarrow> False
+    | (IOPortCap _ _, IOPortCap _ _) \<Rightarrow> True
     | _ \<Rightarrow> arch_same_region_as cp cp')"
 
 (* Proofs don't want to see this definition *)
