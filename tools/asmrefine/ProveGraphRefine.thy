@@ -136,6 +136,22 @@ lemma drop_sign_isomorphism_bitwise:
           | safe
           | simp add: test_bit_bin)+
 
+lemma drop_sign_of_nat:
+  "drop_sign (of_nat n) = of_nat n"
+  by (simp add: drop_sign_def ucast_of_nat is_down_def
+                target_size_def source_size_def word_size)
+
+lemma drop_sign_to_bl:
+  "to_bl (drop_sign w) = to_bl w"
+  by (simp add: drop_sign_def to_bl_ucast)
+
+lemma drop_sign_extra_bl_ops:
+  "drop_sign (bv_clz w) = bv_clz (drop_sign w)"
+  "drop_sign (bv_ctz w) = bv_ctz (drop_sign w)"
+  "drop_sign (bv_popcount w) = bv_popcount (drop_sign w)"
+  by (simp_all add: bv_clz_def bv_ctz_def bv_popcount_def drop_sign_of_nat
+                    word_ctz_def word_clz_def pop_count_def drop_sign_to_bl)
+
 lemma drop_sign_number[simp]:
   "drop_sign (numeral n) = numeral n"
   "drop_sign (- numeral n) = - numeral n"
@@ -153,8 +169,8 @@ lemma drop_sign_projections:
 
 lemmas drop_sign_isomorphism
     = drop_sign_isomorphism_ariths drop_sign_projections
-        drop_sign_isomorphism_bitwise
-        ucast_id
+        drop_sign_isomorphism_bitwise drop_sign_of_nat
+        drop_sign_extra_bl_ops ucast_id
 
 lemma drop_sign_h_val[simp]:
   "drop_sign (h_val hp p :: ('a :: len8) signed word) = h_val hp (ptr_coerce p)"

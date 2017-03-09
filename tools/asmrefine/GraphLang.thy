@@ -570,6 +570,7 @@ val opers = Symtab.make [
       ("WordArrayAccess", @{const_name "fun_app"}),
       ("WordArrayUpdate", @{const_name "fun_upd"}),
       ("CountLeadingZeroes", @{const_name "bv_clz"}),
+      ("CountTrailingZeroes", @{const_name "bv_ctz"}),
       ("True", @{const_name "True"}),
       ("False", @{const_name "False"}),
       ("IfThenElse", @{const_name "If"}),

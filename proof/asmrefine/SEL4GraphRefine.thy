@@ -66,31 +66,8 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
   "snd (snd ((if P then f else g) gs)) = (if P then snd (snd (f gs)) else snd (snd (g gs)))"
   by (simp_all add: gs_new_frames_def gs_new_cnodes_def gs_clear_region_def)
 
-ML {* val nm = "Kernel_C.invert_l1index" *}
-
-(*
-
-(* If test_all_graph_refine_proofs_parallel fails, debug it by uncommenting this comment block
-   and setting "nm" to the failed C function. *)
-
-local_setup {*  define_graph_fun_short funs nm *}
-
-ML {*
-    val ctxt = @{context}
-    val hints = SimplToGraphProof.mk_hints funs ctxt nm
-    val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm
-        ctxt
-*}
-
-ML {*
-    val v = ProveSimplToGraphGoals.test_graph_refine_proof funs (csenv ()) ctxt nm
-*}
-
-schematic_goal "PROP ?P"
-  apply (tactic {* resolve_tac @{context} [init_thm] 1 *})
-  apply (tactic {* ALLGOALS (TRY o ProveSimplToGraphGoals.graph_refine_proof_full_goal_tac
-        (csenv ()) @{context}) *})
-*)
+(* If this fails, it can be debugged with the assistance of the
+   script in TestGraphRefine.thy *)
 
 ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_parallel
     funs (csenv ()) @{context} *}

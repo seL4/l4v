@@ -10,8 +10,11 @@
 
 theory GraphRefine
 
-imports TailrecPre GraphLangLemmas "../../lib/LemmaBucket_C"
-
+imports
+  TailrecPre
+  GraphLangLemmas
+  "../../lib/LemmaBucket_C"
+  ExtraSpecs
 begin
 
 type_synonym ('s, 'x, 'e) c_trace = "nat \<Rightarrow> (('s, 'x, 'e) com \<times> ('s, 'e) xstate) option"
@@ -935,9 +938,10 @@ lemma trace_end_Ret_Err:
          auto simp: exec_graph_invariant_def)
   done
 
-lemma graph_fun_refines_from_simpl_to_graph:
+lemma graph_fun_refines_from_simpl_to_graph_with_refine:
   "\<lbrakk> SGamma proc = Some com; GGamma fname = Some gf;
-    \<And>Q. simpl_to_graph SGamma GGamma fname (NextNode (entry_point gf)) (add_cont com []) 0
+    simple_simpl_refines SGamma com' com;
+    \<And>Q. simpl_to_graph SGamma GGamma fname (NextNode (entry_point gf)) (add_cont com' []) 0
         [Q] UNIV I eqs
         (\<lambda>s s'. map (\<lambda>i. var_acc i s) (function_outputs gf) = map (\<lambda>i. i s') outs);
         eq_impl (NextNode (entry_point gf))
@@ -949,8 +953,8 @@ lemma graph_fun_refines_from_simpl_to_graph:
   apply (clarsimp simp: graph_fun_refines_def)
   apply (frule exec_trace_def[THEN eqset_imp_iff, THEN iffD1])
   apply clarsimp
-  apply (erule_tac x="UNIV \<times> {[0 \<mapsto> (com, Normal s)]}" in meta_allE)
-  apply (drule_tac tr=tr and tr'="[0 \<mapsto> (com, Normal s)]"
+  apply (erule_tac x="UNIV \<times> {[0 \<mapsto> (com', Normal s)]}" in meta_allE)
+  apply (drule_tac tr=tr and tr'="[0 \<mapsto> (com', Normal s)]"
           and n'=0 and n''=0 and sst=s in simpl_to_graphD)
    apply (rule conjI, assumption)
    apply (simp add: suffix_tuple_closure_inter_def exec_trace_def)
@@ -967,15 +971,22 @@ lemma graph_fun_refines_from_simpl_to_graph:
     apply clarsimp
     apply (drule step_preserves_termination[rotated])
      apply (erule step.Call)
-    apply (simp add: c_trace_nontermination)
+    apply (drule simple_simpl_refines_no_fault_terminatesD)
+     apply (blast intro: exec.Call)
+    apply (simp add: c_trace_nontermination simple_simpl_refines_def)
    apply (frule(1) trace_end_Ret_Err)
    apply (clarsimp simp: exec_final_step_def acc_vars_def)
    apply metis
   apply clarsimp
-  apply (erule exec.Call)
+  apply (rule exec.Call, assumption)
+  apply (erule simple_simpl_refines_no_fault_execD[rotated])
+   apply (blast intro: exec.Call)
   apply (simp add: exec_via_trace)
   apply metis
   done
+
+lemmas graph_fun_refines_from_simpl_to_graph
+    = graph_fun_refines_from_simpl_to_graph_with_refine[OF _ _ simple_simpl_refines_refl]
 
 lemma simpl_to_graph_name_simpl_state:
   "(\<And>sst. sst \<in> P \<Longrightarrow> simpl_to_graph SGamma GGamma gf nn com n traces {sst} I inp_eqs out_eqs)
@@ -2259,17 +2270,17 @@ fun mk_hints (funs : ParseGraph.funs) ctxt nm = case Symtab.lookup funs nm of
     err_conds = ec} end
 
 fun init_graph_refines_proof funs nm ctxt = let
-    val body_thm = Proof_Context.get_thm ctxt
-            (Long_Name.base_name nm ^ "_body_def")
+    val body_ref_thm = Get_Body_Refines.get ctxt (Long_Name.base_name nm)
     val ct = mk_graph_refines funs ctxt nm |> Thm.cterm_of ctxt
   in Thm.trivial ct
-    |> (resolve0_tac [@{thm graph_fun_refines_from_simpl_to_graph}] 1
+    |> (resolve_tac ctxt [@{thm graph_fun_refines_from_simpl_to_graph_with_refine}] 1
         THEN apply_impl_thm ctxt 1
         THEN graph_gamma_tac ctxt 1
-        THEN ALLGOALS (simp_tac (put_simpset HOL_basic_ss ctxt addsimps [body_thm]
+        THEN resolve_tac ctxt [body_ref_thm] 1
+        THEN ALLGOALS (simp_tac (put_simpset HOL_basic_ss ctxt
             addsimps @{thms entry_point.simps function_inputs.simps
                             function_outputs.simps list.simps}))
-        THEN TRY ((resolve0_tac [@{thm simpl_to_graph_noop_same_eqs}]
+        THEN TRY ((resolve_tac ctxt [@{thm simpl_to_graph_noop_same_eqs}]
             THEN' inst_graph_tac ctxt) 1)
     )
     |> Seq.hd

@@ -15,7 +15,7 @@ imports "../../lib/CTranslationNICTA"
 
 begin
 
-text {* Additional constants needed to make conversion to graph lang easy *}
+text {* Additional constants needed to make conversion to and from the graph lang easy *}
 
 definition
   bvshl :: "'a :: len0 word \<Rightarrow> 'a word \<Rightarrow> 'a word"
@@ -38,15 +38,19 @@ where
  "bv_shift_amount n = of_nat (min n ((2 ^ len_of TYPE('a)) - 1))"
 
 definition
-  "count_leading_zeroes z = length (takeWhile Not (to_bl z))"
-
-definition
-  "count_trailing_zeroes z = length (takeWhile Not (rev (to_bl z)))"
-
-definition
   bv_clz :: "('a :: len) word \<Rightarrow> 'a word"
 where
-  "bv_clz x = of_nat (count_leading_zeroes x)"
+  "bv_clz x = of_nat (word_clz x)"
+
+definition
+  bv_ctz :: "('a :: len) word \<Rightarrow> 'a word"
+where
+  "bv_ctz x = of_nat (word_ctz x)"
+
+definition
+  bv_popcount :: "('a :: len) word \<Rightarrow> 'a word"
+where
+  "bv_popcount x = of_nat (pop_count x)"
 
 definition
   "mem_acc mem addr = h_val mem (Ptr addr)"
