@@ -514,15 +514,15 @@ definition
 where
   "setHCR w \<equiv> machine_op_lift (setHCR_impl w)"
 
-consts' (* FIXME ARMHYP this makes no sense *)
+consts'
   addressTranslateS1CPR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-  addressTranslateS1CPR_val :: "machine_state \<Rightarrow> machine_word"
+  addressTranslateS1CPR_val :: "machine_word \<Rightarrow> machine_state \<Rightarrow> machine_word"
 definition
   addressTranslateS1CPR :: "machine_word \<Rightarrow> machine_word machine_monad"
 where
   "addressTranslateS1CPR w \<equiv> do
     machine_op_lift (addressTranslateS1CPR_impl w);
-    gets addressTranslateS1CPR_val
+    gets (addressTranslateS1CPR_val w)
   od"
 
 definition
@@ -635,21 +635,21 @@ definition
 where
   "get_gic_vcpu_ctrl_eisr1 \<equiv> gets gic_vcpu_ctrl_eisr0_val"
 
-consts' (* FIXME ARMHYP this doesn't seem to make sense *)
-  get_gic_vcpu_ctrl_lr_impl :: "nat \<Rightarrow> unit machine_rest_monad"
-  gic_vcpu_ctrl_lr_val :: "machine_state \<Rightarrow> machine_word"
+consts'
+  get_gic_vcpu_ctrl_lr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+  gic_vcpu_ctrl_lr_val :: "machine_word \<Rightarrow> machine_state \<Rightarrow> machine_word"
 definition
-  get_gic_vcpu_ctrl_lr :: "nat \<Rightarrow> machine_word machine_monad"
+  get_gic_vcpu_ctrl_lr :: "machine_word \<Rightarrow> machine_word machine_monad"
 where
   "get_gic_vcpu_ctrl_lr n \<equiv> do
       machine_op_lift (get_gic_vcpu_ctrl_lr_impl n);
-      gets gic_vcpu_ctrl_lr_val
+      gets (gic_vcpu_ctrl_lr_val n)
     od"
 
 consts'
-  set_gic_vcpu_ctrl_lr_impl :: "nat \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+  set_gic_vcpu_ctrl_lr_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition
-  set_gic_vcpu_ctrl_lr :: "nat \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+  set_gic_vcpu_ctrl_lr :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
 where
   "set_gic_vcpu_ctrl_lr n w  \<equiv> machine_op_lift (set_gic_vcpu_ctrl_lr_impl n w)"
 
