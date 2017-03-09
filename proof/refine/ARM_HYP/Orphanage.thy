@@ -186,8 +186,12 @@ lemma invs_valid_queues':
 
 declare invs_valid_queues'[rule_format, elim!]
 
+lemma vcpuSwitch_ksCurThread [wp]:
+  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
+  sorry
+
 crunch ksCurThread [wp]: setVMRoot "\<lambda> s. P (ksCurThread s)"
-(wp: crunch_wps simp: crunch_simps)
+(wp: crunch_wps simp: crunch_simps ignore: getObject)
 
 crunch ksReadyQueues [wp]: asUser "\<lambda>s. P (ksReadyQueues s)"
 (wp: crunch_wps simp: crunch_simps)
@@ -560,7 +564,7 @@ lemma switchToIdleThread_no_orphans' [wp]:
              \<longrightarrow> ksCurThread s \<in> all_queued_tcb_ptrs s) \<rbrace>
    switchToIdleThread
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding switchToIdleThread_def setCurThread_def ARM_H.switchToIdleThread_def
+  unfolding switchToIdleThread_def setCurThread_def ARM_HYP_H.switchToIdleThread_def
   apply (simp add: no_orphans_disj all_queued_tcb_ptrs_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_disj_lift storeWordUser_typ'
        | clarsimp)+
@@ -582,24 +586,24 @@ lemma no_orphans_ksIdle [simp]:
 
 
 crunch no_orphans [wp]: "Arch.switchToThread" "no_orphans"
-  (wp: no_orphans_lift ignore: ARM.clearExMonitor)
+  (wp: no_orphans_lift ignore: ARM_HYP.clearExMonitor)
 
 crunch ksCurThread [wp]: "Arch.switchToThread" "\<lambda> s. P (ksCurThread s)"
-  (ignore: ARM.clearExMonitor)
+  (ignore: ARM_HYP.clearExMonitor)
 
 crunch ksIdleThread [wp]: "Arch.switchToThread" "\<lambda> s. P (ksIdleThread s)"
-  (ignore: ARM.clearExMonitor)
+  (ignore: ARM_HYP.clearExMonitor)
 
 lemma ArchThreadDecls_H_switchToThread_all_queued_tcb_ptrs [wp]:
   "\<lbrace> \<lambda>s. P (all_queued_tcb_ptrs s) \<rbrace>
    Arch.switchToThread tcb_ptr
    \<lbrace> \<lambda>rv s. P (all_queued_tcb_ptrs s) \<rbrace>"
-  unfolding ARM_H.switchToThread_def all_queued_tcb_ptrs_def
+  unfolding ARM_HYP_H.switchToThread_def all_queued_tcb_ptrs_def
   apply (wp | clarsimp)+
   done
 
 crunch ksSchedulerAction [wp]: "Arch.switchToThread" "\<lambda>s. P (ksSchedulerAction s)"
-  (ignore: ARM.clearExMonitor)
+  (ignore: ARM_HYP.clearExMonitor)
 
 
 lemma setCurThread_no_orphans [wp]:
@@ -708,7 +712,7 @@ lemma findM_on_success:
   done
 
 crunch st_tcb' [wp]: switchToThread "\<lambda>s. P' (st_tcb_at' P t s)"
-  (ignore: ARM.clearExMonitor)
+  (ignore: ARM_HYP.clearExMonitor)
 
 lemma setQueue_deq_not_empty:
   "\<lbrace> \<lambda>s. (\<exists>tcb. tcb \<in> set (ksReadyQueues s p) \<and> st_tcb_at' P tcb s) \<and>
@@ -1066,13 +1070,13 @@ lemma sendIPC_valid_queues' [wp]:
    \<lbrace> \<lambda>rv s. valid_queues' s \<rbrace>"
   unfolding sendIPC_def
   apply (wp hoare_drop_imps | wpc | clarsimp)+
-          apply (wp_once sts_st_tcb', clarsimp)
+ (*         apply (wp sts_st_tcb', simp)
          apply (wp)+
   apply (rule_tac Q="\<lambda>rv. valid_queues' and valid_objs' and ko_at' rv epptr
                           and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
    apply (clarsimp)
   apply (wp get_ep_sp' | clarsimp)+
-  done
+  done*) sorry
 
 lemma sendFaultIPC_valid_queues' [wp]:
   "\<lbrace> \<lambda>s. valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s \<rbrace>
@@ -1170,7 +1174,7 @@ lemma createNewCaps_no_orphans:
                                     objBits_if_dev
                           split del: if_split
                    | simp add: objBits_simps
-                   | fastforce simp:pageBits_def archObjSize_def ptBits_def pdBits_def)+
+                   | fastforce simp:pageBits_def archObjSize_def vspace_bits_defs)+
   done
 
 lemma createObject_no_orphans:
@@ -1181,10 +1185,10 @@ lemma createObject_no_orphans:
    \<lbrace>\<lambda>xa. no_orphans\<rbrace>"
   including no_pre
   apply (case_tac tp)
-        apply (simp_all add: createObject_def ARM_H.createObject_def split del: if_split)
+        apply (simp_all add: createObject_def ARM_HYP_H.createObject_def split del: if_split)
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type)
-            apply (simp_all add: ARM_H.createObject_def placeNewObject_def2
+            apply (simp_all add: ARM_HYP_H.createObject_def placeNewObject_def2
               toAPIType_def split del: if_split)+
             apply (wp threadSet_no_orphans | clarsimp)+
            apply ((wp createObjects'_wp_subst
@@ -1223,14 +1227,14 @@ lemma createObject_no_orphans:
    apply ((wp createObjects'_wp_subst
                createObjects_no_orphans[where sz = sz ] |
        clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-                      is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def
+                      is_active_thread_state_def makeObject_tcb vspace_bits_defs
                       projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
                       APIType_capBits_def objBits_simps
                split: option.splits)+)[1]
   apply ((wp createObjects'_wp_subst
               createObjects_no_orphans[where sz = sz] |
       clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
-                     is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def pdBits_def
+                     is_active_thread_state_def makeObject_tcb vspace_bits_defs
                      projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
                      APIType_capBits_def objBits_simps
               split: option.splits))+
@@ -1478,7 +1482,7 @@ lemma handleInterrupt_no_orphans [wp]:
    apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv
          | wpc | clarsimp simp: invs'_def valid_state'_def
                                 handleReservedIRQ_def)+
-  done
+  sorry (* vgicMaintenance *)
 
 lemma suspend_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> tcb_at' t s \<rbrace>
@@ -1498,7 +1502,7 @@ lemma storeHWASID_no_orphans [wp]:
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
   unfolding no_orphans_disj all_queued_tcb_ptrs_def
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-  done
+  sorry
 
 lemma invalidateHWASIDEntry_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
@@ -1506,7 +1510,7 @@ lemma invalidateHWASIDEntry_no_orphans [wp]:
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
   unfolding no_orphans_disj all_queued_tcb_ptrs_def
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-  done
+  sorry
 
 lemma invalidateASID_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
@@ -1514,7 +1518,7 @@ lemma invalidateASID_no_orphans [wp]:
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
   unfolding no_orphans_disj all_queued_tcb_ptrs_def
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-  done
+  sorry
 
 lemma findFreeHWASID_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
@@ -1522,7 +1526,7 @@ lemma findFreeHWASID_no_orphans [wp]:
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
   unfolding no_orphans_disj all_queued_tcb_ptrs_def
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-  done
+  sorry
 
 crunch ksCurThread [wp]: invalidateASIDEntry "\<lambda> s. P (ksCurThread s)"
 
@@ -1577,7 +1581,12 @@ lemma flushTable_no_orphans [wp]:
   apply (wp hoare_drop_imps | wpc | clarsimp)+
   done
 
+lemma dissociateVCPUTCB_no_orphans [wp]:
+  "\<lbrace>no_orphans\<rbrace> dissociateVCPUTCB param_a param_b \<lbrace>\<lambda>_. no_orphans\<rbrace>"
+  sorry
+
 crunch no_orphans [wp]: unmapPageTable, prepareThreadDelete "no_orphans"
+ (ignore: getObject updateObject)
 
 lemma setASIDPool_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
@@ -1599,10 +1608,10 @@ lemma arch_finaliseCap_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
    Arch.finaliseCap cap fin
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding ARM_H.finaliseCap_def
+  unfolding ARM_HYP_H.finaliseCap_def
   apply (rule hoare_pre)
    apply (wp | wpc | clarsimp)+
-  done
+  sorry
 
 lemma deletingIRQHandler_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
@@ -1860,7 +1869,7 @@ lemma invokeIRQControl_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
    performIRQControl i
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (cases i, simp_all add: performIRQControl_def ARM_H.performIRQControl_def)
+  apply (cases i, simp_all add: performIRQControl_def ARM_HYP_H.performIRQControl_def)
   apply (wp | clarsimp)+
   done
 
@@ -1984,11 +1993,18 @@ lemma performPageDirectoryInvocation_no_orphans [wp]:
   apply (wp | simp)+
   done
 
+lemma performARMVCPUInvocation_no_orphans [wp]:
+  "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
+   performARMVCPUInvocation vi
+   \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
+  apply (cases vi, simp_all add: performARMVCPUInvocation_def)
+  sorry
+
 lemma arch_performInvocation_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_arch_inv' i s \<and> ct_active' s \<rbrace>
    Arch.performInvocation i
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
-  unfolding ARM_H.performInvocation_def performARMMMUInvocation_def
+  unfolding ARM_HYP_H.performInvocation_def performARMMMUInvocation_def
   apply (cases i, simp_all add: valid_arch_inv'_def)
       apply (wp | clarsimp)+
   done
@@ -2110,7 +2126,19 @@ notes if_cong[cong] shows
      apply (wp | clarsimp | fastforce)+
   done
 
-crunch invs' [wp]: getThreadCallerSlot, handleHypervisorFault "invs'"
+crunch invs' [wp]: getThreadCallerSlot "invs'"
+
+lemma asUser_invs': "\<lbrace>invs'\<rbrace> asUser param_a param_b \<lbrace>\<lambda>_. invs'\<rbrace>"
+  sorry
+
+lemma setObject_invs': "\<lbrace>invs'\<rbrace> setObject param_a param_b \<lbrace>\<lambda>_. invs'\<rbrace>"
+  sorry
+
+lemma sendIPC_invs':"\<lbrace>invs'\<rbrace> sendIPC param_a param_b param_c param_d param_e param_f \<lbrace>\<lambda>_. invs'\<rbrace>"
+  sorry
+
+crunch invs' [wp]: handleHypervisorFault "invs'"
+  (ignore: doMachineOp getObject updateObject)
 
 lemma handleReply_no_orphans [wp]:
   "\<lbrace>no_orphans and invs'\<rbrace> handleReply \<lbrace>\<lambda>_. no_orphans\<rbrace>"

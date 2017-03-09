@@ -395,7 +395,7 @@ lemma valid_sched_init[simp]:
   apply (simp add: valid_sched_def init_A_st_def ext_init_def)
   apply (clarsimp simp: valid_etcbs_def init_kheap_def st_tcb_at_kh_def obj_at_kh_def
                     obj_at_def is_etcb_at_def idle_thread_ptr_def init_globals_frame_def
-                    init_global_pd_def valid_queues_2_def ct_not_in_q_def not_queued_def
+                    valid_queues_2_def ct_not_in_q_def not_queued_def
                     valid_sched_action_def is_activatable_def
                     ct_in_cur_domain_2_def valid_blocked_2_def valid_idle_etcb_def etcb_at'_def default_etcb_def)
   done
@@ -481,7 +481,7 @@ lemma kernelEntry_invs':
             doMachineOp_ct_running' doMachineOp_sch_act_simple
             callKernel_domain_time_left
             static_imp_wp
-         | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs'
+         | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs' atcbContextSet_def
                           valid_domain_list'_def)+
   done
 
@@ -519,7 +519,7 @@ lemma ptable_rights_imp_UserData:
   assumes rel: "(s,s') : state_relation"
   assumes rights: "ptable_rights t (absKState s') x \<noteq> {}"
   assumes trans:
-    "ptable_lift t (absKState s') x = Some (ARM.addrFromPPtr y)"
+    "ptable_lift t (absKState s') x = Some (ARM_HYP.addrFromPPtr y)"
   shows "pointerInUserData y s' \<or> pointerInDeviceData y s'"
 proof -
   from invs invs' rel have [simp]: "absKState s' = abs_state s"
@@ -667,7 +667,7 @@ lemma entry_corres:
                  threadSet_invs_trivial threadSet_ct_running'
                  select_wp thread_set_not_state_valid_sched static_imp_wp
                  hoare_vcg_disj_lift ct_in_state_thread_state_lift
-              | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state
+              | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state atcbContextSet_def
               | (wps, wp threadSet_st_tcb_at2) )+
    apply (clarsimp simp: invs_def cur_tcb_def)
   apply (clarsimp simp: ct_in_state'_def)

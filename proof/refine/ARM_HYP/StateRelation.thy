@@ -191,7 +191,7 @@ definition
   arch_tcb_relation :: "Structures_A.arch_tcb \<Rightarrow> Structures_H.arch_tcb \<Rightarrow> bool"
 where
  "arch_tcb_relation \<equiv> \<lambda>atcb atcb'.
-   tcb_context atcb = atcbContext atcb'"
+   tcb_context atcb = atcbContext atcb' \<and> tcb_vcpu atcb = atcbVCPUPtr atcb'"
 
 definition
   tcb_relation :: "Structures_A.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"
