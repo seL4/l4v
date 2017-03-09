@@ -40,7 +40,7 @@ where
 end
 
 context begin interpretation Arch .
-requalify_types register
+requalify_types register vcpureg
 
 end
 
