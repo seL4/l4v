@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Refinement for handleEvent and syscalls
 *)
 
@@ -39,39 +39,36 @@ lemma diminished_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
       \<Longrightarrow> no_cap_to_obj_with_diff_ref cap S s"
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_arch_caps_def)
   apply (frule(1) unique_table_refs_no_cap_asidD)
-  apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def 
+  apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def
     table_cap_ref_mask_cap diminished_def Ball_def)
   done
 
-lemma getDFSR_invs[wp]:
-  "valid invs (do_machine_op getDFSR) (\<lambda>_. invs)"
-  by (simp add: getDFSR_def do_machine_op_def split_def select_f_returns | wp)+
-
-lemma getFAR_invs[wp]:
-  "valid invs (do_machine_op getFAR) (\<lambda>_. invs)"
-  by (simp add: getFAR_def do_machine_op_def split_def select_f_returns | wp)+
-
-lemma getIFSR_invs[wp]:
-  "valid invs (do_machine_op getIFSR) (\<lambda>_. invs)"
-  by (simp add: getIFSR_def do_machine_op_def split_def select_f_returns | wp)+
+lemma getFaultAddress_invs[wp]:
+  "valid invs (do_machine_op getFaultAddress) (\<lambda>_. invs)"
+  by (simp add: getFaultAddress_def do_machine_op_def split_def select_f_returns | wp)+
 
 lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
   apply (cases flt, simp_all)
   apply (wp|simp)+
   done
 
+crunch inv[wp]: getFaultAddress, getRegister "P"
+
 lemma hv_inv_ex [Syscall_AI_assms]:
   "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   apply (cases vp, simp_all)
-  apply (wp dmo_inv getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv 
+  apply (wp dmo_inv getFaultAddress_inv getRestartPC_inv
             det_getRestartPC as_user_inv
          | wpcw | simp)+
   done
 
+lemma no_irq_getFaultAddress: "no_irq getFaultAddress"
+  by (wp | clarsimp simp: getFaultAddress_def)+
+
 lemma handle_vm_fault_valid_fault[wp, Syscall_AI_assms]:
   "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
   apply (cases ft, simp_all)
-   apply (wp no_irq_getDFSR no_irq_getIFSR| simp add: valid_fault_def)+
+   apply (wp no_irq_getFaultAddress | simp add: valid_fault_def)+
   done
 
 lemma hvmf_active [Syscall_AI_assms]:
@@ -85,6 +82,16 @@ lemma hvmf_ex_cap[wp, Syscall_AI_assms]:
   apply (cases b, simp_all)
    apply (wp | simp)+
   done
+
+
+crunch pred_tcb_at[wp,Syscall_AI_assms]: handle_arch_fault_reply "pred_tcb_at proj P t"
+crunch invs[wp,Syscall_AI_assms]: handle_arch_fault_reply "invs"
+crunch cap_to[wp,Syscall_AI_assms]: handle_arch_fault_reply "ex_nonz_cap_to c"
+crunch it[wp,Syscall_AI_assms]: handle_arch_fault_reply "\<lambda>s. P (idle_thread s)"
+crunch caps[wp,Syscall_AI_assms]: handle_arch_fault_reply "\<lambda>s. P (caps_of_state s)"
+crunch cur_thread[wp,Syscall_AI_assms]: handle_arch_fault_reply "\<lambda>s. P (cur_thread s)"
+crunch valid_objs[wp,Syscall_AI_assms]: handle_arch_fault_reply "valid_objs"
+crunch cte_wp_at[wp,Syscall_AI_assms]: handle_arch_fault_reply "\<lambda>s. P (cte_wp_at P' p s)"
 
 end
 
