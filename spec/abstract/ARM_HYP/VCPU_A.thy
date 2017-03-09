@@ -147,7 +147,7 @@ definition invoke_vcpu_inject_irq :: "obj_ref \<Rightarrow> nat \<Rightarrow> vi
 where "invoke_vcpu_inject_irq vr index virq \<equiv> do
    cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
    (case cur_v of
-      Some (vr, _) \<Rightarrow> do_machine_op $ set_gic_vcpu_ctrl_lr index virq
+      Some (vr, _) \<Rightarrow> do_machine_op $ set_gic_vcpu_ctrl_lr (of_nat index) virq
     | None \<Rightarrow> do
            vcpu \<leftarrow> get_vcpu vr;
            vcpuLR \<leftarrow> return (fun_upd (vgicLR $ vcpu_VGIC $ vcpu) index (Some virq));

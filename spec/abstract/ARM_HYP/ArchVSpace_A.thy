@@ -423,7 +423,7 @@ where
        apr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_apr;
        num_list_regs \<leftarrow> gets (arm_gicvcpu_numlistregs \<circ> arch_state);
        gicIndices \<leftarrow> return (map nat [0..(int num_list_regs)-1]);
-       lr_vals \<leftarrow> do_machine_op $ mapM get_gic_vcpu_ctrl_lr gicIndices;
+       lr_vals \<leftarrow> do_machine_op $ mapM (get_gic_vcpu_ctrl_lr \<circ> of_nat) gicIndices;
        pairs \<leftarrow> return (zip gicIndices lr_vals);
        vcpuLR \<leftarrow> return (foldl (\<lambda>f p. fun_upd f (fst p) (Some (snd p))) (vgicLR $ vcpu_VGIC vcpu) pairs);
        set_vcpu vr (vcpu \<lparr>vcpu_sctlr := sctlr,
@@ -448,7 +448,8 @@ where
      do_machine_op $ do
          set_gic_vcpu_ctrl_vmcr (vgicVMCR vgic);
          set_gic_vcpu_ctrl_apr (vgicAPR vgic);
-         mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (nat (fst p)) (the (snd p))) (map (%i. (i, (vgicLR vgic) (nat i))) [0 ..  gicVCPUMaxNumLR-1]);
+         mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (of_int (fst p)) (the (snd p)))
+              (map (\<lambda>i. (i, (vgicLR vgic) (nat i))) [0 ..  gicVCPUMaxNumLR-1]);
          setACTLR (vcpu_actlr vcpu)
      od;
      vcpu_enable vr
