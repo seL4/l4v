@@ -44,8 +44,13 @@ There are presently no ARM-specific register subsets defined, but in future this
 #ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 > sanitiseRegister _ CPSR v = (v .&. 0xf8000000) .|. 0x150
 #else
-> sanitiseRegister _ CPSR v =
->     if v .&. 0x1f == 0x1f then v else (v .&. 0xf8000000) .|. 0x150
+> sanitiseRegister tcb CPSR v =
+>   if (atcbVCPUPtr (tcbArch tcb) /= Nothing && ((v .&. 0x1f) `elem` modes))
+>       then v
+>       else v'
+>   where v' = (v .&. 0xf8000000) .|. 0x150
+>         -- PMODE_(USER/FIQ/IRQ/SUPERVISOR/ABORT/UNDEFINED/SYSTEM)
+>         modes = [0x10, 0x11, 0x12, 0x13, 0x17, 0x1b, 0x1f]
 #endif
 > sanitiseRegister _ _ v = v
 
