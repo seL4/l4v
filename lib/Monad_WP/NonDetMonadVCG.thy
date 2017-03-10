@@ -1631,7 +1631,7 @@ lemma hoare_drop_imp:
 
 lemma hoare_drop_impE:
   "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. R r s \<longrightarrow> Q s\<rbrace>, \<lbrace>E\<rbrace>"
-  by (metis (lifting, mono_tags) hoare_post_impErr')
+  by (simp add: validE_weaken)
 
 lemma hoare_drop_impE_R:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. R r s \<longrightarrow> Q r s\<rbrace>, -"
