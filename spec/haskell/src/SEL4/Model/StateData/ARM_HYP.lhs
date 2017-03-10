@@ -68,6 +68,8 @@ FIXME ARMHYP missing IO ASID to PD map for SMMU
 #else
 >     armHSCurVCPU :: Maybe (PPtr VCPU, Bool),
 >     armKSGICVCPUNumListRegs :: Int,
+>     armUSGlobalPD :: PPtr PDE,
+>     -- a page directory containing invalid mappings (no shared kernel region)
 #endif
 >     armKSKernelVSpace :: PPtr Word -> ArmVSpaceRegionUse}
 
@@ -120,6 +122,7 @@ FIXME ARMHYP ok, someone needs to explain how this actually works before it gets
 >             armKSASIDMap = funPartialArray (const Nothing) asidRange,
 >             armHSCurVCPU = Nothing,
 >             armKSGICVCPUNumListRegs = error "FIXME ARMHYP read from platform",
+>             armUSGlobalPD = error "FIXME ARMHYP address of C global constant",
 >             armKSKernelVSpace =
 >                 (\vref -> if vref < mask 20 then ArmVSpaceKernelWindow
 >                                             else ArmVSpaceInvalidRegion)
