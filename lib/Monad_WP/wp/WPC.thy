@@ -9,7 +9,7 @@
  *)
 
 theory WPC
-imports "~~/src/HOL/Main"
+imports "WP_Pre"
 keywords "wpc_setup" :: thy_decl
 
 begin
@@ -236,11 +236,14 @@ val wp_cases_method_vweak  = WeakestPreCases.wp_cases_method @{thms wpc_vweak_pr
 
 *}
 
-method_setup wpc = {* wp_cases_method_strong *}
+method_setup wpc0 = {* wp_cases_method_strong *}
   "case splitter for weakest-precondition proofs"
 
-method_setup wpcw = {* wp_cases_method_weak *}
+method_setup wpcw0 = {* wp_cases_method_weak *}
   "weak-form case splitter for weakest-precondition proofs"
+
+method wpc = (wp_pre, wpc0)
+method wpcw = (wp_pre, wpcw0)
 
 definition
   wpc_test :: "'a set \<Rightarrow> ('a \<times> 'b) set \<Rightarrow> 'b set \<Rightarrow> bool"
