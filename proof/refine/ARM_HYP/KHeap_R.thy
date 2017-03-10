@@ -10,7 +10,7 @@
 
 theory KHeap_R
 imports
-  "../../invariant-abstract/DetSchedSchedule_AI"
+  "../../invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
   Machine_R Eisbach
 begin
 
