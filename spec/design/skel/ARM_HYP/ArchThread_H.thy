@@ -15,6 +15,7 @@ imports
   ArchThreadDecls_H
   "../TCBDecls_H"
   ArchVSpaceDecls_H
+  ArchHypervisor_H
 begin
 context Arch begin global_naming ARM_HYP_H
 
