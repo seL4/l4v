@@ -17,8 +17,8 @@ imports
 begin
 
 (* Wrap up the standard usage pattern of wp/wpc/simp into its own command: *)
-method wpsimp uses wp simp =
-  ((determ \<open>wp add: wp|wpc|clarsimp simp: simp\<close>)+)[1]
+method wpsimp uses wp simp split split_del cong =
+  ((determ \<open>wp add: wp|wpc|clarsimp simp: simp split: split split del: split_del cong: cong\<close>)+)[1]
 
 declare K_def [simp]
 
