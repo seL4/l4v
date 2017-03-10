@@ -3759,7 +3759,7 @@ lemma finalise_cap_corres:
          apply (rule corres_split[OF _ suspend_corres])
             apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
           apply (rule prepareThreadDelete_corres)
-        apply (wp unbind_notification_invs ARM.unbind_notification_simple_sched_action)+
+        apply (wp unbind_notification_invs unbind_notification_simple_sched_action)+
       apply (simp add: valid_cap_def)
      apply (simp add: valid_cap'_def)
     apply (simp add: final_matters'_def liftM_def[symmetric]
