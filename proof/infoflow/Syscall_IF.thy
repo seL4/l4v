@@ -831,11 +831,19 @@ lemma handle_vm_fault_reads_respects:
          | simp add: getRestartPC_def getRegister_def reads_lrefl)+
   done
 
+lemma handle_hypervisor_fault_reads_respects:
+  "reads_respects aag l \<top> (handle_hypervisor_fault thread hypfault_type)"
+  by (cases hypfault_type; wpsimp)
+
 lemma handle_vm_fault_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> handle_vm_fault thread vmfault_type \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
   apply (cases vmfault_type)
    apply (wp dmo_no_mem_globals_equiv | simp add: getDFSR_def getFAR_def getIFSR_def)+
   done
+
+lemma handle_hypervisor_fault_globals_equiv:
+  "\<lbrace>globals_equiv st\<rbrace> handle_hypervisor_fault thread hypfault_type \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
+  by (cases hypfault_type; wpsimp)
 
 lemma handle_vm_fault_reads_respects_g:
   "reads_respects_g aag l (K(is_subject aag thread) and (valid_ko_at_arm and (\<lambda>s. thread \<noteq> idle_thread s))) (handle_vm_fault thread vmfault_type)"
@@ -843,6 +851,15 @@ lemma handle_vm_fault_reads_respects_g:
    apply (rule handle_vm_fault_reads_respects)
   apply (rule doesnt_touch_globalsI)
   apply (wp handle_vm_fault_globals_equiv)
+  apply simp
+  done
+
+lemma handle_hypervisor_fault_reads_respects_g:
+  "reads_respects_g aag l \<top> (handle_hypervisor_fault thread hyp)"
+  apply (rule reads_respects_g[where P="\<top>" and Q="\<top>", simplified])
+   apply (rule handle_hypervisor_fault_reads_respects)
+  apply (rule doesnt_touch_globalsI)
+  apply (wp handle_hypervisor_fault_globals_equiv)
   apply simp
   done
 
@@ -865,7 +882,7 @@ crunch silc_inv[wp]: handle_yield "silc_inv aag st"
 
 crunch globals_equiv[wp]: handle_yield "globals_equiv st" (wp: dxo_wp_weak ignore: reschedule_required)
 
-crunch pas_cur_domain[wp]: handle_reply, handle_vm_fault "pas_cur_domain aag"
+crunch pas_cur_domain[wp]: handle_reply, handle_vm_fault, handle_hypervisor_fault "pas_cur_domain aag"
   (wp: crunch_wps ignore: getFAR getDFSR getIFSR)
 
 lemma equiv_valid_hoist_guard:
@@ -891,10 +908,10 @@ lemma handle_event_reads_respects_f_g:
                   reads_respects_f_g[OF reads_respects_f[where st=st and aag=aag and Q=\<top>, OF handle_yield_reads_respects] doesnt_touch_globalsI]
                   handle_reply_reads_respects_g handle_reply_silc_inv[where st=st]
                 | simp add: invs_imps | rule equiv_valid_guard_imp | force)+)[8]
-     apply (wp reads_respects_f_g'[OF handle_fault_reads_respects_g, where st=st]
+     apply ((wp reads_respects_f_g'[OF handle_fault_reads_respects_g, where st=st]
                | simp add: reads_equiv_f_g_conj
             | clarsimp simp: invs_imps requiv_g_cur_thread_eq schact_is_rct_simple
-            | wpc | intro impI conjI allI)+
+            | wpc | intro impI conjI allI)+)[3]
        apply (rule equiv_valid_guard_imp)
         apply ((wp reads_respects_f_g'[OF handle_vm_fault_reads_respects_g, where Q="\<top>" and st=st] handle_vm_fault_silc_inv | simp)+)[1]
         prefer 2
@@ -906,6 +923,18 @@ lemma handle_event_reads_respects_f_g:
           apply (wp hv_invs handle_vm_fault_silc_inv)+
        apply (simp add: invs_imps invs_mdb invs_valid_idle)+
        apply wp+
+   apply (clarsimp simp: requiv_g_cur_thread_eq reads_equiv_f_g_conj ct_active_not_idle)
+  apply (wp reads_respects_f_g'[OF handle_fault_reads_respects_g, where st=st]
+          | simp add: reads_equiv_f_g_conj
+          | clarsimp simp: invs_imps requiv_g_cur_thread_eq schact_is_rct_simple
+          | wpc | intro impI conjI allI)+
+       apply (rule equiv_valid_guard_imp)
+        apply ((wp reads_respects_f_g'[OF handle_hypervisor_fault_reads_respects_g, where Q="\<top>" and st=st] handle_hypervisor_fault_silc_inv | simp)+)[1]
+       prefer 2
+       apply ((wp reads_respects_f_g'[OF handle_fault_reads_respects_g, where st=st] | simp)+)[1]
+      apply (simp add: validE_E_def)
+     apply (wp hv_invs handle_vm_fault_silc_inv)+
+  apply (simp add: invs_imps invs_mdb invs_valid_idle)+
   apply (clarsimp simp: requiv_g_cur_thread_eq reads_equiv_f_g_conj ct_active_not_idle)
   done
 
@@ -1048,6 +1077,7 @@ lemma handle_event_globals_equiv:
                  handle_reply_globals_equiv
                  handle_interrupt_globals_equiv
                  handle_vm_fault_globals_equiv
+                 handle_hypervisor_fault_globals_equiv
               | wpc | simp add: handle_send_def handle_call_def Let_def
               | wp_once hoare_drop_imps | clarsimp simp: invs_imps invs_valid_idle ct_active_not_idle)+
   done

@@ -274,7 +274,7 @@ fun append_used_rule rule used_rules = used_rules := !used_rules @ [rule]
 
 fun add_extra_rule rule extra_rules = extra_rules := !extra_rules @ [rule]
 
-fun resolve_ruleset_tac ctxt rs used_rules_ref n t =
+fun resolve_ruleset_tac' ctxt rs used_rules_ref n t =
   let fun append_rule rule thm = Seq.map (fn thm => (append_used_rule rule used_rules_ref; thm)) thm;
   in case
     Thm.cprem_of t n |> Thm.term_of |> snd (#trips rs) (Thm.theory_of_thm t)
@@ -293,6 +293,9 @@ fun resolve_ruleset_tac ctxt rs used_rules_ref n t =
          FIRST (map (fn split => fn thm => append_rule split (resolve_tac ctxt [split] n thm)) (#splits rs)) end t
     | _ => FIRST (map (fn rule => fn thm => append_rule rule (resolve_tac ctxt [rule] n thm))
                       (map snd (#3 (#rules rs)) @ #splits rs)) t end;
+
+fun resolve_ruleset_tac ctxt rs used_rules_ref n =
+  (Apply_Debug.break ctxt (SOME "wp")) THEN (resolve_ruleset_tac' ctxt rs used_rules_ref n)
 
 fun pretty_rule ctxt rule =
   Pretty.big_list (Thm.get_name_hint rule) [Thm.pretty_thm ctxt rule]

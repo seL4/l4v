@@ -334,7 +334,7 @@ datatype SimpTrace = SimpTrace of { equation : thm, thms : (string * cterm) list
 
 fun fconv_rule_traced ctxt conv thm =
   let val eq_thm = conv (Thm.cprop_of thm)
-      val thms = Apply_Trace.used_facts eq_thm
+      val thms = Apply_Trace.used_facts ctxt eq_thm |> map (fn ((nm,idx),ct) => (nm,ct))
   in (if Thm.is_reflexive eq_thm then thm else Thm.equal_elim eq_thm thm, (* Pure/conv.ML *)
       SimpTrace { equation = eq_thm, thms = map (apsnd (Thm.cterm_of ctxt)) thms })
   end

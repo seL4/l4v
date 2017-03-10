@@ -19,6 +19,7 @@ imports
   "../design/Event_H"
   Decode_A
   "./$L4V_ARCH/Init_A"
+  "./$L4V_ARCH/Hypervisor_A"
 begin
 
 context begin interpretation Arch .
@@ -26,7 +27,7 @@ context begin interpretation Arch .
 requalify_consts
   arch_perform_invocation
   handle_vm_fault
-
+  handle_hypervisor_fault
 end
 
 
@@ -361,6 +362,12 @@ where
 | "handle_event (VMFaultEvent fault_type) = (without_preemption $ do
     thread \<leftarrow> gets cur_thread;
     handle_vm_fault thread fault_type <catch> handle_fault thread;
+    return ()
+  od)"
+
+| "handle_event (HypervisorEvent hypfault_type) = (without_preemption $ do
+    thread \<leftarrow> gets cur_thread;
+    handle_hypervisor_fault thread hypfault_type;
     return ()
   od)"
 

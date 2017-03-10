@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!--
+     Copyright 2016, Data61
+
+     This software may be distributed and modified according to the terms of
+     the BSD 2-Clause license. Note that NO WARRANTY is provided.
+     See "LICENSE_BSD2.txt" for details.
+
+     @TAG(DATA61_BSD)
+  -->
+
+<!--
+
+     Regression Specification File
+
+     See "misc/regression/tests.xml" for a description of the file
+     format.
+
+-->
+<testsuite cpu-timeout="600">
+
+    <set depends="isabelle">
+        <test name="Sep_Algebra">../../isabelle/bin/isabelle build -v -d ../.. Sep_Algebra</test>
+    </set>
+
+</testsuite>

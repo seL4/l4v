@@ -8,12 +8,13 @@
  * @TAG(GD_GPL)
  *)
 
-theory Corres
-imports StateRelation
+theory Include
+imports
+  "../../../spec/abstract/Syscall_A"
+  "../../../spec/design/API_H"
+  "../../../spec/design/$L4V_ARCH/ArchIntermediate_H"
 begin
 
-text {* Instantiating the corres framework to this particular state relation. *}
-abbreviation
- "corres \<equiv> corres_underlying state_relation False True"
+no_notation bind_drop (infixl ">>" 60)
 
 end

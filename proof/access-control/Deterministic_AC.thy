@@ -10,7 +10,7 @@
 
 theory Deterministic_AC
 imports
-  "../invariant-abstract/DetSchedSchedule_AI"
+  "../invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
 begin
 
 (*This theory defines an abstract "integrity" property over

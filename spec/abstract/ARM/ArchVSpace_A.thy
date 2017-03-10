@@ -581,6 +581,13 @@ where
   od
   | _ \<Rightarrow> return NullCap"
 
+
+definition (* prepares a thread for deletion; nothing to do for ARM *)
+  prepare_thread_delete :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "prepare_thread_delete p \<equiv> return ()"
+
+
 text {* A thread's virtual address space capability must be to a page directory
 to be valid on the ARM architecture. *}
 definition

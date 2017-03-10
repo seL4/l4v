@@ -1664,3 +1664,32 @@ case \x of (cap@IOPageTableCap {}) -> _ ->  ---> let cap = \x in
   then ->1
   else ->2
 
+case \x of cap@(PageCap {}) -> _ ->  ---> let cap = \x in
+  if isPageCap cap
+  then ->1
+  else ->2
+
+case \x of (PageMap asid cap ctSlot entries) -> (PageRemap entries) -> (PageUnmap cap ctSlot) -> (PageIOMap cap cptr vtdpte slot) -> (PageIOUnmap (ArchObjectCap cap@PageCap {}) ctSlot) -> (PageIOUnmap _ _) -> (PageGetAddr ptr) ->  ---> let \v0\ = \x in
+    case \v0\ of
+      PageMap asid cap ct ctSlot entries => ->1
+    | PageRemap entries => ->2
+    | PageUnmap cap ctSlot => ->3
+    | PageIOMap cap cptr ctdpte slot => ->4
+    | PageIOUnmap (ArchObjectCap cap) ctSlot =>
+        if isPageCap cap
+        then ->5
+        else ->6
+    | PageIOUnmap _ _ => ->6
+    | PageGetAddr ptr => ->7
+
+case \x of UntypedCap {} | capBlockSize untyped == objBits pool -> _ ->  ---> let \v0\ = \x in
+    if isUntypedCap \v0\ \<and> capBlockSize \v0\ == objBits pool
+    then ->1
+    else ->2
+
+case \x of (cap@IOPageTableCap {}) -> _ ->  ---> let cap = \x in
+  if isIOPageTableCap cap
+  then ->1
+  else ->2
+
+

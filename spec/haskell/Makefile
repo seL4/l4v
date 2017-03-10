@@ -16,31 +16,49 @@ BOOT_MODULES = Kernel/CSpace Kernel/Thread Kernel/FaultHandler \
 
 BOOT_FILES=$(BOOT_MODULES:%=src/SEL4/%.lhs-boot)
 
-GHC=ghc
+# We use the cabal executable that we installed via stack,
+# and use the PATH from `stack exec` to find it.
+# However, cabal refuses to run when the GHC_PACKAGE_PATH
+# variable is set, so we use `stack-path` to clear
+# GHC_PACKAGE_PATH first.
+CABAL=stack exec -- ./stack-path cabal
 
 all: build pdf
 
-build: $(BOOT_FILES)
-	cabal sandbox init
-	cabal install --dependencies-only -w $(GHC)
-	cabal configure --configure-option="arm-kzm" -w $(GHC) 
-	cabal build
+build: .stack-work $(BOOT_FILES)
+	$(CABAL) sandbox init
+	$(CABAL) install --dependencies-only
+	$(CABAL) configure --configure-option="arm-kzm"
+	$(CABAL) build
 
-build-x64: $(BOOT_FILES)
-	cabal sandbox init
-	cabal install --dependencies-only
+build-x64: .stack-work $(BOOT_FILES)
+	$(CABAL)sandbox init
+	$(CABAL) install --dependencies-only
 	# FIXME: allow some warnings for now
-	cabal configure --configure-option="x64-pc99" --flags="-FFI -ArchArm" --ghc-options="-fno-warn-unused-matches -fno-warn-unused-imports"
-
-	cabal build
+	$(CABAL) configure --configure-option="x64-pc99" --flags="-FFI -ArchArm" --ghc-options="-fno-warn-unused-matches -fno-warn-unused-imports"
+	$(CABAL) build
 pdf:
 	cd doc && make
+
+# We assume that if the .stack-work directory exists,
+# we don't need to install ghc, cabal, nor fetch the cabal
+# package database.
+# We make this assumption to avoid hitting the network on
+# every build.
+# However, this means that if .stack-work exists, but the
+# cabal package database is missing, the build will fail.
+.stack-work:
+	stack --install-ghc build cabal-install
+	$(CABAL) update
 
 %.lhs-boot: %.lhs mkhsboot.pl
 	perl mkhsboot.pl -l < $< > $@
 
 clean:
 	rm -f $(BOOT_FILES)
-	cabal clean
+	$(CABAL) clean
 
-.PHONY: all build pdf clean
+realclean:
+	rm -rf $(BOOT_FILES) dist .stack-work .cabal-sandbox cabal.sandbox.config
+
+.PHONY: all build pdf clean realclean

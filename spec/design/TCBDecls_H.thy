@@ -129,5 +129,8 @@ threadSet :: "(tcb \<Rightarrow> tcb) \<Rightarrow> machine_word \<Rightarrow> u
 consts'
 asUser :: "machine_word \<Rightarrow> 'a user_monad \<Rightarrow> 'a kernel"
 
+consts'
+sanitiseRegister :: "tcb \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
+
 
 end

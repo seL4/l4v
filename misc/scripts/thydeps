@@ -206,7 +206,7 @@ sub read_thy {
 
     if (s/^keywords\s*//) {
       while (not m/^(?:uses|begin)\b/ and
-             s/^(?:"[^"]*"|and\b\s*|::\s*$re_id)\s*//) {}
+             s/^(?:"[^"]*"|and\b\s*|::\s*$re_id|%\s*$re_id)\s*//) {}
     }
 
     if (s/^uses\s*//) {

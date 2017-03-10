@@ -14,7 +14,7 @@ imports
   SyscallArgs_C
   Delete_C
   Syscall_C
-  "../refine/RAB_FN"
+  "../refine/$L4V_ARCH/RAB_FN"
   "../../lib/clib/MonadicRewrite_C"
 begin
 

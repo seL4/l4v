@@ -185,6 +185,7 @@ od))
     cte_ptr \<leftarrow> getThreadCSpaceRoot tcb;
     unbindNotification tcb;
     suspend tcb;
+    Arch.prepareThreadDelete tcb;
     return (Zombie cte_ptr ZombieTCB 5, Nothing)
   od)
   else if isZombie v1 \<and> v2

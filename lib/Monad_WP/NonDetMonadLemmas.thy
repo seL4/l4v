@@ -126,8 +126,14 @@ lemma when_False [simp]: "when False X = return ()"
 lemma unless_False [simp]: "unless False X = X"
   by (clarsimp simp: unless_def)
 
+lemma unlessE_False [simp]: "unlessE False f = f"
+  unfolding unlessE_def by fastforce
+
 lemma unless_True [simp]: "unless True X = return ()"
   by (clarsimp simp: unless_def)
+
+lemma unlessE_True [simp]: "unlessE True f = returnOk ()"
+  unfolding unlessE_def by fastforce
 
 lemma unlessE_whenE:
   "unlessE P = whenE (~P)"

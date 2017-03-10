@@ -126,6 +126,7 @@ Threads are treated as special capability nodes; they also become zombies when t
 >     cte_ptr <- getThreadCSpaceRoot tcb
 >     unbindNotification tcb
 >     suspend tcb
+>     Arch.prepareThreadDelete tcb
 >     return (Zombie cte_ptr ZombieTCB 5, Nothing)
 
 Zombies have already been finalised.

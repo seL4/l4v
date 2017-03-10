@@ -1,11 +1,11 @@
 (*
- * Copyright 2014, General Dynamics C4 Systems
+ * Copyright 2017, Data61, CSIRO
  *
  * This software may be distributed and modified according to the terms of
  * the GNU General Public License version 2. Note that NO WARRANTY is provided.
  * See "LICENSE_GPLv2.txt" for details.
  *
- * @TAG(GD_GPL)
+ * @TAG(DATA61_GPL)
  *)
 
 chapter "Intermediate"
@@ -39,7 +39,7 @@ private abbreviation (input)
 defs Arch_createNewCaps_def:
 "Arch_createNewCaps t regionBase numObjects userSize dev \<equiv>
     let pointerCast = PPtr \<circ> fromPPtr
-    in (case t of 
+    in (case t of
           APIObjectType apiObject \<Rightarrow> haskell_fail []
         | SmallPageObject \<Rightarrow>
             createNewPageCaps regionBase numObjects dev 0 ARMSmallPage

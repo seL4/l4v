@@ -25,6 +25,14 @@ ifeq ($(L4V_ARCH),ARM)
     CONFIG_DOMAIN_SCHEDULE=config_arm.c
 endif
 
+ifeq ($(L4V_ARCH),ARM_HYP)
+    ARCH=arm
+    ARMV=armv7-a
+    PLAT=tk1
+    CPU=cortex-a15
+    CONFIG_DOMAIN_SCHEDULE=config_arm.c
+endif
+
 ifndef ARCH
     $(error Bad value for L4V_ARCH)
 endif

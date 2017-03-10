@@ -213,7 +213,10 @@ locale CNodeInv_AI =
         \<not> is_master_reply_cap (fst rv)"
   assumes nat_to_cref_0_replicate:
     "\<And>n. n < word_bits \<Longrightarrow> nat_to_cref n 0 = replicate n False"
-
+  assumes prepare_thread_delete_thread_cap:
+  "\<And>x p t. \<lbrace>\<lambda>(s::'state_ext state). caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>
+     prepare_thread_delete t
+   \<lbrace>\<lambda>rv s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>"
 
 locale CNodeInv_AI_2 = CNodeInv_AI state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself" +
@@ -780,6 +783,13 @@ lemma in_pspace_typ_at:
   apply (fastforce simp: obj_at_def)
   done
 
+lemma prepare_thread_delete_not_recursive:
+  "\<lbrace>\<lambda>s. P (not_recursive_cspaces s)\<rbrace>
+     prepare_thread_delete t
+   \<lbrace>\<lambda>rv s. P (not_recursive_cspaces s)\<rbrace>"
+  apply (simp add: not_recursive_cspaces_def cte_wp_at_caps_of_state)
+  apply (wp prepare_thread_delete_caps_of_state)
+  done
 
 lemma suspend_not_recursive:
   "\<lbrace>\<lambda>s. P (not_recursive_cspaces s)\<rbrace>
@@ -972,8 +982,10 @@ lemma rec_del_termination:
                          fst_cte_ptrs_def
                   split: if_split_asm)
    apply (frule(1) use_valid [OF _ unbind_notification_caps_of_state],
-          frule(1) use_valid [OF _ suspend_thread_cap])
+          frule(1) use_valid [OF _ suspend_thread_cap],
+          frule(1) use_valid [OF _ prepare_thread_delete_thread_cap])
    apply clarsimp
+   apply (erule use_valid [OF _ prepare_thread_delete_not_recursive])
    apply (erule use_valid [OF _ suspend_not_recursive])
    apply (erule use_valid [OF _ unbind_notification_not_recursive])
    apply simp
@@ -1939,6 +1951,11 @@ lemma cap_swap_cap_refs_respects_device_region[wp]:
   apply fastforce
   done
 
+lemma cap_swap_aobj_at:
+  "arch_obj_pred P' \<Longrightarrow>
+  \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> cap_swap c (a, b) c' (aa, ba) \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
+  unfolding cap_swap_def set_cdt_def by (wpsimp wp: set_cap.aobj_at)
+
 lemma cap_swap_invs[wp]:
   "\<And>c' a c b.
   \<lbrace>invs and ex_cte_cap_wp_to (appropriate_cte_cap c') a
@@ -1952,8 +1969,8 @@ lemma cap_swap_invs[wp]:
     K (a \<noteq> b \<and> \<not> is_master_reply_cap c \<and> \<not> is_master_reply_cap c')\<rbrace>
    cap_swap c a c' b \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
-  apply (wp cap_swap_replies cap_swap_reply_masters valid_arch_state_lift
-            cap_swap_typ_at valid_irq_node_typ
+  apply (wp cap_swap_replies cap_swap_reply_masters valid_arch_state_lift_aobj_at
+            cap_swap_typ_at valid_irq_node_typ cap_swap_aobj_at
          | simp
          | erule disjE
          | clarsimp simp: cte_wp_at_caps_of_state copy_of_cte_refs weak_derived_def

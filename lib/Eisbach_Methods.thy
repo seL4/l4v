@@ -41,6 +41,7 @@ method_setup print_headgoal =
 section \<open>Simple Combinators\<close>
 
 method_setup defer_tac = \<open>Scan.succeed (fn _ => SIMPLE_METHOD (defer_tac 1))\<close>
+method_setup prefer_last = \<open>Scan.succeed (fn _ => SIMPLE_METHOD (PRIMITIVE (Thm.permute_prems 0 ~1)))\<close>
 
 method_setup all =
  \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
@@ -218,6 +219,10 @@ lemma context_conjunction'I:
   apply assumption
   done
 
+lemma conjunction'I:
+  "PROP P \<Longrightarrow> PROP Q \<Longrightarrow> PROP P &^& PROP Q"
+  by (rule context_conjunction'I; simp)
+
 lemma conjunction'E:
   assumes PQ: "PROP P &^& PROP Q"
   assumes PQR: "PROP P \<Longrightarrow> PROP Q \<Longrightarrow> PROP R"
@@ -328,6 +333,30 @@ method distinct_subgoals_strong methods m =
      (((elim protectE conjunction'E)?, solves \<open>m\<close>)
      | (elim protect_thin)?)))?
 
+end
+
+method forward_solve methods fwd m =
+  (fwd, prefer_last, fold_subgoals, safe_meta_conjuncts, rule conjunction'I,
+   defer_tac, ((intro conjunction'I)?; solves \<open>m\<close>))[1]
+
+method frule_solve methods m uses rule = (forward_solve \<open>frule rule\<close> \<open>m\<close>)
+method drule_solve methods m uses rule = (forward_solve \<open>drule rule\<close> \<open>m\<close>)
+
+notepad begin
+  {
+  fix A B C D E
+  assume ABCD: "A \<Longrightarrow> B \<Longrightarrow> C \<Longrightarrow> D"
+  assume ACD: "A \<Longrightarrow> C \<Longrightarrow> D"
+  assume DE: "D \<Longrightarrow> E"
+  assume B C
+
+  have "A \<Longrightarrow> D"
+  apply (frule_solve \<open>simp add: \<open>B\<close> \<open>C\<close>\<close> rule: ABCD)
+  apply (drule_solve \<open>simp add: \<open>B\<close> \<open>C\<close>\<close> rule: ACD)
+  apply (match premises in A \<Rightarrow> \<open>fail\<close> \<bar> _ \<Rightarrow> \<open>-\<close>)
+  apply assumption
+  done
+  }
 end
 
 

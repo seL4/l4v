@@ -107,7 +107,8 @@ definition
   | UnknownSyscall n \<Rightarrow>  (handleUnknownSyscall_C_body_if (of_nat n))
   | UserLevelFault w1 w2 \<Rightarrow> (handleUserLevelFault_C_body_if w1 w2)
   | Interrupt \<Rightarrow> (handleInterruptEntry_C_body_if)
-  | VMFaultEvent t \<Rightarrow> (handleVMFaultEvent_C_body_if (vm_fault_type_from_H t))"
+  | VMFaultEvent t \<Rightarrow> (handleVMFaultEvent_C_body_if (vm_fault_type_from_H t))
+  | HypervisorEvent t \<Rightarrow> (SKIP ;; \<acute>ret__unsigned_long :== scast EXCEPTION_NONE)"
 
 
 definition
@@ -294,6 +295,16 @@ lemma handleEvent_ccorres:
                     is_cap_fault_def
               elim: pred_tcb'_weakenE st_tcb_ex_cap''
               dest: st_tcb_at_idle_thread' rf_sr_ksCurThread)
+  -- "HypervisorEvent"
+  apply (simp add: liftE_def bind_assoc)
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_symb_exec_l)
+      apply (case_tac x6; simp add: handleHypervisorFault_def)
+      apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+      apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: return_def)
+     apply wp+
+  apply clarsimp
   done
 
 lemma kernelEntry_corres_C:

@@ -4045,6 +4045,8 @@ locale Deterministic_AI_2 = Deterministic_AI_1 +
     "\<And>thread fault. \<lbrace>valid_list\<rbrace> handle_vm_fault thread fault \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes handle_yield_valid_list[wp]:
     "\<lbrace>valid_list\<rbrace> handle_yield \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes handle_hypervisor_fault_valid_list[wp]:
+    "\<lbrace>valid_list\<rbrace> handle_hypervisor_fault thread fault \<lbrace>\<lambda>_. valid_list\<rbrace>"
 
 
 context Deterministic_AI_2 begin

@@ -1,20 +1,21 @@
 # generated doc files
 
-doc/refman.pdf
-doc/version.txt
+/doc/refman.pdf
+/doc/version.txt
 
-doc/figures/clientkernel.pdf
-doc/figures/clientserver.pdf
-doc/figures/derive.pdf
-doc/figures/ipctransfer.pdf
-doc/figures/truncation.pdf
+/doc/figures/clientkernel.pdf
+/doc/figures/clientserver.pdf
+/doc/figures/derive.pdf
+/doc/figures/ipctransfer.pdf
+/doc/figures/truncation.pdf
 
 # generated build files
 
 **.lhs-boot
-dist
+/dist/
 
 # cabal dependencies 
 
-.cabal-sandbox/
-cabal.sandbox.config
+/.stack-work/
+/.cabal-sandbox/
+/cabal.sandbox.config

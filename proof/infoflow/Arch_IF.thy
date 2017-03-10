@@ -43,7 +43,7 @@ crunch irq_state_of_state[wp]: handle_recv "\<lambda>s. P (irq_state_of_state s)
 crunch irq_state_of_state[wp]: handle_reply "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def unless_def store_word_offs_def storeWord_def ignore: const_on_failure)
 
-crunch irq_state_of_state[wp]: handle_vm_fault "\<lambda>s. P (irq_state_of_state s)"
+crunch irq_state_of_state[wp]: handle_vm_fault, handle_hypervisor_fault "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def unless_def store_word_offs_def storeWord_def ignore: const_on_failure getFAR getDFSR getIFSR simp: getDFSR_def no_irq_getFAR getFAR_def getIFSR_def)
 
 

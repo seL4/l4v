@@ -12,7 +12,7 @@ This is the top-level module; it defines the interface between the kernel and th
 
 > module SEL4 (
 >     module SEL4.Machine,
->     Event(..), Syscall(..), callKernel, asUser, putUC, getUC,
+>     Event(..), Syscall(..), callKernel, asUser,
 >     Kernel, KernelState, getCurThread,
 >     lookupCap,
 >     module SEL4.API.Types,
@@ -32,7 +32,6 @@ This is the top-level module; it defines the interface between the kernel and th
 > import SEL4.Object.TCB(asUser)
 > import SEL4.Object.Interrupt(handleInterrupt)
 > import Control.Monad.Error
-> import Control.Monad.State
 > import Data.Maybe
 
 \subsection{Kernel Entry Point}
@@ -50,19 +49,4 @@ faults, and system calls; the set of possible events is defined in
 >                       when (isJust irq) $ handleInterrupt (fromJust irq))
 >     schedule
 >     activateThread
-
-\subsection{Saving and Restoring User State}
-
-The following two functions save and restore the user-level context of the current thread.
-
-> putUC :: UserContext -> Kernel ()
-> putUC uc = do
->     thread <- getCurThread
->     asUser thread $ put uc
-
-> getUC :: Kernel UserContext
-> getUC = do
->     thread <- getCurThread
->     asUser thread get
-
 

@@ -51,6 +51,7 @@ internal/*
 
 spec/haskell/cabal.sandbox.config
 spec/haskell/.cabal-sandbox/*
+spec/haskell/.stack-work/*
 spec/haskell/Setup.hs
 spec/haskell/configure
 spec/haskell/dist/*
@@ -84,6 +85,8 @@ spec/cspec/c/arch/object/structures_defs.thy
 spec/cspec/c/arch/object/structures_proofs.thy
 spec/cspec/c/arch/api/shared_types_defs.thy
 spec/cspec/c/arch/api/shared_types_proofs.thy
+spec/cspec/c/32/mode/api/shared_types_defs.thy
+spec/cspec/c/32/mode/api/shared_types_proofs.thy
 spec/cspec/c/plat/machine/hardware_proofs.thy
 spec/cspec/c/plat/machine/hardware_defs.thy
 spec/cspec/c/api/types_proofs.thy

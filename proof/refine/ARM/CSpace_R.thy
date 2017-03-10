@@ -3503,17 +3503,6 @@ lemma cteInsert_invs:
   cteInsert cap src dest
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
-  (* FIXME: wp_cleanup
-  apply (wp cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift
-            valid_irq_node_lift valid_queues_lift' irqs_masked_lift
-            cteInsert_norq | simp add: st_tcb_at'_def)+
-  apply (wp cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift CSpace_R.valid_queues_lift
-            valid_irq_node_lift valid_queues_lift' irqs_masked_lift
-            cteInsert_norq | simp add: pred_tcb_at'_def)+
-  apply (auto simp: invs'_def valid_state'_def valid_pspace'_def
-                    cte_wp_at_ctes_of
-    elim: valid_capAligned is_derived_badge_derived')
-  *)
   apply (wpsimp wp: cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift CSpace_R.valid_queues_lift
                     valid_irq_node_lift valid_queues_lift' irqs_masked_lift cteInsert_norq 
               simp: st_tcb_at'_def)

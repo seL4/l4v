@@ -87,6 +87,9 @@ locale Finalise_AI_1 =
   assumes arch_finalise_cap_typ_at[wp]:
     "\<And> P T p a b.
       \<lbrace>\<lambda>(s :: 'a state). P (typ_at T p s)\<rbrace> arch_finalise_cap a b \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
+  assumes prepare_thread_delete_typ_at[wp]:
+    "\<And> P T p a.
+      \<lbrace>\<lambda>(s :: 'a state). P (typ_at T p s)\<rbrace> prepare_thread_delete a \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
   assumes finalise_cap_new_valid_cap[wp]:
     "\<And> cap x. \<lbrace>valid_cap cap :: 'a state \<Rightarrow> bool\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
   assumes arch_finalise_cap_invs[wp]:
@@ -129,6 +132,12 @@ locale Finalise_AI_1 =
   assumes arch_finalise_cap_cte_wp_at[wp]:
     "\<And> P P' p a b.
     \<lbrace>\<lambda>(s :: 'a state). P (cte_wp_at P' p s)\<rbrace> arch_finalise_cap a b \<lbrace>\<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"
+  assumes prepare_thread_delete_cte_wp_at[wp]:
+    "\<And> P p a.
+      \<lbrace>\<lambda>(s :: 'a state). P (cte_wp_at P' p s)\<rbrace> prepare_thread_delete a \<lbrace>\<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"
+  assumes prepare_thread_delete_caps_of_state:
+    "\<And>P t. \<lbrace>\<lambda>(s :: 'a state). P (caps_of_state s)\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+
 
 text {* Properties about empty_slot *}
 
@@ -400,13 +409,6 @@ lemma empty_slot_final_cap_at:
   apply (rule hoare_gen_asm)
   apply (simp add: empty_slot_def final_cap_at_eq cte_wp_at_conj cte_wp_at_caps_of_state)
   apply (wpsimp wp: opt_return_pres_lift get_cap_wp)
-  (* FIXME: wp_cleanup
-  apply (simp add: empty_slot_def final_cap_at_eq cte_wp_at_conj)
-  apply (simp add: cte_wp_at_caps_of_state)
-  apply (wp opt_return_pres_lift | simp split del: if_split)+
-  apply (rule hoare_strengthen_post [OF get_cap_sp])
-  apply (clarsimp simp: cte_wp_at_caps_of_state)
-  *)
   done
 
 
@@ -1031,6 +1033,10 @@ locale Finalise_AI_3 = Finalise_AI_2 a b
       \<lbrace>\<lambda>s. replaceable_or_arch_update s slot cap cap'\<rbrace>
         do_machine_op (mo :: 'c machine_monad)
       \<lbrace>\<lambda>r s. replaceable_or_arch_update s slot cap cap'\<rbrace>"
+  assumes prepare_thread_delete_irq_node[wp]:
+  "\<And>t. \<lbrace>\<lambda>(s :: 'a state). P (interrupt_irq_node s)\<rbrace>
+     prepare_thread_delete t
+       \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
 
 crunch irq_node[wp]: suspend, unbind_maybe_notification, unbind_notification "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps select_wp simp: crunch_simps)
@@ -1057,6 +1063,10 @@ lemmas (in Finalise_AI_3) deleting_irq_handler_cte_preserved_irqn
   = hoare_use_eq_irq_node [OF deleting_irq_handler_irq_node
                               deleting_irq_handler_cte_preserved]
 
+lemmas (in Finalise_AI_3) prepare_thread_delete_cte_preserved_irqn
+  = hoare_use_eq_irq_node [OF prepare_thread_delete_irq_node
+                              prepare_thread_delete_cte_wp_at]
+
 lemma unbind_notification_cte_cap_to[wp]:
 "\<lbrace>ex_cte_cap_wp_to P sl\<rbrace> unbind_notification t \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P sl\<rbrace>"
   by (wp ex_cte_cap_to_pres)
@@ -1070,6 +1080,7 @@ lemma (in Finalise_AI_3) finalise_cap_cte_cap_to[wp]:
   apply (cases cap, simp_all add: ex_cte_cap_wp_to_def split del: if_split)
        apply (wp hoare_vcg_ex_lift hoare_drop_imps
                  deleting_irq_handler_cte_preserved_irqn
+                 prepare_thread_delete_cte_preserved_irqn
                  | simp
                  | clarsimp simp: can_fast_finalise_def
                            split: cap.split_asm | wpc)+

@@ -1,8 +1,11 @@
-Built from git repo at /Users/kleing/verification/l4v/spec/haskell by kleing
+Built from git repo at /Users/miki/repo3/l4v/spec/haskell by miki
 
 Generated from changeset:
-9668464 cleanup: remove accidentally declared const
+84dc702 InfoFlowC: updates for Hypervisor stub
 
 
 Warning - uncomitted changes used:
+ M ../design/ARM/ArchHypervisor_H.thy
  M ../design/version
+ M src/SEL4/Kernel/Hypervisor/ARM.lhs
+ M ../../tools/haskell-translator/caseconvs

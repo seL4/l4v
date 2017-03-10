@@ -548,6 +548,10 @@ lemma handle_vm_pas_refined[wp]:
   apply (wp | simp)+
   done
 
+crunch pas_refined[wp]: handle_hypervisor_fault "pas_refined aag"
+crunch cur_thread[wp]: handle_hypervisor_fault "\<lambda>s. P (cur_thread s)"
+crunch integrity[wp]: handle_hypervisor_fault "integrity aag X st"
+
 lemma handle_vm_cur_thread [wp]:
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>
     handle_vm_fault thread vmfault_type
@@ -595,6 +599,7 @@ lemma handle_event_pas_refined:
            | strengthen invs_vobjs_strgs
            | simp)+
   apply auto
+  apply wpsimp+
   done
 
 lemma valid_fault_Unknown [simp]:

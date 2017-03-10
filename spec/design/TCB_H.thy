@@ -374,8 +374,9 @@ defs invokeTCB_def:
   withoutPreemption $ (do
     self \<leftarrow> getCurThread;
     performTransfer arch self dest;
+    t \<leftarrow> threadGet id dest;
     asUser dest $ (do
-        zipWithM (\<lambda> r v. setRegister r (sanitiseRegister r v))
+        zipWithM (\<lambda> r v. setRegister r (sanitiseRegister t r v))
             (frameRegisters @ gpRegisters) values;
         pc \<leftarrow> getRestartPC;
         setNextPC pc

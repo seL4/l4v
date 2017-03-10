@@ -158,6 +158,7 @@ lemma Arch_switchToIdleThread_ccorres:
   "ccorres dc xfdc (valid_pspace' and valid_arch_state') UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
   apply (cinit simp: ARM_H.switchToIdleThread_def)
+  apply ccorres_rewrite
   by (rule ccorres_return_Skip, clarsimp)
 
 (* FIXME: move *)

@@ -208,13 +208,12 @@ lemma is_aligned_tcb_ptr_to_ctcb_ptr:
   done
 
 lemma sanitiseRegister_spec:
-  "\<forall>s v r. \<Gamma> \<turnstile> ({s} \<inter> \<lbrace>\<acute>v___unsigned_long = v\<rbrace> \<inter> \<lbrace>\<acute>reg = register_from_H r\<rbrace>)
-                Call sanitiseRegister_'proc
-                \<lbrace>\<acute>ret__unsigned_long = sanitiseRegister r v\<rbrace>"
+  "\<forall>s t v r. \<Gamma> \<turnstile> ({s} \<inter> \<lbrace>\<acute>v___unsigned_long = v\<rbrace> \<inter> \<lbrace>\<acute>reg = register_from_H r\<rbrace>)
+                   Call sanitiseRegister_'proc
+                 \<lbrace>\<acute>ret__unsigned_long = sanitiseRegister t r v\<rbrace>"
   apply vcg
-  apply (auto simp: C_register_defs ARM_H.sanitiseRegister_def
-                    ARM.sanitiseRegister_def word_0_sle_from_less
-                 split: register.split)
+  apply (auto simp: C_register_defs sanitiseRegister_def word_0_sle_from_less
+             split: register.split)
   done
 
 end

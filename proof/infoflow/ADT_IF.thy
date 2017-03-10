@@ -1652,7 +1652,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch irq_state_of_state[wp]: cap_move "\<lambda>s. P (irq_state_of_state s)"
 crunch domain_fields[wp]: handle_yield "domain_fields P"
-crunch domain_fields[wp]: handle_vm_fault "domain_fields P"
+crunch domain_fields[wp]: handle_vm_fault, handle_hypervisor_fault "domain_fields P"
   (ignore: getFAR getDFSR getIFSR)
 
 crunch domain_list[wp]: timer_tick "\<lambda>s. P (domain_list s)"
@@ -2990,7 +2990,7 @@ lemma handle_event_irq_state_inv:
              | blast | (elim conjE, (intro conjI | assumption)+))+)[1]
            apply ((simp add: handle_send_def handle_call_def
                | wp handle_invocation_irq_state_inv)+)[2]
-  apply((simp | wp_trace add: irq_state_inv_triv hy_inv 
+  apply ((simp | wp add: irq_state_inv_triv hy_inv 
     | blast | (elim conjE, (intro conjI | assumption)+))+)
   done
 

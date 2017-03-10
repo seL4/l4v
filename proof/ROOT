@@ -33,13 +33,13 @@ chapter "Proofs"
 session Refine = BaseRefine +
   description {* Refinement between Haskell and Abstract spec. *}
   theories
-    "refine/Refine"
-    "refine/Orphanage"
+    "refine/$L4V_ARCH/Refine"
+    "refine/$L4V_ARCH/Orphanage"
 
 session BaseRefine = AInvs +
   description {* Background theory and libraries for refinement proof. *}
   theories
-    "refine/Include"
+    "refine/$L4V_ARCH/Include"
 
 session AInvs = ASpec +
   theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
@@ -47,7 +47,7 @@ session AInvs = ASpec +
   theories
     "invariant-abstract/AInvs"
     "invariant-abstract/KernelInit_AI"
-    "invariant-abstract/DetSchedSchedule_AI"
+    "invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
 
 
 (*

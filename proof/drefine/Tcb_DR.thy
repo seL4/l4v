@@ -636,15 +636,16 @@ lemma invoke_tcb_corres_write_regs:
    dcorres (dc \<oplus> dc) \<top> (invs and not_idle_thread obj_id and tcb_at obj_id and valid_etcbs) (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
   apply (rule corres_symb_exec_r)
-     apply (rule corres_guard_imp)
-       apply (rule corres_split [where r'=dc])
-          apply (rule corres_cases [where R=resume])
-           apply (clarsimp simp: when_def)
-           apply (rule corres_bind_return_r)
-           apply (clarsimp simp: dc_def, rule restart_corres [unfolded dc_def])
-          apply (clarsimp simp: when_def)
-         apply (rule corrupt_tcb_intent_as_user_corres)
-        apply (wp wp_post_taut | simp add:invs_def valid_state_def | fastforce)+
+     apply (rule corres_symb_exec_r)
+        apply (rule corres_guard_imp)
+          apply (rule corres_split [where r'=dc])
+             apply (rule corres_cases [where R=resume])
+              apply (clarsimp simp: when_def)
+              apply (rule corres_bind_return_r)
+              apply (clarsimp simp: dc_def, rule restart_corres [unfolded dc_def])
+             apply (clarsimp simp: when_def)
+            apply (rule corrupt_tcb_intent_as_user_corres)
+           apply (wp wp_post_taut | simp add:invs_def valid_state_def | fastforce)+
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)

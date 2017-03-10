@@ -85,4 +85,30 @@ update_a_global (int x) {
   a_modified_global = x;
 }
 
+/* small const global array */
+typedef int reference_val;
+
+static const reference_val a_reference_array[] = {
+        12
+};
+
+static int
+get_num_reference_vals(void)
+{
+    return sizeof(a_reference_array) / sizeof(reference_val);
+}
+
+static reference_val
+get_reference_val(int i, int extra_param)
+{
+    reference_val ref = a_reference_array[i];
+
+    if (ref < extra_param) {
+      return 0;
+    }
+    else {
+      return ref;
+    }
+}
+
 

@@ -3055,12 +3055,6 @@ lemma create_cap_valid_global_refs[wp]:
   apply (simp add: valid_global_refs_def valid_refs_def
                    cte_wp_at_caps_of_state create_cap_def pred_conj_def)
   apply (simp only: imp_conv_disj)
-  (* FIXME: wp_cleanup
-  apply (rule hoare_pre)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
-                | simp split del: if_split)+
-  apply clarsimp
-  *)
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift)
   apply (subgoal_tac "global_refs s \<inter> cap_range (default_cap tp oref sz dev) = {}")
    apply auto[1]
@@ -3072,12 +3066,18 @@ lemma create_cap_valid_global_refs[wp]:
 crunch arch_state[wp]: create_cap "\<lambda>s. P (arch_state s)"
   (simp: crunch_simps)
 
+lemma create_cap_aobj_at:
+  "arch_obj_pred P' \<Longrightarrow>
+  \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> create_cap type bits ut is_dev cref \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
+  unfolding create_cap_def split_def set_cdt_def
+  by (wpsimp wp: set_cap.aobj_at)
+
+lemma create_cap_valid_arch_state[wp]:
+  "\<lbrace>valid_arch_state\<rbrace> create_cap type bits ut is_dev cref \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  by (wp valid_arch_state_lift_aobj_at create_cap_aobj_at)
+
 crunch irq_node[wp]: create_cap "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps)
-
-
-lemmas create_cap_valid_arch_state[wp]
-    = valid_arch_state_lift [OF create_cap_typ_at create_cap_arch_state]
 
 lemmas create_cap_valid_irq_node[wp]
     = valid_irq_node_typ [OF create_cap_typ_at create_cap_irq_node]

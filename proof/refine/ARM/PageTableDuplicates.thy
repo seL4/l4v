@@ -1813,7 +1813,7 @@ crunch valid_duplicates'[wp]:
     ignore:getObject updateObject setObject)
 
 crunch valid_duplicates'[wp]:
-  deleteASIDPool, unbindNotification "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  deleteASIDPool, unbindNotification, prepareThreadDelete "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def ignore:getObject setObject)
 
 lemma archFinaliseCap_valid_duplicates'[wp]:
@@ -2521,7 +2521,7 @@ crunch valid_duplicates'[wp]:
  (ignore: threadGet simp:crunch_simps wp:hoare_unless_wp)
 
 crunch valid_duplicates'[wp]:
-  "VSpace_H.handleVMFault" "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  "VSpace_H.handleVMFault", handleHypervisorFault "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
  (ignore: getFAR getDFSR getIFSR simp:crunch_simps)
 
 lemma hs_valid_duplicates'[wp]:

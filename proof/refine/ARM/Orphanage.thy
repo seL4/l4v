@@ -1577,7 +1577,7 @@ lemma flushTable_no_orphans [wp]:
   apply (wp hoare_drop_imps | wpc | clarsimp)+
   done
 
-crunch no_orphans [wp]: unmapPageTable "no_orphans"
+crunch no_orphans [wp]: unmapPageTable, prepareThreadDelete "no_orphans"
 
 lemma setASIDPool_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
@@ -2110,7 +2110,7 @@ notes if_cong[cong] shows
      apply (wp | clarsimp | fastforce)+
   done
 
-crunch invs' [wp]: getThreadCallerSlot "invs'"
+crunch invs' [wp]: getThreadCallerSlot, handleHypervisorFault "invs'"
 
 lemma handleReply_no_orphans [wp]:
   "\<lbrace>no_orphans and invs'\<rbrace> handleReply \<lbrace>\<lambda>_. no_orphans\<rbrace>"
@@ -2146,7 +2146,7 @@ lemma handleEvent_no_orphans [wp]:
   apply (simp add: handleEvent_def handleSend_def handleCall_def
               cong: event.case_cong syscall.case_cong)
   apply (rule hoare_pre)
-   apply (wp hv_inv' hoare_drop_imps | wpc | clarsimp)+
+   apply (wp hv_inv' hoare_drop_imps | wpc | clarsimp simp: handleHypervisorFault_def)+
   apply (auto simp: activatable_from_running' active_from_running')
   done
 

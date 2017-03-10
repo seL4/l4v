@@ -2114,16 +2114,18 @@ lemma dcorres_handle_fault_reply:
    (corrupt_tcb_intent y)
    (handle_fault_reply a y mi mrs)"
   apply (case_tac a)
-    apply (simp_all)
-    apply (rule dummy_corrupt_tcb_intent_corres)+
+     apply (simp_all)
+     apply (rule dummy_corrupt_tcb_intent_corres)+
     apply (rule corres_dummy_return_l)
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF corres_trivial[OF corres_free_return] corrupt_tcb_intent_as_user_corres])
-        apply (wp|clarsimp)+
-    apply (rule corres_dummy_return_l)
-    apply (rule corres_guard_imp)
-      apply (rule corres_split[OF corres_trivial[OF corres_free_return] corrupt_tcb_intent_as_user_corres])
-        apply (wp|clarsimp)+
+      apply (rule corres_symb_exec_r)
+         apply (rule corres_split[OF corres_trivial[OF corres_free_return] corrupt_tcb_intent_as_user_corres])
+          apply (wp|clarsimp)+
+   apply (rule corres_dummy_return_l)
+   apply (rule corres_guard_imp)
+     apply (rule corres_symb_exec_r)
+        apply (rule corres_split[OF corres_trivial[OF corres_free_return] corrupt_tcb_intent_as_user_corres])
+         apply (wp|clarsimp)+
   apply (rule dcorres_handle_arch_fault_reply)
   done
 
@@ -2817,7 +2819,7 @@ lemma tcb_fault_update_valid_state[wp]:
    apply (wp thread_set_valid_idle_trivial thread_set_valid_ioc_trivial
           | simp add: ran_tcb_cap_cases)+
     apply (wp thread_set_only_idle thread_set_ifunsafe_trivial
-              thread_set_arch_state thread_set_valid_reply_caps_trivial
+              thread_set_valid_reply_caps_trivial
               thread_set_valid_reply_masters_trivial
               thread_set_global_refs_triv
            | clarsimp simp: tcb_cap_cases_def)+

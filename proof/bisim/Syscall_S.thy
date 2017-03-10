@@ -691,7 +691,9 @@ lemma handle_event_bisim:
       apply (wp separate_state_pres)+
        apply (rule hoare_pre, wps, wp+, simp)
       apply wp+
-  apply (simp add: cur_tcb_def)
+   apply (simp add: cur_tcb_def)
+
+   apply (rule bisim_refl, simp)
   done
 
 lemma call_kernel_bisim:

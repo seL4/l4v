@@ -160,11 +160,6 @@ Functions are provided to get and set a single register.
 > setRegister :: Register -> Word -> UserMonad ()
 > setRegister r v = modify $ UC . (//[(r, v)]) . fromUC
 
-On some architectures, the thread context may include registers that may be modified by user level code, but cannot safely be given arbitrary values. For example, some of the bits in the ARM architecture's CPSR are used for conditional execution, and others enable kernel mode. This function is used to filter out any bits that should not be modified by user level programs.
-
-> sanitiseRegister :: Register -> Word -> Word
-> sanitiseRegister (Register r) (Word w) = Word $ Arch.sanitiseRegister r w
-
 \subsubsection{Miscellaneous}
 
 The "mask" function is a trivial function which, given a number of bits, returns a word with that number of low-order bits set.

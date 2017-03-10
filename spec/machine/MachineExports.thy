@@ -22,6 +22,7 @@ requalify_types
   machine_word 
   machine_word_len
   vmfault_type
+  hyp_fault_type
   irq
 
 requalify_consts
@@ -35,7 +36,6 @@ requalify_consts
   getRestartPC
   setRegister
   getRegister
-  sanitiseRegister
   initContext
   exceptionMessage
   syscallMessage
@@ -49,8 +49,8 @@ requalify_consts
   clearMemory
 
 (* HERE IS THE PLACE FOR GENERIC WORD LEMMAS FOR ALL ARCHITECTURES *)
-  
-lemma Suc_unat_mask_div_obfuscated: 
+
+lemma Suc_unat_mask_div_obfuscated:
   "Suc (unat (mask sz div (word_size::machine_word))) = 2 ^ (min sz word_bits - word_size_bits)"
   unfolding word_size_bits_def
   by (rule Suc_unat_mask_div)

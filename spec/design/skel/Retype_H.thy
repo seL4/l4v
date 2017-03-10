@@ -24,7 +24,7 @@ requalify_consts
   hasCancelSendRights sameRegionAs isPhysicalCap
   sameObjectAs updateCapData maskCapRights
   createObject capUntypedPtr capUntypedSize
-  performInvocation decodeInvocation
+  performInvocation decodeInvocation prepareThreadDelete
 
 context begin global_naming global
 

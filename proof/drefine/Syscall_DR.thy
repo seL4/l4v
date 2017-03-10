@@ -1612,6 +1612,12 @@ declare tcb_sched_action_transform[wp]
 
 crunch transform_inv[wp]: reschedule_required "\<lambda>s. transform s = cs"
 
+lemma handle_hypervisor_fault_corres:
+  "dcorres dc (\<lambda>_. True)
+           (invs and (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x) and ct_running and valid_etcbs)
+           Syscall_D.handle_hypervisor_fault (do y \<leftarrow> local.handle_hypervisor_fault thread w; return () od)"
+  by (cases w; simp add: Syscall_D.handle_hypervisor_fault_def returnOk_def2)
+
 lemma handle_event_corres:
   "dcorres (dc \<oplus> dc) \<top>
      (invs and valid_pdpt_objs and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_etcbs)
@@ -1679,6 +1685,7 @@ lemma handle_event_corres:
     apply (frule (1) ct_running_not_idle_etc)
     apply (clarsimp simp:invs_def valid_state_def st_tcb_at_def generates_pending_def obj_at_def)
    apply (wp|simp)+
+    apply (rule corres_symb_exec_r[OF handle_hypervisor_fault_corres], wp+)
   done
 
 end

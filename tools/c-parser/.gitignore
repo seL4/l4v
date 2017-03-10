@@ -7,7 +7,10 @@ globalmakevars.local
 
 /standalone-parser/table.ML
 /standalone-parser/ARM/
+/standalone-parser/ARM_HYP/
 /standalone-parser/X64/
+
+/umm_heap/ARM_HYP/
 
 /tools/mllex/mllex
 /tools/mlyacc/mlyacc

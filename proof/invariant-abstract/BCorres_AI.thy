@@ -202,12 +202,12 @@ lemma throw_on_false_bcorres[wp]: "bcorres f f' \<Longrightarrow>  bcorres (thro
   done
 
 context Arch begin
-  crunch (bcorres)bcorres[wp]: arch_finalise_cap truncate_state (simp: swp_def ignore: forM_x)
+  crunch (bcorres)bcorres[wp]: arch_finalise_cap,prepare_thread_delete truncate_state (simp: swp_def ignore: forM_x)
 end
 
-requalify_facts Arch.arch_finalise_cap_bcorres
+requalify_facts Arch.arch_finalise_cap_bcorres Arch.prepare_thread_delete_bcorres
 
-declare arch_finalise_cap_bcorres[wp]
+declare arch_finalise_cap_bcorres[wp] prepare_thread_delete_bcorres[wp]
 
 
 crunch (bcorres)bcorres[wp]: "IpcCancel_A.suspend",deleting_irq_handler truncate_state (simp: gets_the_def swp_def ignore: gets_the ignore: throw_on_false)
@@ -228,7 +228,7 @@ lemma preemption_point_bcorres[wp]: "bcorres preemption_point preemption_point"
   apply (simp add: preemption_point_def)
   apply (wp | wpc | simp | intro impI allI conjI)+
   done
-  
+
 crunch (bcorres)bcorres[wp]: cap_swap_for_delete truncate_state
 
 end

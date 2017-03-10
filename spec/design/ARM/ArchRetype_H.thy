@@ -201,6 +201,9 @@ defs capUntypedSize_def:
   | (ASIDPoolCap _ _) \<Rightarrow>    1 `~shiftL~` (asidLowBits + 2)
   )"
 
+defs prepareThreadDelete_def:
+"prepareThreadDelete arg1 \<equiv> return ()"
+
 
 end
 end

@@ -16,5 +16,6 @@ imports
   Thread_H
   FaultHandler_H
   CSpace_H
+  Hypervisor_H
 begin
 end

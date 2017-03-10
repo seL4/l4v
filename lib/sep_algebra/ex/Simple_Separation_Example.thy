@@ -145,15 +145,14 @@ lemma "VARS H p q r
    apply (case_tac ps, simp)
    apply (rename_tac p ps')
    apply (clarsimp simp: sep_conj_exists sep_conj_ac)
-   apply (sep_subst points_to)
+   apply (subst points_to, sep_solve)
    apply (rule_tac x = "ps'" in exI)
    apply (rule_tac x = "p # qs" in exI)
    apply (simp add: sep_conj_exists sep_conj_ac)
    apply (rule exI)
-   apply (sep_rule maps_to_write) -- "note: demonstrates computation"
-   apply ((sep_cancel add: maps_to_maps_to_ex)+)[1]
+   apply (sep_rule (direct) maps_to_write) -- "note: demonstrates computation"
+   apply (sep_solve add: maps_to_maps_to_ex)
   apply clarsimp
   done
-
 
 end

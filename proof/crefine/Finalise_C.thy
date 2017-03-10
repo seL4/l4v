@@ -1889,6 +1889,15 @@ lemma ccap_relation_IRQHandler_mask:
   apply (simp add: c_valid_cap_def cap_irq_handler_cap_lift cl_valid_cap_def)
   done
 
+lemma prepare_thread_delete_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+   (prepareThreadDelete thread) (Call Arch_prepareThreadDelete_'proc)"
+  unfolding prepareThreadDelete_def
+  apply (rule ccorres_Call)
+  apply (rule Arch_prepareThreadDelete_impl[unfolded Arch_prepareThreadDelete_body_def])
+  apply (rule ccorres_return_Skip)
+  done
+
 lemma finaliseCap_ccorres:
   "\<And>final.
    ccorres (\<lambda>rv rv'. ccap_relation (fst rv) (finaliseCap_ret_C.remainder_C rv')
@@ -1993,6 +2002,7 @@ lemma finaliseCap_ccorres:
     apply csymbr
     apply (ctac(no_vcg) add: unbindNotification_ccorres)
      apply (ctac(no_vcg) add: suspend_ccorres[OF cteDeleteOne_ccorres])
+     apply (ctac(no_vcg) add: prepare_thread_delete_ccorres)
       apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
       apply (rule allI, rule conseqPre, vcg)
       apply (clarsimp simp: word_sle_def return_def)
@@ -2068,17 +2078,21 @@ lemma finaliseCap_ccorres:
   apply (clarsimp simp: cap_get_tag_isCap word_sle_def Collect_const_mem
                         false_def from_bool_def)
   apply (intro impI conjI)
-             apply (clarsimp split: bool.splits)
-            apply (clarsimp split: bool.splits)
-           apply (clarsimp simp: valid_cap'_def isCap_simps)
-          apply (clarsimp simp: isCap_simps capRange_def
-                             capAligned_def)
-         apply (clarsimp simp: isCap_simps valid_cap'_def)
+                apply (clarsimp split: bool.splits)
+               apply (clarsimp split: bool.splits)
+              apply (clarsimp simp: valid_cap'_def isCap_simps)
+             apply (clarsimp simp: isCap_simps capRange_def capAligned_def)
+            apply (clarsimp simp: isCap_simps valid_cap'_def)
+           apply (clarsimp simp: isCap_simps capRange_def capAligned_def)
+          apply (clarsimp simp: isCap_simps valid_cap'_def )
+         apply clarsimp
         apply (clarsimp simp: isCap_simps valid_cap'_def )
-
-       apply (clarsimp simp: isCap_simps split: bool.splits)
-      apply clarsimp
-      apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
+      apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def ccap_relation_def isCap_simps
+      c_valid_cap_def cap_thread_cap_lift_def cap_to_H_def
+      ctcb_ptr_to_tcb_ptr_def Let_def
+                   split: option.splits cap_CL.splits if_splits)
+     apply clarsimp
+     apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
      apply (clarsimp simp: isCap_simps from_bool_def false_def)
     apply (clarsimp simp: tcb_cnode_index_defs ptr_add_assertion_def)
    apply clarsimp

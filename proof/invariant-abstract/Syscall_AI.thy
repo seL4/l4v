@@ -273,10 +273,10 @@ lemma (in Systemcall_AI_Pre) handle_fault_reply_cte_wp_at:
       apply (case_tac f)
          apply (clarsimp)+
        apply (clarsimp simp add: as_user_def)
-       apply (wp set_object_cte_wp_at2 | simp add: split_def)+
+       apply (wp set_object_cte_wp_at2 thread_get_wp' | simp add: split_def)+
        apply (clarsimp simp add: NC)
       apply (clarsimp simp add: as_user_def)
-      apply (wp set_object_cte_wp_at2 | simp add: split_def)+
+      apply (wp set_object_cte_wp_at2 thread_get_wp' | simp add: split_def)+
       apply (clarsimp simp add: NC)
       apply simp
       apply wp
@@ -415,8 +415,6 @@ locale Syscall_AI = Systemcall_AI_Pre:Systemcall_AI_Pre _ state_ext_t
         \<Longrightarrow> no_cap_to_obj_with_diff_ref cap S s"
   assumes hv_invs[wp]:
     "\<And>t' flt. \<lbrace>invs :: 'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
-  assumes hv_inv_ex:
-    "\<And>P t vp. \<lbrace>P :: 'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   assumes handle_vm_fault_valid_fault[wp]:
     "\<And>thread ft.
       \<lbrace>\<top>::'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
@@ -426,6 +424,11 @@ locale Syscall_AI = Systemcall_AI_Pre:Systemcall_AI_Pre _ state_ext_t
   assumes hvmf_ex_cap[wp]:
     "\<And>p t b.
       \<lbrace>ex_nonz_cap_to p::'state_ext state \<Rightarrow> bool\<rbrace> handle_vm_fault t b \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
+  assumes hh_invs[wp]:
+  "\<And>thread fault.
+    \<lbrace>invs and ct_active\<rbrace> handle_hypervisor_fault thread fault
+      \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+
 
 
 context Syscall_AI begin
@@ -757,7 +760,7 @@ proof (induct param rule: resolve_address_bits'.induct)
     apply (elim conjE exE disjE)
         apply ((clarsimp simp: whenE_def bindE_def bind_def lift_def liftE_def
                     throwError_def returnOk_def return_def valid_fault_def
-                    valid_cap_def2 wellformed_cap_def
+                    valid_cap_def2 wellformed_cap_def word_bits_def
                   split: if_split_asm cap.splits)+)[4]
     apply (split if_split_asm)
      apply (clarsimp simp: whenE_def bindE_def bind_def lift_def liftE_def

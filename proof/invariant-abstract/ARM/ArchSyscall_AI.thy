@@ -70,14 +70,6 @@ lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' 
   apply (wp|simp)+
   done
 
-lemma hv_inv_ex [Syscall_AI_assms]:
-  "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (cases vp, simp_all)
-  apply (wp dmo_inv getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv 
-            det_getRestartPC as_user_inv
-         | wpcw | simp)+
-  done
-
 lemma handle_vm_fault_valid_fault[wp, Syscall_AI_assms]:
   "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
   apply (cases ft, simp_all)
@@ -95,6 +87,10 @@ lemma hvmf_ex_cap[wp, Syscall_AI_assms]:
   apply (cases b, simp_all)
    apply (wp | simp)+
   done
+
+lemma hh_invs[wp, Syscall_AI_assms]:
+  "\<lbrace>invs and ct_active\<rbrace> handle_hypervisor_fault thread fault \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (cases fault; wpsimp)
 
 end
 

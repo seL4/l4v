@@ -86,6 +86,11 @@ definition
 where
   "word_clz w \<equiv> length (takeWhile Not (to_bl w))"
 
+(* Count trailing zeros  *)
+definition
+  word_ctz :: "'a::len word \<Rightarrow> nat"
+where
+  "word_ctz w \<equiv> length (takeWhile Not (rev (to_bl w)))"
 
 definition
   word_log2 :: "'a::len word \<Rightarrow> nat"

@@ -28,6 +28,7 @@ modules.
 > import SEL4.Kernel.CSpace
 > import SEL4.Kernel.VSpace
 > import SEL4.Kernel.FaultHandler
+> import SEL4.Kernel.Hypervisor
 > import SEL4.Object
 > import SEL4.Object.Structures
 > import SEL4.Model
@@ -48,6 +49,7 @@ The kernel model works by processing events caused by sources outside the kernel
 >         | UserLevelFault Word Word
 >         | Interrupt
 >         | VMFaultEvent VMFaultType
+>         | HypervisorEvent HypFaultType
 >         deriving Show
 
 \subsubsection{System Calls}
@@ -133,6 +135,15 @@ If the simulator reports a VM fault, the appropriate action depends on whether t
 > handleEvent (VMFaultEvent faultType) = withoutPreemption $ do
 >     thread <- getCurThread
 >     handleVMFault thread faultType `catchFailure` handleFault thread
+>     return ()
+
+\subsubsection{Hypervisor Faults}
+
+For platforms running in hypervisor mode, many fault handlers are wrapped and redirected to standard fault handlers on kernel entry. Some however, such as VCPU faults on ARM plaftforms, require specialised handling.
+
+> handleEvent (HypervisorEvent hypType) = withoutPreemption $ do
+>     thread <- getCurThread
+>     handleHypervisorFault thread hypType
 >     return ()
 
 \subsection{System Calls}

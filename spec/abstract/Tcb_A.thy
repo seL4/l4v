@@ -23,6 +23,7 @@ context begin interpretation Arch .
 requalify_consts
   arch_activate_idle_thread
   arch_tcb_set_ipc_buffer
+  sanitise_register
 
 end
 
@@ -219,8 +220,9 @@ where
 | "invoke_tcb (WriteRegisters dest resume_target values arch) =
   (liftE $ do
     self \<leftarrow> gets cur_thread;
+    t \<leftarrow> thread_get id dest;
     as_user dest $ do
-        zipWithM (\<lambda>r v. setRegister r (sanitiseRegister r v))
+        zipWithM (\<lambda>r v. setRegister r (sanitise_register t r v))
             (frameRegisters @ gpRegisters) values;
         pc \<leftarrow> getRestartPC;
         setNextPC pc
@@ -240,6 +242,10 @@ where
     unbind_notification tcb;
     return []
   od)"
+
+context Arch begin
+declare arch_tcb_set_ipc_buffer_def [simp]
+end
 
 context Arch begin
 declare arch_tcb_set_ipc_buffer_def [simp]
@@ -274,27 +280,6 @@ definition
         | Some pptr \<Rightarrow> mapM (\<lambda>x. load_word_offs pptr x)
                [length msg_registers + 1 ..< Suc msg_max_length];
      return (take (unat (mi_length info)) $ cpu_mrs @ buf_mrs)
-   od"
-
-text {* Copy a set of registers from a thread to memory and vice versa. *}
-definition
-  copyRegsToArea :: "register list \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "copyRegsToArea regs thread ptr \<equiv> do
-     context \<leftarrow> thread_get (arch_tcb_context_get o tcb_arch) thread;
-     zipWithM_x (store_word_offs ptr)
-       [0 ..< length regs]
-       (map context regs)
-  od"
-
-definition
-  copyAreaToRegs :: "register list \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "copyAreaToRegs regs ptr thread \<equiv> do
-     old_regs \<leftarrow> thread_get (arch_tcb_context_get o tcb_arch) thread;
-     vals \<leftarrow> mapM (load_word_offs ptr) [0 ..< length regs];
-     vals2 \<leftarrow> return $ zip vals regs;
-     vals3 \<leftarrow> return $ map (\<lambda>(v, r). (sanitiseRegister r v, r)) vals2;
-     new_regs \<leftarrow> return $ foldl (\<lambda>rs (v, r). rs ( r := v )) old_regs vals3;
-     thread_set (\<lambda>tcb. tcb \<lparr> tcb_arch := arch_tcb_context_set new_regs (tcb_arch tcb) \<rparr>) thread
    od"
 
 end

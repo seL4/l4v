@@ -1998,11 +1998,9 @@ lemma handle_arch_fault_reply_reads_respects:
 lemma handle_fault_reply_reads_respects:
   "reads_respects aag l (K (is_subject aag thread)) (handle_fault_reply fault thread x y)"
   apply(case_tac fault)
-     apply (wp as_user_reads_respects
-               det_zipWithM_x
-               set_register_det
-               handle_arch_fault_reply_reads_respects[simplified K_def]
-          | simp add: reads_lrefl)+
+     apply (wp as_user_reads_respects thread_get_reads_respects
+               thread_get_wp' handle_arch_fault_reply_reads_respects[simplified K_def]
+          | simp add: reads_lrefl det_zipWithM_x set_register_det)+
   done
 
 lemma lookup_ipc_buffer_has_read_auth':

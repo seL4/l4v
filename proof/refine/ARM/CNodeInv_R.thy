@@ -695,6 +695,12 @@ lemma unbindNotification_ctes_of_thread:
    \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>" 
   by wp
 
+lemma prepareThreadDelete_ctes_of_thread:
+  "\<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>
+     prepareThreadDelete t
+   \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>" 
+  by (wpsimp simp: prepareThreadDelete_def)
+
 lemma suspend_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
      suspend t
@@ -713,6 +719,14 @@ lemma unbindNotification_not_recursive_ctes:
      unbindNotification t
    \<lbrace>\<lambda>rv s. P (not_recursive_ctes s)\<rbrace>"
   apply (simp only: not_recursive_ctes_def cteCaps_of_def)
+  apply wp
+  done
+
+lemma prepareThreadDelete_not_recursive_ctes:
+  "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
+     prepareThreadDelete t
+   \<lbrace>\<lambda>rv s. P (not_recursive_ctes s)\<rbrace>"
+  apply (simp only: prepareThreadDelete_def cteCaps_of_def)
   apply wp
   done
 
@@ -811,7 +825,9 @@ termination finaliseSlot'
                            getThreadCSpaceRoot_def locateSlot_conv)
      apply (frule(1) use_valid [OF _ unbindNotification_ctes_of_thread, OF _ exI])
      apply (frule(1) use_valid [OF _ suspend_ctes_of_thread])
+     apply (frule(1) use_valid [OF _ prepareThreadDelete_ctes_of_thread])
      apply clarsimp
+     apply (erule use_valid [OF _ prepareThreadDelete_not_recursive_ctes])
      apply (erule use_valid [OF _ suspend_not_recursive_ctes])
      apply (erule use_valid [OF _ unbindNotification_not_recursive_ctes])
      apply simp
@@ -6955,7 +6971,7 @@ lemma cteDelete_sch_act_simple:
 
 crunch st_tcb_at'[wp]: emptySlot "st_tcb_at' P t" (simp: case_Null_If)
 
-crunch st_tcb_at'[wp]: "Arch.finaliseCap", unbindMaybeNotification "st_tcb_at' P t"
+crunch st_tcb_at'[wp]: "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete "st_tcb_at' P t"
   (ignore: getObject setObject simp: crunch_simps
    wp: crunch_wps getObject_inv loadObject_default_inv)
 end
@@ -6971,6 +6987,7 @@ lemma finaliseCap2_st_tcb_at':
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
    apply ((wp cancelAllIPC_st_tcb_at cancelAllSignals_st_tcb_at
+              prepareThreadDelete_st_tcb_at'
               suspend_st_tcb_at' cteDeleteOne_st_tcb_at getCTE_wp'
              | simp add: isCap_simps getSlotCap_def getIRQSlot_def
                          locateSlot_conv getInterruptState_def

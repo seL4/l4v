@@ -23,6 +23,8 @@ lemma (* obj_at_not_live_valid_arch_cap_strg *) [Finalise_AI_asms]:
                      a_type_arch_live
               split: arch_cap.split_asm if_splits)
 
+crunch caps_of_state[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (caps_of_state s)"
+
 global_naming ARM
 
 lemma valid_global_refs_asid_table_udapte [iff]:
@@ -354,6 +356,8 @@ lemma deleting_irq_handler_final [Finalise_AI_asms]:
   apply simp
   done
 
+crunch is_final_cap'[wp]: prepare_thread_delete "is_final_cap' cap"
+
 lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. final \<longrightarrow> is_final_cap' cap s
          \<and> cte_wp_at (op = cap) slot s\<rbrace>
@@ -385,9 +389,11 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
    apply (wp | wpc | simp only: simp_thms)+
   done
 
-crunch typ_at_arch[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (typ_at T p s)"
+crunch typ_at_arch[wp,Finalise_AI_asms]: arch_finalise_cap,prepare_thread_delete "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def
         ignore: maskInterrupt )
+
+crunch tcb_at[wp]: prepare_thread_delete "\<lambda>s. tcb_at p s"
 
 lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
   "\<lbrace>valid_cap cap\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
@@ -539,7 +545,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                       unbind_notification_valid_objs
                    | clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
                                      ran_tcb_cap_cases is_cap_simps
-                                     cap_range_def
+                                     cap_range_def prepare_thread_delete_def
                                      can_fast_finalise_def
                                      obj_irq_refs_subset
                                      vs_cap_ref_def
@@ -578,6 +584,9 @@ lemma (* deleting_irq_handler_cte_preserved *)[Finalise_AI_asms]:
 
 
 crunch cte_wp_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (cte_wp_at P' p s)"
+  (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
+
+crunch cte_wp_at[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at)
 
 end
@@ -631,6 +640,8 @@ context Arch begin global_naming ARM
 
 crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps select_wp simp: crunch_simps)
+
+crunch irq_node[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (interrupt_irq_node s)"
 
 crunch pred_tcb_at[wp]: arch_finalise_cap "pred_tcb_at proj P t"
   (simp: crunch_simps wp: crunch_wps)
@@ -1071,41 +1082,6 @@ lemma pd_shifting_global_refs:
   apply simp
   done
 
-lemma mapM_x_store_pde_InvalidPDE_empty:
-  "\<lbrace>(invs and  (\<lambda>s. word \<notin> global_refs s)) and K(is_aligned word pd_bits)\<rbrace>
-    mapM_x (swp store_pde InvalidPDE)
-           (map (\<lambda>a. (a << 2) + word) [0.e.(kernel_base >> 20) - 1])
-   \<lbrace>\<lambda>_ s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (rule hoare_post_imp)
-   apply (erule obj_at_empty_tableI)
-  apply (wp hoare_vcg_conj_lift)
-    apply (rule mapM_x_swp_store_pde_invs_unmap)
-   apply (simp add: mapM_x_map)
-   apply (rule hoare_strengthen_post)
-    apply (rule mapM_x_accumulate_checks[OF store_pde_pde_wp_at])
-    defer
-    apply (rule allI)
-    apply (erule_tac x="ucast x" in ballE)
-     apply (rule impI)
-     apply (frule_tac pd="word" and ae="x" in pd_shifting_again3)
-     apply (frule_tac pd="word" and ae="x" in pd_shifting_again5)
-      apply ((simp add: kernel_mapping_slots_def kernel_base_def)+)[3]
-    apply (subst word_not_le)
-    apply (subst (asm) word_not_le)
-    apply (cut_tac x="ucast x" and y="kernel_base >> 20" in le_m1_iff_lt)
-    apply clarsimp
-    apply (simp add: le_m1_iff_lt word_less_nat_alt unat_ucast)
-    apply (simp add: pde_ref_def)
-   apply (rule conjI, rule allI, rule impI)
-    apply (rule pd_shifting_kernel_mapping_slots)
-     apply simp+
-   apply (rule allI, rule impI)
-   apply (rule pd_shifting_global_refs)
-     apply simp+
-  apply (wp store_pde_pde_wp_at2)
-  done
-
 lemma word_aligned_pt_slots:
   "\<lbrakk>is_aligned word pt_bits;
     x \<in> set [word , word + 4 .e. word + 2 ^ pt_bits - 1]\<rbrakk>
@@ -1243,16 +1219,6 @@ lemma store_pde_arch_objs_invalid:
   apply (simp add: pde_ref_def)
   done
 
-lemma mapM_x_store_pde_InvalidPDE_empty2:
-  "\<lbrace>invs and (\<lambda>s. word \<notin> global_refs s) and K (is_aligned word pd_bits) and K (slots = (map (\<lambda>a. (a << 2) + word) [0.e.(kernel_base >> 20) - 1])) \<rbrace>
-  mapM_x (\<lambda>x. store_pde x InvalidPDE) slots
-  \<lbrace>\<lambda>_ s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply simp
-  apply (wp mapM_x_store_pde_InvalidPDE_empty [unfolded swp_def])
-  apply simp
-  done
-
 crunch valid_cap: invalidate_tlb_by_asid "valid_cap cap"
 crunch inv: page_table_mapped "P"
 crunch valid_objs[wp]: invalidate_tlb_by_asid "valid_objs"
@@ -1281,6 +1247,8 @@ lemma mapM_x_swp_store_invalid_pde_invs:
   done
 
 global_naming Arch
+
+crunch invs[wp]: prepare_thread_delete invs
 
 lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
   shows "\<lbrace>invs and cte_wp_at (op = cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. invs\<rbrace>"

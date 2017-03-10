@@ -20,16 +20,19 @@ ifndef STP_INCLUDED
 STP_INCLUDED=true
 
 ARM_DIR=$(STP_PFX)/ARM
+ARM_HYP_DIR=$(STP_PFX)/ARM_HYP
 X64_DIR=$(STP_PFX)/X64
-ARCH_DIRS=$(ARM_DIR) $(X64_DIR)
+ARCH_DIRS=$(ARM_DIR) $(ARM_HYP_DIR) $(X64_DIR)
 
 STPARSER_ARM=$(ARM_DIR)/c-parser
+STPARSER_ARM_HYP=$(ARM_HYP_DIR)/c-parser
 STPARSER_X64=$(X64_DIR)/c-parser
-STPARSERS=$(STPARSER_ARM) $(STPARSER_X64)
+STPARSERS=$(STPARSER_ARM) $(STPARSER_ARM_HYP) $(STPARSER_X64)
 
 TOKENIZER_ARM=$(ARM_DIR)/tokenizer
+TOKENIZER_ARM_HYP=$(ARM_HYP_DIR)/tokenizer
 TOKENIZER_X64=$(X64_DIR)/tokenizer
-TOKENIZERS=$(TOKENIZER_ARM) $(TOKENIZER_X64)
+TOKENIZERS=$(TOKENIZER_ARM) $(TOKENIZER_ARM_HYP) $(TOKENIZER_X64)
 
 .PHONY: all cparser_tools stp_all standalone-cparser standalone-tokenizer
 
@@ -39,6 +42,14 @@ standalone-cparser stp_all: $(STPARSERS)
 standalone-tokenizer stp_all: $(TOKENIZERS)
 
 include $(STP_PFX)/../Makefile
+
+# This is only used for ARM_HYP and ARM since the former is a copy of the latter
+UMM_HEAP_ARM_HYP=$(realpath $(STP_PFX)/../umm_heap)/ARM_HYP
+UMM_HEAP_ARM=$(realpath $(STP_PFX)/../umm_heap/ARM)
+
+$(UMM_HEAP_ARM_HYP)/% : $(UMM_HEAP_ARM)/%
+	mkdir -p $(UMM_HEAP_ARM_HYP)
+	cp -p $< $@
 
 STP_CLEAN_TARGETS := $(STPARSERS) $(TOKENIZERS) $(STP_PFX)/c-parser.o $(STP_PFX)/table.ML
 
@@ -55,23 +66,32 @@ ifeq ($(SML_COMPILER),mlton)
 #
 
 ARM_MLB_PATH := -mlb-path-var 'L4V_ARCH ARM'
+ARM_HYP_MLB_PATH := -mlb-path-var 'L4V_ARCH ARM_HYP'
 X64_MLB_PATH := -mlb-path-var 'L4V_ARCH X64'
 
 PARSER_DEPS_ARM := $(shell mlton $(ARM_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
+PARSER_DEPS_ARM_HYP := $(shell mlton $(ARM_HYP_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
 PARSER_DEPS_X64 := $(shell mlton $(X64_MLB_PATH) -stop f $(STP_PFX)/c-parser.mlb)
 
 TOKENIZER_DEPS_ARM := $(shell mlton $(ARM_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
+TOKENIZER_DEPS_ARM_HYP := $(shell mlton $(ARM_HYP_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
 TOKENIZER_DEPS_X64 := $(shell mlton $(X64_MLB_PATH) -stop f $(STP_PFX)/tokenizer.mlb)
 
 
 $(STPARSER_ARM): $(PARSER_DEPS_ARM) | $(ARM_DIR)
 	mlton $(ARM_MLB_PATH) -output $@ $<
 
+$(STPARSER_ARM_HYP): $(PARSER_DEPS_ARM_HYP) | $(ARM_HYP_DIR)
+	mlton $(ARM_HYP_MLB_PATH) -output $@ $<
+
 $(STPARSER_X64): $(PARSER_DEPS_X64) | $(X64_DIR)
 	mlton $(X64_MLB_PATH) -output $@ $<
 
 $(TOKENIZER_ARM): $(TOKENIZER_DEPS_ARM) | $(ARM_DIR)
 	mlton $(ARM_MLB_PATH) -output $@ $<
+
+$(TOKENIZER_ARM_HYP): $(TOKENIZER_DEPS_ARM_HYP) | $(ARM_HYP_DIR)
+	mlton $(ARM_HYP_MLB_PATH) -output $@ $<
 
 $(TOKENIZER_X64): $(TOKENIZER_DEPS_X64) | $(X64_DIR)
 	mlton $(X64_MLB_PATH) -output $@ $<
@@ -115,5 +135,6 @@ clean: stp_clean
 
 stp_clean:
 	-/bin/rm -f $(STP_CLEAN_TARGETS)
+	-/bin/rm -fr $(UMM_HEAP_ARM_HYP)
 
 endif

@@ -2637,10 +2637,8 @@ lemma schedule_corres:
             apply (rule_tac P="tcb_at cur" in corres_symb_exec_l')
               apply (rule_tac corres_symb_exec_l')
                 apply simp
-                apply (rule corres_assert_ret)
-               apply (wp gets_exs_valid | simp)+
-            apply (rule thread_get_wp')
-           apply simp
+                apply (rule corres_assert_ret) 
+               apply (wpsimp wp: thread_get_wp' gets_exs_valid)+
            apply (rule corres_split[OF _ thread_get_isRunnable_corres])
              apply (rule corres_split[OF _ corres_when])
                  apply (rule corres_split[OF _ guarded_switch_to_corres])
@@ -2659,28 +2657,23 @@ lemma schedule_corres:
              apply (simp_all only: cong: if_cong Deterministic_A.scheduler_action.case_cong
                                            Structures_H.scheduler_action.case_cong)
            apply ((wp thread_get_wp' hoare_vcg_conj_lift hoare_drop_imps | clarsimp)+)
-thm tcbSchedEnqueue_invs'
    apply (rule conjI,simp)
-   apply (clarsimp split:Deterministic_A.scheduler_action.splits
-     simp: invs_psp_aligned invs_distinct invs_valid_objs
-     invs_arch_state invs_arch_objs)
-   apply (intro impI conjI allI tcb_at_invs | (fastforce
-          simp: invs_def cur_tcb_def valid_arch_caps_def
-                valid_sched_def valid_sched_action_def
-               is_activatable_def st_tcb_at_def obj_at_def
-                valid_state_def only_idle_def valid_etcbs_def
-                weak_valid_sched_action_def
-                not_cur_thread_def tcb_at_invs
-          ))+
+   apply (clarsimp split: Deterministic_A.scheduler_action.splits
+                    simp: invs_psp_aligned invs_distinct invs_valid_objs invs_arch_state invs_arch_objs)
+   apply (intro impI conjI allI tcb_at_invs |
+          (fastforce simp: invs_def cur_tcb_def valid_arch_caps_def valid_etcbs_def
+                           valid_sched_def valid_sched_action_def is_activatable_def
+                           st_tcb_at_def obj_at_def valid_state_def only_idle_def
+                           weak_valid_sched_action_def not_cur_thread_def tcb_at_invs))+
     apply (cut_tac s = s in valid_blocked_valid_blocked_except)
      prefer 2
      apply (simp add:valid_sched_def)
     apply (simp add:valid_sched_def)
    apply simp
   by (fastforce simp: invs'_def cur_tcb'_def valid_state'_def st_tcb_at'_def
-                         sch_act_wf_def  valid_pspace'_def valid_objs'_maxDomain
-                         valid_objs'_maxPriority comp_def
-                   split: scheduler_action.splits)
+                      sch_act_wf_def  valid_pspace'_def valid_objs'_maxDomain
+                      valid_objs'_maxPriority comp_def
+               split: scheduler_action.splits)
 
 lemma ssa_all_invs_but_ct_not_inQ':
   "\<lbrace>all_invs_but_ct_not_inQ' and sch_act_wf sa and 

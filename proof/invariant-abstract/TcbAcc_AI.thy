@@ -331,11 +331,6 @@ crunch it [wp]: thread_set "\<lambda>s. P (idle_thread s)"
 crunch arch [wp]: thread_set "\<lambda>s. P (arch_state s)"
 
 
-lemma thread_set_arch_state [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> thread_set f t \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift; wp)
-
-
 lemma thread_set_caps_of_state_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
@@ -669,11 +664,6 @@ lemma as_user_irq_handlers[wp]:
   apply (wp valid_irq_handlers_lift thread_set_caps_of_state_trivial
                 ball_tcb_cap_casesI | simp)+
   done
-
-
-lemma as_user_valid_arch [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> as_user t f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) wp+
 
 
 lemma as_user_iflive[wp]:
@@ -1345,15 +1335,6 @@ lemma set_bound_notification_global_refs [wp]:
 crunch arch [wp]: set_thread_state, set_bound_notification "\<lambda>s. P (arch_state s)"
 
 
-lemma set_thread_state_valid_arch [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> set_thread_state p st \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) wp+
-
-
-lemma set_bound_notification_valid_arch [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> set_bound_notification p ntfn \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift) wp+
-
 lemma st_tcb_ex_cap:
   "\<lbrakk> st_tcb_at P t s; if_live_then_nonz_cap s;
       \<And>st. P st \<Longrightarrow> \<not> halted st \<rbrakk>
@@ -1872,5 +1853,10 @@ lemma set_mrs_st_tcb [wp]:
    apply (simp add: tcb_to_itcb_def)
   apply wp
   done
+
+
+lemma get_tcb_ko_atD:
+  "get_tcb t s = Some tcb \<Longrightarrow> ko_at (TCB tcb) t s"
+  by auto
 
 end

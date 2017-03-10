@@ -40,6 +40,12 @@ lemma ucast_not_helper_cheating:
   shows "ucast a \<noteq> (0xFFFF::32 signed word)"
   by (word_bitwise,simp)
 
+lemma Arch_finaliseInterrupt_ccorres:
+  "ccorres dc xfdc \<top> UNIV [] (return a) (Call Arch_finaliseInterrupt_'proc)"
+  apply (cinit')
+   apply (rule ccorres_return_Skip)
+  apply clarsimp
+  done
 
 lemma handleInterruptEntry_ccorres:
   "ccorres dc xfdc 
@@ -74,14 +80,16 @@ lemma handleInterruptEntry_ccorres:
      apply vcg
     apply (clarsimp simp: irqInvalid_def ucast_ucast_b 
       is_up ucast_not_helper_cheating)
+    apply (rule ccorres_rhs_assoc)
     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-     apply (ctac (no_vcg) add: schedule_ccorres)
-      apply (rule ccorres_add_return2)
-      apply (ctac (no_vcg) add: activateThread_ccorres)
-       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-       apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: return_def)
-      apply (wp schedule_sch_act_wf schedule_invs'
+     apply (rule ccorres_add_return, ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres)
+      apply (ctac (no_vcg) add: schedule_ccorres)
+       apply (rule ccorres_add_return2)
+       apply (ctac (no_vcg) add: activateThread_ccorres)
+        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: return_def)
+       apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
    apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
     apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
@@ -263,7 +271,9 @@ lemma handleSyscall_ccorres:
                       apply (case_tac rv, clarsimp, 
                         clarsimp simp: ucast_not_helper_cheating ucast_ucast_b
                           is_up)
+                     apply (rule ccorres_add_return2)
                      apply (ctac (no_vcg) add: handleInterrupt_ccorres)
+                      apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                     apply ceqv
                    apply (rule_tac r=dc and xf=xfdc in ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                   apply wp
@@ -301,7 +311,9 @@ lemma handleSyscall_ccorres:
                      apply (case_tac rv, clarsimp, 
                        clarsimp simp: ucast_not_helper_cheating is_up 
                          ucast_ucast_b)
+                     apply (rule ccorres_add_return2)
                     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
+                     apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                    apply ceqv
                   apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                  apply wp
@@ -338,7 +350,9 @@ lemma handleSyscall_ccorres:
                     apply (case_tac rv, clarsimp)
                     apply (clarsimp simp: ucast_not_helper_cheating ucast_ucast_b is_up)
                    apply clarsimp
+                   apply (rule ccorres_add_return2)
                    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
+                    apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                   apply ceqv
                  apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                 apply wp
@@ -503,6 +517,23 @@ lemma no_fail_callKernel:
   apply metis
   done
 
+lemma handleHypervisorEvent_ccorres:
+  "ccorres dc xfdc 
+           (invs' and sch_act_simple)
+           UNIV []
+           (callKernel (HypervisorEvent t)) handleHypervisorEvent_C"
+  apply (simp add: callKernel_def handleEvent_def handleHypervisorEvent_C_def)
+  apply (simp add: liftE_def bind_assoc)
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       apply (cases t; simp add: handleHypervisorFault_def)
+       apply (ctac (no_vcg) add: schedule_ccorres)
+        apply (ctac (no_vcg) add: activateThread_ccorres)
+       apply (wp schedule_sch_act_wf schedule_invs'
+              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
+    apply clarsimp+
+  done
+
 lemma callKernel_corres_C:
   "corres_underlying rf_sr False True dc
            (all_invs' e)
@@ -543,7 +574,12 @@ lemma callKernel_corres_C:
      apply (rule ccorres_call)
         apply (rule handleSyscall_ccorres)
        apply (clarsimp simp: all_invs'_def sch_act_simple_def)+
-done
+   apply (rule ccorres_corres_u [rotated], assumption)
+    apply (rule ccorres_guard_imp)
+         apply (rule handleHypervisorEvent_ccorres)
+        apply (clarsimp simp: all_invs'_def sch_act_simple_def)
+       apply simp
+  done
 
 lemma ccorres_add_gets:
   "ccorresG rf_sr \<Gamma> rv xf P P' hs (do v \<leftarrow> gets f; m od) c
@@ -685,8 +721,8 @@ lemma entry_corres_C:
         apply (rule corres_split)
            prefer 2
            apply (rule corres_cases[where R=fp], simp_all add: dc_def[symmetric])[1]
-            apply (rule callKernel_withFastpath_corres_C)
-           apply (rule callKernel_corres_C)
+            apply (rule callKernel_withFastpath_corres_C, simp)
+           apply (rule callKernel_corres_C[unfolded dc_def], simp)
           apply (rule corres_split [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
              prefer 2
              apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
@@ -1121,6 +1157,7 @@ lemma kernel_all_subset_kernel:
            apply (simp add: callKernel_C_def callKernel_withFastpath_C_def
                             kernel_global.callKernel_C_def
                             kernel_global.callKernel_withFastpath_C_def
+                            handleHypervisorEvent_C_def kernel_global.handleHypervisorEvent_C_def
                        split: event.split if_split)
            apply (intro allI impI conjI monadic_rewrite_\<Gamma>)[1]
           apply ((wp | simp)+)[3]

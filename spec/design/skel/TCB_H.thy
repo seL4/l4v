@@ -36,7 +36,7 @@ requalify_consts
   fromVPtr
 end
 
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= bodies_only NOT liftFnMaybe assertDerived archThreadGet archThreadSet asUser
+#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= bodies_only NOT liftFnMaybe assertDerived archThreadGet archThreadSet asUser sanitiseRegister
 
 defs asUser_def:
 "asUser tptr f\<equiv> (do

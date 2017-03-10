@@ -22,7 +22,7 @@ imports
   MoreCorres
   "../../spec/design/InvocationLabels_H"
   "../../lib/MonadicRewrite"
-  "../refine/EmptyFail"
+  "../refine/$L4V_ARCH/EmptyFail"
 begin
 
 no_notation bind_drop (infixl ">>" 60)

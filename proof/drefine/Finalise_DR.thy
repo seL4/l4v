@@ -2631,6 +2631,10 @@ lemma set_cap_set_thread_state_inactive:
     simp:obj_at_def infer_tcb_pending_op_def)
   done
 
+lemma prepare_thread_delete_dcorres: "dcorres dc P P' (CSpace_D.prepare_thread_delete t) (prepare_thread_delete t)"
+  apply (clarsimp simp: CSpace_D.prepare_thread_delete_def prepare_thread_delete_def)
+  done
+
 lemma dcorres_finalise_cap:
   "cdlcap = transform_cap cap \<Longrightarrow>
       dcorres (\<lambda>r r'. fst r = transform_cap (fst r'))
@@ -2656,8 +2660,10 @@ lemma dcorres_finalise_cap:
            apply (rule corres_split)
               unfolding K_bind_def
               apply (rule dcorres_rhs_noop_above_True[OF tcb_sched_action_dcorres[where P=\<top> and P'=\<top>]])
-              apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
-              apply (clarsimp simp:transform_cap_def)
+              apply (rule corres_split'[OF prepare_thread_delete_dcorres])
+                apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
+                apply (clarsimp simp:transform_cap_def)
+               apply wp+
              apply (rule set_cap_set_thread_state_inactive)
             apply wp+
          apply (simp add:not_idle_thread_def)
