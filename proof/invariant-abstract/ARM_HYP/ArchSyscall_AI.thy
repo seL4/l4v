@@ -104,8 +104,9 @@ lemma hvmf_ex_cap[wp, Syscall_AI_assms]:
   done
 
 lemma hh_invs[wp, Syscall_AI_assms]:
-  "\<lbrace>invs and ct_active\<rbrace> handle_hypervisor_fault thread fault \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (cases fault; wpsimp)
+  "\<lbrace>invs and ct_active and st_tcb_at active thread and ex_nonz_cap_to thread\<rbrace>
+  handle_hypervisor_fault thread fault \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (cases fault; wpsimp simp: valid_fault_def)
 
 end
 
