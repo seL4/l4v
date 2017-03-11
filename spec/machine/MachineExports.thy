@@ -47,6 +47,7 @@ requalify_consts
   minIRQ
   word_size_bits
   clearMemory
+  non_kernel_IRQs
 
 (* HERE IS THE PLACE FOR GENERIC WORD LEMMAS FOR ALL ARCHITECTURES *)
 

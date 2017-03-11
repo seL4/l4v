@@ -33,7 +33,7 @@ where
   "vgic_maintenance = do
      ct \<leftarrow> gets cur_thread;
      st \<leftarrow> thread_get tcb_state ct;
-     when (runnable st) do
+     when (runnable st) $ do
        eisr0 \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_eisr0;
        eisr1 \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_eisr1;
        flags \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_misr;

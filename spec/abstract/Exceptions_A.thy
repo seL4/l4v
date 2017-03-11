@@ -67,7 +67,7 @@ definition
  "preemption_point \<equiv> doE liftE $ do_extended_op update_work_units;
                          OR_choiceE (work_units_limit_reached)
                            (doE liftE $ do_extended_op reset_work_units;
-                                irq_opt \<leftarrow> liftE $ do_machine_op getActiveIRQ;
+                                irq_opt \<leftarrow> liftE $ do_machine_op (getActiveIRQ True);
                                 case_option (returnOk ()) (throwError \<circ> Interrupted) irq_opt
                            odE) (returnOk ())
                      odE"
