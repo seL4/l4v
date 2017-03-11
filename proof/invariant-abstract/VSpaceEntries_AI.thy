@@ -243,8 +243,8 @@ lemma mapME_x_accumulate_checks:
         apply fastforce
       apply (wp Cons.hyps)
          apply (rule Cons.prems,simp)
-        apply (wp Cons.prems(2),simp)
-       apply (wp Cons.prems(3),simp)
+        apply (wp Cons.prems(2);simp)
+       apply (wp Cons.prems(3);simp)
       using Cons.prems
       apply fastforce
      apply (rule hoare_pre)
