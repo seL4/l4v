@@ -530,11 +530,11 @@ lemma sts_mcpriority_tcb_at_ct[wp]:
 lemma sts_tcb_inv_wf [wp]:
   "\<lbrace>tcb_inv_wf i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. tcb_inv_wf i\<rbrace>"
   apply (case_tac i)
-  apply (wp set_thread_state_valid_cap hoare_vcg_all_lift hoare_vcg_const_imp_lift
+  by (wp set_thread_state_valid_cap hoare_vcg_all_lift hoare_vcg_const_imp_lift
          | simp add: tcb_at_typ split: option.split
          | safe
          | wp sts_obj_at_impossible)+
-  done
+
 
 lemma sts_valid_inv[wp]:
   "\<lbrace>valid_invocation i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_invocation i\<rbrace>"
