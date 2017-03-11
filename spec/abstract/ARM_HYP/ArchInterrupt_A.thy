@@ -31,28 +31,32 @@ definition
   vgic_maintenance :: "(unit,'z::state_ext) s_monad"
 where
   "vgic_maintenance = do
-     eisr0 \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_eisr0;
-     eisr1 \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_eisr1;
-     flags \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_misr;
-     vgic_misr_eoi \<leftarrow> return $ 1;
-
-     fault \<leftarrow>
-         if flags && vgic_misr_eoi \<noteq> 0
-         then
-              if eisr0 = 0 \<and> eisr1 = 0
-                 then return $ VGICMaintenance [0, 0]
-                 else do
-                     irq_idx \<leftarrow> return (if eisr0 \<noteq> 0 then word_ctz eisr0 else word_ctz eisr1);
-                     gic_vcpu_num_list_regs \<leftarrow> gets (arm_gicvcpu_numlistregs o arch_state);
-                     when (irq_idx < gic_vcpu_num_list_regs) (do_machine_op $ do
-                       virq \<leftarrow> get_gic_vcpu_ctrl_lr (of_nat irq_idx);
-                       set_gic_vcpu_ctrl_lr (of_nat irq_idx) $ virqSetEOIIRQEN virq 0
-                     od);
-                     return $ VGICMaintenance [of_nat irq_idx, 1]
-                 od
-         else return $ VGICMaintenance [0, 0];
      ct \<leftarrow> gets cur_thread;
-     handle_fault ct $ ArchFault fault
+     st \<leftarrow> thread_get tcb_state ct;
+     when (runnable st) do
+       eisr0 \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_eisr0;
+       eisr1 \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_eisr1;
+       flags \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_misr;
+       vgic_misr_eoi \<leftarrow> return $ 1;
+
+       fault \<leftarrow>
+           if flags && vgic_misr_eoi \<noteq> 0
+           then
+                if eisr0 = 0 \<and> eisr1 = 0
+                   then return $ VGICMaintenance [0, 0]
+                   else do
+                       irq_idx \<leftarrow> return (if eisr0 \<noteq> 0 then word_ctz eisr0 else word_ctz eisr1);
+                       gic_vcpu_num_list_regs \<leftarrow> gets (arm_gicvcpu_numlistregs o arch_state);
+                       when (irq_idx < gic_vcpu_num_list_regs) (do_machine_op $ do
+                         virq \<leftarrow> get_gic_vcpu_ctrl_lr (of_nat irq_idx);
+                         set_gic_vcpu_ctrl_lr (of_nat irq_idx) $ virqSetEOIIRQEN virq 0
+                       od);
+                       return $ VGICMaintenance [of_nat irq_idx, 1]
+                   od
+           else return $ VGICMaintenance [0, 0];
+       ct \<leftarrow> gets cur_thread;
+       handle_fault ct $ ArchFault fault
+     od
    od"
 
 definition
