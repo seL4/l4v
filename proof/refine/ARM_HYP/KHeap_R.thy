@@ -11,7 +11,7 @@
 theory KHeap_R
 imports
   "../../invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
-  Machine_R Eisbach
+  Machine_R
 begin
 
 lemma lookupAround2_known1:
