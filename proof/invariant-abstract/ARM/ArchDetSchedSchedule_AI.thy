@@ -236,21 +236,27 @@ crunch valid_list [wp, DetSchedSchedule_AI_assms]:
 
 crunch cur_tcb [wp, DetSchedSchedule_AI_assms]: handle_arch_fault_reply, handle_vm_fault cur_tcb
 
-crunch valid_sched [wp, DetSchedSchedule_AI_assms]: handle_hypervisor_fault valid_sched
-  (ignore: getFAR getDFSR getIFSR)
-
-crunch not_queued [wp, DetSchedSchedule_AI_assms]: handle_hypervisor_fault "not_queued t"
-  (ignore: getFAR getDFSR getIFSR)
-
-crunch sched_act_not [wp, DetSchedSchedule_AI_assms]: handle_hypervisor_fault "scheduler_act_not t"
-  (ignore: getFAR getDFSR getIFSR)
-
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?)
+  qed
+
+context Arch begin global_naming ARM_HYP
+
+lemma handle_hyp_fault_valid_sched[wp]:
+  "\<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t\<rbrace>
+    handle_hypervisor_fault t fault \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  by (cases fault; wpsimp wp: handle_fault_valid_sched simp: valid_fault_def)
+
+end
+
+global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault
+  proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (unfold_locales; (fact handle_hyp_fault_valid_sched)?)
   qed
 
 end
