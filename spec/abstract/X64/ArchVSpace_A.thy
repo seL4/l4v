@@ -561,5 +561,10 @@ definition
    \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) =
         Some (ArchObj (DataPage False sz))"
 
+definition
+  prepare_thread_delete :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "prepare_thread_delete p \<equiv> return ()"
+
 end
 end

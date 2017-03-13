@@ -24,7 +24,7 @@ begin
 context Arch begin global_naming X64
 
 text {*
-  An implementation of the machine's types, defining register set 
+  An implementation of the machine's types, defining register set
   and some observable machine state.
 *}
 
@@ -50,13 +50,13 @@ datatype register =
   | ES
   | FS
   | GS
-  | FaultInstruction
+  | FaultIP
   | TLS_BASE
   | PADDING_REGISTER
   | ErrorRegister
   | NextIP
   | CS
-  | RFLAGS
+  | FLAGS
   | RSP
   | SS
 
@@ -106,14 +106,14 @@ end
 context Arch begin global_naming X64
 
 end
-qualify X64 (in Arch) 
+qualify X64 (in Arch)
 (* register instance proofs *)
 (*<*)
 instantiation register :: enum begin
 interpretation Arch .
 definition
-  enum_register: "enum_class.enum \<equiv> 
-    [ 
+  enum_register: "enum_class.enum \<equiv>
+    [
       RAX,
       RBX,
       RCX,
@@ -133,13 +133,13 @@ definition
       ES,
       FS,
       GS,
-      FaultInstruction,
+      FaultIP,
       TLS_BASE,
       PADDING_REGISTER,
       ErrorRegister,
       NextIP,
       CS,
-      RFLAGS,
+      FLAGS,
       RSP,
       SS
     ]"
@@ -163,7 +163,7 @@ instantiation register :: enum_alt
 begin
 interpretation Arch .
 definition
-  enum_alt_register: "enum_alt \<equiv> 
+  enum_alt_register: "enum_alt \<equiv>
     alt_from_ord (enum :: register list)"
 instance ..
 end
@@ -179,14 +179,14 @@ end_qualify
 context Arch begin global_naming X64
 
 end
-qualify X64 (in Arch) 
+qualify X64 (in Arch)
 (* gdtslot instance proofs *)
 (*<*)
 instantiation gdtslot :: enum begin
 interpretation Arch .
 definition
-  enum_gdtslot: "enum_class.enum \<equiv> 
-    [ 
+  enum_gdtslot: "enum_class.enum \<equiv>
+    [
       GDT_NULL,
       GDT_CS_0,
       GDT_DS_0,
@@ -218,7 +218,7 @@ instantiation gdtslot :: enum_alt
 begin
 interpretation Arch .
 definition
-  enum_alt_gdtslot: "enum_alt \<equiv> 
+  enum_alt_gdtslot: "enum_alt \<equiv>
     alt_from_ord (enum :: gdtslot list)"
 instance ..
 end
@@ -247,16 +247,16 @@ definition
 "badgeRegister \<equiv> capRegister"
 
 definition
-"frameRegisters \<equiv> FaultInstruction # RSP # RFLAGS # [RAX  .e.  R15]"
+"frameRegisters \<equiv> FaultIP # RSP # FLAGS # [RAX  .e.  R15]"
 
 definition
 "gpRegisters \<equiv> [TLS_BASE, FS, GS]"
 
 definition
-"exceptionMessage \<equiv> [FaultInstruction, RSP, RFLAGS]"
+"exceptionMessage \<equiv> [FaultIP, RSP, FLAGS]"
 
 definition
-"syscallMessage \<equiv> [RAX  .e.  RBP] @ [NextIP, RSP, RFLAGS]"
+"syscallMessage \<equiv> [RAX  .e.  RBP] @ [NextIP, RSP, FLAGS]"
 
 defs gdtToSel_def:
 "gdtToSel g\<equiv> (fromIntegral (fromEnum g) `~shiftL~` 3 ) || 3"
@@ -284,11 +284,11 @@ definition
 
 defs initContext_def:
 "initContext\<equiv> [(DS, selDS3), (ES, selDS3), (CS, selCS3), (SS, selDS3)
-              ,(RFLAGS, (1 << 9) || bit 1)]"
+              ,(FLAGS, (1 << 9) || bit 1)]"
 
 defs sanitiseRegister_def:
 "sanitiseRegister x0 v\<equiv> (case x0 of
-    RFLAGS \<Rightarrow>   
+    FLAGS \<Rightarrow>
     v || (1 << 1) && (complement (bit 3)) && (complement (bit 5))  || bit 9
     && ((1 << 12) - 1)
   | FS \<Rightarrow>    if v \<noteq> selTLS \<and> v \<noteq> selIPCBUF then 0 else v
@@ -317,7 +317,7 @@ record
   irq_state :: nat
   underlying_memory :: "word64 \<Rightarrow> word8"
   device_state :: "word64 \<Rightarrow> word8 option"
-  machine_state_rest :: X64.machine_state_rest  
+  machine_state_rest :: X64.machine_state_rest
 
 consts irq_oracle :: "nat \<Rightarrow> word8"
 
@@ -372,6 +372,9 @@ datatype vmfault_type =
     X64DataFault
   | X64InstructionFault
 
+datatype hyp_fault_type =
+    X64NoHypFaults
+
 definition
 pageBits :: "nat"
 where
@@ -401,14 +404,14 @@ end
 context Arch begin global_naming X64
 
 end
-qualify X64 (in Arch) 
+qualify X64 (in Arch)
 (* vmpage_size instance proofs *)
 (*<*)
 instantiation vmpage_size :: enum begin
 interpretation Arch .
 definition
-  enum_vmpage_size: "enum_class.enum \<equiv> 
-    [ 
+  enum_vmpage_size: "enum_class.enum \<equiv>
+    [
       X64SmallPage,
       X64LargePage,
       X64HugePage
@@ -433,7 +436,7 @@ instantiation vmpage_size :: enum_alt
 begin
 interpretation Arch .
 definition
-  enum_alt_vmpage_size: "enum_alt \<equiv> 
+  enum_alt_vmpage_size: "enum_alt \<equiv>
     alt_from_ord (enum :: vmpage_size list)"
 instance ..
 end
