@@ -466,7 +466,7 @@ lemma get_endpoint_revrv:
   unfolding get_endpoint_def
   apply(rule_tac Q="\<lambda> rv. ko_at rv epptr and pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of and (K ((pasSubject aag, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag))" in equiv_valid_rv_bind)
     apply(rule equiv_valid_rv_guard_imp[OF equiv_valid_rv_trivial])
-     apply wp+
+     apply wpsimp+
    apply(case_tac "\<exists> ep. rv = Endpoint ep")
     apply(case_tac "\<exists> ep. rv' = Endpoint ep")
      apply (clarsimp split: kernel_object.splits)

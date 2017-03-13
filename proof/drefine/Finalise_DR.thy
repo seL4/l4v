@@ -453,7 +453,8 @@ lemma finalise_cancel_ipc:
              apply (rule corres_split[OF _ dcorres_revoke_cap_unnecessary])
                unfolding K_bind_def
                apply (rule set_thread_state_corres)
-              apply (wp set_ntfn_valid_objs | clarsimp simp:not_idle_thread_def)+
+              including no_pre
+              apply (wpsimp wp: set_ntfn_valid_objs simp:not_idle_thread_def)+
            apply (clarsimp simp:valid_def fail_def return_def split:Structures_A.ntfn.splits)+
            apply (clarsimp simp:invs_def)
            apply (frule(1) valid_tcb_if_valid_state)
@@ -487,7 +488,8 @@ lemma dcorres_deleting_irq_handler:
   apply (rule corres_split[OF _ dcorres_get_irq_slot])
     apply (simp, rule delete_cap_simple_corres,simp)
     apply (rule hoare_vcg_precond_imp [where Q="invs and valid_etcbs"])
-    apply (wp |clarsimp simp:get_irq_slot_def)+
+    including no_pre
+    apply (wpsimp simp:get_irq_slot_def)+
     apply (rule irq_node_image_not_idle)
     apply (simp add:invs_def valid_state_def)+
 done

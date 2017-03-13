@@ -8094,6 +8094,7 @@ shows  "ccorres dc xfdc
          apply (rule is_aligned_shiftl_self)
         apply (simp)
        apply (simp add: range_cover_one[OF _  range_cover.sz(2) range_cover.sz(1)])
+       including no_pre
        apply (wp insertNewCap_invs' insertNewCap_valid_pspace' insertNewCap_caps_overlap_reserved'
                  insertNewCap_pspace_no_overlap' insertNewCap_caps_no_overlap'' insertNewCap_descendants_range_in'
                  insertNewCap_untypedRange hoare_vcg_all_lift insertNewCap_cte_at static_imp_wp)

@@ -464,7 +464,7 @@ lemma setPriority_ccorres:
       apply (clarsimp simp: st_tcb_at'_def o_def split: if_splits)
      apply (wp threadSet_tcbDomain_triv)
      apply simp
-    apply (simp add: guard_is_UNIV_def)
+    apply (simp add: guard_is_UNIV_def)+
    apply (simp add: inQ_def pred_conj_def conj_comms)
    apply (wp weak_sch_act_wf_lift_linear tcbSchedDequeue_valid_queues)
     apply (rule hoare_strengthen_post,

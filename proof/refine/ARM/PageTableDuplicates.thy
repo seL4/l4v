@@ -1824,13 +1824,9 @@ lemma archFinaliseCap_valid_duplicates'[wp]:
   apply (case_tac arch_cap,simp_all add:ARM_H.finaliseCap_def)
       apply (rule hoare_pre)
        apply (wp|wpc|simp)+
-    apply (rule hoare_pre)
-     apply (wp|wpc|simp)+
     apply (clarsimp simp:valid_cap'_def)
    apply (rule hoare_pre)
     apply (wp|wpc|simp)+
-  apply (rule hoare_pre)
-   apply (wp|wpc|simp)+
   done
 
 lemma finaliseCap_valid_duplicates'[wp]:

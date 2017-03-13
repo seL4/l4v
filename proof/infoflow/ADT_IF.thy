@@ -2046,7 +2046,7 @@ lemma kernel_entry_if_was_not_Interrupt:
    apply wp
      apply simp
      apply(rule handle_event_was_not_Interrupt[simplified validE_E_def validE_def])
-    apply wp+
+    apply wpsimp+
   done
 
 lemma ct_idle_lift:

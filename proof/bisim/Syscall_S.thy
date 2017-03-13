@@ -293,8 +293,7 @@ lemma send_fault_ipc_bisim:
     apply (wp not_empty_lc)
       apply (rule_tac P = "separate_cap xa" in not_empty_gen_asm)
       apply (erule separate_capE, simp_all)[1]
-        apply wp+
-  apply simp
+        apply wpsimp+
   done
 
 lemma handle_fault_bisim:
@@ -690,7 +689,7 @@ lemma handle_event_bisim:
 
       apply (wp separate_state_pres)+
        apply (rule hoare_pre, wps, wp+, simp)
-      apply wp+
+      apply wpsimp+
    apply (simp add: cur_tcb_def)
 
    apply (rule bisim_refl, simp)

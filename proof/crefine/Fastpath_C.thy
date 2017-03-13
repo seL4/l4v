@@ -984,7 +984,8 @@ lemma armv_contextSwitch_HWASID_fp_rewrite:
   apply (rule monadic_rewrite_imp)
    apply (rule monadic_rewrite_gets_l)
    apply (rule monadic_rewrite_symb_exec_l)
-      apply (wp | simp)+
+      including no_pre
+      apply (wpsimp)+
      apply (simp add: empty_fail_findPDForASID empty_fail_catch)
     apply (rule monadic_rewrite_assert monadic_rewrite_gets_l)+
     apply (rule_tac P="asidMap asid \<noteq> None \<and> fst (the (asidMap asid)) = the (pde_stored_asid v)"

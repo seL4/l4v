@@ -246,9 +246,8 @@ lemma tcb_update_cspace_root_wp:
   apply (wp hoare_whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE] get_cap_rv )
    apply (wp get_cap_rv)
   apply (intro hoare_validE_conj)
-    apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE])
-    apply (clarsimp simp: sep_conj_assoc)
-    apply (sep_cancel+)
+    apply (wpsimp wp: tcb_empty_thread_slot_wpE[sep_wand_wpE] simp: sep_conj_assoc)
+    apply (sep_cancel+, simp)
     apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE])+
    apply (clarsimp, sep_cancel+)
   apply (rule validE_allI)
@@ -1151,6 +1150,7 @@ shows
         apply (rule_tac P="is_tcb_cap c" in hoare_gen_asmEx )
         apply (rule split_error_validE)
          apply (clarsimp simp: decode_tcb_invocation_simps)
+         including no_pre
          apply (wp)
          apply (clarsimp simp: comp_def)
          apply (wp+)[2]

@@ -825,7 +825,7 @@ lemma handleFaultReply':
                   fromIntegral_simp1 fromIntegral_simp2 shiftL_word)
     apply (clarsimp simp: mapM_def sequence_def bind_assoc asUser_bind_distrib
                           asUser_return submonad_asUser.fn_stateAssert bit_def)
-   apply wp+
+   apply wpsimp+
   done
 
 end
@@ -2348,7 +2348,7 @@ lemma loadCapTransfer_ctReceiveDepth:
      apply simp
      apply (simp only: word_bits_len_of[symmetric])
      apply (subst unat_lt2p, simp) 
-    apply wp+
+    apply wpsimp+
   done
 
 (* FIXME: move *)
@@ -3482,8 +3482,7 @@ proof -
            apply (rule_tac Q'="\<lambda>rv. no_0_obj' and real_cte_at' rv"
                       in hoare_post_imp_R, wp lsft_real_cte)
            apply (clarsimp simp: cte_wp_at_ctes_of)
-          apply (wp | simp)+
-         apply (rule hoare_pre, (wp | simp)+)
+          apply (wpsimp)+
         apply (clarsimp simp: guard_is_UNIV_def
                        elim!: inl_inrE)
        apply (rule hoare_pre, (wp mapM_wp' | simp)+)
@@ -3519,9 +3518,7 @@ lemma lookupExtraCaps_excaps_in_mem[wp]:
   apply (simp add: excaps_in_mem_def lookupExtraCaps_def lookupCapAndSlot_def
                    split_def)
   apply (wp mapME_set)
-      apply (wp getSlotCap_slotcap_in_mem | simp)+
-    apply (rule hoare_pre, wp, simp)
-   apply (simp add:hoare_TrueI)+
+      apply (wpsimp wp: getSlotCap_slotcap_in_mem)+
   done
 
 lemma doNormalTransfer_ccorres [corres]:

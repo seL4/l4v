@@ -614,7 +614,6 @@ lemma invoke_tcb_corres_read_regs:
            apply (rule dcorres_idempotent_as_user)
            apply (rule hoare_mapM_idempotent)
            apply wp+
-        apply simp
        apply (rule suspend_corres, simp)
       apply wp
     apply simp

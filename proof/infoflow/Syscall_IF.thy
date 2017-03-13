@@ -701,9 +701,7 @@ lemma handle_recv_reads_respects_f:
              apply(rule reads_ep[where auth=Receive])
               apply(fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)+
         apply(wp reads_respects_f[OF handle_fault_reads_respects,where st=st])
-        apply (wp get_ntfn_wp get_cap_wp | wpc)+
-       apply simp
-       apply(rule hoare_pre)
+        apply (wpsimp wp: get_ntfn_wp get_cap_wp)+
         apply(rule VSpaceEntries_AI.hoare_vcg_all_liftE)
            apply (rule_tac Q="\<lambda>r s. silc_inv aag st s \<and> einvs s \<and> pas_refined aag s \<and>
                                      tcb_at rv s \<and> pas_cur_domain aag s \<and>                                     

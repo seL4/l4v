@@ -404,8 +404,6 @@ lemma lookupExtraCaps_excaps_in_mem[wp]:
                    split_def)
   apply (wp mapME_set)
       apply (wp getSlotCap_slotcap_in_mem | simp)+
-    apply (rule hoare_pre, wp, simp)
-   apply (simp add:hoare_TrueI)+
   done
 
 lemma getCurThread_ccorres:

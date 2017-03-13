@@ -548,8 +548,7 @@ lemma set_cap_slots_holding_overlapping_caps_other:
     set_cap cap slot
    \<lbrace> \<lambda> rv s. x \<in> slots_holding_overlapping_caps capa s \<rbrace>"
   unfolding set_cap_def
-  apply (wp set_object_wp get_object_wp | wpc | simp add: split_def)+
-  apply clarsimp
+  apply (wpsimp wp: set_object_wp get_object_wp)+
   apply(case_tac "Structures_A.obj_refs capa = {} \<and> cap_irqs capa = {}")
    apply(clarsimp simp: slots_holding_overlapping_caps_def)
   apply(subgoal_tac "fst x \<noteq> fst slot")
@@ -561,7 +560,8 @@ lemma set_cap_slots_holding_overlapping_caps_other:
         apply(rule upd_other_cte_wp_at)
          apply(simp add: cte_wp_at_def)
         apply assumption
-       apply(auto intro: set_cap_slots_holding_overlapping_caps_helper)
+       apply((drule set_cap_slots_holding_overlapping_caps_helper[where slot=slot], simp+)+)[5]
+  apply clarsimp
   done
 
 
@@ -569,15 +569,12 @@ lemma set_cap_cte_wp_at_triv:
   "\<lbrace>\<top>\<rbrace> set_cap cap slot 
    \<lbrace>\<lambda>_. cte_wp_at (op = cap) slot\<rbrace>"
   unfolding set_cap_def
-  apply (wp set_object_wp get_object_wp | wpc | simp add: split_def)+
-  apply clarsimp
+  apply (wpsimp wp: set_object_wp get_object_wp)
   apply(intro impI conjI allI)
        apply(rule cte_wp_at_cteI)
           apply fastforce
          apply clarsimp
-         apply(erule (1) set_cap_well_formed_cnode_helper)
-        apply simp
-       apply(rule refl)
+         apply(drule set_cap_well_formed_cnode_helper[where slot=slot], simp+)
       apply(fastforce intro: cte_wp_at_tcbI simp: tcb_cap_cases_def)+
   done
 

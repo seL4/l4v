@@ -934,6 +934,7 @@ lemma get_extra_cptrs_rev:
   apply(case_tac buffer, simp_all add: return_ev_pre)
   apply (wp mapM_ev equiv_valid_guard_imp[OF load_word_offs_rev]
        | erule (2) aag_has_auth_to_read_cptrs)+
+  apply wpsimp+
   done
 
 lemma lookup_extra_caps_rev:
