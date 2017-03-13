@@ -658,7 +658,7 @@ locale DetSchedSchedule_AI =
   assumes arch_switch_to_thread_ct_in_cur_domain_2[wp]:
     "\<And>t' t.
       \<lbrace>\<lambda>s. ct_in_cur_domain_2 t' (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)\<rbrace>
-        arch_switch_to_thread t 
+        arch_switch_to_thread t
       \<lbrace>\<lambda>_ s. ct_in_cur_domain_2 t' (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)\<rbrace>"
   assumes arch_switch_to_thread_valid_blocked[wp]:
     "\<And>t. \<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
@@ -744,12 +744,6 @@ locale DetSchedSchedule_AI =
     "\<And>t. \<lbrace>simple_sched_action\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. simple_sched_action\<rbrace>"
   assumes prepare_thread_delete_valid_sched'[wp]:
     "\<And>t. \<lbrace>valid_sched\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  assumes handle_hypervisor_fault_valid_sched'[wp]:
-    "\<And>t f. \<lbrace>valid_sched\<rbrace> handle_hypervisor_fault t f \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  assumes handle_hypervisor_fault_not_queued'[wp]:
-    "\<And>t' t f. \<lbrace>not_queued t'\<rbrace> handle_hypervisor_fault t f \<lbrace>\<lambda>_. not_queued t'\<rbrace>"
-  assumes handle_hypervisor_fault_scheduler_act_not'[wp]:
-    "\<And>t' t f. \<lbrace>scheduler_act_not t'\<rbrace> handle_hypervisor_fault t f \<lbrace>\<lambda>_. scheduler_act_not t'\<rbrace>"
 
 context DetSchedSchedule_AI begin
 
@@ -3112,6 +3106,17 @@ lemma do_reply_transfer_scheduler_act_sane[wp]:
 crunch ct_not_queued[wp]: handle_reply "ct_not_queued"
 crunch scheduler_act_sane[wp]: handle_reply "scheduler_act_sane"
 
+end
+
+locale DetSchedSchedule_AI_handle_hypervisor_fault = DetSchedSchedule_AI +
+  assumes handle_hyp_fault_valid_sched[wp]:
+    "\<And>t fault.
+      \<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t\<rbrace>
+        handle_hypervisor_fault t fault
+      \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+
+context DetSchedSchedule_AI_handle_hypervisor_fault begin
+
 lemma handle_event_valid_sched:
   "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
       and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
@@ -3138,7 +3143,7 @@ end
 
 crunch valid_list[wp]: next_domain valid_list (simp: Let_def)
 
-context DetSchedSchedule_AI begin
+context DetSchedSchedule_AI_handle_hypervisor_fault begin
 
 lemma schedule_valid_list[wp]: "\<lbrace>valid_list\<rbrace> Schedule_A.schedule \<lbrace>\<lambda>_. valid_list\<rbrace>"
   apply (simp add: Schedule_A.schedule_def)
