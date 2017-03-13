@@ -32,10 +32,10 @@ chapter "Proofs"
 
 session Refine = BaseRefine +
   description {* Refinement between Haskell and Abstract spec. *}
-  theories
+  theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
     "refine/$L4V_ARCH/Refine"
     "refine/$L4V_ARCH/Orphanage"
-  theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
+  theories
     "refine/$L4V_ARCH/Refine"
     "refine/$L4V_ARCH/Orphanage"
 
