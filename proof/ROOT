@@ -41,6 +41,10 @@ session BaseRefine = AInvs +
   theories
     "refine/$L4V_ARCH/Include"
 
+session BaseRefineQD = AInvsQD +
+  theories
+    "refine/$L4V_ARCH/Include"
+
 session AInvs = ASpec +
   theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
     "invariant-abstract/AInvs"
