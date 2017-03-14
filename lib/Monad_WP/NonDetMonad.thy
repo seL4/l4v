@@ -729,6 +729,15 @@ definition
 where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<forall>(r,s') \<in> fst (f s). Q r s')"
 
+text {*
+  We often reason about invariant predicates. The following provides shorthand syntax
+  that avoids repeating potentially long predicates.
+*}
+abbreviation (input)
+  invariant :: "('s,'a) nondet_monad \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" ("_ \<lbrace>_\<rbrace>" [59,0] 60)
+where
+  "invariant f P \<equiv> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
+
 text {* 
   Validity for the exception monad is similar and build on the standard 
   validity above. Instead of one postcondition, we have two: one for

@@ -1266,9 +1266,6 @@ crunch current_ipc_buffer_register [wp]: finalise_cap "\<lambda>s. P (current_ip
             tcb_sched_action)
 
 
-abbreviation (input)
-  "invariant m P \<equiv> \<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>"
-
 lemma rec_del_current_ipc_buffer_register [wp]:
   "invariant (rec_del call) (\<lambda>s. P (current_ipc_buffer_register s))"
   by (rule rec_del_preservation; wpsimp wp: preemption_point_inv)
