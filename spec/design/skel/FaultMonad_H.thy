@@ -99,7 +99,7 @@ where
      workUnits <- liftE $ getWorkUnits;
      whenE (workUnitsLimit <= workUnits) $ doE
        liftE $ setWorkUnits 0;
-       preempt <- liftE $ doMachineOp getActiveIRQ;
+       preempt <- liftE $ doMachineOp (getActiveIRQ True);
        case preempt of
            Some irq => throwError irq
            | None => returnOk ()

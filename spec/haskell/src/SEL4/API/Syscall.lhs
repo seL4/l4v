@@ -98,7 +98,7 @@ System call events are dispatched here to the appropriate system call handlers, 
 Interrupt handling is performed by "handleInterrupt", defined in \autoref{sec:object.interrupt.kernel.handling}.
 
 > handleEvent Interrupt = withoutPreemption $ do
->     active <- doMachineOp getActiveIRQ
+>     active <- doMachineOp (getActiveIRQ False)
 >     case active of
 >         Just irq -> handleInterrupt irq
 >         Nothing -> doMachineOp $ debugPrint "spurious interrupt"

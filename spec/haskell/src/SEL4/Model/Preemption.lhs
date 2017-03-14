@@ -54,7 +54,7 @@ In preemptible code, the kernel may explicitly mark a preemption point with the 
 >     workUnits <- lift $ getWorkUnits
 >     when (workUnitsLimit <= workUnits) $ do
 >       lift $ setWorkUnits 0
->       preempt <- lift $ doMachineOp getActiveIRQ
+>       preempt <- lift $ doMachineOp (getActiveIRQ True)
 >       case preempt of
 >           Just irq -> throwError irq
 >           Nothing -> return ()

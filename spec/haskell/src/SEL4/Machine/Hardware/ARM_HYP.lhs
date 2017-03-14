@@ -142,8 +142,8 @@ The following functions define the ARM-specific interface between the kernel and
 > pageColourBits :: Int
 > pageColourBits = Platform.pageColourBits
 
-> getActiveIRQ :: MachineMonad (Maybe IRQ)
-> getActiveIRQ = do
+> getActiveIRQ :: Bool -> MachineMonad (Maybe IRQ)
+> getActiveIRQ _ = do
 >     cbptr <- ask
 >     liftIO $ Platform.getActiveIRQ cbptr
 
