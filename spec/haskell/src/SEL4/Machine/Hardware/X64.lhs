@@ -66,6 +66,9 @@ x86 virtual memory faults are handled by one of two trap handlers: one for data 
 >     | X64InstructionFault
 >     deriving Show
 
+> data HypFaultType
+>     = X64NoHypFaults
+
 \subsubsection{Physical Memory}
 
 The MMU does not allow access to physical addresses while translation is enabled; the kernel must access its objects via virtual addresses. Depending on the platform, these virtual addresses may either be the same as the physical addresses, or offset by a constant.

@@ -22,9 +22,9 @@ This module defines the x86 64-bit register set.
 > data Register =
 >     RAX | RBX | RCX | RDX | RSI | RDI | RBP |
 >     R8 | R9 | R10 | R11 | R12 | R13 | R14 | R15 | DS | ES | FS | GS |
->     FaultInstruction | -- "FaultIP"
+>     FaultIP | -- "FaultIP"
 >     TLS_BASE | PADDING_REGISTER |
->     ErrorRegister | NextIP | CS | RFLAGS | RSP | SS
+>     ErrorRegister | NextIP | CS | FLAGS | RSP | SS
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
 > type Word = Data.Word.Word64
@@ -33,11 +33,11 @@ This module defines the x86 64-bit register set.
 > msgInfoRegister = RSI
 > msgRegisters = [RDI, RBP]
 > badgeRegister = capRegister
-> frameRegisters = FaultInstruction : RSP : RFLAGS : [RAX .. R15]
+> frameRegisters = FaultIP : RSP : FLAGS : [RAX .. R15]
 > gpRegisters = [TLS_BASE, FS, GS]
-> exceptionMessage = [FaultInstruction, RSP, RFLAGS]
+> exceptionMessage = [FaultIP, RSP, FLAGS]
 
-> syscallMessage = [RAX .. RBP] ++ [NextIP, RSP, RFLAGS]
+> syscallMessage = [RAX .. RBP] ++ [NextIP, RSP, FLAGS]
 
 > data GDTSlot
 >     = GDT_NULL
@@ -67,12 +67,12 @@ This module defines the x86 64-bit register set.
 
 > initContext :: [(Register, Word)]
 > initContext = [(DS, selDS3), (ES, selDS3), (CS, selCS3), (SS, selDS3)
->               ,(RFLAGS, bit 9 .|. bit 1)] -- User mode
+>               ,(FLAGS, bit 9 .|. bit 1)] -- User mode
 
 %FIXME x64: add FPU context
 
 > sanitiseRegister :: Register -> Word -> Word
-> sanitiseRegister RFLAGS v =
+> sanitiseRegister FLAGS v =
 >     v .|. bit 1 .&. (complement (bit 3)) .&. (complement (bit 5))  .|. bit 9
 >     .&. (bit 12 - 1)
 > sanitiseRegister FS v = if v /= selTLS && v /= selIPCBUF then 0 else v
