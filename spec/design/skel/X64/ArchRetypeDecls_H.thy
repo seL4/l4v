@@ -19,10 +19,10 @@ imports
   ArchObjInsts_H
 begin
 
-context X64 begin
+context Arch begin global_naming X64_H
 
-#INCLUDE_HASKELL SEL4/API/Invocation/X64.lhs CONTEXT X64 decls_only
-#INCLUDE_HASKELL SEL4/Object/ObjectType/X64.lhs CONTEXT X64 Arch.Types=ArchTypes_H ArchInv=ArchRetypeDecls_H decls_only
+#INCLUDE_HASKELL SEL4/API/Invocation/X64.lhs CONTEXT X64_H decls_only
+#INCLUDE_HASKELL SEL4/Object/ObjectType/X64.lhs CONTEXT X64_H Arch.Types=ArchTypes_H ArchInv=ArchRetypeDecls_H decls_only
 
 end (context X64)
 

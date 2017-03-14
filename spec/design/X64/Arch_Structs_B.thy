@@ -17,7 +17,7 @@ chapter "Common, Architecture-Specific Data Types"
 theory Arch_Structs_B
 imports "~~/src/HOL/Main" "../../../spec/machine/Setup_Locale"
 begin
-(* FIXME: Clagged from ARM version *)
+(* FIXME: Clagged from X64 version *)
 
 context Arch begin global_naming X64_H
 

@@ -21,7 +21,7 @@ imports
   ArchObjInsts_H
 begin
 
-context X64 begin
+context Arch begin global_naming X64_H
 
 datatype pdptinvocation =
     PDPTUnmap arch_capability machine_word
@@ -287,143 +287,11 @@ where
     PageTableMap v0 v1 v2 v3 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
-datatype iopage_table_invocation =
-    IOPageTableUnmap arch_capability machine_word
-  | IOPageTableMap arch_capability machine_word iopte machine_word
-  | IOPageTableMapContext arch_capability machine_word iocte machine_word
-
-primrec
-  ioptMapCap :: "iopage_table_invocation \<Rightarrow> arch_capability"
-where
-  "ioptMapCap (IOPageTableMap v0 v1 v2 v3) = v0"
-| "ioptMapCap (IOPageTableMapContext v0 v1 v2 v3) = v0"
-
-primrec
-  ioptMapCxtTableSlot :: "iopage_table_invocation \<Rightarrow> machine_word"
-where
-  "ioptMapCxtTableSlot (IOPageTableMapContext v0 v1 v2 v3) = v3"
-
-primrec
-  ioptUnmapCap :: "iopage_table_invocation \<Rightarrow> arch_capability"
-where
-  "ioptUnmapCap (IOPageTableUnmap v0 v1) = v0"
-
-primrec
-  ioptMapPT :: "iopage_table_invocation \<Rightarrow> iopte"
-where
-  "ioptMapPT (IOPageTableMap v0 v1 v2 v3) = v2"
-
-primrec
-  ioptMapCxtTableEntry :: "iopage_table_invocation \<Rightarrow> iocte"
-where
-  "ioptMapCxtTableEntry (IOPageTableMapContext v0 v1 v2 v3) = v2"
-
-primrec
-  ioptMapCTSlot :: "iopage_table_invocation \<Rightarrow> machine_word"
-where
-  "ioptMapCTSlot (IOPageTableMap v0 v1 v2 v3) = v1"
-| "ioptMapCTSlot (IOPageTableMapContext v0 v1 v2 v3) = v1"
-
-primrec
-  ioptMapPTSlot :: "iopage_table_invocation \<Rightarrow> machine_word"
-where
-  "ioptMapPTSlot (IOPageTableMap v0 v1 v2 v3) = v3"
-
-primrec
-  ioptUnmapCapSlot :: "iopage_table_invocation \<Rightarrow> machine_word"
-where
-  "ioptUnmapCapSlot (IOPageTableUnmap v0 v1) = v1"
-
-primrec
-  ioptMapCap_update :: "(arch_capability \<Rightarrow> arch_capability) \<Rightarrow> iopage_table_invocation \<Rightarrow> iopage_table_invocation"
-where
-  "ioptMapCap_update f (IOPageTableMap v0 v1 v2 v3) = IOPageTableMap (f v0) v1 v2 v3"
-| "ioptMapCap_update f (IOPageTableMapContext v0 v1 v2 v3) = IOPageTableMapContext (f v0) v1 v2 v3"
-
-primrec
-  ioptMapCxtTableSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> iopage_table_invocation \<Rightarrow> iopage_table_invocation"
-where
-  "ioptMapCxtTableSlot_update f (IOPageTableMapContext v0 v1 v2 v3) = IOPageTableMapContext v0 v1 v2 (f v3)"
-
-primrec
-  ioptUnmapCap_update :: "(arch_capability \<Rightarrow> arch_capability) \<Rightarrow> iopage_table_invocation \<Rightarrow> iopage_table_invocation"
-where
-  "ioptUnmapCap_update f (IOPageTableUnmap v0 v1) = IOPageTableUnmap (f v0) v1"
-
-primrec
-  ioptMapPT_update :: "(iopte \<Rightarrow> iopte) \<Rightarrow> iopage_table_invocation \<Rightarrow> iopage_table_invocation"
-where
-  "ioptMapPT_update f (IOPageTableMap v0 v1 v2 v3) = IOPageTableMap v0 v1 (f v2) v3"
-
-primrec
-  ioptMapCxtTableEntry_update :: "(iocte \<Rightarrow> iocte) \<Rightarrow> iopage_table_invocation \<Rightarrow> iopage_table_invocation"
-where
-  "ioptMapCxtTableEntry_update f (IOPageTableMapContext v0 v1 v2 v3) = IOPageTableMapContext v0 v1 (f v2) v3"
-
-primrec
-  ioptMapCTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> iopage_table_invocation \<Rightarrow> iopage_table_invocation"
-where
-  "ioptMapCTSlot_update f (IOPageTableMap v0 v1 v2 v3) = IOPageTableMap v0 (f v1) v2 v3"
-| "ioptMapCTSlot_update f (IOPageTableMapContext v0 v1 v2 v3) = IOPageTableMapContext v0 (f v1) v2 v3"
-
-primrec
-  ioptMapPTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> iopage_table_invocation \<Rightarrow> iopage_table_invocation"
-where
-  "ioptMapPTSlot_update f (IOPageTableMap v0 v1 v2 v3) = IOPageTableMap v0 v1 v2 (f v3)"
-
-primrec
-  ioptUnmapCapSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> iopage_table_invocation \<Rightarrow> iopage_table_invocation"
-where
-  "ioptUnmapCapSlot_update f (IOPageTableUnmap v0 v1) = IOPageTableUnmap v0 (f v1)"
-
-abbreviation (input)
-  IOPageTableUnmap_trans :: "(arch_capability) \<Rightarrow> (machine_word) \<Rightarrow> iopage_table_invocation" ("IOPageTableUnmap'_ \<lparr> ioptUnmapCap= _, ioptUnmapCapSlot= _ \<rparr>")
-where
-  "IOPageTableUnmap_ \<lparr> ioptUnmapCap= v0, ioptUnmapCapSlot= v1 \<rparr> == IOPageTableUnmap v0 v1"
-
-abbreviation (input)
-  IOPageTableMap_trans :: "(arch_capability) \<Rightarrow> (machine_word) \<Rightarrow> (iopte) \<Rightarrow> (machine_word) \<Rightarrow> iopage_table_invocation" ("IOPageTableMap'_ \<lparr> ioptMapCap= _, ioptMapCTSlot= _, ioptMapPT= _, ioptMapPTSlot= _ \<rparr>")
-where
-  "IOPageTableMap_ \<lparr> ioptMapCap= v0, ioptMapCTSlot= v1, ioptMapPT= v2, ioptMapPTSlot= v3 \<rparr> == IOPageTableMap v0 v1 v2 v3"
-
-abbreviation (input)
-  IOPageTableMapContext_trans :: "(arch_capability) \<Rightarrow> (machine_word) \<Rightarrow> (iocte) \<Rightarrow> (machine_word) \<Rightarrow> iopage_table_invocation" ("IOPageTableMapContext'_ \<lparr> ioptMapCap= _, ioptMapCTSlot= _, ioptMapCxtTableEntry= _, ioptMapCxtTableSlot= _ \<rparr>")
-where
-  "IOPageTableMapContext_ \<lparr> ioptMapCap= v0, ioptMapCTSlot= v1, ioptMapCxtTableEntry= v2, ioptMapCxtTableSlot= v3 \<rparr> == IOPageTableMapContext v0 v1 v2 v3"
-
-definition
-  isIOPageTableUnmap :: "iopage_table_invocation \<Rightarrow> bool"
-where
- "isIOPageTableUnmap v \<equiv> case v of
-    IOPageTableUnmap v0 v1 \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
-definition
-  isIOPageTableMap :: "iopage_table_invocation \<Rightarrow> bool"
-where
- "isIOPageTableMap v \<equiv> case v of
-    IOPageTableMap v0 v1 v2 v3 \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
-definition
-  isIOPageTableMapContext :: "iopage_table_invocation \<Rightarrow> bool"
-where
- "isIOPageTableMapContext v \<equiv> case v of
-    IOPageTableMapContext v0 v1 v2 v3 \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
 datatype page_invocation =
     PageGetAddr machine_word
   | PageRemap "(vmpage_entry * vmpage_entry_ptr)"
   | PageMap asid capability machine_word "(vmpage_entry * vmpage_entry_ptr)"
   | PageUnmap arch_capability machine_word
-  | PageIOMap capability machine_word iopte machine_word
-  | PageIOUnmap capability machine_word
-
-primrec
-  pageIOUnmapCTSlot :: "page_invocation \<Rightarrow> machine_word"
-where
-  "pageIOUnmapCTSlot (PageIOUnmap v0 v1) = v1"
 
 primrec
   pageMapCap :: "page_invocation \<Rightarrow> capability"
@@ -436,24 +304,9 @@ where
   "pageUnmapCapSlot (PageUnmap v0 v1) = v1"
 
 primrec
-  pageIOMapCTSlot :: "page_invocation \<Rightarrow> machine_word"
-where
-  "pageIOMapCTSlot (PageIOMap v0 v1 v2 v3) = v1"
-
-primrec
   pageUnmapCap :: "page_invocation \<Rightarrow> arch_capability"
 where
   "pageUnmapCap (PageUnmap v0 v1) = v0"
-
-primrec
-  pageIOMapEntryPtr :: "page_invocation \<Rightarrow> machine_word"
-where
-  "pageIOMapEntryPtr (PageIOMap v0 v1 v2 v3) = v3"
-
-primrec
-  pageIOUnmapCap :: "page_invocation \<Rightarrow> capability"
-where
-  "pageIOUnmapCap (PageIOUnmap v0 v1) = v0"
 
 primrec
   pageRemapEntries :: "page_invocation \<Rightarrow> (vmpage_entry * vmpage_entry_ptr)"
@@ -466,19 +319,9 @@ where
   "pageMapASID (PageMap v0 v1 v2 v3) = v0"
 
 primrec
-  pageIOMapCap :: "page_invocation \<Rightarrow> capability"
-where
-  "pageIOMapCap (PageIOMap v0 v1 v2 v3) = v0"
-
-primrec
   pageGetBasePtr :: "page_invocation \<Rightarrow> machine_word"
 where
   "pageGetBasePtr (PageGetAddr v0) = v0"
-
-primrec
-  pageIOMapEntry :: "page_invocation \<Rightarrow> iopte"
-where
-  "pageIOMapEntry (PageIOMap v0 v1 v2 v3) = v2"
 
 primrec
   pageMapEntries :: "page_invocation \<Rightarrow> (vmpage_entry * vmpage_entry_ptr)"
@@ -491,11 +334,6 @@ where
   "pageMapCTSlot (PageMap v0 v1 v2 v3) = v2"
 
 primrec
-  pageIOUnmapCTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
-where
-  "pageIOUnmapCTSlot_update f (PageIOUnmap v0 v1) = PageIOUnmap v0 (f v1)"
-
-primrec
   pageMapCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
   "pageMapCap_update f (PageMap v0 v1 v2 v3) = PageMap v0 (f v1) v2 v3"
@@ -506,24 +344,9 @@ where
   "pageUnmapCapSlot_update f (PageUnmap v0 v1) = PageUnmap v0 (f v1)"
 
 primrec
-  pageIOMapCTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
-where
-  "pageIOMapCTSlot_update f (PageIOMap v0 v1 v2 v3) = PageIOMap v0 (f v1) v2 v3"
-
-primrec
   pageUnmapCap_update :: "(arch_capability \<Rightarrow> arch_capability) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
   "pageUnmapCap_update f (PageUnmap v0 v1) = PageUnmap (f v0) v1"
-
-primrec
-  pageIOMapEntryPtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
-where
-  "pageIOMapEntryPtr_update f (PageIOMap v0 v1 v2 v3) = PageIOMap v0 v1 v2 (f v3)"
-
-primrec
-  pageIOUnmapCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
-where
-  "pageIOUnmapCap_update f (PageIOUnmap v0 v1) = PageIOUnmap (f v0) v1"
 
 primrec
   pageRemapEntries_update :: "(((vmpage_entry * vmpage_entry_ptr)) \<Rightarrow> ((vmpage_entry * vmpage_entry_ptr))) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
@@ -536,19 +359,9 @@ where
   "pageMapASID_update f (PageMap v0 v1 v2 v3) = PageMap (f v0) v1 v2 v3"
 
 primrec
-  pageIOMapCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
-where
-  "pageIOMapCap_update f (PageIOMap v0 v1 v2 v3) = PageIOMap (f v0) v1 v2 v3"
-
-primrec
   pageGetBasePtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
   "pageGetBasePtr_update f (PageGetAddr v0) = PageGetAddr (f v0)"
-
-primrec
-  pageIOMapEntry_update :: "(iopte \<Rightarrow> iopte) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
-where
-  "pageIOMapEntry_update f (PageIOMap v0 v1 v2 v3) = PageIOMap v0 v1 (f v2) v3"
 
 primrec
   pageMapEntries_update :: "(((vmpage_entry * vmpage_entry_ptr)) \<Rightarrow> ((vmpage_entry * vmpage_entry_ptr))) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
@@ -580,16 +393,6 @@ abbreviation (input)
 where
   "PageUnmap_ \<lparr> pageUnmapCap= v0, pageUnmapCapSlot= v1 \<rparr> == PageUnmap v0 v1"
 
-abbreviation (input)
-  PageIOMap_trans :: "(capability) \<Rightarrow> (machine_word) \<Rightarrow> (iopte) \<Rightarrow> (machine_word) \<Rightarrow> page_invocation" ("PageIOMap'_ \<lparr> pageIOMapCap= _, pageIOMapCTSlot= _, pageIOMapEntry= _, pageIOMapEntryPtr= _ \<rparr>")
-where
-  "PageIOMap_ \<lparr> pageIOMapCap= v0, pageIOMapCTSlot= v1, pageIOMapEntry= v2, pageIOMapEntryPtr= v3 \<rparr> == PageIOMap v0 v1 v2 v3"
-
-abbreviation (input)
-  PageIOUnmap_trans :: "(capability) \<Rightarrow> (machine_word) \<Rightarrow> page_invocation" ("PageIOUnmap'_ \<lparr> pageIOUnmapCap= _, pageIOUnmapCTSlot= _ \<rparr>")
-where
-  "PageIOUnmap_ \<lparr> pageIOUnmapCap= v0, pageIOUnmapCTSlot= v1 \<rparr> == PageIOUnmap v0 v1"
-
 definition
   isPageGetAddr :: "page_invocation \<Rightarrow> bool"
 where
@@ -616,20 +419,6 @@ definition
 where
  "isPageUnmap v \<equiv> case v of
     PageUnmap v0 v1 \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
-definition
-  isPageIOMap :: "page_invocation \<Rightarrow> bool"
-where
- "isPageIOMap v \<equiv> case v of
-    PageIOMap v0 v1 v2 v3 \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
-definition
-  isPageIOUnmap :: "page_invocation \<Rightarrow> bool"
-where
- "isPageIOUnmap v \<equiv> case v of
-    PageIOUnmap v0 v1 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 datatype asidcontrol_invocation =
@@ -833,7 +622,6 @@ datatype invocation =
     InvokePDPT pdptinvocation
   | InvokePageDirectory page_directory_invocation
   | InvokePageTable page_table_invocation
-  | InvokeIOPageTable iopage_table_invocation
   | InvokePage page_invocation
   | InvokeASIDControl asidcontrol_invocation
   | InvokeASIDPool asidpool_invocation
@@ -1045,15 +833,6 @@ consts'
 finaliseCap :: "arch_capability \<Rightarrow> bool \<Rightarrow> capability kernel"
 
 consts'
-resetMemMapping :: "arch_capability \<Rightarrow> arch_capability"
-
-consts'
-recycleCap :: "bool \<Rightarrow> arch_capability \<Rightarrow> arch_capability kernel"
-
-consts'
-hasRecycleRights :: "arch_capability \<Rightarrow> bool"
-
-consts'
 sameRegionAs :: "arch_capability \<Rightarrow> arch_capability \<Rightarrow> bool"
 
 consts'
@@ -1061,6 +840,9 @@ isPhysicalCap :: "arch_capability \<Rightarrow> bool"
 
 consts'
 sameObjectAs :: "arch_capability \<Rightarrow> arch_capability \<Rightarrow> bool"
+
+consts'
+placeNewDataObject :: "machine_word \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> unit kernel"
 
 consts'
 createObject :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> arch_capability kernel"
@@ -1079,6 +861,9 @@ capUntypedPtr :: "arch_capability \<Rightarrow> machine_word"
 
 consts'
 capUntypedSize :: "arch_capability \<Rightarrow> machine_word"
+
+consts'
+prepareThreadDelete :: "machine_word \<Rightarrow> unit kernel"
 
 
 end (context X64)

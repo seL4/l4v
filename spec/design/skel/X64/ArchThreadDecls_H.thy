@@ -20,11 +20,10 @@ imports
   "../FaultMonad_H"
   "../KernelInitMonad_H"
 begin
-(* FIXME: Clagged from ARM version *)
 
-context X64 begin
+context Arch begin global_naming X64_H
 
-#INCLUDE_HASKELL SEL4/Kernel/Thread/X64.lhs CONTEXT X64 decls_only
+#INCLUDE_HASKELL SEL4/Kernel/Thread/X64.lhs CONTEXT X64_H decls_only
 
 end (* context X64 *)
 

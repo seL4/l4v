@@ -26,6 +26,11 @@ performTransfer :: "copy_register_sets \<Rightarrow> machine_word \<Rightarrow> 
 where
 "performTransfer arg1 arg2 arg3 \<equiv> return ()"
 
+definition
+sanitiseRegister :: "tcb \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
+where
+"sanitiseRegister arg1 arg2 v \<equiv> v"
+
 
 definition
 archThreadGet :: "(arch_tcb \<Rightarrow> 'a) \<Rightarrow> machine_word \<Rightarrow> 'a kernel"

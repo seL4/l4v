@@ -16,16 +16,18 @@ imports
   State_H
 begin
 
+context Arch begin global_naming X64_H
 
-context X64 begin
+type_synonym irq = "Platform.X64.irq"
 
-type_synonym irq = "Platform.irq"
-
-type_synonym cr3 = "Platform.cr3"
+type_synonym cr3 = "Platform.X64.cr3"
 
 type_synonym ioport = "word16"
 
-type_synonym paddr = "Platform.paddr"
+datatype hyp_fault_type =
+    X64NoHypFaults
+
+type_synonym paddr = "Platform.X64.paddr"
 
 datatype vmrights =
     VMKernelOnly
@@ -521,179 +523,6 @@ where
     SmallPagePTE v0 v1 v2 v3 v4 v5 v6 v7 v8 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
-datatype translation_type =
-    NotTranslatedRequest
-  | TranslatedRequest
-
-datatype iocte =
-    InvalidIOCTE
-  | VTDCTE word16 bool nat paddr translation_type bool
-
-primrec
-  domainId :: "iocte \<Rightarrow> word16"
-where
-  "domainId (VTDCTE v0 v1 v2 v3 v4 v5) = v0"
-
-primrec
-  addressWidth :: "iocte \<Rightarrow> nat"
-where
-  "addressWidth (VTDCTE v0 v1 v2 v3 v4 v5) = v2"
-
-primrec
-  reservedMemReg :: "iocte \<Rightarrow> bool"
-where
-  "reservedMemReg (VTDCTE v0 v1 v2 v3 v4 v5) = v1"
-
-primrec
-  nxtLevelPtr :: "iocte \<Rightarrow> paddr"
-where
-  "nxtLevelPtr (VTDCTE v0 v1 v2 v3 v4 v5) = v3"
-
-primrec
-  translationType :: "iocte \<Rightarrow> translation_type"
-where
-  "translationType (VTDCTE v0 v1 v2 v3 v4 v5) = v4"
-
-primrec
-  ctePresent :: "iocte \<Rightarrow> bool"
-where
-  "ctePresent (VTDCTE v0 v1 v2 v3 v4 v5) = v5"
-
-primrec
-  domainId_update :: "(word16 \<Rightarrow> word16) \<Rightarrow> iocte \<Rightarrow> iocte"
-where
-  "domainId_update f (VTDCTE v0 v1 v2 v3 v4 v5) = VTDCTE (f v0) v1 v2 v3 v4 v5"
-
-primrec
-  addressWidth_update :: "(nat \<Rightarrow> nat) \<Rightarrow> iocte \<Rightarrow> iocte"
-where
-  "addressWidth_update f (VTDCTE v0 v1 v2 v3 v4 v5) = VTDCTE v0 v1 (f v2) v3 v4 v5"
-
-primrec
-  reservedMemReg_update :: "(bool \<Rightarrow> bool) \<Rightarrow> iocte \<Rightarrow> iocte"
-where
-  "reservedMemReg_update f (VTDCTE v0 v1 v2 v3 v4 v5) = VTDCTE v0 (f v1) v2 v3 v4 v5"
-
-primrec
-  nxtLevelPtr_update :: "(paddr \<Rightarrow> paddr) \<Rightarrow> iocte \<Rightarrow> iocte"
-where
-  "nxtLevelPtr_update f (VTDCTE v0 v1 v2 v3 v4 v5) = VTDCTE v0 v1 v2 (f v3) v4 v5"
-
-primrec
-  translationType_update :: "(translation_type \<Rightarrow> translation_type) \<Rightarrow> iocte \<Rightarrow> iocte"
-where
-  "translationType_update f (VTDCTE v0 v1 v2 v3 v4 v5) = VTDCTE v0 v1 v2 v3 (f v4) v5"
-
-primrec
-  ctePresent_update :: "(bool \<Rightarrow> bool) \<Rightarrow> iocte \<Rightarrow> iocte"
-where
-  "ctePresent_update f (VTDCTE v0 v1 v2 v3 v4 v5) = VTDCTE v0 v1 v2 v3 v4 (f v5)"
-
-abbreviation (input)
-  VTDCTE_trans :: "(word16) \<Rightarrow> (bool) \<Rightarrow> (nat) \<Rightarrow> (paddr) \<Rightarrow> (translation_type) \<Rightarrow> (bool) \<Rightarrow> iocte" ("VTDCTE'_ \<lparr> domainId= _, reservedMemReg= _, addressWidth= _, nxtLevelPtr= _, translationType= _, ctePresent= _ \<rparr>")
-where
-  "VTDCTE_ \<lparr> domainId= v0, reservedMemReg= v1, addressWidth= v2, nxtLevelPtr= v3, translationType= v4, ctePresent= v5 \<rparr> == VTDCTE v0 v1 v2 v3 v4 v5"
-
-definition
-  isInvalidIOCTE :: "iocte \<Rightarrow> bool"
-where
- "isInvalidIOCTE v \<equiv> case v of
-    InvalidIOCTE \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
-definition
-  isVTDCTE :: "iocte \<Rightarrow> bool"
-where
- "isVTDCTE v \<equiv> case v of
-    VTDCTE v0 v1 v2 v3 v4 v5 \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
-datatype iopte =
-    InvalidIOPTE
-  | VTDPTE paddr vmrights
-
-primrec
-  framePtr :: "iopte \<Rightarrow> paddr"
-where
-  "framePtr (VTDPTE v0 v1) = v0"
-
-primrec
-  rw :: "iopte \<Rightarrow> vmrights"
-where
-  "rw (VTDPTE v0 v1) = v1"
-
-primrec
-  framePtr_update :: "(paddr \<Rightarrow> paddr) \<Rightarrow> iopte \<Rightarrow> iopte"
-where
-  "framePtr_update f (VTDPTE v0 v1) = VTDPTE (f v0) v1"
-
-primrec
-  rw_update :: "(vmrights \<Rightarrow> vmrights) \<Rightarrow> iopte \<Rightarrow> iopte"
-where
-  "rw_update f (VTDPTE v0 v1) = VTDPTE v0 (f v1)"
-
-abbreviation (input)
-  VTDPTE_trans :: "(paddr) \<Rightarrow> (vmrights) \<Rightarrow> iopte" ("VTDPTE'_ \<lparr> framePtr= _, rw= _ \<rparr>")
-where
-  "VTDPTE_ \<lparr> framePtr= v0, rw= v1 \<rparr> == VTDPTE v0 v1"
-
-definition
-  isInvalidIOPTE :: "iopte \<Rightarrow> bool"
-where
- "isInvalidIOPTE v \<equiv> case v of
-    InvalidIOPTE \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
-definition
-  isVTDPTE :: "iopte \<Rightarrow> bool"
-where
- "isVTDPTE v \<equiv> case v of
-    VTDPTE v0 v1 \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
-datatype iorte =
-    InvalidIORTE
-  | VTDRTE paddr bool
-
-primrec
-  cxtTablePtr :: "iorte \<Rightarrow> paddr"
-where
-  "cxtTablePtr (VTDRTE v0 v1) = v0"
-
-primrec
-  rtePresent :: "iorte \<Rightarrow> bool"
-where
-  "rtePresent (VTDRTE v0 v1) = v1"
-
-primrec
-  cxtTablePtr_update :: "(paddr \<Rightarrow> paddr) \<Rightarrow> iorte \<Rightarrow> iorte"
-where
-  "cxtTablePtr_update f (VTDRTE v0 v1) = VTDRTE (f v0) v1"
-
-primrec
-  rtePresent_update :: "(bool \<Rightarrow> bool) \<Rightarrow> iorte \<Rightarrow> iorte"
-where
-  "rtePresent_update f (VTDRTE v0 v1) = VTDRTE v0 (f v1)"
-
-abbreviation (input)
-  VTDRTE_trans :: "(paddr) \<Rightarrow> (bool) \<Rightarrow> iorte" ("VTDRTE'_ \<lparr> cxtTablePtr= _, rtePresent= _ \<rparr>")
-where
-  "VTDRTE_ \<lparr> cxtTablePtr= v0, rtePresent= v1 \<rparr> == VTDRTE v0 v1"
-
-definition
-  isInvalidIORTE :: "iorte \<Rightarrow> bool"
-where
- "isInvalidIORTE v \<equiv> case v of
-    InvalidIORTE \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
-definition
-  isVTDRTE :: "iorte \<Rightarrow> bool"
-where
- "isVTDRTE v \<equiv> case v of
-    VTDRTE v0 v1 \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
 datatype vmpage_entry =
     VMPTE pte
   | VMPDE pde
@@ -786,12 +615,12 @@ lemma x64PAT_x64PAT_update [simp]:
 definition
 addrFromKPPtr :: "machine_word \<Rightarrow> paddr"
 where
-"addrFromKPPtr \<equiv> Platform.addrFromKPPtr"
+"addrFromKPPtr \<equiv> Platform.X64.addrFromKPPtr"
 
 definition
 fromPAddr :: "paddr \<Rightarrow> machine_word"
 where
-"fromPAddr \<equiv> Platform.fromPAddr"
+"fromPAddr \<equiv> Platform.X64.fromPAddr"
 
 definition
 ptTranslationBits :: "nat"
@@ -819,11 +648,6 @@ where
 "pml4Bits \<equiv> ptTranslationBits + 3"
 
 definition
-ioptBits :: "nat"
-where
-"ioptBits \<equiv> ptTranslationBits + 3"
-
-definition
 pageColourBits :: "nat"
 where
 "pageColourBits \<equiv> error []"
@@ -837,63 +661,10 @@ definition
 archSetCurrentVSpaceRoot :: "paddr \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
 where
 "archSetCurrentVSpaceRoot pd asid \<equiv>
-  setCurrentCR3 $ Platform.X64CR3 pd asid"
+  setCurrentCR3 $ Platform.X64.X64CR3 pd asid"
 
 definition
 "resetCR3 \<equiv> error []"
-
-definition
-invalidatePageStructureCache :: "unit machine_monad"
-where
-"invalidatePageStructureCache \<equiv> invalidateTLBEntry 0"
-
-definition
-vtdCTBits :: "nat"
-where
-"vtdCTBits \<equiv> 9"
-
-definition
-"vtdCTESizeBits \<equiv> 3"
-
-definition
-"vtdCTSizeBits \<equiv> vtdCTBits + vtdCTESizeBits"
-
-definition
-vtdPTBits :: "nat"
-where
-"vtdPTBits \<equiv> 9"
-
-definition
-"vtdPTESizeBits \<equiv> 3"
-
-definition
-"vtdPTSizeBits \<equiv> vtdCTBits + vtdPTESizeBits"
-
-definition
-wordFromIOCTE :: "iocte \<Rightarrow> (machine_word * machine_word)"
-where
-"wordFromIOCTE x0\<equiv> (case x0 of
-    InvalidIOCTE \<Rightarrow>    (0,0)
-  | (VTDCTE did rmr aw nxtptr tt present) \<Rightarrow>    (((fromIntegral $ did) `~shiftL~` 4) &&
-    (if rmr then (1 << 3) else 0) || ((fromIntegral aw) && 0x7),
-    ((fromIntegral nxtptr) && 0xfffff000) || (if present then 1 else 0))
-  )"
-
-definition
-wordFromIOPTE :: "iopte \<Rightarrow> machine_word"
-where
-"wordFromIOPTE x0\<equiv> (case x0 of
-    InvalidIOPTE \<Rightarrow>    0
-  | (VTDPTE pteFrame rw) \<Rightarrow>    ((fromIntegral $ pteFrame) && 0xfffff000) || (vmRightsToBits rw)
-  )"
-
-definition
-wordFromIORTE :: "iorte \<Rightarrow> machine_word"
-where
-"wordFromIORTE x0\<equiv> (case x0 of
-    InvalidIORTE \<Rightarrow>    0
-  | (VTDRTE ptr present) \<Rightarrow>    ((fromIntegral $ ptr) && 0xfffff000) || (if present then 1 else 0)
-  )"
 
 definition
 getPTIndex :: "vptr \<Rightarrow> machine_word"
@@ -927,7 +698,7 @@ definition
 vmRightsToBits :: "vmrights \<Rightarrow> machine_word"
 where
 "vmRightsToBits x0\<equiv> (case x0 of
-    VMKernelOnly \<Rightarrow>    0x1
+    VMKernelOnly \<Rightarrow>    0x0
   | VMReadOnly \<Rightarrow>    0x10
   | VMWriteOnly \<Rightarrow>    0x01
   | VMReadWrite \<Rightarrow>    0x11
@@ -971,12 +742,12 @@ where
 definition
 pptrBase :: "vptr"
 where
-"pptrBase \<equiv> Platform.pptrBase"
+"pptrBase \<equiv> Platform.X64.pptrBase"
 
 definition
 physBase :: "paddr"
 where
-"physBase \<equiv> toPAddr Platform.physBase"
+"physBase \<equiv> toPAddr Platform.X64.physBase"
 
 definition
 initIRQController :: "unit machine_monad"
@@ -985,54 +756,15 @@ where
 
 
 end
-qualify X64 (in Arch) 
-(* translation_type instance proofs *)
-(*<*)
-instantiation translation_type :: enum begin
-interpretation Arch .
-definition
-  enum_translation_type: "enum_class.enum \<equiv> 
-    [ 
-      NotTranslatedRequest,
-      TranslatedRequest
-    ]"
 
-
-definition
-  "enum_class.enum_all (P :: translation_type \<Rightarrow> bool) \<longleftrightarrow> Ball UNIV P"
-
-definition
-  "enum_class.enum_ex (P :: translation_type \<Rightarrow> bool) \<longleftrightarrow> Bex UNIV P"
-
-  instance
-  apply intro_classes
-   apply (safe, simp)
-   apply (case_tac x)
-  apply (simp_all add: enum_translation_type enum_all_translation_type_def enum_ex_translation_type_def)
-  by fast+
+context begin interpretation Arch .
+requalify_types vmrights
 end
 
-instantiation translation_type :: enum_alt
-begin
-interpretation Arch .
-definition
-  enum_alt_translation_type: "enum_alt \<equiv> 
-    alt_from_ord (enum :: translation_type list)"
-instance ..
-end
-
-instantiation translation_type :: enumeration_both
-begin
-interpretation Arch .
-instance by (intro_classes, simp add: enum_alt_translation_type)
-end
-
-(*>*)
-end_qualify
-context Arch begin global_naming X64
+context Arch begin global_naming X64_H
 
 end
-qualify X64 (in Arch) 
+qualify X64_H (in Arch)
 (* vmmap_type instance proofs *)
 (*<*)
 instantiation vmmap_type :: enum begin
@@ -1077,7 +809,7 @@ end
 
 (*>*)
 end_qualify
-context Arch begin global_naming X64
+context Arch begin global_naming X64_H
 
 
 definition

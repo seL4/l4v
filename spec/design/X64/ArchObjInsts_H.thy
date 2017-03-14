@@ -113,29 +113,6 @@ instance
 
 end
 
-instantiation X64_H.iopte :: pre_storable
-begin
-interpretation Arch .
-
-definition
-  projectKO_opt_iopte:
-  "projectKO_opt e \<equiv> case e of (KOArch (KOIOPTE e)) \<Rightarrow> Some e | _ \<Rightarrow> None"
-
-definition
-  injectKO_iopte [simp]:
-  "injectKO e \<equiv> KOArch (KOIOPTE e)"
-
-definition
-  koType_iopte [simp]:
-  "koType (t::iopte itself) \<equiv> ArchT IOPTET"
-
-instance
-  by (intro_classes,
-      auto simp: projectKO_opt_iopte split: kernel_object.splits arch_kernel_object.splits)
-
-end
-
-
 instantiation X64_H.asidpool :: pre_storable
 begin
 interpretation Arch .
@@ -161,7 +138,6 @@ end
 lemmas (in Arch) projectKO_opts_defs = 
   projectKO_opt_pte projectKO_opt_pde 
   projectKO_opt_pdpte projectKO_opt_pml4e
-  projectKO_opt_iopte
   projectKO_opt_asidpool
   ObjectInstances_H.projectKO_opts_defs
 
@@ -170,7 +146,6 @@ lemmas (in Arch) [simp] =
   injectKO_pde koType_pde
   injectKO_pdpte koType_pdpte
   injectKO_pml4e koType_pml4e
-  injectKO_iopte koType_iopte
   injectKO_asidpool koType_asidpool
 
 
@@ -300,36 +275,6 @@ instance
 
 end
 
-instantiation X64_H.iopte :: pspace_storable
-begin
-interpretation Arch .
-
-(* iopte extra instance defs *)
-
-
-definition
-  makeObject_iopte: "(makeObject :: iopte)  \<equiv> InvalidIOPTE"
-
-definition
-  loadObject_iopte[simp]:
- "(loadObject p q n obj) :: iopte kernel \<equiv>
-    loadObject_default p q n obj"
-
-definition
-  updateObject_iopte[simp]:
- "updateObject (val :: iopte) \<equiv>
-    updateObject_default val"
-
-
-instance
-  apply (intro_classes)
-  apply (clarsimp simp add: updateObject_default_def in_monad projectKO_opts_defs
-                            projectKO_eq2
-                     split: kernel_object.splits arch_kernel_object.splits)
-  done
-
-end
-
 (* This is hard coded since using funArray in haskell for 2^32 bound is risky *)
 
 instantiation X64_H.asidpool :: pspace_storable
@@ -364,7 +309,6 @@ lemmas load_update_defs =
   loadObject_pde updateObject_pde
   loadObject_pdpte updateObject_pdpte
   loadObject_pml4e updateObject_pml4e
-  loadObject_iopte updateObject_iopte
   loadObject_asidpool updateObject_asidpool
 
 declare load_update_defs[simp del]

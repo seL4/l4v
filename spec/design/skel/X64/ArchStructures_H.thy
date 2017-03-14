@@ -20,9 +20,9 @@ context Arch begin global_naming X64_H
 #INCLUDE_SETTINGS keep_constructor=asidpool
 #INCLUDE_SETTINGS keep_constructor=arch_tcb
 
-#INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64 decls_only
-#INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64 instanceproofs
-#INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64 bodies_only
+#INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64_H decls_only
+#INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64_H instanceproofs
+#INCLUDE_HASKELL SEL4/Object/Structures/X64.lhs CONTEXT X64_H bodies_only
 
 datatype arch_kernel_object_type =
     PDET
@@ -30,7 +30,6 @@ datatype arch_kernel_object_type =
   | PDPTET
   | PML4ET
   | ASIDPoolT
-  | IOPTET
 
 primrec
   archTypeOf :: "arch_kernel_object \<Rightarrow> arch_kernel_object_type"
@@ -40,7 +39,6 @@ where
 | "archTypeOf (KOPDPTE e) = PDPTET"
 | "archTypeOf (KOPML4E e) = PML4ET"
 | "archTypeOf (KOASIDPool e) = ASIDPoolT"
-| "archTypeOf (KOIOPTE e) = IOPTET"
 
 end
 end

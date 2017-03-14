@@ -23,8 +23,6 @@ imports
   "../../../lib/Lib"
 begin
 
-context X64 begin
-
 datatype apiobject_type =
     Untyped
   | TCBObject
@@ -107,6 +105,8 @@ where
   )"
 
 
+context Arch begin global_naming X64_H
+
 datatype object_type =
     APIObjectType apiobject_type
   | SmallPageObject
@@ -153,28 +153,26 @@ where
   | _ \<Rightarrow>    False
   )"
 
+
 end
-qualify X64 (in Arch) 
-(* object_type instance proofs *)
-(*<*)
-instantiation object_type :: enum begin
+
+text {* object\_type instance proofs *}
+
+qualify X64_H (in Arch)
+instantiation X64_H.object_type :: enum
+begin
 interpretation Arch .
 definition
-  enum_object_type: "enum_class.enum \<equiv> 
-    [ 
-      SmallPageObject,
+  enum_object_type: "enum_class.enum \<equiv>
+    map APIObjectType (enum_class.enum :: apiobject_type list) @
+     [SmallPageObject,
       LargePageObject,
       HugePageObject,
       PageTableObject,
       PageDirectoryObject,
       PDPointerTableObject,
-      PML4Object
-    ]
-    @ (map APIObjectType enum)"
-
-lemma APIObjectType_map_distinct[simp]: "distinct (map APIObjectType enum)"
-  apply (simp add: distinct_map)
-  by (meson injI object_type.inject)
+      PageMapL4Object
+    ]"
 
 definition
   "enum_class.enum_all (P :: object_type \<Rightarrow> bool) \<longleftrightarrow> Ball UNIV P"
@@ -183,33 +181,33 @@ definition
   "enum_class.enum_ex (P :: object_type \<Rightarrow> bool) \<longleftrightarrow> Bex UNIV P"
 
   instance
-  apply intro_classes
-   apply (safe, simp)
-   apply (case_tac x)
-  apply (simp_all add: enum_object_type enum_all_object_type_def enum_ex_object_type_def)
-  by fast+
+    apply intro_classes
+     apply (safe, simp)
+     apply (case_tac x)
+    apply (simp_all add: enum_object_type)
+    apply (auto intro: distinct_map_enum
+                 simp: enum_all_object_type_def enum_ex_object_type_def)
+    done
 end
 
-instantiation object_type :: enum_alt
+
+instantiation X64_H.object_type :: enum_alt
 begin
 interpretation Arch .
 definition
-  enum_alt_object_type: "enum_alt \<equiv> 
+  enum_alt_object_type: "enum_alt \<equiv>
     alt_from_ord (enum :: object_type list)"
 instance ..
 end
 
-instantiation object_type :: enumeration_both
+instantiation X64_H.object_type :: enumeration_both
 begin
 interpretation Arch .
 instance by (intro_classes, simp add: enum_alt_object_type)
 end
 
-(*>*)
-end_qualify
-context Arch begin global_naming X64
-
-
-end (* context X64 *) 
+context begin interpretation Arch .
+requalify_types object_type
+end
 
 end

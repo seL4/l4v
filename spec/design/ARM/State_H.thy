@@ -100,11 +100,6 @@ syscallMessage :: "register list"
 where
 "syscallMessage \<equiv> map Register ARM.syscallMessage"
 
-definition
-tpidrurwRegister :: "register"
-where
-"tpidrurwRegister \<equiv> Register ARM.tpidrurwRegister"
-
 
 definition
   PPtr :: "machine_word \<Rightarrow> machine_word"

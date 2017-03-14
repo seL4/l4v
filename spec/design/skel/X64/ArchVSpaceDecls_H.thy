@@ -14,12 +14,12 @@ theory ArchVSpaceDecls_H
 imports ArchRetypeDecls_H "../InvocationLabels_H"
 begin
 
-context X64 begin
+context Arch begin global_naming X64_H
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs
 #INCLUDE_HASKELL_PREPARSE SEL4/API/InvocationLabels/X64.lhs CONTEXT X64
-#INCLUDE_HASKELL SEL4/Kernel/VSpace/X64.lhs CONTEXT X64 decls_only ArchInv=ArchRetypeDecls_H
-#INCLUDE_HASKELL SEL4/Object/IOPort/X64.lhs CONTEXT X64 decls_only ArchInv=ArchRetypeDecls_H
+#INCLUDE_HASKELL SEL4/Kernel/VSpace/X64.lhs CONTEXT X64_H decls_only ArchInv=ArchRetypeDecls_H
+#INCLUDE_HASKELL SEL4/Object/IOPort/X64.lhs CONTEXT X64_H decls_only ArchInv=ArchRetypeDecls_H
 
 end (* context X64 *)
 

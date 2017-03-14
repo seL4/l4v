@@ -20,22 +20,10 @@ imports
 begin
 
 
-context X64 begin
-
-defs baseToGDTDataWord_def:
-"baseToGDTDataWord p \<equiv> error []"
+context Arch begin global_naming X64_H
 
 defs switchToThread_def:
-"switchToThread tcb\<equiv> (do
-    setVMRoot tcb;
-    gdt \<leftarrow> gets $ x64KSGDT \<circ> ksArchState;
-    base \<leftarrow> asUser tcb $ getRegister (Register MachineTypes.TLS_BASE);
-    gdt_tls_slot \<leftarrow> return ( fromIntegral (fromEnum MachineTypes.GDT_TLS) `~shiftL~` gdteBits);
-    doMachineOp $ storeWord (gdt + gdt_tls_slot) $ baseToGDTDataWord $ base;
-    bufferPtr \<leftarrow> threadGet tcbIPCBuffer tcb;
-    gdt_ipcbuf_slot \<leftarrow> return ( fromIntegral (fromEnum MachineTypes.GDT_IPCBUF) `~shiftL~` gdteBits);
-    doMachineOp $ storeWord (gdt + gdt_ipcbuf_slot) $ baseToGDTDataWord $ fromVPtr bufferPtr
-od)"
+"switchToThread tcb \<equiv> setVMRoot tcb"
 
 defs configureIdleThread_def:
 "configureIdleThread arg1 \<equiv> error []"

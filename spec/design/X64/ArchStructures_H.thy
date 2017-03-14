@@ -20,13 +20,6 @@ begin
 context Arch begin global_naming X64_H
 
 
-type_synonym ioasid = "word16"
-
-definition
-  IOASID :: "ioasid \<Rightarrow> ioasid"
-where IOASID_def[simp]:
- "IOASID \<equiv> id"
-
 type_synonym asid = "word64"
 
 definition
@@ -38,8 +31,6 @@ datatype arch_capability =
     ASIDPoolCap machine_word asid
   | ASIDControlCap
   | IOPortCap ioport ioport
-  | IOSpaceCap word16 "ioasid option"
-  | IOPageTableCap machine_word nat "(ioasid * vptr) option"
   | PageCap machine_word vmrights vmmap_type vmpage_size bool "(asid * vptr) option"
   | PageTableCap machine_word "(asid * vptr) option"
   | PageDirectoryCap machine_word "(asid * vptr) option"
@@ -52,31 +43,6 @@ where
   "capVPIsDevice (PageCap v0 v1 v2 v3 v4 v5) = v4"
 
 primrec
-  capVPRights :: "arch_capability \<Rightarrow> vmrights"
-where
-  "capVPRights (PageCap v0 v1 v2 v3 v4 v5) = v1"
-
-primrec
-  capPTMappedAddress :: "arch_capability \<Rightarrow> (asid * vptr) option"
-where
-  "capPTMappedAddress (PageTableCap v0 v1) = v1"
-
-primrec
-  capIODomainID :: "arch_capability \<Rightarrow> word16"
-where
-  "capIODomainID (IOSpaceCap v0 v1) = v0"
-
-primrec
-  capPTBasePtr :: "arch_capability \<Rightarrow> machine_word"
-where
-  "capPTBasePtr (PageTableCap v0 v1) = v0"
-
-primrec
-  capVPMapType :: "arch_capability \<Rightarrow> vmmap_type"
-where
-  "capVPMapType (PageCap v0 v1 v2 v3 v4 v5) = v2"
-
-primrec
   capVPBasePtr :: "arch_capability \<Rightarrow> machine_word"
 where
   "capVPBasePtr (PageCap v0 v1 v2 v3 v4 v5) = v0"
@@ -87,19 +53,29 @@ where
   "capASIDPool (ASIDPoolCap v0 v1) = v0"
 
 primrec
-  capIOPTBasePtr :: "arch_capability \<Rightarrow> machine_word"
+  capPDBasePtr :: "arch_capability \<Rightarrow> machine_word"
 where
-  "capIOPTBasePtr (IOPageTableCap v0 v1 v2) = v0"
+  "capPDBasePtr (PageDirectoryCap v0 v1) = v0"
+
+primrec
+  capVPRights :: "arch_capability \<Rightarrow> vmrights"
+where
+  "capVPRights (PageCap v0 v1 v2 v3 v4 v5) = v1"
+
+primrec
+  capPTMappedAddress :: "arch_capability \<Rightarrow> (asid * vptr) option"
+where
+  "capPTMappedAddress (PageTableCap v0 v1) = v1"
+
+primrec
+  capIOPortFirstPort :: "arch_capability \<Rightarrow> ioport"
+where
+  "capIOPortFirstPort (IOPortCap v0 v1) = v0"
 
 primrec
   capPML4MappedASID :: "arch_capability \<Rightarrow> asid option"
 where
   "capPML4MappedASID (PML4Cap v0 v1) = v1"
-
-primrec
-  capPDBasePtr :: "arch_capability \<Rightarrow> machine_word"
-where
-  "capPDBasePtr (PageDirectoryCap v0 v1) = v0"
 
 primrec
   capPML4BasePtr :: "arch_capability \<Rightarrow> machine_word"
@@ -117,31 +93,6 @@ where
   "capPDPTBasePtr (PDPointerTableCap v0 v1) = v0"
 
 primrec
-  capIOPTMappedAddress :: "arch_capability \<Rightarrow> (ioasid * vptr) option"
-where
-  "capIOPTMappedAddress (IOPageTableCap v0 v1 v2) = v2"
-
-primrec
-  capIOPCIDevice :: "arch_capability \<Rightarrow> ioasid option"
-where
-  "capIOPCIDevice (IOSpaceCap v0 v1) = v1"
-
-primrec
-  capIOPTLevel :: "arch_capability \<Rightarrow> nat"
-where
-  "capIOPTLevel (IOPageTableCap v0 v1 v2) = v1"
-
-primrec
-  capVPSize :: "arch_capability \<Rightarrow> vmpage_size"
-where
-  "capVPSize (PageCap v0 v1 v2 v3 v4 v5) = v3"
-
-primrec
-  capIOPortFirstPort :: "arch_capability \<Rightarrow> ioport"
-where
-  "capIOPortFirstPort (IOPortCap v0 v1) = v0"
-
-primrec
   capPDPTMappedAddress :: "arch_capability \<Rightarrow> (asid * vptr) option"
 where
   "capPDPTMappedAddress (PDPointerTableCap v0 v1) = v1"
@@ -152,9 +103,24 @@ where
   "capIOPortLastPort (IOPortCap v0 v1) = v1"
 
 primrec
+  capPTBasePtr :: "arch_capability \<Rightarrow> machine_word"
+where
+  "capPTBasePtr (PageTableCap v0 v1) = v0"
+
+primrec
+  capVPMapType :: "arch_capability \<Rightarrow> vmmap_type"
+where
+  "capVPMapType (PageCap v0 v1 v2 v3 v4 v5) = v2"
+
+primrec
   capPDMappedAddress :: "arch_capability \<Rightarrow> (asid * vptr) option"
 where
   "capPDMappedAddress (PageDirectoryCap v0 v1) = v1"
+
+primrec
+  capVPSize :: "arch_capability \<Rightarrow> vmpage_size"
+where
+  "capVPSize (PageCap v0 v1 v2 v3 v4 v5) = v3"
 
 primrec
   capVPMappedAddress :: "arch_capability \<Rightarrow> (asid * vptr) option"
@@ -167,31 +133,6 @@ where
   "capVPIsDevice_update f (PageCap v0 v1 v2 v3 v4 v5) = PageCap v0 v1 v2 v3 (f v4) v5"
 
 primrec
-  capVPRights_update :: "(vmrights \<Rightarrow> vmrights) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
-where
-  "capVPRights_update f (PageCap v0 v1 v2 v3 v4 v5) = PageCap v0 (f v1) v2 v3 v4 v5"
-
-primrec
-  capPTMappedAddress_update :: "(((asid * vptr) option) \<Rightarrow> ((asid * vptr) option)) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
-where
-  "capPTMappedAddress_update f (PageTableCap v0 v1) = PageTableCap v0 (f v1)"
-
-primrec
-  capIODomainID_update :: "(word16 \<Rightarrow> word16) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
-where
-  "capIODomainID_update f (IOSpaceCap v0 v1) = IOSpaceCap (f v0) v1"
-
-primrec
-  capPTBasePtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
-where
-  "capPTBasePtr_update f (PageTableCap v0 v1) = PageTableCap (f v0) v1"
-
-primrec
-  capVPMapType_update :: "(vmmap_type \<Rightarrow> vmmap_type) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
-where
-  "capVPMapType_update f (PageCap v0 v1 v2 v3 v4 v5) = PageCap v0 v1 (f v2) v3 v4 v5"
-
-primrec
   capVPBasePtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
 where
   "capVPBasePtr_update f (PageCap v0 v1 v2 v3 v4 v5) = PageCap (f v0) v1 v2 v3 v4 v5"
@@ -202,19 +143,29 @@ where
   "capASIDPool_update f (ASIDPoolCap v0 v1) = ASIDPoolCap (f v0) v1"
 
 primrec
-  capIOPTBasePtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
+  capPDBasePtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
 where
-  "capIOPTBasePtr_update f (IOPageTableCap v0 v1 v2) = IOPageTableCap (f v0) v1 v2"
+  "capPDBasePtr_update f (PageDirectoryCap v0 v1) = PageDirectoryCap (f v0) v1"
+
+primrec
+  capVPRights_update :: "(vmrights \<Rightarrow> vmrights) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
+where
+  "capVPRights_update f (PageCap v0 v1 v2 v3 v4 v5) = PageCap v0 (f v1) v2 v3 v4 v5"
+
+primrec
+  capPTMappedAddress_update :: "(((asid * vptr) option) \<Rightarrow> ((asid * vptr) option)) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
+where
+  "capPTMappedAddress_update f (PageTableCap v0 v1) = PageTableCap v0 (f v1)"
+
+primrec
+  capIOPortFirstPort_update :: "(ioport \<Rightarrow> ioport) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
+where
+  "capIOPortFirstPort_update f (IOPortCap v0 v1) = IOPortCap (f v0) v1"
 
 primrec
   capPML4MappedASID_update :: "((asid option) \<Rightarrow> (asid option)) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
 where
   "capPML4MappedASID_update f (PML4Cap v0 v1) = PML4Cap v0 (f v1)"
-
-primrec
-  capPDBasePtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
-where
-  "capPDBasePtr_update f (PageDirectoryCap v0 v1) = PageDirectoryCap (f v0) v1"
 
 primrec
   capPML4BasePtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
@@ -232,31 +183,6 @@ where
   "capPDPTBasePtr_update f (PDPointerTableCap v0 v1) = PDPointerTableCap (f v0) v1"
 
 primrec
-  capIOPTMappedAddress_update :: "(((ioasid * vptr) option) \<Rightarrow> ((ioasid * vptr) option)) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
-where
-  "capIOPTMappedAddress_update f (IOPageTableCap v0 v1 v2) = IOPageTableCap v0 v1 (f v2)"
-
-primrec
-  capIOPCIDevice_update :: "((ioasid option) \<Rightarrow> (ioasid option)) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
-where
-  "capIOPCIDevice_update f (IOSpaceCap v0 v1) = IOSpaceCap v0 (f v1)"
-
-primrec
-  capIOPTLevel_update :: "(nat \<Rightarrow> nat) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
-where
-  "capIOPTLevel_update f (IOPageTableCap v0 v1 v2) = IOPageTableCap v0 (f v1) v2"
-
-primrec
-  capVPSize_update :: "(vmpage_size \<Rightarrow> vmpage_size) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
-where
-  "capVPSize_update f (PageCap v0 v1 v2 v3 v4 v5) = PageCap v0 v1 v2 (f v3) v4 v5"
-
-primrec
-  capIOPortFirstPort_update :: "(ioport \<Rightarrow> ioport) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
-where
-  "capIOPortFirstPort_update f (IOPortCap v0 v1) = IOPortCap (f v0) v1"
-
-primrec
   capPDPTMappedAddress_update :: "(((asid * vptr) option) \<Rightarrow> ((asid * vptr) option)) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
 where
   "capPDPTMappedAddress_update f (PDPointerTableCap v0 v1) = PDPointerTableCap v0 (f v1)"
@@ -267,9 +193,24 @@ where
   "capIOPortLastPort_update f (IOPortCap v0 v1) = IOPortCap v0 (f v1)"
 
 primrec
+  capPTBasePtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
+where
+  "capPTBasePtr_update f (PageTableCap v0 v1) = PageTableCap (f v0) v1"
+
+primrec
+  capVPMapType_update :: "(vmmap_type \<Rightarrow> vmmap_type) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
+where
+  "capVPMapType_update f (PageCap v0 v1 v2 v3 v4 v5) = PageCap v0 v1 (f v2) v3 v4 v5"
+
+primrec
   capPDMappedAddress_update :: "(((asid * vptr) option) \<Rightarrow> ((asid * vptr) option)) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
 where
   "capPDMappedAddress_update f (PageDirectoryCap v0 v1) = PageDirectoryCap v0 (f v1)"
+
+primrec
+  capVPSize_update :: "(vmpage_size \<Rightarrow> vmpage_size) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
+where
+  "capVPSize_update f (PageCap v0 v1 v2 v3 v4 v5) = PageCap v0 v1 v2 (f v3) v4 v5"
 
 primrec
   capVPMappedAddress_update :: "(((asid * vptr) option) \<Rightarrow> ((asid * vptr) option)) \<Rightarrow> arch_capability \<Rightarrow> arch_capability"
@@ -285,16 +226,6 @@ abbreviation (input)
   IOPortCap_trans :: "(ioport) \<Rightarrow> (ioport) \<Rightarrow> arch_capability" ("IOPortCap'_ \<lparr> capIOPortFirstPort= _, capIOPortLastPort= _ \<rparr>")
 where
   "IOPortCap_ \<lparr> capIOPortFirstPort= v0, capIOPortLastPort= v1 \<rparr> == IOPortCap v0 v1"
-
-abbreviation (input)
-  IOSpaceCap_trans :: "(word16) \<Rightarrow> (ioasid option) \<Rightarrow> arch_capability" ("IOSpaceCap'_ \<lparr> capIODomainID= _, capIOPCIDevice= _ \<rparr>")
-where
-  "IOSpaceCap_ \<lparr> capIODomainID= v0, capIOPCIDevice= v1 \<rparr> == IOSpaceCap v0 v1"
-
-abbreviation (input)
-  IOPageTableCap_trans :: "(machine_word) \<Rightarrow> (nat) \<Rightarrow> ((ioasid * vptr) option) \<Rightarrow> arch_capability" ("IOPageTableCap'_ \<lparr> capIOPTBasePtr= _, capIOPTLevel= _, capIOPTMappedAddress= _ \<rparr>")
-where
-  "IOPageTableCap_ \<lparr> capIOPTBasePtr= v0, capIOPTLevel= v1, capIOPTMappedAddress= v2 \<rparr> == IOPageTableCap v0 v1 v2"
 
 abbreviation (input)
   PageCap_trans :: "(machine_word) \<Rightarrow> (vmrights) \<Rightarrow> (vmmap_type) \<Rightarrow> (vmpage_size) \<Rightarrow> (bool) \<Rightarrow> ((asid * vptr) option) \<Rightarrow> arch_capability" ("PageCap'_ \<lparr> capVPBasePtr= _, capVPRights= _, capVPMapType= _, capVPSize= _, capVPIsDevice= _, capVPMappedAddress= _ \<rparr>")
@@ -343,20 +274,6 @@ where
   | _ \<Rightarrow> False"
 
 definition
-  isIOSpaceCap :: "arch_capability \<Rightarrow> bool"
-where
- "isIOSpaceCap v \<equiv> case v of
-    IOSpaceCap v0 v1 \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
-definition
-  isIOPageTableCap :: "arch_capability \<Rightarrow> bool"
-where
- "isIOPageTableCap v \<equiv> case v of
-    IOPageTableCap v0 v1 v2 \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
-definition
   isPageCap :: "arch_capability \<Rightarrow> bool"
 where
  "isPageCap v \<equiv> case v of
@@ -400,12 +317,37 @@ datatype arch_kernel_object =
   | KOPDE pde
   | KOPDPTE pdpte
   | KOPML4E pml4e
-  | KOIOPTE iopte
-  | KOIORTE iorte
-  | KOIOCTE iocte
+
+datatype arch_tcb =
+    ArchThread user_context
+
+primrec
+  atcbContext :: "arch_tcb \<Rightarrow> user_context"
+where
+  "atcbContext (ArchThread v0) = v0"
+
+primrec
+  atcbContext_update :: "(user_context \<Rightarrow> user_context) \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
+where
+  "atcbContext_update f (ArchThread v0) = ArchThread (f v0)"
+
+abbreviation (input)
+  ArchThread_trans :: "(user_context) \<Rightarrow> arch_tcb" ("ArchThread'_ \<lparr> atcbContext= _ \<rparr>")
+where
+  "ArchThread_ \<lparr> atcbContext= v0 \<rparr> == ArchThread v0"
+
+lemma atcbContext_atcbContext_update [simp]:
+  "atcbContext (atcbContext_update f v) = f (atcbContext v)"
+  by (cases v) simp
 
 consts'
 archObjSize :: "arch_kernel_object \<Rightarrow> nat"
+
+consts'
+atcbContextSet :: "user_context \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
+
+consts'
+atcbContextGet :: "arch_tcb \<Rightarrow> user_context"
 
 consts'
 asidHighBits :: "nat"
@@ -424,15 +366,22 @@ asidHighBitsOf :: "asid \<Rightarrow> asid"
 
 defs archObjSize_def:
 "archObjSize a\<equiv> (case a of
-                  KOASIDPool v25 \<Rightarrow>   pageBits
-                | KOPTE v26 \<Rightarrow>   3
-                | KOPDE v27 \<Rightarrow>   3
-                | KOPDPTE v28 \<Rightarrow>   3
-                | KOPML4E v29 \<Rightarrow>   3
-                | KOIOPTE v30 \<Rightarrow>   3
-                | KOIOCTE v31 \<Rightarrow>   3
-                | KOIORTE v32 \<Rightarrow>   3
+                  KOASIDPool v16 \<Rightarrow>   pageBits
+                | KOPTE v17 \<Rightarrow>   3
+                | KOPDE v18 \<Rightarrow>   3
+                | KOPDPTE v19 \<Rightarrow>   3
+                | KOPML4E v20 \<Rightarrow>   3
                 )"
+
+definition
+"newArchTCB \<equiv> ArchThread_ \<lparr>
+    atcbContext= newContext \<rparr>"
+
+defs atcbContextSet_def:
+"atcbContextSet uc at \<equiv> at \<lparr> atcbContext := uc \<rparr>"
+
+defs atcbContextGet_def:
+"atcbContextGet \<equiv> atcbContext"
 
 defs asidHighBits_def:
 "asidHighBits \<equiv> 3"
@@ -456,7 +405,6 @@ datatype arch_kernel_object_type =
   | PDPTET
   | PML4ET
   | ASIDPoolT
-  | IOPTET
 
 primrec
   archTypeOf :: "arch_kernel_object \<Rightarrow> arch_kernel_object_type"
@@ -466,7 +414,6 @@ where
 | "archTypeOf (KOPDPTE e) = PDPTET"
 | "archTypeOf (KOPML4E e) = PML4ET"
 | "archTypeOf (KOASIDPool e) = ASIDPoolT"
-| "archTypeOf (KOIOPTE e) = IOPTET"
 
 end
 end

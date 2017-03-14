@@ -16,7 +16,7 @@ theory ArchVSpaceDecls_H
 imports ArchRetypeDecls_H "../InvocationLabels_H"
 begin
 
-context X64 begin
+context Arch begin global_naming X64_H
 
 consts'
 kernelBase :: "vptr"
@@ -139,51 +139,6 @@ consts'
 decodeX64FrameInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
 
 consts'
-decodeX64IOPTInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
-
-consts'
-decodeX64IOFrameInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
-
-consts'
-unmapIOPage :: "vmpage_size \<Rightarrow> ioasid \<Rightarrow> vptr \<Rightarrow> machine_word \<Rightarrow> unit kernel"
-
-consts'
-unmapIOPageTable :: "nat \<Rightarrow> ioasid \<Rightarrow> vptr \<Rightarrow> machine_word \<Rightarrow> unit kernel"
-
-consts'
-getPCIBus :: "ioasid \<Rightarrow> machine_word"
-
-consts'
-getPCIDev :: "ioasid \<Rightarrow> machine_word"
-
-consts'
-getPCIFun :: "ioasid \<Rightarrow> machine_word"
-
-consts'
-getPCIRequestId :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> ioasid"
-
-consts'
-getVTDPTEOffset :: "machine_word \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> machine_word"
-
-consts'
-pciRequestIDFromCap :: "capability \<Rightarrow> ioasid kernel"
-
-consts'
-x86KSvtdRootTable :: "machine_word"
-
-consts'
-lookupIOContextSlot :: "ioasid \<Rightarrow> (machine_word) kernel"
-
-consts'
-lookupIOPTResolveLevels :: "machine_word \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> ( lookup_failure , (machine_word * nat) ) kernel_f"
-
-consts'
-lookupIOPTSlot :: "machine_word \<Rightarrow> machine_word \<Rightarrow> ( lookup_failure , (machine_word * nat) ) kernel_f"
-
-consts'
-unmapVTDCTE :: "capability \<Rightarrow> unit kernel"
-
-consts'
 decodeX64PDPointerTableInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
 
 consts'
@@ -220,9 +175,6 @@ consts'
 performPageTableInvocation :: "page_table_invocation \<Rightarrow> unit kernel"
 
 consts'
-performIOPageTableInvocation :: "iopage_table_invocation \<Rightarrow> unit kernel"
-
-consts'
 pteCheckIfMapped :: "machine_word \<Rightarrow> bool kernel"
 
 consts'
@@ -248,18 +200,6 @@ storePDE :: "machine_word \<Rightarrow> pde \<Rightarrow> unit kernel"
 
 consts'
 storePTE :: "machine_word \<Rightarrow> pte \<Rightarrow> unit kernel"
-
-consts'
-storeIOCTE :: "machine_word \<Rightarrow> iocte \<Rightarrow> unit kernel"
-
-consts'
-storeIOPTE :: "machine_word \<Rightarrow> iopte \<Rightarrow> unit kernel"
-
-consts'
-storeIORTE :: "machine_word \<Rightarrow> iorte \<Rightarrow> unit kernel"
-
-consts'
-deleteIOPageTable :: "arch_capability \<Rightarrow> unit kernel"
 
 consts'
 mapKernelWindow :: "unit kernel"

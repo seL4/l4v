@@ -22,7 +22,7 @@ imports
   RegisterSet_H
   "../../machine/X64/MachineOps"
 begin
-context X64 begin
+context Arch begin global_naming X64_H
 
 definition
   Word :: "machine_word \<Rightarrow> machine_word"
@@ -30,7 +30,7 @@ where
   Word_def[simp]:
  "Word \<equiv> id"
 
-type_synonym register = "MachineTypes.register"
+type_synonym register = "X64.register"
 
 definition
   Register :: "register \<Rightarrow> register"
@@ -63,54 +63,42 @@ where
 definition
 msgInfoRegister :: "register"
 where
-"msgInfoRegister \<equiv> Register MachineTypes.msgInfoRegister"
+"msgInfoRegister \<equiv> Register X64.msgInfoRegister"
 
 definition
 msgRegisters :: "register list"
 where
-"msgRegisters \<equiv> map Register MachineTypes.msgRegisters"
+"msgRegisters \<equiv> map Register X64.msgRegisters"
 
 definition
 capRegister :: "register"
 where
-"capRegister \<equiv> Register MachineTypes.capRegister"
+"capRegister \<equiv> Register X64.capRegister"
 
 definition
 badgeRegister :: "register"
 where
-"badgeRegister \<equiv> Register MachineTypes.badgeRegister"
+"badgeRegister \<equiv> Register X64.badgeRegister"
 
 definition
 frameRegisters :: "register list"
 where
-"frameRegisters \<equiv> map Register MachineTypes.frameRegisters"
+"frameRegisters \<equiv> map Register X64.frameRegisters"
 
 definition
 gpRegisters :: "register list"
 where
-"gpRegisters \<equiv> map Register MachineTypes.gpRegisters"
+"gpRegisters \<equiv> map Register X64.gpRegisters"
 
 definition
 exceptionMessage :: "register list"
 where
-"exceptionMessage \<equiv> map Register MachineTypes.exceptionMessage"
+"exceptionMessage \<equiv> map Register X64.exceptionMessage"
 
 definition
 syscallMessage :: "register list"
 where
-"syscallMessage \<equiv> map Register MachineTypes.syscallMessage"
-
-definition
-tpidrurwRegister :: "register"
-where
-"tpidrurwRegister \<equiv> Register MachineTypes.tpidrurwRegister"
-
-definition
-sanitiseRegister :: "register \<Rightarrow> machine_word \<Rightarrow> machine_word"
-where
-"sanitiseRegister x0 x1\<equiv> (case (x0, x1) of
-    (((* Register *) r), ((* Word *) w)) \<Rightarrow>    Word $ MachineTypes.sanitiseRegister r w
-  )"
+"syscallMessage \<equiv> map Register X64.syscallMessage"
 
 
 definition
@@ -130,5 +118,5 @@ definition
 where
  "nullPointer \<equiv> 0"
 
-end (* context X64 *)
+end
 end

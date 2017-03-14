@@ -21,9 +21,9 @@ imports
   ArchStructures_H
 begin
 
-context X64 begin
+context Arch begin global_naming X64_H
 
-#INCLUDE_HASKELL SEL4/Model/StateData/X64.lhs CONTEXT X64 NOT X64VSpaceRegionUse
+#INCLUDE_HASKELL SEL4/Model/StateData/X64.lhs CONTEXT X64_H NOT X64VSpaceRegionUse
 
 end
 end

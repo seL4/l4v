@@ -22,12 +22,8 @@ imports
   "../FaultMonad_H"
   "../KernelInitMonad_H"
 begin
-(* FIXME: Clagged from ARM version *)
 
-context X64 begin
-
-consts'
-baseToGDTDataWord :: "machine_word \<Rightarrow> machine_word"
+context Arch begin global_naming X64_H
 
 consts'
 switchToThread :: "machine_word \<Rightarrow> unit kernel"

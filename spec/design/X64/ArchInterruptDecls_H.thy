@@ -14,7 +14,7 @@ theory ArchInterruptDecls_H
 imports "../RetypeDecls_H" "../CNode_H" 
 begin
 
-context X64 begin
+context Arch begin global_naming X64_H
 
 consts'
 decodeIRQControlInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> capability list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.irqcontrol_invocation ) kernel_f"
@@ -24,6 +24,12 @@ performIRQControl :: "ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> unit
 
 consts'
 checkIRQ :: "machine_word \<Rightarrow> ( syscall_error , unit ) kernel_f"
+
+consts'
+handleReservedIRQ :: "irq \<Rightarrow> unit kernel"
+
+consts'
+initInterruptController :: "unit kernel"
 
 
 end (* context X64 *)

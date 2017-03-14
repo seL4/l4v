@@ -14,14 +14,21 @@ imports
   State_H
 begin
 
+context Arch begin global_naming X64_H
 
-context X64 begin
+#INCLUDE_HASKELL SEL4/Machine/Hardware/X64.lhs Platform=Platform.X64 CONTEXT X64_H NOT getMemoryRegions getDeviceRegions getKernelDevices loadWord storeWord storeWordVM getActiveIRQ ackInterrupt maskInterrupt configureTimer resetTimer debugPrint getRestartPC setNextPC clearMemory clearMemoryVM initMemory freeMemory setCurrentPD setGlobalPD setHardwareASID wordFromPDE wordFromPTE VMFaultType VMPageSize pageBits pageBitsForSize toPAddr addrFromPPtr ptrFromPAddr setCurrentCR3 getCurrentCR3 invalidateTLB invalidateTLBEntry mfence wordFromPML4E wordFromPDPTE firstValidIODomain numIODomainIDBits hwASIDInvalidate getFaultAddress irqIntOffset maxPCIBus maxPCIDev maxPCIFunc numIOAPICs ioapicIRQLines ioapicMapPinToVector irqStateIRQIOAPICNew irqStateIRQMSINew updateIRQState X64IRQState in8 out8 in16 out16 in32 out32 invalidatePageStructureCache
 
-#INCLUDE_HASKELL SEL4/Machine/Hardware/X64.lhs CONTEXT X64 NOT getMemoryRegions getDeviceRegions getKernelDevices loadWord storeWord storeWordVM getActiveIRQ ackInterrupt maskInterrupt configureTimer resetTimer debugPrint getRestartPC setNextPC clearMemory clearMemoryVM initMemory freeMemory writeTTBR0 setCurrentPD setGlobalPD  setTTBCR setHardwareASID invalidateTLB invalidateTLB_ASID invalidateTLB_VAASID cleanByVA cleanByVA_PoU invalidateByVA invalidateByVA_I invalidate_I_PoU cleanInvalByVA branchFlush clean_D_PoU cleanInvalidate_D_PoC cleanInvalidate_D_PoU cleanInvalidateL2Range invalidateL2Range cleanL2Range isb dsb dmb getIFSR getDFSR getFAR HardwareASID wordFromPDE wordFromPTE VMFaultType VMPageSize pageBits pageBitsForSize toPAddr cacheLineBits cacheLine lineStart cacheRangeOp cleanCacheRange_PoC cleanInvalidateCacheRange_RAM cleanCacheRange_RAM cleanCacheRange_PoU invalidateCacheRange_RAM invalidateCacheRange_I branchFlushRange cleanCaches_PoU cleanInvalidateL1Caches addrFromPPtr ptrFromPAddr setCurrentCR3 getCurrentCR3 invalidateTLB invalidateTLBEntry mfence wordFromPML4E wordFromPDPTE firstValidIODomain numIODomainIDBits hwASIDInvalidate getFaultAddress irqIntOffset maxPCIBus maxPCIDev maxPCIFunc numIOAPICs ioapicIRQLines ioapicMapPinToVector irqStateIRQIOAPICNew irqStateIRQMSINew updateIRQState X64IRQState in8 out8 in16 out16 in32 out32
+end
 
-#INCLUDE_HASKELL SEL4/Machine/Hardware/X64.lhs CONTEXT X64 instanceproofs NOT HardwareASID VMFaultType VMPageSize VMPageEntry
+context begin interpretation Arch .
+requalify_types vmrights
+end
 
-#INCLUDE_HASKELL SEL4/Machine/Hardware/X64.lhs CONTEXT X64 ONLY wordFromPDE wordFromPTE wordFromPML4E wordFromPDPTE
+context Arch begin global_naming X64_H
+
+#INCLUDE_HASKELL SEL4/Machine/Hardware/X64.lhs CONTEXT X64_H instanceproofs NOT HardwareASID VMFaultType VMPageSize VMPageEntry
+
+#INCLUDE_HASKELL SEL4/Machine/Hardware/X64.lhs CONTEXT X64_H ONLY wordFromPDE wordFromPTE wordFromPML4E wordFromPDPTE
 
 end (* context X64 *)
 
