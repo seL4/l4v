@@ -1486,7 +1486,7 @@ lemma set_pt_kernel_window[wp]:
 lemma set_pt_respects_device_region[wp]:
   "\<lbrace>pspace_respects_device_region\<rbrace> set_pt p pt \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
   apply (simp add: set_pt_def)
-  apply (wp set_object_pspace_respect_device_region get_object_wp)
+  apply (wp set_object_pspace_respects_device_region get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: Structures_A.kernel_object.split_asm
                         arch_kernel_obj.split_asm)
@@ -2063,7 +2063,7 @@ lemma set_asid_pool_kernel_window[wp]:
 lemma set_asid_pool_pspace_respects_device_region[wp]:
   "\<lbrace>pspace_respects_device_region\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
   apply (simp add: set_asid_pool_def)
-  apply (wp set_object_pspace_respect_device_region get_object_wp)
+  apply (wp set_object_pspace_respects_device_region get_object_wp)
   including unfold_objects_asm
   by (clarsimp simp: a_type_def)
 
@@ -3163,7 +3163,7 @@ lemma set_pd_kernel_window[wp]:
 lemma set_pd_device_region[wp]:
   "\<lbrace>pspace_respects_device_region\<rbrace> set_pd p pd \<lbrace>\<lambda>rv. pspace_respects_device_region\<rbrace>"
   apply (simp add: set_pd_def)
-  apply (wp set_object_pspace_respect_device_region get_object_wp)
+  apply (wp set_object_pspace_respects_device_region get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: Structures_A.kernel_object.split_asm
                         arch_kernel_obj.split_asm)
