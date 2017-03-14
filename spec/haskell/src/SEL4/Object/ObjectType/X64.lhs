@@ -60,46 +60,46 @@ ASID capabilities can be copied without modification, as can IOPort and IOSpace 
 > deriveCap _ c@ASIDControlCap = return c
 > deriveCap _ (c@ASIDPoolCap {}) = return c
 > deriveCap _ (c@IOPortCap {}) = return c
-> deriveCap _ (c@IOSpaceCap {}) = return c
+> -- deriveCap _ (c@IOSpaceCap {}) = return c
 
 IOPTs
 
-> deriveCap _ (c@IOPageTableCap { capIOPTMappedAddress = Just _ }) = return c
-> deriveCap _ (IOPageTableCap { capIOPTMappedAddress = Nothing }) 
->     = throw IllegalOperation
+> -- deriveCap _ (c@IOPageTableCap { capIOPTMappedAddress = Just _ }) = return c
+> -- deriveCap _ (IOPageTableCap { capIOPTMappedAddress = Nothing })
+> --    = throw IllegalOperation -}
 
 X64 has two writable user data caps
 
 > -- FIXME x64: io_space_capdata_get_domainID
 > ioSpaceGetDomainID :: Word -> Word16
-> ioSpaceGetDomainID dat = error "Not implemented"
+> ioSpaceGetDomainID _ = error "Not implemented"
 
 > -- FIXME x64: io_space_capdata_get_PCIDevice
 > ioSpaceGetPCIDevice :: Word -> Maybe IOASID
-> ioSpaceGetPCIDevice dat = error "Not implemented"
+> ioSpaceGetPCIDevice _ = error "Not implemented"
 
 > -- FIXME x64: io_port_capdata_get_firstPort
 > ioPortGetFirstPort :: Word -> Word16
-> ioPortGetFirstPort dat = error "Not implemented"
+> ioPortGetFirstPort _ = error "Not implemented"
 
 > -- FIXME x64: io_port_capdata_get_lastPort
 > ioPortGetLastPort :: Word -> Word16
-> ioPortGetLastPort dat = error "Not implemented"
-   
+> ioPortGetLastPort _ = error "Not implemented"
+
 > updateCapData :: Bool -> Word -> ArchCapability -> Capability
-> updateCapData preserve newData (c@IOSpaceCap {}) =
+>-- updateCapData preserve newData (c@IOSpaceCap {}) =
+>--     let
+>--         pciDevice = ioSpaceGetPCIDevice newData;
+>--         domID = ioSpaceGetDomainID newData;
+>--         fstValidDom = firstValidIODomain;
+>--         domIDBits = numIODomainIDBits
+>--     in
+>--     if (not preserve && capIOPCIDevice c == Nothing && domID >= fstValidDom
+>--                     && domID /= 0 && domID <= mask domIDBits)
+>--                then (ArchObjectCap (IOSpaceCap domID pciDevice))
+>--                else NullCap -}
+> updateCapData _ newData (c@IOPortCap {}) =
 >     let
->         pciDevice = ioSpaceGetPCIDevice newData;
->         domID = ioSpaceGetDomainID newData;
->         fstValidDom = firstValidIODomain;
->         domIDBits = numIODomainIDBits
->     in
->     if (not preserve && capIOPCIDevice c == Nothing && domID >= fstValidDom
->                     && domID /= 0 && domID <= mask domIDBits) 
->                then (ArchObjectCap (IOSpaceCap domID pciDevice))
->                else NullCap
-> updateCapData preserve newData (c@IOPortCap {}) =
->     let 
 >         firstPort = ioPortGetFirstPort newData;
 >         lastPort = ioPortGetLastPort newData
 >     in
@@ -161,28 +161,37 @@ Deletion of a final capability to a page table that has been mapped requires tha
 >     unmapPageTable a v ptr
 >     return NullCap
 
-> finaliseCap (IOSpaceCap {}) True = return NullCap -- FIXME x64: not yet implemented in C
+> --finaliseCap (IOSpaceCap {}) True = return NullCap -- FIXME x64: not yet implemented in C
+
+> finaliseCap (PageCap {
+>         capVPMappedAddress = Just (a, v),
+>         capVPSize = s,
+>         capVPBasePtr = ptr }) True = do
+>     unmapPage s a v ptr
+>     return NullCap
+
+> finaliseCap _ _ = return NullCap
 
 %Note: limitations in Haskell translator caseconvs makes this horrible
 
-> finaliseCap c b = case (c, b) of
->     ((IOPageTableCap { capIOPTMappedAddress = Just (asid,ioaddr), 
->                                capIOPTLevel = level,
->                              capIOPTBasePtr = baseptr  }), True) -> do
->         deleteIOPageTable c
->         unmapIOPageTable level asid ioaddr baseptr
->         return NullCap
->     ((PageCap { capVPMappedAddress = Just (asid, vaddr),
->                          capVPSize = vpsz,
->                       capVPMapType = VMIOSpaceMap,
->                       capVPBasePtr = baseptr}), _) -> do 
->         unmapIOPage vpsz (fromIntegral asid) vaddr baseptr
->         return NullCap
->     ((PageCap { capVPMappedAddress = Just (a, v), capVPSize = s, capVPBasePtr = ptr }), _) -> do
->         unmapPage s a v ptr
->         return NullCap
->     (_, _) -> return NullCap
->     
+>-- finaliseCap c b = case (c, b) of
+>--     ((IOPageTableCap { capIOPTMappedAddress = Just (asid,ioaddr),
+>--                                capIOPTLevel = level,
+>--                              capIOPTBasePtr = baseptr  }), True) -> do
+>--         deleteIOPageTable c
+>--         unmapIOPageTable level asid ioaddr baseptr
+>--         return NullCap
+>--     ((PageCap { capVPMappedAddress = Just (asid, vaddr),
+>--                          capVPSize = vpsz,
+>--                       capVPMapType = VMIOSpaceMap,
+>--                       capVPBasePtr = baseptr}), _) -> do
+>--         unmapIOPage vpsz (fromIntegral asid) vaddr baseptr
+>--         return NullCap
+>--     ((PageCap { capVPMappedAddress = Just (a, v), capVPSize = s, capVPBasePtr = ptr }), _) -> do
+>--         unmapPage s a v ptr
+>--         return NullCap
+>--     (_, _) -> return NullCap -}
+>--
 
 \subsection{Identifying Capabilities}
 
@@ -205,11 +214,11 @@ Deletion of a final capability to a page table that has been mapped requires tha
 > sameRegionAs ASIDControlCap ASIDControlCap = True
 > sameRegionAs (a@ASIDPoolCap {}) (b@ASIDPoolCap {}) =
 >     capASIDPool a == capASIDPool b
-> sameRegionAs (a@IOPortCap {}) (b@IOPortCap {}) = True
-> sameRegionAs (a@IOSpaceCap {}) (b@IOSpaceCap {}) =
->     capIOPCIDevice a == capIOPCIDevice b
-> sameRegionAs (a@IOPageTableCap {}) (b@IOPageTableCap {}) =
->     capIOPTBasePtr a == capIOPTBasePtr b
+> sameRegionAs (IOPortCap {}) (IOPortCap {}) = True
+> --sameRegionAs (a@IOSpaceCap {}) (b@IOSpaceCap {}) =
+> --    capIOPCIDevice a == capIOPCIDevice b
+> --sameRegionAs (a@IOPageTableCap {}) (b@IOPageTableCap {}) =
+> --    capIOPTBasePtr a == capIOPTBasePtr b -}
 > sameRegionAs _ _ = False
 
 > isPhysicalCap :: ArchCapability -> Bool
@@ -234,28 +243,28 @@ Create an architecture-specific object.
 >     else placeNewObject regionBase UserData sz
 
 > createObject :: ObjectType -> PPtr () -> Int -> Bool -> Kernel ArchCapability
-> createObject t regionBase _ isDevice = 
+> createObject t regionBase _ isDevice =
 >     let funupd = (\f x v y -> if y == x then v else f y) in
 >     let pointerCast = PPtr . fromPPtr
 >     in case t of
 >         Arch.Types.APIObjectType _ ->
 >             fail "Arch.createObject got an API type"
 >         Arch.Types.SmallPageObject -> do
->             placeNewDataObject regionBase 0
+>             placeNewDataObject regionBase 0 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just X64SmallPage)})
 >             return $! PageCap (pointerCast regionBase)
 >                   VMReadWrite VMVSpaceMap X64SmallPage isDevice Nothing
->         Arch.Types.LargePageObject -> do 
->             placeNewDataObject regionBase ptTranslationBits
+>         Arch.Types.LargePageObject -> do
+>             placeNewDataObject regionBase ptTranslationBits isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just X64LargePage)})
 >             return $! PageCap (pointerCast regionBase)
 >                   VMReadWrite VMVSpaceMap X64LargePage isDevice Nothing
 >         Arch.Types.HugePageObject -> do
->             placeNewDataObject regionBase (ptTranslationBits + ptTranslationBits)
+>             placeNewDataObject regionBase (ptTranslationBits + ptTranslationBits) isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just X64HugePage)})
@@ -284,20 +293,20 @@ Create an architecture-specific object.
 > isIOCap :: ArchCapability -> Bool
 > isIOCap c = case c of
 >          (IOPortCap {}) -> True
->          (IOSpaceCap {}) -> True
+> --         (IOSpaceCap {}) -> True
 >          _ -> False
 
 > decodeInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError ArchInv.Invocation
-> decodeInvocation label args capIndex slot cap extraCaps = 
+> decodeInvocation label args capIndex slot cap extraCaps =
 >     if isIOCap cap
 >      then decodeX64PortInvocation label args capIndex slot cap extraCaps
 >      else decodeX64MMUInvocation label args capIndex slot cap extraCaps
 
 > performInvocation :: ArchInv.Invocation -> KernelP [Word]
 > performInvocation (oper@(InvokeIOPort _)) = performX64PortInvocation oper
-> performInvocation oper = performX64MMUInvocation oper 
+> performInvocation oper = performX64MMUInvocation oper
 
 \subsection{Helper Functions}
 
@@ -310,8 +319,8 @@ Create an architecture-specific object.
 > capUntypedPtr ASIDControlCap = error "ASID control has no pointer"
 > capUntypedPtr (ASIDPoolCap { capASIDPool = PPtr p }) = PPtr p
 > capUntypedPtr (IOPortCap {}) = error "IOPortCap has no pointer"
-> capUntypedPtr (IOSpaceCap {}) = error "IOSpaceCap has no pointer"
-> capUntypedPtr (IOPageTableCap { capIOPTBasePtr = PPtr p }) = PPtr p
+> --capUntypedPtr (IOSpaceCap {}) = error "IOSpaceCap has no pointer"
+> --capUntypedPtr (IOPageTableCap { capIOPTBasePtr = PPtr p }) = PPtr p
 
 
 > capUntypedSize :: ArchCapability -> Word
@@ -323,7 +332,12 @@ Create an architecture-specific object.
 > capUntypedSize (ASIDControlCap {}) = 0
 > capUntypedSize (ASIDPoolCap {}) = 1 `shiftL` (asidLowBits + 3)
 > capUntypedSize (IOPortCap {}) = 0
-> capUntypedSize (IOSpaceCap {}) = 0
-> capUntypedSize (IOPageTableCap {}) = 1 `shiftL` 12
+> --capUntypedSize (IOSpaceCap {}) = 0
+> --capUntypedSize (IOPageTableCap {}) = 1 `shiftL` 12
 
+
+No arch-specific thread deletion operations needed on X64 platform.
+
+> prepareThreadDelete :: PPtr TCB -> Kernel ()
+> prepareThreadDelete _ = return ()
 

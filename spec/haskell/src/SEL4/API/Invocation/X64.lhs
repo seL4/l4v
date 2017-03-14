@@ -38,7 +38,7 @@ ASID pool structures, and on IO ports.
 >     = InvokePDPT PDPTInvocation
 >     | InvokePageDirectory PageDirectoryInvocation
 >     | InvokePageTable PageTableInvocation
->     | InvokeIOPageTable IOPageTableInvocation
+>--     | InvokeIOPageTable IOPageTableInvocation
 >     | InvokePage PageInvocation
 >     | InvokeASIDControl ASIDControlInvocation
 >     | InvokeASIDPool ASIDPoolInvocation
@@ -83,21 +83,22 @@ VTD context as a VTD context table entry (IOCTE).  If the context table entry
 for a device does not have a page table entry, we must initialise that first to
 point to the invoked IO page table.
 
-> data IOPageTableInvocation
->     = IOPageTableUnmap {
->         ioptUnmapCap :: ArchCapability,
->         ioptUnmapCapSlot :: PPtr CTE }
->     | IOPageTableMap {
->         ioptMapCap :: ArchCapability,
->         ioptMapCTSlot :: PPtr CTE,
->         ioptMapPT :: IOPTE,
->         ioptMapPTSlot :: PPtr IOPTE }
->     | IOPageTableMapContext {
->         ioptMapCap :: ArchCapability,
->         ioptMapCTSlot :: PPtr CTE,
->         ioptMapCxtTableEntry :: IOCTE, 
->         ioptMapCxtTableSlot :: PPtr IOCTE }
->     deriving Show
+>-- data IOPageTableInvocation
+>--     = IOPageTableUnmap {
+>--         ioptUnmapCap :: ArchCapability,
+>--         ioptUnmapCapSlot :: PPtr CTE }
+>--     | IOPageTableMap {
+>--         ioptMapCap :: ArchCapability,
+>--         ioptMapCTSlot :: PPtr CTE,
+>--         ioptMapPT :: IOPTE,
+>--         ioptMapPTSlot :: PPtr IOPTE }
+>--     | IOPageTableMapContext {
+>--         ioptMapCap :: ArchCapability,
+>--         ioptMapCTSlot :: PPtr CTE,
+>--         ioptMapCxtTableEntry :: IOCTE,
+>--         ioptMapCxtTableSlot :: PPtr IOCTE }
+>--     deriving Show
+>--
 
 > data PageInvocation
 >     = PageGetAddr {
@@ -112,14 +113,14 @@ point to the invoked IO page table.
 >     | PageUnmap {
 >         pageUnmapCap :: ArchCapability,
 >         pageUnmapCapSlot :: PPtr CTE }
->     | PageIOMap {
->         pageIOMapCap :: Capability,
->         pageIOMapCTSlot :: PPtr CTE,
->         pageIOMapEntry :: IOPTE,
->         pageIOMapEntryPtr :: PPtr IOPTE }
->     | PageIOUnmap {
->         pageIOUnmapCap :: Capability,
->         pageIOUnmapCTSlot :: PPtr CTE }
+>--     | PageIOMap {
+>--         pageIOMapCap :: Capability,
+>--         pageIOMapCTSlot :: PPtr CTE,
+>--         pageIOMapEntry :: IOPTE,
+>--         pageIOMapEntryPtr :: PPtr IOPTE }
+>--     | PageIOUnmap {
+>--         pageIOUnmapCap :: Capability,
+>--         pageIOUnmapCTSlot :: PPtr CTE } -}
 >     deriving Show
 
 > data ASIDControlInvocation

@@ -14,7 +14,7 @@ This module contains the architecture-specific kernel global data for the X86-64
 \begin{impdetails}
 
 > import SEL4.Machine
-> import SEL4.Machine.Hardware.X64 (PML4E(..))
+> import SEL4.Machine.Hardware.X64 (PML4E(..),PDPTE(..),PDE(..),PTE(..))
 > import SEL4.Object.Structures.X64
 
 > import Data.Array
@@ -35,7 +35,7 @@ This module contains the architecture-specific kernel global data for the X86-64
 
 > data KernelState = X64KernelState {
 >     x64KSASIDTable   :: Array ASID (Maybe (PPtr ASIDPool)),
->     x64KSASIDMap     :: Array ASID (Maybe (PPtr PDE)),
+>     x64KSASIDMap     :: Array ASID (Maybe (PPtr PML4E)),
 >     x64KSGlobalPML4  :: PPtr PML4E,
 >     x64KSGlobalPDPTs :: [PPtr PDPTE],
 >     x64KSGlobalPDs   :: [PPtr PDE],

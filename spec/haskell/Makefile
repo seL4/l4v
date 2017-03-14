@@ -23,20 +23,25 @@ BOOT_FILES=$(BOOT_MODULES:%=src/SEL4/%.lhs-boot)
 # GHC_PACKAGE_PATH first.
 CABAL=stack exec -- ./stack-path cabal
 
-all: build pdf
+all: build-x64
 
-build: .stack-work $(BOOT_FILES)
+sandbox: .stack-work
 	$(CABAL) sandbox init
 	$(CABAL) install --dependencies-only
-	$(CABAL) configure --configure-option="arm-kzm"
-	$(CABAL) build
 
-build-x64: .stack-work $(BOOT_FILES)
-	$(CABAL)sandbox init
-	$(CABAL) install --dependencies-only
-	# FIXME: allow some warnings for now
-	$(CABAL) configure --configure-option="x64-pc99" --flags="-FFI -ArchArm" --ghc-options="-fno-warn-unused-matches -fno-warn-unused-imports"
-	$(CABAL) build
+
+build-arm: sandbox $(BOOT_FILES)
+	$(CABAL) configure --configure-option="arm-kzm" \
+		--flags="ArchArm" \
+		--builddir="dist/arm"
+	$(CABAL) build --builddir="dist/arm"
+
+build-x64: sandbox $(BOOT_FILES)
+	$(CABAL) configure --configure-option="x64-pc99" \
+		--flags="ArchX64 -FFI" \
+		--builddir="dist/x64"
+	$(CABAL) build --builddir="dist/x64"
+
 pdf:
 	cd doc && make
 
@@ -61,4 +66,4 @@ clean:
 realclean:
 	rm -rf $(BOOT_FILES) dist .stack-work .cabal-sandbox cabal.sandbox.config
 
-.PHONY: all build pdf clean realclean
+.PHONY: all build-arm build-x64 pdf clean realclean

@@ -29,8 +29,8 @@ This module makes use of the GHC extension allowing declaration of types with no
 
 \end{impdetails}
 
-> newtype IOASID = IOASID Word16
->     deriving (Show, Eq, Ord, Enum, Real, Integral, Num, Bits, Ix, Bounded)
+> --newtype IOASID = IOASID Word16
+> --    deriving (Show, Eq, Ord, Enum, Real, Integral, Num, Bits, Ix, Bounded) -}
 
 \subsection{Capabilities}
 
@@ -42,13 +42,13 @@ This module makes use of the GHC extension allowing declaration of types with no
 >     | IOPortCap {
 >         capIOPortFirstPort :: IOPort,
 >         capIOPortLastPort :: IOPort }
->     | IOSpaceCap {
->         capIODomainID :: Word16,
->         capIOPCIDevice :: Maybe IOASID }
->     | IOPageTableCap {
->         capIOPTBasePtr :: PPtr IOPTE,
->         capIOPTLevel :: Int,
->         capIOPTMappedAddress :: Maybe (IOASID, VPtr) }
+>--     | IOSpaceCap {
+>--         capIODomainID :: Word16,
+>--         capIOPCIDevice :: Maybe IOASID }
+>--     | IOPageTableCap {
+>--         capIOPTBasePtr :: PPtr IOPTE,
+>--         capIOPTLevel :: Int,
+>--         capIOPTMappedAddress :: Maybe (IOASID, VPtr) }
 >     | PageCap {
 >         capVPBasePtr :: PPtr Word,
 >         capVPRights :: VMRights,
@@ -78,9 +78,9 @@ This module makes use of the GHC extension allowing declaration of types with no
 >     | KOPDE PDE
 >     | KOPDPTE PDPTE
 >     | KOPML4E PML4E
->     | KOIOPTE IOPTE
->     | KOIORTE IORTE
->     | KOIOCTE IOCTE
+>--    | KOIOPTE IOPTE
+>--    | KOIORTE IORTE
+>--    | KOIOCTE IOCTE
 >     deriving Show
 
 > archObjSize ::  ArchKernelObject -> Int
@@ -90,9 +90,9 @@ This module makes use of the GHC extension allowing declaration of types with no
 >                 KOPDE _ -> 3
 >                 KOPDPTE _ -> 3
 >                 KOPML4E _ -> 3
->                 KOIOPTE _ -> 3
->                 KOIOCTE _ -> 3
->                 KOIORTE _ -> 3 -- FIXME: Not correct ?
+>--                KOIOPTE _ -> 3
+>--                KOIOCTE _ -> 3
+>--                KOIORTE _ -> 3 -- FIXME: Not correct ?
 
 \subsection{Threads}
 

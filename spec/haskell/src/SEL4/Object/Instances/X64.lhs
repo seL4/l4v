@@ -13,7 +13,7 @@ This module defines instances of "PSpaceStorable" for X64-specific kernel object
 
 \begin{impdetails}
 
-> import SEL4.Machine.Hardware.X64(PTE(..), PDE(..), PDPTE(..), PML4E(..), IOPTE(..), IORTE(..), IOCTE(..))
+> import SEL4.Machine.Hardware.X64(PTE(..), PDE(..), PDPTE(..), PML4E(..))
 > import SEL4.Object.Structures
 > import SEL4.Model
 > import Data.Helpers
@@ -56,24 +56,24 @@ This module defines instances of "PSpaceStorable" for X64-specific kernel object
 >         KOArch (KOASIDPool e) -> return e
 >         _ -> typeError "ASID pool" o
 
-> instance PSpaceStorable IOPTE where
->     makeObject = InvalidIOPTE
->     injectKO = KOArch . KOIOPTE
->     projectKO o = case o of 
->                 KOArch (KOIOPTE p) -> return p
->                 _ -> typeError "IOPTE" o
+>--instance PSpaceStorable IOPTE where
+>--    makeObject = InvalidIOPTE
+>--    injectKO = KOArch . KOIOPTE
+>--    projectKO o = case o of
+>--                KOArch (KOIOPTE p) -> return p
+>--                _ -> typeError "IOPTE" o
 
-> instance PSpaceStorable IORTE where
->     makeObject = InvalidIORTE
->     injectKO = KOArch . KOIORTE
->     projectKO o = case o of 
->                 KOArch (KOIORTE p) -> return p
->                 _ -> typeError "IORTE" o
+>--instance PSpaceStorable IORTE where
+>--    makeObject = InvalidIORTE
+>--    injectKO = KOArch . KOIORTE
+>--    projectKO o = case o of
+>--                KOArch (KOIORTE p) -> return p
+>--                _ -> typeError "IORTE" o
 
-> instance PSpaceStorable IOCTE where
->     makeObject = InvalidIOCTE
->     injectKO = KOArch . KOIOCTE
->     projectKO o = case o of 
->                 KOArch (KOIOCTE p) -> return p
->                 _ -> typeError "IOCTE" o
+>--instance PSpaceStorable IOCTE where
+>--    makeObject = InvalidIOCTE
+>--    injectKO = KOArch . KOIOCTE
+>--    projectKO o = case o of
+>--                KOArch (KOIOCTE p) -> return p
+>--                _ -> typeError "IOCTE" o
 

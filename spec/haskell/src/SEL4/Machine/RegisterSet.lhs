@@ -139,8 +139,8 @@ This list may be empty, though it should contain as many registers as possible. 
 > syscallMessage = map Register Arch.syscallMessage
 
 
-> tpidrurwRegister :: Register
-> tpidrurwRegister = Register Arch.tpidrurwRegister
+> --tpidrurwRegister :: Register
+> --tpidrurwRegister = Register Arch.tpidrurwRegister
 
 \end{description}
 

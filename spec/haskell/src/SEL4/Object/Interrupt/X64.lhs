@@ -104,12 +104,14 @@ This module defines the machine-specific interrupt handling routines for x64.
 >     return ()
 
 %FIXME: separate ranges for ISA interrupts and user interrupts
+
 > checkIRQ :: Word -> KernelF SyscallError ()
 > checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
 
 %FIXME: handle VTD faults
+
 > handleReservedIRQ :: IRQ -> Kernel ()
-> handleReservedIRQ irq = return ()
+> handleReservedIRQ _ = return ()
 
 > initInterruptController :: Kernel ()
 > initInterruptController = return ()

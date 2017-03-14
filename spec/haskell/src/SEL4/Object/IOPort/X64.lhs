@@ -24,7 +24,6 @@ This module defines IO port routines, specific to x64.
 > import SEL4.Object.Structures
 > import SEL4.Object.TCB
 > import SEL4.API.Invocation.X64 as ArchInv
-> import SEL4.API.Invocation
 > import SEL4.API.InvocationLabels
 > import SEL4.API.InvocationLabels.X64
 

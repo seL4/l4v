@@ -68,6 +68,7 @@ x86 virtual memory faults are handled by one of two trap handlers: one for data 
 
 > data HypFaultType
 >     = X64NoHypFaults
+>     deriving Show
 
 \subsubsection{Physical Memory}
 
@@ -164,8 +165,8 @@ Every table is one small page in size.
 > pml4Bits :: Int
 > pml4Bits = ptTranslationBits + 3
 
-> ioptBits :: Int
-> ioptBits = ptTranslationBits + 3
+> --ioptBits :: Int
+> --ioptBits = ptTranslationBits + 3
 
 > pageColourBits :: Int
 > pageColourBits = error "Does not exist on x64" -- Platform.pageColourBits
@@ -188,7 +189,7 @@ Every table is one small page in size.
 > debugPrint :: String -> MachineMonad ()
 > debugPrint str = liftIO $ putStrLn str
 
-> getRestartPC = getRegister (Register X64.FaultInstruction)
+> getRestartPC = getRegister (Register X64.FaultIP)
 > setNextPC = setRegister (Register X64.NextIP)
 
 \subsection{Memory Management}
@@ -397,76 +398,76 @@ The following types are Haskell representations of an entry in an x64 page table
 
 % IOMMU memory data are logical 4 bytes
 
-> data TranslationType 
->     = NotTranslatedRequest
->     | TranslatedRequest
->     deriving (Show, Eq, Enum)
 
-> vtdCTBits :: Int
-> vtdCTBits = 9
+>--data TranslationType
+>--    = NotTranslatedRequest
+>--    | TranslatedRequest
+>--    deriving (Show, Eq, Enum)
 
-> vtdCTESizeBits = 3
-> vtdCTSizeBits = vtdCTBits + vtdCTESizeBits
+>--vtdCTBits :: Int
+>--vtdCTBits = 9
 
-
-> data IOCTE = InvalidIOCTE
->     | VTDCTE {
->         -- reserved 32 bits [0,31]
->         -- VTDWord Boundary --
->         -- reserved 8 bits [24,31]
->         domainId :: Word16, -- 16 bits [8: 23]
->         reservedMemReg :: Bool, -- 1 bit [4]
->         addressWidth :: Int, -- 3 bits [0,3]
->         -- VTDWord Boundary [0,31] padding
->         nxtLevelPtr :: PAddr, -- high 20 bits [12,31]
->         translationType :: TranslationType, -- This should alsways be 0 [2,3]
->         ctePresent :: Bool -- 1 bit [0]
->     }
->     deriving Show
+>--vtdCTESizeBits = 3
+>--vtdCTSizeBits = vtdCTBits + vtdCTESizeBits
 
 
-> vtdPTBits :: Int
-> vtdPTBits = 9
+>--data IOCTE = InvalidIOCTE
+>--    | VTDCTE {
+>--        -- reserved 32 bits [0,31]
+>--        -- VTDWord Boundary --
+>--        -- reserved 8 bits [24,31]
+>--        domainId :: Word16, -- 16 bits [8: 23]
+>--        reservedMemReg :: Bool, -- 1 bit [4]
+>--        addressWidth :: Int, -- 3 bits [0,3]
+>--        -- VTDWord Boundary [0,31] padding
+>--        nxtLevelPtr :: PAddr, -- high 20 bits [12,31]
+>--        translationType :: TranslationType, -- This should alsways be 0 [2,3]
+>--        ctePresent :: Bool -- 1 bit [0]
+>--    }
+>--    deriving Show
 
 
-> vtdPTESizeBits = 3
-> vtdPTSizeBits = vtdCTBits + vtdPTESizeBits
-
-> data IOPTE = InvalidIOPTE
->     | VTDPTE {
->       -- reserved 32 bits [0,31] and assume AVAIL and TM as reserved
->       -- VTDWord Boundary
->       framePtr :: PAddr, -- [12,31]
->       rw :: VMRights -- [0,1],
->     }
->     deriving (Show, Eq)
-
-% There is no wordFromIORTE yet because its size is 64*2
-
-> data IORTE = InvalidIORTE
->     | VTDRTE {
->       -- reserved 96 bits
->       -- VTDWord Boundary
->       cxtTablePtr :: PAddr, -- high 20 bits [12,31]
->       rtePresent :: Bool -- 1 bit [0]
->     }
->     deriving (Show, Eq)
-
-> wordFromIOCTE :: IOCTE -> (Word,Word)
-> wordFromIOCTE InvalidIOCTE = (0,0)
-> wordFromIOCTE (VTDCTE did rmr aw nxtptr tt present) = (((fromIntegral $ did) `shiftL` 4) .&.
->     (if rmr then bit 3 else 0) .|. ((fromIntegral aw) .&. 0x7),
->     ((fromIntegral nxtptr) .&. 0xfffff000) .|. (if present then 1 else 0))
+>--vtdPTBits :: Int
+>--vtdPTBits = 9
 
 
-> wordFromIOPTE :: IOPTE -> Word
-> wordFromIOPTE InvalidIOPTE = 0
-> wordFromIOPTE (VTDPTE pteFrame rw) = ((fromIntegral $ pteFrame) .&. 0xfffff000) .|. (vmRightsToBits rw)
+>--vtdPTESizeBits = 3
+>--vtdPTSizeBits = vtdCTBits + vtdPTESizeBits
 
-> wordFromIORTE :: IORTE -> Word
-> wordFromIORTE InvalidIORTE = 0
-> wordFromIORTE (VTDRTE ptr present) = ((fromIntegral $ ptr) .&. 0xfffff000) .|. (if present then 1 else 0)
+>--data IOPTE = InvalidIOPTE
+>--    | VTDPTE {
+>--      -- reserved 32 bits [0,31] and assume AVAIL and TM as reserved
+>--      -- VTDWord Boundary
+>--      framePtr :: PAddr, -- [12,31]
+>--      rw :: VMRights -- [0,1],
+>--    }
+>--    deriving (Show, Eq)
 
+%--There is no wordFromIORTE yet because its size is 64*2
+
+>--data IORTE = InvalidIORTE
+>--    | VTDRTE {
+>--      -- reserved 96 bits
+>--      -- VTDWord Boundary
+>--      cxtTablePtr :: PAddr, -- high 20 bits [12,31]
+>--      rtePresent :: Bool -- 1 bit [0]
+>--    }
+>--    deriving (Show, Eq)
+
+>--wordFromIOCTE :: IOCTE -> (Word,Word)
+>--wordFromIOCTE InvalidIOCTE = (0,0)
+>--wordFromIOCTE (VTDCTE did rmr aw nxtptr tt present) = (((fromIntegral $ did) `shiftL` 4) .&.
+>--    (if rmr then bit 3 else 0) .|. ((fromIntegral aw) .&. 0x7),
+>--    ((fromIntegral nxtptr) .&. 0xfffff000) .|. (if present then 1 else 0))
+
+
+>--wordFromIOPTE :: IOPTE -> Word
+>--wordFromIOPTE InvalidIOPTE = 0
+>--wordFromIOPTE (VTDPTE pteFrame rw) = ((fromIntegral $ pteFrame) .&. 0xfffff000) .|. (vmRightsToBits rw)
+
+>--wordFromIORTE :: IORTE -> Word
+>--wordFromIORTE InvalidIORTE = 0
+>--wordFromIORTE (VTDRTE ptr present) = ((fromIntegral $ ptr) .&. 0xfffff000) .|. (if present then 1 else 0)
 
 
 %FIXME x64: word size review
@@ -534,7 +535,7 @@ Page entries -- any of PTEs, PDEs or PDPTEs.
 >     deriving (Show, Eq)
 
 > vmRightsToBits :: VMRights -> Word
-> vmRightsToBits VMKernelOnly = 0x1
+> vmRightsToBits VMKernelOnly = 0x0
 > vmRightsToBits VMReadOnly = 0x10
 > vmRightsToBits VMWriteOnly = 0x01
 > vmRightsToBits VMReadWrite = 0x11

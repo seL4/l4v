@@ -15,6 +15,7 @@ This module defines the handling of the x64 hardware-defined page tables.
 
 > import SEL4.API.Types
 > import SEL4.API.Failures
+> import SEL4.API.Failures.X64
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.RegisterSet.X64 (Register(..))
 > import SEL4.Machine.Hardware.X64
@@ -55,7 +56,7 @@ The idle thread's code is at an arbitrary location in kernel memory. For conveni
 > idleThreadStart :: VPtr
 > idleThreadStart = globalsBase + VPtr 0x100
 
-> x86KSnumIOPTLevels = 4
+> --x86KSnumIOPTLevels = 4
 
 \subsubsection{Creating a New Address Space}
 
@@ -68,7 +69,7 @@ When a new page directory is created, the kernel copies all of the global mappin
 >     let pml4eBits = objBits (undefined :: PML4E) -- = 3, size of word
 >     let pmSize = 1 `shiftL` ptTranslationBits -- 512 entries in table
 >     forM_ [base .. pmSize - 1] $ \index -> do
->         let offset = PPtr index `shiftL` pml4eBits 
+>         let offset = PPtr index `shiftL` pml4eBits
 >         pml4e <- getObject $ globalPM + offset
 >         storePML4E (newPM + offset) pml4e
 
@@ -224,7 +225,7 @@ The "lookupPTSlot" function locates the page table slot that maps a given virtua
 >     case pde of
 >         PageTablePDE {} -> do
 >             let pt = ptrFromPAddr $ pdeTable pde
->             let ptIndex = getPTIndex vptr 
+>             let ptIndex = getPTIndex vptr
 >             let ptSlot = pt + (PPtr $ ptIndex `shiftL` 3) -- ptr arithmetic, 8 byte words
 >             return ptSlot
 >         _ -> throw $ MissingCapability (pageBits + ptBits)
@@ -237,7 +238,7 @@ The "lookupPTSlot" function locates the page table slot that maps a given virtua
 >         PageDirectoryPDPTE {} -> do
 >             let pd = ptrFromPAddr $ pdpteTable pdpte
 >             let pdIndex = getPDIndex vptr
->             let pdSlot = pd + (PPtr $ pdIndex `shiftL` 3) -- FIXME x64: word_size_bits 
+>             let pdSlot = pd + (PPtr $ pdIndex `shiftL` 3) -- FIXME x64: word_size_bits
 >             return pdSlot
 >         _ -> throw $ MissingCapability (pageBits + ptBits)
 
@@ -248,8 +249,8 @@ The "lookupPTSlot" function locates the page table slot that maps a given virtua
 >     case pml4e of
 >         PDPointerTablePML4E {} -> do
 >             let pdpt = ptrFromPAddr $ pml4eTable pml4e
->             let pdptIndex = getPML4Index vptr 
->             let pdptSlot = pdpt + (PPtr $ pdptIndex `shiftL` 3) -- FIXME x64: word_size_bits 
+>             let pdptIndex = getPML4Index vptr
+>             let pdptSlot = pdpt + (PPtr $ pdptIndex `shiftL` 3) -- FIXME x64: word_size_bits
 >             return pdptSlot
 >         _ -> throw $ MissingCapability (pageBits + ptBits)
 
@@ -320,7 +321,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >         PDPointerTablePML4E { pml4eTable = pt' } ->
 >             if pt' == addrFromPPtr pdpt then return () else throw InvalidRoot
 >         _ -> throw InvalidRoot
->     withoutFailure $ do 
+>     withoutFailure $ do
 >         flushPDPT vspace vaddr pdpt
 >         storePML4E pmSlot InvalidPML4E
 
@@ -350,7 +351,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >         PageTablePDE { pdeTable = pt' } ->
 >             if pt' == addrFromPPtr pt then return () else throw InvalidRoot
 >         _ -> throw InvalidRoot -- FIXME x64: dummy throw
->     withoutFailure $ do 
+>     withoutFailure $ do
 >         flushTable vspace vaddr pt
 >         storePDE pdSlot InvalidPDE
 >         doMachineOp invalidatePageStructureCache -- FIXME x64: hardware implement
@@ -382,7 +383,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >         threadRootSlot <- getThreadVSpaceRoot tcb
 >         threadRoot <- getSlotCap threadRootSlot
 >         case threadRoot of
->             ArchObjectCap (PML4Cap { capPML4BasePtr = ptr', capPML4MappedASID = Just _ }) 
+>             ArchObjectCap (PML4Cap { capPML4BasePtr = ptr', capPML4MappedASID = Just _ })
 >                                -> when (ptr' == vspace) $ doMachineOp $ invalidateTLBEntry vptr
 >             _ -> return ()
 
@@ -408,7 +409,7 @@ This helper function checks that the mapping installed at a given PT or PD slot 
 \subsection{Address Space Switching}
 
 > setCurrentVSpaceRoot :: PAddr -> ASID -> MachineMonad ()
-> setCurrentVSpaceRoot addr (ASID asid) = archSetCurrentVSpaceRoot addr (Word asid) 
+> setCurrentVSpaceRoot addr (ASID asid) = archSetCurrentVSpaceRoot addr (Word asid)
 
 > -- FIXME x64: Currently we don't have global state for the CR3 so
 > -- we can't test whether or not we should write to it. We should
@@ -462,12 +463,12 @@ Note that implementations with separate high and low memory regions may also wis
 %FIXME x64: needs review
 
 > flushPDPT :: PPtr PML4E -> VPtr -> PPtr PDPTE -> Kernel ()
-> flushPDPT _ vptr pdpte = doMachineOp $ resetCR3
+> flushPDPT _ _ _ = doMachineOp $ resetCR3
 
 %FIXME x64: needs review
 
 > flushPageDirectory :: PPtr PML4E -> VPtr -> PPtr PDE -> Kernel ()
-> flushPageDirectory _ vptr pde = doMachineOp $ resetCR3
+> flushPageDirectory _ _ _ = doMachineOp $ resetCR3
 
 > flushCacheRange :: PPtr a -> Int -> Kernel ()
 > flushCacheRange _ _  = fail "not implemeneted"
@@ -486,7 +487,7 @@ Note that implementations with separate high and low memory regions may also wis
 >         ArchObjectCap (PML4Cap {
 >               capPML4MappedASID = Just _,
 >               capPML4BasePtr = vspace'}) ->
->             when (vspace == vspace') $ do 
+>             when (vspace == vspace') $ do
 >                 let pteBits = objBits (undefined :: PTE)
 >                 let ptSize = 1 `shiftL` ptTranslationBits
 >                 forM_ [0 .. ptSize - 1] $ \index -> do
@@ -495,7 +496,7 @@ Note that implementations with separate high and low memory regions may also wis
 >                     case pte of
 >                         InvalidPTE -> return ()
 >                         _ -> let index' = index `shiftL` pageBits
->                              in doMachineOp $ invalidateTLBEntry $ 
+>                              in doMachineOp $ invalidateTLBEntry $
 >                                          VPtr $ (fromVPtr vptr) + index'
 >         _ -> return ()
 
@@ -511,27 +512,27 @@ Note that implementations with separate high and low memory regions may also wis
 > pageBase vaddr size = vaddr .&. (complement $ mask (pageBitsForSize size))
 
 
-> decodeX64FrameInvocation :: Word -> [Word] -> PPtr CTE -> 
+> decodeX64FrameInvocation :: Word -> [Word] -> PPtr CTE ->
 >                    ArchCapability -> [(Capability, PPtr CTE)] ->
 >                    KernelF SyscallError ArchInv.Invocation
-> decodeX64FrameInvocation label args cte (cap@PageCap {}) extraCaps = 
+> decodeX64FrameInvocation label args cte (cap@PageCap {}) extraCaps =
 >     case (invocationType label, args, extraCaps) of
 >         (ArchInvocationLabel X64PageMap, vaddr:rightsMask:attr:_, (vspaceCap,_):_) -> do
->             when (isJust $ capVPMappedAddress cap) $ 
+>             when (isJust $ capVPMappedAddress cap) $
 >                 throw $ InvalidCapability 0
 >             (vspace,asid) <- case vspaceCap of
 >                 ArchObjectCap (PML4Cap {
 >                         capPML4MappedASID = Just asid,
 >                         capPML4BasePtr = vspace })
 >                     -> return (vspace, asid)
->                 _ -> throw $ InvalidCapability 1 
+>                 _ -> throw $ InvalidCapability 1
 >             vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
 >             when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
 >             let vtop = vaddr + (bit (pageBitsForSize $ capVPSize cap) - 1)
 >             when (VPtr vtop > kernelBase) $
 >                 throw $ InvalidArgument 0
 >             let vmRights = maskVMRights (capVPRights cap) $
->                     rightsFromWord rightsMask 
+>                     rightsFromWord rightsMask
 >             checkVPAlignment (capVPSize cap) (VPtr vaddr)
 >             entries <- createMappingEntries (addrFromPPtr $ capVPBasePtr cap)
 >                 (VPtr vaddr) (capVPSize cap) vmRights
@@ -542,7 +543,7 @@ Note that implementations with separate high and low memory regions may also wis
 >                 pageMapCap = ArchObjectCap $ cap { capVPMappedAddress = Just (asid, VPtr vaddr) },
 >                 pageMapCTSlot = cte,
 >                 pageMapEntries = entries }
->         (ArchInvocationLabel X64PageMap, _, _) -> throw TruncatedMessage        
+>         (ArchInvocationLabel X64PageMap, _, _) -> throw TruncatedMessage
 >         (ArchInvocationLabel X64PageRemap, rightsMask:attr:_, (vspaceCap,_):_) -> do
 >             when (capVPMapType cap == VMIOSpaceMap) $ throw IllegalOperation
 >             (vspace,asid) <- case vspaceCap of
@@ -566,237 +567,238 @@ Note that implementations with separate high and low memory regions may also wis
 >             return $ InvokePage $ PageRemap {
 >                 pageRemapEntries = entries }
 >         (ArchInvocationLabel X64PageRemap, _, _) -> throw TruncatedMessage
->         (ArchInvocationLabel X64PageUnmap, _, _) -> case capVPMapType cap of
->             VMIOSpaceMap -> decodeX64IOFrameInvocation label args cte cap extraCaps
->             _ -> return $ InvokePage $ PageUnmap {
+>         (ArchInvocationLabel X64PageUnmap, _, _) -> -- case capVPMapType cap of
+>--             VMIOSpaceMap -> decodeX64IOFrameInvocation label args cte cap extraCaps
+>--             _ ->
+>               return $ InvokePage $ PageUnmap {
 >                 pageUnmapCap = cap,
->                 pageUnmapCapSlot = cte }  
->         (ArchInvocationLabel X64PageMapIO, _, _) -> decodeX64IOFrameInvocation label args cte cap extraCaps
+>                 pageUnmapCapSlot = cte }
+>--         (ArchInvocationLabel X64PageMapIO, _, _) -> decodeX64IOFrameInvocation label args cte cap extraCaps
 >         (ArchInvocationLabel X64PageGetAddress, _, _) -> return $ InvokePage $ PageGetAddr (capVPBasePtr cap)
 >         _ -> throw IllegalOperation
 > decodeX64FrameInvocation _ _ _ _ _ = fail "Unreachable"
 
-> decodeX64IOPTInvocation :: Word -> [Word] -> PPtr CTE -> ArchCapability ->
->                    [(Capability, PPtr CTE)] ->
->                    KernelF SyscallError ArchInv.Invocation
-> decodeX64IOPTInvocation label args cptr cap@(IOPageTableCap {}) extraCaps = 
->     case (invocationType label, args, extraCaps) of  
->         (ArchInvocationLabel X64IOPageTableMap, ioaddr:_, (iospaceCap,_):_) -> do
->             when (isJust $ capIOPTMappedAddress cap ) $ throw $ InvalidCapability 0
->             when (not (capVPSize cap == X64SmallPage)) $ throw $ InvalidCapability 0
+>--decodeX64IOPTInvocation :: Word -> [Word] -> PPtr CTE -> ArchCapability ->
+>--                   [(Capability, PPtr CTE)] ->
+>--                   KernelF SyscallError ArchInv.Invocation
+>--decodeX64IOPTInvocation label args cptr cap@(IOPageTableCap {}) extraCaps =
+>--    case (invocationType label, args, extraCaps) of
+>--        (ArchInvocationLabel X64IOPageTableMap, ioaddr:_, (iospaceCap,_):_) -> do
+>--            when (isJust $ capIOPTMappedAddress cap ) $ throw $ InvalidCapability 0
+>--            when (not (capVPSize cap == X64SmallPage)) $ throw $ InvalidCapability 0
 
->             (deviceid,domainid) <- case iospaceCap of
->                 ArchObjectCap (IOSpaceCap {
->                         capIODomainID = domainid,
->                         capIOPCIDevice = Just deviceid })
->                     -> return (deviceid, domainid)
->                 _ -> throw $ InvalidCapability 0
+>--            (deviceid,domainid) <- case iospaceCap of
+>--                ArchObjectCap (IOSpaceCap {
+>--                        capIODomainID = domainid,
+>--                        capIOPCIDevice = Just deviceid })
+>--                    -> return (deviceid, domainid)
+>--                _ -> throw $ InvalidCapability 0
 
 
->             paddr <- return $ addrFromPPtr $ capIOPTBasePtr cap
->             pciRequestId <- withoutFailure $ pciRequestIDFromCap iospaceCap
->             cteslot <-  withoutFailure $ lookupIOContextSlot pciRequestId
->             cte  <- withoutFailure $ getObject cteslot
->             case cte of
->                 VTDCTE did rmrr aw slptr tt present ->
->                     if present then do
->                         let vtdcte = VTDCTE { domainId = domainid,
->                             reservedMemReg = False,
->                             addressWidth = x86KSnumIOPTLevels - 2,
->                             nxtLevelPtr = paddr,
->                             translationType = NotTranslatedRequest,
->                             ctePresent = True }
->                             cap' =  cap { capIOPTLevel = 0,
->                                       capIOPTMappedAddress = Just (deviceid, VPtr ioaddr)}
->                         (return $ InvokeIOPageTable $ IOPageTableMapContext cap' cptr vtdcte cteslot)
->                     else do
->                         let vtdpte = ptrFromPAddr slptr
->                         (slot, level) <- lookupErrorOnFailure False $ lookupIOPTSlot vtdpte ioaddr
->                         level <- return $ x86KSnumIOPTLevels - level
->                         pte <- withoutFailure $ getObject slot
->                         case pte of 
->                             InvalidIOPTE -> do
->                                 let vtdpte = VTDPTE {
->                                           framePtr = paddr,
->                                           rw = VMReadWrite }
->                                     cap' =  cap { capVPMapType = VMIOSpaceMap,
->                                           capIOPTLevel = level
->                                           capVMMappedAddress = Just (deviceid, VPtr ioaddr)}
->                                 (return $ InvokeIOPageTable $ IOPageTableMap cap' cptr vtdpte slot)
->                             _ -> throw $ InvalidCapability 0
->                 _ -> throw $ InvalidCapability 0
->         (ArchInvocationLabel X64IOPageTableMap, _, _) -> throw TruncatedMessage
->         (ArchInvocationLabel X64IOPageTableUnmap, _, _) -> 
->                               (return $ InvokeIOPageTable $ IOPageTableUnmap cap cptr)
->         _ -> throw IllegalOperation
-> decodeX64IOPTInvocation _ _ _ _ _ = fail "Unreachable"
+>--            paddr <- return $ addrFromPPtr $ capIOPTBasePtr cap
+>--            pciRequestId <- withoutFailure $ pciRequestIDFromCap iospaceCap
+>--            cteslot <-  withoutFailure $ lookupIOContextSlot pciRequestId
+>--            cte  <- withoutFailure $ getObject cteslot
+>--            case cte of
+>--                VTDCTE did rmrr aw slptr tt present ->
+>--                    if present then do
+>--                        let vtdcte = VTDCTE { domainId = domainid,
+>--                            reservedMemReg = False,
+>--                            addressWidth = x86KSnumIOPTLevels - 2,
+>--                            nxtLevelPtr = paddr,
+>--                            translationType = NotTranslatedRequest,
+>--                            ctePresent = True }
+>--                            cap' =  cap { capIOPTLevel = 0,
+>--                                      capIOPTMappedAddress = Just (deviceid, VPtr ioaddr)}
+>--                        (return $ InvokeIOPageTable $ IOPageTableMapContext cap' cptr vtdcte cteslot)
+>--                    else do
+>--                        let vtdpte = ptrFromPAddr slptr
+>--                        (slot, level) <- lookupErrorOnFailure False $ lookupIOPTSlot vtdpte ioaddr
+>--                        level <- return $ x86KSnumIOPTLevels - level
+>--                        pte <- withoutFailure $ getObject slot
+>--                        case pte of
+>--                            InvalidIOPTE -> do
+>--                                let vtdpte = VTDPTE {
+>--                                          framePtr = paddr,
+>--                                          rw = VMReadWrite }
+>--                                    cap' =  cap { capVPMapType = VMIOSpaceMap,
+>--                                          capIOPTLevel = level
+>--                                          capVMMappedAddress = Just (deviceid, VPtr ioaddr)}
+>--                                (return $ InvokeIOPageTable $ IOPageTableMap cap' cptr vtdpte slot)
+>--                            _ -> throw $ InvalidCapability 0
+>--                _ -> throw $ InvalidCapability 0
+>--        (ArchInvocationLabel X64IOPageTableMap, _, _) -> throw TruncatedMessage
+>--        (ArchInvocationLabel X64IOPageTableUnmap, _, _) ->
+>--                              (return $ InvokeIOPageTable $ IOPageTableUnmap cap cptr)
+>--        _ -> throw IllegalOperation
+>--decodeX64IOPTInvocation _ _ _ _ _ = fail "Unreachable"
 
 decodeX64IOMap and decodeX64IOUnmap are combined as following function.
 IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnmap
 
-> decodeX64IOFrameInvocation :: Word -> [Word] -> PPtr CTE -> 
->                    ArchCapability -> [(Capability, PPtr CTE)] ->
->                    KernelF SyscallError ArchInv.Invocation
-> decodeX64IOFrameInvocation label args cptr cap@(PageCap {}) extraCaps = do
->     case (invocationType label, args, extraCaps) of
->         (ArchInvocationLabel X64PageMapIO, rw:ioaddr:_, (iospaceCap,_):_) -> do
->             when (not (capVPSize cap == X64SmallPage)) $ 
->                 throw $ InvalidCapability 0
->             when (isJust $ capVPMappedAddress cap) $ 
->                 throw $ InvalidCapability 0
->             (paddr,vmrights) <- case cap of
->                 (PageCap {
->                         capVPBasePtr = frame_pptr,
->                         capVPRights = vmrights }) -> return (addrFromPPtr frame_pptr, vmrights)
->                 _ -> throw $ InvalidCapability 1 
+>-- decodeX64IOFrameInvocation :: Word -> [Word] -> PPtr CTE ->
+>--                    ArchCapability -> [(Capability, PPtr CTE)] ->
+>--                    KernelF SyscallError ArchInv.Invocation
+>-- decodeX64IOFrameInvocation label args cptr cap@(PageCap {}) extraCaps = do
+>--     case (invocationType label, args, extraCaps) of
+>--         (ArchInvocationLabel X64PageMapIO, rw:ioaddr:_, (iospaceCap,_):_) -> do
+>--             when (not (capVPSize cap == X64SmallPage)) $
+>--                 throw $ InvalidCapability 0
+>--             when (isJust $ capVPMappedAddress cap) $
+>--                 throw $ InvalidCapability 0
+>--             (paddr,vmrights) <- case cap of
+>--                 (PageCap {
+>--                         capVPBasePtr = frame_pptr,
+>--                         capVPRights = vmrights }) -> return (addrFromPPtr frame_pptr, vmrights)
+>--                 _ -> throw $ InvalidCapability 1
 
->             (deviceid,domainid) <- case iospaceCap of
->                 ArchObjectCap (IOSpaceCap {
->                         capIODomainID = domainid,
->                         capIOPCIDevice = Just deviceid })
->                     -> return (deviceid, domainid)
->                 _ -> throw $ InvalidCapability 0
->             pciRequestId <- withoutFailure $ pciRequestIDFromCap iospaceCap
->             cteslot <-  withoutFailure $ lookupIOContextSlot pciRequestId
->             cte  <- withoutFailure $ getObject cteslot
->             (slot, level) <- case cte of
->                 VTDCTE did rmrr aw slptr tt True -> do
->                     let vtdpte = ptrFromPAddr slptr
->                     lookupErrorOnFailure False $ lookupIOPTSlot vtdpte ioaddr
->                 _ -> throw $ FailedLookup False InvalidRoot
->             when (not (level == 0)) $
->                 throw $ InvalidCapability 0
->             pte <- withoutFailure $ getObject slot
->             when (not (pte == InvalidIOPTE)) $
->                 throw DeleteFirst
->             let vtdpte = VTDPTE {
->                          framePtr = paddr,
->                          rw = getVMRights (allowRead vmrights) (allowRead (vmRightsFromBits rw)) }
->                 cap' =  cap { capIOPTLevel = level,
->                             capIOPTMappedAddress = Just (deviceid, VPtr ioaddr)}
->             return $ InvokePage $ PageIOMap (ArchObjectCap cap') cptr vtdpte slot
+>--             (deviceid,domainid) <- case iospaceCap of
+>--                 ArchObjectCap (IOSpaceCap {
+>--                         capIODomainID = domainid,
+>--                         capIOPCIDevice = Just deviceid })
+>--                     -> return (deviceid, domainid)
+>--                 _ -> throw $ InvalidCapability 0
+>--             pciRequestId <- withoutFailure $ pciRequestIDFromCap iospaceCap
+>--             cteslot <-  withoutFailure $ lookupIOContextSlot pciRequestId
+>--             cte  <- withoutFailure $ getObject cteslot
+>--             (slot, level) <- case cte of
+>--                 VTDCTE did rmrr aw slptr tt True -> do
+>--                     let vtdpte = ptrFromPAddr slptr
+>--                     lookupErrorOnFailure False $ lookupIOPTSlot vtdpte ioaddr
+>--                 _ -> throw $ FailedLookup False InvalidRoot
+>--             when (not (level == 0)) $
+>--                 throw $ InvalidCapability 0
+>--             pte <- withoutFailure $ getObject slot
+>--             when (not (pte == InvalidIOPTE)) $
+>--                 throw DeleteFirst
+>--             let vtdpte = VTDPTE {
+>--                          framePtr = paddr,
+>--                          rw = getVMRights (allowRead vmrights) (allowRead (vmRightsFromBits rw)) }
+>--                 cap' =  cap { capIOPTLevel = level,
+>--                             capIOPTMappedAddress = Just (deviceid, VPtr ioaddr)}
+>--             return $ InvokePage $ PageIOMap (ArchObjectCap cap') cptr vtdpte slot
 
->         (ArchInvocationLabel X64PageMapIO, _, _) -> throw TruncatedMessage
->         (ArchInvocationLabel X64PageUnmap, _, _) -> do
->             (return $ InvokePage $ PageIOUnmap (ArchObjectCap cap) cptr)
->         _ -> throw IllegalOperation
-> decodeX64IOFrameInvocation _ _ _ _ _ = fail "Unreachable"
-
-
-> unmapIOPage :: VMPageSize -> IOASID -> VPtr -> PPtr Word -> Kernel ()
-> unmapIOPage sz asid ioaddr baseptr = ignoreFailure $ do
->    cteslot <- withoutFailure $ lookupIOContextSlot asid
->    cte <- withoutFailure $ getObject cteslot
->    (slot, level) <- case cte of
->        VTDCTE did rmrr aw slptr tt True -> 
->           lookupErrorOnFailure False $ lookupIOPTSlot (ptrFromPAddr slptr) (fromVPtr ioaddr)
->        _ -> throw $ FailedLookup False InvalidRoot
->    when (not (level == 0)) $
->        return ()
->    withoutFailure $ do
->        pte <- getObject slot
->        case pte of 
->            VTDPTE {} ->  if (framePtr pte == addrFromPPtr baseptr) then storeIOPTE slot InvalidIOPTE else return ()
->            InvalidIOPTE -> return ()
->        flushCacheRange slot vtdPTESizeBits
->        doMachineOp $ invalidateIOTLB
-
-> unmapIOPageTable :: Int -> IOASID -> VPtr -> PPtr IOPTE -> Kernel ()
-> unmapIOPageTable level asid ioaddr baseptr = ignoreFailure $ do
->    cteslot <- withoutFailure $ lookupIOContextSlot asid
->    cte <- withoutFailure $ getObject cteslot
->    pteslot <- case cte of
->        VTDCTE did rmrr aw slptr tt True -> return $ ptrFromPAddr slptr
->        _ -> throw $ FailedLookup False InvalidRoot
->    if (level == 0) 
->        then when (addrFromPPtr pteslot == addrFromPPtr baseptr) $ withoutFailure $ do
->            storeIOPTE pteslot InvalidIOPTE 
->            flushCacheRange pteslot vtdPTESizeBits
->        else do
->            (targetslot,retlvl) <-lookupErrorOnFailure False $
->                lookupIOPTResolveLevels pteslot ((fromVPtr ioaddr) `shiftR` pageBits) (level - 1) (level - 1)
->            withoutFailure $ do
->                pte <- getObject targetslot
->                case pte of 
->                    VTDPTE {} ->  if (framePtr pte == (addrFromPPtr baseptr)) 
->                                     then storeIOPTE targetslot InvalidIOPTE
->                                     else return ()
->                    InvalidIOPTE -> return ()
->                flushCacheRange targetslot vtdPTESizeBits
->                doMachineOp $ invalidateIOTLB
+>--         (ArchInvocationLabel X64PageMapIO, _, _) -> throw TruncatedMessage
+>--         (ArchInvocationLabel X64PageUnmap, _, _) -> do
+>--             (return $ InvokePage $ PageIOUnmap (ArchObjectCap cap) cptr)
+>--         _ -> throw IllegalOperation
+>-- decodeX64IOFrameInvocation _ _ _ _ _ = fail "Unreachable"
 
 
-> getPCIBus :: IOASID -> Word
-> getPCIBus picRequestId = fromIntegral $ (picRequestId `shiftR` 8) .&. 0xFF
+>-- unmapIOPage :: VMPageSize -> IOASID -> VPtr -> PPtr Word -> Kernel ()
+>-- unmapIOPage sz asid ioaddr baseptr = ignoreFailure $ do
+>--    cteslot <- withoutFailure $ lookupIOContextSlot asid
+>--    cte <- withoutFailure $ getObject cteslot
+>--    (slot, level) <- case cte of
+>--        VTDCTE did rmrr aw slptr tt True ->
+>--           lookupErrorOnFailure False $ lookupIOPTSlot (ptrFromPAddr slptr) (fromVPtr ioaddr)
+>--        _ -> throw $ FailedLookup False InvalidRoot
+>--    when (not (level == 0)) $
+>--        return ()
+>--    withoutFailure $ do
+>--        pte <- getObject slot
+>--        case pte of
+>--            VTDPTE {} ->  if (framePtr pte == addrFromPPtr baseptr) then storeIOPTE slot InvalidIOPTE else return ()
+>--            InvalidIOPTE -> return ()
+>--        flushCacheRange slot vtdPTESizeBits
+>--        doMachineOp $ invalidateIOTLB
+
+>-- unmapIOPageTable :: Int -> IOASID -> VPtr -> PPtr IOPTE -> Kernel ()
+>-- unmapIOPageTable level asid ioaddr baseptr = ignoreFailure $ do
+>--    cteslot <- withoutFailure $ lookupIOContextSlot asid
+>--    cte <- withoutFailure $ getObject cteslot
+>--    pteslot <- case cte of
+>--        VTDCTE did rmrr aw slptr tt True -> return $ ptrFromPAddr slptr
+>--        _ -> throw $ FailedLookup False InvalidRoot
+>--    if (level == 0)
+>--        then when (addrFromPPtr pteslot == addrFromPPtr baseptr) $ withoutFailure $ do
+>--            storeIOPTE pteslot InvalidIOPTE
+>--            flushCacheRange pteslot vtdPTESizeBits
+>--        else do
+>--            (targetslot,retlvl) <-lookupErrorOnFailure False $
+>--                lookupIOPTResolveLevels pteslot ((fromVPtr ioaddr) `shiftR` pageBits) (level - 1) (level - 1)
+>--            withoutFailure $ do
+>--                pte <- getObject targetslot
+>--                case pte of
+>--                    VTDPTE {} ->  if (framePtr pte == (addrFromPPtr baseptr))
+>--                                     then storeIOPTE targetslot InvalidIOPTE
+>--                                     else return ()
+>--                    InvalidIOPTE -> return ()
+>--                flushCacheRange targetslot vtdPTESizeBits
+>--                doMachineOp $ invalidateIOTLB
 
 
-> getPCIDev :: IOASID -> Word
-> getPCIDev picRequestId = fromIntegral $ (picRequestId `shiftR` 3) .&. 0x1F
-
-> getPCIFun :: IOASID -> Word
-> getPCIFun picRequestId = fromIntegral $ picRequestId .&. 0x7
-
-> getPCIRequestId :: Word -> Word -> Word -> IOASID
-> getPCIRequestId bus dev fun = fromIntegral $ (bus `shiftL` 8) .|. (dev `shiftL` 3) .|. fun
+>-- getPCIBus :: IOASID -> Word
+>-- getPCIBus picRequestId = fromIntegral $ (picRequestId `shiftR` 8) .&. 0xFF
 
 
-% x86KSnumIOPTLevels is computed via vtd_init and is of type uint_32. 
-% However x86KSnumIOPTLevels in haskell is hardcoded so far.
+>-- getPCIDev :: IOASID -> Word
+>-- getPCIDev picRequestId = fromIntegral $ (picRequestId `shiftR` 3) .&. 0x1F
 
-> getVTDPTEOffset :: Word -> Int -> Int -> Word
-> getVTDPTEOffset translation levelsToResolve levelsRemaining = 
->     let lvldiff = levelsToResolve - levelsRemaining
->     in (translation `shiftR` (vtdPTBits * (x86KSnumIOPTLevels - 1 - lvldiff))) .&. (mask vtdPTBits)
+>-- getPCIFun :: IOASID -> Word
+>-- getPCIFun picRequestId = fromIntegral $ picRequestId .&. 0x7
 
-> pciRequestIDFromCap :: Capability -> Kernel IOASID
-> pciRequestIDFromCap cap = case cap of 
->     ArchObjectCap (IOSpaceCap _ (Just pcidev)) -> return pcidev
->     ArchObjectCap (IOPageTableCap ioptbase _ (Just (ioasid,vptr))) -> return ioasid
->     ArchObjectCap (PageCap _ _ _ _ _ (Just (ioasid, vptr))) -> return $ fromIntegral $ ioasid
->     _ -> fail "Invalid cap type"
+>-- getPCIRequestId :: Word -> Word -> Word -> IOASID
+>-- getPCIRequestId bus dev fun = fromIntegral $ (bus `shiftL` 8) .|. (dev `shiftL` 3) .|. fun
 
 
-> x86KSvtdRootTable :: Word
-> x86KSvtdRootTable = 0 -- FIXME: this is not correct, similar to ipcbuf, artifical hard coded address not good, and I don't want do that again here.
+%-- x86KSnumIOPTLevels is computed via vtd_init and is of type uint_32.
+%-- However x86KSnumIOPTLevels in haskell is hardcoded so far.
 
-> lookupIOContextSlot :: IOASID -> Kernel (PPtr IOCTE)
-> lookupIOContextSlot pciRequestId = do
->     rootIndex <- return $ getPCIBus pciRequestId
->     rtePtr <- return $ PPtr $ x86KSvtdRootTable + rootIndex
->     rte <- getObject rtePtr
->     case rte of 
->         VTDRTE {} -> do
->             let cteTablePtr = ptrFromPAddr $ cxtTablePtr rte
->             let cteIndex = ((getPCIDev pciRequestId) `shiftL` vtdCTESizeBits) .|. getPCIFun(pciRequestId)
->             let ctePtr = cteTablePtr + (PPtr $ cteIndex `shiftL` vtdCTESizeBits) 
->             return $ ctePtr
->         _ -> fail "Invalid rte in lookupIOContextSlot"
+>-- getVTDPTEOffset :: Word -> Int -> Int -> Word
+>-- getVTDPTEOffset translation levelsToResolve levelsRemaining =
+>--     let lvldiff = levelsToResolve - levelsRemaining
+>--     in (translation `shiftR` (vtdPTBits * (x86KSnumIOPTLevels - 1 - lvldiff))) .&. (mask vtdPTBits)
 
-> lookupIOPTResolveLevels :: PPtr IOPTE -> Word -> Int -> Int -> KernelF LookupFailure (PPtr IOPTE, Int)
-> lookupIOPTResolveLevels vtdpte translation levelsToResolve levelsRemaining = do
->     ptePtr <- return $ vtdpte + (PPtr $ getVTDPTEOffset translation levelsToResolve levelsRemaining)
->     if (levelsRemaining == 0) then return (ptePtr,0) else do
->       iopte <- withoutFailure $ getObject ptePtr
->       case iopte of
->         VTDPTE framePtr rw -> do 
->           let slot = ptrFromPAddr (framePtr)
->           if (not $ rw == VMReadWrite) then return (ptePtr, levelsRemaining) 
->                     else lookupIOPTResolveLevels slot translation levelsToResolve (levelsRemaining - 1)
->         _ -> throw $ MissingCapability levelsRemaining
-
-> lookupIOPTSlot :: PPtr IOPTE -> Word -> KernelF LookupFailure (PPtr IOPTE, Int)
-> lookupIOPTSlot vtdpte ioaddr = lookupIOPTResolveLevels vtdpte (ioaddr `shiftR` pageBits) (x86KSnumIOPTLevels - 1) (x86KSnumIOPTLevels - 1)
+>-- pciRequestIDFromCap :: Capability -> Kernel IOASID
+>-- pciRequestIDFromCap cap = case cap of
+>--     ArchObjectCap (IOSpaceCap _ (Just pcidev)) -> return pcidev
+>--     ArchObjectCap (IOPageTableCap ioptbase _ (Just (ioasid,vptr))) -> return ioasid
+>--     ArchObjectCap (PageCap _ _ _ _ _ (Just (ioasid, vptr))) -> return $ fromIntegral $ ioasid
+>--     _ -> fail "Invalid cap type"
 
 
-> invalidateIOTLB = error "Not implemented"     
+>-- x86KSvtdRootTable :: Word
+>-- x86KSvtdRootTable = 0 -- FIXME: this is not correct, similar to ipcbuf, artifical hard coded address not good, and I don't want do that again here.
 
-> unmapVTDCTE :: Capability -> Kernel ()
-> unmapVTDCTE cap = do 
->      pciRequestId <- pciRequestIDFromCap cap
->      cte_ptr <- lookupIOContextSlot pciRequestId
->      storeIOCTE cte_ptr InvalidIOCTE
->      flushCacheRange cte_ptr vtdCTESizeBits
->      doMachineOp $ invalidateIOTLB
+>-- lookupIOContextSlot :: IOASID -> Kernel (PPtr IOCTE)
+>-- lookupIOContextSlot pciRequestId = do
+>--     rootIndex <- return $ getPCIBus pciRequestId
+>--     rtePtr <- return $ PPtr $ x86KSvtdRootTable + rootIndex
+>--     rte <- getObject rtePtr
+>--     case rte of
+>--         VTDRTE {} -> do
+>--             let cteTablePtr = ptrFromPAddr $ cxtTablePtr rte
+>--             let cteIndex = ((getPCIDev pciRequestId) `shiftL` vtdCTESizeBits) .|. getPCIFun(pciRequestId)
+>--             let ctePtr = cteTablePtr + (PPtr $ cteIndex `shiftL` vtdCTESizeBits)
+>--             return $ ctePtr
+>--         _ -> fail "Invalid rte in lookupIOContextSlot"
+
+>-- lookupIOPTResolveLevels :: PPtr IOPTE -> Word -> Int -> Int -> KernelF LookupFailure (PPtr IOPTE, Int)
+>-- lookupIOPTResolveLevels vtdpte translation levelsToResolve levelsRemaining = do
+>--     ptePtr <- return $ vtdpte + (PPtr $ getVTDPTEOffset translation levelsToResolve levelsRemaining)
+>--     if (levelsRemaining == 0) then return (ptePtr,0) else do
+>--       iopte <- withoutFailure $ getObject ptePtr
+>--       case iopte of
+>--         VTDPTE framePtr rw -> do
+>--           let slot = ptrFromPAddr (framePtr)
+>--           if (not $ rw == VMReadWrite) then return (ptePtr, levelsRemaining)
+>--                     else lookupIOPTResolveLevels slot translation levelsToResolve (levelsRemaining - 1)
+>--         _ -> throw $ MissingCapability levelsRemaining
+
+>-- lookupIOPTSlot :: PPtr IOPTE -> Word -> KernelF LookupFailure (PPtr IOPTE, Int)
+>-- lookupIOPTSlot vtdpte ioaddr = lookupIOPTResolveLevels vtdpte (ioaddr `shiftR` pageBits) (x86KSnumIOPTLevels - 1) (x86KSnumIOPTLevels - 1)
+
+
+>-- invalidateIOTLB = error "Not implemented"
+
+>-- unmapVTDCTE :: Capability -> Kernel ()
+>-- unmapVTDCTE cap = do
+>--      pciRequestId <- pciRequestIDFromCap cap
+>--      cte_ptr <- lookupIOContextSlot pciRequestId
+>--      storeIOCTE cte_ptr InvalidIOCTE
+>--      flushCacheRange cte_ptr vtdCTESizeBits
+>--      doMachineOp $ invalidateIOTLB -}
 
 > decodeX64PDPointerTableInvocation :: Word -> [Word] -> PPtr CTE ->
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
@@ -850,7 +852,7 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError ArchInv.Invocation
 
-> decodeX64PageDirectoryInvocation label args cte cap@(PageDirectoryCap {}) extraCaps  = 
+> decodeX64PageDirectoryInvocation label args cte cap@(PageDirectoryCap {}) extraCaps  =
 >     case (invocationType label, args, extraCaps) of
 >         (ArchInvocationLabel X64PageDirectoryMap, vaddr':attr:_, (pml4Cap,_):_) -> do
 >             when (isJust $ capPDMappedAddress cap) $
@@ -898,7 +900,7 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError ArchInv.Invocation
 
-> decodeX64PageTableInvocation label args cte cap@(PageTableCap {}) extraCaps = 
+> decodeX64PageTableInvocation label args cte cap@(PageTableCap {}) extraCaps =
 >    case (invocationType label, args, extraCaps) of
 >         (ArchInvocationLabel X64PageTableMap, vaddr':attr:_, (pml4Cap,_):_) -> do
 >             when (isJust $ capPTMappedAddress cap) $
@@ -946,7 +948,7 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError ArchInv.Invocation
 
-> decodeX64ASIDControlInvocation label args ASIDControlCap extraCaps = 
+> decodeX64ASIDControlInvocation label args ASIDControlCap extraCaps =
 >     case (invocationType label, args, extraCaps) of
 >         (ArchInvocationLabel X64ASIDControlMakePool, index:depth:_,
 >                         (untyped,parentSlot):(root,_):_) -> do
@@ -1008,21 +1010,20 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError ArchInv.Invocation
 
-> decodeX64MMUInvocation label args _ cte cap@(PageCap {}) extraCaps = 
+> decodeX64MMUInvocation label args _ cte cap@(PageCap {}) extraCaps =
 >  decodeX64FrameInvocation label args cte cap extraCaps
-> decodeX64MMUInvocation label args _ cte cap@(PDPointerTableCap {}) extraCaps = 
+> decodeX64MMUInvocation label args _ cte cap@(PDPointerTableCap {}) extraCaps =
 >  decodeX64PDPointerTableInvocation label args cte cap extraCaps
-> decodeX64MMUInvocation label args _ cte cap@(PageDirectoryCap {}) extraCaps = 
+> decodeX64MMUInvocation label args _ cte cap@(PageDirectoryCap {}) extraCaps =
 >  decodeX64PageDirectoryInvocation label args cte cap extraCaps
-> decodeX64MMUInvocation label args _ cte cap@(PageTableCap {}) extraCaps = 
+> decodeX64MMUInvocation label args _ cte cap@(PageTableCap {}) extraCaps =
 >  decodeX64PageTableInvocation label args cte cap extraCaps
-> decodeX64MMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps = 
+> decodeX64MMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
 >  decodeX64ASIDControlInvocation label args cap extraCaps
-> decodeX64MMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps = 
+> decodeX64MMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps =
 >  decodeX64ASIDPoolInvocation label cap extraCaps
-> decodeX64MMUInvocation label args _ cte cap@(IOPageTableCap {}) extraCaps = 
->  decodeX64IOPTInvocation label args cte cap extraCaps
-> decodeX64MMUInvocation label _ _ _ cap@(PML4Cap {}) _ = error "Not implemented"
+>-- decodeX64MMUInvocation label args _ cte cap@(IOPageTableCap {}) extraCaps =
+>--  decodeX64IOPTInvocation label args cte cap extraCaps
 > decodeX64MMUInvocation _ _ _ _ _ _ = fail "Unreachable"
 
 
@@ -1045,7 +1046,7 @@ Checking virtual address for page size dependent alignment:
 >         InvokePDPT oper -> performPDPTInvocation oper
 >         InvokePageDirectory oper -> performPageDirectoryInvocation oper
 >         InvokePageTable oper -> performPageTableInvocation oper
->         InvokeIOPageTable oper -> performIOPageTableInvocation oper
+>--         InvokeIOPageTable oper -> performIOPageTableInvocation oper
 >         InvokePage oper -> performPageInvocation oper
 >         InvokeASIDControl oper -> performASIDControlInvocation oper
 >         InvokeASIDPool oper -> performASIDPoolInvocation oper
@@ -1107,22 +1108,22 @@ Checking virtual address for page size dependent alignment:
 >     ArchObjectCap cap <- getSlotCap slot
 >     updateCap slot (ArchObjectCap $ cap { capPTMappedAddress = Nothing })
 
-> performIOPageTableInvocation :: IOPageTableInvocation -> Kernel ()
-> performIOPageTableInvocation (IOPageTableMap cap cptr vtdpte slot) = do
->     storeIOPTE slot vtdpte
->     flushCacheRange slot vtdPTESizeBits
->     updateCap cptr (ArchObjectCap cap)
+>-- performIOPageTableInvocation :: IOPageTableInvocation -> Kernel ()
+>-- performIOPageTableInvocation (IOPageTableMap cap cptr vtdpte slot) = do
+>--     storeIOPTE slot vtdpte
+>--     flushCacheRange slot vtdPTESizeBits
+>--     updateCap cptr (ArchObjectCap cap)
 
-> performIOPageTableInvocation (IOPageTableMapContext cap cptr vtdcte slot) = do
->     storeIOCTE slot vtdcte
->     flushCacheRange slot vtdCTESizeBits
->     updateCap cptr (ArchObjectCap cap)
+>-- performIOPageTableInvocation (IOPageTableMapContext cap cptr vtdcte slot) = do
+>--     storeIOCTE slot vtdcte
+>--     flushCacheRange slot vtdCTESizeBits
+>--     updateCap cptr (ArchObjectCap cap)
 
-> performIOPageTableInvocation (IOPageTableUnmap cap cptr) = do
->     deleteIOPageTable cap
->     ArchObjectCap cap <- getSlotCap cptr
->     updateCap cptr (ArchObjectCap $ 
->                           cap { capVPMappedAddress = Nothing })
+>-- performIOPageTableInvocation (IOPageTableUnmap cap cptr) = do
+>--     deleteIOPageTable cap
+>--     ArchObjectCap cap <- getSlotCap cptr
+>--     updateCap cptr (ArchObjectCap $
+>--                           cap { capVPMappedAddress = Nothing }) -}
 
 
 > pteCheckIfMapped :: PPtr PTE -> Kernel Bool
@@ -1136,42 +1137,42 @@ Checking virtual address for page size dependent alignment:
 >     return $ pd /= InvalidPDE
 
 > performPageInvocation :: PageInvocation -> Kernel ()
-> performPageInvocation (PageMap asid cap ctSlot entries) = do
+> performPageInvocation (PageMap _ cap ctSlot entries) = do
 >     updateCap ctSlot cap
 >     case entries of
 >         (VMPTE pte, VMPTEPtr slot) -> storePTE slot pte
 >         (VMPDE pde, VMPDEPtr slot) -> storePDE slot pde
 >         (VMPDPTE pdpte, VMPDPTEPtr slot) -> storePDPTE slot pdpte
 >         _ -> fail "impossible"
-> 
+>
 > performPageInvocation (PageRemap entries) = case entries of
 >     (VMPTE pte, VMPTEPtr slot) -> storePTE slot pte
 >     (VMPDE pde, VMPDEPtr slot) -> storePDE slot pde
 >     (VMPDPTE pdpte, VMPDPTEPtr slot) -> storePDPTE slot pdpte
 >     _ -> fail "impossible"
-> 
+>
 > performPageInvocation (PageUnmap cap ctSlot) = do
 >     case capVPMappedAddress cap of
 >         Just (asid, vaddr) -> unmapPage (capVPSize cap) asid vaddr
 >                                     (capVPBasePtr cap)
 >         _ -> return ()
 >     ArchObjectCap cap <- getSlotCap ctSlot
->     updateCap ctSlot (ArchObjectCap $ 
+>     updateCap ctSlot (ArchObjectCap $
 >                           cap { capVPMappedAddress = Nothing })
-> 
-> performPageInvocation (PageIOMap cap cptr vtdpte slot) = do
->     updateCap cptr cap
->     storeIOPTE slot vtdpte
 >
-> performPageInvocation (PageIOUnmap (ArchObjectCap cap@PageCap {}) ctSlot) = do
->     case capVPMappedAddress cap of
->         Just (asid, vaddr) -> unmapIOPage (capVPSize cap) (fromIntegral asid) vaddr
->                                     (capVPBasePtr cap)
->         _ -> return ()
->     ArchObjectCap cap <- getSlotCap ctSlot
->     updateCap ctSlot (ArchObjectCap $ 
->                           cap { capVPMappedAddress = Nothing })
-> performPageInvocation (PageIOUnmap _ _)  = fail "impossible"
+>-- performPageInvocation (PageIOMap cap cptr vtdpte slot) = do
+>--     updateCap cptr cap
+>--     storeIOPTE slot vtdpte
+>--
+>-- performPageInvocation (PageIOUnmap (ArchObjectCap cap@PageCap {}) ctSlot) = do
+>--     case capVPMappedAddress cap of
+>--         Just (asid, vaddr) -> unmapIOPage (capVPSize cap) (fromIntegral asid) vaddr
+>--                                     (capVPBasePtr cap)
+>--         _ -> return ()
+>--     ArchObjectCap cap <- getSlotCap ctSlot
+>--     updateCap ctSlot (ArchObjectCap $
+>--                           cap { capVPMappedAddress = Nothing })
+>-- performPageInvocation (PageIOUnmap _ _)  = fail "impossible" -}
 >
 > performPageInvocation (PageGetAddr ptr) = do
 >     let paddr = fromPAddr $ addrFromPPtr ptr
@@ -1236,35 +1237,35 @@ The kernel model's x64 targets use an external simulation of the physical addres
 >     setObject slot pte
 >     doMachineOp $ storeWordVM (PPtr $ fromPPtr slot) $ wordFromPTE pte
 
-> storeIOCTE :: PPtr IOCTE -> IOCTE -> Kernel ()
-> storeIOCTE slot cte = do
->     setObject slot cte
->     (high,low) <- return $ wordFromIOCTE cte
->     doMachineOp $ storeWordVM (PPtr $ fromPPtr slot) high
->     doMachineOp $ storeWordVM (8 + (PPtr $ fromPPtr slot)) low
+>-- storeIOCTE :: PPtr IOCTE -> IOCTE -> Kernel ()
+>-- storeIOCTE slot cte = do
+>--     setObject slot cte
+>--     (high,low) <- return $ wordFromIOCTE cte
+>--     doMachineOp $ storeWordVM (PPtr $ fromPPtr slot) high
+>--     doMachineOp $ storeWordVM (8 + (PPtr $ fromPPtr slot)) low
 
 
-> storeIOPTE :: PPtr IOPTE -> IOPTE -> Kernel ()
-> storeIOPTE slot pte = do
->     setObject slot pte
->     doMachineOp $ storeWordVM (PPtr $ fromPPtr slot) $ wordFromIOPTE pte
+>-- storeIOPTE :: PPtr IOPTE -> IOPTE -> Kernel ()
+>-- storeIOPTE slot pte = do
+>--     setObject slot pte
+>--     doMachineOp $ storeWordVM (PPtr $ fromPPtr slot) $ wordFromIOPTE pte
 
 
-% The first 64 bits of rte is ignored
+%-- The first 64 bits of rte is ignored
 
-> storeIORTE :: PPtr IORTE -> IORTE -> Kernel ()
-> storeIORTE slot rte = do
->     setObject slot rte
->     doMachineOp $ storeWordVM (8 + (PPtr $ fromPPtr slot)) $ wordFromIORTE rte
+>-- storeIORTE :: PPtr IORTE -> IORTE -> Kernel ()
+>-- storeIORTE slot rte = do
+>--     setObject slot rte
+>--     doMachineOp $ storeWordVM (8 + (PPtr $ fromPPtr slot)) $ wordFromIORTE rte
 
-> deleteIOPageTable :: ArchCapability -> Kernel ()
-> deleteIOPageTable (cap@IOPageTableCap {}) = 
->     case capIOPTMappedAddress cap of
->         Just (asid, vaddr) -> unmapIOPageTable (capIOPTLevel cap) asid vaddr
->                                     (capIOPTBasePtr cap)
->         _ -> return ()
+>-- deleteIOPageTable :: ArchCapability -> Kernel ()
+>-- deleteIOPageTable (cap@IOPageTableCap {}) =
+>--     case capIOPTMappedAddress cap of
+>--         Just (asid, vaddr) -> unmapIOPageTable (capIOPTLevel cap) asid vaddr
+>--                                     (capIOPTBasePtr cap)
+>--         _ -> return ()
 
-> deleteIOPageTable _ = error "Not an IOPageTable capability"
+>-- deleteIOPageTable _ = error "Not an IOPageTable capability" -}
 
 > mapKernelWindow :: Kernel ()
 > mapKernelWindow = error "Unimplemented . init code"
@@ -1278,11 +1279,11 @@ The kernel model's x64 targets use an external simulation of the physical addres
 > createBIFrame :: Capability -> VPtr -> Word32 -> Word32 -> KernelInit Capability
 > createBIFrame = error "Unimplemented . init code"
 
-> createFramesOfRegion :: Capability -> Region -> Bool -> KernelInit () 
+> createFramesOfRegion :: Capability -> Region -> Bool -> KernelInit ()
 > createFramesOfRegion = error "Unimplemented . init code"
 
 > createITPDPTs :: Capability -> VPtr -> VPtr -> KernelInit Capability
-> createITPDPTs = error "Unimplemented . init code" 
+> createITPDPTs = error "Unimplemented . init code"
 
 > writeITPDPTs :: Capability -> Capability -> KernelInit ()
 > writeITPDPTs = error "Unimplemented . init code"

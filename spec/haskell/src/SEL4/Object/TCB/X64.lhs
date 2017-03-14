@@ -17,11 +17,13 @@ There are presently no x64-specific register subsets defined, but in future this
 
 \begin{impdetails}
 
-> import SEL4.Machine
+> import SEL4.Machine(PPtr)
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.X64
+> import SEL4.Machine.RegisterSet.X64
+> --import Data.Bits
 
 > import Data.Word(Word8)
 
@@ -32,4 +34,8 @@ There are presently no x64-specific register subsets defined, but in future this
 
 > performTransfer :: CopyRegisterSets -> PPtr TCB -> PPtr TCB -> Kernel ()
 > performTransfer _ _ _ = return ()
+
+> -- FIXME x64: implement from abstract
+> sanitiseRegister :: TCB -> Register -> Word -> Word
+> sanitiseRegister _ _ v = v
 

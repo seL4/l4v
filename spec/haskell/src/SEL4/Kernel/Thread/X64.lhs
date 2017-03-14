@@ -14,16 +14,10 @@ This module contains the architecture-specific thread switch code for X86-64bit.
 \begin{impdetails}
 
 > import SEL4.Machine
-> import qualified SEL4.Machine.RegisterSet.X64 as ArchReg
 > import SEL4.Model.StateData
-> import SEL4.Model.StateData.X64
 > import SEL4.Object.Structures
-> import SEL4.Object.TCB
 > import SEL4.Kernel.VSpace.X64
-> import qualified SEL4.Machine.Hardware.X64 as Arch
 > import {-# SOURCE #-} SEL4.Kernel.Init
-> import Data.Array
-> import Data.Bits
 
 \end{impdetails}
 
