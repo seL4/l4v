@@ -115,18 +115,15 @@ lemma get_page_info_gpd_kmaps:
     get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
                   (x64_global_pml4 (arch_state s)) p = Some (b, a, attr, r)\<rbrakk>
    \<Longrightarrow> p \<in> kernel_mappings"
-   apply (clarsimp simp: valid_global_objs_def valid_arch_state_def)
-   apply (thin_tac "Ball x y" for x y)
-   apply (clarsimp simp add: obj_at_def valid_ao_at_def)
-   apply (clarsimp simp: empty_table_def kernel_mappings_slots_eq)
-   apply (drule_tac x="ucast (p >> pml4_shift_bits)" in spec)
-   apply (rule ccontr, simp)
-   apply (clarsimp simp: get_page_info_def get_pml4_entry_def get_arch_obj_def
-                         get_pdpt_info_def get_pdpt_entry_def get_pd_info_def get_pd_entry_def
-                         get_pt_info_def get_pt_entry_def
-                  split: option.splits arch_kernel_obj.splits kernel_object.splits
-                         pml4e.splits pdpte.splits pde.splits pte.splits)
-   sorry
+  apply (clarsimp simp: valid_global_objs_def valid_arch_state_def
+                        obj_at_def valid_ao_at_def
+                        empty_table_def kernel_mappings_slots_eq)
+  apply (drule_tac x="ucast (p >> pml4_shift_bits)" in spec; clarsimp)
+  apply (rule ccontr)
+  apply (clarsimp simp: get_page_info_def get_pml4_entry_def get_arch_obj_def
+                        bit_simps ucast_ucast_mask9
+                 split: option.splits pml4e.splits arch_kernel_obj.splits)
+  done
 
 lemma get_vspace_of_thread_reachable:
   "get_vspace_of_thread (kheap s) (arch_state s) t \<noteq> x64_global_pml4 (arch_state s)
@@ -145,60 +142,29 @@ lemma is_aligned_ptrFromPAddrD:
   done
 
 lemma some_get_page_info_umapsD:
-  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, attr, r);
-    (\<exists>\<rhd> pd_ref) s; p \<notin> kernel_mappings; valid_arch_objs s; pspace_aligned s;
+  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pml4_ref p = Some (b, a, attr, r);
+    (\<exists>\<rhd> pml4_ref) s; p \<notin> kernel_mappings; valid_arch_objs s; pspace_aligned s;
+    canonical_address p;
     valid_asid_table (x64_asid_table (arch_state s)) s; valid_objs s\<rbrakk>
-   \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a \<and> is_aligned b a \<and>
-             typ_at (AArch (AIntData sz)) (ptrFromPAddr b) s)"
-  apply (clarsimp simp: get_page_info_def get_pd_entry_def get_arch_obj_def
+   \<Longrightarrow> \<exists>sz. pageBitsForSize sz = a \<and> is_aligned b a \<and> data_at sz (ptrFromPAddr b) s"
+  apply (clarsimp simp: get_page_info_def get_pdpt_info_def get_pd_info_def get_pt_info_def
+                        get_pml4_entry_def get_pdpt_entry_def get_pd_entry_def get_pt_entry_def
+                        get_arch_obj_def valid_asid_table_def bit_simps
                         kernel_mappings_slots_eq
-                 split: option.splits Structures_A.kernel_object.splits
-                        arch_kernel_obj.splits)
-  apply (frule (1) valid_arch_objsD[rotated 2])
-   apply (simp add: obj_at_def)
-  sorry (*
-  apply (simp add: valid_arch_obj_def)
-  apply (drule bspec, simp)
-  apply (simp split: pde.splits)
-     apply (rename_tac rs pd pt_ref rights w)
-     apply (subgoal_tac
-        "((rs, pd_ref) \<rhd>1
-          (VSRef (ucast (ucast (p >> 20))) (Some APageDirectory) # rs,
-           ptrFromPAddr pt_ref)) s")
-     prefer 2
-     apply (rule vs_lookup1I[rotated 2], simp)
-      apply (simp add: obj_at_def)
-     apply (simp add: vs_refs_def pde_ref_def image_def graph_of_def)
-     apply (rule exI, rule conjI, simp+)
-    apply (frule (1) vs_lookup_step)
-    apply (drule (2) stronger_arch_objsD[where ref="x # xs" for x xs])
-    apply clarsimp
-    apply (case_tac ao, simp_all add: a_type_simps obj_at_def)[1]
-    apply (simp add: get_pt_info_def get_pt_entry_def)
-    apply (drule_tac x="(ucast ((p >> 12) && mask 8))" in spec)
-    apply (clarsimp simp: obj_at_def valid_arch_obj_def
-      split: pte.splits)
-     apply (clarsimp simp: pspace_aligned_def)
-     apply (drule_tac x = "(ptrFromPAddr b)" in  bspec, fastforce)
-     apply (drule is_aligned_ptrFromPAddrD)
-      apply simp
-     apply (clarsimp simp:a_type_simps)
-    apply (clarsimp simp: pspace_aligned_def)
-    apply (drule_tac x = "(ptrFromPAddr b)" in  bspec, fastforce)
-    apply (drule is_aligned_ptrFromPAddrD)
-     apply simp
-    apply (clarsimp simp:a_type_simps)
-   apply (clarsimp simp: pspace_aligned_def obj_at_def)
-   apply (drule_tac x = "(ptrFromPAddr b)" in  bspec, fastforce)
-   apply (drule is_aligned_ptrFromPAddrD)
-    apply simp
-   apply (clarsimp simp:a_type_simps)
-  apply (clarsimp simp: pspace_aligned_def obj_at_def)
-  apply (drule_tac x = "(ptrFromPAddr b)" in  bspec, fastforce)
-  apply (drule is_aligned_ptrFromPAddrD)
-   apply simp
-   apply (clarsimp simp:a_type_simps)
-  done *)
+                 split: option.splits kernel_object.splits arch_kernel_obj.splits
+                        pml4e.splits pdpte.splits pde.splits pte.splits)
+    apply (all \<open>drule (2) vs_lookup_step_alt[OF _ _ vs_refs_pml4I],
+                simp add: ucast_ucast_mask9, fastforce\<close>)
+    prefer 3 subgoal
+      by (rule exI[of _ X64HugePage]; frule (3) valid_arch_objs_entryD;
+          clarsimp simp: bit_simps vmsz_aligned_def)
+   apply (all \<open>drule (2) vs_lookup_step_alt[OF _ _ vs_refs_pdptI], fastforce\<close>)
+   prefer 2 subgoal
+     by (rule exI[of _ X64LargePage]; frule (3) valid_arch_objs_entryD;
+         clarsimp simp: bit_simps vmsz_aligned_def)
+  apply (drule (2) vs_lookup_step_alt[OF _ _ vs_refs_pdI], fastforce)
+  by (rule exI[of _ X64SmallPage]; frule (3) valid_arch_objs_entryD;
+      clarsimp simp: bit_simps vmsz_aligned_def)
 
 lemma user_mem_dom_cong:
   "kheap s = kheap s' \<Longrightarrow> dom (user_mem s) = dom (user_mem s')"
@@ -216,58 +182,54 @@ lemma device_frame_in_device_region:
 global_naming Arch
 named_theorems AInvsPre_asms
 
-lemma (* ptable_rights_imp_user_frame *)[AInvsPre_asms]:
-  assumes "valid_state s"
+lemma ptable_rights_imp_frame[AInvsPre_asms]:
+  assumes "valid_state s" "canonical_address x"
   shows "ptable_rights t s x \<noteq> {} \<Longrightarrow>
          ptable_lift t s x = Some (addrFromPPtr y) \<Longrightarrow>
-         in_user_frame y s"
-  sorry (*
-  apply (clarsimp simp: ptable_rights_def ptable_lift_def in_user_frame_def
+         in_user_frame y s \<or> in_device_frame y s"
+  apply (rule ccontr)
+  using assms
+  apply (clarsimp simp: ptable_lift_def ptable_rights_def
+                        in_user_frame_def in_device_frame_def
                  split: option.splits)
-  apply (rename_tac b a r)
   apply (case_tac "x \<in> kernel_mappings")
-   apply (frule (1) some_get_page_info_kmapsD)
-     using assms
-     apply (clarsimp simp add: valid_state_def)
-    using assms
-    apply (clarsimp simp add: valid_state_def)
-   apply simp
+   apply (frule (2) some_get_page_info_kmapsD; fastforce simp: valid_state_def)
   apply (frule some_get_page_info_umapsD)
-       apply (rule get_vspace_of_thread_reachable)
-       apply clarsimp
-       apply (frule get_page_info_gpd_kmaps[rotated 2])
-          using assms
-          apply (simp_all add: valid_state_def valid_pspace_def
-                               valid_arch_state_def)
-  apply clarsimp
-  apply (frule is_aligned_add_helper[OF _ and_mask_less',
-                                     THEN conjunct2, of _ _ x])
+        apply (rule get_vspace_of_thread_reachable)
+        apply clarsimp
+        apply (frule get_page_info_gpd_kmaps[rotated 2])
+           apply (simp_all add: valid_state_def valid_pspace_def
+                                valid_arch_state_def)
+    apply (clarsimp simp: data_at_def)+
+  apply (drule_tac x=sz in spec)+
+  apply (rename_tac p_addr attr rghts sz)
+  apply (frule is_aligned_add_helper[OF _ and_mask_less', THEN conjunct2, of _ _ x])
    apply (simp only: pbfs_less_wb'[simplified word_bits_def])
-  apply (clarsimp simp: ptrFromPAddr_def Platform.X64.addrFromPPtr_def
-                        field_simps)
-  apply (rule_tac x=sz in exI)
+  apply (clarsimp simp: data_at_def ptrFromPAddr_def addrFromPPtr_def field_simps)
+  apply (subgoal_tac "p_addr + (pptrBase + (x && mask (pageBitsForSize sz)))
+                        && ~~ mask (pageBitsForSize sz) = p_addr + pptrBase")
+   apply simp
   apply (subst add.assoc[symmetric])
   apply (subst is_aligned_add_helper)
     apply (erule aligned_add_aligned)
-      apply (case_tac sz, simp_all add: physMappingOffset_def
-                            kernelBase_addr_def physBase_def is_aligned_def)[1]
-     apply (case_tac sz, simp_all add: word_bits_conv)[1]
+     apply (case_tac sz; simp add: is_aligned_def pptrBase_def bit_simps)
+    apply simp
    apply (rule and_mask_less')
-   apply (case_tac sz, simp_all add: word_bits_conv)[1]
+   apply (case_tac sz; simp add: bit_simps)
   apply simp
-  done *)
+  done
+
 end
 
 interpretation AInvsPre?: AInvsPre
   proof goal_cases
   interpret Arch .
-  case 1 show ?case apply (intro_locales; (unfold_locales, fact AInvsPre_asms)?) sorry
+  case 1 show ?case by (intro_locales; (unfold_locales; fact AInvsPre_asms)?)
   qed
 
 requalify_facts
   X64.user_mem_dom_cong
   X64.device_mem_dom_cong
   X64.device_frame_in_device_region
-
 
 end

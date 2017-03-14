@@ -35,7 +35,6 @@ lemma do_machine_op_lift_invs:
 
 abbreviation "canonicalise x \<equiv> (scast ((ucast x) :: 48 word)) :: 64 word"
 
-(* FIXME x64: this needs canonical_address shenanigans *)
 lemma pptr_base_shift_cast_le:
   fixes x :: "9 word"
   shows  "((pptr_base >> pml4_shift_bits) && mask ptTranslationBits \<le> ucast x) =

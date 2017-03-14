@@ -45,6 +45,7 @@ requalify_consts
 
   ASIDPoolObj
 
+  canonical_address
   vs_lookup1
   vs_lookup_trans
   vs_refs

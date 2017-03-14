@@ -2973,6 +2973,40 @@ lemma valid_arch_obj_default':
   unfolding default_arch_object_def
   by (cases aobject_type; simp)
 
+lemma valid_arch_obj_entryD:
+  shows valid_arch_obj_pml4eD: "\<lbrakk>valid_arch_obj (PageMapL4 pm) s; pm i = pml4e; i \<notin> kernel_mapping_slots\<rbrakk> \<Longrightarrow> valid_pml4e pml4e s"
+    and valid_arch_obj_pdpteD: "\<lbrakk>valid_arch_obj (PDPointerTable pdpt) s; pdpt i = pdpte\<rbrakk> \<Longrightarrow> valid_pdpte pdpte s"
+    and valid_arch_obj_pdeD  : "\<lbrakk>valid_arch_obj (PageDirectory pd) s; pd i = pde\<rbrakk> \<Longrightarrow> valid_pde pde s"
+    and valid_arch_obj_pteD  : "\<lbrakk>valid_arch_obj (PageTable pt) s; pt i = pte\<rbrakk> \<Longrightarrow> valid_pte pte s"
+  by fastforce+
+
+lemmas valid_arch_objsD_alt'
+  = valid_arch_objsD[simplified obj_at_def, simplified]
+
+lemmas valid_arch_objs_entryD
+  = valid_arch_obj_entryD[OF valid_arch_objsD_alt']
+
+lemmas vs_lookup_step_alt
+  = vs_lookup_step[OF _ vs_lookup1I[OF _ _ refl], simplified obj_at_def, simplified]
+
+lemma pdpte_graph_ofI:
+  "\<lbrakk>pdpt x = pdpte; pdpte_ref pdpte = Some v\<rbrakk> \<Longrightarrow> (x, v) \<in> graph_of (pdpte_ref \<circ> pdpt)"
+  by (rule graph_ofI, simp)
+
+lemma vs_refs_pdptI:
+  "\<lbrakk>pdpt ((ucast (r :: machine_word)) :: 9 word) = PageDirectoryPDPTE x a b;
+     \<forall>n \<ge> 9. n < 64 \<longrightarrow> \<not> r !! n\<rbrakk>
+   \<Longrightarrow> (VSRef r (Some APDPointerTable), ptrFromPAddr x) \<in> vs_refs (ArchObj (PDPointerTable pdpt))"
+  apply (simp add: vs_refs_def)
+  apply (rule image_eqI[rotated])
+   apply (erule pdpte_graph_ofI)
+   apply (simp add: pdpte_ref_def)
+  apply (simp add: ucast_ucast_mask)
+  apply (rule word_eqI)
+  apply (simp add: word_size)
+  apply (rule ccontr, auto)
+  done
+
 end 
 
 (* 

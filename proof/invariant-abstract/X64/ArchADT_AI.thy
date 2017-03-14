@@ -234,7 +234,7 @@ text {*
   @{text get_page_info} takes the architecture-specific part of the kernel heap,
   a reference to the page directory, and a virtual memory address.
   It returns a tuple containing
-  (a) the physical address, where the associated page table starts,
+  (a) the physical address, where the associated page starts,
   (b) the page table's size in bits, and
   (c) the page attributes (cachable, XNever, etc)
   (d) the access rights (a subset of @{term "{AllowRead, AllowWrite}"}).

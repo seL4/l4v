@@ -115,8 +115,7 @@ lemma do_user_op_invs:
                         restrict_map_def invs_def cur_tcb_def
                  split: option.splits if_split_asm)
   apply (frule ptable_rights_imp_frame)
-    apply fastforce
-   apply simp
+     apply fastforce+
   apply (clarsimp simp: valid_state_def device_frame_in_device_region)
   done
 
