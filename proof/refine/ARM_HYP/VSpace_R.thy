@@ -521,9 +521,15 @@ lemma no_fail_getHDFAR: "no_fail \<top> getHDFAR"
   by (simp add: getHDFAR_def)
 
 (* FIXME: move to Machine_AI *)
+lemma no_fail_getHSR: "no_fail \<top> getHSR"
+  by (simp add: getHSR_def)
+
+(* FIXME: move to Machine_AI *)
 lemma no_fail_addressTranslateS1CPR: "no_fail \<top> (addressTranslateS1CPR w)"
-  apply (simp add: addressTranslateS1CPR_def)
-  sorry
+  by (wpsimp wp: no_fail_machine_op_lift simp: addressTranslateS1CPR_def)
+
+(* prefer 2 as a tactic *)
+method prefer_next = tactic {* SUBGOAL (K (prefer_tac 2)) 1 *}
 
 lemma hv_corres:
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
@@ -532,37 +538,26 @@ lemma hv_corres:
   apply (cases fault)
    apply simp
    apply (rule corres_guard_imp)
-     apply (rule corres_splitEE)
-        prefer 2
-        apply simp
-        apply (rule corres_machine_op [where r="op ="])
-        apply (rule corres_Id, rule refl, simp)
-        apply (rule no_fail_getHDFAR)
-       apply (rule corres_splitEE)
-          prefer 2
-          apply simp
-          apply (rule corres_machine_op [where r="op ="])
-          apply (rule corres_Id, rule refl, simp)
-          apply (rule no_fail_addressTranslateS1CPR)
-         apply (rule corres_trivial, simp add: arch_fault_map_def)
-(*  apply (rule corres_guard_imp)
-    apply (rule corres_splitEE)
-       prefer 2
-       apply simp
+     apply (rule corres_splitEE, prefer_next,simp,
+            rule corres_machine_op [where r="op ="],
+            rule corres_Id refl, rule refl, simp,
+            rule no_fail_getHDFAR no_fail_addressTranslateS1CPR no_fail_getHSR)+
+         apply (rule corres_trivial)
+         apply (simp add: arch_fault_map_def)
+    apply wpsimp+
+  apply (rule corres_guard_imp)
+    apply (rule corres_splitEE,prefer_next,simp)
        apply (rule corres_as_user')
        apply (rule corres_no_failI [where R="op ="])
         apply (rule no_fail_getRestartPC)
        apply fastforce
-      apply (rule corres_splitEE)
-         prefer 2
-         apply simp
-         apply (rule corres_machine_op [where r="op ="])
-         apply (rule corres_Id, rule refl, simp)
-         apply (rule no_fail_getIFSR)
-        apply (rule corres_trivial, simp add: arch_fault_map_def)
-       apply wp+
-   apply simp+ *)
-  sorry (* handle_vm_fault *)
+      apply (rule corres_splitEE, prefer_next,simp,
+             rule corres_machine_op [where r="op ="],
+             rule corres_Id refl, rule refl, simp,
+             rule no_fail_addressTranslateS1CPR no_fail_getHSR)+
+          apply (rule corres_trivial, simp add: arch_fault_map_def)
+         apply wpsimp+
+  done
 
 lemma flush_space_corres:
   "corres dc
@@ -666,6 +661,51 @@ lemmas setCurrentPD_no_fails = no_fail_dsb no_fail_isb no_fail_writeTTBR0
 
 lemmas setCurrentPD_no_irqs = no_irq_dsb no_irq_isb no_irq_writeTTBR0
 
+lemma vcpuSave_corres:
+  "\<lbrakk> vb = vb' \<rbrakk> \<Longrightarrow> corres dc \<top> \<top> (vcpu_save vb) (vcpuSave vb')"
+  sorry
+
+lemma vcpuDisable_corres:
+  "\<lbrakk> vcpu = vcpu' \<rbrakk> \<Longrightarrow> corres dc \<top> \<top> (vcpu_disable vcpu) (vcpuDisable vcpu')"
+  sorry
+
+lemma vcpuEnable_corres:
+  "\<lbrakk> vcpu = vcpu' \<rbrakk> \<Longrightarrow> corres dc \<top> \<top> (vcpu_enable vcpu) (vcpuEnable vcpu')"
+  sorry
+
+lemma vcpuRestore_corres:
+  "\<lbrakk> vcpu = vcpu' \<rbrakk> \<Longrightarrow> corres dc \<top> \<top> (vcpu_restore vcpu) (vcpuRestore vcpu')"
+  sorry
+
+lemma vcpuSwitch_corres:
+  "\<lbrakk> vcpu = vcpu' \<rbrakk> \<Longrightarrow> corres dc \<top> \<top> (vcpu_switch vcpu) (vcpuSwitch vcpu')"
+  proof -
+    have modify_current_vcpu:
+      "\<And>a b. corres dc \<top> \<top> (modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := Some (a, b)\<rparr>\<rparr>))
+                             (modifyArchState (armHSCurVCPU_update (\<lambda>_. Some (a, b))))"
+      by (clarsimp simp add: modifyArchState_def state_relation_def arch_state_relation_def
+                   intro!: corres_modify)
+    have get_current_vcpu: "corres (op =) \<top> \<top> (gets (arm_current_vcpu \<circ> arch_state))
+                                               (gets (armHSCurVCPU \<circ> ksArchState))"
+      apply clarsimp
+      apply (rule_tac P = "(arm_current_vcpu (arch_state s)) = (armHSCurVCPU (ksArchState s'))"
+                     in TrueE;
+             simp add: state_relation_def arch_state_relation_def)
+      done
+    assume vcpu_eq : "vcpu = vcpu'"
+    show ?thesis
+      apply (simp add: vcpu_switch_def vcpuSwitch_def)
+      apply (cases vcpu)
+      apply (all \<open>simp add: vcpu_eq, rule corres_split'[OF get_current_vcpu],rename_tac rv, case_tac rv\<close>)
+         apply (rule corres_split'[OF corres_machine_op[OF corres_underlying_trivial[OF no_fail_isb]]]
+                     corres_split'[OF vcpuRestore_corres[OF refl] modify_current_vcpu]
+                     corres_split'[OF vcpuDisable_corres[OF refl] modify_current_vcpu]
+                     corres_split'[OF vcpuEnable_corres [OF refl] modify_current_vcpu]
+                     corres_split'[OF vcpuSave_corres[OF refl]]
+                     wp_post_taut conjI | clarsimp simp add: when_def)+
+      done
+  qed
+
 lemma setCurrentPD_corres:
   "corres dc \<top> \<top> (do_machine_op (setCurrentPD addr)) (doMachineOp (setCurrentPD addr))"
   apply (simp add: setCurrentPD_def)
@@ -681,6 +721,8 @@ lemma setCurrentPD_corres:
                 | simp add: dc_def)+
   done
 
+crunch tcb_at'[wp]: armv_contextSwitch "tcb_at' t"
+
 lemma set_vm_root_corres:
   "corres dc (tcb_at t and valid_arch_state and valid_objs and valid_asid_map
               and unique_table_refs o caps_of_state and valid_vs_lookup
@@ -690,6 +732,17 @@ lemma set_vm_root_corres:
                  and valid_arch_state' and tcb_at' t and no_0_obj')
              (set_vm_root t) (setVMRoot t)"
 proof -
+  have Q: "\<And>P P'. corres dc P P'
+        (throwError ExceptionTypes_A.lookup_failure.InvalidRoot <catch>
+         (\<lambda>_ . do_machine_op $ setCurrentPD $ addrFromPPtr 0 ))
+        (throwError Fault_H.lookup_failure.InvalidRoot <catch>
+         (\<lambda>_ . doMachineOp $ setCurrentPD $ addrFromPPtr 0))"
+    apply (rule corres_guard_imp)
+      apply (rule corres_split_catch [where f=lfr])
+         apply (simp, rule setCurrentPD_corres)
+        apply (subst corres_throwError, simp add: lookup_failure_map_def)
+       apply (wp | simp)+
+    done
   show ?thesis
     unfolding set_vm_root_def setVMRoot_def locateSlot_conv
                      getThreadVSpaceRoot_def
@@ -701,20 +754,17 @@ proof -
                                          valid_vspace_objs and valid_vs_lookup and
                                          unique_table_refs o caps_of_state and
                                          valid_objs and
+                                         tcb_at t and
                                          pspace_aligned and pspace_distinct and
                                          cte_wp_at (op = thread_root) thread_root_slot"
-                     and R'="\<lambda>thread_root. pspace_aligned' and pspace_distinct' and no_0_obj'"
+                     and R'="\<lambda>thread_root. pspace_aligned' and pspace_distinct' and no_0_obj' and tcb_at' t"
                      in corres_split [OF _ getSlotCap_corres])
-(*           apply (insert Q)
            apply (case_tac rv, simp_all add: isCap_simps Q[simplified])[1]
            apply (rename_tac arch_cap)
            apply (case_tac arch_cap, simp_all add: isCap_simps Q[simplified])[1]
            apply (rename_tac word option)
            apply (case_tac option, simp_all add: Q[simplified])[1]
            apply (clarsimp simp: cap_asid_def)
-                apply (case_tac "x = aa")
-                 apply clarsimp
-                apply (clarsimp simp: pd_at_uniq_def restrict_map_def)
            apply (rule corres_guard_imp)
              apply (rule corres_split_catch [where f=lfr])
                 apply (simp add: checkPDNotInASIDMap_def
@@ -726,7 +776,7 @@ proof -
                                       and valid_vspace_objs
                                       and valid_arch_state"
                             in corres_stateAssert_implied)
-                 apply (rule P)
+                 apply (rule setCurrentPD_corres)
                 apply (clarsimp simp: restrict_map_def state_relation_asid_map
                                elim!: ranE)
                 apply (frule(1) valid_asid_mapD)
@@ -740,8 +790,10 @@ proof -
                    apply (simp add: lookup_failure_map_def)
                   apply simp
                  apply simp
-                 apply (rule arm_context_switch_corres)
-                apply (wp | simp | wp_once hoare_drop_imps)+
+                 apply (rule corres_split[OF _ arm_context_switch_corres])
+                   apply (rule corres_split[OF vcpuSwitch_corres get_tcb_corres])
+                     apply (clarsimp simp add: tcb_relation_def arch_tcb_relation_def)
+                    apply (wpsimp simp: armv_contextSwitch_def | rule hoare_drop_imps)+
                apply (simp add: whenE_def split del: if_split, wp)[1]
               apply (rule find_pd_for_asid_pd_at_asid_again)
              apply wp
@@ -754,8 +806,8 @@ proof -
            apply simp+
          apply (wp get_cap_wp | simp)+
      apply (clarsimp simp: tcb_at_cte_at_1 [simplified])
-    apply simp *)
-    sorry (* set_vm_root *)
+    apply simp
+    done
 qed
 
 lemma invalidateTLBByASID_invs'[wp]:
