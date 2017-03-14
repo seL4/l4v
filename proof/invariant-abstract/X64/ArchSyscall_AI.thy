@@ -93,6 +93,11 @@ crunch cur_thread[wp,Syscall_AI_assms]: handle_arch_fault_reply "\<lambda>s. P (
 crunch valid_objs[wp,Syscall_AI_assms]: handle_arch_fault_reply "valid_objs"
 crunch cte_wp_at[wp,Syscall_AI_assms]: handle_arch_fault_reply "\<lambda>s. P (cte_wp_at P' p s)"
 
+
+lemma hh_invs[wp, Syscall_AI_assms]:
+  "\<lbrace>invs and ct_active\<rbrace> handle_hypervisor_fault thread fault \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (cases fault) wpsimp
+
 end
 
 global_interpretation Syscall_AI?: Syscall_AI

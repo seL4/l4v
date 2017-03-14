@@ -504,8 +504,8 @@ lemma update_aobj_pred_tcb_at[wp]:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def a_type_def)
   done
 
-lemma update_aobj_cur [wp]:
-  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> update_object ptr (ArchObj obj) \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+lemma update_object_cur_thread [wp]:
+  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> update_object ptr obj \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
   unfolding update_object_def by (wp get_object_wp) simp
 
 lemma update_aobj_cur_tcb [wp]:
@@ -1242,19 +1242,19 @@ end
 
 context begin
 
-method finish =
+method hammer =
   (simp?; erule is_aligned_weaken[rotated]; simp add: is_aligned_def pptrBase_def)
 
 lemma is_aligned_addrFromPPtr_eq: "n \<le> 39 \<Longrightarrow> is_aligned (addrFromPPtr p) n = is_aligned p n"
   apply (simp add: addrFromPPtr_def; rule iffI)
-   apply (drule aligned_sub_aligned[where y="-pptrBase"]; finish)
-  apply (erule aligned_sub_aligned; finish)
+   apply (drule aligned_sub_aligned[where y="-pptrBase"]; hammer)
+  apply (erule aligned_sub_aligned; hammer)
   done
 
 lemma is_aligned_ptrFromPAddr_eq: "n \<le> 39 \<Longrightarrow> is_aligned (ptrFromPAddr p) n = is_aligned p n"
   apply (simp add: ptrFromPAddr_def; rule iffI)
-   apply (drule aligned_add_aligned[where y="-pptrBase"]; finish)
-  apply (erule aligned_add_aligned; finish)
+   apply (drule aligned_add_aligned[where y="-pptrBase"]; hammer)
+  apply (erule aligned_add_aligned; hammer)
   done
 
 end

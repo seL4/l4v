@@ -467,6 +467,7 @@ lemma zombie_is_cap_toE_pre[CNodeInv_AI_assms]:
   apply (simp add: nat_to_cref_def word_bits_conv)
   done
 
+crunch st_tcb_at_halted[wp]: prepare_thread_delete "st_tcb_at halted t"
 
 lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
   "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)
@@ -513,6 +514,11 @@ lemma nat_to_cref_0_replicate [CNodeInv_AI_assms]:
   apply simp
   done
 
+lemma prepare_thread_delete_thread_cap [CNodeInv_AI_assms]:
+  "\<lbrace>\<lambda>s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>
+    prepare_thread_delete t
+   \<lbrace>\<lambda>rv s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>"
+  by (wpsimp simp: prepare_thread_delete_def)
 
 end
 

@@ -49,6 +49,11 @@ session AInvs = ASpec +
     "invariant-abstract/KernelInit_AI"
     "invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
 
+session AInvsQD = ASpec +
+  theories [quick_and_dirty]
+    "invariant-abstract/AInvs"
+    "invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
+
 
 (*
  * C Refinement proof.
@@ -172,7 +177,7 @@ session AutoLevity = AutoLevity_Base +
   theories
    "../lib/autolevity_buckets/AutoLevity_Top"
 
-session AutoLevity_Base = Word_Lib + 
+session AutoLevity_Base = Word_Lib +
   theories
     "../lib/autolevity_buckets/AutoLevity_Base"
 

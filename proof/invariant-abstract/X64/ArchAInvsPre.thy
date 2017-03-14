@@ -261,7 +261,7 @@ end
 interpretation AInvsPre?: AInvsPre
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales, fact AInvsPre_asms)?)
+  case 1 show ?case apply (intro_locales; (unfold_locales, fact AInvsPre_asms)?) sorry
   qed
 
 requalify_facts

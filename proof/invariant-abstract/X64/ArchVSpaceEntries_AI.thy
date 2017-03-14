@@ -720,7 +720,7 @@ lemma handle_invocation_valid_vspace_objs[wp]:
   done
 
 
-crunch valid_vspace_objs[wp]: activate_thread,switch_to_thread,
+crunch valid_vspace_objs[wp]: activate_thread,switch_to_thread, handle_hypervisor_fault,
        switch_to_idle_thread, handle_call, handle_recv, handle_reply,
        handle_send, handle_yield, handle_interrupt "valid_vspace_objs"
   (simp: crunch_simps wp: crunch_wps alternative_valid select_wp OR_choice_weak_wp select_ext_weak_wp

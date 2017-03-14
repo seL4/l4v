@@ -352,6 +352,8 @@ lemma deleting_irq_handler_final [Finalise_AI_asms]:
   apply simp
   done
 
+crunch is_final_cap'[wp]: prepare_thread_delete "is_final_cap' cap"
+
 lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. final \<longrightarrow> is_final_cap' cap s
          \<and> cte_wp_at (op = cap) slot s\<rbrace>
@@ -385,9 +387,16 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
    apply (wp | wpc | simp only: simp_thms)+
   done
 
-crunch typ_at_arch[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (typ_at T p s)"
+crunch typ_at_arch[wp,Finalise_AI_asms]: arch_finalise_cap, prepare_thread_delete "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def
         ignore: maskInterrupt )
+
+crunch valid_cap[wp]: prepare_thread_delete "valid_cap cap"
+crunch tcb_at[wp]: prepare_thread_delete "tcb_at p"
+crunch cte_wp_at[wp, Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (cte_wp_at P' p s)"
+crunch irq_node[wp, Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (interrupt_irq_node s)"
+crunch invs[wp]: prepare_thread_delete invs
+crunch caps_of_state[wp, Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (caps_of_state s)"
 
 lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
   "\<lbrace>valid_cap cap\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
@@ -529,7 +538,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
                       unbind_notification_valid_objs
                    | clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
                                      ran_tcb_cap_cases is_cap_simps
-                                     cap_range_def
+                                     cap_range_def prepare_thread_delete_def
                                      can_fast_finalise_def
                                      obj_irq_refs_subset
                                      vs_cap_ref_def unat_of_bl_length

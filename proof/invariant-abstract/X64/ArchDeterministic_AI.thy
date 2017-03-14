@@ -93,7 +93,8 @@ crunch valid_list[wp]: perform_invocation valid_list
 crunch valid_list[wp, Deterministic_AI_assms]: handle_invocation valid_list
   (wp: crunch_wps syscall_valid simp: crunch_simps ignore: without_preemption)
 
-crunch valid_list[wp, Deterministic_AI_assms]: handle_recv, handle_yield, handle_call valid_list
+crunch valid_list[wp, Deterministic_AI_assms]: handle_recv, handle_yield, handle_call,
+                                               handle_hypervisor_fault valid_list
   (wp: crunch_wps simp: crunch_simps)
 
 lemma handle_vm_fault_valid_list[wp, Deterministic_AI_assms]:
