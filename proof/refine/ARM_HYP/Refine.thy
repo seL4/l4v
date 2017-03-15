@@ -573,6 +573,14 @@ lemma doUserOp_valid_duplicates':
   apply clarsimp
   done
 
+lemma None_drop:
+  "P \<Longrightarrow> x = None \<longrightarrow> P"
+  by simp
+
+lemma Ex_Some_conv:
+  "((\<exists>y. x = Some y) \<longrightarrow> P x) = (\<forall>y. x = Some y \<longrightarrow> P (Some y))"
+  by auto
+
 text {* The top-level correspondence *}
 
 lemma kernel_corres:
@@ -614,7 +622,8 @@ lemma kernel_corres:
        apply (simp add: invs'_def valid_state'_def)
       apply (rule corres_split [OF _ schedule_corres])
         apply (rule activate_corres)
-       apply (wp schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps |simp)+
+       apply (wp schedule_invs' hoare_vcg_if_lift2 dmo_getActiveIRQ_non_kernel
+              | simp cong: rev_conj_cong | strengthen None_drop | subst Ex_Some_conv)+
      apply (rule_tac Q="\<lambda>_. valid_sched and invs and valid_list" and E="\<lambda>_. valid_sched and invs and valid_list"
             in hoare_post_impErr)
        apply (wp handle_event_valid_sched |simp)+
@@ -663,12 +672,15 @@ lemma entry_corres:
            apply wp+
          apply (rule hoare_strengthen_post, rule akernel_invs_det_ext, simp add: invs_def cur_tcb_def)
         apply (rule hoare_strengthen_post, rule ckernel_invs, simp add: invs'_def cur_tcb'_def)
-       apply (wp thread_set_invs_trivial thread_set_ct_running
-                 threadSet_invs_trivial threadSet_ct_running'
-                 select_wp thread_set_not_state_valid_sched static_imp_wp
-                 hoare_vcg_disj_lift ct_in_state_thread_state_lift
-              | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state atcbContextSet_def
-              | (wps, wp threadSet_st_tcb_at2) )+
+       apply ((wp thread_set_invs_trivial thread_set_ct_running
+                  thread_set_not_state_valid_sched static_imp_wp
+                  hoare_vcg_disj_lift ct_in_state_thread_state_lift
+               | simp add: tcb_cap_cases_def thread_set_no_change_tcb_state)+)[1]
+      apply (simp add: pred_conj_def cong: conj_cong)
+      apply (wp threadSet_invs_trivial threadSet_ct_running'
+                 static_imp_wp hoare_vcg_disj_lift
+              | simp add: ct_in_state'_def atcbContextSet_def
+              | (wps, wp threadSet_st_tcb_at2))+
    apply (clarsimp simp: invs_def cur_tcb_def)
   apply (clarsimp simp: ct_in_state'_def)
   done
