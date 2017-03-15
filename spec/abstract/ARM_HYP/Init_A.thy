@@ -45,8 +45,7 @@ definition
   "init_globals_frame = kernel_base + 0x5000"
 
 definition
-  init_global_pt :: word32 where (* FIXME : update *)
-  "init_global_pt = kernel_base + 0x60000"
+  "us_global_pd_ptr = kernel_base + 0x60000"
 
 definition
   "init_arch_state \<equiv> \<lparr>
@@ -56,15 +55,14 @@ definition
     arm_asid_map = empty,
     arm_current_vcpu = None,
     arm_gicvcpu_numlistregs = undefined,
-    arm_kernel_vspace = \<lambda>ref.
+    arm_kernel_vspace = (\<lambda>ref.
       if ref \<in> {kernel_base .. kernel_base + mask 20}
       then ArmVSpaceKernelWindow
-      else ArmVSpaceInvalidRegion
+      else ArmVSpaceInvalidRegion),
+    arm_us_global_pd = us_global_pd_ptr
   \<rparr>"
 
-definition
-  [simp]:
-  "global_pd \<equiv> (\<lambda>_. InvalidPDE)( ucast (kernel_base >> 20) := SectionPDE (addrFromPPtr kernel_base) {} {})"
+definition [simp]: "us_global_pd \<equiv> ArchObj (PageDirectory (\<lambda>_. InvalidPDE))"
 
 definition
   "init_kheap \<equiv>
@@ -83,7 +81,8 @@ definition
     tcb_bound_notification = None,
     tcb_mcpriority = minBound,
     tcb_arch = init_arch_tcb
-  \<rparr>)"
+  \<rparr>)
+  (us_global_pd_ptr \<mapsto> us_global_pd)"
 
 definition
   "init_cdt \<equiv> empty"

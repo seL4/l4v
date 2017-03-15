@@ -335,6 +335,7 @@ record arch_state =
   arm_current_vcpu    :: "(obj_ref \<times> bool) option"
   arm_gicvcpu_numlistregs :: nat
   arm_kernel_vspace :: ARM_A.arm_vspace_region_uses
+  arm_us_global_pd  :: obj_ref
 
 end_qualify
 

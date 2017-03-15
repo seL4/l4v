@@ -539,7 +539,10 @@ definition
                    od
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
-    (\<lambda>_. do_machine_op $ setCurrentPD $ addrFromPPtr 0)
+    (\<lambda>_. do
+       global_us_pd \<leftarrow> gets (arm_us_global_pd o arch_state);
+       do_machine_op $ setCurrentPD $ addrFromPPtr global_us_pd
+    od)
 od"
 
 text {* Before deleting an ASID pool object we must deactivate all page
