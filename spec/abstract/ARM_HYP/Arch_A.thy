@@ -39,11 +39,9 @@ definition
    od"
 
 text {* The idle thread does not need to be handled specially on ARM. *}
-(* Clear the globals frame when switching to the idle thread. This is
-    specificially to ease infoflow reasoning VER-207 *)
 definition
    arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where
-   "arch_switch_to_idle_thread \<equiv> return ()"
+   "arch_switch_to_idle_thread \<equiv> vcpu_switch None"
 
 definition
   arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
