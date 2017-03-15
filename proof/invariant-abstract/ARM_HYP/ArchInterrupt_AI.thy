@@ -189,9 +189,47 @@ lemma empty_fail_maskInterrupt_ARCH[Interrupt_AI_asms]:
   "empty_fail (maskInterrupt f irq)"
   by (wp | simp add: maskInterrupt_def)+
 
+lemma dmo_st_tcb_cur[wp]:
+  "\<lbrace>\<lambda>s. st_tcb_at P (cur_thread s) s\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. st_tcb_at P (cur_thread s) s\<rbrace>"
+  by (rule hoare_lift_Pf[where f=cur_thread]; wp)
+
+lemma dmo_ex_nonz_cap_to[wp]:
+  "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
+  by (rule hoare_lift_Pf[where f=cur_thread]; wp)
+
+lemma dmo_gets_inv[wp]:
+  "\<lbrace>P\<rbrace> do_machine_op (gets f) \<lbrace>\<lambda>rv. P\<rbrace>"
+  unfolding do_machine_op_def by (wpsimp simp: simpler_gets_def)
+
+lemma conj_imp_strg:
+  "P \<Longrightarrow> (A \<longrightarrow> P) \<and> (B \<longrightarrow> P)" by simp
+
+lemma runnable_eq:
+  "runnable st = (st = Running \<or> st = Restart)"
+  by (cases st; simp)
+
+lemma halted_eq:
+  "halted st = (st = Inactive \<or> st = IdleThreadState)"
+  by (cases st; simp)
+
+lemma vgic_maintenance_invs[wp]:
+  "\<lbrace>invs\<rbrace> vgic_maintenance \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding vgic_maintenance_def get_gic_vcpu_ctrl_misr_def
+            get_gic_vcpu_ctrl_eisr1_def get_gic_vcpu_ctrl_eisr0_def
+  apply (wpsimp simp: valid_fault_def do_machine_op_bind ct_in_state_def
+                  wp: thread_get_wp'
+         | strengthen conj_imp_strg)+
+  apply (fastforce intro!: st_tcb_ex_cap[where P=active]
+                     simp: st_tcb_at_def obj_at_def runnable_eq halted_eq)
+  done
+
+lemma handle_reserved_irq_invs[wp]:
+  "\<lbrace>invs\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def)
+
 lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: handle_interrupt_def  )
+  apply (simp add: handle_interrupt_def)
   apply (rule conjI; rule impI)
   apply (simp add: do_machine_op_bind empty_fail_ackInterrupt_ARCH empty_fail_maskInterrupt_ARCH)
      apply (wp dmo_maskInterrupt_invs maskInterrupt_invs_ARCH dmo_ackInterrupt send_signal_interrupt_states | wpc | simp)+
@@ -200,7 +238,9 @@ lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]:
      apply (clarsimp simp: ex_nonz_cap_to_def invs_valid_objs)
      apply (intro allI exI, erule cte_wp_at_weakenE)
      apply (clarsimp simp: is_cap_simps)
-    apply (wp hoare_drop_imps resetTimer_invs_ARCH | simp add: get_irq_state_def handle_reserved_irq_def)+
+    apply (wpsimp wp: hoare_drop_imps resetTimer_invs_ARCH
+                simp: get_irq_state_def
+           | rule conjI)+
  done
 
 end

@@ -99,7 +99,10 @@ locale DetSchedDomainTime_AI =
       \<lbrace>\<lambda>s :: det_ext state. 0 < domain_time s \<rbrace>
         handle_interrupt i
       \<lbrace>\<lambda>rv s.  domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread \<rbrace>"
-
+  assumes handle_reserved_irq_some_time_inv'[wp]:
+    "\<And>P irq. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+  assumes handle_reserved_irq_domain_list_inv'[wp]:
+    "\<And>P irq. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
 
 context DetSchedDomainTime_AI begin
 
@@ -162,6 +165,11 @@ crunch domain_list_inv[wp]:
   invoke_tcb, invoke_domain, invoke_irq_control, invoke_irq_handler
   "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
+
+crunch domain_list_inv[wp]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
+  (wp: crunch_wps check_cap_inv)
+
+crunch domain_list_inv[wp]: handle_interrupt "\<lambda>s. P (domain_list s)"
 
 end
 
@@ -400,6 +408,7 @@ lemma hoare_false_imp:
   by (auto simp: valid_def)
 
 context DetSchedDomainTime_AI begin
+
 lemma call_kernel_domain_time_inv_det_ext:
   "\<lbrace> (\<lambda>s. 0 < domain_time s) and valid_domain_list and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) \<rbrace>
    (call_kernel e) :: (unit,det_ext) s_monad

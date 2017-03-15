@@ -81,14 +81,14 @@ lemma handle_vm_fault_valid_list[wp, Deterministic_AI_assms]:
   apply (wp|simp)+
   done
 
+lemma vgic_maintenance_valid_list[wp]:
+  "\<lbrace>valid_list\<rbrace> vgic_maintenance \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  unfolding vgic_maintenance_def by (wpsimp wp: hoare_drop_imps)
+
 lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
   "\<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  unfolding handle_interrupt_def ackInterrupt_def
-  apply (rule hoare_pre)
-   apply (wp get_cap_wp do_machine_op_valid_list | wpc
-        | simp add: get_irq_slot_def handle_reserved_irq_def
-        | wp_once hoare_drop_imps)+
-  done
+  unfolding handle_interrupt_def ackInterrupt_def handle_reserved_irq_def
+  by (wpsimp wp: hoare_drop_imps)
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_send,handle_reply valid_list
 

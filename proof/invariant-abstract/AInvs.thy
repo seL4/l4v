@@ -26,27 +26,22 @@ lemma pred_tcb_at_upd_apply:
   pred_tcb_at proj P t (s\<lparr>kheap := (kheap s)(t := p' t)\<rparr>)"
   by (simp add: pred_tcb_at_def obj_at_def)
 
+
 text {* The top-level invariance *}
 
 lemma akernel_invs:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
   (call_kernel e) :: (unit,unit) s_monad
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
-  apply wp
-   apply (simp add: call_kernel_def)
-   apply (wp activate_invs | simp)+
-   apply (auto simp: active_from_running)
-  done
+  unfolding call_kernel_def
+  by (wpsimp wp: activate_invs simp: active_from_running)
 
 lemma akernel_invs_det_ext:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
   (call_kernel e) :: (unit,det_ext) s_monad
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
-  apply wp
-   apply (simp add: call_kernel_def)
-   apply (wp activate_invs | simp)+
-   apply (auto simp: active_from_running)
-  done
+  unfolding call_kernel_def
+  by (wpsimp wp: activate_invs simp: active_from_running)
 
 (* FIXME: move *)
 lemma ct_running_machine_op:
@@ -55,13 +50,26 @@ lemma ct_running_machine_op:
   apply (rule hoare_lift_Pf [where f=cur_thread])
   by wp+
 
+(* FIXME: move *)
+(* FIXME: subsumes thread_set_ct_running *)
+lemma thread_set_ct_in_state:
+  "(\<And>tcb. tcb_state (f tcb) = tcb_state tcb) \<Longrightarrow>
+  \<lbrace>ct_in_state st\<rbrace> thread_set f t \<lbrace>\<lambda>rv. ct_in_state st\<rbrace>"
+  apply (simp add: ct_in_state_def)
+  apply (rule hoare_lift_Pf [where f=cur_thread])
+   apply (wp thread_set_no_change_tcb_state; simp)
+  apply (simp add: thread_set_def)
+  apply wp
+  apply simp
+  done
+
 lemma kernel_entry_invs:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
   (kernel_entry e us) :: (register \<Rightarrow> 32 word,unit) s_monad
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   apply (simp add: kernel_entry_def)
-  apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_running select_wp
-         ct_running_machine_op static_imp_wp
+  apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_in_state select_wp
+         ct_running_machine_op static_imp_wp hoare_vcg_disj_lift
       | clarsimp simp add: tcb_cap_cases_def)+
   done
 
@@ -89,8 +97,7 @@ lemma device_update_invs:
   apply (erule notE)
   apply (erule cte_wp_at_weakenE)
   apply clarsimp
-  apply (fastforce split: if_splits) (* takes 20 secs *)
-  done
+  by (fastforce split: if_splits) (* takes 20 secs *)
 
 crunch device_state_inv[wp]: user_memory_update "\<lambda>ms. P (device_state ms)"
 

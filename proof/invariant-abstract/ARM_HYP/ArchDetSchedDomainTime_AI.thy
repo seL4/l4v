@@ -50,8 +50,9 @@ crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects, arch_tcb_set_ipc_buffer,
   arch_invoke_irq_control, handle_vm_fault,
-  prepare_thread_delete, handle_hypervisor_fault
+  prepare_thread_delete, handle_hypervisor_fault, handle_reserved_irq
   "\<lambda>s. P (domain_list s)"
+  (wp: crunch_wps)
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
@@ -63,11 +64,26 @@ crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects, arch_tcb_set_ipc_buffer,
   arch_invoke_irq_control, handle_vm_fault,
-  prepare_thread_delete, handle_hypervisor_fault
+  prepare_thread_delete, handle_hypervisor_fault, handle_reserved_irq
   "\<lambda>s. P (domain_time s)"
+  (wp: crunch_wps)
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps check_cap_inv)
+
+lemma vgic_maintenance_valid_domain_time:
+  "\<lbrace>\<lambda>s. 0 < domain_time s\<rbrace>
+    vgic_maintenance \<lbrace>\<lambda>y s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
+  unfolding vgic_maintenance_def
+  apply (rule hoare_strengthen_post [where Q="\<lambda>_ s. 0 < domain_time s"])
+   apply (wpsimp wp: handle_fault_domain_time_inv hoare_drop_imps)
+  apply clarsimp
+  done
+
+lemma handle_reserved_irq_valid_domain_time:
+  "\<lbrace>\<lambda>s. 0 < domain_time s\<rbrace>
+     handle_reserved_irq i \<lbrace>\<lambda>y s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
+  unfolding handle_reserved_irq_def by (wpsimp wp: vgic_maintenance_valid_domain_time)
 
 lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
   "\<lbrace>\<lambda>s :: det_ext state. 0 < domain_time s \<rbrace> handle_interrupt i
@@ -83,11 +99,11 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
       apply wp+
      apply simp (* dxo_eq *)
      apply (clarsimp simp: timer_tick_def num_domains_def)
-     apply (wp reschedule_required_valid_domain_time
-           | simp add: handle_reserved_irq_def
+     apply (wp reschedule_required_valid_domain_time handle_reserved_irq_valid_domain_time
+           | simp
            | wp_once hoare_drop_imp)+
-    apply clarsimp
    done
+
 
 end
 

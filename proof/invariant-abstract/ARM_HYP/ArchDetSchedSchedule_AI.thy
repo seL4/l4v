@@ -399,6 +399,27 @@ global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
 
 context Arch begin global_naming ARM_HYP
 
+lemma dmo_scheduler_act_sane[wp]:
+  "\<lbrace>scheduler_act_sane\<rbrace> do_machine_op f \<lbrace>\<lambda>rv. scheduler_act_sane\<rbrace>"
+  unfolding scheduler_act_sane_def
+  by (rule hoare_lift_Pf[where f=cur_thread]; wp)
+
+lemma vgic_maintenance_irq_valid_sched[wp]:
+  "\<lbrace>valid_sched and invs and scheduler_act_sane and ct_not_queued\<rbrace>
+  vgic_maintenance \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  unfolding vgic_maintenance_def
+            get_gic_vcpu_ctrl_misr_def get_gic_vcpu_ctrl_eisr1_def get_gic_vcpu_ctrl_eisr0_def
+  apply (wpsimp wp: handle_fault_valid_sched thread_get_wp'
+              simp: do_machine_op_bind valid_fault_def
+         | rule conjI | strengthen conj_imp_strg)+
+  apply (clarsimp simp: st_tcb_at_def obj_at_def runnable_eq)
+  done
+
+lemma handle_reserved_irq_valid_sched:
+  "\<lbrace>valid_sched and invs and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow>  scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
+  handle_reserved_irq irq \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def)
+
 lemma handle_hyp_fault_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t\<rbrace>
     handle_hypervisor_fault t fault \<lbrace>\<lambda>_. valid_sched\<rbrace>"
@@ -409,7 +430,7 @@ end
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact handle_hyp_fault_valid_sched)?)
+  case 1 show ?case by (unfold_locales; (fact handle_hyp_fault_valid_sched handle_reserved_irq_valid_sched)?)
   qed
 
 end

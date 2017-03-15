@@ -131,8 +131,11 @@ lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fau
   apply (simp | wp)+
   done
 
+lemma vgic_maintenance_bcorres[wp]: "bcorres vgic_maintenance vgic_maintenance"
+  unfolding vgic_maintenance_def by wpsimp
+
 lemma handle_reserved_irq_bcorres[wp]: "bcorres (handle_reserved_irq a) (handle_reserved_irq a)"
-  by (simp add: handle_reserved_irq_def; wp)
+  unfolding handle_reserved_irq_def by wpsimp
 
 lemma handle_hypervisor_fault_bcorres[wp]: "bcorres (handle_hypervisor_fault a b) (handle_hypervisor_fault a b)"
   apply (cases b)
