@@ -30,7 +30,11 @@ definition
 where
   "sanitise_register t r v \<equiv> case r of
       CPSR \<Rightarrow>
-        if v && 0x1f = 0x1f then v else (v && 0xf8000000) || 0x150
+       if tcb_vcpu (tcb_arch t) \<noteq> None \<and>
+          v && 0x1f \<in> {0x10, 0x11, 0x12, 0x13, 0x17, 0x1b, 0x1f}
+             (* PMODE_(USER/FIQ/IRQ/SUPERVISOR/ABORT/UNDEFINED/SYSTEM) *)
+       then v
+       else (v && 0xf8000000) || 0x150
     | _    \<Rightarrow> v"
 
 end
