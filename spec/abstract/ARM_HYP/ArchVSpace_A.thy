@@ -15,7 +15,9 @@ Higher level functions for manipulating virtual address spaces
 chapter "ARM VSpace Functions"
 
 theory ArchVSpace_A
-imports "../Retype_A"
+imports
+  "../Retype_A"
+  "ArchTcb_A"
 begin
 
 context Arch begin global_naming ARM_A
@@ -333,7 +335,8 @@ where
         vcpu \<leftarrow> get_vcpu vr;
         hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
         sctlr \<leftarrow> do_machine_op getSCTLR;
-        set_vcpu vr  (vcpu\<lparr> vcpu_sctlr := sctlr, vcpu_VGIC := (vcpu_VGIC vcpu)\<lparr> vgicHCR := hcr \<rparr>\<rparr>)
+        regs' \<leftarrow> return $ (vcpu_regs vcpu) (VCPURegSCTLR := sctlr);
+        set_vcpu vr  (vcpu\<lparr> vcpu_VGIC := (vcpu_VGIC vcpu)\<lparr> vgicHCR := hcr \<rparr>, vcpu_regs := regs'\<rparr>)
       od
     | _ \<Rightarrow> return ());
     do_machine_op $ do
@@ -351,7 +354,7 @@ where
   "vcpu_enable vr \<equiv> do
      vcpu \<leftarrow> get_vcpu vr;
      do_machine_op $ do
-        setSCTLR (vcpu_sctlr vcpu);
+        setSCTLR (vcpu_regs vcpu VCPURegSCTLR);
         setHCR hcrVCPU;
         isb;
         set_gic_vcpu_ctrl_hcr (vgicHCR $ vcpu_VGIC vcpu)
@@ -382,7 +385,12 @@ where "dissociate_vcpu_tcb vr t \<equiv> do
   cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
   when (\<exists>a. cur_v = Some (vr,a)) vcpu_invalidate_active;
   set_vcpu vr (v\<lparr> vcpu_tcb := None \<rparr>);
-  arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := None \<rparr>) t
+  arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := None \<rparr>) t;
+  tcb \<leftarrow> gets_the $ get_tcb t;
+  as_user t $ do
+    cpsr \<leftarrow> getRegister CPSR;
+    setRegister CPSR $ sanitise_register tcb CPSR cpsr
+  od
 od"
 
 
@@ -401,7 +409,6 @@ where "associate_vcpu_tcb vr t \<equiv> do
   set_vcpu vr (v\<lparr> vcpu_tcb := Some t \<rparr>)
 od"
 
-
 text {* Register + context save for VCPUs *}
 definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -417,7 +424,7 @@ where
                                  hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
                                  return (sctlr, hcr)
                             od
-                        else return (vcpu_sctlr vcpu, vgicHCR $ vcpu_VGIC vcpu));
+                        else return (vcpu_regs vcpu VCPURegSCTLR, vgicHCR $ vcpu_VGIC vcpu));
        actlr \<leftarrow> do_machine_op getACTLR;
        vmcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_vmcr;
        apr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_apr;
@@ -426,12 +433,47 @@ where
        lr_vals \<leftarrow> do_machine_op $ mapM (get_gic_vcpu_ctrl_lr \<circ> of_nat) gicIndices;
        pairs \<leftarrow> return (zip gicIndices lr_vals);
        vcpuLR \<leftarrow> return (foldl (\<lambda>f p. fun_upd f (fst p) (Some (snd p))) (vgicLR $ vcpu_VGIC vcpu) pairs);
-       set_vcpu vr (vcpu \<lparr>vcpu_sctlr := sctlr,
-                          vcpu_actlr := actlr,
+
+       (* save banked registers *)
+       lr_svc \<leftarrow> do_machine_op get_lr_svc;
+       sp_svc \<leftarrow> do_machine_op get_sp_svc;
+       lr_abt \<leftarrow> do_machine_op get_lr_abt;
+       sp_abt \<leftarrow> do_machine_op get_sp_abt;
+       lr_und \<leftarrow> do_machine_op get_lr_und;
+       sp_und \<leftarrow> do_machine_op get_sp_und;
+       lr_irq \<leftarrow> do_machine_op get_lr_irq;
+       sp_irq \<leftarrow> do_machine_op get_sp_irq;
+       lr_fiq \<leftarrow> do_machine_op get_lr_fiq;
+       sp_fiq \<leftarrow> do_machine_op get_sp_fiq;
+       r8_fiq \<leftarrow> do_machine_op get_r8_fiq;
+       r9_fiq \<leftarrow> do_machine_op get_r9_fiq;
+       r10_fiq \<leftarrow> do_machine_op get_r10_fiq;
+       r11_fiq \<leftarrow> do_machine_op get_r11_fiq;
+       r12_fiq \<leftarrow> do_machine_op get_r12_fiq;
+
+       regs' \<leftarrow> return $ (vcpu_regs vcpu) (VCPURegSCTLR:= sctlr,
+                                           VCPURegLRsvc:= lr_svc,
+                                           VCPURegSPsvc:= sp_svc,
+                                           VCPURegLRabt:= lr_abt,
+                                           VCPURegSPabt:= sp_abt,
+                                           VCPURegLRund:= lr_und,
+                                           VCPURegSPund:= sp_und,
+                                           VCPURegLRirq:= lr_irq,
+                                           VCPURegSPirq:= sp_irq,
+                                           VCPURegLRfiq:= lr_fiq,
+                                           VCPURegSPfiq:= sp_fiq,
+                                           VCPURegR8fiq:= r8_fiq,
+                                           VCPURegR9fiq:= r9_fiq,
+                                           VCPURegR10fiq:= r10_fiq,
+                                           VCPURegR11fiq:= r11_fiq,
+                                           VCPURegR12fiq:= r12_fiq);
+
+       set_vcpu vr (vcpu \<lparr>vcpu_actlr := actlr,
                           vcpu_VGIC  := (vcpu_VGIC vcpu) \<lparr> vgicHCR := hcr,
                                                            vgicVMCR := vmcr,
                                                            vgicAPR := apr,
-                                                           vgicLR := vcpuLR \<rparr> \<rparr>);
+                                                           vgicLR := vcpuLR \<rparr>,
+                          vcpu_regs := regs' \<rparr>);
        do_machine_op isb
      od
  | _ \<Rightarrow> fail (* vcpu_save: no VCPU to save *)
@@ -450,6 +492,22 @@ where
          set_gic_vcpu_ctrl_apr (vgicAPR vgic);
          mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (of_int (fst p)) (the (snd p)))
               (map (\<lambda>i. (i, (vgicLR vgic) (nat i))) [0 ..  gicVCPUMaxNumLR-1]);
+         (* restore banked VCPU registers except SCTLR (that's in VCPUEnable) *)
+         set_lr_svc (vcpu_regs vcpu VCPURegLRsvc);
+         set_sp_svc (vcpu_regs vcpu VCPURegSPsvc);
+         set_lr_abt (vcpu_regs vcpu VCPURegLRabt);
+         set_sp_abt (vcpu_regs vcpu VCPURegSPabt);
+         set_lr_und (vcpu_regs vcpu VCPURegLRund);
+         set_sp_und (vcpu_regs vcpu VCPURegSPund);
+         set_lr_irq (vcpu_regs vcpu VCPURegLRirq);
+         set_sp_irq (vcpu_regs vcpu VCPURegSPirq);
+         set_lr_fiq (vcpu_regs vcpu VCPURegLRfiq);
+         set_sp_fiq (vcpu_regs vcpu VCPURegSPfiq);
+         set_r8_fiq (vcpu_regs vcpu VCPURegR8fiq);
+         set_r9_fiq (vcpu_regs vcpu VCPURegR9fiq);
+         set_r10_fiq (vcpu_regs vcpu VCPURegR10fiq);
+         set_r11_fiq (vcpu_regs vcpu VCPURegR11fiq);
+         set_r12_fiq (vcpu_regs vcpu VCPURegR12fiq);
          setACTLR (vcpu_actlr vcpu)
      od;
      vcpu_enable vr
@@ -497,14 +555,6 @@ where
               modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>)
             od))
    od"
-
-text {* Save register and context for current VCPU, then prepare for removal. *}
-definition
-  "vcpu_clean_invalidate_active \<equiv> do
-    cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
-    vcpu_save cur_v;
-    vcpu_invalidate_active
-  od"
 
 text {*
   Prepare a given VCPU for removal: dissociate it, and clean up current VCPU state

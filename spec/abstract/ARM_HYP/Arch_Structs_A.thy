@@ -147,9 +147,9 @@ record  GICVCPUInterface =
 
 record vcpu =
   vcpu_tcb   :: "obj_ref option"
-  vcpu_sctlr :: machine_word
   vcpu_actlr :: machine_word
   vcpu_VGIC  :: GICVCPUInterface
+  vcpu_regs :: "vcpureg \<Rightarrow> machine_word"
 
 end_qualify
 
@@ -163,6 +163,7 @@ definition  "vgicHCREN \<equiv> 0x1 :: machine_word"         (* VGIC_HCR_EN *)
 definition  "sctlrDefault \<equiv> 0xc5187c :: machine_word" (* SCTLR_DEFAULT *)
 definition  "actlrDefault \<equiv> 0x40 :: machine_word"     (* ACTLR_DEFAULT *)
 
+definition "vcpu_sctlr vcpu \<equiv> vcpu_regs vcpu VCPURegSCTLR"
 
 definition
   default_gic_vcpu_interface :: GICVCPUInterface
@@ -177,9 +178,9 @@ definition
   default_vcpu :: vcpu where
   "default_vcpu \<equiv> \<lparr>
       vcpu_tcb    = None,
-      vcpu_sctlr  = sctlrDefault,
       vcpu_actlr  = actlrDefault,
-      vcpu_VGIC   = default_gic_vcpu_interface \<rparr>"
+      vcpu_VGIC   = default_gic_vcpu_interface,
+      vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrDefault) \<rparr>"
 
 
 text {*

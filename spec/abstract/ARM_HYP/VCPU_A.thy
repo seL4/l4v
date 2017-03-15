@@ -53,59 +53,107 @@ The only way to get lasting dissociation is to delete the TCB or the VCPU. See A
 subsection "VCPU: Read/Write Registers"
 
 definition
-  read_vcpu_register :: "obj_ref \<Rightarrow> (machine_word,'z::state_ext) s_monad"
+  read_vcpu_register :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> (machine_word,'z::state_ext) s_monad"
 where
-  "read_vcpu_register vcpu \<equiv>
+  "read_vcpu_register vcpu_ptr reg \<equiv>
   do
-    v \<leftarrow> get_vcpu vcpu;
-    return $ vcpu_sctlr v
+     cur_vcpu \<leftarrow> gets (arm_current_vcpu o arch_state);
+     (on_cur_vcpu, active) \<leftarrow> return (case cur_vcpu of
+          Some (vcpu_ptr', a) \<Rightarrow> (vcpu_ptr' = vcpu_ptr, a)
+       |  _ \<Rightarrow> (False, False));
+
+     if on_cur_vcpu
+         then case reg of
+                  VCPURegSCTLR \<Rightarrow> if active then do_machine_op getSCTLR
+                                            else do
+                                                vcpu \<leftarrow> get_vcpu vcpu_ptr;
+                                                return $ vcpu_regs vcpu reg
+                                            od
+                | VCPURegLRsvc \<Rightarrow> do_machine_op get_lr_svc
+                | VCPURegSPsvc \<Rightarrow> do_machine_op get_sp_svc
+                | VCPURegLRabt \<Rightarrow> do_machine_op get_lr_abt
+                | VCPURegSPabt \<Rightarrow> do_machine_op get_sp_abt
+                | VCPURegLRund \<Rightarrow> do_machine_op get_lr_und
+                | VCPURegSPund \<Rightarrow> do_machine_op get_sp_und
+                | VCPURegLRirq \<Rightarrow> do_machine_op get_lr_irq
+                | VCPURegSPirq \<Rightarrow> do_machine_op get_sp_irq
+                | VCPURegLRfiq \<Rightarrow> do_machine_op get_lr_fiq
+                | VCPURegSPfiq \<Rightarrow> do_machine_op get_sp_fiq
+                | VCPURegR8fiq \<Rightarrow> do_machine_op get_r8_fiq
+                | VCPURegR9fiq \<Rightarrow> do_machine_op get_r9_fiq
+                | VCPURegR10fiq \<Rightarrow> do_machine_op get_r10_fiq
+                | VCPURegR11fiq \<Rightarrow> do_machine_op get_r11_fiq
+                | VCPURegR12fiq \<Rightarrow> do_machine_op get_r12_fiq
+         else do
+             vcpu \<leftarrow> get_vcpu vcpu_ptr;
+             return $ vcpu_regs vcpu reg
+         od
   od"
 
 definition
-  write_vcpu_register :: "obj_ref \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad"
+  write_vcpu_register :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "write_vcpu_register vcpu val \<equiv>
+  "write_vcpu_register vcpu_ptr reg val \<equiv>
   do
-    v \<leftarrow> get_vcpu vcpu;
-    val' \<leftarrow> return (case register_mask of
-              None \<Rightarrow> val
-            | Some m \<Rightarrow> (vcpu_sctlr v) && m || val && ~~m);
-    set_vcpu vcpu (v\<lparr> vcpu_sctlr := val' \<rparr> )
+     cur_vcpu \<leftarrow> gets (arm_current_vcpu o arch_state);
+     (on_cur_vcpu, active) \<leftarrow> return (case cur_vcpu of
+         Some (cv, a) \<Rightarrow> (cv = vcpu_ptr, a)
+       | _ \<Rightarrow> (False, False));
+
+     if on_cur_vcpu
+         then case reg of
+                  VCPURegSCTLR \<Rightarrow> if active then do_machine_op $ setSCTLR val
+                                            else do
+                                                vcpu \<leftarrow> get_vcpu vcpu_ptr;
+                                                set_vcpu vcpu_ptr $ vcpu \<lparr> vcpu_regs := (vcpu_regs vcpu) (reg := val) \<rparr>
+                                            od
+                | VCPURegLRsvc \<Rightarrow> do_machine_op $ set_lr_svc val
+                | VCPURegSPsvc \<Rightarrow> do_machine_op $ set_sp_svc val
+                | VCPURegLRabt \<Rightarrow> do_machine_op $ set_lr_abt val
+                | VCPURegSPabt \<Rightarrow> do_machine_op $ set_sp_abt val
+                | VCPURegLRund \<Rightarrow> do_machine_op $ set_lr_und val
+                | VCPURegSPund \<Rightarrow> do_machine_op $ set_sp_und val
+                | VCPURegLRirq \<Rightarrow> do_machine_op $ set_lr_irq val
+                | VCPURegSPirq \<Rightarrow> do_machine_op $ set_sp_irq val
+                | VCPURegLRfiq \<Rightarrow> do_machine_op $ set_lr_fiq val
+                | VCPURegSPfiq \<Rightarrow> do_machine_op $ set_sp_fiq val
+                | VCPURegR8fiq \<Rightarrow> do_machine_op $ set_r8_fiq val
+                | VCPURegR9fiq \<Rightarrow> do_machine_op $ set_r9_fiq val
+                | VCPURegR10fiq \<Rightarrow> do_machine_op $ set_r10_fiq val
+                | VCPURegR11fiq \<Rightarrow> do_machine_op $ set_r11_fiq val
+                | VCPURegR12fiq \<Rightarrow> do_machine_op $ set_r12_fiq val
+         else do
+             vcpu \<leftarrow> get_vcpu vcpu_ptr;
+             set_vcpu vcpu_ptr $ vcpu \<lparr> vcpu_regs := (vcpu_regs vcpu) (reg := val) \<rparr>
+         od
   od"
 
-text {*Currently, there is only one VCPU register available for reading/writing by the user: cpx.sctlr. *}
-
-definition decode_vcpu_read_register :: "obj_ref list \<Rightarrow> arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
+definition decode_vcpu_read_register :: "machine_word list \<Rightarrow> arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where
-  "decode_vcpu_read_register ptrs cap \<equiv> case (ptrs, cap) of
-      (_, VCPUCap p) \<Rightarrow> returnOk $ InvokeVCPU $ VCPUReadRegister p
+  "decode_vcpu_read_register args cap \<equiv> case (args, cap) of
+      (reg#_, VCPUCap p) \<Rightarrow> if fromEnum (maxBound::vcpureg) < unat reg
+                           then throwError (InvalidArgument 1)
+                           else returnOk $ InvokeVCPU $ VCPUReadRegister p $ toEnum (unat reg)
     | (_, _) \<Rightarrow> throwError TruncatedMessage"
 
-definition decode_vcpu_write_register :: "obj_ref list \<Rightarrow> arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
+definition decode_vcpu_write_register :: "machine_word list \<Rightarrow> arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where
-  "decode_vcpu_write_register ptrs cap \<equiv> case (ptrs, cap) of
-    (val # _, VCPUCap p) \<Rightarrow> returnOk $ InvokeVCPU $ VCPUWriteRegister p val
+  "decode_vcpu_write_register args cap \<equiv> case (args, cap) of
+    (reg#val#_, VCPUCap p) \<Rightarrow> if fromEnum (maxBound::vcpureg) < unat reg
+                              then throwError (InvalidArgument 1)
+                              else returnOk $ InvokeVCPU $ VCPUWriteRegister p (toEnum (unat reg)) val
   | (_, _) \<Rightarrow> throwError TruncatedMessage"
 
-definition invoke_vcpu_read_register :: "obj_ref \<Rightarrow> (data list, 'z::state_ext) s_monad"
-where "invoke_vcpu_read_register v \<equiv> do
-   ct \<leftarrow> gets cur_thread;
-   cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
-   (case cur_v of
-      Some (vr, _) \<Rightarrow> vcpu_clean_invalidate_active
-    | None \<Rightarrow> return ());
-   val \<leftarrow> read_vcpu_register v;
+definition invoke_vcpu_read_register :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> (data list, 'z::state_ext) s_monad"
+where "invoke_vcpu_read_register v reg \<equiv> do
+   val \<leftarrow> read_vcpu_register v reg;
    return [val]
 od"
 
-definition invoke_vcpu_write_register :: "obj_ref \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad"
-where "invoke_vcpu_write_register v val \<equiv> do
-   cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
-   (case cur_v of
-      Some (vr, _) \<Rightarrow> vcpu_clean_invalidate_active
-    | None \<Rightarrow> return ());
-   write_vcpu_register v val
-   od"
+definition
+  invoke_vcpu_write_register :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "invoke_vcpu_write_register v reg val \<equiv>  write_vcpu_register v reg val"
 
 text {* VCPU : inject IRQ *}
 
@@ -161,10 +209,10 @@ text {* VCPU perform and decode main functions *}
 definition
 perform_vcpu_invocation :: "vcpu_invocation \<Rightarrow> (data list,'z::state_ext) s_monad" where
 "perform_vcpu_invocation iv \<equiv> case iv of
-    VCPUSetTCB vcpu tcb \<Rightarrow> do associate_vcpu_tcb tcb vcpu ; return [] od
-  | VCPUReadRegister vcpu \<Rightarrow> invoke_vcpu_read_register vcpu
-  | VCPUWriteRegister vcpu val \<Rightarrow> do invoke_vcpu_write_register vcpu val ; return [] od
-  | VCPUInjectIRQ vcpu index vir \<Rightarrow> do invoke_vcpu_inject_irq vcpu index vir ; return [] od"
+    VCPUSetTCB vcpu tcb \<Rightarrow> do associate_vcpu_tcb tcb vcpu; return [] od
+  | VCPUReadRegister vcpu reg \<Rightarrow> invoke_vcpu_read_register vcpu reg
+  | VCPUWriteRegister vcpu reg val \<Rightarrow> do invoke_vcpu_write_register vcpu reg val; return [] od
+  | VCPUInjectIRQ vcpu index vir \<Rightarrow> do invoke_vcpu_inject_irq vcpu index vir; return [] od"
 
 
 definition decode_vcpu_invocation ::
