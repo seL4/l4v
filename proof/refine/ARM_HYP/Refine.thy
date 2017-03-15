@@ -901,12 +901,12 @@ lemma ckernel_invariant:
    apply (drule use_valid[OF _ valid_corres_combined
                             [OF kernel_entry_invs entry_corres],
                             OF _ kernelEntry_invs'[THEN hoare_weaken_pre]])
-     apply fastforce
+     subgoal by fastforce
     apply (fastforce simp: ex_abs_def sch_act_simple_def ct_running_related ct_idle_related
                            sched_act_rct_related)
    apply (clarsimp simp: kernel_call_H_def)
-   apply (fastforce simp: ex_abs_def sch_act_simple_def ct_running_related ct_idle_related
-                          sched_act_rct_related)
+   subgoal by (fastforce simp: ex_abs_def sch_act_simple_def ct_running_related ct_idle_related
+                              sched_act_rct_related)
 
   apply (erule_tac P="a \<and> b" for a b in disjE)
    apply (clarsimp simp add: do_user_op_H_def monad_to_transition_def)
@@ -916,12 +916,11 @@ lemma ckernel_invariant:
      apply (rule valid_corres_combined[OF do_user_op_invs2 corres_guard_imp2[OF do_user_op_corres]])
       apply clarsimp
      apply (rule doUserOp_invs'[THEN hoare_weaken_pre])
-     apply (fastforce simp: ex_abs_def domain_time_rel_eq domain_list_rel_eq)
+     apply (fastforce simp: ex_abs_def)
     apply (clarsimp simp: ex_abs_def, rule_tac x=s in exI,
             clarsimp simp: ct_running_related sched_act_rct_related)
    apply (clarsimp simp: ex_abs_def)
-   apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related
-                          domain_time_rel_eq)
+   apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related)
 
   apply (erule_tac P="a \<and> b \<and> c \<and> (\<exists>x. d x)" for a b c d in disjE)
    apply (clarsimp simp add: do_user_op_H_def monad_to_transition_def)
