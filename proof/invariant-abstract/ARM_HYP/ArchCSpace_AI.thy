@@ -23,7 +23,7 @@ named_theorems CSpace_AI_assms
 (* FIXME: move? *)
 lemma getActiveIRQ_wp [CSpace_AI_assms]:
   "irq_state_independent_A P \<Longrightarrow>
-   valid P (do_machine_op getActiveIRQ) (\<lambda>_. P)"
+   valid P (do_machine_op (getActiveIRQ in_kernel)) (\<lambda>_. P)"
   apply (simp add: getActiveIRQ_def do_machine_op_def split_def exec_gets
                    select_f_select[simplified liftM_def]
                    select_modify_comm gets_machine_state_modify)

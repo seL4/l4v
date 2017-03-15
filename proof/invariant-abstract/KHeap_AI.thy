@@ -57,6 +57,9 @@ requalify_facts
   wellformed_arch_obj_same_type
   default_arch_object_not_live
   default_tcb_not_live
+
+  getActiveIRQ_neq_non_kernel
+  dmo_getActiveIRQ_non_kernel
 end
 
 lemmas cap_is_device_obj_is_device[simp] = cap_is_device_obj_is_device

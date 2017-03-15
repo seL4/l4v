@@ -183,7 +183,7 @@ definition
   check_active_irq :: "(bool,'z :: state_ext) s_monad"
   where
   "check_active_irq \<equiv> do
-      irq \<leftarrow> do_machine_op getActiveIRQ;
+      irq \<leftarrow> do_machine_op $ getActiveIRQ False;
       return (irq \<noteq> None)
   od"
 

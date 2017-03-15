@@ -450,7 +450,7 @@ locale EmptyFail_AI_call_kernel = EmptyFail_AI_schedule state_ext_t
   assumes activate_thread_empty_fail[wp]:
     "empty_fail (activate_thread :: (unit, 'state_ext) s_monad)"
   assumes getActiveIRQ_empty_fail[wp]:
-    "empty_fail getActiveIRQ"
+    "empty_fail (getActiveIRQ in_kernel)"
   assumes handle_event_empty_fail[wp]:
     "\<And>event. empty_fail (handle_event event :: (unit, 'state_ext) p_monad)"
   assumes handle_interrupt_empty_fail[wp]:

@@ -114,7 +114,7 @@ locale CSpace_AI_getActiveIRQ_wp =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes getActiveIRQ_wp[wp]:
     "\<And>P :: 'state_ext state \<Rightarrow> bool.
-      irq_state_independent_A P \<Longrightarrow> valid P (do_machine_op getActiveIRQ) (\<lambda>_. P)"
+      irq_state_independent_A P \<Longrightarrow> valid P (do_machine_op (getActiveIRQ in_kernel)) (\<lambda>_. P)"
 
 
 lemma OR_choiceE_weak_wp:

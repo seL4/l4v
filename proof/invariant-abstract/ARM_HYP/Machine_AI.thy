@@ -328,7 +328,7 @@ lemma no_fail_freeMemory[simp, wp]:
 
 
 lemma no_fail_getActiveIRQ[wp]:
-  "no_fail \<top> getActiveIRQ"
+  "no_fail \<top> (getActiveIRQ in_kernel)"
   apply (simp add: getActiveIRQ_def)
   apply (rule no_fail_pre)
    apply (wp non_fail_select)
@@ -338,7 +338,7 @@ lemma no_fail_getActiveIRQ[wp]:
 definition "irq_state_independent P \<equiv> \<forall>f s. P s \<longrightarrow> P (irq_state_update f s)"
 
 lemma getActiveIRQ_inv [wp]:
-  "\<lbrakk>irq_state_independent P\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> getActiveIRQ \<lbrace>\<lambda>rv. P\<rbrace>"
+  "\<lbrakk>irq_state_independent P\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: getActiveIRQ_def)
   apply (wp alternative_wp select_wp)
   apply (simp add: irq_state_independent_def)
@@ -529,7 +529,7 @@ lemma no_irq_loadWord: "no_irq (loadWord x)"
   done
 
 
-lemma no_irq_getActiveIRQ: "no_irq getActiveIRQ"
+lemma no_irq_getActiveIRQ: "no_irq (getActiveIRQ in_kernel)"
   apply (clarsimp simp: no_irq_def)
   apply (rule getActiveIRQ_inv)
   apply (simp add: irq_state_independent_def)
@@ -671,7 +671,7 @@ lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
   done
 
 lemma getActiveIRQ_le_maxIRQ':
-  "\<lbrace>\<lambda>s. \<forall>irq > maxIRQ. irq_masks s irq\<rbrace> getActiveIRQ \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>irq > maxIRQ. irq_masks s irq\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: getActiveIRQ_def)
   apply (wp alternative_wp select_wp)
   apply clarsimp
@@ -681,10 +681,26 @@ lemma getActiveIRQ_le_maxIRQ':
 
 (* FIXME: follows already from getActiveIRQ_le_maxIRQ *)
 lemma getActiveIRQ_neq_Some0xFF':
-  "\<lbrace>\<top>\<rbrace> getActiveIRQ \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
   apply (simp add: getActiveIRQ_def)
   apply (wp alternative_wp select_wp)
   apply simp
+  done
+
+lemma getActiveIRQ_neq_non_kernel:
+  "\<lbrace>\<top>\<rbrace> getActiveIRQ True \<lbrace>\<lambda>rv s. rv \<notin> Some ` non_kernel_IRQs \<rbrace>"
+  apply (simp add: getActiveIRQ_def)
+  apply (wp alternative_wp select_wp)
+  apply auto
+  done
+
+lemma dmo_getActiveIRQ_non_kernel[wp]:
+  "\<lbrace>\<top>\<rbrace> do_machine_op (getActiveIRQ True)
+   \<lbrace>\<lambda>rv s. \<forall>irq. rv = Some irq \<longrightarrow> irq \<in> non_kernel_IRQs \<longrightarrow> P irq s\<rbrace>"
+  unfolding do_machine_op_def
+  apply wpsimp
+  apply (drule use_valid, rule getActiveIRQ_neq_non_kernel, rule TrueI)
+  apply clarsimp
   done
 
 lemma empty_fail_isb: "empty_fail  isb"
