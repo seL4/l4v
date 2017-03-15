@@ -1940,7 +1940,7 @@ definition
   checkActiveIRQ :: "(kernel_state, bool) nondet_monad"
   where
   "checkActiveIRQ \<equiv>
-   do irq \<leftarrow> doMachineOp getActiveIRQ;
+   do irq \<leftarrow> doMachineOp (getActiveIRQ False);
       return (irq \<noteq> None)
    od"
 
