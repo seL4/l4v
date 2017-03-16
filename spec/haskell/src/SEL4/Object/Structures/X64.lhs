@@ -24,8 +24,8 @@ This module makes use of the GHC extension allowing declaration of types with no
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware.X64
 > import Data.Array
-> import Data.Word (Word16, Word64)
 > import Data.Bits
+> import Data.Word(Word64)
 
 \end{impdetails}
 
@@ -84,9 +84,9 @@ This module makes use of the GHC extension allowing declaration of types with no
 >     deriving Show
 
 > archObjSize ::  ArchKernelObject -> Int
-> archObjSize a = case a of 
+> archObjSize a = case a of
 >                 KOASIDPool _ -> pageBits
->                 KOPTE _ -> 3 
+>                 KOPTE _ -> 3
 >                 KOPDE _ -> 3
 >                 KOPDPTE _ -> 3
 >                 KOPML4E _ -> 3
@@ -108,7 +108,7 @@ present on all platforms is stored here.
 >     atcbContext = newContext }
 
 > atcbContextSet :: UserContext -> ArchTCB -> ArchTCB
-> atcbContextSet uc at = at { atcbContext = uc }
+> atcbContextSet uc atcb = atcb { atcbContext = uc }
 >
 > atcbContextGet :: ArchTCB -> UserContext
 > atcbContextGet = atcbContext
@@ -122,7 +122,7 @@ An ASID pool is an array of pointers to page directories. This is used to implem
 
 An ASID is an unsigned word. Note that it is a \emph{virtual} address space identifier, and does not correspond to any hardware-defined identifier.
 
-> newtype ASID = ASID Word64
+> newtype ASID = ASID { fromASID :: Word64 }
 >     deriving (Show, Eq, Ord, Enum, Real, Integral, Num, Bits, Ix, Bounded)
 
 ASIDs are mapped to address space roots by a global two-level table. The actual ASID values are opaque to the user, as are the sizes of the levels of the tables; ASID allocation calls will simply return an error once the available ASIDs are exhausted.
@@ -141,4 +141,11 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 
 > asidHighBitsOf :: ASID -> ASID
 > asidHighBitsOf asid = (asid `shiftR` asidLowBits) .&. mask asidHighBits
+
+> data CR3 = CR3 {
+>     cr3BaseAddress :: PAddr,
+>     cr3pcid :: ASID }
+>     deriving (Show, Eq)
+
+
 

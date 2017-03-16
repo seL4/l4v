@@ -71,12 +71,12 @@ IOPTs
 X64 has two writable user data caps
 
 > -- FIXME x64: io_space_capdata_get_domainID
-> ioSpaceGetDomainID :: Word -> Word16
-> ioSpaceGetDomainID _ = error "Not implemented"
+>-- ioSpaceGetDomainID :: Word -> Word16
+>-- ioSpaceGetDomainID _ = error "Not implemented"
 
-> -- FIXME x64: io_space_capdata_get_PCIDevice
-> ioSpaceGetPCIDevice :: Word -> Maybe IOASID
-> ioSpaceGetPCIDevice _ = error "Not implemented"
+>-- -- FIXME x64: io_space_capdata_get_PCIDevice
+>-- ioSpaceGetPCIDevice :: Word -> Maybe IOASID
+>-- ioSpaceGetPCIDevice _ = error "Not implemented"
 
 > -- FIXME x64: io_port_capdata_get_firstPort
 > ioPortGetFirstPort :: Word -> Word16

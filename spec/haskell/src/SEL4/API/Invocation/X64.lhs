@@ -53,7 +53,8 @@ ASID pool structures, and on IO ports.
 >         pdptMapCap :: Capability,
 >         pdptMapCTSlot :: PPtr CTE,
 >         pdptMapPML4E :: PML4E,
->         pdptMapPML4Slot :: PPtr PML4E }
+>         pdptMapPML4Slot :: PPtr PML4E,
+>         pdptMapVSpace :: PPtr PML4E }
 >     deriving Show
 
 > data PageDirectoryInvocation
@@ -64,7 +65,8 @@ ASID pool structures, and on IO ports.
 >         pdMapCap :: Capability,
 >         pdMapCTSlot :: PPtr CTE,
 >         pdMapPDPTE :: PDPTE,
->         pdMapPDPTSlot :: PPtr PDPTE }
+>         pdMapPDPTSlot :: PPtr PDPTE,
+>         pdMapVSpace :: PPtr PML4E }
 >     deriving Show
 
 > data PageTableInvocation
@@ -75,7 +77,8 @@ ASID pool structures, and on IO ports.
 >         ptMapCap :: Capability,
 >         ptMapCTSlot :: PPtr CTE,
 >         ptMapPDE :: PDE,
->         ptMapPDSlot :: PPtr PDE }
+>         ptMapPDSlot :: PPtr PDE,
+>         ptMapVSpace :: PPtr PML4E }
 >     deriving Show
 
 IO page tables are contained in other IO page tables. The topmost one sits in a

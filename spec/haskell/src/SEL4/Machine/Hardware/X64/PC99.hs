@@ -131,15 +131,16 @@ foreign import ccall unsafe "qemu_store_word_phys"
 
 -- PC99 stubs
 
-data CR3 = X64CR3 { cr3BaseAddress :: PAddr, cr3pcid :: Word }
 writeCR3 = error "Unimplemented"
-readCR3 = error "Unimplemented"
+resetCR3 = error "Unimplemented"
 
 invalidateTLB = error "Unimplemented"
 mfence = error "Unimplemented"
 addrFromKPPtr = error "Unimplemented" -- FIXME two kernel windows
 pptrBase = error "Unimplemented" -- FIXME two kernel windows
 hwASIDInvalidate = error "Unimplemented"
+invalidateASID = error "Unimplemented"
+invalidateTranslationSingleASID = error "unimplemented"
 
 
 getFaultAddress :: Ptr CallbackData -> IO VPtr

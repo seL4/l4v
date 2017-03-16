@@ -87,7 +87,7 @@ This module defines the machine-specific interrupt handling routines for x64.
 > performIRQControl (ArchInv.IssueIRQHandlerIOAPIC (IRQ irq) destSlot srcSlot ioapic
 >         pin level polarity vector) = withoutPreemption $ do
 >     doMachineOp $ Arch.ioapicMapPinToVector ioapic pin level polarity vector
->     irqState <- doMachineOp $ Arch.irqStateIRQIOAPICNew ioapic pin level polarity (1::Word) (0::Word)
+>     irqState <- return $ Arch.IRQIOAPIC ioapic pin level polarity True
 >     doMachineOp $ Arch.updateIRQState irq irqState
 >     -- do same thing as generic path in performIRQControl in Interrupt.lhs
 >     setIRQState IRQSignal (IRQ irq)
@@ -96,7 +96,7 @@ This module defines the machine-specific interrupt handling routines for x64.
 >
 > performIRQControl (ArchInv.IssueIRQHandlerMSI (IRQ irq) destSlot srcSlot pciBus
 >         pciDev pciFunc handle) = withoutPreemption $ do
->     irqState <- doMachineOp $ Arch.irqStateIRQMSINew pciBus pciDev pciFunc handle
+>     irqState <- return $ Arch.IRQMSI pciBus pciDev pciFunc handle
 >     doMachineOp $ Arch.updateIRQState irq irqState
 >     -- do same thing as generic path in performIRQControl in Interrupt.lhs
 >     setIRQState IRQSignal (IRQ irq)

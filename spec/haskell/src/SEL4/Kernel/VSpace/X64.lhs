@@ -322,7 +322,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >             if pt' == addrFromPPtr pdpt then return () else throw InvalidRoot
 >         _ -> throw InvalidRoot
 >     withoutFailure $ do
->         flushPDPT vspace vaddr pdpt
+>         flushPDPT (addrFromPPtr vspace) asid
 >         storePML4E pmSlot InvalidPML4E
 
 \subsubsection{Deleting a Page Directory}
@@ -337,8 +337,9 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >             if pd' == addrFromPPtr pd then return () else throw InvalidRoot
 >         _ -> throw InvalidRoot
 >     withoutFailure $ do
->         doMachineOp invalidatePageStructureCache -- FIXME x64: hardware implement
+>         flushPD (addrFromPPtr vspace) asid
 >         storePDPTE pdptSlot InvalidPDPTE
+>         invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
 
 \subsubsection{Deleting a Page Table}
 
@@ -354,7 +355,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >     withoutFailure $ do
 >         flushTable vspace vaddr pt
 >         storePDE pdSlot InvalidPDE
->         doMachineOp invalidatePageStructureCache -- FIXME x64: hardware implement
+>         invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
 
 
 \subsubsection{Unmapping a Frame}
@@ -408,8 +409,31 @@ This helper function checks that the mapping installed at a given PT or PD slot 
 
 \subsection{Address Space Switching}
 
-> setCurrentVSpaceRoot :: PAddr -> ASID -> MachineMonad ()
-> setCurrentVSpaceRoot addr (ASID asid) = archSetCurrentVSpaceRoot addr (Word asid)
+> getCurrentCR3 :: Kernel CR3
+> getCurrentCR3 = gets (x64KSCurrentCR3 . ksArchState)
+
+> setCurrentCR3 :: CR3 -> Kernel ()
+> setCurrentCR3 cr3 = do
+>     modify (\s -> s { ksArchState = (ksArchState s) { x64KSCurrentCR3 = cr3 }})
+>     doMachineOp $ writeCR3 (cr3BaseAddress cr3) $ fromASID $ cr3pcid cr3
+
+> invalidateLocalPageStructureCacheASID :: PAddr -> ASID -> Kernel ()
+> invalidateLocalPageStructureCacheASID ptr asid = do
+>     curCR3 <- getCurrentCR3
+>     setCurrentCR3 (CR3 ptr asid)
+>     setCurrentCR3 curCR3
+
+> invalidatePageStructureCacheASID :: PAddr -> ASID -> Kernel ()
+> invalidatePageStructureCacheASID p a = invalidateLocalPageStructureCacheASID p a
+
+> getCurrentVSpaceRoot :: Kernel PAddr
+> getCurrentVSpaceRoot = do
+>     cur <- getCurrentCR3
+>     return $ cr3BaseAddress cur
+
+> setCurrentVSpaceRoot :: PAddr -> ASID -> Kernel ()
+> setCurrentVSpaceRoot vspace asid = setCurrentCR3 $ CR3 vspace asid
+
 
 > -- FIXME x64: Currently we don't have global state for the CR3 so
 > -- we can't test whether or not we should write to it. We should
@@ -426,11 +450,14 @@ This helper function checks that the mapping installed at a given PT or PD slot 
 >                     capPML4BasePtr = pd }) -> do
 >                 pd' <- findVSpaceForASID asid
 >                 when (pd /= pd') $ throw InvalidRoot
->                 withoutFailure $ doMachineOp $ setCurrentVSpaceRoot (addrFromPPtr pd) asid
+>                 -- update asid map
+>                 curCR3 <- withoutFailure $ getCurrentCR3
+>                 when (curCR3 /= CR3 (addrFromPPtr pd) asid) $
+>                         withoutFailure $ setCurrentCR3 $ CR3 (addrFromPPtr pd) asid
 >             _ -> throw InvalidRoot)
 >         (\_ -> do
 >             globalPML4 <- gets (x64KSGlobalPML4 . ksArchState)
->             doMachineOp $ setCurrentVSpaceRoot (addrFromKPPtr globalPML4) 0)
+>             setCurrentVSpaceRoot (addrFromKPPtr globalPML4) 0)
 
 \subsection{Helper Functions}
 
@@ -462,16 +489,14 @@ Note that implementations with separate high and low memory regions may also wis
 
 %FIXME x64: needs review
 
-> flushPDPT :: PPtr PML4E -> VPtr -> PPtr PDPTE -> Kernel ()
-> flushPDPT _ _ _ = doMachineOp $ resetCR3
+> flushAll :: PAddr -> ASID -> Kernel ()
+> flushAll vspace asid  = doMachineOp $ invalidateASID vspace (fromASID asid)
 
-%FIXME x64: needs review
+> flushPDPT  :: PAddr -> ASID -> Kernel ()
+> flushPDPT p a = flushAll p a
 
-> flushPageDirectory :: PPtr PML4E -> VPtr -> PPtr PDE -> Kernel ()
-> flushPageDirectory _ _ _ = doMachineOp $ resetCR3
-
-> flushCacheRange :: PPtr a -> Int -> Kernel ()
-> flushCacheRange _ _  = fail "not implemeneted"
+> flushPD :: PAddr -> ASID -> Kernel ()
+> flushPD p a = flushAll p a
 
 
 %FIXME x64: needs review
@@ -835,7 +860,8 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 >                 pdptMapCap = ArchObjectCap $ cap { capPDPTMappedAddress = Just (asid, (VPtr vaddr)) },
 >                 pdptMapCTSlot = cte,
 >                 pdptMapPML4E = pml4e,
->                 pdptMapPML4Slot = pml4Slot }
+>                 pdptMapPML4Slot = pml4Slot,
+>                 pdptMapVSpace = vspace }
 >         (ArchInvocationLabel X64PDPTMap, _, _) -> throw TruncatedMessage
 >         (ArchInvocationLabel X64PDPTUnmap, _, _) -> do
 >             cteVal <- withoutFailure $ getCTE cte
@@ -883,7 +909,8 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 >                 pdMapCap = ArchObjectCap $ cap { capPDMappedAddress = Just (asid, (VPtr vaddr)) },
 >                 pdMapCTSlot = cte,
 >                 pdMapPDPTE = pdpte,
->                 pdMapPDPTSlot = pdptSlot }
+>                 pdMapPDPTSlot = pdptSlot,
+>                 pdMapVSpace = pml }
 >         (ArchInvocationLabel X64PageDirectoryMap, _, _) -> throw TruncatedMessage
 >         (ArchInvocationLabel X64PageDirectoryUnmap, _, _) -> do
 >             cteVal <- withoutFailure $ getCTE cte
@@ -931,7 +958,8 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 >                 ptMapCap = ArchObjectCap $ cap { capPTMappedAddress = Just (asid, (VPtr vaddr)) },
 >                 ptMapCTSlot = cte,
 >                 ptMapPDE = pde,
->                 ptMapPDSlot = pdSlot }
+>                 ptMapPDSlot = pdSlot,
+>                 ptMapVSpace = pml }
 >         (ArchInvocationLabel X64PageTableMap, _, _) -> throw TruncatedMessage
 >         (ArchInvocationLabel X64PageTableUnmap, _, _) -> do
 >             cteVal <- withoutFailure $ getCTE cte
@@ -951,18 +979,18 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 > decodeX64ASIDControlInvocation label args ASIDControlCap extraCaps =
 >     case (invocationType label, args, extraCaps) of
 >         (ArchInvocationLabel X64ASIDControlMakePool, index:depth:_,
->                         (untyped,parentSlot):(root,_):_) -> do
+>                         (untyped,parentSlot):(croot,_):_) -> do
 >             asidTable <- withoutFailure $ gets (x64KSASIDTable . ksArchState)
 >             let free = filter (\(x,y) -> x <= (1 `shiftL` asidHighBits) - 1 && isNothing y) $ assocs asidTable
 >             when (null free) $ throw DeleteFirst
 >             let base = (fst $ head free) `shiftL` asidLowBits
 >             let pool = makeObject :: ASIDPool
 >             frame <- case untyped of
->                 UntypedCap {} | capBlockSize untyped == objBits pool -> do
+>                 UntypedCap { capIsDevice = False } | capBlockSize untyped == objBits pool -> do
 >                     ensureNoChildren parentSlot
 >                     return $ capPtr untyped
 >                 _ -> throw $ InvalidCapability 1
->             destSlot <- lookupTargetSlot root (CPtr index) (fromIntegral depth)
+>             destSlot <- lookupTargetSlot croot (CPtr index) (fromIntegral depth)
 >             ensureEmptySlot destSlot
 >             return $ InvokeASIDControl $ MakePool {
 >                 makePoolFrame = frame,
@@ -1054,10 +1082,13 @@ Checking virtual address for page size dependent alignment:
 >     return $ []
 
 > performPDPTInvocation :: PDPTInvocation -> Kernel ()
-> performPDPTInvocation (PDPTMap cap ctSlot pml4e pml4Slot) = do
+> performPDPTInvocation (PDPTMap cap ctSlot pml4e pml4Slot vspace) = do
 >     updateCap ctSlot cap
 >     storePML4E pml4Slot pml4e
->     doMachineOp invalidatePageStructureCache
+>     asid <- case cap of
+>             ArchObjectCap (PageDirectoryCap _ (Just (a, _))) -> return a
+>             _ -> fail "should never happen"
+>     invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
 >
 > performPDPTInvocation (PDPTUnmap cap ctSlot) = do
 >     case capPDPTMappedAddress cap of
@@ -1072,10 +1103,13 @@ Checking virtual address for page size dependent alignment:
 >     updateCap ctSlot (ArchObjectCap $ cap { capPDPTMappedAddress = Nothing })
 
 > performPageDirectoryInvocation :: PageDirectoryInvocation -> Kernel ()
-> performPageDirectoryInvocation (PageDirectoryMap cap ctSlot pdpte pdptSlot) = do
+> performPageDirectoryInvocation (PageDirectoryMap cap ctSlot pdpte pdptSlot vspace) = do
 >     updateCap ctSlot cap
 >     storePDPTE pdptSlot pdpte
->     doMachineOp invalidatePageStructureCache
+>     asid <- case cap of
+>             ArchObjectCap (PageDirectoryCap _ (Just (a, _))) -> return a
+>             _ -> fail "should never happen"
+>     invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
 >
 > performPageDirectoryInvocation (PageDirectoryUnmap cap ctSlot) = do
 >     case capPDMappedAddress cap of
@@ -1091,10 +1125,13 @@ Checking virtual address for page size dependent alignment:
 
 
 > performPageTableInvocation :: PageTableInvocation -> Kernel ()
-> performPageTableInvocation (PageTableMap cap ctSlot pde pdSlot) = do
+> performPageTableInvocation (PageTableMap cap ctSlot pde pdSlot vspace) = do
 >     updateCap ctSlot cap
 >     storePDE pdSlot pde
->     doMachineOp invalidatePageStructureCache
+>     asid <- case cap of
+>             ArchObjectCap (PageTableCap _ (Just (a, _))) -> return a
+>             _ -> fail "should never happen"
+>     invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
 >
 > performPageTableInvocation (PageTableUnmap cap slot) = do
 >     case capPTMappedAddress cap of
@@ -1267,38 +1304,37 @@ The kernel model's x64 targets use an external simulation of the physical addres
 
 >-- deleteIOPageTable _ = error "Not an IOPageTable capability" -}
 
-> mapKernelWindow :: Kernel ()
-> mapKernelWindow = error "Unimplemented . init code"
+> mapKernelWindow  :: Kernel ()
+> mapKernelWindow = error "boot code unimplemented"
 
 > activateGlobalVSpace :: Kernel ()
-> activateGlobalVSpace = error "Unimplemented . init code"
+> activateGlobalVSpace = error "boot code unimplemented"
 
 > createIPCBufferFrame :: Capability -> VPtr -> KernelInit Capability
-> createIPCBufferFrame = error "Unimplemented . init code"
+> createIPCBufferFrame = error "boot code unimplemented"
 
 > createBIFrame :: Capability -> VPtr -> Word32 -> Word32 -> KernelInit Capability
-> createBIFrame = error "Unimplemented . init code"
+> createBIFrame = error "boot code unimplemented"
 
 > createFramesOfRegion :: Capability -> Region -> Bool -> KernelInit ()
-> createFramesOfRegion = error "Unimplemented . init code"
+> createFramesOfRegion = error "boot code unimplemented"
 
 > createITPDPTs :: Capability -> VPtr -> VPtr -> KernelInit Capability
-> createITPDPTs = error "Unimplemented . init code"
+> createITPDPTs  = error "boot code unimplemented"
 
 > writeITPDPTs :: Capability -> Capability -> KernelInit ()
-> writeITPDPTs = error "Unimplemented . init code"
+> writeITPDPTs  = error "boot code unimplemented"
 
 > createITASIDPool :: Capability -> KernelInit Capability
-> createITASIDPool = error "Unimplemented . init code"
+> createITASIDPool  = error "boot code unimplemented"
 
 > writeITASIDPool :: Capability -> Capability -> Kernel ()
-> writeITASIDPool = error "Unimplemented . init code"
+> writeITASIDPool  = error "boot code unimplemented"
 
 > createDeviceFrames :: Capability -> KernelInit ()
-> createDeviceFrames = error "Unimplemented . init code"
+> createDeviceFrames  = error "boot code unimplemented"
 
 > vptrFromPPtr :: PPtr a -> KernelInit VPtr
-> vptrFromPPtr (PPtr ptr) = do
->     offset <- gets initVPtrOffset
->     return $ (VPtr ptr) + offset
+> vptrFromPPtr  = error "boot code unimplemented"
+
 

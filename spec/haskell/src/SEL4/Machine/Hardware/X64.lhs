@@ -43,8 +43,6 @@ The machine monad contains a platform-specific opaque pointer, used by the exter
 
 > type IRQ = Platform.IRQ
 
-> type CR3 = Platform.CR3
-
 > type IOPort = Word16
 
 > toPAddr = Platform.PAddr
@@ -240,19 +238,11 @@ caches must be done separately.
 
 \subsubsection{Address Space Setup}
 
-> setCurrentCR3 :: CR3 -> MachineMonad ()
-> setCurrentCR3 cr3 = Platform.writeCR3 cr3
+> writeCR3 :: PAddr -> Word64 -> MachineMonad ()
+> writeCR3 vspace asid  = Platform.writeCR3 vspace asid
 
-> getCurrentCR3 :: MachineMonad CR3
-> getCurrentCR3 = do
->     cbptr <- ask
->     liftIO $ Platform.readCR3 cbptr
-
-> archSetCurrentVSpaceRoot :: PAddr -> Word -> MachineMonad ()
-> archSetCurrentVSpaceRoot pd asid =
->   setCurrentCR3 $ Platform.X64CR3 pd asid
-
-> resetCR3 = error "Unimplemented"
+> resetCR3 :: MachineMonad ()
+> resetCR3 = Platform.resetCR3
 
 \subsubsection{Memory Barriers}
 
@@ -269,6 +259,12 @@ caches must be done separately.
 
 > invalidatePageStructureCache :: MachineMonad ()
 > invalidatePageStructureCache = invalidateTLBEntry 0
+
+> invalidateASID :: PAddr -> Word64 -> MachineMonad ()
+> invalidateASID vspace asid = Platform.invalidateASID vspace asid
+
+> invalidateTranslationSingleASID :: PAddr -> Word64 -> MachineMonad ()
+> invalidateTranslationSingleASID vspace asid = Platform.invalidateTranslationSingleASID vspace asid
 
 \subsubsection{Page Table Structure}
 
@@ -631,11 +627,21 @@ IRQ parameters
 
 %FIXME: review how deeply we need to model this.
 
-> data X64IRQState = X64IRQState
+> data X64IRQState =
+>     IRQFree
+>   | IRQReserved
+>   | IRQMSI {
+>     msiBus :: Word,
+>     msiDev :: Word,
+>     msiFunc :: Word,
+>     msiHandle :: Word }
+>   | IRQIOAPIC {
+>     irqIOAPIC :: Word,
+>     irqPin :: Word,
+>     irqLevel :: Word,
+>     irqPolarity :: Word,
+>     irqMasked :: Bool }
 
-> irqStateIRQIOAPICNew = error "Unimplemented . FIXME see structures.bf"
-
-> irqStateIRQMSINew = error "Unimplemented . FIXME see structures.bf"
 
 > updateIRQState :: IRQ -> X64IRQState -> MachineMonad ()
 > updateIRQState _ _ = error "Unimplemented"
