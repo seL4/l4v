@@ -1861,11 +1861,11 @@ done
 
 definition
   "absArchState s' \<equiv>
-   case s' of ARMKernelState asid_tbl hwat anext am curvcpu vnumlistregs kvspace \<Rightarrow>
+   case s' of ARMKernelState asid_tbl hwat anext am curvcpu vnumlistregs globalpd kvspace \<Rightarrow>
      \<lparr>arm_asid_table = asid_tbl \<circ> ucast,
       arm_hwasid_table = hwat, arm_next_asid = anext,
       arm_asid_map = am, arm_current_vcpu = curvcpu, arm_gicvcpu_numlistregs = vnumlistregs,
-      arm_kernel_vspace = kvspace\<rparr>"
+      arm_kernel_vspace = kvspace, arm_us_global_pd = globalpd\<rparr>"
 
 lemma absArchState_correct:
 assumes rel:

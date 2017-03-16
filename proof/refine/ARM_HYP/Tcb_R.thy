@@ -334,11 +334,12 @@ lemma writereg_corres:
          apply (rule corres_split_nor)
             prefer 2
             apply (rule corres_as_user)
-            apply (simp add: zipWithM_mapM getRestartPC_def setNextPC_def)
+            apply (simp add: zipWithM_mapM getRestartPC_def setNextPC_def atcbVCPUPtr
+                       cong: register.case_cong)
             apply (rule corres_Id, simp+)
             apply (rule no_fail_pre, wp no_fail_mapM)
-               apply clarsimp
-(*               apply (wp no_fail_setRegister | simp)+
+               apply (clarsimp split del: if_split)
+               apply (wp no_fail_setRegister | simp)+
            apply (rule corres_split_nor)
               apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
               apply simp
@@ -346,7 +347,7 @@ lemma writereg_corres:
              apply (rule restart_corres)
             apply (wp static_imp_wp | clarsimp simp: invs'_def valid_state'_def
                                                dest!: global'_no_ex_cap)+
-  done*) sorry
+  done
 
 crunch it[wp]: suspend "\<lambda>s. P (ksIdleThread s)"
 
@@ -1552,8 +1553,9 @@ lemma tcbinv_corres:
      apply (rule_tac F="is_aligned word 5" in corres_req)
       apply (clarsimp simp add: is_aligned_weaken [OF tcb_aligned])
      apply (rule corres_guard_imp [OF tc_corres], clarsimp+)
-      apply (clarsimp simp: is_cnode_or_valid_arch_def
-                     split: option.split option.split_asm)
+      subgoal
+      by (clarsimp simp: is_cnode_or_valid_arch_def
+                  split: option.split option.split_asm)
      apply clarsimp
      apply (auto split: option.split_asm simp: newroot_rel_def)[1]
     apply (simp add: invokeTCB_def liftM_def[symmetric]

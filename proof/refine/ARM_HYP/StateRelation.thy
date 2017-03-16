@@ -139,9 +139,10 @@ where "vgic_map \<equiv> \<lambda>v. VGICInterface (ARM_A.vgicHCR v) (ARM_A.vgic
 definition
   vcpu_relation :: "ARM_A.vcpu \<Rightarrow> vcpu \<Rightarrow> bool"
 where
-  "vcpu_relation \<equiv> \<lambda>v v'. vcpu_tcb v = vcpuTCBPtr v' \<and> vcpu_sctlr v = vcpuSCTLR v' \<and>
-                          vcpu_actlr v = vcpuACTLR v' \<and>
-                           vgic_map (vcpu_VGIC v) = vcpuVGIC v'"
+  "vcpu_relation \<equiv> \<lambda>v v'. vcpu_tcb v = vcpuTCBPtr v' \<and>
+                           vcpu_actlr v = vcpuACTLR v' \<and>
+                           vgic_map (vcpu_VGIC v) = vcpuVGIC v' \<and>
+                           vcpu_regs v = vcpuRegs v'"
 
 definition
   ntfn_relation :: "Structures_A.notification \<Rightarrow> Structures_H.notification \<Rightarrow> bool"
@@ -470,7 +471,8 @@ where
        \<and> arm_asid_map s = armKSASIDMap s'
        \<and> arm_current_vcpu s = armHSCurVCPU s'
        \<and> arm_gicvcpu_numlistregs s = armKSGICVCPUNumListRegs s'
-       \<and> arm_kernel_vspace s = armKSKernelVSpace s'}"
+       \<and> arm_kernel_vspace s = armKSKernelVSpace s'
+       \<and> arm_us_global_pd s = armUSGlobalPD s'}"
 
 definition
   (* NOTE: this map discards the Ident right, needed on endpoints only *)

@@ -707,7 +707,7 @@ lemma vcpuSwitch_corres:
   qed
 
 lemma setCurrentPD_corres:
-  "corres dc \<top> \<top> (do_machine_op (setCurrentPD addr)) (doMachineOp (setCurrentPD addr))"
+  "addr = addr' \<Longrightarrow> corres dc \<top> \<top> (do_machine_op (setCurrentPD addr)) (doMachineOp (setCurrentPD addr'))"
   apply (simp add: setCurrentPD_def)
   apply (rule corres_machine_op)
   apply (rule corres_guard_imp)
@@ -734,12 +734,19 @@ lemma set_vm_root_corres:
 proof -
   have Q: "\<And>P P'. corres dc P P'
         (throwError ExceptionTypes_A.lookup_failure.InvalidRoot <catch>
-         (\<lambda>_ . do_machine_op $ setCurrentPD $ addrFromPPtr 0 ))
+         (\<lambda>_. do global_us_pd \<leftarrow> gets (arm_us_global_pd \<circ> arch_state);
+                 do_machine_op $ setCurrentPD $ addrFromPPtr global_us_pd
+              od))
         (throwError Fault_H.lookup_failure.InvalidRoot <catch>
-         (\<lambda>_ . doMachineOp $ setCurrentPD $ addrFromPPtr 0))"
+         (\<lambda>_ . do globalPD \<leftarrow> gets (armUSGlobalPD \<circ> ksArchState);
+                  doMachineOp $ setCurrentPD $ addrFromPPtr globalPD
+               od))"
     apply (rule corres_guard_imp)
       apply (rule corres_split_catch [where f=lfr])
-         apply (simp, rule setCurrentPD_corres)
+         apply (rule corres_split' [where P=\<top> and P'=\<top> and r'="op ="])
+            apply (clarsimp simp: state_relation_def arch_state_relation_def)
+           apply (simp, rule setCurrentPD_corres, rule refl)
+          apply wp+
         apply (subst corres_throwError, simp add: lookup_failure_map_def)
        apply (wp | simp)+
     done
@@ -776,7 +783,10 @@ proof -
                                       and valid_vspace_objs
                                       and valid_arch_state"
                             in corres_stateAssert_implied)
-                 apply (rule setCurrentPD_corres)
+                 apply (rule corres_split' [where P=\<top> and P'=\<top> and r'="op ="])
+                    apply (clarsimp simp: state_relation_def arch_state_relation_def)
+                   apply (rule setCurrentPD_corres, simp)
+                  apply wp+
                 apply (clarsimp simp: restrict_map_def state_relation_asid_map
                                elim!: ranE)
                 apply (frule(1) valid_asid_mapD)
@@ -3773,14 +3783,9 @@ lemma flushPage_invs' [wp]:
 
 lemma unmapPage_invs' [wp]:
   "\<lbrace>invs'\<rbrace> unmapPage sz asid vptr pptr \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: unmapPage_def)
-  apply (rule hoare_pre)
-   apply (wp lookupPTSlot_inv
-             mapM_storePTE_invs mapM_storePDE_invs
-             hoare_vcg_const_imp_lift
-         |wpc
-         |simp)+
-  done
+  unfolding unmapPage_def
+  by (wpsimp wp: lookupPTSlot_inv mapM_storePTE_invs mapM_storePDE_invs
+                 hoare_vcg_const_imp_lift)
 
 crunch (no_irq) no_irq[wp]: doFlush
 

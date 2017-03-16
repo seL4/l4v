@@ -396,7 +396,7 @@ lemma valid_sched_init[simp]:
   apply (clarsimp simp: valid_etcbs_def init_kheap_def st_tcb_at_kh_def obj_at_kh_def
                     obj_at_def is_etcb_at_def idle_thread_ptr_def init_globals_frame_def
                     valid_queues_2_def ct_not_in_q_def not_queued_def
-                    valid_sched_action_def is_activatable_def
+                    valid_sched_action_def is_activatable_def us_global_pd_ptr_def
                     ct_in_cur_domain_2_def valid_blocked_2_def valid_idle_etcb_def etcb_at'_def default_etcb_def)
   done
 

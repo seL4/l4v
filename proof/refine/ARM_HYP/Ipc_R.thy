@@ -2024,6 +2024,10 @@ crunch nosch[wp]: doIPCTransfer "\<lambda>s. P (ksSchedulerAction s)"
   (wp: hoare_drop_imps hoare_vcg_split_case_option mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
+lemma atcbVCPUPtr:
+  "tcb_relation t t' \<Longrightarrow> atcbVCPUPtr (tcbArch t') = tcb_vcpu (tcb_arch t)"
+  unfolding tcb_relation_def arch_tcb_relation_def by simp
+
 lemma handle_fault_reply_registers_corres:
   "corres (op =) (tcb_at t) (tcb_at' t)
            (do t' \<leftarrow> thread_get id t;
@@ -2046,8 +2050,8 @@ lemma handle_fault_reply_registers_corres:
        apply (rule corres_split)
        apply (rule corres_trivial, simp)
       apply (rule corres_as_user')
-      apply(simp add: set_register_def setRegister_def sanitise_register_def
-                      sanitiseRegister_def syscallMessage_def)
+      apply(simp add: set_register_def setRegister_def sanitise_register_def atcbVCPUPtr
+                      sanitiseRegister_def syscallMessage_def Let_def cong: register.case_cong)
       apply(subst zipWithM_x_modify)+
       apply(rule corres_modify')
        apply (simp|wp)+

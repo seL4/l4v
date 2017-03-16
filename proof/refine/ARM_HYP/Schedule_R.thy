@@ -1030,9 +1030,8 @@ lemma typ_at'_typ_at'_mask: "\<And>s. \<lbrakk> typ_at' t (P s) s \<rbrakk> \<Lo
 
 lemma arch_switch_idle_thread_corres:
   "corres dc \<top> (valid_arch_state' and pspace_aligned') arch_switch_to_idle_thread Arch.switchToIdleThread"
-  apply (simp add: arch_switch_to_idle_thread_def
-                ARM_HYP_H.switchToIdleThread_def)
-  done
+  unfolding arch_switch_to_idle_thread_def ARM_HYP_H.switchToIdleThread_def
+  by (rule corres_guard_imp, rule vcpuSwitch_corres; simp)
 
 lemma switch_idle_thread_corres:
   "corres dc invs invs_no_cicd' switch_to_idle_thread switchToIdleThread"
@@ -1783,12 +1782,19 @@ lemma setThreadState_rct:
   apply (clarsimp)
   done
 
+lemma vcpuSwitch_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> vcpuSwitch v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  sorry
+
+lemma vcpuSwitch_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> vcpuSwitch v \<lbrace>\<lambda>_. invs'\<rbrace>"
+  sorry
+
 lemma switchToIdleThread_invs'[wp]:
   "\<lbrace>invs'\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp: Thread_H.switchToIdleThread_def ARM_HYP_H.switchToIdleThread_def)
-  apply (wp_trace setCurThread_invs_idle_thread)
+  apply (wp setCurThread_invs_idle_thread)
   apply clarsimp
-
   done
 
 lemma bind_dummy_ret_val:
@@ -1814,10 +1820,6 @@ lemma invs_bitmapQ_tcb_at_cur_domain'_hd:
   apply (simp add: valid_bitmapQ_bitmapQ_simp)
   done
 
-lemma shiftr_le_0:
-  "unat (w::'a::len word) < 2 ^ n \<Longrightarrow> w >> n = (0::'a::len word)"
-  by (rule word_unat.Rep_eqD) (simp add: shiftr_div_2n')
-
 lemma prioToL1Index_l1IndexToPrio_or_id:
   "\<lbrakk> unat (w'::priority) < 2 ^ wordRadix ; w < size w' \<rbrakk>
    \<Longrightarrow> prioToL1Index ((l1IndexToPrio w) || w') = w"
@@ -1828,10 +1830,6 @@ lemma prioToL1Index_l1IndexToPrio_or_id:
    apply simp
   apply (subst unat_of_nat_eq, simp_all add: word_size)
   done
-
-lemma word_exists_nth:
-  "(w::'a::len word) \<noteq> 0 \<Longrightarrow> \<exists>i. w !! i"
-  using word_log2_nth_same by blast
 
 lemma bitmapQ_no_L1_orphansD:
   "\<lbrakk> bitmapQ_no_L1_orphans s ; ksReadyQueuesL1Bitmap s d !! i \<rbrakk>
