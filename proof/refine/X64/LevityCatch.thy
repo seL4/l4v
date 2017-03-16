@@ -75,7 +75,7 @@ lemma updateObject_default_inv:
   by (simp, wp magnitudeCheck_inv alignCheck_inv projectKO_inv, simp)
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma to_from_apiType [simp]: "toAPIType (fromAPIType x) = Some x"
-  by (cases x) (auto simp add: fromAPIType_def ARM_H.fromAPIType_def
-    toAPIType_def ARM_H.toAPIType_def)
+  by (cases x) (auto simp add: fromAPIType_def X64_H.fromAPIType_def
+    toAPIType_def X64_H.toAPIType_def)
 end
 end

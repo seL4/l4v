@@ -55,13 +55,13 @@ definition
 
 
 definition
-  obj_at' :: "('a::pspace_storable \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+  obj_at' :: "('a::pspace_storable \<Rightarrow> bool) \<Rightarrow> machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where obj_at'_real_def:
   "obj_at' P p s \<equiv>
    ko_wp_at' (\<lambda>ko. \<exists>obj. projectKO_opt ko = Some obj \<and> P obj) p s"
 
 definition
-  typ_at' :: "kernel_object_type \<Rightarrow> word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+  typ_at' :: "kernel_object_type \<Rightarrow> machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "typ_at' T \<equiv> ko_wp_at' (\<lambda>ko. koTypeOf ko = T)"
 
@@ -87,7 +87,7 @@ record itcb' =
   itcbState          :: thread_state
   itcbFaultHandler   :: cptr
   itcbIPCBuffer      :: vptr
-  itcbBoundNotification       :: "word32 option"
+  itcbBoundNotification       :: "machine_word option"
   itcbPriority       :: priority
   itcbFault          :: "fault option"
   itcbTimeSlice      :: nat
@@ -127,7 +127,7 @@ lemma [simp]: "itcbMCP (tcb_to_itcb' tcb) = tcbMCP tcb"
   by (auto simp: tcb_to_itcb'_def)
 
 definition
-  pred_tcb_at' :: "(itcb' \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+  pred_tcb_at' :: "(itcb' \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "pred_tcb_at' proj test \<equiv> obj_at' (\<lambda>ko. test (proj (tcb_to_itcb' ko)))"
 
@@ -148,7 +148,7 @@ abbreviation
   "cte_at' \<equiv> cte_wp_at' \<top>"
 
 definition
-  tcb_cte_cases :: "word32 \<rightharpoonup> ((tcb \<Rightarrow> cte) \<times> ((cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb))"
+  tcb_cte_cases :: "machine_word \<rightharpoonup> ((tcb \<Rightarrow> cte) \<times> ((cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb))"
 where
  "tcb_cte_cases \<equiv> [ 0 \<mapsto> (tcbCTable, tcbCTable_update),
                    16 \<mapsto> (tcbVTable, tcbVTable_update),
@@ -157,12 +157,12 @@ where
                    64 \<mapsto> (tcbIPCBufferFrame, tcbIPCBufferFrame_update) ]"
 
 definition
-  max_ipc_words :: word32
+  max_ipc_words :: machine_word
 where
   "max_ipc_words \<equiv> capTransferDataSize + msgMaxLength + msgMaxExtraCaps + 2"
 
 definition
-  tcb_st_refs_of' :: "Structures_H.thread_state   \<Rightarrow> (word32 \<times> reftype) set"
+  tcb_st_refs_of' :: "Structures_H.thread_state   \<Rightarrow> (machine_word \<times> reftype) set"
 where
   "tcb_st_refs_of' z \<equiv> case z of (Running)                  => {}
   | (Inactive)                 => {}
@@ -174,7 +174,7 @@ where
   | (IdleThreadState)          => {}"
 
 definition
-  ep_q_refs_of'   :: "Structures_H.endpoint       \<Rightarrow> (word32 \<times> reftype) set"
+  ep_q_refs_of'   :: "Structures_H.endpoint       \<Rightarrow> (machine_word \<times> reftype) set"
 where
   "ep_q_refs_of' x \<equiv> case x of
   IdleEP    => {}
@@ -182,24 +182,24 @@ where
   | (SendEP q) => set q \<times> {EPSend}"
 
 definition
-  ntfn_q_refs_of'  :: "Structures_H.ntfn \<Rightarrow> (word32 \<times> reftype) set"
+  ntfn_q_refs_of'  :: "Structures_H.ntfn \<Rightarrow> (machine_word \<times> reftype) set"
 where
   "ntfn_q_refs_of' x \<equiv> case x of  IdleNtfn         => {}
   | (WaitingNtfn q)      => set q \<times> {NTFNSignal}
   | (ActiveNtfn b)  => {}"
 
 definition
-  ntfn_bound_refs' :: "word32 option \<Rightarrow> (word32 \<times> reftype) set"
+  ntfn_bound_refs' :: "machine_word option \<Rightarrow> (machine_word \<times> reftype) set"
 where
   "ntfn_bound_refs' t \<equiv> set_option t \<times> {NTFNBound}"
 
 definition
-  tcb_bound_refs' :: "word32 option \<Rightarrow> (word32 \<times> reftype) set"
+  tcb_bound_refs' :: "machine_word option \<Rightarrow> (machine_word \<times> reftype) set"
 where
   "tcb_bound_refs' a \<equiv> set_option a \<times> {TCBBound}"
 
 definition
-  refs_of'        :: "Structures_H.kernel_object  \<Rightarrow> (word32 \<times> reftype) set"
+  refs_of'        :: "Structures_H.kernel_object  \<Rightarrow> (machine_word \<times> reftype) set"
 where
   "refs_of' x \<equiv> case x of
     (KOTCB tcb) => tcb_st_refs_of' (tcbState tcb) \<union> tcb_bound_refs' (tcbBoundNotification tcb)
@@ -212,7 +212,7 @@ where
   | (KOArch ako)          => {}"
 
 definition
-  state_refs_of' :: "kernel_state \<Rightarrow> word32 \<Rightarrow> (word32 \<times> reftype) set"
+  state_refs_of' :: "kernel_state \<Rightarrow> machine_word \<Rightarrow> (machine_word \<times> reftype) set"
 where
  "state_refs_of' s \<equiv> (\<lambda>x. case (ksPSpace s x)
                            of None \<Rightarrow> {}
@@ -237,7 +237,7 @@ where
 | "live' (KOArch ako)          = False"
 
 primrec
-  zobj_refs' :: "capability \<Rightarrow> word32 set"
+  zobj_refs' :: "capability \<Rightarrow> machine_word set"
 where
   "zobj_refs' NullCap                        = {}"
 | "zobj_refs' DomainCap                      = {}"
@@ -253,7 +253,7 @@ where
 | "zobj_refs' (ReplyCap tcb m)               = {}"
 
 definition
-  ex_nonz_cap_to' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+  ex_nonz_cap_to' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "ex_nonz_cap_to' ref \<equiv>
    (\<lambda>s. \<exists>cref. cte_wp_at' (\<lambda>c. ref \<in> zobj_refs' (cteCap c)) cref s)"
@@ -266,7 +266,7 @@ where
 
 
 primrec
-  cte_refs' :: "capability \<Rightarrow> word32 \<Rightarrow> word32 set"
+  cte_refs' :: "capability \<Rightarrow> machine_word \<Rightarrow> machine_word set"
 where
   "cte_refs' (UntypedCap d p n f) x               = {}"
 | "cte_refs' (NullCap) x                          = {}"
@@ -289,7 +289,7 @@ abbreviation
  "irq_node' s \<equiv> intStateIRQNode (ksInterruptState s)"
 
 definition
-  ex_cte_cap_wp_to' :: "(capability \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+  ex_cte_cap_wp_to' :: "(capability \<Rightarrow> bool) \<Rightarrow> machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "ex_cte_cap_wp_to' P ptr \<equiv> \<lambda>s. \<exists>cref.
        cte_wp_at' (\<lambda>c. P (cteCap c)
@@ -310,11 +310,14 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 primrec
   acapBits :: "arch_capability \<Rightarrow> nat"
 where
-  "acapBits (ASIDPoolCap x y) = asidLowBits + 2"
-| "acapBits ASIDControlCap = asidHighBits + 2"
-| "acapBits (PageCap d x y sz z) = pageBitsForSize sz"
-| "acapBits (PageTableCap x y) = 10"
-| "acapBits (PageDirectoryCap x y) = 14"
+  "acapBits (ASIDPoolCap x y) = asidLowBits + word_size_bits"
+| "acapBits ASIDControlCap = asidHighBits + word_size_bits"
+| "acapBits (PageCap x y typ sz d z) = pageBitsForSize sz"
+| "acapBits (PageTableCap x y) = table_size"
+| "acapBits (PageDirectoryCap x y) = table_size"
+| "acapBits (PDPointerTableCap x y) = table_size"
+| "acapBits (PML4Cap x y) = table_size"
+
 end
 
 
@@ -345,10 +348,10 @@ definition
    is_aligned (capUntypedPtr c) (capBits c) \<and> capBits c < word_bits"
 
 definition
- "obj_range' (p::word32) ko \<equiv> {p .. p + 2 ^ objBitsKO ko - 1}"
+ "obj_range' (p::machine_word) ko \<equiv> {p .. p + 2 ^ objBitsKO ko - 1}"
 
 primrec (nonexhaustive)
-  usableUntypedRange :: "capability \<Rightarrow> word32 set"
+  usableUntypedRange :: "capability \<Rightarrow> machine_word set"
 where
  "usableUntypedRange (UntypedCap d p n f) =
     (if f < 2^n then {p+of_nat f .. p + 2 ^ n - 1} else {})"
@@ -363,16 +366,28 @@ definition
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
-  page_table_at' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+  page_table_at' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "page_table_at' x \<equiv> \<lambda>s. is_aligned x ptBits
-                      \<and> (\<forall>y < 2 ^ 8. typ_at' (ArchT PTET) (x + (y << 2)) s)"
+                      \<and> (\<forall>y < 2 ^ ptTranslationBits. typ_at' (ArchT PTET) (x + (y << word_size_bits)) s)"
 
 definition
-  page_directory_at' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+  page_directory_at' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "page_directory_at' x \<equiv> \<lambda>s. is_aligned x pdBits
-                      \<and> (\<forall>y < 2 ^ 12. typ_at' (ArchT PDET) (x + (y << 2)) s)"
+                      \<and> (\<forall>y < 2 ^ ptTranslationBits. typ_at' (ArchT PDET) (x + (y << word_size_bits)) s)"
+
+definition
+  pd_pointer_table_at' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+ "pd_pointer_table_at' x \<equiv> \<lambda>s. is_aligned x pdptBits
+                      \<and> (\<forall>y < 2 ^ ptTranslationBits. typ_at' (ArchT PDPTET) (x + (y << word_size_bits)) s)"
+
+definition
+  page_map_l4_at' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+ "page_map_l4_at' x \<equiv> \<lambda>s. is_aligned x pml4Bits
+                      \<and> (\<forall>y < 2 ^ ptTranslationBits. typ_at' (ArchT PML4ET) (x + (y << word_size_bits)) s)"
 
 abbreviation
   "asid_pool_at' \<equiv> typ_at' (ArchT ASIDPoolT)"
@@ -395,7 +410,7 @@ where valid_cap'_def:
     Structures_H.NullCap \<Rightarrow> True
   | Structures_H.DomainCap \<Rightarrow> True
   | Structures_H.UntypedCap d r n f \<Rightarrow>
-      valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> 4\<le> n \<and> n \<le> 29 \<and> f \<le> 2^n \<and>  is_aligned (of_nat f :: word32) 4
+      valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> 4\<le> n \<and> n \<le> 29 \<and> f \<le> 2^n \<and>  is_aligned (of_nat f :: machine_word) 4
   | Structures_H.EndpointCap r badge x y z \<Rightarrow> ep_at' r s
   | Structures_H.NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | Structures_H.CNodeCap r bits guard guard_sz \<Rightarrow>
@@ -413,18 +428,25 @@ where valid_cap'_def:
     ASIDPoolCap pool asid \<Rightarrow>
     typ_at' (ArchT ASIDPoolT) pool s \<and> is_aligned asid asid_low_bits \<and> asid \<le> 2^asid_bits - 1
   | ASIDControlCap \<Rightarrow> True
-  | PageCap d ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
+  | PageCap ref rghts t sz d mapdata \<Rightarrow> ref \<noteq> 0 \<and>
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
     (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
-            0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < kernelBase)
+            0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < pptrBase)
   | PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
             0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < kernelBase)
   | PageDirectoryCap ref mapdata \<Rightarrow>
     page_directory_at' ref s \<and>
-    case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
+    (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le>2^asid_bits-1 \<and> ref < pptrBase)
+  | PDPointerTableCap ref mapdata \<Rightarrow>
+    pd_pointer_table_at' ref s \<and>
+    (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le>2^asid_bits-1 \<and> ref < pptrBase)
+  | PML4Cap ref mapdata \<Rightarrow>
+    page_map_l4_at' ref s \<and>
+    case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
+  | IOPortCap first lst \<Rightarrow> True (* should probably have something like fst \<le> last *)))"
 
 abbreviation (input)
   valid_cap'_syn :: "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>' _" [60, 60] 61)
@@ -446,12 +468,12 @@ where
   | _ \<Rightarrow> True"
 
 definition
-  valid_ipc_buffer_ptr' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_ipc_buffer_ptr' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_ipc_buffer_ptr' a s \<equiv> is_aligned a msg_align_bits \<and> typ_at' UserDataT (a && ~~ mask pageBits) s"
 
 definition
-  valid_bound_ntfn' :: "word32 option \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_bound_ntfn' :: "machine_word option \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_bound_ntfn' ntfn_opt s \<equiv> case ntfn_opt of
                                  None \<Rightarrow> True
@@ -461,7 +483,7 @@ definition
   is_device_page_cap' :: "capability \<Rightarrow> bool"
 where
   "is_device_page_cap' cap \<equiv> case cap of
-    capability.ArchObjectCap (arch_capability.PageCap dev _ _ _ _) \<Rightarrow> dev
+    capability.ArchObjectCap (arch_capability.PageCap _ _ _ _ dev _) \<Rightarrow> dev
    | _ \<Rightarrow> False"
 
 definition
@@ -485,7 +507,7 @@ where
 
 
 definition
-  valid_bound_tcb' :: "word32 option \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_bound_tcb' :: "machine_word option \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_bound_tcb' tcb_opt s \<equiv> case tcb_opt of
                                  None \<Rightarrow> True
@@ -503,32 +525,43 @@ where
   \<and> valid_bound_tcb' (ntfnBoundTCB ntfn) s"
 
 definition
-  valid_mapping' :: "word32 \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_mapping' :: "machine_word \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz)
                             \<and> ptrFromPAddr x \<noteq> 0"
 
 primrec
-  valid_pte' :: "ARM_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_pte' :: "X64_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_pte' (InvalidPTE) = \<top>"
-| "valid_pte' (LargePagePTE ptr _ _ _ _) = (valid_mapping' ptr ARMLargePage)"
-| "valid_pte' (SmallPagePTE ptr _ _ _ _) = (valid_mapping' ptr ARMSmallPage)"
+| "valid_pte' (SmallPagePTE ptr _ _ _ _ _ _ _ _) = (valid_mapping' ptr X64SmallPage)"
 
 primrec
-  valid_pde' :: "ARM_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_pde' :: "X64_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_pde' (InvalidPDE) = \<top>"
-| "valid_pde' (SectionPDE ptr _ _ _ _ _ _) = (valid_mapping' ptr ARMSection)"
-| "valid_pde' (SuperSectionPDE ptr _ _ _ _ _) = (valid_mapping' ptr ARMSuperSection)"
-| "valid_pde' (PageTablePDE ptr _ _) = (\<lambda>_. is_aligned ptr ptBits)"
+| "valid_pde' (LargePagePDE ptr _ _ _ _ _ _ _ _) = (valid_mapping' ptr X64LargePage)"
+| "valid_pde' (PageTablePDE ptr _ _ _ _ _) = (\<lambda>_. is_aligned ptr ptBits)"
+
+primrec
+  valid_pdpte' :: "X64_H.pdpte \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+ "valid_pdpte' (InvalidPDPTE) = \<top>"
+| "valid_pdpte' (HugePagePDPTE ptr _ _ _ _ _ _ _ _) = (valid_mapping' ptr X64LargePage)"
+| "valid_pdpte' (PageDirectoryPDPTE ptr _ _ _ _ _) = (\<lambda>_. is_aligned ptr pdBits)"
+
+primrec
+  valid_pml4e' :: "X64_H.pml4e \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+ "valid_pml4e' (InvalidPML4E) = \<top>"
+| "valid_pml4e' (PDPointerTablePML4E ptr _ _ _ _ _) = (\<lambda>_. is_aligned ptr pdptBits)"
 
 primrec
   valid_asid_pool' :: "asidpool \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_asid_pool' (ASIDPool pool)
      = (\<lambda>s. dom pool \<subseteq> {0 .. 2^asid_low_bits - 1}
-           \<and> 0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pdBits))"
+           \<and> 0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pml4Bits))"
 
 primrec
   valid_arch_obj' :: "arch_kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -536,6 +569,8 @@ where
   "valid_arch_obj' (KOASIDPool pool) = valid_asid_pool' pool"
 | "valid_arch_obj' (KOPDE pde) = valid_pde' pde"
 | "valid_arch_obj' (KOPTE pte) = valid_pte' pte"
+| "valid_arch_obj' (KOPDPTE pdpte) = valid_pdpte' pdpte"
+| "valid_arch_obj' (KOPML4E pml4e) = valid_pml4e' pml4e"
 
 definition
   valid_obj' :: "Structures_H.kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -567,10 +602,10 @@ definition
 where
   "valid_objs' s \<equiv> \<forall>obj \<in> ran (ksPSpace s). valid_obj' obj s"
 
-type_synonym cte_heap = "word32 \<Rightarrow> cte option"
+type_synonym cte_heap = "machine_word \<Rightarrow> cte option"
 
 definition
-  map_to_ctes :: "(word32 \<rightharpoonup> kernel_object) \<Rightarrow> cte_heap"
+  map_to_ctes :: "(machine_word \<rightharpoonup> kernel_object) \<Rightarrow> cte_heap"
 where
  "map_to_ctes m \<equiv> \<lambda>x.
       let cte_bits = objBitsKO (KOCTE undefined);
@@ -590,27 +625,27 @@ abbreviation
   "ctes_of s \<equiv> map_to_ctes (ksPSpace s)"
 
 definition
-  mdb_next :: "cte_heap \<Rightarrow> word32 \<Rightarrow> word32 option"
+  mdb_next :: "cte_heap \<Rightarrow> machine_word \<Rightarrow> machine_word option"
 where
   "mdb_next s c \<equiv> option_map (mdbNext o cteMDBNode) (s c)"
 
 definition
-  mdb_next_rel :: "cte_heap \<Rightarrow> (word32 \<times> word32) set"
+  mdb_next_rel :: "cte_heap \<Rightarrow> (machine_word \<times> machine_word) set"
 where
   "mdb_next_rel m \<equiv> {(x, y). mdb_next m x = Some y}"
 
 abbreviation
-  mdb_next_direct :: "cte_heap \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool" ("_ \<turnstile> _ \<leadsto> _" [60,0,60] 61)
+  mdb_next_direct :: "cte_heap \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> bool" ("_ \<turnstile> _ \<leadsto> _" [60,0,60] 61)
 where
   "m \<turnstile> a \<leadsto> b \<equiv> (a, b) \<in> mdb_next_rel m"
 
 abbreviation
-  mdb_next_trans :: "cte_heap \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool" ("_ \<turnstile> _ \<leadsto>\<^sup>+ _" [60,0,60] 61)
+  mdb_next_trans :: "cte_heap \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> bool" ("_ \<turnstile> _ \<leadsto>\<^sup>+ _" [60,0,60] 61)
 where
   "m \<turnstile> a \<leadsto>\<^sup>+ b \<equiv> (a,b) \<in> (mdb_next_rel m)\<^sup>+"
 
 abbreviation
-  mdb_next_rtrans :: "cte_heap \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool" ("_ \<turnstile> _ \<leadsto>\<^sup>* _" [60,0,60] 61)
+  mdb_next_rtrans :: "cte_heap \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> bool" ("_ \<turnstile> _ \<leadsto>\<^sup>* _" [60,0,60] 61)
 where
   "m \<turnstile> a \<leadsto>\<^sup>* b \<equiv> (a,b) \<in> (mdb_next_rel m)\<^sup>*"
 
@@ -632,7 +667,7 @@ definition
      mdbFirstBadged node')"
 
 fun (sequential)
-  untypedRange :: "capability \<Rightarrow> word32 set"
+  untypedRange :: "capability \<Rightarrow> machine_word set"
 where
    "untypedRange (UntypedCap d p n f) = {p .. p + 2 ^ n - 1}"
 |  "untypedRange c = {}"
@@ -642,9 +677,13 @@ primrec
 where
   "acapClass (ASIDPoolCap x y)      = PhysicalClass"
 | "acapClass ASIDControlCap         = ASIDMasterClass"
-| "acapClass (PageCap d x y sz z)   = PhysicalClass"
+| "acapClass (PageCap x y t sz d z) = PhysicalClass"
 | "acapClass (PageTableCap x y)     = PhysicalClass"
 | "acapClass (PageDirectoryCap x y) = PhysicalClass"
+| "acapClass (PDPointerTableCap x y) = PhysicalClass"
+| "acapClass (PML4Cap x y) = PhysicalClass"
+| "acapClass (IOPortCap x y) = IOPortClass"
+
 
 primrec
   capClass :: "capability \<Rightarrow> capclass"
@@ -716,7 +755,7 @@ definition
   (m \<turnstile> p' \<leadsto>\<^sup>+ p \<longrightarrow> is_chunk m cap' p' p)"
 
 definition
-  parentOf :: "cte_heap \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool" ("_ \<turnstile> _ parentOf _")
+  parentOf :: "cte_heap \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> bool" ("_ \<turnstile> _ parentOf _")
 where
   "s \<turnstile> c' parentOf c \<equiv>
   \<exists>cte' cte. s c = Some cte \<and> s c' = Some cte' \<and> isMDBParentOf cte' cte"
@@ -727,8 +766,8 @@ notes [[inductive_internals =true]]
 begin
 
 inductive
-  subtree :: "cte_heap \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool" ("_ \<turnstile> _ \<rightarrow> _" [60,0,60] 61)
-  for s :: cte_heap and c :: word32
+  subtree :: "cte_heap \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> bool" ("_ \<turnstile> _ \<rightarrow> _" [60,0,60] 61)
+  for s :: cte_heap and c :: machine_word
 where
   direct_parent:
   "\<lbrakk> s \<turnstile> c \<leadsto> c'; c' \<noteq> 0; s \<turnstile> c parentOf c'\<rbrakk> \<Longrightarrow> s \<turnstile> c \<rightarrow> c'"
@@ -777,10 +816,10 @@ definition
 definition
   isArchPageCap :: "capability \<Rightarrow> bool"
 where
- "isArchPageCap cap \<equiv> case cap of ArchObjectCap (PageCap d ref rghts sz data) \<Rightarrow> True | _ \<Rightarrow> False"
+ "isArchPageCap cap \<equiv> case cap of ArchObjectCap (PageCap ref rghts typ sz d data) \<Rightarrow> True | _ \<Rightarrow> False"
 
 definition
-  distinct_zombie_caps :: "(word32 \<Rightarrow> capability option) \<Rightarrow> bool"
+  distinct_zombie_caps :: "(machine_word \<Rightarrow> capability option) \<Rightarrow> bool"
 where
  "distinct_zombie_caps caps \<equiv> \<forall>ptr ptr' cap cap'. caps ptr = Some cap
          \<and> caps ptr' = Some cap' \<and> ptr \<noteq> ptr' \<and> isZombie cap
@@ -816,19 +855,6 @@ where
 
 definition
   "no_0_obj' \<equiv> \<lambda>s. ksPSpace s 0 = None"
-
-definition
-  vs_ptr_align :: "Structures_H.kernel_object \<Rightarrow> nat" where
- "vs_ptr_align obj \<equiv>
-  case obj of KOArch (KOPTE (pte.LargePagePTE _ _ _ _ _)) \<Rightarrow> 6
-            | KOArch (KOPDE (pde.SuperSectionPDE _ _ _ _ _ _)) \<Rightarrow> 6
-            | _ \<Rightarrow> 0"
-
-definition "vs_valid_duplicates' \<equiv> \<lambda>h.
-    \<forall>x y. case h x of None \<Rightarrow> True
-         | Some ko \<Rightarrow> is_aligned y 2 \<longrightarrow>
-              x && ~~ mask (vs_ptr_align ko) = y && ~~ mask (vs_ptr_align ko) \<longrightarrow>
-              h x = h y"
 
 definition
   valid_pspace' :: "kernel_state \<Rightarrow> bool"
@@ -919,7 +945,7 @@ definition
 where
  "valid_queues' \<equiv> \<lambda>s. \<forall>d p t. obj_at' (inQ d p) t s \<longrightarrow> t \<in> set (ksReadyQueues s (d, p))"
 
-definition tcb_in_cur_domain' :: "32 word \<Rightarrow> kernel_state \<Rightarrow> bool" where
+definition tcb_in_cur_domain' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "tcb_in_cur_domain' t \<equiv> \<lambda>s. obj_at' (\<lambda>tcb. ksCurDomain s = tcbDomain tcb) t s"
 
 definition
@@ -970,23 +996,23 @@ where
   "valid_idle' \<equiv> \<lambda>s. idle_tcb_at' (\<lambda>p. idle' (fst p) \<and> snd p = None) (ksIdleThread s) s"
 
 definition
-  valid_irq_node' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_irq_node' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_irq_node' x \<equiv>
   \<lambda>s. is_aligned x 12 \<and> (\<forall>irq :: irq. real_cte_at' (x + 16 * (ucast irq)) s)"
 
 definition
-  valid_refs' :: "word32 set \<Rightarrow> cte_heap \<Rightarrow> bool"
+  valid_refs' :: "machine_word set \<Rightarrow> cte_heap \<Rightarrow> bool"
 where
   "valid_refs' R \<equiv> \<lambda>m. \<forall>c \<in> ran m. R \<inter> capRange (cteCap c) = {}"
 
 definition
-  page_directory_refs' :: "word32 \<Rightarrow> word32 set"
+  page_directory_refs' :: "machine_word \<Rightarrow> machine_word set"
 where
   "page_directory_refs' x \<equiv> (\<lambda>y. x + (y << 2)) ` {y. y < 2 ^ 12}"
 
 definition
-  page_table_refs' :: "word32 \<Rightarrow> word32 set"
+  page_table_refs' :: "machine_word \<Rightarrow> machine_word set"
 where
   "page_table_refs' x \<equiv> (\<lambda>y. x + (y << 2)) ` {y. y < 2 ^ 8}"
 
@@ -1018,18 +1044,18 @@ where
                 ({x .. x + (2 ^ objBitsKO ko) - 1}) \<inter> kernel_data_refs = {})"
 
 definition
-  valid_asid_table' :: "(asid \<rightharpoonup> word32) \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_asid_table' :: "(asid \<rightharpoonup> machine_word) \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_asid_table' table \<equiv> \<lambda>s. dom table \<subseteq> {0 .. 2^asid_high_bits - 1}
                                   \<and> 0 \<notin> ran table"
 
 definition
-  valid_global_pts' :: "word32 list \<Rightarrow> kernel_state \<Rightarrow> bool"
+  valid_global_pts' :: "machine_word list \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_global_pts' pts \<equiv> \<lambda>s. \<forall>p \<in> set pts. page_table_at' p s"
 
 definition
-  valid_asid_map' :: "(word32 \<rightharpoonup> word8 \<times> word32) \<Rightarrow> bool"
+  valid_asid_map' :: "(machine_word \<rightharpoonup> word8 \<times> machine_word) \<Rightarrow> bool"
 where
  "valid_asid_map' m \<equiv> inj_on (option_map snd o m) (dom m)
                           \<and> dom m \<subseteq> ({0 .. mask asid_bits} - {0})"
@@ -1051,7 +1077,7 @@ where
   "irq_issued' irq \<equiv> \<lambda>s. intStateIRQTable (ksInterruptState s) irq = IRQSignal"
 
 definition
-  cteCaps_of :: "kernel_state \<Rightarrow> word32 \<Rightarrow> capability option"
+  cteCaps_of :: "kernel_state \<Rightarrow> machine_word \<Rightarrow> capability option"
 where
  "cteCaps_of s \<equiv> option_map cteCap \<circ> ctes_of s"
 
@@ -1065,7 +1091,7 @@ definition
   "irqs_masked' \<equiv> \<lambda>s. \<forall>irq > maxIRQ. intStateIRQTable (ksInterruptState s) irq = IRQInactive"
 
 definition
-  pd_asid_slot :: word32
+  pd_asid_slot :: machine_word
 where
  "pd_asid_slot \<equiv> 0xff0"
 
@@ -1073,12 +1099,12 @@ where
      of them one particular mapping is clear. at the moment all we can easily say
      is that the mapping is clear. *)
 definition
-  valid_pde_mapping_offset' :: "word32 \<Rightarrow> bool"
+  valid_pde_mapping_offset' :: "machine_word \<Rightarrow> bool"
 where
  "valid_pde_mapping_offset' offset \<equiv> offset \<noteq> pd_asid_slot * 4"
 
 definition
-  valid_pde_mapping' :: "word32 \<Rightarrow> pde \<Rightarrow> bool"
+  valid_pde_mapping' :: "machine_word \<Rightarrow> pde \<Rightarrow> bool"
 where
  "valid_pde_mapping' offset pde \<equiv> pde = InvalidPDE \<or> valid_pde_mapping_offset' offset"
 
@@ -1160,7 +1186,7 @@ abbreviation
 
   (* x-symbol doesn't have a reverse leadsto.. *)
 definition
-  mdb_prev :: "cte_heap \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool" ("_ \<turnstile> _ \<leftarrow> _" [60,0,60] 61)
+  mdb_prev :: "cte_heap \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> bool" ("_ \<turnstile> _ \<leftarrow> _" [60,0,60] 61)
 where
   "m \<turnstile> c \<leftarrow> c' \<equiv> (\<exists>z. m c' = Some z \<and> c = mdbPrev (cteMDBNode z))"
 
@@ -1470,7 +1496,7 @@ lemmas objBitsKO_simps = objBits_simps
 lemmas wordRadix_def' = wordRadix_def[simplified]
 
 lemma valid_duplicates'_D:
-  "\<lbrakk>vs_valid_duplicates' m; m (p::word32) = Some ko;is_aligned p' 2;
+  "\<lbrakk>vs_valid_duplicates' m; m (p::machine_word) = Some ko;is_aligned p' 2;
   p && ~~ mask (vs_ptr_align ko) = p' && ~~ mask (vs_ptr_align ko)\<rbrakk>
   \<Longrightarrow> m p' = Some ko "
   apply (clarsimp simp:vs_valid_duplicates'_def)
@@ -1691,7 +1717,7 @@ lemma ko_at_state_refs_ofD':
   by (clarsimp dest!: obj_at_state_refs_ofD')
 
 definition
-  tcb_ntfn_is_bound' :: "word32 option \<Rightarrow> tcb \<Rightarrow> bool"
+  tcb_ntfn_is_bound' :: "machine_word option \<Rightarrow> tcb \<Rightarrow> bool"
 where
   "tcb_ntfn_is_bound' ntfn tcb \<equiv> tcbBoundNotification tcb = ntfn"
 
@@ -2185,7 +2211,7 @@ lemma lookupAround2_char2:
   done
 
 lemma ps_clearI:
-  "\<lbrakk> is_aligned p n; (1 :: word32) < 2 ^ n;
+  "\<lbrakk> is_aligned p n; (1 :: machine_word) < 2 ^ n;
      \<And>x. \<lbrakk> x > p; x \<le> p + 2 ^ n - 1 \<rbrakk> \<Longrightarrow> ksPSpace s x = None \<rbrakk>
       \<Longrightarrow> ps_clear p n s"
   apply (subgoal_tac "p \<le> p + 1")
@@ -2234,7 +2260,7 @@ lemma ps_clear_lookupAround2:
   done
 
 lemma in_magnitude_check:
-  "\<lbrakk> is_aligned x n; (1 :: word32) < 2 ^ n; ksPSpace s x = Some y \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> is_aligned x n; (1 :: machine_word) < 2 ^ n; ksPSpace s x = Some y \<rbrakk> \<Longrightarrow>
    ((v, s') \<in> fst (magnitudeCheck x (snd (lookupAround2 x (ksPSpace s))) n s))
      = (s' = s \<and> ps_clear x n s)"
   apply (rule iffI)
@@ -2263,7 +2289,7 @@ lemma in_magnitude_check:
 
 lemma in_magnitude_check3:
   "\<lbrakk> \<forall>z. x < z \<and> z \<le> y \<longrightarrow> ksPSpace s z = None; is_aligned x n;
-     (1 :: word32) < 2 ^ n; ksPSpace s x = Some v; x \<le> y; y - x < 2 ^ n \<rbrakk> \<Longrightarrow>
+     (1 :: machine_word) < 2 ^ n; ksPSpace s x = Some v; x \<le> y; y - x < 2 ^ n \<rbrakk> \<Longrightarrow>
    fst (magnitudeCheck x (snd (lookupAround2 y (ksPSpace s))) n s)
      = (if ps_clear x n s then {((), s)} else {})"
   apply (rule set_eqI, rule iffI)
