@@ -1028,7 +1028,12 @@ end
 
 lemma canonical_address_range:
   "canonical_address x = (x \<le> mask 47 \<or> ~~ mask 47 \<le> x)"
-  by (simp add: canonical_address_def scast_ucast_mask_compare)
+  by (simp add: canonical_address_def canonical_address_of_def scast_ucast_mask_compare)
+
+lemma canonical_address_of_mask:
+  "canonical_address_of x = (if x \<le> mask 47 then ucast x else ucast x || ~~ mask 47)"
+  apply (simp add: canonical_address_of_def mask_def)
+  by word_bitwise
 
 
 (* FIXME: move *)

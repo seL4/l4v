@@ -17,7 +17,6 @@ chapter "An Initial Kernel State"
 theory Init_A
 imports "../Retype_A"
 begin
-(*FIXME x64: needs to be defined such that x64 invariants hold *)
 
 context Arch begin global_naming X64_A
 
@@ -27,40 +26,79 @@ text {*
   show that the invariants and refinement relation are consistent. 
 *}
 
-
-
-definition
-  init_tcb_ptr :: obj_ref where
-  "init_tcb_ptr = kernel_base + 0x2000"
-
+(* 8KiB *)
 definition
   init_irq_node_ptr :: obj_ref where
-  "init_irq_node_ptr = kernel_base + 0x3000"
+  "init_irq_node_ptr = kernel_base + 0x2000"
+
+(* 4KiB *)
+definition
+  init_global_pml4 :: obj_ref where
+  "init_global_pml4 = kernel_base + 0x4000"
+
+(* 4KiB *)
+definition
+  init_global_pdpt :: obj_ref where
+  "init_global_pdpt = kernel_base + 0x5000"
+
+(* 4KiB *)
+definition
+  init_global_pd :: obj_ref where
+  "init_global_pd = kernel_base + 0x6000"
 
 definition
-  "init_arch_state \<equiv> undefined :: arch_state"
+  "init_arch_state \<equiv> \<lparr>
+    x64_asid_table = empty,
+    x64_global_pml4 = init_global_pml4,
+    x64_kernel_vspace =
+      \<lambda>ref. if ref \<in> {pptr_base .. pptr_base + mask pml4_shift_bits}
+              then X64VSpaceKernelWindow
+              else X64VSpaceInvalidRegion,
+    x64_global_pts = [],
+    x64_global_pdpts = [init_global_pdpt],
+    x64_global_pds = [init_global_pd],
+    x64_asid_map = empty,
+    x64_current_cr3 = CR3 0 0
+   \<rparr>"
 
+definition [simp]:
+  "global_pml4 \<equiv> (\<lambda>_ :: 9 word. InvalidPML4E)
+    (0x1FF := PDPointerTablePML4E (addrFromPPtr init_global_pdpt) {} {})"
 
-(* FIXME x64: add kernel vspace mappings. *)
+(* The kernel uses huge page mappings in the global PDPT to get a view of all physical memory.
+   The exception is the upper-most PDPT entry, which maps to the global page directory. *)
+definition [simp]:
+  "global_pdpt \<equiv> (\<lambda> i :: 9 word. HugePagePDPTE (ucast i << 30) {} {})
+                    (0x1FF := PageDirectoryPDPTE (addrFromPPtr init_global_pd) {} {})"
+
+(* C kernel initialisation refines this down to small pages for devices, but we'll stop here. *)
+definition [simp]:
+  "global_pd \<equiv> (\<lambda> i :: 9 word. LargePagePDE (0x03FE00 + ucast i << 21) {} {})"
+
 definition
   "init_kheap \<equiv>
-  (\<lambda>x. if \<exists>irq :: irq. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
-       then Some (CNode 0 (empty_cnode 0)) else None)
-  (idle_thread_ptr \<mapsto> TCB \<lparr>
-    tcb_ctable = NullCap,
-    tcb_vtable = NullCap,
-    tcb_reply = NullCap,
-    tcb_caller = NullCap,
-    tcb_ipcframe = NullCap,
-    tcb_state = IdleThreadState,
-    tcb_fault_handler = replicate word_bits False,
-    tcb_ipc_buffer = 0,
-    tcb_fault = None,
-    tcb_bound_notification = None,
-    tcb_mcpriority = minBound,
-    tcb_arch = init_arch_tcb
-  \<rparr>
-  )"
+    (\<lambda>x. if \<exists>irq :: irq. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
+           then Some (CNode 0 (empty_cnode 0))
+           else None)
+    (idle_thread_ptr \<mapsto>
+       TCB \<lparr>
+         tcb_ctable = NullCap,
+         tcb_vtable = NullCap,
+         tcb_reply = NullCap,
+         tcb_caller = NullCap,
+         tcb_ipcframe = NullCap,
+         tcb_state = IdleThreadState,
+         tcb_fault_handler = replicate word_bits False,
+         tcb_ipc_buffer = 0,
+         tcb_fault = None,
+         tcb_bound_notification = None,
+         tcb_mcpriority = minBound,
+         tcb_arch = init_arch_tcb
+         \<rparr>,
+     init_global_pml4 \<mapsto> ArchObj (PageMapL4 global_pml4),
+     init_global_pdpt \<mapsto> ArchObj (PDPointerTable global_pdpt),
+     init_global_pd \<mapsto> ArchObj (PageDirectory global_pd)
+    )"
 
 definition
   "init_cdt \<equiv> empty"
@@ -81,7 +119,7 @@ definition
     interrupt_irq_node = \<lambda>irq. init_irq_node_ptr + (ucast irq << cte_level_bits),
     interrupt_states = \<lambda>_. Structures_A.IRQInactive,
     arch_state = init_arch_state,
-    exst = ext_init 
+    exst = ext_init
   \<rparr>"
 
 end

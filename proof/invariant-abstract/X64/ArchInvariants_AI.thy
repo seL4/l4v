@@ -99,9 +99,13 @@ definition
    address space provided by the instruction set architecture, and require that the
    most significant 17 bits of any virtual address are identical. *)
 
+definition canonical_address_of :: "48 word \<Rightarrow> obj_ref"
+where
+  "canonical_address_of x \<equiv> scast x"
+
 definition canonical_address :: "obj_ref \<Rightarrow> bool"
 where
-  "canonical_address x \<equiv> ((scast ((ucast x) :: 48 word)) :: 64 word) = x"
+  "canonical_address x \<equiv> canonical_address_of (ucast x) = x"
 
 definition
   "wellformed_mapdata sz \<equiv>
@@ -700,8 +704,7 @@ where
   | SmallPagePTE ptr atts rghts \<Rightarrow>
         ptrFromPAddr ptr = vref
         \<and> (\<exists>use. (\<forall>x \<in> {vref .. vref + 2 ^ pte_mapping_bits - 1}. uses x = use)
-             \<and> (use = X64VSpaceKernelWindow
-                    \<or> use = X64VSpaceDeviceWindow))
+             \<and> (use \<in> {X64VSpaceKernelWindow, X64VSpaceDeviceWindow}))
         \<and> rghts = {}"
 
 definition
@@ -731,8 +734,7 @@ where
   | LargePagePDE ptr atts rghts \<Rightarrow>
         (\<lambda>s. ptrFromPAddr ptr = vref
              \<and> (\<exists>use. (\<forall>x \<in> {vref .. vref + 2 ^ pde_mapping_bits - 1}. uses x = use)
-                   \<and> (use = X64VSpaceKernelWindow
-                            \<or> use = X64VSpaceDeviceWindow))
+                   \<and> (use \<in> {X64VSpaceKernelWindow, X64VSpaceDeviceWindow}))
              \<and> rghts = {})"
 
 definition
@@ -764,8 +766,7 @@ where
   | HugePagePDPTE ptr atts rghts \<Rightarrow>
         (\<lambda>s. ptrFromPAddr ptr = vref
              \<and> (\<exists>use. (\<forall>x \<in> {vref .. vref + 2 ^ pdpte_mapping_bits - 1}. uses x = use)
-                   \<and> (use = X64VSpaceKernelWindow
-                            \<or> use = X64VSpaceDeviceWindow))
+                   \<and> (use \<in> {X64VSpaceKernelWindow, X64VSpaceDeviceWindow}))
              \<and> rghts = {})"
 
 definition
@@ -789,8 +790,7 @@ definition
 where
  "valid_pml4e_kernel_mappings pml4e vref uses \<equiv> case pml4e of
     InvalidPML4E \<Rightarrow>
-        (\<lambda>s. \<forall>x \<in> {vref .. vref + 2 ^ pml4e_mapping_bits - 1}.
-                    uses x \<noteq> X64VSpaceKernelWindow)
+        (\<lambda>s. \<forall>x \<in> {vref .. vref + 2 ^ pml4e_mapping_bits - 1}. uses x \<noteq> X64VSpaceKernelWindow)
   | PDPointerTablePML4E ptr _ _ \<Rightarrow>
         (\<lambda>s. obj_at (valid_pdpt_kernel_mappings vref uses s)
                     (ptrFromPAddr ptr) s)"
@@ -803,7 +803,7 @@ where
   case obj of
     PageMapL4 pm \<Rightarrow>
       (\<forall>x. valid_pml4e_kernel_mappings
-             (pm x) (ucast x << pml4e_mapping_bits) uses s)
+             (pm x) (canonical_address_of (ucast x << pml4e_mapping_bits)) uses s)
   | _ \<Rightarrow> False"
 
 declare valid_pml4_kernel_mappings_arch_def[simp]
