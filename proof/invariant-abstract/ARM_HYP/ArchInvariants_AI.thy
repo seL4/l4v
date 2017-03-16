@@ -792,11 +792,11 @@ definition
   (\<exists>p' cap. (caps_of_state s) p' = Some cap \<and>
             p \<in> obj_refs cap \<and> vs_cap_ref cap = Some ref)"
 
-definition (* ARMHYP+ *)
+definition
   global_refs :: "'z::state_ext state \<Rightarrow> obj_ref set"
 where
   "global_refs \<equiv> \<lambda>s.
-  {idle_thread s} \<union>
+  {idle_thread s, arm_us_global_pd (arch_state s)} \<union>
    range (interrupt_irq_node s)"
 
 definition
@@ -1306,7 +1306,7 @@ lemma caps_of_state_update [iff]:
 lemma wellformed_arch_obj_update:
   "\<And>ao. b = ArchObj ao \<Longrightarrow> wellformed_arch_obj ao (f s) = wellformed_arch_obj ao s"
   apply (case_tac ao;
-         clarsimp simp: valid_vcpu_def obj_at_update
+         clarsimp simp: valid_vcpu_def
                   cong: option.case_cong split: option.splits)
   done
 
@@ -1369,8 +1369,7 @@ context Arch begin global_naming ARM
 lemma global_refs_equiv:
   assumes "idle_thread s = idle_thread s'"
   assumes "interrupt_irq_node s = interrupt_irq_node s'"
-  assumes "ran (arm_asid_table (arch_state s)) = ran (arm_asid_table (arch_state s'))"
-  assumes "arm_current_vcpu (arch_state s) = arm_current_vcpu (arch_state s')"
+  assumes "arm_us_global_pd (arch_state s) = arm_us_global_pd (arch_state s')"
   shows "global_refs s = global_refs s'"
   by (simp add: assms global_refs_def)
 

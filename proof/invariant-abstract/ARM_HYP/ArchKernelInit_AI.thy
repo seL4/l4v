@@ -28,7 +28,7 @@ lemma [simp]: "is_aligned (0x1000 :: word32) 9" by (simp add: is_aligned_def)
 lemma [simp]: "is_aligned (0x2000 :: word32) 9" by (simp add: is_aligned_def)
 
 lemmas ptr_defs = init_tcb_ptr_def idle_thread_ptr_def init_irq_node_ptr_def
-                  init_globals_frame_def
+                  init_globals_frame_def us_global_pd_ptr_def
 lemmas state_defs = init_A_st_def init_kheap_def init_arch_state_def ptr_defs
 
 lemma [simp]: "is_tcb (TCB t)" by (simp add: is_tcb_def)
@@ -193,7 +193,7 @@ lemma in_kernel_base:
 lemma pspace_aligned_init_A:
   "pspace_aligned init_A_st"
   apply (clarsimp simp: pspace_aligned_def state_defs wf_obj_bits [OF wf_empty_bits]
-                          dom_if_Some cte_level_bits_def)
+                          dom_if_Some cte_level_bits_def pd_bits_def pde_bits_def)
   apply (safe intro!: aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl],
            simp_all add: is_aligned_def word_bits_def kernel_base_def)[1]
   done
@@ -259,7 +259,7 @@ lemma invs_A:
    apply (simp add: cur_tcb_def state_defs obj_at_def)
   apply (simp add: valid_state_def)
   apply (rule conjI)
-   apply (simp add: valid_pspace_def)
+   apply (simp add: valid_pspace_def pspace_aligned_init_A)
    apply (rule conjI)
     apply (clarsimp simp: kernel_base_def valid_objs_def state_defs
                           valid_obj_def valid_vm_rights_def vm_kernel_only_def
@@ -272,15 +272,10 @@ lemma invs_A:
                           init_irq_ptrs_all_ineqs valid_tcb_def
                    split: if_split_asm)
    apply (rule conjI)
-    apply (clarsimp simp: pspace_aligned_def state_defs wf_obj_bits [OF wf_empty_bits]
-                          dom_if_Some cte_level_bits_def)
-    apply (safe intro!: aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl],
-           simp_all add: is_aligned_def word_bits_def kernel_base_def)[1]
-   apply (rule conjI)
     apply (simp add:pspace_distinct_init_A)
    apply (rule conjI)
     apply (clarsimp simp: if_live_then_nonz_cap_def ex_nonz_cap_to_def live_def hyp_live_def
-                          obj_at_def state_defs init_arch_tcb_def)
+                          obj_at_def state_defs init_arch_tcb_def arch_live_def)
    apply (rule conjI)
     apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs
                           tcb_cap_cases_def is_zombie_def)
@@ -351,7 +346,7 @@ lemma invs_A:
   apply (rule conjI)
    apply (clarsimp simp: valid_asid_map_def state_defs)
   apply (rule conjI)
-   apply (clarsimp simp: pspace_in_kernel_window_def state_defs mask_def)
+   apply (clarsimp simp: pspace_in_kernel_window_def state_defs mask_def pd_bits_def pde_bits_def)
    apply (intro conjI impI)
      apply (rule in_kernel_base|simp)+
     apply (erule exE,drule sym,simp add:field_simps)

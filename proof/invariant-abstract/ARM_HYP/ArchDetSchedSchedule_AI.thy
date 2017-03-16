@@ -17,13 +17,13 @@ context Arch begin global_naming ARM_HYP
 named_theorems DetSchedSchedule_AI_assms
 
 crunch exst[wp]: set_vcpu "\<lambda>s. P (exst s)" (wp: crunch_wps)
-crunch exst[wp]: switch_to_idle_thread,vcpu_disable,vcpu_restore,vcpu_save "\<lambda>s. P (exst s)"
+crunch exst[wp]: vcpu_disable,vcpu_restore,vcpu_save "\<lambda>s. P (exst s)"
 
 lemma vcpu_switch_exst[wp]:
   "\<lbrace>\<lambda>s. P (exst s)\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_ s. P (exst s)\<rbrace>"
   unfolding vcpu_switch_def by (rule hoare_pre) wpsimp+
 
-crunch exst[wp]: set_vm_root "\<lambda>s. P (exst s)"
+crunch exst[wp]: switch_to_idle_thread,set_vm_root "\<lambda>s. P (exst s)"
   (simp: whenE_def ignore: set_object do_machine_op wp: crunch_wps)
 
 lemma set_vcpu_etcbs [wp]:
@@ -103,21 +103,33 @@ lemma switch_to_idle_thread_ct_not_in_q[wp, DetSchedSchedule_AI_assms]:
                          valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
+lemma vcpu_switch_valid_sched_action[wp]:
+  "\<lbrace>valid_sched_action\<rbrace> vcpu_switch v \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
+  unfolding valid_sched_action_def is_activatable_def st_tcb_at_kh_simp
+  by (rule hoare_lift_Pf[where f=cur_thread]; wpsimp wp: hoare_vcg_imp_lift)
+
+lemma vcpu_switch_valid_idle[wp]:
+  "\<lbrace>valid_idle\<rbrace> vcpu_switch v \<lbrace>\<lambda>_. valid_idle\<rbrace>"
+  unfolding valid_idle_def by (rule hoare_lift_Pf[where f=idle_thread]; wp)
+
+lemma valid_sched_action_idle_strg:
+  "thread = idle_thread s \<and> valid_sched_action s \<and> valid_idle s \<Longrightarrow>
+   valid_sched_action (s\<lparr>cur_thread := thread\<rparr>)"
+  by (auto simp: valid_sched_action_def is_activatable_def valid_idle_def pred_tcb_at_def obj_at_def)
+
 lemma switch_to_idle_thread_valid_sched_action[wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_sched_action and valid_idle\<rbrace>
      switch_to_idle_thread
    \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
-  apply (simp add: switch_to_idle_thread_def)
-  apply wp
-   apply (simp add: arch_switch_to_idle_thread_def do_machine_op_def split_def)
-   apply wp+
-  apply (clarsimp simp: valid_sched_action_def valid_idle_def is_activatable_def
-                        pred_tcb_at_def obj_at_def)
+  apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
+  apply (wp | strengthen valid_sched_action_idle_strg)+
+  apply simp
   done
 
 lemma switch_to_idle_thread_ct_in_cur_domain[wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>"
-  by (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def do_machine_op_def split_def ct_in_cur_domain_def | wp)+
+  by (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def ct_in_cur_domain_def
+       | wp hoare_vcg_imp_lift hoare_vcg_disj_lift)+
 
 lemma set_vm_root_ct_not_in_q[wp]:
   "\<lbrace>ct_not_in_q\<rbrace> set_vm_root param_a \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
@@ -156,12 +168,6 @@ crunch is_activatable[wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread "is_
 
 crunch valid_sched_action[wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread valid_sched_action
   (simp: whenE_def ignore: clearExMonitor)
-
-crunch it[wp]: set_vcpu,vcpu_disable,vcpu_restore,vcpu_save "\<lambda>s. P (idle_thread s)"
-
-lemma vcpu_switch_it [wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> vcpu_switch v \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
-  unfolding vcpu_switch_def by (rule hoare_pre) wpsimp+
 
 crunch it[wp]: set_vm_root "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -234,23 +240,45 @@ lemma switch_to_idle_thread_ct_not_queued[wp, DetSchedSchedule_AI_assms]:
                          pred_tcb_at_def obj_at_def not_queued_def)
   done
 
-lemma switch_to_idle_thread_valid_blocked[wp, DetSchedSchedule_AI_assms]:
-  "\<lbrace>valid_blocked and ct_in_q\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
-  apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def do_machine_op_def | wp | wpc)+
+lemma vcpu_switch_valid_blocked[wp]:
+  "\<lbrace>valid_blocked\<rbrace> vcpu_switch v \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
+  unfolding valid_blocked_def not_queued_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift) auto
+
+lemma vcpu_switch_ct_in_q[wp]:
+  "\<lbrace>ct_in_q\<rbrace> vcpu_switch v \<lbrace>\<lambda>_. ct_in_q\<rbrace>"
+  unfolding ct_in_q_def
+  apply (rule hoare_lift_Pf[where f=cur_thread])
+   apply (rule hoare_lift_Pf[where f=ready_queues])
+    apply wpsimp+
+  done
+
+lemma valid_blocked_idle_strg:
+  "thread = idle_thread s \<and> valid_blocked s \<and> ct_in_q s \<Longrightarrow> valid_blocked (s\<lparr>cur_thread := thread\<rparr>)"
   apply clarsimp
   apply (drule(1) ct_in_q_valid_blocked_ct_upd)
   apply simp
   done
+
+lemma switch_to_idle_thread_valid_blocked[wp, DetSchedSchedule_AI_assms]:
+  "\<lbrace>valid_blocked and ct_in_q\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
+  by (strengthen valid_blocked_idle_strg
+       | simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def do_machine_op_def
+       | wp | wpc )+
 
 crunch exst[wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread "\<lambda>s. P (exst s)"
 
 crunch valid_idle [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread "valid_idle :: det_ext state \<Rightarrow> bool"
 
+lemma ct_in_state_cur_update[simp]:
+  "ct_in_state P (s\<lparr>cur_thread := thread\<rparr>) = st_tcb_at P thread s"
+  by (simp add: ct_in_state_def)
+
 lemma stit_activatable' [DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
-  apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def do_machine_op_def split_def)
-  apply wp
+  unfolding switch_to_idle_thread_def arch_switch_to_idle_thread_def
+  apply wpsimp
   apply (clarsimp simp: valid_idle_def ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
@@ -329,21 +357,21 @@ crunch valid_sched[wp]:
   valid_sched
   (wp: mapM_x_wp' mapM_wp')
 
-crunch cur_thread[wp]: read_vcpu_register,vcpu_clean_invalidate_active "\<lambda>s. P (cur_thread s)"
+crunch cur_thread[wp]: read_vcpu_register "\<lambda>s. P (cur_thread s)"
 
 crunch ct_active[wp]:
-  write_vcpu_register,read_vcpu_register,set_message_info,as_user, vcpu_clean_invalidate_active
+  write_vcpu_register,read_vcpu_register,set_message_info,as_user
   ct_active
   (wp: ct_in_state_thread_state_lift)
 
-crunch valid_sched[wp]: read_vcpu_register,write_vcpu_register,vcpu_clean_invalidate_active valid_sched
+crunch valid_sched[wp]: read_vcpu_register,write_vcpu_register valid_sched
 
 lemma invoke_vcpu_read_register_valid_sched[wp]:
-  "\<lbrace>valid_sched and ct_active\<rbrace> invoke_vcpu_read_register v \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  "\<lbrace>valid_sched and ct_active\<rbrace> invoke_vcpu_read_register v reg \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   unfolding invoke_vcpu_read_register_def by (wpsimp wp: set_thread_state_Running_valid_sched)
 
 lemma invoke_vcpu_write_register_valid_sched[wp]:
-  "\<lbrace>valid_sched and ct_active\<rbrace> invoke_vcpu_write_register v val \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  "\<lbrace>valid_sched and ct_active\<rbrace> invoke_vcpu_write_register v reg val \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   unfolding invoke_vcpu_write_register_def by (wpsimp wp: set_thread_state_Restart_valid_sched)
 
 crunch valid_sched[wp]: perform_vcpu_invocation valid_sched

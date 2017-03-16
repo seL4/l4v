@@ -197,10 +197,6 @@ lemma dmo_ex_nonz_cap_to[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
   by (rule hoare_lift_Pf[where f=cur_thread]; wp)
 
-lemma dmo_gets_inv[wp]:
-  "\<lbrace>P\<rbrace> do_machine_op (gets f) \<lbrace>\<lambda>rv. P\<rbrace>"
-  unfolding do_machine_op_def by (wpsimp simp: simpler_gets_def)
-
 lemma conj_imp_strg:
   "P \<Longrightarrow> (A \<longrightarrow> P) \<and> (B \<longrightarrow> P)" by simp
 

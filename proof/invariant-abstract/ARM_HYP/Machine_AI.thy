@@ -829,6 +829,39 @@ lemma empty_fail_set_gic_vcpu_ctrl_hcr[simp, intro!]:
   "empty_fail (set_gic_vcpu_ctrl_hcr w)"
   by (simp add: set_gic_vcpu_ctrl_hcr_def)
 
+lemmas vcpuregs_gets =
+  get_lr_svc_def
+  get_sp_svc_def
+  get_lr_abt_def
+  get_sp_abt_def
+  get_lr_und_def
+  get_sp_und_def
+  get_lr_irq_def
+  get_sp_irq_def
+  get_lr_fiq_def
+  get_sp_fiq_def
+  get_r8_fiq_def
+  get_r9_fiq_def
+  get_r10_fiq_def
+  get_r11_fiq_def
+  get_r12_fiq_def
+
+lemmas vcpuregs_sets =
+  set_lr_svc_def
+  set_sp_svc_def
+  set_lr_abt_def
+  set_sp_abt_def
+  set_lr_und_def
+  set_sp_und_def
+  set_lr_irq_def
+  set_sp_irq_def
+  set_lr_fiq_def
+  set_sp_fiq_def
+  set_r8_fiq_def
+  set_r9_fiq_def
+  set_r10_fiq_def
+  set_r11_fiq_def
+  set_r12_fiq_def
 
 lemma empty_fail_cacheRangeOp [simp, intro!]:
   assumes ef: "\<And>a b. empty_fail (oper a b)"

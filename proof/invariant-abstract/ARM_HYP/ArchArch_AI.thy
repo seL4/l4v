@@ -29,8 +29,8 @@ definition
        VCPUSetTCB vcpu_ptr tcb_ptr \<Rightarrow> vcpu_at vcpu_ptr and tcb_at tcb_ptr and
                                       ex_nonz_cap_to vcpu_ptr and ex_nonz_cap_to tcb_ptr
      | VCPUInjectIRQ vcpu_ptr index virq \<Rightarrow> vcpu_at vcpu_ptr
-     | VCPUReadRegister vcpu_ptr \<Rightarrow> vcpu_at vcpu_ptr
-     | VCPUWriteRegister vcpu_ptr val \<Rightarrow> vcpu_at vcpu_ptr"
+     | VCPUReadRegister vcpu_ptr reg \<Rightarrow> vcpu_at vcpu_ptr
+     | VCPUWriteRegister vcpu_ptr reg val \<Rightarrow> vcpu_at vcpu_ptr"
 
 lemma safe_parent_strg:
   "cte_wp_at (\<lambda>cap. cap = UntypedCap False frame pageBits idx) p s \<and>
@@ -906,6 +906,12 @@ lemma vcpu_invalidate_active_hyp_refs_empty[wp]:
   "\<lbrace>obj_at (\<lambda>ko. hyp_refs_of ko = {}) p\<rbrace> vcpu_invalidate_active \<lbrace>\<lambda>r. obj_at (\<lambda>ko. hyp_refs_of ko = {}) p\<rbrace>"
   unfolding vcpu_invalidate_active_def vcpu_disable_def by wpsimp
 
+lemma as_user_hyp_refs_empty[wp]:
+  "\<lbrace>obj_at (\<lambda>ko. hyp_refs_of ko = {}) p\<rbrace> as_user t f \<lbrace>\<lambda>r. obj_at (\<lambda>ko. hyp_refs_of ko = {}) p\<rbrace>"
+  unfolding as_user_def
+  apply (wpsimp wp: set_object_wp)
+  by (clarsimp simp: get_tcb_Some_ko_at obj_at_def arch_tcb_context_set_def)
+
 lemma dissociate_vcpu_tcb_obj_at_hyp_refs[wp]:
   "\<lbrace>\<lambda>s. p \<notin> {t, vr} \<longrightarrow> obj_at (\<lambda>ko. hyp_refs_of ko = {}) p s \<rbrace>
      dissociate_vcpu_tcb t vr
@@ -1008,7 +1014,7 @@ lemma associate_vcpu_tcb_invs[wp]:
   apply (simp add: pred_conj_def)
   apply (rule hoare_pre)
    apply (rule hoare_vcg_conj_lift[rotated])+
-   by (wp weak_if_wp hoare_vcg_all_lift hoare_drop_imps
+   by (wp weak_if_wp hoare_vcg_all_lift hoare_drop_imps as_user_only_idle
         | wpc
         | clarsimp
         | strengthen valid_arch_state_vcpu_update_str valid_global_refs_vcpu_update_str
@@ -1019,21 +1025,19 @@ lemma associate_vcpu_tcb_invs[wp]:
         | simp add: vcpu_invalidate_active_def
         | simp add: vcpu_disable_def)+
 
-lemma valid_obj_vcpu_sctlr_update[simp]:
-  "valid_obj vcpu (ArchObj (VCPU (vcpu_sctlr_update f v))) s = valid_obj vcpu (ArchObj (VCPU v)) s"
-  by (simp add: valid_obj_def valid_vcpu_def)
+lemma set_vcpu_regs_update[wp]:
+  "\<lbrace>invs and valid_obj p (ArchObj (VCPU vcpu)) and
+    obj_at (\<lambda>ko'. hyp_refs_of ko' = vcpu_tcb_refs (vcpu_tcb vcpu)) p\<rbrace>
+  set_vcpu p (vcpu_regs_update f vcpu) \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding invs_def valid_state_def
+  by (wpsimp wp: set_vcpu_valid_pspace set_vcpu_valid_arch_eq_hyp)
 
 lemma write_vcpu_register_invs[wp]:
-  "\<lbrace>invs\<rbrace> write_vcpu_register vcpu val \<lbrace>\<lambda>_. invs\<rbrace>"
-  unfolding write_vcpu_register_def invs_def valid_state_def
-  apply (wp get_vcpu_wp set_vcpu_valid_pspace set_vcpu_valid_arch_eq_hyp)
-  apply (clarsimp simp: obj_at_def valid_pspace_def)
-  apply (erule (2) valid_objsE)
+  "\<lbrace>invs\<rbrace> write_vcpu_register vcpu reg val \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding write_vcpu_register_def vcpuregs_sets
+  apply (wpsimp wp: get_vcpu_wp)
+  apply (fastforce intro: valid_objsE simp: obj_at_def)
   done
-
-lemma valid_obj_vcpu_VGIC_update[simp]:
-  "valid_obj vcpu (ArchObj (VCPU (vcpu_VGIC_update f v))) s = valid_obj vcpu (ArchObj (VCPU v)) s"
-  by (simp add: valid_obj_def valid_vcpu_def)
 
 lemma invoke_vcpu_inject_irq_invs[wp]:
   "\<lbrace>invs\<rbrace> invoke_vcpu_inject_irq vcpu indx t \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -1055,8 +1059,7 @@ lemma perform_vcpu_invs[wp]:
   apply (rule hoare_pre)
    apply (wp | wpc
          | clarsimp simp: invoke_vcpu_read_register_def read_vcpu_register_def
-                          invoke_vcpu_write_register_def
-                          vcpu_clean_invalidate_active_def[abs_def])+
+                          invoke_vcpu_write_register_def vcpuregs_gets)+
   done
 
 lemma invoke_arch_invs[wp]:
@@ -1826,7 +1829,6 @@ lemma  perform_vcpu_invocation_pred_tcb_at[wp]:
   apply (wp associate_vcpu_tcb_pred_tcb_at | wpc
         | clarsimp simp: invoke_vcpu_read_register_def
                          read_vcpu_register_def
-                         vcpu_clean_invalidate_active_def
                          invoke_vcpu_write_register_def
                          write_vcpu_register_def)+
   done

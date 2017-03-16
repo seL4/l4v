@@ -78,12 +78,23 @@ lemma arch_stt_runnable[Schedule_AI_asms]:
   apply wp
   done
 
+lemma idle_strg:
+  "thread = idle_thread s \<and> invs s \<Longrightarrow> invs (s\<lparr>cur_thread := thread\<rparr>)"
+  by (clarsimp simp: invs_def valid_state_def valid_idle_def cur_tcb_def
+                     pred_tcb_at_def valid_machine_state_def obj_at_def is_tcb_def)
+
+crunch it[wp]: vcpu_enable, vcpu_disable, vcpu_restore, vcpu_save "\<lambda>s. P (idle_thread s)"
+
+lemma vcpu_switch_it[wp]:
+  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> vcpu_switch v \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
+  unfolding vcpu_switch_def
+  by (rule hoare_pre, wpsimp) simp
+
 lemma stit_invs [wp,Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
-  apply wp
-by (clarsimp simp: invs_def valid_state_def valid_idle_def cur_tcb_def
-              pred_tcb_at_def valid_machine_state_def obj_at_def is_tcb_def)
+  apply (wpsimp|strengthen idle_strg)+
+  done
 
 lemma stit_activatable[Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"

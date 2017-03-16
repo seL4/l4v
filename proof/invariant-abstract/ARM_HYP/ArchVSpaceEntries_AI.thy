@@ -74,15 +74,8 @@ where
 
 lemma valid_pdpt_init[iff]:
   "valid_pdpt_objs init_A_st"
-proof -
-  have P: "valid_pd_entries (global_pd :: 11 word \<Rightarrow> _)"
-    by (clarsimp simp: valid_entries_def)
-  also have Q: "entries_align pde_range_sz (global_pd :: 11 word \<Rightarrow> _)"
-    by (clarsimp simp: entries_align_def)
-  thus ?thesis using P
-    by (auto simp: init_A_st_def init_kheap_def
-            elim!: ranE split: if_split_asm)
-qed
+  by (auto simp: init_A_st_def init_kheap_def valid_entries_def entries_align_def
+          elim!: ranE split: if_split_asm)
 
 lemma set_object_valid_pdpt[wp]:
   "\<lbrace>valid_pdpt_objs and K (obj_valid_pdpt obj)\<rbrace>
@@ -573,13 +566,6 @@ lemma invoke_cnode_valid_pdpt_objs[wp]:
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
    apply (wp get_cap_wp | wpc | simp split del: if_split)+
-  done
-
-lemma as_user_valid_pdpt_objs[wp]:
-  "\<lbrace>valid_pdpt_objs\<rbrace> as_user t m \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  apply (simp add: as_user_def split_def)
-  apply wp
-  apply simp
   done
 
 crunch valid_pdpt_objs[wp]: invoke_tcb "valid_pdpt_objs"

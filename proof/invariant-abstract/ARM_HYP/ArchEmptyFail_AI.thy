@@ -123,9 +123,13 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slo
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits
-   ignore: do_machine_op writeContextIDAndPD_impl set_gic_vcpu_ctrl_hcr_impl setSCTLR_impl setHCR_impl
-           set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl set_gic_vcpu_ctrl_lr_impl setACTLR
-           get_gic_vcpu_ctrl_lr_impl)
+   ignore: setACTLR do_machine_op set_gic_vcpu_ctrl_hcr_impl set_lr_svc_impl
+           set_sp_svc_impl set_lr_abt_impl set_sp_abt_impl set_lr_und_impl set_sp_und_impl
+           set_lr_irq_impl set_sp_irq_impl set_lr_fiq_impl set_sp_fiq_impl set_r8_fiq_impl
+           set_r9_fiq_impl set_r10_fiq_impl set_r11_fiq_impl set_r12_fiq_impl
+           get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
+           writeContextIDAndPD_impl set_gic_vcpu_ctrl_hcr_impl setSCTLR_impl setHCR_impl
+           set_gic_vcpu_ctrl_lr_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: setRegister, setNextPC
 
