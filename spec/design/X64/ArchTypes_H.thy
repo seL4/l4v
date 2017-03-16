@@ -171,7 +171,7 @@ definition
       PageTableObject,
       PageDirectoryObject,
       PDPointerTableObject,
-      PageMapL4Object
+      PML4Object
     ]"
 
 definition

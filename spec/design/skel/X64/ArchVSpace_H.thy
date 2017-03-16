@@ -28,12 +28,6 @@ defs checkValidMappingSize_def:
   "checkValidMappingSize sz \<equiv> stateAssert
     (\<lambda>s. 2 ^ pageBitsForSize sz <= gsMaxObjectSize s) []"
 
-defs asidInvalidate_def:
-  "asidInvalidate asid \<equiv> doMachineOp $ hwASIDInvalidate asid"
-
-defs setCurrentVSpaceRoot_def:
-  "setCurrentVSpaceRoot addr asid \<equiv> archSetCurrentVSpaceRoot addr asid"
-
 end
 
 end

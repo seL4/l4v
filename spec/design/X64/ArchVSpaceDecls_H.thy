@@ -103,7 +103,22 @@ consts'
 checkMappingPPtr :: "machine_word \<Rightarrow> vmpage_entry \<Rightarrow> ( lookup_failure , unit ) kernel_f"
 
 consts'
-setCurrentVSpaceRoot :: "paddr \<Rightarrow> asid \<Rightarrow> unit machine_monad"
+getCurrentCR3 :: "cr3 kernel"
+
+consts'
+setCurrentCR3 :: "cr3 \<Rightarrow> unit kernel"
+
+consts'
+invalidateLocalPageStructureCacheASID :: "paddr \<Rightarrow> asid \<Rightarrow> unit kernel"
+
+consts'
+invalidatePageStructureCacheASID :: "paddr \<Rightarrow> asid \<Rightarrow> unit kernel"
+
+consts'
+getCurrentVSpaceRoot :: "paddr kernel"
+
+consts'
+setCurrentVSpaceRoot :: "paddr \<Rightarrow> asid \<Rightarrow> unit kernel"
 
 consts'
 setVMRoot :: "machine_word \<Rightarrow> unit kernel"
@@ -118,13 +133,13 @@ consts'
 maskVMRights :: "vmrights \<Rightarrow> cap_rights \<Rightarrow> vmrights"
 
 consts'
-flushPDPT :: "machine_word \<Rightarrow> vptr \<Rightarrow> machine_word \<Rightarrow> unit kernel"
+flushAll :: "paddr \<Rightarrow> asid \<Rightarrow> unit kernel"
 
 consts'
-flushPageDirectory :: "machine_word \<Rightarrow> vptr \<Rightarrow> machine_word \<Rightarrow> unit kernel"
+flushPDPT  :: "paddr \<Rightarrow> asid \<Rightarrow> unit kernel"
 
 consts'
-flushCacheRange :: "machine_word \<Rightarrow> nat \<Rightarrow> unit kernel"
+flushPD :: "paddr \<Rightarrow> asid \<Rightarrow> unit kernel"
 
 consts'
 flushTable :: "machine_word \<Rightarrow> vptr \<Rightarrow> machine_word \<Rightarrow> unit kernel"
@@ -136,25 +151,25 @@ consts'
 pageBase :: "vptr \<Rightarrow> vmpage_size \<Rightarrow> vptr"
 
 consts'
-decodeX64FrameInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
+decodeX64FrameInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
 consts'
-decodeX64PDPointerTableInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
+decodeX64PDPointerTableInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
 consts'
-decodeX64PageDirectoryInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
+decodeX64PageDirectoryInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
 consts'
-decodeX64PageTableInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
+decodeX64PageTableInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
 consts'
-decodeX64ASIDControlInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
+decodeX64ASIDControlInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
 consts'
-decodeX64ASIDPoolInvocation :: "machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
+decodeX64ASIDPoolInvocation :: "machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
 consts'
-decodeX64MMUInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
+decodeX64MMUInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
 consts'
 checkVPAlignment :: "vmpage_size \<Rightarrow> vptr \<Rightarrow> ( syscall_error , unit ) kernel_f"
@@ -163,7 +178,7 @@ consts'
 checkValidMappingSize :: "vmpage_size \<Rightarrow> unit kernel"
 
 consts'
-performX64MMUInvocation :: "ArchRetypeDecls_H.invocation \<Rightarrow> machine_word list kernel_p"
+performX64MMUInvocation :: "invocation \<Rightarrow> machine_word list kernel_p"
 
 consts'
 performPDPTInvocation :: "pdptinvocation \<Rightarrow> unit kernel"
@@ -202,7 +217,7 @@ consts'
 storePTE :: "machine_word \<Rightarrow> pte \<Rightarrow> unit kernel"
 
 consts'
-mapKernelWindow :: "unit kernel"
+mapKernelWindow  :: "unit kernel"
 
 consts'
 activateGlobalVSpace :: "unit kernel"
@@ -238,10 +253,10 @@ consts'
 ensurePortOperationAllowed :: "arch_capability \<Rightarrow> ioport \<Rightarrow> nat \<Rightarrow> ( syscall_error , unit ) kernel_f"
 
 consts'
-decodeX64PortInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
+decodeX64PortInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
 consts'
-performX64PortInvocation :: "ArchRetypeDecls_H.invocation \<Rightarrow> machine_word list kernel_p"
+performX64PortInvocation :: "invocation \<Rightarrow> machine_word list kernel_p"
 
 
 end (* context X64 *)

@@ -32,7 +32,6 @@ requalify_consts
   performTransfer
   msgInfoRegister
   msgRegisters
-  tpidrurwRegister
   fromVPtr
 end
 

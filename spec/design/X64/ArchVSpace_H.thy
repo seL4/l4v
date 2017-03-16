@@ -272,7 +272,7 @@ defs unmapPDPT_def:
         | _ \<Rightarrow>   throw InvalidRoot
         );
     withoutFailure $ (do
-        flushPDPT vspace vaddr pdpt;
+        flushPDPT (addrFromPPtr vspace) asid;
         storePML4E pmSlot InvalidPML4E
     od)
 odE)"
@@ -288,8 +288,9 @@ defs unmapPageDirectory_def:
         | _ \<Rightarrow>   throw InvalidRoot
         );
     withoutFailure $ (do
-        doMachineOp invalidatePageStructureCache;
-        storePDPTE pdptSlot InvalidPDPTE
+        flushPD (addrFromPPtr vspace) asid;
+        storePDPTE pdptSlot InvalidPDPTE;
+        invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
     od)
 odE)"
 
@@ -306,7 +307,7 @@ defs unmapPageTable_def:
     withoutFailure $ (do
         flushTable vspace vaddr pt;
         storePDE pdSlot InvalidPDE;
-        doMachineOp invalidatePageStructureCache
+        invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
     od)
 odE)"
 
@@ -366,6 +367,31 @@ defs checkMappingPPtr_def:
         )
   )"
 
+defs getCurrentCR3_def:
+"getCurrentCR3\<equiv> gets (x64KSCurrentCR3 \<circ> ksArchState)"
+
+defs setCurrentCR3_def:
+"setCurrentCR3 cr3\<equiv> (do
+    modify (\<lambda> s. s \<lparr> ksArchState := (ksArchState s) \<lparr> x64KSCurrentCR3 := cr3 \<rparr>\<rparr>);
+    doMachineOp $ writeCR3 (cr3BaseAddress cr3) $ fromASID $ cr3pcid cr3
+od)"
+
+defs invalidateLocalPageStructureCacheASID_def:
+"invalidateLocalPageStructureCacheASID ptr asid\<equiv> (do
+    curCR3 \<leftarrow> getCurrentCR3;
+    setCurrentCR3 (CR3 ptr asid);
+    setCurrentCR3 curCR3
+od)"
+
+defs invalidatePageStructureCacheASID_def:
+"invalidatePageStructureCacheASID p a \<equiv> invalidateLocalPageStructureCacheASID p a"
+
+defs getCurrentVSpaceRoot_def:
+"getCurrentVSpaceRoot\<equiv> (do
+    cur \<leftarrow> getCurrentCR3;
+    return $ cr3BaseAddress cur
+od)"
+
 defs setVMRoot_def:
 "setVMRoot tcb\<equiv> (do
     threadRootSlot \<leftarrow> getThreadVSpaceRoot tcb;
@@ -375,15 +401,17 @@ defs setVMRoot_def:
               ArchObjectCap (PML4Cap pd (Some asid)) \<Rightarrow>   (doE
                 pd' \<leftarrow> findVSpaceForASID asid;
                 whenE (pd \<noteq> pd') $ throw InvalidRoot;
-                withoutFailure $ doMachineOp $ setCurrentVSpaceRoot (addrFromPPtr pd) asid
+                curCR3 \<leftarrow> withoutFailure $ getCurrentCR3;
+                whenE (curCR3 \<noteq> CR3 (addrFromPPtr pd) asid) $
+                        withoutFailure $ setCurrentCR3 $ CR3 (addrFromPPtr pd) asid
               odE)
             | _ \<Rightarrow>   throw InvalidRoot)
             )
         (\<lambda> _. (do
             globalPML4 \<leftarrow> gets (x64KSGlobalPML4 \<circ> ksArchState);
-            doMachineOp $ setCurrentVSpaceRoot (addrFromKPPtr globalPML4) 0
+            setCurrentVSpaceRoot (addrFromKPPtr globalPML4) 0
         od)
-                                                                           )
+                                                             )
 od)"
 
 defs isValidVTableRoot_def:
@@ -409,14 +437,14 @@ defs maskVMRights_def:
     | _ \<Rightarrow>   VMKernelOnly
     )"
 
+defs flushAll_def:
+"flushAll vspace asid\<equiv> doMachineOp $ invalidateASID vspace (fromASID asid)"
+
 defs flushPDPT_def:
-"flushPDPT arg1 arg2 arg3 \<equiv> doMachineOp $ resetCR3"
+"flushPDPT p a \<equiv> flushAll p a"
 
-defs flushPageDirectory_def:
-"flushPageDirectory arg1 arg2 arg3 \<equiv> doMachineOp $ resetCR3"
-
-defs flushCacheRange_def:
-"flushCacheRange arg1 arg2 \<equiv> haskell_fail []"
+defs flushPD_def:
+"flushPD p a \<equiv> flushAll p a"
 
 defs flushTable_def:
 "flushTable vspace vptr pt\<equiv> (do
@@ -550,7 +578,8 @@ defs decodeX64PDPointerTableInvocation_def:
                 pdptMapCap= ArchObjectCap $ cap \<lparr> capPDPTMappedAddress:= Just (asid, (VPtr vaddr)) \<rparr>,
                 pdptMapCTSlot= cte,
                 pdptMapPML4E= pml4e,
-                pdptMapPML4Slot= pml4Slot \<rparr>
+                pdptMapPML4Slot= pml4Slot,
+                pdptMapVSpace= vspace \<rparr>
         odE)
         | (ArchInvocationLabel X64PageDirectoryMap, _, _) =>  throw TruncatedMessage
         | (ArchInvocationLabel X64PageDirectoryUnmap, _, _) =>  (doE
@@ -600,7 +629,8 @@ defs decodeX64PageDirectoryInvocation_def:
                 pdMapCap= ArchObjectCap $ cap \<lparr> capPDMappedAddress:= Just (asid, (VPtr vaddr)) \<rparr>,
                 pdMapCTSlot= cte,
                 pdMapPDPTE= pdpte,
-                pdMapPDPTSlot= pdptSlot \<rparr>
+                pdMapPDPTSlot= pdptSlot,
+                pdMapVSpace= pml \<rparr>
         odE)
         | (ArchInvocationLabel X64PageDirectoryMap, _, _) =>  throw TruncatedMessage
         | (ArchInvocationLabel X64PageDirectoryUnmap, _, _) =>  (doE
@@ -649,7 +679,8 @@ defs decodeX64PageTableInvocation_def:
                 ptMapCap= ArchObjectCap $ cap \<lparr> capPTMappedAddress:= Just (asid, (VPtr vaddr)) \<rparr>,
                 ptMapCTSlot= cte,
                 ptMapPDE= pde,
-                ptMapPDSlot= pdSlot \<rparr>
+                ptMapPDSlot= pdSlot,
+                ptMapVSpace= pml \<rparr>
         odE)
         | (ArchInvocationLabel X64PageTableMap, _, _) =>  throw TruncatedMessage
         | (ArchInvocationLabel X64PageTableUnmap, _, _) =>  (doE
@@ -670,21 +701,21 @@ defs decodeX64ASIDControlInvocation_def:
     ASIDControlCap \<Rightarrow>   
     (let (label, args, extraCaps) = (invocationType label, args, extraCaps) in
         case (label, args, extraCaps) of
-        (ArchInvocationLabel X64ASIDControlMakePool, index#depth#_, (untyped,parentSlot)#(root,_)#_) =>  (doE
+        (ArchInvocationLabel X64ASIDControlMakePool, index#depth#_, (untyped,parentSlot)#(croot,_)#_) =>  (doE
             asidTable \<leftarrow> withoutFailure $ gets (x64KSASIDTable \<circ> ksArchState);
             free \<leftarrow> returnOk ( filter (\<lambda> (x,y). x \<le> (1 `~shiftL~` asidHighBits) - 1 \<and> isNothing y) $ assocs asidTable);
             whenE (null free) $ throw DeleteFirst;
             base \<leftarrow> returnOk ( (fst $ head free) `~shiftL~` asidLowBits);
             pool \<leftarrow> returnOk ( makeObject ::asidpool);
             frame \<leftarrow> (let v16 = untyped in
-                if isUntypedCap v16 \<and> capBlockSize v16 = objBits pool
+                if isUntypedCap v16 \<and> capBlockSize v16 = objBits pool \<and> \<not> capIsDevice v16
                 then  (doE
                     ensureNoChildren parentSlot;
                     returnOk $ capPtr untyped
                 odE)
                 else  throw $ InvalidCapability 1
                 );
-            destSlot \<leftarrow> lookupTargetSlot root (CPtr index) (fromIntegral depth);
+            destSlot \<leftarrow> lookupTargetSlot croot (CPtr index) (fromIntegral depth);
             ensureEmptySlot destSlot;
             returnOk $ InvokeASIDControl $ MakePool_ \<lparr>
                 makePoolFrame= frame,
@@ -732,7 +763,27 @@ defs decodeX64ASIDPoolInvocation_def:
   )"
 
 defs decodeX64MMUInvocation_def:
-"decodeX64MMUInvocation label args x2 cte x4 extraCaps\<equiv> (* case removed *) undefined"
+"decodeX64MMUInvocation label args x2 cte x4 extraCaps\<equiv> (let cap = x4 in
+  if isPageCap cap
+  then
+ decodeX64FrameInvocation label args cte cap extraCaps
+  else if isPDPointerTableCap cap
+  then
+ decodeX64PDPointerTableInvocation label args cte cap extraCaps
+  else if isPageDirectoryCap cap
+  then
+ decodeX64PageDirectoryInvocation label args cte cap extraCaps
+  else if isPageTableCap cap
+  then
+ decodeX64PageTableInvocation label args cte cap extraCaps
+  else if isASIDControlCap cap
+  then
+ decodeX64ASIDControlInvocation label args cap extraCaps
+  else if isASIDPoolCap cap
+  then
+ decodeX64ASIDPoolInvocation label cap extraCaps
+  else   haskell_fail []
+  )"
 
 defs checkVPAlignment_def:
 "checkVPAlignment sz w \<equiv>
@@ -755,10 +806,14 @@ od)"
 
 defs performPDPTInvocation_def:
 "performPDPTInvocation x0\<equiv> (case x0 of
-    (PDPTMap cap ctSlot pml4e pml4Slot) \<Rightarrow>    (do
+    (PDPTMap cap ctSlot pml4e pml4Slot vspace) \<Rightarrow>    (do
     updateCap ctSlot cap;
     storePML4E pml4Slot pml4e;
-    doMachineOp invalidatePageStructureCache
+    asid \<leftarrow> (case cap of
+              ArchObjectCap (PageDirectoryCap _ (Some (a, _))) \<Rightarrow>   return a
+            | _ \<Rightarrow>   haskell_fail []
+            );
+    invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
     od)
   | (PDPTUnmap cap ctSlot) \<Rightarrow>    (do
     (case capPDPTMappedAddress cap of
@@ -778,10 +833,14 @@ defs performPDPTInvocation_def:
 
 defs performPageDirectoryInvocation_def:
 "performPageDirectoryInvocation x0\<equiv> (case x0 of
-    (PageDirectoryMap cap ctSlot pdpte pdptSlot) \<Rightarrow>    (do
+    (PageDirectoryMap cap ctSlot pdpte pdptSlot vspace) \<Rightarrow>    (do
     updateCap ctSlot cap;
     storePDPTE pdptSlot pdpte;
-    doMachineOp invalidatePageStructureCache
+    asid \<leftarrow> (case cap of
+              ArchObjectCap (PageDirectoryCap _ (Some (a, _))) \<Rightarrow>   return a
+            | _ \<Rightarrow>   haskell_fail []
+            );
+    invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
     od)
   | (PageDirectoryUnmap cap ctSlot) \<Rightarrow>    (do
     (case capPDMappedAddress cap of
@@ -801,10 +860,14 @@ defs performPageDirectoryInvocation_def:
 
 defs performPageTableInvocation_def:
 "performPageTableInvocation x0\<equiv> (case x0 of
-    (PageTableMap cap ctSlot pde pdSlot) \<Rightarrow>    (do
+    (PageTableMap cap ctSlot pde pdSlot vspace) \<Rightarrow>    (do
     updateCap ctSlot cap;
     storePDE pdSlot pde;
-    doMachineOp invalidatePageStructureCache
+    asid \<leftarrow> (case cap of
+              ArchObjectCap (PageTableCap _ (Some (a, _))) \<Rightarrow>   return a
+            | _ \<Rightarrow>   haskell_fail []
+            );
+    invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
     od)
   | (PageTableUnmap cap slot) \<Rightarrow>    (do
     (case capPTMappedAddress cap of
@@ -944,38 +1007,27 @@ defs createFramesOfRegion_def:
 "createFramesOfRegion \<equiv> error []"
 
 defs createITPDPTs_def:
-"createITPDPTs \<equiv> error []"
+"createITPDPTs  \<equiv> error []"
 
 defs writeITPDPTs_def:
-"writeITPDPTs \<equiv> error []"
+"writeITPDPTs  \<equiv> error []"
 
 defs createITASIDPool_def:
-"createITASIDPool \<equiv> error []"
+"createITASIDPool  \<equiv> error []"
 
 defs writeITASIDPool_def:
-"writeITASIDPool \<equiv> error []"
+"writeITASIDPool  \<equiv> error []"
 
 defs createDeviceFrames_def:
-"createDeviceFrames \<equiv> error []"
+"createDeviceFrames  \<equiv> error []"
 
 defs vptrFromPPtr_def:
-"vptrFromPPtr x0\<equiv> (case x0 of
-    ((* PPtr *) ptr) \<Rightarrow>    (doE
-    offset \<leftarrow> gets initVPtrOffset;
-    returnOk $ (VPtr ptr) + offset
-    odE)
-  )"
+"vptrFromPPtr  \<equiv> error []"
 
 
 defs checkValidMappingSize_def:
   "checkValidMappingSize sz \<equiv> stateAssert
     (\<lambda>s. 2 ^ pageBitsForSize sz <= gsMaxObjectSize s) []"
-
-defs asidInvalidate_def:
-  "asidInvalidate asid \<equiv> doMachineOp $ hwASIDInvalidate asid"
-
-defs setCurrentVSpaceRoot_def:
-  "setCurrentVSpaceRoot addr asid \<equiv> archSetCurrentVSpaceRoot addr asid"
 
 end
 

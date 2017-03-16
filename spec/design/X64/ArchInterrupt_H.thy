@@ -27,12 +27,12 @@ defs decodeIRQControlInvocation_def:
             destSlot \<leftarrow> lookupTargetSlot cnode (CPtr index)
                 (fromIntegral depth);
             ensureEmptySlot destSlot;
-            rangeCheck ioapic 0 (MachineOps.numIOAPICs - 1);
-            rangeCheck pin 0 (MachineOps.ioapicIRQLines - 1);
+            rangeCheck ioapic 0 (numIOAPICs - 1);
+            rangeCheck pin 0 (ioapicIRQLines - 1);
             rangeCheck level (0::machine_word) 1;
             rangeCheck polarity (0::machine_word) 1;
-            vector \<leftarrow> returnOk ( (fromIntegral $ fromEnum irq) + MachineOps.irqIntOffset);
-            returnOk $ ArchRetypeDecls_H.IssueIRQHandlerIOAPIC irq destSlot srcSlot ioapic
+            vector \<leftarrow> returnOk ( (fromIntegral $ fromEnum irq) + irqIntOffset);
+            returnOk $ IssueIRQHandlerIOAPIC irq destSlot srcSlot ioapic
                 pin level polarity vector
         odE)
         | (ArchInvocationLabel X64IRQIssueIRQHandlerMSI,
@@ -42,10 +42,10 @@ defs decodeIRQControlInvocation_def:
             destSlot \<leftarrow> lookupTargetSlot cnode (CPtr index)
                 (fromIntegral depth);
             ensureEmptySlot destSlot;
-            rangeCheck pciBus 0 MachineOps.maxPCIBus;
-            rangeCheck pciDev 0 MachineOps.maxPCIDev;
-            rangeCheck pciFunc 0 MachineOps.maxPCIFunc;
-            returnOk $ ArchRetypeDecls_H.IssueIRQHandlerMSI irq destSlot srcSlot pciBus
+            rangeCheck pciBus 0 maxPCIBus;
+            rangeCheck pciDev 0 maxPCIDev;
+            rangeCheck pciFunc 0 maxPCIFunc;
+            returnOk $ IssueIRQHandlerMSI irq destSlot srcSlot pciBus
                 pciDev pciFunc handle
         odE)
         | _ =>  throw IllegalOperation
@@ -55,16 +55,16 @@ defs performIRQControl_def:
 "performIRQControl x0\<equiv> (let inv = x0 in
   case inv of
   (IssueIRQHandlerIOAPIC irq destSlot srcSlot ioapic pin level polarity vector) =>   withoutPreemption $ (do
-    doMachineOp $ MachineOps.ioapicMapPinToVector ioapic pin level polarity vector;
-    irqState \<leftarrow> doMachineOp $ MachineOps.irqStateIRQIOAPICNew ioapic pin level polarity (1::machine_word) (0::machine_word);
-    doMachineOp $ MachineOps.updateIRQState irq irqState;
+    doMachineOp $ ioapicMapPinToVector ioapic pin level polarity vector;
+    irqState \<leftarrow> return $ IRQIOAPIC ioapic pin level polarity True;
+    doMachineOp $ updateIRQState irq irqState;
     setIRQState IRQSignal (IRQ irq);
     cteInsert (IRQHandlerCap (IRQ irq)) destSlot srcSlot;
     return ()
   od)
   | (IssueIRQHandlerMSI irq destSlot srcSlot pciBus pciDev pciFunc handle) =>   withoutPreemption $ (do
-    irqState \<leftarrow> doMachineOp $ MachineOps.irqStateIRQMSINew pciBus pciDev pciFunc handle;
-    doMachineOp $ MachineOps.updateIRQState irq irqState;
+    irqState \<leftarrow> return $ IRQMSI pciBus pciDev pciFunc handle;
+    doMachineOp $ updateIRQState irq irqState;
     setIRQState IRQSignal (IRQ irq);
     cteInsert (IRQHandlerCap (IRQ irq)) destSlot srcSlot;
     return ()

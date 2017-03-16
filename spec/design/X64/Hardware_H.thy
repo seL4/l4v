@@ -20,12 +20,7 @@ context Arch begin global_naming X64_H
 
 type_synonym irq = "Platform.X64.irq"
 
-type_synonym cr3 = "Platform.X64.cr3"
-
 type_synonym ioport = "word16"
-
-datatype hyp_fault_type =
-    X64NoHypFaults
 
 type_synonym paddr = "Platform.X64.paddr"
 
@@ -658,15 +653,6 @@ where
 "setInterruptMode arg1 arg2 arg3 \<equiv> return ()"
 
 definition
-archSetCurrentVSpaceRoot :: "paddr \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-where
-"archSetCurrentVSpaceRoot pd asid \<equiv>
-  setCurrentCR3 $ Platform.X64.X64CR3 pd asid"
-
-definition
-"resetCR3 \<equiv> error []"
-
-definition
 getPTIndex :: "vptr \<Rightarrow> machine_word"
 where
 "getPTIndex vptr \<equiv>
@@ -745,11 +731,6 @@ where
 "pptrBase \<equiv> Platform.X64.pptrBase"
 
 definition
-physBase :: "paddr"
-where
-"physBase \<equiv> toPAddr Platform.X64.physBase"
-
-definition
 initIRQController :: "unit machine_monad"
 where
 "initIRQController \<equiv> error []"
@@ -761,54 +742,6 @@ context begin interpretation Arch .
 requalify_types vmrights
 end
 
-context Arch begin global_naming X64_H
-
-end
-qualify X64_H (in Arch)
-(* vmmap_type instance proofs *)
-(*<*)
-instantiation vmmap_type :: enum begin
-interpretation Arch .
-definition
-  enum_vmmap_type: "enum_class.enum \<equiv> 
-    [ 
-      VMNoMap,
-      VMVSpaceMap,
-      VMIOSpaceMap
-    ]"
-
-
-definition
-  "enum_class.enum_all (P :: vmmap_type \<Rightarrow> bool) \<longleftrightarrow> Ball UNIV P"
-
-definition
-  "enum_class.enum_ex (P :: vmmap_type \<Rightarrow> bool) \<longleftrightarrow> Bex UNIV P"
-
-  instance
-  apply intro_classes
-   apply (safe, simp)
-   apply (case_tac x)
-  apply (simp_all add: enum_vmmap_type enum_all_vmmap_type_def enum_ex_vmmap_type_def)
-  by fast+
-end
-
-instantiation vmmap_type :: enum_alt
-begin
-interpretation Arch .
-definition
-  enum_alt_vmmap_type: "enum_alt \<equiv> 
-    alt_from_ord (enum :: vmmap_type list)"
-instance ..
-end
-
-instantiation vmmap_type :: enumeration_both
-begin
-interpretation Arch .
-instance by (intro_classes, simp add: enum_alt_vmmap_type)
-end
-
-(*>*)
-end_qualify
 context Arch begin global_naming X64_H
 
 

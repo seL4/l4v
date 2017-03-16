@@ -72,7 +72,7 @@ consts
   nopBIFrameData :: biframe_data
 
 definition
-  runInit :: "word32 \<Rightarrow> 'a kernel_init \<Rightarrow> 'b kernel"
+  runInit :: "machine_word \<Rightarrow> 'a kernel_init \<Rightarrow> 'b kernel"
 where
   "runInit initOffset doInit \<equiv> do
     ks \<leftarrow> get;

@@ -25,17 +25,17 @@ context Arch begin global_naming X64_H
 
 datatype pdptinvocation =
     PDPTUnmap arch_capability machine_word
-  | PDPTMap capability machine_word pml4e machine_word
+  | PDPTMap capability machine_word pml4e machine_word machine_word
 
 primrec
   pdptMapCap :: "pdptinvocation \<Rightarrow> capability"
 where
-  "pdptMapCap (PDPTMap v0 v1 v2 v3) = v0"
+  "pdptMapCap (PDPTMap v0 v1 v2 v3 v4) = v0"
 
 primrec
   pdptMapPML4Slot :: "pdptinvocation \<Rightarrow> machine_word"
 where
-  "pdptMapPML4Slot (PDPTMap v0 v1 v2 v3) = v3"
+  "pdptMapPML4Slot (PDPTMap v0 v1 v2 v3 v4) = v3"
 
 primrec
   pdptUnmapCap :: "pdptinvocation \<Rightarrow> arch_capability"
@@ -45,12 +45,17 @@ where
 primrec
   pdptMapCTSlot :: "pdptinvocation \<Rightarrow> machine_word"
 where
-  "pdptMapCTSlot (PDPTMap v0 v1 v2 v3) = v1"
+  "pdptMapCTSlot (PDPTMap v0 v1 v2 v3 v4) = v1"
+
+primrec
+  pdptMapVSpace :: "pdptinvocation \<Rightarrow> machine_word"
+where
+  "pdptMapVSpace (PDPTMap v0 v1 v2 v3 v4) = v4"
 
 primrec
   pdptMapPML4E :: "pdptinvocation \<Rightarrow> pml4e"
 where
-  "pdptMapPML4E (PDPTMap v0 v1 v2 v3) = v2"
+  "pdptMapPML4E (PDPTMap v0 v1 v2 v3 v4) = v2"
 
 primrec
   pdptUnmapCapSlot :: "pdptinvocation \<Rightarrow> machine_word"
@@ -60,12 +65,12 @@ where
 primrec
   pdptMapCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> pdptinvocation \<Rightarrow> pdptinvocation"
 where
-  "pdptMapCap_update f (PDPTMap v0 v1 v2 v3) = PDPTMap (f v0) v1 v2 v3"
+  "pdptMapCap_update f (PDPTMap v0 v1 v2 v3 v4) = PDPTMap (f v0) v1 v2 v3 v4"
 
 primrec
   pdptMapPML4Slot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> pdptinvocation \<Rightarrow> pdptinvocation"
 where
-  "pdptMapPML4Slot_update f (PDPTMap v0 v1 v2 v3) = PDPTMap v0 v1 v2 (f v3)"
+  "pdptMapPML4Slot_update f (PDPTMap v0 v1 v2 v3 v4) = PDPTMap v0 v1 v2 (f v3) v4"
 
 primrec
   pdptUnmapCap_update :: "(arch_capability \<Rightarrow> arch_capability) \<Rightarrow> pdptinvocation \<Rightarrow> pdptinvocation"
@@ -75,12 +80,17 @@ where
 primrec
   pdptMapCTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> pdptinvocation \<Rightarrow> pdptinvocation"
 where
-  "pdptMapCTSlot_update f (PDPTMap v0 v1 v2 v3) = PDPTMap v0 (f v1) v2 v3"
+  "pdptMapCTSlot_update f (PDPTMap v0 v1 v2 v3 v4) = PDPTMap v0 (f v1) v2 v3 v4"
+
+primrec
+  pdptMapVSpace_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> pdptinvocation \<Rightarrow> pdptinvocation"
+where
+  "pdptMapVSpace_update f (PDPTMap v0 v1 v2 v3 v4) = PDPTMap v0 v1 v2 v3 (f v4)"
 
 primrec
   pdptMapPML4E_update :: "(pml4e \<Rightarrow> pml4e) \<Rightarrow> pdptinvocation \<Rightarrow> pdptinvocation"
 where
-  "pdptMapPML4E_update f (PDPTMap v0 v1 v2 v3) = PDPTMap v0 v1 (f v2) v3"
+  "pdptMapPML4E_update f (PDPTMap v0 v1 v2 v3 v4) = PDPTMap v0 v1 (f v2) v3 v4"
 
 primrec
   pdptUnmapCapSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> pdptinvocation \<Rightarrow> pdptinvocation"
@@ -93,9 +103,9 @@ where
   "PDPTUnmap_ \<lparr> pdptUnmapCap= v0, pdptUnmapCapSlot= v1 \<rparr> == PDPTUnmap v0 v1"
 
 abbreviation (input)
-  PDPTMap_trans :: "(capability) \<Rightarrow> (machine_word) \<Rightarrow> (pml4e) \<Rightarrow> (machine_word) \<Rightarrow> pdptinvocation" ("PDPTMap'_ \<lparr> pdptMapCap= _, pdptMapCTSlot= _, pdptMapPML4E= _, pdptMapPML4Slot= _ \<rparr>")
+  PDPTMap_trans :: "(capability) \<Rightarrow> (machine_word) \<Rightarrow> (pml4e) \<Rightarrow> (machine_word) \<Rightarrow> (machine_word) \<Rightarrow> pdptinvocation" ("PDPTMap'_ \<lparr> pdptMapCap= _, pdptMapCTSlot= _, pdptMapPML4E= _, pdptMapPML4Slot= _, pdptMapVSpace= _ \<rparr>")
 where
-  "PDPTMap_ \<lparr> pdptMapCap= v0, pdptMapCTSlot= v1, pdptMapPML4E= v2, pdptMapPML4Slot= v3 \<rparr> == PDPTMap v0 v1 v2 v3"
+  "PDPTMap_ \<lparr> pdptMapCap= v0, pdptMapCTSlot= v1, pdptMapPML4E= v2, pdptMapPML4Slot= v3, pdptMapVSpace= v4 \<rparr> == PDPTMap v0 v1 v2 v3 v4"
 
 definition
   isPDPTUnmap :: "pdptinvocation \<Rightarrow> bool"
@@ -108,17 +118,17 @@ definition
   isPDPTMap :: "pdptinvocation \<Rightarrow> bool"
 where
  "isPDPTMap v \<equiv> case v of
-    PDPTMap v0 v1 v2 v3 \<Rightarrow> True
+    PDPTMap v0 v1 v2 v3 v4 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 datatype page_directory_invocation =
     PageDirectoryUnmap arch_capability machine_word
-  | PageDirectoryMap capability machine_word pdpte machine_word
+  | PageDirectoryMap capability machine_word pdpte machine_word machine_word
 
 primrec
   pdMapCTSlot :: "page_directory_invocation \<Rightarrow> machine_word"
 where
-  "pdMapCTSlot (PageDirectoryMap v0 v1 v2 v3) = v1"
+  "pdMapCTSlot (PageDirectoryMap v0 v1 v2 v3 v4) = v1"
 
 primrec
   pdUnmapCap :: "page_directory_invocation \<Rightarrow> arch_capability"
@@ -126,19 +136,24 @@ where
   "pdUnmapCap (PageDirectoryUnmap v0 v1) = v0"
 
 primrec
+  pdMapVSpace :: "page_directory_invocation \<Rightarrow> machine_word"
+where
+  "pdMapVSpace (PageDirectoryMap v0 v1 v2 v3 v4) = v4"
+
+primrec
   pdMapPDPTE :: "page_directory_invocation \<Rightarrow> pdpte"
 where
-  "pdMapPDPTE (PageDirectoryMap v0 v1 v2 v3) = v2"
+  "pdMapPDPTE (PageDirectoryMap v0 v1 v2 v3 v4) = v2"
 
 primrec
   pdMapCap :: "page_directory_invocation \<Rightarrow> capability"
 where
-  "pdMapCap (PageDirectoryMap v0 v1 v2 v3) = v0"
+  "pdMapCap (PageDirectoryMap v0 v1 v2 v3 v4) = v0"
 
 primrec
   pdMapPDPTSlot :: "page_directory_invocation \<Rightarrow> machine_word"
 where
-  "pdMapPDPTSlot (PageDirectoryMap v0 v1 v2 v3) = v3"
+  "pdMapPDPTSlot (PageDirectoryMap v0 v1 v2 v3 v4) = v3"
 
 primrec
   pdUnmapCapSlot :: "page_directory_invocation \<Rightarrow> machine_word"
@@ -148,7 +163,7 @@ where
 primrec
   pdMapCTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
 where
-  "pdMapCTSlot_update f (PageDirectoryMap v0 v1 v2 v3) = PageDirectoryMap v0 (f v1) v2 v3"
+  "pdMapCTSlot_update f (PageDirectoryMap v0 v1 v2 v3 v4) = PageDirectoryMap v0 (f v1) v2 v3 v4"
 
 primrec
   pdUnmapCap_update :: "(arch_capability \<Rightarrow> arch_capability) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
@@ -156,19 +171,24 @@ where
   "pdUnmapCap_update f (PageDirectoryUnmap v0 v1) = PageDirectoryUnmap (f v0) v1"
 
 primrec
+  pdMapVSpace_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
+where
+  "pdMapVSpace_update f (PageDirectoryMap v0 v1 v2 v3 v4) = PageDirectoryMap v0 v1 v2 v3 (f v4)"
+
+primrec
   pdMapPDPTE_update :: "(pdpte \<Rightarrow> pdpte) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
 where
-  "pdMapPDPTE_update f (PageDirectoryMap v0 v1 v2 v3) = PageDirectoryMap v0 v1 (f v2) v3"
+  "pdMapPDPTE_update f (PageDirectoryMap v0 v1 v2 v3 v4) = PageDirectoryMap v0 v1 (f v2) v3 v4"
 
 primrec
   pdMapCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
 where
-  "pdMapCap_update f (PageDirectoryMap v0 v1 v2 v3) = PageDirectoryMap (f v0) v1 v2 v3"
+  "pdMapCap_update f (PageDirectoryMap v0 v1 v2 v3 v4) = PageDirectoryMap (f v0) v1 v2 v3 v4"
 
 primrec
   pdMapPDPTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
 where
-  "pdMapPDPTSlot_update f (PageDirectoryMap v0 v1 v2 v3) = PageDirectoryMap v0 v1 v2 (f v3)"
+  "pdMapPDPTSlot_update f (PageDirectoryMap v0 v1 v2 v3 v4) = PageDirectoryMap v0 v1 v2 (f v3) v4"
 
 primrec
   pdUnmapCapSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_directory_invocation \<Rightarrow> page_directory_invocation"
@@ -181,9 +201,9 @@ where
   "PageDirectoryUnmap_ \<lparr> pdUnmapCap= v0, pdUnmapCapSlot= v1 \<rparr> == PageDirectoryUnmap v0 v1"
 
 abbreviation (input)
-  PageDirectoryMap_trans :: "(capability) \<Rightarrow> (machine_word) \<Rightarrow> (pdpte) \<Rightarrow> (machine_word) \<Rightarrow> page_directory_invocation" ("PageDirectoryMap'_ \<lparr> pdMapCap= _, pdMapCTSlot= _, pdMapPDPTE= _, pdMapPDPTSlot= _ \<rparr>")
+  PageDirectoryMap_trans :: "(capability) \<Rightarrow> (machine_word) \<Rightarrow> (pdpte) \<Rightarrow> (machine_word) \<Rightarrow> (machine_word) \<Rightarrow> page_directory_invocation" ("PageDirectoryMap'_ \<lparr> pdMapCap= _, pdMapCTSlot= _, pdMapPDPTE= _, pdMapPDPTSlot= _, pdMapVSpace= _ \<rparr>")
 where
-  "PageDirectoryMap_ \<lparr> pdMapCap= v0, pdMapCTSlot= v1, pdMapPDPTE= v2, pdMapPDPTSlot= v3 \<rparr> == PageDirectoryMap v0 v1 v2 v3"
+  "PageDirectoryMap_ \<lparr> pdMapCap= v0, pdMapCTSlot= v1, pdMapPDPTE= v2, pdMapPDPTSlot= v3, pdMapVSpace= v4 \<rparr> == PageDirectoryMap v0 v1 v2 v3 v4"
 
 definition
   isPageDirectoryUnmap :: "page_directory_invocation \<Rightarrow> bool"
@@ -196,17 +216,17 @@ definition
   isPageDirectoryMap :: "page_directory_invocation \<Rightarrow> bool"
 where
  "isPageDirectoryMap v \<equiv> case v of
-    PageDirectoryMap v0 v1 v2 v3 \<Rightarrow> True
+    PageDirectoryMap v0 v1 v2 v3 v4 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 datatype page_table_invocation =
     PageTableUnmap arch_capability machine_word
-  | PageTableMap capability machine_word pde machine_word
+  | PageTableMap capability machine_word pde machine_word machine_word
 
 primrec
   ptMapPDSlot :: "page_table_invocation \<Rightarrow> machine_word"
 where
-  "ptMapPDSlot (PageTableMap v0 v1 v2 v3) = v3"
+  "ptMapPDSlot (PageTableMap v0 v1 v2 v3 v4) = v3"
 
 primrec
   ptUnmapCapSlot :: "page_table_invocation \<Rightarrow> machine_word"
@@ -216,7 +236,12 @@ where
 primrec
   ptMapCTSlot :: "page_table_invocation \<Rightarrow> machine_word"
 where
-  "ptMapCTSlot (PageTableMap v0 v1 v2 v3) = v1"
+  "ptMapCTSlot (PageTableMap v0 v1 v2 v3 v4) = v1"
+
+primrec
+  ptMapVSpace :: "page_table_invocation \<Rightarrow> machine_word"
+where
+  "ptMapVSpace (PageTableMap v0 v1 v2 v3 v4) = v4"
 
 primrec
   ptUnmapCap :: "page_table_invocation \<Rightarrow> arch_capability"
@@ -226,17 +251,17 @@ where
 primrec
   ptMapPDE :: "page_table_invocation \<Rightarrow> pde"
 where
-  "ptMapPDE (PageTableMap v0 v1 v2 v3) = v2"
+  "ptMapPDE (PageTableMap v0 v1 v2 v3 v4) = v2"
 
 primrec
   ptMapCap :: "page_table_invocation \<Rightarrow> capability"
 where
-  "ptMapCap (PageTableMap v0 v1 v2 v3) = v0"
+  "ptMapCap (PageTableMap v0 v1 v2 v3 v4) = v0"
 
 primrec
   ptMapPDSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
 where
-  "ptMapPDSlot_update f (PageTableMap v0 v1 v2 v3) = PageTableMap v0 v1 v2 (f v3)"
+  "ptMapPDSlot_update f (PageTableMap v0 v1 v2 v3 v4) = PageTableMap v0 v1 v2 (f v3) v4"
 
 primrec
   ptUnmapCapSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
@@ -246,7 +271,12 @@ where
 primrec
   ptMapCTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
 where
-  "ptMapCTSlot_update f (PageTableMap v0 v1 v2 v3) = PageTableMap v0 (f v1) v2 v3"
+  "ptMapCTSlot_update f (PageTableMap v0 v1 v2 v3 v4) = PageTableMap v0 (f v1) v2 v3 v4"
+
+primrec
+  ptMapVSpace_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
+where
+  "ptMapVSpace_update f (PageTableMap v0 v1 v2 v3 v4) = PageTableMap v0 v1 v2 v3 (f v4)"
 
 primrec
   ptUnmapCap_update :: "(arch_capability \<Rightarrow> arch_capability) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
@@ -256,12 +286,12 @@ where
 primrec
   ptMapPDE_update :: "(pde \<Rightarrow> pde) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
 where
-  "ptMapPDE_update f (PageTableMap v0 v1 v2 v3) = PageTableMap v0 v1 (f v2) v3"
+  "ptMapPDE_update f (PageTableMap v0 v1 v2 v3 v4) = PageTableMap v0 v1 (f v2) v3 v4"
 
 primrec
   ptMapCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> page_table_invocation \<Rightarrow> page_table_invocation"
 where
-  "ptMapCap_update f (PageTableMap v0 v1 v2 v3) = PageTableMap (f v0) v1 v2 v3"
+  "ptMapCap_update f (PageTableMap v0 v1 v2 v3 v4) = PageTableMap (f v0) v1 v2 v3 v4"
 
 abbreviation (input)
   PageTableUnmap_trans :: "(arch_capability) \<Rightarrow> (machine_word) \<Rightarrow> page_table_invocation" ("PageTableUnmap'_ \<lparr> ptUnmapCap= _, ptUnmapCapSlot= _ \<rparr>")
@@ -269,9 +299,9 @@ where
   "PageTableUnmap_ \<lparr> ptUnmapCap= v0, ptUnmapCapSlot= v1 \<rparr> == PageTableUnmap v0 v1"
 
 abbreviation (input)
-  PageTableMap_trans :: "(capability) \<Rightarrow> (machine_word) \<Rightarrow> (pde) \<Rightarrow> (machine_word) \<Rightarrow> page_table_invocation" ("PageTableMap'_ \<lparr> ptMapCap= _, ptMapCTSlot= _, ptMapPDE= _, ptMapPDSlot= _ \<rparr>")
+  PageTableMap_trans :: "(capability) \<Rightarrow> (machine_word) \<Rightarrow> (pde) \<Rightarrow> (machine_word) \<Rightarrow> (machine_word) \<Rightarrow> page_table_invocation" ("PageTableMap'_ \<lparr> ptMapCap= _, ptMapCTSlot= _, ptMapPDE= _, ptMapPDSlot= _, ptMapVSpace= _ \<rparr>")
 where
-  "PageTableMap_ \<lparr> ptMapCap= v0, ptMapCTSlot= v1, ptMapPDE= v2, ptMapPDSlot= v3 \<rparr> == PageTableMap v0 v1 v2 v3"
+  "PageTableMap_ \<lparr> ptMapCap= v0, ptMapCTSlot= v1, ptMapPDE= v2, ptMapPDSlot= v3, ptMapVSpace= v4 \<rparr> == PageTableMap v0 v1 v2 v3 v4"
 
 definition
   isPageTableUnmap :: "page_table_invocation \<Rightarrow> bool"
@@ -284,7 +314,7 @@ definition
   isPageTableMap :: "page_table_invocation \<Rightarrow> bool"
 where
  "isPageTableMap v \<equiv> case v of
-    PageTableMap v0 v1 v2 v3 \<Rightarrow> True
+    PageTableMap v0 v1 v2 v3 v4 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 datatype page_invocation =
@@ -618,6 +648,10 @@ datatype ioport_invocation_data =
 datatype ioport_invocation =
     IOPortInvocation ioport ioport_invocation_data
 
+datatype copy_register_sets =
+    X64NoExtraRegisters
+
+
 datatype invocation =
     InvokePDPT pdptinvocation
   | InvokePageDirectory page_directory_invocation
@@ -805,17 +839,9 @@ where
     IssueIRQHandlerMSI v0 v1 v2 v3 v4 v5 v6 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
-datatype copy_register_sets =
-    X64NoExtraRegisters
 
 consts'
 deriveCap :: "machine_word \<Rightarrow> arch_capability \<Rightarrow> ( syscall_error , arch_capability ) kernel_f"
-
-consts'
-ioSpaceGetDomainID :: "machine_word \<Rightarrow> word16"
-
-consts'
-ioSpaceGetPCIDevice :: "machine_word \<Rightarrow> ioasid option"
 
 consts'
 ioPortGetFirstPort :: "machine_word \<Rightarrow> word16"
@@ -851,10 +877,10 @@ consts'
 isIOCap :: "arch_capability \<Rightarrow> bool"
 
 consts'
-decodeInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"
+decodeInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
 consts'
-performInvocation :: "ArchRetypeDecls_H.invocation \<Rightarrow> machine_word list kernel_p"
+performInvocation :: "invocation \<Rightarrow> machine_word list kernel_p"
 
 consts'
 capUntypedPtr :: "arch_capability \<Rightarrow> machine_word"
@@ -866,6 +892,6 @@ consts'
 prepareThreadDelete :: "machine_word \<Rightarrow> unit kernel"
 
 
-end (context X64)
+end (*context X64*)
 
 end

@@ -51,12 +51,6 @@ defs deriveCap_def:
   else undefined
   )"
 
-defs ioSpaceGetDomainID_def:
-"ioSpaceGetDomainID arg1 \<equiv> error []"
-
-defs ioSpaceGetPCIDevice_def:
-"ioSpaceGetPCIDevice arg1 \<equiv> error []"
-
 defs ioPortGetFirstPort_def:
 "ioPortGetFirstPort arg1 \<equiv> error []"
 
@@ -118,7 +112,36 @@ defs finaliseCap_def:
   )"
 
 defs sameRegionAs_def:
-"sameRegionAs x0 x1\<equiv> (* case removed *) undefined"
+"sameRegionAs x0 x1\<equiv> (let (a,b) = (x0, x1) in
+  if isPageCap a \<and> isPageCap b
+  then
+    let
+        botA = capVPBasePtr a;
+        botB = capVPBasePtr b;
+        topA = botA + bit (pageBitsForSize $ capVPSize a) - 1;
+        topB = botB + bit (pageBitsForSize $ capVPSize b) - 1
+    in
+
+    (botA \<le> botB) \<and> (topA \<ge> topB) \<and> (botB \<le> topB)
+  else if isPageTableCap a \<and> isPageTableCap b
+  then
+    capPTBasePtr a = capPTBasePtr b
+  else if isPageDirectoryCap a \<and> isPageDirectoryCap b
+  then
+    capPDBasePtr a = capPDBasePtr b
+  else if isPDPointerTableCap a \<and> isPDPointerTableCap b
+  then
+    capPDPTBasePtr a = capPDPTBasePtr b
+  else if isPML4Cap a \<and> isPML4Cap b
+  then
+    capPML4BasePtr a = capPML4BasePtr b
+  else if isASIDControlCap a \<and> isASIDControlCap b
+  then   True
+  else if isIOPortCap a \<and> isIOPortCap b
+  then
+    capASIDPool a = capASIDPool b
+  else   True
+  )"
 
 defs isPhysicalCap_def:
 "isPhysicalCap x0\<equiv> (case x0 of

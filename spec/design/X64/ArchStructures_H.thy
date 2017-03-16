@@ -27,6 +27,22 @@ definition
 where ASID_def[simp]:
  "ASID \<equiv> id"
 
+definition
+  fromASID :: "asid \<Rightarrow> asid"
+where
+  fromASID_def[simp]:
+ "fromASID \<equiv> id"
+
+definition  fromASID_update :: "(asid \<Rightarrow> asid) \<Rightarrow> asid \<Rightarrow> asid"
+where
+  fromASID_update_def[simp]:
+ "fromASID_update f y \<equiv> f y"
+
+abbreviation (input)
+  ASID_trans :: "(word64) \<Rightarrow> asid" ("ASID'_ \<lparr> fromASID= _ \<rparr>")
+where
+  "ASID_ \<lparr> fromASID= v0 \<rparr> == ASID v0"
+
 datatype arch_capability =
     ASIDPoolCap machine_word asid
   | ASIDControlCap
@@ -340,6 +356,50 @@ lemma atcbContext_atcbContext_update [simp]:
   "atcbContext (atcbContext_update f v) = f (atcbContext v)"
   by (cases v) simp
 
+datatype cr3 =
+    CR3 paddr asid
+
+primrec
+  cr3BaseAddress :: "cr3 \<Rightarrow> paddr"
+where
+  "cr3BaseAddress (CR3 v0 v1) = v0"
+
+primrec
+  cr3pcid :: "cr3 \<Rightarrow> asid"
+where
+  "cr3pcid (CR3 v0 v1) = v1"
+
+primrec
+  cr3BaseAddress_update :: "(paddr \<Rightarrow> paddr) \<Rightarrow> cr3 \<Rightarrow> cr3"
+where
+  "cr3BaseAddress_update f (CR3 v0 v1) = CR3 (f v0) v1"
+
+primrec
+  cr3pcid_update :: "(asid \<Rightarrow> asid) \<Rightarrow> cr3 \<Rightarrow> cr3"
+where
+  "cr3pcid_update f (CR3 v0 v1) = CR3 v0 (f v1)"
+
+abbreviation (input)
+  CR3_trans :: "(paddr) \<Rightarrow> (asid) \<Rightarrow> cr3" ("CR3'_ \<lparr> cr3BaseAddress= _, cr3pcid= _ \<rparr>")
+where
+  "CR3_ \<lparr> cr3BaseAddress= v0, cr3pcid= v1 \<rparr> == CR3 v0 v1"
+
+lemma cr3BaseAddress_cr3BaseAddress_update [simp]:
+  "cr3BaseAddress (cr3BaseAddress_update f v) = f (cr3BaseAddress v)"
+  by (cases v) simp
+
+lemma cr3BaseAddress_cr3pcid_update [simp]:
+  "cr3BaseAddress (cr3pcid_update f v) = cr3BaseAddress v"
+  by (cases v) simp
+
+lemma cr3pcid_cr3BaseAddress_update [simp]:
+  "cr3pcid (cr3BaseAddress_update f v) = cr3pcid v"
+  by (cases v) simp
+
+lemma cr3pcid_cr3pcid_update [simp]:
+  "cr3pcid (cr3pcid_update f v) = f (cr3pcid v)"
+  by (cases v) simp
+
 consts'
 archObjSize :: "arch_kernel_object \<Rightarrow> nat"
 
@@ -378,7 +438,7 @@ definition
     atcbContext= newContext \<rparr>"
 
 defs atcbContextSet_def:
-"atcbContextSet uc at \<equiv> at \<lparr> atcbContext := uc \<rparr>"
+"atcbContextSet uc atcb \<equiv> atcb \<lparr> atcbContext := uc \<rparr>"
 
 defs atcbContextGet_def:
 "atcbContextGet \<equiv> atcbContext"

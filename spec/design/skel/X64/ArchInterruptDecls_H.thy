@@ -14,7 +14,7 @@ begin
 
 context Arch begin global_naming X64_H
 
-#INCLUDE_HASKELL SEL4/Object/Interrupt/X64.lhs CONTEXT X64_H decls_only ArchInv=ArchRetypeDecls_H Arch=MachineOps
+#INCLUDE_HASKELL SEL4/Object/Interrupt/X64.lhs CONTEXT X64_H decls_only ArchInv= Arch=MachineOps
 
 end (* context X64 *)
 
