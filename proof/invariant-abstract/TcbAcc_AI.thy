@@ -737,7 +737,7 @@ lemma as_user_cur [wp]:
 
 
 lemma as_user_cte_wp_at [wp]:
-  "\<lbrace>cte_wp_at P c\<rbrace> as_user p' f \<lbrace>\<lambda>rv. cte_wp_at P c\<rbrace>"
+  "\<lbrace>\<lambda>s. P (cte_wp_at P' c s)\<rbrace> as_user p' f \<lbrace>\<lambda>rv s. P (cte_wp_at P' c s)\<rbrace>"
   by (wp as_user_wp_thread_set_helper
          thread_set_cte_wp_at_trivial
          ball_tcb_cap_casesI | simp)+
