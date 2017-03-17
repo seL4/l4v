@@ -491,7 +491,7 @@ where
          set_gic_vcpu_ctrl_vmcr (vgicVMCR vgic);
          set_gic_vcpu_ctrl_apr (vgicAPR vgic);
          mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (of_int (fst p)) (the (snd p)))
-              (map (\<lambda>i. (i, (vgicLR vgic) (nat i))) [0 ..  gicVCPUMaxNumLR-1]);
+              (map (\<lambda>i. (i, (vgicLR vgic) i)) [0 ..< gicVCPUMaxNumLR]);
          (* restore banked VCPU registers except SCTLR (that's in VCPUEnable) *)
          set_lr_svc (vcpu_regs vcpu VCPURegLRsvc);
          set_sp_svc (vcpu_regs vcpu VCPURegSPsvc);

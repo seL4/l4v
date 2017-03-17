@@ -132,7 +132,7 @@ text {*  vcpu *}
 
 type_synonym virq = machine_word
 
-definition gicVCPUMaxNumLR :: int where "gicVCPUMaxNumLR \<equiv> 64"
+definition gicVCPUMaxNumLR :: nat where "gicVCPUMaxNumLR \<equiv> 64"
 
 end
 
