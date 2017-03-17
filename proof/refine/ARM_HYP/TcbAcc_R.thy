@@ -389,10 +389,7 @@ proof -
            apply (rule y)
           apply (rule e)
          apply (rule corres_noop [where P=\<top> and P'=\<top>])
-          apply simp
-         apply (rule no_fail_pre, wp)[1]
-        apply wp+
-      apply simp
+          apply wpsimp+
       apply (erule pspace_relation_tcb_at[rotated])
       apply clarsimp
      apply simp

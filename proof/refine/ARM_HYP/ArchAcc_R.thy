@@ -1418,9 +1418,7 @@ lemma find_pd_for_asid_corres'':
                 split: option.split)
       apply (clarsimp simp:checkPDAt_def stateAssert_def liftE_bindE bind_assoc)
       apply (rule corres_noop)
-       apply (simp add:validE_def returnOk_def | wp)+
-      apply (rule no_fail_pre, wp)
-      apply clarsimp
+       apply (wpsimp simp:validE_def returnOk_def)+
       apply (erule page_directory_at_state_relation)
         apply simp+
      apply (wp getObject_inv loadObject_default_inv | simp)+

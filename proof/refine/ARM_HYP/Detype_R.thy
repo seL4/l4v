@@ -5140,7 +5140,7 @@ proof -
               apply simp
              apply (subst monad_commute_simple[symmetric])
               apply (rule commute_commute[OF curDomain_commute])
-              apply wp+
+              apply (wpsimp+)[2]
              apply (rule_tac Q = "\<lambda>r s. r = (ksCurDomain s) \<and>
                pspace_aligned' s \<and>
                pspace_distinct' s \<and>

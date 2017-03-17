@@ -618,7 +618,7 @@ lemma kernel_corres:
           apply simp
          apply (wp doMachineOp_getActiveIRQ_IRQ_active handle_event_valid_sched | simp)+
        apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_post_impErr)
-         apply wp+
+         apply wpsimp+
        apply (simp add: invs'_def valid_state'_def)
       apply (rule corres_split [OF _ schedule_corres])
         apply (rule activate_corres)

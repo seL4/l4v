@@ -1515,7 +1515,7 @@ lemma getMessageInfo_msgExtraCaps[wp]:
      apply (simp add: word_bits_def msgExtraCapBits_def)
     apply (rule and_mask_less'[unfolded mask_2pm1])
     apply (simp add: msgExtraCapBits_def)
-   apply wp+
+   apply wpsimp+
   done
 
 lemma lcs_corres:

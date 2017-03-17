@@ -82,9 +82,7 @@ sublocale
   apply unfold_locales
   unfolding vcpu_disable_def vcpu_enable_def vcpu_restore_def vcpu_save_def
   (* vcpu_disable vcpu_enable vcpu_restore*)
-  apply (wp set_vcpu.vsobj_at get_vcpu.vsobj_at | wpc | clarsimp )+
-  (* vcpu_restore *)
-  apply (cases vcpu', (wp set_vcpu.vsobj_at get_vcpu.vsobj_at | wpc | clarsimp )+)+
+  apply (wpsimp wp: set_vcpu.vsobj_at get_vcpu.vsobj_at)+
   done
 
 crunch typ_at [wp]: vcpu_disable "\<lambda>s. P (typ_at T p s)"

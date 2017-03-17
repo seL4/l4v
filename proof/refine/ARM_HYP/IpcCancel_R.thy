@@ -1028,9 +1028,8 @@ lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
   apply (case_tac "t'=t")
    apply (rule_tac B="\<lambda>st. st_tcb_at' runnable' t and K (runnable' st)"
             in hoare_seq_ext)
-    apply(case_tac x; wpsimp)
-   apply (wp sts_pred_tcb_neq' | simp | wpc)+
-           apply (clarsimp)
+    apply(case_tac x; simp)
+   apply (wpsimp wp: sts_pred_tcb_neq')+
            apply (rule_tac Q="\<lambda>rv. ?PRE" in hoare_post_imp, fastforce)
            apply (wp cteDeleteOne_tcb_at_runnable'
                     threadSet_pred_tcb_no_state

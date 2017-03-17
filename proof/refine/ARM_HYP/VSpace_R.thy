@@ -2665,8 +2665,6 @@ lemma perform_page_table_corres:
      apply (rule hoare_lift_Pf2[where f=caps_of_state])
       apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
                 mapM_x_wp' | simp split del: if_split)+
-     apply (rule hoare_pre)
-      apply (wp mapM_x_wp' | simp split del: if_split)+
    apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state
                          is_arch_diminished_def
                          cap_master_cap_simps

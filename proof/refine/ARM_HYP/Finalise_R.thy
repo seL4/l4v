@@ -3549,8 +3549,6 @@ lemma (in delete_one) deleting_irq_corres:
           apply (auto simp: cte_wp_at_caps_of_state is_cap_simps can_fast_finalise_def)[1]
          apply (clarsimp simp: cte_wp_at_ctes_of)
         apply (wp getCTE_wp' | simp add: getSlotCap_def)+
-      apply (rule no_fail_pre, wp)
-      apply (clarsimp simp: cte_wp_at_ctes_of)
      apply (wp | simp add: get_irq_slot_def getIRQSlot_def
                            locateSlot_conv getInterruptState_def)+
    apply (clarsimp simp: ex_cte_cap_wp_to_def interrupt_cap_null_or_ntfn)
