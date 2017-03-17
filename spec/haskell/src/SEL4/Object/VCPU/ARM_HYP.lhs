@@ -386,7 +386,7 @@ For initialisation, see makeVCPUObject.
 >     apr <- doMachineOp get_gic_vcpu_ctrl_apr
 >
 >     numListRegs <- gets (armKSGICVCPUNumListRegs . ksArchState)
->     let gicIndices = [0..numListRegs-1]
+>     let gicIndices = init [0..numListRegs]
 >     lrVals <- doMachineOp $ mapM (get_gic_vcpu_ctrl_lr . fromIntegral) gicIndices
 >     let vcpuLR = (vgicLR . vcpuVGIC $ vcpu) // zip gicIndices lrVals
 >
