@@ -138,6 +138,14 @@ lemma init_append_last:
   apply (simp add: init_def)
   done
 
+lemma init_Snoc[simp]:
+  "init (xs @ [x]) = xs"
+  by (induct xs) (auto simp: init_def)
+
+lemma init_upto_enum_upt[simp]:
+  "init [0.e.n] = [0..<n]"
+  by (induct n) (auto simp: init_def)
+
 lemma no_fail_stateAssert:
   "no_fail P (stateAssert P xs)"
   apply (simp add: stateAssert_def)
