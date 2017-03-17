@@ -429,7 +429,7 @@ where
        vmcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_vmcr;
        apr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_apr;
        num_list_regs \<leftarrow> gets (arm_gicvcpu_numlistregs \<circ> arch_state);
-       gicIndices \<leftarrow> return (map nat [0..(int num_list_regs)-1]);
+       gicIndices \<leftarrow> return [0..<num_list_regs];
        lr_vals \<leftarrow> do_machine_op $ mapM (get_gic_vcpu_ctrl_lr \<circ> of_nat) gicIndices;
        pairs \<leftarrow> return (zip gicIndices lr_vals);
        vcpuLR \<leftarrow> return (foldl (\<lambda>f p. fun_upd f (fst p) (Some (snd p))) (vgicLR $ vcpu_VGIC vcpu) pairs);
