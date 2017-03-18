@@ -1639,21 +1639,36 @@ lemma bindNotification_invs':
    apply (clarsimp dest!: pred_tcb_at' simp: obj_at'_def projectKOs)
   apply (clarsimp simp: pred_tcb_at' conj_comms o_def)
   apply (subst delta_sym_refs, assumption)
-(*    apply (fastforce simp: ntfn_q_refs_of'_def obj_at'_def projectKOs
-                    dest!: symreftype_inverse'
-                    split: ntfn.splits if_split_asm)
+    apply (clarsimp split: if_split_asm)
+    apply (drule (1) sym_refsD)
+    apply (fastforce simp: obj_at'_def hyp_refs_of'_def projectKOs ko_wp_at'_def
+                     dest: state_hyp_refs_of'_elemD
+                    split: option.splits if_splits)
    apply (clarsimp split: if_split_asm)
-    apply (fastforce simp: tcb_st_refs_of'_def
-                    dest!: bound_tcb_at_state_refs_ofD'
-                    split: if_split_asm thread_state.splits)
-   apply (fastforce simp: obj_at'_def projectKOs state_refs_of'_def
-                   dest!: symreftype_inverse')
-  apply (clarsimp simp: valid_pspace'_def)
-  apply (frule_tac P="\<lambda>k. k=ntfn" in obj_at_valid_objs', simp)
-  apply (clarsimp simp: valid_obj'_def projectKOs valid_ntfn'_def obj_at'_def
-                    dest!: pred_tcb_at'
-                    split: ntfn.splits)
-  done*) sorry
+    apply (drule (1) sym_refsD[where st="state_hyp_refs_of' s" for s])
+    apply (drule state_hyp_refs_of'_elemD)
+    apply (fastforce simp: obj_at'_def hyp_refs_of'_def projectKOs ko_wp_at'_def
+                    split: option.splits if_splits)
+   apply (drule (1) sym_refsD[where st="state_hyp_refs_of' s" for s])
+   apply simp
+  apply clarsimp
+  apply (rule conjI, clarsimp)
+  apply (rule conjI, clarsimp simp: obj_at'_def)
+  apply (rule conjI)
+   apply (frule_tac P="\<lambda>k. k=ntfn" in obj_at_valid_objs', simp)
+   apply (clarsimp simp: valid_obj'_def projectKOs valid_ntfn'_def obj_at'_def
+                  dest!: pred_tcb_at'
+                  split: ntfn.splits)
+  apply (rule delta_sym_refs, assumption)
+   apply (fastforce simp: ntfn_q_refs_of'_def obj_at'_def projectKOs
+                   dest!: symreftype_inverse'
+                   split: ntfn.splits if_split_asm)
+  apply (clarsimp split: if_split_asm)
+   subgoal by (fastforce simp: tcb_st_refs_of'_def
+                        dest!: bound_tcb_at_state_refs_ofD'
+                        split: if_split_asm thread_state.splits)
+  by (fastforce simp: obj_at'_def projectKOs state_refs_of'_def
+               dest!: symreftype_inverse')
 
 lemma tcbntfn_invs':
   "\<lbrace>invs' and tcb_inv_wf' (tcbinvocation.NotificationControl tcb ntfnptr)\<rbrace>
