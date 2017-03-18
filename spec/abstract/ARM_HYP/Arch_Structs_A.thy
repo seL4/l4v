@@ -33,7 +33,7 @@ section {* Architecture-specific virtual memory *}
 text {* An ASID is simply a word. *}
 type_synonym asid = "word32"
 
-datatype vm_attribute = ParityEnabled | PageCacheable | XNever
+datatype vm_attribute = PageCacheable | XNever
 type_synonym vm_attributes = "vm_attribute set"
 
 section {* Architecture-specific capabilities *}
@@ -142,7 +142,7 @@ record  GICVCPUInterface =
   vgicHCR  :: machine_word
   vgicVMCR :: machine_word
   vgicAPR  :: machine_word
-  vgicLR   :: "nat \<rightharpoonup> ARM_A.virq"
+  vgicLR   :: "nat \<Rightarrow> ARM_A.virq"
 
 
 record vcpu =
@@ -172,7 +172,7 @@ where
       vgicHCR  = vgicHCREN,
       vgicVMCR = 0,
       vgicAPR  = 0,
-      vgicLR   = Map.empty \<rparr>" (* FIXME vgicLR *)
+      vgicLR   = \<lambda>_. 0 \<rparr>"
 
 definition
   default_vcpu :: vcpu where

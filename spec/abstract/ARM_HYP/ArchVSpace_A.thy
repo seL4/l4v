@@ -45,28 +45,25 @@ where
   "create_mapping_entries base vptr ARMSmallPage vm_rights attrib pd =
   doE
     p \<leftarrow> lookup_error_on_failure False $ lookup_pt_slot pd vptr;
-    returnOk $ Inl (SmallPagePTE base (attrib - {ParityEnabled})
-                                 vm_rights, [p])
+    returnOk $ Inl (SmallPagePTE base attrib vm_rights, [p])
   odE"
 
 | "create_mapping_entries base vptr ARMLargePage vm_rights attrib pd =
   doE
     p \<leftarrow> lookup_error_on_failure False $ lookup_pt_slot pd vptr;
-    returnOk $ Inl (LargePagePTE base (attrib - {ParityEnabled})
-                                 vm_rights, map (\<lambda>x. x + p) largePagePTE_offsets)
+    returnOk $ Inl (LargePagePTE base attrib vm_rights, map (\<lambda>x. x + p) largePagePTE_offsets)
   odE"
 
 | "create_mapping_entries base vptr ARMSection vm_rights attrib pd =
   doE
     p \<leftarrow> returnOk (lookup_pd_slot pd vptr);
-    returnOk $ Inr (SectionPDE base (attrib - {ParityEnabled}) vm_rights, [p])
+    returnOk $ Inr (SectionPDE base attrib vm_rights, [p])
   odE"
 
 | "create_mapping_entries base vptr ARMSuperSection vm_rights attrib pd =
   doE
     p \<leftarrow> returnOk (lookup_pd_slot pd vptr);
-    returnOk $ Inr (SuperSectionPDE base (attrib - {ParityEnabled})
-        vm_rights, map (\<lambda>x. x + p) superSectionPDE_offsets)
+    returnOk $ Inr (SuperSectionPDE base attrib vm_rights, map (\<lambda>x. x + p) superSectionPDE_offsets)
   odE"
 
 definition get_master_pde :: "word32 \<Rightarrow> (pde,'z::state_ext)s_monad"
@@ -432,7 +429,7 @@ where
        gicIndices \<leftarrow> return [0..<num_list_regs];
        lr_vals \<leftarrow> do_machine_op $ mapM (get_gic_vcpu_ctrl_lr \<circ> of_nat) gicIndices;
        pairs \<leftarrow> return (zip gicIndices lr_vals);
-       vcpuLR \<leftarrow> return (foldl (\<lambda>f p. fun_upd f (fst p) (Some (snd p))) (vgicLR $ vcpu_VGIC vcpu) pairs);
+       vcpuLR \<leftarrow> return (foldl (\<lambda>f p. f (fst p := snd p)) (vgicLR $ vcpu_VGIC vcpu) pairs);
 
        (* save banked registers *)
        lr_svc \<leftarrow> do_machine_op get_lr_svc;
@@ -490,7 +487,7 @@ where
      do_machine_op $ do
          set_gic_vcpu_ctrl_vmcr (vgicVMCR vgic);
          set_gic_vcpu_ctrl_apr (vgicAPR vgic);
-         mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (of_int (fst p)) (the (snd p)))
+         mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (of_int (fst p)) (snd p))
               (map (\<lambda>i. (i, (vgicLR vgic) i)) [0 ..< gicVCPUMaxNumLR]);
          (* restore banked VCPU registers except SCTLR (that's in VCPUEnable) *)
          set_lr_svc (vcpu_regs vcpu VCPURegLRsvc);
@@ -938,9 +935,8 @@ mapping is to have. *}
 definition
 attribs_from_word :: "word32 \<Rightarrow> vm_attributes" where
 "attribs_from_word w \<equiv>
-  let V = (if w !!0 then {PageCacheable} else {});
-      V' = (if w!!1 then insert ParityEnabled V else V)
-  in if w!!2 then insert XNever V' else V'"
+  let V = (if w !!0 then {PageCacheable} else {})
+  in if w!!2 then insert XNever V else V"
 
 text {* Update the mapping data saved in a page or page table capability. *}
 definition

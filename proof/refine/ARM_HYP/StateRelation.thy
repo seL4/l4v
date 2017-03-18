@@ -133,8 +133,9 @@ where
 
 definition
   vgic_map :: "ARM_A.GICVCPUInterface \<Rightarrow> gicvcpuinterface"
-where "vgic_map \<equiv> \<lambda>v. VGICInterface (ARM_A.vgicHCR v) (ARM_A.vgicVMCR v) (ARM_A.vgicAPR v)
-                                     (\<lambda>n. case (ARM_A.vgicLR v) n of Some x \<Rightarrow> x | None \<Rightarrow> undefined)"
+where
+  "vgic_map \<equiv> \<lambda>v. VGICInterface (ARM_A.vgicHCR v) (ARM_A.vgicVMCR v) (ARM_A.vgicAPR v)
+                                (ARM_A.vgicLR v)"
 
 definition
   vcpu_relation :: "ARM_A.vcpu \<Rightarrow> vcpu \<Rightarrow> bool"

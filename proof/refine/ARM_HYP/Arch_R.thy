@@ -391,10 +391,13 @@ lemma mask_vmrights_corres:
                      vm_kernel_only_def vm_read_only_def
                split: bool.splits)
 
+definition
+  "parity_mask attrs \<equiv> case attrs of VMAttributes c p xn \<Rightarrow> VMAttributes c False xn"
+
 lemma vm_attributes_corres:
-  "vmattributes_map (attribs_from_word w) = attribsFromWord w"
+  "vmattributes_map (attribs_from_word w) = parity_mask (attribsFromWord w)"
   by (clarsimp simp: attribsFromWord_def attribs_from_word_def
-                     Let_def vmattributes_map_def)
+                     Let_def vmattributes_map_def parity_mask_def)
 
 lemma check_vp_corres:
   "corres (ser \<oplus> dc) \<top> \<top>

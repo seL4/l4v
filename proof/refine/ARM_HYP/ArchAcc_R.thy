@@ -1235,7 +1235,7 @@ lemma arch_derive_corres:
   done
 
 definition
-  "vmattributes_map \<equiv> \<lambda>R. VMAttributes (PageCacheable \<in> R) (ParityEnabled \<in> R) (XNever \<in> R)"
+  "vmattributes_map \<equiv> \<lambda>R. VMAttributes (PageCacheable \<in> R) False (XNever \<in> R)"
 
 definition
   mapping_map :: "ARM_A.pte \<times> word32 list + ARM_A.pde \<times> word32 list \<Rightarrow>

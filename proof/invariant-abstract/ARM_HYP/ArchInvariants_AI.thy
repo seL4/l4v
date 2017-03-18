@@ -301,16 +301,16 @@ definition
 where
   "wellformed_pte pte \<equiv> case pte of
      LargePagePTE p attr r \<Rightarrow>
-       ParityEnabled \<notin> attr \<and> r \<in> valid_vm_rights
+       r \<in> valid_vm_rights
    | SmallPagePTE p attr r \<Rightarrow>
-       ParityEnabled \<notin> attr \<and> r \<in> valid_vm_rights
+       r \<in> valid_vm_rights
    | _ \<Rightarrow> True"
 
 definition
   wellformed_pde :: "pde \<Rightarrow> bool"
 where
   "wellformed_pde pde \<equiv> case pde of
-     pde.PageTablePDE p \<Rightarrow> True (* FIXME ARMHYP: check *)
+     pde.PageTablePDE p \<Rightarrow> True
    | pde.SectionPDE p attr r \<Rightarrow> r \<in> valid_vm_rights
    | pde.SuperSectionPDE p attr r \<Rightarrow> r \<in> valid_vm_rights
    | _ \<Rightarrow> True"
