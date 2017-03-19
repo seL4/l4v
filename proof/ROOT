@@ -34,10 +34,8 @@ session Refine = BaseRefine +
   description {* Refinement between Haskell and Abstract spec. *}
   theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
     "refine/$L4V_ARCH/Refine"
-    "refine/$L4V_ARCH/Orphanage"
   theories
     "refine/$L4V_ARCH/Refine"
-    "refine/$L4V_ARCH/Orphanage"
 
 session BaseRefine = AInvs +
   description {* Background theory and libraries for refinement proof. *}
