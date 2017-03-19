@@ -448,8 +448,9 @@ lemma ckernel_invs:
   apply (simp add: callKernel_def)
   apply (rule hoare_pre)
    apply (wp activate_invs' activate_sch_act schedule_sch
-             schedule_sch_act_simple he_invs' schedule_invs'
-          | simp add: no_irq_getActiveIRQ)+
+             schedule_sch_act_simple he_invs' schedule_invs' hoare_vcg_if_lift3
+          | simp add: no_irq_getActiveIRQ
+          | strengthen non_kernel_IRQs_strg[where Q=True, simplified], simp cong: conj_cong)+
   done
 
 lemma doMachineOp_sch_act_simple:
@@ -610,12 +611,11 @@ lemma kernel_corres:
           apply simp
           apply (wp hoare_drop_imps)[1]
          apply simp
-         apply (rule_tac Q="\<lambda>irq s. invs' s \<and>
+         apply (rule_tac Q="\<lambda>irq s. irq \<notin> Some ` non_kernel_IRQs \<and> invs' s \<and>
                               (\<forall>irq'. irq = Some irq' \<longrightarrow>
-                                 intStateIRQTable (ksInterruptState s ) irq' \<noteq>
-                                 IRQInactive)"
+                                 intStateIRQTable (ksInterruptState s ) irq' \<noteq> IRQInactive)"
                       in hoare_post_imp)
-          apply simp
+          apply clarsimp
          apply (wp doMachineOp_getActiveIRQ_IRQ_active handle_event_valid_sched | simp)+
        apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_post_impErr)
          apply wpsimp+
@@ -626,7 +626,9 @@ lemma kernel_corres:
               | simp cong: rev_conj_cong | strengthen None_drop | subst Ex_Some_conv)+
      apply (rule_tac Q="\<lambda>_. valid_sched and invs and valid_list" and E="\<lambda>_. valid_sched and invs and valid_list"
             in hoare_post_impErr)
-       apply (wp handle_event_valid_sched |simp)+
+       apply (wp handle_event_valid_sched hoare_vcg_if_lift3
+              | simp
+              | strengthen non_kernel_IRQs_strg[where Q=True, simplified], simp cong: conj_cong)+
    apply (clarsimp simp: active_from_running)
   apply (clarsimp simp: active_from_running')
   done

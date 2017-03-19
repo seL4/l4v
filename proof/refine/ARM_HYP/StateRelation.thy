@@ -452,6 +452,7 @@ where
      (irq_state.IRQInactive, irqstate.IRQInactive) \<Rightarrow> True
    | (irq_state.IRQSignal, irqstate.IRQSignal) \<Rightarrow> True
    | (irq_state.IRQTimer, irqstate.IRQTimer) \<Rightarrow> True
+   | (irq_state.IRQReserved, irqstate.IRQReserved) \<Rightarrow> True
    | _ \<Rightarrow> False"
 
 definition

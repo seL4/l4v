@@ -2134,8 +2134,7 @@ lemma performPageInvocation_valid_duplicates'[wp]:
      apply (rule_tac sz = 7 and ptr = "p && ~~ mask pdBits" and word = p
          in mapM_x_storePDE_update_helper)
     apply clarsimp
-    apply (simp add:invs_pspace_aligned' vspace_bits_defs
-      field_simps pageBits_def)+
+    apply (simp add:invs_pspace_aligned' vspace_bits_defs field_simps)+
    -- "PageMap"
    apply (clarsimp simp: pteCheckIfMapped_def pdeCheckIfMapped_def)
    apply (clarsimp simp:valid_pde_slots'_def valid_page_inv'_def
@@ -2568,6 +2567,16 @@ lemma handleEvent_valid_duplicates':
               | wpc)+
   done
 
+lemma dmo_getActiveIRQ_notin_non_kernel_IRQs[wp]:
+  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ True) \<lbrace>\<lambda>irq _. irq \<notin> Some ` non_kernel_IRQs\<rbrace>"
+  unfolding doMachineOp_def
+  by (wpsimp simp: getActiveIRQ_def in_monad split: if_split_asm)
+
+lemma non_kernel_IRQs_strg:
+  "invs' s \<and> irq \<notin> Some ` non_kernel_IRQs \<and> Q \<Longrightarrow>
+    (\<exists>y. irq = Some y) \<longrightarrow> invs' s \<and> (the irq \<in> non_kernel_IRQs \<longrightarrow> P) \<and> Q"
+  by auto
+
 lemma callKernel_valid_duplicates':
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
     (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
@@ -2577,8 +2586,9 @@ lemma callKernel_valid_duplicates':
   apply (simp add: callKernel_def)
   apply (rule hoare_pre)
    apply (wp activate_invs' activate_sch_act schedule_sch
-             schedule_sch_act_simple he_invs'
-          | simp add: no_irq_getActiveIRQ)+
+             schedule_sch_act_simple he_invs' hoare_vcg_if_lift3
+          | simp add: no_irq_getActiveIRQ
+          | strengthen non_kernel_IRQs_strg, simp cong: conj_cong)+
    apply (rule hoare_post_impErr)
      apply (rule valid_validE)
      prefer 2

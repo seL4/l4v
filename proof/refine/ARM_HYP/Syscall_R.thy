@@ -2318,7 +2318,11 @@ proof -
                     | simp add: imp_conjR | wp_once hoare_drop_imps)+
         apply force
        apply simp
-       apply (simp add: invs'_def valid_state'_def)
+       apply (clarsimp simp: invs'_def valid_state'_def ct_not_inQ_def valid_queues_def
+                             valid_queues_no_bitmap_def)
+       apply (erule allE)+
+       apply (erule conjE, drule (1) bspec)
+       apply (clarsimp simp: obj_at'_def inQ_def)
       apply (rule_tac corres_split')
          apply (rule corres_guard_imp, rule gct_corres, simp+)
         apply (rule corres_split_catch)
@@ -2441,7 +2445,7 @@ proof -
                  | clarsimp simp: tcb_at_invs ct_in_state'_def simple_sane_strg sch_act_simple_def
                  | drule st_tcb_at_idle_thread'
                  | drule ct_not_ksQ[rotated]
-                 | wpc | wp_once hoare_drop_imps)+
+                 | wpc | wp_once hoare_drop_imps hoare_vcg_all_lift)+
   done
 qed
 

@@ -146,7 +146,7 @@ lemma handleRecv_ksDomSchedule_inv[wp]:
      (wp hoare_drop_imps | simp add: crunch_simps | wpc)+
 
 crunch ksDomSchedule_inv[wp]: handleEvent "\<lambda>s. P (ksDomSchedule s)"
-  (wp: hoare_drop_imps hv_inv' syscall_valid' throwError_wp withoutPreemption_lift
+  (wp: hoare_drop_imps hv_inv' syscall_valid' throwError_wp withoutPreemption_lift hoare_vcg_if_lift3
    simp: runErrorT_def
    ignore: setThreadState)
 
