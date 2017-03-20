@@ -607,12 +607,12 @@ where
      = (\<lambda>s. dom pool \<subseteq> {0 .. 2^asid_low_bits - 1}
            \<and> 0 \<notin> ran pool \<and> (\<forall>x \<in> ran pool. is_aligned x pdBits))"
 
-primrec
+definition
   valid_vcpu' :: "vcpu \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
-  "valid_vcpu' (VCPUObj v _ _ _) = (case v of
-  None \<Rightarrow> \<top>
-| Some vt \<Rightarrow> typ_at' (TCBT) vt)"
+  "valid_vcpu' v \<equiv> (case vcpuTCBPtr v of
+    None \<Rightarrow> \<top>
+  | Some vt \<Rightarrow> typ_at' (TCBT) vt)"
 
 primrec
   valid_arch_obj' :: "arch_kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool"
