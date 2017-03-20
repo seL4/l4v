@@ -207,8 +207,8 @@ fun rule_by_tac' ctxt {vars,prop} tac asm_tacs pos raw_st =
 fun rule_by_tac is_closed ctxt args tac asm_tacs pos raw_st =
  let val f = rule_by_tac' ctxt args tac asm_tacs pos
   in
-   if is_closed orelse Context_Position.is_really_visible ctxt then f raw_st
-   else Drule.free_dummy_thm
+   if is_closed orelse Context_Position.is_really_visible ctxt then SOME (f raw_st)
+   else try f raw_st
  end
 
 fun pos_closure (scan : 'a context_parser) :
@@ -227,20 +227,24 @@ fun tac m ctxt =
 
 (* Declare as a mixed attribute to avoid any partial evaluation *)
 
-val (rule_prems_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags => 
+fun handle_dummy f (context, thm) =
+  case (f context thm) of SOME thm' => (NONE, SOME thm')
+  | NONE => (SOME context, SOME Drule.free_dummy_thm)
+
+val (rule_prems_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags =>
   pos_closure (Scan.repeat1
     (with_rule_prems (not (#vars flags)) Method.text_closure ||
-      Scan.lift (Args.$$$ "_" >> (K Method.succeed_text))))) >> 
-        (fn (flags,(ms,(pos, is_closed))) => Thm.mixed_attribute (fn (context, thm) => (context,
-          rule_by_tac is_closed (Context.proof_of context) flags (K all_tac) (map tac ms) pos thm)))
+      Scan.lift (Args.$$$ "_" >> (K Method.succeed_text))))) >>
+        (fn (flags,(ms,(pos, is_closed))) => handle_dummy (fn context =>
+          rule_by_tac is_closed (Context.proof_of context) flags (K all_tac) (map tac ms) pos))
 
-val (rule_concl_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags => 
+val (rule_concl_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags =>
   pos_closure (with_rule_prems (not (#vars flags)) Method.text_closure)) >>
-    (fn (flags,(m,(pos, is_closed))) => Thm.mixed_attribute (fn (context, thm) => (context,
-      rule_by_tac is_closed (Context.proof_of context) flags (tac m) [] pos thm)))
+    (fn (flags,(m,(pos, is_closed))) => handle_dummy (fn context =>
+      rule_by_tac is_closed (Context.proof_of context) flags (tac m) [] pos))
 
-val _ = Theory.setup 
-  (Global_Theory.add_thms_dynamic (@{binding "rule_prems"}, 
+val _ = Theory.setup
+  (Global_Theory.add_thms_dynamic (@{binding "rule_prems"},
     (fn context => get_rule_prems (Context.proof_of context))) #>
    Attrib.setup @{binding "#"} rule_prems_by_method
     "transform rule premises with method" #>
@@ -252,7 +256,7 @@ val _ = Theory.setup
 experiment begin
 
 ML \<open>
-  val [att] = @{attributes [@\<open>fail\<close>]}
+  val [att] = @{attributes [@\<open>erule thin_rl, cut_tac TrueI, fail\<close>]}
   val k = Attrib.attribute @{context} att
   val _ = case (try k (Context.Proof @{context}, Drule.dummy_thm)) of
     SOME _ => error "Should fail"
@@ -260,6 +264,8 @@ ML \<open>
   \<close>
 
 lemmas baz = [[@\<open>erule thin_rl, rule revcut_rl[of "P \<longrightarrow> P \<and> P"], simp\<close>]] for P
+
+lemmas bazz[THEN impE] = TrueI[@\<open>erule thin_rl, rule revcut_rl[of "P \<longrightarrow> P \<and> P"], simp\<close>] for P
 
 lemma "Q \<longrightarrow> Q \<and> Q" by (rule baz)
 
