@@ -302,27 +302,30 @@ For initialisation, see makeVCPUObject.
 
 > vgicMaintenance :: Kernel ()
 > vgicMaintenance = do
->     eisr0 <- doMachineOp $ get_gic_vcpu_ctrl_eisr0
->     eisr1 <- doMachineOp $ get_gic_vcpu_ctrl_eisr1
->     flags <- doMachineOp $ get_gic_vcpu_ctrl_misr
->     let vgic_misr_eoi = 1 -- defined to be VGIC_HCR_EN
+>     ct <- gets ksCurThread
+>     runnable <- isRunnable ct
+>     when runnable $ do
+>       eisr0 <- doMachineOp $ get_gic_vcpu_ctrl_eisr0
+>       eisr1 <- doMachineOp $ get_gic_vcpu_ctrl_eisr1
+>       flags <- doMachineOp $ get_gic_vcpu_ctrl_misr
+>       let vgic_misr_eoi = 1 -- defined to be VGIC_HCR_EN
 >
->     fault <-
->         if (flags .&. vgic_misr_eoi /= 0)
->         then
->             if (eisr0 == 0 && eisr1 == 0) -- irq_idx invalid
->                 then return $ VGICMaintenance [0, 0]
->                 else (do
->                     let irq_idx = irqIndex eisr0 eisr1
->                     gic_vcpu_num_list_regs <-
->                         gets (armKSGICVCPUNumListRegs . ksArchState)
->                     when (irq_idx < gic_vcpu_num_list_regs) (badIndex irq_idx)
->                     return $ VGICMaintenance [fromIntegral irq_idx, 1]
->                     )
->         else return $ VGICMaintenance [0, 0]
+>       fault <-
+>           if (flags .&. vgic_misr_eoi /= 0)
+>           then
+>               if (eisr0 == 0 && eisr1 == 0) -- irq_idx invalid
+>                   then return $ VGICMaintenance [0, 0]
+>                   else (do
+>                       let irq_idx = irqIndex eisr0 eisr1
+>                       gic_vcpu_num_list_regs <-
+>                           gets (armKSGICVCPUNumListRegs . ksArchState)
+>                       when (irq_idx < gic_vcpu_num_list_regs) (badIndex irq_idx)
+>                       return $ VGICMaintenance [fromIntegral irq_idx, 1]
+>                       )
+>           else return $ VGICMaintenance [0, 0]
 >
->     ct <- getCurThread
->     handleFault ct $ ArchFault fault
+>       ct <- getCurThread
+>       handleFault ct $ ArchFault fault
 >
 >     where
 >         irqIndex eisr0 eisr1 =
