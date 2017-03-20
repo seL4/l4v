@@ -182,7 +182,7 @@ where
      num_list_regs \<leftarrow> liftE $ gets (arm_gicvcpu_numlistregs \<circ> arch_state);
      range_check index 0 (of_nat num_list_regs);
      vcpu \<leftarrow> liftE $ get_vcpu p;
-     vcpuLR \<leftarrow> returnOk (vgicLR $ vcpu_VGIC $ vcpu);
+     vcpuLR \<leftarrow> returnOk (vgic_lr $ vcpu_vgic $ vcpu);
 
      whenE (vcpuLR (unat index) && vgic_irq_mask = vgic_irq_active) $ throwError DeleteFirst;
 
@@ -198,8 +198,8 @@ where "invoke_vcpu_inject_irq vr index virq \<equiv> do
       Some (vr, _) \<Rightarrow> do_machine_op $ set_gic_vcpu_ctrl_lr (of_nat index) virq
     | None \<Rightarrow> do
            vcpu \<leftarrow> get_vcpu vr;
-           vcpuLR \<leftarrow> return $ (vgicLR $ vcpu_VGIC vcpu) (index := virq);
-           set_vcpu vr $ vcpu \<lparr> vcpu_VGIC := (vcpu_VGIC vcpu) \<lparr> vgicLR := vcpuLR \<rparr>\<rparr>
+           vcpuLR \<leftarrow> return $ (vgic_lr $ vcpu_vgic vcpu) (index := virq);
+           set_vcpu vr $ vcpu \<lparr> vcpu_vgic := (vcpu_vgic vcpu) \<lparr> vgic_lr := vcpuLR \<rparr>\<rparr>
            od)
    od"
 

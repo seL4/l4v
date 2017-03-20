@@ -132,23 +132,21 @@ text {*  vcpu *}
 
 type_synonym virq = machine_word
 
-definition gicVCPUMaxNumLR :: nat where "gicVCPUMaxNumLR \<equiv> 64"
-
 end
 
 qualify ARM_A (in Arch)
 
-record  GICVCPUInterface =
-  vgicHCR  :: machine_word
-  vgicVMCR :: machine_word
-  vgicAPR  :: machine_word
-  vgicLR   :: "nat \<Rightarrow> ARM_A.virq"
+record  gic_vcpu_interface =
+  vgic_hcr  :: machine_word
+  vgic_vmcr :: machine_word
+  vgic_apr  :: machine_word
+  vgic_lr   :: "nat \<Rightarrow> ARM_A.virq"
 
 
 record vcpu =
   vcpu_tcb   :: "obj_ref option"
   vcpu_actlr :: machine_word
-  vcpu_VGIC  :: GICVCPUInterface
+  vcpu_vgic  :: gic_vcpu_interface
   vcpu_regs :: "vcpureg \<Rightarrow> machine_word"
 
 end_qualify
@@ -156,30 +154,23 @@ end_qualify
 
 context Arch begin global_naming ARM_A
 
-(* ARMHYP *)
-definition "hcrVCPU \<equiv> 0x87039 :: machine_word"        (* HCR_VCPU *)
-definition "hcrNative \<equiv> 0xfe8703b :: machine_word"    (* HCR_NATIVE *)
-definition  "vgicHCREN \<equiv> 0x1 :: machine_word"         (* VGIC_HCR_EN *)
-definition  "sctlrDefault \<equiv> 0xc5187c :: machine_word" (* SCTLR_DEFAULT *)
-definition  "actlrDefault \<equiv> 0x40 :: machine_word"     (* ACTLR_DEFAULT *)
-
 definition "vcpu_sctlr vcpu \<equiv> vcpu_regs vcpu VCPURegSCTLR"
 
 definition
-  default_gic_vcpu_interface :: GICVCPUInterface
+  default_gic_vcpu_interface :: gic_vcpu_interface
 where
   "default_gic_vcpu_interface \<equiv> \<lparr>
-      vgicHCR  = vgicHCREN,
-      vgicVMCR = 0,
-      vgicAPR  = 0,
-      vgicLR   = \<lambda>_. 0 \<rparr>"
+      vgic_hcr  = vgicHCREN,
+      vgic_vmcr = 0,
+      vgic_apr  = 0,
+      vgic_lr   = \<lambda>_. 0 \<rparr>"
 
 definition
   default_vcpu :: vcpu where
   "default_vcpu \<equiv> \<lparr>
       vcpu_tcb    = None,
       vcpu_actlr  = actlrDefault,
-      vcpu_VGIC   = default_gic_vcpu_interface,
+      vcpu_vgic   = default_gic_vcpu_interface,
       vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrDefault) \<rparr>"
 
 

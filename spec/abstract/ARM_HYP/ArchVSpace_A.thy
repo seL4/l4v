@@ -333,7 +333,7 @@ where
         hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
         sctlr \<leftarrow> do_machine_op getSCTLR;
         regs' \<leftarrow> return $ (vcpu_regs vcpu) (VCPURegSCTLR := sctlr);
-        set_vcpu vr  (vcpu\<lparr> vcpu_VGIC := (vcpu_VGIC vcpu)\<lparr> vgicHCR := hcr \<rparr>, vcpu_regs := regs'\<rparr>)
+        set_vcpu vr  (vcpu\<lparr> vcpu_vgic := (vcpu_vgic vcpu)\<lparr> vgic_hcr := hcr \<rparr>, vcpu_regs := regs'\<rparr>)
       od
     | _ \<Rightarrow> return ());
     do_machine_op $ do
@@ -354,7 +354,7 @@ where
         setSCTLR (vcpu_regs vcpu VCPURegSCTLR);
         setHCR hcrVCPU;
         isb;
-        set_gic_vcpu_ctrl_hcr (vgicHCR $ vcpu_VGIC vcpu)
+        set_gic_vcpu_ctrl_hcr (vgic_hcr $ vcpu_vgic vcpu)
      od
   od"
 
@@ -421,7 +421,7 @@ where
                                  hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
                                  return (sctlr, hcr)
                             od
-                        else return (vcpu_regs vcpu VCPURegSCTLR, vgicHCR $ vcpu_VGIC vcpu));
+                        else return (vcpu_regs vcpu VCPURegSCTLR, vgic_hcr $ vcpu_vgic vcpu));
        actlr \<leftarrow> do_machine_op getACTLR;
        vmcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_vmcr;
        apr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_apr;
@@ -429,7 +429,7 @@ where
        gicIndices \<leftarrow> return [0..<num_list_regs];
        lr_vals \<leftarrow> do_machine_op $ mapM (get_gic_vcpu_ctrl_lr \<circ> of_nat) gicIndices;
        pairs \<leftarrow> return (zip gicIndices lr_vals);
-       vcpuLR \<leftarrow> return (foldl (\<lambda>f p. f (fst p := snd p)) (vgicLR $ vcpu_VGIC vcpu) pairs);
+       vcpuLR \<leftarrow> return (foldl (\<lambda>f p. f (fst p := snd p)) (vgic_lr $ vcpu_vgic vcpu) pairs);
 
        (* save banked registers *)
        lr_svc \<leftarrow> do_machine_op get_lr_svc;
@@ -466,10 +466,10 @@ where
                                            VCPURegR12fiq:= r12_fiq);
 
        set_vcpu vr (vcpu \<lparr>vcpu_actlr := actlr,
-                          vcpu_VGIC  := (vcpu_VGIC vcpu) \<lparr> vgicHCR := hcr,
-                                                           vgicVMCR := vmcr,
-                                                           vgicAPR := apr,
-                                                           vgicLR := vcpuLR \<rparr>,
+                          vcpu_vgic  := (vcpu_vgic vcpu) \<lparr> vgic_hcr := hcr,
+                                                           vgic_vmcr := vmcr,
+                                                           vgic_apr := apr,
+                                                           vgic_lr := vcpuLR \<rparr>,
                           vcpu_regs := regs' \<rparr>);
        do_machine_op isb
      od
@@ -483,12 +483,12 @@ where
      do_machine_op $ set_gic_vcpu_ctrl_hcr 0;   (* turn off VGIC *)
      do_machine_op $ isb;
      vcpu \<leftarrow> get_vcpu vr;   (* restore GIC VCPU control state *)
-     vgic \<leftarrow> return (vcpu_VGIC vcpu);
+     vgic \<leftarrow> return (vcpu_vgic vcpu);
      do_machine_op $ do
-         set_gic_vcpu_ctrl_vmcr (vgicVMCR vgic);
-         set_gic_vcpu_ctrl_apr (vgicAPR vgic);
+         set_gic_vcpu_ctrl_vmcr (vgic_vmcr vgic);
+         set_gic_vcpu_ctrl_apr (vgic_apr vgic);
          mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (of_int (fst p)) (snd p))
-              (map (\<lambda>i. (i, (vgicLR vgic) i)) [0 ..< gicVCPUMaxNumLR]);
+              (map (\<lambda>i. (i, (vgic_lr vgic) i)) [0 ..< gicVCPUMaxNumLR]);
          (* restore banked VCPU registers except SCTLR (that's in VCPUEnable) *)
          set_lr_svc (vcpu_regs vcpu VCPURegLRsvc);
          set_sp_svc (vcpu_regs vcpu VCPURegSPsvc);
