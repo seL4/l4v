@@ -525,6 +525,10 @@ lemma no_fail_getHSR: "no_fail \<top> getHSR"
   by (simp add: getHSR_def)
 
 (* FIXME: move to Machine_AI *)
+lemma no_fail_get_gic_vcpu_ctrl_lr: "no_fail \<top> (get_gic_vcpu_ctrl_lr l)"
+  by (wpsimp simp: get_gic_vcpu_ctrl_lr_def wp: no_fail_machine_op_lift)
+
+(* FIXME: move to Machine_AI *)
 lemma no_fail_addressTranslateS1CPR: "no_fail \<top> (addressTranslateS1CPR w)"
   by (wpsimp wp: no_fail_machine_op_lift simp: addressTranslateS1CPR_def)
 
@@ -661,24 +665,272 @@ lemmas setCurrentPD_no_fails = no_fail_dsb no_fail_isb no_fail_writeTTBR0
 
 lemmas setCurrentPD_no_irqs = no_irq_dsb no_irq_isb no_irq_writeTTBR0
 
+(* TODO: move? *)
+lemma corres_add_noop_rhs:
+  "corres_underlying sr nf nf' r P P' g (return () >>= (\<lambda>_. f))
+      \<Longrightarrow> corres_underlying sr nf nf' r P P' g f"
+  by simp
+
+(* TODO: maybe move? *)
+lemma mapM_mapM_x: "do y \<leftarrow> mapM f l;
+                g
+             od =
+             do mapM_x f l;
+                g
+             od"
+  by (simp add: mapM_x_mapM)
+
+(* TODO: move *)
+lemma getObject_ko_at_vcpu [wp]:
+  "\<lbrace>\<top>\<rbrace> getObject p \<lbrace>\<lambda>rv::vcpu. ko_at' rv p\<rbrace>"
+  by (rule getObject_ko_at | simp add: objBits_simps archObjSize_def vcpu_bits_def pageBits_def)+
+thm getObject_tcb_sp
+
+(* TODO: move *)
+lemma getObject_vcpu_sp:
+  "\<lbrace>P\<rbrace> getObject r \<lbrace>\<lambda>t::vcpu. P and ko_at' t r\<rbrace>"
+  by (wp getObject_obj_at'; simp)
+
+lemma corres_gets_gicvcpu_numlistregs:
+  "corres (op =) \<top> \<top> (gets (arm_gicvcpu_numlistregs \<circ> arch_state))
+                      (gets (armKSGICVCPUNumListRegs \<circ> ksArchState))"
+  by (simp add: state_relation_def arch_state_relation_def)
+
+lemmas corres_split_forward = corres_split'[rule_format, where Q="\<lambda>_. P" and P=P  and Q'="\<lambda>_. P'" and P'=P' for P P']
+
+lemma set_vcpu_corres:
+  "vcpu_relation vcpuObj vcpuObj'
+   \<Longrightarrow>  corres dc (vcpu_at  vcpu)
+                  (vcpu_at' vcpu)
+                  (set_vcpu vcpu vcpuObj)
+                  (setObject vcpu vcpuObj')"
+  apply (simp add: set_vcpu_def)
+  apply (rule corres_symb_exec_l)
+     apply (rule corres_symb_exec_l)
+        apply (rule corres_guard_imp)
+          apply (rule set_other_obj_corres [where P="\<lambda>ko::vcpu. True"])
+                apply simp
+               apply (clarsimp simp: obj_at'_def projectKOs)
+               apply (erule map_to_ctes_upd_other, simp, simp)
+              apply (simp add: a_type_def is_other_obj_relation_type_def)
+             apply (simp add: objBits_simps archObjSize_def)
+            apply simp
+           apply (simp add: objBits_simps archObjSize_def vcpu_bits_def pageBits_def)
+          apply (simp add: other_obj_relation_def asid_pool_relation_def)
+         apply assumption
+        apply (clarsimp simp add: typ_at_to_obj_at'[symmetric])
+       prefer 5
+       apply (rule get_object_sp)
+      apply (clarsimp simp: obj_at_def exs_valid_def assert_def a_type_def return_def fail_def)
+      apply (auto split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)[1]
+     apply wp
+     apply (clarsimp simp: obj_at_def a_type_def)
+     apply (auto split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)[1]
+    apply (rule no_fail_pre, wp)
+    apply (clarsimp simp: simp: obj_at_def a_type_def)
+    apply (auto split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)[1]
+   apply (clarsimp simp: obj_at_def exs_valid_def get_object_def exec_gets)
+   apply (simp add: return_def)
+  apply (rule no_fail_pre, wp)
+  apply (clarsimp simp add: obj_at_def)
+  done
+
+lemma map_nat_upto_int: "map nat [0 .. int n - 1] = [0 ..< n]"
+  apply (induct n)
+   apply clarsimp
+  apply (subst upto_rec2)
+   apply clarsimp+
+  done
+
+lemma aLU_case_fold: "(\<lambda>n. case f n of Some x \<Rightarrow> x) aLU l = (\<lambda>n. case foldl (\<lambda>f p. f(fst p \<mapsto> snd p)) f l n of Some x \<Rightarrow> x)"
+  proof -
+    have aux: "\<And>a b f. (\<lambda>n. case f n of Some x \<Rightarrow> x)(a := b) = (\<lambda>n. case (f(a \<mapsto> b)) n of Some x \<Rightarrow> x)"
+      by auto
+    show ?thesis by (induct l arbitrary: f; clarsimp simp add: aux simp del: fun_upd_apply)
+  qed
+
 lemma vcpuSave_corres:
-  "\<lbrakk> vb = vb' \<rbrakk> \<Longrightarrow> corres dc \<top> \<top> (vcpu_save vb) (vcpuSave vb')"
-  sorry
+  "corres dc (vcpu_at  (fst  vcpu))
+             (vcpu_at' (fst  vcpu))
+             (vcpu_save (Some vcpu))
+             (vcpuSave (Some  vcpu))"
+  proof -
+    note arrayListUpdate_def[simp del]
+    note fun_upd_apply[simp del]
+    show ?thesis
+      apply (clarsimp simp add: vcpu_save_def vcpuSave_def map_nat_upto_int)
+      apply (cases vcpu, clarsimp)
+      apply (rule corres_split_forward[OF _ _ do_machine_op_typ_at doMachineOp_typ_at'])
+       apply (rule corres_guard_imp[OF corres_machine_op TrueI TrueI])
+       apply (rule corres_underlying_trivial[OF no_fail_dsb])
+      apply (rule corres_split_forward[OF corres_get_vcpu _ get_vcpu_typ_at getObject_inv_vcpu])
+      apply (rule corres_split_forward[rotated 2])
+         apply (case_tac b; clarsimp; wp)
+        apply (case_tac b; clarsimp; wp)
+       apply (case_tac b; simp add: getSCTLR_def get_gic_vcpu_ctrl_hcr_def)
+        apply (rule corres_guard_imp[OF _  TrueI TrueI])
+        apply (rule corres_split'[OF corres_machine_op _ wp_post_taut wp_post_taut],
+               rule corres_underlying_trivial[OF non_fail_gets_simp])+
+        apply (simp only:)
+        apply (rule corres_return_eq)
+       apply (clarsimp simp add: vcpu_relation_def vcpuSCTLR_def)
+       apply (drule sym[of "vgic_map _"])
+       apply (simp add: vgic_map_def)
+      apply (clarsimp simp add: getACTLR_def get_gic_vcpu_ctrl_vmcr_def get_gic_vcpu_ctrl_apr_def)
+      apply (rule corres_split_forward[OF _ _ do_machine_op_typ_at doMachineOp_typ_at'],
+             rule corres_guard_imp[OF corres_machine_op TrueI TrueI],
+             rule corres_underlying_trivial[OF non_fail_gets_simp])+
+      apply (rule corres_split_forward[OF corres_guard_imp[OF _ TrueI TrueI] _ gets_inv gets_inv])
+       apply (rule corres_gets_gicvcpu_numlistregs[simplified comp_def])
+      apply (rule corres_split_forward[OF _ _ do_machine_op_typ_at doMachineOp_typ_at'])
+       apply (rule corres_guard_imp[OF corres_machine_op TrueI TrueI])
+       apply (rule_tac r="op =" in corres_trivial)
+       apply (rule_tac S = "{(x,y). x = y}"
+          in corres_mapM[OF refl _ _ wp_post_taut wp_post_taut])
+          apply simp
+         apply simp
+         apply (rule corres_underlying_trivial[OF no_fail_get_gic_vcpu_ctrl_lr])
+        apply simp
+       apply clarsimp
+      apply (rule corres_split_forward[OF _ _ do_machine_op_typ_at doMachineOp_typ_at'],
+             rule corres_guard_imp[OF corres_machine_op[OF corres_underlying_trivial] TrueI TrueI],
+             wp)+
+      apply (rule corres_split'[OF set_vcpu_corres])
+         apply (clarsimp simp add: vcpu_relation_def)
+         apply (drule sym[of "vgic_map _"])
+         apply (clarsimp simp add: vgic_map_def aLU_case_fold arrayListUpdate_def)
+        apply (rule corres_machine_op[OF corres_rel_imp[OF corres_underlying_trivial[OF no_fail_isb] TrueI]])
+        apply (rule hoare_post_taut)+
+      done
+  qed
 
 lemma vcpuDisable_corres:
-  "\<lbrakk> vcpu = vcpu' \<rbrakk> \<Longrightarrow> corres dc \<top> \<top> (vcpu_disable vcpu) (vcpuDisable vcpu')"
-  sorry
+  "corres dc (\<lambda>s. (\<exists>v. vcpu = Some v) \<longrightarrow> vcpu_at  (the vcpu) s)
+             (\<lambda>s. (\<exists>v. vcpu = Some v) \<longrightarrow> vcpu_at' (the vcpu) s)
+             (vcpu_disable vcpu)
+             (vcpuDisable vcpu)"
+  apply (simp add: vcpu_disable_def vcpuDisable_def)
+  apply (cases vcpu; clarsimp simp add: sctlrDefault_def hcrNative_def
+                                        set_gic_vcpu_ctrl_hcr_def isb_def
+                                        get_gic_vcpu_ctrl_hcr_def getSCTLR_def
+                                        setSCTLR_def setHCR_def)
+   apply (rule corres_split'[OF corres_guard_imp[OF corres_machine_op TrueI TrueI]])
+      apply (rule corres_underlying_trivial[OF no_fail_dsb])
+     apply (rule corres_machine_op)
+     apply (rule corres_split'[OF corres_underlying_trivial[OF no_fail_machine_op_lift]])+
+             apply (rule corres_rel_imp[OF corres_underlying_trivial[OF no_fail_machine_op_lift] dc_simp])
+            apply (rule wp_post_taut | simp)+
+  apply (rule corres_split'[OF _ _ do_machine_op_typ_at doMachineOp_typ_at'])
+   apply (rule corres_guard_imp[OF corres_machine_op TrueI TrueI])
+   apply (rule corres_underlying_trivial[OF no_fail_dsb])
+  apply (rule corres_split')
+     apply (rule corres_split'[OF corres_get_vcpu, rotated])
+       apply (rule get_vcpu_inv)
+      apply (rule getObject_inv_vcpu)
+     apply (rule corres_split'[OF _ _ do_machine_op_typ_at doMachineOp_typ_at'])
+      apply (rule corres_guard_imp[OF corres_machine_op TrueI TrueI])
+      apply (rule corres_underlying_trivial[OF non_fail_gets_simp])
+     apply (rule corres_split'[OF _ _ do_machine_op_typ_at doMachineOp_typ_at'])
+      apply (rule corres_guard_imp[OF corres_machine_op TrueI TrueI])
+      apply (rule corres_underlying_trivial[OF non_fail_gets_simp])
+     apply (rule set_vcpu_corres)
+     apply (clarsimp simp add: vcpu_relation_def)
+     apply (drule sym[of "vgic_map _"])
+    apply (simp add: vgic_map_def)
+    apply (rule corres_machine_op)
+    apply (rule corres_split'[OF corres_underlying_trivial[OF no_fail_machine_op_lift]])+
+            apply (rule corres_rel_imp[OF corres_underlying_trivial[OF no_fail_machine_op_lift] dc_simp])
+           apply (rule wp_post_taut | simp)+
+    apply wp+
+  done
 
 lemma vcpuEnable_corres:
-  "\<lbrakk> vcpu = vcpu' \<rbrakk> \<Longrightarrow> corres dc \<top> \<top> (vcpu_enable vcpu) (vcpuEnable vcpu')"
-  sorry
+  "corres dc (vcpu_at  vcpu)
+             (vcpu_at' vcpu)
+             (vcpu_enable vcpu)
+             (vcpuEnable vcpu)"
+  apply (simp add: vcpu_enable_def vcpuEnable_def)
+  apply (rule corres_split'[OF corres_get_vcpu, rotated,OF get_vcpu_typ_at getObject_inv_vcpu])
+  apply (rule corres_guard_imp)
+    apply (clarsimp simp add: vcpu_relation_def setSCTLR_def setHCR_def
+                              hcrVCPU_def isb_def)
+    apply (rule corres_machine_op)
+    apply (rule corres_split'[OF corres_underlying_trivial[OF no_fail_machine_op_lift]])+
+          apply (drule sym[of "vgic_map _"])
+          apply (clarsimp simp add: vgic_map_def set_gic_vcpu_ctrl_hcr_def)
+          apply (rule corres_rel_imp[OF corres_underlying_trivial[OF no_fail_machine_op_lift] dc_simp])
+         apply (rule wp_post_taut)+
+   apply simp+
+  done
 
 lemma vcpuRestore_corres:
-  "\<lbrakk> vcpu = vcpu' \<rbrakk> \<Longrightarrow> corres dc \<top> \<top> (vcpu_restore vcpu) (vcpuRestore vcpu')"
-  sorry
+  "corres dc (vcpu_at vcpu)
+             (vcpu_at' vcpu)
+             (vcpu_restore vcpu)
+             (vcpuRestore vcpu)"
+  apply (simp add: vcpu_restore_def vcpuRestore_def gicVCPUMaxNumLR_def
+                   set_gic_vcpu_ctrl_hcr_def isb_def)
+  apply (rule corres_split'[OF _ _ do_machine_op_typ_at doMachineOp_typ_at'],
+         rule corres_guard_imp[OF corres_machine_op[OF corres_underlying_trivial]],
+         simp+)+
+  apply (rule corres_split'[OF corres_get_vcpu, rotated])
+    apply (rule get_vcpu_typ_at)
+   apply (rule getObject_inv_vcpu)
+  apply (rule corres_split')
+    apply (rename_tac vcpuobj vcpuobj')
+     apply (rule corres_guard_imp)
+       apply (rule corres_machine_op)
+       apply (rule corres_split')
+       apply (clarsimp simp add: vcpu_relation_def)
+       apply (drule sym[of "vgic_map _"])
+       apply (clarsimp simp add: vgic_map_def)
+       apply (rule corres_underlying_trivial, simp add: set_gic_vcpu_ctrl_vmcr_def)
+         apply (rule corres_split')
+            apply (clarsimp simp add: vcpu_relation_def)
+            apply (drule sym[of "vgic_map _"])
+            apply (clarsimp simp add: vgic_map_def)
+            apply (rule corres_underlying_trivial, simp add: set_gic_vcpu_ctrl_apr_def)
+            apply (rule no_fail_machine_op_lift)
+           apply (subst mapM_mapM_x)
+           apply (rule corres_split')
+              apply (simp add: mapM_x_mapM)
+              apply (rule corres_split')
+                 apply (rule_tac S =  "{((x1,x2),y1,y2). \<exists>x2'. of_int x1 = y1 \<and> x2 = y2}"
+                                 in corres_mapM[OF refl refl])
+                     apply (clarsimp simp add: uncurry_def)
+                     apply (rule corres_underlying_trivial)
+                     apply (simp add: set_gic_vcpu_ctrl_lr_def)
+                     apply (rule no_fail_machine_op_lift)
+                    apply (rule wp_post_taut)+
+                  apply simp
+                 apply (clarsimp simp add: zip_map_map vcpu_relation_def)
+                 apply (drule sym[of "vgic_map _"])
+                 apply (simp add: vgic_map_def)
+                apply (rule corres_underlying_trivial[OF no_fail_return])
+               apply (rule wp_post_taut)+
+             apply (simp add: vcpu_relation_def)
+             apply(rule corres_underlying_trivial)
+             apply wpsimp+
+    apply (rule vcpuEnable_corres[simplified dc_def])
+   apply wp+
+  done
+
+lemma getObject_typ_at' : "(getObject r :: vcpu kernel) \<lbrace> P (vcpu_at' t p) \<rbrace>"
+  by (rule getObject_inv_vcpu)
+
+
+lemma vcpuSave_vcpu_at'[wp]: "vcpuSave v \<lbrace>\<lambda>s . vcpu_at' p s\<rbrace>"
+  by (wpsimp simp: vcpuSave_def)
 
 lemma vcpuSwitch_corres:
-  "\<lbrakk> vcpu = vcpu' \<rbrakk> \<Longrightarrow> corres dc \<top> \<top> (vcpu_switch vcpu) (vcpuSwitch vcpu')"
+  "corres dc (\<lambda>s. ((\<exists>v. vcpu = Some v) \<longrightarrow> vcpu_at  (the vcpu) s) \<and>
+                  ((\<exists>v b. (arm_current_vcpu \<circ> arch_state) s = Some v)
+                  \<longrightarrow> vcpu_at ((fst \<circ> the \<circ> arm_current_vcpu \<circ> arch_state)  s) s))
+             (\<lambda>s. ((\<exists>v. vcpu = Some v) \<longrightarrow> vcpu_at'  (the vcpu) s) \<and>
+                  ((\<exists>v b. (armHSCurVCPU \<circ> ksArchState) s = Some v)
+                  \<longrightarrow> vcpu_at' ((fst \<circ> the \<circ> armHSCurVCPU \<circ> ksArchState) s) s))
+             (vcpu_switch vcpu)
+             (vcpuSwitch vcpu)"
   proof -
     have modify_current_vcpu:
       "\<And>a b. corres dc \<top> \<top> (modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := Some (a, b)\<rparr>\<rparr>))
@@ -692,17 +944,21 @@ lemma vcpuSwitch_corres:
                      in TrueE;
              simp add: state_relation_def arch_state_relation_def)
       done
-    assume vcpu_eq : "vcpu = vcpu'"
     show ?thesis
       apply (simp add: vcpu_switch_def vcpuSwitch_def)
       apply (cases vcpu)
-      apply (all \<open>simp add: vcpu_eq, rule corres_split'[OF get_current_vcpu],rename_tac rv, case_tac rv\<close>)
-         apply (rule corres_split'[OF corres_machine_op[OF corres_underlying_trivial[OF no_fail_isb]]]
-                     corres_split'[OF vcpuRestore_corres[OF refl] modify_current_vcpu]
-                     corres_split'[OF vcpuDisable_corres[OF refl] modify_current_vcpu]
-                     corres_split'[OF vcpuEnable_corres [OF refl] modify_current_vcpu]
-                     corres_split'[OF vcpuSave_corres[OF refl]]
-                     wp_post_taut conjI | clarsimp simp add: when_def)+
+         apply (all \<open>simp, rule corres_split'[OF  _ _ gets_sp gets_sp],
+                           rule corres_guard_imp[OF get_current_vcpu TrueI TrueI],
+                           rename_tac rv rv', case_tac rv ;
+                           clarsimp simp add: when_def\<close>)
+        apply (rule corres_machine_op[OF corres_underlying_trivial[OF no_fail_isb]] TrueI TrueI
+                    vcpuDisable_corres modify_current_vcpu
+                    vcpuEnable_corres
+                    vcpuRestore_corres
+                    vcpuSave_corres
+                    hoare_post_taut conjI
+                    corres_split' corres_guard_imp
+               | clarsimp simp add: when_def | wpsimp | assumption)+
       done
   qed
 
@@ -801,7 +1057,7 @@ proof -
                   apply simp
                  apply simp
                  apply (rule corres_split[OF _ arm_context_switch_corres])
-                   apply (rule corres_split[OF vcpuSwitch_corres get_tcb_corres])
+                  (* apply (rule corres_split[OF vcpuSwitch_corres get_tcb_corres])
                      apply (clarsimp simp add: tcb_relation_def arch_tcb_relation_def)
                     apply (wpsimp simp: armv_contextSwitch_def | rule hoare_drop_imps)+
                apply (simp add: whenE_def split del: if_split, wp)[1]
@@ -817,7 +1073,8 @@ proof -
          apply (wp get_cap_wp | simp)+
      apply (clarsimp simp: tcb_at_cte_at_1 [simplified])
     apply simp
-    done
+    done *)
+    sorry
 qed
 
 lemma invalidateTLBByASID_invs'[wp]:

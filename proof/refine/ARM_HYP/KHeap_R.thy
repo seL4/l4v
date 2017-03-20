@@ -44,6 +44,12 @@ lemma getObject_inv:
   shows      "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
   by (simp add: getObject_def split_def | wp x)+
 
+lemma getObject_inv_vcpu [wp]: "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda>(rv :: ArchStructures_H.vcpu). P\<rbrace>"
+  apply (rule getObject_inv)
+  apply simp
+  apply (rule loadObject_default_inv)
+  done
+
 lemma getObject_inv_tcb [wp]: "\<lbrace>P\<rbrace> getObject l \<lbrace>\<lambda>(rv :: Structures_H.tcb). P\<rbrace>"
   apply (rule getObject_inv)
   apply simp
@@ -132,6 +138,22 @@ lemma no_fail_getPDE [wp]:
   apply (clarsimp split: option.split_asm simp: objBits_simps archObjSize_def)
   done
 
+lemma no_fail_getObject_vcpu[wp]: "no_fail (vcpu_at' vcpu) (getObject vcpu :: vcpu kernel)"
+  apply (simp add: getObject_def split_def)
+  apply (rule no_fail_pre)
+   apply wp
+  apply (clarsimp simp add: obj_at'_def projectKOs objBits_simps typ_at_to_obj_at_arches
+                      cong: conj_cong)
+  apply (rule ps_clear_lookupAround2, assumption+)
+    apply simp
+   apply (erule is_aligned_no_overflow)
+  apply clarsimp
+  apply (clarsimp split: option.split_asm simp: objBits_simps archObjSize_def)
+  done
+
+lemma vcpu_at_ko: "typ_at (AArch AVCPU) p s \<Longrightarrow> \<exists>vcpu. ko_at (ArchObj (arch_kernel_obj.VCPU vcpu)) p s "
+  by (clarsimp simp add: obj_at_def)
+
 lemma corres_get_tcb:
   "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t) (gets (get_tcb t)) (getObject t)"
   apply (rule corres_no_failI)
@@ -158,6 +180,40 @@ lemma lookupAround2_same1[simp]:
   apply (rule iffI)
    apply (simp add: lookupAround2_char1)
   apply (simp add: lookupAround2_known1)
+  done
+
+lemma corres_get_vcpu: "corres vcpu_relation (vcpu_at vcpu)
+                                             (vcpu_at' vcpu)
+                                             (get_vcpu vcpu)
+                                             (getObject vcpu)"
+  apply (simp add: getObject_def get_vcpu_def get_object_def split_def)
+  apply (rule corres_no_failI)
+   apply (rule no_fail_pre, wp)
+    apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
+   apply (case_tac ko; simp)
+   apply (rename_tac arch_kernel_object)
+   apply (case_tac arch_kernel_object, simp_all)[1]
+   apply (clarsimp simp: lookupAround2_known1
+                         projectKOs)
+   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
+                         archObjSize_def)
+   apply (erule (1) ps_clear_lookupAround2)
+     apply simp
+    apply (erule is_aligned_no_overflow)
+   apply simp
+   apply (clarsimp simp add: objBits_simps archObjSize_def
+                      split: option.split)
+  apply (clarsimp simp: in_monad loadObject_default_def projectKOs)
+  apply (simp add: bind_assoc exec_gets)
+  apply (drule vcpu_at_ko)
+  apply (clarsimp simp: obj_at_def)
+  apply (simp add: return_def)
+  apply (simp add: in_magnitude_check objBits_simps
+                   archObjSize_def pageBits_def)
+  apply (frule in_inv_by_hoareD [OF magnitudeCheck_inv])
+  apply (clarsimp simp: state_relation_def pspace_relation_def)
+  apply (drule bspec, blast)
+  apply (clarsimp simp: other_obj_relation_def)
   done
 
 lemma getObject_tcb_at':
