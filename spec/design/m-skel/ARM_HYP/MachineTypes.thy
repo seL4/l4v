@@ -144,7 +144,7 @@ definition
 
 
 (* Machine/Hardware/ARM.lhs - hardware_asid, vmfault_type and vmpage_size *)
-#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM_HYP.lhs CONTEXT ARM_HYP ONLY HardwareASID VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize
+#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM_HYP.lhs CONTEXT ARM_HYP ONLY HardwareASID VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize hcrVCPU hcrNative vgicHCREN sctlrDefault actlrDefault gicVCPUMaxNumLR
 
 end
 

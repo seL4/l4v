@@ -173,7 +173,6 @@ FIXME ARMHYP move to platform
 
 > type VIRQ = Word
 
-> gicVCPUMaxNumLR = (64 :: Int)
 
 > data GICVCPUInterface = VGICInterface {
 >                        vgicHCR :: Word,
@@ -191,12 +190,6 @@ FIXME ARMHYP move to platform
 >                 }
 >     deriving Show
 
-> hcrVCPU =  (0x87039 :: Word) -- HCR_VCPU
-> hcrNative = (0xfe8703b :: Word) -- HCR_NATIVE
-> vgicHCREN = (0x1 :: Word) -- VGIC_HCR_EN
-> sctlrDefault = (0xc5187c :: Word) -- SCTLR_DEFAULT
-> actlrDefault = (0x40 :: Word) -- ACTLR_DEFAULT
->
 > vcpuSCTLR vcpu = vcpuRegs vcpu ! VCPURegSCTLR
 
 makeObject specialised to VCPUs.
