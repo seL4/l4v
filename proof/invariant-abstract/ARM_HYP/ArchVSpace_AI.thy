@@ -1417,7 +1417,7 @@ lemma set_vcpu_hyp_live_eq:
  by (wpsimp wp: set_vcpu_wp simp: obj_at_def)
 
 lemma hyp_live_vcpu_VGIC_update[simp]:
-  "hyp_live (ArchObj (VCPU (vcpu_VGIC_update f vcpu))) = hyp_live (ArchObj (VCPU vcpu))"
+  "hyp_live (ArchObj (VCPU (vcpu_vgic_update f vcpu))) = hyp_live (ArchObj (VCPU vcpu))"
   by (simp add: hyp_live_def arch_live_def)
 
 lemma hyp_live_vcpu_sctlr[simp]:
@@ -2709,7 +2709,7 @@ lemma valid_vcpu_actlr_update[simp]:
   by (simp add: valid_vcpu_def valid_obj_def)
 
 lemma valid_vcpu_vgic_update[simp]:
-  "valid_obj p (ArchObj (VCPU (vcpu_VGIC_update f vcpu))) s = valid_obj p (ArchObj (VCPU vcpu)) s"
+  "valid_obj p (ArchObj (VCPU (vcpu_vgic_update f vcpu))) s = valid_obj p (ArchObj (VCPU vcpu)) s"
   by (simp add: valid_vcpu_def valid_obj_def)
 
 lemma vcpu_save_invs[wp]:
