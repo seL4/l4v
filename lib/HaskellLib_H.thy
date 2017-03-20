@@ -531,11 +531,11 @@ definition
   forME_x_def[simp]:
  "forME_x xs f \<equiv> mapME_x f xs"
 
-primrec
+definition
   arrayListUpdate :: "('a \<Rightarrow> 'b) \<Rightarrow> ('a \<times> 'b) list \<Rightarrow> ('a \<Rightarrow> 'b)" (infixl "aLU" 90)
 where
-  "arrayListUpdate f []       = f"
-| "arrayListUpdate f (x # xs) = f (fst x := snd x)"
+  arrayListUpdate_def[simp]:
+  "arrayListUpdate f l  \<equiv> foldl (\<lambda>f p. f(fst p := snd p)) f l"
 
 definition
  "genericTake \<equiv> take \<circ> fromIntegral"
