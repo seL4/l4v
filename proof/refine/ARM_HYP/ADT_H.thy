@@ -112,14 +112,14 @@ definition
        else ARM_A.InvalidPDE"
 
 definition
-  absVGIC :: "gicvcpuinterface \<Rightarrow> ARM_A.GICVCPUInterface"
+  absVGIC :: "gicvcpuinterface \<Rightarrow> gic_vcpu_interface"
 where
   "absVGIC v \<equiv> case v of
-    VGICInterface hcr vmcr apr lr \<Rightarrow> GICVCPUInterface.make hcr vmcr apr lr"
+    VGICInterface hcr vmcr apr lr \<Rightarrow> gic_vcpu_interface.make hcr vmcr apr lr"
 
 lemma absVGIC_eq[simp]:
   "absVGIC (vgic_map vgic) = vgic"
-  by (simp add: vgic_map_def absVGIC_def GICVCPUInterface.make_def)
+  by (simp add: vgic_map_def absVGIC_def gic_vcpu_interface.make_def)
 
 (* Can't pull the whole heap off at once, start with arch specific stuff.*)
 definition
@@ -139,7 +139,7 @@ definition
    | KOVCPU (VCPUObj tcb actlr vgic regs) \<Rightarrow>
        Some (VCPU \<lparr> vcpu_tcb    = tcb,
                     vcpu_actlr  = actlr,
-                    vcpu_VGIC   = absVGIC vgic,
+                    vcpu_vgic   = absVGIC vgic,
                     vcpu_regs   = regs \<rparr>))"
 
 definition
