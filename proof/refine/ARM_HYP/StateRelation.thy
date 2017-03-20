@@ -132,17 +132,17 @@ where
   "asid_pool_relation \<equiv> \<lambda>p p'. p = inv ASIDPool p' o ucast"
 
 definition
-  vgic_map :: "ARM_A.GICVCPUInterface \<Rightarrow> gicvcpuinterface"
+  vgic_map :: "gic_vcpu_interface \<Rightarrow> gicvcpuinterface"
 where
-  "vgic_map \<equiv> \<lambda>v. VGICInterface (ARM_A.vgicHCR v) (ARM_A.vgicVMCR v) (ARM_A.vgicAPR v)
-                                (ARM_A.vgicLR v)"
+  "vgic_map \<equiv> \<lambda>v. VGICInterface (vgic_hcr v) (vgic_vmcr v) (vgic_apr v)
+                                (vgic_lr v)"
 
 definition
   vcpu_relation :: "ARM_A.vcpu \<Rightarrow> vcpu \<Rightarrow> bool"
 where
   "vcpu_relation \<equiv> \<lambda>v v'. vcpu_tcb v = vcpuTCBPtr v' \<and>
                            vcpu_actlr v = vcpuACTLR v' \<and>
-                           vgic_map (vcpu_VGIC v) = vcpuVGIC v' \<and>
+                           vgic_map (vcpu_vgic v) = vcpuVGIC v' \<and>
                            vcpu_regs v = vcpuRegs v'"
 
 definition
