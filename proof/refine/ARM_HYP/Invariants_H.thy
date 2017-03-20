@@ -2156,7 +2156,10 @@ lemma valid_arch_obj'_pspaceI:
   apply (case_tac pde;
          auto simp: page_table_at'_def valid_mapping'_def
              intro: typ_at'_pspaceI[rotated])
-  sorry
+  apply (rename_tac vcpu)
+  apply (case_tac vcpu, rename_tac tcbref x1 x2 x3)
+  apply (case_tac tcbref; auto simp: valid_vcpu'_def intro: typ_at'_pspaceI[rotated])
+  done
 
 lemma valid_obj'_pspaceI:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
@@ -3145,7 +3148,7 @@ lemma valid_asid_table_update' [iff]:
 
 lemma valid_vcpu_update' [iff]:
   "valid_vcpu' v (f s) = valid_vcpu' v s"
-  sorry
+by (case_tac "ARM_HYP_H.vcpuTCBPtr v"; simp add: valid_vcpu'_def)
 
 lemma page_table_at_update' [iff]:
   "page_table_at' p (f s) = page_table_at' p s"
