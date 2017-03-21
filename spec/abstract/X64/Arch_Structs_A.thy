@@ -37,8 +37,6 @@ section {* Architecture-specific capabilities *}
 text {*  The x64 kernel supports capabilities for ASID pools and an ASID controller capability,
 along with capabilities for IO ports and spaces, as well as virtual memory mappings. *}
 
-datatype vm_map_type = VMNoMap | VMVSpaceMap | VMIOSpaceMap
-
 datatype arch_cap =
    ASIDPoolCap (acap_asid_pool : obj_ref) (acap_asid_base : asid)
  | ASIDControlCap
@@ -47,7 +45,7 @@ datatype arch_cap =
  | IOSpaceCap (cap_io_domain_id : "16 word") (cap_io_pci_device : "io_asid option")
  | IOPageTableCap (cap_iopt_base_ptr : obj_ref) (cap_io_pt_level : nat) (cap_iopt_mapped_address : "(io_asid * vspace_ref) option")
 *)
- | PageCap bool obj_ref (acap_rights : cap_rights) vm_map_type vmpage_size "(asid * vspace_ref) option"
+ | PageCap bool obj_ref (acap_rights : cap_rights) vmmap_type vmpage_size "(asid * vspace_ref) option"
  | PageTableCap obj_ref "(asid * vspace_ref) option"
  | PageDirectoryCap obj_ref "(asid * vspace_ref) option"
  | PDPointerTableCap obj_ref "(asid * vspace_ref) option"

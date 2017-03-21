@@ -181,8 +181,8 @@ where
   "decode_io_unmap_invocation label args cte cap extra_caps \<equiv> undefined"
 
  
-definition page_cap_set_vm_map_type :: "arch_cap \<Rightarrow> vm_map_type \<Rightarrow> arch_cap"
-where "page_cap_set_vm_map_type cap t \<equiv> (case cap of
+definition page_cap_set_vmmap_type :: "arch_cap \<Rightarrow> vmmap_type \<Rightarrow> arch_cap"
+where "page_cap_set_vmmap_type cap t \<equiv> (case cap of
   PageCap dev p R map_type pgsz mapped_address \<Rightarrow> PageCap dev p R t pgsz mapped_address
   | _ \<Rightarrow> undefined)"
 

@@ -375,6 +375,11 @@ datatype vmfault_type =
 datatype hyp_fault_type =
     X64NoHypFaults
 
+datatype vmmap_type =
+    VMNoMap
+  | VMVSpaceMap
+  | VMIOSpaceMap
+
 definition
 pageBits :: "nat"
 where
@@ -398,7 +403,7 @@ where
 end
 
 context begin interpretation Arch .
-requalify_types vmpage_size
+requalify_types vmpage_size vmmap_type
 end
 
 context Arch begin global_naming X64
@@ -445,6 +450,54 @@ instantiation vmpage_size :: enumeration_both
 begin
 interpretation Arch .
 instance by (intro_classes, simp add: enum_alt_vmpage_size)
+end
+
+(*>*)
+end_qualify
+context Arch begin global_naming X64
+
+end
+qualify X64 (in Arch)
+(* vmmap_type instance proofs *)
+(*<*)
+instantiation vmmap_type :: enum begin
+interpretation Arch .
+definition
+  enum_vmmap_type: "enum_class.enum \<equiv>
+    [
+      VMNoMap,
+      VMVSpaceMap,
+      VMIOSpaceMap
+    ]"
+
+
+definition
+  "enum_class.enum_all (P :: vmmap_type \<Rightarrow> bool) \<longleftrightarrow> Ball UNIV P"
+
+definition
+  "enum_class.enum_ex (P :: vmmap_type \<Rightarrow> bool) \<longleftrightarrow> Bex UNIV P"
+
+  instance
+  apply intro_classes
+   apply (safe, simp)
+   apply (case_tac x)
+  apply (simp_all add: enum_vmmap_type enum_all_vmmap_type_def enum_ex_vmmap_type_def)
+  by fast+
+end
+
+instantiation vmmap_type :: enum_alt
+begin
+interpretation Arch .
+definition
+  enum_alt_vmmap_type: "enum_alt \<equiv>
+    alt_from_ord (enum :: vmmap_type list)"
+instance ..
+end
+
+instantiation vmmap_type :: enumeration_both
+begin
+interpretation Arch .
+instance by (intro_classes, simp add: enum_alt_vmmap_type)
 end
 
 (*>*)

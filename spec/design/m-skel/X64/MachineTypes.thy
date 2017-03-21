@@ -118,17 +118,17 @@ definition
                          device_state = empty,
                          machine_state_rest = undefined \<rparr>"
 
-#INCLUDE_HASKELL SEL4/Machine/Hardware/X64.lhs CONTEXT X64 ONLY HardwareASID VMFaultType HypFaultType VMPageSize pageBits ptTranslationBits pageBitsForSize
+#INCLUDE_HASKELL SEL4/Machine/Hardware/X64.lhs CONTEXT X64 ONLY HardwareASID VMFaultType HypFaultType VMPageSize VMMapType pageBits ptTranslationBits pageBitsForSize
 
 end
 
 context begin interpretation Arch .
-requalify_types vmpage_size
+requalify_types vmpage_size vmmap_type
 end
 
 context Arch begin global_naming X64
 
-#INCLUDE_HASKELL SEL4/Machine/Hardware/X64.lhs CONTEXT X64 instanceproofs ONLY HardwareASID VMFaultType HypFaultType VMPageSize
+#INCLUDE_HASKELL SEL4/Machine/Hardware/X64.lhs CONTEXT X64 instanceproofs ONLY HardwareASID VMFaultType HypFaultType VMPageSize VMMapType
 
 end
 end
