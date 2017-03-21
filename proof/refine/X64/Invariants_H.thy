@@ -321,6 +321,7 @@ where
 | "acapBits (PageDirectoryCap x y) = table_size"
 | "acapBits (PDPointerTableCap x y) = table_size"
 | "acapBits (PML4Cap x y) = table_size"
+| "acapBits (IOPortCap f l) = 0"
 
 end
 
@@ -450,7 +451,7 @@ where valid_cap'_def:
   | PML4Cap ref mapdata \<Rightarrow>
     page_map_l4_at' ref s \<and>
     case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
-  | IOPortCap first lst \<Rightarrow> True (* should probably have something like fst \<le> last *)))"
+  | IOPortCap first lst \<Rightarrow> first \<le> lst (* should probably have something like fst \<le> last *)))"
 
 abbreviation (input)
   valid_cap'_syn :: "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>' _" [60, 60] 61)
@@ -2752,6 +2753,8 @@ lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       typ_at_lift_valid_cap'
                       valid_pde_lift'
                       valid_pte_lift'
+                      valid_pdpte_lift'
+                      valid_pml4e_lift'
                       valid_asid_pool_lift'
                       valid_bound_tcb_lift
 
