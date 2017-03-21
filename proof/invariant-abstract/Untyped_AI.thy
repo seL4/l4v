@@ -67,7 +67,7 @@ locale Untyped_AI_of_bl_nat_to_cref =
 lemma cnode_cap_bits_range:
   "\<lbrakk> cte_wp_at P p s; invs s \<rbrakk> \<Longrightarrow>
      (\<exists>c. P c \<and> (is_cnode_cap c \<longrightarrow>
-                 (\<lambda>n. n > 0 \<and> n < (word_bits - 4) \<and> is_aligned (obj_ref_of c) (n + 4)) (bits_of c)))"
+                 (\<lambda>n. n > 0 \<and> n < (word_bits - cte_level_bits) \<and> is_aligned (obj_ref_of c) (n + cte_level_bits)) (bits_of c)))"
   apply (frule invs_valid_objs)
   apply (drule(1) cte_wp_at_valid_objs_valid_cap)
   apply clarsimp
@@ -1554,14 +1554,14 @@ lemma retype_region_ranges':
       apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
        apply (fastforce simp: range_cover_def)
        apply (simp add: word_bits_def is_aligned_mult_triv2[where n = 9,simplified])+
-     apply (subst add.commute[where a = "0xF"])
+     apply (subst add.commute[where a = "0x1F"])
      apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
       apply (fastforce simp: range_cover_def)
-      apply (simp add: word_bits_def is_aligned_mult_triv2[where n = 4,simplified])+
-    apply (subst add.commute[where a = "0xF"])
+      apply (simp add: word_bits_def is_aligned_mult_triv2[where n = 5,simplified])+
+    apply (subst add.commute[where a = "0x1F"])
     apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
      apply (fastforce simp: range_cover_def)
-     apply (simp add: word_bits_def is_aligned_mult_triv2[where n = 4,simplified])+
+     apply (simp add: word_bits_def is_aligned_mult_triv2[where n = 5,simplified])+
      apply (clarsimp simp: is_aligned_def)
     apply (simp add: p_assoc_help)
     apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])

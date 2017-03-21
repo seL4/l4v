@@ -104,7 +104,7 @@ text {* The following definitions provide architecture-dependent sizes
 *}
 definition 
   slot_bits :: nat where
-  "slot_bits \<equiv> 4"
+  "slot_bits \<equiv> 5"
 
 type_synonym user_context = "register \<Rightarrow> data"
 

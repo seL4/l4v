@@ -977,8 +977,8 @@ lemma valid_pspace_well_formed_cnode[intro?]:
   by (erule (1) well_formed_cnode_valid_cs_size [OF valid_cs_sizeI])
 
 
-lemma clb_is_16:
-  "2 ^ cte_level_bits = (16 :: word32)" by (simp add: cte_level_bits_def)
+lemma clb_is_32:
+  "2 ^ cte_level_bits = (32 :: word32)" by (simp add: cte_level_bits_def)
 
 
 lemmas cte_wp_at_cte_at = cte_wp_at_weakenE [OF _ TrueI]

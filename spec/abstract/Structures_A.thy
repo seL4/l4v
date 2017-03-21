@@ -434,15 +434,15 @@ definition
 
 definition
   cte_level_bits :: nat where
-  "cte_level_bits  \<equiv> 4"
+  "cte_level_bits  \<equiv> 5"
 
 primrec
   obj_bits :: "kernel_object \<Rightarrow> nat"
 where
   "obj_bits (CNode sz cs) = cte_level_bits + sz"
 | "obj_bits (TCB t) = 9"
-| "obj_bits (Endpoint ep) = 4"
-| "obj_bits (Notification ntfn) = 4"
+| "obj_bits (Endpoint ep) = 5"
+| "obj_bits (Notification ntfn) = 5"
 | "obj_bits (ArchObj ao) = arch_kobj_size ao"
 
 primrec (nonexhaustive)

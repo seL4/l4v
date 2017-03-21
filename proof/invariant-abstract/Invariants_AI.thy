@@ -924,7 +924,7 @@ where
 
 definition
   "obj_bits_type T \<equiv> case T of
-    ACapTable n \<Rightarrow> 4 + n
+    ACapTable n \<Rightarrow> cte_level_bits + n
   | AGarbage n \<Rightarrow> n
   | ATCB \<Rightarrow> obj_bits (TCB undefined)
   | AEndpoint \<Rightarrow> obj_bits (Endpoint undefined)
@@ -1829,13 +1829,13 @@ lemma wf_cs_insert:
 
 lemma obj_bits_CNode:
   "\<lbrakk> valid_cs_size sz ps; ps cref = Some cap \<rbrakk> \<Longrightarrow>
-  obj_bits (CNode sz ps) = 4 + length cref"
+  obj_bits (CNode sz ps) = cte_level_bits + length cref"
   unfolding valid_cs_size_def
   by (auto simp: well_formed_cnode_n_def cte_level_bits_def)
 
 lemma obj_bits_CNode':
   "\<lbrakk> valid_cs_size sz ps; cref \<in> dom ps \<rbrakk> \<Longrightarrow>
-  obj_bits (CNode sz ps) = 4 + length cref"
+  obj_bits (CNode sz ps) = cte_level_bits + length cref"
   by (drule domD, erule exE, rule obj_bits_CNode)
 
 lemma valid_cs_sizeE [elim]:
@@ -1954,7 +1954,7 @@ lemma valid_CNodeCapE:
   assumes p: "s \<turnstile> CNodeCap ptr cbits guard" "valid_objs s" "pspace_aligned s"
   assumes R: "\<And>cs. \<lbrakk> 0 < cbits; kheap s ptr = Some (CNode cbits cs);
                \<forall>cap\<in>ran cs. s \<turnstile> cap; dom cs = {x. length x = cbits};
-               is_aligned ptr (4 + cbits); cbits < word_bits - cte_level_bits
+               is_aligned ptr (cte_level_bits + cbits); cbits < word_bits - cte_level_bits
               \<rbrakk> \<Longrightarrow> P"
   shows "P"
   using p
@@ -2117,8 +2117,6 @@ lemma pspace_typ_at:
 lemma obj_bits_T:
   "obj_bits v = obj_bits_type (a_type v)"
   apply (cases v, simp_all add: obj_bits_type_def a_type_def)
-   apply (clarsimp simp: well_formed_cnode_n_def 
-                         length_set_helper length_helper cte_level_bits_def)
   apply (rule aobj_bits_T)
   done
 
@@ -2301,7 +2299,7 @@ lemma wf_unique:
 
 lemma wf_obj_bits:
   "well_formed_cnode_n bits f \<Longrightarrow>
-  obj_bits (CNode bits f) = 4 + bits"
+  obj_bits (CNode bits f) = cte_level_bits + bits"
   by (auto simp: cte_level_bits_def)
 
 lemma wf_cs_n_unique:
@@ -3064,7 +3062,7 @@ lemma well_formed_cnode_valid_cs_size:
   by (clarsimp simp: valid_cs_size_def)
 
 lemma empty_cnode_bits:
-  "obj_bits (CNode n (empty_cnode n)) = 4 + n"
+  "obj_bits (CNode n (empty_cnode n)) = cte_level_bits + n"
   by (simp add: wf_empty_bits cte_level_bits_def)
 
 lemma irq_revocableD:
