@@ -67,27 +67,27 @@ lemma [simp]: "\<not>is_reply_cap Structures_A.NullCap"
 
 declare cap_range_NullCap [simp]
 
-(* IRQ nodes occupy 12 bits of address space: 8 for irq number, 4 for cte_level_bits. *)
+(* IRQ nodes occupy 13 bits of address space: 8 for irq number, 5 for cte_level_bits. *)
 lemma init_irq_ptrs_ineqs:
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) \<ge> init_irq_node_ptr"
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) + 2 ^ cte_level_bits - 1
-                \<le> init_irq_node_ptr + 2 ^ 12 - 1"
+                \<le> init_irq_node_ptr + 2 ^ 13 - 1"
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits)
-                \<le> init_irq_node_ptr + 2 ^ 12 - 1"
+                \<le> init_irq_node_ptr + 2 ^ 13 - 1"
 proof -
-  have P: "ucast irq < (2 ^ (12 - cte_level_bits) :: machine_word)"
+  have P: "ucast irq < (2 ^ (13 - cte_level_bits) :: machine_word)"
     apply (rule order_le_less_trans[OF
         ucast_le_ucast[where 'a=8 and 'b=64, simplified, THEN iffD2, OF word_n1_ge]])
     apply (simp add: cte_level_bits_def minus_one_norm)
     done
   show "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) \<ge> init_irq_node_ptr"
-    apply (rule is_aligned_no_wrap'[where sz=12])
+    apply (rule is_aligned_no_wrap'[where sz=13])
      apply (simp add: is_aligned_def init_irq_node_ptr_def kernel_base_def)
     apply (rule shiftl_less_t2n[OF P])
     apply simp
     done
   show Q: "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) + 2 ^ cte_level_bits - 1
-                \<le> init_irq_node_ptr + 2 ^ 12 - 1"
+                \<le> init_irq_node_ptr + 2 ^ 13 - 1"
     apply (simp only: add_diff_eq[symmetric] add.assoc)
     apply (rule word_add_le_mono2)
      apply (simp only: trans [OF shiftl_t2n mult.commute])
@@ -96,7 +96,7 @@ proof -
         word_bits_def kernel_base_def init_irq_node_ptr_def)
     done
   show "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits)
-                \<le> init_irq_node_ptr + 2 ^ 12 - 1"
+                \<le> init_irq_node_ptr + 2 ^ 13 - 1"
     apply (simp only: add_diff_eq[symmetric])
     apply (rule word_add_le_mono2)
      apply (rule minus_one_helper3, rule shiftl_less_t2n[OF P])
