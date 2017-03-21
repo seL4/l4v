@@ -209,7 +209,7 @@ text {* VCPU perform and decode main functions *}
 definition
 perform_vcpu_invocation :: "vcpu_invocation \<Rightarrow> (data list,'z::state_ext) s_monad" where
 "perform_vcpu_invocation iv \<equiv> case iv of
-    VCPUSetTCB vcpu tcb \<Rightarrow> do associate_vcpu_tcb tcb vcpu; return [] od
+    VCPUSetTCB vcpu tcb \<Rightarrow> do associate_vcpu_tcb vcpu tcb; return [] od
   | VCPUReadRegister vcpu reg \<Rightarrow> invoke_vcpu_read_register vcpu reg
   | VCPUWriteRegister vcpu reg val \<Rightarrow> do invoke_vcpu_write_register vcpu reg val; return [] od
   | VCPUInjectIRQ vcpu index vir \<Rightarrow> do invoke_vcpu_inject_irq vcpu index vir; return [] od"
