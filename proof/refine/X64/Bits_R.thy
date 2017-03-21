@@ -39,17 +39,6 @@ crunch_ignore (add:
   unify_failure throw_on_false
 )
 
-context Arch begin (*FIXME: arch_split*)
-
-crunch_ignore (add:
-  invalidateTLB_ASID invalidateTLB_VAASID
-  cleanByVA cleanByVA_PoU invalidateByVA invalidateByVA_I invalidate_I_PoU
-  cleanInvalByVA branchFlush clean_D_PoU cleanInvalidate_D_PoC cleanInvalidateL2Range
-  invalidateL2Range cleanL2Range flushBTAC writeContextID isb dsb dmb
-  setHardwareASID setCurrentPD)
-
-end
-
 crunch_ignore (add:
   storeWordVM loadWord setRegister getRegister getRestartPC
   debugPrint set_register get_register
@@ -92,12 +81,15 @@ lemma isCap_simps:
   "isIRQHandlerCap v = (\<exists>v0. v = IRQHandlerCap v0)"
   "isNullCap v = (v = NullCap)"
   "isDomainCap v = (v = DomainCap)"
-  "isPageCap w = (\<exists>d v0 v1 v2 v3. w = PageCap d v0 v1 v2 v3)"
+  "isPageCap w = (\<exists>d v0 v1 v2 v3 v4. w = PageCap v0 v1 v2 v3 d v4)"
   "isPageTableCap w = (\<exists>v0 v1. w = PageTableCap v0 v1)"
   "isPageDirectoryCap w = (\<exists>v0 v1. w = PageDirectoryCap v0 v1)"
+  "isPDPointerTableCap w = (\<exists>v0 v1. w = PDPointerTableCap v0 v1)"
+  "isPML4Cap w = (\<exists>v0 v1. w = PML4Cap v0 v1)"
+  "isIOPortCap w = (\<exists>v0 v1. w = IOPortCap v0 v1)"
   "isASIDControlCap w = (w = ASIDControlCap)"
   "isASIDPoolCap w = (\<exists>v0 v1. w = ASIDPoolCap v0 v1)"
-  "isArchPageCap cap = (\<exists>d ref rghts sz data. cap = ArchObjectCap (PageCap d ref rghts sz data))"
+  "isArchPageCap cap = (\<exists>d ref rghts sz data typ. cap = ArchObjectCap (PageCap ref rghts typ sz d data))"
   by (auto simp: isCap_defs split: capability.splits arch_capability.splits)
 
 lemma untyped_not_null [simp]:
@@ -385,7 +377,7 @@ lemma ko_at_cte_ctable:
 
 lemma ko_at_cte_vtable:
   fixes ko :: tcb
-  shows "\<lbrakk> ko_at' tcb p s \<rbrakk> \<Longrightarrow> cte_wp_at' (\<lambda>x. x = tcbVTable tcb) (p + 16) s"
+  shows "\<lbrakk> ko_at' tcb p s \<rbrakk> \<Longrightarrow> cte_wp_at' (\<lambda>x. x = tcbVTable tcb) (p + 32) s"
   apply (clarsimp simp: obj_at'_def objBits_simps projectKOs)
   apply (erule(2) cte_wp_at_tcbI')
    apply fastforce
@@ -503,7 +495,7 @@ lemma withoutPreemption_R:
   by (wp withoutPreemption_lift)
 
 lemma ko_at_cte_ipcbuffer:
-  "ko_at' tcb p s \<Longrightarrow> cte_wp_at' (\<lambda>x. x = tcbIPCBufferFrame tcb) (p + tcbIPCBufferSlot * 0x10) s"
+  "ko_at' tcb p s \<Longrightarrow> cte_wp_at' (\<lambda>x. x = tcbIPCBufferFrame tcb) (p + tcbIPCBufferSlot * 0x20) s"
   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
   apply (erule (2) cte_wp_at_tcbI')
    apply (fastforce simp add: tcb_cte_cases_def tcbIPCBufferSlot_def)

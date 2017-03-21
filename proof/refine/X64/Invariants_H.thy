@@ -81,6 +81,10 @@ abbreviation
   "pde_at' \<equiv> typ_at' (ArchT PDET)"
 abbreviation
   "pte_at' \<equiv> typ_at' (ArchT PTET)"
+abbreviation
+  "pdpte_at' \<equiv> typ_at' (ArchT PDPTET)"
+abbreviation
+  "pml4e_at' \<equiv> typ_at' (ArchT PML4ET)"
 end
 
 record itcb' =
@@ -151,10 +155,10 @@ definition
   tcb_cte_cases :: "machine_word \<rightharpoonup> ((tcb \<Rightarrow> cte) \<times> ((cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb))"
 where
  "tcb_cte_cases \<equiv> [ 0 \<mapsto> (tcbCTable, tcbCTable_update),
-                   16 \<mapsto> (tcbVTable, tcbVTable_update),
-                   32 \<mapsto> (tcbReply, tcbReply_update),
-                   48 \<mapsto> (tcbCaller, tcbCaller_update),
-                   64 \<mapsto> (tcbIPCBufferFrame, tcbIPCBufferFrame_update) ]"
+                   32 \<mapsto> (tcbVTable, tcbVTable_update),
+                   64 \<mapsto> (tcbReply, tcbReply_update),
+                   96 \<mapsto> (tcbCaller, tcbCaller_update),
+                   128 \<mapsto> (tcbIPCBufferFrame, tcbIPCBufferFrame_update) ]"
 
 definition
   max_ipc_words :: machine_word
@@ -1007,22 +1011,19 @@ where
   "valid_refs' R \<equiv> \<lambda>m. \<forall>c \<in> ran m. R \<inter> capRange (cteCap c) = {}"
 
 definition
-  page_directory_refs' :: "machine_word \<Rightarrow> machine_word set"
+  table_refs' :: "machine_word \<Rightarrow> machine_word set"
 where
-  "page_directory_refs' x \<equiv> (\<lambda>y. x + (y << 2)) ` {y. y < 2 ^ 12}"
-
-definition
-  page_table_refs' :: "machine_word \<Rightarrow> machine_word set"
-where
-  "page_table_refs' x \<equiv> (\<lambda>y. x + (y << 2)) ` {y. y < 2 ^ 8}"
+  "table_refs' x \<equiv> (\<lambda>y. x + (y << word_size_bits)) ` {y. y < 2^ptTranslationBits}"
 
 definition
   global_refs' :: "kernel_state \<Rightarrow> obj_ref set"
 where
   "global_refs' \<equiv> \<lambda>s.
   {ksIdleThread s} \<union>
-   page_directory_refs' (armKSGlobalPD (ksArchState s)) \<union>
-   (\<Union>pt \<in> set (armKSGlobalPTs (ksArchState s)). page_table_refs' pt) \<union>
+   table_refs' (x64KSGlobalPML4 (ksArchState s)) \<union>
+   (\<Union>pt \<in> set (x64KSGlobalPDs (ksArchState s)). table_refs' pt) \<union>
+   (\<Union>pt \<in> set (x64KSGlobalPTs (ksArchState s)). table_refs' pt) \<union>
+   (\<Union>pt \<in> set (x64KSGlobalPDPTs (ksArchState s)). table_refs' pt) \<union>
    range (\<lambda>irq :: irq. irq_node' s + 16 * ucast irq)"
 
 definition
@@ -1055,21 +1056,31 @@ where
   "valid_global_pts' pts \<equiv> \<lambda>s. \<forall>p \<in> set pts. page_table_at' p s"
 
 definition
-  valid_asid_map' :: "(machine_word \<rightharpoonup> word8 \<times> machine_word) \<Rightarrow> bool"
+  valid_global_pds' :: "machine_word list \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
- "valid_asid_map' m \<equiv> inj_on (option_map snd o m) (dom m)
+  "valid_global_pds' pds \<equiv> \<lambda>s. \<forall>p \<in> set pds. page_directory_at' p s"
+
+definition
+  valid_global_pdpts' :: "machine_word list \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "valid_global_pdpts' pdpts \<equiv> \<lambda>s. \<forall>p \<in> set pdpts. pd_pointer_table_at' p s"
+
+definition
+  valid_asid_map' :: "(asid \<rightharpoonup> machine_word) \<Rightarrow> bool"
+where
+ "valid_asid_map' m \<equiv> inj_on m (dom m)
                           \<and> dom m \<subseteq> ({0 .. mask asid_bits} - {0})"
 
 definition
   valid_arch_state' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_arch_state' \<equiv> \<lambda>s.
-  valid_asid_table' (armKSASIDTable (ksArchState s)) s \<and>
-  page_directory_at' (armKSGlobalPD (ksArchState s)) s \<and>
-  valid_global_pts' (armKSGlobalPTs (ksArchState s)) s \<and>
-  is_inv (armKSHWASIDTable (ksArchState s))
-            (option_map fst o armKSASIDMap (ksArchState s)) \<and>
-  valid_asid_map' (armKSASIDMap (ksArchState s))"
+  valid_asid_table' (x64KSASIDTable (ksArchState s)) s \<and>
+  page_directory_at' (x64KSGlobalPML4 (ksArchState s)) s \<and>
+  valid_global_pds' (x64KSGlobalPDs (ksArchState s)) s \<and>
+  valid_global_pdpts' (x64KSGlobalPDPTs (ksArchState s)) s \<and>
+  valid_global_pts' (x64KSGlobalPTs (ksArchState s)) s \<and>
+  valid_asid_map' (x64KSASIDMap (ksArchState s))"
 
 definition
   irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1204,6 +1215,8 @@ definition
                     | ArchT atp \<Rightarrow> (case atp of
                                           PDET \<Rightarrow> injectKO (makeObject :: pde)
                                         | PTET \<Rightarrow> injectKO (makeObject :: pte)
+                                        | PDPTET \<Rightarrow> injectKO (makeObject :: pdpte)
+                                        | PML4ET \<Rightarrow> injectKO (makeObject :: pml4e)
                                         | ASIDPoolT \<Rightarrow> injectKO (makeObject :: asidpool))"
 
 definition
@@ -1495,15 +1508,6 @@ lemmas objBitsKO_simps = objBits_simps
 
 lemmas wordRadix_def' = wordRadix_def[simplified]
 
-lemma valid_duplicates'_D:
-  "\<lbrakk>vs_valid_duplicates' m; m (p::machine_word) = Some ko;is_aligned p' 2;
-  p && ~~ mask (vs_ptr_align ko) = p' && ~~ mask (vs_ptr_align ko)\<rbrakk>
-  \<Longrightarrow> m p' = Some ko "
-  apply (clarsimp simp:vs_valid_duplicates'_def)
-  apply (drule_tac x = p in spec)
-  apply auto
-  done
-
 lemma ps_clear_def2:
   "p \<le> p + 1 \<Longrightarrow> ps_clear p n s = ({p + 1 .. p + (1 << n) - 1} \<inter> dom (ksPSpace s) = {})"
   apply (simp add: ps_clear_def)
@@ -1532,7 +1536,7 @@ lemma singleton_in_magnitude_check:
   by (simp add: magnitudeCheck_def when_def in_monad return_def
          split: if_split_asm option.split_asm)
 
-lemma wordSizeCase_simp [simp]: "wordSizeCase a b = a"
+lemma wordSizeCase_simp [simp]: "wordSizeCase a b = b"
   by (simp add: wordSizeCase_def wordBits_def word_size)
 
 lemma projectKO_eq:
@@ -1596,10 +1600,10 @@ lemma cte_at'_def:
 
 lemma tcb_cte_cases_simps[simp]:
   "tcb_cte_cases 0  = Some (tcbCTable, tcbCTable_update)"
-  "tcb_cte_cases 16 = Some (tcbVTable, tcbVTable_update)"
-  "tcb_cte_cases 32 = Some (tcbReply, tcbReply_update)"
-  "tcb_cte_cases 48 = Some (tcbCaller, tcbCaller_update)"
-  "tcb_cte_cases 64 = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
+  "tcb_cte_cases 32 = Some (tcbVTable, tcbVTable_update)"
+  "tcb_cte_cases 64 = Some (tcbReply, tcbReply_update)"
+  "tcb_cte_cases 96 = Some (tcbCaller, tcbCaller_update)"
+  "tcb_cte_cases 128 = Some (tcbIPCBufferFrame, tcbIPCBufferFrame_update)"
   by (simp add: tcb_cte_cases_def)+
 
 lemma refs_of'_simps[simp]:
@@ -1867,6 +1871,7 @@ lemma
              | IRQHandlerCap irq               \<Rightarrow> False
              | ReplyCap r m                    \<Rightarrow> False
              | ArchObjectCap ASIDControlCap    \<Rightarrow> False
+             | ArchObjectCap (IOPortCap _ _)   \<Rightarrow> False
              | _                               \<Rightarrow> True)"
   by (simp split: capability.splits arch_capability.splits zombie_type.splits)
 
@@ -1875,16 +1880,14 @@ lemma sch_act_sane_not:
   by (auto simp: sch_act_sane_def)
 
 lemma objBits_cte_conv:
-  "objBits (cte :: cte) = 4"
+  "objBits (cte :: cte) = 5"
   by (simp add: objBits_def objBitsKO_def wordSizeCase_def word_size)
 
 lemma valid_pde_mapping'_simps[simp]:
  "valid_pde_mapping' offset (InvalidPDE) = True"
- "valid_pde_mapping' offset (SectionPDE ptr a b c d e w)
+ "valid_pde_mapping' offset (LargePagePDE ptr a b c d e w x y)
      = valid_pde_mapping_offset' offset"
- "valid_pde_mapping' offset (SuperSectionPDE ptr a' b' c' d' w)
-     = valid_pde_mapping_offset' offset"
- "valid_pde_mapping' offset (PageTablePDE ptr x z'')
+ "valid_pde_mapping' offset (PageTablePDE ptr x z'' g h f)
      = valid_pde_mapping_offset' offset"
   by (clarsimp simp: valid_pde_mapping'_def)+
 
@@ -1976,7 +1979,7 @@ lemma valid_cap'_pspaceI:
      (force intro: obj_at'_pspaceI[rotated]
                   cte_wp_at'_pspaceI valid_untyped'_pspaceI
                   typ_at'_pspaceI[rotated]
-            simp: page_table_at'_def page_directory_at'_def
+            simp: page_table_at'_def page_directory_at'_def pd_pointer_table_at'_def page_map_l4_at'_def
            split: arch_capability.split zombie_type.split option.splits)+
 
 lemma valid_arch_obj'_pspaceI:
@@ -1991,6 +1994,10 @@ lemma valid_arch_obj'_pspaceI:
   apply (case_tac pde;
          auto simp: page_table_at'_def valid_mapping'_def
              intro: typ_at'_pspaceI[rotated])
+   apply (rename_tac pdpte)
+   apply (case_tac pdpte; auto simp: valid_mapping'_def)
+  apply (rename_tac pml4e)
+  apply (case_tac pml4e; auto simp: valid_mapping'_def)
   done
 
 lemma valid_obj'_pspaceI:
@@ -2363,7 +2370,7 @@ lemma tcb_ctes_clear:
 lemma cte_wp_at_cases':
   shows "cte_wp_at' P p s =
   ((\<exists>cte. ksPSpace s p = Some (KOCTE cte) \<and> is_aligned p cte_level_bits
-             \<and> P cte \<and> ps_clear p 4 s) \<or>
+             \<and> P cte \<and> ps_clear p 5 s) \<or>
    (\<exists>n tcb getF setF. ksPSpace s (p - n) = Some (KOTCB tcb) \<and> is_aligned (p - n) 9
              \<and> tcb_cte_cases n = Some (getF, setF) \<and> P (getF tcb) \<and> ps_clear (p - n) 9 s))"
   (is "?LHS = ?RHS")
@@ -2389,7 +2396,8 @@ lemma cte_wp_at_cases':
                erule rsubst[where P="\<lambda>x. ksPSpace s x = v" for s v],
                fastforce simp add: field_simps, simp)+
    apply (subst(asm) in_magnitude_check3, simp+)
-   apply (simp split: if_split_asm)
+   apply (simp split: if_split_asm
+                add: )
   apply (simp add: cte_wp_at'_def getObject_def split_def
                    bind_def simpler_gets_def return_def
                    assert_opt_def fail_def
@@ -2451,8 +2459,7 @@ lemma cte_wp_atE' [consumes 1, case_names CTE TCB]:
   \<lbrakk> ksPSpace s ptr' = Some (KOTCB tcb); ps_clear ptr' 9 s; is_aligned ptr' 9;
      tcb_cte_cases (ptr - ptr') = Some (getF, setF); P (getF tcb) \<rbrakk> \<Longrightarrow> R"
   shows "R"
-  by (rule disjE [OF iffD1 [OF cte_wp_at_cases' cte]])
-     (auto intro: r1 r2 simp: cte_level_bits_def)
+  by (rule disjE [OF iffD1 [OF cte_wp_at_cases' cte]]) (auto intro: r1 r2 simp: cte_level_bits_def)
 
 lemma cte_wp_at_cteI':
   assumes "ksPSpace s ptr = Some (KOCTE cte)"
@@ -2618,6 +2625,18 @@ lemma typ_at_lift_page_table_at':
   unfolding page_table_at'_def All_less_Ball
   by (wp hoare_vcg_const_Ball_lift x)
 
+lemma typ_at_lift_pd_pointer_table_at':
+  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
+  shows      "\<lbrace>pd_pointer_table_at' p\<rbrace> f \<lbrace>\<lambda>rv. pd_pointer_table_at' p\<rbrace>"
+  unfolding pd_pointer_table_at'_def All_less_Ball
+  by (wp hoare_vcg_const_Ball_lift x)
+
+lemma typ_at_lift_page_map_l4_at':
+  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
+  shows      "\<lbrace>page_map_l4_at' p\<rbrace> f \<lbrace>\<lambda>rv. page_map_l4_at' p\<rbrace>"
+  unfolding page_map_l4_at'_def All_less_Ball
+  by (wp hoare_vcg_const_Ball_lift x)
+
 lemma ko_wp_typ_at':
   "ko_wp_at' P p s \<Longrightarrow> \<exists>T. typ_at' T p s"
   by (clarsimp simp: typ_at'_def ko_wp_at'_def)
@@ -2637,7 +2656,7 @@ lemma typ_at_lift_valid_untyped':
   apply (clarsimp simp: valid_def split del:if_split)
   apply (frule ko_wp_typ_at')
   apply clarsimp
-  apply (cut_tac T=T and p=ptr' in P)
+  apply (cut_tac T1=T and p1=ptr' in P)
   apply (simp add: valid_def)
   apply (erule_tac x=s in allE)
   apply (erule impE)
@@ -2666,7 +2685,7 @@ lemma typ_at_lift_valid_cap':
   apply (simp add: valid_cap'_def)
   apply wp
   apply (case_tac cap;
-         simp add: valid_cap'_def P [where P=id, simplified] typ_at_lift_tcb'
+         simp add: valid_cap'_def P[where P1=id, simplified] typ_at_lift_tcb'
                    hoare_vcg_prop typ_at_lift_ep'
                    typ_at_lift_ntfn' typ_at_lift_cte_at'
                    hoare_vcg_conj_lift [OF typ_at_lift_cte_at'])
@@ -2675,8 +2694,9 @@ lemma typ_at_lift_valid_cap':
       apply (wp typ_at_lift_tcb' P hoare_vcg_all_lift typ_at_lift_cte')+
     apply (rename_tac arch_capability)
     apply (case_tac arch_capability,
-           simp_all add: P [where P=id, simplified] page_table_at'_def
-                         hoare_vcg_prop page_directory_at'_def All_less_Ball
+           simp_all add: P [where P1=id, simplified] page_table_at'_def
+                         hoare_vcg_prop page_directory_at'_def pd_pointer_table_at'_def
+                         All_less_Ball page_map_l4_at'_def
               split del: if_splits)
        apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped'
                  hoare_vcg_all_lift typ_at_lift_cte')+
@@ -2700,6 +2720,16 @@ lemma valid_pte_lift':
   shows "\<lbrace>\<lambda>s. valid_pte' pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte' pte s\<rbrace>"
   by (cases pte) (simp add: valid_mapping'_def|wp x typ_at_lift_page_directory_at')+
 
+lemma valid_pdpte_lift':
+  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_pdpte' pdpte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pdpte' pdpte s\<rbrace>"
+  by (cases pdpte) (simp add: valid_mapping'_def|wp x typ_at_lift_pd_pointer_table_at')+
+
+lemma valid_pml4e_lift':
+  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_pml4e' pml4e s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pml4e' pml4e s\<rbrace>"
+  by (cases pml4e) (simp add: valid_mapping'_def|wp x typ_at_lift_page_map_l4_at')+
+
 lemma valid_asid_pool_lift':
   assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_asid_pool' ap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_asid_pool' ap s\<rbrace>"
@@ -2715,6 +2745,8 @@ lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       typ_at_lift_cte_at'
                       typ_at_lift_page_table_at'
                       typ_at_lift_page_directory_at'
+                      typ_at_lift_page_map_l4_at'
+                      typ_at_lift_pd_pointer_table_at'
                       typ_at_lift_asid_at'
                       typ_at_lift_valid_untyped'
                       typ_at_lift_valid_cap'
@@ -2972,9 +3004,25 @@ lemma page_directory_at_update' [iff]:
   "page_directory_at' p (f s) = page_directory_at' p s"
   by (simp add: page_directory_at'_def)
 
+lemma pd_pointer_table_at_update' [iff]:
+  "pd_pointer_table_at' p (f s) = pd_pointer_table_at' p s"
+  by (simp add: pd_pointer_table_at'_def)
+
+lemma page_map_l4_at_update' [iff]:
+  "page_map_l4_at' p (f s) = page_map_l4_at' p s"
+  by (simp add: page_map_l4_at'_def)
+
 lemma valid_global_pts_update' [iff]:
   "valid_global_pts' pts (f s) = valid_global_pts' pts s"
   by (simp add: valid_global_pts'_def)
+
+lemma valid_global_pds_update' [iff]:
+  "valid_global_pds' pds (f s) = valid_global_pds' pds s"
+  by (simp add: valid_global_pds'_def)
+
+lemma valid_global_pdpts_update' [iff]:
+  "valid_global_pdpts' pdpts (f s) = valid_global_pdpts' pdpts s"
+  by (simp add: valid_global_pdpts'_def)
 
 lemma no_0_obj'_update [iff]:
   "no_0_obj' (f s) = no_0_obj' s"
@@ -3192,12 +3240,16 @@ lemma ex_cte_cap_to'_pres:
   done
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma page_directory_pde_atI':
-  "\<lbrakk> page_directory_at' p s; x < 2 ^ pageBits \<rbrakk> \<Longrightarrow> pde_at' (p + (x << 2)) s"
+  "\<lbrakk> page_directory_at' p s; x < 2 ^ ptTranslationBits \<rbrakk> \<Longrightarrow> pde_at' (p + (x << word_size_bits)) s"
   by (simp add: page_directory_at'_def pageBits_def)
 
 lemma page_table_pte_atI':
-  "\<lbrakk> page_table_at' p s; x < 2^(ptBits - 2) \<rbrakk> \<Longrightarrow> pte_at' (p + (x << 2)) s"
+  "\<lbrakk> page_table_at' p s; x < 2^ptTranslationBits \<rbrakk> \<Longrightarrow> pte_at' (p + (x << word_size_bits)) s"
   by (simp add: page_table_at'_def pageBits_def ptBits_def)
+
+lemma pd_pointer_table_pdpte_atI':
+  "\<lbrakk> pd_pointer_table_at' p s; x < 2^ptTranslationBits \<rbrakk> \<Longrightarrow> pdpte_at' (p + (x << word_size_bits)) s"
+  by (simp add: pd_pointer_table_at'_def pageBits_def)
 
 lemma valid_global_refsD':
   "\<lbrakk> ctes_of s p = Some cte; valid_global_refs' s \<rbrakk> \<Longrightarrow>
@@ -3369,24 +3421,27 @@ lemma vms_sch_act_update'[iff]:
   by (simp add: valid_machine_state'_def )
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma objBitsT_simps:
-  "objBitsT EndpointT = 4"
-  "objBitsT NotificationT = 4"
-  "objBitsT CTET = 4"
+  "objBitsT EndpointT = 5"
+  "objBitsT NotificationT = 5"
+  "objBitsT CTET = 5"
   "objBitsT TCBT = 9"
   "objBitsT UserDataT = pageBits"
   "objBitsT UserDataDeviceT = pageBits"
   "objBitsT KernelDataT = pageBits"
-  "objBitsT (ArchT PDET) = 2"
-  "objBitsT (ArchT PTET) = 2"
+  "objBitsT (ArchT PDET) = word_size_bits"
+  "objBitsT (ArchT PTET) = word_size_bits"
+  "objBitsT (ArchT PDPTET) = word_size_bits"
+  "objBitsT (ArchT PML4ET) = word_size_bits"
   "objBitsT (ArchT ASIDPoolT) = pageBits"
   unfolding objBitsT_def makeObjectT_def
-  by (simp_all add: makeObject_simps objBits_simps archObjSize_def)
+  by (simp add: makeObject_simps objBits_simps archObjSize_def bit_simps)+
+
 
 lemma objBitsT_koTypeOf :
   "(objBitsT (koTypeOf ko)) = objBitsKO ko"
   apply (cases ko; simp add: objBits_simps objBitsT_simps)
   apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps)
+  apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps bit_simps)
   done
 
 lemma sane_update [intro!]:

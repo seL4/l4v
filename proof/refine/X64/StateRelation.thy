@@ -17,8 +17,10 @@ imports Invariants_H
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
+
+(* FIXME x64: should this be 32 bc cte_level_bits is 5 not 4 *)
 definition
-  cte_map :: "cslot_ptr \<Rightarrow> word32"
+  cte_map :: "cslot_ptr \<Rightarrow> machine_word"
 where
  "cte_map \<equiv> \<lambda>(oref, cref). oref + (of_bl cref * 16)"
 
@@ -32,9 +34,9 @@ where
   | ExceptionTypes_A.GuardMismatch n g      \<Rightarrow> Fault_H.GuardMismatch n (of_bl g) (length g)"
 
 primrec
-  arch_fault_map :: "Machine_A.ARM_A.arch_fault \<Rightarrow> ArchFault_H.ARM_H.arch_fault"
+  arch_fault_map :: "Machine_A.X64_A.arch_fault \<Rightarrow> ArchFault_H.X64_H.arch_fault"
 where
- "arch_fault_map (Machine_A.ARM_A.VMFault ptr msg) = ArchFault_H.ARM_H.VMFault ptr msg"
+ "arch_fault_map (Machine_A.X64_A.VMFault ptr msg) = ArchFault_H.X64_H.VMFault ptr msg"
 
 primrec
   fault_map :: "ExceptionTypes_A.fault \<Rightarrow> Fault_H.fault"
@@ -57,7 +59,7 @@ text {*
 *}
 
 type_synonym obj_relation_cut = "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
-type_synonym obj_relation_cuts = "(word32 \<times> obj_relation_cut) set"
+type_synonym obj_relation_cuts = "(machine_word \<times> obj_relation_cut) set"
 
 definition
   vmrights_map :: "rights set \<Rightarrow> vmrights"
@@ -79,12 +81,16 @@ where
         arch_capability.ASIDPoolCap x y)"
 | "acap_relation (arch_cap.ASIDControlCap) c              = (c =
         arch_capability.ASIDControlCap)"
-| "acap_relation (arch_cap.PageCap dev word rghts sz data) c  = (c =
-        arch_capability.PageCap dev word (vmrights_map rghts) sz data)"
+| "acap_relation (arch_cap.PageCap dev word rghts typ sz data) c  = (c =
+        arch_capability.PageCap word (vmrights_map rghts) typ sz dev data)"
 | "acap_relation (arch_cap.PageTableCap word data) c      = (c =
         arch_capability.PageTableCap word data)"
 | "acap_relation (arch_cap.PageDirectoryCap word data) c  = (c =
         arch_capability.PageDirectoryCap word data)"
+| "acap_relation (arch_cap.PDPointerTableCap word data) c = (c =
+        arch_capability.PDPointerTableCap word data)"
+| "acap_relation (arch_cap.PML4Cap word data) c = (c =
+        arch_capability.PML4Cap word data)"
 
 primrec
   cap_relation :: "cap \<Rightarrow> capability \<Rightarrow> bool"
@@ -123,7 +129,7 @@ where
                                \<and> cs y = Some cap \<and> cap_relation cap (cteCap cte)"
 
 definition
-  asid_pool_relation :: "(10 word \<rightharpoonup> word32) \<Rightarrow> asidpool \<Rightarrow> bool"
+  asid_pool_relation :: "(9 word \<rightharpoonup> machine_word) \<Rightarrow> asidpool \<Rightarrow> bool"
 where
   "asid_pool_relation \<equiv> \<lambda>p p'. p = inv ASIDPool p' o ucast"
 
@@ -202,85 +208,90 @@ where
         (TCB tcb, KOTCB tcb') \<Rightarrow> tcb_relation tcb tcb'
       | (Endpoint ep, KOEndpoint ep') \<Rightarrow> ep_relation ep ep'
       | (Notification ntfn, KONotification ntfn') \<Rightarrow> ntfn_relation ntfn ntfn'
-      | (ArchObj (ARM_A.ASIDPool pool), KOArch (KOASIDPool pool'))
+      | (ArchObj (X64_A.ASIDPool pool), KOArch (KOASIDPool pool'))
              \<Rightarrow> asid_pool_relation pool pool'
       | _ \<Rightarrow> False)"
 
 primrec
-   pde_relation' :: "ARM_A.pde \<Rightarrow> ARM_H.pde \<Rightarrow> bool"
+   pml4e_relation' :: "X64_A.pml4e \<Rightarrow> X64_H.pml4e \<Rightarrow> bool"
 where
-  "pde_relation'  ARM_A.InvalidPDE x = (x = ARM_H.InvalidPDE)"
-| "pde_relation' (ARM_A.PageTablePDE ptr atts domain) x
-      = (x = ARM_H.PageTablePDE ptr (ParityEnabled \<in> atts) domain)"
-| "pde_relation' (ARM_A.SectionPDE ptr atts domain rghts) x
-      = (x = ARM_H.SectionPDE ptr (ParityEnabled \<in> atts) domain
-               (PageCacheable \<in> atts) (Global \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
-| "pde_relation' (ARM_A.SuperSectionPDE ptr atts rghts) x
-      = (x = ARM_H.SuperSectionPDE ptr (ParityEnabled \<in> atts)
-               (PageCacheable \<in> atts) (Global \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
+  "pml4e_relation'  X64_A.InvalidPML4E x = (x = X64_H.InvalidPML4E)"
+| "pml4e_relation' (X64_A.PDPointerTablePML4E ptr atts rights) x
+      = (x = X64_H.PDPointerTablePML4E ptr (Accessed \<in> atts) (CacheDisabled \<in> atts) (WriteThrough \<in> atts)
+                                    (ExecuteDisable \<in> atts) (vmrights_map rights))"
 
 
 primrec
-   pte_relation' :: "ARM_A.pte \<Rightarrow> ARM_H.pte \<Rightarrow> bool"
+   pdpte_relation' :: "X64_A.pdpte \<Rightarrow> X64_H.pdpte \<Rightarrow> bool"
 where
-  "pte_relation'  ARM_A.InvalidPTE x = (x = ARM_H.InvalidPTE)"
-| "pte_relation' (ARM_A.LargePagePTE ptr atts rghts) x
-      = (x = ARM_H.LargePagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts)
-                                         (XNever \<in> atts) (vmrights_map rghts))"
-| "pte_relation' (ARM_A.SmallPagePTE ptr atts rghts) x
-      = (x = ARM_H.SmallPagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts)
-                                         (XNever \<in> atts) (vmrights_map rghts))"
+  "pdpte_relation'  X64_A.InvalidPDPTE x = (x = X64_H.InvalidPDPTE)"
+| "pdpte_relation' (X64_A.PageDirectoryPDPTE ptr atts rights) x
+      = (x = X64_H.PageDirectoryPDPTE ptr (Accessed \<in> atts) (CacheDisabled \<in> atts) (WriteThrough \<in> atts)
+                                    (ExecuteDisable \<in> atts) (vmrights_map rights))"
+| "pdpte_relation' (X64_A.HugePagePDPTE ptr atts rghts) x
+      = (x = X64_H.HugePagePDPTE ptr (Global \<in> atts) (PAT \<in> atts) (Dirty \<in> atts)
+                                    (PTAttr Accessed \<in> atts) (PTAttr CacheDisabled \<in> atts)
+                                    (PTAttr WriteThrough \<in> atts) (PTAttr ExecuteDisable \<in> atts)
+                                    (vmrights_map rghts))"
 
-
-definition
-  pde_align' :: "ARM_H.pde \<Rightarrow> nat"
+primrec
+   pde_relation' :: "X64_A.pde \<Rightarrow> X64_H.pde \<Rightarrow> bool"
 where
- "pde_align' pde \<equiv>
-  case pde of ARM_H.pde.SuperSectionPDE _ _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
+  "pde_relation'  X64_A.InvalidPDE x = (x = X64_H.InvalidPDE)"
+| "pde_relation' (X64_A.PageTablePDE ptr atts rights) x
+      = (x = X64_H.PageTablePDE ptr (Accessed \<in> atts) (CacheDisabled \<in> atts) (WriteThrough \<in> atts)
+                                    (ExecuteDisable \<in> atts) (vmrights_map rights))"
+| "pde_relation' (X64_A.LargePagePDE ptr atts rghts) x
+      = (x = X64_H.LargePagePDE ptr (Global \<in> atts) (PAT \<in> atts) (Dirty \<in> atts)
+                                    (PTAttr Accessed \<in> atts) (PTAttr CacheDisabled \<in> atts)
+                                    (PTAttr WriteThrough \<in> atts) (PTAttr ExecuteDisable \<in> atts)
+                                    (vmrights_map rghts))"
 
-lemmas pde_align_simps[simp] =
-  pde_align'_def[split_simps ARM_A.pde.split]
 
-definition
-  pte_align' :: "ARM_H.pte \<Rightarrow> nat"
+primrec
+   pte_relation' :: "X64_A.pte \<Rightarrow> X64_H.pte \<Rightarrow> bool"
 where
- "pte_align' pte \<equiv> case pte of ARM_H.pte.LargePagePTE _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
-
-lemmas pte_align_simps[simp] =
-  pte_align'_def[split_simps ARM_A.pte.split]
-
-definition
-  "pde_relation_aligned y pde pde' \<equiv>
-   if is_aligned y (pde_align' pde') then pde_relation' pde pde'
-   else pde = ARM_A.InvalidPDE"
-
-definition
-  "pte_relation_aligned y pte pte' \<equiv>
-   if is_aligned y (pte_align' pte') then pte_relation' pte pte'
-   else pte = ARM_A.InvalidPTE"
+  "pte_relation'  X64_A.InvalidPTE x = (x = X64_H.InvalidPTE)"
+| "pte_relation' (X64_A.SmallPagePTE ptr atts rghts) x
+      = (x = X64_H.SmallPagePTE ptr (Global \<in> atts) (PAT \<in> atts) (Dirty \<in> atts)
+                                    (PTAttr Accessed \<in> atts) (PTAttr CacheDisabled \<in> atts)
+                                    (PTAttr WriteThrough \<in> atts) (PTAttr ExecuteDisable \<in> atts)
+                                    (vmrights_map rghts))"
 
 definition
  "pte_relation y \<equiv> \<lambda>ko ko'. \<exists>pt pte. ko = ArchObj (PageTable pt) \<and> ko' = KOArch (KOPTE pte)
-                              \<and> pte_relation_aligned y (pt y) pte"
+                              \<and> pte_relation' (pt y) pte"
 
 definition
  "pde_relation y \<equiv> \<lambda>ko ko'. \<exists>pd pde. ko = ArchObj (PageDirectory pd) \<and> ko' = KOArch (KOPDE pde)
-                              \<and> pde_relation_aligned y (pd y) pde"
+                              \<and> pde_relation' (pd y) pde"
+
+definition
+ "pdpte_relation y \<equiv> \<lambda>ko ko'. \<exists>pd pdpte. ko = ArchObj (PDPointerTable pd) \<and> ko' = KOArch (KOPDPTE pdpte)
+                              \<and> pdpte_relation' (pd y) pdpte"
+
+definition
+ "pml4e_relation y \<equiv> \<lambda>ko ko'. \<exists>pd pml4e. ko = ArchObj (PageMapL4 pd) \<and> ko' = KOArch (KOPML4E pml4e)
+                              \<and> pml4e_relation' (pd y) pml4e"
 
 primrec
- aobj_relation_cuts :: "ARM_A.arch_kernel_obj \<Rightarrow> word32 \<Rightarrow> obj_relation_cuts"
+ aobj_relation_cuts :: "X64_A.arch_kernel_obj \<Rightarrow> machine_word \<Rightarrow> obj_relation_cuts"
 where
   "aobj_relation_cuts (DataPage dev sz) x =
       {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = (if dev then KOUserDataDevice else KOUserData) ) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }"
-| "aobj_relation_cuts (ARM_A.ASIDPool pool) x =
+| "aobj_relation_cuts (X64_A.ASIDPool pool) x =
      {(x, other_obj_relation)}"
 | "aobj_relation_cuts (PageTable pt) x =
-     (\<lambda>y. (x + (ucast y << 2), pte_relation y)) ` UNIV"
+     (\<lambda>y. (x + (ucast y << word_size_bits), pte_relation y)) ` UNIV"
 | "aobj_relation_cuts (PageDirectory pd) x =
-     (\<lambda>y. (x + (ucast y << 2), pde_relation y)) ` UNIV"
+     (\<lambda>y. (x + (ucast y << word_size_bits), pde_relation y)) ` UNIV"
+| "aobj_relation_cuts (PDPointerTable pdpt) x =
+     (\<lambda>y. (x + (ucast y << word_size_bits), pdpte_relation y)) ` UNIV"
+| "aobj_relation_cuts (PageMapL4 pm) x =
+     (\<lambda>y. (x + (ucast y << word_size_bits), pml4e_relation y)) ` UNIV"
 
 primrec
-  obj_relation_cuts :: "Structures_A.kernel_object \<Rightarrow> word32 \<Rightarrow> obj_relation_cuts"
+  obj_relation_cuts :: "Structures_A.kernel_object \<Rightarrow> machine_word \<Rightarrow> obj_relation_cuts"
 where
   "obj_relation_cuts (CNode sz cs) x =
      (if well_formed_cnode_n sz cs
@@ -297,31 +308,39 @@ lemma obj_relation_cuts_def2:
    (case ko of CNode sz cs \<Rightarrow> if well_formed_cnode_n sz cs
                              then {(cte_map (x, y), cte_relation y) | y. y \<in> dom cs}
                              else {(x, \<bottom>\<bottom>)}
-             | ArchObj (PageTable pt) \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pte_relation y))
-                                           ` (UNIV :: word8 set)
-             | ArchObj (PageDirectory pd) \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pde_relation y))
-                                           ` (UNIV :: 12 word set)
+             | ArchObj (PageTable pt) \<Rightarrow> (\<lambda>y. (x + (ucast y << word_size_bits), pte_relation y))
+                                           ` (UNIV :: 9 word set)
+             | ArchObj (PageDirectory pd) \<Rightarrow> (\<lambda>y. (x + (ucast y << word_size_bits), pde_relation y))
+                                           ` (UNIV :: 9 word set)
+             | ArchObj (PDPointerTable pdpt) \<Rightarrow> (\<lambda>y. (x + (ucast y << word_size_bits), pdpte_relation y))
+                                           ` (UNIV :: 9 word set)
+             | ArchObj (PageMapL4 pm) \<Rightarrow> (\<lambda>y. (x + (ucast y << word_size_bits), pml4e_relation y))
+                                           ` (UNIV :: 9 word set)
              | ArchObj (DataPage dev sz)      \<Rightarrow>
                  {(x + n * 2 ^ pageBits,  \<lambda>_ obj. obj =(if dev then KOUserDataDevice else KOUserData)) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
              | _ \<Rightarrow> {(x, other_obj_relation)})"
   by (simp split: Structures_A.kernel_object.split
-                  ARM_A.arch_kernel_obj.split)
+                  X64_A.arch_kernel_obj.split)
 
 lemma obj_relation_cuts_def3:
   "obj_relation_cuts ko x =
   (case (a_type ko) of
      ACapTable n \<Rightarrow> {(cte_map (x, y), cte_relation y) | y. length y = n}
-   | AArch APageTable \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pte_relation y))
-                            ` (UNIV :: word8 set)
-   | AArch APageDirectory \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pde_relation y))
-                            ` (UNIV :: 12 word set)
+   | AArch APageTable \<Rightarrow> (\<lambda>y. (x + (ucast y << word_size_bits), pte_relation y))
+                            ` (UNIV :: 9 word set)
+   | AArch APageDirectory \<Rightarrow> (\<lambda>y. (x + (ucast y << word_size_bits), pde_relation y))
+                            ` (UNIV :: 9 word set)
+   | AArch APDPointerTable \<Rightarrow> (\<lambda>y. (x + (ucast y << word_size_bits), pdpte_relation y))
+                            ` (UNIV :: 9 word set)
+   | AArch APageMapL4 \<Rightarrow> (\<lambda>y. (x + (ucast y << word_size_bits), pml4e_relation y))
+                            ` (UNIV :: 9 word set)
    | AArch (AUserData sz)  \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = KOUserData) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
    | AArch (ADeviceData sz)  \<Rightarrow> {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = KOUserDataDevice ) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
    | AGarbage _ \<Rightarrow> {(x, \<bottom>\<bottom>)}
    | _ \<Rightarrow> {(x, other_obj_relation)})"
   apply (simp add: obj_relation_cuts_def2 a_type_def
             split: Structures_A.kernel_object.split
-                  ARM_A.arch_kernel_obj.split)
+                  X64_A.arch_kernel_obj.split)
   apply (clarsimp simp: well_formed_cnode_n_def length_set_helper)
   done
 
@@ -331,6 +350,8 @@ definition
      ACapTable n \<Rightarrow> False
    | AArch APageTable \<Rightarrow> False
    | AArch APageDirectory \<Rightarrow> False
+   | AArch APDPointerTable \<Rightarrow> False
+   | AArch APageMapL4 \<Rightarrow> False
    | AArch (AUserData _)   \<Rightarrow> False
    | AArch (ADeviceData _)   \<Rightarrow> False
    | AGarbage _ \<Rightarrow> False
@@ -355,12 +376,12 @@ lemma is_other_obj_relation_type:
          split: a_type.splits aa_type.splits)
 
 definition
-  pspace_dom :: "Structures_A.kheap \<Rightarrow> word32 set"
+  pspace_dom :: "Structures_A.kheap \<Rightarrow> machine_word set"
 where
   "pspace_dom ps \<equiv> \<Union>x\<in>dom ps. fst ` (obj_relation_cuts (the (ps x)) x)"
 
 definition
-  pspace_relation :: "Structures_A.kheap \<Rightarrow> (word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> bool"
+  pspace_relation :: "Structures_A.kheap \<Rightarrow> (machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> bool"
 where
  "pspace_relation ab con \<equiv>
   (pspace_dom ab = dom con) \<and>
@@ -375,7 +396,7 @@ where
   \<and> tcb_domain etcb = tcbDomain tcb'"
 
 definition
- ekheap_relation :: "(obj_ref \<Rightarrow> etcb option) \<Rightarrow> (word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> bool"
+ ekheap_relation :: "(obj_ref \<Rightarrow> etcb option) \<Rightarrow> (machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> bool"
 where
  "ekheap_relation ab con \<equiv>
     \<forall>x \<in> dom ab. \<exists>tcb'. con x = Some (KOTCB tcb') \<and> etcb_relation (the (ab x)) tcb'"
@@ -394,7 +415,7 @@ where
   "ready_queues_relation qs qs' \<equiv> \<forall>d p. (qs d p = qs' (d, p))"
 
 definition
-  ghost_relation :: "Structures_A.kheap \<Rightarrow> (word32 \<rightharpoonup> vmpage_size) \<Rightarrow> (word32 \<rightharpoonup> nat) \<Rightarrow> bool"
+  ghost_relation :: "Structures_A.kheap \<Rightarrow> (machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow> bool"
 where
   "ghost_relation h ups cns \<equiv>
    (\<forall>a sz. (\<exists>dev. h a = Some (ArchObj (DataPage dev sz))) \<longleftrightarrow> ups a = Some sz) \<and>
@@ -441,16 +462,22 @@ where
               \<and> (\<forall>irq. irq_state_relation (irqs irq) (irqs' irq)))"
 
 definition
-  arch_state_relation :: "(arch_state \<times> ARM_H.kernel_state) set"
+  cr3_relation :: "CR3 \<Rightarrow> cr3 \<Rightarrow> bool"
+where
+  "cr3_relation c c' \<equiv> CR3BaseAddress c = cr3BaseAddress c' \<and> CR3pcid c = cr3pcid c'"
+
+definition
+  arch_state_relation :: "(arch_state \<times> X64_H.kernel_state) set"
 where
   "arch_state_relation \<equiv> {(s, s') .
-         arm_asid_table s = armKSASIDTable s' o ucast
-       \<and> arm_global_pd s = armKSGlobalPD s'
-       \<and> arm_hwasid_table s = armKSHWASIDTable s'
-       \<and> arm_global_pts s = armKSGlobalPTs s'
-       \<and> arm_next_asid s = armKSNextASID s'
-       \<and> arm_asid_map s = armKSASIDMap s'
-       \<and> arm_kernel_vspace s = armKSKernelVSpace s'}"
+         x64_asid_table s = x64KSASIDTable s' o ucast
+       \<and> x64_global_pml4 s = x64KSGlobalPML4 s'
+       \<and> x64_global_pdpts s = x64KSGlobalPDPTs s'
+       \<and> x64_global_pds s = x64KSGlobalPDs s'
+       \<and> x64_global_pts s = x64KSGlobalPTs s'
+       \<and> x64_asid_map s = x64KSASIDMap s'
+       \<and> cr3_relation (x64_current_cr3 s) (x64KSCurrentCR3 s')
+       \<and> x64_kernel_vspace s = x64KSKernelVSpace s'}"
 
 
 definition
@@ -465,11 +492,17 @@ lemma obj_relation_cutsE:
      \<And>sz cs z cap cte. \<lbrakk> ko = CNode sz cs; well_formed_cnode_n sz cs; y = cte_map (x, z);
                       ko' = KOCTE cte; cs z = Some cap; cap_relation cap (cteCap cte) \<rbrakk>
               \<Longrightarrow> R;
-     \<And>pt (z :: word8) pte'. \<lbrakk> ko = ArchObj (PageTable pt); y = x + (ucast z << 2);
-                              ko' = KOArch (KOPTE pte'); pte_relation_aligned z (pt z) pte' \<rbrakk>
+     \<And>pt (z :: 9 word) pte'. \<lbrakk> ko = ArchObj (PageTable pt); y = x + (ucast z << word_size_bits);
+                              ko' = KOArch (KOPTE pte'); pte_relation' (pt z) pte' \<rbrakk>
               \<Longrightarrow> R;
-     \<And>pd (z :: 12 word) pde'. \<lbrakk> ko = ArchObj (PageDirectory pd); y = x + (ucast z << 2);
-                              ko' = KOArch (KOPDE pde'); pde_relation_aligned z (pd z) pde' \<rbrakk>
+     \<And>pd (z :: 9 word) pde'. \<lbrakk> ko = ArchObj (PageDirectory pd); y = x + (ucast z << word_size_bits);
+                              ko' = KOArch (KOPDE pde'); pde_relation' (pd z) pde' \<rbrakk>
+              \<Longrightarrow> R;
+     \<And>pdpt (z :: 9 word) pdpte'. \<lbrakk> ko = ArchObj (PDPointerTable pdpt); y = x + (ucast z << word_size_bits);
+                              ko' = KOArch (KOPDPTE pdpte'); pdpte_relation' (pdpt z) pdpte' \<rbrakk>
+              \<Longrightarrow> R;
+     \<And>pml4 (z :: 9 word) pml4e'. \<lbrakk> ko = ArchObj (PageMapL4 pml4); y = x + (ucast z << word_size_bits);
+                              ko' = KOArch (KOPML4E pml4e'); pml4e_relation' (pml4 z) pml4e' \<rbrakk>
               \<Longrightarrow> R;
      \<And>sz dev n. \<lbrakk> ko = ArchObj (DataPage dev sz); ko' = (if dev then KOUserDataDevice else KOUserData);
               y = x + n * 2 ^ pageBits; n < 2 ^ (pageBitsForSize sz - pageBits) \<rbrakk> \<Longrightarrow> R;
@@ -478,9 +511,10 @@ lemma obj_relation_cutsE:
   apply (simp add: obj_relation_cuts_def2 is_other_obj_relation_type_def
                    a_type_def
             split: Structures_A.kernel_object.split_asm if_split_asm
-                   ARM_A.arch_kernel_obj.split_asm)
+                   X64_A.arch_kernel_obj.split_asm)
     apply ((clarsimp split: if_splits,
-                force simp: cte_relation_def pte_relation_def pde_relation_def)+)[5]
+                force simp: cte_relation_def pte_relation_def pde_relation_def
+                            pdpte_relation_def pml4e_relation_def)+)
   done
 
 lemma eq_trans_helper:
@@ -533,7 +567,7 @@ where
 | "syscall_error_map (ExceptionTypes_A.NotEnoughMemory n)       = Fault_H.syscall_error.NotEnoughMemory n"
 
 definition
-  APIType_map :: "Structures_A.apiobject_type \<Rightarrow> ARM_H.object_type"
+  APIType_map :: "Structures_A.apiobject_type \<Rightarrow> X64_H.object_type"
 where
   "APIType_map ty \<equiv> case ty of
                     Structures_A.Untyped \<Rightarrow> APIObjectType ArchTypes_H.Untyped
@@ -544,10 +578,11 @@ where
                   | ArchObject ao \<Rightarrow> (case ao of
          SmallPageObj     \<Rightarrow> SmallPageObject
        | LargePageObj     \<Rightarrow> LargePageObject
-       | SectionObj       \<Rightarrow> SectionObject
-       | SuperSectionObj  \<Rightarrow> SuperSectionObject
+       | HugePageObj       \<Rightarrow> HugePageObject
        | PageTableObj     \<Rightarrow> PageTableObject
-       | PageDirectoryObj \<Rightarrow> PageDirectoryObject)"
+       | PageDirectoryObj \<Rightarrow> PageDirectoryObject
+       | PDPTObj \<Rightarrow> PDPointerTableObject
+       | PML4Obj \<Rightarrow> PML4Object)"
 
 lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb t s = Some tcb)"
   by (simp add: tcb_at_def)
@@ -671,9 +706,9 @@ lemma objBits_obj_bits:
   by (simp add: other_obj_relation_def objBitsKO_simps pageBits_def
                 archObjSize_def
          split: Structures_A.kernel_object.split_asm
-                ARM_A.arch_kernel_obj.split_asm
+                X64_A.arch_kernel_obj.split_asm
                 Structures_H.kernel_object.split_asm
-                ARM_H.arch_kernel_object.split_asm)
+                X64_H.arch_kernel_object.split_asm)
 
 lemma replicate_length_cong:
   "x = y \<Longrightarrow> replicate x n = replicate y n" by simp
@@ -684,6 +719,7 @@ lemmas isCap_defs =
   isEndpointCap_def isUntypedCap_def isNullCap_def
   isIRQHandlerCap_def isIRQControlCap_def isReplyCap_def
   isPageCap_def isPageTableCap_def isPageDirectoryCap_def
+  isPDPointerTableCap_def isPML4Cap_def isIOPortCap_def
   isASIDControlCap_def isASIDPoolCap_def isArchPageCap_def
   isDomainCap_def
 
