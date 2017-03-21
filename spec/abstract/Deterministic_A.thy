@@ -144,19 +144,19 @@ text {*
 *}
 type_synonym cdt_list = "cslot_ptr \<Rightarrow> cslot_ptr list"
 
-definition work_units_limit :: "32 word" where
+definition work_units_limit :: "machine_word" where
   "work_units_limit = 0x64"
 text {*
   The extended state of the deterministic abstract specification.
 *}
 record det_ext =
-   work_units_completed_internal :: "32 word"
+   work_units_completed_internal :: "machine_word"
    scheduler_action_internal :: scheduler_action
    ekheap_internal :: "obj_ref \<Rightarrow> etcb option"
-   domain_list_internal :: "(domain \<times> 32 word) list"
+   domain_list_internal :: "(domain \<times> machine_word) list"
    domain_index_internal :: nat
    cur_domain_internal :: domain
-   domain_time_internal :: "32 word"
+   domain_time_internal :: "machine_word"
    ready_queues_internal :: "domain \<Rightarrow> priority \<Rightarrow> ready_queue"
    cdt_list_internal :: cdt_list
 
