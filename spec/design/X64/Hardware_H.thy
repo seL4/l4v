@@ -528,11 +528,6 @@ datatype vmpage_entry_ptr =
   | VMPDEPtr machine_word
   | VMPDPTEPtr machine_word
 
-datatype vmmap_type =
-    VMNoMap
-  | VMVSpaceMap
-  | VMIOSpaceMap
-
 datatype vmattributes =
     VMAttributes bool bool bool
 
