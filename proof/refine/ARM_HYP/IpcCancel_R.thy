@@ -849,7 +849,7 @@ proof -
               | simp add: valid_tcb_state'_def split del: if_split
               | wpc)+
      prefer 2
-     apply assumption
+(*     apply assumption
     apply (rule hoare_strengthen_post [OF get_ep_sp'])
     apply (clarsimp simp: pred_tcb_at' fun_upd_def[symmetric] conj_comms
                split del: if_split cong: if_cong)
@@ -887,8 +887,8 @@ defer
      apply (frule_tac x=t in set_remove1_eq)
      apply (clarsimp elim!: delta_sym_refs
                simp: symreftype_inverse' tcb_st_refs_of'_def tcb_bound_refs'_def
-              split: thread_state.splits if_split_asm)
-    sorry
+              split: thread_state.splits if_split_asm) *)
+    sorry (* valid_arch_state etc. *)
   have R:
     "\<lbrace>invs' and tcb_at' t\<rbrace>
      do y \<leftarrow> threadSet (\<lambda>tcb. tcb \<lparr> tcbFault := None \<rparr>) t;
@@ -2360,7 +2360,7 @@ lemma cancelAllIPC_invs'[wp]:
             irqs_masked_lift
          | simp only: sch_act_wf.simps forM_x_def | simp)+
    prefer 2
-   apply assumption
+(*   apply assumption
   apply (rule hoare_strengthen_post [OF get_ep_sp'])
   apply (clarsimp simp: invs'_def valid_state'_def valid_ep'_def)
   apply (frule obj_at_valid_objs', fastforce)
@@ -2376,7 +2376,7 @@ lemma cancelAllIPC_invs'[wp]:
   defer
   apply (drule(2) ep_q_refs_max)
   apply (erule delta_sym_refs)
-   apply (clarsimp dest!: symreftype_inverse' split: if_split_asm | drule(1) bspec subsetD)+
+   apply (clarsimp dest!: symreftype_inverse' split: if_split_asm | drule(1) bspec subsetD)+*)
   sorry (* hyp_ref *)
 
 lemma cancelAllSignals_invs'[wp]:
@@ -2690,7 +2690,7 @@ lemma cancelBadgedSends_invs[wp]:
   apply (simp add: list_case_return cong: list.case_cong)
   apply (rule hoare_pre, wp valid_irq_node_lift irqs_masked_lift)
     apply simp
-    apply (rule hoare_strengthen_post,
+(*    apply (rule hoare_strengthen_post,
            rule cancelBadgedSends_filterM_helper[where epptr=epptr])
     apply (clarsimp simp: ep_redux_simps3 fun_upd_def[symmetric])
   apply (rule conjI)
@@ -2707,7 +2707,7 @@ defer
    apply (clarsimp simp: projectKOs live'_def)
   apply (frule(1) sym_refs_ko_atD')
   apply (clarsimp simp add: fun_upd_idem
-                            st_tcb_at_refs_of_rev')
+                            st_tcb_at_refs_of_rev')*)
 (*  apply (drule (1) bspec, drule st_tcb_at_state_refs_ofD', clarsimp)
   apply (fastforce simp: set_eq_subset tcb_bound_refs'_def)*)
   sorry

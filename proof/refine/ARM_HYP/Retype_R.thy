@@ -2479,7 +2479,20 @@ proof -
     apply simp
    apply (clarsimp simp: objBits_simps archObjSize_def vspace_bits_defs)
   -- "VCPUObject"
-   sorry (* add vcpu case *)
+  apply (wpsimp wp: hoare_vcg_const_Ball_lift simp: valid_cap'_def capAligned_def n_less_word_bits)+
+  apply (simp only: imp_conv_disj typ_at_to_obj_at_arches vcpu_bits_def pageBits_def)
+  apply (rule hoare_chain)
+    apply (rule hoare_vcg_conj_lift)
+     apply (rule createObjects_aligned [OF _ range_cover.range_cover_n_less(1)
+          [where 'a=32, unfolded word_bits_len_of, OF cover] not_0])
+      apply (simp add:objBits_simps archObjSize_def vcpu_bits_def pageBits_def)+
+     apply (simp add:range_cover_def word_bits_def)
+    apply (rule createObjects_obj_at [where 'a=vcpu, OF _  not_0])
+     apply (simp add:objBits_simps archObjSize_def vcpu_bits_def pageBits_def)
+    apply (simp add: projectKOs projectKO_opt_pde)
+   apply simp
+  apply (clarsimp simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def)
+  done
   next
     case (Some a) thus ?thesis
     proof(cases a)
@@ -3447,11 +3460,10 @@ proof (intro conjI impI)
     apply (case_tac pde; simp add: valid_mapping'_def page_table_at'_def
                                    typ_at_to_obj_at_arches obj_at_disj')
    apply (rename_tac vcpu)
-   apply (case_tac vcpu, clarsimp simp: page_directory_at'_def
-                                        typ_at_to_obj_at_arches
-                                        obj_at_disj'
-                                  split: option.splits)
-    sorry
+   apply (case_tac "vcpuTCBPtr vcpu";
+          clarsimp simp: valid_vcpu'_def typ_at_to_obj_at'[where 'a=tcb, simplified]
+                         typ_at_to_obj_at_arches obj_at_disj')
+   done
   have not_0: "0 \<notin> set (new_cap_addrs (2 ^ gbits * n) ptr val)"
     using p_0
     apply clarsimp
@@ -4580,20 +4592,25 @@ lemma createNewCaps_valid_arch_state:
                    valid_asid_table'_def
                    valid_global_pts'_def
                    page_table_at'_def
-                   page_directory_at'_def
-                   typ_at_to_obj_at_arches)
+                   page_directory_at'_def)
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f=ksArchState, OF createNewCaps_ksArchState])
-   apply (wp hoare_vcg_const_Ball_lift
+    apply (case_tac "armHSCurVCPU f"; simp)
+    apply wp
+   apply (wpsimp wp: hoare_vcg_prop
+             createNewCaps_ko_wp_at'
+             createNewCaps_obj_at''
+             hoare_vcg_all_lift hoare_vcg_conj_lift
+          simp: typ_at_to_obj_at_arches)
+   apply simp
+   apply (wpsimp wp: hoare_vcg_const_Ball_lift
              hoare_vcg_prop
              createNewCaps_obj_at''
              createNewCaps_ko_wp_at'
-             hoare_vcg_all_lift
+             hoare_vcg_all_lift hoare_vcg_conj_lift
              hoare_vcg_const_imp_lift)
   apply (clarsimp simp: valid_pspace'_def o_def)
-(*  apply (intro conjI)
-  apply (auto split: option.splits)*)
-  sorry
+  sorry (* valid_arch_state *)
 
 lemma valid_irq_node_lift_asm:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> f \<lbrace>\<lambda>rv s. P (irq_node' s)\<rbrace>"
@@ -5431,11 +5448,11 @@ lemma createObjects_valid_arch:
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f=ksArchState, OF createObjects_ksArch])
     apply (simp add: createObjects_def)
-    apply (wp createObjects'_typ_at hoare_vcg_all_lift hoare_vcg_const_imp_lift
-              hoare_vcg_const_Ball_lift)
-(*  apply (simp add: o_def)
-  apply auto*)
-  sorry
+    apply (wp createObjects'_typ_at hoare_vcg_conj_lift hoare_vcg_all_lift
+              hoare_vcg_ex_lift static_imp_wp createObjects'_typ_at
+         | clarsimp split: option.splits)+
+(*  apply (simp add: o_def; auto)+
+  done*) sorry (* valid_arch_state *)
 
 lemma createObjects_irq_state:
   "\<lbrace>\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and>
@@ -5796,8 +5813,9 @@ lemma corres_retype_region_createNewCaps:
                apply (clarsimp simp: range_cover_def)
                apply (arith+)[4]
            -- "TCB, EP, NTFN"
+           defer 10
            apply (simp_all add: retype_region2_ext_retype_region bind_cong[OF curDomain_mapM_x_futz refl, unfolded bind_assoc]
-                     split del: if_split)[9] (* not PageDirectoryObject *)
+                     split del: if_split)[10] (* not PageDirectoryObject *)
            apply (rule corres_guard_imp)
              apply (rule corres_split_eqr)
                 apply (rule corres_split_nor)
@@ -5946,6 +5964,7 @@ lemma corres_retype_region_createNewCaps:
     apply (clarsimp simp: list_all2_map1 list_all2_map2 list_all2_same
                           APIType_map2_def arch_default_cap_def)
    apply simp+
+   defer
   -- "PageDirectory"
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr)
@@ -6035,6 +6054,23 @@ lemma corres_retype_region_createNewCaps:
     apply (auto simp: objBits_simps retype_addrs_def obj_bits_api_def
                       APIType_map2_def default_arch_object_def default_object_def archObjSize_def
                       vspace_bits_defs fromIntegral_def toInteger_nat fromInteger_nat)
+  -- "VCPUObject"
+      apply (subst retype_region2_extra_ext_trivial)
+       apply (simp add: APIType_map2_def)
+      apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
+      apply (rule corres_rel_imp)
+(*       apply (simp add: init_arch_objects_APIType_map2_noop split del: if_split)
+       apply (rule corres_guard_imp)
+         apply (rule corres_retype_update_gsI,
+                simp_all add: APIType_map2_def makeObjectKO_def
+                    arch_default_cap_def obj_bits_api_def3
+                    default_object_def default_arch_object_def pageBits_def
+                    ext objBits_simps range_cover.aligned,
+                    simp_all add: data_page_relation_retype)[1]
+        apply simp+
+      apply (simp add: APIType_map2_def arch_default_cap_def vmrights_map_def
+               vm_read_write_def list_all2_map1 list_all2_map2 list_all2_same)*)
+
   sorry (* vcpu case *)
 
 lemma createObjects'_wp_subst:

@@ -1503,15 +1503,25 @@ lemma setObject_PTE_arch [wp]:
 
 lemma setObject_ASID_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::asidpool) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift'; wp)
+  apply (rule valid_arch_state_lift'; wp?)
+  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps archObjSize_def pageBits_def, rule refl, simp)
+  apply (clarsimp; rule conjI)
+   prefer 2
+   apply (clarsimp simp: pred_conj_def)
+  apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def)
+  sorry (* valid_arch_state *)
 
 lemma setObject_PDE_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pde) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift') (wp setObject_typ_at')+
+  apply (rule valid_arch_state_lift')
+  apply (wp setObject_typ_at')+
+  sorry (* valid_arch_state *)
 
 lemma setObject_PTE_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pte) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift') (wp setObject_typ_at')+
+  apply (rule valid_arch_state_lift')
+  apply (wp setObject_typ_at')+
+  sorry (* valid_arch_state *)
 
 lemma setObject_ASID_ct [wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::asidpool) \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"

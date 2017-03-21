@@ -5842,7 +5842,8 @@ lemma make_zombie_invs':
             updateCap_untyped_ranges_zero_simple
        | simp)+
   apply simp_all
-        apply (clarsimp simp: cte_wp_at_ctes_of)
+
+(*        apply (clarsimp simp: cte_wp_at_ctes_of)
         apply (auto simp: untypedZeroRange_def isCap_simps)[1]
        apply clarsimp
       apply (clarsimp simp: modify_map_def ran_def split del: if_split
@@ -5863,7 +5864,7 @@ lemma make_zombie_invs':
    apply (subgoal_tac "st_tcb_at' (op = Inactive) p' s
                                \<and> obj_at' (Not \<circ> tcbQueued) p' s
                                \<and> bound_tcb_at' (op = None) p' s")
-    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs live'_def hyp_live'_def)
+    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs live'_def hyp_live'_def) *)  (* valid_arch_state *)
 (*   apply (auto dest!: isCapDs)[1]
   apply (clarsimp simp: cte_wp_at_ctes_of disj_ac
                  dest!: isCapDs)
@@ -5952,7 +5953,7 @@ lemma make_zombie_invs':
   apply (erule(1) ztc_replace_update_final, simp_all)
    apply (simp add: cteCaps_of_def)
   apply (erule(1) ctes_of_valid_cap')
-done*) sorry
+done*) sorry (* valid_arch_state etc. *)
 
 
 lemma make_zombie_cnode_invs':
@@ -9487,7 +9488,7 @@ lemma updateCap_noop_invs:
              valid_arch_state_lift' valid_irq_node_lift
              updateCap_noop_irq_handlers sch_act_wf_lift
              untyped_ranges_zero_lift)
-  apply (clarsimp simp: cte_wp_at_ctes_of modify_map_apply)
+(*  apply (clarsimp simp: cte_wp_at_ctes_of modify_map_apply)
   apply (strengthen untyped_ranges_zero_delta[where xs=Nil, mk_strg I E])
   apply (case_tac cte)
   apply (clarsimp simp: fun_upd_idem cteCaps_of_def modify_map_apply
@@ -9499,7 +9500,7 @@ lemma updateCap_noop_invs:
     apply (simp add: cte_wp_at_ctes_of)
    apply assumption
   apply clarsimp
-  done
+  done*) sorry (* valid_arch_state *)
 
 lemmas make_zombie_or_noop_or_arch_invs
     = hoare_vcg_disj_lift [OF updateCap_noop_invs

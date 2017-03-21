@@ -2067,22 +2067,34 @@ lemma valid_global_refs_lift':
 lemma valid_arch_state_lift':
   assumes typs: "\<And>T p P. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
   assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
+  assumes vcpu: "\<And>P p. \<lbrace>\<lambda>s. P (ko_wp_at' (is_vcpu' and hyp_live') p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ko_wp_at' (is_vcpu' and hyp_live') p s)\<rbrace>"
   shows "\<lbrace>valid_arch_state'\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  apply (simp add: valid_arch_state'_def valid_asid_table'_def
-                   valid_global_pts'_def page_directory_at'_def
-                   page_table_at'_def
-                   All_less_Ball)
-  apply (rule hoare_lift_Pf [where f="ksArchState"])
-   apply (wp typs hoare_vcg_const_Ball_lift arch typ_at_lifts)+
-  sorry
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def)
+  apply (rule hoare_lift_Pf [where f="ksArchState"]; (rule arch)?)
+  including no_pre
+  apply (wp hoare_vcg_const_Ball_lift)
+  apply (case_tac "armHSCurVCPU x"; simp add: split_def; wp?)
+  apply (wpsimp wp: vcpu typ_at_lifts typs)+
+  done
 
 lemma set_ep_global_refs'[wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
   by (rule valid_global_refs_lift'; wp)
 
+lemma vcpu_ep':
+  "\<lbrakk> vcpu_at' p s; ep_at' p s \<rbrakk> \<Longrightarrow> False"
+  by (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def projectKOs)
+
 lemma set_ep_valid_arch' [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift'; wp)
+  apply (rule valid_arch_state_lift'; wp?)
+  apply (simp add: setEndpoint_def)
+  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps, rule refl, simp)
+  apply (clarsimp; rule conjI)
+   prefer 2
+   apply (clarsimp simp: pred_conj_def)
+  apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def)
+  sorry (* valid_arch_state *)
 
 lemma setObject_ep_ct:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::endpoint) \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
@@ -2179,9 +2191,14 @@ lemma set_ntfn_global_refs' [wp]:
 
 crunch typ_at' [wp]: setNotification "\<lambda>s. P (typ_at' T p s)"
 
+lemma vcpu_ntfn':
+  "\<lbrakk> vcpu_at' p s; ntfn_at' p s \<rbrakk> \<Longrightarrow> False"
+  by (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def projectKOs)
+
 lemma set_ntfn_valid_arch' [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  by (rule valid_arch_state_lift'; wp)
+  apply (rule valid_arch_state_lift'; wp?)
+  sorry (* valid_arch_state *)
 
 lemmas valid_irq_node_lift =
     hoare_use_eq_irq_node' [OF _ typ_at_lift_valid_irq_node']

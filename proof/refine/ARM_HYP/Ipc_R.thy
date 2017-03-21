@@ -4212,7 +4212,7 @@ lemma ri_invs' [wp]:
      apply (simp add: invs'_def valid_state'_def)
      apply (rule hoare_pre, wpc, wp valid_irq_node_lift)
       apply (simp add: valid_ep'_def)
-      apply (wp sts_sch_act' hoare_vcg_const_Ball_lift valid_irq_node_lift
+(*      apply (wp sts_sch_act' hoare_vcg_const_Ball_lift valid_irq_node_lift
                 sts_valid_queues setThreadState_ct_not_inQ
                 asUser_urz
            | simp add: doNBRecvFailedTransfer_def cteCaps_of_def)+
@@ -4234,7 +4234,7 @@ lemma ri_invs' [wp]:
        apply (clarsimp split: if_split_asm)
         apply (rename_tac list one two three fur five six seven eight nine ten)
         apply (subgoal_tac "set list \<times> {EPRecv} \<noteq> {}")
-         apply safe[1]
+         apply safe[1]*)                                     (* valid_arch_state *)
 (*                apply (auto dest!: symreftype_inverse')[10]
       apply (clarsimp split: if_split_asm)
      apply (fastforce simp: valid_pspace'_def global'_no_ex_cap idle'_not_queued)
@@ -4316,7 +4316,7 @@ lemma ri_invs' [wp]:
            | clarsimp simp: set_eq_subset dest!: bound_tcb_at_state_refs_ofD' )+
   apply (rule hoare_pre)
    apply (wp getNotification_wp | wpc | clarsimp)+
-  done*) sorry
+  done*) sorry (* valid_arch_state etc. *)
 
 (* t = ksCurThread s *)
 lemma rai_invs'[wp]:
@@ -4542,7 +4542,7 @@ lemma si_invs'[wp]:
              | wp_once sch_act_sane_lift tcb_in_cur_domain'_lift)+
     apply (clarsimp simp: pred_tcb_at'
                split del: if_split)
-    apply (frule obj_at_valid_objs', clarsimp)
+(*    apply (frule obj_at_valid_objs', clarsimp)
     apply (frule(1) sym_refs_ko_atD')
     apply (clarsimp simp: projectKOs valid_obj'_def valid_ep'_def
                           st_tcb_at_refs_of_rev' pred_tcb_at'
@@ -4564,7 +4564,7 @@ lemma si_invs'[wp]:
      apply (fastforce simp: tcb_bound_refs'_def set_eq_subset)
     apply (rule conjI, clarsimp simp: idle'_no_refs)
     apply (rule conjI, clarsimp simp: global'_no_ex_cap)
-    apply (rule conjI)
+    apply (rule conjI)*)                            (* valid_arch_state *)
 (*     apply (rule impI)
      apply (frule(1) ct_not_in_epQueue, clarsimp, clarsimp)
      apply (clarsimp)
@@ -4623,7 +4623,7 @@ lemma si_invs'[wp]:
                     split: if_split_asm)
    apply (fastforce simp: global'_no_ex_cap idle'_not_queued)
   apply (simp | wp)+
-  done*) sorry
+  done*) sorry (* valid_arch_state etc.*)
 
 lemma sfi_invs_plus':
   "\<lbrace>invs' and st_tcb_at' simple' t

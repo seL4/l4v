@@ -78,6 +78,9 @@ abbreviation
   "ko_at' v \<equiv> obj_at' (\<lambda>k. k = v)"
 
 abbreviation
+  "vcpu_at' \<equiv> typ_at' (ArchT VCPUT)"
+
+abbreviation
   "pde_at' \<equiv> typ_at' (ArchT PDET)"
 abbreviation
   "pte_at' \<equiv> typ_at' (ArchT PTET)"
@@ -449,9 +452,6 @@ where
 
 abbreviation
   "asid_pool_at' \<equiv> typ_at' (ArchT ASIDPoolT)"
-
-abbreviation
-  "vcpu_at' \<equiv> typ_at' (ArchT VCPUT)"
 
 (* FIXME: duplicated with vmsz_aligned *)
 definition
@@ -1119,12 +1119,21 @@ where
  "valid_asid_map' m \<equiv> inj_on (option_map snd o m) (dom m)
                           \<and> dom m \<subseteq> ({0 .. mask asid_bits} - {0})"
 
+definition "is_vcpu' \<equiv> \<lambda>ko. \<exists>vcpu. ko = (KOArch (KOVCPU vcpu))"
+
+lemma vcpu_at_is_vcpu': "\<And>v. vcpu_at' v = ko_wp_at' is_vcpu' v"
+  apply (rule all_ext)
+  apply (clarsimp simp: typ_at'_def is_vcpu'_def ko_wp_at'_def)
+  apply (rule; clarsimp?)
+  apply (case_tac ko; simp; rename_tac ako; case_tac ako; simp)
+  done
+
 definition
   valid_arch_state' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_arch_state' \<equiv> \<lambda>s.
   valid_asid_table' (armKSASIDTable (ksArchState s)) s \<and>
-  (case (armHSCurVCPU (ksArchState s)) of Some (v, b) \<Rightarrow> vcpu_at' v s | _ \<Rightarrow> True) \<and>
+  (case (armHSCurVCPU (ksArchState s)) of Some (v, b) \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') v s | _ \<Rightarrow> True) \<and>
   is_inv (armKSHWASIDTable (ksArchState s))
             (option_map fst o armKSASIDMap (ksArchState s)) \<and>
   valid_asid_map' (armKSASIDMap (ksArchState s))"
@@ -2147,13 +2156,13 @@ lemma valid_cap'_pspaceI:
 lemma valid_arch_obj'_pspaceI:
   "valid_arch_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_arch_obj' obj s'"
   apply (cases obj; simp)
-    apply (rename_tac asidpool)
-    apply (case_tac asidpool,
+     apply (rename_tac asidpool)
+     apply (case_tac asidpool,
            auto simp: page_directory_at'_def intro: typ_at'_pspaceI[rotated])[1]
-   apply (rename_tac pte)
-   apply (case_tac pte; simp add: valid_mapping'_def)
-  apply (rename_tac pde)
-  apply (case_tac pde;
+    apply (rename_tac pte)
+    apply (case_tac pte; simp add: valid_mapping'_def)
+   apply (rename_tac pde)
+   apply (case_tac pde;
          auto simp: page_table_at'_def valid_mapping'_def
              intro: typ_at'_pspaceI[rotated])
   apply (rename_tac vcpu)
@@ -3148,7 +3157,7 @@ lemma valid_asid_table_update' [iff]:
 
 lemma valid_vcpu_update' [iff]:
   "valid_vcpu' v (f s) = valid_vcpu' v s"
-by (case_tac "ARM_HYP_H.vcpuTCBPtr v"; simp add: valid_vcpu'_def)
+  by (case_tac "ARM_HYP_H.vcpuTCBPtr v"; simp add: valid_vcpu'_def)
 
 lemma page_table_at_update' [iff]:
   "page_table_at' p (f s) = page_table_at' p s"
