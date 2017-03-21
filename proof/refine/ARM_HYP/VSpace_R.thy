@@ -1744,23 +1744,23 @@ lemma page_table_mapped_corres:
 crunch inv[wp]: pageTableMapped "P"
   (wp: loadObject_default_inv)
 
-lemma storePDE_no_0_obj'[wp]: "\<lbrace>no_0_obj'\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
-  sorry (* crunch *)
+crunch no_0_obj'[wp]: storePDE no_0_obj'
+ (wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp)
 
-lemma storePTE_no_0_obj'[wp]: "\<lbrace>no_0_obj'\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
-  sorry (* crunch *)
+crunch no_0_obj'[wp]: storePTE no_0_obj'
+ (wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp)
 
 lemma storePDE_valid_arch'[wp]: "\<lbrace>valid_arch_state'\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp simp: storePDE_def)
 
 lemma storePTE_valid_arch'[wp]: "\<lbrace>valid_arch_state'\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp simp: storePTE_def)
 
 lemma storePDE_cur_tcb'[wp]: "\<lbrace>cur_tcb'\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp simp: storePDE_def)
 
 lemma storePTE_cur_tcb'[wp]: "\<lbrace>cur_tcb'\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp simp: storePTE_def)
 
 lemma unmap_page_table_corres:
   "corres dc
@@ -1786,14 +1786,14 @@ lemma unmap_page_table_corres:
         apply (rule hoare_vcg_conj_lift)
          apply (simp add: store_pde_def)
          apply (wp set_pd_vs_lookup_unmap)+
-(*      apply (rule corres_trivial, simp)
+      apply (rule corres_trivial, simp)
      apply (wp page_table_mapped_wp)
     apply (wp hoare_drop_imps)[1]
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_arch_caps_def word_gt_0)
    apply (frule (1) page_directory_pde_at_lookupI)
    apply (auto elim: simp: empty_table_def valid_pde_mappings_def pde_ref_def obj_at_def
                      vs_refs_pages_def graph_of_def split: if_splits)
-*)  sorry (* storePDE *)
+  done
 
 crunch typ_at' [wp]: flushPage "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps hoare_drop_imps)
@@ -1915,7 +1915,7 @@ lemma unmap_page_corres:
                                  | simp add: pte_relation_aligned_def)+
               apply (clarsimp simp: page_directory_pde_at_lookupI
                 page_directory_at_aligned_pd_bits vmsz_aligned_def)
-              apply (simp add:valid_unmap_def pageBits_def)
+              apply (simp add:valid_unmap_def pageBits_def)+
 (*             apply (erule less_kernel_base_mapping_slots)
               apply (simp add:page_directory_at_aligned_pd_bits)
              apply simp
@@ -3245,10 +3245,10 @@ crunch it' [wp]: lookupPTSlot "\<lambda>s. P (ksIdleThread s)"
    ignore: getObject)
 
 lemma storePTE_it'[wp]: "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
 
 lemma storePDE_it'[wp]: "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
 
 crunch it' [wp]: flushTable "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def
@@ -3294,17 +3294,19 @@ lemmas performASIDPoolInvocation_typ_ats' [wp] =
 
 lemma storePDE_pred_tcb_at' [wp]:
   "\<lbrace>pred_tcb_at' proj P t\<rbrace> storePDE p pde \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
-  apply (simp add: storePDE_def pred_tcb_at'_def)
-(*  apply (rule obj_at_setObject2)
-  apply (clarsimp simp add: updateObject_default_def in_monad)*)
-  sorry (* storePDE *)
+  apply (simp add: pred_tcb_at'_def storePDE_def)
+  apply (wp hoare_drop_imp obj_at_setObject2)
+  apply (clarsimp simp add: updateObject_default_def in_monad)
+  apply (clarsimp simp:  obj_at'_def tcb_to_itcb'_def)
+  done
 
 lemma storePTE_pred_tcb_at' [wp]:
   "\<lbrace>pred_tcb_at' proj P t\<rbrace> storePTE p pte \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
   apply (simp add: storePTE_def pred_tcb_at'_def)
-(*  apply (rule obj_at_setObject2)
-  apply (clarsimp simp add: updateObject_default_def in_monad)*)
-  sorry (* storePTE *)
+  apply (wp hoare_drop_imp obj_at_setObject2)
+  apply (clarsimp simp add: updateObject_default_def in_monad)
+  apply (clarsimp simp:  obj_at'_def tcb_to_itcb'_def)
+  done
 
 lemma setASID_pred_tcb_at' [wp]:
   "\<lbrace>pred_tcb_at' proj P t\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
@@ -3326,26 +3328,26 @@ lemma storePDE_valid_mdb [wp]:
 
 lemma storePDE_nosch[wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: setObject_nosch headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
 
 lemma storePDE_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
 
 lemma storePDE_inQ[wp]:
   "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace> storePDE ptr pde \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
   apply (simp add: obj_at'_real_def storePDE_def)
-  apply (wp setObject_ko_wp_at | simp add: objBits_simps archObjSize_def)+
+  apply (wp setObject_ko_wp_at hoare_drop_imp | simp add: objBits_simps archObjSize_def vspace_bits_defs)+
   apply (clarsimp simp: projectKOs obj_at'_def ko_wp_at'_def)
-  sorry (* storePDE *)
+  done
 
 lemma storePDE_nordL1[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_ s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
 
 lemma storePDE_nordL2[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_ s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
 
 lemma storePDE_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> storePDE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
@@ -3357,12 +3359,10 @@ lemma storePDE_valid_queues' [wp]:
 
 lemma storePDE_iflive [wp]:
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: storePDE_def)
-  apply (rule hoare_pre)
-(*   apply (rule setObject_iflive' [where P=\<top>], simp)
-      apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)*)
-  sorry (* storePDE *)
+  apply (wpsimp simp: storePDE_def objBits_simps archObjSize_def vspace_bits_defs
+                wp: hoare_drop_imp setObject_iflive' [where P=\<top>])
+     apply (auto simp: updateObject_default_def in_monad live'_def hyp_live'_def arch_live'_def projectKOs)
+  done
 
 lemma setObject_pde_ksInt [wp]:
   "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setObject p (pde::pde) \<lbrace>\<lambda>_. \<lambda>s. P (ksInterruptState s)\<rbrace>"
@@ -3370,17 +3370,16 @@ lemma setObject_pde_ksInt [wp]:
 
 lemma storePDE_ksInterruptState[wp]:
   "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_ s. P (ksInterruptState s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
 
 lemma storePDE_ifunsafe [wp]:
   "\<lbrace>if_unsafe_then_cap'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   apply (simp add: storePDE_def)
-  apply (rule hoare_pre)
-(*   apply (rule setObject_ifunsafe' [where P=\<top>], simp)
+  apply (wp setObject_ifunsafe'[where P=\<top>] hoare_drop_imp, simp)
      apply (auto simp: updateObject_default_def in_monad projectKOs)[2]
    apply wp
-  apply simp*)
-  sorry (* storePDE *)
+  apply simp
+  done
 
 lemma storePDE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
@@ -3389,18 +3388,18 @@ lemma storePDE_idle [wp]:
 
 lemma storePDE_arch'[wp]:
   "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
 
 lemma storePDE_cur'[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
 
 lemma storePDE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> storePDE pde p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (simp add: storePDE_def)
   apply (wpsimp wp: valid_irq_states_lift' dmo_lift' no_irq_storeWord setObject_ksMachine
-                    updateObject_default_inv)
-  sorry
+                    updateObject_default_inv hoare_drop_imp)
+  done
 
 lemma storePDE_pde_mappings'[wp]:
   "\<lbrace>valid_pde_mappings' and K (valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
@@ -3411,35 +3410,39 @@ lemma storePDE_pde_mappings'[wp]:
    apply (rule hoare_post_imp)
     apply (simp only: obj_at'_real_def)
    apply (simp add: storePDE_def)
-   apply (wp setObject_ko_wp_at)
+   apply (wp setObject_ko_wp_at hoare_drop_imp)
       apply simp
-(*     apply (simp add: objBits_simps archObjSize_def)
+     apply (simp add: objBits_simps archObjSize_def vspace_bits_defs)
     apply simp
    apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
-  apply assumption*)
-  sorry (* storePDE *)
+  apply assumption
+  done
+
+lemma setObject_pde_machine_state[wp]:
+  "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setObject t (v::pde) \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
+  apply (simp add: setObject_def split_def)
+  apply (wp updateObject_default_inv | simp)+
+  done
+
+lemma storePDE_machine_state[wp]:
+  "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> storePDE p pde \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
 
 lemma storePDE_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  apply (simp add: storePDE_def valid_machine_state'_def pointerInUserData_def
-                   pointerInDeviceData_def)
-  apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv
-            hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
-  sorry
+  by (wpsimp simp: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
+             wp: setObject_typ_at_inv setObject_ksMachine updateObject_default_inv hoare_vcg_all_lift hoare_vcg_disj_lift)
 
-lemma storePDE_pspace_domain_valid[wp]:
-  "\<lbrace>\<lambda>s. P (pspace_domain_valid s)\<rbrace> storePDE param_a param_b \<lbrace>\<lambda>_ s. P (pspace_domain_valid s)\<rbrace>"
-  sorry (* crunch *)
+crunch pspace_domain_valid[wp]: storePDE "pspace_domain_valid"
+  (wp: hoare_drop_imp)
 
 lemma storePDE_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> storePDE p pde \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   apply (rule ct_not_inQ_lift [OF storePDE_nosch])
-  apply (simp add: storePDE_def)
-  apply (rule hoare_weaken_pre)
-(*   apply (wps setObject_PDE_ct)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)+*)
-  sorry (* storePDE *)
+  apply (wpsimp simp: storePDE_def updateObject_default_def wp: hoare_drop_imp)
+   apply (wps setObject_PDE_ct)
+   apply (wpsimp wp: obj_at_setObject2 simp: updateObject_default_def in_monad)+
+  done
 
 lemma setObject_pde_cur_domain[wp]:
   "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> setObject t (v::pde) \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
@@ -3455,18 +3458,15 @@ lemma setObject_pde_ksDomSchedule[wp]:
 
 lemma storePDE_cur_domain[wp]:
   "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> storePDE p pde \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
-  sorry
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
 
 lemma storePDE_ksDomSchedule[wp]:
   "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> storePDE p pde \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-  sorry
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
 
 lemma storePDE_tcb_obj_at'[wp]:
   "\<lbrace>obj_at' (P::tcb \<Rightarrow> bool) t\<rbrace> storePDE p pde \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
-  apply (simp add: storePDE_def)
-(*  apply (rule obj_at_setObject2)
-  apply (clarsimp simp add: updateObject_default_def in_monad)*)
-  sorry (* storePDE *)
+  by (wpsimp wp: hoare_drop_imp obj_at_setObject2 simp: storePDE_def updateObject_default_def in_monad)
 
 lemma storePDE_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t\<rbrace> storePDE p pde \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
@@ -3486,27 +3486,27 @@ lemma setObject_pde_ksDomScheduleIdx [wp]:
 
 lemma storePDE_ksDomScheduleIdx[wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> storePDE p pde \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def)
 
 lemma storePTE_ksDomScheduleIdx[wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> storePTE p pde \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
 
 lemma storePDE_gsMaxObjectSize[wp]:
   "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> storePDE p pde \<lbrace>\<lambda>rv s. P (gsMaxObjectSize s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def setObject_def)
 
 lemma storePTE_gsMaxObjectSize[wp]:
   "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> storePTE p pde \<lbrace>\<lambda>rv s. P (gsMaxObjectSize s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def setObject_def)
 
 lemma storePDE_gsUntypedZeroRanges[wp]:
   "\<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace> storePDE p pde \<lbrace>\<lambda>rv s. P (gsUntypedZeroRanges s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePDE_def updateObject_default_def setObject_def)
 
 lemma storePTE_gsUntypedZeroRanges[wp]:
-  "\<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace> storePDTE p pde \<lbrace>\<lambda>rv s. P (gsUntypedZeroRanges s)\<rbrace>"
-  sorry (* crunch *)
+  "\<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace> storePTE p pde \<lbrace>\<lambda>rv s. P (gsUntypedZeroRanges s)\<rbrace>"
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def setObject_def)
 
 lemma storePDE_invs[wp]:
   "\<lbrace>invs' and valid_pde' pde
@@ -3530,26 +3530,26 @@ lemma storePTE_valid_mdb [wp]:
 
 lemma storePTE_nosch[wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: setObject_nosch headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
 
 lemma storePTE_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
 
 lemma storePTE_inQ[wp]:
   "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace> storePTE ptr pde \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
   apply (simp add: obj_at'_real_def storePTE_def)
-  apply (wp setObject_ko_wp_at | simp add: objBits_simps archObjSize_def)+
+  apply (wp setObject_ko_wp_at hoare_drop_imp | simp add: objBits_simps archObjSize_def vspace_bits_defs)+
   apply (clarsimp simp: projectKOs obj_at'_def ko_wp_at'_def)
-  sorry
+  done
 
 lemma storePTE_nordL1[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_ s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
 
 lemma storePTE_nordL2[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_ s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
 
 lemma storePTE_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> storePTE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
@@ -3561,12 +3561,10 @@ lemma storePTE_valid_queues' [wp]:
 
 lemma storePTE_iflive [wp]:
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: storePTE_def)
-  apply (rule hoare_pre)
-(*   apply (rule setObject_iflive' [where P=\<top>], simp)
-      apply (simp add: objBits_simps archObjSize_def)
-     apply (auto simp: updateObject_default_def in_monad projectKOs)*)
-  sorry
+  apply (wpsimp simp: storePTE_def objBits_simps archObjSize_def vspace_bits_defs
+                wp: hoare_drop_imp setObject_iflive' [where P=\<top>])
+     apply (auto simp: updateObject_default_def in_monad live'_def hyp_live'_def arch_live'_def projectKOs)
+  done
 
 lemma setObject_pte_ksInt [wp]:
   "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setObject p (pte::pte) \<lbrace>\<lambda>_. \<lambda>s. P (ksInterruptState s)\<rbrace>"
@@ -3574,17 +3572,16 @@ lemma setObject_pte_ksInt [wp]:
 
 lemma storePTE_ksInt'[wp]:
   "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_ s. P (ksInterruptState s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: hoare_drop_imp setObject_ksInterrupt updateObject_default_inv simp: storePTE_def)
 
 lemma storePTE_ifunsafe [wp]:
   "\<lbrace>if_unsafe_then_cap'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   apply (simp add: storePTE_def)
-  apply (rule hoare_pre)
-(*   apply (rule setObject_ifunsafe' [where P=\<top>], simp)
+  apply (wp setObject_ifunsafe'[where P=\<top>] hoare_drop_imp, simp)
      apply (auto simp: updateObject_default_def in_monad projectKOs)[2]
    apply wp
-  apply simp*)
-  sorry (* storePTE *)
+  apply simp
+  done
 
 lemma storePTE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
@@ -3593,18 +3590,18 @@ lemma storePTE_idle [wp]:
 
 lemma storePTE_arch'[wp]:
   "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
 
 lemma storePTE_cur'[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
 
 lemma storePTE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> storePTE pte p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (simp add: storePTE_def)
-  apply (wpsimp wp: valid_irq_states_lift' dmo_lift' no_irq_storeWord setObject_ksMachine
-                    updateObject_default_inv)
-  sorry
+  apply (wpsimp wp: hoare_drop_imp valid_irq_states_lift' dmo_lift' no_irq_storeWord
+                    setObject_ksMachine updateObject_default_inv)
+  done
 
 lemma storePTE_valid_objs [wp]:
   "\<lbrace>valid_objs' and valid_pte' pte\<rbrace> storePTE p pte \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
@@ -3622,32 +3619,36 @@ lemma storePTE_pde_mappings'[wp]:
   "\<lbrace>valid_pde_mappings'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
   apply (wp valid_pde_mappings_lift')
    apply (simp add: storePTE_def)
-(*   apply (rule obj_at_setObject2)
-   apply (clarsimp dest!: updateObject_default_result)
-  apply assumption
-*)  sorry (* storePTE *)
+   apply (wp hoare_drop_imp obj_at_setObject2)
+   apply (auto dest!: updateObject_default_result)
+  done
+
+lemma setObject_pte_machine_state[wp]:
+  "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setObject t (v::pte) \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
+  apply (simp add: setObject_def split_def)
+  apply (wp updateObject_default_inv | simp)+
+  done
+
+lemma storePTE_machine_state[wp]:
+  "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> storePTE p pde \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
+
 
 lemma storePTE_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> storePTE p pde \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
-  apply (simp add: storePTE_def valid_machine_state'_def pointerInUserData_def
-                   pointerInDeviceData_def)
-  apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv
-            hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
-  sorry (* storePTE *)
+  by (wpsimp simp: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
+             wp: setObject_typ_at_inv setObject_ksMachine updateObject_default_inv hoare_vcg_all_lift hoare_vcg_disj_lift)
 
-lemma storePTE_pspace_domain_valid[wp]:
-  "\<lbrace>\<lambda>s. P (pspace_domain_valid s)\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_ s. P (pspace_domain_valid s)\<rbrace>"
-  sorry (* crunch *)
+crunch pspace_domain_valid[wp]: storePTE "pspace_domain_valid"
+  (wp: hoare_drop_imp)
 
 lemma storePTE_ct_not_inQ[wp]:
   "\<lbrace>ct_not_inQ\<rbrace> storePTE p pte \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   apply (rule ct_not_inQ_lift [OF storePTE_nosch])
-  apply (simp add: storePTE_def)
-  apply (rule hoare_weaken_pre)
-(*   apply (wps setObject_pte_ct)
-  apply (rule obj_at_setObject2)
-   apply (clarsimp simp: updateObject_default_def in_monad)+*)
-  sorry (* storePTE *)
+  apply (wpsimp simp: storePTE_def updateObject_default_def wp: hoare_drop_imp)
+   apply (wps setObject_PDE_ct)
+   apply (wpsimp wp: obj_at_setObject2 simp: updateObject_default_def in_monad)+
+  done
 
 lemma setObject_pte_cur_domain[wp]:
   "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> setObject t (v::pte) \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
@@ -3663,19 +3664,15 @@ lemma setObject_pte_ksDomSchedule[wp]:
 
 lemma storePTE_cur_domain[wp]:
   "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> storePTE p pde \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
-  sorry (* storePTE *)
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
 
 lemma storePTE_ksDomSchedule[wp]:
   "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> storePTE p pde \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-  sorry (* storePTE *)
-
+  by (wpsimp wp: headM_inv hoare_drop_imp simp: storePTE_def updateObject_default_def)
 
 lemma storePTE_tcb_obj_at'[wp]:
   "\<lbrace>obj_at' (P::tcb \<Rightarrow> bool) t\<rbrace> storePTE p pte \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
-  apply (simp add: storePTE_def)
-(*  apply (rule obj_at_setObject2)
-  apply (clarsimp simp add: updateObject_default_def in_monad)*)
-  sorry (* storePTE *)
+  by (wpsimp wp: hoare_drop_imp obj_at_setObject2 simp: storePTE_def updateObject_default_def in_monad)
 
 lemma storePTE_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t\<rbrace> storePTE p pte \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
@@ -3759,7 +3756,13 @@ lemma setASIDPool_state_refs' [wp]:
 
 lemma setASIDPool_state_hyp_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
-  sorry
+  apply (clarsimp simp: setObject_def valid_def in_monad split_def
+                        updateObject_default_def projectKOs objBits_simps
+                        in_magnitude_check state_hyp_refs_of'_def ps_clear_upd'
+                 elim!: rsubst[where P=P] intro!: ext
+             split del: if_split cong: option.case_cong if_cong)
+  apply (simp split: option.split)
+  done
 
 lemma setASIDPool_iflive [wp]:
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
