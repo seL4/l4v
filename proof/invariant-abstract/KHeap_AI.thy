@@ -60,6 +60,10 @@ requalify_facts
 
   getActiveIRQ_neq_non_kernel
   dmo_getActiveIRQ_non_kernel
+
+  valid_arch_tcb_same_type
+  valid_arch_tcb_typ_at
+  valid_tcb_arch_ref_lift
 end
 
 lemmas cap_is_device_obj_is_device[simp] = cap_is_device_obj_is_device
@@ -139,11 +143,6 @@ lemma valid_cap_same_type:
       assumption, auto)
 
 
-lemma wellformed_arch_obj_same_type:
-  "\<lbrakk> wellformed_arch_obj obj s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
-   \<Longrightarrow> wellformed_arch_obj obj (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
-oops
-
 lemma valid_obj_same_type:
   "\<lbrakk> valid_obj p' obj s; valid_obj p k s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
    \<Longrightarrow> valid_obj p' obj (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
@@ -151,7 +150,7 @@ lemma valid_obj_same_type:
       apply (clarsimp simp add: valid_obj_def valid_cs_def)
       apply (drule (1) bspec)
       apply (erule (2) valid_cap_same_type)
-     apply (clarsimp simp add: valid_obj_def valid_tcb_def valid_bound_ntfn_def)
+     apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_ntfn_def valid_arch_tcb_same_type)
      apply (fastforce elim: valid_cap_same_type typ_at_same_type
                       simp: valid_tcb_state_def ep_at_typ
                             ntfn_at_typ tcb_at_typ

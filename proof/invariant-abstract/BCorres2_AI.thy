@@ -28,6 +28,7 @@ locale BCorres2_AI =
       bcorres (make_arch_fault_msg a b :: 'a state \<Rightarrow> _)
               (make_arch_fault_msg a b)"
 
+
 definition all_but_exst where
 "all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
                       (cur_thread s) (idle_thread s)
@@ -73,6 +74,9 @@ lemma valid_tcb_state[simp]: "valid_tcb_state a (trans_state g s) = valid_tcb_st
 lemma valid_bound_ntfn[simp]: "valid_bound_ntfn a (trans_state g s) = valid_bound_ntfn a s"
   by (simp add: valid_bound_ntfn_def split: option.splits)
   
+lemma valid_arch_tcb_trans[simp]: "valid_arch_tcb t (trans_state g s) = valid_arch_tcb t s"
+  by (auto elim: valid_arch_tcb_pspaceI)
+
 lemma valid_tcb_trans_state[simp]: "valid_tcb a b (trans_state g s) = valid_tcb a b s"
   apply (simp add: valid_tcb_def)
   done

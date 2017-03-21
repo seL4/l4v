@@ -39,6 +39,7 @@ requalify_consts
   valid_asid_map
   valid_arch_obj
   valid_vspace_obj
+  valid_arch_tcb
 
   valid_arch_state
   valid_arch_objs
@@ -100,6 +101,8 @@ requalify_facts
   hyp_live_tcb_def
   wellformed_arch_pspace
   wellformed_arch_typ
+  valid_arch_tcb_pspaceI
+  valid_arch_tcb_lift
 end
 
 lemmas [intro!] =  idle_global acap_rights_update_id
@@ -486,7 +489,8 @@ where
      \<and> valid_tcb_state (tcb_state t) s
      \<and> (case tcb_fault t of Some f \<Rightarrow> valid_fault f | _ \<Rightarrow> True)
      \<and> length (tcb_fault_handler t) = word_bits
-     \<and> valid_bound_ntfn (tcb_bound_notification t) s"
+     \<and> valid_bound_ntfn (tcb_bound_notification t) s
+     \<and> valid_arch_tcb (tcb_arch t) s"
 
 definition
   tcb_cap_valid :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -1609,7 +1613,7 @@ lemma valid_obj_pspaceI:
       apply (auto simp add: valid_ntfn_def valid_cs_def valid_tcb_def valid_ep_def
                             valid_tcb_state_def pred_tcb_at_def valid_bound_ntfn_def
                             valid_bound_tcb_def wellformed_arch_pspace
-                 intro: obj_at_pspaceI valid_cap_pspaceI valid_arch_obj_pspaceI
+                 intro: obj_at_pspaceI valid_cap_pspaceI valid_arch_obj_pspaceI valid_arch_tcb_pspaceI
                  split: ntfn.splits endpoint.splits
                         thread_state.splits option.split
           | auto split: kernel_object.split)+
@@ -2188,7 +2192,7 @@ lemma valid_tcb_typ:
   shows      "\<lbrace>\<lambda>s. valid_tcb p tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb p tcb s\<rbrace>"
   apply (simp add: valid_tcb_def valid_bound_ntfn_def split_def)
   apply (wp valid_tcb_state_typ valid_cap_typ P hoare_vcg_const_Ball_lift
-            valid_case_option_post_wp ntfn_at_typ_at)
+            valid_case_option_post_wp ntfn_at_typ_at valid_arch_tcb_lift)
   done
 
 lemma valid_cs_typ:

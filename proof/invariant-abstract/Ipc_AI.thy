@@ -1270,12 +1270,12 @@ lemma set_mrs_valid_objs [wp]:
    apply (simp add: set_mrs_redux)
    apply (wp thread_set_valid_objs_triv)
        apply (auto simp: tcb_cap_cases_def)[1]
-      apply simp+
+      apply (simp add: valid_arch_arch_tcb_context_set)+
   apply (simp add: set_mrs_redux zipWithM_x_mapM split_def
                    store_word_offs_def
             split del: if_split)
   apply (wp mapM_wp' thread_set_valid_objs_triv | simp)+
-      apply (auto simp: tcb_cap_cases_def)
+      apply (auto simp: tcb_cap_cases_def valid_arch_arch_tcb_context_set)
   done
 
 

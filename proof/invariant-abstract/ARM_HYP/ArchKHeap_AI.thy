@@ -837,5 +837,10 @@ lemma default_arch_object_not_live: "\<not> live (ArchObj (default_arch_object a
 lemma default_tcb_not_live: "\<not> live (TCB default_tcb)"
   by (clarsimp simp: default_tcb_def default_arch_tcb_def live_def hyp_live_def)
 
+lemma valid_arch_tcb_same_type:
+  "\<lbrakk> valid_arch_tcb t s; valid_obj p k s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
+   \<Longrightarrow> valid_arch_tcb t (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+  by (auto simp: valid_arch_tcb_def obj_at_def)
+
 end
 end

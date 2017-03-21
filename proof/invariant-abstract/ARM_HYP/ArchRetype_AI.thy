@@ -569,39 +569,9 @@ lemma valid_untyped_helper [Retype_AI_assms]:
   done
   qed
 
-(*
-lemma hyp_refs_eq[Retype_AI_assms]:
-  "\<forall>x obj. kheap s x = Some obj \<longrightarrow> x \<notin> set (retype_addrs ptr ty n us) \<Longrightarrow>
-    ty \<noteq> Structures_A.apiobject_type.Untyped \<Longrightarrow>
-      state_hyp_refs_of (s\<lparr>kheap :=
-                 \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
-                     then Some (default_object ty dev us) else kheap s x\<rparr>)
-           = state_hyp_refs_of s"
-  apply (clarsimp intro!: ext simp: state_hyp_refs_of_def
-                   split: option.splits)
-  apply (cases ty, simp_all add: default_object_def default_tcb_def
-                                 hyp_refs_of_def tcb_hyp_refs_def tcb_vcpu_refs_def
-                                 default_arch_tcb_def)
-  apply (rename_tac ao)
-  apply (clarsimp simp: refs_of_a_def vcpu_tcb_refs_def default_arch_object_def
-                        default_vcpu_def
-                  split: aobject_type.splits)
-  done
-
-lemma wellformed_default_obj[Retype_AI_assms]:
-   "\<lbrakk>\<forall>P x. obj_at P x s \<longrightarrow> obj_at P x (s\<lparr>kheap :=
-                 \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
-                     then Some (default_object ty dev us) else kheap s x\<rparr>);
-      ptra \<notin> set (retype_addrs ptr ty n us);
-        kheap s ptra = Some (ArchObj x5); wellformed_arch_obj x5 s\<rbrakk> \<Longrightarrow>
-          wellformed_arch_obj x5
-            (s\<lparr>kheap :=
-                 \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
-                     then Some (default_object ty dev us) else kheap s x\<rparr>)"
-  apply (clarsimp simp: wellformed_arch_obj_def valid_vcpu_def
-                  split: arch_kernel_obj.splits option.splits)
-  done
-*)
+lemma valid_default_arch_tcb:
+  "\<And>s. valid_arch_tcb default_arch_tcb s"
+  by (simp add: default_arch_tcb_def valid_arch_tcb_def)
 
 end
 
@@ -784,21 +754,13 @@ proof
   ultimately
   show "valid_vspace_obj ao s'" by blast
 qed
-(*
-lemma valid_arch_objs':
-  assumes va: "valid_arch_objs s"
-  shows "valid_arch_objs s'"
-proof (clarsimp simp add: valid_arch_objs_def)
-qed
-*)
 
 
-(* ML \<open>val pre_ctxt_0 = @{context}\<close> *)
 sublocale retype_region_proofs_gen?: retype_region_proofs_gen
   by (unfold_locales,
         auto simp: hyp_refs_eq[simplified s'_def ps_def]
-                  wellformed_default_obj[simplified s'_def ps_def])
-(* local_setup \<open>note_new_facts pre_ctxt_0\<close> *)
+                  wellformed_default_obj[simplified s'_def ps_def]
+                  valid_default_arch_tcb)
 
 end
 

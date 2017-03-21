@@ -1009,21 +1009,19 @@ lemma set_vcpu_valid_arch_Some[wp]:
   done
 
 lemma associate_vcpu_tcb_invs[wp]:
-  "\<lbrace>invs and ex_nonz_cap_to vcpu and ex_nonz_cap_to tcb\<rbrace> associate_vcpu_tcb vcpu tcb \<lbrace>\<lambda>_. invs\<rbrace>"
+  "\<lbrace>invs and ex_nonz_cap_to vcpu and ex_nonz_cap_to tcb and vcpu_at vcpu\<rbrace> associate_vcpu_tcb vcpu tcb \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (simp add: pred_conj_def)
   apply (rule hoare_pre)
    apply (rule hoare_vcg_conj_lift[rotated])+
-   by (wp weak_if_wp hoare_vcg_all_lift hoare_drop_imps as_user_only_idle
+   by (wp get_vcpu_wp arch_thread_get_wp weak_if_wp as_user_only_idle hoare_vcg_all_lift
+        | wp_once hoare_drop_imps
         | wpc
         | clarsimp
         | strengthen valid_arch_state_vcpu_update_str valid_global_refs_vcpu_update_str
-        | simp add: associate_vcpu_tcb_def
-                    obj_at_def valid_obj_def[abs_def] valid_vcpu_def
-        | wp get_vcpu_wp arch_thread_get_wp arch_thread_set_wp
-        | simp add: dissociate_vcpu_tcb_def
-        | simp add: vcpu_invalidate_active_def
-        | simp add: vcpu_disable_def)+
+        | simp add: associate_vcpu_tcb_def valid_obj_def[abs_def] valid_vcpu_def
+                    dissociate_vcpu_tcb_def vcpu_invalidate_active_def vcpu_disable_def
+        | simp add: obj_at_def)+
 
 lemma set_vcpu_regs_update[wp]:
   "\<lbrace>invs and valid_obj p (ArchObj (VCPU vcpu)) and
@@ -1056,10 +1054,8 @@ lemma invoke_vcpu_inject_irq_invs[wp]:
 lemma perform_vcpu_invs[wp]:
   "\<lbrace>invs and valid_vcpu_invocation vi\<rbrace> perform_vcpu_invocation vi \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: perform_vcpu_invocation_def valid_vcpu_invocation_def)
-  apply (rule hoare_pre)
-   apply (wp | wpc
-         | clarsimp simp: invoke_vcpu_read_register_def read_vcpu_register_def
-                          invoke_vcpu_write_register_def vcpuregs_gets)+
+  apply (wpsimp simp: invoke_vcpu_read_register_def read_vcpu_register_def
+                      invoke_vcpu_write_register_def vcpuregs_gets)
   done
 
 lemma invoke_arch_invs[wp]:

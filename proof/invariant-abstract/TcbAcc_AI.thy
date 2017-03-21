@@ -12,6 +12,13 @@ theory TcbAcc_AI
 imports "$L4V_ARCH/ArchCSpace_AI"
 begin
 
+context begin interpretation Arch .
+
+requalify_facts
+  valid_arch_arch_tcb_context_set
+
+end
+
 locale TcbAcc_AI_storeWord_invs =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes storeWord_invs[wp]:
@@ -218,7 +225,9 @@ lemma thread_set_valid_objs_triv:
                                                    | Some f \<Rightarrow> valid_fault f)"
   assumes b: "\<And>tcb. tcb_bound_notification (f tcb) \<noteq> tcb_bound_notification tcb 
                        \<longrightarrow> tcb_bound_notification (f tcb) = None"
-  shows "\<lbrace>valid_objs\<rbrace> thread_set f t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  assumes c: "\<And>tcb s::'z::state_ext state.
+                     valid_arch_tcb (tcb_arch (f tcb)) s = valid_arch_tcb (tcb_arch tcb) s"
+  shows "\<lbrace>valid_objs\<rbrace> thread_set f t \<lbrace>\<lambda>rv. valid_objs :: 'z::state_ext state \<Rightarrow> bool\<rbrace>"
   using bspec [OF x, OF tcb_ipcframe_in_cases]
   apply (simp add: thread_set_def)
   apply wp
@@ -228,7 +237,7 @@ lemma thread_set_valid_objs_triv:
   apply (drule get_tcb_SomeD)
   apply (erule (1) pspace_valid_objsE)
   apply (clarsimp simp add: valid_obj_def valid_tcb_def valid_bound_ntfn_def z
-                            split_paired_Ball obj_at_def
+                            split_paired_Ball obj_at_def c
                             a_type_def bspec_split[OF x])
   apply (rule conjI)
    apply (elim allEI)
@@ -239,8 +248,7 @@ lemma thread_set_valid_objs_triv:
   apply (cut_tac tcb=y in y)
   apply (cut_tac tcb=y in a)
   apply (cut_tac tcb=y in b)
-  apply auto[1]
-  done
+  by auto[1]
 
 end
 
@@ -474,7 +482,6 @@ context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 lemma thread_set_invs_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
-  assumes r:  "\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb" (* ARMHYP *)
   assumes z:  "\<And>tcb. tcb_state     (f tcb) = tcb_state tcb"
   assumes z': "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
   assumes w: "\<And>tcb. tcb_ipc_buffer (f tcb) = tcb_ipc_buffer tcb
@@ -507,7 +514,8 @@ lemma thread_set_invs_trivial:
              thread_set_cap_refs_in_kernel_window
              thread_set_cap_refs_respects_device_region
              thread_set_aligned
-             | rule x r z z' w y a arch | erule bspec_split [OF x] | simp add: z')+
+             | rule x z z' w y a arch valid_tcb_arch_ref_lift [THEN fun_cong]
+             | erule bspec_split [OF x] | simp add: z')+
   apply (simp add: z)
   done
 
@@ -626,8 +634,7 @@ lemma as_user_objs [wp]:
   "\<lbrace>valid_objs\<rbrace> as_user a f \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   apply (wp as_user_wp_thread_set_helper
             thread_set_valid_objs_triv)
-     apply (fastforce simp add: tcb_cap_cases_def)
-  apply (wp | simp)+
+  apply (wpsimp simp: tcb_cap_cases_def valid_arch_arch_tcb_context_set)+
   done
 
 end

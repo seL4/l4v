@@ -646,8 +646,8 @@ lemma arch_thread_set_pspace_aligned[wp]:
                   dest!: get_tcb_SomeD)
   done
 
-lemma arch_thread_set_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> arch_thread_set f v \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+lemma arch_thread_set_valid_objs_context[wp]:
+  "arch_thread_set (tcb_context_update f) v \<lbrace>valid_objs\<rbrace>"
   apply (simp add: arch_thread_set_def)
   apply (wp set_object_valid_objs)
   apply (clarsimp simp: Ball_def obj_at_def valid_objs_def dest!: get_tcb_SomeD)
@@ -657,6 +657,26 @@ lemma arch_thread_set_valid_objs[wp]:
   apply (clarsimp simp:valid_obj_def valid_tcb_def tcb_cap_cases_def)
   done
 
+lemma arch_thread_set_valid_objs_vcpu_None[wp]:
+  "arch_thread_set (tcb_vcpu_update Map.empty) v \<lbrace>valid_objs\<rbrace>"
+  apply (simp add: arch_thread_set_def)
+  apply (wp set_object_valid_objs)
+  apply (clarsimp simp: Ball_def obj_at_def valid_objs_def dest!: get_tcb_SomeD)
+  apply (erule_tac x=v in allE)
+  apply (clarsimp simp: dom_def)
+  apply (subst get_tcb_rev, assumption, subst option.sel)+
+  apply (clarsimp simp:valid_obj_def valid_tcb_def tcb_cap_cases_def valid_arch_tcb_def)
+  done
+
+lemma arch_thread_set_valid_objs_vcpu_Some[wp]:
+  "\<lbrace>valid_objs and vcpu_at vcpu\<rbrace> arch_thread_set (tcb_vcpu_update (\<lambda>_. Some vcpu)) v \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  apply (simp add: arch_thread_set_def)
+  apply (wpsimp wp: set_object_valid_objs)
+  apply (clarsimp simp: Ball_def obj_at_def valid_objs_def dest!: get_tcb_SomeD)
+  apply (erule_tac x=v in allE)
+  apply (clarsimp simp: dom_def)
+  apply (clarsimp simp:valid_obj_def valid_tcb_def tcb_cap_cases_def valid_arch_tcb_def obj_at_def)
+  done
 
 lemma sym_refs_update_some_tcb:
   "\<lbrakk>kheap s v = Some (TCB tcb) ; refs_of (TCB tcb) = refs_of (TCB (f tcb))\<rbrakk>
@@ -767,7 +787,7 @@ lemma dissociate_vcpu_tcb_sym_refs_hyp[wp]:
   done
 
 crunch valid_objs[wp]: dissociate_vcpu_tcb "valid_objs"
-  (wp: crunch_wps simp: crunch_simps valid_obj_def valid_vcpu_def)
+  (wp: crunch_wps simp: crunch_simps valid_obj_def valid_vcpu_def ignore: arch_thread_set)
 
 lemma set_vcpu_unlive_hyp[wp]:
  "\<lbrace>\<lambda>s. vr \<noteq> t \<longrightarrow> obj_at (Not \<circ> hyp_live) t s\<rbrace>

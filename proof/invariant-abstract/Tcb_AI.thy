@@ -184,7 +184,7 @@ lemma out_invs_trivialT:
                                                    | Some f \<Rightarrow> valid_fault f)"
   shows      "\<lbrace>invs\<rbrace> option_update_thread t fn v \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac v, simp_all add: option_update_thread_def)
-  apply (rule thread_set_invs_trivial [OF x r z z' w y a])
+  apply (rule thread_set_invs_trivial [OF x z z' w y a r])
   apply (auto intro: r)
   done
 

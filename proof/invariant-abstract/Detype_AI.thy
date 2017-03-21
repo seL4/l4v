@@ -452,6 +452,9 @@ locale detype_locale_gen_1 = Detype_AI "TYPE('a)" + detype_locale cap ptr s
        \<Longrightarrow> wellformed_arch_obj ao (detype (untyped_range cap) s)"
   assumes sym_hyp_refs_detype:
     "sym_refs (state_hyp_refs_of (detype (untyped_range cap) s))"
+  assumes tcb_arch_detype:
+    "\<And>p t. \<lbrakk>ko_at (TCB t) p s; valid_arch_tcb (tcb_arch t) s\<rbrakk>
+       \<Longrightarrow> valid_arch_tcb (tcb_arch t) (detype (untyped_range cap) s)"
 
 locale detype_locale_gen_2 = detype_locale_gen_1 cap ptr s
   for cap ptr
@@ -564,7 +567,7 @@ lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbra
         apply (erule ranE)
         apply (fastforce simp: obj_at_def intro!: cte_wp_at_cteI)
        apply (frule refs_of)
-       apply (clarsimp simp: valid_tcb_def obj_at_def)
+       apply (clarsimp simp: valid_tcb_def obj_at_def tcb_arch_detype)
        apply (rule conjI)
         apply (erule ballEI)
         apply (clarsimp elim!: ranE)

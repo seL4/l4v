@@ -189,6 +189,20 @@ lemma obj_at_hyp_live_strg:
   "obj_at hyp_live p s \<Longrightarrow> obj_at live p s"
   by (erule obj_at_weakenE, rule hyp_live_strg)
 
+lemma tcb_arch_detype[detype_invs_proofs]:
+  "\<lbrakk>ko_at (TCB t) p s; valid_arch_tcb (tcb_arch t) s\<rbrakk>
+      \<Longrightarrow> valid_arch_tcb (tcb_arch t) (detype (untyped_range cap) s)"
+  apply (clarsimp simp: valid_arch_tcb_def)
+  apply (drule hyp_sym_refs_ko_atD, rule hyp_refsym)
+  apply clarsimp
+  apply rotate_tac (* do not pick typ_at *)
+  apply (drule live_okE)
+   apply (clarsimp simp: live_def hyp_live_def arch_live_def obj_at_def hyp_refs_of_def
+                         refs_of_a_def vcpu_tcb_refs_def
+                  split: kernel_object.splits arch_kernel_obj.splits option.splits)
+  apply clarsimp
+  done
+
 lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
   using valid_vs_lookup valid_arch_state ut_mdb valid_global_refsD [OF globals cap] cap

@@ -238,6 +238,11 @@ definition
 definition "data_at \<equiv> \<lambda>sz p s. typ_at (AArch (AUserData sz)) p s
   \<or> typ_at (AArch (ADeviceData sz)) p s"
 
+definition
+  valid_arch_tcb :: "arch_tcb \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_arch_tcb \<equiv> \<lambda>t s. \<forall>v. tcb_vcpu t = Some v \<longrightarrow> vcpu_at v s"
+
 primrec
   valid_pte :: "pte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -291,7 +296,6 @@ where
 | "valid_vspace_obj (PageTable pt) = (\<lambda>s. \<forall>x. valid_pte (pt x) s)"
 | "valid_vspace_obj (DataPage dev sz) = \<top>"
 | "valid_vspace_obj (VCPU v) = \<top>"
-
 
 lemma valid_arch_imp_valid_vspace_obj: "valid_arch_obj ko s \<Longrightarrow> valid_vspace_obj ko s"
   by (case_tac ko; clarsimp simp: valid_arch_obj_def valid_vspace_obj_def)
@@ -2563,10 +2567,21 @@ lemma hyp_refs_of_hyp_live_obj:
 definition tcb_arch_ref :: "tcb \<Rightarrow> obj_ref option"
 where "tcb_arch_ref t \<equiv> tcb_vcpu (tcb_arch t)"
 
+lemma valid_tcb_arch_ref_lift:
+  "tcb_arch_ref t = tcb_arch_ref t' \<Longrightarrow> valid_arch_tcb (tcb_arch t) = valid_arch_tcb (tcb_arch t')"
+  by (simp add: valid_arch_tcb_def tcb_arch_ref_def)
+
+lemma valid_arch_tcb_context_update[simp]:
+  "valid_arch_tcb (tcb_context_update f t) = valid_arch_tcb t"
+  unfolding valid_arch_tcb_def obj_at_def by simp
+
+lemma valid_arch_arch_tcb_context_set[simp]:
+  "valid_arch_tcb (arch_tcb_context_set a t) = valid_arch_tcb t"
+  by (simp add: arch_tcb_context_set_def)
+
 lemma tcb_arch_ref_context_update:
   "tcb_arch_ref (t\<lparr>tcb_arch := (arch_tcb_context_set a (tcb_arch t))\<rparr>) = tcb_arch_ref t"
-  apply (simp add: tcb_arch_ref_def arch_tcb_context_set_def)
-  done
+  by (simp add: tcb_arch_ref_def arch_tcb_context_set_def)
 
 lemma tcb_arch_ref_ipc_buffer_update: "\<And>tcb.
        tcb_arch_ref (tcb_ipc_buffer_update f tcb) = tcb_arch_ref tcb"
@@ -2635,6 +2650,20 @@ lemma hyp_live_tcb_simps[simp]:
 "\<And>tcb f. hyp_live (TCB (tcb_fault_update f tcb)) = hyp_live (TCB tcb)"
 "\<And>tcb f. hyp_live (TCB (tcb_bound_notification_update f tcb)) = hyp_live (TCB tcb)"
   by (simp_all add: hyp_live_tcb_def)
+
+
+lemma valid_arch_tcb_pspaceI:
+  "\<lbrakk> valid_arch_tcb t s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_tcb t s'"
+  unfolding valid_arch_tcb_def obj_at_def by (simp)
+
+lemma valid_arch_tcb_typ_at:
+  "\<lbrakk> valid_arch_tcb t s; \<And>T p. typ_at T p s \<Longrightarrow> typ_at T p s' \<rbrakk> \<Longrightarrow> valid_arch_tcb t s'"
+  by (simp add: valid_arch_tcb_def)
+
+lemma valid_arch_tcb_lift:
+  "(\<And>T p. f \<lbrace>typ_at T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_arch_tcb t\<rbrace>"
+  unfolding valid_arch_tcb_def
+  by (wp hoare_vcg_all_lift hoare_vcg_imp_lift; simp)
 
 end
 

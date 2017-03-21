@@ -1605,13 +1605,14 @@ end
 lemma valid_obj_default_object:
   assumes tyunt: "ty \<noteq> Untyped"
   and      tyct: "ty = CapTableObject \<Longrightarrow> us < word_bits - cte_level_bits \<and> 0 < us"
+  and      arch: "valid_arch_tcb default_arch_tcb s"
   shows "valid_obj ptr (default_object ty dev us) s"
   unfolding valid_obj_def default_object_def
   apply (cases ty)
        apply (simp add: tyunt)
       apply (simp add: valid_tcb_def default_tcb_def valid_tcb_state_def
                        tcb_cap_cases_def valid_ipc_buffer_cap_def
-                       word_bits_def)
+                       word_bits_def arch)
      apply (simp add: valid_ep_def default_ep_def)
     apply (simp add: valid_ntfn_def default_notification_def default_ntfn_def valid_bound_tcb_def)
    apply (frule tyct)
@@ -1715,7 +1716,9 @@ locale retype_region_proofs_gen
   for s :: "'state_ext :: state_ext state"
   and ty us ptr sz n ps s' dev +
   assumes hyp_refs_eq:
-  "state_hyp_refs_of s' = state_hyp_refs_of s"
+    "state_hyp_refs_of s' = state_hyp_refs_of s"
+  assumes valid_arch_tcb_default[simp]:
+    "\<And>s :: 'state_ext :: state_ext state. valid_arch_tcb default_arch_tcb s"
   assumes  wellformed_default_obj:
    "\<lbrakk> ptra \<notin> set (retype_addrs ptr ty n us);
         kheap s ptra = Some (ArchObj x5); wellformed_arch_obj x5 s\<rbrakk> \<Longrightarrow>
@@ -1890,8 +1893,8 @@ lemma valid_objs: "valid_objs s'"
      apply (rule ballI, drule(1) bspec, clarsimp elim!: ranE)
      apply (erule valid_cap_pres[unfolded s'_def ps_def])
      apply (rule cte_wp_at_tcbI, fastforce+)[1]
-   apply (fastforce simp: valid_tcb_state_def valid_bound_ntfn_def
-                   elim!: obj_at_pres[unfolded s'_def ps_def]
+     apply (fastforce simp: valid_tcb_state_def valid_bound_ntfn_def
+                   elim!: obj_at_pres[unfolded s'_def ps_def] valid_arch_tcb_typ_at
                    split: Structures_A.thread_state.splits option.splits)
     apply (fastforce simp: valid_ep_def
                   elim!: obj_at_pres[unfolded s'_def ps_def]
@@ -2154,7 +2157,6 @@ locale retype_region_proofs_invs
   assumes valid_global_refs: "valid_global_refs s \<Longrightarrow> valid_global_refs s'"
   assumes valid_arch_state: "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
   assumes valid_vspace_objs': "valid_vspace_objs s \<Longrightarrow> valid_vspace_objs s'"
-(*  assumes valid_arch_objs': "valid_arch_objs s \<Longrightarrow> valid_arch_objs s'" *)
   assumes valid_cap:
     "(s::'state_ext state) \<turnstile> cap \<and>
         untyped_range cap \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} = {}
