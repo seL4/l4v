@@ -923,11 +923,11 @@ lemma vcpuSave_vcpu_at'[wp]: "vcpuSave v \<lbrace>\<lambda>s . vcpu_at' p s\<rbr
   by (wpsimp simp: vcpuSave_def)
 
 lemma vcpuSwitch_corres:
-  "corres dc (\<lambda>s. ((\<exists>v. vcpu = Some v) \<longrightarrow> vcpu_at  (the vcpu) s) \<and>
-                  ((\<exists>v b. (arm_current_vcpu \<circ> arch_state) s = Some v)
-                  \<longrightarrow> vcpu_at ((fst \<circ> the \<circ> arm_current_vcpu \<circ> arch_state)  s) s))
-             (\<lambda>s. ((\<exists>v. vcpu = Some v) \<longrightarrow> vcpu_at'  (the vcpu) s) \<and>
-                  ((\<exists>v b. (armHSCurVCPU \<circ> ksArchState) s = Some v)
+  "corres dc (\<lambda>s. (vcpu \<noteq> None \<longrightarrow> vcpu_at  (the vcpu) s) \<and>
+                  ((arm_current_vcpu \<circ> arch_state) s \<noteq> None
+                  \<longrightarrow> vcpu_at ((fst \<circ> the \<circ> arm_current_vcpu \<circ> arch_state) s) s))
+             (\<lambda>s. (vcpu \<noteq> None \<longrightarrow> vcpu_at'  (the vcpu) s) \<and>
+                  ((armHSCurVCPU \<circ> ksArchState) s \<noteq> None
                   \<longrightarrow> vcpu_at' ((fst \<circ> the \<circ> armHSCurVCPU \<circ> ksArchState) s) s))
              (vcpu_switch vcpu)
              (vcpuSwitch vcpu)"
@@ -962,6 +962,38 @@ lemma vcpuSwitch_corres:
       done
   qed
 
+lemma aligned_distinct_relation_vcpu_atI'[elim]:
+  "\<lbrakk> vcpu_at p s; pspace_relation (kheap s) (ksPSpace s');
+     pspace_aligned' s'; pspace_distinct' s' \<rbrakk>
+        \<Longrightarrow> vcpu_at' p s'"
+  apply (clarsimp simp add: pde_at_def obj_at_def a_type_def)
+  apply (simp split: Structures_A.kernel_object.split_asm
+                     if_split_asm arch_kernel_obj.split_asm)
+  apply (drule(1) pspace_relation_absD)
+  apply (clarsimp simp: other_obj_relation_def)
+    apply (case_tac z ; simp)
+    apply (rename_tac vcpu)
+    apply (case_tac vcpu; simp)
+  apply (clarsimp simp: vcpu_relation_def obj_at'_def typ_at'_def ko_wp_at'_def projectKOs)
+  apply (fastforce simp add: pspace_aligned'_def pspace_distinct'_def dom_def)
+  done
+
+lemma vcpuSwitch_corres' : "corres dc (\<lambda>s. (vcpu \<noteq> None \<longrightarrow> vcpu_at  (the vcpu) s) \<and>
+                  ((arm_current_vcpu \<circ> arch_state) s \<noteq> None
+                  \<longrightarrow> vcpu_at ((fst \<circ> the \<circ> arm_current_vcpu \<circ> arch_state) s) s))
+             (pspace_aligned' and pspace_distinct')
+             (vcpu_switch vcpu)
+             (vcpuSwitch vcpu)"
+  apply (rule stronger_corres_guard_imp,
+         rule vcpuSwitch_corres)
+       apply simp
+  apply (rule conjI)
+   apply clarsimp
+    apply (rule aligned_distinct_relation_vcpu_atI' ; clarsimp simp add: state_relation_def, assumption?)
+    apply (clarsimp simp add: state_relation_def arch_state_relation_def)
+    apply (rule aligned_distinct_relation_vcpu_atI'; assumption)
+  done
+
 lemma setCurrentPD_corres:
   "addr = addr' \<Longrightarrow> corres dc \<top> \<top> (do_machine_op (setCurrentPD addr)) (doMachineOp (setCurrentPD addr'))"
   apply (simp add: setCurrentPD_def)
@@ -978,6 +1010,26 @@ lemma setCurrentPD_corres:
   done
 
 crunch tcb_at'[wp]: armv_contextSwitch "tcb_at' t"
+crunch ko_at'[wp]: armv_contextSwitch "ko_at' p t"
+
+crunch tcb_at[wp]: arm_context_switch "tcb_at p"
+crunch ko_at[wp]: arm_context_switch "ko_at p t"
+
+crunch pspace_distinct'[wp]: getHWASID "pspace_distinct'"
+crunch pspace_aligned'[wp]: getHWASID "pspace_aligned'"
+
+(* TODO: move CSpaceInv_AI *)
+lemma assert_get_tcb_ko':
+  shows "\<lbrace>P\<rbrace> gets_the (get_tcb thread) \<lbrace>\<lambda>t. P and ko_at (TCB t) thread\<rbrace>"
+  by (clarsimp simp: valid_def in_monad gets_the_def get_tcb_def
+                     obj_at_def
+               split: option.splits Structures_A.kernel_object.splits)
+
+lemma valid_objs_valid_tcb: "\<lbrakk> valid_objs s ; ko_at (TCB t) p s \<rbrakk> \<Longrightarrow> valid_tcb p t s"
+  by (fastforce simp add: valid_objs_def valid_obj_def obj_at_def)
+
+lemma valid_objs_valid_tcb': "\<lbrakk> valid_objs' s ; ko_at' (t :: tcb) p s \<rbrakk> \<Longrightarrow> valid_tcb' t s"
+  by (fastforce simp add: obj_at'_def ran_def valid_obj'_def projectKOs valid_objs'_def)
 
 lemma set_vm_root_corres:
   "corres dc (tcb_at t and valid_arch_state and valid_objs and valid_asid_map
@@ -1006,6 +1058,13 @@ proof -
         apply (subst corres_throwError, simp add: lookup_failure_map_def)
        apply (wp | simp)+
     done
+  have valid_tcb_vcpu: "\<And>s t p v.\<lbrakk> valid_tcb p t s; tcb_vcpu (tcb_arch t) = Some v \<rbrakk>
+                        \<Longrightarrow> vcpu_at v s"
+    by (clarsimp simp add: valid_tcb_def valid_arch_tcb_def)
+  have valid_arch_state_curr_vcpu:
+    "\<And>a b s. \<lbrakk>valid_arch_state s; arm_current_vcpu (arch_state s) = Some (a, b)\<rbrakk>
+     \<Longrightarrow> vcpu_at a s"
+    by (clarsimp simp add: valid_arch_state_def obj_at_def is_vcpu_def)
   show ?thesis
     unfolding set_vm_root_def setVMRoot_def locateSlot_conv
                      getThreadVSpaceRoot_def
@@ -1057,9 +1116,17 @@ proof -
                   apply simp
                  apply simp
                  apply (rule corres_split[OF _ arm_context_switch_corres])
-                  (* apply (rule corres_split[OF vcpuSwitch_corres get_tcb_corres])
+                   apply (rule corres_split[OF _ get_tcb_corres])
+                     apply (subgoal_tac "tcb_vcpu (tcb_arch rv) = atcbVCPUPtr (tcbArch rv')")
+                      apply simp
+                      apply (rule_tac P="valid_arch_state and valid_objs and ko_at (TCB rv) t" and
+                                      P'="pspace_aligned' and pspace_distinct'"
+                                      in corres_guard_imp)
+                        apply (rule vcpuSwitch_corres'[simplified dc_def])
+                       apply (fastforce intro: valid_tcb_vcpu[OF valid_objs_valid_tcb] valid_arch_state_curr_vcpu)
+                      apply (assumption)
                      apply (clarsimp simp add: tcb_relation_def arch_tcb_relation_def)
-                    apply (wpsimp simp: armv_contextSwitch_def | rule hoare_drop_imps)+
+                 apply (wpsimp simp: armv_contextSwitch_def wp: assert_get_tcb_ko' | rule hoare_drop_impE_R)+
                apply (simp add: whenE_def split del: if_split, wp)[1]
               apply (rule find_pd_for_asid_pd_at_asid_again)
              apply wp
@@ -1073,8 +1140,7 @@ proof -
          apply (wp get_cap_wp | simp)+
      apply (clarsimp simp: tcb_at_cte_at_1 [simplified])
     apply simp
-    done *)
-    sorry
+    done
 qed
 
 lemma invalidateTLBByASID_invs'[wp]:
