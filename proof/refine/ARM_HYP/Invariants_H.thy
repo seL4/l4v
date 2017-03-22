@@ -1087,7 +1087,7 @@ definition
   global_refs' :: "kernel_state \<Rightarrow> obj_ref set"
 where
   "global_refs' \<equiv> \<lambda>s.
-  {ksIdleThread s} \<union>
+  {ksIdleThread s, armUSGlobalPD (ksArchState s)} \<union>
    range (\<lambda>irq :: irq. irq_node' s + 16 * ucast irq)"
 
 definition
