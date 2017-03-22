@@ -260,7 +260,7 @@ lookup_pdpt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z:
             pd_slot \<leftarrow> returnOk (pd + (pd_index << word_size_bits));
             returnOk pd_slot
           odE)
-        | _ \<Rightarrow> throwError $ MissingCapability pdpt_bits)
+        | _ \<Rightarrow> throwError $ MissingCapability pml4_shift_bits)
  odE"
  
 text {* A non-failing version of @{const lookup_pdpt_slot} when the pml4 is already known *}
@@ -284,7 +284,7 @@ lookup_pd_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z::s
             pd_slot \<leftarrow> returnOk (pd + (pd_index << word_size_bits));
             returnOk pd_slot
           odE)
-        | _ \<Rightarrow> throwError $ MissingCapability pdpt_bits)
+        | _ \<Rightarrow> throwError $ MissingCapability pdpt_shift_bits)
  odE"
 
 text {* A non-failing version of @{const lookup_pd_slot} when the pdpt is already known *}
@@ -310,7 +310,7 @@ lookup_pt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z::s
             pt_slot \<leftarrow> returnOk (pt + (pt_index << word_size_bits));
             returnOk pt_slot
           odE)
-        | _ \<Rightarrow> throwError $ MissingCapability 20)
+        | _ \<Rightarrow> throwError $ MissingCapability pd_shift_bits)
    odE"
 
 text {* A non-failing version of @{const lookup_pt_slot} when the pd is already known *}
