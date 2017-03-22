@@ -1051,7 +1051,7 @@ lemma valid_obj':
     apply (rename_tac tcb)
     apply (case_tac "tcbState tcb";
            clarsimp simp: valid_tcb_state'_def valid_bound_ntfn'_def
-                   dest!: refs_notRange split: option.splits)
+                   dest!: refs_notRange split: option.splits) (*
    apply (clarsimp simp: valid_cte'_def)
    apply (rule_tac p=p in valid_cap2)
    apply (clarsimp simp: ko_wp_at'_def objBits_simps cte_level_bits_def[symmetric])
@@ -1066,7 +1066,7 @@ lemma valid_obj':
   apply(rename_tac pde)
   apply (case_tac pde, simp_all add: valid_mapping'_def)
   apply (rename_tac vcpu)
-  apply (case_tac vcpu, clarsimp simp: obj_at'_def split: option.splits)
+  apply (case_tac vcpu, clarsimp simp: obj_at'_def split: option.splits) *)
   sorry (* add vcpu case *)
 
 lemma st_tcb:

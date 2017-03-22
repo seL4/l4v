@@ -542,6 +542,11 @@ where
    | _ \<Rightarrow> False"
 
 definition
+  valid_arch_tcb' :: "Structures_H.arch_tcb \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "valid_arch_tcb' \<equiv> \<lambda>t s. \<forall>v. atcbVCPUPtr t = Some v \<longrightarrow> vcpu_at' v s "
+
+definition
   valid_tcb' :: "Structures_H.tcb \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_tcb' t s \<equiv> (\<forall>(getF, setF) \<in> ran tcb_cte_cases. s \<turnstile>' cteCap (getF t))
@@ -550,7 +555,8 @@ where
                   \<and> valid_bound_ntfn' (tcbBoundNotification t) s
                   \<and> tcbDomain t \<le> maxDomain
                   \<and> tcbPriority t \<le> maxPriority
-                  \<and> tcbMCP t \<le> maxPriority"
+                  \<and> tcbMCP t \<le> maxPriority
+                  \<and> valid_arch_tcb' (tcbArch t) s"
 
 definition
   valid_ep' :: "Structures_H.endpoint \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -2176,10 +2182,10 @@ lemma valid_obj'_pspaceI:
   by (cases obj)
      (auto simp: valid_ep'_def valid_ntfn'_def valid_tcb'_def valid_cte'_def
                  valid_tcb_state'_def valid_arch_obj'_pspaceI valid_bound_tcb'_def
-                 valid_bound_ntfn'_def
+                 valid_bound_ntfn'_def valid_arch_tcb'_def
            split: Structures_H.endpoint.splits Structures_H.notification.splits
                   Structures_H.thread_state.splits ntfn.splits option.splits
-           intro: obj_at'_pspaceI valid_cap'_pspaceI)
+           intro: obj_at'_pspaceI valid_cap'_pspaceI typ_at'_pspaceI)
 
 lemma valid_objs'_pspaceI:
   "\<lbrakk>valid_objs' s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> valid_objs' s'"

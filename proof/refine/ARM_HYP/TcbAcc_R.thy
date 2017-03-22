@@ -685,6 +685,7 @@ lemma threadSet_valid_pspace'T_P:
   assumes u: "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
   assumes w: "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
   assumes w': "\<forall>tcb. tcbMCP tcb \<le> maxPriority \<longrightarrow> tcbMCP (F tcb) \<le> maxPriority"
+  assumes v': "\<forall>tcb s. valid_arch_tcb' (tcbArch tcb) s \<longrightarrow> valid_arch_tcb' (tcbArch (F tcb)) s"
   shows
   "\<lbrace>valid_pspace' and (\<lambda>s. P \<longrightarrow> st_tcb_at' Q t s \<and> bound_tcb_at' Q' t s)\<rbrace>
      threadSet F t
@@ -696,14 +697,14 @@ lemma threadSet_valid_pspace'T_P:
   apply (erule(1) valid_objsE')
   apply (clarsimp simp add: valid_obj'_def valid_tcb'_def
                             bspec_split [OF spec [OF x]] z
-                            split_paired_Ball y u w v w')
+                            split_paired_Ball y u w v w' v')
   done
 
 lemmas threadSet_valid_pspace'T =
     threadSet_valid_pspace'T_P[where P=False, simplified]
 
 lemmas threadSet_valid_pspace' =
-    threadSet_valid_pspace'T [OF all_tcbI all_tcbI all_tcbI all_tcbI, OF ball_tcb_cte_casesI]
+    threadSet_valid_pspace'T [OF all_tcbI all_tcbI all_tcbI all_tcbI _ _ _ all_tcbI, OF ball_tcb_cte_casesI]
 
 lemma threadSet_ifunsafe'T:
   assumes x: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
@@ -1347,7 +1348,7 @@ proof -
               threadSet_valid_queues'
               threadSet_cur
               untyped_ranges_zero_lift
-           |clarsimp simp: y z a r domains cteCaps_of_def |rule refl)+
+           |clarsimp simp: y z a r domains cteCaps_of_def valid_arch_tcb'_def|rule refl)+
    apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
    apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def o_def)
   apply (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a)
@@ -1524,13 +1525,15 @@ lemma asUser_valid_objs [wp]:
   "\<lbrace>valid_objs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadSet_valid_objs' hoare_drop_imps
-             | simp add: valid_tcb'_def tcb_cte_cases_def)+
+             | simp add: valid_tcb'_def tcb_cte_cases_def
+                         valid_arch_tcb'_def atcbContextSet_def)+
   done
 
 lemma asUser_valid_pspace'[wp]:
   "\<lbrace>valid_pspace'\<rbrace> asUser t m \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   apply (simp add: asUser_def split_def)
-  apply (wp threadSet_valid_pspace' hoare_drop_imps | simp)+
+  apply (wp threadSet_valid_pspace' hoare_drop_imps
+             | simp add: atcbContextSet_def valid_arch_tcb'_def)+
   done
 
 lemma asUser_valid_queues[wp]:

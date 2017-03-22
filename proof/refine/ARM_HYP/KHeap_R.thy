@@ -1273,8 +1273,9 @@ lemma typ_at'_valid_obj'_lift:
     apply (rename_tac tcb)
     apply (case_tac "tcbState tcb";
            simp add: valid_tcb'_def valid_tcb_state'_def split_def valid_bound_ntfn'_def
+                     valid_arch_tcb'_def
               split: option.splits,
-           wpsimp)
+           wpsimp wp: P)
    apply (wpsimp simp: valid_cte'_def)
   apply (rename_tac arch_kernel_object)
   apply (case_tac arch_kernel_object; wpsimp)

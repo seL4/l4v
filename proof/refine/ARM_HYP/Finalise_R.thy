@@ -2610,10 +2610,12 @@ lemma typ_at'_valid_tcb'_lift:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_tcb' tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb' tcb s\<rbrace>"
   including no_pre
-  apply (simp add: valid_tcb'_def)
-  apply (case_tac "tcbState tcb", simp_all add: valid_tcb_state'_def split_def valid_bound_ntfn'_def)
-         apply (wp hoare_vcg_const_Ball_lift typ_at_lifts[OF P]
-               | case_tac "tcbBoundNotification tcb", simp_all)+
+  apply (simp add: valid_tcb'_def valid_arch_tcb'_def)
+  apply (case_tac  "atcbVCPUPtr (tcbArch tcb)";
+         case_tac "tcbState tcb";
+         case_tac "tcbBoundNotification tcb")
+  apply (simp add: valid_tcb_state'_def split_def valid_bound_ntfn'_def
+        | wp hoare_vcg_const_Ball_lift typ_at_lifts[OF P] P)+
   done
 
 lemmas setNotification_valid_tcb' = typ_at'_valid_tcb'_lift [OF setNotification_typ_at']

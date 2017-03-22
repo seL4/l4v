@@ -120,8 +120,8 @@ lemma valid_obj_makeObject_cte [simp]:
 
 lemma valid_obj_makeObject_tcb [simp]:
   "valid_obj' (KOTCB makeObject) s"
-  unfolding valid_obj'_def valid_tcb'_def  valid_tcb_state'_def
-  by (clarsimp simp: makeObject_tcb makeObject_cte
+  unfolding valid_obj'_def valid_tcb'_def  valid_tcb_state'_def valid_arch_tcb'_def
+  by (clarsimp simp: makeObject_tcb makeObject_cte newArchTCB_def
                      tcb_cte_cases_def maxDomain_def numDomains_def maxPriority_def numPriorities_def minBound_word)
 
 lemma valid_obj_makeObject_endpoint [simp]:
@@ -3440,6 +3440,7 @@ proof (intro conjI impI)
       apply (case_tac thread_state, simp_all add: valid_tcb_state'_def
                                                   valid_bound_ntfn'_def obj_at_disj'
                                            split: option.splits)[2]
+      apply (clarsimp simp add: valid_arch_tcb'_def typ_at_to_obj_at_arches obj_at_disj')
      apply (simp add: valid_cte'_def)
      apply (frule pspace_alignedD' [OF _ ad(1)])
      apply (frule pspace_distinctD' [OF _ ad(2)])
