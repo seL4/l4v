@@ -184,45 +184,45 @@ lemma obj_relation_cuts_in_obj_range:
   apply (frule(1) pspace_alignedD)
   apply (frule valid_obj_sizes, erule ranI)
   apply (rename_tac arch_kernel_obj)
-  apply (case_tac arch_kernel_obj, simp_all add: vspace_bits_defs)
+  apply (case_tac arch_kernel_obj, simp_all)
     apply (clarsimp simp only: obj_range_def vspace_bits_defs field_simps atLeastAtMost_iff
                                 obj_bits.simps arch_kobj_size.simps)
     apply (rule context_conjI)
      apply (erule is_aligned_no_wrap')
       apply simp
-(*     apply (simp add: ucast_less_shiftl_helper)
+     apply (simp add: ucast_less_shiftl3_helper)
     apply (subst add_diff_eq[symmetric])
     apply (rule word_plus_mono_right)
      apply (subst word_less_sub_le, simp)
-     apply (simp add: ucast_less_shiftl_helper)
+     apply (simp add: ucast_less_shiftl3_helper)
     apply (simp add: field_simps)
    apply (clarsimp simp only: obj_range_def field_simps atLeastAtMost_iff
-                              obj_bits.simps arch_kobj_size.simps)
+                              obj_bits.simps arch_kobj_size.simps vspace_bits_defs)
    apply (rule context_conjI)
     apply (erule is_aligned_no_wrap')
      apply simp
-    apply (simp add: ucast_less_shiftl_helper)
+    apply (simp add: ucast_less_shiftl3_helper)
    apply (subst add_diff_eq[symmetric])
    apply (rule word_plus_mono_right)
     apply (subst word_less_sub_le, simp)
-    apply (simp add: ucast_less_shiftl_helper)
+    apply (simp add: ucast_less_shiftl3_helper)
    apply (simp add: field_simps)
   apply (rename_tac vmpage_size)
   apply (clarsimp simp only: obj_range_def field_simps atLeastAtMost_iff
-                             obj_bits.simps arch_kobj_size.simps)
+                             obj_bits.simps arch_kobj_size.simps vspace_bits_defs)
   apply (subgoal_tac "n * 2 ^ pageBits < 2 ^ pageBitsForSize vmpage_size")
    apply (rule context_conjI)
     apply (erule is_aligned_no_wrap')
-    apply assumption
+    apply (clarsimp simp: pageBits_def)
    apply (subst add_diff_eq[symmetric])
    apply (rule word_plus_mono_right)
     apply (subst word_less_sub_le, simp add: word_bits_def)
-    apply assumption
+    apply (clarsimp simp: pageBits_def)
    apply (simp add: field_simps)
-  apply (erule word_less_power_trans2)
+  apply (simp only: pageBits_def, erule word_less_power_trans2)
    apply (case_tac vmpage_size, simp_all add: pageBits_def)[1]
-  apply (simp add: word_bits_def)*)
-  sorry
+  apply (simp add: word_bits_def)
+  done
 
 lemma obj_relation_cuts_eqv_base_in_detype_range:
   "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; kheap s x = Some ko;
@@ -1048,10 +1048,11 @@ lemma valid_obj':
      apply (erule(2) cte_wp_at_tcbI')
       apply fastforce
      apply simp
-    apply (rename_tac tcb)
+(*    apply (rename_tac tcb)
     apply (case_tac "tcbState tcb";
            clarsimp simp: valid_tcb_state'_def valid_bound_ntfn'_def
-                   dest!: refs_notRange split: option.splits) (*
+                   dest!: refs_notRange split: option.splits)
+
    apply (clarsimp simp: valid_cte'_def)
    apply (rule_tac p=p in valid_cap2)
    apply (clarsimp simp: ko_wp_at'_def objBits_simps cte_level_bits_def[symmetric])
@@ -1066,16 +1067,15 @@ lemma valid_obj':
   apply(rename_tac pde)
   apply (case_tac pde, simp_all add: valid_mapping'_def)
   apply (rename_tac vcpu)
-  apply (case_tac vcpu, clarsimp simp: obj_at'_def split: option.splits) *)
+  apply (case_tac "vcpuTCBPtr vcpu"; clarsimp simp: valid_vcpu'_def)
+  apply (drule live_notRange, clarsimp simp: live'_def hyp_live'_def arch_live'_def)*)
   sorry (* add vcpu case *)
 
 lemma st_tcb:
     "\<And>P p. \<lbrakk> st_tcb_at' P p s; \<not> P Inactive; \<not> P IdleThreadState \<rbrakk> \<Longrightarrow>
          st_tcb_at' P p state'"
-(*    by (fastforce simp: pred_tcb_at'_def obj_at'_real_def
-                       projectKOs
-                 dest: live_notRange) *)
-  sorry
+  by (fastforce simp: pred_tcb_at'_def obj_at'_real_def  projectKOs live'_def hyp_live'_def
+                   dest: live_notRange)
 
 lemma irq_nodes_global:
     "\<forall>irq :: 10 word. irq_node' s + (ucast irq) * 16 \<in> global_refs' s"
@@ -1455,16 +1455,10 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     apply (simp add: valid_arch_state'_def
                      global_refs'_def)
     apply (intro conjI)
-      apply (simp add: valid_asid_table'_def)
-     apply (simp add: page_directory_at'_def
-                      page_directory_refs'_def
-                      subset_iff )
-(*    apply (simp add: valid_global_pts'_def
-                     subset_iff
-                     page_table_at'_def
-                     page_table_refs'_def
-                     page_directory_at'_def)
-    by fastforce*) sorry
+     apply (simp add: valid_asid_table'_def)
+    apply (case_tac "armHSCurVCPU (ksArchState s)"; clarsimp simp add: split_def)
+    apply (drule  live_notRange, clarsimp, case_tac ko; simp add: is_vcpu'_def live'_def)
+    done
 
   show "valid_irq_node' (irq_node' s) ?s"
     using virq irq_nodes_range
@@ -2772,7 +2766,7 @@ lemma getPDE_det:
       apply (simp add:is_aligned_mask)+
    apply (clarsimp simp:image_def)
   apply (clarsimp simp:magnitudeCheck_assert assert_def
-    objBits_def archObjSize_def
+    objBits_def archObjSize_def vspace_bits_defs
     return_def fail_def lookupAround2_char2 split:option.splits if_split_asm)
   apply (rule ccontr)
   apply (simp add:ps_clear_def field_simps)
@@ -2782,10 +2776,10 @@ lemma getPDE_det:
     apply (subst add.commute)
     apply (rule word_diff_ls')
      apply (clarsimp simp:field_simps not_le plus_one_helper)
-(*    apply (simp add:field_simps is_aligned_no_wrap' is_aligned_mask)
+    apply (simp add:field_simps is_aligned_no_wrap' is_aligned_mask)
    apply simp
-  apply auto*)
-  sorry
+  apply auto
+  done
 
 lemma pde_at_obj_at':
   "ko_wp_at' (op = (KOArch (KOPDE (pde::pde)))) ptr s =
@@ -2906,9 +2900,9 @@ lemma storePDE_det:
        modify
          (ksPSpace_update (\<lambda>_. ksPSpace s(ptr \<mapsto> KOArch (KOPDE new_pde)))) s"
   apply (clarsimp simp:ko_wp_at'_def storePDE_def split_def
-                       bind_def gets_def return_def
-                       get_def setObject_def
-                       assert_opt_def split:if_splits)
+                       bind_def gets_def return_def wordsFromPDE_def
+                       get_def setObject_def headM_def tailM_def
+                       assert_opt_def split:if_splits pde.splits)
   apply (clarsimp simp:lookupAround2_known1 return_def alignCheck_def
                        updateObject_default_def split_def
                        archObjSize_def unless_def projectKO_def
@@ -2917,7 +2911,7 @@ lemma storePDE_det:
   apply (drule magnitudeCheck_det)
     apply (simp add:objBits_simps archObjSize_def)+
   apply (simp add:simpler_modify_def)
-  sorry
+  done
 
 lemma modify_obj_commute:
   "monad_commute (K (ptr\<noteq> ptr'))
@@ -3275,21 +3269,7 @@ lemma copyGlobalMappings_setCTE_commute:
      (valid_arch_state' and pspace_distinct' and pspace_aligned' and
       cte_wp_at' (\<lambda>_. True) src and page_directory_at' ptr)
      (copyGlobalMappings ptr) (setCTE src cte)"
-(*  apply (clarsimp simp:copyGlobalMappings_def)
-   apply (rule monad_commute_guard_imp)
-    apply (rule commute_commute[OF monad_commute_split])
-     apply (rule mapM_x_commute[where f = id])
-      apply (rule monad_commute_split[OF _ getPDE_setCTE_commute])
-       apply (rule storePDE_setCTE_commute)
-      apply wp+
-     apply clarsimp
-    apply (rule setCTE_gets_globalPD_commute)
-   apply wp
-  apply (clarsimp simp:valid_arch_state'_def page_directory_at'_def
-         objBits_simps archObjSize_def pdBits_def pageBits_def)
-  apply (drule le_m1_iff_lt[where x = "(0x1000::word32)",simplified,THEN iffD1])
-  apply clarsimp
-  done*) sorry
+  by (fastforce simp: copyGlobalMappings_def intro: monad_commute_guard_imp return_commute)
 
 lemma setCTE_doMachineOp_commute:
   assumes nf: "no_fail Q (doMachineOp x)"
@@ -3616,7 +3596,7 @@ lemma createObject_setCTE_commute:
           apply (rule setCTE_placeNewObject_commute)
          apply (wp|clarsimp simp:objBitsKO_simps)+
        -- "Arch Objects"
-       apply ((rule monad_commute_guard_imp[OF commute_commute]
+       apply((rule monad_commute_guard_imp[OF commute_commute]
               , rule monad_commute_split[OF commute_commute[OF return_commute]]
               , clarsimp simp: ARM_HYP_H.createObject_def
                                placeNewDataObject_def bind_assoc split
@@ -3632,11 +3612,11 @@ lemma createObject_setCTE_commute:
                  | wp placeNewObject_pspace_distinct'
                       placeNewObject_pspace_aligned'
                       placeNewObject_cte_wp_at'
-                      placeNewObject_valid_arch_state placeNewObject_pd_at'
+                      placeNewObject_valid_arch_state placeNewObject_pd_at'[simplified]
                  | erule is_aligned_weaken
-                 | simp add: objBits_simps vspace_bits_defs
+                 | simp add: objBits_simps vspace_bits_defs vcpu_bits_def
                              archObjSize_def split del: if_splits)+)+)
-  sorry
+  done
 
 
 lemma createObject_updateMDB_commute:
@@ -3781,23 +3761,7 @@ lemma copyGlobalMappings_gsUntypedZeroRanges_commute':
   "monad_commute \<top>
      (copyGlobalMappings ptr)
      (modify (\<lambda>s. s \<lparr> gsUntypedZeroRanges := f (gsUntypedZeroRanges s) \<rparr> ))"
-  apply (simp add: copyGlobalMappings_def)
-  apply (rule monad_commute_guard_imp)
-(*   apply (rule commute_commute[OF monad_commute_split[where P="\<top>"]])
-     apply (rule mapM_x_commute[where f = id and P="\<top>\<top>"])
-      apply (simp add: storePDE_def getObject_def setObject_def cong: bind_cong)
-      apply (strengthen monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"], OF _ _ hoare_vcg_prop]
-         | simp add: modify_commute updateObject_default_def alignCheck_assert
-                     magnitudeCheck_assert return_commute return_commute[THEN commute_commute]
-                     projectKO_def2 assert_commute2 assert_commute2[THEN commute_commute]
-                     assert_opt_def2 loadObject_default_def
-              split: option.split prod.split)+
-      apply (simp add: monad_commute_def exec_gets exec_modify)
-     apply wp
-    apply (simp add: monad_commute_def exec_gets exec_modify)
-   apply wp
-  apply simp
-  done*) sorry
+  by (simp add: copyGlobalMappings_def monad_commute_guard_imp return_commute)
 
 lemma createObject_gsUntypedZeroRanges_commute:
   "monad_commute
@@ -5478,12 +5442,24 @@ proof -
              createObjects'_psp_aligned[where sz = sz]
              createObjects'_psp_distinct[where sz = sz] hoare_vcg_imp_lift
              createObjects'_pspace_no_overlap[where sz = sz]
-            | simp add:objBits_simps archObjSize_def field_simps)+
+            | simp add:objBits_simps archObjSize_def vspace_bits_defs field_simps)+
          apply (drule range_cover_le[where n = "Suc n"])
           apply simp
          apply (clarsimp simp:word_bits_def valid_pspace'_def vspace_bits_defs)
          apply (clarsimp simp:aligned_add_aligned[OF range_cover.aligned] is_aligned_shiftl_self word_bits_def vspace_bits_defs)+
-    sorry
+-- VCPUObject
+      apply (simp add: Arch_createNewCaps_def
+                       Retype_H.createObject_def createObjects_def bind_assoc
+                       ARM_HYP_H.toAPIType_def ARM_HYP_H.toAPIType_def
+                       ARM_HYP_H.createObject_def placeNewDataObject_def)
+      apply (subst monad_eq, rule createObjects_Cons)
+            apply (simp_all add: field_simps shiftl_t2n vcpu_bits_def vspace_bits_defs
+                        getObjectSize_def ARM_HYP_H.getObjectSize_def archObjSize_def
+                        objBits_simps)[7]
+      apply (simp add: bind_assoc placeNewObject_def2 objBits_simps
+                         getObjectSize_def ARM_HYP_H.getObjectSize_def
+                         vcpu_bits_def pageBits_def add.commute append)
+    done
 qed
 
 lemma createObject_def2:
