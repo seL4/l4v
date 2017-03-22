@@ -3732,7 +3732,7 @@ lemma deriveCap_derived:
         | rule is_derived'_def[THEN meta_eq_to_obj_eq, THEN iffD2])+)
   apply (rename_tac arch_capability)
   apply (case_tac arch_capability;
-         simp add: ARM_H.deriveCap_def Let_def isCap_simps
+         simp add: X64_H.deriveCap_def Let_def isCap_simps
               split: if_split,
          safe)
         apply ((wp throwError_validE_R undefined_validE_R
@@ -6178,7 +6178,7 @@ lemma cte_refs_maskCapRights[simp]:
   "cte_refs' (maskCapRights rghts cap) = cte_refs' cap"
   by (rule ext, cases cap,
       simp_all add: maskCapRights_def isCap_defs Let_def
-                    ARM_H.maskCapRights_def
+                    X64_H.maskCapRights_def
          split del: if_split
              split: arch_capability.split)
 
@@ -6427,7 +6427,7 @@ lemma diminished_Untyped' :
    (* 6 subgoals *)
    apply (rename_tac arch_capability R)
    apply (case_tac arch_capability)
-    apply (clarsimp simp: isCap_simps ARM_H.maskCapRights_def maskCapRights_def
+    apply (clarsimp simp: isCap_simps X64_H.maskCapRights_def maskCapRights_def
                           diminished'_def Let_def)+
 done
 

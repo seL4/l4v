@@ -65,7 +65,7 @@ lemma APIType_map2_CapTable[simp]:
   "(APIType_map2 ty = Structures_A.CapTableObject)
     = (ty = Inr (APIObjectType ArchTypes_H.CapTableObject))"
   by (simp add: APIType_map2_def
-         split: sum.split ARM_H.object_type.split
+         split: sum.split X64_H.object_type.split
                 apiobject_type.split
                 kernel_object.split arch_kernel_object.splits)
 
@@ -186,7 +186,7 @@ next
     by (simp add: whenE_def returnOk_def)
   have Q: "\<And>v. corres (ser \<oplus> (\<lambda>a b. APIType_map2 (Inr (toEnum (unat v))) = a)) \<top> \<top>
                   (data_to_obj_type v)
-                  (whenE (fromEnum (maxBound :: ARM_H.object_type) < unat v)
+                  (whenE (fromEnum (maxBound :: X64_H.object_type) < unat v)
                        (throwError (Fault_H.syscall_error.InvalidArgument 0)))"
     apply (simp only: data_to_obj_type_def returnOk_bindE fun_app_def)
     apply (simp add: maxBound_def enum_apiobject_type
@@ -287,9 +287,9 @@ next
                           toInteger_nat fromInteger_nat linorder_not_less)
          apply fastforce
         apply (rule whenE_throwError_corres, simp)
-         apply (clarsimp simp: fromAPIType_def ARM_H.fromAPIType_def)
+         apply (clarsimp simp: fromAPIType_def X64_H.fromAPIType_def)
         apply (rule whenE_throwError_corres, simp)
-         apply (clarsimp simp: fromAPIType_def ARM_H.fromAPIType_def)
+         apply (clarsimp simp: fromAPIType_def X64_H.fromAPIType_def)
         apply (rule_tac r' = "\<lambda>cap cap'. cap_relation cap cap'" in corres_splitEE[OF _ corres_if])
              apply (rule_tac corres_split_norE)
                 prefer 2
@@ -831,7 +831,7 @@ lemma decodeUntyped_wf[wp]:
     apply (clarsimp dest!:valid_capAligned
                      simp:capAligned_def objBits_def objBitsKO_def)
     apply (simp_all add: word_bits_def)[2]
-  apply (clarsimp simp:  ARM_H.fromAPIType_def)
+  apply (clarsimp simp:  X64_H.fromAPIType_def)
   apply (subgoal_tac "Suc (unat (args ! 4 + args ! 5 - 1))
       = unat (args ! 4) + unat (args ! 5)")
    prefer 2
@@ -3291,7 +3291,7 @@ where
 | "isDeviceCap (ArchObjectCap (PageCap d _ _ _ _)) = d"
 | "isDeviceCap _ = False"
 
-lemmas makeObjectKO_simp = makeObjectKO_def[split_simps ARM_H.object_type.split
+lemmas makeObjectKO_simp = makeObjectKO_def[split_simps X64_H.object_type.split
   Structures_H.kernel_object.split ArchTypes_H.apiobject_type.split
   sum.split arch_kernel_object.split]
 
@@ -3656,7 +3656,7 @@ lemma getObjectSize_def_eq:
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type)
             apply (clarsimp simp: getObjectSize_def apiGetObjectSize_def APIType_map2_def
-                                  ARM_H.getObjectSize_def obj_bits_api_def tcbBlockSizeBits_def
+                                  X64_H.getObjectSize_def obj_bits_api_def tcbBlockSizeBits_def
                                   epSizeBits_def ntfnSizeBits_def cteSizeBits_def slot_bits_def
                                   arch_kobj_size_def default_arch_object_def ptBits_def pageBits_def
                                   pdBits_def simp del: APIType_capBits)+
@@ -5953,11 +5953,11 @@ lemma zipWithM_x_insertNewCap_invs':
 
 lemma createNewCaps_not_isZombie[wp]:
   "\<lbrace>\<top>\<rbrace> createNewCaps ty ptr bits sz d \<lbrace>\<lambda>rv s. (\<forall>cap \<in> set rv. \<not> isZombie cap)\<rbrace>"
-  apply (simp add: createNewCaps_def toAPIType_def ARM_H.toAPIType_def
+  apply (simp add: createNewCaps_def toAPIType_def X64_H.toAPIType_def
                    createNewCaps_def
               split del: if_split cong: option.case_cong if_cong
                                         apiobject_type.case_cong
-                                        ARM_H.object_type.case_cong)
+                                        X64_H.object_type.case_cong)
   apply (rule hoare_pre)
    apply (wp undefined_valid | wpc
             | simp add: isCap_simps)+
@@ -5988,7 +5988,7 @@ crunch it[wp]: copyGlobalMappings "\<lambda>s. P (ksIdleThread s)"
 lemma createNewCaps_idlethread[wp]:
   "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> createNewCaps tp ptr sz us d \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
   apply (simp add: createNewCaps_def toAPIType_def
-            split: ARM_H.object_type.split
+            split: X64_H.object_type.split
                    apiobject_type.split)
   apply safe
           apply (wp mapM_x_wp' | simp)+

@@ -2194,7 +2194,7 @@ lemma finaliseCap_cases[wp]:
        isZombie (fst rv) \<and> final \<and> \<not> flag \<and> snd rv = None
         \<and> capUntypedPtr (fst rv) = capUntypedPtr cap
         \<and> (isThreadCap cap \<or> isCNodeCap cap \<or> isZombie cap)\<rbrace>"
-  apply (simp add: finaliseCap_def ARM_H.finaliseCap_def Let_def
+  apply (simp add: finaliseCap_def X64_H.finaliseCap_def Let_def
                    getThreadCSpaceRoot
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
@@ -2339,8 +2339,8 @@ lemma ct_not_inQ_ksArchState_update[simp]:
   by (simp add: ct_not_inQ_def)
 
 lemma invs_asid_update_strg':
-  "invs' s \<and> tab = armKSASIDTable (ksArchState s) \<longrightarrow>
-   invs' (s\<lparr>ksArchState := armKSASIDTable_update
+  "invs' s \<and> tab = x64KSASIDTable (ksArchState s) \<longrightarrow>
+   invs' (s\<lparr>ksArchState := x64KSASIDTable_update
             (\<lambda>_. tab (asid := None)) (ksArchState s)\<rparr>)"
   apply (simp add: invs'_def)
   apply (simp add: valid_state'_def)
@@ -2424,7 +2424,7 @@ lemma arch_finaliseCap_invs[wp]:
   "\<lbrace>invs' and valid_cap' (ArchObjectCap cap)\<rbrace>
      Arch.finaliseCap cap fin
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: ARM_H.finaliseCap_def)
+  apply (simp add: X64_H.finaliseCap_def)
   apply (rule hoare_pre)
    apply (wp | wpc)+
   apply clarsimp
@@ -2436,7 +2436,7 @@ lemma arch_finaliseCap_removeable[wp]:
             \<longrightarrow> isFinal (ArchObjectCap cap) slot (cteCaps_of s))\<rbrace>
      Arch.finaliseCap cap final
    \<lbrace>\<lambda>rv s. isNullCap rv \<and> removeable' slot s (ArchObjectCap cap)\<rbrace>"
-  apply (simp add: ARM_H.finaliseCap_def
+  apply (simp add: X64_H.finaliseCap_def
                    removeable'_def)
   apply (rule hoare_pre)
    apply (wp | wpc)+
@@ -2549,7 +2549,7 @@ lemma finaliseCap_cte_refs:
      finaliseCap cap final flag
    \<lbrace>\<lambda>rv s. fst rv \<noteq> NullCap \<longrightarrow> cte_refs' (fst rv) = cte_refs' cap\<rbrace>"
   apply (simp  add: finaliseCap_def Let_def getThreadCSpaceRoot
-                    ARM_H.finaliseCap_def
+                    X64_H.finaliseCap_def
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wp | wpc | simp only: o_def)+
@@ -2937,7 +2937,7 @@ crunch cte_wp_at'[wp]: unmapPageTable, unmapPage, unbindNotification, finaliseCa
 
 lemma arch_finaliseCap_cte_wp_at[wp]:
   "\<lbrace>cte_wp_at' P p\<rbrace> Arch.finaliseCap cap fin \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
-  apply (simp add: ARM_H.finaliseCap_def)
+  apply (simp add: X64_H.finaliseCap_def)
   apply (rule hoare_pre)
    apply (wp unmapPage_cte_wp_at'| simp | wpc)+
   done
@@ -3438,7 +3438,7 @@ lemma finaliseCap_valid_cap[wp]:
   "\<lbrace>valid_cap' cap\<rbrace> finaliseCap cap final flag \<lbrace>\<lambda>rv. valid_cap' (fst rv)\<rbrace>"
   apply (simp add: finaliseCap_def Let_def
                    getThreadCSpaceRoot
-                   ARM_H.finaliseCap_def
+                   X64_H.finaliseCap_def
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wp | simp only: valid_NullCap o_def fst_conv | wpc)+
@@ -3528,7 +3528,7 @@ lemma arch_finalise_cap_corres:
                       final' = isFinal (ArchObjectCap cap') (cte_map sl) (cteCaps_of s)))
            (arch_finalise_cap cap final) (Arch.finaliseCap cap' final')"
   apply (cases cap,
-         simp_all add: arch_finalise_cap_def ARM_H.finaliseCap_def
+         simp_all add: arch_finalise_cap_def X64_H.finaliseCap_def
                        final_matters'_def case_bool_If liftM_def[symmetric]
                        o_def dc_def[symmetric]
                 split: option.split,
@@ -3953,7 +3953,7 @@ lemma set_thread_all_corres:
   apply (clarsimp simp: obj_at'_def)
   apply (clarsimp simp: projectKOs)
   apply (insert e is_t)
-  by (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits ARM_A.arch_kernel_obj.splits)
+  by (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits X64_A.arch_kernel_obj.splits)
 
 lemma tcb_update_all_corres':
   assumes tcbs: "tcb_relation tcb tcb' \<Longrightarrow> tcb_relation tcbu tcbu'"

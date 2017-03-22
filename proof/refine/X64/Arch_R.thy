@@ -23,8 +23,8 @@ declare is_aligned_shiftr [intro!]
 
 definition
   "asid_ci_map i \<equiv>
-  case i of ARM_A.MakePool frame slot parent base \<Rightarrow>
-  ARM_H.MakePool frame (cte_map slot) (cte_map parent) base"
+  case i of X64_A.MakePool frame slot parent base \<Rightarrow>
+  X64_H.MakePool frame (cte_map slot) (cte_map parent) base"
 
 definition
   "valid_aci' aci \<equiv> case aci of MakePool frame slot parent base \<Rightarrow>
@@ -442,7 +442,7 @@ lemma ARMMMU_improve_cases:
   by (cases cap, simp_all add: isCap_simps)
 
 
-crunch inv [wp]: "ARM_H.decodeInvocation" "P"
+crunch inv [wp]: "X64_H.decodeInvocation" "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
    simp: forME_x_def crunch_simps
          ARMMMU_improve_cases
@@ -511,13 +511,13 @@ lemma page_base_corres[simp]:
   by (clarsimp simp: pageBase_def page_base_def)
 
 lemma flush_type_map:
-  "ARM_H.isPageFlushLabel (invocation_type (mi_label mi))
-   \<or> ARM_H.isPDFlushLabel (invocation_type (mi_label mi))
+  "X64_H.isPageFlushLabel (invocation_type (mi_label mi))
+   \<or> X64_H.isPDFlushLabel (invocation_type (mi_label mi))
   \<Longrightarrow> labelToFlushType (mi_label mi) =
           flush_type_map (label_to_flush_type (invocation_type (mi_label mi)))"
   by (clarsimp simp: label_to_flush_type_def labelToFlushType_def flush_type_map_def
-                        ARM_H.isPageFlushLabel_def ARM_H.isPDFlushLabel_def
-                 split: ARM_A.flush_type.splits invocation_label.splits arch_invocation_label.splits)
+                        X64_H.isPageFlushLabel_def X64_H.isPDFlushLabel_def
+                 split: X64_A.flush_type.splits invocation_label.splits arch_invocation_label.splits)
 
 lemma resolve_vaddr_corres:
   "\<lbrakk> is_aligned pd pd_bits; vaddr < kernel_base \<rbrakk> \<Longrightarrow>
@@ -548,7 +548,7 @@ lemma resolve_vaddr_corres:
   done
 
 lemma dec_arch_inv_page_flush_corres:
-  "ARM_H.isPageFlushLabel (invocation_type (mi_label mi)) \<Longrightarrow>
+  "X64_H.isPageFlushLabel (invocation_type (mi_label mi)) \<Longrightarrow>
    corres (ser \<oplus> archinv_relation)
            (invs and
             valid_cap (cap.ArchObjectCap (arch_cap.PageCap d word seta vmpage_size option)) and
@@ -577,7 +577,7 @@ lemma dec_arch_inv_page_flush_corres:
                         throwError $ ExceptionTypes_A.syscall_error.InvalidArgument 0;
                         returnOk $
                         arch_invocation.InvokePage $
-                        ARM_A.page_invocation.PageFlush
+                        X64_A.page_invocation.PageFlush
                          (label_to_flush_type (invocation_type (mi_label mi))) (start + vaddr)
                          (end + vaddr - 1) (addrFromPPtr word + start) pd asid
                     odE
@@ -606,7 +606,7 @@ lemma dec_arch_inv_page_flush_corres:
       apply (rule corres_returnOk)
       apply (clarsimp simp: archinv_relation_def page_invocation_map_def
                             label_to_flush_type_def labelToFlushType_def flush_type_map_def
-                            ARM_H.isPageFlushLabel_def
+                            X64_H.isPageFlushLabel_def
                      split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
      apply wp+
    apply (fastforce simp: valid_cap_def mask_def)
@@ -643,11 +643,11 @@ lemma vs_refs_pages_ptI:
   done
 
 lemmas vs_refs_pages_pt_largeI
-    = vs_refs_pages_ptI[where pte="ARM_A.pte.LargePagePTE x y z" for x y z,
+    = vs_refs_pages_ptI[where pte="X64_A.pte.LargePagePTE x y z" for x y z,
         unfolded pte_ref_pages_def, simplified, OF _ refl]
 
 lemmas vs_refs_pages_pt_smallI
-    = vs_refs_pages_ptI[where pte="ARM_A.pte.SmallPagePTE x y z" for x y z,
+    = vs_refs_pages_ptI[where pte="X64_A.pte.SmallPagePTE x y z" for x y z,
         unfolded pte_ref_pages_def, simplified, OF _ refl]
 
 lemma vs_refs_pages_pdI:
@@ -660,11 +660,11 @@ lemma vs_refs_pages_pdI:
   done
 
 lemmas vs_refs_pages_pd_sectionI
-    = vs_refs_pages_pdI[where pde="ARM_A.pde.SectionPDE x y z w" for x y z w,
+    = vs_refs_pages_pdI[where pde="X64_A.pde.SectionPDE x y z w" for x y z w,
         unfolded pde_ref_pages_def, simplified, OF _ refl]
 
 lemmas vs_refs_pages_pd_supersectionI
-    = vs_refs_pages_pdI[where pde="ARM_A.pde.SuperSectionPDE x y z" for x y z,
+    = vs_refs_pages_pdI[where pde="X64_A.pde.SuperSectionPDE x y z" for x y z,
         unfolded pde_ref_pages_def, simplified, OF _ refl]
 
 lemma get_master_pde_sp:
@@ -829,7 +829,7 @@ shows
    (Arch.decodeInvocation (mi_label mi) args cptr'
      (cte_map slot) arch_cap' excaps')"
   apply (simp add: arch_decode_invocation_def
-                   ARM_H.decodeInvocation_def
+                   X64_H.decodeInvocation_def
                    decodeARMMMUInvocation_def
               split del: if_split)
   apply (cases arch_cap)
@@ -1125,12 +1125,12 @@ shows
      apply simp
      apply (rule corres_returnOk)
      apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
-    apply (cases "ARM_H.isPageFlushLabel (invocation_type (mi_label mi))")
-     apply (clarsimp simp: ARM_H.isPageFlushLabel_def split del: if_split)
+    apply (cases "X64_H.isPageFlushLabel (invocation_type (mi_label mi))")
+     apply (clarsimp simp: X64_H.isPageFlushLabel_def split del: if_split)
      apply (clarsimp split: invocation_label.splits arch_invocation_label.splits split del: if_split)
         apply (rule dec_arch_inv_page_flush_corres,
-                clarsimp simp: ARM_H.isPageFlushLabel_def)+
-    apply (clarsimp simp: ARM_H.isPageFlushLabel_def split del: if_split)
+                clarsimp simp: X64_H.isPageFlushLabel_def)+
+    apply (clarsimp simp: X64_H.isPageFlushLabel_def split del: if_split)
     apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageGetAddress")
      apply simp
      apply (rule corres_returnOk)
@@ -1209,7 +1209,7 @@ shows
           erule invs_pspace_aligned', clarsimp+)
    apply (simp add: isCap_simps)
   apply (simp add: isCap_simps split del: if_split)
-  apply (cases "ARM_H.isPDFlushLabel (invocation_type (mi_label mi))")
+  apply (cases "X64_H.isPDFlushLabel (invocation_type (mi_label mi))")
    apply (clarsimp split del: if_split)
    apply (cases args, simp)
    apply (rename_tac a0 as)
@@ -1276,7 +1276,7 @@ lemma inv_arch_corres:
      (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
      (arch_perform_invocation ai) (Arch.performInvocation ai')"
   apply (clarsimp simp: arch_perform_invocation_def
-                        ARM_H.performInvocation_def
+                        X64_H.performInvocation_def
                         performARMMMUInvocation_def)
   apply (rule corres_split' [where r'=dc])
      prefer 2
@@ -1358,7 +1358,7 @@ lemma invokeArch_tcb_at':
   "\<lbrace>invs' and valid_arch_inv' ai and ct_active' and st_tcb_at' active' p\<rbrace>
      Arch.performInvocation ai
    \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
-  apply (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def)
+  apply (simp add: X64_H.performInvocation_def performARMMMUInvocation_def)
   apply (cases ai, simp_all)
      apply (wp, clarsimp simp: pred_tcb_at')
     apply (wp, clarsimp simp: pred_tcb_at')
@@ -1719,7 +1719,7 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
    done
 
 lemma arch_decodeARMPageFlush_wf:
-  "ARM_H.isPageFlushLabel (invocation_type label) \<Longrightarrow>
+  "X64_H.isPageFlushLabel (invocation_type label) \<Longrightarrow>
        \<lbrace>invs' and
         valid_cap'
          (capability.ArchObjectCap (arch_capability.PageCap d word vmrights vmpage_size option)) and
@@ -1749,7 +1749,7 @@ lemma arch_decodeInvocation_wf[wp]:
    Arch.decodeInvocation label args cap_index slot arch_cap excaps
    \<lbrace>valid_arch_inv'\<rbrace>,-"
   apply (cases arch_cap)
-      apply (simp add: decodeARMMMUInvocation_def ARM_H.decodeInvocation_def
+      apply (simp add: decodeARMMMUInvocation_def X64_H.decodeInvocation_def
                        Let_def split_def isCap_simps
                   cong: if_cong split del: if_split)
       apply (rule hoare_pre)
@@ -1769,7 +1769,7 @@ lemma arch_decodeInvocation_wf[wp]:
         apply assumption
        apply (simp add: asid_low_bits_def asid_bits_def)
       apply assumption
-     apply (simp add: decodeARMMMUInvocation_def ARM_H.decodeInvocation_def
+     apply (simp add: decodeARMMMUInvocation_def X64_H.decodeInvocation_def
                        Let_def split_def isCap_simps
                   cong: if_cong invocation_label.case_cong arch_invocation_label.case_cong list.case_cong prod.case_cong
                   split del: if_split)
@@ -1813,7 +1813,7 @@ lemma arch_decodeInvocation_wf[wp]:
      apply (simp add: ex_cte_cap_to'_def cte_wp_at_ctes_of)
      apply (rule_tac x=ba in exI)
      apply (simp add: diminished_cte_refs')
-    apply (simp add: decodeARMMMUInvocation_def ARM_H.decodeInvocation_def
+    apply (simp add: decodeARMMMUInvocation_def X64_H.decodeInvocation_def
                        Let_def split_def isCap_simps
                 cong: if_cong split del: if_split)
     apply (cases "invocation_type label = ArchInvocationLabel ARMPageMap")
@@ -1876,17 +1876,17 @@ lemma arch_decodeInvocation_wf[wp]:
      apply (thin_tac "Ball S P" for S P)
      apply (erule cte_wp_at_weakenE')
      apply (clarsimp simp: is_arch_update'_def isCap_simps dest!: diminished_capMaster)
-    apply (cases "ARM_H.isPageFlushLabel (invocation_type label)")
-     apply (clarsimp simp: ARM_H.isPageFlushLabel_def split: invocation_label.splits arch_invocation_label.splits)
+    apply (cases "X64_H.isPageFlushLabel (invocation_type label)")
+     apply (clarsimp simp: X64_H.isPageFlushLabel_def split: invocation_label.splits arch_invocation_label.splits)
         apply (rule arch_decodeARMPageFlush_wf,
-               clarsimp simp: ARM_H.isPageFlushLabel_def)+
+               clarsimp simp: X64_H.isPageFlushLabel_def)+
     apply (cases "invocation_type label = ArchInvocationLabel ARMPageGetAddress")
      apply (simp split del: if_split)
      apply (rule hoare_pre, wp)
      apply (clarsimp simp: valid_arch_inv'_def valid_page_inv'_def)
-    apply (simp add: ARM_H.isPageFlushLabel_def throwError_R'
+    apply (simp add: X64_H.isPageFlushLabel_def throwError_R'
               split: invocation_label.split_asm arch_invocation_label.split_asm)
-   apply (simp add: decodeARMMMUInvocation_def ARM_H.decodeInvocation_def
+   apply (simp add: decodeARMMMUInvocation_def X64_H.decodeInvocation_def
                     Let_def split_def isCap_simps vs_entry_align_def
                cong: if_cong list.case_cong invocation_label.case_cong arch_invocation_label.case_cong prod.case_cong
                split del: if_split)
@@ -1897,7 +1897,7 @@ lemma arch_decodeInvocation_wf[wp]:
       simp add: valid_arch_inv'_def valid_pti'_def unlessE_whenE|
       rule_tac x="fst p" in hoare_imp_eq_substR
       )+)
-              apply (rule_tac Q'="\<lambda>b c. ko_at' ARM_H.pde.InvalidPDE (b + (hd args >> 20 << 2)) c \<longrightarrow>
+              apply (rule_tac Q'="\<lambda>b c. ko_at' X64_H.pde.InvalidPDE (b + (hd args >> 20 << 2)) c \<longrightarrow>
                  cte_wp_at'
                   (is_arch_update'
                     (capability.ArchObjectCap (arch_capability.PageTableCap word (Some (snd p, hd args >> 20 << 20)))))
@@ -1933,8 +1933,8 @@ lemma arch_decodeInvocation_wf[wp]:
                          invs_valid_objs' vs_entry_align_def and_not_mask[symmetric])
    apply (erule order_le_less_trans[rotated])
    apply (rule word_and_le2)
-   apply (simp add: decodeARMMMUInvocation_def ARM_H.decodeInvocation_def isCap_simps Let_def)
-  apply(cases "ARM_H.isPDFlushLabel (invocation_type label)", simp_all)
+   apply (simp add: decodeARMMMUInvocation_def X64_H.decodeInvocation_def isCap_simps Let_def)
+  apply(cases "X64_H.isPDFlushLabel (invocation_type label)", simp_all)
    apply(cases args; simp)
     apply(wp)
    defer
@@ -1988,7 +1988,7 @@ lemma arch_pinv_nosch[wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
      Arch.performInvocation invok
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  by (simp add: ARM_H.performInvocation_def) wp
+  by (simp add: X64_H.performInvocation_def) wp
 
 lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
 
@@ -2050,26 +2050,26 @@ proof(cases ai)
   txt {* The preservation rules for each invocation have already been proved by crunch, so
     this just becomes a case distinction. *}
   case InvokePage thus ?thesis
-    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def,
+    by (simp add: X64_H.performInvocation_def performARMMMUInvocation_def,
         wp performPageInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 next
   case InvokeASIDControl thus ?thesis
-    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def
+    by (simp add: X64_H.performInvocation_def performARMMMUInvocation_def
                   valid_arch_inv'_def,
         wp performASIDControlInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 next
   case InvokeASIDPool thus ?thesis
-    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def
+    by (simp add: X64_H.performInvocation_def performARMMMUInvocation_def
                   valid_arch_inv'_def,
         wp performASIDPoolInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 next
   case InvokePageTable thus ?thesis
-    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def
+    by (simp add: X64_H.performInvocation_def performARMMMUInvocation_def
                   valid_arch_inv'_def,
         wp performPageTableInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 next
   case InvokePageDirectory thus ?thesis
-    by (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def
+    by (simp add: X64_H.performInvocation_def performARMMMUInvocation_def
                   valid_arch_inv'_def,
         wp performPageDirectoryInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 qed
@@ -2100,7 +2100,7 @@ crunch cte_wp_at':  "Arch.finaliseCap" "cte_wp_at' P p"
 lemma invs_asid_table_strenghten':
   "invs' s \<and> asid_pool_at' ap s \<and> asid \<le> 2 ^ asid_high_bits - 1 \<longrightarrow>
    invs' (s\<lparr>ksArchState :=
-            armKSASIDTable_update (\<lambda>_. (armKSASIDTable \<circ> ksArchState) s(asid \<mapsto> ap)) (ksArchState s)\<rparr>)"
+            x64KSASIDTable_update (\<lambda>_. (x64KSASIDTable \<circ> ksArchState) s(asid \<mapsto> ap)) (ksArchState s)\<rparr>)"
   apply (clarsimp simp: invs'_def valid_state'_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_global_refs'_def global_refs'_def)
@@ -2256,7 +2256,7 @@ lemma arch_performInvocation_invs':
   "\<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace>
   Arch.performInvocation invocation
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  unfolding ARM_H.performInvocation_def
+  unfolding X64_H.performInvocation_def
   by (cases invocation,
       simp_all add: performARMMMUInvocation_def valid_arch_inv'_def,
       (wp|simp)+)

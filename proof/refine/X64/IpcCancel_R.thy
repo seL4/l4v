@@ -1423,8 +1423,8 @@ lemma (in delete_one) suspend_corres:
 
 lemma (in delete_one) prepareThreadDelete_corres:
   "corres dc (tcb_at t) (tcb_at' t)
-        (prepare_thread_delete t) (ArchRetypeDecls_H.ARM_H.prepareThreadDelete t)"
-  by (simp add: ArchVSpace_A.ARM_A.prepare_thread_delete_def ArchRetype_H.ARM_H.prepareThreadDelete_def)
+        (prepare_thread_delete t) (ArchRetypeDecls_H.X64_H.prepareThreadDelete t)"
+  by (simp add: ArchVSpace_A.X64_A.prepare_thread_delete_def ArchRetype_H.X64_H.prepareThreadDelete_def)
 
 lemma no_refs_simple_strg':
   "st_tcb_at' simple' t s' \<and> P {} \<longrightarrow> st_tcb_at' (\<lambda>st. P (tcb_st_refs_of' st)) t s'"

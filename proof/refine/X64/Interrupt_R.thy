@@ -158,8 +158,8 @@ lemma decode_irq_control_corres:
      (decode_irq_control_invocation label args slot caps)
      (decodeIRQControlInvocation label args (cte_map slot) caps')"
   apply (clarsimp simp: decode_irq_control_invocation_def decodeIRQControlInvocation_def
-                        arch_check_irq_def ARM_H.checkIRQ_def
-                        ARM_H.decodeIRQControlInvocation_def arch_decode_irq_control_invocation_def
+                        arch_check_irq_def X64_H.checkIRQ_def
+                        X64_H.decodeIRQControlInvocation_def arch_decode_irq_control_invocation_def
              split del: if_split cong: if_cong
                  split: invocation_label.split)
 
@@ -221,7 +221,7 @@ lemma decode_irq_control_valid'[wp]:
   apply (rule hoare_pre)
    apply (wp ensureEmptySlot_stronger isIRQActive_wp
              whenE_throwError_wp
-                | simp add: ARM_H.decodeIRQControlInvocation_def | wpc
+                | simp add: X64_H.decodeIRQControlInvocation_def | wpc
                 | wp_once hoare_drop_imps)+
   apply (clarsimp simp: minIRQ_def maxIRQ_def word_le_nat_alt unat_of_nat)
   done
@@ -373,7 +373,7 @@ lemma invoke_irq_control_corres:
    apply (case_tac ctea)
    apply (clarsimp simp: isCap_simps sameRegionAs_def3)
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
-  apply (clarsimp simp: arch_invoke_irq_control_def ARM_H.performIRQControl_def)
+  apply (clarsimp simp: arch_invoke_irq_control_def X64_H.performIRQControl_def)
   done
 
 crunch valid_cap'[wp]: setIRQState "valid_cap' cap"

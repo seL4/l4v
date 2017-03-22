@@ -716,7 +716,7 @@ lemma diminished_ReplyCap' [simp]:
   apply (rule iffI)
    apply (clarsimp simp: diminished'_def maskCapRights_def Let_def split del: if_split)
    apply (cases cap, simp_all add: isCap_simps)[1]
-   apply (simp add: ARM_H.maskCapRights_def isPageCap_def split: arch_capability.splits)
+   apply (simp add: X64_H.maskCapRights_def isPageCap_def split: arch_capability.splits)
   apply (simp add: diminished'_def maskCapRights_def isCap_simps Let_def)
   done
 
@@ -1903,14 +1903,14 @@ lemma getIFSR_invs'[wp]:
   by (simp add: getIFSR_def doMachineOp_def split_def select_f_returns | wp)+
 
 lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vptr \<lbrace>\<lambda>r. invs'\<rbrace>"
-  apply (simp add: ARM_H.handleVMFault_def
+  apply (simp add: X64_H.handleVMFault_def
              cong: vmfault_type.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpcw | simp)+
   done
 
 lemma hv_tcb'[wp]: "\<lbrace>tcb_at' t\<rbrace> handleVMFault t' vptr \<lbrace>\<lambda>r. tcb_at' t\<rbrace>"
-  apply (simp add: ARM_H.handleVMFault_def
+  apply (simp add: X64_H.handleVMFault_def
              cong: vmfault_type.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpcw)+
@@ -1922,7 +1922,7 @@ crunch nosch[wp]: handleVMFault "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma hv_inv_ex':
   "\<lbrace>P\<rbrace> handleVMFault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: ARM_H.handleVMFault_def
+  apply (simp add: X64_H.handleVMFault_def
              cong: vmfault_type.case_cong)
   apply (rule hoare_pre)
    apply (wp dmo_inv' getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv
@@ -2346,7 +2346,7 @@ crunch ksit[wp]: handleVMFault,handleHypervisorFault "\<lambda>s. P (ksIdleThrea
 
 lemma hv_inv':
   "\<lbrace>P\<rbrace> handleVMFault p t \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: ARM_H.handleVMFault_def)
+  apply (simp add: X64_H.handleVMFault_def)
   apply (rule hoare_pre)
    apply (wp dmo_inv' getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv
              det_getRestartPC asUser_inv
@@ -2355,7 +2355,7 @@ lemma hv_inv':
 
 lemma hh_inv':
   "\<lbrace>P\<rbrace> handleHypervisorFault p t \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: ARM_H.handleHypervisorFault_def)
+  apply (simp add: X64_H.handleHypervisorFault_def)
   apply (cases t; clarsimp)
   done
 
@@ -2429,13 +2429,13 @@ lemma inv_irq_IRQInactive:
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: performIRQControl_def)
   apply (rule hoare_pre)
-   apply (wpc|wp|simp add: ARM_H.performIRQControl_def)+
+   apply (wpc|wp|simp add: X64_H.performIRQControl_def)+
   done
 
 lemma inv_arch_IRQInactive:
   "\<lbrace>\<top>\<rbrace> Arch.performInvocation invocation
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def)
+  apply (simp add: X64_H.performInvocation_def performARMMMUInvocation_def)
   apply wp
   done
 

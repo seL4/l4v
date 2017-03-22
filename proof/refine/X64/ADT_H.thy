@@ -76,43 +76,43 @@ lemma vm_rights_of_vmrights_map_id[simp]:
 
 definition
   absPageTable :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
-                  word8 \<Rightarrow> ARM_A.pte"
+                  word8 \<Rightarrow> X64_A.pte"
   where
   "absPageTable h a \<equiv> %offs.
    case (h (a + (ucast offs << 2))) of
-     Some (KOArch (KOPTE (ARM_H.InvalidPTE))) \<Rightarrow> ARM_A.InvalidPTE
-   | Some (KOArch (KOPTE (ARM_H.LargePagePTE p c g xn rights))) \<Rightarrow>
+     Some (KOArch (KOPTE (X64_H.InvalidPTE))) \<Rightarrow> X64_A.InvalidPTE
+   | Some (KOArch (KOPTE (X64_H.LargePagePTE p c g xn rights))) \<Rightarrow>
        if is_aligned offs 4 then
-         ARM_A.LargePagePTE p
+         X64_A.LargePagePTE p
            {x. c & x=PageCacheable | g & x=Global | xn & x=XNever}
            (vm_rights_of rights)
-       else ARM_A.InvalidPTE
-   | Some (KOArch (KOPTE (ARM_H.SmallPagePTE p c g xn rights))) \<Rightarrow>
-       ARM_A.SmallPagePTE p {x. c & x=PageCacheable |
+       else X64_A.InvalidPTE
+   | Some (KOArch (KOPTE (X64_H.SmallPagePTE p c g xn rights))) \<Rightarrow>
+       X64_A.SmallPagePTE p {x. c & x=PageCacheable |
                                         g & x=Global |
                                         xn & x=XNever} (vm_rights_of rights)"
 
 definition
   absPageDirectory :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
-                      12 word \<Rightarrow>  ARM_A.pde"
+                      12 word \<Rightarrow>  X64_A.pde"
   where
   "absPageDirectory h a \<equiv> %offs.
    case (h (a + (ucast offs << 2))) of
-     Some (KOArch (KOPDE (ARM_H.InvalidPDE))) \<Rightarrow> ARM_A.InvalidPDE
-   | Some (KOArch (KOPDE (ARM_H.PageTablePDE p e mw))) \<Rightarrow>
-       ARM_A.PageTablePDE p {x. e & x=ParityEnabled} mw
-   | Some (KOArch (KOPDE (ARM_H.SectionPDE p e mw c g xn rights))) \<Rightarrow>
-       ARM_A.SectionPDE p {x. e & x=ParityEnabled |
+     Some (KOArch (KOPDE (X64_H.InvalidPDE))) \<Rightarrow> X64_A.InvalidPDE
+   | Some (KOArch (KOPDE (X64_H.PageTablePDE p e mw))) \<Rightarrow>
+       X64_A.PageTablePDE p {x. e & x=ParityEnabled} mw
+   | Some (KOArch (KOPDE (X64_H.SectionPDE p e mw c g xn rights))) \<Rightarrow>
+       X64_A.SectionPDE p {x. e & x=ParityEnabled |
                                       c & x=PageCacheable |
                                       g & x=Global |
                                       xn & x=XNever} mw (vm_rights_of rights)
-   | Some (KOArch (KOPDE (ARM_H.SuperSectionPDE p e c g xn rights))) \<Rightarrow>
+   | Some (KOArch (KOPDE (X64_H.SuperSectionPDE p e c g xn rights))) \<Rightarrow>
        if is_aligned offs 4 then
-         ARM_A.SuperSectionPDE p
+         X64_A.SuperSectionPDE p
            {x. e & x=ParityEnabled | c & x=PageCacheable
              | g & x=Global | xn & x=XNever}
            (vm_rights_of rights)
-       else ARM_A.InvalidPDE"
+       else X64_A.InvalidPDE"
 
 (* Can't pull the whole heap off at once, start with arch specific stuff.*)
 definition
@@ -121,8 +121,8 @@ definition
   where
   "absHeapArch h a \<equiv> %ako.
    (case ako of
-     KOASIDPool (ARM_H.ASIDPool ap) \<Rightarrow>
-       Some (ARM_A.ASIDPool (\<lambda>w. ap (ucast w)))
+     KOASIDPool (X64_H.ASIDPool ap) \<Rightarrow>
+       Some (X64_A.ASIDPool (\<lambda>w. ap (ucast w)))
    | KOPTE _ \<Rightarrow>
        if is_aligned a pt_bits then Some (PageTable (absPageTable h a))
        else None
@@ -138,10 +138,10 @@ lemma
                            Some (KOArch (KOPTE pte')))"
   and pte_rights:
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPTE (ARM_H.LargePagePTE _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPTE (X64_H.LargePagePTE _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPTE (ARM_H.SmallPagePTE _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPTE (X64_H.SmallPagePTE _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
 
   assumes pdes:
@@ -151,10 +151,10 @@ lemma
                              Some (KOArch (KOPDE pde')))"
   and pde_rights:
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPDE (ARM_H.SectionPDE _ _ _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPDE (X64_H.SectionPDE _ _ _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPDE (ARM_H.SuperSectionPDE _ _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPDE (X64_H.SuperSectionPDE _ _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
 
   assumes fst_pte:
@@ -251,7 +251,7 @@ lemma
    apply (erule_tac x=y in allE)
    apply clarsimp
    apply (rule_tac x=pte' in exI)
-   apply (simp add: absPageTable_def  split: option.splits ARM_H.pte.splits)
+   apply (simp add: absPageTable_def  split: option.splits X64_H.pte.splits)
    apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
               vm_kernel_only_def vm_read_only_def vm_read_write_def
             split: vmrights.splits)
@@ -267,7 +267,7 @@ lemma
   apply clarsimp
   apply (simp add: pde_relation_def pde_relation_aligned_def)
   apply (simp add: absPageDirectory_def
-              split: option.splits ARM_H.pde.splits)
+              split: option.splits X64_H.pde.splits)
   apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
              vm_kernel_only_def vm_read_only_def vm_read_write_def
            split: vmrights.splits)
@@ -415,7 +415,7 @@ lemma LookupFailureMap_lookup_failure_map:
 primrec
   ArchFaultMap :: "Fault_H.arch_fault \<Rightarrow> ExceptionTypes_A.arch_fault"
 where
-  "ArchFaultMap (ArchFault_H.ARM_H.arch_fault.VMFault p m) = Machine_A.ARM_A.arch_fault.VMFault p m"
+  "ArchFaultMap (ArchFault_H.X64_H.arch_fault.VMFault p m) = Machine_A.X64_A.arch_fault.VMFault p m"
 
 
 primrec
@@ -880,10 +880,10 @@ proof -
        apply (erule_tac x=offs in allE)
        apply (rename_tac pte')
        apply (case_tac pte', simp_all add: pte_relation_aligned_def)[1]
-        apply (clarsimp split: ARM_A.pte.splits)
+        apply (clarsimp split: X64_A.pte.splits)
         apply (rule set_eqI, clarsimp)
         apply (case_tac x, simp_all)[1]
-       apply (clarsimp split: ARM_A.pte.splits)
+       apply (clarsimp split: X64_A.pte.splits)
        apply (rule set_eqI, clarsimp)
        apply (case_tac x, simp_all)[1]
       apply (clarsimp simp add: pde_relation_def)
@@ -925,12 +925,12 @@ proof -
      apply (erule_tac x=offs in allE)
      apply (rename_tac pde')
      apply (case_tac pde', simp_all add: pde_relation_aligned_def)[1]
-        apply (clarsimp split: ARM_A.pde.splits)+
+        apply (clarsimp split: X64_A.pde.splits)+
        apply (fastforce simp add: subset_eq)
-      apply (clarsimp split: ARM_A.pde.splits)
+      apply (clarsimp split: X64_A.pde.splits)
       apply (rule set_eqI, clarsimp)
       apply (case_tac x, simp_all)[1]
-     apply (clarsimp split: ARM_A.pde.splits)
+     apply (clarsimp split: X64_A.pde.splits)
      apply (rule set_eqI, clarsimp)
      apply (case_tac x, simp_all)[1]
     apply (clarsimp simp add: pde_relation_def split: if_split_asm)
@@ -983,7 +983,7 @@ shows
   apply (erule(1) obj_relation_cutsE)
   apply (clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm  if_split_asm
-                        ARM_A.arch_kernel_obj.split_asm)+
+                        X64_A.arch_kernel_obj.split_asm)+
   done
 
 text {* The following function can be used to reverse cte_map. *}
@@ -1850,10 +1850,10 @@ done
 definition
   "absArchState s' \<equiv>
    case s' of ARMKernelState asid_tbl hwat anext am gpd gpts kvspace \<Rightarrow>
-     \<lparr>arm_asid_table = asid_tbl \<circ> ucast,
-      arm_hwasid_table = hwat, arm_next_asid = anext,
-      arm_asid_map = am, arm_global_pd = gpd, arm_global_pts = gpts,
-      arm_kernel_vspace = kvspace\<rparr>"
+     \<lparr>x64_asid_table = asid_tbl \<circ> ucast,
+      x64_hwasid_table = hwat, x64_next_asid = anext,
+      x64_asid_map = am, x64_global_pd = gpd, x64_global_pts = gpts,
+      x64_kernel_vspace = kvspace\<rparr>"
 
 lemma absArchState_correct:
 assumes rel:
@@ -1866,7 +1866,7 @@ apply (subgoal_tac "(arch_state s, ksArchState s') \<in> arch_state_relation")
  apply (simp add: state_relation_def)
 apply (clarsimp simp add: arch_state_relation_def)
 by (clarsimp simp add: absArchState_def
-             split: ARM_H.kernel_state.splits)
+             split: X64_H.kernel_state.splits)
 
 definition absSchedulerAction where
   "absSchedulerAction action \<equiv>
