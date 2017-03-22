@@ -128,6 +128,16 @@ lemma projectKO_PDE:
   by (cases ko)
      (auto simp: projectKO_opts_defs split: arch_kernel_object.splits)
 
+lemma projectKO_PDPTE:
+  "(projectKO_opt ko = Some t) = (ko = KOArch (KOPDPTE t))"
+  by (cases ko)
+     (auto simp: projectKO_opts_defs split: arch_kernel_object.splits)
+
+lemma projectKO_PML4E:
+  "(projectKO_opt ko = Some t) = (ko = KOArch (KOPML4E t))"
+  by (cases ko)
+     (auto simp: projectKO_opts_defs split: arch_kernel_object.splits)
+
 lemma projectKO_user_data:
   "(projectKO_opt ko = Some (t :: user_data)) = (ko = KOUserData)"
   by (cases ko)
@@ -141,7 +151,8 @@ lemma projectKO_user_data_device:
 
 lemmas projectKOs =
   projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb
-  projectKO_ASID projectKO_PTE projectKO_PDE projectKO_user_data projectKO_user_data_device
+  projectKO_ASID projectKO_PTE projectKO_PDE projectKO_PDPTE projectKO_PML4E
+  projectKO_user_data projectKO_user_data_device
   projectKO_eq projectKO_eq2
 
 lemma capAligned_epI:
