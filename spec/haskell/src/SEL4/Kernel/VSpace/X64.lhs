@@ -228,7 +228,7 @@ The "lookupPTSlot" function locates the page table slot that maps a given virtua
 >             let ptIndex = getPTIndex vptr
 >             let ptSlot = pt + (PPtr $ ptIndex `shiftL` 3) -- ptr arithmetic, 8 byte words
 >             return ptSlot
->         _ -> throw $ MissingCapability (pageBits + ptBits)
+>         _ -> throw $ MissingCapability pdShiftBits
 
 > lookupPDSlot :: PPtr PML4E -> VPtr -> KernelF LookupFailure (PPtr PDE)
 > lookupPDSlot pm vptr = do
@@ -240,7 +240,7 @@ The "lookupPTSlot" function locates the page table slot that maps a given virtua
 >             let pdIndex = getPDIndex vptr
 >             let pdSlot = pd + (PPtr $ pdIndex `shiftL` 3) -- FIXME x64: word_size_bits
 >             return pdSlot
->         _ -> throw $ MissingCapability (pageBits + ptBits)
+>         _ -> throw $ MissingCapability pdptShiftBits
 
 > lookupPDPTSlot :: PPtr PML4E -> VPtr -> KernelF LookupFailure (PPtr PDPTE)
 > lookupPDPTSlot pm vptr = do
@@ -249,10 +249,10 @@ The "lookupPTSlot" function locates the page table slot that maps a given virtua
 >     case pml4e of
 >         PDPointerTablePML4E {} -> do
 >             let pdpt = ptrFromPAddr $ pml4eTable pml4e
->             let pdptIndex = getPML4Index vptr
+>             let pdptIndex = getPDPTIndex vptr
 >             let pdptSlot = pdpt + (PPtr $ pdptIndex `shiftL` 3) -- FIXME x64: word_size_bits
 >             return pdptSlot
->         _ -> throw $ MissingCapability (pageBits + ptBits)
+>         _ -> throw $ MissingCapability pml4ShiftBits
 
 Similarly, "lookupPDSlot" locates a slot in the top-level page directory. However, it does not access the kernel state and never throws a fault, so it is not in the kernel monad.
 

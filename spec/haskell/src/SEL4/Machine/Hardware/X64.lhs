@@ -154,14 +154,27 @@ Every table is one small page in size.
 > ptBits :: Int
 > ptBits = ptTranslationBits + 3
 
+> ptShiftBits :: Int
+> ptShiftBits = pageBits
+
 > pdBits :: Int
 > pdBits = ptTranslationBits + 3
+
+> pdShiftBits :: Int
+> pdShiftBits = pageBits + ptTranslationBits
 
 > pdptBits :: Int
 > pdptBits = ptTranslationBits + 3
 
+> pdptShiftBits :: Int
+> pdptShiftBits = pageBits + ptTranslationBits + ptTranslationBits
+
 > pml4Bits :: Int
 > pml4Bits = ptTranslationBits + 3
+
+> pml4ShiftBits :: Int
+> pml4ShiftBits = pageBits + ptTranslationBits + ptTranslationBits + ptTranslationBits
+
 
 > --ioptBits :: Int
 > --ioptBits = ptTranslationBits + 3
@@ -482,26 +495,16 @@ The following types are Haskell representations of an entry in an x64 page table
 >     (fromIntegral $ vmRightsToBits rights `shiftL` 1)
 
 > getPTIndex :: VPtr -> Word
-> getPTIndex vptr = 
->     let shiftBits = pageBits 
->     in fromVPtr $ vptr `shiftR` shiftBits .&. mask ptTranslationBits
+> getPTIndex vptr = fromVPtr $ vptr `shiftR` ptShiftBits .&. mask ptTranslationBits
 
 > getPDIndex :: VPtr -> Word
-> getPDIndex vptr = 
->     let shiftBits = pageBits + ptTranslationBits 
->     in fromVPtr $ vptr `shiftR` shiftBits .&. mask ptTranslationBits
+> getPDIndex vptr = fromVPtr $ vptr `shiftR` pdShiftBits .&. mask ptTranslationBits
 
 > getPDPTIndex :: VPtr -> Word
-> getPDPTIndex vptr = 
->     let shiftBits = pageBits + ptTranslationBits + ptTranslationBits
->     in fromVPtr $ vptr `shiftR` shiftBits .&. mask ptTranslationBits
+> getPDPTIndex vptr = fromVPtr $ vptr `shiftR` pdptShiftBits .&. mask ptTranslationBits
 
-
-> -- FIXME x64: Check this
 > getPML4Index :: VPtr -> Word
-> getPML4Index vptr = 
->     let shiftBits = pageBits + ptTranslationBits + ptTranslationBits + ptTranslationBits 
->     in fromVPtr $ vptr `shiftR` shiftBits .&. mask ptTranslationBits
+> getPML4Index vptr = fromVPtr $ vptr `shiftR` pml4ShiftBits .&. mask ptTranslationBits
 
 Page entries -- any of PTEs, PDEs or PDPTEs.
 

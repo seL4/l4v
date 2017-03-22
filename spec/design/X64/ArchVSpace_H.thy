@@ -180,7 +180,7 @@ defs lookupPTSlot_def:
             ptSlot \<leftarrow> returnOk ( pt + (PPtr $ ptIndex `~shiftL~` 3));
             returnOk ptSlot
           odE)
-        | _ \<Rightarrow>   throw $ MissingCapability (pageBits + ptBits)
+        | _ \<Rightarrow>   throw $ MissingCapability pdShiftBits
         )
 odE)"
 
@@ -195,7 +195,7 @@ defs lookupPDSlot_def:
             pdSlot \<leftarrow> returnOk ( pd + (PPtr $ pdIndex `~shiftL~` 3));
             returnOk pdSlot
           odE)
-        | _ \<Rightarrow>   throw $ MissingCapability (pageBits + ptBits)
+        | _ \<Rightarrow>   throw $ MissingCapability pdptShiftBits
         )
 odE)"
 
@@ -206,11 +206,11 @@ defs lookupPDPTSlot_def:
     (case pml4e of
           PDPointerTablePML4E _ _ _ _ _ _ \<Rightarrow>   (doE
             pdpt \<leftarrow> returnOk ( ptrFromPAddr $ pml4eTable pml4e);
-            pdptIndex \<leftarrow> returnOk ( getPML4Index vptr);
+            pdptIndex \<leftarrow> returnOk ( getPDPTIndex vptr);
             pdptSlot \<leftarrow> returnOk ( pdpt + (PPtr $ pdptIndex `~shiftL~` 3));
             returnOk pdptSlot
           odE)
-        | _ \<Rightarrow>   throw $ MissingCapability (pageBits + ptBits)
+        | _ \<Rightarrow>   throw $ MissingCapability pml4ShiftBits
         )
 odE)"
 

@@ -623,9 +623,19 @@ where
 "ptBits \<equiv> ptTranslationBits + 3"
 
 definition
+ptShiftBits :: "nat"
+where
+"ptShiftBits \<equiv> pageBits"
+
+definition
 pdBits :: "nat"
 where
 "pdBits \<equiv> ptTranslationBits + 3"
+
+definition
+pdShiftBits :: "nat"
+where
+"pdShiftBits \<equiv> pageBits + ptTranslationBits"
 
 definition
 pdptBits :: "nat"
@@ -633,9 +643,19 @@ where
 "pdptBits \<equiv> ptTranslationBits + 3"
 
 definition
+pdptShiftBits :: "nat"
+where
+"pdptShiftBits \<equiv> pageBits + ptTranslationBits + ptTranslationBits"
+
+definition
 pml4Bits :: "nat"
 where
 "pml4Bits \<equiv> ptTranslationBits + 3"
+
+definition
+pml4ShiftBits :: "nat"
+where
+"pml4ShiftBits \<equiv> pageBits + ptTranslationBits + ptTranslationBits + ptTranslationBits"
 
 definition
 pageColourBits :: "nat"
@@ -650,30 +670,22 @@ where
 definition
 getPTIndex :: "vptr \<Rightarrow> machine_word"
 where
-"getPTIndex vptr \<equiv>
-    let shiftBits = pageBits
-    in fromVPtr $ vptr `~shiftR~` shiftBits && mask ptTranslationBits"
+"getPTIndex vptr \<equiv> fromVPtr $ vptr `~shiftR~` ptShiftBits && mask ptTranslationBits"
 
 definition
 getPDIndex :: "vptr \<Rightarrow> machine_word"
 where
-"getPDIndex vptr \<equiv>
-    let shiftBits = pageBits + ptTranslationBits
-    in fromVPtr $ vptr `~shiftR~` shiftBits && mask ptTranslationBits"
+"getPDIndex vptr \<equiv> fromVPtr $ vptr `~shiftR~` pdShiftBits && mask ptTranslationBits"
 
 definition
 getPDPTIndex :: "vptr \<Rightarrow> machine_word"
 where
-"getPDPTIndex vptr \<equiv>
-    let shiftBits = pageBits + ptTranslationBits + ptTranslationBits
-    in fromVPtr $ vptr `~shiftR~` shiftBits && mask ptTranslationBits"
+"getPDPTIndex vptr \<equiv> fromVPtr $ vptr `~shiftR~` pdptShiftBits && mask ptTranslationBits"
 
 definition
 getPML4Index :: "vptr \<Rightarrow> machine_word"
 where
-"getPML4Index vptr \<equiv>
-    let shiftBits = pageBits + ptTranslationBits + ptTranslationBits + ptTranslationBits
-    in fromVPtr $ vptr `~shiftR~` shiftBits && mask ptTranslationBits"
+"getPML4Index vptr \<equiv> fromVPtr $ vptr `~shiftR~` pml4ShiftBits && mask ptTranslationBits"
 
 definition
 vmRightsToBits :: "vmrights \<Rightarrow> machine_word"
