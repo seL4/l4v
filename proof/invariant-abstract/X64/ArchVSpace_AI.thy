@@ -894,8 +894,7 @@ definition
       | (VMPDE _, slot)
         \<Rightarrow> slot && ~~ mask pd_bits \<in> obj_refs cap \<and> is_pd_cap cap \<and> cap_asid cap \<noteq> None
       | (VMPDPTE _, slot)
-        \<Rightarrow> slot && ~~ mask pdpt_bits \<in> obj_refs cap \<and> is_pdpt_cap cap \<and> cap_asid cap \<noteq> None
-      | (VMPML4E _, _) \<Rightarrow> True"
+        \<Rightarrow> slot && ~~ mask pdpt_bits \<in> obj_refs cap \<and> is_pdpt_cap cap \<and> cap_asid cap \<noteq> None"
 
 (* FIXME x64: check *)
 definition
@@ -912,8 +911,7 @@ definition
      | (VMPDPTE pdpte, slot) \<Rightarrow>
          (\<exists>p. pdpte_ref_pages pdpte = Some p \<and> p \<in> obj_refs cap) \<and>
          (\<forall>ref. (ref \<rhd> (slot && ~~ mask pdpt_bits)) s \<longrightarrow>
-           vs_cap_ref cap = Some (VSRef ((slot && mask pdpt_bits >> word_size_bits)&& mask ptTranslationBits) (Some APDPointerTable) # ref))
-     | (VMPML4E _, _) \<Rightarrow> True"
+           vs_cap_ref cap = Some (VSRef ((slot && mask pdpt_bits >> word_size_bits)&& mask ptTranslationBits) (Some APDPointerTable) # ref))"
 
 definition
   "valid_page_inv page_inv \<equiv> case page_inv of

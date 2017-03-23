@@ -138,8 +138,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
       (case entries
        of (VMPTE pte, slot) \<Rightarrow> store_pte slot pte
         | (VMPDE pde, slot) \<Rightarrow> store_pde slot pde
-        | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte
-        | _ \<Rightarrow> fail);
+        | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte);
       asid <- case cap of ArchObjectCap (PageCap _ _ _ _ _ (Some (as, _))) \<Rightarrow> return as
               | _ \<Rightarrow> fail;
       invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
@@ -148,8 +147,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
       (case entries
        of (VMPTE pte, slot) \<Rightarrow> store_pte slot pte
         | (VMPDE pde, slot) \<Rightarrow> store_pde slot pde
-        | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte
-        | _ \<Rightarrow> fail);
+        | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte);
       invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
     od
   | PageUnmap cap ct_slot \<Rightarrow>

@@ -20,7 +20,7 @@ begin
 context Arch begin global_naming X64_A
 
 text {*
-This theory provides architecture-specific definitions and datatypes 
+This theory provides architecture-specific definitions and datatypes
 including architecture-specific capabilities and objects.
 *}
 
@@ -105,8 +105,8 @@ datatype pdpte
 
 datatype pde
       = InvalidPDE
-      | PageTablePDE 
-         obj_ref 
+      | PageTablePDE
+         obj_ref
          (pt_attrs : table_attrs)
          (pde_rights : cap_rights)
       | LargePagePDE
@@ -116,19 +116,19 @@ datatype pde
 
 datatype pte
       = InvalidPTE
-      | SmallPagePTE 
+      | SmallPagePTE
          (pte_frame: obj_ref)
          (pte_frame_attrs : frame_attrs)
          (pte_rights : cap_rights)
 
 
-datatype vm_page_entry = VMPTE pte | VMPDE pde | VMPDPTE pdpte | VMPML4E pml4e
+datatype vm_page_entry = VMPTE pte | VMPDE pde | VMPDPTE pdpte
 
 datatype translation_type = NotTranslated | Translated
 
 datatype iocte =
    InvalidIOCTE
- | VTDCTE 
+ | VTDCTE
    (domain_id : word16)
    (res_mem_reg: bool)
    (address_width: nat)
@@ -136,15 +136,15 @@ datatype iocte =
    (translation_type: translation_type)
    (iocte_present : bool)
 
-datatype iopte =  
+datatype iopte =
    InvalidIOPTE
- | VTDPTE 
+ | VTDPTE
    (frame_ptr : obj_ref)
    (io_pte_rights  : vm_rights)
 
-datatype iorte = 
+datatype iorte =
    InvalidIORTE
- | VTDRTE 
+ | VTDRTE
    (context_table : obj_ref)
    (iorte_present : bool)
 
@@ -167,7 +167,7 @@ definition table_size :: nat where
 definition iotable_size :: nat where
   "iotable_size = ptTranslationBits + 2*word_size_bits"
 
-  
+
 primrec
   arch_obj_size :: "arch_cap \<Rightarrow> nat"
 where
@@ -233,7 +233,7 @@ definition
 section {* Architecture-specific object types and default objects *}
 
 datatype
-  aobject_type = 
+  aobject_type =
     SmallPageObj
   | LargePageObj
   | HugePageObj
@@ -267,7 +267,7 @@ definition
 definition
   default_arch_object :: "aobject_type \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> arch_kernel_obj" where
  "default_arch_object tp dev n \<equiv> case tp of
-    SmallPageObj \<Rightarrow> DataPage dev X64SmallPage 
+    SmallPageObj \<Rightarrow> DataPage dev X64SmallPage
   | LargePageObj \<Rightarrow> DataPage dev X64LargePage
   | HugePageObj \<Rightarrow> DataPage dev X64HugePage
   | PageTableObj \<Rightarrow> PageTable (\<lambda>x. InvalidPTE)
@@ -283,7 +283,7 @@ end
 qualify X64_A (in Arch)
 
 section {* Architecture-specific state *}
- 
+
 record arch_state =
   x64_asid_table            :: "3 word \<rightharpoonup> obj_ref"
   x64_global_pml4           :: obj_ref
@@ -293,14 +293,14 @@ record arch_state =
   x64_global_pds            :: "obj_ref list"
   x64_asid_map              :: "X64_A.asid \<rightharpoonup> obj_ref" (* FIXME x64: do we need this? *)
   x64_current_cr3           :: "X64_A.CR3"
-  
+
 (* FIXME x64-vtd:
   x64_num_io_domain_bits    :: "16 word"
   x64_first_valid_io_domain :: "16 word"
   x64_num_io_domain_id_bits :: "32 word"
   x64_io_root_table         :: obj_ref *)
 
-end_qualify 
+end_qualify
 
 context Arch begin global_naming X64_A
 
@@ -344,7 +344,7 @@ definition
   vtd_cte_size_bits :: "nat" where
   "vtd_cte_size_bits \<equiv> 8"
 
-definition 
+definition
   vtd_pt_bits :: "nat" where
   "vtd_pt_bits \<equiv> 9" (* FIXME: seems not correct *)
 
@@ -366,7 +366,7 @@ datatype aa_type =
 
 (* FIXME x64-vtd: add *)
 definition aa_type :: "arch_kernel_obj \<Rightarrow> aa_type"
-where 
+where
  "aa_type ao \<equiv> (case ao of
            PageTable pt             \<Rightarrow> APageTable
          | PageDirectory pd         \<Rightarrow> APageDirectory
