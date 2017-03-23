@@ -4084,17 +4084,15 @@ lemma updateFreeIndex_clear_invs':
       apply (rule hoare_vcg_conj_lift)
        apply (simp add: ifunsafe'_def3 cteInsert_def setUntypedCapAsFull_def
                split del: if_split)
-       apply wp+
-      apply (rule hoare_vcg_conj_lift)
-       apply (simp add:updateCap_def)
-       apply wp+
-      apply (wp valid_irq_node_lift)
-      apply (rule hoare_vcg_conj_lift)
-       apply (simp add:updateCap_def)
-       apply (wp setCTE_irq_handlers' getCTE_wp)
+      apply wp+
+     apply (rule hoare_vcg_conj_lift)
       apply (simp add:updateCap_def)
-      apply (wp irqs_masked_lift valid_queues_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift
-                hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp
+      apply wp+
+       apply (wp valid_irq_node_lift setCTE_typ_at')
+      apply (wp getCTE_wp)
+     apply (simp add:updateCap_def)
+     apply (wp irqs_masked_lift valid_queues_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift
+                hoare_vcg_disj_lift untyped_ranges_zero_lift getCTE_wp setCTE_irq_handlers'
                | wp_once hoare_use_eq[where f="gsUntypedZeroRanges"]
                | simp add: getSlotCap_def
                | simp add: cte_wp_at_ctes_of)+
@@ -5857,6 +5855,9 @@ lemma insertNewCap_urz[wp]:
     apply (auto simp add: cteCaps_of_def untypedZeroRange_def isCap_simps)
   done
 
+crunch valid_arch'[wp]: insertNewCap valid_arch_state'
+  (wp: crunch_wps)
+
 lemma insertNewCap_invs':
   "\<lbrace>invs' and ct_active'
           and valid_cap' cap
@@ -5875,14 +5876,13 @@ lemma insertNewCap_invs':
    apply (wp insertNewCap_valid_pspace' sch_act_wf_lift
              valid_queues_lift cur_tcb_lift tcb_in_cur_domain'_lift
              insertNewCap_valid_global_refs'
-             valid_arch_state_lift'
              valid_irq_node_lift insertNewCap_valid_irq_handlers)
-(*  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (frule ctes_of_valid[rotated, where p=parent, OF valid_pspace_valid_objs'])
    apply (fastforce simp: cte_wp_at_ctes_of)
   apply (auto simp: isCap_simps sameRegionAs_def3 intro!: capRange_subset_capBits
               elim: valid_capAligned)
-  done*) sorry (* valid_arch_state *)
+  done
 
 lemma insertNewCap_irq_issued'[wp]:
   "\<lbrace>\<lambda>s. P (irq_issued' irq s)\<rbrace> insertNewCap parent slot cap \<lbrace>\<lambda>rv s. P (irq_issued' irq s)\<rbrace>"

@@ -562,8 +562,10 @@ lemma setObject_tcb_arch' [wp]:
 
 lemma setObject_tcb_valid_arch' [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject t (v :: tcb) \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
-  apply (wp valid_arch_state_lift' setObject_typ_at')
-  sorry (* valid_arch_state *)
+  apply (wpsimp wp: valid_arch_state_lift' setObject_typ_at' setObject_ko_wp_at
+              simp: objBits_simps, rule refl; simp add: pred_conj_def)
+  apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def obj_at'_def projectKOs)
+  done
 
 lemma setObject_tcb_refs' [wp]:
   "\<lbrace>\<lambda>s. P (global_refs' s)\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>rv s. P (global_refs' s)\<rbrace>"

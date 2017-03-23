@@ -3055,7 +3055,15 @@ lemma setCTE_arch [wp]:
 lemma setCTE_valid_arch[wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setCTE p c \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   apply (wp valid_arch_state_lift' setCTE_typ_at')
-  sorry (* valid_arch_state *)
+   apply (simp add: setCTE_def)
+   apply (clarsimp simp: setObject_def split_def valid_def in_monad)
+   apply (rule_tac P=P in rsubst, assumption)
+   apply (drule(1) updateObject_cte_is_tcb_or_cte[OF _ refl, rotated])
+   apply (erule disjE)
+    apply (clarsimp simp: ko_wp_at'_def lookupAround2_char1 is_vcpu'_def ps_clear_upd)
+   apply (clarsimp simp: ko_wp_at'_def lookupAround2_char1 is_vcpu'_def ps_clear_upd)
+  apply assumption
+  done
 
 lemma setCTE_global_refs[wp]:
   "\<lbrace>\<lambda>s. P (global_refs' s)\<rbrace> setCTE p c \<lbrace>\<lambda>_ s. P (global_refs' s)\<rbrace>"
@@ -3106,10 +3114,8 @@ lemma updateCap_global_refs [wp]:
 crunch arch [wp]: cteInsert "\<lambda>s. P (ksArchState s)"
   (wp: crunch_wps simp: cte_wp_at_ctes_of)
 
-lemma cteInsert_valid_arch [wp]:
- "\<lbrace>valid_arch_state'\<rbrace> cteInsert cap src dest \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
-  apply (rule valid_arch_state_lift'; wp?)
-  sorry (* valid_arch_state *)
+crunch valid_arch[wp]: cteInsert valid_arch_state'
+  (wp: crunch_wps)
 
 lemma cteInsert_valid_irq_handlers'[wp]:
   "\<lbrace>\<lambda>s. valid_irq_handlers' s \<and> (\<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)\<rbrace>
@@ -6620,7 +6626,7 @@ lemma updateFreeIndex_forward_invs':
       apply (rule hoare_vcg_conj_lift)
        apply (simp add:updateCap_def)
        apply wp
-      apply (wp valid_irq_node_lift)
+      apply (wp valid_irq_node_lift setCTE_typ_at')+
       apply (rule hoare_vcg_conj_lift)
        apply (simp add:updateCap_def)
        apply (wp setCTE_irq_handlers' getCTE_wp)

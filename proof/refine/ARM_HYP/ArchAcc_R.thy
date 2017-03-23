@@ -1508,20 +1508,32 @@ lemma setObject_ASID_valid_arch [wp]:
   apply (clarsimp; rule conjI)
    prefer 2
    apply (clarsimp simp: pred_conj_def)
-  apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def)
-  sorry (* valid_arch_state *)
+  apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def obj_at'_def projectKOs)
+  done
 
 lemma setObject_PDE_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pde) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   apply (rule valid_arch_state_lift')
   apply (wp setObject_typ_at')+
-  sorry (* valid_arch_state *)
+  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps archObjSize_def pageBits_def, rule refl)
+   apply (simp add: pde_bits_def)
+  apply (clarsimp; rule conjI)
+   prefer 2
+   apply (clarsimp simp: pred_conj_def)
+  apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def obj_at'_def projectKOs)
+  done
 
 lemma setObject_PTE_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pte) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   apply (rule valid_arch_state_lift')
   apply (wp setObject_typ_at')+
-  sorry (* valid_arch_state *)
+  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps archObjSize_def pageBits_def, rule refl)
+   apply (simp add: pte_bits_def)
+  apply (clarsimp; rule conjI)
+   prefer 2
+   apply (clarsimp simp: pred_conj_def)
+  apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def obj_at'_def projectKOs)
+  done
 
 lemma setObject_ASID_ct [wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::asidpool) \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"

@@ -742,9 +742,6 @@ subgoal sorry
       done*) sorry
   qed
 
-lemmas setEndpoint_valid_arch[wp]
-    = valid_arch_state_lift' [OF setEndpoint_typ_at' setEndpoint_ksArchState]
-
 declare setEndpoint_ksArch [wp]
 
 lemma ep_redux_simps3:
@@ -809,6 +806,22 @@ lemma setEndpoint_ksDomScheduleIdx[wp]:
   done
 end
 
+lemma state_hyp_refs_of'_ep:
+  "ko_at' (e::endpoint) epptr s \<Longrightarrow> (state_hyp_refs_of' s)(epptr := {}) = state_hyp_refs_of' s"
+  by (rule ext) (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs)
+
+lemma tcb_st_refs_of'_not_TCBBound[simp]:
+  "(t, TCBBound) \<notin> tcb_st_refs_of' ts"
+  by (cases ts; simp add: tcb_st_refs_of'_def)
+
+lemma tcb_st_refs_of'_not_NTFNBound[simp]:
+  "(t, NTFNBound) \<notin> tcb_st_refs_of' ts"
+  by (cases ts; simp add: tcb_st_refs_of'_def)
+
+lemma tcb_bound_refs'_not_NTFNBound[simp]:
+  "(t, NTFNBound) \<notin> tcb_bound_refs' n"
+  by (simp add: tcb_bound_refs'_def)
+
 lemma (in delete_one_conc) cancelIPC_invs[wp]:
   shows "\<lbrace>tcb_at' t and invs'\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -
@@ -841,16 +854,13 @@ proof -
       od \<lbrace>\<lambda>rv. invs'\<rbrace>"
     apply (simp add: invs'_def valid_state'_def)
     apply (subst P)
-    apply (wp valid_irq_node_lift valid_global_refs_lift' valid_arch_state_lift'
+    apply (wp valid_irq_node_lift valid_global_refs_lift'
               irqs_masked_lift sts_sch_act'
               hoare_vcg_all_lift [OF setEndpoint_ksQ]
               sts_valid_queues setThreadState_ct_not_inQ EPSCHN
-              hoare_vcg_all_lift setNotification_ksQ
+              hoare_vcg_all_lift setNotification_ksQ getEndpoint_wp
               | simp add: valid_tcb_state'_def split del: if_split
               | wpc)+
-     prefer 2
-(*     apply assumption
-    apply (rule hoare_strengthen_post [OF get_ep_sp'])
     apply (clarsimp simp: pred_tcb_at' fun_upd_def[symmetric] conj_comms
                split del: if_split cong: if_cong)
     apply (rule conjI, clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs)
@@ -864,7 +874,7 @@ proof -
     apply (clarsimp, rule conjI)
      apply (auto simp: pred_tcb_at'_def obj_at'_def)[1]
     apply (rule conjI)
-defer
+     apply (clarsimp simp: state_hyp_refs_of'_ep)
     apply (rule conjI)
      apply (clarsimp split: Structures_H.endpoint.split_asm list.split
                       simp: valid_ep'_def)
@@ -876,6 +886,7 @@ defer
      apply (frule distinct_remove1[where x=t])
      apply (cut_tac xs=list in set_remove1_subset[where x=t])
      apply auto[1]
+    apply (thin_tac "sym_refs (state_hyp_refs_of' s)" for s)
     apply (frule(1) sym_refs_ko_atD')
     apply (rule conjI)
      apply (clarsimp elim!: if_live_state_refsE split: Structures_H.endpoint.split_asm)
@@ -885,10 +896,9 @@ defer
                     cong: list.case_cong)
      apply (frule_tac x=t in distinct_remove1)
      apply (frule_tac x=t in set_remove1_eq)
-     apply (clarsimp elim!: delta_sym_refs
+     by (auto elim!: delta_sym_refs
                simp: symreftype_inverse' tcb_st_refs_of'_def tcb_bound_refs'_def
-              split: thread_state.splits if_split_asm) *)
-    sorry (* valid_arch_state etc. *)
+              split: thread_state.splits if_split_asm)
   have R:
     "\<lbrace>invs' and tcb_at' t\<rbrace>
      do y \<leftarrow> threadSet (\<lambda>tcb. tcb \<lparr> tcbFault := None \<rparr>) t;

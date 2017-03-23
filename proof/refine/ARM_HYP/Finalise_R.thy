@@ -1457,16 +1457,22 @@ lemma emptySlot_untyped_ranges[wp]:
   apply (simp add: untypedZeroRange_def isCap_simps)
   done
 
+lemma valid_arch_state'_interrupt[simp]:
+  "valid_arch_state' (ksInterruptState_update f s) = valid_arch_state' s"
+  by (simp add: valid_arch_state'_def cong: option.case_cong)
+
+crunch valid_arch'[wp]: emptySlot valid_arch_state'
+  (wp: crunch_wps)
+
 lemma emptySlot_invs'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' (\<lambda>cte. removeable' sl s (cteCap cte)) sl s
             \<and> (\<forall>irq sl'. opt = Some irq \<longrightarrow> sl' \<noteq> sl \<longrightarrow> cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq))\<rbrace>
      emptySlot sl opt
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
-  apply (rule hoare_pre)
-   apply (wp valid_arch_state_lift' valid_irq_node_lift cur_tcb_lift)
-(*  apply (clarsimp simp: cte_wp_at_ctes_of)
-  done*) sorry (* valid_arch_state *)
+  apply (wp valid_irq_node_lift cur_tcb_lift)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  done
 
 lemma opt_deleted_irq_corres:
   "corres dc \<top> \<top>
@@ -1503,7 +1509,7 @@ lemma clearUntypedFreeIndex_corres_noop:
     apply (rule corres_bind_return2)
     apply (rule corres_symb_exec_r_conj[where P'="cte_at' (cte_map slot)"])
        apply (rule corres_trivial, simp)
-      apply (wp getCTE_wp' | wpc
+      apply (wp hoare_TrueI[where P=\<top>] getCTE_wp' | wpc
         | simp add: updateTrackedFreeIndex_def getSlotCap_def)+
      apply (clarsimp simp: state_relation_def)
     apply (rule no_fail_pre)
@@ -2830,6 +2836,31 @@ crunch valid_cap'[wp]: prepareThreadDelete "valid_cap' cap"
 crunch invs[wp]: prepareThreadDelete "invs'"
   (ignore: getObject)
 
+lemma unset_vcpu_hyp_unlive[wp]:
+  "\<lbrace>\<top>\<rbrace> archThreadSet (atcbVCPUPtr_update (\<lambda>_. Nothing)) t \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') t\<rbrace>"
+  unfolding archThreadSet_def
+  apply (wpsimp wp: setObject_ko_wp_at' getObject_tcb_wp; (simp add: objBits_simps)?)+
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs hyp_live'_def)
+  done
+
+lemma asUser_hyp_unlive[wp]:
+  "asUser f t \<lbrace>ko_wp_at' (Not \<circ> hyp_live') t'\<rbrace>"
+  unfolding asUser_def
+  apply (wpsimp wp: threadSet_ko_wp_at2' threadGet_wp)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs hyp_live'_def atcbContextSet_def)
+  done
+
+lemma dissociateVCPUTCB_hyp_unlive[wp]:
+  "\<lbrace>\<top>\<rbrace> dissociateVCPUTCB v t \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') t\<rbrace>"
+  unfolding dissociateVCPUTCB_def by wpsimp
+
+lemma prepareThreadDelete_hyp_unlive[wp]:
+  "\<lbrace>\<top>\<rbrace> prepareThreadDelete t \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') t\<rbrace>"
+  unfolding prepareThreadDelete_def archThreadGet_def
+  apply (wpsimp wp: getObject_tcb_wp)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs hyp_live'_def)
+  done
+
 end
 
 lemma (in delete_one_conc_pre) finaliseCap_replaceable:
@@ -2851,6 +2882,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
             \<and> (\<forall>p \<in> threadCapRefs cap. st_tcb_at' (op = Inactive) p s
                      \<and> obj_at' (Not \<circ> tcbQueued) p s
                      \<and> bound_tcb_at' (op = None) p s
+                     \<and> ko_wp_at' (Not \<circ> hyp_live') p s
                      \<and> (\<forall>pr. p \<notin> set (ksReadyQueues s pr))))\<rbrace>"
   apply (simp add: finaliseCap_def Let_def getThreadCSpaceRoot
              cong: if_cong split del: if_split)

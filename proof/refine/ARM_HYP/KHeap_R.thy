@@ -2094,8 +2094,8 @@ lemma set_ep_valid_arch' [wp]:
   apply (clarsimp; rule conjI)
    prefer 2
    apply (clarsimp simp: pred_conj_def)
-  apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def)
-  sorry (* valid_arch_state *)
+  apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def obj_at'_def projectKOs)
+  done
 
 lemma setObject_ep_ct:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::endpoint) \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
@@ -2199,7 +2199,13 @@ lemma vcpu_ntfn':
 lemma set_ntfn_valid_arch' [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   apply (rule valid_arch_state_lift'; wp?)
-  sorry (* valid_arch_state *)
+  apply (simp add: setNotification_def)
+  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps, rule refl, simp)
+  apply (clarsimp; rule conjI)
+   prefer 2
+   apply (clarsimp simp: pred_conj_def)
+  apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def obj_at'_def projectKOs)
+  done
 
 lemmas valid_irq_node_lift =
     hoare_use_eq_irq_node' [OF _ typ_at_lift_valid_irq_node']

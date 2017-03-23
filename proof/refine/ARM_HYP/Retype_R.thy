@@ -4583,35 +4583,23 @@ lemma koTypeOf_eq_UserDataT:
         = (ko = KOUserData)"
   by (cases ko, simp_all)
 
+lemma option_case_all_conv:
+  "(case x of None \<Rightarrow> True | Some v \<Rightarrow> P v) = (\<forall>v. x = Some v \<longrightarrow> P v)"
+  by (auto split: option.split)
+
 lemma createNewCaps_valid_arch_state:
   "\<lbrace>(\<lambda>s. valid_arch_state' s \<and> valid_pspace' s \<and> pspace_no_overlap' ptr sz s
         \<and> (tp = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0))
        and K (range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0)\<rbrace>
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
-  apply (simp add: valid_arch_state'_def
-                   valid_asid_table'_def
-                   valid_global_pts'_def
-                   page_table_at'_def
-                   page_directory_at'_def)
-  apply (rule hoare_pre)
-   apply (rule hoare_use_eq [where f=ksArchState, OF createNewCaps_ksArchState])
-    apply (case_tac "armHSCurVCPU f"; simp)
-    apply wp
-   apply (wpsimp wp: hoare_vcg_prop
-             createNewCaps_ko_wp_at'
-             createNewCaps_obj_at''
-             hoare_vcg_all_lift hoare_vcg_conj_lift
-          simp: typ_at_to_obj_at_arches)
-   apply simp
-   apply (wpsimp wp: hoare_vcg_const_Ball_lift
-             hoare_vcg_prop
-             createNewCaps_obj_at''
-             createNewCaps_ko_wp_at'
-             hoare_vcg_all_lift hoare_vcg_conj_lift
-             hoare_vcg_const_imp_lift)
-  apply (clarsimp simp: valid_pspace'_def o_def)
-  sorry (* valid_arch_state *)
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def valid_global_pts'_def
+                   page_table_at'_def page_directory_at'_def option_case_all_conv)
+   apply (wpsimp wp: hoare_vcg_prop createNewCaps_ko_wp_at' createNewCaps_obj_at''
+                     hoare_vcg_all_lift hoare_vcg_imp_lift
+          simp: typ_at_to_obj_at_arches o_def is_vcpu'_def)
+  apply (fastforce simp: valid_pspace'_def o_def pred_conj_def)
+  done
 
 lemma valid_irq_node_lift_asm:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> f \<lbrace>\<lambda>rv s. P (irq_node' s)\<rbrace>"
@@ -5443,17 +5431,13 @@ lemma createObjects_valid_arch:
         pspace_no_overlap' ptr sz s \<and> range_cover ptr sz (objBitsKO val + gbits) n \<and> n \<noteq> 0 \<rbrace>
       createObjects ptr n val gbits
    \<lbrace>\<lambda>rv s. valid_arch_state' s\<rbrace>"
-  apply (simp add: valid_arch_state'_def valid_asid_table'_def
-                   page_directory_at'_def valid_global_pts'_def
-                   page_table_at'_def)
-  apply (rule hoare_pre)
-   apply (rule hoare_use_eq [where f=ksArchState, OF createObjects_ksArch])
-    apply (simp add: createObjects_def)
-    apply (wp createObjects'_typ_at hoare_vcg_conj_lift hoare_vcg_all_lift
-              hoare_vcg_ex_lift static_imp_wp createObjects'_typ_at
-         | clarsimp split: option.splits)+
-(*  apply (simp add: o_def; auto)+
-  done*) sorry (* valid_arch_state *)
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def page_directory_at'_def
+                   valid_global_pts'_def page_table_at'_def createObjects_def)
+  apply (wp createObjects'_typ_at hoare_vcg_all_lift createObjects'_typ_at hoare_vcg_imp_lift
+            createObjects_orig_ko_wp_at2'
+          | clarsimp split: option.splits)+
+  apply (simp add: o_def; auto simp: pred_conj_def)+
+  done
 
 lemma createObjects_irq_state:
   "\<lbrace>\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and>

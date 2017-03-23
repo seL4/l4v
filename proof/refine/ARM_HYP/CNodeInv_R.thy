@@ -5830,6 +5830,7 @@ lemma make_zombie_invs':
                             st_tcb_at' (op = Inactive) p s
                              \<and> bound_tcb_at' (op = None) p s
                              \<and> obj_at' (Not \<circ> tcbQueued) p s
+                             \<and> ko_wp_at' (Not \<circ> hyp_live') p s
                              \<and> (\<forall>pr. p \<notin> set (ksReadyQueues s pr)))) sl s\<rbrace>
     updateCap sl cap
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -5838,12 +5839,12 @@ lemma make_zombie_invs':
                    valid_irq_handlers'_def irq_issued'_def)
   apply (wp updateCap_ctes_of_wp sch_act_wf_lift valid_queues_lift cur_tcb_lift
             updateCap_iflive' updateCap_ifunsafe' updateCap_idle'
-            valid_arch_state_lift' valid_irq_node_lift ct_idle_or_in_cur_domain'_lift2
+            valid_irq_node_lift ct_idle_or_in_cur_domain'_lift2
             updateCap_untyped_ranges_zero_simple
        | simp)+
   apply simp_all
 
-(*        apply (clarsimp simp: cte_wp_at_ctes_of)
+        apply (clarsimp simp: cte_wp_at_ctes_of)
         apply (auto simp: untypedZeroRange_def isCap_simps)[1]
        apply clarsimp
       apply (clarsimp simp: modify_map_def ran_def split del: if_split
@@ -5863,9 +5864,10 @@ lemma make_zombie_invs':
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (subgoal_tac "st_tcb_at' (op = Inactive) p' s
                                \<and> obj_at' (Not \<circ> tcbQueued) p' s
-                               \<and> bound_tcb_at' (op = None) p' s")
-    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs live'_def hyp_live'_def) *)  (* valid_arch_state *)
-(*   apply (auto dest!: isCapDs)[1]
+                               \<and> bound_tcb_at' (op = None) p' s
+                               \<and> ko_wp_at' (Not \<circ> hyp_live') p' s")
+    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs live'_def hyp_live'_def)
+   apply (auto dest!: isCapDs)[1]
   apply (clarsimp simp: cte_wp_at_ctes_of disj_ac
                  dest!: isCapDs)
   apply (frule ztc_phys[where cap=cap])
@@ -5953,7 +5955,7 @@ lemma make_zombie_invs':
   apply (erule(1) ztc_replace_update_final, simp_all)
    apply (simp add: cteCaps_of_def)
   apply (erule(1) ctes_of_valid_cap')
-done*) sorry (* valid_arch_state etc. *)
+  done
 
 
 lemma make_zombie_cnode_invs':
@@ -5985,6 +5987,7 @@ lemma make_zombie_tcb_invs':
          \<and> st_tcb_at' (op = Inactive) (capZombiePtr cap) s
          \<and> bound_tcb_at' (op = None) (capZombiePtr cap) s
          \<and> obj_at' (Not \<circ> tcbQueued) (capZombiePtr cap) s
+         \<and> ko_wp_at' (Not \<circ> hyp_live') (capZombiePtr cap) s
          \<and> (\<forall>p. capZombiePtr cap \<notin> set (ksReadyQueues s p))\<rbrace>
     updateCap sl cap
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -9485,10 +9488,10 @@ lemma updateCap_noop_invs:
   apply (rule hoare_pre)
    apply (wp updateCap_ctes_of_wp updateCap_iflive'
              updateCap_ifunsafe' updateCap_idle'
-             valid_arch_state_lift' valid_irq_node_lift
+             valid_irq_node_lift
              updateCap_noop_irq_handlers sch_act_wf_lift
              untyped_ranges_zero_lift)
-(*  apply (clarsimp simp: cte_wp_at_ctes_of modify_map_apply)
+  apply (clarsimp simp: cte_wp_at_ctes_of modify_map_apply)
   apply (strengthen untyped_ranges_zero_delta[where xs=Nil, mk_strg I E])
   apply (case_tac cte)
   apply (clarsimp simp: fun_upd_idem cteCaps_of_def modify_map_apply
@@ -9500,7 +9503,7 @@ lemma updateCap_noop_invs:
     apply (simp add: cte_wp_at_ctes_of)
    apply assumption
   apply clarsimp
-  done*) sorry (* valid_arch_state *)
+  done
 
 lemmas make_zombie_or_noop_or_arch_invs
     = hoare_vcg_disj_lift [OF updateCap_noop_invs
@@ -9671,13 +9674,12 @@ lemma inv_cnode_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> invokeCNode cnode_inv
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: invokeCNode_def)
-  apply (rule hoare_pre)
-(*   apply (wp cteRevoke_IRQInactive finaliseSlot_IRQInactive
+  apply (wp hoare_TrueI [where P=\<top>] cteRevoke_IRQInactive finaliseSlot_IRQInactive
              cteRevoke_irq_states' cteDelete_IRQInactive
              hoare_whenE_wp
            | wpc
            | simp add:  split_def)+
-  done*) sorry
+  done
 
 end
 

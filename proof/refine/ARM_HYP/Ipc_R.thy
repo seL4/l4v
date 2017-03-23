@@ -4190,6 +4190,8 @@ crunch ctes_of[wp]: switchIfRequiredTo "\<lambda>s. P (ctes_of s)"
 lemmas switchIfRequiredTo_cteCaps_of[wp]
     = cteCaps_of_ctes_of_lift[OF switchIfRequiredTo_ctes_of]
 
+crunch hyp_refs'[wp]: switchIfRequiredTo "\<lambda>s. P (state_hyp_refs_of' s)"
+
 (* t = ksCurThread s *)
 lemma ri_invs' [wp]:
   "\<lbrace>invs' and sch_act_not t
@@ -4211,19 +4213,19 @@ lemma ri_invs' [wp]:
      -- "endpoint = RecvEP"
      apply (simp add: invs'_def valid_state'_def)
      apply (rule hoare_pre, wpc, wp valid_irq_node_lift)
-      apply (simp add: valid_ep'_def)
-(*      apply (wp sts_sch_act' hoare_vcg_const_Ball_lift valid_irq_node_lift
+      apply (simp add: valid_ep'_def del: fun_upd_apply)
+      apply (wp sts_sch_act' hoare_vcg_const_Ball_lift valid_irq_node_lift
                 sts_valid_queues setThreadState_ct_not_inQ
                 asUser_urz
-           | simp add: doNBRecvFailedTransfer_def cteCaps_of_def)+
+           | simp add: doNBRecvFailedTransfer_def cteCaps_of_def del: fun_upd_apply)+
      apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at' o_def)
      apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
      apply (frule obj_at_valid_objs')
       apply (clarsimp simp: valid_pspace'_def)
-     apply (drule(1) sym_refs_ko_atD')
+     apply (frule(1) sym_refs_ko_atD')
      apply (drule simple_st_tcb_at_state_refs_ofD')
      apply (drule bound_tcb_at_state_refs_ofD')
-     apply (clarsimp simp: st_tcb_at_refs_of_rev' valid_ep'_def
+     apply (clarsimp simp: st_tcb_at_refs_of_rev' valid_ep'_def state_hyp_refs_of'_ep
                            valid_obj'_def projectKOs tcb_bound_refs'_def
                     dest!: isCapDs)
      apply (rule conjI, clarsimp)
@@ -4234,19 +4236,19 @@ lemma ri_invs' [wp]:
        apply (clarsimp split: if_split_asm)
         apply (rename_tac list one two three fur five six seven eight nine ten)
         apply (subgoal_tac "set list \<times> {EPRecv} \<noteq> {}")
-         apply safe[1]*)                                     (* valid_arch_state *)
-(*                apply (auto dest!: symreftype_inverse')[10]
+         apply safe[1]
+                apply (auto dest!: symreftype_inverse')[10]
       apply (clarsimp split: if_split_asm)
      apply (fastforce simp: valid_pspace'_def global'_no_ex_cap idle'_not_queued)
    -- "endpoint = IdleEP"
     apply (simp add: invs'_def valid_state'_def)
     apply (rule hoare_pre, wpc, wp valid_irq_node_lift)
-     apply (simp add: valid_ep'_def)
+     apply (simp add: valid_ep'_def del: fun_upd_apply)
      apply (wp sts_sch_act' valid_irq_node_lift
                sts_valid_queues setThreadState_ct_not_inQ
                asUser_urz
-          | simp add: doNBRecvFailedTransfer_def cteCaps_of_def)+
-    apply (clarsimp simp: pred_tcb_at' valid_tcb_state'_def o_def)
+          | simp add: doNBRecvFailedTransfer_def cteCaps_of_def del: fun_upd_apply)+
+    apply (clarsimp simp: pred_tcb_at' valid_tcb_state'_def o_def state_hyp_refs_of'_ep)
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
     apply (subgoal_tac "t \<noteq> capEPPtr cap")
      apply (drule simple_st_tcb_at_state_refs_ofD')
@@ -4273,11 +4275,11 @@ lemma ri_invs' [wp]:
               switchIfRequiredTo_ct_not_inQ hoare_vcg_all_lift
               setEndpoint_ksQ setEndpoint_ct'
          | simp add: valid_tcb_state'_def case_bool_If
-                     case_option_If
+                     case_option_If del: fun_upd_apply
               split del: if_split cong: if_cong
         | wp_once sch_act_sane_lift hoare_vcg_conj_lift hoare_vcg_all_lift
                   untyped_ranges_zero_lift)+
-   apply (clarsimp split del: if_split simp: pred_tcb_at')
+   apply (clarsimp split del: if_split simp: pred_tcb_at' state_hyp_refs_of'_ep)
    apply (frule obj_at_valid_objs')
     apply (clarsimp simp: valid_pspace'_def)
    apply (frule(1) ct_not_in_epQueue, clarsimp, clarsimp)
@@ -4299,24 +4301,25 @@ lemma ri_invs' [wp]:
      apply (clarsimp simp: ep_redux_simps' cong: if_cong)
      apply (erule delta_sym_refs)
       apply (clarsimp split: if_split_asm)
-     apply (fastforce simp: tcb_bound_refs'_def
-                      dest: symreftype_inverse'
-                     split: if_split_asm)
-    apply (clarsimp simp: singleton_tuple_cartesian split: list.split
-            | rule conjI | drule(1) bspec
-            | drule st_tcb_at_state_refs_ofD' bound_tcb_at_state_refs_ofD'
-            | clarsimp elim!: if_live_state_refsE)+
+     subgoal by (fastforce simp: tcb_bound_refs'_def
+                           dest: symreftype_inverse'
+                          split: if_split_asm)
+    subgoal
+      by (clarsimp simp: singleton_tuple_cartesian split: list.split
+              | rule conjI | drule(1) bspec
+              | drule st_tcb_at_state_refs_ofD' bound_tcb_at_state_refs_ofD'
+              | clarsimp elim!: if_live_state_refsE)+
     apply (case_tac cap, simp_all add: isEndpointCap_def)
     apply (clarsimp simp: global'_no_ex_cap)
-   apply (rule conjI
+   subgoal
+     by (rule conjI
            | clarsimp simp: singleton_tuple_cartesian split: list.split
            | clarsimp elim!: if_live_state_refsE
            | clarsimp simp: global'_no_ex_cap idle'_not_queued' idle'_no_refs tcb_bound_refs'_def
            | drule(1) bspec | drule st_tcb_at_state_refs_ofD'
            | clarsimp simp: set_eq_subset dest!: bound_tcb_at_state_refs_ofD' )+
-  apply (rule hoare_pre)
-   apply (wp getNotification_wp | wpc | clarsimp)+
-  done*) sorry (* valid_arch_state etc. *)
+  apply (wp getNotification_wp | wpc | clarsimp)+
+  done
 
 (* t = ksCurThread s *)
 lemma rai_invs'[wp]:
@@ -4538,11 +4541,12 @@ lemma si_invs'[wp]:
              | simp    add: valid_tcb_state'_def case_bool_If
                             case_option_If
                       cong: if_cong
+                       del: fun_upd_apply
                  split del: if_split
              | wp_once sch_act_sane_lift tcb_in_cur_domain'_lift)+
-    apply (clarsimp simp: pred_tcb_at'
+    apply (clarsimp simp: pred_tcb_at' state_hyp_refs_of'_ep
                split del: if_split)
-(*    apply (frule obj_at_valid_objs', clarsimp)
+    apply (frule obj_at_valid_objs', clarsimp)
     apply (frule(1) sym_refs_ko_atD')
     apply (clarsimp simp: projectKOs valid_obj'_def valid_ep'_def
                           st_tcb_at_refs_of_rev' pred_tcb_at'
@@ -4564,8 +4568,8 @@ lemma si_invs'[wp]:
      apply (fastforce simp: tcb_bound_refs'_def set_eq_subset)
     apply (rule conjI, clarsimp simp: idle'_no_refs)
     apply (rule conjI, clarsimp simp: global'_no_ex_cap)
-    apply (rule conjI)*)                            (* valid_arch_state *)
-(*     apply (rule impI)
+    apply (rule conjI)
+     apply (rule impI)
      apply (frule(1) ct_not_in_epQueue, clarsimp, clarsimp)
      apply (clarsimp)
     apply (simp add: ep_redux_simps')
@@ -4579,10 +4583,11 @@ lemma si_invs'[wp]:
    apply (cases bl)
     apply (simp add: invs'_def valid_state'_def)
     apply (rule hoare_pre, wp valid_irq_node_lift)
-     apply (simp add: valid_ep'_def)
+     apply (simp add: valid_ep'_def del: fun_upd_apply)
      apply (wp valid_irq_node_lift sts_sch_act' sts_valid_queues
                setThreadState_ct_not_inQ)
-    apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at')
+    apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at' state_hyp_refs_of'_ep
+                    simp del: fun_upd_apply)
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
     apply (subgoal_tac "ep \<noteq> t")
      apply (drule simple_st_tcb_at_state_refs_ofD' ko_at_state_refs_ofD'
@@ -4599,10 +4604,11 @@ lemma si_invs'[wp]:
   apply (cases bl)
    apply (simp add: invs'_def valid_state'_def)
    apply (rule hoare_pre, wp valid_irq_node_lift)
-    apply (simp add: valid_ep'_def)
+    apply (simp add: valid_ep'_def del: fun_upd_apply)
     apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift sts_sch_act'
               sts_valid_queues setThreadState_ct_not_inQ)
-   apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at')
+   apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at' state_hyp_refs_of'_ep
+                   simp del: fun_upd_apply)
    apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
    apply (frule obj_at_valid_objs', clarsimp)
    apply (frule(1) sym_refs_ko_atD')
@@ -4623,7 +4629,7 @@ lemma si_invs'[wp]:
                     split: if_split_asm)
    apply (fastforce simp: global'_no_ex_cap idle'_not_queued)
   apply (simp | wp)+
-  done*) sorry (* valid_arch_state etc.*)
+  done
 
 lemma sfi_invs_plus':
   "\<lbrace>invs' and st_tcb_at' simple' t
