@@ -28,7 +28,6 @@ datatype vmrights =
     VMKernelOnly
   | VMReadOnly
   | VMReadWrite
-  | VMWriteOnly
 
 datatype pml4e =
     InvalidPML4E
@@ -686,9 +685,8 @@ definition
 vmRightsToBits :: "vmrights \<Rightarrow> machine_word"
 where
 "vmRightsToBits x0\<equiv> (case x0 of
-    VMKernelOnly \<Rightarrow>    0x0
+    VMKernelOnly \<Rightarrow>    0x01
   | VMReadOnly \<Rightarrow>    0x10
-  | VMWriteOnly \<Rightarrow>    0x01
   | VMReadWrite \<Rightarrow>    0x11
   )"
 
@@ -699,7 +697,6 @@ where
     VMKernelOnly \<Rightarrow>    False
   | VMReadOnly \<Rightarrow>    False
   | VMReadWrite \<Rightarrow>    True
-  | VMWriteOnly \<Rightarrow>    True
   )"
 
 definition
@@ -707,9 +704,8 @@ allowRead :: "vmrights \<Rightarrow> bool"
 where
 "allowRead x0\<equiv> (case x0 of
     VMKernelOnly \<Rightarrow>    False
-  | VMReadOnly \<Rightarrow>    False
+  | VMReadOnly \<Rightarrow>    True
   | VMReadWrite \<Rightarrow>    True
-  | VMWriteOnly \<Rightarrow>    False
   )"
 
 definition
@@ -718,8 +714,7 @@ where
 "getVMRights x0 x1\<equiv> (case (x0, x1) of
     (True, True) \<Rightarrow>    VMReadWrite
   | (True, False) \<Rightarrow>    VMReadOnly
-  | (False, True) \<Rightarrow>    VMWriteOnly
-  | (False, False) \<Rightarrow>    VMKernelOnly
+  | (_, _) \<Rightarrow>    VMKernelOnly
   )"
 
 definition

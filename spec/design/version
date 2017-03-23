@@ -1,15 +1,11 @@
 Built from git repo at /home/joelb/work/verification/l4v/spec/haskell by joelb
 
 Generated from changeset:
-263ebe9 x64: s/ARM/X64/g proof/refine/X64/*.thy
+e6fcfaf x64: refine: ArchAcc_R done
 
 
 Warning - uncomitted changes used:
- M ../../proof/refine/X64/ArchAcc_R.thy
- M ../../proof/refine/X64/Invariants_H.thy
- M ../../proof/refine/X64/StateRelation.thy
- M ../design/X64/Hardware_H.thy
- M ../design/skel/X64/Hardware_H.thy
+ M ../../proof/refine/X64/CSpace_I.thy
  M ../design/version
- M ../../tools/haskell-translator/caseconvs
+ M src/SEL4/Machine/Hardware/X64.lhs
  M ../../tools/haskell-translator/make_spec.sh

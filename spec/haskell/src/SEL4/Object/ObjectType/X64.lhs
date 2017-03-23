@@ -223,6 +223,7 @@ Deletion of a final capability to a page table that has been mapped requires tha
 
 > isPhysicalCap :: ArchCapability -> Bool
 > isPhysicalCap ASIDControlCap = False
+> isPhysicalCap (IOPortCap _ _) = False
 > isPhysicalCap _ = True
 
 > sameObjectAs :: ArchCapability -> ArchCapability -> Bool

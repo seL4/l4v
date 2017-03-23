@@ -530,32 +530,27 @@ Page entries -- any of PTEs, PDEs or PDPTEs.
 >     = VMKernelOnly
 >     | VMReadOnly
 >     | VMReadWrite
->     | VMWriteOnly
 >     deriving (Show, Eq)
 
 > vmRightsToBits :: VMRights -> Word
-> vmRightsToBits VMKernelOnly = 0x0
+> vmRightsToBits VMKernelOnly = 0x01
 > vmRightsToBits VMReadOnly = 0x10
-> vmRightsToBits VMWriteOnly = 0x01
 > vmRightsToBits VMReadWrite = 0x11
 
 > allowWrite :: VMRights -> Bool
 > allowWrite VMKernelOnly = False
 > allowWrite VMReadOnly = False
 > allowWrite VMReadWrite = True
-> allowWrite VMWriteOnly = True
 
 > allowRead :: VMRights -> Bool
 > allowRead VMKernelOnly = False
-> allowRead VMReadOnly = False
+> allowRead VMReadOnly = True
 > allowRead VMReadWrite = True
-> allowRead VMWriteOnly = False
 
 > getVMRights :: Bool -> Bool -> VMRights
 > getVMRights True True = VMReadWrite
 > getVMRights True False = VMReadOnly
-> getVMRights False True = VMWriteOnly
-> getVMRights False False = VMKernelOnly
+> getVMRights _ _ = VMKernelOnly
 
 > vmRightsFromBits ::  Word -> VMRights
 > vmRightsFromBits rw = getVMRights (testBit rw 1) (testBit rw 0)
