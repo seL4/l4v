@@ -1020,6 +1020,26 @@ lemma hyp_refs_notRange:
   apply clarsimp
   done
 
+lemma sym_refs_VCPU_hyp_live':
+ "\<lbrakk>ko_wp_at' (op = (KOArch (KOVCPU v))) p s; sym_refs (state_hyp_refs_of' s); vcpuTCBPtr v = Some t\<rbrakk>
+  \<Longrightarrow> ko_wp_at' (\<lambda>ko. koTypeOf ko = TCBT \<and> hyp_live' ko) t s"
+  apply (drule (1) sym_hyp_refs_ko_wp_atD)
+  apply (clarsimp)
+  apply (drule state_hyp_refs_of'_elemD)
+  apply (simp add: ko_wp_at'_def)
+  apply (clarsimp simp: hyp_refs_of_rev' hyp_live'_def)
+  done
+
+lemma sym_refs_TCB_hyp_live':
+ "\<lbrakk>ko_wp_at' (op = (KOTCB t)) p s; sym_refs (state_hyp_refs_of' s); atcbVCPUPtr (tcbArch t) = Some v\<rbrakk>
+  \<Longrightarrow> ko_wp_at' (\<lambda>ko. koTypeOf ko = ArchT VCPUT \<and> hyp_live' ko) v s"
+  apply (drule (1) sym_hyp_refs_ko_wp_atD)
+  apply (clarsimp)
+  apply (drule state_hyp_refs_of'_elemD)
+  apply (simp add: ko_wp_at'_def)
+  apply (clarsimp simp: hyp_refs_of_rev' hyp_live'_def arch_live'_def)
+  done
+
 lemma valid_obj':
   "\<lbrakk> valid_obj' obj s; ko_wp_at' (op = obj) p s \<rbrakk> \<Longrightarrow> valid_obj' obj state'"
   apply (case_tac obj, simp_all add: valid_obj'_def)
@@ -1048,11 +1068,18 @@ lemma valid_obj':
      apply (erule(2) cte_wp_at_tcbI')
       apply fastforce
      apply simp
-(*    apply (rename_tac tcb)
-    apply (case_tac "tcbState tcb";
-           clarsimp simp: valid_tcb_state'_def valid_bound_ntfn'_def
-                   dest!: refs_notRange split: option.splits)
-
+    apply (rename_tac tcb)
+    apply (simp only: conj_assoc[symmetric], rule conjI)
+     apply (case_tac "tcbState tcb";
+            clarsimp simp: valid_tcb_state'_def valid_bound_ntfn'_def
+                     dest!: refs_notRange split: option.splits)
+    using sym_hyp_refs
+    apply (clarsimp simp add: valid_arch_tcb'_def split: option.split_asm)
+    apply (drule (1) sym_refs_TCB_hyp_live'[rotated])
+     apply (clarsimp simp: ko_wp_at'_def objBitsKO_simps; (rule conjI|assumption)+)
+    apply (drule live_notRange, clarsimp simp: live'_def)
+     apply (case_tac ko; simp)
+    apply clarsimp
    apply (clarsimp simp: valid_cte'_def)
    apply (rule_tac p=p in valid_cap2)
    apply (clarsimp simp: ko_wp_at'_def objBits_simps cte_level_bits_def[symmetric])
@@ -1066,10 +1093,14 @@ lemma valid_obj':
    apply (case_tac pte, simp_all add: valid_mapping'_def)
   apply(rename_tac pde)
   apply (case_tac pde, simp_all add: valid_mapping'_def)
-  apply (rename_tac vcpu)
-  apply (case_tac "vcpuTCBPtr vcpu"; clarsimp simp: valid_vcpu'_def)
-  apply (drule live_notRange, clarsimp simp: live'_def hyp_live'_def arch_live'_def)*)
-  sorry (* add vcpu case *)
+  (* vcpu case *)
+  using sym_hyp_refs
+  apply (clarsimp simp add: valid_vcpu'_def split: option.split_asm)
+  apply (drule (2) sym_refs_VCPU_hyp_live')
+  apply (drule live_notRange, clarsimp simp: live'_def)
+   apply (case_tac ko; simp)
+  apply clarsimp
+  done
 
 lemma st_tcb:
     "\<And>P p. \<lbrakk> st_tcb_at' P p s; \<not> P Inactive; \<not> P IdleThreadState \<rbrakk> \<Longrightarrow>
