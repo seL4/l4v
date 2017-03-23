@@ -113,6 +113,48 @@ lemma get_asid_pool_corres':
    apply auto
   done
 
+lemma storePML4E_cte_wp_at'[wp]:
+  "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
+     storePML4E ptr val
+   \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
+  apply (simp add: storePML4E_def)
+  apply (wp setObject_cte_wp_at2'[where Q="\<top>"])
+    apply (clarsimp simp: updateObject_default_def in_monad
+                          projectKO_opts_defs projectKOs)
+   apply (rule equals0I)
+   apply (clarsimp simp: updateObject_default_def in_monad
+                         projectKOs projectKO_opts_defs)
+  apply simp
+  done
+
+lemma storePML4E_state_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
+     storePML4E ptr val
+   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
+  unfolding storePML4E_def
+  by (wp setObject_state_refs_of_eq; clarsimp simp: updateObject_default_def in_monad projectKOs)
+
+lemma storePDPTE_cte_wp_at'[wp]:
+  "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
+     storePDPTE ptr val
+   \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
+  apply (simp add: storePDPTE_def)
+  apply (wp setObject_cte_wp_at2'[where Q="\<top>"])
+    apply (clarsimp simp: updateObject_default_def in_monad
+                          projectKO_opts_defs projectKOs)
+   apply (rule equals0I)
+   apply (clarsimp simp: updateObject_default_def in_monad
+                         projectKOs projectKO_opts_defs)
+  apply simp
+  done
+
+lemma storePDPTE_state_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
+     storePDPTE ptr val
+   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
+  unfolding storePDPTE_def
+  by (wp setObject_state_refs_of_eq; clarsimp simp: updateObject_default_def in_monad projectKOs)
+
 lemma storePDE_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
      storePDE ptr val
@@ -1048,30 +1090,40 @@ lemma store_pte_corres':
    apply auto
   done
 
-
-lemmas tableBitSimps[simplified X64_H.ptTranslationBits_def, simplified] =
+lemmas tableBitSimps[simplified ptTranslationBits_def, simplified] =
       ptBits_def pdBits_def pdptBits_def pml4Bits_def
 
-lemmas shiftBitSimps[simplified X64_H.ptTranslationBits_def pageBits_def, simplified] =
+lemmas shiftBitSimps[simplified ptTranslationBits_def pageBits_def, simplified] =
       ptShiftBits_def pdShiftBits_def pdptShiftBits_def pml4ShiftBits_def
 
-lemmas bitSimps = X64_H.ptTranslationBits_def tableBitSimps shiftBitSimps
+lemmas bitSimps = tableBitSimps shiftBitSimps
+
+lemma bit_simps_corres[simp]:
+  "ptShiftBits = pt_shift_bits"
+  "pdShiftBits = pd_shift_bits"
+  "pdptShiftBits = pdpt_shift_bits"
+  "pml4ShiftBits = pml4_shift_bits"
+  "ptBits = pt_bits"
+  "pdBits = pd_bits"
+  "pdptBits = pdpt_bits"
+  "pml4Bits = pml4_bits"
+  by (simp add: bit_simps bitSimps)+
 
 lemma get_pml4_index_corres[simp]:
   "get_pml4_index x = getPML4Index x"
-  by (simp add: get_pml4_index_def getPML4Index_def bit_simps bitSimps)
+  by (simp add: get_pml4_index_def getPML4Index_def bit_simps)
 
 lemma get_pdpt_index_corres[simp]:
   "get_pdpt_index x = getPDPTIndex x"
-  by (simp add: get_pdpt_index_def getPDPTIndex_def bit_simps bitSimps)
+  by (simp add: get_pdpt_index_def getPDPTIndex_def bit_simps)
 
 lemma get_pd_index_corres[simp]:
   "get_pd_index x = getPDIndex x"
-  by (simp add: get_pd_index_def getPDIndex_def bit_simps bitSimps)
+  by (simp add: get_pd_index_def getPDIndex_def bit_simps)
 
 lemma get_pt_index_corres[simp]:
   "get_pt_index x = getPTIndex x"
-  by (simp add: get_pt_index_def getPTIndex_def bit_simps bitSimps)
+  by (simp add: get_pt_index_def getPTIndex_def bit_simps )
 
 lemma lookup_pml4_slot_corres [simp]:
   "lookupPML4Slot pml4 vptr = lookup_pml4_slot pml4 vptr"
@@ -1139,7 +1191,7 @@ lemma page_table_at_state_relation:
    apply fastforce
   apply clarsimp
   apply (frule(1) pspace_alignedD)
-   apply (simp add:ptrFromPAddr_def bit_simps bitSimps)
+   apply (simp add:ptrFromPAddr_def bit_simps )
   apply clarsimp
   apply (drule_tac x = "ucast y" in spec)
   apply (drule sym[where s = "pspace_dom (kheap s)"])
@@ -1176,7 +1228,7 @@ lemma page_directory_at_state_relation:
    apply fastforce
   apply clarsimp
   apply (frule(1) pspace_alignedD)
-   apply (simp add: pdBits_def pageBits_def bit_simps bitSimps)
+   apply (simp add: pdBits_def pageBits_def bit_simps )
   apply clarsimp
   apply (drule_tac x = "ucast y" in spec)
   apply (drule sym[where s = "pspace_dom (kheap s)"])
@@ -1212,7 +1264,7 @@ lemma pd_pointer_table_at_state_relation:
    apply fastforce
   apply clarsimp
   apply (frule(1) pspace_alignedD)
-   apply (simp add: bit_simps bitSimps)
+   apply (simp add: bit_simps )
   apply clarsimp
   apply (drule_tac x = "ucast y" in spec)
   apply (drule sym[where s = "pspace_dom (kheap s)"])
@@ -1248,7 +1300,7 @@ lemma page_map_l4_at_state_relation:
    apply fastforce
   apply clarsimp
   apply (frule(1) pspace_alignedD)
-   apply (simp add: bit_simps bitSimps)
+   apply (simp add: bit_simps )
   apply clarsimp
   apply (drule_tac x = "ucast y" in spec)
   apply (drule sym[where s = "pspace_dom (kheap s)"])
@@ -1311,7 +1363,7 @@ lemma lookup_pdpt_slot_corres:
   apply (rule corres_initial_splitE
                  [where Q'="\<lambda>_. pspace_distinct'" and Q="\<lambda>r. pml4e_at (lookup_pml4_slot pml4 vptr)"])
        apply (simp, rule get_pml4e_corres')
-      apply (case_tac rv; simp add: lookup_failure_map_def bit_simps bitSimps
+      apply (case_tac rv; simp add: lookup_failure_map_def bit_simps
                              split: X64_H.pml4e.splits)
       apply (wpsimp wp: getPML4E_wp get_pml4e_wp
                   simp: obj_at_def lookup_pml4_slot_eq lookup_pml4_slot_kernel_mappings returnOk_liftE
@@ -1335,7 +1387,7 @@ lemma lookup_pd_slot_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE[OF _ lookup_pdpt_slot_corres])
       apply (rule corres_initial_splitE, simp, rule get_pdpte_corres')
-        apply (case_tac rv; simp add: lookup_failure_map_def bit_simps bitSimps split: pdpte.splits)
+        apply (case_tac rv; simp add: lookup_failure_map_def bit_simps  split: pdpte.splits)
         apply (wpsimp wp: get_pdpte_wp getPDPTE_wp simp: returnOk_liftE)+
   done
 
@@ -1350,11 +1402,17 @@ lemma lookup_pt_slot_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE[OF _ lookup_pd_slot_corres])
       apply (rule corres_initial_splitE, simp, rule get_pde_corres')
-        apply (case_tac rv; simp_all add: lookup_failure_map_def bit_simps bitSimps split: pde.splits)
+        apply (case_tac rv; simp_all add: lookup_failure_map_def bit_simps  split: pde.splits)
         apply (wpsimp wp: get_pde_wp getPDE_wp simp: returnOk_liftE)+
   done
 
 declare in_set_zip_refl[simp]
+
+crunch typ_at' [wp]: storePML4E "\<lambda>s. P (typ_at' T p s)"
+  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
+
+crunch typ_at' [wp]: storePDPTE "\<lambda>s. P (typ_at' T p s)"
+  (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
 
 crunch typ_at' [wp]: storePDE "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
@@ -1362,6 +1420,8 @@ crunch typ_at' [wp]: storePDE "\<lambda>s. P (typ_at' T p s)"
 crunch typ_at' [wp]: storePTE "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp' simp: crunch_simps)
 
+lemmas storePML4E_typ_ats[wp] = typ_at_lifts [OF storePML4E_typ_at']
+lemmas storePDPTE_typ_ats[wp] = typ_at_lifts [OF storePDPTE_typ_at']
 lemmas storePDE_typ_ats[wp] = typ_at_lifts [OF storePDE_typ_at']
 lemmas storePTE_typ_ats[wp] = typ_at_lifts [OF storePTE_typ_at']
 
@@ -1379,56 +1439,59 @@ lemma getObject_pde_inv[wp]:
   "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>rv :: pde. P\<rbrace>"
   by (simp add: getObject_inv loadObject_default_inv)
 
+lemma getObject_pdpte_inv[wp]:
+  "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>rv :: pdpte. P\<rbrace>"
+  by (simp add: getObject_inv loadObject_default_inv)
+
+lemma getObject_pml4e_inv[wp]:
+  "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>rv :: pml4e. P\<rbrace>"
+  by (simp add: getObject_inv loadObject_default_inv)
+
 crunch typ_at'[wp]: copyGlobalMappings "\<lambda>s. P (typ_at' T p s)"
   (wp: mapM_x_wp' ignore: forM_x getObject)
 
 lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
 
 lemma copy_global_mappings_corres:
-  "corres dc (page_directory_at pd and pspace_aligned and valid_arch_state and valid_etcbs)
-             (page_directory_at' pd and valid_arch_state')
-          (copy_global_mappings pd) (copyGlobalMappings pd)"
+  "corres dc (page_map_l4_at pm and pspace_aligned and valid_arch_state and valid_etcbs)
+             (page_map_l4_at' pm and valid_arch_state')
+          (copy_global_mappings pm) (copyGlobalMappings pm)"
   apply (simp add: copy_global_mappings_def copyGlobalMappings_def)
   apply (simp add: pd_bits_def pdBits_def objBits_simps
-                   archObjSize_def kernel_base_def ARM.kernelBase_def X64_H.kernelBase_def)
+                   archObjSize_def pptr_base_def X64.pptrBase_def getPML4Index_def bit_simps)
   apply (rule corres_guard_imp)
     apply (rule corres_split [where r'="op =" and P=\<top>  and P'=\<top>])
        prefer 2
        apply (clarsimp simp: state_relation_def arch_state_relation_def)
-       apply (rule_tac F = "is_aligned global_pd 6 \<and> is_aligned pd 6" in corres_gen_asm)
       apply (rule corres_mapM_x)
           prefer 5
           apply (rule order_refl)
           apply clarsimp
             apply (rule corres_split)
-            apply (rule store_pde_corres)
+            apply (rule store_pml4e_corres)
             apply assumption
-           apply (rule_tac P="page_directory_at globalPD and pspace_aligned" and
-                           P'="page_directory_at' globalPD" in corres_guard_imp)
+           apply (rule_tac P="page_map_l4_at globalPM and pspace_aligned" and
+                           P'="page_map_l4_at' globalPM" in corres_guard_imp)
              apply (rule corres_rel_imp)
-              apply (rule get_pde_corres)
-             apply (drule(1) align_entry_add_cong)
-              apply (auto simp:pde_relation_aligned_def)[1]
+              apply (rule get_pml4e_corres, assumption)
              apply clarsimp
-            apply (erule (2) page_directory_pde_atI)
-           apply (erule (1) page_directory_pde_atI')
-          apply (rule_tac P="page_directory_at pd and pspace_aligned and valid_etcbs" in hoare_triv)
+            apply (erule page_map_l4_pml4e_atI[simplified bit_simps, simplified], word_bitwise, assumption)
+           apply (erule page_map_l4_pml4e_atI'[simplified bit_simps, simplified], word_bitwise)
+          apply (rule_tac P="page_map_l4_at pm and pspace_aligned and valid_etcbs" in hoare_triv)
           apply wp
           apply clarsimp
-          apply (erule (2) page_directory_pde_atI)
-         apply (rule_tac P="page_directory_at' pd" in hoare_triv)
-         apply (wp getPDE_wp)
+          apply (erule page_map_l4_pml4e_atI[simplified bit_simps, simplified], word_bitwise, assumption)
+         apply (rule_tac P="page_map_l4_at' pm" in hoare_triv)
+         apply (wp getPML4E_wp)
          apply clarsimp
-         apply (erule (1) page_directory_pde_atI')
+         apply (erule page_map_l4_pml4e_atI'[simplified bit_simps, simplified], word_bitwise)
         apply wp
         apply simp+
-       apply (wp getPDE_wp)
+       apply (wp getPML4E_wp)
        apply clarsimp
       apply clarsimp
      apply wp+
    apply (clarsimp simp: valid_arch_state_def obj_at_def dest!:pspace_alignedD)
-   apply (intro conjI)
-    apply (erule is_aligned_weaken,simp)+
   apply (simp add: valid_arch_state'_def)
   done
 
@@ -1477,60 +1540,100 @@ lemma arch_derive_corres:
   done
 
 definition
-  "vmattributes_map \<equiv> \<lambda>R. VMAttributes (PageCacheable \<in> R) (ParityEnabled \<in> R) (XNever \<in> R)"
+  "vmattributes_map \<equiv> \<lambda>R. VMAttributes (PTAttr WriteThrough \<in> R) (PAT \<in> R) (PTAttr CacheDisabled \<in> R)"
 
 definition
-  mapping_map :: "X64_A.pte \<times> word32 list + X64_A.pde \<times> word32 list \<Rightarrow>
-                  X64_H.pte \<times> word32 list + X64_H.pde \<times> word32 list \<Rightarrow> bool"
+  page_entry_map :: "vm_page_entry \<Rightarrow> vmpage_entry \<Rightarrow> bool"
 where
-  "mapping_map \<equiv> pte_relation' \<otimes> (op =) \<oplus> pde_relation' \<otimes> (op =)"
+  "page_entry_map ae he \<equiv> case ae of
+        vm_page_entry.VMPTE p \<Rightarrow> \<exists>p'. he = VMPTE p' \<and> pte_relation' p p'
+      | vm_page_entry.VMPDE p \<Rightarrow> \<exists>p'. he = VMPDE p' \<and> pde_relation' p p'
+      | vm_page_entry.VMPDPTE p \<Rightarrow> \<exists>p'. he = VMPDPTE p' \<and> pdpte_relation' p p'"
+
+definition
+  page_entry_ptr_map :: "machine_word \<Rightarrow> vmpage_entry_ptr \<Rightarrow> bool"
+where
+  "page_entry_ptr_map x h \<equiv> case_vmpage_entry_ptr (op = x) (op = x) (op = x) h"
+
+definition
+  page_entry_map_corres :: "vmpage_entry \<times>vmpage_entry_ptr \<Rightarrow> bool"
+where
+  "page_entry_map_corres e \<equiv> case (fst e) of
+        VMPTE pte \<Rightarrow> \<exists>ptr'. snd e = VMPTEPtr ptr'
+      | VMPDE pde \<Rightarrow> \<exists>ptr'. snd e = VMPDEPtr ptr'
+      | VMPDPTE pdpte \<Rightarrow> \<exists>ptr'. snd e = VMPDPTEPtr ptr'"
+
+term createMappingEntries
+definition
+  mapping_map :: "vm_page_entry \<times> machine_word \<Rightarrow> vmpage_entry \<times> vmpage_entry_ptr \<Rightarrow> bool"
+where
+  "mapping_map \<equiv> page_entry_map \<otimes> page_entry_ptr_map"
 
 lemma create_mapping_entries_corres:
+  notes mapping_map_simps = page_entry_map_def attr_mask_def attr_mask'_def page_entry_ptr_map_def
+  shows
   "\<lbrakk> vm_rights' = vmrights_map vm_rights;
      attrib' = vmattributes_map attrib \<rbrakk>
   \<Longrightarrow> corres (ser \<oplus> mapping_map)
-          (\<lambda>s. (pgsz = ARMSmallPage \<or> pgsz = ARMLargePage \<longrightarrow> pde_at (lookup_pd_slot pd vptr) s)
-           \<and> (is_aligned pd pd_bits \<and> vmsz_aligned vptr pgsz \<and> vptr < kernel_base \<and> vm_rights \<in> valid_vm_rights)
-           \<and> valid_arch_objs s \<and> pspace_aligned s \<and> (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits)) s)
+          (valid_arch_objs and pspace_aligned and valid_arch_state and valid_global_objs and
+           equal_kernel_mappings and \<exists>\<rhd> pml4 and page_map_l4_at pml4 and
+           K (is_aligned pml4 pml4_bits \<and> vmsz_aligned vptr pgsz \<and> vptr < pptr_base
+                \<and> vm_rights \<in> valid_vm_rights \<and> canonical_address vptr))
           (pspace_aligned' and pspace_distinct')
-          (create_mapping_entries base vptr pgsz vm_rights attrib pd)
-          (createMappingEntries base vptr pgsz vm_rights' attrib' pd)"
+          (create_mapping_entries base vptr pgsz vm_rights attrib pml4)
+          (createMappingEntries base vptr pgsz vm_rights' attrib' pml4)"
   apply simp
   apply (cases pgsz, simp_all add: createMappingEntries_def mapping_map_def)
-     apply (rule corres_guard_imp)
-       apply (rule corres_split_eqrE)
-          apply (rule corres_returnOk [where P="\<top>" and P'="\<top>"])
-          apply (clarsimp simp: vmattributes_map_def)
-         apply (rule corres_lookup_error)
-         apply (rule lookup_pt_slot_corres)
-        apply wp+
-      apply clarsimp
-      apply (drule(1) less_kernel_base_mapping_slots,simp)
-     apply simp+
     apply (rule corres_guard_imp)
       apply (rule corres_split_eqrE)
-         apply (rule corres_returnOk [where P="\<top>" and P'="\<top>"])
-         apply (clarsimp simp: vmattributes_map_def)
+         apply (rule corres_returnOkTT)
+         apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
         apply (rule corres_lookup_error)
         apply (rule lookup_pt_slot_corres)
        apply wp+
      apply clarsimp
-     apply (drule(1) less_kernel_base_mapping_slots,simp)
     apply simp+
-   apply (rule corres_returnOk)
-   apply (simp add: vmattributes_map_def)
-  apply (rule corres_returnOk)
-  apply (simp add: vmattributes_map_def)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split_eqrE)
+        apply (rule corres_returnOkTT)
+        apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
+       apply (rule corres_lookup_error)
+       apply (rule lookup_pd_slot_corres)
+      apply wp+
+    apply clarsimp
+   apply simp+
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_eqrE)
+       apply (rule corres_returnOkTT)
+       apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
+      apply (rule corres_lookup_error)
+      apply (rule lookup_pdpt_slot_corres)
+     apply wp+
+   apply clarsimp
+  apply simp
   done
 
 lemma pte_relation'_Invalid_inv [simp]:
   "pte_relation' x X64_H.pte.InvalidPTE = (x = X64_A.pte.InvalidPTE)"
   by (cases x) auto
 
+lemma pde_relation'_Invalid_inv [simp]:
+  "pde_relation' x X64_H.pde.InvalidPDE = (x = X64_A.pde.InvalidPDE)"
+  by (cases x) auto
+
+lemma pdpte_relation'_Invalid_inv [simp]:
+  "pdpte_relation' x X64_H.pdpte.InvalidPDPTE = (x = X64_A.pdpte.InvalidPDPTE)"
+  by (cases x) auto
+
+lemma pml4e_relation'_Invalid_inv [simp]:
+  "pml4e_relation' x X64_H.pml4e.InvalidPML4E = (x = X64_A.pml4e.InvalidPML4E)"
+  by (cases x) auto
+
 definition
   "valid_slots' m \<equiv> case m of
-    Inl (pte, xs) \<Rightarrow> \<lambda>s. valid_pte' pte s
-  | Inr (pde, xs) \<Rightarrow> \<lambda>s. valid_pde' pde s"
+    (VMPTE pte, p) \<Rightarrow> \<lambda>s. valid_pte' pte s
+  | (VMPDE pde, p) \<Rightarrow> \<lambda>s. valid_pde' pde s
+  | (VMPDPTE pdpte, p) \<Rightarrow> \<lambda>s. valid_pdpte' pdpte s"
 
 lemma valid_slots_typ_at':
   assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
@@ -1538,11 +1641,8 @@ lemma valid_slots_typ_at':
   unfolding valid_slots'_def
   apply (cases m)
    apply (case_tac a)
-   apply simp
-   apply (wp x valid_pte_lift')
-  apply (case_tac b)
-  apply simp
-  apply (wp x valid_pde_lift')
+    apply simp
+    apply (wpsimp wp: x valid_pte_lift' valid_pde_lift' valid_pdpte_lift')+
   done
 
 lemma createMappingEntries_valid_slots' [wp]:
@@ -1557,63 +1657,69 @@ lemma createMappingEntries_valid_slots' [wp]:
   apply auto
   done
 
+lemma mapping_map_pte: "\<lbrakk>mapping_map (vm_page_entry.VMPTE p, x) m'; page_entry_map_corres m'\<rbrakk> \<Longrightarrow> \<exists>p'. m' = (VMPTE p', VMPTEPtr x)"
+  by (cases m'; clarsimp simp : mapping_map_def page_entry_map_def page_entry_ptr_map_def page_entry_map_corres_def)
+
+lemma mapping_map_pde: "\<lbrakk>mapping_map (vm_page_entry.VMPDE p, x) m'; page_entry_map_corres m'\<rbrakk> \<Longrightarrow> \<exists>p'. m' = (VMPDE p', VMPDEPtr x)"
+  by (cases m'; clarsimp simp : mapping_map_def page_entry_map_def page_entry_ptr_map_def page_entry_map_corres_def)
+
+lemma mapping_map_pdpte: "\<lbrakk>mapping_map (vm_page_entry.VMPDPTE p, x) m'; page_entry_map_corres m'\<rbrakk> \<Longrightarrow> \<exists>p'. m' = (VMPDPTE p', VMPDPTEPtr x)"
+  by (cases m'; clarsimp simp : mapping_map_def page_entry_map_def page_entry_ptr_map_def page_entry_map_corres_def)
+
+lemma createMappingEntries_wf:
+  "\<lbrace>\<top>\<rbrace> createMappingEntries base vptr sz R attrs vspace \<lbrace>\<lambda>rv s. page_entry_map_corres rv\<rbrace>, -"
+  apply (simp add: createMappingEntries_def page_entry_map_corres_def)
+  apply (rule hoare_pre)
+   apply wpc
+     apply (wp | simp split: vmpage_entry.splits)+
+  by auto
+
 lemma ensure_safe_mapping_corres:
-  "mapping_map m m' \<Longrightarrow>
+  notes mapping_map_simps = mapping_map_def page_entry_map_def page_entry_ptr_map_def attr_mask_def
+  shows
+  "\<lbrakk>mapping_map m m'; page_entry_map_corres m'\<rbrakk> \<Longrightarrow>
   corres (ser \<oplus> dc) (valid_mapping_entries m)
-                    (pspace_aligned' and pspace_distinct'
-                    and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
+                    (pspace_aligned' and pspace_distinct')
                     (ensure_safe_mapping m) (ensureSafeMapping m')"
-  apply (simp add: mapping_map_def)
+  apply (simp add: ensureSafeMapping_def)
   apply (cases m)
-   apply (case_tac a)
-   apply (case_tac aa)
-      apply (simp add: ensureSafeMapping_def corres_returnOk)
-     apply (simp add: ensureSafeMapping_def)
+  apply (case_tac a)
+     apply simp
+     apply (frule (1) mapping_map_pte, clarsimp)
+     apply (case_tac x1)
+      apply (simp add: mapping_map_simps corres_returnOk)
+     apply (clarsimp simp: mapping_map_simps)
      apply (rule corres_guard_imp)
-       apply (rule mapME_x_corres_inv)
-          apply (rule corres_initial_splitE [where Q="\<lambda>_. \<top>" and Q'="\<lambda>_. \<top>"])
-             apply simp
-             apply (rule get_master_pte_corres')
-            apply (case_tac rv, simp_all add: pte_relation_aligned_def
-              corres_returnOk split:X64_H.pte.splits if_splits)[1]
-           apply wp[2]
-          apply (wp hoare_drop_imps|wpc|simp add:
-            valid_mapping_entries_def)+
-   apply (simp add: ensureSafeMapping_def corres_returnOk)
-   apply (rule corres_guard_imp)
-     apply (rule mapME_x_corres_inv)
-        apply (rule corres_initial_splitE [where Q="\<lambda>_. \<top>" and Q'="\<lambda>_. \<top>"])
-           apply simp
-           apply (rule get_master_pte_corres')
-          apply (case_tac rv, simp_all add: pte_relation_aligned_def
-              corres_returnOk split:X64_H.pte.splits if_splits)[1]
-         apply wp[2]
-       apply (wp hoare_drop_imps|wpc|simp add:
-            valid_mapping_entries_def)+
-  apply (case_tac b)
-  apply clarsimp
-  apply (case_tac aa)
-     apply (simp_all add: ensureSafeMapping_def valid_mapping_entries_def)
-     apply (simp add: corres_returnOk)
-    apply (clarsimp simp:fail_def corres_underlying_def)
-   apply clarsimp
-   apply (rule corres_guard_imp)
-     apply  (rule mapME_x_corres_inv)
-        apply (rule corres_initial_splitE [where Q="\<lambda>_. \<top>" and Q'="\<lambda>_. \<top>"])
-           apply simp
-           apply (rule get_master_pde_corres')
-          apply (case_tac rv, simp_all add: corres_returnOk )[1]
-         apply wp[2]
-       apply (wp hoare_drop_imps|wpc|simp)+
-  apply clarsimp
-  apply (rule corres_guard_imp)
-    apply  (rule mapME_x_corres_inv)
        apply (rule corres_initial_splitE [where Q="\<lambda>_. \<top>" and Q'="\<lambda>_. \<top>"])
           apply simp
-          apply (rule get_master_pde_corres')
-         apply (case_tac rv, simp_all add: corres_returnOk)[1]
+          apply (rule get_pte_corres')
+         apply (case_tac rv, simp_all add: corres_returnOk split:X64_H.pte.splits if_splits)[1]
         apply wp[2]
-      apply (wp hoare_drop_imps|wpc|simp)+
+       apply (wp hoare_drop_imps | wpc | simp add: valid_mapping_entries_def)+
+    apply (frule (1) mapping_map_pde, clarsimp)
+    apply (case_tac x2)
+      apply (simp add: mapping_map_simps corres_returnOk)
+     apply (clarsimp simp: mapping_map_simps corres_fail)
+    apply (clarsimp simp: mapping_map_simps)
+    apply (rule corres_guard_imp)
+      apply (rule corres_initial_splitE [where Q="\<lambda>_. \<top>" and Q'="\<lambda>_. \<top>"])
+         apply simp
+         apply (rule get_pde_corres')
+        apply (case_tac rv, simp_all add: corres_returnOk split:X64_H.pde.splits if_splits)[1]
+       apply wp[2]
+      apply (wp hoare_drop_imps | wpc | simp add: valid_mapping_entries_def)+
+   apply (frule (1) mapping_map_pdpte, clarsimp)
+   apply (case_tac x3)
+     apply (simp add: mapping_map_simps corres_returnOk)
+    apply (clarsimp simp: mapping_map_simps corres_fail)
+   apply (clarsimp simp: mapping_map_simps)
+   apply (rule corres_guard_imp)
+     apply (rule corres_initial_splitE [where Q="\<lambda>_. \<top>" and Q'="\<lambda>_. \<top>"])
+        apply simp
+        apply (rule get_pdpte_corres')
+       apply (case_tac rv, simp_all add: corres_returnOk split:X64_H.pdpte.splits if_splits)[1]
+      apply wp[2]
+     apply (wp hoare_drop_imps | wpc | simp add: valid_mapping_entries_def)+
   done
 
 lemma asidHighBitsOf [simp]:
@@ -1623,13 +1729,13 @@ lemma asidHighBitsOf [simp]:
   apply (simp add: word_size nth_ucast)
   done
 
-lemma find_pd_for_asid_corres'':
+lemma find_vspace_for_asid_corres'':
   "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s)
                            and valid_arch_objs and pspace_aligned
                            and K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
-                       (find_pd_for_asid asid) (findPDForASID asid)"
-  apply (simp add: find_pd_for_asid_def findPDForASID_def)
+                       (find_vspace_for_asid asid) (findVSpaceForASID asid)"
+  apply (simp add: find_vspace_for_asid_def findVSpaceForASID_def)
   apply (rule corres_gen_asm, simp)
   apply (simp add: liftE_bindE asidRange_def
                    mask_2pm1[symmetric])
@@ -1642,7 +1748,7 @@ lemma find_pd_for_asid_corres'':
   apply (simp add: liftE_bindE)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_asid_pool_corres'])
-      apply (rule_tac P="case_option \<top> page_directory_at (pool (ucast asid)) and pspace_aligned"
+      apply (rule_tac P="case_option \<top> page_map_l4_at (pool (ucast asid)) and pspace_aligned"
                  and P'="no_0_obj' and pspace_distinct'" in corres_inst)
       apply (rule_tac F="pool (ucast asid) \<noteq> Some 0" in corres_req)
        apply (clarsimp simp: obj_at_def no_0_obj'_def state_relation_def
@@ -1660,13 +1766,7 @@ lemma find_pd_for_asid_corres'':
       apply (simp add: mask_asid_low_bits_ucast_ucast returnOk_def
                        lookup_failure_map_def
                 split: option.split)
-      apply (clarsimp simp:checkPDAt_def stateAssert_def liftE_bindE bind_assoc)
-      apply (rule corres_noop)
-       apply (simp add:validE_def returnOk_def | wp)+
-      apply (rule no_fail_pre, wp)
       apply clarsimp
-      apply (erule page_directory_at_state_relation)
-        apply simp+
      apply (wp getObject_inv loadObject_default_inv | simp)+
    apply clarsimp
    apply (rule context_conjI)
@@ -1698,20 +1798,20 @@ lemma find_pd_for_asid_corres'':
   apply simp
   done
 
-lemma find_pd_for_asid_corres:
+lemma find_vspace_for_asid_corres:
   "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s) and valid_arch_objs
                            and pspace_aligned and K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
-                       (find_pd_for_asid asid) (findPDForASID asid)"
-  apply (rule find_pd_for_asid_corres'')
+                       (find_vspace_for_asid asid) (findVSpaceForASID asid)"
+  apply (rule find_vspace_for_asid_corres'')
   done
 
-lemma find_pd_for_asid_corres':
+lemma find_vspace_for_asid_corres':
   "corres (lfr \<oplus> op =) (vspace_at_asid asid pd and valid_arch_objs
                            and pspace_aligned and  K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
-                       (find_pd_for_asid asid) (findPDForASID asid)"
-  apply (rule corres_guard_imp, rule find_pd_for_asid_corres'')
+                       (find_vspace_for_asid asid) (findVSpaceForASID asid)"
+  apply (rule corres_guard_imp, rule find_vspace_for_asid_corres'')
    apply fastforce
   apply simp
   done
@@ -1739,6 +1839,22 @@ lemma setObject_PDE_arch [wp]:
   apply simp
   done
 
+lemma setObject_PML4E_arch [wp]:
+  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setObject p (v::pml4e) \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
+  apply (rule setObject_arch)
+  apply (simp add: updateObject_default_def)
+  apply wp
+  apply simp
+  done
+
+lemma setObject_PDPTE_arch [wp]:
+  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setObject p (v::pdpte) \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
+  apply (rule setObject_arch)
+  apply (simp add: updateObject_default_def)
+  apply wp
+  apply simp
+  done
+
 lemma setObject_PTE_arch [wp]:
   "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setObject p (v::pte) \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   apply (rule setObject_arch)
@@ -1751,6 +1867,14 @@ lemma setObject_ASID_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::asidpool) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   by (rule valid_arch_state_lift'; wp)
 
+lemma setObject_PML4E_valid_arch [wp]:
+  "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pml4e) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  by (rule valid_arch_state_lift') (wp setObject_typ_at')+
+
+lemma setObject_PDPTE_valid_arch [wp]:
+  "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pdpte) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  by (rule valid_arch_state_lift') (wp setObject_typ_at')+
+
 lemma setObject_PDE_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setObject p (v::pde) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   by (rule valid_arch_state_lift') (wp setObject_typ_at')+
@@ -1761,6 +1885,18 @@ lemma setObject_PTE_valid_arch [wp]:
 
 lemma setObject_ASID_ct [wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::asidpool) \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
+  apply (simp add: setObject_def updateObject_default_def split_def)
+  apply (wp updateObject_default_inv | simp)+
+  done
+
+lemma setObject_PML4E_ct [wp]:
+  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::pml4e) \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
+  apply (simp add: setObject_def updateObject_default_def split_def)
+  apply (wp updateObject_default_inv | simp)+
+  done
+
+lemma setObject_PDPTE_ct [wp]:
+  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::pdpte) \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
   apply (simp add: setObject_def updateObject_default_def split_def)
   apply (wp updateObject_default_inv | simp)+
   done
@@ -1779,6 +1915,20 @@ lemma setObject_pte_ct [wp]:
 
 lemma setObject_ASID_cur_tcb' [wp]:
   "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> setObject p (e::asidpool) \<lbrace>\<lambda>_ s. cur_tcb' s\<rbrace>"
+  apply (simp add: cur_tcb'_def)
+  apply (rule hoare_lift_Pf [where f=ksCurThread])
+   apply wp+
+  done
+
+lemma setObject_PML4E_cur_tcb' [wp]:
+  "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> setObject p (e::pml4e) \<lbrace>\<lambda>_ s. cur_tcb' s\<rbrace>"
+  apply (simp add: cur_tcb'_def)
+  apply (rule hoare_lift_Pf [where f=ksCurThread])
+   apply wp+
+  done
+
+lemma setObject_PDPTE_cur_tcb' [wp]:
+  "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> setObject p (e::pdpte) \<lbrace>\<lambda>_ s. cur_tcb' s\<rbrace>"
   apply (simp add: cur_tcb'_def)
   apply (rule hoare_lift_Pf [where f=ksCurThread])
    apply wp+
@@ -1804,39 +1954,32 @@ lemma getASID_wp:
                      archObjSize_def in_magnitude_check pageBits_def
                      projectKOs in_monad valid_def obj_at'_def objBits_simps)
 
-lemma pde_at_aligned_vptr':
-  "\<lbrakk>x \<in> set [0 , 4 .e. 0x3C]; page_directory_at' pd s; is_aligned vptr 24 \<rbrakk> \<Longrightarrow>
-  pde_at' (x + lookup_pd_slot pd vptr) s"
-  apply (simp add: lookup_pd_slot_def Let_def page_directory_at'_def add.commute add.left_commute)
-  apply (clarsimp simp: upto_enum_step_def)
-  apply (clarsimp simp: shiftl_t2n)
-  apply (subst mult.commute)
-  apply (subst ring_distribs [symmetric])
-  apply (erule allE)
-  apply (erule impE)
-   prefer 2
-   apply assumption
-  apply (erule (1) pde_shifting)
+lemma page_map_l4_pml4e_at_lookupI':
+  "page_map_l4_at' pm s \<Longrightarrow> pml4e_at' (lookup_pml4_slot pm vptr) s"
+  apply (simp add: lookup_pml4_slot_def Let_def)
+  apply (erule page_map_l4_pml4e_atI')
+  apply (clarsimp simp: bit_simps getPML4Index_def mask_def, word_bitwise)
+  done
+
+lemma pd_pointer_table_pdpte_at_lookupI':
+  "pd_pointer_table_at' pm s \<Longrightarrow> pdpte_at' (lookup_pdpt_slot_no_fail pm vptr) s"
+  apply (simp add: lookup_pdpt_slot_no_fail_def Let_def)
+  apply (erule pd_pointer_table_pdpte_atI')
+  apply (clarsimp simp: bit_simps getPDPTIndex_def mask_def, word_bitwise)
   done
 
 lemma page_directory_pde_at_lookupI':
-  "page_directory_at' pd s \<Longrightarrow> pde_at' (lookup_pd_slot pd vptr) s"
-  apply (simp add: lookup_pd_slot_def Let_def)
+  "page_directory_at' pm s \<Longrightarrow> pde_at' (lookup_pd_slot_no_fail pm vptr) s"
+  apply (simp add: lookup_pd_slot_no_fail_def Let_def)
   apply (erule page_directory_pde_atI')
-  apply (rule vptr_shiftr_le_2p)
+  apply (clarsimp simp: bit_simps getPDIndex_def mask_def, word_bitwise)
   done
-
-lemma pt_bits_stuff:
-  "pt_bits = ptBits"
-  "ptBits < word_bits"
-  "2 \<le> ptBits"
-  by (simp add: pt_bits_def ptBits_def pageBits_def word_bits_def)+
 
 lemma page_table_pte_at_lookupI':
   "page_table_at' pt s \<Longrightarrow> pte_at' (lookup_pt_slot_no_fail pt vptr) s"
   apply (simp add: lookup_pt_slot_no_fail_def)
   apply (erule page_table_pte_atI')
-  apply (rule vptr_shiftr_le_2pt[simplified pt_bits_stuff])
+  apply (clarsimp simp: bit_simps getPTIndex_def mask_def, word_bitwise)
   done
 
 lemma storePTE_ctes [wp]:
@@ -1851,6 +1994,41 @@ lemma storePDE_ctes [wp]:
   apply (rule storePDE_cte_wp_at')
   done
 
+lemma storePDPTE_ctes [wp]:
+  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> storePDPTE p pte \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
+  apply (rule ctes_of_from_cte_wp_at [where Q=\<top>, simplified])
+  apply (rule storePDPTE_cte_wp_at')
+  done
+
+lemma storePML4E_ctes [wp]:
+  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> storePML4E p pte \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
+  apply (rule ctes_of_from_cte_wp_at [where Q=\<top>, simplified])
+  apply (rule storePML4E_cte_wp_at')
+  done
+
+lemma storePML4E_valid_objs [wp]:
+  "\<lbrace>valid_objs' and valid_pml4e' pml4e\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  apply (simp add: storePML4E_def doMachineOp_def split_def)
+  apply (rule hoare_pre)
+   apply (wp hoare_drop_imps|wpc|simp)+
+   apply (rule setObject_valid_objs')
+   prefer 2
+   apply assumption
+  apply (clarsimp simp: updateObject_default_def in_monad)
+  apply (clarsimp simp: valid_obj'_def)
+  done
+
+lemma storePDPTE_valid_objs [wp]:
+  "\<lbrace>valid_objs' and valid_pdpte' pdpte\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  apply (simp add: storePDPTE_def doMachineOp_def split_def)
+  apply (rule hoare_pre)
+   apply (wp hoare_drop_imps|wpc|simp)+
+   apply (rule setObject_valid_objs')
+   prefer 2
+   apply assumption
+  apply (clarsimp simp: updateObject_default_def in_monad)
+  apply (clarsimp simp: valid_obj'_def)
+  done
 
 lemma storePDE_valid_objs [wp]:
   "\<lbrace>valid_objs' and valid_pde' pde\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_objs'\<rbrace>"

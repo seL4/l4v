@@ -91,6 +91,8 @@ where
         arch_capability.PDPointerTableCap word data)"
 | "acap_relation (arch_cap.PML4Cap word data) c = (c =
         arch_capability.PML4Cap word data)"
+| "acap_relation (arch_cap.IOPortCap f l) c = (c =
+        arch_capability.IOPortCap f l)"
 
 primrec
   cap_relation :: "cap \<Rightarrow> capability \<Rightarrow> bool"

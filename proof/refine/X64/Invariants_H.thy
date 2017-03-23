@@ -552,7 +552,7 @@ primrec
   valid_pdpte' :: "X64_H.pdpte \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_pdpte' (InvalidPDPTE) = \<top>"
-| "valid_pdpte' (HugePagePDPTE ptr _ _ _ _ _ _ _ _) = (valid_mapping' ptr X64LargePage)"
+| "valid_pdpte' (HugePagePDPTE ptr _ _ _ _ _ _ _ _) = (valid_mapping' ptr X64HugePage)"
 | "valid_pdpte' (PageDirectoryPDPTE ptr _ _ _ _ _) = (\<lambda>_. is_aligned ptr pdBits)"
 
 primrec
@@ -1077,7 +1077,7 @@ definition
 where
   "valid_arch_state' \<equiv> \<lambda>s.
   valid_asid_table' (x64KSASIDTable (ksArchState s)) s \<and>
-  page_directory_at' (x64KSGlobalPML4 (ksArchState s)) s \<and>
+  page_map_l4_at' (x64KSGlobalPML4 (ksArchState s)) s \<and>
   valid_global_pds' (x64KSGlobalPDs (ksArchState s)) s \<and>
   valid_global_pdpts' (x64KSGlobalPDPTs (ksArchState s)) s \<and>
   valid_global_pts' (x64KSGlobalPTs (ksArchState s)) s \<and>
@@ -3253,6 +3253,10 @@ lemma page_table_pte_atI':
 lemma pd_pointer_table_pdpte_atI':
   "\<lbrakk> pd_pointer_table_at' p s; x < 2^ptTranslationBits \<rbrakk> \<Longrightarrow> pdpte_at' (p + (x << word_size_bits)) s"
   by (simp add: pd_pointer_table_at'_def pageBits_def)
+
+lemma page_map_l4_pml4e_atI':
+  "\<lbrakk> page_map_l4_at' p s; x < 2^ptTranslationBits \<rbrakk> \<Longrightarrow> pml4e_at' (p + (x << word_size_bits)) s"
+  by (simp add: page_map_l4_at'_def pageBits_def)
 
 lemma valid_global_refsD':
   "\<lbrakk> ctes_of s p = Some cte; valid_global_refs' s \<rbrakk> \<Longrightarrow>
