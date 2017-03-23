@@ -1,36 +1,15 @@
 Built from git repo at /home/joelb/work/verification/l4v/spec/haskell by joelb
 
 Generated from changeset:
-bdbaef2 x64: KHeap_R done
+263ebe9 x64: s/ARM/X64/g proof/refine/X64/*.thy
 
 
 Warning - uncomitted changes used:
- M ../../proof/refine/X64/ADT_H.thy
  M ../../proof/refine/X64/ArchAcc_R.thy
- M ../../proof/refine/X64/Arch_R.thy
- M ../../proof/refine/X64/Bits_R.thy
- M ../../proof/refine/X64/CNodeInv_R.thy
- M ../../proof/refine/X64/CSpace1_R.thy
- M ../../proof/refine/X64/CSpace_I.thy
- M ../../proof/refine/X64/CSpace_R.thy
- M ../../proof/refine/X64/Detype_R.thy
- M ../../proof/refine/X64/Finalise_R.thy
- M ../../proof/refine/X64/Interrupt_R.thy
- M ../../proof/refine/X64/IpcCancel_R.thy
- M ../../proof/refine/X64/Ipc_R.thy
- M ../../proof/refine/X64/PageTableDuplicates.thy
- M ../../proof/refine/X64/Retype_R.thy
- M ../../proof/refine/X64/Schedule_R.thy
- M ../../proof/refine/X64/Syscall_R.thy
- M ../../proof/refine/X64/TcbAcc_R.thy
- M ../../proof/refine/X64/Tcb_R.thy
- M ../../proof/refine/X64/Untyped_R.thy
- M ../../proof/refine/X64/VSpace_R.thy
- M ../abstract/X64/ArchVSpaceAcc_A.thy
- M ../design/X64/ArchVSpace_H.thy
+ M ../../proof/refine/X64/Invariants_H.thy
+ M ../../proof/refine/X64/StateRelation.thy
  M ../design/X64/Hardware_H.thy
+ M ../design/skel/X64/Hardware_H.thy
  M ../design/version
- M src/SEL4/Kernel/VSpace/X64.lhs
- M src/SEL4/Machine/Hardware/X64.lhs
- M src/SEL4/Model/StateData/X64.lhs
+ M ../../tools/haskell-translator/caseconvs
  M ../../tools/haskell-translator/make_spec.sh

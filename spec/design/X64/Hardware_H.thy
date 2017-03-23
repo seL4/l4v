@@ -613,11 +613,6 @@ where
 "fromPAddr \<equiv> Platform.X64.fromPAddr"
 
 definition
-ptTranslationBits :: "nat"
-where
-"ptTranslationBits \<equiv> 9"
-
-definition
 ptBits :: "nat"
 where
 "ptBits \<equiv> ptTranslationBits + 3"

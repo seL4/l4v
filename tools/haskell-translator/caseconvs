@@ -1339,17 +1339,17 @@ case \x of (c@PageTableCap { capPTMappedAddress = Just _ }) -> (PageTableCap { c
     else if isPDPointerTableCap c \<and> capPDPTMappedAddress c = None
     then ->6
     else if isPML4Cap c \<and> capPML4MappedASID c \<noteq> None
-    then ->6
-    else if isPML4Cap c \<and> capPML4MappedASID c = None
     then ->7
-    else if isPageCap c
+    else if isPML4Cap c \<and> capPML4MappedASID c = None
     then ->8
-    else if isASIDControlCap c
+    else if isPageCap c
     then ->9
-    else if isASIDPoolCap c
+    else if isASIDControlCap c
     then ->10
-    else if isIOPortCap c
+    else if isASIDPoolCap c
     then ->11
+    else if isIOPortCap c
+    then ->12
     else undefined
 
 case \x of (c@IOPortCap {}) -> c ->  ---> let c = \x in

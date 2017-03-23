@@ -37,13 +37,13 @@ defs deriveCap_def:
   else if isPDPointerTableCap c \<and> capPDPTMappedAddress c = None
   then   throw IllegalOperation
   else if isPML4Cap c \<and> capPML4MappedASID c \<noteq> None
-  then   throw IllegalOperation
-  else if isPML4Cap c \<and> capPML4MappedASID c = None
   then   returnOk c
-  else if isPageCap c
+  else if isPML4Cap c \<and> capPML4MappedASID c = None
   then   throw IllegalOperation
-  else if isASIDControlCap c
+  else if isPageCap c
   then   returnOk $ c \<lparr> capVPMappedAddress := Nothing, capVPMapType := VMNoMap \<rparr>
+  else if isASIDControlCap c
+  then   returnOk c
   else if isASIDPoolCap c
   then   returnOk c
   else if isIOPortCap c
