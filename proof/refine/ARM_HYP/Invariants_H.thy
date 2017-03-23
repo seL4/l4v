@@ -2902,6 +2902,14 @@ lemma valid_vcpu_lift':
   shows "\<lbrace>\<lambda>s. valid_vcpu' vcpu s\<rbrace> f \<lbrace>\<lambda>rv s. valid_vcpu' vcpu s\<rbrace>"
   by (cases vcpu; clarsimp simp: valid_vcpu'_def split: option.split, intro conjI; wpsimp wp:x)
 
+lemma valid_arch_tcb_lift':
+  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_arch_tcb' tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_tcb' tcb s\<rbrace>"
+  apply (clarsimp simp add: valid_arch_tcb'_def)
+  apply (cases "atcbVCPUPtr tcb"; simp)
+   apply (wp x)+
+  done
+
 lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       typ_at_lift_ntfn' typ_at_lift_cte'
                       typ_at_lift_cte_at'
@@ -2915,6 +2923,7 @@ lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       valid_asid_pool_lift'
                       valid_bound_tcb_lift
                       valid_vcpu_lift'
+                      valid_arch_tcb_lift'
 
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"

@@ -1224,10 +1224,13 @@ lemma invalidateASID_valid_arch_state [wp]:
   apply (clarsimp simp add: None_upd_eq fun_upd_def[symmetric] split: option.splits)
   done
 
-lemma vcpuSwitch_no_0_obj'[wp]: "\<lbrace>no_0_obj'\<rbrace> vcpuSwitch v \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
- sorry (* crunch *)
+crunch no_0_obj'[wp]: vcpuDisable, vcpuEnable, vcpuSave, vcpuRestore no_0_obj'
+  (ignore: getObject simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
 
- crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
+lemma vcpuSwitch_no_0_obj'[wp]: "\<lbrace>no_0_obj'\<rbrace> vcpuSwitch v \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
+
+crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
    (ignore: getObject simp: crunch_simps
    wp: crunch_wps getObject_inv loadObject_default_inv)
 
@@ -1534,13 +1537,13 @@ crunch typ_at' [wp]: armv_contextSwitch "\<lambda>s. P (typ_at' T p s)"
 crunch typ_at' [wp]: findPDForASID "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps loadObject_default_def ignore: getObject)
 
-crunch typ_at' [wp]: vcpuEnable "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at' [wp]: vcpuEnable, vcpuDisable, vcpuSave, vcpuRestore "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps ignore: getObject
    wp: crunch_wps getObject_inv loadObject_default_inv)
 
-lemma vcpuSwitch_typ_at'[wp]: "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> vcpuSwitch param_a
-                      \<lbrace>\<lambda>_ s. P (typ_at' T p s) \<rbrace>"
-  sorry (* crunch *)
+lemma vcpuSwitch_typ_at'[wp]:
+  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (typ_at' T p s) \<rbrace>"
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps ignore: getObject
@@ -1772,11 +1775,17 @@ crunch inv [wp]: findPDForASID P
   (simp: assertE_def whenE_def loadObject_default_def
    wp: crunch_wps getObject_inv ignore: getObject)
 
+crunch pspace_aligned'[wp]: vcpuEnable, vcpuSave, vcpuDisable, vcpuRestore pspace_aligned'
+  (ignore: getObject simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+
 lemma vcpuSwitch_aligned'[wp]: "\<lbrace>pspace_aligned'\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. pspace_aligned'\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
+
+crunch pspace_distinct'[wp]: vcpuEnable, vcpuSave, vcpuDisable, vcpuRestore pspace_distinct'
+  (ignore: getObject simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
 
 lemma vcpuSwitch_distinct'[wp]: "\<lbrace>pspace_distinct'\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. pspace_distinct'\<rbrace>"
-  sorry (* crunch *)
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 crunch aligned'[wp]: unmapPageTable "pspace_aligned'"
   (ignore: getObject simp: crunch_simps
@@ -1866,8 +1875,39 @@ crunch typ_at' [wp]: flushPage "\<lambda>s. P (typ_at' T p s)"
 
 lemmas flushPage_typ_ats' [wp] = typ_at_lifts [OF flushPage_typ_at']
 
-lemma vcpuSwitch_valid_objs'[wp]: "\<lbrace>valid_objs'\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  sorry (* crunch *)
+lemma valid_objs_valid_vcpu': "\<lbrakk> valid_objs' s ; ko_at' (t :: vcpu) p s \<rbrakk> \<Longrightarrow> valid_vcpu' t s"
+  by (fastforce simp add: obj_at'_def ran_def valid_obj'_def projectKOs valid_objs'_def)
+
+find_theorems (140) setObject valid valid_objs'
+
+lemma setObject_vcpu_no_tcb_update:
+  "\<lbrakk> vcpuTCBPtr (f vcpu) = vcpuTCBPtr vcpu \<rbrakk>
+  \<Longrightarrow> \<lbrace> valid_objs' and ko_at' (vcpu :: vcpu) p\<rbrace> setObject p (f vcpu) \<lbrace> \<lambda>_. valid_objs' \<rbrace>"
+  apply (rule_tac Q="valid_objs' and (ko_at' vcpu p and valid_obj' (KOArch (KOVCPU vcpu)))" in hoare_pre_imp)
+   apply (clarsimp)
+   apply (frule valid_objs_valid_vcpu')
+    apply assumption+
+   apply (simp add: valid_obj'_def)
+  apply (rule setObject_valid_objs')
+  apply (clarsimp simp add: obj_at'_def projectKOs)
+  apply (frule updateObject_default_result)
+  apply (clarsimp simp add: projectKOs valid_obj'_def valid_vcpu'_def)
+  done
+
+lemma vcpuSave_valid_objs'[wp]: "\<lbrace>valid_objs'\<rbrace> vcpuSave vcpu \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  by (wpsimp simp: vcpuSave_def | rule_tac vcpu=vcpua in setObject_vcpu_no_tcb_update)+
+
+lemma vcpuDisable_valid_objs'[wp]: "\<lbrace>valid_objs'\<rbrace> vcpuDisable vcpu \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  by (wpsimp simp: vcpuDisable_def | rule_tac vcpu=vcpua in  setObject_vcpu_no_tcb_update)+
+
+lemma vcpuEnable_valid_objs'[wp]: "\<lbrace>valid_objs'\<rbrace> vcpuEnable vcpu \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  by (wpsimp simp: vcpuEnable_def | rule_tac vcpu=vcpua in  setObject_vcpu_no_tcb_update)+
+
+lemma vcpuRestore_valid_objs'[wp]: "\<lbrace>valid_objs'\<rbrace> vcpuRestore vcpu \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  by (wpsimp simp: vcpuRestore_def | rule_tac vcpu=vcpua in  setObject_vcpu_no_tcb_update)+
+
+lemma vcpuSwitch_valid_objs'[wp]: "\<lbrace>valid_objs'\<rbrace> vcpuSwitch vcpu \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 crunch valid_objs' [wp]: flushPage "valid_objs'"
   (wp: crunch_wps hoare_drop_imps simp: whenE_def crunch_simps ignore: getObject)
@@ -2324,8 +2364,37 @@ definition
   | PageFlush typ start end pstart pd asid \<Rightarrow> \<top>
   | PageGetAddr ptr \<Rightarrow> \<top>"
 
-lemma vcpuSwitch_ctes[wp]: "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
-  sorry (* crunch *)
+crunch ctes[wp]: doMachineOp "\<lambda>s. P (ctes_of s)"
+
+lemma setObject_vcpu_cte_wp_at'[wp]:
+  "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
+     setObject ptr (vcpu::vcpu)
+   \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
+  apply (wp setObject_cte_wp_at2'[where Q="\<top>"])
+    apply (clarsimp simp: updateObject_default_def in_monad
+                          projectKO_opts_defs projectKOs)
+                         apply (rule equals0I)
+   apply (clarsimp simp: updateObject_default_def in_monad
+                         projectKOs projectKO_opts_defs)
+  apply simp
+  done
+
+lemma setObject_vcpu_ctes_of[wp]: "\<lbrace> \<lambda>s. P (ctes_of s)\<rbrace> setObject p (t :: vcpu) \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
+  apply (rule ctes_of_from_cte_wp_at[where Q="\<top>", simplified])
+  apply (wp setObject_cte_wp_at2'[where Q="\<top>"])
+    apply (clarsimp simp: updateObject_default_def in_monad
+                          projectKO_opts_defs projectKOs)
+   apply (rule equals0I)
+   apply (clarsimp simp: updateObject_default_def in_monad
+                         projectKOs projectKO_opts_defs)
+  apply simp
+  done
+
+crunch ctes[wp]: vcpuSave, vcpuRestore, vcpuDisable, vcpuEnable  "\<lambda>s. P (ctes_of s)"
+  (ignore: getObject setObject simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+
+lemma vcpuSwitch_ctes[wp]: "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> vcpuSwitch vcpu \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 crunch ctes [wp]: unmapPage "\<lambda>s. P (ctes_of s)"
   (simp: crunch_simps ignore: getObject
