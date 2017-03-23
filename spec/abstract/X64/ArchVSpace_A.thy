@@ -25,6 +25,9 @@ text {*
 definition
   "attr_mask = {Global,Dirty,PTAttr Accessed,PTAttr ExecuteDisable}"
 
+definition
+  "attr_mask' = attr_mask \<union> {PAT}"
+
 text {* Save the set of entries that would be inserted into a page table or
 page directory to map various different sizes of frame at a given virtual
 address. *}
@@ -47,7 +50,7 @@ where
 | "create_mapping_entries base vptr X64HugePage vm_rights attrib pml4 =
   doE
     p \<leftarrow> lookup_error_on_failure False $ lookup_pdpt_slot pml4 vptr;
-    returnOk $ (VMPDPTE (HugePagePDPTE base (attrib - attr_mask) vm_rights), p)
+    returnOk $ (VMPDPTE (HugePagePDPTE base (attrib - attr_mask') vm_rights), p)
   odE"
 
 
@@ -410,7 +413,7 @@ where
    | PDPointerTableCap _ None \<Rightarrow> throwError IllegalOperation
    | PML4Cap _ (Some x) \<Rightarrow> returnOk c
    | PML4Cap _ None \<Rightarrow> throwError IllegalOperation
-   | PageCap dev r R mt pgs x \<Rightarrow> returnOk (PageCap dev r R mt pgs None)
+   | PageCap dev r R mt pgs x \<Rightarrow> returnOk (PageCap dev r R VMNoMap pgs None)
    | ASIDControlCap \<Rightarrow> returnOk c
    | ASIDPoolCap _ _ \<Rightarrow> returnOk c
 (* FIXME x64-vtd: *)
