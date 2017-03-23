@@ -1748,7 +1748,6 @@ shows
                                                                               | _ \<Rightarrow> unat n_frameRegisters))"
                                  in ccorres_split_nothrow_novcg)
                           apply (rule ccorres_Cond_rhs)
-                           apply (simp del: Collect_const)
                            apply (rule ccorres_rel_imp,
                                   rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
                                                       (ARM_H.frameRegisters @ ARM_H.gpRegisters))
@@ -2103,7 +2102,6 @@ lemma decodeReadRegisters_ccorres:
        apply (simp add: ccorres_invocationCatch_Inr returnOk_bind
                         performInvocation_def
                    del: Collect_const)
-       apply (rule ccorres_Guard_Seq)+
        apply csymbr
        apply csymbr
        apply csymbr
@@ -2216,7 +2214,6 @@ lemma decodeWriteRegisters_ccorres:
         apply (rule syscall_error_throwError_ccorres_n)
         apply (simp add: syscall_error_to_H_cases)
        apply (simp add: whenE_def decodeTransfer_def returnOk_bind del: Collect_const)
-       apply (rule ccorres_Guard_Seq)+
        apply csymbr
        apply csymbr
        apply csymbr
@@ -2329,7 +2326,6 @@ lemma decodeCopyRegisters_ccorres:
     apply (simp add: syscall_error_to_H_cases)
    apply (simp add: if_1_0_0 del: Collect_const)
    apply (subst unat_eq_0[symmetric], simp add: Collect_False del: Collect_const)
-   apply (rule ccorres_Guard_Seq)+
    apply csymbr
    apply (simp add: if_1_0_0 interpret_excaps_test_null decodeTransfer_def
                del: Collect_const)
@@ -2341,7 +2337,6 @@ lemma decodeCopyRegisters_ccorres:
    apply (simp add: excaps_map_def null_def del: Collect_const)
    apply (rule ccorres_add_return,
           ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
-     apply (rule ccorres_Guard_Seq)+
      apply (rule ccorres_symb_exec_r)
        apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
        apply (rule ccorres_move_c_guard_cte)
@@ -2482,7 +2477,6 @@ apply (simp add:checkValidIPCBuffer_def ARM_H.checkValidIPCBuffer_def)
       apply (rule ccorres_cond_false_seq)
       apply clarsimp
       apply (simp only:Cond_if_mem)
-      apply (rule ccorres_Guard_Seq)+
       apply (rule ccorres_Cond_rhs_Seq)
        apply (clarsimp simp add: msgAlignBits_def mask_def whenE_def)
        apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
@@ -2785,7 +2779,6 @@ lemma decodeTCBConfigure_ccorres:
             >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeTCBConfigure_'proc)"
   apply (cinit' lift: cap_' length___unsigned_long_' slot_' rootCaps_' buffer_' simp: decodeTCBConfigure_def)
-   apply ccorres_rewrite
    apply csymbr
    apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs
                simp del: Collect_const
@@ -3222,7 +3215,6 @@ lemma decodeSetMCPriority_ccorres:
             >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeSetMCPriority_'proc)"
   apply (cinit' lift: cap_' length___unsigned_long_' buffer_' simp: decodeSetMCPriority_def)
-   apply ccorres_rewrite
    apply wpc
     apply (simp add: throwError_bind invocationCatch_def)
     apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
@@ -3304,7 +3296,6 @@ lemma decodeSetPriority_ccorres:
             >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeSetPriority_'proc)"
   apply (cinit' lift: cap_' length___unsigned_long_' buffer_' simp: decodeSetPriority_def)
-   apply ccorres_rewrite
    apply wpc
     apply (simp add: throwError_bind invocationCatch_def)
     apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
@@ -3407,7 +3398,6 @@ lemma decodeSetIPCBuffer_ccorres:
                           syscall_error_rel_def syscall_error_to_H_cases)
    apply csymbr
    apply (rule ccorres_cond_false_seq)
-   apply (rule ccorres_Guard_Seq)+
    apply csymbr
    apply (simp add: interpret_excaps_test_null excaps_map_Nil if_1_0_0
                del: Collect_const)
@@ -3421,7 +3411,6 @@ lemma decodeSetIPCBuffer_ccorres:
                del: Collect_const)
    apply (rule ccorres_add_return,
           ctac add: getSyscallArg_ccorres_foo [where args=args and n=0 and buffer=buffer])
-     apply (rule ccorres_Guard_Seq)+
      apply csymbr
      apply (rule ccorres_move_c_guard_cte)
      apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
@@ -3694,7 +3683,6 @@ lemma decodeBindNotification_ccorres:
   using [[goals_limit=1]]
   apply (simp, rule ccorres_gen_asm)
   apply (cinit lift: cap_' excaps_' simp: decodeBindNotification_def)
-   apply (rule ccorres_Guard_Seq)+
    apply (simp add: bind_assoc whenE_def bind_bindE_assoc interpret_excaps_test_null
                del: Collect_const cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
@@ -3911,7 +3899,6 @@ lemma decodeSetSpace_ccorres:
                            subset_iff
                     split: list.split)
     apply unat_arith
-   apply (rule ccorres_Guard_Seq)+
    apply csymbr
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: if_1_0_0 interpret_excaps_test_null excaps_map_Nil)
@@ -3923,7 +3910,6 @@ lemma decodeSetSpace_ccorres:
                           intr_and_se_rel_def syscall_error_rel_def
                           syscall_error_to_H_cases exception_defs
                    split: list.split)
-   apply (rule ccorres_Guard_Seq)+
    apply csymbr
    apply (simp add: if_1_0_0 interpret_excaps_test_null del: Collect_const)
    apply (rule_tac P="\<lambda>c. ccorres rvr xf P P' hs a (Cond c c1 c2 ;; c3)" for rvr xf P P' hs a c1 c2 c3 in ssubst)
@@ -3956,13 +3942,11 @@ lemma decodeSetSpace_ccorres:
             ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
        apply (rule ccorres_add_return,
               ctac add: getSyscallArg_ccorres_foo[where args=args and n=2 and buffer=buffer])
-         apply (rule ccorres_Guard_Seq)+
          apply csymbr
          apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
          apply (rule ccorres_move_c_guard_cte)
          apply ctac
            apply (rule ccorres_assert2)
-           apply (rule ccorres_Guard_Seq)+
            apply csymbr
            apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=1])
            apply (rule ccorres_move_c_guard_cte)

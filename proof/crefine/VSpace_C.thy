@@ -1270,12 +1270,8 @@ lemma findFreeHWASID_ccorres:
                     mapME_def 
                del: Collect_const map_append)
    apply (rule ccorres_splitE_novcg)
-   apply (rule ccorres_Guard)
        apply (subgoal_tac "[nextASID .e. maxBound] @ init [minBound .e. nextASID]
                                = map (\<lambda>x. nextASID + (of_nat x)) [0 ..< 256]")
-       -- "Remove the Guard SignedArithmetic \<lbrace>True\<rbrace> SKIP"
-       apply (rule ccorres_semantic_equivD2 [rotated])
-       apply (iprover intro: semantic_equiv_While_cong semantic_equiv_Guard_Skip_Seq)
         apply (rule_tac xf=hw_asid_offset_' and i=0
                      and xf_update=hw_asid_offset_'_update
                      and r'=dc and xf'=xfdc and Q=UNIV
@@ -1537,12 +1533,7 @@ lemma setVMRoot_ccorres:
           apply vcg
          apply wp
         apply (simp add: whenE_def returnOk_def)
-        apply (rule ccorres_add_return2)
         apply (ctac (no_vcg) add: armv_contextSwitch_ccorres[unfolded dc_def])
-          apply simp
-          apply (rule ccorres_cond_empty)
-          apply (rule ccorres_return_Skip[simplified dc_def])
-         apply wp[1]
        apply (simp add: checkPDNotInASIDMap_def checkPDASIDMapMembership_def)
        apply (rule ccorres_stateAssert)
        apply (rule ccorres_rhs_assoc)+
@@ -1928,7 +1919,6 @@ lemma performPageGetAddress_ccorres:
    apply csymbr
    apply (rule ccorres_pre_getCurThread)
    apply (clarsimp simp add: setMRs_def zipWithM_x_mapM_x mapM_x_Nil length_of_msgRegisters zip_singleton msgRegisters_unfold mapM_x_singleton)
-   apply (rule ccorres_Guard_Seq)+
    apply (ctac add: setRegister_ccorres)
      apply csymbr
      apply (rule ccorres_add_return2)

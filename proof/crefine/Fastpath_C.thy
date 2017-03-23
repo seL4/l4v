@@ -563,7 +563,6 @@ lemma lookup_fp_ccorres':
         apply (simp add: ccorres_expand_while_iff_Seq[symmetric]
                          whileAnno_def del: Collect_const)
         apply (rule ccorres_cond_false)
-        apply (rule ccorres_Guard_Seq)+
         apply (rule ccorres_cond_false_seq)
         apply (simp del: Collect_const)
         apply (rule_tac P'="{s. cap_' s = getCTE_cap}"
@@ -609,7 +608,6 @@ lemma lookup_fp_ccorres':
           apply (simp add: whileAnno_def extra_sle_sless_unfolds)
          apply (rule ccorres_drop_cutMon)
          apply (simp add: liftE_def getSlotCap_def)
-         apply (rule ccorres_Guard_Seq)+
          apply (rule ccorres_pre_getCTE)
          apply (rule ccorres_cond_false_seq)
          apply (rule_tac P="\<lambda>s. cteCap rva = rv" and P'="{s. cap_' s = cap}"
@@ -1058,7 +1056,6 @@ lemma switchToThread_fp_ccorres:
         apply (rule monadic_rewrite_bind_head)
         apply (rule_tac pd=pd and v=v
                      in armv_contextSwitch_HWASID_fp_rewrite)
-       apply (simp only: ccorres_seq_IF_False ccorres_seq_skip)
        apply (ctac(no_vcg) add: armv_contextSwitch_HWASID_ccorres)
         apply (simp add: storeWordUser_def bind_assoc case_option_If2
                          split_def
@@ -1999,7 +1996,6 @@ shows
         apply (rule ccorres_guard_imp2)
          apply (rule ccorres_rhs_assoc)+
          apply (rule_tac xf'="i_'" in ccorres_abstract, ceqv)
-         apply (rule ccorres_Guard_Seq)+
          apply csymbr
          apply (ctac(no_vcg))
           apply ctac

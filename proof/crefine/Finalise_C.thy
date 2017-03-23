@@ -1341,7 +1341,6 @@ lemma pageTableMapped_ccorres:
          apply (ctac (no_vcg) add: findPDForASID_ccorres)
         apply ceqv
        apply (simp add: Collect_False del: Collect_const cong: call_ignore_cong)
-       apply (rule ccorres_Guard_Seq)+
        apply csymbr
        apply (rule_tac xf'=pde_' and r'=cpde_relation in ccorres_split_nothrow_novcg)
            apply (rule ccorres_add_return2, rule ccorres_pre_getObject_pde)
@@ -1414,7 +1413,6 @@ lemma unmapPageTable_ccorres:
      apply (rule ccorres_return_Skip[unfolded dc_def])
     apply (simp add: option_to_ptr_def option_to_0_def ccorres_cond_iffs)
     apply (rule ccorres_rhs_assoc)+
-    apply (rule ccorres_Guard_Seq)+
     apply csymbr
     apply (rule ccorres_move_array_assertion_pd)
     apply csymbr
@@ -1803,7 +1801,6 @@ lemma deletingIRQHandler_ccorres:
       apply ceqv
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_symb_exec_l)
-           apply (rule ccorres_Guard_Seq)
            apply (rule ccorres_symb_exec_r)
              apply (ctac add: cteDeleteOne_ccorres[where w="scast cap_notification_cap"])
             apply vcg

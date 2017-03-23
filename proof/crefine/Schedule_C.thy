@@ -158,7 +158,6 @@ lemma Arch_switchToIdleThread_ccorres:
   "ccorres dc xfdc (valid_pspace' and valid_arch_state') UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
   apply (cinit simp: ARM_H.switchToIdleThread_def)
-  apply ccorres_rewrite
   by (rule ccorres_return_Skip, clarsimp)
 
 (* FIXME: move *)
@@ -996,7 +995,6 @@ lemma timerTick_ccorres:
         apply (simp add: "StrictC'_thread_state_defs", rule ccorres_cond_false, rule ccorres_return_Skip[unfolded dc_def])+
         apply ceqv
        apply (simp add: when_def numDomains_def decDomainTime_def)
-       apply (rule ccorres_cond_true)
        apply (rule ccorres_split_nothrow_novcg)
            apply (rule_tac rrel=dc and xf=xfdc and P=\<top> and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)
@@ -1005,6 +1003,7 @@ lemma timerTick_ccorres:
                                  carch_state_relation_def cmachine_state_relation_def)
           apply ceqv
          apply (rule ccorres_pre_getDomainTime)
+         apply (rename_tac rva rv'a rvb)
          apply (rule_tac P'="{s. ksDomainTime_' (globals s) = rvb}" in ccorres_inst, simp)
          apply (case_tac "rvb = 0")
           apply clarsimp

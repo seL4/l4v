@@ -2103,14 +2103,13 @@ lemma deleteObjects_ccorres[corres]:
      UNIV hs
      (deleteObjects ptr bits)
      (Seq (global_htd_update (\<lambda>_. typ_region_bytes ptr bits))
-          (Guard GhostStateError UNIV
-             (Basic (\<lambda>s. globals_update
-                (ghost'state_'_update (gs_clear_region ptr bits)) s))))"
+          (Basic (\<lambda>s. globals_update
+             (ghost'state_'_update (gs_clear_region ptr bits)) s)))"
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_Guard_Seq)
-   apply (rule Corres_UL_C.ccorres_exec_cong[THEN iffD2,
-                                             OF _ deleteObjects_ccorres'[where idx=idx and p=p and d=d]])
-   apply (simp add: exec_Basic_Guard_UNIV o_def
+   apply (rule Corres_UL_C.ccorres_exec_cong
+                 [THEN iffD2, OF _ deleteObjects_ccorres'[where idx=idx and p=p and d=d]])
+   apply (simp add: exec_Basic_Seq_Basic o_def
                     hrs_ghost_update_comm[simplified o_def])
   apply clarsimp
   apply (frule(2) untyped_cap_rf_sr_ptr_bits_domain)

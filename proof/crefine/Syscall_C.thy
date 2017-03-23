@@ -1009,7 +1009,6 @@ lemma handleInvocation_ccorres:
          apply (simp add: Collect_True liftE_def return_returnOk
                      del: Collect_const)
          apply (rule ccorres_rhs_assoc)+
-         apply (simp del: Collect_const)
          apply (rule_tac P=\<top> in ccorres_cross_over_guard)
          apply (rule ccorres_symb_exec_r)
            apply (rule ccorres_split_nothrow_novcg_dc)
@@ -1143,7 +1142,7 @@ lemma handleReply_ccorres:
            apply csymbr+
            apply (frule cap_get_tag_ReplyCap)
            apply (clarsimp simp: to_bool_def)
-           apply csymbr+
+           apply (csymbr, csymbr)
            apply simp
            apply (rule ccorres_assert2)
            apply (fold dc_def)
@@ -1204,7 +1203,6 @@ lemma deleteCallerCap_ccorres [corres]:
        apply (drule ptr_val_tcb_ptr_mask2)
        apply (simp add: mask_def)
       apply ceqv
-     apply (rule ccorres_Guard_Seq)
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_symb_exec_l)
            apply (rule ccorres_symb_exec_r)
@@ -1455,7 +1453,6 @@ lemma handleRecv_ccorres:
             apply (rule conseqPre, vcg)
             apply (clarsimp simp: rf_sr_upd_safe)
            apply (vcg exspec=handleFault_modifies)
-       apply (rule ccorres_cond_univ)
         apply (simp add: capFaultOnFailure_def rethrowFailure_def
                          handleE'_def throwError_def)
 
@@ -1804,7 +1801,6 @@ lemma handleInterrupt_ccorres:
     apply (drule scast_maxIRQ_is_less[simplified])
     apply (simp del: Collect_const)
     apply (rule ccorres_rhs_assoc)+
-    apply (simp del: Collect_const)
     apply (subst doMachineOp_bind)
       apply (rule maskInterrupt_empty_fail)
      apply (rule ackInterrupt_empty_fail)

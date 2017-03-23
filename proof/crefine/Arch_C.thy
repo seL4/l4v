@@ -427,7 +427,6 @@ shows
    apply (rule ccorres_split_nothrow[where c="Seq c c'" for c c'])
        apply (fold pageBits_def)[1]
        apply (simp add: hrs_htd_update)
-       apply (rule ccorres_Guard_Seq[where S=UNIV])?
        apply (rule deleteObjects_ccorres)
       apply ceqv
       apply (rule ccorres_rhs_assoc2)
@@ -691,7 +690,6 @@ lemma decodeARMPageTableInvocation_ccorres:
      apply fastforce
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
-   apply (rule ccorres_Guard_Seq)+
    apply csymbr
    apply (simp add: if_1_0_0 interpret_excaps_test_null excaps_map_def
                del: Collect_const)
@@ -794,7 +792,6 @@ lemma decodeARMPageTableInvocation_ccorres:
              apply (simp add: syscall_error_to_H_cases)
             apply (simp add: bindE_assoc del: Collect_const,
                    simp add: liftE_bindE del: Collect_const)
-            apply (rule ccorres_Guard_Seq)+
             apply (rule ccorres_pre_getObject_pde)
             apply csymbr
             apply (rule ccorres_rhs_assoc2, rule ccorres_symb_exec_r)
@@ -1978,7 +1975,6 @@ lemma performPageInvocationRemapPDE_ccorres:
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (clarsimp simp: isRight_def)
   apply (cinit lift: asid_')
-   apply ccorres_rewrite (* FIXME make part of cinit in future for automatic lifting *)
    apply (rule_tac xf'=pde_' in ccorres_abstract, ceqv, rename_tac pde')
    apply (rule_tac P="cpde_relation (fst (theRight mapping)) pde'" in ccorres_gen_asm2)
    apply (rule_tac xf'=pde_entries_' in ccorres_abstract, ceqv, rename_tac pde_entries')
@@ -2103,7 +2099,6 @@ lemma performPageInvocationRemapPTE_ccorres:
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (clarsimp simp: isLeft_def)
   apply (cinit lift: asid_')
-   apply ccorres_rewrite (* FIXME make part of cinit in future for automatic lifting *)
    apply (rule_tac xf'=pte_' in ccorres_abstract, ceqv, rename_tac pte')
    apply (rule_tac P="cpte_relation (fst (theLeft mapping)) pte'" in ccorres_gen_asm2)
    apply (rule_tac xf'=pte_entries_' in ccorres_abstract, ceqv, rename_tac pte_entries')
@@ -2635,7 +2630,6 @@ lemma decodeARMFrameInvocation_ccorres:
         apply (simp add: syscall_error_to_H_cases)
        apply (simp add: returnOk_bind bindE_assoc performARMMMUInvocations)
        apply (rule ccorres_rhs_assoc)+
-       apply simp
        apply (ctac add: setThreadState_ccorres)
          apply csymbr
          apply (ctac(no_vcg) add: performPageGetAddress_ccorres)
@@ -2773,7 +2767,6 @@ lemma decodeARMFrameInvocation_ccorres:
      apply (rule ccorres_cond_true_seq)
      apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
-    apply (rule ccorres_Guard_Seq)+
     apply csymbr
     apply (simp add: if_1_0_0 interpret_excaps_test_null
                      excaps_map_def del: Collect_const)
@@ -3011,7 +3004,6 @@ lemma decodeARMFrameInvocation_ccorres:
     apply (rule ccorres_cond_true_seq)
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
-   apply (rule ccorres_Guard_Seq)+
    apply csymbr
    apply (simp add: if_1_0_0 interpret_excaps_test_null
                     excaps_map_def del: Collect_const)
@@ -3690,7 +3682,6 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
      apply simp
      apply (vcg exspec=getSyscallArg_modifies)
     apply (simp add:isPDFlush_fold throwError_invocationCatch)
-    apply (rule ccorres_cond_univ)
     apply (rule syscall_error_throwError_ccorres_n)
     apply (clarsimp simp: syscall_error_to_H_cases)
    apply (clarsimp simp:ex_cte_cap_wp_to'_def invs_arch_state'    
@@ -3864,14 +3855,12 @@ lemma Arch_decodeInvocation_ccorres:
     apply (simp add: if_1_0_0 interpret_excaps_test_null
                      excaps_map_def
                 del: Collect_const)
-    apply (rule ccorres_Guard_Seq)+
     apply csymbr
     apply (rule ccorres_Cond_rhs_Seq)
      apply (simp add: if_1_0_0 | rule ccorres_cond_true_seq)+
      apply (simp add: throwError_bind invocationCatch_def)
      apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
-    apply (rule ccorres_Guard_Seq)+
     apply csymbr
     apply (simp add: if_1_0_0 interpret_excaps_test_null[OF Suc_leI]
                 del: Collect_const)
@@ -3891,7 +3880,6 @@ lemma Arch_decodeInvocation_ccorres:
     apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
       apply (rule ccorres_add_return)
       apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
-        apply (rule ccorres_Guard_Seq)+
         apply csymbr
         apply (rule ccorres_add_return,
                rule_tac xf'=untyped_' and r'="(\<lambda>rv _ un.
@@ -4133,13 +4121,11 @@ lemma Arch_decodeInvocation_ccorres:
     apply (simp add: interpret_excaps_test_null excaps_map_def
                      list_case_If2 split_def
                 del: Collect_const)
-    apply (rule ccorres_Guard_Seq)+
     apply (rule ccorres_Cond_rhs_Seq)
      apply (simp add: throwError_bind invocationCatch_def)
      apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
     apply (simp add: Let_def split_def del: Collect_const)
-    apply (rule ccorres_Guard_Seq)+
     apply csymbr
     apply (rule ccorres_add_return)
     apply (rule_tac r'="(\<lambda>rv _ rv'. ((cap_get_tag rv' = scast cap_page_directory_cap)

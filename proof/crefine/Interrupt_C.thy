@@ -77,7 +77,6 @@ proof -
    apply (rule ccorres_move_array_assertion_irq)
    apply (simp only:)
    apply (ctac(no_vcg) add: getIRQSlot_ccorres)
-     apply (rule ccorres_Guard_Seq)
      apply (rule ccorres_symb_exec_r)
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
         apply (ctac(no_vcg) add: cteInsert_ccorres)
@@ -113,7 +112,6 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
    apply (rule ccorres_move_array_assertion_irq)
    apply (simp only: )
    apply (ctac(no_vcg) add: getIRQSlot_ccorres)
-     apply (rule ccorres_Guard_Seq)
      apply (rule ccorres_symb_exec_r)
        apply (ctac add: cteDeleteOne_ccorres[where w="-1"])
       apply vcg
@@ -176,7 +174,6 @@ lemma decodeIRQHandlerInvocation_ccorres:
     apply (simp add: list_case_If2 split_def del: Collect_const)
     apply (rule ccorres_if_bind)
     apply (rule ccorres_if_lhs[rotated])
-     apply (rule ccorres_Guard_Seq)+
      apply (rule ccorres_cond_false_seq)
      apply (simp add: Let_def split_def ntfn_case_can_send
                  del: Collect_const)
@@ -234,7 +231,6 @@ lemma decodeIRQHandlerInvocation_ccorres:
      apply (simp add: rf_sr_ksCurThread if_1_0_0 mask_def[where n=4]
                       "StrictC'_thread_state_defs" cap_get_tag_isCap excaps_map_def
                       word_sless_def word_sle_def)
-    apply (rule ccorres_Guard_Seq)+
     apply (simp add: invocationCatch_def throwError_bind
                      interpret_excaps_test_null Collect_True
                      excaps_map_def
@@ -253,7 +249,6 @@ lemma decodeIRQHandlerInvocation_ccorres:
       apply (rule ccorres_alternative2)
       apply (rule ccorres_return_CE, simp+)[1]
      apply (wp sts_invs_minor')+
-   apply (rule ccorres_Cond_rhs)
     apply (rule ccorres_equals_throwError)
      apply (fastforce simp: invocationCatch_def throwError_bind split: invocation_label.split)
     apply (simp add: ccorres_cond_iffs cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -477,7 +472,6 @@ lemma decodeIRQControlInvocation_ccorres:
      apply (rule ccorres_cond_true_seq)
      apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
-    apply (rule ccorres_Guard_Seq)+
     apply csymbr
     apply (rule ccorres_Cond_rhs_Seq)
      apply (simp add: interpret_excaps_test_null if_1_0_0 excaps_map_def
@@ -511,7 +505,6 @@ lemma decodeIRQControlInvocation_ccorres:
                apply (simp add: injection_liftE)
                apply (simp add: liftE_bindE bind_assoc del: Collect_const)
                apply (ctac add: isIRQActive_ccorres)
-                 apply (ccorres_rewrite)
                  apply (simp add: from_bool_0 del: Collect_const)
                  apply (rule ccorres_Cond_rhs_Seq)
                   apply (simp add: throwError_bind invocationCatch_def whenE_def
