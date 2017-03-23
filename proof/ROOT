@@ -39,12 +39,16 @@ session Refine = BaseRefine +
 
 session BaseRefine = AInvs +
   description {* Background theory and libraries for refinement proof. *}
+  theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
+    "refine/$L4V_ARCH/Include"
   theories
     "refine/$L4V_ARCH/Include"
 
 session AInvs = ASpec +
   theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
     "invariant-abstract/AInvs"
+    "invariant-abstract/KernelInit_AI"
+    "invariant-abstract/DetSchedSchedule_AI"
   theories [condition = "INVS_QUICK_AND_DIRTY", quick_and_dirty]
     "invariant-abstract/AInvs"
     "invariant-abstract/KernelInit_AI"
