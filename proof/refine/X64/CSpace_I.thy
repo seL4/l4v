@@ -28,9 +28,11 @@ lemma capUntypedPtr_simps [simp]:
   "capUntypedPtr (CNodeCap r n g n2) = r"
   "capUntypedPtr (ReplyCap r m) = r"
   "Arch.capUntypedPtr (X64_H.ASIDPoolCap r asid) = r"
-  "Arch.capUntypedPtr (X64_H.PageCap d r rghts sz mapdata) = r"
+  "Arch.capUntypedPtr (X64_H.PageCap r rghts mt sz d mapdata) = r"
   "Arch.capUntypedPtr (X64_H.PageTableCap r mapdata2) = r"
   "Arch.capUntypedPtr (X64_H.PageDirectoryCap r mapdata3) = r"
+  "Arch.capUntypedPtr (X64_H.PDPointerTableCap r mapdata4) = r"
+  "Arch.capUntypedPtr (X64_H.PML4Cap r mapdata5) = r"
   by (auto simp: capUntypedPtr_def
                  X64_H.capUntypedPtr_def)
 
@@ -627,14 +629,20 @@ where
  | ReplyCap ref master \<Rightarrow> ReplyCap ref True
  | UntypedCap d ref n f \<Rightarrow> UntypedCap d ref n 0
  | ArchObjectCap acap \<Rightarrow> ArchObjectCap (case acap of
-      PageCap d ref rghts sz mapdata \<Rightarrow>
-         PageCap d ref VMReadWrite sz None
+      PageCap ref rghts mt sz d mapdata \<Rightarrow>
+         PageCap ref VMReadWrite mt sz d None
     | ASIDPoolCap pool asid \<Rightarrow>
          ASIDPoolCap pool 0
     | PageTableCap ptr data \<Rightarrow>
          PageTableCap ptr None
     | PageDirectoryCap ptr data \<Rightarrow>
          PageDirectoryCap ptr None
+    | PDPointerTableCap ptr data \<Rightarrow>
+         PDPointerTableCap ptr None
+    | PML4Cap ptr data \<Rightarrow>
+         PML4Cap ptr None
+    | IOPortCap f l \<Rightarrow>
+         IOPortCap 0 max_word
     | _ \<Rightarrow> acap)
  | _ \<Rightarrow> cap"
 
@@ -651,12 +659,18 @@ lemma capMasterCap_simps[simp]:
             capability.ArchObjectCap (arch_capability.ASIDPoolCap word1 0)"
   "capMasterCap (capability.ArchObjectCap arch_capability.ASIDControlCap) =
          capability.ArchObjectCap arch_capability.ASIDControlCap"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.PageCap d word vmrights vmpage_size pdata)) =
-            capability.ArchObjectCap (arch_capability.PageCap d word VMReadWrite vmpage_size None)"
+  "capMasterCap (capability.ArchObjectCap (arch_capability.PageCap word vmrights mt vmpage_size d pdata)) =
+            capability.ArchObjectCap (arch_capability.PageCap word VMReadWrite mt vmpage_size d None)"
   "capMasterCap (capability.ArchObjectCap (arch_capability.PageTableCap word ptdata)) =
             capability.ArchObjectCap (arch_capability.PageTableCap word None)"
   "capMasterCap (capability.ArchObjectCap (arch_capability.PageDirectoryCap word pddata)) =
             capability.ArchObjectCap (arch_capability.PageDirectoryCap word None)"
+  "capMasterCap (capability.ArchObjectCap (arch_capability.PDPointerTableCap word pdptdata)) =
+            capability.ArchObjectCap (arch_capability.PDPointerTableCap word None)"
+  "capMasterCap (capability.ArchObjectCap (arch_capability.PML4Cap word pml4data)) =
+            capability.ArchObjectCap (arch_capability.PML4Cap word None)"
+  "capMasterCap (capability.ArchObjectCap (arch_capability.IOPortCap ft l)) =
+            capability.ArchObjectCap (arch_capability.IOPortCap 0 max_word)"
   "capMasterCap (capability.UntypedCap d word n f) = capability.UntypedCap d word n 0"
   "capMasterCap capability.IRQControlCap = capability.IRQControlCap"
   "capMasterCap (capability.ReplyCap word m) = capability.ReplyCap word True"
@@ -687,9 +701,9 @@ lemma capMasterCap_eqDs1:
      \<Longrightarrow> \<exists>f. cap = UntypedCap d ref bits f"
   "capMasterCap cap = ReplyCap ref master
      \<Longrightarrow> \<exists>master. cap = ReplyCap ref master"
-  "capMasterCap cap = ArchObjectCap (PageCap d ref rghts sz mapdata)
+  "capMasterCap cap = ArchObjectCap (PageCap ref rghts mt sz d mapdata)
      \<Longrightarrow> rghts = VMReadWrite \<and> mapdata = None
-          \<and> (\<exists>rghts mapdata. cap = ArchObjectCap (PageCap d ref rghts sz mapdata))"
+          \<and> (\<exists>rghts mapdata. cap = ArchObjectCap (PageCap ref rghts mt sz d mapdata))"
   "capMasterCap cap = ArchObjectCap ASIDControlCap
      \<Longrightarrow> cap = ArchObjectCap ASIDControlCap"
   "capMasterCap cap = ArchObjectCap (ASIDPoolCap pool asid)
