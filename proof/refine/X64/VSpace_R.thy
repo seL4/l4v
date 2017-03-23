@@ -38,10 +38,10 @@ defs checkPDASIDMapMembership_def:
 
 crunch inv[wp]:checkPDAt P
 
-lemma findPDForASID_pd_at_wp:
+lemma findVSpaceForASID_pd_at_wp:
   "\<lbrace>\<lambda>s. \<forall>pd. (page_directory_at' pd s \<longrightarrow> pd_at_asid' pd asid s)
-            \<longrightarrow> P pd s\<rbrace> findPDForASID asid \<lbrace>P\<rbrace>,-"
-  apply (simp add: findPDForASID_def assertE_def
+            \<longrightarrow> P pd s\<rbrace> findVSpaceForASID asid \<lbrace>P\<rbrace>,-"
+  apply (simp add: findVSpaceForASID_def assertE_def
              cong: option.case_cong
                split del: if_split)
   apply (rule hoare_pre)
@@ -53,19 +53,19 @@ lemma findPDForASID_pd_at_wp:
   apply fastforce
   done
 
-lemma findPDForASIDAssert_pd_at_wp:
+lemma findVSpaceForASIDAssert_pd_at_wp:
   "\<lbrace>(\<lambda>s. \<forall>pd. pd_at_asid' pd asid  s
                \<and> pd \<notin> ran ((option_map snd o x64KSASIDMap (ksArchState s) |` (- {asid})))
                 \<longrightarrow> P pd s)\<rbrace>
-       findPDForASIDAssert asid \<lbrace>P\<rbrace>"
-  apply (simp add: findPDForASIDAssert_def const_def
+       findVSpaceForASIDAssert asid \<lbrace>P\<rbrace>"
+  apply (simp add: findVSpaceForASIDAssert_def const_def
                    checkPDAt_def checkPDUniqueToASID_def
                    checkPDASIDMapMembership_def)
-  apply (rule hoare_pre, wp getPDE_wp findPDForASID_pd_at_wp)
+  apply (rule hoare_pre, wp getPDE_wp findVSpaceForASID_pd_at_wp)
   apply simp
   done
 
-crunch inv[wp]: findPDForASIDAssert "P"
+crunch inv[wp]: findVSpaceForASIDAssert "P"
   (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps)
 
 lemma pspace_relation_pd:
@@ -89,10 +89,10 @@ lemma pspace_relation_pd:
   apply simp
   done
 
-lemma find_pd_for_asid_eq_helper:
+lemma find_vspace_for_asid_eq_helper:
   "\<lbrakk> vspace_at_asid asid pd s; valid_arch_objs s;
          asid \<noteq> 0; pspace_aligned s \<rbrakk>
-    \<Longrightarrow> find_pd_for_asid asid s = returnOk pd s
+    \<Longrightarrow> find_vspace_for_asid asid s = returnOk pd s
              \<and> page_directory_at pd s \<and> is_aligned pd pdBits"
   apply (clarsimp simp: vspace_at_asid_def valid_arch_objs_def)
   apply (frule spec, drule mp, erule exI)
@@ -119,7 +119,7 @@ lemma find_pd_for_asid_eq_helper:
   apply (drule bspec, erule ranI)
   apply clarsimp
   apply (drule ucast_up_inj, simp)
-  apply (simp add: find_pd_for_asid_def bind_assoc
+  apply (simp add: find_vspace_for_asid_def bind_assoc
                    word_neq_0_conv[symmetric] liftE_bindE)
   apply (simp add: exec_gets liftE_bindE bind_assoc
                    get_asid_pool_def get_object_def)
@@ -132,12 +132,12 @@ lemma find_pd_for_asid_eq_helper:
   apply (simp add: pdBits_def pageBits_def)
   done
 
-lemma find_pd_for_asid_assert_eq:
+lemma find_vspace_for_asid_assert_eq:
   "\<lbrakk> vspace_at_asid asid pd s; valid_arch_objs s;
          asid \<noteq> 0; pspace_aligned s \<rbrakk>
-    \<Longrightarrow> find_pd_for_asid_assert asid s = return pd s"
-  apply (drule(3) find_pd_for_asid_eq_helper)
-  apply (simp add: find_pd_for_asid_assert_def
+    \<Longrightarrow> find_vspace_for_asid_assert asid s = return pd s"
+  apply (drule(3) find_vspace_for_asid_eq_helper)
+  apply (simp add: find_vspace_for_asid_assert_def
                    catch_def bind_assoc)
   apply (clarsimp simp: returnOk_def obj_at_def
                         a_type_def
@@ -150,27 +150,27 @@ lemma find_pd_for_asid_assert_eq:
   apply (simp add: exec_gets)
   done
 
-lemma find_pd_for_asid_valids:
+lemma find_vspace_for_asid_valids:
   "\<lbrace> vspace_at_asid asid pd and valid_arch_objs
          and pspace_aligned and K (asid \<noteq> 0) \<rbrace>
-     find_pd_for_asid asid \<lbrace>\<lambda>rv s. pde_at rv s\<rbrace>,-"
+     find_vspace_for_asid asid \<lbrace>\<lambda>rv s. pde_at rv s\<rbrace>,-"
   "\<lbrace> vspace_at_asid asid pd and valid_arch_objs
          and pspace_aligned and K (asid \<noteq> 0)
          and K (is_aligned pd pdBits \<longrightarrow> P pd) \<rbrace>
-     find_pd_for_asid asid \<lbrace>\<lambda>rv s. P rv\<rbrace>,-"
+     find_vspace_for_asid asid \<lbrace>\<lambda>rv s. P rv\<rbrace>,-"
   "\<lbrace> vspace_at_asid asid pd and valid_arch_objs
          and pspace_aligned and K (asid \<noteq> 0)
          and pd_at_uniq asid pd \<rbrace>
-     find_pd_for_asid asid \<lbrace>\<lambda>rv s. pd_at_uniq asid rv s\<rbrace>,-"
+     find_vspace_for_asid asid \<lbrace>\<lambda>rv s. pd_at_uniq asid rv s\<rbrace>,-"
   "\<lbrace> vspace_at_asid asid pd and valid_arch_objs
          and pspace_aligned and K (asid \<noteq> 0) \<rbrace>
-     find_pd_for_asid asid -,\<lbrace>\<bottom>\<bottom>\<rbrace>"
+     find_vspace_for_asid asid -,\<lbrace>\<bottom>\<bottom>\<rbrace>"
   apply (simp_all add: validE_def validE_R_def validE_E_def
                        valid_def split: sum.split)
   apply (auto simp: returnOk_def return_def
                     pde_at_def pd_bits_def pdBits_def
                     pageBits_def is_aligned_neg_mask_eq
-             dest!: find_pd_for_asid_eq_helper
+             dest!: find_vspace_for_asid_eq_helper
              elim!: is_aligned_weaken)
   done
 
@@ -197,17 +197,17 @@ lemma asidBits_asid_bits[simp]:
   by (simp add: asid_bits_def asidBits_def
                 asidHighBits_def asid_low_bits_def)
 
-lemma find_pd_for_asid_assert_corres:
+lemma find_vspace_for_asid_assert_corres:
   "corres (\<lambda>rv rv'. rv = pd \<and> rv' = pd)
            (K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
                  and pspace_aligned and pspace_distinct
                  and valid_arch_objs and valid_asid_map
                  and vspace_at_asid asid pd and pd_at_uniq asid pd)
            (pspace_aligned' and pspace_distinct' and no_0_obj')
-       (find_pd_for_asid_assert asid)
-       (findPDForASIDAssert asid)"
-  apply (simp add: find_pd_for_asid_assert_def const_def
-                   findPDForASIDAssert_def liftM_def)
+       (find_vspace_for_asid_assert asid)
+       (findVSpaceForASIDAssert asid)"
+  apply (simp add: find_vspace_for_asid_assert_def const_def
+                   findVSpaceForASIDAssert_def liftM_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr)
        apply (rule_tac F="is_aligned pda pdBits
@@ -260,29 +260,29 @@ lemma find_pd_for_asid_assert_corres:
        apply (erule(3) pspace_relation_pd)
        apply (simp add: pde_at_def pd_bits_def pdBits_def
                         is_aligned_neg_mask_eq)
-      apply (rule corres_split_catch [OF _ find_pd_for_asid_corres'[where pd=pd]])
+      apply (rule corres_split_catch [OF _ find_vspace_for_asid_corres'[where pd=pd]])
         apply (rule_tac P="\<bottom>" and P'="\<top>" in corres_inst)
         apply (simp add: corres_fail)
-       apply (wp find_pd_for_asid_valids[where pd=pd])+
+       apply (wp find_vspace_for_asid_valids[where pd=pd])+
    apply (clarsimp simp: word_neq_0_conv)
   apply simp
   done
 
-lemma findPDForASIDAssert_known_corres:
+lemma findVSpaceForASIDAssert_known_corres:
   "corres r P P' f (g pd) \<Longrightarrow>
   corres r (vspace_at_asid asid pd and pd_at_uniq asid pd
                and valid_arch_objs and valid_asid_map
                and pspace_aligned and pspace_distinct
                and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits) and P)
            (P' and pspace_aligned' and pspace_distinct' and no_0_obj')
-       f (findPDForASIDAssert asid >>= g)"
+       f (findVSpaceForASIDAssert asid >>= g)"
   apply (subst return_bind[symmetric])
   apply (subst corres_cong [OF refl refl _ refl refl])
    apply (rule bind_apply_cong [OF _ refl])
    apply clarsimp
-   apply (erule(3) find_pd_for_asid_assert_eq[symmetric])
+   apply (erule(3) find_vspace_for_asid_assert_eq[symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ find_pd_for_asid_assert_corres[where pd=pd]])
+    apply (rule corres_split [OF _ find_vspace_for_asid_assert_corres[where pd=pd]])
       apply simp
      apply wp+
    apply clarsimp
@@ -304,13 +304,13 @@ lemma load_hw_asid_corres:
   apply (case_tac "rv' a")
    apply simp
    apply (rule corres_guard_imp)
-     apply (rule_tac pd=pd in findPDForASIDAssert_known_corres)
+     apply (rule_tac pd=pd in findVSpaceForASIDAssert_known_corres)
      apply (rule corres_trivial, simp)
     apply clarsimp
    apply clarsimp
   apply clarsimp
   apply (rule corres_guard_imp)
-    apply (rule_tac pd=b in findPDForASIDAssert_known_corres)
+    apply (rule_tac pd=b in findVSpaceForASIDAssert_known_corres)
     apply (rule corres_trivial, simp)
    apply (clarsimp simp: valid_arch_state_def valid_asid_map_def)
    apply (drule subsetD, erule domI)
@@ -332,7 +332,7 @@ lemma store_hw_asid_corres:
           (store_hw_asid a h) (storeHWASID a h)"
   apply (simp add: store_hw_asid_def storeHWASID_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ find_pd_for_asid_assert_corres[where pd=pd]])
+    apply (rule corres_split [OF _ find_vspace_for_asid_assert_corres[where pd=pd]])
       apply (rule corres_split_eqr)
          apply (rule corres_split)
             prefer 2
@@ -365,7 +365,7 @@ lemma invalidate_asid_corres:
   (is "corres dc ?P ?P' ?f ?f'")
   apply (simp add: invalidate_asid_def invalidateASID_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac pd=pd in findPDForASIDAssert_known_corres)
+    apply (rule_tac pd=pd in findVSpaceForASIDAssert_known_corres)
     apply (rule_tac P="?P" and P'="?P'" in corres_inst)
     apply (rule_tac r'="op =" in corres_split' [OF _ _ gets_sp gets_sp])
      apply (clarsimp simp: state_relation_def arch_state_relation_def)
@@ -632,17 +632,17 @@ lemma state_relation_asid_map:
   "(s, s') \<in> state_relation \<Longrightarrow> x64KSASIDMap (ksArchState s') = x64_asid_map (arch_state s)"
   by (simp add: state_relation_def arch_state_relation_def)
 
-lemma find_pd_for_asid_pd_at_asid_again:
+lemma find_vspace_for_asid_pd_at_asid_again:
   "\<lbrace>\<lambda>s. (\<forall>pd. vspace_at_asid asid pd s \<longrightarrow> P pd s)
        \<and> (\<forall>ex. (\<forall>pd. \<not> vspace_at_asid asid pd s) \<longrightarrow> Q ex s)
        \<and> valid_arch_objs s \<and> pspace_aligned s \<and> asid \<noteq> 0\<rbrace>
-      find_pd_for_asid asid
+      find_vspace_for_asid asid
    \<lbrace>P\<rbrace>,\<lbrace>Q\<rbrace>"
   apply (unfold validE_def, rule hoare_name_pre_state, fold validE_def)
   apply (case_tac "\<exists>pd. vspace_at_asid asid pd s")
    apply clarsimp
    apply (rule_tac Q="\<lambda>rv s'. s' = s \<and> rv = pd" and E="\<bottom>\<bottom>" in hoare_post_impErr)
-     apply (rule hoare_pre, wp find_pd_for_asid_valids)
+     apply (rule hoare_pre, wp find_vspace_for_asid_valids)
      apply fastforce
     apply simp+
   apply (rule_tac Q="\<lambda>rv s'. s' = s \<and> vspace_at_asid asid rv s'"
@@ -750,7 +750,7 @@ proof -
                 apply (clarsimp simp: pd_at_uniq_def restrict_map_def)
                 apply (erule notE, rule_tac a=x in ranI)
                 apply simp
-               apply (rule corres_split_eqrE [OF _ find_pd_for_asid_corres])
+               apply (rule corres_split_eqrE [OF _ find_vspace_for_asid_corres])
                  apply (rule whenE_throwError_corres)
                    apply (simp add: lookup_failure_map_def)
                   apply simp
@@ -758,7 +758,7 @@ proof -
                  apply (rule x64_context_switch_corres)
                 apply (wp | simp | wp_once hoare_drop_imps)+
                apply (simp add: whenE_def split del: if_split, wp)[1]
-              apply (rule find_pd_for_asid_pd_at_asid_again)
+              apply (rule find_vspace_for_asid_pd_at_asid_again)
              apply wp
             apply clarsimp
             apply (frule page_directory_cap_pd_at_uniq, simp+)
@@ -801,7 +801,7 @@ lemma loadHWASID_wp [wp]:
   "\<lbrace>\<lambda>s. P (option_map fst (x64KSASIDMap (ksArchState s) asid)) s\<rbrace>
          loadHWASID asid \<lbrace>P\<rbrace>"
   apply (simp add: loadHWASID_def)
-  apply (wp findPDForASIDAssert_pd_at_wp
+  apply (wp findVSpaceForASIDAssert_pd_at_wp
             | wpc | simp | wp_once hoare_drop_imps)+
   apply (auto split: option.split)
   done
@@ -1152,7 +1152,7 @@ qed
 crunch typ_at' [wp]: armv_contextSwitch "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps)
 
-crunch typ_at' [wp]: findPDForASID "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at' [wp]: findVSpaceForASID "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps loadObject_default_def ignore: getObject)
 
 crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
@@ -1175,11 +1175,11 @@ crunch distinct' [wp]: setVMRootForFlush pspace_distinct'
 crunch cur' [wp]: setVMRootForFlush cur_tcb'
   (wp: hoare_drop_imps)
 
-lemma findPDForASID_inv2:
-  "\<lbrace>\<lambda>s. asid \<noteq> 0 \<and> asid \<le> mask asid_bits \<longrightarrow> P s\<rbrace> findPDForASID asid \<lbrace>\<lambda>rv. P\<rbrace>"
+lemma findVSpaceForASID_inv2:
+  "\<lbrace>\<lambda>s. asid \<noteq> 0 \<and> asid \<le> mask asid_bits \<longrightarrow> P s\<rbrace> findVSpaceForASID asid \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (cases "asid \<noteq> 0 \<and> asid \<le> mask asid_bits")
-   apply (simp add: findPDForASID_inv)
-  apply (simp add: findPDForASID_def assertE_def asidRange_def mask_def)
+   apply (simp add: findVSpaceForASID_inv)
+  apply (simp add: findVSpaceForASID_def assertE_def asidRange_def mask_def)
   apply clarsimp
   done
 
@@ -1195,13 +1195,13 @@ lemma storeHWASID_valid_arch' [wp]:
    apply assumption
   apply (simp add: valid_arch_state'_def comp_upd_simp fun_upd_def[symmetric])
   apply wp
-   apply (simp add: findPDForASIDAssert_def const_def
+   apply (simp add: findVSpaceForASIDAssert_def const_def
                     checkPDUniqueToASID_def checkPDASIDMapMembership_def)
    apply wp
    apply (rule_tac Q'="\<lambda>rv s. valid_asid_map' (x64KSASIDMap (ksArchState s))
                                 \<and> asid \<noteq> 0 \<and> asid \<le> mask asid_bits"
               in hoare_post_imp_R)
-    apply (wp findPDForASID_inv2)+
+    apply (wp findVSpaceForASID_inv2)+
    apply (clarsimp simp: valid_asid_map'_def)
    apply (subst conj_commute, rule context_conjI)
     apply clarsimp
@@ -1378,9 +1378,9 @@ crunch typ_at' [wp]: flushTable "\<lambda>s. P (typ_at' T p s)"
 
 lemmas flushTable_typ_ats' [wp] = typ_at_lifts [OF flushTable_typ_at']
 
-lemmas findPDForASID_typ_ats' [wp] = typ_at_lifts [OF findPDForASID_typ_at']
+lemmas findVSpaceForASID_typ_ats' [wp] = typ_at_lifts [OF findVSpaceForASID_typ_at']
 
-crunch inv [wp]: findPDForASID P
+crunch inv [wp]: findVSpaceForASID P
   (simp: assertE_def whenE_def loadObject_default_def
    wp: crunch_wps getObject_inv ignore: getObject)
 
@@ -1401,7 +1401,7 @@ lemma page_table_mapped_corres:
   apply (rule corres_guard_imp)
    apply (rule corres_split_catch)
       apply (rule corres_trivial, simp)
-     apply (rule corres_split_eqrE [OF _ find_pd_for_asid_corres])
+     apply (rule corres_split_eqrE [OF _ find_vspace_for_asid_corres])
        apply (simp add: liftE_bindE)
        apply (rule corres_split [OF _ get_pde_corres'])
          apply (rule corres_trivial)
@@ -1544,7 +1544,7 @@ lemma unmap_page_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch [where E="\<lambda>_. \<top>" and E'="\<lambda>_. \<top>"], simp)
       apply (rule corres_split_strengthen_ftE[where ftr'=dc],
-             rule find_pd_for_asid_corres)
+             rule find_vspace_for_asid_corres)
         apply (rule corres_splitEE)
            apply clarsimp
            apply (rule flush_page_corres)
@@ -2668,7 +2668,7 @@ lemma storeHWASID_invs:
     apply (rule storeHWASID_valid_arch')
    apply fastforce
   apply (simp add: storeHWASID_def)
-  apply (wp findPDForASIDAssert_pd_at_wp)
+  apply (wp findVSpaceForASIDAssert_pd_at_wp)
   apply (clarsimp simp: invs'_def valid_state'_def valid_arch_state'_def
              valid_global_refs'_def global_refs'_def valid_machine_state'_def
              ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
@@ -2684,7 +2684,7 @@ lemma storeHWASID_invs_no_cicd':
     apply (rule storeHWASID_valid_arch')
    apply (fastforce simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
   apply (simp add: storeHWASID_def)
-  apply (wp findPDForASIDAssert_pd_at_wp)
+  apply (wp findVSpaceForASIDAssert_pd_at_wp)
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_arch_state'_def
              valid_global_refs'_def global_refs'_def valid_machine_state'_def
              ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
@@ -2698,7 +2698,7 @@ lemma findFreeHWASID_invs:
   apply (simp add: findFreeHWASID_def invalidateHWASIDEntry_def invalidateASID_def
                    doMachineOp_def split_def
               cong: option.case_cong)
-  apply (wp findPDForASIDAssert_pd_at_wp | wpc)+
+  apply (wp findVSpaceForASIDAssert_pd_at_wp | wpc)+
   apply (clarsimp simp: invs'_def valid_state'_def valid_arch_state'_def
              valid_global_refs'_def global_refs'_def valid_machine_state'_def
              ct_not_inQ_def
@@ -2722,7 +2722,7 @@ lemma findFreeHWASID_invs_no_cicd':
   apply (simp add: findFreeHWASID_def invalidateHWASIDEntry_def invalidateASID_def
                    doMachineOp_def split_def
               cong: option.case_cong)
-  apply (wp findPDForASIDAssert_pd_at_wp | wpc)+
+  apply (wp findVSpaceForASIDAssert_pd_at_wp | wpc)+
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_arch_state'_def
              valid_global_refs'_def global_refs'_def valid_machine_state'_def
              ct_not_inQ_def
@@ -2850,7 +2850,7 @@ crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps
        loadObject_default_def ignore: getObject)
 
-crunch it' [wp]: findPDForASID "\<lambda>s. P (ksIdleThread s)"
+crunch it' [wp]: findVSpaceForASID "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def wp: getObject_inv ignore: getObject)
 
 crunch it' [wp]: deleteASIDPool "\<lambda>s. P (ksIdleThread s)"

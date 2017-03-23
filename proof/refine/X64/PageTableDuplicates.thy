@@ -1661,7 +1661,7 @@ crunch valid_duplicates'[wp]:
     ignore:getObject updateObject setObject)
 
 crunch valid_duplicates'[wp]:
- findPDForASID "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+ findVSpaceForASID "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def
     ignore:getObject updateObject setObject)
 
@@ -1745,7 +1745,7 @@ lemma unmapPage_valid_duplicates'[wp]:
      (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
      K(vmsz_aligned' vptr vmpage_size \<and> is_aligned r pdBits)
      and page_directory_at' (lookup_pd_slot r vptr && ~~ mask pdBits)"])
-    apply (wp findPDForASID_page_directory_at' | simp)+
+    apply (wp findVSpaceForASID_page_directory_at' | simp)+
    apply (clarsimp simp add:pdBits_def pageBits_def vmsz_aligned'_def)
    apply (drule is_aligned_lookup_pd_slot)
     apply (erule is_aligned_weaken,simp)

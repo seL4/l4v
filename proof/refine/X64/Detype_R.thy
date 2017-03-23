@@ -548,7 +548,7 @@ lemma ksASIDMapSafeI:
   apply (erule allE)+
   apply (erule (1) impE)
   apply clarsimp
-  apply (drule find_pd_for_asid_eq_helper)
+  apply (drule find_vspace_for_asid_eq_helper)
      apply fastforce
     apply assumption
    apply fastforce

@@ -569,7 +569,7 @@ lemma dec_arch_inv_page_flush_corres:
                         case option of
                         None \<Rightarrow> throwError ExceptionTypes_A.syscall_error.IllegalOperation
                         | Some x \<Rightarrow> returnOk x;
-                        pd \<leftarrow> lookup_error_on_failure False $ find_pd_for_asid asid;
+                        pd \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
                         whenE (end \<le> start) $
                         throwError $ ExceptionTypes_A.syscall_error.InvalidArgument 1;
                         page_size \<leftarrow> returnOk $ 1 << pageBitsForSize vmpage_size;
@@ -597,7 +597,7 @@ lemma dec_arch_inv_page_flush_corres:
     apply (rule corres_splitEE)
        prefer 2
        apply (rule corres_lookup_error)
-       apply (rule find_pd_for_asid_corres)
+       apply (rule find_vspace_for_asid_corres)
       apply (rule whenE_throwError_corres, simp)
        apply simp
       apply (rule whenE_throwError_corres, simp)
@@ -1000,7 +1000,7 @@ shows
                              valid_cap (cap.ArchObjectCap
                                          (arch_cap.PageDirectoryCap wd (Some optv)))"
                      in corres_guard_imp)
-            apply (rule find_pd_for_asid_corres)
+            apply (rule find_vspace_for_asid_corres)
            apply (clarsimp simp: valid_cap_def)
            apply (simp add: mask_def)
           apply assumption
@@ -1078,7 +1078,7 @@ shows
          apply (rule corres_splitEE)
             prefer 2
             apply (rule corres_lookup_error)
-            apply (rule find_pd_for_asid_corres)
+            apply (rule find_vspace_for_asid_corres)
            apply (rule whenE_throwError_corres)
              apply simp
             apply simp
@@ -1150,7 +1150,7 @@ shows
       apply (rule corres_splitEE)
          prefer 2
          apply (rule corres_lookup_error)
-         apply (rule find_pd_for_asid_corres)
+         apply (rule find_vspace_for_asid_corres)
         apply (rule whenE_throwError_corres, simp, simp)
         apply (rule corres_splitEE)
            prefer 2
@@ -1172,7 +1172,7 @@ shows
             apply (clarsimp simp: archinv_relation_def page_table_invocation_map_def)
             apply (clarsimp simp: attribs_from_word_def attribsFromWord_def Let_def)
             apply (simp add: shiftr_shiftl1)
-           apply (wp hoare_whenE_wp get_master_pde_wp getPDE_wp find_pd_for_asid_inv
+           apply (wp hoare_whenE_wp get_master_pde_wp getPDE_wp find_vspace_for_asid_inv
                      | wp_once hoare_drop_imps)+
      apply (fastforce simp: valid_cap_def mask_def)
     apply (clarsimp simp: valid_cap'_def)
@@ -1228,7 +1228,7 @@ shows
      apply (rule corres_splitEE)
         prefer 2
         apply (rule corres_lookup_error)
-        apply (rule find_pd_for_asid_corres)
+        apply (rule find_vspace_for_asid_corres)
        apply (rule whenE_throwError_corres, simp)
         apply clarsimp
        apply (simp add: liftE_bindE)
@@ -1526,9 +1526,9 @@ lemma inv_ASIDPool: "inv ASIDPool = (\<lambda>v. case v of ASIDPool a \<Rightarr
   apply simp
   done
 
-lemma findPDForASID_aligned[wp]:
-  "\<lbrace>valid_objs'\<rbrace> findPDForASID p \<lbrace>\<lambda>rv s. is_aligned rv pdBits\<rbrace>,-"
-  apply (simp add: findPDForASID_def assertE_def cong: option.case_cong
+lemma findVSpaceForASID_aligned[wp]:
+  "\<lbrace>valid_objs'\<rbrace> findVSpaceForASID p \<lbrace>\<lambda>rv s. is_aligned rv pdBits\<rbrace>,-"
+  apply (simp add: findVSpaceForASID_def assertE_def cong: option.case_cong
                       split del: if_split)
   apply (rule hoare_pre)
    apply (wp getASID_wp | wpc)+
@@ -1538,11 +1538,11 @@ lemma findPDForASID_aligned[wp]:
                  split: asidpool.split_asm)
   done
 
-lemma findPDForASID_valid_offset'[wp]:
-  "\<lbrace>valid_objs' and K (vptr < kernelBase)\<rbrace> findPDForASID p
+lemma findVSpaceForASID_valid_offset'[wp]:
+  "\<lbrace>valid_objs' and K (vptr < kernelBase)\<rbrace> findVSpaceForASID p
    \<lbrace>\<lambda>rv s. valid_pde_mapping_offset' (rv + (vptr >> 20 << 2) && mask pdBits)\<rbrace>,-"
   apply (rule hoare_gen_asmE)
-  apply (rule hoare_post_imp_R, rule findPDForASID_aligned)
+  apply (rule hoare_post_imp_R, rule findVSpaceForASID_aligned)
   apply (simp add: mask_add_aligned)
   apply (erule less_kernelBase_valid_pde_offset'')
   done
@@ -1563,11 +1563,11 @@ lemma lookupPTSlot_page_table_at':
   apply simp
   done
 
-lemma findPDForASID_page_directory_at':
+lemma findVSpaceForASID_page_directory_at':
   notes checkPDAt_inv[wp del]
-  shows "\<lbrace>\<top>\<rbrace> findPDForASID asiv
+  shows "\<lbrace>\<top>\<rbrace> findVSpaceForASID asiv
     \<lbrace>\<lambda>rv s. page_directory_at' (lookup_pd_slot rv vptr && ~~ mask pdBits) s\<rbrace>,-"
-  apply (simp add:findPDForASID_def)
+  apply (simp add:findVSpaceForASID_def)
    apply (wp getASID_wp|simp add:checkPDAt_def | wpc)+
   apply (clarsimp simp:lookup_pd_slot_def pdBits_def)
   apply (subst vaddr_segment_nonsense[unfolded pd_bits_def,simplified])
@@ -1825,7 +1825,7 @@ lemma arch_decodeInvocation_wf[wp]:
             apply (rule hoare_vcg_conj_lift_R,(wp ensureSafeMapping_inv)[1])+
             apply ((wp whenE_throwError_wp checkVP_wpR hoare_vcg_const_imp_lift_R
                  ensureSafeMapping_valid_slots_duplicated'
-                 createMappingEntries_valid_pde_slots' findPDForASID_page_directory_at'
+                 createMappingEntries_valid_pde_slots' findVSpaceForASID_page_directory_at'
                | wpc
                | simp add: valid_arch_inv'_def valid_page_inv'_def
                | rule_tac x="fst p" in hoare_imp_eq_substR)+)[8]
@@ -1856,7 +1856,7 @@ lemma arch_decodeInvocation_wf[wp]:
                 | simp add: valid_arch_inv'_def valid_page_inv'_def)+)[6]
         apply (simp add: eq_commute[where b="fst x" for x])
         apply ((wp whenE_throwError_wp checkVP_wpR hoare_vcg_const_imp_lift_R
-                   hoare_drop_impE_R findPDForASID_page_directory_at'
+                   hoare_drop_impE_R findVSpaceForASID_page_directory_at'
                    createMappingEntries_valid_pde_slots'
                   | wpc
                   | simp add: valid_arch_inv'_def valid_page_inv'_def)+)[3]
