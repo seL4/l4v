@@ -1927,10 +1927,6 @@ lemma liftM_exs_valid:
   apply simp
   done
 
-lemma ceqv_trans:
-  "\<lbrakk> ceqv \<Gamma> xf' rv' t t' c c'; ceqv \<Gamma> xf' rv' t t' c' c'' \<rbrakk> \<Longrightarrow> ceqv \<Gamma> xf' rv' t t' c c''"
-  unfolding ceqv_def by auto
-
 lemma ceqv_remove_eqv_skip:
   "\<lbrakk> \<And>s. ceqv \<Gamma> xf () s s' b Skip \<rbrakk> \<Longrightarrow>
      ceqv \<Gamma> xf () s s' (a ;; b) a"
