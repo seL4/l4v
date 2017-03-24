@@ -3755,13 +3755,21 @@ global_interpretation delete_one
    apply auto
   done
 
+lemma no_idle_thread_cap:
+  "\<lbrakk> cte_wp_at (op = (cap.ThreadCap p)) sl s; valid_global_refs s \<rbrakk> \<Longrightarrow> p \<noteq> idle_thread s"
+  apply (cases sl)
+  apply (clarsimp simp: valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
+  apply ((erule allE)+, erule (1) impE)
+  apply (clarsimp simp: cap_range_def)
+  done
+
 lemma finalise_cap_corres:
   "\<lbrakk> final_matters' cap' \<Longrightarrow> final = final'; cap_relation cap cap';
           flag \<longrightarrow> can_fast_finalise cap \<rbrakk>
      \<Longrightarrow> corres (\<lambda>x y. cap_relation (fst x) (fst y) \<and> snd x = snd y)
            (\<lambda>s. einvs s \<and> s \<turnstile> cap \<and> (final_matters cap \<longrightarrow> final = is_final_cap' cap s)
                        \<and> cte_wp_at (op = cap) sl s)
-           (\<lambda>s. invs' s \<and> s \<turnstile>' cap' \<and>
+           (\<lambda>s. invs' s \<and> s \<turnstile>' cap' \<and> sch_act_simple s \<and>
                  (final_matters' cap' \<longrightarrow>
                       final' = isFinal cap' (cte_map sl) (cteCaps_of s)))
            (finalise_cap cap final) (finaliseCap cap' final' flag)"
@@ -3791,9 +3799,14 @@ lemma finalise_cap_corres:
          apply (rule corres_split[OF _ suspend_corres])
             apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
           apply (rule prepareThreadDelete_corres)
-        apply (wp unbind_notification_invs unbind_notification_simple_sched_action)+
+        apply (wp unbind_notification_invs unbind_notification_simple_sched_action
+                  delete_one_conc_fr.suspend_objs')+
       apply (simp add: valid_cap_def)
+      apply (clarsimp dest!: no_idle_thread_cap) defer
      apply (simp add: valid_cap'_def)
+     apply clarsimp
+     apply (drule no_idle_thread_cap, clarsimp)
+     defer
     apply (simp add: final_matters'_def liftM_def[symmetric]
                      o_def dc_def[symmetric])
     apply (intro impI, rule corres_guard_imp)

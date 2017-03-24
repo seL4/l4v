@@ -273,9 +273,6 @@ lemma restart_tcb'[wp]:
   apply wpsimp
   done
 
-lemma no_fail_setRegister: "no_fail \<top> (setRegister r v)"
-  by (simp add: setRegister_def)
-
 lemma suspend_cap_to'[wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace> suspend t \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
   apply (simp add: suspend_def unless_def)
@@ -284,10 +281,6 @@ lemma suspend_cap_to'[wp]:
 
 declare det_getRegister[simp]
 declare det_setRegister[simp]
-
-lemma
-  no_fail_getRegister[wp]: "no_fail \<top> (getRegister r)"
-  by (simp add: getRegister_def)
 
 lemma readreg_corres:
   "corres (intr \<oplus> op =)

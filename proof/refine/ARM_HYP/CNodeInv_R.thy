@@ -6979,9 +6979,6 @@ crunch st_tcb_at'[wp]: emptySlot "st_tcb_at' P t" (simp: case_Null_If)
 lemma vcpuSwitch_st_tcb_at'[wp]: "\<lbrace>st_tcb_at' P t\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
   sorry
 
-lemma dissociateVCPUTCB_st_tcb_at'[wp]: "\<lbrace>st_tcb_at' P t\<rbrace> dissociateVCPUTCB v param_a \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
-  sorry
-
 crunch st_tcb_at'[wp]: "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete "st_tcb_at' P t"
   (ignore: getObject setObject simp: crunch_simps
    wp: crunch_wps getObject_inv loadObject_default_inv)

@@ -2009,9 +2009,6 @@ crunch st_tcb_at': performPageDirectoryInvocation, performPageTableInvocation, p
   (ignore: getObject setObject
    wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps)
 
-lemma dissociateVCPUTCB_st_tcb_at': "\<lbrace>st_tcb_at' P t\<rbrace> associateVCPUTCB v t' \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
-  sorry (* crunch *)
-
 lemma vcpuSave_st_tcb_at': "\<lbrace>st_tcb_at' P t\<rbrace> vcpuSave param_a \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
   sorry (* crunch *)
 

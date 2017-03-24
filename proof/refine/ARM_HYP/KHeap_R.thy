@@ -1765,13 +1765,35 @@ lemma setObject_state_hyp_refs_of_eq:
              cong: option.case_cong if_cong)
   done
 
+
+lemma setObject_gen_obj_at:
+  fixes v :: "'a :: pspace_storable"
+  assumes R: "\<And>ko s y n. (updateObject v ko p y n s) = (updateObject_default v ko p y n s)"
+  assumes n: "\<And>v' :: 'a. objBits v' = n"
+  assumes m: "(1 :: word32) < 2 ^ n"
+  assumes o: "\<lbrace>\<lambda>s. obj_at' (\<lambda>x :: 'a. True) p s \<and> P s\<rbrace> setObject p v \<lbrace>Q\<rbrace>"
+  shows      "\<lbrace>P\<rbrace> setObject p v \<lbrace>Q\<rbrace>"
+  using o
+  apply (clarsimp simp: setObject_def valid_def in_monad
+                        split_def split_paired_Ball
+                        R updateObject_default_def projectKOs)
+  apply (clarsimp simp: project_inject objBits_def[symmetric] n
+                        in_magnitude_check [OF _ m])
+  apply (erule_tac x=s in allE, erule impE)
+   apply (fastforce simp: obj_at'_def projectKOs objBits_def[symmetric] n project_inject)
+  apply (auto simp: project_inject objBits_def[symmetric] n
+                    in_magnitude_check [OF _ m])
+  done
+
+lemma state_hyp_refs_of'_ep:
+  "ep_at' epptr s \<Longrightarrow> (state_hyp_refs_of' s)(epptr := {}) = state_hyp_refs_of' s"
+  by (rule ext) (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs)
+
 lemma set_ep_state_hyp_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s)(epptr := {}))\<rbrace>
-     setEndpoint epptr ep
-   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  "setEndpoint epptr ep \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
   unfolding setEndpoint_def
-  apply (wp setObject_state_hyp_refs_of',
-      simp_all add: objBits_simps fun_upd_def[symmetric])
+  apply (rule setObject_gen_obj_at, simp, simp add: objBits_simps, simp)
+  apply (wp setObject_state_hyp_refs_of'; simp add: objBits_simps state_hyp_refs_of'_ep)
   done
 
 lemma set_ntfn_ctes_of[wp]:
@@ -1873,13 +1895,15 @@ lemma set_ntfn_state_refs_of'[wp]:
   by (wp setObject_state_refs_of',
       simp_all add: objBits_simps fun_upd_def)
 
+lemma state_hyp_refs_of'_ntfn:
+  "ntfn_at' ntfn s \<Longrightarrow> (state_hyp_refs_of' s) (ntfn := {}) = state_hyp_refs_of' s"
+  by (rule ext) (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs)
+
 lemma set_ntfn_state_hyp_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s)(epptr := {}))\<rbrace>
-     setNotification epptr ntfn
-   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  "setNotification epptr ntfn \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
   unfolding setNotification_def
-  apply (wp setObject_state_hyp_refs_of',
-      simp_all add: objBits_simps fun_upd_def)
+  apply (rule setObject_gen_obj_at, simp, simp add: objBits_simps, simp)
+  apply (wp setObject_state_hyp_refs_of'; simp add: objBits_simps state_hyp_refs_of'_ntfn)
   done
 
 lemma setNotification_pred_tcb_at'[wp]:
@@ -2338,18 +2362,10 @@ lemma set_ntfn_minor_invs':
      setNotification ptr val
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp add: invs'_def valid_state'_def cteCaps_of_def)
-  apply (wp irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift,
-    simp_all add: o_def)
-  apply clarsimp
-  apply (rule conjI)
-  apply (clarsimp elim!: rsubst[where P=sym_refs]
-                 intro!: ext
-                  dest!: obj_at_state_refs_ofD')
-  apply (thin_tac "sym_refs (state_refs_of' s)" for s)
-  apply (clarsimp elim!: rsubst[where P=sym_refs]
-                 intro!: ext
-                  dest!: obj_at_state_hyp_refs_ofD')
-  done
+  apply (wp irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift; simp add: o_def)
+  by (clarsimp elim!: rsubst[where P=sym_refs]
+              intro!: ext
+               dest!: obj_at_state_refs_ofD')
 
 lemma getEndpoint_wp:
   "\<lbrace>\<lambda>s. \<forall>ep. ko_at' ep e s \<longrightarrow> P ep s\<rbrace> getEndpoint e \<lbrace>P\<rbrace>"

@@ -944,7 +944,7 @@ proof -
 qed
 
 
-crunch ksQ[wp]: storeWordUser,armv_contextSwitch,doMachineOp "\<lambda>s. P (ksReadyQueues s p)"
+crunch ksQ[wp]: storeWordUser,armv_contextSwitch,doMachineOp "\<lambda>s. P (ksReadyQueues s)"
 
 lemma vcpuSwitch_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
@@ -957,11 +957,11 @@ lemma setVMRoot_ksQ[wp]:
 crunch ksIdleThread[wp]: storeWordUser "\<lambda>s. P (ksIdleThread s)"
 crunch ksIdleThread[wp]: asUser "\<lambda>s. P (ksIdleThread s)"
 (wp: crunch_wps simp: crunch_simps)
-crunch ksQ[wp]: asUser "\<lambda>s. P (ksReadyQueues s p)"
+crunch ksQ[wp]: asUser "\<lambda>s. P (ksReadyQueues s)"
 (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_switch_thread_ksQ[wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"
+  "Arch.switchToThread t \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace>"
   apply (simp add: ARM_HYP_H.switchToThread_def)
   apply (wp)
   done
