@@ -3894,5 +3894,26 @@ add_upd_simps "invs' (gsUntypedZeroRanges_update f s)
     \<and> valid_queues (gsUntypedZeroRanges_update f s)"
   (obj_at'_real_def)
 declare upd_simps[simp]
+
+qualify ARM_HYP_H (in Arch)
+
+(*
+  Then idea with this class is to be able to genericaly constrain
+  predicates over pspace_storable values to are not of type VCPU,
+  this is useful for invariants such as obj_at' that are trivialy
+  true (sort of) if the predicate and the function (in the hoare triple)
+  manipulate diferente types of objects
+*)
+
+class no_vcpu = pspace_storable +
+  assumes not_vcpu: "koType TYPE('a) \<noteq> ArchT ARM_HYP_H.VCPUT"
+
+instance tcb      :: no_vcpu by intro_classes auto
+instance endpoint :: no_vcpu by intro_classes auto
+instance cte      :: no_vcpu by intro_classes auto
+
+end_qualify
+
+
 end
 
