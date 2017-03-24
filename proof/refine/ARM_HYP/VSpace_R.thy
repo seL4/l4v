@@ -3161,11 +3161,20 @@ lemma armv_contextSwitch_obj_at [wp]:
   apply (wp doMachineOp_obj_at|wpc|simp)+
   done
 
-lemma vcpuSwitch_obj_at[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at' P' t s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (obj_at' P' t s)\<rbrace>"
-  sorry (* crunch *)
+lemma setObject_vcpu_obj_at'_tcb[wp]:
+  "\<lbrace>obj_at' (P :: ('a :: no_vcpu) \<Rightarrow> bool) t \<rbrace> setObject ptr (e::vcpu) \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
+  apply (rule obj_at_setObject2)
+  apply (clarsimp simp: updateObject_default_def in_monad not_vcpu[symmetric])
+  done
 
-crunch obj_at[wp]: setVMRoot "\<lambda>s. P (obj_at' P' t s)"
+crunch obj_at'[wp]: vcpuSave, vcpuDisable, vcpuEnable, vcpuRestore "obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t"
+  (ignore: setObject simp: crunch_simps wp: crunch_wps)
+
+lemma vcpuSwitch_obj_at[wp]:
+  "\<lbrace>obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. obj_at' P' t\<rbrace>"
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
+
+crunch obj_at[wp]: setVMRoot "obj_at' (P :: ('a :: no_vcpu) \<Rightarrow> bool) t"
   (simp: crunch_simps ignore: getObject)
 
 lemma storeHWASID_invs:
@@ -4035,9 +4044,12 @@ lemma setASIDPool_invs [wp]:
   apply (clarsimp simp: o_def)
   done
 
+crunch cte_wp_at'[wp]: vcpuSave, vcpuRestore, vcpuDisable, vcpuEnable  "\<lambda>s. P (cte_wp_at' P' p s)"
+  (ignore: getObject setObject simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+
 lemma vcpuSwitch_cte_wp_at'[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (cte_wp_at' P' p s)\<rbrace> "
-  sorry (* crunch *)
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 crunch cte_wp_at'[wp]: unmapPageTable "\<lambda>s. P (cte_wp_at' P' p s)"
   (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)

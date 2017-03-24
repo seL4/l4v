@@ -2006,7 +2006,7 @@ lemma switchToIdleThread_invs_no_cicd':
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_idle'_def)
   done
 
-crunch obj_at'[wp]: "Arch.switchToIdleThread" "\<lambda>s. obj_at' P t s"
+crunch obj_at'[wp]: "Arch.switchToIdleThread" "obj_at' (P :: ('a :: no_vcpu) \<Rightarrow> bool) t"
 
 
 lemma switchToIdleThread_activatable[wp]:
