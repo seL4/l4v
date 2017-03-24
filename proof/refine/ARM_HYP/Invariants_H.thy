@@ -3898,22 +3898,42 @@ declare upd_simps[simp]
 qualify ARM_HYP_H (in Arch)
 
 (*
-  Then idea with this class is to be able to genericaly constrain
+  Then idea with this class is to be able to generically constrain
   predicates over pspace_storable values to are not of type VCPU,
-  this is useful for invariants such as obj_at' that are trivialy
-  true (sort of) if the predicate and the function (in the hoare triple)
-  manipulate diferente types of objects
+  this is useful for invariants such as obj_at' that are trivially
+  true (sort of) if the predicate and the function (in the Hoare triple)
+  manipulate different types of objects
 *)
 
 class no_vcpu = pspace_storable +
   assumes not_vcpu: "koType TYPE('a) \<noteq> ArchT ARM_HYP_H.VCPUT"
 
-instance tcb      :: no_vcpu by intro_classes auto
-instance endpoint :: no_vcpu by intro_classes auto
-instance cte      :: no_vcpu by intro_classes auto
+instance tcb              :: no_vcpu by intro_classes auto
+instance endpoint         :: no_vcpu by intro_classes auto
+instance notification     :: no_vcpu by intro_classes auto
+instance cte              :: no_vcpu by intro_classes auto
+instance user_data        :: no_vcpu by intro_classes auto
+instance user_data_device :: no_vcpu by intro_classes auto
 
 end_qualify
 
+instantiation ARM_HYP_H.asidpool :: no_vcpu
+begin
+interpretation Arch .
+instance by intro_classes auto
+end
+
+instantiation ARM_HYP_H.pde :: no_vcpu
+begin
+interpretation Arch .
+instance by intro_classes auto
+end
+
+instantiation ARM_HYP_H.pte :: no_vcpu
+begin
+interpretation Arch .
+instance by intro_classes auto
+end
 
 end
 
