@@ -37,6 +37,15 @@ session Refine = BaseRefine +
   theories
     "refine/$L4V_ARCH/Refine"
 
+session BaseRefine2 = BaseRefine +
+  description {* Intermediate point in refinement proof. Useful for machines with small RAM. *}
+  theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
+    "refine/$L4V_ARCH/Untyped_R"
+    "refine/$L4V_ARCH/Schedule_R"
+  theories
+   "refine/$L4V_ARCH/Untyped_R"
+   "refine/$L4V_ARCH/Schedule_R"
+
 session BaseRefine = AInvs +
   description {* Background theory and libraries for refinement proof. *}
   theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]

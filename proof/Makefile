@@ -23,7 +23,7 @@ report-regression:
 #
 
 # Refine heaps.
-HEAPS += AInvs BaseRefine Refine
+HEAPS += AInvs BaseRefine BaseRefine2 Refine
 
 # CRefine heaps.
 HEAPS += CKernel CSpec CBaseRefine CRefine
