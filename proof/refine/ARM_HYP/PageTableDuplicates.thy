@@ -190,20 +190,17 @@ lemma mapM_x_storePTE_updates:
   apply (rule hoare_seq_ext, assumption)
   apply (thin_tac "valid P f Q" for P f Q)
   apply (simp add: storePTE_def setObject_def)
-  apply (wp | simp add:split_def updateObject_default_def)+
-(*  apply clarsimp
+  apply (wp hoare_drop_imps | simp add:split_def updateObject_default_def)+
+  apply clarsimp
   apply (intro conjI ballI)
    apply (drule(1) bspec)
-   apply (clarsimp simp:typ_at'_def ko_wp_at'_def
-     objBits_simps archObjSize_def dest!:koTypeOf_pte
-     split:  Structures_H.kernel_object.split_asm)
+   apply (clarsimp simp:typ_at'_def ko_wp_at'_def objBits_simps archObjSize_def lookupAround2_known1
+                  dest!:koTypeOf_pte)
    apply (simp add:ps_clear_def dom_fun_upd2[unfolded fun_upd_def])
   apply (erule rsubst[where P=Q])
-  apply (rule ext, clarsimp)
-  apply (case_tac "(fst (lookupAround2 aa (ksPSpace s)))")
-   apply (clarsimp simp:lookupAround2_None1)
-  apply (clarsimp simp:lookupAround2_known1)
-  done*) sorry (* storePTE *)
+  apply (rule ext)
+  apply (clarsimp simp: typ_at'_def ko_wp_at'_def lookupAround2_known1)
+  done
 
 lemma is_aligned_plus_bound:
   assumes al: "is_aligned p sz"
@@ -504,20 +501,17 @@ lemma mapM_x_storePDE_updates:
   apply (rule hoare_seq_ext, assumption)
   apply (thin_tac "valid P f Q" for P f Q)
   apply (simp add: storePDE_def setObject_def)
-(*  apply (wp | simp add:split_def updateObject_default_def)+
+  apply (wp hoare_drop_imps | simp add:split_def updateObject_default_def)+
   apply clarsimp
   apply (intro conjI ballI)
    apply (drule(1) bspec)
-   apply (clarsimp simp:typ_at'_def ko_wp_at'_def
-     objBits_simps archObjSize_def dest!:koTypeOf_pde
-     split:  Structures_H.kernel_object.split_asm  arch_kernel_object.split_asm if_split)
+   apply (clarsimp simp:typ_at'_def ko_wp_at'_def objBits_simps archObjSize_def lookupAround2_known1
+                  dest!:koTypeOf_pde)
    apply (simp add:ps_clear_def dom_fun_upd2[unfolded fun_upd_def])
   apply (erule rsubst[where P=Q])
-  apply (rule ext, clarsimp)
-  apply (case_tac "(fst (lookupAround2 aa (ksPSpace s)))")
-   apply (clarsimp simp:lookupAround2_None1)
-  apply (clarsimp simp:lookupAround2_known1)
-  done*) sorry
+  apply (rule ext)
+  apply (clarsimp simp: typ_at'_def ko_wp_at'_def lookupAround2_known1)
+  done
 
 lemma mapM_x_storePDE_update_helper:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)
@@ -664,335 +658,6 @@ lemma globalPDEWindow_neg_mask:
   apply simp
   done
 
-lemma copyGlobalMappings_ksPSpace_stable:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
-  assumes ptr_al: "is_aligned ptr pdBits"
-  shows
-   "\<lbrace>\<lambda>s. ksPSpace s x = ko \<and> pspace_distinct' s \<and> pspace_aligned' s \<and>
-    is_aligned (armKSGlobalPD (ksArchState s)) pdBits\<rbrace>
-   copyGlobalMappings ptr
-   \<lbrace>\<lambda>_ s. ksPSpace s x = (if x \<in> {ptr + (kernelBase >> 21 << 3)..ptr + (2 ^ pdBits - 1)}
-           then ksPSpace s ((armKSGlobalPD (ksArchState s)) + (x && mask pdBits))
-           else ko)\<rbrace>"
-  proof -
-    have not_aligned_eq_None:
-      "\<And>x s. \<lbrakk>\<not> is_aligned x 3; pspace_aligned' s\<rbrakk> \<Longrightarrow> ksPSpace s x = None"
-      apply (rule ccontr)
-      apply clarsimp
-      apply (drule(1) pspace_alignedD')
-      apply (drule is_aligned_weaken[where y = 3])
-       apply (case_tac y, simp_all add:objBits_simps vspace_bits_defs)
-      apply (simp add:archObjSize_def vspace_bits_defs vcpu_bits_def
-        split:arch_kernel_object.splits)
-      done
-    have ptr_eqD:
-      "\<And>p a b. \<lbrakk>p + a = ptr + b;is_aligned p pdBits;
-            a < 2^ pdBits; b < 2^pdBits \<rbrakk>
-       \<Longrightarrow> p = ptr"
-      apply (drule arg_cong[where f = "\<lambda>x. x && ~~ mask pdBits"])
-      apply (subst (asm) is_aligned_add_helper[THEN conjunct2])
-        apply simp
-       apply simp
-      apply (subst (asm) is_aligned_add_helper[THEN conjunct2])
-        apply (simp add:ptr_al vspace_bits_defs)
-(*       apply simp
-      apply simp*)
-      sorry
-    have postfix_listD:
-      "\<And>a as. suffix (a # as) [kernelBase >> 20.e.2 ^ (pdBits - 2) - 1]
-       \<Longrightarrow> a \<in> set [kernelBase >> 20 .e. 2 ^ (pdBits - 2) - 1]"
-       apply (clarsimp simp:suffix_def)
-       apply (subgoal_tac "a \<in> set (zs @ a # as)")
-        apply (drule sym)
-        apply simp
-       apply simp
-       done
-     have in_rangeD: "\<And>x.
-       \<lbrakk>kernelBase >> 21 \<le> x; x \<le> 2 ^ (pdBits - 3) - 1\<rbrakk>
-       \<Longrightarrow> ptr + (x << 3) \<in> {ptr + (kernelBase >> 21 << 3)..ptr + (2 ^ pdBits - 1)}"
-       apply (clarsimp simp:blah)
-       apply (intro conjI)
-        apply (rule word_plus_mono_right)
-         apply (simp add:ARM_HYP.kernelBase_def kernelBase_def vspace_bits_defs)
-         apply (word_bitwise,simp)
-        apply (rule is_aligned_no_wrap'[OF ptr_al])
-        apply (simp add:vspace_bits_defs)
-        apply (word_bitwise,simp)
-       apply (rule word_plus_mono_right)
-        apply (simp add:vspace_bits_defs)
-        apply (word_bitwise,simp)
-       apply (rule is_aligned_no_wrap'[OF ptr_al])
-       apply (simp add:vspace_bits_defs)
-       done
-
-     have offset_bound:
-       "\<And>x. \<lbrakk>is_aligned ptr 14;ptr + (kernelBase >> 21 << 3) \<le> x; x \<le> ptr + 0x3FFF\<rbrakk>
-        \<Longrightarrow> x - ptr < 0x4000"
-        apply (clarsimp simp: ARM_HYP.kernelBase_def kernelBase_def field_simps)
-        apply unat_arith
-        done
-
-  show ?thesis
-  apply (case_tac "\<not> is_aligned x 3")
-   apply (rule hoare_name_pre_state)
-   apply (clarsimp)
-   apply (rule_tac Q = "\<lambda>r s. is_aligned (armKSGlobalPD (ksArchState s)) 3
-      \<and> pspace_aligned' s" in hoare_post_imp)
-    apply (frule_tac x = x in not_aligned_eq_None)
-     apply simp
-    apply (frule_tac x = x and s = sa in not_aligned_eq_None)
-     apply simp
-    apply clarsimp
-    apply (drule_tac  x = "armKSGlobalPD (ksArchState sa) + (x && mask pdBits)"
-      and  s = sa in not_aligned_eq_None[rotated])
-     apply (subst is_aligned_mask)
-     apply (simp add: mask_add_aligned mask_twice)
-     apply (simp add:is_aligned_mask vspace_bits_defs mask_def)
-    apply simp
-   apply (wp|simp)+
-   apply (erule is_aligned_weaken)
-   apply (simp add:vspace_bits_defs)
-  apply (simp add: copyGlobalMappings_def)
-  apply (rule hoare_name_pre_state)
-  apply (rule hoare_conjI)
-   apply (rule hoare_pre)
-    apply (rule hoare_vcg_const_imp_lift)
-    apply wp
-(*     apply (rule_tac V="\<lambda>xs s. \<forall>x \<in> (set [kernelBase >> 21.e.2 ^ (pdBits - 3) - 1] - set xs).
-                                 ksPSpace s (ptr + (x << 3)) = ksPSpace s (globalPD + (x << 3))"
-             and I="\<lambda>s'. globalPD = (armKSGlobalPD (ksArchState s'))
-                       \<and> globalPD = (armKSGlobalPD (ksArchState s))"
-       in mapM_x_inv_wp2)
-      apply (cut_tac ptr_al)
-      apply (clarsimp simp:blah pdBits_def pageBits_def)
-      apply (drule_tac x="x - ptr >> 2" in spec)
-      apply (frule offset_bound)
-       apply simp+
-      apply (erule impE)
-       apply (rule conjI)
-        apply (rule le_shiftr[where u="kernelBase >> 18" and n=2, simplified shiftr_shiftr, simplified])
-        apply (rule word_le_minus_mono_left[where x=ptr and y="(kernelBase >> 18) + ptr", simplified])
-         apply (simp add: ARM.kernelBase_def kernelBase_def field_simps)
-        apply (simp add:field_simps)
-        apply (erule is_aligned_no_wrap')
-        apply (simp add: ARM.kernelBase_def kernelBase_def pdBits_def pageBits_def)
-       apply (drule le_m1_iff_lt[THEN iffD1,THEN iffD2,rotated])
-        apply simp
-       apply (drule le_shiftr[where u = "x - ptr" and n = 2])
-       apply simp
-      apply (cut_tac b = 2 and c = 2 and a = "x - ptr" in shiftr_shiftl1)
-       apply simp
-      apply simp
-      apply (cut_tac n = 2 and p = "x - ptr" in is_aligned_neg_mask_eq)
-       apply (erule aligned_sub_aligned)
-        apply (erule is_aligned_weaken,simp)
-       apply simp
-      apply simp
-      apply (drule_tac t = x in
-        global_pd_offset[symmetric,unfolded pdBits_def pageBits_def,simplified])
-       apply (clarsimp simp:blah field_simps)
-      apply (subgoal_tac "x && mask 14 = x - ptr")
-       apply clarsimp
-      apply (simp add:field_simps)
-     apply (wp hoare_vcg_all_lift getPDE_wp mapM_x_wp'
-        | simp add: storePDE_def setObject_def split_def
-        updateObject_default_def
-        split: option.splits)+
-     apply (clarsimp simp:objBits_simps archObjSize_def)
-     apply (clarsimp simp:obj_at'_def objBits_simps
-        projectKO_def projectKO_opt_pde fail_def return_def
-        split: Structures_H.kernel_object.splits
-        arch_kernel_object.splits)
-     apply (drule_tac x = xa in bspec)
-      apply simp
-      apply (rule ccontr)
-      apply simp
-     apply clarsimp
-     apply (drule(1) ptr_eqD)
-       apply (rule shiftl_less_t2n)
-        apply (simp add:pdBits_def pageBits_def )
-        apply (rule le_m1_iff_lt[THEN iffD1,THEN iffD1])
-         apply simp
-        apply simp
-       apply (simp add:pdBits_def pageBits_def)
-      apply (rule shiftl_less_t2n)
-       apply (drule postfix_listD)
-       apply (clarsimp simp:pdBits_def)
-      apply (simp add:pdBits_def pageBits_def)
-     apply simp
-    apply wp
-   apply (clarsimp simp:objBits_simps archObjSize_def)
-  apply (rule hoare_name_pre_state)
-  apply (rule hoare_pre)
-   apply (rule hoare_vcg_const_imp_lift)
-   apply wp
-    apply (rule_tac Q = "\<lambda>r s'. ksPSpace s' x = ksPSpace s x \<and> globalPD = armKSGlobalPD (ksArchState s)"
-      in hoare_post_imp)
-     apply (wp hoare_vcg_all_lift getPDE_wp mapM_x_wp'
-        | simp add: storePDE_def setObject_def split_def
-        updateObject_default_def
-        split: option.splits)+
-    apply (clarsimp simp:objBits_simps archObjSize_def dest!:in_rangeD)
-   apply wp
-  apply simp
-  done*) sorry (* armKSGlobalPD *)
-qed
-
-lemma copyGlobalMappings_ksPSpace_same:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
-  shows
-  "\<lbrakk>is_aligned ptr pdBits\<rbrakk> \<Longrightarrow>
-   \<lbrace>\<lambda>s. ksPSpace s x = ko \<and> pspace_distinct' s \<and> pspace_aligned' s \<and>
-    is_aligned (armKSGlobalPD (ksArchState s)) pdBits \<and> ptr = armKSGlobalPD (ksArchState s)\<rbrace>
-   copyGlobalMappings ptr
-   \<lbrace>\<lambda>_ s. ksPSpace s x = ko\<rbrace>"
-  apply (simp add:copyGlobalMappings_def)
-  apply (rule hoare_name_pre_state)
-  apply wpsimp
-  sorry (* need to fix the statement: armKSGlobalPD *)
-
-lemmas copyGlobalMappings_ksPSpaceD = use_valid[OF _ copyGlobalMappings_ksPSpace_stable]
-lemmas copyGlobalMappings_ksPSpace_sameD = use_valid[OF _ copyGlobalMappings_ksPSpace_same]
-
-lemma copyGlobalMappings_ksPSpace_concrete:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
-  assumes monad: "(r, s') \<in> fst (copyGlobalMappings ptr s)"
-  and ps: "pspace_distinct' s" "pspace_aligned' s"
-  and al: "is_aligned (armKSGlobalPD (ksArchState s)) pdBits"
-          "is_aligned ptr pdBits"
-  shows   "ksPSpace s' = (\<lambda>x.
-           (if x \<in> {ptr + (kernelBase >> 21 << 3)..ptr + (2 ^ pdBits - 1)}
-            then ksPSpace s ((x && mask pdBits) + armKSGlobalPD (ksArchState s)) else ksPSpace s x))"
-  proof -
-    have pd: "\<And>pd. \<lbrace>\<lambda>s. armKSGlobalPD (ksArchState s) = pd \<rbrace>
-              copyGlobalMappings ptr \<lbrace>\<lambda>r s. armKSGlobalPD (ksArchState s) = pd \<rbrace>"
-      by wp
-    have comp: "\<And>x. x \<in> {ptr + (kernelBase >> 21 << 3)..ptr + 2 ^ pdBits - 1}
-      \<Longrightarrow> ptr  + (x && mask pdBits) = x"
-      using al
-      apply -
-      apply (rule mask_eqI[where n = pdBits])
-       apply (simp add:mask_add_aligned mask_twice pdBits_def pageBits_def)
-      apply (subst mask_out_sub_mask)
-      apply (simp add:mask_add_aligned mask_twice pdBits_def pageBits_def)
-      apply (clarsimp simp:blah)
-      apply (drule neg_mask_mono_le[where n = 14])
-      apply (drule neg_mask_mono_le[where n = 14])
-      apply (simp add:field_simps vspace_bits_defs)
-      apply (frule_tac d1 = "0x3FFF" and p1="ptr" in is_aligned_add_helper[THEN conjunct2])
-       apply simp
-      apply (frule_tac d1 = "kernelBase >> 21 << 3" and p1 = "ptr"
-        in is_aligned_add_helper[THEN conjunct2])
-       apply (simp add:ARM_HYP.kernelBase_def kernelBase_def)
-      apply simp
-      done
-
-  show ?thesis
-    using ps al monad
-    apply -
-    apply (rule ext)
-    apply (frule_tac x = x in copyGlobalMappings_ksPSpaceD)
-     apply simp+
-    apply (clarsimp split:if_splits)
-    apply (frule_tac x = "(armKSGlobalPD (ksArchState s') + (x && mask pdBits))"
-           in copyGlobalMappings_ksPSpaceD)
-     apply simp+
-    apply (drule use_valid[OF _ pd])
-     apply simp
-    apply (clarsimp split: if_splits simp: vspace_bits_defs field_simps)
-    apply (clarsimp simp: mask_add_aligned)
-(*    apply (frule comp)
-    apply (clarsimp simp:pdBits_def pageBits_def mask_twice blah)
-    apply (drule_tac y = "armKSGlobalPD a + b" for a b in neg_mask_mono_le[where n = 14])
-    apply (drule_tac x = "armKSGlobalPD a + b" for a b in neg_mask_mono_le[where n = 14])
-    apply (frule_tac d1 = "x && mask 14" in is_aligned_add_helper[THEN conjunct2])
-     apply (simp add:mask_def)
-     apply (rule le_less_trans[OF word_and_le1])
-     apply simp
-    apply (frule_tac d1 = "kernelBase >> 20 << 2" in is_aligned_add_helper[THEN conjunct2])
-     apply (simp add:ARM_HYP.kernelBase_def kernelBase_def)
-    apply (simp add:field_simps)
-    apply (frule_tac d1 = "0x3FFF" and p1="ptr" in is_aligned_add_helper[THEN conjunct2])
-     apply simp
-    apply (frule_tac d1 = "kernelBase >> 20 << 2" and p1 = "ptr"
-      in is_aligned_add_helper[THEN conjunct2])
-     apply (simp add:ARM_HYP.kernelBase_def kernelBase_def)
-    apply simp
-    apply (cut_tac copyGlobalMappings_ksPSpace_sameD)
-       apply simp
-      apply (rule monad)
-     apply (simp add:al)
-    apply (simp add:al) *)
-  sorry (* armKSGlobalPD *)
-qed
-
-
-lemma copyGlobalMappings_valid_duplicates':
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
-  shows "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_distinct'
-    and pspace_aligned'
-    and (\<lambda>s. is_aligned (armKSGlobalPD (ksArchState s)) pdBits)
-    and K (is_aligned ptr pdBits)\<rbrace>
-  copyGlobalMappings ptr \<lbrace>\<lambda>y s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  proof -
-      have neg_mask_simp: "\<And>x ptr' ptr a.
-      \<lbrakk>is_aligned ptr pdBits\<rbrakk>
-      \<Longrightarrow> x + ptr && ~~ mask (vs_ptr_align a) = (x && ~~ mask (vs_ptr_align a))
-      + ptr"
-        apply (cut_tac a = a in vs_ptr_align_upbound)
-        apply (subst add.commute)
-        apply (subst mask_out_add_aligned[symmetric])
-         apply (erule is_aligned_weaken)
-         apply (simp add: vspace_bits_defs)+
-        done
-      have eq_trans: "\<And>a b c d f. (c = d) \<Longrightarrow> (a = f c) \<Longrightarrow> (b = f d) \<Longrightarrow> (a = b)"
-        by auto
-      have mask_sub_mask:"\<And>m n x. ((x::word32) && mask n) && ~~ mask m = (x && ~~ mask m ) && mask n"
-        by (rule word_eqI, auto)
-
-  show ?thesis
-  apply (clarsimp simp:valid_def)
-  apply (subst vs_valid_duplicates'_def)
-  apply (clarsimp split:option.splits)
-  apply (drule copyGlobalMappings_ksPSpace_concrete)
-     apply simp+
-  apply (intro conjI)
-   apply clarsimp
-   apply (frule_tac ptr = ptr in globalPDEWindow_neg_mask)
-     apply simp
-    apply simp
-   apply (clarsimp simp: vspace_bits_defs split:if_splits)
-(*   apply (drule_tac p' = "((y && mask pdBits) + armKSGlobalPD (ksArchState s))"
-     in valid_duplicates'_D[rotated])
-      apply (erule aligned_add_aligned[OF is_aligned_andI1])
-       apply (erule is_aligned_weaken[where y = 2])
-       apply (simp add:pdBits_def)
-      apply simp
-     apply (frule_tac x = "x && mask pdBits" and a = x2 and ptr = "armKSGlobalPD (ksArchState s)"
-         in neg_mask_simp)
-     apply (drule_tac x = "y && mask pdBits" and a = x2 and ptr = "armKSGlobalPD (ksArchState s)"
-       in neg_mask_simp)
-     apply (simp add:mask_sub_mask)
-    apply simp
-   apply simp
-  apply (clarsimp split:if_splits)
-   apply (drule_tac ptr = ptr in globalPDEWindow_neg_mask[OF sym])
-     apply simp
-    apply simp
-   apply simp
-  apply (drule_tac p' = y  in valid_duplicates'_D[rotated])
-  apply simp+
-  done*) sorry (* armKSGlobalPD *)
-qed
-
 lemma foldr_data_map_insert[simp]:
  "foldr (\<lambda>addr map a. if a = addr then Some b else map a)
  = foldr (\<lambda>addr. data_map_insert addr b)"
@@ -1007,7 +672,7 @@ assumes inset: "p\<in>set (new_cap_addrs (2 ^ us) ptr ko)"
 shows
     "\<lbrakk>is_aligned ptr (objBitsKO ko + us); us < 29;is_aligned p' 3\<rbrakk>
   \<Longrightarrow> p' \<in> set (new_cap_addrs (2 ^ us) ptr ko)"
-  apply (subgoal_tac "\<And>x. \<lbrakk>is_aligned ptr (Suc (Suc (Suc us))); us < 29; is_aligned p' 3; 4 \<le> us; ptr + (of_nat x << 3) && ~~ mask 6 = p' && ~~ mask 7;
+  apply (subgoal_tac "\<And>x. \<lbrakk>is_aligned ptr (Suc (Suc (Suc us))); us < 29; is_aligned p' 3; 4 \<le> us; ptr + (of_nat x << 3) && ~~ mask 7 = p' && ~~ mask 7;
          x < 2 ^ us\<rbrakk>
         \<Longrightarrow> \<exists>x\<in>{0..<2 ^ us}. p' = ptr + (of_nat x << 3)")
    prefer 2
@@ -1037,10 +702,10 @@ shows
    apply (simp add: field_simps)
   using pdpt_align
   apply (clarsimp simp: image_def vs_entry_align_def vs_ptr_align_def
-    new_cap_addrs_def objBits_simps archObjSize_def vspace_bits_defs
+    new_cap_addrs_def objBits_simps archObjSize_def vspace_bits_defs add.commute
     split:ARM_HYP_H.pde.splits ARM_HYP_H.pte.splits arch_kernel_object.splits
     Structures_H.kernel_object.splits)
-  sorry
+  done
 
 lemma in_new_cap_addrs_aligned:
   "is_aligned ptr 3 \<Longrightarrow> p \<in> set (new_cap_addrs (2 ^ us) ptr ko) \<Longrightarrow> is_aligned p 3"
@@ -1128,7 +793,6 @@ lemma valid_duplicates'_update:
 lemma createObject_valid_duplicates'[wp]:
   "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_aligned' and pspace_distinct'
    and pspace_no_overlap' ptr (getObjectSize ty us)
-   and (\<lambda>s. is_aligned (armKSGlobalPD (ksArchState s)) pdBits)
    and K (is_aligned ptr (getObjectSize ty us))
    and K (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28)\<rbrace>
   RetypeDecls_H.createObject ty ptr us d
@@ -1138,13 +802,10 @@ lemma createObject_valid_duplicates'[wp]:
   apply (rule hoare_pre)
   apply (wpc | wp| simp add: ARM_HYP_H.createObject_def split del: if_split)+
          apply (simp add: placeNewObject_def placeNewDataObject_def
-                          placeNewObject'_def split_def split del: if_split
+                          placeNewObject'_def split_def copyGlobalMappings_def
+                     split del: if_split
            | wp hoare_unless_wp[where P="d"] hoare_unless_wp[where Q=\<top>]
            | wpc | simp add: alignError_def split del: if_split)+
- (*    apply (rule copyGlobalMappings_valid_duplicates')
-    apply ((wp hoare_unless_wp[where P="d"] hoare_unless_wp[where Q=\<top>] | wpc
-            | simp add: alignError_def placeNewObject_def
-                        placeNewObject'_def split_def split del: if_split)+)[2]
   apply (intro conjI impI)
              apply clarsimp+
             apply (erule(2) valid_duplicates'_update)
@@ -1163,69 +824,74 @@ lemma createObject_valid_duplicates'[wp]:
                           APIType_capBits_def objBits_simps pageBits_def)+)[1]
            | rule none_in_new_cap_addrs[where us = 4,simplified,THEN bspec,rotated -1]
            | simp add: objBits_simps pageBits_def word_bits_conv)+)[1]
-        apply ((clarsimp simp: new_cap_addrs_fold'[where n = "0x100",simplified]
-          | (erule valid_duplicates'_insert_ko[where us = 8,simplified]
+        apply ((clarsimp simp: new_cap_addrs_fold'[where n = "0x200",simplified]
+          | (erule valid_duplicates'_insert_ko[where us = 9,simplified]
             , (simp add: toAPIType_def vs_entry_align_def
                          APIType_capBits_def objBits_simps pageBits_def)+)[1]
-          | rule none_in_new_cap_addrs[where us = 8,simplified,THEN bspec,rotated -1]
+          | rule none_in_new_cap_addrs[where us = 9,simplified,THEN bspec,rotated -1]
           | simp add: objBits_simps pageBits_def word_bits_conv)+)[1]
-       apply (clarsimp simp: new_cap_addrs_fold'[where n = "0x100",simplified])
-       apply (erule valid_duplicates'_insert_ko[where us = 8,simplified])
+       apply (clarsimp simp: new_cap_addrs_fold'[where n = "0x200",simplified])
+       apply (erule valid_duplicates'_insert_ko[where us = 9,simplified])
           apply (simp add: toAPIType_def vs_entry_align_def
                            APIType_capBits_def objBits_simps pageBits_def)+
-       apply (rule none_in_new_cap_addrs[where us =8,simplified]
+       apply (rule none_in_new_cap_addrs[where us =9,simplified]
         ,(simp add: objBits_simps pageBits_def word_bits_conv)+)[1]
-      apply (clarsimp simp: new_cap_addrs_fold'[where n = "0x1000",simplified])
-      apply (erule valid_duplicates'_insert_ko[where us = 12,simplified])
+      apply (clarsimp simp: new_cap_addrs_fold'[where n = "0x2000",simplified])
+      apply (erule valid_duplicates'_insert_ko[where us = 13,simplified])
          apply (simp add: toAPIType_def vs_entry_align_def
                           APIType_capBits_def objBits_simps pageBits_def)+
-      apply (rule none_in_new_cap_addrs[where us =12,simplified]
+      apply (rule none_in_new_cap_addrs[where us =13,simplified]
        ,(simp add: objBits_simps pageBits_def word_bits_conv)+)[1]
-     apply (clarsimp simp: new_cap_addrs_fold'[where n = "0x1000",simplified])
-     apply (erule valid_duplicates'_insert_ko[where us = 12,simplified])
+     apply (clarsimp simp: new_cap_addrs_fold'[where n = "0x2000",simplified])
+     apply (erule valid_duplicates'_insert_ko[where us = 13,simplified])
        apply (simp add: ARM_HYP_H.toAPIType_def vs_entry_align_def
                         APIType_capBits_def objBits_simps pageBits_def)+
-     apply (rule none_in_new_cap_addrs[where us =12,simplified]
+     apply (rule none_in_new_cap_addrs[where us =13,simplified]
       ,(simp add: objBits_simps pageBits_def word_bits_conv)+)[1]
     apply (clarsimp simp: objBits_simps ptBits_def archObjSize_def pageBits_def)
-   apply (cut_tac ptr=ptr in new_cap_addrs_fold'[where n = "0x100" and ko = "(KOArch (KOPTE makeObject))"
+   apply (cut_tac ptr=ptr in new_cap_addrs_fold'[where n = "0x200" and ko = "(KOArch (KOPTE makeObject))"
       ,simplified objBits_simps])
     apply simp
-   apply (clarsimp simp: archObjSize_def)
-   apply (erule valid_duplicates'_insert_ko[where us = 8,simplified])
+   apply (clarsimp simp: archObjSize_def pt_bits_def pte_bits_def)
+   apply (erule valid_duplicates'_insert_ko[where us = 9,simplified])
       apply (simp add: toAPIType_def archObjSize_def vs_entry_align_def
-                       APIType_capBits_def objBits_simps pageBits_def
+                       APIType_capBits_def objBits_simps pageBits_def pte_bits_def
                 split: ARM_HYP_H.pte.splits)+
-    apply (rule none_in_new_cap_addrs[where us =8,simplified]
-      ,(simp add: objBits_simps pageBits_def word_bits_conv archObjSize_def)+)[1]
-   apply clarsimp
-   apply (cut_tac ptr=ptr in new_cap_addrs_fold'[where n = "0x1000" and ko = "(KOArch (KOPDE makeObject))"
+    apply (rule none_in_new_cap_addrs[where us =9,simplified]
+      ,(simp add: objBits_simps pageBits_def word_bits_conv archObjSize_def pte_bits_def)+)[1]
+   apply (clarsimp simp: pd_bits_def pde_bits_def)
+   apply (cut_tac ptr=ptr in new_cap_addrs_fold'[where n = "0x0800" and ko = "(KOArch (KOPDE makeObject))"
      ,simplified objBits_simps])
     apply simp
-   apply (clarsimp simp: objBits_simps archObjSize_def pdBits_def pageBits_def)
-   apply (frule(2) retype_aligned_distinct'[where n = 4096 and ko = "KOArch (KOPDE makeObject)"])
+   apply (clarsimp simp: objBits_simps archObjSize_def pdBits_def pageBits_def pde_bits_def)
+   apply (frule(2) retype_aligned_distinct'[where n = "0x0800" and ko = "KOArch (KOPDE makeObject)"])
     apply (simp add:objBits_simps archObjSize_def)
     apply (rule range_cover_rel[OF range_cover_full])
        apply simp
-      apply (simp add:APIType_capBits_def word_bits_def)+
-   apply (frule(2) retype_aligned_distinct'(2)[where n = 4096 and ko = "KOArch (KOPDE makeObject)"])
+      apply (simp add:APIType_capBits_def word_bits_def pde_bits_def)+
+   apply (frule(2) retype_aligned_distinct'(2)[where n = "2048" and ko = "KOArch (KOPDE makeObject)"])
     apply (simp add:objBits_simps archObjSize_def)
     apply (rule range_cover_rel[OF range_cover_full])
        apply simp
-      apply (simp add:APIType_capBits_def word_bits_def)+
+      apply (simp add:APIType_capBits_def word_bits_def pde_bits_def)+
    apply (subgoal_tac "vs_valid_duplicates'
                 (foldr (\<lambda>addr. data_map_insert addr (KOArch (KOPDE makeObject)))
-                  (map (\<lambda>n. ptr + (n << 2)) [0.e.2 ^ (pdBits - 2) - 1]) (ksPSpace s))")
-    apply (simp add:APIType_capBits_def pdBits_def pageBits_def
+                  (map (\<lambda>n. ptr + (n << 3)) [0.e.0x7FF]) (ksPSpace s))")
+    apply (simp add:APIType_capBits_def pdBits_def pageBits_def pde_bits_def pd_bits_def
      data_map_insert_def[abs_def])
-   apply (clarsimp simp: archObjSize_def pdBits_def pageBits_def)
-   apply (rule valid_duplicates'_insert_ko[where us = 12,simplified])
+   apply (clarsimp simp: archObjSize_def pdBits_def pageBits_def pdBits_def pd_bits_def pde_bits_def)
+   apply (rule valid_duplicates'_insert_ko[where us = 11,simplified])
       apply (simp add: ARM_HYP_H.toAPIType_def archObjSize_def vs_entry_align_def
-                       APIType_capBits_def objBits_simps pageBits_def
+                       APIType_capBits_def objBits_simps pageBits_def pde_bits_def
                 split: ARM_HYP_H.pde.splits)+
-   apply (rule none_in_new_cap_addrs[where us =12,simplified]
-     ,(simp add: objBits_simps pageBits_def word_bits_conv archObjSize_def)+)[1]
-  apply (intro conjI impI allI)
+   apply (rule none_in_new_cap_addrs[where us =11,simplified]
+     ,(simp add: objBits_simps pageBits_def word_bits_conv archObjSize_def pde_bits_def)+)[1]
+
+   apply clarsimp
+   apply (erule(2) valid_duplicates'_update)
+    apply (clarsimp simp: vs_entry_align_def)
+   apply (clarsimp simp: vs_entry_align_def)
+   apply (intro conjI impI allI)
       apply simp
      apply clarsimp
      apply (drule(2) valid_duplicates'_update) prefer 3
@@ -1257,16 +923,12 @@ lemma createObject_valid_duplicates'[wp]:
                  word_bits_conv archObjSize_def is_aligned_mask
           split: ARM_HYP_H.object_type.splits)+)[1]
   apply (clarsimp simp: word_bits_def)
- done *) sorry
-
-
-crunch arch_inv[wp]: createNewObjects "\<lambda>s. P (armKSGlobalPD (ksArchState s))"
-  (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps hoare_unless_wp)
+ done
 
 
 lemma createNewObjects_valid_duplicates'[wp]:
  "\<lbrace> (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_no_overlap' ptr sz
-  and pspace_aligned' and pspace_distinct' and (\<lambda>s. is_aligned (armKSGlobalPD (ksArchState s)) pdBits)
+  and pspace_aligned' and pspace_distinct'
   and K (range_cover ptr sz (Types_H.getObjectSize ty us) (length dest) \<and>
       ptr \<noteq> 0 \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> us < 28) ) \<rbrace>
        createNewObjects ty src dest ptr us d
@@ -1302,9 +964,9 @@ lemma createNewObjects_valid_duplicates'[wp]:
      apply (intro conjI aligned_add_aligned)
         apply (erule range_cover_le,simp)
        apply (rule is_aligned_shiftl_self)
- (*     apply simp
+      apply simp
      apply simp
-     done*) sorry
+     done
    qed
 
 lemma valid_duplicates'_diffI:
@@ -1350,21 +1012,38 @@ lemma valid_duplicates_deleteObjects_helper:
           atLeastAtMost_iff
   shows "vs_valid_duplicates'  (\<lambda>x. if x \<in> {ptr .. ptr + 2 ^ sz - 1} then None else m x)"
   apply (rule valid_duplicates'_diffI,rule vd)
-  apply (clarsimp simp: vs_valid_duplicates'_def split:option.splits)
+   apply (clarsimp simp: vs_valid_duplicates'_def split:option.splits)
   apply (clarsimp simp: vs_valid_duplicates'_def split:option.splits)
   apply (case_tac "the (m x)",simp_all add:vs_ptr_align_def)
-   apply fastforce+
+         apply fastforce+
   apply (rename_tac arch_kernel_object)
   apply (case_tac arch_kernel_object)
-    apply fastforce+
-   apply (clarsimp split:ARM_HYP_H.pte.splits)
+     apply fastforce+
+    apply (clarsimp split:ARM_HYP_H.pte.splits)
+    apply auto[1]
+      apply (drule_tac p' = y in valid_duplicates'_D[OF vd])
+        apply (simp add:vs_ptr_align_def)+
+      apply clarsimp
+      apply (drule(1) inc)
+      apply (drule(1) mask_out_first_mask_some)
+      apply (simp add:mask_lower_twice)
+      apply (simp add: mask_in_range[OF aligned,symmetric])
+     apply (drule_tac p' = y in valid_duplicates'_D[OF vd])
+       apply simp
+      apply (simp add:vs_ptr_align_def)
+     apply simp
+    apply (drule_tac p' = y in valid_duplicates'_D[OF vd])
+      apply simp
+     apply (simp add:vs_ptr_align_def)
+    apply simp
+   apply (clarsimp split:ARM_HYP_H.pde.splits)
    apply auto[1]
      apply (drule_tac p' = y in valid_duplicates'_D[OF vd])
-       apply (simp add:vs_ptr_align_def)+
-     apply clarsimp
+       apply simp
+      apply (simp add:vs_ptr_align_def)
      apply (drule(1) inc)
      apply (drule(1) mask_out_first_mask_some)
-      apply (simp add:mask_lower_twice)
+     apply (simp add:mask_lower_twice)
      apply (simp add: mask_in_range[OF aligned,symmetric])
     apply (drule_tac p' = y in valid_duplicates'_D[OF vd])
       apply simp
@@ -1373,25 +1052,9 @@ lemma valid_duplicates_deleteObjects_helper:
    apply (drule_tac p' = y in valid_duplicates'_D[OF vd])
      apply simp
     apply (simp add:vs_ptr_align_def)
-   apply simp
-  apply (clarsimp split:ARM_HYP_H.pde.splits)
-  apply auto[1]
-    apply (drule_tac p' = y in valid_duplicates'_D[OF vd])
-      apply simp
-     apply (simp add:vs_ptr_align_def)
-    apply (drule(1) inc)
-    apply (drule(1) mask_out_first_mask_some)
-    apply (simp add:mask_lower_twice)
-    apply (simp add: mask_in_range[OF aligned,symmetric])
-   apply (drule_tac p' = y in valid_duplicates'_D[OF vd])
-     apply simp
-    apply (simp add:vs_ptr_align_def)
-   apply simp
-  apply (drule_tac p' = y in valid_duplicates'_D[OF vd])
-    apply simp
-   apply (simp add:vs_ptr_align_def)
-  apply simp
-  sorry (* add vcpu case *)
+   apply clarsimp
+  apply auto
+  done
 
 lemma deleteObjects_valid_duplicates'[wp]:
   notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
@@ -1436,12 +1099,6 @@ lemma resetUntypedCap_valid_duplicates'[wp]:
   apply (clarsimp simp add: isCap_simps valid_cap_simps' capAligned_def)
   done
 
-lemma is_aligned_armKSGlobalPD:
-  "valid_arch_state' s
-    \<Longrightarrow> is_aligned (armKSGlobalPD (ksArchState s)) pdBits"
- (* by (clarsimp simp: valid_arch_state'_def page_directory_at'_def)*)
-  sorry (* armKSGlobalPD *)
-
 lemma new_CapTable_bound:
   "range_cover (ptr :: obj_ref) sz (APIType_capBits tp us) n
     \<Longrightarrow> tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> us < 28"
@@ -1479,11 +1136,10 @@ lemma invokeUntyped_valid_duplicates[wp]:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (frule new_CapTable_bound)
   apply (frule invokeUntyped_proofs.not_0_ptr)
-(*  apply (strengthen is_aligned_armKSGlobalPD)
   apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)
   apply (clarsimp simp add: isCap_simps valid_cap_simps' capAligned_def)
   apply (auto split: if_split_asm)
-  done*) sorry
+  done
 
 crunch valid_duplicates'[wp]:
   doReplyTransfer "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
@@ -1543,8 +1199,8 @@ lemma storePDE_no_duplicates':
     \<and> vs_entry_align (KOArch (KOPDE pde)) = 0 \<rbrace>
    storePDE ptr pde
   \<lbrace>\<lambda>ya s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add:storePDE_def setObject_def split_def | wp | wpc)+
-(*    apply (simp add:updateObject_default_def)
+  apply (simp add:storePDE_def setObject_def split_def | wp hoare_drop_imps | wpc)+
+    apply (simp add:updateObject_default_def)
     apply wp+
   apply clarsimp
   apply (subst vs_valid_duplicates'_def)
@@ -1568,7 +1224,7 @@ lemma storePDE_no_duplicates':
   apply (clarsimp split:option.splits)
   apply (drule_tac p = x and p' = y in valid_duplicates'_D)
    apply simp+
-  done*) sorry
+  done
 
 lemma storePTE_no_duplicates':
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)
@@ -1576,8 +1232,8 @@ lemma storePTE_no_duplicates':
     \<and> vs_entry_align (KOArch (KOPTE pte)) = 0 \<rbrace>
    storePTE ptr pte
   \<lbrace>\<lambda>ya s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add:storePTE_def setObject_def split_def | wp | wpc)+
-(*    apply (simp add:updateObject_default_def)
+  apply (simp add:storePTE_def setObject_def split_def | wp hoare_drop_imps | wpc)+
+    apply (simp add:updateObject_default_def)
     apply wp+
   apply clarsimp
   apply (subst vs_valid_duplicates'_def)
@@ -1601,7 +1257,7 @@ lemma storePTE_no_duplicates':
   apply (clarsimp split:option.splits)
   apply (drule_tac p = x and p' = y in valid_duplicates'_D)
    apply simp+
-  done*) sorry
+  done
 
 crunch valid_duplicates'[wp]:
  lookupPTSlot "\<lambda>s. valid_duplicates' (ksPSpace s)"
@@ -1716,7 +1372,7 @@ lemma unmapPage_valid_duplicates'[wp]:
        apply clarsimp
        apply (wp checkMappingPPtr_inv lookupPTSlot_page_table_at')+
       apply (rule hoare_post_imp_R[OF lookupPTSlot_aligned[where sz= vmpage_size]])
-      apply (simp add:pageBitsForSize_def)
+      apply (simp add:pageBitsForSize_def pt_bits_def pte_bits_def)
       apply (drule upto_enum_step_shift[where n = 7 and m = 3,simplified])
       apply (clarsimp simp: mask_def add.commute upto_enum_step_def)
  (*    apply wp+
@@ -1812,22 +1468,19 @@ crunch valid_duplicates'[wp]:
   deleteASIDPool, unbindNotification, prepareThreadDelete "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def ignore:getObject setObject)
 
+lemma vcpuFinalise_valid_duplicates'[wp]:
+  "vcpuFinalise v \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  sorry
+
 lemma archFinaliseCap_valid_duplicates'[wp]:
   "\<lbrace>valid_objs' and pspace_aligned' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))
     and (valid_cap' (capability.ArchObjectCap arch_cap))\<rbrace>
   Arch.finaliseCap arch_cap is_final
   \<lbrace>\<lambda>ya a. vs_valid_duplicates' (ksPSpace a)\<rbrace>"
-  apply (case_tac arch_cap,simp_all add:ARM_HYP_H.finaliseCap_def)
-(*      apply (rule hoare_pre)
-       apply (wp|wpc|simp)+
-    apply (rule hoare_pre)
-     apply (wp|wpc|simp)+
-    apply (clarsimp simp:valid_cap'_def)
-   apply (rule hoare_pre)
-    apply (wp|wpc|simp)+
-  apply (rule hoare_pre)
-   apply (wp|wpc|simp)+
-  done*) sorry
+  unfolding ARM_HYP_H.finaliseCap_def Let_def
+  apply wpsimp
+  apply (clarsimp simp: isCap_simps valid_cap'_def)
+  done
 
 lemma finaliseCap_valid_duplicates'[wp]:
   "\<lbrace>valid_objs' and pspace_aligned' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))
@@ -1916,8 +1569,8 @@ lemma mapM_x_storePTE_invalid_whole:
   apply (clarsimp simp:valid_cap'_def capAligned_def pageBits_def
     ptBits_def is_aligned_neg_mask_eq objBits_simps
     archObjSize_def)
-  apply (simp add:mask_def field_simps vspace_bits_defs)
-  sorry
+  apply (simp add:mask_def field_simps vspace_bits_defs is_aligned_neg_mask_eq')
+  done
 
 lemma mapM_x_storePDE_update_invalid:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<and>
