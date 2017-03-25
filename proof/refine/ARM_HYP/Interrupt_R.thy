@@ -607,13 +607,6 @@ lemma doMachineOp_get_invs [wp]:
   "doMachineOp (gets f) \<lbrace>P\<rbrace>"
   unfolding doMachineOp_def by (wpsimp simp: in_monad)
 
-(* FIXME: move *)
-(* should probably become part of the hoare_vgc_if_lift2 set *)
-lemma hoare_vcg_if_lift3:
-  "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P rv s \<longrightarrow> X rv s) \<and> (\<not> P rv s \<longrightarrow> Y rv s)\<rbrace> \<Longrightarrow>
-  \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (if P rv s then X rv else Y rv) s\<rbrace>"
-  by auto
-
 lemma vgic_maintenance_corres [corres]:
   "corres dc einvs
       (\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))

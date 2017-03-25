@@ -4361,9 +4361,8 @@ lemma rai_invs'[wp]:
       apply (fastforce simp: tcb_bound_refs'_def symreftype_inverse'
                       split: if_split_asm)
      apply (clarsimp dest!: global'_no_ex_cap)
-    apply (rule conjI)
     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
-(*   -- "ep = ActiveNtfn"
+   -- "ep = ActiveNtfn"
    apply (simp add: invs'_def valid_state'_def)
    apply (rule hoare_pre)
     apply (wp valid_irq_node_lift sts_valid_objs' typ_at_lifts static_imp_wp
@@ -4383,7 +4382,7 @@ lemma rai_invs'[wp]:
    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift sts_sch_act'
              sts_valid_queues setThreadState_ct_not_inQ typ_at_lifts
              asUser_urz
-        | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def | wpc)+
+        | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def live'_def | wpc)+
   apply (clarsimp simp: valid_tcb_state'_def)
   apply (frule_tac t=t in not_in_ntfnQueue)
      apply (simp)
@@ -4410,7 +4409,7 @@ lemma rai_invs'[wp]:
    apply (fastforce simp: tcb_bound_refs'_def
                    split: if_split_asm)
   apply (clarsimp dest!: global'_no_ex_cap)
-  done*) sorry
+  done
 
 lemma zobj_refs_maskCapRights[simp]:
   "zobj_refs' (maskCapRights msk cap) = zobj_refs' cap"

@@ -2237,13 +2237,10 @@ crunch typ_at'[wp]: finaliseCap "\<lambda>s. P (typ_at' T p s)"
      wp: getObject_inv loadObject_default_inv crunch_wps)
 lemmas finaliseCap_typ_ats[wp] = typ_at_lifts[OF finaliseCap_typ_at']
 
-lemma dissociateVCPUTCB_it': "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> dissociateVCPUTCB param_a param_b \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
-  sorry (* crunch *)
-
 crunch it'[wp]: finaliseCap "\<lambda>s. P (ksIdleThread s)"
   (ignore: getObject setObject forM ignoreFailure maskInterrupt
    wp: mapM_x_wp_inv mapM_wp' hoare_drop_imps getObject_inv loadObject_default_inv
-   simp: whenE_def crunch_simps unless_def)
+   simp: whenE_def crunch_simps unless_def updateObject_default_def)
 
 
 
@@ -2255,11 +2252,6 @@ declare doUnbindNotification_def[simp]
 lemma ntfn_q_refs_of'_mult:
   "ntfn_q_refs_of' ntfn = (case ntfn of Structures_H.WaitingNtfn q \<Rightarrow> set q | _ \<Rightarrow> {}) \<times> {NTFNSignal}"
   by (cases ntfn, simp_all)
-
-lemma tcb_st_not_Bound:
-  "(p, NTFNBound) \<notin> tcb_st_refs_of' ts"
-  "(p, TCBBound) \<notin> tcb_st_refs_of' ts"
-  by (auto simp: tcb_st_refs_of'_def split: Structures_H.thread_state.split)
 
 lemma unbindNotification_invs[wp]:
   "\<lbrace>invs'\<rbrace> unbindNotification tcb \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -2283,16 +2275,14 @@ lemma unbindNotification_invs[wp]:
   apply (clarsimp simp: refs_of_rev')
   apply normalise_obj_at'
   apply (subst delta_sym_refs, assumption)
-(*defer
-defer
     apply (auto split: if_split_asm)[1]
-   apply (auto simp: tcb_st_not_Bound ntfn_q_refs_of'_mult split: if_split_asm)[1]
+   apply (auto simp: ntfn_q_refs_of'_mult split: if_split_asm)[1]
   apply (frule obj_at_valid_objs', clarsimp+)
   apply (simp add: valid_ntfn'_def valid_obj'_def projectKOs live'_def
             split: ntfn.splits)
   apply (erule if_live_then_nonz_capE')
   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs live'_def)
-  done*) sorry
+  done
 
 lemma ntfn_bound_tcb_at':
   "\<lbrakk>sym_refs (state_refs_of' s); valid_objs' s; ko_at' ntfn ntfnptr s;
@@ -2318,7 +2308,7 @@ lemma unbindMaybeNotification_invs[wp]:
              irqs_masked_lift setBoundNotification_ct_not_inQ
              untyped_ranges_zero_lift
              | wpc | clarsimp simp: cteCaps_of_def o_def)+
-(*  apply safe[1]
+  apply safe[1]
            defer 3
            defer 7
            apply (fold_subgoals (prefix))[8]
@@ -2341,7 +2331,7 @@ lemma unbindMaybeNotification_invs[wp]:
                    dest!: bound_tcb_at_state_refs_ofD'
                    split: ntfn.splits thread_state.splits)
   apply (frule ko_at_state_refs_ofD', simp)
-  done*) sorry
+  done
 
 (* Ugh, required to be able to split out the abstract invs *)
 lemma finaliseCap_True_invs[wp]:
@@ -2363,9 +2353,10 @@ lemma invs_asid_update_strg':
             (\<lambda>_. tab (asid := None)) (ksArchState s)\<rparr>)"
   apply (simp add: invs'_def)
   apply (simp add: valid_state'_def)
-  apply (simp add: valid_global_refs'_def global_refs'_def valid_arch_state'_def valid_asid_table'_def valid_machine_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-  apply (auto simp add: ran_def split: if_split_asm)
-  sorry
+  apply (simp add: valid_global_refs'_def global_refs'_def valid_arch_state'_def valid_asid_table'_def
+                   valid_machine_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
+             cong: option.case_cong)
+  by (auto simp add: ran_def split: if_split_asm)
 
 lemma invalidateASIDEntry_invs' [wp]:
   "\<lbrace>invs'\<rbrace> invalidateASIDEntry asid \<lbrace>\<lambda>r. invs'\<rbrace>"
@@ -2384,19 +2375,19 @@ lemma invalidateASIDEntry_invs' [wp]:
                     comp_upd_simp fun_upd_def[symmetric]
                     inj_on_fun_upd_elsewhere
                     valid_asid_map'_def
-                    ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-   subgoal (* by (auto elim!: subset_inj_on) *)
-   sorry
+                    ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
+             cong: option.case_cong)
+   subgoal by (auto elim!: subset_inj_on)
   apply (clarsimp simp: invs'_def valid_state'_def)
   apply (rule conjI)
-   apply (simp add: valid_global_refs'_def
-                    global_refs'_def)
+   apply (simp add: valid_global_refs'_def global_refs'_def)
   apply (rule conjI)
    apply (simp add: valid_arch_state'_def ran_def
                     valid_asid_table'_def None_upd_eq
-                    fun_upd_def[symmetric] comp_upd_simp)
+                    fun_upd_def[symmetric] comp_upd_simp
+              cong: option.case_cong)
   apply (simp add: valid_machine_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-  sorry
+  done
 
 lemma deleteASIDPool_invs[wp]:
   "\<lbrace>invs'\<rbrace> deleteASIDPool asid pool \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -2424,7 +2415,7 @@ lemma deleteASID_invs'[wp]:
   apply (simp add: deleteASID_def cong: option.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpc)+
-(*      apply (rule_tac Q="\<lambda>rv. valid_obj' (injectKO rv) and invs'"
+      apply (rule_tac Q="\<lambda>rv. valid_obj' (injectKO rv) and invs'"
                 in hoare_post_imp)
      apply (clarsimp split: if_split_asm del: subsetI)
      apply (simp add: fun_upd_def[symmetric] valid_obj'_def)
@@ -2437,18 +2428,21 @@ lemma deleteASID_invs'[wp]:
      apply (auto dest!: ran_del_subset)[1]
     apply (wp getObject_valid_obj getObject_inv loadObject_default_inv
              | simp add: objBits_simps archObjSize_def pageBits_def)+
-  apply clarsimp*)
+  apply clarsimp
+  done
+
+lemma dissociateVCPUTCB_invs'[wp]:
+  "dissociateVCPUTCB vcpu tcb \<lbrace>invs'\<rbrace>"
+  unfolding dissociateVCPUTCB_def
+  apply wpsimp
   sorry
 
+lemma vcpuFinalise_invs'[wp]: "vcpuFinalise vcpu \<lbrace>invs'\<rbrace>"
+  unfolding vcpuFinalise_def by wpsimp
+
 lemma arch_finaliseCap_invs[wp]:
-  "\<lbrace>invs' and valid_cap' (ArchObjectCap cap)\<rbrace>
-     Arch.finaliseCap cap fin
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply_trace (simp add: ARM_HYP_H.finaliseCap_def)
-(*  apply (rule hoare_pre)
-   apply (wp | wpc)+
-  apply clarsimp*)
-  sorry
+  "\<lbrace>invs' and valid_cap' (ArchObjectCap cap)\<rbrace> Arch.finaliseCap cap fin \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  unfolding ARM_HYP_H.finaliseCap_def Let_def by wpsimp
 
 lemma arch_finaliseCap_removeable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile>' ArchObjectCap cap \<and> invs' s
@@ -2456,12 +2450,8 @@ lemma arch_finaliseCap_removeable[wp]:
             \<longrightarrow> isFinal (ArchObjectCap cap) slot (cteCaps_of s))\<rbrace>
      Arch.finaliseCap cap final
    \<lbrace>\<lambda>rv s. isNullCap rv \<and> removeable' slot s (ArchObjectCap cap)\<rbrace>"
-  apply (simp add: ARM_HYP_H.finaliseCap_def
-                   removeable'_def)
-(*  apply (rule hoare_pre)
-   apply (wp | wpc)+
-  apply simp*)
-  sorry
+  unfolding ARM_HYP_H.finaliseCap_def removeable'_def
+  by (wpsimp|rule conjI)+
 
 lemma isZombie_Null:
   "\<not> isZombie NullCap"
@@ -2524,9 +2514,17 @@ lemmas threadSet_cteCaps_of = ctes_of_cteCaps_of_lift [OF threadSet_ctes_of]
 crunch isFinal: setSchedulerAction "\<lambda>s. isFinal cap slot (cteCaps_of s)"
   (simp: cteCaps_of_def)
 
-lemma dissociateVCPUTCB_isFinal:
-  "\<lbrace>\<lambda>s. isFinal cap slot (cteCaps_of s)\<rbrace> dissociateVCPUTCB param_a param_b \<lbrace>\<lambda>_ s. isFinal cap slot (cteCaps_of s)\<rbrace>"
-  sorry (* crunch *)
+lemma archThreadSet_ctes_of[wp]:
+  "archThreadSet f t \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
+  unfolding archThreadSet_def
+  apply (wpsimp wp: getObject_tcb_wp)
+  apply (clarsimp simp: obj_at'_def tcb_cte_cases_def)
+  done
+
+crunch ctes_of[wp]: dissociateVCPUTCB "\<lambda>s. P (ctes_of s)"
+  (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+
+lemmas dissociateVCPUTCB_isFinal =  ctes_of_cteCaps_of_lift [OF dissociateVCPUTCB_ctes_of]
 
 crunch isFinal: suspend, prepareThreadDelete "\<lambda>s. isFinal cap slot (cteCaps_of s)"
   (ignore: setObject getObject threadSet
@@ -2548,8 +2546,19 @@ lemma cteDeleteOne_deletes[wp]:
   apply clarsimp
   done
 
-lemma vcpuSwitch_irq_node': "\<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (irq_node' s)\<rbrace>"
-  sorry  (* crunch *)
+(* FIXME: move *)
+(* should probably become part of the hoare_vgc_if_lift2 set *)
+lemma hoare_vcg_if_lift3:
+  "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P rv s \<longrightarrow> X rv s) \<and> (\<not> P rv s \<longrightarrow> Y rv s)\<rbrace> \<Longrightarrow>
+  \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (if P rv s then X rv else Y rv) s\<rbrace>"
+  by auto
+
+lemmas FalseI = notE[where R=False]
+
+crunch irq_node'[wp]: vcpuSwitch "\<lambda>s. P (irq_node' s)"
+  (wp: FalseI crunch_wps getObject_inv loadObject_default_inv
+       updateObject_default_inv setObject_ksInterrupt
+       ignore: getObject setObject simp: crunch_simps unless_def)
 
 crunch irq_node'[wp]: finaliseCap "\<lambda>s. P (irq_node' s)"
   (wp: mapM_x_wp crunch_wps getObject_inv loadObject_default_inv
@@ -2774,10 +2783,20 @@ lemma cancelIPC_bound_tcb_at'[wp]:
    apply (wp threadSet_pred_tcb_no_state | simp)+
   done
 
-lemma dissociateVCPUTCB_bound_tcb_at':
- "\<lbrace>bound_tcb_at' P t\<rbrace> dissociateVCPUTCB param_a param_b
-                                   \<lbrace>\<lambda>_. bound_tcb_at' P t\<rbrace>"
-  sorry  (* crunch *)
+lemma archThreadSet_bound_tcb_at'[wp]:
+  "archThreadSet f t \<lbrace>bound_tcb_at' P t'\<rbrace>"
+  unfolding archThreadSet_def
+  apply (wpsimp wp: setObject_tcb_strongest getObject_tcb_wp simp: pred_tcb_at'_def)
+  by (auto simp: obj_at'_def projectKOs objBits_simps)
+
+lemmas asUser_bound_obj_at'[wp] = asUser_pred_tcb_at' [of itcbBoundNotification]
+
+lemmas setObject_vcpu_pred_tcb_at'[wp] =
+  setObject_vcpu_obj_at'_tcb [of "\<lambda>ko. tst (pr (tcb_to_itcb' ko))" for tst pr, folded pred_tcb_at'_def]
+
+crunch bound_tcb_at'[wp]: dissociateVCPUTCB "bound_tcb_at' P t"
+  (wp: sts_bound_tcb_at' getVCPU_wp crunch_wps hoare_vcg_all_lift hoare_vcg_if_lift3
+   ignore: getObject setObject archThreadSet)
 
 crunch bound_tcb_at'[wp]: suspend, prepareThreadDelete "bound_tcb_at' P t"
   (wp: sts_bound_tcb_at' cancelIPC_bound_tcb_at'
@@ -2797,13 +2816,12 @@ lemma unbindMaybeNotification_bound_tcb_at':
   apply (simp add: unbindMaybeNotification_def)
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
   apply (case_tac "ntfnBoundTCB ntfn")
-   apply (((wp threadSet_pred_tcb_at_state setNotification_bound_tcb_at' static_imp_wp hoare_drop_imps
+   by (((wp threadSet_pred_tcb_at_state setNotification_bound_tcb_at' static_imp_wp hoare_drop_imps
             | clarsimp simp: setBoundNotification_def)+,
            drule (1) sym_refs_bound_tcb_atD',
            auto simp: tcb_ntfn_is_bound'_def obj_at'_def projectKOs ko_wp_at'_def
                       pred_tcb_at'_def ntfn_q_refs_of'_def
                split: ntfn.splits)[1])+
-  done
 
 crunch valid_queues[wp]: unbindNotification, unbindMaybeNotification "Invariants_H.valid_queues"
   (wp: sbn_valid_queues)
@@ -2822,12 +2840,11 @@ lemma unbindMaybeNotification_tcb_at'[wp]:
   apply (wp gbn_wp' | wpc | simp)+
   done
 
-lemma dissociateVCPUTCB_cte_wp_at'[wp]: "\<lbrace>cte_wp_at' P p\<rbrace> dissociateVCPUTCB param_a param_b \<lbrace>\<lambda>_. cte_wp_at' P p\<rbrace>"
-  sorry (* crunch *)
-lemma dissociateVCPUTCB_valid_cap'[wp]: "\<lbrace>valid_cap' cap\<rbrace> dissociateVCPUTCB param_a param_b \<lbrace>\<lambda>_. valid_cap' cap\<rbrace>"
-  sorry (* crunch *)
-lemma dissociateVCPUTCB_invs'[wp]: "\<lbrace>invs'\<rbrace> dissociateVCPUTCB param_a param_b \<lbrace>\<lambda>_. invs'\<rbrace>"
-  sorry (* crunch *)
+lemma dissociateVCPUTCB_cte_wp_at'[wp]:
+  "dissociateVCPUTCB v t \<lbrace>cte_wp_at' P p\<rbrace>"
+  unfolding cte_wp_at_ctes_of by wp
+
+lemmas dissociateVCPUTCB_typ_ats'[wp] = typ_at_lifts[OF dissociateVCPUTCB_typ_at']
 
 crunch cte_wp_at'[wp]: prepareThreadDelete "cte_wp_at' P p"
   (ignore: getObject)
@@ -3005,12 +3022,13 @@ crunch cte_wp_at'[wp]: unmapPageTable, unmapPage, unbindNotification, finaliseCa
   (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv
      ignore: getObject setObject)
 
+crunch cte_wp_at'[wp]: vcpuFinalise "cte_wp_at' P p"
+  (wp: crunch_wps getObject_inv loadObject_default_inv ignore: getObject setObject)
+
 lemma arch_finaliseCap_cte_wp_at[wp]:
   "\<lbrace>cte_wp_at' P p\<rbrace> Arch.finaliseCap cap fin \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
-  apply (simp add: ARM_HYP_H.finaliseCap_def)
-(*  apply (rule hoare_pre)
-   apply (wp unmapPage_cte_wp_at'| simp | wpc)+*)
-  sorry
+  unfolding ARM_HYP_H.finaliseCap_def
+  by (wpsimp wp: unmapPage_cte_wp_at'|rule conjI)+
 
 lemma deletingIRQHandler_cte_preserved:
   assumes x: "\<And>cap final. P cap \<Longrightarrow> finaliseCap cap final True = fail"
@@ -3424,9 +3442,8 @@ lemma cteDeleteOne_invs[wp]:
     apply (rule disjI2)
     apply (rule conjI)
      subgoal by auto
-    subgoal apply (auto dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def projectKOs
+    subgoal by (auto dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def projectKOs
                                       live'_def hyp_live'_def ko_wp_at'_def)
-    sorry
    apply (wp isFinalCapability_inv getCTE_wp' static_imp_wp
         | wp_once isFinal[where x=ptr])+
   apply (fastforce simp: cte_wp_at_ctes_of)
@@ -3444,10 +3461,6 @@ lemma deletingIRQHandler_invs' [wp]:
   apply (wp getCTE_wp')
   apply simp
   done
-
-lemma prepareThreadDelete_invs' [wp]:
-  "\<lbrace>invs'\<rbrace> ARM_HYP_H.prepareThreadDelete t \<lbrace>\<lambda>_. invs'\<rbrace>"
-  sorry
 
 crunch tcb_at'[wp]: unbindNotification, unbindMaybeNotification "tcb_at' t"
 
@@ -3525,9 +3538,10 @@ lemma finaliseCap_valid_cap[wp]:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma dissociateVCPUTCB_nosch[wp]:
-  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> dissociateVCPUTCB param_a param_b \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
-  sorry (* crunch *)
+crunch nosch[wp]: dissociateVCPUTCB "\<lambda>s. P (ksSchedulerAction s)"
+  (wp: crunch_wps getVCPU_wp getObject_inv hoare_vcg_all_lift hoare_vcg_if_lift3
+   simp: loadObject_default_def updateObject_default_def
+   ignore: getObject)
 
 crunch nosch[wp]: "Arch.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: loadObject_default_def updateObject_default_def
@@ -3756,12 +3770,19 @@ global_interpretation delete_one
   done
 
 lemma no_idle_thread_cap:
-  "\<lbrakk> cte_wp_at (op = (cap.ThreadCap p)) sl s; valid_global_refs s \<rbrakk> \<Longrightarrow> p \<noteq> idle_thread s"
+  "\<lbrakk> cte_wp_at (op = (cap.ThreadCap (idle_thread s))) sl s; valid_global_refs s \<rbrakk> \<Longrightarrow> False"
   apply (cases sl)
   apply (clarsimp simp: valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
   apply ((erule allE)+, erule (1) impE)
   apply (clarsimp simp: cap_range_def)
   done
+
+(* FIXME: move to Corres_UL *)
+lemma corres_add_guard:
+  "\<lbrakk>\<And>s s'. \<lbrakk>Q s; Q' s'; (s, s') \<in> sr\<rbrakk> \<Longrightarrow> P s \<and> P' s';
+    corres_underlying sr nf nf' r (Q and P) (Q' and P') f g\<rbrakk> \<Longrightarrow>
+    corres_underlying sr nf nf' r Q Q' f g"
+  by (erule stronger_corres_guard_imp_str, simp)
 
 lemma finalise_cap_corres:
   "\<lbrakk> final_matters' cap' \<Longrightarrow> final = final'; cap_relation cap cap';
@@ -3794,6 +3815,12 @@ lemma finalise_cap_corres:
      apply (clarsimp simp add: final_matters'_def getThreadCSpaceRoot
                                liftM_def[symmetric] o_def zbits_map_def
                                dc_def[symmetric])
+     apply (rename_tac t)
+     apply (rule_tac P="\<lambda>s. t \<noteq> idle_thread s" and P'="\<lambda>s. t \<noteq> ksIdleThread s" in corres_add_guard)
+      apply clarsimp
+      apply (rule context_conjI)
+       apply (clarsimp dest!: no_idle_thread_cap)
+      apply (clarsimp simp: state_relation_def)
      apply (rule corres_guard_imp)
        apply (rule corres_split[OF _ unbind_notification_corres])
          apply (rule corres_split[OF _ suspend_corres])
@@ -3802,13 +3829,8 @@ lemma finalise_cap_corres:
         apply (wp unbind_notification_invs unbind_notification_simple_sched_action
                   delete_one_conc_fr.suspend_objs')+
       apply (simp add: valid_cap_def)
-      apply (clarsimp dest!: no_idle_thread_cap) defer
      apply (simp add: valid_cap'_def)
-     apply clarsimp
-     apply (drule no_idle_thread_cap, clarsimp)
-     defer
-    apply (simp add: final_matters'_def liftM_def[symmetric]
-                     o_def dc_def[symmetric])
+    apply (simp add: final_matters'_def liftM_def[symmetric] o_def dc_def[symmetric])
     apply (intro impI, rule corres_guard_imp)
       apply (rule deleting_irq_corres)
      apply simp
@@ -3822,6 +3844,7 @@ lemma finalise_cap_corres:
   apply (clarsimp split del: if_split simp: o_def)
   apply (rule corres_guard_imp [OF arch_finalise_cap_corres], (fastforce simp: valid_sched_def)+)
   done
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma arch_recycleCap_improve_cases:
    "\<lbrakk> \<not> isPageCap cap; \<not> isPageTableCap cap; \<not> isPageDirectoryCap cap;\<not> isVCPUCap cap;
