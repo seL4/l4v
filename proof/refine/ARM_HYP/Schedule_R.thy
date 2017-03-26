@@ -1783,6 +1783,10 @@ lemma setThreadState_rct:
   apply (clarsimp)
   done
 
+lemma vcpuSwitch_valid_arch_state'[wp]:
+  "\<lbrace>valid_arch_state'\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  sorry
+
 lemma vcpuSwitch_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> vcpuSwitch v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
   sorry
