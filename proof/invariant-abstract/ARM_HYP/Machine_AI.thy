@@ -877,6 +877,86 @@ lemma no_fail_get_r11_fiq[wp]: "no_fail \<top> get_r11_fiq"
 lemma no_fail_get_r12_fiq[wp]: "no_fail \<top> get_r12_fiq"
   by (simp add: get_r12_fiq_def)
 
+lemma empty_fail_get_lr_svc[wp]:  "empty_fail get_lr_svc"
+  by (simp add: get_lr_svc_def)
+lemma empty_fail_get_sp_svc[wp]:  "empty_fail get_sp_svc"
+  by (simp add: get_sp_svc_def)
+lemma empty_fail_get_lr_abt[wp]:  "empty_fail get_lr_abt"
+  by (simp add: get_lr_abt_def)
+lemma empty_fail_get_sp_abt[wp]:  "empty_fail get_sp_abt"
+  by (simp add: get_sp_abt_def)
+lemma empty_fail_get_lr_und[wp]:  "empty_fail get_lr_und"
+  by (simp add: get_lr_und_def)
+lemma empty_fail_get_sp_und[wp]:  "empty_fail get_sp_und"
+  by (simp add: get_sp_und_def)
+lemma empty_fail_get_lr_irq[wp]:  "empty_fail get_lr_irq"
+  by (simp add: get_lr_irq_def)
+lemma empty_fail_get_sp_irq[wp]:  "empty_fail get_sp_irq"
+  by (simp add: get_sp_irq_def)
+lemma empty_fail_get_lr_fiq[wp]:  "empty_fail get_lr_fiq"
+  by (simp add: get_lr_fiq_def)
+lemma empty_fail_get_sp_fiq[wp]:  "empty_fail get_sp_fiq"
+  by (simp add: get_sp_fiq_def)
+lemma empty_fail_get_r8_fiq[wp]:  "empty_fail get_r8_fiq"
+  by (simp add: get_r8_fiq_def)
+lemma empty_fail_get_r9_fiq[wp]:  "empty_fail get_r9_fiq"
+  by (simp add: get_r9_fiq_def)
+lemma empty_fail_get_r10_fiq[wp]: "empty_fail get_r10_fiq"
+  by(simp add: get_r10_fiq_def)
+lemma empty_fail_get_r11_fiq[wp]: "empty_fail get_r11_fiq"
+  by (simp add: get_r11_fiq_def)
+lemma empty_fail_get_r12_fiq[wp]: "empty_fail get_r12_fiq"
+  by (simp add: get_r12_fiq_def)
+
+lemma no_irq_get_lr_svc[wp]:  "no_irq get_lr_svc"
+  by (simp add: get_lr_svc_def)
+lemma no_irq_get_sp_svc[wp]:  "no_irq get_sp_svc"
+  by (simp add: get_sp_svc_def)
+lemma no_irq_get_lr_abt[wp]:  "no_irq get_lr_abt"
+  by (simp add: get_lr_abt_def)
+lemma no_irq_get_sp_abt[wp]:  "no_irq get_sp_abt"
+  by (simp add: get_sp_abt_def)
+lemma no_irq_get_lr_und[wp]:  "no_irq get_lr_und"
+  by (simp add: get_lr_und_def)
+lemma no_irq_get_sp_und[wp]:  "no_irq get_sp_und"
+  by (simp add: get_sp_und_def)
+lemma no_irq_get_lr_irq[wp]:  "no_irq get_lr_irq"
+  by (simp add: get_lr_irq_def)
+lemma no_irq_get_sp_irq[wp]:  "no_irq get_sp_irq"
+  by (simp add: get_sp_irq_def)
+lemma no_irq_get_lr_fiq[wp]:  "no_irq get_lr_fiq"
+  by (simp add: get_lr_fiq_def)
+lemma no_irq_get_sp_fiq[wp]:  "no_irq get_sp_fiq"
+  by (simp add: get_sp_fiq_def)
+lemma no_irq_get_r8_fiq[wp]:  "no_irq get_r8_fiq"
+  by (simp add: get_r8_fiq_def)
+lemma no_irq_get_r9_fiq[wp]:  "no_irq get_r9_fiq"
+  by (simp add: get_r9_fiq_def)
+lemma no_irq_get_r10_fiq[wp]: "no_irq get_r10_fiq"
+  by(simp add: get_r10_fiq_def)
+lemma no_irq_get_r11_fiq[wp]: "no_irq get_r11_fiq"
+  by (simp add: get_r11_fiq_def)
+lemma no_irq_get_r12_fiq[wp]: "no_irq get_r12_fiq"
+  by (simp add: get_r12_fiq_def)
+
+lemmas no_irq_vcpuregs_gets =
+ no_irq_get_lr_svc
+ no_irq_get_sp_svc
+ no_irq_get_lr_abt
+ no_irq_get_sp_abt
+ no_irq_get_lr_und
+ no_irq_get_sp_und
+ no_irq_get_lr_irq
+ no_irq_get_sp_irq
+ no_irq_get_lr_fiq
+ no_irq_get_sp_fiq
+ no_irq_get_r8_fiq
+ no_irq_get_r9_fiq
+ no_irq_get_r10_fiq
+ no_irq_get_r11_fiq
+ no_irq_get_r12_fiq
+
+
 lemmas vcpuregs_sets =
   set_lr_svc_def
   set_sp_svc_def
@@ -926,6 +1006,87 @@ lemma no_fail_set_r12_fiq[wp]: "no_fail \<top> (set_r12_fiq reg)"
   by (simp add: set_r12_fiq_def)
 lemma no_fail_set_setACTLR[wp]: "no_fail \<top> (setACTLR reg)"
   by (simp add: setACTLR_def)
+
+lemma empty_fail_set_lr_svc[wp]: "empty_fail (set_lr_svc  reg)"
+  by (simp add: set_lr_svc_def )
+lemma empty_fail_set_sp_svc[wp]: "empty_fail (set_sp_svc  reg)"
+  by (simp add: set_sp_svc_def )
+lemma empty_fail_set_lr_abt[wp]: "empty_fail (set_lr_abt  reg)"
+  by (simp add: set_lr_abt_def)
+lemma empty_fail_set_sp_abt[wp]: "empty_fail (set_sp_abt  reg)"
+  by (simp add: set_sp_abt_def )
+lemma empty_fail_set_lr_und[wp]: "empty_fail (set_lr_und  reg)"
+  by (simp add: set_lr_und_def )
+lemma empty_fail_set_sp_und[wp]: "empty_fail (set_sp_und  reg)"
+  by (simp add: set_sp_und_def )
+lemma empty_fail_set_lr_irq[wp]: "empty_fail (set_lr_irq  reg)"
+  by (simp add: set_lr_irq_def )
+lemma empty_fail_set_sp_irq[wp]: "empty_fail (set_sp_irq  reg)"
+  by (simp add: set_sp_irq_def )
+lemma empty_fail_set_lr_fiq[wp]: "empty_fail (set_lr_fiq  reg)"
+  by (simp add: set_lr_fiq_def )
+lemma empty_fail_set_sp_fiq[wp]: "empty_fail (set_sp_fiq  reg)"
+  by (simp add: set_sp_fiq_def )
+lemma empty_fail_set_r8_fiq[wp]: "empty_fail (set_r8_fiq  reg)"
+  by (simp add: set_r8_fiq_def )
+lemma empty_fail_set_r9_fiq[wp]: "empty_fail (set_r9_fiq  reg)"
+  by (simp add: set_r9_fiq_def )
+lemma empty_fail_set_r10_fiq[wp]: "empty_fail (set_r10_fiq reg)"
+  by (simp add: set_r10_fiq_def)
+lemma empty_fail_set_r11_fiq[wp]: "empty_fail (set_r11_fiq reg)"
+  by (simp add: set_r11_fiq_def)
+lemma empty_fail_set_r12_fiq[wp]: "empty_fail (set_r12_fiq reg)"
+  by (simp add: set_r12_fiq_def)
+lemma empty_fail_set_setACTLR[wp]: "empty_fail (setACTLR reg)"
+  by (simp add: setACTLR_def)
+
+lemma no_irq_set_lr_svc[wp]: "no_irq (set_lr_svc  reg)"
+  by (simp add: set_lr_svc_def )
+lemma no_irq_set_sp_svc[wp]: "no_irq (set_sp_svc  reg)"
+  by (simp add: set_sp_svc_def )
+lemma no_irq_set_lr_abt[wp]: "no_irq (set_lr_abt  reg)"
+  by (simp add: set_lr_abt_def)
+lemma no_irq_set_sp_abt[wp]: "no_irq (set_sp_abt  reg)"
+  by (simp add: set_sp_abt_def )
+lemma no_irq_set_lr_und[wp]: "no_irq (set_lr_und  reg)"
+  by (simp add: set_lr_und_def )
+lemma no_irq_set_sp_und[wp]: "no_irq (set_sp_und  reg)"
+  by (simp add: set_sp_und_def )
+lemma no_irq_set_lr_irq[wp]: "no_irq (set_lr_irq  reg)"
+  by (simp add: set_lr_irq_def )
+lemma no_irq_set_sp_irq[wp]: "no_irq (set_sp_irq  reg)"
+  by (simp add: set_sp_irq_def )
+lemma no_irq_set_lr_fiq[wp]: "no_irq (set_lr_fiq  reg)"
+  by (simp add: set_lr_fiq_def )
+lemma no_irq_set_sp_fiq[wp]: "no_irq (set_sp_fiq  reg)"
+  by (simp add: set_sp_fiq_def )
+lemma no_irq_set_r8_fiq[wp]: "no_irq (set_r8_fiq  reg)"
+  by (simp add: set_r8_fiq_def )
+lemma no_irq_set_r9_fiq[wp]: "no_irq (set_r9_fiq  reg)"
+  by (simp add: set_r9_fiq_def )
+lemma no_irq_set_r10_fiq[wp]: "no_irq (set_r10_fiq reg)"
+  by (simp add: set_r10_fiq_def)
+lemma no_irq_set_r11_fiq[wp]: "no_irq (set_r11_fiq reg)"
+  by (simp add: set_r11_fiq_def)
+lemma no_irq_set_r12_fiq[wp]: "no_irq (set_r12_fiq reg)"
+  by (simp add: set_r12_fiq_def)
+
+lemmas no_irq_vcpuregs_sets =
+ no_irq_set_lr_svc
+ no_irq_set_sp_svc
+ no_irq_set_lr_abt
+ no_irq_set_sp_abt
+ no_irq_set_lr_und
+ no_irq_set_sp_und
+ no_irq_set_lr_irq
+ no_irq_set_sp_irq
+ no_irq_set_lr_fiq
+ no_irq_set_sp_fiq
+ no_irq_set_r8_fiq
+ no_irq_set_r9_fiq
+ no_irq_set_r10_fiq
+ no_irq_set_r11_fiq
+ no_irq_set_r12_fiq
 
 lemma empty_fail_cacheRangeOp [simp, intro!]:
   assumes ef: "\<And>a b. empty_fail (oper a b)"
