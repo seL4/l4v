@@ -194,14 +194,15 @@ next
     apply (simp add: returnOk_def APIType_map2_def toEnum_def
                      enum_apiobject_type enum_object_type)
     apply (intro conjI impI)
-     apply (subgoal_tac "unat v - 6 > 5")
+     apply (simp add: the_def)
+     apply (subgoal_tac "unat v - 5 > 5")
       apply (simp add: arch_data_to_obj_type_def)
       apply (intro conjI impI; simp)
      apply simp
-    apply (subgoal_tac "\<exists>n. unat v = n + 6")
+    apply (subgoal_tac "\<exists>n. unat v = n + 5")
      apply (clarsimp simp: arch_data_to_obj_type_def returnOk_def)
-    apply (rule_tac x="unat v - 6" in exI)
-    sorry
+    apply (rule_tac x="unat v - 5" in exI, simp)
+    done
   have S: "\<And>x (y :: ('g :: len) word) (z :: 'g word) bits. \<lbrakk> bits < len_of TYPE('g); x < 2 ^ bits \<rbrakk> \<Longrightarrow> toEnum x = (of_nat x :: 'g word)"
     apply (rule toEnum_of_nat)
     apply (erule order_less_trans)
@@ -548,7 +549,14 @@ defer
   apply (clarsimp simp: less_mask_eq)
   apply (fastforce simp: obj_range'_def projectKOs objBits_simps field_simps)[1]
   -- "VCPU case"
-  sorry (* add vcpu case *)
+  apply (clarsimp simp: valid_cap'_def typ_at'_def ko_wp_at'_def objBits_simps)
+  apply (intro exI conjI, assumption)
+  apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
+  apply (case_tac ko, simp+)[1]
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object;
+         simp add: archObjSize_def vcpu_bits_def pageBits_def)
+  done
 
 lemma untypedCap_descendants_range':
   "\<lbrakk>valid_pspace' s; (ctes_of s) p = Some cte;
