@@ -1830,8 +1830,7 @@ lemma wf_cs_insert:
 lemma obj_bits_CNode:
   "\<lbrakk> valid_cs_size sz ps; ps cref = Some cap \<rbrakk> \<Longrightarrow>
   obj_bits (CNode sz ps) = cte_level_bits + length cref"
-  unfolding valid_cs_size_def
-  by (auto simp: well_formed_cnode_n_def cte_level_bits_def)
+  by (auto simp: valid_cs_size_def well_formed_cnode_n_def)
 
 lemma obj_bits_CNode':
   "\<lbrakk> valid_cs_size sz ps; cref \<in> dom ps \<rbrakk> \<Longrightarrow>
@@ -1965,8 +1964,7 @@ lemma valid_CNodeCapE:
   apply (clarsimp simp: valid_obj_def valid_cs_def well_formed_cnode_n_def)
   apply (erule valid_cs_sizeE)
   apply (clarsimp simp: cap_aligned_def)
-  apply (drule (3) R)
-    apply (auto simp: cte_level_bits_def)
+  apply (erule (5) R)
   done
 
 lemma cap_table_at_cte_at:
@@ -2298,9 +2296,8 @@ lemma wf_unique:
   by (clarsimp simp: well_formed_cnode_n_def length_set_helper)
 
 lemma wf_obj_bits:
-  "well_formed_cnode_n bits f \<Longrightarrow>
-  obj_bits (CNode bits f) = cte_level_bits + bits"
-  by (auto simp: cte_level_bits_def)
+  "well_formed_cnode_n bits f \<Longrightarrow> obj_bits (CNode bits f) = cte_level_bits + bits"
+  by simp
 
 lemma wf_cs_n_unique:
   "\<lbrakk> well_formed_cnode_n n f; well_formed_cnode_n n' f \<rbrakk>
@@ -2309,8 +2306,7 @@ lemma wf_cs_n_unique:
 
 
 lemma typ_at_range:
-  "\<lbrakk> typ_at T p s; pspace_aligned s; valid_objs s \<rbrakk> \<Longrightarrow>
-  typ_range p T \<noteq> {}"
+  "\<lbrakk> typ_at T p s; pspace_aligned s; valid_objs s \<rbrakk> \<Longrightarrow> typ_range p T \<noteq> {}"
   apply (erule (1) obj_at_valid_objsE)
   apply (clarsimp simp: pspace_aligned_def)
   apply (drule bspec)
@@ -2318,7 +2314,7 @@ lemma typ_at_range:
   apply clarsimp
   apply (case_tac ko)
        apply (clarsimp simp: a_type_def split: if_split_asm)
-        apply (clarsimp simp: typ_range_def obj_bits_type_def interval_empty cte_level_bits_def)
+        apply (clarsimp simp: typ_range_def obj_bits_type_def)
         apply (erule notE)
         apply (erule is_aligned_no_overflow)
        apply (clarsimp simp: valid_obj_def valid_cs_def valid_cs_size_def)
@@ -2382,14 +2378,14 @@ lemma valid_objs_caps_contained:
    apply (simp add: cap_table_at_typ)
    apply (erule allE, erule allE, erule (1) impE)
    apply (drule (2) typ_at_range)
-   apply (clarsimp simp: typ_range_def obj_bits_type_def interval_empty cte_level_bits_def)
+   apply (clarsimp simp: typ_range_def obj_bits_type_def)
    apply fastforce
   apply (clarsimp simp: valid_cap_def is_cap_simps)
   apply (clarsimp simp: valid_untyped_T)
   apply (simp add: tcb_at_typ)
   apply (erule allE, erule allE, erule (1) impE)
   apply (drule (2) typ_at_range)
-  apply (clarsimp simp: typ_range_def obj_bits_type_def interval_empty)
+  apply (clarsimp simp: typ_range_def obj_bits_type_def)
   apply fastforce
   done
 
@@ -3063,7 +3059,7 @@ lemma well_formed_cnode_valid_cs_size:
 
 lemma empty_cnode_bits:
   "obj_bits (CNode n (empty_cnode n)) = cte_level_bits + n"
-  by (simp add: wf_empty_bits cte_level_bits_def)
+  by (simp add: wf_empty_bits)
 
 lemma irq_revocableD:
   "\<lbrakk> cs p = Some IRQControlCap; irq_revocable (is_original_cap s) cs \<rbrakk> \<Longrightarrow> is_original_cap s p"

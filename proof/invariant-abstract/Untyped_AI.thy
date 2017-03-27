@@ -77,13 +77,11 @@ lemma cnode_cap_bits_range:
   apply (case_tac ko, simp_all add: is_cap_table_def)[1]
   apply (clarsimp simp: valid_obj_def valid_cs_def well_formed_cnode_n_def
                         valid_cs_size_def length_set_helper
-                        word_bits_def cte_level_bits_def)
+                        word_bits_def)
   apply (drule invs_psp_aligned)
   apply (unfold pspace_aligned_def)
   apply (frule domI, drule (1) bspec)
-  apply (clarsimp simp: obj_bits.simps ex_with_length add.commute
-                        cte_level_bits_def
-                  split: if_split_asm)
+  apply (clarsimp simp: ex_with_length add.commute split: if_split_asm)
   done
 
 
@@ -1356,14 +1354,14 @@ lemma retype_ret_valid_caps:
   apply (case_tac tp,simp_all)
    defer
       apply ((clarsimp simp:valid_cap_def default_object_def cap_aligned_def
-        cte_level_bits_def  is_obj_defs well_formed_cnode_n_def empty_cnode_def
+        is_obj_defs well_formed_cnode_n_def empty_cnode_def
         dom_def  ptr_add_def | rule conjI | intro conjI obj_at_foldr_intro imageI
       | rule is_aligned_add_multI[OF _ le_refl],
         (simp add:range_cover_def word_bits_def obj_bits_api_def)+)+)[3]
     apply (rule_tac ptr=ptr and sz=sz in retype_ret_valid_caps_captable; simp)
    apply (rule_tac ptr=ptr and sz=sz in retype_ret_valid_caps_aobj; simp)
   apply (clarsimp simp:valid_cap_def default_object_def cap_aligned_def
-        cte_level_bits_def is_obj_defs well_formed_cnode_n_def empty_cnode_def
+        is_obj_defs well_formed_cnode_n_def empty_cnode_def
         dom_def ptr_add_def | intro conjI obj_at_foldr_intro
         imageI
       | rule is_aligned_add_multI[OF _ le_refl]

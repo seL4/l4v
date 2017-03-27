@@ -225,15 +225,13 @@ lemma (in Retype_AI_slot_bits) obj_bits_api_default_object:
   "\<lbrakk> ty \<noteq> Untyped\<rbrakk> \<Longrightarrow> obj_bits_api ty us = obj_bits (default_object ty dev us)"
   unfolding obj_bits_api_def default_object_def
   by (cases ty)
-     (simp_all add: slot_bits_def2 arch_kobj_size_cong wf_empty_bits cte_level_bits_def)
-
+     (simp_all add: slot_bits_def2 arch_kobj_size_cong wf_empty_bits)
 
 
 lemma obj_bits_api_default_CapTableObject:
   "obj_bits (default_object Structures_A.apiobject_type.CapTableObject dev us) 
   = cte_level_bits + us"
-  unfolding default_object_def 
-  by (simp add: cte_level_bits_def wf_empty_bits)
+  by (simp add: default_object_def wf_empty_bits)
 
 
 lemma empty_cnode_dom:
@@ -249,7 +247,7 @@ lemma obj_bits_api_def2:
            | _ \<Rightarrow> obj_bits (default_object type False obj_size_bits))" 
   by (simp add: obj_bits_api_def default_object_def
                 wf_empty_bits dom_empty_cnode ex_with_length
-                slot_bits_def2 cte_level_bits_def
+                slot_bits_def2
          split: apiobject_type.split)
 
 lemma obj_bits_api_def3:
@@ -258,7 +256,7 @@ lemma obj_bits_api_def3:
      else obj_bits (default_object type False obj_size_bits))"
   by (simp add: obj_bits_api_def default_object_def
                 wf_empty_bits dom_empty_cnode ex_with_length
-                slot_bits_def2 cte_level_bits_def
+                slot_bits_def2
          split: apiobject_type.split)
 
 lemma obj_bits_api_def4:
@@ -267,7 +265,7 @@ lemma obj_bits_api_def4:
      else obj_bits (default_object type True obj_size_bits))"
   by (simp add: obj_bits_api_def default_object_def arch_kobj_size_cong
                 wf_empty_bits dom_empty_cnode ex_with_length
-                slot_bits_def2 cte_level_bits_def
+                slot_bits_def2
          split: apiobject_type.split)
 
 lemma obj_bits_dev_irr:
@@ -2174,7 +2172,7 @@ lemma use_retype_region_proofs':
    apply (rule retype_region_proofs.intro, simp_all)[1]
 
    apply (fastforce simp add: range_cover_def obj_bits_api_def 
-     slot_bits_def2 word_bits_def cte_level_bits_def)+
+     slot_bits_def2 word_bits_def)+
   done
 end
 

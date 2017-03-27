@@ -107,6 +107,20 @@ lemma region_in_kernel_window_delete_objects[wp]:
    \<lbrace>\<lambda>_. region_in_kernel_window S\<rbrace>"
   by (wp | simp add: delete_objects_def do_machine_op_def split_def)+
 
+lemma of_bl_length2:
+  "length xs < word_bits - cte_level_bits \<Longrightarrow> of_bl xs * 32 < (2 :: machine_word) ^ (length xs + 5)"
+  apply (simp add: power_add cte_level_bits_def)
+  apply (rule word_mult_less_mono1)
+    apply (rule of_bl_length, simp add: word_bits_def)
+   apply simp
+  apply simp
+  apply (simp add: word_bits_def)
+  apply (rule order_less_le_trans)
+   apply (erule power_strict_increasing)
+   apply simp
+  apply simp
+  done
+
 end
 
 interpretation Detype_AI?: Detype_AI

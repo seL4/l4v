@@ -45,6 +45,7 @@ requalify_consts
   default_arch_tcb
   arch_tcb_context_get
   arch_tcb_context_set
+  cte_level_bits
 
 end
 
@@ -431,10 +432,6 @@ text {* Checks whether a cnode's contents are well-formed. *}
 definition
   well_formed_cnode_n :: "nat \<Rightarrow> cnode_contents \<Rightarrow> bool" where
  "well_formed_cnode_n n \<equiv> \<lambda>cs. dom cs = {x. length x = n}"
-
-definition
-  cte_level_bits :: nat where
-  "cte_level_bits  \<equiv> 5"
 
 primrec
   obj_bits :: "kernel_object \<Rightarrow> nat"

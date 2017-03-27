@@ -99,11 +99,15 @@ datatype arch_kernel_obj =
  | DataPage bool vmpage_size
 
 lemmas arch_kernel_obj_cases =
-  arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
+  arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P,
+                         simplified, rule_format]
 
 lemmas arch_kernel_obj_cases_asm =
-arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x, 
-  simplified, rule_format, rotated -1]
+  arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x, 
+                         simplified, rule_format, rotated -1]
+
+definition [simplified slot_bits_def]:
+  "cte_level_bits \<equiv> slot_bits"
 
 primrec
   arch_obj_size :: "arch_cap \<Rightarrow> nat"

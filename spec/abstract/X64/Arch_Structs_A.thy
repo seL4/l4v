@@ -163,10 +163,11 @@ datatype arch_kernel_obj =
 definition table_size :: nat where
   "table_size = ptTranslationBits + word_size_bits"
 
-
 definition iotable_size :: nat where
   "iotable_size = ptTranslationBits + 2*word_size_bits"
 
+definition [simplified slot_bits_def]:
+  "cte_level_bits \<equiv> slot_bits"
 
 primrec
   arch_obj_size :: "arch_cap \<Rightarrow> nat"

@@ -19,7 +19,8 @@ begin
 
 
 context begin interpretation Arch .
-requalify_facts set_cap_arch
+requalify_facts
+  set_cap_arch cte_at_length_limit
 end
 
 declare set_cap_arch[wp]
@@ -328,21 +329,6 @@ proof -
     apply (simp split: prod.split_asm list.split_asm)
   done
 qed
-
-
-lemma valid_cnode_capI:
-  "\<lbrakk>cap_table_at n w s; valid_objs s; pspace_aligned s; n > 0; length g \<le> 32\<rbrakk>
-   \<Longrightarrow> s \<turnstile> cap.CNodeCap w n g"
-  apply (simp add: valid_cap_def cap_aligned_def)
-  apply (rule conjI)
-   apply (clarsimp simp add: pspace_aligned_def obj_at_def)
-   apply (drule bspec, fastforce)
-   apply (clarsimp simp: is_obj_defs wf_obj_bits cte_level_bits_def)
-  apply (clarsimp simp add: obj_at_def is_obj_defs valid_objs_def dom_def)
-  apply (erule allE, erule impE, blast)
-  apply (simp add: valid_obj_def valid_cs_def valid_cs_size_def)
-  apply (simp add: cte_level_bits_def word_bits_def)
-  done
 
 
 lemma Suc_length_not_empty: 
@@ -2266,10 +2252,6 @@ lemma of_bl_eq_0:
   apply (rule exI)
   apply (rule word_same_bl_memo_unify_word_type[where 'a='a]; simp)
   done
-
-
-(* FIXME: eliminate *)
-lemmas cte_at_length = cte_at_length_limit
 
 
 context CNodeInv_AI begin

@@ -178,16 +178,13 @@ lemma pspace_distinct_init_A: "pspace_distinct init_A_st"
   apply (safe; simp add: init_irq_ptrs_all_ineqs[simplified kernel_base_def, simplified])
   apply (cut_tac x="init_irq_node_ptr + (ucast irq << cte_level_bits)"
              and y="init_irq_node_ptr + (ucast irqa << cte_level_bits)"
-             and sz=cte_level_bits in aligned_neq_into_no_overlap)
-     apply (simp add: init_irq_node_ptr_def kernel_base_def cte_level_bits_def)
+             and sz=cte_level_bits in aligned_neq_into_no_overlap;
+         simp add: init_irq_node_ptr_def kernel_base_def cte_level_bits_def)
     apply (rule aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl])
-    apply (simp add: is_aligned_def cte_level_bits_def init_irq_node_ptr_def
-                     kernel_base_def)
+    apply (simp add: is_aligned_def)
    apply (rule aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl])
-   apply (simp add: is_aligned_def cte_level_bits_def init_irq_node_ptr_def
-                    kernel_base_def)
-  apply (simp add: init_irq_node_ptr_def kernel_base_def cte_level_bits_def
-                   linorder_not_le)
+   apply (simp add: is_aligned_def)
+  apply (simp add: linorder_not_le)
   done
 
 lemma caps_of_state_init_A_st_Null:
@@ -343,7 +340,7 @@ lemma invs_A:
            apply (rule in_kernel_base_in_pptr_base | simp add: bit_simps)+
          apply (erule exE, drule sym, simp add:field_simps)
          apply (rule in_kernel_base_in_pptr_base[simplified add.commute])
-          apply (rule word_less_add_right,simp add:cte_level_bits_def)
+          apply (rule word_less_add_right, simp add: cte_level_bits_def)
            apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
           apply simp
          apply (simp add:cte_level_bits_def field_simps)

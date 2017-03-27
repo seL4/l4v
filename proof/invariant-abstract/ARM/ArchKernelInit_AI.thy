@@ -127,7 +127,7 @@ proof -
     apply (rule word_add_le_mono2)
      apply (simp only: trans [OF shiftl_t2n mult.commute])
      apply (rule nasty_split_lt[OF P])
-      apply (simp_all add: cte_level_bits_def 
+      apply (simp_all add: cte_level_bits_def
         word_bits_def kernel_base_def init_irq_node_ptr_def)
     done
   show "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits)
@@ -193,7 +193,7 @@ lemma in_kernel_base:
 lemma pspace_aligned_init_A:
   "pspace_aligned init_A_st"
   apply (clarsimp simp: pspace_aligned_def state_defs wf_obj_bits [OF wf_empty_bits]
-                          dom_if_Some cte_level_bits_def)
+                        dom_if_Some cte_level_bits_def)
   apply (safe intro!: aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl],
            simp_all add: is_aligned_def word_bits_def kernel_base_def)[1]
   done
@@ -202,22 +202,20 @@ lemma pspace_distinct_init_A:
   "pspace_distinct init_A_st"
   apply (clarsimp simp: pspace_distinct_def state_defs pageBits_def
                         empty_cnode_bits kernel_base_def
-                        cte_level_bits_def linorder_not_le cong: if_cong)
+                        linorder_not_le cte_level_bits_def
+                  cong: if_cong)
   apply (safe,
          simp_all add: init_irq_ptrs_all_ineqs
                        [simplified kernel_base_def, simplified])[1]
   apply (cut_tac x="init_irq_node_ptr + (ucast irq << cte_level_bits)"
              and y="init_irq_node_ptr + (ucast irqa << cte_level_bits)"
-             and sz=cte_level_bits in aligned_neq_into_no_overlap)
-     apply (simp add: init_irq_node_ptr_def kernel_base_def cte_level_bits_def)
+             and sz=cte_level_bits in aligned_neq_into_no_overlap;
+         simp add: init_irq_node_ptr_def kernel_base_def cte_level_bits_def)
     apply (rule aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl])
-    apply (simp add: is_aligned_def cte_level_bits_def init_irq_node_ptr_def
-                     kernel_base_def)
+    apply (simp add: is_aligned_def)
    apply (rule aligned_add_aligned[OF _ is_aligned_shiftl_self order_refl])
-   apply (simp add: is_aligned_def cte_level_bits_def init_irq_node_ptr_def
-                    kernel_base_def)
-  apply (simp add: init_irq_node_ptr_def kernel_base_def cte_level_bits_def
-                   linorder_not_le)
+   apply (simp add: is_aligned_def)
+  apply (simp add: linorder_not_le)
   done
 
 lemma caps_of_state_init_A_st_Null:
@@ -330,7 +328,7 @@ lemma invs_A:
     apply (rule inj_onI)
     apply (simp add: init_irq_ptrs_eq[unfolded cte_level_bits_def])
    apply clarsimp
-   defer
+   apply word_bitwise
   apply (simp add: valid_irq_handlers_def caps_of_state_init_A_st_Null
                    ran_def cong: rev_conj_cong)
   apply (rule conjI)
@@ -380,7 +378,7 @@ lemma invs_A:
             apply (rule in_kernel_base|simp)+
          apply (erule exE,drule sym,simp add:field_simps)
          apply (rule in_kernel_base[simplified add.commute])
-          apply (rule word_less_add_right,simp add:cte_level_bits_def)
+          apply (rule word_less_add_right, simp add: cte_level_bits_def)
            apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
           apply simp
          apply (simp add:cte_level_bits_def field_simps)
@@ -392,7 +390,6 @@ lemma invs_A:
      apply (rule in_kernel_base|simp)+
   apply (simp add: cap_refs_in_kernel_window_def caps_of_state_init_A_st_Null
                   valid_refs_def[unfolded cte_wp_at_caps_of_state])
-  apply word_bitwise
   done
 
 end

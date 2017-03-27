@@ -168,7 +168,7 @@ lemma retype_ret_valid_caps_captable[Untyped_AI_assms]:
                 \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object CapTableObject dev us)) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api CapTableObject us)) [0..<n])
                            (kheap s)\<rparr> \<turnstile> CNodeCap (ptr_add ptr (y * 2 ^ obj_bits_api CapTableObject us)) us []"
 by ((clarsimp simp:valid_cap_def default_object_def cap_aligned_def 
-        cte_level_bits_def slot_bits_def is_obj_defs well_formed_cnode_n_def empty_cnode_def
+        cte_level_bits_def is_obj_defs well_formed_cnode_n_def empty_cnode_def
         dom_def arch_default_cap_def ptr_add_def | rule conjI | intro conjI obj_at_foldr_intro imageI
       | rule is_aligned_add_multI[OF _ le_refl],
         (simp add:range_cover_def word_bits_def obj_bits_api_def slot_bits_def)+)+)[1]
@@ -183,7 +183,7 @@ lemma retype_ret_valid_caps_aobj[Untyped_AI_assms]:
   apply (rename_tac aobject_type us n)
   apply (case_tac aobject_type)
   by (clarsimp simp: valid_cap_def default_object_def cap_aligned_def
-                     cte_level_bits_def slot_bits_def is_obj_defs well_formed_cnode_n_def empty_cnode_def
+                     cte_level_bits_def is_obj_defs well_formed_cnode_n_def empty_cnode_def
                      dom_def arch_default_cap_def ptr_add_def
       | intro conjI obj_at_foldr_intro
         imageI valid_vm_rights_def

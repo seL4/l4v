@@ -977,10 +977,6 @@ lemma valid_pspace_well_formed_cnode[intro?]:
   by (erule (1) well_formed_cnode_valid_cs_size [OF valid_cs_sizeI])
 
 
-lemma clb_is_32:
-  "2 ^ cte_level_bits = (32 :: word32)" by (simp add: cte_level_bits_def)
-
-
 lemmas cte_wp_at_cte_at = cte_wp_at_weakenE [OF _ TrueI]
 
 
@@ -995,21 +991,6 @@ lemmas cte_wp_at_casesE [consumes 1, case_names CapTable TCB] = cte_wp_atE
 lemma dom_known_length:
   "\<lbrakk> dom f = {x. length x = n}; f xs = Some cap \<rbrakk> \<Longrightarrow> n = length xs"
   by (drule domI[where m=f], simp)
-
-
-lemma of_bl_length2:
-  "length xs < word_bits - cte_level_bits \<Longrightarrow> of_bl xs * 16 < (2 :: machine_word) ^ (length xs + 4)"
-  apply (simp add: power_add)
-  apply (rule word_mult_less_mono1)
-    apply (rule of_bl_length, simp add: word_bits_def)
-   apply simp
-  apply simp
-  apply (simp add: word_bits_def cte_level_bits_def)
-  apply (rule order_less_le_trans)
-   apply (erule power_strict_increasing)
-   apply simp
-  apply simp
-  done
 
 
 lemma (in Detype_AI) cte_map_not_null_outside: (*FIXME: arch_split*)

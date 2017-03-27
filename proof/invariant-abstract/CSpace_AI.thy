@@ -458,19 +458,6 @@ lemma tcb_cap_cases_length:
   "x \<in> dom tcb_cap_cases \<Longrightarrow> length x = 3"
   by (auto simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1)
 
-lemma cte_at_length_limit:
-  "\<lbrakk> cte_at p s; valid_objs s \<rbrakk> \<Longrightarrow> length (snd p) < word_bits - cte_level_bits"
-  apply (simp add: cte_at_cases)
-  apply (erule disjE)
-   apply clarsimp
-   apply (erule(1) valid_objsE)
-   apply (clarsimp simp: valid_obj_def well_formed_cnode_n_def valid_cs_def valid_cs_size_def
-                         length_set_helper)
-   apply (drule arg_cong[where f="\<lambda>S. snd p \<in> S"])
-   apply (simp add: domI)
-  apply (clarsimp simp add: tcb_cap_cases_length word_bits_conv cte_level_bits_def)
-  done
-
 
 lemma cte_at_cref_len:
   "\<lbrakk>cte_at (p, c) s; cte_at (p, c') s\<rbrakk> \<Longrightarrow> length c = length c'"
