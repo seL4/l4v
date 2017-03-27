@@ -115,12 +115,13 @@ lemma valid_ipc_buffer_ptr'D2:
 
 lemma load_ct_corres:
   "corres ct_relation \<top> (valid_ipc_buffer_ptr' buffer) (load_cap_transfer buffer) (loadCapTransfer buffer)"
-(*  apply (simp add: load_cap_transfer_def loadCapTransfer_def
+  apply (simp add: load_cap_transfer_def loadCapTransfer_def
                    captransfer_from_words_def captransfer_size_def
                    capTransferDataSize_def capTransferFromWords_def
-                   msgExtraCapBits_def word_size add.commute add.left_commute
+                   msgExtraCapBits_def add.commute add.left_commute
                    msg_max_length_def msg_max_extra_caps_def word_size_def
-                   msgMaxLength_def msgMaxExtraCaps_def msgLengthBits_def wordSize_def wordBits_def
+                   msgMaxLength_def msgMaxExtraCaps_def msgLengthBits_def
+                   wordSize_def wordBits_def word_bits_size word_bits_def[simplified]
               del: upt.simps)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ load_word_corres])
@@ -134,7 +135,7 @@ lemma load_ct_corres:
   apply safe
        apply (erule valid_ipc_buffer_ptr_aligned_2, simp add: is_aligned_def)+
     apply (erule valid_ipc_buffer_ptr'D2, simp add: max_ipc_words, simp add: is_aligned_def)+
-  done*) sorry
+  done
 
 lemma get_recv_slot_corres:
   "corres (\<lambda>xs ys. ys = map cte_map xs)
@@ -244,9 +245,10 @@ lemma get_extra_cptrs_corres:
         apply (simp add: word_size_def word_size field_simps
                          msg_max_length_def msgMaxLength_def
                          msgLengthBits_def max_ipc_words word_less_nat_alt)
-(*       apply (simp add: word_size_def word_size field_simps
+       apply (simp add: word_size_def field_simps
                         msg_max_length_def msgMaxLength_def wordSize_def wordBits_def
-                        msgLengthBits_def max_ipc_words word_less_nat_alt)
+                        msgLengthBits_def max_ipc_words word_less_nat_alt
+                        word_bits_size word_bits_def[simplified])
       apply wp+
     apply (simp add: map_Suc_upt[symmetric] upt_lhs_sub_map[where x=msg_max_length]
                      upto_enum_step_def upto_enum_def unat_minus_one unat_gt_0
@@ -262,7 +264,7 @@ lemma get_extra_cptrs_corres:
      del: of_nat_Suc)
      apply (simp add: word_le_nat_alt)
     apply simp+
-  done*) sorry
+  done
 
 lemma getExtraCptrs_inv[wp]:
   "\<lbrace>P\<rbrace> getExtraCPtrs buf mi \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -304,11 +306,12 @@ lemma corres_set_extra_badge:
   apply (drule store_word_offs_corres [where a=buffer and w=b])
   apply (simp add: set_extra_badge_def setExtraBadge_def buffer_cptr_index_def
                    bufferCPtrOffset_def Let_def)
-(*  apply (simp add: word_size word_size_def wordSize_def wordBits_def
+  apply (simp add: word_size_def wordSize_def wordBits_def
                    bufferCPtrOffset_def buffer_cptr_index_def msgMaxLength_def
                    msg_max_length_def msgLengthBits_def store_word_offs_def
-                   add.commute add.left_commute)
-  done*) sorry
+                   add.commute add.left_commute wordBits_def
+                   word_bits_size word_bits_def[simplified])
+  done
 
 crunch typ_at': setExtraBadge "\<lambda>s. P (typ_at' T p s)"
 lemmas setExtraBadge_typ_ats' [wp] = typ_at_lifts [OF setExtraBadge_typ_at']
@@ -1123,8 +1126,8 @@ lemma transferCapsToSlots_invs[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
   apply (wp valid_irq_node_lift)
-(*  apply fastforce
-  done*) sorry
+  apply fastforce
+  done
 
 lemma set_extra_badges_flags_eq:
   "length badges \<le> msgMaxExtraCaps \<Longrightarrow>
@@ -1560,12 +1563,13 @@ lemma lec_corres:
    apply (simp add: getExtraCPtrs_def mapME_Nil)
    apply (rule corres_returnOk)
    apply simp
-(*  apply (simp add: msgLengthBits_def msgMaxLength_def word_size field_simps
+  apply (simp add: msgLengthBits_def msgMaxLength_def field_simps
                    getExtraCPtrs_def upto_enum_step_def upto_enum_word
                    word_size_def msg_max_length_def liftM_def
                    Suc_unat_diff_1 word_le_sub1 mapM_map_simp
                    upt_lhs_sub_map[where x=buffer_cptr_index]
                    wordSize_def wordBits_def
+                   word_bits_size word_bits_def[simplified]
               del: upt.simps)
   apply (rule corres_guard_imp)
     apply (rule corres_split')
@@ -1601,7 +1605,7 @@ lemma lec_corres:
          apply (wp | simp)+
       apply (simp add: set_zip_same Int_lower1)
      apply (wp mapM_wp [OF _ subset_refl] | simp)+
-  done*) sorry
+  done
 
 crunch ctes_of[wp]: copyMRs "\<lambda>s. P (ctes_of s)"
   (ignore: threadSet setObject getObject
@@ -3426,7 +3430,7 @@ lemma sai_invs'[wp]:
                            simp: st_tcb_at_refs_of_rev' ep_redux_simps' ntfn_bound_refs'_def)
         apply (frule st_tcb_at_state_refs_ofD')
         apply (erule delta_sym_refs)
-(*         apply (fastforce simp: ntfn_q_refs_no_TCBBound' split: if_split_asm)
+         apply (fastforce simp: ntfn_q_refs_no_TCBBound' split: if_split_asm)
         apply (fastforce simp: tcb_bound_refs'_def set_eq_subset symreftype_inverse'
                         split: if_split_asm)
        apply (clarsimp simp: valid_pspace'_def)
@@ -3481,7 +3485,7 @@ lemma ncof_corres:
      apply wp+
    apply fastforce
   apply fastforce
-  done*) sorry
+  done
 
 lemma rfk_corres:
   "corres dc (tcb_at t and invs) (tcb_at' t and invs')
@@ -4152,7 +4156,7 @@ lemma completeSignal_invs:
    apply wp
   apply (subgoal_tac "valid_ntfn' ntfn s")
    apply (subgoal_tac "ntfnptr \<noteq> ksIdleThread s")
-(*    apply (fastforce simp: valid_ntfn'_def valid_bound_tcb'_def projectKOs ko_at_state_refs_ofD'
+    apply (fastforce simp: valid_ntfn'_def valid_bound_tcb'_def projectKOs ko_at_state_refs_ofD' live'_def
                      elim: obj_at'_weakenE
                            if_live_then_nonz_capD'[OF invs_iflive'
                                                       obj_at'_real_def[THEN meta_eq_to_obj_eq,
@@ -4161,7 +4165,7 @@ lemma completeSignal_invs:
                    dest!: invs_valid_idle')
   apply (fastforce dest: invs_valid_objs' ko_at_valid_objs'
                    simp: valid_obj'_def projectKOs)[1]
-  done*) sorry
+  done
 
 lemma setupCallerCap_urz[wp]:
   "\<lbrace>untyped_ranges_zero' and valid_pspace' and tcb_at' sender\<rbrace>
@@ -4866,11 +4870,11 @@ lemma ri_makes_runnable_simple':
      apply (wp hoare_vcg_disj_lift)+
    apply clarsimp
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
-(*   apply (fastforce simp: pred_tcb_at'_def obj_at'_def isSend_def
+   apply (fastforce simp: pred_tcb_at'_def obj_at'_def isSend_def
                   split: Structures_H.thread_state.split_asm)
   apply (rule hoare_pre)
    apply (wp | wpc | clarsimp)+
-  done*) sorry
+  done
 
 lemma rai_makes_runnable_simple':
   "\<lbrace>st_tcb_at' P t' and K (t \<noteq> t') and K (P = runnable' \<or> P = simple')\<rbrace>
