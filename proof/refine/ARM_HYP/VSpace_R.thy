@@ -2001,6 +2001,13 @@ lemma store_pte_pd_at_asid[wp]:
   apply clarsimp
   done
 
+lemma is_aligned_dvd_k: "\<lbrakk>  2 ^ m  * (k :: nat) = 2 ^ n  ; is_aligned p n \<rbrakk> \<Longrightarrow> is_aligned p m"
+  apply (simp add: is_aligned_def)
+  apply (rule dvd_mult_left[where b=k])
+  apply (drule sym)
+  apply simp
+  done
+
 lemma unmap_page_corres:
   "corres dc (invs and valid_etcbs and
               K (valid_unmap sz (asid,vptr) \<and> vptr < kernel_base \<and> asid \<le> mask asid_bits))
@@ -2043,9 +2050,6 @@ lemma unmap_page_corres:
               apply (clarsimp simp: page_directory_pde_at_lookupI
                 page_directory_at_aligned_pd_bits vmsz_aligned_def)
               apply (simp add:valid_unmap_def pageBits_def)+
-(*             apply (erule less_kernel_base_mapping_slots)
-              apply (simp add:page_directory_at_aligned_pd_bits)
-             apply simp
             apply (rule corres_guard_imp)
               apply (rule corres_split_strengthen_ftE[OF lookup_pt_slot_corres])
                 apply (rule_tac F="is_aligned p 7" in corres_gen_asm)
@@ -2062,21 +2066,22 @@ lemma unmap_page_corres:
                          apply simp
                         apply simp
                        apply clarsimp
-                       apply (rule_tac P="(\<lambda>s. \<forall>x\<in>set [0, 4 .e. 0x3C]. pte_at (x + pa) s) and pspace_aligned and valid_etcbs"
-                                   and P'="pspace_aligned' and pspace_distinct'"
-                                    in corres_guard_imp)
-                         apply (rule store_pte_corres',  simp add:pte_relation_aligned_def)
-                        apply clarsimp
-                       apply clarsimp
-                      apply (wp store_pte_typ_at hoare_vcg_const_Ball_lift | simp | wp_once hoare_drop_imps)+
-               apply (wp lookup_pt_slot_ptes lookup_pt_slot_inv lookupPTSlot_inv
-                         lookup_pt_slot_is_aligned lookup_pt_slot_is_aligned_6)+
+                      apply (rule_tac P="(\<lambda>s. \<forall>x\<in>set largePagePTEOffsets. pte_at (x + pa) s) and pspace_aligned and valid_etcbs"
+                                     and P'="pspace_aligned' and pspace_distinct'"
+                                     in corres_guard_imp)
+                      apply (rule store_pte_corres',  simp add:pte_relation_aligned_def)
+                      apply clarsimp
+                      apply clarsimp
+                      apply (wp store_pte_typ_at hoare_vcg_const_Ball_lift | clarsimp | wp_once hoare_drop_imps)+
+               (* this is dumb... *)
+               apply (subst mult_is_add.mult_commute)
+                     apply (wpsimp wp: lookup_pt_slot_ptes lookup_pt_slot_inv lookupPTSlot_inv
+                                 lookup_pt_slot_is_aligned lookup_pt_slot_is_aligned_6
+                             simp: largePagePTEOffsets_def pte_bits_def)+
              apply (clarsimp simp: page_directory_pde_at_lookupI vmsz_aligned_def pd_aligned
-                                   pd_bits_def pageBits_def valid_unmap_def)
-             apply (drule(1) less_kernel_base_mapping_slots[OF _ page_directory_at_aligned_pd_bits])
-              apply simp
-             apply (simp add:pd_bits_def pageBits_def)
-            apply (clarsimp simp: pd_aligned page_directory_pde_at_lookupI)
+                                   pd_bits_def pageBits_def valid_unmap_def
+                                   page_directory_at_aligned_pd_bits pde_bits_def)
+            apply (simp add:pd_bits_def pageBits_def)
            apply (rule corres_guard_imp)
              apply (rule corres_split_strengthen_ftE[OF check_mapping_corres])
                apply simp
@@ -2084,15 +2089,23 @@ lemma unmap_page_corres:
                   apply (rule corres_machine_op)
                   apply (rule corres_Id, rule refl, simp)
                   apply (rule no_fail_cleanByVA_PoU)
+                 apply (simp add: pde_relation_aligned_def)
+                apply (rule wp_post_taut)+
                  apply (wp | simp add:pde_relation_aligned_def
-                   | wp_once hoare_drop_imps)+
+                       | wp_once hoare_drop_imps)+
             apply (clarsimp simp: page_directory_pde_at_lookupI
                                   pg_entry_align_def)
             apply (clarsimp simp:lookup_pd_slot_def)
-            apply (erule(1) aligned_add_aligned[OF page_directory_at_aligned_pd_bits])
-             apply (simp add:is_aligned_shiftl_self)
-            apply (simp add:pd_bits_def pageBits_def word_bits_conv)
-           apply (simp add:pd_bits_def pageBits_def)
+            apply (clarsimp simp add: pd_bits_def pageBits_def
+                                      word_bits_conv pt_bits_def pde_bits_def)
+            apply (rule is_aligned_add[rotated])
+             apply (rule is_aligned_shift)
+            apply (clarsimp simp add: obj_at_def pspace_aligned_def Ball_def dom_def)
+            apply (erule_tac x=pd in allE)
+            apply (clarsimp simp add: pd_bits_def pde_bits_def)
+            apply (rule is_aligned_dvd_k[where k=2048 and n=14]; clarsimp)
+           apply clarsimp
+          apply (simp add:pd_bits_def pageBits_def)
           apply (rule corres_guard_imp)
             apply (rule corres_split_strengthen_ftE[OF check_mapping_corres])
               apply (rule_tac F="is_aligned (lookup_pd_slot pd vptr) 7"
@@ -2112,7 +2125,9 @@ lemma unmap_page_corres:
                    apply (rule corres_guard_imp, rule store_pde_corres')
                      apply (simp add:pde_relation_aligned_def)+
                     apply clarsimp
-                    apply (erule (2) pde_at_aligned_vptr)
+                    apply (rule pde_at_aligned_vptr)
+                      apply (simp add: superSectionPDEOffsets_def pde_bits_def)+
+                    apply (simp add: lookup_pd_slot_def vspace_bits_defs)
                     apply (simp add: valid_unmap_def)
                    apply assumption
                   apply (wp | simp | wp_once hoare_drop_imps)+
@@ -2122,23 +2137,24 @@ lemma unmap_page_corres:
           apply simp
          apply wp
          apply (rule_tac Q'="\<lambda>_. invs and vspace_at_asid asid pda" in hoare_post_imp_R)
-          apply (wp lookup_pt_slot_inv lookup_pt_slot_cap_to2' lookup_pt_slot_cap_to_multiple2
-                    store_pde_invs_unmap store_pde_pd_at_asid mapM_swp_store_pde_invs_unmap
-               | wpc | simp | wp hoare_drop_imps
-               | wp mapM_wp')+
+          apply (wpsimp wp: lookup_pt_slot_inv lookup_pt_slot_cap_to2' lookup_pt_slot_cap_to_multiple2
+                            store_pde_invs_unmap store_pde_pd_at_asid mapM_swp_store_pde_invs_unmap
+                        simp: largePagePTEOffsets_def pte_bits_def
+                | wp hoare_drop_imps
+                | wp mapM_wp' | assumption)+
          apply auto[1]
-        apply (wp lookupPTSlot_inv mapM_wp' | wpc | clarsimp)+
-       apply (wp hoare_vcg_const_imp_lift_R
-            | strengthen lookup_pd_slot_kernel_mappings_strg not_in_global_refs_vs_lookup
-              page_directory_at_lookup_mask_aligned_strg lookup_pd_slot_kernel_mappings_set_strg
-              page_directory_at_lookup_mask_add_aligned_strg
-            | wp hoare_vcg_const_Ball_lift_R)+
+        apply (wpsimp wp: hoare_vcg_const_imp_lift_R lookupPTSlot_inv
+              | strengthen not_in_global_refs_vs_lookup
+                page_directory_at_lookup_mask_aligned_strg
+                page_directory_at_lookup_mask_add_aligned_strg
+              | wp hoare_vcg_const_Ball_lift_R mapM_wp')+
    apply (clarsimp simp add: valid_unmap_def valid_asid_def)
    apply (case_tac sz)
       apply (auto simp: invs_def valid_state_def
         valid_arch_state_def pageBits_def
+        superSectionPDEOffsets_def pde_bits_def
         valid_arch_caps_def vmsz_aligned_def)
-  done*) sorry (* remove kernel_mapping *)
+  done
 
 definition
   "flush_type_map type \<equiv> case type of
@@ -2681,7 +2697,8 @@ proof -
                           apply (simp add: last_byte_pte_def objBits_simps archObjSize_def)
                          apply simp
                         apply (rule no_fail_cleanCacheRange_PoU)
-(*                       apply (wp hoare_vcg_ex_lift)+
+                      apply (wpsimp, safe ; wpsimp wp: hoare_vcg_ex_lift)
+                     apply wpsimp
                      apply (clarsimp simp:pte_relation_aligned_def)
                      apply (clarsimp dest!:valid_slots_duplicated_pteD')
                     apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
@@ -2704,10 +2721,9 @@ proof -
               apply (rule_tac x=a in exI, rule_tac x=b in exI)
               apply clarify
               apply (drule_tac x=refa in spec)
-              apply clarsimp
-             apply (rule conjI[rotated], fastforce)
-             apply auto[1]
-            apply clarsimp
+              apply (clarsimp simp add: vspace_bits_defs)
+             apply (rule conjI[rotated])
+             apply (fastforce simp add: vspace_bits_defs)+
            apply (case_tac ba)
            apply (clarsimp simp: mapping_map_def valid_slots_def valid_slots'_def neq_Nil_conv valid_page_inv_def valid_page_map_inv_def)
            apply (rule corres_name_pre)
@@ -2722,7 +2738,8 @@ proof -
                          apply (simp add: last_byte_pde_def objBits_simps archObjSize_def)
                         apply simp
                        apply (rule no_fail_cleanCacheRange_PoU)
-                      apply (wp hoare_vcg_ex_lift)+
+                     apply (wpsimp, safe ; wpsimp wp: hoare_vcg_ex_lift)
+                      apply wpsimp
                     apply (clarsimp simp: pde_relation_aligned_def)
                     apply (clarsimp dest!:valid_slots_duplicated_pdeD' )
                    apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
@@ -2742,13 +2759,13 @@ proof -
             apply (rule conjI, rule_tac x=ref in exI, clarsimp)
             apply (rule conjI)
              apply (rule_tac x=aa in exI, rule_tac x=ba in exI)
-             apply auto[1]
+             apply (auto simp add: arch_cap_fun_lift_def)[1]
             apply (rule conjI)
              apply (rule_tac x=a in exI, rule_tac x=b in exI, auto simp: same_refs_def)[1]
             apply (rule conjI)
              apply (clarsimp simp: pde_at_def obj_at_def
                                          caps_of_state_cteD'[where P=\<top>, simplified])
-             apply (drule_tac cap=capa and ptr="(aa,ba)"
+             apply (drule_tac cap="cap.ArchObjectCap acap" and ptr="(aa,ba)"
                            in valid_global_refsD[OF invs_valid_global_refs])
                apply assumption+
              apply (clarsimp simp: cap_range_def)
@@ -2759,7 +2776,7 @@ proof -
             apply (erule ballEI)
             apply (clarsimp simp: pde_at_def obj_at_def
                                         caps_of_state_cteD'[where P=\<top>, simplified])
-            apply (drule_tac cap=capa and ptr="(aa,ba)"
+            apply (drule_tac cap="cap.ArchObjectCap acap" and ptr="(aa,ba)"
                            in valid_global_refsD[OF invs_valid_global_refs])
               apply assumption+
             apply (drule_tac x=x in imageI[where f="\<lambda>x. x && ~~ mask pd_bits"])
@@ -2792,7 +2809,8 @@ proof -
                      apply (simp add: last_byte_pte_def objBits_simps archObjSize_def)
                     apply simp
                    apply (rule no_fail_cleanCacheRange_PoU)
-                  apply (wp hoare_vcg_ex_lift)+
+                 apply (wpsimp, safe ; wpsimp wp: hoare_vcg_ex_lift)
+                apply wpsimp
                 apply (clarsimp simp:valid_page_inv'_def)
                 apply (clarsimp dest!:valid_slots_duplicated_pteD')
                apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
@@ -2812,7 +2830,7 @@ proof -
          apply clarsimp
          apply (rule_tac x=ac in exI, rule_tac x=bb in exI, rule_tac x=capa in exI)
          apply (drule same_refs_lD)
-         apply clarsimp
+         apply (clarsimp simp add: vspace_bits_defs)
          apply (erule (2) ref_is_unique[OF _ _ reachable_page_table_not_global])
                  apply (simp_all add: invs_def valid_state_def valid_arch_state_def valid_arch_caps_def valid_pspace_def valid_objs_caps)[9]
         apply fastforce
@@ -2833,7 +2851,8 @@ proof -
                     apply (simp add: last_byte_pde_def objBits_simps archObjSize_def)
                    apply simp
                   apply (rule no_fail_cleanCacheRange_PoU)
-                 apply (wp hoare_vcg_ex_lift)+
+                apply (wpsimp, safe ; wpsimp wp: hoare_vcg_ex_lift)
+               apply wpsimp
                apply (clarsimp simp: pde_relation_aligned_def valid_page_inv'_def)
                apply (clarsimp dest!:valid_slots_duplicated_pdeD' )
               apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
@@ -2854,9 +2873,9 @@ proof -
        apply (frule valid_global_refsD2)
         apply (clarsimp simp: cap_range_def)+
        apply (rule conjI)
-        apply  (rule_tac x=ac in exI, rule_tac x=bb in exI, rule_tac x=cap in exI)
+        apply  (rule_tac x=ac in exI, rule_tac x=bb in exI, rule_tac x="cap.ArchObjectCap acap" in exI)
         apply (erule conjI)
-        apply clarsimp
+        apply (clarsimp simp add: arch_cap_fun_lift_def)
        apply (rule conjI)
         apply (rule_tac x=ad in exI, rule_tac x=bc in exI, rule_tac x=capa in exI)
         apply (clarsimp simp: same_refs_def pde_ref_def pde_ref_pages_def
@@ -2876,8 +2895,7 @@ proof -
                valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
           apply (simp split: if_split_asm)+
         apply force
-       apply (rule conjI[rotated], fastforce)
-       apply (erule ballEI)
+       apply fastforce
        apply clarsimp
        apply (drule_tac ptr="(ac,bb)" in
                valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
@@ -2961,7 +2979,7 @@ proof -
        apply (wp)+
    apply (clarsimp simp: tcb_at_invs)
   apply (clarsimp simp: tcb_at_invs')
-  done*) sorry
+  done
 qed
 
 definition
