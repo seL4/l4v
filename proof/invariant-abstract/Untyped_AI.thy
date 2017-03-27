@@ -1529,7 +1529,7 @@ lemma range_cover_subset':
   apply simp
   done
 
-context Untyped_AI_arch begin (*FIXME: arch_split done*)
+context Untyped_AI_arch begin
 lemma retype_region_ranges':
   "\<lbrace>K (range_cover ptr sz (obj_bits_api tp us) n)\<rbrace>
    retype_region ptr n us tp dev
@@ -1551,15 +1551,13 @@ lemma retype_region_ranges':
       apply (subst add.commute[where a = "0x1FF"])
       apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
        apply (fastforce simp: range_cover_def)
-       apply (simp add: word_bits_def is_aligned_mult_triv2[where n = 9,simplified])+
-     apply (subst add.commute[where a = "0x1F"])
-     apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
+       apply (simp_all add: word_bits_def is_aligned_mult_triv2[where n=9, simplified])[2]
+      apply (subst add.commute, rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
       apply (fastforce simp: range_cover_def)
-      apply (simp add: word_bits_def is_aligned_mult_triv2[where n = 5,simplified])+
-    apply (subst add.commute[where a = "0x1F"])
-    apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
+      apply (simp add: word_bits_def is_aligned_mult_triv2[where n=endpoint_bits, simplified])+
+    apply (subst add.commute, rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
      apply (fastforce simp: range_cover_def)
-     apply (simp add: word_bits_def is_aligned_mult_triv2[where n = 5,simplified])+
+     apply (simp add: word_bits_def is_aligned_mult_triv2[where n=ntfn_bits, simplified])+
      apply (clarsimp simp: is_aligned_def)
     apply (simp add: p_assoc_help)
     apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
@@ -4013,4 +4011,3 @@ lemma snd_set_zip_in_set:
   done
 
 end
-

@@ -46,6 +46,12 @@ requalify_consts
   arch_tcb_context_get
   arch_tcb_context_set
   cte_level_bits
+  endpoint_bits
+  ntfn_bits
+
+lemmas [simp] =
+  endpoint_bits_def
+  ntfn_bits_def
 
 end
 
@@ -438,8 +444,8 @@ primrec
 where
   "obj_bits (CNode sz cs) = cte_level_bits + sz"
 | "obj_bits (TCB t) = 9"
-| "obj_bits (Endpoint ep) = 5"
-| "obj_bits (Notification ntfn) = 5"
+| "obj_bits (Endpoint ep) = endpoint_bits"
+| "obj_bits (Notification ntfn) = ntfn_bits"
 | "obj_bits (ArchObj ao) = arch_kobj_size ao"
 
 primrec (nonexhaustive)

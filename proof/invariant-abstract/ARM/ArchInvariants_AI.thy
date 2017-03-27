@@ -1073,7 +1073,7 @@ lemma arch_kobj_size_bounded:
 
 lemma valid_arch_sizes:
   "obj_bits (ArchObj obj) < word_bits"
-  by (simp add: arch_kobj_size_bounded)
+  using arch_kobj_size_bounded word_bits_conv by auto
 
 lemma aobj_bits_T:
   "arch_kobj_size v = arch_obj_bits_type (aa_type v)"

@@ -199,6 +199,12 @@ where
 | "arch_cap_is_device (PDPointerTableCap _ _) = False"
 | "arch_cap_is_device (PML4Cap _ _) = False"
 
+definition endpoint_bits :: nat where
+  "endpoint_bits \<equiv> 5"
+
+definition ntfn_bits :: nat where
+  "ntfn_bits \<equiv> 5"
+
 primrec
   arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat"
 where
