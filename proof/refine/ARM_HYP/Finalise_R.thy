@@ -2343,10 +2343,6 @@ lemma finaliseCap_True_invs[wp]:
 
 crunch invs'[wp]: flushSpace "invs'" (ignore: doMachineOp)
 
-lemma ct_not_inQ_ksArchState_update[simp]:
-  "ct_not_inQ (s\<lparr>ksArchState := v\<rparr>) = ct_not_inQ s"
-  by (simp add: ct_not_inQ_def)
-
 lemma invs_asid_update_strg':
   "invs' s \<and> tab = armKSASIDTable (ksArchState s) \<longrightarrow>
    invs' (s\<lparr>ksArchState := armKSASIDTable_update

@@ -1349,7 +1349,7 @@ lemma lookupPTSlot_aligned:
 
 crunch valid_arch_state'[wp]:
  flushPage valid_arch_state'
-  (wp: crunch_wps  getHWASID_valid_arch' simp: crunch_simps unless_def
+  (wp: crunch_wps getHWASID_valid_arch' simp: crunch_simps unless_def
     ignore:getObject updateObject setObject)
 
 crunch valid_arch_state'[wp]:

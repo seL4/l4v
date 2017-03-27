@@ -3526,9 +3526,6 @@ proof (intro conjI impI)
 
 qed
 
-abbreviation
- "injectKOS \<equiv> (injectKO :: ('a :: pspace_storable) \<Rightarrow> kernel_object)"
-
 lemma createObjects_valid_pspace_untyped':
   assumes  mko: "makeObjectKO dev ty = Some val"
   and    not_0: "n \<noteq> 0"
@@ -4583,10 +4580,6 @@ lemma koTypeOf_eq_UserDataT:
         = (ko = KOUserData)"
   by (cases ko, simp_all)
 
-lemma option_case_all_conv:
-  "(case x of None \<Rightarrow> True | Some v \<Rightarrow> P v) = (\<forall>v. x = Some v \<longrightarrow> P v)"
-  by (auto split: option.split)
-
 lemma createNewCaps_valid_arch_state:
   "\<lbrace>(\<lambda>s. valid_arch_state' s \<and> valid_pspace' s \<and> pspace_no_overlap' ptr sz s
         \<and> (tp = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0))
@@ -4599,17 +4592,6 @@ lemma createNewCaps_valid_arch_state:
                      hoare_vcg_all_lift hoare_vcg_imp_lift
           simp: typ_at_to_obj_at_arches o_def is_vcpu'_def)
   apply (fastforce simp: valid_pspace'_def o_def pred_conj_def)
-  done
-
-lemma valid_irq_node_lift_asm:
-  assumes x: "\<And>P. \<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> f \<lbrace>\<lambda>rv s. P (irq_node' s)\<rbrace>"
-  assumes y: "\<And>p. \<lbrace>real_cte_at' p and Q\<rbrace> f \<lbrace>\<lambda>rv. real_cte_at' p\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s \<and> Q s\<rbrace> f \<lbrace>\<lambda>rv s. valid_irq_node' (irq_node' s) s\<rbrace>"
-  apply (simp add: valid_irq_node'_def)
-  apply (rule hoare_pre)
-   apply (rule hoare_use_eq_irq_node' [OF x])
-   apply (wp hoare_vcg_all_lift y)
-  apply simp
   done
 
 lemma valid_irq_handlers_cte_wp_at_form':
