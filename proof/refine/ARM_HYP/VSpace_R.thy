@@ -1393,7 +1393,7 @@ lemma delete_asid_pool_corres:
                  apply (simp add: asid_low_bits_def word_bits_def)
                 apply (simp add: asid_bits_def asid_low_bits_def asid_high_bits_def)
                apply (subst conj_commute, rule context_conjI)
-(*                apply (erule vs_lookup_trancl_step)
+                apply (erule vs_lookup_trancl_step)
                 apply (rule r_into_trancl)
                 apply (erule vs_lookup1I)
                  apply (simp add: vs_refs_def)
@@ -1466,7 +1466,7 @@ lemma delete_asid_pool_corres:
    apply (clarsimp simp: conj_comms)
    apply (auto simp: vs_lookup_def intro: vs_asid_refsI)[1]
   apply clarsimp
-*)  sorry
+done
 
 lemma set_vm_root_for_flush_corres:
   "corres (op =)
@@ -1725,10 +1725,9 @@ lemma flush_table_corres:
           apply (rule corres_Id[OF refl])
            apply simp
           apply (rule no_fail_invalidateTLB_ASID)
-         apply (wp hoare_drop_imps | simp)+
-(*       apply (wp load_hw_asid_wp hoare_drop_imps |
-                simp add: cur_tcb'_def [symmetric] cur_tcb_def [symmetric])+
-*)  sorry
+         apply (wpsimp wp: hoare_drop_imps | fold cur_tcb_def cur_tcb'_def)+
+       apply (wpsimp wp: hoare_post_taut load_hw_asid_wp | rule hoare_drop_imps)+
+  done
 
 lemma flush_page_corres:
   "corres dc
@@ -1759,11 +1758,12 @@ lemma flush_page_corres:
             apply wp+
           apply (rule corres_Id, rule refl, simp)
           apply (rule no_fail_pre, wp no_fail_invalidateTLB_VAASID)
-         apply simp
+          apply simp
          apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
-         apply (wp hoare_drop_imps)[1]
-(*        apply (assumption | wp hoare_drop_imps load_hw_asid_wp | clarsimp simp: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])+
- *) sorry
+         apply (wpsimp wp: hoare_post_taut load_hw_asid_wp
+               | rule hoare_drop_imps
+               | fold cur_tcb_def cur_tcb'_def)+
+  done
 
 crunch typ_at' [wp]: flushTable "\<lambda>s. P (typ_at' T p s)"
   (simp: assertE_def when_def wp: crunch_wps ignore: getObject)
