@@ -34,10 +34,11 @@ ML \<open>fun method_evaluate text ctxt facts =
 
 method_setup print_headgoal = 
   \<open>Scan.succeed (fn ctxt =>
-   SIMPLE_METHOD
-    (SUBGOAL (fn (t,_) => 
+    fn _ => fn (ctxt', thm) =>
+    ((SUBGOAL (fn (t,_) =>
      (Output.writeln 
-     (Pretty.string_of (Syntax.pretty_term ctxt t)); all_tac)) 1))\<close>
+     (Pretty.string_of (Syntax.pretty_term ctxt t)); all_tac)) 1 thm);
+     (Seq.make_results (Seq.single (ctxt', thm)))))\<close>
 
 section \<open>Simple Combinators\<close>
 
