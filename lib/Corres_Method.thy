@@ -405,9 +405,15 @@ lemma normal_corres:
    corres_underlying sr nf nf' r (K A and P) Q f f'"
   by (auto simp add: corres_underlying_def)
 
+lemma normal_corres':
+  "A \<longrightarrow> corres_underlying sr nf nf' r P Q f f' \<Longrightarrow>
+   corres_underlying sr nf nf' r P (K A and Q) f f'"
+  by (auto simp add: corres_underlying_def)
+
 (* assumes atomized *)
 
 method normal_corres = (((drule uncurry)+)?, drule normal_corres)
+method normal_corres' = (((drule uncurry)+)?, drule normal_corres')
 
 experiment
   fixes A B C :: bool
