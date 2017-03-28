@@ -106,8 +106,8 @@ lemmas arch_kernel_obj_cases_asm =
   arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x, 
                          simplified, rule_format, rotated -1]
 
-definition [simplified slot_bits_def]:
-  "cte_level_bits \<equiv> slot_bits"
+definition cte_level_bits :: nat where
+  "cte_level_bits \<equiv> 4"
 
 primrec
   arch_obj_size :: "arch_cap \<Rightarrow> nat"

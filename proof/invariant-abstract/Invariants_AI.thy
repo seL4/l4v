@@ -78,6 +78,11 @@ requalify_facts
   vs_lookup1_stateI2
   vs_lookup_pages1_stateI2
   typ_at_pg
+  cte_level_bits_def
+
+lemmas [simp] =
+  endpoint_bits_def
+  ntfn_bits_def
 
 end
 

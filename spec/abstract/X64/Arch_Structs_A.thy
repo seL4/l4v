@@ -166,8 +166,8 @@ definition table_size :: nat where
 definition iotable_size :: nat where
   "iotable_size = ptTranslationBits + 2*word_size_bits"
 
-definition [simplified slot_bits_def]:
-  "cte_level_bits \<equiv> slot_bits"
+definition cte_level_bits :: nat where
+  "cte_level_bits \<equiv> 5"
 
 primrec
   arch_obj_size :: "arch_cap \<Rightarrow> nat"

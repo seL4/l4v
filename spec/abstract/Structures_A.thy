@@ -49,10 +49,6 @@ requalify_consts
   endpoint_bits
   ntfn_bits
 
-lemmas [simp] =
-  endpoint_bits_def
-  ntfn_bits_def
-
 end
 
 text {*
