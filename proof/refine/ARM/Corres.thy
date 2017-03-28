@@ -16,4 +16,7 @@ text {* Instantiating the corres framework to this particular state relation. *}
 abbreviation
  "corres \<equiv> corres_underlying state_relation False True"
 
+abbreviation
+ "corresK \<equiv> corres_underlyingK state_relation False True"
+
 end
