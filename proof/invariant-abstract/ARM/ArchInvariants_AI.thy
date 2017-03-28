@@ -75,11 +75,6 @@ lemmas a_type_simps = a_type_def[split_simps kernel_object.split arch_kernel_obj
 definition
   "vmsz_aligned ref sz \<equiv> is_aligned ref (pageBitsForSize sz)"
 
-(* There are no non-canonical addresses on 32-bit ARM. *)
-definition canonical_address :: "obj_ref \<Rightarrow> bool"
-where
-  "canonical_address p \<equiv> True"
-
 definition
   "wellformed_mapdata sz \<equiv>
    \<lambda>(asid, vref). 0 < asid \<and> asid \<le> 2^asid_bits - 1

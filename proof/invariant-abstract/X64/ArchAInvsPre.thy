@@ -183,11 +183,11 @@ global_naming Arch
 named_theorems AInvsPre_asms
 
 lemma ptable_rights_imp_frame[AInvsPre_asms]:
-  assumes "valid_state s" "canonical_address x"
+  assumes "valid_state s"
   shows "ptable_rights t s x \<noteq> {} \<Longrightarrow>
          ptable_lift t s x = Some (addrFromPPtr y) \<Longrightarrow>
          in_user_frame y s \<or> in_device_frame y s"
-  apply (rule ccontr)
+  apply (rule ccontr, frule ptable_lift_Some_canonical_addressD)
   using assms
   apply (clarsimp simp: ptable_lift_def ptable_rights_def
                         in_user_frame_def in_device_frame_def

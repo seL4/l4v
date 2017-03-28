@@ -243,11 +243,12 @@ definition
   get_page_info :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> obj_ref \<Rightarrow>
                     machine_word \<rightharpoonup> (machine_word \<times> nat \<times> frame_attrs \<times> vm_rights)"
 where
-  get_page_info_def:
   "get_page_info ahp pm_ref vptr \<equiv>
-   case get_pml4_entry ahp pm_ref vptr of
-     Some (PDPointerTablePML4E p _ _) \<Rightarrow> get_pdpt_info ahp (ptrFromPAddr p) vptr
-   | _ \<Rightarrow> None"
+     if canonical_address vptr then
+       case get_pml4_entry ahp pm_ref vptr of
+           Some (PDPointerTablePML4E p _ _) \<Rightarrow> get_pdpt_info ahp (ptrFromPAddr p) vptr
+         | _ \<Rightarrow> None
+     else None"
 
 text {*
   Both functions, @{text ptable_lift} and @{text vm_rights},
@@ -266,6 +267,10 @@ definition
   case_option {} (snd o snd o snd)
      (get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
         (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
+
+lemma ptable_lift_Some_canonical_addressD:
+  "ptable_lift t s vptr = Some p \<Longrightarrow> canonical_address vptr"
+  by (clarsimp simp: ptable_lift_def get_page_info_def split: if_splits)
 
 end
 end

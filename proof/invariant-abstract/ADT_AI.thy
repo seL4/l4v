@@ -220,15 +220,9 @@ definition
                        ,(ds \<circ> ptrFromPAddr) |`  {pa. \<exists>va. conv va = Some pa \<and> AllowRead \<in> rights va} ) 
                      ));
       do_machine_op (user_memory_update
-                       ((um' |` {pa. \<exists>va. canonical_address va
-                                            \<and> conv va = Some pa
-                                            \<and> AllowWrite \<in> rights va}
-                      \<circ> addrFromPPtr) |` (- dom ds)));
+          ((um' |` {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va} \<circ> addrFromPPtr) |` (- dom ds)));
       do_machine_op (device_memory_update
-                       ((ds' |` {pa. \<exists>va. canonical_address va
-                                            \<and> conv va = Some pa
-                                            \<and> AllowWrite \<in> rights va}
-                      \<circ> addrFromPPtr) |` (dom ds)));
+          ((ds' |` {pa. \<exists>va. conv va = Some pa \<and> AllowWrite \<in> rights va} \<circ> addrFromPPtr) |` (dom ds)));
       return (e, tc')
    od" 
 
