@@ -102,6 +102,19 @@ where
 text {* Cancel all message operations on threads queued in a notification
 endpoint. *}
 
+text {* Notification accessors. *}
+abbreviation 
+  ntfn_set_bound_tcb :: "notification \<Rightarrow> obj_ref option \<Rightarrow> notification"
+where
+  "ntfn_set_bound_tcb ntfn t \<equiv> ntfn \<lparr> ntfn_bound_tcb := t \<rparr>"
+
+abbreviation
+  ntfn_set_obj :: "notification \<Rightarrow> ntfn \<Rightarrow> notification"
+where
+  "ntfn_set_obj ntfn a \<equiv> ntfn \<lparr> ntfn_obj := a \<rparr>"
+
+
+text {* Remove the binding between a notification and a TCB. *}
 abbreviation
   do_unbind_notification :: "obj_ref \<Rightarrow> notification \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -111,6 +124,8 @@ where
       set_bound_notification tcbptr None
     od"
 
+
+text {* Remove bound notification from a TCB in bound state. *}
 definition
   unbind_notification :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -124,6 +139,7 @@ where
        | None \<Rightarrow> return ()
    od"
 
+text {* Remove bound notification from a TCB if such notification exists. *}
 definition
   unbind_maybe_notification :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
@@ -133,6 +149,9 @@ where
        Some t \<Rightarrow> do_unbind_notification ntfnptr ntfn t
      | None \<Rightarrow> return ())
    od"
+
+
+text {* Cancel all message operations on threads queued in a notification endpoint. *}
 
 definition
   cancel_all_signals :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
