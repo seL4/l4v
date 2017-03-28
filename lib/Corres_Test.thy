@@ -92,32 +92,28 @@ lemma delete_asid_corresb:
   apply (simp add: delete_asid_def deleteASID_def)
   apply_debug (trace) (* apply_trace between steps *)
     (tags "corres") (* break at breakpoints labelled "corres" *)
-    (corres | (corresc, #break))+ (* weaken precondition *)
+    corres (* weaken precondition *)
     continue (* split *)
     continue (* gets rule *)
-    continue (* simplification *)
-    continue (* backtracking (no corres progress after simp) *)
-    continue (* continue backtracking *)
-    continue (* case split with corresc *)
-    continue (* focus on first goal *)
-    continue (* trivially solved *)
+    continue (* corresc *)
+    continue (* return rule *)
     continue (* split *)
     continue (* simplification *)
-    continue (* successful corres_once with liftM after simplification *)
-    continue (* get_asid_pool applied *)
+    continue (* liftM rule *)
+    continue (* get_asid_pool_corres_inv' *)
     continue (* simplification *)
-    continue (* when rule *)
+    continue (* corresK_when *)
     continue (* split *)
-    continue (* flush_space corres rule *)
+    continue (* flush_space_corres *)
     continue (* split *)
-    continue (* apply invalidate_asid_entry_corres (issue with tracing?) *)
+    continue (* invalidate_asid_entry_corres *)
     continue (* split *)
-    continue (* set_asid_pool (issue with tracing?) *)
+    continue (* set_asid_pool_corres *)
     continue (* split *)
-    continue (* gets rule *)
+    continue (* gct_corres *)
     continue (* simplification *)
-    finish (* set_vm_root *)
-  apply (wp | simp add: mask_asid_low_bits_ucast_ucast | fold cur_tcb_def | wps)+
+    finish (* set_vm_root_corres *)
+  apply (wp corres_rv_defer_right | simp add: mask_asid_low_bits_ucast_ucast | fold cur_tcb_def | wps)+
   apply (rule conjI)
   apply (intro impI allI)
   apply (rule context_conjI)
@@ -137,16 +133,19 @@ lemma delete_asid_corresb:
        apply (simp add: vs_refs_def)
        apply (rule image_eqI[rotated], erule graph_ofI)
        apply (simp add: mask_asid_low_bits_ucast_ucast)
-  apply (simp add: o_def)
+  prefer 2
   apply (safe; assumption?)
- apply (simp add: inv_def mask_asid_low_bits_ucast_ucast)
+ apply (clarsimp simp add: inv_def mask_asid_low_bits_ucast_ucast)
   apply (rule ext)
   apply clarsimp
   apply (fastforce dest: ucast_ucast_eq)
+  apply (simp add: typ_at_to_obj_at_arches)
+  apply (clarsimp simp add: obj_at'_def)
+  apply (simp add: cur_tcb'_def)
+  apply safe
   apply (erule ko_at_weakenE)
   apply (clarsimp simp: graph_of_def)
   apply (fastforce split: if_split_asm)
-  apply clarsimp
   apply (frule invs_arch_objs)
   apply (drule (2) valid_arch_objsD)
   apply (erule ranE)
@@ -154,11 +153,6 @@ lemma delete_asid_corresb:
     apply (erule ko_at_weakenE)
   apply (clarsimp simp: graph_of_def)
   apply (fastforce split: if_split_asm)
-  apply clarsimp
-  apply safe
-  apply (simp add: typ_at_to_obj_at_arches)
-  apply (clarsimp simp add: obj_at'_def)
-  apply (simp add: cur_tcb'_def)
   done
 
 lemma getSlotCap_corres:
@@ -199,33 +193,25 @@ lemma set_vm_root_for_flush_corres:
     finish (* successful terminal goal discharged by corres_once with given rule *)
 
   apply corres+
+
   apply (wp get_cap_wp getSlotCap_wp | wpc| simp)+
   apply (rule context_conjI)
   subgoal by (simp add: cte_map_def objBits_simps tcb_cnode_index_def
-                         tcbVTableSlot_def to_bl_1 cte_level_bits_def)
+                        tcbVTableSlot_def to_bl_1 cte_level_bits_def)
   apply (rule context_conjI)
-          subgoal by (fastforce simp: cur_tcb_def intro!: tcb_at_cte_at_1[simplified])
-          apply (rule conjI)
-          subgoal by (auto simp: isCap_simps)
-          apply (drule cte_wp_at_ex)
-          apply clarsimp
-          apply (drule (1) pspace_relation_cte_wp_at[rotated 1]; (assumption | clarsimp)?)
-          apply (drule cte_wp_at_norm')
-          apply clarsimp
-          apply (rule_tac x="cteCap cte" in exI)
-          subgoal premises prems for s s' cap cte
-          apply safe
-          apply (thin_tac _)+
-          subgoal cte_wp_at'
-          apply (insert prems)
-          apply (rule rsubst[where P="\<lambda>s. cte_wp_at' x s s'" for x])
-          apply (erule cte_wp_at_weakenE', simp)
-          apply (clarsimp dest!: curthread_relation)
-          done
-          apply (safe intro!: cte_wp_at')
-        done
-        done
-
-
+  subgoal by (fastforce simp: cur_tcb_def intro!: tcb_at_cte_at_1[simplified])
+  apply (rule conjI)
+   apply (auto simp: isCap_simps)[1]
+  apply (drule cte_wp_at_ex)
+  apply clarsimp
+  apply (drule (1) pspace_relation_cte_wp_at[rotated 1]; (assumption | clarsimp)?)
+  apply (drule cte_wp_at_norm')
+  apply clarsimp
+  apply (rule_tac x="cteCap cte" in exI)
+  apply (clarsimp dest!: curthread_relation)
+  apply (intro impI context_conjI;simp?)
+   apply (erule cte_wp_at_weakenE',simp)
+  apply (erule cte_wp_at_weakenE',simp)
+  done
 end
 end
