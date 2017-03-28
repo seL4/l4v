@@ -447,8 +447,8 @@ lemma ARMMMU_improve_cases:
     else U)"
   by (cases cap, simp_all add: isCap_simps) (* not sure if this is useful as is *)
 
-lemma decodeVCPUInjectIRQ_inv[wp]: "\<lbrace>P\<rbrace> decodeVCPUInjectIRQ param_a param_b \<lbrace>\<lambda>_. P\<rbrace>"
-  sorry
+lemma decodeVCPUInjectIRQ_inv[wp]: "\<lbrace>P\<rbrace> decodeVCPUInjectIRQ a b \<lbrace>\<lambda>_. P\<rbrace>"
+  by (wpsimp simp: decodeVCPUInjectIRQ_def Let_def wp: hoare_whenE_wp getVCPU_wp | rule conjI)+
 
 crunch inv [wp]: "ARM_HYP_H.decodeInvocation" "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
@@ -612,6 +612,7 @@ lemma dec_arch_inv_page_flush_corres:
        apply simp
       apply (rule corres_trivial)
       apply (rule corres_returnOk)
+    apply (clarsimp simp: archinv_relation_def page_invocation_map_def flush_type_map_def)
       apply (clarsimp simp: archinv_relation_def page_invocation_map_def
                             label_to_flush_type_def labelToFlushType_def flush_type_map_def
                             ARM_HYP_H.isPageFlushLabel_def
@@ -660,7 +661,6 @@ lemmas vs_refs_pages_pt_smallI
 
 lemma vs_refs_pages_pdI:
   "pd x = pde \<Longrightarrow> pde_ref_pages pde = Some r'
-    \<Longrightarrow> x \<notin> kernel_mapping_slots
     \<Longrightarrow> (VSRef (ucast x) (Some APageDirectory), r') \<in> vs_refs_pages (ArchObj (PageDirectory pd))"
   apply (simp add: vs_refs_pages_def)
   apply (rule image_eqI[rotated], rule graph_ofI[where x=x], simp)
@@ -681,26 +681,16 @@ lemma get_master_pde_sp:
         \<and> pd_slot' && ~~ mask pd_bits = pd_slot && ~~ mask pd_bits
 (*        \<and> ((ucast (pd_slot' && mask pd_bits >> 2) \<in> kernel_mapping_slots)
             \<longrightarrow> (ucast (pd_slot && mask pd_bits >> 2) \<in> kernel_mapping_slots))*)
-        \<and> pd (ucast (pd_slot' && mask pd_bits >> 2)) = pde)  \<rbrace>"
+        \<and> pd (ucast (pd_slot' && mask pd_bits >> 3)) = pde)  \<rbrace>"
   apply (simp add: get_master_pde_def)
   apply (wp get_pde_wp | wpc)+
   apply (clarsimp simp: obj_at_def)
-(*  apply (safe, simp_all add: exI[where x=pd_slot])
+  apply (safe, simp_all add: exI[where x=pd_slot] vspace_bits_defs)
   apply (cut_tac max.absorb2[where a=6 and b=pd_bits])
    apply (clarsimp simp: word_bw_assocs neg_mask_combine)
-   apply (rule_tac x="pd_slot && ~~ mask 6" in exI)
-   apply (simp add: word_bw_assocs neg_mask_combine)
-   apply (clarsimp simp: kernel_mapping_slots_def)
-   apply (erule order_trans)
-   apply (rule ucast_mono_le)
-    apply (rule le_shiftr)
-    apply (metis word_and_le1 word_bw_assocs(1) word_bw_comms(1))
-   apply (rule shiftr_less_t2n)
-   apply (rule order_less_le_trans, rule and_mask_less_size)
-    apply (simp add: pd_bits_def pageBits_def word_size)
-   apply (simp add: pd_bits_def pageBits_def)
-  apply (simp add: pd_bits_def pageBits_def)
-  done*) sorry
+   apply (rule_tac x="pd_slot && ~~ mask 7" in exI)
+   apply (clarsimp simp add: word_bw_assocs neg_mask_combine pd_bits_def)+
+  done
 
 lemma get_master_pte_wp:
   "\<lbrace> \<lambda>s. (\<forall>pt pt_slot'. ko_at (ArchObj (PageTable pt)) (pt_slot && ~~ mask pt_bits) s
@@ -716,6 +706,10 @@ lemma get_master_pte_wp:
    apply fastforce
   apply (simp add: pt_bits_def pageBits_def)
   done
+
+lemma vaddr_segment_nonsense5:
+  "is_aligned (p :: word32) 12 \<Longrightarrow> p + ((vaddr >> 12) && mask 9 << 3) && ~~ mask pt_bits = p"
+  by (frule vaddr_segment_nonsense3) (simp add:  mask_def)
 
 lemma resolve_vaddr_valid_mapping_size:
   "\<lbrace> valid_vs_lookup and pspace_aligned and valid_vspace_objs and page_directory_at pd
@@ -735,24 +729,25 @@ lemma resolve_vaddr_valid_mapping_size:
   apply (drule_tac y=pd_bits in is_aligned_weaken, simp add: vspace_bits_defs)
   apply (frule valid_vspace_objsD, simp add: obj_at_def lookup_pd_slot_eq, simp)
   apply (simp add: lookup_pd_slot_eq)
-(*  apply (drule spec, simp)
+  apply (drule_tac x="ucast (pd_slot' && mask pd_bits >> 3)" in spec)
   apply (rule conjI)
    apply clarsimp
    apply (drule vs_lookup_step)
     apply (rule vs_lookup1I, simp add: obj_at_def)
-     apply (erule(1) vs_refs_pdI2)
+     apply (erule vs_refs_pdI2)
     apply simp
    apply (drule sym[where s=pd])
    apply (simp add: lookup_pd_slot_eq)
    apply (frule(1) is_aligned_pt)
    apply (frule is_aligned_weaken[where x=pt_bits and y=10])
-    apply (simp add: pt_bits_def pageBits_def)
-   apply (simp add: vaddr_segment_nonsense3)
-   apply (frule valid_arch_objsD, simp add: obj_at_def, simp)
+    apply (simp add: pt_bits_def pageBits_def pte_bits_def)
+   apply (simp add: vspace_bits_defs)
+   apply (frule_tac vaddr=vaddr in  vaddr_segment_nonsense5, simp add: vspace_bits_defs)
+   apply (frule_tac  valid_vspace_objsD, simp add: obj_at_def, simp)
    apply (drule vs_lookup_pages_vs_lookupI)
    apply (rule conjI)
     apply clarsimp
-    apply (drule_tac x="ucast (pt_slot' && mask pt_bits >> 2)" in spec)
+    apply (drule_tac x="ucast (pt_slot' && mask pt_bits >> 3)" in spec)
     apply (drule vs_lookup_pages_step)
      apply (rule vs_lookup_pages1I, simp add: obj_at_def)
       apply (erule vs_refs_pages_pt_largeI)
@@ -760,13 +755,12 @@ lemma resolve_vaddr_valid_mapping_size:
     apply (drule(1) valid_vs_lookupD)
     apply simp
     apply (erule exEI)+
-    apply (clarsimp simp: vs_cap_ref_def split: cap.split_asm arch_cap.split_asm
+    apply (clarsimp simp: vs_cap_ref_def vspace_bits_defs split: cap.split_asm arch_cap.split_asm
            option.split_asm vmpage_size.split_asm)
     apply (frule(1) caps_of_state_valid_cap)
     apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
-                   split: if_split_asm)
-   apply (clarsimp simp: vaddr_segment_nonsense4)
-   apply (drule_tac x="ucast (pt_slot' && mask pt_bits >> 2)" in spec)
+                   split: if_split_asm)+
+   apply (drule_tac x="ucast (pt_slot' && mask pt_bits >> 3)" in spec)
    apply (drule vs_lookup_pages_step)
     apply (rule vs_lookup_pages1I, simp add: obj_at_def)
      apply (erule vs_refs_pages_pt_smallI)
@@ -774,17 +768,17 @@ lemma resolve_vaddr_valid_mapping_size:
    apply (drule(1) valid_vs_lookupD)
    apply simp
    apply (erule exEI)+
-   apply (clarsimp simp: vs_cap_ref_def split: cap.split_asm arch_cap.split_asm
+   apply (clarsimp simp: vs_cap_ref_def vspace_bits_defs split: cap.split_asm arch_cap.split_asm
           option.split_asm vmpage_size.split_asm)
    apply (frule(1) caps_of_state_valid_cap)
    apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
-                  split: if_split_asm)
+                  split: if_split_asm)+
   apply (drule vs_lookup_pages_vs_lookupI)
   apply (rule conjI)
    apply clarsimp
    apply (drule vs_lookup_pages_step)
     apply (rule vs_lookup_pages1I, simp add: obj_at_def)
-     apply (erule(1) vs_refs_pages_pd_sectionI)
+     apply (erule vs_refs_pages_pd_sectionI)
     apply simp
    apply (drule(1) valid_vs_lookupD)
    apply simp
@@ -800,7 +794,7 @@ lemma resolve_vaddr_valid_mapping_size:
   apply clarsimp
   apply (drule vs_lookup_pages_step)
    apply (rule vs_lookup_pages1I, simp add: obj_at_def)
-    apply (erule(1) vs_refs_pages_pd_supersectionI)
+    apply (erule vs_refs_pages_pd_supersectionI)
    apply simp
   apply (drule(1) valid_vs_lookupD)
   apply simp
@@ -813,8 +807,8 @@ lemma resolve_vaddr_valid_mapping_size:
                   split: if_split_asm)
   apply (frule(1) caps_of_state_valid_cap)
   apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
-                 split: if_split_asm)*)
-  sorry
+                 split: if_split_asm)
+  done
 
 lemma dec_arch_inv_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp] [[goals_limit = 1]]
