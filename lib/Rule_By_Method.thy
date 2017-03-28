@@ -104,8 +104,12 @@ val empty_rule_prems = Data.map (K ([],true));
 fun add_rule_prem thm = Data.map (apfst (Thm.add_thm thm));
 
 fun with_rule_prems enabled parse =
-  apfst (Context.map_proof (Data.map (K ([Drule.free_dummy_thm],enabled))))
-  #> parse
+  Scan.state :|-- (fn context =>
+  let
+    val context' = Context.proof_of context |> Data.map (K ([Drule.free_dummy_thm],enabled))
+                   |> Context.Proof
+  in Scan.lift (Scan.pass context' parse) end)
+
 
 fun get_rule_prems ctxt = 
   let
@@ -249,9 +253,14 @@ val _ = Theory.setup
    Attrib.setup @{binding "#"} rule_prems_by_method
     "transform rule premises with method" #>
    Attrib.setup @{binding "@"} rule_concl_by_method
-    "transform rule conclusion with method")
+    "transform rule conclusion with method" #>
+   Attrib.setup @{binding atomized}
+    (Scan.succeed (Thm.rule_attribute []
+      (fn context => fn thm =>
+        Conv.fconv_rule (Object_Logic.atomize (Context.proof_of context)) thm
+          |> Drule.zero_var_indexes)))
+    "atomize rule")
 \<close>
-
 
 experiment begin
 
