@@ -1812,6 +1812,11 @@ lemma list_cases_wp:
   shows "\<lbrace>case_list P_A P_B ts\<rbrace> case ts of [] \<Rightarrow> a | x # xs \<Rightarrow> b x xs \<lbrace>Q\<rbrace>"
   by (cases ts, auto simp: a b)
 
+lemma maybeM_wp[wp]:
+  "(\<And>x. y = Some x \<Longrightarrow> \<lbrace>P x\<rbrace> m x \<lbrace>Q\<rbrace>) \<Longrightarrow>
+  \<lbrace>\<lambda>s. (\<forall>x. y = Some x \<longrightarrow> P x s) \<and> (y = None \<longrightarrow> Q () s)\<rbrace> maybeM m y \<lbrace>Q\<rbrace>"
+  unfolding maybeM_def by (cases y; simp; wp)
+
 (* FIXME: make wp *)
 lemma whenE_throwError_wp:
   "\<lbrace>\<lambda>s. \<not>Q \<longrightarrow> P s\<rbrace> whenE Q (throwError e) \<lbrace>\<lambda>rv. P\<rbrace>, -"
