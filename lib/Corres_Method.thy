@@ -19,11 +19,47 @@ section \<open>Boilerplate\<close>
 
 context begin
 
+lemma stronger_corres_guard_imp_str:
+  assumes x: "corres_underlying sr nf nf' r Q Q' f g"
+  assumes y: "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> Q s \<and> Q' s'"
+  shows      "corres_underlying sr nf nf' r P P' f g"
+  using x by (auto simp: y corres_underlying_def)
+
 private lemma corres_trivial:
   "corres_underlying sr nf nf' r P P' f f' \<Longrightarrow> corres_underlying sr nf nf' r P P' f f'"
   by simp
 
-method check_corres = succeeds \<open>rule corres_trivial\<close>
+method check_corres = (succeeds \<open>rule corres_trivial\<close>, fails \<open>rule TrueI\<close>)
+
+private definition "my_false s \<equiv> False"
+
+private
+  lemma corres_my_false: "corres_underlying sr nf nf' r my_false P f f'"
+                         "corres_underlying sr nf nf' r P' my_false f f'"
+  by (auto simp add: my_false_def[abs_def] corres_underlying_def)
+
+
+method corres_pre =
+  (check_corres, (fails \<open>rule corres_my_false\<close>, rule stronger_corres_guard_imp_str)?)
+
+
+named_theorems corres_concrete_r
+
+private lemma corres_r_False:
+  "False \<Longrightarrow> corres_underlying sr nf nf' (\<lambda>_. my_false) P P' f f'"
+  by simp
+
+method corres_concrete_r declares corres_concrete_r =
+  (fails \<open>rule corres_r_False\<close>, determ \<open>rule corres_concrete_r\<close>)
+
+named_theorems corres_concrete_P
+
+private lemma corres_both_False:
+  "corres_underlying sr nf nf' r my_false my_false f f'"
+  by (auto simp add: my_false_def[abs_def] corres_underlying_def)
+
+method corres_concrete_P declares corres_concrete_P =
+  (fails \<open>rule corres_both_False\<close>, determ \<open>rule corres_concrete_P\<close>)
 
 end
 
@@ -86,11 +122,7 @@ lemma corres_split_str:
   using z
   by (auto simp add: valid_def split: prod.splits)
 
-lemma stronger_corres_guard_imp_str:
-  assumes x: "corres_underlying sr nf nf' r Q Q' f g"
-  assumes y: "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> Q s \<and> Q' s'"
-  shows      "corres_underlying sr nf nf' r P P' f g"
-  using x by (auto simp: y corres_underlying_def)
+
 
 section \<open>Corres Method\<close>
 
@@ -99,24 +131,12 @@ text \<open>Handles structured decomposition of corres goals\<close>
 named_theorems
   corres_splits and
   corres_simp and (* conservative simplification rules applied when no progress can be made *)
+  corres_simp_del and (* bad simp rules that break everything *)
   corres (* solving terminal corres subgoals *)
 
 context begin
 
 text \<open>Testing for schematic goal state\<close>
-
-private definition "my_false s \<equiv> False"
-
-private
-  lemma corres_my_false: "corres_underlying sr nf nf' r my_false P f f'"
-                         "corres_underlying sr nf nf' r P' my_false f f'"
-  by (auto simp add: my_false_def[abs_def] corres_underlying_def)
-
-
-
-method corres_pre =
-  (check_corres, (fails \<open>rule corres_my_false\<close>, rule stronger_corres_guard_imp_str)?)
-
 
 lemma corres_fold_dc:
   "corres_underlying sr nf nf' dc P P' f f' \<Longrightarrow> corres_underlying sr nf nf' (\<lambda>_ _. True) P P' f f'"
@@ -126,18 +146,21 @@ private method corres_fold_dc =
   (match conclusion in
     "corres_underlying _ _ _ (\<lambda>_ _. True) _ _ _ _" \<Rightarrow> \<open>rule corres_fold_dc\<close>)
 
+
 method corres_once declares corres_splits corres corres_simp =
-   ((check_corres,corres_fold_dc?,
+   (corres_fold_dc?,
+   (corres_concrete_P | (corres_pre,
     #break "corres",
     ( determ \<open>rule corres\<close>
+    | corres_concrete_r
     | corresc
     | (rule corres_splits, corres_once)
     | (simp only: corres_simp, corres_once)
-    )))
+    ))))
 
 
 method corres declares corres_splits corres corres_simp =
-  (corres_pre, (corres_once)+)[1]
+  (corres_once+)[1]
 
 end
 
@@ -258,6 +281,7 @@ text \<open>
   after the search concludes.
 \<close>
 
+
 private method corres_search_frame methods m uses search =
    (#break "corres_search",
     ((corres?, corres_once corres: search)
@@ -277,7 +301,7 @@ method corres_search uses search
   declares corres corres_simp corres_symb_exec_ls corres_symb_exec_rs =
   (corres_pre,
    use search[corres del] in
-     \<open>use in \<open>corres_search_frame \<open>corres_search search: search\<close> search: search\<close>\<close>)
+     \<open>use in \<open>corres_search_frame \<open>corres_search search: search\<close> search: search\<close>\<close>)[1]
 
 end
 
@@ -305,7 +329,7 @@ lemma corres_stateAssert_implied_frame:
    apply (wp | rule no_fail_pre)+
   done
 
-lemma corres_return_str:
+lemma corres_return_str [corres_concrete_r]:
   "corres_underlying sr nf nf' r (\<lambda>_. r a b) \<top> (return a) (return b)"
   by simp
 
@@ -426,7 +450,7 @@ lemma corres_splitEE_str [corres_splits]:
    apply (insert z)
    by (fastforce simp: valid_def validE_def split: sum.splits)+
 
-lemma corres_returnOk_str:
+lemma corres_returnOk_str [corres_concrete_r]:
   "corres_underlying sr nf nf' r (\<lambda>_. r (Inr a) (Inr b)) \<top> (returnOk a) (returnOk b)"
   by (simp add: returnOk_def)
 
@@ -434,11 +458,30 @@ lemma corres_assertE_str[corres]:
   "corres_underlying sr nf nf' (f \<oplus> dc) (\<lambda>_. Q \<longrightarrow> P) (\<lambda>_. Q) (assertE P) (assertE Q)"
   by (auto simp add: corres_underlying_def returnOk_def return_def assertE_def fail_def)
 
+lemmas corres_symb_exec_whenE_l_search[corres_symb_exec_ls] =
+  corres_symb_exec_l_search[where 'd="'x + 'y", folded liftE_bindE]
+
+(* Failure *)
+
+lemma corres_fail_str[corres_concrete_P]:
+  "(\<And>s s'. \<lbrakk>(s, s') \<in> sr; P s; P' s'\<rbrakk> \<Longrightarrow> False) \<Longrightarrow> corres_underlying sr nf True R P P' f fail"
+  by (fastforce intro!: corres_fail)
+
+lemma corres_fail_str'[corres]:
+  "corres_underlying sr nf False (\<lambda>_ _. False) (\<lambda>_. True) (\<lambda>_. True) f fail"
+  by (fastforce intro!: corres_fail)
+
 (* Wrap it up in a big hammer. Small optimization to avoid searching when no fact is given. *)
+
 
 method corressimp uses simp search wp
   declares corres corres_splits corres_simp =
-  ((corres | wp add: wp | wpc | clarsimp simp: simp |
+  ((corres
+    | use hoare_vcg_precond_imp[wp_comb del] hoare_vcg_precond_imp[wp_pre del] in
+      \<open>use in \<open>wp add: wp\<close>\<close>
+    | wpc | clarsimp simp: simp simp del: corres_simp_del |
       (match search in _ \<Rightarrow> \<open>corres_search search: search\<close>))+)[1]
+
+declare corres_return[corres_simp_del]
 
 end
