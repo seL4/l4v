@@ -15,6 +15,49 @@ begin
 
 chapter \<open>Corres Methods\<close>
 
+section \<open>Boilerplate\<close>
+
+context begin
+
+private lemma corres_trivial:
+  "corres_underlying sr nf nf' r P P' f f' \<Longrightarrow> corres_underlying sr nf nf' r P P' f f'"
+  by simp
+
+method check_corres = succeeds \<open>rule corres_trivial\<close>
+
+end
+
+section \<open>Corresc - Corres over case statements\<close>
+
+definition
+  "corres_underlyingL \<equiv> corres_underlying"
+
+lemma wpc_helper_corres1:
+  "corres_underlyingL sr nf nf' r Q A f f' \<Longrightarrow> wpc_helper (P, P') (Q, Q') (corres_underlying sr nf nf' r P A f f')"
+  by (clarsimp simp: wpc_helper_def corres_underlyingL_def elim!: corres_guard_imp)
+
+lemma wpc_helper_corres2:
+  "corres_underlying sr nf nf' r A Q f f' \<Longrightarrow> wpc_helper (P, P') (Q, Q') (corres_underlyingL sr nf nf' r A P f f')"
+  by (clarsimp simp: wpc_helper_def corres_underlyingL_def elim!: corres_guard_imp)
+
+wpc_setup "\<lambda>f. corres_underlying sr nf nf' r P P' f f'" wpc_helper_corres1
+wpc_setup "\<lambda>f'. corres_underlyingL sr nf nf' r P P' f f'" wpc_helper_corres2
+
+lemma
+  wpc_contr_helper:
+  "A = B \<Longrightarrow> A = C \<Longrightarrow> B \<noteq> C \<Longrightarrow> P"
+  by blast
+
+text \<open>
+ Generate quadratic blowup of the case statements on either side of refinement.
+ Attempt to discharge resulting contradictions.
+\<close>
+
+method corresc uses simp =
+  (check_corres, wpc; wpc;
+    (solves \<open>rule FalseE,
+      (simp add: simp)?, (erule (1) wpc_contr_helper, simp add: simp)?\<close>)?)[1]
+
 section \<open>Alternative split rules\<close>
 
 text \<open>
@@ -63,16 +106,13 @@ context begin
 text \<open>Testing for schematic goal state\<close>
 
 private definition "my_false s \<equiv> False"
-private definition "my_false' s \<equiv> False"
 
-private lemma corres_my_false: "corres_underlying sr nf nf' r my_false my_false' f f'"
-  by (simp add: my_false_def[abs_def] my_false'_def[abs_def])
+private
+  lemma corres_my_false: "corres_underlying sr nf nf' r my_false P f f'"
+                         "corres_underlying sr nf nf' r P' my_false f f'"
+  by (auto simp add: my_false_def[abs_def] corres_underlying_def)
 
-private lemma corres_trivial:
-  "corres_underlying sr nf nf' r P P' f f' \<Longrightarrow> corres_underlying sr nf nf' r P P' f f'"
-  by simp
 
-method check_corres = succeeds \<open>rule corres_trivial\<close>
 
 method corres_pre =
   (check_corres, (fails \<open>rule corres_my_false\<close>, rule stronger_corres_guard_imp_str)?)
@@ -90,6 +130,7 @@ method corres_once declares corres_splits corres corres_simp =
    ((check_corres,corres_fold_dc?,
     #break "corres",
     ( determ \<open>rule corres\<close>
+    | corresc
     | (rule corres_splits, corres_once)
     | (simp only: corres_simp, corres_once)
     )))
@@ -129,36 +170,7 @@ lemmas [corres_simp] =
   fun_app_def comp_apply option.inject K_bind_def return_bind
   Let_def liftE_bindE
 
-section \<open>Corresc - Corres over case statements\<close>
 
-definition
-  "corres_underlyingL \<equiv> corres_underlying"
-
-lemma wpc_helper_corres1:
-  "corres_underlyingL sr nf nf' r Q A f f' \<Longrightarrow> wpc_helper (P, P') (Q, Q') (corres_underlying sr nf nf' r P A f f')"
-  by (clarsimp simp: wpc_helper_def corres_underlyingL_def elim!: corres_guard_imp)
-
-lemma wpc_helper_corres2:
-  "corres_underlying sr nf nf' r A Q f f' \<Longrightarrow> wpc_helper (P, P') (Q, Q') (corres_underlyingL sr nf nf' r A P f f')"
-  by (clarsimp simp: wpc_helper_def corres_underlyingL_def elim!: corres_guard_imp)
-
-wpc_setup "\<lambda>f. corres_underlying sr nf nf' r P P' f f'" wpc_helper_corres1
-wpc_setup "\<lambda>f'. corres_underlyingL sr nf nf' r P P' f f'" wpc_helper_corres2
-
-lemma
-  wpc_contr_helper:
-  "A = B \<Longrightarrow> A = C \<Longrightarrow> B \<noteq> C \<Longrightarrow> P"
-  by blast
-
-text \<open>
- Generate quadratic blowup of the case statements on either side of refinement.
- Attempt to discharge resulting contradictions.
-\<close>
-
-method corresc uses simp =
-  (check_corres, wpc; wpc;
-    (solves \<open>rule FalseE,
-      (simp add: simp)?, (erule (1) wpc_contr_helper, simp add: simp)?\<close>)?)[1]
 
 section \<open>Corres Search - find symbolic execution path that allows a given rule to be applied\<close>
 
@@ -421,5 +433,12 @@ lemma corres_returnOk_str:
 lemma corres_assertE_str[corres]:
   "corres_underlying sr nf nf' (f \<oplus> dc) (\<lambda>_. Q \<longrightarrow> P) (\<lambda>_. Q) (assertE P) (assertE Q)"
   by (auto simp add: corres_underlying_def returnOk_def return_def assertE_def fail_def)
+
+(* Wrap it up in a big hammer. Small optimization to avoid searching when no fact is given. *)
+
+method corressimp uses simp search wp
+  declares corres corres_splits corres_simp =
+  ((corres | wp add: wp | wpc | clarsimp simp: simp |
+      (match search in _ \<Rightarrow> \<open>corres_search search: search\<close>))+)[1]
 
 end
