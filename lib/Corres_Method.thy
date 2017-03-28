@@ -342,22 +342,22 @@ lemma corres_rv_weaken:
 
 lemma corresK_split:
   assumes x: "corres_underlyingK sr nf nf' F r' P P' a c"
-  assumes y: "\<And>rv rv'. F \<Longrightarrow> r' rv rv' \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') r (R rv) (R' rv') (b rv) (d rv')"
-  assumes z: "F \<Longrightarrow> \<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" "F \<Longrightarrow> \<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
-  assumes c: "F \<Longrightarrow> corres_rv sr (\<lambda>rv rv'. r' rv rv' \<longrightarrow> F' rv rv') PP PP' a c"
+  assumes y: "\<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') r (R rv) (R' rv') (b rv) (d rv')"
+  assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
+  assumes c: "corres_rv sr (\<lambda>rv rv'. r' rv rv' \<longrightarrow> F' rv rv') PP PP' a c"
   shows      "corres_underlyingK sr nf nf' F r (PP and P and Q) (PP' and P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
   apply (clarsimp simp: corres_underlying_def corres_underlyingK_def bind_def)
   apply (rule conjI)
    apply (frule (3) x[simplified corres_underlyingK_def, rule_format, THEN corres_underlyingD],simp)
    apply clarsimp
    apply (drule(1) bspec,clarsimp)
-   apply (insert c;simp)
+   apply (insert c;simp?)
    apply (drule(6) corres_rvD)
    apply (rule_tac x="(ac,bc)" in bexI,clarsimp)
     apply (frule_tac s'=baa in y[simplified corres_underlyingK_def, rule_format, THEN corres_underlyingD])
           apply assumption+
-       apply (erule(2) use_valid[OF _ z(1)])
-      apply (erule(2) use_valid[OF _ z(2)])
+       apply (erule(1) use_valid[OF _ z(1)])
+      apply (erule(1) use_valid[OF _ z(2)])
      apply fastforce
     apply clarsimp
     apply (drule(1) bspec,clarsimp)
@@ -366,12 +366,12 @@ lemma corresK_split:
   apply (frule (3) x[simplified corres_underlyingK_def, rule_format, THEN corres_underlyingD],simp)
   apply clarsimp
   apply (drule(1) bspec,clarsimp)
-  apply (insert c;simp)
+  apply (insert c;simp?)
   apply (drule(6) corres_rvD)
   apply (frule_tac s'=baa in y[simplified corres_underlyingK_def, rule_format, THEN corres_underlyingD])
         apply simp+
-     apply (erule(2) use_valid[OF _ z(1)])
-    apply (erule(2) use_valid[OF _ z(2)])
+     apply (erule(1) use_valid[OF _ z(1)])
+    apply (erule(1) use_valid[OF _ z(2)])
    apply fastforce
   apply clarsimp
   done
@@ -699,9 +699,9 @@ lemmas [THEN iffD2, atomized, THEN corresK_lift_rule, rule_format, corresK] =
 
 lemma corres_splitEE_str [corres_splits]:
   assumes x: "corres_underlyingK sr nf nf' F (f \<oplus> r') P P' a c"
-  assumes y: "\<And>rv rv'. F \<Longrightarrow> r' rv rv' \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') (f \<oplus> r) (R rv) (R' rv') (b rv) (d rv')"
-  assumes z: "F \<Longrightarrow> \<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>" "F \<Longrightarrow> \<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>"
-  assumes c: "F \<Longrightarrow> corres_rv sr (\<lambda>rv rv'. (case (rv,rv') of (Inr rva, Inr rva') \<Rightarrow> r' rva rva' \<longrightarrow> F' rva rva' | _ \<Rightarrow> True)) PP PP' a c"
+  assumes y: "\<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') (f \<oplus> r) (R rv) (R' rv') (b rv) (d rv')"
+  assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>"
+  assumes c: "corres_rv sr (\<lambda>rv rv'. (case (rv,rv') of (Inr rva, Inr rva') \<Rightarrow> r' rva rva' \<longrightarrow> F' rva rva' | _ \<Rightarrow> True)) PP PP' a c"
   shows      "corres_underlyingK sr nf nf' F (f \<oplus> r) (PP and P and Q) (PP' and P' and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E (\<lambda>rv'. d rv'))"
   apply (simp add: bindE_def)
   apply (rule corresK_split[OF x, where F'="\<lambda>rv rv'. case (rv,rv') of (Inr rva, Inr rva') \<Rightarrow> F' rva rva' | _ \<Rightarrow> True"])
@@ -713,7 +713,6 @@ lemma corres_splitEE_str [corres_splits]:
      apply (simp add: corres_underlyingK_def)
     apply (rule corresK_weaken)
      apply (rule y)
-     apply simp
     apply simp
     apply (subst conj_assoc[symmetric])
     apply (rule conjI)
