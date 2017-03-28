@@ -150,7 +150,7 @@ method corres_concrete_r declares corres_concrete_r corres_concrete_rER =
  | (fails \<open>rule corres_r_FalseE\<close>, determ \<open>rule corres_concrete_rER\<close>)
 
 
-
+(*
 named_theorems corres_concrete_P
 
 private lemma corres_both_False:
@@ -160,6 +160,7 @@ private lemma corres_both_False:
 method corres_concrete_P declares corres_concrete_P =
   ((rule corresK_unlift)?,
     fails \<open>rule corres_both_False\<close>, determ \<open>rule corres_concrete_P\<close>)
+*)
 
 end
 
@@ -430,7 +431,7 @@ private method corres_apply =
 
 method corres_once declares corres_splits corres corresK corres_simp corresc_simp =
    (corres_fold_dc?,
-   (corres_concrete_P | (corres_pre,
+   (corres_pre,
     #break "corres",
     ( (check_corresK, determ \<open>rule corresK\<close>)
     | corres_apply
@@ -438,7 +439,7 @@ method corres_once declares corres_splits corres corresK corres_simp corresc_sim
     | corresc
     | (rule corres_splits, corres_once)
     | (corres_simp, corres_once)
-    ))))
+    )))
 
 
 method corres declares corres_splits corres corresK corres_simp corresc_simp =
@@ -509,7 +510,7 @@ lemma corresK_symb_exec_l_search[corres_symb_exec_ls]:
   shows
   "\<lbrakk>\<And>s. \<lbrace>PP s\<rbrace> m \<lbrace>\<lambda>_. op = s\<rbrace>; \<And>rv. corres_underlyingK sr nf True (F rv) r (Q rv) P' (x rv) y;
    empty_fail m; no_fail P m; \<lbrace>R\<rbrace> m \<lbrace>Q\<rbrace>; \<lbrace>RR\<rbrace> m \<lbrace>\<lambda>rv s. F rv\<rbrace>\<rbrakk>
-\<Longrightarrow> corres_underlyingK sr nf True True r (P and R and RR and (\<lambda>s. \<forall>s'. s = s' \<longrightarrow> PP s' s)) P' (m >>= x) y"
+\<Longrightarrow> corres_underlyingK sr nf True True r (RR and P and R and (\<lambda>s. \<forall>s'. s = s' \<longrightarrow> PP s' s)) P' (m >>= x) y"
   apply (simp add: corres_underlyingK_def)
   apply (rule corres_name_pre)
   apply (clarsimp simp: corres_underlying_def corres_underlyingK_def
@@ -546,7 +547,7 @@ lemma corresK_symb_exec_r_search[corres_symb_exec_rs]:
   assumes Z: "\<lbrace>R\<rbrace> m \<lbrace>Q'\<rbrace>"
   assumes Y: "\<lbrace>RR\<rbrace> m \<lbrace>\<lambda>rv s. F rv\<rbrace>"
   shows
-  "corres_underlyingK sr nf nf' True r P (P' and R and RR and (\<lambda>s. \<forall>s'. s = s' \<longrightarrow> PP' s' s)) x (m >>= y)"
+  "corres_underlyingK sr nf nf' True r P (RR and P' and R and (\<lambda>s. \<forall>s'. s = s' \<longrightarrow> PP' s' s)) x (m >>= y)"
   apply (insert corres)
   apply (simp add: corres_underlyingK_def)
   apply (rule corres_name_pre)
@@ -619,7 +620,7 @@ end
 chapter \<open>Misc Helper Lemmas\<close>
 
 
-lemma corresK_assert[corres]:
+lemma corresK_assert[corresK]:
   "corres_underlyingK sr nf nf' ((nf' \<longrightarrow> Q) \<and> P) dc \<top> \<top> (assert P) (assert Q)"
   by (auto simp add: corres_underlyingK_def corres_underlying_def return_def assert_def fail_def)
 
@@ -744,10 +745,9 @@ lemmas corres_returnOk_liftEs
 
 (* Failure *)
 
-lemma corresK_fail[corres_concrete_P]:
-  "corres_underlyingK sr nf True (\<forall>s s'. (s, s') \<in> sr \<longrightarrow> P s \<longrightarrow> P' s' \<longrightarrow> False) r P P' f fail"
-  apply (simp add: corres_underlyingK_def)
-  by (fastforce intro!: corres_fail)
+lemma corresK_fail[corresK]:
+  "corres_underlyingK sr nf True False r P P' f fail"
+  by (simp add: corres_underlyingK_def)
 
 lemma corresK_fail_no_fail'[corresK]:
   "corres_underlyingK sr nf False True (\<lambda>_ _. False) (\<lambda>_. True) (\<lambda>_. True) f fail"
@@ -763,7 +763,8 @@ method corressimp uses simp cong search wp
   ((corres corresc_simp: simp
     | use hoare_vcg_precond_imp[wp_comb del] hoare_vcg_precond_imp[wp_pre del] in
       \<open>use in \<open>wp add: wp\<close>\<close>
-    | wpc | clarsimp cong: cong simp: simp simp del: corres_simp_del | rule corres_rv_trivial |
+    | wpc | clarsimp cong: cong simp: simp simp del: corres_simp_del split del: if_split
+    | rule corres_rv_trivial |
       (match search in _ \<Rightarrow> \<open>corres_search search: search\<close>))+)[1]
 
 declare corres_return[corres_simp_del]
