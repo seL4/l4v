@@ -58,21 +58,7 @@ defs ioPortGetLastPort_def:
 "ioPortGetLastPort arg1 \<equiv> error []"
 
 defs updateCapData_def:
-"updateCapData x0 newData x2\<equiv> (let c = x2 in
-  if isIOPortCap c
-  then  
-    let
-        firstPort = ioPortGetFirstPort newData;
-        lastPort = ioPortGetLastPort newData
-    in
-    if (capIOPortFirstPort c \<le> capIOPortLastPort c)
-     then if (firstPort \<le> lastPort \<and> firstPort \<ge> capIOPortFirstPort c
-                      \<and> lastPort \<le> capIOPortLastPort c)
-               then (ArchObjectCap (IOPortCap firstPort lastPort))
-               else NullCap
-    else error []
-  else   ArchObjectCap c
-  )"
+"updateCapData arg1 arg2 c \<equiv> ArchObjectCap c"
 
 defs maskCapRights_def:
 "maskCapRights r x1\<equiv> (let c = x1 in
@@ -137,15 +123,26 @@ defs sameRegionAs_def:
     capPML4BasePtr a = capPML4BasePtr b
   else if isASIDControlCap a \<and> isASIDControlCap b
   then   True
-  else if isIOPortCap a \<and> isIOPortCap b
+  else if isASIDPoolCap a \<and> isASIDPoolCap b
   then
     capASIDPool a = capASIDPool b
-  else   True
+  else if isIOPortCap a \<and> isIOPortCap b
+  then
+    let
+        fA = capIOPortFirstPort a;
+        fB = capIOPortFirstPort b;
+        lA = capIOPortLastPort a;
+        lB = capIOPortLastPort b
+    in
+
+    (fA \<le> fB) \<and> (lB \<le> lA) \<and> (fB \<le> lB)
+  else   False
   )"
 
 defs isPhysicalCap_def:
 "isPhysicalCap x0\<equiv> (case x0 of
     ASIDControlCap \<Rightarrow>    False
+  | (IOPortCap _ _) \<Rightarrow>    False
   | _ \<Rightarrow>    True
   )"
 
@@ -156,6 +153,12 @@ defs sameObjectAs_def:
   in  
     (ptrA = capVPBasePtr b) \<and> (capVPSize a = capVPSize b)
         \<and> (ptrA \<le> ptrA + bit (pageBitsForSize $ capVPSize a) - 1)
+        \<and> (capVPIsDevice a = capVPIsDevice b)
+  else if isIOPortCap a \<and> isIOPortCap b
+  then let fA = capIOPortFirstPort a
+  in
+    (fA = capIOPortFirstPort b) \<and> (capIOPortLastPort a = capIOPortLastPort b)
+        \<and> (fA \<le> capIOPortLastPort a)
   else   sameRegionAs a b
   )"
 
