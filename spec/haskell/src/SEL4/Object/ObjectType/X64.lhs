@@ -98,17 +98,19 @@ X64 has two writable user data caps
 >--                     && domID /= 0 && domID <= mask domIDBits)
 >--                then (ArchObjectCap (IOSpaceCap domID pciDevice))
 >--                else NullCap -}
-> updateCapData _ newData (c@IOPortCap {}) =
->     let
->         firstPort = ioPortGetFirstPort newData;
->         lastPort = ioPortGetLastPort newData
->     in
->     if (capIOPortFirstPort c <= capIOPortLastPort c)
->      then if (firstPort <= lastPort && firstPort >= capIOPortFirstPort c
->                       && lastPort <= capIOPortLastPort c)
->                then (ArchObjectCap (IOPortCap firstPort lastPort))
->                else NullCap
->     else error "first port must be less than last"
+>-- updateCapData _ newData (c@IOPortCap {}) =
+>--     let
+>--         firstPort = ioPortGetFirstPort newData;
+>--         lastPort = ioPortGetLastPort newData;
+>--         oldLast = capIOPortLastPort c;
+>--         oldFirst = capIOPortFirstPort c
+>--     in
+>--     if (oldFirst <= oldLast) then
+>--         if (firstPort <= lastPort && firstPort >= capIOPortFirstPort c
+>--                       && lastPort <= oldLast)
+>--           then (ArchObjectCap (IOPortCap firstPort lastPort))
+>--           else NullCap
+>--     else error "first port must be less than last"
 > updateCapData _ _ c = ArchObjectCap c
 
 Page capabilities have read and write permission bits, which are used to restrict virtual memory accesses to their contents. Note that the ability to map objects into a page table or page directory is granted by possession of a capability to it; there is no specific permission bit restricting this ability.
@@ -214,7 +216,14 @@ Deletion of a final capability to a page table that has been mapped requires tha
 > sameRegionAs ASIDControlCap ASIDControlCap = True
 > sameRegionAs (a@ASIDPoolCap {}) (b@ASIDPoolCap {}) =
 >     capASIDPool a == capASIDPool b
-> sameRegionAs (IOPortCap {}) (IOPortCap {}) = True
+> sameRegionAs (a@IOPortCap {}) (b@IOPortCap {}) =
+>     (fA <= fB) && (lB <= lA) && (fB <= lB)
+>     where
+>         fA = capIOPortFirstPort a
+>         fB = capIOPortFirstPort b
+>         lA = capIOPortLastPort a
+>         lB = capIOPortLastPort b
+
 > --sameRegionAs (a@IOSpaceCap {}) (b@IOSpaceCap {}) =
 > --    capIOPCIDevice a == capIOPCIDevice b
 > --sameRegionAs (a@IOPageTableCap {}) (b@IOPageTableCap {}) =
@@ -230,6 +239,10 @@ Deletion of a final capability to a page table that has been mapped requires tha
 > sameObjectAs (a@PageCap { capVPBasePtr = ptrA }) (b@PageCap {}) =
 >     (ptrA == capVPBasePtr b) && (capVPSize a == capVPSize b)
 >         && (ptrA <= ptrA + bit (pageBitsForSize $ capVPSize a) - 1)
+>         && (capVPIsDevice a == capVPIsDevice b)
+> sameObjectAs (a@IOPortCap { capIOPortFirstPort = fA }) (b@IOPortCap {}) =
+>     (fA == capIOPortFirstPort b) && (capIOPortLastPort a == capIOPortLastPort b)
+>         && (fA <= capIOPortLastPort a)
 > sameObjectAs a b = sameRegionAs a b
 
 \subsection{Creating New Capabilities}
