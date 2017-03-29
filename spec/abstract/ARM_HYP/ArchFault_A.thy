@@ -24,7 +24,8 @@ fun make_arch_fault_msg :: "arch_fault \<Rightarrow> obj_ref \<Rightarrow> (data
 where
   "make_arch_fault_msg (VMFault vptr archData) thread = do
      pc \<leftarrow> as_user thread getRestartPC;
-     return (5, pc # vptr # archData) od"
+     upc \<leftarrow> do_machine_op (addressTranslateS1CPR pc);
+     return (5, (upc && ~~ mask pageBits || pc && mask pageBits) # vptr # archData) od"
 | "make_arch_fault_msg (VCPUFault hsr) thread = return (7, [hsr])"
 | "make_arch_fault_msg (VGICMaintenance archData) thread = return (6, archData)" (* FIXME ARMHYP check vgic index here? *)
 
