@@ -35,7 +35,7 @@ definition
   "cap_master_arch_cap acap \<equiv>
      (case acap of
            ASIDPoolCap pool asid \<Rightarrow> ASIDPoolCap pool 0
-         | IOPortCap first_port last_port \<Rightarrow> IOPortCap 0 (-1)
+         | IOPortCap f l \<Rightarrow> IOPortCap f l
          | PageCap dev ref rghts map_type sz map_data \<Rightarrow> PageCap dev ref UNIV VMNoMap sz None
          | PageTableCap ptr data \<Rightarrow> PageTableCap ptr None
          | PageDirectoryCap ptr data \<Rightarrow> PageDirectoryCap ptr None
@@ -49,8 +49,7 @@ lemma
      \<Longrightarrow> asid = 0 \<and> (\<exists>asid. cap = ASIDPoolCap pool asid)"
   "cap_master_arch_cap cap = ASIDControlCap \<Longrightarrow> cap = ASIDControlCap"
   "cap_master_arch_cap cap = IOPortCap first_port last_port
-     \<Longrightarrow> first_port = 0 \<and> last_port = -1
-          \<and> (\<exists>first_port last_port. cap = IOPortCap first_port last_port)"
+     \<Longrightarrow> (cap = IOPortCap first_port last_port)"
   "cap_master_arch_cap cap = PageCap dev ref rghts map_type sz map_data
      \<Longrightarrow> rghts = UNIV \<and> map_type = VMNoMap \<and> map_data = None
           \<and> (\<exists>rghts map_type map_data. cap = PageCap dev ref rghts map_type sz map_data)"

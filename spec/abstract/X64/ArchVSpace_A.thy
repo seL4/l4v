@@ -428,14 +428,7 @@ text {* No user-modifiable data is stored in x64-specific capabilities. *}
 definition
   arch_update_cap_data :: "data \<Rightarrow> arch_cap \<Rightarrow> cap"
 where
-  "arch_update_cap_data data c \<equiv> case c of
-    IOPortCap first_port_old last_port_old \<Rightarrow>
-      let first_port = (ucast data ); (* ioPortGetFirstPort *)
-          last_port = (ucast (data >> 16)) (* ioPortGetLastPort *) in
-        if (first_port \<le> last_port \<and> first_port \<ge> first_port_old \<and> last_port \<le> last_port_old)
-          then ArchObjectCap $ IOPortCap first_port last_port
-          else NullCap
-  | _ \<Rightarrow> ArchObjectCap c"
+  "arch_update_cap_data data c \<equiv> ArchObjectCap c"
 
 
 text {* Actions that must be taken on finalisation of x64-specific

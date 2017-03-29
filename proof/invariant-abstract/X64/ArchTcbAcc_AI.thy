@@ -25,8 +25,7 @@ lemma cap_master_cap_arch_eqDs:
   "cap_master_cap cap = ArchObjectCap ASIDControlCap
      \<Longrightarrow> cap = ArchObjectCap ASIDControlCap"
   "cap_master_cap cap = ArchObjectCap (IOPortCap first_port last_port)
-     \<Longrightarrow> first_port = 0 \<and> last_port = -1
-          \<and> (\<exists> first_port last_port. cap = ArchObjectCap (IOPortCap first_port last_port))"
+     \<Longrightarrow> cap = ArchObjectCap (IOPortCap first_port last_port)"
   "cap_master_cap cap = ArchObjectCap (PageCap dev ref rghts maptype sz mapdata)
      \<Longrightarrow> maptype = VMNoMap \<and> rghts = UNIV \<and> mapdata = None
           \<and> (\<exists>maptype rghts mapdata. cap = ArchObjectCap (PageCap dev ref rghts maptype sz mapdata))"

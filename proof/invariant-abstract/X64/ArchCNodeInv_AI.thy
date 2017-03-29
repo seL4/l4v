@@ -99,7 +99,7 @@ lemma same_object_as_def2:
                                 \<and> (is_arch_cap cp \<longrightarrow>
                                      (case the_arch_cap cp of
                                          PageCap d x rs tp sz v \<Rightarrow> x \<le> x + 2 ^ pageBitsForSize sz - 1
-                                       | IOPortCap f l \<Rightarrow> case cp' of ArchObjectCap (IOPortCap _ _) \<Rightarrow> True | _ \<Rightarrow> False
+                                       | IOPortCap f l \<Rightarrow> f \<le> l
                                        | _ \<Rightarrow> True)))"
   apply (simp add: same_object_as_def is_cap_simps split: cap.split)
   apply (auto simp: cap_master_cap_def bits_of_def is_cap_simps

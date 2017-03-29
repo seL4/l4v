@@ -84,7 +84,7 @@ lemma
   cap_master_cap_arch_simps:
   "cap_master_arch_cap (ASIDPoolCap pool asid) = ASIDPoolCap pool 0"
   "cap_master_arch_cap ASIDControlCap = ASIDControlCap"
-  "cap_master_arch_cap (IOPortCap first_port last_port) = IOPortCap 0 (-1)"
+  "cap_master_arch_cap (IOPortCap f l) = IOPortCap f l"
   "cap_master_arch_cap (PageCap dev ref rghts maptype sz mapdata)
       = PageCap dev ref UNIV VMNoMap sz None"
   "cap_master_arch_cap (PageTableCap ptr x) = PageTableCap ptr None"

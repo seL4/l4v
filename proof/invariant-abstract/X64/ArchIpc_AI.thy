@@ -40,14 +40,7 @@ lemma update_cap_data_closedform:
    | IRQControlCap \<Rightarrow> IRQControlCap
    | IRQHandlerCap irq \<Rightarrow> IRQHandlerCap irq
    | Zombie r b n \<Rightarrow> Zombie r b n
-   | ArchObjectCap cap \<Rightarrow> 
-       let fst = ucast w;
-           lst = ucast (w >> 16)
-       in case cap of IOPortCap old_fst old_lst \<Rightarrow> 
-              if (fst \<le> lst \<and> fst \<ge> old_fst \<and> lst \<le> old_lst)
-              then ArchObjectCap (IOPortCap fst lst)
-              else NullCap
-           | _ \<Rightarrow> ArchObjectCap cap)"
+   | ArchObjectCap cap \<Rightarrow> ArchObjectCap cap)"
   apply (cases cap,
          simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
                         is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
