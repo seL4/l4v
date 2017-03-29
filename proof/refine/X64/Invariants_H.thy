@@ -421,7 +421,7 @@ where valid_cap'_def:
   | Structures_H.CNodeCap r bits guard guard_sz \<Rightarrow>
     bits \<noteq> 0 \<and> bits + guard_sz \<le> word_bits \<and>
     guard && mask guard_sz = guard \<and>
-    (\<forall>addr. real_cte_at' (r + 16 * (addr && mask bits)) s)
+    (\<forall>addr. real_cte_at' (r + 32 * (addr && mask bits)) s)
   | Structures_H.ThreadCap r \<Rightarrow> tcb_at' r s
   | Structures_H.ReplyCap r m \<Rightarrow> tcb_at' r s
   | Structures_H.IRQControlCap \<Rightarrow> True

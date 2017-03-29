@@ -22,7 +22,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 definition
   cte_map :: "cslot_ptr \<Rightarrow> machine_word"
 where
- "cte_map \<equiv> \<lambda>(oref, cref). oref + (of_bl cref * 16)"
+ "cte_map \<equiv> \<lambda>(oref, cref). oref + (of_bl cref * 32)"
 
 definition
   lookup_failure_map :: "ExceptionTypes_A.lookup_failure \<Rightarrow> Fault_H.lookup_failure"

@@ -146,7 +146,7 @@ lemma obj_size_relation:
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap,
     simp_all add: objBits_def X64_H.capUntypedSize_def asid_low_bits_def
-                  pageBits_def)
+                  bit_simps)
   done
 
 lemma same_region_as_relation:
@@ -291,13 +291,13 @@ lemma cap_relation_masks:
   "cap_relation c c' \<Longrightarrow> cap_relation
       (cap_rights_update (cap_rights c \<inter> rmask) c)
       (RetypeDecls_H.maskCapRights (rights_mask_map rmask) c')"
-apply (case_tac c, simp_all add: isCap_defs maskCapRights_def Let_def
+  apply (case_tac c, simp_all add: isCap_defs maskCapRights_def Let_def
                                  rights_mask_map_def maskVMRights_def
                                  AllowSend_def AllowRecv_def
                                  cap_rights_update_def
                           split del: if_split)
-apply (clarsimp simp add: isCap_defs)
-by (rule ArchAcc_R.arch_cap_rights_update
+  apply (clarsimp simp add: isCap_defs)
+  by (rule ArchAcc_R.arch_cap_rights_update
          [simplified, simplified rights_mask_map_def])
 
 lemma getCTE_wp:
@@ -422,15 +422,15 @@ lemma cap_map_update_data:
   shows   "cap_relation (update_cap_data p x c) (updateCapData p x c')"
 proof -
   note simps = update_cap_data_def updateCapData_def word_size
-               isCap_defs is_cap_defs Let_def
+               isCap_defs is_cap_defs Let_def badge_bits_def
                cap_rights_update_def badge_update_def
-  { fix x :: word32
-    def y \<equiv> "(x >> 8) && mask 18"
-    def z \<equiv> "unat ((x >> 3) && mask 5)"
-    have "of_bl (to_bl (y && mask z)) = (of_bl (replicate (32-z) False @ drop (32-z) (to_bl y))::word32)"
+  { fix x :: machine_word
+    def y \<equiv> "(x >> 8) && mask 18" (* guard_bits *)
+    def z \<equiv> "unat ((x >> 2) && mask 6)" (* cnode_padding_bits, cnode_guard_size_bits *)
+    have "of_bl (to_bl (y && mask z)) = (of_bl (replicate (64-z) False @ drop (64-z) (to_bl y))::machine_word)"
       by (simp add: bl_and_mask)
     then
-    have "y && mask z = of_bl (drop (32 - z) (to_bl y))"
+    have "y && mask z = of_bl (drop (64 - z) (to_bl y))"
       apply simp
       apply (subst test_bit_eq_iff [symmetric])
       apply (rule ext)
