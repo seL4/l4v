@@ -209,13 +209,8 @@ defs updateCapData_def:
   then let w = v17; cap = v18
   in  
     let
-        rightsBits = 3;
-        guardBits = (if finiteBitSize w = 32
-            then  18
-            else if finiteBitSize w = 64
-            then  48
-            else  error []
-            );
+        rightsBits = 2;
+        guardBits = 18;
         guardSizeBits = (if finiteBitSize w = 32
             then  5
             else if finiteBitSize w = 64
@@ -243,7 +238,7 @@ defs updateCapData_def:
   )"
 
 defs badgeBits_def:
-"badgeBits \<equiv> 28"
+"badgeBits \<equiv> wordSizeCase 28 64"
 
 defs maskCapRights_def:
 "maskCapRights r x1\<equiv> (let c = x1; aoCap = capCap x1 in

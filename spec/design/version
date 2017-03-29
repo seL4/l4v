@@ -1,24 +1,12 @@
 Built from git repo at /home/joelb/work/verification/l4v/spec/haskell by joelb
 
 Generated from changeset:
-03e2595 x64: progress in CSpace_I
+52439db x64: haskell-translator: make translator use whitespace removal tool
 
 
 Warning - uncomitted changes used:
- M ../../proof/invariant-abstract/X64/ArchCNodeInv_AI.thy
- M ../../proof/invariant-abstract/X64/ArchCSpaceInvPre_AI.thy
- M ../../proof/invariant-abstract/X64/ArchCSpacePre_AI.thy
- M ../../proof/invariant-abstract/X64/ArchIpc_AI.thy
- M ../../proof/invariant-abstract/X64/ArchTcbAcc_AI.thy
- M ../../proof/refine/X64/Bits_R.thy
- M ../../proof/refine/X64/CSpace_I.thy
+ M ../../proof/refine/X64/CSpace1_R.thy
  M ../../proof/refine/X64/Invariants_H.thy
- M ../../proof/refine/X64/KHeap_R.thy
  M ../../proof/refine/X64/StateRelation.thy
- M ../abstract/X64/ArchCSpace_A.thy
- M ../abstract/X64/ArchVSpace_A.thy
- M ../design/X64/ArchRetype_H.thy
  M ../design/version
- M src/SEL4/Object/ObjectType/X64.lhs
- M ../../tools/haskell-translator/caseconvs
- M ../../tools/haskell-translator/make_spec.sh
+ M src/SEL4/Object/ObjectType.lhs
