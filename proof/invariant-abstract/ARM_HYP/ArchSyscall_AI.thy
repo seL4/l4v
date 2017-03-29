@@ -108,6 +108,8 @@ lemma hh_invs[wp, Syscall_AI_assms]:
   handle_hypervisor_fault thread fault \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (cases fault; wpsimp simp: valid_fault_def)
 
+crunch cur_thread[wp, Syscall_AI_assms]: make_fault_msg "\<lambda>s. P (cur_thread s)"
+
 end
 
 global_interpretation Syscall_AI?: Syscall_AI

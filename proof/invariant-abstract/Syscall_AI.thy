@@ -467,6 +467,9 @@ locale Syscall_AI = Systemcall_AI_Pre:Systemcall_AI_Pre _ state_ext_t
     \<lbrace>invs and ct_active and st_tcb_at active thread and ex_nonz_cap_to thread\<rbrace>
       handle_hypervisor_fault thread fault
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_fault_msg_cur_thread[wp]:
+    "\<And>ft t. make_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. P (cur_thread s)\<rbrace>"
+
 
 
 
@@ -1224,7 +1227,7 @@ crunch cur_thread[wp]: set_extra_badge "\<lambda>s. P (cur_thread s)"
 crunch (in Syscall_AI) cur_thread[wp]: handle_reply "\<lambda>s :: 'state_ext state. P (cur_thread s)"
   (wp: crunch_wps transfer_caps_loop_pres
         simp: unless_def crunch_simps
-      ignore: transfer_caps_loop)
+      ignore: transfer_caps_loop make_fault_msg)
 
 lemmas cap_delete_one_st_tcb_at_simple[wp] =
     cap_delete_one_st_tcb_at[where P=simple, simplified]

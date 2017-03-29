@@ -41,7 +41,7 @@ context Arch begin global_naming ARM
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
-         Let_def wp: zipWithM_x_empty_fail)
+         Let_def wp: zipWithM_x_empty_fail empty_fail_addressTranslateS1CPR)
 
 crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notification, decode_unbind_notification
   (simp: cap.splits arch_cap.splits split_def)

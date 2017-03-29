@@ -1917,7 +1917,11 @@ lemma transfer_caps_not_cur_thread[wp]:
    \<lbrace>\<lambda>rv. not_cur_thread t\<rbrace>"
   by (simp add: transfer_caps_def | wp transfer_caps_loop_pres | wpc)+
 
-crunch not_cur_thread[wp]: do_ipc_transfer, as_user "not_cur_thread t"
+
+crunch not_cur_thread[wp]: as_user "not_cur_thread t"
+  (wp: crunch_wps simp: crunch_simps ignore: const_on_failure)
+
+crunch (in DetSchedSchedule_AI) not_cur_thread[wp] : do_ipc_transfer "not_cur_thread t"
   (wp: crunch_wps simp: crunch_simps ignore: const_on_failure)
 
 lemma switch_if_required_to_valid_sched':

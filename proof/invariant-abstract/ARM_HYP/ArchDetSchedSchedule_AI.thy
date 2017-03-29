@@ -417,6 +417,13 @@ crunch valid_list [wp, DetSchedSchedule_AI_assms]:
 
 crunch cur_tcb [wp, DetSchedSchedule_AI_assms]: handle_arch_fault_reply, handle_vm_fault cur_tcb
 
+crunch not_cur_thread [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg "not_cur_thread t'"
+crunch valid_sched    [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg valid_sched
+crunch ready_queues   [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg "\<lambda>s. P (ready_queues s)"
+crunch valid_etcbs    [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg valid_etcbs
+
+crunch scheduler_action [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg "\<lambda>s. P (scheduler_action s)"
+
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI

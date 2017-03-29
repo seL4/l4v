@@ -60,14 +60,10 @@ locale DetSchedDomainTime_AI =
     "\<And>P t p. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_tcb_set_ipc_buffer t p \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_invoke_irq_control_domain_list_inv'[wp]:
     "\<And>P i. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_invoke_irq_control i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes arch_perform_invocation_domain_list_inv'[wp]:
-    "\<And>P i. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_perform_invocation i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes handle_vm_fault_domain_list_inv'[wp]:
     "\<And>P t f. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> handle_vm_fault t f \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes prepare_thread_delete_domain_list_inv'[wp]:
     "\<And>P t. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  assumes handle_hypervisor_fault_domain_list_inv'[wp]:
-    "\<And>P t f. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> handle_hypervisor_fault t f \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes finalise_cap_domain_time_inv'[wp]:
     "\<And>P cap fin. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_finalise_cap cap fin \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_activate_idle_thread_domain_time_inv'[wp]:
@@ -86,14 +82,24 @@ locale DetSchedDomainTime_AI =
     "\<And>P t p. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_tcb_set_ipc_buffer t p \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_invoke_irq_control_domain_time_inv'[wp]:
     "\<And>P i. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_invoke_irq_control i \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
-  assumes arch_perform_invocation_domain_time_inv'[wp]:
-    "\<And>P i. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_perform_invocation i \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes handle_vm_fault_domain_time_inv'[wp]:
     "\<And>P t f. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> handle_vm_fault t f \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes prepare_thread_delete_domain_time_inv'[wp]:
     "\<And>P t. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+  assumes make_arch_fault_msg_domain_time_inv'[wp]:
+    "\<And>P ft t. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> make_arch_fault_msg ft t \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+  assumes make_arch_fault_msg_domain_list_inv'[wp]:
+    "\<And>P ft t. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> make_arch_fault_msg ft t \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+
+locale DetSchedDomainTime_AI_2 = DetSchedDomainTime_AI +
+  assumes handle_hypervisor_fault_domain_list_inv'[wp]:
+    "\<And>P t f. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> handle_hypervisor_fault t f \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes handle_hypervisor_fault_domain_time_inv'[wp]:
     "\<And>P t f. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> handle_hypervisor_fault t f \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+  assumes arch_perform_invocation_domain_list_inv'[wp]:
+    "\<And>P i. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_perform_invocation i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+  assumes arch_perform_invocation_domain_time_inv'[wp]:
+    "\<And>P i. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_perform_invocation i \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes handle_interrupt_valid_domain_time:
     "\<And>i.
       \<lbrace>\<lambda>s :: det_ext state. 0 < domain_time s \<rbrace>
@@ -118,14 +124,15 @@ crunch domain_list_inv[wp]: cap_delete, activate_thread "\<lambda>s. P (domain_l
 crunch domain_list_inv[wp]: schedule "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imp simp: Let_def)
 
-crunch domain_list_inv[wp]: handle_interrupt "\<lambda>s. P (domain_list s)"
-
 end
+
+crunch (in DetSchedDomainTime_AI_2) domain_list_inv[wp]: handle_interrupt "\<lambda>s. P (domain_list s)"
 
 crunch domain_list_inv[wp]:
   lookup_cap_and_slot, cap_insert, set_extra_badge "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps)
 
+context DetSchedDomainTime_AI begin
 crunch domain_list_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps transfer_caps_loop_pres simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
@@ -134,7 +141,7 @@ crunch domain_list_inv[wp]: copy_mrs "\<lambda>s. P (domain_list s)"
 crunch domain_list_inv[wp]: handle_fault "\<lambda>s. P (domain_list s)"
   (wp: mapM_wp hoare_drop_imps simp: crunch_simps ignore:copy_mrs)
 
-context DetSchedDomainTime_AI begin
+
 crunch domain_list_inv[wp]:
   reply_from_kernel, create_cap, retype_region, do_reply_transfer
   "\<lambda>s. P (domain_list s)"
@@ -166,12 +173,12 @@ crunch domain_list_inv[wp]:
   "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
 
-crunch domain_list_inv[wp]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
+end
+
+crunch (in DetSchedDomainTime_AI_2) domain_list_inv[wp]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
 
-crunch domain_list_inv[wp]: handle_interrupt "\<lambda>s. P (domain_list s)"
-
-end
+crunch (in DetSchedDomainTime_AI_2) domain_list_inv[wp]: handle_interrupt "\<lambda>s. P (domain_list s)"
 
 crunch domain_list_inv[wp]: cap_move "\<lambda>s. P (domain_list s)"
 
@@ -187,7 +194,7 @@ crunch domain_list_inv[wp]: cancel_badged_sends "\<lambda>s. P (domain_list s)"
      simp: filterM_mapM crunch_simps
        wp: crunch_wps)
 
-context DetSchedDomainTime_AI begin
+context DetSchedDomainTime_AI_2 begin
 
 lemma invoke_cnode_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s :: det_ext state. P (domain_list s)\<rbrace>
@@ -276,6 +283,8 @@ crunch domain_time_inv[wp]: cap_insert "\<lambda>s. P (domain_time s)"
 
 crunch domain_time_inv[wp]: set_extra_badge "\<lambda>s. P (domain_time s)"
 
+context DetSchedDomainTime_AI begin
+
 crunch domain_time_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps transfer_caps_loop_pres simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
@@ -288,7 +297,6 @@ crunch domain_time_inv[wp]:
   reply_from_kernel, create_cap, retype_region
   "\<lambda>s. P (domain_time s)"
 
-context DetSchedDomainTime_AI begin
 crunch domain_time_inv[wp]: do_reply_transfer "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps)
 end
@@ -335,7 +343,7 @@ crunch domain_time_inv[wp]: cancel_badged_sends "\<lambda>s. P (domain_time s)"
      simp: filterM_mapM crunch_simps
        wp: crunch_wps)
 
-context DetSchedDomainTime_AI begin
+context DetSchedDomainTime_AI_2 begin
 
 lemma invoke_cnode_domain_time_inv[wp]:
   "\<lbrace>\<lambda>s :: det_ext state. P (domain_time s)\<rbrace>
@@ -407,7 +415,7 @@ lemma hoare_false_imp:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. \<not> R r s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. R r s \<longrightarrow> Q r s\<rbrace>"
   by (auto simp: valid_def)
 
-context DetSchedDomainTime_AI begin
+context DetSchedDomainTime_AI_2 begin
 
 lemma call_kernel_domain_time_inv_det_ext:
   "\<lbrace> (\<lambda>s. 0 < domain_time s) and valid_domain_list and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) \<rbrace>
