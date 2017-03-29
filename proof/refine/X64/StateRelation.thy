@@ -723,7 +723,7 @@ lemmas isCap_defs =
   isPageCap_def isPageTableCap_def isPageDirectoryCap_def
   isPDPointerTableCap_def isPML4Cap_def isIOPortCap_def
   isASIDControlCap_def isASIDPoolCap_def isArchPageCap_def
-  isDomainCap_def
+  isDomainCap_def isArchIOPortCap_def
 
 lemma isCNodeCap_cap_map [simp]:
   "cap_relation c c' \<Longrightarrow> isCNodeCap c' = is_cnode_cap c"

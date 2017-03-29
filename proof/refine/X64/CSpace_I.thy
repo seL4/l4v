@@ -630,7 +630,7 @@ where
  | UntypedCap d ref n f \<Rightarrow> UntypedCap d ref n 0
  | ArchObjectCap acap \<Rightarrow> ArchObjectCap (case acap of
       PageCap ref rghts mt sz d mapdata \<Rightarrow>
-         PageCap ref VMReadWrite mt sz d None
+         PageCap ref VMReadWrite VMNoMap sz d None
     | ASIDPoolCap pool asid \<Rightarrow>
          ASIDPoolCap pool 0
     | PageTableCap ptr data \<Rightarrow>
@@ -641,8 +641,6 @@ where
          PDPointerTableCap ptr None
     | PML4Cap ptr data \<Rightarrow>
          PML4Cap ptr None
-    | IOPortCap f l \<Rightarrow>
-         IOPortCap 0 max_word
     | _ \<Rightarrow> acap)
  | _ \<Rightarrow> cap"
 
@@ -660,7 +658,7 @@ lemma capMasterCap_simps[simp]:
   "capMasterCap (capability.ArchObjectCap arch_capability.ASIDControlCap) =
          capability.ArchObjectCap arch_capability.ASIDControlCap"
   "capMasterCap (capability.ArchObjectCap (arch_capability.PageCap word vmrights mt vmpage_size d pdata)) =
-            capability.ArchObjectCap (arch_capability.PageCap word VMReadWrite mt vmpage_size d None)"
+            capability.ArchObjectCap (arch_capability.PageCap word VMReadWrite VMNoMap vmpage_size d None)"
   "capMasterCap (capability.ArchObjectCap (arch_capability.PageTableCap word ptdata)) =
             capability.ArchObjectCap (arch_capability.PageTableCap word None)"
   "capMasterCap (capability.ArchObjectCap (arch_capability.PageDirectoryCap word pddata)) =
@@ -669,8 +667,8 @@ lemma capMasterCap_simps[simp]:
             capability.ArchObjectCap (arch_capability.PDPointerTableCap word None)"
   "capMasterCap (capability.ArchObjectCap (arch_capability.PML4Cap word pml4data)) =
             capability.ArchObjectCap (arch_capability.PML4Cap word None)"
-  "capMasterCap (capability.ArchObjectCap (arch_capability.IOPortCap ft l)) =
-            capability.ArchObjectCap (arch_capability.IOPortCap 0 max_word)"
+  "capMasterCap (capability.ArchObjectCap (arch_capability.IOPortCap ft lt)) =
+            capability.ArchObjectCap (arch_capability.IOPortCap ft lt)"
   "capMasterCap (capability.UntypedCap d word n f) = capability.UntypedCap d word n 0"
   "capMasterCap capability.IRQControlCap = capability.IRQControlCap"
   "capMasterCap (capability.ReplyCap word m) = capability.ReplyCap word True"
@@ -702,8 +700,8 @@ lemma capMasterCap_eqDs1:
   "capMasterCap cap = ReplyCap ref master
      \<Longrightarrow> \<exists>master. cap = ReplyCap ref master"
   "capMasterCap cap = ArchObjectCap (PageCap ref rghts mt sz d mapdata)
-     \<Longrightarrow> rghts = VMReadWrite \<and> mapdata = None
-          \<and> (\<exists>rghts mapdata. cap = ArchObjectCap (PageCap ref rghts mt sz d mapdata))"
+     \<Longrightarrow> rghts = VMReadWrite \<and> mapdata = None \<and> mt = VMNoMap
+          \<and> (\<exists>rghts mapdata mt. cap = ArchObjectCap (PageCap ref rghts mt sz d mapdata))"
   "capMasterCap cap = ArchObjectCap ASIDControlCap
      \<Longrightarrow> cap = ArchObjectCap ASIDControlCap"
   "capMasterCap cap = ArchObjectCap (ASIDPoolCap pool asid)
@@ -712,13 +710,19 @@ lemma capMasterCap_eqDs1:
      \<Longrightarrow> data = None \<and> (\<exists>data. cap = ArchObjectCap (PageTableCap ptr data))"
   "capMasterCap cap = ArchObjectCap (PageDirectoryCap ptr data2)
      \<Longrightarrow> data2 = None \<and> (\<exists>data2. cap = ArchObjectCap (PageDirectoryCap ptr data2))"
+  "capMasterCap cap = ArchObjectCap (PDPointerTableCap ptr data3)
+     \<Longrightarrow> data3 = None \<and> (\<exists>data3. cap = ArchObjectCap (PDPointerTableCap ptr data3))"
+  "capMasterCap cap = ArchObjectCap (PML4Cap ptr data4)
+     \<Longrightarrow> data4 = None \<and> (\<exists>data4. cap = ArchObjectCap (PML4Cap ptr data4))"
+  "capMasterCap cap = ArchObjectCap (IOPortCap f span)
+     \<Longrightarrow> cap = ArchObjectCap (IOPortCap f span)"
   by (clarsimp simp: capMasterCap_def
               split: capability.split_asm arch_capability.split_asm)+
 
 lemmas capMasterCap_eqDs[dest!] = capMasterCap_eqDs1 capMasterCap_eqDs1 [OF sym]
 
 definition
-  capBadge :: "capability \<Rightarrow> word32 option"
+  capBadge :: "capability \<Rightarrow> machine_word option"
 where
  "capBadge cap \<equiv> if isEndpointCap cap then Some (capEPBadge cap)
                  else if isNotificationCap cap then Some (capNtfnBadge cap)
@@ -767,27 +771,39 @@ lemma isCap_Master:
   "isNullCap (capMasterCap cap) = isNullCap cap"
   "isDomainCap (capMasterCap cap) = isDomainCap cap"
   "isArchPageCap (capMasterCap cap) = isArchPageCap cap"
+  "isArchIOPortCap (capMasterCap cap) = isArchIOPortCap cap"
   by (simp add: isCap_simps capMasterCap_def
          split: capability.split arch_capability.split)+
 
 lemma capUntypedSize_capBits:
   "capClass cap = PhysicalClass \<Longrightarrow> capUntypedSize cap = 2 ^ (capBits cap)"
   apply (simp add: capUntypedSize_def objBits_simps
-                   X64_H.capUntypedSize_def
+                   X64_H.capUntypedSize_def bit_simps
             split: capability.splits arch_capability.splits
                    zombie_type.splits)
   apply fastforce
   done
 
+definition
+  "portRange c \<equiv> if isArchIOPortCap c then
+                   {(capIOPortFirstPort (capCap c)) .. (capIOPortLastPort (capCap c))}
+                 else {}"
+
+lemma portRange_Master:
+  "portRange (capMasterCap cap) = portRange cap"
+  by (simp add: capMasterCap_def split: capability.split arch_capability.split,
+      simp add: portRange_def isCap_simps)
+
 lemma sameRegionAs_def2:
  "sameRegionAs cap cap' = (\<lambda>cap cap'.
      (cap = cap'
           \<and> (\<not> isNullCap cap \<and> \<not> isZombie cap
-              \<and> \<not> isUntypedCap cap \<and> \<not> isArchPageCap cap)
+              \<and> \<not> isUntypedCap cap \<and> \<not> isArchPageCap cap \<and> \<not> isArchIOPortCap cap)
           \<and> (\<not> isNullCap cap' \<and> \<not> isZombie cap'
-              \<and> \<not> isUntypedCap cap' \<and> \<not> isArchPageCap cap'))
+              \<and> \<not> isUntypedCap cap' \<and> \<not> isArchPageCap cap' \<and> \<not> isArchIOPortCap cap))
       \<or> (capRange cap' \<noteq> {} \<and> capRange cap' \<subseteq> capRange cap
                  \<and> (isUntypedCap cap \<or> (isArchPageCap cap \<and> isArchPageCap cap')))
+      \<or> (portRange cap' \<noteq> {} \<and> portRange cap' \<subseteq> portRange cap \<and> isArchIOPortCap cap \<and> isArchIOPortCap cap')
       \<or> (isIRQControlCap cap \<and> isIRQHandlerCap cap'))
            (capMasterCap cap) (capMasterCap cap')"
   apply (cases "isUntypedCap cap")
@@ -795,21 +811,21 @@ lemma sameRegionAs_def2:
                          isCap_Master capRange_Master capClass_Master)
    apply (clarsimp simp: isCap_simps
                          capMasterCap_def[where cap="UntypedCap d p n f" for d p n f])
-   apply (simp add: capRange_def capUntypedSize_capBits)
+   apply (simp add: capRange_def capUntypedSize_capBits portRange_def)
    apply (intro impI iffI)
     apply (clarsimp del: subsetI intro!: range_subsetI)
    apply clarsimp
-   apply (simp add: range_subset_eq2)
   apply (simp cong: conj_cong)
-  apply (simp     add: capMasterCap_def sameRegionAs_def isArchPageCap_def
+  apply (simp     add: capMasterCap_def sameRegionAs_def isArchPageCap_def isArchIOPortCap_def
                 split: capability.split
             split del: if_split cong: if_cong)
   apply (simp    add: X64_H.sameRegionAs_def isCap_simps
                split: arch_capability.split
            split del: if_split cong: if_cong)
-  apply (clarsimp simp: capRange_def Let_def)
+  apply (clarsimp simp: capRange_def Let_def portRange_def isCap_simps)
   apply (simp add: range_subset_eq2 cong: conj_cong)
-  by (simp add: conj_comms)
+  apply (simp add: conj_comms)
+  done
 
 lemma sameObjectAs_def2:
  "sameObjectAs cap cap' = (\<lambda>cap cap'.
@@ -819,7 +835,9 @@ lemma sameObjectAs_def2:
           \<and> (\<not> isNullCap cap' \<and> \<not> isZombie cap'
               \<and> \<not> isUntypedCap cap')
           \<and> (isArchPageCap cap \<longrightarrow> capRange cap \<noteq> {})
-          \<and> (isArchPageCap cap' \<longrightarrow> capRange cap' \<noteq> {})))
+          \<and> (isArchPageCap cap' \<longrightarrow> capRange cap' \<noteq> {})
+          \<and> (isArchIOPortCap cap \<longrightarrow> portRange cap \<noteq> {})
+          \<and> (isArchIOPortCap cap' \<longrightarrow> portRange cap' \<noteq> {})))
            (capMasterCap cap) (capMasterCap cap')"
   apply (simp add: sameObjectAs_def sameRegionAs_def2
                    isCap_simps capMasterCap_def
@@ -828,37 +846,41 @@ lemma sameObjectAs_def2:
                  split: arch_capability.split cong: if_cong)
   apply (clarsimp simp: X64_H.sameRegionAs_def isCap_simps
              split del: if_split cong: if_cong)
-  apply (simp add: capRange_def interval_empty)
+  apply (simp add: capRange_def interval_empty portRange_def isCap_simps
+        split del: if_split)
   apply fastforce
   done
 
 lemmas sameRegionAs_def3 =
-  sameRegionAs_def2 [simplified capClass_Master capRange_Master isCap_Master]
+  sameRegionAs_def2 [simplified capClass_Master capRange_Master isCap_Master portRange_Master]
 
 lemmas sameObjectAs_def3 =
-  sameObjectAs_def2 [simplified capClass_Master capRange_Master isCap_Master]
+  sameObjectAs_def2 [simplified capClass_Master capRange_Master isCap_Master portRange_Master]
 
 lemma sameRegionAsE:
   "\<lbrakk> sameRegionAs cap cap';
      \<lbrakk> capMasterCap cap = capMasterCap cap'; \<not> isNullCap cap; \<not> isZombie cap;
-         \<not> isUntypedCap cap; \<not> isArchPageCap cap \<rbrakk> \<Longrightarrow> R;
+         \<not> isUntypedCap cap; \<not> isArchPageCap cap; \<not> isArchIOPortCap cap\<rbrakk> \<Longrightarrow> R;
      \<lbrakk> capRange cap' \<noteq> {}; capRange cap' \<subseteq> capRange cap; isUntypedCap cap \<rbrakk> \<Longrightarrow> R;
      \<lbrakk> capRange cap' \<noteq> {}; capRange cap' \<subseteq> capRange cap; isArchPageCap cap;
           isArchPageCap cap' \<rbrakk> \<Longrightarrow> R;
+     \<lbrakk> portRange cap' \<noteq> {}; portRange cap' \<subseteq> portRange cap; isArchIOPortCap cap; isArchIOPortCap cap'\<rbrakk>
+          \<Longrightarrow> R;
      \<lbrakk> isIRQControlCap cap; isIRQHandlerCap cap' \<rbrakk> \<Longrightarrow> R
       \<rbrakk> \<Longrightarrow> R"
-  by (simp add: sameRegionAs_def3, fastforce)
+   by  (simp add: sameRegionAs_def3, fastforce)
 
 lemma sameObjectAsE:
   "\<lbrakk> sameObjectAs cap cap';
      \<lbrakk> capMasterCap cap = capMasterCap cap'; \<not> isNullCap cap; \<not> isZombie cap;
          \<not> isUntypedCap cap;
-         isArchPageCap cap \<Longrightarrow> capRange cap \<noteq> {} \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+         isArchPageCap cap \<Longrightarrow> capRange cap \<noteq> {};
+         isArchIOPortCap cap \<Longrightarrow> portRange cap \<noteq> {} \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   by (clarsimp simp add: sameObjectAs_def3)
 
 lemma sameObjectAs_sameRegionAs:
   "sameObjectAs cap cap' \<Longrightarrow> sameRegionAs cap cap'"
-  by (clarsimp simp add: sameObjectAs_def2 sameRegionAs_def2)
+  by (clarsimp simp add: sameObjectAs_def2 sameRegionAs_def2 portRange_def isCap_simps)
 
 lemma sameObjectAs_sym:
   "sameObjectAs c d = sameObjectAs d c"
@@ -883,6 +905,12 @@ lemma sameObject_untypedCap:
 lemma sameObject_capRange:
   "sameObjectAs cap cap' \<Longrightarrow> capRange cap' = capRange cap"
   apply (rule master_eqI, rule capRange_Master)
+  apply (clarsimp simp: sameObjectAs_def2)
+  done
+
+lemma sameObject_portRange:
+  "sameObjectAs cap cap' \<Longrightarrow> portRange cap' = portRange cap"
+  apply (rule master_eqI, rule portRange_Master)
   apply (clarsimp simp: sameObjectAs_def2)
   done
 
@@ -918,13 +946,12 @@ lemma sameRegionAs_classes:
       apply (rule master_eqI, rule capClass_Master)
       apply simp
      apply (simp add: capRange_def split: if_split_asm)
-    apply (clarsimp simp: isCap_simps)
-   apply (clarsimp simp: isCap_simps)
+    apply (clarsimp simp: isCap_simps)+
   done
 
 lemma sameRegionAs_capRange:
   "\<lbrakk> sameRegionAs cap cap';
-     \<not> isUntypedCap cap; \<not> isArchPageCap cap \<rbrakk>
+     \<not> isUntypedCap cap; \<not> isArchPageCap cap; \<not> isArchIOPortCap cap \<rbrakk>
       \<Longrightarrow> capRange cap = capRange cap'"
   apply (rule master_eqI, rule capRange_Master)
   apply (erule sameRegionAsE, simp_all)
@@ -950,14 +977,13 @@ lemma sameRegionAs_capRange_Int:
      apply blast
     apply blast
    apply (clarsimp simp: isCap_simps)
+  apply (clarsimp simp: isCap_simps)
   done
 
 lemma sameRegionAs_trans:
   "\<lbrakk> sameRegionAs a b; sameRegionAs b c \<rbrakk> \<Longrightarrow> sameRegionAs a c"
   apply (simp add: sameRegionAs_def2, elim conjE disjE, simp_all)
-         apply (auto simp: isCap_simps)
-    apply (auto simp: capRange_def)
-  done
+                by (auto simp: isCap_simps capRange_def portRange_def) (* long *)
 
 lemma capMasterCap_maskCapRights[simp]:
   "capMasterCap (maskCapRights msk cap)
@@ -1060,7 +1086,7 @@ lemma capUntypedSize_range:
                  isCap_simps
           split: capability.splits arch_capability.split
                  zombie_type.splits)
-   apply (auto simp: is_aligned_no_overflow objBits_simps word_bits_def)
+   apply (auto simp: is_aligned_no_overflow objBits_simps bit_simps word_bits_def)
   done
 
 lemma caps_no_overlap'_no_region:
@@ -1301,7 +1327,7 @@ lemma cte_refs_capRange:
    -- "CNodeCap"
    apply (rename_tac word1 nat1 word2 nat2)
    apply (clarsimp simp: objBits_simps capAligned_def dest!: valid_capAligned)
-   apply (subgoal_tac "xa * 0x10 < 2 ^ (4 + nat1)")
+   apply (subgoal_tac "xa * 0x20 < 2 ^ (5 + nat1)") (* cte_level_bits *)
     apply (intro conjI)
      apply (erule(1) is_aligned_no_wrap')
     apply (simp add: add_diff_eq[symmetric])
@@ -1319,7 +1345,7 @@ lemma cte_refs_capRange:
   -- "Zombie"
   apply (rename_tac word zombie_type nat)
   apply (clarsimp simp: capAligned_def valid_cap'_def objBits_simps)
-  apply (subgoal_tac "xa * 0x10 < 2 ^ zBits zombie_type")
+  apply (subgoal_tac "xa * 0x20 < 2 ^ zBits zombie_type")
    apply (intro conjI)
     apply (erule(1) is_aligned_no_wrap')
    apply (simp add: add_diff_eq[symmetric])
@@ -1954,7 +1980,7 @@ lemma capBits_Master:
 
 lemma capUntyped_Master:
   "capUntypedPtr (capMasterCap cap) = capUntypedPtr cap"
-  by (clarsimp simp: capMasterCap_def split: capability.split arch_capability.split)
+  by (clarsimp simp: capMasterCap_def X64_H.capUntypedPtr_def split: capability.split arch_capability.split)
 
 lemma distinct_zombies_copyMasterE:
   "\<lbrakk> distinct_zombies m; m x = Some cte;

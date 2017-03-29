@@ -1358,8 +1358,7 @@ lemma valid_updateCapDataI:
   apply (cases c)
   apply (simp_all add: isCap_defs valid_cap'_def capUntypedPtr_def isCap_simps
                        capAligned_def word_size word_bits_def word_bw_assocs
-                split: arch_capability.splits)
-
+                split: arch_capability.splits capability.splits)
   done
 
 lemma no_fail_threadGet [wp]:

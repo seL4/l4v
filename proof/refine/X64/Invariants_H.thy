@@ -278,11 +278,11 @@ where
 | "cte_refs' (EndpointCap ref badge s r g) x      = {}"
 | "cte_refs' (NotificationCap ref badge s r) x   = {}"
 | "cte_refs' (CNodeCap ref bits g gs) x           =
-     (\<lambda>x. ref + (x * 16)) ` {0 .. 2 ^ bits - 1}"
+     (\<lambda>x. ref + (x * 32)) ` {0 .. 2 ^ bits - 1}"
 | "cte_refs' (ThreadCap ref) x                    =
      (\<lambda>x. ref + x) ` (dom tcb_cte_cases)"
 | "cte_refs' (Zombie r b n) x                     =
-     (\<lambda>x. r + (x * 16)) ` {0 ..< of_nat n}"
+     (\<lambda>x. r + (x * 32)) ` {0 ..< of_nat n}"
 | "cte_refs' (ArchObjectCap cap) x                = {}"
 | "cte_refs' (IRQControlCap) x                    = {}"
 | "cte_refs' (IRQHandlerCap irq) x                = {x + (ucast irq) * 16}"
@@ -451,7 +451,7 @@ where valid_cap'_def:
   | PML4Cap ref mapdata \<Rightarrow>
     page_map_l4_at' ref s \<and>
     case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
-  | IOPortCap first lst \<Rightarrow> first \<le> lst (* should probably have something like fst \<le> last *)))"
+  | IOPortCap first l \<Rightarrow> first \<le> l))"
 
 abbreviation (input)
   valid_cap'_syn :: "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>' _" [60, 60] 61)
@@ -822,6 +822,11 @@ definition
   isArchPageCap :: "capability \<Rightarrow> bool"
 where
  "isArchPageCap cap \<equiv> case cap of ArchObjectCap (PageCap ref rghts typ sz d data) \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
+  isArchIOPortCap :: "capability \<Rightarrow> bool"
+where
+  "isArchIOPortCap cap \<equiv> case cap of ArchObjectCap (IOPortCap f l) \<Rightarrow> True | _ \<Rightarrow> False"
 
 definition
   distinct_zombie_caps :: "(machine_word \<Rightarrow> capability option) \<Rightarrow> bool"

@@ -90,6 +90,7 @@ lemma isCap_simps:
   "isASIDControlCap w = (w = ASIDControlCap)"
   "isASIDPoolCap w = (\<exists>v0 v1. w = ASIDPoolCap v0 v1)"
   "isArchPageCap cap = (\<exists>d ref rghts sz data typ. cap = ArchObjectCap (PageCap ref rghts typ sz d data))"
+  "isArchIOPortCap cap = (\<exists>f l. cap = ArchObjectCap (IOPortCap f l))"
   by (auto simp: isCap_defs split: capability.splits arch_capability.splits)
 
 lemma untyped_not_null [simp]:
