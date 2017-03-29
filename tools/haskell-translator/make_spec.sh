@@ -130,3 +130,5 @@ for thy in $SPECNONARCH/${ARCHES[0]}/*.thy; do rsync -c "$thy" "$SPEC/"; done
 
 rm -r $SPECNONARCH
 rm -r $TMPFILE
+
+cd $TRANSLATOR/../.. && ./misc/whitespace/fix-commit-whitespace
