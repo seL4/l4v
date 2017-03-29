@@ -1433,7 +1433,7 @@ case \x of Arch.Types.APIObjectType _ -> Arch.Types.SmallPageObject -> Arch.Type
    | PDPointerTableObject => ->7
    | PML4Object => ->8
 
-case \x of ((a@PageCap {}), (b@PageCap {})) -> ((a@PageTableCap {}), (b@PageTableCap {})) -> ((a@PageDirectoryCap {}), (b@PageDirectoryCap {})) -> ((a@PDPointerTableCap {}), (b@PDPointerTableCap {})) -> ((a@PML4Cap {}), (b@PML4Cap {})) -> (ASIDControlCap, ASIDControlCap) -> ((a@ASIDPoolCap {}), (b@ASIDPoolCap {})) -> ((IOPortCap {}), (IOPortCap {})) -> (_, _) ->  ---> let (a,b) = \x in
+case \x of ((a@PageCap {}), (b@PageCap {})) -> ((a@PageTableCap {}), (b@PageTableCap {})) -> ((a@PageDirectoryCap {}), (b@PageDirectoryCap {})) -> ((a@PDPointerTableCap {}), (b@PDPointerTableCap {})) -> ((a@PML4Cap {}), (b@PML4Cap {})) -> (ASIDControlCap, ASIDControlCap) -> ((a@ASIDPoolCap {}), (b@ASIDPoolCap {})) -> ((a@IOPortCap {}), (b@IOPortCap {})) -> (_, _) ->  ---> let (a,b) = \x in
     if isPageCap a \<and> isPageCap b
     then ->1
     else if isPageTableCap a \<and> isPageTableCap b
@@ -1446,9 +1446,11 @@ case \x of ((a@PageCap {}), (b@PageCap {})) -> ((a@PageTableCap {}), (b@PageTabl
     then ->5
     else if isASIDControlCap a \<and> isASIDControlCap b
     then ->6
-    else if isIOPortCap a \<and> isIOPortCap b
+    else if isASIDPoolCap a \<and> isASIDPoolCap b
     then ->7
-    else ->8
+    else if isIOPortCap a \<and> isIOPortCap b
+    then ->8
+    else ->9
 
 
 case \x of (oper@(InvokeIOPort _)) -> oper ->  ---> let oper = \x in
@@ -1693,5 +1695,15 @@ case \x of (cap@IOPageTableCap {}) -> _ ->  ---> let cap = \x in
 
 case \x of (X64NoHypFaults) -> ---> let hyp = \x in
   case hyp of X64NoHypFaults => ->1
+
+
+case \x of ((a@PageCap { capVPBasePtr = ptrA }), (b@PageCap {})) -> ((a@IOPortCap { capIOPortFirstPort = fA }), (b@IOPortCap {})) -> (a, b) ->  ---> let (a, b) = \x in
+    if isPageCap a \<and> isPageCap b
+    then let ptrA = capVPBasePtr a
+        in ->1
+    else if isIOPortCap a \<and> isIOPortCap b
+    then let fA = capIOPortFirstPort a
+        in ->2
+    else ->3
 
 
