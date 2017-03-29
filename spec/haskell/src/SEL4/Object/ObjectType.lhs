@@ -259,11 +259,8 @@ The total of the guard size and the radix of the node cannot exceed the number o
 >             mask guardBits .&. mask guardSize
 >         guardSize = fromIntegral $ (w `shiftR` rightsBits) .&.
 >             mask guardSizeBits
->         rightsBits = 3
->         guardBits = case finiteBitSize w of
->             32 -> 18
->             64 -> 48
->             _ -> error "Unknown word size"
+>         rightsBits = 2
+>         guardBits = 18
 >         guardSizeBits = case finiteBitSize w of
 >             32 -> 5
 >             64 -> 6
@@ -276,7 +273,7 @@ The total of the guard size and the radix of the node cannot exceed the number o
 The C implementation only has space for 28 bits in the badge field.
 
 > badgeBits :: Int
-> badgeBits = 28
+> badgeBits = wordSizeCase 28 64
 
 The "maskCapRights" function restricts the operations that can be performed on a capability, given a set of rights.
 
