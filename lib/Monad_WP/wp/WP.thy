@@ -10,8 +10,7 @@
 
 theory WP
 imports
-  "~~/src/HOL/Main"
-  "~~/src/HOL/Eisbach/Eisbach_Tools"
+  "WP_Pre"
   "../../Apply_Debug"
 begin
 

@@ -2961,6 +2961,7 @@ lemma hf_invs':
   "\<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to t and (\<lambda>_. valid_fault f)\<rbrace>
    handle_fault t f
    \<lbrace>\<lambda>r (s::'state_ext state). invs s \<and> Q s\<rbrace>"
+  including no_pre
   apply (simp add: handle_fault_def)
   apply wp
     apply (simp add: handle_double_fault_def)

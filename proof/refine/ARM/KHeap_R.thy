@@ -131,7 +131,7 @@ lemma no_fail_getPDE [wp]:
   apply (clarsimp split: option.split_asm simp: objBits_simps archObjSize_def)
   done
 
-lemma corres_get_tcb:
+lemma corres_get_tcb [corres]:
   "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t) (gets (get_tcb t)) (getObject t)"
   apply (rule corres_no_failI)
    apply wp
@@ -886,7 +886,7 @@ lemma no_fail_getEndpoint [wp]:
    apply (clarsimp split: option.split_asm simp: objBits_simps archObjSize_def)
   done
 
-lemma get_ep_corres:
+lemma get_ep_corres [corres]:
   "corres ep_relation (ep_at ptr) (ep_at' ptr)
      (get_endpoint ptr) (getEndpoint ptr)"
   apply (rule corres_no_failI)
@@ -1067,77 +1067,32 @@ lemma set_other_obj_corres:
   apply (case_tac ob; 
          simp_all add: a_type_def other_obj_relation_def etcb_relation_def 
                        is_other_obj_relation_type t exst_same_def)
-    apply (clarsimp simp: is_other_obj_relation_type t exst_same_def
+    by (clarsimp simp: is_other_obj_relation_type t exst_same_def
                    split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits 
                           ARM_A.arch_kernel_obj.splits)+
-  done
 
-lemma set_ep_corres:
+lemmas obj_at_simps = obj_at_def obj_at'_def projectKOs map_to_ctes_upd_other
+                      is_other_obj_relation_type_def
+                      a_type_def objBits_simps other_obj_relation_def
+                      archObjSize_def pageBits_def
+
+lemma set_ep_corres [corres]:
   "ep_relation e e' \<Longrightarrow>
   corres dc (ep_at ptr) (ep_at' ptr) 
             (set_endpoint ptr e) (setEndpoint ptr e')"
   apply (simp add: set_endpoint_def setEndpoint_def is_ep_def[symmetric])
-  apply (rule corres_symb_exec_l)
-     prefer 4
-     apply (rule no_fail_pre, wp)
-     apply (clarsimp simp: obj_at_def)
-    prefer 3
-    apply (rule get_object_sp)
-   apply (rule corres_symb_exec_l)
-      prefer 4
-      apply (rule no_fail_pre, wp)
-      apply (clarsimp simp: obj_at_def)
-     prefer 3
-     apply (rule assert_sp)
-    apply (rule corres_guard_imp)
-      apply (rule set_other_obj_corres [where P="\<top>"])
-            apply (rule ext)+
-            apply simp
-           apply (clarsimp simp add: obj_at'_def projectKOs map_to_ctes_upd_other)
-          apply (clarsimp simp: is_other_obj_relation_type_def a_type_def)
-         apply (simp add: objBits_simps)
-        apply simp
-       apply (simp add: objBits_simps)
-      apply (simp add: other_obj_relation_def)
-     apply (clarsimp simp: obj_at_def is_ep a_type_def)
-    apply assumption
-   apply (clarsimp simp: exs_valid_def assert_def return_def fail_def obj_at_def)
-  apply (clarsimp simp: exs_valid_def get_object_def bind_def in_monad
-                        gets_def get_def return_def assert_def fail_def obj_at_def)
-  done
+    apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
+  apply (wp get_object_ret get_object_wp)+
+  by (clarsimp simp: is_ep obj_at_simps)
 
-lemma set_ntfn_corres:
+lemma set_ntfn_corres [corres]:
   "ntfn_relation ae ae' \<Longrightarrow>
   corres dc (ntfn_at ptr) (ntfn_at' ptr)
             (set_notification ptr ae) (setNotification ptr ae')"
   apply (simp add: set_notification_def setNotification_def is_ntfn_def[symmetric])
-  apply (rule corres_symb_exec_l)+
-        prefer 7
-        apply (rule no_fail_pre, wp)
-        apply (clarsimp simp: obj_at_def)
-       prefer 6
-       apply (rule get_object_sp)
-      prefer 3
-      apply (rule assert_sp)
-     prefer 3
-     apply (rule no_fail_pre, wp)
-     apply (clarsimp simp: obj_at_def)
-    apply (rule corres_guard_imp)
-      apply (rule set_other_obj_corres [where P="\<top>"])
-            apply (rule ext)+
-            apply simp
-           apply (clarsimp simp add: obj_at'_def projectKOs map_to_ctes_upd_other)
-          apply (clarsimp simp: is_other_obj_relation_type_def a_type_def)
-         apply (simp add: objBits_simps)
-        apply simp
-       apply (simp add: objBits_simps)
-      apply (simp add: other_obj_relation_def)
-     apply (clarsimp simp: obj_at_def a_type_def is_ntfn)
-    apply assumption
-   apply (clarsimp simp: exs_valid_def assert_def return_def fail_def obj_at_def)
-  apply (clarsimp simp: exs_valid_def get_object_def bind_def in_monad
-                        gets_def get_def return_def assert_def fail_def obj_at_def)
-  done
+       apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
+  apply (wp get_object_ret get_object_wp)+
+  by (clarsimp simp: is_ntfn obj_at_simps)
 
 lemma no_fail_getNotification [wp]:
   "no_fail (ntfn_at' ptr) (getNotification ptr)"

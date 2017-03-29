@@ -104,8 +104,12 @@ val empty_rule_prems = Data.map (K ([],true));
 fun add_rule_prem thm = Data.map (apfst (Thm.add_thm thm));
 
 fun with_rule_prems enabled parse =
-  apfst (Context.map_proof (Data.map (K ([Drule.free_dummy_thm],enabled))))
-  #> parse
+  Scan.state :|-- (fn context =>
+  let
+    val context' = Context.proof_of context |> Data.map (K ([Drule.free_dummy_thm],enabled))
+                   |> Context.Proof
+  in Scan.lift (Scan.pass context' parse) end)
+
 
 fun get_rule_prems ctxt = 
   let
@@ -143,10 +147,8 @@ let
   val ctxt' = empty_rule_prems ctxt;
 in Seq.EVERY tacs' (ctxt',st) end;
 
-fun rule_by_tac ctxt {vars,prop} tac asm_tacs pos raw_st  =
+fun rule_by_tac' ctxt {vars,prop} tac asm_tacs pos raw_st =
   let
-
-
     val (st,ctxt1) = if vars then (raw_st,ctxt) else fix_schematics ctxt raw_st;
 
     val ([x],ctxt2) = Proof_Context.add_fixes [(Binding.name Auto_Bind.thesisN,NONE, NoSyn)] ctxt1;
@@ -159,15 +161,16 @@ fun rule_by_tac ctxt {vars,prop} tac asm_tacs pos raw_st  =
 
     fun is_thesis t = Logic.strip_assums_concl t aconv thesis;
 
-    fun err str = error (str ^ Position.here pos);
+    fun err thm str = error (str ^ Position.here pos ^ "\n" ^
+      (Pretty.string_of (Goal_Display.pretty_goal ctxt thm)));
 
     fun pop_thesis st =
     let
       val prems = Thm.prems_of st |> tag_list 0;
       val (i,_) = (case filter (is_thesis o snd) prems of
-        [] => err "Lost thesis"
+        [] => err st "Lost thesis"
         | [x] => x
-        | _ => err "More than one result obtained");
+        | _ => err st "More than one result obtained");
      in st |> Thm.permute_prems 0 i  end
         
     val asm_st = 
@@ -177,12 +180,14 @@ fun rule_by_tac ctxt {vars,prop} tac asm_tacs pos raw_st  =
 
     val (ctxt3,concl_st) = case Seq.pull (zip_subgoals (not vars) asm_tacs pos ctxt2 asm_st) of
       SOME (x,_) => x
-    | NONE => err "Failed to apply tactics to rule assumptions";
+    | NONE => error ("Failed to apply tactics to rule assumptions. " ^ (Position.here pos));
 
-    val concl_st_result =
+    val concl_st_prepped =
       concl_st
       |> Goal.conclude
       |> (fn st => Goal.protect (Thm.nprems_of st) st |> Thm.permute_prems 0 ~1 |> Goal.protect 1)
+
+    val concl_st_result = concl_st_prepped
       |> (tac ctxt3
           THEN (PRIMITIVE pop_thesis)
           THEN curry_asm ctxt
@@ -190,7 +195,7 @@ fun rule_by_tac ctxt {vars,prop} tac asm_tacs pos raw_st  =
 
     val result = (case Seq.pull concl_st_result of
       SOME (result,_) => singleton (Proof_Context.export ctxt3 ctxt) result
-      | NONE => err "Failed to apply tactic to rule conclusion")
+      | NONE => err concl_st_prepped "Failed to apply tactic to rule conclusion:")
 
     val drop_rule = if prop then drop_trivial_imp else drop_trivial_imp'
 
@@ -203,42 +208,86 @@ fun rule_by_tac ctxt {vars,prop} tac asm_tacs pos raw_st  =
 
   in Drule.zero_var_indexes result' end;
 
+fun rule_by_tac is_closed ctxt args tac asm_tacs pos raw_st =
+ let val f = rule_by_tac' ctxt args tac asm_tacs pos
+  in
+   if is_closed orelse Context_Position.is_really_visible ctxt then SOME (f raw_st)
+   else try f raw_st
+ end
 
-fun position (scan : 'a context_parser) : (('a * Position.T) context_parser) = (fn (context,toks) =>
+fun pos_closure (scan : 'a context_parser) :
+  (('a * (Position.T * bool)) context_parser) = (fn (context,toks) =>
   let
     val (((context',x),tr_toks),toks') = Scan.trace (Scan.pass context (Scan.state -- scan)) toks;
     val pos = Token.range_of tr_toks;
-  in ((x,Position.range_position pos),(context',toks')) end)
+    val is_closed = exists (fn t => is_some (Token.get_value t)) tr_toks
+  in ((x,(Position.range_position pos, is_closed)),(context',toks')) end)
 
 val parse_flags = Args.mode "schematic" -- Args.mode "raw_prop" >> (fn (b,b') => {vars = b, prop = b'})
-
-(*TODO: Method_Closure.parse_method should do this already *)
-
-val parse_method = Method.text_closure o apfst (Config.put_generic Method.old_section_parser true)
 
 fun tac m ctxt =
   Method.NO_CONTEXT_TACTIC ctxt
     (Method.evaluate_runtime m ctxt []);
 
-val (rule_prems_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags => 
-  position (Scan.repeat1 
-    (with_rule_prems (not (#vars flags)) parse_method || 
-      Scan.lift (Args.$$$ "_" >> (K Method.succeed_text))))) >> 
-        (fn (flags,(ms,pos)) => Thm.rule_attribute [] (fn context =>
-          rule_by_tac (Context.proof_of context) flags (K all_tac) (map tac ms) pos))
+(* Declare as a mixed attribute to avoid any partial evaluation *)
 
-val (rule_concl_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags => 
-  position (with_rule_prems (not (#vars flags)) parse_method)) >> 
-    (fn (flags,(m,pos)) => Thm.rule_attribute [] (fn context =>
-      rule_by_tac (Context.proof_of context) flags (tac m) [] pos))
+fun handle_dummy f (context, thm) =
+  case (f context thm) of SOME thm' => (NONE, SOME thm')
+  | NONE => (SOME context, SOME Drule.free_dummy_thm)
 
-val _ = Theory.setup 
-  (Global_Theory.add_thms_dynamic (@{binding "rule_prems"}, 
+val (rule_prems_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags =>
+  pos_closure (Scan.repeat1
+    (with_rule_prems (not (#vars flags)) Method.text_closure ||
+      Scan.lift (Args.$$$ "_" >> (K Method.succeed_text))))) >>
+        (fn (flags,(ms,(pos, is_closed))) => handle_dummy (fn context =>
+          rule_by_tac is_closed (Context.proof_of context) flags (K all_tac) (map tac ms) pos))
+
+val (rule_concl_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags =>
+  pos_closure (with_rule_prems (not (#vars flags)) Method.text_closure)) >>
+    (fn (flags,(m,(pos, is_closed))) => handle_dummy (fn context =>
+      rule_by_tac is_closed (Context.proof_of context) flags (tac m) [] pos))
+
+val _ = Theory.setup
+  (Global_Theory.add_thms_dynamic (@{binding "rule_prems"},
     (fn context => get_rule_prems (Context.proof_of context))) #>
    Attrib.setup @{binding "#"} rule_prems_by_method
     "transform rule premises with method" #>
    Attrib.setup @{binding "@"} rule_concl_by_method
-    "transform rule conclusion with method")
+    "transform rule conclusion with method" #>
+   Attrib.setup @{binding atomized}
+    (Scan.succeed (Thm.rule_attribute []
+      (fn context => fn thm =>
+        Conv.fconv_rule (Object_Logic.atomize (Context.proof_of context)) thm
+          |> Drule.zero_var_indexes)))
+    "atomize rule")
 \<close>
+
+experiment begin
+
+ML \<open>
+  val [att] = @{attributes [@\<open>erule thin_rl, cut_tac TrueI, fail\<close>]}
+  val k = Attrib.attribute @{context} att
+  val _ = case (try k (Context.Proof @{context}, Drule.dummy_thm)) of
+    SOME _ => error "Should fail"
+    | _ => ()
+  \<close>
+
+lemmas baz = [[@\<open>erule thin_rl, rule revcut_rl[of "P \<longrightarrow> P \<and> P"], simp\<close>]] for P
+
+lemmas bazz[THEN impE] = TrueI[@\<open>erule thin_rl, rule revcut_rl[of "P \<longrightarrow> P \<and> P"], simp\<close>] for P
+
+lemma "Q \<longrightarrow> Q \<and> Q" by (rule baz)
+
+method silly_rule for P :: bool uses rule =
+  (rule [[@\<open>erule thin_rl, cut_tac rule, drule asm_rl[of P]\<close>]])
+
+lemma assumes A shows A by (silly_rule A rule: \<open>A\<close>)
+
+lemma assumes A[simp]: "A" shows A
+  apply (match conclusion in P for P \<Rightarrow>
+       \<open>rule [[@\<open>erule thin_rl, rule revcut_rl[of "P"], simp\<close>]]\<close>)
+  done
+
+end
 
 end

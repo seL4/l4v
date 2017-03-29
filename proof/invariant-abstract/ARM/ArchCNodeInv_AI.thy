@@ -37,50 +37,11 @@ lemma valid_cnode_capI:
 (* unused *)
 lemma derive_cap_objrefs [CNodeInv_AI_assms]:
   "\<lbrace>\<lambda>s. P (obj_refs cap)\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> P (obj_refs rv)\<rbrace>,-"
-  including no_pre
-  apply (cases cap, simp_all add: derive_cap_def is_zombie_def)
-          apply ((wp ensure_no_children_inv | simp add: o_def | rule hoare_pre)+)[11]
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap, simp_all add: arch_derive_cap_def)
-      apply (wp | simp add: o_def)+
-   apply (rename_tac word option)
-   apply (case_tac option)
-    apply simp
-    apply (rule hoare_pre, wp+)
-   apply simp
-   apply (rule hoare_pre, wp+)
-   apply (simp add: aobj_ref_cases)
-  apply (rename_tac word option)
-  apply (case_tac option, simp)
-   apply (rule hoare_pre, wp+)
-  apply simp
-  apply (rule hoare_pre, wp)
-  apply clarsimp
-  done
+  by (wpsimp simp: arch_derive_cap_def derive_cap_def) auto
 
 lemma derive_cap_zobjrefs [CNodeInv_AI_assms]:
   "\<lbrace>\<lambda>s. P (zobj_refs cap)\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> P (zobj_refs rv)\<rbrace>,-"
-  including no_pre
-  apply (cases cap, simp_all add: derive_cap_def is_zombie_def)
-          apply ((wp ensure_no_children_inv | simp add: o_def | rule hoare_pre)+)[11]
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap, simp_all add: arch_derive_cap_def)
-      apply (wp | simp add: o_def)+
-   apply (rename_tac option)
-   apply (case_tac option)
-    apply simp
-    apply (rule hoare_pre, wp+)
-   apply simp
-   apply (rule hoare_pre, wp+)
-   apply (simp add: aobj_ref_cases)
-  apply (rename_tac option)
-  apply (case_tac option, simp)
-   apply (rule hoare_pre, wp+)
-  apply simp
-  apply (rule hoare_pre, wp)
-  apply clarsimp
-  done
-
+  by (wpsimp simp: arch_derive_cap_def derive_cap_def) auto
 
 lemma update_cap_objrefs [CNodeInv_AI_assms]:
   "\<lbrakk> update_cap_data P dt cap \<noteq> NullCap \<rbrakk> \<Longrightarrow>

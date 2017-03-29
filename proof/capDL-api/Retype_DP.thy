@@ -999,7 +999,6 @@ lemma invoke_untyped_preempt:
         apply (rule mapME_x_inv_wp[where P = P and E = "\<lambda>r. P" for P])
         apply (wp alternative_wp)
          apply simp
-         apply (rule hoare_pre)
          apply (wp hoare_vcg_ex_lift)
           apply (rule hoare_post_imp[OF _ set_cap_wp])
           apply sep_solve
@@ -1008,7 +1007,6 @@ lemma invoke_untyped_preempt:
         apply sep_solve
        apply simp
       apply simp
-     apply sep_solve
     apply (wp select_wp)+
   apply clarsimp
   apply (frule opt_cap_sep_imp)

@@ -113,8 +113,7 @@ lemma get_object_revrv:
       apply(simp)
      apply(rule assert_ev2)
      apply(simp)
-    apply(wp)+
-  apply fastforce
+    apply(wpsimp)+
   done
 
 lemma get_object_revrv':
@@ -131,8 +130,7 @@ lemma get_object_revrv':
       apply(simp)
      apply(rule assert_ev2)
      apply(simp add: equiv_for_def)
-    apply(wp)+
-  apply fastforce
+    apply(wpsimp)+
   done
 
 lemma get_asid_pool_revrv':
@@ -1020,7 +1018,7 @@ lemma equiv_valid_get_assert:
   apply(rule_tac W="\<top>\<top>" in equiv_valid_rv_bind)
     apply(rule equiv_valid_rv_guard_imp)
      apply(rule equiv_valid_rv_trivial)
-     apply wp+
+     apply wpsimp+
    apply(rule_tac R'="\<top>\<top>" in equiv_valid_2_bind)
       apply(simp add: equiv_valid_def2)
      apply(rule assert_ev2)
@@ -1101,7 +1099,7 @@ lemma arm_asid_table_update_reads_respects:
   apply(simp add: equiv_valid_def2)
   apply(rule_tac W="\<top>\<top>" and Q="\<lambda> rv s. is_subject aag pool_ptr \<and> rv = arm_asid_table (arch_state s)" in equiv_valid_rv_bind)
     apply(rule equiv_valid_rv_guard_imp[OF equiv_valid_rv_trivial])
-     apply wp+
+     apply wpsimp+
    apply(rule modify_ev2)
    apply clarsimp
    apply (drule(1) is_subject_kheap_eq[rotated])

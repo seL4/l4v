@@ -1810,21 +1810,9 @@ lemma set_mrs_invs[wp]:
     \<lbrace> invs and tcb_at receiver :: 'state_ext state \<Rightarrow> bool \<rbrace>
       set_mrs receiver recv_buf mrs
     \<lbrace>\<lambda>rv. invs \<rbrace>"
-  apply (simp add: set_mrs_redux)
-  apply wp
-   apply (rule_tac P="invs" in hoare_triv)
-   apply (case_tac recv_buf)
-    apply simp
-   apply (simp add: zipWithM_x_mapM split del: if_split)
-   apply wp
-   apply (rule mapM_wp)
-    apply (simp add: split_def store_word_offs_def)
-    apply (wp storeWord_invs)
-    apply simp
-   apply blast
-  apply (wp thread_set_invs_trivial)
-  apply (auto simp: tcb_cap_cases_def)
-  done
+  by (wpsimp wp: mapM_wp' storeWord_invs thread_set_invs_trivial hoare_vcg_imp_lift
+           simp: set_mrs_redux zipWithM_x_mapM store_word_offs_def tcb_cap_cases_def
+      split_del: if_split)
 
 end
 

@@ -22,7 +22,6 @@ begin
    For example, use C_simp_final when the RHS matches the LHS. *)
 
 named_theorems C_simp
-named_theorems C_simp_final
 
 context
   (* for less typing and local com_eq syntax *)
@@ -111,7 +110,7 @@ lemmas ccorres_rewrite_splits =
 (* Actual simplification rules *)
 
 lemma com_eq_Skip_Seq [C_simp]:
-  "Skip;;c \<sim> c"
+  "c \<sim> c' \<Longrightarrow> Skip;;c \<sim> c'"
   apply (clarsimp simp: com_eq_def)
   apply (rule iffI)
    apply (fastforce elim!: exec_elim_cases)
@@ -120,7 +119,7 @@ lemma com_eq_Skip_Seq [C_simp]:
   done
 
 lemma com_eq_Seq_Skip [C_simp]:
-  "c;;Skip \<sim> c"
+  "c \<sim> c' \<Longrightarrow> c;;Skip \<sim> c'"
   apply (clarsimp simp: com_eq_def)
   apply (rule iffI)
    apply (fastforce elim!: exec_elim_cases)  
@@ -131,12 +130,12 @@ lemma com_eq_Seq_Skip [C_simp]:
   done
 
 lemma com_eq_Cond_empty [C_simp]:
-  "Cond {} c1 c \<sim> c"
+  "c \<sim> c' \<Longrightarrow> Cond {} c1 c \<sim> c'"
   unfolding com_eq_def
   by (clarsimp, case_tac s, auto intro: exec.CondFalse elim!: exec_elim_cases)
 
 lemma com_eq_Cond_UNIV [C_simp]:
-  "Cond UNIV c c2 \<sim> c"
+  "c \<sim> c' \<Longrightarrow> Cond UNIV c c2 \<sim> c'"
   unfolding com_eq_def
   by (clarsimp, case_tac s, auto intro: exec.CondTrue  elim!: exec_elim_cases)
 
@@ -146,16 +145,16 @@ lemma exec_Cond_cases:
   by (cases "s \<in> b") (auto intro: exec.CondTrue exec.CondFalse)
 
 lemma com_eq_Cond_both [C_simp]:
-  "Cond b c c \<sim> c"
+  "c \<sim> c' \<Longrightarrow> Cond b c c \<sim> c'"
   unfolding com_eq_def
   by (clarsimp, case_tac s, auto intro: exec_Cond_cases elim!: exec_elim_cases)
 
 lemma com_eq_If_False [C_simp]:
-  "IF False THEN c1 ELSE c FI \<sim> c"
+  "c \<sim> c' \<Longrightarrow> IF False THEN c1 ELSE c FI \<sim> c'"
   by (simp add: com_eq_Cond_empty)
 
 lemma com_eq_If_True [C_simp]:
-  "IF True THEN c ELSE c2 FI \<sim> c"
+  "c \<sim> c' \<Longrightarrow> IF True THEN c ELSE c2 FI \<sim> c'"
   by (simp add: com_eq_Cond_UNIV)
 
 lemma com_eq_While_empty [C_simp]:
@@ -168,20 +167,20 @@ lemma com_eq_While_FALSE [C_simp]:
   by (simp add: com_eq_While_empty whileAnno_def)
 
 lemma com_eq_Guard_UNIV [C_simp]:
-  "Guard f UNIV c \<sim> c"
+  "c \<sim> c' \<Longrightarrow> Guard f UNIV c \<sim> c'"
   unfolding com_eq_def
   by (clarsimp, case_tac s, auto intro: exec.Guard elim!: exec_elim_cases)
 
 lemma com_eq_Guard_True [C_simp]:
-  "Guard f \<lbrace>True\<rbrace> c \<sim> c"
+  "c \<sim> c' \<Longrightarrow> Guard f \<lbrace>True\<rbrace> c \<sim> c'"
   by (clarsimp simp: com_eq_Guard_UNIV)
 
-lemma com_eq_Guard_empty [C_simp_final]:
+lemma com_eq_Guard_empty [C_simp]:
   "Guard f {} c \<sim> Guard f {} Skip"
   unfolding com_eq_def
   by (clarsimp, case_tac s, auto intro: exec.GuardFault elim!: exec_elim_cases)
 
-lemma com_eq_Guard_False [C_simp_final]:
+lemma com_eq_Guard_False [C_simp]:
   "Guard f \<lbrace>False\<rbrace> c \<sim> Guard f {} Skip"
   by (clarsimp simp: com_eq_Guard_empty)
 
@@ -191,7 +190,7 @@ lemma com_eq_Catch_Skip [C_simp]:
   by (auto intro: exec.CatchMiss exec.Skip elim!: exec_elim_cases)
 
 lemma com_eq_Catch_Throw [C_simp]:
-  "Catch Throw c \<sim> c"
+  "c \<sim> c' \<Longrightarrow> Catch Throw c \<sim> c'"
   unfolding com_eq_def
   by (clarsimp, case_tac s, auto intro: exec.CatchMatch exec.Throw elim!: exec_elim_cases)
 
@@ -218,10 +217,10 @@ end
 method ccorres_rewrite_decompose =
   (rule com_eq_trans, (rule ccorres_rewrite_splits; ccorres_rewrite_decompose)?)
 
-method ccorres_rewrite_recombine declares C_simp C_simp_final =
-  determ \<open>rule C_simp_final C_simp[THEN com_eq_trans] com_eq_refl\<close>
+method ccorres_rewrite_recombine declares C_simp =
+  determ \<open>rule C_simp com_eq_refl\<close>
 
-method ccorres_rewrite declares C_simp C_simp_final =
+method ccorres_rewrite declares C_simp =
   changed \<open>rule ccorres_com_eqI, ccorres_rewrite_decompose, ccorres_rewrite_recombine+\<close>
 
 (* Example *)
@@ -286,7 +285,7 @@ private lemma "ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H
 
 end
 
-(* Test C_simp_final avoids looping. *)
+(* Test False guard avoids looping. *)
 lemma "ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H
         (SKIP ;; Guard f {} (IF b THEN c ELSE c FI) ;; SKIP)"
   apply ccorres_rewrite

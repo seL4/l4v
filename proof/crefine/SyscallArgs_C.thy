@@ -1294,7 +1294,6 @@ lemma getSyscallArg_ccorres_foo:
      apply (wp getMRs_tcbContext)
     apply simp
    apply (rule ccorres_seq_skip [THEN iffD2])
-   apply (rule ccorres_seq_skip [THEN iffD2])
    apply (rule ccorres_add_return2)
    apply (rule ccorres_symb_exec_l)
       apply (rule_tac P="\<lambda>s. user_word_at (x!n) (ptr_val (CTypesDefs.ptr_add ipc_buffer (of_nat n + 1))) s

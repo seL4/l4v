@@ -31,6 +31,9 @@ lemma corres_machine_op:
    apply (simp_all add: state_relation_def swp_def)
   done
 
+lemmas corresK_machine_op =
+  corres_machine_op[atomized, THEN corresK_lift_rule, rule_format, corresK]
+
 lemma doMachineOp_mapM:
   assumes "\<And>x. empty_fail (m x)"
   shows "doMachineOp (mapM m l) = mapM (doMachineOp \<circ> m) l"

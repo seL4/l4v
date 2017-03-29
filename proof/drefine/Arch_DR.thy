@@ -1006,6 +1006,7 @@ next
          apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+
       apply (rule validE_cases_valid, rule hoare_pre, wp)
 
+      including no_pre
       apply (wp resolve_vaddr_inv |  clarsimp simp: flush_type_map_def transform_page_dir_inv_def Let_unfold arch_invocation_relation_def translate_arch_invocation_def
       in_monad conj_disj_distribR[symmetric] split: option.splits | rule impI conjI)+
         apply (wp valid_validE[OF whenE_inv] |  clarsimp split: option.splits | safe)+

@@ -1318,14 +1318,10 @@ lemma he_invs[wp]:
     \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
       handle_event e
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  apply (case_tac e, simp_all)
-      apply (rename_tac syscall)
-      apply (case_tac syscall, simp_all)
-      apply ((rule hoare_pre, wp hvmf_active hr_invs hy_inv ) |
-                 wpc | wp hoare_drop_imps hoare_vcg_all_lift |
-                 fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
-                         elim!: st_tcb_ex_cap)+
-  done
+  by (case_tac e;
+      wpsimp wp: hvmf_active hr_invs hy_inv hoare_drop_imps hoare_vcg_all_lift
+           simp: valid_fault_def ct_in_state_def;
+      fastforce elim!: st_tcb_ex_cap)
 
 end
 

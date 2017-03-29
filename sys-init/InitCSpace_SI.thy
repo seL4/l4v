@@ -1265,8 +1265,9 @@ lemma init_cnode_slots_move_sep:
                   si_objects \<and>* object_empty_slots_initialised spec t obj_id" and
                xs="slots_of_list spec obj_id",
                simplified sep_conj_assoc], clarsimp+)
-     apply (wp init_cnode_slot_move_sep, simp+)
+     apply (wpsimp wp: init_cnode_slot_move_sep)
      apply fastforce
+    apply simp
    apply (subst sep.prod.distrib)+
    apply (clarsimp simp: sep_conj_assoc fun_eq_iff)
    apply sep_solve

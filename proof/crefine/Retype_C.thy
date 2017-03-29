@@ -4448,18 +4448,9 @@ lemma copyGlobalMappings_ccorres:
   apply (cinit lift: newPD_' simp: ARMSectionBits_def)
    apply (rule ccorres_h_t_valid_armKSGlobalPD)
    apply csymbr
-   apply (rule ccorres_Guard_Seq)+
    apply (simp add: kernelBase_def ARM.kernelBase_def objBits_simps archObjSize_def
                     whileAnno_def word_sle_def word_sless_def
                     Collect_True              del: Collect_const)
-   apply (rule_tac xf'="\<lambda>_. ()" in ccorres_abstract)
-    apply (simp del: Collect_const)
-    apply (rule Seq_ceqv [OF ceqv_refl _ xpres_triv])
-    apply (simp add: ceqv_Guard_UNIV del: Collect_const)
-    apply (rule While_ceqv[OF _ _ xpres_triv])
-     apply (rule impI, rule refl)
-    apply (rule ceqv_remove_eqv_skip)
-    apply (simp add: ceqv_Guard_UNIV ceqv_refl)
    apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState)
    apply csymbr
    apply (rule ccorres_rel_imp)
@@ -5888,7 +5879,6 @@ proof -
               apply simp
               apply (rule ccorres_pre_curDomain)
               apply ctac
-                apply ccorres_rewrite
                 apply (rule ccorres_symb_exec_r)
                   apply (rule ccorres_return_C, simp, simp, simp)
                  apply vcg
@@ -8094,6 +8084,7 @@ shows  "ccorres dc xfdc
          apply (rule is_aligned_shiftl_self)
         apply (simp)
        apply (simp add: range_cover_one[OF _  range_cover.sz(2) range_cover.sz(1)])
+       including no_pre
        apply (wp insertNewCap_invs' insertNewCap_valid_pspace' insertNewCap_caps_overlap_reserved'
                  insertNewCap_pspace_no_overlap' insertNewCap_caps_no_overlap'' insertNewCap_descendants_range_in'
                  insertNewCap_untypedRange hoare_vcg_all_lift insertNewCap_cte_at static_imp_wp)

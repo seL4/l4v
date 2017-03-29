@@ -1270,7 +1270,11 @@ lemma ceqv_xpres_Throw:
 lemma exec_Basic_Seq:
   "\<Gamma> \<turnstile> \<langle>Basic f ;; c, Normal s\<rangle> \<Rightarrow> s'
      = \<Gamma> \<turnstile> \<langle>c, Normal (f s)\<rangle> \<Rightarrow> s'"
-  by (auto elim!: exec_elim_cases intro: exec.intros)
+  by (auto elim: exec_elim_cases intro: exec.Basic exec.Seq)
+
+lemma exec_Basic_Seq_Basic:
+  "\<Gamma>\<turnstile> \<langle>Basic f;; Basic g, x\<rangle> \<Rightarrow> y = \<Gamma>\<turnstile> \<langle>Basic (g \<circ> f), x\<rangle> \<Rightarrow> y"
+  by (auto simp: o_def elim: exec_elim_cases intro: exec.Basic exec.Seq)
 
 lemma ceqv_xpres_return_C:
   "\<lbrakk> ceqv_xpres_rewrite_basic xf v qf qf';
@@ -1926,10 +1930,6 @@ lemma liftM_exs_valid:
   apply (erule bexI [rotated])
   apply simp
   done
-
-lemma ceqv_trans:
-  "\<lbrakk> ceqv \<Gamma> xf' rv' t t' c c'; ceqv \<Gamma> xf' rv' t t' c' c'' \<rbrakk> \<Longrightarrow> ceqv \<Gamma> xf' rv' t t' c c''"
-  unfolding ceqv_def by auto
 
 lemma ceqv_remove_eqv_skip:
   "\<lbrakk> \<And>s. ceqv \<Gamma> xf () s s' b Skip \<rbrakk> \<Longrightarrow>

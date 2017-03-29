@@ -144,7 +144,6 @@ lemma decodeDomainInvocation_ccorres:
       apply (rule syscall_error_throwError_ccorres_n)
       apply (simp add: syscall_error_to_H_cases)
      apply (simp add: null_def excaps_map_def)
-     apply (rule ccorres_Guard_Seq)+
      apply (rule ccorres_Cond_rhs_Seq)
       apply (simp add: throwError_bind invocationCatch_def
                        interpret_excaps_test_null
@@ -666,7 +665,6 @@ lemma decodeCNodeInvocation_ccorres:
              apply (rule syscall_error_throwError_ccorres_n)
              apply (simp add: syscall_error_to_H_cases)
             apply (simp add: linorder_not_less del: Collect_const cong: call_ignore_cong)
-            apply (rule ccorres_Guard_Seq)+
             apply csymbr
             apply (simp add: if_1_0_0 interpret_excaps_test_null
                              excaps_map_def
@@ -692,7 +690,6 @@ lemma decodeCNodeInvocation_ccorres:
                      prefer 2
                      apply simp
                      apply (rule ccorres_split_throws)
-                      apply simp
                       apply (rule ccorres_return_C_errorE, simp+)[1]
                      apply vcg
                     apply simp
@@ -702,7 +699,6 @@ lemma decodeCNodeInvocation_ccorres:
                        prefer 2
                        apply simp
                        apply (rule ccorres_split_throws)
-                        apply simp
                         apply (rule ccorres_return_C_errorE, simp+)[1]
                        apply vcg
                       apply (simp add: liftE_bindE cong: call_ignore_cong)
@@ -763,7 +759,6 @@ lemma decodeCNodeInvocation_ccorres:
                                 prefer 2
                                 apply simp
                                 apply (rule ccorres_split_throws)
-                                 apply simp
                                  apply (rule ccorres_return_C_errorE, simp+)[1]
                                 apply vcg
                                apply simp
@@ -841,7 +836,6 @@ lemma decodeCNodeInvocation_ccorres:
                                     prefer 2
                                     apply simp
                                     apply (rule ccorres_split_throws)
-                                     apply simp
                                      apply (rule ccorres_return_C_errorE, simp+)[1]
                                     apply vcg
                                    apply simp
@@ -1067,7 +1061,6 @@ lemma decodeCNodeInvocation_ccorres:
                apply (vcg exspec=setThreadState_modifies)
               apply (simp add: dc_def[symmetric])
               apply (rule ccorres_split_throws)
-               apply simp
                apply (rule ccorres_return_C_errorE, simp+)[1]
               apply vcg
              apply (wp injection_wp_E[OF refl])
@@ -1144,7 +1137,6 @@ lemma decodeCNodeInvocation_ccorres:
            apply (simp add: invocationCatch_use_injection_handler
                                   [symmetric, unfolded o_def]
                        del: Collect_const)
-           apply (rule ccorres_Guard_Seq)+
            apply csymbr
            apply (simp add: interpret_excaps_test_null excaps_map_def
                             if_1_0_0 dc_def[symmetric]
@@ -1154,7 +1146,6 @@ lemma decodeCNodeInvocation_ccorres:
             apply (rule ccorres_cond_true_seq)
             apply (rule syscall_error_throwError_ccorres_n)
             apply (simp add: syscall_error_to_H_cases)
-           apply (rule ccorres_Guard_Seq)+
            apply csymbr
            apply (simp add: interpret_excaps_test_null Suc_length_not_empty'
                             if_1_0_0 del: Collect_const)
@@ -2088,7 +2079,6 @@ lemma resetUntypedCap_ccorres:
              apply (rule ccorres_guard_imp2)
               apply (rule ccorres_rhs_assoc)+
               apply (ctac add: clearMemory_untyped_ccorres[where ut_slot=slot])
-                apply (rule ccorres_Guard_Seq)+
                 apply csymbr
                 apply (rule ccorres_move_c_guard_cte)
                 apply (rule ccorres_split_nothrow_novcg)
@@ -2512,7 +2502,6 @@ lemma invokeUntyped_Retype_ccorres:
        apply (rule ccorres_move_c_guard_cte)
        apply csymbr
        apply (rule ccorres_abstract_cleanup)
-       apply (rule ccorres_Guard_Seq)+
        apply csymbr
        apply (simp add: from_bool_0 del: Collect_const)
        apply (rule_tac xf'=xfdc and r'=dc in ccorres_splitE)
@@ -2536,7 +2525,6 @@ lemma invokeUntyped_Retype_ccorres:
          apply csymbr
          apply csymbr
          apply (rule ccorres_move_c_guard_cte)
-         apply (rule ccorres_Guard_Seq)+
          apply (rule ccorres_stateAssert)
          apply (rule ccorres_cross_retype_zero_bytes_over_guard[where
              dev=isdev and p=cref, OF cover])
@@ -3036,7 +3024,6 @@ shows
                cong: StateSpace.state.fold_congs globals.fold_congs)
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
-   apply (rule ccorres_Guard_Seq)+
    apply csymbr
    apply (simp add: interpret_excaps_test_null
                     excaps_map_def if_1_0_0
@@ -3071,7 +3058,6 @@ shows
              apply (rule ccorres_add_return)
              apply (simp only: )  
              apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=5 and buffer=buffer])
-               apply (rule ccorres_Guard_Seq)+
                apply csymbr
                apply (simp add: invocationCatch_use_injection_handler
                                 injection_bindE[OF refl refl]
@@ -3345,11 +3331,9 @@ shows
                         apply (rename_tac reset' fi', rule_tac P="reset_fi_tup = (fi', reset')"
                             in ccorres_gen_asm2)
                         apply csymbr
-                        apply (rule ccorres_Guard_Seq)+
                         apply csymbr+
                         apply (rule ccorres_Guard_Seq)+
                         apply csymbr
-                        apply (rule ccorres_Guard_Seq)+
                         apply csymbr
                         apply (rule ccorres_symb_exec_r)
                          apply (rule_tac xf'=ret__int_' in ccorres_abstract, ceqv)

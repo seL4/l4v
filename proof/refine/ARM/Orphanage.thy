@@ -1065,7 +1065,7 @@ lemma sendIPC_valid_queues' [wp]:
    sendIPC blocking call badge canGrant thread epptr
    \<lbrace> \<lambda>rv s. valid_queues' s \<rbrace>"
   unfolding sendIPC_def
-  apply (wp hoare_drop_imps | wpc | clarsimp)+
+  apply (wp hoare_drop_imps | wpsimp)+
           apply (wp_once sts_st_tcb', clarsimp)
          apply (wp)+
   apply (rule_tac Q="\<lambda>rv. valid_queues' and valid_objs' and ko_at' rv epptr

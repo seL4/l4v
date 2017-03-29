@@ -543,9 +543,7 @@ lemma revokable_ccorres:
                   IF ret__unsigned = scast cap_untyped_cap THEN
                     \<acute>newCapIsRevocable :== scast true
                   ELSE
-                    IF True THEN
-                       \<acute>newCapIsRevocable :== scast false
-                    FI
+                    \<acute>newCapIsRevocable :== scast false
                   FI
                 FI
               FI
@@ -755,9 +753,7 @@ lemma cteInsert_if_helper:
                    IF rv = scast cap_untyped_cap THEN
                      \<acute>newCapIsRevocable :== scast true
                    ELSE
-                     IF True THEN
-                        \<acute>newCapIsRevocable :== scast false
-                     FI
+                     \<acute>newCapIsRevocable :== scast false
                    FI
                  FI
                FI

@@ -426,13 +426,13 @@ lemma reduceZombie_ccorres1:
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool expo}) []
      (cutMon (op = s) (reduceZombie cap slot expo)) (Call reduceZombie_'proc)"
   apply (cinit' lift: slot_' immediate_')
-   apply (simp add: from_bool_0
-               del: Collect_const)
+   apply (simp add: from_bool_0 del: Collect_const)
    apply (rule_tac P="capZombieNumber cap < 2 ^ word_bits" in ccorres_gen_asm)
    apply (rule ccorres_move_c_guard_cte)
-   apply (rule_tac xf'=ret__unsigned_long_' and val="capZombiePtr cap"
-                 and R="cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot and invs'"
-               in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
+   apply (rule_tac xf'=ret__unsigned_long_'
+               and val="capZombiePtr cap"
+               and R="cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot and invs'"
+            in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
       apply vcg
       apply clarsimp
       apply (erule(2) zombie_rf_sr_helperE)
@@ -441,9 +441,10 @@ lemma reduceZombie_ccorres1:
      apply ceqv
     apply csymbr
     apply (rule ccorres_move_c_guard_cte)
-    apply (rule_tac xf'=n_' and val="of_nat (capZombieNumber cap)"
-                 and R="cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot and invs'"
-               in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
+    apply (rule_tac xf'=n_'
+                and val="of_nat (capZombieNumber cap)"
+                and R="cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot and invs'"
+             in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
        apply (rule conseqPre, vcg)
        apply clarsimp
        apply (erule(2) zombie_rf_sr_helperE)
@@ -451,23 +452,22 @@ lemma reduceZombie_ccorres1:
        apply fastforce
       apply ceqv
      apply (rule ccorres_move_c_guard_cte)
-     apply (rule_tac xf'=type_' and val="case_zombie_type ZombieTCB_C of_nat (capZombieType cap)"
+     apply (rule_tac xf'=type_'
+                 and val="case_zombie_type ZombieTCB_C of_nat (capZombieType cap)"
                  and R="cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot and invs'"
-               in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
+              in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
         apply vcg
         apply clarsimp
         apply (erule(2) zombie_rf_sr_helperE)
          apply simp
         apply clarsimp
        apply ceqv
-      apply (simp add: reduceZombie_def
-                  del: Collect_const)
+      apply (simp add: reduceZombie_def del: Collect_const)
       apply (simp only: cutMon_walk_if)
       apply (rule ccorres_if_lhs)
        apply (simp, rule ccorres_drop_cutMon, rule ccorres_fail)
       apply (rule ccorres_if_lhs)
-       apply (simp add: Let_def Collect_True Collect_False
-                        assertE_assert liftE_bindE
+       apply (simp add: Let_def Collect_True Collect_False assertE_assert liftE_bindE
                    del: Collect_const)
        apply (rule ccorres_drop_cutMon, rule ccorres_assert)
        apply (rule ccorres_rhs_assoc)+
@@ -477,54 +477,42 @@ lemma reduceZombie_ccorres1:
         apply (rule ccorres_assert)
         apply (rule ccorres_move_c_guard_cte)
         apply (rule ccorres_symb_exec_r)
-          apply (rule ccorres_symb_exec_r)
-            apply (simp add: liftE_liftM liftM_def)
-            apply (ctac(no_vcg) add: capSwapForDelete_ccorres)
-             apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-             apply (rule allI, rule conseqPre, vcg)
-             apply (simp add: return_def)
-            apply wp
-           apply vcg
-          apply (rule conseqPre, vcg)
-          apply simp
-         apply simp
+          apply (simp add: liftE_liftM liftM_def)
+          apply (ctac(no_vcg) add: capSwapForDelete_ccorres)
+           apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+           apply (rule allI, rule conseqPre, vcg)
+           apply (simp add: return_def)
+          apply wp
          apply vcg
         apply (rule conseqPre, vcg)
         apply clarsimp
        apply wp
       apply (rule ccorres_if_lhs)
-       apply (simp add: Let_def liftE_bindE
-                   del: Collect_const)
+       apply (simp add: Let_def liftE_bindE del: Collect_const)
        apply (rule ccorres_cutMon_locateSlotCap_Zombie)
-       apply (simp add: cutMon_walk_bindE Collect_True
-                   del: Collect_const)
-       apply (rule ccorres_rhs_assoc
-                   ccorres_move_c_guard_cte
-                   ccorres_Guard_Seq)+
+       apply (simp add: cutMon_walk_bindE Collect_True del: Collect_const)
+       apply (rule ccorres_rhs_assoc ccorres_move_c_guard_cte ccorres_Guard_Seq)+
        apply csymbr
        apply (ctac(no_vcg, no_simp) add: cteDelete_ccorres1)
           apply (rule ccorres_guard_imp2)
            apply (rule fs_cc, clarsimp+)[1]
           apply simp
          apply (rule ccorres_drop_cutMon)
-         apply (simp add: Collect_False
-                     del: Collect_const)
+         apply (simp add: Collect_False del: Collect_const)
          apply (rule ccorres_rhs_assoc ccorres_move_c_guard_cte)+
          apply (rule ccorres_symb_exec_l[OF _ getCTE_inv _ empty_fail_getCTE])
           apply (rule_tac F="\<lambda>rv'. \<exists>cp. ccap_relation (cteCap rv) cp
                                       \<and> rv' = cap_get_tag cp"
                       and xf'=ret__unsigned_'
                       and R="cte_wp_at' (op = rv) slot"
-                       in ccorres_symb_exec_r_abstract_UNIV[where R'=UNIV])
+                   in ccorres_symb_exec_r_abstract_UNIV[where R'=UNIV])
              apply (rule conseqPre, vcg)
              apply (clarsimp simp: cte_wp_at_ctes_of)
              apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
-             apply (clarsimp dest!: ccte_relation_ccap_relation
-                              simp: typ_heap_simps)
+             apply (clarsimp dest!: ccte_relation_ccap_relation simp: typ_heap_simps)
              apply fastforce
             apply ceqv
-           apply (clarsimp simp: cap_get_tag_isCap
-                       simp del: Collect_const)
+           apply (clarsimp simp: cap_get_tag_isCap simp del: Collect_const)
            apply (rule ccorres_Cond_rhs_Seq)
             apply simp
             apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
@@ -533,9 +521,10 @@ lemma reduceZombie_ccorres1:
            apply (rule ccorres_Cond_rhs_Seq)
             apply (simp add: Let_def del: Collect_const)
             apply (rule ccorres_move_c_guard_cte ccorres_rhs_assoc)+
-            apply (rule_tac xf'=ret__unsigned_long_' and val="capZombiePtr (cteCap rv)"
-                 and R="cte_wp_at' (op = rv) slot and invs'"
-               in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
+            apply (rule_tac xf'=ret__unsigned_long_'
+                        and val="capZombiePtr (cteCap rv)"
+                        and R="cte_wp_at' (op = rv) slot and invs'"
+                     in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
                apply (rule conseqPre, vcg)
                apply clarsimp
                apply (erule(2) zombie_rf_sr_helperE)
@@ -556,8 +545,8 @@ lemma reduceZombie_ccorres1:
              apply (rule ccorres_move_c_guard_cte)
              apply (rule_tac xf'=ret__unsigned_long_'
                          and val="of_nat (capZombieNumber (cteCap rv))"
-                 and R="cte_wp_at' (op = rv) slot and invs'"
-               in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
+                         and R="cte_wp_at' (op = rv) slot and invs'"
+                      in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
                 apply (rule conseqPre, vcg)
                 apply clarsimp
                 apply (erule(2) zombie_rf_sr_helperE)
@@ -567,18 +556,16 @@ lemma reduceZombie_ccorres1:
               apply csymbr
               apply (simp only: if_1_0_0 simp_thms)
               apply (rule ccorres_Cond_rhs_Seq[rotated])
-               apply (rule_tac P="\<exists>s. s \<turnstile>' cteCap rv \<and> s \<turnstile>' cap"
-                            in ccorres_gen_asm)
-               apply (clarsimp simp: word_unat.Abs_inject
-                                     valid_cap_capZombieNumber_unats)
+               apply (rule_tac P="\<exists>s. s \<turnstile>' cteCap rv \<and> s \<turnstile>' cap" in ccorres_gen_asm)
+               apply (clarsimp simp: word_unat.Abs_inject valid_cap_capZombieNumber_unats)
                apply (simp add: assertE_def)
                apply (rule ccorres_fail)
               apply (rule ccorres_rhs_assoc)+
               apply (rule ccorres_move_c_guard_cte)
               apply (rule_tac xf'=ret__unsigned_'
                           and val="case_zombie_type ZombieTCB_C of_nat (capZombieType (cteCap rv))"
-                             and R="cte_wp_at' (op = rv) slot and invs'"
-                          in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
+                          and R="cte_wp_at' (op = rv) slot and invs'"
+                       in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
                  apply (rule conseqPre, vcg)
                  apply clarsimp
                  apply (erule(2) zombie_rf_sr_helperE)
@@ -588,12 +575,10 @@ lemma reduceZombie_ccorres1:
                apply csymbr
                apply (simp only: if_1_0_0 simp_thms)
                apply (rule ccorres_Cond_rhs_Seq)
-                apply (rule_tac P="\<exists>s. s \<turnstile>' cap \<and> s \<turnstile>' cteCap rv"
-                              in ccorres_gen_asm)
+                apply (rule_tac P="\<exists>s. s \<turnstile>' cap \<and> s \<turnstile>' cteCap rv" in ccorres_gen_asm)
                 apply (subgoal_tac "P" for P, subst if_P, assumption)
                  prefer 2
-                 apply (clarsimp simp: word_unat.Abs_inject
-                                       valid_cap_capZombieNumber_unats)
+                 apply (clarsimp simp: word_unat.Abs_inject valid_cap_capZombieNumber_unats)
                  apply (drule valid_capAligned)+
                  apply (drule(4) case_zombie_type_map_inj)
                  apply simp
@@ -604,8 +589,8 @@ lemma reduceZombie_ccorres1:
                 apply (rule ccorres_symb_exec_l [OF _ getCTE_inv _ empty_fail_getCTE])
                  apply (rule ccorres_assert)
                  apply (rule_tac xf'=ret__struct_cap_C_'
-                               and F="\<lambda>rv'. ccap_relation (capZombieNumber_update (\<lambda>x. x - 1) cap) rv'"
-                               and R="cte_wp_at' (op = rv) slot and invs'"
+                             and F="\<lambda>rv'. ccap_relation (capZombieNumber_update (\<lambda>x. x - 1) cap) rv'"
+                             and R="cte_wp_at' (op = rv) slot and invs'"
                           in ccorres_symb_exec_r_abstract_UNIV[where R'=UNIV])
                     apply (rule conseqPre, vcg)
                     apply clarsimp
@@ -650,20 +635,17 @@ lemma reduceZombie_ccorres1:
         apply (rule ccorres_split_throws)
          apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
          apply (rule allI, rule conseqPre, vcg)
-         apply (clarsimp simp: throwError_def return_def
-                               cintr_def)
+         apply (clarsimp simp: throwError_def return_def cintr_def)
         apply vcg
        apply (wp cutMon_validE_drop)
-       apply (rule_tac Q'="\<lambda>rv. invs' and cte_at' slot and valid_cap' cap"
-                 in hoare_post_imp_R)
+       apply (rule_tac Q'="\<lambda>rv. invs' and cte_at' slot and valid_cap' cap" in hoare_post_imp_R)
         apply (wp cteDelete_invs'')
        apply (clarsimp simp: cte_wp_at_ctes_of)
        apply (fastforce dest: ctes_of_valid')
       apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
       apply simp
      apply (simp add: guard_is_UNIV_def Collect_const_mem)
-     apply (clarsimp simp: from_bool_def false_def isCap_simps
-                           size_of_def cte_level_bits_def)
+     apply (clarsimp simp: from_bool_def false_def isCap_simps size_of_def cte_level_bits_def)
      apply (simp only: word_bits_def unat_of_nat unat_arith_simps, simp)
     apply (simp add: guard_is_UNIV_def)+
   apply (clarsimp simp: cte_wp_at_ctes_of)

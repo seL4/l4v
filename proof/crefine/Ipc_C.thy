@@ -825,7 +825,7 @@ lemma handleFaultReply':
                   fromIntegral_simp1 fromIntegral_simp2 shiftL_word)
     apply (clarsimp simp: mapM_def sequence_def bind_assoc asUser_bind_distrib
                           asUser_return submonad_asUser.fn_stateAssert bit_def)
-   apply wp+
+   apply wpsimp+
   done
 
 end
@@ -1846,8 +1846,6 @@ proof -
                       seL4_Fault_tag_defs
                  del: Collect_const)
      apply (rule ccorres_rhs_assoc)+
-     apply simp
-     apply (rule ccorres_rhs_assoc)+
      apply (ctac (no_vcg))
       apply (rule ccorres_stateAssert)
       apply (ctac(no_vcg) add: setMR_ccorres_dc)
@@ -2348,7 +2346,7 @@ lemma loadCapTransfer_ctReceiveDepth:
      apply simp
      apply (simp only: word_bits_len_of[symmetric])
      apply (subst unat_lt2p, simp) 
-    apply wp+
+    apply wpsimp+
   done
 
 (* FIXME: move *)
@@ -3482,8 +3480,7 @@ proof -
            apply (rule_tac Q'="\<lambda>rv. no_0_obj' and real_cte_at' rv"
                       in hoare_post_imp_R, wp lsft_real_cte)
            apply (clarsimp simp: cte_wp_at_ctes_of)
-          apply (wp | simp)+
-         apply (rule hoare_pre, (wp | simp)+)
+          apply (wpsimp)+
         apply (clarsimp simp: guard_is_UNIV_def
                        elim!: inl_inrE)
        apply (rule hoare_pre, (wp mapM_wp' | simp)+)
@@ -3519,9 +3516,7 @@ lemma lookupExtraCaps_excaps_in_mem[wp]:
   apply (simp add: excaps_in_mem_def lookupExtraCaps_def lookupCapAndSlot_def
                    split_def)
   apply (wp mapME_set)
-      apply (wp getSlotCap_slotcap_in_mem | simp)+
-    apply (rule hoare_pre, wp, simp)
-   apply (simp add:hoare_TrueI)+
+      apply (wpsimp wp: getSlotCap_slotcap_in_mem)+
   done
 
 lemma doNormalTransfer_ccorres [corres]:
@@ -4197,8 +4192,6 @@ lemma handleFaultReply_ccorres [corres]:
         apply (rule ccorres_cond_false)
         apply (rule ccorres_cond_false)
         apply (rule ccorres_cond_false)
-        apply (clarsimp simp: ccorres_cond_iffs
-                        split del: if_split)
         apply (rule ccorres_rhs_assoc)
         (* apply (rule_tac P="\<lambda>s. \<exists>t. ko_at' t r s" in ccorres_cross_over_guard) *)
         apply (rule_tac val="fault_to_fault_tag f"
@@ -4466,7 +4459,6 @@ proof -
      apply (fold dc_def)[1]
      apply (rule ccorres_rhs_assoc)+
      apply (ctac(no_vcg))
-      apply (rule ccorres_Guard_Seq)
       apply (rule ccorres_symb_exec_r)
         apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="scast cap_reply_cap"])
          apply (ctac(no_vcg) add: setThreadState_ccorres)
@@ -4490,7 +4482,6 @@ proof -
     apply (rule ccorres_rhs_assoc)+
     apply (fold dc_def)[1]
     apply csymbr
-    apply (rule ccorres_Guard_Seq)
     apply (rule ccorres_symb_exec_r)
       apply (ctac (no_vcg) add: cteDeleteOne_ccorres[where w="scast cap_reply_cap"])
        apply (rule_tac A'=UNIV in stronger_ccorres_guard_imp)
@@ -4658,7 +4649,6 @@ lemma sendIPC_dequeue_ccorres_helper:
                                         | (a#list) \<Rightarrow> Structures_H.RecvEP rest)
         (\<acute>queue :== CALL ep_ptr_get_queue(ep_ptr);;
          \<acute>dest :== head_C \<acute>queue;;
-         SKIP;;
          \<acute>queue :== CALL tcbEPDequeue(\<acute>dest,\<acute>queue);;
          CALL ep_ptr_set_queue(ep_ptr,\<acute>queue);;
          IF head_C \<acute>queue = Ptr 0 THEN
@@ -5229,7 +5219,6 @@ lemma sendIPC_ccorres [corres]:
        apply (rule ccorres_rhs_assoc2)
        apply (rule ccorres_rhs_assoc2)
        apply (rule ccorres_rhs_assoc2)
-       apply (rule ccorres_rhs_assoc2)
       apply (rule ccorres_split_nothrow_novcg)             
            apply (rule_tac dest=dest in sendIPC_dequeue_ccorres_helper)
            apply simp
@@ -5620,7 +5609,6 @@ lemma receiveIPC_dequeue_ccorres_helper:
                                        | (a#list) \<Rightarrow> Structures_H.SendEP rest))
         (\<acute>queue :== CALL ep_ptr_get_queue(Ptr ep);;
          \<acute>sender :== head_C \<acute>queue;;
-         SKIP;;
          \<acute>queue :== CALL tcbEPDequeue(\<acute>sender,\<acute>queue);;
          CALL ep_ptr_set_queue(Ptr ep,\<acute>queue);;
          IF head_C \<acute>queue = Ptr 0 THEN
@@ -5995,7 +5983,6 @@ lemma receiveIPC_ccorres [corres]:
            apply (rule ccorres_rhs_assoc2)
            apply (rule ccorres_rhs_assoc2)
            apply (rule ccorres_rhs_assoc2)
-           apply (rule ccorres_rhs_assoc2)
            apply (rule ccorres_split_nothrow_novcg)
                apply simp
                apply (rule_tac sender=sender in receiveIPC_dequeue_ccorres_helper[simplified])
@@ -6195,7 +6182,6 @@ lemma sendSignal_dequeue_ccorres_helper:
                                         | (a#list) \<Rightarrow> Structures_H.ntfn.WaitingNtfn rest) nTFN)
         (\<acute>ntfn_queue :== CALL ntfn_ptr_get_queue(Ptr ntfn);;
          \<acute>dest :== head_C \<acute>ntfn_queue;;
-         SKIP;;
          \<acute>ntfn_queue :== CALL tcbEPDequeue(\<acute>dest,\<acute>ntfn_queue);;
          CALL ntfn_ptr_set_queue(Ptr ntfn,\<acute>ntfn_queue);;
          IF head_C \<acute>ntfn_queue = Ptr 0 THEN

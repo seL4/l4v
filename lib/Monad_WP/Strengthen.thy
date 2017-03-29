@@ -271,16 +271,16 @@ fun do_strg ctxt congs rules
     = apply_strg ctxt (Config.get ctxt (fst tracing)) congs rules
         THEN_ALL_NEW (TRY o resolve_tac ctxt @{thms strengthen_refl intro_oblig})
 
-fun strengthen ctxt thms = let
+fun strengthen ctxt thms i st = let
     val congs = Congs.get (Proof_Context.theory_of ctxt)
     val rules = map (Make_Strengthen_Rule.auto_mk ctxt) thms
-  in resolve0_tac @{thms use_strengthen_imp}
-    THEN' do_strg ctxt congs rules end
+  in (resolve0_tac @{thms use_strengthen_imp}
+    THEN' do_strg ctxt congs rules) i st end
 
 val strengthen_args =
   Attrib.thms >> curry (fn (rules, ctxt) =>
-    Method.SIMPLE_METHOD (
-      strengthen ctxt rules 1
+    Method.CONTEXT_METHOD (fn _ =>
+      Method.RUNTIME (Method.CONTEXT_TACTIC (strengthen ctxt rules 1))
     )
   );
 
@@ -427,5 +427,4 @@ lemma foo:
   done
 
 end
-
 end

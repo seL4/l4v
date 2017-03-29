@@ -658,7 +658,7 @@ lemma activate_thread_corres:
            apply (rule dcorres_symb_exec_r)
              apply (rule set_thread_state_corres[unfolded tcb_pending_op_slot_def])
             apply simp
-            apply (wp dcorres_to_wp[OF as_user_setNextPC_corres,simplified])+
+            apply (wpsimp wp: dcorres_to_wp[OF as_user_setNextPC_corres,simplified])+
        apply (simp add:invs_mdb pred_tcb_at_def obj_at_def invs_valid_idle
          generates_pending_def not_idle_thread_def)
       apply (clarsimp simp:infer_tcb_pending_op_def arch_activate_idle_thread_def

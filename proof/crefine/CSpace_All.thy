@@ -191,7 +191,6 @@ lemma lookupSlotForCNodeOp_ccorres':
                             word_sle_def syscall_error_to_H_cases
                             word_size exception_defs)
      apply vcg
-    apply (rule ccorres_Guard_Seq)+
     apply csymbr
     apply (rule_tac Q="\<lambda>s. depth < 2 ^ word_bits" and Q'=\<top> in ccorres_split_unless_throwError_cond)
        -- "correspondance of Haskell and C conditions"

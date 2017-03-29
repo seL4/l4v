@@ -15,6 +15,7 @@
 theory Eisbach_Methods
 imports "subgoal_focus/Subgoal_Methods"
         "~~/src/HOL/Eisbach/Eisbach_Tools"
+        Rule_By_Method
 begin
 
 
@@ -33,10 +34,11 @@ ML \<open>fun method_evaluate text ctxt facts =
 
 method_setup print_headgoal = 
   \<open>Scan.succeed (fn ctxt =>
-   SIMPLE_METHOD
-    (SUBGOAL (fn (t,_) => 
+    fn _ => fn (ctxt', thm) =>
+    ((SUBGOAL (fn (t,_) =>
      (Output.writeln 
-     (Pretty.string_of (Syntax.pretty_term ctxt t)); all_tac)) 1))\<close>
+     (Pretty.string_of (Syntax.pretty_term ctxt t)); all_tac)) 1 thm);
+     (Seq.make_results (Seq.single (ctxt', thm)))))\<close>
 
 section \<open>Simple Combinators\<close>
 
@@ -385,5 +387,31 @@ notepad begin
   }
 end
 
+section \<open>Attribute methods (for use with rule_by_method attributes)\<close>
+
+method prove_prop_raw for P :: "prop" methods m =
+  (erule thin_rl, rule revcut_rl[of "PROP P"],
+    solves \<open>match conclusion in _ \<Rightarrow> \<open>m\<close>\<close>)
+
+method prove_prop for P :: "prop" = (prove_prop_raw "PROP P" \<open>auto\<close>)
+
+experiment begin
+
+lemma assumes A[simp]:A shows A by (rule [[@\<open>prove_prop A\<close>]])
+
+end
+
+section \<open>Shortcuts for prove_prop. Note these are less efficient than using the raw syntax because
+ the facts are re-proven every time.\<close>
+
+method ruleP for P :: "prop" = (catch \<open>rule [[@\<open>prove_prop "PROP P"\<close>]]\<close> \<open>fail\<close>)
+method insertP for P :: "prop" = (catch \<open>insert [[@\<open>prove_prop "PROP P"\<close>]]\<close> \<open>fail\<close>)[1]
+
+experiment begin
+
+lemma assumes A[simp]:A shows A by (ruleP False | ruleP A)
+lemma assumes A:A shows A by (ruleP "\<And>P. P \<Longrightarrow> P \<Longrightarrow> P", rule A, rule A)
+
+end
 
 end
