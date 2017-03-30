@@ -70,27 +70,27 @@ spec/haskell/src/SEL4/Object/IOPort/X64.lhs-boot
 
 spec/design/version
 
-spec/cspec/c/32/*
-spec/cspec/c/64/*
-spec/cspec/c/api/*
-spec/cspec/c/arch/*
-spec/cspec/c/kernel_all.c
-spec/cspec/c/kernel_all.c_pp
-spec/cspec/c/parsetab.py
-spec/cspec/c/plat/*
-spec/cspec/c/sources_list_updated
-spec/cspec/c/autoconf.h
+spec/cspec/*/c/32/*
+spec/cspec/*/c/64/*
+spec/cspec/*/c/api/*
+spec/cspec/*/c/arch/*
+spec/cspec/*/c/kernel_all.c
+spec/cspec/*/c/kernel_all.c_pp
+spec/cspec/*/c/parsetab.py
+spec/cspec/*/c/plat/*
+spec/cspec/*/c/sources_list_updated
+spec/cspec/*/c/autoconf.h
 
-spec/cspec/c/arch/object/structures_defs.thy
-spec/cspec/c/arch/object/structures_proofs.thy
-spec/cspec/c/arch/api/shared_types_defs.thy
-spec/cspec/c/arch/api/shared_types_proofs.thy
-spec/cspec/c/32/mode/api/shared_types_defs.thy
-spec/cspec/c/32/mode/api/shared_types_proofs.thy
-spec/cspec/c/plat/machine/hardware_proofs.thy
-spec/cspec/c/plat/machine/hardware_defs.thy
-spec/cspec/c/api/types_proofs.thy
-spec/cspec/c/api/types_defs.thy
+spec/cspec/*/c/arch/object/structures_defs.thy
+spec/cspec/*/c/arch/object/structures_proofs.thy
+spec/cspec/*/c/arch/api/shared_types_defs.thy
+spec/cspec/*/c/arch/api/shared_types_proofs.thy
+spec/cspec/*/c/32/mode/api/shared_types_defs.thy
+spec/cspec/*/c/32/mode/api/shared_types_proofs.thy
+spec/cspec/*/c/plat/machine/hardware_proofs.thy
+spec/cspec/*/c/plat/machine/hardware_defs.thy
+spec/cspec/*/c/api/types_proofs.thy
+spec/cspec/*/c/api/types_defs.thy
 
 tools/c-parser/Simpl/SyntaxTest.thy
 tools/c-parser/Simpl/HoareTotalProps.thy
