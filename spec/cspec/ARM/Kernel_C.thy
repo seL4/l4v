@@ -10,9 +10,9 @@
 
 theory Kernel_C
 imports
-  "../machine/$L4V_ARCH/MachineTypes"
-  "../../lib/CTranslationNICTA"
-  "../../tools/asmrefine/CommonOps"
+  "../../machine/$L4V_ARCH/MachineTypes"
+  "../../../lib/CTranslationNICTA"
+  "../../../tools/asmrefine/CommonOps"
 begin
 
 declare Char_eq_Char_iff [simp del]

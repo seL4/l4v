@@ -76,18 +76,18 @@ session ExecSpec = Word_Lib +
 
 session CSpec = CKernel +
   theories [condition = "SORRY_BITFIELD_PROOFS", quick_and_dirty]
-    "cspec/KernelInc_C"
+    "cspec/$L4V_ARCH/KernelInc_C"
   theories
-    "cspec/KernelInc_C"
-    "cspec/KernelState_C"
+    "cspec/$L4V_ARCH/KernelInc_C"
+    "cspec/$L4V_ARCH/KernelState_C"
 
 session CKernel = CParser +
   theories [condition = "SORRY_MODIFIES_PROOFS", quick_and_dirty]
-    "cspec/Kernel_C"
+    "cspec/$L4V_ARCH/Kernel_C"
   theories
-    "cspec/Kernel_C"
+    "cspec/$L4V_ARCH/Kernel_C"
   files
-    "cspec/c/kernel_all.c_pp"
+    "cspec/$L4V_ARCH/c/kernel_all.c_pp"
 
 session SimplExport = CSpec +
   theories "cspec/SimplExport"
