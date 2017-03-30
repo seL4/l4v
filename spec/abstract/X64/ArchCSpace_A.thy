@@ -72,7 +72,7 @@ where
   --"FIXME: should this also check domain id equality? C kernel does not"
 *)
 | "arch_same_region_as (IOPortCap frst lst) c' =
-   (\<exists>frst' lst'. c' = IOPortCap frst' lst' \<and> frst \<le> frst' \<and> lst' \<le> lst)"
+   (\<exists>frst' lst'. c' = IOPortCap frst' lst' \<and> frst \<le> frst' \<and> lst' \<le> lst \<and> frst' \<le> lst')"
 
 text {* Check whether two arch capabilities are to the same object. *}
 definition
