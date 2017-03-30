@@ -43,13 +43,9 @@ crunch ksDomSchedule_inv[wp]: setDomain "\<lambda>s. P (ksDomSchedule s)"
 crunch ksDomSchedule_inv[wp]: sendSignal "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps simp: crunch_simps simp: unless_def)
 
-lemma vcpuSwitch_ksDomSchedule_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
-  sorry
-
-lemma dissociateVCPUTCB_ksDomSchedule_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> dissociateVCPUTCB param_a param_b \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
-  sorry
+crunch ksDomSchedule_inv[wp]: vcpuSwitch, dissociateVCPUTCB "\<lambda>s. P (ksDomSchedule s)"
+  (wp: crunch_wps setObject_ksDomSchedule_inv FalseI simp: crunch_simps
+   ignore: setObject getObject)
 
 crunch ksDomSchedule_inv[wp]: finaliseCap "\<lambda>s. P (ksDomSchedule s)"
   (simp: crunch_simps assertE_def unless_def
@@ -63,13 +59,9 @@ lemma finaliseSlot_ksDomSchedule_inv[wp]:
   "\<lbrace>\<lambda>s. P (ksDomSchedule s) \<rbrace> finaliseSlot param_a param_b \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
   by (wp finaliseSlot_preservation | clarsimp)+
 
-lemma cteDelete_ksDomSchedule_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> cteDelete param_a b \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
-  sorry (* crunch *)
-
-lemma invokeTCB_ksDomSchedule_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> invokeTCB param_a \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
-  sorry (* crunch *)
+crunch ksDomSchedule_inv[wp]: invokeTCB "\<lambda>s. P (ksDomSchedule s)"
+  (wp: cteDelete_preservation checkCap_inv crunch_wps simp: crunch_simps unless_def
+   ignore: checkCapAt cteDelete)
 
 crunch ksDomSchedule_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
@@ -78,8 +70,8 @@ crunch ksDomSchedule_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomSchedule s)"
       ignore: transferCapsToSlots setObject getObject)
 
 lemma cteRevoke_ksDomSchedule_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s) \<rbrace> cteRevoke param_a \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
-  by (wp cteRevoke_preservation | clarsimp)+
+  "cteRevoke p \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
+  by (wp cteRevoke_preservation cteDelete_preservation | clarsimp)+
 
 crunch ksDomSchedule_inv[wp]: finaliseCap "\<lambda>s. P (ksDomSchedule s)"
   (simp: crunch_simps assertE_def unless_def
@@ -101,35 +93,11 @@ crunch ksDomSchedule_inv[wp]: performARMMMUInvocation "\<lambda>s. P (ksDomSched
   (ignore: getObject setObject
    wp: crunch_wps getObject_cte_inv getASID_wp
    simp: unless_def)
-(*
-lemma vcpuSave_ksDomSchedule_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> vcpuSave param_a \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
-  sorry
 
-lemma invokeVCPUInjectIRQ_ksDomSchedule_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> invokeVCPUInjectIRQ a b c \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
-  sorry
-
-lemma vcpuDisable_ksDomSchedule_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> vcpuDisable v \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
-  sorry
-
-lemma writeVCPUReg_ksDomSchedule_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> writeVCPUReg a b c \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
-  sorry
-
-lemma associateVCPUTCB_ksDomSchedule_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> associateVCPUTCB a b \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
-  sorry*)
-
-lemma performInvocation_ksDomSchedule_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> performInvocation a b g \<lbrace>\<lambda>_ s. P (ksDomSchedule s)\<rbrace>"
-  sorry (* crunch *)
-(*
 crunch ksDomSchedule_inv[wp]: performInvocation "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps zipWithM_x_inv cteRevoke_preservation mapME_x_inv_wp
    simp: unless_def crunch_simps filterM_mapM ignore: getObject loadObject)
-*)
+
 crunch ksDomSchedule_inv[wp]: schedule "\<lambda>s. P (ksDomSchedule s)"
   (ignore: setNextPC threadSet simp:crunch_simps wp:findM_inv)
 
@@ -180,18 +148,10 @@ crunch ksDomainTime_inv[wp]: setDomain "\<lambda>s. P (ksDomainTime s)"
 crunch ksDomainTime_inv[wp]: sendSignal "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps simp: crunch_simps simp: unless_def)
 
-lemma vcpuSwitch_ksDomainTime_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (ksDomainTime s)\<rbrace>"
-  sorry
-
-crunch ksDomainTime_inv[wp]: deleteASID "\<lambda>s. P (ksDomainTime s)"
+crunch ksDomainTime_inv[wp]: deleteASID, dissociateVCPUTCB "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only getObject_inv loadObject_default_inv
-       updateObject_default_inv
+       updateObject_default_inv FalseI getVCPU_wp hoare_vcg_all_lift hoare_vcg_if_lift3
    ignore: setObject getObject simp: whenE_def)
-
-lemma dissociateVCPUTCB_ksDomainTime_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace> dissociateVCPUTCB param_a param_b \<lbrace>\<lambda>_ s. P (ksDomainTime s)\<rbrace>"
-  sorry
 
 crunch ksDomainTime_inv[wp]: finaliseCap "\<lambda>s. P (ksDomainTime s)"
   (simp: crunch_simps assertE_def unless_def
@@ -211,16 +171,8 @@ lemma finaliseSlot_ksDomainTime_inv[wp]:
   "\<lbrace>\<lambda>s. P (ksDomainTime s) \<rbrace> finaliseSlot param_a param_b \<lbrace>\<lambda>_ s. P (ksDomainTime s)\<rbrace>"
   by (wp finaliseSlot_preservation | clarsimp)+
 
-lemma cteDelete_ksDomainTime_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace> cteDelete param_a b \<lbrace>\<lambda>_ s. P (ksDomainTime s)\<rbrace>"
-  sorry (* crunch *)
-
-lemma invokeTCB_ksDomainTime_inv[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace> invokeTCB param_a \<lbrace>\<lambda>_ s. P (ksDomainTime s)\<rbrace>"
-  sorry (* crunch *)
-(*
 crunch ksDomainTime_inv[wp]: invokeTCB "\<lambda>s. P (ksDomainTime s)"
-  (wp: crunch_wps checkCap_inv finaliseSlot'_preservation simp: if_apply_def2 crunch_simps)*)
+  (wp: crunch_wps checkCap_inv finaliseSlot'_preservation simp: if_apply_def2 crunch_simps)
 
 crunch ksDomainTime_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
@@ -255,15 +207,13 @@ crunch ksDomainTime_inv[wp]: performARMMMUInvocation "\<lambda>s. P (ksDomainTim
 crunch ksDomainTime_inv[wp]: preemptionPoint "\<lambda>s. P (ksDomainTime s)"
   (simp: whenE_def)
 
-lemma performInvocation_ksDomainTime_inv[wp]: "\<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace>
-            RetypeDecls_H.performInvocation param_a param_b param_c
-            \<lbrace>\<lambda>_ s. P (ksDomainTime s)\<rbrace>"
-  sorry
-(*
+lemma setObjectVCPU_ksDomainTime_inv[wp]:
+  "setObject p (v::vcpu) \<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace>"
+  unfolding setObject_def by (wpsimp simp: updateObject_default_def)
+
 crunch ksDomainTime_inv[wp]: performInvocation "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps zipWithM_x_inv cteRevoke_preservation mapME_x_inv_wp
-   simp: unless_def crunch_simps filterM_mapM ignore: getObject updateObject)
-*)
+   simp: unless_def crunch_simps filterM_mapM ignore: getObject setObject)
 
 crunch ksDomainTime_inv[wp]: activateThread "\<lambda>s. P (ksDomainTime s)"
 
@@ -326,6 +276,14 @@ lemma timerTick_valid_domain_time:
         apply (wp | clarsimp simp: if_apply_def2)+
   done
 
+lemma handleReservedIRQ_valid_domain_time[wp]:
+  "\<lbrace>\<lambda>s.  0 < ksDomainTime s \<rbrace>
+   handleReservedIRQ i
+   \<lbrace>\<lambda>rv s.  ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread\<rbrace>"
+  unfolding handleReservedIRQ_def vgicMaintenance_def
+  apply (wpsimp | wp_once hoare_vcg_imp_lift)+
+  sorry
+
 lemma handleInterrupt_valid_domain_time:
   "\<lbrace>\<lambda>s.  0 < ksDomainTime s \<rbrace>
    handleInterrupt i
@@ -343,10 +301,9 @@ lemma handleInterrupt_valid_domain_time:
      apply (rule_tac Q="\<lambda>_ s. 0 < ksDomainTime s" in hoare_post_imp, clarsimp)
      apply wp
     (* IRQTimer : tick occurs *) (* IRQReserved : trivial *)
-    apply (wp timerTick_valid_domain_time
-          | clarsimp simp: handleReservedIRQ_def
-          | wp_once hoare_vcg_imp_lift)+
-  sorry (* vgic *)
+    apply (wpsimp wp: timerTick_valid_domain_time
+          | wp_once hoare_vcg_imp_lift )+
+  done
 
 lemma schedule_domain_time_left':
   "\<lbrace> valid_domain_list' and
