@@ -10,7 +10,7 @@
 
 theory ADT_IF_Refine_C
 imports    
-    "ADT_IF_Refine" "../crefine/Refine_C"
+    "ADT_IF_Refine" "../crefine/$L4V_ARCH/Refine_C"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

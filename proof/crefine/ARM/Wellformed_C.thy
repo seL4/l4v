@@ -13,9 +13,9 @@
 
 theory Wellformed_C
 imports
-  "../../lib/CTranslationNICTA"
+  "../../../lib/CTranslationNICTA"
   CLevityCatch
-  "../../spec/cspec/Substitute"
+  "../../../spec/cspec/Substitute"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

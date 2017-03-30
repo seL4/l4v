@@ -14,10 +14,10 @@ text \<open>
   See AutoCorresTest for example usage.
 \<close>
 theory AutoCorres_C imports
-  "../../tools/autocorres/AutoCorres"
-  "../../tools/autocorres/L4VerifiedLinks"
-  "../../lib/clib/AutoCorresModifiesProofs"
-  "../../lib/clib/Corres_C"
+  "../../../tools/autocorres/AutoCorres"
+  "../../../tools/autocorres/L4VerifiedLinks"
+  "../../../lib/clib/AutoCorresModifiesProofs"
+  "../../../lib/clib/Corres_C"
 begin
 
 context kernel begin

@@ -11,8 +11,8 @@
 theory CLevityCatch
 imports
   Include_C
-  "../../lib/LemmaBucket_C"
-  "../../lib/LemmaBucket"
+  "../../../lib/LemmaBucket_C"
+  "../../../lib/LemmaBucket"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

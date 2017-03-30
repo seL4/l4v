@@ -11,7 +11,7 @@
 theory Corres_C
 imports 
 	CCorresLemmas 
-	"../../proof/crefine/SR_lemmas_C"
+	"../../proof/crefine/$L4V_ARCH/SR_lemmas_C"
 begin
 
 abbreviation

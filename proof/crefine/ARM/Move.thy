@@ -11,7 +11,7 @@
 (* things that should be moved into first refinement *)
 
 theory Move
-imports "../refine/$L4V_ARCH/Refine"
+imports "../../refine/$L4V_ARCH/Refine"
 begin
 
 lemma finaliseCap_Reply:

@@ -9,7 +9,7 @@
  *)
 
 theory IsolatedThreadAction
-imports "../../lib/clib/MonadicRewrite_C" Finalise_C CSpace_All SyscallArgs_C
+imports "../../../lib/clib/MonadicRewrite_C" Finalise_C CSpace_All SyscallArgs_C
 begin
 
 datatype tcb_state_regs = TCBStateRegs "thread_state" "MachineTypes.register \<Rightarrow> machine_word"

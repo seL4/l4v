@@ -10,8 +10,8 @@
 
 theory Include_C
 imports
-  "../../spec/cspec/KernelInc_C"
-  "../refine/$L4V_ARCH/Refine"
+  "../../../spec/cspec/$L4V_ARCH/KernelInc_C"
+  "../../refine/$L4V_ARCH/Refine"
 begin
 
 end

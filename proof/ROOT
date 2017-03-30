@@ -56,17 +56,17 @@ session AInvs = ASpec +
 
 session CRefineSyscall = CBaseRefine +
   theories
-    "crefine/Syscall_C"
+    "crefine/$L4V_ARCH/Syscall_C"
 
 session CRefine = CBaseRefine +
   theories
-    "crefine/Refine_C"
+    "crefine/$L4V_ARCH/Refine_C"
 
 session CBaseRefine = CSpec +
   theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
-    "crefine/Include_C"
+    "crefine/$L4V_ARCH/Include_C"
   theories
-    "crefine/Include_C"
+    "crefine/$L4V_ARCH/Include_C"
 
 
 (*

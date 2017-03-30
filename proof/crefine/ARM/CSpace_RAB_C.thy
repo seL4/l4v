@@ -9,7 +9,7 @@
  *)
 
 theory CSpace_RAB_C
-imports CSpaceAcc_C "../../lib/clib/MonadicRewrite_C"
+imports CSpaceAcc_C "../../../lib/clib/MonadicRewrite_C"
 begin
 
 context kernel
