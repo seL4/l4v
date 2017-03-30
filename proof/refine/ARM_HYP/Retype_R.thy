@@ -6020,25 +6020,28 @@ lemma corres_retype_region_createNewCaps:
      apply (wp createObjects_valid_arch)
     apply (auto simp: objBits_simps retype_addrs_def obj_bits_api_def
                       APIType_map2_def default_arch_object_def default_object_def archObjSize_def
-                      vspace_bits_defs fromIntegral_def toInteger_nat fromInteger_nat)
+                      vspace_bits_defs fromIntegral_def toInteger_nat fromInteger_nat)[2]
   -- "VCPUObject"
       apply (subst retype_region2_extra_ext_trivial)
        apply (simp add: APIType_map2_def)
       apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
       apply (rule corres_rel_imp)
-(*       apply (simp add: init_arch_objects_APIType_map2_noop split del: if_split)
+       apply (simp add: init_arch_objects_APIType_map2_noop split del: if_split)
        apply (rule corres_guard_imp)
-         apply (rule corres_retype_update_gsI,
-                simp_all add: APIType_map2_def makeObjectKO_def
-                    arch_default_cap_def obj_bits_api_def3
-                    default_object_def default_arch_object_def pageBits_def
-                    ext objBits_simps range_cover.aligned,
-                    simp_all add: data_page_relation_retype)[1]
-        apply simp+
-      apply (simp add: APIType_map2_def arch_default_cap_def vmrights_map_def
-               vm_read_write_def list_all2_map1 list_all2_map2 list_all2_same)*)
-
-  sorry (* vcpu case *)
+            apply (rule corres_retype[where 'a = vcpu],
+                   simp_all add: obj_bits_api_def objBits_simps pageBits_def default_arch_object_def
+                                 APIType_map2_def makeObjectKO_def archObjSize_def vcpu_bits_def
+                                 other_objs_default_relation)[1]
+            apply (fastforce simp: range_cover_def)
+           apply (simp add: no_gs_types_def)
+          apply (auto simp add: obj_relation_retype_def range_cover_def objBitsKO_def arch_kobj_size_def default_object_def
+                           archObjSize_def vcpu_bits_def pageBits_def obj_bits_def cte_level_bits_def default_arch_object_def
+                           other_obj_relation_def vcpu_relation_def default_vcpu_def makeObject_vcpu
+                           makeVCPUObject_def default_gic_vcpu_interface_def vgic_map_def)[1]
+         apply simp+
+        apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2
+                              objBits_simps APIType_map2_def arch_default_cap_def)
+  done
 
 lemma createObjects'_wp_subst:
   "\<lbrakk>\<lbrace>P\<rbrace>createObjects a b c d\<lbrace>\<lambda>r. Q\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>createObjects' a b c d\<lbrace>\<lambda>r. Q\<rbrace>"
