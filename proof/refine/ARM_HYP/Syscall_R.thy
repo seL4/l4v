@@ -842,6 +842,9 @@ lemma setMRs_cte_wp_at'[wp]:
   "\<lbrace>cte_wp_at' P ptr\<rbrace> setMRs thread buffer messageData \<lbrace>\<lambda>_. cte_wp_at' P ptr\<rbrace>"
   by (simp add: setMRs_def zipWithM_x_mapM split_def, wp crunch_wps)
 
+crunch cte_wp_at'[wp]: makeArchFaultMessage "cte_wp_at' P ptr"
+crunch cte_wp_at'[wp]: makeFaultMessage "cte_wp_at' P ptr"
+
 lemma doFaultTransfer_cte_wp_at'[wp]:
   "\<lbrace>cte_wp_at' P ptr\<rbrace>
    doFaultTransfer badge sender receiver receiverIPCBuffer

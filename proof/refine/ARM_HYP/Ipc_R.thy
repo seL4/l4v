@@ -1744,12 +1744,14 @@ lemma make_arch_fault_msg_corres:
   "corres op = (tcb_at t) (tcb_at' t)
   (make_arch_fault_msg f t)
   (makeArchFaultMessage (arch_fault_map f) t)"
-  apply (cases f, clarsimp simp: makeArchFaultMessage_def split: arch_fault.split)
+  apply (cases f; clarsimp simp: makeArchFaultMessage_def split: arch_fault.split)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF _ getRestartPCs_corres])
-(*      apply (rule corres_trivial, simp add: arch_fault_map_def)
-     apply (wp+, auto)
-  done*) sorry
+      apply (rule corres_split_eqr[OF _ corres_machine_op])
+         apply (rule corres_trivial, simp)
+        apply (rule corres_underlying_trivial[OF no_fail_addressTranslateS1CPR])
+       apply (wp+, auto)
+  done
 
 lemma mk_ft_msg_corres:
   "corres op = (tcb_at t) (tcb_at' t)
@@ -1773,14 +1775,48 @@ lemma mk_ft_msg_corres:
   apply (rule make_arch_fault_msg_corres)
   done
 
+lemma dmo_addressTranslateS1CPR_invs'[wp]:
+  "doMachineOp (addressTranslateS1CPR pc) \<lbrace>invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_addressTranslateS1CPR no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+    apply (clarsimp simp: addressTranslateS1CPR_def machine_op_lift_def
+                          machine_rest_lift_def split_def | wp)+
+  done
+
+lemma dmo_addressTranslateS1CPR_valid_ipc_buffer_ptr'[wp]:
+  "doMachineOp (addressTranslateS1CPR pc) \<lbrace>valid_ipc_buffer_ptr' p\<rbrace>"
+  by (wpsimp wp: hoare_valid_ipc_buffer_ptr_typ_at')
+
+crunch inv[wp]: makeArchFaultMessage invs'
+  (wp: mapM_wp' det_getRestartPC getRestartPC_inv ignore: doMachineOp)
+
 lemma makeFaultMessage_inv[wp]:
-  "\<lbrace>P\<rbrace> makeFaultMessage ft t \<lbrace>\<lambda>rv. P\<rbrace>"
+  "\<lbrace>invs'\<rbrace> makeFaultMessage ft t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (cases ft, simp_all add: makeFaultMessage_def)
-     apply (wp asUser_inv mapM_wp' det_mapM[where S=UNIV]
-               det_getRestartPC getRestartPC_inv
-             | clarsimp simp: getRegister_def makeArchFaultMessage_def
-                        split: arch_fault.split)+
-  sorry
+     apply (wpsimp wp: asUser_inv mapM_wp' det_mapM[where S=UNIV]
+                       det_getRestartPC getRestartPC_inv
+                 simp: getRegister_def makeArchFaultMessage_def)+
+  done
+
+lemma makeFaultMessage_tcb_at'[wp]:
+  "makeFaultMessage ft t \<lbrace>tcb_at' p\<rbrace>"
+  apply (cases ft, simp_all add: makeFaultMessage_def)
+     apply (wpsimp wp: asUser_inv mapM_wp' det_mapM[where S=UNIV]
+                       det_getRestartPC getRestartPC_inv
+                 simp: getRegister_def makeArchFaultMessage_def)+
+  done
+
+crunch in_user_frame[wp]: make_fault_msg "in_user_frame p"
+
+lemma makeFaultMessage_valid_ipc_buffer_ptr'[wp]:
+  "makeFaultMessage ft t \<lbrace>valid_ipc_buffer_ptr' p\<rbrace>"
+  apply (cases ft, simp_all add: makeFaultMessage_def)
+     apply (wpsimp wp: asUser_inv mapM_wp' det_mapM[where S=UNIV]
+                       det_getRestartPC getRestartPC_inv
+                 simp: getRegister_def makeArchFaultMessage_def)+
+  done
 
 lemmas threadget_fault_corres =
           threadget_corres [where r = fault_rel_optionation
@@ -2008,7 +2044,8 @@ crunch irq_handlers'[wp]: doIPCTransfer "valid_irq_handlers'"
 
 crunch irq_states'[wp]: doIPCTransfer "valid_irq_states'"
   (wp: crunch_wps no_irq no_irq_mapM no_irq_storeWord no_irq_loadWord
-       no_irq_case_option simp: crunch_simps zipWithM_x_mapM)
+       no_irq_case_option no_irq_addressTranslateS1CPR
+       simp: crunch_simps zipWithM_x_mapM)
 
 crunch pde_mappings'[wp]: doIPCTransfer "valid_pde_mappings'"
   (wp: crunch_wps simp: crunch_simps)
@@ -3212,9 +3249,20 @@ crunch it'[wp]: switchIfRequiredTo "\<lambda>s. P (ksIdleThread s)"
 crunch ct[wp]: switchIfRequiredTo cur_tcb'
   (wp: cur_tcb_lift)
 
+find_theorems doMachineOp ksMachineState valid
+
+lemma dmo_addressTranslateS1CPR_valid_machine_state'[wp]:
+  "doMachineOp (addressTranslateS1CPR pc) \<lbrace>valid_machine_state'\<rbrace>"
+  by (wpsimp simp: valid_machine_state'_def
+                      pointerInUserData_def
+                      pointerInDeviceData_def
+                wp: dmo_lift' hoare_vcg_all_lift
+                    addressTranslateS1CPR_underlying_memory
+                    hoare_vcg_disj_lift)
+
 crunch vms'[wp]: setupCallerCap, switchIfRequiredTo, asUser,
     doIPCTransfer "valid_machine_state'"
-  (wp: crunch_wps simp: zipWithM_x_mapM_x)
+  (wp: crunch_wps simp: zipWithM_x_mapM_x ignore: doMachineOp)
 
 crunch nonz_cap_to'[wp]: cancelSignal "ex_nonz_cap_to' p"
   (wp: crunch_wps simp: crunch_simps)
