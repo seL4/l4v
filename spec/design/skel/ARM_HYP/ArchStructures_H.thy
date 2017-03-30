@@ -21,7 +21,22 @@ context Arch begin global_naming ARM_HYP_H
 
 #INCLUDE_HASKELL SEL4/Object/Structures/ARM_HYP.lhs CONTEXT ARM_HYP_H decls_only
 #INCLUDE_HASKELL SEL4/Object/Structures/ARM_HYP.lhs CONTEXT ARM_HYP_H instanceproofs
-#INCLUDE_HASKELL SEL4/Object/Structures/ARM_HYP.lhs CONTEXT ARM_HYP_H bodies_only
+#INCLUDE_HASKELL SEL4/Object/Structures/ARM_HYP.lhs CONTEXT ARM_HYP_H bodies_only NOT makeVCPUObject
+
+(* we define makeVCPUObject_def manually because we want a total function vgicLR *)
+defs makeVCPUObject_def:
+"makeVCPUObject \<equiv>
+    VCPUObj_ \<lparr>
+          vcpuTCBPtr= Nothing
+        , vcpuACTLR= actlrDefault
+        , vcpuVGIC= VGICInterface_ \<lparr>
+                          vgicHCR= vgicHCREN
+                        , vgicVMCR= 0
+                        , vgicAPR= 0
+                        , vgicLR= (\<lambda>_. 0)
+                        \<rparr>
+        , vcpuRegs= funArray (const 0)  aLU  [(VCPURegSCTLR, sctlrDefault)]
+        \<rparr>"
 
 datatype arch_kernel_object_type =
     PDET
