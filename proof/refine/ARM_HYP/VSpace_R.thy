@@ -3881,7 +3881,7 @@ lemma setVCPU_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t\<rbrace> setObject p (v::vcpu) \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
   by (wp tcb_in_cur_domain'_lift)
 
-lemma setVCPU_invs [wp]:
+lemma setVCPU_invs:
   "\<lbrace>invs' and valid_vcpu' v\<rbrace> setObject p (v::vcpu) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
@@ -3892,9 +3892,9 @@ lemma setVCPU_invs [wp]:
           | simp add: cteCaps_of_def
           | rule setObject_ksPSpace_only)+
   apply (clarsimp simp: o_def)
-  sorry
+  oops
 
-lemma setVCPU_invs_no_cicd'[wp]:
+lemma setVCPU_invs_no_cicd':
   "\<lbrace>invs_no_cicd' and valid_vcpu' v\<rbrace> setObject p (v::vcpu) \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
   apply (simp add: invs_no_cicd'_def invs'_def valid_state'_def valid_pspace'_def)
   apply (wp (*sch_act_wf_lift*) valid_global_refs_lift' irqs_masked_lift
@@ -3905,7 +3905,7 @@ lemma setVCPU_invs_no_cicd'[wp]:
           | simp add: cteCaps_of_def
           | rule setObject_ksPSpace_only)+
   apply (clarsimp simp: o_def)
-  sorry
+  oops
 
 lemma vcpuEnable_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> vcpuEnable v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
