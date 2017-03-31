@@ -1913,13 +1913,6 @@ lemma getHDFAR_invs'[wp]:
   "valid invs' (doMachineOp getHDFAR) (\<lambda>_. invs')"
   by (simp add: getHDFAR_def doMachineOp_def split_def select_f_returns | wp)+
 
-lemma addressTranslateS1CPR_invs[wp]:
-  "valid invs' (doMachineOp (addressTranslateS1CPR w)) (\<lambda>_. invs')"
-  apply (wpsimp wp: dmo_inv'
-                simp: addressTranslateS1CPR_def machine_op_lift_def
-                      machine_rest_lift_def split_def select_f_def in_monad)+
-  sorry
-
 lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vptr \<lbrace>\<lambda>r. invs'\<rbrace>"
   apply (simp add: ARM_HYP_H.handleVMFault_def
              cong: vmfault_type.case_cong)
@@ -1940,13 +1933,12 @@ crunch nosch[wp]: handleVMFault "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma hv_inv_ex':
   "\<lbrace>P\<rbrace> handleVMFault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: ARM_HYP_H.handleVMFault_def
+  apply (simp add: ARM_HYP_H.handleVMFault_def getHSR_def
              cong: vmfault_type.case_cong)
   apply (rule hoare_pre)
    apply (wp dmo_inv' getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv
              det_getRestartPC asUser_inv
           | wpcw)+
-  apply simp
   sorry
 
 lemma active_from_running':
