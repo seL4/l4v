@@ -276,13 +276,17 @@ lemma timerTick_valid_domain_time:
         apply (wp | clarsimp simp: if_apply_def2)+
   done
 
+crunch domain_time'_inv[wp]: handleReservedIRQ "\<lambda>s. P (ksDomainTime s)"
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma handleReservedIRQ_valid_domain_time[wp]:
   "\<lbrace>\<lambda>s.  0 < ksDomainTime s \<rbrace>
    handleReservedIRQ i
    \<lbrace>\<lambda>rv s.  ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread\<rbrace>"
-  unfolding handleReservedIRQ_def vgicMaintenance_def
-  apply (wpsimp | wp_once hoare_vcg_imp_lift)+
-  sorry
+  apply (rule hoare_strengthen_post)
+   apply (rule handleReservedIRQ_domain_time'_inv)
+  apply clarsimp
+  done
 
 lemma handleInterrupt_valid_domain_time:
   "\<lbrace>\<lambda>s.  0 < ksDomainTime s \<rbrace>
@@ -325,7 +329,7 @@ lemma handleEvent_ksDomainTime_inv:
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all add: handle_send_def)
              apply (wp hv_inv'|simp add: handleEvent_def |wpc)+
-  sorry
+  done
 
 lemma callKernel_domain_time_left:
   "\<lbrace> (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s) \<rbrace>
