@@ -40,6 +40,12 @@ close to 4GB of memory. For further sessions building on top of `CSpec`,
 usually at least 16GB of main memory are required together with a 64-bit setup
 of Isabelle.
 
+The target architecture may be specified by setting the `L4V_ARCH` environment
+variable. It determines both which configuration of seL4 is used, as well as
+indicating the architecture-specific definitions and proofs to use. The default
+architecture is `ARM` and will be selected if none is provided. See
+`l4v/spec/cspec/$L4V_ARCH/c/Makefile` for seL4 configuration details.
+
 
 Remarks
 -------

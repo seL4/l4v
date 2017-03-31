@@ -28,6 +28,10 @@ To build from the `l4v/proof` directory, run:
 
     make CRefine
 
+If you wish to build for a specific architecture other than the default, set
+your `L4V_ARCH` environment variable accordingly, as documented for the [C code
+translation](../../spec/cspec/README.md).
+
 Important Theories
 ------------------
 
