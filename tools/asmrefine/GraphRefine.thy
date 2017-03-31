@@ -343,6 +343,68 @@ proof -
     done
 qed
 
+lemma extensible_traces_to_infinite_trace_choice:
+  assumes step: "\<forall>x \<in> S. \<exists>y. (trace x, trace y) \<in> extend_rel
+          \<and> y \<in> S \<and> m x < m y"
+    and x: "x \<in> S"
+  shows "\<exists>tr. \<forall>i :: nat. \<exists>y \<in> S. \<exists>j. m y > i \<and> fst (trace y) > i
+    \<and> (trace y, (j, tr)) \<in> extend_rel"
+proof -
+
+  let ?P = "\<lambda>i x. m x \<ge> i \<and> fst (trace x) \<ge> i \<and> x \<in> S"
+  let ?Q = "\<lambda>x y. m y > m x \<and> (trace x, trace y) \<in> extend_rel"
+
+  have induct:
+    "\<And>x n. ?P n x \<Longrightarrow> \<exists>y. ?P (Suc n) y \<and> ?Q x y"
+    apply clarsimp
+    apply (frule step[THEN bspec])
+    apply clarsimp
+    apply (rule_tac x=y in exI)
+    apply simp
+    done
+
+  obtain f where f: "\<forall>n. ?P n (f n) \<and> ?Q (f n) (f (Suc n))"
+    using x dependent_nat_choice[where P="?P" and Q="\<lambda>_. ?Q"]
+    by (simp only: induct, auto)
+
+  have f_induct: "\<And>i. m (f i) \<ge> i \<and> fst (trace (f i)) \<ge> i \<and> f i \<in> S"
+    apply (cut_tac n=i in f[rule_format], simp)
+    done
+
+  have f_eq: "\<forall>i j k. i \<le> fst (trace (f j)) \<longrightarrow> j \<le> k
+     \<longrightarrow> fst (trace (f j)) \<le> fst (trace (f k)) \<and> snd (trace (f k)) i = snd (trace (f j)) i"
+    apply (intro allI, induct_tac k)
+     apply simp
+    apply clarsimp
+    apply (cut_tac i=n in f_induct[rule_format], clarsimp)
+    apply (cut_tac n=n in f[rule_format], simp)
+    apply (clarsimp simp: fun_eq_iff restrict_map_def linorder_not_le split_def
+                   split: if_split_asm)
+    apply (drule_tac x=i in spec)
+    apply (auto simp: le_Suc_eq)
+    done
+
+  have f_norm:
+    "\<forall>i j. j \<le> fst (trace (f i)) \<longrightarrow> snd (trace (f i)) j = snd (trace (f j)) j"
+    apply clarsimp
+    apply (cut_tac i=j and j="min i j" and k="max i j" in f_eq[rule_format])
+      apply (simp add: min_def linorder_not_le f_induct)
+     apply simp
+    apply (simp add: min_def max_def split: if_split_asm)
+    done
+
+  show "?thesis"
+    apply (rule_tac x="\<lambda>i. snd (trace (f i)) i" in exI)
+    apply (clarsimp simp: split_def)
+    apply (rule_tac x="f (Suc i)" in bexI)
+     apply (cut_tac i="Suc i" in f_induct)
+     apply (clarsimp simp: fun_eq_iff restrict_map_def f_norm
+                 simp del: funpow.simps)
+     apply (metis lessI)
+    apply (simp add: f_induct del: funpow.simps)
+    done
+qed
+
 lemma trace_end_None_ge_seq:
   "tr \<in> nat_trace_rel c R
     \<Longrightarrow> \<forall>i. \<exists>j \<ge> i. tr j \<noteq> None
@@ -446,10 +508,6 @@ proof -
     apply simp
     done
 
-  { fix S' Q'
-    note bchoice[where Q="\<lambda>x y. y \<in> S' \<and> Q' x y", folded Bex_def]
-  } note bbchoice = this
-
   have infinite_case:
     "\<And>v' n1 tr1. \<forall>v \<in> M n1 tr1. \<exists>v' \<in> M n1 tr1. fst v' > fst v \<and> (snd v, snd v') \<in> extend_rel
         \<Longrightarrow> tr \<in> exec_trace GGamma gf
@@ -458,11 +516,10 @@ proof -
             \<and> restrict_map tr' {.. n1} = restrict_map tr1 {.. n1}
             \<and> trace_end tr' = None
             \<and> tr' \<in> c_trace SGamma"
-    apply (drule bbchoice)
-    apply (elim exE)
-    apply (frule_tac trace=snd and m=fst and f=f
-          in extensible_traces_to_infinite_trace[rotated])
-     apply simp
+    apply (drule extensible_traces_to_infinite_trace_choice[where
+          trace=snd and m=fst, rotated])
+     apply (rule ballI, drule(1) bspec)
+     apply fastforce
     apply (erule exE, rename_tac tr')
     apply (rule_tac x=tr' in exI)
     apply (rule conjI)
