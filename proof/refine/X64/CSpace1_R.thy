@@ -124,7 +124,7 @@ lemma same_arch_region_as_relation:
   arch_same_region_as c c' =
   sameRegionAs (ArchObjectCap d) (ArchObjectCap d')"
   apply (cases c)
-   sorry (*by (((cases c', auto simp: X64_H.sameRegionAs_def sameRegionAs_def Let_def isCap_simps)[1])+) *)
+  by (((cases c', auto simp: X64_H.sameRegionAs_def sameRegionAs_def Let_def isCap_simps)[1])+)
 
 
 lemma is_phyiscal_relation:
@@ -4054,8 +4054,8 @@ lemma src_no_mdb_parent:
   apply (clarsimp simp: isMDBParentOf_CTE is_derived'_def badge_derived'_def)
   apply (erule sameRegionAsE)
      apply (clarsimp simp add: sameRegionAs_def3)
-     subgoal  sorry (*by (cases src_cap,auto simp:capMasterCap_def revokable'_def vsCapRef_def freeIndex_update_def
-         isCap_simps split:capability.splits arch_capability.splits)[1] *)
+     subgoal by (cases src_cap,auto simp:capMasterCap_def revokable'_def vsCapRef_def freeIndex_update_def
+         isCap_simps split:capability.splits arch_capability.splits)[1] (* long *)
     apply (clarsimp simp: isCap_simps sameRegionAs_def3 capMasterCap_def freeIndex_update_def
        split:capability.splits arch_capability.splits)
    apply (clarsimp simp: isCap_simps sameRegionAs_def3 freeIndex_update_def
@@ -4087,10 +4087,8 @@ lemma parent_preserved:
    apply simp
    apply (drule(2) revokable_plus_orderD)
    apply (erule disjE)
-    apply (clarsimp simp: isCap_simps)
-  sorry (*
-   apply ((fastforce elim: capBadge_ordering_trans)+)
-  done *)
+     apply (clarsimp simp: isCap_simps)
+     by ((fastforce elim: capBadge_ordering_trans simp: isCap_simps)+)
 
 lemma src_no_parent_n [simp]:
   "n \<turnstile> src \<rightarrow> p = False"
@@ -4337,10 +4335,8 @@ lemma parentOf_preserve_oneway:
       apply assumption
     apply (drule_tac x1 = x in misc)
       apply assumption
-    sorry (*
-    apply (clarsimp simp:isMDBParentOf_def split:cte.splits if_split_asm)
-    by (clarsimp simp: sameRegionAs_def isCap_simps split:if_splits | rule conjI)+ *)
-
+    apply ((simp only: isMDBParentOf_def split_def split: cte.splits if_split_asm); clarsimp)
+    by (clarsimp simp: sameRegionAs_def isCap_simps Let_def split: if_split_asm)+ (* long *)
 
 lemma parentOf_preserve:
   assumes dom:"\<And>x. (x \<in> dom m) = (x \<in> dom m')"
