@@ -490,10 +490,10 @@ definition
 definition
   msg_align_bits :: nat
   where
-  "msg_align_bits \<equiv> 2 + (LEAST n. (cap_transfer_data_size + msg_max_length + msg_max_extra_caps + 2) \<le> 2 ^ n)"
+  "msg_align_bits \<equiv> word_size_bits + (LEAST n. (cap_transfer_data_size + msg_max_length + msg_max_extra_caps + 2) \<le> 2 ^ n)"
 
 lemma msg_align_bits:
-  "msg_align_bits = 9"
+  "msg_align_bits = 10"
 proof -
   have "(LEAST n. (cap_transfer_data_size + msg_max_length + msg_max_extra_caps + 2) \<le> 2 ^ n) = 7"
   proof (rule Least_equality)
@@ -507,7 +507,7 @@ proof -
     thus "7 \<le> y"
       by (rule power_le_imp_le_exp [rotated], simp)
   qed
-  thus ?thesis unfolding msg_align_bits_def by simp
+  thus ?thesis unfolding msg_align_bits_def by (simp add: word_size_bits_def)
 qed
 
 definition
