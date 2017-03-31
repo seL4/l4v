@@ -2427,11 +2427,273 @@ lemma deleteASID_invs'[wp]:
   apply clarsimp
   done
 
+(* FIMXME: move up *)
+lemmas archThreadSet_typ_ats[wp] = typ_at_lifts [OF archThreadSet_typ_at']
+
+lemma archThreadSet_valid_objs'[wp]:
+  "\<lbrace>valid_objs' and (\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> valid_arch_tcb' (f (tcbArch tcb)) s)\<rbrace>
+   archThreadSet f t \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  unfolding archThreadSet_def
+  apply (wp setObject_tcb_valid_objs getObject_tcb_wp)
+  apply clarsimp
+  apply normalise_obj_at'
+  apply (drule (1) valid_objs_valid_tcb')
+  apply (clarsimp simp: valid_obj'_def valid_tcb'_def tcb_cte_cases_def)
+  done
+
+crunch no_0_obj'[wp]: archThreadSet no_0_obj' (ignore: getObject)
+
+lemma archThreadSet_ctes_of[wp]:
+  "archThreadSet f t \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
+  unfolding archThreadSet_def
+  apply (wpsimp wp: getObject_tcb_wp)
+  apply normalise_obj_at'
+  apply (auto simp: tcb_cte_cases_def)
+  done
+
+crunch ksCurDomain[wp]: archThreadSet "\<lambda>s. P (ksCurDomain s)"
+  (ignore: getObject setObject wp: setObject_cd_inv)
+
+lemma archThreadSet_obj_at':
+  "(\<And>tcb. P tcb \<Longrightarrow> P (tcb \<lparr> tcbArch:= f (tcbArch tcb)\<rparr>)) \<Longrightarrow> archThreadSet f t \<lbrace>obj_at' P t'\<rbrace>"
+  unfolding archThreadSet_def
+  apply (wpsimp wp: getObject_tcb_wp setObject_tcb_strongest)
+  apply normalise_obj_at'
+  apply auto
+  done
+
+lemma archThreadSet_tcbDomain[wp]:
+  "archThreadSet f t \<lbrace>obj_at' (\<lambda>tcb. x = tcbDomain tcb) t'\<rbrace>"
+  by (wpsimp wp: archThreadSet_obj_at')
+
+lemma archThreadSet_inQ[wp]:
+  "archThreadSet f t' \<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace>"
+  unfolding obj_at'_real_def archThreadSet_def
+  apply (wpsimp wp: setObject_ko_wp_at getObject_tcb_wp
+              simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def
+         | simp)+
+  apply (auto simp: obj_at'_def ko_wp_at'_def projectKOs)
+  done
+
+crunch ct[wp]: archThreadSet "\<lambda>s. P (ksCurThread s)"
+  (ignore: getObject setObject wp: setObject_ct_inv)
+
+crunch sched[wp]: archThreadSet "\<lambda>s. P (ksSchedulerAction s)"
+  (ignore: getObject setObject wp: setObject_sa_inv)
+
+crunch L1[wp]: archThreadSet "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  (ignore: getObject setObject wp: setObject_sa_inv)
+
+crunch L2[wp]: archThreadSet "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  (ignore: getObject setObject wp: setObject_sa_inv)
+
+crunch ksArch[wp]: archThreadSet "\<lambda>s. P (ksArchState s)"
+  (ignore: getObject setObject)
+
+crunch ksDomSchedule[wp]: archThreadSet "\<lambda>s. P (ksDomSchedule s)"
+  (ignore: getObject setObject wp: setObject_ksDomSchedule_inv)
+
+crunch ksDomScheduleIdx[wp]: archThreadSet "\<lambda>s. P (ksDomScheduleIdx s)"
+  (ignore: getObject setObject)
+
+lemma setObject_tcb_ksInterruptState[wp]:
+  "setObject t (v :: tcb) \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace>"
+  by (wpsimp simp: setObject_def wp: updateObject_default_inv)
+
+lemma setObject_tcb_gsMaxObjectSize[wp]:
+  "setObject t (v :: tcb) \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>"
+  by (wpsimp simp: setObject_def wp: updateObject_default_inv)
+
+crunch ksInterruptState[wp]: archThreadSet "\<lambda>s. P (ksInterruptState s)"
+  (ignore: getObject setObject)
+
+crunch gsMaxObjectSize[wp]: archThreadSet "\<lambda>s. P (gsMaxObjectSize s)"
+  (ignore: getObject setObject)
+
+crunch ksMachineState[wp]: archThreadSet "\<lambda>s. P (ksMachineState s)"
+  (ignore: getObject setObject wp: setObject_ksMachine updateObject_default_inv)
+
+lemma archThreadSet_state_refs_of'[wp]:
+  "archThreadSet f t \<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>"
+  unfolding archThreadSet_def
+  apply (wpsimp wp: setObject_tcb_state_refs_of' getObject_tcb_wp)
+  apply normalise_obj_at'
+  apply (erule rsubst[where P=P])
+  apply (rule ext)
+  apply (auto simp: state_refs_of'_def obj_at'_def projectKOs)
+  done
+
+lemma archThreadSet_state_hyp_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> P ((state_hyp_refs_of' s)(t := tcb_hyp_refs' (f (tcbArch tcb))))\<rbrace>
+  archThreadSet f t \<lbrace>\<lambda>_ s. P (state_hyp_refs_of' s)\<rbrace>"
+  unfolding archThreadSet_def
+  apply (wpsimp wp: setObject_state_hyp_refs_of' getObject_tcb_wp simp: objBits_simps)
+  apply normalise_obj_at'
+  apply (erule rsubst[where P=P])
+  apply auto
+  done
+
+lemma archThreadSet_if_live'[wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and>
+        (\<forall>tcb. ko_at' tcb t s \<longrightarrow> atcbVCPUPtr (f (tcbArch tcb)) \<noteq> None \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
+  archThreadSet f t \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
+  unfolding archThreadSet_def
+  apply (wpsimp wp: setObject_tcb_iflive' getObject_tcb_wp)
+  apply normalise_obj_at'
+  apply (clarsimp simp: tcb_cte_cases_def if_live_then_nonz_cap'_def)
+  apply (erule_tac x=t in allE)
+  apply (erule impE)
+   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs live'_def hyp_live'_def)
+  apply simp
+  done
+
+lemma archThreadSet_ifunsafe'[wp]:
+  "archThreadSet f t \<lbrace>if_unsafe_then_cap'\<rbrace>"
+  unfolding archThreadSet_def
+  apply (wpsimp wp: setObject_tcb_ifunsafe' getObject_tcb_wp)
+  apply normalise_obj_at'
+  apply (auto simp: tcb_cte_cases_def if_live_then_nonz_cap'_def)
+  done
+
+lemma archThreadSet_valid_idle'[wp]:
+  "archThreadSet f t \<lbrace>valid_idle'\<rbrace>"
+  unfolding archThreadSet_def
+  apply (wpsimp wp: setObject_tcb_idle' getObject_tcb_wp)
+  apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def)
+  apply normalise_obj_at'
+  done
+
+lemma archThreadSet_ko_wp_at_no_vcpu[wp]:
+  "archThreadSet f t \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') p\<rbrace>"
+  unfolding archThreadSet_def
+  apply (wpsimp wp: getObject_tcb_wp setObject_ko_wp_at simp: objBits_simps|rule refl)+
+  apply normalise_obj_at'
+  apply (auto simp: ko_wp_at'_def obj_at'_real_def projectKOs is_vcpu'_def)
+  done
+
+lemma archThreadSet_valid_arch_state'[wp]:
+  "archThreadSet f t \<lbrace>valid_arch_state'\<rbrace>"
+  unfolding valid_arch_state'_def valid_asid_table'_def option_case_all_conv split_def
+  apply (rule hoare_lift_Pf[where f=ksArchState]; wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
+  apply (clarsimp simp: pred_conj_def)
+  done
+
+lemma archThreadSet_valid_queues'[wp]:
+  "archThreadSet f t \<lbrace>valid_queues'\<rbrace>"
+  unfolding valid_queues'_def
+  apply (rule hoare_lift_Pf[where f=ksReadyQueues]; wp?)
+  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)
+  apply auto
+  done
+
+lemma archThreadSet_ct_not_inQ[wp]:
+  "archThreadSet f t \<lbrace>ct_not_inQ\<rbrace>"
+  unfolding ct_not_inQ_def
+  apply (rule hoare_lift_Pf[where f=ksCurThread]; wp?)
+  apply (wpsimp wp: hoare_vcg_imp_lift simp: o_def)
+  done
+
+lemma archThreadSet_obj_at'_pde[wp]:
+  "archThreadSet f t \<lbrace>obj_at' (P::pde \<Rightarrow> bool) p\<rbrace>"
+  unfolding archThreadSet_def
+  by (wpsimp wp: obj_at_setObject2 simp: updateObject_default_def in_monad)
+
+crunch pspace_domain_valid[wp]: archThreadSet pspace_domain_valid
+  (ignore: getObject)
+
+lemma setObject_tcb_gsUntypedZeroRanges[wp]:
+  "setObject ptr (tcb::tcb) \<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace>"
+  by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+crunch gsUntypedZeroRanges[wp]: archThreadSet "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (ignore: getObject setObject)
+
+lemma archThreadSet_untyped_ranges_zero'[wp]:
+  "archThreadSet f t \<lbrace>untyped_ranges_zero'\<rbrace>"
+  by (rule hoare_lift_Pf[where f=cteCaps_of]; wp cteCaps_of_ctes_of_lift)
+
+lemma archThreadSet_tcb_at'[wp]:
+  "\<lbrace>\<top>\<rbrace> archThreadSet f t \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
+  unfolding archThreadSet_def
+  by (wpsimp wp: getObject_tcb_wp simp: obj_at'_def)
+
+lemma dissoc_invs':
+  "\<lbrace>invs' and (\<lambda>s. \<forall>p. (\<exists>a. armHSCurVCPU (ksArchState s) = Some (p, a)) \<longrightarrow> p \<noteq> v) and
+    ko_at' vcpu v and K (vcpuTCBPtr vcpu = Some t) and
+    obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) = Some v) t\<rbrace>
+   do
+    setObject v $ vcpuTCBPtr_update (\<lambda>_. Nothing) vcpu;
+    archThreadSet (atcbVCPUPtr_update (\<lambda>_. Nothing)) t
+   od \<lbrace>\<lambda>_. invs' and tcb_at' t\<rbrace>"
+  unfolding invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
+            valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
+                    setObject_tcb_valid_objs setObject_vcpu_valid_objs'
+                    setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
+                    valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
+                    cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
+                    valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
+                    valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
+                    setVCPU_valid_arch'
+              simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def
+                    state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb valid_arch_tcb'_def
+        | wp_once hoare_vcg_imp_lift)+
+  apply (clarsimp simp: live'_def hyp_live'_def arch_live'_def)
+  apply (drule (1) valid_objs_valid_vcpu')
+  apply (clarsimp simp: valid_vcpu'_def)
+  supply fun_upd_apply[simp]
+  apply (rule_tac rfs'="state_hyp_refs_of' s" in delta_sym_refs, assumption)
+   apply (clarsimp split: if_split_asm)
+  apply (clarsimp split: if_split_asm)
+   apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs tcb_vcpu_refs'_def
+                  split: option.splits if_split_asm)
+  apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs)
+  done
+
+lemma setVCPU_archThreadSet_None_eq:
+  "do
+    setObject v $ vcpuTCBPtr_update (\<lambda>_. Nothing) vcpu;
+    archThreadSet (atcbVCPUPtr_update (\<lambda>_. Nothing)) t;
+    f
+   od = do
+    do
+      setObject v $ vcpuTCBPtr_update (\<lambda>_. Nothing) vcpu;
+      archThreadSet (atcbVCPUPtr_update (\<lambda>_. Nothing)) t
+    od;
+    f
+  od" by (simp add: bind_assoc)
+
+lemma vcpuInvalidateActive_inactive[wp]:
+  "\<lbrace>\<top>\<rbrace> vcpuInvalidateActive \<lbrace>\<lambda>rv s. \<forall>p. (\<exists>a. armHSCurVCPU (ksArchState s) = Some (p, a)) \<longrightarrow> P p rv s\<rbrace>"
+  unfolding vcpuInvalidateActive_def modifyArchState_def by wpsimp
+
+lemma vcpuDisableNone_obj_at'[wp]:
+  "vcpuDisable None \<lbrace>\<lambda>s. P (obj_at' P' p s)\<rbrace>"
+  unfolding vcpuDisable_def by wpsimp
+
+lemma vcpuInvalidateActive_obj_at'[wp]:
+  "vcpuInvalidateActive \<lbrace>\<lambda>s. P (obj_at' P' p s)\<rbrace>"
+  unfolding vcpuInvalidateActive_def modifyArchState_def by wpsimp
+
+lemma when_assert_eq:
+  "(when P $ haskell_fail xs) = assert (\<not>P)"
+  by (simp add: assert_def when_def)
+
 lemma dissociateVCPUTCB_invs'[wp]:
   "dissociateVCPUTCB vcpu tcb \<lbrace>invs'\<rbrace>"
-  unfolding dissociateVCPUTCB_def
-  apply wpsimp
-  sorry
+  unfolding dissociateVCPUTCB_def setVCPU_archThreadSet_None_eq when_assert_eq
+  apply (wpsimp wp: dissoc_invs' getVCPU_wp|wpsimp wp: getObject_tcb_wp simp: archThreadGet_def)+
+  apply (drule tcb_ko_at')
+  apply clarsimp
+  apply (rule exI, rule conjI, assumption)
+  apply clarsimp
+  apply (rule conjI)
+   apply normalise_obj_at'
+  apply (rule conjI)
+   apply normalise_obj_at'
+  apply (clarsimp simp: obj_at'_def)
+  done
 
 lemma vcpuFinalise_invs'[wp]: "vcpuFinalise vcpu \<lbrace>invs'\<rbrace>"
   unfolding vcpuFinalise_def by wpsimp
@@ -2509,13 +2771,6 @@ lemmas threadSet_cteCaps_of = ctes_of_cteCaps_of_lift [OF threadSet_ctes_of]
 
 crunch isFinal: setSchedulerAction "\<lambda>s. isFinal cap slot (cteCaps_of s)"
   (simp: cteCaps_of_def)
-
-lemma archThreadSet_ctes_of[wp]:
-  "archThreadSet f t \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
-  unfolding archThreadSet_def
-  apply (wpsimp wp: getObject_tcb_wp)
-  apply (clarsimp simp: obj_at'_def tcb_cte_cases_def)
-  done
 
 crunch ctes_of[wp]: dissociateVCPUTCB "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
