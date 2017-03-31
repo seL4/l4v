@@ -356,6 +356,16 @@ lemma pac_corres:
   done
 
 definition
+  vcpu_invocation_map :: "vcpu_invocation \<Rightarrow> vcpuinvocation"
+where
+  "vcpu_invocation_map vcpui \<equiv> case vcpui of
+      vcpu_invocation.VCPUSetTCB v  t                 \<Rightarrow> VCPUSetTCB v t
+   |  vcpu_invocation.VCPUInjectIRQ obj n vreg        \<Rightarrow> VCPUInjectIRQ obj n vreg
+   |  vcpu_invocation.VCPUReadRegister obj vreg       \<Rightarrow> VCPUReadRegister obj vreg
+   |  vcpu_invocation.VCPUWriteRegister obj vreg word \<Rightarrow> VCPUWriteRegister obj vreg word
+"
+
+definition
   archinv_relation :: "arch_invocation \<Rightarrow> Arch.invocation \<Rightarrow> bool"
 where
   "archinv_relation ai ai' \<equiv> case ai of
@@ -368,7 +378,10 @@ where
    | arch_invocation.InvokeASIDControl aci \<Rightarrow>
        \<exists>aci'. ai' = InvokeASIDControl aci' \<and> aci' = asid_ci_map aci
    | arch_invocation.InvokeASIDPool ap \<Rightarrow>
-       \<exists>ap'. ai' = InvokeASIDPool ap' \<and>  ap' = asid_pool_invocation_map ap"
+       \<exists>ap'. ai' = InvokeASIDPool ap' \<and>  ap' = asid_pool_invocation_map ap
+   | arch_invocation.InvokeVCPU vcpui \<Rightarrow>
+       \<exists>vcpui'. ai' = InvokeVCPU vcpui' \<and> vcpui' = vcpu_invocation_map vcpui"
+
 
 definition
   valid_arch_inv' :: "Arch.invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -395,7 +408,7 @@ definition
   "parity_mask attrs \<equiv> case attrs of VMAttributes c p xn \<Rightarrow> VMAttributes c False xn"
 
 lemma vm_attributes_corres:
-  "vmattributes_map (attribs_from_word w) = parity_mask (attribsFromWord w)"
+  "vmattributes_map (attribs_from_word w) = attribsFromWord w"
   by (clarsimp simp: attribsFromWord_def attribs_from_word_def
                      Let_def vmattributes_map_def parity_mask_def)
 
@@ -585,9 +598,9 @@ lemma dec_arch_inv_page_flush_corres:
                         throwError $ ExceptionTypes_A.syscall_error.InvalidArgument 0;
                         returnOk $
                         arch_invocation.InvokePage $
-                        ARM_A.page_invocation.PageFlush
-                         (label_to_flush_type (invocation_type (mi_label mi))) (start + vaddr)
-                         (end + vaddr - 1) (addrFromPPtr word + start) pd asid
+                        ARM_A.page_invocation.PageFlush (* Must use word in hyp mode. *)
+                         (label_to_flush_type (invocation_type (mi_label mi))) (start + word)
+                         (end + word - 1) (addrFromPPtr word + start) pd asid
                     odE
             else throwError ExceptionTypes_A.syscall_error.TruncatedMessage)
            (decodeARMPageFlush (mi_label mi) args
@@ -617,10 +630,10 @@ lemma dec_arch_inv_page_flush_corres:
                             label_to_flush_type_def labelToFlushType_def flush_type_map_def
                             ARM_HYP_H.isPageFlushLabel_def
                      split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
-(*     apply wp+
+     apply wp+
    apply (fastforce simp: valid_cap_def mask_def)
   apply auto
-  done*) sorry
+  done
 
 lemma lookup_pd_slot_mask_6_gumpf:
   "is_aligned pd pd_bits \<Longrightarrow>
@@ -810,10 +823,44 @@ lemma resolve_vaddr_valid_mapping_size:
                  split: if_split_asm)
   done
 
+lemma list_all2_Cons: "list_all2 f (x#xs) b \<Longrightarrow> \<exists>y ys. b = y # ys"
+  by (induct b; simp)
+
+lemma dec_vcpu_inv_corres:
+  notes if_split [split del]
+  shows
+  "\<lbrakk>acap_relation arch_cap arch_cap'; list_all2 cap_relation (map fst excaps) (map fst excaps');
+    list_all2 (\<lambda>s s'. s' = cte_map s) (map snd excaps) (map snd excaps')\<rbrakk> \<Longrightarrow>
+   corres (ser \<oplus> archinv_relation)
+          (invs and valid_cap (cap.ArchObjectCap arch_cap)
+                and (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> fst x \<and> cte_wp_at (\<lambda>_. True) (snd x) s))
+           (invs' and valid_cap' (capability.ArchObjectCap arch_cap')
+                  and (\<lambda>s. \<forall>x\<in>set excaps'. valid_cap' (fst x) s \<and> cte_wp_at' (\<lambda>_. True) (snd x) s)
+                  and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
+                (decode_vcpu_invocation  label args arch_cap excaps)
+                (decodeARMVCPUInvocation label args cptr' cte arch_cap' excaps')"
+  apply (simp add: decode_vcpu_invocation_def decodeARMVCPUInvocation_def)
+  apply (cases arch_cap; cases "invocation_type label"; simp add: isVCPUCap_def)
+  apply (rename_tac vcpui)
+  apply (case_tac vcpui; simp split del: if_split) (*
+    (* set_tcb *)
+     apply (simp add: decode_vcpu_set_tcb_def decodeVCPUSetTCB_def Let_def isVCPUCap_def)
+     apply (cases excaps; simp add: null_def)
+     apply (frule list_all2_Cons)
+     apply clarsimp
+     apply (case_tac a; clarsimp simp add: cap_relation_def)
+     (* inject_irq *)
+     apply (simp add: decode_vcpu_inject_irq_def decodeVCPUInjectIRQ_def isVCPUCap_def)
+    apply (cases args; clarsimp)
+    apply (case_tac list; clarsimp simp add: rangeCheck_def range_check_def)
+   *) sorry
+
 lemma dec_arch_inv_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp] [[goals_limit = 1]]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)
+notes valid_arch_imp_valid_vspace_objs[simp add]
+notes valid_arch_objs_lift[simp add]
 shows
   "\<lbrakk> acap_relation arch_cap arch_cap';
      list_all2 cap_relation (map fst excaps) (map fst excaps');
@@ -830,14 +877,12 @@ shows
       arch_cap excaps)
    (Arch.decodeInvocation (mi_label mi) args cptr'
      (cte_map slot) arch_cap' excaps')"
-  apply (simp add: arch_decode_invocation_def
-                   ARM_HYP_H.decodeInvocation_def
-                   decodeARMMMUInvocation_def
-              split del: if_split)
+  unfolding arch_decode_invocation_def ARM_HYP_H.decodeInvocation_def
+            decodeARMMMUInvocation_def decode_mmu_invocation_def
   apply (cases arch_cap)
-      apply (simp add: isCap_simps split del: if_split)
+      apply (simp add: isCap_simps Let_def split del: if_split)
       apply (cases "invocation_type (mi_label mi) \<noteq> ArchInvocationLabel ARMASIDPoolAssign")
-(*       apply (simp split: invocation_label.split arch_invocation_label.split)
+       apply (clarsimp  split: invocation_label.split arch_invocation_label.split)
       apply (rename_tac word1 word2)
       apply (cases "excaps", simp)
       apply (cases "excaps'", simp)
@@ -924,7 +969,7 @@ shows
             apply (rule corres_whenE)
               apply (subst assocs_empty_dom_comp [symmetric])
               apply (simp add: o_def)
-              apply (rule dom_ucast_eq_7)
+              apply (rule dom_ucast_eq_6)
              apply (rule corres_trivial, simp, simp)
            apply (simp split del: if_split)
            apply (rule_tac F="- dom (asidTable \<circ> ucast) \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} \<noteq> {}" in corres_gen_asm)
@@ -979,7 +1024,7 @@ shows
     apply (simp add: isCap_simps split del: if_split)
     apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageMap")
      apply (case_tac "\<not>(2 < length args \<and> excaps \<noteq> [])")
-      apply (auto split: list.split)[1]
+      apply (auto simp: Let_def split: list.split)[1]
      apply (simp add: Let_def neq_Nil_conv)
      apply (elim exE conjE)
      apply (simp split: list.split, intro conjI impI allI, simp_all)[1]
@@ -998,7 +1043,7 @@ shows
           prefer 2
           apply (rule corres_lookup_error)
           apply (rule_tac P="valid_arch_state and valid_arch_objs and
-                             pspace_aligned and equal_kernel_mappings and valid_global_objs and
+                             pspace_aligned and equal_kernel_mappings and
                              valid_cap (cap.ArchObjectCap
                                          (arch_cap.PageDirectoryCap wd (Some optv)))"
                      in corres_guard_imp)
@@ -1009,7 +1054,7 @@ shows
          apply (rule whenE_throwError_corres, simp, simp)
          apply (rule_tac R="\<lambda>_ s. valid_arch_objs s \<and> pspace_aligned s
                                   \<and> hd args + 2 ^ pageBitsForSize vmpage_size - 1 < kernel_base \<and>
-                                  valid_arch_state s \<and> equal_kernel_mappings s \<and> valid_global_objs s \<and>
+                                  valid_arch_state s \<and> equal_kernel_mappings s \<and>
                                   s \<turnstile> (fst (hd excaps)) \<and> (\<exists>\<rhd> (lookup_pd_slot (obj_ref_of (fst (hd excaps))) (hd args) && ~~ mask pd_bits)) s \<and>
                                   (\<exists>\<rhd> rv') s \<and> page_directory_at rv' s"
                      and R'="\<lambda>_ s. s \<turnstile>' (fst (hd excaps')) \<and> valid_objs' s \<and>
@@ -1018,7 +1063,7 @@ shows
                          in corres_splitEE)
             prefer 2
             apply (rule corres_whenE)
-              apply (simp add: kernel_base_def ARM.kernelBase_def kernelBase_def shiftl_t2n)
+              apply (simp add: kernel_base_def ARM_HYP.kernelBase_def kernelBase_def shiftl_t2n)
              apply (rule corres_trivial, simp)
             apply simp
            apply (rule corres_guard_imp)
@@ -1053,13 +1098,13 @@ shows
      apply fastforce
     apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageRemap")
      apply (case_tac "\<not>(1 < length args \<and> excaps \<noteq> [])")
-      subgoal by (auto split: list.split)
+      subgoal by (auto simp: Let_def split: list.split)
      apply (simp add: Let_def split: list.split)
      apply (case_tac args, simp)
      apply (clarsimp simp: split_def)
      apply (rename_tac w1 w2 w3)
      apply (case_tac excaps', simp)
-     apply clarsimp
+     apply (clarsimp simp add: isIOSpaceFrame_def)
      apply (rule corres_guard_imp)
        apply (rule corres_splitEE [where r' = "op ="])
           prefer 2
@@ -1103,7 +1148,7 @@ shows
                 apply wp+
             apply (subgoal_tac "valid_arch_objs s \<and> pspace_aligned s \<and>
                                 (snd v')  < kernel_base \<and>
-                                equal_kernel_mappings s \<and> valid_global_objs s \<and> valid_arch_state s \<and>
+                                equal_kernel_mappings s \<and> valid_arch_state s \<and>
                                 (\<exists>\<rhd> (lookup_pd_slot (fst pa) (snd v') && ~~ mask pd_bits)) s \<and>
                                 page_directory_at (fst pa) s \<and> (\<exists>\<rhd> (fst pa)) s")
              prefer 2
@@ -1138,7 +1183,7 @@ shows
      apply (rule corres_returnOk)
      apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
     subgoal by (clarsimp split: invocation_label.splits arch_invocation_label.splits split del: if_split)
-   apply (simp add: isCap_simps split del: if_split)
+   apply (simp add: isCap_simps Let_def split del: if_split)
    apply (simp split: invocation_label.split arch_invocation_label.splits split del: if_split)
    apply (intro conjI impI allI)
     apply (simp split: list.split, intro conjI impI allI, simp_all)[1]
@@ -1147,7 +1192,7 @@ shows
     apply (simp split: cap.split arch_cap.split option.split,
            intro conjI allI impI, simp_all)[1]
     apply (rule whenE_throwError_corres_initial, simp)
-     apply (simp add: kernel_base_def ARM.kernelBase_def kernelBase_def)
+     apply (simp add: kernel_base_def ARM_HYP.kernelBase_def kernelBase_def)
     apply (rule corres_guard_imp)
       apply (rule corres_splitEE)
          prefer 2
@@ -1172,7 +1217,6 @@ shows
             apply (rule corres_trivial)
             apply (rule corres_returnOk)
             apply (clarsimp simp: archinv_relation_def page_table_invocation_map_def)
-            apply (clarsimp simp: attribs_from_word_def attribsFromWord_def Let_def)
             apply (simp add: shiftr_shiftl1)
            apply (wp hoare_whenE_wp get_master_pde_wp getPDE_wp find_pd_for_asid_inv
                      | wp_once hoare_drop_imps)+
@@ -1222,7 +1266,7 @@ shows
      apply (rule whenE_throwError_corres, simp)
       apply clarsimp
      apply (rule whenE_throwError_corres, simp)
-      apply (clarsimp simp: kernel_base_def ARM.kernelBase_def kernelBase_def)
+      apply (clarsimp simp: kernel_base_def ARM_HYP.kernelBase_def kernelBase_def)
      apply (rule case_option_corresE)
       apply (rule corres_trivial)
       apply clarsimp
@@ -1269,44 +1313,30 @@ shows
    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                   split: option.splits)
   apply clarsimp
-  done*) sorry
+  apply (simp, rule corres_guard_imp[OF dec_vcpu_inv_corres]; simp)
+  done
+
 
 lemma inv_arch_corres:
-  "archinv_relation ai ai' \<Longrightarrow>
-   corres (intr \<oplus> op=)
-     (einvs and ct_active and valid_arch_inv ai)
-     (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
-     (arch_perform_invocation ai) (Arch.performInvocation ai')"
-  apply (clarsimp simp: arch_perform_invocation_def
-                        ARM_HYP_H.performInvocation_def
-                        performARMMMUInvocation_def)
-(*  apply (rule corres_split' [where r'=dc])
-     prefer 2
-     apply (rule corres_trivial)
-     apply simp
-    apply (cases ai)
-        apply (clarsimp simp: archinv_relation_def)
-        apply (erule corres_guard_imp [OF perform_page_table_corres])
-         apply (fastforce simp: valid_arch_inv_def)
-        apply (fastforce simp: valid_arch_inv'_def)
-       apply (clarsimp simp: archinv_relation_def)
-       apply (erule corres_guard_imp [OF perform_page_directory_corres])
-        apply (fastforce simp: valid_arch_inv_def)
-       apply (fastforce simp: valid_arch_inv'_def)
-      apply (clarsimp simp: archinv_relation_def)
-      apply (erule corres_guard_imp [OF perform_page_corres])
-       apply (fastforce simp: valid_arch_inv_def)
-      apply (fastforce simp: valid_arch_inv'_def)
-     apply (clarsimp simp: archinv_relation_def)
-     apply (rule corres_guard_imp [OF pac_corres], rule refl)
-      apply (fastforce simp: valid_arch_inv_def)
-     apply (fastforce simp: valid_arch_inv'_def)
-    apply (clarsimp simp: archinv_relation_def)
-    apply (rule corres_guard_imp [OF pap_corres], rule refl)
-     apply (fastforce simp: valid_arch_inv_def)
-    apply (fastforce simp: valid_arch_inv'_def)
-   apply wp+
-  done*) sorry
+  assumes "archinv_relation ai ai'"
+  shows   "corres (intr \<oplus> op=)
+                  (einvs and ct_active and valid_arch_inv ai)
+                  (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
+                  (arch_perform_invocation ai) (Arch.performInvocation ai')"
+proof -
+  note invocation_corres =  perform_page_table_corres perform_page_directory_corres
+                            pac_corres pap_corres perform_page_corres
+  from assms show ?thesis
+  unfolding arch_perform_invocation_def ARM_HYP_H.performInvocation_def performARMMMUInvocation_def
+  apply clarsimp
+  apply (cases ai; clarsimp simp add: archinv_relation_def liftE_bind_return_bindE_returnOk[symmetric])
+       apply (rule corres_split'[where r'=dc, OF _ corres_trivial]
+             , rule invocation_corres[THEN corres_guard_imp]
+             , (fastforce simp: valid_arch_inv_def valid_arch_inv'_def)+
+             , wpsimp+)+
+  sorry
+qed
+
 
 lemma asid_pool_typ_at_ext':
   "asid_pool_at' = obj_at' (\<top>::asidpool \<Rightarrow> bool)"
