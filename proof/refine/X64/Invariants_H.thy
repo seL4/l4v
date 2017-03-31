@@ -1009,7 +1009,7 @@ definition
   valid_irq_node' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_irq_node' x \<equiv>
-  \<lambda>s. is_aligned x 12 \<and> (\<forall>irq :: irq. real_cte_at' (x + 16 * (ucast irq)) s)"
+  \<lambda>s. is_aligned x 12 \<and> (\<forall>irq :: irq. real_cte_at' (x + 32 * (ucast irq)) s)"
 
 definition
   valid_refs' :: "machine_word set \<Rightarrow> cte_heap \<Rightarrow> bool"
