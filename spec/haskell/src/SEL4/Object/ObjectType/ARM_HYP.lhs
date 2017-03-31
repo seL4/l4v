@@ -280,7 +280,6 @@ Create an architecture-specific object.
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >                  ArchInv.InvokeVCPU iv -> do
 >                      withoutPreemption $ performARMVCPUInvocation iv
->                      return []
 #endif
 #ifdef CONFIG_ARM_SMMU
 >                  ArchInv.InvokeIOSpace _ ->

@@ -991,7 +991,11 @@ ARM memory mappings may be marked cacheable or non-cacheable. Also, parity check
 > attribsFromWord :: Word -> VMAttributes
 > attribsFromWord w = VMAttributes {
 >     armPageCacheable = w `testBit` 0,
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     armParityEnabled = False,
+#else
 >     armParityEnabled = w `testBit` 1,
+#endif
 >     armExecuteNever = w `testBit` 2 }
 
 \subsection{ARM Hardware ASID allocation}
