@@ -900,6 +900,7 @@ lemma set_cap_not_quite_corres':
                 using cr
                 apply (fastforce simp: c p pspace_relations_def)+
                 done
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma cap_move_corres:
   assumes cr: "cap_relation cap cap'"
@@ -1097,7 +1098,7 @@ lemma cap_move_corres:
       apply fastforce
      apply fastforce
     apply clarsimp
-   subgoal by (simp add: null_filter_def split: if_splits)
+   subgoal by (simp add: null_filter_def split: if_splits) (*long *)
   apply (subgoal_tac "mdb_move (ctes_of b) (cte_map ptr) src_cap src_node (cte_map ptr') cap' old_dest_node")
    prefer 2
    apply (rule mdb_move.intro)
@@ -1374,7 +1375,7 @@ lemma n_trancl_eq':
    apply clarsimp
    apply (insert n_src_dest)[1]
    apply (drule (1) next_single_value)
-   apply (clarsimp simp: rtrancl_eq_or_trancl)
+   subgoal by (clarsimp dest!: rtrancl_eq_or_trancl[THEN iffD1])
   apply (drule m_tranclD)
   apply clarsimp
   done
@@ -1384,15 +1385,19 @@ lemma n_trancl_eq:
   (if p' = dest then p = src \<or> m \<turnstile> p \<leadsto>\<^sup>+ src
    else if p = dest then m \<turnstile> src \<leadsto>\<^sup>+ p'
    else m \<turnstile> p \<leadsto>\<^sup>+ p')"
-  by (auto simp add: n_trancl_eq' rtrancl_eq_or_trancl)
+  by (safe; clarsimp simp: n_trancl_eq'
+                       dest!: rtrancl_eq_or_trancl[THEN iffD1]
+                      intro!: rtrancl_eq_or_trancl[THEN iffD2])
 
 lemma n_rtrancl_eq:
   "n \<turnstile> p \<leadsto>\<^sup>* p' =
   (if p' = dest then p = dest \<or> p \<noteq> dest \<and> m \<turnstile> p \<leadsto>\<^sup>* src
    else if p = dest then p' \<noteq> src \<and> m \<turnstile> src \<leadsto>\<^sup>* p'
    else m \<turnstile> p \<leadsto>\<^sup>* p')"
-  by (auto simp: n_trancl_eq rtrancl_eq_or_trancl)
-
+  apply clarsimp
+  by (safe; clarsimp simp: n_trancl_eq'
+                       dest!: rtrancl_eq_or_trancl[THEN iffD1]
+                      intro!: rtrancl_eq_or_trancl[THEN iffD2])
 
 lemma n_cap:
   "n p = Some (CTE cap node) \<Longrightarrow>
@@ -1493,9 +1498,10 @@ lemma chunked_n:
     apply (rule conjI)
      apply clarsimp
      apply (erule sameRegionAsE, simp_all add: sameRegionAs_def3)[1]
+        apply blast
        apply blast
-      apply blast
-     apply (clarsimp simp: isCap_simps)
+      apply (clarsimp simp: isCap_simps)
+     apply (clarsimp simp: isCap_simps portRange_def)
     apply fastforce
    apply clarsimp
    apply (erule_tac x=p'' in allE)
@@ -1826,7 +1832,9 @@ lemma untyped_inc_prev_update:
 lemma is_derived_badge_derived':
   "is_derived' m src cap cap' \<Longrightarrow> badge_derived' cap cap'"
   by (simp add: is_derived'_def)
+
 context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma cteInsert_mdb_chain_0:
   "\<lbrace>valid_mdb' and pspace_aligned' and pspace_distinct' and (\<lambda>s. src \<noteq> dest) and
     (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s)\<rbrace>
@@ -2992,8 +3000,7 @@ crunch inQ[wp]: cteInsert "\<lambda>s. P (obj_at' (inQ d p) t s)"
 lemma setCTE_it'[wp]:
   "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> setCTE c p \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
   apply (simp add: setCTE_def setObject_def split_def updateObject_cte)
-  apply (wp|wpc|simp add: unless_def)+
-  done
+  by (wpsimp+; auto)
 
 lemma setCTE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> setCTE p cte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
@@ -3038,7 +3045,7 @@ lemma cteInsert_idle'[wp]:
 lemma setCTE_arch [wp]:
   "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setCTE p c \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   apply (simp add: setCTE_def setObject_def split_def updateObject_cte)
-  apply (wp|wpc|simp add: unless_def)+
+  apply (wpsimp+; auto)
   done
 
 lemma setCTE_valid_arch[wp]:
@@ -3048,13 +3055,13 @@ lemma setCTE_valid_arch[wp]:
 lemma setCTE_global_refs[wp]:
   "\<lbrace>\<lambda>s. P (global_refs' s)\<rbrace> setCTE p c \<lbrace>\<lambda>_ s. P (global_refs' s)\<rbrace>"
   apply (simp add: setCTE_def setObject_def split_def updateObject_cte global_refs'_def)
-  apply (wp|wpc|simp add: unless_def)+
+  apply (wpsimp+; auto)
   done
 
 lemma setCTE_gsMaxObjectSize[wp]:
   "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> setCTE p c \<lbrace>\<lambda>_ s. P (gsMaxObjectSize s)\<rbrace>"
   apply (simp add: setCTE_def setObject_def split_def updateObject_cte)
-  apply (wp|wpc|simp add: unless_def)+
+  apply (wpsimp+; auto)
   done
 
 lemma setCTE_valid_globals[wp]:
@@ -4089,11 +4096,11 @@ lemma create_reply_master_corres:
   done
 
 lemma cte_map_nat_to_cref:
-  "\<lbrakk> n < 2 ^ b; b < 32 \<rbrakk> \<Longrightarrow>
-   cte_map (p, nat_to_cref b n) = p + (of_nat n * 16)"
+  "\<lbrakk> n < 2 ^ b; b < 64 \<rbrakk> \<Longrightarrow>
+   cte_map (p, nat_to_cref b n) = p + (of_nat n * 32)"
   apply (clarsimp simp: cte_map_def nat_to_cref_def
                  dest!: less_is_drop_replicate)
-  apply (rule arg_cong [where f="\<lambda>x. x * 16"])
+  apply (rule arg_cong [where f="\<lambda>x. x * 32"])
   apply (subst of_drop_to_bl)
   apply (simp add: word_bits_def)
   apply (subst mask_eq_iff_w2p)
@@ -4181,7 +4188,7 @@ lemma setup_reply_master_corres:
   apply (simp add: setupReplyMaster_def setup_reply_master_def)
   apply (simp add: locateSlot_conv tcbReplySlot_def objBits_def objBitsKO_def)
   apply (simp add: nullMDBNode_def, fold initMDBNode_def)
-  apply (rule_tac F="t + 0x20 = cte_map (t, tcb_cnode_index 2)"
+  apply (rule_tac F="t + 0x40 = cte_map (t, tcb_cnode_index 2)"
                in corres_req)
    apply (clarsimp simp: tcb_cnode_index_def2 cte_map_nat_to_cref)
   apply (clarsimp simp: cte_level_bits_def)
@@ -4488,7 +4495,10 @@ lemma mdb_next_trans_next_pres:
 lemma mdb_next_rtrans_next_pres:
   "\<lbrakk> m p = Some v; mdbNext (cteMDBNode x) = mdbNext (cteMDBNode v) \<rbrakk> \<Longrightarrow>
    m(p \<mapsto> x) \<turnstile> a \<leadsto>\<^sup>* b = m \<turnstile> a \<leadsto>\<^sup>* b"
-  by (simp add: rtrancl_eq_or_trancl mdb_next_trans_next_pres)
+  by (safe; clarsimp simp: mdb_next_trans_next_pres
+                       dest!: rtrancl_eq_or_trancl[THEN iffD1]
+                      intro!: rtrancl_eq_or_trancl[THEN iffD2] mdb_next_trans_next_pres[THEN iffD1])
+
 
 lemma arch_update_descendants':
   "\<lbrakk> is_arch_update' cap oldcte; m p = Some oldcte\<rbrakk> \<Longrightarrow>
@@ -4731,7 +4741,8 @@ definition
   \<not> isThreadCap cap \<and>
   \<not> isCNodeCap cap \<and>
   \<not> isZombie cap \<and>
-  \<not> isArchPageCap cap"
+  \<not> isArchPageCap cap \<and>
+  \<not> isArchIOPortCap cap"
 end
 
 (* FIXME: duplicated *)
@@ -4940,7 +4951,9 @@ done
 lemma is_simple_cap'_maskedAsFull[simp]:
   "is_simple_cap' (maskedAsFull src_cap' c') =  is_simple_cap' src_cap'"
   by (auto simp: is_simple_cap'_def maskedAsFull_def isCap_simps split:if_splits)
+
 context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma cins_corres_simple:
   assumes "cap_relation c c'" "src' = cte_map src" "dest' = cte_map dest"
   notes trans_state_update'[symmetric,simp]
@@ -5215,14 +5228,20 @@ lemma cins_corres_simple:
 
 declare if_split [split]
 
+lemma capMaster_portRange:
+  "capMasterCap c = capMasterCap c' \<Longrightarrow> portRange c = portRange c'"
+  by (simp add: capMasterCap_def portRange_def isCap_simps split: capability.splits arch_capability.splits)
+
 lemma sameRegion_capRange_sub:
   "sameRegionAs cap cap' \<Longrightarrow> capRange cap' \<subseteq> capRange cap"
   apply (clarsimp simp: sameRegionAs_def2 isCap_Master capRange_Master)
   apply (erule disjE)
-   apply (clarsimp dest!: capMaster_capRange)
+   apply (clarsimp dest!: capMaster_capRange simp: portRange_def)
   apply (erule disjE)
    apply fastforce
-  apply (clarsimp simp: isCap_simps capRange_def)
+  apply (erule disjE)
+   apply (clarsimp simp: isCap_simps portRange_def capRange_def)
+  apply (clarsimp simp: isCap_simps capRange_def portRange_def)
   done
 
 lemma safe_parent_for_capRange_capBits:
@@ -5741,8 +5760,10 @@ lemma sameRegion_c_src':
    prefer 2
    apply clarsimp
    apply (erule disjE, blast)
+   apply (erule disjE, clarsimp simp: isCap_simps portRange_def split: if_split_asm;
+                       clarsimp simp: capRange_def)
    apply (clarsimp simp: isCap_simps)
-   apply (clarsimp simp: capRange_def)
+   apply (clarsimp simp: capRange_def portRange_def isCap_simps split: if_split_asm)
   apply (elim conjE)
   apply (drule capMaster_capRange)
   apply simp
@@ -5996,6 +6017,11 @@ lemma notArchPage:
   using simple
   by (clarsimp simp: isCap_simps is_simple_cap'_def)
 
+lemma notArchIOPort:
+  "\<not> isArchIOPortCap c'"
+  using simple
+  by (clarsimp simp: isCap_simps is_simple_cap'_def)
+
 lemma distinct_zombies[simp]:
   "distinct_zombies n'"
   using distinct_zombies_m
@@ -6011,10 +6037,12 @@ lemma distinct_zombies[simp]:
    apply (frule(3) untyped_rangefree)
    apply (simp add: capRange_def)
   apply (rule sameRegionAsE [OF sameRegion_src], simp_all)
-    apply (erule distinct_zombies_copyMasterE, rule src)
-     apply simp
-    apply (simp add: notZomb)
-   apply (simp add: notArchPage)
+     apply (erule distinct_zombies_copyMasterE, rule src)
+      apply simp
+     apply (simp add: notZomb)
+    apply (simp add: notArchPage)
+   apply (simp add: notArchIOPort)
+  apply (clarsimp simp: isCap_simps)
   apply (erule distinct_zombies_sameMasterE, rule dest)
   apply (clarsimp simp: isCap_simps)
   done
@@ -6087,7 +6115,9 @@ setUntypedCapAsFull (cteCap srcCTE) cap src
   apply wp
   apply clarsimp
 done
+
 context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma cteInsert_simple_mdb':
   "\<lbrace>valid_mdb' and pspace_aligned' and pspace_distinct' and (\<lambda>s. src \<noteq> dest) and K (capAligned cap) and
     (\<lambda>s. safe_parent_for' (ctes_of s) src cap) and K (is_simple_cap' cap) \<rbrace>
@@ -6183,7 +6213,7 @@ lemma cte_refs_maskCapRights[simp]:
              split: arch_capability.split)
 
 lemma capASID_PageCap_None [simp]:
-  "capASID (ArchObjectCap (PageCap d r R page_size None)) = None"
+  "capASID (ArchObjectCap (PageCap r R mt page_size d None)) = None"
   by (simp add: capASID_def)
 
 lemma getSlotCap_cap_to'[wp]:
@@ -6498,7 +6528,7 @@ lemma usableUntypedRange_mono2:
 
 lemma updateFreeIndex_pspace':
   "\<lbrace>\<lambda>s. (capFreeIndex cap \<le> idx \<and> idx \<le> 2 ^ capBlockSize cap \<and>
-         is_aligned (of_nat idx :: word32) 4 \<and> isUntypedCap cap) \<and>
+         is_aligned (of_nat idx :: machine_word) 4 \<and> isUntypedCap cap) \<and>
         valid_pspace' s \<and> cte_wp_at' (\<lambda>c. cteCap c = cap) src s\<rbrace>
    updateCap src (capFreeIndex_update (\<lambda>_. idx) cap)
    \<lbrace>\<lambda>r s. valid_pspace' s\<rbrace>"
@@ -6537,7 +6567,7 @@ lemma ctes_of_cte_wpD:
 lemma updateFreeIndex_forward_valid_objs':
   "\<lbrace>\<lambda>s. valid_objs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap
           \<and> capFreeIndex cap \<le> idx \<and> idx \<le> 2 ^ capBlockSize cap
-          \<and> is_aligned (of_nat idx :: word32) 4) o cteCap) src s\<rbrace>
+          \<and> is_aligned (of_nat idx :: machine_word) 4) o cteCap) src s\<rbrace>
    updateFreeIndex src idx
    \<lbrace>\<lambda>r s. valid_objs' s\<rbrace>"
   apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def updateCap_def getSlotCap_def)
@@ -6576,7 +6606,7 @@ lemma updateFreeIndex_forward_valid_mdb':
 lemma updateFreeIndex_forward_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap
           \<and> capFreeIndex cap \<le> idx \<and> idx \<le> 2 ^ capBlockSize cap
-          \<and> is_aligned (of_nat idx :: word32) 4) o cteCap) src s\<rbrace>
+          \<and> is_aligned (of_nat idx :: machine_word) 4) o cteCap) src s\<rbrace>
    updateFreeIndex src idx
    \<lbrace>\<lambda>r s. invs' s\<rbrace>"
   apply (clarsimp simp:invs'_def valid_state'_def)
