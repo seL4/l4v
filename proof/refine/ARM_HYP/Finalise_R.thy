@@ -3856,6 +3856,42 @@ lemma (in delete_one) deleting_irq_corres:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+lemma sym_refs_vcpu_tcb:
+  "\<lbrakk> ko_at (ArchObj (VCPU vcpu)) v s; vcpu_tcb vcpu = Some t; sym_refs (state_hyp_refs_of s) \<rbrakk> \<Longrightarrow>
+  \<exists>tcb. ko_at (TCB tcb) t s \<and> tcb_vcpu (tcb_arch tcb) = Some v"
+  apply (drule (1) hyp_sym_refs_obj_atD)
+  apply (clarsimp simp: obj_at_def hyp_refs_of_def)
+  apply (rename_tac ko)
+  apply (case_tac ko; simp add: tcb_vcpu_refs_def split: option.splits)
+  apply (rename_tac koa)
+  apply (case_tac koa; simp add: refs_of_a_def vcpu_tcb_refs_def split: option.splits)
+  done
+
+lemma vcpuFinalise_corres [corres]:
+  "corres dc (invs and vcpu_at vcpu) (invs' and vcpu_at' vcpu) (vcpu_finalise vcpu) (vcpuFinalise vcpu)"
+  unfolding vcpuFinalise_def vcpu_finalise_def
+  apply (corres corres: corres_get_vcpu)
+     apply (clarsimp simp: vcpu_relation_def)
+     apply (rule option_corres; clarsimp)
+     apply corres
+    apply (wp get_vcpu_wp)
+   apply (wp getVCPU_wp)
+  apply clarsimp
+  apply (rule conjI)
+   apply clarsimp
+   apply (rule conjI, fastforce)
+   apply clarsimp
+   apply (frule sym_refs_vcpu_tcb)
+     apply (simp add: vcpu_relation_def)
+    apply fastforce
+   apply (clarsimp simp: obj_at_def vcpu_relation_def)
+  apply clarsimp
+  apply (rule conjI, fastforce)
+  apply clarsimp
+  apply (drule ko_at_valid_objs', fastforce, simp add: projectKOs)
+  apply (clarsimp simp: valid_obj'_def valid_vcpu'_def typ_at_tcb')
+  done
+
 lemma arch_finalise_cap_corres:
   "\<lbrakk> final_matters' (ArchObjectCap cap') \<Longrightarrow> final = final'; acap_relation cap cap' \<rbrakk>
      \<Longrightarrow> corres cap_relation
@@ -3887,8 +3923,9 @@ lemma arch_finalise_cap_corres:
                elim!: is_aligned_weaken invs_valid_asid_map)[2]
   apply (rule corres_guard_imp, rule delete_asid_corres)
    apply (auto elim!: invs_valid_asid_map simp: mask_def valid_cap_def)[2]
-  sorry (* add vcpu case *)
-
+  apply corres
+  apply (clarsimp simp: valid_cap_def valid_cap'_def)
+  done
 
 lemma ntfnBoundTCB_update_ntfnObj_inv[simp]:
   "ntfnObj (ntfnBoundTCB_update f ntfn) = ntfnObj ntfn"
