@@ -1766,7 +1766,7 @@ lemma setThreadState_rct:
 lemma switchToIdleThread_invs'[wp]:
   "\<lbrace>invs'\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp: Thread_H.switchToIdleThread_def ARM_HYP_H.switchToIdleThread_def)
-  apply (wp setCurThread_invs_idle_thread)
+  apply (wp setCurThread_invs_idle_thread vcpuSwitch_it')
   apply clarsimp
   done
 
@@ -1974,7 +1974,7 @@ qed
 lemma switchToIdleThread_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp: Thread_H.switchToIdleThread_def ARM_HYP_H.switchToIdleThread_def)
-  apply (wp setCurThread_invs_no_cicd'_idle_thread storeWordUser_invs_no_cicd')
+  apply (wp setCurThread_invs_no_cicd'_idle_thread storeWordUser_invs_no_cicd' vcpuSwitch_it')
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_idle'_def)
   done
 
@@ -2010,6 +2010,7 @@ lemma setCurThread_const:
 
 
 crunch it[wp]: switchToIdleThread "\<lambda>s. P (ksIdleThread s)"
+  (wp: vcpuSwitch_it' ignore: getObject)
 crunch it[wp]: switchToThread "\<lambda>s. P (ksIdleThread s)"
     (ignore: clearExMonitor getObject)
 
@@ -2965,7 +2966,7 @@ lemma stit_nosch[wp]:
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
   apply (simp add: Thread_H.switchToIdleThread_def
                    ARM_HYP_H.switchToIdleThread_def  storeWordUser_def)
-  apply (wp setCurThread_nosch | simp add: getIdleThread_def)+
+  apply (wp setCurThread_nosch vcpuSwitch_nosch | simp add: getIdleThread_def)+
   done
 
 lemma chooseThread_nosch:

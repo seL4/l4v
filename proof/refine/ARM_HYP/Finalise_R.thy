@@ -2804,8 +2804,6 @@ lemma hoare_vcg_if_lift3:
   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (if P rv s then X rv else Y rv) s\<rbrace>"
   by auto
 
-lemmas FalseI = notE[where R=False]
-
 crunch irq_node'[wp]: vcpuSwitch "\<lambda>s. P (irq_node' s)"
   (wp: FalseI crunch_wps getObject_inv loadObject_default_inv
        updateObject_default_inv setObject_ksInterrupt
