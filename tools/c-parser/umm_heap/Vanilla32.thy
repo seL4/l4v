@@ -305,12 +305,16 @@ lemma ptr_add_word32 [simp]:
   fixes a :: "32 word ptr"
   shows "ptr_val (a +\<^sub>p uint x) = ptr_val a + 4 * x"
   by (cases a) (simp add: ptr_add_def scast_id)
-(*
+
+lemma ptr_add_word64_signed [simp]:
+  fixes a :: "64 word ptr"
+  shows "ptr_val (a +\<^sub>p x) = ptr_val a + 8 * of_int x"
+  by (cases a) (simp add: CTypesDefs.ptr_add_def scast_id)
+
 lemma ptr_add_word64 [simp]:
-  fixes a :: "64 word ptr" and x :: "64 word"
+  fixes a :: "64 word ptr"
   shows "ptr_val (a +\<^sub>p uint x) = ptr_val a + 8 * x"
   by (cases a) (simp add: ptr_add_def scast_id)
-*)
 
 lemma ptr_add_0_id[simp]:"x +\<^sub>p 0 = x"
   by (simp add:CTypesDefs.ptr_add_def)
@@ -322,8 +326,7 @@ lemma from_bytes_ptr_to_bytes_ptr:
                 length_word_rsplit_exp_size' word_rcat_rsplit)
 
 lemma ptr_aligned_coerceI:
-  "ptr_aligned (ptr_coerce x::32 word ptr) \<Longrightarrow>
-      ptr_aligned (x::'a::mem_type ptr ptr)"
+  "ptr_aligned (ptr_coerce x::addr ptr) \<Longrightarrow> ptr_aligned (x::'a::mem_type ptr ptr)"
   by (simp add: ptr_aligned_def)
 
 lemma lift_ptr_ptr [simp]:

@@ -17,7 +17,7 @@ begin
 type_synonym addr_bitsize = "64"
 type_synonym addr = "addr_bitsize word"
 definition addr_bitsize :: nat where "addr_bitsize \<equiv> 64"
-definition addr_align :: nat where "addr_align \<equiv> 2"
+definition addr_align :: nat where "addr_align \<equiv> 3"
 declare addr_align_def[simp]
 
 definition addr_card :: nat where

@@ -419,9 +419,9 @@ lemma c_guard_array_field:
 instantiation ptr :: (type) enum
 begin
 
-  definition "enum_ptr \<equiv> map Ptr (enum_class.enum :: 32 word list)"
-  definition "enum_all_ptr P \<equiv> enum_class.enum_all (\<lambda>v :: 32 word. P (Ptr v))"
-  definition "enum_ex_ptr P \<equiv> enum_class.enum_ex (\<lambda>v :: 32 word. P (Ptr v))"
+  definition "enum_ptr \<equiv> map Ptr enum_class.enum"
+  definition "enum_all_ptr P \<equiv> enum_class.enum_all (\<lambda>v. P (Ptr v))"
+  definition "enum_ex_ptr P \<equiv> enum_class.enum_ex (\<lambda>v. P (Ptr v))"
 
   instance
     apply (intro_classes)

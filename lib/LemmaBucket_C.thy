@@ -299,16 +299,16 @@ lemma heap_update_list_update:
 
 (* FIXME: generalise *)  
 lemma heap_update_list_append2:
-  fixes v :: word8
-  shows "length xs + length ys < 2 ^ word_bits \<Longrightarrow> heap_update_list s (xs @ ys) hp = 
-  (heap_update_list s xs (heap_update_list (s + of_nat (length xs)) ys hp))"
+  "length xs + length ys < 2 ^ word_bits \<Longrightarrow>
+    heap_update_list s (xs @ ys) hp
+      = heap_update_list s xs (heap_update_list (s + of_nat (length xs)) ys hp)"
 proof (induct xs arbitrary: hp s)
   case Nil
   show ?case by simp
 next
   case (Cons v' vs')
 
-  have "(1 :: word32) + of_nat (length vs') = of_nat (length (v' # vs'))"
+  have "(1 :: addr) + of_nat (length vs') = of_nat (length (v' # vs'))"
     by simp
   also have "\<dots> \<noteq> 0" using Cons.prems
     apply -
@@ -316,15 +316,15 @@ next
     apply simp
     apply (simp add: word_bits_conv)
     done
-  finally have neq0: "(1 :: word32) + of_nat (length vs') \<noteq> 0" .
+  finally have neq0: "(1 :: addr) + of_nat (length vs') \<noteq> 0" .
 
-  have "(1 :: word32) + of_nat (length vs') = of_nat (length (v' # vs'))"
+  have "(1 :: addr) + of_nat (length vs') = of_nat (length (v' # vs'))"
     by simp
   also have "unat \<dots> + length ys < 2 ^ word_bits" using Cons.prems 
     apply (subst unat_of_nat)
     apply (simp add: word_bits_conv)
     done
-  finally have lt: "unat ((1 :: word32) + of_nat (length vs')) + length ys < 2 ^ word_bits" .
+  finally have lt: "unat ((1 :: addr) + of_nat (length vs')) + length ys < 2 ^ word_bits" .
   
   from Cons.prems have "length vs' + length ys < 2 ^ word_bits" by simp
   thus ?case
@@ -412,7 +412,7 @@ lemma intvl_disjoint2:
 
   
 lemma intvl_off_disj:
-  fixes x :: word32
+  fixes x :: addr
   assumes ylt: "y \<le> off"
   and    zoff: "z + off < 2 ^ word_bits"
   shows   "{x ..+ y} \<inter> {x + of_nat off ..+ z} = {}"
@@ -422,7 +422,7 @@ lemma intvl_off_disj:
   apply (rule contrapos_pp [OF TrueI])
   apply (drule intvl_inter)
   apply (erule disjE)
-   apply (cut_tac intvl_nowrap [where x = x and y = "of_nat off :: word32" and z = z])
+   apply (cut_tac intvl_nowrap [where x = x and y = "of_nat off :: addr" and z = z])
      apply simp
     apply (rule of_nat_neq_0)
      apply simp
@@ -776,20 +776,20 @@ lemma heap_update_commute:
 
 lemma heap_update_Array_update:
   assumes n: "n < CARD('b :: finite)"
-  assumes size: "CARD('b) * size_of TYPE('a :: packed_type) < 2 ^ 32"
+  assumes size: "CARD('b) * size_of TYPE('a :: packed_type) < 2 ^ addr_bitsize"
   shows "heap_update p (Arrays.update (arr :: 'a['b]) n v) hp
        = heap_update (array_ptr_index p False n) v (heap_update p arr hp)"
 proof -
 
   have P: "\<And>x k. \<lbrakk> x < CARD('b); k < size_of TYPE('a) \<rbrakk>
-         \<Longrightarrow> unat (of_nat x * of_nat (size_of TYPE('a)) + (of_nat k :: word32))
+         \<Longrightarrow> unat (of_nat x * of_nat (size_of TYPE('a)) + (of_nat k :: addr))
                  = x * size_of TYPE('a) + k"
     using size
     apply (case_tac "size_of TYPE('a)", simp_all)
     apply (case_tac "CARD('b)", simp_all)
     apply (subst unat_add_lem[THEN iffD1])
      apply (simp add: unat_word_ariths unat_of_nat less_Suc_eq_le)
-     apply (subgoal_tac "Suc x * size_of TYPE('a) < 2 ^ 32", simp_all)
+     apply (subgoal_tac "Suc x * size_of TYPE('a) < 2 ^ addr_bitsize", simp_all)
      apply (erule order_le_less_trans[rotated], simp add: add_mono)
     apply (subst unat_mult_lem[THEN iffD1])
      apply (simp add: unat_of_nat unat_add_lem[THEN iffD1])
@@ -835,7 +835,7 @@ lemma heap_update_Array_element'':
   fixes hp w
   assumes p: "p = array_ptr_index p' False n"
   assumes n: "n < CARD('b)"
-  assumes size: "CARD('b) * size_of TYPE('a) < 2 ^ 32"
+  assumes size: "CARD('b) * size_of TYPE('a) < 2 ^ addr_bitsize"
   shows "heap_update p' (Arrays.update (h_val hp p') n w) hp
        = heap_update p w hp"
   apply (subst heap_update_Array_update[OF n size])
@@ -846,7 +846,7 @@ lemmas heap_update_Array_element'
     = heap_update_Array_element''[simplified array_ptr_index_simps]
 
 lemma fourthousand_size:
-  "CARD('b :: fourthousand_count) * size_of TYPE('a :: oneMB_size) < 2 ^ 32"
+  "CARD('b :: fourthousand_count) * size_of TYPE('a :: oneMB_size) < 2 ^ addr_bitsize"
   using oneMB_size_ax[where 'a='a] fourthousand_count_ax[where 'a='b]
   apply (clarsimp dest!: nat_le_Suc_less_imp)
   apply (drule(1) mult_mono, simp+)
@@ -1097,7 +1097,7 @@ lemma hrs_mem_update_id3: "hrs_mem_update id = id"
   unfolding hrs_mem_update_def by simp
 
 abbreviation
-  ptr_span :: "'a::mem_type ptr \<Rightarrow> word32 set" where
+  ptr_span :: "'a::mem_type ptr \<Rightarrow> addr set" where
   "ptr_span p \<equiv> {ptr_val p ..+ size_of TYPE('a)}"
 
 abbreviation (input)
