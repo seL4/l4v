@@ -1502,11 +1502,11 @@ lemma sts_valid_arch_inv':
 
 lemma less_kernelBase_valid_pde_offset':
   "\<lbrakk> vptr < kernelBase; x = 0 \<or> is_aligned vptr 25; x \<le> 0x1F \<rbrakk>
-     \<Longrightarrow> valid_pde_mapping_offset' (((x * 4) + (vptr >> 21 << 3)) && mask pdBits)"
+     \<Longrightarrow> valid_pde_mapping_offset' (((x * 4) + (vptr >> 20 << 2)) && mask pdBits)"
   apply (clarsimp simp: ARM_HYP.kernelBase_def kernelBase_def pdBits_def pageBits_def
                         valid_pde_mapping_offset'_def pd_asid_slot_def)
   apply (drule minus_one_helper3, simp)
-  apply (drule le_shiftr[where u=vptr and n=21])
+  apply (drule le_shiftr[where u=vptr and n=20])
   apply (subst(asm) iffD2[OF mask_eq_iff_w2p])
     apply (simp add: word_size vspace_bits_defs)
    apply (simp add: vspace_bits_defs shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem])
@@ -1576,8 +1576,8 @@ lemma findPDForASID_valid_offset'[wp]:
   apply (rule hoare_gen_asmE)
   apply (rule hoare_post_imp_R, rule findPDForASID_aligned)
   apply (simp add: mask_add_aligned)
-(*  apply (erule less_kernelBase_valid_pde_offset'')
-  done*) sorry
+  apply (erule less_kernelBase_valid_pde_offset'')
+  done
 
 lemma diminished_arch_update':
   "diminished' (ArchObjectCap cp) (cteCap cte) \<Longrightarrow> is_arch_update' (ArchObjectCap cp) cte"
@@ -1589,11 +1589,11 @@ lemma lookupPTSlot_page_table_at':
   \<lbrace>\<lambda>rv s. page_table_at' (rv && ~~ mask ptBits) s\<rbrace>,-"
   apply (simp add:lookupPTSlot_def)
   apply (wp getPDE_wp|wpc|simp add:checkPTAt_def)+
-  apply (clarsimp simp:ptBits_def lookup_pt_slot_no_fail_def)
-(*  apply (subst vaddr_segment_nonsense3[unfolded pt_bits_def,simplified])
-   apply (simp add:page_table_at'_def ptBits_def pageBits_def)
+  apply (clarsimp simp:ptBits_def lookup_pt_slot_no_fail_def vspace_bits_defs)
+  apply (subst vaddr_segment_nonsense5[unfolded vspace_bits_defs,simplified])
+   apply (simp add:page_table_at'_def ptBits_def pageBits_def vspace_bits_defs)
   apply simp
-  done*) sorry
+  done
 
 lemma findPDForASID_page_directory_at':
   notes checkPDAt_inv[wp del]
@@ -1601,22 +1601,22 @@ lemma findPDForASID_page_directory_at':
     \<lbrace>\<lambda>rv s. page_directory_at' (lookup_pd_slot rv vptr && ~~ mask pdBits) s\<rbrace>,-"
   apply (simp add:findPDForASID_def)
    apply (wp getASID_wp|simp add:checkPDAt_def | wpc)+
-  apply (clarsimp simp:lookup_pd_slot_def pdBits_def)
-(*  apply (subst vaddr_segment_nonsense[unfolded pd_bits_def,simplified])
-   apply (simp add:page_directory_at'_def pdBits_def pageBits_def)
+  apply (clarsimp simp:lookup_pd_slot_def pdBits_def vspace_bits_defs)
+  apply (subst vaddr_segment_nonsense[unfolded vspace_bits_defs,simplified])
+   apply (simp add:page_directory_at'_def pdBits_def pageBits_def vspace_bits_defs)
   apply simp
-  done*) sorry
+  done
 
 definition "slots_duplicated_ensured \<equiv> \<lambda>m s. case m of
   Inl (pte, xs) \<Rightarrow> (case pte of
-    pte.LargePagePTE _ _ _ _ \<Rightarrow> \<exists>p. xs = [p, p+4 .e. p + mask 6] \<and> is_aligned p 6
+    pte.LargePagePTE _ _ _ _ \<Rightarrow> \<exists>p. xs = [p, p+8 .e. p + mask 7] \<and> is_aligned p 7
         \<and> page_table_at' (p && ~~ mask ptBits) s
     | pte.InvalidPTE  \<Rightarrow> False
     | _ \<Rightarrow> \<exists>p. xs = [p]
       \<and> page_table_at' (p && ~~ mask ptBits) s)
   | Inr (pde, xs) \<Rightarrow> (case pde of
-    pde.SuperSectionPDE _ _ _ _ \<Rightarrow> \<exists>p. xs = [p, p+4 .e. p + mask 6] \<and> is_aligned p 6
-        \<and> page_directory_at' (p && ~~ mask pdBits) s \<and> is_aligned p 6
+    pde.SuperSectionPDE _ _ _ _ \<Rightarrow> \<exists>p. xs = [p, p+8 .e. p + mask 7] \<and> is_aligned p 7
+        \<and> page_directory_at' (p && ~~ mask pdBits) s \<and> is_aligned p 7
     | pde.InvalidPDE  \<Rightarrow> False
     | _ \<Rightarrow> \<exists>p. xs = [p]
       \<and> page_directory_at' (p && ~~ mask pdBits) s)"
@@ -1635,7 +1635,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
      apply (wp mapME_x_inv_wp getPTE_wp| wpc)+
      apply clarsimp
     apply (clarsimp simp:valid_slots_duplicated'_def)
- (*  apply (simp add:slots_duplicated_ensured_def)
+   apply (simp add:slots_duplicated_ensured_def vspace_bits_defs)
    apply (rule hoare_pre)
     apply (rule_tac P = "\<exists>p. b = [p]" and
       P' = "\<lambda>s. \<exists>p. b = [p] \<and> page_table_at' (p && ~~ mask ptBits) s" in hoare_gen_asmE)
@@ -1651,7 +1651,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
     apply (simp add:projectKO_opt_pte vs_entry_align_def
       split:Structures_H.kernel_object.splits
       arch_kernel_object.splits)
-   apply clarsimp
+   apply (clarsimp simp add: vspace_bits_defs)
   apply (case_tac b)
   apply (case_tac a)
    apply (simp add:slots_duplicated_ensured_def | wp)+
@@ -1676,7 +1676,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
    apply (wp mapME_x_inv_wp getPDE_wp| wpc)+
    apply clarsimp
   apply (fastforce simp:valid_slots_duplicated'_def)
-  done*) sorry
+  done
 
 lemma is_aligned_ptrFromPAddr_aligned:
   "m \<le> 28 \<Longrightarrow> is_aligned (ptrFromPAddr p) m = is_aligned p m"
@@ -1704,12 +1704,13 @@ lemma lookupPTSlot_aligned:
      apply simp
     apply (erule is_aligned_weaken)
     apply (simp add: vspace_bits_defs)
-(*   apply (rule is_aligned_shiftl,simp)
+    apply (simp add: vspace_bits_defs)
+   apply (rule is_aligned_shiftl,simp)
    apply (rule is_aligned_andI1)
    apply (rule is_aligned_shiftr)
    apply simp
   apply simp
-  done*) sorry
+  done
 
 lemma createMappingEntires_valid_slots_duplicated'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<and> vmsz_aligned vptr vmsz \<and> valid_objs' s
@@ -1718,37 +1719,35 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
   \<lbrace>\<lambda>rv s. slots_duplicated_ensured rv s\<rbrace>, -"
   apply (clarsimp simp:createMappingEntries_def)
   apply (rule hoare_pre)
-   apply (wpc | wp lookupPTSlot_page_table_at'
-     | simp add: slots_duplicated_ensured_def)+
+   apply (wpsimp wp: lookupPTSlot_page_table_at'[unfolded vspace_bits_defs, simplified]
+                 simp: slots_duplicated_ensured_def)+
      apply (rule_tac Q' = "\<lambda>p s.  is_aligned p 7 \<and> page_table_at' (p && ~~ mask ptBits) s"
        in  hoare_post_imp_R)
-      apply (wp lookupPTSlot_aligned lookupPTSlot_page_table_at'
-           | simp add: vspace_bits_defs largePagePTEOffsets_def superSectionPDEOffsets_def)+
-(*     apply (rule_tac x = r in exI)
-     apply clarsimp
-     apply (frule is_aligned_no_wrap'[where off = "0x3c"])
+      apply (wpsimp wp: lookupPTSlot_aligned lookupPTSlot_page_table_at'
+                    simp: vspace_bits_defs slots_duplicated_ensured_def
+                          largePagePTEOffsets_def superSectionPDEOffsets_def)+
+     apply (rule_tac x = r in exI)
+    apply clarsimp
+     apply (frule is_aligned_no_wrap'[where off = "0x78"])
       apply simp
-     apply (drule upto_enum_step_shift[where n = 6 and m = 2,simplified])
+    apply (drule upto_enum_step_shift[where n = 7 and m = 3,simplified])
      apply (clarsimp simp:mask_def add.commute upto_enum_step_def)
-     apply (drule(1) le_less_trans)
      apply simp
     apply wp+
-   apply (intro conjI impI)
-            apply ((clarsimp simp: vmsz_aligned_def pageBitsForSize_def
-              slots_duplicated_ensured_def
-              split:vmpage_size.splits)+)[9]
-   apply clarsimp
-   apply (drule lookup_pd_slot_aligned_6)
-    apply (simp add:pdBits_def pageBits_def)
-   apply (clarsimp simp:slots_duplicated_ensured_def)
-   apply (rule_tac x = "(lookup_pd_slot pd vptr)" in exI)
-   apply clarsimp
-   apply (frule is_aligned_no_wrap'[where off = "0x3c" and sz = 6])
-    apply simp
-   apply (drule upto_enum_step_shift[where n = 6 and m = 2,simplified])
-   apply (clarsimp simp:mask_def add.commute upto_enum_step_def)
-   apply (drule(1) le_less_trans)
-   apply simp
+   apply (safe)
+  apply (clarsimp simp: vmsz_aligned_def pageBitsForSize_def
+                        slots_duplicated_ensured_def vspace_bits_defs
+                  split:vmpage_size.splits)+
+  apply (rule_tac x = "(lookup_pd_slot pd vptr)" in exI)
+    apply (subgoal_tac "is_aligned (lookup_pd_slot pd vptr)  7")
+    apply (clarsimp simp: vspace_bits_defs slots_duplicated_ensured_def
+                          largePagePTEOffsets_def superSectionPDEOffsets_def)
+    apply (frule is_aligned_no_wrap'[where off = "0x78"])
+      apply simp
+    apply (drule upto_enum_step_shift[where n = 7 and m = 3,simplified])
+     apply (clarsimp simp:mask_def add.commute upto_enum_step_def)
+    apply (rule lookup_pd_slot_aligned_6)
+    apply (clarsimp simp: vmsz_aligned_def)+
    done
 
 lemma arch_decodeARMPageFlush_wf:
@@ -1770,8 +1769,9 @@ lemma arch_decodeARMPageFlush_wf:
   apply (rule hoare_pre)
    apply (wp throwE_R whenE_throwError_wp | wpc | clarsimp)+
    apply (simp add: valid_arch_inv'_def valid_page_inv'_def)
+  apply wpsimp
   apply fastforce
-  done*) sorry
+  done
 
 lemma arch_decodeInvocation_wf[wp]:
   notes ensureSafeMapping_inv[wp del]
