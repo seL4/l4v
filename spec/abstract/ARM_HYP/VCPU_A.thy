@@ -163,8 +163,8 @@ definition make_virq :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<R
   let
     groupShift = 30;
     prioShift = 23;
-    irqPending = 1 << (28 - 1);
-    eoiirqen = 1 << (19 - 1)
+    irqPending = 1 << 28;
+    eoiirqen = 1 << 19
   in (grp << groupShift) || (prio << prioShift) || irq || irqPending || eoiirqen"
 
 
@@ -176,7 +176,7 @@ where
      priority \<leftarrow> returnOk ((mr0 >> 16) && 0xFF);
      group \<leftarrow> returnOk ((mr0 >> 24) && 0xFF);
      index \<leftarrow> returnOk (mr1 && 0xFF);
-     range_check vid 0 (1 << 10 - 1);
+     range_check vid 0 ((1 << 10) - 1);
      range_check priority 0 31;
      range_check group 0 1;
      num_list_regs \<leftarrow> liftE $ gets (arm_gicvcpu_numlistregs \<circ> arch_state);
