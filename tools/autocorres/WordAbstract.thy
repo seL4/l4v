@@ -12,34 +12,25 @@ theory WordAbstract
 imports L2Defs ExecConcrete
 begin
 
-definition [simplified]: "INT_MAX \<equiv> (2 :: int) ^ 31 - 1"
-definition [simplified]: "INT_MIN \<equiv> - ((2 :: int) ^ 31)"
-definition [simplified]: "UINT_MAX \<equiv> (2 :: nat) ^ 32 - 1"
-
-definition [simplified]: "SHORT_MAX \<equiv> (2 :: int) ^ 15 - 1"
-definition [simplified]: "SHORT_MIN \<equiv> - ((2 :: int) ^ 15)"
-definition [simplified]: "USHORT_MAX \<equiv> (2 :: nat) ^ 16 - 1"
-
-definition [simplified]: "CHAR_MAX \<equiv> (2 :: int) ^ 7 - 1"
-definition [simplified]: "CHAR_MIN \<equiv> - ((2 :: int) ^ 7)"
-definition [simplified]: "UCHAR_MAX \<equiv> (2 :: nat) ^ 8 - 1"
-
 definition "WORD_MAX x \<equiv> ((2 ^ (len_of x - 1) - 1) :: int)"
 definition "WORD_MIN x \<equiv> (- (2 ^ (len_of x - 1)) :: int)"
 definition "UWORD_MAX x \<equiv> ((2 ^ (len_of x)) - 1 :: nat)"
 
 lemma WORD_values [simplified]:
-  "WORD_MAX (TYPE(8 signed)) = (2 ^ 7 - 1)"
+  "WORD_MAX (TYPE( 8 signed)) = (2 ^  7 - 1)"
   "WORD_MAX (TYPE(16 signed)) = (2 ^ 15 - 1)"
   "WORD_MAX (TYPE(32 signed)) = (2 ^ 31 - 1)"
+  "WORD_MAX (TYPE(64 signed)) = (2 ^ 63 - 1)"
 
-  "WORD_MIN (TYPE(8 signed)) = - (2 ^ 7)"
+  "WORD_MIN (TYPE( 8 signed)) = - (2 ^  7)"
   "WORD_MIN (TYPE(16 signed)) = - (2 ^ 15)"
   "WORD_MIN (TYPE(32 signed)) = - (2 ^ 31)"
+  "WORD_MIN (TYPE(64 signed)) = - (2 ^ 63)"
 
-  "UWORD_MAX (TYPE(8)) = (2 ^ 8 - 1)"
+  "UWORD_MAX (TYPE( 8)) = (2 ^  8 - 1)"
   "UWORD_MAX (TYPE(16)) = (2 ^ 16 - 1)"
   "UWORD_MAX (TYPE(32)) = (2 ^ 32 - 1)"
+  "UWORD_MAX (TYPE(64)) = (2 ^ 64 - 1)"
   by (auto simp: WORD_MAX_def WORD_MIN_def UWORD_MAX_def)
 
 lemmas WORD_values_add1 =
@@ -55,53 +46,11 @@ lemmas [L1unfold] =
   WORD_values_add1 [symmetric]
   WORD_values_minus1 [symmetric]
 
-(* These are added to the Polish simps after translation *)
-lemma WORD_MAX_simps:
-   "WORD_MAX TYPE(32) = INT_MAX"
-   "WORD_MAX TYPE(16) = SHORT_MAX"
-   "WORD_MAX TYPE(8) = CHAR_MAX"
-  by (auto simp: INT_MAX_def SHORT_MAX_def CHAR_MAX_def WORD_MAX_def)
-
-lemma WORD_MIN_simps:
-   "WORD_MIN TYPE(32) = INT_MIN"
-   "WORD_MIN TYPE(16) = SHORT_MIN"
-   "WORD_MIN TYPE(8) = CHAR_MIN"
-  by (auto simp: INT_MIN_def SHORT_MIN_def CHAR_MIN_def WORD_MIN_def)
-
-lemma UWORD_MAX_simps:
-   "UWORD_MAX TYPE(32) = UINT_MAX"
-   "UWORD_MAX TYPE(16) = USHORT_MAX"
-   "UWORD_MAX TYPE(8) = UCHAR_MAX"
-  by (auto simp: UINT_MAX_def USHORT_MAX_def UCHAR_MAX_def UWORD_MAX_def)
-
 lemma WORD_signed_to_unsigned [simp]:
    "WORD_MAX TYPE('a signed) = WORD_MAX TYPE('a::len)"
    "WORD_MIN TYPE('a signed) = WORD_MIN TYPE('a::len)"
    "UWORD_MAX TYPE('a signed) = UWORD_MAX TYPE('a::len)"
   by (auto simp: WORD_MAX_def WORD_MIN_def UWORD_MAX_def)
-
-
-lemma INT_MIN_MAX_lemmas [simp]:
-  "unat (u :: word32) \<le> UINT_MAX"
-  "sint (s :: sword32) \<le> INT_MAX"
-  "INT_MIN \<le> sint (s :: sword32)"
-  "INT_MIN \<le> INT_MAX"
-  "INT_MIN \<le> sint (s :: sword32)"
-  "INT_MIN \<le> INT_MAX"
-  "INT_MIN \<le> 0"
-  "0 \<le> INT_MAX"
-
-  "\<not> (sint (s :: sword32) > INT_MAX)"
-  "\<not> (INT_MIN > sint (s :: sword32))"
-  "\<not> (unat (u :: word32) > UINT_MAX)"
-
-  unfolding UINT_MAX_def INT_MAX_def INT_MIN_def
-  using sint_range_size [where w=s, simplified word_size, simplified]
-        unat_lt2p [where 'a=32, simplified]
-        zle_add1_eq_le [where z=INT_MAX, symmetric]
-        less_eq_Suc_le not_less_eq_eq
-        unat_lt2p [where x=u]
-  by auto
 
 (*
  * The following set of theorems allow us to discharge simple
@@ -810,12 +759,20 @@ lemma abstract_val_abs_var_give_up [consumes 1]:
 (* Misc *)
 
 lemma len_of_word_comparisons [L2opt]:
+  "len_of TYPE(64) \<le> len_of TYPE(64)"
+  "len_of TYPE(32) \<le> len_of TYPE(64)"
+  "len_of TYPE(16) \<le> len_of TYPE(64)"
+  "len_of TYPE( 8) \<le> len_of TYPE(64)"
   "len_of TYPE(32) \<le> len_of TYPE(32)"
   "len_of TYPE(16) \<le> len_of TYPE(32)"
   "len_of TYPE( 8) \<le> len_of TYPE(32)"
   "len_of TYPE(16) \<le> len_of TYPE(16)"
   "len_of TYPE( 8) \<le> len_of TYPE(16)"
   "len_of TYPE( 8) \<le> len_of TYPE( 8)"
+
+  "len_of TYPE(32) < len_of TYPE(64)"
+  "len_of TYPE(16) < len_of TYPE(64)"
+  "len_of TYPE( 8) < len_of TYPE(64)"
   "len_of TYPE(16) < len_of TYPE(32)"
   "len_of TYPE( 8) < len_of TYPE(32)"
   "len_of TYPE( 8) < len_of TYPE(16)"
@@ -928,30 +885,32 @@ lemmas word_abs_base [word_abs] =
   len_of_word_comparisons
 
 (*
- * Signed word abstraction rules: sword32 \<rightarrow> int
+ * Signed word abstraction rules: 'a sword \<rightarrow> int
  *)
 
-lemmas word_abs_sword32 =
+lemmas word_abs_sword =
   abstract_val_signed_ops
   abstract_val_scast
   abstract_val_scast_upcast
   abstract_val_scast_downcast
   abstract_val_unwrap [where f=sint]
+  introduce_typ_abs_fn [where f="sint :: (sword64 \<Rightarrow> int)"]
   introduce_typ_abs_fn [where f="sint :: (sword32 \<Rightarrow> int)"]
   introduce_typ_abs_fn [where f="sint :: (sword16 \<Rightarrow> int)"]
   introduce_typ_abs_fn [where f="sint :: (sword8 \<Rightarrow> int)"]
 
 (*
- * Unsigned word abstraction rules: word32 \<rightarrow> nat
+ * Unsigned word abstraction rules: 'a word \<rightarrow> nat
  *)
 
-lemmas word_abs_word32 =
+lemmas word_abs_word =
   abstract_val_unsigned_ops
   abstract_val_uint
   abstract_val_ucast
   abstract_val_ucast_upcast
   abstract_val_ucast_downcast
   abstract_val_unwrap [where f=unat]
+  introduce_typ_abs_fn [where f="unat :: (word64 \<Rightarrow> nat)"]
   introduce_typ_abs_fn [where f="unat :: (word32 \<Rightarrow> nat)"]
   introduce_typ_abs_fn [where f="unat :: (word16 \<Rightarrow> nat)"]
   introduce_typ_abs_fn [where f="unat :: (word8 \<Rightarrow> nat)"]

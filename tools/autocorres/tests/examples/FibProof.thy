@@ -91,7 +91,7 @@ lemma fibo_greater: "(6 + n) < fibo (6 + n)"
 lemma fibo_greater': "n \<ge> 6 \<Longrightarrow> n < fibo n"
   by (metis le_iff_add fibo_greater)
 lemma unat_word32_plus: "unat x + unat y < 2^32 \<Longrightarrow> unat x + unat y = unat (x + y :: word32)"
-  by (metis unat_of_nat32 word_arith_nat_add word_bits_conv)
+  by (metis len32 unat_of_nat_len word_arith_nat_add)
 
 (* ... so we should say that too. *)
 lemma fibo32_is_fibo: "fibo n < 2^32 \<Longrightarrow> fibo n = unat (fibo32 (of_nat n))"
@@ -113,8 +113,8 @@ lemma fibo32_is_fibo: "fibo n < 2^32 \<Longrightarrow> fibo n = unat (fibo32 (of
         apply (metis diff_less gr0I zero_less_one)
        apply simp
       apply simp
-     apply (metis unat_1 unat_of_nat32 word_bits_conv)
-    apply (metis unat_0 unat_of_nat32 word_bits_conv)
+     apply (metis len32 unat_1 unat_of_nat_len)
+    apply (metis len32 unat_0 unat_of_nat_len)
    apply (metis fibo_alt_def)
   apply (case_tac "n < 6")
    apply simp

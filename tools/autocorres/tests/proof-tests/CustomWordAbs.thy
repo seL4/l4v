@@ -28,9 +28,7 @@ lemma [word_abs]:
   apply (fold mask_def)
   apply (subst word_mod_2p_is_mask [symmetric])
   apply (subst p2_gt_0)
-   apply simp
-  apply (metis unat_mod unat_power_lower32 word_bits_conv)
-  done
+  by (auto simp: unat_mod)
 
 lemma [word_abs]:
   "\<lbrakk> abstract_val P x unat (x' :: word32);

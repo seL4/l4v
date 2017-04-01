@@ -13,7 +13,7 @@
  *)
 
 theory Polish
-imports WordAbstract TypeStrengthen
+imports WordPolish TypeStrengthen
 begin
 
 (* Final simplification after type strengthening. *)
@@ -426,6 +426,10 @@ lemma scast_1_simps [simp, L2opt, polish]:
   by auto
 
 lemma scast_1_simps_direct [simp, L2opt, polish]:
+   "scast (1 :: sword64) = (1 :: word64)"
+   "scast (1 :: sword64) = (1 :: word32)"
+   "scast (1 :: sword64) = (1 :: word16)"
+   "scast (1 :: sword64) = (1 :: word8)"
    "scast (1 :: sword32) = (1 :: word32)"
    "scast (1 :: sword32) = (1 :: word16)"
    "scast (1 :: sword32) = (1 :: word8)"

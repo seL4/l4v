@@ -86,10 +86,10 @@ context word_abs_cases begin
   thm cross'_def gcd_s_rec'.simps gcd_s_loop'_def
 
   lemma int_max: "2147483647 \<le> a \<Longrightarrow> sint (n :: sword32) \<le> a"
-    using INT_MIN_MAX_lemmas(2)[where s = n, unfolded INT_MAX_def]
+    using INT_MIN_MAX_lemmas(10)[where s = n, unfolded INT_MAX_def]
     by arith
   lemma int_min: "a \<le> -2147483648 \<Longrightarrow> a \<le> sint (n :: sword32)"
-    using INT_MIN_MAX_lemmas(3)[where s = n, unfolded INT_MIN_def]
+    using INT_MIN_MAX_lemmas(11)[where s = n, unfolded INT_MIN_def]
     by arith
   lemma oguard_True: "(\<And>s. P s) \<Longrightarrow> DO oguard P; f OD = f"
     by (monad_eq simp: oguard_def obind_def K_bind_def)

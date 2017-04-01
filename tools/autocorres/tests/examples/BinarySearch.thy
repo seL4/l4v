@@ -25,7 +25,7 @@ lemma uint_of_nat:
   done
 
 lemma ptr_add_uint_of_nat [simp]:
-    "p +\<^sub>p uint (of_nat x :: 32 word) = p +\<^sub>p int x"
+    "p +\<^sub>p uint (of_nat x :: addr) = p +\<^sub>p int x"
   apply (subst uint_of_nat)
   apply (unfold CTypesDefs.ptr_add_def)
   apply (metis (hide_lams, no_types) uint_of_nat of_int_of_nat_eq of_int_uint)

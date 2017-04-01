@@ -15,8 +15,8 @@ begin
 (* No proof here, just testing the parser. *)
 
 consts
-  KMC :: word32
-  ptr_retyps :: "nat \<Rightarrow> word32 \<Rightarrow> heap_typ_desc \<Rightarrow> heap_typ_desc"
+  KMC :: addr
+  ptr_retyps :: "nat \<Rightarrow> addr \<Rightarrow> heap_typ_desc \<Rightarrow> heap_typ_desc"
 
 install_C_file "kmalloc.c"
 

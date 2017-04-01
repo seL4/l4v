@@ -55,7 +55,7 @@ definition
   array_loc_valid :: "word32 ptr \<Rightarrow> nat \<Rightarrow> bool"
 where
   "array_loc_valid a n \<equiv>
-   (unat (ptr_val a) + size_of TYPE(word32) * n \<le> 2 ^ len_of TYPE(32))"
+   (unat (ptr_val a) + size_of TYPE(word32) * n \<le> 2 ^ len_of TYPE(addr_bitsize))"
 
 fun
   array_elems_valid :: "lifted_globals \<Rightarrow> word32 ptr \<Rightarrow> nat \<Rightarrow> bool"
@@ -96,7 +96,7 @@ where
 definition array_not_at_mem_end :: "word32 ptr \<Rightarrow> nat \<Rightarrow> bool"
 where
   "array_not_at_mem_end a n \<equiv>
-   (unat (ptr_val a) + size_of TYPE(word32) * n < 2 ^ len_of TYPE(32))"
+   (unat (ptr_val a) + size_of TYPE(word32) * n < 2 ^ len_of TYPE(addr_bitsize))"
   (* same as "array_loc_valid a n" but excluding equality *)
 
 
@@ -143,14 +143,8 @@ lemma updated_array_is_array [simp]:
 
 (* FIXME: move *)
 lemma unat_plus_weak:
-  "(x::word32) \<le> x + y \<Longrightarrow> unat (x + y) = unat x + unat y"
+  "(x::addr) \<le> x + y \<Longrightarrow> unat (x + y) = unat x + unat y"
   by (simp add: unat_plus_simple)
-
-(* FIXME: move *)
-lemma unat_mult_weak:
-  "unat (x::word32) * unat y < 2 ^ len_of TYPE(32) \<Longrightarrow>
-   unat (x * y) = unat x * unat y"
-  by (simp add: unat_mult_lem[symmetric])
 
 lemma unat_linear_over_array_loc:
   "array_not_at_mem_end a n \<Longrightarrow>
@@ -163,7 +157,7 @@ lemma unat_linear_over_array_loc:
     apply (rule_tac s = "4 * n" and t = "unat (4 * of_nat n)" in subst)
      apply (erule sym)
     apply simp+
-  apply (simp add: unat_mult_weak unat_of_nat_eq)
+  apply (simp add: unat_mult_simple unat_of_nat_eq)
   done
 
 lemma unat_linear_over_array_loc2:
@@ -179,7 +173,7 @@ lemma array_no_wrap:
   apply (clarsimp simp: array_loc_valid_def CTypesDefs.ptr_add_def
                         ptr_le_def' ptr_le_def)
   apply (subst no_olen_add_nat)
-  apply (subst unat_mult_weak)
+  apply (subst unat_mult_simple)
    apply (subst unat_of_nat_eq, simp+)+
   done
 
@@ -196,7 +190,7 @@ lemma array_loc_mono:
      apply (rule PackedTypes.of_nat_mono_maybe_le, simp+)
    apply (subst unat_of_nat_eq, simp+)
   apply (subst no_olen_add_nat)
-  apply (subst unat_mult_weak)
+  apply (subst unat_mult_simple)
    apply (subst unat_of_nat_eq, simp+)+
   done
 
@@ -213,7 +207,7 @@ lemma array_loc_strict_mono:
      apply (subst of_nat_mono_maybe, simp+)
    apply (subst unat_of_nat_eq, simp+)
   apply (subst no_olen_add_nat)
-  apply (subst unat_mult_weak)
+  apply (subst unat_mult_simple)
    apply (subst unat_of_nat_eq, simp+)+
   done
 
@@ -324,34 +318,34 @@ lemma the_array_concat2:
 
 (* FIXME: move *)
 lemma word32_mult_cancel_right:
-  fixes a :: "word32" and b :: "word32" and c :: "word32"
+  fixes a :: "addr" and b :: "addr" and c :: "addr"
   shows
-  "\<lbrakk> unat a * unat c < 2 ^ len_of TYPE(32);
-     unat b * unat c < 2 ^ len_of TYPE(32); c \<noteq> 0 \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> unat a * unat c < 2 ^ len_of TYPE(addr_bitsize);
+     unat b * unat c < 2 ^ len_of TYPE(addr_bitsize); c \<noteq> 0 \<rbrakk> \<Longrightarrow>
    (a * c = b * c) = (a = b)"
   apply (rule iffI)
    apply simp_all
   apply (subgoal_tac "a = a * c div c")
    apply simp
    apply (rule sym)
-   apply (rule Word.word_div_mult[symmetric, where 'a = 32],
+   apply (rule Word.word_div_mult[symmetric, where 'a = addr_bitsize],
           unat_arith, simp)+
   done
 
 lemma ptr_offsets_eq [simp]:
   fixes i :: "nat" and j :: "nat" and a :: "word32 ptr"
   shows
-  "\<lbrakk> i * size_of TYPE(word32) < 2 ^ len_of TYPE(32);
-     j * size_of TYPE(word32) < 2 ^ len_of TYPE(32) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> i * size_of TYPE(word32) < 2 ^ len_of TYPE(addr_bitsize);
+     j * size_of TYPE(word32) < 2 ^ len_of TYPE(addr_bitsize) \<rbrakk> \<Longrightarrow>
    (a +\<^sub>p int i = a +\<^sub>p int j) = (i = j)"
   by (simp add: CTypesDefs.ptr_add_def word32_mult_cancel_right
                 unat_of_nat_eq of_nat_inj)
 
 lemma ptr_offsets_eq2 [simp]:
-  fixes i :: "word32" and j :: "word32" and a :: "word32 ptr"
+  fixes i :: "addr" and j :: "addr" and a :: "word32 ptr"
   shows
-  "\<lbrakk> unat i * size_of TYPE(word32) < 2 ^ len_of TYPE(32);
-     unat j * size_of TYPE(word32) < 2 ^ len_of TYPE(32) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> unat i * size_of TYPE(word32) < 2 ^ len_of TYPE(addr_bitsize);
+     unat j * size_of TYPE(word32) < 2 ^ len_of TYPE(addr_bitsize) \<rbrakk> \<Longrightarrow>
    (a +\<^sub>p uint i = a +\<^sub>p uint j) = (i = j)"
   by (simp add: uint_nat)
 
@@ -555,7 +549,7 @@ lemma partition_correct:
     apply (intro conjI impI allI)
               apply simp
              apply (simp add: CTypesDefs.ptr_add_def)
-            apply (simp add: CTypesDefs.ptr_add_def)
+            apply (simp add: CTypesDefs.ptr_add_def )
            apply (simp add: CTypesDefs.ptr_add_def)
           apply unat_arith
          apply (simp add: CTypesDefs.ptr_add_def)
@@ -633,7 +627,7 @@ lemma partition_correct:
 
 (* Induction rule used for quicksort proof *)
 lemma word_strong_induct[case_names Ind]:
-  "(\<And>n. (\<forall>k < n. P k) \<Longrightarrow> P n) \<Longrightarrow> P (m::word32)"
+  "(\<And>n. (\<forall>k < n. P k) \<Longrightarrow> P n) \<Longrightarrow> P (m::addr)"
   by (rule less_induct, blast)
 
 
@@ -898,11 +892,11 @@ lemma array_loc_le_Suc:
   done
 
 lemma unat_sub_sub1 [simp]:
-  "(m::word32) < n \<Longrightarrow> unat (n - m - 1) = unat n - unat m - 1"
+  "(m::addr) < n \<Longrightarrow> unat (n - m - 1) = unat n - unat m - 1"
   by unat_arith
 
 lemma unat_inc:
-  "(m::word32) < n \<Longrightarrow> unat (m + 1) = Suc (unat m)"
+  "(m::addr) < n \<Longrightarrow> unat (m + 1) = Suc (unat m)"
   by unat_arith
 
 

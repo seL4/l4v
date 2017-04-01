@@ -240,7 +240,7 @@ lemma gets_the_to_return:
   by (clarsimp simp: gets_the_def exec_gets)
 
 lemma owhile_to_fold:
-  assumes p_increments: "\<And>r. P (Q r) = (P r + 1 :: word32)"
+  assumes p_increments: "\<And>r. P (Q r) = (P r + 1 :: 'a::len word)"
   shows "owhile (\<lambda>r s. P r < x) (\<lambda>r. oreturn (Q r)) i =
       oreturn (if P i \<le> x then fold (\<lambda>i. Q) [unat (P i)..<unat x] i else i)"
     (is "?LHS = oreturn (?RHS x)")
@@ -271,7 +271,7 @@ lemma owhile_to_fold:
   done
 
 lemma whileLoop_to_fold:
-  assumes p_increments: "\<And>r. P (Q r) = (P r + 1 :: word32)"
+  assumes p_increments: "\<And>r. P (Q r) = (P r + 1 :: 'a::len word)"
   shows "(whileLoop (\<lambda>r s. P r < x)
            (\<lambda>r. return (Q r))
            i s) = return (if P i \<le> x then fold (\<lambda>i r. (Q r)) [unat (P i) ..< unat x] i else i) s"

@@ -48,7 +48,7 @@ datatype heap_typ_contents =
  * and nothing more.
  *)
 definition
-  heap_type_tag :: "heap_typ_desc \<Rightarrow> word32 \<Rightarrow> heap_typ_contents"
+  heap_type_tag :: "heap_typ_desc \<Rightarrow> addr \<Rightarrow> heap_typ_contents"
 where
   "heap_type_tag d a \<equiv>
      (if fst (d a) = False \<or> (\<forall>x. (snd (d a)) x = None) \<or> (\<forall>x. (snd (d a)) x \<noteq> None) then
@@ -71,7 +71,7 @@ where
  * structures.
  *)
 definition
-  valid_simple_footprint :: "heap_typ_desc \<Rightarrow> word32 \<Rightarrow> typ_uinfo \<Rightarrow> bool"
+  valid_simple_footprint :: "heap_typ_desc \<Rightarrow> addr \<Rightarrow> typ_uinfo \<Rightarrow> bool"
 where
   "valid_simple_footprint d x t \<equiv>
     heap_type_tag d x = HeapType t \<and>
@@ -180,7 +180,7 @@ lemma valid_simple_footprint_ptr_retyp:
    apply (metis One_nat_def less_diff_conv)
   apply (subst add.assoc, subst heap_type_tag_ptr_retyp_rest)
      apply clarsimp
-    apply (case_tac "1 + of_nat k = (0 :: word32)")
+    apply (case_tac "1 + of_nat k = (0 :: addr)")
      apply (metis add.left_neutral intvlI intvl_Suc_nmem size_of_def)
     apply unat_arith
    apply clarsimp
@@ -405,7 +405,8 @@ lemma h_val_field_from_bytes':
   "\<lbrakk> field_ti TYPE('a::{mem_type}) f = Some t;
      export_uinfo t = export_uinfo (typ_info_t TYPE('b::{mem_type})) \<rbrakk> \<Longrightarrow>
     h_val h (Ptr &(pa\<rightarrow>f) :: 'b ptr) = from_bytes (access_ti\<^sub>0 t (h_val h pa))"
-  apply (insert h_val_field_from_bytes [where f=f and pa=pa and t=t and h="(h,x)" and 'a='a and 'b='b])
+  apply (insert h_val_field_from_bytes[where f=f and pa=pa and t=t and h="(h,x)"
+                                         and 'a='a and 'b='b for x])
   apply (clarsimp simp: hrs_mem_def)
   done
 
@@ -417,7 +418,7 @@ lemma simple_lift_super_field_update_lookup:
   shows "(super_field_update_t (Ptr (&(p\<rightarrow>f))) (v::'a::mem_type) ((simple_lift h)::'b ptr \<Rightarrow> 'b option)) =
           ((simple_lift h)(p \<mapsto> field_update (field_desc s) (to_bytes_p v) v'))"
 proof -
-  from assms have [simp]: "unat (of_nat n :: 32 word) = n"
+  from assms have [simp]: "unat (of_nat n :: addr) = n"
      apply (subst unat_of_nat)
      apply (subst mod_less)
       apply (drule td_set_field_lookupD)+
@@ -469,7 +470,8 @@ proof -
 qed
 
 lemma field_offset_addr_card:
-    "\<exists>x. field_lookup (typ_info_t TYPE('a::mem_type)) f 0 = Some x \<Longrightarrow> field_offset TYPE('a) f < addr_card"
+  "\<exists>x. field_lookup (typ_info_t TYPE('a::mem_type)) f 0 = Some x
+    \<Longrightarrow> field_offset TYPE('a) f < addr_card"
   apply (clarsimp simp: field_offset_def field_offset_untyped_def typ_uinfo_t_def)
   apply (subst field_lookup_export_uinfo_Some)
    apply assumption
@@ -481,7 +483,7 @@ lemma field_offset_addr_card:
 
 lemma unat_of_nat_field_offset:
   "\<exists>x. field_lookup (typ_info_t TYPE('a::mem_type)) f 0 = Some x \<Longrightarrow>
-      unat (of_nat (field_offset TYPE('a) f)  :: word32 ) = field_offset TYPE('a) f"
+      unat (of_nat (field_offset TYPE('a) f)  :: addr) = field_offset TYPE('a) f"
   apply (subst word_unat.Abs_inverse)
    apply (clarsimp simp: unats_def)
    apply (insert field_offset_addr_card [where f=f and ?'a="'a"])[1]
@@ -762,7 +764,7 @@ lemma heap_ptr_valid_range_not_NULL:
 
 lemma heap_ptr_valid_last_byte_no_overflow:
   "heap_ptr_valid htd (p :: ('a :: c_type) ptr)
-      \<Longrightarrow> unat (ptr_val p) + size_of TYPE('a) \<le> 2 ^ len_of TYPE(32)"
+      \<Longrightarrow> unat (ptr_val p) + size_of TYPE('a) \<le> 2 ^ len_of TYPE(addr_bitsize)"
   by (metis c_guard_def c_null_guard_def heap_ptr_valid_def
         zero_not_in_intvl_no_overflow)
 

@@ -8,8 +8,8 @@
  * @TAG(NICTA_BSD)
  */
 
-void *memcpy(void *dest, void *src, unsigned int size) {
-    unsigned int i;
+void *memcpy(void *dest, void *src, unsigned long size) {
+    unsigned long i;
     char *d = (char*)dest, *s = (char*)src;
     for (i = 0; i < size; i++) {
         d[i] = s[i];

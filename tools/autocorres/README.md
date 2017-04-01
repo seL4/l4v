@@ -33,16 +33,36 @@ AutoCorres is packaged as a theory for Isabelle2016-1:
 
     https://isabelle.in.tum.de
 
-To build it, type
+AutoCorres currently supports two platforms: ARM and X64. The platform
+determines the sizes of C integral and pointer types.
 
-    isabelle build -d . AutoCorres
+For ARM, the sizes are:
+  - 64 bits: long long
+  - 32 bits: pointers, long, int
+  - 16 bits: short
 
-in the root of the L4v repository. This builds the C parser and AutoCorres itself.
+For X64:
+  - 64 bits: pointers, long long, long
+  - 32 bits: int
+  - 16 bits: short
+
+To build or use AutoCorres, you must set the L4V_ARCH environment variable
+according to your choice of platform.
+
+To build AutoCorres for ARM, type the following in tools/autocorres:
+
+    L4V_ARCH=ARM isabelle build -d . AutoCorres
+
+This builds the C parser and AutoCorres itself.
+
+To build AutoCorres for X64:
+
+    L4V_ARCH=X64 isabelle build -d . AutoCorres
+
 There is also a test suite, which can be run using:
 
-    make AutoCorresTest
-
-in tools/autocorres.
+    L4V_ARCH=ARM make AutoCorresTest
+    L4V_ARCH=X64 make AutoCorresTest
 
 
 
@@ -58,7 +78,8 @@ the tutorial.
 Development and reporting bugs
 ------------------------------
 
-AutoCorres is currently maintained by Japheth Lim <Japheth.Lim@nicta.com.au>.
+AutoCorres is currently maintained by
+Matthew Brecknell <Matthew.Brecknell@data61.csiro.au>
 
 Additionally, the latest development version is available on GitHub
 as part of the L4.verified project:

@@ -21,7 +21,7 @@ void* memset(void *dest, int c, unsigned n)
 
 struct node {
   struct node *next;
-  int data;
+  long data;
 };
 
 void zero_node(struct node *node)
