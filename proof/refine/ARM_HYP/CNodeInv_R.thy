@@ -224,7 +224,7 @@ lemma dec_cnode_inv_corres:
                                             split: option.split)
                             apply (rule corres_trivial)
                             subgoal by (auto simp add: whenE_def, auto simp add: returnOk_def)
-(*                           apply (wp | wpc | simp(no_asm))+
+                           apply (wp | wpc | simp(no_asm))+
                   apply (wp hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift
                             hoare_vcg_all_lift_R hoare_vcg_all_lift lsfco_cte_at' hoare_drop_imps
                                  | clarsimp)+
@@ -389,7 +389,7 @@ lemma dec_cnode_inv_corres:
     apply simp
    apply (auto elim!: valid_cnode_capI)[1]
   apply fastforce
-  done*) sorry
+  done
 
 lemma sameObjectAs_mask2 [simp]:
   "sameObjectAs cap (maskCapRights R cap') = sameObjectAs cap cap'"
@@ -497,7 +497,7 @@ lemma decodeCNodeInv_wf[wp]:
                apply (simp add: imp_conjR)
                apply ((wp deriveCap_derived deriveCap_untyped_derived
                  | wp_once hoare_drop_imps)+)[1]
-(*              apply (wp whenE_throwError_wp getCTE_wp | wpc | simp(no_asm))+
+              apply (wp whenE_throwError_wp getCTE_wp | wpc | simp(no_asm))+
            apply (rule_tac Q'="\<lambda>rv. invs' and cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) destSlot
                                           and ex_cte_cap_to' destSlot"
                                    in hoare_post_imp_R, wp)
@@ -563,7 +563,7 @@ lemma decodeCNodeInv_wf[wp]:
          simp_all add: decodeCNodeInvocation_def isCNodeCap_CNodeCap
                        unlessE_whenE cnode_invok_case_cleanup
                 split: list.split_asm list.split)
-  by (auto simp: valid_def validE_def validE_R_def in_monad)*) sorry
+  by (auto simp: valid_def validE_def validE_R_def in_monad)
 
 declare updateCapData_Zombie' [simp del]
 
@@ -695,11 +695,15 @@ lemma unbindNotification_ctes_of_thread:
    \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
   by wp
 
+lemma prepareThreadDelete_ctes_of[wp]:
+  "prepareThreadDelete t \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
+  by (wpsimp simp: prepareThreadDelete_def)
+
 lemma prepareThreadDelete_ctes_of_thread:
   "\<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>
      prepareThreadDelete t
    \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
-(*  by (wpsimp simp: prepareThreadDelete_def)*) sorry
+  by wp
 
 lemma suspend_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
@@ -726,9 +730,7 @@ lemma prepareThreadDelete_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
      prepareThreadDelete t
    \<lbrace>\<lambda>rv s. P (not_recursive_ctes s)\<rbrace>"
-  apply (simp only: prepareThreadDelete_def cteCaps_of_def)
-  apply wp
-  sorry
+  by (wpsimp simp: not_recursive_ctes_def cteCaps_of_def)
 
 definition
   finaliseSlot_recset :: "((word32 \<times> bool \<times> kernel_state) \<times> (word32 \<times> bool \<times> kernel_state)) set"
@@ -5287,7 +5289,7 @@ lemma cteSwap_urz[wp]:
   apply (simp add: cteSwap_def)
   apply (rule hoare_pre)
    apply (rule untyped_ranges_zero_lift)
-(*    apply wp+
+    apply wp+
   apply clarsimp
   apply (erule untyped_ranges_zero_delta[where xs="[c1, c2]"])
      apply (simp add: modify_map_def)
@@ -5297,7 +5299,7 @@ lemma cteSwap_urz[wp]:
                         cteCaps_of_def modify_map_def)
   apply (drule(1) weak_derived_untypedZeroRange)+
   apply auto
-  done*) sorry
+  done
 
 crunch valid_arch_state'[wp]: cteSwap "valid_arch_state'"
 
@@ -5867,7 +5869,7 @@ lemma make_zombie_invs':
                                \<and> bound_tcb_at' (op = None) p' s
                                \<and> ko_wp_at' (Not \<circ> hyp_live') p' s")
     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs live'_def hyp_live'_def)
-   apply (auto dest!: isCapDs)[1]
+   subgoal by (auto dest!: isCapDs)[1]
   apply (clarsimp simp: cte_wp_at_ctes_of disj_ac
                  dest!: isCapDs)
   apply (frule ztc_phys[where cap=cap])
@@ -6313,7 +6315,7 @@ proof (induct rule: finalise_spec_induct)
      apply (wp | simp)+
          apply ((wp "1.hyps" updateCap_cte_wp_at_cases)+,
                  (assumption | rule refl | simp only: split_def fst_conv snd_conv)+)
-(*          apply (wp | simp)+
+          apply (wp | simp)+
        apply (rule hoare_strengthen_post)
         apply (rule hoare_vcg_conj_lift[where Q="\<lambda>rv. cte_at' slot"])
          apply (wp typ_at_lifts [OF finaliseCap_typ_at'])[1]
@@ -6321,7 +6323,7 @@ proof (induct rule: finalise_spec_induct)
        apply (clarsimp simp: cte_wp_at_ctes_of)
       apply (wp getCTE_wp isFinalCapability_inv | simp)+
     apply (clarsimp simp: cte_wp_at_ctes_of)
-    done*) sorry
+    done
 qed
 
 lemmas finaliseSlot_abort_cases
@@ -6976,8 +6978,8 @@ lemma cteDelete_sch_act_simple:
 
 crunch st_tcb_at'[wp]: emptySlot "st_tcb_at' P t" (simp: case_Null_If)
 
-lemma vcpuSwitch_st_tcb_at'[wp]: "\<lbrace>st_tcb_at' P t\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
-  sorry
+crunch st_tcb_at'[wp]: vcpuSwitch "st_tcb_at' P t"
+  (simp: crunch_simps wp: crunch_wps FalseI ignore: setObject getObject)
 
 crunch st_tcb_at'[wp]: "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete "st_tcb_at' P t"
   (ignore: getObject setObject simp: crunch_simps
@@ -7090,21 +7092,22 @@ lemmas storePDE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePDE_ctes]
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma vcpuSwitch_rvk_prog':
-  "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option capToRPO (cteCaps_of s x))\<rbrace> vcpuSwitch param_a
-    \<lbrace>\<lambda>_ s. revoke_progress_ord m (\<lambda>x. map_option capToRPO (cteCaps_of s x))\<rbrace>"
-  sorry
+  "vcpuSwitch v \<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option capToRPO (cteCaps_of s x))\<rbrace>"
+  by (wpsimp simp: cteCaps_of_def)
 
-lemma dissociateVCPUTCB_rvk_prog':
-  "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option capToRPO (cteCaps_of s x))\<rbrace> dissociateVCPUTCB v param_a
-    \<lbrace>\<lambda>_ s. revoke_progress_ord m (\<lambda>x. map_option capToRPO (cteCaps_of s x))\<rbrace>"
-  sorry
+crunch ctes_of[wp]: vcpuFinalise "\<lambda>s. P (ctes_of s)"
+  (ignore: getObject setObject)
+
+lemma vcpuFinalise_rvk_prog':
+  "vcpuFinalise v \<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option capToRPO (cteCaps_of s x))\<rbrace>"
+  by (wpsimp simp: cteCaps_of_def)
 
 crunch rvk_prog': finaliseCap
     "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of
-       getObject_inv loadObject_default_inv
+       getObject_inv loadObject_default_inv dissociateVCPUTCB_isFinal
         simp: crunch_simps unless_def setBoundNotification_def
-      ignore: getObject setObject setCTE)
+      ignore: getObject setObject setCTE dissociateVCPUTCB)
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
@@ -8323,12 +8326,12 @@ crunch st_tcb_at'[wp]: cteMove "st_tcb_at' P t"
   (wp: crunch_wps)
 
 lemma arch_recycleCap_improve_cases': "\<lbrakk>\<not> isPageCap param_b; \<not> isPageTableCap param_b;
-          \<not> isPageDirectoryCap param_b; \<not> isASIDControlCap param_b\<rbrakk>
+          \<not> isPageDirectoryCap param_b; \<not> isVCPUCap param_b; \<not> isASIDControlCap param_b\<rbrakk>
         \<Longrightarrow> isASIDPoolCap param_b"
-(*  apply (frule (3) arch_recycleCap_improve_cases[where v="\<not>undefined"])
+  apply (frule (4) arch_recycleCap_improve_cases[where v="\<not>undefined"])
   apply (case_tac "isASIDPoolCap param_b")
   apply simp+
-  done*) sorry
+  done
 
 lemma threadSet_st_tcb_at2:
   assumes x: "\<forall>tcb. P (tcbState tcb) \<longrightarrow> P (tcbState (f tcb))"
@@ -9154,7 +9157,7 @@ lemma cteMove_urz [wp]:
    \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
   apply (clarsimp simp: cteMove_def)
   apply (rule hoare_pre)
-(*   apply (wp untyped_ranges_zero_lift getCTE_wp' | simp)+
+   apply (wp untyped_ranges_zero_lift getCTE_wp' | simp)+
   apply (clarsimp simp: cte_wp_at_ctes_of
              split del: if_split)
   apply (erule untyped_ranges_zero_delta[where xs="[src, dest]"],
@@ -9163,7 +9166,7 @@ lemma cteMove_urz [wp]:
                         cteCaps_of_def untypedZeroRange_def[where ?x0.0=NullCap])
   apply (drule weak_derived_untypedZeroRange[OF weak_derived_sym'], clarsimp)
   apply auto
-  done*) sorry
+  done
 
 lemma cteMove_invs' [wp]:
   "\<lbrace>\<lambda>x. invs' x \<and> ex_cte_cap_to' word2 x \<and>
@@ -9548,28 +9551,27 @@ declare withoutPreemption_lift [wp]
 
 crunch irq_states' [wp]: capSwapForDelete valid_irq_states'
 
-lemma dissociateVCPUTCB_irq_states' [wp]:
-  "\<lbrace>valid_irq_states'\<rbrace> dissociateVCPUTCB param_a param_b \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
-  sorry
+lemma setVCPU_valid_irq_states' [wp]:
+  "setObject p (vcpu::vcpu) \<lbrace>valid_irq_states'\<rbrace>"
+  by (wp valid_irq_states_lift')
 
-lemma vcpuSwitch_irq_states' [wp]:
-  "\<lbrace>valid_irq_states'\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
-  sorry
-
-lemma vcpuFinalise_irq_states' [wp]:
-  "\<lbrace>valid_irq_states'\<rbrace> vcpuFinalise param_a \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
-  sorry
-
-lemma armv_contextSwitch_irq_states' [wp]:
-  "\<lbrace>valid_irq_states'\<rbrace> armv_contextSwitch param_a w \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
-  sorry
+crunch irq_states' [wp]: vcpuDisable, vcpuEnable, vcpuSave, vcpuRestore valid_irq_states'
+  (wp: crunch_wps no_irq no_irq_mapM_x
+   simp: crunch_simps
+         set_gic_vcpu_ctrl_hcr_def setSCTLR_def setHCR_def get_gic_vcpu_ctrl_hcr_def
+         getSCTLR_def get_gic_vcpu_ctrl_lr_def get_gic_vcpu_ctrl_apr_def
+         get_gic_vcpu_ctrl_vmcr_def getACTLR_def vcpuregs_sets vcpuregs_gets
+         set_gic_vcpu_ctrl_vmcr_def set_gic_vcpu_ctrl_apr_def uncurry_def
+         set_gic_vcpu_ctrl_lr_def setACTLR_def
+   ignore: getObject setObject)
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
        no_irq_invalidateTLB_ASID no_irq_setHardwareASID
        no_irq_setCurrentPD no_irq_invalidateTLB_VAASID
-       no_irq_cleanByVA_PoU
-   simp: crunch_simps armv_contextSwitch_HWASID_def ignore: getObject setObject)
+       no_irq_cleanByVA_PoU FalseI
+   simp: crunch_simps armv_contextSwitch_HWASID_def writeContextIDAndPD_def
+   ignore: getObject setObject)
 
 lemma finaliseSlot_IRQInactive':
   "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> finaliseSlot' a b
