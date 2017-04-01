@@ -1931,16 +1931,6 @@ lemma hv_tcb'[wp]: "\<lbrace>tcb_at' t\<rbrace> handleVMFault t' vptr \<lbrace>\
 crunch nosch[wp]: handleVMFault "\<lambda>s. P (ksSchedulerAction s)"
   (ignore: getFAR getDFSR getIFSR)
 
-lemma hv_inv_ex':
-  "\<lbrace>P\<rbrace> handleVMFault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: ARM_HYP_H.handleVMFault_def getHSR_def
-             cong: vmfault_type.case_cong)
-  apply (rule hoare_pre)
-   apply (wp dmo_inv' getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv
-             det_getRestartPC asUser_inv
-          | wpcw)+
-  sorry
-
 lemma active_from_running':
   "ct_running' s' \<Longrightarrow> ct_active' s'"
   by (clarsimp elim!: pred_tcb'_weakenE
@@ -2227,18 +2217,44 @@ lemma hrw_corres:
   done
 
 lemma hh_corres:
-  "corres dc (einvs and  st_tcb_at active thread and ex_nonz_cap_to thread
-                   and (%_. valid_fault f))
+  "corres dc (einvs and  st_tcb_at active thread and ex_nonz_cap_to thread)
              (invs' and sch_act_not thread
                     and (\<lambda>s. \<forall>p. thread \<notin> set(ksReadyQueues s p))
                     and st_tcb_at' simple' thread and ex_nonz_cap_to' thread)
-          (do y \<leftarrow> handle_hypervisor_fault w fault;
-                return ()
-             od) (handleHypervisorFault w fault)"
+          (handle_hypervisor_fault thread fault)
+          (handleHypervisorFault thread fault)"
   apply (cases fault; clarsimp simp add: handleHypervisorFault_def returnOk_def2)
-  sorry
+  apply (corres corres: hf_corres)
+   apply (simp add: ucast_id)
+  apply (clarsimp simp: valid_fault_def)
+  done
 
-(* FIXME: move *)
+lemma dmo_machine_rest_lift:
+  "(\<And>s m. P (s\<lparr>ksMachineState := ksMachineState s\<lparr>machine_state_rest := m\<rparr>\<rparr>) = P s) \<Longrightarrow>
+  \<lbrace>P\<rbrace> doMachineOp (machine_op_lift f') \<lbrace>\<lambda>rv. P\<rbrace>"
+  apply (wpsimp simp: doMachineOp_def machine_op_lift_def machine_rest_lift_def in_monad)
+  apply (clarsimp simp: select_f_def ignore_failure_def split: if_split_asm)
+  done
+
+lemma hvmf_invs_lift:
+  "(\<And>s m. P (s\<lparr>ksMachineState := ksMachineState s\<lparr>machine_state_rest := m\<rparr>\<rparr>) = P s) \<Longrightarrow>
+   \<lbrace>P\<rbrace> handleVMFault t flt \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding handleVMFault_def
+  by (wpsimp wp: dmo_machine_rest_lift asUser_inv
+           simp: getHSR_def getHDFAR_def addressTranslateS1CPR_def
+                 doMachineOp_bind getRestartPC_def getRegister_def)
+
+lemma hvmf_invs_etc:
+  "\<lbrace>invs' and sch_act_not t and (\<lambda>s. \<forall>p. t \<notin> set (ksReadyQueues s p)) and st_tcb_at' simple' t and
+    ex_nonz_cap_to' t\<rbrace>
+    handleVMFault t f
+   \<lbrace>\<lambda>_ _. True\<rbrace>,
+   \<lbrace>\<lambda>_. invs' and sch_act_not t and (\<lambda>s. \<forall>p. t \<notin> set (ksReadyQueues s p)) and
+        st_tcb_at' simple' t and ex_nonz_cap_to' t\<rbrace>"
+  apply (rule hvmf_invs_lift)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def)
+  done
+
 lemma he_corres:
   "corres (intr \<oplus> dc) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
                        (\<lambda>s. scheduler_action s = resume_cur_thread))
@@ -2323,10 +2339,8 @@ proof -
         apply (rule corres_split_catch)
            apply (erule hf_corres)
           apply (rule hv_corres)
-         apply (rule hoare_elim_pred_conjE2)(*
-         apply (rule hoare_vcg_E_conj, rule validE_validE_E[OF hv_inv_ex])
          apply (wp handle_vm_fault_valid_fault)
-        apply (rule hv_inv_ex')
+        apply (wp hvmf_invs_etc)
        apply wp
        apply (clarsimp simp: simple_from_running tcb_at_invs)
        apply (fastforce elim!: st_tcb_ex_cap st_tcb_weakenE simp: ct_in_state_def)
@@ -2338,7 +2352,6 @@ proof -
          apply (rule corres_split')
             apply (rule corres_guard_imp[OF gct_corres], simp+)
            apply (rule hh_corres)
-          apply (simp add: valid_fault_def)
           apply wp
           apply (fastforce elim!: st_tcb_ex_cap st_tcb_weakenE
                            simp: ct_in_state_def)
@@ -2348,36 +2361,32 @@ proof -
          apply (auto simp: ct_in_state'_def sch_act_simple_def
                            sch_act_sane_def
                      elim: pred_tcb'_weakenE st_tcb_ex_cap'')[1]
-      done*) sorry
+      done
   qed
 
-lemma setObject_st_tcb_at'[wp]: "\<lbrace>st_tcb_at' P t\<rbrace> setObject param_a param_b \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
-  sorry
-
-lemma setupCallerCap_st_tcb_at'[wp]: "\<lbrace>st_tcb_at' P t\<rbrace> setupCallerCap param_a param_b \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
-  sorry
-
-crunch st_tcb_at'[wp]: handleVMFault,handleHypervisorFault "st_tcb_at' P t"
-  (ignore: getFAR getDFSR getIFSR getObject updateObject)
+crunch st_tcb_at'[wp]: handleVMFault "st_tcb_at' P t"
+  (ignore: getFAR getDFSR getIFSR getObject setObject)
 crunch cap_to'[wp]: handleVMFault,handleHypervisorFault "ex_nonz_cap_to' t"
   (ignore: getFAR getDFSR getIFSR)
 crunch ksit[wp]: handleVMFault,handleHypervisorFault "\<lambda>s. P (ksIdleThread s)"
   (ignore: getFAR getDFSR getIFSR)
+crunch norq[wp]: handleVMFault "\<lambda>s. P (ksReadyQueues s)"
 
-lemma hv_inv':
-  "\<lbrace>P\<rbrace> handleVMFault p t \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: ARM_HYP_H.handleVMFault_def)
-  apply (rule hoare_pre)
-   apply (wp dmo_inv' getDFSR_inv getHSR_inv getHDFAR_inv getRestartPC_inv
-             det_getRestartPC asUser_inv
-          |wpc|simp)+
-  sorry (* addressTranslateS1CPR_inv? *)
+(* FIXME *)
+lemma hv_stuff'[wp]:
+  "\<lbrace>\<lambda>s. st_tcb_at' simple' thread s \<and> ex_nonz_cap_to' thread s \<and> thread \<noteq> ksIdleThread s\<rbrace>
+  handleVMFault t f
+  \<lbrace>\<lambda>rv s. st_tcb_at' simple' thread s \<and> ex_nonz_cap_to' thread s \<and> thread \<noteq> ksIdleThread s\<rbrace>"
+  unfolding ARM_HYP_H.handleVMFault_def
+  by (wpsimp wp: getDFSR_inv getHSR_inv getHDFAR_inv getRestartPC_inv det_getRestartPC asUser_inv)
 
-lemma hh_inv':
-  "\<lbrace>P\<rbrace> handleHypervisorFault p t \<lbrace>\<lambda>_. P\<rbrace>"
+lemma hh_invs'[wp]:
+  "\<lbrace>invs' and sch_act_not p and (\<lambda>s. \<forall>a b. p \<notin> set (ksReadyQueues s (a, b))) and
+    st_tcb_at' simple' p and ex_nonz_cap_to' p and (\<lambda>s. p \<noteq> ksIdleThread s)\<rbrace>
+  handleHypervisorFault p t \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: ARM_HYP_H.handleHypervisorFault_def)
-  apply (cases t; clarsimp)
-  sorry
+  apply (cases t; wpsimp)
+  done
 
 lemma ct_not_idle':
   fixes s
@@ -2434,7 +2443,8 @@ proof -
                rule hy_invs')
          apply (simp add: active_from_running')
         apply simp
-       apply (wp hv_inv' hh_inv'
+       apply (simp add: active_from_running')
+       apply (wp
                  | rule conjI
                  | erule pred_tcb'_weakenE st_tcb_ex_cap''
                  | clarsimp simp: tcb_at_invs ct_in_state'_def simple_sane_strg sch_act_simple_def
@@ -2455,9 +2465,7 @@ lemma inv_irq_IRQInactive:
 lemma inv_arch_IRQInactive:
   "\<lbrace>\<top>\<rbrace> Arch.performInvocation invocation
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: ARM_HYP_H.performInvocation_def performARMMMUInvocation_def performARMVCPUInvocation_def)
-(*  apply wp
-  done*) sorry
+  by (wpsimp simp: ARM_HYP_H.performInvocation_def performARMMMUInvocation_def performARMVCPUInvocation_def)
 
 lemma retype_pi_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> RetypeDecls_H.performInvocation blocking call v

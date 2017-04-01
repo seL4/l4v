@@ -114,7 +114,7 @@ lemma handleRecv_ksDomSchedule_inv[wp]:
      (wp hoare_drop_imps | simp add: crunch_simps | wpc)+
 
 crunch ksDomSchedule_inv[wp]: handleEvent "\<lambda>s. P (ksDomSchedule s)"
-  (wp: hoare_drop_imps hv_inv' syscall_valid' throwError_wp withoutPreemption_lift hoare_vcg_if_lift3
+  (wp: hoare_drop_imps syscall_valid' throwError_wp withoutPreemption_lift hoare_vcg_if_lift3
    simp: runErrorT_def
    ignore: setThreadState)
 
@@ -233,12 +233,12 @@ crunch ksDomainTime_inv[wp]: doUserOp "(\<lambda>s. P (ksDomainTime s))"
 crunch ksDomainTime_inv[wp]: getIRQState, chooseThread, handleYield "(\<lambda>s. P (ksDomainTime s))"
 
 crunch ksDomainTime_inv[wp]: handleSend, handleReply "(\<lambda>s. P (ksDomainTime s))"
-  (wp: hoare_drop_imps hv_inv' syscall_valid' throwError_wp withoutPreemption_lift
+  (wp: hoare_drop_imps syscall_valid' throwError_wp withoutPreemption_lift
    simp: runErrorT_def
    ignore: setThreadState)
 
 crunch ksDomainTime_inv[wp]: handleInvocation "(\<lambda>s. P (ksDomainTime s))"
-  (wp: hoare_drop_imps hv_inv' syscall_valid' throwError_wp withoutPreemption_lift
+  (wp: hoare_drop_imps syscall_valid' throwError_wp withoutPreemption_lift
    simp: runErrorT_def
    ignore: setThreadState)
 
@@ -276,7 +276,7 @@ lemma timerTick_valid_domain_time:
         apply (wp | clarsimp simp: if_apply_def2)+
   done
 
-crunch domain_time'_inv[wp]: handleReservedIRQ "\<lambda>s. P (ksDomainTime s)"
+crunch domain_time'_inv[wp]: handleReservedIRQ, handleVMFault "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma handleReservedIRQ_valid_domain_time[wp]:
@@ -328,7 +328,7 @@ lemma handleEvent_ksDomainTime_inv:
   apply (cases e, simp_all)
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all add: handle_send_def)
-             apply (wp hv_inv'|simp add: handleEvent_def |wpc)+
+             apply (wp |simp add: handleEvent_def |wpc)+
   done
 
 lemma callKernel_domain_time_left:
