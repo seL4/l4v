@@ -9,12 +9,6 @@ AutoCorres.thy:
 autocorres.ML:
     Implements the top-level auto-corres command run by users.
 
-AutoCorresAttributes.thy:
-attributes.ML:
-    Installs new theory attributes (such as "[polish]") that are
-    internally used by various stages in auto-corres to determine how
-    intermediate specifications should be rewritten.
-
 autocorres_data.ML:
     Sets up storage in Isabelle theory objects used to hold intermediate
     theorems and definitions.
@@ -76,6 +70,7 @@ monad_types.ML:
     specifications to a stronger type.
 
 Polish.thy:
+WordPolish.thy:
 pretty_bound_var_names.ML:
     Rules used in the final "polishing" stage of abstraction, designed
     to introduce syntactic sugar and remove rough edges required only
@@ -107,11 +102,6 @@ heap_lift.ML:
 record_utils.ML:
     Heap abstraction code.
 
-statistics.ML:
-    A tool for logging intermediate terms generated during conversion,
-    used for debugging and understanding effectiveness of various
-    optimisation stages.
-
 AbstractArrays.thy:
 DataStructures.thy:
     Helper theorems for reasoning about arrays and linked lists.
@@ -120,10 +110,8 @@ tests/examples/*.thy:
 tests/examples/*.c:
 tests/examples/*.h:
 tests/parse-tests/*.c:
-tests/parse-tests/*.h:
 tests/proof-tests/*.thy:
 tests/proof-tests/*.c:
-tests/proof-tests/*.h:
 tests/README:
     Some simple examples of the tool in use.
 

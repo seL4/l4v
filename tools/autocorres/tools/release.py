@@ -177,9 +177,11 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
                          for dir, file in lib_files if file.endswith('.thy')]
         included_thys += [os.path.join(dir, file)
                           for dir, file in ac_files if file.endswith('.thy')]
-        thy_deps = subprocess.check_output([thydeps_tool, '-T', 'text', '-o', '-'] + included_thys,
-                                           cwd=args.repository)
-        thy_deps = thy_deps.splitlines()
+        thy_deps = ''
+        for arch in ["ARM","X64"]:
+            thy_deps += subprocess.check_output([thydeps_tool, '-T', 'text', '-o', '-'] + included_thys,
+                                                cwd=args.repository, env=dict(os.environ, L4V_ARCH=arch))
+        thy_deps = sorted(set(thy_deps.splitlines()))
         needed_files = [os.path.join(args.repository, f)
                         for f in thy_deps if f.startswith('lib') or f.startswith('tools/autocorres')]
 
@@ -243,7 +245,9 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
         with open(filename, "w") as f:
             f.write(new_data)
     for f in rglob(os.path.join(target_dir, "autocorres"), "*.thy"):
-        inplace_replace_string(f, "../../lib", "../lib")
+        inplace_replace_string(f, "../../lib/", "../lib/")
+    for f in rglob(os.path.join(target_dir, "lib"), "*.thy"):
+        inplace_replace_string(f, "../tools/c-parser/", "../c-parser/")
 
     ## Check licenses
     #print "Checking licenses..."
@@ -305,11 +309,9 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
 
             # Build the docs.
             try:
-                subprocess.check_call([
-                        isabelle_bin, "build", "-c", "-d", ".",
-                                "-d", "./autocorres/doc/quickstart",
-                                "AutoCorresQuickstart"],
-                        cwd=os.path.join(doc_build_dir, "doc"))
+                subprocess.check_call(
+                    [isabelle_bin, "build", "-c", "-d", ".", "-d", "./autocorres/doc/quickstart", "AutoCorresQuickstart"],
+                    cwd=os.path.join(doc_build_dir, "doc"), env=dict(os.environ, L4V_ARCH="ARM"))
             except subprocess.CalledProcessError:
                 print "Building documentation failed."
                 if args.browse:
@@ -334,7 +336,9 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
         print "Testing release..."
         try:
             subprocess.check_call([isabelle_bin, "version"], cwd=target_dir)
-            subprocess.check_call([isabelle_bin, "build", "-d", ".", "AutoCorres", "AutoCorresTest"], cwd=target_dir)
+            for arch in ["ARM","X64"]:
+                subprocess.check_call([isabelle_bin, "build", "-d", ".", "AutoCorres", "AutoCorresTest"],
+                                      cwd=target_dir, env=dict(os.environ, L4V_ARCH=arch))
         except subprocess.CalledProcessError:
             print "Test failed"
             if args.browse:
