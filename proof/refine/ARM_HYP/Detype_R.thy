@@ -767,8 +767,15 @@ lemma sym_hyp_refs_ko_wp_atD:
 
 lemma zobj_refs_capRange:
   "capAligned c \<Longrightarrow> zobj_refs' c \<subseteq> capRange c"
-  by (cases c, simp_all add: capRange_def capAligned_def is_aligned_no_overflow)
+  apply (cases c; simp add: capAligned_def capRange_def is_aligned_no_overflow)
+  apply (rename_tac ac)
+  apply (case_tac ac; simp)
+  apply clarsimp
+  apply (drule is_aligned_no_overflow)
+  apply simp
+  done
 end
+
 locale delete_locale =
   fixes s and base and bits and ptr and idx and d
   assumes cap: "cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d base bits idx) ptr s"

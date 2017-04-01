@@ -1362,7 +1362,12 @@ lemmas threadSet_invs_trivial =
 
 lemma zobj_refs'_capRange:
   "s \<turnstile>' cap \<Longrightarrow> zobj_refs' cap \<subseteq> capRange cap"
-  by (cases cap; simp add: valid_cap'_def capAligned_def capRange_def is_aligned_no_overflow)
+  apply (cases cap; simp add: valid_cap'_def capAligned_def capRange_def is_aligned_no_overflow
+                       split: arch_capability.splits)
+  apply clarsimp
+  apply (drule is_aligned_no_overflow)
+  apply simp
+  done
 
 lemma global'_no_ex_cap:
   "\<lbrakk>valid_global_refs' s; valid_pspace' s\<rbrakk> \<Longrightarrow> \<not> ex_nonz_cap_to' (ksIdleThread s) s"

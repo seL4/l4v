@@ -2709,7 +2709,8 @@ lemma arch_finaliseCap_removeable[wp]:
      Arch.finaliseCap cap final
    \<lbrace>\<lambda>rv s. isNullCap rv \<and> removeable' slot s (ArchObjectCap cap)\<rbrace>"
   unfolding ARM_HYP_H.finaliseCap_def removeable'_def
-  by (wpsimp|rule conjI)+
+  apply (wpsimp simp: isCap_simps|rule conjI)+
+  sorry
 
 lemma isZombie_Null:
   "\<not> isZombie NullCap"

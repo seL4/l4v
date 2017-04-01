@@ -4348,6 +4348,8 @@ lemma setupReplyMaster_iflive'[wp]:
   apply (clarsimp elim!: cte_wp_at_weakenE')
   done
 
+declare azobj_refs'_only_vcpu[simp]
+
 lemma setupReplyMaster_global_refs[wp]:
   "\<lbrace>\<lambda>s. valid_global_refs' s \<and> thread \<notin> global_refs' s \<and> tcb_at' thread s
       \<and> ex_nonz_cap_to' thread s \<and> valid_objs' s\<rbrace>
@@ -4372,7 +4374,7 @@ lemma ex_nonz_tcb_cte_caps':
   apply (clarsimp simp: ex_nonz_cap_to'_def ex_cte_cap_to'_def cte_wp_at_ctes_of)
   apply (subgoal_tac "s \<turnstile>' cteCap cte")
    apply (rule_tac x=cref in exI, rule_tac x=cte in exI)
-   apply (clarsimp simp: valid_cap'_def obj_at'_def projectKOs dom_def
+   apply (clarsimp simp: valid_cap'_def obj_at'_def projectKOs dom_def typ_at_to_obj_at_arches
                   split: cte.split_asm capability.split_asm)
   apply (case_tac cte)
   apply (clarsimp simp: ctes_of_valid_cap')
@@ -4386,9 +4388,12 @@ lemma ex_nonz_cap_not_global':
   apply clarsimp
   apply (drule orthD1, erule (1) subsetD)
   apply (subgoal_tac "s \<turnstile>' cteCap cte")
-   apply (fastforce simp: valid_cap'_def capRange_def capAligned_def
+   apply (clarsimp simp: valid_cap'_def capRange_def capAligned_def
                          is_aligned_no_overflow
                   split: cte.split_asm capability.split_asm)
+   apply (erule notE)
+   apply (drule is_aligned_no_overflow)
+   apply simp
   apply (case_tac cte)
   apply (clarsimp simp: ctes_of_valid_cap')
   done
@@ -4662,7 +4667,7 @@ lemma cte_refs_Master:
 
 lemma zobj_refs_Master:
   "zobj_refs' (capMasterCap cap) = zobj_refs' cap"
-  by (simp add: capMasterCap_def split: capability.split)
+  by (simp add: capMasterCap_def split: capability.split arch_capability.split)
 
 lemma capMaster_same_refs:
   "capMasterCap a = capMasterCap b \<Longrightarrow> cte_refs' a = cte_refs' b \<and> zobj_refs' a = zobj_refs' b"

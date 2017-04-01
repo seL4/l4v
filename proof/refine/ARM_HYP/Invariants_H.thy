@@ -312,6 +312,22 @@ where
   | (KOKernelData)        => False
   | (KOArch ako)          => hyp_live' ko"
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+primrec
+  azobj_refs' :: "arch_capability \<Rightarrow> word32 set"
+where
+  "azobj_refs' (ASIDPoolCap x y) = {}"
+| "azobj_refs' ASIDControlCap = {}"
+| "azobj_refs' (PageCap d x y sz z) = {}"
+| "azobj_refs' (PageTableCap x y) = {}"
+| "azobj_refs' (PageDirectoryCap x y) = {}"
+| "azobj_refs' (VCPUCap v) = {v}"
+
+lemma azobj_refs'_only_vcpu:
+  "(x \<in> azobj_refs' acap) = (acap = VCPUCap x)"
+  by (cases acap) auto
+end
+
 primrec
   zobj_refs' :: "capability \<Rightarrow> word32 set"
 where
@@ -323,7 +339,7 @@ where
 | "zobj_refs' (CNodeCap r b g gsz)           = {}"
 | "zobj_refs' (ThreadCap r)                  = {r}"
 | "zobj_refs' (Zombie r b n)                 = {}"
-| "zobj_refs' (ArchObjectCap ac)             = {}" (* is this ok? *)
+| "zobj_refs' (ArchObjectCap ac)             = azobj_refs' ac"
 | "zobj_refs' (IRQControlCap)                = {}"
 | "zobj_refs' (IRQHandlerCap irq)            = {}"
 | "zobj_refs' (ReplyCap tcb m)               = {}"
