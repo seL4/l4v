@@ -367,8 +367,7 @@ where
 
 | "handle_event (HypervisorEvent hypfault_type) = (without_preemption $ do
     thread \<leftarrow> gets cur_thread;
-    handle_hypervisor_fault thread hypfault_type;
-    return ()
+    handle_hypervisor_fault thread hypfault_type
   od)"
 
 
