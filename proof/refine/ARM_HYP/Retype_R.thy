@@ -4349,6 +4349,8 @@ apply (wp createObjects_orig_ko_wp_at2')
 apply auto
 done
 
+crunch ko_wp_at_'_P[wp]: doMachineOp "\<lambda>s. P (ko_wp_at' P' t s)"
+
 lemma createNewCaps_ko_wp_atQ':
   "\<lbrace>(\<lambda>s. P (ko_wp_at' P' p s)
        \<and> range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0

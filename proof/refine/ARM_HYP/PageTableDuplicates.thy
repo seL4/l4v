@@ -1347,10 +1347,23 @@ lemma lookupPTSlot_aligned:
   apply (case_tac sz,simp_all add:ptBits_def pageBits_def)
   done
 
+lemma doMachineOp_live_vcpu_at_tcb[wp]: "\<lbrakk>\<forall>s xb. (p s) = (p (s\<lparr>ksMachineState := xb\<rparr>))\<rbrakk> \<Longrightarrow> doMachineOp f \<lbrace>\<lambda>s. live_vcpu_at_tcb (p s) s\<rbrace>"
+  apply (simp add: doMachineOp_def)
+  apply wpsimp
+    apply (rule_tac x=x in exI)
+    apply (case_tac  "atcbVCPUPtr (tcbArch x)")
+    apply clarsimp+
+  done
+
+lemma flushPage_valid_arch_state'[wp]: "flushPage a pd asid vptr \<lbrace> valid_arch_state' \<rbrace>"
+  apply (simp add: flushPage_def setVMRootForFlush_def)
+  apply(wpsimp wp: crunch_wps getHWASID_valid_arch' simp:  crunch_simps unless_def)+
+  sorry
+
 crunch valid_arch_state'[wp]:
  flushPage valid_arch_state'
   (wp: crunch_wps getHWASID_valid_arch' simp: crunch_simps unless_def
-    ignore:getObject updateObject setObject)
+    ignore:getObject updateObject setObject doMachineOp)
 
 crunch valid_arch_state'[wp]:
  flushTable "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"

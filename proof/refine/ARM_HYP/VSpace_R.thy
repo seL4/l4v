@@ -3668,17 +3668,24 @@ lemma setObject_vcpu_obj_at'_no_vcpu[wp]:
 						        done
 
 lemma setVCPU_valid_arch':
- "\<lbrace>valid_arch_state' and (\<lambda>s. vcpuTCBPtr vcpu = None \<longrightarrow>
-     (\<forall>p a. armHSCurVCPU (ksArchState s) = Some (p,a) \<longrightarrow> p \<noteq> v)) \<rbrace>
-  setObject v (vcpu::vcpu) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-    apply (simp add: valid_arch_state'_def valid_asid_table'_def option_case_all_conv)
-      apply wp_pre
-         apply (rule hoare_lift_Pf[where f=ksArchState]; (wp hoare_vcg_imp_lift hoare_vcg_all_lift)?)
-apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def, simp+)
-apply wpsimp+
-	     sorry
-
-(*****)
+ "\<lbrace>valid_arch_state' and (\<lambda>s. \<forall>a. armHSCurVCPU (ksArchState s) = Some (v,a) \<longrightarrow> hyp_live' (KOArch (KOVCPU vcpu))) \<rbrace>
+    setObject v (vcpu::vcpu)
+  \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def option_case_all_conv pred_conj_def)
+  apply (rule hoare_vcg_conj_lift[rotated])
+   apply (rule hoare_vcg_conj_lift[rotated])
+    apply (subst conj_commute[where P="\<forall>a. _ a \<longrightarrow> _ a"])
+    apply (subst conj_commute[where P="\<forall>a. _ a \<longrightarrow> _ a"])
+    apply (subst conj_assoc)+
+    apply (rule hoare_vcg_conj_lift[rotated])
+     apply (rule hoare_vcg_conj_lift[rotated])
+      apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)
+       apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift  setObject_ko_wp_at)
+        apply (simp add: objBits_simps archObjSize_def vcpu_bits_def pageBits_def)+
+      apply safe
+         apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def)+
+     apply (wp hoare_vcg_all_lift hoare_drop_imp)+
+done
 
 lemma setVCPU_nosch [wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setObject p (v::vcpu) \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
@@ -4286,11 +4293,42 @@ lemma vcpuSwitch_invs_no_cicd'[wp]:
   apply (auto simp: invs_no_cicd'_def valid_state'_def valid_arch_state'_def pred_conj_def)
   done
 
+crunch valid_arch_state'[wp]: checkPDNotInASIDMap valid_arch_state'
+crunch valid_arch_state'[wp]: findPDForASID  valid_arch_state'
+crunch valid_arch_state'[wp]: armv_contextSwitch valid_arch_state'
+crunch ko_wp_at'[wp]: armv_contextSwitch "ko_wp_at' P' t"
+
+lemma valid_case_option_post_wp':
+  "(\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>\<lambda>rv. Q x\<rbrace>) \<Longrightarrow>
+    \<lbrace>case ep of Some x \<Rightarrow> P x | _ \<Rightarrow> \<lambda>_. True\<rbrace>
+       f \<lbrace>\<lambda>rv. case ep of Some x \<Rightarrow> Q x | _ \<Rightarrow> \<lambda>_. True\<rbrace>"
+  by (cases ep, simp_all add: hoare_vcg_prop)
+
+abbreviation
+  "live_vcpu_at_tcb p s \<equiv> \<exists>x. ko_at' x p s \<and>
+    (case atcbVCPUPtr (tcbArch x) of None \<Rightarrow> \<lambda>_. True
+                                   | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x) s"
+
 lemma setVMRoot_valid_arch_state'[wp]:
-  "\<lbrace>valid_arch_state'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
+  "\<lbrace>valid_arch_state' and live_vcpu_at_tcb p\<rbrace>
+     setVMRoot p
+   \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
-  apply (wpsimp simp: checkPDNotInASIDMap_def throwError_def wp: getObject_tcb_wp)
-  sorry
+  apply ((wpsimp wp: hoare_vcg_imp_lift hoare_vcg_ex_lift
+                    getObject_tcb_wp valid_case_option_post_wp'
+                    whenE_inv locateSlotTCB_inv)+
+        , rule_tac x=x in exI
+        , subst simp_thms
+        , clarsimp)+
+  apply wpsimp+
+  apply (rule_tac Q="\<lambda>_. valid_arch_state' and live_vcpu_at_tcb p"
+                  in hoare_post_imp)
+    apply clarsimp
+    apply fastforce
+    apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_ex_lift
+                      getObject_tcb_wp valid_case_option_post_wp'
+                      whenE_inv locateSlotTCB_inv)+
+  done
 
 lemma setVMRoot_invs'[wp]:
   "\<lbrace>invs'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs'\<rbrace>"

@@ -2589,7 +2589,7 @@ lemma assoc_invs':
    apply (clarsimp simp: typ_at_tcb' obj_at'_def)
 
   supply fun_upd_apply[simp]
-  apply clarsimp
+  apply (clarsimp simp: hyp_live'_def arch_live'_def)
   apply (rule_tac rfs'="state_hyp_refs_of' s" in delta_sym_refs, assumption)
    apply (clarsimp split: if_split_asm)
    apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs tcb_vcpu_refs'_def
