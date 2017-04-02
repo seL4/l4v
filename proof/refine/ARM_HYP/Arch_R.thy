@@ -902,7 +902,7 @@ lemma dec_vcpu_inv_corres:
     apply (clarsimp simp: shiftL_nat)
     apply (rule corres_guard_imp)
       apply (rule corres_splitE[where r'=dc])
-  subgoal sorry (* FIXME: wrong spec *)
+         apply corres
         apply (corres corres: corres_splitE)
                      apply (rule corres_whenE)
                       apply simp
@@ -911,12 +911,9 @@ lemma dec_vcpu_inv_corres:
                     apply (rule corres_returnOkTT)
                     apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def ucast_id
                                           make_virq_def makeVIRQ_def)
-  subgoal sorry (* FIXME: wrong spec *)
                    apply (wpsimp wp: get_vcpu_wp getVCPU_wp whenE_throwError_wp)+
-     apply (rule conjI, rule TrueI)
      apply (clarsimp simp: valid_cap_def)
     apply simp
-    apply (rule conjI, rule TrueI)
     apply (clarsimp simp: valid_cap'_def)
    (* read register *)
    apply (clarsimp simp: decode_vcpu_read_register_def decodeVCPUReadReg_def)
@@ -1757,28 +1754,29 @@ lemma sts_valid_arch_inv':
   done
 
 lemma less_kernelBase_valid_pde_offset':
-  "\<lbrakk> vptr < kernelBase; x = 0 \<or> is_aligned vptr 25; x \<le> 0x1F \<rbrakk>
-     \<Longrightarrow> valid_pde_mapping_offset' (((x * 4) + (vptr >> 20 << 2)) && mask pdBits)"
+  "\<lbrakk> vptr < kernelBase; x = 0 \<or> is_aligned vptr 25; x \<le> 0x0F \<rbrakk>
+     \<Longrightarrow> valid_pde_mapping_offset' (((x * 8) + (vptr >> 21 << 3)) && mask pdBits)"
   apply (clarsimp simp: ARM_HYP.kernelBase_def kernelBase_def pdBits_def pageBits_def
-                        valid_pde_mapping_offset'_def pd_asid_slot_def)
+                        valid_pde_mapping_offset'_def pd_asid_slot_def pt_index_bits_def
+                        vspace_bits_defs)
   apply (drule minus_one_helper3, simp)
-  apply (drule le_shiftr[where u=vptr and n=20])
+  apply (drule le_shiftr[where u=vptr and n=21])
   apply (subst(asm) iffD2[OF mask_eq_iff_w2p])
-    apply (simp add: word_size vspace_bits_defs)
-   apply (simp add: vspace_bits_defs shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem])
+    apply (simp add: word_size)
+   apply (simp add: shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem])
   apply (erule disjE)
-   apply (simp add: vspace_bits_defs shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem])
+   apply (simp add: shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem])
   apply (frule arg_cong[where f="\<lambda>v. v && mask 7"])
   apply (subst(asm) field_simps, subst(asm) is_aligned_add_helper[where n=7],
          rule is_aligned_shiftl)
     apply (rule is_aligned_shiftr, simp)
+   apply simp
    apply (simp add: unat_arith_simps iffD1[OF unat_mult_lem])
-  apply (simp add: mask_def[where n=7])
   apply (simp add: shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem])
   done
 
 lemmas less_kernelBase_valid_pde_offset''
-    = less_kernelBase_valid_pde_offset'[where x=0, simplified]
+    = less_kernelBase_valid_pde_offset'[where x=0, simplified pd_bits_def pdBits_def pdeBits_def, simplified]
 
 lemma createMappingEntries_valid_pde_slots':
   "\<lbrace>K (vmsz_aligned' vptr sz \<and> is_aligned pd pdBits
@@ -1789,22 +1787,17 @@ lemma createMappingEntries_valid_pde_slots':
   apply (cases sz, simp_all)
      apply (wp | simp)+
    apply (clarsimp simp: lookup_pd_slot_def Let_def mask_add_aligned vspace_bits_defs)
-(*   apply (erule less_kernelBase_valid_pde_offset'')
+   apply (erule less_kernelBase_valid_pde_offset'')
   apply (rule hoare_pre, wp)
-  apply (clarsimp simp: vmsz_aligned'_def del: ballI)
-  apply (subst p_0x3C_shift)
-   apply (simp add: lookup_pd_slot_def Let_def)
-   apply (erule aligned_add_aligned)
-     apply (rule is_aligned_shiftl, rule is_aligned_shiftr)
-     apply simp
-    apply (simp add: pdBits_def pageBits_def word_bits_def)
-   apply (simp add: pdBits_def pageBits_def)
+  apply (clarsimp simp: vmsz_aligned'_def superSectionPDEOffsets_def vspace_bits_defs del: ballI)
+  apply (simp add: lookup_pd_slot_def Let_def vspace_bits_defs)
   apply (clarsimp simp: upto_enum_step_def linorder_not_less pd_bits_def
                         lookup_pd_slot_def Let_def field_simps
                         mask_add_aligned)
-  apply (erule less_kernelBase_valid_pde_offset'
-    [unfolded pdBits_def pageBits_def, simplified], simp+)
-  done*) sorry
+  apply (erule less_kernelBase_valid_pde_offset' [simplified pdBits_def pdeBits_def, simplified])
+   apply simp
+  apply simp
+  done
 
 lemma inv_ASIDPool: "inv ASIDPool = (\<lambda>v. case v of ASIDPool a \<Rightarrow> a)"
   apply (rule ext)
@@ -1831,7 +1824,7 @@ lemma findPDForASID_valid_offset'[wp]:
    \<lbrace>\<lambda>rv s. valid_pde_mapping_offset' (rv + (vptr >> 21 << 3) && mask pd_bits)\<rbrace>,-"
   apply (rule hoare_gen_asmE)
   apply (rule hoare_post_imp_R, rule findPDForASID_aligned)
-  apply (simp add: mask_add_aligned)
+  apply (simp add: mask_add_aligned vspace_bits_defs)
   apply (erule less_kernelBase_valid_pde_offset'')
   done
 
@@ -2022,6 +2015,14 @@ lemma arch_decodeARMPageFlush_wf:
   apply (simp add: decodeARMPageFlush_def)
   apply (wpsimp wp: whenE_throwError_wp simp: valid_arch_inv'_def valid_page_inv'_def)
   done
+
+lemma zobj_refs_maksCapRights[simp]:
+  "zobj_refs' (maskCapRights R cap) = zobj_refs' cap"
+  by (cases cap; clarsimp simp: maskCapRights_def ARM_HYP_H.maskCapRights_def Let_def isCap_simps)
+
+lemma diminished_zobj_refs':
+  "diminished' cap cap' \<Longrightarrow> zobj_refs' cap' = zobj_refs' cap"
+  by (cases cap'; clarsimp simp: diminished'_def)
 
 lemma arch_decodeInvocation_wf[wp]:
   notes ensureSafeMapping_inv[wp del]
@@ -2239,8 +2240,10 @@ lemma arch_decodeInvocation_wf[wp]:
    prefer 2
    apply (drule diminished_valid')+
    apply clarsimp
-  apply (clarsimp simp: valid_cap'_def)
-  sorry (* FIXME: need zobj_refs for arch objs *)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_cap'_def)
+  apply (drule diminished_zobj_refs')+
+  by fastforce
 
 lemma setObject_cte_nosch [wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setObject p (cte::cte) \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
@@ -2751,8 +2754,8 @@ lemma invokeVCPUWriteReg_invs'[wp]:
   by (wpsimp wp: dmo_machine_op_lift_invs' simp: setSCTLR_def vcpuregs_sets)
 
 lemma performARMVCPUInvocation_invs'[wp]:
-  "performARMVCPUInvocation i \<lbrace>invs'\<rbrace>"
-  unfolding performARMVCPUInvocation_def by wpsimp
+  "\<lbrace>invs' and valid_vcpuinv' i\<rbrace> performARMVCPUInvocation i \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding performARMVCPUInvocation_def valid_vcpuinv'_def by wpsimp
 
 lemma arch_performInvocation_invs':
   "\<lbrace>invs' and ct_active' and valid_arch_inv' invocation\<rbrace>

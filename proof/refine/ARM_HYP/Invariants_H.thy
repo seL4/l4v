@@ -1180,9 +1180,14 @@ definition
   "irqs_masked' \<equiv> \<lambda>s. \<forall>irq > maxIRQ. intStateIRQTable (ksInterruptState s) irq = IRQInactive"
 
 definition
+  "pt_index_bits \<equiv> pt_bits - pte_bits"
+
+lemmas vspace_bits_defs = vspace_bits_defs pt_index_bits_def
+
+definition
   pd_asid_slot :: word32
 where
- "pd_asid_slot \<equiv> 0xff0"
+ "pd_asid_slot \<equiv> 0xff000000 >> (pt_index_bits + pageBits)"
 
   (* ideally, all mappings above kernel_base are global and kernel-only, and
      of them one particular mapping is clear. at the moment all we can easily say
@@ -1190,7 +1195,7 @@ where
 definition
   valid_pde_mapping_offset' :: "word32 \<Rightarrow> bool"
 where
- "valid_pde_mapping_offset' offset \<equiv> offset \<noteq> pd_asid_slot * 4"
+ "valid_pde_mapping_offset' offset \<equiv> offset \<noteq> (pd_asid_slot << pte_bits)"
 
 definition
   valid_pde_mapping' :: "word32 \<Rightarrow> pde \<Rightarrow> bool"

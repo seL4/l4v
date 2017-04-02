@@ -1643,10 +1643,13 @@ lemma deleteCallerCap_simple[wp]:
   apply (wp cteDeleteOne_st_tcb_at hoare_drop_imps | simp)+
   done
 
+definition
+  "isVCPUCap' cap \<equiv> \<exists>p. cap = ArchObjectCap (VCPUCap p)"
+
 lemma valid_cap_tcb_at_thread_or_zomb':
   "\<lbrakk> s \<turnstile>' cap; t \<in> zobj_refs' cap; tcb_at' t s \<rbrakk>
-        \<Longrightarrow> isThreadCap cap \<or> isZombie cap"
-  by (clarsimp simp: valid_cap'_def isCap_simps
+        \<Longrightarrow> isThreadCap cap \<or> isZombie cap \<or> isVCPUCap' cap"
+  by (clarsimp simp: valid_cap'_def isCap_simps isVCPUCap'_def
                      obj_at'_def projectKOs
               split: capability.split_asm)
 
