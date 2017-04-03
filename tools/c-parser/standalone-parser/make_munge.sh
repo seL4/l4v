@@ -62,8 +62,12 @@ MUN_TMP=$(mktemp --tmpdir -d munge-seL4.XXXXXXXX) || \
 trap "rm -rf ${MUN_TMP}" EXIT
 mkdir -p ${MUN_TMP}
 
+# Defaults
+export L4V_ARCH=${L4V_ARCH:="ARM"}
+export CONFIG_KERNEL_EXTRA_CPPFLAGS=${CONFIG_KERNEL_EXTRA_CPPFLAGS:="-P"}
+
 # Useful refs
-CKERNEL_DIR=${L4V}/spec/cspec/c
+CKERNEL_DIR=${L4V}/spec/cspec/${L4V_ARCH}/c
 CKERNEL=${CKERNEL_DIR}/kernel_all.c_pp
 NAMES_FILE=${MUN_TMP}/ckernel_names.txt
 AST_FILE=${MUN_TMP}/ckernel_ast.txt
@@ -90,9 +94,7 @@ set +e
 [ -f ${CKERNEL} ] && mv ${CKERNEL} ${CKERNEL}.orig
 
 set -e
-# Defaults
-export L4V_ARCH=${L4V_ARCH:="ARM"}
-export CONFIG_KERNEL_EXTRA_CPPFLAGS=${CONFIG_KERNEL_EXTRA_CPPFLAGS:="-P"}
+
 # build kernel_all.c_pp
 make -C ${CKERNEL_DIR} SOURCE_ROOT=${SEL4_CLONE} kernel_all.c_pp
 
