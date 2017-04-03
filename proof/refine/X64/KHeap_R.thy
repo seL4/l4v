@@ -94,9 +94,9 @@ lemma typ_at_to_obj_at':
 
 lemmas typ_at_to_obj_at_arches
   = typ_at_to_obj_at'[where 'a=pte, simplified]
-    typ_at_to_obj_at' [where 'a=pde, simplified]
-    typ_at_to_obj_at' [where 'a=pdpte, simplified]
-    typ_at_to_obj_at' [where 'a=pml4e, simplified]
+    typ_at_to_obj_at'[where 'a=pde, simplified]
+    typ_at_to_obj_at'[where 'a=pdpte, simplified]
+    typ_at_to_obj_at'[where 'a=pml4e, simplified]
     typ_at_to_obj_at'[where 'a=asidpool, simplified]
     typ_at_to_obj_at'[where 'a=user_data, simplified]
     typ_at_to_obj_at'[where 'a=user_data_device, simplified]

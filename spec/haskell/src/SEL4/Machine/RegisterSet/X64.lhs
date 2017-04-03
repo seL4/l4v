@@ -66,8 +66,10 @@ This module defines the x86 64-bit register set.
 > selDS0 = gdtToSel GDT_DS_0
 
 > initContext :: [(Register, Word)]
-> initContext = [(DS, selDS3), (ES, selDS3), (CS, selCS3), (SS, selDS3)
->               ,(FLAGS, bit 9 .|. bit 1)] -- User mode
+> initContext = [ (CS, selCS3)
+>               , (SS, selDS3)
+>               , (FLAGS, bit 9 .|. bit 1) -- User mode
+>               ]
 
 %FIXME x64: add FPU context
 

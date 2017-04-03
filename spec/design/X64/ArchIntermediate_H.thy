@@ -44,9 +44,9 @@ defs Arch_createNewCaps_def:
         | SmallPageObject \<Rightarrow>
             createNewPageCaps regionBase numObjects dev 0 X64SmallPage
         | LargePageObject \<Rightarrow>
-            createNewPageCaps regionBase numObjects dev 4 X64LargePage
+            createNewPageCaps regionBase numObjects dev ptTranslationBits X64LargePage
         | HugePageObject \<Rightarrow>
-            createNewPageCaps regionBase numObjects dev 8 X64HugePage
+            createNewPageCaps regionBase numObjects dev (ptTranslationBits + ptTranslationBits) X64HugePage
         | PageTableObject \<Rightarrow>
             createNewTableCaps regionBase numObjects ptBits (makeObject::pte) PageTableCap
               (\<lambda>pts. return ())

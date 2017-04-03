@@ -283,8 +283,10 @@ definition
 "selDS0 \<equiv> gdtToSel GDT_DS_0"
 
 defs initContext_def:
-"initContext\<equiv> [(DS, selDS3), (ES, selDS3), (CS, selCS3), (SS, selDS3)
-              ,(FLAGS, (1 << 9) || bit 1)]"
+"initContext\<equiv> [ (CS, selCS3)
+              , (SS, selDS3)
+              , (FLAGS, (1 << 9) || bit 1)
+              ]"
 
 defs sanitiseRegister_def:
 "sanitiseRegister x0 v\<equiv> (case x0 of

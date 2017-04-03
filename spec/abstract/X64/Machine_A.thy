@@ -110,7 +110,7 @@ type_synonym user_context = "register \<Rightarrow> data"
 
 definition
   new_context :: "user_context" where
-  "new_context \<equiv> (\<lambda>r. 0)" (* FIXME: any status register or other defaults? *)
+  "new_context \<equiv> (\<lambda>r. 0) aLU initContext"
 
 definition
   pptr_base :: "machine_word" where
