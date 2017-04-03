@@ -353,7 +353,7 @@ lemma storeHWASID_ccorres:
        apply (simp split: if_split_asm)
        apply (clarsimp simp: cpde_relation_def Let_def
                              pde_lift_pde_invalid
-                       cong: ARM_H.pde.case_cong)
+                       cong: ARM_HYP_H.pde.case_cong)
       apply (erule array_relation_update)
         subgoal by simp
        subgoal by (simp add: option_to_0_def)
@@ -449,7 +449,7 @@ lemma invalidateASID_ccorres:
       apply (simp split: if_split_asm)
       apply (clarsimp simp: cpde_relation_def Let_def
                             pde_lift_pde_invalid
-                      cong: ARM_H.pde.case_cong)
+                      cong: ARM_HYP_H.pde.case_cong)
      apply (subst asid_map_pd_to_hwasids_clear, assumption)
       subgoal by clarsimp
      apply (rule ext, simp add: pd_pointer_to_asid_slot_def map_comp_def split: if_split)
@@ -731,7 +731,7 @@ lemma lookupPDSlot_spec:
   \<lbrace>  \<acute>ret__ptr_to_struct_pde_C =  Ptr (lookupPDSlot (ptr_val (pd_' s))  (vptr_' s)) \<rbrace>"
   apply vcg
   apply (clarsimp simp: lookupPDSlot_def)
-  apply (simp add: ARM_A.lookup_pd_slot_def)
+  apply (simp add: ARM_HYP_A.lookup_pd_slot_def)
   apply (subst array_assertion_shrink_right, assumption)
    apply (rule unat_le_helper, simp)
    apply (rule order_less_imp_le, rule vptr_shiftr_le_2p)
@@ -746,7 +746,7 @@ lemma lookupPTSlot_nofail_spec:
   \<lbrace>  \<acute>ret__ptr_to_struct_pte_C =  Ptr (lookup_pt_slot_no_fail (ptr_val (pt_' s))  (vptr_' s)) \<rbrace>"
   apply vcg
   apply (clarsimp simp: )
-  apply (simp add: ARM_A.lookup_pt_slot_no_fail_def)
+  apply (simp add: ARM_HYP_A.lookup_pt_slot_no_fail_def)
   apply (subst array_assertion_shrink_right, assumption)
    apply (rule order_less_imp_le, rule unat_less_helper, simp)
    apply (rule order_le_less_trans, rule word_and_le1, simp add: ptBits_def pageBits_def)
@@ -795,8 +795,8 @@ lemma ptrFromPAddr_spec:
   Call ptrFromPAddr_'proc
   \<lbrace>  \<acute>ret__ptr_to_void =  Ptr (ptrFromPAddr (paddr_' s) ) \<rbrace>"
   apply vcg
-  apply (simp add: ARM.ptrFromPAddr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def ARM.physBase_def)
+  apply (simp add: ARM_HYP.ptrFromPAddr_def physMappingOffset_def
+                   kernelBase_addr_def physBase_def ARM_HYP.physBase_def)
   done
 
 lemma addrFromPPtr_spec:
@@ -805,8 +805,8 @@ lemma addrFromPPtr_spec:
   \<lbrace>  \<acute>ret__unsigned_long =  (addrFromPPtr (ptr_val (pptr_' s)) ) \<rbrace>"
   apply vcg
   apply (simp add: addrFromPPtr_def
-                   ARM.addrFromPPtr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def ARM.physBase_def)
+                   ARM_HYP.addrFromPPtr_def physMappingOffset_def
+                   kernelBase_addr_def physBase_def ARM_HYP.physBase_def)
   done
 
 
@@ -870,7 +870,7 @@ lemma lookupPTSlot_ccorres:
    apply (simp add: pageBits_def)
   apply (clarsimp simp: cpde_relation_def pde_pde_coarse_lift_def
                         pde_pde_coarse_lift Let_def isPageTablePDE_def
-                 split: ARM_H.pde.split_asm)
+                 split: ARM_HYP_H.pde.split_asm)
   done
 
 lemma cap_case_isPageDirectoryCap:
@@ -1644,10 +1644,10 @@ lemma setVMRootForFlush_ccorres:
 (* FIXME: move to StateRelation_C *)
 definition
   "framesize_from_H sz \<equiv> case sz of
-    ARM.ARMSmallPage \<Rightarrow> (scast Kernel_C.ARMSmallPage :: word32)
-  | ARM.ARMLargePage \<Rightarrow> scast Kernel_C.ARMLargePage
-  | ARM.ARMSection \<Rightarrow> scast Kernel_C.ARMSection
-  | ARM.ARMSuperSection \<Rightarrow> scast Kernel_C.ARMSuperSection"
+    ARM_HYP.ARMSmallPage \<Rightarrow> (scast Kernel_C.ARMSmallPage :: word32)
+  | ARM_HYP.ARMLargePage \<Rightarrow> scast Kernel_C.ARMLargePage
+  | ARM_HYP.ARMSection \<Rightarrow> scast Kernel_C.ARMSection
+  | ARM_HYP.ARMSuperSection \<Rightarrow> scast Kernel_C.ARMSuperSection"
 
 lemma framesize_from_to_H:
   "gen_framesize_to_H (framesize_from_H sz) = sz"
@@ -1675,23 +1675,23 @@ lemma dmo_invalidateCacheRange_RAM_invs'[wp]:
 
 lemma dmo_flushtype_case:
   "(doMachineOp (case t of
-    ARM_H.flush_type.Clean \<Rightarrow> f
-  | ARM_H.flush_type.Invalidate \<Rightarrow> g
-  | ARM_H.flush_type.CleanInvalidate \<Rightarrow> h
-  | ARM_H.flush_type.Unify \<Rightarrow> i)) =
+    ARM_HYP_H.flush_type.Clean \<Rightarrow> f
+  | ARM_HYP_H.flush_type.Invalidate \<Rightarrow> g
+  | ARM_HYP_H.flush_type.CleanInvalidate \<Rightarrow> h
+  | ARM_HYP_H.flush_type.Unify \<Rightarrow> i)) =
   (case t of
-    ARM_H.flush_type.Clean \<Rightarrow> doMachineOp f
-  | ARM_H.flush_type.Invalidate \<Rightarrow> doMachineOp g
-  | ARM_H.flush_type.CleanInvalidate \<Rightarrow> doMachineOp h
-  | ARM_H.flush_type.Unify \<Rightarrow> doMachineOp i)"
+    ARM_HYP_H.flush_type.Clean \<Rightarrow> doMachineOp f
+  | ARM_HYP_H.flush_type.Invalidate \<Rightarrow> doMachineOp g
+  | ARM_HYP_H.flush_type.CleanInvalidate \<Rightarrow> doMachineOp h
+  | ARM_HYP_H.flush_type.Unify \<Rightarrow> doMachineOp i)"
   by (case_tac "t", simp_all)
 
 definition
   "flushtype_relation typ label \<equiv> case typ of
-    ARM_H.flush_type.Clean \<Rightarrow> (label = Kernel_C.ARMPageClean_Data \<or> label = Kernel_C.ARMPDClean_Data)
-  | ARM_H.flush_type.Invalidate \<Rightarrow>(label = Kernel_C.ARMPageInvalidate_Data \<or> label = Kernel_C.ARMPDInvalidate_Data)
-  | ARM_H.flush_type.CleanInvalidate \<Rightarrow> (label = Kernel_C.ARMPageCleanInvalidate_Data \<or> label = Kernel_C.ARMPDCleanInvalidate_Data)
-  | ARM_H.flush_type.Unify \<Rightarrow> (label = Kernel_C.ARMPageUnify_Instruction \<or> label = Kernel_C.ARMPDUnify_Instruction)"
+    ARM_HYP_H.flush_type.Clean \<Rightarrow> (label = Kernel_C.ARMPageClean_Data \<or> label = Kernel_C.ARMPDClean_Data)
+  | ARM_HYP_H.flush_type.Invalidate \<Rightarrow>(label = Kernel_C.ARMPageInvalidate_Data \<or> label = Kernel_C.ARMPDInvalidate_Data)
+  | ARM_HYP_H.flush_type.CleanInvalidate \<Rightarrow> (label = Kernel_C.ARMPageCleanInvalidate_Data \<or> label = Kernel_C.ARMPDCleanInvalidate_Data)
+  | ARM_HYP_H.flush_type.Unify \<Rightarrow> (label = Kernel_C.ARMPageUnify_Instruction \<or> label = Kernel_C.ARMPDUnify_Instruction)"
 
 lemma ccorres_seq_IF_False:
   "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (IF False THEN x ELSE y FI ;; c) = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (y ;; c)"
@@ -1745,7 +1745,7 @@ lemma doFlush_ccorres:
                         Kernel_C.ARMPageCleanInvalidate_Data_def Kernel_C.ARMPDCleanInvalidate_Data_def
                         Kernel_C.ARMPageUnify_Instruction_def Kernel_C.ARMPDUnify_Instruction_def
                   dest: ghost_assertion_size_logic[rotated]
-                 split: ARM_H.flush_type.splits)
+                 split: ARM_HYP_H.flush_type.splits)
   done
 end
 
@@ -1799,8 +1799,8 @@ lemma performPageFlush_ccorres:
   done
 
 lemma length_of_msgRegisters:
-  "length ARM_H.msgRegisters = 4"
-  by (auto simp: ARM_H.msgRegisters_def msgRegisters_unfold)
+  "length ARM_HYP_H.msgRegisters = 4"
+  by (auto simp: ARM_HYP_H.msgRegisters_def msgRegisters_unfold)
 
 
 (* FIXME: move *)
@@ -1904,7 +1904,7 @@ lemma setMessageInfo_ccorres:
      apply (ctac add: setRegister_ccorres)
     apply wp
    apply vcg
-  apply (simp add: ARM_H.msgInfoRegister_def ARM.msgInfoRegister_def
+  apply (simp add: ARM_HYP_H.msgInfoRegister_def ARM_HYP.msgInfoRegister_def
                    Kernel_C.msgInfoRegister_def Kernel_C.R1_def)
   done
 
@@ -1938,8 +1938,8 @@ lemma performPageGetAddress_ccorres:
      apply (simp add: guard_is_UNIV_def)
     apply wp
    apply vcg
-  by (auto simp: ARM_H.fromPAddr_def message_info_to_H_def mask_def ARM_H.msgInfoRegister_def
-                    ARM.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.R1_def
+  by (auto simp: ARM_HYP_H.fromPAddr_def message_info_to_H_def mask_def ARM_HYP_H.msgInfoRegister_def
+                    ARM_HYP.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.R1_def
                     word_sle_def word_sless_def Kernel_C.R2_def
                     kernel_all_global_addresses.msgRegisters_def fupdate_def Arrays.update_def
                     fcp_beta)
@@ -2714,7 +2714,7 @@ lemma diminished_PageCap:
   apply (clarsimp simp: diminished'_def)
   apply (clarsimp simp: maskCapRights_def Let_def)
   apply (cases cap, simp_all add: isCap_simps)
-  apply (simp add: ARM_H.maskCapRights_def)
+  apply (simp add: ARM_HYP_H.maskCapRights_def)
   apply (simp add: isPageCap_def split: arch_capability.splits)
   done
 

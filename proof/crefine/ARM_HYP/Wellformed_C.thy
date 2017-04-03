@@ -203,16 +203,16 @@ vmrights_to_H :: "word32 \<Rightarrow> vmrights" where
 (* Force clarity over name collisions *)
 abbreviation
   ARMSmallPage :: "vmpage_size" where
- "ARMSmallPage == ARM.ARMSmallPage"
+ "ARMSmallPage == ARM_HYP.ARMSmallPage"
 abbreviation
   ARMLargePage :: "vmpage_size" where
- "ARMLargePage == ARM.ARMLargePage"
+ "ARMLargePage == ARM_HYP.ARMLargePage"
 abbreviation
   ARMSection :: "vmpage_size" where
- "ARMSection == ARM.ARMSection"
+ "ARMSection == ARM_HYP.ARMSection"
 abbreviation
   ARMSuperSection :: "vmpage_size" where
- "ARMSuperSection == ARM.ARMSuperSection"
+ "ARMSuperSection == ARM_HYP.ARMSuperSection"
 
 -- "ARMSmallFrame is treated in a separate cap in C,
     so needs special treatment in ccap_relation"

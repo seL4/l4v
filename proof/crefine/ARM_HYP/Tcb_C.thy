@@ -714,7 +714,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                                in hoare_gen_asm)
                apply (wp threadSet_ipcbuffer_trivial static_imp_wp | simp )+
              apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
-                                   option_to_0_def ARM_H.tpidrurwRegister_def ARM.tpidrurwRegister_def
+                                   option_to_0_def ARM_HYP_H.tpidrurwRegister_def ARM_HYP.tpidrurwRegister_def
                             split: option.split_asm)
             apply simp
             apply (rule ccorres_split_throws)
@@ -1030,15 +1030,15 @@ abbreviation "gpRegistersC \<equiv> kernel_all_substitute.gpRegisters"
 lemmas gpRegistersC_def = kernel_all_substitute.gpRegisters_def
 
 lemma frame_gp_registers_convs:
-  "length ARM_H.frameRegisters = unat n_frameRegisters"
-  "length ARM_H.gpRegisters = unat n_gpRegisters"
-  "n < length ARM_H.frameRegisters \<Longrightarrow>
-     index frameRegistersC n = register_from_H (ARM_H.frameRegisters ! n)"
-  "n < length ARM_H.gpRegisters \<Longrightarrow>
-     index gpRegistersC n = register_from_H (ARM_H.gpRegisters ! n)"
-  apply (simp_all add: ARM_H.gpRegisters_def ARM_H.frameRegisters_def
-                       ARM.gpRegisters_def n_gpRegisters_def
-                       ARM.frameRegisters_def n_frameRegisters_def
+  "length ARM_HYP_H.frameRegisters = unat n_frameRegisters"
+  "length ARM_HYP_H.gpRegisters = unat n_gpRegisters"
+  "n < length ARM_HYP_H.frameRegisters \<Longrightarrow>
+     index frameRegistersC n = register_from_H (ARM_HYP_H.frameRegisters ! n)"
+  "n < length ARM_HYP_H.gpRegisters \<Longrightarrow>
+     index gpRegistersC n = register_from_H (ARM_HYP_H.gpRegisters ! n)"
+  apply (simp_all add: ARM_HYP_H.gpRegisters_def ARM_HYP_H.frameRegisters_def
+                       ARM_HYP.gpRegisters_def n_gpRegisters_def
+                       ARM_HYP.frameRegisters_def n_frameRegisters_def
                        frameRegistersC_def gpRegistersC_def msgRegisters_unfold
                        fupdate_def Arrays.update_def toEnum_def
                        upto_enum_def fromEnum_def enum_register)
@@ -1468,7 +1468,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
              apply (rule ccorres_stateAssert)
              apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
                  apply (rule_tac F="\<lambda>n. sysargs_rel args buffer
-                                     and sysargs_rel_n args buffer (n + length ARM_H.frameRegisters + 2)
+                                     and sysargs_rel_n args buffer (n + length ARM_HYP_H.frameRegisters + 2)
                                      and tcb_at' dst
                                      and (\<lambda>s. dst \<noteq> ksCurThread s)"
                              and Q=UNIV in ccorres_mapM_x_whileQ)
@@ -1492,8 +1492,8 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
                   apply (clarsimp simp: n_msgRegisters_def frame_gp_registers_convs
                                         n_frameRegisters_def)
                   apply arith
-                 apply (simp add: ARM_H.gpRegisters_def word_bits_def
-                                  ARM.gpRegisters_def)
+                 apply (simp add: ARM_HYP_H.gpRegisters_def word_bits_def
+                                  ARM_HYP.gpRegisters_def)
                 apply simp
                 apply (rule ceqv_refl)
                apply (ctac(no_vcg) add: getRestartPC_ccorres)
@@ -1586,11 +1586,11 @@ lemmas getRegister_ccorres_defer
     = ccorres_defer[OF getRegister_ccorres, OF no_fail_asUser [OF no_fail_getRegister]]
 
 lemma msg_registers_convs:
-  "length ARM_H.msgRegisters = unat n_msgRegisters"
-  "n < length ARM_H.msgRegisters \<Longrightarrow>
-     index msgRegistersC n = register_from_H (ARM_H.msgRegisters ! n)"
+  "length ARM_HYP_H.msgRegisters = unat n_msgRegisters"
+  "n < length ARM_HYP_H.msgRegisters \<Longrightarrow>
+     index msgRegistersC n = register_from_H (ARM_HYP_H.msgRegisters ! n)"
   apply (simp_all add: msgRegisters_unfold
-                       ARM.msgRegisters_def n_msgRegisters_def
+                       ARM_HYP.msgRegisters_def n_msgRegisters_def
                        msgRegistersC_def fupdate_def Arrays.update_def)
   apply (auto simp: less_Suc_eq fcp_beta)
   done
@@ -1619,7 +1619,7 @@ lemma valid_ipc_buffer_ptr_the_strengthen:
 lemma lookupIPCBuffer_Some_0:
   "\<lbrace>\<top>\<rbrace> lookupIPCBuffer w t \<lbrace>\<lambda>rv s. rv \<noteq> Some 0\<rbrace>"
   apply (simp add: lookupIPCBuffer_def
-                   ARM_H.lookupIPCBuffer_def
+                   ARM_HYP_H.lookupIPCBuffer_def
                    Let_def getThreadBufferSlot_def
                    locateSlot_conv
              cong: if_cong)
@@ -1684,7 +1684,7 @@ shows
                                 in ccorres_gen_asm)
                     apply (rule ccorres_split_nothrow_novcg)
                         apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
-                                                     (ARM_H.frameRegisters @ ARM_H.gpRegisters))
+                                                     (ARM_HYP_H.frameRegisters @ ARM_HYP_H.gpRegisters))
                                                               = reply) target s"
                                    in ccorres_mapM_x_while)
                             apply clarsimp
@@ -1750,7 +1750,7 @@ shows
                           apply (rule ccorres_Cond_rhs)
                            apply (rule ccorres_rel_imp,
                                   rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
-                                                      (ARM_H.frameRegisters @ ARM_H.gpRegisters))
+                                                      (ARM_HYP_H.frameRegisters @ ARM_HYP_H.gpRegisters))
                                                                = reply) target s
                                                  \<and> valid_ipc_buffer_ptr' (the rva) s
                                                  \<and> valid_pspace' s"
@@ -1864,7 +1864,7 @@ shows
                             apply (rule ccorres_Cond_rhs)
                              apply (simp del: Collect_const)
                              apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
-                                                       (ARM_H.frameRegisters @ ARM_H.gpRegisters))
+                                                       (ARM_HYP_H.frameRegisters @ ARM_HYP_H.gpRegisters))
                                                                 = reply) target s
                                                   \<and> valid_ipc_buffer_ptr' (the rva) s \<and> valid_pspace' s"
                                         and i="0" in ccorres_mapM_x_while')
@@ -2000,8 +2000,8 @@ shows
                  apply (strengthen valid_ipc_buffer_ptr_the_strengthen)
                  apply simp
                  apply (wp lookupIPCBuffer_Some_0 | wp_once hoare_drop_imps)+
-                apply (simp add: Collect_const_mem ARM_H.badgeRegister_def
-                                 ARM.badgeRegister_def
+                apply (simp add: Collect_const_mem ARM_HYP_H.badgeRegister_def
+                                 ARM_HYP.badgeRegister_def
                                  "StrictC'_register_defs")
                 apply (vcg exspec=lookupIPCBuffer_modifies)
                apply (simp add: false_def)
@@ -2430,7 +2430,7 @@ lemma ccap_relation_gen_framesize_to_H:
        \<Longrightarrow> gen_framesize_to_H (generic_frame_cap_get_capFSize_CL (cap_lift cap'))
                  = capVPSize (capCap cap)"
   apply (clarsimp simp: isCap_simps)
-  apply (case_tac "sz = ARM.ARMSmallPage")
+  apply (case_tac "sz = ARM_HYP.ARMSmallPage")
    apply (frule cap_get_tag_PageCap_small_frame)
    apply (simp add: cap_get_tag_isCap isCap_simps
                     pageSize_def cap_lift_small_frame_cap
@@ -2459,11 +2459,11 @@ lemma checkValidIPCBuffer_ccorres:
        (invs') (UNIV \<inter> {s. vptr_' s = vptr} \<inter> {s. ccap_relation cp (cap_' s)}) []
        (checkValidIPCBuffer vptr cp)
        (Call checkValidIPCBuffer_'proc)"
-apply (simp add:checkValidIPCBuffer_def ARM_H.checkValidIPCBuffer_def)
+apply (simp add:checkValidIPCBuffer_def ARM_HYP_H.checkValidIPCBuffer_def)
   apply (cases "isArchPageCap cp \<and> \<not> isDeviceCap cp")
    apply (simp only: isCap_simps isDeviceCap.simps, safe)[1]
    apply (cinit lift: vptr_' cap_')
-    apply (simp add: ARM_H.checkValidIPCBuffer_def  if_1_0_0 del: Collect_const)
+    apply (simp add: ARM_HYP_H.checkValidIPCBuffer_def  if_1_0_0 del: Collect_const)
     apply csymbr
     apply csymbr
     apply (clarsimp simp : if_1_0_0)
@@ -2503,7 +2503,7 @@ apply (simp add:checkValidIPCBuffer_def ARM_H.checkValidIPCBuffer_def)
   apply (cases "isArchPageCap cp")
    apply (simp only: isCap_simps isDeviceCap.simps, safe)[1]
    apply (cinit lift: vptr_' cap_')
-    apply (simp add: ARM_H.checkValidIPCBuffer_def  if_1_0_0 del: Collect_const)
+    apply (simp add: ARM_HYP_H.checkValidIPCBuffer_def  if_1_0_0 del: Collect_const)
     apply csymbr
     apply csymbr
     apply (clarsimp simp : if_1_0_0)
@@ -2533,7 +2533,7 @@ apply (simp add:checkValidIPCBuffer_def ARM_H.checkValidIPCBuffer_def)
                   split: if_splits)[1]
   apply (cinit lift: vptr_' cap_')
    apply csymbr
-   apply (simp add: ARM_H.checkValidIPCBuffer_def
+   apply (simp add: ARM_HYP_H.checkValidIPCBuffer_def
                     cap_get_tag_isCap)
    apply csymbr
    apply (rule ccorres_cond_true_seq)+
@@ -2632,7 +2632,7 @@ lemma isValidVTableRoot_conv:
       \<Longrightarrow> isValidVTableRoot_C cap' = isValidVTableRoot cap"
   apply (clarsimp simp: isValidVTableRoot_C_def
                         if_1_0_0 from_bool_0 isValidVTableRoot_def
-                        ARM_H.isValidVTableRoot_def)
+                        ARM_HYP_H.isValidVTableRoot_def)
   apply (case_tac "isArchCap_tag (cap_get_tag cap')")
    apply (clarsimp simp: cap_get_tag_isCap cap_get_tag_isCap_ArchObject)
    apply (case_tac "cap_get_tag cap' = scast cap_page_directory_cap")

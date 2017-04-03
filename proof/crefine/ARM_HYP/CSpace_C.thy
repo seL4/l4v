@@ -107,7 +107,7 @@ lemma Arch_maskCapRights_ccorres [corres]:
   (Call Arch_maskCapRights_'proc)"
   apply (cinit' (trace) lift: cap_' cap_rights_mask_')
    apply csymbr
-   apply (unfold ARM_H.maskCapRights_def)
+   apply (unfold ARM_HYP_H.maskCapRights_def)
    apply (simp only: Let_def)
    apply (case_tac "cap_get_tag cap = scast cap_small_frame_cap")
     apply (clarsimp simp add: ccorres_cond_iffs cap_get_tag_isCap isCap_simps)
@@ -2803,7 +2803,7 @@ lemma Arch_sameRegionAs_spec:
   apply vcg
   apply clarsimp
 
-  apply (simp add: ARM_H.sameRegionAs_def)
+  apply (simp add: ARM_HYP_H.sameRegionAs_def)
   subgoal for capa capb cap_b cap_a
   apply (cases capa; simp add: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
 
@@ -3187,7 +3187,7 @@ lemma cap_get_capSizeBits_spec:
 lemma ccap_relation_get_capSizeBits_physical:
   notes unfolds = ccap_relation_def get_capSizeBits_CL_def cap_lift_def
                   cap_tag_defs cap_to_H_def objBits_def objBitsKO_simps
-                  Let_def field_simps mask_def asid_low_bits_def ARM_H.capUntypedSize_def
+                  Let_def field_simps mask_def asid_low_bits_def ARM_HYP_H.capUntypedSize_def
   shows
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap = PhysicalClass;
             capAligned hcap \<rbrakk> \<Longrightarrow>
@@ -3679,7 +3679,7 @@ lemma Arch_sameObjectAs_spec:
   Call Arch_sameObjectAs_'proc
   \<lbrace> \<acute>ret__unsigned_long = from_bool (Arch.sameObjectAs capa capb) \<rbrace>"
   apply vcg
-  apply (clarsimp simp: ARM_H.sameObjectAs_def)
+  apply (clarsimp simp: ARM_HYP_H.sameObjectAs_def)
   apply (case_tac capa, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                                       isCap_defs cap_tag_defs)
       apply fastforce+
@@ -3940,7 +3940,7 @@ lemma updateCapData_spec:
    apply clarsimp
    apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
    apply (simp add: isArchCap_tag_def2)
-   apply (simp add: ARM_H.updateCapData_def)
+   apply (simp add: ARM_HYP_H.updateCapData_def)
 
   -- "CNodeCap"
   apply clarsimp
@@ -4078,7 +4078,7 @@ lemma Arch_deriveCap_ccorres:
   (Arch.deriveCap slot cap) (Call Arch_deriveCap_'proc)"
   apply (cinit lift: cap_')
    apply csymbr
-   apply (unfold ARM_H.deriveCap_def Let_def)
+   apply (unfold ARM_HYP_H.deriveCap_def Let_def)
    apply (fold case_bool_If)
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject

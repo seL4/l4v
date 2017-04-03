@@ -143,7 +143,7 @@ lemma Arch_switchToThread_obj_at_pre:
   "\<lbrace>obj_at' (Not \<circ> tcbQueued) t\<rbrace>
    Arch.switchToThread t
    \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
-  apply (simp add: ARM_H.switchToThread_def)
+  apply (simp add: ARM_HYP_H.switchToThread_def)
   apply (wp asUser_obj_at_notQ doMachineOp_obj_at setVMRoot_obj_at hoare_drop_imps|wpc)+
   done
 
@@ -786,9 +786,9 @@ lemma user_getreg_rv:
   done
 
 lemma copyMRs_simple:
-  "msglen \<le> of_nat (length ARM_H.msgRegisters) \<longrightarrow>
+  "msglen \<le> of_nat (length ARM_HYP_H.msgRegisters) \<longrightarrow>
     copyMRs sender sbuf receiver rbuf msglen
-        = forM_x (take (unat msglen) ARM_H.msgRegisters)
+        = forM_x (take (unat msglen) ARM_HYP_H.msgRegisters)
              (\<lambda>r. do v \<leftarrow> asUser sender (getRegister r);
                     asUser receiver (setRegister r v) od)
            >>= (\<lambda>rv. return msglen)"
@@ -804,16 +804,16 @@ lemma doIPCTransfer_simple_rewrite:
   "monadic_rewrite True True
    ((\<lambda>_. msgExtraCaps (messageInfoFromWord msgInfo) = 0
                \<and> msgLength (messageInfoFromWord msgInfo)
-                      \<le> of_nat (length ARM_H.msgRegisters))
+                      \<le> of_nat (length ARM_HYP_H.msgRegisters))
       and obj_at' (\<lambda>tcb. tcbFault tcb = None
                \<and> (atcbContextGet o tcbArch) tcb msgInfoRegister = msgInfo) sender)
    (doIPCTransfer sender ep badge True rcvr)
    (do rv \<leftarrow> mapM_x (\<lambda>r. do v \<leftarrow> asUser sender (getRegister r);
                              asUser rcvr (setRegister r v)
                           od)
-               (take (unat (msgLength (messageInfoFromWord msgInfo))) ARM_H.msgRegisters);
+               (take (unat (msgLength (messageInfoFromWord msgInfo))) ARM_HYP_H.msgRegisters);
          y \<leftarrow> setMessageInfo rcvr ((messageInfoFromWord msgInfo) \<lparr>msgCapsUnwrapped := 0\<rparr>);
-         asUser rcvr (setRegister ARM_H.badgeRegister badge)
+         asUser rcvr (setRegister ARM_HYP_H.badgeRegister badge)
       od)"
   apply (rule monadic_rewrite_gen_asm)
   apply (simp add: doIPCTransfer_def bind_assoc doNormalTransfer_def
@@ -1032,7 +1032,7 @@ lemma oblivious_setVMRoot_schact:
 
 lemma oblivious_switchToThread_schact:
   "oblivious (ksSchedulerAction_update f) (ThreadDecls_H.switchToThread t)"
-  apply (simp add: Thread_H.switchToThread_def ARM_H.switchToThread_def bind_assoc
+  apply (simp add: Thread_H.switchToThread_def ARM_HYP_H.switchToThread_def bind_assoc
                    getCurThread_def setCurThread_def threadGet_def liftM_def
                    threadSet_def tcbSchedEnqueue_def unless_when asUser_def
                    getQueue_def setQueue_def storeWordUser_def setRegister_def
@@ -1457,7 +1457,7 @@ lemma threadGet_isolatable:
 
  lemma switchToThread_isolatable:
   "thread_actions_isolatable idx (Arch.switchToThread t)"
-  apply (simp add: ARM_H.switchToThread_def
+  apply (simp add: ARM_HYP_H.switchToThread_def
                    storeWordUser_def stateAssert_def2)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                gets_isolatable setVMRoot_isolatable

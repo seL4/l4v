@@ -574,15 +574,15 @@ lemma heap_to_user_data_in_user_mem'[simp]:
    apply (frule(1) pspace_distinctD')
    apply (subgoal_tac "x + ucast off * 4 + xa  && ~~ mask pageBits = x" )
     apply (clarsimp simp: pointerInUserData_def typ_at'_def ko_wp_at'_def)
-   apply (simp add: ARM.pageBits_def)
+   apply (simp add: ARM_HYP.pageBits_def)
    apply (subst mask_lower_twice2[where n = 2 and m = 12,simplified,symmetric])
    apply (subst is_aligned_add_helper[THEN conjunct2,where n1 = 2])
      apply (erule aligned_add_aligned)
       apply (simp add: is_aligned_mult_triv2[where n = 2,simplified])
-     apply  (clarsimp simp: objBits_simps ARM.pageBits_def)
+     apply  (clarsimp simp: objBits_simps ARM_HYP.pageBits_def)
     apply simp
    apply (rule is_aligned_add_helper[THEN conjunct2])
-    apply (simp add: ARM.pageBits_def objBits_simps)
+    apply (simp add: ARM_HYP.pageBits_def objBits_simps)
    apply (rule word_less_power_trans2[where k = 2,simplified])
      apply (rule less_le_trans[OF ucast_less])
       apply simp+
@@ -644,8 +644,8 @@ lemma clearMemory_setObject_PTE_ccorres:
                 and (\<lambda>s. 2 ^ ptBits \<le> gsMaxObjectSize s)
                 and (\<lambda>_. is_aligned ptr ptBits \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
             (UNIV \<inter> {s. ptr___ptr_to_unsigned_long_' s = Ptr ptr} \<inter> {s. bits_' s = of_nat ptBits}) []
-       (do x \<leftarrow> mapM_x (\<lambda>a. setObject a ARM_H.InvalidPTE)
-                       [ptr , ptr + 2 ^ objBits ARM_H.InvalidPTE .e. ptr + 2 ^ ptBits - 1];
+       (do x \<leftarrow> mapM_x (\<lambda>a. setObject a ARM_HYP_H.InvalidPTE)
+                       [ptr , ptr + 2 ^ objBits ARM_HYP_H.InvalidPTE .e. ptr + 2 ^ ptBits - 1];
            doMachineOp (cleanCacheRange_PoU ptr (ptr + 2 ^ ptBits - 1) pstart)
         od)
        (Call clearMemory_'proc)"

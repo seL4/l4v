@@ -157,7 +157,7 @@ lemma ccorres_pre_getDomainTime:
 lemma Arch_switchToIdleThread_ccorres:
   "ccorres dc xfdc (valid_pspace' and valid_arch_state') UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
-  apply (cinit simp: ARM_H.switchToIdleThread_def)
+  apply (cinit simp: ARM_HYP_H.switchToIdleThread_def)
   by (rule ccorres_return_Skip, clarsimp)
 
 (* FIXME: move *)
@@ -177,7 +177,7 @@ lemma switchToIdleThread_ccorres:
        apply (clarsimp simp: simpler_modify_def)
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                              carch_state_relation_def cmachine_state_relation_def)
-      apply (simp add: ARM_H.switchToIdleThread_def)
+      apply (simp add: ARM_HYP_H.switchToIdleThread_def)
       apply wp+
    apply simp
   apply simp
@@ -190,7 +190,7 @@ lemma Arch_switchToThread_ccorres:
            []
            (Arch.switchToThread t) (Call Arch_switchToThread_'proc)"
   apply (cinit lift: tcb_')
-   apply (unfold ARM_H.switchToThread_def)[1]
+   apply (unfold ARM_HYP_H.switchToThread_def)[1]
    apply (ctac (no_vcg) add: setVMRoot_ccorres)
     apply (simp (no_asm) del: Collect_const)
     apply (rule_tac A'=UNIV in ccorres_guard_imp2)

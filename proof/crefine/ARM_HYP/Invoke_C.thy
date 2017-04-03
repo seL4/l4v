@@ -1706,7 +1706,7 @@ lemma addrFromPPtr_mask:
   "n \<le> 28
     \<Longrightarrow> addrFromPPtr ptr && mask n = ptr && mask n"
   apply (simp add: addrFromPPtr_def physMappingOffset_def kernelBase_addr_def
-                   ARM.physBase_def)
+                   ARM_HYP.physBase_def)
   apply word_bitwise
   apply simp
   done
@@ -3105,7 +3105,7 @@ shows
                  apply (simp add: toEnum_eq_to_fromEnum_eq
                                   fromEnum_object_type_to_H
                                   object_type_from_H_def
-                                  fromAPIType_def ARM_H.fromAPIType_def)
+                                  fromAPIType_def ARM_HYP_H.fromAPIType_def)
                 apply (rule syscall_error_throwError_ccorres_n)
                 apply (simp add: syscall_error_to_H_cases)
                apply (rule ccorres_split_when_throwError_cond
@@ -3117,7 +3117,7 @@ shows
                                        toEnum_eq_to_fromEnum_eq)
                  apply (simp add: fromEnum_object_type_to_H
                                   object_type_from_H_def
-                                  fromAPIType_def ARM_H.fromAPIType_def)
+                                  fromAPIType_def ARM_HYP_H.fromAPIType_def)
                 apply (rule syscall_error_throwError_ccorres_n)
                 apply (simp add: syscall_error_to_H_cases)
                 apply (rule_tac xf'="nodeCap_'"
@@ -3370,7 +3370,7 @@ shows
                            apply (clarsimp simp: toEnum_eq_to_fromEnum_eq
                                   fromEnum_object_type_to_H from_bool_0
                                   object_type_from_H_def hd_conv_nth length_ineq_not_Nil
-                                  fromAPIType_def ARM_H.fromAPIType_def)
+                                  fromAPIType_def ARM_HYP_H.fromAPIType_def)
                           apply (rule syscall_error_throwError_ccorres_n)
                           apply (clarsimp simp: syscall_error_rel_def
                             ccap_relation_untyped_CL_simps shiftL_nat

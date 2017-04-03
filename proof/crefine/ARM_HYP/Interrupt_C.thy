@@ -93,7 +93,7 @@ proof -
                     ghost_assertion_data_set_def)
   apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
   apply (clarsimp simp: invs_pspace_aligned' cte_wp_at_ctes_of badge_derived'_def
-                        Collect_const_mem unat_gt_0 valid_cap_simps' ARM.maxIRQ_def)
+                        Collect_const_mem unat_gt_0 valid_cap_simps' ARM_HYP.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
   apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
   apply (drule valid_globals_ex_cte_cap_irq[where irq=irq])
@@ -276,7 +276,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
      apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')[4]
     apply (drule ctes_of_valid')
      apply fastforce
-    apply (clarsimp simp add:valid_cap_simps' ARM.maxIRQ_def)
+    apply (clarsimp simp add:valid_cap_simps' ARM_HYP.maxIRQ_def)
     apply (erule order.trans,simp)
   apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')
   done
@@ -309,7 +309,7 @@ lemma invokeIRQControl_ccorres:
    apply (clarsimp simp: is_simple_cap'_def isCap_simps valid_cap_simps' capAligned_def)
    apply (subst ucast_le_ucast[where 'a = 16 and 'b = 32,symmetric],simp)
    apply (subst ucast_le_ucast_10_32[symmetric])
-   apply (auto simp:ucast_up_ucast is_up ARM.maxIRQ_def Kernel_C.maxIRQ_def word_bits_def )[1]
+   apply (auto simp:ucast_up_ucast is_up ARM_HYP.maxIRQ_def Kernel_C.maxIRQ_def word_bits_def )[1]
   apply (clarsimp simp: Collect_const_mem ccap_relation_def cap_irq_handler_cap_lift
                         cap_to_H_def c_valid_cap_def cl_valid_cap_def
                         word_bw_assocs mask_twice Kernel_C.maxIRQ_def ucast_ucast_a
@@ -353,8 +353,8 @@ lemma isIRQActive_ccorres:
   done
 
 lemma Platform_maxIRQ:
-  "ARM.maxIRQ = scast Kernel_C.maxIRQ"
-  by (simp add: ARM.maxIRQ_def Kernel_C.maxIRQ_def)
+  "ARM_HYP.maxIRQ = scast Kernel_C.maxIRQ"
+  by (simp add: ARM_HYP.maxIRQ_def Kernel_C.maxIRQ_def)
 
 lemma Arch_decodeIRQControlInvocation_ccorres:
   "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -362,7 +362,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
      (Arch.decodeIRQControlInvocation label args srcSlot extraCaps
         >>= invocationCatch thread isBlocking isCall (InvokeIRQControl o ArchIRQControl))
      (Call Arch_decodeIRQControlInvocation_'proc)"
-  apply (cinit' simp: ARM_H.decodeIRQControlInvocation_def)
+  apply (cinit' simp: ARM_HYP_H.decodeIRQControlInvocation_def)
    apply (simp add: throwError_bind invocationCatch_def
               cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule syscall_error_throwError_ccorres_n)
@@ -395,7 +395,7 @@ lemma Arch_checkIRQ_ccorres:
    \<top> (UNIV \<inter> \<lbrace>irq = \<acute>irq___unsigned_long\<rbrace>) []
    (checkIRQ irq) (Call Arch_checkIRQ_'proc)"
   apply (cinit lift: irq___unsigned_long_' )
-   apply (simp add: rangeCheck_def unlessE_def ARM.minIRQ_def checkIRQ_def
+   apply (simp add: rangeCheck_def unlessE_def ARM_HYP.minIRQ_def checkIRQ_def
                     ucast_nat_def word_le_nat_alt[symmetric]
                     linorder_not_le[symmetric] Platform_maxIRQ
                     length_ineq_not_Nil hd_conv_nth cast_simps
@@ -492,7 +492,7 @@ lemma decodeIRQControlInvocation_ccorres:
           apply (rule ccorres_move_c_guard_cte)
           apply ctac
             apply (rule ccorres_assert2)
-            apply (simp add: rangeCheck_def unlessE_def ARM.minIRQ_def
+            apply (simp add: rangeCheck_def unlessE_def ARM_HYP.minIRQ_def
                              ucast_nat_def word_le_nat_alt[symmetric]
                              linorder_not_le[symmetric] Platform_maxIRQ
                              length_ineq_not_Nil hd_conv_nth cast_simps

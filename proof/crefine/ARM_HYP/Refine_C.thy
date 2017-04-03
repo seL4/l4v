@@ -91,8 +91,8 @@ lemma handleInterruptEntry_ccorres:
         apply (clarsimp simp: return_def)
        apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
-   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
-    apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
+   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM_HYP.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
+    apply (clarsimp simp: Kernel_C.maxIRQ_def ARM_HYP.maxIRQ_def)
    apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
@@ -280,9 +280,9 @@ lemma handleSyscall_ccorres:
                  apply (simp add: guard_is_UNIV_def)
                 apply clarsimp
                 apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-                 (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
+                 (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM_HYP.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
                                              in hoare_post_imp)
-                 apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
+                 apply (clarsimp simp: Kernel_C.maxIRQ_def ARM_HYP.maxIRQ_def)
                 apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
                apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
                apply (simp add: invs'_def valid_state'_def)
@@ -320,9 +320,9 @@ lemma handleSyscall_ccorres:
                 apply (simp add: guard_is_UNIV_def)
                apply clarsimp
                apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-                (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
+                (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM_HYP.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
                                      in hoare_post_imp)
-                apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
+                apply (clarsimp simp: Kernel_C.maxIRQ_def ARM_HYP.maxIRQ_def)
                apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
               apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
               apply (simp add: invs'_def valid_state'_def)
@@ -359,9 +359,9 @@ lemma handleSyscall_ccorres:
                apply (simp add: guard_is_UNIV_def)
               apply clarsimp
               apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-               (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
+               (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM_HYP.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
                                         in hoare_post_imp)
-               apply (clarsimp simp: Kernel_C.maxIRQ_def ARM.maxIRQ_def)
+               apply (clarsimp simp: Kernel_C.maxIRQ_def ARM_HYP.maxIRQ_def)
               apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
              apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
              apply (simp add: invs'_def valid_state'_def)
@@ -589,8 +589,8 @@ lemma ccorres_add_gets:
 lemma ccorres_get_registers:
   "\<lbrakk> \<And>cptr msgInfo. ccorres dc xfdc
      ((\<lambda>s. P s \<and> Q s \<and>
-           obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb ARM_H.capRegister = cptr
-                      \<and>   (atcbContextGet o tcbArch) tcb ARM_H.msgInfoRegister = msgInfo)
+           obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb ARM_HYP_H.capRegister = cptr
+                      \<and>   (atcbContextGet o tcbArch) tcb ARM_HYP_H.msgInfoRegister = msgInfo)
              (ksCurThread s) s) and R)
      (UNIV \<inter> \<lbrace>\<acute>cptr = cptr\<rbrace> \<inter> \<lbrace>\<acute>msgInfo = msgInfo\<rbrace>) [] m c \<rbrakk>
       \<Longrightarrow>
@@ -603,14 +603,14 @@ lemma ccorres_get_registers:
   apply (rule ccorres_assume_pre)
   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
   apply (drule obj_at_ko_at', clarsimp)
-  apply (erule_tac x="(atcbContextGet o tcbArch) ko ARM_H.capRegister" in meta_allE)
-  apply (erule_tac x="(atcbContextGet o tcbArch) ko ARM_H.msgInfoRegister" in meta_allE)
+  apply (erule_tac x="(atcbContextGet o tcbArch) ko ARM_HYP_H.capRegister" in meta_allE)
+  apply (erule_tac x="(atcbContextGet o tcbArch) ko ARM_HYP_H.msgInfoRegister" in meta_allE)
   apply (erule ccorres_guard_imp2)
   apply (clarsimp simp: rf_sr_ksCurThread)
   apply (drule(1) obj_at_cslift_tcb, clarsimp simp: obj_at'_def projectKOs)
   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
-                        ARM_H.msgInfoRegister_def ARM_H.capRegister_def
-                        ARM.msgInfoRegister_def ARM.capRegister_def
+                        ARM_HYP_H.msgInfoRegister_def ARM_HYP_H.capRegister_def
+                        ARM_HYP.msgInfoRegister_def ARM_HYP.capRegister_def
                         carch_tcb_relation_def
                         "StrictC'_register_defs")
   done

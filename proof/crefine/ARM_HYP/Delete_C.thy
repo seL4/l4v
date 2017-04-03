@@ -895,7 +895,7 @@ lemma finaliseSlot_ccorres:
           apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of
                          split: option.split)
           apply (auto dest!: ctes_of_valid'
-                       simp: valid_cap'_def Kernel_C.maxIRQ_def ARM.maxIRQ_def
+                       simp: valid_cap'_def Kernel_C.maxIRQ_def ARM_HYP.maxIRQ_def
                              unat_ucast word_le_nat_alt)[1]
          apply (clarsimp dest!: isCapDs)
          subgoal by (auto dest!: valid_capAligned ctes_of_valid'
