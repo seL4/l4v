@@ -49,6 +49,58 @@ assumes dmb_ccorres:
            (doMachineOp dmb)
            (Call dmb_'proc)"
 
+(* FIXME ARMHYP MISSING *)
+assumes setCurrentPDPL2_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = addr \<rbrace>) []
+           (doMachineOp (setCurrentPDPL2 addr))
+           (Call setCurrentPDPL2_'proc)"
+
+(* FIXME ARMHYP should a machine op be taking an asid? *)
+assumes writeContextIDAndPD_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>id = ucast asid\<rbrace> \<union> \<lbrace> \<acute>pd_val = pd_val \<rbrace>) []
+           (doMachineOp (writeContextIDAndPD asid pd_val))
+           (Call writeContextIDAndPD_'proc)"
+
+assumes getHSR_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp getHSR)
+           (Call getHSR_'proc)"
+
+assumes setHCR_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>r = r \<rbrace>) []
+           (doMachineOp (setHCR r))
+           (Call setHCR_'proc)"
+
+assumes getHDFAR_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp getHDFAR)
+           (Call getHDFAR_'proc)"
+
+assumes getSCTLR_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp getSCTLR)
+           (Call getSCTLR_'proc)"
+
+assumes setSCTLR_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>sctlr = sctlr \<rbrace>) []
+           (doMachineOp (setSCTLR scltr))
+           (Call setSCTLR_'proc)"
+
+assumes getACTLR_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp getACTLR)
+           (Call getACTLR_'proc)"
+
+assumes setACTLR_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>actlr = actlr \<rbrace>) []
+           (doMachineOp (setACTLR acltr))
+           (Call setACTLR_'proc)"
+
+assumes addressTranslateS1CPR_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> (\<lbrace>\<acute>vaddr = vaddr \<rbrace>) []
+           (doMachineOp (addressTranslateS1CPR vaddr))
+           (Call addressTranslateS1CPR_'proc)"
+
 assumes invalidateTLB_ccorres:
   "ccorres dc xfdc \<top> UNIV []
            (doMachineOp invalidateTLB)
@@ -132,7 +184,7 @@ assumes cleanL2Range_ccorres:
 
 assumes clearExMonitor_ccorres:
   "ccorres dc xfdc \<top> UNIV []
-           (doMachineOp ARM.clearExMonitor)
+           (doMachineOp ARM_HYP.clearExMonitor)
            (Call clearExMonitor_'proc)"
 
 assumes getIFSR_ccorres:
@@ -182,12 +234,118 @@ assumes invalidateTLB_VAASID_spec:
 assumes cleanCacheRange_PoU_spec:
  "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call cleanCacheRange_PoU_'proc) UNIV"
 
+(* ARM Hypervisor banked register save/restoring *)
+
+assumes set_lr_svc_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_lr_svc v)) (Call set_lr_svc_'proc)"
+assumes set_sp_svc_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_sp_svc v)) (Call set_sp_svc_'proc)"
+assumes set_lr_abt_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_lr_abt v)) (Call set_lr_abt_'proc)"
+assumes set_sp_abt_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_sp_abt v)) (Call set_sp_abt_'proc)"
+assumes set_lr_und_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_lr_und v)) (Call set_lr_und_'proc)"
+assumes set_sp_und_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_sp_und v)) (Call set_sp_und_'proc)"
+assumes set_lr_irq_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_lr_irq v)) (Call set_lr_irq_'proc)"
+assumes set_sp_irq_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_sp_irq v)) (Call set_sp_irq_'proc)"
+assumes set_lr_fiq_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_lr_fiq v)) (Call set_lr_fiq_'proc)"
+assumes set_sp_fiq_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_sp_fiq v)) (Call set_sp_fiq_'proc)"
+assumes set_r8_fiq_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_r8_fiq v)) (Call set_r8_fiq_'proc)"
+assumes set_r9_fiq_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_r9_fiq v)) (Call set_r9_fiq_'proc)"
+assumes set_r10_fiq_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_r10_fiq v)) (Call set_r10_fiq_'proc)"
+assumes set_r11_fiq_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_r11_fiq v)) (Call set_r11_fiq_'proc)"
+assumes set_r12_fiq_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_r12_fiq v)) (Call set_r12_fiq_'proc)"
+
+assumes get_lr_svc_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_lr_svc) (Call get_lr_svc_'proc)"
+assumes get_sp_svc_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_sp_svc) (Call get_sp_svc_'proc)"
+assumes get_lr_abt_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_lr_abt) (Call get_lr_abt_'proc)"
+assumes get_sp_abt_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_sp_abt) (Call get_sp_abt_'proc)"
+assumes get_lr_und_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_lr_und) (Call get_lr_und_'proc)"
+assumes get_sp_und_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_sp_und) (Call get_sp_und_'proc)"
+assumes get_lr_irq_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_lr_irq) (Call get_lr_irq_'proc)"
+assumes get_sp_irq_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_sp_irq) (Call get_sp_irq_'proc)"
+assumes get_lr_fiq_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_lr_fiq) (Call get_lr_fiq_'proc)"
+assumes get_sp_fiq_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_sp_fiq) (Call get_sp_fiq_'proc)"
+assumes get_r8_fiq_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_r8_fiq) (Call get_r8_fiq_'proc)"
+assumes get_r9_fiq_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_r9_fiq) (Call get_r9_fiq_'proc)"
+assumes get_r10_fiq_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_r10_fiq) (Call get_r10_fiq_'proc)"
+assumes get_r11_fiq_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_r11_fiq) (Call get_r11_fiq_'proc)"
+assumes get_r12_fiq_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_r12_fiq) (Call get_r12_fiq_'proc)"
+
+(* ARM Hypervisor Virtual Global Interrupt Controller (VGIC) *)
+
+assumes get_gic_vcpu_ctrl_hcr_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_hcr) (Call get_gic_vcpu_ctrl_hcr_'proc)"
+assumes get_gic_vcpu_ctrl_vmcr_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_vmcr) (Call get_gic_vcpu_ctrl_vmcr_'proc)"
+assumes get_gic_vcpu_ctrl_apr_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_apr) (Call get_gic_vcpu_ctrl_apr_'proc)"
+assumes get_gic_vcpu_ctrl_vtr_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_vtr) (Call get_gic_vcpu_ctrl_vtr_'proc)"
+assumes get_gic_vcpu_ctrl_eisr0_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_eisr0) (Call get_gic_vcpu_ctrl_eisr0_'proc)"
+assumes get_gic_vcpu_ctrl_eisr1_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_eisr1) (Call get_gic_vcpu_ctrl_eisr1_'proc)"
+assumes get_gic_vcpu_ctrl_misr_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_misr) (Call get_gic_vcpu_ctrl_misr_'proc)"
+
+assumes set_gic_vcpu_ctrl_hcr_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>hcr = v \<rbrace>) []
+     (doMachineOp (set_gic_vcpu_ctrl_hcr v)) (Call set_gic_vcpu_ctrl_hcr_'proc)"
+assumes set_gic_vcpu_ctrl_vmcr_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>vmcr = v \<rbrace>) []
+     (doMachineOp (set_gic_vcpu_ctrl_vmcr v)) (Call set_gic_vcpu_ctrl_vmcr_'proc)"
+assumes set_gic_vcpu_ctrl_apr_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>apr = v \<rbrace>) []
+     (doMachineOp (set_gic_vcpu_ctrl_apr v)) (Call set_gic_vcpu_ctrl_apr_'proc)"
+
+assumes set_gic_vcpu_ctrl_lr_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>num = n \<rbrace> \<inter> \<lbrace>\<acute>lr = lr \<rbrace>) []
+     (doMachineOp (set_gic_vcpu_ctrl_lr n lr)) (Call set_gic_vcpu_ctrl_lr_'proc)"
+
+assumes get_gic_vcpu_ctrl_lr_ccorres:
+  "ccorres (op =) ret__unsigned_long_' (\<lbrace>\<acute>num = n \<rbrace>) UNIV []
+           (doMachineOp (get_gic_vcpu_ctrl_lr n)) (Call get_gic_vcpu_ctrl_lr_'proc)"
+
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)
 
 (*  clearExMonitor_fp is an inline-friendly version of clearExMonitor *)
 assumes clearExMonitor_fp_ccorres:
-  "ccorres dc xfdc (\<lambda>_. True) UNIV [] (doMachineOp ARM.clearExMonitor)
+  "ccorres dc xfdc (\<lambda>_. True) UNIV [] (doMachineOp ARM_HYP.clearExMonitor)
    (Call clearExMonitor_fp_'proc)"
 
 (*
@@ -221,7 +379,7 @@ assumes fastpath_restore_ccorres:
            \<inter> {s. cur_thread_' s = tcb_ptr_to_ctcb_ptr t})
      [SKIP]
      (asUser t (zipWithM_x setRegister
-               [ARM_H.badgeRegister, ARM_H.msgInfoRegister]
+               [ARM_HYP_H.badgeRegister, ARM_HYP_H.msgInfoRegister]
                [bdg, msginfo]))
      (Call fastpath_restore_'proc)"
 
@@ -697,21 +855,16 @@ lemma cleanCaches_PoU_ccorres:
   apply clarsimp
   done
 
-
 lemma setCurrentPD_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = pd\<rbrace>) []
            (doMachineOp (setCurrentPD pd))
            (Call setCurrentPD_'proc)"
   apply cinit'
    apply (clarsimp simp: setCurrentPD_def doMachineOp_bind empty_fail_dsb empty_fail_isb
-                    writeTTBR0_empty_fail
-                   intro!: ccorres_cond_empty)
-   apply (rule ccorres_rhs_assoc)
-   apply (ctac (no_vcg) add: dsb_ccorres)
-    apply (ctac (no_vcg) add: writeTTBR0_ccorres)
-     apply (ctac (no_vcg) add: isb_ccorres)
-    apply wp+
-  apply clarsimp
+                         setCurrentPDPL2_empty_fail
+                  intro!: ccorres_cond_empty)
+   apply (ctac (no_vcg) add: setCurrentPDPL2_ccorres)
+  apply wpsimp
   done
 
 end
