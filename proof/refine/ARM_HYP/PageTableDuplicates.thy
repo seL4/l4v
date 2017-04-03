@@ -1355,10 +1355,21 @@ lemma doMachineOp_live_vcpu_at_tcb[wp]: "\<lbrakk>\<forall>s xb. (p s) = (p (s\<
     apply clarsimp+
   done
 
-lemma flushPage_valid_arch_state'[wp]: "flushPage a pd asid vptr \<lbrace> valid_arch_state' \<rbrace>"
-  apply (simp add: flushPage_def setVMRootForFlush_def)
-  apply(wpsimp wp: crunch_wps getHWASID_valid_arch' simp:  crunch_simps unless_def)+
-  sorry
+crunch ko_at'_s[wp]: armv_contextSwitch "\<lambda>s. ko_at' t (ksCurThread s) s"
+
+lemma flushPage_valid_arch_state'[wp]:
+  "\<lbrace>\<lambda>s. valid_arch_state' s \<and> live_vcpu_at_tcb (ksCurThread s) s \<rbrace>
+     flushPage a pd asid vptr
+   \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (simp add: flushPage_def setVMRootForFlush_def getThreadVSpaceRoot_def)
+  apply(wpsimp wp: crunch_wps getHWASID_valid_arch'
+                   hoare_vcg_conj_lift
+                   hoare_vcg_ex_lift
+                   valid_case_option_post_wp'
+               simp:  crunch_simps unless_def)+
+  apply (rule_tac x=x in exI)
+  apply (clarsimp split: option.splits)
+  done
 
 crunch valid_arch_state'[wp]:
  flushPage valid_arch_state'
