@@ -1,12 +1,18 @@
 Built from git repo at /home/joelb/work/verification/l4v/spec/haskell by joelb
 
 Generated from changeset:
-7827c2f x64: CSpace1_R now processes with a few minor sorries
+0c011df x64: refine: CSpace_R, TcbAcc_R done
 
 
 Warning - uncomitted changes used:
- M ../../proof/refine/X64/CSpace1_R.thy
- M ../../proof/refine/X64/CSpace_R.thy
- M ../../proof/refine/X64/TcbAcc_R.thy
+ M ../../proof/refine/X64/KHeap_R.thy
+ M ../../proof/refine/X64/VSpace_R.thy
  M ../abstract/X64/ArchVSpace_A.thy
+ M ../design/Types_H.thy
+ M ../design/X64/ArchVSpaceDecls_H.thy
+ M ../design/X64/ArchVSpace_H.thy
+ M ../design/skel/X64/ArchVSpace_H.thy
  M ../design/version
+ M src/SEL4/API/Types.lhs
+ M src/SEL4/Kernel/VSpace/X64.lhs
+ M src/SEL4/Machine/Hardware/X64.lhs

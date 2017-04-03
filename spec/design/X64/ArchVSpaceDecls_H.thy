@@ -43,6 +43,9 @@ consts'
 findVSpaceForASID :: "asid \<Rightarrow> ( lookup_failure , (machine_word) ) kernel_f"
 
 consts'
+findVSpaceForASIDAssert :: "asid \<Rightarrow> (machine_word) kernel"
+
+consts'
 checkPML4At :: "machine_word \<Rightarrow> unit kernel"
 
 consts'
@@ -82,9 +85,6 @@ consts'
 deleteASIDPool :: "asid \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts'
-asidInvalidate :: "asid \<Rightarrow> unit kernel"
-
-consts'
 deleteASID :: "asid \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts'
@@ -121,6 +121,9 @@ consts'
 setCurrentVSpaceRoot :: "paddr \<Rightarrow> asid \<Rightarrow> unit kernel"
 
 consts'
+updateASIDMap :: "asid \<Rightarrow> unit kernel"
+
+consts'
 setVMRoot :: "machine_word \<Rightarrow> unit kernel"
 
 consts'
@@ -143,6 +146,12 @@ flushPD :: "paddr \<Rightarrow> asid \<Rightarrow> unit kernel"
 
 consts'
 flushTable :: "machine_word \<Rightarrow> vptr \<Rightarrow> machine_word \<Rightarrow> unit kernel"
+
+consts'
+invalidateASID' :: "asid \<Rightarrow> unit kernel"
+
+consts'
+invalidateASIDEntry :: "asid \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts'
 attribsFromWord :: "machine_word \<Rightarrow> vmattributes"

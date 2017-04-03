@@ -1898,7 +1898,7 @@ where
 definition
 msgAlignBits :: "nat"
 where
-"msgAlignBits \<equiv> 9"
+"msgAlignBits \<equiv> 10"
 
 definition
 capTransferDataSize :: "machine_word"

@@ -123,9 +123,9 @@ defs lookupIPCBuffer_def:
     bufferPtr \<leftarrow> threadGet tcbIPCBuffer thread;
     bufferFrameSlot \<leftarrow> getThreadBufferSlot thread;
     bufferCap \<leftarrow> getSlotCap bufferFrameSlot;
-    (let v13 = bufferCap in
-        if isArchObjectCap v13 \<and> isPageCap (capCap v13)
-        then let frame = capCap v13
+    (let v14 = bufferCap in
+        if isArchObjectCap v14 \<and> isPageCap (capCap v14)
+        then let frame = capCap v14
         in  (do
             rights \<leftarrow> return ( capVPRights frame);
             pBits \<leftarrow> return ( pageBitsForSize $ capVPSize frame);
@@ -162,6 +162,23 @@ defs findVSpaceForASID_def:
         | None \<Rightarrow>   throw InvalidRoot
         )
 odE)"
+
+defs findVSpaceForASIDAssert_def:
+"findVSpaceForASIDAssert asid\<equiv> (do
+    pm \<leftarrow> findVSpaceForASID asid `~catchFailure~`
+        const (haskell_fail []);
+    haskell_assert (pm && mask pml4Bits = 0)
+        [];
+    checkPML4At pm;
+    checkPML4UniqueToASID pm asid;
+    asidMap \<leftarrow> gets (x64KSASIDMap \<circ> ksArchState);
+    flip haskell_assert []
+        $ (case asidMap asid of
+              None \<Rightarrow>   True
+            | Some pm' \<Rightarrow>   pm = pm'
+            );
+    return pm
+od)"
 
 defs checkPML4UniqueToASID_def:
 "checkPML4UniqueToASID pd asid \<equiv> checkPML4ASIDMapMembership pd [asid]"
@@ -235,6 +252,10 @@ defs deleteASIDPool_def:
         [];
     asidTable \<leftarrow> gets (x64KSASIDTable \<circ> ksArchState);
     when (asidTable (asidHighBitsOf base) = Just ptr) $ (do
+ pool \<leftarrow> liftM (inv ASIDPool) $  getObject ptr;
+        forM [0  .e.  (bit asidLowBits) - 1] (\<lambda> offset. (
+            when (isJust $ pool offset) $ invalidateASIDEntry (base + offset) $ fromJust $ pool offset
+        ));
         asidTable' \<leftarrow> return ( asidTable aLU [(asidHighBitsOf base, Nothing)]);
         modify (\<lambda> s. s \<lparr>
             ksArchState := (ksArchState s) \<lparr> x64KSASIDTable := asidTable' \<rparr>\<rparr>);
@@ -246,7 +267,7 @@ od)"
 defs deleteASID_def:
 "deleteASID asid pm\<equiv> (do
     asidTable \<leftarrow> gets (x64KSASIDTable \<circ> ksArchState);
-    asidInvalidate asid;
+    invalidateASIDEntry asid pm;
     (case asidTable (asidHighBitsOf asid) of
           None \<Rightarrow>   return ()
         | Some poolPtr \<Rightarrow>   (do
@@ -392,6 +413,19 @@ defs getCurrentVSpaceRoot_def:
     return $ cr3BaseAddress cur
 od)"
 
+defs setCurrentVSpaceRoot_def:
+"setCurrentVSpaceRoot vspace asid \<equiv> setCurrentCR3 $ CR3 vspace asid"
+
+defs updateASIDMap_def:
+"updateASIDMap asid\<equiv> (do
+    vs \<leftarrow> findVSpaceForASIDAssert asid;
+    asidMap \<leftarrow> gets (x64KSASIDMap \<circ> ksArchState);
+    asidMap' \<leftarrow> return ( asidMap aLU [(asid, Just vs)]);
+    modify (\<lambda> s. s \<lparr>
+        ksArchState := (ksArchState s)
+        \<lparr> x64KSASIDMap := asidMap' \<rparr>\<rparr>)
+od)"
+
 defs setVMRoot_def:
 "setVMRoot tcb\<equiv> (do
     threadRootSlot \<leftarrow> getThreadVSpaceRoot tcb;
@@ -401,6 +435,7 @@ defs setVMRoot_def:
               ArchObjectCap (PML4Cap pd (Some asid)) \<Rightarrow>   (doE
                 pd' \<leftarrow> findVSpaceForASID asid;
                 whenE (pd \<noteq> pd') $ throw InvalidRoot;
+                withoutFailure $ updateASIDMap asid;
                 curCR3 \<leftarrow> withoutFailure $ getCurrentCR3;
                 whenE (curCR3 \<noteq> CR3 (addrFromPPtr pd) asid) $
                         withoutFailure $ setCurrentCR3 $ CR3 (addrFromPPtr pd) asid
@@ -471,6 +506,22 @@ defs flushTable_def:
             od)
         | _ \<Rightarrow>   return ()
         )
+od)"
+
+defs invalidateASID'_def:
+"invalidateASID' asid\<equiv> (do
+    findVSpaceForASIDAssert asid;
+    asidMap \<leftarrow> gets (x64KSASIDMap \<circ> ksArchState);
+    asidMap' \<leftarrow> return ( asidMap aLU [(asid, Nothing)]);
+    modify (\<lambda> s. s \<lparr>
+        ksArchState := (ksArchState s)
+        \<lparr> x64KSASIDMap := asidMap' \<rparr>\<rparr>)
+od)"
+
+defs invalidateASIDEntry_def:
+"invalidateASIDEntry asid vspace\<equiv> (do
+    doMachineOp $ hwASIDInvalidate (addrFromPPtr vspace) (fromASID asid);
+    invalidateASID' asid
 od)"
 
 defs attribsFromWord_def:
@@ -707,8 +758,8 @@ defs decodeX64ASIDControlInvocation_def:
             whenE (null free) $ throw DeleteFirst;
             base \<leftarrow> returnOk ( (fst $ head free) `~shiftL~` asidLowBits);
             pool \<leftarrow> returnOk ( makeObject ::asidpool);
-            frame \<leftarrow> (let v16 = untyped in
-                if isUntypedCap v16 \<and> capBlockSize v16 = objBits pool \<and> \<not> capIsDevice v16
+            frame \<leftarrow> (let v18 = untyped in
+                if isUntypedCap v18 \<and> capBlockSize v18 = objBits pool \<and> \<not> capIsDevice v18
                 then  (doE
                     ensureNoChildren parentSlot;
                     returnOk $ capPtr untyped

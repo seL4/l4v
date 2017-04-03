@@ -22,7 +22,7 @@ begin
 
 context Arch begin global_naming X64_H
 
-#INCLUDE_HASKELL SEL4/Kernel/VSpace/X64.lhs CONTEXT X64_H bodies_only ArchInv=ArchRetypeDecls_H NOT checkPML4At checkPDPTAt checkPDAt checkPTAt checkPML4ASIDMapMembership setCurrentVSpaceRoot checkValidMappingSize asidInvalidate
+#INCLUDE_HASKELL SEL4/Kernel/VSpace/X64.lhs CONTEXT X64_H bodies_only ArchInv=ArchRetypeDecls_H NOT checkPML4At checkPDPTAt checkPDAt checkPTAt checkPML4ASIDMapMembership checkValidMappingSize asidInvalidate
 
 defs checkValidMappingSize_def:
   "checkValidMappingSize sz \<equiv> stateAssert
