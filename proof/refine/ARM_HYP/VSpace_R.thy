@@ -4330,26 +4330,66 @@ lemma setVMRoot_valid_arch_state'[wp]:
                       whenE_inv locateSlotTCB_inv)+
   done
 
+lemma getObject_tcb_hyp_invs': "\<lbrace>invs'\<rbrace> getObject p
+       \<lbrace>\<lambda>rv. case atcbVCPUPtr (tcbArch rv) of None \<Rightarrow> \<lambda>_. True
+             | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x\<rbrace>"
+  apply (wpsimp wp: getObject_tcb_wp)
+  apply (clarsimp simp: typ_at_tcb'[symmetric] typ_at'_def ko_wp_at'_def[of _ p]
+                split: option.splits)
+  apply (case_tac ko; simp)
+  apply (rename_tac tcb)
+  apply (rule_tac x=tcb in exI; rule conjI, clarsimp simp: obj_at'_def projectKOs)
+  apply (clarsimp, rule context_conjI, clarsimp simp: obj_at'_def projectKOs)
+  apply (frule invs_sym_hyp')
+  apply (drule ko_at_state_hyp_refs_ofD')
+  apply (simp add: hyp_refs_of'_def sym_refs_def)
+  apply (erule_tac x=p in allE, simp)
+  apply (drule state_hyp_refs_of'_elemD)
+  apply (clarsimp simp: hyp_refs_of_rev')
+  apply (simp add: ko_wp_at'_def, erule exE,
+         clarsimp simp: is_vcpu'_def hyp_live'_def arch_live'_def)
+  done
+
 lemma setVMRoot_invs'[wp]:
   "\<lbrace>invs'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs'\<rbrace>"
   using [[goals_limit=12]]
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
-   apply (wpsimp simp: checkPDNotInASIDMap_def throwError_def wp: getObject_tcb_wp)
-   apply (wpsimp simp: armv_contextSwitch_def getHWASID_def storeHWASID_def findFreeHWASID_def
-                invalidateHWASIDEntry_def invalidateASID_def
-               wp: hoare_vcg_imp_lift hoare_vcg_ex_lift)
-   apply simp
-  sorry
-
-lemma setVMRoot_invs_no_cicd':
-  "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps armv_contextSwitch_invs_no_cicd' getHWASID_invs_no_cicd'
-             dmo_setCurrentPD_invs_no_cicd' dmo_writeContextIDAndPD_invs_no_cicd'
+   apply (wp hoare_drop_imps getObject_tcb_hyp_invs'
           | wpcw
           | simp add: whenE_def checkPDNotInASIDMap_def split del: if_split)+
-  sorry
+  done
+
+lemma getObject_tcb_hyp_invs_no_cicd': "\<lbrace>invs_no_cicd'\<rbrace> getObject p
+       \<lbrace>\<lambda>rv. case atcbVCPUPtr (tcbArch rv) of None \<Rightarrow> \<lambda>_. True
+             | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x\<rbrace>"
+  apply (wpsimp wp: getObject_tcb_wp)
+  apply (clarsimp simp: typ_at_tcb'[symmetric] typ_at'_def ko_wp_at'_def[of _ p]
+                split: option.splits)
+  apply (case_tac ko; simp)
+  apply (rename_tac tcb)
+  apply (rule_tac x=tcb in exI; rule conjI, clarsimp simp: obj_at'_def projectKOs)
+  apply (clarsimp, rule context_conjI, clarsimp simp: obj_at'_def projectKOs)
+  apply (subgoal_tac "sym_refs (state_hyp_refs_of' s)")
+   prefer 2
+   apply (simp add: invs_no_cicd'_def)
+  apply (drule ko_at_state_hyp_refs_ofD')
+  apply (simp add: hyp_refs_of'_def sym_refs_def)
+  apply (erule_tac x=p in allE, simp)
+  apply (drule state_hyp_refs_of'_elemD)
+  apply (clarsimp simp: hyp_refs_of_rev')
+  apply (simp add: ko_wp_at'_def, erule exE,
+         clarsimp simp: is_vcpu'_def hyp_live'_def arch_live'_def)
+  done
+
+lemma setVMRoot_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
+   apply (wp hoare_drop_imps getObject_tcb_hyp_invs_no_cicd'
+             armv_contextSwitch_invs_no_cicd' getHWASID_invs_no_cicd'
+             dmo_setCurrentPD_invs_no_cicd'
+          | wpcw
+          | simp add: whenE_def checkPDNotInASIDMap_def split del: if_split)+
+  done
 
 crunch nosch: vcpuSwitch "\<lambda>s. P (ksSchedulerAction s)"
   (wp: updateObject_default_inv FalseI ignore: getObject)
