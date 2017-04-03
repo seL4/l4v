@@ -572,10 +572,8 @@ Page entries -- any of PTEs, PDEs or PDPTEs.
 > numIODomainIDBits :: Int
 > numIODomainIDBits = Platform.numIODomainIDBits
 
-> hwASIDInvalidate :: Word64 -> MachineMonad ()
-> hwASIDInvalidate asid = do
->     cbptr <- ask
->     liftIO $ Platform.hwASIDInvalidate cbptr asid
+> hwASIDInvalidate :: PAddr -> Word64 -> MachineMonad ()
+> hwASIDInvalidate = invalidateASID
 
 
 > getFaultAddress :: MachineMonad VPtr

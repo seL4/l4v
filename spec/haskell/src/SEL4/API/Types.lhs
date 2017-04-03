@@ -186,7 +186,7 @@ The maximum number of capabilities passed as arguments to a method invocation. T
 > msgMaxExtraCaps = bit msgExtraCapBits - 1
 
 > msgAlignBits :: Int
-> msgAlignBits = 9
+> msgAlignBits = 10
 
 \subsection{Capability Transfers}
 

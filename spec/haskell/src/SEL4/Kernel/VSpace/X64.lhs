@@ -188,21 +188,35 @@ Locating the page directory for a given ASID is necessary when updating or delet
 >             return ptr
 >         Nothing -> throw InvalidRoot
 
+> findVSpaceForASIDAssert :: ASID -> Kernel (PPtr PML4E)
+> findVSpaceForASIDAssert asid = do
+>     pm <- findVSpaceForASID asid `catchFailure`
+>         const (fail "findVSpaceForASIDAssert: pm not found")
+>     assert (pm .&. mask pml4Bits == 0)
+>         "findVSpaceForASIDAssert: pml4 pointer alignment check"
+>     checkPML4At pm
+>     checkPML4UniqueToASID pm asid
+>     asidMap <- gets (x64KSASIDMap . ksArchState)
+>     flip assert "findVSpaceForASIDAssert: pml4 map mismatch"
+>         $ case asidMap ! asid of
+>             Nothing -> True
+>             Just pm'-> pm == pm'
+>     return pm
 
 These checks are too expensive to run in haskell. The first funcion checks that the pointer is to a page directory, which would require testing that each entry of the table is present. The second checks that the page directory appears in x64KSASIDMap only on the ASIDs specified, which would require walking all possible ASIDs to test. In the formalisation of this specification, these functions are given alternative definitions that make the appropriate checks.
 
 > -- FIXME x64: these are all now unused.
 
-> checkPML4At :: PPtr PDE -> Kernel ()
+> checkPML4At :: PPtr PML4E -> Kernel ()
 > checkPML4At _ = return ()
 
-> checkPDPTAt :: PPtr PDE -> Kernel ()
+> checkPDPTAt :: PPtr PDPTE -> Kernel ()
 > checkPDPTAt _ = return ()
 
 > checkPDAt :: PPtr PDE -> Kernel ()
 > checkPDAt _ = return ()
 
-> checkPTAt :: PPtr PDE -> Kernel ()
+> checkPTAt :: PPtr PTE -> Kernel ()
 > checkPTAt _ = return ()
 
 > checkPML4ASIDMapMembership :: PPtr PML4E -> [ASID] -> Kernel ()
@@ -285,6 +299,9 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >         "ASID pool's base must be aligned"
 >     asidTable <- gets (x64KSASIDTable . ksArchState)
 >     when (asidTable!(asidHighBitsOf base) == Just ptr) $ do
+>         ASIDPool pool <- getObject ptr
+>         forM [0 .. (bit asidLowBits) - 1] $ \offset -> do
+>             when (isJust $ pool ! offset) $ invalidateASIDEntry (base + offset) $ fromJust $ pool ! offset
 >         let asidTable' = asidTable//[(asidHighBitsOf base, Nothing)]
 >         modify (\s -> s {
 >             ksArchState = (ksArchState s) { x64KSASIDTable = asidTable' }})
@@ -293,13 +310,10 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 
 \subsubsection{Deleting an Address Space}
 
-> asidInvalidate :: ASID -> Kernel ()
-> asidInvalidate (ASID asid) = doMachineOp $ hwASIDInvalidate asid
-
 > deleteASID :: ASID -> PPtr PML4E -> Kernel ()
 > deleteASID asid pm = do
 >     asidTable <- gets (x64KSASIDTable . ksArchState)
->     asidInvalidate asid
+>     invalidateASIDEntry asid pm
 >     case asidTable!(asidHighBitsOf asid) of
 >         Nothing -> return ()
 >         Just poolPtr -> do
@@ -434,6 +448,14 @@ This helper function checks that the mapping installed at a given PT or PD slot 
 > setCurrentVSpaceRoot :: PAddr -> ASID -> Kernel ()
 > setCurrentVSpaceRoot vspace asid = setCurrentCR3 $ CR3 vspace asid
 
+> updateASIDMap :: ASID -> Kernel ()
+> updateASIDMap asid = do
+>     vs <- findVSpaceForASIDAssert asid
+>     asidMap <- gets (x64KSASIDMap . ksArchState)
+>     let asidMap' = asidMap//[(asid, Just vs)]
+>     modify (\s -> s {
+>         ksArchState = (ksArchState s)
+>         { x64KSASIDMap = asidMap' }})
 
 > -- FIXME x64: Currently we don't have global state for the CR3 so
 > -- we can't test whether or not we should write to it. We should
@@ -450,7 +472,7 @@ This helper function checks that the mapping installed at a given PT or PD slot 
 >                     capPML4BasePtr = pd }) -> do
 >                 pd' <- findVSpaceForASID asid
 >                 when (pd /= pd') $ throw InvalidRoot
->                 -- update asid map
+>                 withoutFailure $ updateASIDMap asid
 >                 curCR3 <- withoutFailure $ getCurrentCR3
 >                 when (curCR3 /= CR3 (addrFromPPtr pd) asid) $
 >                         withoutFailure $ setCurrentCR3 $ CR3 (addrFromPPtr pd) asid
@@ -524,6 +546,22 @@ Note that implementations with separate high and low memory regions may also wis
 >                              in doMachineOp $ invalidateTLBEntry $
 >                                          VPtr $ (fromVPtr vptr) + index'
 >         _ -> return ()
+
+\subsection{Managing ASID Map}
+
+> invalidateASID' :: ASID -> Kernel ()
+> invalidateASID' asid = do
+>     findVSpaceForASIDAssert asid
+>     asidMap <- gets (x64KSASIDMap . ksArchState)
+>     let asidMap' = asidMap//[(asid, Nothing)]
+>     modify (\s -> s {
+>         ksArchState = (ksArchState s)
+>         { x64KSASIDMap = asidMap' }})
+
+> invalidateASIDEntry :: ASID -> PPtr PML4E -> Kernel ()
+> invalidateASIDEntry asid vspace = do
+>     doMachineOp $ hwASIDInvalidate (addrFromPPtr vspace) (fromASID asid)
+>     invalidateASID' asid
 
 \subsection{Decoding x64 Invocations}
 
