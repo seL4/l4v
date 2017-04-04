@@ -572,9 +572,9 @@ end
 
 fun simple s = {isa_name = MString.mk s, src_name = s}
 
-fun pretty_globals thy vars =
+fun pretty_recdef thy nm vars =
     Pretty.big_list
-        "Defining global variables: record 'a globals ="
+        ("Defining record: " ^ nm ^ " =")
         (map (fn (nm,ity,_,_) =>
                  Pretty.str (MString.dest (#isa_name nm) ^ " :: " ^
                              Syntax.string_of_typ (thy2ctxt thy) ity))
@@ -613,13 +613,13 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
     val (lvars, gvars) = split_vars thy ([], []) rest
     open NameGeneration
     fun mk_globals_rcd thy = let
-      val _ = if not (null gvars) then pretty_globals thy gvars
-              else ()
       val (_ (* utglobs *), nsglobs, _ (* adglobs *)) =
           (* untouched globals, Norbert Schirmer Globals, addressed globals *)
           categorise_globals (Config.get_global thy globals_all_addressed,
                               Config.get_global thy populate_globals)
                              gvars
+      val _ = if not (null gvars) then pretty_recdef thy "globals" nsglobs
+              else ()
       val gflds =
           [(bnm global_heap_var, MemoryModelExtras.extended_heap_ty, NoSyn),
            (bnm (global_var phantom_state_name), pmstate_ty, NoSyn),
@@ -657,9 +657,7 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
                     else (bnm nm',ty,NoSyn) :: map_elim_name (nm'::seen) rest
                   end
             val lflds = map_elim_name [] lvars
-            val _ = informStr (2, "Defining "^ Int.toString(length lflds) ^
-                                  " local variables: "^
-                                  listvars (fn (s,_,_) => Binding.print s) lflds)
+            val _ = pretty_recdef thy "myvars" lvars
             val thy = Record.add_record {overloaded=false}
                       ([("'g",["HOL.type"])], bnm NameGeneration.local_rcd_name)
                       (SOME([TFree("'g", ["HOL.type"])], "StateSpace.state"))
