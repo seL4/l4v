@@ -115,9 +115,11 @@ begin
 (* relates fixed adresses *)
 definition
   "carch_globals s \<equiv>
-  (armKSGlobalPD s = symbol_table ''armKSGlobalPD'') \<and>
-  (armKSGlobalPTs s  = [symbol_table ''armKSGlobalPT''])"
+    (armUSGlobalPD s = symbol_table ''armUSGlobalPD'')"
 
+(* FIXME ARMHYP armUSGlobalPD points to page full of invalid PDEs, i.e. it's all zero *)
+(* FIXME ARMHYP TODO armKSGICVCPUNumListRegs - clamped to GIC_VCPU_MAX_NUM_LR *)
+(* FIXME ARMHYP TODO curVCPU *)
 definition
   carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
@@ -184,6 +186,11 @@ abbreviation
   map_to_user_data :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> user_data"
   where
   "map_to_user_data hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
+
+abbreviation
+  map_to_vcpu :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> vcpu"
+  where
+  "map_to_vcpu hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
 
 abbreviation
   map_to_user_data_device :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> user_data_device"
@@ -383,25 +390,15 @@ where
        \<and> option_to_ctcb_ptr (ntfnBoundTCB antfn) = cbound"
 
 definition
-  "ap_from_vm_rights R \<equiv> case R of
+  "hap_from_vm_rights R \<equiv> case R of
     VMNoAccess \<Rightarrow> 0
-  | VMKernelOnly \<Rightarrow> 1
-  | VMReadOnly \<Rightarrow> 2
+  | VMKernelOnly \<Rightarrow> 0
+  | VMReadOnly \<Rightarrow> 1
   | VMReadWrite \<Rightarrow> 3"
 
 definition
-  "tex_from_cacheable c \<equiv> case c of
-    True \<Rightarrow> 5
-  | False \<Rightarrow> 0"
-
-definition
-  "s_from_cacheable c \<equiv> case c of
-    True \<Rightarrow> 0
-  | False \<Rightarrow> 1"
-
-definition
-  "b_from_cacheable c \<equiv> case c of
-    True \<Rightarrow> 1
+  "memattr_from_cacheable c \<equiv> case c of
+    True \<Rightarrow> 0xf
   | False \<Rightarrow> 0"
 
 definition
@@ -411,42 +408,29 @@ where
   (let cpde' = pde_lift cpde in
   case pde of
     InvalidPDE \<Rightarrow>
-    (\<exists>inv. cpde' = Some (Pde_pde_invalid inv))
-  | PageTablePDE frame parity domain \<Rightarrow>
+      (\<exists>inv. cpde' = Some (Pde_pde_invalid inv)) (* seL4 uses invalid PDEs to stash other info *)
+  | PageTablePDE table \<Rightarrow>
     cpde' = Some (Pde_pde_coarse
-     \<lparr> pde_pde_coarse_CL.address_CL = frame,
-       P_CL = of_bool parity,
-       Domain_CL = domain \<rparr>)
-  | SectionPDE frame parity domain cacheable global xn rights \<Rightarrow>
+      \<lparr> pde_pde_coarse_CL.address_CL = table \<rparr>)
+  | SectionPDE frame cacheable xn rights \<Rightarrow>
     cpde' = Some (Pde_pde_section
-     \<lparr> pde_pde_section_CL.address_CL = frame,
-       size_CL = 0,
-       nG_CL = of_bool (~global),
-       S_CL = s_from_cacheable cacheable,
-       APX_CL = 0,
-       TEX_CL = tex_from_cacheable cacheable,
-       AP_CL = ap_from_vm_rights rights,
-       P_CL = of_bool parity,
-       Domain_CL = domain,
-       XN_CL = of_bool xn,
-       C_CL = 0,
-       B_CL = b_from_cacheable cacheable
-  \<rparr>)
-  | SuperSectionPDE frame parity cacheable global xn rights \<Rightarrow>
+     \<lparr> pde_pde_section_CL.XN_CL = of_bool xn,
+       contiguous_hint_CL = 0,
+       pde_pde_section_CL.address_CL = frame,
+       AF_CL = 1,
+       SH_CL = 0,
+       HAP_CL = hap_from_vm_rights rights,
+       MemAttr_CL = memattr_from_cacheable cacheable \<rparr>)
+  | SuperSectionPDE frame cacheable xn rights \<Rightarrow>
     cpde' = Some (Pde_pde_section
-     \<lparr> pde_pde_section_CL.address_CL = frame,
-       size_CL = 1,
-       nG_CL = of_bool (~global),
-       S_CL = s_from_cacheable cacheable,
-       APX_CL = 0,
-       TEX_CL = tex_from_cacheable cacheable,
-       AP_CL = ap_from_vm_rights rights,
-       P_CL = of_bool parity,
-       Domain_CL = 0,
-       XN_CL = of_bool xn,
-       C_CL = 0,
-       B_CL = b_from_cacheable cacheable
-  \<rparr>))"
+     \<lparr> pde_pde_section_CL.XN_CL = of_bool xn,
+       contiguous_hint_CL = 1,
+       pde_pde_section_CL.address_CL = frame,
+       AF_CL = 1,
+       SH_CL = 0,
+       HAP_CL = hap_from_vm_rights rights,
+       MemAttr_CL = memattr_from_cacheable cacheable \<rparr>)
+  )"
 
 definition
   cpte_relation :: "pte \<Rightarrow> pte_C \<Rightarrow> bool"
@@ -455,59 +439,32 @@ where
   (let cpte' = pte_lift cpte in
   case pte of
     InvalidPTE \<Rightarrow>
-    cpte' = Some (Pte_pte_large
-     \<lparr> pte_pte_large_CL.address_CL = 0,
-       XN_CL = 0,
-       TEX_CL = 0,
-       nG_CL = 0,
-       S_CL = 0,
-       APX_CL = 0,
-       AP_CL = 0,
-       C_CL = 0,
-       B_CL = 0,
-       reserved_CL = 0
-     \<rparr>)
-  | LargePagePTE frame cacheable global xn rights \<Rightarrow>
-    cpte' = Some (Pte_pte_large
-     \<lparr> pte_pte_large_CL.address_CL = frame,
-       XN_CL = of_bool xn,
-       TEX_CL = tex_from_cacheable cacheable,
-       nG_CL = of_bool (~global),
-       S_CL = s_from_cacheable cacheable,
-       APX_CL = 0,
-       AP_CL = ap_from_vm_rights rights,
-       C_CL = 0,
-       B_CL = b_from_cacheable cacheable,
-       reserved_CL = 1
-     \<rparr>)
-  | SmallPagePTE frame cacheable global xn rights \<Rightarrow>
+      (cpte' = Some (Pte_pte_invalid))
+  | SmallPagePTE frame cacheable xn rights \<Rightarrow>
     cpte' = Some (Pte_pte_small
-     \<lparr> address_CL = frame,
-       nG_CL = of_bool (~global),
-       S_CL = s_from_cacheable cacheable,
-       APX_CL = 0,
-       TEX_CL = tex_from_cacheable cacheable,
-       AP_CL = ap_from_vm_rights rights,
-       C_CL = 0,
-       B_CL = b_from_cacheable cacheable,
-       XN_CL = of_bool xn
-     \<rparr>))"
+     \<lparr> pte_pte_small_CL.XN_CL = of_bool xn,
+       contiguous_hint_CL = 0,
+       pte_pte_small_CL.address_CL = frame,
+       AF_CL = 1,
+       SH_CL = 0,
+       HAP_CL = hap_from_vm_rights rights,
+       MemAttr_CL = memattr_from_cacheable cacheable \<rparr>)
+  | LargePagePTE frame cacheable xn rights \<Rightarrow>
+    cpte' = Some (Pte_pte_small
+     \<lparr> pte_pte_small_CL.XN_CL = of_bool xn,
+       contiguous_hint_CL = 1,
+       pte_pte_small_CL.address_CL = frame,
+       AF_CL = 1,
+       SH_CL = 0,
+       HAP_CL = hap_from_vm_rights rights,
+       MemAttr_CL = memattr_from_cacheable cacheable \<rparr>)
+  )"
 
-(* Invalid PTEs map to large PTEs with reserved bit 0 *)
+(* Invalid PTEs map to invalid PTEs (sanity check?) *)
 lemma pte_0:
-  "index (pte_C.words_C cpte) 0 = 0 \<Longrightarrow> pte_lift cpte = Some (Pte_pte_large
-     \<lparr> pte_pte_large_CL.address_CL = 0,
-       XN_CL = 0,
-       TEX_CL = 0,
-       nG_CL = 0,
-       S_CL = 0,
-       APX_CL = 0,
-       AP_CL = 0,
-       C_CL = 0,
-       B_CL = 0,
-       reserved_CL = 0
-     \<rparr>)"
-  by (simp add: pte_lift_def pte_get_tag_def pte_pte_large_def)
+  "index (pte_C.words_C cpte) 0 = 0 \<and> index (pte_C.words_C cpte) 1 = 0 \<Longrightarrow>
+   pte_lift cpte = Some (Pte_pte_invalid)"
+  by (simp add: pte_lift_def pte_get_tag_def pte_pte_invalid_def)
 
 definition
   casid_pool_relation :: "asidpool \<Rightarrow> asid_pool_C \<Rightarrow> bool"
@@ -526,8 +483,6 @@ definition
   cuser_user_data_device_relation :: "(10 word \<Rightarrow> word32) \<Rightarrow> user_data_device_C \<Rightarrow> bool"
 where
   "cuser_user_data_device_relation f ud \<equiv> True"
-  (*"cuser_user_data_device_relation f ud \<equiv> \<forall>off. f off = index (user_data_device_C.words_C ud) (unat off)" *)
-
 
 abbreviation
   "cpspace_cte_relation ah ch \<equiv> cmap_relation (map_to_ctes ah) (clift ch) Ptr ccte_relation"
@@ -623,7 +578,7 @@ fun
   | "irqstate_to_C irqstate.IRQReserved = scast Kernel_C.IRQReserved"
 
 definition
-  cinterrupt_relation :: "interrupt_state \<Rightarrow> cte_C ptr \<Rightarrow> (word32[160]) \<Rightarrow> bool"
+  cinterrupt_relation :: "interrupt_state \<Rightarrow> cte_C ptr \<Rightarrow> (word32[192]) \<Rightarrow> bool"
 where
   "cinterrupt_relation airqs cnode cirqs \<equiv>
      cnode = Ptr (intStateIRQNode airqs) \<and>
@@ -676,7 +631,9 @@ where
            ((\<not> (d \<le> maxDomain \<and> i \<le> numPriorities div wordBits))
             \<longrightarrow>  abitmap2 (d, i) = 0)"
 
-end
+(* FIXME ARMHYP TODO: cvcpu_relation et al. *)
+
+end (* interpretation Arch . (*FIXME: arch_split*) *)
 
 definition
    region_is_bytes' :: "word32 \<Rightarrow> nat \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
