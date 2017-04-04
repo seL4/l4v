@@ -267,12 +267,12 @@ od)"
 defs deleteASID_def:
 "deleteASID asid pm\<equiv> (do
     asidTable \<leftarrow> gets (x64KSASIDTable \<circ> ksArchState);
-    invalidateASIDEntry asid pm;
     (case asidTable (asidHighBitsOf asid) of
           None \<Rightarrow>   return ()
         | Some poolPtr \<Rightarrow>   (do
  pool \<leftarrow> liftM (inv ASIDPool) $  getObject poolPtr;
             when (pool (asid && mask asidLowBits) = Just pm) $ (do
+                invalidateASIDEntry asid pm;
                 pool' \<leftarrow> return ( pool aLU [(asid && mask asidLowBits, Nothing)]);
                 setObject poolPtr $ ASIDPool pool';
                 tcb \<leftarrow> getCurThread;
@@ -326,7 +326,7 @@ defs unmapPageTable_def:
         | _ \<Rightarrow>   throw InvalidRoot
         );
     withoutFailure $ (do
-        flushTable vspace vaddr pt;
+        flushTable vspace vaddr pt asid;
         storePDE pdSlot InvalidPDE;
         invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
     od)
@@ -482,30 +482,20 @@ defs flushPD_def:
 "flushPD p a \<equiv> flushAll p a"
 
 defs flushTable_def:
-"flushTable vspace vptr pt\<equiv> (do
+"flushTable arg1 vptr pt asid \<equiv> (do
     haskell_assert (vptr && mask (ptTranslationBits + pageBits) = 0)
         [];
-    tcb \<leftarrow> getCurThread;
-    threadRootSlot \<leftarrow> getThreadVSpaceRoot tcb;
-    threadRoot \<leftarrow> getSlotCap threadRootSlot;
-    (case threadRoot of
-          ArchObjectCap (PML4Cap vspace' (Some _)) \<Rightarrow>  
-            when (vspace = vspace') $ (do
-                pteBits \<leftarrow> return ( objBits (undefined ::pte));
-                ptSize \<leftarrow> return ( 1 `~shiftL~` ptTranslationBits);
-                forM_x [0  .e.  ptSize - 1] (\<lambda> index. (do
-                    offset \<leftarrow> return ( PPtr index `~shiftL~` pteBits);
-                    pte \<leftarrow> getObject $ pt + offset;
-                    (case pte of
-                          InvalidPTE \<Rightarrow>   return ()
-                        | _ \<Rightarrow>   let index' = index `~shiftL~` pageBits
-                             in doMachineOp $ invalidateTLBEntry $
-                                         VPtr $ (fromVPtr vptr) + index'
-                        )
-                od))
-            od)
-        | _ \<Rightarrow>   return ()
-        )
+    pteBits \<leftarrow> return ( objBits (undefined ::pte));
+    ptSize \<leftarrow> return ( 1 `~shiftL~` ptTranslationBits);
+    forM_x [0  .e.  ptSize - 1] (\<lambda> index. (do
+        offset \<leftarrow> return ( PPtr index `~shiftL~` pteBits);
+        pte \<leftarrow> getObject $ pt + offset;
+        (case pte of
+              InvalidPTE \<Rightarrow>   return ()
+            | _ \<Rightarrow>   let index' = index `~shiftL~` pageBits
+                 in doMachineOp $ invalidateTranslationSingleASID (VPtr $ (fromVPtr vptr) + index') $ fromASID asid
+            )
+    od))
 od)"
 
 defs invalidateASID'_def:

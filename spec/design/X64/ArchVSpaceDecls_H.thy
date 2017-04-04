@@ -145,7 +145,7 @@ consts'
 flushPD :: "paddr \<Rightarrow> asid \<Rightarrow> unit kernel"
 
 consts'
-flushTable :: "machine_word \<Rightarrow> vptr \<Rightarrow> machine_word \<Rightarrow> unit kernel"
+flushTable :: "machine_word \<Rightarrow> vptr \<Rightarrow> machine_word \<Rightarrow> asid \<Rightarrow> unit kernel"
 
 consts'
 invalidateASID' :: "asid \<Rightarrow> unit kernel"
