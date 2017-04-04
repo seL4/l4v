@@ -20,9 +20,6 @@ definition
 definition
   "array_relation r n a c \<equiv> \<forall>i \<le> n. r (a i) (index c (unat i))"
 
-definition
-  "option_to_ptr \<equiv> Ptr o option_to_0"
-
 (* used for bound ntfn/tcb *)
 definition
   "option_to_ctcb_ptr x \<equiv> case x of None \<Rightarrow> NULL | Some t \<Rightarrow> tcb_ptr_to_ctcb_ptr t"
@@ -117,9 +114,17 @@ definition
   "carch_globals s \<equiv>
     (armUSGlobalPD s = symbol_table ''armUSGlobalPD'')"
 
+(* FIXME ARMHYP is this the right place? MOVE? *)
+definition
+  cur_vcpu_relation :: "(32 word \<times> bool) option \<Rightarrow> vcpu_C ptr \<Rightarrow> 32 word \<Rightarrow> bool"
+where
+  "cur_vcpu_relation akscurvcpu cvcpu cactive \<equiv>
+    case akscurvcpu
+      of Some acurvcpu \<Rightarrow> cvcpu = Ptr (fst acurvcpu) \<and> cactive = from_bool (snd acurvcpu)
+       | None \<Rightarrow> cvcpu = NULL \<and> cactive = 0"
+
 (* FIXME ARMHYP armUSGlobalPD points to page full of invalid PDEs, i.e. it's all zero *)
-(* FIXME ARMHYP TODO armKSGICVCPUNumListRegs - clamped to GIC_VCPU_MAX_NUM_LR *)
-(* FIXME ARMHYP TODO curVCPU *)
+(* FIXME ARMHYP TODO armKSGICVCPUNumListRegs \<le> GIC_VCPU_MAX_NUM_LR (64): missing invariant upstream?  *)
 definition
   carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
@@ -130,7 +135,9 @@ where
   array_relation (op = \<circ> option_to_ptr) (2^asid_high_bits - 1) (armKSASIDTable astate) (armKSASIDTable_' cstate) \<and>
   (asid_map_pd_to_hwasids (armKSASIDMap astate))
        = set_option \<circ> (pde_stored_asid  \<circ>\<^sub>m clift (t_hrs_' cstate) \<circ>\<^sub>m pd_pointer_to_asid_slot) \<and>
-  carch_globals astate"
+  carch_globals astate \<and>
+  gic_vcpu_num_list_regs_' cstate = of_nat (armKSGICVCPUNumListRegs astate) \<and>
+  cur_vcpu_relation (armHSCurVCPU astate) (armHSCurVCPU_' cstate) (armHSVCPUActive_' cstate)"
 
 end
 
@@ -188,9 +195,9 @@ abbreviation
   "map_to_user_data hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
 
 abbreviation
-  map_to_vcpu :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> vcpu"
+  map_to_vcpus :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> vcpu"
   where
-  "map_to_vcpu hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
+  "map_to_vcpus hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
 
 abbreviation
   map_to_user_data_device :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> user_data_device"
@@ -336,7 +343,8 @@ definition
   carch_tcb_relation :: "Structures_H.arch_tcb \<Rightarrow> arch_tcb_C \<Rightarrow> bool"
 where
   "carch_tcb_relation aarch_tcb carch_tcb \<equiv>
-    ccontext_relation (atcbContextGet aarch_tcb) (tcbContext_C carch_tcb)"
+      ccontext_relation (atcbContextGet aarch_tcb) (tcbContext_C carch_tcb)
+    \<and> option_to_ptr (atcbVCPUPtr aarch_tcb) = tcbVCPU_C carch_tcb"
 
 definition
   ctcb_relation :: "Structures_H.tcb \<Rightarrow> tcb_C \<Rightarrow> bool"
@@ -474,6 +482,78 @@ where
   case casid_pool of asid_pool_C cpool \<Rightarrow>
   array_relation (op = \<circ> option_to_ptr) (2^asid_low_bits - 1) pool cpool"
 
+fun
+  vcpureg_from_H :: "vcpureg \<Rightarrow> word32"
+where
+  "vcpureg_from_H VCPURegSCTLR = scast seL4_VCPUReg_SCTLR"
+| "vcpureg_from_H VCPURegLRsvc = scast seL4_VCPUReg_LRsvc"
+| "vcpureg_from_H VCPURegSPsvc = scast seL4_VCPUReg_SPsvc"
+| "vcpureg_from_H VCPURegLRabt = scast seL4_VCPUReg_LRabt"
+| "vcpureg_from_H VCPURegSPabt = scast seL4_VCPUReg_SPabt"
+| "vcpureg_from_H VCPURegLRund = scast seL4_VCPUReg_LRund"
+| "vcpureg_from_H VCPURegSPund = scast seL4_VCPUReg_SPund"
+| "vcpureg_from_H VCPURegLRirq = scast seL4_VCPUReg_LRirq"
+| "vcpureg_from_H VCPURegSPirq = scast seL4_VCPUReg_SPirq"
+| "vcpureg_from_H VCPURegLRfiq = scast seL4_VCPUReg_LRfiq"
+| "vcpureg_from_H VCPURegSPfiq = scast seL4_VCPUReg_SPfiq"
+| "vcpureg_from_H VCPURegR8fiq = scast seL4_VCPUReg_R8fiq"
+| "vcpureg_from_H VCPURegR9fiq = scast seL4_VCPUReg_R9fiq"
+| "vcpureg_from_H VCPURegR10fiq = scast seL4_VCPUReg_R10fiq"
+| "vcpureg_from_H VCPURegR11fiq = scast seL4_VCPUReg_R11fiq"
+| "vcpureg_from_H VCPURegR12fiq = scast seL4_VCPUReg_R12fiq"
+
+term option_to_ptr
+find_consts name:r12_fiq_C
+term vcpuRegs
+term ASIDPool
+
+(* seL4 does not currently use an array to store these and spells them out individually.
+   If this changes, this should become an array_relation *)
+definition
+  cvcpu_regs_relation :: "vcpu \<Rightarrow> vcpu_C \<Rightarrow> bool"
+where
+  "cvcpu_regs_relation vcpu cvcpu \<equiv>
+    let rs = vcpuRegs vcpu in
+      sctlr_C (cpx_C cvcpu) = vcpuSCTLR vcpu
+    \<and> lr_svc_C cvcpu = rs VCPURegLRsvc
+    \<and> sp_svc_C cvcpu = rs VCPURegSPsvc
+    \<and> lr_abt_C cvcpu = rs VCPURegLRabt
+    \<and> sp_abt_C cvcpu = rs VCPURegSPabt
+    \<and> lr_und_C cvcpu = rs VCPURegLRund
+    \<and> sp_und_C cvcpu = rs VCPURegSPund
+    \<and> lr_irq_C cvcpu = rs VCPURegLRirq
+    \<and> sp_irq_C cvcpu = rs VCPURegSPirq
+    \<and> lr_fiq_C cvcpu = rs VCPURegLRfiq
+    \<and> sp_fiq_C cvcpu = rs VCPURegSPfiq
+    \<and> r8_fiq_C cvcpu = rs VCPURegR8fiq
+    \<and> r9_fiq_C cvcpu = rs VCPURegR9fiq
+    \<and> r10_fiq_C cvcpu = rs VCPURegR10fiq
+    \<and> r11_fiq_C cvcpu = rs VCPURegR11fiq
+    \<and> r12_fiq_C cvcpu = rs VCPURegR12fiq"
+
+definition
+  virq_to_H :: "virq_C \<Rightarrow> virq"
+where
+  "virq_to_H virq = (virq_C.words_C virq).[0]"
+
+definition
+  cvgic_relation :: "gicvcpuinterface \<Rightarrow> gicVCpuIface_C \<Rightarrow> bool"
+where
+  "cvgic_relation vgic cvgic \<equiv>
+       gicVCpuIface_C.hcr_C cvgic = vgicHCR vgic
+     \<and> gicVCpuIface_C.vmcr_C cvgic = vgicVMCR vgic
+     \<and> gicVCpuIface_C.apr_C cvgic = vgicAPR vgic
+     \<and> (\<forall>i\<le>(63::nat). (vgicLR vgic i) = virq_to_H ((gicVCpuIface_C.lr_C cvgic).[i]))"
+
+definition
+  cvcpu_relation :: "vcpu \<Rightarrow> vcpu_C \<Rightarrow> bool"
+where
+  "cvcpu_relation vcpu cvcpu \<equiv>
+     vcpuTCB_C cvcpu = option_to_ptr (vcpuTCBPtr vcpu)
+     \<and> actlr_C (cpx_C cvcpu) = vcpuACTLR vcpu
+     \<and> cvcpu_regs_relation vcpu cvcpu
+     \<and> cvgic_relation (vcpuVGIC vcpu) (vgic_C cvcpu)"
+
 definition
   cuser_user_data_relation :: "(10 word \<Rightarrow> word32) \<Rightarrow> user_data_C \<Rightarrow> bool"
 where
@@ -506,6 +586,10 @@ abbreviation
   "cpspace_asidpool_relation ah ch \<equiv> cmap_relation (map_to_asidpools ah) (clift ch) Ptr casid_pool_relation"
 
 abbreviation
+  "cpspace_vcpu_relation ah ch \<equiv> cmap_relation (map_to_vcpus ah) (clift ch) Ptr cvcpu_relation"
+
+
+abbreviation
   "cpspace_user_data_relation ah bh ch \<equiv> cmap_relation (heap_to_user_data ah bh) (clift ch) Ptr cuser_user_data_relation"
 
 abbreviation
@@ -532,7 +616,8 @@ where
   cpspace_cte_relation ah ch \<and> cpspace_tcb_relation ah ch \<and> cpspace_ep_relation ah ch \<and> cpspace_ntfn_relation ah ch \<and>
   cpspace_pde_relation ah ch \<and> cpspace_pte_relation ah ch \<and> cpspace_asidpool_relation ah ch \<and>
   cpspace_user_data_relation ah bh ch \<and> cpspace_device_data_relation ah bh ch \<and>
-  cpspace_pde_array_relation ah ch \<and> cpspace_pte_array_relation ah ch"
+  cpspace_pde_array_relation ah ch \<and> cpspace_pte_array_relation ah ch \<and>
+  cpspace_vcpu_relation ah ch"
 
 abbreviation
   "sched_queue_relation' \<equiv> tcb_queue_relation' tcbSchedNext_C tcbSchedPrev_C"
@@ -631,8 +716,6 @@ where
            ((\<not> (d \<le> maxDomain \<and> i \<le> numPriorities div wordBits))
             \<longrightarrow>  abitmap2 (d, i) = 0)"
 
-(* FIXME ARMHYP TODO: cvcpu_relation et al. *)
-
 end (* interpretation Arch . (*FIXME: arch_split*) *)
 
 definition
@@ -707,8 +790,8 @@ where
          (ptr_coerce (intStateIRQNode_' cstate) :: (cte_C[256]) ptr) \<and>
        {ptr_val (intStateIRQNode_' cstate) ..+ 2 ^ (8 + cte_level_bits)} \<subseteq> kernel_data_refs \<and>
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
-         (pd_Ptr (symbol_table ''armKSGlobalPD'')) \<and>
-       ptr_span (pd_Ptr (symbol_table ''armKSGlobalPD'')) \<subseteq> kernel_data_refs \<and>
+         (pd_Ptr (symbol_table ''armUSGlobalPD'')) \<and>
+       ptr_span (pd_Ptr (symbol_table ''armUSGlobalPD'')) \<subseteq> kernel_data_refs \<and>
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>
        kernel_data_refs = (- domain) \<and>
        globals_list_distinct (- kernel_data_refs) symbol_table globals_list \<and>
