@@ -2702,15 +2702,104 @@ lemma arch_finaliseCap_invs[wp]:
   "\<lbrace>invs' and valid_cap' (ArchObjectCap cap)\<rbrace> Arch.finaliseCap cap fin \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding ARM_HYP_H.finaliseCap_def Let_def by wpsimp
 
+lemma setObject_tcb_unlive[wp]:
+   "\<lbrace>\<lambda>s. vr \<noteq> t \<and> ko_wp_at' (Not \<circ> live') vr s\<rbrace>
+        setObject t (tcbArch_update (\<lambda>_. atcbVCPUPtr_update Map.empty (tcbArch tcb)) tcb)
+           \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') vr\<rbrace>"
+  apply (rule wp_pre)
+  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_def objBitsKO_def, simp+)
+  apply (clarsimp simp: tcb_at_typ_at' typ_at'_def ko_wp_at'_def )
+  done
+
+lemma setVCPU_unlive[wp]:
+  "\<lbrace>\<top>\<rbrace> setObject vr (vcpuTCBPtr_update Map.empty vcpu) \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') vr\<rbrace>"
+  apply (rule wp_pre)
+  apply (wpsimp wp: setObject_ko_wp_at
+           simp: objBits_def objBitsKO_def archObjSize_def vcpu_bits_def pageBits_def)
+    apply simp+
+  apply (clarsimp simp: live'_def hyp_live'_def arch_live'_def ko_wp_at'_def obj_at'_def)
+  done
+
+lemma archThreadSet_unlive_other:
+  "\<lbrace>\<lambda>s. vr \<noteq> t \<and> ko_wp_at' (Not \<circ> live') vr s\<rbrace>
+        archThreadSet (atcbVCPUPtr_update Map.empty) t \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') vr\<rbrace>"
+  by (wpsimp simp: archThreadSet_def)
+
+lemma asUser_unlive[wp]:
+  "\<lbrace>ko_wp_at' (Not \<circ> live') vr\<rbrace> asUser t f \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') vr\<rbrace>"
+  unfolding asUser_def
+  apply (wpsimp simp: threadSet_def atcbContextSet_def objBits_def objBitsKO_def split_def
+                wp: setObject_ko_wp_at)
+  apply (rule refl, simp)
+  apply (wpsimp simp: atcbContextGet_def wp: getObject_tcb_wp threadGet_wp)+
+  apply (clarsimp simp: tcb_at_typ_at' typ_at'_def ko_wp_at'_def[where p=t])
+  apply (case_tac ko; simp)
+  apply (rename_tac tcb)
+  apply (rule_tac x=tcb in exI)
+  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (rule_tac x=tcb in exI, rule conjI; clarsimp simp: o_def)
+  apply (clarsimp simp: ko_wp_at'_def live'_def hyp_live'_def)
+  done
+
+lemma dissoc_unlive:
+  "\<lbrace> (\<lambda>s. \<forall>p. (\<exists>a. armHSCurVCPU (ksArchState s) = Some (p, a)) \<longrightarrow> p \<noteq> v) and
+    ko_at' vcpu v and K (vcpuTCBPtr vcpu = Some t) and
+    obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) = Some v) t\<rbrace>
+   do
+    setObject v $ vcpuTCBPtr_update (\<lambda>_. Nothing) vcpu;
+    archThreadSet (atcbVCPUPtr_update (\<lambda>_. Nothing)) t
+   od \<lbrace>\<lambda>_. (ko_wp_at' (Not o live') v) and tcb_at' t\<rbrace>"
+  unfolding invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
+            valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: archThreadSet_unlive_other setVCPU_unlive[simplified o_def]
+        | wp_once hoare_vcg_imp_lift)+
+  apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs tcb_vcpu_refs'_def
+                  split: option.splits if_split_asm)
+  done
+
+lemma dissociateVCPUTCB_unlive:
+  "\<lbrace> \<top> \<rbrace> dissociateVCPUTCB vcpu tcb \<lbrace> \<lambda>_. ko_wp_at' (Not o live') vcpu \<rbrace>"
+  unfolding dissociateVCPUTCB_def setVCPU_archThreadSet_None_eq when_assert_eq
+  apply (wpsimp wp: dissoc_unlive  getVCPU_wp[where p=vcpu] |
+         wpsimp wp: getObject_tcb_wp hoare_vcg_conj_lift hoare_vcg_ex_lift dissoc_unlive
+         getVCPU_wp[where p=vcpu] setVCPU_unlive[simplified o_def]
+            setObject_tcb_unlive hoare_drop_imp setObject_tcb_strongest
+          simp: archThreadGet_def archThreadSet_def)+
+  apply (simp add: tcb_at_typ_at' typ_at'_def ko_wp_at'_def, clarsimp)
+  apply (case_tac ko; simp)
+  apply (rename_tac t)
+  apply (rule_tac x=t in exI)
+   apply (rule conjI)
+   apply (clarsimp simp: obj_at'_def projectKOs)
+  by (clarsimp, rule; clarsimp; rule; clarsimp simp: obj_at'_def projectKOs)
+
+lemma vcpuFinalise_unlive[wp]:
+  "\<lbrace> \<top> \<rbrace> vcpuFinalise v \<lbrace> \<lambda>_. ko_wp_at' (Not o live') v \<rbrace>"
+  apply (wpsimp simp: vcpuFinalise_def wp: dissociateVCPUTCB_unlive getVCPU_wp)
+  apply (frule state_hyp_refs_of'_vcpu_absorb)
+  apply (auto simp: ko_wp_at'_def)
+  apply (rule_tac x="KOArch (KOVCPU ko)" in exI)
+  apply (clarsimp simp: live'_def hyp_live'_def arch_live'_def obj_at'_def projectKOs)
+  done
+
+lemmas capMasterCap_simps_vcpu = capMasterCap_simps(14)
+
 lemma arch_finaliseCap_removeable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile>' ArchObjectCap cap \<and> invs' s
-       \<and> (final \<and> final_matters' (ArchObjectCap cap)
-            \<longrightarrow> isFinal (ArchObjectCap cap) slot (cteCaps_of s))\<rbrace>
+       \<and> (final_matters' (ArchObjectCap cap)
+               \<longrightarrow> (final = isFinal (ArchObjectCap cap) slot (cteCaps_of s))) \<rbrace>
      Arch.finaliseCap cap final
    \<lbrace>\<lambda>rv s. isNullCap rv \<and> removeable' slot s (ArchObjectCap cap)\<rbrace>"
-  unfolding ARM_HYP_H.finaliseCap_def removeable'_def
-  apply (wpsimp simp: isCap_simps|rule conjI)+
-  sorry
+  unfolding ARM_HYP_H.finaliseCap_def
+  including no_pre
+  apply (case_tac cap; clarsimp)
+       apply ((wpsimp simp: removeable'_def isCap_simps
+                | rule conjI)+)[5]
+  apply (clarsimp simp: isCap_simps, rule conjI)
+   apply (wpsimp simp: isCap_simps removeable'_def wp: hoare_disjI2)
+  apply  (wpsimp simp: not_Final_removeable final_matters'_def)
+  done
 
 lemma isZombie_Null:
   "\<not> isZombie NullCap"
@@ -3171,20 +3260,26 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
            | (rule hoare_strengthen_post [OF arch_finaliseCap_removeable[where slot=slot]],
                   clarsimp simp: isCap_simps)
            | wpc)+
-
   apply clarsimp
   apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
-  apply (case_tac "cteCap cte",
+  apply (rule conjI)
+   apply (case_tac "cteCap cte",
          simp_all add: isCap_simps capRange_def
                        final_matters'_def objBits_simps
                        not_Final_removeable finaliseCap_def,
-         simp_all add: removeable'_def)
+         simp_all add: removeable'_def)[1]
      (* thread *)
      apply (frule capAligned_capUntypedPtr [OF valid_capAligned], simp)
      apply (clarsimp simp: valid_cap'_def)
      apply (drule valid_globals_cte_wpD'[rotated], clarsimp)
      apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-    apply (clarsimp simp: obj_at'_def | rule conjI)+
+    apply ((clarsimp simp: obj_at'_def | rule conjI)+)[2]
+  apply (rule impI)
+  apply (case_tac "cteCap cte",
+         simp_all add: isCap_simps capRange_def
+                       final_matters'_def objBits_simps
+                       not_Final_removeable finaliseCap_def,
+         simp_all add: removeable'_def)
   done
 
 crunch cte_wp_at'[wp]: setQueue "\<lambda>s. P (cte_wp_at' P' p s)"
