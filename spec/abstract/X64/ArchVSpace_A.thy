@@ -260,12 +260,12 @@ definition
 delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "delete_asid asid pml4 \<equiv> do
   asid_table \<leftarrow> gets (x64_asid_table \<circ> arch_state);
-  invalidate_asid_entry asid pml4;
   case asid_table (asid_high_bits_of asid) of
     None \<Rightarrow> return ()
   | Some pool_ptr \<Rightarrow>  do
      pool \<leftarrow> get_asid_pool pool_ptr;
      when (pool (ucast asid) = Some pml4) $ do
+                invalidate_asid_entry asid pml4;
                 pool' \<leftarrow> return (pool (ucast asid := None));
                 set_asid_pool pool_ptr pool';
                 tcb \<leftarrow> gets cur_thread;

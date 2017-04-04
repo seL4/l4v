@@ -108,14 +108,27 @@ lemma delete_asid_pool_invs[wp]:
   apply clarsimp
   done
 
+lemma invalidate_asid_entry_invalidates:
+  "\<lbrace>valid_asid_map and valid_arch_state and K (asid \<le> mask asid_bits) and
+    (\<lambda>s. x64_asid_table (arch_state s) (asid_high_bits_of asid) = Some ap)\<rbrace>
+   invalidate_asid_entry asid pm
+   \<lbrace>\<lambda>rv s. \<forall>asida. asida \<le> mask asid_bits \<longrightarrow>
+              ucast asida = (ucast asid :: 9 word) \<longrightarrow>
+              x64_asid_table (arch_state s) (asid_high_bits_of asida) =
+                Some ap \<longrightarrow>
+              x64_asid_map (arch_state s) asida = None\<rbrace>"
+  apply (simp add: invalidate_asid_entry_def)
+  apply (wp invalidate_asid_invalidates)
+  apply clarsimp
+  done
+
 lemma delete_asid_invs[wp]:
   "\<lbrace>invs and K (asid \<le> mask asid_bits)\<rbrace>
      delete_asid asid pd
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: delete_asid_def cong: option.case_cong del: set_arch_obj_simps(5))
-  apply_trace (wp set_asid_pool_invs_unmap hoare_vcg_all_lift | wpc)+
-     apply (simp add: invalidate_asid_entry_def)
-     apply (wp invalidate_asid_invalidates gets_wp hoare_vcg_const_imp_lift hoare_vcg_all_lift
+  apply (wp set_asid_pool_invs_unmap | wpc)+
+     apply (wp invalidate_asid_entry_invalidates gets_wp hoare_vcg_const_imp_lift hoare_vcg_all_lift
                hoare_vcg_imp_lift invalidate_asid_asid_map_None_inv)+
   apply (clarsimp simp del: fun_upd_apply simp: invs_valid_asid_map)
   done
