@@ -512,6 +512,7 @@ lemma fst_setCTE:
            (map_to_asidpools (ksPSpace s) = map_to_asidpools (ksPSpace s'));
            (map_to_user_data (ksPSpace s) = map_to_user_data (ksPSpace s'));
            (map_to_user_data_device (ksPSpace s) = map_to_user_data_device (ksPSpace s'));
+           (map_to_vcpus (ksPSpace s) = map_to_vcpus (ksPSpace s'));
            (map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s)
               = map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s'));
            \<forall>T p. typ_at' T p s = typ_at' T p s'\<rbrakk> \<Longrightarrow> P"
@@ -587,6 +588,18 @@ proof -
       ultimately have "(projectKO_opt ko' :: asidpool option) = projectKO_opt ko" using xin thms(4) ceq
 	      by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_asidpool)
       thus "(projectKO_opt (the (ksPSpace s' x)) :: asidpool option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
+	      by simp
+    qed fact
+
+    show "map_to_vcpus (ksPSpace s) = map_to_vcpus (ksPSpace s')"
+    proof (rule map_comp_eqI)
+      fix x
+      assume xin: "x \<in> dom (ksPSpace s')"
+      then obtain ko where ko: "ksPSpace s x = Some ko" by (clarsimp simp: thms(3)[symmetric])
+      moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
+      ultimately have "(projectKO_opt ko' :: vcpu option) = projectKO_opt ko" using xin thms(4) ceq
+	      by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_vcpu)
+      thus "(projectKO_opt (the (ksPSpace s' x)) :: vcpu option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
 	      by simp
     qed fact
 
@@ -1032,6 +1045,11 @@ lemma rf_sr_cpde_relation:
   by (clarsimp simp: rf_sr_def cstate_relation_def
                      Let_def cpspace_relation_def)
 
+lemma cmap_relation_vcpu [intro]:
+  "(s, s') \<in> rf_sr \<Longrightarrow> cpspace_vcpu_relation (ksPSpace s) (t_hrs_' (globals s'))"
+  unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
+  by (simp add: Let_def)
+
 lemma rf_sr_cte_relation:
   "\<lbrakk> (s, s') \<in> rf_sr; ctes_of s src = Some cte; cslift s' (Ptr src) = Some cte' \<rbrakk> \<Longrightarrow> ccte_relation cte cte'"
   apply (drule cmap_relation_cte)
@@ -1107,11 +1125,15 @@ lemma cstate_relation_only_t_hrs:
   ghost'state_' s = ghost'state_' t;
   ksDomScheduleIdx_' s = ksDomScheduleIdx_' t;
   ksCurDomain_' s = ksCurDomain_' t;
-  ksDomainTime_' s = ksDomainTime_' t
+  ksDomainTime_' s = ksDomainTime_' t;
+  gic_vcpu_num_list_regs_' s = gic_vcpu_num_list_regs_' t;
+  armHSCurVCPU_' s = armHSCurVCPU_' t;
+  armHSVCPUActive_' s = armHSVCPUActive_' t
   \<rbrakk>
   \<Longrightarrow> cstate_relation a s = cstate_relation a t"
   unfolding cstate_relation_def
-  by (clarsimp simp add: Let_def carch_state_relation_def cmachine_state_relation_def)
+  by (clarsimp simp add: Let_def carch_state_relation_def cmachine_state_relation_def
+                         cur_vcpu_relation_def)
 
 lemma rf_sr_upd:
   assumes
@@ -1133,6 +1155,9 @@ lemma rf_sr_upd:
     "ksDomScheduleIdx_' (globals x) = ksDomScheduleIdx_' (globals y)"
     "ksCurDomain_' (globals x) = ksCurDomain_' (globals y)"
     "ksDomainTime_' (globals x) = ksDomainTime_' (globals y)"
+    "gic_vcpu_num_list_regs_' (globals x) = gic_vcpu_num_list_regs_' (globals y)"
+    "armHSCurVCPU_' (globals x) = armHSCurVCPU_' (globals y)"
+    "armHSVCPUActive_' (globals x) = armHSVCPUActive_' (globals y)"
   shows "((a, x) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
   unfolding rf_sr_def using assms
   by simp (rule cstate_relation_only_t_hrs, auto)
@@ -1154,6 +1179,9 @@ lemma rf_sr_upd_safe[simp]:
     "armKSHWASIDTable_' (globals (g y)) = armKSHWASIDTable_' (globals y)"
     "armKSASIDTable_' (globals (g y)) = armKSASIDTable_' (globals y)"
     "armKSNextASID_' (globals (g y)) = armKSNextASID_' (globals y)"
+    "gic_vcpu_num_list_regs_' (globals (g y)) = gic_vcpu_num_list_regs_' (globals y)"
+    "armHSCurVCPU_' (globals (g y)) = armHSCurVCPU_' (globals y)"
+    "armHSVCPUActive_' (globals (g y)) = armHSVCPUActive_' (globals y)"
     "phantom_machine_state_' (globals (g y)) = phantom_machine_state_' (globals y)"
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
@@ -1555,6 +1583,7 @@ lemma update_ntfn_map_tos:
   and     "map_to_pdes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_pdes (ksPSpace s)"
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_ptes (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_vcpus (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_vcpus (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_user_data (ksPSpace s)"
   and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_user_data_device (ksPSpace s)"
   using at
@@ -1570,6 +1599,7 @@ lemma update_ep_map_tos:
   and     "map_to_pdes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_pdes (ksPSpace s)"
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ptes (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_vcpus (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_vcpus (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_user_data (ksPSpace s)"
   and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_user_data_device (ksPSpace s)"
   using at
@@ -1584,6 +1614,7 @@ lemma update_tcb_map_tos:
   and     "map_to_pdes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_pdes (ksPSpace s)"
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ptes (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_vcpus (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_vcpus (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_user_data (ksPSpace s)"
   and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_user_data_device (ksPSpace s)"
   using at
@@ -1599,6 +1630,7 @@ lemma update_asidpool_map_tos:
   and     "map_to_pdes (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_pdes (ksPSpace s)"
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ptes (ksPSpace s)"
   and     "map_to_eps  (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_eps (ksPSpace s)"
+  and     "map_to_vcpus (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_vcpus (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_user_data (ksPSpace s)"
   and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_user_data_device (ksPSpace s)"
 
@@ -1627,6 +1659,7 @@ lemma update_pte_map_tos:
   and     "map_to_pdes (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_pdes (ksPSpace s)"
   and     "map_to_eps  (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_eps (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_vcpus (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_vcpus (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data (ksPSpace s)"
   and     "map_to_user_data_device (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data_device (ksPSpace s)"
   using at
@@ -1649,6 +1682,7 @@ lemma update_pde_map_tos:
   and     "map_to_ptes (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_ptes (ksPSpace s)"
   and     "map_to_eps  (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_eps (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_vcpus  (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_vcpus (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_user_data (ksPSpace s)"
   and     "map_to_user_data_device (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_user_data_device (ksPSpace s)"
   using at
@@ -1657,6 +1691,22 @@ lemma update_pde_map_tos:
             simp: projectKOs,
        auto simp: projectKO_opts_defs)
 
+lemma update_vcpu_map_tos:
+  fixes P :: "vcpu \<Rightarrow> bool"
+  assumes at: "obj_at' P p s"
+  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_tcbs (ksPSpace s(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes (ksPSpace s(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_ctes (ksPSpace s)"
+  and     "map_to_ptes (ksPSpace s(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_ptes (ksPSpace s)"
+  and     "map_to_pdes (ksPSpace s(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_pdes (ksPSpace s)"
+  and     "map_to_eps  (ksPSpace s(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_eps (ksPSpace s)"
+  and     "map_to_asidpools (ksPSpace s(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_user_data (ksPSpace s(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_user_data_device (ksPSpace s)"
+  using at
+  by (auto elim!: obj_atE' intro!: map_comp_eqI map_to_ctes_upd_other
+           split: if_split_asm if_split
+            simp: projectKOs)
 
 lemma heap_to_page_data_cong [cong]:
   "\<lbrakk> map_to_user_data ks = map_to_user_data ks'; bhp = bhp' \<rbrakk>
@@ -2040,7 +2090,8 @@ lemma cap_get_tag_isCap_ArchObject0:
   \<and> (cap_get_tag cap' = scast cap_page_table_cap) = isPageTableCap cap
   \<and> (cap_get_tag cap' = scast cap_page_directory_cap) = isPageDirectoryCap cap
   \<and> (cap_get_tag cap' = scast cap_small_frame_cap) = (isPageCap cap \<and> capVPSize cap = ARMSmallPage)
-  \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isPageCap cap \<and> capVPSize cap \<noteq> ARMSmallPage)"
+  \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isPageCap cap \<and> capVPSize cap \<noteq> ARMSmallPage)
+  \<and> (cap_get_tag cap' = scast cap_vcpu_cap) = isVCPUCap cap"
   using cr
   apply -
   apply (erule ccap_relationE)
@@ -2056,6 +2107,7 @@ lemma cap_get_tag_isCap_ArchObject:
   and "(cap_get_tag cap' = scast cap_page_directory_cap) = isPageDirectoryCap cap"
   and "(cap_get_tag cap' = scast cap_small_frame_cap) = (isPageCap cap \<and> capVPSize cap = ARMSmallPage)"
   and "(cap_get_tag cap' = scast cap_frame_cap) = (isPageCap cap \<and> capVPSize cap \<noteq> ARMSmallPage)"
+  and "(cap_get_tag cap' = scast cap_vcpu_cap) = isVCPUCap cap"
   using cap_get_tag_isCap_ArchObject0 [OF cr] by auto
 
 
@@ -2081,6 +2133,7 @@ lemma cap_get_tag_isCap_unfolded_H_cap:
   and "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capability.PageCap v102 v38 v39 v40 v41)) cap'; v40\<noteq>ARMSmallPage\<rbrakk>  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.PageDirectoryCap v42 v43)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_directory_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.PageDirectoryCap v44 v45)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_directory_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.VCPUCap v47)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_vcpu_cap)"
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)
   apply (frule cap_get_tag_isCap(2), simp)
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps pageSize_def)+
@@ -2106,6 +2159,8 @@ lemma cap_get_tag_isCap_ArchObject2:
            = (isArchObjectCap cap \<and> isPageTableCap (capCap cap))"
   and   "(cap_get_tag cap' = scast cap_page_directory_cap)
            = (isArchObjectCap cap \<and> isPageDirectoryCap (capCap cap))"
+  and   "(cap_get_tag cap' = scast cap_vcpu_cap)
+           = (isArchObjectCap cap \<and> isVCPUCap (capCap cap))"
   and   "(cap_get_tag cap' = scast cap_small_frame_cap)
            = (isArchObjectCap cap \<and> isPageCap (capCap cap) \<and> capVPSize (capCap cap) = ARMSmallPage)"
   and   "(cap_get_tag cap' = scast cap_frame_cap)
@@ -2114,10 +2169,10 @@ lemma cap_get_tag_isCap_ArchObject2:
       simp add: cap_get_tag_isCap_ArchObject,
       simp add: isArchCap_tag_def2 cap_tag_defs)+
 
-lemma rf_sr_armKSGlobalPD:
+lemma rf_sr_armUSGlobalPD:
   "(s, s') \<in> rf_sr
-   \<Longrightarrow> armKSGlobalPD (ksArchState s)
-         = symbol_table ''armKSGlobalPD''"
+   \<Longrightarrow> armUSGlobalPD (ksArchState s)
+         = symbol_table ''armUSGlobalPD''"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
 
 lemma ghost_assertion_size_logic':
@@ -2195,12 +2250,14 @@ lemma page_directory_at_carray_map_relation:
   apply (clarsimp simp: carray_map_relation_def h_t_valid_clift_Some_iff)
   apply (drule spec, erule iffD1)
   apply (clarsimp simp: page_directory_at'_def)
-  apply (drule_tac x="p' && mask pdBits >> 2" in spec)
+  apply (drule_tac x="p' && mask pdBits >> 3" in spec)
   apply (clarsimp simp: shiftr_shiftl1)
   apply (drule mp)
    apply (simp add: shiftr_over_and_dist pdBits_def pageBits_def mask_def
+                    pd_bits_def pde_bits_def
                     order_le_less_trans[OF word_and_le1])
   apply (clarsimp simp: typ_at_to_obj_at_arches objBits_simps archObjSize_def
+                        pd_bits_def pde_bits_def
                         is_aligned_andI1 add.commute word_plus_and_or_coroll2
                  dest!: obj_at_ko_at' ko_at_projectKO_opt)
   done
@@ -2217,12 +2274,14 @@ lemma page_table_at_carray_map_relation:
   apply (clarsimp simp: carray_map_relation_def h_t_valid_clift_Some_iff)
   apply (drule spec, erule iffD1)
   apply (clarsimp simp: page_table_at'_def)
-  apply (drule_tac x="p' && mask ptBits >> 2" in spec)
+  apply (drule_tac x="p' && mask ptBits >> 3" in spec)
   apply (clarsimp simp: shiftr_shiftl1)
   apply (drule mp)
    apply (simp add: shiftr_over_and_dist ptBits_def pageBits_def mask_def
+                    pt_bits_def pte_bits_def
                     order_le_less_trans[OF word_and_le1])
   apply (clarsimp simp: typ_at_to_obj_at_arches objBits_simps archObjSize_def
+                        pt_bits_def pte_bits_def
                         is_aligned_andI1 add.commute word_plus_and_or_coroll2
                  dest!: obj_at_ko_at' ko_at_projectKO_opt)
   done
