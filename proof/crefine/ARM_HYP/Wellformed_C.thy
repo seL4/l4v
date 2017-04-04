@@ -29,6 +29,8 @@ abbreviation
 abbreviation
   tcb_Ptr :: "word32 \<Rightarrow> tcb_C ptr" where "tcb_Ptr == Ptr"
 abbreviation
+  vcpu_Ptr :: "word32 \<Rightarrow> vcpu_C ptr" where "vcpu_Ptr == Ptr"
+abbreviation
   ep_Ptr :: "word32 \<Rightarrow> endpoint_C ptr" where "ep_Ptr == Ptr"
 abbreviation
   ntfn_Ptr :: "word32 \<Rightarrow> notification_C ptr" where "ntfn_Ptr == Ptr"
@@ -79,6 +81,12 @@ definition
    | _ \<Rightarrow> False"
 
 definition
+  isVCPUCap_C :: "cap_CL \<Rightarrow> bool" where
+  "isVCPUCap_C c \<equiv> case c of
+   Cap_vcpu_cap a \<Rightarrow> True
+   | _ \<Rightarrow> False"
+
+definition
   isIRQControlCap_C :: "cap_CL \<Rightarrow> bool" where
   "isIRQControlCap_C c \<equiv> case c of
    Cap_irq_control_cap \<Rightarrow> True
@@ -110,6 +118,11 @@ definition
   tcb_at_C' :: "word32 \<Rightarrow> heap_raw_state \<Rightarrow> bool"
   where
   "tcb_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: tcb_C typ_heap)"
+
+definition
+  vcpu_at_C' :: "word32 \<Rightarrow> heap_raw_state \<Rightarrow> bool"
+  where
+  "vcpu_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: vcpu_C typ_heap)"
 
 definition
   cte_at_C' :: "word32 \<Rightarrow> heap_raw_state \<Rightarrow> bool"
@@ -168,6 +181,7 @@ where
 | "capBits_C (Cap_cnode_cap cnc) =  wordSizeCase 4 5"
 | "capBits_C (Cap_thread_cap tc) = 10"
 | "capBits_C (Cap_zombie_cap zc) =  (wordSizeCase 4 5)"
+| "capBits_C (Cap_vcpu_cap tc) = 12"
 
 
 definition
@@ -183,6 +197,7 @@ capUntypedPtr_C :: "cap_CL \<Rightarrow> word32" where
  |  Cap_frame_cap fc \<Rightarrow>  (cap_frame_cap_CL.capFBasePtr_CL fc)
  |  Cap_page_table_cap ptc \<Rightarrow>  (capPTBasePtr_CL ptc)
  |  Cap_page_directory_cap pdc \<Rightarrow>  (capPDBasePtr_CL pdc)
+ |  Cap_vcpu_cap tc \<Rightarrow>  (cap_vcpu_cap_CL.capVCPUPtr_CL tc)
  | _ \<Rightarrow> error []"
 
 definition ZombieTCB_C_def:
@@ -370,7 +385,8 @@ where
                                           (if to_bool (capPDIsMapped_CL pdf)
                                            then Some (capPDMappedASID_CL pdf)
                                            else None))
- | Cap_domain_cap \<Rightarrow> DomainCap"
+ | Cap_domain_cap \<Rightarrow> DomainCap
+ | Cap_vcpu_cap vcpu \<Rightarrow> ArchObjectCap (VCPUCap (capVCPUPtr_CL vcpu))"
 
 lemmas cap_to_H_simps = cap_to_H_def[split_simps cap_CL.split]
 
@@ -421,6 +437,7 @@ lemma  c_valid_cap_simps [simp]:
   "cap_get_tag c = scast cap_untyped_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_zombie_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_reply_cap \<Longrightarrow> c_valid_cap c"
+  "cap_get_tag c = scast cap_vcpu_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_null_cap \<Longrightarrow> c_valid_cap c"
   unfolding c_valid_cap_def  cap_lift_def cap_tag_defs
   by (simp add: cl_valid_cap_def)+
@@ -440,6 +457,9 @@ lemma maxDom_to_H:
 lemma maxPrio_to_H:
   "ucast seL4_MaxPrio = maxPriority"
   by (simp add: maxPriority_def seL4_MaxPrio_def numPriorities_def)
+
+(* Input abbreviations for API object types *)
+(* disambiguates names *)
 
 abbreviation(input)
   NotificationObject :: sword32
