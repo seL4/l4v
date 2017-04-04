@@ -276,7 +276,7 @@ caches must be done separately.
 > invalidateASID :: PAddr -> Word64 -> MachineMonad ()
 > invalidateASID vspace asid = Platform.invalidateASID vspace asid
 
-> invalidateTranslationSingleASID :: PAddr -> Word64 -> MachineMonad ()
+> invalidateTranslationSingleASID :: VPtr -> Word64 -> MachineMonad ()
 > invalidateTranslationSingleASID vspace asid = Platform.invalidateTranslationSingleASID vspace asid
 
 \subsubsection{Page Table Structure}

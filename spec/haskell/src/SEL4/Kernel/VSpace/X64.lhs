@@ -313,12 +313,12 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 > deleteASID :: ASID -> PPtr PML4E -> Kernel ()
 > deleteASID asid pm = do
 >     asidTable <- gets (x64KSASIDTable . ksArchState)
->     invalidateASIDEntry asid pm
 >     case asidTable!(asidHighBitsOf asid) of
 >         Nothing -> return ()
 >         Just poolPtr -> do
 >             ASIDPool pool <- getObject poolPtr
 >             when (pool!(asid .&. mask asidLowBits) == Just pm) $ do
+>                 invalidateASIDEntry asid pm
 >                 let pool' = pool//[(asid .&. mask asidLowBits, Nothing)]
 >                 setObject poolPtr $ ASIDPool pool'
 >                 tcb <- getCurThread
@@ -367,7 +367,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >             if pt' == addrFromPPtr pt then return () else throw InvalidRoot
 >         _ -> throw InvalidRoot -- FIXME x64: dummy throw
 >     withoutFailure $ do
->         flushTable vspace vaddr pt
+>         flushTable vspace vaddr pt asid
 >         storePDE pdSlot InvalidPDE
 >         invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
 
@@ -523,29 +523,19 @@ Note that implementations with separate high and low memory regions may also wis
 
 %FIXME x64: needs review
 
-> flushTable :: PPtr PML4E -> VPtr -> PPtr PTE -> Kernel ()
-> flushTable vspace vptr pt = do
+> flushTable :: PPtr PML4E -> VPtr -> PPtr PTE -> ASID -> Kernel ()
+> flushTable _ vptr pt asid = do
 >     assert (vptr .&. mask (ptTranslationBits + pageBits) == 0)
->         "vptr must be 1MB aligned"
->     tcb <- getCurThread
->     threadRootSlot <- getThreadVSpaceRoot tcb
->     threadRoot <- getSlotCap threadRootSlot
->     case threadRoot of
->         ArchObjectCap (PML4Cap {
->               capPML4MappedASID = Just _,
->               capPML4BasePtr = vspace'}) ->
->             when (vspace == vspace') $ do
->                 let pteBits = objBits (undefined :: PTE)
->                 let ptSize = 1 `shiftL` ptTranslationBits
->                 forM_ [0 .. ptSize - 1] $ \index -> do
->                     let offset = PPtr index `shiftL` pteBits
->                     pte <- getObject $ pt + offset
->                     case pte of
->                         InvalidPTE -> return ()
->                         _ -> let index' = index `shiftL` pageBits
->                              in doMachineOp $ invalidateTLBEntry $
->                                          VPtr $ (fromVPtr vptr) + index'
->         _ -> return ()
+>         "vptr must be 2MB aligned"
+>     let pteBits = objBits (undefined :: PTE)
+>     let ptSize = 1 `shiftL` ptTranslationBits
+>     forM_ [0 .. ptSize - 1] $ \index -> do
+>         let offset = PPtr index `shiftL` pteBits
+>         pte <- getObject $ pt + offset
+>         case pte of
+>             InvalidPTE -> return ()
+>             _ -> let index' = index `shiftL` pageBits
+>                  in doMachineOp $ invalidateTranslationSingleASID (VPtr $ (fromVPtr vptr) + index') $ fromASID asid
 
 \subsection{Managing ASID Map}
 
