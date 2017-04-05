@@ -76,7 +76,7 @@ definition
 
 definition
   maxIRQ :: "irq" where
-  "maxIRQ \<equiv> 0x9F"
+  "maxIRQ \<equiv> 191"
 
 definition irqVGICMaintenance :: "irq"
   where "irqVGICMaintenance \<equiv> 25"
