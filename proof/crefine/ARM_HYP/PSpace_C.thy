@@ -101,6 +101,21 @@ lemma carray_map_relation_upd_triv:
                 koTypeOf_injectKO
            del: objBitsT_koTypeOf)
 
+lemma headM_wordsFromPTE[simp]:
+  "headM (wordsFromPTE pte) = (return (hd (wordsFromPTE pte)))"
+  unfolding wordsFromPTE_def
+  by (cases pte; simp)
+
+lemma length_wordsFromPTE:
+  "length (wordsFromPTE pte) = 2"
+  unfolding wordsFromPTE_def
+  by (cases pte; simp)
+
+lemma length_wordsFromPDE:
+  "length (wordsFromPDE pde) = 2"
+  unfolding wordsFromPDE_def
+  by (cases pde; simp)
+
 lemma storePTE_Basic_ccorres':
   "\<lbrakk> cpte_relation pte pte' \<rbrakk> \<Longrightarrow>
    ccorres dc xfdc \<top> {s. ptr_val (f s) = p} hs
@@ -108,9 +123,12 @@ lemma storePTE_Basic_ccorres':
      (Guard C_Guard {s. s \<Turnstile>\<^sub>c f s}
         (Basic (\<lambda>s. globals_update( t_hrs_'_update
             (hrs_mem_update (heap_update (f s) pte'))) s)))"
-  apply (simp add: storePTE_def)
+  using length_wordsFromPTE[where pte=pte]
+  apply (simp add: storePTE_def tailM_def headM_def)
+  apply (case_tac "wordsFromPTE pte"; clarsimp)
+  apply (case_tac list; clarsimp)
   apply (rule setObject_ccorres_helper)
-    apply (simp_all add: objBits_simps archObjSize_def)
+    apply (simp_all add: objBits_simps archObjSize_def pte_bits_def)
   apply (rule conseqPre, vcg)
   apply (rule subsetI, clarsimp simp: Collect_const_mem)
   apply (rule cmap_relationE1, erule rf_sr_cpte_relation,
@@ -131,7 +149,7 @@ lemma storePTE_Basic_ccorres':
                    carch_state_relation_def
                    cmachine_state_relation_def
                    Let_def typ_heap_simps
-                   cteCaps_of_def update_pte_map_tos
+                   cteCaps_of_def update_pte_map_tos pte_bits_def
                    )
   done
 
@@ -154,7 +172,8 @@ lemma pde_stored_asid_update_valid_offset:
             = (pde_stored_asid  \<circ>\<^sub>m clift (t_hrs_' cstate) \<circ>\<^sub>m pd_pointer_to_asid_slot)"
   apply (rule ext, clarsimp simp add: pd_pointer_to_asid_slot_def map_comp_eq)
   apply (simp add: valid_pde_mapping_offset'_def mask_add_aligned)
-  apply (simp add: pd_asid_slot_def pdBits_def pageBits_def mask_def)
+  apply (simp add: pd_asid_slot_def pdBits_def pageBits_def mask_def
+                   pd_bits_def' pt_bits_def pte_bits_def pt_index_bits_def)
   done
 
 lemma storePDE_Basic_ccorres':
@@ -166,9 +185,12 @@ lemma storePDE_Basic_ccorres':
      (Guard C_Guard {s. s \<Turnstile>\<^sub>c f s}
         (Basic (\<lambda>s. globals_update( t_hrs_'_update
             (hrs_mem_update (heap_update (f s) pde'))) s)))"
-  apply (simp add: storePDE_def)
+  using length_wordsFromPDE[where pde=pde]
+  apply (simp add: storePDE_def tailM_def headM_def)
+  apply (case_tac "wordsFromPDE pde"; clarsimp)
+  apply (case_tac list; clarsimp)
   apply (rule setObject_ccorres_helper)
-    apply (simp_all add: objBits_simps archObjSize_def)
+    apply (simp_all add: objBits_simps archObjSize_def pde_bits_def)
   apply (rule conseqPre, vcg)
   apply (rule subsetI, clarsimp simp: Collect_const_mem)
   apply (rule cmap_relationE1, erule rf_sr_cpde_relation,
