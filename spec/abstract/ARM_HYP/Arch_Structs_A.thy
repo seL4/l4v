@@ -62,13 +62,13 @@ definition
 
 definition
   asid_high_bits :: nat where
-  "asid_high_bits \<equiv> 6"
+  "asid_high_bits \<equiv> 7"
 definition
   asid_low_bits :: nat where
   "asid_low_bits \<equiv> 10 :: nat"
 definition
   asid_bits :: nat where
-  "asid_bits \<equiv> 16 :: nat"
+  "asid_bits \<equiv> 17 :: nat"
 
 section {* Architecture-specific objects *}
 
@@ -320,7 +320,7 @@ qualify ARM_A (in Arch)
 text {* arch\_state *}
 
 record arch_state =
-  arm_asid_table    :: "6 word \<rightharpoonup> obj_ref"
+  arm_asid_table    :: "7 word \<rightharpoonup> obj_ref"
   arm_hwasid_table  :: "ARM_A.hw_asid \<rightharpoonup> ARM_A.asid"
   arm_next_asid     :: ARM_A.hw_asid
   arm_asid_map      :: "ARM_A.asid \<rightharpoonup> (ARM_A.hw_asid \<times> obj_ref)"

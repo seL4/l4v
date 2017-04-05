@@ -37,7 +37,7 @@ type_synonym data               = machine_word
 type_synonym cap_ref            = "bool list"
 type_synonym length_type        = machine_word
 type_synonym asid_pool_index    = "10 word"
-type_synonym asid_index         = "6 word" (* FIXME: better name? *)
+type_synonym asid_index         = "7 word" (* FIXME: better name? *)
 
 text {* With the definitions above, most conversions between abstract
 type names boil down to just the identity function, some convert from

@@ -31,7 +31,7 @@ section "Encodings"
 
 text {* The high bits of a virtual ASID. *}
 definition
-  asid_high_bits_of :: "asid \<Rightarrow> 6 word" where
+  asid_high_bits_of :: "asid \<Rightarrow> 7 word" where
   "asid_high_bits_of asid \<equiv> ucast (asid >> asid_low_bits)"
 
 
