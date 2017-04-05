@@ -1170,7 +1170,7 @@ lemma rf_sr_tcb_update_not_in_queue:
            x\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
   apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes
-                        heap_to_user_data_def)
+                        heap_to_user_data_def live'_def)
   apply (frule (1) cmap_relation_ko_atD)
   apply (erule obj_atE')
   apply (clarsimp simp: projectKOs)
@@ -1178,6 +1178,7 @@ lemma rf_sr_tcb_update_not_in_queue:
                         typ_heap_simps')
   apply (subgoal_tac "\<forall>rf. \<not> ko_wp_at' (\<lambda>ko. rf \<in> refs_of' ko) thread s")
   prefer 2
+   apply clarsimp
    apply (auto simp: obj_at'_def ko_wp_at'_def)[1]
   apply (intro conjI)
        subgoal by (clarsimp simp: cmap_relation_def map_comp_update projectKO_opts_defs inj_eq)
