@@ -221,7 +221,7 @@ lemma tcb_in_valid_state':
   apply (fastforce simp add: valid_obj'_def valid_tcb'_def)
   done
 
-lemma gct_corres: "corres op = \<top> \<top> (gets cur_thread) getCurThread"
+lemma gct_corres [corres]: "corres op = \<top> \<top> (gets cur_thread) getCurThread"
   by (simp add: getCurThread_def curthread_relation)
 
 lemma gct_wp [wp]: "\<lbrace>\<lambda>s. P (ksCurThread s) s\<rbrace> getCurThread \<lbrace>P\<rbrace>"
@@ -278,7 +278,7 @@ lemma corres_injection:
   apply (case_tac v, (clarsimp simp: z)+)
   done
 
-lemma corres_gets_pspace:
+lemma corres_gets_pspace [corres]:
   "corres pspace_relation \<top> \<top> (gets kheap) (gets ksPSpace)"
   by (subst corres_gets, clarsimp)
 
@@ -305,6 +305,8 @@ lemma corres_cap_fault:
   by (fastforce intro: corres_injection[where f'=lfr]
          simp: cap_fault_injection capFault_injection)
 
+lemmas corresK_cap_fault = corres_cap_fault[atomized, THEN corresK_lift_rule, rule_format, corresK]
+
 lemmas capFault_wp[wp] = injection_wp[OF capFault_injection]
 lemmas capFault_wp_E[wp] = injection_wp_E[OF capFault_injection]
 
@@ -317,6 +319,9 @@ lemma corres_lookup_error:
      \<Longrightarrow> corres (ser \<oplus> r) P P' (lookup_error_on_failure b f) (lookupErrorOnFailure b g)"
   by (fastforce intro: corres_injection[where f'=lfr]
          simp: lookup_error_injection lookupError_injection)
+
+lemmas corresK_lookup_error =
+  corres_lookup_error[atomized, THEN corresK_lift_rule, rule_format, corresK]
 
 lemmas lookupError_wp[wp] = injection_wp[OF lookupError_injection]
 lemmas lookupError_wp_E[wp] = injection_wp_E[OF lookupError_injection]
@@ -493,7 +498,8 @@ lemma corres_empty_on_failure:
    apply simp+
   done
 
-
+lemmas corresK_empty_on_failure =
+  corres_empty_on_failure[atomized, THEN corresK_lift_rule, rule_format, corresK]
 
 lemma emptyOnFailure_wp[wp]:
   "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>rv. Q []\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> emptyOnFailure m \<lbrace>Q\<rbrace>"
@@ -566,11 +572,19 @@ lemma corres_const_on_failure:
    apply simp+
   done
 
+lemmas corresK_const_on_failure =
+  corres_const_on_failure[atomized, THEN corresK_lift_rule, rule_format, corresK]
+
 lemma constOnFailure_wp :
   "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>rv. Q n\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> constOnFailure n m \<lbrace>Q\<rbrace>"
   apply (simp add: constOnFailure_def const_def)
   apply (wp|simp)+
   done
+
+lemma corres_throwError_str [corres_concrete_rER]:
+  "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throw b)"
+  "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throwError b)"
+ by (simp add: corres_underlyingK_def)+
 
 end
 end

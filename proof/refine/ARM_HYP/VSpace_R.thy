@@ -773,8 +773,7 @@ lemma vcpuSave_corres:
         apply (rule corres_guard_imp[OF _  TrueI TrueI])
         apply (rule corres_split'[OF corres_machine_op _ wp_post_taut wp_post_taut],
                rule corres_underlying_trivial[OF non_fail_gets_simp])+
-        apply (simp only:)
-        apply (rule corres_return_eq)
+        apply corressimp
        apply (clarsimp simp add: vcpu_relation_def vcpuSCTLR_def)
        apply (drule sym[of "vgic_map _"])
        apply (simp add: vgic_map_def)

@@ -3964,23 +3964,14 @@ lemma sym_refs_vcpu_tcb:
 lemma vcpuFinalise_corres [corres]:
   "corres dc (invs and vcpu_at vcpu) (invs' and vcpu_at' vcpu) (vcpu_finalise vcpu) (vcpuFinalise vcpu)"
   unfolding vcpuFinalise_def vcpu_finalise_def
-  apply (corres corres: corres_get_vcpu)
-     apply (clarsimp simp: vcpu_relation_def)
-     apply (rule option_corres; clarsimp)
-     apply corres
-    apply (wp get_vcpu_wp)
-   apply (wp getVCPU_wp)
-  apply clarsimp
+  apply (corressimp corres: corres_get_vcpu simp: vcpu_relation_def)
+     apply (wpsimp wp: get_vcpu_wp getVCPU_wp)+
   apply (rule conjI)
-   apply clarsimp
-   apply (rule conjI, fastforce)
    apply clarsimp
    apply (frule sym_refs_vcpu_tcb)
      apply (simp add: vcpu_relation_def)
     apply fastforce
    apply (clarsimp simp: obj_at_def vcpu_relation_def)
-  apply clarsimp
-  apply (rule conjI, fastforce)
   apply clarsimp
   apply (drule ko_at_valid_objs', fastforce, simp add: projectKOs)
   apply (clarsimp simp: valid_obj'_def valid_vcpu'_def typ_at_tcb')
@@ -4164,7 +4155,7 @@ lemma corres_add_guard:
   "\<lbrakk>\<And>s s'. \<lbrakk>Q s; Q' s'; (s, s') \<in> sr\<rbrakk> \<Longrightarrow> P s \<and> P' s';
     corres_underlying sr nf nf' r (Q and P) (Q' and P') f g\<rbrakk> \<Longrightarrow>
     corres_underlying sr nf nf' r Q Q' f g"
-  by (erule stronger_corres_guard_imp_str, simp)
+  by (auto simp: corres_underlying_def)
 
 lemma finalise_cap_corres:
   "\<lbrakk> final_matters' cap' \<Longrightarrow> final = final'; cap_relation cap cap';
@@ -4750,6 +4741,31 @@ lemma cteDeleteOne_ct_not_ksQ:
     apply (wp finaliseCapTrue_standin_ct_not_ksQ isFinalCapability_inv)+
   apply (clarsimp)
   done
+
+(* FIXME move to Corres_Method? *)
+
+lemma corres_underlying_equiv_raw: "(nf \<Longrightarrow> no_fail P f) \<Longrightarrow> (nf' \<Longrightarrow> no_fail P' f) \<Longrightarrow>
+    corres_underlyingK Id nf nf' True (op =) P P' f f"
+  apply (simp add: corres_underlyingK_def corres_underlying_def Id_def)
+   by (auto simp: no_fail_def)
+
+lemma corres_underlying_equiv_dc_raw: "(nf \<Longrightarrow> no_fail P f) \<Longrightarrow> (nf' \<Longrightarrow> no_fail P' f) \<Longrightarrow>
+    corres_underlyingK Id nf nf' True dc P P' f f"
+  apply (simp add: corres_underlyingK_def corres_underlying_def Id_def)
+  by (auto simp: no_fail_def)
+(* FIXME cleanup *)
+
+lemmas corres_underlying_equiv [corresK] =
+  corres_underlying_equiv_raw[where nf=False and nf'=True and P=\<top>, simplified]
+
+lemmas corres_underlying_equiv_dc [corresK] =
+  corres_underlying_equiv_dc_raw[where nf=False and nf'=True and P=\<top>, simplified]
+
+(* end of move to Corres_Method *)
+
+(* FIXME Move to Machine_AI? *)
+lemma no_fail_set_gic_vcpu_ctrl_lr[wp]: "no_fail \<top> (set_gic_vcpu_ctrl_lr w p)"
+  by (wpsimp simp: set_gic_vcpu_ctrl_lr_def)
 
 end
 

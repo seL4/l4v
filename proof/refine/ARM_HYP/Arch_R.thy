@@ -826,13 +826,18 @@ lemma resolve_vaddr_valid_mapping_size:
 lemma list_all2_Cons: "list_all2 f (x#xs) b \<Longrightarrow> \<exists>y ys. b = y # ys"
   by (induct b; simp)
 
-lemma corres_gets_numlistregs[corres]:
+lemma corres_gets_numlistregsE[corres]:
   "corres (r \<oplus> op =) \<top> \<top>
             (liftE (gets (arm_gicvcpu_numlistregs \<circ> arch_state)))
             (liftE (gets (armKSGICVCPUNumListRegs \<circ> ksArchState)))"
   by (clarsimp simp: state_relation_def arch_state_relation_def)
 
-lemma corres_whenE_str [corres]:
+lemma corres_gets_numlistregs [corres]:
+  "corres (op =) \<top> \<top>
+      (gets (arm_gicvcpu_numlistregs \<circ> arch_state)) (gets (armKSGICVCPUNumListRegs \<circ> ksArchState))"
+  by (clarsimp simp: state_relation_def arch_state_relation_def)
+
+lemma corres_whenE_str:
   "\<lbrakk>G \<Longrightarrow> G' \<Longrightarrow> corres_underlying sr nf nf' (r \<oplus> dc) P P' a c\<rbrakk>
 \<Longrightarrow> corres_underlying sr nf nf' (r \<oplus> dc) (K(G = G') and (\<lambda>x. G \<longrightarrow> P x)) (\<lambda>x. G' \<longrightarrow> P' x) (whenE G a) (whenE G' c)"
   apply (simp add: corres_underlying_def)
@@ -894,27 +899,16 @@ lemma dec_vcpu_inv_corres:
      apply (case_tac a; clarsimp simp add: cap_relation_def)
      apply (corres corres: corres_returnOkTT)
       apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def)
-     apply simp
      (* inject_irq *)
     apply (simp add: decode_vcpu_inject_irq_def decodeVCPUInjectIRQ_def isVCPUCap_def)
     apply (cases args; clarsimp)
     apply (case_tac list; clarsimp simp add: rangeCheck_def range_check_def unlessE_whenE)
-    apply (clarsimp simp: shiftL_nat)
-    apply (rule corres_guard_imp)
-      apply (rule corres_splitE[where r'=dc])
-         apply corres
-        apply (corres corres: corres_splitE)
-                     apply (rule corres_whenE)
-                      apply simp
-                      apply (rule corres_throwError_ser)
-                     apply (rule dc_simp)
-                    apply (rule corres_returnOkTT)
-                    apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def ucast_id
-                                          make_virq_def makeVIRQ_def)
-                   apply (wpsimp wp: get_vcpu_wp getVCPU_wp whenE_throwError_wp)+
-     apply (clarsimp simp: valid_cap_def)
-    apply simp
-    apply (clarsimp simp: valid_cap'_def)
+    apply (clarsimp simp: shiftL_nat whenE_bindE_throwError_to_if)
+    supply corresK(7)[corresK del]
+    apply (corressimp corresK: corresK_if wp: get_vcpu_wp corres_rv_defer_left)
+    apply (fastforce simp: archinv_relation_def vcpu_invocation_map_def ucast_id
+                       valid_cap'_def valid_cap_def
+                       make_virq_def makeVIRQ_def split:if_split)
    (* read register *)
    apply (clarsimp simp: decode_vcpu_read_register_def decodeVCPUReadReg_def)
    apply (cases args; clarsimp simp: isCap_simps whenE_def split: if_split)
@@ -1398,39 +1392,31 @@ lemma invokeVCPUInjectIRQ_corres:
         (invokeVCPUInjectIRQ v index virq)"
   unfolding invokeVCPUInjectIRQ_def invoke_vcpu_inject_irq_def
   apply (clarsimp simp: bind_assoc)
-  apply corres
-     apply (rule option_corres; clarsimp simp: bind_assoc)
-      apply (corres corres: corres_get_vcpu set_vcpu_corres)
-           apply (rename_tac vcpu')
-           apply (case_tac vcpu')
-           apply (simp add: vcpu_relation_def vgic_map_def)
-           apply (rename_tac vgic regs)
-           apply (case_tac vgic)
-           apply simp
-           apply (rule ext)
-           apply simp
-          apply corres
-         apply (wpsimp wp: get_vcpu_wp getVCPU_wp)+
-     apply (corres corres: corres_machine_op corres_underlying_trivial)
-        apply (simp add: set_gic_vcpu_ctrl_lr_def)
-        apply (rule no_fail_machine_op_lift)
-       apply corres
-      apply wpsimp+
+  apply (corressimp corres: corres_get_vcpu set_vcpu_corres  wp: corres_rv_wp_left get_vcpu_wp)
+  apply (rule conjI, fastforce)
+  apply (clarsimp simp: vcpu_relation_def vgic_map_def)
+  apply (rename_tac vcpu vcpu')
+  apply (case_tac vcpu; case_tac vcpu'; clarsimp)
+  apply (rename_tac vgic regs)
+  apply (case_tac vgic)
+  apply simp
+  apply (rule ext)
+  apply simp
   done
 
 lemmas corres_discard_r =
   corres_symb_exec_r [where P'=P' and Q'="\<lambda>_. P'" for P', simplified]
 
-lemma corres_prod [corres]:
-  "corres r P P' (f (fst p) (snd p)) (f' (fst p') (snd p'))
-  \<Longrightarrow> corres r P P' (case p of (a, b) \<Rightarrow> f a b) (case p' of (a', b') \<Rightarrow> f' a' b')"
-  by (cases p, cases p', simp)
-
 lemma dmo_gets_corres:
   "corres (op =) P P' (do_machine_op (gets f)) (doMachineOp (gets f))"
-  by (corres corres: corres_machine_op; fastforce)
+  apply (corres corres: corresK_machine_op)
+  apply (auto simp : corres_underlyingK_def)
+  done
 
 lemmas corres_returnTT = corres_return[where P=\<top> and P'=\<top>, THEN iffD2]
+
+lemma [wp]:"no_fail \<top> getSCTLR"
+  by (clarsimp simp: getSCTLR_def)
 
 lemma invoke_vcpu_read_register_corres:
   "corres (op =) (vcpu_at v) (vcpu_at' v)
@@ -1438,18 +1424,16 @@ lemma invoke_vcpu_read_register_corres:
                  (invokeVCPUReadReg v r)"
   unfolding invoke_vcpu_read_register_def invokeVCPUReadReg_def read_vcpu_register_def readVCPUReg_def
   apply (rule corres_discard_r)
-     apply corres
-             apply (rule corres_if_str [where r="op =" and P="vcpu_at v" and P'="vcpu_at' v"])
-              apply (cases r; clarsimp simp: vcpuregs_gets dmo_gets_corres getSCTLR_def)
-              apply (corres corres: corres_get_vcpu corres_returnTT)
-                 apply (simp add: vcpu_relation_def)
-                apply wpsimp+
-              apply (corres corres: corres_get_vcpu corres_returnTT)
-                 apply (simp add: vcpu_relation_def)
-              apply (wp get_vcpu_wp getVCPU_wp)+
-        apply corres
-       apply (wpsimp simp: getCurThread_def)+
+  apply corres
+  apply (corres_once corresK: corresK_if)
+  apply (corresc)
+  apply (corressimp corres: corres_get_vcpu corresK: corresK_if wp: corres_rv_defer_left)+
+  apply (rule conjI)
+  apply (intro allI impI conjI; rule TrueI) (* FIXME where is this coming from? *)
+  apply (clarsimp simp: vcpu_relation_def split: option.splits)
+  apply (wpsimp simp: getCurThread_def)+
   done
+
 
 lemma dmo_rest_corres:
   "corres dc P P' (do_machine_op (machine_op_lift f)) (doMachineOp (machine_op_lift f))"
@@ -1460,6 +1444,9 @@ lemma dmo_rest_corres:
     apply auto
   done
 
+lemma [wp]:"no_fail \<top> (setSCTLR x)"
+  by (clarsimp simp: setSCTLR_def)
+
 lemma invoke_vcpu_write_register_corres:
   "corres op = (vcpu_at vcpu) (vcpu_at' vcpu)
         (do y \<leftarrow> invoke_vcpu_write_register vcpu r v;
@@ -1469,22 +1456,17 @@ lemma invoke_vcpu_write_register_corres:
   unfolding invokeVCPUWriteReg_def invoke_vcpu_write_register_def write_vcpu_register_def
             writeVCPUReg_def
   apply (rule corres_discard_r)
-     apply corres
-             apply (rule corres_if_str [where r="dc" and P="vcpu_at vcpu" and P'="vcpu_at' vcpu"])
-              apply (cases r; clarsimp simp: vcpuregs_sets dmo_rest_corres setSCTLR_def)
-              apply (corres corres: corres_get_vcpu set_vcpu_corres)
-                 apply (simp add: vcpu_relation_def)
-                 apply (rule ext)
-                 apply simp
-                apply (wpsimp wp: get_vcpu_wp getVCPU_wp)+
-             apply (corres corres: corres_get_vcpu set_vcpu_corres)
-               apply (simp add: vcpu_relation_def)
-              apply (wp get_vcpu_wp getVCPU_wp)+
-        apply corres
-       apply (wpsimp)+
+  apply corres
+  apply (corres_once corresK: corresK_if)
+  apply (corresc)
+  apply (corressimp corres: set_vcpu_corres corres_get_vcpu corresK: corresK_if wp: corres_rv_defer_left)+
+  apply (rule conjI)
+  apply (intro allI impI conjI; rule TrueI) (* FIXME where is this coming from? *)
+  apply (auto simp: vcpu_relation_def split: option.splits)[1]
+  apply (wpsimp simp: getCurThread_def)+
   done
 
-lemma option_case_corres[corres]:
+lemma option_case_corres:
   "\<lbrakk> \<lbrakk> x = None; x' = None \<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r P P' A C;
      \<And>z. \<lbrakk> x = Some z; x' = Some z \<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r (Q z) (Q' z) (B z) (D z)\<rbrakk>
   \<Longrightarrow> corres_underlying sr nf nf' r (\<lambda>s. x = x' \<and> (x = None \<longrightarrow> P s) \<and> (\<forall>z. x = Some z \<longrightarrow> Q z s))
@@ -1511,9 +1493,7 @@ lemma associate_vcpu_tcb_corres:
                (associateVCPUTCB v t)"
   unfolding associate_vcpu_tcb_def associateVCPUTCB_def
   apply (clarsimp simp: bind_assoc)
-  apply (corres corres: corres_get_vcpu set_vcpu_corres)
-                apply (simp add: vcpu_relation_def)
-               apply corres
+  apply (corressimp search: corres_get_vcpu set_vcpu_corres simp: vcpu_relation_def)
               apply (wpsimp wp: get_vcpu_wp getVCPU_wp)+
       apply (rule_tac Q="\<lambda>_. invs and tcb_at t" in hoare_strengthen_post)
        apply wp
@@ -1521,10 +1501,8 @@ lemma associate_vcpu_tcb_corres:
       apply (rule conjI)
        apply (clarsimp simp: vcpu_relation_def)
       apply (rule conjI)
-       apply clarsimp
        apply (frule (1) sym_refs_vcpu_tcb, fastforce)
-       apply (clarsimp simp: obj_at_def)
-      apply (clarsimp simp: obj_at_def)
+       apply (clarsimp simp: obj_at_def)+
      apply (wpsimp)
      apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t" in hoare_strengthen_post)
       apply wpsimp
@@ -1535,6 +1513,7 @@ lemma associate_vcpu_tcb_corres:
       apply (simp add: valid_vcpu'_def typ_at_tcb')
       apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_def)
      apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_def)
+    apply (rule corres_rv_proveT, clarsimp)
     apply (wpsimp wp: arch_thread_get_wp getObject_tcb_wp simp: archThreadGet_def)+
   apply (rule conjI)
    apply clarsimp
@@ -1542,9 +1521,6 @@ lemma associate_vcpu_tcb_corres:
     apply clarsimp
     apply (frule (1) sym_refs_tcb_vcpu, fastforce)
     apply (clarsimp simp: obj_at_def)
-   apply clarsimp
-   apply (rule conjI)
-    apply (clarsimp simp: vcpu_relation_def)
    apply clarsimp
    apply (frule (1) sym_refs_vcpu_tcb, fastforce)
    apply (clarsimp simp: obj_at_def)
