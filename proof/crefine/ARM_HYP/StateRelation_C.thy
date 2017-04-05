@@ -597,13 +597,13 @@ abbreviation
 
 
 abbreviation
-  pd_Ptr :: "32 word \<Rightarrow> (pde_C[4096]) ptr" where "pd_Ptr == Ptr"
+  pd_Ptr :: "32 word \<Rightarrow> (pde_C[2048]) ptr" where "pd_Ptr == Ptr"
 
 abbreviation
   "cpspace_pde_array_relation ah ch \<equiv> carray_map_relation pdBits (map_to_pdes ah) (h_t_valid (hrs_htd ch) c_guard) pd_Ptr"
 
 abbreviation
-  pt_Ptr :: "32 word \<Rightarrow> (pte_C[256]) ptr" where "pt_Ptr == Ptr"
+  pt_Ptr :: "32 word \<Rightarrow> (pte_C[512]) ptr" where "pt_Ptr == Ptr"
 
 abbreviation
   "cpspace_pte_array_relation ah ch \<equiv> carray_map_relation ptBits (map_to_ptes ah) (h_t_valid (hrs_htd ch) c_guard) pt_Ptr"

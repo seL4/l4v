@@ -586,7 +586,7 @@ lemma assumes A: "is_inv f g" shows the_inv_map_eq: "the_inv_map f = g"
 
 definition
   casid_map_to_H
-  :: "(word32[256]) \<Rightarrow> (pde_C ptr \<rightharpoonup> pde_C) \<Rightarrow> asid \<rightharpoonup> hw_asid \<times> obj_ref"
+  :: "(word32[512]) \<Rightarrow> (pde_C ptr \<rightharpoonup> pde_C) \<Rightarrow> asid \<rightharpoonup> hw_asid \<times> obj_ref"
   where
   "casid_map_to_H hw_asid_table pdes \<equiv>
    (\<lambda>asid. map_option

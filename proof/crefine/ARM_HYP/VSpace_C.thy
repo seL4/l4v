@@ -173,7 +173,7 @@ lemma pd_at_asid_cross_over:
                   \<and> index ap (unat (asid && 2 ^ asid_low_bits - 1)) = pde_Ptr pd
                   \<and> cslift s' (pde_Ptr (pd + 0x3FC0)) = Some pde
                   \<and> is_aligned pd pdBits
-                  \<and> array_assertion (pde_Ptr pd) 4096 (hrs_htd (t_hrs_' (globals s')))
+                  \<and> array_assertion (pde_Ptr pd) 2048 (hrs_htd (t_hrs_' (globals s')))
                   \<and> (valid_pde_mappings' s \<longrightarrow> pde_get_tag pde = scast pde_pde_invalid)"
   apply (clarsimp simp: pd_at_asid'_def)
   apply (subgoal_tac "asid >> asid_low_bits \<le> 2 ^ asid_high_bits - 1")
@@ -1087,7 +1087,7 @@ lemma ccorres_pre_gets_armKSGlobalPD_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
                   (\<lambda>s. (\<forall>rv. armKSGlobalPD (ksArchState s) = rv  \<longrightarrow> P rv s))
-                  (P' (ptr_val ((Ptr ::(32 word \<Rightarrow> (pde_C[4096]) ptr)) (symbol_table ''armKSGlobalPD''))))
+                  (P' (ptr_val ((Ptr ::(32 word \<Rightarrow> (pde_C[2048]) ptr)) (symbol_table ''armKSGlobalPD''))))
                           hs (gets (armKSGlobalPD \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l)
@@ -1446,7 +1446,7 @@ lemma armv_contextSwitch_ccorres:
 lemma ccorres_h_t_valid_armKSGlobalPD:
   "ccorres r xf P P' hs f (f' ;; g') \<Longrightarrow>
    ccorres r xf P P' hs f
-    (Guard C_Guard {s'. s' \<Turnstile>\<^sub>c (Ptr::(32 word \<Rightarrow> (pde_C[4096]) ptr)) (symbol_table ''armKSGlobalPD'')} f';;
+    (Guard C_Guard {s'. s' \<Turnstile>\<^sub>c (Ptr::(32 word \<Rightarrow> (pde_C[2048]) ptr)) (symbol_table ''armKSGlobalPD'')} f';;
     g')"
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_move_c_guards[where P = \<top>])

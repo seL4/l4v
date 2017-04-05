@@ -1886,7 +1886,7 @@ proof (intro impI allI)
     h_t_array_valid_ptr_retyps_gen[where p="Ptr ptr", simplified, OF szo empty]
 
   with rf have irq: "h_t_valid (hrs_htd ?ks') c_guard
-      (ptr_coerce (intStateIRQNode_' (globals x)) :: (cte_C[256]) ptr)"
+      (ptr_coerce (intStateIRQNode_' (globals x)) :: (cte_C[512]) ptr)"
     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
     apply (simp add: hrs_htd_update h_t_valid_eq_array_valid)
     apply (simp add: h_t_array_valid_ptr_retyps_gen[OF szo] empty)
@@ -2054,7 +2054,7 @@ lemma createObjects_ccorres_pte:
   \<and> range_cover ptr sz ptBits 1
   \<and> valid_global_refs' s
   \<and> kernel_data_refs \<inter> {ptr..+ 2 ^ ptBits} = {} \<longrightarrow>
-  (\<sigma>\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr ko) (new_cap_addrs 256 ptr ko) (ksPSpace \<sigma>)\<rparr>,
+  (\<sigma>\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr ko) (new_cap_addrs 512 ptr ko) (ksPSpace \<sigma>)\<rparr>,
    x\<lparr>globals := globals x
                  \<lparr>t_hrs_' := hrs_htd_update (ptr_retyps_gen 1 (pt_Ptr ptr) False)
                        (t_hrs_' (globals x))\<rparr>\<rparr>) \<in> rf_sr"
@@ -2065,7 +2065,7 @@ proof (intro impI allI)
   let ?thesis = "(\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr"
   let ?ks = "?ks \<sigma>"
   let ?ks' = "?ks' x"
-  let ?ptr = "Ptr ptr :: (pte_C[256]) ptr"
+  let ?ptr = "Ptr ptr :: (pte_C[512]) ptr"
   assume "?P \<sigma> x"
   hence rf: "(\<sigma>, x) \<in> rf_sr"
     and cover: "range_cover ptr sz ptBits 1"
@@ -2109,9 +2109,9 @@ proof (intro impI allI)
   (* /obj specific *)
 
   (* s/obj/obj'/ *)
-  have szo: "size_of TYPE(pte_C[256]) = 2 ^ ptBits"
+  have szo: "size_of TYPE(pte_C[512]) = 2 ^ ptBits"
     by (simp add: size_of_def size_td_array ptBits_def pageBits_def)
-  have szo2: "256 * size_of TYPE(pte_C) = 2 ^ ptBits"
+  have szo2: "512 * size_of TYPE(pte_C) = 2 ^ ptBits"
     by (simp add: szo[symmetric])
   have szo': "size_of TYPE(pte_C) = 2 ^ objBitsKO ko"
     by (simp add: objBits_simps ko_def archObjSize_def ptBits_def pageBits_def)
@@ -2121,7 +2121,7 @@ proof (intro impI allI)
 
   have sz_weaken: "objBitsKO ko \<le> ptBits"
     by (simp add: objBits_simps ko_def archObjSize_def ptBits_def pageBits_def)
-  have cover': "range_cover ptr sz (objBitsKO ko) 256"
+  have cover': "range_cover ptr sz (objBitsKO ko) 512"
     apply (rule range_cover_rel[OF cover sz_weaken])
     apply (simp add: ptBits_def objBits_simps ko_def archObjSize_def pageBits_def)
     done
@@ -2142,7 +2142,7 @@ proof (intro impI allI)
      apply (simp_all add: ptBits_def pageBits_def)
     done
 
-  have guard': "\<forall>n < 256. c_guard (pte_Ptr ptr +\<^sub>p int n)"
+  have guard': "\<forall>n < 512. c_guard (pte_Ptr ptr +\<^sub>p int n)"
     apply (rule retype_guard_helper [OF cover' ptr0 szo', where m=2])
      apply (simp_all add: objBits_simps ko_def archObjSize_def align_of_def)
     done
@@ -2230,9 +2230,9 @@ lemma createObjects_ccorres_pde:
   \<and> range_cover ptr sz pdBits 1
   \<and> valid_global_refs' s
   \<and> kernel_data_refs \<inter> {ptr..+ 2 ^ pdBits} = {} \<longrightarrow>
-  (\<sigma>\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr ko) (new_cap_addrs 4096 ptr ko) (ksPSpace \<sigma>)\<rparr>,
+  (\<sigma>\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr ko) (new_cap_addrs 2048 ptr ko) (ksPSpace \<sigma>)\<rparr>,
    x\<lparr>globals := globals x
-                 \<lparr>t_hrs_' := hrs_htd_update (ptr_retyps_gen 1 (Ptr ptr :: (pde_C[4096]) ptr) False)
+                 \<lparr>t_hrs_' := hrs_htd_update (ptr_retyps_gen 1 (Ptr ptr :: (pde_C[2048]) ptr) False)
                        (t_hrs_' (globals x))\<rparr>\<rparr>) \<in> rf_sr"
   (is "\<forall>\<sigma> x. ?P \<sigma> x \<longrightarrow>
     (\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr")
@@ -2241,7 +2241,7 @@ proof (intro impI allI)
   let ?thesis = "(\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr"
   let ?ks = "?ks \<sigma>"
   let ?ks' = "?ks' x"
-  let ?ptr = "Ptr ptr :: (pde_C[4096]) ptr"
+  let ?ptr = "Ptr ptr :: (pde_C[2048]) ptr"
 
   assume "?P \<sigma> x"
   hence rf: "(\<sigma>, x) \<in> rf_sr" and al: "is_aligned ptr pdBits" and ptr0: "ptr \<noteq> 0"
@@ -2298,9 +2298,9 @@ proof (intro impI allI)
   (* /obj specific *)
 
   (* s/obj/obj'/ *)
-  have szo: "size_of TYPE(pde_C[4096]) = 2 ^ pdBits"
+  have szo: "size_of TYPE(pde_C[2048]) = 2 ^ pdBits"
     by (simp add: size_of_def size_td_array pdBits_def pageBits_def)
-  have szo2: "4096 * size_of TYPE(pde_C) = 2 ^ pdBits"
+  have szo2: "2048 * size_of TYPE(pde_C) = 2 ^ pdBits"
     by (simp add: szo[symmetric])
   have szo': "size_of TYPE(pde_C) = 2 ^ objBitsKO ko"
     by (simp add: objBits_simps ko_def archObjSize_def pdBits_def pageBits_def)
@@ -2310,7 +2310,7 @@ proof (intro impI allI)
 
   have sz_weaken: "objBitsKO ko \<le> pdBits"
     by (simp add: objBits_simps ko_def archObjSize_def pdBits_def pageBits_def)
-  have cover': "range_cover ptr sz (objBitsKO ko) 4096"
+  have cover': "range_cover ptr sz (objBitsKO ko) 2048"
     apply (rule range_cover_rel[OF cover sz_weaken])
     apply (simp add: pdBits_def objBits_simps ko_def archObjSize_def pageBits_def)
     done
@@ -2331,7 +2331,7 @@ proof (intro impI allI)
      apply (simp_all add: pdBits_def pageBits_def)
     done
 
-  have guard': "\<forall>n < 4096. c_guard (pde_Ptr ptr +\<^sub>p int n)"
+  have guard': "\<forall>n < 2048. c_guard (pde_Ptr ptr +\<^sub>p int n)"
     apply (rule retype_guard_helper [OF cover' ptr0 szo', where m=2])
      apply (simp_all add: objBits_simps ko_def archObjSize_def align_of_def)
     done
@@ -4223,7 +4223,7 @@ proof (intro impI allI)
 
   def big_0s \<equiv> "(replicate (2^pageBits) 0) :: word8 list"
 
-  have "length big_0s = 4096" unfolding big_0s_def
+  have "length big_0s = 2048" unfolding big_0s_def
     by simp (simp add: pageBits_def)
 
   hence i1: "\<And>off :: 10 word. index (user_data_C.words_C (from_bytes big_0s)) (unat off) = 0"
@@ -4964,7 +4964,7 @@ lemma placeNewObject_pte:
     ({s. region_actually_is_zero_bytes regionBase (2 ^ 10) s})
     hs
     (placeNewObject regionBase (makeObject :: pte) 8)
-    (global_htd_update (\<lambda>_. (ptr_retyp (Ptr regionBase :: (pte_C[256]) ptr))))"
+    (global_htd_update (\<lambda>_. (ptr_retyp (Ptr regionBase :: (pte_C[512]) ptr))))"
   apply (rule ccorres_from_vcg_nofail)
   apply clarsimp
   apply (rule conseqPre)
@@ -6787,7 +6787,7 @@ lemma ccorres_typ_region_bytes_dummy:
             ptr'="pd_Ptr (symbol_table ''armKSGlobalPD'')"])
         apply (simp add: invs_pspace_aligned')+
   apply (frule typ_bytes_cpspace_relation_clift_gptr[where
-            ptr'="ptr_coerce x :: (cte_C[256]) ptr" for x])
+            ptr'="ptr_coerce x :: (cte_C[512]) ptr" for x])
         apply (simp add: invs_pspace_aligned')+
     apply (simp add: cte_level_bits_def cte_C_size, simp+)
   apply (simp add: carch_state_relation_def cmachine_state_relation_def)

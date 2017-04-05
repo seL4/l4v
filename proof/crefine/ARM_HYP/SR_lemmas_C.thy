@@ -2288,7 +2288,7 @@ lemma page_table_at_carray_map_relation:
 
 lemma page_table_at_rf_sr:
    "\<lbrakk> page_table_at' pd s; (s, s') \<in> rf_sr \<rbrakk>
-    \<Longrightarrow> cslift s' (Ptr pd :: (pte_C[256]) ptr) \<noteq> None"
+    \<Longrightarrow> cslift s' (Ptr pd :: (pte_C[512]) ptr) \<noteq> None"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                      cpspace_relation_def page_table_at_carray_map_relation)
 
