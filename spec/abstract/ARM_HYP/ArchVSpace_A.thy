@@ -588,7 +588,7 @@ definition
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do
        global_us_pd \<leftarrow> gets (arm_us_global_pd o arch_state);
-       do_machine_op $ setCurrentPD $ addrFromPPtr global_us_pd
+       do_machine_op $ set_current_pd $ addrFromPPtr global_us_pd
     od)
 od"
 

@@ -157,14 +157,11 @@ definition
   dmb :: "unit machine_monad"
 where "dmb \<equiv> machine_op_lift dmb_impl"
 
-
+consts'
+  setCurrentPDPL2_impl :: "paddr \<Rightarrow> unit machine_rest_monad"
 definition
-  setCurrentPD :: "paddr \<Rightarrow> unit machine_monad"
-where "setCurrentPD pd \<equiv> do
-             dsb;
-             writeTTBR0 pd;
-             isb
-          od"
+  setCurrentPDPL2 :: "paddr \<Rightarrow> unit machine_monad"
+where "setCurrentPDPL2 pd \<equiv> machine_op_lift (setCurrentPDPL2_impl pd)"
 
 consts'
   invalidateTLB_impl :: "unit machine_rest_monad"
