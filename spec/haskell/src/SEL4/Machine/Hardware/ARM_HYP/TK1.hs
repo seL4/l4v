@@ -177,7 +177,7 @@ cacheCleanL2RangeCallback _ _ _ = return ()
 
 -- For the ARM1136
 cacheLine :: Int
-cacheLine = 32
+cacheLine = 64
 
 cacheLineBits :: Int
-cacheLineBits = 5
+cacheLineBits = 6
