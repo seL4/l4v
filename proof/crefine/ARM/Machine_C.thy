@@ -15,7 +15,7 @@
 *)
 
 theory Machine_C
-imports "../../../lib/clib/Ctac"
+imports Ctac_lemmas_C
 begin
 
 locale kernel_m = kernel +

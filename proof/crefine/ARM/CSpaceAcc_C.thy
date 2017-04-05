@@ -11,7 +11,7 @@
 (* collects lemmas common to the various CSpace branches *)
 
 theory CSpaceAcc_C
-imports "../../refine/$L4V_ARCH/EmptyFail" "../../../lib/clib/Ctac"
+imports "../../refine/$L4V_ARCH/EmptyFail" Ctac_lemmas_C
 begin
 
 (* For resolving schematics *) 
