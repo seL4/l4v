@@ -512,7 +512,7 @@ declare check_vp_alignment_inv[wp del]
 
 lemma select_ext_fa:
   "free_asid_select asid_tbl \<in> S
-  \<Longrightarrow> ((select_ext (\<lambda>_. free_asid_select asid_tbl) S) :: (6 word) det_ext_monad)
+  \<Longrightarrow> ((select_ext (\<lambda>_. free_asid_select asid_tbl) S) :: (7 word) det_ext_monad)
    = return (free_asid_select asid_tbl)"
   by (simp add: select_ext_def get_def gets_def bind_def assert_def return_def fail_def)
 
@@ -1037,7 +1037,7 @@ shows
             apply (rule corres_whenE)
               apply (subst assocs_empty_dom_comp [symmetric])
               apply (simp add: o_def)
-              apply (rule dom_ucast_eq_6)
+              apply (rule dom_ucast_eq_7)
              apply (rule corres_trivial, simp, simp)
            apply (simp split del: if_split)
            apply (rule_tac F="- dom (asidTable \<circ> ucast) \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} \<noteq> {}" in corres_gen_asm)
