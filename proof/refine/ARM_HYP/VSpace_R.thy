@@ -663,10 +663,6 @@ lemma find_pd_for_asid_pd_at_asid_again:
     apply clarsimp+
   done
 
-lemmas setCurrentPD_no_fails = no_fail_dsb no_fail_isb no_fail_writeTTBR0
-
-lemmas setCurrentPD_no_irqs = no_irq_dsb no_irq_isb no_irq_writeTTBR0
-
 (* TODO: move? *)
 lemma corres_add_noop_rhs:
   "corres_underlying sr nf nf' r P P' g (return () >>= (\<lambda>_. f))
@@ -995,19 +991,18 @@ lemma vcpuSwitch_corres' : "corres dc (\<lambda>s. (vcpu \<noteq> None \<longrig
     apply (rule aligned_distinct_relation_vcpu_atI'; assumption)
   done
 
+lemma no_fail_setCurrentPDPL2: "no_fail \<top> (setCurrentPDPL2 w)"
+  by (simp add: set_current_pd_def setCurrentPDPL2_def)
+
 lemma setCurrentPD_corres:
-  "addr = addr' \<Longrightarrow> corres dc \<top> \<top> (do_machine_op (setCurrentPD addr)) (doMachineOp (setCurrentPD addr'))"
-  apply (simp add: setCurrentPD_def)
+  "addr = addr' \<Longrightarrow> corres dc \<top> \<top> (do_machine_op (set_current_pd addr)) (doMachineOp (setCurrentPD addr'))"
+  apply (simp add: setCurrentPD_def set_current_pd_def)
   apply (rule corres_machine_op)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr)
-       apply (rule corres_split_eqr)
-          apply (rule corres_rel_imp)
-           apply (wp
-                | rule corres_underlying_trivial
-                | rule setCurrentPD_no_fails
-                | rule setCurrentPD_no_irqs
-                | simp add: dc_def)+
+    apply (rule corres_rel_imp)
+     apply (rule corres_underlying_trivial)
+    apply (rule no_fail_setCurrentPDPL2)
+    apply simp+
   done
 
 crunch tcb_at'[wp]: armv_contextSwitch "tcb_at' t"
@@ -1044,7 +1039,7 @@ proof -
   have Q: "\<And>P P'. corres dc P P'
         (throwError ExceptionTypes_A.lookup_failure.InvalidRoot <catch>
          (\<lambda>_. do global_us_pd \<leftarrow> gets (arm_us_global_pd \<circ> arch_state);
-                 do_machine_op $ setCurrentPD $ addrFromPPtr global_us_pd
+                 do_machine_op $ set_current_pd $ addrFromPPtr global_us_pd
               od))
         (throwError Fault_H.lookup_failure.InvalidRoot <catch>
          (\<lambda>_ . do globalPD \<leftarrow> gets (armUSGlobalPD \<circ> ksArchState);
@@ -3345,6 +3340,9 @@ lemma armv_contextSwitch_invs_no_cicd':
     apply (clarsimp simp: machine_op_lift_def machine_rest_lift_def split_def armv_ctxt_sw_defs | wp)+
   done
 
+lemma no_irq_setCurrentPD: "no_irq (setCurrentPD addr)"
+  by (simp add: setCurrentPD_def setCurrentPDPL2_def)
+
 lemma dmo_setCurrentPD_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (setCurrentPD addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wp dmo_invs' no_irq_setCurrentPD no_irq)
@@ -3352,7 +3350,7 @@ lemma dmo_setCurrentPD_invs'[wp]:
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
   apply (clarsimp simp: setCurrentPD_def machine_op_lift_def writeTTBR0_def dsb_def isb_def
-                        machine_rest_lift_def split_def | wp)+
+                        setCurrentPDPL2_def machine_rest_lift_def split_def | wp)+
   done
 
 lemma dmo_setCurrentPD_invs_no_cicd':
@@ -3362,7 +3360,7 @@ lemma dmo_setCurrentPD_invs_no_cicd':
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
   apply (clarsimp simp: setCurrentPD_def machine_op_lift_def writeTTBR0_def dsb_def isb_def
-                        machine_rest_lift_def split_def | wp)+
+                        machine_rest_lift_def split_def setCurrentPDPL2_def| wp)+
   done
 
 lemma dmo_writeContextIDAndPD_invs'[wp]:
