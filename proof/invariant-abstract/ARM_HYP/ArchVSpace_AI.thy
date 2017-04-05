@@ -171,7 +171,7 @@ lemma asid_low_high_bits:
   apply (cases "n < 10")
    using prems(1)
    apply fastforce
-  apply (cases "n < 16")
+  apply (cases "n < 17")
    using prems(2)[where n="n - 10"]
    apply fastforce
   using prems(3-)
@@ -844,7 +844,7 @@ lemma ex_asid_high_bits_plus:
   apply (rule conjI)
    prefer 2
    apply arith
-  apply (subgoal_tac "n < 16", simp)
+  apply (subgoal_tac "n < 17", simp)
   apply (clarsimp simp add: linorder_not_le [symmetric])
   done
 
@@ -862,7 +862,7 @@ lemma asid_high_bits_shl:
   apply (rule conjI)
    prefer 2
    apply simp
-  apply (subgoal_tac "n < 16", simp)
+  apply (subgoal_tac "n < 17", simp)
   apply (clarsimp simp add: linorder_not_le [symmetric])
   done
 
@@ -5352,7 +5352,7 @@ lemma store_pte_unmap_page: (* ARMHYP write with xxx_bits? *)
                         is_aligned_add_helper less_le_trans[OF ucast_less]
                         shiftl_less_t2n'[where m=9 and n=3, simplified]
                  dest!: graph_ofD ucast_up_inj[where 'a=10 and 'b=32, simplified]
-                        ucast_up_inj[where 'a=6 and 'b=32, simplified]
+                        ucast_up_inj[where 'a=7 and 'b=32, simplified]
                  split: if_split_asm  pde.splits pte.splits if_splits)
 
 

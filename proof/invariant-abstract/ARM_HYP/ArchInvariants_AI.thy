@@ -417,7 +417,7 @@ abbreviation
   "ref \<rhd>* ref' \<equiv> \<lambda>s. (ref,ref') \<in> vs_lookup_trans s"
 
 definition
-  vs_asid_refs :: "(6 word \<rightharpoonup> obj_ref) \<Rightarrow> vs_chain set"
+  vs_asid_refs :: "(7 word \<rightharpoonup> obj_ref) \<Rightarrow> vs_chain set"
 where
   "vs_asid_refs t \<equiv> (\<lambda>(r,p). ([VSRef (ucast r) None], p)) ` graph_of t"
 
@@ -684,7 +684,7 @@ lemmas aligned_pte_simps[simp] =
        aligned_pte_def[split_simps pte.split]
 
 definition
-  valid_asid_table :: "(6 word \<rightharpoonup> obj_ref) \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_asid_table :: "(7 word \<rightharpoonup> obj_ref) \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_asid_table table \<equiv> \<lambda>s. (\<forall>p \<in> ran table. asid_pool_at p s) \<and>
                                 inj_on table (dom table)"

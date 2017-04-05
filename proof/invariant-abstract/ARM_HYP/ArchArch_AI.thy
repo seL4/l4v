@@ -134,12 +134,12 @@ lemma dom_ucast_eq:
 
 
 lemma asid_high_bits_max_word:
-  "(2 ^ asid_high_bits - 1 :: 6 word) = max_word"
+  "(2 ^ asid_high_bits - 1 :: 7 word) = max_word"
   by (simp add: asid_high_bits_def max_word_def)
 
 
-lemma dom_ucast_eq_6:
-  "(- dom (\<lambda>a::6 word. p (ucast a::word32)) \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} = {}) =
+lemma dom_ucast_eq_7:
+  "(- dom (\<lambda>a::7 word. p (ucast a::word32)) \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} = {}) =
    (- dom p \<inter> {x. x \<le> 2 ^ asid_high_bits - 1} = {})"
   apply safe
    apply clarsimp
