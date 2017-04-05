@@ -3705,6 +3705,35 @@ lemma unmap_page_invs[wp]:
                     invs_psp_aligned lookup_pml4_slot_eq pml4e_ref_def)
   done
 
+lemma unmap_page_unmapped:
+  "\<lbrace>pspace_aligned and valid_arch_objs and data_at sz pptr and valid_arch_state and
+    valid_objs and (\<lambda>s. valid_asid_table (x64_asid_table (arch_state s)) s) and
+    K ((sz = X64SmallPage \<longrightarrow> ref =
+             [VSRef ((vaddr >> 12) && mask 9) (Some APageTable),
+              VSRef ((vaddr >> 21) && mask 9) (Some APageDirectory),
+              VSRef ((vaddr >> 30) && mask 9) (Some APDPointerTable),
+              VSRef ((vaddr >> 39) && mask 9) (Some APageMapL4),
+              VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+              VSRef (ucast (asid_high_bits_of asid)) None]) \<and>
+       (sz = X64LargePage \<longrightarrow> ref =
+             [VSRef ((vaddr >> 21) && mask 9) (Some APageDirectory),
+              VSRef ((vaddr >> 30) && mask 9) (Some APDPointerTable),
+              VSRef ((vaddr >> 39) && mask 9) (Some APageMapL4),
+              VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+              VSRef (ucast (asid_high_bits_of asid)) None]) \<and>
+       (sz = X64HugePage \<longrightarrow> ref =
+             [VSRef ((vaddr >> 30) && mask 9) (Some APDPointerTable),
+              VSRef ((vaddr >> 39) && mask 9) (Some APageMapL4),
+              VSRef (asid && mask asid_low_bits) (Some AASIDPool),
+              VSRef (ucast (asid_high_bits_of asid)) None]) \<and>
+        p = pptr \<and> vaddr < pptr_base \<and> canonical_address vaddr)\<rbrace>
+  unmap_page sz asid vaddr pptr
+  \<lbrace>\<lambda>rv s. \<not> (ref \<unrhd> p) s\<rbrace>"
+  apply (rule hoare_gen_asm, clarsimp)
+  apply (cases sz; simp)
+    by (wpsimp wp: unmap_page_vs_lookup_pages_small unmap_page_vs_lookup_pages_large
+                      unmap_page_vs_lookup_pages_huge)+
+
 lemma perform_page_invs [wp]:
   "\<lbrace>invs and valid_page_inv page_inv\<rbrace> perform_page_invocation page_inv \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: perform_page_invocation_def)
@@ -3852,10 +3881,34 @@ lemma perform_page_invs [wp]:
     apply (rename_tac arch_cap cslot_ptr)
     apply (rule hoare_pre)
      apply (wp dmo_invs arch_update_cap_invs_unmap_page get_cap_wp
-               hoare_vcg_const_imp_lift | wpc | simp)+
+          | wpc | simp)+
+      apply (rule_tac Q="\<lambda>_ s. invs s \<and>
+                               cte_wp_at (\<lambda>c. is_pg_cap c \<and>
+                                 (\<forall>ref. vs_cap_ref c = Some ref \<longrightarrow>
+                                        \<not> (ref \<unrhd> obj_ref_of c) s)) cslot_ptr s"
+                   in hoare_strengthen_post)
+       prefer 2
+       apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps
+                             update_map_data_def
+                             is_arch_update_def cap_master_cap_simps)
+       apply (drule caps_of_state_valid, fastforce)
+       apply (clarsimp simp: valid_cap_def cap_aligned_def vs_cap_ref_def
+                      split: option.splits vmpage_size.splits cap.splits)
+      apply (simp add: cte_wp_at_caps_of_state)
+      apply (wp unmap_page_invs hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_imp_lift
+                unmap_page_unmapped)+
+   apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state)
+   apply (clarsimp simp: is_arch_diminished_def)
+   apply (drule (2) diminished_is_update')
+   apply (clarsimp simp: is_cap_simps cap_master_cap_simps is_arch_update_def
+                         update_map_data_def cap_rights_update_def
+                         acap_rights_update_def)
+   using valid_validate_vm_rights[simplified valid_vm_rights_def]
+   apply (auto simp: valid_cap_def cap_aligned_def mask_def vs_cap_ref_def data_at_def
+                   split: vmpage_size.splits option.splits if_splits)[1]
    apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state valid_cap_def mask_def)
-  apply wp
   -- "PageFlush"
+  apply wp
   apply(simp add: valid_page_inv_def tcb_at_invs)
   done
 
