@@ -9,7 +9,7 @@
  *)
 
 theory TcbAcc_C
-imports "../../../lib/clib/Ctac"
+imports Ctac_lemmas_C
 begin
 
 context kernel

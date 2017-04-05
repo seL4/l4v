@@ -9,7 +9,7 @@
  *)
 
 theory Detype_C
-imports "../../../lib/clib/Ctac" TcbQueue_C
+imports Ctac_lemmas_C TcbQueue_C
 begin
 
 lemma typ_clear_region_out:
