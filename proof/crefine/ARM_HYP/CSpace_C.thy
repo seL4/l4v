@@ -787,7 +787,7 @@ schematic_goal ccap_relation_tag_Master:
                (case_arch_capability ?aa ?ab
                         (\<lambda>dev ptr rghts sz data. if sz = ARMSmallPage
                                 then scast cap_small_frame_cap else scast cap_frame_cap)
-                           ?ad ?ae) ?h ?i ?j ?k
+                           ?ad ?ae ?af) ?h ?i ?j ?k
             (capMasterCap cap)"
   by (fastforce simp: ccap_relation_def map_option_Some_eq2
                      Let_def cap_lift_def cap_to_H_def
@@ -1128,8 +1128,6 @@ lemma cslift_ptr_safe:
         in lift_t_ptr_safe[where g = c_guard])
   apply (fastforce simp add:typ_heap_simps hrs_htd_def)
   done
-
-thm ccorres_move_c_guard_cte
 
 lemma ccorres_move_ptr_safe:
   "ccorres_underlying rf_sr \<Gamma> r xf arrel axf A C' hs a c \<Longrightarrow>
@@ -2238,7 +2236,7 @@ show ?thesis
                          split: if_split )
           apply (rule word_0_sle_from_less)
 
-          apply (rule order_less_le_trans[where y = 160])
+          apply (rule order_less_le_trans[where y = 192])
            apply (simp add: unat_ucast_no_overflow_le)
           apply simp
          apply ceqv
@@ -2803,10 +2801,13 @@ lemma Arch_sameRegionAs_spec:
   apply vcg
   apply clarsimp
 
+  apply (simp add: if_then_1_else_0 cong: imp_cong conj_cong)
+
   apply (simp add: ARM_HYP_H.sameRegionAs_def)
   subgoal for capa capb cap_b cap_a
   apply (cases capa; simp add: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
 
+  (* FIXME: add 1 indent, 1 extra VCPU goal appeared *)
   -- "capa is ASIDPoolCap"
       apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap
                          isCap_simps cap_tag_defs from_bool_def false_def)
@@ -3045,6 +3046,28 @@ lemma Arch_sameRegionAs_spec:
   apply (simp add: cap_to_H_def)
   by (cases "capPDBasePtr_CL (cap_page_directory_cap_lift cap_a) =
                    capPDBasePtr_CL (cap_page_directory_cap_lift cap_b)"; simp)
+
+  -- "capa is VCPUCap"
+  apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap
+                      isCap_simps cap_tag_defs from_bool_def false_def true_def)
+   -- " capb is PageCap"
+   subgoal for \<dots> vmpage_size option
+   apply (cases "vmpage_size=ARMSmallPage")
+    apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b],
+            assumption, simp add: cap_tag_defs)
+   by (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap'=cap_b],
+           assumption, simp add: cap_tag_defs)
+  -- "capb is VCPUCap"
+  subgoal
+  apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(20))
+  apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(20))
+  apply (frule cap_get_tag_isCap_unfolded_H_cap)
+  apply (simp add: ccap_relation_def  map_option_case)
+  apply (simp add: cap_vcpu_cap_lift)
+  apply (simp add: cap_to_H_def)
+  by (cases "capVCPUPtr_CL (cap_vcpu_cap_lift cap_a) =
+                   capVCPUPtr_CL (cap_vcpu_cap_lift cap_b)"; simp)
+
   done
 done
 
@@ -3124,6 +3147,7 @@ lemma generic_frame_cap_get_capFVMRights_spec:
                         cap_small_frame_cap_lift_def cap_frame_cap_lift_def)
   by (simp add: cap_lift_def Let_def Kernel_C.VMNoAccess_def split: if_split)
 
+(* combination of cap_get_capSizeBits + cap_get_archCapSizeBits from C *)
 definition
   get_capSizeBits_CL :: "cap_CL option \<Rightarrow> nat" where
   "get_capSizeBits_CL \<equiv> \<lambda>cap. case cap of
@@ -3134,12 +3158,13 @@ definition
     | Some (Cap_thread_cap c) \<Rightarrow> 9
     | Some (Cap_small_frame_cap c) \<Rightarrow> 12
     | Some (Cap_frame_cap c) \<Rightarrow> pageBitsForSize (gen_framesize_to_H $ generic_frame_cap_get_capFSize_CL cap)
-    | Some (Cap_page_table_cap c) \<Rightarrow> 10
+    | Some (Cap_page_table_cap c) \<Rightarrow> 12
     | Some (Cap_page_directory_cap c) \<Rightarrow> 14
-    | Some (Cap_asid_pool_cap c) \<Rightarrow> asidLowBits + 2
+    | Some (Cap_asid_pool_cap c) \<Rightarrow> 12
     | Some (Cap_zombie_cap c) \<Rightarrow>
         let type = cap_zombie_cap_CL.capZombieType_CL c in
         if isZombieTCB_C type then 9 else unat (type && mask 5) + 4
+    | Some (Cap_vcpu_cap c) \<Rightarrow> 12
     | _ \<Rightarrow> 0"
 
 lemma frame_cap_size [simp]:
@@ -3172,7 +3197,7 @@ lemma cap_get_capSizeBits_spec:
                                               Kernel_C.asidLowBits_def asid_low_bits_def
                                               word_sle_def Let_def mask_def
                                               isZombieTCB_C_def ZombieTCB_C_def
-                                              cap_lift_domain_cap
+                                              cap_lift_domain_cap cap_lift_vcpu_cap
                                        dest!: sym [where t = "cap_get_tag cap" for cap])+
   (* slow *)
   by (case_tac "cap_lift cap", simp_all, case_tac "a",
@@ -3182,12 +3207,14 @@ lemma cap_get_capSizeBits_spec:
                   cap_cnode_cap_lift_def cap_thread_cap_lift_def
                   cap_zombie_cap_lift_def cap_page_table_cap_lift_def
                   cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
-                  Let_def cap_untyped_cap_lift_def  split: if_split_asm)
+                  cap_vcpu_cap_lift_def
+                  cap_untyped_cap_lift_def  split: if_split_asm)
 
 lemma ccap_relation_get_capSizeBits_physical:
   notes unfolds = ccap_relation_def get_capSizeBits_CL_def cap_lift_def
                   cap_tag_defs cap_to_H_def objBits_def objBitsKO_simps
                   Let_def field_simps mask_def asid_low_bits_def ARM_HYP_H.capUntypedSize_def
+                  pt_bits_def' pd_bits_def' vcpu_bits_def pageBits_def
   shows
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap = PhysicalClass;
             capAligned hcap \<rbrakk> \<Longrightarrow>
@@ -3204,11 +3231,12 @@ lemma ccap_relation_get_capSizeBits_physical:
    apply (simp add: capAligned_def objBits_simps word_bits_conv word_less_nat_alt)
   subgoal for arch_capability
   apply (cases arch_capability; simp)
-     defer 2 (* page caps last *)
-     apply (fold_subgoals (prefix))[3]
-     subgoal premises prems by ((frule cap_get_tag_isCap_unfolded_H_cap,
-               clarsimp simp: unfolds
-                       split: if_split_asm)+)
+      defer 2 (* page caps last *)
+      apply (fold_subgoals (prefix))[4]
+      subgoal premises prems
+        by ((frule cap_get_tag_isCap_unfolded_H_cap,
+             clarsimp simp: unfolds
+                      split: if_split_asm)+)
   apply (rename_tac vmpage_size option)
   apply (case_tac "vmpage_size = ARMSmallPage", simp_all)
    apply (frule cap_get_tag_isCap_unfolded_H_cap(16), simp)
@@ -3331,6 +3359,7 @@ definition
     | Some (Cap_page_directory_cap c) \<Rightarrow> cap_page_directory_cap_CL.capPDBasePtr_CL c
     | Some (Cap_asid_pool_cap c) \<Rightarrow> cap_asid_pool_cap_CL.capASIDPool_CL c
     | Some (Cap_zombie_cap c) \<Rightarrow> get_capZombiePtr_CL c
+    | Some (Cap_vcpu_cap c) \<Rightarrow> cap_vcpu_cap_CL.capVCPUPtr_CL c
     | _ \<Rightarrow> 0)"
 
 lemma cap_get_capPtr_spec:
@@ -3356,7 +3385,7 @@ lemma cap_get_capPtr_spec:
                   cap_cnode_cap_lift_def cap_thread_cap_lift_def
                   cap_zombie_cap_lift_def cap_page_table_cap_lift_def
                   cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
-                  Let_def cap_untyped_cap_lift_def  split: if_split_asm)
+                  cap_untyped_cap_lift_def cap_vcpu_cap_lift_def split: if_split_asm)
 
 definition get_capIsPhysical_CL :: "cap_CL option \<Rightarrow> bool"
 where
@@ -3372,6 +3401,7 @@ where
     | Some (Cap_page_directory_cap c) \<Rightarrow> True
     | Some (Cap_asid_pool_cap c) \<Rightarrow> True
     | Some (Cap_zombie_cap c) \<Rightarrow> True
+    | Some (Cap_vcpu_cap c) \<Rightarrow> True
     | _ \<Rightarrow> False)"
 
 lemma cap_get_capIsPhysical_spec:
@@ -3396,7 +3426,7 @@ lemma cap_get_capIsPhysical_spec:
                   cap_cnode_cap_lift_def cap_thread_cap_lift_def
                   cap_zombie_cap_lift_def cap_page_table_cap_lift_def
                   cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
-                  Let_def cap_untyped_cap_lift_def  split: if_split_asm)
+                  cap_untyped_cap_lift_def cap_vcpu_cap_lift_def  split: if_split_asm)
 
 lemma ccap_relation_get_capPtr_not_physical:
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap \<noteq> PhysicalClass \<rbrakk> \<Longrightarrow>
@@ -3454,7 +3484,7 @@ lemma ccap_relation_get_capPtr_physical:
   subgoal for arch_capability
   apply (cases arch_capability; simp)
      defer 2 (* page caps last *)
-     apply (fold_subgoals (prefix))[3]
+     apply (fold_subgoals (prefix))[4]
      subgoal by ((frule cap_get_tag_isCap_unfolded_H_cap,
                   clarsimp simp: unfolds split: if_split_asm)+)
   defer
@@ -4044,9 +4074,6 @@ lemma ensureNoChildren_ccorres:
   apply clarsimp
   apply (simp add: cte_wp_at_ctes_of)
 done
-
-
-
 
 lemma cap_small_frame_cap_set_capFMappedASID_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. cap_get_tag \<^bsup>s\<^esup>cap = scast cap_small_frame_cap\<rbrace>
