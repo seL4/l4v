@@ -142,7 +142,7 @@ crunch pspace_in_kernel_window[wp]: arm_context_switch "pspace_in_kernel_window"
   (simp: crunch_simps wp: crunch_wps ignore: do_machine_op writeContextIDAndPD_impl)
 
 crunch pspace_in_kernel_window[wp]: set_vm_root "pspace_in_kernel_window"
-  (simp: crunch_simps wp: crunch_wps ignore: setCurrentPD writeContextIDAndPD do_machine_op)
+  (simp: crunch_simps wp: crunch_wps ignore: set_current_pd writeContextIDAndPD do_machine_op)
 
 crunch pspace_in_kernel_window[wp]: perform_page_invocation "pspace_in_kernel_window"
   (simp: crunch_simps wp: crunch_wps)
@@ -2172,20 +2172,20 @@ lemma arm_context_switch_invs [wp]: (* ARMHYP callback undefined *)
           in use_valid)
      apply ((clarsimp | wp)+)[3]
   apply(erule use_valid)
-  apply(wp no_irq | simp add: no_irq_setHardwareASID no_irq_setCurrentPD)+
+  apply(wp no_irq | simp add: no_irq_setHardwareASID no_irq_set_current_pd)+
   done
 
-lemmas setCurrentPD_irq_masks = no_irq[OF no_irq_setCurrentPD]
+lemmas set_current_pd_irq_masks = no_irq[OF no_irq_set_current_pd]
 lemmas setHardwareASID_irq_masks = no_irq[OF no_irq_setHardwareASID]
 
-lemma dmo_setCurrentPD_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op (setCurrentPD addr) \<lbrace>\<lambda>y. invs\<rbrace>"
+lemma dmo_set_current_pd_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op (set_current_pd addr) \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
   apply safe
    apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
           in use_valid)
-     apply ((clarsimp simp: setCurrentPD_def writeTTBR0_def dsb_def isb_def machine_op_lift_def
-                           machine_rest_lift_def split_def | wp)+)[3]
-  apply(erule (1) use_valid[OF _ setCurrentPD_irq_masks])
+     apply ((clarsimp simp: set_current_pd_def writeTTBR0_def dsb_def isb_def machine_op_lift_def
+                           machine_rest_lift_def split_def setCurrentPDPL2_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ set_current_pd_irq_masks])
   done
 
 crunch device_state_inv[wp]: ackInterrupt "\<lambda>ms. P (device_state ms)"

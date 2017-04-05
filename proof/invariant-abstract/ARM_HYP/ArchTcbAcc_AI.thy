@@ -62,7 +62,7 @@ crunch device_state_inv[wp]: invalidateTLB_VAASID "\<lambda>ms. P (device_state 
 crunch device_state_inv[wp]: setHardwareASID "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: isb "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: dsb "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: setCurrentPD "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: set_current_pd "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: storeWord "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: cleanByVA_PoU "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: cleanL2Range "\<lambda>ms. P (device_state ms)"

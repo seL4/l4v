@@ -118,7 +118,7 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
 context Arch begin global_naming ARM
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
-    setHardwareASID, setCurrentPD, finalise_cap, preemption_point,
+    setHardwareASID, set_current_pd, finalise_cap, preemption_point,
     cap_swap_for_delete, decode_invocation
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
@@ -129,7 +129,7 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slo
            set_r9_fiq_impl set_r10_fiq_impl set_r11_fiq_impl set_r12_fiq_impl
            get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
            writeContextIDAndPD_impl set_gic_vcpu_ctrl_hcr_impl setSCTLR_impl setHCR_impl
-           set_gic_vcpu_ctrl_lr_impl)
+           set_gic_vcpu_ctrl_lr_impl setCurrentPDPL2_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: setRegister, setNextPC
 
