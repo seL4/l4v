@@ -17,7 +17,12 @@ imports TcbAcc_R
 begin
 context Arch begin global_naming X64 (*FIXME: arch_split*)
 
+(* FIXME x64: move *)
+lemmas store_pde_typ_ats' [wp] = abs_typ_at_lifts [OF store_pde_typ_at]
+lemmas store_pdpte_typ_ats' [wp] = abs_typ_at_lifts [OF store_pdpte_typ_at]
 lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
+lemmas store_pde_typ_ats[wp] = store_pde_typ_ats' abs_atyp_at_lifts[OF store_pde_typ_at]
+lemmas store_pdpte_typ_ats[wp] = store_pdpte_typ_ats' abs_atyp_at_lifts[OF store_pdpte_typ_at]
 
 end
 
@@ -925,10 +930,10 @@ crunch inv [wp]: findVSpaceForASID P
   (simp: assertE_def whenE_def loadObject_default_def
    wp: crunch_wps getObject_inv ignore: getObject)
 
-crunch aligned'[wp]: unmapPageTable "pspace_aligned'"
+crunch aligned'[wp]: unmapPageTable, unmapPageDirectory, unmapPDPT "pspace_aligned'"
   (ignore: getObject simp: crunch_simps
        wp: crunch_wps getObject_inv loadObject_default_inv)
-crunch distinct'[wp]: unmapPageTable "pspace_distinct'"
+crunch distinct'[wp]: unmapPageTable, unmapPageDirectory, unmapPDPT "pspace_distinct'"
   (ignore: getObject simp: crunch_simps
        wp: crunch_wps getObject_inv loadObject_default_inv)
 
@@ -1043,10 +1048,8 @@ lemma corres_split_strengthen_ftE:
   done
 
 lemma check_mapping_corres:
-  "page_entry_map m m' \<Longrightarrow> corres (dc \<oplus> dc)
-            (\<top>)
-            (pspace_aligned' and pspace_distinct')
-      (unlessE (check_mapping_pptr pptr m) $ throwError InvalidRoot)
+  "page_entry_map m m' \<Longrightarrow> corres (dc \<oplus> dc) \<top> \<top>
+      (unlessE (check_mapping_pptr pptr m) $ throwError ExceptionTypes_A.InvalidRoot)
       (checkMappingPPtr pptr m')"
   apply (simp add: liftE_bindE check_mapping_pptr_def
                    checkMappingPPtr_def)
@@ -1063,496 +1066,152 @@ crunch inv[wp]: checkMappingPPtr "P"
   (wp: crunch_wps loadObject_default_inv simp: crunch_simps)
 
 lemma store_pte_vspace_at_asid[wp]:
-  "\<lbrace>vspace_at_asid asid pd\<rbrace>
-  store_pte p pte \<lbrace>\<lambda>_. vspace_at_asid asid pd\<rbrace>"
-  apply (simp add: store_pte_def set_pd_def set_object_def vspace_at_asid_def)
+  "\<lbrace>vspace_at_asid asid pm\<rbrace>
+  store_pte p pte \<lbrace>\<lambda>_. vspace_at_asid asid pm\<rbrace>"
+  apply (simp add: store_pte_def set_pd_def set_object_def update_object_def vspace_at_asid_def)
   apply (wp get_object_wp)
   apply clarsimp
-  done
+  sorry
+
+(* FIXME x64: move *)
+lemma no_fail_invalidateTranslationSingleASID[wp]:
+  "no_fail \<top> (invalidateTranslationSingleASID v a)"
+  by (simp add: invalidateTranslationSingleASID_def)
+
+lemmas liftE_get_pde_corres = get_pde_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
+lemmas liftE_get_pte_corres = get_pte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
+lemmas liftE_get_pdpte_corres = get_pdpte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
+
+(* Wrap up the standard usage pattern of wp/wpc/simp into its own command: *)
+method wpsimp' uses wp wp_del simp simp_del split split_del cong =
+  ((determ \<open>wp add: wp del: wp_del |wpc|clarsimp simp add: simp simp del: simp_del split: split split del: split_del cong: cong\<close>)+)[1]
 
 lemma unmap_page_corres:
   "corres dc (invs and valid_etcbs and
-              K (valid_unmap sz (asid,vptr) \<and> vptr < kernel_base \<and> asid \<le> mask asid_bits))
+              K (valid_unmap sz (asid,vptr) \<and> vptr < pptr_base \<and> asid \<le> mask asid_bits \<and> canonical_address vptr))
              (valid_objs' and valid_arch_state' and pspace_aligned' and
               pspace_distinct' and no_0_obj' and cur_tcb')
              (unmap_page sz asid vptr pptr)
              (unmapPage sz asid vptr pptr)"
   apply (clarsimp simp: unmap_page_def unmapPage_def ignoreFailure_def const_def)
+thm unmap_page_def
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch [where E="\<lambda>_. \<top>" and E'="\<lambda>_. \<top>"], simp)
       apply (rule corres_split_strengthen_ftE[where ftr'=dc],
              rule find_vspace_for_asid_corres)
         apply (rule corres_splitEE)
            apply clarsimp
-           apply (rule flush_page_corres)
-          apply (rule_tac F = "vptr < kernel_base" in corres_gen_asm)
-          apply (rule_tac P="\<exists>\<rhd> pd and page_directory_at pd and vspace_at_asid asid pd
-                             and (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits))
+           apply (rule corres_machine_op, rule corres_Id, rule refl, simp)
+           apply (rule no_fail_invalidateTranslationSingleASID)
+          apply (rule_tac F = "vptr < pptr_base" in corres_gen_asm)
+          apply (rule_tac P="\<exists>\<rhd> vspace and page_map_l4_at vspace and vspace_at_asid asid vspace
+                             and (\<exists>\<rhd> vspace)
                              and valid_arch_state and valid_arch_objs
                              and equal_kernel_mappings
                              and pspace_aligned and valid_global_objs and valid_etcbs and
-                             K (valid_unmap sz (asid,vptr) )" and
+                             K (valid_unmap sz (asid,vptr) \<and> canonical_address vptr )" and
                           P'="pspace_aligned' and pspace_distinct'" in corres_inst)
           apply clarsimp
-          apply (rename_tac pd)
+          apply (rename_tac vspace)
           apply (cases sz, simp_all)[1]
              apply (rule corres_guard_imp)
-               apply (rule_tac F = "vptr < kernel_base" in corres_gen_asm)
+               apply (rule_tac F = "vptr < pptr_base" in corres_gen_asm)
                apply (rule corres_split_strengthen_ftE[OF lookup_pt_slot_corres])
                  apply simp
-                 apply (rule corres_splitEE[OF _ check_mapping_corres])
+                 apply (rule corres_splitEE[OF _ liftE_get_pte_corres])
                    apply simp
-                   apply (rule corres_split [OF _ store_pte_corres'])
-                      apply (rule corres_machine_op)
-                      apply (rule corres_Id, rule refl, simp)
-                      apply (rule no_fail_cleanByVA_PoU)
-                     apply (wp hoare_drop_imps lookup_pt_slot_inv
-                       lookupPTSlot_inv lookup_pt_slot_is_aligned
-                                 | simp add: pte_relation_aligned_def)+
-              apply (clarsimp simp: page_directory_pde_at_lookupI
-                page_directory_at_aligned_pd_bits vmsz_aligned_def)
-              apply (simp add:valid_unmap_def pageBits_def)
-              apply (erule less_kernel_base_mapping_slots)
-              apply (simp add:page_directory_at_aligned_pd_bits)
-             apply simp
-            apply (rule corres_guard_imp)
-              apply (rule corres_split_strengthen_ftE[OF lookup_pt_slot_corres])
-                apply (rule_tac F="is_aligned p 6" in corres_gen_asm)
-                apply (simp add: is_aligned_mask[symmetric])
-                apply (rule corres_split_strengthen_ftE[OF check_mapping_corres])
+                   apply (rule corres_split_norE[OF _ check_mapping_corres, where r=dc, simplified])
+                   apply simp
+                   apply (rule store_pte_corres')
+                   apply (((wpsimp' wp: hoare_vcg_all_lift_R get_pte_wp getPTE_wp lookup_pt_slot_wp
+                                  simp: page_entry_map_def unlessE_def is_aligned_pml4
+                             split_del: if_split
+                              simp_del: dc_simp)+
+                           | wp_once hoare_drop_imps)+)[10]
+         apply (rule corres_guard_imp)
+           apply (rule corres_split_strengthen_ftE[OF lookup_pd_slot_corres])
+             apply (simp del: dc_simp)
+             apply (rule corres_splitEE[OF _ liftE_get_pde_corres])
+               apply (rule corres_split_norE[OF _ check_mapping_corres, where r=dc, simplified])
                   apply simp
-                  apply (rule corres_split [OF _ corres_mapM])
-                           prefer 8
-                           apply (rule order_refl)
-                          apply (rule corres_machine_op)
-                          apply (clarsimp simp: last_byte_pte_def objBits_simps archObjSize_def)
-                          apply (rule corres_Id, rule refl, simp)
-                          apply (rule no_fail_cleanCacheRange_PoU)
-                         apply simp
-                        apply simp
-                       apply clarsimp
-                       apply (rule_tac P="(\<lambda>s. \<forall>x\<in>set [0, 4 .e. 0x3C]. pte_at (x + pa) s) and pspace_aligned and valid_etcbs"
-                                   and P'="pspace_aligned' and pspace_distinct'"
-                                    in corres_guard_imp)
-                         apply (rule store_pte_corres',  simp add:pte_relation_aligned_def)
-                        apply clarsimp
-                       apply clarsimp
-                      apply (wp store_pte_typ_at hoare_vcg_const_Ball_lift | simp | wp_once hoare_drop_imps)+
-               apply (wp lookup_pt_slot_ptes lookup_pt_slot_inv lookupPTSlot_inv
-                         lookup_pt_slot_is_aligned lookup_pt_slot_is_aligned_6)+
-             apply (clarsimp simp: page_directory_pde_at_lookupI vmsz_aligned_def pd_aligned
-                                   pd_bits_def pageBits_def valid_unmap_def)
-             apply (drule(1) less_kernel_base_mapping_slots[OF _ page_directory_at_aligned_pd_bits])
-              apply simp
-             apply (simp add:pd_bits_def pageBits_def)
-            apply (clarsimp simp: pd_aligned page_directory_pde_at_lookupI)
-           apply (rule corres_guard_imp)
-             apply (rule corres_split_strengthen_ftE[OF check_mapping_corres])
-               apply simp
-               apply (rule corres_split[OF _ store_pde_corres'])
-                  apply (rule corres_machine_op)
-                  apply (rule corres_Id, rule refl, simp)
-                  apply (rule no_fail_cleanByVA_PoU)
-                 apply (wp | simp add:pde_relation_aligned_def
-                   | wp_once hoare_drop_imps)+
-            apply (clarsimp simp: page_directory_pde_at_lookupI
-                                  pg_entry_align_def)
-            apply (clarsimp simp:lookup_pd_slot_def)
-            apply (erule(1) aligned_add_aligned[OF page_directory_at_aligned_pd_bits])
-             apply (simp add:is_aligned_shiftl_self)
-            apply (simp add:pd_bits_def pageBits_def word_bits_conv)
-           apply (simp add:pd_bits_def pageBits_def)
-          apply (rule corres_guard_imp)
-            apply (rule corres_split_strengthen_ftE[OF check_mapping_corres])
-              apply (rule_tac F="is_aligned (lookup_pd_slot pd vptr) 6"
-                            in corres_gen_asm)
-              apply (simp add: is_aligned_mask[symmetric])
-              apply (rule corres_split)
-                 apply (rule corres_machine_op)
-                 apply (clarsimp simp: last_byte_pde_def objBits_simps archObjSize_def)
-                 apply (rule corres_Id, rule refl, simp)
-                 apply (rule no_fail_cleanCacheRange_PoU)
-                apply (rule_tac P="page_directory_at pd and pspace_aligned and valid_etcbs
-                                      and K (valid_unmap sz (asid, vptr))"
-                            in corres_mapM [where r=dc], simp, simp)
-                    prefer 5
-                    apply (rule order_refl)
-                   apply clarsimp
-                   apply (rule corres_guard_imp, rule store_pde_corres')
-                     apply (simp add:pde_relation_aligned_def)+
-                    apply clarsimp
-                    apply (erule (2) pde_at_aligned_vptr)
-                    apply (simp add: valid_unmap_def)
-                   apply assumption
-                  apply (wp | simp | wp_once hoare_drop_imps)+
-           apply (clarsimp simp: valid_unmap_def page_directory_pde_at_lookupI
-                                 lookup_pd_slot_aligned_6 pg_entry_align_def
-                                 pd_aligned vmsz_aligned_def)
-          apply simp
-         apply wp
-         apply (rule_tac Q'="\<lambda>_. invs and vspace_at_asid asid pda" in hoare_post_imp_R)
-          apply (wp lookup_pt_slot_inv lookup_pt_slot_cap_to2' lookup_pt_slot_cap_to_multiple2
-                    store_pde_invs_unmap store_pde_vspace_at_asid mapM_swp_store_pde_invs_unmap
-               | wpc | simp | wp hoare_drop_imps
-               | wp mapM_wp')+
-         apply auto[1]
-        apply (wp lookupPTSlot_inv mapM_wp' | wpc | clarsimp)+
-       apply (wp hoare_vcg_const_imp_lift_R
-            | strengthen lookup_pd_slot_kernel_mappings_strg not_in_global_refs_vs_lookup
-              page_directory_at_lookup_mask_aligned_strg lookup_pd_slot_kernel_mappings_set_strg
-              page_directory_at_lookup_mask_add_aligned_strg
-            | wp hoare_vcg_const_Ball_lift_R)+
-   apply (clarsimp simp add: valid_unmap_def valid_asid_def)
-   apply (case_tac sz)
-      apply (auto simp: invs_def valid_state_def
-        valid_arch_state_def pageBits_def
-        valid_arch_caps_def vmsz_aligned_def)
-  done
-
-definition
-  "flush_type_map type \<equiv> case type of
-     X64_A.flush_type.Clean \<Rightarrow> X64_H.flush_type.Clean
-   | X64_A.flush_type.Invalidate \<Rightarrow> X64_H.flush_type.Invalidate
-   | X64_A.flush_type.CleanInvalidate \<Rightarrow> X64_H.flush_type.CleanInvalidate
-   | X64_A.flush_type.Unify \<Rightarrow> X64_H.flush_type.Unify"
-
-lemma do_flush_corres:
-  "corres_underlying Id nf nf' dc \<top> \<top>
-             (do_flush typ start end pstart) (doFlush (flush_type_map typ) start end pstart)"
-  apply (simp add: do_flush_def doFlush_def)
-  apply (cases "typ", simp_all add: flush_type_map_def)
-     apply (rule corres_Id [where r=dc], rule refl, simp)
-     apply (wp no_fail_cleanCacheRange_RAM)
-    apply (rule corres_Id [where r=dc], rule refl, simp)
-    apply (wp no_fail_invalidateCacheRange_RAM)
-   apply (rule corres_Id [where r=dc], rule refl, simp)
-   apply (wp no_fail_cleanInvalidateCacheRange_RAM)
-  apply (rule corres_Id [where r=dc], rule refl, simp)
-  apply (rule no_fail_pre, wp add: no_fail_cleanCacheRange_PoU no_fail_invalidateCacheRange_I
-                              no_fail_dsb no_fail_isb del: no_irq)
-  apply clarsimp
+                  apply (rule store_pde_corres')
+                  apply (((wpsimp' wp: hoare_vcg_all_lift_R get_pde_wp getPDE_wp lookup_pd_slot_wp
+                                 simp: page_entry_map_def unlessE_def is_aligned_pml4
+                            split_del: if_split
+                             simp_del: dc_simp)+
+                         | wp_once hoare_drop_imps)+)[10]
+        apply (rule corres_guard_imp)
+          apply (rule corres_split_strengthen_ftE[OF lookup_pdpt_slot_corres])
+            apply (simp del: dc_simp)
+            apply (rule corres_splitEE[OF _ liftE_get_pdpte_corres])
+              apply (rule corres_split_norE[OF _ check_mapping_corres, where r=dc, simplified])
+                 apply simp
+                 apply (rule store_pdpte_corres')
+                 apply (((wpsimp' wp: hoare_vcg_all_lift_R get_pdpte_wp getPDPTE_wp
+                                      lookup_pdpt_slot_wp
+                                simp: page_entry_map_def unlessE_def is_aligned_pml4
+                           split_del: if_split
+                            simp_del: dc_simp)+
+                         | wp_once hoare_drop_imps)+)
+   apply (rule conjI[OF disjI1], clarsimp)
+   apply (clarsimp simp: invs_arch_objs invs_psp_aligned valid_unmap_def invs_arch_state
+                         invs_equal_kernel_mappings)
+  apply (clarsimp)
   done
 
 definition
   "page_directory_invocation_map pdi pdi' \<equiv> case pdi of
-    X64_A.PageDirectoryNothing \<Rightarrow> pdi' = PageDirectoryNothing
-  | X64_A.PageDirectoryFlush typ start end pstart pd asid \<Rightarrow>
-      pdi' = PageDirectoryFlush (flush_type_map typ) start end pstart pd asid"
-
-lemma perform_page_directory_corres:
-  "page_directory_invocation_map pdi pdi' \<Longrightarrow>
-   corres dc (invs and valid_pdi pdi)
-             (valid_objs' and pspace_aligned' and pspace_distinct' and no_0_obj'
-               and cur_tcb' and valid_arch_state')
-             (perform_page_directory_invocation pdi) (performPageDirectoryInvocation pdi')"
-  apply (simp add: perform_page_directory_invocation_def performPageDirectoryInvocation_def)
-  apply (cases pdi)
-   apply (clarsimp simp: page_directory_invocation_map_def)
-   apply (rule corres_guard_imp)
-     apply (rule corres_when, simp)
-     apply (rule corres_split [OF _ set_vm_root_for_flush_corres])
-       apply (rule corres_split [OF _ corres_machine_op])
-          prefer 2
-          apply (rule do_flush_corres)
-         apply (rule corres_when, simp)
-         apply (rule corres_split [OF _ gct_corres])
-           apply clarsimp
-           apply (rule set_vm_root_corres)
-          apply wp+
-        apply (simp add: cur_tcb_def[symmetric])
-        apply (wp hoare_drop_imps)
-       apply (simp add: cur_tcb'_def[symmetric])
-       apply (wp hoare_drop_imps)+
-    apply clarsimp
-    apply (auto simp: valid_pdi_def)[2]
-  apply (clarsimp simp: page_directory_invocation_map_def)
-  done
+   X64_A.PageDirectoryMap cap cte pdpte pdpt_slot pml4  \<Rightarrow>
+      \<exists>cap' pdpte'. pdi' = PageDirectoryMap cap' (cte_map cte) pdpte' pdpt_slot pml4
+            \<and> cap_relation cap cap' \<and> pdpte_relation' pdpte pdpte'
+ | X64_A.PageDirectoryUnmap cap ptr \<Rightarrow>
+      \<exists>cap'. pdi' = PageDirectoryUnmap cap' (cte_map ptr) \<and> cap_relation cap (ArchObjectCap cap')"
 
 definition
   "page_invocation_map pgi pgi' \<equiv> case pgi of
-    X64_A.PageMap a c ptr m \<Rightarrow>
-      \<exists>c' m'. pgi' = PageMap a c' (cte_map ptr) m' \<and>
+    X64_A.PageMap c slot m vs \<Rightarrow>
+      \<exists>c' m'. pgi' = PageMap c' (cte_map slot) m' vs \<and>
               cap_relation c c' \<and>
               mapping_map m m'
-
-  | X64_A.PageRemap a m \<Rightarrow>
-      \<exists>m'. pgi' = PageRemap a m' \<and> mapping_map m m'
+  | X64_A.PageRemap m a vs \<Rightarrow>
+      \<exists>m'. pgi' = PageRemap m' a vs \<and> mapping_map m m'
   | X64_A.PageUnmap c ptr \<Rightarrow>
       \<exists>c'. pgi' = PageUnmap c' (cte_map ptr) \<and>
          acap_relation c c'
-  | X64_A.PageFlush typ start end pstart pd asid \<Rightarrow>
-      pgi' = PageFlush (flush_type_map typ) start end pstart pd asid
   | X64_A.PageGetAddr ptr \<Rightarrow>
       pgi' = PageGetAddr ptr"
 
+(* FIXME x64: is this needed? *)
 definition
   "valid_pde_slots' m \<equiv> case m of Inl (pte, xs) \<Rightarrow> True
            | Inr (pde, xs) \<Rightarrow> \<forall>x \<in> set xs. valid_pde_mapping' (x && mask pdBits) pde"
-
-definition
-  "vs_entry_align obj \<equiv>
-   case obj of KOArch (KOPTE pte) \<Rightarrow> pte_align' pte
-             | KOArch (KOPDE pde) \<Rightarrow> pde_align' pde
-             | _ \<Rightarrow> 0"
-
-definition "valid_slots_duplicated' \<equiv> \<lambda>m s. case m of
-  Inl (pte, xs) \<Rightarrow> (case pte of
-    pte.LargePagePTE _ _ _ _ _ \<Rightarrow> \<exists>p. xs = [p, p+4 .e. p + mask 6] \<and> is_aligned p 6
-        \<and> page_table_at' (p && ~~ mask ptBits) s
-    | _ \<Rightarrow> \<exists>p. xs = [p] \<and> ko_wp_at' (\<lambda>ko. vs_entry_align ko = 0) p s
-      \<and> page_table_at' (p && ~~ mask ptBits) s)
-  | Inr (pde, xs) \<Rightarrow> (case pde of
-    pde.SuperSectionPDE _ _ _ _ _ _ \<Rightarrow> \<exists>p. xs = [p, p+4 .e. p + mask 6] \<and> is_aligned p 6
-        \<and> page_directory_at' (p && ~~ mask pdBits) s
-    | _ \<Rightarrow> \<exists>p. xs = [p] \<and> ko_wp_at' (\<lambda>ko. vs_entry_align ko = 0) p s
-      \<and> page_directory_at' (p && ~~ mask pdBits) s)"
 
 lemma tl_nat_list_simp:
  "tl [a..<b] = [a + 1 ..<b]"
   by (induct b,auto)
 
-lemma valid_slots_duplicated_pteD':
-  assumes "valid_slots_duplicated' (Inl (pte, xs)) s"
-  shows "(is_aligned (hd xs >> 2) (pte_align' pte))
-     \<and> (\<forall>p \<in> set (tl xs). \<not> is_aligned (p >> 2) (pte_align' pte))"
-proof -
-  have is_aligned_estimate:
-    "\<And>x. is_aligned (x::word32) 4 \<Longrightarrow> x \<noteq> 0 \<Longrightarrow> 2 ^ 4 \<le> x"
-    apply (simp add:is_aligned_mask mask_def)
-    apply word_bitwise
-    apply auto
-    done
-  show ?thesis
-  using assms
-  apply -
-  apply (clarsimp simp:valid_slots_duplicated'_def
-    split:X64_H.pte.splits)
-  apply (subgoal_tac "p \<le> p + mask 6")
-   apply (clarsimp simp:upto_enum_step_def not_less)
-   apply (intro conjI impI,simp)
-    apply (simp add:hd_map_simp mask_def is_aligned_shiftr upto_enum_word)
-   apply (clarsimp simp:mask_def upto_enum_word)
-   apply (subst (asm) tl_map_simp upto_enum_word)
-    apply simp
-   apply (clarsimp simp:image_def)
-   apply (cut_tac w = "of_nat x :: word32" in shiftl_t2n[where n = 2,simplified,symmetric])
-   apply (clarsimp simp:field_simps)
-   apply (drule is_aligned_shiftl[where n = 6 and m = 2,simplified])
-   apply (subst (asm) shiftr_shiftl1)
-    apply simp
-   apply (simp add: tl_nat_list_simp)
-   apply (subst (asm) is_aligned_neg_mask_eq)
-    apply (erule aligned_add_aligned[OF _ is_aligned_shiftl_self])
-    apply simp
-   apply (drule(1) is_aligned_addD1)
-   apply (drule_tac w = "(of_nat x::word32) << 2" in
-     is_aligned_shiftr[where n = 4 and m = 2,simplified])
-   apply (clarsimp simp: shiftl_shiftr_id word_of_nat_less)+
-   apply (drule is_aligned_estimate)
-    apply (rule of_nat_neq_0)
-     apply simp
-    apply simp
-   apply (drule unat_le_helper)
-   apply simp
-  apply (erule is_aligned_no_wrap')
-  apply (simp add:mask_def)
-  done
-qed
-
-lemma valid_slots_duplicated_pdeD':
-  assumes "valid_slots_duplicated' (Inr (pde, xs)) s"
-  shows "(is_aligned (hd xs >> 2) (pde_align' pde))
-     \<and> (\<forall>p \<in> set (tl xs). \<not> is_aligned (p >> 2) (pde_align' pde))"
-proof -
-  have is_aligned_estimate:
-    "\<And>x. is_aligned (x::word32) 4 \<Longrightarrow> x \<noteq> 0 \<Longrightarrow> 2 ^ 4 \<le> x"
-    apply (simp add:is_aligned_mask mask_def)
-    apply word_bitwise
-    apply auto
-    done
-  show ?thesis
-  using assms
-  apply -
-  apply (clarsimp simp:valid_slots_duplicated'_def
-    split:X64_H.pde.splits)
-  apply (subgoal_tac "p \<le> p + mask 6")
-   apply (clarsimp simp:upto_enum_step_def not_less)
-   apply (intro conjI impI,simp)
-    apply (simp add:hd_map_simp mask_def is_aligned_shiftr upto_enum_word)
-   apply (clarsimp simp:mask_def upto_enum_word)
-   apply (subst (asm) tl_map_simp upto_enum_word)
-    apply simp
-   apply (clarsimp simp:image_def)
-   apply (cut_tac w = "of_nat x :: word32" in shiftl_t2n[where n = 2,simplified,symmetric])
-   apply (clarsimp simp:field_simps)
-   apply (drule is_aligned_shiftl[where n = 6 and m = 2,simplified])
-   apply (subst (asm) shiftr_shiftl1)
-    apply simp
-   apply (simp add: tl_nat_list_simp)
-   apply (subst (asm) is_aligned_neg_mask_eq)
-    apply (erule aligned_add_aligned[OF _ is_aligned_shiftl_self])
-    apply simp
-   apply (drule(1) is_aligned_addD1)
-   apply (drule_tac w = "(of_nat x::word32) << 2" in
-     is_aligned_shiftr[where n = 4 and m = 2,simplified])
-   apply (clarsimp simp: shiftl_shiftr_id word_of_nat_less)+
-   apply (drule is_aligned_estimate)
-    apply (rule of_nat_neq_0)
-     apply simp
-    apply simp
-   apply (drule unat_le_helper)
-   apply simp
-  apply (erule is_aligned_no_wrap')
-  apply (simp add:mask_def)
-  done
-qed
-
-lemma setCTE_vs_entry_align[wp]:
-  "\<lbrace>\<lambda>s. ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p s\<rbrace>
-    setCTE ptr cte
-  \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p\<rbrace>"
-  apply (clarsimp simp: setCTE_def setObject_def split_def
-                        valid_def in_monad ko_wp_at'_def
-             split del: if_split
-                 elim!: rsubst[where P=P])
-  apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
-  apply (elim exE conjE disjE)
-   apply (clarsimp simp: ps_clear_upd' objBits_simps
-                         lookupAround2_char1)
-   apply (simp add:vs_entry_align_def)
-  apply (clarsimp simp: ps_clear_upd' objBits_simps vs_entry_align_def)
-  done
-
-lemma updateCap_vs_entry_align[wp]:
- "\<lbrace>ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p \<rbrace> updateCap ptr cap
-  \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p\<rbrace>"
-  apply (simp add:updateCap_def)
-  apply wp
-  done
-
-lemma valid_slots_duplicated_updateCap[wp]:
-  "\<lbrace>valid_slots_duplicated' m'\<rbrace> updateCap cap c'
-  \<lbrace>\<lambda>rv s. valid_slots_duplicated' m' s\<rbrace>"
-  apply (case_tac m')
-   apply (simp_all add:valid_slots_duplicated'_def)
-   apply (case_tac a,case_tac aa,simp_all)
-     apply (wp hoare_vcg_ex_lift)+
-  apply (case_tac b,case_tac a,simp_all)
-     apply (wp hoare_vcg_ex_lift)+
-  done
-
 definition
   "valid_page_inv' pgi \<equiv> case pgi of
-    PageMap asid cap ptr m \<Rightarrow>
+    PageMap cap ptr m vs \<Rightarrow>
       cte_wp_at' (is_arch_update' cap) ptr and valid_slots' m and valid_cap' cap
-          and K (valid_pde_slots' m) and (valid_slots_duplicated' m)
-  | PageRemap asid m \<Rightarrow> valid_slots' m and K (valid_pde_slots' m) and (valid_slots_duplicated' m)
+      and K (page_entry_map_corres m)
+  | PageRemap m asid vs \<Rightarrow> valid_slots' m and K (page_entry_map_corres m)
   | PageUnmap cap ptr \<Rightarrow>
-      \<lambda>s. \<exists>d r R sz m. cap = PageCap d r R sz m \<and>
+      \<lambda>s. \<exists>r mt R sz d m. cap = PageCap r R mt sz d m \<and>
           cte_wp_at' (is_arch_update' (ArchObjectCap cap)) ptr s \<and>
           s \<turnstile>' (ArchObjectCap cap)
-  | PageFlush typ start end pstart pd asid \<Rightarrow> \<top>
   | PageGetAddr ptr \<Rightarrow> \<top>"
 
 crunch ctes [wp]: unmapPage "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: crunch_simps ignore: getObject)
 
-lemma corres_store_pde_with_invalid_tail:
-  "\<forall>slot \<in>set ys. \<not> is_aligned (slot >> 2) (pde_align' ab)
-  \<Longrightarrow>corres dc ((\<lambda>s. \<forall>y\<in> set ys. pde_at y s) and pspace_aligned and valid_etcbs)
-           (pspace_aligned' and pspace_distinct')
-           (mapM (swp store_pde X64_A.pde.InvalidPDE) ys)
-           (mapM (swp storePDE ab) ys)"
-  apply (rule_tac S ="{(x,y). x = y \<and> x \<in> set ys}"
-               in corres_mapM[where r = dc and r' = dc])
-       apply simp
-      apply simp
-     apply clarsimp
-     apply (rule corres_guard_imp)
-       apply (rule store_pde_corres')
-       apply (drule bspec)
-        apply simp
-       apply (simp add:pde_relation_aligned_def)
-       apply auto[1]
-      apply (drule bspec, simp)
-     apply simp
-    apply (wp hoare_vcg_ball_lift | simp)+
-   apply clarsimp
-   done
-
-lemma corres_store_pte_with_invalid_tail:
-  "\<forall>slot\<in> set ys. \<not> is_aligned (slot >> 2) (pte_align' aa)
-  \<Longrightarrow> corres dc ((\<lambda>s. \<forall>y\<in>set ys. pte_at y s) and pspace_aligned and valid_etcbs)
-                (pspace_aligned' and pspace_distinct')
-             (mapM (swp store_pte X64_A.pte.InvalidPTE) ys)
-             (mapM (swp storePTE aa) ys)"
-  apply (rule_tac S ="{(x,y). x = y \<and> x \<in> set ys}"
-               in corres_mapM[where r = dc and r' = dc])
-       apply simp
-      apply simp
-     apply clarsimp
-     apply (rule corres_guard_imp)
-       apply (rule store_pte_corres')
-       apply (drule bspec)
-        apply simp
-       apply (simp add:pte_relation_aligned_def)
-       apply auto[1]
-      apply (drule bspec,simp)
-     apply simp
-    apply (wp hoare_vcg_ball_lift | simp)+
-   apply clarsimp
-   done
-
 lemma updateCap_valid_slots'[wp]:
   "\<lbrace>valid_slots' x2\<rbrace> updateCap cte cte' \<lbrace>\<lambda>_ s. valid_slots' x2 s \<rbrace>"
-  apply (case_tac x2)
-   apply (clarsimp simp:valid_slots'_def)
-   apply (wp hoare_vcg_ball_lift)
-  apply (clarsimp simp:valid_slots'_def)
-  apply (wp hoare_vcg_ball_lift)
-  done
+  apply (case_tac x2, case_tac a)
+    by (wpsimp simp: valid_slots'_def wp: hoare_vcg_ball_lift)+
 
-lemma pte_check_if_mapped_corres:
-  "corres (op =) (pte_at slot) ((\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_aligned' and pspace_distinct') (pte_check_if_mapped slot) (pteCheckIfMapped slot)"
-  apply (simp add: pte_check_if_mapped_def pteCheckIfMapped_def)
-    apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ get_master_pte_corres', simplified])
-      apply (rule corres_return[where P="pte_at slot" and
-                          P'="pspace_aligned' and pspace_distinct'", THEN iffD2])
-      apply (clarsimp simp: pte_relation'_def split: )
-      apply (case_tac pt, simp_all)[1]
-     apply wp+
-   apply (simp)
-  apply simp
-  done
 
-lemma pde_check_if_mapped_corres:
-  "corres (op =) (pde_at slot) ((\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_aligned' and pspace_distinct') (pde_check_if_mapped slot) (pdeCheckIfMapped slot)"
-  apply (simp add: pde_check_if_mapped_def pdeCheckIfMapped_def)
-    apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ get_master_pde_corres', simplified])
-      apply (rule corres_return[where P="pde_at slot" and
-                          P'="pspace_aligned' and pspace_distinct'", THEN iffD2])
-      apply (clarsimp simp: pte_relation'_def split: )
-      apply (case_tac pd, simp_all)[1]
-     apply wp+
-   apply (clarsimp simp: pte_relation_aligned_def split: if_split_asm)
-  apply simp
-  done
-
-crunch unique_table_refs[wp]: do_machine_op, store_pte "\<lambda>s. (unique_table_refs (caps_of_state s))"
-crunch valid_asid_map[wp]: store_pte "valid_asid_map"
-
-lemma store_pte_valid_global_objs[wp]:
-  "\<lbrace>valid_global_objs and valid_arch_state and K (aligned_pte pte)\<rbrace> store_pte slot pte \<lbrace>\<lambda>_. valid_global_objs\<rbrace>"
-  apply (simp add: store_pte_def)
-  apply (wp)
-  apply clarsimp
-  apply (frule valid_global_ptsD, simp)
-  apply clarsimp
-  apply (subgoal_tac "pt=pta")
-   apply (auto simp: obj_at_def)
-  done
+crunch unique_table_refs[wp]: do_machine_op, store_pte, store_pde, store_pdpte "\<lambda>s. (unique_table_refs (caps_of_state s))"
 
 lemma set_cap_vspace_at_asid [wp]:
   "\<lbrace>vspace_at_asid asid pd\<rbrace> set_cap t st \<lbrace>\<lambda>rv. vspace_at_asid asid pd\<rbrace>"
@@ -1562,22 +1221,23 @@ lemma set_cap_vspace_at_asid [wp]:
 
 lemma set_cap_valid_slots_inv[wp]:
   "\<lbrace>valid_slots m\<rbrace> set_cap t st \<lbrace>\<lambda>rv. valid_slots m\<rbrace>"
-  by (cases m, (clarsimp simp: valid_slots_def, wp hoare_vcg_ball_lift set_cap.vs_lookup set_cap_typ_ats)+)
+  apply (cases m; simp)
+  apply (case_tac a; simp)
+    by  (clarsimp simp: valid_slots_def, wp hoare_vcg_ball_lift set_cap.vs_lookup set_cap_typ_ats)+
 
 lemma set_cap_same_refs_inv[wp]:
   "\<lbrace>\<lambda>s. same_refs m cap s\<rbrace> set_cap t st \<lbrace>\<lambda>rv s. same_refs m cap s\<rbrace>"
   by (cases m, (clarsimp simp: same_refs_def, wp)+)
 
 definition
-  "valid_page_map_inv asid cap ptr m \<equiv> (\<lambda>s. caps_of_state s ptr = Some cap) and same_refs m cap and
+  "valid_page_map_inv cap ptr m vs \<equiv> (\<lambda>s. caps_of_state s ptr = Some cap) and same_refs m cap and
   valid_slots m and
   valid_cap cap and
-  K (is_pg_cap cap \<and> empty_refs m \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0) and
-  (\<lambda>s. \<exists>sl. cte_wp_at (parent_for_refs m) sl s) and
-  (\<lambda>s. \<exists>pd. vspace_at_asid asid pd s)"
+  K (is_pg_cap cap \<and> empty_refs m) and
+  (\<lambda>s. \<exists>sl. cte_wp_at (parent_for_refs m) sl s)"
 
 lemma set_cap_valid_page_map_inv:
-  "\<lbrace>valid_page_inv (X64_A.page_invocation.PageMap asid cap slot m)\<rbrace> set_cap cap slot \<lbrace>\<lambda>rv. valid_page_map_inv asid cap slot m\<rbrace>"
+  "\<lbrace>valid_page_inv (X64_A.page_invocation.PageMap cap slot m vs)\<rbrace> set_cap cap slot \<lbrace>\<lambda>rv. valid_page_map_inv cap slot m vs\<rbrace>"
   apply (simp add: valid_page_inv_def valid_page_map_inv_def)
   apply (wp set_cap_cte_wp_at_cases hoare_vcg_ex_lift| simp)+
   apply clarsimp
@@ -1586,52 +1246,8 @@ lemma set_cap_valid_page_map_inv:
   apply (subgoal_tac "(a,b) \<noteq> slot")
    apply clarsimp
   apply (clarsimp simp: cte_wp_at_def parent_for_refs_def)
-  apply (auto simp: is_pt_cap_def is_pg_cap_def is_pd_cap_def split: sum.splits)
+  apply (auto simp: is_pt_cap_def is_pg_cap_def is_pd_cap_def is_pdpt_cap_def split: vm_page_entry.splits)
   done
-
-lemma duplicate_address_set_simp:
-  "\<lbrakk>koTypeOf m \<noteq> ArchT PDET; koTypeOf m \<noteq> ArchT PTET \<rbrakk>
-  \<Longrightarrow> p && ~~ mask (vs_ptr_align m) = p"
-  by (auto simp:vs_ptr_align_def koTypeOf_def
-    split:kernel_object.splits arch_kernel_object.splits)+
-
-lemma valid_duplicates'_non_pd_pt_I:
-  "\<lbrakk>koTypeOf ko \<noteq> ArchT PDET; koTypeOf ko \<noteq> ArchT PTET;
-   vs_valid_duplicates' (ksPSpace s) ; ksPSpace s p = Some ko; koTypeOf ko = koTypeOf m\<rbrakk>
-       \<Longrightarrow> vs_valid_duplicates' (ksPSpace s(p \<mapsto> m))"
-  apply (subst vs_valid_duplicates'_def)
-  apply (intro allI impI)
-  apply (clarsimp split:if_splits simp:duplicate_address_set_simp option.splits)
-  apply (intro conjI impI allI)
-    apply (frule_tac p = x and p' = p in valid_duplicates'_D)
-     apply assumption
-    apply simp
-   apply (simp add:duplicate_address_set_simp)+
-  apply (drule_tac m = "ksPSpace s"
-    and p = x in valid_duplicates'_D)
-     apply simp+
-  done
-
-lemma setCTE_valid_duplicates'[wp]:
- "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
-  setCTE p cte \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add:setCTE_def)
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
-                        objBits_def[symmetric] lookupAround2_char1
-                 split: if_split_asm)
-  apply (frule pspace_storable_class.updateObject_type[where v = cte,simplified])
-  apply (clarsimp simp:ObjectInstances_H.updateObject_cte assert_def bind_def
-    alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
-    assert_opt_def return_def fail_def typeError_def
-    split:if_splits option.splits Structures_H.kernel_object.splits)
-     apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
-  done
-crunch valid_duplicates'[wp]: updateCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps
-   simp: crunch_simps unless_def
-   ignore: getObject setObject)
-
 
 lemma message_info_to_data_eqv:
   "wordFromMessageInfo (message_info_map mi) = message_info_to_data mi"
@@ -1684,8 +1300,9 @@ lemma set_mrs_invs'[wp]:
 
 lemma perform_page_corres:
   assumes "page_invocation_map pgi pgi'"
+  notes mapping_map_simps = mapping_map_def page_entry_map_def attr_mask_def attr_mask'_def page_entry_ptr_map_def
   shows "corres dc (invs and valid_etcbs and valid_page_inv pgi)
-            (invs' and valid_page_inv' pgi' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
+            (invs' and valid_page_inv' pgi')
             (perform_page_invocation pgi) (performPageInvocation pgi')"
 proof -
   have pull_out_P:
@@ -1694,299 +1311,142 @@ proof -
   show ?thesis
   using assms
   apply (cases pgi)
-       apply (rename_tac word cap prod sum)
+       apply (rename_tac cap prod entry vspace)
        apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def
                              page_invocation_map_def)
        apply (rule corres_guard_imp)
-         apply (rule_tac R="\<lambda>_. invs and (valid_page_map_inv word cap (a,b) sum) and valid_etcbs and (\<lambda>s. caps_of_state s (a,b) = Some cap)"
-           and R'="\<lambda>_. invs' and valid_slots' m' and pspace_aligned' and valid_slots_duplicated' m'
-           and pspace_distinct' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))" in corres_split)
+         apply (rule_tac R="\<lambda>_. invs and (valid_page_map_inv cap (a,b) (aa,ba) vspace) and valid_etcbs and (\<lambda>s. caps_of_state s (a,b) = Some cap)"
+           and R'="\<lambda>_. invs' and valid_slots' (ab,bb) and pspace_aligned'
+           and pspace_distinct' and K (page_entry_map_corres (ab,bb))" in corres_split)
             prefer 2
             apply (erule updateCap_same_master)
-           apply (case_tac sum, case_tac aa)
-            apply (clarsimp simp: mapping_map_def valid_slots'_def valid_slots_def valid_page_inv_def neq_Nil_conv valid_page_map_inv_def)
+           apply (simp, rule corres_gen_asm2)
+           apply (case_tac aa)
+             apply clarsimp
+             apply (frule (1) mapping_map_pte, clarsimp)
+             apply (clarsimp simp: mapping_map_simps valid_slots'_def valid_slots_def valid_page_inv_def neq_Nil_conv valid_page_map_inv_def)
             apply (rule corres_name_pre)
-            apply (clarsimp simp:mapM_Cons bind_assoc split del: if_split)
-            apply (rule corres_guard_imp)
-              apply (rule corres_split[OF _ pte_check_if_mapped_corres])
-                apply (rule corres_split[OF _ store_pte_corres'])
-                   apply (rule corres_split[where r' = dc, OF _ corres_store_pte_with_invalid_tail])
-                      apply (rule corres_split[where r'=dc, OF _ corres_machine_op[OF corres_Id]])
-                           apply (clarsimp simp add: when_def)
-                           apply (rule invalidate_tlb_by_asid_corres_ex)
-                          apply (simp add: last_byte_pte_def objBits_simps archObjSize_def)
-                         apply simp
-                        apply (rule no_fail_cleanCacheRange_PoU)
-                       apply (wp hoare_vcg_ex_lift)+
-                     apply (clarsimp simp:pte_relation_aligned_def)
-                     apply (clarsimp dest!:valid_slots_duplicated_pteD')
-                    apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
-                     prefer 2
-                     apply auto[1]
-                    apply (wp mapM_swp_store_pte_invs[where pte="X64_A.pte.InvalidPTE", simplified] hoare_vcg_ex_lift)
-                    apply (wp mapM_UNIV_wp | simp add: swp_def del: fun_upd_apply)+
-                  apply (clarsimp simp:pte_relation_aligned_def)
-                  apply (clarsimp dest!:valid_slots_duplicated_pteD')
-                 apply (clarsimp simp del: fun_upd_apply simp add: cte_wp_at_caps_of_state)
-                 apply (wp add: hoare_vcg_const_Ball_lift store_pte_typ_at store_pte_cte_wp_at hoare_vcg_ex_lift)+
-              apply (wp | simp add: pteCheckIfMapped_def)+
-             apply (clarsimp simp add: cte_wp_at_caps_of_state valid_slots_def parent_for_refs_def empty_refs_def invs_psp_aligned simp del: fun_upd_apply)
-             apply (rule conjI)
-              apply (rule_tac x=aa in exI, rule_tac x=ba in exI)
-              apply (clarsimp simp: is_pt_cap_def cap_asid_def image_def neq_Nil_conv Collect_disj_eq split: Structures_A.cap.splits arch_cap.splits option.splits)
-             apply (rule conjI)
-              apply clarsimp
-              apply (drule same_refs_lD)
-              apply (rule_tac x=a in exI, rule_tac x=b in exI)
-              apply clarify
-              apply (drule_tac x=refa in spec)
-              apply clarsimp
-             apply (rule conjI[rotated], fastforce)
-             apply auto[1]
-            apply clarsimp
-           apply (case_tac ba)
-           apply (clarsimp simp: mapping_map_def valid_slots_def valid_slots'_def neq_Nil_conv valid_page_inv_def valid_page_map_inv_def)
-           apply (rule corres_name_pre)
-           apply (clarsimp simp:mapM_Cons bind_assoc split del:if_split)
+           apply (clarsimp simp:mapM_Cons bind_assoc split del: if_split)
            apply (rule corres_guard_imp)
-             apply (rule corres_split[OF _ pde_check_if_mapped_corres])
-               apply (rule corres_split[OF _ store_pde_corres'])
-                  apply (rule corres_split[where r'=dc, OF _ corres_store_pde_with_invalid_tail])
-                     apply (rule corres_split[where r'=dc,OF _ corres_machine_op[OF corres_Id]])
-                          apply (clarsimp simp: when_def)
-                          apply (rule invalidate_tlb_by_asid_corres_ex)
-                         apply (simp add: last_byte_pde_def objBits_simps archObjSize_def)
-                        apply simp
-                       apply (rule no_fail_cleanCacheRange_PoU)
-                      apply (wp hoare_vcg_ex_lift)+
-                    apply (clarsimp simp: pde_relation_aligned_def)
-                    apply (clarsimp dest!:valid_slots_duplicated_pdeD' )
-                   apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
-                    prefer 2
-                    apply auto[1]
-                   apply (wp mapM_swp_store_pde_invs_unmap[where pde="X64_A.pde.InvalidPDE", simplified] hoare_vcg_ex_lift)
-                   apply (wp mapM_UNIV_wp store_pde_vspace_at_asid | clarsimp simp add: swp_def)+
-                 apply (clarsimp simp: pde_relation_aligned_def)
-                 apply (clarsimp  dest!:valid_slots_duplicated_pdeD')
-                apply (clarsimp simp add: cte_wp_at_caps_of_state  simp del: fun_upd_apply)
-                apply (wp_trace hoare_vcg_const_Ball_lift store_pde_typ_at hoare_vcg_ex_lift store_pde_vspace_at_asid)
-                apply (rule hoare_vcg_conj_lift)
-                 apply (rule_tac slots="y # ys" in store_pde_invs_unmap')
-                apply (wp hoare_vcg_const_Ball_lift store_pde_vspace_at_asid hoare_vcg_ex_lift)
-             apply (wp | simp add: pdeCheckIfMapped_def)+
-            apply (clarsimp simp add: cte_wp_at_caps_of_state valid_slots_def parent_for_refs_def empty_refs_def invs_psp_aligned simp del: fun_upd_apply)
-            apply (rule conjI, rule_tac x=ref in exI, clarsimp)
-            apply (rule conjI)
-             apply (rule_tac x=aa in exI, rule_tac x=ba in exI)
-             apply auto[1]
-            apply (rule conjI)
-             apply (rule_tac x=a in exI, rule_tac x=b in exI, auto simp: same_refs_def)[1]
-            apply (rule conjI)
-             apply (clarsimp simp: pde_at_def obj_at_def
-                                         caps_of_state_cteD'[where P=\<top>, simplified])
-             apply (drule_tac cap=capa and ptr="(aa,ba)"
-                           in valid_global_refsD[OF invs_valid_global_refs])
-               apply assumption+
-             apply (clarsimp simp: cap_range_def)
-            apply (rule conjI)
-             apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
-             apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm X64_A.arch_kernel_obj.splits)
-            apply (rule conjI[rotated], fastforce)
-            apply (erule ballEI)
-            apply (clarsimp simp: pde_at_def obj_at_def
-                                        caps_of_state_cteD'[where P=\<top>, simplified])
-            apply (drule_tac cap=capa and ptr="(aa,ba)"
-                           in valid_global_refsD[OF invs_valid_global_refs])
-              apply assumption+
-            apply (drule_tac x=x in imageI[where f="\<lambda>x. x && ~~ mask pd_bits"])
-            apply (drule (1) subsetD)
-            apply (clarsimp simp: cap_range_def)
-           apply clarsimp
-          apply (wp_trace arch_update_cap_invs_map set_cap_valid_page_map_inv)
-         apply (wp arch_update_updateCap_invs)
-        apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct valid_page_inv_def cte_wp_at_caps_of_state is_arch_update_def is_cap_simps)
-        apply (simp add: cap_master_cap_def split: cap.splits arch_cap.splits)
-       apply (auto simp: cte_wp_at_ctes_of valid_page_inv'_def)[1]
-       -- "PageRemap"
-      apply (rename_tac word sum)
-      apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def
-                            page_invocation_map_def)
-      apply (case_tac sum)
-       apply simp
-       apply (case_tac a, simp)
-       apply (clarsimp simp: mapping_map_def)
-       apply (rule corres_name_pre)
-       apply (clarsimp simp:mapM_Cons mapM_x_mapM bind_assoc valid_slots_def valid_page_inv_def
-                            neq_Nil_conv split del: if_split)
-       apply (rule corres_guard_imp)
-         apply (rule corres_split[OF _ pte_check_if_mapped_corres])
-           apply (rule corres_split[OF _ store_pte_corres'])
-              apply (rule corres_split[OF _ corres_store_pte_with_invalid_tail])
-                 apply (rule corres_split[where r' = dc,OF _ corres_machine_op[OF corres_Id]])
-                      apply (clarsimp simp: when_def)
-                      apply (rule invalidate_tlb_by_asid_corres_ex)
-                     apply (simp add: last_byte_pte_def objBits_simps archObjSize_def)
-                    apply simp
-                   apply (rule no_fail_cleanCacheRange_PoU)
-                  apply (wp hoare_vcg_ex_lift)+
-                apply (clarsimp simp:valid_page_inv'_def)
-                apply (clarsimp dest!:valid_slots_duplicated_pteD')
-               apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
-                prefer 2
-                apply auto[1]
-               apply (wp mapM_swp_store_pte_invs[where pte="X64_A.pte.InvalidPTE", simplified] hoare_vcg_ex_lift)
-               apply (wp mapM_UNIV_wp | simp add: swp_def del: fun_upd_apply)+
-             apply (clarsimp simp:pte_relation_aligned_def valid_page_inv'_def)
-             apply (clarsimp dest!:valid_slots_duplicated_pteD')
-            apply (clarsimp simp del: fun_upd_apply simp add: cte_wp_at_caps_of_state)
-            apply (wp_trace add: hoare_vcg_const_Ball_lift store_pte_typ_at store_pte_cte_wp_at hoare_vcg_ex_lift)
-         apply (wp | simp add: pteCheckIfMapped_def)+
-        apply (clarsimp simp add: cte_wp_at_caps_of_state valid_slots_def parent_for_refs_def empty_refs_def invs_psp_aligned is_cap_simps simp del: fun_upd_apply)
-        apply (rule conjI)
-         apply fastforce
-        apply (rule conjI)
-         apply clarsimp
-         apply (rule_tac x=ac in exI, rule_tac x=bb in exI, rule_tac x=capa in exI)
-         apply (drule same_refs_lD)
-         apply clarsimp
-         apply (erule (2) ref_is_unique[OF _ _ reachable_page_table_not_global])
-                 apply (simp_all add: invs_def valid_state_def valid_arch_state_def valid_arch_caps_def valid_pspace_def valid_objs_caps)[9]
-        apply fastforce
-       apply auto[1]
-      apply simp
-      apply (case_tac b)
-      apply (rule corres_name_pre)
-      apply (clarsimp simp: mapping_map_def valid_page_inv_def
-        mapM_x_mapM mapM_Cons bind_assoc
-        valid_slots_def neq_Nil_conv split del:if_split)
-      apply (rule corres_guard_imp)
-        apply (rule corres_split[OF _ pde_check_if_mapped_corres])
-          apply (rule corres_split[OF _ store_pde_corres'])
-             apply (rule corres_split[where r'=dc, OF _ corres_store_pde_with_invalid_tail])
-                apply (rule corres_split[where r'=dc,OF _ corres_machine_op[OF corres_Id]])
-                     apply (clarsimp simp: when_def)
-                     apply (rule invalidate_tlb_by_asid_corres_ex)
-                    apply (simp add: last_byte_pde_def objBits_simps archObjSize_def)
+             apply (rule corres_split[OF _ store_pte_corres'])
+                apply (rule corres_split[where r'="op ="])
                    apply simp
-                  apply (rule no_fail_cleanCacheRange_PoU)
-                 apply (wp hoare_vcg_ex_lift)+
-               apply (clarsimp simp: pde_relation_aligned_def valid_page_inv'_def)
-               apply (clarsimp dest!:valid_slots_duplicated_pdeD' )
-              apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
-               prefer 2
-               apply auto[1]
-              apply (wp mapM_swp_store_pde_invs_unmap[where pde="X64_A.pde.InvalidPDE", simplified] hoare_vcg_ex_lift)
-              apply (wp mapM_UNIV_wp store_pde_vspace_at_asid | clarsimp simp add: swp_def)+
-            apply (clarsimp simp: pde_relation_aligned_def valid_page_inv'_def)
-            apply (clarsimp  dest!:valid_slots_duplicated_pdeD')
-           apply (clarsimp simp add: cte_wp_at_caps_of_state  simp del: fun_upd_apply)
-           apply (wp_trace hoare_vcg_const_Ball_lift store_pde_typ_at hoare_vcg_ex_lift store_pde_vspace_at_asid)
-           apply (rule hoare_vcg_conj_lift)
-            apply (rule_tac slots="y # ys" in store_pde_invs_unmap')
-           apply (wp hoare_vcg_const_Ball_lift store_pde_vspace_at_asid hoare_vcg_ex_lift)
-        apply (wp | simp add: pdeCheckIfMapped_def)+
-       apply (clarsimp simp add: cte_wp_at_caps_of_state valid_slots_def parent_for_refs_def empty_refs_def invs_psp_aligned simp del: fun_upd_apply)
-       apply (rule conjI, rule_tac x=ref in exI, clarsimp)
-       apply (frule valid_global_refsD2)
-        apply (clarsimp simp: cap_range_def)+
-       apply (rule conjI)
-        apply  (rule_tac x=ac in exI, rule_tac x=bb in exI, rule_tac x=cap in exI)
-        apply (erule conjI)
-        apply clarsimp
-       apply (rule conjI)
-        apply (rule_tac x=ad in exI, rule_tac x=bc in exI, rule_tac x=capa in exI)
-        apply (clarsimp simp: same_refs_def pde_ref_def pde_ref_pages_def
-                              valid_pde_def invs_def valid_state_def valid_pspace_def)
-        apply (drule valid_objs_caps)
-        apply (clarsimp simp: valid_caps_def)
-        apply (drule spec, drule spec, drule_tac x=capa in spec, drule (1) mp)
-        apply (case_tac aa, simp_all)
-          apply (erule(1) data_at_pg_cap[rotated],fastforce)+
-       apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
-       apply (case_tac ko, simp_all split: if_split_asm)[1]
-       apply (rename_tac arch_kernel_obj)
-       apply (case_tac arch_kernel_obj, simp_all)
-       apply (rule conjI)
-        apply clarsimp
-        apply (drule_tac ptr="(ac,bb)" in
-               valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
-          apply (simp split: if_split_asm)+
-        apply force
-       apply (rule conjI[rotated], fastforce)
-       apply (erule ballEI)
-       apply clarsimp
-       apply (drule_tac ptr="(ac,bb)" in
-               valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
-       apply (force split: if_split_asm)+
-      apply (auto split: if_split_asm)[1]
-     apply (clarsimp simp: performPageInvocation_def perform_page_invocation_def
-                           page_invocation_map_def)
-     apply (rule corres_assume_pre)
-     apply (clarsimp simp: valid_page_inv_def valid_page_inv'_def isCap_simps is_page_cap_def cong: option.case_cong prod.case_cong)
-     apply (case_tac m)
-      apply simp
+                   apply (rule invalidateLocalPageStructureCacheASID_corres)
+                  apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
+                  apply (case_tac m; clarsimp)
+                  apply (rule corres_fail)
+                  apply (simp add: same_refs_def)
+                 apply (wpsimp simp: invs_psp_aligned)+
+          apply (frule (1) mapping_map_pde, clarsimp)
+          apply (clarsimp simp: mapping_map_simps valid_slots'_def valid_slots_def valid_page_inv_def neq_Nil_conv valid_page_map_inv_def)
+          apply (rule corres_name_pre)
+          apply (clarsimp simp:mapM_Cons bind_assoc split del: if_split)
+          apply (rule corres_guard_imp)
+            apply (rule corres_split[OF _ store_pde_corres'])
+               apply (rule corres_split[where r'="op ="])
+                  apply simp
+                  apply (rule invalidateLocalPageStructureCacheASID_corres)
+                 apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
+                 apply (case_tac m; clarsimp)
+                 apply (rule corres_fail)
+                 apply (simp add: same_refs_def)
+                apply (wpsimp simp: invs_psp_aligned)+
+         apply (frule (1) mapping_map_pdpte, clarsimp)
+         apply (clarsimp simp: mapping_map_simps valid_slots'_def valid_slots_def valid_page_inv_def neq_Nil_conv valid_page_map_inv_def)
+         apply (rule corres_name_pre)
+         apply (clarsimp simp:mapM_Cons bind_assoc split del: if_split)
+         apply (rule corres_guard_imp)
+                apply (rule corres_split[OF _ store_pdpte_corres'])
+              apply (rule corres_split[where r'="op ="])
+                 apply simp
+                 apply (rule invalidateLocalPageStructureCacheASID_corres)
+                apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
+                apply (case_tac m; clarsimp)
+                apply (rule corres_fail)
+                apply (simp add: same_refs_def)
+               apply (wpsimp simp: invs_psp_aligned)+
+        apply (wp_trace arch_update_cap_invs_map set_cap_valid_page_map_inv)
+       apply (wp arch_update_updateCap_invs)
+      apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct valid_page_inv_def cte_wp_at_caps_of_state is_arch_update_def is_cap_simps)
+     apply (simp add: cap_master_cap_def split: cap.splits arch_cap.splits)
+     apply (auto simp: cte_wp_at_ctes_of valid_page_inv'_def)[1]
+       -- "PageRemap"
+      apply (rename_tac asid vspace)
+      apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def
+      page_invocation_map_def)
+    apply (rule corres_name_pre)
+    apply (clarsimp simp: mapM_Cons mapM_x_mapM bind_assoc valid_slots_def valid_page_inv_def
+                          neq_Nil_conv valid_page_inv'_def split del: if_split)
+    apply (case_tac a; simp)
+      apply (frule (1) mapping_map_pte, clarsimp)
+      apply (clarsimp simp: mapping_map_simps)
       apply (rule corres_guard_imp)
-        apply (rule corres_split [where r'="acap_relation"])
-           prefer 2
-           apply simp
-           apply (rule corres_rel_imp)
-            apply (rule get_cap_corres_all_rights_P[where P=is_arch_cap], rule refl)
-           apply (clarsimp simp: is_cap_simps)
-          apply (rule_tac F="is_page_cap cap" in corres_gen_asm)
-          apply (rule updateCap_same_master)
-          apply (clarsimp simp: is_page_cap_def update_map_data_def)
-         apply (wp get_cap_wp getSlotCap_wp)+
-       apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_diminished_def)
-       apply (drule (2) diminished_is_update')+
-       apply (clarsimp simp: cap_rights_update_def acap_rights_update_def update_map_data_def is_cap_simps)
-       apply auto[1]
-      apply (auto simp: cte_wp_at_ctes_of)[1]
-     apply clarsimp
+        apply (rule corres_split[OF _ store_pte_corres'])
+           apply (rule invalidateLocalPageStructureCacheASID_corres)
+          apply (wpsimp simp: invs_pspace_aligned')+
+     apply (frule (1) mapping_map_pde, clarsimp)
+     apply (clarsimp simp: mapping_map_simps)
      apply (rule corres_guard_imp)
-       apply (rule corres_split)
-          prefer 2
-          apply (rule unmap_page_corres)
-         apply (rule corres_split [where r'=acap_relation])
-            prefer 2
-            apply simp
-            apply (rule corres_rel_imp)
-             apply (rule get_cap_corres_all_rights_P[where P=is_arch_cap], rule refl)
-            apply (clarsimp simp: is_cap_simps)
-           apply (rule_tac F="is_page_cap cap" in corres_gen_asm)
-           apply (rule updateCap_same_master)
-           apply (clarsimp simp: is_page_cap_def update_map_data_def)
-          apply (wp get_cap_wp getSlotCap_wp)+
-        apply (simp add: cte_wp_at_caps_of_state)
-        apply (strengthen pull_out_P)+
-        apply wp
-       apply (simp add: cte_wp_at_ctes_of)
-       apply wp
-      apply (clarsimp simp: valid_unmap_def cte_wp_at_caps_of_state)
-      apply (clarsimp simp: is_arch_diminished_def is_cap_simps split: cap.splits arch_cap.splits)
-      apply (drule (2) diminished_is_update')+
-      apply (clarsimp simp: cap_rights_update_def is_page_cap_def cap_master_cap_simps update_map_data_def acap_rights_update_def)
-      apply (clarsimp simp add: valid_cap_def mask_def)
-      apply auto[1]
-     apply (auto simp: cte_wp_at_ctes_of)[1]
-    apply (clarsimp simp: performPageInvocation_def perform_page_invocation_def
-                            page_invocation_map_def)
+       apply (rule corres_split[OF _ store_pde_corres'])
+          apply (rule invalidateLocalPageStructureCacheASID_corres)
+         apply (wpsimp simp: invs_pspace_aligned')+
+    apply (frule (1) mapping_map_pdpte, clarsimp)
+    apply (clarsimp simp: mapping_map_simps)
     apply (rule corres_guard_imp)
-      apply (rule corres_when, simp)
-      apply (rule corres_split [OF _ set_vm_root_for_flush_corres])
-        apply (rule corres_split [OF _ corres_machine_op])
-           prefer 2
-           apply (rule do_flush_corres)
-          apply (rule corres_when, simp)
-          apply (rule corres_split [OF _ gct_corres])
-            apply simp
-            apply (rule set_vm_root_corres)
-           apply wp+
-         apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
-         apply (wp hoare_drop_imps)
-        apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
-        apply (wp hoare_drop_imps)+
-     apply (auto simp: valid_page_inv_def)[2]
-  -- "PageGetAddr"
+      apply (rule corres_split[OF _ store_pdpte_corres'])
+         apply (rule invalidateLocalPageStructureCacheASID_corres)
+        apply (wpsimp simp: invs_pspace_aligned')+
+     -- "PageUnmap"
+   apply (clarsimp simp: performPageInvocation_def perform_page_invocation_def
+                         page_invocation_map_def)
+   apply (rule corres_assume_pre)
+   apply (clarsimp simp: valid_page_inv_def valid_page_inv'_def isCap_simps is_page_cap_def cong: option.case_cong prod.case_cong)
+   apply (case_tac m)
+    apply simp
+    apply (rule corres_guard_imp)
+      apply (rule corres_split [where r'="acap_relation"])
+         prefer 2
+         apply simp
+         apply (rule corres_rel_imp)
+          apply (rule get_cap_corres_all_rights_P[where P=is_arch_cap], rule refl)
+         apply (clarsimp simp: is_cap_simps)
+        apply (rule_tac F="is_page_cap cap" in corres_gen_asm)
+        apply (rule updateCap_same_master)
+        apply (clarsimp simp: is_page_cap_def update_map_data_def)
+       apply (wp get_cap_wp getSlotCap_wp)+
+     apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_diminished_def)
+     apply (drule (2) diminished_is_update')+
+     apply (clarsimp simp: cap_rights_update_def acap_rights_update_def update_map_data_def is_cap_simps)
+     apply auto[1]
+    apply (auto simp: cte_wp_at_ctes_of)[1]
+   apply clarsimp
+   apply (rule corres_guard_imp)
+     apply (rule corres_split)
+        prefer 2
+        apply (rule unmap_page_corres)
+       apply (rule corres_split [where r'=acap_relation])
+          prefer 2
+          apply simp
+          apply (rule corres_rel_imp)
+           apply (rule get_cap_corres_all_rights_P[where P=is_arch_cap], rule refl)
+          apply (clarsimp simp: is_cap_simps)
+         apply (rule_tac F="is_page_cap cap" in corres_gen_asm)
+         apply (rule updateCap_same_master)
+         apply (clarsimp simp: is_page_cap_def update_map_data_def)
+        apply (wp get_cap_wp getSlotCap_wp)+
+      apply (simp add: cte_wp_at_caps_of_state)
+      apply (strengthen pull_out_P)+
+      apply wp
+     apply (simp add: cte_wp_at_ctes_of)
+     apply wp
+    apply (clarsimp simp: valid_unmap_def cte_wp_at_caps_of_state)
+    apply (clarsimp simp: is_arch_diminished_def is_cap_simps split: cap.splits arch_cap.splits)
+    apply (drule (2) diminished_is_update')+
+    apply (clarsimp simp: cap_rights_update_def is_page_cap_def cap_master_cap_simps update_map_data_def acap_rights_update_def)
+    apply (clarsimp simp add: valid_cap_def mask_def)
+    apply auto[1]
+   apply (auto simp: cte_wp_at_ctes_of)[1]
+    -- "PageGetAddr"
   apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def page_invocation_map_def fromPAddr_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ gct_corres])
@@ -2002,22 +1462,20 @@ qed
 
 definition
   "page_table_invocation_map pti pti' \<equiv> case pti of
-     X64_A.PageTableMap cap ptr pde p \<Rightarrow>
-    \<exists>cap' pde'. pti' = PageTableMap cap' (cte_map ptr) pde' p \<and>
+     X64_A.PageTableMap cap ptr pde pd_slot vspace \<Rightarrow>
+    \<exists>cap' pde'. pti' = PageTableMap cap' (cte_map ptr) pde' pd_slot vspace \<and>
                 cap_relation cap cap' \<and>
-                pde_relation' pde pde' \<and> is_aligned (p >> 2) (pde_align' pde')
+                pde_relation' pde pde'
    | X64_A.PageTableUnmap cap ptr \<Rightarrow>
     \<exists>cap'. pti' = PageTableUnmap cap' (cte_map ptr) \<and>
            cap_relation cap (ArchObjectCap cap')"
 
 definition
   "valid_pti' pti \<equiv> case pti of
-     PageTableMap cap slot pde pdeSlot \<Rightarrow>
+     PageTableMap cap slot pde pdeSlot vspace \<Rightarrow>
      cte_wp_at' (is_arch_update' cap) slot and
-     ko_wp_at' (\<lambda>ko. vs_entry_align ko = 0) pdeSlot and
      valid_cap' cap and
-     valid_pde' pde and
-     K (valid_pde_mapping' (pdeSlot && mask pdBits) pde \<and> vs_entry_align (KOArch (KOPDE pde)) = 0)
+     valid_pde' pde and K (case cap of ArchObjectCap (PageTableCap _ (Some (asid, vs))) \<Rightarrow> True | _ \<Rightarrow> False)
    | PageTableUnmap cap slot \<Rightarrow> cte_wp_at' (is_arch_update' (ArchObjectCap cap)) slot
                                  and valid_cap' (ArchObjectCap cap)
                                  and K (isPageTableCap cap)"
@@ -2026,18 +1484,18 @@ lemma clear_page_table_corres:
   "corres dc (pspace_aligned and page_table_at p and valid_etcbs)
              (pspace_aligned' and pspace_distinct')
     (mapM_x (swp store_pte X64_A.InvalidPTE)
-       [p , p + 4 .e. p + 2 ^ ptBits - 1])
+       [p , p + 8 .e. p + 2 ^ ptBits - 1])
     (mapM_x (swp storePTE X64_H.InvalidPTE)
-       [p , p + 4 .e. p + 2 ^ ptBits - 1])"
+       [p , p + 8 .e. p + 2 ^ ptBits - 1])"
   apply (rule_tac F="is_aligned p ptBits" in corres_req)
    apply (clarsimp simp: obj_at_def a_type_def)
    apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm
                           arch_kernel_obj.split_asm)
    apply (drule(1) pspace_alignedD)
-   apply (simp add: ptBits_def pageBits_def)
-  apply (simp add: upto_enum_step_subtract[where x=p and y="p + 4"]
-                   is_aligned_no_overflow pt_bits_stuff
-                   upto_enum_step_red[where us=2, simplified]
+   apply (simp add: bit_simps)
+  apply (simp add: upto_enum_step_subtract[where x=p and y="p + 8"]
+                   is_aligned_no_overflow bit_simps
+                   upto_enum_step_red[where us=3, simplified]
                    mapM_x_mapM liftM_def[symmetric])
   apply (rule corres_guard_imp,
          rule_tac r'=dc and S="op ="
@@ -2045,17 +1503,85 @@ lemma clear_page_table_corres:
                and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
                 in corres_mapM_list_all2, simp_all)
       apply (rule corres_guard_imp, rule store_pte_corres')
-        apply (simp add:pte_relation_aligned_def)+
+        apply (simp add:pte_relation_def)+
      apply (wp hoare_vcg_const_Ball_lift | simp)+
    apply (simp add: list_all2_refl)
   apply (clarsimp simp: upto_enum_step_def)
-  apply (erule page_table_pte_atI[simplified shiftl_t2n mult.commute, simplified])
-   apply (simp add: ptBits_def pageBits_def pt_bits_def word_less_nat_alt word_le_nat_alt unat_of_nat)
+  apply (erule page_table_pte_atI[simplified shiftl_t2n mult.commute bit_simps, simplified])
+   apply (simp add: bit_simps word_less_nat_alt word_le_nat_alt unat_of_nat)
   apply simp
   done
 
-crunch typ_at'[wp]: unmapPageTable "\<lambda>s. P (typ_at' T p s)"
+lemma clear_page_directory_corres:
+  "corres dc (pspace_aligned and page_directory_at p and valid_etcbs)
+             (pspace_aligned' and pspace_distinct')
+    (mapM_x (swp store_pde X64_A.InvalidPDE)
+       [p , p + 8 .e. p + 2 ^ pdBits - 1])
+    (mapM_x (swp storePDE X64_H.InvalidPDE)
+       [p , p + 8 .e. p + 2 ^ pdBits - 1])"
+  apply (rule_tac F="is_aligned p pdBits" in corres_req)
+   apply (clarsimp simp: obj_at_def a_type_def)
+   apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm
+                          arch_kernel_obj.split_asm)
+   apply (drule(1) pspace_alignedD)
+   apply (simp add: bit_simps)
+  apply (simp add: upto_enum_step_subtract[where x=p and y="p + 8"]
+                   is_aligned_no_overflow bit_simps
+                   upto_enum_step_red[where us=3, simplified]
+                   mapM_x_mapM liftM_def[symmetric])
+  apply (rule corres_guard_imp,
+         rule_tac r'=dc and S="op ="
+               and Q="\<lambda>xs s. \<forall>x \<in> set xs. pde_at x s \<and> pspace_aligned s \<and> valid_etcbs s"
+               and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
+                in corres_mapM_list_all2, simp_all)
+      apply (rule corres_guard_imp, rule store_pde_corres')
+        apply (simp add:pde_relation_def)+
+     apply (wp hoare_vcg_const_Ball_lift | simp)+
+   apply (simp add: list_all2_refl)
+  apply (clarsimp simp: upto_enum_step_def)
+  apply (erule page_directory_pde_atI[simplified shiftl_t2n mult.commute bit_simps, simplified])
+   apply (simp add: bit_simps word_less_nat_alt word_le_nat_alt unat_of_nat)
+  apply simp
+  done
+
+lemma clear_pdpt_corres:
+  "corres dc (pspace_aligned and pd_pointer_table_at p and valid_etcbs)
+             (pspace_aligned' and pspace_distinct')
+    (mapM_x (swp store_pdpte X64_A.InvalidPDPTE)
+       [p , p + 8 .e. p + 2 ^ pdBits - 1])
+    (mapM_x (swp storePDPTE X64_H.InvalidPDPTE)
+       [p , p + 8 .e. p + 2 ^ pdBits - 1])"
+  apply (rule_tac F="is_aligned p pdptBits" in corres_req)
+   apply (clarsimp simp: obj_at_def a_type_def)
+   apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm
+                          arch_kernel_obj.split_asm)
+   apply (drule(1) pspace_alignedD)
+   apply (simp add: bit_simps)
+  apply (simp add: upto_enum_step_subtract[where x=p and y="p + 8"]
+                   is_aligned_no_overflow bit_simps
+                   upto_enum_step_red[where us=3, simplified]
+                   mapM_x_mapM liftM_def[symmetric])
+  apply (rule corres_guard_imp,
+         rule_tac r'=dc and S="op ="
+               and Q="\<lambda>xs s. \<forall>x \<in> set xs. pdpte_at x s \<and> pspace_aligned s \<and> valid_etcbs s"
+               and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
+                in corres_mapM_list_all2, simp_all)
+      apply (rule corres_guard_imp, rule store_pdpte_corres')
+        apply (simp add:pde_relation_def)+
+     apply (wp hoare_vcg_const_Ball_lift | simp)+
+   apply (simp add: list_all2_refl)
+  apply (clarsimp simp: upto_enum_step_def)
+  apply (erule pd_pointer_table_pdpte_atI[simplified shiftl_t2n mult.commute bit_simps, simplified])
+   apply (simp add: bit_simps word_less_nat_alt word_le_nat_alt unat_of_nat)
+  apply simp
+  done
+
+crunch typ_at'[wp]: invalidatePageStructureCacheASID, unmapPageTable, unmapPageDirectory, unmapPDPT "\<lambda>s. P (typ_at' T p s)"
+  (wp: crunch_wps hoare_vcg_all_lift_R ignore: getObject)
+
 lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
+lemmas unmapPageDirectory_typ_ats[wp] = typ_at_lifts[OF unmapPageDirectory_typ_at']
+lemmas unmapPDPT_typ_ats[wp] = typ_at_lifts[OF unmapPDPT_typ_at']
 
 lemma perform_page_table_corres:
   "page_table_invocation_map pti pti' \<Longrightarrow>
@@ -2067,30 +1593,35 @@ lemma perform_page_table_corres:
   (is "?mp \<Longrightarrow> corres dc ?P ?P' ?f ?g")
   apply (simp add: perform_page_table_invocation_def performPageTableInvocation_def)
   apply (cases pti)
+   apply (rename_tac cap slot pde pd_slot vspace)
    apply (clarsimp simp: page_table_invocation_map_def)
+   apply (rule corres_name_pre)
+   apply (clarsimp simp: valid_pti_def valid_pti'_def split: capability.split_asm arch_capability.split_asm)
    apply (rule corres_guard_imp)
-      apply (rule corres_split [OF _ updateCap_same_master])
-         prefer 2
-         apply assumption
-        apply (rule corres_split [OF _ store_pde_corres'])
-           apply (rule corres_machine_op)
-           apply (rule corres_Id, rule refl, simp)
-           apply (rule no_fail_cleanByVA_PoU)
-          apply (simp add: pde_relation_aligned_def)
-         apply (wp set_cap_typ_at)+
-    apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state is_arch_update_def)
+     apply (rule corres_split [OF _ updateCap_same_master])
+        prefer 2
+        apply assumption
+       apply (rule corres_split [OF _ store_pde_corres'])
+          apply (rule corres_split[where r'="op =" and P="\<top>" and P'="\<top>"])
+             apply simp
+             apply (rule invalidatePageStructureCacheASID_corres)
+            apply (case_tac cap; clarsimp simp add: is_pt_cap_def)
+            apply (case_tac asid; clarsimp)
+           apply (wpsimp wp: set_cap_typ_at)+
+    apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct is_arch_update_def
+                          cte_wp_at_caps_of_state )
     apply (clarsimp simp: is_cap_simps cap_master_cap_simps
-                    dest!: cap_master_cap_eqDs)
-    apply auto[1]
+                   dest!: cap_master_cap_eqDs)
+  subgoal sorry (* FIXME x64: this will be solved by adding "pde_at pd_slot" to valid_pti *)
    apply (clarsimp simp: cte_wp_at_ctes_of valid_pti'_def)
    apply auto[1]
-   apply (clarsimp simp:valid_pde_mapping'_def split:X64_H.pde.split)
+  apply (clarsimp simp:valid_pde_mapping'_def split:X64_H.pde.split)
   apply (rename_tac cap a b)
   apply (clarsimp simp: page_table_invocation_map_def)
   apply (rule_tac F="is_pt_cap cap" in corres_req)
    apply (clarsimp simp: valid_pti_def)
   apply (clarsimp simp: is_pt_cap_def split_def
-                        pt_bits_stuff objBits_simps archObjSize_def
+                        bit_simps objBits_simps archObjSize_def
                   cong: option.case_cong)
   apply (simp add: case_option_If2 getSlotCap_def split del: if_split)
   apply (rule corres_guard_imp)
@@ -2103,19 +1634,14 @@ lemma perform_page_table_corres:
         apply (wp get_cap_wp)+
       apply (rule corres_if[OF refl])
        apply (rule corres_split [OF _ unmap_page_table_corres])
-         apply (rule corres_split_nor)
-            apply (rule corres_machine_op, rule corres_Id)
-              apply simp+
-           apply (rule clear_page_table_corres)
-          apply wp+
+         apply (rule clear_page_table_corres[simplified bit_simps bitSimps, simplified])
+        apply wp+
       apply (rule corres_trivial, simp)
      apply (simp add: cte_wp_at_caps_of_state pred_conj_def
-                  split del: if_split)
+           split del: if_split)
      apply (rule hoare_lift_Pf2[where f=caps_of_state])
-      apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
-                mapM_x_wp' | simp split del: if_split)+
-     apply (rule hoare_pre)
-      apply (wp mapM_x_wp' | simp split del: if_split)+
+      apply_trace ((wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                mapM_x_wp' | simp split del: if_split)+)
    apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state
                          is_arch_diminished_def
                          cap_master_cap_simps
@@ -2126,7 +1652,207 @@ lemma perform_page_table_corres:
    apply (auto simp: valid_cap_def mask_def cap_master_cap_def
                      cap_rights_update_def acap_rights_update_def
               split: option.split_asm)[1]
-   apply (auto simp: valid_pti'_def cte_wp_at_ctes_of)
+   apply (auto simp: valid_pti'_def cte_wp_at_ctes_of bit_simps)
+  done
+
+definition
+  "valid_pdi' pdi \<equiv> case pdi of
+     PageDirectoryMap cap slot pdpte pdptSlot vspace \<Rightarrow>
+     cte_wp_at' (is_arch_update' cap) slot and
+     valid_cap' cap and
+     valid_pdpte' pdpte and K (case cap of ArchObjectCap (PageDirectoryCap _ (Some (asid, vs))) \<Rightarrow> True | _ \<Rightarrow> False)
+   | PageDirectoryUnmap cap slot \<Rightarrow> cte_wp_at' (is_arch_update' (ArchObjectCap cap)) slot
+                                 and valid_cap' (ArchObjectCap cap)
+                                 and K (isPageTableCap cap)"
+
+lemma unmap_pd_corres:
+  notes liftE_get_pdpte_corres = get_pdpte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
+  shows "corres dc
+          (invs and valid_etcbs and page_directory_at pd and
+           K (0 < asid \<and> is_aligned vptr pdpt_shift_bits \<and> vptr < pptr_base \<and> canonical_address vptr \<and> asid \<le> mask asid_bits))
+          (valid_arch_state' and pspace_aligned' and pspace_distinct'
+            and no_0_obj' and cur_tcb' and valid_objs')
+          (unmap_pd asid vptr pd)
+          (unmapPageDirectory asid vptr pd)"
+  sorry (* copy proof from unmap_page_table_corres *)
+
+crunch valid_objs[wp]: unmap_pd, unmap_pdpt "valid_objs"
+crunch pspace_aligned[wp]: unmap_pd, unmap_pdpt "pspace_aligned"
+crunch pspace_distinct[wp]: unmap_pd, unmap_pdpt "pspace_distinct"
+
+lemma perform_page_directory_corres:
+  "page_directory_invocation_map pdi pdi' \<Longrightarrow>
+   corres dc
+          (invs and valid_etcbs and valid_pdi pdi)
+          (invs' and valid_pdi' pdi')
+          (perform_page_directory_invocation pdi)
+          (performPageDirectoryInvocation pdi')"
+  (is "?mp \<Longrightarrow> corres dc ?P ?P' ?f ?g")
+  apply (simp add: perform_page_directory_invocation_def performPageDirectoryInvocation_def)
+  apply (cases pdi)
+   apply (rename_tac cap slot pdpte pdpt_slot vspace)
+   apply (clarsimp simp: page_directory_invocation_map_def)
+   apply (rule corres_name_pre)
+   apply (clarsimp simp: valid_pdi_def valid_pdi'_def split: capability.split_asm arch_capability.split_asm)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split [OF _ updateCap_same_master])
+        prefer 2
+        apply assumption
+       apply (rule corres_split [OF _ store_pdpte_corres'])
+          apply (rule corres_split[where r'="op =" and P="\<top>" and P'="\<top>"])
+             apply simp
+             apply (rule invalidatePageStructureCacheASID_corres)
+            apply (case_tac cap; clarsimp simp add: is_pd_cap_def)
+            apply (case_tac asid; clarsimp)
+           apply (wpsimp wp: set_cap_typ_at)+
+    apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct is_arch_update_def
+                          cte_wp_at_caps_of_state )
+    apply (clarsimp simp: is_cap_simps cap_master_cap_simps
+                   dest!: cap_master_cap_eqDs)
+  subgoal sorry (* FIXME x64: this will be solved by adding "pdpte_at pdpt_slot" to valid_pdi *)
+   apply (clarsimp simp: cte_wp_at_ctes_of valid_pdi'_def)
+   apply auto[1]
+  apply (clarsimp split:X64_H.pdpte.split)
+  apply (rename_tac cap a b)
+  apply (clarsimp simp: page_directory_invocation_map_def)
+  apply (rule_tac F="is_pd_cap cap" in corres_req)
+   apply (clarsimp simp: valid_pdi_def)
+  apply (clarsimp simp: is_pd_cap_def split_def
+                        bit_simps objBits_simps archObjSize_def
+                  cong: option.case_cong)
+  apply (simp add: case_option_If2 getSlotCap_def split del: if_split)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_nor)
+       apply (simp add: liftM_def)
+       apply (rule corres_split [OF _ get_cap_corres])
+         apply (rule_tac F="is_pd_cap x" in corres_gen_asm)
+         apply (rule updateCap_same_master)
+         apply (clarsimp simp: is_pd_cap_def update_map_data_def)
+        apply (wp get_cap_wp)+
+      apply (rule corres_if[OF refl])
+       apply (rule corres_split [OF _ unmap_pd_corres])
+         apply (rule clear_page_directory_corres[simplified bit_simps bitSimps, simplified])
+        apply wp+
+      apply (rule corres_trivial, simp)
+     apply (simp add: cte_wp_at_caps_of_state pred_conj_def
+           split del: if_split)
+     apply (rule hoare_lift_Pf2[where f=caps_of_state])
+      apply ((wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                mapM_x_wp' | simp split del: if_split)+)
+   apply (clarsimp simp: valid_pdi_def cte_wp_at_caps_of_state
+                         is_arch_diminished_def
+                         cap_master_cap_simps
+                         update_map_data_def is_cap_simps
+                         cap_rights_update_def acap_rights_update_def
+                  dest!: cap_master_cap_eqDs)
+   apply (frule (2) diminished_is_update')
+   apply (auto simp: valid_cap_def mask_def cap_master_cap_def
+                     cap_rights_update_def acap_rights_update_def
+                     wellformed_mapdata_def vmsz_aligned_def
+              split: option.split_asm)[1]
+   apply (auto simp: valid_pdi'_def cte_wp_at_ctes_of bit_simps)
+  done
+
+definition
+  "valid_pdpti' pdi \<equiv> case pdi of
+     PDPTMap cap slot pml4e pml4Slot vspace \<Rightarrow>
+     cte_wp_at' (is_arch_update' cap) slot and
+     valid_cap' cap and
+     valid_pml4e' pml4e and K (case cap of ArchObjectCap (PDPointerTableCap _ (Some (asid, vs))) \<Rightarrow> True | _ \<Rightarrow> False)
+   | PDPTUnmap cap slot \<Rightarrow> cte_wp_at' (is_arch_update' (ArchObjectCap cap)) slot
+                                 and valid_cap' (ArchObjectCap cap)
+                                 and K (isPageTableCap cap)"
+
+lemma unmap_pdpt_corres:
+  notes liftE_get_pml4e_corres = get_pml4e_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
+  shows "corres dc
+          (invs and valid_etcbs and pd_pointer_table_at pd and
+           K (0 < asid \<and> is_aligned vptr pml4_shift_bits \<and> vptr < pptr_base \<and> canonical_address vptr \<and> asid \<le> mask asid_bits))
+          (valid_arch_state' and pspace_aligned' and pspace_distinct'
+            and no_0_obj' and cur_tcb' and valid_objs')
+          (unmap_pdpt asid vptr pd)
+          (unmapPDPT asid vptr pd)"
+  sorry (* copy proof from unmap_page_table_corres *)
+
+definition
+  "pdpt_invocation_map pdpti pdpti' \<equiv> case pdpti of
+   X64_A.PDPTMap cap cte pml4e pml4_slot vspace  \<Rightarrow>
+      \<exists>cap' pml4e'. pdpti' = PDPTMap cap' (cte_map cte) pml4e' pml4_slot vspace
+            \<and> cap_relation cap cap' \<and> pml4e_relation' pml4e pml4e'
+ | X64_A.PDPTUnmap cap ptr \<Rightarrow>
+      \<exists>cap'. pdpti' = PDPTUnmap cap' (cte_map ptr) \<and> cap_relation cap (ArchObjectCap cap')"
+
+lemma perform_pdpt_corres:
+  "pdpt_invocation_map pdpti pdpti' \<Longrightarrow>
+   corres dc
+          (invs and valid_etcbs and valid_pdpti pdpti)
+          (invs' and valid_pdpti' pdpti')
+          (perform_pdpt_invocation pdpti)
+          (performPDPTInvocation pdpti')"
+  (is "?mp \<Longrightarrow> corres dc ?P ?P' ?f ?g")
+  apply (simp add: perform_pdpt_invocation_def performPDPTInvocation_def)
+  apply (cases pdpti)
+   apply (rename_tac cap slot pml4e pml4_slot vspace)
+   apply (clarsimp simp: pdpt_invocation_map_def)
+   apply (rule corres_name_pre)
+   apply (clarsimp simp: valid_pdpti_def valid_pdpti'_def split: capability.split_asm arch_capability.split_asm)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split [OF _ updateCap_same_master])
+        prefer 2
+        apply assumption
+       apply (rule corres_split [OF _ store_pml4e_corres'])
+          apply (rule corres_split[where r'="op =" and P="\<top>" and P'="\<top>"])
+             apply simp
+             apply (rule invalidatePageStructureCacheASID_corres)
+            apply (case_tac cap; clarsimp simp add: is_pdpt_cap_def)
+            apply (case_tac asid; clarsimp)
+           apply (wpsimp wp: set_cap_typ_at)+
+    apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct is_arch_update_def
+                          cte_wp_at_caps_of_state )
+    apply (clarsimp simp: is_cap_simps cap_master_cap_simps
+                   dest!: cap_master_cap_eqDs)
+  subgoal sorry (* FIXME x64: this will be solved by adding "pml4e_at pml4_slot" to valid_pdpti *)
+   apply (clarsimp simp: cte_wp_at_ctes_of valid_pdpti'_def)
+   apply auto[1]
+  apply (clarsimp split:X64_H.pml4e.split)
+  apply (rename_tac cap a b)
+  apply (clarsimp simp: pdpt_invocation_map_def)
+  apply (rule_tac F="is_pdpt_cap cap" in corres_req)
+   apply (clarsimp simp: valid_pdpti_def)
+  apply (clarsimp simp: is_pdpt_cap_def split_def
+                        bit_simps objBits_simps archObjSize_def
+                  cong: option.case_cong)
+  apply (simp add: case_option_If2 getSlotCap_def split del: if_split)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_nor)
+       apply (simp add: liftM_def)
+       apply (rule corres_split [OF _ get_cap_corres])
+         apply (rule_tac F="is_pdpt_cap x" in corres_gen_asm)
+         apply (rule updateCap_same_master)
+         apply (clarsimp simp: is_pdpt_cap_def update_map_data_def)
+        apply (wp get_cap_wp)+
+      apply (rule corres_if[OF refl])
+       apply (rule corres_split [OF _ unmap_pdpt_corres])
+         apply (rule clear_pdpt_corres[simplified bit_simps bitSimps, simplified])
+        apply wp+
+      apply (rule corres_trivial, simp)
+     apply (simp add: cte_wp_at_caps_of_state pred_conj_def
+           split del: if_split)
+     apply (rule hoare_lift_Pf2[where f=caps_of_state])
+      apply ((wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                mapM_x_wp' | simp split del: if_split)+)
+   apply (clarsimp simp: valid_pdpti_def cte_wp_at_caps_of_state
+                         is_arch_diminished_def
+                         cap_master_cap_simps
+                         update_map_data_def is_cap_simps
+                         cap_rights_update_def acap_rights_update_def
+                  dest!: cap_master_cap_eqDs)
+   apply (frule (2) diminished_is_update')
+   apply (auto simp: valid_cap_def mask_def cap_master_cap_def
+                     cap_rights_update_def acap_rights_update_def
+                     wellformed_mapdata_def vmsz_aligned_def
+              split: option.split_asm)[1]
+   apply (auto simp: valid_pdpti'_def cte_wp_at_ctes_of bit_simps)
   done
 
 definition
@@ -2134,11 +1860,11 @@ definition
   asid_pool_invocation.Assign asid p slot \<Rightarrow> Assign asid p (cte_map slot)"
 
 definition
-  "isPDCap cap \<equiv> \<exists>p asid. cap = ArchObjectCap (PageDirectoryCap p asid)"
+  "isPML4Cap' cap \<equiv> \<exists>p asid. cap = (ArchObjectCap (PML4Cap p asid))"
 
 definition
   "valid_apinv' ap \<equiv> case ap of Assign asid p slot \<Rightarrow>
-  asid_pool_at' p and cte_wp_at' (isPDCap o cteCap) slot and K
+  asid_pool_at' p and cte_wp_at' (isPML4Cap' o cteCap) slot and K
   (0 < asid \<and> asid \<le> 2^asid_bits - 1)"
 
 lemma pap_corres:
@@ -2153,11 +1879,11 @@ lemma pap_corres:
   apply (rename_tac word1 word2 prod)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ getSlotCap_corres])
-      apply (rule_tac F="\<exists>p asid. rv = Structures_A.ArchObjectCap (X64_A.PageDirectoryCap p asid)" in corres_gen_asm)
+      apply (rule_tac F="\<exists>p asid. rv = Structures_A.ArchObjectCap (X64_A.PML4Cap p asid)" in corres_gen_asm)
       apply clarsimp
       apply (rule_tac Q="valid_objs and pspace_aligned and pspace_distinct and asid_pool_at word2 and valid_etcbs and
                          cte_wp_at (\<lambda>c. cap_master_cap c =
-                                        cap_master_cap (cap.ArchObjectCap (arch_cap.PageDirectoryCap p asid))) (a,b)"
+                                        cap_master_cap (cap.ArchObjectCap (arch_cap.PML4Cap p asid))) (a,b)"
                       in corres_split)
          prefer 2
          apply simp
