@@ -190,7 +190,7 @@ lookup_pt_slot :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> (word32,'z::sta
             pt_slot \<leftarrow> returnOk (pt + (pt_index << pte_bits));
             returnOk pt_slot
           odE)
-        | _ \<Rightarrow> throwError $ MissingCapability 20)
+        | _ \<Rightarrow> throwError $ MissingCapability 21)
 odE"
 
 
