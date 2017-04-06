@@ -1,14 +1,11 @@
 Built from git repo at /home/joelb/work/verification/l4v/spec/haskell by joelb
 
 Generated from changeset:
-53e0f5e x64: refine: update group lemma
+a27bb4a x64: fixup invocations, unmap functions to match abstract
 
 
 Warning - uncomitted changes used:
- M ../../proof/invariant-abstract/X64/ArchFinalise_AI.thy
  M ../../proof/refine/X64/VSpace_R.thy
- M ../abstract/X64/ArchVSpace_A.thy
+ M ../design/X64/ArchRetypeDecls_H.thy
  M ../design/X64/ArchVSpace_H.thy
  M ../design/version
- M src/SEL4/Kernel/VSpace/X64.lhs
- M src/SEL4/Machine/Hardware/X64.lhs

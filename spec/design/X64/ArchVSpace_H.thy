@@ -355,15 +355,7 @@ defs unmapPage_def:
             withoutFailure $ storePDPTE p InvalidPDPTE
         odE)
         );
-    withoutFailure $ (do
-        tcb \<leftarrow> getCurThread;
-        threadRootSlot \<leftarrow> getThreadVSpaceRoot tcb;
-        threadRoot \<leftarrow> getSlotCap threadRootSlot;
-        (case threadRoot of
-              ArchObjectCap (PML4Cap ptr' (Some _)) \<Rightarrow>   when (ptr' = vspace) $ doMachineOp $ invalidateTLBEntry vptr
-            | _ \<Rightarrow>   return ()
-            )
-    od)
+    withoutFailure $ doMachineOp $ invalidateTranslationSingleASID vptr $ fromASID asid
 odE)"
 
 defs checkMappingPPtr_def:
@@ -549,10 +541,10 @@ defs decodeX64FrameInvocation_def:
                 (attribsFromWord attr) vspace;
             ensureSafeMapping entries;
             returnOk $ InvokePage $ PageMap_ \<lparr>
-                pageMapASID= asid,
                 pageMapCap= ArchObjectCap $ cap \<lparr> capVPMappedAddress:= Just (asid, VPtr vaddr) \<rparr>,
                 pageMapCTSlot= cte,
-                pageMapEntries= entries \<rparr>
+                pageMapEntries= entries,
+                pageMapVSpace= vspace \<rparr>
         odE)
         | (ArchInvocationLabel X64PageMap, _, _) =>  throw TruncatedMessage
         | (ArchInvocationLabel X64PageRemap, rightsMask#attr#_, (vspaceCap, _)#_) =>  (doE
@@ -573,7 +565,9 @@ defs decodeX64FrameInvocation_def:
             entries \<leftarrow> createMappingEntries (addrFromPPtr $ capVPBasePtr cap)
                 vaddr (capVPSize cap) vmRights (attribsFromWord attr) vspace;
             returnOk $ InvokePage $ PageRemap_ \<lparr>
-                pageRemapEntries= entries \<rparr>
+                pageRemapEntries= entries,
+                pageRemapASID= asid,
+                pageRemapVSpace= vspace \<rparr>
         odE)
         | (ArchInvocationLabel X64PageRemap, _, _) =>  throw TruncatedMessage
         | (ArchInvocationLabel X64PageUnmap, _, _) =>
@@ -851,7 +845,7 @@ defs performPDPTInvocation_def:
     updateCap ctSlot cap;
     storePML4E pml4Slot pml4e;
     asid \<leftarrow> (case cap of
-              ArchObjectCap (PageDirectoryCap _ (Some (a, _))) \<Rightarrow>   return a
+              ArchObjectCap (PDPointerTableCap _ (Some (a, _))) \<Rightarrow>   return a
             | _ \<Rightarrow>   haskell_fail []
             );
     invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
@@ -940,21 +934,29 @@ od)"
 
 defs performPageInvocation_def:
 "performPageInvocation x0\<equiv> (case x0 of
-    (PageMap _ cap ctSlot entries) \<Rightarrow>    (do
+    (PageMap cap ctSlot entries vspace) \<Rightarrow>    (do
     updateCap ctSlot cap;
     (case entries of
           (VMPTE pte, VMPTEPtr slot) \<Rightarrow>   storePTE slot pte
         | (VMPDE pde, VMPDEPtr slot) \<Rightarrow>   storePDE slot pde
         | (VMPDPTE pdpte, VMPDPTEPtr slot) \<Rightarrow>   storePDPTE slot pdpte
         | _ \<Rightarrow>   haskell_fail []
-        )
+        );
+    asid \<leftarrow> (case cap of
+          ArchObjectCap (PageCap _ _ _ _ _ (Some (as, _))) \<Rightarrow>   return as
+        | _ \<Rightarrow>   haskell_fail []
+        );
+    invalidateLocalPageStructureCacheASID (addrFromPPtr vspace) asid
     od)
-  | (PageRemap entries) \<Rightarrow>    (case entries of
-      (VMPTE pte, VMPTEPtr slot) \<Rightarrow>   storePTE slot pte
-    | (VMPDE pde, VMPDEPtr slot) \<Rightarrow>   storePDE slot pde
-    | (VMPDPTE pdpte, VMPDPTEPtr slot) \<Rightarrow>   storePDPTE slot pdpte
-    | _ \<Rightarrow>   haskell_fail []
-    )
+  | (PageRemap entries asid vspace) \<Rightarrow>    (do
+    (case entries of
+          (VMPTE pte, VMPTEPtr slot) \<Rightarrow>   storePTE slot pte
+        | (VMPDE pde, VMPDEPtr slot) \<Rightarrow>   storePDE slot pde
+        | (VMPDPTE pdpte, VMPDPTEPtr slot) \<Rightarrow>   storePDPTE slot pdpte
+        | _ \<Rightarrow>   haskell_fail []
+        );
+    invalidateLocalPageStructureCacheASID (addrFromPPtr vspace) asid
+  od)
   | (PageUnmap cap ctSlot) \<Rightarrow>    (do
     (case capVPMappedAddress cap of
           Some (asid, vaddr) \<Rightarrow>   unmapPage (capVPSize cap) asid vaddr
@@ -1000,9 +1002,9 @@ defs performASIDPoolInvocation_def:
 "performASIDPoolInvocation x0\<equiv> (case x0 of
     (Assign asid poolPtr ctSlot) \<Rightarrow>    (do
     oldcap \<leftarrow> getSlotCap ctSlot;
- pool \<leftarrow> liftM (inv ASIDPool) $  getObject poolPtr;
  cap \<leftarrow> liftM capCap $  return ( oldcap);
     updateCap ctSlot (ArchObjectCap $ cap \<lparr> capPML4MappedASID := Just asid \<rparr>);
+ pool \<leftarrow> liftM (inv ASIDPool) $  getObject poolPtr;
     pool' \<leftarrow> return ( pool aLU [(asid && mask asidLowBits, Just $ capPML4BasePtr cap)]);
     setObject poolPtr $ ASIDPool pool'
     od)
