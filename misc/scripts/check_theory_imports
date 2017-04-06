@@ -32,15 +32,30 @@ EXCLUDE_THYS='design/(m-)?skel'
 # Run thydeps tool. We ignore the usual dependency output (>/dev/null),
 # instead using the theory import errors that are printed on stderr.
 
-ERRORS=$(
+# Available architectures
+L4V_ARCHS=("ARM" "ARM_HYP")
+TEST_SUCCEED=true
+
+for arch in ${L4V_ARCHS[*]}
+do
+    # Generate CKernel theories
+    L4V_ARCH=${arch} make -C spec/ c-kernel
+done
+
+for arch in ${L4V_ARCHS[*]}
+do
+    ERRORS=$(
     echo "$THYS" |
     grep -Ev "$EXCLUDE_THYS" |
-    # TODO: hardcoded L4V_ARCH    
-    L4V_ARCH=ARM xargs '-d\n' misc/scripts/thydeps $BUILTINS -o /dev/null 2>&1 |
+    # TODO: hardcoded L4V_ARCH
+    L4V_ARCH=${arch} xargs '-d\n' misc/scripts/thydeps $BUILTINS -o /dev/null 2>&1 |
     grep -Fv '~~/' || # ignore imports from Isabelle distribution
       true) # discard grep's return code
 
-if [ -n "$ERRORS" ]; then
-    echo "$ERRORS"
-    exit 1
-fi
+    if [ -n "$ERRORS" ]; then
+        echo "$ERRORS"
+        TEST_SUCCEED=false
+    fi
+done
+
+${TEST_SUCCEED}

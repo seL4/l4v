@@ -17,7 +17,7 @@
      format.
 
 -->
-<testsuite cpu-timeout="60">
+<testsuite cpu-timeout="3600">
     <!-- Check theory import paths. Depends on kernel theories to be generated. -->
-    <test name="theory_imports" depends="CSpec">bash check_theory_imports</test>
+    <test name="theory_imports" depends="CParser">bash check_theory_imports</test>
 </testsuite>
