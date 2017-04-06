@@ -2096,33 +2096,6 @@ lemmas set_ntfn_irq_handlers'[wp] = valid_irq_handlers_lift'' [OF set_ntfn_ctes_
 
 lemmas set_ntfn_irq_states' [wp] = valid_irq_states_lift' [OF set_ntfn_ksInterrupt set_ntfn_ksMachine]
 
-lemma valid_pde_mappings'_def2:
-  "valid_pde_mappings' =
-     (\<lambda>s. \<forall>x. pde_at' x s \<longrightarrow> obj_at' (valid_pde_mapping' (x && mask pdBits)) x s)"
-  apply (clarsimp simp: valid_pde_mappings'_def typ_at_to_obj_at_arches)
-  apply (rule ext, rule iff_allI)
-  apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (auto simp add: objBits_simps archObjSize_def)
-  done
-
-lemma valid_pde_mappings_lift':
-  assumes x: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  assumes y: "\<And>x. \<lbrace>obj_at' (valid_pde_mapping' (x && mask pdBits)) x\<rbrace>
-                    f \<lbrace>\<lambda>rv. obj_at' (valid_pde_mapping' (x && mask pdBits)) x\<rbrace>"
-  shows      "\<lbrace>valid_pde_mappings'\<rbrace> f \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
-  apply (simp only: valid_pde_mappings'_def2 imp_conv_disj)
-  apply (rule hoare_vcg_all_lift hoare_vcg_disj_lift x y)+
-  done
-
-lemma set_ntfn_valid_pde_mappings'[wp]:
-  "\<lbrace>valid_pde_mappings'\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
-  apply (rule valid_pde_mappings_lift')
-   apply wp
-  apply (simp add: setNotification_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
-
 lemma set_ntfn_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
   apply (simp add: setNotification_def valid_machine_state'_def pointerInDeviceData_def pointerInUserData_def)
@@ -2321,7 +2294,6 @@ crunch obj_at'[wp]: doMachineOp "\<lambda>s. P (obj_at' P' p s)"
 crunch it[wp]: doMachineOp "\<lambda>s. P (ksIdleThread s)"
 crunch idle'[wp]: doMachineOp "valid_idle'"
   (wp: crunch_wps simp: crunch_simps valid_idle'_pspace_itI)
-crunch pde_mappings'[wp]: doMachineOp "valid_pde_mappings'"
 
 lemma setEndpoint_ksMachine:
   "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"

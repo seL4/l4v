@@ -1181,11 +1181,6 @@ definition
   | X64_A.PageGetAddr ptr \<Rightarrow>
       pgi' = PageGetAddr ptr"
 
-(* FIXME x64: is this needed? *)
-definition
-  "valid_pde_slots' m \<equiv> case m of Inl (pte, xs) \<Rightarrow> True
-           | Inr (pde, xs) \<Rightarrow> \<forall>x \<in> set xs. valid_pde_mapping' (x && mask pdBits) pde"
-
 lemma tl_nat_list_simp:
  "tl [a..<b] = [a + 1 ..<b]"
   by (induct b,auto)
@@ -1615,7 +1610,7 @@ lemma perform_page_table_corres:
   subgoal sorry (* FIXME x64: this will be solved by adding "pde_at pd_slot" to valid_pti *)
    apply (clarsimp simp: cte_wp_at_ctes_of valid_pti'_def)
    apply auto[1]
-  apply (clarsimp simp:valid_pde_mapping'_def split:X64_H.pde.split)
+  apply (clarsimp simp: split:X64_H.pde.split)
   apply (rename_tac cap a b)
   apply (clarsimp simp: page_table_invocation_map_def)
   apply (rule_tac F="is_pt_cap cap" in corres_req)
@@ -2370,18 +2365,115 @@ lemma setObject_pde_ksDomScheduleIdx [wp]:
   "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (pde::pde) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
   by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
 
-crunch ksDomScheduleIdx[wp]: storePTE, storePDE "\<lambda>s. P (ksDomScheduleIdx s)"
+lemma storePDPTE_ct_not_inQ[wp]:
+  "\<lbrace>ct_not_inQ\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
+  apply (rule ct_not_inQ_lift [OF storePDPTE_nosch])
+  apply (simp add: storePDPTE_def)
+  apply (rule hoare_weaken_pre)
+   apply (wps setObject_PDPTE_ct)
+  apply (rule obj_at_setObject2)
+  apply (clarsimp simp: updateObject_default_def in_monad)+
+  done
+
+lemma setObject_pdpte_cur_domain[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> setObject t (v::pdpte) \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
+  apply (simp add: setObject_def split_def)
+  apply (wp updateObject_default_inv | simp)+
+  done
+
+lemma setObject_pdpte_ksDomSchedule[wp]:
+  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setObject t (v::pdpte) \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
+  apply (simp add: setObject_def split_def)
+  apply (wp updateObject_default_inv | simp)+
+  done
+
+lemma storePDPTE_cur_domain[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
+by (simp add: storePDPTE_def) wp
+
+lemma storePDPTE_ksDomSchedule[wp]:
+  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
+by (simp add: storePDPTE_def) wp
+
+lemma storePDPTE_tcb_obj_at'[wp]:
+  "\<lbrace>obj_at' (P::tcb \<Rightarrow> bool) t\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
+  apply (simp add: storePDPTE_def)
+  apply (rule obj_at_setObject2)
+  apply (clarsimp simp add: updateObject_default_def in_monad)
+  done
+
+lemma storePDPTE_tcb_in_cur_domain'[wp]:
+  "\<lbrace>tcb_in_cur_domain' t\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
+  by (wp tcb_in_cur_domain'_lift)
+
+lemma storePDPTE_ct_idle_or_in_cur_domain'[wp]:
+  "\<lbrace>ct_idle_or_in_cur_domain'\<rbrace> storePDPTE p pdpte \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
+  by (wp ct_idle_or_in_cur_domain'_lift hoare_vcg_disj_lift)
+
+lemma setObject_pdpte_ksDomScheduleIdx [wp]:
+  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (pdpte::pdpte) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
+  by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
+
+lemma storePML4E_ct_not_inQ[wp]:
+  "\<lbrace>ct_not_inQ\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
+  apply (rule ct_not_inQ_lift [OF storePML4E_nosch])
+  apply (simp add: storePML4E_def)
+  apply (rule hoare_weaken_pre)
+   apply (wps setObject_PML4E_ct)
+  apply (rule obj_at_setObject2)
+  apply (clarsimp simp: updateObject_default_def in_monad)+
+  done
+
+lemma setObject_pml4e_cur_domain[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> setObject t (v::pml4e) \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
+  apply (simp add: setObject_def split_def)
+  apply (wp updateObject_default_inv | simp)+
+  done
+
+lemma setObject_pml4e_ksDomSchedule[wp]:
+  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setObject t (v::pml4e) \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
+  apply (simp add: setObject_def split_def)
+  apply (wp updateObject_default_inv | simp)+
+  done
+
+lemma storePML4E_cur_domain[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>rv s. P (ksCurDomain s)\<rbrace>"
+by (simp add: storePML4E_def) wp
+
+lemma storePML4E_ksDomSchedule[wp]:
+  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
+by (simp add: storePML4E_def) wp
+
+lemma storePML4E_tcb_obj_at'[wp]:
+  "\<lbrace>obj_at' (P::tcb \<Rightarrow> bool) t\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
+  apply (simp add: storePML4E_def)
+  apply (rule obj_at_setObject2)
+  apply (clarsimp simp add: updateObject_default_def in_monad)
+  done
+
+lemma storePML4E_tcb_in_cur_domain'[wp]:
+  "\<lbrace>tcb_in_cur_domain' t\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
+  by (wp tcb_in_cur_domain'_lift)
+
+lemma storePML4E_ct_idle_or_in_cur_domain'[wp]:
+  "\<lbrace>ct_idle_or_in_cur_domain'\<rbrace> storePML4E p pml4e \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
+  by (wp ct_idle_or_in_cur_domain'_lift hoare_vcg_disj_lift)
+
+lemma setObject_pml4e_ksDomScheduleIdx [wp]:
+  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setObject p (pml4e::pml4e) \<lbrace>\<lambda>_. \<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
+  by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
+
+crunch ksDomScheduleIdx[wp]: storePTE, storePDE, storePDPTE, storePML4E "\<lambda>s. P (ksDomScheduleIdx s)"
 (ignore: getObject setObject)
 
-crunch gsMaxObjectSize[wp]: storePTE, storePDE "\<lambda>s. P (gsMaxObjectSize s)"
+crunch gsMaxObjectSize[wp]: storePTE, storePDE, storePDPTE, storePML4E "\<lambda>s. P (gsMaxObjectSize s)"
 (ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
 
-crunch gsUntypedZeroRanges[wp]: storePTE, storePDE "\<lambda>s. P (gsUntypedZeroRanges s)"
+crunch gsUntypedZeroRanges[wp]: storePTE, storePDE, storePDPTE, storePML4E "\<lambda>s. P (gsUntypedZeroRanges s)"
 (ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemma storePDE_invs[wp]:
-  "\<lbrace>invs' and valid_pde' pde
-          and (\<lambda>s. valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
+  "\<lbrace>invs' and valid_pde' pde\<rbrace>
       storePDE p pde
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
@@ -2672,13 +2764,6 @@ lemma setASIDPool_irq_states' [wp]:
   apply assumption
   done
 
-lemma setObject_asidpool_mappings'[wp]:
-  "\<lbrace>valid_pde_mappings'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
-  apply (wp valid_pde_mappings_lift')
-   apply (rule obj_at_setObject2)
-   apply (clarsimp dest!: updateObject_default_result)
-  apply assumption
-  done
 
 lemma setASIDPool_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
@@ -2853,10 +2938,8 @@ lemma mapM_x_storePTE_invs:
   done
 
 lemma mapM_x_storePDE_invs:
-  "\<lbrace>invs' and valid_pde' pde
-       and K (\<forall>p \<in> set ps. valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
+  "\<lbrace>invs' and valid_pde' pde \<rbrace>
          mapM_x (swp storePDE pde) ps \<lbrace>\<lambda>xa. invs'\<rbrace>"
-  apply (rule hoare_gen_asm)
   apply (rule hoare_post_imp)
    prefer 2
    apply (rule mapM_x_wp[OF _ subset_refl])

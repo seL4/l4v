@@ -3124,19 +3124,6 @@ lemma cteInsert_valid_irq_handlers'[wp]:
   apply (clarsimp simp:modify_map_def split:if_splits)
 done
 
-lemma setCTE_valid_mappings'[wp]:
-  "\<lbrace>valid_pde_mappings'\<rbrace> setCTE x y \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
-  apply (wp valid_pde_mappings_lift' setCTE_typ_at')
-   apply (simp add: setCTE_def)
-   apply (rule obj_at_setObject2)
-   apply (clarsimp simp: updateObject_cte typeError_def in_monad
-                  split: Structures_H.kernel_object.split_asm if_split_asm)
-  apply assumption
-  done
-
-crunch pde_mappings' [wp]: cteInsert valid_pde_mappings'
-  (wp: crunch_wps)
-
 lemma setCTE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> setCTE x y \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (rule valid_irq_states_lift')
@@ -3254,9 +3241,6 @@ lemma cteInsert_valid_globals [wp]:
 
 crunch arch [wp]: cteInsert "\<lambda>s. P (ksArchState s)"
   (wp: crunch_wps simp: cte_wp_at_ctes_of)
-
-crunch pde_mappings' [wp]: cteInsert valid_pde_mappings'
-  (wp: crunch_wps)
 
 lemma setCTE_ksMachine[wp]:
   "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setCTE x y \<lbrace>\<lambda>_ s. P (ksMachineState s)\<rbrace>"
@@ -4390,8 +4374,6 @@ lemma setupReplyMaster_irq_handlers'[wp]:
 crunch irq_states' [wp]: setupReplyMaster valid_irq_states'
 crunch irqs_makes' [wp]: setupReplyMaster irqs_masked'
   (rule: irqs_masked_lift)
-crunch pde_mappings' [wp]: setupReplyMaster valid_pde_mappings'
-
 crunch pred_tcb_at' [wp]: setupReplyMaster "pred_tcb_at' proj P t"
 
 crunch ksMachine[wp]: setupReplyMaster "\<lambda>s. P (ksMachineState s)"

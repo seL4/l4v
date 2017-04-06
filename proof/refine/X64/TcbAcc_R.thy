@@ -1003,18 +1003,8 @@ lemma threadSet_typ_at'[wp]:
 
 lemmas threadSet_typ_at_lifts[wp] = typ_at_lifts [OF threadSet_typ_at']
 
-lemma setObject_tcb_pde_mappings'[wp]:
-  "\<lbrace>valid_pde_mappings'\<rbrace> setObject p (tcb :: tcb) \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
-  apply (wp valid_pde_mappings_lift' setObject_typ_at')
-  apply (rule obj_at_setObject2)
-  apply (auto dest: updateObject_default_result)
-  done
-
 crunch irq_states' [wp]: threadSet valid_irq_states'
   (ignore: setObject getObject)
-
-crunch pde_mappings' [wp]: threadSet valid_pde_mappings'
-  (ignore: getObject setObject)
 
 crunch pspace_domain_valid [wp]: threadSet "pspace_domain_valid"
   (ignore: getObject setObject)
@@ -4304,8 +4294,6 @@ lemma sbn_global_reds' [wp]:
   by (rule valid_global_refs_lift'; wp)
 
 crunch irq_states' [wp]: setThreadState, setBoundNotification valid_irq_states'
-  (simp: unless_def crunch_simps)
-crunch pde_mappings' [wp]: setThreadState, setBoundNotification valid_pde_mappings'
   (simp: unless_def crunch_simps)
 
 lemma addToBitmap_ksMachine[wp]:

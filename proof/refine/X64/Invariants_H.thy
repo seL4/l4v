@@ -441,7 +441,7 @@ where valid_cap'_def:
   | PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
-            0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < kernelBase)
+            0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < pptrBase)
   | PageDirectoryCap ref mapdata \<Rightarrow>
     page_directory_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le>2^asid_bits-1 \<and> ref < pptrBase)
@@ -1108,31 +1108,6 @@ definition
   "irqs_masked' \<equiv> \<lambda>s. \<forall>irq > maxIRQ. intStateIRQTable (ksInterruptState s) irq = IRQInactive"
 
 definition
-  pd_asid_slot :: machine_word
-where
- "pd_asid_slot \<equiv> 0xff0"
-
-  (* ideally, all mappings above kernel_base are global and kernel-only, and
-     of them one particular mapping is clear. at the moment all we can easily say
-     is that the mapping is clear. *)
-definition
-  valid_pde_mapping_offset' :: "machine_word \<Rightarrow> bool"
-where
- "valid_pde_mapping_offset' offset \<equiv> offset \<noteq> pd_asid_slot * 4"
-
-definition
-  valid_pde_mapping' :: "machine_word \<Rightarrow> pde \<Rightarrow> bool"
-where
- "valid_pde_mapping' offset pde \<equiv> pde = InvalidPDE \<or> valid_pde_mapping_offset' offset"
-
-definition
-  valid_pde_mappings' :: "kernel_state \<Rightarrow> bool"
-where
-  "valid_pde_mappings' \<equiv> \<lambda>s.
-     \<forall>x pde. ko_at' pde x s
-          \<longrightarrow> valid_pde_mapping' (x && mask pdBits) pde"
-
-definition
   "valid_irq_masks' table masked \<equiv> \<forall>irq. table irq = IRQInactive \<longrightarrow> masked irq"
 
 abbreviation
@@ -1183,7 +1158,6 @@ where
                       \<and> valid_queues' s
                       \<and> ct_not_inQ s
                       \<and> ct_idle_or_in_cur_domain' s
-                      \<and> valid_pde_mappings' s
                       \<and> pspace_domain_valid s
                       \<and> ksCurDomain s \<le> maxDomain
                       \<and> valid_dom_schedule' s
@@ -1253,7 +1227,7 @@ abbreviation(input)
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
            \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
-           \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s \<and> valid_pde_mappings' s
+           \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
@@ -1266,7 +1240,7 @@ abbreviation(input)
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
            \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
-           \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s \<and> valid_pde_mappings' s
+           \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_idle_or_in_cur_domain' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
@@ -1287,7 +1261,7 @@ definition
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
            \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
-           \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_not_inQ s \<and> valid_pde_mappings' s
+           \<and> cur_tcb' s \<and> valid_queues' s \<and> ct_not_inQ s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
@@ -1888,14 +1862,6 @@ lemma sch_act_sane_not:
 lemma objBits_cte_conv:
   "objBits (cte :: cte) = 5"
   by (simp add: objBits_def objBitsKO_def wordSizeCase_def word_size)
-
-lemma valid_pde_mapping'_simps[simp]:
- "valid_pde_mapping' offset (InvalidPDE) = True"
- "valid_pde_mapping' offset (LargePagePDE ptr a b c d e w x y)
-     = valid_pde_mapping_offset' offset"
- "valid_pde_mapping' offset (PageTablePDE ptr x z'' g h f)
-     = valid_pde_mapping_offset' offset"
-  by (clarsimp simp: valid_pde_mapping'_def)+
 
 lemmas valid_irq_states'_def = valid_irq_masks'_def
 
@@ -3035,10 +3001,6 @@ lemma valid_global_pdpts_update' [iff]:
 lemma no_0_obj'_update [iff]:
   "no_0_obj' (f s) = no_0_obj' s"
   by (simp add: no_0_obj'_def pspace)
-
-lemma valid_pde_mappings'_update [iff]:
-  "valid_pde_mappings' (f s) = valid_pde_mappings' s"
-  by (simp add: valid_pde_mappings'_def)
 
 lemma pointerInUserData_update[iff]:
   "pointerInUserData p (f s) = pointerInUserData p s"
