@@ -56,7 +56,7 @@ definition
 
 definition
   physBase :: word32 where
-  "physBase \<equiv> 0x10000000"
+  "physBase \<equiv> 0x80000000"
 
 definition
   physMappingOffset :: word32 where
