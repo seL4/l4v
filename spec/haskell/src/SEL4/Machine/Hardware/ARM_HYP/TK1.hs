@@ -30,10 +30,10 @@ instance Bounded IRQ where
     maxBound = IRQ 31
 
 kernelBase :: VPtr
-kernelBase = VPtr 0xf0000000
+kernelBase = VPtr 0xe0000000
 
 physBase = 0x80000000
-physMappingOffset = 0xf0000000 - physBase
+physMappingOffset = 0xe0000000 - physBase
 
 ptrFromPAddr :: PAddr -> PPtr a
 ptrFromPAddr (PAddr addr) = PPtr $ addr + physMappingOffset
