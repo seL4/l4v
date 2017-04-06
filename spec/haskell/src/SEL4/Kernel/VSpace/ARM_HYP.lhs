@@ -1095,22 +1095,23 @@ round-robin.
 
 \subsection {ARM Cache and TLB consistency}
 
-XXX ARMHYP no changes in this subsection
+FIXME ARMHYP TODO clean up, fix for ifdef for ARM arch-parametrise
 
 > doFlush :: FlushType -> VPtr -> VPtr -> PAddr -> MachineMonad ()
-> doFlush Clean vstart vend pstart =
->     cleanCacheRange_RAM vstart vend pstart
-> doFlush Invalidate vstart vend pstart =
->     invalidateCacheRange_RAM vstart vend pstart
-> doFlush CleanInvalidate vstart vend pstart =
->     cleanInvalidateCacheRange_RAM vstart vend pstart
-> doFlush Unify vstart vend pstart = do
->     cleanCacheRange_PoU vstart vend pstart
->     dsb
->     invalidateCacheRange_I vstart vend pstart
->     branchFlushRange vstart vend pstart
->     isb
-
+> doFlush flushType vstart vend pstart =
+>     case flushType of
+>         Clean           -> cleanCacheRange_RAM vstart' vend' pstart
+>         Invalidate      -> invalidateCacheRange_RAM vstart' vend' pstart
+>         CleanInvalidate -> cleanInvalidateCacheRange_RAM vstart' vend' pstart
+>         Unify           -> do
+>                      cleanCacheRange_PoU vstart' vend' pstart
+>                      dsb
+>                      invalidateCacheRange_I vstart' vend' pstart
+>                      branchFlushRange vstart' vend' pstart
+>                      isb
+>     where vstart' = VPtr $ fromPPtr $ ptrFromPAddr pstart
+>           vend' = vstart' + (vend - vstart)
+>
 > flushPage :: VMPageSize -> PPtr PDE -> ASID -> VPtr -> Kernel ()
 > flushPage _ pd asid vptr = do
 >     assert (vptr .&. mask pageBits == 0)
