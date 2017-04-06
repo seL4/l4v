@@ -990,6 +990,7 @@ definition
         and K(wellformed_pde pde)
         and valid_cap cap
         and valid_pde pde
+        and pde_at p
         and cte_wp_at (\<lambda>c. is_arch_update cap c \<and> cap_asid c = None) cptr
         and (\<lambda>s. \<exists>x ref. (pde_ref_pages pde = Some x)
                  \<and> x \<in> obj_refs cap
@@ -1009,6 +1010,7 @@ definition
         and K(wellformed_pdpte pdpte)
         and valid_cap cap
         and valid_pdpte pdpte
+        and pdpte_at p
         and cte_wp_at (\<lambda>c. is_arch_update cap c \<and> cap_asid c = None) cptr
         and (\<lambda>s. \<exists>x ref. (pdpte_ref_pages pdpte = Some x)
                  \<and> x \<in> obj_refs cap
@@ -1026,7 +1028,7 @@ definition
       PDPTMap cap cptr pml4e p vspace\<Rightarrow>
         (\<lambda>s. p && ~~ mask pml4_bits \<notin> global_refs s)
         and K(wellformed_pml4e pml4e)
-        and valid_cap cap
+        and valid_cap cap and pml4e_at p
         and valid_pml4e pml4e and empty_pml4e_at p
         and cte_wp_at (\<lambda>c. is_arch_update cap c \<and> cap_asid c = None) cptr
         and (\<lambda>s. \<exists>x ref. (pml4e_ref_pages pml4e = Some x)
