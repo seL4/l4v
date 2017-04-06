@@ -250,4 +250,23 @@ lemma exec_Basic_Guard_UNIV:
 
 end
 
+(* FIXME MOVE to where option_to_0 is defined *)
+lemma option_to_0_simps [simp]:
+  "option_to_0 None =  0"
+  "option_to_0 (Some x) = x"
+  by (auto simp: option_to_0_def split: option.split)
+
+definition
+  "option_to_ptr \<equiv> Ptr o option_to_0"
+
+lemma option_to_ptr_simps [simp]:
+  "option_to_ptr None = NULL"
+  "option_to_ptr (Some x) = Ptr x"
+  by (auto simp: option_to_ptr_def split: option.split)
+
+(* FIXME MOVE *)
+lemma typ_at'_no_0_objD:
+  "typ_at' P p s \<Longrightarrow> no_0_obj' s \<Longrightarrow> p \<noteq> 0"
+  by (cases "p = 0" ; clarsimp)
+
 end
