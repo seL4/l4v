@@ -396,14 +396,14 @@ lemma lookup_pt_slot_no_fail:
    lookup_pt_slot pd vptr s =
    (case pdo (ucast (vptr >> 21)) of
       InvalidPDE \<Rightarrow>
-        ({(Inl (ExceptionTypes_A.MissingCapability 20),s)},False)
+        ({(Inl (ExceptionTypes_A.MissingCapability 21),s)},False)
     | PageTablePDE p \<Rightarrow>
         ({(Inr (ptrFromPAddr p + ((vptr >> 12) && 0x1FF << 3)),s)},
          False)
     | SectionPDE _ _ _ \<Rightarrow>
-        ({(Inl (ExceptionTypes_A.MissingCapability 20),s)},False)
+        ({(Inl (ExceptionTypes_A.MissingCapability 21),s)},False)
     | SuperSectionPDE _ _ _ \<Rightarrow>
-        ({(Inl (ExceptionTypes_A.MissingCapability 20),s)},False)  )"
+        ({(Inl (ExceptionTypes_A.MissingCapability 21),s)},False)  )"
   apply (frule pd_shifting'[of _ vptr])
   apply (cut_tac shiftr_shiftl_mask_pd_bits[of vptr])
   apply (subgoal_tac "vptr >> 21 << 3 >> 3 = vptr >> 21")
