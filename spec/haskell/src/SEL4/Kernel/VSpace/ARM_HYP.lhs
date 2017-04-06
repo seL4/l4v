@@ -708,7 +708,11 @@ FIXME ARMHYP the normal ARM has magic numbers everywhere here! can't be certain 
 >         PageTablePDE {} -> do
 >             let pt = ptrFromPAddr $ pdeTable pde
 >             withoutFailure $ lookupPTSlotFromPT pt vptr
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>         _ -> throw $ MissingCapability 21
+#else
 >         _ -> throw $ MissingCapability 20
+#endif
 
 > lookupPTSlotFromPT :: PPtr PTE -> VPtr -> Kernel (PPtr PTE)
 > lookupPTSlotFromPT pt vptr = do
