@@ -1624,11 +1624,12 @@ lemma zero_ranges_are_zero_typ_region_bytes:
 lemma deleteObjects_ccorres':
   notes if_cong[cong]
   shows
+  (* the 4 \<le> bits appears related to smallest retypeable object size, see valid_cap_def *)
   "ccorres dc xfdc
      (cte_wp_at' (\<lambda>cte. cteCap cte = capability.UntypedCap d ptr bits idx) p and
       (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s)) and
       invs' and ct_active' and sch_act_simple and
-      K ( 2 \<le> bits \<and> bits < word_bits))
+      K ( 4 \<le> bits \<and> bits < word_bits))
      UNIV hs
      (deleteObjects ptr bits)
      (Basic (\<lambda>s. globals_update
@@ -1668,7 +1669,7 @@ proof -
     and cte: "cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d ptr bits idx) p s"
     and desc_range: "descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s)"
     and invs: "invs' s" and "ct_active' s"
-    and "sch_act_simple s" and wb: "bits < word_bits" and b2: "2 \<le> bits"
+    and "sch_act_simple s" and wb: "bits < word_bits" and b2: "4 \<le> bits"
     and "deletionIsSafe ptr bits s"
     and cNodePartial: "\<not> cNodePartialOverlap (gsCNodes s)
         (\<lambda>x. ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1)"
@@ -1730,7 +1731,7 @@ proof -
   note cmap_array_helper = arg_cong2[where f=carray_map_relation, OF refl map_comp_restrict_map]
   have trivia: "size_of TYPE(pte_C[512]) = 2 ^ ptBits"
                "size_of TYPE(pde_C[2048]) = 2 ^ pdBits"
-    by (auto simp: ptBits_def pageBits_def pdBits_def)
+    by (auto simp: ptBits_def pageBits_def pdBits_def pt_bits_def' pd_bits_def')
   note cmap_array = cmap_array_typ_region_bytes[where 'a=pte, OF refl _ al _ trivia(1)]
      cmap_array_typ_region_bytes[where 'a=pde, OF refl _ al _ trivia(2)]
   note cmap_array = cmap_array[simplified, simplified objBitsT_simps b2
@@ -1750,6 +1751,8 @@ proof -
   have ptr_refs: "kernel_data_refs \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
     by (fastforce simp: valid_global_refs'_def valid_refs'_def cte_wp_at_ctes_of ran_def)
 
+  have bits_ge_3[simp]: "3 \<le> bits" using b2 by linarith
+
   (* calculation starts here *)
   have cs: "cpspace_relation (ksPSpace s) (underlying_memory (ksMachineState s))
                              (t_hrs_' (globals s'))"
@@ -1765,14 +1768,16 @@ proof -
             rule cm_disj cm_disj_tcb cm_disj_cte cm_disj_user cm_disj_device
             , assumption +,
             simp_all add: objBits_simps archObjSize_def pageBits_def projectKOs
+                          pte_bits_def pde_bits_def vcpu_bits_def
                           heap_to_user_data_restrict heap_to_device_data_restrict)[1])+ -- "waiting ..."
     apply (simp add: map_to_ctes_delete' cmap_relation_restrict_both_proj
                      cmap_relation_restrict_both cmap_array_helper hrs_htd_update
-                     ptBits_def pdBits_def pageBits_def cmap_array)
+                     table_bits_defs cmap_array)
+    apply (subst cmap_array[simplified table_bits_defs] ; simp add: table_bits_defs)
+    apply (subst cmap_array[simplified table_bits_defs] ; simp add: table_bits_defs)
+    apply (frule cmap_relation_restrict_both_proj[where f = tcb_ptr_to_ctcb_ptr], simp)
+
     apply (intro conjI)
-       apply (frule cmap_relation_restrict_both_proj
-                      [where f = tcb_ptr_to_ctcb_ptr])
-        apply simp
        apply (erule iffD1[OF cpspace_tcb_relation_address_subset,
                            OF D.valid_untyped invs cmaptcb])
       apply (subst cmap_relation_cong [OF refl refl,
@@ -1799,7 +1804,7 @@ proof -
     apply simp
     apply (simp add: obj_at'_real_def)
     apply (erule ko_wp_at'_weakenE)
-    apply (clarsimp simp: projectKOs inQ_def)
+    apply (clarsimp simp: live'_def projectKOs inQ_def)
     done
   hence tat: "\<And>p. \<forall>t \<in> set (ksReadyQueues s p). tcb_at' t s"
     and  tlive: "\<And>p. \<forall>t \<in> set (ksReadyQueues s p). ko_wp_at' live' t s"
@@ -1853,7 +1858,7 @@ proof -
       apply (subst lift_t_typ_region_bytes[OF cm_disj], simp_all)
         apply (fastforce simp: cpspace_relation_def)
        apply (simp add: projectKOs)
-      apply (simp add: objBits_simps archObjSize_def)
+      apply (simp add: objBits_simps archObjSize_def table_bits_defs)
       done
 
     have "set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot) =
@@ -1876,20 +1881,20 @@ proof -
        apply (cut_tac p="pd_ptr + 0x3FC0" in D.typ_at' [of "ArchT PDET", simplified field_simps])
        apply (simp add: upto_intvl_eq [OF al])
       apply (clarsimp simp: page_directory_at'_def)
-      apply (erule_tac x="0xFF0" in allE)
+      apply (erule_tac x="0x3FC0 >> 3" in allE)
       apply simp
       done
   }
   moreover
   {
-    assume "s' \<Turnstile>\<^sub>c (Ptr::(32 word \<Rightarrow> (pde_C[2048]) ptr)) (symbol_table ''armKSGlobalPD'')"
+    assume "s' \<Turnstile>\<^sub>c (Ptr::(32 word \<Rightarrow> (pde_C[2048]) ptr)) (symbol_table ''armUSGlobalPD'')"
     moreover
-    from sr ptr_refs have "ptr_span (pd_Ptr (symbol_table ''armKSGlobalPD''))
+    from sr ptr_refs have "ptr_span (pd_Ptr (symbol_table ''armUSGlobalPD''))
       \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
       by (fastforce simp: rf_sr_def cstate_relation_def Let_def)
     ultimately
     have "hrs_htd (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s')))
-      \<Turnstile>\<^sub>t (Ptr::(32 word \<Rightarrow> (pde_C[2048]) ptr)) (symbol_table ''armKSGlobalPD'')"
+      \<Turnstile>\<^sub>t (Ptr::(32 word \<Rightarrow> (pde_C[2048]) ptr)) (symbol_table ''armUSGlobalPD'')"
       using al wb
       apply (cases "t_hrs_' (globals s')")
       apply (simp add: hrs_htd_update_def hrs_htd_def h_t_valid_typ_region_bytes upto_intvl_eq)
@@ -2099,7 +2104,7 @@ lemma deleteObjects_ccorres[corres]:
      (cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d ptr bits idx) p and
       (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s)) and
       invs' and ct_active' and sch_act_simple and
-      K ( 2 \<le> bits \<and> bits < word_bits))
+      K ( 4 \<le> bits \<and> bits < word_bits))
      UNIV hs
      (deleteObjects ptr bits)
      (Seq (global_htd_update (\<lambda>_. typ_region_bytes ptr bits))
