@@ -1716,6 +1716,8 @@ lemma ptrFromPAddr_mask6_simp[simp]:
 
 lemma doFlush_ccorres:
   "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask 6 = ps && mask 6
+        (* hyp version translates ps into kernel virtual before flushing *)
+        \<and> ptrFromPAddr ps \<le> ptrFromPAddr ps + (ve - vs)
         \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
      (\<lbrace>flushtype_relation t \<acute>invLabel___int\<rbrace> \<inter> \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end = ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace>) []
      (doMachineOp (doFlush t vs ve ps)) (Call doFlush_'proc)"
@@ -1783,6 +1785,7 @@ lemma performPageFlush_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and K (asid \<le> mask asid_bits)
               and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 6 = ps && mask 6
+                  \<and> ptrFromPAddr ps \<le> ptrFromPAddr ps + (ve - vs)
                   \<and> unat (ve - vs) \<le> gsMaxObjectSize s))
        (\<lbrace>\<acute>pd = Ptr pd\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace> \<inter>
                \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end =  ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace> \<inter> \<lbrace>flushtype_relation typ \<acute>invLabel___int \<rbrace>)
@@ -1972,6 +1975,7 @@ lemma performPageDirectoryInvocationFlush_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and K (asid \<le> mask asid_bits)
               and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 6 = ps && mask 6
+                  \<and> ptrFromPAddr ps \<le> ptrFromPAddr ps + (ve - vs)
                   \<and> unat (ve - vs) \<le> gsMaxObjectSize s))
        (\<lbrace>\<acute>pd = Ptr pd\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace> \<inter>
                \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end =  ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace> \<inter> \<lbrace>flushtype_relation typ \<acute>invLabel___int \<rbrace>)
