@@ -22,7 +22,7 @@ crunch_ignore (empty_fail)
         in8_impl in16_impl in32_impl out8_impl out16_impl out32_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
-  loadWord, load_word_offs, storeWord, getRestartPC, get_mrs, invalidateLocalPageStructureCacheASID
+  loadWord, load_word_offs, storeWord, getRestartPC, get_mrs, invalidate_local_page_structure_cache_asid
 
 end
 

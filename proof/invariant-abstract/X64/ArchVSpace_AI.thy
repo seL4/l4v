@@ -1102,10 +1102,10 @@ lemmas writeCR3_irq_masks = no_irq[OF no_irq_writeCR3]
 lemma dmo_writeCR3[wp]: "\<lbrace>invs\<rbrace> do_machine_op (writeCR3 vs asid) \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (simp add: writeCR3_def do_machine_op_lift_invs)
 
-crunch inv[wp]: getCurrentCR3 P
+crunch inv[wp]: get_current_cr3 P
 
-lemma getCurrentCR3_rewrite_lift[wp]:
-  "\<lbrace>P\<rbrace> getCurrentCR3 \<lbrace>\<lambda>rv s. Q rv \<longrightarrow> P s\<rbrace>"
+lemma get_current_cr3_rewrite_lift[wp]:
+  "\<lbrace>P\<rbrace> get_current_cr3 \<lbrace>\<lambda>rv s. Q rv \<longrightarrow> P s\<rbrace>"
   by (wp hoare_drop_imps)
 
 lemma arch_state_update_invs:
@@ -1126,15 +1126,15 @@ lemma arch_state_update_invs:
                             valid_arch_objs_arch_update valid_vs_lookup_arch_update
                             valid_asid_map_arch_update)
 
-lemma setCurrentCR3_invs[wp]:
-  "\<lbrace>invs\<rbrace> setCurrentCR3 cr3 \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wpsimp simp: setCurrentCR3_def; erule arch_state_update_invs)
+lemma set_current_cr3_invs[wp]:
+  "\<lbrace>invs\<rbrace> set_current_cr3 c \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (wpsimp simp: set_current_cr3_def; erule arch_state_update_invs)
   by (auto simp: valid_global_refs_def global_refs_def valid_arch_state_def valid_table_caps_def
                  valid_global_objs_def valid_kernel_mappings_def)
 
-lemma setCurrentVSpaceRoot_invs[wp]:
-  "\<lbrace>invs\<rbrace> setCurrentVSpaceRoot vspace asid \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: setCurrentVSpaceRoot_def)
+lemma set_current_vspace_root_invs[wp]:
+  "\<lbrace>invs\<rbrace> set_current_vspace_root vspace asid \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (simp add: set_current_vspace_root_def)
   apply (wp)
   done
 
@@ -1185,14 +1185,14 @@ lemma svr_invs [wp]:
    apply (clarsimp simp: valid_cap_def mask_def)
   by (fastforce)
 
-crunch pred_tcb_at[wp]: setCurrentVSpaceRoot, update_asid_map "pred_tcb_at proj P t"
+crunch pred_tcb_at[wp]: set_current_vspace_root, update_asid_map "pred_tcb_at proj P t"
 
 lemma svr_pred_st_tcb[wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_vm_root t \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_vm_root_def )
   by (wp get_cap_wp | wpc | simp add: whenE_def split del: if_split)+
 
-crunch typ_at [wp]: getCurrentCR3, set_vm_root "\<lambda>s. P (typ_at T p s)"
+crunch typ_at [wp]: get_current_cr3, set_vm_root "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps)
 
 lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]
@@ -2044,7 +2044,7 @@ lemma vs_lookup_pages_current_cr3[iff]:
    vs_lookup_pages s"
   by (simp add: vs_lookup_pages_arch_update)
 
-crunch vs_lookup_pages[wp]: invalidateLocalPageStructureCacheASID "\<lambda>s. P (vs_lookup_pages s)"
+crunch vs_lookup_pages[wp]: invalidate_local_page_structure_cache_asid "\<lambda>s. P (vs_lookup_pages s)"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma vs_ref_pages_simps:
@@ -2795,7 +2795,7 @@ lemma vs_lookup1_archD:
                           \<and> ko_at (ArchObj ko) p s \<and> (r,p') \<in> vs_refs_arch ko"
   by (clarsimp dest!: vs_lookup1D simp: obj_at_def vs_refs_def split: kernel_object.splits)
 
-crunch invs[wp]: invalidateLocalPageStructureCacheASID invs
+crunch invs[wp]: invalidate_local_page_structure_cache_asid invs
 
 lemma unmap_pd_invs[wp]:
   "\<lbrace>invs and K (asid \<le> mask asid_bits \<and> vaddr < pptr_base \<and> canonical_address vaddr)\<rbrace>
@@ -3237,7 +3237,7 @@ lemma store_invalid_pte_vs_lookup_pages_shrink:
   apply force+
   done
 
-lemma set_current_cr3_global_refs[iff]:
+lemma set_current_cr3_global_refs_inv[iff]:
   "global_refs (s\<lparr>arch_state := arch_state s\<lparr>x64_current_cr3 := param_a\<rparr>\<rparr>) = global_refs s"
   by (simp add: global_refs_def)
 
