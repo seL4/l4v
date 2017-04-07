@@ -87,13 +87,17 @@ lemma trans_depends_eq:
   apply (clarsimp simp: trans_depends_def)
   done
 
-lemma lookup_empty_refl[simp]:
+lemma lookup_empty_refl:
   "((a, p), [], q) \<in> cs\<^sup>* \<Longrightarrow> a = [] \<and> p = q"
   apply (erule rtranclE)
    apply simp
   apply (case_tac y)
   apply (clarsimp dest!: lookup1_is_append)
   done
+
+lemma lookup_empty_refl_eq[simp]:
+  "((a, p), [], q) \<in> cs\<^sup>* \<longleftrightarrow> a = [] \<and> p = q"
+  using lookup_empty_refl by auto
 
 lemma lookup1_same_leaf:
   "\<lbrakk>(a, refs, p) \<in> cs; (a, refs, q) \<in> cs\<rbrakk> \<Longrightarrow> p = q"
@@ -254,11 +258,9 @@ lemma lookup_forwardE:
   apply (frule lookup1_is_append)
   apply (elim exE)+
   apply (case_tac r)
-    apply (rule neq1)
+   apply (rule neq1)
     apply simp
    apply clarsimp
-   apply (erule rtranclE, simp)
-   apply (clarsimp dest!: lookup1_is_append)
    apply (erule rtranclE, simp)
    apply (clarsimp dest!: lookup1_is_append)
   apply clarsimp
@@ -346,17 +348,8 @@ lemma lookup_trancl_cut:
   qed
 
 lemma empty_lookup_walk:
-"lookup_walk cs m [] p = {ptr. ptr \<in> m \<and> fst ptr = [] \<and> snd ptr = p }"
-  apply (clarsimp simp: lookup_walk_def)
-  apply (intro set_eqI iffI)
-  apply clarsimp
-  apply (erule_tac a = "([],b)" in rtranclE)
-  apply simp
-  apply (erule rtranclE)
-    apply simp
-   apply (clarsimp dest!: lookup1_is_append)+
-  apply fastforce
-  done
+  "lookup_walk cs m [] p = {ptr. ptr \<in> m \<and> fst ptr = [] \<and> snd ptr = p }"
+  by (fastforce simp: lookup_walk_def)
 
 lemma lookup_walk_stepI1:
   "\<lbrakk>p \<in> lookup_walk cs m ref ptr; (([], ptr), [q], ptr') \<in> cs\<rbrakk> \<Longrightarrow> p \<in> lookup_walk cs m (q # ref) ptr'"
@@ -421,11 +414,7 @@ lemma reachable_walk:
 
 lemma lookup_trans_eq:
   "((refs, b), refs, p) \<in> cs\<^sup>* \<Longrightarrow> b = p"
-  apply (drule lookup_trancl_append[where ra = "[]" and r = "[]" ,simplified])
-  apply (erule rtranclE)
-   apply simp
-  apply (clarsimp dest!: lookup1_is_append)
-  done
+  by (erule lookup_trancl_append[where ra = "[]" and r = "[]" , simplified])
 
 lemma lookup1_same_parent:
   "\<lbrakk>(a, refs, p) \<in> cs; (b, refs, q) \<in> cs\<rbrakk> \<Longrightarrow> fst a = fst b"
@@ -495,10 +484,7 @@ lemma lookup_trancl_walk:
 
 lemma lookup1_eq_ref:
   "(ref, ptr) \<in> lookup_walk cs m ref p \<Longrightarrow> p = ptr"
-  apply (clarsimp simp: lookup_walk_def)
-  apply (erule rtranclE, simp)
-  apply (clarsimp dest!: lookup1_is_append)
-  done
+  by (clarsimp simp: lookup_walk_def)
 
 lemma lookup_walk_decomp:
   "(a, ptr) \<in> lookup_walk cs rset r rptr \<Longrightarrow>

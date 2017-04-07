@@ -162,9 +162,6 @@ lemma delete_asid_pool_unmapped[wp]:
    apply (simp add: up_ucast_inj_eq)
   apply (drule vs_lookup1D)
   apply clarsimp
-  apply (clarsimp simp: vs_refs_def
-                 split: Structures_A.kernel_object.split_asm arch_kernel_obj.splits
-                 dest!: graph_ofD)
  done
 
 lemma set_asid_pool_unmap:

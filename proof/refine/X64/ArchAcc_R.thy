@@ -1784,10 +1784,7 @@ lemma find_vspace_for_asid_corres'':
                     split: Structures_A.kernel_object.splits
                            arch_kernel_obj.splits)
     apply (clarsimp dest!: vs_lookup1D)
-    apply (erule rtranclE)
      apply (clarsimp dest!: vs_lookup1D)
-    apply (clarsimp dest!: vs_lookup1D)
-   apply clarsimp
    apply (drule(1) valid_arch_objsD[rotated])
     apply (rule vs_lookupI)
      apply (rule vs_asid_refsI)
