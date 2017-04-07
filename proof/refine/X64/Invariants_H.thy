@@ -394,6 +394,9 @@ where
  "page_map_l4_at' x \<equiv> \<lambda>s. is_aligned x pml4Bits
                       \<and> (\<forall>y < 2 ^ ptTranslationBits. typ_at' (ArchT PML4ET) (x + (y << word_size_bits)) s)"
 
+lemmas vspace_table_at'_defs
+  = page_table_at'_def page_directory_at'_def pd_pointer_table_at'_def page_map_l4_at'_def
+
 abbreviation
   "asid_pool_at' \<equiv> typ_at' (ArchT ASIDPoolT)"
 
@@ -1951,7 +1954,7 @@ lemma valid_cap'_pspaceI:
      (force intro: obj_at'_pspaceI[rotated]
                   cte_wp_at'_pspaceI valid_untyped'_pspaceI
                   typ_at'_pspaceI[rotated]
-            simp: page_table_at'_def page_directory_at'_def pd_pointer_table_at'_def page_map_l4_at'_def
+            simp: vspace_table_at'_defs
            split: arch_capability.split zombie_type.split option.splits)+
 
 lemma valid_arch_obj'_pspaceI:
@@ -2666,10 +2669,9 @@ lemma typ_at_lift_valid_cap':
       apply (wp typ_at_lift_tcb' P hoare_vcg_all_lift typ_at_lift_cte')+
     apply (rename_tac arch_capability)
     apply (case_tac arch_capability,
-           simp_all add: P [where P1=id, simplified] page_table_at'_def
-                         hoare_vcg_prop page_directory_at'_def pd_pointer_table_at'_def
-                         All_less_Ball page_map_l4_at'_def
-              split del: if_splits)
+           simp_all add: P[where P1=id, simplified] vspace_table_at'_defs
+                         hoare_vcg_prop All_less_Ball
+                    split del: if_splits)
        apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped'
                  hoare_vcg_all_lift typ_at_lift_cte')+
   done

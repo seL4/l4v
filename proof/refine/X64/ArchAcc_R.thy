@@ -530,9 +530,11 @@ lemma mask_pml4_bits_inner_beauty:
   (p && ~~ mask pml4_bits) + (ucast ((ucast (p && mask pml4_bits >> word_size_bits)) :: 9 word) << word_size_bits) = (p::machine_word)"
   by (rule mask_split_aligned; simp add: bit_simps)
 
-lemma get_pml4e_corres:
-  "corres (pml4e_relation') (pml4e_at p) (pml4e_at' p)
-     (get_pml4e p) (getObject p)"
+lemma get_pml4e_corres [corres]:
+  assumes "p' = p"
+  shows "corres pml4e_relation' (pml4e_at p') (pml4e_at' p)
+                (get_pml4e p') (getObject p)"
+  using assms
   apply (simp add: getObject_def get_pml4e_def get_pml4_def get_object_def split_def bind_assoc)
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
@@ -978,9 +980,11 @@ lemma set_pml4_corres:
 
 declare set_arch_obj_simps[simp del]
 
-lemma store_pml4e_corres:
-  "pml4e_relation' pml4e pml4e' \<Longrightarrow>
-  corres dc (pml4e_at p and pspace_aligned and valid_etcbs) (pml4e_at' p) (store_pml4e p pml4e) (storePML4E p pml4e')"
+lemma store_pml4e_corres [corres]:
+  assumes "p' = p" "pml4e_relation' pml4e pml4e'"
+  shows "corres dc (pml4e_at p and pspace_aligned and valid_etcbs) (pml4e_at' p')
+                   (store_pml4e p pml4e) (storePML4E p' pml4e')"
+  using assms
   apply (simp add: store_pml4e_def storePML4E_def)
   apply (rule corres_symb_exec_l)
      apply (erule set_pml4_corres)
@@ -997,12 +1001,11 @@ lemma store_pml4e_corres:
   done
 
 lemma store_pml4e_corres':
-  "pml4e_relation' pml4e pml4e' \<Longrightarrow>
-  corres dc
-     (pml4e_at p and pspace_aligned and valid_etcbs) (pspace_aligned' and pspace_distinct')
-     (store_pml4e p pml4e) (storePML4E p pml4e')"
-  apply (rule stronger_corres_guard_imp,
-         erule store_pml4e_corres)
+  assumes "p' = p" "pml4e_relation' pml4e pml4e'"
+  shows "corres dc (pml4e_at p and pspace_aligned and valid_etcbs) (pspace_aligned' and pspace_distinct')
+                   (store_pml4e p pml4e) (storePML4E p' pml4e')"
+  using assms apply -
+  apply (rule stronger_corres_guard_imp, erule (1) store_pml4e_corres)
    apply auto
   done
 
@@ -1452,48 +1455,34 @@ crunch typ_at'[wp]: copyGlobalMappings "\<lambda>s. P (typ_at' T p s)"
 
 lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
 
-lemma copy_global_mappings_corres:
-  "corres dc (page_map_l4_at pm and pspace_aligned and valid_arch_state and valid_etcbs)
-             (page_map_l4_at' pm and valid_arch_state')
-          (copy_global_mappings pm) (copyGlobalMappings pm)"
-  apply (simp add: copy_global_mappings_def copyGlobalMappings_def)
-  apply (simp add: pd_bits_def pdBits_def objBits_simps
-                   archObjSize_def pptr_base_def X64.pptrBase_def getPML4Index_def bit_simps)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split [where r'="op =" and P=\<top>  and P'=\<top>])
-       prefer 2
-       apply (clarsimp simp: state_relation_def arch_state_relation_def)
-      apply (rule corres_mapM_x)
-          prefer 5
-          apply (rule order_refl)
-          apply clarsimp
-            apply (rule corres_split)
-            apply (rule store_pml4e_corres)
-            apply assumption
-           apply (rule_tac P="page_map_l4_at globalPM and pspace_aligned" and
-                           P'="page_map_l4_at' globalPM" in corres_guard_imp)
-             apply (rule corres_rel_imp)
-              apply (rule get_pml4e_corres, assumption)
-             apply clarsimp
-            apply (erule page_map_l4_pml4e_atI[simplified bit_simps, simplified], word_bitwise, assumption)
-           apply (erule page_map_l4_pml4e_atI'[simplified bit_simps, simplified], word_bitwise)
-          apply (rule_tac P="page_map_l4_at pm and pspace_aligned and valid_etcbs" in hoare_triv)
-          apply wp
-          apply clarsimp
-          apply (erule page_map_l4_pml4e_atI[simplified bit_simps, simplified], word_bitwise, assumption)
-         apply (rule_tac P="page_map_l4_at' pm" in hoare_triv)
-         apply (wp getPML4E_wp)
-         apply clarsimp
-         apply (erule page_map_l4_pml4e_atI'[simplified bit_simps, simplified], word_bitwise)
-        apply wp
-        apply simp+
-       apply (wp getPML4E_wp)
-       apply clarsimp
-      apply clarsimp
-     apply wp+
-   apply (clarsimp simp: valid_arch_state_def obj_at_def dest!:pspace_alignedD)
-  apply (simp add: valid_arch_state'_def)
-  done
+lemma corres_gets_global_pml4 [corres]:
+  "corres (op =) \<top> \<top> (gets (x64_global_pml4 \<circ> arch_state)) (gets (x64KSGlobalPML4 \<circ> ksArchState))"
+  by (simp add: state_relation_def arch_state_relation_def)
+
+lemma copy_global_mappings_corres [corres]:
+  assumes "pm' = pm"
+  notes [corresK] =
+    corresK_mapM_x[where S="op =" and F="op ="
+                     and I="\<lambda>xs s. pspace_aligned s \<and> valid_etcbs s
+                                     \<and> (\<forall>x\<in>set xs. pml4e_at (g_pm + (x << word_size_bits)) s
+                                                     \<and> pml4e_at (pm + (x << word_size_bits)) s)"
+                     and I'="\<lambda>ys s. \<forall>y\<in>set ys. pml4e_at' (g_pm' + (y << word_size_bits)) s
+                                                 \<and> pml4e_at' (pm + (y << word_size_bits)) s"
+                     for g_pm g_pm']
+  shows "corres dc (valid_arch_state and valid_etcbs and pspace_aligned and page_map_l4_at pm)
+                   (valid_arch_state' and page_map_l4_at' pm')
+                (copy_global_mappings pm)
+                (copyGlobalMappings pm')"
+  apply (simp add: assms copy_global_mappings_def copyGlobalMappings_def
+                   objBits_simps archObjSize_def pptr_base_def)
+  apply (fold word_size_bits_def)
+  apply corressimp
+          apply (rule corres_rv_defer_left, fastforce)
+        apply (wpsimp wp: hoare_vcg_ball_lift abs_atyp_at_lifts[OF store_pml4e_typ_at]
+                    simp: list.rel_eq)+
+  apply (subst word64_less_sub_le, fastforce simp: bit_simps word_bits_def)+
+  by (auto simp: valid_arch_state_def valid_arch_state'_def
+           elim: page_map_l4_pml4e_atI page_map_l4_pml4e_atI')
 
 lemma arch_cap_rights_update:
   "acap_relation c c' \<Longrightarrow>

@@ -1959,11 +1959,12 @@ lemma valid_arch_state_lift':
   assumes typs: "\<And>T p P. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
   assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   shows "\<lbrace>valid_arch_state'\<rbrace> f \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  apply (simp add: valid_arch_state'_def valid_asid_table'_def
-                   valid_global_pts'_def page_directory_at'_def
-                   page_table_at'_def pd_pointer_table_at'_def
-                   page_map_l4_at'_def valid_global_pdpts'_def
+  apply (simp add: valid_arch_state'_def
+                   valid_asid_table'_def
+                   valid_global_pts'_def
+                   valid_global_pdpts'_def
                    valid_global_pds'_def
+                   vspace_table_at'_defs
                    All_less_Ball)
   apply (rule hoare_lift_Pf [where f="ksArchState"])
    apply (wp typs hoare_vcg_const_Ball_lift arch typ_at_lifts)+

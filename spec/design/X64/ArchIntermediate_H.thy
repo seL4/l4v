@@ -24,7 +24,7 @@ private abbreviation (input)
         modify (\<lambda>ks. ks \<lparr> gsUserPages := (\<lambda> addr.
           if addr `~elem~` map fromPPtr addrs then Just pSize
           else gsUserPages ks addr)\<rparr>);
-        return $ map (\<lambda>n. PageCap (PPtr (fromPPtr n)) VMReadWrite VMVSpaceMap pSize dev Nothing) addrs
+        return $ map (\<lambda>n. PageCap (PPtr (fromPPtr n)) VMReadWrite VMNoMap pSize dev Nothing) addrs
      od)"
 
 private abbreviation (input)
@@ -54,10 +54,10 @@ defs Arch_createNewCaps_def:
             createNewTableCaps regionBase numObjects pdBits (makeObject::pde) PageDirectoryCap
               (\<lambda>pts. return ())
         | PDPointerTableObject \<Rightarrow>
-            createNewTableCaps regionBase numObjects pdBits (makeObject::pdpte) PDPointerTableCap
+            createNewTableCaps regionBase numObjects pdptBits (makeObject::pdpte) PDPointerTableCap
               (\<lambda>pts. return ())
         | PML4Object \<Rightarrow>
-            createNewTableCaps regionBase numObjects pdBits (makeObject::pml4e) PML4Cap
+            createNewTableCaps regionBase numObjects pml4Bits (makeObject::pml4e) PML4Cap
               (\<lambda>pms. mapM_x copyGlobalMappings pms)
         )"
 

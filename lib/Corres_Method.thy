@@ -757,7 +757,6 @@ lemma corresK_fail_no_fail'[corresK]:
 
 (* Wrap it up in a big hammer. Small optimization to avoid searching when no fact is given. *)
 
-
 method corressimp uses simp cong search wp
   declares corres corresK corres_splits corres_simp corresc_simp =
   ((corres corresc_simp: simp
@@ -768,5 +767,40 @@ method corressimp uses simp cong search wp
       (match search in _ \<Rightarrow> \<open>corres_search search: search\<close>))+)[1]
 
 declare corres_return[corres_simp_del]
+
+
+section \<open>Additional corresK rules\<close>
+
+(* To use this, you'll want to specify I, I' and S, and probably F as well. *)
+lemma corresK_mapM:
+  assumes "\<And>x y xs ys. corres_underlyingK sr nf nf' (F (x#xs) (y#ys)) r' (I (x#xs)) (I' (y#ys)) (f x) (f' y)"
+  assumes "\<And>x y xs. \<lbrakk> S x y; suffix (x#xs) as \<rbrakk> \<Longrightarrow> \<lbrace> I  (x#xs) \<rbrace> f  x \<lbrace> \<lambda>rv. I  xs \<rbrace>"
+  assumes "\<And>x y ys. \<lbrakk> S x y; suffix (y#ys) cs \<rbrakk> \<Longrightarrow> \<lbrace> I' (y#ys) \<rbrace> f' y \<lbrace> \<lambda>rv. I' ys \<rbrace>"
+  assumes "r [] []" "\<And>x y xs ys. \<lbrakk> r' x y; r xs ys \<rbrakk> \<Longrightarrow> r (x#xs) (y#ys)" "list_all2 S as cs"
+  shows "corres_underlyingK sr nf nf' (\<forall>xs ys. list_all2 S xs ys \<longrightarrow> F xs ys)
+                            r (I as) (I' cs) (mapM f as) (mapM f' cs)"
+  unfolding corres_underlyingK_def
+  apply (rule impI, rule corres_mapM_list_all2[of r r' S])
+  using assms unfolding corres_underlyingK_def by auto
+
+lemma corresK_discard_rv:
+  assumes "corres_underlyingK sr nf nf' F r' P P' a c"
+  shows "corres_underlyingK sr nf nf' F dc P P' (do x \<leftarrow> a; return () od) (do x \<leftarrow> c; return () od)"
+  unfolding corres_underlyingK_def
+  apply (rule impI, rule corres_guard_imp)
+  apply (simp add: liftM_def[symmetric])
+  apply (rule corres_rel_imp)
+  apply (rule assms[unfolded corres_underlyingK_def, THEN mp])
+  by auto
+
+lemma corresK_mapM_mapM_x:
+  assumes "corres_underlyingK sr nf nf' F r' P P' (mapM f as) (mapM f' cs)"
+  shows "corres_underlyingK sr nf nf' F dc P P' (mapM_x f as) (mapM_x f' cs)"
+  unfolding mapM_x_mapM by (rule corresK_discard_rv, rule assms)
+
+lemmas corresK_mapM_x
+  = corresK_mapM[where r'=dc,
+                           THEN corresK_mapM_mapM_x[where r'=dc],
+                           simplified]
 
 end
