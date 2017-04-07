@@ -464,9 +464,9 @@ where
               \<and> (\<forall>irq. irq_state_relation (irqs irq) (irqs' irq)))"
 
 definition
-  cr3_relation :: "CR3 \<Rightarrow> cr3 \<Rightarrow> bool"
+  cr3_relation :: "X64_A.cr3 \<Rightarrow> cr3 \<Rightarrow> bool"
 where
-  "cr3_relation c c' \<equiv> CR3BaseAddress c = cr3BaseAddress c' \<and> CR3pcid c = cr3pcid c'"
+  "cr3_relation c c' \<equiv> cr3_base_address c = cr3BaseAddress c' \<and> cr3_pcid c = cr3pcid c'"
 
 definition
   arch_state_relation :: "(arch_state \<times> X64_H.kernel_state) set"

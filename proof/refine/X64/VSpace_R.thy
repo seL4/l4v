@@ -380,9 +380,9 @@ lemma find_vspace_for_asid_vspace_at_asid_again:
 lemma no_fail_writeCR3[wp]: "no_fail \<top> (writeCR3 a b)"
   by (simp add: writeCR3_def)
 
-lemma setCurrentCR3_corres:
-  "cr3_relation cr3 cr3' \<Longrightarrow> corres dc \<top> \<top> (X64_A.setCurrentCR3 cr3) (setCurrentCR3 cr3')"
-  apply (clarsimp simp add: X64_A.setCurrentCR3_def setCurrentCR3_def cr3_relation_def)
+lemma set_current_cr3_corres:
+  "cr3_relation c c' \<Longrightarrow> corres dc \<top> \<top> (set_current_cr3 c) (setCurrentCR3 c')"
+  apply (clarsimp simp add: set_current_cr3_def setCurrentCR3_def cr3_relation_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
        apply (rule corres_machine_op)
@@ -394,9 +394,9 @@ lemma setCurrentCR3_corres:
      apply wpsimp+
   done
 
-lemma getCurrentCR3_corres:
-  "corres cr3_relation \<top> \<top> (X64_A.getCurrentCR3) (getCurrentCR3)"
-  apply (simp add: getCurrentCR3_def X64_A.getCurrentCR3_def)
+lemma get_current_cr3_corres:
+  "corres cr3_relation \<top> \<top> (get_current_cr3) (getCurrentCR3)"
+  apply (simp add: getCurrentCR3_def get_current_cr3_def)
   by (clarsimp simp: state_relation_def arch_state_relation_def)
 
 lemma update_asid_map_corres:
@@ -431,15 +431,15 @@ lemma set_vm_root_corres:
 proof -
   have P: "corres dc \<top> \<top>
         (do global_pml4 \<leftarrow> gets (x64_global_pml4 \<circ> arch_state);
-            X64_A.setCurrentVSpaceRoot (X64.addrFromKPPtr global_pml4) 0
+            set_current_vspace_root (X64.addrFromKPPtr global_pml4) 0
          od)
         (do globalPML4 \<leftarrow> gets (x64KSGlobalPML4 \<circ> ksArchState);
             X64_H.setCurrentVSpaceRoot (addrFromKPPtr globalPML4) 0
          od)"
-    apply (simp add: X64_H.setCurrentVSpaceRoot_def X64_A.setCurrentVSpaceRoot_def)
+    apply (simp add: X64_H.setCurrentVSpaceRoot_def set_current_vspace_root_def)
     apply (rule corres_guard_imp)
       apply (rule corres_split_eqr)
-         apply (rule setCurrentCR3_corres, simp add: cr3_relation_def addrFromKPPtr_def)
+         apply (rule set_current_cr3_corres, simp add: cr3_relation_def addrFromKPPtr_def)
         apply (subst corres_gets)
         apply (clarsimp simp: state_relation_def arch_state_relation_def)
        apply (wp | simp)+
@@ -447,7 +447,7 @@ proof -
   have Q: "\<And>P P'. corres dc P P'
         (throwError ExceptionTypes_A.lookup_failure.InvalidRoot <catch>
          (\<lambda>_ . do global_pml4 \<leftarrow> gets (x64_global_pml4 \<circ> arch_state);
-                  X64_A.setCurrentVSpaceRoot (X64.addrFromKPPtr global_pml4) 0
+                  set_current_vspace_root (X64.addrFromKPPtr global_pml4) 0
                od))
         (throwError Fault_H.lookup_failure.InvalidRoot <catch>
          (\<lambda>_ . do globalPML4 \<leftarrow> gets (x64KSGlobalPML4 \<circ> ksArchState);
@@ -491,12 +491,12 @@ proof -
                  apply simp
 apply (rule corres_split_norE)
 apply (simp only: liftE_bindE)
-apply (rule corres_split'[OF getCurrentCR3_corres])
+apply (rule corres_split'[OF get_current_cr3_corres])
 apply (rule corres_whenE)
 apply (clarsimp simp: cr3_relation_def)
 apply (case_tac rv, case_tac rv', simp)
 apply simp
-apply (rule setCurrentCR3_corres[unfolded dc_def], simp add: cr3_relation_def)
+apply (rule set_current_cr3_corres[unfolded dc_def], simp add: cr3_relation_def)
 apply (simp add: dc_def)
 apply wpsimp+
 apply (rule update_asid_map_corres)
@@ -946,21 +946,21 @@ crunch valid_arch'[wp]: storePDE, storePTE, storePDPTE, storePML4E valid_arch_st
 crunch cur_tcb'[wp]: storePDE, storePTE, storePDPTE, storePML4E cur_tcb'
 (ignore: setObject)
 
-lemma getCurrentCR3_inv': "\<lbrace>P\<rbrace> getCurrentCR3 \<lbrace>\<lambda>_. P\<rbrace>"
+lemma getCurrentCR3_inv: "\<lbrace>P\<rbrace> getCurrentCR3 \<lbrace>\<lambda>_. P\<rbrace>"
   by (simp add: getCurrentCR3_def)
 
-lemma invalidateLocalPageStructureCacheASID_corres:
+lemma invalidate_local_page_structure_cache_asid_corres:
   shows
   "corres dc \<top> \<top>
-     (X64_A.invalidateLocalPageStructureCacheASID a b)
+     (invalidate_local_page_structure_cache_asid a b)
      (X64_H.invalidateLocalPageStructureCacheASID a b)"
-  apply (simp add: X64_A.invalidateLocalPageStructureCacheASID_def
+  apply (simp add: invalidate_local_page_structure_cache_asid_def
                    X64_H.invalidateLocalPageStructureCacheASID_def)
-  by (corressimp corres: getCurrentCR3_corres setCurrentCR3_corres
-                        wp: getCurrentCR3_inv getCurrentCR3_inv'
+  by (corressimp corres: get_current_cr3_corres set_current_cr3_corres
+                        wp: get_current_cr3_inv getCurrentCR3_inv
                       simp: cr3_relation_def)
 
-lemmas invalidatePageStructureCacheASID_corres = invalidateLocalPageStructureCacheASID_corres
+lemmas invalidatePageStructureCacheASID_corres = invalidate_local_page_structure_cache_asid_corres
                       [folded invalidatePageStructureCacheASID_def]
 
 (* FIXME x64: move *)
@@ -1326,7 +1326,7 @@ proof -
              apply (rule corres_split[OF _ store_pte_corres'])
                 apply (rule corres_split[where r'="op ="])
                    apply simp
-                   apply (rule invalidateLocalPageStructureCacheASID_corres)
+                   apply (rule invalidate_local_page_structure_cache_asid_corres)
                   apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                   apply (case_tac m; clarsimp)
                   apply (rule corres_fail)
@@ -1340,7 +1340,7 @@ proof -
             apply (rule corres_split[OF _ store_pde_corres'])
                apply (rule corres_split[where r'="op ="])
                   apply simp
-                  apply (rule invalidateLocalPageStructureCacheASID_corres)
+                  apply (rule invalidate_local_page_structure_cache_asid_corres)
                  apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                  apply (case_tac m; clarsimp)
                  apply (rule corres_fail)
@@ -1354,7 +1354,7 @@ proof -
                 apply (rule corres_split[OF _ store_pdpte_corres'])
               apply (rule corres_split[where r'="op ="])
                  apply simp
-                 apply (rule invalidateLocalPageStructureCacheASID_corres)
+                 apply (rule invalidate_local_page_structure_cache_asid_corres)
                 apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                 apply (case_tac m; clarsimp)
                 apply (rule corres_fail)
@@ -1377,19 +1377,19 @@ proof -
       apply (clarsimp simp: mapping_map_simps)
       apply (rule corres_guard_imp)
         apply (rule corres_split[OF _ store_pte_corres'])
-           apply (rule invalidateLocalPageStructureCacheASID_corres)
+           apply (rule invalidate_local_page_structure_cache_asid_corres)
           apply (wpsimp simp: invs_pspace_aligned')+
      apply (frule (1) mapping_map_pde, clarsimp)
      apply (clarsimp simp: mapping_map_simps)
      apply (rule corres_guard_imp)
        apply (rule corres_split[OF _ store_pde_corres'])
-          apply (rule invalidateLocalPageStructureCacheASID_corres)
+          apply (rule invalidate_local_page_structure_cache_asid_corres)
          apply (wpsimp simp: invs_pspace_aligned')+
     apply (frule (1) mapping_map_pdpte, clarsimp)
     apply (clarsimp simp: mapping_map_simps)
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF _ store_pdpte_corres'])
-         apply (rule invalidateLocalPageStructureCacheASID_corres)
+         apply (rule invalidate_local_page_structure_cache_asid_corres)
         apply (wpsimp simp: invs_pspace_aligned')+
      -- "PageUnmap"
    apply (clarsimp simp: performPageInvocation_def perform_page_invocation_def
@@ -1906,7 +1906,7 @@ lemma pap_corres:
   done *)
 
 lemma setCurrentCR3_obj_at [wp]:
-  "\<lbrace>\<lambda>s. P (obj_at' P' t s)\<rbrace> setCurrentCR3 cr3 \<lbrace>\<lambda>rv s. P (obj_at' P' t s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (obj_at' P' t s)\<rbrace> setCurrentCR3 c \<lbrace>\<lambda>rv s. P (obj_at' P' t s)\<rbrace>"
   apply (simp add: setCurrentCR3_def)
   apply (wp doMachineOp_obj_at|wpc|simp)+
   done
@@ -2873,7 +2873,7 @@ lemma dmo_invalidateASID_invs'[wp]:
   done
 
 lemma x64KSCurrentCR3_update_inv[simp]:
-  "invs' s \<Longrightarrow> invs' (s\<lparr>ksArchState := x64KSCurrentCR3_update (\<lambda>_. cr3) (ksArchState s)\<rparr>)"
+  "invs' s \<Longrightarrow> invs' (s\<lparr>ksArchState := x64KSCurrentCR3_update (\<lambda>_. c) (ksArchState s)\<rparr>)"
   by (clarsimp simp: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def
                         valid_arch_state'_def valid_machine_state'_def ct_not_inQ_def
                         ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
