@@ -102,13 +102,27 @@ private lemma corres_trivial:
   "False \<Longrightarrow> corres_underlying sr nf nf' r P P' f f'"
   by simp
 
-method check_corres = (succeeds \<open>rule corres_trivial\<close>, fails \<open>rule TrueI\<close>)
+method check_corres =
+  (succeeds \<open>rule corres_trivial\<close>, fails \<open>rule TrueI\<close>)
 
 private lemma corresK_trivial:
   "False \<Longrightarrow> corres_underlyingK sr nf nf' F r P P' f f'"
   by simp
 
-method check_corresK = (succeeds \<open>rule corresK_trivial\<close>, fails \<open>rule TrueI\<close>)
+(* Ensure we don't apply calculational rules if either function is schematic *)
+
+private definition "dummy_fun \<equiv> undefined"
+
+private lemma corresK_dummy_left:
+  "False \<Longrightarrow> corres_underlyingK sr nf nf' F r P P' dummy_fun f'"
+  by simp
+
+private lemma corresK_dummy_right:
+  "False \<Longrightarrow> corres_underlyingK sr nf nf' F r P P' f dummy_fun"
+  by simp
+
+method check_corresK =
+  (succeeds \<open>rule corresK_trivial\<close>, fails \<open>rule corresK_dummy_left corresK_dummy_right\<close>)
 
 private definition "my_false s \<equiv> False"
 
@@ -129,7 +143,7 @@ method corres_raw_pre =
 method corresK_pre =
   (check_corresK, (fails \<open>rule corresK_my_false\<close>, rule corresK_weaken)?)
 
-method corres_pre = (corres_raw_pre | corresK_pre)
+method corres_pre = (corres_raw_pre | corresK_pre)?
 
 named_theorems corres_concrete_r and corres_concrete_rER
 
@@ -768,5 +782,91 @@ method corressimp uses simp cong search wp
       (match search in _ \<Rightarrow> \<open>corres_search search: search\<close>))+)[1]
 
 declare corres_return[corres_simp_del]
+thm corres_return
+section \<open>Normalize corres rule into corresK rule\<close>
+
+lemma corresK_convert:
+  "A \<longrightarrow> corres_underlying sr nf nf' r P Q f f' \<Longrightarrow>
+   corres_underlyingK sr nf nf' A r P Q f f'"
+  by (auto simp add: corres_underlyingK_def)
+
+method corresK_convert = (((drule uncurry)+)?, drule corresK_convert corresK_drop)
+
+section \<open>Lifting corres results into wp proofs\<close>
+
+definition
+  "ex_abs sr P s' \<equiv> \<exists>s. (s,s') \<in> sr \<and> P s"
+
+lemma ex_absI[intro!]:
+  "(s, s') \<in> sr \<Longrightarrow> P s \<Longrightarrow> ex_abs sr P s'"
+  by (auto simp add: ex_abs_def)
+
+lemma use_corresK':
+  "corres_underlyingK sr False nf' F r PP PP' f f' \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow>
+    \<lbrace>K F and PP' and ex_abs sr (PP and P)\<rbrace> f' \<lbrace>\<lambda>rv' s'. \<exists>rv. r rv rv' \<and> ex_abs sr (Q rv) s'\<rbrace>"
+  by (fastforce simp: corres_underlying_def corres_underlyingK_def valid_def ex_abs_def)
+
+lemma use_corresK [wp]:
+  "corres_underlyingK sr False nf' F r PP PP' f f' \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>rv'. r rv rv' \<longrightarrow> Q rv' s\<rbrace> \<Longrightarrow>
+    \<lbrace>K F and PP' and ex_abs sr (PP and P)\<rbrace> f' \<lbrace>\<lambda>rv'. ex_abs sr (Q rv')\<rbrace>"
+ apply (fastforce simp: corres_underlying_def corres_underlyingK_def valid_def ex_abs_def)
+ done
+
+lemma hoare_add_post':
+  "\<lbrakk>\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>; \<lbrace>P''\<rbrace> f \<lbrace>\<lambda>rv s. Q' rv s \<longrightarrow> Q rv s\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P' and P''\<rbrace> f \<lbrace>Q\<rbrace>"
+  by (fastforce simp add: valid_def)
+
+lemma use_corresK_frame:
+  assumes corres: "corres_underlyingK sr False nf' F r PP P' f f'"
+  assumes frame: "(\<forall>s s' rv rv'. (s,s') \<in> sr \<longrightarrow> r rv rv' \<longrightarrow> Q rv s \<longrightarrow> Q' rv' s' \<longrightarrow> QQ' rv' s')"
+  assumes valid: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
+  assumes valid': "\<lbrace>PP'\<rbrace> f' \<lbrace>Q'\<rbrace>"
+  shows "\<lbrace>K F and P' and PP' and ex_abs sr (PP and P)\<rbrace> f' \<lbrace>QQ'\<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule hoare_add_post'[OF valid'])
+   apply (rule hoare_strengthen_post)
+    apply (rule use_corresK'[OF corres valid])
+   apply (insert frame)[1]
+   apply (clarsimp simp: ex_abs_def)
+  apply clarsimp
+  done
+
+lemma use_corresK_frame_E_R:
+  assumes corres: "corres_underlyingK sr False nf' F (lf \<oplus> r) PP P' f f'"
+  assumes frame: "(\<forall>s s' rv rv'. (s,s') \<in> sr \<longrightarrow> r rv rv' \<longrightarrow> Q rv s \<longrightarrow> Q' rv' s' \<longrightarrow> QQ' rv' s')"
+  assumes valid: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -"
+  assumes valid': "\<lbrace>PP'\<rbrace> f' \<lbrace>Q'\<rbrace>, -"
+  shows "\<lbrace>K F and P' and PP' and ex_abs sr (PP and P)\<rbrace> f' \<lbrace>QQ'\<rbrace>, -"
+  apply (simp only: validE_R_def validE_def)
+  apply (rule use_corresK_frame[OF corres _ valid[simplified validE_R_def validE_def] valid'[simplified validE_R_def validE_def]])
+  by (auto simp: frame split: sum.splits)
+
+lemma K_True: "K True = (\<lambda>_. True)" by simp
+lemma True_And: "((\<lambda>_. True) and P) = P" by simp
+
+method use_corres uses frame =
+  (corresK_convert?, drule use_corresK_frame use_corresK_frame_E_R, rule frame,
+    (solves \<open>wp\<close> | defer_tac), (solves \<open>wp\<close> | defer_tac), (simp only: True_And K_True)?)
+
+experiment
+  fixes sr nf' r P P' f f' F G Q Q' QQ' PP PP' g g'
+  assumes f_corres[corres]: "G \<Longrightarrow> F \<Longrightarrow> corres_underlying sr False True r P P' f f'" and
+          g_corres[corres]: "corres_underlying sr False True dc \<top> \<top> g g'" and
+          wpl [wp]: "\<lbrace>PP\<rbrace> f \<lbrace>Q\<rbrace>" and wpr [wp]: "\<lbrace>PP'\<rbrace> f' \<lbrace>Q'\<rbrace>"
+                  and [wp]: "\<lbrace>P\<rbrace> g \<lbrace>\<lambda>_. P\<rbrace>" "\<lbrace>PP\<rbrace> g \<lbrace>\<lambda>_. PP\<rbrace>" "\<lbrace>P'\<rbrace> g' \<lbrace>\<lambda>_. P'\<rbrace>" "\<lbrace>PP'\<rbrace> g' \<lbrace>\<lambda>_. PP'\<rbrace>" and
+          frameA: "\<forall>s s' rv rv'. (s,s') \<in> sr \<longrightarrow> r rv rv' \<longrightarrow> Q rv s \<longrightarrow> Q' rv' s' \<longrightarrow> QQ' rv' s'"
+  begin
+
+  lemmas f_Q' = f_corres[atomized, @\<open>use_corres frame: frameA\<close>]
+  lemma "G \<Longrightarrow> F \<Longrightarrow> corres_underlying sr False True dc (P and PP) (P' and PP')
+    (g >>= (K (f >>= K (assert True)))) (g' >>= (K (f' >>= (\<lambda>rv'. (stateAssert (QQ' rv') [])))))"
+  apply (simp only: stateAssert_def K_def)
+  apply corres
+  apply (corres_search search: corresK_assert)
+  apply (wp f_Q' | simp)+
+  apply corres
+  apply (wp | simp)+
+  by auto
+end
 
 end
