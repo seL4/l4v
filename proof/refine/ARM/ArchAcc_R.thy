@@ -1101,15 +1101,13 @@ lemma getPTE_wp:
 lemmas get_pde_wp_valid = hoare_add_post'[OF get_pde_valid get_pde_wp]
 
 lemma page_table_at_lift:
-  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
-  (pspace_aligned s \<and> valid_pde (ARM_A.PageTablePDE ptr x z) s \<and> (ptrFromPAddr ptr) = ptr') \<longrightarrow>
+  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow> (ptrFromPAddr ptr) = ptr' \<longrightarrow>
+  (pspace_aligned s \<and> valid_pde (ARM_A.PageTablePDE ptr x z) s) \<longrightarrow>
   pspace_distinct' s' \<longrightarrow> page_table_at' ptr' s'"
   by (fastforce intro!: page_table_at_state_relation)
 
-
 lemmas checkPTAt_corres [corresK] =
   corres_stateAssert_implied_frame[OF page_table_at_lift, folded checkPTAt_def]
-
 
 lemma lookup_pt_slot_corres [corres]:
   "corres (lfr \<oplus> op =)
@@ -1119,10 +1117,11 @@ lemma lookup_pt_slot_corres [corres]:
           \<and> ucast (lookup_pd_slot pd vptr && mask pd_bits >> 2) \<notin> kernel_mapping_slots))
           (pspace_aligned' and pspace_distinct')
           (lookup_pt_slot pd vptr) (lookupPTSlot pd vptr)"
+  supply protect_r_def[simp]
   unfolding lookup_pt_slot_def lookupPTSlot_def lookupPTSlotFromPT_def
   apply (corressimp simp: pde_relation_aligned_def lookup_failure_map_def
                           ptBits_def pdeBits_def pageBits_def pteBits_def mask_def
-                      wp: get_pde_wp_valid getPDE_wp)
+                      wp: get_pde_wp_valid getPDE_wp corres_rv_defer_left)
   by (auto simp: lookup_failure_map_def obj_at_def)
 
 declare in_set_zip_refl[simp]
@@ -1170,12 +1169,15 @@ lemma arm_global_pd_corres [corres]:
      (gets (arm_global_pd \<circ> arch_state)) (gets (armKSGlobalPD \<circ> ksArchState))"
  by (clarsimp simp: state_relation_def arch_state_relation_def)
 
+
+
 lemma copy_global_mappings_corres [corres]:
   "corres dc (page_directory_at pd and pspace_aligned and valid_arch_state and valid_etcbs)
              (page_directory_at' pd and valid_arch_state')
           (copy_global_mappings pd) (copyGlobalMappings pd)" (is "corres _ ?apre _ _ _")
   unfolding copy_global_mappings_def copyGlobalMappings_def pd_bits_def pdBits_def objBits_simps
             archObjSize_def kernel_base_def ARM.kernelBase_def ARM_H.kernelBase_def
+  supply protect_r_def[simp]
   apply corressimp
      apply (rule corresK_drop)
      apply (rule_tac P="page_directory_at globalPD
@@ -1185,8 +1187,13 @@ lemma copy_global_mappings_corres [corres]:
         apply (corressimp simp: pdeBits_def ptBits_def pdeBits_def pageBits_def pteBits_def mask_def
                           wp: get_pde_wp getPDE_wp corres_rv_defer_left)
         subgoal for globalPD
+<<<<<<< HEAD
           apply (auto intro!: page_directory_pde_atI page_directory_pde_atI'
                      simp: pde_relation_aligned_def pageBits_def le_less_trans
+=======
+          by (auto intro!: page_directory_pde_atI page_directory_pde_atI'
+                     simp: pde_relation_aligned_def protect_r_def
+>>>>>>> fix refine after changes to corres_method
                      dest: align_entry_add_cong[of globalPD])
           done
   apply (wpsimp simp: pageBits_def)+
@@ -1326,7 +1333,7 @@ lemma asidHighBitsOf [simp]:
   done
 
 lemma page_directory_at_lift:
-  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow> True \<longrightarrow>
   (pspace_aligned s \<and> page_directory_at ptr s) \<longrightarrow>
   pspace_distinct' s' \<longrightarrow> page_directory_at' ptr s'"
   by (fastforce intro!: page_directory_at_state_relation)
@@ -1354,6 +1361,7 @@ lemma find_pd_for_asid_corres [corres]:
                        (find_pd_for_asid asid) (findPDForASID asid)"
   apply (simp add: find_pd_for_asid_def findPDForASID_def liftME_def bindE_assoc)
   apply (corressimp simp: liftE_bindE assertE_assert mask_asid_low_bits_ucast_ucast lookup_failure_map_def
+                          protect_r_def
                       wp: getPDE_wp getASID_wp
                   search: checkPDAt_corres corres_gets_asid)
   subgoal premises prems for s s'
