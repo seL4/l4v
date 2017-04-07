@@ -226,12 +226,8 @@ lemma arch_switch_thread_corres:
              (arch_switch_to_thread t) (Arch.switchToThread t)"
   apply (simp add: arch_switch_to_thread_def X64_H.switchToThread_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split' [OF set_vm_root_corres])
-      apply (rule corres_machine_op[OF corres_rel_imp])
-      apply (rule corres_underlying_trivial)
-       apply (simp add: ARM.clearExMonitor_def | wp)+
-   apply clarsimp
-   apply (erule st_tcb_at_tcb_at)
+    apply (rule set_vm_root_corres)
+   apply (clarsimp simp: st_tcb_at_tcb_at)
   apply (clarsimp simp: valid_pspace'_def)
   done
 
@@ -639,12 +635,6 @@ crunch ct'[wp]: tcbSchedAppend "\<lambda>s. P (ksCurThread s)"
   (simp: unless_def)
 crunch ct'[wp]: tcbSchedDequeue "\<lambda>s. P (ksCurThread s)"
 
-crunch pde_mappings'[wp]: tcbSchedEnqueue "valid_pde_mappings'"
-  (simp: unless_def)
-crunch pde_mappings'[wp]: tcbSchedAppend "valid_pde_mappings'"
-  (simp: unless_def)
-crunch pde_mappings'[wp]: tcbSchedDequeue "valid_pde_mappings'"
-
 lemma tcbSchedEnqueue_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
   apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
@@ -917,7 +907,7 @@ lemma arch_switch_thread_tcb_at' [wp]: "\<lbrace>tcb_at' t\<rbrace> Arch.switchT
   by (unfold X64_H.switchToThread_def, wp typ_at_lift_tcb')
 
 crunch typ_at'[wp]: "switchToThread" "\<lambda>s. P (typ_at' T p s)"
-  (ignore: clearExMonitor)
+  (ignore: )
 
 lemma Arch_switchToThread_pred_tcb'[wp]:
   "\<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>
@@ -925,8 +915,6 @@ lemma Arch_switchToThread_pred_tcb'[wp]:
 proof -
   have pos: "\<And>P t t'. \<lbrace>pred_tcb_at' proj P t'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. pred_tcb_at' proj P t'\<rbrace>"
     apply (simp add:  pred_tcb_at'_def X64_H.switchToThread_def)
-    apply (rule hoare_seq_ext)+
-       apply (rule doMachineOp_obj_at)
      apply (rule setVMRoot_obj_at)
     done
   show ?thesis
@@ -951,7 +939,7 @@ lemma arch_switch_thread_ksQ[wp]:
   done
 
 crunch valid_queues[wp]: "Arch.switchToThread" "Invariants_H.valid_queues"
-(wp: crunch_wps simp: crunch_simps ignore: clearExMonitor)
+(wp: crunch_wps simp: crunch_simps)
 
 lemma switch_thread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
@@ -1240,14 +1228,6 @@ lemma setCurThread_invs_idle_thread:
   by (rule hoare_pre, rule setCurThread_invs_no_cicd'_idle_thread)
      (clarsimp simp: invs'_to_invs_no_cicd'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
 
-lemma clearExMonitor_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp ARM.clearExMonitor \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq)
-   apply (simp add: no_irq_clearExMonitor)
-  apply (clarsimp simp: ARM.clearExMonitor_def machine_op_lift_def
-                        in_monad select_f_def)
-  done
-
 lemma Arch_switchToThread_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: X64_H.switchToThread_def)
@@ -1294,30 +1274,20 @@ lemma tcbSchedDequeue_not_tcbQueued:
 lemma asUser_obj_at[wp]:  "\<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>
    asUser t' f
    \<lbrace>\<lambda>rv. obj_at' (P \<circ> tcbState) t\<rbrace>"
-   apply (simp add: asUser_def threadGet_stateAssert_gets_asUser)
-   apply (wp|wpc)+
-   apply (simp add: asUser_fetch_def obj_at'_def)
-done
+  apply (simp add: asUser_def threadGet_stateAssert_gets_asUser)
+  apply (wp|wpc)+
+  apply (simp add: asUser_fetch_def obj_at'_def)
+  done
 
 lemma Arch_switchToThread_obj_at[wp]:
   "\<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>
    Arch.switchToThread t
    \<lbrace>\<lambda>rv. obj_at' (P \<circ> tcbState) t\<rbrace>"
   apply (simp add: X64_H.switchToThread_def )
-  apply (rule hoare_seq_ext)+
-   apply (rule doMachineOp_obj_at)
   apply (rule setVMRoot_obj_at)
   done
 
 declare doMachineOp_obj_at[wp]
-
-lemma clearExMonitor_invs_no_cicd'[wp]:
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp ARM.clearExMonitor \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wp dmo_invs_no_cicd' no_irq)
-   apply (simp add: no_irq_clearExMonitor)
-  apply (clarsimp simp: ARM.clearExMonitor_def machine_op_lift_def
-                        in_monad select_f_def)
-  done
 
 crunch valid_arch_state'[wp]: asUser "valid_arch_state'"
 (wp: crunch_wps simp: crunch_simps)
@@ -1370,9 +1340,6 @@ lemma asUser_ct_not_inQ[wp]:
   apply (clarsimp simp: ct_not_inQ_def obj_at'_def projectKOs objBitsKO_def  ps_clear_def dom_def)
   apply (rule conjI; clarsimp; blast)
   done
-
-crunch valid_pde_mappings'[wp]: asUser "valid_pde_mappings'"
-(wp: crunch_wps simp: crunch_simps)
 
 crunch pspace_domain_valid[wp]: asUser "pspace_domain_valid"
 (wp: crunch_wps simp: crunch_simps)
@@ -1501,10 +1468,10 @@ lemma sct_cap_to'[wp]:
 
 
 crunch cap_to'[wp]: "Arch.switchToThread" "ex_nonz_cap_to' p"
-  (simp: crunch_simps ignore: ARM.clearExMonitor)
+  (simp: crunch_simps)
 
 crunch cap_to'[wp]: switchToThread "ex_nonz_cap_to' p"
-  (simp: crunch_simps ignore: ARM.clearExMonitor)
+  (simp: crunch_simps)
 
 lemma no_longer_inQ[simp]:
   "\<not> inQ d p (tcbQueued_update (\<lambda>x. False) tcb)"
@@ -1792,7 +1759,7 @@ lemma shiftr_le_0:
   by (rule word_unat.Rep_eqD) (simp add: shiftr_div_2n')
 
 lemma prioToL1Index_l1IndexToPrio_or_id:
-  "\<lbrakk> unat (w'::priority) < 2 ^ wordRadix ; w < size w' \<rbrakk>
+  "\<lbrakk> unat (w'::priority) < 2 ^ wordRadix ; w < 2^(size w' - wordRadix) \<rbrakk>
    \<Longrightarrow> prioToL1Index ((l1IndexToPrio w) || w') = w"
   unfolding l1IndexToPrio_def prioToL1Index_def
   apply (simp add: shiftr_over_or_dist shiftr_le_0 wordRadix_def')
@@ -1929,7 +1896,7 @@ lemma bitmapL1_highest_lookup:
      apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size wordRadix_def')
     apply (simp add: word_size)
     apply (drule (1) bitmapQ_no_L1_orphansD[where d=d and i="word_log2 _"])
-    apply (simp add: numPriorities_def wordBits_def word_size)
+    apply (simp add: numPriorities_def wordBits_def word_size wordRadix_def')
    apply simp
   apply (rule prioToL1Index_le_index[rotated], simp)
   apply (frule (2) bitmapQ_from_bitmap_lookup)
@@ -1940,7 +1907,7 @@ lemma bitmapL1_highest_lookup:
      apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size)
     apply (rule order_less_le_trans[OF word_log2_max], simp add: word_size wordRadix_def')
    apply (fastforce dest: bitmapQ_no_L1_orphansD
-                    simp: wordBits_def numPriorities_def word_size)
+                    simp: wordBits_def numPriorities_def word_size wordRadix_def')
   apply (erule word_log2_highest)
   done
 
@@ -2013,7 +1980,7 @@ lemma setCurThread_const:
 
 crunch it[wp]: switchToIdleThread "\<lambda>s. P (ksIdleThread s)"
 crunch it[wp]: switchToThread "\<lambda>s. P (ksIdleThread s)"
-    (ignore: clearExMonitor)
+    (ignore: )
 
 lemma switchToIdleThread_curr_is_idle:
   "\<lbrace>\<top>\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv s. ksCurThread s = ksIdleThread s\<rbrace>"
