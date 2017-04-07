@@ -652,20 +652,25 @@ set_vm_root_for_flush :: "word32 \<Rightarrow> asid \<Rightarrow> (bool,'z::stat
     else return False)
 od"
 
+find_consts name: "from"
+
 definition
 do_flush :: "flush_type \<Rightarrow> vspace_ref \<Rightarrow> vspace_ref \<Rightarrow> paddr \<Rightarrow> unit machine_monad" where
 "do_flush flush_type vstart vend pstart \<equiv>
-    case flush_type of
-       Clean \<Rightarrow> cleanCacheRange_RAM vstart vend pstart
-     | Invalidate \<Rightarrow> invalidateCacheRange_RAM vstart vend pstart
-     | CleanInvalidate \<Rightarrow> cleanInvalidateCacheRange_RAM vstart vend pstart
+    let vstart' = ptrFromPAddr pstart;
+        vend'  = vstart' + (vend - vstart)
+    in
+    (case flush_type of
+       Clean \<Rightarrow> cleanCacheRange_RAM vstart' vend' pstart
+     | Invalidate \<Rightarrow> invalidateCacheRange_RAM vstart' vend' pstart
+     | CleanInvalidate \<Rightarrow> cleanInvalidateCacheRange_RAM vstart' vend' pstart
      | Unify \<Rightarrow> do
-         cleanCacheRange_PoU vstart vend pstart;
+         cleanCacheRange_PoU vstart' vend' pstart;
          dsb;
-         invalidateCacheRange_I vstart vend pstart;
-         branchFlushRange vstart vend pstart;
+         invalidateCacheRange_I vstart' vend' pstart;
+         branchFlushRange vstart' vend' pstart;
          isb
-     od"
+     od)"
 
 text {* Flush mappings associated with a page table. *}
 definition
