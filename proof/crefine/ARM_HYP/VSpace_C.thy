@@ -208,8 +208,8 @@ lemma pd_at_asid_cross_over:
   apply (clarsimp simp: valid_pde_mappings'_def)
   apply (elim allE, drule(1) mp)
   apply (simp add: valid_pde_mapping'_def valid_pde_mapping_offset'_def
-                   pd_asid_slot_def mask_add_aligned pt_index_bits_def' pageBits_def pte_bits_def)
-  apply (simp add: mask_def pd_bits_def' pageBits_def)
+                   pd_asid_slot_def mask_add_aligned table_bits_defs)
+  apply (simp add: mask_def)
   apply (clarsimp simp add: cpde_relation_def Let_def)
   by (simp add: pde_lift_def Let_def split: if_split_asm)
 
@@ -2255,7 +2255,7 @@ lemma multiple_add_less_nat:
    496 = number of entries in pt - 16, where number of entries is 512 *)
 lemma large_ptSlot_array_constraint:
   "is_aligned (ptSlot :: word32) 7 \<Longrightarrow> n \<le> limit - 496 \<and> 496 \<le> limit
-    \<Longrightarrow> \<exists>i. ptSlot = (ptSlot && ~~ mask pt_bits) + of_nat i * 8 \<and> i + n \<le> limit"
+    \<Longrightarrow> \<exists>i. ptSlot = (ptSlot && ~~ mask ptBits) + of_nat i * 8 \<and> i + n \<le> limit"
   apply (rule_tac x="unat ((ptSlot && mask ptBits) >> 3)" in exI)
   apply (simp add: shiftl_t2n[where n=3, symmetric, THEN trans[rotated],
                    OF mult.commute, simplified])
@@ -2267,7 +2267,7 @@ lemma large_ptSlot_array_constraint:
   apply (clarsimp simp add: le_diff_conv2)
   apply (erule order_trans[rotated], simp)
   apply (rule unat_le_helper)
-  apply (simp add: is_aligned_mask mask_def pageBits_def pt_bits_def')
+  apply (simp add: is_aligned_mask mask_def table_bits_defs)
   apply (word_bitwise, simp?)
   done
 

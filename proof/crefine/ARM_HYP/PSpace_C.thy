@@ -172,8 +172,7 @@ lemma pde_stored_asid_update_valid_offset:
             = (pde_stored_asid  \<circ>\<^sub>m clift (t_hrs_' cstate) \<circ>\<^sub>m pd_pointer_to_asid_slot)"
   apply (rule ext, clarsimp simp add: pd_pointer_to_asid_slot_def map_comp_eq)
   apply (simp add: valid_pde_mapping_offset'_def mask_add_aligned)
-  apply (simp add: pd_asid_slot_def pdBits_def pageBits_def mask_def
-                   pd_bits_def' pt_bits_def pte_bits_def pt_index_bits_def)
+  apply (simp add: pd_asid_slot_def mask_def table_bits_defs)
   done
 
 lemma storePDE_Basic_ccorres':

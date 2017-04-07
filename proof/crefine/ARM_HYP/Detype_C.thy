@@ -1731,7 +1731,7 @@ proof -
   note cmap_array_helper = arg_cong2[where f=carray_map_relation, OF refl map_comp_restrict_map]
   have trivia: "size_of TYPE(pte_C[512]) = 2 ^ ptBits"
                "size_of TYPE(pde_C[2048]) = 2 ^ pdBits"
-    by (auto simp: ptBits_def pageBits_def pdBits_def pt_bits_def' pd_bits_def')
+    by (auto simp: table_bits_defs)
   note cmap_array = cmap_array_typ_region_bytes[where 'a=pte, OF refl _ al _ trivia(1)]
      cmap_array_typ_region_bytes[where 'a=pde, OF refl _ al _ trivia(2)]
   note cmap_array = cmap_array[simplified, simplified objBitsT_simps b2
@@ -1762,6 +1762,7 @@ proof -
     unfolding cpspace_relation_def
     using cendpoint_relation_restrict [OF D.valid_untyped invs rl]
       cnotification_relation_restrict [OF D.valid_untyped invs rl]
+    using  cmap_array[simplified table_bits_defs]
     apply -
     apply (elim conjE)
     apply ((subst lift_t_typ_region_bytes,
@@ -1773,10 +1774,7 @@ proof -
     apply (simp add: map_to_ctes_delete' cmap_relation_restrict_both_proj
                      cmap_relation_restrict_both cmap_array_helper hrs_htd_update
                      table_bits_defs cmap_array)
-    apply (subst cmap_array[simplified table_bits_defs] ; simp add: table_bits_defs)
-    apply (subst cmap_array[simplified table_bits_defs] ; simp add: table_bits_defs)
     apply (frule cmap_relation_restrict_both_proj[where f = tcb_ptr_to_ctcb_ptr], simp)
-
     apply (intro conjI)
        apply (erule iffD1[OF cpspace_tcb_relation_address_subset,
                            OF D.valid_untyped invs cmaptcb])
