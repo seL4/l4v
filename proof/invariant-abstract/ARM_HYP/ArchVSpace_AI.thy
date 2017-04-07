@@ -4646,7 +4646,8 @@ lemma no_irq_do_flush:
   "no_irq (do_flush a b c d)"
   apply (simp add: do_flush_def)
   apply (case_tac a)
-  apply (wp no_irq_dsb no_irq_invalidateCacheRange_I no_irq_branchFlushRange no_irq_isb | simp)+
+  apply (wpsimp wp: no_irq_dsb no_irq_invalidateCacheRange_I no_irq_branchFlushRange no_irq_isb
+                simp: Let_def)+
   done
 
 
@@ -4722,7 +4723,7 @@ crunch device_state_inv[wp]: cleanInvalidateL2Range "\<lambda>ms. P (device_stat
   (wp: cacheRangeOp_respects_device_region)
 
 crunch device_state_inv[wp]: do_flush "\<lambda>ms. P (device_state ms)"
-  (wp: cacheRangeOp_respects_device_region)
+  (wp: cacheRangeOp_respects_device_region simp: Let_def)
 
 crunch device_state_inv[wp]: storeWord "\<lambda>ms. P (device_state ms)"
 
