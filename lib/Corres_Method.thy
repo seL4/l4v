@@ -300,7 +300,6 @@ method corresc declares corresc_simp =
     (solves \<open>rule corresK_false_guard_instantiate,
       (simp add: corresc_simp)?, (erule (1) wpc_contr_helper, simp add: corresc_simp)?\<close>)?)[1]
 
-
 section \<open>Alternative split rules\<close>
 
 text \<open>
@@ -355,9 +354,12 @@ lemma corres_rv_weaken:
   "(\<And>rv rv'. r rv rv' \<Longrightarrow> r' rv rv') \<Longrightarrow> corres_rv sr r P P' f f' \<Longrightarrow> corres_rv sr r' P P' f f'"
   by (auto simp add: corres_rv_def)
 
+definition
+  "protect_r r = (r :: bool)"
+
 lemma corresK_split:
   assumes x: "corres_underlyingK sr nf nf' F r' P P' a c"
-  assumes y: "\<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') r (R rv) (R' rv') (b rv) (d rv')"
+  assumes y: "\<And>rv rv'. protect_r (r' rv rv') \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') r (R rv) (R' rv') (b rv) (d rv')"
   assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
   assumes c: "corres_rv sr (\<lambda>rv rv'. r' rv rv' \<longrightarrow> F' rv rv') PP PP' a c"
   shows      "corres_underlyingK sr nf nf' F r (PP and P and Q) (PP' and P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
@@ -369,7 +371,7 @@ lemma corresK_split:
    apply (insert c;simp?)
    apply (drule(6) corres_rvD)
    apply (rule_tac x="(ac,bc)" in bexI,clarsimp)
-    apply (frule_tac s'=baa in y[simplified corres_underlyingK_def, rule_format, THEN corres_underlyingD])
+    apply (frule_tac s'=baa in y[simplified corres_underlyingK_def protect_r_def, rule_format, THEN corres_underlyingD])
           apply assumption+
        apply (erule(1) use_valid[OF _ z(1)])
       apply (erule(1) use_valid[OF _ z(2)])
@@ -383,7 +385,7 @@ lemma corresK_split:
   apply (drule(1) bspec,clarsimp)
   apply (insert c;simp?)
   apply (drule(6) corres_rvD)
-  apply (frule_tac s'=baa in y[simplified corres_underlyingK_def, rule_format, THEN corres_underlyingD])
+  apply (frule_tac s'=baa in y[simplified corres_underlyingK_def protect_r_def, rule_format, THEN corres_underlyingD])
         apply simp+
      apply (erule(1) use_valid[OF _ z(1)])
     apply (erule(1) use_valid[OF _ z(2)])
@@ -401,6 +403,10 @@ named_theorems
   corres_simp_del and (* bad simp rules that break everything *)
   corres and (* solving terminal corres subgoals *)
   corresK (* calculational rules that are phrased as corresK rules *)
+
+lemma protect_r_conj_elim[simp, corres_simp]:
+  "protect_r (a \<and> b) = (protect_r a \<and> protect_r b)"
+  by (simp add: protect_r_def)
 
 context begin
 
@@ -439,7 +445,8 @@ private lemma has_guard: "maybe_guard F" by (simp add: maybe_guard_def)
 private lemma no_guard: "maybe_guard True" by (simp add: maybe_guard_def)
 
 private method corres_apply =
-  (rule corresK_assume_guard_guarded, (determ \<open>rule corres\<close>, safe_fold_subgoals)[1],
+  (rule corresK_assume_guard_guarded,
+    (determ \<open>rule corres\<close>, safe_fold_subgoals)[1],
      #break "corres_apply",
    ((focus_concl \<open>(atomize (full))?\<close>, erule guard_collect, rule has_guard) | rule no_guard))[1]
 
@@ -639,10 +646,10 @@ lemma corresK_assert[corresK]:
   by (auto simp add: corres_underlyingK_def corres_underlying_def return_def assert_def fail_def)
 
 lemma corres_stateAssert_implied_frame:
-  assumes A: "\<forall>s s'. (s, s') \<in> sr \<longrightarrow> P' s \<longrightarrow> Q' s' \<longrightarrow> A s'"
+  assumes A: "\<forall>s s'. (s, s') \<in> sr \<longrightarrow> F' \<longrightarrow> P' s \<longrightarrow> Q' s' \<longrightarrow> A s'"
   assumes C: "\<And>x. corres_underlyingK sr nf nf' F r P Q f (g x)"
   shows
-  "corres_underlyingK sr nf nf' F r (P and P') (Q and Q') f (stateAssert A [] >>= g)"
+  "corres_underlyingK sr nf nf' (F \<and> F') r (P and P') (Q and Q') f (stateAssert A [] >>= g)"
   apply (clarsimp simp: bind_assoc stateAssert_def)
   apply (corres_search search: C[THEN corresK_unlift])
   by (wp | simp add: A)+
@@ -714,21 +721,21 @@ lemmas [THEN iffD2, atomized, THEN corresK_lift_rule, rule_format, corresK] =
 
 lemma corres_splitEE_str [corres_splits]:
   assumes x: "corres_underlyingK sr nf nf' F (f \<oplus> r') P P' a c"
-  assumes y: "\<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') (f \<oplus> r) (R rv) (R' rv') (b rv) (d rv')"
+  assumes y: "\<And>rv rv'. protect_r (r' rv rv') \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') (f \<oplus> r) (R rv) (R' rv') (b rv) (d rv')"
   assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>"
   assumes c: "corres_rv sr (\<lambda>rv rv'. (case (rv,rv') of (Inr rva, Inr rva') \<Rightarrow> r' rva rva' \<longrightarrow> F' rva rva' | _ \<Rightarrow> True)) PP PP' a c"
   shows      "corres_underlyingK sr nf nf' F (f \<oplus> r) (PP and P and Q) (PP' and P' and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E (\<lambda>rv'. d rv'))"
   apply (simp add: bindE_def)
   apply (rule corresK_split[OF x, where F'="\<lambda>rv rv'. case (rv,rv') of (Inr rva, Inr rva') \<Rightarrow> F' rva rva' | _ \<Rightarrow> True"])
+  apply (simp add: protect_r_def)
     prefer 4
     apply (rule corres_rv_weaken[OF _ c])
     apply (case_tac rv; case_tac rv'; simp)
-    apply simp
     apply (case_tac rv; case_tac rv'; simp)
-     apply (simp add: corres_underlyingK_def)
+     apply (simp add: corres_underlyingK_def protect_r_def)
     apply (rule corresK_weaken)
      apply (rule y)
-    apply simp
+    apply (simp add: protect_r_def)
     apply (subst conj_assoc[symmetric])
     apply (rule conjI)
      apply (rule conjI)
@@ -867,6 +874,7 @@ experiment
   apply corres
   apply (wp | simp)+
   by auto
+
 end
 
 end
