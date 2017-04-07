@@ -325,17 +325,17 @@ lemma corres_rv_defer_left:
   "corres_rv sr r (\<lambda>s. \<forall>rv rv'. r rv rv') \<top> f f'"
   by (auto simp add: corres_rv_def)
 
-lemma corres_rv_defer_left_strong:
-  "corres_rv sr r (\<lambda>s. \<forall>s'. (s,s') \<in> sr \<longrightarrow> corres_rv sr r \<top> P f f') P f f'"
-  by (auto simp add: corres_rv_def)
+lemma corres_rv_wp_left:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>rv'. r rv rv'\<rbrace> \<Longrightarrow> corres_rv sr r P \<top> f f'"
+  by (fastforce simp add: corres_rv_def valid_def)
 
 lemma corres_rv_defer_right:
   "corres_rv sr r \<top> (\<lambda>s. \<forall>rv rv'. r rv rv') f f'"
   by (auto simp add: corres_rv_def)
 
-lemma corres_rv_defer_right_strong:
-  "corres_rv sr r P (\<lambda>s'. \<forall>s. (s,s') \<in> sr \<longrightarrow> corres_rv sr r P \<top> f f') f f'"
-  by (auto simp add: corres_rv_def)
+lemma corres_rv_wp_right:
+  "\<lbrace>P'\<rbrace> f' \<lbrace>\<lambda>rv' s. \<forall>rv. r rv rv'\<rbrace> \<Longrightarrow> corres_rv sr r \<top> P' f f'"
+  by (fastforce simp add: corres_rv_def valid_def)
 
 lemma corres_rv_weaken:
   "(\<And>rv rv'. r rv rv' \<Longrightarrow> r' rv rv') \<Longrightarrow> corres_rv sr r P P' f f' \<Longrightarrow> corres_rv sr r' P P' f f'"
