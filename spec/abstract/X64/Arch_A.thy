@@ -141,14 +141,14 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
         | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte);
       asid <- case cap of ArchObjectCap (PageCap _ _ _ _ _ (Some (as, _))) \<Rightarrow> return as
               | _ \<Rightarrow> fail;
-      invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
+      invalidate_page_structure_cache_asid (addrFromPPtr vspace) asid
       od
   | PageRemap entries asid vspace \<Rightarrow> do
       (case entries
        of (VMPTE pte, slot) \<Rightarrow> store_pte slot pte
         | (VMPDE pde, slot) \<Rightarrow> store_pde slot pde
         | (VMPDPTE pdpte, slot) \<Rightarrow> store_pdpte slot pdpte);
-      invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
+      invalidate_page_structure_cache_asid (addrFromPPtr vspace) asid
     od
   | PageUnmap cap ct_slot \<Rightarrow>
       (case cap
@@ -178,7 +178,7 @@ case iv of PageTableMap cap ct_slot pde pd_slot vspace \<Rightarrow> do
     store_pde pd_slot pde;
     asid <- case cap of ArchObjectCap (PageTableCap  _ (Some (as, _))) \<Rightarrow> return as
             | _ \<Rightarrow> fail;
-    invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
+    invalidate_page_structure_cache_asid (addrFromPPtr vspace) asid
   od
   | PageTableUnmap (ArchObjectCap (PageTableCap p mapped_address)) ct_slot \<Rightarrow> do
     case mapped_address of Some (asid, vaddr) \<Rightarrow> do
@@ -202,7 +202,7 @@ case iv of PageDirectoryMap cap ct_slot pdpte pdpt_slot vspace \<Rightarrow> do
     store_pdpte pdpt_slot pdpte;
     asid <- case cap of ArchObjectCap (PageDirectoryCap _ (Some (as, _))) \<Rightarrow> return as
             | _ \<Rightarrow> fail;
-    invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
+    invalidate_page_structure_cache_asid (addrFromPPtr vspace) asid
   od
   | PageDirectoryUnmap (ArchObjectCap (PageDirectoryCap p mapped_address)) ct_slot \<Rightarrow> do
     case mapped_address of Some (asid, vaddr) \<Rightarrow> do
@@ -226,7 +226,7 @@ case iv of PDPTMap cap ct_slot pml4e pml4_slot vspace \<Rightarrow> do
     store_pml4e pml4_slot pml4e;
     asid <- case cap of ArchObjectCap (PDPointerTableCap _ (Some (as, _))) \<Rightarrow> return as
             | _ \<Rightarrow> fail;
-    invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
+    invalidate_page_structure_cache_asid (addrFromPPtr vspace) asid
   od
   | PDPTUnmap (ArchObjectCap (PDPointerTableCap p mapped_address)) ct_slot \<Rightarrow> do
     case mapped_address of Some (asid, vaddr) \<Rightarrow> do

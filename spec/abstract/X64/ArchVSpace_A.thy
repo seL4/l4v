@@ -150,41 +150,41 @@ where
 odE"
 
 definition
-  getCurrentCR3 :: "(CR3, 'z::state_ext) s_monad"
+  get_current_cr3 :: "(cr3, 'z::state_ext) s_monad"
 where
-  "getCurrentCR3 \<equiv> gets (x64_current_cr3 \<circ> arch_state)"
+  "get_current_cr3 \<equiv> gets (x64_current_cr3 \<circ> arch_state)"
 
 definition
-  setCurrentCR3 :: "CR3 \<Rightarrow> (unit,'z::state_ext) s_monad"
+  set_current_cr3 :: "cr3 \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "setCurrentCR3 cr3 \<equiv> do
-     modify (\<lambda>s. s \<lparr>arch_state := (arch_state s) \<lparr>x64_current_cr3 := cr3\<rparr>\<rparr>);
-     do_machine_op $ writeCR3 (CR3BaseAddress cr3) (CR3pcid cr3)
+  "set_current_cr3 c \<equiv> do
+     modify (\<lambda>s. s \<lparr>arch_state := (arch_state s) \<lparr>x64_current_cr3 := c\<rparr>\<rparr>);
+     do_machine_op $ writeCR3 (cr3_base_address c) (cr3_pcid c)
    od"
 
 definition
-  invalidateLocalPageStructureCacheASID :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  invalidate_local_page_structure_cache_asid :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "invalidateLocalPageStructureCacheASID vspace asid \<equiv> do
-     curCR3 \<leftarrow> getCurrentCR3;
-     setCurrentCR3 (CR3 vspace asid);
-     setCurrentCR3 curCR3
+  "invalidate_local_page_structure_cache_asid vspace asid \<equiv> do
+     cur_cr3 \<leftarrow> get_current_cr3;
+     set_current_cr3 (cr3 vspace asid);
+     set_current_cr3 cur_cr3
    od"
 
-abbreviation "invalidatePageStructureCacheASID \<equiv> invalidateLocalPageStructureCacheASID"
+abbreviation "invalidate_page_structure_cache_asid \<equiv> invalidate_local_page_structure_cache_asid"
 
 definition
   getCurrentVSpaceRoot :: "(obj_ref, 'z::state_ext) s_monad"
 where
   "getCurrentVSpaceRoot \<equiv> do
-      cur \<leftarrow> getCurrentCR3;
-      return $ CR3BaseAddress cur
+      cur \<leftarrow> get_current_cr3;
+      return $ cr3_base_address cur
    od"
 
 definition
-  setCurrentVSpaceRoot :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  set_current_vspace_root :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "setCurrentVSpaceRoot vspace asid \<equiv> setCurrentCR3 $ CR3 vspace asid"
+  "set_current_vspace_root vspace asid \<equiv> set_current_cr3 $ cr3 vspace asid"
 
 definition
   update_asid_map :: "asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -208,14 +208,14 @@ definition
            pml4' \<leftarrow> find_vspace_for_asid asid;
            whenE (pml4 \<noteq> pml4') $ throwError InvalidRoot;
            liftE $ update_asid_map asid;
-           curCR3 \<leftarrow> liftE $ getCurrentCR3;
-           whenE (curCR3 \<noteq> CR3 (addrFromPPtr pml4) asid) $
-              liftE $ setCurrentCR3 $ CR3 (addrFromPPtr pml4) asid
+           cur_cr3 \<leftarrow> liftE $ get_current_cr3;
+           whenE (cur_cr3 \<noteq> cr3 (addrFromPPtr pml4) asid) $
+              liftE $ set_current_cr3 $ cr3 (addrFromPPtr pml4) asid
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do
        global_pml4 \<leftarrow> gets (x64_global_pml4 \<circ> arch_state);
-       setCurrentVSpaceRoot (addrFromKPPtr global_pml4) 0
+       set_current_vspace_root (addrFromKPPtr global_pml4) 0
     od)
 od"
 
@@ -332,7 +332,7 @@ unmap_pd :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (
   liftE $ do
     flush_pd vspace asid;
     store_pdpte pdpt_slot InvalidPDPTE;
-    invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
+    invalidate_page_structure_cache_asid (addrFromPPtr vspace) asid
   od
 odE <catch> (K $ return ())"
 
@@ -350,7 +350,7 @@ unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Right
     liftE $ do
       flush_table vspace vaddr pt asid;
       store_pde pd_slot InvalidPDE;
-      invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
+      invalidate_page_structure_cache_asid (addrFromPPtr vspace) asid
     od
 odE <catch> (K $ return ())"
 

@@ -61,20 +61,20 @@ definition
   asid_bits :: nat where
   "asid_bits \<equiv> 12 :: nat"
 
-(* CR3 Stuff *)
-datatype CR3 = CR3 obj_ref asid
+(* cr3 Stuff *)
+datatype cr3 = cr3 obj_ref asid
 
-primrec CR3BaseAddress where
-"CR3BaseAddress (CR3 v0 _) = v0"
+primrec cr3_base_address where
+"cr3_base_address (cr3 v0 _) = v0"
 
-primrec CR3BaseAddress_update where
-"CR3BaseAddress_update f (CR3 v0 v1) = (CR3 (f v0) v1)"
+primrec cr3_base_address_update where
+"cr3_base_address_update f (cr3 v0 v1) = (cr3 (f v0) v1)"
 
-primrec CR3pcid where
-"CR3pcid (CR3 _ v1) = v1"
+primrec cr3_pcid where
+"cr3_pcid (cr3 _ v1) = v1"
 
-primrec CR3pcid_update where
-"CR3pcid_update f (CR3 v0 v1) = (CR3 v0 (f v1))"
+primrec cr3_pcid_update where
+"cr3_pcid_update f (cr3 v0 v1) = (cr3 v0 (f v1))"
 
 section {* Architecture-specific objects *}
 
@@ -299,7 +299,7 @@ record arch_state =
   x64_global_pdpts          :: "obj_ref list"
   x64_global_pds            :: "obj_ref list"
   x64_asid_map              :: "X64_A.asid \<rightharpoonup> obj_ref" (* FIXME x64: do we need this? *)
-  x64_current_cr3           :: "X64_A.CR3"
+  x64_current_cr3           :: "X64_A.cr3"
 
 (* FIXME x64-vtd:
   x64_num_io_domain_bits    :: "16 word"
