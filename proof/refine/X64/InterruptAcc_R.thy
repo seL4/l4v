@@ -160,7 +160,7 @@ lemma invs'_irq_state_independent [simp, intro!]:
           valid_arch_state'_def valid_irq_node'_def
           valid_irq_handlers'_def valid_irq_states'_def
           irqs_masked'_def bitmapQ_defs valid_queues_no_bitmap_def
-          valid_queues'_def valid_pde_mappings'_def
+          valid_queues'_def
           pspace_domain_valid_def cur_tcb'_def
           valid_machine_state'_def tcb_in_cur_domain'_def
           ct_not_inQ_def ct_idle_or_in_cur_domain'_def
