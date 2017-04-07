@@ -2512,7 +2512,7 @@ lemma doFlush_underlying_memory[wp]:
   "\<lbrace> \<lambda>m'. underlying_memory m' p = um \<rbrace>
    doFlush flush_type vstart vend pstart
    \<lbrace> \<lambda>_ m'. underlying_memory m' p = um \<rbrace>"
-  unfolding doFlush_def by(cases flush_type; wpsimp)
+  unfolding doFlush_def by(cases flush_type; wpsimp simp: Let_def)
 
 (* FIXME: move *)
 lemma dmo_invs'_simple:
