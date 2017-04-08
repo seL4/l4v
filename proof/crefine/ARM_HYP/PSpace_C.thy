@@ -128,7 +128,7 @@ lemma storePTE_Basic_ccorres':
   apply (case_tac "wordsFromPTE pte"; clarsimp)
   apply (case_tac list; clarsimp)
   apply (rule setObject_ccorres_helper)
-    apply (simp_all add: objBits_simps archObjSize_def pte_bits_def)
+    apply (simp_all add: objBits_simps archObjSize_def table_bits_defs)
   apply (rule conseqPre, vcg)
   apply (rule subsetI, clarsimp simp: Collect_const_mem)
   apply (rule cmap_relationE1, erule rf_sr_cpte_relation,
@@ -149,7 +149,7 @@ lemma storePTE_Basic_ccorres':
                    carch_state_relation_def
                    cmachine_state_relation_def
                    Let_def typ_heap_simps
-                   cteCaps_of_def update_pte_map_tos pte_bits_def
+                   cteCaps_of_def update_pte_map_tos table_bits_defs
                    )
   done
 
@@ -189,7 +189,7 @@ lemma storePDE_Basic_ccorres':
   apply (case_tac "wordsFromPDE pde"; clarsimp)
   apply (case_tac list; clarsimp)
   apply (rule setObject_ccorres_helper)
-    apply (simp_all add: objBits_simps archObjSize_def pde_bits_def)
+    apply (simp_all add: objBits_simps archObjSize_def table_bits_defs)
   apply (rule conseqPre, vcg)
   apply (rule subsetI, clarsimp simp: Collect_const_mem)
   apply (rule cmap_relationE1, erule rf_sr_cpde_relation,
@@ -207,7 +207,7 @@ lemma storePDE_Basic_ccorres':
   apply (simp add: cready_queues_relation_def
                    carch_state_relation_def
                    cmachine_state_relation_def
-                   Let_def typ_heap_simps
+                   Let_def typ_heap_simps table_bits_defs
                    pde_stored_asid_update_valid_offset
                    cteCaps_of_def update_pde_map_tos)
   done

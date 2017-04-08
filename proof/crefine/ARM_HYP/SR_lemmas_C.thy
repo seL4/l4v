@@ -2253,11 +2253,10 @@ lemma page_directory_at_carray_map_relation:
   apply (drule_tac x="p' && mask pdBits >> 3" in spec)
   apply (clarsimp simp: shiftr_shiftl1)
   apply (drule mp)
-   apply (simp add: shiftr_over_and_dist pdBits_def pageBits_def mask_def
-                    pd_bits_def pde_bits_def
+   apply (simp add: shiftr_over_and_dist mask_def pdBits_def'
                     order_le_less_trans[OF word_and_le1])
   apply (clarsimp simp: typ_at_to_obj_at_arches objBits_simps archObjSize_def
-                        pd_bits_def pde_bits_def
+                        table_bits_defs
                         is_aligned_andI1 add.commute word_plus_and_or_coroll2
                  dest!: obj_at_ko_at' ko_at_projectKO_opt)
   done
@@ -2277,11 +2276,10 @@ lemma page_table_at_carray_map_relation:
   apply (drule_tac x="p' && mask ptBits >> 3" in spec)
   apply (clarsimp simp: shiftr_shiftl1)
   apply (drule mp)
-   apply (simp add: shiftr_over_and_dist ptBits_def pageBits_def mask_def
-                    pt_bits_def pte_bits_def
+   apply (simp add: shiftr_over_and_dist table_bits_defs mask_def
                     order_le_less_trans[OF word_and_le1])
   apply (clarsimp simp: typ_at_to_obj_at_arches objBits_simps archObjSize_def
-                        pt_bits_def pte_bits_def
+                        table_bits_defs
                         is_aligned_andI1 add.commute word_plus_and_or_coroll2
                  dest!: obj_at_ko_at' ko_at_projectKO_opt)
   done

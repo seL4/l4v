@@ -113,29 +113,7 @@ lemma byte_to_word_heap_upd_outside_range:
 lemma intvl_range_conv:
   "\<lbrakk> is_aligned (ptr :: 'a :: len word) bits; bits < len_of TYPE('a) \<rbrakk> \<Longrightarrow>
    {ptr ..+ 2 ^ bits} = {ptr .. ptr + 2 ^ bits - 1}"
-  apply (rule set_eqI)
-  apply (rule iffI)
-   apply (frule intvl_le_lower)
-     apply (simp add:field_simps)
-    apply (rule iffD2[OF power_strict_increasing_iff, rotated])
-     apply simp
-    apply simp
-   apply (frule intvl_less_upper)
-     apply (simp add:field_simps)
-    apply (rule iffD2[OF power_strict_increasing_iff, rotated])
-     apply simp
-    apply simp
-   apply (simp add:field_simps)
-  apply (subgoal_tac "\<exists>x'. x = ptr + of_nat x' \<and> x' < 2 ^ len_of TYPE('a)")
-   apply clarsimp
-   apply (drule(1) word_le_minus_mono_left [where x=ptr])
-   apply (simp only: p_assoc_help add_diff_cancel2)
-   apply (clarsimp simp: intvl_def)
-   apply (rule_tac x="x'" in exI)
-   apply (clarsimp simp: word_less_nat_alt unat_of_nat)
-  apply (rule_tac x="unat (x - ptr)" in exI)
-  apply simp
-  done
+  by (rule upto_intvl_eq)
 
 lemma byte_to_word_heap_upd_neq:
   assumes   alb: "is_aligned base 2"

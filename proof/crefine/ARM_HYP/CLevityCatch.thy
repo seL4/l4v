@@ -17,6 +17,31 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+(* Short-hand for  unfolding cumbersome machine constants *)
+(* FIXME MOVE these should be in refine, and the _eq forms should NOT be declared [simp]! *)
+
+declare ptBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
+declare pdBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
+declare pteBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
+declare pdeBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
+declare vcpuBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
+lemmas pt_bits_def' = pt_bits_def[simplified pte_bits_def, simplified]
+lemmas pd_bits_def' = pd_bits_def[simplified pde_bits_def, simplified]
+lemmas page_bits_def' = page_bits_def[simplified pageBits_def, simplified]
+lemmas ptBits_def' = ptBits_def[simplified pteBits_def, simplified]
+lemmas pdBits_def' = pdBits_def[simplified pdeBits_def, simplified]
+lemmas pt_index_bits_def' = pt_index_bits_def[simplified pt_bits_def pte_bits_def, simplified]
+lemmas vcpuBits_def' = vcpuBits_def[simplified pageBits_def, simplified]
+
+lemmas table_bits_defs = pt_bits_def' pte_bits_def pd_bits_def' pde_bits_def
+                         pageBits_def page_bits_def'
+                         pteBits_def pdeBits_def
+                         pt_index_bits_def'
+                         ptBits_def' pdBits_def'
+
+lemmas machine_bits_defs = table_bits_defs
+                            vcpuBits_def' vcpu_bits_def
+
 declare word_neq_0_conv [simp del]
 
 (* Rule previously in the simpset, now not. *)

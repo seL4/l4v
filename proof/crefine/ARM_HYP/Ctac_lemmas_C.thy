@@ -134,7 +134,7 @@ lemma array_assertion_abs_pt:
   apply (intro allI impI disjCI2, clarsimp)
   apply (drule(1) page_table_at_rf_sr, clarsimp)
   apply (erule clift_array_assertion_imp,
-         simp_all add: pd_bits_def pt_bits_def pte_bits_def)
+         simp_all add: table_bits_defs)
   apply (rule_tac x=0 in exI, simp)
   done
 
@@ -159,7 +159,7 @@ lemma array_assertion_abs_pd:
     \<longrightarrow> (x s' = 0 \<or> array_assertion (pde_Ptr pd) (n s') (hrs_htd (t_hrs_' (globals s'))))"
   apply (intro allI impI disjCI2, clarsimp)
   apply (drule(1) page_directory_at_rf_sr, clarsimp)
-  apply (erule clift_array_assertion_imp, simp_all add: pd_bits_def pde_bits_def)
+  apply (erule clift_array_assertion_imp, simp_all add: table_bits_defs)
   apply (rule_tac x=0 in exI, simp)
   done
 
@@ -197,22 +197,6 @@ lemma rf_sr_gsCNodes_array_assertion:
     \<Longrightarrow>  array_assertion (cte_Ptr p) (2 ^ n) (hrs_htd (t_hrs_' (globals s')))"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                      cte_array_relation_array_assertion)
-
-(* Short-hand for  unfolding cumbersome machine constants *)
-(* FIXME MOVE these should be in refine *)
-declare ptBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
-declare pdBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
-lemmas pt_bits_def' = pt_bits_def[simplified pte_bits_def, simplified]
-lemmas pd_bits_def' = pd_bits_def[simplified pde_bits_def, simplified]
-lemmas page_bits_def' = page_bits_def[simplified pageBits_def, simplified]
-lemmas ptBits_def' = ptBits_def[simplified pteBits_def, simplified]
-lemmas pdBits_def' = pdBits_def[simplified pdeBits_def, simplified]
-lemmas pt_index_bits_def' = pt_index_bits_def[simplified pt_bits_def pte_bits_def, simplified]
-lemmas table_bits_defs = pt_bits_def' pte_bits_def pd_bits_def' pde_bits_def
-                         pageBits_def page_bits_def'
-                         pteBits_def pdeBits_def
-                         pt_index_bits_def'
-                         ptBits_def' pdBits_def'
 
 end
 

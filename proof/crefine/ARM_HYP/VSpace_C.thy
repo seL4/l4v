@@ -729,26 +729,26 @@ lemma generic_frame_cap_ptr_set_capFMappedAddress_spec:
   done
 
 lemma lookupPDSlot_spec:
-  "\<forall>s. \<Gamma> \<turnstile>  \<lbrace>s. array_assertion (pd_' s) (2 ^ (pd_bits - pde_bits)) (hrs_htd (\<acute>t_hrs))\<rbrace>
+  "\<forall>s. \<Gamma> \<turnstile>  \<lbrace>s. array_assertion (pd_' s) (2 ^ (pdBits - pdeBits)) (hrs_htd (\<acute>t_hrs))\<rbrace>
   Call lookupPDSlot_'proc
   \<lbrace>  \<acute>ret__ptr_to_struct_pde_C =  Ptr (lookupPDSlot (ptr_val (pd_' s))  (vptr_' s)) \<rbrace>"
   using vptr_shiftr_le_2p_gen
   apply vcg
   apply clarsimp
   apply (clarsimp simp: lookup_pd_slot_def)
-  apply (simp add: pd_bits_def pde_bits_def pageBits_def pt_bits_def pte_bits_def)
+  apply (simp add: table_bits_defs)
   apply (subst array_assertion_shrink_right, assumption)
    apply (fastforce intro: unat_le_helper order_less_imp_le)
-  apply (simp add: Let_def word_sle_def pageBits_def pt_bits_def pde_bits_def)
+  apply (simp add: Let_def word_sle_def table_bits_defs)
   apply (case_tac pd)
   apply (simp add: shiftl_t2n)
   done
 
 lemma lookupPTSlot_nofail_spec:
-  "\<forall>s. \<Gamma> \<turnstile>  \<lbrace>s. array_assertion (pt_' s) (2 ^ (ptBits - 2)) (hrs_htd (\<acute>t_hrs))\<rbrace>
+  "\<forall>s. \<Gamma> \<turnstile>  \<lbrace>s. array_assertion (pt_' s) (2 ^ (ptBits - pteBits)) (hrs_htd (\<acute>t_hrs))\<rbrace>
   Call lookupPTSlot_nofail_'proc
   \<lbrace>  \<acute>ret__ptr_to_struct_pte_C =  Ptr (lookup_pt_slot_no_fail (ptr_val (pt_' s))  (vptr_' s)) \<rbrace>"
-  supply ptBits_def[simp] pt_bits_def[simp] pte_bits_def[simp] pageBits_def[simp]
+  supply table_bits_defs[simp]
   apply vcg
   apply (clarsimp)
   apply (simp add: lookup_pt_slot_no_fail_def)
@@ -870,11 +870,11 @@ lemma lookupPTSlot_ccorres:
    apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
     apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
    apply (simp add: word_shift_by_2 lookup_pt_slot_no_fail_def)
-   apply (simp add: pt_bits_def pte_bits_def pageBits_def mask_def shiftl_t2n)
+   apply (simp add: table_bits_defs mask_def shiftl_t2n)
   apply (clarsimp simp: Collect_const_mem h_t_valid_clift)
   apply (frule(1) page_directory_at_rf_sr, clarsimp)
   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
-   apply (simp add: pd_bits_def pde_bits_def)
+   apply (simp add: table_bits_defs)
   apply (clarsimp simp: cpde_relation_def pde_pde_coarse_lift_def
                         pde_pde_coarse_lift Let_def isPageTablePDE_def
                  split: ARM_HYP_H.pde.split_asm)
@@ -2133,7 +2133,7 @@ lemma checkMappingPPtr_pte_ccorres:
       apply (erule cmap_relationE1[OF rf_sr_cpte_relation])
        apply (erule ko_at_projectKO_opt)
       apply simp
-     apply (wp empty_fail_getObject | simp add: objBits_simps archObjSize_def pte_bits_def)+
+     apply (wp empty_fail_getObject | simp add: objBits_simps archObjSize_def table_bits_defs)+
   done
 
 lemma checkMappingPPtr_pde_ccorres:
@@ -2169,7 +2169,7 @@ lemma checkMappingPPtr_pde_ccorres:
       apply (erule cmap_relationE1[OF rf_sr_cpde_relation])
        apply (erule ko_at_projectKO_opt)
       apply simp
-     apply (wp empty_fail_getObject | simp add: objBits_simps archObjSize_def pde_bits_def)+
+     apply (wp empty_fail_getObject | simp add: objBits_simps archObjSize_def table_bits_defs)+
   done
 
 
@@ -2278,11 +2278,11 @@ lemma large_pdSlot_array_constraint:
     \<Longrightarrow> \<exists>i. lookup_pd_slot pd vptr = pd + of_nat i * 8 \<and> i + n \<le> limit"
   apply (rule_tac x="unat (vptr >> 21)" in exI)
   apply (rule conjI)
-   apply (simp add: lookup_pd_slot_def shiftl_t2n pt_bits_def pte_bits_def pageBits_def pd_bits_def pde_bits_def)
+   apply (simp add: lookup_pd_slot_def shiftl_t2n table_bits_defs)
   apply (clarsimp simp add: le_diff_conv2)
   apply (erule order_trans[rotated], simp)
   apply (rule unat_le_helper)
-  apply (simp add: is_aligned_mask mask_def pdBits_def pageBits_def
+  apply (simp add: is_aligned_mask mask_def table_bits_defs
                    vmsz_aligned_def)
   apply (word_bitwise, simp?)
   done

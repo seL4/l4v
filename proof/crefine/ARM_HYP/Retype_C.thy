@@ -3543,7 +3543,7 @@ proof -
     apply clarsimp
     apply (erule impE[OF impI])
      apply (rule range_cover_full[OF al])
-     apply (simp add: objBits_simps word_bits_conv table_bits_defs archObjSize_def vcpu_bits_def
+     apply (simp add: objBits_simps word_bits_conv machine_bits_defs archObjSize_def
        split:kernel_object.splits arch_kernel_object.splits)
     apply (simp add: fun_upd_def kotcb_def cong: if_cong)
     done
@@ -3798,12 +3798,12 @@ lemma cnc_foldl_foldr:
 
 lemma objBitsKO_gt_0:
   "0 < objBitsKO ko"
-  by (simp add: objBits_simps archObjSize_def table_bits_defs vcpu_bits_def
+  by (simp add: objBits_simps archObjSize_def machine_bits_defs
          split: kernel_object.splits arch_kernel_object.splits)
 
 lemma objBitsKO_gt_1:
   "(1 :: word32) < 2 ^ objBitsKO ko"
-  by (simp add: objBits_simps archObjSize_def table_bits_defs vcpu_bits_def
+  by (simp add: objBits_simps archObjSize_def machine_bits_defs
          split: kernel_object.splits arch_kernel_object.splits)
 
 lemma ps_clear_subset:
@@ -4492,7 +4492,7 @@ lemma getObjectSize_symb:
    apply (case_tac apiobject_type)
    apply (simp_all add:object_type_from_H_def Kernel_C_defs
      ARMSmallPageBits_def ARMLargePageBits_def ARMSectionBits_def ARMSuperSectionBits_def
-     APIType_capBits_def objBits_simps vcpu_bits_def table_bits_defs)
+     APIType_capBits_def objBits_simps machine_bits_defs)
   apply unat_arith
   done
 
@@ -4545,7 +4545,7 @@ lemma getObjectSize_max_size:
   apply (clarsimp simp only: getObjectSize_def apiGetObjectSize_def word_bits_def
                   split: ARM_HYP_H.object_type.splits apiobject_type.splits)
   apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
-                        table_bits_defs vcpu_bits_def)
+                        machine_bits_defs)
   done
 
 lemma getObjectSize_min_size:
@@ -4555,7 +4555,7 @@ lemma getObjectSize_min_size:
   apply (clarsimp simp only: getObjectSize_def apiGetObjectSize_def word_bits_def
                   split: ARM_HYP_H.object_type.splits apiobject_type.splits)
   apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
-                        table_bits_defs vcpu_bits_def)
+                        machine_bits_defs)
   done
 
 (*
@@ -6120,10 +6120,10 @@ lemma vcpu_range_subseteq:
   apply simp
   apply (rule subset_trans)
   apply (rule intvl_start_le[where y = "2^objBitsKO ((KOArch (KOVCPU ko)))"])
-   apply (simp add: objBits_simps archObjSize_def vcpu_bits_def table_bits_defs)
+   apply (simp add: objBits_simps archObjSize_def machine_bits_defs)
   apply (subst intvl_range_conv)
     apply simp
-   apply (simp add:objBits_simps word_bits_conv archObjSize_def vcpu_bits_def table_bits_defs)+
+   apply (simp add:objBits_simps word_bits_conv archObjSize_def machine_bits_defs)+
   done
 
 lemma pspace_no_overlap_induce_vcpu:
@@ -6971,7 +6971,7 @@ shows "\<lbrace>P\<rbrace>createObject ty ptr us dev \<lbrace>\<lambda>m s. capR
              apply wp
         apply (simp add:split untypedRange.simps objBits_simps capRange_def APIType_capBits_def | wp)+
        apply (wpsimp simp: ARM_HYP_H.createObject_def capRange_def APIType_capBits_def
-                        vcpu_bits_def table_bits_defs acapClass.simps)+
+                        machine_bits_defs acapClass.simps)+
   done
 
 lemma createObject_capRange_helper:
@@ -7124,9 +7124,9 @@ lemma createObject_child:
               apply (simp_all add: capUntypedPtr_def sameRegionAs_def Let_def isCap_simps)+
         apply clarsimp+
     apply (rename_tac arch_capability d v0 v1 f)
-    apply (simp add: ARM_HYP_H.capUntypedSize_def vcpu_bits_def table_bits_defs)+
+    apply (simp add: ARM_HYP_H.capUntypedSize_def machine_bits_defs)+
     apply (case_tac arch_capability,
-           auto simp: ARM_HYP_H.capUntypedSize_def vcpu_bits_def table_bits_defs
+           auto simp: ARM_HYP_H.capUntypedSize_def machine_bits_defs
                       is_aligned_no_wrap' field_simps
                split: arch_capability.split)+
   done
@@ -7430,7 +7430,7 @@ lemma range_cover_gsMaxObjectSize:
 lemma APIType_capBits_min:
   "(tp = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> userSize)
     \<Longrightarrow> 4 \<le> APIType_capBits tp userSize"
-  by (simp add: APIType_capBits_def objBits_simps vcpu_bits_def table_bits_defs
+  by (simp add: APIType_capBits_def objBits_simps machine_bits_defs
             split: object_type.split ArchTypes_H.apiobject_type.split)
 
 end
@@ -8242,7 +8242,7 @@ shows  "ccorres dc xfdc
                   by (clarsimp simp: objBits_simps unat_eq_def word_unat.Rep_inverse'
                                      word_less_nat_alt)+
      by (clarsimp simp: ARMSmallPageBits_def ARMLargePageBits_def
-                        ARMSectionBits_def ARMSuperSectionBits_def vcpu_bits_def pageBits_def)+
+                        ARMSectionBits_def ARMSuperSectionBits_def machine_bits_defs)+
 
 end
 

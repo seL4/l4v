@@ -1735,7 +1735,7 @@ proof -
   note cmap_array = cmap_array_typ_region_bytes[where 'a=pte, OF refl _ al _ trivia(1)]
      cmap_array_typ_region_bytes[where 'a=pde, OF refl _ al _ trivia(2)]
   note cmap_array = cmap_array[simplified, simplified objBitsT_simps b2
-        ptBits_def pdBits_def pageBits_def word_bits_def, simplified]
+        table_bits_defs word_bits_def, simplified]
 
   note pspace_distinct' = invs_pspace_distinct'[OF invs] and
        pspace_aligned' = invs_pspace_aligned'[OF invs] and
@@ -1768,8 +1768,8 @@ proof -
     apply ((subst lift_t_typ_region_bytes,
             rule cm_disj cm_disj_tcb cm_disj_cte cm_disj_user cm_disj_device
             , assumption +,
-            simp_all add: objBits_simps archObjSize_def pageBits_def projectKOs
-                          pte_bits_def pde_bits_def vcpu_bits_def
+            simp_all add: objBits_simps archObjSize_def projectKOs
+                          machine_bits_defs
                           heap_to_user_data_restrict heap_to_device_data_restrict)[1])+ -- "waiting ..."
     apply (simp add: map_to_ctes_delete' cmap_relation_restrict_both_proj
                      cmap_relation_restrict_both cmap_array_helper hrs_htd_update

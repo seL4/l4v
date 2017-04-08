@@ -3214,7 +3214,7 @@ lemma ccap_relation_get_capSizeBits_physical:
   notes unfolds = ccap_relation_def get_capSizeBits_CL_def cap_lift_def
                   cap_tag_defs cap_to_H_def objBits_def objBitsKO_simps
                   Let_def field_simps mask_def asid_low_bits_def ARM_HYP_H.capUntypedSize_def
-                  vcpu_bits_def table_bits_defs
+                  machine_bits_defs
   shows
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap = PhysicalClass;
             capAligned hcap \<rbrakk> \<Longrightarrow>
