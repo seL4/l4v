@@ -1886,7 +1886,7 @@ proof (intro impI allI)
     h_t_array_valid_ptr_retyps_gen[where p="Ptr ptr", simplified, OF szo empty]
 
   with rf have irq: "h_t_valid (hrs_htd ?ks') c_guard
-      (ptr_coerce (intStateIRQNode_' (globals x)) :: (cte_C[512]) ptr)"
+      (ptr_coerce (intStateIRQNode_' (globals x)) :: (cte_C[256]) ptr)"
     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
     apply (simp add: hrs_htd_update h_t_valid_eq_array_valid)
     apply (simp add: h_t_array_valid_ptr_retyps_gen[OF szo] empty)
@@ -2110,20 +2110,20 @@ proof (intro impI allI)
 
   (* s/obj/obj'/ *)
   have szo: "size_of TYPE(pte_C[512]) = 2 ^ ptBits"
-    by (simp add: size_of_def size_td_array ptBits_def pageBits_def)
+    by (simp add: size_of_def size_td_array table_bits_defs)
   have szo2: "512 * size_of TYPE(pte_C) = 2 ^ ptBits"
     by (simp add: szo[symmetric])
   have szo': "size_of TYPE(pte_C) = 2 ^ objBitsKO ko"
-    by (simp add: objBits_simps ko_def archObjSize_def ptBits_def pageBits_def)
+    by (simp add: objBits_simps ko_def archObjSize_def table_bits_defs)
 
   note rl' = cslift_ptr_retyp_other_inst[where n=1,
     simplified, OF empty cover[simplified] szo[symmetric] szo]
 
   have sz_weaken: "objBitsKO ko \<le> ptBits"
-    by (simp add: objBits_simps ko_def archObjSize_def ptBits_def pageBits_def)
+    by (simp add: objBits_simps ko_def archObjSize_def table_bits_defs)
   have cover': "range_cover ptr sz (objBitsKO ko) 512"
     apply (rule range_cover_rel[OF cover sz_weaken])
-    apply (simp add: ptBits_def objBits_simps ko_def archObjSize_def pageBits_def)
+    apply (simp add: ptBits_def objBits_simps ko_def archObjSize_def table_bits_defs)
     done
   from sz sz_weaken have sz': "objBitsKO ko \<le> sz" by simp
   note al' = is_aligned_weaken[OF al sz_weaken]
@@ -2137,14 +2137,17 @@ proof (intro impI allI)
   note cterl = retype_ctes_helper [OF pal pdst pno al' sz' szb mko cover']
 
   have guard: "c_guard ?ptr"
+    using al[simplified table_bits_defs]
+    apply -
     apply (rule is_aligned_c_guard[where n=ptBits and m=2])
-        apply (simp_all add: al ptr0 align_of_def align_td_array)
-     apply (simp_all add: ptBits_def pageBits_def)
+    apply (simp_all add:  align_td_array align_of_def table_bits_defs ptr0)
     done
 
   have guard': "\<forall>n < 512. c_guard (pte_Ptr ptr +\<^sub>p int n)"
+    using al[simplified table_bits_defs]
+    apply -
     apply (rule retype_guard_helper [OF cover' ptr0 szo', where m=2])
-     apply (simp_all add: objBits_simps ko_def archObjSize_def align_of_def)
+     apply (simp_all add: objBits_simps ko_def archObjSize_def align_of_def table_bits_defs)
     done
 
   note ptr_retyps.simps[simp del]
@@ -2163,10 +2166,10 @@ proof (intro impI allI)
        apply (simp add: h_t_valid_clift_Some_iff dom_def split: if_split)
        apply (subst clift_ptr_retyps_gen_prev_memset_same[where n=1, simplified, OF guard],
          simp_all only: szo refl empty, simp_all add: zero)[1]
-        apply (simp add: ptBits_def pageBits_def word_bits_def)
+        apply (simp add: table_bits_defs word_bits_def)
        apply (auto split: if_split)[1]
-      apply (simp_all add: objBits_simps archObjSize_def ptBits_def
-                           pageBits_def ko_def word_bits_def)
+      apply (simp_all add: objBits_simps archObjSize_def table_bits_defs
+                           ko_def word_bits_def)
    done
 
   from rf have "cpspace_relation (ksPSpace \<sigma>) (underlying_memory (ksMachineState \<sigma>)) (t_hrs_' (globals x))"
@@ -2180,7 +2183,7 @@ proof (intro impI allI)
   apply (simp add: ptr_retyp_to_array[simplified])
   apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard'], simp_all only: szo2 empty)
      apply simp
-    apply (simp(no_asm) add: ptBits_def pageBits_def word_bits_def)
+    apply (simp(no_asm) add: table_bits_defs word_bits_def)
    apply (simp add: zero)
   apply (simp add: rl projectKOs del: pte_C_size)
   apply (simp add: rl projectKO_opt_retyp_same ko_def projectKOs Let_def
@@ -2192,7 +2195,7 @@ proof (intro impI allI)
 
   moreover
   from rf szb al
-  have "ptr_span (pd_Ptr (symbol_table ''armKSGlobalPD'')) \<inter> {ptr ..+ 2 ^ ptBits} = {}"
+  have "ptr_span (pd_Ptr (symbol_table ''armUSGlobalPD'')) \<inter> {ptr ..+ 2 ^ ptBits} = {}"
     apply (clarsimp simp: valid_global_refs'_def  Let_def
                           valid_refs'_def ran_def rf_sr_def cstate_relation_def)
     apply (erule disjoint_subset)
@@ -2210,13 +2213,13 @@ proof (intro impI allI)
     apply (subst h_t_valid_ptr_retyps_gen_disjoint, assumption)
      apply (simp add:szo cte_C_size cte_level_bits_def)
      apply (erule disjoint_subset)
-     apply (simp add: ptBits_def pageBits_def del: replicate_numeral)
+     apply (simp add: table_bits_defs del: replicate_numeral)
     apply (subst h_t_valid_ptr_retyps_gen_disjoint, assumption)
      apply (simp add:szo cte_C_size cte_level_bits_def)
      apply (erule disjoint_subset)
-     apply (simp add: ptBits_def pageBits_def del: replicate_numeral)
+     apply (simp add: table_bits_defs del: replicate_numeral)
     by (simp add:szo ptr_retyps_htd_safe_neg hrs_htd_def
-      kernel_data_refs_domain_eq_rotate ptBits_def pageBits_def
+      kernel_data_refs_domain_eq_rotate table_bits_defs
       Int_ac del: replicate_numeral)
 qed
 
@@ -2263,15 +2266,18 @@ proof (intro impI allI)
   note blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
 
+  let ?blankpde =
+    "pde_C.words_C_update (\<lambda>_.
+       Arrays.update (Arrays.update (pde_C.words_C undefined) 0 0) 1 0
+       ) undefined"
   have relrl':
-    "from_bytes (replicate (size_of TYPE(pde_C)) 0)
-          = pde_C.words_C_update (\<lambda>_. Arrays.update (pde_C.words_C undefined) 0 0) undefined"
+    "from_bytes (replicate (size_of TYPE(pde_C)) 0) = ?blankpde"
     apply (simp add: from_bytes_def)
     apply (simp add: typ_info_simps pde_C_tag_def pde_lift_def pde_get_tag_def
       size_td_lt_final_pad size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-    apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine Let_def
+    apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine
       size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
-      ti_typ_pad_combine_def Let_def ti_typ_combine_def empty_typ_info_def)
+      ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def)
     apply (simp add: typ_info_array array_tag_def eval_nat_numeral)
     apply (simp add: array_tag_n.simps)
     apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine Let_def
@@ -2299,11 +2305,11 @@ proof (intro impI allI)
 
   (* s/obj/obj'/ *)
   have szo: "size_of TYPE(pde_C[2048]) = 2 ^ pdBits"
-    by (simp add: size_of_def size_td_array pdBits_def pageBits_def)
+    by (simp add: size_of_def size_td_array table_bits_defs)
   have szo2: "2048 * size_of TYPE(pde_C) = 2 ^ pdBits"
     by (simp add: szo[symmetric])
   have szo': "size_of TYPE(pde_C) = 2 ^ objBitsKO ko"
-    by (simp add: objBits_simps ko_def archObjSize_def pdBits_def pageBits_def)
+    by (simp add: objBits_simps ko_def archObjSize_def table_bits_defs)
 
   note rl' = cslift_ptr_retyp_other_inst[where n=1,
     simplified, OF empty cover[simplified] szo[symmetric] szo]
@@ -2328,12 +2334,12 @@ proof (intro impI allI)
   have guard: "c_guard ?ptr"
     apply (rule is_aligned_c_guard[where n=pdBits and m=2])
         apply (simp_all add: al ptr0 align_of_def align_td_array)
-     apply (simp_all add: pdBits_def pageBits_def)
+     apply (simp_all add: table_bits_defs)
     done
 
   have guard': "\<forall>n < 2048. c_guard (pde_Ptr ptr +\<^sub>p int n)"
     apply (rule retype_guard_helper [OF cover' ptr0 szo', where m=2])
-     apply (simp_all add: objBits_simps ko_def archObjSize_def align_of_def)
+     apply (simp_all add: objBits_simps ko_def archObjSize_def align_of_def table_bits_defs)
     done
 
   note rl' = cslift_ptr_retyp_other_inst[OF _ cover refl szo,
@@ -2353,10 +2359,10 @@ proof (intro impI allI)
        apply (simp add: h_t_valid_clift_Some_iff dom_def split: if_split)
        apply (subst clift_ptr_retyps_gen_prev_memset_same[where n=1, simplified, OF guard],
          simp_all only: szo empty, simp_all add: zero)[1]
-        apply (simp add: pdBits_def pageBits_def word_bits_def)
+        apply (simp add: table_bits_defs word_bits_def)
        apply (auto split: if_split)[1]
-      apply (simp_all add: objBits_simps archObjSize_def pdBits_def
-                           pageBits_def ko_def word_bits_def)
+      apply (simp_all add: objBits_simps archObjSize_def table_bits_defs
+                           ko_def word_bits_def)
    done
 
   from rf have cpsp: "cpspace_relation (ksPSpace \<sigma>) (underlying_memory (ksMachineState \<sigma>)) (t_hrs_' (globals x))"
@@ -2370,7 +2376,7 @@ proof (intro impI allI)
   apply (simp add: ptr_retyp_to_array[simplified])
   apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard'], simp_all only: szo2 empty)
      apply simp
-    apply (simp(no_asm) add: pdBits_def pageBits_def word_bits_def)
+    apply (simp(no_asm) add: table_bits_defs word_bits_def)
    apply (simp add: zero)
   apply (simp add: rl projectKOs)
   apply (simp add: rl projectKO_opt_retyp_same ko_def projectKOs Let_def
@@ -2382,7 +2388,7 @@ proof (intro impI allI)
 
   moreover
   from rf szb al
-  have "ptr_span (pd_Ptr (symbol_table ''armKSGlobalPD'')) \<inter> {ptr ..+ 2 ^ pdBits} = {}"
+  have "ptr_span (pd_Ptr (symbol_table ''armUSGlobalPD'')) \<inter> {ptr ..+ 2 ^ pdBits} = {}"
     apply (clarsimp simp: valid_global_refs'_def  Let_def
                           valid_refs'_def ran_def rf_sr_def cstate_relation_def)
     apply (erule disjoint_subset)
@@ -2397,7 +2403,7 @@ proof (intro impI allI)
     apply (simp add: ptr_retyp_to_array[simplified])
     apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard'], simp_all only: szo2 empty)
        apply simp
-      apply (simp add: pdBits_def word_bits_def pageBits_def)
+      apply (simp add: table_bits_defs word_bits_def)
      apply (simp add: zero)
     apply (rule ext)
     apply (simp add: map_comp_def stored_asid[simplified] split: option.split if_split)
@@ -2407,7 +2413,7 @@ proof (intro impI allI)
      apply (rule intvl_self, simp)
     apply clarsimp
     apply (subst (asm) empty[unfolded region_is_bytes'_def])
-      apply (simp add: objBits_simps archObjSize_def ko_def pdBits_def pageBits_def
+      apply (simp add: objBits_simps archObjSize_def ko_def table_bits_defs
                        offs_in_intvl_iff unat_word_ariths unat_of_nat)
      apply clarsimp
     apply clarsimp
@@ -2426,17 +2432,17 @@ proof (intro impI allI)
      apply (simp add:szo cte_C_size cte_level_bits_def)
      apply (erule disjoint_subset)
      apply (simp add: ko_def projectKOs objBits_simps archObjSize_def
-                      pdBits_def pageBits_def del: replicate_numeral)
+                      table_bits_defs del: replicate_numeral)
     apply (subst h_t_valid_ptr_retyps_gen_disjoint)
       apply assumption
      apply (simp add:szo cte_C_size cte_level_bits_def)
      apply (erule disjoint_subset)
      apply (simp add: ko_def projectKOs objBits_simps archObjSize_def
-                      pdBits_def pageBits_def del: replicate_numeral)
+                      table_bits_defs del: replicate_numeral)
     apply (simp add:szo ptr_retyps_htd_safe_neg hrs_htd_def
       kernel_data_refs_domain_eq_rotate
       ko_def projectKOs objBits_simps archObjSize_def Int_ac
-      pdBits_def pageBits_def
+      table_bits_defs
       del: replicate_numeral)
     done
 qed
@@ -2456,7 +2462,8 @@ definition
                             | ARM_HYP_H.SectionObject \<Rightarrow> scast seL4_ARM_SectionObject
                             | ARM_HYP_H.SuperSectionObject \<Rightarrow> scast seL4_ARM_SuperSectionObject
                             | ARM_HYP_H.PageTableObject \<Rightarrow> scast seL4_ARM_PageTableObject
-                            | ARM_HYP_H.PageDirectoryObject \<Rightarrow> scast seL4_ARM_PageDirectoryObject"
+                            | ARM_HYP_H.PageDirectoryObject \<Rightarrow> scast seL4_ARM_PageDirectoryObject
+                            | ARM_HYP_H.VCPUObject \<Rightarrow> scast seL4_ARM_VCPUObject"
 
 lemmas nAPIObjects_def = seL4_NonArchObjectTypeCount_def
 
@@ -2480,8 +2487,9 @@ definition
             if (x = scast seL4_ARM_SectionObject) then ARM_HYP_H.SectionObject else (
              if (x = scast seL4_ARM_SuperSectionObject) then ARM_HYP_H.SuperSectionObject else (
               if (x = scast seL4_ARM_PageTableObject) then ARM_HYP_H.PageTableObject else (
-               if (x = scast seL4_ARM_PageDirectoryObject) then ARM_HYP_H.PageDirectoryObject else
-                undefined)))))))))))"
+               if (x = scast seL4_ARM_PageDirectoryObject) then ARM_HYP_H.PageDirectoryObject else (
+                 if (x = scast seL4_ARM_VCPUObject) then ARM_HYP_H.VCPUObject else
+                undefined))))))))))))"
 
 lemmas Kernel_C_defs =
   seL4_UntypedObject_def
@@ -2495,6 +2503,7 @@ lemmas Kernel_C_defs =
   seL4_ARM_SuperSectionObject_def
   seL4_ARM_PageTableObject_def
   seL4_ARM_PageDirectoryObject_def
+  seL4_ARM_VCPUObject_def
   Kernel_C.asidLowBits_def
   Kernel_C.asidHighBits_def
 
@@ -2929,6 +2938,7 @@ lemma object_type_from_H_toAPIType_simps:
   "(object_type_from_H tp = scast seL4_ARM_SuperSectionObject) = (tp = ARM_HYP_H.SuperSectionObject)"
   "(object_type_from_H tp = scast seL4_ARM_PageTableObject) = (tp = ARM_HYP_H.PageTableObject)"
   "(object_type_from_H tp = scast seL4_ARM_PageDirectoryObject) = (tp = ARM_HYP_H.PageDirectoryObject)"
+  "(object_type_from_H tp = scast seL4_ARM_VCPUObject) = (tp = ARM_HYP_H.VCPUObject)"
   by (auto simp: toAPIType_def
                  object_type_from_H_def "StrictC'_object_defs" api_object_defs
           split: object_type.splits ArchTypes_H.apiobject_type.splits)
@@ -3533,17 +3543,20 @@ proof -
     apply clarsimp
     apply (erule impE[OF impI])
      apply (rule range_cover_full[OF al])
-     apply (simp add: objBits_simps word_bits_conv pageBits_def archObjSize_def
+     apply (simp add: objBits_simps word_bits_conv table_bits_defs archObjSize_def vcpu_bits_def
        split:kernel_object.splits arch_kernel_object.splits)
     apply (simp add: fun_upd_def kotcb_def cong: if_cong)
     done
 
   let ?tcb = "undefined
     \<lparr>tcbArch_C := tcbArch_C undefined
-     \<lparr>tcbContext_C := tcbContext_C (tcbArch_C undefined)
-       \<lparr>registers_C :=
-          foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<19]
-           (registers_C (tcbContext_C (tcbArch_C undefined)))\<rparr>\<rparr>,
+      \<lparr>tcbContext_C := tcbContext_C (tcbArch_C undefined)
+         \<lparr>registers_C :=
+           foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<19]
+             (registers_C (tcbContext_C (tcbArch_C undefined)))
+         \<rparr>,
+       tcbVCPU_C := vcpu_Ptr 0
+     \<rparr>,
        tcbState_C :=
          thread_state_C.words_C_update
           (\<lambda>_. foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<3]
@@ -3586,17 +3599,20 @@ proof -
     unfolding ctcb_relation_def makeObject_tcb
     apply (simp add: fbtcb minBound_word)
     apply (intro conjI)
-    apply (simp add: cthread_state_relation_def thread_state_lift_def
-      eval_nat_numeral ThreadState_Inactive_def)
-    apply (simp add: ccontext_relation_def newContext_def2 carch_tcb_relation_def)
-    apply rule
-    apply (case_tac r, simp_all add: "StrictC'_register_defs" eval_nat_numeral atcbContext_def newArchTCB_def newContext_def initContext_def)[1] -- "takes ages"
-    apply (simp add: thread_state_lift_def eval_nat_numeral atcbContextGet_def)+
-    apply (simp add: timeSlice_def)
+        apply (simp add: cthread_state_relation_def thread_state_lift_def
+                         eval_nat_numeral ThreadState_Inactive_def)
+       apply (clarsimp simp: ccontext_relation_def newContext_def2 carch_tcb_relation_def
+                             newArchTCB_def)
+       apply (case_tac r,
+              simp_all add: "StrictC'_register_defs" eval_nat_numeral
+                            atcbContext_def newArchTCB_def newContext_def
+                            initContext_def)[1] -- "takes ages"
+                         apply (simp add: thread_state_lift_def eval_nat_numeral atcbContextGet_def)+
+     apply (simp add: timeSlice_def)
     apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
-      lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
-      eval_nat_numeral seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
-      split: if_split)+
+        lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
+        eval_nat_numeral seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
+        split: if_split)+
     done
 
   have pks: "ks (ctcb_ptr_to_tcb_ptr p) = None"
@@ -3776,16 +3792,19 @@ lemma cnc_foldl_foldr:
   shows "foldl (\<lambda>v addr. v(addr \<mapsto> ko)) mp
   (map (\<lambda>n. ptr + (of_nat n << 9)) [0..< n]) =
   foldr (\<lambda>addr. data_map_insert addr ko) (new_cap_addrs n ptr ko) mp"
-  by (simp add: data_map_insert_def foldr_upd_app_if foldl_conv_foldr
-    new_cap_addrs_def objBits_simps ko_def power_minus_is_div cong: foldr_cong)
+  by (simp add: foldr_upd_app_if foldl_conv_foldr
+                new_cap_addrs_def objBits_simps ko_def power_minus_is_div
+          cong: foldr_cong)
 
 lemma objBitsKO_gt_0:
   "0 < objBitsKO ko"
-  by (simp add: objBits_simps archObjSize_def  pageBits_def split: kernel_object.splits arch_kernel_object.splits)
+  by (simp add: objBits_simps archObjSize_def table_bits_defs vcpu_bits_def
+         split: kernel_object.splits arch_kernel_object.splits)
 
 lemma objBitsKO_gt_1:
   "(1 :: word32) < 2 ^ objBitsKO ko"
-  by (simp add: objBits_simps archObjSize_def  pageBits_def split: kernel_object.splits arch_kernel_object.splits)
+  by (simp add: objBits_simps archObjSize_def table_bits_defs vcpu_bits_def
+         split: kernel_object.splits arch_kernel_object.splits)
 
 lemma ps_clear_subset:
   assumes pd: "ps_clear x (objBitsKO ko) (s' \<lparr>ksPSpace := (\<lambda>x. if x \<in> as then Some (f x) else ksPSpace s' x) \<rparr>)"
@@ -4223,8 +4242,8 @@ proof (intro impI allI)
 
   def big_0s \<equiv> "(replicate (2^pageBits) 0) :: word8 list"
 
-  have "length big_0s = 2048" unfolding big_0s_def
-    by simp (simp add: pageBits_def)
+  have "length big_0s = 4096" unfolding big_0s_def
+    by simp (simp add: table_bits_defs)
 
   hence i1: "\<And>off :: 10 word. index (user_data_C.words_C (from_bytes big_0s)) (unat off) = 0"
     apply (simp add: from_bytes_def)
@@ -4440,122 +4459,14 @@ lemmas clift_array_assertionE
 
 lemma copyGlobalMappings_ccorres:
   "ccorres dc xfdc
-     (valid_pde_mappings' and (\<lambda>s. page_directory_at' (armKSGlobalPD (ksArchState s)) s)
+     (valid_pde_mappings' and (\<lambda>s. page_directory_at' (armUSGlobalPD (ksArchState s)) s)
         and page_directory_at' pd and (\<lambda>_. is_aligned pd pdBits))
      (UNIV \<inter> {s. newPD_' s = Ptr pd}) []
     (copyGlobalMappings pd) (Call copyGlobalMappings_'proc)"
   apply (rule ccorres_gen_asm)
   apply (cinit lift: newPD_' simp: ARMSectionBits_def)
-   apply (rule ccorres_h_t_valid_armKSGlobalPD)
-   apply csymbr
-   apply (simp add: kernelBase_def ARM_HYP.kernelBase_def objBits_simps archObjSize_def
-                    whileAnno_def word_sle_def word_sless_def
-                    Collect_True              del: Collect_const)
-   apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState)
-   apply csymbr
-   apply (rule ccorres_rel_imp)
-    apply (rule_tac F="\<lambda>_ s. rv = armKSGlobalPD (ksArchState s)
-                                \<and> is_aligned rv pdBits \<and> valid_pde_mappings' s
-                                \<and> page_directory_at' pd s
-                                \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
-              and i="0xE00"
-               in ccorres_mapM_x_while')
-        apply (clarsimp simp del: Collect_const)
-        apply (rule ccorres_guard_imp2)
-         apply (rule ccorres_pre_getObject_pde)
-         apply (simp add: storePDE_def del: Collect_const)
-         apply (rule_tac P="\<lambda>s. ko_at' rva (armKSGlobalPD (ksArchState s)
-                                              + ((0xE00 + of_nat n) << 2)) s
-                                    \<and> page_directory_at' pd s \<and> valid_pde_mappings' s
-                                    \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
-                    and P'="{s. i_' s = of_nat (3584 + n)
-                                    \<and> is_aligned (symbol_table ''armKSGlobalPD'') pdBits}"
-                    in setObject_ccorres_helper)
-           apply (rule conseqPre, vcg)
-           apply (clarsimp simp: shiftl_t2n field_simps upto_enum_word
-                                 rf_sr_armKSGlobalPD
-                       simp del: upt.simps)
-           apply (frule_tac pd=pd in page_directory_at_rf_sr, simp)
-           apply (frule_tac pd="symbol_table a" for a in page_directory_at_rf_sr, simp)
-           apply (rule cmap_relationE1[OF rf_sr_cpde_relation],
-                  assumption, erule_tac ko=ko' in ko_at_projectKO_opt)
-           apply (rule cmap_relationE1[OF rf_sr_cpde_relation],
-                  assumption, erule_tac ko=rva in ko_at_projectKO_opt)
-           apply (clarsimp simp: typ_heap_simps')
-           apply (drule(1) page_directory_at_rf_sr)+
-           apply clarsimp
-           apply (subst array_ptr_valid_array_assertionI[where p="Ptr pd" and q="Ptr pd"],
-             erule h_t_valid_clift; simp)
-            apply (simp add: unat_def[symmetric] unat_word_ariths unat_of_nat pdBits_def pageBits_def)
-           apply (subst array_ptr_valid_array_assertionI[where q="Ptr (symbol_table x)" for x],
-             erule h_t_valid_clift; simp)
-            apply (simp add: unat_def[symmetric] unat_word_ariths unat_of_nat pdBits_def pageBits_def)
-           apply (clarsimp simp: rf_sr_def cstate_relation_def
-                                 Let_def typ_heap_simps update_pde_map_tos)
-           apply (rule conjI)
-            apply clarsimp
-            apply (rule conjI)
-             apply (rule disjCI2, erule clift_array_assertionE, simp+)
-             apply (simp only: unat_arith_simps unat_of_nat,
-               simp add: pdBits_def pageBits_def)
-            apply (rule conjI)
-             apply (rule disjCI2, erule clift_array_assertionE, simp+)
-             apply (simp only: unat_arith_simps unat_of_nat,
-               simp add: pdBits_def pageBits_def)
-            apply (rule conjI)
-             apply (clarsimp simp: cpspace_relation_def
-                                   typ_heap_simps
-                                   update_pde_map_tos
-                                   update_pde_map_to_pdes
-                                   carray_map_relation_upd_triv)
-             apply (erule(2) cmap_relation_updI)
-              subgoal by simp
-             subgoal by simp
-            apply (clarsimp simp: carch_state_relation_def
-                                  cmachine_state_relation_def
-                                  typ_heap_simps map_comp_eq
-                                  pd_pointer_to_asid_slot_def
-                          intro!: ext split: if_split)
-            apply (simp add: field_simps)
-            apply (drule arg_cong[where f="\<lambda>x. x && mask pdBits"],
-                   simp add: mask_add_aligned)
-            apply (simp add: iffD2[OF mask_eq_iff_w2p] word_size pdBits_def pageBits_def)
-            apply (subst(asm) iffD2[OF mask_eq_iff_w2p])
-              subgoal by (simp add: word_size)
-             apply (simp only: word_shift_by_2)
-             apply (rule shiftl_less_t2n)
-              apply (rule of_nat_power)
-               subgoal by simp
-              subgoal by simp
-             subgoal by simp
-            apply (simp add: word_shift_by_2)
-            apply (drule arg_cong[where f="\<lambda>x. x >> 2"], subst(asm) shiftl_shiftr_id)
-              subgoal by (simp add: word_bits_def)
-             apply (rule of_nat_power)
-              subgoal by (simp add: word_bits_def)
-             subgoal by (simp add: word_bits_def)
-            apply simp
-           apply clarsimp
-           apply (drule(1) valid_pde_mappings_ko_atD')+
-           apply (clarsimp simp: mask_add_aligned valid_pde_mapping'_def field_simps)
-           apply (subst(asm) field_simps, simp add: mask_add_aligned)
-           apply (simp add: mask_def pdBits_def pageBits_def
-                            valid_pde_mapping_offset'_def pd_asid_slot_def)
-           apply (simp add: obj_at'_def projectKOs fun_upd_idem)
-          apply simp
-         apply (simp add: objBits_simps archObjSize_def)
-        apply (clarsimp simp: upto_enum_word rf_sr_armKSGlobalPD
-                    simp del: upt.simps)
-       apply (simp add: pdBits_def pageBits_def)
-      apply (rule allI, rule conseqPre, vcg)
-      apply clarsimp
-     apply (rule hoare_pre)
-      apply (wp getObject_valid_pde_mapping' | simp
-        | wps storePDE_arch')+
-     apply (clarsimp simp: mask_add_aligned)
-    apply (simp add: pdBits_def pageBits_def word_bits_def)
-   apply simp
-  apply (clarsimp simp: word_sle_def page_directory_at'_def)
+   apply (rule ccorres_return_Skip)
+  apply simp
   done
 
 lemma add_mult_aligned_neg_mask:
@@ -4581,7 +4492,7 @@ lemma getObjectSize_symb:
    apply (case_tac apiobject_type)
    apply (simp_all add:object_type_from_H_def Kernel_C_defs
      ARMSmallPageBits_def ARMLargePageBits_def ARMSectionBits_def ARMSuperSectionBits_def
-     APIType_capBits_def objBits_simps)
+     APIType_capBits_def objBits_simps vcpu_bits_def table_bits_defs)
   apply unat_arith
   done
 
@@ -4634,7 +4545,7 @@ lemma getObjectSize_max_size:
   apply (clarsimp simp only: getObjectSize_def apiGetObjectSize_def word_bits_def
                   split: ARM_HYP_H.object_type.splits apiobject_type.splits)
   apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
-                        pdBits_def pageBits_def ptBits_def)
+                        table_bits_defs vcpu_bits_def)
   done
 
 lemma getObjectSize_min_size:
@@ -4644,7 +4555,7 @@ lemma getObjectSize_min_size:
   apply (clarsimp simp only: getObjectSize_def apiGetObjectSize_def word_bits_def
                   split: ARM_HYP_H.object_type.splits apiobject_type.splits)
   apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
-                        pdBits_def pageBits_def ptBits_def)
+                        table_bits_defs vcpu_bits_def)
   done
 
 (*
@@ -4953,17 +4864,18 @@ lemma ccorres_placeNewObject_tcb:
   apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def ctcb_offset_def)
   done
 
+(* FIXME this is harcoded madness: 12 = ptBits, 9 = ptBits - pteBits, 512 = 2 ^ 9 *)
 lemma placeNewObject_pte:
   "ccorresG rf_sr \<Gamma> dc xfdc
-   ( valid_global_refs' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase 10
-      and (\<lambda>s. 2 ^ 10 \<le> gsMaxObjectSize s)
-      and ret_zero regionBase (2 ^ 10)
-      and K (regionBase \<noteq> 0 \<and> range_cover regionBase 10 10 1
-      \<and> ({regionBase..+2 ^ 10} \<inter> kernel_data_refs = {})
+   ( valid_global_refs' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase 12
+      and (\<lambda>s. 2 ^ 12 \<le> gsMaxObjectSize s)
+      and ret_zero regionBase (2 ^ 12)
+      and K (regionBase \<noteq> 0 \<and> range_cover regionBase 12 12 1
+      \<and> ({regionBase..+2 ^ 12} \<inter> kernel_data_refs = {})
       ))
-    ({s. region_actually_is_zero_bytes regionBase (2 ^ 10) s})
+    ({s. region_actually_is_zero_bytes regionBase (2 ^ 12) s})
     hs
-    (placeNewObject regionBase (makeObject :: pte) 8)
+    (placeNewObject regionBase (makeObject :: pte) 9)
     (global_htd_update (\<lambda>_. (ptr_retyp (Ptr regionBase :: (pte_C[512]) ptr))))"
   apply (rule ccorres_from_vcg_nofail)
   apply clarsimp
@@ -4974,28 +4886,27 @@ lemma placeNewObject_pte:
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
                   elim!: ptr_retyp_htd_safe_neg)
-  apply (frule range_cover_rel[where sbit' = 2])
+  apply (frule range_cover_rel[where sbit' = 3])
     apply simp+
-  apply (frule range_cover.unat_of_nat_shift[where gbits = 2 ])
-   apply simp+
-   apply (rule le_refl)
-  apply (subgoal_tac "region_is_bytes regionBase 1024 x")
+  apply (frule range_cover.unat_of_nat_shift[where gbits = 3 ])
+     apply simp+
+    apply (rule le_refl)
+  apply (subgoal_tac "region_is_bytes regionBase 4096 x")
    apply (rule bexI [OF _ placeNewObject_eq])
       apply (clarsimp simp: split_def new_cap_addrs_def)
-      apply (cut_tac s=\<sigma> in createObjects_ccorres_pte [where ptr=regionBase and sz=10])
+      apply (cut_tac s=\<sigma> in createObjects_ccorres_pte [where ptr=regionBase and sz=12])
       apply (erule_tac x=\<sigma> in allE, erule_tac x=x in allE)
       apply (clarsimp elim!:is_aligned_weaken simp: objBitsKO_def word_bits_def)+
       apply (clarsimp simp: split_def objBitsKO_def archObjSize_def
           Fun.comp_def rf_sr_def split_def Let_def ptr_retyps_gen_def
           new_cap_addrs_def field_simps power_add
           cong: globals.unfold_congs)
-      apply (simp add:Int_ac ptBits_def pageBits_def)
+      apply (simp add: Int_ac table_bits_defs)
      apply (clarsimp simp: word_bits_conv range_cover_def archObjSize_def)
-    apply (clarsimp simp: objBitsKO_def range_cover.aligned archObjSize_def)
+    apply (clarsimp simp: objBitsKO_def range_cover.aligned archObjSize_def table_bits_defs)
    apply (clarsimp simp: no_fail_def)
   apply (simp add: region_actually_is_bytes)
  done
-
 
 lemma placeNewObject_pde:
   "ccorresG rf_sr \<Gamma> dc xfdc
@@ -5008,7 +4919,7 @@ lemma placeNewObject_pde:
       ))
     ({s. region_actually_is_zero_bytes regionBase (2 ^ 14) s})
     hs
-    (placeNewObject regionBase (makeObject :: pde) 12)
+    (placeNewObject regionBase (makeObject :: pde) 11)
     (global_htd_update (\<lambda>_. (ptr_retyp (pd_Ptr regionBase))))"
   apply (rule ccorres_from_vcg_nofail)
   apply clarsimp
@@ -5019,24 +4930,25 @@ lemma placeNewObject_pde:
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
                   elim!: ptr_retyp_htd_safe_neg)
-  apply (frule range_cover_rel[where sbit' = 2])
+  apply (frule range_cover_rel[where sbit' = 3])
     apply simp+
-  apply (frule range_cover.unat_of_nat_shift[where gbits = 2 ])
+  apply (frule range_cover.unat_of_nat_shift[where gbits = 3 ])
    apply simp+
    apply (rule le_refl)
-  apply (subgoal_tac "region_is_bytes regionBase 16384 x")
+
+   apply (subgoal_tac "region_is_bytes regionBase 16384 x")
    apply (rule bexI [OF _ placeNewObject_eq])
       apply (clarsimp simp: split_def new_cap_addrs_def)
       apply (cut_tac s=\<sigma> in createObjects_ccorres_pde [where ptr=regionBase and sz=14])
       apply (erule_tac x=\<sigma> in allE, erule_tac x=x in allE)
-      apply (clarsimp elim!:is_aligned_weaken simp: objBitsKO_def word_bits_def)+
+      apply (clarsimp elim!:is_aligned_weaken simp: objBitsKO_def word_bits_def table_bits_defs)+
       apply (clarsimp simp: split_def objBitsKO_def archObjSize_def
           Fun.comp_def rf_sr_def Let_def ptr_retyps_gen_def
           new_cap_addrs_def field_simps power_add
           cong: globals.unfold_congs)
-      apply (simp add:Int_ac pdBits_def pageBits_def)
+      apply (simp add: Int_ac table_bits_defs)
      apply (clarsimp simp: word_bits_conv range_cover_def archObjSize_def)
-    apply (clarsimp simp: objBitsKO_def range_cover.aligned archObjSize_def)
+    apply (clarsimp simp: objBitsKO_def range_cover.aligned archObjSize_def table_bits_defs)
    apply (clarsimp simp: no_fail_def)
   apply (simp add: region_actually_is_bytes)
  done
@@ -5475,6 +5387,7 @@ lemma is_aligned_neg_mask_eq_concrete:
   apply (metis word_bw_assocs word_bw_comms)
   done
 
+term ptr_retyps
 lemma Arch_createObject_ccorres:
   assumes t: "toAPIType newType = None"
   shows "ccorres (\<lambda>a b. ccap_relation (ArchObjectCap a) b) ret__struct_cap_C_'
@@ -5497,7 +5410,7 @@ proof -
            simp_all add: toAPIType_def
                bind_assoc
                ARMLargePageBits_def)
-
+sorry (* FIXME ARMHYP annotations in C are for non-HYP arm, this won't work at the moment
          apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
           apply (simp add: object_type_from_H_def Kernel_C_defs)
           apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
@@ -5688,7 +5601,7 @@ proof -
                              valid_arch_state'_def page_directory_at'_def pdBits_def)
       apply (clarsimp simp: is_aligned_no_overflow'[where n=14, simplified]
                             field_simps is_aligned_mask[symmetric] mask_AND_less_0)+
-    done
+    done*)
 qed
 
 lemma add_ge0_weak:
@@ -6201,6 +6114,45 @@ lemma pspace_no_overlap_induce_notification:
             split: arch_kernel_object.split_asm)
   done
 
+lemma vcpu_range_subseteq:
+  "is_aligned x (objBitsKO (KOArch (KOVCPU ko)))
+   \<Longrightarrow> {(x::machine_word)..+size_of TYPE(vcpu_C)} \<subseteq> {x..x + 2 ^ objBitsKO (KOArch (KOVCPU ko)) - 1}"
+  apply simp
+  apply (rule subset_trans)
+  apply (rule intvl_start_le[where y = "2^objBitsKO ((KOArch (KOVCPU ko)))"])
+   apply (simp add: objBits_simps archObjSize_def vcpu_bits_def table_bits_defs)
+  apply (subst intvl_range_conv)
+    apply simp
+   apply (simp add:objBits_simps word_bits_conv archObjSize_def vcpu_bits_def table_bits_defs)+
+  done
+
+lemma pspace_no_overlap_induce_vcpu:
+  "\<lbrakk>cpspace_relation (ksPSpace (s::kernel_state))
+      (underlying_memory (ksMachineState s)) hp;
+    pspace_aligned' s; clift hp xa = Some (v::vcpu_C);
+    is_aligned ptr bits; bits < word_bits;
+    pspace_no_overlap' ptr bits s\<rbrakk>
+   \<Longrightarrow> {ptr_val xa..+size_of TYPE(vcpu_C)} \<inter> {ptr..+2 ^ bits} = {}"
+  apply (clarsimp simp:cpspace_relation_def)
+  apply (clarsimp simp:cmap_relation_def)
+  apply (subgoal_tac "xa\<in> vcpu_Ptr ` dom (map_to_vcpus (ksPSpace s))")
+    prefer 2
+    apply (simp add:domI)
+  apply (thin_tac "S = dom K" for S K)+
+  apply (thin_tac "\<forall>x\<in> S. K x" for S K)+
+  apply (clarsimp simp: image_def projectKO_opt_tcb map_comp_def
+                 split: option.splits kernel_object.split_asm)
+  apply (subst intvl_range_conv)
+   apply (simp add: word_bits_def)+
+  (* prevent intersection in assumption becoming predicates *)
+  supply Int_atLeastAtMost[simp del]
+  apply (frule(1) pspace_no_overlapD', simp)
+  apply (drule(1) pspace_alignedD')
+  apply (clarsimp simp: image_def projectKO_opt_vcpu map_comp_def
+                 split: option.splits kernel_object.split_asm  arch_kernel_object.split_asm)
+  apply (erule (1) disjoint_subset[OF vcpu_range_subseteq[simplified]])
+  done
+
 lemma ctes_of_ko_at_strong:
   "\<lbrakk>ctes_of s p = Some a;is_aligned p 4\<rbrakk> \<Longrightarrow>
   (\<exists>ptr ko. (ksPSpace s ptr = Some ko \<and> {p ..+ 16} \<subseteq> obj_range' ptr ko))"
@@ -6446,11 +6398,11 @@ lemma pspace_no_overlap_induce_pte:
    apply (subst intvl_range_conv)
      apply simp
     apply (simp add: word_bits_def)
-   apply (subst intvl_range_conv[where bits = 2,simplified])
+   apply (subst intvl_range_conv[where bits = 3,simplified])
     apply (drule(1) pspace_alignedD')
-    apply (simp add: objBits_simps archObjSize_def split:arch_kernel_object.split_asm)
+    apply (simp add: objBits_simps archObjSize_def table_bits_defs split:arch_kernel_object.split_asm)
    apply (simp add: word_bits_conv)
-  apply (simp add: objBits_simps archObjSize_def split:arch_kernel_object.split_asm)
+  apply (simp add: objBits_simps archObjSize_def table_bits_defs split:arch_kernel_object.split_asm)
   done
 
 lemma pspace_no_overlap_induce_pde:
@@ -6472,11 +6424,11 @@ lemma pspace_no_overlap_induce_pde:
    apply (subst intvl_range_conv)
      apply simp
     apply (simp add: word_bits_def)
-   apply (subst intvl_range_conv[where bits = 2,simplified])
+   apply (subst intvl_range_conv[where bits = 3,simplified])
     apply (drule(1) pspace_alignedD')
-    apply (simp add: objBits_simps archObjSize_def split:arch_kernel_object.split_asm)
+    apply (simp add: objBits_simps archObjSize_def table_bits_defs split:arch_kernel_object.split_asm)
    apply (simp add:word_bits_conv)
-  by (simp add: objBits_simps archObjSize_def split:arch_kernel_object.split_asm)
+  by (simp add: objBits_simps archObjSize_def table_bits_defs split:arch_kernel_object.split_asm)
 
 
 lemma typ_bytes_cpspace_relation_clift_tcb:
@@ -6542,6 +6494,19 @@ assumes "cpspace_relation (ksPSpace s) (underlying_memory (ksMachineState (s::ke
   apply -
   apply (rule lift_t_typ_region_bytes_none, simp_all)
   apply (erule(5) pspace_no_overlap_induce_notification[simplified])
+  done
+
+lemma typ_bytes_cpspace_relation_clift_vcpu:
+assumes "cpspace_relation (ksPSpace s) (underlying_memory (ksMachineState (s::kernel_state))) hp"
+  and "is_aligned ptr bits" "bits < word_bits"
+  and "pspace_aligned' s"
+  and "pspace_no_overlap' ptr bits s"
+ shows "clift (hrs_htd_update (typ_region_bytes ptr bits) hp) = ((clift hp) :: (vcpu_C ptr \<rightharpoonup> vcpu_C))"
+  (is "?lhs = ?rhs")
+  using assms
+  apply -
+  apply (rule lift_t_typ_region_bytes_none, simp_all)
+  apply (erule(5) pspace_no_overlap_induce_vcpu[simplified])
   done
 
 lemma typ_bytes_cpspace_relation_clift_asid_pool:
@@ -6753,7 +6718,7 @@ lemma ccorres_typ_region_bytes_dummy:
      (invs' and ct_active' and sch_act_simple and
       pspace_no_overlap' ptr bits and
       (cnodes_retype_have_size S bits o gsCNodes)
-      and K (bits < word_bits \<and> is_aligned ptr bits \<and> 2 \<le> bits
+      and K (bits < word_bits \<and> is_aligned ptr bits \<and> 4 \<le> bits
          \<and> 0 \<notin> {ptr..+2 ^ bits}
          \<and> {ptr ..+ 2 ^ bits} \<subseteq> S
          \<and> kernel_data_refs \<inter> {ptr..+2 ^ bits} = {}))
@@ -6783,11 +6748,13 @@ lemma ccorres_typ_region_bytes_dummy:
       apply (simp add: invs_pspace_aligned')+
   apply (frule typ_bytes_cpspace_relation_clift_devicedata)
       apply (simp add: invs_pspace_aligned')+
+  apply (frule typ_bytes_cpspace_relation_clift_vcpu)
+      apply (simp add: invs_pspace_aligned')+
   apply (frule typ_bytes_cpspace_relation_clift_gptr[where
-            ptr'="pd_Ptr (symbol_table ''armKSGlobalPD'')"])
+            ptr'="pd_Ptr (symbol_table ''armUSGlobalPD'')"])
         apply (simp add: invs_pspace_aligned')+
   apply (frule typ_bytes_cpspace_relation_clift_gptr[where
-            ptr'="ptr_coerce x :: (cte_C[512]) ptr" for x])
+            ptr'="ptr_coerce x :: (cte_C[256]) ptr" for x])
         apply (simp add: invs_pspace_aligned')+
     apply (simp add: cte_level_bits_def cte_C_size, simp+)
   apply (simp add: carch_state_relation_def cmachine_state_relation_def)
@@ -6797,7 +6764,7 @@ lemma ccorres_typ_region_bytes_dummy:
                    cnodes_retype_have_size_mono[where T=S]
                    tcb_ctes_typ_region_bytes[OF _ _ invs_pspace_aligned'])
   apply (simp add: cmap_array_typ_region_bytes_triv
-               invs_pspace_aligned' pdBits_def pageBits_def ptBits_def
+               invs_pspace_aligned' table_bits_defs
                objBitsT_simps word_bits_def
                zero_ranges_are_zero_typ_region_bytes)
   apply (rule htd_safe_typ_region_bytes, simp)
@@ -7003,8 +6970,8 @@ shows "\<lbrace>P\<rbrace>createObject ty ptr us dev \<lbrace>\<lambda>m s. capR
          apply wpc
              apply wp
         apply (simp add:split untypedRange.simps objBits_simps capRange_def APIType_capBits_def | wp)+
-       apply (simp add:ARM_HYP_H.createObject_def capRange_def APIType_capBits_def
-         acapClass.simps | wp)+
+       apply (wpsimp simp: ARM_HYP_H.createObject_def capRange_def APIType_capBits_def
+                        vcpu_bits_def table_bits_defs acapClass.simps)+
   done
 
 lemma createObject_capRange_helper:
@@ -7149,20 +7116,19 @@ lemma createObject_child:
   apply (rule hoare_assume_pre)
   apply (simp add:createObject_def3)
   apply wp
-  apply (rule hoare_chain [OF createNewCaps_range_helper[where sz = "APIType_capBits ty us"]])
-   apply (fastforce simp:range_cover_full)
-  apply clarsimp
-  apply (drule_tac x = ptr in spec)
+   apply (rule hoare_chain [OF createNewCaps_range_helper[where sz = "APIType_capBits ty us"]])
+    apply (fastforce simp:range_cover_full)
+   apply clarsimp
+   apply (drule_tac x = ptr in spec)
    apply (case_tac "(capfn ptr)")
-   apply (simp_all add:capUntypedPtr_def sameRegionAs_def Let_def isCap_simps)+
-    apply clarsimp+
+              apply (simp_all add: capUntypedPtr_def sameRegionAs_def Let_def isCap_simps)+
+        apply clarsimp+
     apply (rename_tac arch_capability d v0 v1 f)
-    apply (case_tac arch_capability)
-     apply (simp add:ARM_HYP_H.capUntypedSize_def)+
-     apply (simp add: is_aligned_no_wrap' field_simps)
-    apply (simp add:ARM_HYP_H.capUntypedSize_def)+
-    apply (simp add: is_aligned_no_wrap' field_simps)
-  apply clarsimp+
+    apply (simp add: ARM_HYP_H.capUntypedSize_def vcpu_bits_def table_bits_defs)+
+    apply (case_tac arch_capability,
+           auto simp: ARM_HYP_H.capUntypedSize_def vcpu_bits_def table_bits_defs
+                      is_aligned_no_wrap' field_simps
+               split: arch_capability.split)+
   done
 
 lemma createObject_parent_helper:
@@ -7464,7 +7430,7 @@ lemma range_cover_gsMaxObjectSize:
 lemma APIType_capBits_min:
   "(tp = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> userSize)
     \<Longrightarrow> 4 \<le> APIType_capBits tp userSize"
-  by (simp add: APIType_capBits_def objBits_simps
+  by (simp add: APIType_capBits_def objBits_simps vcpu_bits_def table_bits_defs
             split: object_type.split ArchTypes_H.apiobject_type.split)
 
 end
@@ -7587,14 +7553,8 @@ lemma copyGlobalMappings_preserves_bytes:
       {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
          \<and> byte_regions_unmodified' s t}"
   apply (hoare_rule HoarePartial.ProcNoRec1)
-  apply (clarsimp simp only: whileAnno_def)
-  apply (subst whileAnno_def[symmetric, where V=undefined
-       and I="{t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
-         \<and> byte_regions_unmodified' s t}" for s])
-  apply (rule conseqPre, vcg)
-  apply (safe intro!: byte_regions_unmodified_hrs_mem_update
-    elim!: byte_regions_unmodified_trans byte_regions_unmodified_trans[rotated],
-    (simp_all add: h_t_valid_field)+)
+  apply vcg
+  apply clarsimp
   done
 
 lemma cleanByVA_PoU_preserves_bytes:
@@ -7640,16 +7600,18 @@ lemma Arch_createObject_preserves_bytes:
     exspec=copyGlobalMappings_preserves_bytes
     exspec=addrFromPPtr_modifies
     exspec=cleanCacheRange_PoU_preserves_bytes
-    exspec=cap_page_directory_cap_new_modifies)
+    exspec=cap_page_directory_cap_new_modifies
+    exspec=vcpu_init_modifies)
   apply (safe intro!: byte_regions_unmodified_hrs_mem_update,
     (simp_all add: h_t_valid_field hrs_htd_update)+)
   apply (safe intro!: ptr_retyp_d ptr_retyps_out)
   apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
     split: object_type.split_asm ArchTypes_H.apiobject_type.split_asm)
+  sorry  (* FIXME ARMHYP Arch_createObject spec needs update before proof can proceed
    apply (rule byte_regions_unmodified_flip, simp)
   apply (rule byte_regions_unmodified_trans[rotated],
     assumption, simp_all add: hrs_htd_update_canon hrs_htd_update)
-  done
+  done *)
 
 lemma ptr_arr_retyps_eq_outside_dom:
   "x \<notin> {ptr_val (p :: 'a ptr) ..+ n * size_of TYPE ('a :: wf_type)}
@@ -7825,7 +7787,7 @@ lemma createObject_untyped_region_is_zero_bytes:
   apply (rule allI, rule conseqPre, vcg exspec=copyGlobalMappings_modifies
       exspec=Arch_initContext_modifies
       exspec=cleanCacheRange_PoU_modifies)
-  apply (clarsimp simp: cap_tag_defs)
+  apply (clarsimp simp: cap_tag_defs Let_def)
   apply (simp add: cap_lift_untyped_cap cap_tag_defs cap_to_H_simps
                    cap_untyped_cap_lift_def object_type_from_H_def)
   apply (simp add: untypedZeroRange_def split: if_split)
@@ -7833,7 +7795,7 @@ lemma createObject_untyped_region_is_zero_bytes:
   apply (simp add: is_aligned_neg_mask_eq[OF is_aligned_weaken])
   apply (simp add:  APIType_capBits_def
                    less_mask_eq word_less_nat_alt)
-  done
+  sorry (* FIXME ARMHYP *)
 
 lemma createNewObjects_ccorres:
 notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
@@ -8279,9 +8241,8 @@ shows  "ccorres dc xfdc
         subgoal premises prems using prems
                   by (clarsimp simp: objBits_simps unat_eq_def word_unat.Rep_inverse'
                                      word_less_nat_alt)+
-
      by (clarsimp simp: ARMSmallPageBits_def ARMLargePageBits_def
-                           ARMSectionBits_def ARMSuperSectionBits_def)+
+                        ARMSectionBits_def ARMSuperSectionBits_def vcpu_bits_def pageBits_def)+
 
 end
 
