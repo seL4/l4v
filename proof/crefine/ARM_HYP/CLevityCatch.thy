@@ -11,6 +11,7 @@
 theory CLevityCatch
 imports
   Include_C
+  Move
   "../../../lib/LemmaBucket_C"
   "../../../lib/LemmaBucket"
 begin

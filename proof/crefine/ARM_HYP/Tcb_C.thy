@@ -9,7 +9,7 @@
  *)
 
 theory Tcb_C
-imports Move Delete_C Ipc_C
+imports Delete_C Ipc_C
 begin
 
 lemma asUser_obj_at' :
