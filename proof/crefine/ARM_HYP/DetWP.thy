@@ -12,6 +12,13 @@ theory DetWP
 imports "../../../lib/clib/DetWPLib" Include_C
 begin
 
+(* FIXME YUCK where did you come from *)
+declare ptBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
+declare pdBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
+declare pteBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
+declare pdeBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
+declare vcpuBits_eq[simp del] (* used everywhere in CRefine, breaks clarsimp-normal form of rules *)
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma det_wp_doMachineOp [wp]:
