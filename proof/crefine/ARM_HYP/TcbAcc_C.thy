@@ -40,9 +40,71 @@ lemma ccorres_pre_threadGet:
   apply clarsimp
   done
 
+
+(* FIXME MOVE *)
+crunch inv'[wp]: archThreadGet P
+  (ignore: getObject)
+
+(* FIXME MOVE near thm tg_sp' *)
+lemma atg_sp':
+  "\<lbrace>P\<rbrace> archThreadGet f p \<lbrace>\<lambda>t. obj_at' (\<lambda>t'. f (tcbArch t') = t) p and P\<rbrace>"
+  including no_pre
+  apply (simp add: archThreadGet_def)
+  apply wp
+  apply (rule hoare_strengthen_post)
+   apply (rule getObject_tcb_sp)
+  apply clarsimp
+  apply (erule obj_at'_weakenE)
+  apply simp
+  done
+
+(* FIXME: MOVE to EmptyFail *)
+lemma empty_fail_archThreadGet [intro!, wp, simp]:
+  "empty_fail (archThreadGet f p)"
+  by (simp add: archThreadGet_def getObject_def split_def)
+
+lemma ccorres_pre_archThreadGet:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (g rv) c"
+  shows   "ccorres r xf
+           (\<lambda>s. \<forall>tcb. ko_at' tcb p s \<longrightarrow> P (f (tcbArch tcb)) s)
+           ({s'. \<forall>tcb ctcb. cslift s' (tcb_ptr_to_ctcb_ptr p) = Some ctcb
+                            \<and> ctcb_relation tcb ctcb \<longrightarrow> s' \<in> P' (f (tcbArch tcb))})
+           hs (archThreadGet f p >>= (\<lambda>rv. g rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (rule atg_sp')
+     apply simp
+    apply assumption
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+    apply (frule obj_at_ko_at')
+    apply clarsimp
+  apply assumption
+  apply clarsimp
+  apply (frule (1) obj_at_cslift_tcb)
+  apply clarsimp
+  done
+
 lemma threadGet_eq:
   "ko_at' tcb thread s \<Longrightarrow> (f tcb, s) \<in> fst (threadGet f thread s)"
   unfolding threadGet_def
+  apply (simp add: liftM_def in_monad)
+  apply (rule exI [where x = tcb])
+  apply simp
+  apply (subst getObject_eq)
+     apply simp
+    apply (simp add: objBits_simps)
+   apply assumption
+  apply simp
+  done
+
+lemma archThreadGet_eq:
+  "ko_at' tcb thread s \<Longrightarrow> (f (tcbArch tcb), s) \<in> fst (archThreadGet f thread s)"
+  unfolding archThreadGet_def
   apply (simp add: liftM_def in_monad)
   apply (rule exI [where x = tcb])
   apply simp
