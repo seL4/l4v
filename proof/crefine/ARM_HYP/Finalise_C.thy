@@ -1354,7 +1354,7 @@ lemma pageTableMapped_ccorres:
            apply (drule(1) page_directory_at_rf_sr)
            apply (erule cmap_relationE1[OF rf_sr_cpde_relation],
                   erule ko_at_projectKO_opt)
-           apply (clarsimp simp: typ_heap_simps' shiftl_t2n field_simps)
+           apply (clarsimp simp: typ_heap_simps' shiftl_t2n field_simps table_bits_defs)
           apply ceqv
          apply (rule_tac P="rv \<noteq> 0" in ccorres_gen_asm)
          apply csymbr+
@@ -1384,7 +1384,7 @@ lemma pageTableMapped_ccorres:
        apply (rule ccorres_return_C, simp+)
       apply vcg
      apply (wp hoare_drop_imps findPDForASID_nonzero)
-    apply (simp add: guard_is_UNIV_def word_sle_def pdBits_def pageBits_def
+    apply (simp add: guard_is_UNIV_def word_sle_def table_bits_defs
                      unat_gt_0 unat_shiftr_le_bound)
    apply (simp add: guard_is_UNIV_def option_to_0_def option_to_ptr_def)
   apply auto[1]
@@ -1428,16 +1428,16 @@ lemma unmapPageTable_ccorres:
       apply (vcg exspec=cleanByVA_PoU_modifies)
      apply wp
     apply (fastforce simp: guard_is_UNIV_def Collect_const_mem Let_def
-      shiftl_t2n field_simps lookup_pd_slot_def)
+      shiftl_t2n field_simps lookup_pd_slot_def table_bits_defs)
    apply (rule_tac Q="\<lambda>rv s. (case rv of Some pd \<Rightarrow> page_directory_at' pd s | _ \<Rightarrow> True) \<and> invs' s"
              in hoare_post_imp)
     apply (clarsimp simp: lookup_pd_slot_def Let_def
                           mask_add_aligned less_kernelBase_valid_pde_offset''
-                          page_directory_at'_def)
+                          page_directory_at'_def table_bits_defs)
    apply (wp pageTableMapped_pd)
   apply (clarsimp simp: word_sle_def lookup_pd_slot_def
                         Let_def shiftl_t2n field_simps
-                        Collect_const_mem pdBits_def pageBits_def)
+                        Collect_const_mem table_bits_defs)
   apply (simp add: unat_shiftr_le_bound unat_eq_0)
   done
 
@@ -1469,6 +1469,9 @@ lemma Arch_finaliseCap_ccorres:
    apply csymbr
    apply (simp add: ARM_HYP_H.finaliseCap_def cap_get_tag_isCap_ArchObject
                del: Collect_const)
+sorry
+(* FIXME ARMHYP: shape of finaliseCap_def is completely different (ifs instead of cases,
+                 since it came through a caseconv)
    apply (wpc, simp_all add: isCap_simps Collect_False Collect_True
                              case_bool_If
                         del: Collect_const)[1]
@@ -1625,7 +1628,7 @@ lemma Arch_finaliseCap_ccorres:
    apply (clarsimp simp: cap_page_table_cap_lift cap_to_H_def
                   elim!: ccap_relationE simp del: Collect_const)
   apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap)
-  done
+  done *)
 
 lemma ccte_relation_ccap_relation:
   "ccte_relation cte cte' \<Longrightarrow> ccap_relation (cteCap cte) (cte_C.cap_C cte')"
@@ -1886,14 +1889,18 @@ lemma ccap_relation_IRQHandler_mask:
   apply (simp add: c_valid_cap_def cap_irq_handler_cap_lift cl_valid_cap_def)
   done
 
-lemma prepare_thread_delete_ccorres:
-  "ccorres dc xfdc \<top> UNIV []
+lemma prepareThreadDelete_ccorres:
+  "ccorres dc xfdc
+     (invs' and tcb_at' thread)
+     (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}) hs
    (prepareThreadDelete thread) (Call Arch_prepareThreadDelete_'proc)"
-  unfolding prepareThreadDelete_def
-  apply (rule ccorres_Call)
-  apply (rule Arch_prepareThreadDelete_impl[unfolded Arch_prepareThreadDelete_body_def])
-  apply (rule ccorres_return_Skip)
-  done
+  supply dc_simp[simp del]
+  apply (cinit lift: thread_', rename_tac cthread)
+  apply (rule ccorres_move_c_guard_tcb)
+  apply (rule ccorres_pre_archThreadGet, rename_tac vcpuopt)
+  apply simp
+  apply wpc
+  sorry (* FIXME ARMHYP WTF, can't figure out a way to split out a stateful IF condition  *)
 
 lemma finaliseCap_ccorres:
   "\<And>final.
@@ -1999,7 +2006,7 @@ lemma finaliseCap_ccorres:
     apply csymbr
     apply (ctac(no_vcg) add: unbindNotification_ccorres)
      apply (ctac(no_vcg) add: suspend_ccorres[OF cteDeleteOne_ccorres])
-     apply (ctac(no_vcg) add: prepare_thread_delete_ccorres)
+     apply (ctac(no_vcg) add: prepareThreadDelete_ccorres)
       apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
       apply (rule allI, rule conseqPre, vcg)
       apply (clarsimp simp: word_sle_def return_def)
