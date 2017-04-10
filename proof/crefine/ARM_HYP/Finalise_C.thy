@@ -1889,6 +1889,58 @@ lemma ccap_relation_IRQHandler_mask:
   apply (simp add: c_valid_cap_def cap_irq_handler_cap_lift cl_valid_cap_def)
   done
 
+(* FIXME: Move
+   this is not easy to move; it should go into CCorresLemmas but uses tactics from Ctac *)
+lemma ccorres_rewrite_cond_sr:
+  assumes abs: "\<forall>s s'. (s, s') \<in> sr \<and> Q s \<and> s' \<in> Q' \<longrightarrow> (s' \<in> C) = (s' \<in> C') "
+  and     c1: "ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs m (Cond C' c d)"
+  shows   "ccorres_underlying sr \<Gamma> r xf arrel axf (P and Q) (P' \<inter> Q') hs
+                              m (Cond C c d)"
+  apply (rule ccorres_name_pre)
+  apply (rule_tac Q="op = s" and Q'="P' \<inter> Q' \<inter> {s'. (s, s') \<in> sr}" in stronger_ccorres_guard_imp)
+    apply (rule ccorres_semantic_equiv[THEN iffD1, rotated])
+     apply (rule ccorres_guard_imp, rule c1, simp_all)
+  apply (clarsimp simp add: semantic_equiv_Cond_cases abs semantic_equiv_refl)
+  done
+
+(* FIXME MOVE *)
+lemma ko_at'_tcb_vcpu_not_NULL:
+  "\<lbrakk> ko_at' (tcb::tcb) t s ; valid_pspace' s ; atcbVCPUPtr (tcbArch tcb) = Some p \<rbrakk>
+   \<Longrightarrow> 0 < p"
+  -- "when C pointer is NULL, need this to show atcbVCPUPtr is None"
+  unfolding valid_pspace'_def
+  by (fastforce simp: valid_tcb'_def valid_arch_tcb'_def word_gt_0 typ_at'_no_0_objD
+                dest: valid_objs_valid_tcb')
+
+(* FIXME MOVE *)
+lemma option_to_ptr_NULL_eq:
+  "\<lbrakk> option_to_ptr p = p' \<rbrakk> \<Longrightarrow> (p' = NULL) = (p = None \<or> p = Some 0)"
+  unfolding option_to_ptr_def option_to_0_def
+  by (clarsimp split: option.splits)
+
+(* FIXME MOVE *)
+lemma sym_refs_tcb_vcpu':
+  "\<lbrakk> ko_at' (tcb::tcb) t s; atcbVCPUPtr (tcbArch tcb) = Some v; sym_refs (state_hyp_refs_of' s) \<rbrakk> \<Longrightarrow>
+  \<exists>vcpu. ko_at' vcpu v s \<and> vcpuTCBPtr vcpu = Some t"
+  apply (drule (1) hyp_sym_refs_obj_atD')
+  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
+  apply (case_tac ko; simp add: tcb_vcpu_refs'_def projectKOs)
+  apply (rename_tac koa)
+  apply (case_tac koa; clarsimp simp: refs_of_a_def vcpu_tcb_refs'_def)
+  done
+
+lemma dissociateVCPUTCB_ccorres:
+  "ccorres dc xfdc
+     (invs' and obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) =  Some vcpuptr) tptr
+        and obj_at' (\<lambda>v. vcpuTCBPtr v = Some tptr) vcpuptr)
+     (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr tptr }
+       \<inter> {s. vcpu_' s = Ptr vcpuptr }) hs
+     (dissociateVCPUTCB vcpuptr t) (Call dissociateVCPUTCB_'proc)"
+  (* FIXME ARMHYP TODO. Note that invs' may be too strong, depending on from where it's called.
+     There is a definite assertion that the VCPU and TCB are associated when calling this function,
+     so I put that in *)
+  sorry
+
 lemma prepareThreadDelete_ccorres:
   "ccorres dc xfdc
      (invs' and tcb_at' thread)
@@ -1896,11 +1948,33 @@ lemma prepareThreadDelete_ccorres:
    (prepareThreadDelete thread) (Call Arch_prepareThreadDelete_'proc)"
   supply dc_simp[simp del]
   apply (cinit lift: thread_', rename_tac cthread)
-  apply (rule ccorres_move_c_guard_tcb)
-  apply (rule ccorres_pre_archThreadGet, rename_tac vcpuopt)
-  apply simp
-  apply wpc
-  sorry (* FIXME ARMHYP WTF, can't figure out a way to split out a stateful IF condition  *)
+   apply (rule ccorres_move_c_guard_tcb)
+   apply (rule ccorres_pre_archThreadGet, rename_tac vcpuopt)
+   apply simp
+   apply (rule_tac Q="valid_pspace' and obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) = vcpuopt) thread"
+               and Q'=UNIV  and C'="{s. vcpuopt \<noteq> None}" in ccorres_rewrite_cond_sr)
+    apply clarsimp
+    apply (drule (1) obj_at_cslift_tcb)
+    apply (fastforce simp: typ_heap_simps ctcb_relation_def carch_tcb_relation_def
+                           option_to_ptr_NULL_eq
+                     dest: ko_at'_tcb_vcpu_not_NULL
+                    split: option.splits)
+   apply (wpc ; clarsimp ; ccorres_rewrite)
+    apply (rule ccorres_return_Skip)
+   apply (rule ccorres_move_c_guard_tcb)
+   apply (ctac add: dissociateVCPUTCB_ccorres)
+  apply (clarsimp simp: invs_valid_pspace')
+  apply (rule conjI; clarsimp simp: typ_heap_simps)
+   apply (rule conjI)
+    subgoal
+    apply clarsimp
+    apply (rename_tac vcpuptr)
+    apply (frule (1) sym_refs_tcb_vcpu')
+     apply (auto dest:  simp: invs_sym_hyp' obj_at'_def)
+    done
+   apply (clarsimp simp: obj_at'_def)
+  apply (clarsimp simp: typ_heap_simps ctcb_relation_def carch_tcb_relation_def)
+  done
 
 lemma finaliseCap_ccorres:
   "\<And>final.
