@@ -285,7 +285,7 @@ where
      (\<lambda>x. r + (x * 32)) ` {0 ..< of_nat n}"
 | "cte_refs' (ArchObjectCap cap) x                = {}"
 | "cte_refs' (IRQControlCap) x                    = {}"
-| "cte_refs' (IRQHandlerCap irq) x                = {x + (ucast irq) * 16}"
+| "cte_refs' (IRQHandlerCap irq) x                = {x + (ucast irq) * 32}"
 | "cte_refs' (ReplyCap tcb m) x                   = {}"
 
 
@@ -428,7 +428,7 @@ where valid_cap'_def:
   | Structures_H.IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
   | Structures_H.Zombie r b n \<Rightarrow> n \<le> zombieCTEs b \<and> zBits b < word_bits
             \<and> (case b of ZombieTCB \<Rightarrow> tcb_at' r s | ZombieCNode n \<Rightarrow> n \<noteq> 0
-                    \<and> (\<forall>addr. real_cte_at' (r + 16 * (addr && mask n)) s))
+                    \<and> (\<forall>addr. real_cte_at' (r + 32 * (addr && mask n)) s))
   | Structures_H.ArchObjectCap ac \<Rightarrow> (case ac of
     ASIDPoolCap pool asid \<Rightarrow>
     typ_at' (ArchT ASIDPoolT) pool s \<and> is_aligned asid asid_low_bits \<and> asid \<le> 2^asid_bits - 1

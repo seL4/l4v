@@ -1140,7 +1140,7 @@ lemma updateCap_ko_wp_at_live[wp]:
   by wp
 
 primrec
-  threadCapRefs :: "capability \<Rightarrow> word32 set"
+  threadCapRefs :: "capability \<Rightarrow> machine_word set"
 where
   "threadCapRefs (ThreadCap r)                  = {r}"
 | "threadCapRefs (ReplyCap t m)                 = {}"
@@ -1359,8 +1359,6 @@ crunch valid_queues'[wp]: setInterruptState "valid_queues'"
   (simp: valid_queues'_def)
 
 crunch valid_queues'[wp]: emptySlot "valid_queues'"
-
-crunch pde_mappings'[wp]: emptySlot "valid_pde_mappings'"
 
 lemma deletedIRQHandler_irqs_masked'[wp]:
   "\<lbrace>irqs_masked'\<rbrace> deletedIRQHandler irq \<lbrace>\<lambda>_. irqs_masked'\<rbrace>"
@@ -1772,8 +1770,9 @@ where
   | Zombie ptr zb n \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> True
   | ArchObjectCap acap \<Rightarrow> (case acap of
-    PageCap d ref rghts sz mapdata \<Rightarrow> False
+    PageCap ref rghts mt sz d mapdata \<Rightarrow> False
   | ASIDControlCap \<Rightarrow> False
+  | IOPortCap f l \<Rightarrow> False
   | _ \<Rightarrow> True)
   | _ \<Rightarrow> False"
 
@@ -1796,9 +1795,10 @@ lemma final_matters_sameRegion_sameObject2:
      \<Longrightarrow> sameRegionAs cap cap' = sameObjectAs cap cap'"
   apply (rule iffI)
    apply (erule sameRegionAsE)
-      apply (simp add: sameObjectAs_def3)
-      apply (fastforce simp: isCap_simps final_matters'_def)
-     apply simp
+       apply (simp add: sameObjectAs_def3)
+       apply (fastforce simp: isCap_simps final_matters'_def)
+      apply simp
+     apply (clarsimp simp: final_matters'_def isCap_simps)
     apply (clarsimp simp: final_matters'_def isCap_simps)
    apply (clarsimp simp: final_matters'_def isCap_simps)
   apply (erule sameObjectAs_sameRegionAs)
@@ -2230,9 +2230,6 @@ crunch it'[wp]: finaliseCap "\<lambda>s. P (ksIdleThread s)"
 
 
 
-crunch vs_lookup[wp]: flush_space "\<lambda>s. P (vs_lookup s)"
-  (wp: crunch_wps)
-
 declare doUnbindNotification_def[simp]
 
 lemma ntfn_q_refs_of'_mult:
@@ -2332,8 +2329,6 @@ lemma finaliseCap_True_invs[wp]:
     apply (wp irqs_masked_lift| simp | wpc)+
   done
 
-crunch invs'[wp]: flushSpace "invs'" (ignore: doMachineOp)
-
 lemma ct_not_inQ_ksArchState_update[simp]:
   "ct_not_inQ (s\<lparr>ksArchState := v\<rparr>) = ct_not_inQ s"
   by (simp add: ct_not_inQ_def)
@@ -2348,35 +2343,21 @@ lemma invs_asid_update_strg':
   apply (auto simp add: ran_def split: if_split_asm)
   done
 
-lemma invalidateASIDEntry_invs' [wp]:
-  "\<lbrace>invs'\<rbrace> invalidateASIDEntry asid \<lbrace>\<lambda>r. invs'\<rbrace>"
-  apply (simp add: invalidateASIDEntry_def invalidateASID_def
-                   invalidateHWASIDEntry_def bind_assoc)
-  apply (wp loadHWASID_wp | simp)+
-  apply (clarsimp simp: fun_upd_def[symmetric])
-  apply (rule conjI)
-   apply (clarsimp simp: invs'_def valid_state'_def)
-   apply (rule conjI)
-    apply (simp add: valid_global_refs'_def
-                     global_refs'_def)
-   apply (simp add: valid_arch_state'_def ran_def
-                    valid_asid_table'_def is_inv_None_upd
-                    valid_machine_state'_def
-                    comp_upd_simp fun_upd_def[symmetric]
-                    inj_on_fun_upd_elsewhere
-                    valid_asid_map'_def
-                    ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-   subgoal by (auto elim!: subset_inj_on)
-  apply (clarsimp simp: invs'_def valid_state'_def)
-  apply (rule conjI)
-   apply (simp add: valid_global_refs'_def
-                    global_refs'_def)
-  apply (rule conjI)
-   apply (simp add: valid_arch_state'_def ran_def
-                    valid_asid_table'_def None_upd_eq
-                    fun_upd_def[symmetric] comp_upd_simp)
-  apply (simp add: valid_machine_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+lemma invalidateASID'_invs' [wp]:
+  "\<lbrace>invs'\<rbrace> invalidateASID' asid \<lbrace>\<lambda>r. invs'\<rbrace>"
+  apply (simp add: invalidateASID'_def bind_assoc)
+  apply (wp  | simp)+
+  apply (auto simp: invs'_def valid_state'_def valid_global_refs'_def valid_arch_state'_def
+                        valid_asid_map'_def valid_machine_state'_def global_refs'_def
+                        ct_idle_or_in_cur_domain'_def fun_upd_def[symmetric] tcb_in_cur_domain'_def
+                        dom_def inj_on_def)
   done
+
+
+lemma invalidateASIDEntry_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> invalidateASIDEntry asid vs \<lbrace>\<lambda>r. invs'\<rbrace>"
+  apply (simp add: invalidateASIDEntry_def hwASIDInvalidate_def)
+  by wpsimp
 
 lemma deleteASIDPool_invs[wp]:
   "\<lbrace>invs'\<rbrace> deleteASIDPool asid pool \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -2388,16 +2369,21 @@ lemma deleteASIDPool_invs[wp]:
               | simp)+
   done
 
-lemma invalidateASIDEntry_valid_ap' [wp]:
-  "\<lbrace>valid_asid_pool' p\<rbrace> invalidateASIDEntry asid \<lbrace>\<lambda>r. valid_asid_pool' p\<rbrace>"
-  apply (simp add: invalidateASIDEntry_def invalidateASID_def
-                   invalidateHWASIDEntry_def bind_assoc)
-  apply (wp loadHWASID_wp | simp)+
-  apply (case_tac p)
-  apply (clarsimp simp del: fun_upd_apply)
-  done
+lemma valid_asid_pool'_ASIDMap_inv[simp]:
+  "valid_asid_pool' p s \<Longrightarrow> valid_asid_pool' p (s\<lparr>ksArchState := x64KSASIDMap_update (\<lambda>_ a.
+                   if a = asid then b
+                   else x64KSASIDMap
+  (ksArchState s) a)
+               (ksArchState s)\<rparr>)"
+  by (cases p; simp)
 
-lemmas flushSpace_typ_ats' [wp] = typ_at_lifts [OF flushSpace_typ_at']
+lemma invalidateASIDEntry_valid_ap' [wp]:
+  "\<lbrace>valid_asid_pool' p\<rbrace> invalidateASIDEntry asid vs \<lbrace>\<lambda>r. valid_asid_pool' p\<rbrace>"
+  apply (simp add: invalidateASIDEntry_def invalidateASID'_def hwASIDInvalidate_def
+                    bind_assoc)
+  apply (wp | simp)+
+  apply (rule_tac Q="\<lambda>rv. valid_asid_pool' p" in hoare_strengthen_post)
+    by (wpsimp)+
 
 lemma deleteASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> deleteASID asid pd \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -2524,9 +2510,14 @@ lemma cteDeleteOne_deletes[wp]:
   apply clarsimp
   done
 
+lemma flushTable_irq_node'[wp]:
+  "\<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> flushTable a b c d \<lbrace>\<lambda>rv s. P (irq_node' s)\<rbrace>"
+  apply (clarsimp simp: flushTable_def)
+  by (wpsimp wp: mapM_x_wp' | wp_once hoare_drop_imps)+
+
 crunch irq_node'[wp]: finaliseCap "\<lambda>s. P (irq_node' s)"
   (wp: mapM_x_wp crunch_wps getObject_inv loadObject_default_inv
-       updateObject_default_inv setObject_ksInterrupt
+       updateObject_default_inv setObject_ksInterrupt mapM_x_wp'
        ignore: getObject setObject simp: crunch_simps unless_def)
 
 lemma deletingIRQHandler_removeable':
@@ -2920,7 +2911,7 @@ crunch cte_wp_at'[wp]: deleteASIDPool "cte_wp_at' P p"
 
 lemma deleteASID_cte_wp_at'[wp]:
   "\<lbrace>cte_wp_at' P p\<rbrace> deleteASID param_a param_b \<lbrace>\<lambda>_. cte_wp_at' P p\<rbrace>"
-  apply (simp add: deleteASID_def invalidateHWASIDEntry_def invalidateASID_def
+  apply (simp add: deleteASID_def
               cong: option.case_cong)
   apply (wp setObject_cte_wp_at'[where Q="\<top>"] getObject_inv
             loadObject_default_inv setVMRoot_cte_wp_at'
@@ -3505,8 +3496,6 @@ lemma (in delete_one) deleting_irq_corres:
           apply (auto simp: cte_wp_at_caps_of_state is_cap_simps can_fast_finalise_def)[1]
          apply (clarsimp simp: cte_wp_at_ctes_of)
         apply (wp getCTE_wp' | simp add: getSlotCap_def)+
-      apply (rule no_fail_pre, wp)
-      apply (clarsimp simp: cte_wp_at_ctes_of)
      apply (wp | simp add: get_irq_slot_def getIRQSlot_def
                            locateSlot_conv getInterruptState_def)+
    apply (clarsimp simp: ex_cte_cap_wp_to_def interrupt_cap_null_or_ntfn)
@@ -3533,17 +3522,25 @@ lemma arch_finalise_cap_corres:
                        o_def dc_def[symmetric]
                 split: option.split,
          safe)
-     apply (rule corres_guard_imp, rule delete_asid_pool_corres)
-      apply (clarsimp simp: valid_cap_def mask_def)
-     apply (clarsimp simp: valid_cap'_def)
-     apply auto[1]
-    apply (rule corres_guard_imp, rule unmap_page_corres)
-      apply simp
-     apply (clarsimp simp: valid_cap_def valid_unmap_def)
-     apply (auto simp: vmsz_aligned_def pbfs_atleast_pageBits mask_def
-                 elim: is_aligned_weaken invs_valid_asid_map)[2]
-   apply (rule corres_guard_imp, rule unmap_page_table_corres)
-    apply (auto simp: valid_cap_def valid_cap'_def mask_def
+       apply (rule corres_guard_imp, rule delete_asid_pool_corres)
+        apply (clarsimp simp: valid_cap_def mask_def)
+       apply (clarsimp simp: valid_cap'_def)
+       apply auto[1]
+      apply (rule corres_guard_imp, rule unmap_page_corres)
+       apply simp
+       apply (clarsimp simp: valid_cap_def valid_unmap_def)
+       apply (auto simp: vmsz_aligned_def pbfs_atleast_pageBits mask_def
+                   elim: is_aligned_weaken invs_valid_asid_map)[2]
+     apply (rule corres_guard_imp, rule unmap_page_table_corres)
+      apply (auto simp: valid_cap_def valid_cap'_def mask_def bit_simps
+                 elim!: is_aligned_weaken invs_valid_asid_map)[2]
+    apply (rule corres_guard_imp, rule unmap_pd_corres)
+     apply (auto simp: valid_cap_def valid_cap'_def mask_def bit_simps wellformed_mapdata_def
+                       vmsz_aligned_def
+                elim!: is_aligned_weaken invs_valid_asid_map)[2]
+   apply (rule corres_guard_imp, rule unmap_pdpt_corres)
+    apply (auto simp: valid_cap_def valid_cap'_def mask_def bit_simps wellformed_mapdata_def
+                      vmsz_aligned_def
                elim!: is_aligned_weaken invs_valid_asid_map)[2]
   apply (rule corres_guard_imp, rule delete_asid_corres)
    apply (auto elim!: invs_valid_asid_map simp: mask_def valid_cap_def)[2]
@@ -3734,11 +3731,8 @@ lemma finalise_cap_corres:
   apply (clarsimp split del: if_split simp: o_def)
   apply (rule corres_guard_imp [OF arch_finalise_cap_corres], (fastforce simp: valid_sched_def)+)
   done
+
 context begin interpretation Arch . (*FIXME: arch_split*)
-lemma arch_recycleCap_improve_cases:
-   "\<lbrakk> \<not> isPageCap cap; \<not> isPageTableCap cap; \<not> isPageDirectoryCap cap;
-         \<not> isASIDControlCap cap \<rbrakk> \<Longrightarrow> (if isASIDPoolCap cap then v else undefined) = v"
-  by (cases cap, simp_all add: isCap_simps)
 
 crunch queues[wp]: copyGlobalMappings "Invariants_H.valid_queues"
   (wp: crunch_wps ignore: storePDE getObject)
@@ -3748,14 +3742,6 @@ crunch queues'[wp]: copyGlobalMappings "Invariants_H.valid_queues'"
 
 crunch ifunsafe'[wp]: copyGlobalMappings "if_unsafe_then_cap'"
   (wp: crunch_wps ignore: storePDE getObject)
-
-lemma copyGlobalMappings_pde_mappings2':
-  "\<lbrace>valid_pde_mappings' and valid_arch_state'
-            and K (is_aligned pd pdBits)\<rbrace>
-      copyGlobalMappings pd \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
-  apply (wp copyGlobalMappings_pde_mappings')
-  apply (clarsimp simp: valid_arch_state'_def page_directory_at'_def)
-  done
 
 crunch pred_tcb_at'[wp]: copyGlobalMappings "pred_tcb_at' proj P t"
   (wp: crunch_wps ignore: storePDE getObject)
@@ -3775,13 +3761,24 @@ crunch ct__in_cur_domain'[wp]: copyGlobalMappings ct_idle_or_in_cur_domain'
 crunch gsUntypedZeroRanges[wp]: copyGlobalMappings "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: crunch_wps ignore: getObject)
 
+crunch gsMaxObjectSize[wp]: copyGlobalMappings "\<lambda>s. P (gsMaxObjectSize s)"
+  (wp: crunch_wps ignore: getObject)
+
+crunch it'[wp]: copyGlobalMappings "\<lambda>s. P (ksIdleThread s)"
+  (wp: crunch_wps ignore: getObject)
+
+crunch valid_irq_states'[wp]: copyGlobalMappings "valid_irq_states'"
+  (wp: crunch_wps ignore: getObject)
+
+crunch ksDomScheduleIdx[wp]: copyGlobalMappings "\<lambda>s. P (ksDomScheduleIdx s)"
+  (wp: crunch_wps ignore: getObject)
+
 lemma copyGlobalMappings_invs'[wp]:
-  "\<lbrace>invs' and K (is_aligned pd pdBits)\<rbrace> copyGlobalMappings pd \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "\<lbrace>invs' and K (is_aligned pm pml4Bits)\<rbrace> copyGlobalMappings pm \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
    apply (wp valid_irq_node_lift_asm valid_global_refs_lift' sch_act_wf_lift
              valid_irq_handlers_lift'' cur_tcb_lift typ_at_lifts irqs_masked_lift
-             copyGlobalMappings_pde_mappings2'
              untyped_ranges_zero_lift
         | clarsimp simp: cteCaps_of_def o_def)+
   done
@@ -3808,10 +3805,6 @@ apply (wp hoare_vcg_disj_lift hoare_vcg_imp_lift)
  apply wp
 apply (auto simp: obj_at'_def)
 done
-
-crunch typ_at'[wp]: invalidateTLBByASID "\<lambda>s. P (typ_at' T p s)"
-crunch valid_arch_state'[wp]: invalidateTLBByASID "valid_arch_state'"
-lemmas invalidateTLBByASID_typ_ats[wp] = typ_at_lifts [OF invalidateTLBByASID_typ_at']
 
 lemma cte_wp_at_norm_eq':
   "cte_wp_at' P p s = (\<exists>cte. cte_wp_at' (op = cte) p s \<and> P cte)"
@@ -3856,10 +3849,6 @@ lemma isFinal_lift:
             valid_cte_at_neg_typ' [OF y])
   done
 
-crunch cteCaps_of: invalidateTLBByASID "\<lambda>s. P (cteCaps_of s)"
-
-crunch valid_etcbs[wp]: invalidate_tlb_by_asid valid_etcbs
-
 lemma cteCaps_of_ctes_of_lift:
   "(\<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P (cteCaps_of s) \<rbrace> f \<lbrace>\<lambda>_ s. P (cteCaps_of s)\<rbrace>"
   unfolding cteCaps_of_def .
@@ -3899,7 +3888,7 @@ lemma set_thread_all_corres:
   assumes z: "\<And>s. obj_at' P ptr s
                \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO ob')) = map_to_ctes (ksPSpace s)"
   assumes b: "\<And>ko. P ko \<Longrightarrow> objBits ko = objBits ob'"
-  assumes P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
+  assumes P: "\<And>(v::'a::pspace_storable). (1 :: machine_word) < 2 ^ (objBits v)"
   assumes e: "etcb_relation etcb tcb'"
   assumes is_t: "injectKO (ob' :: 'a :: pspace_storable) = KOTCB tcb'"
   shows      "other_obj_relation (TCB tcb) (injectKO (ob' :: 'a :: pspace_storable)) \<Longrightarrow>
