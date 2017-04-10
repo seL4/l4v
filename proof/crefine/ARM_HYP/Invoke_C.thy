@@ -1501,8 +1501,10 @@ lemma getObjectSize_spec:
   "\<forall>s. \<Gamma>\<turnstile>\<lbrace>s. \<acute>t \<le> of_nat (length (enum::object_type list) - 1)\<rbrace> Call getObjectSize_'proc
            \<lbrace>\<acute>ret__unsigned_long = of_nat (getObjectSize (object_type_to_H (t_' s)) (unat (userObjSize_' s)))\<rbrace>"
   apply vcg
-  apply (clarsimp simp:ARMSmallPageBits_def ARMLargePageBits_def objBits_simps
-    object_type_to_H_def Kernel_C_defs APIType_capBits_def ARMSectionBits_def ARMSuperSectionBits_def)
+  apply (clarsimp simp: ARMSmallPageBits_def ARMLargePageBits_def ARMSectionBits_def
+                        ARMSuperSectionBits_def machine_bits_defs objBits_simps
+                        object_type_to_H_def Kernel_C_defs APIType_capBits_def
+    )
   apply (simp add:nAPIObjects_def)
   apply (simp add:enum_object_type enum_apiobject_type)
   apply unat_arith
@@ -1528,8 +1530,8 @@ lemma APIType_capBits_low:
      newType = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 29\<rbrakk>
            \<Longrightarrow> 4 \<le> APIType_capBits newType us"
   apply (case_tac newType)
-  apply (clarsimp simp:invokeUntyped_proofs_def APIType_capBits_def objBits_simps
-    split: apiobject_type.splits)+
+  apply (clarsimp simp:invokeUntyped_proofs_def APIType_capBits_def objBits_simps machine_bits_defs
+                  split: apiobject_type.splits)+
   done
 
 lemma APIType_capBits_high:
@@ -1537,8 +1539,8 @@ lemma APIType_capBits_high:
      newType = APIObjectType apiobject_type.Untyped \<longrightarrow> us \<le> 29\<rbrakk>
            \<Longrightarrow> APIType_capBits newType us < 32"
   apply (case_tac newType)
-  apply (clarsimp simp:invokeUntyped_proofs_def APIType_capBits_def objBits_simps
-    split: apiobject_type.splits)+
+  apply (clarsimp simp: invokeUntyped_proofs_def APIType_capBits_def objBits_simps machine_bits_defs
+                 split: apiobject_type.splits)+
   done
 
 lemma typ_clear_region_eq:
@@ -2891,8 +2893,9 @@ lemma unat_of_nat_APIType_capBits:
   \<Longrightarrow> unat (of_nat (APIType_capBits z b) ::word32) = APIType_capBits z b"
   apply (rule unat_of_nat32)
   apply (case_tac z)
-  apply (clarsimp simp:invokeUntyped_proofs_def word_bits_conv APIType_capBits_def objBits_simps
-    split: apiobject_type.splits)+
+  apply (clarsimp simp: invokeUntyped_proofs_def word_bits_conv APIType_capBits_def objBits_simps
+                        machine_bits_defs
+                 split: apiobject_type.splits)+
   done
 
 lemma valid_untyped_inv'_D:
