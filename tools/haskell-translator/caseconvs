@@ -616,11 +616,6 @@ case \x of (0, vaddr:rightsMask:attr:_, (pdCap,_):_) -> (0, _, _) -> (1, rightsM
     then ->6
     else ->7
 
-case \x of UntypedCap { capIsDevice = False } | capBlockSize untyped == objBits pool -> _ ->  ---> let \v0\ = \x in
-    if isUntypedCap \v0\ \<and> capBlockSize \v0\ == objBits pool \<and> \<not> capIsDevice \v0\
-    then ->1
-    else ->2
-
 case \x of (0, index:depth:_, (untyped,parentSlot):(root,_):_) -> (0, _, _) -> _ ->  ---> let (\v0\, \v1\, \v2\) = \x in
     if \v0\ = 0 then
         if length \v1\ > 1 \<and> length \v2\ > 1
@@ -1848,4 +1843,11 @@ case \x of cap@(PageDirectoryCap {}) -> cap@(PageTableCap {}) -> cap@(PageCap {}
     then ->6
     else undefined
 
+case \x of UntypedCap { capIsDevice = False } | capBlockSize untyped == objBits pool -> _ ->  ---> let \v0\ = \x in
+    if isUntypedCap \v0\ \<and> capBlockSize \v0\ == objBits pool \<and> \<not> capIsDevice \v0\
+        then ->1
+	    else ->2
 
+case \x of UntypedCap {capIsDevice = False} | capBlockSize untyped == objBits pool -> _ ->  ---> if isUntypedCap \x \<and> (\<not> capIsDevice \x) \<and> (capBlockSize \x = objBits pool)
+    then ->1
+        else ->2
