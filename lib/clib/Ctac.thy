@@ -470,6 +470,21 @@ lemma semantic_equiv_cond_seq2_seq:
 
 lemmas ccorres_cond_seq2_seq = ccorres_semantic_equiv[OF semantic_equiv_cond_seq2_seq]
 
+(* FIXME: move
+   It appears that the semantic equiv. lemmas should go into their own file, then
+   CCorresLemmas on top of that, and then finally Ctac on top of CCorresLemmas *)
+lemma ccorres_rewrite_cond_sr:
+  assumes abs: "\<forall>s s'. (s, s') \<in> sr \<and> Q s \<and> s' \<in> Q' \<longrightarrow> (s' \<in> C) = (s' \<in> C') "
+  and     c1: "ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs m (Cond C' c d)"
+  shows   "ccorres_underlying sr \<Gamma> r xf arrel axf (P and Q) (P' \<inter> Q') hs
+                              m (Cond C c d)"
+  apply (rule ccorres_name_pre)
+  apply (rule_tac Q="op = s" and Q'="P' \<inter> Q' \<inter> {s'. (s, s') \<in> sr}" in stronger_ccorres_guard_imp)
+    apply (rule ccorres_semantic_equiv[THEN iffD1, rotated])
+     apply (rule ccorres_guard_imp, rule c1, simp_all)
+  apply (clarsimp simp add: semantic_equiv_Cond_cases abs semantic_equiv_refl)
+  done
+
 definition
   "push_in_stmt G stmt c c' \<equiv> (\<forall>s s'. semantic_equiv G s s' (c ;; stmt) c')"
 
