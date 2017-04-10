@@ -1,11 +1,11 @@
 Built from git repo at /home/joelb/work/verification/l4v/spec/haskell by joelb
 
 Generated from changeset:
-a27bb4a x64: fixup invocations, unmap functions to match abstract
+f86b7b0 x64 refine: fix InterruptAcc_R
 
 
 Warning - uncomitted changes used:
- M ../../proof/refine/X64/VSpace_R.thy
- M ../design/X64/ArchRetypeDecls_H.thy
- M ../design/X64/ArchVSpace_H.thy
+ M ../../proof/refine/X64/Finalise_R.thy
+ M ../../proof/refine/X64/Invariants_H.thy
  M ../design/version
+ M src/SEL4/Object/ObjectType/X64.lhs

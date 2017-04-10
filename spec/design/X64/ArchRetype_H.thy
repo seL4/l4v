@@ -90,7 +90,7 @@ defs finaliseCap_def:
     unmapPageTable a v ptr;
     return NullCap
   od)
-  | ((PageCap ptr _ _ s _ (Some (a, v))), True) \<Rightarrow>    (do
+  | ((PageCap ptr _ _ s _ (Some (a, v))), _) \<Rightarrow>    (do
     unmapPage s a v ptr;
     return NullCap
   od)
