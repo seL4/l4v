@@ -291,8 +291,9 @@ lemma option_to_ptr_simps [simp]:
   by (auto simp: option_to_ptr_def split: option.split)
 
 (* FIXME MOVE *)
-lemma typ_at'_no_0_objD:
-  "typ_at' P p s \<Longrightarrow> no_0_obj' s \<Longrightarrow> p \<noteq> 0"
-  by (cases "p = 0" ; clarsimp)
+lemma option_to_ptr_NULL_eq:
+  "\<lbrakk> option_to_ptr p = p' \<rbrakk> \<Longrightarrow> (p' = NULL) = (p = None \<or> p = Some 0)"
+  unfolding option_to_ptr_def option_to_0_def
+  by (clarsimp split: option.splits)
 
 end

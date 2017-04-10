@@ -60,4 +60,34 @@ lemma suspend_st_tcb_at':
 lemma to_bool_if:
   "(if w \<noteq> 0 then 1 else 0) = (if to_bool w then 1 else 0)"
   by (auto simp: to_bool_def)
+
+(* FIXME MOVE *)
+lemma typ_at'_no_0_objD:
+  "typ_at' P p s \<Longrightarrow> no_0_obj' s \<Longrightarrow> p \<noteq> 0"
+  by (cases "p = 0" ; clarsimp)
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
+lemma sym_refs_tcb_vcpu':
+  "\<lbrakk> ko_at' (tcb::tcb) t s; atcbVCPUPtr (tcbArch tcb) = Some v; sym_refs (state_hyp_refs_of' s) \<rbrakk> \<Longrightarrow>
+  \<exists>vcpu. ko_at' vcpu v s \<and> vcpuTCBPtr vcpu = Some t"
+  apply (drule (1) hyp_sym_refs_obj_atD')
+  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
+  apply (case_tac ko; simp add: tcb_vcpu_refs'_def projectKOs)
+  apply (rename_tac koa)
+  apply (case_tac koa; clarsimp simp: refs_of_a_def vcpu_tcb_refs'_def)
+  done
+
+
+(* FIXME MOVE *)
+lemma ko_at'_tcb_vcpu_not_NULL:
+  "\<lbrakk> ko_at' (tcb::tcb) t s ; valid_pspace' s ; atcbVCPUPtr (tcbArch tcb) = Some p \<rbrakk>
+   \<Longrightarrow> 0 < p"
+  -- "when C pointer is NULL, need this to show atcbVCPUPtr is None"
+  unfolding valid_pspace'_def
+  by (fastforce simp: valid_tcb'_def valid_arch_tcb'_def word_gt_0 typ_at'_no_0_objD
+                dest: valid_objs_valid_tcb')
+
+end
+
 end
