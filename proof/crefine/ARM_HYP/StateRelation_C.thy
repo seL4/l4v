@@ -331,6 +331,11 @@ where
            = Some (UnknownSyscallException (syscallNumber_CL us))"
   | "fault_to_H (SeL4_Fault_UserException ue) lf
           = Some (UserException (number_CL ue) (code_CL ue))"
+  | "fault_to_H (SeL4_Fault_VCPUFault vf) lf
+          = Some (ArchFault (VCPUFault (seL4_Fault_VCPUFault_CL.hsr_CL vf)))"
+  | "fault_to_H (SeL4_Fault_VGICMaintenance vf) lf
+          = Some (ArchFault (VGICMaintenance [seL4_Fault_VGICMaintenance_CL.idx_CL vf,
+                                              seL4_Fault_VGICMaintenance_CL.idxValid_CL vf]))"
 
 definition
   cfault_rel :: "Fault_H.fault option \<Rightarrow> seL4_Fault_CL option \<Rightarrow> lookup_fault_CL option \<Rightarrow> bool"
@@ -815,8 +820,9 @@ fun
   arch_fault_to_fault_tag :: "arch_fault \<Rightarrow> word32"
   where
   "arch_fault_to_fault_tag (VMFault a b) = scast seL4_Fault_VMFault"
+| "arch_fault_to_fault_tag (VCPUFault a) = scast seL4_Fault_VCPUFault"
+| "arch_fault_to_fault_tag (VGICMaintenance a) = scast seL4_Fault_VGICMaintenance"
 end
-
 
 fun
   fault_to_fault_tag :: "fault \<Rightarrow> word32"
