@@ -168,7 +168,7 @@ Deletion of a final capability to a page table that has been mapped requires tha
 > finaliseCap (PageCap {
 >         capVPMappedAddress = Just (a, v),
 >         capVPSize = s,
->         capVPBasePtr = ptr }) True = do
+>         capVPBasePtr = ptr }) _ = do
 >     unmapPage s a v ptr
 >     return NullCap
 
