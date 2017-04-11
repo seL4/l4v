@@ -88,6 +88,35 @@ lemma ko_at'_tcb_vcpu_not_NULL:
   by (fastforce simp: valid_tcb'_def valid_arch_tcb'_def word_gt_0 typ_at'_no_0_objD
                 dest: valid_objs_valid_tcb')
 
+
+(* FIXME move *)
+lemma setVMRoot_valid_queues':
+  "\<lbrace> valid_queues' \<rbrace> setVMRoot a \<lbrace> \<lambda>_. valid_queues' \<rbrace>"
+  apply (rule valid_queues_lift')
+term "x::'a::no_vcpu"
+thm setVMRoot_obj_at[where 'a=tcb]
+sorry (* FIXME ARMHYP the no_vcpu trick does not seem to work here even though inQ d p applies to tcbs
+   only, which are an instance of no_vcpu!
+  apply wp
+  apply (rule setVMRoot_obj_at[where 'a=tcb]) -- this does not work either, WHY
+*)
+
+lemma vcpuEnable_valid_pspace' [wp]:
+  "\<lbrace> valid_pspace' \<rbrace> vcpuEnable a \<lbrace>\<lambda>_. valid_pspace' \<rbrace>"
+  sorry
+
+lemma vcpuSave_valid_pspace' [wp]:
+  "\<lbrace> valid_pspace' \<rbrace> vcpuSave a \<lbrace>\<lambda>_. valid_pspace' \<rbrace>"
+  sorry
+
+lemma vcpuRestore_valid_pspace' [wp]:
+  "\<lbrace> valid_pspace' \<rbrace> vcpuRestore a \<lbrace>\<lambda>_. valid_pspace' \<rbrace>"
+  sorry
+
+lemma vcpuSwitch_valid_pspace' [wp]:
+  "\<lbrace> valid_pspace' \<rbrace> vcpuSwitch a \<lbrace>\<lambda>_. valid_pspace' \<rbrace>"
+  sorry
+
 end
 
 end
