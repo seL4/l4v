@@ -1386,13 +1386,15 @@ case \x of (cap@PageCap {}) -> (cap@PageTableCap { capPTBasePtr = ptr }) -> (cap
         in ->10
     else undefined
 
-case \x of (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerIOAPIC, index:depth:ioapic:pin:level:polarity:irqW:_, cnode:_) -> (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerMSI, index:depth:pciBus:pciDev:pciFunc:handle:irqW:_, cnode:_) -> _ ->  ---> let (label, args, extraCaps) = \x in
+case \x of (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerIOAPIC, index:depth:ioapic:pin:level:polarity:irqW:_, cnode:_) -> (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerIOAPIC, _, _) -> (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerMSI, index:depth:pciBus:pciDev:pciFunc:handle:irqW:_, cnode:_) -> (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerMSI, _, _) -> _ ->  ---> let (label, args, extraCaps) = \x in
     case (label, args, extraCaps) of
       (ArchInvocationLabel X64IRQIssueIRQHandlerIOAPIC,
         index#depth#ioapic#pin#level#polarity#irqW#_, cnode#_) => ->1
+    | (ArchInvocationLabel X64IRQIssueIRQHandlerIOAPIC, _, _) => ->2
     | (ArchInvocationLabel X64IRQIssueIRQHandlerMSI,
-        index#depth#pciBus#pciDev#pciFunc#handle#irqW#_, cnode#_) => ->2
-    | _ => ->3
+        index#depth#pciBus#pciDev#pciFunc#handle#irqW#_, cnode#_) => ->3
+    | (ArchInvocationLabel X64IRQIssueIRQHandlerMSI, _, _) => ->4
+    | _ => ->5
 
 case \x of (ArchInv.IssueIRQHandlerIOAPIC (IRQ irq) destSlot srcSlot ioapic pin level polarity vector) -> (ArchInv.IssueIRQHandlerMSI (IRQ irq) destSlot srcSlot pciBus pciDev pciFunc handle) ->  ---> let inv = \x in
     case inv of
@@ -1705,5 +1707,6 @@ case \x of ((a@PageCap { capVPBasePtr = ptrA }), (b@PageCap {})) -> ((a@IOPortCa
     then let fA = capIOPortFirstPort a
         in ->2
     else ->3
+
 
 
