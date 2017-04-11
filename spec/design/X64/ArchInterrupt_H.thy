@@ -24,6 +24,8 @@ defs decodeIRQControlInvocation_def:
         index#depth#ioapic#pin#level#polarity#irqW#_, cnode#_) =>  (doE
             rangeCheck irqW (fromEnum minIRQ) (fromEnum maxIRQ);
             irq \<leftarrow> returnOk ( toEnum (fromIntegral irqW) ::irq);
+            irqActive \<leftarrow> withoutFailure $ isIRQActive irq;
+            whenE irqActive $ throw RevokeFirst;
             destSlot \<leftarrow> lookupTargetSlot cnode (CPtr index)
                 (fromIntegral depth);
             ensureEmptySlot destSlot;
@@ -35,10 +37,13 @@ defs decodeIRQControlInvocation_def:
             returnOk $ IssueIRQHandlerIOAPIC irq destSlot srcSlot ioapic
                 pin level polarity vector
         odE)
+        | (ArchInvocationLabel X64IRQIssueIRQHandlerIOAPIC, _, _) =>  throw TruncatedMessage
         | (ArchInvocationLabel X64IRQIssueIRQHandlerMSI,
         index#depth#pciBus#pciDev#pciFunc#handle#irqW#_, cnode#_) =>  (doE
             rangeCheck irqW (fromEnum minIRQ) (fromEnum maxIRQ);
             irq \<leftarrow> returnOk ( toEnum (fromIntegral irqW) ::irq);
+            irqActive \<leftarrow> withoutFailure $ isIRQActive irq;
+            whenE irqActive $ throw RevokeFirst;
             destSlot \<leftarrow> lookupTargetSlot cnode (CPtr index)
                 (fromIntegral depth);
             ensureEmptySlot destSlot;
@@ -48,6 +53,7 @@ defs decodeIRQControlInvocation_def:
             returnOk $ IssueIRQHandlerMSI irq destSlot srcSlot pciBus
                 pciDev pciFunc handle
         odE)
+        | (ArchInvocationLabel X64IRQIssueIRQHandlerMSI, _, _) =>  throw TruncatedMessage
         | _ =>  throw IllegalOperation
         )"
 
@@ -59,14 +65,14 @@ defs performIRQControl_def:
     irqState \<leftarrow> return $ IRQIOAPIC ioapic pin level polarity True;
     doMachineOp $ updateIRQState irq irqState;
     setIRQState IRQSignal (IRQ irq);
-    cteInsert (IRQHandlerCap (IRQ irq)) destSlot srcSlot;
+    cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot;
     return ()
   od)
   | (IssueIRQHandlerMSI irq destSlot srcSlot pciBus pciDev pciFunc handle) =>   withoutPreemption $ (do
     irqState \<leftarrow> return $ IRQMSI pciBus pciDev pciFunc handle;
     doMachineOp $ updateIRQState irq irqState;
     setIRQState IRQSignal (IRQ irq);
-    cteInsert (IRQHandlerCap (IRQ irq)) destSlot srcSlot;
+    cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot;
     return ()
   od)
   )"
