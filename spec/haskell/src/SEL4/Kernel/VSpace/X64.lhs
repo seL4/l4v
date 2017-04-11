@@ -155,13 +155,11 @@ When the kernel tries to access a thread's IPC buffer, this function is called t
 >     bufferFrameSlot <- getThreadBufferSlot thread
 >     bufferCap <- getSlotCap bufferFrameSlot
 >     case bufferCap of
->         ArchObjectCap (frame@PageCap {}) -> do
->             let rights = capVPRights frame
->             let pBits = pageBitsForSize $ capVPSize frame
+>         ArchObjectCap (PageCap {capVPIsDevice = False, capVPBasePtr = baseptr, capVPRights = rights, capVPSize = sz}) -> do
+>             let pBits = pageBitsForSize sz
 >             if (rights == VMReadWrite || not isReceiver && rights == VMReadOnly)
 >               then do
->                  let ptr = capVPBasePtr frame +
->                            PPtr (fromVPtr bufferPtr .&. mask pBits)
+>                  let ptr = baseptr + PPtr (fromVPtr bufferPtr .&. mask pBits)
 >                  assert (ptr /= 0)
 >                             "IPC buffer pointer must be non-null"
 >                  return $ Just ptr
