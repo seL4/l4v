@@ -832,6 +832,13 @@ where
   | "fault_to_fault_tag (UnknownSyscallException a) = scast seL4_Fault_UnknownSyscall"
   | "fault_to_fault_tag (UserException a b) = scast seL4_Fault_UserException"
 
+lemmas seL4_Faults = seL4_Fault_UserException_def
+                     seL4_Fault_UnknownSyscall_def
+                     seL4_Fault_CapFault_def
+
+lemmas seL4_Arch_Faults = seL4_Fault_VMFault_def
+                          seL4_Fault_VCPUFault_def
+                          seL4_Fault_VGICMaintenance_def
 
 (* Return relations *)
 

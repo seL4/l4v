@@ -473,11 +473,8 @@ end
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition
-  "handleArchFaultReply' f sender receiver tag \<equiv> do
-     label \<leftarrow> return $ msgLabel tag;
-     mlen \<leftarrow> return $ msgLength tag;
-     case f of
-       VMFault _ _ \<Rightarrow> do
+  "handleArchFaultReply' f sender receiver tag \<equiv>
+     let default_action = (do
          sendBuf \<leftarrow> lookupIPCBuffer False sender;
          stateAssert (tcb_at' sender) [];
          case sendBuf of
@@ -489,8 +486,15 @@ definition
              return ()
            od;
          return True
-       od
-    od"
+       od) in
+   (do
+     label \<leftarrow> return $ msgLabel tag;
+     mlen \<leftarrow> return $ msgLength tag;
+     case f of
+       VMFault _ _ \<Rightarrow> default_action
+     | VCPUFault _ \<Rightarrow> default_action
+     | VGICMaintenance _ \<Rightarrow> default_action
+    od)"
 
 definition
   "handleFaultReply' f sender receiver \<equiv> do
@@ -566,11 +570,23 @@ lemma handleArchFaultReply':
   apply (unfold handleArchFaultReply'_def getMRs_def msgMaxLength_def
                 bit_def msgLengthBits_def msgRegisters_unfold
                 fromIntegral_simp1 fromIntegral_simp2
-                shiftL_word)
+                shiftL_word Let_def)
   apply (simp add: bind_assoc)
   apply (clarsimp simp: mapM_def sequence_def bind_assoc asUser_bind_distrib
                         asUser_return submonad_asUser.fn_stateAssert)
-  apply (case_tac f)
+  apply (case_tac f ; clarsimp)
+    apply (clarsimp simp: handleArchFaultReply_def asUser_getRegister_discarded
+                            bind_subst_lift [OF stateAssert_stateAssert]
+                            pred_conj_def)
+    apply (rule bind_apply_cong [OF refl], rename_tac sb s'')
+    apply (rule bind_apply_cong [OF refl], rename_tac rv r'')
+    apply (case_tac sb, simp_all add: word_size n_msgRegisters_def)[1]
+   apply (clarsimp simp: handleArchFaultReply_def asUser_getRegister_discarded
+                           bind_subst_lift [OF stateAssert_stateAssert]
+                           pred_conj_def)
+   apply (rule bind_apply_cong [OF refl], rename_tac sb s'')
+   apply (rule bind_apply_cong [OF refl], rename_tac rv r'')
+   apply (case_tac sb, simp_all add: word_size n_msgRegisters_def)[1]
   apply (clarsimp simp: handleArchFaultReply_def asUser_getRegister_discarded
                           bind_subst_lift [OF stateAssert_stateAssert]
                           pred_conj_def)
@@ -686,7 +702,7 @@ lemma handleFaultReply':
    apply (clarsimp simp: mapM_def sequence_def bind_assoc asUser_bind_distrib
                          asUser_return submonad_asUser.fn_stateAssert)
    apply (case_tac f, simp_all add: handleFaultReply_def zipWithM_x_mapM_x zip_take)
-   (* UserException *)
+      (* UserException *)
       apply (clarsimp simp: handleFaultReply_def zipWithM_x_mapM_x
                             zip_Cons ARM_HYP_H.exceptionMessage_def
                             ARM_HYP.exceptionMessage_def
@@ -715,7 +731,7 @@ lemma handleFaultReply':
                        monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
                 | wp mapM_x_mapM_valid[OF mapM_x_wp'[OF loadWordUser_inv]]
                      empty_fail_loadWordUser)+
-    (* UnknownSyscallExceptio *)
+    (* UnknownSyscallException *)
     apply (simp add: zip_append2 mapM_x_append asUser_bind_distrib split_def bind_assoc)
     apply (rule monadic_rewrite_imp)
      apply (rule monadic_rewrite_trans[rotated])
@@ -787,7 +803,7 @@ lemma handleFaultReply':
                              word_less_nat_alt ARM_HYP_H.sanitiseRegister_def
                              split_def n_msgRegisters_def msgMaxLength_def
                              bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
-                             word_size msgLengthBits_def n_syscallMessage_def
+                             word_size msgLengthBits_def n_syscallMessage_def Let_def
                   split del: if_split
                        cong: if_weak_cong)
        apply (rule monadic_rewrite_bind_tail)+
@@ -805,6 +821,7 @@ lemma handleFaultReply':
                               monadic_rewrite_symb_exec_l[OF stateAssert_inv]
                               monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
                        | wp empty_fail_loadWordUser)+)+
+sorry (* FIXME ARMHYP this might not be true anymore, consider the threadGet
       apply (clarsimp simp: upto_enum_word word_le_nat_alt simp del: upt.simps cong: if_weak_cong)
       apply (cut_tac i="unat n" and j="Suc (unat (scast n_syscallMessage :: word32))"
                                 and k="Suc msgMaxLength" in upt_add_eq_append')
@@ -826,7 +843,7 @@ lemma handleFaultReply':
     apply (clarsimp simp: mapM_def sequence_def bind_assoc asUser_bind_distrib
                           asUser_return submonad_asUser.fn_stateAssert bit_def)
    apply wpsimp+
-  done
+  done *)
 
 end
 
@@ -1846,6 +1863,7 @@ proof -
                       seL4_Fault_tag_defs
                  del: Collect_const)
      apply (rule ccorres_rhs_assoc)+
+     sorry (* FIXME ARMHYP
      apply (ctac (no_vcg))
       apply (rule ccorres_stateAssert)
       apply (ctac(no_vcg) add: setMR_ccorres_dc)
@@ -1900,14 +1918,8 @@ proof -
     apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def
                         Let_def zip_upt_Cons
                   split: if_split_asm)
-  done
+  done *)
 qed
-
-lemmas seL4_Faults = seL4_Fault_UserException_def
-                     seL4_Fault_UnknownSyscall_def
-                     seL4_Fault_CapFault_def
-
-lemmas seL4_Arch_Faults =  seL4_Fault_VMFault_def
 
 lemma setMRs_fault_ccorres [corres]:
   "ccorres (\<lambda>r r'. r = r' && mask msgLengthBits) ret__unsigned_long_'
@@ -1937,6 +1949,7 @@ proof -
         apply (clarsimp simp: ctcb_relation_def typ_heap_simps'
                               cfault_rel_def seL4_Fault_lift_def Let_def
                        split: if_split_asm)
+           apply (simp add: is_cap_fault_def)
        apply ceqv
       (* UserException *)
       apply wpc
@@ -2086,14 +2099,8 @@ proof -
                  asUser_get_registers[simplified atcbContextGet_def comp_def])
        apply simp
       (* ArchFault *)
-      apply (rule ccorres_cond_false)
-      apply (rule ccorres_cond_false)
-      apply (rule ccorres_cond_false)
-      apply (simp add: Collect_True Collect_False ccorres_cond_iffs
-                         zip_upt_Cons
-                         mapM_Cons bind_assoc
-                         seL4_Fault_tag_defs
-                    del: Collect_const)
+      apply clarsimp
+      apply ccorres_rewrite
       apply (rule ccorres_rhs_assoc)+
       apply (rule ccorres_move_c_guard_tcb)
       apply (rule_tac val="fault_to_fault_tag ft" in symb_exec_r_fault)
@@ -2114,8 +2121,6 @@ proof -
      apply (rule  fault_to_fault_tag.simps(2)[symmetric])
      (* done *)
      apply (rule guard_is_UNIVI, clarsimp simp: option_to_ptr_def seL4_CapFault_IP_def)
-     apply (case_tac x)
-     apply (simp add: seL4_Faults seL4_Arch_Faults)
      apply (clarsimp simp: msgMaxLength_unfold length_syscallMessage
                           ARM_HYP_H.exceptionMessage_def
                           ARM_HYP.exceptionMessage_def
@@ -2131,7 +2136,10 @@ qed
 definition
   makeArchFaultMessage2 :: "arch_fault \<Rightarrow> 32 word"
 where
-  "makeArchFaultMessage2 \<equiv> \<lambda>aft. case aft of VMFault _ _ \<Rightarrow> 5"
+  "makeArchFaultMessage2 \<equiv>
+     \<lambda>aft. case aft of VMFault _ _ \<Rightarrow> 5
+                     | VCPUFault _ \<Rightarrow> 7
+                     | VGICMaintenance _ \<Rightarrow> 6"
 
 lemma makeFaultMessage2:
   "makeFaultMessage ft thread
@@ -2140,8 +2148,18 @@ lemma makeFaultMessage2:
                    | UnknownSyscallException _ \<Rightarrow> 2
                    | UserException _ _ \<Rightarrow> 3
                    | ArchFault aft \<Rightarrow> makeArchFaultMessage2 aft, snd x) od)"
-  by (simp add: makeFaultMessage_def makeArchFaultMessage2_def makeArchFaultMessage_def
-           split: fault.split arch_fault.split)
+  by (cases ft)
+     (auto simp: makeFaultMessage_def makeArchFaultMessage2_def makeArchFaultMessage_def bind_assoc
+          split: fault.split arch_fault.split)+
+
+lemma makeFaultMessage_tcb_at'_fault[wp]:
+  "makeFaultMessage ft t \<lbrace> obj_at' (\<lambda>a. tcbFault a = Some ft) p\<rbrace>"
+  apply (cases ft, simp_all add: makeFaultMessage_def)
+     apply (wpsimp wp: asUser_inv mapM_wp' det_mapM[where S=UNIV]
+                       det_getRestartPC getRestartPC_inv
+                 simp: getRegister_def makeArchFaultMessage_def
+                 split: arch_fault.split)+
+  done
 
 lemma doFaultTransfer_ccorres [corres]:
   "ccorres dc xfdc (valid_pspace' and tcb_at' sender and tcb_at' receiver
@@ -2168,7 +2186,10 @@ lemma doFaultTransfer_ccorres [corres]:
    apply (ctac(no_vcg) add: setMRs_fault_ccorres)
     apply (rule_tac R="obj_at' (\<lambda>tcb. tcbFault tcb = ft) sender"
               and val="case (the ft) of CapFault _ _ _ \<Rightarrow> 1
-                  | ArchFault (VMFault _ _) \<Rightarrow> 5 | UnknownSyscallException _ \<Rightarrow> 2
+                  | ArchFault (VMFault _ _) \<Rightarrow> 5
+                  | ArchFault (VGICMaintenance _) \<Rightarrow> 6
+                  | ArchFault (VCPUFault _) \<Rightarrow> 7
+                  | UnknownSyscallException _ \<Rightarrow> 2
                   | UserException _ _ \<Rightarrow> 3"
               in ccorres_symb_exec_r_known_rv_UNIV
                    [where xf'=ret__unsigned_' and R'=UNIV])
@@ -2188,9 +2209,7 @@ lemma doFaultTransfer_ccorres [corres]:
     apply (clarsimp simp: message_info_to_H_def guard_is_UNIVI
                           mask_def msgLengthBits_def
                    split: fault.split arch_fault.split)
-   apply wp
-    apply (simp add: setMRs_to_setMR zipWithM_mapM split_def)
-    apply (wp mapM_wp' setMR_tcbFault_obj_at | simp)+
+   apply (wpsimp simp: setMRs_to_setMR zipWithM_mapM split_def wp: mapM_wp' setMR_tcbFault_obj_at)+
   apply (clarsimp simp: obj_at'_def projectKOs)
   done
 
@@ -2461,10 +2480,6 @@ lemma setExtraBadge_ccorres:
                     capTransferDataSize_def msgMaxLength_def msgMaxExtraCaps_def
                     msgExtraCapBits_def unat_word_ariths unat_of_nat)
   done
-
-lemma option_to_0_Some:
-  "option_to_0 (Some x) = x"
-  by (simp add: option_to_0_def)
 
 (* FIXME: move *)
 lemma ccorres_constOnFailure:
@@ -3258,7 +3273,7 @@ lemma capFaultOnFailure_ccorres:
   done
 
 definition
- "cfault_rel2 \<equiv> \<lambda>ft exnvar err. exnvar = (scast EXCEPTION_FAULT :: word32) \<and>
+ "cfault_rel2 \<equiv> \<lambda>ft exnvar err. exnvar = (scast EXCEPTION_FAULT :: machine_word) \<and>
                    cfault_rel (Some ft) (errfault err) (errlookup_fault err)"
 
 lemma takeWhile_eq:
@@ -3353,7 +3368,7 @@ proof -
    apply (simp add: liftE_bindE del: Collect_const)
    apply wpc
    apply (rename_tac word1 word2 word3 word4)
-   apply (simp del: Collect_const)
+   apply (simp del: Collect_const wordSize_def)
    apply wpc
     apply (simp add: option_to_ptr_def option_to_0_def)
     apply (rule ccorres_rhs_assoc2, rule ccorres_split_throws)
@@ -3366,9 +3381,6 @@ proof -
     apply vcg
    apply (simp add: id_def[symmetric] del: Collect_const)
    apply (rule ccorres_symb_exec_r)
-     apply (simp add: option_to_ptr_def option_to_0_def Collect_False
-                      ccorres_cond_iffs
-                 del: Collect_const)
      apply csymbr
      apply (rename_tac "lngth")
      apply (simp add: mi_from_H_def mapME_def del: Collect_const cong: bind_apply_cong)
@@ -3796,10 +3808,15 @@ proof -
                  apply (rule ccorres_symb_exec_r)
                    apply ctac
                   apply vcg
+                 apply clarsimp
                  apply (rule conseqPre, vcg)
                  apply fastforce
                 apply wp
+               apply clarsimp
                apply vcg
+              apply clarsimp
+sorry(* FIXME ARMHYP this one probably needs an expert, vcg explodes here and the resulting goal
+        won't even print without "quick print" on
               apply vcg
               apply (rule conjI, simp add: ARM_HYP_H.exceptionMessage_def
                                            ARM_HYP.exceptionMessage_def word_of_nat_less)
@@ -3807,11 +3824,11 @@ proof -
                                unat_of_nat exceptionMessage_ccorres[symmetric,simplified MessageID_Exception_def,simplified]
                                n_exceptionMessage_def length_exceptionMessage sanitiseRegister_def)
               apply (simp add: word_less_nat_alt unat_of_nat)
-             apply (rule conseqPre, vcg)
+             axpply (rule conseqPre, vcg)
              apply (clarsimp simp: word_of_nat_less ARM_HYP_H.exceptionMessage_def
                                    ARM_HYP.exceptionMessage_def)
             apply (simp add: min_def length_msgRegisters)
-            apply (clarsimp simp: min_def n_exceptionMessage_def
+            axpply (clarsimp simp: min_def n_exceptionMessage_def
                                   ARM_HYP_H.exceptionMessage_def
                                   ARM_HYP.exceptionMessage_def
                                   length_msgRegisters n_msgRegisters_def
@@ -3842,7 +3859,7 @@ proof -
                            Collect_const_mem
                     split: if_split)
     apply (fastforce intro: obj_tcb_at')
-    done
+    done *)
 qed
 
 lemma valid_drop_case: "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. P' rv s\<rbrace> \<rbrakk>
@@ -3908,6 +3925,7 @@ lemma copyMRsFaultReply_ccorres_syscall:
                  apply fastforce
                 apply wp
                apply vcg
+sorry (* FIXME ARMHYP vcg explodes leaving a very large state, too big to print without Quck Print on
               apply vcg
               apply (rule conjI, simp add: ARM_HYP_H.syscallMessage_def
                                            ARM_HYP.syscallMessage_def word_of_nat_less
@@ -4057,7 +4075,7 @@ lemma copyMRsFaultReply_ccorres_syscall:
                             n_syscallMessage_def
                             n_msgRegisters_def
                        intro: obj_tcb_at')+
-  done
+  done *)
 qed
 
 lemma handleArchFaultReply_corres:
@@ -4075,8 +4093,31 @@ lemma handleArchFaultReply_corres:
   apply (unfold K_def)
   apply (rule ccorres_gen_asm)+
   apply (cinit lift: faultType_' sender_' receiver_')
-   apply (clarsimp simp: bind_assoc seL4_Fault_tag_defs ccorres_cond_iffs
-                   split del: if_split split: arch_fault.split)
+   apply (clarsimp simp: bind_assoc seL4_Fault_tag_defs ccorres_cond_iffs Let_def
+                   split del: if_split)
+   apply (wpc ; clarsimp simp: seL4_Fault_tag_defs ; ccorres_rewrite)
+     (* same thing three times, could probably be cleaner *)
+     (* VMFault *)
+     apply (rule ccorres_symb_exec_l)
+        apply (rule ccorres_stateAssert)
+        apply wpc
+         apply (clarsimp simp: ccorres_cond_iffs)
+         apply (rule ccorres_return_C)
+           apply simp+
+        apply (rule ccorres_symb_exec_l)
+           apply (ctac add: ccorres_return_C)
+          apply (wp mapM_wp' empty_fail_loadWordUser | clarsimp simp: to_bool_def true_def)+
+    (* VCPUFault *)
+    apply (rule ccorres_symb_exec_l)
+       apply (rule ccorres_stateAssert)
+       apply wpc
+        apply (clarsimp simp: ccorres_cond_iffs)
+        apply (rule ccorres_return_C)
+          apply simp+
+       apply (rule ccorres_symb_exec_l)
+          apply (ctac add: ccorres_return_C)
+         apply (wp mapM_wp' empty_fail_loadWordUser | clarsimp simp: to_bool_def true_def)+
+   (* VGICMaintenance *)
    apply (rule ccorres_symb_exec_l)
       apply (rule ccorres_stateAssert)
       apply wpc
@@ -4110,10 +4151,6 @@ proof -
     apply simp
     done
 qed
-
-schematic_goal arch_fault_to_fault_tag_range:
-  "arch_fault_to_fault_tag x \<in> ?X"
-  by (case_tac x, fastforce simp: seL4_Fault_VMFault_def)
 
 lemma handleFaultReply_ccorres [corres]:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
@@ -4189,9 +4226,8 @@ lemma handleFaultReply_ccorres [corres]:
            apply (wpsimp wp: threadGet_wp)+
 
         (* ArchFault *)
-        apply (rule ccorres_cond_false)
-        apply (rule ccorres_cond_false)
-        apply (rule ccorres_cond_false)
+        apply (rename_tac arch_fault)
+        apply ccorres_rewrite
         apply (rule ccorres_rhs_assoc)
         (* apply (rule_tac P="\<lambda>s. \<exists>t. ko_at' t r s" in ccorres_cross_over_guard) *)
         apply (rule_tac val="fault_to_fault_tag f"
@@ -4239,7 +4275,6 @@ lemma handleFaultReply_ccorres [corres]:
                         min_def word_less_nat_alt true_def
                         obj_at'_def
                  split: if_split)
-  using arch_fault_to_fault_tag_range
   apply (fastforce simp: seL4_Faults seL4_Arch_Faults)
   done
 
@@ -4713,6 +4748,7 @@ lemma sendIPC_dequeue_ccorres_helper:
            apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
             apply simp
            apply (erule (1) map_to_ko_atI')
+          subgoal sorry -- "vcpu relation"
           -- "queue relation"
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
@@ -4761,6 +4797,7 @@ lemma sendIPC_dequeue_ccorres_helper:
           apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
            apply simp
           apply (erule (1) map_to_ko_atI')
+         subgoal sorry -- "vcpu relation"
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -5114,6 +5151,7 @@ lemma sendIPC_enqueue_ccorres_helper:
            apply (simp only:projectKOs injectKO_ep objBits_simps)
            apply clarsimp
           apply (clarsimp simp: obj_at'_def projectKOs)
+         subgoal sorry -- "vcpu relation"
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -5155,6 +5193,7 @@ lemma sendIPC_enqueue_ccorres_helper:
          apply (erule(2) map_to_ko_at_updI')
           apply (clarsimp simp: objBitsKO_def)
          apply (clarsimp simp: obj_at'_def projectKOs)
+        subgoal sorry -- "vcpu relation"
         -- "queue relation"
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         apply (clarsimp simp: comp_def)
@@ -5551,6 +5590,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
           apply (erule(2) map_to_ko_at_updI')
            apply (clarsimp simp: objBitsKO_def)
           apply (clarsimp simp: obj_at'_def projectKOs)
+         subgoal sorry -- "vcpu relation"
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -5589,6 +5629,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
          apply (erule(2) map_to_ko_at_updI')
           apply (clarsimp simp: objBitsKO_def)
          apply (clarsimp simp: obj_at'_def projectKOs)
+        subgoal sorry -- "vcpu relation"
         -- "queue relation"
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         apply (clarsimp simp: comp_def)
@@ -5673,6 +5714,7 @@ lemma receiveIPC_dequeue_ccorres_helper:
            apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
            apply simp
           apply (erule (1) map_to_ko_atI')
+          subgoal sorry -- "vcpu relation"
           -- "queue relation"
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
@@ -5721,6 +5763,7 @@ lemma receiveIPC_dequeue_ccorres_helper:
           apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
            apply simp
           apply (erule (1) map_to_ko_atI')
+         subgoal sorry -- "vcpu relation"
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -6247,6 +6290,7 @@ lemma sendSignal_dequeue_ccorres_helper:
             apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def
                              tcb_queue_relation'_def)
            apply simp
+          subgoal sorry -- "vcpu relation"
           -- "queue relation"
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
@@ -6297,6 +6341,7 @@ lemma sendSignal_dequeue_ccorres_helper:
                        split del: if_split)
            apply (clarsimp split: if_split)
           apply simp
+         subgoal sorry -- "vcpu relation"
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -6677,6 +6722,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
                                  valid_ntfn'_def
                            dest: tcb_queue_relation_next_not_NULL)
           apply (simp add: isWaitingNtfn_def)
+         subgoal sorry -- "vcpu relation"
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          subgoal by (clarsimp simp: comp_def)
@@ -6717,6 +6763,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
                          split: if_split)
           apply (fastforce simp: tcb_queue_relation'_def is_aligned_neg_mask)
          apply (simp add: isWaitingNtfn_def)
+        subgoal sorry -- "vcpu relation"
         -- "queue relation"
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         apply (clarsimp simp: comp_def)
