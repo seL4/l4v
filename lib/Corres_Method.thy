@@ -755,6 +755,47 @@ lemma corresK_fail_no_fail'[corresK]:
   by (fastforce intro!: corres_fail)
 
 
+(* Throw and catch. *)
+
+(* FIXME: I was not able to get these to work nicely, so for now, they are
+          not added to any rule sets. *)
+
+lemma corresK_strengthen_rv:
+  assumes "corres_underlyingK sr nf nf' F r' P P' a c"
+  assumes "\<And>rv rv'. r' rv rv' \<Longrightarrow> r rv rv'"
+  shows   "corres_underlyingK sr nf nf' F r  P P' a c"
+  using assms unfolding corres_underlyingK_def corres_underlying_def by blast
+
+definition
+  "corres_rv_disj r' r'' r \<equiv> \<forall> rv rv'. r' rv rv' \<or> r'' rv rv' \<longrightarrow> r rv rv'"
+
+lemma corres_rv_disj_same (* [intro!] *): "corres_rv_disj r r r"
+  unfolding corres_rv_disj_def by simp
+
+lemma corresK_split_catch (* [corres_splits] *):
+  assumes x: "corres_underlyingK sr nf nf' F (f \<oplus> r') P P' a c"
+  assumes y: "\<And>e e'. f e e' \<Longrightarrow> corres_underlyingK sr nf nf' (F' e e') r'' (E e) (E' e') (b e) (d e')"
+  assumes z: "\<lbrace>Q\<rbrace> a -,\<lbrace>E\<rbrace>" "\<lbrace>Q'\<rbrace> c -,\<lbrace>E'\<rbrace>"
+  assumes c: "corres_rv sr (\<lambda>rv rv'. case (rv,rv') of (Inl e, Inl e') \<Rightarrow> f e e' \<longrightarrow> F' e e' | _ \<Rightarrow> True)
+                        PP PP' a c"
+  assumes r: "corres_rv_disj r' r'' r"
+  shows      "corres_underlyingK sr nf nf' F r (PP and P and Q) (PP' and P' and Q')
+                                 (a <catch> b) (c <catch> d)"
+  unfolding catch_def
+  apply (rule corresK_split[OF x, where R="case_sum E \<top>\<top>" and R'="case_sum E' \<top>\<top>"
+                                    and F'="\<lambda>r r'. case (r,r') of (Inl e, Inl e') \<Rightarrow> F' e e' | _ \<Rightarrow> True"])
+     apply (rename_tac rv rv'; case_tac rv; clarsimp)
+      apply (rule corresK_strengthen_rv[OF y]; simp add: r[simplified corres_rv_disj_def])
+     apply (rule corresK_weaken[OF corresK_return]; simp add: r[simplified corres_rv_disj_def])
+    using c z
+    by (auto simp: validE_E_def validE_def split_def valid_def corres_rv_def
+            split: sum.splits)
+
+lemma corresK_throwError (* [corresK] *):
+  "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throwError b)"
+  unfolding corres_underlyingK_def by simp
+
+
 (* Wrap it up in a big hammer. Small optimization to avoid searching when no fact is given. *)
 
 method corressimp uses simp cong search wp

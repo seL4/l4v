@@ -13,6 +13,12 @@ imports CSpace_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
+
+(* FIXME move *)
+lemma oblivious_mapM_x:
+  "\<forall>x\<in>set xs. oblivious f (g x) \<Longrightarrow> oblivious f (mapM_x g xs)"
+by (induct xs) (auto simp: mapM_x_Nil mapM_x_Cons oblivious_bind)
+
 (* FIXME MOVE *)
 lemma hoare_pre_post:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> Q s ; \<lbrace> Q \<rbrace> f \<lbrace>\<lambda>_. Q \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace>\<lambda>_. Q \<rbrace>"

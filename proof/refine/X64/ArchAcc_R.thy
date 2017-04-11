@@ -105,9 +105,11 @@ lemma aligned_distinct_relation_asid_pool_atI'[elim]:
   done
 
 lemma get_asid_pool_corres':
-  "corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
-          (asid_pool_at p) (pspace_aligned' and pspace_distinct')
-          (get_asid_pool p) (getObject p)"
+  assumes "p' = p"
+  shows "corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
+                (asid_pool_at p) (pspace_aligned' and pspace_distinct')
+                (get_asid_pool p) (getObject p')"
+  apply (simp add: assms)
   apply (rule stronger_corres_guard_imp,
          rule get_asid_pool_corres)
    apply auto
@@ -1796,12 +1798,26 @@ lemma asidHighBitsOf [simp]:
   apply (simp add: word_size nth_ucast)
   done
 
-lemma find_vspace_for_asid_corres'':
-  "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s)
-                           and valid_arch_objs and pspace_aligned
-                           and K (0 < asid \<and> asid \<le> mask asidBits))
-                       (pspace_aligned' and pspace_distinct' and no_0_obj')
-                       (find_vspace_for_asid asid) (findVSpaceForASID asid)"
+term vspace_at_asid
+
+find_consts "64 word \<Rightarrow> 'a state \<Rightarrow> bool" name:asid
+
+(* FIXME: move to invariants? *)
+definition
+  "vspace_at_asid_ex asid \<equiv> \<lambda>s. \<exists>pm. vspace_at_asid asid pm s"
+
+definition
+  "vspace_at_uniq_ex asid \<equiv> \<lambda>s. \<exists>pm. vspace_at_asid asid pm s \<and> vspace_at_uniq asid pm s"
+
+lemma find_vspace_for_asid_corres:
+  assumes "asid' = asid"
+  shows "corres (lfr \<oplus> op =)
+                ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid_ex asid s)
+                    and valid_arch_objs and pspace_aligned
+                    and K (0 < asid \<and> asid \<le> mask asidBits))
+                (pspace_aligned' and pspace_distinct' and no_0_obj')
+                (find_vspace_for_asid asid) (findVSpaceForASID asid')"
+  using assms
   apply (simp add: find_vspace_for_asid_def findVSpaceForASID_def)
   apply (rule corres_gen_asm, simp)
   apply (simp add: liftE_bindE asidRange_def
@@ -1814,7 +1830,7 @@ lemma find_vspace_for_asid_corres'':
   apply (simp add: liftME_def bindE_assoc)
   apply (simp add: liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_asid_pool_corres'])
+    apply (rule corres_split [OF _ get_asid_pool_corres'[OF refl]])
       apply (rule_tac P="case_option \<top> page_map_l4_at (pool (ucast asid)) and pspace_aligned"
                  and P'="no_0_obj' and pspace_distinct'" in corres_inst)
       apply (rule_tac F="pool (ucast asid) \<noteq> Some 0" in corres_req)
@@ -1847,7 +1863,7 @@ lemma find_vspace_for_asid_corres'':
     apply (erule disjE)
      apply (clarsimp simp: valid_arch_state_def valid_asid_table_def)
      apply fastforce
-    apply (clarsimp simp: vspace_at_asid_def valid_arch_objs_def)
+    apply (clarsimp simp: vspace_at_asid_ex_def vspace_at_asid_def valid_arch_objs_def)
     apply (clarsimp simp: vs_asid_refs_def graph_of_def elim!: vs_lookupE)
     apply (erule rtranclE)
      apply simp
@@ -1869,20 +1885,14 @@ lemma find_vspace_for_asid_corres'':
   apply simp
   done
 
-lemma find_vspace_for_asid_corres:
-  "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s) and valid_arch_objs
-                           and pspace_aligned and K (0 < asid \<and> asid \<le> mask asidBits))
-                       (pspace_aligned' and pspace_distinct' and no_0_obj')
-                       (find_vspace_for_asid asid) (findVSpaceForASID asid)"
-  apply (rule find_vspace_for_asid_corres'')
-  done
-
 lemma find_vspace_for_asid_corres':
-  "corres (lfr \<oplus> op =) (vspace_at_asid asid pd and valid_arch_objs
-                           and pspace_aligned and  K (0 < asid \<and> asid \<le> mask asidBits))
-                       (pspace_aligned' and pspace_distinct' and no_0_obj')
-                       (find_vspace_for_asid asid) (findVSpaceForASID asid)"
-  apply (rule corres_guard_imp, rule find_vspace_for_asid_corres'')
+  assumes "asid' = asid"
+  shows "corres (lfr \<oplus> op =)
+                (vspace_at_asid_ex asid and valid_arch_objs
+                    and pspace_aligned and  K (0 < asid \<and> asid \<le> mask asidBits))
+                (pspace_aligned' and pspace_distinct' and no_0_obj')
+                (find_vspace_for_asid asid) (findVSpaceForASID asid')"
+  apply (rule corres_guard_imp, rule find_vspace_for_asid_corres[OF assms])
    apply fastforce
   apply simp
   done

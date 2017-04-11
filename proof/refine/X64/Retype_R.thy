@@ -1679,11 +1679,6 @@ where
     return $ ptrs
   od"
 
-(* FIXME move *)
-lemma oblivious_mapM_x:
-  "\<forall>x\<in>set xs. oblivious f (g x) \<Longrightarrow> oblivious f (mapM_x g xs)"
-by (induct xs) (auto simp: mapM_x_Nil mapM_x_Cons oblivious_bind)
-
 lemma retype_region_ext_modify_kheap_futz:
   "(retype_region2_extra_ext ptrs type :: (unit, det_ext) s_monad) >>= (\<lambda>_. modify (kheap_update f))
  = (modify (kheap_update f) >>= (\<lambda>_. retype_region2_extra_ext ptrs type))"
