@@ -67,18 +67,16 @@ definition
         in doE
 
         whenE (x > ucast maxIRQ) $ throwError (RangeError 0 (ucast maxIRQ));
-
-        dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
-        ensure_empty dest_slot;
-
         irq_active \<leftarrow> liftE $ is_irq_active irqv;
         whenE irq_active $ throwError RevokeFirst;
+        dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
+        ensure_empty dest_slot;
 
        (* Following should be wrapped in to a funcion like what c did
           since it is pc99 related, problem is where to put this function*)
 
-        whenE (ioapic > numIOAPICs - 1) $ throwError (RangeError 0 numIOAPICs);
-        whenE (pin > ioapicIRQLines - 1) $ throwError (RangeError 0 ioapicIRQLines);
+        whenE (ioapic > numIOAPICs - 1) $ throwError (RangeError 0 (numIOAPICs-1));
+        whenE (pin > ioapicIRQLines - 1) $ throwError (RangeError 0 (ioapicIRQLines-1));
         whenE (level > 1) $ throwError (RangeError 0 1);
         whenE (polarity > 1) $ throwError (RangeError 0 1);
 

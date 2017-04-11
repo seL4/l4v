@@ -14,7 +14,6 @@ begin
 
 context Arch begin global_naming X64
 
-thm irq_control_inv_valid.simps arch_decode_irq_control_invocation_def
 primrec arch_irq_control_inv_valid_real :: "arch_irq_control_invocation \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
 where
   "arch_irq_control_inv_valid_real (IssueIRQHandlerIOAPIC irq dest_slot src_slot
