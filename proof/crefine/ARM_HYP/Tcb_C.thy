@@ -701,6 +701,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                     apply (clarsimp simp: ccap_relation_def cap_thread_cap_lift
                                           cap_to_H_def)
                    apply (rule ccorres_cond_false_seq | simp)+
+sorry (* FIXME ARMHYP proof breaks here, good luck
                    apply (simp split: option.split_asm)
                    apply (rule ccorres_return_CE, simp+)[1]
                   apply simp
@@ -905,7 +906,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                   dest!: isValidVTableRootD)
   apply (clarsimp simp: valid_cap'_def capAligned_def  word_bits_conv
                         obj_at'_def objBits_simps projectKOs)
-  done
+  done *)
 
 lemma setupReplyMaster_ccorres:
   "ccorres dc xfdc (tcb_at' t)
@@ -947,8 +948,10 @@ lemma setupReplyMaster_ccorres:
         apply clarsimp
         apply (rule conjI)
          apply (erule(2) cmap_relation_updI)
+sorry (* FIXME ARMHYP some simp rule is not firing properly; large goal, clarsimp seems stuck for
           apply (clarsimp simp: ccte_relation_def cap_reply_cap_lift
                                 cte_lift_def)
+          several minutes
           apply (simp add: cte_to_H_def cap_to_H_def mdb_node_to_H_def
                            nullMDBNode_def c_valid_cte_def)
           apply (simp add: cap_reply_cap_lift)
@@ -967,7 +970,7 @@ lemma setupReplyMaster_ccorres:
    apply vcg
   apply (clarsimp simp: word_sle_def cte_wp_at_ctes_of
                         tcb_cnode_index_defs tcbReplySlot_def)
-  done
+  done *)
 
 lemma restart_ccorres:
   "ccorres dc xfdc (invs' and tcb_at' thread and sch_act_simple)
@@ -1149,12 +1152,17 @@ lemma invokeTCB_WriteRegisters_ccorres_helper:
      apply (rule ccorres_symb_exec_r)
        apply (ctac add: setRegister_ccorres)
       apply vcg
+     apply clarsimp
      apply (rule conseqPre, vcg, clarsimp)
+     apply fastforce
     apply wp
    apply simp
    apply (vcg exspec=getSyscallArg_modifies)
+  apply clarsimp
+sorry (* FIXME ARMHYP might not be true anymore due to changed sanitiseRegister on hyp platform,
+         consequently requiring investigation at the point this is used
   apply (fastforce)
-  done
+  done *)
 
 lemma doMachineOp_context:
   "(rv,s') \<in> fst (doMachineOp f s) \<Longrightarrow>
@@ -1826,7 +1834,6 @@ shows
                                                  n_gpRegisters_def msg_registers_convs
                                           split: option.split_asm)
                            apply (simp add: min_def split: if_split_asm if_split)
-                           apply arith
                           apply (drule_tac s=rv'a in sym, simp)
                           apply (rule_tac P=\<top> and P'="{s. i_' s = rv'a}" in ccorres_inst)
                           apply clarsimp
@@ -1961,6 +1968,7 @@ shows
                          apply clarsimp
                         apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
                         apply (simp add: message_info_to_H_def)
+sorry (* FIXME ARMHYP good luck
                         apply (clarsimp simp: n_frameRegisters_def n_msgRegisters_def
                                               n_gpRegisters_def field_simps upto_enum_word
                                               word_less_nat_alt Types_H.msgMaxLength_def
@@ -2036,7 +2044,7 @@ shows
    apply (rule conseqPre, vcg, clarsimp)
   apply (clarsimp simp: rf_sr_ksCurThread ct_in_state'_def true_def
                  split: if_split)
-  done
+  done *)
 
 lemma capTCBPtr_eq:
   "\<lbrakk> ccap_relation cap cap'; isThreadCap cap \<rbrakk>
@@ -2400,7 +2408,6 @@ lemma decodeCopyRegisters_ccorres:
                          ct_in_state'_def pred_tcb_at')
    apply (rule conjI)
     apply (clarsimp simp: sysargs_rel_n_def n_msgRegisters_def)
-   apply (cut_tac msk=ba and cap="cteCap cte" in capMasterCap_maskCapRights)
    apply (clarsimp simp: isCap_simps simp del: capMasterCap_maskCapRights)
    apply (frule ctes_of_valid', clarsimp+)
    apply (auto simp: valid_cap'_def excaps_map_def valid_tcb_state'_def
@@ -3688,6 +3695,7 @@ lemma decodeBindNotification_ccorres:
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: excaps_map_def invocationCatch_def throwError_bind null_def
                cong: StateSpace.state.fold_congs globals.fold_congs)
+sorry (* FIXME ARMHYP good luck
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
    apply (simp add: excaps_map_def null_def del: Collect_const cong: call_ignore_cong)
@@ -3856,7 +3864,7 @@ lemma decodeBindNotification_ccorres:
        apply (auto simp: word_sless_alt typ_heap_simps cap_get_tag_ThreadCap ctcb_relation_def
                          option_to_ptr_def option_to_0_def
                   split: if_split)
-  done
+  done *)
 
 
 lemma decodeSetSpace_ccorres:
