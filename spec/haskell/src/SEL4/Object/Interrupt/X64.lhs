@@ -48,6 +48,9 @@ This module defines the machine-specific interrupt handling routines for x64.
 >             rangeCheck irqW (fromEnum minIRQ) (fromEnum maxIRQ)
 >             let irq = toEnum (fromIntegral irqW) :: IRQ
 >
+>             irqActive <- withoutFailure $ isIRQActive irq
+>             when irqActive $ throw RevokeFirst
+>
 >             destSlot <- lookupTargetSlot cnode (CPtr index)
 >                 (fromIntegral depth)
 >             ensureEmptySlot destSlot
@@ -63,6 +66,8 @@ This module defines the machine-specific interrupt handling routines for x64.
 >             return $ ArchInv.IssueIRQHandlerIOAPIC irq destSlot srcSlot ioapic
 >                 pin level polarity vector
 >
+>         (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerIOAPIC, _, _) -> throw TruncatedMessage
+>
 >         (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerMSI,
 >                  index:depth:pciBus:pciDev:pciFunc:handle:irqW:_, cnode:_) -> do
 >
@@ -70,10 +75,13 @@ This module defines the machine-specific interrupt handling routines for x64.
 >             rangeCheck irqW (fromEnum minIRQ) (fromEnum maxIRQ)
 >             let irq = toEnum (fromIntegral irqW) :: IRQ
 >
+>             irqActive <- withoutFailure $ isIRQActive irq
+>             when irqActive $ throw RevokeFirst
+>
 >             destSlot <- lookupTargetSlot cnode (CPtr index)
 >                 (fromIntegral depth)
->             ensureEmptySlot destSlot
 >
+>             ensureEmptySlot destSlot
 >             rangeCheck pciBus 0 Arch.maxPCIBus
 >             rangeCheck pciDev 0 Arch.maxPCIDev
 >             rangeCheck pciFunc 0 Arch.maxPCIFunc
@@ -81,6 +89,8 @@ This module defines the machine-specific interrupt handling routines for x64.
 >             return $ ArchInv.IssueIRQHandlerMSI irq destSlot srcSlot pciBus
 >                 pciDev pciFunc handle
 >
+>         (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerMSI, _, _) -> throw TruncatedMessage
+
 >         _ -> throw IllegalOperation
 
 > performIRQControl :: ArchInv.IRQControlInvocation -> KernelP ()
@@ -91,7 +101,7 @@ This module defines the machine-specific interrupt handling routines for x64.
 >     doMachineOp $ Arch.updateIRQState irq irqState
 >     -- do same thing as generic path in performIRQControl in Interrupt.lhs
 >     setIRQState IRQSignal (IRQ irq)
->     cteInsert (IRQHandlerCap (IRQ irq)) destSlot srcSlot
+>     cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
 >     return ()
 >
 > performIRQControl (ArchInv.IssueIRQHandlerMSI (IRQ irq) destSlot srcSlot pciBus
@@ -100,7 +110,7 @@ This module defines the machine-specific interrupt handling routines for x64.
 >     doMachineOp $ Arch.updateIRQState irq irqState
 >     -- do same thing as generic path in performIRQControl in Interrupt.lhs
 >     setIRQState IRQSignal (IRQ irq)
->     cteInsert (IRQHandlerCap (IRQ irq)) destSlot srcSlot
+>     cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
 >     return ()
 
 %FIXME: separate ranges for ISA interrupts and user interrupts
