@@ -2968,7 +2968,7 @@ lemma dissociateVCPUTCB_unqueued:
 
 lemmas asUser_st_tcb_at'[wp] = asUser_obj_at [folded st_tcb_at'_def]
 lemmas setObject_vcpu_st_tcb_at'[wp] =
-  setObject_vcpu_obj_at'_tcb [where P="P o tcbState" for P, folded st_tcb_at'_def]
+  setObject_vcpu_obj_at'_no_vcpu [where P'="P o tcbState" for P, folded st_tcb_at'_def]
 lemmas vcpuInvalidateActive_st_tcb_at'[wp] =
   vcpuInvalidateActive_no_vcpu [where P="P o tcbState" for P, folded st_tcb_at'_def]
 

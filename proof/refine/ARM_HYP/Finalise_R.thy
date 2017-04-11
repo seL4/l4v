@@ -3131,7 +3131,7 @@ lemma archThreadSet_bound_tcb_at'[wp]:
 lemmas asUser_bound_obj_at'[wp] = asUser_pred_tcb_at' [of itcbBoundNotification]
 
 lemmas setObject_vcpu_pred_tcb_at'[wp] =
-  setObject_vcpu_obj_at'_tcb [of "\<lambda>ko. tst (pr (tcb_to_itcb' ko))" for tst pr, folded pred_tcb_at'_def]
+  setObject_vcpu_obj_at'_no_vcpu [of _ "\<lambda>ko. tst (pr (tcb_to_itcb' ko))" for tst pr, folded pred_tcb_at'_def]
 
 crunch bound_tcb_at'[wp]: dissociateVCPUTCB "bound_tcb_at' P t"
   (wp: sts_bound_tcb_at' getVCPU_wp crunch_wps hoare_vcg_all_lift hoare_vcg_if_lift3

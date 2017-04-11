@@ -936,7 +936,7 @@ proof -
     apply (simp add:  pred_tcb_at'_def ARM_HYP_H.switchToThread_def)
     apply (rule hoare_seq_ext)+
        apply (rule doMachineOp_obj_at)
-     apply (rule setVMRoot_obj_at)
+     apply (rule setVMRoot_obj_at'_no_vcpu)
     done
   show ?thesis
     apply (rule P_bool_lift [OF pos])
@@ -1303,7 +1303,7 @@ lemma Arch_switchToThread_obj_at[wp]:
   apply (simp add: ARM_HYP_H.switchToThread_def )
   apply (rule hoare_seq_ext)+
    apply (rule doMachineOp_obj_at)
-  apply (rule setVMRoot_obj_at)
+  apply (rule setVMRoot_obj_at'_no_vcpu)
   done
 
 declare doMachineOp_obj_at[wp]

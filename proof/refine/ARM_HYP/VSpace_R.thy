@@ -3167,26 +3167,38 @@ lemma pap_corres:
   apply (clarsimp simp: cte_wp_at_ctes_of valid_apinv'_def)
   done
 
-lemma armv_contextSwitch_obj_at [wp]:
+lemma armv_contextSwitch_obj_at' [wp]:
   "\<lbrace>\<lambda>s. P (obj_at' P' t s)\<rbrace> armv_contextSwitch pd a \<lbrace>\<lambda>rv s. P (obj_at' P' t s)\<rbrace>"
   apply (simp add: armv_contextSwitch_def armv_contextSwitch_HWASID_def getHWASID_def)
   apply (wp doMachineOp_obj_at|wpc|simp)+
   done
 
-lemma setObject_vcpu_obj_at'_tcb[wp]:
-  "\<lbrace>obj_at' (P :: ('a :: no_vcpu) \<Rightarrow> bool) t \<rbrace> setObject ptr (e::vcpu) \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad not_vcpu[symmetric])
+lemma projectKO_opt_no_vcpu[simp]:
+  "projectKO_opt (KOArch (KOVCPU v)) = (None::'a::no_vcpu option)"
+    by (rule ccontr) (simp add: project_koType not_vcpu[symmetric])
+
+lemma setObject_vcpu_obj_at'_no_vcpu[wp]:
+  "setObject ptr (v::vcpu) \<lbrace>\<lambda>s. P (obj_at' (P'::'a::no_vcpu \<Rightarrow> bool) t s)\<rbrace>"
+  apply (wp setObject_ko_wp_at[where
+        P'="\<lambda>ko. \<exists>obj. projectKO_opt ko = Some obj \<and> P' (obj::'a::no_vcpu)" for P',
+        folded obj_at'_real_def])
+     apply (clarsimp simp: updateObject_default_def in_monad not_vcpu[symmetric])
+    apply (simp add: objBits_simps archObjSize_def)
+   apply (simp add: vcpu_bits_def pageBits_def)
+  apply (clarsimp split del: if_split)
+  apply (erule rsubst[where P=P])
+  apply normalise_obj_at'
+  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs)
   done
 
-crunch obj_at'[wp]: vcpuSave, vcpuDisable, vcpuEnable, vcpuRestore "obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t"
-  (ignore: setObject simp: crunch_simps wp: crunch_wps)
+crunch obj_at'_no_vcpu[wp]: vcpuSave, vcpuDisable, vcpuEnable, vcpuRestore "\<lambda>s. P (obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t s)"
+  (ignore: setObject getObject simp: crunch_simps wp: crunch_wps)
 
-lemma vcpuSwitch_obj_at[wp]:
-  "\<lbrace>obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. obj_at' P' t\<rbrace>"
+lemma vcpuSwitch_obj_at'_no_vcpu[wp]:
+  "vcpuSwitch param_a \<lbrace>\<lambda>s. P (obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t s)\<rbrace>"
   by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
-crunch obj_at[wp]: setVMRoot "obj_at' (P :: ('a :: no_vcpu) \<Rightarrow> bool) t"
+crunch obj_at'_no_vcpu[wp]: setVMRoot "\<lambda>s. P (obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t s)"
   (simp: crunch_simps ignore: getObject)
 
 lemma storeHWASID_invs:
@@ -3451,10 +3463,6 @@ lemma dmo'_gets_wp:
   "\<lbrace>\<lambda>s. Q (f (ksMachineState s)) s\<rbrace> doMachineOp (gets f) \<lbrace>Q\<rbrace>"
     unfolding doMachineOp_def by (wpsimp simp: in_monad)
 
-lemma projectKO_opt_no_vcpu[simp]:
-  "projectKO_opt (KOArch (KOVCPU v)) = (None::'a::no_vcpu option)"
-    by (rule ccontr) (simp add: project_koType not_vcpu[symmetric])
-
 lemma setObject_vcpu_cur_domain[wp]:
   "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>"
     by (wpsimp wp: updateObject_default_inv simp: setObject_def)
@@ -3531,8 +3539,8 @@ lemma setVCPU_if_unsafe[wp]:
 		    done
 
 lemmas setVCPU_pred_tcb'[wp] =
-  setObject_vcpu_obj_at'_tcb
-      [where P="\<lambda>ko. P (proj (tcb_to_itcb' ko))" for P proj, folded pred_tcb_at'_def]
+  setObject_vcpu_obj_at'_no_vcpu
+      [where P'="\<lambda>ko. P (proj (tcb_to_itcb' ko))" for P proj, folded pred_tcb_at'_def]
 
 lemma setVCPU_valid_idle'[wp]:
   "setObject v (vcpu::vcpu) \<lbrace>valid_idle'\<rbrace>"
@@ -3649,20 +3657,6 @@ lemma setObject_vcpu_valid_objs':
        apply (clarsimp simp: in_monad updateObject_default_def projectKOs valid_obj'_def)
          apply simp
 	   done
-
-lemma setObject_vcpu_obj_at'_no_vcpu[wp]:
-  "setObject ptr (v::vcpu) \<lbrace>\<lambda>s. P (obj_at' (P'::'a::no_vcpu \<Rightarrow> bool) t s)\<rbrace>"
-    apply (wp setObject_ko_wp_at[where
-                   P'="\<lambda>ko. \<exists>obj. projectKO_opt ko = Some obj \<and> P' (obj::'a::no_vcpu)" for P',
-		                  folded obj_at'_real_def])
-				       apply (clarsimp simp: updateObject_default_def in_monad not_vcpu[symmetric])
-				           apply (simp add: objBits_simps archObjSize_def)
-					      apply (simp add: vcpu_bits_def pageBits_def)
-					        apply (clarsimp split del: if_split)
-						  apply (erule rsubst[where P=P])
-						    apply normalise_obj_at'
-						      apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs)
-						        done
 
 lemma setVCPU_valid_arch':
  "\<lbrace>valid_arch_state' and (\<lambda>s. \<forall>a. armHSCurVCPU (ksArchState s) = Some (v,a) \<longrightarrow> hyp_live' (KOArch (KOVCPU vcpu))) \<rbrace>
