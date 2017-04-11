@@ -144,7 +144,7 @@ lemma Arch_switchToThread_obj_at_pre:
    Arch.switchToThread t
    \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
   apply (simp add: ARM_HYP_H.switchToThread_def)
-  apply (wp asUser_obj_at_notQ doMachineOp_obj_at setVMRoot_obj_at hoare_drop_imps|wpc)+
+  apply (wp asUser_obj_at_notQ doMachineOp_obj_at setVMRoot_obj_at'_no_vcpu hoare_drop_imps|wpc)+
   done
 
 lemma rescheduleRequired_obj_at_unchangedT:
