@@ -23,7 +23,7 @@ lemma get_mi_corres: "corres (op = \<circ> message_info_map)
   apply (rule corres_guard_imp)
     apply (unfold get_message_info_def getMessageInfo_def fun_app_def)
     apply (simp add: X64_H.msgInfoRegister_def
-             ARM.msgInfoRegister_def X64_A.msg_info_register_def)
+             X64.msgInfoRegister_def X64_A.msg_info_register_def)
     apply (rule corres_split_eqr [OF _ user_getreg_corres])
        apply (rule corres_trivial, simp add: message_info_from_data_eqv)
       apply (wp | simp)+
@@ -91,17 +91,17 @@ lemma rights_mask_map_data_to_rights:
                 data_to_rights_def Let_def nth_ucast)
 
 (* MOVE *)
-lemma valid_ipc_buffer_ptr_aligned_2:
-  "\<lbrakk>valid_ipc_buffer_ptr' a s;  is_aligned y 2 \<rbrakk> \<Longrightarrow> is_aligned (a + y) 2"
+lemma valid_ipc_buffer_ptr_aligned_word_size_bits:
+  "\<lbrakk>valid_ipc_buffer_ptr' a s;  is_aligned y word_size_bits \<rbrakk> \<Longrightarrow> is_aligned (a + y) word_size_bits"
   unfolding valid_ipc_buffer_ptr'_def
   apply clarsimp
   apply (erule (1) aligned_add_aligned)
-  apply (simp add: msg_align_bits)
+  apply (simp add: msg_align_bits word_size_bits_def)
   done
 
 (* MOVE *)
 lemma valid_ipc_buffer_ptr'D2:
-  "\<lbrakk>valid_ipc_buffer_ptr' a s; y < max_ipc_words * 4; is_aligned y 2\<rbrakk> \<Longrightarrow> typ_at' UserDataT (a + y && ~~ mask pageBits) s"
+  "\<lbrakk>valid_ipc_buffer_ptr' a s; y < max_ipc_words * word_size; is_aligned y word_size_bits\<rbrakk> \<Longrightarrow> typ_at' UserDataT (a + y && ~~ mask pageBits) s"
   unfolding valid_ipc_buffer_ptr'_def
   apply clarsimp
   apply (subgoal_tac "(a + y) && ~~ mask pageBits = a  && ~~ mask pageBits")
@@ -109,11 +109,14 @@ lemma valid_ipc_buffer_ptr'D2:
   apply (rule mask_out_first_mask_some [where n = msg_align_bits])
    apply (erule is_aligned_add_helper [THEN conjunct2])
    apply (erule order_less_le_trans)
-   apply (simp add: msg_align_bits max_ipc_words )
+   apply (simp add: msg_align_bits max_ipc_words word_size_def)
   apply simp
   done
 
 lemma load_ct_corres:
+  notes msg_max_words_simps = max_ipc_words_def msgMaxLength_def msgMaxExtraCaps_def msgLengthBits_def
+                              capTransferDataSize_def msgExtraCapBits_def
+  shows
   "corres ct_relation \<top> (valid_ipc_buffer_ptr' buffer) (load_cap_transfer buffer) (loadCapTransfer buffer)"
   apply (simp add: load_cap_transfer_def loadCapTransfer_def
                    captransfer_from_words_def captransfer_size_def
@@ -132,8 +135,10 @@ lemma load_ct_corres:
    apply simp
   apply (simp add: conj_comms)
   apply safe
-       apply (erule valid_ipc_buffer_ptr_aligned_2, simp add: is_aligned_def)+
-    apply (erule valid_ipc_buffer_ptr'D2, simp add: max_ipc_words, simp add: is_aligned_def)+
+       apply (erule valid_ipc_buffer_ptr_aligned_word_size_bits, simp add: is_aligned_def word_size_bits_def)+
+    apply (erule valid_ipc_buffer_ptr'D2,
+              simp add: msg_max_words_simps word_size_def word_size_bits_def,
+              simp add: word_size_bits_def is_aligned_def)+
   done
 
 lemma get_recv_slot_corres:
@@ -217,10 +222,10 @@ lemma get_rs_real_cte_at'[wp]:
 
 declare word_div_1 [simp]
 declare word_minus_one_le [simp]
-declare word32_minus_one_le [simp]
+declare word64_minus_one_le [simp]
 
 lemma load_word_offs_corres':
-  "\<lbrakk> y < unat max_ipc_words; y' = of_nat y * 4 \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> y < unat max_ipc_words; y' = of_nat y * 8 \<rbrakk> \<Longrightarrow>
   corres op = \<top> (valid_ipc_buffer_ptr' a) (load_word_offs a y) (loadWordUser (a + y'))"
   apply simp
   apply (erule load_word_offs_corres)
@@ -258,7 +263,7 @@ lemma get_extra_cptrs_corres:
      apply (clarsimp simp: set_zip_same zip_map1 buffer_cptr_index_def)
      apply (clarsimp simp add: valid_message_info_def msg_max_extra_caps_def)
       apply (subgoal_tac "b < 6")
-     apply (simp add: of_nat_Suc [symmetric] word_less_nat_alt unat_of_nat32 word_bits_conv
+     apply (simp add: of_nat_Suc [symmetric] word_less_nat_alt unat_of_nat64 word_bits_conv
      del: of_nat_Suc)
      apply (simp add: word_le_nat_alt)
     apply simp+
@@ -1004,12 +1009,6 @@ lemma transferCapsToSlots_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> transferCapsToSlots ep buffer n caps slots mi \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   by (wp transferCapsToSlots_pres1)
 
-crunch valid_pde_mappings' [wp]: setExtraBadge valid_pde_mappings'
-
-lemma transferCapsToSlots_pde_mappings'[wp]:
-  "\<lbrace>valid_pde_mappings'\<rbrace> transferCapsToSlots ep buffer n caps slots mi \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
-  by (wp transferCapsToSlots_pres1)
-
 lemma transferCapsToSlots_irqs_masked'[wp]:
   "\<lbrace>irqs_masked'\<rbrace> transferCapsToSlots ep buffer n caps slots mi \<lbrace>\<lambda>rv. irqs_masked'\<rbrace>"
   by (wp transferCapsToSlots_pres1 irqs_masked_lift)
@@ -1018,17 +1017,17 @@ lemma storeWordUser_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> storeWordUser a w \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
 proof -
   have aligned_offset_ignore:
-    "\<And>(l::word32) (p::word32) sz. l<4 \<Longrightarrow> p && mask 2 = 0 \<Longrightarrow>
+    "\<And>(l::machine_word) (p::machine_word) sz. l<8 \<Longrightarrow> p && mask 3 = 0 \<Longrightarrow>
        p+l && ~~ mask pageBits = p && ~~ mask pageBits"
   proof -
     fix l p sz
-    assume al: "(p::word32) && mask 2 = 0"
-    assume "(l::word32) < 4" hence less: "l<2^2" by simp
-    have le: "2 \<le> pageBits" by (simp add: pageBits_def)
+    assume al: "(p::machine_word) && mask 3 = 0"
+    assume "(l::machine_word) < 8" hence less: "l<2^3" by simp
+    have le: "3 \<le> pageBits" by (simp add: pageBits_def)
     show "?thesis l p sz"
       by (rule is_aligned_add_helper[simplified is_aligned_mask,
           THEN conjunct2, THEN mask_out_first_mask_some,
-          where n=2, OF al less le])
+          where n=3, OF al less le])
   qed
 
   show ?thesis
@@ -1044,7 +1043,7 @@ proof -
     apply (erule disjE, simp)
     apply (simp add: pointerInUserData_def word_size)
     apply (subgoal_tac "a && ~~ mask pageBits = p && ~~ mask pageBits", simp)
-    apply (simp only: is_aligned_mask[of _ 2])
+    apply (simp only: is_aligned_mask[of _ 3])
     apply (elim disjE, simp_all)
       apply (rule aligned_offset_ignore[symmetric], simp+)+
     done
@@ -1321,8 +1320,7 @@ lemma updateCapData_derived:
          clarsimp simp add: is_derived'_def badge_derived'_def updateCapDataIRQ)
   apply (rule conjI, erule(1) updateCapData_ordering)
   apply (clarsimp simp add: isCap_simps updateCapData_capReplyMaster)
-  apply auto
-  done
+  by ((rule conjI)?, clarsimp)+
 
 lemma lookup_cap_to'[wp]:
   "\<lbrace>\<top>\<rbrace> lookupCap t cref \<lbrace>\<lambda>rv s. \<forall>r\<in>cte_refs' rv (irq_node' s). ex_cte_cap_to' r s\<rbrace>,-"
@@ -1502,7 +1500,7 @@ lemma getMessageInfo_msgExtraCaps[wp]:
      apply (simp add: word_bits_def msgExtraCapBits_def)
     apply (rule and_mask_less'[unfolded mask_2pm1])
     apply (simp add: msgExtraCapBits_def)
-   apply wp+
+   apply wpsimp+
   done
 
 lemma lcs_corres:
@@ -1853,7 +1851,7 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
    apply (clarsimp simp: projectKO_opts_defs split: kernel_object.split_asm)
   apply (clarsimp simp add: valid_obj'_def valid_tcb'_def
                             isCap_simps cte_level_bits_def field_simps)
-  apply (drule bspec [OF _ ranI [where a = "0x40"]])
+  apply (drule bspec [OF _ ranI [where a = "0x80"]])
    apply simp
   apply (clarsimp simp add: valid_cap'_def)
   apply (rule conjI)
@@ -1861,12 +1859,12 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
      apply (clarsimp simp add: capAligned_def)
      apply assumption
     apply (erule is_aligned_andI1)
-   apply (case_tac xd, simp_all add: msg_align_bits)[1]
+   apply (case_tac xd, simp_all add: msg_align_bits bit_simps)[1]
   apply (clarsimp simp: capAligned_def)
   apply (drule_tac x =
     "(tcbIPCBuffer ko && mask (pageBitsForSize xd))  >> pageBits" in spec)
   apply (subst(asm) mult.commute mult.left_commute, subst(asm) shiftl_t2n[symmetric])
-  apply (simp add: shiftr_shiftl1)
+  apply (simp add: shiftr_shiftl1 )
   apply (subst (asm) mask_out_add_aligned)
    apply (erule is_aligned_weaken [OF _ pbfs_atleast_pageBits])
   apply (erule mp)
@@ -1991,9 +1989,6 @@ crunch irq_states'[wp]: doIPCTransfer "valid_irq_states'"
   (wp: crunch_wps no_irq no_irq_mapM no_irq_storeWord no_irq_loadWord
        no_irq_case_option simp: crunch_simps zipWithM_x_mapM)
 
-crunch pde_mappings'[wp]: doIPCTransfer "valid_pde_mappings'"
-  (wp: crunch_wps simp: crunch_simps)
-
 crunch irqs_masked'[wp]: doIPCTransfer "irqs_masked'"
   (wp: crunch_wps simp: crunch_simps rule: irqs_masked_lift)
 
@@ -2008,6 +2003,18 @@ lemma doIPCTransfer_invs[wp]:
 crunch nosch[wp]: doIPCTransfer "\<lambda>s. P (ksSchedulerAction s)"
   (wp: hoare_drop_imps hoare_vcg_split_case_option mapM_wp'
    simp: split_def zipWithM_x_mapM)
+
+lemma sanitise_register_corres:
+  "foldl (\<lambda>s (a, b) c. if c = a then sanitise_register t' a b else s c) s (zip msg_template msg) =
+   foldl (\<lambda>s (a, b) c. if c = a then sanitiseRegister t'a a b else s c) s (zip msg_template msg)"
+  apply (rule foldl_cong)
+    apply simp
+   apply simp
+  apply (clarsimp)
+  apply (rule arg_cong)
+  apply (clarsimp simp: sanitise_register_def sanitiseRegister_def)
+  by (auto simp: sanitise_or_flags_def sanitise_and_flags_def user_vtop_def mask_def
+                    sanitiseOrFlags_def sanitiseAndFlags_def)
 
 lemma handle_fault_reply_registers_corres:
   "corres (op =) (tcb_at t) (tcb_at' t)
@@ -2031,11 +2038,10 @@ lemma handle_fault_reply_registers_corres:
        apply (rule corres_split)
        apply (rule corres_trivial, simp)
       apply (rule corres_as_user')
-      apply(simp add: set_register_def setRegister_def sanitise_register_def
-                      sanitiseRegister_def syscallMessage_def)
+      apply(simp add: set_register_def setRegister_def syscallMessage_def)
       apply(subst zipWithM_x_modify)+
       apply(rule corres_modify')
-       apply (simp|wp)+
+       apply (simp add: sanitise_register_corres|wp)+
   done
 
 lemma handle_fault_reply_corres:
@@ -3078,8 +3084,6 @@ crunch irq_handlers'[wp]: attemptSwitchTo valid_irq_handlers'
   (simp: unless_def tcb_cte_cases_def wp: crunch_wps)
 crunch irq_states'[wp]: attemptSwitchTo valid_irq_states'
   (wp: crunch_wps)
-crunch pde_mappigns'[wp]: attemptSwitchTo valid_pde_mappings'
-  (wp: crunch_wps)
 
 (* Levity: added (20090713 10:04:33) *)
 declare setNotification_ct' [wp]
@@ -3169,7 +3173,6 @@ crunch typ_at'[wp]: switchIfRequiredTo "\<lambda>s. P (typ_at' T p s)"
 crunch irq_handlers'[wp]: switchIfRequiredTo valid_irq_handlers'
   (simp: unless_def tcb_cte_cases_def)
 crunch irq_states'[wp]: switchIfRequiredTo valid_irq_states'
-crunch pde_mappings'[wp]: switchIfRequiredTo valid_pde_mappings'
 crunch vp[wp]: switchIfRequiredTo valid_pspace'
 crunch tcb_at'[wp]: switchIfRequiredTo "tcb_at' t"
 crunch ct'[wp]: switchIfRequiredTo "\<lambda>s. P (ksCurThread s)"
@@ -4041,9 +4044,6 @@ crunch it[wp]: receiveIPC "\<lambda>s. P (ksIdleThread s)"
 crunch irq_states' [wp]: setupCallerCap valid_irq_states'
   (wp: crunch_wps)
 
-crunch pde_mappings' [wp]: setupCallerCap valid_pde_mappings'
-  (wp: crunch_wps)
-
 crunch irqs_masked' [wp]: receiveIPC "irqs_masked'"
   (wp: crunch_wps rule: irqs_masked_lift)
 
@@ -4391,6 +4391,9 @@ lemma lookupCap_cap_to_refs[wp]:
                    getSlotCap_def)
   apply (wp | simp)+
   done
+
+crunch valid_objs'[wp]: setVMRoot valid_objs'
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_stt_objs' [wp]:
   "\<lbrace>valid_objs'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
