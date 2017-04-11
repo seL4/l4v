@@ -1,11 +1,13 @@
 Built from git repo at /home/joelb/work/verification/l4v/spec/haskell by joelb
 
 Generated from changeset:
-f86b7b0 x64 refine: fix InterruptAcc_R
+b331932 x64: fix Finalise_R
 
 
 Warning - uncomitted changes used:
- M ../../proof/refine/X64/Finalise_R.thy
- M ../../proof/refine/X64/Invariants_H.thy
+ M ../../proof/refine/X64/Ipc_R.thy
+ M ../design/X64/ArchTCB_H.thy
+ M ../design/X64/ArchVSpace_H.thy
  M ../design/version
- M src/SEL4/Object/ObjectType/X64.lhs
+ M src/SEL4/Kernel/VSpace/X64.lhs
+ M src/SEL4/Object/TCB/X64.lhs

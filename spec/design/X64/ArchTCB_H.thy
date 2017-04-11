@@ -27,9 +27,27 @@ where
 "performTransfer arg1 arg2 arg3 \<equiv> return ()"
 
 definition
+sanitiseOrFlags :: "machine_word"
+where
+"sanitiseOrFlags \<equiv> (1 << 1) || bit 9"
+
+definition
+sanitiseAndFlags :: "machine_word"
+where
+"sanitiseAndFlags\<equiv> ((1 << 12) - 1) && (complement (bit 3)) && (complement (bit 5)) && (complement (bit 8))"
+
+definition
 sanitiseRegister :: "tcb \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 where
-"sanitiseRegister arg1 arg2 v \<equiv> v"
+"sanitiseRegister arg1 r v \<equiv>
+    let val = if r = FaultIP \<or> r = NextIP then
+                 if v > 0x00007fffffffffff \<and> v < 0xffff800000000000 then 0 else v
+              else v;
+        val' = if r = TLS_BASE then if val > 0x00007fffffffffff then 0x00007fffffffffff else val else val
+    in
+        if r = FLAGS then
+            (val' || sanitiseOrFlags) && sanitiseAndFlags
+        else val'"
 
 
 definition

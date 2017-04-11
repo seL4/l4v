@@ -123,23 +123,19 @@ defs lookupIPCBuffer_def:
     bufferPtr \<leftarrow> threadGet tcbIPCBuffer thread;
     bufferFrameSlot \<leftarrow> getThreadBufferSlot thread;
     bufferCap \<leftarrow> getSlotCap bufferFrameSlot;
-    (let v14 = bufferCap in
-        if isArchObjectCap v14 \<and> isPageCap (capCap v14)
-        then let frame = capCap v14
-        in  (do
-            rights \<leftarrow> return ( capVPRights frame);
-            pBits \<leftarrow> return ( pageBitsForSize $ capVPSize frame);
+    (case bufferCap of
+          ArchObjectCap (PageCap baseptr rights _ sz False _) \<Rightarrow>   (do
+            pBits \<leftarrow> return ( pageBitsForSize sz);
             if (rights = VMReadWrite \<or> Not isReceiver \<and> rights = VMReadOnly)
               then (do
-                 ptr \<leftarrow> return ( capVPBasePtr frame +
-                           PPtr (fromVPtr bufferPtr && mask pBits));
+                 ptr \<leftarrow> return ( baseptr + PPtr (fromVPtr bufferPtr && mask pBits));
                  haskell_assert (ptr \<noteq> 0)
                             [];
                  return $ Just ptr
               od)
               else return Nothing
-        od)
-        else  return Nothing
+          od)
+        | _ \<Rightarrow>   return Nothing
         )
 od)"
 
@@ -742,8 +738,8 @@ defs decodeX64ASIDControlInvocation_def:
             whenE (null free) $ throw DeleteFirst;
             base \<leftarrow> returnOk ( (fst $ head free) `~shiftL~` asidLowBits);
             pool \<leftarrow> returnOk ( makeObject ::asidpool);
-            frame \<leftarrow> (let v18 = untyped in
-                if isUntypedCap v18 \<and> capBlockSize v18 = objBits pool \<and> \<not> capIsDevice v18
+            frame \<leftarrow> (let v16 = untyped in
+                if isUntypedCap v16 \<and> capBlockSize v16 = objBits pool \<and> \<not> capIsDevice v16
                 then  (doE
                     ensureNoChildren parentSlot;
                     returnOk $ capPtr untyped
