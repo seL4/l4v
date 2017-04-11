@@ -12,6 +12,8 @@ theory Schedule_C
 imports Tcb_C
 begin
 
+instance tcb              :: no_vcpu by intro_classes auto
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma nat_add_less_by_max:
@@ -98,17 +100,12 @@ proof -
     by (simp add: unat_arith_simps unat_ucast split assms[simplified unat_arith_simps])
 qed
 
-(* FIXME move *)
-lemma setVMRoot_valid_queues':
-  "\<lbrace> valid_queues' \<rbrace> setVMRoot a \<lbrace> \<lambda>_. valid_queues' \<rbrace>"
-  by (rule valid_queues_lift'; wp)
-
 (* FIXME move to REFINE *)
 crunch valid_queues'[wp]: "Arch.switchToThread" valid_queues'
     (ignore: clearExMonitor)
 crunch ksCurDomain[wp]: switchToIdleThread "\<lambda>s. P (ksCurDomain s)"
 crunch valid_pspace'[wp]: switchToIdleThread, switchToThread valid_pspace'
-(simp: whenE_def)
+  (simp: whenE_def ignore: getObject)
 crunch valid_arch_state'[wp]: switchToThread valid_arch_state'
 
 end
@@ -158,7 +155,7 @@ lemma Arch_switchToIdleThread_ccorres:
   "ccorres dc xfdc (valid_pspace' and valid_arch_state') UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
   apply (cinit simp: ARM_HYP_H.switchToIdleThread_def)
-  by (rule ccorres_return_Skip, clarsimp)
+  sorry (* FIXME ARMHYP TODO vcpuSwitch/vcpu_switch_ccorres *)
 
 (* FIXME: move *)
 lemma empty_fail_getIdleThread [simp,intro!]:
@@ -177,10 +174,8 @@ lemma switchToIdleThread_ccorres:
        apply (clarsimp simp: simpler_modify_def)
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                              carch_state_relation_def cmachine_state_relation_def)
-      apply (simp add: ARM_HYP_H.switchToIdleThread_def)
-      apply wp+
-   apply simp
-  apply simp
+      apply (wpsimp simp: ARM_HYP_H.switchToIdleThread_def
+                      wp: vcpuSwitch_it')+
   done
 
 lemma Arch_switchToThread_ccorres:
