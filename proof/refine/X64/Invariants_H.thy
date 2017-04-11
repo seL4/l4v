@@ -1033,7 +1033,7 @@ where
    (\<Union>pt \<in> set (x64KSGlobalPDs (ksArchState s)). table_refs' pt) \<union>
    (\<Union>pt \<in> set (x64KSGlobalPTs (ksArchState s)). table_refs' pt) \<union>
    (\<Union>pt \<in> set (x64KSGlobalPDPTs (ksArchState s)). table_refs' pt) \<union>
-   range (\<lambda>irq :: irq. irq_node' s + 16 * ucast irq)"
+   range (\<lambda>irq :: irq. irq_node' s + 32 * ucast irq)"
 
 definition
   valid_cap_sizes' :: "nat \<Rightarrow> cte_heap \<Rightarrow> bool"
