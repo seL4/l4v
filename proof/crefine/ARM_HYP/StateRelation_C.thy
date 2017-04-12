@@ -554,7 +554,7 @@ definition
   cvcpu_relation :: "vcpu \<Rightarrow> vcpu_C \<Rightarrow> bool"
 where
   "cvcpu_relation vcpu cvcpu \<equiv>
-     vcpuTCB_C cvcpu = option_to_ptr (vcpuTCBPtr vcpu)
+     vcpuTCB_C cvcpu = option_to_ctcb_ptr (vcpuTCBPtr vcpu)
      \<and> actlr_C (cpx_C cvcpu) = vcpuACTLR vcpu
      \<and> cvcpu_regs_relation vcpu cvcpu
      \<and> cvgic_relation (vcpuVGIC vcpu) (vgic_C cvcpu)"
