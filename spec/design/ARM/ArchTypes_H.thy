@@ -81,17 +81,17 @@ where
 definition
 epSizeBits :: "nat"
 where
-"epSizeBits \<equiv> 4"
+"epSizeBits \<equiv> 5"
 
 definition
 ntfnSizeBits :: "nat"
 where
-"ntfnSizeBits \<equiv> 4"
+"ntfnSizeBits \<equiv> 5"
 
 definition
 cteSizeBits :: "nat"
 where
-"cteSizeBits \<equiv> 4"
+"cteSizeBits \<equiv> 5"
 
 definition
 apiGetObjectSize :: "apiobject_type \<Rightarrow> nat \<Rightarrow> nat"
