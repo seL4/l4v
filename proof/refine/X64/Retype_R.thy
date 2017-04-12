@@ -13,7 +13,7 @@
 *)
 
 theory Retype_R
-imports TcbAcc_R (* FIXME x64: should be VSpace_R *)
+imports TcbAcc_R VSpace_R
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -4092,18 +4092,10 @@ crunch ksReadyQueuesL1[wp]: copyGlobalMappings "\<lambda>s. P (ksReadyQueuesL1Bi
 crunch ksReadyQueuesL2[wp]: copyGlobalMappings "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (ignore: getObject setObject wp: updateObject_default_inv crunch_wps)
 
-lemma storePML4E_valid_idle'[wp]:
-  "\<lbrace>valid_idle'\<rbrace> storePML4E p pm \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  sorry (* FIXME x64: remove once we're importing VSpace_R again. *)
-
 crunch valid_idle'[wp]: copyGlobalMappings "valid_idle'"
   (ignore: getObject setObject
      simp: objBits_simps archObjSize_def
        wp: updateObject_default_inv crunch_wps setObject_idle' refl)
-
-lemma storePML4E_if_live_then_nonz_cap'[wp]:
-  "\<lbrace>if_live_then_nonz_cap'\<rbrace> storePML4E p pm \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  sorry (* FIXME x64: remove once we're importing VSpace_R again. *)
 
 crunch iflive'[wp]: copyGlobalMappings "if_live_then_nonz_cap'"
   (ignore: getObject wp: crunch_wps)
@@ -4427,9 +4419,6 @@ crunch nosch[wp]: createObjects, createNewCaps "\<lambda>s. P (ksSchedulerAction
   (simp: crunch_simps wp: crunch_wps
     ignore: forM_x)
 
-lemma storePML4E_it'[wp]: "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> storePML4E param_a param_b \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
-  sorry (* FIXME x64: remove once we're importing VSpace_R again. *)
-
 crunch it[wp]: createObjects, createNewCaps "\<lambda>s. P (ksIdleThread s)"
   (wp: crunch_wps simp: crunch_simps unless_def
     ignore: forM_x getObject)
@@ -4484,10 +4473,6 @@ lemma createNewCaps_idle'[wp]:
   done
 
 crunch_ignore (add: clearMemoryVM)
-
-lemma storePML4E_gsMaxObjectSize[wp]:
-  "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> storePML4E p pm \<lbrace>\<lambda>_ s. P (gsMaxObjectSize s)\<rbrace>"
-  sorry (* FIXME x64: remove once we're importing VSpace_R again. *)
 
 crunch ksArch[wp]: createNewCaps "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps unless_def wp: crunch_wps
@@ -4597,10 +4582,6 @@ lemma createObjects'_irq_states' [wp]:
   apply (wp hoare_unless_wp|wpc|simp add: alignError_def)+
   apply fastforce
   done
-
-lemma storePML4E_irq_states':
-  "\<lbrace>valid_irq_states'\<rbrace> storePML4E p pm \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
-  sorry (* FIXME x64: remove once we're importing VSpace_R again. *)
 
 crunch irq_states' [wp]: createNewCaps valid_irq_states'
   (ignore: getObject wp: crunch_wps no_irq no_irq_clearMemory simp: crunch_simps unless_def)
@@ -4874,10 +4855,6 @@ crunch ksDomSchedule[wp]: copyGlobalMappings "\<lambda>s. P (ksDomSchedule s)"
 crunch ksDomSchedule[wp]: createNewCaps "\<lambda>s. P (ksDomSchedule s)"
   (wp: mapM_x_wp' ignore: getObject setObject simp: crunch_simps)
 
-lemma storePML4E_ksDomScheduleIdx:
-  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> storePML4E p pm \<lbrace>\<lambda>_ s. P (ksDomScheduleIdx s)\<rbrace>"
-  sorry (* FIXME x64: remove once we're importing VSpace_R again. *)
-
 crunch ksDomScheduleIdx[wp]: createNewCaps "\<lambda>s. P (ksDomScheduleIdx s)"
   (wp: mapM_x_wp' ignore: getObject setObject simp: crunch_simps)
 
@@ -4958,10 +4935,6 @@ lemma createNewCaps_null_filter':
 
 lemma storePML4E_gsUntypedZeroRanges:
   "\<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace> storePML4E p pm \<lbrace>\<lambda>_ s. P (gsUntypedZeroRanges s)\<rbrace>"
-  sorry (* FIXME x64: remove once we're importing VSpace_R again. *)
-
-crunch gsUntypedZeroRanges[wp]: createNewCaps "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (wp: crunch_wps simp: crunch_simps unless_def
       ignore: getObject setObject)
 
 lemma untyped_ranges_zero_inv_null_filter:
