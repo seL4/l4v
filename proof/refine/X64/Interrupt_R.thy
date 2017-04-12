@@ -232,7 +232,6 @@ lemma arch_decode_irq_control_corres:
     -- "IOAPIC"
   apply (rule conjI, clarsimp)
   apply (rule corres_guard_imp)
-thm arch_decode_irq_control_invocation_def
    apply (rule whenE_throwError_corres)
      apply (simp add: maxIRQ_def minIRQ_def)
     apply (simp add: maxIRQ_def minIRQ_def ucast_nat_def)

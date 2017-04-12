@@ -99,7 +99,7 @@ lemma cap_relation_NullCap:
                       split del: if_split)
      apply simp
     apply simp
-   apply (clarsimp simp: word_size word_size_def)
+   apply (clarsimp simp: word_size word_size_def cnode_padding_bits_def cnode_guard_size_bits_def)
   apply (clarsimp simp: X64_H.updateCapData_def isCap_simps split del: if_split)
   done
 
@@ -611,7 +611,7 @@ declare word_unat_power [symmetric, simp del]
 lemma finalise_cap_not_reachable_pg_cap:
   "\<lbrace>pspace_aligned and
        valid_arch_objs and
-       valid_objs and
+       valid_objs and valid_arch_state and
        cte_wp_at (op = cap) slot and
        (\<lambda>s. valid_asid_table (x64_asid_table (arch_state s)) s)
        and K (is_pg_cap cap \<longrightarrow> is_final)
@@ -633,7 +633,7 @@ text {* Proving desired properties about recursiveDelete/cteDelete *}
 text {* Proving the termination of finaliseSlot *}
 
 definition
-  not_recursive_ctes :: "kernel_state \<Rightarrow> word32 set"
+  not_recursive_ctes :: "kernel_state \<Rightarrow> machine_word set"
 where
  "not_recursive_ctes s \<equiv> {ptr. \<exists>cap. cteCaps_of s ptr = Some cap
                              \<and> \<not> (isZombie cap \<and> capZombiePtr cap = ptr)}"
@@ -731,7 +731,7 @@ lemma prepareThreadDelete_not_recursive_ctes:
   done
 
 definition
-  finaliseSlot_recset :: "((word32 \<times> bool \<times> kernel_state) \<times> (word32 \<times> bool \<times> kernel_state)) set"
+  finaliseSlot_recset :: "((machine_word \<times> bool \<times> kernel_state) \<times> (machine_word \<times> bool \<times> kernel_state)) set"
 where
  "finaliseSlot_recset \<equiv>
     wf_sum (\<lambda>(slot, exposed, state). exposed)
@@ -5302,8 +5302,6 @@ crunch valid_arch_state'[wp]: cteSwap "valid_arch_state'"
 
 crunch irq_states'[wp]: cteSwap "valid_irq_states'"
 
-crunch pde_mappings'[wp]: cteSwap "valid_pde_mappings'"
-
 crunch vq'[wp]: cteSwap "valid_queues'"
 
 crunch ksqsL1[wp]: cteSwap "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
@@ -5490,7 +5488,7 @@ lemma descendants_of_subset_untyped:
 proof
   have P: "\<And>x cte. \<lbrakk> m' x = Some cte; isUntypedCap (cteCap cte) \<rbrakk>
                        \<Longrightarrow> \<exists>node. m x = Some (CTE (cteCap cte) node) \<and> m' x = Some cte"
-    apply (cut_tac x=x in adj)
+    apply (cut_tac x1=x in adj)
     apply clarsimp
     apply (case_tac y, simp)
     done
@@ -5501,8 +5499,8 @@ proof
     apply clarsimp
     apply (drule P | simp)+
     apply clarsimp
-    apply (cut_tac x=p in desc)
-    apply (cut_tac x=p' in desc)
+    apply (cut_tac x1=p in desc)
+    apply (cut_tac x1=p' in desc)
     apply blast
     done
 
@@ -5510,7 +5508,7 @@ proof
              \<Longrightarrow> \<exists>cap node. m x = Some (CTE cap node)
                     \<and> isUntypedCap cap = isUntypedCap (cteCap cte)
                     \<and> capRange cap = capRange (cteCap cte)"
-    apply (cut_tac x=x in adj)
+    apply (cut_tac x1=x in adj)
     apply clarsimp
     apply (case_tac y, simp)
     done
@@ -5519,10 +5517,10 @@ proof
     unfolding untyped_mdb'_def
     apply (rule impI, erule allEI, erule allEI)
     apply clarsimp
-    apply (drule_tac x=p in P, simp)
-    apply (drule_tac x=p' in Q, simp)
+    apply (drule_tac x1=p in P, simp)
+    apply (drule_tac x1=p' in Q, simp)
     apply clarsimp
-    apply (cut_tac x=p in desc)
+    apply (cut_tac x1=p in desc)
     apply blast
     done
 
@@ -5548,7 +5546,7 @@ lemma Final_notUntyped_capRange_disjoint:
   apply (clarsimp simp: cteCaps_of_def)
   apply (drule(1) ctes_of_valid')
   apply (elim disjE isCapDs[elim_format])
-   apply (clarsimp simp: valid_cap'_def
+   apply (clarsimp simp: valid_cap'_def bit_simps
                          obj_at'_def projectKOs objBits_simps
                          typ_at'_def ko_wp_at'_def
                   split: capability.split_asm zombie_type.split_asm
@@ -5557,12 +5555,13 @@ lemma Final_notUntyped_capRange_disjoint:
      apply (clarsimp simp: sameObjectAs_def3 isCap_simps)
     apply (simp add: isCap_simps)
    apply (simp add: isCap_simps)
-  apply (clarsimp simp: valid_cap'_def
+  apply (clarsimp simp: valid_cap'_def bit_simps
                         obj_at'_def projectKOs objBits_simps
-                        typ_at'_def ko_wp_at'_def
+                        typ_at'_def ko_wp_at'_def pd_pointer_table_at'_def
                         page_table_at'_def page_directory_at'_def
+                        page_map_l4_at'_def
                  split: capability.split_asm zombie_type.split_asm
-                        arch_capability.split_asm
+                        arch_capability.split_asm option.split_asm
                  dest!: spec[where x=0])
     apply fastforce+
   apply (clarsimp simp: isCap_simps sameObjectAs_def3)
@@ -5694,6 +5693,11 @@ lemma distinct_zombiesD:
   apply auto
   done
 
+lemma isArchIOPortCap_portRange_nonempty[simp]:
+  "\<lbrakk>s \<turnstile>' cap;isArchIOPortCap cap\<rbrakk> \<Longrightarrow> portRange cap \<noteq> {}"
+  by (clarsimp simp: isArchIOPortCap_def portRange_def valid_cap'_def
+                 split: capability.splits arch_capability.splits)
+
 lemma ztc_replace_update_final:
   assumes chunk: "mdb_chunked m"
       and  slot: "m x = Some (CTE cap node)"
@@ -5718,6 +5722,7 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
     apply (clarsimp simp: isFinal_def)
     apply (drule_tac x=y in spec)
     apply (clarsimp simp: sameObjectAs_def3)
+    apply (case_tac "isArchIOPortCap (cteCap cte)"; simp)
     done
 
   show Fin1: "\<And>y cte. \<lbrakk> m y = Some cte; y \<noteq> x \<rbrakk> \<Longrightarrow> \<not> sameRegionAs cap (cteCap cte)"
@@ -5760,7 +5765,7 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
                                 isUntypedCap cap, isArchPageCap cap,
                                 capRange cap)" in  master_eqE,
              simp add: isCap_Master capRange_Master del: isNullCap)+
-     apply (auto simp: isCap_Master capRange_Master)[1]
+     using valid apply (auto simp: isCap_Master capRange_Master)[1]
     apply (erule disjE)
      apply (drule(2) zombie_case_helper)
      apply (simp add: ztc_sameRegion ztc1 ztc2)
@@ -5778,7 +5783,7 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
                                   isUntypedCap cap, isArchPageCap cap,
                                   capRange cap)" in  master_eqE,
                simp add: isCap_Master capRange_Master del: isNullCap)+
-       apply (auto simp: isCap_Master capRange_Master)[1]
+       apply (auto simp: isCap_Master capRange_Master isCap_simps)[1]
       apply simp
      apply (clarsimp simp: isCap_simps)+
     done
@@ -6003,7 +6008,7 @@ lemma isFinal_Zombie:
 lemma shrink_zombie_invs':
   "\<lbrace>invs' and (K (isZombie cap))
     and cte_wp_at' (\<lambda>cte. cteCap cte = Zombie (capZombiePtr cap) (capZombieType cap) (capZombieNumber cap + 1)) sl
-    and cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) (capZombiePtr cap + 16 * (of_nat (capZombieNumber cap)))\<rbrace>
+    and cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) (capZombiePtr cap + 32 * (of_nat (capZombieNumber cap)))\<rbrace>
       updateCap sl cap
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wp make_zombie_invs')
@@ -6090,10 +6095,10 @@ crunch typ_at' [wp]: doMachineOp "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp simp: crunch_simps)
 
 lemma valid_Zombie_cte_at':
-  "\<lbrakk> s \<turnstile>' Zombie p zt m; n < zombieCTEs zt \<rbrakk> \<Longrightarrow> cte_at' (p + (of_nat n * 16)) s"
+  "\<lbrakk> s \<turnstile>' Zombie p zt m; n < zombieCTEs zt \<rbrakk> \<Longrightarrow> cte_at' (p + (of_nat n * 32)) s"
   apply (clarsimp simp: valid_cap'_def split: zombie_type.split_asm)
    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
-   apply (subgoal_tac "tcb_cte_cases (of_nat n * 16) \<noteq> None")
+   apply (subgoal_tac "tcb_cte_cases (of_nat n * 32) \<noteq> None")
     apply clarsimp
     apply (erule(2) cte_wp_at_tcbI')
      apply fastforce
@@ -6364,15 +6369,15 @@ lemma zombieCTEs_le:
 lemma valid_cap'_handy_bits:
   "s \<turnstile>' Zombie r zb n \<Longrightarrow> n \<le> 2 ^ (zBits zb)"
   "s \<turnstile>' Zombie r zb n \<Longrightarrow> n < 2 ^ word_bits"
-  "\<lbrakk> s \<turnstile>' Zombie r zb n; n \<noteq> 0 \<rbrakk> \<Longrightarrow> of_nat n - 1 < (2 ^ (zBits zb) :: word32)"
+  "\<lbrakk> s \<turnstile>' Zombie r zb n; n \<noteq> 0 \<rbrakk> \<Longrightarrow> of_nat n - 1 < (2 ^ (zBits zb) :: machine_word)"
   "s \<turnstile>' Zombie r zb n \<Longrightarrow> zBits zb < word_bits"
   apply (insert zombieCTEs_le[where zb=zb],
          simp_all add: valid_cap'_def)
    apply (clarsimp elim!: order_le_less_trans)
   apply (clarsimp simp: word_less_nat_alt)
-  apply (subgoal_tac "n \<in> unats (len_of TYPE (32))")
+  apply (subgoal_tac "n \<in> unats (len_of TYPE (machine_word_len))")
    apply (subst unat_minus_one)
-    apply (drule of_nat_mono_maybe[rotated, where 'a=32])
+    apply (drule of_nat_mono_maybe[rotated, where 'a=machine_word_len])
      apply (simp add: unats_def)
     apply simp
    apply (simp add: word_unat.Abs_inverse)
@@ -6395,7 +6400,7 @@ lemma ex_Zombie_to:
    apply simp
   apply simp
   apply (frule(1) ctes_of_valid')
-  apply (drule of_nat_mono_maybe[rotated, where 'a=32])
+  apply (drule of_nat_mono_maybe[rotated, where 'a=machine_word_len])
    apply (simp only: word_bits_len_of)
    apply (erule valid_cap'_handy_bits)
   apply simp
@@ -6404,7 +6409,7 @@ lemma ex_Zombie_to:
 lemma handy_mixer:
   "\<lbrakk> ctes_of s p = Some cte; cteCap cte = Zombie p' zb n;
        valid_objs' s; n \<noteq> 0 \<rbrakk>
-       \<Longrightarrow> of_nat n - 1 < (2 ^ (zBits zb) :: word32)"
+       \<Longrightarrow> of_nat n - 1 < (2 ^ (zBits zb) :: machine_word)"
   apply (drule(1) ctes_of_valid')
   apply simp
   apply (erule valid_cap'_handy_bits)
@@ -6414,17 +6419,17 @@ lemma handy_mixer:
 lemma ex_Zombie_to2:
   "\<lbrakk> ctes_of s p = Some cte; cteCap cte = Zombie p' b n;
        n \<noteq> 0; valid_objs' s \<rbrakk>
-      \<Longrightarrow> ex_cte_cap_to' (p' + (16 * of_nat n - 16)) s"
+      \<Longrightarrow> ex_cte_cap_to' (p' + (32 * of_nat n - 32)) s"
   apply (simp add: ex_cte_cap_to'_def cte_wp_at_ctes_of)
   apply (intro exI, rule conjI, assumption)
   apply (simp add: image_def)
   apply (rule bexI[where x="of_nat n - 1"])
    apply simp
-  apply (subgoal_tac "n \<in> unats (len_of TYPE(32))")
+  apply (subgoal_tac "n \<in> unats (len_of TYPE(machine_word_len))")
    apply (simp add: word_less_nat_alt)
    apply (subst unat_minus_one)
     apply (simp add: word_neq_0_conv)
-    apply (drule of_nat_mono_maybe[rotated, where 'a=32])
+    apply (drule of_nat_mono_maybe[rotated, where 'a=machine_word_len])
      apply (simp add: unats_def)
     apply simp
    apply (simp add: word_unat.Abs_inverse)
@@ -6536,7 +6541,7 @@ lemma reduceZombie_invs'':
          apply (rule getCTE_wp)
         apply (wp | simp)+
       apply (rule_tac Q="\<lambda>cte s. rv = capZombiePtr cap +
-                                      of_nat (capZombieNumber cap) * 16 - 16
+                                      of_nat (capZombieNumber cap) * 32 - 32
                               \<and> cte_wp_at' (\<lambda>c. c = cte) slot s \<and> invs' s
                               \<and> no_cte_prop Q s \<and> sch_act_simple s"
                   in hoare_post_imp)
@@ -6547,7 +6552,7 @@ lemma reduceZombie_invs'':
 apply wp
      apply (rule spec_strengthen_postE)
       apply (rule_tac Q="\<lambda>fc s. rv = capZombiePtr cap +
-                                      of_nat (capZombieNumber cap) * 16 - 16"
+                                      of_nat (capZombieNumber cap) * 32 - 32"
                  in spec_valid_conj_liftE1)
        apply wp[1]
       apply (rule fin, assumption+)
@@ -6618,11 +6623,11 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
                      \<or> (\<exists>zb n cp. cteCap cte = Zombie q zb n
                           \<and> Q cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> q))"
   note hyps = "1.hyps"[folded reduceZombie_def[unfolded cteDelete_def finaliseSlot_def]]
-  have Q: "\<And>x y n. {x :: word32} = (\<lambda>x. y + x * 0x10) ` {0 ..< n} \<Longrightarrow> n = 1"
+  have Q: "\<And>x y n. {x :: machine_word} = (\<lambda>x. y + x * 0x20) ` {0 ..< n} \<Longrightarrow> n = 1"
     apply (drule sym)
     apply (case_tac "1 < n")
-     apply (frule_tac x = "y + 0 * 0x10" in eqset_imp_iff)
-     apply (frule_tac x = "y + 1 * 0x10" in eqset_imp_iff)
+     apply (frule_tac x = "y + 0 * 0x20" in eqset_imp_iff)
+     apply (frule_tac x = "y + 1 * 0x20" in eqset_imp_iff)
      apply (subst(asm) imageI, simp)
       apply (erule order_less_trans[rotated], simp)
      apply (subst(asm) imageI, simp)
@@ -6632,7 +6637,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
      apply simp
     apply simp
     done
-  have R: "\<And>n. n \<noteq> 0 \<Longrightarrow> {0 .. n - 1} = {0 ..< n :: word32}"
+  have R: "\<And>n. n \<noteq> 0 \<Longrightarrow> {0 .. n - 1} = {0 ..< n :: machine_word}"
     apply safe
      apply simp
      apply (erule(1) minus_one_helper5)
@@ -6667,7 +6672,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
          apply (rule hoare_pre_spec_validE,
                 rule spec_strengthen_postE)
           apply (unfold finaliseSlot_def)[1]
-           apply (rule hyps[where P="\<top>" and p=sl], (assumption | rule refl)+)
+           apply (rule hyps[where P1="\<top>" and p1=sl], (assumption | rule refl)+)
           apply clarsimp
          apply (clarsimp simp: cte_wp_at_ctes_of)
         apply (wp, simp)
@@ -7010,7 +7015,7 @@ lemma cteDelete_st_tcb_at':
   done
 
 definition
-  capToRPO :: "capability \<Rightarrow> word32 option \<times> nat"
+  capToRPO :: "capability \<Rightarrow> machine_word option \<times> nat"
 where
  "capToRPO cap \<equiv> case cap of
     NullCap \<Rightarrow> (None, 0)
@@ -7078,6 +7083,8 @@ lemmas threadSet_ctesCaps_of = ctes_of_cteCaps_of_lift[OF threadSet_ctes_of]
 
 lemmas storePTE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePTE_ctes]
 lemmas storePDE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePDE_ctes]
+lemmas storePDPTE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePDPTE_ctes]
+lemmas storePML4E_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePML4E_ctes]
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -7852,7 +7859,7 @@ next
     apply simp
     apply (subst field_simps, rule plus_one_helper2)
      apply simp
-    apply (frule of_nat_mono_maybe[rotated, where 'a=32])
+    apply (frule of_nat_mono_maybe[rotated, where 'a=machine_word_len])
      apply (rule power_strict_increasing)
       apply (simp add: word_bits_def cte_level_bits_def)
      apply simp
@@ -8293,6 +8300,12 @@ qed
 
 lemmas cap_revoke_corres = use_spec_corres [OF cap_revoke_corres']
 
+lemma arch_recycleCap_improve_cases:
+   "\<lbrakk> \<not> isPageCap cap; \<not> isPageTableCap cap; \<not> isPageDirectoryCap cap; \<not> isPDPointerTableCap cap;
+         \<not>  isPML4Cap cap; \<not> isIOPortCap cap;
+         \<not> isASIDControlCap cap \<rbrakk> \<Longrightarrow> (if isASIDPoolCap cap then v else undefined) = v"
+  by (cases cap, simp_all add: isCap_simps)
+
 crunch typ_at'[wp]: invokeCNode "\<lambda>s. P (typ_at' T p s)"
   (ignore: filterM finaliseSlot
      simp: crunch_simps filterM_mapM unless_def
@@ -8305,9 +8318,10 @@ crunch st_tcb_at'[wp]: cteMove "st_tcb_at' P t"
   (wp: crunch_wps)
 
 lemma arch_recycleCap_improve_cases': "\<lbrakk>\<not> isPageCap param_b; \<not> isPageTableCap param_b;
-          \<not> isPageDirectoryCap param_b; \<not> isASIDControlCap param_b\<rbrakk>
+          \<not> isPageDirectoryCap param_b; \<not> isASIDControlCap param_b; \<not> isPDPointerTableCap param_b;
+          \<not> isPML4Cap param_b; \<not> isIOPortCap param_b\<rbrakk>
         \<Longrightarrow> isASIDPoolCap param_b"
-  apply (frule (3) arch_recycleCap_improve_cases[where v="\<not>undefined"])
+  apply (frule (6) arch_recycleCap_improve_cases[where v="\<not>undefined"])
   apply (case_tac "isASIDPoolCap param_b")
   apply simp+
   done
@@ -9381,7 +9395,7 @@ lemma inv_cnode_corres:
    apply (simp add: getThreadCallerSlot_def locateSlot_conv objBits_simps cte_level_bits_def)
    apply (rule corres_guard_imp)
      apply (rule corres_split [OF _ gct_corres])
-        apply (subgoal_tac "thread + 0x10 * tcbCallerSlot = cte_map (thread, tcb_cnode_index 3)")
+        apply (subgoal_tac "thread + 0x20 * tcbCallerSlot = cte_map (thread, tcb_cnode_index 3)")
          prefer 2
          apply (simp add: cte_map_def tcb_cnode_index_def tcbCallerSlot_def)
         apply (rule corres_split [OF _ getSlotCap_corres])
@@ -9533,10 +9547,9 @@ crunch irq_states' [wp]: capSwapForDelete valid_irq_states'
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
-       no_irq_invalidateTLB_ASID no_irq_setHardwareASID
-       no_irq_setCurrentPD no_irq_invalidateTLB_VAASID
-       no_irq_cleanByVA_PoU
-   simp: crunch_simps armv_contextSwitch_HWASID_def ignore: getObject setObject)
+       no_irq_hwASIDInvalidate no_irq_writeCR3
+        no_irq_invalidateASID
+   simp: crunch_simps ignore: getObject setObject)
 
 lemma finaliseSlot_IRQInactive':
   "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> finaliseSlot' a b
