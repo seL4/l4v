@@ -36,8 +36,12 @@ where
 context kernel_m
 begin
 
+(* currently hypervisor events redirect directly to handleVCPUFault *)
 definition
-  "handleHypervisorEvent_C = (CALL schedule();; CALL activateThread())"
+  handleHypervisorEvent_C :: "hyp_fault_type \<Rightarrow> (globals myvars, int, strictc_errortype) com"
+where
+  "handleHypervisorEvent_C t = (case t
+    of hyp_fault_type.ARMVCPUFault hsr \<Rightarrow> (CALL handleVCPUFault(hsr)))"
 
 definition
   "callKernel_C e \<equiv> case e of
@@ -46,7 +50,7 @@ definition
   | UserLevelFault w1 w2 \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleUserLevelFault(w1,w2))
   | Interrupt \<Rightarrow> exec_C \<Gamma> (Call handleInterruptEntry_'proc)
   | VMFaultEvent t \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleVMFaultEvent(vm_fault_type_from_H t))
-  | HypervisorEvent t \<Rightarrow> exec_C \<Gamma> handleHypervisorEvent_C"
+  | HypervisorEvent t \<Rightarrow> exec_C \<Gamma> (handleHypervisorEvent_C t)"
 
 definition
   "callKernel_withFastpath_C e \<equiv>
@@ -59,10 +63,11 @@ definition
    else callKernel_C e"
 
 definition
-  setArchTCB_C :: "arch_tcb_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
+  setTCBContext_C :: "user_context_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
 where
-  "setArchTCB_C ct thread \<equiv>
-  exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (Ptr &(thread\<rightarrow>[''tcbArch_C''])) ct) \<acute>t_hrs)"
+  "setTCBContext_C ct thread \<equiv>
+  exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (
+    Ptr &((Ptr &(thread\<rightarrow>[''tcbArch_C'']) :: (arch_tcb_C ptr))\<rightarrow>[''tcbContext_C''])) ct) \<acute>t_hrs)"
 
 lemma Basic_sem_eq:
   "\<Gamma>\<turnstile>\<langle>Basic f,s\<rangle> \<Rightarrow> s' = ((\<exists>t. s = Normal t \<and> s' = Normal (f t)) \<or> (\<forall>t. s \<noteq> Normal t \<and> s' = s))"
@@ -76,11 +81,16 @@ lemma Basic_sem_eq:
   apply (cases s, auto)
   done
 
-lemma setArchTCB_C_corres:
-  "\<lbrakk> ccontext_relation tc (tcbContext_C tc'); t' = tcb_ptr_to_ctcb_ptr t \<rbrakk> \<Longrightarrow>
+lemma atcbVCPUPtr_atcbContextSet_id [simp]:
+  "atcbVCPUPtr (atcbContextSet tc (tcbArch ko)) = atcbVCPUPtr (tcbArch ko)"
+  unfolding atcbContextSet_def
+  by simp
+
+lemma setTCBContext_C_corres:
+  "\<lbrakk> ccontext_relation tc tc'; t' = tcb_ptr_to_ctcb_ptr t \<rbrakk> \<Longrightarrow>
   corres_underlying rf_sr nf nf' dc (tcb_at' t) \<top>
-    (threadSet (\<lambda>tcb. tcb \<lparr> tcbArch := atcbContextSet tc (tcbArch tcb)\<rparr>) t) (setArchTCB_C tc' t')"
-  apply (simp add: setArchTCB_C_def exec_C_def Basic_sem_eq corres_underlying_def)
+    (threadSet (\<lambda>tcb. tcb \<lparr> tcbArch := atcbContextSet tc (tcbArch tcb)\<rparr>) t) (setTCBContext_C tc' t')"
+  apply (simp add: setTCBContext_C_def exec_C_def Basic_sem_eq corres_underlying_def)
   apply clarsimp
   apply (simp add: threadSet_def bind_assoc split_def exec_gets)
   apply (drule (1) obj_at_cslift_tcb)
@@ -119,6 +129,7 @@ lemma setArchTCB_C_corres:
    apply assumption
   apply simp
   done
+
 end
 
 definition
@@ -128,6 +139,17 @@ definition
   to_user_context_C :: "user_context \<Rightarrow> user_context_C"
 where
   "to_user_context_C uc \<equiv> user_context_C (FCP (\<lambda>r. uc (register_to_H (of_nat r))))"
+
+
+(* FIXME ARMHYP is this useful in any other file? *)
+(* Note: depends on vcpuactive being false when vcpuptr is NULL! *)
+definition
+  ccur_vcpu_to_H :: "vcpu_C ptr \<Rightarrow> machine_word \<Rightarrow> (machine_word \<times> bool) option"
+where
+  "ccur_vcpu_to_H vcpuptr vcpuactive \<equiv>
+    if vcpuptr = NULL
+    then None
+    else Some (ptr_val vcpuptr, to_bool vcpuactive)"
 
 context kernel_m begin
 
@@ -163,7 +185,7 @@ definition
   where
   "kernelEntry_C fp e tc \<equiv> do
     t \<leftarrow> gets (ksCurThread_' o globals);
-    setArchTCB_C (arch_tcb_C (to_user_context_C tc)) t;
+    setTCBContext_C (to_user_context_C tc) t;
     if fp then callKernel_withFastpath_C e else callKernel_C e;
     t \<leftarrow> gets (ksCurThread_' o globals);
     gets $ getContext_C t
@@ -586,7 +608,7 @@ lemma assumes A: "is_inv f g" shows the_inv_map_eq: "the_inv_map f = g"
 
 definition
   casid_map_to_H
-  :: "(word32[512]) \<Rightarrow> (pde_C ptr \<rightharpoonup> pde_C) \<Rightarrow> asid \<rightharpoonup> hw_asid \<times> obj_ref"
+  :: "(word32[256]) \<Rightarrow> (pde_C ptr \<rightharpoonup> pde_C) \<Rightarrow> asid \<rightharpoonup> hw_asid \<times> obj_ref"
   where
   "casid_map_to_H hw_asid_table pdes \<equiv>
    (\<lambda>asid. map_option
@@ -632,6 +654,17 @@ end
 lemma (in kernel_m)
   assumes valid: "valid_arch_state' astate"
   assumes rel: "carch_state_relation (ksArchState astate) cstate"
+  shows ccur_vcpu_to_H_correct:
+    "ccur_vcpu_to_H (armHSCurVCPU_' cstate) (armHSVCPUActive_' cstate) =
+     armHSCurVCPU (ksArchState astate)"
+  using valid rel
+  by (clarsimp simp: valid_arch_state'_def carch_state_relation_def
+                        ccur_vcpu_to_H_def cur_vcpu_relation_def
+                 split: option.splits)
+
+lemma (in kernel_m)
+  assumes valid: "valid_arch_state' astate"
+  assumes rel: "carch_state_relation (ksArchState astate) cstate"
   shows casid_map_to_H_correct:
     "casid_map_to_H (armKSHWASIDTable_' cstate) (clift (t_hrs_' cstate)) =
      armKSASIDMap (ksArchState astate)"
@@ -647,6 +680,7 @@ lemma (in kernel_m)
   apply clarsimp
   apply (case_tac "armKSASIDMap (ksArchState astate) x")
    apply (clarsimp simp: ran_array_map_conv option_to_0_def split:option.splits)
+    apply (fastforce simp: is_inv_def)
    apply (fastforce simp: is_inv_def)
   apply clarsimp
   apply (rule conjI)
@@ -679,8 +713,9 @@ definition (in state_rel)
                      (armKSHWASIDTable_' cstate))
      (armKSNextASID_' cstate)
      (casid_map_to_H (armKSHWASIDTable_' cstate) (clift (t_hrs_' cstate)))
-     (symbol_table ''armKSGlobalPD'')
-     [symbol_table ''armKSGlobalPT'']
+     (ccur_vcpu_to_H (armHSCurVCPU_' cstate) (armHSVCPUActive_' cstate))
+     (unat (gic_vcpu_num_list_regs_' cstate))
+     (symbol_table ''armUSGlobalPD'')
      armKSKernelVSpace_C"
 
 lemma eq_option_to_ptr_rev:
@@ -694,15 +729,20 @@ lemma eq_option_to_ptr_rev:
 lemma (in kernel_m)  carch_state_to_H_correct:
   assumes valid:  "valid_arch_state' astate"
   assumes rel:    "carch_state_relation (ksArchState astate) (cstate)"
-  assumes gpts:   "armKSGlobalPTs (ksArchState astate) =
-                   [symbol_table ''armKSGlobalPT'']"
   shows           "carch_state_to_H cstate = ksArchState astate"
   apply (case_tac "ksArchState astate", simp)
-  apply (rename_tac v1 v2 v3 v4 v5 v6 v7)
-  using gpts rel[simplified carch_state_relation_def carch_globals_def]
+  apply (rename_tac v1 v2 v3 v4 v5 v6 v7 v8)
+  using rel[simplified carch_state_relation_def carch_globals_def]
   apply (clarsimp simp: carch_state_to_H_def
                         casid_map_to_H_correct[OF valid rel])
   apply (rule conjI[rotated])
+   apply (rule conjI[rotated])
+    subgoal using valid rel
+      apply (clarsimp simp: ccur_vcpu_to_H_correct[OF _ rel])
+      apply (subst unat_of_nat_eq; simp)
+      subgoal sorry (* FIXME ARMHYP we know nothing about armKSGICVCPUNumListRegs being limited to
+                                     any specific range, missing invariant? *)
+      done
    apply (rule array_relation_map_conv2[OF _ eq_option_to_0_rev])
      apply assumption
     using valid[simplified valid_arch_state'_def]
@@ -739,25 +779,6 @@ lemma tcb_queue_rel'_unique:
    apply (clarsimp simp: neq_Nil_conv)
   apply (erule(2) tcb_queue_rel_unique)
   done
-
-lemma cqueues_unique:
-  "h_tcb NULL = None \<Longrightarrow>
-   cready_queues_relation h_tcb cs as \<Longrightarrow>
-   cready_queues_relation h_tcb cs as' \<Longrightarrow> as' = as"
-oops (*
- apply (clarsimp simp add: cready_queues_relation_def Let_def fun_eq_iff)
-  apply (rename_tac qdom prio)
-  apply (erule_tac x=qdom in allE)
-  apply (erule_tac x=qdom in allE)
-  apply (erule_tac x=prio in allE)+
-  apply clarsimp
-  apply (cut_tac w=qdom in word_le_p2m1)
-  apply (cut_tac w=prio in word_le_p2m1, simp add: seL4_MinPrio_def seL4_MaxPrio_def minus_one_norm)
-  apply (cut_tac w=prio in word_le_p2m1)
-  apply (simp add: seL4_MinPrio_def seL4_MaxPrio_def minDom_def maxDom_def minus_one_norm)
-  apply (clarsimp simp add: tcb_queue_relation'_def tcb_queue_rel_unique)
-  done
-*)
 
 definition
   cready_queues_to_H
@@ -817,13 +838,6 @@ lemma inj_tcb_ptr_to_ctcb_ptr: "inj tcb_ptr_to_ctcb_ptr"
 lemma ccontext_relation_imp_eq:
   "ccontext_relation f x \<Longrightarrow> ccontext_relation g x \<Longrightarrow> f=g"
   by (rule ext) (simp add: ccontext_relation_def)
-
-lemma carch_tcb_relation_imp_eq:
-  "carch_tcb_relation f x \<Longrightarrow> carch_tcb_relation g x \<Longrightarrow> f = g"
-  apply (cases f)
-  apply (cases g)
-  apply (simp add: carch_tcb_relation_def ccontext_relation_imp_eq atcbContextGet_def)
-  done
 
 (* FIXME: move *)
 lemma ran_tcb_cte_cases:
@@ -949,6 +963,33 @@ lemma ksPSpace_valid_objs_tcbBoundNotification_nonzero:
   apply (clarsimp simp: projectKOs valid_obj'_def valid_tcb'_def)
   done
 
+lemma ksPSpace_valid_objs_atcbVCPUPtr_nonzero:
+  "\<exists>s. ksPSpace s = ah \<and> no_0_obj' s \<and> valid_objs' s
+     \<Longrightarrow> map_to_tcbs ah p = Some tcb \<Longrightarrow> atcbVCPUPtr (tcbArch tcb) \<noteq> Some 0"
+  apply (clarsimp simp: map_comp_def split: option.splits)
+  apply (erule(1) valid_objsE')
+  apply (clarsimp simp: projectKOs valid_obj'_def valid_tcb'_def valid_arch_tcb'_def)
+  done
+
+lemma carch_tcb_relation_imp_eq:
+  "atcbVCPUPtr f \<noteq> Some 0 \<Longrightarrow> atcbVCPUPtr g \<noteq> Some 0
+   \<Longrightarrow> carch_tcb_relation f x \<Longrightarrow> carch_tcb_relation g x \<Longrightarrow> f = g"
+  apply (cases f)
+  apply (rename_tac tc1 vcpuptr1)
+  apply (cases g)
+  apply (rename_tac tc2 vcpuptr2)
+  apply clarsimp
+  apply (clarsimp simp add: carch_tcb_relation_def)
+  apply (rule context_conjI)
+   subgoal by (clarsimp simp add: ccontext_relation_imp_eq atcbContextGet_def)
+  apply (clarsimp)
+  apply (case_tac "tcbVCPU_C x = NULL")
+   apply (fastforce dest!: option_to_ptr_NULL_eq)
+  apply (cases "tcbVCPU_C x")
+  apply (case_tac vcpuptr1 ; simp)
+  apply (case_tac vcpuptr2 ; simp)
+  done
+
 lemma cpspace_tcb_relation_unique:
   assumes tcbs: "cpspace_tcb_relation ah ch" "cpspace_tcb_relation ah' ch"
       and   vs: "\<exists>s. ksPSpace s = ah \<and> no_0_obj' s \<and> valid_objs' s"
@@ -971,6 +1012,8 @@ lemma cpspace_tcb_relation_unique:
    apply (drule_tac x=x in spec, drule_tac x=y in spec, erule impE, fastforce)
    apply (frule ksPSpace_valid_objs_tcbBoundNotification_nonzero[OF vs])
    apply (frule ksPSpace_valid_objs_tcbBoundNotification_nonzero[OF vs'])
+   apply (frule ksPSpace_valid_objs_atcbVCPUPtr_nonzero[OF vs])
+   apply (frule ksPSpace_valid_objs_atcbVCPUPtr_nonzero[OF vs'])
    apply (thin_tac "map_to_tcbs x y = Some z" for x y z)+
    apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x100)))")
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
@@ -1045,21 +1088,35 @@ lemma of_bool_inject[iff]: "of_bool a = of_bool b \<longleftrightarrow> a=b"
   by (cases a) (cases b, simp_all)+
 
 (* FIXME: move *)
-lemma ap_from_vm_rights_inject[iff]:
-  "(ap_from_vm_rights a::word32) = ap_from_vm_rights b \<longleftrightarrow> a=b"
-  by (simp add: ap_from_vm_rights_def split: vmrights.splits)
+lemma hap_from_vm_rights_inject[iff]:
+  "(hap_from_vm_rights a::word32) = hap_from_vm_rights b \<longleftrightarrow> a=b"
+  unfolding hap_from_vm_rights_def
+  apply (simp add: hap_from_vm_rights_def split: vmrights.splits)
+  oops (* FIXME ARMHYP NOT TRUE *)
 
 lemma cpspace_pde_relation_unique:
   assumes "cpspace_pde_relation ah ch" "cpspace_pde_relation ah' ch"
   shows   "map_to_pdes ah' = map_to_pdes ah"
   apply (rule cmap_relation_unique[OF inj_Ptr _ assms])
-  by (simp add: cpde_relation_def s_from_cacheable_def Let_def split: pde.splits bool.splits)
+  apply (simp add: cpde_relation_def Let_def split: pde.splits bool.splits)
+  sorry
+  (* FIXME ARMHYP NOT TRUE at the moment, since hap_from_vm_rights is categorically *not* injective *)
 
 lemma cpspace_pte_relation_unique:
   assumes "cpspace_pte_relation ah ch" "cpspace_pte_relation ah' ch"
   shows   "map_to_ptes ah' = map_to_ptes ah"
   apply (rule cmap_relation_unique[OF inj_Ptr _ assms])
-  by (simp add: cpte_relation_def s_from_cacheable_def Let_def split: pte.splits bool.splits)
+  apply (simp add: cpte_relation_def Let_def split: pte.splits bool.splits)
+  sorry
+  (* FIXME ARMHYP NOT TRUE at the moment, since hap_from_vm_rights is categorically *not* injective *)
+
+lemma cpspace_vcpu_relation_unique:
+  assumes "cpspace_vcpu_relation ah ch" "cpspace_vcpu_relation ah' ch"
+  shows   "map_to_vcpus ah' = map_to_vcpus ah"
+  apply (rule cmap_relation_unique[OF inj_Ptr _ assms])
+  apply (simp add: cvcpu_relation_def Let_def cvgic_relation_def split: vcpu.splits)
+  apply clarsimp
+  sorry (* FIXME ARMHYP TODO no idea if this is true, but we should aim to make it so *)
 
 (* FIXME: move *)
 lemma Collect_mono2: "Collect P \<subseteq> Collect Q \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x)" by auto
@@ -1160,8 +1217,8 @@ lemma cpspace_device_data_relation_unique:
 
 lemmas projectKO_opts = projectKO_opt_ep projectKO_opt_ntfn projectKO_opt_tcb
                         projectKO_opt_pte projectKO_opt_pde projectKO_opt_cte
-                        projectKO_opt_asidpool  projectKO_opt_user_data
-                        projectKO_opt_user_data_device
+                        projectKO_opt_asidpool projectKO_opt_vcpu
+                        projectKO_opt_user_data projectKO_opt_user_data_device
 
 (* Following from the definition of map_to_ctes,
    there are two kinds of capability tables, namely CNodes and TCBs.
@@ -1279,6 +1336,7 @@ proof -
    apply (fastforce intro: valid_pspaces)
   apply (drule (1) cpspace_pde_relation_unique)
   apply (drule (1) cpspace_pte_relation_unique)
+  apply (drule (1) cpspace_vcpu_relation_unique)
   apply (drule (1) cpspace_asidpool_relation_unique[
                      OF valid_objs'_imp_wf_asid_pool'[OF valid_objs]
                         valid_objs'_imp_wf_asid_pool'[OF valid_objs']])
@@ -1334,20 +1392,27 @@ lemma ksPSpace_eq_imp_valid_cap'_eq:
 lemma ksPSpace_eq_imp_valid_tcb'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_tcb' tcb s' = valid_tcb' tcb s"
-
+  sorry (* FIXME ARMHYP should be fine
   by (auto simp: ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                  ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
-                 valid_tcb'_def valid_tcb_state'_def valid_bound_ntfn'_def
-          split: thread_state.splits option.splits)
+                 valid_tcb'_def valid_tcb_state'_def valid_bound_ntfn'_def valid_arch_tcb'_def
+          split: thread_state.splits option.splits) *)
+
+lemma ksPSpace_eq_imp_valid_vcpu'_eq:
+  assumes ksPSpace: "ksPSpace s' = ksPSpace s"
+  shows "valid_vcpu' vcpu s' = valid_vcpu' vcpu s"
+  sorry (* FIXME ARMHYP should be fine *)
 
 lemma ksPSpace_eq_imp_valid_arch_obj'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_arch_obj' ao s' = valid_arch_obj' ao s"
   apply (case_tac ao, simp)
-   apply (rename_tac pte)
-   apply (case_tac pte, simp_all add: valid_mapping'_def)
-  apply (rename_tac pde)
-  apply (case_tac pde, simp_all add: valid_mapping'_def)
+    apply (rename_tac pte)
+    apply (case_tac pte, simp_all add: valid_mapping'_def)
+   apply (rename_tac pde)
+   apply (case_tac pde, simp_all add: valid_mapping'_def)
+  apply (rename_tac vcpu)
+  apply (rule ksPSpace_eq_imp_valid_vcpu'_eq[OF ksPSpace])
   done
 
 lemma ksPSpace_eq_imp_valid_objs'_eq:
@@ -1666,9 +1731,13 @@ locale kernel_global = state_rel + kernel_all_global_addresses
 (* note we're in the c-parser's locale now, not the substitute *)
 begin
 
-
+(* FIXME ARMHYP why is this function being repeated? *)
+(* currently hypervisor events redirect directly to handleVCPUFault *)
 definition
-  "handleHypervisorEvent_C = (CALL schedule();; CALL activateThread())"
+  handleHypervisorEvent_C :: "hyp_fault_type \<Rightarrow> (globals myvars, int, strictc_errortype) com"
+where
+  "handleHypervisorEvent_C t = (case t
+    of hyp_fault_type.ARMVCPUFault hsr \<Rightarrow> (CALL handleVCPUFault(hsr)))"
 
 definition
   "callKernel_C e \<equiv> case e of
@@ -1677,7 +1746,7 @@ definition
   | UserLevelFault w1 w2 \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleUserLevelFault(w1,w2))
   | Interrupt \<Rightarrow> exec_C \<Gamma> (Call handleInterruptEntry_'proc)
   | VMFaultEvent t \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleVMFaultEvent(kernel_m.vm_fault_type_from_H t))
-  | HypervisorEvent t \<Rightarrow> exec_C \<Gamma> handleHypervisorEvent_C"
+  | HypervisorEvent t \<Rightarrow> exec_C \<Gamma> (handleHypervisorEvent_C t)"
 
 definition
   "callKernel_withFastpath_C e \<equiv>
@@ -1689,16 +1758,20 @@ definition
                    ELSE CALL fastpath_reply_recv(\<acute>cptr, \<acute>msgInfo) FI)
    else callKernel_C e"
 
+(* FIXME ARMHYP: why is this duplicated here, we've already seen setTCBContext_C before in this file!
+   same was the case before when it was called setTCBArch since obviously arch_tcb only contained
+   the context *)
 definition
-  setArchTCB_C :: "arch_tcb_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
+  setTCBContext_C :: "user_context_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
 where
-  "setArchTCB_C ct thread \<equiv>
-  exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (Ptr &(thread\<rightarrow>[''tcbArch_C''])) ct) \<acute>t_hrs)"
+  "setTCBContext_C ct thread \<equiv>
+  exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (
+    Ptr &((Ptr &(thread\<rightarrow>[''tcbArch_C'']) :: (arch_tcb_C ptr))\<rightarrow>[''tcbContext_C''])) ct) \<acute>t_hrs)"
 
 definition
   "kernelEntry_C fp e tc \<equiv> do
     t \<leftarrow> gets (ksCurThread_' o globals);
-    setArchTCB_C (arch_tcb_C (to_user_context_C tc)) t;
+    setTCBContext_C (to_user_context_C tc) t;
     if fp then callKernel_withFastpath_C e else callKernel_C e;
     t \<leftarrow> gets (ksCurThread_' o globals);
     gets $ getContext_C t
