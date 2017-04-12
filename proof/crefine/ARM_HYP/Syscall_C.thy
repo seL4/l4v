@@ -1782,11 +1782,13 @@ lemma scast_maxIRQ_is_not_less: "(\<not> (Kernel_C.maxIRQ) <s (ucast \<circ> (uc
 done
 
 lemma ccorres_handleReserveIRQ:
-  "ccorres dc xfdc \<top> UNIV hs (handleReservedIRQ irq) (Call handleReservedIRQ_'proc)"
-  apply cinit
-  apply (rule ccorres_return_Skip)
-  apply simp
-  done
+  "ccorres dc xfdc \<top> (UNIV \<inter> {s. irq_' s = ucast irq}) hs
+    (handleReservedIRQ irq) (Call handleReservedIRQ_'proc)"
+  supply dc_simp[simp del]
+  apply (cinit lift: irq_')
+  apply (clarsimp simp: irqVGICMaintenance_def INTERRUPT_PPI_9_def ucast_up_ucast is_up when_def)
+  sorry (* FIXME ARMHYP cond rules are unhappy
+           FIXME ARMHYP TODO VGICMaintenance_ccorres *)
 
 lemma handleInterrupt_ccorres:
   "ccorres dc xfdc
@@ -1889,7 +1891,7 @@ lemma handleInterrupt_ccorres:
    apply (ctac add: ccorres_handleReserveIRQ)
      apply (ctac (no_vcg) add: ackInterrupt_ccorres [unfolded dc_def])
     apply wp
-   apply vcg
+   apply (vcg exspec=handleReservedIRQ_modifies)
   apply (simp add: sint_ucast_eq_uint is_down uint_up_ucast is_up )
   apply (clarsimp simp: word_sless_alt word_less_alt word_le_def Kernel_C.maxIRQ_def
                         uint_up_ucast is_up_def
@@ -1909,7 +1911,7 @@ lemma handleInterrupt_ccorres:
        apply (frule cap_get_tag_isCap_unfolded_H_cap)
        apply (frule cap_get_tag_to_H, assumption)
        apply (clarsimp simp: to_bool_def)
-      apply (cut_tac un_ui_le[where b = 159 and a = irq,
+      apply (cut_tac un_ui_le[where b = 191 and a = irq,
              simplified word_size])
       apply (simp add: ucast_eq_0 is_up_def source_size_def
                        target_size_def word_size unat_gt_0
