@@ -446,7 +446,7 @@ defs isValidVTableRoot_def:
 defs checkValidIPCBuffer_def:
 "checkValidIPCBuffer vptr x1\<equiv> (case x1 of
     (ArchObjectCap (PageCap _ _ _ _ _ _)) \<Rightarrow>    (doE
-    whenE (vptr && mask 9 \<noteq> 0) $ throw AlignmentError;
+    whenE (vptr && mask 10 \<noteq> 0) $ throw AlignmentError;
     returnOk ()
     odE)
   | _ \<Rightarrow>    throw IllegalOperation
