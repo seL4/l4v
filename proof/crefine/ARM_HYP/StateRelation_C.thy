@@ -120,7 +120,7 @@ definition
 where
   "cur_vcpu_relation akscurvcpu cvcpu cactive \<equiv>
     case akscurvcpu
-      of Some acurvcpu \<Rightarrow> cvcpu = Ptr (fst acurvcpu) \<and> cactive = from_bool (snd acurvcpu)
+      of Some acurvcpu \<Rightarrow> cvcpu = Ptr (fst acurvcpu) \<and> cvcpu \<noteq> NULL \<and> cactive = from_bool (snd acurvcpu)
        | None \<Rightarrow> cvcpu = NULL \<and> cactive = 0"
 
 (* FIXME ARMHYP armUSGlobalPD points to page full of invalid PDEs, i.e. it's all zero *)
