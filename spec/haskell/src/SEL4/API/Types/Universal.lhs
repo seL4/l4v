@@ -32,13 +32,13 @@ The following is the definition of the five object types that are always availab
 > tcbBlockSizeBits = 9
 
 > epSizeBits :: Int
-> epSizeBits = 4
+> epSizeBits = 5
 
 > ntfnSizeBits :: Int
-> ntfnSizeBits = 4
+> ntfnSizeBits = 5
 
 > cteSizeBits :: Int
-> cteSizeBits = 4
+> cteSizeBits = 5
 
 > apiGetObjectSize :: APIObjectType -> Int -> Int
 > apiGetObjectSize Untyped size = size
