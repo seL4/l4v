@@ -16,6 +16,31 @@ context Arch begin global_naming ARM
 
 named_theorems Detype_AI_asms
 
+lemma pre_helper2':
+  "\<And>base x n. \<lbrakk> is_aligned (base :: machine_word) n; n < word_bits; word_size_bits \<le> n; x < 2 ^ (n - word_size_bits) \<rbrakk>
+             \<Longrightarrow> base + x * word_size \<in> {base .. base + 2 ^ n  - 1}"
+  apply (subgoal_tac "x * word_size < 2 ^ n")
+   apply simp
+   apply (rule context_conjI)
+    apply (erule(1) is_aligned_no_wrap')
+   apply (subst add_diff_eq[symmetric])
+   apply (rule word_plus_mono_right)
+    apply simp
+   apply (erule is_aligned_no_wrap')
+   apply simp
+  apply (drule word_mult_less_mono1[where k="2 ^ word_size_bits"])
+    apply (simp add: word_size_bits_def)
+   apply (subst unat_power_lower, simp add: word_bits_def word_size_bits_def)+
+   apply (simp only: power_add[symmetric])
+   apply (rule power_strict_increasing)
+    apply (simp add: word_bits_def)
+   apply simp
+  apply (simp only: power_add[symmetric] le_add_diff_inverse2)
+  apply (simp add: word_size_def word_size_bits_def)
+  done
+
+lemmas pre_helper2 = pre_helper2'[unfolded word_size_bits_def word_size_def]
+
 lemma valid_globals_irq_node[Detype_AI_asms]:
     "\<lbrakk> valid_global_refs s; cte_wp_at (op = cap) ptr s \<rbrakk>
           \<Longrightarrow> interrupt_irq_node s irq \<notin> cap_range cap"
