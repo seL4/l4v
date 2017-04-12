@@ -487,7 +487,7 @@ Note that implementations with separate high and low memory regions may also wis
 
 > checkValidIPCBuffer :: VPtr -> Capability -> KernelF SyscallError ()
 > checkValidIPCBuffer vptr (ArchObjectCap (PageCap {})) = do
->     when (vptr .&. mask 9 /= 0) $ throw AlignmentError
+>     when (vptr .&. mask 10 /= 0) $ throw AlignmentError
 >     return ()
 > checkValidIPCBuffer _ _ = throw IllegalOperation
 
