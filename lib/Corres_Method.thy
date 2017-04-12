@@ -825,21 +825,21 @@ method corresK_convert = (((drule uncurry)+)?, drule corresK_convert corresK_dro
 section \<open>Lifting corres results into wp proofs\<close>
 
 definition
-  "ex_abs sr P s' \<equiv> \<exists>s. (s,s') \<in> sr \<and> P s"
+  "ex_abs_underlying sr P s' \<equiv> \<exists>s. (s,s') \<in> sr \<and> P s"
 
 lemma ex_absI[intro!]:
-  "(s, s') \<in> sr \<Longrightarrow> P s \<Longrightarrow> ex_abs sr P s'"
-  by (auto simp add: ex_abs_def)
+  "(s, s') \<in> sr \<Longrightarrow> P s \<Longrightarrow> ex_abs_underlying sr P s'"
+  by (auto simp add: ex_abs_underlying_def)
 
 lemma use_corresK':
   "corres_underlyingK sr False nf' F r PP PP' f f' \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow>
-    \<lbrace>K F and PP' and ex_abs sr (PP and P)\<rbrace> f' \<lbrace>\<lambda>rv' s'. \<exists>rv. r rv rv' \<and> ex_abs sr (Q rv) s'\<rbrace>"
-  by (fastforce simp: corres_underlying_def corres_underlyingK_def valid_def ex_abs_def)
+    \<lbrace>K F and PP' and ex_abs_underlying sr (PP and P)\<rbrace> f' \<lbrace>\<lambda>rv' s'. \<exists>rv. r rv rv' \<and> ex_abs_underlying sr (Q rv) s'\<rbrace>"
+  by (fastforce simp: corres_underlying_def corres_underlyingK_def valid_def ex_abs_underlying_def)
 
 lemma use_corresK [wp]:
   "corres_underlyingK sr False nf' F r PP PP' f f' \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>rv'. r rv rv' \<longrightarrow> Q rv' s\<rbrace> \<Longrightarrow>
-    \<lbrace>K F and PP' and ex_abs sr (PP and P)\<rbrace> f' \<lbrace>\<lambda>rv'. ex_abs sr (Q rv')\<rbrace>"
- apply (fastforce simp: corres_underlying_def corres_underlyingK_def valid_def ex_abs_def)
+    \<lbrace>K F and PP' and ex_abs_underlying sr (PP and P)\<rbrace> f' \<lbrace>\<lambda>rv'. ex_abs_underlying sr (Q rv')\<rbrace>"
+ apply (fastforce simp: corres_underlying_def corres_underlyingK_def valid_def ex_abs_underlying_def)
  done
 
 lemma hoare_add_post':
@@ -851,13 +851,13 @@ lemma use_corresK_frame:
   assumes frame: "(\<forall>s s' rv rv'. (s,s') \<in> sr \<longrightarrow> r rv rv' \<longrightarrow> Q rv s \<longrightarrow> Q' rv' s' \<longrightarrow> QQ' rv' s')"
   assumes valid: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   assumes valid': "\<lbrace>PP'\<rbrace> f' \<lbrace>Q'\<rbrace>"
-  shows "\<lbrace>K F and P' and PP' and ex_abs sr (PP and P)\<rbrace> f' \<lbrace>QQ'\<rbrace>"
+  shows "\<lbrace>K F and P' and PP' and ex_abs_underlying sr (PP and P)\<rbrace> f' \<lbrace>QQ'\<rbrace>"
   apply (rule hoare_pre)
    apply (rule hoare_add_post'[OF valid'])
    apply (rule hoare_strengthen_post)
     apply (rule use_corresK'[OF corres valid])
    apply (insert frame)[1]
-   apply (clarsimp simp: ex_abs_def)
+   apply (clarsimp simp: ex_abs_underlying_def)
   apply clarsimp
   done
 
@@ -866,7 +866,7 @@ lemma use_corresK_frame_E_R:
   assumes frame: "(\<forall>s s' rv rv'. (s,s') \<in> sr \<longrightarrow> r rv rv' \<longrightarrow> Q rv s \<longrightarrow> Q' rv' s' \<longrightarrow> QQ' rv' s')"
   assumes valid: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -"
   assumes valid': "\<lbrace>PP'\<rbrace> f' \<lbrace>Q'\<rbrace>, -"
-  shows "\<lbrace>K F and P' and PP' and ex_abs sr (PP and P)\<rbrace> f' \<lbrace>QQ'\<rbrace>, -"
+  shows "\<lbrace>K F and P' and PP' and ex_abs_underlying sr (PP and P)\<rbrace> f' \<lbrace>QQ'\<rbrace>, -"
   apply (simp only: validE_R_def validE_def)
   apply (rule use_corresK_frame[OF corres _ valid[simplified validE_R_def validE_def] valid'[simplified validE_R_def validE_def]])
   by (auto simp: frame split: sum.splits)
