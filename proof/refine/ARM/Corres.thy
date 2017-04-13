@@ -9,7 +9,7 @@
  *)
 
 theory Corres
-imports StateRelation "../../../lib/Corres_Method"
+imports StateRelation "../../../lib/CorresK_Lemmas"
 begin
 
 text {* Instantiating the corres framework to this particular state relation. *}
@@ -18,5 +18,8 @@ abbreviation
 
 abbreviation
  "corresK \<equiv> corres_underlyingK state_relation False True"
+
+abbreviation
+  "ex_abs \<equiv> ex_abs_underlying state_relation"
 
 end

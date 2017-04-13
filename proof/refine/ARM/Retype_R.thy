@@ -2754,9 +2754,9 @@ lemma copy_global_corres:
                                               \<and> pde_at' (pd + (x << 2)) s"
                           in corres_mapM_list_all2, (simp add: pdeBits_def)+)
           apply (rule corres_guard_imp, rule corres_split)
-               apply (erule store_pde_corres)
+               apply (erule store_pde_corres[OF refl])
               apply (rule corres_rel_imp)
-               apply (rule_tac get_pde_corres)
+               apply (rule_tac get_pde_corres[OF refl])
               apply clarsimp
               apply (drule(1) pde_relation_aligned_eq)
               apply fastforce

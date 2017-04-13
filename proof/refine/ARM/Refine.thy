@@ -534,8 +534,6 @@ proof -
      pointerInDeviceData_relation[OF rel valid' valid])
 qed
 
-definition
-  "ex_abs G \<equiv> \<lambda>s'. \<exists>s. ((s :: (det_ext) state),s') \<in> state_relation \<and> G s"
 
 lemma device_update_invs':
   "\<lbrace>invs'\<rbrace>doMachineOp (device_memory_update ds)
@@ -543,6 +541,8 @@ lemma device_update_invs':
    apply (simp add: doMachineOp_def device_memory_update_def simpler_modify_def select_f_def
                     gets_def get_def bind_def valid_def return_def)
    by (clarsimp simp: invs'_def valid_state'_def valid_irq_states'_def valid_machine_state'_def)
+
+lemmas ex_abs_def = ex_abs_underlying_def[where sr=state_relation and P=G,abs_def] for G
 
 lemma doUserOp_invs':
   "\<lbrace>invs' and ex_abs einvs and

@@ -1559,7 +1559,7 @@ lemma unmap_page_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch [where E="\<lambda>_. \<top>" and E'="\<lambda>_. \<top>"], simp)
       apply (rule corres_split_strengthen_ftE[where ftr'=dc],
-             rule find_pd_for_asid_corres)
+             rule find_pd_for_asid_corres,simp)
         apply (rule corres_splitEE)
            apply clarsimp
            apply (rule flush_page_corres)
@@ -1576,7 +1576,7 @@ lemma unmap_page_corres:
           apply (cases sz, simp_all)[1]
              apply (rule corres_guard_imp)
                apply (rule_tac F = "vptr < kernel_base" in corres_gen_asm)
-               apply (rule corres_split_strengthen_ftE[OF lookup_pt_slot_corres])
+               apply (rule corres_split_strengthen_ftE[OF lookup_pt_slot_corres[OF refl refl]])
                  apply simp
                  apply (rule corres_splitEE[OF _ check_mapping_corres])
                    apply simp
@@ -1595,7 +1595,7 @@ lemma unmap_page_corres:
               apply (simp add:page_directory_at_aligned_pd_bits)
              apply simp
             apply (rule corres_guard_imp)
-              apply (rule corres_split_strengthen_ftE[OF lookup_pt_slot_corres])
+              apply (rule corres_split_strengthen_ftE[OF lookup_pt_slot_corres[OF refl refl]])
                 apply (rule_tac F="is_aligned p 6" in corres_gen_asm)
                 apply (simp add: is_aligned_mask[symmetric])
                 apply (rule corres_split_strengthen_ftE[OF check_mapping_corres])
@@ -2649,7 +2649,7 @@ lemma pap_corres:
            apply simp
           apply (rule corres_rel_imp)
            apply simp
-           apply (rule set_asid_pool_corres)
+           apply (rule set_asid_pool_corres[OF refl])
            apply (simp add: inv_def)
            apply (rule ext)
            apply (clarsimp simp: mask_asid_low_bits_ucast_ucast)

@@ -535,7 +535,7 @@ lemma resolve_vaddr_corres:
       apply (case_tac rv, simp_all add: pde_relation'_def)[1]
       apply (rule corres_stateAssert_assume_stronger)
        apply (rule stronger_corres_guard_imp)
-         apply (rule corres_split[OF _ get_master_pte_corres])
+         apply (rule corres_split[OF _ get_master_pte_corres[OF refl]])
            apply (rule corres_trivial)
            apply (case_tac rva, simp_all add: pte_relation'_def)[1]
           apply (wp get_master_pte_inv)+
@@ -543,9 +543,8 @@ lemma resolve_vaddr_corres:
        apply (clarsimp simp: page_table_pte_at_lookupI' page_table_at_state_relation)
       apply clarsimp
       apply (erule(3) page_table_at_state_relation)
-     apply wp+
-   apply (clarsimp simp: page_directory_pde_at_lookupI less_kernel_base_mapping_slots
-                         valid_vspace_objs_def')
+     apply wpsimp+
+   apply (clarsimp simp: page_directory_pde_at_lookupI less_kernel_base_mapping_slots)
   apply (clarsimp simp: page_directory_pde_at_lookupI' page_directory_at_state_relation)
   done
 
@@ -599,7 +598,7 @@ lemma dec_arch_inv_page_flush_corres:
     apply (rule corres_splitEE)
        prefer 2
        apply (rule corres_lookup_error)
-       apply (rule find_pd_for_asid_corres)
+       apply (rule find_pd_for_asid_corres[OF refl])
       apply (rule whenE_throwError_corres, simp)
        apply simp
       apply (rule whenE_throwError_corres, simp)
@@ -1003,7 +1002,7 @@ shows
                              valid_cap (cap.ArchObjectCap
                                          (arch_cap.PageDirectoryCap wd (Some optv)))"
                      in corres_guard_imp)
-            apply (rule find_pd_for_asid_corres)
+            apply (rule find_pd_for_asid_corres[OF refl])
            apply (clarsimp simp: valid_cap_def)
            apply (simp add: mask_def)
           apply assumption
@@ -1029,7 +1028,7 @@ shows
                apply (rule corres_splitEE)
                   prefer 2
                   apply (simp only: addrFromPPtr_def)
-                  apply (rule create_mapping_entries_corres)
+                  apply (rule create_mapping_entries_corres[OF _ _ refl refl refl refl])
                    apply (simp add: mask_vmrights_corres)
                   apply (simp add: vm_attributes_corres)
                  apply (rule corres_splitEE)
@@ -1082,7 +1081,7 @@ shows
          apply (rule corres_splitEE)
             prefer 2
             apply (rule corres_lookup_error)
-            apply (rule find_pd_for_asid_corres)
+            apply (rule find_pd_for_asid_corres[OF refl])
            apply (rule whenE_throwError_corres)
              apply simp
             apply simp
@@ -1093,7 +1092,7 @@ shows
              apply (rule corres_splitEE)
                 prefer 2
                 apply (simp only: addrFromPPtr_def)
-                apply (rule create_mapping_entries_corres)
+                apply (rule create_mapping_entries_corres[OF _ _ refl refl refl refl])
                  apply (simp add: mask_vmrights_corres)
                 apply (simp add: vm_attributes_corres)
                apply (rule corres_splitEE)
@@ -1156,7 +1155,7 @@ shows
       apply (rule corres_splitEE)
          prefer 2
          apply (rule corres_lookup_error)
-         apply (rule find_pd_for_asid_corres)
+         apply (rule find_pd_for_asid_corres[OF refl])
         apply (rule whenE_throwError_corres, simp, simp)
         apply (rule corres_splitEE)
            prefer 2
@@ -1235,7 +1234,7 @@ shows
      apply (rule corres_splitEE)
         prefer 2
         apply (rule corres_lookup_error)
-        apply (rule find_pd_for_asid_corres)
+        apply (rule find_pd_for_asid_corres[OF refl])
        apply (rule whenE_throwError_corres, simp)
         apply clarsimp
        apply (simp add: liftE_bindE)

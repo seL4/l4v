@@ -105,9 +105,9 @@ lemma asid_low_bits [simp]:
   by (simp add: asid_low_bits_def asidLowBits_def)
 
 lemma get_asid_pool_corres [corres]:
-  "corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
-          (asid_pool_at p) (asid_pool_at' p)
-          (get_asid_pool p) (getObject p)"
+  "p = p' \<Longrightarrow> corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
+          (asid_pool_at p) (asid_pool_at' p')
+          (get_asid_pool p) (getObject p')"
   apply (simp add: getObject_def get_asid_pool_def get_object_def split_def)
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
@@ -225,9 +225,9 @@ crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch inv[wp]: getIRQSlot "P"
 
 lemma set_asid_pool_corres [corres]:
-  "a = inv ASIDPool a' o ucast \<Longrightarrow>
-  corres dc (asid_pool_at p and valid_etcbs) (asid_pool_at' p)
-            (set_asid_pool p a) (setObject p a')"
+  "p = p' \<Longrightarrow> a = inv ASIDPool a' o ucast \<Longrightarrow>
+  corres dc (asid_pool_at p and valid_etcbs) (asid_pool_at' p')
+            (set_asid_pool p a) (setObject p' a')"
   apply (simp add: set_asid_pool_def)
   apply (corressimp search: set_other_obj_corres[where P="\<lambda>_. True"]
                         wp: get_object_ret get_object_wp)
@@ -252,8 +252,8 @@ lemma pde_relation_aligned_simp:
               split: ARM_H.pde.splits if_splits)
 
 lemma get_pde_corres [corres]:
-  "corres (pde_relation_aligned (p >> 2)) (pde_at p) (pde_at' p)
-     (get_pde p) (getObject p)"
+  "p = p' \<Longrightarrow> corres (pde_relation_aligned (p >> 2)) (pde_at p) (pde_at' p')
+     (get_pde p) (getObject p')"
   apply (simp add: getObject_def get_pde_def get_pd_def get_object_def split_def bind_assoc)
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
@@ -347,10 +347,12 @@ lemma pde_at_ksPSpace_not_None:
   done
 
 lemma get_master_pde_corres [corres]:
+  assumes pre[symmetric,simp]: "p = p'"
+  shows
   "corres pde_relation' (pde_at p)
-     (pde_at' p and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
+     (pde_at' p' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
       pspace_aligned' and pspace_distinct')
-     (get_master_pde p) (getObject p)"
+     (get_master_pde p) (getObject p')"
   proof -
     have [simp]: "max pd_bits 6 = pd_bits"
       by (simp add:pd_bits_def pageBits_def)
@@ -523,8 +525,8 @@ lemma pte_relation_aligned_simp:
               split: ARM_H.pte.splits if_splits)
 
 lemma get_pte_corres [corres]:
-  "corres (pte_relation_aligned (p >> 2)) (pte_at p) (pte_at' p)
-     (get_pte p) (getObject p)"
+  "p = p' \<Longrightarrow> corres (pte_relation_aligned (p >> 2)) (pte_at p) (pte_at' p')
+     (get_pte p) (getObject p')"
   apply (simp add: getObject_def get_pte_def get_pt_def get_object_def split_def bind_assoc)
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
@@ -617,10 +619,12 @@ lemma pte_at_ksPSpace_not_None:
   done
 
 lemma get_master_pte_corres [corres]:
+  assumes [symmetric,simp]: "p = p'"
+  shows
   "corres pte_relation' (pte_at p)
-     (pte_at' p and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
+     (pte_at' p' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
       pspace_aligned' and pspace_distinct')
-     (get_master_pte p) (getObject p)"
+     (get_master_pte p) (getObject p')"
   proof -
     have [simp]: "max pt_bits 6 = pt_bits"
       by (simp add:pd_bits_def pageBits_def pt_bits_def)
@@ -780,12 +784,14 @@ lemma pt_slot_eq:
 
 -- "set_other_obj_corres unfortunately doesn't work here"
 lemma set_pd_corres [corres]:
+  assumes [symmetric,simp]: "p = p'"
+  shows
   "pde_relation_aligned (p>>2) pde pde' \<Longrightarrow>
-         corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits)
-                     and pspace_aligned and valid_etcbs)
-                    (pde_at' p)
+         corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) 
+                     and pspace_aligned and valid_etcbs) 
+                    (pde_at' p')
           (set_pd (p && ~~ mask pd_bits) (pd(ucast (p && mask pd_bits >> 2) := pde)))
-          (setObject p pde')"
+          (setObject p' pde')"
   apply (simp add: set_pd_def get_object_def bind_assoc)
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
@@ -859,12 +865,14 @@ lemma set_pd_corres [corres]:
 
 
 lemma set_pt_corres [corres]:
+  assumes [symmetric,simp]: "p = p'"
+  shows
   "pte_relation_aligned (p >> 2) pte pte' \<Longrightarrow>
-         corres dc  (ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits)
-                     and pspace_aligned and valid_etcbs)
-                    (pte_at' p)
+         corres dc  (ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits) 
+                     and pspace_aligned and valid_etcbs) 
+                    (pte_at' p')
           (set_pt (p && ~~ mask pt_bits) (pt(ucast (p && mask pt_bits >> 2) := pte)))
-          (setObject p pte')"
+          (setObject p' pte')"
   apply (simp add: set_pt_def get_object_def bind_assoc)
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
@@ -933,13 +941,14 @@ lemma set_pt_corres [corres]:
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
-
 lemma store_pde_corres [corres]:
-  "pde_relation_aligned (p >> 2) pde pde' \<Longrightarrow>
-  corres dc (pde_at p and pspace_aligned and valid_etcbs) (pde_at' p) (store_pde p pde) (storePDE p pde')"
+  assumes [symmetric,simp]: "p = p'"
+  shows
+  "pde_relation_aligned (p >> 2) pde pde' \<Longrightarrow> 
+  corres dc (pde_at p and pspace_aligned and valid_etcbs) (pde_at' p') (store_pde p pde) (storePDE p' pde')"
   apply (simp add: store_pde_def storePDE_def)
   apply (rule corres_symb_exec_l)
-     apply (erule set_pd_corres)
+     apply (erule set_pd_corres[where p=p and p'=p', simplified])
     apply (clarsimp simp: exs_valid_def get_pd_def get_object_def exec_gets bind_assoc
                           obj_at_def pde_at_def)
     apply (clarsimp simp: a_type_def return_def
@@ -962,11 +971,13 @@ lemma store_pde_corres':
   done
 
 lemma store_pte_corres [corres]:
-  "pte_relation_aligned (p>>2) pte pte' \<Longrightarrow>
-  corres dc (pte_at p and pspace_aligned and valid_etcbs) (pte_at' p) (store_pte p pte) (storePTE p pte')"
+  assumes [symmetric,simp]: "p = p'"
+  shows
+  "pte_relation_aligned (p>>2) pte pte' \<Longrightarrow> 
+  corres dc (pte_at p and pspace_aligned and valid_etcbs) (pte_at' p') (store_pte p pte) (storePTE p' pte')"
   apply (simp add: store_pte_def storePTE_def)
   apply (rule corres_symb_exec_l)
-     apply (erule set_pt_corres)
+     apply (erule set_pt_corres[where p=p and p'=p', simplified])
     apply (clarsimp simp: exs_valid_def get_pt_def get_object_def
                           exec_gets bind_assoc obj_at_def pte_at_def)
     apply (clarsimp simp: a_type_def return_def
@@ -1110,14 +1121,15 @@ lemmas checkPTAt_corres [corresK] =
   corres_stateAssert_implied_frame[OF page_table_at_lift, folded checkPTAt_def]
 
 lemma lookup_pt_slot_corres [corres]:
+  assumes [symmetric,simp]: "pd = pd'" "vptr = vptr'"
+  shows
   "corres (lfr \<oplus> op =)
           (pde_at (lookup_pd_slot pd vptr) and pspace_aligned and valid_vspace_objs
           and (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits)) and
           K (is_aligned pd pd_bits \<and> vptr < kernel_base
           \<and> ucast (lookup_pd_slot pd vptr && mask pd_bits >> 2) \<notin> kernel_mapping_slots))
           (pspace_aligned' and pspace_distinct')
-          (lookup_pt_slot pd vptr) (lookupPTSlot pd vptr)"
-  supply protect_r_def[simp]
+          (lookup_pt_slot pd vptr) (lookupPTSlot pd' vptr')"
   unfolding lookup_pt_slot_def lookupPTSlot_def lookupPTSlotFromPT_def
   apply (corressimp simp: pde_relation_aligned_def lookup_failure_map_def
                           ptBits_def pdeBits_def pageBits_def pteBits_def mask_def
@@ -1169,32 +1181,26 @@ lemma arm_global_pd_corres [corres]:
      (gets (arm_global_pd \<circ> arch_state)) (gets (armKSGlobalPD \<circ> ksArchState))"
  by (clarsimp simp: state_relation_def arch_state_relation_def)
 
-
-
 lemma copy_global_mappings_corres [corres]:
+  assumes [symmetric,simp]: "pd = pd'"
+  shows
   "corres dc (page_directory_at pd and pspace_aligned and valid_arch_state and valid_etcbs)
-             (page_directory_at' pd and valid_arch_state')
-          (copy_global_mappings pd) (copyGlobalMappings pd)" (is "corres _ ?apre _ _ _")
+             (page_directory_at' pd' and valid_arch_state')
+          (copy_global_mappings pd) (copyGlobalMappings pd')" (is "corres _ ?apre _ _ _")
   unfolding copy_global_mappings_def copyGlobalMappings_def pd_bits_def pdBits_def objBits_simps
             archObjSize_def kernel_base_def ARM.kernelBase_def ARM_H.kernelBase_def
-  supply protect_r_def[simp]
   apply corressimp
      apply (rule corresK_drop)
-     apply (rule_tac P="page_directory_at globalPD
-                        and (\<lambda>_. is_aligned globalPD 6 \<and> is_aligned pd 6) and ?apre" and
+     apply (rule_tac P="page_directory_at global_pd
+                        and (\<lambda>_. is_aligned global_pd 6 \<and> is_aligned pd 6) and ?apre" and
                     P'="page_directory_at' globalPD and page_directory_at' pd"
               in corres_mapM_x[rotated -1, OF order_refl])
         apply (corressimp simp: pdeBits_def ptBits_def pdeBits_def pageBits_def pteBits_def mask_def
                           wp: get_pde_wp getPDE_wp corres_rv_defer_left)
         subgoal for globalPD
-<<<<<<< HEAD
           apply (auto intro!: page_directory_pde_atI page_directory_pde_atI'
                      simp: pde_relation_aligned_def pageBits_def le_less_trans
-=======
-          by (auto intro!: page_directory_pde_atI page_directory_pde_atI'
-                     simp: pde_relation_aligned_def protect_r_def
->>>>>>> fix refine after changes to corres_method
-                     dest: align_entry_add_cong[of globalPD])
+        apply (corressimp wp: get_pde_wp getPDE_wp corres_rv_defer_left)
           done
   apply (wpsimp simp: pageBits_def)+
   apply (clarsimp simp: valid_arch_state_def obj_at_def pageBits_def dest!:pspace_alignedD)
@@ -1262,8 +1268,8 @@ lemma create_mapping_entries_corres [corres]:
            \<and> (is_aligned pd pd_bits \<and> vmsz_aligned vptr pgsz \<and> vptr < kernel_base \<and> vm_rights \<in> valid_vm_rights)
            \<and> valid_vspace_objs s \<and> pspace_aligned s \<and> (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits)) s)
           (pspace_aligned' and pspace_distinct')
-          (create_mapping_entries base vptr pgsz vm_rights attrib pd)
-          (createMappingEntries base vptr pgsz vm_rights' attrib' pd)"
+          (create_mapping_entries base vptr pgsz vm_rights attrib pd) 
+          (createMappingEntries base' vptr' pgsz' vm_rights' attrib' pd')"
   unfolding createMappingEntries_def mapping_map_def
   apply (cases pgsz; corressimp simp: vmattributes_map_def less_kernel_base_mapping_slots)
     apply (rule corres_rv_defer_left)
@@ -1309,8 +1315,6 @@ lemma createMappingEntries_valid_slots' [wp]:
   apply (simp add: vmsz_aligned'_def)
   apply auto
   done
-lemmas mapME_x_corresK_inv =
-  mapME_x_corres_inv[OF corresK_unlift[where F=F], THEN corresK_lift[where F=F], corresK] for F
 
 lemma ensure_safe_mapping_corres [corres]:
   "mapping_map m m' \<Longrightarrow>
@@ -1332,11 +1336,12 @@ lemma asidHighBitsOf [simp]:
   apply (simp add: word_size nth_ucast)
   done
 
+
 lemma page_directory_at_lift:
-  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow> True \<longrightarrow>
+  "corres_inst_eq ptr ptr' \<Longrightarrow> \<forall>s s'. (s, s') \<in> state_relation \<longrightarrow> True \<longrightarrow>
   (pspace_aligned s \<and> page_directory_at ptr s) \<longrightarrow>
-  pspace_distinct' s' \<longrightarrow> page_directory_at' ptr s'"
-  by (fastforce intro!: page_directory_at_state_relation)
+  pspace_distinct' s' \<longrightarrow> page_directory_at' ptr' s'"
+  by (fastforce simp: corres_inst_eq_def intro!: page_directory_at_state_relation )
 
 lemmas checkPDAt_corres =
   corres_stateAssert_implied_frame[OF page_directory_at_lift, folded checkPDAt_def]
@@ -1352,16 +1357,13 @@ lemma ko_at_typ_at_asidpool:
   by (clarsimp simp: obj_at_def a_type_simps)
 
 lemma find_pd_for_asid_corres [corres]:
-  notes [corres del] = get_asid_pool_corres and [corres] = get_asid_pool_corres'
-  shows
-  "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s)
+  "asid = asid' \<Longrightarrow> corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s)
                            and valid_arch_objs and pspace_aligned
                            and K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
-                       (find_pd_for_asid asid) (findPDForASID asid)"
+                       (find_pd_for_asid asid) (findPDForASID asid')"
   apply (simp add: find_pd_for_asid_def findPDForASID_def liftME_def bindE_assoc)
   apply (corressimp simp: liftE_bindE assertE_assert mask_asid_low_bits_ucast_ucast lookup_failure_map_def
-                          protect_r_def
                       wp: getPDE_wp getASID_wp
                   search: checkPDAt_corres corres_gets_asid)
   subgoal premises prems for s s'
@@ -1374,7 +1376,7 @@ lemma find_pd_for_asid_corres [corres]:
        apply (clarsimp simp: vs_asid_refs_def graph_of_def elim!: vs_lookupE)
         apply (erule rtranclE)
         subgoal by simp
-       apply (simp add: arm_asid_table_related[simplified o_def])
+       apply (simp add: arm_asid_table_related)
        apply (clarsimp dest!: vs_lookup1D)
         apply (erule rtranclE)
         apply (clarsimp simp: vs_refs_def graph_of_def obj_at_def a_type_def
@@ -1395,7 +1397,8 @@ lemma find_pd_for_asid_corres [corres]:
       by (simp add: ranI)+
     apply (insert prems)
     apply (fastforce simp add: asidRange_def mask_2pm1[symmetric])
-  subgoal for x ko xa
+  subgoal for x by (insert asid_pool_at[of x], auto simp: arm_asid_table_related)
+  subgoal for x ko
    apply (cases ko; simp)
    apply (frule arm_asid_table_related[where s'=s', simplified o_def])
    apply (cut_tac asid_pool_at[of x, simplified obj_at_def])
@@ -1414,8 +1417,7 @@ lemma find_pd_for_asid_corres':
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
                        (find_pd_for_asid asid) (findPDForASID asid)"
   apply (rule corres_guard_imp, rule find_pd_for_asid_corres)
-   apply fastforce
-  apply simp
+   apply fastforce+
   done
 
 lemma setObject_arch:

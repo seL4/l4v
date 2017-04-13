@@ -733,7 +733,7 @@ lemma schedule_if_corres_C:
      apply fastforce
     apply simp
     apply (rule hoare_post_taut[where P=\<top>])
-   apply (fastforce simp: ex_abs_def)+
+   apply (auto simp: ex_abs_def)
   done
 
 definition
@@ -887,17 +887,17 @@ lemma c_to_haskell: "uop_nonempty uop \<Longrightarrow> global_automata_refine c
                              handlePreemption_H_if_def handle_preemption_C_if_def
                              schedule'_H_if_def schedule_C_if_def
                              kernelExit_H_if_def kernel_exit_C_if_def)
-        apply (rule step_corres_lifts,rule corres_guard_imp[OF check_active_irq_corres_C],(fastforce simp: full_invs_if'_def ex_abs_def)+)
-       apply (rule step_corres_lifts,rule corres_guard_imp[OF check_active_irq_corres_C],(fastforce simp: full_invs_if'_def ex_abs_def)+)
-      apply (rule step_corres_lifts,rule corres_guard_imp[OF do_user_op_if_C_corres],(fastforce simp: full_invs_if'_def ex_abs_def)+)
+        apply (rule step_corres_lifts,rule corres_guard_imp[OF check_active_irq_corres_C]; fastforce simp: full_invs_if'_def)
+       apply (rule step_corres_lifts,rule corres_guard_imp[OF check_active_irq_corres_C]; fastforce simp: full_invs_if'_def)
+      apply (rule step_corres_lifts,rule corres_guard_imp[OF do_user_op_if_C_corres]; auto simp: full_invs_if'_def ex_abs_def)
      apply (rule step_corres_lifts)
       apply (rule corres_rel_imp)
        apply (rule corres_guard_imp[OF kernelEntry_corres_C],(clarsimp simp: prod_lift_def)+)
-    apply (rule step_corres_lifts,rule corres_guard_imp[OF handle_preemption_corres_C], (fastforce simp add: full_invs_if'_def)+)
-   apply (rule step_corres_lifts,rule corres_guard_imp[OF schedule_if_corres_C],(fastforce simp: full_invs_if'_def ex_abs_def)+)
+    apply (rule step_corres_lifts,rule corres_guard_imp[OF handle_preemption_corres_C]; auto simp add: full_invs_if'_def)
+   apply (rule step_corres_lifts,rule corres_guard_imp[OF schedule_if_corres_C]; auto simp: full_invs_if'_def ex_abs_def)
   apply (rule_tac S="invs'" and S'="\<top>" in step_corres_lifts(5))
       apply (rule corres_guard_imp[OF kernel_exit_corres_C])
-       apply (fastforce simp: full_invs_if'_def ex_abs_def)
+       apply (fastforce simp: full_invs_if'_def)
       apply simp+
     apply (simp add: ct_running'_C)
    apply wp+

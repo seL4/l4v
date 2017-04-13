@@ -578,9 +578,4 @@ lemma constOnFailure_wp :
 
 end
 
-lemma corres_throwError_str [corres_concrete_rER]:
-  "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throw b)"
-  "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throwError b)"
- by (simp add: corres_underlyingK_def)+
-
 end

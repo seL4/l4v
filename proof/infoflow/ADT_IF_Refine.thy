@@ -678,7 +678,7 @@ lemma handlePreemption_ex_abs[wp]:
   apply (rule hoare_pre)
    apply (rule corres_ex_abs_lift[OF handle_preemption_if_corres])
    apply (wp handle_preemption_if_invs)
-  apply (fastforce simp: ex_abs_def non_kernel_IRQs_def)
+  apply (auto simp: ex_abs_def non_kernel_IRQs_def)
    done
 
 lemma handle_preemption_if_valid_domain_time:
@@ -778,7 +778,7 @@ lemma scheduler'_if_ex_abs[wp]:
   apply (rule hoare_pre)
    apply (rule corres_ex_abs_lift[OF schedule_if_corres])
    apply wp
-  apply (fastforce simp: ex_abs_def)
+  apply (auto simp: ex_abs_def)
   done
 
 definition
