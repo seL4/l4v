@@ -2379,7 +2379,7 @@ lemma createNewCaps_valid_cap:
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n "
   assumes not_0: "n \<noteq> 0"
   assumes ct: "ty = APIObjectType ArchTypes_H.CapTableObject \<Longrightarrow> 0 < us"
-              "ty = APIObjectType apiobject_type.Untyped \<Longrightarrow> 4 \<le> us \<and> us \<le> 29"
+              "ty = APIObjectType apiobject_type.Untyped \<Longrightarrow> 4 \<le> us \<and> us \<le> 61"
   assumes ptr: " ptr \<noteq> 0"
   shows "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and> valid_pspace' s\<rbrace>
            createNewCaps ty ptr n us dev
@@ -4933,9 +4933,8 @@ lemma createNewCaps_null_filter':
                     | fastforce)+
   done
 
-lemma storePML4E_gsUntypedZeroRanges:
-  "\<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace> storePML4E p pm \<lbrace>\<lambda>_ s. P (gsUntypedZeroRanges s)\<rbrace>"
-      ignore: getObject setObject)
+crunch gsUntypedZeroRanges[wp]: createNewCaps "\<lambda>s. P (gsUntypedZeroRanges s)"
+  (wp: mapM_x_wp' ignore: getObject setObject simp: crunch_simps)
 
 lemma untyped_ranges_zero_inv_null_filter:
   "untyped_ranges_zero_inv (option_map cteCap o null_filter' ctes)
