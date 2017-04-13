@@ -164,18 +164,6 @@ method corres_concrete_r declares corres_concrete_r corres_concrete_rER =
  | (fails \<open>rule corres_r_FalseE\<close>, determ \<open>rule corres_concrete_rER\<close>)
 
 
-(*
-named_theorems corres_concrete_P
-
-private lemma corres_both_False:
-  "corres_underlyingK sr nf nf' F r my_false my_false f f'"
-  by (auto simp add: my_false_def[abs_def] corres_underlying_def corres_underlyingK_def)
-
-method corres_concrete_P declares corres_concrete_P =
-  ((rule corresK_unlift)?,
-    fails \<open>rule corres_both_False\<close>, determ \<open>rule corres_concrete_P\<close>)
-*)
-
 end
 
 
@@ -455,9 +443,6 @@ private method corres_fold_dc =
 
 private attribute_setup no_simps =
   \<open>Scan.succeed (Thm.declaration_attribute (fn _ => Context.mapping I (put_simpset HOL_basic_ss)))\<close>
-
-(* method corres_simp declares corres_simp =
-  (use [[no_simps, simproc unit_eq]] in \<open>simp add: corres_simp\<close>) *)
 
 method corres_simp declares corres_simp = (simp only: corres_simp)
 
