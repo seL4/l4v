@@ -800,7 +800,7 @@ lemma sameRegionAs_def2:
           \<and> (\<not> isNullCap cap \<and> \<not> isZombie cap
               \<and> \<not> isUntypedCap cap \<and> \<not> isArchPageCap cap \<and> \<not> isArchIOPortCap cap)
           \<and> (\<not> isNullCap cap' \<and> \<not> isZombie cap'
-              \<and> \<not> isUntypedCap cap' \<and> \<not> isArchPageCap cap' \<and> \<not> isArchIOPortCap cap))
+              \<and> \<not> isUntypedCap cap' \<and> \<not> isArchPageCap cap' \<and> \<not> isArchIOPortCap cap'))
       \<or> (capRange cap' \<noteq> {} \<and> capRange cap' \<subseteq> capRange cap
                  \<and> (isUntypedCap cap \<or> (isArchPageCap cap \<and> isArchPageCap cap')))
       \<or> (portRange cap' \<noteq> {} \<and> portRange cap' \<subseteq> portRange cap \<and> isArchIOPortCap cap \<and> isArchIOPortCap cap')
