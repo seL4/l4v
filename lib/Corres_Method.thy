@@ -445,8 +445,6 @@ private method corres_fold_dc =
 private attribute_setup no_simps =
   \<open>Scan.succeed (Thm.declaration_attribute (fn _ => Context.mapping I (put_simpset HOL_basic_ss)))\<close>
 
-method corres_simp declares corres_simp = (simp only: corres_simp)
-
 (* Lift corres_underlying rules into corres_underlyingK rules in-place *)
 
 private definition "guard_collect (F :: bool) \<equiv> F"
@@ -471,7 +469,7 @@ private method corres_apply =
 
 private method corres_alternate = corres_inst
 
-method corres_once declares corres_splits corres corresK corres_simp corresc_simp =
+method corres_once declares corres_splits corres corresK corresc_simp =
    (corres_alternate |
      (corres_fold_dc?,
      (corres_pre,
@@ -481,11 +479,10 @@ method corres_once declares corres_splits corres corresK corres_simp corresc_sim
       | corres_concrete_r
       | corresc
       | (rule corres_splits, corres_once)
-      | (corres_simp, corres_once)
       ))))
 
 
-method corres declares corres_splits corres corresK corres_simp corresc_simp =
+method corres declares corres_splits corres corresK corresc_simp =
   (corres_once+)[1]
 
 end
@@ -514,8 +511,7 @@ lemma corres_lift_to_K:
   by (simp add: corres_underlyingK_def)
 
 lemmas corresK_liftM =
-  corres_liftM2_simp[THEN iffD2,atomized, THEN corres_lift_to_K, rule_format]
-
+  corres_liftM2_simp[THEN iffD2,atomized, THEN corres_lift_to_K, rule_format, simplified o_def]
 
 
 lemmas [corresK] =
@@ -524,10 +520,31 @@ lemmas [corresK] =
   corresK_return_trivial
   corresK_return_eq
 
-lemmas [corres_simp] =
-  fun_app_def comp_apply option.inject K_bind_def return_bind
-  Let_def liftE_bindE
+lemma corresK_subst_left: "g = f \<Longrightarrow>
+  corres_underlyingK sr nf nf' F r P P' f f' \<Longrightarrow>
+  corres_underlyingK sr nf nf' F r P P' g f'" by simp
 
+lemma corresK_subst_right: "g' = f' \<Longrightarrow>
+  corres_underlyingK sr nf nf' F r P P' f f' \<Longrightarrow>
+  corres_underlyingK sr nf nf' F r P P' f g'" by simp
+
+lemmas corresK_fun_app_left[corres_splits] = corresK_subst_left[OF fun_app_def[THEN meta_eq_to_obj_eq]]
+lemmas corresK_fun_app_right[corres_splits] = corresK_subst_right[OF fun_app_def[THEN meta_eq_to_obj_eq]]
+
+lemmas corresK_Let_left[corres_splits] = corresK_subst_left[OF Let_def[THEN meta_eq_to_obj_eq]]
+lemmas corresK_Let_right[corres_splits] = corresK_subst_right[OF Let_def[THEN meta_eq_to_obj_eq]]
+
+lemmas corresK_return_bind_left[corres_splits] = corresK_subst_left[OF return_bind]
+lemmas corresK_return_bind_right[corres_splits] = corresK_subst_right[OF return_bind]
+
+lemmas corresK_liftE_bindE_left[corres_splits] = corresK_subst_left[OF liftE_bindE]
+lemmas corresK_liftE_bindE_right[corres_splits] = corresK_subst_right[OF liftE_bindE]
+
+lemmas corresK_K_bind_left[corres_splits] =
+  corresK_subst_left[where g="K_bind f rv" and f="f" for f rv, # \<open>simp\<close>]
+
+lemmas corresK_K_bind_right[corres_splits] =
+  corresK_subst_right[where g'="K_bind f' rv" and f'="f'" for f' rv, # \<open>simp\<close>]
 
 
 section \<open>Corres Search - find symbolic execution path that allows a given rule to be applied\<close>
@@ -655,7 +672,7 @@ text \<open>
 \<close>
 
 method corres_search uses search
-  declares corres corres_simp corres_symb_exec_ls corres_symb_exec_rs =
+  declares corres corres_symb_exec_ls corres_symb_exec_rs =
   (corres_pre,
    use search[corres del] search[corresK del] in
      \<open>use in \<open>corres_search_frame \<open>corres_search search: search\<close> search: search\<close>\<close>)[1]
@@ -804,7 +821,7 @@ lemma corresK_fail_no_fail'[corresK]:
 
 
 method corressimp uses simp cong search wp
-  declares corres corresK corres_splits corres_simp corresc_simp =
+  declares corres corresK corres_splits corresc_simp =
   ((corres corresc_simp: simp
     | use hoare_vcg_precond_imp[wp_comb del] hoare_vcg_precond_imp[wp_pre del] in
       \<open>use in \<open>wp add: wp\<close>\<close>
@@ -902,5 +919,18 @@ experiment
   by auto
 
 end
+
+section \<open>Corres Argument lifting\<close>
+
+text \<open>Used for rewriting corres rules with syntactically equivalent arguments\<close>
+
+lemma lift_args_corres:
+  "corres_underlying sr nf nf' r (P x) (P' x) (f x) (f' x) \<Longrightarrow> x = x' \<Longrightarrow>
+   corres_underlying sr nf nf' r (P x) (P' x') (f x) (f' x')" by simp
+
+method lift_corres_args =
+  (match premises in
+    H[thin]:"corres_underlying _ _ _ _ (P x) (P' x) (f x) (f' x)" for P P' f f' x \<Rightarrow>
+      \<open>cut_tac lift_args_corres[where f=f and f'=f' and P=P and P'=P', OF H]\<close>)
 
 end
