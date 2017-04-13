@@ -233,6 +233,9 @@ definition
  "wpc2_helper \<equiv> \<lambda>(P, P') (Q, Q') (PP, PP') (QQ,QQ') R.
     ((\<forall>s. P s \<longrightarrow> Q s) \<and> P' \<subseteq> Q') \<longrightarrow> ((\<forall>s. PP s \<longrightarrow> QQ s) \<and> PP' \<subseteq> QQ') \<longrightarrow> R"
 
+definition
+  "wpc2_protect B Q \<equiv> (Q :: bool)"
+
 lemma wpc2_helperI:
   "wpc2_helper (P, P') (P, P') (PP, PP') (PP, PP') Q \<Longrightarrow> Q"
   by (simp add: wpc2_helper_def)
@@ -248,17 +251,12 @@ lemma wpc2_all_process:
   by (clarsimp simp: wpc2_helper_def subset_iff)
 
 lemma wpc2_imp_process:
-  "\<lbrakk> Q \<Longrightarrow> wpc2_helper (P, P') (R, R') (PP, PP') (RR, RR') S \<rbrakk>
+  "\<lbrakk> wpc2_protect B Q \<Longrightarrow> wpc2_helper (P, P') (R, R') (PP, PP') (RR, RR') S \<rbrakk>
         \<Longrightarrow> wpc2_helper (P, P') (\<lambda>s. Q \<longrightarrow> R s, {s. Q \<longrightarrow> s \<in> R'}) (PP, PP') (\<lambda>s. Q \<longrightarrow> RR s, {s. Q \<longrightarrow> s \<in> RR'}) (Q \<longrightarrow> S)"
-  by (clarsimp simp add: wpc2_helper_def subset_iff)
+  by (clarsimp simp add: wpc2_helper_def subset_iff wpc2_protect_def)
 
-lemmas wpc2_processors
-  = wpc2_conj_process wpc2_all_process wpc2_imp_process
 
-lemma
-  wpc_contr_helper:
-  "A = B \<Longrightarrow> A = C \<Longrightarrow> B \<noteq> C \<Longrightarrow> P"
-  by blast
+
 
 text \<open>
  Generate quadratic blowup of the case statements on either side of refinement.
@@ -266,39 +264,57 @@ text \<open>
 \<close>
 
 
-method corresc_body uses helper =
-  determ \<open>(rule wpc2_helperI, repeat_new \<open>rule wpc2_processors\<close> ; (rule helper))\<close>
+method corresc_body for B :: bool uses helper =
+  determ \<open>(rule wpc2_helperI,
+    repeat_new \<open>rule wpc2_conj_process wpc2_all_process wpc2_imp_process[where B=B]\<close> ; (rule helper))\<close>
 
 lemma wpc2_helper_corres_left:
   "corres_underlyingK sr nf nf' QQ r Q A f f' \<Longrightarrow>
     wpc2_helper (P, P') (Q, Q') (\<lambda>_. PP,PP') (\<lambda>_. QQ,QQ') (corres_underlyingK sr nf nf' PP r P A f f')"
   by (clarsimp simp: wpc2_helper_def  corres_underlyingK_def elim!: corres_guard_imp)
 
-method corresc_left =
+method corresc_left_raw =
   determ \<open>(match conclusion in "corres_underlyingK sr nf nf' F r P P' f f'" for sr nf nf' F r P P' f f'
     \<Rightarrow> \<open>apply_split f "\<lambda>f. corres_underlyingK sr nf nf' F r P P' f f'"\<close>,
-        corresc_body helper: wpc2_helper_corres_left)\<close>
+        corresc_body False helper: wpc2_helper_corres_left)\<close>
 
 lemma wpc2_helper_corres_right:
   "corres_underlyingK sr nf nf' QQ r A Q f f' \<Longrightarrow>
     wpc2_helper (P, P') (Q, Q') (\<lambda>_. PP,PP') (\<lambda>_. QQ,QQ') (corres_underlyingK sr nf nf' PP r A P f f')"
   by (clarsimp simp: wpc2_helper_def corres_underlyingK_def elim!: corres_guard_imp)
 
-method corresc_right =
+method corresc_right_raw =
   determ \<open>(match conclusion in "corres_underlyingK sr nf nf' F r P P' f f'" for sr nf nf' F r P P' f f'
     \<Rightarrow> \<open>apply_split f' "\<lambda>f'. corres_underlyingK sr nf nf' F r P P' f f'"\<close>,
-        corresc_body helper: wpc2_helper_corres_right)\<close>
+        corresc_body True helper: wpc2_helper_corres_right)\<close>
+
+definition
+  "protect_r r = (r :: bool)"
+
+lemma wpc2_protect_r: "wpc2_protect B Q \<Longrightarrow> protect_r Q" by (simp add: wpc2_protect_def protect_r_def)
+
+method corresc_left = (corresc_left_raw; (drule wpc2_protect_r[where B=False]))
+method corresc_right = (corresc_right_raw; (drule wpc2_protect_r[where B=True]))
 
 named_theorems corresc_simp
+
+declare wpc2_protect_def[corresc_simp]
+declare protect_r_def[corresc_simp]
 
 lemma corresK_false_guard_instantiate:
   "False \<Longrightarrow> corres_underlyingK sr nf nf' True r P P' f f'"
   by (simp add: corres_underlyingK_def)
 
+lemma
+  wpc_contr_helper:
+  "wpc2_protect False (A = B) \<Longrightarrow> wpc2_protect True (A = C) \<Longrightarrow> B \<noteq> C \<Longrightarrow> P"
+  by (auto simp: wpc2_protect_def)
+
 method corresc declares corresc_simp =
-  (check_corresK, corresc_left; corresc_right;
-    (solves \<open>rule corresK_false_guard_instantiate,
-      (simp add: corresc_simp)?, (erule (1) wpc_contr_helper, simp add: corresc_simp)?\<close>)?)[1]
+  (check_corresK, corresc_left_raw; corresc_right_raw;
+    ((solves \<open>rule corresK_false_guard_instantiate,
+     determ \<open>(erule (1) wpc_contr_helper)?\<close>, simp add: corresc_simp\<close>)
+    | (drule wpc2_protect_r[where B=False], drule wpc2_protect_r[where B=True])))[1]
 
 section \<open>Alternative split rules\<close>
 
@@ -358,8 +374,6 @@ lemma corres_rv_weaken:
   "(\<And>rv rv'. r rv rv' \<Longrightarrow> r' rv rv') \<Longrightarrow> corres_rv sr r P P' f f' \<Longrightarrow> corres_rv sr r' P P' f f'"
   by (auto simp add: corres_rv_def)
 
-definition
-  "protect_r r = (r :: bool)"
 
 lemma corresK_split:
   assumes x: "corres_underlyingK sr nf nf' F r' P P' a c"
