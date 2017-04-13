@@ -525,6 +525,7 @@ definition
   else if n = 3 then Some PageTableObj
   else if n = 4 then Some PageDirectoryObj
   else if n = 5 then Some PDPTObj
+  else if n = 6 then Some PML4Obj
   else None"
 
 end (* context Arch *)
