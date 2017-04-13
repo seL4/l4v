@@ -699,11 +699,6 @@ lemma corresK_return [corres_concrete_r]:
   "corres_underlyingK sr nf nf' (r a b) r \<top> \<top> (return a) (return b)"
   by (simp add: corres_underlyingK_def)
 
-lemma corres_K_bind [corresK]:
-  "corres_underlyingK sr nf nf' F r P P' f f' \<Longrightarrow>
-   corres_underlyingK sr nf nf' F r P P' f (K_bind f' a)"
-  by simp
-
 chapter \<open>Extra Stuff (Stale)\<close>
 
 section \<open>Named state rules\<close>
@@ -832,7 +827,7 @@ method corressimp uses simp cong search wp
       (match search in _ \<Rightarrow> \<open>corres_search search: search\<close>))+)[1]
 
 declare corres_return[corres_simp_del]
-thm corres_return
+
 section \<open>Normalize corres rule into corresK rule\<close>
 
 lemma corresK_convert:
