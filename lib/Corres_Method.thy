@@ -805,7 +805,9 @@ method corressimp uses simp cong search wp
   ((corres corresc_simp: simp
     | use hoare_vcg_precond_imp[wp_comb del] hoare_vcg_precond_imp[wp_pre del] in
       \<open>use in \<open>wp add: wp\<close>\<close>
-    | wpc | clarsimp cong: cong simp: simp simp del: corres_simp_del split del: if_split
+    | wpc
+    | clarsimp cong: cong simp: simp simp del: corres_simp_del split del: if_split
+    | solves \<open>clarsimp cong: cong simp: simp protect_r_def simp del: corres_simp_del split del: if_split\<close>
     | rule corres_rv_trivial |
       (match search in _ \<Rightarrow> \<open>corres_search search: search\<close>))+)[1]
 
