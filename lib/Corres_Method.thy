@@ -926,6 +926,8 @@ lemma lift_args_corres:
 method lift_corres_args =
   (match premises in
     H[thin]:"corres_underlying _ _ _ _ (P x) (P' x) (f x) (f' x)" for P P' f f' x \<Rightarrow>
-      \<open>cut_tac lift_args_corres[where f=f and f'=f' and P=P and P'=P', OF H]\<close>)
+      \<open>match (f) in "\<lambda>_. g" for g \<Rightarrow> \<open>fail\<close> \<bar> _ \<Rightarrow>
+        \<open>match (f') in "\<lambda>_. g'" for g' \<Rightarrow> \<open>fail\<close> \<bar> _ \<Rightarrow>
+          \<open>cut_tac lift_args_corres[where f=f and f'=f' and P=P and P'=P', OF H]\<close>\<close>\<close>)+
 
 end
