@@ -334,18 +334,22 @@ lemmas corres_rv_proveT = corres_rv_prove[where P=\<top> and P'=\<top>,simplifie
 
 lemmas corres_rv_trivial[intro!, wp] = corres_rv_prove[where r="\<lambda>_ _. True" and P=\<top> and P'=\<top>, OF TrueI]
 
+(*UNSAFE*)
 lemma corres_rv_defer_left:
   "corres_rv sr r (\<lambda>s. \<forall>rv rv'. r rv rv') \<top> f f'"
   by (auto simp add: corres_rv_def)
 
+(*More safe*)
 lemma corres_rv_wp_left:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>rv'. r rv rv'\<rbrace> \<Longrightarrow> corres_rv sr r P \<top> f f'"
   by (fastforce simp add: corres_rv_def valid_def)
 
+(*UNSAFE*)
 lemma corres_rv_defer_right:
   "corres_rv sr r \<top> (\<lambda>s. \<forall>rv rv'. r rv rv') f f'"
   by (auto simp add: corres_rv_def)
 
+(*More safe*)
 lemma corres_rv_wp_right:
   "\<lbrace>P'\<rbrace> f' \<lbrace>\<lambda>rv' s. \<forall>rv. r rv rv'\<rbrace> \<Longrightarrow> corres_rv sr r \<top> P' f f'"
   by (fastforce simp add: corres_rv_def valid_def)
