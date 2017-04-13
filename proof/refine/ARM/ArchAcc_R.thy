@@ -1197,13 +1197,12 @@ lemma copy_global_mappings_corres [corres]:
               in corres_mapM_x[rotated -1, OF order_refl])
         apply (corressimp simp: pdeBits_def ptBits_def pdeBits_def pageBits_def pteBits_def mask_def
                           wp: get_pde_wp getPDE_wp corres_rv_defer_left)
-        subgoal for globalPD
-          apply (auto intro!: page_directory_pde_atI page_directory_pde_atI'
-                     simp: pde_relation_aligned_def pageBits_def le_less_trans
-        apply (corressimp wp: get_pde_wp getPDE_wp corres_rv_defer_left)
-          done
-  apply (wpsimp simp: pageBits_def)+
-  apply (clarsimp simp: valid_arch_state_def obj_at_def pageBits_def dest!:pspace_alignedD)
+        subgoal for global_pd globalPD
+          by (auto intro!: page_directory_pde_atI page_directory_pde_atI'
+                     simp: pde_relation_aligned_def corres_protect_def
+                     dest: align_entry_add_cong[of globalPD])
+  apply wpsimp+
+  apply (clarsimp simp: valid_arch_state_def obj_at_def dest!:pspace_alignedD)
   by (auto intro: is_aligned_weaken[of _ 14] simp: valid_arch_state'_def)
 
 
