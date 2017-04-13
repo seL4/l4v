@@ -2270,7 +2270,7 @@ lemma dcorres_set_thread_state_Restart:
        apply (simp add: get_etcb_def)
       apply (simp add: not_idle_thread_def)
      apply (simp add: tcb_pending_op_slot_def)
-    apply ((wp | clarsimp | simp)+)[2]
+    apply ((wp del: use_corresK | clarsimp | simp)+)[2]
   apply (frule(1) valid_etcbs_get_tcb_get_etcb, clarsimp simp: get_etcb_def)
   apply (simp add:KHeap_D.set_cap_def set_object_def gets_the_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_l)
