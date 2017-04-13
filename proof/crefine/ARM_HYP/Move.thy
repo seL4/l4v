@@ -66,7 +66,22 @@ lemma typ_at'_no_0_objD:
   "typ_at' P p s \<Longrightarrow> no_0_obj' s \<Longrightarrow> p \<noteq> 0"
   by (cases "p = 0" ; clarsimp)
 
+(* FIXME ARMHYP MOVE *)
+lemma ko_at'_not_NULL:
+  "\<lbrakk> ko_at' ko p s ; no_0_obj' s\<rbrakk>
+   \<Longrightarrow> p \<noteq> 0"
+  by (fastforce simp:  word_gt_0 typ_at'_no_0_objD)
+
 context begin interpretation Arch . (*FIXME: arch_split*)
+
+(* FIXME ARMHYP MOVE*)
+lemma vcpu_at_ko':
+  "vcpu_at' p s \<Longrightarrow> \<exists>vcpu :: vcpu. ko_at' vcpu p s"
+  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)
+  apply (case_tac ko, auto)
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object, auto)[1]
+  done
 
 lemma sym_refs_tcb_vcpu':
   "\<lbrakk> ko_at' (tcb::tcb) t s; atcbVCPUPtr (tcbArch tcb) = Some v; sym_refs (state_hyp_refs_of' s) \<rbrakk> \<Longrightarrow>

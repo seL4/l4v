@@ -296,4 +296,8 @@ lemma option_to_ptr_NULL_eq:
   unfolding option_to_ptr_def option_to_0_def
   by (clarsimp split: option.splits)
 
+lemma option_to_ptr_not_0:
+  "\<lbrakk> p \<noteq> 0 ; option_to_ptr v = Ptr p \<rbrakk> \<Longrightarrow> v = Some p"
+  by (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
+
 end

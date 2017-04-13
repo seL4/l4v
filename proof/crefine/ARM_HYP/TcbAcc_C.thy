@@ -301,6 +301,83 @@ lemma sanitiseRegister_spec:
   apply (erule (1) valid_objs_valid_tcb')
   done
 
+lemma rf_sr_ksArchState_armHSCurVCPU:
+  "(s, s') \<in> rf_sr \<Longrightarrow> cur_vcpu_relation (armHSCurVCPU (ksArchState s)) (armHSCurVCPU_' (globals s')) (armHSVCPUActive_' (globals s'))"
+  by (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def Let_def)
+
+lemma ccorres_pre_getCurVCPU:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>rv. (armHSCurVCPU \<circ> ksArchState) s = rv \<longrightarrow> P rv s))
+                  {s. \<forall>rv vcpu' act'. armHSCurVCPU_' (globals s) = vcpu' \<and>
+                                      armHSVCPUActive_' (globals s) = act' \<and>
+                                      cur_vcpu_relation rv vcpu' act'
+                                 \<longrightarrow> s \<in> P' rv }
+                          hs (gets (armHSCurVCPU \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp
+      apply (rule hoare_gets_sp)
+     apply (clarsimp simp: empty_fail_def getCurThread_def simpler_gets_def)
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply (clarsimp simp: rf_sr_ksArchState_armHSCurVCPU)
+  done
+
+lemma getObject_tcb_wp':
+  "\<lbrace>\<lambda>s. \<forall>t. ko_at' (t :: tcb) p s \<longrightarrow> Q t s\<rbrace> getObject p \<lbrace>Q\<rbrace>"
+  by (clarsimp simp: getObject_def valid_def in_monad
+                     split_def objBits_simps loadObject_default_def
+                     projectKOs obj_at'_def in_magnitude_check)
+
+lemma ccorres_pre_getObject_tcb:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>vcpu. ko_at' vcpu p s \<longrightarrow> P vcpu s))
+                  {s. \<forall> vcpu vcpu'. cslift s (tcb_ptr_to_ctcb_ptr p) = Some vcpu' \<and> ctcb_relation vcpu vcpu'
+                           \<longrightarrow> s \<in> P' vcpu}
+                          hs (getObject p >>= (\<lambda>rv :: tcb. f rv)) c"
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_symb_exec_l)
+      apply (rule ccorres_guard_imp2)
+       apply (rule cc)
+      apply (rule conjI)
+       apply (rule_tac Q="ko_at' rv p s" in conjunct1)
+       apply assumption
+      apply assumption
+     apply (wpsimp wp: empty_fail_getObject getObject_tcb_wp')+
+    apply (erule cmap_relationE1[OF cmap_relation_tcb],
+           erule ko_at_projectKO_opt)
+  apply simp
+  done
+
+lemma ccorres_pre_getObject_vcpu:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>vcpu. ko_at' vcpu p s \<longrightarrow> P vcpu s))
+                  {s. \<forall> vcpu vcpu'. cslift s (vcpu_Ptr p) = Some vcpu' \<and> cvcpu_relation vcpu vcpu'
+                           \<longrightarrow> s \<in> P' vcpu}
+                          hs (getObject p >>= (\<lambda>rv :: vcpu. f rv)) c"
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_symb_exec_l)
+      apply (rule ccorres_guard_imp2)
+       apply (rule cc)
+      apply (rule conjI)
+       apply (rule_tac Q="ko_at' rv p s" in conjunct1)
+       apply assumption
+      apply assumption
+     apply (wpsimp wp: getVCPU_wp empty_fail_getObject)+
+    apply (erule cmap_relationE1 [OF cmap_relation_vcpu],
+         erule ko_at_projectKO_opt)
+  apply simp
+  done
+
 end
 
 end
