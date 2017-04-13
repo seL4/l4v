@@ -277,17 +277,19 @@ method corresc_right_raw =
         corresc_body True helper: wpc2_helper_corres_right)\<close>
 
 definition
-  "protect_r r = (r :: bool)"
+  "corres_protect r = (r :: bool)"
 
-lemma wpc2_protect_r: "wpc2_protect B Q \<Longrightarrow> protect_r Q" by (simp add: wpc2_protect_def protect_r_def)
+lemma wpc2_corres_protect:
+  "wpc2_protect B Q \<Longrightarrow> corres_protect Q"
+  by (simp add: wpc2_protect_def corres_protect_def)
 
-method corresc_left = (corresc_left_raw; (drule wpc2_protect_r[where B=False]))
-method corresc_right = (corresc_right_raw; (drule wpc2_protect_r[where B=True]))
+method corresc_left = (corresc_left_raw; (drule wpc2_corres_protect[where B=False]))
+method corresc_right = (corresc_right_raw; (drule wpc2_corres_protect[where B=True]))
 
 named_theorems corresc_simp
 
 declare wpc2_protect_def[corresc_simp]
-declare protect_r_def[corresc_simp]
+declare corres_protect_def[corresc_simp]
 
 lemma corresK_false_guard_instantiate:
   "False \<Longrightarrow> corres_underlyingK sr nf nf' True r P P' f f'"
@@ -302,7 +304,7 @@ method corresc declares corresc_simp =
   (check_corresK, corresc_left_raw; corresc_right_raw;
     ((solves \<open>rule corresK_false_guard_instantiate,
      determ \<open>(erule (1) wpc_contr_helper)?\<close>, simp add: corresc_simp\<close>)
-    | (drule wpc2_protect_r[where B=False], drule wpc2_protect_r[where B=True])))[1]
+    | (drule wpc2_corres_protect[where B=False], drule wpc2_corres_protect[where B=True])))[1]
 
 section \<open>Alternative split rules\<close>
 
@@ -365,7 +367,7 @@ lemma corres_rv_weaken:
 
 lemma corresK_split:
   assumes x: "corres_underlyingK sr nf nf' F r' P P' a c"
-  assumes y: "\<And>rv rv'. protect_r (r' rv rv') \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') r (R rv) (R' rv') (b rv) (d rv')"
+  assumes y: "\<And>rv rv'. corres_protect (r' rv rv') \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') r (R rv) (R' rv') (b rv) (d rv')"
   assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
   assumes c: "corres_rv sr (\<lambda>rv rv'. r' rv rv' \<longrightarrow> F' rv rv') PP PP' a c"
   shows      "corres_underlyingK sr nf nf' F r (PP and P and Q) (PP' and P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
@@ -377,7 +379,7 @@ lemma corresK_split:
    apply (insert c;simp?)
    apply (drule(6) corres_rvD)
    apply (rule_tac x="(ac,bc)" in bexI,clarsimp)
-    apply (frule_tac s'=baa in y[simplified corres_underlyingK_def protect_r_def, rule_format, THEN corres_underlyingD])
+    apply (frule_tac s'=baa in y[simplified corres_underlyingK_def corres_protect_def, rule_format, THEN corres_underlyingD])
           apply assumption+
        apply (erule(1) use_valid[OF _ z(1)])
       apply (erule(1) use_valid[OF _ z(2)])
@@ -391,7 +393,7 @@ lemma corresK_split:
   apply (drule(1) bspec,clarsimp)
   apply (insert c;simp?)
   apply (drule(6) corres_rvD)
-  apply (frule_tac s'=baa in y[simplified corres_underlyingK_def protect_r_def, rule_format, THEN corres_underlyingD])
+  apply (frule_tac s'=baa in y[simplified corres_underlyingK_def corres_protect_def, rule_format, THEN corres_underlyingD])
         apply simp+
      apply (erule(1) use_valid[OF _ z(1)])
     apply (erule(1) use_valid[OF _ z(2)])
@@ -412,7 +414,7 @@ lemma corres_inst_eqI[intro!]: "corres_inst_eq x x" by (simp add: corres_inst_eq
 
 lemma corres_inst_test: "False \<Longrightarrow> corres_inst_eq x y" by simp
 
-method corres_inst = (succeeds \<open>rule corres_inst_test\<close>, fastforce simp: protect_r_def)
+method corres_inst = (succeeds \<open>rule corres_inst_test\<close>, fastforce simp: corres_protect_def)
 
 section \<open>Corres Method\<close>
 
@@ -420,14 +422,13 @@ text \<open>Handles structured decomposition of corres goals\<close>
 
 named_theorems
   corres_splits and
-  corres_simp and (* conservative simplification rules applied when no progress can be made *)
   corres_simp_del and (* bad simp rules that break everything *)
   corres and (* solving terminal corres subgoals *)
   corresK (* calculational rules that are phrased as corresK rules *)
 
-lemma protect_r_conj_elim[simp, corres_simp]:
-  "protect_r (a \<and> b) = (protect_r a \<and> protect_r b)"
-  by (simp add: protect_r_def)
+lemma corres_protect_conj_elim[simp]:
+  "corres_protect (a \<and> b) = (corres_protect a \<and> corres_protect b)"
+  by (simp add: corres_protect_def)
 
 context begin
 
@@ -493,9 +494,9 @@ lemmas [corres_splits] =
   corresK_split
 
 lemma corresK_when:
-  "\<lbrakk>G \<Longrightarrow> G' \<Longrightarrow> corres_underlyingK sr nf nf' F dc P P' a c\<rbrakk>
+  "\<lbrakk>corres_protect G \<Longrightarrow> corres_protect G' \<Longrightarrow> corres_underlyingK sr nf nf' F dc P P' a c\<rbrakk>
 \<Longrightarrow> corres_underlyingK sr nf nf' ((G = G') \<and> F) dc ((\<lambda>x. G \<longrightarrow> P x)) (\<lambda>x. G' \<longrightarrow> P' x) (when G a) (when G' c)"
-  apply (simp add: corres_underlying_def corres_underlyingK_def)
+  apply (simp add: corres_underlying_def corres_underlyingK_def corres_protect_def)
   apply (cases "G = G'"; cases G; simp)
   by (clarsimp simp: return_def)
 
@@ -532,16 +533,18 @@ lemmas [corres_simp] =
 section \<open>Corres Search - find symbolic execution path that allows a given rule to be applied\<close>
 
 lemma corresK_if:
-  "\<lbrakk>(G \<Longrightarrow> G' \<Longrightarrow> corres_underlyingK sr nf nf' F r P P' a c); (\<not>G \<Longrightarrow> \<not>G' \<Longrightarrow> corres_underlyingK sr nf nf' F' r Q Q' b d)\<rbrakk>
+  "\<lbrakk>(corres_protect G \<Longrightarrow> corres_protect G' \<Longrightarrow> corres_underlyingK sr nf nf' F r P P' a c);
+    (corres_protect (\<not>G) \<Longrightarrow> corres_protect (\<not>G') \<Longrightarrow> corres_underlyingK sr nf nf' F' r Q Q' b d)\<rbrakk>
 \<Longrightarrow> corres_underlyingK sr nf nf' ((G = G') \<and> (G \<longrightarrow> F) \<and> (\<not>G \<longrightarrow> F')) r (if G then P else Q) (if G' then P' else Q') (if G then a else b)
       (if G' then c else d)"
-    by (simp add: corres_underlying_def corres_underlyingK_def)
+    by (simp add: corres_underlying_def corres_underlyingK_def corres_protect_def)
 
 lemma corresK_if_rev:
-  "\<lbrakk>(\<not> G \<Longrightarrow> G' \<Longrightarrow> corres_underlyingK sr nf nf' F r P P' a c); (G \<Longrightarrow> \<not>G' \<Longrightarrow> corres_underlyingK sr nf nf' F' r Q Q' b d)\<rbrakk>
+  "\<lbrakk>(corres_protect (\<not> G) \<Longrightarrow> corres_protect G' \<Longrightarrow> corres_underlyingK sr nf nf' F r P P' a c);
+    (corres_protect G \<Longrightarrow> corres_protect (\<not>G') \<Longrightarrow> corres_underlyingK sr nf nf' F' r Q Q' b d)\<rbrakk>
 \<Longrightarrow> corres_underlyingK sr nf nf' ((\<not> G = G') \<and> (\<not>G \<longrightarrow> F) \<and> (G \<longrightarrow> F')) r (if G then Q else P) (if G' then P' else Q') (if G then b else a)
       (if G' then c else d)"
-    by (simp add: corres_underlying_def corres_underlyingK_def)
+    by (simp add: corres_underlying_def corres_underlyingK_def corres_protect_def)
 
 
 
@@ -742,21 +745,21 @@ lemmas [THEN iffD2, atomized, THEN corresK_lift_rule, rule_format, corresK] =
 
 lemma corres_splitEE_str [corres_splits]:
   assumes x: "corres_underlyingK sr nf nf' F (f \<oplus> r') P P' a c"
-  assumes y: "\<And>rv rv'. protect_r (r' rv rv') \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') (f \<oplus> r) (R rv) (R' rv') (b rv) (d rv')"
+  assumes y: "\<And>rv rv'. corres_protect (r' rv rv') \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') (f \<oplus> r) (R rv) (R' rv') (b rv) (d rv')"
   assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>"
   assumes c: "corres_rv sr (\<lambda>rv rv'. (case (rv,rv') of (Inr rva, Inr rva') \<Rightarrow> r' rva rva' \<longrightarrow> F' rva rva' | _ \<Rightarrow> True)) PP PP' a c"
   shows      "corres_underlyingK sr nf nf' F (f \<oplus> r) (PP and P and Q) (PP' and P' and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E (\<lambda>rv'. d rv'))"
   apply (simp add: bindE_def)
   apply (rule corresK_split[OF x, where F'="\<lambda>rv rv'. case (rv,rv') of (Inr rva, Inr rva') \<Rightarrow> F' rva rva' | _ \<Rightarrow> True"])
-  apply (simp add: protect_r_def)
+  apply (simp add: corres_protect_def)
     prefer 4
     apply (rule corres_rv_weaken[OF _ c])
     apply (case_tac rv; case_tac rv'; simp)
     apply (case_tac rv; case_tac rv'; simp)
-     apply (simp add: corres_underlyingK_def protect_r_def)
+     apply (simp add: corres_underlyingK_def corres_protect_def)
     apply (rule corresK_weaken)
      apply (rule y)
-    apply (simp add: protect_r_def)
+    apply (simp add: corres_protect_def)
     apply (subst conj_assoc[symmetric])
     apply (rule conjI)
      apply (rule conjI)
@@ -807,7 +810,7 @@ method corressimp uses simp cong search wp
       \<open>use in \<open>wp add: wp\<close>\<close>
     | wpc
     | clarsimp cong: cong simp: simp simp del: corres_simp_del split del: if_split
-    | solves \<open>clarsimp cong: cong simp: simp protect_r_def simp del: corres_simp_del split del: if_split\<close>
+    | solves \<open>clarsimp cong: cong simp: simp corres_protect_def simp del: corres_simp_del split del: if_split\<close>
     | rule corres_rv_trivial |
       (match search in _ \<Rightarrow> \<open>corres_search search: search\<close>))+)[1]
 
