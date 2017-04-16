@@ -73,6 +73,8 @@ session AInvs = ASpec +
  *)
 
 session CRefineSyscall = CBaseRefine +
+  theories [condition = "CREFINE_QUICK_AND_DIRTY", quick_and_dirty]
+    "crefine/$L4V_ARCH/Syscall_C"
   theories
     "crefine/$L4V_ARCH/Syscall_C"
 
