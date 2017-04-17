@@ -809,11 +809,11 @@ lemma inj_image_inv:
   shows "f ` A = B \<Longrightarrow> inv f ` B = A"
   by (drule sym) (simp add: image_inv_f_f[OF inj_f])
 
-lemma cmap_relation_unique:
+lemma cmap_relation_unique_0:
   assumes inj_f: "inj f"
-  assumes r: "\<And>x y z. r x z \<Longrightarrow> r y z \<Longrightarrow> x=y"
-  shows "cmap_relation a c f r \<Longrightarrow> cmap_relation a' c f r \<Longrightarrow> a' = a"
-        (is "PROP ?goal")
+  assumes r: "\<And>x y z p . \<lbrakk> r x z; r y z; a p = Some x; a' p = Some y; P p x; P' p y \<rbrakk> \<Longrightarrow> x=y"
+  shows "\<lbrakk> cmap_relation a c f r; cmap_relation a' c f r;
+           \<forall>p x. a p = Some x \<longrightarrow> P p x; \<forall>p x. a' p = Some x \<longrightarrow> P' p x \<rbrakk> \<Longrightarrow> a' = a"
   apply (clarsimp simp add: cmap_relation_def)
   apply (drule inj_image_inv[OF inj_f])+
   apply simp
@@ -822,8 +822,40 @@ lemma cmap_relation_unique:
    apply (drule bspec, assumption)+
    apply (simp add: dom_def Collect_eq, drule_tac x=x in spec)
    apply (drule (1) r)
+       apply fastforce
+      apply fastforce
+     apply fastforce
+    apply fastforce
+   apply (thin_tac "inv f ` A = B" for A B)
+   apply (thin_tac "\<forall>p x. a p = Some x \<longrightarrow> P p x" for a P)
+   apply (thin_tac "\<forall>x. a p = Some x \<longrightarrow> P p x" for a P p)
+   apply (erule_tac x=x in allE)
    apply clarsimp
+  apply (thin_tac "\<forall>p x. a p = Some x \<longrightarrow> P p x" for a P)+
   apply fastforce
+  done
+
+lemma cmap_relation_unique':
+  assumes inj_f: "inj f"
+  assumes r: "\<And>x y z. r x z \<Longrightarrow> r y z \<Longrightarrow> P x \<Longrightarrow> P' y \<Longrightarrow> x=y"
+  shows "\<lbrakk> cmap_relation a c f r; cmap_relation a' c f r; \<forall>x \<in> ran a. P x; \<forall>x \<in> ran a'. P' x \<rbrakk> \<Longrightarrow> a' = a"
+  using assms
+  apply (clarsimp simp: ran_def)
+  apply (rule cmap_relation_unique_0[OF inj_f, where P="\<lambda>_. P" and P'="\<lambda>_. P'"])
+      defer
+      apply assumption+
+    apply fastforce
+   apply fastforce
+  apply fastforce
+  done
+
+lemma cmap_relation_unique:
+  assumes inj_f: "inj f"
+  assumes r: "\<And>x y z. r x z \<Longrightarrow> r y z \<Longrightarrow> x=y"
+  shows "cmap_relation a c f r \<Longrightarrow> cmap_relation a' c f r \<Longrightarrow> a' = a"
+  apply (rule cmap_relation_unique'[OF inj_f])
+      defer
+      apply (fastforce intro: r)+
   done
 
 lemma cpspace_cte_relation_unique:
@@ -1084,39 +1116,74 @@ lemma cpspace_ntfn_relation_unique:
               split: ntfn.splits option.splits) (* long *)
 
 (* FIXME: move *)
-lemma of_bool_inject[iff]: "of_bool a = of_bool b \<longleftrightarrow> a=b"
+lemma of_bool_inject[simp]: "of_bool a = of_bool b \<longleftrightarrow> a=b"
   by (cases a) (cases b, simp_all)+
 
 (* FIXME: move *)
-lemma hap_from_vm_rights_inject[iff]:
-  "(hap_from_vm_rights a::word32) = hap_from_vm_rights b \<longleftrightarrow> a=b"
+lemma hap_from_vm_rights_inject[simp]:
+  "\<lbrakk> a \<noteq> VMNoAccess; b \<noteq> VMNoAccess \<rbrakk> \<Longrightarrow> (hap_from_vm_rights a::word32) = hap_from_vm_rights b \<longleftrightarrow> a=b"
   unfolding hap_from_vm_rights_def
-  apply (simp add: hap_from_vm_rights_def split: vmrights.splits)
-  oops (* FIXME ARMHYP NOT TRUE *)
+  by (simp add: hap_from_vm_rights_def split: vmrights.splits)
+
+lemma memattr_from_cacheable_inject[simp]:
+  "(memattr_from_cacheable a :: 32 word) = memattr_from_cacheable b \<longleftrightarrow> a = b"
+  by (simp add: memattr_from_cacheable_def split: bool.splits)
 
 lemma cpspace_pde_relation_unique:
   assumes "cpspace_pde_relation ah ch" "cpspace_pde_relation ah' ch"
+  assumes "\<forall>x \<in> ran (map_to_pdes ah). valid_pde' x s"
+  assumes "\<forall>x \<in> ran (map_to_pdes ah'). valid_pde' x s'"
   shows   "map_to_pdes ah' = map_to_pdes ah"
-  apply (rule cmap_relation_unique[OF inj_Ptr _ assms])
+  apply (rule cmap_relation_unique'[OF inj_Ptr _ assms])
   apply (simp add: cpde_relation_def Let_def split: pde.splits bool.splits)
-  sorry
-  (* FIXME ARMHYP NOT TRUE at the moment, since hap_from_vm_rights is categorically *not* injective *)
+  done
 
 lemma cpspace_pte_relation_unique:
   assumes "cpspace_pte_relation ah ch" "cpspace_pte_relation ah' ch"
+  assumes "\<forall>x \<in> ran (map_to_ptes ah). valid_pte' x s"
+  assumes "\<forall>x \<in> ran (map_to_ptes ah'). valid_pte' x s'"
   shows   "map_to_ptes ah' = map_to_ptes ah"
-  apply (rule cmap_relation_unique[OF inj_Ptr _ assms])
+  apply (rule cmap_relation_unique'[OF inj_Ptr _ assms])
   apply (simp add: cpte_relation_def Let_def split: pte.splits bool.splits)
-  sorry
-  (* FIXME ARMHYP NOT TRUE at the moment, since hap_from_vm_rights is categorically *not* injective *)
+  done
+
+lemma is_aligned_no_overflow_0:
+  "\<lbrakk> is_aligned x n; y \<le> 2^n-1; y \<noteq> 0 \<rbrakk> \<Longrightarrow> 0 < x + y"
+  apply (drule is_aligned_no_overflow)
+  apply simp
+  by unat_arith
+
+abbreviation
+  "is_aligned_opt x n \<equiv> case x of None \<Rightarrow> True | Some y \<Rightarrow> is_aligned y n"
+
+lemma option_to_ctcb_ptr_inj:
+  "\<lbrakk> is_aligned_opt a 9; (* obj_bits TCB = 9 *)
+     is_aligned_opt b 9 \<rbrakk> \<Longrightarrow>
+  (option_to_ctcb_ptr a = option_to_ctcb_ptr b) = (a = b)"
+  apply (simp add: option_to_ctcb_ptr_def tcb_ptr_to_ctcb_ptr_def ctcb_offset_def split: option.splits)
+   apply (erule is_aligned_no_overflow_0; simp)
+  apply (erule is_aligned_no_overflow_0; simp)
+  done
 
 lemma cpspace_vcpu_relation_unique:
   assumes "cpspace_vcpu_relation ah ch" "cpspace_vcpu_relation ah' ch"
+  assumes "\<forall>x \<in> ran (map_to_vcpus ah). is_aligned_opt (vcpuTCBPtr x) 9"  (* obj_bits TCB = 9 *)
+  assumes "\<forall>x \<in> ran (map_to_vcpus ah'). is_aligned_opt (vcpuTCBPtr x) 9"
   shows   "map_to_vcpus ah' = map_to_vcpus ah"
-  apply (rule cmap_relation_unique[OF inj_Ptr _ assms])
+  apply (rule cmap_relation_unique' [OF inj_Ptr _ assms])
   apply (simp add: cvcpu_relation_def Let_def cvgic_relation_def split: vcpu.splits)
-  apply clarsimp
-  sorry (* FIXME ARMHYP TODO no idea if this is true, but we should aim to make it so *)
+  apply (case_tac x, case_tac y)
+  apply (clarsimp simp: cvcpu_regs_relation_def vcpuSCTLR_def option_to_ctcb_ptr_inj)
+  apply (rename_tac vgic regs p vgic' regs')
+  apply (rule conjI)
+   apply (case_tac vgic, case_tac vgic')
+   apply clarsimp
+   apply (rule ext)
+   apply (rename_tac r)
+   apply (case_tac "64 \<le> r"; simp)
+  apply (rule ext)
+  apply (rename_tac r)
+  by (case_tac r; simp)
 
 (* FIXME: move *)
 lemma Collect_mono2: "Collect P \<subseteq> Collect Q \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x)" by auto
@@ -1309,6 +1376,37 @@ lemma map_to_cnes_eq:
   apply (clarsimp simp: projectKO_opt_cte split: kernel_object.splits)
   done
 
+lemma valid_objs'_valid_pde'_ran:
+  "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_pdes (ksPSpace s)). valid_pde' x s"
+  apply (clarsimp simp: valid_objs'_def ran_def)
+  apply (case_tac "ksPSpace s a", simp+)
+  apply (rename_tac y, drule_tac x=y in spec)
+  apply (case_tac y, simp_all add: projectKOs)
+  apply (clarsimp simp: valid_obj'_def
+                 split: arch_kernel_object.splits)
+  done
+
+lemma valid_objs'_valid_pte'_ran:
+  "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_ptes (ksPSpace s)). valid_pte' x s"
+  apply (clarsimp simp: valid_objs'_def ran_def)
+  apply (case_tac "ksPSpace s a", simp+)
+  apply (rename_tac y, drule_tac x=y in spec)
+  apply (case_tac y, simp_all add: projectKOs)
+  apply (clarsimp simp: valid_obj'_def
+                 split: arch_kernel_object.splits)
+  done
+
+lemma valid_objs'_aligned_vcpuTCB:
+  "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_vcpus (ksPSpace s)). is_aligned_opt (vcpuTCBPtr x) 9"
+  apply (clarsimp simp: valid_objs'_def ran_def pspace_aligned'_def)
+  apply (case_tac "ksPSpace s a"; simp)
+  apply (rename_tac y, drule_tac x=y in spec)
+  apply (case_tac y; clarsimp simp: projectKOs)
+  apply (erule impE, fastforce)
+  apply (clarsimp simp: valid_obj'_def valid_vcpu'_def split: option.splits)
+  apply (clarsimp simp: typ_at_tcb' obj_at'_def projectKOs objBits_simps)
+  done
+
 lemma cpspace_relation_unique:
   assumes valid_pspaces: "valid_pspace' s" "valid_pspace' s'"
   shows "cpspace_relation (ksPSpace s) bh ch \<Longrightarrow>
@@ -1328,40 +1426,45 @@ proof -
     by auto
 
   show "PROP ?goal"
-  apply (clarsimp simp add: cpspace_relation_def)
-  apply (drule (1) cpspace_cte_relation_unique)
-  apply (drule (1) cpspace_ep_relation_unique)
-  apply (drule (1) cpspace_ntfn_relation_unique)
-    apply (fastforce intro: valid_pspaces)
-   apply (fastforce intro: valid_pspaces)
-  apply (drule (1) cpspace_pde_relation_unique)
-  apply (drule (1) cpspace_pte_relation_unique)
-  apply (drule (1) cpspace_vcpu_relation_unique)
-  apply (drule (1) cpspace_asidpool_relation_unique[
-                     OF valid_objs'_imp_wf_asid_pool'[OF valid_objs]
-                        valid_objs'_imp_wf_asid_pool'[OF valid_objs']])
-  apply (drule (1) cpspace_tcb_relation_unique)
-     apply (fastforce intro: no_0_objs no_0_objs' valid_objs valid_objs')
-    apply (fastforce intro: no_0_objs no_0_objs' valid_objs valid_objs')
-   apply (intro allI impI,elim exE conjE)
-   apply (rule_tac p=p in map_to_ctes_tcb_ctes, assumption)
-    apply (frule (1) map_to_ko_atI[OF _ aligned distinct])
-   apply (frule (1) map_to_ko_atI[OF _ aligned' distinct'])
-  apply (drule (1) map_to_cnes_eq[OF aligned aligned' distinct distinct'])
-  apply (drule (1) cpspace_user_data_relation_unique)
-  apply (drule (1)  cpspace_device_data_relation_unique)
-  apply (thin_tac "cmap_relation a c f r" for a c f r)+
-  apply (cut_tac no_kdatas)
-  apply (clarsimp simp add: ran_def fun_eq_iff)
-  apply (drule_tac x=x in spec)+
-  apply (case_tac "ksPSpace s x")
-   apply (case_tac "ksPSpace s' x", simp)
-  apply (case_tac a, simp_all add: projectKO_opts
-                            split: arch_kernel_object.splits)
-  apply (clarsimp simp: projectKO_opts map_comp_def
-                 split: kernel_object.splits arch_kernel_object.splits
-                        option.splits)
-  done
+    apply (clarsimp simp add: cpspace_relation_def)
+    apply (drule (1) cpspace_cte_relation_unique)
+    apply (drule (1) cpspace_ep_relation_unique)
+    apply (drule (1) cpspace_ntfn_relation_unique)
+      apply (fastforce intro: valid_pspaces)
+     apply (fastforce intro: valid_pspaces)
+    apply (drule (1) cpspace_pde_relation_unique)
+      apply (rule valid_objs'_valid_pde'_ran [OF valid_objs])
+     apply (rule valid_objs'_valid_pde'_ran [OF valid_objs'])
+    apply (drule (1) cpspace_pte_relation_unique)
+      apply (rule valid_objs'_valid_pte'_ran [OF valid_objs])
+     apply (rule valid_objs'_valid_pte'_ran [OF valid_objs'])
+    apply (drule (1) cpspace_vcpu_relation_unique)
+      apply (rule valid_objs'_aligned_vcpuTCB [OF valid_objs])
+     apply (rule valid_objs'_aligned_vcpuTCB [OF valid_objs'])
+    apply (drule (1) cpspace_asidpool_relation_unique[
+                       OF valid_objs'_imp_wf_asid_pool'[OF valid_objs]
+                          valid_objs'_imp_wf_asid_pool'[OF valid_objs']])
+    apply (drule (1) cpspace_tcb_relation_unique)
+       apply (fastforce intro: no_0_objs no_0_objs' valid_objs valid_objs')
+      apply (fastforce intro: no_0_objs no_0_objs' valid_objs valid_objs')
+     apply (intro allI impI,elim exE conjE)
+     apply (rule_tac p=p in map_to_ctes_tcb_ctes, assumption)
+      apply (frule (1) map_to_ko_atI[OF _ aligned distinct])
+     apply (frule (1) map_to_ko_atI[OF _ aligned' distinct'])
+    apply (drule (1) map_to_cnes_eq[OF aligned aligned' distinct distinct'])
+    apply (drule (1) cpspace_user_data_relation_unique)
+    apply (drule (1)  cpspace_device_data_relation_unique)
+    apply (thin_tac "cmap_relation a c f r" for a c f r)+
+    apply (cut_tac no_kdatas)
+    apply (clarsimp simp add: ran_def fun_eq_iff)
+    apply (drule_tac x=x in spec)+
+    apply (case_tac "ksPSpace s x")
+     apply (case_tac "ksPSpace s' x", simp)
+     apply (case_tac a, simp_all add: projectKO_opts
+                               split: arch_kernel_object.splits)
+    by (clarsimp simp: projectKO_opts map_comp_def
+                split: kernel_object.splits arch_kernel_object.splits
+                       option.splits)
 qed
 (*<<< end showing that cpspace_relation is actually unique *)
 
@@ -1392,16 +1495,16 @@ lemma ksPSpace_eq_imp_valid_cap'_eq:
 lemma ksPSpace_eq_imp_valid_tcb'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_tcb' tcb s' = valid_tcb' tcb s"
-  sorry (* FIXME ARMHYP should be fine
   by (auto simp: ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                  ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
+                 ksPSpace_eq_imp_typ_at'_eq[OF ksPSpace]
                  valid_tcb'_def valid_tcb_state'_def valid_bound_ntfn'_def valid_arch_tcb'_def
-          split: thread_state.splits option.splits) *)
+          split: thread_state.splits option.splits)
 
 lemma ksPSpace_eq_imp_valid_vcpu'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_vcpu' vcpu s' = valid_vcpu' vcpu s"
-  sorry (* FIXME ARMHYP should be fine *)
+  by (auto simp: valid_vcpu'_def ksPSpace_eq_imp_typ_at'_eq[OF ksPSpace] split: option.splits)
 
 lemma ksPSpace_eq_imp_valid_arch_obj'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"

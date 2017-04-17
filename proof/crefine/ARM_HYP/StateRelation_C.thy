@@ -548,7 +548,9 @@ where
        gicVCpuIface_C.hcr_C cvgic = vgicHCR vgic
      \<and> gicVCpuIface_C.vmcr_C cvgic = vgicVMCR vgic
      \<and> gicVCpuIface_C.apr_C cvgic = vgicAPR vgic
-     \<and> (\<forall>i\<le>(63::nat). (vgicLR vgic i) = virq_to_H ((gicVCpuIface_C.lr_C cvgic).[i]))"
+     \<and> (\<forall>i\<le>63. vgicLR vgic i = virq_to_H ((gicVCpuIface_C.lr_C cvgic).[i]))
+     \<and> (\<forall>i\<ge>64. vgicLR vgic i = 0)"
+(* FIXME ARM_HYP: if we know the range is 64, we should change the index type from nat to 6 word *)
 
 definition
   cvcpu_relation :: "vcpu \<Rightarrow> vcpu_C \<Rightarrow> bool"
