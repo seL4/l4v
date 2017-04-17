@@ -509,7 +509,8 @@ where valid_cap'_def:
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
     (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
-            0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < kernelBase)
+            0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < kernelBase) \<and>
+    rghts \<noteq> VMNoAccess
   | PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
@@ -611,15 +612,15 @@ primrec
   valid_pte' :: "ARM_HYP_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_pte' (InvalidPTE) = \<top>"
-| "valid_pte' (LargePagePTE ptr _ _ _) = (valid_mapping' ptr ARMLargePage)"
-| "valid_pte' (SmallPagePTE ptr _ _ _) = (valid_mapping' ptr ARMSmallPage)"
+| "valid_pte' (LargePagePTE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMLargePage s \<and> r \<noteq> VMNoAccess)"
+| "valid_pte' (SmallPagePTE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSmallPage s \<and> r \<noteq> VMNoAccess)"
 
 primrec
   valid_pde' :: "ARM_HYP_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_pde' (InvalidPDE) = \<top>"
-| "valid_pde' (SectionPDE ptr _ _ _) = (valid_mapping' ptr ARMSection)"
-| "valid_pde' (SuperSectionPDE ptr _ _ _) = (valid_mapping' ptr ARMSuperSection)"
+| "valid_pde' (SectionPDE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSection s \<and> r \<noteq> VMNoAccess)"
+| "valid_pde' (SuperSectionPDE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSuperSection s \<and> r \<noteq> VMNoAccess)"
 | "valid_pde' (PageTablePDE ptr) = (\<lambda>_. is_aligned ptr ptBits)"
 
 primrec

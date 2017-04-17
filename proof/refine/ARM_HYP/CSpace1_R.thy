@@ -346,6 +346,10 @@ lemma maskCapRights [simp]:
   cap_relation (mask_cap msk c) (maskCapRights (rights_mask_map msk) c')"
   by (simp add: mask_cap_def cap_relation_masks)
 
+lemma maskVMRights_VMNoAccess[simp]:
+  "(maskVMRights vmR R = VMNoAccess) = (vmR = VMNoAccess)"
+  by (simp add: maskVMRights_def split: vmrights.splits bool.splits)
+
 lemma maskCap_valid [simp]:
   "s \<turnstile>' RetypeDecls_H.maskCapRights R cap = s \<turnstile>' cap"
   by (simp    add: valid_cap'_def maskCapRights_def isCap_simps

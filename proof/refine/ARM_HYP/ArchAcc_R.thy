@@ -1310,7 +1310,7 @@ lemma valid_slots_typ_at':
 
 lemma createMappingEntries_valid_slots' [wp]:
   "\<lbrace>valid_objs' and
-    K (vmsz_aligned' base sz \<and> vmsz_aligned' vptr sz \<and> ptrFromPAddr base \<noteq> 0) \<rbrace>
+    K (vmsz_aligned' base sz \<and> vmsz_aligned' vptr sz \<and> ptrFromPAddr base \<noteq> 0 \<and> vm_rights \<noteq> VMNoAccess) \<rbrace>
   createMappingEntries base vptr sz vm_rights attrib pd
   \<lbrace>\<lambda>m. valid_slots' m\<rbrace>, -"
   apply (simp add: createMappingEntries_def)
