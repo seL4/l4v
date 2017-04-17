@@ -571,7 +571,7 @@ lemma revokable_ccorres:
 	  apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
 	 apply (frule cap_get_tag_EndpointCap [where cap' = newCap, THEN iffD1])
 	  apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
-	 apply (fastforce simp: cap_get_tag_isCap isCap_simps)
+	 subgoal by (fastforce simp: cap_get_tag_isCap isCap_simps)
 
 	by (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
 	  rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)+

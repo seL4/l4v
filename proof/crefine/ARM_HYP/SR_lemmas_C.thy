@@ -100,9 +100,8 @@ lemma cap_get_tag_isCap0:
   apply -
   apply (erule ccap_relationE)
   apply (simp add: cap_to_H_def cap_lift_def Let_def isArchCap_tag_def2 isArchCap_def)
-  apply (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def
-                 split: if_split_asm) -- "takes a while"
-  done
+  by (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def
+              split: if_split_asm) -- "takes a while"
 
 
 lemma cap_get_tag_isCap:
@@ -1240,9 +1239,9 @@ lemma rf_sr_cte_at_validD:
 lemma ccap_relation_NullCap_iff:
   "(ccap_relation NullCap cap') = (cap_get_tag cap' = scast cap_null_cap)"
   unfolding ccap_relation_def
-  apply (clarsimp simp: map_option_Some_eq2 c_valid_cap_def cl_valid_cap_def
-            cap_to_H_def cap_lift_def Let_def cap_tag_defs split: if_split)
-  done
+  by (clarsimp simp: map_option_Some_eq2 c_valid_cap_def cl_valid_cap_def
+                     cap_to_H_def cap_lift_def Let_def cap_tag_defs
+              split: if_split)
 
 (* MOVE *)
 lemma ko_at_valid_ntfn':
@@ -2096,8 +2095,7 @@ lemma cap_get_tag_isCap_ArchObject0:
   apply -
   apply (erule ccap_relationE)
   apply (simp add: cap_to_H_def cap_lift_def Let_def isArchCap_def)
-  apply (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def split: if_split_asm) -- "takes a while"
-  done
+  by (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def split: if_split_asm) -- "takes a while"
 
 lemma cap_get_tag_isCap_ArchObject:
   assumes cr: "ccap_relation (capability.ArchObjectCap cap) cap'"
@@ -2194,11 +2192,10 @@ lemma gs_set_assn_Delete_cstate_relation:
   "cstate_relation s (ghost'state_'_update (gs_set_assn cteDeleteOne_'proc v) gs)
     = cstate_relation s gs"
   apply (cases "ghost'state_' gs")
-  apply (auto simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                    cmachine_state_relation_def ghost_assertion_data_set_def
-                    ghost_size_rel_def ghost_assertion_data_get_def
-                    cteDeleteOne_'proc_def cap_get_capSizeBits_'proc_def)
-  done
+  by (auto simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                 cmachine_state_relation_def ghost_assertion_data_set_def
+                 ghost_size_rel_def ghost_assertion_data_get_def
+                 cteDeleteOne_'proc_def cap_get_capSizeBits_'proc_def)
 
 lemma update_typ_at:
   assumes at: "obj_at' P p s"
