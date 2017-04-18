@@ -76,8 +76,8 @@ It is not possible to dissociate a VCPU and a TCB by using SetTCB. Final outcome
 >     case hsCurVCPU of
 >         Just (curVCPU, _) -> when (curVCPU == vcpuPtr) vcpuInvalidateActive
 >         _ -> return ()
->     setObject vcpuPtr $ vcpu { vcpuTCBPtr = Nothing }
 >     archThreadSet (\atcb -> atcb { atcbVCPUPtr = Nothing }) tcbPtr
+>     setObject vcpuPtr $ vcpu { vcpuTCBPtr = Nothing }
 >     tcb <- getObject tcbPtr
 >     asUser tcbPtr $ (do
 >         cpsr <- getRegister (Register CPSR)
