@@ -738,8 +738,8 @@ lemma vcpu_invalidate_tcbs_inv[wp]:
 lemma sym_refs_vcpu_None:
   assumes sym_refs: "sym_refs (state_hyp_refs_of s)"
   assumes tcb: "ko_at (TCB tcb) t s" "tcb_vcpu (tcb_arch tcb) = Some vr"
-  shows "sym_refs (state_hyp_refs_of (s\<lparr>kheap := kheap s(vr \<mapsto> ArchObj (VCPU (vcpu_tcb_update Map.empty v)),
-                                       t \<mapsto> TCB (tcb\<lparr>tcb_arch := tcb_vcpu_update Map.empty (tcb_arch tcb)\<rparr>))\<rparr>))"
+  shows "sym_refs (state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_arch := tcb_vcpu_update Map.empty (tcb_arch tcb)\<rparr>),
+                                       vr \<mapsto> ArchObj (VCPU (vcpu_tcb_update Map.empty v)))\<rparr>))"
     (is "sym_refs (state_hyp_refs_of ?s')")
 proof -
   from tcb
