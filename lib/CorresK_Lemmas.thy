@@ -48,4 +48,63 @@ lemma mapME_x_corresK_inv:
   qed
   done
 
+lemma corresK_mapM:
+  assumes S: "set (zip xs ys) \<subseteq> S"
+  assumes z: "\<And>x y. corres_protect ((x, y) \<in> S) \<Longrightarrow> corres_underlyingK R nf nf' (F x y) r' P P' (f x) (f' y)"
+  assumes w: "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
+             "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>P'\<rbrace> f' y \<lbrace>\<lambda>rv. P'\<rbrace>"
+  shows      "corres_underlyingK R nf nf'
+                  ((length xs = length ys) \<and>
+                   (r [] []) \<and> (\<forall>x xs y ys. r xs ys \<longrightarrow> r' x y \<longrightarrow> r (x # xs) (y # ys)) \<and>
+                  (\<forall>(x,y)\<in>S. F x y)) r P P' (mapM f xs) (mapM f' ys)"
+  apply (rule corresK_use_guard, elim conjE)
+  subgoal premises prems
+proof (insert \<open>length xs = length ys\<close>, insert S, induct xs ys rule: list_induct2)
+  case Nil
+  show ?case
+    by (simp add: mapM_def sequence_def corres_underlyingK_def)
+next
+  case (Cons a as b bs)
+  from Cons have P: "(a, b) \<in> S"
+    by simp
+  from Cons have Q: "corres_underlyingK R nf nf' ((\<forall>x y. (x,y) \<in> set (zip as bs) \<longrightarrow> F x y)) r P P' (mapM f as) (mapM f' bs)"
+    apply -
+    apply (corres_pre)
+    apply (erule meta_mp)
+    by (clarsimp simp: prems)+
+  show ?case
+    apply (simp add: mapM_Cons)
+    apply (corressimp corresK: z Q wp: P)
+      apply (rule corres_rv_proveT)
+      apply (fastforce simp: corres_protect_def prems)
+      apply (wp w | rule P)+
+      apply (rule corres_rv_defer_left)
+      apply (insert prems Cons)
+      apply (auto simp: corres_protect_def)
+    done
+qed
+done
+
+lemma corresK_mapM_x:
+  assumes S: "(set (zip xs ys) \<subseteq> S)"
+  assumes x: "\<And>x y. corres_protect ((x, y) \<in> S) \<Longrightarrow> corres_underlyingK sr nf nf' (F x y) dc P P' (f x) (f' y)"
+  assumes y: "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
+             "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>P'\<rbrace> f' y \<lbrace>\<lambda>rv. P'\<rbrace>"
+  shows      "corres_underlyingK sr nf nf'
+                (length xs = length ys \<and> (\<forall>(x,y)\<in>S. F x y)) dc P P' (mapM_x f xs) (mapM_x f' ys)"
+  apply (simp add: mapM_x_mapM)
+  apply (corressimp corresK: corresK_mapM[where S=S and r=dc and r'=dc] x wp: y simp: S)
+  done
+
+lemma corresK_subst_both: "g' = f' \<Longrightarrow> g = f \<Longrightarrow>
+  corres_underlyingK sr nf nf' F r P P' f f' \<Longrightarrow>
+  corres_underlyingK sr nf nf' F r P P' g g'" by simp
+
+lemma if_fun_true: "(if A then B else (\<lambda>_. True)) = (\<lambda>s. (A  \<longrightarrow> B s))" by simp
+
+lemmas corresK_whenE [corres_splits] =
+  corresK_if[THEN
+    corresK_subst_both[OF whenE_def[THEN meta_eq_to_obj_eq] whenE_def[THEN meta_eq_to_obj_eq]],
+    OF _ corresK_returnOk[where r="f \<oplus> dc" for f], simplified, simplified if_fun_true]
+
 end
