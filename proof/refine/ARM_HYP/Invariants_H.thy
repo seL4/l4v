@@ -1152,6 +1152,10 @@ lemma vcpu_at_is_vcpu': "\<And>v. vcpu_at' v = ko_wp_at' is_vcpu' v"
   done
 
 definition
+  max_armKSGICVCPUNumListRegs :: nat where
+  "max_armKSGICVCPUNumListRegs \<equiv> 63"
+
+definition
   valid_arch_state' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_arch_state' \<equiv> \<lambda>s.
@@ -1159,7 +1163,8 @@ where
   (case (armHSCurVCPU (ksArchState s)) of Some (v, b) \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') v s | _ \<Rightarrow> True) \<and>
   is_inv (armKSHWASIDTable (ksArchState s))
             (option_map fst o armKSASIDMap (ksArchState s)) \<and>
-  valid_asid_map' (armKSASIDMap (ksArchState s))"
+  valid_asid_map' (armKSASIDMap (ksArchState s)) \<and>
+  armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs"
 
 definition
   irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool"

@@ -1586,7 +1586,8 @@ lemma storeHWASID_valid_arch' [wp]:
                     checkPDUniqueToASID_def checkPDASIDMapMembership_def)
    apply wp
    apply (rule_tac Q'="\<lambda>rv s. valid_asid_map' (armKSASIDMap (ksArchState s))
-                                \<and> asid \<noteq> 0 \<and> asid \<le> mask asid_bits"
+                               \<and> asid \<noteq> 0 \<and> asid \<le> mask asid_bits
+                               \<and> armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs"
               in hoare_post_imp_R)
     apply (wp findPDForASID_inv2)+
    apply clarsimp
