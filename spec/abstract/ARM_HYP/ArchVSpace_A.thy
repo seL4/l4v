@@ -381,8 +381,8 @@ where "dissociate_vcpu_tcb vr t \<equiv> do
   assert (t_vcpu = Some vr \<and> vcpu_tcb v = Some t); (* make sure they were associated *)
   cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
   when (\<exists>a. cur_v = Some (vr,a)) vcpu_invalidate_active;
-  set_vcpu vr (v\<lparr> vcpu_tcb := None \<rparr>);
   arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := None \<rparr>) t;
+  set_vcpu vr (v\<lparr> vcpu_tcb := None \<rparr>);
   tcb \<leftarrow> gets_the $ get_tcb t;
   as_user t $ do
     cpsr \<leftarrow> getRegister CPSR;
