@@ -155,7 +155,7 @@ method corres_raw_pre =
   (check_corres, (fails \<open>rule corres_my_false\<close>, rule corresK_start)?)
 
 method corresK_pre =
-  (check_corresK, (fails \<open>rule corresK_my_false\<close>, rule corresK_weaken)?)
+  (check_corresK, (fails \<open>rule corresK_my_false\<close>, rule corresK_weaken[where F=True] corresK_weaken)?)
 
 method corres_pre = (corres_raw_pre | corresK_pre)?
 
@@ -713,6 +713,10 @@ lemma corres_stateAssert_implied_frame:
 lemma corresK_return [corres_concrete_r]:
   "corres_underlyingK sr nf nf' (r a b) r \<top> \<top> (return a) (return b)"
   by (simp add: corres_underlyingK_def)
+
+lemma corres_throwError_str [corres_concrete_rER]:
+  "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throwError b)"
+ by (simp add: corres_underlyingK_def)+
 
 chapter \<open>Extra Stuff (Stale)\<close>
 
