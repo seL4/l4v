@@ -738,15 +738,12 @@ lemma (in kernel_m)  carch_state_to_H_correct:
   apply (rule conjI[rotated])
    apply (rule conjI[rotated])
     subgoal using valid rel
-      apply (clarsimp simp: ccur_vcpu_to_H_correct[OF _ rel])
-      apply (subst unat_of_nat_eq; simp)
-      subgoal sorry (* FIXME ARMHYP we know nothing about armKSGICVCPUNumListRegs being limited to
-                                     any specific range, missing invariant? *)
-      done
+      by (clarsimp simp: ccur_vcpu_to_H_correct[OF _ rel] unat_of_nat_eq valid_arch_state'_def
+                         max_armKSGICVCPUNumListRegs_def)
    apply (rule array_relation_map_conv2[OF _ eq_option_to_0_rev])
      apply assumption
     using valid[simplified valid_arch_state'_def]
-    apply (fastforce simp: is_inv_def valid_asid_map'_def)
+    subgoal by (fastforce simp: is_inv_def valid_asid_map'_def)
    apply clarsimp
    apply (cut_tac w=i in word_le_p2m1, simp add: minus_one_norm)
   apply (rule array_relation_map_conv2[OF _ eq_option_to_ptr_rev])
