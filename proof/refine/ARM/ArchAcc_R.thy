@@ -1167,6 +1167,8 @@ lemma arm_global_pd_corres [corres]:
      (gets (arm_global_pd \<circ> arch_state)) (gets (armKSGlobalPD \<circ> ksArchState))"
  by (clarsimp simp: state_relation_def arch_state_relation_def)
 
+
+
 lemma copy_global_mappings_corres [@lift_corres_args, corres]:
   "corres dc (page_directory_at pd and pspace_aligned and valid_arch_state and valid_etcbs)
              (page_directory_at' pd and valid_arch_state')
@@ -1174,16 +1176,14 @@ lemma copy_global_mappings_corres [@lift_corres_args, corres]:
   unfolding copy_global_mappings_def copyGlobalMappings_def pd_bits_def pdBits_def objBits_simps
             archObjSize_def kernel_base_def ARM.kernelBase_def ARM_H.kernelBase_def
   apply corressimp
-     apply (rule corresK_drop)
      apply (rule_tac P="page_directory_at global_pd
                         and (\<lambda>_. is_aligned global_pd 6 \<and> is_aligned pd 6) and ?apre" and
                     P'="page_directory_at' globalPD and page_directory_at' pd"
-              in corres_mapM_x[rotated -1, OF order_refl])
-        apply (corressimp simp: pdeBits_def ptBits_def pdeBits_def pageBits_def pteBits_def mask_def
-                          wp: get_pde_wp getPDE_wp corres_rv_defer_left)
-        subgoal for global_pd globalPD
+              in corresK_mapM_x[OF order_refl])
+        apply (corressimp wp: get_pde_wp getPDE_wp corres_rv_wp_left)
+        subgoal for globalPD
           by (auto intro!: page_directory_pde_atI page_directory_pde_atI'
-                     simp: pde_relation_aligned_def corres_protect_def
+                     simp: pde_relation_aligned_def
                      dest: align_entry_add_cong[of globalPD])
   apply wpsimp+
   apply (clarsimp simp: valid_arch_state_def obj_at_def dest!:pspace_alignedD)
@@ -1339,6 +1339,10 @@ lemma ko_at_typ_at_asidpool:
   "ko_at (ArchObj (arch_kernel_obj.ASIDPool pool)) x s \<Longrightarrow> typ_at (AArch AASIDPool) x s"
   by (clarsimp simp: obj_at_def a_type_simps)
 
+
+
+
+
 lemma find_pd_for_asid_corres [corres]:
   "asid = asid' \<Longrightarrow> corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s)
                            and valid_arch_objs and pspace_aligned
@@ -1346,7 +1350,8 @@ lemma find_pd_for_asid_corres [corres]:
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
                        (find_pd_for_asid asid) (findPDForASID asid')"
   apply (simp add: find_pd_for_asid_def findPDForASID_def liftME_def bindE_assoc)
-  apply (corressimp simp: liftE_bindE assertE_assert mask_asid_low_bits_ucast_ucast lookup_failure_map_def
+  apply (corressimp simp: liftE_bindE assertE_assert mask_asid_low_bits_ucast_ucast
+                          lookup_failure_map_def
                       wp: getPDE_wp getASID_wp
                   search: checkPDAt_corres corres_gets_asid)
   subgoal premises prems for s s'

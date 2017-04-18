@@ -610,7 +610,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
       hence [simp]: "((cbits + length guard = 0) = False) \<and>
                      ((cbits = 0 \<and> guard = []) = False) \<and>
                     (0 < cbits \<or> guard \<noteq> []) " by simp
-      note if_split [split del] isCNodeCap_cap_map[simp del] drop_append[simp del]
+      note if_split [split del] drop_append[simp del]
       from "1.prems"
       have ?thesis
         apply -
@@ -623,7 +623,6 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
                               wp: get_cap_wp getSlotCap_valid no_fail_stateAssert
                                   corres_rv_defer_right
                             simp: locateSlot_conv)
-        supply isCNodeCap_cap_map[simp]
         apply (simp add: drop_postfix_eq)
         apply clarsimp
         apply (prove "is_aligned ptr (4 + cbits) \<and> cbits \<le> word_bits - cte_level_bits")
