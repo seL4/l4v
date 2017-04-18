@@ -1004,6 +1004,15 @@ lemma oblivious_getObject_ksPSpace_cte[simp]:
          simp_all split: Structures_H.kernel_object.split if_split)
   by (safe intro!: oblivious_bind, simp_all)
 
+lemma oblivious_setObject_ksPSpace_vcpu[simp]:
+  "\<lbrakk> \<forall>s. ksPSpace (f s) = ksPSpace s;
+     \<forall>s g. ksPSpace_update g (f s) = f (ksPSpace_update g s) \<rbrakk> \<Longrightarrow>
+   oblivious f (setObject p (v :: vcpu))"
+  apply (simp add: setObject_def split_def updateObject_default_def
+                   projectKO_def2 alignCheck_assert magnitudeCheck_assert)
+  apply (intro oblivious_bind, simp_all)
+  done
+
 lemma oblivious_doMachineOp[simp]:
   "\<lbrakk> \<forall>s. ksMachineState (f s) = ksMachineState s;
      \<forall>g s. ksMachineState_update g (f s) = f (ksMachineState_update g s) \<rbrakk>
@@ -1015,12 +1024,17 @@ lemma oblivious_doMachineOp[simp]:
 lemmas oblivious_getObject_ksPSpace_asidpool[simp]
     = oblivious_getObject_ksPSpace_default[OF _ loadObject_asidpool]
 
+lemma oblivious_modifyArchState_schact[simp]:
+  "oblivious (ksSchedulerAction_update f) (modifyArchState f')"
+  by (simp add: oblivious_def modifyArchState_def simpler_modify_def)
+
+lemmas oblivious_getObject_ksPSpace_vcpu[simp]
+  = oblivious_getObject_ksPSpace_default [OF _ loadObject_vcpu]
+
 lemma oblivious_setVMRoot_schact:
   "oblivious (ksSchedulerAction_update f) (setVMRoot t)"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def locateSlot_conv
                    getSlotCap_def getCTE_def armv_contextSwitch_def)
-sorry (* FIXME ARMHYP should still be true, vcpuSwitch does not change the scheduler info, but
-                      that's harder to prove
   by (safe intro!: oblivious_bind oblivious_bindE oblivious_catch
              | simp_all add: liftE_def getHWASID_def
                              findPDForASID_def liftME_def loadHWASID_def
@@ -1030,9 +1044,10 @@ sorry (* FIXME ARMHYP should still be true, vcpuSwitch does not change the sched
                              findFreeHWASID_def invalidateASID_def
                              invalidateHWASIDEntry_def storeHWASID_def
                              checkPDNotInASIDMap_def armv_contextSwitch_def
-                             vcpuSwitch_def vcpuDisable_def
-                      split: capability.split arch_capability.split option.split)+
-*)
+                             vcpuSwitch_def vcpuDisable_def vcpuRestore_def
+                             vcpuEnable_def vcpuSave_def
+                      split: if_split capability.split arch_capability.split option.split)+
+
 
 lemma oblivious_switchToThread_schact:
   "oblivious (ksSchedulerAction_update f) (ThreadDecls_H.switchToThread t)"
