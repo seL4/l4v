@@ -127,6 +127,20 @@ method check_corresK =
 private definition "my_false s \<equiv> False"
 
 private
+  lemma corres_my_falseE: "my_false x \<Longrightarrow> P" by (simp add: my_false_def)
+
+method no_schematic_prems = (fails \<open>erule corres_my_falseE\<close>)
+
+private lemma hoare_pre: "\<lbrace>my_false\<rbrace> f \<lbrace>Q\<rbrace>" by (simp add: valid_def my_false_def)
+private lemma hoareE_pre: "\<lbrace>my_false\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>Q'\<rbrace>" by (simp add: validE_def valid_def my_false_def)
+private lemma hoare_E_E_pre: "\<lbrace>my_false\<rbrace> f -,\<lbrace>Q\<rbrace>" by (simp add: validE_E_def validE_def valid_def my_false_def)
+private lemma hoare_E_R_pre: "\<lbrace>my_false\<rbrace> f \<lbrace>Q\<rbrace>,-" by (simp add: validE_R_def validE_def valid_def my_false_def)
+
+private lemmas hoare_pres = hoare_pre hoare_pre hoare_E_E_pre hoare_E_R_pre
+
+method schematic_hoare_pre = (succeeds \<open>rule hoare_pres\<close>)
+
+private
   lemma corres_my_false: "corres_underlying sr nf nf' r my_false P f f'"
                          "corres_underlying sr nf nf' r P' my_false f f'"
   by (auto simp add: my_false_def[abs_def] corres_underlying_def)
@@ -814,19 +828,38 @@ lemma corresK_fail_no_fail'[corresK]:
 
 (* Wrap it up in a big hammer. Small optimization to avoid searching when no fact is given. *)
 
+named_theorems correswp_wp_comb_del
+
+method correswp_once uses wp =
+  (determ \<open>
+    (fails \<open>schematic_hoare_pre\<close>, (wp wp))
+   | (schematic_hoare_pre,
+        (use correswp_wp_comb_del[wp_comb del] hoare_pre[wp_pre del] in
+      \<open>use in \<open>wp_once add: wp\<close>\<close>))\<close>;
+    no_schematic_prems)
+
+method correswp uses wp =
+  ((correswp_once wp: wp)+)[1]
 
 method corressimp uses simp cong search wp
   declares corres corresK corres_splits corresc_simp =
   ((corres corresc_simp: simp
-    | use hoare_vcg_precond_imp[wp_comb del] hoare_vcg_precond_imp[wp_pre del] in
-      \<open>use in \<open>wp add: wp\<close>\<close>
+    | (correswp wp: wp)
+    | (fails \<open>check_corres\<close>, fails \<open>check_corresK\<close>, simp only: corres_protect_def)
     | wpc
     | clarsimp cong: cong simp: simp simp del: corres_simp_del split del: if_split
-    | solves \<open>clarsimp cong: cong simp: simp corres_protect_def simp del: corres_simp_del split del: if_split\<close>
     | rule corres_rv_trivial |
       (match search in _ \<Rightarrow> \<open>corres_search search: search\<close>))+)[1]
 
 declare corres_return[corres_simp_del]
+
+lemmas [correswp_wp_comb_del] =
+  hoare_post_comb_imp_conj
+  hoare_vcg_precond_imp
+  hoare_vcg_precond_impE
+  hoare_vcg_precond_impE_R
+  hoare_wp_state_combsE(1)
+  hoare_wp_state_combsE(2)
 
 section \<open>Normalize corres rule into corresK rule\<close>
 
