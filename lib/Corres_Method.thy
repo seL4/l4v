@@ -499,12 +499,15 @@ method corres_once declares corres_splits corres corresK corresc_simp =
 method corres declares corres_splits corres corresK corresc_simp =
   (corres_once+)[1]
 
+method corres_unsafe_split declares corres_splits corres corresK corresc_simp =
+  ((rule corres_splits | corres_once)+)[1]
+
 end
 
 lemmas [corres_splits] =
   corresK_split
 
-lemma corresK_when:
+lemma corresK_when [corres_splits]:
   "\<lbrakk>corres_protect G \<Longrightarrow> corres_protect G' \<Longrightarrow> corres_underlyingK sr nf nf' F dc P P' a c\<rbrakk>
 \<Longrightarrow> corres_underlyingK sr nf nf' ((G = G') \<and> F) dc ((\<lambda>x. G \<longrightarrow> P x)) (\<lambda>x. G' \<longrightarrow> P' x) (when G a) (when G' c)"
   apply (simp add: corres_underlying_def corres_underlyingK_def corres_protect_def)
@@ -524,13 +527,11 @@ lemma corres_lift_to_K:
     corres_underlyingK sra nfa nf'a F ra Pa P'a fa f'a \<longrightarrow> corres_underlyingK sr nf nf' F r P P' f f'"
   by (simp add: corres_underlyingK_def)
 
-lemmas corresK_liftM =
+lemmas corresK_liftM[corres_splits] =
   corres_liftM2_simp[THEN iffD2,atomized, THEN corres_lift_to_K, rule_format, simplified o_def]
 
 
 lemmas [corresK] =
-  corresK_when
-  corresK_liftM
   corresK_return_trivial
   corresK_return_eq
 
@@ -563,7 +564,7 @@ lemmas corresK_K_bind_right[corres_splits] =
 
 section \<open>Corres Search - find symbolic execution path that allows a given rule to be applied\<close>
 
-lemma corresK_if:
+lemma corresK_if [corres_splits]:
   "\<lbrakk>(corres_protect G \<Longrightarrow> corres_protect G' \<Longrightarrow> corres_underlyingK sr nf nf' F r P P' a c);
     (corres_protect (\<not>G) \<Longrightarrow> corres_protect (\<not>G') \<Longrightarrow> corres_underlyingK sr nf nf' F' r Q Q' b d)\<rbrakk>
 \<Longrightarrow> corres_underlyingK sr nf nf' ((G = G') \<and> (G \<longrightarrow> F) \<and> (\<not>G \<longrightarrow> F')) r (if G then P else Q) (if G' then P' else Q') (if G then a else b)
@@ -688,7 +689,7 @@ text \<open>
 method corres_search uses search
   declares corres corres_symb_exec_ls corres_symb_exec_rs =
   (corres_pre,
-   use search[corres del] search[corresK del] in
+   use search[corres del] search[corresK del] search[corres_splits del] in
      \<open>use in \<open>corres_search_frame \<open>corres_search search: search\<close> search: search\<close>\<close>)[1]
 
 end
