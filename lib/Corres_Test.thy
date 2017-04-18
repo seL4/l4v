@@ -283,7 +283,7 @@ lemma delete_asid_corresb:
                       continue (* gct_corres *)
                      continue (* set_vm_root_corres *)
                     finish (* backtracking? *)
-                    apply (wp corres_rv_wp_right
+                    apply (correswp wp: corres_rv_wp_right
       | simp add: mask_asid_low_bits_ucast_ucast corres_protect_def
       | fold cur_tcb_def | wps)+
   apply clarsimp
@@ -361,9 +361,7 @@ lemma set_vm_root_for_flush_corres:
     continue (* can't make corres progress here, trying other goal *)
     finish (* successful goal discharged by corres *)
 
-  apply corres+
-  unfolding corres_protect_def
-  apply (simp | wp get_cap_wp getSlotCap_wp corres_rv_wp_left | wpc)+
+  apply (corressimp wp: get_cap_wp getSlotCap_wp corres_rv_wp_left simp: corres_protect_def)+
   apply (rule context_conjI)
   subgoal by (simp add: cte_map_def objBits_simps tcb_cnode_index_def
                         tcbVTableSlot_def to_bl_1 cte_level_bits_def)
