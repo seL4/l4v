@@ -2622,8 +2622,8 @@ lemma dissoc_invs':
     ko_at' vcpu v and K (vcpuTCBPtr vcpu = Some t) and
     obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) = Some v) t\<rbrace>
    do
-    setObject v $ vcpuTCBPtr_update (\<lambda>_. Nothing) vcpu;
-    archThreadSet (atcbVCPUPtr_update (\<lambda>_. Nothing)) t
+    archThreadSet (atcbVCPUPtr_update (\<lambda>_. Nothing)) t;
+    setObject v $ vcpuTCBPtr_update (\<lambda>_. Nothing) vcpu
    od \<lbrace>\<lambda>_. invs' and tcb_at' t\<rbrace>"
   unfolding invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
             valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
@@ -2635,11 +2635,10 @@ lemma dissoc_invs':
                     cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
                     valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
                     valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-                    setVCPU_valid_arch'
+                    setVCPU_valid_arch' archThreadSet_if_live'
               simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb valid_arch_tcb'_def
-        | wp_once hoare_vcg_imp_lift)+
-  apply (clarsimp simp: live'_def hyp_live'_def arch_live'_def)
+        | clarsimp simp: live'_def hyp_live'_def arch_live'_def)+
   apply (drule (1) valid_objs_valid_vcpu')
   apply (clarsimp simp: valid_vcpu'_def)
   supply fun_upd_apply[simp]
@@ -2653,13 +2652,13 @@ lemma dissoc_invs':
 
 lemma setVCPU_archThreadSet_None_eq:
   "do
-    setObject v $ vcpuTCBPtr_update (\<lambda>_. Nothing) vcpu;
     archThreadSet (atcbVCPUPtr_update (\<lambda>_. Nothing)) t;
+    setObject v $ vcpuTCBPtr_update (\<lambda>_. Nothing) vcpu;
     f
    od = do
     do
-      setObject v $ vcpuTCBPtr_update (\<lambda>_. Nothing) vcpu;
-      archThreadSet (atcbVCPUPtr_update (\<lambda>_. Nothing)) t
+      archThreadSet (atcbVCPUPtr_update (\<lambda>_. Nothing)) t;
+      setObject v $ vcpuTCBPtr_update (\<lambda>_. Nothing) vcpu
     od;
     f
   od" by (simp add: bind_assoc)
@@ -2683,7 +2682,7 @@ lemma when_assert_eq:
 lemma dissociateVCPUTCB_invs'[wp]:
   "dissociateVCPUTCB vcpu tcb \<lbrace>invs'\<rbrace>"
   unfolding dissociateVCPUTCB_def setVCPU_archThreadSet_None_eq when_assert_eq
-  apply (wpsimp wp: dissoc_invs' getVCPU_wp|wpsimp wp: getObject_tcb_wp simp: archThreadGet_def)+
+  apply ( wpsimp wp: dissoc_invs' getVCPU_wp | wpsimp wp: getObject_tcb_wp simp: archThreadGet_def)+
   apply (drule tcb_ko_at')
   apply clarsimp
   apply (rule exI, rule conjI, assumption)
@@ -2746,33 +2745,24 @@ lemma dissoc_unlive:
     ko_at' vcpu v and K (vcpuTCBPtr vcpu = Some t) and
     obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) = Some v) t\<rbrace>
    do
-    setObject v $ vcpuTCBPtr_update (\<lambda>_. Nothing) vcpu;
-    archThreadSet (atcbVCPUPtr_update (\<lambda>_. Nothing)) t
+    archThreadSet (atcbVCPUPtr_update (\<lambda>_. Nothing)) t;
+    setObject v $ vcpuTCBPtr_update (\<lambda>_. Nothing) vcpu
    od \<lbrace>\<lambda>_. (ko_wp_at' (Not o live') v) and tcb_at' t\<rbrace>"
   unfolding invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
             valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
   supply fun_upd_apply[simp del]
-  apply (wpsimp wp: archThreadSet_unlive_other setVCPU_unlive[simplified o_def]
+  apply ( wpsimp wp: archThreadSet_unlive_other setVCPU_unlive[simplified o_def]
         | wp_once hoare_vcg_imp_lift)+
-  apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs tcb_vcpu_refs'_def
-                  split: option.splits if_split_asm)
   done
 
 lemma dissociateVCPUTCB_unlive:
   "\<lbrace> \<top> \<rbrace> dissociateVCPUTCB vcpu tcb \<lbrace> \<lambda>_. ko_wp_at' (Not o live') vcpu \<rbrace>"
   unfolding dissociateVCPUTCB_def setVCPU_archThreadSet_None_eq when_assert_eq
-  apply (wpsimp wp: dissoc_unlive  getVCPU_wp[where p=vcpu] |
-         wpsimp wp: getObject_tcb_wp hoare_vcg_conj_lift hoare_vcg_ex_lift dissoc_unlive
-         getVCPU_wp[where p=vcpu] setVCPU_unlive[simplified o_def]
-            setObject_tcb_unlive hoare_drop_imp setObject_tcb_strongest
-          simp: archThreadGet_def archThreadSet_def)+
-  apply (simp add: tcb_at_typ_at' typ_at'_def ko_wp_at'_def, clarsimp)
-  apply (case_tac ko; simp)
-  apply (rename_tac t)
-  apply (rule_tac x=t in exI)
-   apply (rule conjI)
-   apply (clarsimp simp: obj_at'_def projectKOs)
-  by (clarsimp, rule; clarsimp; rule; clarsimp simp: obj_at'_def projectKOs)
+  by (wpsimp wp: dissoc_unlive  getVCPU_wp[where p=vcpu] |
+      wpsimp wp: getObject_tcb_wp hoare_vcg_conj_lift hoare_vcg_ex_lift dissoc_unlive
+                 getVCPU_wp[where p=vcpu] setVCPU_unlive[simplified o_def]
+                 setObject_tcb_unlive hoare_drop_imp setObject_tcb_strongest
+             simp: archThreadGet_def archThreadSet_def)+
 
 lemma vcpuFinalise_unlive[wp]:
   "\<lbrace> \<top> \<rbrace> vcpuFinalise v \<lbrace> \<lambda>_. ko_wp_at' (Not o live') v \<rbrace>"
@@ -3193,11 +3183,31 @@ crunch invs[wp]: prepareThreadDelete "invs'"
   (ignore: getObject)
 
 lemma unset_vcpu_hyp_unlive[wp]:
-  "\<lbrace>\<top>\<rbrace> archThreadSet (atcbVCPUPtr_update (\<lambda>_. Nothing)) t \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') t\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> archThreadSet (atcbVCPUPtr_update Map.empty) t \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') t\<rbrace>"
   unfolding archThreadSet_def
   apply (wpsimp wp: setObject_ko_wp_at' getObject_tcb_wp; (simp add: objBits_simps)?)+
   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs hyp_live'_def)
   done
+
+ lemma unset_tcb_hyp_unlive[wp]:
+  "\<lbrace>\<top>\<rbrace> setObject vr (vcpuTCBPtr_update Map.empty vcpu) \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') vr\<rbrace>"
+  apply (wpsimp wp: setObject_ko_wp_at' getObject_tcb_wp
+                simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def
+        | simp)+
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs hyp_live'_def arch_live'_def)
+  done
+
+lemma setObject_vcpu_hyp_unlive[wp]:
+   "\<lbrace>\<lambda>s. t \<noteq> vr \<and> ko_wp_at' (Not \<circ> hyp_live') t s\<rbrace>
+         setObject vr (vcpuTCBPtr_update Map.empty vcpu)
+    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') t\<rbrace>"
+  apply (rule wp_pre)
+  apply (wpsimp wp: setObject_ko_wp_at
+                simp: objBits_def objBitsKO_def archObjSize_def vcpu_bits_def pageBits_def
+        | simp)+
+  apply (clarsimp simp: tcb_at_typ_at' typ_at'_def ko_wp_at'_def )
+  done
+
 
 lemma asUser_hyp_unlive[wp]:
   "asUser f t \<lbrace>ko_wp_at' (Not \<circ> hyp_live') t'\<rbrace>"
@@ -3208,7 +3218,8 @@ lemma asUser_hyp_unlive[wp]:
 
 lemma dissociateVCPUTCB_hyp_unlive[wp]:
   "\<lbrace>\<top>\<rbrace> dissociateVCPUTCB v t \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') t\<rbrace>"
-  unfolding dissociateVCPUTCB_def by wpsimp
+  unfolding dissociateVCPUTCB_def
+  by (cases "v = t"; wpsimp wp: unset_tcb_hyp_unlive unset_vcpu_hyp_unlive[simplified comp_def])
 
 lemma prepareThreadDelete_hyp_unlive[wp]:
   "\<lbrace>\<top>\<rbrace> prepareThreadDelete t \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') t\<rbrace>"
