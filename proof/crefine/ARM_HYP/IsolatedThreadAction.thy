@@ -718,12 +718,170 @@ lemma getHWASID_isolatable:
             | simp add: page_directory_at_partial_overwrite)+
   done
 
+lemma modifyArchState_isolatable:
+  "thread_actions_isolatable idx (modifyArchState f)"
+  by (clarsimp simp: modifyArchState_def modify_isolatable)
+
+lemma getVCPU_isolatable:
+  "thread_actions_isolatable idx (getObject v :: vcpu kernel)"
+  by (rule getObject_isolatable; simp add: projectKO_opt_vcpu)
+
+lemma modify_not_fail[simp]:
+  "modify f s \<noteq> fail s"
+  by (simp add: simpler_modify_def fail_def)
+
+lemma setObject_assert_modify:
+  "\<lbrakk> updateObject v = updateObject_default v; (1::32 word) < 2 ^ objBits v;
+     \<And>ko v'. projectKO_opt ko = Some (v'::'a) \<Longrightarrow> objBitsKO ko = objBits v \<rbrakk> \<Longrightarrow>
+   setObject p (v::'a::pspace_storable) s = (do
+     assert (obj_at' (\<lambda>_::'a. True) p s);
+     modify (ksPSpace_update (\<lambda>ps. ps(p \<mapsto> injectKOS v)))
+   od) s"
+  apply (clarsimp simp: assert_def setObject_modify split: if_split)
+  apply (clarsimp simp: setObject_def updateObject_default_def exec_gets split_def bind_assoc)
+  apply (clarsimp simp: assert_opt_def assert_def alignCheck_assert projectKO_def
+                 split: option.splits if_splits)
+  apply (clarsimp simp: magnitudeCheck_assert2 assert_def split: if_splits)
+  apply (clarsimp simp: obj_at'_def projectKOs)
+  done
+
+lemma setVCPU_isolatable:
+  "thread_actions_isolatable idx (setObject p (v::vcpu))"
+  apply (clarsimp simp: thread_actions_isolatable_def monadic_rewrite_def isolate_thread_actions_def)
+  apply (clarsimp simp: exec_gets getSchedulerAction_def)
+  apply (subst setObject_assert_modify;
+         simp add: projectKOs objBits_simps archObjSize_def vcpuBits_def pageBits_def)+
+  apply (clarsimp simp: select_f_asserts assert_def obj_at_partial_overwrite_id2 split: if_splits)
+  apply (clarsimp simp: select_f_def simpler_modify_def bind_def o_def)
+  apply (case_tac s)
+  apply simp
+  apply (rule ext)
+  apply (clarsimp simp: partial_overwrite_def put_tcb_state_regs_def split: if_split)
+  apply (rule conjI)
+   apply clarsimp
+   apply (rename_tac p')
+   apply (erule_tac x=p' in allE)
+   apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (clarsimp simp: put_tcb_state_regs_tcb_def get_tcb_state_regs_def)
+  apply (rename_tac p')
+  apply (erule_tac x=p' in allE)
+  apply (clarsimp simp: obj_at'_def projectKOs atcbContextSet_def atcbContextGet_def split: tcb_state_regs.splits)
+  apply (rename_tac tcb)
+  apply (case_tac tcb, simp)
+  apply (rename_tac arch_tcb)
+  apply (case_tac arch_tcb, simp)
+  done
+
+lemma vcpuSave_isolatable:
+  "thread_actions_isolatable idx (vcpuSave v)"
+  apply (clarsimp simp: vcpuSave_def thread_actions_isolatable_fail split: option.splits)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               thread_actions_isolatable_if thread_actions_isolatable_returns
+               thread_actions_isolatable_fail getVCPU_isolatable setVCPU_isolatable
+               gets_isolatable doMachineOp_isolatable
+         |wp|assumption|clarsimp)+
+  done
+
+
+lemma vcpuEnable_isolatable:
+  "thread_actions_isolatable idx (vcpuEnable v)"
+  apply (clarsimp simp: vcpuEnable_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               getVCPU_isolatable doMachineOp_isolatable
+         |wp|assumption)+
+  done
+
+lemma vcpuRestore_isolatable:
+  "thread_actions_isolatable idx (vcpuRestore v)"
+  apply (clarsimp simp: vcpuRestore_def thread_actions_isolatable_fail split: option.splits)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               thread_actions_isolatable_if thread_actions_isolatable_returns
+               thread_actions_isolatable_fail getVCPU_isolatable setVCPU_isolatable
+               gets_isolatable doMachineOp_isolatable vcpuEnable_isolatable
+         |wp|assumption|clarsimp)+
+  done
+
+lemma vcpuDisable_isolatable:
+  "thread_actions_isolatable idx (vcpuDisable v)"
+  apply (clarsimp simp: vcpuDisable_def thread_actions_isolatable_fail split: option.splits)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               thread_actions_isolatable_if thread_actions_isolatable_returns
+               thread_actions_isolatable_fail getVCPU_isolatable setVCPU_isolatable
+               gets_isolatable doMachineOp_isolatable vcpuEnable_isolatable
+               conjI impI
+         |wp|assumption|clarsimp)+
+  done
+
+lemma vcpuSwitch_isolatable:
+  "thread_actions_isolatable idx (vcpuSwitch v)"
+  apply (clarsimp simp: vcpuSwitch_def when_def split: option.splits)
+  apply (safe intro!:
+               thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               thread_actions_isolatable_bindE[OF _ _ hoare_pre(1)]
+               thread_actions_isolatable_catch[OF _ _ hoare_pre(1)]
+               thread_actions_isolatable_if thread_actions_isolatable_returns
+               thread_actions_isolatable_fail
+               gets_isolatable)
+   apply (clarsimp simp: thread_actions_isolatable_returns
+                  split: option.splits
+         |intro thread_actions_isolatable_if thread_actions_isolatable_returns
+                thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+                vcpuSave_isolatable vcpuRestore_isolatable
+                vcpuDisable_isolatable vcpuEnable_isolatable
+                modifyArchState_isolatable conjI doMachineOp_isolatable
+         |wp
+         |assumption)+
+  done
+
+lemma liftM_getObject_return_tcb:
+  "ko_at' v p s \<Longrightarrow> liftM f (getObject p) s = return (f (v::tcb)) s"
+  by (simp add: liftM_def bind_def getObject_return_tcb return_def)
+
+lemma threadGet_vcpu_isolatable:
+  "thread_actions_isolatable idx (threadGet (atcbVCPUPtr o tcbArch) t)"
+  apply (clarsimp simp: threadGet_def thread_actions_isolatable_def)
+  apply (clarsimp simp: isolate_thread_actions_def)
+  apply (clarsimp simp: monadic_rewrite_def)
+  apply (cases "t \<in> range idx")
+   apply clarsimp
+   apply (frule_tac x=x in spec)
+   apply (drule tcb_ko_at')
+   apply (clarsimp simp: exec_gets getSchedulerAction_def liftM_getObject_return_tcb)
+   apply (rename_tac tcb)
+   apply (subgoal_tac "\<exists>tcb'. ko_at' tcb' t (ksPSpace_update (partial_overwrite idx (\<lambda>y. undefined))
+                                 s\<lparr>ksSchedulerAction := ResumeCurrentThread\<rparr>) \<and>
+                              atcbVCPUPtr (tcbArch tcb') = atcbVCPUPtr (tcbArch tcb)")
+    apply (clarsimp simp: liftM_getObject_return_tcb)
+    apply (clarsimp simp: return_def select_f_def simpler_modify_def bind_def)
+    apply (clarsimp simp: o_def partial_overwrite_get_tcb_state_regs)
+   apply (clarsimp simp: obj_at_partial_overwrite_If)
+   apply (rule_tac x="put_tcb_state_regs_tcb undefined tcb" in exI)
+   apply (clarsimp simp: put_tcb_state_regs_tcb_def atcbContextSet_def obj_at'_def projectKOs
+                  split: tcb_state_regs.splits)
+  apply (clarsimp simp: getObject_get_assert exec_gets liftM_def bind_assoc getSchedulerAction_def
+                        obj_at_partial_overwrite_id1)
+  apply (clarsimp simp: assert_def exec_gets select_f_asserts split: if_split)
+  apply (clarsimp simp: select_f_def return_def simpler_modify_def bind_def
+                        partial_overwrite_get_tcb_state_regs o_def)
+  apply (clarsimp simp: partial_overwrite_def)
+  done
+
+lemma getTCB_threadGet:
+  "do
+     tcbobj \<leftarrow> getObject t;
+     f (atcbVCPUPtr (tcbArch tcbobj))
+   od = do
+     vcpu_ptr \<leftarrow> threadGet (atcbVCPUPtr o tcbArch) t;
+     f vcpu_ptr
+   od"
+   by (simp add: threadGet_def liftM_def)
+
 lemma setVMRoot_isolatable:
   "thread_actions_isolatable idx (setVMRoot t)"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def
                    locateSlot_conv getSlotCap_def
                    cap_case_isPageDirectoryCap if_bool_simps
-                   whenE_def liftE_def
+                   whenE_def liftE_def getTCB_threadGet
                    checkPDNotInASIDMap_def stateAssert_def2
                    checkPDASIDMapMembership_def armv_contextSwitch_def
              cong: if_cong)
@@ -733,11 +891,11 @@ lemma setVMRoot_isolatable:
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail
                gets_isolatable getCTE_isolatable getHWASID_isolatable
+               threadGet_vcpu_isolatable vcpuSwitch_isolatable
                findPDForASID_isolatable doMachineOp_isolatable)
     apply (simp add: projectKO_opt_asidpool
            | wp getASID_wp typ_at_lifts [OF getHWASID_typ_at'])+
-  sorry (* FIXME ARMHYP
-  done *)
+  done
 
 lemma transferCaps_simple:
   "transferCaps mi [] ep receiver rcvrBuf =
