@@ -378,6 +378,56 @@ lemma ccorres_pre_getObject_vcpu:
   apply simp
   done
 
+lemma armHSCurVCPU_update_active_ccorres:
+  "b' = from_bool b \<Longrightarrow> v' = fst v \<Longrightarrow>
+   ccorres dc xfdc (\<lambda>s. armHSCurVCPU (ksArchState s) = Some v) UNIV hs
+      (modifyArchState (armHSCurVCPU_update (\<lambda>_. Some (v', b))))
+      (Basic (\<lambda>s. globals_update (armHSVCPUActive_'_update (\<lambda>_. b')) s))"
+  apply (clarsimp simp: modifyArchState_def)
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: bind_def simpler_gets_def from_bool_def simpler_modify_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  by (clarsimp simp: carch_state_relation_def carch_globals_def cur_vcpu_relation_def
+                     cmachine_state_relation_def from_bool_def
+               split: bool.split)
+
+lemma armHSCurVCPU_update_curv_ccorres:
+  "ccorres dc xfdc (\<lambda>s. ((armHSCurVCPU (ksArchState s)) = Some (v, a)) \<and> v \<noteq> 0 \<and> new \<noteq> 0) UNIV hs
+    (modifyArchState (armHSCurVCPU_update (\<lambda>_. Some (new, a))))
+    (Basic (\<lambda>s. globals_update (armHSCurVCPU_'_update (\<lambda>_. Ptr new)) s))"
+  apply (clarsimp simp: modifyArchState_def)
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: bind_def simpler_gets_def simpler_modify_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  by (clarsimp simp: carch_state_relation_def carch_globals_def cur_vcpu_relation_def
+                     cmachine_state_relation_def from_bool_def true_def false_def
+               split: bool.split)
+
+lemma armHSCurVCPU_update_ccorres:
+  "ccorres dc xfdc (\<lambda>_. cur_vcpu_relation curv vcpu act) UNIV hs
+     (modifyArchState (armHSCurVCPU_update (\<lambda>_. curv)))
+     (Basic (\<lambda>s. globals_update (armHSCurVCPU_'_update (\<lambda>_. vcpu)) s);;
+        Basic (\<lambda>s. globals_update (armHSVCPUActive_'_update (\<lambda>_. act)) s))"
+  apply (clarsimp simp: modifyArchState_def)
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: bind_def simpler_gets_def simpler_modify_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  by (clarsimp simp: carch_state_relation_def carch_globals_def cur_vcpu_relation_def
+                     cmachine_state_relation_def from_bool_def true_def false_def
+               split: bool.split)
+
+lemmas armHSCurVCPU_update_active_ccorres2 = armHSCurVCPU_update_ccorres[where curv="Some (v, b)"]
+
+lemma invs'_HScurVCPU_vcpu_at':
+  "\<lbrakk>invs' s; armHSCurVCPU (ksArchState s) = Some (a, b) \<rbrakk> \<Longrightarrow> vcpu_at' a s"
+by (fastforce dest: invs_arch_state' simp: valid_arch_state'_def vcpu_at_is_vcpu' ko_wp_at'_def split: option.splits)
+
+crunch ksArch[wp]: vcpuDisable, vcpuRestore, vcpuSave, vcpuEnable "\<lambda>s. P (ksArchState s)"
+  (ignore: getObject setObject)
+
 end
 
 end
