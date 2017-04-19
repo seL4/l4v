@@ -1118,8 +1118,7 @@ lemma lookup_pt_slot_corres [@lift_corres_args, corres]:
           (lookup_pt_slot pd vptr) (lookupPTSlot pd vptr)"
   unfolding lookup_pt_slot_def lookupPTSlot_def lookupPTSlotFromPT_def
   apply (corressimp simp: pde_relation_aligned_def lookup_failure_map_def
-                          ptBits_def pdeBits_def pageBits_def pteBits_def mask_def
-                      wp: get_pde_wp_valid getPDE_wp corres_rv_defer_left)
+                      wp: get_pde_wp_valid getPDE_wp corres_rv_defer)
   by (auto simp: lookup_failure_map_def obj_at_def)
 
 declare in_set_zip_refl[simp]
@@ -1181,9 +1180,9 @@ lemma copy_global_mappings_corres [@lift_corres_args, corres]:
                     P'="page_directory_at' globalPD and page_directory_at' pd"
               in corresK_mapM_x[OF order_refl])
         apply (corressimp wp: get_pde_wp getPDE_wp corres_rv_wp_left)
-        subgoal for globalPD
+        subgoal for _ globalPD
           by (auto intro!: page_directory_pde_atI page_directory_pde_atI'
-                     simp: pde_relation_aligned_def
+                     simp: pde_relation_aligned_def corres_protect_def
                      dest: align_entry_add_cong[of globalPD])
   apply wpsimp+
   apply (clarsimp simp: valid_arch_state_def obj_at_def dest!:pspace_alignedD)

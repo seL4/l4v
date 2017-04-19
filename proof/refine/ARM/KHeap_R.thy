@@ -1082,7 +1082,7 @@ lemma set_ep_corres [corres]:
             (set_endpoint ptr e) (setEndpoint ptr e')"
   apply (simp add: set_endpoint_def setEndpoint_def is_ep_def[symmetric])
     apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
-  apply (wp get_object_ret get_object_wp)+
+  apply (correswp wp: get_object_ret get_object_wp)+
   by (clarsimp simp: is_ep obj_at_simps)
 
 lemma set_ntfn_corres [corres]:
@@ -1091,7 +1091,7 @@ lemma set_ntfn_corres [corres]:
             (set_notification ptr ae) (setNotification ptr ae')"
   apply (simp add: set_notification_def setNotification_def is_ntfn_def[symmetric])
        apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
-  apply (wp get_object_ret get_object_wp)+
+  apply (correswp wp: get_object_ret get_object_wp)+
   by (clarsimp simp: is_ntfn obj_at_simps)
 
 lemma no_fail_getNotification [wp]:

@@ -621,7 +621,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (subst cnode_cap_case_if)
         apply (corressimp search: getSlotCap_corres IH
                               wp: get_cap_wp getSlotCap_valid no_fail_stateAssert
-                                  corres_rv_defer_right
+                                  corres_rv_defer
                             simp: locateSlot_conv)
         apply (simp add: drop_postfix_eq)
         apply clarsimp
@@ -648,12 +648,10 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
               apply (erule (3) cte_map_shift')
              subgoal by simp
              apply (clarsimp simp add: objBits_simps cte_level_bits_def)
+               apply (rule conjI)
              apply (erule (1) cte_map_shift; assumption?)
              subgoal by simp
              apply (clarsimp simp: cte_level_bits_def)
-            apply (clarsimp simp: valid_cap_def cap_table_at_gsCNodes isCap_simps)
-            apply (rule and_mask_less_size, simp add: word_bits_def word_size cte_level_bits_def)
-           apply (clarsimp simp: isCap_simps caps split: if_splits)
            apply (intro conjI impI allI;clarsimp?)
             apply (subst \<open>to_bl _ = _\<close>[symmetric])
             apply (drule postfix_dropD)
@@ -664,10 +662,12 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
             apply simp
             apply (subst drop_drop [symmetric])
            subgoal by simp
-           apply (simp add: objBits_simps cte_level_bits_def)
            apply (erule (1) cte_map_shift; assumption?)
             apply clarsimp
            subgoal by (simp add: cte_level_bits_def)
+               apply (clarsimp simp: valid_cap_def cap_table_at_gsCNodes isCap_simps)
+             apply (rule and_mask_less_size, simp add: word_bits_def word_size cte_level_bits_def)
+             apply (clarsimp split: if_splits)
           done
         done
     }
