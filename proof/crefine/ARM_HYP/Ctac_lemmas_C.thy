@@ -198,6 +198,18 @@ lemma rf_sr_gsCNodes_array_assertion:
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                      cte_array_relation_array_assertion)
 
+lemma move_c_guard_vcpu:
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> vcpu_at' (ptr_val p) s \<and> True
+              \<longrightarrow> s' \<Turnstile>\<^sub>c (p :: vcpu_C ptr)"
+  apply (clarsimp simp: typ_at_to_obj_at_arches)
+  apply (drule obj_at_ko_at', clarsimp)
+  apply (erule cmap_relationE1 [OF cmap_relation_vcpu])
+   apply (erule ko_at_projectKO_opt)
+  apply (fastforce intro: typ_heap_simps)
+  done
+
+lemmas ccorres_move_c_guard_vcpu = ccorres_move_c_guards [OF move_c_guard_vcpu]
+
 end
 
 end

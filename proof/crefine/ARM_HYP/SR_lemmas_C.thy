@@ -2345,6 +2345,16 @@ lemma arch_fault_tag_not_fault_tag_simps [simp]:
   "(arch_fault_to_fault_tag arch_fault = scast seL4_Fault_UnknownSyscall) = False"
   by (cases arch_fault ; simp add: seL4_Faults seL4_Arch_Faults)+
 
+(* FIXME: move *)
+lemma vcpu_at_rf_sr:
+  "\<lbrakk>ko_at' vcpu p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow>
+  \<exists>vcpu'. cslift s' (vcpu_Ptr p) = Some vcpu' \<and>
+          cvcpu_relation vcpu vcpu'"
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
+  apply (erule (1) cmap_relation_ko_atE)
+  apply clarsimp
+  done
+
 end
 end
 
