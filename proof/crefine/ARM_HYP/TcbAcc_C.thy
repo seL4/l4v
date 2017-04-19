@@ -339,9 +339,9 @@ lemma getObject_tcb_wp':
 lemma ccorres_pre_getObject_tcb:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>vcpu. ko_at' vcpu p s \<longrightarrow> P vcpu s))
-                  {s. \<forall> vcpu vcpu'. cslift s (tcb_ptr_to_ctcb_ptr p) = Some vcpu' \<and> ctcb_relation vcpu vcpu'
-                           \<longrightarrow> s \<in> P' vcpu}
+                  (\<lambda>s. (\<forall>tcb. ko_at' tcb p s \<longrightarrow> P tcb s))
+                  {s. \<forall> tcb tcb'. cslift s (tcb_ptr_to_ctcb_ptr p) = Some tcb' \<and> ctcb_relation tcb tcb'
+                           \<longrightarrow> s \<in> P' tcb}
                           hs (getObject p >>= (\<lambda>rv :: tcb. f rv)) c"
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_symb_exec_l)

@@ -29,6 +29,8 @@ abbreviation
 abbreviation
   tcb_Ptr :: "word32 \<Rightarrow> tcb_C ptr" where "tcb_Ptr == Ptr"
 abbreviation
+  atcb_Ptr :: "word32 \<Rightarrow> arch_tcb_C ptr" where "atcb_Ptr == Ptr"
+abbreviation
   vcpu_Ptr :: "word32 \<Rightarrow> vcpu_C ptr" where "vcpu_Ptr == Ptr"
 abbreviation
   ep_Ptr :: "word32 \<Rightarrow> endpoint_C ptr" where "ep_Ptr == Ptr"

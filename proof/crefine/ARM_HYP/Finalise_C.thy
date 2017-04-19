@@ -1889,13 +1889,145 @@ lemma ccap_relation_IRQHandler_mask:
   apply (simp add: c_valid_cap_def cap_irq_handler_cap_lift cl_valid_cap_def)
   done
 
+(* FIXME ARMHYP MOVE to LevityCatch_C *)
+lemma option_to_ctcb_ptr_not_0:
+  "\<lbrakk> tcb_at' p s; option_to_ctcb_ptr v = tcb_ptr_to_ctcb_ptr p\<rbrakk> \<Longrightarrow> v = Some p"
+  apply (clarsimp simp: option_to_ctcb_ptr_def tcb_ptr_to_ctcb_ptr_def
+                  split: option.splits)
+  apply (frule tcb_aligned')
+  apply (frule_tac y=ctcb_offset and n=9 in aligned_offset_non_zero)
+    apply (clarsimp simp: ctcb_offset_def)+
+  done
+
+lemma update_tcb_map_to_tcb:
+  "map_to_tcbs (ksPSpace s(p \<mapsto> KOTCB tcb))
+             = (map_to_tcbs (ksPSpace s))(p \<mapsto> tcb)"
+  by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
+
+lemma ep_queue_relation_shift2:
+  "(option_map2 tcbEPNext_C (f (cslift s))
+         = option_map2 tcbEPNext_C (cslift s)
+    \<and> option_map2 tcbEPPrev_C (f (cslift s))
+         = option_map2 tcbEPPrev_C (cslift s))
+     \<Longrightarrow> ep_queue_relation (f (cslift s)) ts qPrev qHead
+          = ep_queue_relation (cslift s) ts qPrev qHead"
+  apply clarsimp
+  apply (induct ts arbitrary: qPrev qHead)
+   apply simp
+  apply simp
+  apply (simp add: option_map2_def fun_eq_iff
+                   map_option_case)
+  apply (drule_tac x=qHead in spec)+
+  apply (clarsimp split: option.split_asm)
+  done
+
+lemma sched_queue_relation_shift:
+  "(option_map2 tcbSchedNext_C (f (cslift s))
+         = option_map2 tcbSchedNext_C (cslift s)
+    \<and> option_map2 tcbSchedPrev_C (f (cslift s))
+         = option_map2 tcbSchedPrev_C (cslift s))
+     \<Longrightarrow>  sched_queue_relation (f (cslift s)) ts qPrev qHead
+          =  sched_queue_relation (cslift s) ts qPrev qHead"
+  apply clarsimp
+  apply (induct ts arbitrary: qPrev qHead)
+   apply simp
+  apply simp
+  apply (simp add: option_map2_def fun_eq_iff
+                   map_option_case)
+  apply (drule_tac x=qHead in spec)+
+  apply (clarsimp split: option.split_asm)
+  done
+
+lemma cendpoint_relation_udpate_arch:
+  "\<lbrakk> cslift x p = Some tcb ; cendpoint_relation (cslift x) v v' \<rbrakk>
+    \<Longrightarrow> cendpoint_relation (cslift x(p \<mapsto> tcbArch_C_update f tcb)) v v'"
+  apply (clarsimp simp: cendpoint_relation_def Let_def tcb_queue_relation'_def
+                  split: endpoint.splits)
+   apply (subst ep_queue_relation_shift2; simp add: fun_eq_iff)
+   apply (safe ; case_tac "xa = p" ; clarsimp simp: option_map2_def map_option_case)
+  apply (subst ep_queue_relation_shift2; simp add: fun_eq_iff)
+  apply (safe ; case_tac "xa = p" ; clarsimp simp: option_map2_def map_option_case)
+  done
+
+lemma cnotification_relation_udpate_arch:
+  "\<lbrakk> cslift x p = Some tcb ;  cnotification_relation (cslift x) v v' \<rbrakk>
+    \<Longrightarrow>  cnotification_relation (cslift x(p \<mapsto> tcbArch_C_update f tcb)) v v'"
+  apply (clarsimp simp: cnotification_relation_def Let_def tcb_queue_relation'_def
+                  split: notification.splits ntfn.splits)
+  apply (subst ep_queue_relation_shift2; simp add: fun_eq_iff)
+  apply (safe ; case_tac "xa = p" ; clarsimp simp: option_map2_def map_option_case)
+  done
+
+lemma archThreadSet_tcbVCPU_Basic_ccorres:
+  "ccorres dc xfdc \<top> UNIV hs
+                    (archThreadSet (atcbVCPUPtr_update (\<lambda>_. vcpuptr)) tptr)
+     ((Basic (\<lambda>s. globals_update( t_hrs_'_update
+            (hrs_mem_update (heap_update (Ptr &((atcb_Ptr &(tcb_ptr_to_ctcb_ptr tptr\<rightarrow>[''tcbArch_C'']))\<rightarrow>[''tcbVCPU_C'']))
+                                         (option_to_ptr vcpuptr :: vcpu_C ptr)))) s)))"
+  apply (simp add: archThreadSet_def)
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_pre_getObject_tcb)
+   apply (rule_tac P="tcb_at' tptr and ko_at' tcb tptr" and P'=UNIV in setObject_ccorres_helper)
+     apply (simp_all add: objBits_simps archObjSize_def pageBits_def obj_tcb_at')
+  apply (rule conseqPre, vcg, clarsimp)
+  apply (rule cmap_relationE1[OF cmap_relation_tcb], assumption, erule ko_at_projectKO_opt)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def update_tcb_map_tos
+                        typ_heap_simps' cpspace_relation_def update_tcb_map_tos)
+   apply (safe ; (clarsimp simp: cpspace_relation_def typ_heap_simps
+                                 carch_state_relation_def Let_def
+                                 update_tcb_map_to_tcb
+                                 cmachine_state_relation_def
+                                 update_tcb_map_tos)?)
+      apply (subst map_to_ctes_upd_tcb_no_ctes; simp add: tcb_cte_cases_def)
+     apply (erule cmap_relation_updI, erule ko_at_projectKO_opt, simp+)
+      apply (clarsimp simp: ctcb_relation_def carch_tcb_relation_def ccontext_relation_def atcbContextGet_def)
+     apply clarsimp
+    apply (rule cmap_relation_rel_upd[OF _ cendpoint_relation_udpate_arch], simp+)
+    apply (rule cmap_relation_rel_upd[OF _ cnotification_relation_udpate_arch], simp+)
+      apply (clarsimp simp add: cready_queues_relation_def Let_def tcb_queue_relation'_def)
+   apply (subst sched_queue_relation_shift; simp add: fun_eq_iff)
+   apply (safe ; case_tac "xa = tcb_ptr_to_ctcb_ptr tptr" ; clarsimp simp: option_map2_def map_option_case)
+    apply (clarsimp simp: cvariable_relation_upd_const)
+  done
+
+lemma update_vcpu_map_to_vcpu:
+  "map_to_vcpus (ksPSpace s(p \<mapsto> KOArch (KOVCPU vcpu)))
+             = (map_to_vcpus (ksPSpace s))(p \<mapsto> vcpu)"
+  by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
+
+lemma setObject_vcpuTCB_Basic_ccorres:
+  "ccorres dc xfdc (ko_at' vcpu vcpuptr) UNIV hs
+                    (setObject vcpuptr (vcpuTCBPtr_update (\<lambda>_. tptr) vcpu))
+     ((Basic (\<lambda>s. globals_update( t_hrs_'_update
+            (hrs_mem_update (heap_update (Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''vcpuTCB_C'']))
+                                         ( option_to_ctcb_ptr tptr :: tcb_C ptr)))) s)))"
+  apply (rule ccorres_guard_imp2)
+  apply (rule_tac P="ko_at' vcpu vcpuptr" and P'=UNIV in setObject_ccorres_helper)
+     apply (simp_all add: objBits_simps archObjSize_def pageBits_def obj_tcb_at' vcpuBits_def)
+  apply (rule conseqPre, vcg, clarsimp)
+  apply (rule cmap_relationE1[OF cmap_relation_vcpu], assumption, erule ko_at_projectKO_opt)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def typ_heap_simps'
+                        cpspace_relation_def update_vcpu_map_tos)
+  apply (safe ; (clarsimp simp: cpspace_relation_def typ_heap_simps
+                                carch_state_relation_def Let_def
+                                 update_vcpu_map_to_vcpu
+                                 cmachine_state_relation_def
+                                 update_vcpu_map_tos)?)
+  apply (erule cmap_relation_updI, erule ko_at_projectKO_opt, simp+)
+    apply (clarsimp simp add: cvcpu_relation_def
+                              option_to_ctcb_ptr_def
+                              cvcpu_regs_relation_def
+                              Let_def vcpuSCTLR_def)
+  apply simp
+  done
+
 lemma dissociateVCPUTCB_ccorres:
   "ccorres dc xfdc
      (invs' and obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) =  Some vcpuptr) tptr
         and obj_at' (\<lambda>v. vcpuTCBPtr v = Some tptr) vcpuptr)
      (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr tptr }
        \<inter> {s. vcpu_' s = Ptr vcpuptr }) hs
-     (dissociateVCPUTCB vcpuptr t) (Call dissociateVCPUTCB_'proc)"
+     (dissociateVCPUTCB vcpuptr tptr) (Call dissociateVCPUTCB_'proc)"
   (* FIXME ARMHYP TODO. Note that invs' may be too strong, depending on from where it's called.
      There is a definite assertion that the VCPU and TCB are associated when calling this function,
      so I put that in *)
