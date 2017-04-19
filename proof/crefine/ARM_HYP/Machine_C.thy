@@ -307,7 +307,7 @@ assumes get_r12_fiq_ccorres:
 (* ARM Hypervisor Virtual Global Interrupt Controller (VGIC) *)
 
 assumes get_gic_vcpu_ctrl_hcr_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (op =) ret__unsigned_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_hcr) (Call get_gic_vcpu_ctrl_hcr_'proc)"
 assumes get_gic_vcpu_ctrl_vmcr_ccorres:
   "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
