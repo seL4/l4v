@@ -43,7 +43,7 @@ lemma mapME_x_corresK_inv:
     show ?case
       apply (simp add: mapME_x_def sequenceE_x_def)
       apply (fold mapME_x_def sequenceE_x_def dc_def)
-      apply (corressimp corresK: x IH wp: y corres_rv_defer_left)
+      apply (corressimp corresK: x IH wp: y corres_rv_defer)
       by (auto split: sum.splits)
   qed
   done
@@ -74,13 +74,13 @@ next
     by (clarsimp simp: prems)+
   show ?case
     apply (simp add: mapM_Cons)
-    apply (corressimp corresK: z Q wp: P)
+    apply (corressimp corresK: z Q wp: P simp: corres_protect_def)
       apply (rule corres_rv_proveT)
-      apply (fastforce simp: corres_protect_def prems)
+      apply (fastforce simp: prems)
       apply (wp w | rule P)+
-      apply (rule corres_rv_defer_left)
+      apply (rule corres_rv_defer)
       apply (insert prems Cons)
-      apply (auto simp: corres_protect_def)
+      apply (auto)
     done
 qed
 done
@@ -93,7 +93,7 @@ lemma corresK_mapM_x:
   shows      "corres_underlyingK sr nf nf'
                 (length xs = length ys \<and> (\<forall>(x,y)\<in>S. F x y)) dc P P' (mapM_x f xs) (mapM_x f' ys)"
   apply (simp add: mapM_x_mapM)
-  apply (corressimp corresK: corresK_mapM[where S=S and r=dc and r'=dc] x wp: y simp: S)
+  apply (corressimp corresK: corresK_mapM[where S=S and r=dc and r'=dc] x wp: y simp: S | assumption)+
   done
 
 lemma corresK_subst_both: "g' = f' \<Longrightarrow> g = f \<Longrightarrow>

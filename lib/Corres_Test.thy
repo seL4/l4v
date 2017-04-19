@@ -96,8 +96,7 @@ thm corres_rv_proveT[no_vars]
 
 text \<open>Additionally, the obligation can be pushed into the precondition for either the left or right side.\<close>
 
-thm corres_rv_defer_left
-thm corres_rv_defer_right
+thm corres_rv_defer
 
 section \<open>The corres method\<close>
 
@@ -232,6 +231,11 @@ lemmas flush_space_corres_args[corres] =
 lemmas invalidate_asid_entry_corres_args[corres] =
   invalidate_asid_entry_corres[@lift_corres_args]
 
+
+lemma corres_inst_eq_ext:
+  "(\<And>x. corres_inst_eq (f x) (f' x)) \<Longrightarrow> corres_inst_eq f f'"
+  by (auto simp add: corres_inst_eq_def)
+
 lemma delete_asid_corresb:
   notes [corres] = corres_gets_asid gct_corres and
     [@ \<open>lift_corres_args\<close>, corres] =  get_asid_pool_corres_inv'
@@ -284,9 +288,8 @@ lemma delete_asid_corresb:
                      continue (* set_vm_root_corres *)
                     finish (* backtracking? *)
                     apply (correswp wp: corres_rv_wp_right
-      | simp add: mask_asid_low_bits_ucast_ucast corres_protect_def
+      | simp add: mask_asid_low_bits_ucast_ucast
       | fold cur_tcb_def | wps)+
-  apply clarsimp
   apply (frule arm_asid_table_related,clarsimp)
   apply (rule conjI)
    apply (intro impI allI)
@@ -309,17 +312,12 @@ lemma delete_asid_corresb:
     apply (simp add: mask_asid_low_bits_ucast_ucast)
    prefer 2
    apply (safe; assumption?)
-      apply (fastforce simp: o_def dest: valid_asid_tableD invs_valid_asid_table)
-     apply (clarsimp simp add: inv_def mask_asid_low_bits_ucast_ucast)
-     apply (rule ext)
-     apply clarsimp
-     apply (fastforce dest: ucast_ucast_eq)
-    apply (simp add: typ_at_to_obj_at_arches)
-    apply (clarsimp simp add: obj_at'_def)
-   apply (simp add: cur_tcb'_def)
-  apply safe
-      apply fastforce
-     apply fastforce
+         apply (rule ext)
+     apply (fastforce simp: inv_def dest: ucast_ucast_eq)
+    apply (rule aligned_distinct_relation_asid_pool_atI'; fastforce?)
+    apply (fastforce simp: o_def dest: valid_asid_tableD invs_valid_asid_table)
+    apply (simp add: cur_tcb'_def)
+    apply (safe; assumption?)
     apply (erule ko_at_weakenE)
     apply (clarsimp simp: graph_of_def)
     apply (fastforce split: if_split_asm)
@@ -361,7 +359,7 @@ lemma set_vm_root_for_flush_corres:
     continue (* can't make corres progress here, trying other goal *)
     finish (* successful goal discharged by corres *)
 
-  apply (corressimp wp: get_cap_wp getSlotCap_wp corres_rv_wp_left simp: corres_protect_def)+
+  apply (corressimp wp: get_cap_wp getSlotCap_wp corres_rv_wp_left)+
   apply (rule context_conjI)
   subgoal by (simp add: cte_map_def objBits_simps tcb_cnode_index_def
                         tcbVTableSlot_def to_bl_1 cte_level_bits_def)
