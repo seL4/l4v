@@ -70,10 +70,19 @@ consts'
 lookupPTSlot :: "machine_word \<Rightarrow> vptr \<Rightarrow> ( lookup_failure , (machine_word) ) kernel_f"
 
 consts'
+lookupPTSlotFromPT :: "machine_word \<Rightarrow> vptr \<Rightarrow> (machine_word) kernel"
+
+consts'
 lookupPDSlot :: "machine_word \<Rightarrow> vptr \<Rightarrow> ( lookup_failure , (machine_word) ) kernel_f"
 
 consts'
+lookupPDSlotFromPD :: "machine_word \<Rightarrow> vptr \<Rightarrow> (machine_word) kernel"
+
+consts'
 lookupPDPTSlot :: "machine_word \<Rightarrow> vptr \<Rightarrow> ( lookup_failure , (machine_word) ) kernel_f"
+
+consts'
+lookupPDPTSlotFromPDPT :: "machine_word \<Rightarrow> vptr \<Rightarrow> (machine_word) kernel"
 
 consts'
 lookupPML4Slot :: "machine_word \<Rightarrow> vptr \<Rightarrow> machine_word"

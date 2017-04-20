@@ -153,6 +153,7 @@ defs findVSpaceForASID_def:
     (case pm of
           Some ptr \<Rightarrow>   (doE
             haskell_assertE (ptr \<noteq> 0) [];
+            withoutFailure $ checkPML4At ptr;
             returnOk ptr
           odE)
         | None \<Rightarrow>   throw InvalidRoot
@@ -189,13 +190,19 @@ defs lookupPTSlot_def:
     (case pde of
           PageTablePDE _ _ _ _ _ _ \<Rightarrow>   (doE
             pt \<leftarrow> returnOk ( ptrFromPAddr $ pdeTable pde);
-            ptIndex \<leftarrow> returnOk ( getPTIndex vptr);
-            ptSlot \<leftarrow> returnOk ( pt + (PPtr $ ptIndex `~shiftL~` 3));
-            returnOk ptSlot
+            withoutFailure $ lookupPTSlotFromPT pt vptr
           odE)
         | _ \<Rightarrow>   throw $ MissingCapability pdShiftBits
         )
 odE)"
+
+defs lookupPTSlotFromPT_def:
+"lookupPTSlotFromPT pt vptr\<equiv> (do
+    ptIndex \<leftarrow> return ( getPTIndex vptr);
+    ptSlot \<leftarrow> return ( pt + (PPtr $ ptIndex `~shiftL~` 3));
+    checkPTAt pt;
+    return ptSlot
+od)"
 
 defs lookupPDSlot_def:
 "lookupPDSlot pm vptr\<equiv> (doE
@@ -204,13 +211,19 @@ defs lookupPDSlot_def:
     (case pdpte of
           PageDirectoryPDPTE _ _ _ _ _ _ \<Rightarrow>   (doE
             pd \<leftarrow> returnOk ( ptrFromPAddr $ pdpteTable pdpte);
-            pdIndex \<leftarrow> returnOk ( getPDIndex vptr);
-            pdSlot \<leftarrow> returnOk ( pd + (PPtr $ pdIndex `~shiftL~` 3));
-            returnOk pdSlot
+            withoutFailure $ lookupPDSlotFromPD pd vptr
           odE)
         | _ \<Rightarrow>   throw $ MissingCapability pdptShiftBits
         )
 odE)"
+
+defs lookupPDSlotFromPD_def:
+"lookupPDSlotFromPD pt vptr\<equiv> (do
+    ptIndex \<leftarrow> return ( getPDIndex vptr);
+    ptSlot \<leftarrow> return ( pt + (PPtr $ ptIndex `~shiftL~` 3));
+    checkPDAt pt;
+    return ptSlot
+od)"
 
 defs lookupPDPTSlot_def:
 "lookupPDPTSlot pm vptr\<equiv> (doE
@@ -219,13 +232,19 @@ defs lookupPDPTSlot_def:
     (case pml4e of
           PDPointerTablePML4E _ _ _ _ _ _ \<Rightarrow>   (doE
             pdpt \<leftarrow> returnOk ( ptrFromPAddr $ pml4eTable pml4e);
-            pdptIndex \<leftarrow> returnOk ( getPDPTIndex vptr);
-            pdptSlot \<leftarrow> returnOk ( pdpt + (PPtr $ pdptIndex `~shiftL~` 3));
-            returnOk pdptSlot
+            withoutFailure $ lookupPDPTSlotFromPDPT pdpt vptr
           odE)
         | _ \<Rightarrow>   throw $ MissingCapability pml4ShiftBits
         )
 odE)"
+
+defs lookupPDPTSlotFromPDPT_def:
+"lookupPDPTSlotFromPDPT pt vptr\<equiv> (do
+    ptIndex \<leftarrow> return ( getPDPTIndex vptr);
+    ptSlot \<leftarrow> return ( pt + (PPtr $ ptIndex `~shiftL~` 3));
+    checkPDPTAt pt;
+    return ptSlot
+od)"
 
 defs lookupPML4Slot_def:
 "lookupPML4Slot pm vptr \<equiv>
