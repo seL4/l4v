@@ -1666,11 +1666,12 @@ lemma createMappingEntries_wf:
 lemma ensure_safe_mapping_corres:
   notes mapping_map_simps = mapping_map_def page_entry_map_def page_entry_ptr_map_def attr_mask_def
   shows
-  "\<lbrakk>mapping_map m m'; page_entry_map_corres m'\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>mapping_map m m'\<rbrakk> \<Longrightarrow>
   corres (ser \<oplus> dc) (valid_mapping_entries m)
-                    (pspace_aligned' and pspace_distinct')
+                    (pspace_aligned' and pspace_distinct' and K (page_entry_map_corres m'))
                     (ensure_safe_mapping m) (ensureSafeMapping m')"
   apply (simp add: ensureSafeMapping_def)
+  apply (rule corres_gen_asm2)
   apply (cases m)
   apply (case_tac a)
      apply simp
