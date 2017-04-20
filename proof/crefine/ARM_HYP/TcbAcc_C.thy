@@ -428,6 +428,46 @@ by (fastforce dest: invs_arch_state' simp: valid_arch_state'_def vcpu_at_is_vcpu
 crunch ksArch[wp]: vcpuDisable, vcpuRestore, vcpuSave, vcpuEnable "\<lambda>s. P (ksArchState s)"
   (ignore: getObject setObject)
 
-end
+(* FIXME move to Invariants_H *)
+lemma invs_cicd_arch_state' [elim!]:
+  "all_invs_but_ct_idle_or_in_cur_domain' s \<Longrightarrow> valid_arch_state' s"
+  by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def)
 
+(* FIXME move to Invariants_H *)
+lemma invs_cicd_no_0_obj'[elim!]:
+  "all_invs_but_ct_idle_or_in_cur_domain' s \<Longrightarrow> no_0_obj' s"
+  by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_pspace'_def)
+
+(* FIXME: move *)
+lemma vcpu_at_ko:
+  "vcpu_at' p s \<Longrightarrow> \<exists>vcpu. ko_at' (vcpu::vcpu) p s"
+  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)
+  apply (case_tac ko; simp)
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object, auto)[1]
+  done
+
+(* FIXME: move *)
+lemma vcpu_at_c_guard:
+  "\<lbrakk>vcpu_at' p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow> c_guard (vcpu_Ptr p)"
+  by (fastforce intro: typ_heap_simps dest!: vcpu_at_ko vcpu_at_rf_sr)
+
+(* FIXME: MOVE, probably to CSpace_RAB  *)
+lemma ccorres_gen_asm2_state:
+  assumes rl: "\<And>s. P s \<Longrightarrow> ccorres r xf G G' hs a c"
+  shows "ccorres r xf G (G' \<inter> {s. P s}) hs a c"
+proof (rule ccorres_guard_imp2)
+  show "ccorres r xf G (G' \<inter> {_. \<exists>s. P s}) hs a c"
+    apply (rule ccorres_gen_asm2)
+    apply (erule exE)
+    apply (erule rl)
+    done
+next
+  fix s s'
+  assume "(s, s') \<in> rf_sr" and "G s" and "s' \<in> G' \<inter> {s. P s}"
+  thus "G s \<and> s' \<in> (G' \<inter> {_. \<exists>s. P s})"
+    by (clarsimp elim!: exI simp: Collect_const_mem)
+qed
+
+end
 end
