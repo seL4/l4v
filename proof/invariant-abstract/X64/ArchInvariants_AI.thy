@@ -132,6 +132,7 @@ where
      \<and> is_aligned vref pml4_shift_bits \<and> vref < pptr_base \<and> canonical_address vref
    | PML4Cap r (Some asid) \<Rightarrow>
      0 < asid \<and> asid \<le> 2^asid_bits - 1
+   | IOPortCap f l \<Rightarrow> f \<le> l
    | _ \<Rightarrow> True"
 
 lemmas wellformed_acap_simps =
@@ -224,7 +225,7 @@ where
          typ_at (AArch AASIDPool) r s \<and> is_aligned as asid_low_bits
            \<and> as \<le> 2^asid_bits - 1
   | ASIDControlCap \<Rightarrow> True
-  | IOPortCap first_port last_port \<Rightarrow> True
+  | IOPortCap first_port last_port \<Rightarrow> first_port \<le> last_port
   | PageCap dev r rghts maptyp sz mapdata \<Rightarrow>
     (if dev then (typ_at (AArch (ADeviceData sz)) r s)
             else (typ_at (AArch (AUserData sz)) r s)) \<and>

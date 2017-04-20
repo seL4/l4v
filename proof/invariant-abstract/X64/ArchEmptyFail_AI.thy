@@ -83,7 +83,8 @@ lemma arch_decode_X64ASIDControlMakePool_empty_fail:
     subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def
                                 returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: if_split_asm)
   apply (simp add: Let_def split: cap.splits arch_cap.splits option.splits bool.splits | wp | intro conjI impI allI)+
-  by (clarsimp simp add: decode_page_invocation_def split: arch_cap.splits | wp)+
+  by (clarsimp simp add: decode_page_invocation_def decode_page_table_invocation_def
+                         decode_page_directory_invocation_def decode_pdpt_invocation_def split: arch_cap.splits | wp)+
 
 
 lemma arch_decode_X64ASIDPoolAssign_empty_fail:
@@ -107,7 +108,8 @@ lemma arch_decode_X64ASIDPoolAssign_empty_fail:
    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_def bindE_def
                                bind_def return_def returnOk_def lift_def liftE_def select_ext_def
                                gets_def get_def assert_def fail_def)
-  apply (clarsimp simp: decode_page_invocation_def | wp)+
+  apply (clarsimp simp: decode_page_invocation_def decode_page_table_invocation_def
+                         decode_page_directory_invocation_def decode_pdpt_invocation_def | wp)+
   done
 
 lemma arch_decode_invocation_empty_fail[wp]:
@@ -119,7 +121,8 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (find_goal \<open>succeeds \<open>erule arch_decode_X64ASIDControlMakePool_empty_fail\<close>\<close>)
   apply (find_goal \<open>succeeds \<open>erule arch_decode_X64ASIDPoolAssign_empty_fail\<close>\<close>)
   apply ((simp add: arch_decode_X64ASIDControlMakePool_empty_fail arch_decode_X64ASIDPoolAssign_empty_fail)+)[2]  
-  by ((simp add: arch_decode_invocation_def decode_page_invocation_def Let_def 
+  by ((simp add: arch_decode_invocation_def decode_page_invocation_def Let_def decode_page_table_invocation_def
+                         decode_page_directory_invocation_def decode_pdpt_invocation_def
              split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
 
 end
