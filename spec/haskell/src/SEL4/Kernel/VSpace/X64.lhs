@@ -549,12 +549,14 @@ Note that implementations with separate high and low memory regions may also wis
 > attribsFromWord :: Word -> VMAttributes
 > attribsFromWord w = VMAttributes {
 >     x64WriteThrough = w `testBit` 0,
->     x64PAT = w `testBit` 2,
->     x64CacheDisabled = w `testBit` 1 }
+>     x64PAT = w `testBit` 1,
+>     x64CacheDisabled = w `testBit` 2 }
 
 > pageBase :: VPtr -> VMPageSize -> VPtr
 > pageBase vaddr size = vaddr .&. (complement $ mask (pageBitsForSize size))
 
+> userVTop :: Word
+> userVTop = 0x00007fffffffffff
 
 > decodeX64FrameInvocation :: Word -> [Word] -> PPtr CTE ->
 >                    ArchCapability -> [(Capability, PPtr CTE)] ->
@@ -572,18 +574,19 @@ Note that implementations with separate high and low memory regions may also wis
 >                 _ -> throw $ InvalidCapability 1
 >             vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
 >             when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
->             let vtop = vaddr + (bit (pageBitsForSize $ capVPSize cap) - 1)
->             when (VPtr vtop > kernelBase) $
+>             let vaddr' = vaddr .&. userVTop
+>             let vtop = vaddr' + (bit (pageBitsForSize $ capVPSize cap) - 1)
+>             when (VPtr vtop > VPtr userVTop) $
 >                 throw $ InvalidArgument 0
 >             let vmRights = maskVMRights (capVPRights cap) $
 >                     rightsFromWord rightsMask
->             checkVPAlignment (capVPSize cap) (VPtr vaddr)
+>             checkVPAlignment (capVPSize cap) (VPtr vaddr')
 >             entries <- createMappingEntries (addrFromPPtr $ capVPBasePtr cap)
->                 (VPtr vaddr) (capVPSize cap) vmRights
+>                 (VPtr vaddr') (capVPSize cap) vmRights
 >                 (attribsFromWord attr) vspace
 >             ensureSafeMapping entries
 >             return $ InvokePage $ PageMap {
->                 pageMapCap = ArchObjectCap $ cap { capVPMappedAddress = Just (asid, VPtr vaddr) },
+>                 pageMapCap = ArchObjectCap $ cap { capVPMappedAddress = Just (asid, VPtr vaddr') },
 >                 pageMapCTSlot = cte,
 >                 pageMapEntries = entries,
 >                 pageMapVSpace = vspace }
@@ -596,11 +599,11 @@ Note that implementations with separate high and low memory regions may also wis
 >                         capPML4BasePtr = vspace })
 >                     -> return (vspace,asid)
 >                 _ -> throw $ InvalidCapability 1
->             vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
->             when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
->             vaddr <- case capVPMappedAddress cap of
->                 Just (_, v) -> return v
+>             (asid',vaddr) <- case capVPMappedAddress cap of
+>                 Just v -> return v
 >                 _ -> throw $ InvalidCapability 0
+>             vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
+>             when (vspaceCheck /= vspace || asid /= asid') $ throw $ InvalidCapability 1
 >             -- asidCheck not required because ASIDs and HWASIDs are the same on x86
 >             let vmRights = maskVMRights (capVPRights cap) $
 >                     rightsFromWord rightsMask
@@ -861,9 +864,8 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 >                          capPML4BasePtr = vspace })
 >                     -> return (vspace,asid)
 >                 _ -> throw $ InvalidCapability 1
->             let shiftBits = pageBits + ptTranslationBits + ptTranslationBits + ptTranslationBits
->             let vaddr = vaddr' .&. complement (mask shiftBits)
->             when (VPtr vaddr >= kernelBase ) $
+>             let vaddr = vaddr' .&. complement (mask pml4ShiftBits)
+>             when (VPtr vaddr > VPtr userVTop ) $
 >                 throw $ InvalidArgument 0
 >             vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
 >             when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
@@ -871,7 +873,7 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 >             oldpml4e <- withoutFailure $ getObject pml4Slot
 >             unless (oldpml4e == InvalidPML4E) $ throw DeleteFirst
 >             let pml4e = PDPointerTablePML4E {
->                     pml4eTable = addrFromPPtr $ capPTBasePtr cap,
+>                     pml4eTable = addrFromPPtr $ capPDPTBasePtr cap,
 >                     pml4eAccessed = False,
 >                     pml4eCacheDisabled = x64CacheDisabled $ attribsFromWord attr,
 >                     pml4eWriteThrough = x64WriteThrough $ attribsFromWord attr,
@@ -910,9 +912,8 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 >                          capPML4BasePtr = pml })
 >                     -> return (pml,asid)
 >                 _ -> throw $ InvalidCapability 1
->             let shiftBits = pageBits + ptTranslationBits + ptTranslationBits
->             let vaddr = vaddr' .&. complement (mask shiftBits)
->             when (VPtr vaddr >= kernelBase ) $
+>             let vaddr = vaddr' .&. complement (mask pdptShiftBits)
+>             when (VPtr vaddr > VPtr userVTop ) $
 >                 throw $ InvalidArgument 0
 >             pmlCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
 >             when (pmlCheck /= pml) $ throw $ InvalidCapability 1
@@ -920,7 +921,7 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 >             oldpde <- withoutFailure $ getObject pdptSlot
 >             unless (oldpde == InvalidPDPTE) $ throw DeleteFirst
 >             let pdpte = PageDirectoryPDPTE {
->                     pdpteTable = addrFromPPtr $ capPTBasePtr cap,
+>                     pdpteTable = addrFromPPtr $ capPDBasePtr cap,
 >                     pdpteAccessed = False,
 >                     pdpteCacheDisabled = x64CacheDisabled $ attribsFromWord attr,
 >                     pdpteWriteThrough = x64WriteThrough $ attribsFromWord attr,
@@ -959,9 +960,8 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 >                          capPML4BasePtr = pml })
 >                     -> return (pml,asid)
 >                 _ -> throw $ InvalidCapability 1
->             let shiftBits = pageBits + ptTranslationBits
->             let vaddr = vaddr' .&. complement (mask shiftBits)
->             when (VPtr vaddr >= kernelBase ) $
+>             let vaddr = vaddr' .&. complement (mask pdShiftBits)
+>             when (VPtr vaddr > VPtr userVTop ) $
 >                 throw $ InvalidArgument 0
 >             pmlCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
 >             when (pmlCheck /= pml) $ throw $ InvalidCapability 1
@@ -1071,6 +1071,7 @@ IOMap is related with label X64PageMapIO and IOUnmap is related with X64PageUnma
 >  decodeX64ASIDControlInvocation label args cap extraCaps
 > decodeX64MMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps =
 >  decodeX64ASIDPoolInvocation label cap extraCaps
+> decodeX64MMUInvocation _ _ _ _ (PML4Cap {}) _ = throw IllegalOperation
 >-- decodeX64MMUInvocation label args _ cte cap@(IOPageTableCap {}) extraCaps =
 >--  decodeX64IOPTInvocation label args cte cap extraCaps
 > decodeX64MMUInvocation _ _ _ _ _ _ = fail "Unreachable"

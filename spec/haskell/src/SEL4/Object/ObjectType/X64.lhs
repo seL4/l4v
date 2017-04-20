@@ -315,7 +315,7 @@ Create an architecture-specific object.
 >         KernelF SyscallError ArchInv.Invocation
 > decodeInvocation label args capIndex slot cap extraCaps =
 >     if isIOCap cap
->      then decodeX64PortInvocation label args capIndex slot cap extraCaps
+>      then decodeX64PortInvocation label args cap
 >      else decodeX64MMUInvocation label args capIndex slot cap extraCaps
 
 > performInvocation :: ArchInv.Invocation -> KernelP [Word]
