@@ -183,6 +183,7 @@ Locating the page directory for a given ASID is necessary when updating or delet
 >     case pm of
 >         Just ptr -> do
 >             assert (ptr /= 0) "findVSpaceForASID: found null PD"
+>             withoutFailure $ checkPML4At ptr
 >             return ptr
 >         Nothing -> throw InvalidRoot
 
@@ -237,10 +238,15 @@ The "lookupPTSlot" function locates the page table slot that maps a given virtua
 >     case pde of
 >         PageTablePDE {} -> do
 >             let pt = ptrFromPAddr $ pdeTable pde
->             let ptIndex = getPTIndex vptr
->             let ptSlot = pt + (PPtr $ ptIndex `shiftL` 3) -- ptr arithmetic, 8 byte words
->             return ptSlot
+>             withoutFailure $ lookupPTSlotFromPT pt vptr
 >         _ -> throw $ MissingCapability pdShiftBits
+
+> lookupPTSlotFromPT :: PPtr PTE -> VPtr -> Kernel (PPtr PTE)
+> lookupPTSlotFromPT pt vptr = do
+>     let ptIndex = getPTIndex vptr
+>     let ptSlot = pt + (PPtr $ ptIndex `shiftL` 3)
+>     checkPTAt pt
+>     return ptSlot
 
 > lookupPDSlot :: PPtr PML4E -> VPtr -> KernelF LookupFailure (PPtr PDE)
 > lookupPDSlot pm vptr = do
@@ -249,10 +255,15 @@ The "lookupPTSlot" function locates the page table slot that maps a given virtua
 >     case pdpte of
 >         PageDirectoryPDPTE {} -> do
 >             let pd = ptrFromPAddr $ pdpteTable pdpte
->             let pdIndex = getPDIndex vptr
->             let pdSlot = pd + (PPtr $ pdIndex `shiftL` 3) -- FIXME x64: word_size_bits
->             return pdSlot
+>             withoutFailure $ lookupPDSlotFromPD pd vptr
 >         _ -> throw $ MissingCapability pdptShiftBits
+
+> lookupPDSlotFromPD :: PPtr PDE -> VPtr -> Kernel (PPtr PDE)
+> lookupPDSlotFromPD pt vptr = do
+>     let ptIndex = getPDIndex vptr
+>     let ptSlot = pt + (PPtr $ ptIndex `shiftL` 3)
+>     checkPDAt pt
+>     return ptSlot
 
 > lookupPDPTSlot :: PPtr PML4E -> VPtr -> KernelF LookupFailure (PPtr PDPTE)
 > lookupPDPTSlot pm vptr = do
@@ -261,10 +272,16 @@ The "lookupPTSlot" function locates the page table slot that maps a given virtua
 >     case pml4e of
 >         PDPointerTablePML4E {} -> do
 >             let pdpt = ptrFromPAddr $ pml4eTable pml4e
->             let pdptIndex = getPDPTIndex vptr
->             let pdptSlot = pdpt + (PPtr $ pdptIndex `shiftL` 3) -- FIXME x64: word_size_bits
->             return pdptSlot
+>             withoutFailure $ lookupPDPTSlotFromPDPT pdpt vptr
 >         _ -> throw $ MissingCapability pml4ShiftBits
+
+> lookupPDPTSlotFromPDPT :: PPtr PDPTE -> VPtr -> Kernel (PPtr PDPTE)
+> lookupPDPTSlotFromPDPT pt vptr = do
+>     let ptIndex = getPDPTIndex vptr
+>     let ptSlot = pt + (PPtr $ ptIndex `shiftL` 3)
+>     checkPDPTAt pt
+>     return ptSlot
+
 
 Similarly, "lookupPDSlot" locates a slot in the top-level page directory. However, it does not access the kernel state and never throws a fault, so it is not in the kernel monad.
 
