@@ -4748,7 +4748,6 @@ lemma sendIPC_dequeue_ccorres_helper:
            apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
             apply simp
            apply (erule (1) map_to_ko_atI')
-          subgoal sorry -- "vcpu relation"
           -- "queue relation"
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
@@ -4797,7 +4796,6 @@ lemma sendIPC_dequeue_ccorres_helper:
           apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
            apply simp
           apply (erule (1) map_to_ko_atI')
-         subgoal sorry -- "vcpu relation"
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -5151,7 +5149,6 @@ lemma sendIPC_enqueue_ccorres_helper:
            apply (simp only:projectKOs injectKO_ep objBits_simps)
            apply clarsimp
           apply (clarsimp simp: obj_at'_def projectKOs)
-         subgoal sorry -- "vcpu relation"
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -5193,7 +5190,6 @@ lemma sendIPC_enqueue_ccorres_helper:
          apply (erule(2) map_to_ko_at_updI')
           apply (clarsimp simp: objBitsKO_def)
          apply (clarsimp simp: obj_at'_def projectKOs)
-        subgoal sorry -- "vcpu relation"
         -- "queue relation"
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         apply (clarsimp simp: comp_def)
@@ -5590,7 +5586,6 @@ lemma receiveIPC_enqueue_ccorres_helper:
           apply (erule(2) map_to_ko_at_updI')
            apply (clarsimp simp: objBitsKO_def)
           apply (clarsimp simp: obj_at'_def projectKOs)
-         subgoal sorry -- "vcpu relation"
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -5629,7 +5624,6 @@ lemma receiveIPC_enqueue_ccorres_helper:
          apply (erule(2) map_to_ko_at_updI')
           apply (clarsimp simp: objBitsKO_def)
          apply (clarsimp simp: obj_at'_def projectKOs)
-        subgoal sorry -- "vcpu relation"
         -- "queue relation"
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         apply (clarsimp simp: comp_def)
@@ -5714,7 +5708,6 @@ lemma receiveIPC_dequeue_ccorres_helper:
            apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
            apply simp
           apply (erule (1) map_to_ko_atI')
-          subgoal sorry -- "vcpu relation"
           -- "queue relation"
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
@@ -5763,7 +5756,6 @@ lemma receiveIPC_dequeue_ccorres_helper:
           apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
            apply simp
           apply (erule (1) map_to_ko_atI')
-         subgoal sorry -- "vcpu relation"
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -6290,7 +6282,6 @@ lemma sendSignal_dequeue_ccorres_helper:
             apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def
                              tcb_queue_relation'_def)
            apply simp
-          subgoal sorry -- "vcpu relation"
           -- "queue relation"
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
@@ -6341,7 +6332,6 @@ lemma sendSignal_dequeue_ccorres_helper:
                        split del: if_split)
            apply (clarsimp split: if_split)
           apply simp
-         subgoal sorry -- "vcpu relation"
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -6722,7 +6712,6 @@ lemma receiveSignal_enqueue_ccorres_helper:
                                  valid_ntfn'_def
                            dest: tcb_queue_relation_next_not_NULL)
           apply (simp add: isWaitingNtfn_def)
-         subgoal sorry -- "vcpu relation"
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          subgoal by (clarsimp simp: comp_def)
@@ -6763,7 +6752,6 @@ lemma receiveSignal_enqueue_ccorres_helper:
                          split: if_split)
           apply (fastforce simp: tcb_queue_relation'_def is_aligned_neg_mask)
          apply (simp add: isWaitingNtfn_def)
-        subgoal sorry -- "vcpu relation"
         -- "queue relation"
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         apply (clarsimp simp: comp_def)
