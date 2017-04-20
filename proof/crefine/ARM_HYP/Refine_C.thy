@@ -49,7 +49,7 @@ lemma Arch_finaliseInterrupt_ccorres:
 
 lemma handleInterruptEntry_ccorres:
   "ccorres dc xfdc
-           (invs' and sch_act_simple)
+           (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
            UNIV []
            (callKernel Interrupt) (Call handleInterruptEntry_'proc)"
   proof -
@@ -92,13 +92,12 @@ lemma handleInterruptEntry_ccorres:
        apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
    apply simp
-thm dmo_getActiveIRQ_non_kernel
-   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM_HYP.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
+   apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM_HYP.maxIRQ) \<and> rv \<noteq> Some 0x3FF \<and>
+                             sch_act_not (ksCurThread s) s \<and>
+                             (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))" in hoare_post_imp)
     apply (clarsimp simp: Kernel_C.maxIRQ_def ARM_HYP.maxIRQ_def)
-term non_kernel_IRQs
-find_theorems "getActiveIRQ False"
-    subgoal sorry
    apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+  apply (clarsimp simp: ct_not_ksQ)
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
 qed
@@ -139,6 +138,8 @@ lemma handleUnknownSyscall_ccorres:
   apply (clarsimp simp: cfault_rel_def seL4_Fault_UnknownSyscall_lift is_cap_fault_def)
   done
 
+crunch ct[wp]:  handleVMFault "\<lambda>s. P (ksCurThread s)"
+
 lemma handleVMFaultEvent_ccorres:
   "ccorres dc xfdc
            (invs' and sch_act_simple and ct_running' and
@@ -164,9 +165,8 @@ lemma handleVMFaultEvent_ccorres:
            apply simp
           apply simp
          apply simp
-sorry (* FIXME ARMHYP extra conditions stemming from new handleInterrupt preconditions must now
-          be handled
-        apply (wp hv_inv_ex')
+        apply (rule hvmf_invs_lift)
+        apply (simp add: invs'_machine valid_machine_state'_def)
        apply (simp add: guard_is_UNIV_def)
        apply clarsimp
        apply (vcg exspec=handleVMFault_modifies)
@@ -188,7 +188,6 @@ sorry (* FIXME ARMHYP extra conditions stemming from new handleInterrupt precond
   by (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ
               elim: pred_tcb'_weakenE st_tcb_ex_cap''
               dest: st_tcb_at_idle_thread' rf_sr_ksCurThread)
-  *)
 
 
 lemma handleUserLevelFault_ccorres:
@@ -434,14 +433,15 @@ lemma handleSyscall_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: return_def)
       apply (wp schedule_invs' schedule_sch_act_wf | strengthen invs_queues_imp invs_valid_objs_strengthen)+
+     apply (wpsimp wp: hoare_vcg_if_lift3)
+      apply (strengthen non_kernel_IRQs_strg[where Q=True, simplified])
+      apply (wpsimp wp: hoare_drop_imps)
      apply (simp
           | wpc
           | wp hoare_drop_imp handleReply_sane handleReply_nonz_cap_to_ct schedule_invs'
                handleReply_ct_not_ksQ[simplified]
           | strengthen ct_active_not_idle'_strengthen invs_valid_objs_strengthen)+
       apply (rule_tac  Q="\<lambda>rv. invs' and ct_active'" in hoare_post_imp, simp)
-sorry (* FIXME ARMHYP extra conditions stemming from new handleInterrupt preconditions must now
-          be handled
       apply (wp hy_invs')
      apply (clarsimp simp add: liftE_def)
      apply wp
@@ -461,7 +461,7 @@ sorry (* FIXME ARMHYP extra conditions stemming from new handleInterrupt precond
   apply (rule conjI, fastforce)
   apply (auto simp: syscall_from_H_def Kernel_C.SysSend_def
               split: option.split_asm)
-  done  *)
+  done
 
 lemma ccorres_corres_u:
   "\<lbrakk> ccorres dc xfdc P (Collect P') [] H C; no_fail P H \<rbrakk> \<Longrightarrow>
@@ -527,65 +527,30 @@ lemma no_fail_callKernel:
   apply metis
   done
 
-(* FIXME ARMHYP unclear if this rule is useful, and how to get it to apply with csymbr below *)
-lemma seL4_Fault_VCPUFault_new_spec:
-  "\<forall> s. \<Gamma> \<turnstile> {s}
-       \<acute>ret__struct_seL4_Fault_C :== PROC seL4_Fault_VCPUFault_new(\<acute>hsr)
-       \<lbrace> seL4_Fault_lift \<acute>ret__struct_seL4_Fault_C =
-(Some (SeL4_Fault_VCPUFault \<lparr>
-       seL4_Fault_VCPUFault_CL.hsr_CL = \<acute>hsr \<rparr>))
-            \<rbrace>"
-  apply (hoare_rule HoarePartial.ProcNoRec1) (* force vcg to unfold non-recursive procedure *)
-  apply vcg
-  apply (clarsimp simp: seL4_Fault_lift_def Let_def seL4_Fault_get_tag_def
-                        seL4_Faults seL4_Arch_Faults seL4_Fault_NullFault_def
-                        mask_def
-                  split: if_split)
-  done
 
 lemma handleVCPUFault_ccorres:
   "ccorres dc xfdc
-     (* FIXME ARMHYP these are almost certainly insufficient *)
-     (invs' and sch_act_simple)
+     (invs' and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
      (UNIV \<inter> {s. hsr = hsr___unsigned_long_' s }) hs
            (callKernel (HypervisorEvent (ARMVCPUFault hsr))) (Call handleVCPUFault_'proc)"
   apply (cinit' lift: hsr___unsigned_long_')
    apply (simp add: callKernel_def handleEvent_def handleHypervisorFault_def)
    apply (simp add: liftE_def bind_assoc)
    apply (rule ccorres_pre_getCurThread, rename_tac curThread)
-   apply (rule ccorres_rhs_assoc2)
-   sorry (* FIXME ARMHYP WTF why not csymbr, I even wrote a spec rule
-   apply csymbr
+   apply (rule ccorres_symb_exec_r)
+     apply (ctac (no_vcg) add: handleFault_ccorres)
+      apply (ctac (no_vcg) add: schedule_ccorres)
+       apply (ctac (no_vcg) add: activateThread_ccorres[simplified dc_def])
+      apply (wp schedule_sch_act_wf schedule_invs'|strengthen invs_queues invs_valid_objs')+
+    apply vcg
+   apply clarsimp
+   apply (rule conseqPre, vcg)
+   apply clarsimp
+  apply (clarsimp simp: ct_not_ksQ ct_running_imp_simple')
+  apply (rule conjI, rule active_ex_cap', erule active_from_running', fastforce)
+  apply (clarsimp simp: cfault_rel_def seL4_Fault_VCPUFault_lift is_cap_fault_def)
+  done
 
-       apply (cases t; simp add: handleHypervisorFault_def)
-       apply (ctac (no_vcg) add: schedule_ccorres)
-        apply (ctac (no_vcg) add: activateThread_ccorres)
-       apply (wp schedule_sch_act_wf schedule_invs'
-              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
-    apply clarsimp+
-   *)
-
-definition
-  handleHypervisorEvent_C2 :: "hyp_fault_type \<Rightarrow> (globals myvars, int, strictc_errortype) com"
-where
-  "handleHypervisorEvent_C2 t = (case t
-    of hyp_fault_type.ARMVCPUFault hsr \<Rightarrow> (CALL handleVCPUFault(\<acute>hsr)))"
-
-lemma handleHypervisorEvent_ccorres:
-  "ccorres dc xfdc
-           (* FIXME ARMHYP these are almost certainly insufficient *)
-           (invs' and sch_act_simple)
-           (UNIV)
-           hs
-           (callKernel (HypervisorEvent t)) (handleHypervisorEvent_C t)"
-  supply inf_top.left_neutral[simp del]
-  apply (cases t, clarsimp, rename_tac hsr)
-  apply (simp add: handleHypervisorEvent_C_def)
-  oops (* FIXME ARMHYP WTF why can't I use ccorres_call or cinit' here?
-          it works within the proof below
-apply (rule ccorres_call)
-  apply (cinit')
- *)
 
 lemma callKernel_corres_C:
   "corres_underlying rf_sr False True dc
@@ -599,7 +564,6 @@ lemma callKernel_corres_C:
       apply (rule ccorres_corres_u)
        apply simp
        apply (rule ccorres_guard_imp)
-(* FIXME ARMHYP new knowledge required here for whatever handleInterruptEntry_ccorres will need *)
          apply (rule handleInterruptEntry_ccorres)
         apply (clarsimp simp: all_invs'_def sch_act_simple_def)
        apply simp
@@ -634,9 +598,8 @@ lemma callKernel_corres_C:
   apply (simp add: handleHypervisorEvent_C_def)
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_call)
-       (* FIXME ARMHYP WTF how does this work here and not above? *)
        apply (rule handleVCPUFault_ccorres, (simp+))
-   apply (clarsimp simp: all_invs'_def sch_act_simple_def)
+   apply (clarsimp simp: all_invs'_def)
   apply fastforce
   done
 
@@ -782,7 +745,7 @@ lemma entry_corres_C:
          prefer 2
          apply simp
          apply (rule setTCBContext_C_corres)
-          subgoal sorry (* FIXME ARMHYP insufficient information to conclude ccontext_relation *)
+          apply (simp add: ccontext_rel_to_C)
          apply simp
         apply (rule corres_split)
            prefer 2
