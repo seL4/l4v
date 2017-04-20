@@ -93,6 +93,9 @@ The ARM MMU does not allow access to physical addresses while translation is ena
 > fromPAddr :: PAddr -> Word
 > fromPAddr = Platform.fromPAddr
 
+> addPAddr :: PAddr -> Word -> PAddr
+> addPAddr p w = toPAddr (fromPAddr p + w)
+
 \subsection{Hardware Access}
 
 The following functions define the ARM-specific interface between the kernel and the hardware. Most of them depend on the simulator in use, and are therefore defined in the platform module.

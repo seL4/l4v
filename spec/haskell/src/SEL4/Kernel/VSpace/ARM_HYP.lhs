@@ -1562,6 +1562,17 @@ the PT/PD is consistent.
 >     pd <- getObject slot
 >     return $ pd /= InvalidPDE
 
+> addPTEOffset :: PTE -> Word -> PTE
+> addPTEOffset pte i = if pte == InvalidPTE then InvalidPTE
+>                      else pte { pteFrame = addPAddr (pteFrame pte)
+>                                  (i * bit (pageBitsForSize(ARMSmallPage))) }
+
+> addPDEOffset :: PDE -> Word -> PDE
+> addPDEOffset InvalidPDE _ = InvalidPDE
+> addPDEOffset (PageTablePDE p) _ = PageTablePDE p
+> addPDEOffset pde i = pde { pdeFrame = addPAddr (pdeFrame pde)
+>                                 (i * bit (pageBitsForSize(ARMSection))) }
+
 > performPageInvocation :: PageInvocation -> Kernel ()
 >
 > performPageInvocation (PageMap asid cap ctSlot entries) = do
@@ -1569,7 +1580,8 @@ the PT/PD is consistent.
 >     case entries of
 >         Left (pte, slots) -> do
 >             tlbFlush <- pteCheckIfMapped (head slots)
->             mapM (flip storePTE pte) slots
+>             mapM (\(slot, i) -> storePTE slot (addPTEOffset pte i))
+>                  (zip slots [0 .. fromIntegral (length slots - 1)])
 >             doMachineOp $
 >                 cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
 >                                     (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1))
@@ -1577,7 +1589,8 @@ the PT/PD is consistent.
 >             when tlbFlush $ invalidateTLBByASID asid
 >         Right (pde, slots) -> do
 >             tlbFlush <- pdeCheckIfMapped (head slots)
->             mapM (flip storePDE pde) slots
+>             mapM (\(slot, i) -> storePDE slot (addPDEOffset pde i))
+>                  (zip slots [0 .. fromIntegral (length slots - 1)])
 >             doMachineOp $
 >                 cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
 >                                     (VPtr $ (fromPPtr (last slots)) + (bit pdeBits - 1))
@@ -1586,7 +1599,8 @@ the PT/PD is consistent.
 >
 > performPageInvocation (PageRemap asid (Left (pte, slots))) = do
 >     tlbFlush <- pteCheckIfMapped (head slots)
->     mapM (flip storePTE pte) slots
+>     mapM (\(slot, i) -> storePTE slot (addPTEOffset pte i))
+>          (zip slots [0 .. fromIntegral (length slots - 1)])
 >     doMachineOp $
 >         cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
 >                             (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1))
@@ -1595,7 +1609,8 @@ the PT/PD is consistent.
 >
 > performPageInvocation (PageRemap asid (Right (pde, slots))) = do
 >     tlbFlush <- pdeCheckIfMapped (head slots)
->     mapM (flip storePDE pde) slots
+>     mapM (\(slot, i) -> storePDE slot (addPDEOffset pde i))
+>          (zip slots [0 .. fromIntegral (length slots - 1)])
 >     doMachineOp $
 >         cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
 >                             (VPtr $ (fromPPtr (last slots)) + (bit pdeBits - 1))
