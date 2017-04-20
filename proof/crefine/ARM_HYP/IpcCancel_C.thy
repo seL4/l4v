@@ -119,6 +119,7 @@ abbreviation
         "cslift_all_but_tcb_C s t \<equiv> (cslift s :: cte_C typ_heap) = cslift t
                 \<and> (cslift s :: endpoint_C typ_heap) = cslift t
                 \<and> (cslift s :: notification_C typ_heap) = cslift t
+                \<and> (cslift s :: vcpu_C typ_heap) = cslift t
                 \<and> (cslift s :: asid_pool_C typ_heap) = cslift t
                 \<and> (cslift s :: pte_C typ_heap) = cslift t
                 \<and> (cslift s :: pde_C typ_heap) = cslift t
@@ -167,23 +168,25 @@ lemma tcbEPDequeue_spec:
   apply (frule c_guard_clift)
   apply (simp add: typ_heap_simps')
   apply (intro allI conjI impI)
-            apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
-           apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
-                           cong: if_weak_cong)
-          apply (rule ext)
-          apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
-         apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
-        apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
-       apply (rule ext)
-       apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def
-                       cong: if_weak_cong)
-      apply (rule ext)
-      apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
-     apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
-    apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
-                    cong: if_weak_cong)
-   apply (rule ext)
-   apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
+               apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
+              apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
+                              cong: if_weak_cong)
+             apply (rule ext)
+             apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
+            apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff c_guard_clift)
+           apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
+          apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
+         apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def
+                         cong: if_weak_cong)
+        apply (rule ext)
+        apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
+       apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff c_guard_clift)
+      apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff)
+     apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
+                     cong: if_weak_cong)
+    apply (rule ext)
+    apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff tcb_null_ep_ptrs_def)
+   apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff c_guard_clift)
   apply simp
   done
 
@@ -262,7 +265,6 @@ lemma cancelSignal_ccorres_helper:
           apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
           apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def)
           apply (simp add: carch_state_relation_def carch_globals_def)
-subgoal sorry -- "vcpu relation"
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -309,7 +311,6 @@ subgoal sorry -- "vcpu relation"
           apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff)
           apply (simp add: tcb_queue_relation'_prev_mask_4)
          apply simp
-subgoal sorry -- "vcpu relation"
         -- "queue relation"
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         apply (clarsimp simp: comp_def)
@@ -768,7 +769,6 @@ lemma state_relation_queue_update_helper':
      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
      apply simp
      apply (erule cnotification_relation_upd_tcb_no_queues, simp+)
-subgoal sorry  -- "vcpu relation"
     -- "ready queues"
     apply (simp add: cready_queues_relation_def Let_def
                      cready_queues_index_to_C_in_range
@@ -2784,8 +2784,7 @@ lemma cancelIPC_ccorres_helper:
            subgoal by simp
           apply (erule (1) map_to_ko_atI')
          apply (simp add: heap_to_user_data_def Let_def)
-subgoal sorry -- "vcpu relation"
- -- "queue relation"
+        -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          subgoal by (clarsimp simp: comp_def)
         subgoal by (simp add: carch_state_relation_def carch_globals_def
@@ -2829,7 +2828,6 @@ subgoal sorry -- "vcpu relation"
          apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
          apply simp
          apply (erule (1) map_to_ko_atI')
-subgoal sorry -- "vcpu relation"
          -- "queue relation"
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         subgoal by (clarsimp simp: comp_def)
