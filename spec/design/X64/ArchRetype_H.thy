@@ -231,7 +231,7 @@ defs isIOCap_def:
 defs decodeInvocation_def:
 "decodeInvocation label args capIndex slot cap extraCaps \<equiv>
     if isIOCap cap
-     then decodeX64PortInvocation label args capIndex slot cap extraCaps
+     then decodeX64PortInvocation label args cap
      else decodeX64MMUInvocation label args capIndex slot cap extraCaps"
 
 defs performInvocation_def:

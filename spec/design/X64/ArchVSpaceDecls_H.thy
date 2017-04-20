@@ -160,6 +160,9 @@ consts'
 pageBase :: "vptr \<Rightarrow> vmpage_size \<Rightarrow> vptr"
 
 consts'
+userVTop :: "machine_word"
+
+consts'
 decodeX64FrameInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
 consts'
@@ -262,7 +265,7 @@ consts'
 ensurePortOperationAllowed :: "arch_capability \<Rightarrow> ioport \<Rightarrow> nat \<Rightarrow> ( syscall_error , unit ) kernel_f"
 
 consts'
-decodeX64PortInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , invocation ) kernel_f"
+decodeX64PortInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> arch_capability \<Rightarrow> ( syscall_error , invocation ) kernel_f"
 
 consts'
 performX64PortInvocation :: "invocation \<Rightarrow> machine_word list kernel_p"

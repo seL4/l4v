@@ -505,11 +505,14 @@ od)"
 defs attribsFromWord_def:
 "attribsFromWord w \<equiv> VMAttributes_ \<lparr>
     x64WriteThrough= w !! 0,
-    x64PAT= w !! 2,
-    x64CacheDisabled= w !! 1 \<rparr>"
+    x64PAT= w !! 1,
+    x64CacheDisabled= w !! 2 \<rparr>"
 
 defs pageBase_def:
 "pageBase vaddr magnitude\<equiv> vaddr && (complement $ mask (pageBitsForSize magnitude))"
+
+defs userVTop_def:
+"userVTop \<equiv> 0x00007fffffffffff"
 
 defs decodeX64FrameInvocation_def:
 "decodeX64FrameInvocation label args cte x3 extraCaps\<equiv> (let cap = x3 in
@@ -526,18 +529,19 @@ defs decodeX64FrameInvocation_def:
                 );
             vspaceCheck \<leftarrow> lookupErrorOnFailure False $ findVSpaceForASID asid;
             whenE (vspaceCheck \<noteq> vspace) $ throw $ InvalidCapability 1;
-            vtop \<leftarrow> returnOk ( vaddr + (bit (pageBitsForSize $ capVPSize cap) - 1));
-            whenE (VPtr vtop > kernelBase) $
+            vaddr' \<leftarrow> returnOk ( vaddr && userVTop);
+            vtop \<leftarrow> returnOk ( vaddr' + (bit (pageBitsForSize $ capVPSize cap) - 1));
+            whenE (VPtr vtop > VPtr userVTop) $
                 throw $ InvalidArgument 0;
             vmRights \<leftarrow> returnOk ( maskVMRights (capVPRights cap) $
                     rightsFromWord rightsMask);
-            checkVPAlignment (capVPSize cap) (VPtr vaddr);
+            checkVPAlignment (capVPSize cap) (VPtr vaddr');
             entries \<leftarrow> createMappingEntries (addrFromPPtr $ capVPBasePtr cap)
-                (VPtr vaddr) (capVPSize cap) vmRights
+                (VPtr vaddr') (capVPSize cap) vmRights
                 (attribsFromWord attr) vspace;
             ensureSafeMapping entries;
             returnOk $ InvokePage $ PageMap_ \<lparr>
-                pageMapCap= ArchObjectCap $ cap \<lparr> capVPMappedAddress:= Just (asid, VPtr vaddr) \<rparr>,
+                pageMapCap= ArchObjectCap $ cap \<lparr> capVPMappedAddress:= Just (asid, VPtr vaddr') \<rparr>,
                 pageMapCTSlot= cte,
                 pageMapEntries= entries,
                 pageMapVSpace= vspace \<rparr>
@@ -549,12 +553,12 @@ defs decodeX64FrameInvocation_def:
                   ArchObjectCap (PML4Cap vspace (Some asid)) \<Rightarrow>   returnOk (vspace,asid)
                 | _ \<Rightarrow>   throw $ InvalidCapability 1
                 );
-            vspaceCheck \<leftarrow> lookupErrorOnFailure False $ findVSpaceForASID asid;
-            whenE (vspaceCheck \<noteq> vspace) $ throw $ InvalidCapability 1;
-            vaddr \<leftarrow> (case capVPMappedAddress cap of
-                  Some (_, v) \<Rightarrow>   returnOk v
+            (asid',vaddr) \<leftarrow> (case capVPMappedAddress cap of
+                  Some v \<Rightarrow>   returnOk v
                 | _ \<Rightarrow>   throw $ InvalidCapability 0
                 );
+            vspaceCheck \<leftarrow> lookupErrorOnFailure False $ findVSpaceForASID asid;
+            whenE (vspaceCheck \<noteq> vspace \<or> asid \<noteq> asid') $ throw $ InvalidCapability 1;
             vmRights \<leftarrow> returnOk ( maskVMRights (capVPRights cap) $
                     rightsFromWord rightsMask);
             checkVPAlignment (capVPSize cap) vaddr;
@@ -589,9 +593,8 @@ defs decodeX64PDPointerTableInvocation_def:
                   ArchObjectCap (PML4Cap vspace (Some asid)) \<Rightarrow>   returnOk (vspace,asid)
                 | _ \<Rightarrow>   throw $ InvalidCapability 1
                 );
-            shiftBits \<leftarrow> returnOk ( pageBits + ptTranslationBits + ptTranslationBits + ptTranslationBits);
-            vaddr \<leftarrow> returnOk ( vaddr' && complement (mask shiftBits));
-            whenE (VPtr vaddr \<ge> kernelBase ) $
+            vaddr \<leftarrow> returnOk ( vaddr' && complement (mask pml4ShiftBits));
+            whenE (VPtr vaddr > VPtr userVTop ) $
                 throw $ InvalidArgument 0;
             vspaceCheck \<leftarrow> lookupErrorOnFailure False $ findVSpaceForASID asid;
             whenE (vspaceCheck \<noteq> vspace) $ throw $ InvalidCapability 1;
@@ -599,7 +602,7 @@ defs decodeX64PDPointerTableInvocation_def:
             oldpml4e \<leftarrow> withoutFailure $ getObject pml4Slot;
             unlessE (oldpml4e = InvalidPML4E) $ throw DeleteFirst;
             pml4e \<leftarrow> returnOk ( PDPointerTablePML4E_ \<lparr>
-                    pml4eTable= addrFromPPtr $ capPTBasePtr cap,
+                    pml4eTable= addrFromPPtr $ capPDPTBasePtr cap,
                     pml4eAccessed= False,
                     pml4eCacheDisabled= x64CacheDisabled $ attribsFromWord attr,
                     pml4eWriteThrough= x64WriteThrough $ attribsFromWord attr,
@@ -612,8 +615,8 @@ defs decodeX64PDPointerTableInvocation_def:
                 pdptMapPML4Slot= pml4Slot,
                 pdptMapVSpace= vspace \<rparr>
         odE)
-        | (ArchInvocationLabel X64PageDirectoryMap, _, _) =>  throw TruncatedMessage
-        | (ArchInvocationLabel X64PageDirectoryUnmap, _, _) =>  (doE
+        | (ArchInvocationLabel X64PDPTMap, _, _) =>  throw TruncatedMessage
+        | (ArchInvocationLabel X64PDPTUnmap, _, _) =>  (doE
             cteVal \<leftarrow> withoutFailure $ getCTE cte;
             final \<leftarrow> withoutFailure $ isFinalCapability cteVal;
             unlessE final $ throw RevokeFirst;
@@ -640,9 +643,8 @@ defs decodeX64PageDirectoryInvocation_def:
                   ArchObjectCap (PML4Cap pml (Some asid)) \<Rightarrow>   returnOk (pml,asid)
                 | _ \<Rightarrow>   throw $ InvalidCapability 1
                 );
-            shiftBits \<leftarrow> returnOk ( pageBits + ptTranslationBits + ptTranslationBits);
-            vaddr \<leftarrow> returnOk ( vaddr' && complement (mask shiftBits));
-            whenE (VPtr vaddr \<ge> kernelBase ) $
+            vaddr \<leftarrow> returnOk ( vaddr' && complement (mask pdptShiftBits));
+            whenE (VPtr vaddr > VPtr userVTop ) $
                 throw $ InvalidArgument 0;
             pmlCheck \<leftarrow> lookupErrorOnFailure False $ findVSpaceForASID asid;
             whenE (pmlCheck \<noteq> pml) $ throw $ InvalidCapability 1;
@@ -650,7 +652,7 @@ defs decodeX64PageDirectoryInvocation_def:
             oldpde \<leftarrow> withoutFailure $ getObject pdptSlot;
             unlessE (oldpde = InvalidPDPTE) $ throw DeleteFirst;
             pdpte \<leftarrow> returnOk ( PageDirectoryPDPTE_ \<lparr>
-                    pdpteTable= addrFromPPtr $ capPTBasePtr cap,
+                    pdpteTable= addrFromPPtr $ capPDBasePtr cap,
                     pdpteAccessed= False,
                     pdpteCacheDisabled= x64CacheDisabled $ attribsFromWord attr,
                     pdpteWriteThrough= x64WriteThrough $ attribsFromWord attr,
@@ -690,9 +692,8 @@ defs decodeX64PageTableInvocation_def:
                   ArchObjectCap (PML4Cap pml (Some asid)) \<Rightarrow>   returnOk (pml,asid)
                 | _ \<Rightarrow>   throw $ InvalidCapability 1
                 );
-            shiftBits \<leftarrow> returnOk ( pageBits + ptTranslationBits);
-            vaddr \<leftarrow> returnOk ( vaddr' && complement (mask shiftBits));
-            whenE (VPtr vaddr \<ge> kernelBase ) $
+            vaddr \<leftarrow> returnOk ( vaddr' && complement (mask pdShiftBits));
+            whenE (VPtr vaddr > VPtr userVTop ) $
                 throw $ InvalidArgument 0;
             pmlCheck \<leftarrow> lookupErrorOnFailure False $ findVSpaceForASID asid;
             whenE (pmlCheck \<noteq> pml) $ throw $ InvalidCapability 1;
@@ -813,6 +814,8 @@ defs decodeX64MMUInvocation_def:
   else if isASIDPoolCap cap
   then
  decodeX64ASIDPoolInvocation label cap extraCaps
+  else if isPML4Cap cap
+  then   throw IllegalOperation
   else   haskell_fail []
   )"
 
@@ -1062,6 +1065,106 @@ defs createDeviceFrames_def:
 
 defs vptrFromPPtr_def:
 "vptrFromPPtr  \<equiv> error []"
+
+defs ensurePortOperationAllowed_def:
+"ensurePortOperationAllowed x0 start_port magnitude \<equiv> (case x0 of
+    (IOPortCap first_allowed last_allowed) \<Rightarrow>    (doE
+    end_port \<leftarrow> returnOk ( start_port + fromIntegral magnitude - 1);
+    haskell_assertE (first_allowed \<le> last_allowed) [];
+    whenE (start_port > end_port) $ throw IllegalOperation;
+    whenE ((start_port < first_allowed) \<or> (end_port > last_allowed)) $
+        throw IllegalOperation
+    odE)
+  | _ \<Rightarrow>    haskell_fail []
+  )"
+
+defs decodeX64PortInvocation_def:
+"decodeX64PortInvocation label args x2\<equiv> (let cap = x2 in
+  if isIOPortCap cap
+  then   (
+    (let (label, args) = (invocationType label, args) in
+        case (label, args) of
+        (ArchInvocationLabel X64IOPortIn8, port'#_) =>  (doE
+            port \<leftarrow> returnOk ( (fromIntegral port') ::ioport);
+            ensurePortOperationAllowed cap port 1;
+            returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortIn8
+        odE)
+        | (ArchInvocationLabel X64IOPortIn8, _) =>  throw TruncatedMessage
+        | (ArchInvocationLabel X64IOPortIn16, port'#_) =>  (doE
+            port \<leftarrow> returnOk ( (fromIntegral port') ::ioport);
+            ensurePortOperationAllowed cap port 2;
+            returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortIn16
+        odE)
+        | (ArchInvocationLabel X64IOPortIn16, _) =>  throw TruncatedMessage
+        | (ArchInvocationLabel X64IOPortIn32, port'#_) =>  (doE
+            port \<leftarrow> returnOk ( (fromIntegral port') ::ioport);
+            ensurePortOperationAllowed cap port 4;
+            returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortIn32
+        odE)
+        | (ArchInvocationLabel X64IOPortIn32, _) =>  throw TruncatedMessage
+        | (ArchInvocationLabel X64IOPortOut8, port'#out#_) =>  (doE
+            port \<leftarrow> returnOk ( (fromIntegral port') ::ioport);
+            ensurePortOperationAllowed cap port 1;
+            output_data \<leftarrow> returnOk ( fromIntegral out);
+            returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortOut8 output_data
+        odE)
+        | (ArchInvocationLabel X64IOPortOut8, _) =>  throw TruncatedMessage
+        | (ArchInvocationLabel X64IOPortOut16, port'#out#_) =>  (doE
+            port \<leftarrow> returnOk ( (fromIntegral port') ::ioport);
+            ensurePortOperationAllowed cap port 2;
+            output_data \<leftarrow> returnOk ( fromIntegral out);
+            returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortOut16 output_data
+        odE)
+        | (ArchInvocationLabel X64IOPortOut16, _) =>  throw TruncatedMessage
+        | (ArchInvocationLabel X64IOPortOut32, port'#out#_) =>  (doE
+            port \<leftarrow> returnOk ( (fromIntegral port') ::ioport);
+            ensurePortOperationAllowed cap port 4;
+            output_data \<leftarrow> returnOk ( fromIntegral out);
+            returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortOut32 output_data
+        odE)
+        | (ArchInvocationLabel X64IOPortOut32, _) =>  throw TruncatedMessage
+        | _ =>  throw IllegalOperation
+        )
+  )
+  else   haskell_fail []
+  )"
+
+definition
+"portIn f\<equiv> (do
+      ct \<leftarrow> getCurThread;
+      res \<leftarrow> doMachineOp $ f;
+      setMRs ct Nothing [res];
+      msgInfo \<leftarrow> return $ MI_ \<lparr>
+          msgLength= 1,
+          msgExtraCaps= 0,
+          msgCapsUnwrapped= 0,
+          msgLabel= 0 \<rparr>;
+      setMessageInfo ct msgInfo
+od)"
+
+definition
+"portOut f w\<equiv> (do
+       ct \<leftarrow> getCurThread;
+       doMachineOp $ f w;
+       setMessageInfo ct $ MI 0 0 0 0
+od)"
+
+defs performX64PortInvocation_def:
+"performX64PortInvocation x0\<equiv> (case x0 of
+    (InvokeIOPort (IOPortInvocation port port_data)) \<Rightarrow>    withoutPreemption $ (do
+    (let port_data = port_data in
+        case port_data of
+        IOPortIn8 =>  portIn $ in8 port
+        | IOPortIn16 =>  portIn $ in16 port
+        | IOPortIn32 =>  portIn $ in32 port
+        | IOPortOut8 w =>  portOut (out8 port) w
+        | IOPortOut16 w =>  portOut (out16 port) w
+        | IOPortOut32 w =>  portOut (out32 port) w
+        );
+    return $ []
+    od)
+  | _ \<Rightarrow>    haskell_fail []
+  )"
 
 
 defs checkValidMappingSize_def:
