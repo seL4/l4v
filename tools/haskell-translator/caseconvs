@@ -1468,8 +1468,8 @@ case \x of (cap@PageCap {}) -> _ ->  ---> let cap = \x in
 case \x of (ArchInvocationLabel X64PDPTMap, vaddr':attr:_, (vspaceCap,_):_) -> (ArchInvocationLabel X64PDPTMap, _, _) -> (ArchInvocationLabel X64PDPTUnmap, _, _) -> _ ->  ---> let (label, args, extraCaps) = \x in
     case (label, args, extraCaps) of
       (ArchInvocationLabel X64PDPTMap, vaddr'#attr#_, (vspaceCap,_)#_) => ->1
-    | (ArchInvocationLabel X64PageDirectoryMap, _, _) => ->2
-    | (ArchInvocationLabel X64PageDirectoryUnmap, _, _) => ->3
+    | (ArchInvocationLabel X64PDPTMap, _, _) => ->2
+    | (ArchInvocationLabel X64PDPTUnmap, _, _) => ->3
     | _ => ->4
 
 case \x of (ArchInvocationLabel X64PageDirectoryMap, vaddr':attr:_, (pml4Cap,_):_) -> (ArchInvocationLabel X64PageDirectoryMap, _, _) -> (ArchInvocationLabel X64PageDirectoryUnmap, _, _) -> _ ->  ---> let (label, args, extraCaps) = \x in
@@ -1517,15 +1517,21 @@ case \x of (cap@(IOPortCap { capIOPortFirstPort = first_allowed, capIOPortLastPo
     then let first_allowed = capIOPortFirstPort cap; last_allowed = capIOPortLastPort cap in ->1
     else ->2
 
-case \x of (ArchInvocationLabel X64IOPortIn8, port':_) -> (ArchInvocationLabel X64IOPortIn16, port':_) -> (ArchInvocationLabel X64IOPortIn32, port':_) -> (ArchInvocationLabel X64IOPortOut8, port':out:_) -> (ArchInvocationLabel X64IOPortOut16, port':out:_) -> (ArchInvocationLabel X64IOPortOut32, port':out:_) -> (_, _) ->  ---> let (label, args) = \x in
+case \x of (ArchInvocationLabel X64IOPortIn8, port':_) -> (ArchInvocationLabel X64IOPortIn8, _) -> (ArchInvocationLabel X64IOPortIn16, port':_) -> (ArchInvocationLabel X64IOPortIn16, _) -> (ArchInvocationLabel X64IOPortIn32, port':_) -> (ArchInvocationLabel X64IOPortIn32, _) -> (ArchInvocationLabel X64IOPortOut8, port':out:_) -> (ArchInvocationLabel X64IOPortOut8, _) -> (ArchInvocationLabel X64IOPortOut16, port':out:_) -> (ArchInvocationLabel X64IOPortOut16, _) -> (ArchInvocationLabel X64IOPortOut32, port':out:_) -> (ArchInvocationLabel X64IOPortOut32, _) -> (_, _) ->  ---> let (label, args) = \x in
     case (label, args) of
       (ArchInvocationLabel X64IOPortIn8, port'#_) => ->1
-    | (ArchInvocationLabel X64IOPortIn16, port'#_) => ->2
-    | (ArchInvocationLabel X64IOPortIn32, port'#_) => ->3
-    | (ArchInvocationLabel X64IOPortOut8, port'#out:_) => ->4
-    | (ArchInvocationLabel X64IOPortOut16, port'#out#_) => ->5
-    | (ArchInvocationLabel X64IOPortOut32, port'#out#_) => ->6
-    | _ => ->7
+    | (ArchInvocationLabel X64IOPortIn8, _) => ->2
+    | (ArchInvocationLabel X64IOPortIn16, port'#_) => ->3
+    | (ArchInvocationLabel X64IOPortIn16, _) => ->4
+    | (ArchInvocationLabel X64IOPortIn32, port'#_) => ->5
+    | (ArchInvocationLabel X64IOPortIn32, _) => ->6
+    | (ArchInvocationLabel X64IOPortOut8, port'#out:_) => ->7
+    | (ArchInvocationLabel X64IOPortOut8, _) => ->8
+    | (ArchInvocationLabel X64IOPortOut16, port'#out#_) => ->9
+    | (ArchInvocationLabel X64IOPortOut16, _) => ->10
+    | (ArchInvocationLabel X64IOPortOut32, port'#out#_) => ->11
+    | (ArchInvocationLabel X64IOPortOut32, _) => ->12
+    | _ => ->13
 
 case \x of cap@(IOPortCap {}) -> _ ->  ---> let cap = \x in
     if isIOPortCap cap
@@ -1613,7 +1619,7 @@ case \x of cap@(PageCap {}) -> cap@(PDPointerTableCap {}) -> cap@(PageDirectoryC
   then ->8
   else ->9
 
-case \x of cap@(PageCap {}) -> cap@(PDPointerTableCap {}) -> cap@(PageDirectoryCap {}) -> cap@(PageTableCap {}) -> cap@(ASIDControlCap {}) -> cap@(ASIDPoolCap {}) -> _ ->  --->  let cap = \x in
+case \x of cap@(PageCap {}) -> cap@(PDPointerTableCap {}) -> cap@(PageDirectoryCap {}) -> cap@(PageTableCap {}) -> cap@(ASIDControlCap {}) -> cap@(ASIDPoolCap {}) -> (PML4Cap {}) -> _ ->  ---> let cap = \x in
   if isPageCap cap
   then ->1
   else if isPDPointerTableCap cap
@@ -1626,7 +1632,9 @@ case \x of cap@(PageCap {}) -> cap@(PDPointerTableCap {}) -> cap@(PageDirectoryC
   then ->5
   else if isASIDPoolCap cap
   then ->6
-  else ->7
+  else if isPML4Cap cap
+  then ->7
+  else ->8
 
 
 case \x of cap@(IOPageTableCap {}) -> _ ->  ---> let cap = \x in
@@ -1707,6 +1715,8 @@ case \x of ((a@PageCap { capVPBasePtr = ptrA }), (b@PageCap {})) -> ((a@IOPortCa
     then let fA = capIOPortFirstPort a
         in ->2
     else ->3
+
+
 
 
 
