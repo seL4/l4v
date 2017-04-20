@@ -1337,7 +1337,6 @@ shows
   -- "PML4Cap - no invocations"
   apply (clarsimp simp: isCap_simps isIOCap_def decodeX64MMUInvocation_def Let_def
               split del: if_split)
-  subgoal sorry (* rebuild aspec, haskell *)
   done
 
 lemma not_InvokeIOPort_rel:"\<lbrakk>archinv_relation ai ai'; \<forall>x. ai \<noteq> arch_invocation.InvokeIOPort x\<rbrakk> \<Longrightarrow>
@@ -1605,46 +1604,73 @@ lemma diminished_arch_update':
   by (clarsimp simp: is_arch_update'_def isCap_simps
                      diminished'_def)
 
-(* FIXME x64: requires checkPDPTAt et al *)
+lemma lookup_pdpt_slot_no_fail_corres[simp]:
+  "lookupPDPTSlotFromPDPT pt vptr
+    = (do stateAssert (pd_pointer_table_at' pt) []; return (lookup_pdpt_slot_no_fail pt vptr) od)"
+  by (simp add: lookup_pdpt_slot_no_fail_def lookupPDPTSlotFromPDPT_def
+                mask_def checkPDPTAt_def word_size_bits_def)
+
+lemma lookup_pd_slot_no_fail_corres[simp]:
+  "lookupPDSlotFromPD pt vptr
+    = (do stateAssert (page_directory_at' pt) []; return (lookup_pd_slot_no_fail pt vptr) od)"
+  by (simp add: lookup_pd_slot_no_fail_def lookupPDSlotFromPD_def
+                mask_def checkPDAt_def word_size_bits_def)
+
+lemma lookup_pt_slot_no_fail_corres[simp]:
+  "lookupPTSlotFromPT pt vptr
+    = (do stateAssert (page_table_at' pt) []; return (lookup_pt_slot_no_fail pt vptr) od)"
+  by (simp add: lookup_pt_slot_no_fail_def lookupPTSlotFromPT_def
+                mask_def checkPTAt_def word_size_bits_def)
+
 lemma lookupPDPTSlot_pd_pointer_table_at':
   "\<lbrace>valid_objs'\<rbrace> lookupPDPTSlot pm vptr
   \<lbrace>\<lambda>rv s. pd_pointer_table_at' (rv && ~~ mask pdptBits) s\<rbrace>,-"
-  apply (simp add:lookupPDPTSlot_def)
-  apply (wp getPML4E_wp|wpc|simp add:checkPTAt_def)+
-  apply (clarsimp simp:ptBits_def lookup_pt_slot_no_fail_def lookup_pml4_slot_def)
-   apply (fold word_size_bits_def)
-   apply (subst pdpt_shifting(2)[simplified])
-apply (frule (1) ko_at_valid_objs', simp add: projectKOs)
-apply (simp add: valid_obj'_def)
-apply (subst is_aligned_ptrFromPAddr_eq, simp add: bit_simps, simp)
-thm pdpt_shifting(2)[simplified]
-   apply (simp add:pd_pointer_table_at'_def bit_simps getPDPTIndex_def )
-  subgoal sorry (* word shenanigans **)
+  apply (simp add: lookupPDPTSlot_def)
+  apply (wp getPML4E_wp|wpc|simp add:checkPDPTAt_def)+
+  apply (clarsimp simp:ptBits_def lookup_pdpt_slot_no_fail_def lookup_pml4_slot_def)
+  apply (subst pdpt_shifting(2)[simplified])
+   apply (simp add: pd_pointer_table_at'_def bit_simps)
+  apply simp
   done
 
 lemma lookupPDSlot_page_directory_at':
   "\<lbrace>valid_objs'\<rbrace> lookupPDSlot pm vptr
   \<lbrace>\<lambda>rv s. page_directory_at' (rv && ~~ mask pdBits) s\<rbrace>,-"
-  apply (simp add:lookupPDSlot_def)
-  apply (wp getPDPTE_wp|wpc|simp add:checkPTAt_def)+
-  apply (clarsimp simp:ptBits_def lookup_pt_slot_no_fail_def lookup_pml4_slot_def getPML4Index_def bit_simps)
-   apply (simp add:pd_pointer_table_at'_def bit_simps getPDPTIndex_def )
-  subgoal sorry (* word shenanigans **)
+  apply (simp add: lookupPDSlot_def)
+  apply (wp getPDPTE_wp hoare_vcg_all_lift_R hoare_vcg_const_imp_lift_R
+           | wpc
+           | simp add:checkPDAt_def
+           | wp_once hoare_drop_imps)+
+  apply (clarsimp simp:pdBits_def lookup_pd_slot_no_fail_def)
+  apply (subst pd_shifting(2)[simplified])
+   apply (simp add: page_directory_at'_def bit_simps)
   apply simp
   done
 
 lemma lookupPTSlot_page_table_at':
   "\<lbrace>valid_objs'\<rbrace> lookupPTSlot pm vptr
   \<lbrace>\<lambda>rv s. page_table_at' (rv && ~~ mask ptBits) s\<rbrace>,-"
-  sorry
+    apply (simp add: lookupPTSlot_def)
+  apply (wp getPDE_wp hoare_vcg_all_lift_R hoare_vcg_const_imp_lift_R
+           | wpc
+           | simp add:checkPTAt_def
+           | wp_once hoare_drop_imps)+
+  apply (clarsimp simp:ptBits_def lookup_pt_slot_no_fail_def)
+  apply (subst pt_shifting(2)[simplified])
+   apply (simp add: page_table_at'_def bit_simps)
+  apply simp
+  done
 
 lemma findVSpaceForASID_page_map_l4_at':
   shows "\<lbrace>\<top>\<rbrace> findVSpaceForASID asid
     \<lbrace>\<lambda>rv s. page_map_l4_at' (lookup_pml4_slot rv vptr && ~~ mask pml4Bits) s\<rbrace>,-"
   apply (simp add:findVSpaceForASID_def)
-   apply (wp getASID_wp|simp add:checkPDAt_def | wpc)+
-  apply (clarsimp simp:lookup_pml4_slot_def pml4Bits_def)
-  sorry
+   apply (wp getASID_wp|simp add:checkPML4At_def | wpc)+
+  apply (clarsimp simp: lookup_pml4_slot_def pml4Bits_def)
+  apply (subst pml4_shifting'[simplified])
+   apply (simp add: page_map_l4_at'_def bit_simps)
+  apply simp
+  done
 
 lemma decode_page_inv_wf[wp]:
   "cap = (arch_capability.PageCap word vmrights mt vmpage_size d option) \<Longrightarrow>

@@ -1353,6 +1353,14 @@ lemma getPTE_wp:
                      archObjSize_def in_magnitude_check
                      projectKOs in_monad valid_def obj_at'_def objBits_simps)
 
+lemma pdpt_at_lift:
+  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+   (pspace_aligned s \<and> valid_pml4e (X64_A.PDPointerTablePML4E ptr x z) s \<and> (ptrFromPAddr ptr) = ptr') \<longrightarrow>
+    pspace_distinct' s' \<longrightarrow> pd_pointer_table_at' ptr' s'"
+  by (fastforce intro!: pd_pointer_table_at_state_relation)
+
+lemmas checkPDPTAt_corres[corresK] =
+  corres_stateAssert_implied_frame[OF pdpt_at_lift, folded checkPDPTAt_def]
 
 lemma lookup_pdpt_slot_corres:
   "corres (lfr \<oplus> op =)
@@ -1362,15 +1370,21 @@ lemma lookup_pdpt_slot_corres:
           (pspace_aligned' and pspace_distinct')
           (lookup_pdpt_slot pml4 vptr) (lookupPDPTSlot pml4 vptr)"
   apply (simp add: lookup_pdpt_slot_def lookupPDPTSlot_def)
-  apply (rule corres_guard_imp)
   apply (rule corres_initial_splitE
-                 [where Q'="\<lambda>_. pspace_distinct'" and Q="\<lambda>r. pml4e_at (lookup_pml4_slot pml4 vptr)"])
+                 [where Q'="\<lambda>_. pspace_distinct'" and Q="\<lambda>r. valid_pml4e r and pspace_aligned"])
+     apply (rule corres_guard_imp)
        apply (simp, rule get_pml4e_corres')
-      apply (case_tac rv; simp add: lookup_failure_map_def bit_simps
-                             split: X64_H.pml4e.splits)
-      apply (wpsimp wp: getPML4E_wp get_pml4e_wp
-                  simp: obj_at_def lookup_pml4_slot_eq lookup_pml4_slot_kernel_mappings returnOk_liftE
-                        page_map_l4_pml4e_at_lookupI)+
+      apply (simp add: page_map_l4_pml4e_at_lookupI)
+     apply simp
+    apply (case_tac rv; simp add: lookup_failure_map_def lookupPDPTSlotFromPDPT_def
+                           split: X64_H.pml4e.splits)
+    apply (simp add: returnOk_liftE checkPDPTAt_def)
+    apply (rule corres_stateAssert_implied[where P=\<top>, simplified])
+     apply (simp add: word_size_bits_def)
+    apply (rule pd_pointer_table_at_state_relation)
+       apply fastforce
+      apply (wpsimp wp: getPML4E_wp
+                  simp: lookup_pml4_slot_eq lookup_pml4_slot_kernel_mappings)+
   done
 
 crunch aligned'[wp]: lookupPDPTSlot, lookupPDSlot pspace_aligned'
@@ -1378,6 +1392,27 @@ crunch aligned'[wp]: lookupPDPTSlot, lookupPDSlot pspace_aligned'
 
 crunch distict'[wp]: lookupPDPTSlot, lookupPDSlot pspace_distinct'
   (wp: getPML4E_wp getPDPTE_wp hoare_drop_imps ignore: getObject)
+
+lemma pd_at_lift:
+  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+   (pspace_aligned s \<and> valid_pdpte (X64_A.PageDirectoryPDPTE ptr x z) s \<and> (ptrFromPAddr ptr) = ptr') \<longrightarrow>
+    pspace_distinct' s' \<longrightarrow> page_directory_at' ptr' s'"
+  by (fastforce intro!: page_directory_at_state_relation)
+
+lemmas checkPDAt_corres[corresK] =
+  corres_stateAssert_implied_frame[OF pd_at_lift, folded checkPDAt_def]
+
+lemma get_pdpte_valid[wp]:
+  "\<lbrace>valid_arch_objs and \<exists>\<rhd> (x && ~~ mask pdpt_bits)\<rbrace>
+   get_pdpte x
+   \<lbrace>valid_pdpte\<rbrace>"
+  apply (simp add: get_pdpte_def)
+  apply wp
+  apply clarsimp
+  apply (drule (2) valid_arch_objsD)
+  apply simp
+  done
+
 
 lemma lookup_pd_slot_corres:
   "corres (lfr \<oplus> op =)
@@ -1389,9 +1424,40 @@ lemma lookup_pd_slot_corres:
   apply (simp add: lookup_pd_slot_def lookupPDSlot_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE[OF _ lookup_pdpt_slot_corres])
-      apply (rule corres_initial_splitE, simp, rule get_pdpte_corres')
-        apply (case_tac rv; simp add: lookup_failure_map_def bit_simps  split: pdpte.splits)
-        apply (wpsimp wp: get_pdpte_wp getPDPTE_wp simp: returnOk_liftE)+
+      apply (rule corres_splitEE
+      [where R'="\<lambda>_. pspace_distinct'" and R="\<lambda>r. valid_pdpte r and pspace_aligned"])
+         prefer 2
+         apply (simp, rule get_pdpte_corres')
+        apply (case_tac pdpte; simp add: lookup_failure_map_def bit_simps lookupPDSlotFromPD_def
+                                  split: pdpte.splits)
+        apply (simp add: returnOk_liftE checkPDAt_def)
+        apply (rule corres_stateAssert_implied[where P=\<top>, simplified])
+         apply clarsimp
+        apply clarsimp
+        apply (rule page_directory_at_state_relation)
+           apply fastforce
+          apply simp+
+       apply (wpsimp wp: getPDPTE_wp | wp_once hoare_drop_imps)+
+  done
+
+lemma pt_at_lift:
+  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+   (pspace_aligned s \<and> valid_pde (X64_A.PageTablePDE ptr x z) s \<and> (ptrFromPAddr ptr) = ptr') \<longrightarrow>
+    pspace_distinct' s' \<longrightarrow> page_table_at' ptr' s'"
+  by (fastforce intro!: page_table_at_state_relation)
+
+lemmas checkPTAt_corres[corresK] =
+  corres_stateAssert_implied_frame[OF pt_at_lift, folded checkPTAt_def]
+
+lemma get_pde_valid[wp]:
+  "\<lbrace>valid_arch_objs and \<exists>\<rhd> (x && ~~ mask pd_bits)\<rbrace>
+   get_pde x
+   \<lbrace>valid_pde\<rbrace>"
+  apply (simp add: get_pde_def)
+  apply wp
+  apply clarsimp
+  apply (drule (2) valid_arch_objsD)
+  apply simp
   done
 
 lemma lookup_pt_slot_corres:
@@ -1401,12 +1467,23 @@ lemma lookup_pt_slot_corres:
              K (canonical_address vptr \<and> is_aligned pml4 pml4_bits \<and> vptr < pptr_base))
           (pspace_aligned' and pspace_distinct')
           (lookup_pt_slot pml4 vptr) (lookupPTSlot pml4 vptr)"
-  apply (simp add: lookup_pt_slot_def lookupPTSlot_def)
+    apply (simp add: lookup_pt_slot_def lookupPTSlot_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE[OF _ lookup_pd_slot_corres])
-      apply (rule corres_initial_splitE, simp, rule get_pde_corres')
-        apply (case_tac rv; simp_all add: lookup_failure_map_def bit_simps  split: pde.splits)
-        apply (wpsimp wp: get_pde_wp getPDE_wp simp: returnOk_liftE)+
+      apply (rule corres_splitEE
+      [where R'="\<lambda>_. pspace_distinct'" and R="\<lambda>r. valid_pde r and pspace_aligned"])
+         prefer 2
+         apply (simp, rule get_pde_corres')
+        apply (case_tac pde; simp add: lookup_failure_map_def bit_simps lookupPTSlotFromPT_def
+                                  split: pde.splits)
+        apply (simp add: returnOk_liftE checkPTAt_def)
+        apply (rule corres_stateAssert_implied[where P=\<top>, simplified])
+         apply clarsimp
+        apply clarsimp
+        apply (rule page_table_at_state_relation)
+           apply fastforce
+          apply simp+
+       apply (wpsimp wp: getPDE_wp | wp_once hoare_drop_imps)+
   done
 
 declare in_set_zip_refl[simp]
@@ -1757,6 +1834,13 @@ lemma find_vspace_for_asid_corres'':
                        lookup_failure_map_def
                 split: option.split)
       apply clarsimp
+      apply (simp add: returnOk_liftE checkPML4At_def liftE_bindE)
+      apply (rule corres_stateAssert_implied[where P=\<top>, simplified])
+       apply (simp add: )
+      apply clarsimp
+      apply (rule page_map_l4_at_state_relation)
+         apply fastforce
+        apply simp+
      apply (wp getObject_inv loadObject_default_inv | simp)+
    apply clarsimp
    apply (rule context_conjI)
