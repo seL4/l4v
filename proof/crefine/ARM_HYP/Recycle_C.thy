@@ -1135,7 +1135,7 @@ lemma cancelBadgedSends_ccorres:
                      apply clarsimp
                      apply (drule_tac x=p in spec)
                      subgoal by fastforce
-                    apply (rule conjI) prefer 2 subgoal sorry -- "vcpu relation"
+
                     apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
                     apply clarsimp
                     apply (drule(2) map_to_ko_atI2, drule ko_at_state_refs_ofD')
