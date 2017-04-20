@@ -96,7 +96,7 @@ lemma sym_refs_tcb_vcpu':
 
 (* FIXME MOVE *)
 lemma ko_at'_tcb_vcpu_not_NULL:
-  "\<lbrakk> ko_at' (tcb::tcb) t s ; valid_pspace' s ; atcbVCPUPtr (tcbArch tcb) = Some p \<rbrakk>
+  "\<lbrakk> ko_at' (tcb::tcb) t s ; valid_objs' s ; no_0_obj' s ; atcbVCPUPtr (tcbArch tcb) = Some p \<rbrakk>
    \<Longrightarrow> 0 < p"
   -- "when C pointer is NULL, need this to show atcbVCPUPtr is None"
   unfolding valid_pspace'_def
