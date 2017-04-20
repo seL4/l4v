@@ -84,41 +84,6 @@ lemma corresK_lift_rule:
 
 lemmas corresK_drop = corresK_drop_any_guard[where F=True]
 
-definition
-  "corres_choice_true B P \<equiv>
-    B \<longrightarrow> P"
-
-lemma corres_choice_trueD:
-  "corres_choice_true B P \<Longrightarrow> B  \<Longrightarrow> P" by (simp add: corres_choice_true_def)
-
-lemma corres_choice_true_simps[simp]:
-  "corres_choice_true True P = P"
-  "corres_choice_true False P = True"
-  by (simp add: corres_choice_true_def)+
-
-lemma corres_choice_true_True:
-  "P \<Longrightarrow> corres_choice_true True P" by (simp)
-
-definition
-  "corres_choice_false B P \<equiv>
-    (\<not> B) \<longrightarrow> P"
-
-lemma corres_choice_false_simps[simp]:
-  "corres_choice_false False P = P"
-  "corres_choice_false True P = True"
-  by (simp add: corres_choice_false_def)+
-
-lemma corres_choice_falseD:
-  "corres_choice_false B P \<Longrightarrow> \<not> B \<Longrightarrow> P" by (simp add: corres_choice_false_def)
-
-lemma corres_choice_rv[wp]:
-  "\<lbrace>RR\<rbrace> m \<lbrace>\<lambda>rv s. F rv\<rbrace> \<Longrightarrow> corres_choice_true True (\<lbrace>RR\<rbrace> m \<lbrace>\<lambda>rv s. F rv\<rbrace>)"
-  by simp
-
-lemma corres_choice_no_rv[wp]:
-  "corres_choice_true False (\<lbrace>\<lambda>_. True\<rbrace> m \<lbrace>\<lambda>_ _. F\<rbrace>)"
-  by simp
-
 context begin
 
 lemma corresK_start:
@@ -366,70 +331,181 @@ text \<open>
  of the refinement.
  \<close>
 
-definition corres_rv ::"(('s \<times> 't) set) \<Rightarrow>
-                        ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> bool)
-           \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('t, 'b) nondet_monad \<Rightarrow> bool"
+definition "corres_noop = return undefined"
+
+definition corres_rv :: "bool \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> bool)
+           \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('t, 'b) nondet_monad \<Rightarrow>
+            ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> bool"
   where
-  "corres_rv sr r P P' f f' \<equiv>
-   \<forall>(s,s') \<in> sr. P s \<longrightarrow> P' s' \<longrightarrow>
-    (\<forall>sa rv. (rv, sa) \<in> fst (f s) \<longrightarrow> (\<forall>sa' rv'. (rv', sa') \<in> fst (f' s') \<longrightarrow> (sa,sa') \<in> sr \<longrightarrow> r rv rv'))"
+  "corres_rv F r P P' f f' Q \<equiv>
+   F \<longrightarrow> (\<forall>s s'. P s \<longrightarrow> P' s' \<longrightarrow>
+    (\<forall>sa rv. (rv, sa) \<in> fst (f s) \<longrightarrow> (\<forall>sa' rv'. (rv', sa') \<in> fst (f' s') \<longrightarrow> r rv rv' \<longrightarrow> Q rv rv')))"
+
+
+definition "corres_rvE_R F r P P' f f' Q \<equiv>
+  corres_rv F (\<lambda>_ _. True) P P' f f'
+    (\<lambda>rvE rvE'. case (rvE,rvE') of (Inr rv, Inr rv') \<Rightarrow> r rv rv' \<longrightarrow> Q rv rv' | _ \<Rightarrow> True)"
 
 lemma corres_rvD:
-  "corres_rv sr r P P' f f' \<Longrightarrow>
-   (s,s') \<in> sr \<Longrightarrow> P s \<Longrightarrow> P' s' \<Longrightarrow> (rv,sa) \<in> fst (f s) \<Longrightarrow>
-      (rv',sa') \<in> fst (f' s') \<Longrightarrow> (sa,sa') \<in> sr \<Longrightarrow> r rv rv'"
+  "corres_rv F r P P' f f' Q \<Longrightarrow>
+   F \<Longrightarrow> P s \<Longrightarrow> P' s' \<Longrightarrow> (rv,sa) \<in> fst (f s) \<Longrightarrow>
+      (rv',sa') \<in> fst (f' s') \<Longrightarrow> r rv rv' \<Longrightarrow> Q rv rv'"
   by (auto simp add: corres_rv_def)
+
+lemma corres_rvE_RD:
+  "corres_rvE_R F r P P' f f' Q \<Longrightarrow>
+   F \<Longrightarrow> P s \<Longrightarrow> P' s' \<Longrightarrow> (Inr rv,sa) \<in> fst (f s) \<Longrightarrow>
+      (Inr rv',sa') \<in> fst (f' s') \<Longrightarrow> r rv rv' \<Longrightarrow> Q rv rv'"
+  by (auto simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
+
+lemma corres_rv_cong[cong]:
+  "\<lbrakk>F = F'; r = r'; P = P'; PP = PP'; f = f'; g = g'; (\<And>rv rv'. r' rv rv' \<Longrightarrow> Q rv rv' = Q' rv rv')\<rbrakk> \<Longrightarrow>
+      corres_rv F r P PP f g Q = corres_rv F' r' P' PP' f' g' Q'"
+  by (simp add: corres_rv_def)
+
+lemma corres_rvE_R_cong[cong]:
+  "\<lbrakk>F = F'; r = r'; P = P'; PP = PP'; f = f'; g = g'; (\<And>rv rv'. r' rv rv' \<Longrightarrow> Q rv rv' = Q' rv rv')\<rbrakk> \<Longrightarrow>
+      corres_rvE_R F r P PP f g Q = corres_rvE_R F' r' P' PP' f' g' Q'"
+  by (auto simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
 
 (* Working with corres_rv is not immediately intuitive, but most of the time it just goes away.
    Might need more rules if complex goals show up. *)
 
-lemma corres_rv_prove_raw:
-  "(\<And>s s' sa sa' rv rv'. (s,s') \<in> sr \<Longrightarrow> (sa,sa') \<in> sr \<Longrightarrow>
-    (rv,sa) \<in> fst (f s) \<Longrightarrow> (rv',sa') \<in> fst (f' s') \<Longrightarrow> P s \<Longrightarrow> P' s' \<Longrightarrow> r rv rv') \<Longrightarrow>
-    corres_rv sr r P P' f f'"
+lemma corres_rv_prove:
+  "(\<And>s s' sa sa' rv rv'. F \<Longrightarrow>
+    (rv,sa) \<in> fst (f s) \<Longrightarrow> (rv',sa') \<in> fst (f' s') \<Longrightarrow> P s \<Longrightarrow> P' s' \<Longrightarrow> r rv rv' \<Longrightarrow> Q rv rv') \<Longrightarrow>
+    corres_rv F r P P' f f' Q"
   by (auto simp add: corres_rv_def)
+
+lemma corres_rvE_R_prove:
+  "(\<And>s s' sa sa' rv rv'. F \<Longrightarrow>
+    (Inr rv,sa) \<in> fst (f s) \<Longrightarrow> (Inr rv',sa') \<in> fst (f' s') \<Longrightarrow> P s \<Longrightarrow> P' s' \<Longrightarrow> r rv rv' \<Longrightarrow> Q rv rv') \<Longrightarrow>
+    corres_rvE_R F r P P' f f' Q"
+  by (auto simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
 
 lemma corres_rv_wp_left:
-  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>rv'. r rv rv'\<rbrace> \<Longrightarrow> corres_choice_true True (corres_rv sr r P \<top> f f')"
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>rv'. r rv rv' \<longrightarrow> Q rv rv'\<rbrace> \<Longrightarrow> corres_rv True r P \<top> f f' Q"
   by (fastforce simp add: corres_rv_def valid_def)
+
+lemma corres_rvE_R_wp_left:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>rv'. r rv rv' \<longrightarrow> Q rv rv'\<rbrace>, - \<Longrightarrow> corres_rvE_R True r P \<top> f f' Q"
+  apply (simp add: corres_rvE_R_def validE_def validE_R_def)
+  apply (rule corres_rv_wp_left)
+  apply (erule hoare_strengthen_post)
+  apply (auto split: sum.splits)
+  done
 
 lemma corres_rv_wp_right:
-  "\<lbrace>P'\<rbrace> f' \<lbrace>\<lambda>rv' s. \<forall>rv. r rv rv'\<rbrace> \<Longrightarrow> corres_choice_true True (corres_rv sr r \<top> P' f f')"
+  "\<lbrace>P'\<rbrace> f' \<lbrace>\<lambda>rv' s. \<forall>rv. r rv rv' \<longrightarrow> Q rv rv'\<rbrace> \<Longrightarrow> corres_rv True r \<top> P' f f' Q"
   by (fastforce simp add: corres_rv_def valid_def)
 
+lemma corres_rvE_R_wp_right:
+  "\<lbrace>P'\<rbrace> f' \<lbrace>\<lambda>rv' s. \<forall>rv. r rv rv' \<longrightarrow> Q rv rv'\<rbrace>, - \<Longrightarrow> corres_rvE_R True r \<top> P' f f' Q"
+  apply (simp add: corres_rvE_R_def validE_def validE_R_def)
+  apply (rule corres_rv_wp_right)
+  apply (erule hoare_strengthen_post)
+  apply (auto split: sum.splits)
+  done
+
 lemma corres_rv_weaken:
-  "(\<And>rv rv'. r rv rv' \<Longrightarrow> r' rv rv') \<Longrightarrow> corres_rv sr r P P' f f' \<Longrightarrow> corres_rv sr r' P P' f f'"
+  "(\<And>rv rv'. Q rv rv' \<Longrightarrow> Q' rv rv') \<Longrightarrow> corres_rv F r P P' f f' Q \<Longrightarrow> corres_rv F r P P' f f' Q'"
   by (auto simp add: corres_rv_def)
 
-lemma corres_choice_rv_defer_no_args[wp]:
-  "corres_choice_true False (corres_rv sr (\<lambda>_ _. F) (\<lambda>_. True) (\<lambda>_. True) f f')"
-  by simp
+lemma corres_rvE_R_weaken:
+  "(\<And>rv rv'. Q rv rv' \<Longrightarrow> Q' rv rv') \<Longrightarrow> corres_rvE_R F r P P' f f' Q \<Longrightarrow> corres_rvE_R F r P P' f f' Q'"
+  by (auto simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
+
+lemma corres_rv_defer_no_args:
+  "corres_rv (\<forall>rv rv'. r rv rv' \<longrightarrow> F) r (\<lambda>_. True) (\<lambda>_. True) f f' (\<lambda>_ _. F)"
+  by (auto simp add: corres_rv_def)
+
+lemma corres_rvE_R_defer_no_args:
+  "corres_rvE_R (\<forall>rv rv'. r rv rv' \<longrightarrow> F) r (\<lambda>_. True) (\<lambda>_. True) f f' (\<lambda>_ _. F)"
+  by (auto simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
 
 lemma corres_rv_defer:
-  "corres_choice_true False (corres_rv sr F (\<lambda>_. True) (\<lambda>_. True) f f')"
-  by simp
+  "corres_rv (\<forall>rv rv'. r rv rv' \<longrightarrow> Q rv rv') r (\<lambda>_. True) (\<lambda>_. True) f f' Q"
+  by (auto simp add: corres_rv_def)
 
-lemmas corres_rv_prove = corres_rv_prove_raw[THEN corres_choice_true_True]
+lemma corres_rvE_R_defer:
+  "corres_rvE_R (\<forall>rv rv'. r rv rv' \<longrightarrow> Q rv rv') r (\<lambda>_. True) (\<lambda>_. True) f f' Q"
+  by (auto simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
 
 lemmas corres_rv_proveT =
-  corres_rv_prove[where P=\<top> and P'=\<top>, # \<open>simp\<close>]
+  corres_rv_prove[where P=\<top> and P'=\<top> and F=True, # \<open>simp\<close>]
 
 lemmas corres_rv_trivial[intro!, wp] =
-  corres_rv_prove[where r="\<lambda>_ _. True" and P=\<top> and P'=\<top>, OF TrueI]
+  corres_rv_prove[where Q="\<lambda>_ _. True" and P=\<top> and P'=\<top> and F=True, OF TrueI]
+
+lemmas corres_rvE_R_proveT =
+  corres_rvE_R_prove[where P=\<top> and P'=\<top> and F=True, # \<open>simp\<close>]
+
+lemmas corres_rvE_R_trivial[intro!, wp] =
+  corres_rvE_R_prove[where r="\<lambda>_ _. True" and P=\<top> and P'=\<top> and F=True, OF TrueI]
+
+lemma corres_rv_conj_lift:
+  "corres_rv F r P PP f g Q \<Longrightarrow> corres_rv F' r P' PP' f g Q' \<Longrightarrow>
+    corres_rv (F \<and> F') r (\<lambda>s. P s \<and> P' s) (\<lambda>s'. PP s' \<and> PP' s') f g (\<lambda>rv rv'. Q rv rv' \<and> Q' rv rv')"
+   by (clarsimp simp add: corres_rv_def)
+
+lemma corres_rvE_R_conj_lift:
+  "corres_rvE_R F r P PP f g Q \<Longrightarrow> corres_rvE_R F' r P' PP' f g Q' \<Longrightarrow>
+    corres_rvE_R (F \<and> F') r (\<lambda>s. P s \<and> P' s) (\<lambda>s'. PP s' \<and> PP' s') f g (\<lambda>rv rv'. Q rv rv' \<and> Q' rv rv')"
+   by (auto simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
+
+context begin
+
+private lemma corres_rv_defer_left:
+  "corres_rv F r (\<lambda>_. \<forall>rv rv'. Q rv rv') P' f f' Q"
+  by (simp add: corres_rv_def)
+
+private lemma corres_rvE_R_defer_left:
+  "corres_rvE_R F r (\<lambda>_. \<forall>rv rv'. Q rv rv') P' f f' Q"
+  by (simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
+
+private lemma corres_rv_defer_right:
+  "corres_rv F r P (\<lambda>_. \<forall>rv rv'. Q rv rv') f f' Q"
+  by (simp add: corres_rv_def)
+
+private lemma corres_rvE_R_defer_right:
+  "corres_rvE_R F r P (\<lambda>_. \<forall>rv rv'. Q rv rv') f f' Q"
+  by (simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
+
+lemmas corres_noop_wp_left[where f'=corres_noop] = corres_rv_wp_left corres_rvE_R_wp_left
+lemmas corres_noop_wp_right[where f=corres_noop] = corres_rv_wp_right corres_rvE_R_wp_right
+
+named_theorems corres_rv_defers
+
+lemmas [corres_rv_defers] =
+  corres_rv_defer_no_args corres_rvE_R_defer_no_args
+
+named_theorems corres_rv_lifts
+
+lemmas [corres_rv_lifts] =
+  corres_rv_conj_lift corres_rvE_R_conj_lift
+
+method corres_rv declares corres_rv_defers =
+  ((rule corres_rv_defers corres_noop_wp_left corres_noop_wp_right |
+   (succeeds \<open>rule corres_rv_defer_left corres_rvE_R_defer_left\<close>,
+    rule corres_rv_wp_left corres_rvE_R_wp_left) |
+   (succeeds \<open>rule corres_rv_defer_right corres_rvE_R_defer_right\<close>,
+    rule corres_rv_wp_right corres_rvE_R_wp_right) |
+    rule corres_rv_lifts)+)[1]
+
+end
 
 lemma corresK_split:
   assumes x: "corres_underlyingK sr nf nf' F r' P P' a c"
   assumes y: "\<And>rv rv'. corres_protect (r' rv rv') \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') r (R rv) (R' rv') (b rv) (d rv')"
+  assumes c: "corres_rv F'' r' PP PP' a c F'"
   assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
-  assumes c: "corres_choice_true B (corres_rv sr (\<lambda>rv rv'. r' rv rv' \<longrightarrow> F' rv rv') PP PP' a c)"
-  shows      "corres_underlyingK sr nf nf' (F \<and> (corres_choice_false B (\<forall>rv rv'. r' rv rv' \<longrightarrow> F' rv rv'))) r (PP and P and Q) (PP' and P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
+  shows      "corres_underlyingK sr nf nf' (F \<and> F'') r (PP and P and Q) (PP' and P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
   apply (clarsimp simp: corres_underlying_def corres_underlyingK_def bind_def)
   apply (rule conjI)
    apply (frule (3) x[simplified corres_underlyingK_def, rule_format, THEN corres_underlyingD],simp)
    apply clarsimp
    apply (drule(1) bspec,clarsimp)
-   apply (insert c;simp?)
-   apply (subgoal_tac "F' ac aaa")
+   apply (drule (5) corres_rvD[OF c])
    apply (rule_tac x="(ac,bc)" in bexI,clarsimp)
     apply (frule_tac s'=baa in y[simplified corres_underlyingK_def corres_protect_def, rule_format, THEN corres_underlyingD])
           apply assumption+
@@ -439,30 +515,16 @@ lemma corresK_split:
     apply clarsimp
     apply (drule(1) bspec,clarsimp)
    apply simp
-  apply (cases B)
-    apply (drule(1) corres_choice_trueD)
-       apply (drule(6) corres_rvD)
-    apply clarsimp
-    apply (drule(1) corres_choice_falseD)
-    apply clarsimp
-  apply clarsimp
   apply (frule (3) x[simplified corres_underlyingK_def, rule_format, THEN corres_underlyingD],simp)
   apply clarsimp
   apply (drule(1) bspec,clarsimp)
-  apply (insert c;simp?)
-  apply (subgoal_tac "F' ab aaa")
+  apply (drule (5) corres_rvD[OF c])
   apply (frule_tac s'=baa in y[simplified corres_underlyingK_def corres_protect_def, rule_format, THEN corres_underlyingD])
         apply simp+
      apply (erule(1) use_valid[OF _ z(1)])
     apply (erule(1) use_valid[OF _ z(2)])
    apply fastforce
   apply clarsimp
-      apply (cases B)
-    apply (drule(1) corres_choice_trueD)
-       apply (drule(6) corres_rvD)
-    apply clarsimp
-    apply (drule(1) corres_choice_falseD)
-    apply clarsimp
   done
 
 section \<open>Corres_inst\<close>
@@ -474,20 +536,15 @@ text \<open>Handles rare in-place subgoals generated by corres rules which need 
 
 definition "corres_inst_eq x y \<equiv> x = y"
 
-lemma corres_inst_eqI: "corres_inst_eq x x" by (simp add: corres_inst_eq_def)
+lemma corres_inst_eqI[wp]: "corres_inst_eq x x" by (simp add: corres_inst_eq_def)
 
 lemma corres_inst_test: "False \<Longrightarrow> corres_inst_eq x y" by simp
-
-named_theorems corres_inst_simp
 
 method corres_inst =
   (succeeds \<open>rule corres_inst_test\<close>, fails \<open>rule TrueI\<close>,
     (rule corres_inst_eqI |
       (clarsimp simp: corres_protect_def, rule corres_inst_eqI)
-     | (clarsimp simp: corres_protect_def corres_inst_simp, fastforce intro!: corres_inst_eqI)))[1]
-
-lemmas [corres_inst_simp] =
-  o_def inv_def
+     | (clarsimp simp: corres_protect_def, fastforce intro!: corres_inst_eqI)))[1]
 
 section \<open>Corres Method\<close>
 
@@ -540,7 +597,7 @@ private method corres_apply =
      #break "corres_apply",
    ((focus_concl \<open>(atomize (full))?\<close>, erule guard_collect, rule has_guard) | rule no_guard))[1]
 
-private method corres_alternate = corres_inst
+private method corres_alternate = corres_inst | corres_rv
 
 method corres_once declares corres_splits corres corresK corresc_simp =
    (corres_alternate |
@@ -645,40 +702,21 @@ lemma corresK_symb_exec_l_search[corres_symb_exec_ls]:
   fixes x :: "'b \<Rightarrow> 'a \<Rightarrow> ('d \<times> 'a) set \<times> bool"
   shows
   "\<lbrakk>\<And>s. \<lbrace>PP s\<rbrace> m \<lbrace>\<lambda>_. op = s\<rbrace>; \<And>rv. corres_underlyingK sr nf True (F rv) r (Q rv) P' (x rv) y;
-   empty_fail m; no_fail P m; \<lbrace>R\<rbrace> m \<lbrace>Q\<rbrace>; corres_choice_true B (\<lbrace>RR\<rbrace> m \<lbrace>\<lambda>rv s. F rv\<rbrace>)\<rbrakk>
-\<Longrightarrow> corres_underlyingK sr nf True (corres_choice_false B (\<forall>rv. F rv)) r (RR and P and R and (\<lambda>s. \<forall>s'. s = s' \<longrightarrow> PP s' s)) P' (m >>= x) y"
+   empty_fail m; no_fail P m; \<lbrace>R\<rbrace> m \<lbrace>Q\<rbrace>; corres_rv F' dc RR (\<lambda>_. True) m (corres_noop) (\<lambda>rv _. F rv)\<rbrakk>
+\<Longrightarrow> corres_underlyingK sr nf True F' r (RR and P and R and (\<lambda>s. \<forall>s'. s = s' \<longrightarrow> PP s' s)) P' (m >>= x) y"
   apply (clarsimp simp add: corres_underlyingK_def)
   apply (rule corres_name_pre)
-  apply (clarsimp simp: corres_underlying_def corres_underlyingK_def corres_choice_true_def
-                        corres_choice_false_def
+  apply (clarsimp simp: corres_underlying_def corres_underlyingK_def corres_noop_def
                         bind_def valid_def empty_fail_def no_fail_def)
-  apply (cases B; simp)
   apply (drule_tac x=a in meta_spec)+
   apply (drule_tac x=a in spec)+
   apply (drule mp, assumption)+
-
   apply (clarsimp simp: not_empty_eq)
+  apply (drule corres_rvD; (assumption | simp add: return_def)?)
   apply (drule_tac x="(aa,ba)" in bspec,simp)+
   apply clarsimp
   apply (drule_tac x=aa in meta_spec)
   apply clarsimp
-  apply (drule_tac x="(ba,b)" in bspec,simp)
-  apply clarsimp
-  apply (drule mp, fastforce)
-  apply clarsimp
-  apply (drule_tac x="(a,bb)" in bspec,simp)
-  apply clarsimp
-  apply (rule_tac x="(aa,ba)" in bexI)
-   apply (clarsimp)
-   apply (rule_tac x="(ab,bc)" in bexI)
-    apply (clarsimp)+
-   apply (drule_tac x=a in meta_spec)+
-  apply (drule_tac x=a in spec)+
-  apply (drule mp, assumption)+
-  apply (clarsimp simp: not_empty_eq)
-  apply (drule_tac x="(aa,ba)" in bspec,simp)+
-  apply clarsimp
-  apply (drule_tac x=aa in meta_spec)
   apply (drule_tac x="(ba,b)" in bspec,simp)
   apply clarsimp
   apply (drule mp, fastforce)
@@ -701,9 +739,10 @@ lemma corresK_symb_exec_r_search[corres_symb_exec_rs]:
   assumes corres: "\<And>rv. corres_underlyingK sr nf nf' (F rv) r P (Q' rv) x (y rv)"
   assumes nf: "nf' \<Longrightarrow> no_fail P' m"
   assumes Z: "\<lbrace>R\<rbrace> m \<lbrace>Q'\<rbrace>"
-  assumes Y: "corres_choice_true B (\<lbrace>RR\<rbrace> m \<lbrace>\<lambda>rv s. F rv\<rbrace>)"
+  assumes Y: "corres_rv F' dc (\<lambda>_. True) RR (corres_noop) m (\<lambda>_ rv'. F rv')"
+  notes corres_noop_def[simp]
   shows
-  "corres_underlyingK sr nf nf' (corres_choice_false B (\<forall>rv. F rv)) r P (RR and P' and R and (\<lambda>s. \<forall>s'. s = s' \<longrightarrow> PP' s' s)) x (m >>= y)"
+  "corres_underlyingK sr nf nf' F' r P (RR and P' and R and (\<lambda>s. \<forall>s'. s = s' \<longrightarrow> PP' s' s)) x (m >>= y)"
   apply (insert corres)
   apply (simp add: corres_underlyingK_def)
   apply (rule impI)
@@ -711,20 +750,11 @@ lemma corresK_symb_exec_r_search[corres_symb_exec_rs]:
   apply (clarsimp simp: corres_underlying_def corres_underlyingK_def
                         bind_def valid_def empty_fail_def no_fail_def)
   apply (intro impI conjI ballI)
-  apply clarsimp
+    apply clarsimp
     apply (frule(1) use_valid[OF _ X])
-
+    apply (drule corres_rvD[OF Y]; (assumption | simp add: return_def)?)
     apply (frule(1) use_valid[OF _ Z])
-    apply simp
     apply (drule_tac x=aa in meta_spec)
-      apply (cases B)
-       apply (frule(2) use_valid[OF _ Y[THEN corres_choice_trueD]])
-    apply clarsimp
-    apply (drule_tac x="(a, ba)" in bspec,simp)
-    apply (clarsimp)
-    apply (drule(1) bspec)
-    apply clarsimp
-      apply (drule (1) corres_choice_falseD)
     apply clarsimp
     apply (drule_tac x="(a, ba)" in bspec,simp)
     apply (clarsimp)
@@ -732,12 +762,9 @@ lemma corresK_symb_exec_r_search[corres_symb_exec_rs]:
     apply clarsimp
    apply clarsimp
    apply (frule(1) use_valid[OF _ X])
-       apply (frule(1) use_valid[OF _ Z])
-     apply (cases B)
-   apply (frule(2) use_valid[OF _ Y[THEN corres_choice_trueD]])
+   apply (drule corres_rvD[OF Y]; (assumption | simp add: return_def)?)
+   apply (frule(1) use_valid[OF _ Z])
    apply fastforce
-    apply (drule (1) corres_choice_falseD)
-    apply fastforce
   apply (rule no_failD[OF nf],simp+)
   done
 
@@ -799,7 +826,7 @@ lemma corres_stateAssert_implied_frame:
   "corres_underlyingK sr nf nf' (F \<and> F') r (P and P') (Q and Q') f (stateAssert A [] >>= g)"
   apply (clarsimp simp: bind_assoc stateAssert_def)
   apply (corres_search search: C[THEN corresK_unlift])
-  apply (wp | simp add: A)+
+  apply (wp corres_rv_defer | simp add: A)+
   done
 
 lemma corresK_return [corres_concrete_r]:
@@ -866,23 +893,21 @@ lemmas [THEN iffD2, atomized, THEN corresK_lift_rule, rule_format, corresK] =
   corres_liftM2_simp
   corres_liftM_simp
 
-lemma corres_splitEE_str [corres_splits]:
+lemma corresK_splitE [corres_splits]:
   assumes x: "corres_underlyingK sr nf nf' F (f \<oplus> r') P P' a c"
   assumes y: "\<And>rv rv'. corres_protect (r' rv rv') \<Longrightarrow> corres_underlyingK sr nf nf' (F' rv rv') (f \<oplus> r) (R rv) (R' rv') (b rv) (d rv')"
-  assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>"
-  assumes c: "corres_choice_true B (corres_rv sr (\<lambda>(rv :: 'c + 'd) (rv' :: 'e + 'f). (case (rv,rv') of (Inr rva, Inr rva') \<Rightarrow> r' rva rva' \<longrightarrow> F' rva rva' | _ \<Rightarrow> True)) PP PP' a c)"
-  shows      "corres_underlyingK sr nf nf' (F \<and> corres_choice_false B (\<forall>(rv :: 'c + 'd) (rv' :: 'e + 'f). (case (rv,rv') of (Inr rva, Inr rva') \<Rightarrow> r' rva rva' \<longrightarrow> F' rva rva' | _ \<Rightarrow> True))) (f \<oplus> r) (PP and P and Q) (PP' and P' and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E (\<lambda>rv'. d rv'))"
+  assumes c: "corres_rvE_R F'' r' PP PP' a c F'"
+  assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>, -" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>, -"
+  shows      "corres_underlyingK sr nf nf' (F \<and> F'') (f \<oplus> r) (PP and P and Q) (PP' and P' and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E (\<lambda>rv'. d rv'))"
   unfolding bindE_def
   apply (rule corresK_weakenK)
-  apply (rule corresK_split[OF x, where F'="\<lambda>rv rv'. case (rv,rv') of (Inr rva, Inr rva') \<Rightarrow> F' rva rva' | _ \<Rightarrow> True" and B=B])
+  apply (rule corresK_split[OF x, where F'="\<lambda>rv rv'. case (rv,rv') of (Inr rva, Inr rva') \<Rightarrow> F' rva rva' | _ \<Rightarrow> True"])
   apply (simp add: corres_protect_def)
-    prefer 4
-    apply (cases B)
+    prefer 2
     apply simp
-    apply (rule corres_rv_weaken[OF _ c[THEN corres_choice_trueD]])
+    apply (rule corres_rv_prove[where F=F''])
     apply (case_tac rv; case_tac rv'; simp)
-    apply simp
-    apply simp
+    apply (rule corres_rvE_RD[OF c]; assumption)
     apply (case_tac rv; case_tac rv'; simp)
      apply (simp add: corres_underlyingK_def corres_protect_def)
     apply (rule corresK_weaken)
@@ -897,7 +922,7 @@ lemma corres_splitEE_str [corres_splits]:
                         | _ \<Rightarrow> True)"; assumption?)
       apply clarsimp+
    apply (insert z)
-  by ((fastforce simp: valid_def validE_def split: sum.splits)+)
+  by ((fastforce simp: valid_def validE_def validE_R_def split: sum.splits)+)
 
 lemma corresK_returnOk [corres_concrete_r]:
   "corres_underlyingK sr nf nf' (r (Inr a) (Inr b)) r \<top> \<top> (returnOk a) (returnOk b)"
@@ -928,6 +953,8 @@ lemma corresK_fail_no_fail'[corresK]:
   by (fastforce intro!: corres_fail)
 
 
+
+
 (* Wrap it up in a big hammer. Small optimization to avoid searching when no fact is given. *)
 
 named_theorems correswp_wp_comb and correswp_wp_comb_del
@@ -937,26 +964,16 @@ lemma corres_inst_eq_imp:
 
 lemmas corres_hoare_pre = hoare_pre[# \<open>-\<close> \<open>atomize (full), rule allI, rule corres_inst_eq_imp\<close>]
 
-named_theorems correswp
-
-lemmas [correswp] =
-  corres_choice_rv_defer_no_args
-
-method correswp_once uses wp =
+method correswp uses wp =
   (determ \<open>
-     corres_inst
-   | (fails \<open>schematic_hoare_pre\<close>, (wp_once add: correswp wp))
+     (fails \<open>schematic_hoare_pre\<close>, (wp add: wp))
    | (schematic_hoare_pre,
         (use correswp_wp_comb [wp_comb]
              correswp_wp_comb_del[wp_comb del]
              hoare_pre[wp_pre del]
              corres_hoare_pre[wp_pre]
         in
-      \<open>use in \<open>wp_once add: correswp wp\<close>\<close>))\<close>;
-    (fails \<open>rule TrueI\<close>, rule corres_inst_eqI)?)
-
-method correswp uses wp =
-  ((correswp_once wp: wp)+)[1]
+      \<open>use in \<open>wp add: wp\<close>\<close>))\<close>)
 
 lemmas [correswp_wp_comb_del] =
   hoare_vcg_precond_imp
@@ -965,16 +982,24 @@ lemmas [correswp_wp_comb_del] =
   hoare_wp_state_combsE(1)
   hoare_wp_state_combsE(2)
 
-lemmas [correswp_wp_comb] =
-  correswp_wp_comb_del[# \<open>-\<close> \<open>atomize (full), rule allI, rule corres_inst_eq_imp\<close>]
-
-declare hoare_post_comb_imp_conj[correswp_wp_comb_del]
-
 lemma corres_inst_conj_lift[correswp_wp_comb]:
   "\<lbrakk>\<lbrace>R\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>; \<And>s. corres_inst_eq (R s) (P s)\<rbrakk> \<Longrightarrow>
        \<lbrace>\<lambda>s. P s \<and> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>"
   by (rule hoare_vcg_conj_lift; simp add: valid_def corres_inst_eq_def)
 
+lemmas [correswp_wp_comb] =
+  correswp_wp_comb_del[# \<open>-\<close> \<open>atomize (full), rule allI, rule corres_inst_eq_imp\<close>]
+  valid_validE_R
+  hoare_vcg_R_conj[OF valid_validE_R]
+  hoare_vcg_E_elim[OF valid_validE_E]
+  hoare_vcg_E_conj[OF valid_validE_E]
+  validE_validE_R
+  hoare_vcg_R_conj
+  hoare_vcg_E_elim
+  hoare_vcg_E_conj
+  hoare_vcg_conj_lift
+
+declare hoare_post_comb_imp_conj[correswp_wp_comb_del]
 
 method corressimp uses simp cong search wp
   declares corres corresK corres_splits corresc_simp =
@@ -1064,14 +1089,17 @@ experiment
   begin
 
   lemmas f_Q' = f_corres[atomized, @\<open>use_corres frame: frameA\<close>]
+
   lemma "G \<Longrightarrow> F \<Longrightarrow> corres_underlying sr False True dc (P and PP) (P' and PP')
     (g >>= (K (f >>= K (assert True)))) (g' >>= (K (f' >>= (\<lambda>rv'. (stateAssert (QQ' rv') [])))))"
   apply (simp only: stateAssert_def K_def)
   apply corres
   apply (corres_search search: corresK_assert)
+  apply (correswp)+
+  apply corres_rv
   apply (correswp wp: f_Q' | simp)+
   apply corres
-  apply (wp | simp)+
+  apply (correswp | simp)+
   by auto
 
 end

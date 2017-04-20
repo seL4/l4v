@@ -89,7 +89,7 @@ functions will establish @{term F'} after executing.
 
 It turns out that in most cases (certainly those from existing corres proofs), the @{const corres_rv}
 obligations will simply be solved in-place and reduce to
-  @{term "corres_rv sr (\<lambda>_ _. True) (\<lambda>_. True) (\<lambda>_. True) f f'"} through simplification, or proved
+  @{term "corres_rv True r (\<lambda>_. True) (\<lambda>_. True) f f' (\<lambda>_ _. True)"} through simplification, or proved
  directly with @{thm corres_rv_proveT}.
 \<close>
 thm corres_rv_proveT[no_vars]
@@ -287,13 +287,17 @@ lemma delete_asid_corresb:
                       continue (* gct_corres *)
                      continue (* set_vm_root_corres *)
                     finish (* backtracking? *)
-                    apply (correswp wp: corres_rv_wp_right
+                    apply (corressimp
       | simp add: mask_asid_low_bits_ucast_ucast
       | fold cur_tcb_def | wps)+
   apply (frule arm_asid_table_related,clarsimp)
   apply (rule conjI)
    apply (intro impI allI)
-   apply (rule context_conjI)
+    apply (rule conjI)
+     apply (safe; assumption?)
+     apply (rule ext)
+     apply (fastforce simp: inv_def dest: ucast_ucast_eq)
+    apply (rule context_conjI)
     apply (fastforce simp: o_def dest: valid_asid_tableD invs_valid_asid_table)
    apply (intro allI impI)
    apply (subgoal_tac "vspace_at_asid asid pd s")
@@ -312,8 +316,6 @@ lemma delete_asid_corresb:
     apply (simp add: mask_asid_low_bits_ucast_ucast)
    prefer 2
    apply (safe; assumption?)
-         apply (rule ext)
-     apply (fastforce simp: inv_def dest: ucast_ucast_eq)
     apply (rule aligned_distinct_relation_asid_pool_atI'; fastforce?)
     apply (fastforce simp: o_def dest: valid_asid_tableD invs_valid_asid_table)
     apply (simp add: cur_tcb'_def)
@@ -359,7 +361,7 @@ lemma set_vm_root_for_flush_corres:
     continue (* can't make corres progress here, trying other goal *)
     finish (* successful goal discharged by corres *)
 
-  apply (corressimp wp: get_cap_wp getSlotCap_wp corres_rv_wp_left)+
+  apply (corressimp wp: get_cap_wp getSlotCap_wp)+
   apply (rule context_conjI)
   subgoal by (simp add: cte_map_def objBits_simps tcb_cnode_index_def
                         tcbVTableSlot_def to_bl_1 cte_level_bits_def)
@@ -394,7 +396,7 @@ lemma set_vm_root_for_flush_corres':
           (setVMRootForFlush pd asid)"
   apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
   apply (corressimp search: arm_context_switch_corres
-                        wp: get_cap_wp getSlotCap_wp corres_rv_wp_left
+                        wp: get_cap_wp getSlotCap_wp
                       simp: isCap_simps)
   apply (rule context_conjI)
   subgoal by (simp add: cte_map_def objBits_simps tcb_cnode_index_def

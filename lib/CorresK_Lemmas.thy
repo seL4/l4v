@@ -43,8 +43,8 @@ lemma mapME_x_corresK_inv:
     show ?case
       apply (simp add: mapME_x_def sequenceE_x_def)
       apply (fold mapME_x_def sequenceE_x_def dc_def)
-      apply (corressimp corresK: x IH wp: y corres_rv_defer)
-      by (auto split: sum.splits)
+      apply (corressimp corresK: x IH wp: y)
+      done
   qed
   done
 
@@ -77,8 +77,7 @@ next
     apply (corressimp corresK: z Q wp: P simp: corres_protect_def)
       apply (rule corres_rv_proveT)
       apply (fastforce simp: prems)
-      apply (wp w | rule P)+
-      apply (rule corres_rv_defer)
+      apply (corressimp wp: w | rule P | rule hoare_drop_imps)+
       apply (insert prems Cons)
       apply (auto)
     done
