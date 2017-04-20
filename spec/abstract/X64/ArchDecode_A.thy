@@ -118,19 +118,18 @@ definition
 where
   "ensure_port_operation_allowed cap start_port sz \<equiv> case cap of
     IOPortCap first_allowed last_allowed \<Rightarrow> doE
-      end_port \<leftarrow> returnOk $ start_port + of_nat (sz - 1);
+      end_port \<leftarrow> returnOk $ start_port + of_nat sz - 1;
       assertE (first_allowed \<le> last_allowed);
-      assertE (start_port \<le> end_port);
+      whenE (start_port > end_port) $ throwError IllegalOperation;
       whenE ((start_port < first_allowed) \<or> (end_port > last_allowed)) $ throwError IllegalOperation
     odE
   | _ \<Rightarrow> fail"
 
 definition
   decode_port_invocation ::
-    "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
-     (arch_invocation,'z::state_ext) se_monad"
+    "data \<Rightarrow> data list \<Rightarrow> arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where
-  "decode_port_invocation label args x_slot cte cap extra_caps \<equiv> case (invocation_type label) of
+  "decode_port_invocation label args cap \<equiv> case (invocation_type label) of
     (ArchInvocationLabel X64IOPortIn8) \<Rightarrow> doE
       args_at_least 1 args;
       port \<leftarrow> returnOk $ ucast $ args ! 0;
@@ -159,14 +158,14 @@ where
   | (ArchInvocationLabel X64IOPortOut16) \<Rightarrow> doE
       args_at_least 2 args;
       port \<leftarrow> returnOk $ ucast $ args ! 0;
-      ensure_port_operation_allowed cap port 1;
+      ensure_port_operation_allowed cap port 2;
       output_data \<leftarrow> returnOk $ ucast $ args ! 1;
       returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortOut16 output_data
     odE
   | (ArchInvocationLabel X64IOPortOut32) \<Rightarrow> doE
       args_at_least 2 args;
       port \<leftarrow> returnOk $ ucast $ args ! 0;
-      ensure_port_operation_allowed cap port 1;
+      ensure_port_operation_allowed cap port 4;
       output_data \<leftarrow> returnOk $ ucast $ args ! 1;
       returnOk $ InvokeIOPort $ IOPortInvocation port $ IOPortOut32 output_data
       odE
@@ -336,10 +335,10 @@ where
                                   ArchObjectCap (PML4Cap pm (Some asid)) \<Rightarrow>
                                         returnOk (pm, asid)
                                 | _ \<Rightarrow> throwError $ InvalidCapability 1);
-             vspace' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
              (asid',vaddr) \<leftarrow> (case mapped_address of
                                   Some a \<Rightarrow> returnOk a
                                 | _ \<Rightarrow> throwError $ InvalidCapability 0);
+             vspace' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
              whenE (vspace' \<noteq> vspace \<or> asid \<noteq> asid') $ throwError $ InvalidCapability 1;
              vm_rights \<leftarrow> returnOk $ mask_vm_rights R $ data_to_rights rights_mask;
              check_vp_alignment pgsz vaddr;
@@ -366,45 +365,51 @@ where
   "filter_frame_attrs attrs \<equiv> {s. \<exists>s' \<in> attrs. s' = PTAttr s}"
 
 definition
-  arch_decode_invocation :: 
-  "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> 
-   (arch_invocation,'z::state_ext) se_monad"
+  decode_page_table_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow>
+                                  (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where
-  "arch_decode_invocation label args x_slot cte cap extra_caps \<equiv> case cap of
-    PDPointerTableCap p mapped_address \<Rightarrow>
-      if invocation_type label = ArchInvocationLabel X64PDPTMap then
+  "decode_page_table_invocation label args cte cap extra_caps \<equiv> (case cap of
+    PageTableCap p mapped_address \<Rightarrow>
+      if invocation_type label = ArchInvocationLabel X64PageTableMap then
       if length args > 1 \<and> length extra_caps > 0
-      then let vaddr = args ! 0 && user_vtop;
+      then let vaddr = args ! 0;
                attr = args ! 1;
                pml4_cap = fst (extra_caps ! 0)
       in doE
                whenE (mapped_address \<noteq> None) $ throwError $ InvalidCapability 0;
-               vaddr' \<leftarrow> returnOk $ vaddr && ~~ mask pml4_shift_bits;
-               (pml4 ,asid) \<leftarrow> (case pml4_cap of
-                       ArchObjectCap (PML4Cap pml4 (Some asid)) \<Rightarrow> returnOk (pml4, asid)
-                       | _ \<Rightarrow> throwError $ InvalidCapability 0);
-               pml4' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid (asid);
-               whenE (pml4' \<noteq> pml4) $ throwError $ InvalidCapability 0;
-               pml_slot \<leftarrow> returnOk $ lookup_pml4_slot pml4 vaddr;
-               old_pml4e \<leftarrow> liftE $ get_pml4e pml_slot;
-               unlessE (old_pml4e = InvalidPML4E) $ throwError DeleteFirst; 
-               pml4e \<leftarrow> returnOk (PDPointerTablePML4E (addrFromPPtr p) 
-                          (filter_frame_attrs $ attribs_from_word attr) vm_read_write);
-               cap' <- returnOk $ ArchObjectCap $ PDPointerTableCap p $ Some (asid, vaddr');
-               returnOk $ InvokePDPT $ PDPTMap cap' cte pml4e pml_slot pml4
+               vaddr' \<leftarrow> returnOk $ vaddr && ~~ mask pd_shift_bits;
+               (pml4, asid) \<leftarrow> (case pml4_cap of
+                   ArchObjectCap (PML4Cap pml4 (Some asid)) \<Rightarrow> returnOk (pml4, asid)
+                   | _ \<Rightarrow> throwError $ InvalidCapability 1);
+               whenE (user_vtop < vaddr') $ throwError $ InvalidArgument 0;
+               pml4' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
+               whenE (pml4' \<noteq> pml4) $ throwError $ InvalidCapability 1;
+               pd_slot \<leftarrow> lookup_error_on_failure False $ lookup_pd_slot pml4 vaddr';
+               old_pde \<leftarrow> liftE $ get_pde pd_slot;
+               unlessE (old_pde = InvalidPDE) $ throwError DeleteFirst;
+               pde \<leftarrow> returnOk (PageTablePDE (addrFromPPtr p)
+                                  (filter_frame_attrs $ attribs_from_word attr) vm_read_write);
+               cap' <- returnOk $ ArchObjectCap $ PageTableCap p $ Some (asid, vaddr');
+               returnOk $ InvokePageTable $ PageTableMap cap' cte pde pd_slot pml4
             odE
       else throwError TruncatedMessage
-      else if invocation_type label = ArchInvocationLabel X64PDPTUnmap then doE
+      else if invocation_type label = ArchInvocationLabel X64PageTableUnmap then doE
                final \<leftarrow> liftE $ is_final_cap (ArchObjectCap cap);
                unlessE final $ throwError RevokeFirst;
-               returnOk $ InvokePDPT $ PDPTUnmap (ArchObjectCap cap) cte
-         odE
+               returnOk $ InvokePageTable $ PageTableUnmap (ArchObjectCap cap) cte
+        odE
       else throwError IllegalOperation
+  | _ \<Rightarrow> fail)"
 
-  | PageDirectoryCap p mapped_address \<Rightarrow>
+definition
+  decode_page_directory_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow>
+                                      (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
+where
+  "decode_page_directory_invocation label args cte cap extra_caps \<equiv> (case cap of
+    PageDirectoryCap p mapped_address \<Rightarrow>
       if invocation_type label = ArchInvocationLabel X64PageDirectoryMap then
       if length args > 1 \<and> length extra_caps > 0
-      then let vaddr = args ! 0 && user_vtop;
+      then let vaddr = args ! 0;
                attr = args ! 1;
                pml4_cap = fst (extra_caps ! 0)
       in doE
@@ -412,10 +417,11 @@ where
                vaddr' \<leftarrow> returnOk $ vaddr && ~~ mask pdpt_shift_bits;
                (pml4, asid) \<leftarrow> (case pml4_cap of
                        ArchObjectCap (PML4Cap pml4 (Some asid)) \<Rightarrow> returnOk (pml4, asid)
-                       | _ \<Rightarrow> throwError $ InvalidCapability 0);
+                       | _ \<Rightarrow> throwError $ InvalidCapability 1);
+               whenE (user_vtop < vaddr') $ throwError $ InvalidArgument 0;
                pml4' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
-               whenE (pml4' \<noteq> pml4) $ throwError $ InvalidCapability 0;
-               pdpt_slot \<leftarrow> lookup_error_on_failure False $ lookup_pdpt_slot pml4 vaddr;
+               whenE (pml4' \<noteq> pml4) $ throwError $ InvalidCapability 1;
+               pdpt_slot \<leftarrow> lookup_error_on_failure False $ lookup_pdpt_slot pml4 vaddr';
                old_pdpte \<leftarrow> liftE $ get_pdpte pdpt_slot;
                unlessE (old_pdpte = InvalidPDPTE) $ throwError DeleteFirst; 
                pdpte \<leftarrow> returnOk (PageDirectoryPDPTE (addrFromPPtr p) 
@@ -430,39 +436,55 @@ where
                returnOk $ InvokePageDirectory $ PageDirectoryUnmap (ArchObjectCap cap) cte
             odE
       else throwError IllegalOperation 
+  | _ \<Rightarrow> fail)"
 
-  | PageTableCap p mapped_address \<Rightarrow>
-      if invocation_type label = ArchInvocationLabel X64PageTableMap then
+definition
+  decode_pdpt_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow>
+                                      (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
+where
+  "decode_pdpt_invocation label args cte cap extra_caps \<equiv> (case cap of
+    PDPointerTableCap p mapped_address \<Rightarrow>
+      if invocation_type label = ArchInvocationLabel X64PDPTMap then
       if length args > 1 \<and> length extra_caps > 0
-      then let vaddr = args ! 0 && user_vtop;
+      then let vaddr = args ! 0;
                attr = args ! 1;
                pml4_cap = fst (extra_caps ! 0)
       in doE
                whenE (mapped_address \<noteq> None) $ throwError $ InvalidCapability 0;
-               vaddr' \<leftarrow> returnOk $ vaddr && ~~ mask pd_shift_bits;
-               (pml4, asid) \<leftarrow> (case pml4_cap of
-                   ArchObjectCap (PML4Cap pml4 (Some asid)) \<Rightarrow> returnOk (pml4, asid)
-                   | _ \<Rightarrow> throwError $ InvalidCapability 0);
-               pml4' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
+               vaddr' \<leftarrow> returnOk $ vaddr && ~~ mask pml4_shift_bits;
+               (pml4 ,asid) \<leftarrow> (case pml4_cap of
+                       ArchObjectCap (PML4Cap pml4 (Some asid)) \<Rightarrow> returnOk (pml4, asid)
+                       | _ \<Rightarrow> throwError $ InvalidCapability 1);
+               whenE (user_vtop < vaddr') $ throwError $ InvalidArgument 0;
+               pml4' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid (asid);
                whenE (pml4' \<noteq> pml4) $ throwError $ InvalidCapability 1;
-               pd_slot \<leftarrow> lookup_error_on_failure False $ lookup_pd_slot pml4 vaddr;
-               old_pde \<leftarrow> liftE $ get_pde pd_slot;
-               unlessE (old_pde = InvalidPDE) $ throwError DeleteFirst;             
-               pde \<leftarrow> returnOk (PageTablePDE (addrFromPPtr p)
-                                  (filter_frame_attrs $ attribs_from_word attr) vm_read_write);
-               cap' <- returnOk $ ArchObjectCap $ PageTableCap p $ Some (asid, vaddr');
-               returnOk $ InvokePageTable $ PageTableMap cap' cte pde pd_slot pml4
+               pml_slot \<leftarrow> returnOk $ lookup_pml4_slot pml4 vaddr';
+               old_pml4e \<leftarrow> liftE $ get_pml4e pml_slot;
+               unlessE (old_pml4e = InvalidPML4E) $ throwError DeleteFirst;
+               pml4e \<leftarrow> returnOk (PDPointerTablePML4E (addrFromPPtr p)
+                          (filter_frame_attrs $ attribs_from_word attr) vm_read_write);
+               cap' <- returnOk $ ArchObjectCap $ PDPointerTableCap p $ Some (asid, vaddr');
+               returnOk $ InvokePDPT $ PDPTMap cap' cte pml4e pml_slot pml4
             odE
       else throwError TruncatedMessage
-      else if invocation_type label = ArchInvocationLabel X64PageTableUnmap then doE
+      else if invocation_type label = ArchInvocationLabel X64PDPTUnmap then doE
                final \<leftarrow> liftE $ is_final_cap (ArchObjectCap cap);
                unlessE final $ throwError RevokeFirst;
-               returnOk $ InvokePageTable $ PageTableUnmap (ArchObjectCap cap) cte
-        odE
+               returnOk $ InvokePDPT $ PDPTUnmap (ArchObjectCap cap) cte
+         odE
       else throwError IllegalOperation
+  | _ \<Rightarrow> fail)"
 
+definition
+  arch_decode_invocation ::
+  "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
+   (arch_invocation,'z::state_ext) se_monad"
+where
+  "arch_decode_invocation label args x_slot cte cap extra_caps \<equiv> case cap of
+    PDPointerTableCap _ _ \<Rightarrow> decode_pdpt_invocation label args cte cap extra_caps
+  | PageDirectoryCap _ _ \<Rightarrow> decode_page_directory_invocation label args cte cap extra_caps
+  | PageTableCap _ _ \<Rightarrow> decode_page_table_invocation label args cte cap extra_caps
   | PageCap _ _ _ _ _ _ \<Rightarrow> decode_page_invocation label args cte cap extra_caps 
-
   | ASIDControlCap \<Rightarrow>
       if invocation_type label = ArchInvocationLabel X64ASIDControlMakePool then
       if length args > 1 \<and> length extra_caps > 1
@@ -512,9 +534,8 @@ where
       else throwError TruncatedMessage
       else throwError IllegalOperation
 
-  | IOPortCap f l \<Rightarrow> decode_port_invocation label args x_slot cte (IOPortCap f l) extra_caps
-  | _ \<Rightarrow> throwError IllegalOperation"
-
+  | IOPortCap f l \<Rightarrow> decode_port_invocation label args (IOPortCap f l)
+  | PML4Cap a b \<Rightarrow> throwError IllegalOperation"
 
 definition
   arch_data_to_obj_type :: "nat \<Rightarrow> aobject_type option" where
