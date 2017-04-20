@@ -1247,6 +1247,15 @@ lemma lookupPTSlot_le_0x3C:
   apply (simp add: word_bits_def)
   done
 
+definition "FIXME \<equiv> undefined"
+
+(* FIXME: ARMHYP move, to SR_Lemmas? *)
+lemma isPTE_exclusion:
+  "isInvalidPTE pte   \<Longrightarrow> \<not> (isSmallPagePTE pte) \<and> \<not> (isLargePagePTE pte)"
+  "isLargePagePTE pte \<Longrightarrow> \<not> (isInvalidPTE pte)   \<and> \<not> (isSmallPagePTE pte)"
+  "isSmallPagePTE pte \<Longrightarrow> \<not> (isInvalidPTE pte)   \<and> \<not> (isLargePagePTE pte)"
+  by (cases pte ;  clarsimp simp: isInvalidPTE_def isSmallPagePTE_def isLargePagePTE_def)+
+
 lemma createSafeMappingEntries_PTE_ccorres:
   "ccorres (syscall_error_rel \<currency> (\<lambda>rv rv'. isLeft rv \<and> cpte_relation (fst (theLeft rv)) (fst rv')
                                          \<and> pte_range_relation (snd (theLeft rv)) (snd rv')))
@@ -1286,8 +1295,8 @@ lemma createSafeMappingEntries_PTE_ccorres:
          apply csymbr
          apply (rule ccorres_pre_getObject_pte)
          apply (rule ccorres_add_return)
-         apply (rule_tac xf'="ret__unsigned_long_'"
-                      and r'="\<lambda>_ rv'. (rv' = scast pte_pte_large) = (isLargePagePTE rva)"
+         apply (rule_tac xf'="ret__unsigned_'"
+                      and r'="\<lambda>_ rv'. isLargePagePTE rva = (rv' = scast pte_pte_small \<or> rv' = scast pte_pte_invalid)"
                       in ccorres_split_nothrow[where F=UNIV])
              apply (rule_tac P="ko_at' rva rv" in ccorres_from_vcg[where P'=UNIV])
              apply (rule allI, rule conseqPre, vcg)
@@ -1295,12 +1304,60 @@ lemma createSafeMappingEntries_PTE_ccorres:
              apply (drule obj_at_ko_at', clarsimp)
              apply (erule cmap_relationE1[OF rf_sr_cpte_relation], erule ko_at_projectKO_opt)
              apply (clarsimp simp: typ_heap_simps cpte_relation_def Let_def)
-sorry (* FIXME ARMHYP proof breaks here, there is no pte_pte_large_lift_def !
-             apply (simp add: isLargePagePTE_def pte_pte_large_lift_def pte_lift_def Let_def
+
+
+             apply (simp add: isLargePagePTE_def pte_lift_def Let_def
                               pte_tag_defs pte_pte_invalid_def
                        split: ARM_HYP_H.pte.split_asm if_split_asm)
+
+sorry (*
             apply ceqv
+           apply clarsimp
            apply (simp add: pte_case_isLargePagePTE if_to_top_of_bindE del: Collect_const)
+
+apply (rule ccorres_if_lhs)
+
+apply (frule isPTE_exclusion, clarsimp)
+apply csymbr
+apply simp
+apply (rule ccorres_rhs_assoc)
+         apply (rule ccorres_add_return)
+         apply (rule_tac xf'="ret__unsigned_'"
+                      and r'="\<lambda>_ contig'. isLargePagePTE rva \<longrightarrow> (contig' = 1)"
+                      in ccorres_split_nothrow[where F=UNIV])
+             apply (rule_tac P="ko_at' rva rv" in ccorres_from_vcg[where P'=UNIV])
+             apply (rule allI, rule conseqPre, vcg)
+             apply (clarsimp simp: return_def)
+             apply (drule obj_at_ko_at', clarsimp)
+             apply (erule cmap_relationE1[OF rf_sr_cpte_relation], erule ko_at_projectKO_opt)
+             apply (clarsimp simp: typ_heap_simps cpte_relation_def Let_def)
+             apply (case_tac rva; clarsimp simp: isLargePagePTE_def pte_lifts pte_pte_small_lift_def)
+            apply ceqv
+apply clarsimp
+apply csymbr
+apply clarsimp
+
+            apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+            apply (rule allI, rule conseqPre, vcg)
+            apply (clarsimp simp: fst_throwError_returnOk
+                                  exception_defs syscall_error_to_H_cases
+                                  syscall_error_rel_def)
+apply (rule hoare_post_taut)
+apply clarsimp
+apply vcg
+
+
+
+
+
+find_theorems intro True
+
+find_theorems pte_pte_small_lift
+
+
+apply csymbr
+
+find_theorems name:ccorres_if
            apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
               apply vcg
              apply simp
@@ -1607,6 +1664,7 @@ lemma performPageInvocationMapPTE_ccorres:
       apply (rule ccorres_Guard_Seq)
       apply (rule ccorres_basic_srnoop2, simp)
       apply csymbr
+sorry (* FIXME ARMHYP C has changed, waiting for upstream to reprove this
       apply (rule ccorres_split_nothrow_novcg)
           apply (rule_tac F="\<lambda>_. valid_pte_slots'2 mapping"
                   in ccorres_mapM_x_while' [where i=0])
@@ -1707,7 +1765,7 @@ lemma performPageInvocationMapPTE_ccorres:
                         valid_pte_slots'2_def isLeft_def last_map hd_map
                         ptr_add_def)
   apply (auto elim!: order_trans[rotated] simp: unat_word_ariths unat_arith_simps)[1]
-  done
+  done *)
 
 lemma pde_align_ptBits:
   "\<lbrakk> ko_at' (ARM_HYP_H.PageTablePDE x) slot s ;valid_objs' s\<rbrakk>
@@ -1905,6 +1963,8 @@ lemma performPageInvocationMapPDE_ccorres:
       apply (rule ccorres_Guard_Seq)
       apply (rule ccorres_basic_srnoop2, simp)
       apply csymbr
+sorry (* FIXME ARMHYP C has changed, waiting for upstream to reprove this
+
       apply (rule ccorres_split_nothrow_novcg)
           apply (rule_tac F="\<lambda>_. valid_pde_slots'2 mapping" in ccorres_mapM_x_while' [where i=0])
               apply clarsimp
@@ -2003,7 +2063,7 @@ lemma performPageInvocationMapPDE_ccorres:
                         valid_pde_slots'2_def isRight_def last_map hd_map
                         ptr_add_def)
   apply (auto simp: unat_arith_simps unat_word_ariths)
-  done
+  done *)
 
 lemma performPageInvocationRemapPDE_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -2037,13 +2097,13 @@ lemma performPageInvocationRemapPDE_ccorres:
                 del: Collect_const)
     apply csymbr
     apply (rule ccorres_split_nothrow_novcg)
+sorry (* FIXME ARMHYP C has changed, waiting for upstream to reprove this
           apply (rule_tac F="\<lambda>_. valid_pde_slots'2 mapping" in ccorres_mapM_x_while' [where i=0])
             apply clarsimp
             apply (rule ccorres_guard_imp2)
 
              apply (rule ccorres_move_array_assertion_pde_16_2
                   | (rule ccorres_flip_Guard, rule ccorres_move_array_assertion_pde_16_2))+
-sorry (* FIXME ARMHYP
              apply (rule storePDE_Basic_ccorres', simp)
             apply clarsimp
             apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def
@@ -2161,13 +2221,13 @@ lemma performPageInvocationRemapPTE_ccorres:
                      Collect_False
                 del: Collect_const)
     apply csymbr
+sorry (* FIXME ARMHYP C has changed, waiting for upstream to reprove this
     apply (rule ccorres_split_nothrow_novcg)
         apply (rule_tac F="\<lambda>_. valid_pte_slots'2 mapping" in ccorres_mapM_x_while' [where i=0])
             apply clarsimp
             apply (rule ccorres_guard_imp2)
              apply (rule ccorres_move_array_assertion_pte_16_2
                   | (rule ccorres_flip_Guard, rule ccorres_move_array_assertion_pte_16_2))+
-sorry (* FIXME ARMHYP
              apply (rule storePTE_Basic_ccorres', simp)
             apply clarsimp
             apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def)
@@ -2508,15 +2568,6 @@ lemma is_aligned_no_overflow3:
   apply (erule is_aligned_no_wrap')
   apply (auto simp:word32_less_sub_le)
   done
-
-
-(* FIXME ARMHYP there is no pte_pte_large, so what is this now supposed to be?
-lemma pte_get_tag_alt:
-  "pte_lift v = Some pteC
-    \<Longrightarrow> pte_get_tag v = (case pteC of
-            Pte_pte_small _ \<Rightarrow> scast pte_pte_small
-          | Pte_pte_large _ \<Rightarrow> scast pte_pte_large)"
-  by (auto simp add: pte_lift_def Let_def split: if_split_asm) *)
 
 definition
   to_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option"
