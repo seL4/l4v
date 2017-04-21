@@ -36,6 +36,10 @@ session Refine = BaseRefine +
     "refine/$L4V_ARCH/Refine"
     "refine/$L4V_ARCH/Orphanage"
 
+session RefineQD = BaseRefine +
+  theories [quick_and_dirty]
+  "refine/$L4V_ARCH/Refine"
+
 session BaseRefine = AInvs +
   description {* Background theory and libraries for refinement proof. *}
   theories
