@@ -2733,6 +2733,22 @@ lemma unat_sub_le_strg:
   apply (simp add: field_simps)
   done
 
+(* FIXME: move *)
+lemma is_aligned_pageBitsForSize_minimum:
+  "\<lbrakk> is_aligned p (pageBitsForSize sz) ; n \<le> pageBits \<rbrakk> \<Longrightarrow> is_aligned p n"
+  apply (cases sz; clarsimp simp: pageBits_def)
+  apply (erule is_aligned_weaken, simp)+
+  done
+
+(* FIXME: move *)
+lemma mask_add_aligned_right:
+  "is_aligned p n \<Longrightarrow> (q + p) && mask n = q && mask n"
+  by (simp add: mask_add_aligned add.commute)
+
+lemma ptrFromPAddr_add_left:
+  "ptrFromPAddr (x + y) = ptrFromPAddr x + y"
+  unfolding ptrFromPAddr_def by simp
+
 lemma decodeARMFrameInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
@@ -3365,27 +3381,32 @@ lemma decodeARMFrameInvocation_ccorres:
                          mask_def[where n=asid_bits]
                          linorder_not_le simp del: less_1_simp)
    apply (subgoal_tac "extraCaps \<noteq> [] \<longrightarrow> (s \<turnstile>' fst (extraCaps ! 0))")
-    apply ((clarsimp simp: ct_in_state'_def vmsz_aligned'_def isCap_simps
-                           valid_cap'_def page_directory_at'_def
-                           sysargs_rel_to_n linorder_not_less
-                           excaps_map_def valid_tcb_state'_def
-                 simp del: less_1_simp
-              | rule conjI | erule pred_tcb'_weakenE disjE
-      | erule(3) is_aligned_no_overflow3[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2]]
-      | drule st_tcb_at_idle_thread' interpret_excaps_eq
-      | erule order_le_less_trans[rotated] order_trans[where x=127, rotated]
-      | rule order_trans[where x=127, OF _ two_nat_power_pageBitsForSize_le, unfolded pageBits_def]
-      | clarsimp simp: neq_Nil_conv
-      | (drule_tac p2 = v0 in is_aligned_weaken[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2]
-      , where y = 6,OF _ le_trans[OF  _ pbfs_atleast_pageBits]],simp add:pageBits_def)
-      , drule_tac w = b in is_aligned_weaken[
-      where y = 6,OF _ le_trans[OF  _ pbfs_atleast_pageBits]]
-      ,simp add:pageBits_def
-      ,simp add:mask_add_aligned,simp add:field_simps,simp add:mask_add_aligned)
-     +)[1]
+    (* FIXME yuck; slow, likely partly redundant and runs for ~1.5min hence timing check *)
+    apply (timeit \<open>(
+             (clarsimp simp: ct_in_state'_def vmsz_aligned'_def isCap_simps
+                             valid_cap'_def page_directory_at'_def
+                             sysargs_rel_to_n linorder_not_less
+                             excaps_map_def valid_tcb_state'_def
+                   simp del: less_1_simp
+           | rule conjI | erule pred_tcb'_weakenE disjE
+           | erule(3) is_aligned_no_overflow3[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2]]
+           | drule st_tcb_at_idle_thread' interpret_excaps_eq
+           | erule order_le_less_trans[rotated] order_trans[where x=127, rotated]
+           | rule order_trans[where x=127, OF _ two_nat_power_pageBitsForSize_le, unfolded pageBits_def]
+           | clarsimp simp: neq_Nil_conv
+           | ((drule_tac p2 = v0 in is_aligned_weaken[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2],
+                where y = 7,OF _ le_trans[OF  _ pbfs_atleast_pageBits]],simp add:pageBits_def)
+              , drule_tac w = b in is_aligned_weaken[
+                where y = 7,OF _ le_trans[OF  _ pbfs_atleast_pageBits]]
+              , simp add: pageBits_def
+              , simp add: mask_add_aligned, simp add: field_simps, simp add: mask_add_aligned)
+           | simp add: mask_add_aligned_right[OF is_aligned_pageBitsForSize_minimum, simplified pageBits_def]
+                       mask_add_aligned[OF is_aligned_pageBitsForSize_minimum, simplified pageBits_def]
+                       vmsz_aligned_addrFromPPtr
+           | fastforce simp add: ptrFromPAddr_add_left is_aligned_no_overflow3[rotated -1]
+           )+)[1]\<close>)
    apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def slotcap_in_mem_def
                          linorder_not_le)
-sorry (* FIXME ARMHYP
    apply (erule ctes_of_valid', clarsimp)
   apply (clarsimp simp: if_1_0_0 rf_sr_ksCurThread "StrictC'_thread_state_defs"
                         mask_eq_iff_w2p word_size word_less_nat_alt
@@ -3424,7 +3445,7 @@ sorry (* FIXME ARMHYP
    apply (simp add: gen_framesize_to_H_def vm_page_size_defs
                     hd_conv_nth length_ineq_not_Nil
              split: if_split)
-   apply (simp add: vm_page_size_defs split: if_split_asm)
+   apply (simp add: vm_page_size_defs table_bits_defs split: if_split_asm)
   apply (clarsimp simp:signed_shift_guard_simpler_32 pbfs_less)
   apply (frule ccap_relation_PageCap_generics)
   apply (clarsimp simp:framesize_from_H_eq_eqs)
@@ -3442,7 +3463,7 @@ sorry (* FIXME ARMHYP
      apply (clarsimp simp:
        unat_less_helper isPageFlush_def isPageFlushLabel_def
        dest!:at_least_2_args | intro flushtype_relation_triv allI impI conjI)+
-  done *)
+  done
 
 lemma asidHighBits_handy_convs:
   "sint Kernel_C.asidHighBits = 7"
