@@ -848,7 +848,11 @@ lemma ckernel_invariant:
    apply (clarsimp simp add: ADT_H_def)
    apply (subst conj_commute, simp)
    apply (rule conjI)
-    apply (drule ckernel_init_valid_duplicates'[rule_format], simp)
+    apply (frule init_refinement[simplified subset_eq, THEN bspec])
+    apply (clarsimp simp: ex_abs_def lift_state_relation_def)
+    apply (frule akernel_init_invs[THEN bspec])
+    apply (rule_tac x = s in exI)
+    apply (clarsimp simp: Init_A_def)
    apply (insert ckernel_init_invs)[1]
    apply clarsimp
    apply (frule ckernel_init_sch_norm)
