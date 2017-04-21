@@ -84,7 +84,7 @@ crunch ksDomSchedule_inv[wp]: createNewObjects "\<lambda>s. P (ksDomSchedule s)"
 crunch ksDomSchedule_inv[wp]: preemptionPoint "\<lambda>s. P (ksDomSchedule s)"
   (simp: whenE_def)
 
-crunch ksDomSchedule_inv[wp]: performARMMMUInvocation "\<lambda>s. P (ksDomSchedule s)"
+crunch ksDomSchedule_inv[wp]: performX64MMUInvocation, performX64PortInvocation "\<lambda>s. P (ksDomSchedule s)"
   (ignore: getObject setObject
    wp: crunch_wps getObject_cte_inv getASID_wp
    simp: unless_def)
@@ -130,7 +130,7 @@ crunch ksDomainTime[wp]: transferCapsToSlots "\<lambda>s. P (ksDomainTime s)"
 crunch ksDomainTime[wp]: setupCallerCap, switchIfRequiredTo, doIPCTransfer, attemptSwitchTo "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: constOnFailure)
 
-crunch ksDomainTime_inv[wp]: setEndpoint, setNotification, storePTE, storePDE
+crunch ksDomainTime_inv[wp]: setEndpoint, setNotification, storePTE, storePDE, storePDPTE, storePML4E
   "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps setObject_ksPSpace_only updateObject_default_inv
    ignore: setObject)
@@ -194,7 +194,7 @@ crunch ksDomainTime_inv[wp]: createNewObjects "\<lambda>s. P (ksDomainTime s)"
    wp: crunch_wps hoare_unless_wp
    ignore: getObject setObject)
 
-crunch ksDomainTime_inv[wp]: performARMMMUInvocation "\<lambda>s. P (ksDomainTime s)"
+crunch ksDomainTime_inv[wp]: performX64MMUInvocation, performX64PortInvocation "\<lambda>s. P (ksDomainTime s)"
   (ignore: getObject setObject
    wp: crunch_wps getObject_cte_inv getASID_wp setObject_ksPSpace_only updateObject_default_inv
    simp: unless_def)
