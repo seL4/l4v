@@ -400,7 +400,8 @@ definition
 where
   "wellformed_pde pde \<equiv> case pde of
    pde.LargePagePDE p attr r \<Rightarrow> r \<in> valid_vm_rights
-   | _ \<Rightarrow> True"
+ | pde.PageTablePDE p attr r \<Rightarrow> r \<in> valid_vm_rights
+ | _ \<Rightarrow> True"
 
 (* FIXME x64: check hardware to see if any bits are forbidden *)
 definition
@@ -408,13 +409,16 @@ definition
 where
   "wellformed_pdpte pdpte \<equiv> case pdpte of
    pdpte.HugePagePDPTE p attr r \<Rightarrow> r \<in> valid_vm_rights
-   | _ \<Rightarrow> True"
+ | pdpte.PageDirectoryPDPTE p attr r \<Rightarrow> r \<in> valid_vm_rights
+ | _ \<Rightarrow> True"
 
 (* FIXME x64: check hardware to see if any bits are forbidden *)
 definition
   wellformed_pml4e :: "pml4e \<Rightarrow> bool"
 where
-  "wellformed_pml4e pml4e \<equiv> True"
+  "wellformed_pml4e pml4e \<equiv> case pml4e of
+  pml4e.PDPointerTablePML4E p attr r \<Rightarrow> r \<in> valid_vm_rights
+ | _ \<Rightarrow> True"
   
 definition
   wellformed_arch_obj :: "arch_kernel_obj \<Rightarrow> bool"

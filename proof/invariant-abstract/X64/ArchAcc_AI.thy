@@ -3139,34 +3139,35 @@ lemma store_pml4e_invs:
               apply (clarsimp simp: obj_at_def aa_type_simps aobj_upd_invalid_slots_simps ucast_ucast_mask
                              split: if_split_asm option.split_asm dest:valid_arch_obj_from_invs valid_obj_from_invs
                      | intro valid_table_caps_aobj_upd_invalid_pml4e valid_kernel_mappings_if_pm_pml4e)+
-            apply fastforce
-           apply (clarsimp dest!: ref_pages_Some)
-         apply (clarsimp simp: obj_at_def aa_type_simps aobj_upd_invalid_slots_simps ucast_ucast_mask
+             apply fastforce
+            apply (clarsimp dest!: ref_pages_Some)
+           apply (clarsimp simp: obj_at_def aa_type_simps aobj_upd_invalid_slots_simps ucast_ucast_mask
                         split: if_split_asm option.split_asm dest:valid_arch_obj_from_invs valid_obj_from_invs
                      | intro valid_table_caps_aobj_upd_invalid_pde)+
-        apply (fastforce dest!: valid_arch_obj_from_invs)
-       apply (clarsimp simp: obj_at_def aa_type_simps aobj_upd_invalid_slots_simps ucast_ucast_mask
+          apply (fastforce dest!: valid_arch_obj_from_invs)
+         apply (clarsimp dest!: valid_obj_from_invs)
+        apply (clarsimp simp: obj_at_def aa_type_simps aobj_upd_invalid_slots_simps ucast_ucast_mask
                         split: if_split_asm option.split_asm dest:valid_arch_obj_from_invs valid_obj_from_invs
                      | intro valid_table_caps_aobj_upd_invalid_pde)+
-       apply (rule ccontr)
-       apply (clarsimp dest!: ref_pages_Some)
-       apply (erule(1) unmapped_cap_lookup_refs_empty[OF _ rtrancl_into_trancl1])
-       apply (drule vs_lookup1_wellformed.lookup1_cut, fastforce, fastforce)
-      apply (clarsimp simp: aa_type_simps split: option.split_asm if_split_asm)+
-     apply (rule ccontr)
-     apply (erule unmapped_cap_lookup_refs_pages_empty[OF _ ])
-     apply (erule rtrancl_into_trancl1)
-     apply (drule vs_lookup_pages1_wellformed.lookup1_cut, fastforce, fastforce)
-    apply (clarsimp split: option.split_asm if_split_asm simp: aa_type_simps)
-    apply (drule(1) valid_pml4e_vs_ref_page_lvl_simps, simp)
-   apply (clarsimp split: if_split_asm option.split_asm dest!:ref_pages_Some simp: lookupable_refs_def)
-   apply (frule(2) empty_table_lookup_refs_refl)
-   apply clarsimp
-   apply (erule local.empty_table_is_valid)
+        apply (rule ccontr)
+        apply (clarsimp dest!: ref_pages_Some)
+        apply (erule(1) unmapped_cap_lookup_refs_empty[OF _ rtrancl_into_trancl1])
+         apply (drule vs_lookup1_wellformed.lookup1_cut, fastforce, fastforce)
+       apply (clarsimp simp: aa_type_simps split: option.split_asm if_split_asm)+
+      apply (rule ccontr)
+      apply (erule unmapped_cap_lookup_refs_pages_empty[OF _ ])
+       apply (erule rtrancl_into_trancl1)
+       apply (drule vs_lookup_pages1_wellformed.lookup1_cut, fastforce, fastforce)
+     apply (clarsimp split: option.split_asm if_split_asm simp: aa_type_simps)
+     apply (drule(1) valid_pml4e_vs_ref_page_lvl_simps, simp)
+    apply (clarsimp split: if_split_asm option.split_asm dest!:ref_pages_Some simp: lookupable_refs_def)
+    apply (frule(2) empty_table_lookup_refs_refl)
+    apply clarsimp
+    apply (erule local.empty_table_is_valid)
     apply fastforce
-  apply (clarsimp split: if_split_asm option.split_asm dest!:ref_pages_Some simp: lookupable_refs_def)
-  apply (frule(2) empty_table_lookup_refs_pages_refl)
-  apply clarsimp
+   apply (clarsimp split: if_split_asm option.split_asm dest!:ref_pages_Some simp: lookupable_refs_def)
+   apply (frule(2) empty_table_lookup_refs_pages_refl)
+   apply clarsimp
   apply (clarsimp split: if_split_asm option.split_asm dest!:ref_pages_Some simp: lookupable_refs_def)
   apply (drule(2) empty_table_lookup_refs_pages_refl)
   apply (clarsimp simp: cte_wp_at_caps_of_state ucast_ucast_mask ptTranslationBits_def)
