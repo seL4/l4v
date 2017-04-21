@@ -552,12 +552,16 @@ lemma resolve_vaddr_corres:
                and R'="\<lambda>_ s. pspace_distinct' s \<and> pspace_aligned' s
                            \<and> vs_valid_duplicates' (ksPSpace s)"
                 in corres_split[OF _ get_master_pde_corres])
-      apply (case_tac rv, simp_all add: pde_relation'_def)[1]
+      apply (case_tac rv;
+             clarsimp simp: master_pde_relation_def pde_relation'_def isSuperSection_def' page_base_def
+                     split: if_split_asm)
       apply (rule corres_stateAssert_assume_stronger)
        apply (rule stronger_corres_guard_imp)
          apply (rule corres_split[OF _ get_master_pte_corres])
            apply (rule corres_trivial)
-           apply (case_tac rva, simp_all add: pte_relation'_def)[1]
+           apply (case_tac rv;
+                  clarsimp simp: master_pte_relation_def pte_relation'_def isLargePage_def' page_base_def
+                          split: if_split_asm)
           apply (wp get_master_pte_inv)+
         apply (clarsimp simp: page_table_pte_at_lookupI)
        apply (clarsimp simp: page_table_pte_at_lookupI' page_table_at_state_relation)
@@ -1270,7 +1274,6 @@ shows
         apply (rule corres_splitEE)
            prefer 2
            apply simp
-           (* apply (rule get_pde_corres') *)
            apply (rule get_master_pde_corres')
           apply (simp add: unlessE_whenE)
           apply (rule corres_splitEE)
@@ -1278,7 +1281,8 @@ shows
 
              apply (rule corres_whenE)
                apply clarsimp
-               apply (case_tac oldpde, simp_all)[1]
+               apply (case_tac oldpde;
+                      clarsimp simp: master_pde_relation_def isSuperSection_def' split: if_split_asm)
               apply (rule corres_trivial)
               apply simp
              apply simp

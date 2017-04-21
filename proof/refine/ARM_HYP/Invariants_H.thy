@@ -612,7 +612,9 @@ primrec
   valid_pte' :: "ARM_HYP_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_pte' (InvalidPTE) = \<top>"
-| "valid_pte' (LargePagePTE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMLargePage s \<and> r \<noteq> VMNoAccess)"
+  (* The first LargePagePTE is aligned to ARMLargePage, all other `duplicates' to ARMSmallPage.
+     The former is only stated in the abstract spec invariants, not here. *)
+| "valid_pte' (LargePagePTE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSmallPage s \<and> r \<noteq> VMNoAccess)"
 | "valid_pte' (SmallPagePTE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSmallPage s \<and> r \<noteq> VMNoAccess)"
 
 primrec
@@ -620,7 +622,9 @@ primrec
 where
  "valid_pde' (InvalidPDE) = \<top>"
 | "valid_pde' (SectionPDE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSection s \<and> r \<noteq> VMNoAccess)"
-| "valid_pde' (SuperSectionPDE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSuperSection s \<and> r \<noteq> VMNoAccess)"
+  (* The first SuperSectionPDE is aligned to ARMSuperSection, all other `duplicates' to ARMSection.
+     The former is only stated in the abstract spec invariants, not here. *)
+| "valid_pde' (SuperSectionPDE ptr _ _ r) = (\<lambda>s. valid_mapping' ptr ARMSection s \<and> r \<noteq> VMNoAccess)"
 | "valid_pde' (PageTablePDE ptr) = (\<lambda>_. is_aligned ptr ptBits)"
 
 primrec
@@ -928,6 +932,36 @@ definition
   "no_0_obj' \<equiv> \<lambda>s. ksPSpace s 0 = None"
 
 definition
+  "isSuperSection pde \<equiv> case pde of SuperSectionPDE _ _ _ _ \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
+  "isLargePage pte \<equiv> case pte of LargePagePTE _ _ _ _ \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
+  "valid_pde_duplicates_at' \<equiv> \<lambda>h p.
+    \<exists>pde. h p = Some (KOArch (KOPDE pde)) \<and> isSuperSection pde \<and>
+          vmsz_aligned (pdeFrame pde) ARMSuperSection \<and>
+          (\<forall>(p',i) \<in> set (zip superSectionPDEOffsets [0.e.15]).
+              h (p + p') = Some (KOArch (KOPDE (addPDEOffset pde i))))"
+
+definition
+  "valid_pte_duplicates_at' \<equiv> \<lambda>h p.
+    \<exists>pte. h p = Some (KOArch (KOPTE pte)) \<and> isLargePage pte \<and>
+          vmsz_aligned (pteFrame pte) ARMLargePage \<and>
+          (\<forall>(p',i) \<in> set (zip largePagePTEOffsets [0.e.15]).
+              h (p + p') = Some (KOArch (KOPTE (addPTEOffset pte i))))"
+
+definition vs_valid_duplicates' where
+  "vs_valid_duplicates' \<equiv> \<lambda>h. \<forall>x::32 word.
+     case h x of
+       Some (KOArch (KOPTE pte)) \<Rightarrow>
+            isLargePage pte \<longrightarrow> valid_pte_duplicates_at' h (x && ~~ mask (pte_bits + 4))
+     | Some (KOArch (KOPDE pde)) \<Rightarrow>
+            isSuperSection pde \<longrightarrow> valid_pde_duplicates_at' h (x && ~~ mask (pde_bits + 4))
+     | _ \<Rightarrow> True"
+
+(*
+definition
   vs_ptr_align :: "Structures_H.kernel_object \<Rightarrow> nat" where
  "vs_ptr_align obj \<equiv>
   case obj of KOArch (KOPTE (pte.LargePagePTE _ _ _ _)) \<Rightarrow> 7
@@ -939,6 +973,7 @@ definition "vs_valid_duplicates' \<equiv> \<lambda>h.
          | Some ko \<Rightarrow> is_aligned y 3 \<longrightarrow>
               x && ~~ mask (vs_ptr_align ko) = y && ~~ mask (vs_ptr_align ko) \<longrightarrow>
               h x = h y"
+*)
 
 definition
   valid_pspace' :: "kernel_state \<Rightarrow> bool"
@@ -1596,14 +1631,27 @@ lemmas objBitsKO_simps = objBits_simps
 
 lemmas wordRadix_def' = wordRadix_def[simplified]
 
-lemma valid_duplicates'_D:
-  "\<lbrakk>vs_valid_duplicates' m; m (p::word32) = Some ko;is_aligned p' 3;
-  p && ~~ mask (vs_ptr_align ko) = p' && ~~ mask (vs_ptr_align ko)\<rbrakk>
-  \<Longrightarrow> m p' = Some ko "
-  apply (clarsimp simp:vs_valid_duplicates'_def)
-  apply (drule_tac x = p in spec)
-  apply auto
-  done
+lemma valid_duplicates'_pteD:
+  "\<lbrakk> vs_valid_duplicates' h; h p = Some (KOArch (KOPTE pte)); isLargePage pte \<rbrakk>
+  \<Longrightarrow> valid_pte_duplicates_at' h (p && ~~ mask (pte_bits + 4))"
+  unfolding vs_valid_duplicates'_def by (erule_tac x=p in allE, simp)
+
+lemma valid_duplicates'_pdeD:
+  "\<lbrakk> vs_valid_duplicates' h; h p = Some (KOArch (KOPDE pde)); isSuperSection pde \<rbrakk>
+  \<Longrightarrow> valid_pde_duplicates_at' h (p && ~~ mask (pde_bits + 4))"
+  unfolding vs_valid_duplicates'_def by (erule_tac x=p in allE, simp)
+
+lemmas valid_duplicates'_D = valid_duplicates'_pdeD valid_duplicates'_pteD
+
+lemma valid_duplicates'_non_pd_pt_I:
+  "\<lbrakk>koTypeOf ko \<noteq> ArchT PDET; koTypeOf ko \<noteq> ArchT PTET;
+   vs_valid_duplicates' (ksPSpace s) ; ksPSpace s p = Some ko; koTypeOf ko = koTypeOf m\<rbrakk>
+       \<Longrightarrow> vs_valid_duplicates' (ksPSpace s(p \<mapsto> m))"
+  apply (subst vs_valid_duplicates'_def)
+  apply (rule allI)
+  apply (clarsimp simp: option.splits kernel_object.splits arch_kernel_object.splits)
+  by (fastforce simp: valid_pte_duplicates_at'_def valid_pde_duplicates_at'_def
+                dest: valid_duplicates'_D)
 
 lemma ps_clear_def2:
   "p \<le> p + 1 \<Longrightarrow> ps_clear p n s = ({p + 1 .. p + (1 << n) - 1} \<inter> dom (ksPSpace s) = {})"
@@ -2631,8 +2679,7 @@ lemma cte_wp_at_cases':
                     tcbIPCBufferSlot_def tcbReplySlot_def tcbCallerSlot_def
                 split: option.split_asm)
      apply (clarsimp simp: bind_def tcb_cte_cases_def split: if_split_asm)
-    apply (clarsimp simp: bind_def tcb_cte_cases_def iffD2[OF linorder_not_less]
-                          when_False return_def
+    apply (clarsimp simp: bind_def tcb_cte_cases_def iffD2[OF linorder_not_less] return_def
                    split: if_split_asm)
    apply (subgoal_tac "p - n \<le> (p - n) + n", simp)
    apply (erule is_aligned_no_wrap')

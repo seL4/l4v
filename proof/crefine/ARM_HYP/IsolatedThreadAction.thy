@@ -410,49 +410,6 @@ lemma getCTE_isolatable:
   apply (simp add: ksPSpace_update_partial_id)
   done
 
-lemma objBits_2n:
-  "(1 :: word32) < 2 ^ objBits obj"
-  by (simp add: objBits_def objBitsKO_def archObjSize_def machine_bits_defs
-         split: kernel_object.split arch_kernel_object.split)
-
-lemma magnitudeCheck_assert2:
-  "\<lbrakk> is_aligned x n; (1 :: word32) < 2 ^ n; ksPSpace s x = Some v \<rbrakk> \<Longrightarrow>
-   magnitudeCheck x (snd (lookupAround2 x (ksPSpace (s :: kernel_state)))) n
-     = assert (ps_clear x n s)"
-  using in_magnitude_check[where x=x and n=n and s=s and s'=s and v="()"]
-  by (simp add: magnitudeCheck_assert in_monad)
-
-lemma getObject_get_assert:
-  assumes deflt: "\<And>a b c d. (loadObject a b c d :: ('a :: pspace_storable) kernel)
-                          = loadObject_default a b c d"
-  shows
-  "(getObject p :: ('a :: pspace_storable) kernel)
-   = do v \<leftarrow> gets (obj_at' (\<lambda>x :: 'a. True) p);
-        assert v;
-        gets (the o projectKO_opt o the o swp fun_app p o ksPSpace)
-     od"
-  apply (rule ext)
-  apply (simp add: exec_get getObject_def split_def exec_gets
-                   deflt loadObject_default_def projectKO_def2
-                   alignCheck_assert)
-  apply (case_tac "ksPSpace x p")
-   apply (simp add: obj_at'_def assert_opt_def assert_def
-             split: option.split if_split)
-  apply (simp add: lookupAround2_known1 assert_opt_def
-                   obj_at'_def projectKO_def2
-            split: option.split)
-  apply (clarsimp simp: fail_def fst_return conj_comms project_inject
-                        objBits_def)
-  apply (simp only: assert2[symmetric],
-         rule bind_apply_cong[OF refl])
-  apply (clarsimp simp: in_monad)
-  apply (fold objBits_def)
-  apply (simp add: magnitudeCheck_assert2[OF _ objBits_2n])
-  apply (rule bind_apply_cong[OF refl])
-  apply (clarsimp simp: in_monad return_def simpler_gets_def)
-  apply (simp add: iffD2[OF project_inject refl])
-  done
-
 lemma obj_at_partial_overwrite_If:
   "\<lbrakk> \<forall>x. tcb_at' (idx x) s \<rbrakk>
     \<Longrightarrow> obj_at' P p (ksPSpace_update (partial_overwrite idx f) s)

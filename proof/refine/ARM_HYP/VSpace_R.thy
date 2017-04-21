@@ -2437,51 +2437,59 @@ crunch ctes [wp]: unmapPage "\<lambda>s. P (ctes_of s)"
   (simp: crunch_simps ignore: getObject
   wp: crunch_wps loadObject_default_inv getObject_inv)
 
+lemma triple_set_zip_eq:
+  "(a, b, c) \<in> set (zip ys (zip ys xs)) \<Longrightarrow> a = b \<and> a \<in> set ys"
+  apply (induct ys arbitrary: xs; clarsimp)
+  apply (case_tac xs, auto)
+  done
+
 lemma corres_store_pde_with_invalid_tail:
-  "\<forall>slot \<in>set ys. \<not> is_aligned (slot >> pde_bits) (pde_align' ab)
+  "\<lbrakk> \<forall>slot \<in>set ys. \<not> is_aligned (slot >> pde_bits) (pde_align' ab); length ys < 2^word_bits \<rbrakk>
   \<Longrightarrow>corres dc ((\<lambda>s. \<forall>y\<in> set ys. pde_at y s) and pspace_aligned and valid_etcbs)
            (pspace_aligned' and pspace_distinct')
            (mapM (swp store_pde ARM_A.pde.InvalidPDE) ys)
-           (mapM (swp storePDE ab) ys)"
-  apply (rule_tac S ="{(x,y). x = y \<and> x \<in> set ys}"
-               in corres_mapM[where r = dc and r' = dc])
+           (mapM (\<lambda>(slot, i). storePDE slot (addPDEOffset ab i)) (zip ys [1.e.of_nat (length ys)]))"
+  apply (rule_tac S ="{(x,y). x = fst y \<and> x \<in> set ys}" in corres_mapM[where r = dc and r' = dc])
+        apply simp
+       apply simp
+      apply clarsimp
+      apply (rule corres_guard_imp)
+        apply (rule store_pde_corres')
+        apply (drule bspec)
+         apply simp
+        apply (simp add:pde_relation_aligned_def addPDEOffset_def)
+        apply (auto split: pde.splits)[1]
+       apply (drule bspec,simp)
        apply simp
       apply simp
-     apply clarsimp
-     apply (rule corres_guard_imp)
-       apply (rule store_pde_corres')
-       apply (drule bspec)
-        apply simp
-       apply (simp add:pde_relation_aligned_def)
-       apply auto[1]
-      apply (drule bspec, simp)
-     apply simp
-    apply (wp hoare_vcg_ball_lift | simp)+
-   apply clarsimp
-   done
+     apply (wpsimp wp: hoare_vcg_ball_lift)+
+   apply (simp add: word_bits_def unat_of_nat)
+  apply (fastforce dest: triple_set_zip_eq)
+  done
 
 lemma corres_store_pte_with_invalid_tail:
-  "\<forall>slot\<in> set ys. \<not> is_aligned (slot >> pte_bits) (pte_align' aa)
+  "\<lbrakk> \<forall>slot\<in> set ys. \<not> is_aligned (slot >> pte_bits) (pte_align' aa); length ys < 2^word_bits\<rbrakk>
   \<Longrightarrow> corres dc ((\<lambda>s. \<forall>y\<in>set ys. pte_at y s) and pspace_aligned and valid_etcbs)
                 (pspace_aligned' and pspace_distinct')
              (mapM (swp store_pte ARM_A.pte.InvalidPTE) ys)
-             (mapM (swp storePTE aa) ys)"
-  apply (rule_tac S ="{(x,y). x = y \<and> x \<in> set ys}"
-               in corres_mapM[where r = dc and r' = dc])
+             (mapM (\<lambda>(slot, i). storePTE slot (addPTEOffset aa i)) (zip ys [1.e.of_nat (length ys)]))"
+  apply (rule_tac S ="{(x,y). x = fst y \<and> x \<in> set ys}" in corres_mapM[where r = dc and r' = dc])
+        apply simp
+       apply simp
+      apply clarsimp
+      apply (rule corres_guard_imp)
+        apply (rule store_pte_corres')
+        apply (drule bspec)
+         apply simp
+        apply (simp add:pte_relation_aligned_def addPTEOffset_def)
+        apply (auto split: pte.splits)[1]
+       apply (drule bspec,simp)
        apply simp
       apply simp
-     apply clarsimp
-     apply (rule corres_guard_imp)
-       apply (rule store_pte_corres')
-       apply (drule bspec)
-        apply simp
-       apply (simp add:pte_relation_aligned_def)
-       apply auto[1]
-      apply (drule bspec,simp)
-     apply simp
-    apply (wp hoare_vcg_ball_lift | simp)+
-   apply clarsimp
-   done
+     apply (wpsimp wp: hoare_vcg_ball_lift)+
+   apply (simp add: word_bits_def unat_of_nat)
+  apply (fastforce dest: triple_set_zip_eq)
+  done
 
 lemma updateCap_valid_slots'[wp]:
   "\<lbrace>valid_slots' x2\<rbrace> updateCap cte cte' \<lbrace>\<lambda>_ s. valid_slots' x2 s \<rbrace>"
@@ -2499,7 +2507,7 @@ lemma pte_check_if_mapped_corres:
     apply (rule corres_split[OF _ get_master_pte_corres', simplified])
       apply (rule corres_return[where P="pte_at slot" and
                           P'="pspace_aligned' and pspace_distinct'", THEN iffD2])
-      apply (clarsimp simp: pte_relation'_def split: )
+      apply (clarsimp simp: master_pte_relation_def isLargePage_def' split: if_split_asm)
       apply (case_tac pt, simp_all)[1]
      apply wp+
    apply (simp)
@@ -2513,7 +2521,7 @@ lemma pde_check_if_mapped_corres:
     apply (rule corres_split[OF _ get_master_pde_corres', simplified])
       apply (rule corres_return[where P="pde_at slot" and
                           P'="pspace_aligned' and pspace_distinct'", THEN iffD2])
-      apply (clarsimp simp: pte_relation'_def split: )
+      apply (clarsimp simp: master_pde_relation_def isSuperSection_def' split: if_split_asm)
       apply (case_tac pd, simp_all)[1]
      apply wp+
    apply (clarsimp simp: pte_relation_aligned_def split: if_split_asm)
@@ -2522,17 +2530,6 @@ lemma pde_check_if_mapped_corres:
 
 crunch unique_table_refs[wp]: do_machine_op, store_pte "\<lambda>s. (unique_table_refs (caps_of_state s))"
 crunch valid_asid_map[wp]: store_pte "valid_asid_map"
-(*
-lemma store_pte_valid_global_objs[wp]:
-  "\<lbrace>valid_global_objs and valid_arch_state and K (aligned_pte pte)\<rbrace> store_pte slot pte \<lbrace>\<lambda>_. valid_global_objs\<rbrace>"
-  apply (simp add: store_pte_def)
-  apply (wp)
-  apply clarsimp
-  apply (frule valid_global_ptsD, simp)
-  apply clarsimp
-  apply (subgoal_tac "pt=pta")
-   apply (auto simp: obj_at_def)
-  done*)
 
 lemma set_cap_pd_at_asid [wp]:
   "\<lbrace>vspace_at_asid asid pd\<rbrace> set_cap t st \<lbrace>\<lambda>rv. vspace_at_asid asid pd\<rbrace>"
@@ -2569,29 +2566,6 @@ lemma set_cap_valid_page_map_inv:
   apply (auto simp: is_pt_cap_def is_pg_cap_def is_pd_cap_def split: sum.splits)
   done
 
-lemma duplicate_address_set_simp:
-  "\<lbrakk>koTypeOf m \<noteq> ArchT PDET; koTypeOf m \<noteq> ArchT PTET \<rbrakk>
-  \<Longrightarrow> p && ~~ mask (vs_ptr_align m) = p"
-  by (auto simp:vs_ptr_align_def koTypeOf_def
-    split:kernel_object.splits arch_kernel_object.splits)+
-
-lemma valid_duplicates'_non_pd_pt_I:
-  "\<lbrakk>koTypeOf ko \<noteq> ArchT PDET; koTypeOf ko \<noteq> ArchT PTET;
-   vs_valid_duplicates' (ksPSpace s) ; ksPSpace s p = Some ko; koTypeOf ko = koTypeOf m\<rbrakk>
-       \<Longrightarrow> vs_valid_duplicates' (ksPSpace s(p \<mapsto> m))"
-  apply (subst vs_valid_duplicates'_def)
-  apply (intro allI impI)
-  apply (clarsimp split:if_splits simp:duplicate_address_set_simp option.splits)
-  apply (intro conjI impI allI)
-    apply (frule_tac p = x and p' = p in valid_duplicates'_D)
-     apply assumption
-    apply simp
-   apply (simp add:duplicate_address_set_simp)+
-  apply (drule_tac m = "ksPSpace s"
-    and p = x in valid_duplicates'_D)
-     apply simp+
-  done
-
 lemma setCTE_valid_duplicates'[wp]:
  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
   setCTE p cte \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
@@ -2607,6 +2581,7 @@ lemma setCTE_valid_duplicates'[wp]:
     split:if_splits option.splits Structures_H.kernel_object.splits)
      apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
   done
+
 crunch valid_duplicates'[wp]: updateCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps
    simp: crunch_simps unless_def
@@ -2662,6 +2637,37 @@ lemma set_mrs_invs'[wp]:
          simp add: zipWithM_x_mapM split_def)+
   done
 
+lemma addPAddr_0[simp]:
+  "addPAddr p 0 = p"
+  by (cases p; simp add: addPAddr_def fromPAddr_def)
+
+lemma addPTEOffset_0[simp]:
+  "addPTEOffset pte 0 = pte"
+  by (cases pte; simp add: addPTEOffset_def pteFrame_def pteFrame_update_def)
+
+lemma addPDEOffset_0[simp]:
+  "addPDEOffset pde 0 = pde"
+  by (cases pde; simp add: addPDEOffset_def pdeFrame_def pdeFrame_update_def)
+
+lemma zip_cons_idx[simp]:
+  "length ys < 2 ^ LENGTH('a) \<Longrightarrow>
+  zip (y # ys) [0.e.of_nat (length ys)] = (y,0) # zip ys [1.e.of_nat (length ys)::'a::len word]"
+  by (clarsimp simp: upto_enum_def unat_of_nat_eq not_le Suc_le_eq upto_0_to_n2)
+
+lemma valid_slots_duplicated'_length_Inl:
+  "valid_slots_duplicated' (Inl (a, b)) s
+   \<Longrightarrow> length b = (case a of LargePagePTE _ _ _ _ \<Rightarrow> 16 | _ \<Rightarrow> 1)"
+  by (auto simp: valid_slots_duplicated'_def upto_enum_step_def upto_enum_def mask_def
+           dest: is_aligned_no_overflow'
+          split: pte.splits)
+
+lemma valid_slots_duplicated'_length_Inr:
+  "valid_slots_duplicated' (Inr (a, b)) s
+   \<Longrightarrow> length b = (case a of SuperSectionPDE _ _ _ _ \<Rightarrow> 16 | _ \<Rightarrow> 1)"
+  by (auto simp: valid_slots_duplicated'_def upto_enum_step_def upto_enum_def mask_def
+           dest: is_aligned_no_overflow'
+          split: pde.splits)
+
 lemma perform_page_corres:
   assumes "page_invocation_map pgi pgi'"
   shows "corres dc (invs and valid_etcbs and valid_page_inv pgi)
@@ -2674,59 +2680,75 @@ proof -
   show ?thesis
   using assms
   apply (cases pgi)
-       apply (rename_tac word cap prod sum)
-       apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def
-                             page_invocation_map_def)
-       apply (rule corres_guard_imp)
-         apply (rule_tac R="\<lambda>_. invs and (valid_page_map_inv word cap (a,b) sum) and valid_etcbs and (\<lambda>s. caps_of_state s (a,b) = Some cap)"
+      apply (rename_tac word cap prod sum)
+      apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def page_invocation_map_def)
+      apply (rule corres_guard_imp)
+        apply (rule_tac R="\<lambda>_. invs and (valid_page_map_inv word cap (a,b) sum) and valid_etcbs and (\<lambda>s. caps_of_state s (a,b) = Some cap)"
            and R'="\<lambda>_. invs' and valid_slots' m' and pspace_aligned' and valid_slots_duplicated' m'
            and pspace_distinct' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))" in corres_split)
+           prefer 2
+           apply (erule updateCap_same_master)
+          apply (case_tac sum, case_tac aa)
+           apply (rename_tac slots)
+           apply (clarsimp simp: mapping_map_def valid_slots'_def valid_slots_def valid_page_inv_def neq_Nil_conv valid_page_map_inv_def)
+           apply (rule corres_name_pre)
+           apply (subgoal_tac "length slots \<le> 16")
             prefer 2
-            apply (erule updateCap_same_master)
-           apply (case_tac sum, case_tac aa)
-            apply (clarsimp simp: mapping_map_def valid_slots'_def valid_slots_def valid_page_inv_def neq_Nil_conv valid_page_map_inv_def)
-            apply (rule corres_name_pre)
-            apply (clarsimp simp:mapM_Cons bind_assoc split del: if_split)
-            apply (rule corres_guard_imp)
-              apply (rule corres_split[OF _ pte_check_if_mapped_corres])
-                apply (rule corres_split[OF _ store_pte_corres'])
-                   apply (rule corres_split[where r' = dc, OF _ corres_store_pte_with_invalid_tail])
+            apply clarsimp
+            apply (drule valid_slots_duplicated'_length_Inl)
+            apply (fastforce split: pte.splits)
+           apply (clarsimp simp:mapM_Cons bind_assoc split del: if_split)
+           apply (rule corres_guard_imp)
+             apply (rule corres_split[OF _ pte_check_if_mapped_corres])
+               apply (rule corres_split[OF _ store_pte_corres'])
+                  apply (rule corres_split[where r' = dc, OF _ corres_store_pte_with_invalid_tail])
                       apply (rule corres_split[where r'=dc, OF _ corres_machine_op[OF corres_Id]])
-                           apply (clarsimp simp add: when_def)
-                           apply (rule invalidate_tlb_by_asid_corres_ex)
-                          apply (simp add: last_byte_pte_def objBits_simps archObjSize_def)
-                         apply simp
-                        apply (rule no_fail_cleanCacheRange_PoU)
+                      apply (clarsimp simp add: when_def)
+                      apply (rule invalidate_tlb_by_asid_corres_ex)
+                      apply (simp add: last_byte_pte_def objBits_simps archObjSize_def)
+                      apply simp
+                      apply (rule no_fail_cleanCacheRange_PoU)
                       apply (wpsimp, safe ; wpsimp wp: hoare_vcg_ex_lift)
-                     apply wpsimp
+                      apply wpsimp
                      apply (clarsimp simp:pte_relation_aligned_def)
                      apply (clarsimp dest!:valid_slots_duplicated_pteD')
-                    apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
-                     prefer 2
-                     apply auto[1]
-                    apply (wp mapM_swp_store_pte_invs[where pte="ARM_A.pte.InvalidPTE", simplified] hoare_vcg_ex_lift)
-                    apply (wp mapM_UNIV_wp | simp add: swp_def del: fun_upd_apply)+
-                  apply (clarsimp simp:pte_relation_aligned_def)
-                  apply (clarsimp dest!:valid_slots_duplicated_pteD')
-                 apply (clarsimp simp del: fun_upd_apply simp add: cte_wp_at_caps_of_state)
-                 apply (wp add: hoare_vcg_const_Ball_lift store_pte_typ_at store_pte_cte_wp_at hoare_vcg_ex_lift)+
-              apply (wp | simp add: pteCheckIfMapped_def)+
-             apply (clarsimp simp add: cte_wp_at_caps_of_state valid_slots_def parent_for_refs_def empty_refs_def invs_psp_aligned simp del: fun_upd_apply)
-             apply (rule conjI)
-              apply (rule_tac x=aa in exI, rule_tac x=ba in exI)
-              apply (clarsimp simp: is_pt_cap_def cap_asid_def image_def neq_Nil_conv Collect_disj_eq split: Structures_A.cap.splits arch_cap.splits option.splits)
-             apply (rule conjI)
-              apply clarsimp
-              apply (drule same_refs_lD)
-              apply (rule_tac x=a in exI, rule_tac x=b in exI)
-              apply clarify
-              apply (drule_tac x=refa in spec)
-              apply (clarsimp simp add: vspace_bits_defs)
-             apply (rule conjI[rotated])
-             apply (fastforce simp add: vspace_bits_defs)+
+                    apply (clarsimp simp: word_bits_def)
+                   apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
+                    prefer 2
+                    apply auto[1]
+                   apply (wp mapM_swp_store_pte_invs[where pte="ARM_A.pte.InvalidPTE", simplified] hoare_vcg_ex_lift)
+                   apply (wp mapM_UNIV_wp | clarsimp simp add: swp_def split: prod.split simp del: fun_upd_apply)+
+                 apply (clarsimp simp:pte_relation_aligned_def)
+                 apply (clarsimp dest!:valid_slots_duplicated_pteD')
+                apply (clarsimp simp del: fun_upd_apply simp add: cte_wp_at_caps_of_state)
+                apply (wp add: hoare_vcg_const_Ball_lift store_pte_typ_at store_pte_cte_wp_at hoare_vcg_ex_lift)+
+             apply (wp | simp add: pteCheckIfMapped_def)+
+            apply (clarsimp simp: cte_wp_at_caps_of_state valid_slots_def parent_for_refs_def
+                                  empty_refs_def invs_psp_aligned
+                        simp del: fun_upd_apply)
+            apply (rule conjI)
+             apply (rule_tac x=aa in exI, rule_tac x=ba in exI)
+             apply (clarsimp simp: is_pt_cap_def cap_asid_def image_def neq_Nil_conv Collect_disj_eq split: Structures_A.cap.splits arch_cap.splits option.splits)
+            apply (rule conjI)
+             apply clarsimp
+             apply (drule same_refs_lD)
+             apply (rule_tac x=a in exI, rule_tac x=b in exI)
+             apply clarify
+             apply (drule_tac x=refa in spec)
+             apply (clarsimp simp add: vspace_bits_defs)
+            apply (rule conjI[rotated])
+             apply (fold_subgoals (prefix))[3]
+             subgoal apply (unfold_subgoals) by (fastforce simp add: vspace_bits_defs)+
            apply (case_tac ba)
-           apply (clarsimp simp: mapping_map_def valid_slots_def valid_slots'_def neq_Nil_conv valid_page_inv_def valid_page_map_inv_def)
+           apply (rename_tac slots)
+           apply (clarsimp simp: mapping_map_def valid_slots_def valid_slots'_def neq_Nil_conv
+                                 valid_page_inv_def valid_page_map_inv_def)
            apply (rule corres_name_pre)
+           apply (subgoal_tac "length slots \<le> 16")
+            prefer 2
+            apply clarsimp
+            apply (drule valid_slots_duplicated'_length_Inr)
+            apply (fastforce split: pde.splits)
            apply (clarsimp simp:mapM_Cons bind_assoc split del:if_split)
            apply (rule corres_guard_imp)
              apply (rule corres_split[OF _ pde_check_if_mapped_corres])
@@ -2741,7 +2763,8 @@ proof -
                      apply (wpsimp, safe ; wpsimp wp: hoare_vcg_ex_lift)
                       apply wpsimp
                     apply (clarsimp simp: pde_relation_aligned_def)
-                    apply (clarsimp dest!:valid_slots_duplicated_pdeD' )
+                    apply (clarsimp dest!:valid_slots_duplicated_pdeD')
+               apply (simp add: word_bits_def)
                    apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
                     prefer 2
                     apply auto[1]
@@ -2795,8 +2818,13 @@ proof -
       apply (case_tac sum)
        apply simp
        apply (case_tac a, simp)
+       apply (rename_tac slots)
        apply (clarsimp simp: mapping_map_def)
        apply (rule corres_name_pre)
+       apply (subgoal_tac "length slots \<le> 16")
+        prefer 2
+        apply (fastforce dest: valid_slots_duplicated'_length_Inl simp: valid_page_inv'_def
+                        split: pte.splits)
        apply (clarsimp simp:mapM_Cons mapM_x_mapM bind_assoc valid_slots_def valid_page_inv_def
                             neq_Nil_conv split del: if_split)
        apply (rule corres_guard_imp)
@@ -2813,22 +2841,23 @@ proof -
                 apply wpsimp
                 apply (clarsimp simp:valid_page_inv'_def)
                 apply (clarsimp dest!:valid_slots_duplicated_pteD')
+               apply (simp add: word_bits_def)
                apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
                 prefer 2
                 apply auto[1]
                apply (wp mapM_swp_store_pte_invs[where pte="ARM_A.pte.InvalidPTE", simplified] hoare_vcg_ex_lift)
-               apply (wp mapM_UNIV_wp | simp add: swp_def del: fun_upd_apply)+
+               apply (wp mapM_UNIV_wp | clarsimp simp: swp_def split: prod.splits simp del: fun_upd_apply)+
              apply (clarsimp simp:pte_relation_aligned_def valid_page_inv'_def)
              apply (clarsimp dest!:valid_slots_duplicated_pteD')
             apply (clarsimp simp del: fun_upd_apply simp add: cte_wp_at_caps_of_state)
-            apply (wp_trace add: hoare_vcg_const_Ball_lift store_pte_typ_at store_pte_cte_wp_at hoare_vcg_ex_lift)
+            apply (wp add: hoare_vcg_const_Ball_lift store_pte_typ_at store_pte_cte_wp_at hoare_vcg_ex_lift)
          apply (wp | simp add: pteCheckIfMapped_def)+
         apply (clarsimp simp add: cte_wp_at_caps_of_state valid_slots_def parent_for_refs_def empty_refs_def invs_psp_aligned is_cap_simps simp del: fun_upd_apply)
         apply (rule conjI)
          apply fastforce
         apply (rule conjI)
          apply clarsimp
-         apply (rule_tac x=ac in exI, rule_tac x=bb in exI, rule_tac x=capa in exI)
+         apply (rule_tac x=ac in exI, rule_tac x=ba in exI, rule_tac x=capa in exI)
          apply (drule same_refs_lD)
          apply (clarsimp simp add: vspace_bits_defs)
          apply (erule (2) ref_is_unique[OF _ _ reachable_page_table_not_global])
@@ -2837,10 +2866,15 @@ proof -
        apply auto[1]
       apply simp
       apply (case_tac b)
+      apply (rename_tac slots)
       apply (rule corres_name_pre)
+       apply (subgoal_tac "length slots \<le> 16")
+       prefer 2
+       apply (fastforce dest: valid_slots_duplicated'_length_Inr
+                       simp: valid_page_inv'_def mapping_map_def split: pde.splits)
       apply (clarsimp simp: mapping_map_def valid_page_inv_def
-        mapM_x_mapM mapM_Cons bind_assoc
-        valid_slots_def neq_Nil_conv split del:if_split)
+                            mapM_x_mapM mapM_Cons bind_assoc valid_slots_def neq_Nil_conv
+                      split del:if_split)
       apply (rule corres_guard_imp)
         apply (rule corres_split[OF _ pde_check_if_mapped_corres])
           apply (rule corres_split[OF _ store_pde_corres'])
@@ -2855,6 +2889,7 @@ proof -
                apply wpsimp
                apply (clarsimp simp: pde_relation_aligned_def valid_page_inv'_def)
                apply (clarsimp dest!:valid_slots_duplicated_pdeD' )
+              apply (simp add: word_bits_def)
               apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. vspace_at_asid word pd s)" in hoare_strengthen_post)
                prefer 2
                apply auto[1]
@@ -2873,11 +2908,11 @@ proof -
        apply (frule valid_global_refsD2)
         apply (clarsimp simp: cap_range_def)+
        apply (rule conjI)
-        apply  (rule_tac x=ac in exI, rule_tac x=bb in exI, rule_tac x="cap.ArchObjectCap acap" in exI)
+        apply  (rule_tac x=ac in exI, rule_tac x=ba in exI, rule_tac x="cap.ArchObjectCap acap" in exI)
         apply (erule conjI)
         apply (clarsimp simp add: arch_cap_fun_lift_def)
        apply (rule conjI)
-        apply (rule_tac x=ad in exI, rule_tac x=bc in exI, rule_tac x=capa in exI)
+        apply (rule_tac x=ad in exI, rule_tac x=bb in exI, rule_tac x=capa in exI)
         apply (clarsimp simp: same_refs_def pde_ref_def pde_ref_pages_def
                               valid_pde_def invs_def valid_state_def valid_pspace_def)
         apply (drule valid_objs_caps)
@@ -2891,13 +2926,13 @@ proof -
        apply (case_tac arch_kernel_obj, simp_all)
        apply (rule conjI)
         apply clarsimp
-        apply (drule_tac ptr="(ac,bb)" in
+        apply (drule_tac ptr="(ac,ba)" in
                valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
           apply (simp split: if_split_asm)+
         apply force
        apply fastforce
        apply clarsimp
-       apply (drule_tac ptr="(ac,bb)" in
+       apply (drule_tac ptr="(ac,ba)" in
                valid_global_refsD[OF invs_valid_global_refs caps_of_state_cteD])
        apply (force split: if_split_asm)+
       apply (auto split: if_split_asm)[1]
@@ -5145,31 +5180,86 @@ lemma perform_pti_invs [wp]:
 
 crunch invs'[wp]: setVMRootForFlush "invs'"
 
+lemma addPTEOffset_Invalid[simp]:
+  "addPTEOffset InvalidPTE x = InvalidPTE"
+  by (simp add: addPTEOffset_def)
+
+lemma in_set_zip_singleton[simp]:
+  "(x, y) \<in> set (zip xs [z]) = ((\<exists>xs'. xs = x#xs') \<and> y = z)"
+  by (cases xs) auto
+
+lemma valid_pte'_offset:
+  "\<lbrakk> valid_pte' pte s; x \<le> 15; pte = LargePagePTE p a b c; vmsz_aligned' p ARMLargePage \<rbrakk>
+  \<Longrightarrow> valid_pte' (addPTEOffset pte x) s"
+  using is_aligned_mult_triv2[of x 12, simplified] is_aligned_physMappingOffset [of ARMLargePage]
+  apply (clarsimp simp: addPTEOffset_def valid_mapping'_def addPAddr_def fromPAddr_def is_aligned_add)
+  apply (clarsimp simp: ptrFromPAddr_def vmsz_aligned'_def)
+  apply (drule aligned_offset_non_zero[rotated -1, where n=16 and y="x * 0x1000"])
+    apply (erule is_aligned_add, simp)
+   apply simp
+   apply (rule word_less_power_trans2[where k=12 and m=16, simplified])
+    apply unat_arith
+   apply simp
+  apply (simp add: add_ac)
+  done
+
 lemma mapM_x_storePTE_invs:
-  "\<lbrace>invs' and valid_pte' pte\<rbrace> mapM_x (swp storePTE pte) ps \<lbrace>\<lambda>xa. invs'\<rbrace>"
+  "\<lbrace>invs' and valid_pte' pte and
+    K (pte_vmsz_aligned' pte \<and> length slots = (case pte of LargePagePTE _ _ _ _ \<Rightarrow> 16 | _ \<Rightarrow> 1))\<rbrace>
+     mapM_x (\<lambda>(slot, i). storePTE slot (addPTEOffset pte i))
+            (zip slots [(0::32 word).e.of_nat (length slots - Suc 0)])
+  \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule hoare_post_imp)
    prefer 2
    apply (rule mapM_x_wp')
-   apply simp
-   apply (wp valid_pte_lift')
-    apply simp+
+   apply (wpsimp wp: valid_pte_lift')
+   apply (clarsimp split: pte.splits)
+   apply (rule valid_pte'_offset; simp?)
+   apply (drule in_set_zip2, simp)
+  apply simp
   done
 
+lemma valid_pde'_offset:
+  "\<lbrakk> valid_pde' pde s; x \<le> 15; pde = SuperSectionPDE p a b c; vmsz_aligned' p ARMSuperSection \<rbrakk>
+  \<Longrightarrow> valid_pde' (addPDEOffset pde x) s"
+  using is_aligned_mult_triv2[of x 21, simplified] is_aligned_physMappingOffset [of ARMSuperSection]
+  apply (clarsimp simp: addPDEOffset_def valid_mapping'_def addPAddr_def fromPAddr_def is_aligned_add)
+  apply (clarsimp simp: ptrFromPAddr_def vmsz_aligned'_def)
+  apply (drule aligned_offset_non_zero[rotated -1, where n=25 and y="x * 0x200000"])
+    apply (erule is_aligned_add, simp)
+   apply simp
+   apply (rule word_less_power_trans2[where k=21 and m=25, simplified])
+    apply unat_arith
+   apply simp
+  apply (simp add: add_ac)
+  done
+
+lemma addPDEOffset_InvalidPDE[simp]:
+  "(addPDEOffset pde x = InvalidPDE) = (pde = InvalidPDE)"
+  by (cases pde; simp add: addPDEOffset_def)
+
 lemma mapM_x_storePDE_invs:
-  "\<lbrace>invs' and valid_pde' pde
-       and K (\<forall>p \<in> set ps. valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
-         mapM_x (swp storePDE pde) ps \<lbrace>\<lambda>xa. invs'\<rbrace>"
+  "\<lbrace>invs' and valid_pde' pde and K (\<forall>p \<in> set slots. valid_pde_mapping' (p && mask pdBits) pde) and
+    K (pde_vmsz_aligned' pde \<and> length slots = (case pde of SuperSectionPDE _ _ _ _ \<Rightarrow> 16 | _ \<Rightarrow> 1))\<rbrace>
+     mapM_x (\<lambda>(slot, i). storePDE slot (addPDEOffset pde i))
+            (zip slots [(0::32 word).e.of_nat (length slots - Suc 0)])
+  \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_post_imp)
    prefer 2
-   apply (rule mapM_x_wp[OF _ subset_refl])
-   apply simp
-   apply (wp valid_pde_lift')
-    apply simp+
+   apply (rule mapM_x_wp')
+   apply (wpsimp wp: valid_pde_lift')
+   apply (rule conjI)
+    apply (clarsimp split: pde.splits)
+    apply (rule valid_pde'_offset; simp?)
+    apply (drule in_set_zip2, simp)
+   apply (clarsimp simp: valid_pde_mapping'_def)
+   apply (drule in_set_zip1, simp)
+  apply simp
   done
 
 lemma mapM_storePTE_invs:
-  "\<lbrace>invs' and valid_pte' pte\<rbrace> mapM (swp storePTE pte) ps \<lbrace>\<lambda>xa. invs'\<rbrace>"
+  "\<lbrace>invs' and valid_pte' pte\<rbrace> mapM (swp storePTE pte) ps \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule hoare_post_imp)
    prefer 2
    apply (rule mapM_wp')
@@ -5238,16 +5328,18 @@ lemma perform_pt_invs [wp]:
        apply (thin_tac "x : fst (setVMRootForFlush a b s)" for x a b)
        apply (erule use_valid)
         apply (clarsimp simp: doFlush_def Let_def split: flush_type.splits)
-        apply (clarsimp split: sum.split | intro conjI impI
-               | wp mapM_x_storePTE_invs mapM_x_storePDE_invs)+
+        apply (clarsimp simp: mapM_mapM_x split: sum.split | intro conjI impI
+               | wp mapM_x_storePTE_invs mapM_x_storePDE_invs)
      apply (clarsimp simp: valid_page_inv'_def valid_slots'_def
-                           valid_pde_slots'_def
-                    split: sum.split option.splits | intro conjI impI
+                           valid_pde_slots'_def mapM_mapM_x
+                    split: sum.split option.splits
+            | intro conjI impI
             | wp mapM_storePTE_invs mapM_storePDE_invs
                  mapM_x_storePTE_invs mapM_x_storePDE_invs
                  hoare_vcg_all_lift hoare_vcg_const_imp_lift
                  arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp
-            | wpc)+
+            | wpc
+            | drule valid_slots_duplicated'_length_Inl valid_slots_duplicated'_length_Inr)+
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (case_tac cte)
    apply clarsimp

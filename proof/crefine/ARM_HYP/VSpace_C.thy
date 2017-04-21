@@ -2955,21 +2955,6 @@ lemmas ccorres_move_array_assertion_pde_16
       ccorres_move_Guard_Seq [OF array_assertion_abs_pde_16_const]
       ccorres_move_Guard [OF array_assertion_abs_pde_16_const]
 
-lemma superSectionPDEOffsets_nth:
-  "n < length superSectionPDEOffsets \<Longrightarrow> superSectionPDEOffsets ! n = of_nat n * 8"
-  apply (simp add: superSectionPDEOffsets_def table_bits_defs
-                   upto_enum_step_def upto_enum_word nth_append
-            split: if_split)
-  apply clarsimp
-  apply (subgoal_tac "n = 15")
-   apply simp
-  apply arith
-  done
-
-lemma length_superSectionPDEOffsets:
-  "length superSectionPDEOffsets = 16"
-  by (simp add: superSectionPDEOffsets_def table_bits_defs upto_enum_step_def)
-
 lemma unmapPage_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
                           and (\<lambda>_. asid \<le> mask asid_bits \<and> vmsz_aligned' vptr sz
