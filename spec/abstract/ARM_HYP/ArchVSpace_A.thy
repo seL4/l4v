@@ -333,7 +333,8 @@ where
         hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
         sctlr \<leftarrow> do_machine_op getSCTLR;
         regs' \<leftarrow> return $ (vcpu_regs vcpu) (VCPURegSCTLR := sctlr);
-        set_vcpu vr  (vcpu\<lparr> vcpu_vgic := (vcpu_vgic vcpu)\<lparr> vgic_hcr := hcr \<rparr>, vcpu_regs := regs'\<rparr>)
+        set_vcpu vr  (vcpu\<lparr> vcpu_vgic := (vcpu_vgic vcpu)\<lparr> vgic_hcr := hcr \<rparr>, vcpu_regs := regs'\<rparr>);
+        do_machine_op isb
       od
     | _ \<Rightarrow> return ());
     do_machine_op $ do
