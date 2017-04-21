@@ -1529,6 +1529,7 @@ apply (rule ccorres_pre_getObject_vcpu)
 apply simp
 apply (ctac add: get_gic_vcpu_ctrl_hcr_ccorres)  (* why ret__unsigned_long_' *)
 apply clarsimp
+(*
 apply (rule ccorres_move_c_guard_vcpu)
 apply (rule ccorres_symb_exec_r)
 apply (ctac add: getSCTLR_ccorres)
@@ -1547,7 +1548,7 @@ apply (rule setObject_ccorres_helper[rotated, unfolded dc_def])
   apply (rule conjI)
    apply (clarsimp simp: cpspace_relation_def typ_heap_simps
                          update_vcpu_map_tos)
-
+*)
 (*
 apply (clarsimp simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def)+
 apply simp
