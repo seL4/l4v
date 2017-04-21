@@ -174,8 +174,7 @@ lemma decode_invocation_corres:
                  and (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> fst x \<and> cte_at (snd x) s)
                  and (\<lambda>s. length args < 2 ^ word_bits))
            (invs' and valid_cap' cap' and cte_at' slot'
-            and (\<lambda>s. \<forall>x\<in>set excaps'. s \<turnstile>' fst x \<and> cte_at' (snd x) s)
-            and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
+            and (\<lambda>s. \<forall>x\<in>set excaps'. s \<turnstile>' fst x \<and> cte_at' (snd x) s))
       (decode_invocation (mi_label mi) args cptr slot cap excaps)
       (RetypeDecls_H.decodeInvocation (mi_label mi) args' cptr' slot' cap' excaps')"
   apply (rule corres_gen_asm)
@@ -200,7 +199,7 @@ lemma decode_invocation_corres:
                     split del: if_split cong: if_cong)
         apply (clarsimp simp add: o_def)
         apply (rule corres_guard_imp)
-          apply (rule_tac F="length list \<le> 32" in corres_gen_asm)
+          apply (rule_tac F="length list \<le> 64" in corres_gen_asm)
           apply (rule dec_cnode_inv_corres, simp+)
          apply (simp add: valid_cap_def word_bits_def)
         apply simp
@@ -244,25 +243,26 @@ crunch inv' [wp]: lookupCapAndSlot P
 (* See also load_word_offs_corres *)
 lemma load_word_offs_word_corres:
   assumes y: "y < max_ipc_words"
-  and    yv: "y' = y * 4"
+  and    yv: "y' = y * 8"
   shows "corres op = \<top> (valid_ipc_buffer_ptr' a) (load_word_offs_word a y) (loadWordUser (a + y'))"
   unfolding loadWordUser_def yv using y
   apply -
   apply (rule corres_stateAssert_assume [rotated])
    apply (simp add: pointerInUserData_def)
-   apply (erule valid_ipc_buffer_ptr'D2)
+   apply (erule valid_ipc_buffer_ptr'D2[simplified word_size_def])
     apply (subst word_mult_less_iff)
        apply simp
       apply (unfold word_bits_len_of)
       apply (simp, subst mult.commute)
-      apply (rule nat_less_power_trans [where k = 2, simplified])
+      apply (rule nat_less_power_trans [where k = 3, simplified])
        apply (rule unat_less_power)
         apply (simp add: word_bits_conv)
        apply (erule order_less_trans, simp add: max_ipc_words word_bits_conv)
       apply (simp add: word_bits_conv)
      apply (simp add: max_ipc_words word_bits_conv)
     apply assumption
-   apply (rule is_aligned_mult_triv2 [where n = 2, simplified])
+   apply (simp add: word_size_bits_def,
+              rule is_aligned_mult_triv2 [where n = 3, simplified])
    apply (simp add: word_bits_conv)
   apply (rule corres_guard_imp)
     apply (simp add: load_word_offs_word_def word_size_def)
@@ -272,7 +272,7 @@ lemma load_word_offs_word_corres:
     apply (rule no_fail_pre)
      apply wp
     apply (erule aligned_add_aligned)
-      apply (rule is_aligned_mult_triv2 [where n = 2, simplified])
+      apply (rule is_aligned_mult_triv2 [where n = 3, simplified])
       apply (simp add: word_bits_conv msg_align_bits)+
   apply (simp add: valid_ipc_buffer_ptr'_def msg_align_bits)
   done
@@ -491,7 +491,7 @@ lemma pinv_corres:
             and simple_sched_action
             and ct_active
             and (\<lambda>s. (\<exists>w w2 b. i = Invocations_A.InvokeEndpoint w w2 b) \<longrightarrow> st_tcb_at simple (cur_thread s) s))
-     (invs' and sch_act_simple and valid_invocation' i' and ct_active' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
+     (invs' and sch_act_simple and valid_invocation' i' and ct_active')
      (perform_invocation block call i) (performInvocation block call i')"
   apply (simp add: performInvocation_def)
   apply (case_tac i)
@@ -665,15 +665,17 @@ lemma sts_mcpriority_tcb_at_ct'[wp]:
 lemma sts_valid_inv'[wp]:
   "\<lbrace>valid_invocation' i\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_invocation' i\<rbrace>"
   apply (case_tac i, simp_all add: sts_valid_untyped_inv' sts_valid_arch_inv')
-        apply (wp | simp)+
-        defer
-    apply (rename_tac cnode_invocation)
-    apply (case_tac cnode_invocation, simp_all add: cte_wp_at_ctes_of)
-          apply (wp | simp)+
-   apply (rename_tac irqcontrol_invocation)
-   apply (case_tac irqcontrol_invocation, simp_all)
-   apply (wp | simp add: irq_issued'_def)+
-  apply (rename_tac irqhandler_invocation)
+         apply (wp | simp)+
+     defer
+     apply (rename_tac cnode_invocation)
+     apply (case_tac cnode_invocation, simp_all add: cte_wp_at_ctes_of)
+           apply (wp | simp)+
+    apply (rename_tac irqcontrol_invocation)
+    apply (case_tac irqcontrol_invocation, simp_all)
+     apply (rename_tac archirq_inv)
+     apply (case_tac archirq_inv; simp)
+      apply (wp | simp add: irq_issued'_def)+
+   apply (rename_tac irqhandler_invocation)
   apply (case_tac irqhandler_invocation, simp_all)
   apply (wp hoare_vcg_ex_lift ex_cte_cap_to'_pres | simp)+
      apply (rename_tac tcbinvocation)
@@ -757,8 +759,7 @@ lemma decode_inv_wf'[wp]:
           and (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile>' fst x)
           and (\<lambda>s. \<forall>x \<in> set excaps. real_cte_at' (snd x) s)
           and (\<lambda>s. \<forall>x \<in> set excaps. ex_cte_cap_wp_to' isCNodeCap (snd x) s)
-          and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' (badge_derived' (fst x) o cteCap) (snd x) s)
-          and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
+          and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' (badge_derived' (fst x) o cteCap) (snd x) s)\<rbrace>
      decodeInvocation label args cap_index slot cap excaps
    \<lbrace>valid_invocation'\<rbrace>,-"
   apply (case_tac cap, simp_all add: decodeInvocation_def Let_def isCap_defs uncurry_def split_def
@@ -1057,8 +1058,7 @@ abbreviation (input) "all_invs_but_sch_extra \<equiv>
     valid_machine_state' s \<and>
     cur_tcb' s \<and>
     untyped_ranges_zero' s \<and>
-    valid_queues' s \<and>
-    valid_pde_mappings' s \<and> pspace_domain_valid s \<and>
+    valid_queues' s \<and> pspace_domain_valid s \<and>
     ksCurDomain s \<le> maxDomain \<and> valid_dom_schedule' s \<and>
     (\<forall>x. ksSchedulerAction s = SwitchToThread x \<longrightarrow> st_tcb_at' runnable' x s)"
 
@@ -1343,44 +1343,12 @@ done
 lemmas set_thread_state_active_valid_sched =
   set_thread_state_runnable_valid_sched[simplified runnable_eq_active]
 
-lemma setTCB_valid_duplicates'[wp]:
- "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
-  setObject a (tcb::tcb) \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
-                        objBits_def[symmetric] lookupAround2_char1
-                 split: if_split_asm)
-  apply (frule pspace_storable_class.updateObject_type[where v = tcb,simplified])
-  apply (clarsimp simp:updateObject_default_def assert_def bind_def
-    alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
-    assert_opt_def return_def fail_def typeError_def
-    split:if_splits option.splits Structures_H.kernel_object.splits)
-     apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
-  done
-
-crunch valid_duplicates'[wp]: threadSet "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(ignore: getObject setObject wp: setObject_ksInterrupt updateObject_default_inv)
-
-crunch valid_duplicates'[wp]: addToBitmap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(ignore: getObject setObject wp: setObject_ksInterrupt updateObject_default_inv)
-
-lemma tcbSchedEnqueue_valid_duplicates'[wp]:
- "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
-  tcbSchedEnqueue a \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  by (simp add:tcbSchedEnqueue_def unless_def setQueue_def | wp | wpc)+
-
-crunch valid_duplicates'[wp]: rescheduleRequired "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(ignore: getObject setObject wp: setObject_ksInterrupt updateObject_default_inv)
-
-crunch valid_duplicates'[wp]: setThreadState "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (ignore: getObject setObject)
-
 (*FIXME: move to NonDetMonadVCG.valid_validE_R *)
 lemma hinv_corres:
   "c \<longrightarrow> b \<Longrightarrow>
    corres (intr \<oplus> dc)
           (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
-          (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
+          (invs' and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_active')
           (handle_invocation c b)
           (handleInvocation c b)"
@@ -1438,8 +1406,7 @@ lemma hinv_corres:
               apply (rule_tac Q="\<lambda>rv. invs' and valid_invocation' rve'
                                       and (\<lambda>s. thread = ksCurThread s)
                                       and st_tcb_at' active' thread
-                                      and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
-                                      and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+                                      and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)"
                          in hoare_post_imp)
                apply (clarsimp simp: ct_in_state'_def)
                apply (frule(1) ct_not_ksQ)
@@ -1497,7 +1464,6 @@ lemma rfk_ksQ[wp]:
 
 lemma hinv_invs'[wp]:
   "\<lbrace>invs' and ct_active' and
-          (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
           (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
      handleInvocation calling blocking
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -1538,7 +1504,7 @@ crunch typ_at'[wp]: handleFault "\<lambda>s. P (typ_at' T p s)"
 lemmas handleFault_typ_ats[wp] = typ_at_lifts [OF handleFault_typ_at']
 
 lemma hinv_tcb'[wp]:
-  "\<lbrace>st_tcb_at' active' t and invs' and ct_active' and sch_act_simple and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
+  "\<lbrace>st_tcb_at' active' t and invs' and ct_active' and sch_act_simple\<rbrace>
      handleInvocation calling blocking
    \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
   apply (simp add: handleInvocation_def split_def
@@ -1551,14 +1517,13 @@ lemma hinv_tcb'[wp]:
 lemma hs_corres:
   "corres (intr \<oplus> dc)
           (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
-          (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
+          (invs' and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_active')
           (handle_send blocking) (handleSend blocking)"
   by (simp add: handle_send_def handleSend_def hinv_corres)
 
 lemma hs_invs'[wp]:
   "\<lbrace>invs' and ct_active' and
-    (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
     (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
    handleSend blocking \<lbrace>\<lambda>r. invs'\<rbrace>"
   apply (rule validE_valid)
@@ -1890,17 +1855,9 @@ lemma hy_invs':
   apply (simp add:ct_active_runnable'[unfolded ct_in_state'_def])
   done
 
-lemma getDFSR_invs'[wp]:
-  "valid invs' (doMachineOp getDFSR) (\<lambda>_. invs')"
-  by (simp add: getDFSR_def doMachineOp_def split_def select_f_returns | wp)+
-
-lemma getFAR_invs'[wp]:
-  "valid invs' (doMachineOp getFAR) (\<lambda>_. invs')"
-  by (simp add: getFAR_def doMachineOp_def split_def select_f_returns | wp)+
-
-lemma getIFSR_invs'[wp]:
-  "valid invs' (doMachineOp getIFSR) (\<lambda>_. invs')"
-  by (simp add: getIFSR_def doMachineOp_def split_def select_f_returns | wp)+
+lemma getFaultAddress_invs'[wp]:
+  "valid invs' (doMachineOp getFaultAddress) (\<lambda>_. invs')"
+  by (simp add: getFaultAddress_def doMachineOp_def split_def select_f_returns | wp)+
 
 lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vptr \<lbrace>\<lambda>r. invs'\<rbrace>"
   apply (simp add: X64_H.handleVMFault_def
@@ -1918,14 +1875,14 @@ lemma hv_tcb'[wp]: "\<lbrace>tcb_at' t\<rbrace> handleVMFault t' vptr \<lbrace>\
   done
 
 crunch nosch[wp]: handleVMFault "\<lambda>s. P (ksSchedulerAction s)"
-  (ignore: getFAR getDFSR getIFSR)
+  (ignore: getFaultAddress)
 
 lemma hv_inv_ex':
   "\<lbrace>P\<rbrace> handleVMFault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: X64_H.handleVMFault_def
              cong: vmfault_type.case_cong)
   apply (rule hoare_pre)
-   apply (wp dmo_inv' getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv
+   apply (wp dmo_inv' getFaultAddress_inv getRestartPC_inv
              det_getRestartPC asUser_inv
           | wpcw)+
   apply simp
@@ -2045,14 +2002,14 @@ lemma hr_ct_active'[wp]:
 
 lemma hc_corres:
   "corres (intr \<oplus> dc) (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
-              (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
+              (invs' and
                 (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
                 ct_active')
          handle_call handleCall"
   by (simp add: handle_call_def handleCall_def liftE_bindE hinv_corres)
 
 lemma hc_invs'[wp]:
-  "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
+  "\<lbrace>invs' and
       (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
       ct_active'\<rbrace>
      handleCall
@@ -2233,7 +2190,6 @@ lemma he_corres:
   "corres (intr \<oplus> dc) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
                        (\<lambda>s. scheduler_action s = resume_cur_thread))
                       (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
-                       (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
                        (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
                       (handle_event event) (handleEvent event)"
   (is "?he_corres")
@@ -2250,7 +2206,7 @@ proof -
     done
     show ?thesis
       apply (case_tac event)
-          apply (simp_all add: handleEvent_def)
+          apply (simp_all add: handleEvent_def del: handle_vm_fault.simps)
 
           apply (rename_tac syscall)
           apply (case_tac syscall)
@@ -2305,7 +2261,7 @@ proof -
        apply simp
        apply (simp add: invs'_def valid_state'_def)
       apply (rule_tac corres_split')
-         apply (rule corres_guard_imp, rule gct_corres, simp+)
+         apply (rule corres_guard_imp, rule gct_corres, (simp del: handle_vm_fault.simps)+)
         apply (rule corres_split_catch)
            apply (erule hf_corres)
           apply (rule hv_corres)
@@ -2338,17 +2294,17 @@ proof -
   qed
 
 crunch st_tcb_at'[wp]: handleVMFault,handleHypervisorFault "st_tcb_at' P t"
-  (ignore: getFAR getDFSR getIFSR)
+  (ignore: getFaultAddress)
 crunch cap_to'[wp]: handleVMFault,handleHypervisorFault "ex_nonz_cap_to' t"
-  (ignore: getFAR getDFSR getIFSR)
+  (ignore: getFaultAddress)
 crunch ksit[wp]: handleVMFault,handleHypervisorFault "\<lambda>s. P (ksIdleThread s)"
-  (ignore: getFAR getDFSR getIFSR)
+  (ignore: getFaultAddress)
 
 lemma hv_inv':
   "\<lbrace>P\<rbrace> handleVMFault p t \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: X64_H.handleVMFault_def)
   apply (rule hoare_pre)
-   apply (wp dmo_inv' getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv
+   apply (wp dmo_inv' getFaultAddress_inv getRestartPC_inv
              det_getRestartPC asUser_inv
           |wpc|simp)+
   done
@@ -2392,7 +2348,6 @@ lemma ct_active_not_idle'[simp]:
 lemma he_invs'[wp]:
   "\<lbrace>invs' and
       (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
-      (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
       (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
    handleEvent event
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -2435,8 +2390,8 @@ lemma inv_irq_IRQInactive:
 lemma inv_arch_IRQInactive:
   "\<lbrace>\<top>\<rbrace> Arch.performInvocation invocation
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: X64_H.performInvocation_def performARMMMUInvocation_def)
-  apply wp
+  apply (wpsimp simp: performX64MMUInvocation_def X64_H.performInvocation_def
+                      performX64PortInvocation_def)
   done
 
 lemma retype_pi_IRQInactive:

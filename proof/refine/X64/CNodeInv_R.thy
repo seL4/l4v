@@ -174,7 +174,7 @@ lemma cancelSendRightsEq:
 
 lemma dec_cnode_inv_corres:
   "\<lbrakk> cap_relation (cap.CNodeCap w n list) cap'; list_all2 cap_relation cs cs';
-     length list \<le> 32 \<rbrakk> \<Longrightarrow>
+     length list \<le> 64 \<rbrakk> \<Longrightarrow>
   corres
   (ser \<oplus> cnodeinv_relation)
   (invs and cap_table_at n w and K (n \<noteq> 0) and (\<lambda>s. \<forall>x \<in> set cs. s \<turnstile> x)) (invs' and valid_cap' cap' and (\<lambda>s. \<forall>x \<in> set cs'. s \<turnstile>' x))
