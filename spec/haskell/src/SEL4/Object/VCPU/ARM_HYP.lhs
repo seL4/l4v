@@ -361,6 +361,7 @@ For initialisation, see makeVCPUObject.
 >                  vcpuVGIC = (vcpuVGIC vcpu) { vgicHCR = hcr }
 >                , vcpuRegs = regs'
 >                }
+>            doMachineOp isb
 >         Nothing -> return ()
 >
 >     doMachineOp $ do
