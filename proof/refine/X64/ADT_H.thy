@@ -25,12 +25,12 @@ text {*
 *}
 
 consts
-  initEntry :: word32
-  initFrames :: "word32 list"
-  initOffset :: word32
-  initKernelFrames :: "word32 list"
-  initBootFrames :: "word32 list"
-  initDataStart :: word32
+  initEntry :: machine_word
+  initFrames :: "machine_word list"
+  initOffset :: machine_word
+  initKernelFrames :: "machine_word list"
+  initBootFrames :: "machine_word list"
+  initDataStart :: machine_word
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -75,48 +75,67 @@ lemma vm_rights_of_vmrights_map_id[simp]:
                  vm_read_write_def vm_read_only_def vm_kernel_only_def)
 
 definition
-  absPageTable :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
-                  word8 \<Rightarrow> X64_A.pte"
+  absPageTable :: "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
+                  9 word \<Rightarrow> X64_A.pte"
   where
   "absPageTable h a \<equiv> %offs.
-   case (h (a + (ucast offs << 2))) of
+   case (h (a + (ucast offs << 3))) of
      Some (KOArch (KOPTE (X64_H.InvalidPTE))) \<Rightarrow> X64_A.InvalidPTE
-   | Some (KOArch (KOPTE (X64_H.LargePagePTE p c g xn rights))) \<Rightarrow>
-       if is_aligned offs 4 then
-         X64_A.LargePagePTE p
-           {x. c & x=PageCacheable | g & x=Global | xn & x=XNever}
-           (vm_rights_of rights)
-       else X64_A.InvalidPTE
-   | Some (KOArch (KOPTE (X64_H.SmallPagePTE p c g xn rights))) \<Rightarrow>
-       X64_A.SmallPagePTE p {x. c & x=PageCacheable |
-                                        g & x=Global |
-                                        xn & x=XNever} (vm_rights_of rights)"
+   | Some (KOArch (KOPTE (X64_H.SmallPagePTE p g pat d a cd wt xd rights))) \<Rightarrow>
+       X64_A.SmallPagePTE p {x. pat & x=PAT | g & x=Global | d & x=Dirty |
+                                a & x=PTAttr Accessed | cd & x=PTAttr CacheDisabled |
+                                wt & x=PTAttr WriteThrough | xd & x=PTAttr ExecuteDisable}
+                     (vm_rights_of rights)"
 
 definition
-  absPageDirectory :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
-                      12 word \<Rightarrow>  X64_A.pde"
+  absPageDirectory :: "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
+                      9 word \<Rightarrow>  X64_A.pde"
   where
   "absPageDirectory h a \<equiv> %offs.
-   case (h (a + (ucast offs << 2))) of
+   case (h (a + (ucast offs << 3))) of
      Some (KOArch (KOPDE (X64_H.InvalidPDE))) \<Rightarrow> X64_A.InvalidPDE
-   | Some (KOArch (KOPDE (X64_H.PageTablePDE p e mw))) \<Rightarrow>
-       X64_A.PageTablePDE p {x. e & x=ParityEnabled} mw
-   | Some (KOArch (KOPDE (X64_H.SectionPDE p e mw c g xn rights))) \<Rightarrow>
-       X64_A.SectionPDE p {x. e & x=ParityEnabled |
-                                      c & x=PageCacheable |
-                                      g & x=Global |
-                                      xn & x=XNever} mw (vm_rights_of rights)
-   | Some (KOArch (KOPDE (X64_H.SuperSectionPDE p e c g xn rights))) \<Rightarrow>
-       if is_aligned offs 4 then
-         X64_A.SuperSectionPDE p
-           {x. e & x=ParityEnabled | c & x=PageCacheable
-             | g & x=Global | xn & x=XNever}
-           (vm_rights_of rights)
-       else X64_A.InvalidPDE"
+   | Some (KOArch (KOPDE (X64_H.PageTablePDE p a cd wt xd rights))) \<Rightarrow>
+       X64_A.PageTablePDE p {x. a & x=Accessed | cd & x=CacheDisabled |
+                                wt & x=WriteThrough | xd & x=ExecuteDisable}
+                            (vm_rights_of rights)
+   | Some (KOArch (KOPDE (X64_H.LargePagePDE p g pat d a cd wt xd rights))) \<Rightarrow>
+       X64_A.LargePagePDE p {x. pat & x=PAT | g & x=Global | d & x=Dirty |
+                                a & x=PTAttr Accessed | cd & x=PTAttr CacheDisabled |
+                                wt & x=PTAttr WriteThrough | xd & x=PTAttr ExecuteDisable}
+                         (vm_rights_of rights)"
+
+definition
+  absPDPT :: "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
+                      9 word \<Rightarrow>  X64_A.pdpte"
+  where
+  "absPDPT h a \<equiv> %offs.
+   case (h (a + (ucast offs << 3))) of
+     Some (KOArch (KOPDPTE (X64_H.InvalidPDPTE))) \<Rightarrow> X64_A.InvalidPDPTE
+   | Some (KOArch (KOPDPTE (X64_H.PageDirectoryPDPTE p a cd wt xd rights))) \<Rightarrow>
+       X64_A.PageDirectoryPDPTE p {x. a & x=Accessed | cd & x=CacheDisabled |
+                                wt & x=WriteThrough | xd & x=ExecuteDisable}
+                            (vm_rights_of rights)
+   | Some (KOArch (KOPDPTE (X64_H.HugePagePDPTE p g pat d a cd wt xd rights))) \<Rightarrow>
+       X64_A.HugePagePDPTE p {x. pat & x=PAT | g & x=Global | d & x=Dirty |
+                                a & x=PTAttr Accessed | cd & x=PTAttr CacheDisabled |
+                                wt & x=PTAttr WriteThrough | xd & x=PTAttr ExecuteDisable}
+                         (vm_rights_of rights)"
+
+definition
+  absPML4 :: "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
+                      9 word \<Rightarrow>  X64_A.pml4e"
+  where
+  "absPML4 h a \<equiv> %offs.
+   case (h (a + (ucast offs << 3))) of
+     Some (KOArch (KOPML4E (X64_H.InvalidPML4E))) \<Rightarrow> X64_A.InvalidPML4E
+   | Some (KOArch (KOPML4E (X64_H.PDPointerTablePML4E p a cd wt xd rights))) \<Rightarrow>
+       X64_A.PDPointerTablePML4E p {x. a & x=Accessed | cd & x=CacheDisabled |
+                                wt & x=WriteThrough | xd & x=ExecuteDisable}
+                            (vm_rights_of rights)"
 
 (* Can't pull the whole heap off at once, start with arch specific stuff.*)
 definition
-  absHeapArch :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32
+  absHeapArch :: "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> machine_word
                  \<Rightarrow> arch_kernel_object \<rightharpoonup> arch_kernel_obj"
   where
   "absHeapArch h a \<equiv> %ako.
@@ -128,34 +147,38 @@ definition
        else None
    | KOPDE _ \<Rightarrow>
        if is_aligned a pd_bits then Some (PageDirectory (absPageDirectory h a))
+       else None
+   | KOPDPTE _ \<Rightarrow>
+       if is_aligned a pdpt_bits then Some (PDPointerTable (absPDPT h a))
+       else None
+   | KOPML4E _ \<Rightarrow>
+       if is_aligned a pml4_bits then Some (PageMapL4 (absPML4 h a))
        else None)"
 
 lemma
   assumes ptes:
     "\<forall>x. (\<exists>pte. ksPSpace \<sigma> x = Some (KOArch (KOPTE pte))) \<longrightarrow>
          is_aligned x pt_bits \<longrightarrow>
-         (\<forall>y::word8. \<exists>pte'. ksPSpace \<sigma> (x + (ucast y << 2)) =
+         (\<forall>y::9 word. \<exists>pte'. ksPSpace \<sigma> (x + (ucast y << 3)) =
                            Some (KOArch (KOPTE pte')))"
-  and pte_rights:
-    "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPTE (X64_H.LargePagePTE _ _ _ _ r))) \<Rightarrow>
-             r \<noteq> VMNoAccess"
-    "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPTE (X64_H.SmallPagePTE _ _ _ _ r))) \<Rightarrow>
-             r \<noteq> VMNoAccess"
 
   assumes pdes:
     "\<forall>x. (\<exists>pde. ksPSpace \<sigma> x = Some (KOArch (KOPDE pde))) \<longrightarrow>
          is_aligned x pd_bits \<longrightarrow>
-         (\<forall>y::12 word. \<exists>pde'. ksPSpace \<sigma> (x + (ucast y << 2)) =
+         (\<forall>y::9 word. \<exists>pde'. ksPSpace \<sigma> (x + (ucast y << 3)) =
                              Some (KOArch (KOPDE pde')))"
-  and pde_rights:
-    "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPDE (X64_H.SectionPDE _ _ _ _ _ _ r))) \<Rightarrow>
-             r \<noteq> VMNoAccess"
-    "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPDE (X64_H.SuperSectionPDE _ _ _ _ _ r))) \<Rightarrow>
-             r \<noteq> VMNoAccess"
+
+  assumes pdptes:
+    "\<forall>x. (\<exists>pdpte. ksPSpace \<sigma> x = Some (KOArch (KOPDPTE pdpte))) \<longrightarrow>
+         is_aligned x pdpt_bits \<longrightarrow>
+         (\<forall>y::9 word. \<exists>pdpte'. ksPSpace \<sigma> (x + (ucast y << 3)) =
+                             Some (KOArch (KOPDPTE pdpte')))"
+
+  assumes pml4es:
+    "\<forall>x. (\<exists>pml4e. ksPSpace \<sigma> x = Some (KOArch (KOPML4E pml4e))) \<longrightarrow>
+         is_aligned x pml4_bits \<longrightarrow>
+         (\<forall>y::9 word. \<exists>pml4e'. ksPSpace \<sigma> (x + (ucast y << 3)) =
+                             Some (KOArch (KOPML4E pml4e')))"
 
   assumes fst_pte:
     "\<forall>x. (\<exists>pte. ksPSpace \<sigma> x = Some (KOArch (KOPTE pte))) \<longrightarrow>
@@ -165,6 +188,15 @@ lemma
     "\<forall>x. (\<exists>pde. ksPSpace \<sigma> x = Some (KOArch (KOPDE pde))) \<longrightarrow>
           (\<exists>pde'. ksPSpace \<sigma> (x && ~~ mask pd_bits) =
                   Some (KOArch (KOPDE pde')))"
+  assumes fst_pdpte:
+    "\<forall>x. (\<exists>pdpte. ksPSpace \<sigma> x = Some (KOArch (KOPDPTE pdpte))) \<longrightarrow>
+          (\<exists>pdpte'. ksPSpace \<sigma> (x && ~~ mask pdpt_bits) =
+                  Some (KOArch (KOPDPTE pdpte')))"
+  assumes fst_pml4e:
+    "\<forall>x. (\<exists>pml4e. ksPSpace \<sigma> x = Some (KOArch (KOPML4E pml4e))) \<longrightarrow>
+          (\<exists>pml4e'. ksPSpace \<sigma> (x && ~~ mask pml4_bits) =
+                  Some (KOArch (KOPML4E pml4e')))"
+
   assumes pspace_aligned': "pspace_aligned' \<sigma>"
 
   shows
@@ -185,54 +217,94 @@ lemma
     apply (rename_tac arch_kernel_object aa b z)
     apply (simp add: absHeapArch_def)
     apply (case_tac arch_kernel_object)
-      apply (clarsimp split: asidpool.splits)
+        apply (clarsimp split: asidpool.splits)
+       apply (clarsimp split: if_split_asm)
+       using  ptes
+       apply (erule_tac x=x in allE)
+       apply simp
+       apply (erule_tac x=y in allE)
+       apply (clarsimp simp: bit_simps)
+      apply (clarsimp split: if_split_asm)
+      using pdes
+      apply (erule_tac x=x in allE)
+      apply simp
+      apply (erule_tac x=y in allE)
+      apply (clarsimp simp: bit_simps)
      apply (clarsimp split: if_split_asm)
-     using  ptes
+     using pdptes
      apply (erule_tac x=x in allE)
      apply simp
      apply (erule_tac x=y in allE)
-     apply clarsimp
+     apply (clarsimp simp: bit_simps)
     apply (clarsimp split: if_split_asm)
-    using pdes
+    using pml4es
     apply (erule_tac x=x in allE)
     apply simp
     apply (erule_tac x=y in allE)
-    apply clarsimp
+    apply (clarsimp simp: bit_simps)
    apply (clarsimp split: option.splits Structures_H.kernel_object.splits)
    apply (clarsimp simp add: absHeapArch_def)
    apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object)
-     apply (rule_tac x=y in exI)
-     apply (clarsimp split: asidpool.splits)
+         apply (rule_tac x=y in exI)
+         apply (clarsimp split: asidpool.splits)
     using fst_pte
-    apply (erule_tac x=y in allE)
-    apply (clarsimp split: if_split_asm)
-    apply (rule_tac x="(y && ~~ mask pt_bits)" in exI, simp)
-    apply (simp add: is_aligned_mask mask_AND_NOT_mask)
-    apply (simp add: range_composition[symmetric])
-    apply (rule_tac x="ucast (y >> 2)" in range_eqI)
-    apply (simp add: pt_bits_def pageBits_def)
-    apply (simp add: word_size ucast_ucast_mask and_mask_shiftl_comm)
+        apply (erule_tac x=y in allE)
+        apply (clarsimp split: if_split_asm)
+        apply (rule_tac x="(y && ~~ mask pt_bits)" in exI, simp)
+        apply (simp add: is_aligned_mask mask_AND_NOT_mask)
+        apply (simp add: range_composition[symmetric])
+        apply (rule_tac x="ucast (y >> 3)" in range_eqI)
+        apply (simp add: pt_bits_def pageBits_def bit_simps)
+        apply (simp add: word_size ucast_ucast_mask and_mask_shiftl_comm)
     using pspace_aligned'
-    apply (simp add: pspace_aligned'_def dom_def)
-    apply (erule_tac x=y in allE)
-    apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq
-                     and_not_mask[symmetric] AND_NOT_mask_plus_AND_mask_eq)
-   using fst_pde
-   apply (erule_tac x=y in allE)
-   apply clarsimp
-   apply (rule_tac x="(y && ~~ mask pd_bits)" in exI, simp)
-   apply (simp add: is_aligned_mask mask_AND_NOT_mask)
-   apply (simp add: range_composition[symmetric])
-   apply (rule_tac x="ucast (y >> 2)" in range_eqI)
-   apply (simp add: pd_bits_def pageBits_def)
-   apply (simp add: word_size ucast_ucast_mask and_mask_shiftl_comm)
-   using pspace_aligned'
-   apply (simp add: pspace_aligned'_def dom_def)
-   apply (erule_tac x=y in allE)
-   apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq
-                    and_not_mask[symmetric] AND_NOT_mask_plus_AND_mask_eq)
-  apply (simp split: option.splits Structures_H.kernel_object.splits)
+        apply (simp add: pspace_aligned'_def dom_def)
+        apply (erule_tac x=y in allE)
+        apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq
+        and_not_mask[symmetric] AND_NOT_mask_plus_AND_mask_eq)
+    using fst_pde
+       apply (erule_tac x=y in allE)
+       apply (clarsimp split: if_split_asm)
+       apply (rule_tac x="(y && ~~ mask pd_bits)" in exI, simp)
+       apply (simp add: is_aligned_mask mask_AND_NOT_mask)
+       apply (simp add: range_composition[symmetric])
+       apply (rule_tac x="ucast (y >> 3)" in range_eqI)
+       apply (simp add: pt_bits_def pageBits_def bit_simps)
+       apply (simp add: word_size ucast_ucast_mask and_mask_shiftl_comm)
+    using pspace_aligned'
+       apply (simp add: pspace_aligned'_def dom_def)
+       apply (erule_tac x=y in allE)
+       apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq
+        and_not_mask[symmetric] AND_NOT_mask_plus_AND_mask_eq)
+    using fst_pdpte
+      apply (erule_tac x=y in allE)
+      apply (clarsimp split: if_split_asm)
+      apply (rule_tac x="(y && ~~ mask pdpt_bits)" in exI, simp)
+      apply (simp add: is_aligned_mask mask_AND_NOT_mask)
+      apply (simp add: range_composition[symmetric])
+      apply (rule_tac x="ucast (y >> 3)" in range_eqI)
+      apply (simp add: pt_bits_def pageBits_def bit_simps)
+      apply (simp add: word_size ucast_ucast_mask and_mask_shiftl_comm)
+    using pspace_aligned'
+      apply (simp add: pspace_aligned'_def dom_def)
+      apply (erule_tac x=y in allE)
+      apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq
+        and_not_mask[symmetric] AND_NOT_mask_plus_AND_mask_eq)
+    using fst_pml4e
+     apply (erule_tac x=y in allE)
+     apply (clarsimp split: if_split_asm)
+     apply (rule_tac x="(y && ~~ mask pml4_bits)" in exI, simp)
+     apply (simp add: is_aligned_mask mask_AND_NOT_mask)
+     apply (simp add: range_composition[symmetric])
+     apply (rule_tac x="ucast (y >> 3)" in range_eqI)
+     apply (simp add: pt_bits_def pageBits_def bit_simps)
+     apply (simp add: word_size ucast_ucast_mask and_mask_shiftl_comm)
+    using pspace_aligned'
+     apply (simp add: pspace_aligned'_def dom_def)
+     apply (erule_tac x=y in allE)
+     apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq
+        and_not_mask[symmetric] AND_NOT_mask_plus_AND_mask_eq)
+    apply (simp split: option.splits Structures_H.kernel_object.splits)
   apply (intro allI)
   apply (intro impI)
   apply (elim exE)
@@ -243,38 +315,53 @@ lemma
     apply (clarsimp split: asidpool.splits)
     apply (simp add: other_obj_relation_def asid_pool_relation_def o_def inv_def)
    apply simp
-   apply (clarsimp simp: pte_relation_def pte_relation_aligned_def
+   apply (clarsimp simp: pte_relation_def
                   split: if_split_asm)
    using ptes
    apply (erule_tac x=x in allE)
    apply simp
    apply (erule_tac x=y in allE)
-   apply clarsimp
-   apply (rule_tac x=pte' in exI)
+   apply (clarsimp simp: bit_simps)
    apply (simp add: absPageTable_def  split: option.splits X64_H.pte.splits)
    apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
               vm_kernel_only_def vm_read_only_def vm_read_write_def
             split: vmrights.splits)
-   using pte_rights
-   apply -[1]
-   apply (erule_tac x="x + (ucast y << 2)" in allE)+
-   subgoal by fastforce
-  apply (clarsimp split: if_split_asm)
-  using pdes
-  apply (erule_tac x=x in allE)
-  apply simp
-  apply (erule_tac x=y in allE)
-  apply clarsimp
-  apply (simp add: pde_relation_def pde_relation_aligned_def)
-  apply (simp add: absPageDirectory_def
-              split: option.splits X64_H.pde.splits)
-  apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
-             vm_kernel_only_def vm_read_only_def vm_read_write_def
-           split: vmrights.splits)
-  using pde_rights
-  apply -[1]
-  apply (erule_tac x="x + (ucast y << 2)" in allE)+
-  apply fastforce
+   apply simp
+   apply (clarsimp simp: pde_relation_def
+                  split: if_split_asm)
+   using pdes
+   apply (erule_tac x=x in allE)
+   apply simp
+   apply (erule_tac x=y in allE)
+   apply (clarsimp simp: bit_simps)
+   apply (simp add: absPageDirectory_def  split: option.splits X64_H.pde.splits)
+   apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
+              vm_kernel_only_def vm_read_only_def vm_read_write_def
+            split: vmrights.splits)
+   apply simp
+   apply (clarsimp simp: pdpte_relation_def
+                  split: if_split_asm)
+   using pdptes
+   apply (erule_tac x=x in allE)
+   apply simp
+   apply (erule_tac x=y in allE)
+   apply (clarsimp simp: bit_simps)
+   apply (simp add: absPDPT_def  split: option.splits X64_H.pdpte.splits)
+   apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
+              vm_kernel_only_def vm_read_only_def vm_read_write_def
+            split: vmrights.splits)
+   apply simp
+   apply (clarsimp simp: pml4e_relation_def
+                  split: if_split_asm)
+   using pml4es
+   apply (erule_tac x=x in allE)
+   apply simp
+   apply (erule_tac x=y in allE)
+   apply (clarsimp simp: bit_simps)
+   apply (simp add: absPML4_def  split: option.splits X64_H.pml4e.splits)
+   apply (clarsimp simp add:  vmrights_map_def vm_rights_of_def
+              vm_kernel_only_def vm_read_only_def vm_read_write_def
+            split: vmrights.splits)
   done
 
 definition
@@ -315,19 +402,26 @@ fun
 | "CapabilityMap (capability.ArchObjectCap (arch_capability.ASIDControlCap)) =
    cap.ArchObjectCap (arch_cap.ASIDControlCap)"
 | "CapabilityMap (capability.ArchObjectCap
-                    (arch_capability.PageCap d word rghts sz data)) =
-   cap.ArchObjectCap (arch_cap.PageCap d word (vm_rights_of rghts) sz data)"
+                    (arch_capability.PageCap word rghts mt sz d data)) =
+   cap.ArchObjectCap (arch_cap.PageCap d word (vm_rights_of rghts) mt sz data)"
 | "CapabilityMap (capability.ArchObjectCap
                     (arch_capability.PageTableCap word data)) =
   cap.ArchObjectCap (arch_cap.PageTableCap word data)"
 | "CapabilityMap (capability.ArchObjectCap
                     (arch_capability.PageDirectoryCap word data)) =
   cap.ArchObjectCap (arch_cap.PageDirectoryCap word data)"
+| "CapabilityMap (capability.ArchObjectCap
+                    (arch_capability.PDPointerTableCap word data)) =
+  cap.ArchObjectCap (arch_cap.PDPointerTableCap word data)"
+| "CapabilityMap (capability.ArchObjectCap
+                    (arch_capability.PML4Cap word data)) =
+  cap.ArchObjectCap (arch_cap.PML4Cap word data)"
+| "CapabilityMap (capability.ArchObjectCap
+                    (arch_capability.IOPortCap f l)) =
+  cap.ArchObjectCap (arch_cap.IOPortCap f l)"
 
 lemma cap_relation_CapabilityMap:
-  "\<lbrakk>\<forall>dev w r s d. c = capability.ArchObjectCap (arch_capability.PageCap dev w r s d) \<longrightarrow>
-              r \<noteq> VMNoAccess;
-    \<forall>ref n L l. c = capability.CNodeCap ref n L l \<longrightarrow>
+  "\<lbrakk>\<forall>ref n L l. c = capability.CNodeCap ref n L l \<longrightarrow>
                 of_bl (bin_to_bl l (uint L)) = L\<rbrakk>
    \<Longrightarrow> cap_relation (CapabilityMap c) c"
 apply (case_tac c; simp del: bin_to_bl_def)
@@ -405,10 +499,10 @@ by (clarsimp simp add: LookupFailureMap_def lookup_failure_map_def
         split: lookup_failure.splits)
 
 lemma LookupFailureMap_lookup_failure_map:
-  "(\<forall>n g. lf = ExceptionTypes_A.GuardMismatch n g \<longrightarrow> length g \<le> 32)
+  "(\<forall>n g. lf = ExceptionTypes_A.GuardMismatch n g \<longrightarrow> length g \<le> word_bits)
    \<Longrightarrow> LookupFailureMap (lookup_failure_map lf) = lf"
   by (clarsimp simp add: LookupFailureMap_def lookup_failure_map_def
-                         uint_of_bl_is_bl_to_bin
+                         uint_of_bl_is_bl_to_bin word_bits_def
                simp del: bin_to_bl_def
                split: ExceptionTypes_A.lookup_failure.splits)
 
@@ -466,13 +560,13 @@ definition
 definition
  "absCNode sz h a \<equiv> CNode sz (%bl.
   if length bl = sz
-    then Some (CapabilityMap (case (h (a + of_bl bl * 16)) of
+    then Some (CapabilityMap (case (h (a + of_bl bl * 32)) of
                                 Some (KOCTE cte) \<Rightarrow> cteCap cte))
   else None)"
 
 definition
-  absHeap :: "(word32 \<rightharpoonup> vmpage_size) \<Rightarrow> (word32 \<rightharpoonup> nat) \<Rightarrow>
-              (word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> Structures_A.kheap"
+  absHeap :: "(machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow>
+              (machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> Structures_A.kheap"
   where
   "absHeap ups cns h \<equiv> \<lambda>x.
      case h x of
@@ -489,19 +583,19 @@ definition
 lemma unaligned_page_offsets_helper:
   "\<lbrakk>is_aligned y (pageBitsForSize vmpage_size); n\<noteq>0;
     n < 2 ^ (pageBitsForSize vmpage_size - pageBits)\<rbrakk>
-   \<Longrightarrow> \<not> is_aligned (y + n * 2 ^ pageBits :: word32) (pageBitsForSize vmpage_size)"
+   \<Longrightarrow> \<not> is_aligned (y + n * 2 ^ pageBits :: machine_word) (pageBitsForSize vmpage_size)"
   apply (simp (no_asm_simp) add: is_aligned_mask)
   apply (simp add: mask_add_aligned)
   apply (cut_tac mask_eq_iff_w2p [of "pageBitsForSize vmpage_size" "n * 2 ^ pageBits"])
    prefer 2
-   apply (case_tac vmpage_size, simp_all add: pageBits_def word_size)
-  apply (cut_tac word_power_nonzero_32[of n pageBits];
+   apply (case_tac vmpage_size, simp_all add: word_size bit_simps)
+  apply (cut_tac word_power_nonzero_64[of n pageBits];
          simp add: word_bits_conv pageBits_def)
    prefer 2
-   apply (case_tac vmpage_size, simp_all add: pageBits_def word_size)
-     apply (frule less_trans[of n _ "0x100000"], simp+)+
+   apply (case_tac vmpage_size, simp_all add: bit_simps word_size)
+     apply (frule less_trans[of n _ "0x10000000000000"], simp+)+
   apply clarsimp
-  apply (case_tac vmpage_size, simp_all add: pageBits_def)
+  apply (case_tac vmpage_size, simp_all add: bit_simps)
     apply (frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+
   done
 
@@ -518,7 +612,7 @@ lemma unaligned_helper:
 lemma pspace_aligned_distinct_None:
   (* NOTE: life would be easier if pspace_aligned and pspace_distinct were defined on PSpace instead of the whole kernel state. *)
 assumes pspace_aligned:
-  "\<forall>x\<in>dom ha. is_aligned (x :: word32) (obj_bits (the (ha x)))"
+  "\<forall>x\<in>dom ha. is_aligned (x :: machine_word) (obj_bits (the (ha x)))"
 assumes pspace_distinct:
   "\<forall>x y ko ko'.
    ha x = Some ko \<and> ha y = Some ko' \<and> x \<noteq> y \<longrightarrow>
@@ -550,15 +644,15 @@ shows
   apply (clarsimp simp add: dvd_def word_bits_len_of word_bits_conv
                             and_mask_dvd_nat[symmetric])
   apply (cut_tac x=x in unat_lt2p)
-  apply (cut_tac x="mask (obj_bits ko)::word32" in unat_lt2p)
+  apply (cut_tac x="mask (obj_bits ko)::machine_word" in unat_lt2p)
   apply (simp add: mult.commute
                    add.commute[of "unat (mask (obj_bits ko))"])
   apply (case_tac "k=0", simp+)
-  apply (subgoal_tac "obj_bits ko\<le>32")
+  apply (subgoal_tac "obj_bits ko\<le>64")
    prefer 2
    apply (rule ccontr)
    apply (simp add: not_le)
-   apply (frule_tac a="2::nat" and n=32 in power_strict_increasing, simp+)
+   apply (frule_tac a="2::nat" and n=64 in power_strict_increasing, simp+)
    apply (case_tac "k=1", simp)
    apply (cut_tac m=k and n="2 ^ obj_bits ko" in n_less_n_mult_m,
           (simp(no_asm_simp))+)
@@ -568,19 +662,19 @@ shows
   apply (erule disjE)
    prefer 2
    apply (simp add: mask_def)
-  apply (subgoal_tac "obj_bits ko <= (31::nat)", simp_all)
+  apply (subgoal_tac "obj_bits ko <= (63::nat)", simp_all)
   apply (simp add: mask_def unat_minus_one word_bits_conv)
-  apply (cut_tac w=k and c="2 ^ obj_bits ko" and b="2^(32-obj_bits ko)"
+  apply (cut_tac w=k and c="2 ^ obj_bits ko" and b="2^(64-obj_bits ko)"
               in less_le_mult_nat)
    apply (simp_all add: power_add[symmetric])
   apply (rule ccontr)
   apply (simp add: not_less)
-  apply (simp add: le_less[of "2 ^ (32 - obj_bits ko)"])
+  apply (simp add: le_less[of "2 ^ (64 - obj_bits ko)"])
   apply (erule disjE)
    prefer 2
    apply (clarsimp simp add: power_add[symmetric])
   apply clarsimp
-  apply (drule mult_less_mono1[of "2 ^ (32 - obj_bits ko)" _ "2 ^ obj_bits ko"])
+  apply (drule mult_less_mono1[of "2 ^ (64 - obj_bits ko)" _ "2 ^ obj_bits ko"])
    apply (simp add: power_add[symmetric])+
   done
 
@@ -637,12 +731,14 @@ proof -
       apply simp
      apply (rename_tac arch_kernel_obj)
      apply (case_tac arch_kernel_obj, simp_all add: image_def)
+          apply (erule_tac x=0 in allE, simp)
+         apply (erule_tac x=0 in allE, simp)
+        apply (erule_tac x=0 in allE, simp)
        apply (erule_tac x=0 in allE, simp)
-      apply (erule_tac x=0 in allE, simp)
-     apply clarsimp
-     apply (erule_tac x=0 in allE, simp add: pageBits_def)
-     apply (rename_tac vmpage_size)
-     apply (case_tac vmpage_size, simp_all)
+      apply clarsimp
+      apply (erule_tac x=0 in allE, simp add: bit_simps)
+      apply (rename_tac vmpage_size)
+      apply (case_tac vmpage_size, simp_all add: bit_simps)
 
     apply clarsimp
     apply (intro conjI impI allI)
@@ -657,9 +753,11 @@ proof -
            apply (rename_tac arch_kernel_obj)
            apply (case_tac arch_kernel_obj,
                   simp_all add: other_obj_relation_def)
-             apply (clarsimp simp add: pte_relation_def)
-            apply (clarsimp simp add: pde_relation_def)
-           apply (clarsimp split: if_split_asm)+
+                apply (clarsimp simp add: pte_relation_def)
+               apply (clarsimp simp add: pde_relation_def)
+              apply (clarsimp simp add: pdpte_relation_def)
+             apply (clarsimp simp add: pml4e_relation_def)
+            apply (clarsimp split: if_split_asm)+
 
           apply (erule pspace_dom_relatedE[OF _ pspace_relation])
           apply (case_tac ko, simp_all add: other_obj_relation_def)
@@ -670,54 +768,62 @@ proof -
                    split: Structures_A.ntfn.splits)
           apply (rename_tac arch_kernel_obj)
           apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
-            apply (clarsimp simp add: pte_relation_def)
-           apply (clarsimp simp add: pde_relation_def)
-          apply (clarsimp split: if_split_asm)+
+               apply (clarsimp simp add: pte_relation_def)
+              apply (clarsimp simp add: pde_relation_def)
+             apply (clarsimp simp add: pdpte_relation_def)
+            apply (clarsimp simp add: pml4e_relation_def)
+           apply (clarsimp split: if_split_asm)+
 
          apply (erule pspace_dom_relatedE[OF _ pspace_relation])
          apply (case_tac ko, simp_all add: other_obj_relation_def)
            apply (clarsimp simp add: cte_relation_def split: if_split_asm)
          apply (rename_tac arch_kernel_obj)
          apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
-           apply (clarsimp simp add: pte_relation_def)
-          apply (clarsimp simp add: pde_relation_def)
-         apply (clarsimp split: if_split_asm)+
+              apply (clarsimp simp add: pte_relation_def)
+             apply (clarsimp simp add: pde_relation_def)
+            apply (clarsimp simp add: pdpte_relation_def)
+           apply (clarsimp simp add: pml4e_relation_def)
+          apply (clarsimp split: if_split_asm)+
 
         apply (erule pspace_dom_relatedE[OF _ pspace_relation])
         apply (case_tac ko, simp_all add: other_obj_relation_def)
           apply (clarsimp simp add: cte_relation_def split: if_split_asm)
         apply (rename_tac arch_kernel_obj)
         apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
-          apply (clarsimp simp add: pte_relation_def)
-         apply (clarsimp simp add: pde_relation_def)
-        apply (rename_tac vmpage_size)
-        apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
-        apply (case_tac "n=0", simp)
-        apply (case_tac "kheap s (y + n * 2 ^ pageBits)")
-         apply (rule ccontr)
-         apply (clarsimp dest!: gsUserPages[symmetric, THEN iffD1] )
-        using pspace_aligned
-        apply (simp add: pspace_aligned_def dom_def)
-        apply (erule_tac x=y in allE)
-        apply (case_tac "n=0",(simp split: if_split_asm)+)
-        apply (frule (2) unaligned_page_offsets_helper)
-        apply (frule_tac y="n*2^pageBits" in pspace_aligned_distinct_None'
-                                          [OF pspace_aligned pspace_distinct])
-         apply simp
-         apply (rule conjI, clarsimp simp add: word_gt_0)
-         apply (simp add: is_aligned_mask)
-         apply (clarsimp simp add: pageBits_def mask_def)
-        apply (case_tac vmpage_size; simp)
-          apply ((frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+)[4]
+             apply (clarsimp simp add: pte_relation_def)
+            apply (clarsimp simp add: pde_relation_def)
+           apply (clarsimp simp add: pdpte_relation_def)
+          apply (clarsimp simp add: pml4e_relation_def)
+         apply (rename_tac vmpage_size)
+         apply (cut_tac a1=y and sz1=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
+         apply (case_tac "n=0", simp)
+         apply (case_tac "kheap s (y + n * 2 ^ pageBits)")
+          apply (rule ccontr)
+          apply (clarsimp dest!: gsUserPages[symmetric, THEN iffD1] )
+     using pspace_aligned
+         apply (simp add: pspace_aligned_def dom_def)
+         apply (erule_tac x=y in allE)
+         apply (case_tac "n=0",(simp split: if_split_asm)+)
+         apply (frule (2) unaligned_page_offsets_helper)
+         apply (frule_tac y="n*2^pageBits" in pspace_aligned_distinct_None'
+         [OF pspace_aligned pspace_distinct])
+          apply simp
+          apply (rule conjI, clarsimp simp add: word_gt_0)
+          apply (simp add: is_aligned_mask)
+          apply (clarsimp simp add: pageBits_def mask_def )
+          apply (case_tac vmpage_size; simp add: bit_simps)
+           apply ((frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+)[4]
         apply (erule pspace_dom_relatedE[OF _ pspace_relation])
         apply (case_tac ko, simp_all add: other_obj_relation_def)
-          apply (clarsimp simp add: cte_relation_def split: if_split_asm)
+         apply (clarsimp simp add: cte_relation_def split: if_split_asm)
         apply (rename_tac arch_kernel_obj)
         apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
-          apply (clarsimp simp add: pte_relation_def)
-         apply (clarsimp simp add: pde_relation_def)
+            apply (clarsimp simp add: pte_relation_def)
+           apply (clarsimp simp add: pde_relation_def)
+          apply (clarsimp simp add: pdpte_relation_def)
+         apply (clarsimp simp add: pml4e_relation_def)
         apply (rename_tac vmpage_size)
-        apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
+        apply (cut_tac a1=y and sz1=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
         apply (case_tac "n=0", simp)
         apply (case_tac "kheap s (y + n * 2 ^ pageBits)")
          apply (rule ccontr)
@@ -732,8 +838,8 @@ proof -
          apply simp
          apply (rule conjI, clarsimp simp add: word_gt_0)
          apply (simp add: is_aligned_mask)
-         apply (clarsimp simp add: pageBits_def mask_def)
-        apply (case_tac vmpage_size; simp)
+         apply (clarsimp simp add: pageBits_def mask_def bit_simps)
+        apply (case_tac vmpage_size; simp add: bit_simps)
           apply ((frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+)[4]
        apply (erule pspace_dom_relatedE[OF _ pspace_relation])
        apply (case_tac ko, simp_all add: other_obj_relation_def)
@@ -741,16 +847,18 @@ proof -
         prefer 2
         apply (rename_tac arch_kernel_obj)
         apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
-          apply (clarsimp simp add: pte_relation_def)
-         apply (clarsimp simp add: pde_relation_def)
-        apply (clarsimp split: if_split_asm)
-       apply (clarsimp simp add: TcbMap_def tcb_relation_def valid_obj_def)
-       apply (rename_tac tcb y tcb')
-       apply (case_tac tcb)
-       apply (case_tac tcb')
-       apply (simp add: thread_state_relation_imp_ThStateMap)
-       apply (subgoal_tac "map_option FaultMap (tcbFault tcb) = tcb_fault")
-        prefer 2
+               apply (clarsimp simp add: pte_relation_def)
+              apply (clarsimp simp add: pde_relation_def)
+             apply (clarsimp simp add: pdpte_relation_def)
+            apply (clarsimp simp add: pml4e_relation_def)
+           apply (clarsimp split: if_split_asm)
+          apply (clarsimp simp add: TcbMap_def tcb_relation_def valid_obj_def)
+          apply (rename_tac tcb y tcb')
+          apply (case_tac tcb)
+          apply (case_tac tcb')
+          apply (simp add: thread_state_relation_imp_ThStateMap)
+          apply (subgoal_tac "map_option FaultMap (tcbFault tcb) = tcb_fault")
+           prefer 2
         apply (simp add: fault_rel_optionation_def)
         using valid_objs[simplified valid_objs_def dom_def fun_app_def,
                          simplified]
@@ -771,14 +879,16 @@ proof -
        apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
          apply (clarsimp simp add: pte_relation_def)
         apply (clarsimp simp add: pde_relation_def)
+           apply (clarsimp simp add: pdpte_relation_def)
+          apply (clarsimp simp add: pml4e_relation_def)
        apply (clarsimp split: if_split_asm)
       apply (simp add: cte_map_def)
       apply (clarsimp simp add: cte_relation_def)
-      apply (cut_tac a=y and n=sz in gsCNodes, clarsimp)
+      apply (cut_tac a1=y and n1=sz in gsCNodes, clarsimp)
       using pspace_aligned[simplified pspace_aligned_def]
       apply (drule_tac x=y in bspec, clarsimp)
       apply (clarsimp simp: cte_level_bits_def)
-      apply (case_tac "(of_bl ya::word32) * 0x10 = 0", simp)
+      apply (case_tac "(of_bl ya::machine_word) * 0x20 = 0", simp)
        apply (rule ext)
        apply simp
        apply (rule conjI)
@@ -793,7 +903,7 @@ proof -
         apply clarsimp+
        apply (frule pspace_relation_absD[OF _ pspace_relation])
        apply (simp add: cte_map_def)
-       apply (drule_tac x="y + of_bl bl * 0x10" in spec)
+       apply (drule_tac x="y + of_bl bl * 0x20" in spec)
        apply clarsimp
        apply (erule_tac x="cte_relation bl" in allE)
        apply (erule impE)
@@ -806,7 +916,7 @@ proof -
         apply (erule_tac x=y in allE)
         apply (clarsimp simp: valid_obj_def valid_cs_def valid_cap_def2 ran_def)
         apply fastforce+
-      apply (subgoal_tac "kheap s (y + of_bl ya * 0x10) = None")
+      apply (subgoal_tac "kheap s (y + of_bl ya * 0x20) = None")
        prefer 2
        using valid_objs[simplified valid_objs_def Ball_def dom_def fun_app_def]
        apply (erule_tac x=y in allE)
@@ -814,7 +924,7 @@ proof -
        apply (rule pspace_aligned_distinct_None'[OF
                    pspace_aligned pspace_distinct], assumption)
        apply (clarsimp simp: cte_level_bits_def dom_def word_neq_0_conv
-                             power_add mult.commute[of 16])
+                             power_add mult.commute[of 32])
        apply (simp add: well_formed_cnode_n_def dom_def Collect_eq)
        apply (erule_tac x=ya in allE)+
        apply (rule word_mult_less_mono1)
@@ -826,7 +936,7 @@ proof -
        apply (simp add: word_bits_conv cte_level_bits_def)
        apply (drule_tac a="2::nat" in power_strict_increasing, simp+)
       apply (rule ccontr, clarsimp)
-      apply (cut_tac a="y + of_bl ya * 0x10" and n=yc in gsCNodes)
+      apply (cut_tac a1="y + of_bl ya * 0x20" and n1=yc in gsCNodes)
       apply clarsimp
 
     (* mapping architecture-specific objects *)
@@ -844,6 +954,8 @@ proof -
                           inv_def o_def)
         apply (clarsimp simp add:  pte_relation_def)
        apply (clarsimp simp add:  pde_relation_def)
+            apply (clarsimp simp add: pdpte_relation_def)
+           apply (clarsimp simp add: pml4e_relation_def)
       apply (clarsimp split: if_split_asm)+
 
      apply (case_tac arch_kernel_obj)
@@ -852,89 +964,179 @@ proof -
        using pspace_aligned[simplified pspace_aligned_def Ball_def dom_def]
        apply (erule_tac x=y in allE)
        apply (clarsimp simp add: pte_relation_def absPageTable_def
-                                 pt_bits_def pageBits_def)
+                                 bit_simps)
        apply (rule conjI)
         prefer 2
         apply clarsimp
         apply (rule sym)
         apply (rule pspace_aligned_distinct_None'
-                    [OF pspace_aligned pspace_distinct], simp+)
-        apply (cut_tac x=ya and n="2^10" in
-               ucast_less_shiftl_helper[where 'a=32,simplified word_bits_conv], simp+)
+                    [OF pspace_aligned pspace_distinct], (simp add: bit_simps)+)
+        apply (cut_tac x=ya and n="2^12" in
+               ucast_less_shiftl_helper'[where 'a=machine_word_len and a=3,simplified word_bits_conv], simp+)
         apply (clarsimp simp add: word_gt_0)
        apply clarsimp
-       apply (subgoal_tac "ucast ya << 2 = 0")
+       apply (subgoal_tac "ucast ya << 3 = 0")
         prefer 2
         apply (rule ccontr)
         apply (frule_tac x=y in unaligned_helper, assumption)
-         apply (rule ucast_less_shiftl_helper, simp_all)
+         apply (rule ucast_less_shiftl_helper'[where a=3], simp_all)
        apply (rule ext)
        apply (frule pspace_relation_absD[OF _ pspace_relation])
        apply simp
        apply (erule_tac x=offs in allE)
-       apply (clarsimp simp add: pte_relation_def)
+       apply (clarsimp simp add: pte_relation_def word_size_bits_def)
        using valid_objs[simplified valid_objs_def fun_app_def dom_def,
                         simplified]
        apply (erule_tac x=y in allE)
        apply (clarsimp simp add: valid_obj_def wellformed_pte_def)
        apply (erule_tac x=offs in allE)
        apply (rename_tac pte')
-       apply (case_tac pte', simp_all add: pte_relation_aligned_def)[1]
+       apply (case_tac pte', simp_all add:)[1]
         apply (clarsimp split: X64_A.pte.splits)
         apply (rule set_eqI, clarsimp)
         apply (case_tac x, simp_all)[1]
        apply (clarsimp split: X64_A.pte.splits)
-       apply (rule set_eqI, clarsimp)
-       apply (case_tac x, simp_all)[1]
+       apply (case_tac x1, simp_all)[1]
       apply (clarsimp simp add: pde_relation_def)
+apply (clarsimp simp add: pdpte_relation_def)
+apply (clarsimp simp: pml4e_relation_def)
      apply (clarsimp split: if_split_asm)+
 
-    apply (case_tac arch_kernel_obj)
-       apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def
-                        o_def)
-      apply (clarsimp simp add:  pte_relation_def)
-     using pspace_aligned
-     apply (simp add: pspace_aligned_def dom_def)
-     apply (erule_tac x=y in allE)
-     apply (clarsimp simp add: pde_relation_def absPageDirectory_def
-                               pd_bits_def pageBits_def)
-     apply (rule conjI)
-      prefer 2
-      apply clarsimp
-      apply (rule sym)
-      apply (rule pspace_aligned_distinct_None'
-                  [OF pspace_aligned pspace_distinct], simp+)
-      apply (cut_tac x=ya and n="2^14" in
-             ucast_less_shiftl_helper[where 'a=32, simplified word_bits_conv], simp+)
-      apply (clarsimp simp add: word_gt_0)
-     apply clarsimp
-     apply (subgoal_tac "ucast ya << 2 = 0")
-      prefer 2
-      apply (rule ccontr)
-      apply (frule_tac x=y in unaligned_helper, assumption)
-       apply (rule ucast_less_shiftl_helper, simp_all)
-     apply (rule ext)
-     apply (frule pspace_relation_absD[OF _ pspace_relation])
-     apply simp
-     apply (erule_tac x=offs in allE)
-     apply (clarsimp simp add: pde_relation_def)
+     apply (case_tac arch_kernel_obj)
+        apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def
+                         o_def)
+apply (clarsimp simp: pte_relation_def)
+       using pspace_aligned[simplified pspace_aligned_def Ball_def dom_def]
+       apply (erule_tac x=y in allE)
+       apply (clarsimp simp add: pde_relation_def absPageDirectory_def
+                                 bit_simps)
+       apply (rule conjI)
+        prefer 2
+        apply clarsimp
+        apply (rule sym)
+        apply (rule pspace_aligned_distinct_None'
+                    [OF pspace_aligned pspace_distinct], (simp add: bit_simps)+)
+        apply (cut_tac x=ya and n="2^12" in
+               ucast_less_shiftl_helper'[where 'a=machine_word_len and a=3,simplified word_bits_conv], simp+)
+        apply (clarsimp simp add: word_gt_0)
+       apply clarsimp
+       apply (subgoal_tac "ucast ya << 3 = 0")
+        prefer 2
+        apply (rule ccontr)
+        apply (frule_tac x=y in unaligned_helper, assumption)
+         apply (rule ucast_less_shiftl_helper'[where a=3], simp_all)
+       apply (rule ext)
+       apply (frule pspace_relation_absD[OF _ pspace_relation])
+       apply simp
+       apply (erule_tac x=offs in allE)
+       apply (clarsimp simp add: pde_relation_def word_size_bits_def)
+       using valid_objs[simplified valid_objs_def fun_app_def dom_def,
+                        simplified]
+       apply (erule_tac x=y in allE)
+       apply (clarsimp simp add: valid_obj_def wellformed_pde_def)
+       apply (erule_tac x=offs in allE)
+       apply (rename_tac pde')
+       apply (case_tac pde', simp_all add:)[1]
+        apply (clarsimp split: X64_A.pde.splits)
+        apply (rule set_eqI, clarsimp)
+        apply (case_tac x, simp_all)[1]
+       apply (clarsimp split: X64_A.pde.splits)
+apply (rule set_eqI, clarsimp)
+       apply (case_tac x, simp_all)[1]
+apply (case_tac x1, simp_all)[1]
+apply (clarsimp simp add: pdpte_relation_def)
+apply (clarsimp simp: pml4e_relation_def)
+     apply (clarsimp split: if_split_asm)+
 
-     using valid_objs[simplified valid_objs_def fun_app_def dom_def,simplified]
-     apply (erule_tac x=y in allE)
-     apply (clarsimp simp add: valid_obj_def wellformed_pde_def)
-     apply (erule_tac x=offs in allE)
-     apply (rename_tac pde')
-     apply (case_tac pde', simp_all add: pde_relation_aligned_def)[1]
-        apply (clarsimp split: X64_A.pde.splits)+
-       apply (fastforce simp add: subset_eq)
-      apply (clarsimp split: X64_A.pde.splits)
-      apply (rule set_eqI, clarsimp)
-      apply (case_tac x, simp_all)[1]
-     apply (clarsimp split: X64_A.pde.splits)
-     apply (rule set_eqI, clarsimp)
-     apply (case_tac x, simp_all)[1]
-    apply (clarsimp simp add: pde_relation_def split: if_split_asm)
-    done
+     apply (case_tac arch_kernel_obj)
+        apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def
+                         o_def)
+apply (clarsimp simp: pte_relation_def)
+apply (clarsimp simp: pde_relation_def)
+       using pspace_aligned[simplified pspace_aligned_def Ball_def dom_def]
+       apply (erule_tac x=y in allE)
+       apply (clarsimp simp add: pdpte_relation_def absPDPT_def
+                                 bit_simps)
+       apply (rule conjI)
+        prefer 2
+        apply clarsimp
+        apply (rule sym)
+        apply (rule pspace_aligned_distinct_None'
+                    [OF pspace_aligned pspace_distinct], (simp add: bit_simps)+)
+        apply (cut_tac x=ya and n="2^12" in
+               ucast_less_shiftl_helper'[where 'a=machine_word_len and a=3,simplified word_bits_conv], simp+)
+        apply (clarsimp simp add: word_gt_0)
+       apply clarsimp
+       apply (subgoal_tac "ucast ya << 3 = 0")
+        prefer 2
+        apply (rule ccontr)
+        apply (frule_tac x=y in unaligned_helper, assumption)
+         apply (rule ucast_less_shiftl_helper'[where a=3], simp_all)
+       apply (rule ext)
+       apply (frule pspace_relation_absD[OF _ pspace_relation])
+       apply simp
+       apply (erule_tac x=offs in allE)
+       apply (clarsimp simp add: pdpte_relation_def word_size_bits_def)
+       using valid_objs[simplified valid_objs_def fun_app_def dom_def,
+                        simplified]
+       apply (erule_tac x=y in allE)
+       apply (clarsimp simp add: valid_obj_def wellformed_pdpte_def)
+       apply (erule_tac x=offs in allE)
+       apply (rename_tac pdpte')
+       apply (case_tac pdpte', simp_all add:)[1]
+        apply_trace (clarsimp split: X64_A.pdpte.splits)
+        apply (rule set_eqI, clarsimp)
+        apply (case_tac x, simp_all)[1]
+       apply (clarsimp split: X64_A.pdpte.splits)
+apply (rule set_eqI, clarsimp)
+       apply (case_tac x, simp_all)[1]
+apply (case_tac x1, simp_all)[1]
+apply (clarsimp simp: pml4e_relation_def)
+     apply (clarsimp split: if_split_asm)+
+
+     apply (case_tac arch_kernel_obj)
+        apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def
+                         o_def)
+apply (clarsimp simp: pte_relation_def)
+apply (clarsimp simp: pde_relation_def)
+apply (clarsimp simp: pdpte_relation_def)
+       using pspace_aligned[simplified pspace_aligned_def Ball_def dom_def]
+       apply (erule_tac x=y in allE)
+       apply (clarsimp simp add: pml4e_relation_def absPML4_def
+                                 bit_simps)
+       apply (rule conjI)
+        prefer 2
+        apply clarsimp
+        apply (rule sym)
+        apply (rule pspace_aligned_distinct_None'
+                    [OF pspace_aligned pspace_distinct], (simp add: bit_simps)+)
+        apply (cut_tac x=ya and n="2^12" in
+               ucast_less_shiftl_helper'[where 'a=machine_word_len and a=3,simplified word_bits_conv], simp+)
+        apply (clarsimp simp add: word_gt_0)
+       apply clarsimp
+       apply (subgoal_tac "ucast ya << 3 = 0")
+        prefer 2
+        apply (rule ccontr)
+        apply (frule_tac x=y in unaligned_helper, assumption)
+         apply (rule ucast_less_shiftl_helper'[where a=3], simp_all)
+       apply (rule ext)
+       apply (frule pspace_relation_absD[OF _ pspace_relation])
+       apply simp
+       apply (erule_tac x=offs in allE)
+       apply (clarsimp simp add: pml4e_relation_def word_size_bits_def)
+       using valid_objs[simplified valid_objs_def fun_app_def dom_def,
+                        simplified]
+       apply (erule_tac x=y in allE)
+       apply (clarsimp simp add: valid_obj_def wellformed_pml4e_def)
+       apply (erule_tac x=offs in allE)
+       apply (rename_tac pml4e')
+       apply (case_tac pml4e', simp_all add:)[1]
+apply (case_tac "pd offs", simp_all)[1]
+        apply (clarsimp split: X64_A.pml4e.splits)
+        apply (rule set_eqI, clarsimp)
+        apply (case_tac x, simp_all)[1]
+     apply (clarsimp split: if_split_asm)+
+done
 qed
 
 definition
@@ -944,7 +1146,7 @@ definition
       tcb_domain = tcbDomain tcb\<rparr>"
 
 definition
-  absEkheap :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow> etcb option"
+  absEkheap :: "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow> etcb option"
   where
   "absEkheap h \<equiv> \<lambda>x.
      case h x of
@@ -991,7 +1193,7 @@ definition
   "cteMap cns \<equiv> \<lambda>p.
    let P = (%(a,bl). cte_map (a,bl) = p \<and> cns a = Some (length bl))
    in if \<exists>x. P x then (SOME x. P x)
-      else (p && ~~ mask 9, bin_to_bl 3 (uint (p>>4)))"
+      else (p && ~~ mask 9, bin_to_bl 3 (uint (p>>5)))"
 
 lemma wf_unique':
    "P (THE x. \<forall>y\<in>dom fun. length y = x) \<Longrightarrow>
@@ -1010,25 +1212,25 @@ lemma tcb_cap_cases_length:
 by (simp add: tcb_cap_cases_def tcb_cnode_index_def split: if_split_asm)
 
 lemma of_bl_mult_and_not_mask_eq:
-  "\<lbrakk>is_aligned (a :: word32) n; length b + m \<le> n\<rbrakk>
+  "\<lbrakk>is_aligned (a :: machine_word) n; length b + m \<le> n\<rbrakk>
    \<Longrightarrow> a + of_bl b * (2^m) && ~~ mask n = a"
   apply (simp add: shiftl_t2n[simplified mult.commute, symmetric])
   apply (simp add: mask_out_add_aligned[where q="of_bl b << m", symmetric])
-  apply (case_tac "n<32")
+  apply (case_tac "n<64")
    prefer 2
    apply (simp add: not_less power_overflow mask_def)
   apply (simp add: mask_eq_x_eq_0[symmetric])
   apply (rule less_mask_eq)
   apply (rule shiftl_less_t2n, simp_all)
-  apply (cut_tac 'a=32 and xs=b in of_bl_length, simp)
+  apply (cut_tac 'a=machine_word_len and xs=b in of_bl_length, simp)
   apply (drule nat_move_sub_le)
-  apply (drule two_power_increasing[where 'a=32], simp)
+  apply (drule two_power_increasing[where 'a=machine_word_len], simp)
   apply (drule (2) less_le_trans)
 done
 
 lemma bin_to_bl_of_bl_eq:
-  "\<lbrakk>is_aligned (a :: word32) n; length b + 4 \<le> n; length b + 4 < 32\<rbrakk>
-  \<Longrightarrow> bin_to_bl (length b) (uint ((a + of_bl b * 0x10) >> 4)) = b"
+  "\<lbrakk>is_aligned (a :: machine_word) n; length b + 5 \<le> n; length b + 5 < 64\<rbrakk>
+  \<Longrightarrow> bin_to_bl (length b) (uint ((a + of_bl b * 0x20) >> 5)) = b"
 apply (subst word_plus_and_or_coroll)
  apply (erule is_aligned_get_word_bits)
   apply (rule is_aligned_AND_less_0)
@@ -1043,7 +1245,7 @@ apply (rule nth_equalityI)
 apply (clarsimp simp only: len_bin_to_bl nth_bin_to_bl
                            word_test_bit_def[symmetric])
 apply (simp add: nth_shiftr nth_shiftl
-                 shiftl_t2n[where n=4, simplified mult.commute,
+                 shiftl_t2n[where n=5, simplified mult.commute,
                             simplified, symmetric])
 apply (simp add: is_aligned_nth[THEN iffD1, rule_format]
                  test_bit_of_bl nth_rev)
@@ -1166,8 +1368,8 @@ proof -
    apply (drule tcb_cap_cases_length)
    apply (erule impE)
     apply (rule word_plus_mono_right)
-     apply (cut_tac 'a=32 and xs=b in of_bl_length, simp add: word_bits_conv)
-     apply (drule_tac k=16 in word_mult_less_mono1, simp+)
+     apply (cut_tac 'a=machine_word_len and xs=b in of_bl_length, simp add: word_bits_conv)
+     apply (drule_tac k=32 in word_mult_less_mono1, simp+)
      apply (simp add: mask_def)
      apply (rule ccontr)
      apply (simp add: not_le)
@@ -1177,14 +1379,14 @@ proof -
    apply simp
    apply (erule impE)
     apply (drule is_aligned_no_overflow'[simplified mask_2pm1[symmetric]])
-    apply (cut_tac 'a=32 and xs=b in of_bl_length, simp add: word_bits_conv)
-    apply (drule_tac k=16 in word_mult_less_mono1, simp+)
-    apply (subgoal_tac "(0x80::word32) < mask 9")
+    apply (cut_tac 'a=machine_word_len and xs=b in of_bl_length, simp add: word_bits_conv)
+    apply (drule_tac k=32 in word_mult_less_mono1, simp+)
+    apply (subgoal_tac "(0x100::machine_word) < mask 9")
      prefer 2
      apply (simp add: mask_def)
     apply (rule_tac word_random, simp+)
-   apply (simp add: mult.commute[of _ 16]
-                    shiftl_t2n[of _ 4, simplified,symmetric])
+   apply (simp add: mult.commute[of _ 32]
+                    shiftl_t2n[of _ 5, simplified,symmetric])
    apply word_bitwise
    apply simp
    apply (case_tac b, simp)
@@ -1193,7 +1395,7 @@ proof -
    apply (clarsimp simp add: test_bit_of_bl eval_nat_numeral)
   apply (simp add: cte_map_def split: option.splits)
   apply (drule tcb_cap_cases_length)
-  apply (rule of_bl_mult_and_not_mask_eq[where m=4, simplified], simp+)
+  apply (rule of_bl_mult_and_not_mask_eq[where m=5, simplified], simp+)
   done
 qed
 
@@ -1848,12 +2050,20 @@ apply (clarsimp split: irq_state.splits irqstate.splits)
 done
 
 definition
+  absCR3 :: "X64_H.cr3 \<Rightarrow> X64_A.cr3"
+where
+  "absCR3 c \<equiv> case c of CR3 paddr asid \<Rightarrow> (cr3 paddr asid)"
+
+definition
   "absArchState s' \<equiv>
-   case s' of ARMKernelState asid_tbl hwat anext am gpd gpts kvspace \<Rightarrow>
-     \<lparr>x64_asid_table = asid_tbl \<circ> ucast,
-      x64_hwasid_table = hwat, x64_next_asid = anext,
-      x64_asid_map = am, x64_global_pd = gpd, x64_global_pts = gpts,
-      x64_kernel_vspace = kvspace\<rparr>"
+   case s' of X64KernelState asid_tbl am gpm gpdpts gpds gpts ccr3 kvspace \<Rightarrow>
+     \<lparr>x64_asid_table = asid_tbl \<circ> ucast, x64_global_pml4 = gpm,
+      x64_kernel_vspace = kvspace, x64_global_pts = gpts,
+      x64_global_pdpts = gpdpts, x64_global_pds = gpds, x64_asid_map = am,
+      x64_current_cr3 = absCR3 ccr3\<rparr>"
+
+lemma cr3_expand_unexpand[simp]: "cr3 (cr3_base_address a) (cr3_pcid a) = a"
+  by (cases a, simp)
 
 lemma absArchState_correct:
 assumes rel:
@@ -1865,8 +2075,8 @@ apply (subgoal_tac "(arch_state s, ksArchState s') \<in> arch_state_relation")
  using rel
  apply (simp add: state_relation_def)
 apply (clarsimp simp add: arch_state_relation_def)
-by (clarsimp simp add: absArchState_def
-             split: X64_H.kernel_state.splits)
+by (clarsimp simp add: absArchState_def absCR3_def cr3_relation_def
+             split: X64_H.kernel_state.splits cr3.splits)
 
 definition absSchedulerAction where
   "absSchedulerAction action \<equiv>
