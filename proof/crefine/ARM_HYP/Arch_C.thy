@@ -982,8 +982,14 @@ definition
 
 definition
  "vm_attribs_relation attr attr' \<equiv>
-       armParityEnabled_CL (vm_attributes_lift attr') = from_bool (armParityEnabled attr)
-     \<and> armPageCacheable_CL (vm_attributes_lift attr') = from_bool (armPageCacheable attr)
+       armPageCacheable_CL (vm_attributes_lift attr') = from_bool (armPageCacheable attr)
+       (* armParityEnabled_CL / armParityEnabled is not used on ARM with hypervisor
+          Note: Slight divergence between the generated vmAttributesFromWord in C which maps
+                across all the attributes, and the Haskell which explicitly sets the parity
+                enabled attribute to False.
+                In C, the complete set of attributes are passed around, then subsequently parity
+                attribute is ignored when constructing PTE/PDEs.
+        *)
      \<and> armExecuteNever_CL (vm_attributes_lift attr') = from_bool (armExecuteNever attr)"
 
 lemma framesize_from_H_eqs:
