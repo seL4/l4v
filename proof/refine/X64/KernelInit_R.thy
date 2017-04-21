@@ -23,10 +23,6 @@ axiomatization where
   "Init_H \<subseteq> lift_state_relation state_relation `` Init_A"
 
 axiomatization where
-  ckernel_init_valid_duplicates':
-  "\<forall>((tc,s),x) \<in> Init_H. vs_valid_duplicates' (ksPSpace s)"
-
-axiomatization where
   ckernel_init_invs:
   "\<forall>((tc,s),x) \<in> Init_H. invs' s"
 
