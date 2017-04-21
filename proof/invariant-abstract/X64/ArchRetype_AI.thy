@@ -83,7 +83,7 @@ lemma mdb_cte_at_store_pml4e[wp]:
   done
 
 lemma get_pml4e_valid[wp]:
-  "\<lbrace>valid_arch_objs 
+  "\<lbrace>valid_arch_objs
     and \<exists>\<rhd> (x && ~~mask pml4_bits)
     and K (ucast (x && mask pml4_bits >> word_size_bits) \<notin> kernel_mapping_slots)\<rbrace>
    get_pml4e x
@@ -99,7 +99,17 @@ lemma get_pml4e_wellformed[wp]:
   "\<lbrace>valid_objs\<rbrace> get_pml4e x \<lbrace>\<lambda>rv _. wellformed_pml4e rv\<rbrace>"
   apply (simp add: get_pml4e_def)
   apply wp
+  apply (fastforce simp: obj_at_def valid_objs_def dom_def valid_obj_def)
   done
+
+lemma store_pml4e_wellformed[wp]:
+  "\<lbrace>\<lambda>s. wellformed_pml4e a\<rbrace> store_pml4e x p \<lbrace>\<lambda>rv s. wellformed_pml4e a\<rbrace>"
+  by (wpsimp simp: store_pml4e_def)
+
+lemma store_pml4e_valid_objs[wp]:
+  "\<lbrace>valid_objs and K ( wellformed_pml4e p)\<rbrace> store_pml4e x p \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  apply (wpsimp simp: store_pml4e_def)
+  by (fastforce simp: valid_objs_def obj_at_def dom_def valid_obj_def)
 
 crunch valid_objs[wp]: init_arch_objects "valid_objs"
   (ignore: clearMemory wp: crunch_wps simp: unless_def)
@@ -351,7 +361,7 @@ lemma valid_table_caps_aobj_upd_invalid_pml4e2:
 lemmas pml4e_ref_simps[simp] = pml4e_ref_def[split_simps pml4e.split]
 lemmas pml4e_ref_pages_simps[simp] = pml4e_ref_pages_def[split_simps pml4e.split]
 
-lemma pml4e_ref_pages_eq_refs: 
+lemma pml4e_ref_pages_eq_refs:
   "pml4e_ref_pages a = pml4e_ref a"
   by (clarsimp simp: pml4e_ref_pages_def split: pml4e.splits)
 
@@ -391,6 +401,8 @@ lemma copy_global_invs_mappings_restricted:
      apply (simp add: word_size_bits_def)
     apply (erule order_less_le_trans)
     apply (simp add: pml4_bits_def simple_bit_simps)
+   apply (rule conjI)
+    apply (auto simp: valid_objs_def valid_obj_def dom_def obj_at_def)[1]
    apply (clarsimp simp: obj_at_def empty_table_def kernel_vsrefs_def get_pml4_index_def aa_type_simps)
   apply (intro conjI)
            apply (clarsimp split: option.split_asm if_split_asm)+
@@ -553,7 +565,7 @@ global_interpretation Retype_AI_slot_bits?: Retype_AI_slot_bits
 context Arch begin global_naming X64
 
 lemma valid_untyped_helper [Retype_AI_assms]:
-  assumes valid_c : "s  \<turnstile> c" 
+  assumes valid_c : "s  \<turnstile> c"
   and   cte_at  : "cte_wp_at (op = c) q s"
   and     tyunt: "ty \<noteq> Untyped"
   and   cover  : "range_cover ptr sz (obj_bits_api ty us) n"
@@ -648,7 +660,7 @@ lemma valid_cap:
   assumes cap:
     "(s::'state_ext state) \<turnstile> cap \<and> untyped_range cap \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} = {}"
   shows "s' \<turnstile> cap"
-  proof - 
+  proof -
   note blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
         Int_atLeastAtMost atLeastatMost_empty_iff
   have cover':"range_cover ptr sz (obj_bits (default_object ty dev us)) n"
@@ -686,18 +698,18 @@ lemma valid_global_refs:
 
 lemma valid_arch_state:
   "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
-  by (clarsimp simp: valid_arch_state_def obj_at_pres 
+  by (clarsimp simp: valid_arch_state_def obj_at_pres
                      valid_asid_table_def valid_global_pts_def valid_global_pds_def valid_global_pdpts_def)
 
 lemma vs_refs_default [simp]:
   "vs_refs (default_object ty dev us) = {}"
-  by (simp add: default_object_def default_arch_object_def tyunt vs_refs_def 
+  by (simp add: default_object_def default_arch_object_def tyunt vs_refs_def
                 o_def pml4e_ref_def pdpte_ref_def pde_ref_def graph_of_def
          split: Structures_A.apiobject_type.splits aobject_type.splits)
 
 lemma vs_refs_pages_default [simp]:
   "vs_refs_pages (default_object ty dev us) = {}"
-  by (simp add: default_object_def default_arch_object_def tyunt vs_refs_pages_def 
+  by (simp add: default_object_def default_arch_object_def tyunt vs_refs_pages_def
                 o_def pml4e_ref_pages_def pdpte_ref_pages_def graph_of_def
          split: Structures_A.apiobject_type.splits aobject_type.splits)
 
@@ -712,7 +724,7 @@ lemma vs_lookup':
   apply simp
   done
 
-lemma vs_lookup_pages': 
+lemma vs_lookup_pages':
   "vs_lookup_pages s' = vs_lookup_pages s"
   apply (rule order_antisym)
    apply (rule vs_lookup_pages_sub2)
@@ -742,7 +754,7 @@ context retype_region_proofs begin
 interpretation retype_region_proofs_arch ..
 
 lemma valid_arch_objs':
-  assumes va: "valid_arch_objs s" 
+  assumes va: "valid_arch_objs s"
   shows "valid_arch_objs s'"
 proof
   fix p ao
@@ -883,7 +895,7 @@ lemma default_obj_dev:
 
 definition
   region_in_kernel_window :: "machine_word set \<Rightarrow> 'z state \<Rightarrow> bool"
-where 
+where
  "region_in_kernel_window S \<equiv>
      \<lambda>s. \<forall>x \<in> S. x64_kernel_vspace (arch_state s) x = X64VSpaceKernelWindow"
 
@@ -960,7 +972,7 @@ lemma valid_asid_map:
   apply (drule vs_lookup1D)
   apply clarsimp
   apply (drule obj_at_pres)
-  apply (fastforce simp: vs_asid_refs_def graph_of_def 
+  apply (fastforce simp: vs_asid_refs_def graph_of_def
                   intro: vs_lookupI vs_lookup1I)
   done
 

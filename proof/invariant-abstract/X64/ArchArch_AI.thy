@@ -1400,7 +1400,7 @@ lemma decode_page_table_invocation_wf[wp]:
   apply (strengthen not_in_global_refs_vs_lookup, rule conjI, fastforce)
   apply (clarsimp simp: neq_Nil_conv)
   apply (thin_tac "Ball S P" for S P)
-  apply (clarsimp simp: cte_wp_at_caps_of_state diminished_table_cap_simps
+  apply (clarsimp simp: cte_wp_at_caps_of_state diminished_table_cap_simps valid_vm_rights_def
                            is_arch_update_def cap_master_cap_def is_cap_simps)
   apply (rule conjI)
    apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce,
@@ -1434,7 +1434,7 @@ lemma decode_page_directory_invocation_wf[wp]:
   apply (strengthen not_in_global_refs_vs_lookup, rule conjI, fastforce)
   apply (clarsimp simp: neq_Nil_conv)
   apply (thin_tac "Ball S P" for S P)
-  apply (clarsimp simp: cte_wp_at_caps_of_state diminished_table_cap_simps
+  apply (clarsimp simp: cte_wp_at_caps_of_state diminished_table_cap_simps valid_vm_rights_def
                           is_arch_update_def cap_master_cap_def is_cap_simps)
   apply (rule conjI)
    apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce,
@@ -1469,7 +1469,7 @@ lemma decode_pdpt_invocation_wf[wp]:
   apply (strengthen not_in_global_refs_vs_lookup, rule conjI, fastforce)
   apply (clarsimp simp: neq_Nil_conv)
   apply (thin_tac "Ball S P" for S P)
-  apply (clarsimp simp: cte_wp_at_caps_of_state diminished_table_cap_simps
+  apply (clarsimp simp: cte_wp_at_caps_of_state diminished_table_cap_simps valid_vm_rights_def
                          is_arch_update_def cap_master_cap_def is_cap_simps)
   apply (rule conjI)
    apply (frule_tac p="(aa,b)" in valid_capsD[OF _ valid_objs_caps], fastforce,
