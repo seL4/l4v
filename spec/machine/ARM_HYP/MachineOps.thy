@@ -637,7 +637,7 @@ consts'
 definition
   get_gic_vcpu_ctrl_eisr1 :: "machine_word machine_monad"
 where
-  "get_gic_vcpu_ctrl_eisr1 \<equiv> gets gic_vcpu_ctrl_eisr0_val"
+  "get_gic_vcpu_ctrl_eisr1 \<equiv> gets gic_vcpu_ctrl_eisr1_val"
 
 consts'
   get_gic_vcpu_ctrl_lr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
