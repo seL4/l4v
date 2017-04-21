@@ -163,6 +163,9 @@ lemma corresK_weakenK:
   "corres_underlyingK sr nf nf' F' r P P' f f' \<Longrightarrow> (F \<Longrightarrow> F') \<Longrightarrow> corres_underlyingK sr nf nf' F r P P' f f'"
   by (simp add: corres_underlyingK_def)
 
+(* Special corres rules which should only be applied when the return value relation is
+   concrete, to avoid bare schematics. *)
+
 named_theorems corres_concrete_r and corres_concrete_rER
 
 private lemma corres_r_False:
@@ -186,6 +189,10 @@ end
 
 
 section \<open>Corresc - Corres over case statements\<close>
+
+text
+ \<open>Based on wpc, corresc examines the split rule for top-level case statements on the left
+  and right hand sides, propagating backwards the stateless and left/right preconditions.\<close>
 
 ML {*
 
@@ -263,7 +270,6 @@ lemma wpc2_imp_process:
 
 
 
-
 text \<open>
  Generate quadratic blowup of the case statements on either side of refinement.
  Attempt to discharge resulting contradictions.
@@ -297,6 +303,10 @@ method corresc_right_raw =
 definition
   "corres_protect r = (r :: bool)"
 
+lemma corres_protect_conj_elim[simp]:
+  "corres_protect (a \<and> b) = (corres_protect a \<and> corres_protect b)"
+  by (simp add: corres_protect_def)
+
 lemma wpc2_corres_protect:
   "wpc2_protect B Q \<Longrightarrow> corres_protect Q"
   by (simp add: wpc2_protect_def corres_protect_def)
@@ -324,15 +334,14 @@ method corresc declares corresc_simp =
      determ \<open>(erule (1) wpc_contr_helper)?\<close>, simp add: corresc_simp\<close>)
     | (drule wpc2_corres_protect[where B=False], drule wpc2_corres_protect[where B=True])))[1]
 
-section \<open>Alternative split rules\<close>
+section \<open>Corres_rv\<close>
 
-text \<open>
- These split rules provide much greater information about what is happening on each side
- of the refinement.
- \<close>
+text \<open>Corres_rv is used to propagate backwards the stateless precondition (F) from corres_underlyingK.
+  It's main purpose is to defer the decision of where each condition should go: either continue
+  through the stateless precondition, or be pushed into the left/right side as a hoare triple.\<close>
 
-definition "corres_noop = return undefined"
 
+(*Don't unfold the definition. Use corres_rv method or associated rules. *)
 definition corres_rv :: "bool \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> bool)
            \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('t, 'b) nondet_monad \<Rightarrow>
             ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> bool"
@@ -341,7 +350,7 @@ definition corres_rv :: "bool \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> b
    F \<longrightarrow> (\<forall>s s'. P s \<longrightarrow> P' s' \<longrightarrow>
     (\<forall>sa rv. (rv, sa) \<in> fst (f s) \<longrightarrow> (\<forall>sa' rv'. (rv', sa') \<in> fst (f' s') \<longrightarrow> r rv rv' \<longrightarrow> Q rv rv')))"
 
-
+(*Don't unfold the definition. Use corres_rv method or associated rules. *)
 definition "corres_rvE_R F r P P' f f' Q \<equiv>
   corres_rv F (\<lambda>_ _. True) P P' f f'
     (\<lambda>rvE rvE'. case (rvE,rvE') of (Inr rv, Inr rv') \<Rightarrow> r rv rv' \<longrightarrow> Q rv rv' | _ \<Rightarrow> True)"
@@ -357,19 +366,6 @@ lemma corres_rvE_RD:
    F \<Longrightarrow> P s \<Longrightarrow> P' s' \<Longrightarrow> (Inr rv,sa) \<in> fst (f s) \<Longrightarrow>
       (Inr rv',sa') \<in> fst (f' s') \<Longrightarrow> r rv rv' \<Longrightarrow> Q rv rv'"
   by (auto simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
-
-lemma corres_rv_cong[cong]:
-  "\<lbrakk>F = F'; r = r'; P = P'; PP = PP'; f = f'; g = g'; (\<And>rv rv'. r' rv rv' \<Longrightarrow> Q rv rv' = Q' rv rv')\<rbrakk> \<Longrightarrow>
-      corres_rv F r P PP f g Q = corres_rv F' r' P' PP' f' g' Q'"
-  by (simp add: corres_rv_def)
-
-lemma corres_rvE_R_cong[cong]:
-  "\<lbrakk>F = F'; r = r'; P = P'; PP = PP'; f = f'; g = g'; (\<And>rv rv'. r' rv rv' \<Longrightarrow> Q rv rv' = Q' rv rv')\<rbrakk> \<Longrightarrow>
-      corres_rvE_R F r P PP f g Q = corres_rvE_R F' r' P' PP' f' g' Q'"
-  by (auto simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
-
-(* Working with corres_rv is not immediately intuitive, but most of the time it just goes away.
-   Might need more rules if complex goals show up. *)
 
 lemma corres_rv_prove:
   "(\<And>s s' sa sa' rv rv'. F \<Longrightarrow>
@@ -423,25 +419,21 @@ lemma corres_rvE_R_defer_no_args:
   "corres_rvE_R (\<forall>rv rv'. r rv rv' \<longrightarrow> F) r (\<lambda>_. True) (\<lambda>_. True) f f' (\<lambda>_ _. F)"
   by (auto simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
 
+(*UNSAFE*)
 lemma corres_rv_defer:
   "corres_rv (\<forall>rv rv'. r rv rv' \<longrightarrow> Q rv rv') r (\<lambda>_. True) (\<lambda>_. True) f f' Q"
   by (auto simp add: corres_rv_def)
 
+(*UNSAFE*)
 lemma corres_rvE_R_defer:
   "corres_rvE_R (\<forall>rv rv'. r rv rv' \<longrightarrow> Q rv rv') r (\<lambda>_. True) (\<lambda>_. True) f f' Q"
   by (auto simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
 
 lemmas corres_rv_proveT =
-  corres_rv_prove[where P=\<top> and P'=\<top> and F=True, # \<open>simp\<close>]
-
-lemmas corres_rv_trivial[intro!, wp] =
-  corres_rv_prove[where Q="\<lambda>_ _. True" and P=\<top> and P'=\<top> and F=True, OF TrueI]
+  corres_rv_prove[where P=\<top> and P'=\<top> and F=True, simplified]
 
 lemmas corres_rvE_R_proveT =
-  corres_rvE_R_prove[where P=\<top> and P'=\<top> and F=True, # \<open>simp\<close>]
-
-lemmas corres_rvE_R_trivial[intro!, wp] =
-  corres_rvE_R_prove[where r="\<lambda>_ _. True" and P=\<top> and P'=\<top> and F=True, OF TrueI]
+  corres_rvE_R_prove[where P=\<top> and P'=\<top> and F=True,simplified]
 
 lemma corres_rv_conj_lift:
   "corres_rv F r P PP f g Q \<Longrightarrow> corres_rv F' r P' PP' f g Q' \<Longrightarrow>
@@ -452,6 +444,27 @@ lemma corres_rvE_R_conj_lift:
   "corres_rvE_R F r P PP f g Q \<Longrightarrow> corres_rvE_R F' r P' PP' f g Q' \<Longrightarrow>
     corres_rvE_R (F \<and> F') r (\<lambda>s. P s \<and> P' s) (\<lambda>s'. PP s' \<and> PP' s') f g (\<lambda>rv rv'. Q rv rv' \<and> Q' rv rv')"
    by (auto simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
+
+subsection \<open>Corres_rv method\<close>
+
+text \<open>This method propagate corres_rv obligations into each precondition according to the following
+heuristic:
+ For each conjunct in the obligation:
+
+   1) If it does not depend on function return values, propagate it as a stateless precondition
+   2) If either side is a corres_noop (used by symbolic execution), propagate as hoare triple
+      for other side.
+   3) If it can be phrased entirely with variables accessible to the left side, propagate it as
+      a left hoare triple.
+   4) As in 2) but on the right.
+
+ Fail if any of 1-4 are unsuccessful for any conjunct.
+
+In the case where no more corres_rv progress can be made, the user will need to intervene, either
+by specifying where to defer the obligation
+\<close>
+
+definition "corres_noop = return undefined"
 
 context begin
 
@@ -471,28 +484,56 @@ private lemma corres_rvE_R_defer_right:
   "corres_rvE_R F r P (\<lambda>_. \<forall>rv rv'. Q rv rv') f f' Q"
   by (simp add: corres_rv_def corres_rvE_R_def split: sum.splits)
 
-lemmas corres_noop_wp_left[where f'=corres_noop] = corres_rv_wp_left corres_rvE_R_wp_left
-lemmas corres_noop_wp_right[where f=corres_noop] = corres_rv_wp_right corres_rvE_R_wp_right
+lemmas corres_rv_proves =
+  corres_rv_proveT corres_rvE_R_proveT
 
-named_theorems corres_rv_defers
+(* Try to handle cases where corres_rv obligations have been left schematic *)
+lemmas corres_rv_trivials =
+  corres_rv_proves[where Q="\<lambda>_ _. True", OF TrueI]
+  corres_rv_proves[where Q="\<lambda>rv rv'. F rv rv' \<longrightarrow> True" for F, # \<open>simp\<close>]
 
-lemmas [corres_rv_defers] =
+lemmas corres_rv_defers =
   corres_rv_defer_no_args corres_rvE_R_defer_no_args
 
-named_theorems corres_rv_lifts
+lemmas corres_rv_wp_lefts =
+  corres_rv_wp_left corres_rvE_R_wp_left
 
-lemmas [corres_rv_lifts] =
+lemmas corres_rv_wp_rights =
+  corres_rv_wp_right corres_rvE_R_wp_right
+
+lemmas corres_rv_noops =
+  corres_rv_wp_lefts[where f'=corres_noop] corres_rv_wp_rights[where f=corres_noop]
+
+lemmas corres_rv_lifts' =
   corres_rv_conj_lift corres_rvE_R_conj_lift
 
-method corres_rv declares corres_rv_defers =
-  ((rule corres_rv_defers corres_noop_wp_left corres_noop_wp_right |
-   (succeeds \<open>rule corres_rv_defer_left corres_rvE_R_defer_left\<close>,
-    rule corres_rv_wp_left corres_rvE_R_wp_left) |
-   (succeeds \<open>rule corres_rv_defer_right corres_rvE_R_defer_right\<close>,
-    rule corres_rv_wp_right corres_rvE_R_wp_right) |
-    rule corres_rv_lifts)+)[1]
+lemmas corres_rv_lifts =
+  corres_rv_lifts'
+  corres_rv_lifts'[where P="\<lambda>_. True" and P'="\<lambda>_. True" and f="corres_noop", simplified]
+  corres_rv_lifts'[where PP="\<lambda>_. True" and PP'="\<lambda>_. True" and g="corres_noop", simplified]
+
+method corres_rv =
+  (((repeat_new \<open>rule corres_rv_lifts\<close>)?);
+    ((rule corres_rv_trivials corres_rv_defers corres_rv_noops |
+     (succeeds \<open>rule corres_rv_defer_left corres_rvE_R_defer_left\<close>,
+      rule corres_rv_wp_lefts) |
+     (succeeds \<open>rule corres_rv_defer_right corres_rvE_R_defer_right\<close>,
+      rule corres_rv_wp_rights))))
 
 end
+
+
+section \<open>CorresK Split rules\<close>
+
+text \<open>
+ The corresK split allows preconditions to be propagated backward via the extra stateless precondition
+ (here given as @{term F}. The head function is propagated backward directly, while the tail
+ is propagated via corres_rv. Using the corres_rv method, this condition is then decomposed and
+ pushed into the stateless, left, and right preconditions as appropriate.
+
+ The return value relation is now almost never needed directly, and so it is wrapped in corres_protect
+ to prevent it from being used during simplification.
+ \<close>
 
 lemma corresK_split:
   assumes x: "corres_underlyingK sr nf nf' F r' P P' a c"
@@ -551,18 +592,13 @@ section \<open>Corres Method\<close>
 text \<open>Handles structured decomposition of corres goals\<close>
 
 named_theorems
-  corres_splits and
+  corres_splits and (* rules that, one applied, must
+                        eventually yield a successful corres or corresK rule application*)
   corres_simp_del and (* bad simp rules that break everything *)
   corres and (* solving terminal corres subgoals *)
   corresK (* calculational rules that are phrased as corresK rules *)
 
-lemma corres_protect_conj_elim[simp]:
-  "corres_protect (a \<and> b) = (corres_protect a \<and> corres_protect b)"
-  by (simp add: corres_protect_def)
-
 context begin
-
-text \<open>Testing for schematic goal state\<close>
 
 lemma corres_fold_dc:
   "corres_underlyingK sr nf nf' F dc P P' f f' \<Longrightarrow> corres_underlyingK sr nf nf' F (\<lambda>_ _. True) P P' f f'"
@@ -572,10 +608,13 @@ private method corres_fold_dc =
   (match conclusion in
     "corres_underlyingK _ _ _ _ (\<lambda>_ _. True) _ _ _ _" \<Rightarrow> \<open>rule corres_fold_dc\<close>)
 
-private attribute_setup no_simps =
-  \<open>Scan.succeed (Thm.declaration_attribute (fn _ => Context.mapping I (put_simpset HOL_basic_ss)))\<close>
+section \<open>Corres_apply method\<close>
 
-(* Lift corres_underlying rules into corres_underlyingK rules in-place *)
+text \<open>This is a private method that performs an in-place rewrite of corres rules into
+ corresK rules. This is primarily for backwards-compatibility with the existing corres proofs.
+ Works by trying to apply a corres rule, then folding the resulting subgoal state into a single
+ conjunct and atomizing it, then propagating the result into the stateless precondition.
+\<close>
 
 private definition "guard_collect (F :: bool) \<equiv> F"
 private definition "maybe_guard F \<equiv> True"
@@ -615,8 +654,11 @@ method corres_once declares corres_splits corres corresK corresc_simp =
 method corres declares corres_splits corres corresK corresc_simp =
   (corres_once+)[1]
 
+text \<open>Unconditionally try applying split rules. Useful for determining why corres is not applying
+ in a given proof.\<close>
+
 method corres_unsafe_split declares corres_splits corres corresK corresc_simp =
-  ((rule corres_splits | corres_once)+)[1]
+  ((rule corres_splits | corres_pre | corres_once)+)[1]
 
 end
 
@@ -643,8 +685,10 @@ lemma corres_lift_to_K:
     corres_underlyingK sra nfa nf'a F ra Pa P'a fa f'a \<longrightarrow> corres_underlyingK sr nf nf' F r P P' f f'"
   by (simp add: corres_underlyingK_def)
 
-lemmas corresK_liftM[corres_splits] =
-  corres_liftM2_simp[THEN iffD2,atomized, THEN corres_lift_to_K, rule_format, simplified o_def]
+lemmas [THEN iffD2, atomized, THEN corresK_lift_rule, rule_format, simplified o_def, corres_splits] =
+  corres_liftE_rel_sum
+  corres_liftM_simp
+  corres_liftM2_simp
 
 
 lemmas [corresK] =
@@ -700,13 +744,15 @@ named_theorems corres_symb_exec_ls and corres_symb_exec_rs
 
 lemma corresK_symb_exec_l_search[corres_symb_exec_ls]:
   fixes x :: "'b \<Rightarrow> 'a \<Rightarrow> ('d \<times> 'a) set \<times> bool"
+  notes [simp] = corres_noop_def
   shows
   "\<lbrakk>\<And>s. \<lbrace>PP s\<rbrace> m \<lbrace>\<lambda>_. op = s\<rbrace>; \<And>rv. corres_underlyingK sr nf True (F rv) r (Q rv) P' (x rv) y;
-   empty_fail m; no_fail P m; \<lbrace>R\<rbrace> m \<lbrace>Q\<rbrace>; corres_rv F' dc RR (\<lambda>_. True) m (corres_noop) (\<lambda>rv _. F rv)\<rbrakk>
+   corres_rv F' dc RR (\<lambda>_. True) m (corres_noop) (\<lambda>rv _. F rv);
+   empty_fail m; no_fail P m; \<lbrace>R\<rbrace> m \<lbrace>Q\<rbrace>\<rbrakk>
 \<Longrightarrow> corres_underlyingK sr nf True F' r (RR and P and R and (\<lambda>s. \<forall>s'. s = s' \<longrightarrow> PP s' s)) P' (m >>= x) y"
   apply (clarsimp simp add: corres_underlyingK_def)
   apply (rule corres_name_pre)
-  apply (clarsimp simp: corres_underlying_def corres_underlyingK_def corres_noop_def
+  apply (clarsimp simp: corres_underlying_def corres_underlyingK_def
                         bind_def valid_def empty_fail_def no_fail_def)
   apply (drule_tac x=a in meta_spec)+
   apply (drule_tac x=a in spec)+
@@ -737,10 +783,10 @@ lemma corresK_symb_exec_r_search[corres_symb_exec_rs]:
   fixes y :: "'b \<Rightarrow> 'a \<Rightarrow> ('e \<times> 'a) set \<times> bool"
   assumes X: "\<And>s. \<lbrace>PP' s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>"
   assumes corres: "\<And>rv. corres_underlyingK sr nf nf' (F rv) r P (Q' rv) x (y rv)"
+  assumes Y: "corres_rv F' dc (\<lambda>_. True) RR (corres_noop) m (\<lambda>_ rv'. F rv')"
   assumes nf: "nf' \<Longrightarrow> no_fail P' m"
   assumes Z: "\<lbrace>R\<rbrace> m \<lbrace>Q'\<rbrace>"
-  assumes Y: "corres_rv F' dc (\<lambda>_. True) RR (corres_noop) m (\<lambda>_ rv'. F rv')"
-  notes corres_noop_def[simp]
+  notes [simp] = corres_noop_def
   shows
   "corres_underlyingK sr nf nf' F' r P (RR and P' and R and (\<lambda>s. \<forall>s'. s = s' \<longrightarrow> PP' s' s)) x (m >>= y)"
   apply (insert corres)
@@ -837,61 +883,9 @@ lemma corres_throwError_str [corres_concrete_rER]:
   "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throwError b)"
  by (simp add: corres_underlyingK_def)+
 
-chapter \<open>Extra Stuff (Stale)\<close>
-
-section \<open>Named state rules\<close>
-
-text \<open>This forms the bases of the a similar framework for spec_valid (i.e. induction proofs)\<close>
-
-definition
-  "with_state P s \<equiv> \<lambda>s'. s = s' \<and> P s"
-
-
-lemma corres_name_state:
-  assumes "\<And>s s'. (s,s') \<in> sr \<Longrightarrow> corres_underlying sr nf nf' r (with_state P s) (with_state P' s') f f'"
-  shows
-  "corres_underlying sr nf nf' r P P' f f'"
-  apply (insert assms)
-  apply (simp add: corres_underlying_def with_state_def)
-  by (fastforce split: prod.splits prod.split_asm)
-
-lemma corres_name_state_pre:
-  assumes "corres_underlying sr nf nf' r (with_state Q s) (with_state Q' s') f f'"
-          "\<And>s. P s \<Longrightarrow> Q s" "\<And>s'. P' s' \<Longrightarrow> Q' s'"
-  shows
-  "corres_underlying sr nf nf' r (with_state P s) (with_state P' s') f f'"
-  apply (insert assms)
-  apply (simp add: corres_underlying_def with_state_def)
-  by (fastforce split: prod.splits prod.split_asm)
-
-lemma corres_drop_state:
-  assumes "corres_underlying sr nf nf' r P P' f f'"
-  shows "corres_underlying sr nf nf' r (with_state P s) (with_state P' s') f f'"
-  apply (rule corres_guard_imp)
-  apply (rule assms)
-  by (auto simp add: with_state_def)
-
-
-lemma corres_split_named:
-  assumes x: "(s, s') \<in> sr \<Longrightarrow> corres_underlying sr nf nf' r' (with_state P s) (with_state P' s') a c"
-  assumes y: "\<And>ss ss' rv rv'. r' rv rv' \<Longrightarrow> (rv,ss) \<in> fst (a s) \<Longrightarrow> (rv',ss') \<in> fst (c s') \<Longrightarrow>
-  (ss,ss') \<in> sr \<Longrightarrow>
-  corres_underlying sr nf nf' r (with_state (R rv' rv) ss) (with_state (R' rv rv') ss') (b rv) (d rv')"
-  assumes    "(s,s') \<in> sr \<Longrightarrow> Q' s' \<Longrightarrow> s \<turnstile> \<lbrace>Q\<rbrace> a \<lbrace>\<lambda>r s. (\<exists>s'' r''. r' r r'' \<and> (s,s'') \<in> sr \<and> (r'',s'') \<in> fst (c s')) \<longrightarrow> (\<forall>r''. r' r r'' \<longrightarrow>  R r'' r s)\<rbrace>"
-             "(s,s') \<in> sr \<Longrightarrow> Q s \<Longrightarrow> s' \<turnstile> \<lbrace>Q'\<rbrace> c \<lbrace>\<lambda>r s'. \<forall>x. r' x r \<longrightarrow> (\<exists>s. (s,s') \<in> sr) \<longrightarrow> R' x r s'\<rbrace>"
-  shows      "corres_underlying sr nf nf' r (with_state (P and Q) s) (with_state (P' and Q') s') (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
-  using assms
-  apply -
-  apply (clarsimp simp: corres_underlying_def bind_def with_state_def)
-  apply (clarsimp simp: Bex_def Ball_def valid_def spec_valid_def)
-  by meson
-
 section \<open>Error Monad\<close>
 
-lemmas [THEN iffD2, atomized, THEN corresK_lift_rule, rule_format, corresK] =
-  corres_liftE_rel_sum
-  corres_liftM2_simp
-  corres_liftM_simp
+
 
 lemma corresK_splitE [corres_splits]:
   assumes x: "corres_underlyingK sr nf nf' F (f \<oplus> r') P P' a c"
@@ -952,10 +946,21 @@ lemma corresK_fail_no_fail'[corresK]:
   apply (simp add: corres_underlyingK_def)
   by (fastforce intro!: corres_fail)
 
+section \<open>Correswp\<close>
 
+text
+  \<open>This method wraps up wp and wpc to ensure that they don't accidentally generate schematic
+   assumptions when handling hoare triples that emerge from corres proofs.
+   This is partially due to wp not being smart enough to avoid applying certain wp_comb rules
+   when the precondition is schematic, and arises when the schematic precondition doesn't have
+   access to some meta-variables in the postcondition.
 
-
-(* Wrap it up in a big hammer. Small optimization to avoid searching when no fact is given. *)
+   To solve this, instead of meta-implication in the wp_comb rules we use corres_inst_eq, which
+   can only be solved by reflexivity. In most cases these comb rules are either never applied or
+   solved trivially. If users manually apply corres_rv rules to create postconditions with
+   inaccessible meta-variables (@{method corres_rv} will never do this), then these rules will
+   be used. Since @{method corres_inst} has access to the protected return-value relation, it has a chance
+   to unify the generated precondition with the original schematic one.\<close>
 
 named_theorems correswp_wp_comb and correswp_wp_comb_del
 
@@ -966,14 +971,14 @@ lemmas corres_hoare_pre = hoare_pre[# \<open>-\<close> \<open>atomize (full), ru
 
 method correswp uses wp =
   (determ \<open>
-     (fails \<open>schematic_hoare_pre\<close>, (wp add: wp))
+     (fails \<open>schematic_hoare_pre\<close>, (wp add: wp | wpc))
    | (schematic_hoare_pre,
         (use correswp_wp_comb [wp_comb]
              correswp_wp_comb_del[wp_comb del]
              hoare_pre[wp_pre del]
              corres_hoare_pre[wp_pre]
         in
-      \<open>use in \<open>wp add: wp\<close>\<close>))\<close>)
+      \<open>use in \<open>wp add: wp | wpc\<close>\<close>))\<close>)
 
 lemmas [correswp_wp_comb_del] =
   hoare_vcg_precond_imp
@@ -1001,18 +1006,18 @@ lemmas [correswp_wp_comb] =
 
 declare hoare_post_comb_imp_conj[correswp_wp_comb_del]
 
+section \<open>Corressimp\<close>
+
+text \<open>Wrap all the previous methods up in one big hammer.\<close>
+
 method corressimp uses simp cong search wp
   declares corres corresK corres_splits corresc_simp =
   ((corres corresc_simp: simp
-    | (correswp wp: wp)
-    | wpc
+    | correswp wp: wp
     | clarsimp cong: cong simp: simp simp del: corres_simp_del split del: if_split
-    | solves \<open>clarsimp cong: cong simp: simp corres_protect_def simp del: corres_simp_del split del: if_split\<close>
     | (match search in _ \<Rightarrow> \<open>corres_search search: search\<close>))+)[1]
 
 declare corres_return[corres_simp_del]
-
-
 
 section \<open>Normalize corres rule into corresK rule\<close>
 
@@ -1095,11 +1100,11 @@ experiment
   apply (simp only: stateAssert_def K_def)
   apply corres
   apply (corres_search search: corresK_assert)
-  apply (correswp)+
+  apply corres_rv
+  apply (correswp | simp)+
   apply corres_rv
   apply (correswp wp: f_Q' | simp)+
-  apply corres
-  apply (correswp | simp)+
+  apply corressimp+
   by auto
 
 end
@@ -1114,9 +1119,16 @@ lemma lift_args_corres:
 
 method lift_corres_args =
   (match premises in
-    H[thin]:"corres_underlying _ _ _ _ (P x) (P' x) (f x) (f' x)" for P P' f f' x \<Rightarrow>
+    H[thin]:"corres_underlying _ _ _ _ (P x) (P' x) (f x) (f' x)" (cut 5) for P P' f f' x \<Rightarrow>
       \<open>match (f) in "\<lambda>_. g" for g \<Rightarrow> \<open>fail\<close> \<bar> _ \<Rightarrow>
         \<open>match (f') in "\<lambda>_. g'" for g' \<Rightarrow> \<open>fail\<close> \<bar> _ \<Rightarrow>
           \<open>cut_tac lift_args_corres[where f=f and f'=f' and P=P and P'=P', OF H]\<close>\<close>\<close>)+
+
+(* Use calculational rules. Don't unfold the definition! *)
+lemmas corres_rv_def_I_know_what_I'm_doing = corres_rv_def
+lemmas corres_rvE_R_def_I_know_what_I'm_doing = corres_rvE_R_def
+
+hide_fact corres_rv_def
+hide_fact corres_rvE_R_def
 
 end

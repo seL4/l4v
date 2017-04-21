@@ -81,22 +81,27 @@ text \<open>In this split rule for @{const corres_underlyingK} we see that the a
 may discuss both @{term rv} and @{term rv'}. To show that this condition is satisified, however,
 we can't use hoare logic and instead need a new definition: @{const corres_rv}.\<close>
 
-thm corres_rv_def[no_vars]
+thm corres_rv_def_I_know_what_I'm_doing[no_vars]
 
 text \<open>This is a weaker form of @{const corres_underlying} that is only interested in the return value
-of the functions. In essence, it states that assuming all other refinement conditions hold, the given
-functions will establish @{term F'} after executing.
+of the functions. In essence, it states the given functions will establish @{term Q} after executing,
+assuming the given return-value relation @{term r} holds, along with the given stateless precondition
+@{term F} and left/right preconditions @{term P} and @{term P'}.
 
-It turns out that in most cases (certainly those from existing corres proofs), the @{const corres_rv}
-obligations will simply be solved in-place and reduce to
-  @{term "corres_rv True r (\<lambda>_. True) (\<lambda>_. True) f f' (\<lambda>_ _. True)"} through simplification, or proved
- directly with @{thm corres_rv_proveT}.
-\<close>
-thm corres_rv_proveT[no_vars]
-
-text \<open>Additionally, the obligation can be pushed into the precondition for either the left or right side.\<close>
+The assumption in general is that corres_rv rules should never be written, instead corres_rv obligations
+should be propagated into either the stateless precondition (@{term F} from @{term corres_underlyingK}),
+the left precondition (@{term P}) or the right precondition @{term P'}. This is implicitly handled
+by @{method corres_rv} (called from @{method corres}) by applying one of the following rules to each conjunct:\<close>
 
 thm corres_rv_defer
+thm corres_rv_wp_left
+thm corres_rv_wp_right
+
+text \<open>If none of these rules can be safely applied, then @{method corres_rv} will leave the
+  obligation untouched. The user can manually apply one of them if desired, but this is liable to
+  create unsolvable proof obligations. In the worst case, the user may manually solve the goal in-place.\<close>
+
+thm corres_rv_proveT[no_vars]
 
 section \<open>The corres method\<close>
 
@@ -162,9 +167,11 @@ thm corres_symb_exec_rs
 text \<open>A function may be symbolically executed if it does not modify the state, i.e. its only purpose
 is to compute some value and return it. After being symbolically executed,
 this value can only be discussed by the precondition of the associated side or the stateless
-precondition of corresK. Instead of @{const corres_rv} as seen in @{thm corresK_split}, we instead
-are obligated to show that our function establishes the stateless precondition of the generated
-corresK obligation.\<close>
+precondition of corresK. The resulting @{const corres_rv} goal has @{const corres_noop} as the
+function on the alternate side. This gives @{method corres_rv} a hint that the resulting obligation
+should be aggressively re-written into a hoare triple over @{term m} if it can't be propagated
+back statelessly safely.
+\<close>
 
 
 section \<open>Demo\<close>
@@ -174,23 +181,15 @@ context begin interpretation Arch .
 
 (* VSpace_R *)
 
-lemma lift_args_corres:
-  "corres_underlying sr nf nf' r (P x) (P' x) (f x) (f' x) \<Longrightarrow> x = x' \<Longrightarrow>
-   corres_underlying sr nf nf' r (P x) (P' x') (f x) (f' x')" by simp
-
-method lift_corres_args =
-  (match premises in
-    H[thin]:"corres_underlying _ _ _ _ (P x) (P' x) (f x) (f' x)" for P P' f f' x \<Rightarrow>
-      \<open>cut_tac lift_args_corres[where f=f and f'=f' and P=P and P'=P', OF H]\<close>)
 
 lemmas load_hw_asid_corres_args[corres] =
-  load_hw_asid_corres[@ \<open>lift_corres_args\<close>]
+  load_hw_asid_corres[@lift_corres_args]
 
 lemmas invalidate_asid_corres_args[corres] =
-  invalidate_asid_corres[@ \<open>lift_corres_args\<close>]
+  invalidate_asid_corres[@lift_corres_args]
 
 lemmas invalidate_hw_asid_entry_corres_args[corres] =
-  invalidate_hw_asid_entry_corres[@ \<open>lift_corres_args\<close>]
+  invalidate_hw_asid_entry_corres[@lift_corres_args]
 
 lemma invalidate_asid_entry_corres:
   "corres dc (valid_arch_objs and valid_asid_map
@@ -213,7 +212,7 @@ lemma invalidate_asid_entry_corres:
    continue (* invalidate _hw_asid_entry *)
    finish (* invalidate_asid *)
 
-  apply (wp load_hw_asid_wp | simp)+
+  apply (corressimp wp: load_hw_asid_wp)+
   apply clarsimp
   apply (fastforce simp: pd_at_asid_uniq)
   done
@@ -237,10 +236,9 @@ lemma corres_inst_eq_ext:
   by (auto simp add: corres_inst_eq_def)
 
 lemma delete_asid_corresb:
-  notes [corres] = corres_gets_asid gct_corres and
-    [@ \<open>lift_corres_args\<close>, corres] =  get_asid_pool_corres_inv'
+  notes [corres] = corres_gets_asid gct_corres set_asid_pool_corres and
+    [@lift_corres_args, corres] =  get_asid_pool_corres_inv'
     invalidate_asid_entry_corres
-    set_asid_pool_corres
     set_vm_root_corres
   notes [wp] = set_asid_pool_asid_map_unmap set_asid_pool_vs_lookup_unmap'
     set_asid_pool_arch_objs_unmap'
@@ -287,8 +285,7 @@ lemma delete_asid_corresb:
                       continue (* gct_corres *)
                      continue (* set_vm_root_corres *)
                     finish (* backtracking? *)
-                    apply (corressimp
-      | simp add: mask_asid_low_bits_ucast_ucast
+                    apply (corressimp simp: mask_asid_low_bits_ucast_ucast
       | fold cur_tcb_def | wps)+
   apply (frule arm_asid_table_related,clarsimp)
   apply (rule conjI)
@@ -315,7 +312,7 @@ lemma delete_asid_corresb:
     apply (rule image_eqI[rotated], erule graph_ofI)
     apply (simp add: mask_asid_low_bits_ucast_ucast)
    prefer 2
-   apply (safe; assumption?)
+   apply (intro allI impI context_conjI; assumption?)
     apply (rule aligned_distinct_relation_asid_pool_atI'; fastforce?)
     apply (fastforce simp: o_def dest: valid_asid_tableD invs_valid_asid_table)
     apply (simp add: cur_tcb'_def)
