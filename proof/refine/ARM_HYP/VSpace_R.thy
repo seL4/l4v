@@ -808,12 +808,13 @@ lemma vcpuDisable_corres:
              (vcpuDisable vcpu)"
   apply (simp add: vcpu_disable_def vcpuDisable_def)
   apply (cases vcpu; clarsimp simp add: sctlrDefault_def hcrNative_def
-                                        set_gic_vcpu_ctrl_hcr_def isb_def
+                                        set_gic_vcpu_ctrl_hcr_def
                                         get_gic_vcpu_ctrl_hcr_def getSCTLR_def
                                         setSCTLR_def setHCR_def)
    apply (rule corres_split'[OF corres_guard_imp[OF corres_machine_op TrueI TrueI]])
       apply (rule corres_underlying_trivial[OF no_fail_dsb])
      apply (rule corres_machine_op)
+     apply (simp add: isb_def)
      apply (rule corres_split'[OF corres_underlying_trivial[OF no_fail_machine_op_lift]])+
              apply (rule corres_rel_imp[OF corres_underlying_trivial[OF no_fail_machine_op_lift] dc_simp])
             apply (rule wp_post_taut | simp)+
@@ -830,15 +831,19 @@ lemma vcpuDisable_corres:
      apply (rule corres_split'[OF _ _ do_machine_op_typ_at doMachineOp_typ_at'])
       apply (rule corres_guard_imp[OF corres_machine_op TrueI TrueI])
       apply (rule corres_underlying_trivial[OF non_fail_gets_simp])
-     apply (rule set_vcpu_corres)
-     apply (clarsimp simp add: vcpu_relation_def)
-     apply (drule sym[of "vgic_map _"])
-    apply (simp add: vgic_map_def)
+     apply (rule corres_split'[OF _ corres_guard_imp[OF corres_machine_op TrueI TrueI]])
+        apply (rule set_vcpu_corres)
+        apply (clarsimp simp add: vcpu_relation_def)
+        apply (drule sym[of "vgic_map _"])
+        apply (simp add: vgic_map_def)
+       apply (rule corres_underlying_trivial[OF no_fail_isb])
+      apply (wp set_vcpu_typ_at setObject_typ_at_inv)+
     apply (rule corres_machine_op)
+    apply (simp add: isb_def)
     apply (rule corres_split'[OF corres_underlying_trivial[OF no_fail_machine_op_lift]])+
-            apply (rule corres_rel_imp[OF corres_underlying_trivial[OF no_fail_machine_op_lift] dc_simp])
-           apply (rule wp_post_taut | simp)+
-    apply wp+
+            apply (rule corres_rel_imp[OF corres_underlying_trivial[OF no_fail_machine_op_lift]])
+            apply (rule wp_post_taut | simp)+
+   apply wp+
   done
 
 lemma vcpuEnable_corres:
