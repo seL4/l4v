@@ -86,7 +86,7 @@ lemma typ_at_UserDataI:
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
   apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def
                         cte_relation_def other_obj_relation_def
-                        pde_relation_def
+                        pde_relation_def pdpte_relation_def pml4e_relation_def
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
@@ -96,7 +96,7 @@ lemma typ_at_UserDataI:
     apply (drule (1) pspace_alignedD)
     apply simp
    apply (erule word_less_power_trans2 [OF _ pbfs_atleast_pageBits])
-   apply (case_tac vmpage_size, simp_all add: word_bits_conv)[1]
+   apply (case_tac vmpage_size, simp_all add: word_bits_conv bit_simps)[1]
   apply (simp add: obj_at_def  a_type_def)
   done
 
@@ -117,7 +117,7 @@ lemma typ_at_DeviceDataI:
   apply (subst mask_lower_twice [where n = pageBits, OF pbfs_atleast_pageBits, symmetric])
   apply (clarsimp simp: obj_relation_cuts_def2 pte_relation_def
                         cte_relation_def other_obj_relation_def
-                        pde_relation_def
+                        pde_relation_def pdpte_relation_def pml4e_relation_def
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
@@ -127,7 +127,7 @@ lemma typ_at_DeviceDataI:
     apply (drule (1) pspace_alignedD)
     apply simp
    apply (erule word_less_power_trans2 [OF _ pbfs_atleast_pageBits])
-   apply (case_tac vmpage_size, simp_all add: word_bits_conv)[1]
+   apply (case_tac vmpage_size, simp_all add: word_bits_conv bit_simps)[1]
   apply (simp add: obj_at_def  a_type_def)
   done
 
@@ -144,7 +144,7 @@ lemma pointerInUserData_relation:
       apply (fastforce simp: valid_state'_def)+
    apply (rule shiftr_less_t2n')
     apply (simp add: pbfs_atleast_pageBits mask_twice)
-   apply (case_tac sz, simp_all)[1]
+   apply (case_tac sz, simp_all add: bit_simps)[1]
   apply (subgoal_tac "(p && ~~ mask (pageBitsForSize sz)) + (p && mask (pageBitsForSize sz) >> pageBits) * 2 ^ pageBits = (p && ~~ mask pageBits)")
    apply simp
   apply (subst mult.commute)
@@ -170,7 +170,7 @@ lemma pointerInDeviceData_relation:
       apply (fastforce simp: valid_state'_def)+
    apply (rule shiftr_less_t2n')
     apply (simp add: pbfs_atleast_pageBits mask_twice)
-   apply (case_tac sz, simp_all)[1]
+   apply (case_tac sz, simp_all add: bit_simps)[1]
   apply (subgoal_tac "(p && ~~ mask (pageBitsForSize sz)) + (p && mask (pageBitsForSize sz) >> pageBits) * 2 ^ pageBits = (p && ~~ mask pageBits)")
    apply simp
   apply (subst mult.commute)
@@ -394,9 +394,9 @@ lemma valid_sched_init[simp]:
   "valid_sched init_A_st"
   apply (simp add: valid_sched_def init_A_st_def ext_init_def)
   apply (clarsimp simp: valid_etcbs_def init_kheap_def st_tcb_at_kh_def obj_at_kh_def
-                    obj_at_def is_etcb_at_def idle_thread_ptr_def init_globals_frame_def
+                    obj_at_def is_etcb_at_def idle_thread_ptr_def init_global_pml4_def
                     init_global_pd_def valid_queues_2_def ct_not_in_q_def not_queued_def
-                    valid_sched_action_def is_activatable_def
+                    valid_sched_action_def is_activatable_def init_global_pdpt_def
                     ct_in_cur_domain_2_def valid_blocked_2_def valid_idle_etcb_def etcb_at'_def default_etcb_def)
   done
 
@@ -439,7 +439,7 @@ lemma akernel_invariant:
   done
 
 lemma ckernel_invs:
-  "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
+  "\<lbrace>invs' and
                (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s) and
                (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
   callKernel e
@@ -466,16 +466,14 @@ lemma doMachineOp_ct_running':
 lemma kernelEntry_invs':
   "\<lbrace> invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s) and
            (ct_running' or ct_idle') and
-           (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
            (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' \<rbrace>
   kernelEntry e tc
   \<lbrace>\<lambda>rs. (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
          (invs' and (ct_running' or ct_idle')) and
-         (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
          (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' \<rbrace>"
   apply (simp add: kernelEntry_def)
-  apply (wp ckernel_invs callKernel_valid_duplicates' callKernel_domain_time_left
+  apply (wp ckernel_invs callKernel_domain_time_left
             threadSet_invs_trivial threadSet_ct_running' select_wp
             VSpace_R.doMachineOp_cur_tcb' TcbAcc_R.dmo_invs'
             doMachineOp_ct_running' doMachineOp_sch_act_simple
@@ -519,7 +517,7 @@ lemma ptable_rights_imp_UserData:
   assumes rel: "(s,s') : state_relation"
   assumes rights: "ptable_rights t (absKState s') x \<noteq> {}"
   assumes trans:
-    "ptable_lift t (absKState s') x = Some (ARM.addrFromPPtr y)"
+    "ptable_lift t (absKState s') x = Some (X64.addrFromPPtr y)"
   shows "pointerInUserData y s' \<or> pointerInDeviceData y s'"
 proof -
   from invs invs' rel have [simp]: "absKState s' = abs_state s"
@@ -564,14 +562,6 @@ lemma doUserOp_invs':
   apply (frule ptable_rights_imp_UserData[rotated 2], auto)
   done
 
-lemma doUserOp_valid_duplicates':
-  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
-   doUserOp f tc
-   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add: doUserOp_def split_def)
-  apply (wp dmo_invs' select_wp)
-  apply clarsimp
-  done
 
 text {* The top-level correspondence *}
 
@@ -579,8 +569,7 @@ lemma kernel_corres:
   "corres dc (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle)
                and (\<lambda>s. scheduler_action s = resume_cur_thread))
              (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
-              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
-              (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
+              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
              (call_kernel event) (callKernel event)"
   apply (simp add: call_kernel_def callKernel_def)
   apply (rule corres_guard_imp)
@@ -610,7 +599,7 @@ lemma kernel_corres:
           apply simp
          apply (wp doMachineOp_getActiveIRQ_IRQ_active handle_event_valid_sched | simp)+
        apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_post_impErr)
-         apply wp+
+         apply wpsimp+
        apply (simp add: invs'_def valid_state'_def)
       apply (rule corres_split [OF _ schedule_corres])
         apply (rule activate_corres)
@@ -640,8 +629,7 @@ lemma entry_corres:
                   (\<lambda>s. scheduler_action s = resume_cur_thread))
                  (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
                   (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' and (ct_running' or ct_idle') and
-                  (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
-                  (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
+                  (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
           (kernel_entry event tc) (kernelEntry event tc)"
   apply (simp add: kernel_entry_def kernelEntry_def)
   apply (rule corres_guard_imp)
@@ -750,7 +738,7 @@ lemma valid_corres_combined:
 lemma fw_sim_LI: "fw_sim r C A = LI A C r UNIV" by (simp add: fw_sim_def LI_def)
 
 definition
-  "full_invs' \<equiv> {((tc,s),m,e). invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>
+  "full_invs' \<equiv> {((tc,s),m,e). invs' s \<and>
                           ex_abs (einvs::det_ext state \<Rightarrow> bool) s \<and>
                           ksSchedulerAction s = ResumeCurrentThread \<and>
                           (ct_running' s \<or> ct_idle' s) \<and>
@@ -759,14 +747,6 @@ definition
                           (m = IdleMode \<longrightarrow> ct_idle' s) \<and>
                           (e \<noteq> None \<and> e \<noteq> Some Interrupt \<longrightarrow> ct_running' s) \<and>
                           0 < ksDomainTime s \<and> valid_domain_list' s}"
-
-lemma checkActiveIRQ_valid_duplicates':
-  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
-   checkActiveIRQ
-   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add: checkActiveIRQ_def)
-  apply wp
-  done
 
 lemma check_active_irq_corres':
   "corres op = \<top> \<top> (check_active_irq) (checkActiveIRQ)"
@@ -783,8 +763,7 @@ lemma check_active_irq_corres:
     (invs and (ct_running or ct_idle) and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
      and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
     (invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
-      and (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' and (ct_running' or ct_idle')
-      and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
+      and (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' and (ct_running' or ct_idle'))
     (check_active_irq) (checkActiveIRQ)"
   apply (rule corres_guard_imp)
     apply (rule check_active_irq_corres', auto)
@@ -794,7 +773,7 @@ lemma check_active_irq_corres_just_running:
   "corres op =
     (invs and ct_running and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
       and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
-    (invs' and ct_running' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))
+    (invs' and ct_running'
       and (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'
       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
     (check_active_irq) (checkActiveIRQ)"
@@ -806,7 +785,7 @@ lemma check_active_irq_corres_just_idle:
   "corres op =
     (invs and ct_idle and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
       and (\<lambda>s. 0 < domain_time s)  and valid_domain_list)
-    (invs' and ct_idle' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))
+    (invs' and ct_idle'
       and (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'
       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
     (check_active_irq) (checkActiveIRQ)"
@@ -857,6 +836,9 @@ lemma domain_list_rel_eq:
   "(a, c) \<in> state_relation \<Longrightarrow> P (ksDomSchedule c) = P (domain_list a)"
   by (clarsimp simp: state_relation_def)
 
+crunch valid_objs': doUserOp, checkActiveIRQ valid_objs'
+  (wp: crunch_wps select_wp)
+
 lemma ckernel_invariant:
   "ADT_H uop \<Turnstile> full_invs'"
   unfolding full_invs'_def
@@ -867,12 +849,6 @@ lemma ckernel_invariant:
    apply (subst conj_commute, simp)
    apply (rule conjI)
     apply (drule ckernel_init_valid_duplicates'[rule_format], simp)
-   apply (rule conjI)
-    apply (frule init_refinement[simplified subset_eq, THEN bspec])
-    apply (clarsimp simp: ex_abs_def lift_state_relation_def)
-    apply (frule akernel_init_invs[THEN bspec])
-    apply (rule_tac x = s in exI)
-    apply (clarsimp simp: Init_A_def)
    apply (insert ckernel_init_invs)[1]
    apply clarsimp
    apply (frule ckernel_init_sch_norm)
@@ -900,12 +876,12 @@ lemma ckernel_invariant:
    apply (clarsimp simp add: do_user_op_H_def monad_to_transition_def)
    apply (drule use_valid)
      apply (rule hoare_vcg_conj_lift)
-      apply (rule doUserOp_valid_duplicates')
+      apply (rule doUserOp_valid_objs')
      apply (rule valid_corres_combined[OF do_user_op_invs2 corres_guard_imp2[OF do_user_op_corres]])
       apply clarsimp
      apply (rule doUserOp_invs'[THEN hoare_weaken_pre])
      apply (fastforce simp: ex_abs_def domain_time_rel_eq domain_list_rel_eq)
-    apply (clarsimp simp: ex_abs_def, rule_tac x=s in exI,
+    apply (clarsimp simp: invs_valid_objs' ex_abs_def, rule_tac x=s in exI,
             clarsimp simp: ct_running_related sched_act_rct_related)
    apply (clarsimp simp: ex_abs_def)
    apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related
@@ -915,7 +891,7 @@ lemma ckernel_invariant:
    apply (clarsimp simp add: do_user_op_H_def monad_to_transition_def)
    apply (drule use_valid)
      apply (rule hoare_vcg_conj_lift)
-      apply (rule doUserOp_valid_duplicates')
+      apply (rule doUserOp_valid_objs')
      apply (rule valid_corres_combined[OF do_user_op_invs2 corres_guard_imp2[OF do_user_op_corres]])
       apply clarsimp
      apply (rule doUserOp_invs'[THEN hoare_weaken_pre])
@@ -927,7 +903,7 @@ lemma ckernel_invariant:
    apply (clarsimp simp: check_active_irq_H_def)
    apply (drule use_valid)
      apply (rule hoare_vcg_conj_lift)
-      apply (rule checkActiveIRQ_valid_duplicates')
+      apply (rule checkActiveIRQ_valid_objs')
      apply (rule valid_corres_combined[OF check_active_irq_invs_just_running check_active_irq_corres_just_running])
      apply (rule checkActiveIRQ_invs'_just_running[THEN hoare_weaken_pre])
      apply (fastforce simp: ex_abs_def)
@@ -938,7 +914,7 @@ lemma ckernel_invariant:
    apply (clarsimp simp: check_active_irq_H_def)
    apply (drule use_valid)
      apply (rule hoare_vcg_conj_lift)
-      apply (rule checkActiveIRQ_valid_duplicates')
+      apply (rule checkActiveIRQ_valid_objs')
      apply (rule valid_corres_combined[OF check_active_irq_invs_just_idle check_active_irq_corres_just_idle])
      apply (rule checkActiveIRQ_invs'_just_idle[THEN hoare_weaken_pre])
      apply clarsimp
@@ -949,7 +925,7 @@ lemma ckernel_invariant:
   apply (clarsimp simp: check_active_irq_H_def)
    apply (drule use_valid)
      apply (rule hoare_vcg_conj_lift)
-     apply (rule checkActiveIRQ_valid_duplicates')
+     apply (rule checkActiveIRQ_valid_objs')
     apply (rule valid_corres_combined[OF check_active_irq_invs check_active_irq_corres])
     apply (rule checkActiveIRQ_invs'[THEN hoare_weaken_pre])
     apply clarsimp
