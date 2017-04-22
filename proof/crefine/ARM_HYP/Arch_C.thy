@@ -3937,11 +3937,11 @@ lemma cond_throw_whenE:
              simp: throwError_def bindE_def
                    whenE_def bind_def returnOk_def return_def)
 
-lemma Arch_decodeInvocation_ccorres:
+lemma decodeARMMMUInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
-  "interpret_excaps extraCaps' = excaps_map extraCaps
-     \<Longrightarrow>
+  "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps ; \<not> isVCPUCap cp \<rbrakk>
+   \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
               and (excaps_in_mem extraCaps \<circ> ctes_of)
@@ -3950,20 +3950,13 @@ lemma Arch_decodeInvocation_ccorres:
               and sysargs_rel args buffer and valid_objs')
        (UNIV \<inter> {s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
-             \<inter> {s. slot_' s = cte_Ptr slot}
+             \<inter> {s. cte_' s = cte_Ptr slot}
              \<inter> {s. excaps_' s = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
-       (Arch.decodeInvocation label args cptr slot cp extraCaps
+       (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
-       (Call Arch_decodeInvocation_'proc)"
-  (is "?F \<Longrightarrow> ccorres ?r ?xf ?P (?P' slot_') [] ?a ?c")
-  apply cinit'
-sorry (* FIXME ARMHYP
-   apply (rule ccorres_trim_returnE, simp+)
-   apply (rule ccorres_call[where xf''="?xf" and A="?P" and C'="?P' cte_'"])
-      defer
-     apply (simp+)[4]
+       (Call decodeARMMMUInvocation_'proc)"
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_'
                       excaps_' cap_' buffer_')
    apply csymbr
@@ -4155,7 +4148,7 @@ sorry (* FIXME ARMHYP
                   apply (clarsimp simp: if_1_0_0 to_bool_if cond_throw_whenE bindE_assoc
                     from_bool_neq_0)
                   apply (rule ccorres_split_when_throwError_cond[where Q = \<top> and Q' = \<top>])
-                     apply clarsimp
+                     apply fastforce
                     apply (rule syscall_error_throwError_ccorres_n)
                     apply (clarsimp simp: syscall_error_rel_def shiftL_nat syscall_error_to_H_cases)
                    prefer 2
@@ -4618,6 +4611,82 @@ sorry (* FIXME ARMHYP
                         cap_to_H_def to_bool_def
                         cap_page_directory_cap_lift_def
                  elim!: ccap_relationE split: if_split_asm)
-  done *)
+  done
+
+lemma decodeARMVCPUInvocation_ccorres:
+  notes if_cong[cong] tl_drop_1[simp]
+  shows
+  "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps ; isVCPUCap cp \<rbrakk>
+     \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
+              and (excaps_in_mem extraCaps \<circ> ctes_of)
+              and cte_wp_at' (diminished' (ArchObjectCap cp) \<circ> cteCap) slot
+              and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
+              and sysargs_rel args buffer and valid_objs')
+       (* whoever wrote the C code decided to name these arbitrarily differently from other functions *)
+       (UNIV \<inter> {s. label___unsigned_long_' s = label}
+             \<inter> {s. unat (length_' s) = length args}
+             \<inter> {s. slot_' s = cte_Ptr slot}
+             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
+             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+       (decodeARMVCPUInvocation label args cptr slot cp extraCaps
+              >>= invocationCatch thread isBlocking isCall InvokeArchObject)
+       (Call decodeARMVCPUInvocation_'proc)"
+  apply (cinit' lift: label___unsigned_long_' length_' slot_' extraCaps___struct_extra_caps_C_'
+                       cap_' buffer_')
+  sorry (* FIXME ARMHYP TODO *)
+
+lemma Arch_decodeInvocation_ccorres:
+  notes if_cong[cong]
+  assumes "interpret_excaps extraCaps' = excaps_map extraCaps"
+  shows
+  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
+              and (excaps_in_mem extraCaps \<circ> ctes_of)
+              and cte_wp_at' (diminished' (ArchObjectCap cp) \<circ> cteCap) slot
+              and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
+              and sysargs_rel args buffer and valid_objs')
+       (UNIV \<inter> {s. invLabel_' s = label}
+             \<inter> {s. unat (length___unsigned_long_' s) = length args}
+             \<inter> {s. slot_' s = cte_Ptr slot}
+             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
+             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+       (Arch.decodeInvocation label args cptr slot cp extraCaps
+              >>= invocationCatch thread isBlocking isCall InvokeArchObject)
+       (Call Arch_decodeInvocation_'proc)"
+  (is "ccorres ?r ?xf ?P (?P' slot_') [] ?a ?c")
+proof -
+
+  have not_VCPUCap_case_helper_eq:
+    "\<And>P Q. \<not> isVCPUCap cp \<Longrightarrow> (case cp of arch_capability.VCPUCap x \<Rightarrow> P cp | _ \<Rightarrow> Q cp) = Q cp"
+    by (clarsimp simp: isVCPUCap_def split: arch_capability.splits)
+
+  from assms show ?thesis
+    (* FIXME ARMHYP WTF why can't I abstract cptr_' in any position? who decides this random order anyway?! *)
+    apply (cinit' lift:  invLabel_'  length___unsigned_long_'  slot_'  excaps_'  cap_' buffer_')
+     apply csymbr
+     apply (simp only: cap_get_tag_isCap_ArchObject ARM_HYP_H.decodeInvocation_def)
+     apply (rule ccorres_Cond_rhs)
+      apply wpc
+           apply (clarsimp simp: isVCPUCap_def)+
+      apply (rule ccorres_trim_returnE, simp+)
+      apply (rule ccorres_call,
+             rule decodeARMVCPUInvocation_ccorres, (simp add: isVCPUCap_def)+)[1]
+     (* will not rewrite any other way, and we do not want to repeat proof for each MMU cap case
+        of decodeARMMMUInvocation *)
+     apply (subst not_VCPUCap_case_helper_eq, assumption)
+     apply (rule ccorres_trim_returnE, simp+)
+     apply (rule ccorres_call,
+            rule decodeARMMMUInvocation_ccorres, simp+)[1]
+
+    apply (clarsimp simp: cte_wp_at_ctes_of ct_in_state'_def)
+    apply (frule(1) ctes_of_valid', simp only: diminished_valid'[symmetric])
+    apply (clarsimp split: arch_capability.splits simp: isVCPUCap_def)
+    done
+qed
+
 end
 end
