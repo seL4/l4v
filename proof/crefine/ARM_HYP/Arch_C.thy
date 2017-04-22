@@ -2570,9 +2570,38 @@ lemma pte_get_tag_alt:
           | Pte_pte_invalid \<Rightarrow> scast pte_pte_invalid)"
   by (auto simp add: pte_lift_def Let_def split: if_split_asm)
 
+lemma c_page_sizes_noteq:
+  "Kernel_C.ARMSmallPage \<noteq> Kernel_C.ARMLargePage"
+  "Kernel_C.ARMLargePage \<noteq> Kernel_C.ARMSmallPage"
+  by (simp_all add: ARMSmallPage_def ARMLargePage_def)
+
+lemma c_section_sizes_noteq:
+  "Kernel_C.ARMSection \<noteq> Kernel_C.ARMSuperSection"
+  "Kernel_C.ARMSuperSection \<noteq> Kernel_C.ARMSection"
+  by (simp_all add: ARMSection_def ARMSuperSection_def)
+
+lemma c_pages_noteq:
+  "pte_pte_invalid \<noteq> pte_pte_small"
+  "pte_pte_small \<noteq> pte_pte_invalid"
+  by (simp_all add: pte_pte_small_def pte_pte_invalid_def)
+
+lemma cpte_relation_get_tag_simps:
+  "cpte_relation ARM_HYP_H.InvalidPTE cpte \<Longrightarrow> pte_get_tag cpte = scast pte_pte_invalid"
+  "cpte_relation (ARM_HYP_H.SmallPagePTE w x y z) cpte \<Longrightarrow> pte_get_tag cpte = scast pte_pte_small"
+  "cpte_relation (ARM_HYP_H.LargePagePTE w x y z) cpte \<Longrightarrow> pte_get_tag cpte = scast pte_pte_small"
+  by (clarsimp simp: cpte_relation_def pte_get_tag_alt)+
+
+(* FIXME: move *)
+lemma valid_objs_valid_pte': "\<lbrakk> valid_objs' s ; ko_at' (ko :: pte) p s \<rbrakk> \<Longrightarrow> valid_pte' ko s"
+  by (fastforce simp add: obj_at'_def ran_def valid_obj'_def projectKOs valid_objs'_def)
+
+(* Note: needs valid_objs' on ARM Hypervisor since the cpte_relation says nothing about alignment
+         of the page addresses - therefore the only way to ensure that a C large page is aligned
+         is to appeal to validity of the PTE on the Haskell side *)
 lemma resolveVAddr_ccorres:
   "ccorres resolve_ret_rel ret__struct_resolve_ret_C_'
-     (page_directory_at' pd) (UNIV \<inter> {s. pd_' s = pde_Ptr pd} \<inter> {s. vaddr_' s = vaddr}) hs
+           (page_directory_at' pd and valid_objs')
+           (UNIV \<inter> {s. pd_' s = pde_Ptr pd} \<inter> {s. vaddr_' s = vaddr}) hs
      (resolveVAddr pd vaddr) (Call resolveVAddr_'proc)"
   apply (cinit lift: pd_' vaddr_')
    apply clarsimp
@@ -2606,55 +2635,28 @@ lemma resolveVAddr_ccorres:
      apply (rule ccorres_pre_getObject_pte)
      apply (rule_tac P="page_table_at' (ptrFromPAddr word1)"
        in ccorres_cross_over_guard)
-     apply (rule_tac P'="{s. \<exists>v. cslift s (pte_Ptr (lookup_pt_slot_no_fail (ptrFromPAddr word1) vaddr)) = Some v
+     apply (rule_tac P = "\<lambda>s. valid_pte' rv s"
+                 and P'="{s. \<exists>v. cslift s (pte_Ptr (lookup_pt_slot_no_fail (ptrFromPAddr word1) vaddr)) = Some v
                                     \<and> cpte_relation rv v
                                     \<and> array_assertion (pte_Ptr (ptrFromPAddr word1))
                                         (2 ^ (ptBits - 3)) (hrs_htd (t_hrs_' (globals s)))}"
-                  in ccorres_from_vcg_might_throw[where P=\<top>])
+                  in ccorres_from_vcg_might_throw)
      apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: pteBits_def if_1_0_0 typ_heap_simps')
+     apply (clarsimp simp: pteBits_def if_1_0_0 typ_heap_simps' gen_framesize_to_H_def
+                           c_page_sizes_noteq)
+     subgoal for word1 pte \<sigma> x cpte _ tag
 
-sorry (* FIXME ARMHYP
-apply (rule conjI,
-     fastforce simp: pte_get_tag_alt pte_tag_defs cpte_relation_def
-                            fst_return typ_heap_simps framesize_from_H_simps
-                            (* pte_pte_large_lift_def *) pte_pte_small_lift_def
-                            pte_pte_invalid_def
-                     intro: resolve_ret_rel_Some
-                     split: pte.splits)+
-
-
-apply (rule conjI)
-apply (clarsimp simp: pte_tag_defs cpte_relation_def Let_def pte_lifts)
-apply (clarsimp  simp: pte_get_tag_alt pte_tag_defs cpte_relation_def
-                            fst_return typ_heap_simps' framesize_from_H_simps
-gen_framesize_to_H_def
-                            (* pte_pte_large_lift_def *) pte_pte_small_lift_def Let_def
-                            pte_pte_invalid_def ARMLargePage_def ARMSmallPage_def mask_def
-                     intro!: resolve_ret_rel_Some
-                     split: pte.splits if_split)
-
-apply (rule resolve_ret_rel_Some)
-apply clarsimp
-apply (clarsimp simp: framesize_from_H_simps ARMLargePage_def)
-apply clarsimp
-apply (clarsimp simp: pte_lift_def Let_def)
-subgoal
-apply (clarsimp  simp: pte_get_tag_alt pte_tag_defs cpte_relation_def
-                            fst_return typ_heap_simps' framesize_from_H_simps
-gen_framesize_to_H_def
-                            (* pte_pte_large_lift_def *) pte_pte_small_lift_def Let_def
-                            pte_pte_invalid_def ARMLargePage_def ARMSmallPage_def mask_def
-                     intro!: resolve_ret_rel_Some
-                     split: pte.splits if_split_asm)
-
-
-apply (rule resolve_ret_rel_Some)
-apply clarsimp
-apply (clarsimp simp: framesize_from_H_simps ARMSmallPage_def)
-apply clarsimp
-apply clarsimp
-
+       apply (subgoal_tac "scast Kernel_C.ARMLargePage && mask 2 = (scast Kernel_C.ARMLargePage :: machine_word)")
+        prefer 2
+        apply (simp add: mask_def ARMLargePage_def)
+       -- "reduce to resolve_ret_rel goals first"
+       apply (clarsimp simp: fst_return pte_get_tag_alt true_def false_def split: pte.splits)
+       apply (safe ; clarsimp simp: cpte_relation_get_tag_simps c_pages_noteq)
+       (* 4 subgoals *)
+       apply (fastforce simp: cpte_relation_def pte_pte_small_lift_def pte_lift_def Let_def mask_def
+                              valid_mapping'_def  true_def framesize_from_H_simps
+                        split: if_splits intro!: resolve_ret_rel_Some  dest!: aligned_neg_mask)+
+       done
     apply (rule guard_is_UNIVI)
     apply (clarsimp simp: typ_heap_simps)
     apply (auto simp: ptBits_def' pageBits_def
@@ -2672,12 +2674,13 @@ apply clarsimp
                    intro: resolve_ret_rel_Some
                    split: pde.splits)
   apply clarsimp
+  apply (rule conjI, fastforce elim: valid_objs_valid_pte') -- "valid_pte'"
   apply (frule(1) page_directory_at_rf_sr)
   apply (clarsimp simp: isPageTablePDE_def pde_get_tag_alt pde_tag_defs cpde_relation_def
                         typ_heap_simps pde_pde_coarse_lift_def
                         clift_array_assertion_imp table_bits_defs Let_def
                  split: pde.splits)
-  done *)
+  done
 
 lemma cte_wp_at_diminished_gsMaxObjectSize:
   "cte_wp_at' (diminished' cap o cteCap) slot s
@@ -3705,9 +3708,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
            apply (rule ccorres_rhs_assoc)+
            apply (simp add:hd_conv_nth)
            apply (rule ccorres_split_nothrow)
-               apply (rule_tac xf'= "resolve_ret_'" in
-                 ccorres_call)
-
+               apply (rule_tac xf'= "resolve_ret_'" in ccorres_call)
                   apply (rule resolveVAddr_ccorres)
                  apply simp
                 apply simp
