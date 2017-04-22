@@ -4614,7 +4614,7 @@ lemma decodeARMMMUInvocation_ccorres:
   done
 
 lemma decodeARMVCPUInvocation_ccorres:
-  notes if_cong[cong] tl_drop_1[simp]
+  notes if_cong[cong] Collect_const[simp del]
   shows
   "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps ; isVCPUCap cp \<rbrakk>
      \<Longrightarrow>
@@ -4636,7 +4636,50 @@ lemma decodeARMVCPUInvocation_ccorres:
        (Call decodeARMVCPUInvocation_'proc)"
   apply (cinit' lift: label___unsigned_long_' length_' slot_' extraCaps___struct_extra_caps_C_'
                        cap_' buffer_')
-  sorry (* FIXME ARMHYP TODO *)
+   apply (clarsimp simp: decodeARMVCPUInvocation_def)
+
+   apply (rule ccorres_Cond_rhs)
+    apply (simp add: invocation_eq_use_types)
+    apply (rule ccorres_trim_returnE, simp+)
+    subgoal sorry (* FIXME ARMHYP TODO
+      apply (rule ccorres_call,
+             rule decodeVCPUSetTCB_ccorres, simp+)[1]
+      *)
+   apply (rule ccorres_Cond_rhs)
+    apply (simp add: invocation_eq_use_types)
+    apply (rule ccorres_trim_returnE, simp+)
+    subgoal sorry (* FIXME ARMHYP TODO
+      apply (rule ccorres_call,
+             rule decodeVCPUReadReg_ccorres, simp+)[1]
+      *)
+   apply (rule ccorres_Cond_rhs)
+    apply (simp add: invocation_eq_use_types)
+    apply (rule ccorres_trim_returnE, simp+)
+    subgoal sorry (* FIXME ARMHYP TODO
+      apply (rule ccorres_call,
+             rule decodeVCPUWriteReg_ccorres, simp+)[1]
+      *)
+   apply (rule ccorres_Cond_rhs)
+    apply (simp add: invocation_eq_use_types)
+    apply (rule ccorres_trim_returnE, simp+)
+    subgoal sorry (* FIXME ARMHYP TODO
+      apply (rule ccorres_call,
+             rule decodeVCPUInjectIRQ_ccorres, simp+)[1]
+      *)
+      -- "unknown (arch) invocation labels all throw IllegalOperation in line with the Haskell"
+   apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+   apply (intro allI, rule conseqPre, vcg)
+   subgoal
+    apply (clarsimp simp: invocation_eq_use_types
+                    split: invocation_label.splits arch_invocation_label.splits)
+    apply (safe
+           ; simp add: invocation_eq_use_types throwError_invocationCatch fst_throwError_returnOk
+                       exception_defs syscall_error_rel_def syscall_error_to_H_cases)
+    done
+
+  -- "preconditions imply calculated preconditions"
+  subgoal sorry (* FIXME ARMHYP TODO: incomplete calculated preconditions due to stubs *)
+  done
 
 lemma Arch_decodeInvocation_ccorres:
   notes if_cong[cong]
