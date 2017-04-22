@@ -2656,6 +2656,7 @@ lemma resolveVAddr_ccorres:
      apply (rule allI, rule conseqPre, vcg)
 (*      using pte_get_tag_exhaust *)
      apply (clarsimp simp: pteBits_def)
+sorry (* FIXME ARMHYP not a good sign
 apply (rule conjI,
      fastforce simp: pte_get_tag_alt pte_tag_defs cpte_relation_def
                             fst_return typ_heap_simps framesize_from_H_simps
@@ -2673,7 +2674,6 @@ apply (clarsimp  simp: pte_get_tag_alt pte_tag_defs cpte_relation_def
                             pte_pte_invalid_def
                      intro: resolve_ret_rel_Some
                      split: pte.splits)
-sorry (* FIXME ARMHYP not a good sign
 
 apply (rule conjI,
      fastforce simp: pte_get_tag_alt pte_tag_defs cpte_relation_def
