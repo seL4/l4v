@@ -16,7 +16,7 @@ begin
 context Arch begin global_naming ARM_HYP_H
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs CONTEXT ARM_HYP_H
-#INCLUDE_HASKELL SEL4/Kernel/VSpace/ARM_HYP.lhs CONTEXT ARM_HYP_H decls_only ArchInv=
+#INCLUDE_HASKELL SEL4/Kernel/VSpace/ARM_HYP.lhs CONTEXT ARM_HYP_H decls_only NOT pageBase ArchInv=
 
 end
 end
