@@ -1301,8 +1301,12 @@ lemma createSafeMappingEntries_PTE_ccorres:
          apply csymbr
          apply (rule ccorres_pre_getObject_pte)
          apply (rule ccorres_add_return)
-         apply (rule_tac xf'="ret__unsigned_'"
-                      and r'="\<lambda>_ rv'. isLargePagePTE rva = (rv' = scast pte_pte_small \<or> rv' = scast pte_pte_invalid)"
+
+         (* group C side calculation of whether pte is a large page pte : \<not>invalid and CN bit set *)
+         apply (rule ccorres_rhs_assoc2)
+         apply (rule ccorres_rhs_assoc2)
+         apply (rule_tac xf'="ret__int_'"
+                      and r'="\<lambda>_ rv'. rv' = from_bool (isLargePagePTE rva)"
                       in ccorres_split_nothrow[where F=UNIV])
              apply (rule_tac P="ko_at' rva rv" in ccorres_from_vcg[where P'=UNIV])
              apply (rule allI, rule conseqPre, vcg)
@@ -1310,60 +1314,13 @@ lemma createSafeMappingEntries_PTE_ccorres:
              apply (drule obj_at_ko_at', clarsimp)
              apply (erule cmap_relationE1[OF rf_sr_cpte_relation], erule ko_at_projectKO_opt)
              apply (clarsimp simp: typ_heap_simps cpte_relation_def Let_def)
-
-
-             apply (simp add: isLargePagePTE_def pte_lift_def Let_def
-                              pte_tag_defs pte_pte_invalid_def
-                       split: ARM_HYP_H.pte.split_asm if_split_asm)
-
-sorry (*
+             apply (case_tac rva
+                    ; fastforce simp: if_1_0_0 pte_lifts isLargePagePTE_def false_def true_def
+                                     pte_pte_small_lift_def)
             apply ceqv
-           apply clarsimp
+           apply (clarsimp simp del: Collect_const)
+           (* the if/IF condition is now the same on both sides *)
            apply (simp add: pte_case_isLargePagePTE if_to_top_of_bindE del: Collect_const)
-
-apply (rule ccorres_if_lhs)
-
-apply (frule isPTE_exclusion, clarsimp)
-apply csymbr
-apply simp
-apply (rule ccorres_rhs_assoc)
-         apply (rule ccorres_add_return)
-         apply (rule_tac xf'="ret__unsigned_'"
-                      and r'="\<lambda>_ contig'. isLargePagePTE rva \<longrightarrow> (contig' = 1)"
-                      in ccorres_split_nothrow[where F=UNIV])
-             apply (rule_tac P="ko_at' rva rv" in ccorres_from_vcg[where P'=UNIV])
-             apply (rule allI, rule conseqPre, vcg)
-             apply (clarsimp simp: return_def)
-             apply (drule obj_at_ko_at', clarsimp)
-             apply (erule cmap_relationE1[OF rf_sr_cpte_relation], erule ko_at_projectKO_opt)
-             apply (clarsimp simp: typ_heap_simps cpte_relation_def Let_def)
-             apply (case_tac rva; clarsimp simp: isLargePagePTE_def pte_lifts pte_pte_small_lift_def)
-            apply ceqv
-apply clarsimp
-apply csymbr
-apply clarsimp
-
-            apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-            apply (rule allI, rule conseqPre, vcg)
-            apply (clarsimp simp: fst_throwError_returnOk
-                                  exception_defs syscall_error_to_H_cases
-                                  syscall_error_rel_def)
-apply (rule hoare_post_taut)
-apply clarsimp
-apply vcg
-
-
-
-
-
-find_theorems intro True
-
-find_theorems pte_pte_small_lift
-
-
-apply csymbr
-
-find_theorems name:ccorres_if
            apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
               apply vcg
              apply simp
@@ -1373,7 +1330,7 @@ find_theorems name:ccorres_if
             apply (clarsimp simp: fst_throwError_returnOk
                                   exception_defs syscall_error_to_H_cases
                                   syscall_error_rel_def)
-           apply simp
+          apply simp
            apply csymbr
            apply (rule ccorres_return_CE, simp+)[1]
           apply (simp only: pred_conj_def simp_thms)
@@ -1396,9 +1353,10 @@ find_theorems name:ccorres_if
      apply simp
      apply vcg
     apply (rule conseqPre, vcg, clarsimp)
+
    apply (rule ccorres_Cond_rhs)
     apply (simp add: ARMLargePageBits_def ARMSmallPageBits_def word_0_sle_from_less)
-    apply (ccorres_remove_UNIV_guard)
+    apply ccorres_rewrite
     apply (rule ccorres_rhs_assoc)+
     apply (simp add: lookupError_injection bindE_assoc del: Collect_const)
     apply csymbr
@@ -1413,17 +1371,18 @@ find_theorems name:ccorres_if
          apply csymbr
          apply (simp add: mapME_x_sequenceE bindE_assoc
                      del: Collect_const)
-         apply (rule_tac P="\<not> rv + 0x3C < rv" in ccorres_gen_asm)
-         apply (rule_tac P="is_aligned rv 6" in ccorres_gen_asm)
+         apply (rule_tac P="\<not> rv + 0x3C < rv" in ccorres_gen_asm) (* FIXME ARMHYP 3C? *)
+         apply (rule_tac P="is_aligned rv 7" in ccorres_gen_asm)
+         apply clarsimp
          apply (rule ccorres_rhs_assoc2, rule ccorres_splitE)
              apply (simp only: whileAnno_def)
-             apply (ccorres_remove_UNIV_guard)
              apply (rule_tac xf'=xfdc and r'=dc and F="\<lambda>_. page_table_at' (rv && ~~ mask ptBits)"
                         and Q="{s. pte_range_C.base_C (pte_entries_C
                                      (ret___struct_create_mappings_pte_return_C_' s))
                                        = Ptr rv}"
                        in ccorres_sequenceE_while)
                   apply (clarsimp simp: liftE_bindE)
+                  apply (clarsimp simp: largePagePTEOffsets_def[simplified pteBits_def])
                   apply (rule ccorres_symb_exec_l'[OF _ _ hoare_vcg_conj_lift[OF getObject_obj_at' getObject_inv, simplified]])
                        apply (rule ccorres_from_vcg_might_throw)
                        apply (rule allI, rule conseqPre, vcg)
@@ -1431,26 +1390,27 @@ find_theorems name:ccorres_if
                        apply (simp add: upto_enum_step_def upto_enum_word)
                        apply (clarsimp simp: fst_throwError_returnOk
                                              inr_rrel_def syscall_error_rel_def
-                                             syscall_error_to_H_cases exception_defs
+                                             syscall_error_to_H_cases exception_defs pte_lifts
                                       split: pte.split)
                        apply (subst array_assertion_abs_pte_16[rule_format], erule conjI,
                          clarsimp simp: unat_of_nat)+
+
                        apply (drule obj_at_ko_at', clarsimp)
                        apply (erule cmap_relationE1[OF rf_sr_cpte_relation],
                               erule ko_at_projectKO_opt)
-                       apply (auto simp: typ_heap_simps cpte_relation_def pte_pte_invalid_def
-                                         Let_def pte_lift_def pte_tag_defs
+                       apply (auto simp: typ_heap_simps cpte_relation_def
+                                         Let_def pte_lift_def pte_tag_defs table_bits_defs
+                                         add.commute pte_lifts if_1_0_0 pte_pte_small_lift_def
                                   intro: typ_heap_simps split: if_split_asm)[1]
+
                       apply (wp getObject_inv loadObject_default_inv | simp)+
-                    apply (simp add: objBits_simps archObjSize_def)
+                    apply (simp add: objBits_simps archObjSize_def table_bits_defs)
                    apply (simp add: loadObject_default_inv)
                   apply (simp add: empty_fail_getObject)
                  apply (simp add: upto_enum_step_def upto_enum_word
                            split: if_split)
                 apply (rule conseqPre, vcg)
-                apply (clarsimp simp: pte_tag_defs)
-                using pte_get_tag_exhaust
-                apply blast
+                apply (clarsimp simp: pte_tag_defs if_1_0_0)
                apply (wp getPTE_wp | simp | wpc)+
               apply (simp add: upto_enum_step_def upto_enum_word
                                word_bits_def
@@ -1469,9 +1429,7 @@ find_theorems name:ccorres_if
                        in HoarePartial.reannotateWhileNoGuard)
           apply (rule HoarePartial.While[OF order_refl])
            apply (rule conseqPre, vcg)
-           apply (clarsimp simp: pte_tag_defs)
-           using pte_get_tag_exhaust
-           apply blast
+           apply (clarsimp simp: pte_tag_defs if_1_0_0)
           apply clarsimp
          apply vcg
         apply simp
@@ -1484,7 +1442,7 @@ find_theorems name:ccorres_if
         apply (erule lookup_failure_rel_fault_lift[rotated])
         apply (simp add: exception_defs)
        apply (wp injection_wp[OF refl])
-       apply (simp add: linorder_not_less)
+       apply (simp add: linorder_not_less ptBits_eq)
        apply (wp lookupPTSlot_le_0x3C lookupPTSlot_page_table_at' Arch_R.lookupPTSlot_aligned)
       apply simp
       apply (vcg exspec=lookupPTSlot_modifies)
@@ -1499,10 +1457,10 @@ find_theorems name:ccorres_if
                         from_bool_mask_simp[unfolded mask_def, simplified])
   apply (clarsimp simp: typ_heap_simps pte_range_relation_def
                         ptr_range_to_list_def upto_enum_word)
-  apply (simp add: cpte_relation_def true_def false_def pte_tag_defs)
-  using pte_get_tag_exhaust
-  apply (auto simp: vmsz_aligned'_def)[1]
-  done *)
+  apply (simp add: cpte_relation_def true_def false_def pte_tag_defs if_1_0_0 table_bits_defs
+                    largePagePTEOffsets_def)
+  apply (auto simp: vmsz_aligned'_def upto_enum_step_def upto_enum_def)[1]
+  done
 
 lemma ptr_add_uint_of_nat [simp]:
     "a  +\<^sub>p uint (of_nat b :: word32) = a  +\<^sub>p (int b)"
@@ -2654,9 +2612,9 @@ lemma resolveVAddr_ccorres:
                                         (2 ^ (ptBits - 3)) (hrs_htd (t_hrs_' (globals s)))}"
                   in ccorres_from_vcg_might_throw[where P=\<top>])
      apply (rule allI, rule conseqPre, vcg)
-(*      using pte_get_tag_exhaust *)
-     apply (clarsimp simp: pteBits_def)
-sorry (* FIXME ARMHYP not a good sign
+     apply (clarsimp simp: pteBits_def if_1_0_0 typ_heap_simps')
+
+sorry (* FIXME ARMHYP
 apply (rule conjI,
      fastforce simp: pte_get_tag_alt pte_tag_defs cpte_relation_def
                             fst_return typ_heap_simps framesize_from_H_simps
@@ -2667,26 +2625,39 @@ apply (rule conjI,
 
 
 apply (rule conjI)
-apply (clarsimp simp: pte_tag_defs cpte_relation_def Let_def)
+apply (clarsimp simp: pte_tag_defs cpte_relation_def Let_def pte_lifts)
 apply (clarsimp  simp: pte_get_tag_alt pte_tag_defs cpte_relation_def
-                            fst_return typ_heap_simps framesize_from_H_simps
+                            fst_return typ_heap_simps' framesize_from_H_simps
+gen_framesize_to_H_def
                             (* pte_pte_large_lift_def *) pte_pte_small_lift_def Let_def
-                            pte_pte_invalid_def
-                     intro: resolve_ret_rel_Some
-                     split: pte.splits)
+                            pte_pte_invalid_def ARMLargePage_def ARMSmallPage_def mask_def
+                     intro!: resolve_ret_rel_Some
+                     split: pte.splits if_split)
 
-apply (rule conjI,
-     fastforce simp: pte_get_tag_alt pte_tag_defs cpte_relation_def
-                            fst_return typ_heap_simps framesize_from_H_simps
-                            (* pte_pte_large_lift_def *) pte_pte_small_lift_def
-                            pte_pte_invalid_def
-                     intro: resolve_ret_rel_Some
-                     split: pte.splits)+
+apply (rule resolve_ret_rel_Some)
+apply clarsimp
+apply (clarsimp simp: framesize_from_H_simps ARMLargePage_def)
+apply clarsimp
+apply (clarsimp simp: pte_lift_def Let_def)
+subgoal
+apply (clarsimp  simp: pte_get_tag_alt pte_tag_defs cpte_relation_def
+                            fst_return typ_heap_simps' framesize_from_H_simps
+gen_framesize_to_H_def
+                            (* pte_pte_large_lift_def *) pte_pte_small_lift_def Let_def
+                            pte_pte_invalid_def ARMLargePage_def ARMSmallPage_def mask_def
+                     intro!: resolve_ret_rel_Some
+                     split: pte.splits if_split_asm)
 
+
+apply (rule resolve_ret_rel_Some)
+apply clarsimp
+apply (clarsimp simp: framesize_from_H_simps ARMSmallPage_def)
+apply clarsimp
+apply clarsimp
 
     apply (rule guard_is_UNIVI)
     apply (clarsimp simp: typ_heap_simps)
-    apply (auto simp: ptBits_def pageBits_def
+    apply (auto simp: ptBits_def' pageBits_def
                dest!: page_table_at_rf_sr
                elim: clift_array_assertion_imp)[1]
    apply (rule_tac P'="{s. \<exists>v. cslift s (pde_Ptr (lookup_pd_slot pd vaddr)) = Some v
@@ -2704,7 +2675,7 @@ apply (rule conjI,
   apply (frule(1) page_directory_at_rf_sr)
   apply (clarsimp simp: isPageTablePDE_def pde_get_tag_alt pde_tag_defs cpde_relation_def
                         typ_heap_simps pde_pde_coarse_lift_def
-                        clift_array_assertion_imp pageBits_def Let_def
+                        clift_array_assertion_imp table_bits_defs Let_def
                  split: pde.splits)
   done *)
 
