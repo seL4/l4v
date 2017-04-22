@@ -3622,6 +3622,11 @@ lemma injection_handler_stateAssert_relocate:
     = do v \<leftarrow> stateAssert ass xs; injection_handler Inl (f ()) >>=E g od"
   by (simp add: injection_handler_def handleE'_def bind_bindE_assoc bind_assoc)
 
+(* FIXME: move to where is_aligned_ptrFromPAddr is *)
+lemma is_aligned_ptrFromPAddr_pageBitsForSize:
+  "is_aligned p (pageBitsForSize sz) \<Longrightarrow> is_aligned (ptrFromPAddr p) (pageBitsForSize sz)"
+  by (cases sz ; simp add: is_aligned_ptrFromPAddr_n pageBits_def)
+
 lemma decodeARMPageDirectoryInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
@@ -3812,19 +3817,28 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
                    \<and> (obj_at' tcbQueued thread s \<longrightarrow> st_tcb_at' runnable' thread s))"]])
             apply (clarsimp simp: invs_valid_objs' invs_sch_act_wf'
               valid_tcb_state'_def invs_queues)
-            apply (rule conjI)
-             apply (erule flush_range_le)
-              apply (simp add:linorder_not_le)
-              apply (erule word_less_sub_1)
-             apply (simp add:mask_add_aligned mask_twice)
-            apply (subgoal_tac "5 \<le> pageBitsForSize a")
-             apply (frule(1) is_aligned_weaken)
-sorry (* FIXME ARMHYP
-             apply (simp add:mask_add_aligned mask_twice)
+
+           -- "cache flush constraints"
+           subgoal for _ _ _ _ _ _ sz p
+             using pbfs_atleast_pageBits[simplified pageBits_def, of sz]
+             apply (intro conjI)
+                apply (erule flush_range_le)
+                 apply (simp add:linorder_not_le)
+                 apply (erule word_less_sub_1)
+                apply (simp add:mask_add_aligned mask_twice)
+               apply (fastforce simp: mask_twice
+                                      mask_add_aligned[OF is_aligned_pageBitsForSize_minimum,
+                                                       simplified pageBits_def])
+              apply (simp add: ptrFromPAddr_add_left)
+              apply (erule flush_range_le)
+               apply (simp add:linorder_not_le)
+               apply (erule word_less_sub_1)
+              apply (fastforce simp: mask_add_aligned is_aligned_ptrFromPAddr_pageBitsForSize)
              apply (erule order_trans[rotated])
              apply (erule flush_range_le1, simp add: linorder_not_le)
              apply (erule word_less_sub_1)
-            apply (case_tac a,simp+)[1]
+             done
+
            apply simp
            apply (vcg exspec=resolveVAddr_modifies)
           apply (rule_tac P'="{s. errstate s = find_ret}"
@@ -3942,10 +3956,11 @@ sorry (* FIXME ARMHYP
      split:option.splits if_splits
      | fastforce simp: mask_def
      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlushLabel_def
-     | rule word_of_nat_less,simp add: pbfs_less)+ *)
+     | rule word_of_nat_less,simp add: pbfs_less)+
 
+(* FIXME: move *)
 lemma cond_throw_whenE:
-   "(if P then f else throwError e) =   (whenE (\<not> P) (throwError e) >>=E (\<lambda>_. f))"
+   "(if P then f else throwError e) = (whenE (\<not> P) (throwError e) >>=E (\<lambda>_. f))"
    by (auto split: if_splits
              simp: throwError_def bindE_def
                    whenE_def bind_def returnOk_def return_def)
