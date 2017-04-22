@@ -1168,7 +1168,7 @@ FIXME ARMHYP TODO clean up, fix for ifdef for ARM arch-parametrise
 >       ArchInvocationLabel ARMPageUnify_Instruction -> Unify
 >       _ -> error "Should never be called without a flush invocation"
 
-> pageBase :: VPtr -> VMPageSize -> VPtr
+> pageBase :: (Num a, Bits a) => a -> VMPageSize -> a
 > pageBase vaddr size = vaddr .&. (complement $ mask (pageBitsForSize size))
 
 > resolveVAddr :: PPtr PDE -> VPtr -> Kernel (Maybe (VMPageSize, PAddr))
@@ -1178,7 +1178,7 @@ FIXME ARMHYP TODO clean up, fix for ifdef for ARM arch-parametrise
 >     case pde of
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >         SectionPDE frame _ _ _ -> return $ Just (ARMSection, frame)
->         SuperSectionPDE frame _ _ _ -> return $ Just (ARMSuperSection, frame)
+>         SuperSectionPDE frame _ _ _ -> return $ Just (ARMSuperSection, pageBase frame ARMSuperSection)
 >         PageTablePDE table -> do
 #else
 >         SectionPDE frame _ _ _ _ _ _ -> return $ Just (ARMSection, frame)
@@ -1190,7 +1190,7 @@ FIXME ARMHYP TODO clean up, fix for ifdef for ARM arch-parametrise
 >             pte <- getObject pteSlot
 >             case pte of
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->                 LargePagePTE frame _ _ _ -> return $ Just (ARMLargePage, frame)
+>                 LargePagePTE frame _ _ _ -> return $ Just (ARMLargePage, pageBase frame ARMLargePage)
 >                 SmallPagePTE frame _ _ _ -> return $ Just (ARMSmallPage, frame)
 #else
 >                 LargePagePTE frame _ _ _ _ -> return $ Just (ARMLargePage, frame)
