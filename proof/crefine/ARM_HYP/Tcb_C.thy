@@ -1155,7 +1155,6 @@ lemma invokeTCB_WriteRegisters_ccorres_helper:
      apply clarsimp
      apply (rule conseqPre, vcg, clarsimp)
      apply fastforce
-    apply wp
    apply simp
    apply (vcg exspec=getSyscallArg_modifies)
   apply clarsimp

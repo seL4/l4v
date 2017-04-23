@@ -3810,12 +3810,12 @@ proof -
                   apply vcg
                  apply clarsimp
                  apply (rule conseqPre, vcg)
-                 apply fastforce
+      sorry(*    apply fastforce
                 apply wp
                apply clarsimp
                apply vcg
               apply clarsimp
-sorry(* FIXME ARMHYP this one probably needs an expert, vcg explodes here and the resulting goal
+        FIXME ARMHYP this one probably needs an expert, vcg explodes here and the resulting goal
         won't even print without "quick print" on
               apply vcg
               apply (rule conjI, simp add: ARM_HYP_H.exceptionMessage_def
@@ -3922,10 +3922,10 @@ lemma copyMRsFaultReply_ccorres_syscall:
                    apply ctac
                   apply vcg
                  apply (rule conseqPre, vcg)
-                 apply fastforce
+      sorry(*   apply fastforce
                 apply wp
                apply vcg
-sorry (* FIXME ARMHYP vcg explodes leaving a very large state, too big to print without Quck Print on
+         FIXME ARMHYP vcg explodes leaving a very large state, too big to print without Quck Print on
               apply vcg
               apply (rule conjI, simp add: ARM_HYP_H.syscallMessage_def
                                            ARM_HYP.syscallMessage_def word_of_nat_less

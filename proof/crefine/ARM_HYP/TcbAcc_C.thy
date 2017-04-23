@@ -279,7 +279,7 @@ lemma valid_tcb'_vcpuE [elim_format]:
     unfolding valid_tcb'_def valid_arch_tcb'_def
     by auto
 
-lemma sanitiseRegister_spec:
+lemma sanitiseRegister_spec':
   "\<forall>s t v r. \<Gamma> \<turnstile> (\<lbrace>s. \<exists>hs. (hs,s) \<in> rf_sr \<and> valid_objs' hs \<and> no_0_obj' hs
                            \<and> ko_at' t (ctcb_ptr_to_tcb_ptr \<acute>thread) hs\<rbrace>
                   \<inter> \<lbrace>\<acute>v___unsigned_long = v\<rbrace>
