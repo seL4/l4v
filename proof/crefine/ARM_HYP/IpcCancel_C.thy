@@ -2401,7 +2401,7 @@ lemma setThreadState_ccorres[corres]:
                  (\<forall>p. thread \<in> set (ksReadyQueues s p) \<longrightarrow> runnable' st) \<and>
                  sch_act_wf (ksSchedulerAction s) s)
      ({s'. (\<forall>cl fl. cthread_state_relation_lifted st (cl\<lparr>tsType_CL := ts_' s' && mask 4\<rparr>, fl))}
-    \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr thread}) []
+    \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr thread}) hs
          (setThreadState st thread) (Call setThreadState_'proc)"
    apply (cinit lift: tptr_' cong add: call_ignore_cong)
    apply (ctac (no_vcg) add: threadSet_tcbState_simple_corres)
