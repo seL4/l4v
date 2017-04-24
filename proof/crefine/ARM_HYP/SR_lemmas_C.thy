@@ -2406,10 +2406,13 @@ proof -
 
 qed
 
-(* e.g. (of_nat (fromEnum reg) = seL4_VCPUReg_SCTLR) = (reg = VCPURegSCTLR) *)
+(* e.g. (of_nat (fromEnum reg) = scast seL4_VCPUReg_SCTLR) = (reg = VCPURegSCTLR) *)
 lemmas vcpureg_eq_use_types
     = seL4_VCPUReg_defs[THEN vcpureg_eq_use_type, simplified,
                             unfolded enum_vcpureg, simplified]
+
+lemmas cvcpu_relation_regs_def =
+          cvcpu_relation_def[simplified cvcpu_regs_relation_def Let_def vcpuSCTLR_def, simplified]
 
 end
 end
