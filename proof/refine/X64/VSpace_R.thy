@@ -43,19 +43,16 @@ defs checkPML4ASIDMapMembership_def:
 crunch inv[wp]:checkPDAt P
 
 lemma findVSpaceForASID_vs_at_wp:
-  "\<lbrace>\<lambda>s. \<forall>pd. (page_map_l4_at' pd s \<longrightarrow> vspace_at_asid' pd asid s)
-            \<longrightarrow> P pd s\<rbrace> findVSpaceForASID asid \<lbrace>P\<rbrace>,-"
-  apply (simp add: findVSpaceForASID_def assertE_def
-             cong: option.case_cong
-               split del: if_split)
-  apply (rule hoare_pre)
-   apply (wp getASID_wp | wpc | simp add: o_def split del: if_split)+
-  apply (clarsimp simp: vspace_at_asid'_def)
-  apply (case_tac ko, simp)
-  apply (subst(asm) inv_f_f)
-   apply (rule inj_onI, simp+)
-  apply fastforce
-  done
+  "\<lbrace>\<lambda>s. \<forall>pm. (page_map_l4_at' pm s \<longrightarrow> vspace_at_asid' pm asid s) \<longrightarrow> P pm s\<rbrace>
+    findVSpaceForASID asid
+   \<lbrace>P\<rbrace>,-"
+  apply (simp add: findVSpaceForASID_def assertE_def checkPML4At_def
+             cong: option.case_cong split del: if_split)
+  apply (wpsimp wp: getASID_wp)
+  apply (erule allE; erule mp; clarsimp simp: vspace_at_asid'_def page_map_l4_at'_def)
+  apply (case_tac ko; simp)
+  apply (subst (asm) inv_f_f, rule inj_onI, simp)
+  by fastforce
 
 lemma findVSpaceForASIDAssert_vs_at_wp:
   "\<lbrace>(\<lambda>s. \<forall>pd. vspace_at_asid' pd asid  s
