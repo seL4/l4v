@@ -196,7 +196,7 @@ lemma find_vspace_for_asid_wp:
   apply (rule vs_lookupI)
    apply (fastforce simp: vs_asid_refs_def graph_of_def image_def)
   apply (rule rtrancl_into_rtrancl[rotated])
-   apply (erule vs_lookup1I; fastforce simp: vs_refs_def graph_of_def image_def 
+   apply (erule vs_lookup1I; fastforce simp: vs_refs_def graph_of_def image_def
                                              ucast_ucast_mask asid_low_bits_def)
   by simp
 
@@ -3250,23 +3250,44 @@ lemma ucast_ucast_le_low_bits [simp]:
   apply (simp add: asid_low_bits_def)
   done
 
+lemma setObject_cte_obj_at_ap':
+  shows
+  "\<lbrace>\<lambda>s. P' (obj_at' (P :: asidpool \<Rightarrow> bool) p s)\<rbrace>
+  setObject c (cte::cte)
+  \<lbrace>\<lambda>_ s. P' (obj_at' P p s)\<rbrace>"
+  apply (clarsimp simp: setObject_def in_monad split_def
+                        valid_def lookupAround2_char1
+                        obj_at'_def ps_clear_upd' projectKOs
+             split del: if_split)
+  apply (clarsimp elim!: rsubst[where P=P'])
+  apply (clarsimp simp: updateObject_cte in_monad objBits_simps
+                        tcbCTableSlot_def tcbVTableSlot_def
+                        typeError_def
+                 split: if_split_asm
+                        Structures_H.kernel_object.split_asm)
+  done
+
+lemma updateCap_ko_at_inv'[wp]: "\<lbrace>\<lambda>s. P (ko_at' (ko::asidpool) p s )\<rbrace> updateCap a b \<lbrace>\<lambda>rv s. P ( ko_at' ko p s)\<rbrace>"
+  by (wpsimp simp: updateCap_def setCTE_def wp: setObject_cte_obj_at_ap')
+
 lemma perform_aci_invs [wp]:
   "\<lbrace>invs' and valid_apinv' api\<rbrace> performASIDPoolInvocation api \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: performASIDPoolInvocation_def split: asidpool_invocation.splits)
-  apply (wp arch_update_updateCap_invs getASID_wp getSlotCap_wp)
+  apply (wp arch_update_updateCap_invs getASID_wp getSlotCap_wp hoare_vcg_all_lift
+            hoare_vcg_imp_lift
+          | simp add: o_def)+
   apply (clarsimp simp: valid_apinv'_def cte_wp_at_ctes_of)
-  sorry (*
   apply (case_tac cte)
-  apply clarsimp
+  apply (clarsimp split: if_splits)
   apply (drule ctes_of_valid_cap', fastforce)
   apply (clarsimp simp: isPML4Cap'_def valid_cap'_def capAligned_def is_arch_update'_def isCap_simps)
-  apply (drule ko_at_valid_objs', fastforce, simp add: projectKOs)
+  apply (drule ko_at_valid_objs', fastforce, clarsimp simp: projectKOs)
   apply (clarsimp simp: valid_obj'_def ran_def mask_asid_low_bits_ucast_ucast
                  split: if_split_asm)
-  apply (case_tac ko, clarsimp simp: inv_def)
-  apply (clarsimp simp: page_directory_at'_def, drule_tac x=0 in spec)
-  apply auto
-  done *)
+  apply (case_tac x, clarsimp simp: inv_def)
+  apply (clarsimp simp: page_map_l4_at'_def, drule_tac x=0 in spec)
+  apply (auto simp: bit_simps )
+  done
 
 lemma capMaster_isPML4Cap':
   "capMasterCap cap' = capMasterCap cap \<Longrightarrow> isPML4Cap' cap' = isPML4Cap' cap"
