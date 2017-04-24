@@ -2107,26 +2107,116 @@ crunch irq_node'[wp]: doMachineOp "\<lambda>s. P (irq_node' s)"
 crunch gsMaxObjectSize[wp]: doMachineOp "\<lambda>s. P (gsMaxObjectSize s)"
 crunch ksInterruptState[wp]: doMachineOp "\<lambda>s. P (ksInterruptState s)"
 
+lemma dmo_writeCR3_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (writeCR3 a b) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_writeCR3 no_irq)
+  apply clarsimp
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P])
+    apply (simp add: writeCR3_def machine_op_lift_def
+                     machine_rest_lift_def split_def | wp)+
+  done
+
+lemma dmo_writeCR3_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (writeCR3 a addr) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wp dmo_invs_no_cicd' no_irq_writeCR3 no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (clarsimp simp: writeCR3_def machine_op_lift_def
+                        machine_rest_lift_def split_def | wp)+
+  done
+
 lemma setCurrentCR3_invs' [wp]: "\<lbrace>invs'\<rbrace> setCurrentCR3 c \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  unfolding setCurrentCR3_def invs'_def valid_state'_def
-  apply (wpsimp wp: valid_global_refs_lift' valid_irq_node_lift valid_irq_handlers_lift''
-                    valid_irq_states_lift' dmo_lift' writeCR3_irq_masks)
-  sorry
+  unfolding setCurrentCR3_def
+  apply (wpsimp wp:)
+  by (clarsimp simp: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def
+                   valid_arch_state'_def valid_machine_state'_def ct_not_inQ_def
+                   ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+
+lemma getCurrentCR3_invs' [wp]: "\<lbrace>invs'\<rbrace> getCurrentCR3 \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  unfolding getCurrentCR3_def
+  by (wpsimp)
+
+lemma setCurrentCR3_invs_no_cicd' [wp]: "\<lbrace>invs_no_cicd'\<rbrace> setCurrentCR3 c \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  unfolding setCurrentCR3_def
+  apply (wpsimp wp:)
+  by (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_global_refs'_def global_refs'_def
+                   valid_arch_state'_def valid_machine_state'_def ct_not_inQ_def
+                   ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+
+lemma getCurrentCR3_invs_no_cicd' [wp]: "\<lbrace>invs_no_cicd'\<rbrace> getCurrentCR3 \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  unfolding getCurrentCR3_def
+  by (wpsimp)
+
+
+lemma updateASIDMap_valid_arch'[wp]:
+  shows "\<lbrace>valid_arch_state'\<rbrace> updateASIDMap asid  \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
+  apply (simp add: updateASIDMap_def)
+  apply wp
+   prefer 2
+   apply assumption
+  apply (simp add: valid_arch_state'_def comp_upd_simp fun_upd_def[symmetric])
+  apply wp
+   apply (simp add: findVSpaceForASIDAssert_def const_def
+                    checkPML4UniqueToASID_def checkPML4ASIDMapMembership_def)
+   apply wp
+   apply (rule_tac Q'="\<lambda>rv s. valid_asid_map' (x64KSASIDMap (ksArchState s))
+                                \<and> asid \<noteq> 0 \<and> asid \<le> mask asid_bits"
+              in hoare_post_imp_R)
+    apply (wp findVSpaceForASID_inv2)+
+   apply (clarsimp simp: valid_asid_map'_def)
+   apply (subst conj_commute, rule context_conjI)
+    apply clarsimp
+    apply (rule ccontr, erule notE, rule_tac a=x in ranI)
+    apply (simp add: restrict_map_def)
+   apply (erule(1) inj_on_fun_updI2)
+  apply clarsimp
+  done
+
+lemma updateASIDMap_invs'[wp]:
+  notes fun_upd_apply[simp del]
+  shows "\<lbrace>invs'\<rbrace> updateASIDMap a  \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (rule hoare_add_post)
+    apply (rule updateASIDMap_valid_arch')
+   apply fastforce
+  apply (simp add: updateASIDMap_def)
+  apply (wp findVSpaceForASIDAssert_vs_at_wp)
+  apply (clarsimp simp add: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def
+      valid_arch_state'_def valid_machine_state'_def ct_not_inQ_def
+      ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+  done
+
+lemma updateASIDMap_invs_no_cicd'[wp]:
+  notes fun_upd_apply[simp del]
+  shows "\<lbrace>invs_no_cicd'\<rbrace> updateASIDMap a  \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (rule hoare_add_post)
+    apply (rule updateASIDMap_valid_arch')
+   apply (fastforce simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
+  apply (simp add: updateASIDMap_def)
+  apply (wp findVSpaceForASIDAssert_vs_at_wp)
+  apply (clarsimp simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_global_refs'_def global_refs'_def
+      valid_arch_state'_def valid_machine_state'_def ct_not_inQ_def
+      ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+  done
 
 lemma setVMRoot_invs [wp]:
   "\<lbrace>invs'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentVSpaceRoot_def invs_def)
-  apply wpsimp
-  sorry
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentVSpaceRoot_def )
+  apply (rule hoare_pre)
+   apply (wp hoare_whenE_wp | wpcw | clarsimp cong: if_cong)+
+         apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp_R)
+          apply (wpsimp)+
+  done
 
 lemma setVMRoot_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentVSpaceRoot_def)
   apply (rule hoare_pre)
-   apply (wp hoare_drop_imps
-          | wpcw
-          | simp add: whenE_def  split del: if_split)+
-  sorry
+   apply (wp hoare_whenE_wp | wpcw | clarsimp cong: if_cong)+
+         apply (rule_tac Q'="\<lambda>rv. invs_no_cicd'" in hoare_post_imp_R)
+          apply (wpsimp)+
+  done
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps
@@ -3267,7 +3357,8 @@ lemma setObject_cte_obj_at_ap':
                         Structures_H.kernel_object.split_asm)
   done
 
-lemma updateCap_ko_at_inv'[wp]: "\<lbrace>\<lambda>s. P (ko_at' (ko::asidpool) p s )\<rbrace> updateCap a b \<lbrace>\<lambda>rv s. P ( ko_at' ko p s)\<rbrace>"
+lemma updateCap_ko_at_ap_inv'[wp]:
+  "\<lbrace>\<lambda>s. P (ko_at' (ko::asidpool) p s )\<rbrace> updateCap a b \<lbrace>\<lambda>rv s. P ( ko_at' ko p s)\<rbrace>"
   by (wpsimp simp: updateCap_def setCTE_def wp: setObject_cte_obj_at_ap')
 
 lemma perform_aci_invs [wp]:
