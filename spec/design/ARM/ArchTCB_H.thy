@@ -38,6 +38,11 @@ getSanitiseRegisterInfo :: "machine_word \<Rightarrow> bool kernel"
 where
 "getSanitiseRegisterInfo arg1 \<equiv> return False"
 
+definition
+setTCBIPCBuffer :: "vptr \<Rightarrow> unit user_monad"
+where
+"setTCBIPCBuffer ptr \<equiv> setRegister tpidrurwRegister $ fromVPtr ptr"
+
 
 
 definition

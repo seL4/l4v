@@ -1080,12 +1080,19 @@ definition valid_tcb_invocation :: "tcbinvocation \<Rightarrow> bool" where
         ThreadControl _ _ _ mcp p _ _ _ \<Rightarrow> valid_option_prio p \<and> valid_option_prio mcp
       | _                           \<Rightarrow> True"
 
+lemma arch_tcb_set_ipc_buffer_corres:
+  "corres dc (tcb_at target) (tcb_at' target) (arch_tcb_set_ipc_buffer target ptr) (asUser target $ setTCBIPCBuffer ptr)"
+  apply (simp add: setTCBIPCBuffer_def ARM_H.tpidrurwRegister_def ARM.tpidrurwRegister_def)
+  apply (rule user_setreg_corres)
+  done
+
 lemma tc_corres:
   assumes x: "newroot_rel e e'" and y: "newroot_rel f f'" and p: "p = p'" and mcp: "mcp = mcp'"
       and z: "(case g of None \<Rightarrow> g' = None
                        | Some (vptr, g'') \<Rightarrow> \<exists>g'''. g' = Some (vptr, g''')
                               \<and> newroot_rel g'' g''')"
      and sl: "{e, f, option_map undefined g} \<noteq> {None} \<longrightarrow> sl' = cte_map slot"
+  notes arch_tcb_set_ipc_buffer_def[simp del]
   shows
   "corres (intr \<oplus> op =)
     (einvs and simple_sched_action and tcb_at a and
@@ -1214,7 +1221,7 @@ proof -
          (\<lambda>ptr frame.
              doE cap_delete (a, tcb_cnode_index 4);
                  do y \<leftarrow> thread_set (tcb_ipc_buffer_update (\<lambda>_. ptr)) a;
-                    y \<leftarrow> as_user a (set_register TPIDRURW ptr);
+                    y \<leftarrow> arch_tcb_set_ipc_buffer a ptr;
                    liftE $
                    case_option (return ())
                    (case_prod
@@ -1231,7 +1238,7 @@ proof -
             do bufferSlot \<leftarrow> getThreadBufferSlot a;
             doE y \<leftarrow> cteDelete bufferSlot True;
             do y \<leftarrow> threadSet (tcbIPCBuffer_update (\<lambda>_. ptr)) a;
-               y \<leftarrow> asUser a (setRegister ARM_H.tpidrurwRegister ptr);
+               y \<leftarrow> asUser a $ setTCBIPCBuffer ptr;
                liftE
                     (case_option (return ())
                       (case_prod
@@ -1258,8 +1265,7 @@ proof -
          apply (rule corres_split_norE)
             apply (rule corres_split_nor)
                apply (rule corres_split')
-                  apply (simp add: ARM_H.tpidrurwRegister_def ARM.tpidrurwRegister_def)
-                 apply (rule user_setreg_corres)
+                  apply (rule arch_tcb_set_ipc_buffer_corres[simplified])
                  apply (rule corres_trivial)
                 apply simp
                apply wp+
@@ -1277,12 +1283,11 @@ proof -
                         in corres_gen_asm)
           apply (rule corres_split_nor)
              apply (rule corres_split[rotated])
-                apply (simp add: ARM_H.tpidrurwRegister_def ARM.tpidrurwRegister_def)
-                apply (rule user_setreg_corres)
+                apply (rule arch_tcb_set_ipc_buffer_corres[simplified])
                prefer 3
                apply simp
                apply (erule checked_insert_corres)
-              apply wp+
+              apply (wp | simp add: arch_tcb_set_ipc_buffer_def)+
             apply (rule threadset_corres,
                    simp add: tcb_relation_def, (simp add: exst_same_def)+)
            apply (wp thread_set_tcb_ipc_buffer_cap_cleared_invs

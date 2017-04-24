@@ -401,7 +401,7 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >                 cteDelete bufferSlot True
 >                 withoutPreemption $ threadSet
 >                     (\t -> t {tcbIPCBuffer = ptr}) target
->                 withoutPreemption $ asUser target $ setRegister tpidrurwRegister $ fromVPtr ptr
+>                 withoutPreemption $ asUser target $ Arch.setTCBIPCBuffer ptr
 >                 withoutPreemption $ case frame of
 >                     Just (newCap, srcSlot) ->
 >                         checkCapAt newCap srcSlot
