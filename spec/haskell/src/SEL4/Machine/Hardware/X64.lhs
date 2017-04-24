@@ -273,7 +273,7 @@ caches must be done separately.
 > invalidatePageStructureCache :: MachineMonad ()
 > invalidatePageStructureCache = invalidateTLBEntry 0
 
-> invalidateASID :: PAddr -> Word64 -> MachineMonad ()
+> invalidateASID :: Word -> Word64 -> MachineMonad ()
 > invalidateASID vspace asid = Platform.invalidateASID vspace asid
 
 > invalidateTranslationSingleASID :: VPtr -> Word64 -> MachineMonad ()
@@ -572,7 +572,7 @@ Page entries -- any of PTEs, PDEs or PDPTEs.
 > numIODomainIDBits :: Int
 > numIODomainIDBits = Platform.numIODomainIDBits
 
-> hwASIDInvalidate :: PAddr -> Word64 -> MachineMonad ()
+> hwASIDInvalidate :: Word -> Word64 -> MachineMonad ()
 > hwASIDInvalidate = invalidateASID
 
 

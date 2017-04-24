@@ -351,7 +351,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >             if pt' == addrFromPPtr pdpt then return () else throw InvalidRoot
 >         _ -> throw InvalidRoot
 >     withoutFailure $ do
->         flushPDPT (addrFromPPtr vspace) asid
+>         flushPDPT (fromPPtr vspace) asid
 >         storePML4E pmSlot InvalidPML4E
 
 \subsubsection{Deleting a Page Directory}
@@ -366,7 +366,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >             if pd' == addrFromPPtr pd then return () else throw InvalidRoot
 >         _ -> throw InvalidRoot
 >     withoutFailure $ do
->         flushPD (addrFromPPtr vspace) asid
+>         flushPD (fromPPtr vspace) asid
 >         storePDPTE pdptSlot InvalidPDPTE
 >         invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
 
@@ -519,13 +519,13 @@ Note that implementations with separate high and low memory regions may also wis
 
 %FIXME x64: needs review
 
-> flushAll :: PAddr -> ASID -> Kernel ()
+> flushAll :: Word -> ASID -> Kernel ()
 > flushAll vspace asid  = doMachineOp $ invalidateASID vspace (fromASID asid)
 
-> flushPDPT  :: PAddr -> ASID -> Kernel ()
+> flushPDPT  :: Word -> ASID -> Kernel ()
 > flushPDPT p a = flushAll p a
 
-> flushPD :: PAddr -> ASID -> Kernel ()
+> flushPD :: Word -> ASID -> Kernel ()
 > flushPD p a = flushAll p a
 
 
@@ -558,7 +558,7 @@ Note that implementations with separate high and low memory regions may also wis
 
 > invalidateASIDEntry :: ASID -> PPtr PML4E -> Kernel ()
 > invalidateASIDEntry asid vspace = do
->     doMachineOp $ hwASIDInvalidate (addrFromPPtr vspace) (fromASID asid)
+>     doMachineOp $ hwASIDInvalidate (fromPPtr vspace) (fromASID asid)
 >     invalidateASID' asid
 
 \subsection{Decoding x64 Invocations}
