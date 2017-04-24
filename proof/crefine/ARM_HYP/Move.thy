@@ -125,6 +125,10 @@ lemma vcpuSwitch_valid_pspace' [wp]:
   "\<lbrace> valid_pspace' \<rbrace> vcpuSwitch a \<lbrace>\<lambda>_. valid_pspace' \<rbrace>"
   by (wpsimp simp: valid_pspace'_def valid_mdb'_def)
 
+lemma ko_at_vcpu_at'D:
+  "ko_at' (vcpu :: vcpu) vcpuptr s \<Longrightarrow> vcpu_at' vcpuptr s"
+  by (fastforce simp: typ_at_to_obj_at_arches elim: obj_at'_weakenE)
+
 end
 
 end

@@ -4613,6 +4613,114 @@ lemma decodeARMMMUInvocation_ccorres:
                  elim!: ccap_relationE split: if_split_asm)
   done
 
+context begin (* readVCPUReg_ccorres *)
+
+private method readVCPUReg_hardware methods mop_ctac vcg_modifies = solves \<open>
+   rule ccorres_add_return2,
+   mop_ctac, (* e.g. ctac add: getSCTLR_ccorres *)
+   fastforce intro!: ccorres_return_C,
+   wp,
+   vcg_modifies (* e.g. vcg exspec=getSCTLR_modifies *)\<close>
+
+(* solves cases like this, but for all vcpuregs:
+    ccorres op = ret__unsigned_' (ko_at' vcpu vcpuptr) UNIV (SKIP # hs)
+              (return (vcpuRegs vcpu VCPURegSCTLR))
+              (Guard C_Guard {s. s \<Turnstile>\<^sub>c vcpu_Ptr vcpuptr}
+                (return_C ret__unsigned_'_update
+                  (\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s)))
+                        (Ptr &(Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''cpx_C''])\<rightarrow>[''sctlr_C'']))))) *)
+private method readVCPUReg_vcpu = solves \<open>
+  rule ccorres_guard_imp,
+  rule ccorres_move_c_guard_vcpu,
+  determ \<open>rule ccorres_from_vcg_throws[where P'=UNIV and P="ko_at' vcpu vcpuptr"
+                                       and a="a' (vcpuRegs vcpu reg)" and c="c' vcpuptr"
+                                       for a' c' vcpu reg]\<close>,
+   intro allI, rule conseqPre, vcg,
+   clarsimp simp: return_def,
+   drule (1) vcpu_at_rf_sr, clarsimp simp: typ_heap_simps',
+   clarsimp simp: cvcpu_relation_regs_def,
+   fastforce simp: ko_at_vcpu_at'D,
+  fastforce\<close>
+
+lemma readVCPUReg_ccorres:
+  notes Collect_const[simp del] dc_simp[simp del]
+  shows
+  "ccorres (op=) ret__unsigned_'
+      (vcpu_at' vcpuptr and no_0_obj')
+      (UNIV \<inter> \<lbrace>\<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace>\<acute>field = of_nat (fromEnum reg) \<rbrace>) hs
+    (readVCPUReg vcpuptr reg) (Call readVCPUReg_'proc)"
+  apply (cinit lift: vcpu_' field_')
+   apply clarsimp
+   apply (rule ccorres_pre_getCurVCPU, rename_tac cvcpuopt)
+   (* abstract out check for "is vcpuptr the current vcpu" in terms of cvcpuopt *)
+   apply (rule_tac C'="{s. cvcpuopt \<noteq> None \<and> (cvcpuopt \<noteq> None \<longrightarrow> fst (the cvcpuopt) = vcpuptr) }"
+            and Q="\<lambda>s. vcpuptr \<noteq> 0 \<and> (armHSCurVCPU \<circ> ksArchState) s = cvcpuopt"
+            and Q'=UNIV in ccorres_rewrite_cond_sr)
+  subgoal by (fastforce dest: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def
+                          split: option.splits)
+   apply (clarsimp simp: vcpureg_eq_use_types) -- "C register comparison into reg comparison"
+   apply (rule ccorres_Cond_rhs)
+
+    -- "vcpuptr is current vcpu"
+    apply clarsimp
+    apply (rename_tac curvcpuactive)
+    -- "consider possible register values, clean up the C"
+    (* many cases, but only the first (getSCTLR) is interesting *)
+    apply (wpc ; clarsimp ; ccorres_rewrite)
+
+                   apply (rule_tac C'="{s. curvcpuactive }"
+                            and Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = Some (vcpuptr, curvcpuactive)"
+                            and Q'=UNIV in ccorres_rewrite_cond_sr)
+  subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def
+                        split: option.splits)
+                   (* unification choking on schematics with pairs *)
+                   apply (rule ccorres_guard_imp)
+                     apply (rule ccorres_Cond_rhs; clarsimp)
+                      -- "SCTLR from hardware"
+                      apply (readVCPUReg_hardware \<open>ctac add: getSCTLR_ccorres\<close> \<open>vcg exspec=getSCTLR_modifies\<close>)
+                     -- "SCTLR from vcpu"
+                     apply (rule ccorres_pre_getObject_vcpu)
+                     apply (rule ccorres_move_c_guard_vcpu)
+                     apply (rule_tac P="ko_at' rv vcpuptr" in ccorres_from_vcg_throws[where P'=UNIV])
+                     apply (intro allI, rule conseqPre, vcg)
+                     apply (clarsimp simp: return_def)
+                     apply (drule (1) vcpu_at_rf_sr, clarsimp simp: typ_heap_simps')
+                     apply (clarsimp simp: cvcpu_relation_regs_def)
+                    apply fastforce
+                   apply fastforce
+                  -- "now the rest of the VCPU registers, from hardware"
+                  apply (readVCPUReg_hardware \<open>ctac add: get_lr_svc_ccorres\<close> \<open>vcg exspec=get_lr_svc_modifies\<close>)
+                 apply (readVCPUReg_hardware \<open>ctac add: get_sp_svc_ccorres\<close> \<open>vcg exspec=get_sp_svc_modifies\<close>)
+                apply (readVCPUReg_hardware \<open>ctac add: get_lr_abt_ccorres\<close> \<open>vcg exspec=get_lr_abt_modifies\<close>)
+               apply (readVCPUReg_hardware \<open>ctac add: get_sp_abt_ccorres\<close> \<open>vcg exspec=get_sp_abt_modifies\<close>)
+              apply (readVCPUReg_hardware \<open>ctac add: get_lr_und_ccorres\<close> \<open>vcg exspec=get_lr_und_modifies\<close>)
+             apply (readVCPUReg_hardware \<open>ctac add: get_sp_und_ccorres\<close> \<open>vcg exspec=get_sp_und_modifies\<close>)
+            apply (readVCPUReg_hardware \<open>ctac add: get_lr_irq_ccorres\<close> \<open>vcg exspec=get_lr_irq_modifies\<close>)
+           apply (readVCPUReg_hardware \<open>ctac add: get_sp_irq_ccorres\<close> \<open>vcg exspec=get_sp_irq_modifies\<close>)
+          apply (readVCPUReg_hardware \<open>ctac add: get_lr_fiq_ccorres\<close> \<open>vcg exspec=get_lr_fiq_modifies\<close>)
+         apply (readVCPUReg_hardware \<open>ctac add: get_sp_fiq_ccorres\<close> \<open>vcg exspec=get_sp_fiq_modifies\<close>)
+        apply (readVCPUReg_hardware \<open>ctac add: get_r8_fiq_ccorres\<close> \<open>vcg exspec=get_r8_fiq_modifies\<close>)
+       apply (readVCPUReg_hardware \<open>ctac add: get_r9_fiq_ccorres\<close> \<open>vcg exspec=get_r9_fiq_modifies\<close>)
+      apply (readVCPUReg_hardware \<open>ctac add: get_r10_fiq_ccorres\<close> \<open>vcg exspec=get_r10_fiq_modifies\<close>)
+     apply (readVCPUReg_hardware \<open>ctac add: get_r11_fiq_ccorres\<close> \<open>vcg exspec=get_r11_fiq_modifies\<close>)
+    apply (readVCPUReg_hardware \<open>ctac add: get_r12_fiq_ccorres\<close> \<open>vcg exspec=get_r12_fiq_modifies\<close>)
+
+   -- "vcpuptr is not the current vcpu"
+   apply clarsimp
+   -- "rewrite haskell side to exclude hardware read branch, we'll read registers from vcpu"
+   apply (rule_tac f="do vcpu \<leftarrow> getObject vcpuptr;
+                          return (vcpuRegs vcpu reg)
+                       od" in monadic_rewrite_ccorres_assemble[rotated])
+    apply (case_tac cvcpuopt; clarsimp; fastforce intro: monadic_rewrite_refl3)
+   apply (rule ccorres_pre_getObject_vcpu)
+
+   -- "register reads have trivial preconditions"
+   apply (rule_tac P="ko_at' vcpu vcpuptr" in ccorres_inst[where P'=UNIV])
+   apply (cases reg ; clarsimp ; ccorres_rewrite ; readVCPUReg_vcpu) (* ~20 seconds *)
+  apply auto
+  done
+
+end (* readVCPUReg_ccorres *)
 lemma decodeARMVCPUInvocation_ccorres:
   notes if_cong[cong] Collect_const[simp del]
   shows
