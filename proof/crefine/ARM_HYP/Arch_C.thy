@@ -2668,11 +2668,17 @@ lemma resolveVAddr_ccorres:
               in ccorres_from_vcg_might_throw[where P=\<top>])
    apply (rule allI, rule conseqPre, vcg)
    apply clarsimp
-   apply (fastforce simp: isPageTablePDE_def pde_get_tag_alt pde_tag_defs cpde_relation_def
+   apply (clarsimp simp: isPageTablePDE_def pde_get_tag_alt pde_tag_defs cpde_relation_def
                           fst_return typ_heap_simps framesize_from_H_simps
-                          pde_pde_section_lift_def
+                          pde_pde_section_lift_def true_def
                    intro: resolve_ret_rel_Some
                    split: pde.splits)
+     subgoal
+       apply (fastforce simp: cpte_relation_def pte_pte_small_lift_def pte_lift_def Let_def mask_def
+                              valid_mapping'_def  true_def framesize_from_H_simps
+                        split: if_splits intro!: resolve_ret_rel_Some  dest!: aligned_neg_mask)+
+       done
+     subgoal sorry (* FIXME ARMHYP THIS IS FALSE *)
   apply clarsimp
   apply (rule conjI, fastforce elim: valid_objs_valid_pte') -- "valid_pte'"
   apply (frule(1) page_directory_at_rf_sr)
