@@ -181,7 +181,7 @@ defs createObject_def:
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just X64SmallPage)\<rparr>);
             return $ PageCap (pointerCast regionBase)
-                  VMReadWrite VMVSpaceMap X64SmallPage isDevice Nothing
+                  VMReadWrite VMNoMap X64SmallPage isDevice Nothing
         od)
         | LargePageObject =>  (do
             placeNewDataObject regionBase ptTranslationBits isDevice;
@@ -189,7 +189,7 @@ defs createObject_def:
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just X64LargePage)\<rparr>);
             return $ PageCap (pointerCast regionBase)
-                  VMReadWrite VMVSpaceMap X64LargePage isDevice Nothing
+                  VMReadWrite VMNoMap X64LargePage isDevice Nothing
         od)
         | HugePageObject =>  (do
             placeNewDataObject regionBase (ptTranslationBits + ptTranslationBits) isDevice;
@@ -197,7 +197,7 @@ defs createObject_def:
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just X64HugePage)\<rparr>);
             return $ PageCap (pointerCast regionBase)
-                  VMReadWrite VMVSpaceMap X64HugePage isDevice Nothing
+                  VMReadWrite VMNoMap X64HugePage isDevice Nothing
         od)
         | PageTableObject =>  (do
             ptSize \<leftarrow> return ( ptBits - objBits (makeObject ::pte));

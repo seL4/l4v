@@ -269,21 +269,21 @@ Create an architecture-specific object.
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just X64SmallPage)})
 >             return $! PageCap (pointerCast regionBase)
->                   VMReadWrite VMVSpaceMap X64SmallPage isDevice Nothing
+>                   VMReadWrite VMNoMap X64SmallPage isDevice Nothing
 >         Arch.Types.LargePageObject -> do
 >             placeNewDataObject regionBase ptTranslationBits isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just X64LargePage)})
 >             return $! PageCap (pointerCast regionBase)
->                   VMReadWrite VMVSpaceMap X64LargePage isDevice Nothing
+>                   VMReadWrite VMNoMap X64LargePage isDevice Nothing
 >         Arch.Types.HugePageObject -> do
 >             placeNewDataObject regionBase (ptTranslationBits + ptTranslationBits) isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just X64HugePage)})
 >             return $! PageCap (pointerCast regionBase)
->                   VMReadWrite VMVSpaceMap X64HugePage isDevice Nothing
+>                   VMReadWrite VMNoMap X64HugePage isDevice Nothing
 >         Arch.Types.PageTableObject -> do
 >             let ptSize = ptBits - objBits (makeObject :: PTE)
 >             placeNewObject regionBase (makeObject :: PTE) ptSize

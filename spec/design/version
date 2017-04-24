@@ -1,13 +1,9 @@
 Built from git repo at /home/joelb/work/verification/l4v/spec/haskell by joelb
 
 Generated from changeset:
-d725084 x64: refine: Arch_R done with sorries
+04d1026 x64: ainvs: fix broken proofs from strengthening of wellformed_pde et al
 
 
 Warning - uncomitted changes used:
- M ../../proof/refine/X64/ArchAcc_R.thy
- M ../../proof/refine/X64/Arch_R.thy
- M ../design/X64/ArchVSpaceDecls_H.thy
- M ../design/X64/ArchVSpace_H.thy
  M ../design/version
- M src/SEL4/Kernel/VSpace/X64.lhs
+ M src/SEL4/Object/ObjectType/X64.lhs
