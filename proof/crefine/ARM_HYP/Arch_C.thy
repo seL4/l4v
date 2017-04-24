@@ -1253,8 +1253,6 @@ lemma lookupPTSlot_le_0x3C:
   apply (simp add: word_bits_def)
   done
 
-definition "FIXME \<equiv> undefined"
-
 (* FIXME: ARMHYP move, to SR_Lemmas? *)
 lemma isPTE_exclusion:
   "isInvalidPTE pte   \<Longrightarrow> \<not> (isSmallPagePTE pte) \<and> \<not> (isLargePagePTE pte)"
@@ -4822,6 +4820,146 @@ lemma readVCPUReg_ccorres:
   done
 
 end (* readVCPUReg_ccorres *)
+
+lemma setMRs_single:
+  "setMRs thread buffer [val] = do y \<leftarrow> asUser thread (setRegister register.R2 val);
+       return 1
+    od"
+  apply (clarsimp simp: setMRs_def length_of_msgRegisters zipWithM_x_def zipWith_def split: option.splits)
+  apply (subst zip_commute, subst zip_singleton)
+   apply (simp add: length_of_msgRegisters length_0_conv[symmetric])
+  apply (clarsimp simp: msgRegisters_unfold sequence_x_def)
+  done
+
+(* usually when we call setMR directly, we mean to only set a registers, which will
+   fit in actual registers *)
+lemma setMR_as_setRegister_ccorres:
+  notes dc_simp[simp del]
+  shows
+  "ccorres (\<lambda>rv rv'. rv' = of_nat offset + 1) ret__unsigned_'
+      (tcb_at' thread and K (TCB_H.msgRegisters ! offset = reg \<and> offset < length msgRegisters))
+      (UNIV \<inter> \<lbrace>\<acute>reg = val\<rbrace>
+            \<inter> \<lbrace>\<acute>offset = of_nat offset\<rbrace>
+            \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
+    (asUser thread (setRegister reg val))
+    (Call setMR_'proc)"
+  apply (rule ccorres_grab_asm)
+  apply (cinit' lift:  reg_' offset_' receiver_')
+   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters)
+   apply (rule ccorres_cond_false)
+   apply (rule ccorres_move_const_guards)
+   apply (rule ccorres_add_return2)
+   apply (ctac add: setRegister_ccorres)
+     apply (rule ccorres_from_vcg_throws[where P'=UNIV and P=\<top>])
+     apply (rule allI, rule conseqPre, vcg)
+     apply (clarsimp simp: dc_def return_def)
+    apply (rule hoare_post_taut[of \<top>])
+   apply (vcg exspec=setRegister_modifies)
+  apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters not_le conj_commute)
+  apply (subst msgRegisters_ccorres[symmetric])
+   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters unat_of_nat_eq)
+  apply (fastforce simp: unat_of_nat_eq word_of_nat_less)
+  done
+
+lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres *)
+  notes Collect_const[simp del] dc_simp[simp del]
+  shows
+  "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' (op = Restart)
+         and vcpu_at' vcpuptr)
+       (UNIV \<inter> \<lbrace>\<acute>vcpu = Ptr vcpuptr \<rbrace>
+             \<inter> \<lbrace>\<acute>field = of_nat (fromEnum reg) \<rbrace>
+             \<inter> \<lbrace>\<acute>call = from_bool isCall \<rbrace>)
+       hs
+       (do reply \<leftarrow> invokeVCPUReadReg vcpuptr reg;
+           liftE (replyOnRestart thread reply isCall) od)
+       (Call invokeVCPUReadReg_'proc)"
+  apply (cinit' lift: vcpu_' field_' call_' simp: invokeVCPUReadReg_def)
+   apply (clarsimp simp: bind_assoc)
+   apply (rule ccorres_symb_exec_r)
+     apply (rule_tac xf'=thread_' in ccorres_abstract, ceqv)
+     apply (rename_tac cthread,
+      rule_tac P="cthread = tcb_ptr_to_ctcb_ptr thread" in ccorres_gen_asm2)
+     apply (rule ccorres_pre_getCurThread, rename_tac curthread)
+     apply (rule_tac P="curthread = thread" in ccorres_gen_asm)
+     apply clarsimp
+     apply (ctac add: readVCPUReg_ccorres)
+       apply (rule ccorres_Cond_rhs_Seq[rotated]; clarsimp)
+
+        -- "if we are not part of a call"
+        apply (simp add: replyOnRestart_def liftE_def bind_assoc)
+        apply (rule getThreadState_ccorres_foo, rename_tac tstate)
+        apply (rule_tac P="tstate = Restart" in ccorres_gen_asm)
+        apply clarsimp
+        apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
+        apply (ctac (no_vcg) add: setThreadState_ccorres)
+         apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+         apply clarsimp
+         apply (rule conseqPre, vcg)
+         apply (clarsimp simp: return_def dc_simp)
+        apply (rule hoare_post_taut[of \<top>])
+
+       -- "now if we are part of a call"
+       apply (rule ccorres_rhs_assoc)+
+       apply (rename_tac rval)
+       apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
+       apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
+       apply (rule getThreadState_ccorres_foo, rename_tac tstate)
+       apply (rule_tac P="tstate = Restart" in ccorres_gen_asm)
+       apply (clarsimp simp: bind_assoc)
+       apply (simp add: replyFromKernel_def bind_assoc)
+       apply (ctac add: lookupIPCBuffer_ccorres)
+         apply (ctac add: setRegister_ccorres)
+           apply (simp add: setMRs_single)
+           apply (ctac add: setMR_as_setRegister_ccorres[where offset=0])
+             apply clarsimp
+             apply csymbr
+             (* setMessageInfo_ccorres does not fire here, no idea why *)
+             apply (simp only: setMessageInfo_def bind_assoc)
+             apply ctac
+               apply simp
+               apply (ctac add: setRegister_ccorres)
+                 apply (ctac add: setThreadState_ccorres)
+                   apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+                   apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+                   apply (rule allI, rule conseqPre, vcg)
+                   apply (clarsimp simp: return_def dc_def)
+                  apply (rule hoare_post_taut[of \<top>])
+                 apply (vcg exspec=setThreadState_modifies)
+                apply wpsimp
+               apply (vcg exspec=setRegister_modifies)
+              apply wpsimp
+             apply clarsimp
+             apply (vcg)
+            apply wpsimp
+           apply (clarsimp simp: dc_def msgInfoRegister_def  ARM_HYP.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.R1_def)
+           apply (vcg exspec=setMR_modifies)
+          apply wpsimp
+         apply (clarsimp simp: dc_def)
+         apply (vcg exspec=setRegister_modifies)
+        apply wpsimp
+       apply (clarsimp simp: dc_def ThreadState_Running_def)
+       apply (vcg exspec=lookupIPCBuffer_modifies)
+      apply clarsimp
+      apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift hoare_vcg_imp_lift)
+     apply clarsimp
+     apply (vcg exspec=readVCPUReg_modifies)
+    apply vcg
+   apply clarsimp
+   apply (rule conseqPre, vcg)
+   apply clarsimp
+  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                         rf_sr_ksCurThread msgRegisters_unfold
+                         seL4_MessageInfo_lift_def message_info_to_H_def mask_def)
+  apply (cases isCall; clarsimp)
+   apply (rule conjI, clarsimp simp: ct_in_state'_def st_tcb_at'_def comp_def)
+    apply (fastforce simp: obj_at'_def projectKOs)
+   apply (clarsimp simp: Kernel_C.badgeRegister_def ARM_HYP.badgeRegister_def ARM_HYP_H.badgeRegister_def Kernel_C.R0_def)
+   apply (simp add: rf_sr_def cstate_relation_def Let_def)
+  apply (clarsimp simp: ThreadState_Running_def)
+  apply (rule conjI, clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs ct_in_state'_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+done
 lemma decodeARMVCPUInvocation_ccorres:
   notes if_cong[cong] Collect_const[simp del]
   shows
@@ -4917,7 +5055,6 @@ proof -
     by (clarsimp simp: isVCPUCap_def split: arch_capability.splits)
 
   from assms show ?thesis
-    (* FIXME ARMHYP WTF why can't I abstract cptr_' in any position? who decides this random order anyway?! *)
     apply (cinit' lift:  invLabel_'  length___unsigned_long_'  slot_'  excaps_'  cap_' buffer_')
      apply csymbr
      apply (simp only: cap_get_tag_isCap_ArchObject ARM_HYP_H.decodeInvocation_def)
