@@ -129,6 +129,36 @@ lemma ko_at_vcpu_at'D:
   "ko_at' (vcpu :: vcpu) vcpuptr s \<Longrightarrow> vcpu_at' vcpuptr s"
   by (fastforce simp: typ_at_to_obj_at_arches elim: obj_at'_weakenE)
 
+
+(* FIXME: change the original to be predicated! *)
+crunch ko_at'2[wp]: doMachineOp "\<lambda>s. P (ko_at' p t s)"
+  (simp: crunch_simps)
+
+(* FIXME: change the original to be predicated! *)
+crunch pred_tcb_at'2[wp]: doMachineOp "\<lambda>s. P (pred_tcb_at' a b p s)"
+  (simp: crunch_simps)
+
+crunch valid_queues'[wp]: readVCPUReg "\<lambda>s. valid_queues s"
+  (ignore: getObject)
+
+crunch valid_objs'[wp]: readVCPUReg "\<lambda>s. valid_objs' s"
+  (ignore: getObject)
+
+crunch sch_act_wf'[wp]: readVCPUReg "\<lambda>s. P (sch_act_wf (ksSchedulerAction s) s)"
+  (ignore: getObject)
+
+crunch ko_at'[wp]: readVCPUReg "\<lambda>s. P (ko_at' a p s)"
+  (ignore: getObject)
+
+crunch obj_at'[wp]: readVCPUReg "\<lambda>s. P (obj_at' a p s)"
+  (ignore: getObject)
+
+crunch pred_tcb_at'[wp]: readVCPUReg "\<lambda>s. P (pred_tcb_at' a b p s)"
+  (ignore: getObject)
+
+crunch ksCurThread[wp]: readVCPUReg "\<lambda>s. P (ksCurThread s)"
+  (ignore: getObject)
+
 end
 
 end
