@@ -1806,11 +1806,7 @@ lemma unmap_pd_corres:
                                 simp: lookup_failure_map_def pdpte_relation_def
                                 split: X64_A.pdpte.splits)
               apply simp
-              apply (rule corres_split_nor[OF _ flush_all_corres[OF _ refl]])
-                 prefer 2
-                 (* FIXME x64: change Haskell spec so that invalidateASID takes a word,
-                               and unmapPageDirectory uses fromPPtr instead of addrFromPPtr *)
-                 subgoal sorry
+              apply (rule corres_split_nor[OF _ flush_all_corres[OF refl refl]])
                 apply (rule corres_split[OF invalidate_local_page_structure_cache_asid_corres
                                             store_pdpte_corres'])
                   apply ((wpsimp wp: get_pdpte_wp simp: pdpte_at_def)+)[8]
@@ -1933,11 +1929,7 @@ lemma unmap_pdpt_corres:
                               simp: lookup_failure_map_def pml4e_relation_def
                               split: X64_A.pml4e.splits)
             apply simp
-            apply (rule corres_split_nor[OF _ flush_all_corres[OF _ refl]])
-               prefer 2
-               (* FIXME x64: change Haskell spec so that invalidateASID takes a word,
-                             and unmapPageDirectory uses fromPPtr instead of addrFromPPtr *)
-               subgoal sorry
+            apply (rule corres_split_nor[OF _ flush_all_corres[OF refl refl]])
               apply (rule store_pml4e_corres'[OF refl], simp)
              apply ((wpsimp wp: get_pml4e_wp simp: pml4e_at_def)+)[5]
         apply (wpsimp wp: hoare_drop_imps)
@@ -3122,16 +3114,6 @@ lemmas storePDE_Invalid_invs = storePDE_invs[where pde=InvalidPDE, simplified]
 lemmas storePDPTE_Invalid_invs = storePDPTE_invs[where pde=InvalidPDPTE, simplified]
 lemmas storePML4E_Invalid_invs = storePML4E_invs[where pde=InvalidPML4E, simplified]
 
-lemma dmo_writeCR3_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (writeCR3 a b) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_writeCR3 no_irq)
-  apply clarsimp
-  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid[where P=P and Q="\<lambda>_. P" for P])
-    apply (simp add: writeCR3_def machine_op_lift_def
-                     machine_rest_lift_def split_def | wp)+
-  done
-
 (* FIXME x64: move*)
 lemma no_irq_invalidateTranslationSingleASID[wp]:
   "no_irq (invalidateTranslationSingleASID a b)"
@@ -3299,8 +3281,7 @@ crunch valid_pde'[wp]: pteCheckIfMapped, pdeCheckIfMapped "valid_pde' pde"
 
 lemma perform_pt_invs [wp]:
   notes no_irq[wp]
-  shows
-  "\<lbrace>invs' and valid_page_inv' pt\<rbrace> performPageInvocation pt \<lbrace>\<lambda>_. invs'\<rbrace>"
+  shows "\<lbrace>invs' and valid_page_inv' pt\<rbrace> performPageInvocation pt \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: performPageInvocation_def)
   apply (cases pt)
      apply clarsimp

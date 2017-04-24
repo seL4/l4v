@@ -3522,28 +3522,28 @@ lemma arch_finalise_cap_corres:
                        o_def dc_def[symmetric]
                 split: option.split,
          safe)
-       apply (rule corres_guard_imp, rule delete_asid_pool_corres)
+       apply (rule corres_guard_imp, rule delete_asid_pool_corres[OF refl refl])
         apply (clarsimp simp: valid_cap_def mask_def)
        apply (clarsimp simp: valid_cap'_def)
        apply auto[1]
-      apply (rule corres_guard_imp, rule unmap_page_corres)
+      apply (rule corres_guard_imp, rule unmap_page_corres[OF refl refl refl refl])
        apply simp
        apply (clarsimp simp: valid_cap_def valid_unmap_def)
        apply (auto simp: vmsz_aligned_def pbfs_atleast_pageBits mask_def
-                   elim: is_aligned_weaken invs_valid_asid_map)[2]
-     apply (rule corres_guard_imp, rule unmap_page_table_corres)
+                   elim: is_aligned_weaken)[2]
+     apply (rule corres_guard_imp, rule unmap_page_table_corres[OF refl refl refl])
       apply (auto simp: valid_cap_def valid_cap'_def mask_def bit_simps
-                 elim!: is_aligned_weaken invs_valid_asid_map)[2]
-    apply (rule corres_guard_imp, rule unmap_pd_corres)
+                 elim!: is_aligned_weaken)[2]
+    apply (rule corres_guard_imp, rule unmap_pd_corres[OF refl refl refl])
      apply (auto simp: valid_cap_def valid_cap'_def mask_def bit_simps wellformed_mapdata_def
                        vmsz_aligned_def
-                elim!: is_aligned_weaken invs_valid_asid_map)[2]
-   apply (rule corres_guard_imp, rule unmap_pdpt_corres)
+                elim!: is_aligned_weaken)[2]
+   apply (rule corres_guard_imp, rule unmap_pdpt_corres[OF refl refl refl])
     apply (auto simp: valid_cap_def valid_cap'_def mask_def bit_simps wellformed_mapdata_def
                       vmsz_aligned_def
-               elim!: is_aligned_weaken invs_valid_asid_map)[2]
-  apply (rule corres_guard_imp, rule delete_asid_corres)
-   apply (auto elim!: invs_valid_asid_map simp: mask_def valid_cap_def)[2]
+               elim!: is_aligned_weaken)[2]
+  apply (rule corres_guard_imp, rule delete_asid_corres[OF refl refl])
+   apply (auto simp: mask_def valid_cap_def)[2]
   done
 
 

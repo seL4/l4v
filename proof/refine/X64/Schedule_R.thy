@@ -226,7 +226,7 @@ lemma arch_switch_thread_corres:
              (arch_switch_to_thread t) (Arch.switchToThread t)"
   apply (simp add: arch_switch_to_thread_def X64_H.switchToThread_def)
   apply (rule corres_guard_imp)
-    apply (rule set_vm_root_corres)
+    apply (rule set_vm_root_corres[OF refl])
    apply (clarsimp simp: st_tcb_at_tcb_at)
   apply (clarsimp simp: valid_pspace'_def)
   done

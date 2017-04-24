@@ -624,7 +624,7 @@ lemma decode_page_inv_corres:
                              valid_cap (cap.ArchObjectCap
                                          (arch_cap.PML4Cap wd (Some optv)))"
                      in corres_guard_imp)
-          apply (rule find_vspace_for_asid_corres)
+          apply (rule find_vspace_for_asid_corres[OF refl])
          apply (clarsimp simp: valid_cap_def)
          apply (simp add: mask_def)
         apply assumption
@@ -704,7 +704,7 @@ lemma decode_page_inv_corres:
        apply (rule corres_splitEE)
           prefer 2
           apply (rule corres_lookup_error, simp)
-          apply (rule find_vspace_for_asid_corres)
+          apply (rule find_vspace_for_asid_corres[OF refl])
          apply (rule whenE_throwError_corres)
            apply simp
           apply simp
@@ -785,7 +785,7 @@ lemma decode_page_table_inv_corres:
      apply (rule corres_splitEE)
         prefer 2
         apply (rule corres_lookup_error)
-        apply (rule find_vspace_for_asid_corres)
+        apply (rule find_vspace_for_asid_corres[OF refl])
        apply (rule whenE_throwError_corres, simp, simp)
        apply (rule corres_splitEE)
           prefer 2
@@ -887,7 +887,7 @@ lemma decode_page_directory_inv_corres:
      apply (rule corres_splitEE)
         prefer 2
         apply (rule corres_lookup_error)
-        apply (rule find_vspace_for_asid_corres)
+        apply (rule find_vspace_for_asid_corres[OF refl])
        apply (rule whenE_throwError_corres, simp, simp)
        apply (rule corres_splitEE)
           prefer 2
@@ -989,7 +989,7 @@ lemma decode_pdpt_inv_corres:
      apply (rule corres_splitEE)
         prefer 2
         apply (rule corres_lookup_error)
-        apply (rule find_vspace_for_asid_corres)
+        apply (rule find_vspace_for_asid_corres[OF refl])
        apply (rule whenE_throwError_corres, simp, simp)
          apply (rule corres_splitEE)
             prefer 2
@@ -1195,7 +1195,7 @@ shows
             apply (rule corres_splitEE)
                prefer 2
                apply simp
-               apply (rule get_asid_pool_corres_inv')
+               apply (rule get_asid_pool_corres_inv'[OF refl])
               apply (simp add: bindE_assoc)
               apply (rule corres_splitEE)
                  prefer 2
