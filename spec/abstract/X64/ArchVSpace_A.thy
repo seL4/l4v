@@ -233,7 +233,7 @@ virtual ASID. *}
 definition
 invalidate_asid_entry :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "invalidate_asid_entry asid vspace \<equiv> do
-  do_machine_op $ hwASIDInvalidate (addrFromPPtr vspace) asid;
+  do_machine_op $ hwASIDInvalidate vspace asid;
   invalidate_asid asid
 od"
 
