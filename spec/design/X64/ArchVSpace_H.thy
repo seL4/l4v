@@ -308,7 +308,7 @@ defs unmapPDPT_def:
         | _ \<Rightarrow>   throw InvalidRoot
         );
     withoutFailure $ (do
-        flushPDPT (addrFromPPtr vspace) asid;
+        flushPDPT (fromPPtr vspace) asid;
         storePML4E pmSlot InvalidPML4E
     od)
 odE)"
@@ -324,7 +324,7 @@ defs unmapPageDirectory_def:
         | _ \<Rightarrow>   throw InvalidRoot
         );
     withoutFailure $ (do
-        flushPD (addrFromPPtr vspace) asid;
+        flushPD (fromPPtr vspace) asid;
         storePDPTE pdptSlot InvalidPDPTE;
         invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
     od)
@@ -464,7 +464,7 @@ defs isValidVTableRoot_def:
 
 defs checkValidIPCBuffer_def:
 "checkValidIPCBuffer vptr x1\<equiv> (case x1 of
-    (ArchObjectCap (PageCap _ _ _ _ _ _)) \<Rightarrow>    (doE
+    (ArchObjectCap (PageCap _ _ _ _ False _)) \<Rightarrow>    (doE
     whenE (vptr && mask 10 \<noteq> 0) $ throw AlignmentError;
     returnOk ()
     odE)
@@ -517,7 +517,7 @@ od)"
 
 defs invalidateASIDEntry_def:
 "invalidateASIDEntry asid vspace\<equiv> (do
-    doMachineOp $ hwASIDInvalidate (addrFromPPtr vspace) (fromASID asid);
+    doMachineOp $ hwASIDInvalidate (fromPPtr vspace) (fromASID asid);
     invalidateASID' asid
 od)"
 

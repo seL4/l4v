@@ -145,13 +145,13 @@ consts'
 maskVMRights :: "vmrights \<Rightarrow> cap_rights \<Rightarrow> vmrights"
 
 consts'
-flushAll :: "paddr \<Rightarrow> asid \<Rightarrow> unit kernel"
+flushAll :: "machine_word \<Rightarrow> asid \<Rightarrow> unit kernel"
 
 consts'
-flushPDPT  :: "paddr \<Rightarrow> asid \<Rightarrow> unit kernel"
+flushPDPT  :: "machine_word \<Rightarrow> asid \<Rightarrow> unit kernel"
 
 consts'
-flushPD :: "paddr \<Rightarrow> asid \<Rightarrow> unit kernel"
+flushPD :: "machine_word \<Rightarrow> asid \<Rightarrow> unit kernel"
 
 consts'
 flushTable :: "machine_word \<Rightarrow> vptr \<Rightarrow> machine_word \<Rightarrow> asid \<Rightarrow> unit kernel"

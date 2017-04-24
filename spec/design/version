@@ -1,9 +1,14 @@
-Built from git repo at /home/joelb/work/verification/l4v/spec/haskell by joelb
+Built from git repo at /home/matthewb/verification/x64/l4v/spec/haskell by matthewb
 
 Generated from changeset:
-04d1026 x64: ainvs: fix broken proofs from strengthening of wellformed_pde et al
+d998c2bec x64 haskell: check capVPIsDevice in checkValidIPCBuffer
 
 
 Warning - uncomitted changes used:
- M ../design/version
- M src/SEL4/Object/ObjectType/X64.lhs
+ M ../../proof/refine/X64/Arch_R.thy
+ M ../../proof/refine/X64/Finalise_R.thy
+ M ../../proof/refine/X64/Schedule_R.thy
+ M ../../proof/refine/X64/VSpace_R.thy
+M  ../design/X64/ArchVSpaceDecls_H.thy
+M  ../design/X64/ArchVSpace_H.thy
+MM ../design/version
