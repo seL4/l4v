@@ -2414,6 +2414,35 @@ lemmas vcpureg_eq_use_types
 lemmas cvcpu_relation_regs_def =
           cvcpu_relation_def[simplified cvcpu_regs_relation_def Let_def vcpuSCTLR_def, simplified]
 
+
+lemma update_vcpu_map_to_vcpu:
+  "map_to_vcpus (ksPSpace s(p \<mapsto> KOArch (KOVCPU vcpu)))
+             = (map_to_vcpus (ksPSpace s))(p \<mapsto> vcpu)"
+  by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
+
+(* Solves goals of the following shape (rf_sr on fields of VCPUs)
+   \<lbrakk> (\<sigma>, \<sigma>') \<in> rf_sr; ko_at' vcpu vcpuptr \<sigma> \<rbrakk>
+    \<Longrightarrow> (\<sigma>\<lparr>ksPSpace := ksPSpace \<sigma>(vcpuptr \<mapsto> KOArch (KOVCPU (f vcpu)))\<rparr>,
+       globals_update
+        (t_hrs_'_update (hrs_mem_update (heap_update (Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''some_field''])) val)))
+        \<sigma>')
+      \<in> rf_sr *)
+(* FIXME ARMHYP: I would like to generalise this more, maybe with a rule people can find *)
+(* Note, this can choke on whatever weirdness you have in your goals, one example is disjunctions *)
+(* Also note this is slow, around 10 seconds *)
+method solve_rf_sr_vcpu_update = solves \<open>
+  clarsimp?
+  , determ \<open>rule cmap_relationE1[OF cmap_relation_vcpu], assumption, erule ko_at_projectKO_opt\<close>
+  , clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                   typ_heap_simps' cpspace_relation_def update_vcpu_map_tos
+  , (safe ; (clarsimp simp: cpspace_relation_def
+                                carch_state_relation_def Let_def
+                                 update_vcpu_map_to_vcpu
+                                cmachine_state_relation_def
+                                update_tcb_map_tos typ_heap_simps')?)
+  , (erule (1) cmap_relation_updI; fastforce simp: cvcpu_relation_regs_def)
+  \<close>
+
 end
 end
 
