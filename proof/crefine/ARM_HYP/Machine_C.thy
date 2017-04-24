@@ -243,35 +243,35 @@ assumes cleanCacheRange_PoU_spec:
 (* ARM Hypervisor banked register save/restoring *)
 
 assumes set_lr_svc_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_lr_svc v)) (Call set_lr_svc_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_lr_svc v)) (Call set_lr_svc_'proc)"
 assumes set_sp_svc_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_sp_svc v)) (Call set_sp_svc_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_sp_svc v)) (Call set_sp_svc_'proc)"
 assumes set_lr_abt_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_lr_abt v)) (Call set_lr_abt_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_lr_abt v)) (Call set_lr_abt_'proc)"
 assumes set_sp_abt_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_sp_abt v)) (Call set_sp_abt_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_sp_abt v)) (Call set_sp_abt_'proc)"
 assumes set_lr_und_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_lr_und v)) (Call set_lr_und_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_lr_und v)) (Call set_lr_und_'proc)"
 assumes set_sp_und_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_sp_und v)) (Call set_sp_und_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_sp_und v)) (Call set_sp_und_'proc)"
 assumes set_lr_irq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_lr_irq v)) (Call set_lr_irq_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_lr_irq v)) (Call set_lr_irq_'proc)"
 assumes set_sp_irq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_sp_irq v)) (Call set_sp_irq_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_sp_irq v)) (Call set_sp_irq_'proc)"
 assumes set_lr_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_lr_fiq v)) (Call set_lr_fiq_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_lr_fiq v)) (Call set_lr_fiq_'proc)"
 assumes set_sp_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_sp_fiq v)) (Call set_sp_fiq_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_sp_fiq v)) (Call set_sp_fiq_'proc)"
 assumes set_r8_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_r8_fiq v)) (Call set_r8_fiq_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_r8_fiq v)) (Call set_r8_fiq_'proc)"
 assumes set_r9_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_r9_fiq v)) (Call set_r9_fiq_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_r9_fiq v)) (Call set_r9_fiq_'proc)"
 assumes set_r10_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_r10_fiq v)) (Call set_r10_fiq_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_r10_fiq v)) (Call set_r10_fiq_'proc)"
 assumes set_r11_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_r11_fiq v)) (Call set_r11_fiq_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_r11_fiq v)) (Call set_r11_fiq_'proc)"
 assumes set_r12_fiq_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>value = v \<rbrace>) [] (doMachineOp (set_r12_fiq v)) (Call set_r12_fiq_'proc)"
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = v \<rbrace>) [] (doMachineOp (set_r12_fiq v)) (Call set_r12_fiq_'proc)"
 
 assumes get_lr_svc_ccorres:
   "ccorres (op =) ret__unsigned_long_' \<top> UNIV [] (doMachineOp get_lr_svc) (Call get_lr_svc_'proc)"
