@@ -503,7 +503,7 @@ The IPC buffer frame must be a frame capability, and the buffer must be aligned.
 Note that implementations with separate high and low memory regions may also wish to limit valid IPC buffer frames to low memory, so the kernel can access them without extra mappings. This function may also be used to enforce cache colouring restrictions.
 
 > checkValidIPCBuffer :: VPtr -> Capability -> KernelF SyscallError ()
-> checkValidIPCBuffer vptr (ArchObjectCap (PageCap {})) = do
+> checkValidIPCBuffer vptr (ArchObjectCap (PageCap {capVPIsDevice = False})) = do
 >     when (vptr .&. mask 10 /= 0) $ throw AlignmentError
 >     return ()
 > checkValidIPCBuffer _ _ = throw IllegalOperation
