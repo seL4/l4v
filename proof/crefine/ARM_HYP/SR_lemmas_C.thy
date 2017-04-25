@@ -95,6 +95,7 @@ lemma cap_get_tag_isCap0:
   \<and> isArchCap_tag (cap_get_tag cap') = isArchCap \<top> cap
   \<and> (cap_get_tag cap' = scast cap_small_frame_cap) = (isArchPageCap cap \<and> pageSize cap = ARMSmallPage)
   \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isArchPageCap cap \<and> pageSize cap \<noteq> ARMSmallPage)
+  \<and> (cap_get_tag cap' = scast cap_vcpu_cap) = isArchCap isVCPUCap cap
   \<and> (cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap"
   using cr
   apply -
@@ -119,6 +120,7 @@ lemma cap_get_tag_isCap:
   and "isArchCap_tag (cap_get_tag cap') = isArchCap \<top> cap"
   and "(cap_get_tag cap' = scast cap_small_frame_cap) = (isArchPageCap cap \<and> pageSize cap = ARMSmallPage)"
   and "(cap_get_tag cap' = scast cap_frame_cap) = (isArchPageCap cap \<and> pageSize cap \<noteq> ARMSmallPage)"
+  and "(cap_get_tag cap' = scast cap_vcpu_cap) = isArchCap isVCPUCap cap"
   and "(cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap"
   using cap_get_tag_isCap0 [OF cr] by auto
 
@@ -275,6 +277,18 @@ lemma cap_get_tag_DomainCap:
   apply (simp add: cap_get_tag_isCap isCap_simps)
   done
 
+lemma cap_get_tag_VCPUCap:
+  assumes cr: "ccap_relation cap cap'"
+  shows "(cap_get_tag cap' = scast cap_vcpu_cap)
+           = (cap = ArchObjectCap (VCPUCap (capVCPUPtr_CL (cap_vcpu_cap_lift cap'))))"
+  using cr
+  apply -
+  apply (rule iffI)
+   apply (erule ccap_relationE)
+   apply (clarsimp simp add: cap_lifts cap_to_H_def)
+  apply (simp add: cap_get_tag_isCap isCap_simps)
+  done
+
 lemmas cap_get_tag_to_H_iffs =
      cap_get_tag_NullCap
      cap_get_tag_ThreadCap
@@ -286,6 +300,7 @@ lemmas cap_get_tag_to_H_iffs =
      cap_get_tag_ZombieCap
      cap_get_tag_UntypedCap
      cap_get_tag_DomainCap
+     cap_get_tag_VCPUCap
 
 lemmas cap_get_tag_to_H = cap_get_tag_to_H_iffs [THEN iffD1]
 
@@ -2414,6 +2429,23 @@ lemmas vcpureg_eq_use_types
 lemmas cvcpu_relation_regs_def =
           cvcpu_relation_def[simplified cvcpu_regs_relation_def Let_def vcpuSCTLR_def, simplified]
 
+lemma capTCBPtr_eq:
+  "\<lbrakk> ccap_relation cap cap'; isThreadCap cap \<rbrakk>
+     \<Longrightarrow> cap_thread_cap_CL.capTCBPtr_CL (cap_thread_cap_lift cap')
+           = ptr_val (tcb_ptr_to_ctcb_ptr (capTCBPtr cap))"
+  apply (simp add: cap_get_tag_isCap[symmetric])
+  apply (drule(1) cap_get_tag_to_H)
+  apply clarsimp
+  done
+
+lemma capVCPUPtr_eq:
+  "\<lbrakk> ccap_relation (ArchObjectCap cap) cap'; isArchCap isVCPUCap (ArchObjectCap cap) \<rbrakk>
+     \<Longrightarrow> capVCPUPtr_CL (cap_vcpu_cap_lift cap')
+           = capVCPUPtr cap"
+  apply (simp only: cap_get_tag_isCap[symmetric])
+  apply (drule (1) cap_get_tag_to_H)
+  apply clarsimp
+  done
 
 lemma update_vcpu_map_to_vcpu:
   "map_to_vcpus (ksPSpace s(p \<mapsto> KOArch (KOVCPU vcpu)))

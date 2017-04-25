@@ -4816,6 +4816,7 @@ lemma readVCPUReg_ccorres:
    -- "register reads have trivial preconditions"
    apply (rule_tac P="ko_at' vcpu vcpuptr" in ccorres_inst[where P'=UNIV])
    apply (cases reg ; clarsimp ; ccorres_rewrite ; readVCPUReg_vcpu) (* ~20 seconds *)
+
   apply auto
   done
 
@@ -4960,6 +4961,84 @@ lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres
   apply (rule conjI, clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs ct_in_state'_def)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
 done
+
+lemma decodeVCPUReadReg_ccorres:
+  notes if_cong[cong] Collect_const[simp del]
+  shows
+  "\<lbrakk> isVCPUCap cp \<rbrakk>
+     \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
+              and sysargs_rel args buffer
+              and (valid_cap' (ArchObjectCap cp)))
+       (UNIV \<inter> {s. unat (length_' s) = length args}
+             \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
+             \<inter> {s. buffer_' s = option_to_ptr buffer}
+             \<inter> \<lbrace>\<acute>call = from_bool isCall \<rbrace>) []
+       (decodeVCPUReadReg args cp
+              >>= invocationCatch thread isBlocking isCall InvokeArchObject)
+       (Call decodeVCPUReadReg_'proc)"
+  apply (cinit' lift: length_' cap_' buffer_' call_')
+   apply (clarsimp simp: decodeVCPUReadReg_def Let_def)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
+               cong: StateSpace.state.fold_congs globals.fold_congs)
+    apply (rule syscall_error_throwError_ccorres_n)
+    apply (simp add: syscall_error_to_H_cases)
+   apply (rule_tac P="args \<noteq> []" in ccorres_gen_asm)
+   apply clarsimp
+   apply (rule ccorres_add_return)
+   apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
+     apply (clarsimp simp: fromEnum_maxBound_vcpureg_def seL4_VCPUReg_Num_def hd_conv_nth[symmetric])
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (simp add: word_le_nat_alt throwError_bind invocationCatch_def invocation_eq_use_types
+                 cong: StateSpace.state.fold_congs globals.fold_congs)
+      apply (rule syscall_error_throwError_ccorres_n)
+      apply (simp add: syscall_error_to_H_cases)
+     apply (clarsimp simp: word_le_nat_alt)
+     (* unpack invocationCatch and resolve non-determinism (copied from use of
+        invokeTCB_ReadRegisters_ccorres after unsuccessful attempts at abstraction) *)
+     apply (simp add: Collect_const returnOk_def uncurry_def)
+     apply (simp (no_asm) add: ccorres_invocationCatch_Inr split_def
+                               performInvocation_def liftE_bindE bind_assoc)
+     apply (ctac add: setThreadState_ccorres)
+       apply (rule ccorres_nondet_refinement)
+        apply (rule is_nondet_refinement_bindE)
+         apply (rule is_nondet_refinement_refl)
+        apply (simp split: if_split)
+        apply (rule conjI[rotated], rule impI, rule is_nondet_refinement_refl)
+        apply (rule impI)
+        apply (rule is_nondet_refinement_alternative1)
+       apply csymbr
+       (* drill down to invoke level *)
+       apply (clarsimp simp: ARM_HYP_H.performInvocation_def performARMVCPUInvocation_def)
+       apply (clarsimp simp: liftE_bindE)
+       apply (rule ccorres_add_returnOk)
+       apply (ctac (no_vcg) add: invokeVCPUReadReg_ccorres)
+         apply (rule ccorres_return_CE, simp+)[1]
+        apply (rule ccorres_return_C_errorE, simp+)[1]
+       apply (wpsimp wp: sts_invs_minor' ct_in_state'_set)+
+     apply (vcg exspec=setThreadState_modifies)
+    apply wp
+   apply (vcg exspec=getSyscallArg_modifies)
+
+  apply (clarsimp simp: word_le_nat_alt conj_commute
+                        invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                        rf_sr_ksCurThread msgRegisters_unfold
+                        valid_tcb_state'_def ThreadState_Restart_def mask_def)
+
+  apply (rule conjI; clarsimp) -- "no args"
+   subgoal by (clarsimp simp: isCap_simps cap_get_tag_isCap capVCPUPtr_eq)
+               (subst from_to_enum; clarsimp simp: fromEnum_maxBound_vcpureg_def)
+  -- "at least one arg"
+  apply (clarsimp simp: isCap_simps cap_get_tag_isCap capVCPUPtr_eq valid_cap'_def)
+  apply (subgoal_tac "args \<noteq> []")
+    prefer 2 apply (cases args; clarsimp, unat_arith?)
+  apply (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
+                    elim: obj_at'_weakenE)
+  done
+
+
 lemma decodeARMVCPUInvocation_ccorres:
   notes if_cong[cong] Collect_const[simp del]
   shows
@@ -4970,19 +5049,21 @@ lemma decodeARMVCPUInvocation_ccorres:
               and (excaps_in_mem extraCaps \<circ> ctes_of)
               and cte_wp_at' (diminished' (ArchObjectCap cp) \<circ> cteCap) slot
               and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
-              and sysargs_rel args buffer and valid_objs')
+              and sysargs_rel args buffer and valid_objs'
+              and (valid_cap' (ArchObjectCap cp)))
        (* whoever wrote the C code decided to name these arbitrarily differently from other functions *)
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length_' s) = length args}
              \<inter> {s. slot_' s = cte_Ptr slot}
              \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
-             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+             \<inter> {s. buffer_' s = option_to_ptr buffer}
+             \<inter> \<lbrace>\<acute>call = from_bool isCall \<rbrace>) []
        (decodeARMVCPUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMVCPUInvocation_'proc)"
   apply (cinit' lift: label___unsigned_long_' length_' slot_' extraCaps___struct_extra_caps_C_'
-                       cap_' buffer_')
+                       cap_' buffer_' call_')
    apply (clarsimp simp: decodeARMVCPUInvocation_def)
 
    apply (rule ccorres_Cond_rhs)
@@ -4995,10 +5076,8 @@ lemma decodeARMVCPUInvocation_ccorres:
    apply (rule ccorres_Cond_rhs)
     apply (simp add: invocation_eq_use_types)
     apply (rule ccorres_trim_returnE, simp+)
-    subgoal sorry (* FIXME ARMHYP TODO
-      apply (rule ccorres_call,
-             rule decodeVCPUReadReg_ccorres, simp+)[1]
-      *)
+    apply (rule ccorres_call[OF decodeVCPUReadReg_ccorres]; simp)
+
    apply (rule ccorres_Cond_rhs)
     apply (simp add: invocation_eq_use_types)
     apply (rule ccorres_trim_returnE, simp+)
@@ -5013,7 +5092,8 @@ lemma decodeARMVCPUInvocation_ccorres:
       apply (rule ccorres_call,
              rule decodeVCPUInjectIRQ_ccorres, simp+)[1]
       *)
-      -- "unknown (arch) invocation labels all throw IllegalOperation in line with the Haskell"
+
+   -- "unknown (arch) invocation labels all throw IllegalOperation in line with the Haskell"
    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
    apply (intro allI, rule conseqPre, vcg)
    subgoal
@@ -5025,6 +5105,7 @@ lemma decodeARMVCPUInvocation_ccorres:
     done
 
   -- "preconditions imply calculated preconditions"
+  apply clarsimp
   subgoal sorry (* FIXME ARMHYP TODO: incomplete calculated preconditions due to stubs *)
   done
 
@@ -5043,7 +5124,8 @@ lemma Arch_decodeInvocation_ccorres:
              \<inter> {s. slot_' s = cte_Ptr slot}
              \<inter> {s. excaps_' s = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
-             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+             \<inter> {s. buffer_' s = option_to_ptr buffer}
+             \<inter> \<lbrace>\<acute>call = from_bool isCall \<rbrace>) []
        (Arch.decodeInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call Arch_decodeInvocation_'proc)"
@@ -5055,7 +5137,8 @@ proof -
     by (clarsimp simp: isVCPUCap_def split: arch_capability.splits)
 
   from assms show ?thesis
-    apply (cinit' lift:  invLabel_'  length___unsigned_long_'  slot_'  excaps_'  cap_' buffer_')
+    apply (cinit' lift: invLabel_'  length___unsigned_long_'  slot_'  excaps_'  cap_'
+                        buffer_' call_')
      apply csymbr
      apply (simp only: cap_get_tag_isCap_ArchObject ARM_HYP_H.decodeInvocation_def)
      apply (rule ccorres_Cond_rhs)

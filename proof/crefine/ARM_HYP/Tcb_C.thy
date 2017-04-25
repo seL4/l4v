@@ -2045,15 +2045,6 @@ sorry (* FIXME ARMHYP good luck
                  split: if_split)
   done *)
 
-lemma capTCBPtr_eq:
-  "\<lbrakk> ccap_relation cap cap'; isThreadCap cap \<rbrakk>
-     \<Longrightarrow> cap_thread_cap_CL.capTCBPtr_CL (cap_thread_cap_lift cap')
-           = ptr_val (tcb_ptr_to_ctcb_ptr (capTCBPtr cap))"
-  apply (simp add: cap_get_tag_isCap[symmetric])
-  apply (drule(1) cap_get_tag_to_H)
-  apply clarsimp
-  done
-
 lemma decodeReadRegisters_ccorres:
   "ccorres (intr_and_se_rel \<currency> dc)  (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and sch_act_simple and (\<lambda>s. ksCurThread s = thread) and ct_active'

@@ -159,6 +159,10 @@ crunch pred_tcb_at'[wp]: readVCPUReg "\<lambda>s. P (pred_tcb_at' a b p s)"
 crunch ksCurThread[wp]: readVCPUReg "\<lambda>s. P (ksCurThread s)"
   (ignore: getObject)
 
+lemma fromEnum_maxBound_vcpureg_def:
+  "fromEnum (maxBound :: vcpureg) = 15"
+  by (clarsimp simp: fromEnum_def maxBound_def enum_vcpureg)
+
 end
 
 end
