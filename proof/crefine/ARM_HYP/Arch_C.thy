@@ -2631,8 +2631,7 @@ lemma resolveVAddr_ccorres:
        apply (vcg, clarsimp)
       apply ceqv
      apply (rule ccorres_pre_getObject_pte)
-     apply (rule_tac P="page_table_at' (ptrFromPAddr word1)"
-       in ccorres_cross_over_guard)
+     apply (rule_tac P="page_table_at' (ptrFromPAddr word1)" in ccorres_cross_over_guard)
      apply (rule_tac P = "\<lambda>s. valid_pte' rv s"
                  and P'="{s. \<exists>v. cslift s (pte_Ptr (lookup_pt_slot_no_fail (ptrFromPAddr word1) vaddr)) = Some v
                                     \<and> cpte_relation rv v
@@ -2652,7 +2651,7 @@ lemma resolveVAddr_ccorres:
        apply (safe ; clarsimp simp: cpte_relation_get_tag_simps c_pages_noteq)
        (* 4 subgoals *)
        apply (fastforce simp: cpte_relation_def pte_pte_small_lift_def pte_lift_def Let_def mask_def
-                              valid_mapping'_def  true_def framesize_from_H_simps
+                              valid_mapping'_def  true_def framesize_from_H_simps page_base_def
                         split: if_splits intro!: resolve_ret_rel_Some  dest!: aligned_neg_mask)+
        done
     apply (rule guard_is_UNIVI)
@@ -2676,7 +2675,15 @@ lemma resolveVAddr_ccorres:
                               valid_mapping'_def  true_def framesize_from_H_simps
                         split: if_splits intro!: resolve_ret_rel_Some  dest!: aligned_neg_mask)+
        done
-     subgoal sorry (* FIXME ARMHYP THIS IS FALSE *)
+     subgoal
+       apply (rule conjI; clarsimp simp: ARMSuperSection_def mask_def)
+       apply (rule conjI)
+        apply (clarsimp simp: gen_framesize_to_H_def split: if_splits)
+       apply (rule resolve_ret_rel_Some;
+              clarsimp simp: true_def framesize_from_H_simps ARMSuperSection_def)
+       apply (clarsimp simp: page_base_def gen_framesize_to_H_def ARMSmallPage_def ARMLargePage_def
+                             ARMSection_def mask_def)
+       done
   apply clarsimp
   apply (rule conjI, fastforce elim: valid_objs_valid_pte') -- "valid_pte'"
   apply (frule(1) page_directory_at_rf_sr)
