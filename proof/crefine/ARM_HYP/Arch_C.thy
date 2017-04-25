@@ -4969,6 +4969,103 @@ lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
 done
 
+lemma liftE_invokeVCPUWriteReg_empty_return:
+  "liftE (invokeVCPUWriteReg vcpu reg val) >>=E (\<lambda>rv. m rv)
+    = liftE (invokeVCPUWriteReg vcpu reg val) >>=E (\<lambda>_. m [])"
+  unfolding invokeVCPUWriteReg_def
+  by (clarsimp simp: liftE_bindE bind_assoc)
+
+lemma invokeVCPUWriteReg_ccorres:
+  notes Collect_const[simp del] dc_simp[simp del]
+  shows
+  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and vcpu_at' vcpuptr)
+       (UNIV \<inter> \<lbrace>\<acute>vcpu = Ptr vcpuptr \<rbrace>
+             \<inter> \<lbrace>\<acute>field = of_nat (fromEnum reg) \<rbrace>
+             \<inter> \<lbrace>\<acute>value = val \<rbrace>)
+       hs
+       (liftE (invokeVCPUWriteReg vcpuptr reg val))
+       (Call invokeVCPUWriteReg_'proc)"
+  apply (cinit' lift: vcpu_' field_' value_'
+                simp: invokeVCPUWriteReg_def gets_bind_ign liftE_liftM)
+   apply clarsimp
+  apply (ctac (no_vcg) add: writeVCPUReg_ccorres)
+    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: return_def dc_def)
+   by (wpsimp simp: invs_no_0_obj')+
+
+lemma decodeVCPUWriteReg_ccorres:
+  notes if_cong[cong] Collect_const[simp del]
+  shows
+  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
+              and sysargs_rel args buffer
+              and (valid_cap' (ArchObjectCap cp)) and K (isVCPUCap cp))
+       (UNIV \<inter> {s. unat (length_' s) = length args}
+             \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
+             \<inter> {s. buffer_' s = option_to_ptr buffer}
+             ) []
+       (decodeVCPUWriteReg args cp
+              >>= invocationCatch thread isBlocking isCall InvokeArchObject)
+       (Call decodeVCPUWriteReg_'proc)"
+  apply (rule ccorres_grab_asm)
+  apply (cinit' lift: length_' cap_' buffer_' simp: decodeVCPUWriteReg_def Let_def)
+   apply (rule ccorres_Cond_rhs_Seq ; clarsimp)
+    apply (rule_tac ccorres_gen_asm[where P="length args < 2"])
+    apply clarsimp
+    apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
+               cong: StateSpace.state.fold_congs globals.fold_congs)
+    apply (rule syscall_error_throwError_ccorres_n)
+    apply (simp add: syscall_error_to_H_cases)
+   apply (rule_tac ccorres_gen_asm[where P="Suc 0 < length args"])
+   apply clarsimp
+   apply (rule ccorres_add_return)
+   apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
+     apply (rule ccorres_add_return)
+     apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
+       apply (clarsimp simp: fromEnum_maxBound_vcpureg_def seL4_VCPUReg_Num_def hd_conv_nth[symmetric])
+       apply (rule ccorres_Cond_rhs_Seq)
+        apply (simp add: word_le_nat_alt throwError_bind invocationCatch_def invocation_eq_use_types
+                   cong: StateSpace.state.fold_congs globals.fold_congs)
+        apply (rule syscall_error_throwError_ccorres_n)
+        apply (simp add: syscall_error_to_H_cases)
+       apply (clarsimp simp: word_le_nat_alt)
+       apply (simp add: returnOk_bind bindE_assoc
+                        performARMMMUInvocations performARMVCPUInvocation_def)
+       -- "we want the second alternative - nothing to return to user"
+       apply (subst liftE_invokeVCPUWriteReg_empty_return, clarsimp)
+       apply (ctac add: setThreadState_ccorres)
+         apply csymbr
+         apply (ctac add: invokeVCPUWriteReg_ccorres)
+            apply (rule ccorres_alternative2)
+            apply (rule ccorres_return_CE, simp+)[1]
+           apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+          apply wp
+         apply (vcg exspec=invokeVCPUWriteReg_modifies)
+        apply (wpsimp wp: sts_invs_minor' ct_in_state'_set)+
+       apply (vcg exspec=setThreadState_modifies)
+      apply clarsimp
+      apply (rule return_inv) (* force getting rid of schematic, wp does wrong thing here *)
+     apply (vcg exspec=getSyscallArg_modifies)
+    apply (rule return_inv)
+   apply (vcg exspec=getSyscallArg_modifies)
+
+  apply (clarsimp simp: word_less_nat_alt word_le_nat_alt conj_commute
+                        invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                        rf_sr_ksCurThread msgRegisters_unfold
+                        valid_tcb_state'_def ThreadState_Restart_def mask_def)
+  apply (rule conjI; clarsimp) -- "not enough args"
+   apply (clarsimp simp: isCap_simps cap_get_tag_isCap capVCPUPtr_eq)
+   apply (subst from_to_enum; clarsimp simp: fromEnum_maxBound_vcpureg_def)
+    -- "enough args"
+  apply (clarsimp simp: isCap_simps cap_get_tag_isCap capVCPUPtr_eq valid_cap'_def)
+  apply (subgoal_tac "args \<noteq> []")
+   prefer 2 subgoal by (cases args; clarsimp, unat_arith?)
+  by (fastforce simp: sysargs_rel_to_n ct_in_state'_def st_tcb_at'_def comp_def
+                    elim: obj_at'_weakenE)
+
+
 lemma decodeVCPUReadReg_ccorres:
   notes if_cong[cong] Collect_const[simp del]
   shows
@@ -5088,10 +5185,8 @@ lemma decodeARMVCPUInvocation_ccorres:
    apply (rule ccorres_Cond_rhs)
     apply (simp add: invocation_eq_use_types)
     apply (rule ccorres_trim_returnE, simp+)
-    subgoal sorry (* FIXME ARMHYP TODO
-      apply (rule ccorres_call,
-             rule decodeVCPUWriteReg_ccorres, simp+)[1]
-      *)
+    apply (rule ccorres_call[OF decodeVCPUWriteReg_ccorres]; simp)
+
    apply (rule ccorres_Cond_rhs)
     apply (simp add: invocation_eq_use_types)
     apply (rule ccorres_trim_returnE, simp+)
