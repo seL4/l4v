@@ -24,7 +24,7 @@ echo "Testing for L4V_ARCH=${L4V_ARCH}:"
 #export INVS_QUICK_AND_DIRTY=1
 
 # For the time being, we also allow sorries in refine proofs:
-# export REFINE_QUICK_AND_DIRTY=1
+export REFINE_QUICK_AND_DIRTY=1
 
 # For the time being, we also allow sorries in CRefine proofs:
 export SKIP_REFINE_PROOFS=1
