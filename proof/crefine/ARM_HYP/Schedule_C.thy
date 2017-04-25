@@ -152,10 +152,12 @@ lemma ccorres_pre_getDomainTime:
   done
 
 lemma Arch_switchToIdleThread_ccorres:
-  "ccorres dc xfdc (valid_pspace' and valid_arch_state') UNIV []
+  "ccorres dc xfdc (all_invs_but_ct_idle_or_in_cur_domain') UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
   apply (cinit simp: ARM_HYP_H.switchToIdleThread_def)
-  sorry (* FIXME ARMHYP TODO vcpuSwitch/vcpu_switch_ccorres *)
+  apply (ctac add: vcpu_switch_ccorres_None)
+  apply simp
+  done
 
 (* FIXME: move *)
 lemma empty_fail_getIdleThread [simp,intro!]:
@@ -163,7 +165,7 @@ lemma empty_fail_getIdleThread [simp,intro!]:
   by (simp add: getIdleThread_def)
 
 lemma switchToIdleThread_ccorres:
-  "ccorres dc xfdc (valid_pspace' and valid_arch_state') UNIV []
+  "ccorres dc xfdc all_invs_but_ct_idle_or_in_cur_domain' UNIV []
            switchToIdleThread (Call switchToIdleThread_'proc)"
   apply (cinit)
    apply (rule ccorres_symb_exec_l)
@@ -575,59 +577,59 @@ proof -
     by (simp add: invs_no_cicd'_def)
 
   show ?thesis
-  apply (cinit)
-   apply (simp add: numDomains_def word_sless_alt word_sle_def)
-   apply (ctac (no_vcg) add: getCurDomain_ccorres_dom_')
-     apply clarsimp
-     apply (rename_tac curdom)
-     apply (rule_tac P="curdom \<le> maxDomain" in ccorres_cross_over_guard_no_st)
-     apply (rule ccorres_Guard)
-     apply (rule ccorres_pre_getReadyQueuesL1Bitmap)
-     apply (rename_tac l1)
-     apply (rule_tac R="\<lambda>s. l1 = ksReadyQueuesL1Bitmap s curdom \<and> curdom \<le> maxDomain"
-              in ccorres_cond)
-       apply (fastforce dest!: rf_sr_cbitmap_L1_relation simp: cbitmap_L1_relation_def)
-      prefer 2
-      apply (ctac(no_vcg) add: switchToIdleThread_ccorres)
-     apply clarsimp
-     apply (rule ccorres_rhs_assoc)+
-     apply (rule ccorres_Guard_Seq)
-     apply (rule ccorres_pre_getReadyQueuesL2Bitmap)
-     apply (rename_tac l2)
-     apply (rule ccorres_pre_getQueue)
-     apply (rule_tac P="queue \<noteq> []" in ccorres_cross_over_guard_no_st)
-     apply (rule ccorres_symb_exec_l)
-        apply (rule ccorres_assert)
-     apply csymbr
-        apply (rule ccorres_abstract_cleanup)
-        apply (rule ccorres_Guard_Seq)+
-        apply csymbr
-        apply (rule ccorres_Guard_Seq)+
-        apply csymbr
-        apply (rule ccorres_abstract_cleanup)
-        apply (rule ccorres_Guard_Seq)+
-        apply csymbr
-        apply csymbr
-        apply csymbr
-        apply csymbr
-        apply (rule ccorres_Guard_Seq)+
-        apply (rule ccorres_symb_exec_r)
-          apply (simp only: ccorres_seq_skip)
-          apply (rule ccorres_call)
-              apply (rule switchToThread_ccorres')
+    apply (cinit)
+     apply (simp add: numDomains_def word_sless_alt word_sle_def)
+     apply (ctac (no_vcg) add: getCurDomain_ccorres_dom_')
+       apply clarsimp
+       apply (rename_tac curdom)
+       apply (rule_tac P="curdom \<le> maxDomain" in ccorres_cross_over_guard_no_st)
+       apply (rule ccorres_Guard)
+       apply (rule ccorres_pre_getReadyQueuesL1Bitmap)
+       apply (rename_tac l1)
+       apply (rule_tac R="\<lambda>s. l1 = ksReadyQueuesL1Bitmap s curdom \<and> curdom \<le> maxDomain"
+                in ccorres_cond)
+         apply (fastforce dest!: rf_sr_cbitmap_L1_relation simp: cbitmap_L1_relation_def)
+        prefer 2
+        apply (ctac(no_vcg) add: switchToIdleThread_ccorres)
+       apply clarsimp
+       apply (rule ccorres_rhs_assoc)+
+       apply (rule ccorres_Guard_Seq)
+       apply (rule ccorres_pre_getReadyQueuesL2Bitmap)
+       apply (rename_tac l2)
+       apply (rule ccorres_pre_getQueue)
+       apply (rule_tac P="queue \<noteq> []" in ccorres_cross_over_guard_no_st)
+       apply (rule ccorres_symb_exec_l)
+          apply (rule ccorres_assert)
+          apply csymbr
+          apply (rule ccorres_abstract_cleanup)
+          apply (rule ccorres_Guard_Seq)+
+          apply csymbr
+          apply (rule ccorres_Guard_Seq)+
+          apply csymbr
+          apply (rule ccorres_abstract_cleanup)
+          apply (rule ccorres_Guard_Seq)+
+          apply csymbr
+          apply csymbr
+          apply csymbr
+          apply csymbr
+          apply (rule ccorres_Guard_Seq)+
+          apply (rule ccorres_symb_exec_r)
+            apply (simp only: ccorres_seq_skip)
+            apply (rule ccorres_call)
+               apply (rule switchToThread_ccorres')
+              apply simp
              apply simp
             apply simp
-           apply simp
-          apply vcg
-         apply clarsimp
-         apply vcg_step (* vcg creates a state that's not printable in a sane amount of time *)
-         apply clarsimp
-        apply wp+
-      apply (simp add: isRunnable_def)
-     apply wp
-    apply (rename_tac s' d)
-    apply (clarsimp simp: Let_def)
-    apply (safe, simp_all add: invs_no_cicd'_max_CurDomain)
+           apply vcg
+          apply clarsimp
+          apply vcg_step (* vcg creates a state that's not printable in a sane amount of time *)
+          apply clarsimp
+         apply wp+
+       apply (simp add: isRunnable_def)
+      apply wp
+     apply (rename_tac s' d)
+     apply (clarsimp simp: Let_def)
+     apply (safe, simp_all add: invs_no_cicd'_max_CurDomain)
     (*10 subgoals *)
            apply (drule invs_no_cicd'_queues)
            apply (clarsimp simp: rf_sr_ksReadyQueuesL1Bitmap_simp signed_word_log2)
@@ -705,8 +707,7 @@ proof -
     apply (fold lookupBitmapPriority_def)
     apply (drule invs_no_cicd'_queues)
     apply (erule (1) lookupBitmapPriority_le_maxPriority)
-   apply (simp add: invs_no_cicd'_def)+
-  done
+    done
 qed
 
 lemma ksDomSched_length_relation[simp]:
