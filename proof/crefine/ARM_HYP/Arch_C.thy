@@ -3571,13 +3571,13 @@ lemma resolveVAddr_ret:
   apply (intro conjI impI allI)
      apply clarsimp
      apply (drule obj_at_valid_objs', clarsimp)+
-     apply (clarsimp simp: projectKOs valid_obj'_def valid_mapping'_def)
+     apply (clarsimp simp: projectKOs valid_obj'_def valid_mapping'_def page_base_def)
     apply (drule obj_at_valid_objs', clarsimp)+
     apply (clarsimp simp: projectKOs valid_obj'_def valid_mapping'_def)
    apply (drule obj_at_valid_objs', clarsimp)+
    apply (clarsimp simp: projectKOs valid_obj'_def valid_mapping'_def)
   apply (drule obj_at_valid_objs', clarsimp)+
-  apply (clarsimp simp: projectKOs valid_obj'_def valid_mapping'_def)
+  apply (clarsimp simp: projectKOs valid_obj'_def valid_mapping'_def page_base_def)
   done
 
 lemma throwError_invocationCatch:
