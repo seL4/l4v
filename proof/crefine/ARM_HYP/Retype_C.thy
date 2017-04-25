@@ -4458,12 +4458,8 @@ lemmas clift_array_assertionE
         OF _ refl _ exI[where x=0], simplified]
 
 lemma copyGlobalMappings_ccorres:
-  "ccorres dc xfdc
-     (valid_pde_mappings' and (\<lambda>s. page_directory_at' (armUSGlobalPD (ksArchState s)) s)
-        and page_directory_at' pd and (\<lambda>_. is_aligned pd pdBits))
-     (UNIV \<inter> {s. newPD_' s = Ptr pd}) []
+  "ccorres dc xfdc \<top> (UNIV \<inter> {s. newPD_' s = Ptr pd}) []
     (copyGlobalMappings pd) (Call copyGlobalMappings_'proc)"
-  apply (rule ccorres_gen_asm)
   apply (cinit lift: newPD_' simp: ARMSectionBits_def)
    apply (rule ccorres_return_Skip)
   apply simp
@@ -5387,7 +5383,22 @@ lemma is_aligned_neg_mask_eq_concrete:
   apply (metis word_bw_assocs word_bw_comms)
   done
 
-term ptr_retyps
+lemma placeNewObject_vcpu:
+  "ccorresG rf_sr \<Gamma> dc xfdc
+   (valid_global_refs' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase vcpu_bits
+      and (\<lambda>s. 2 ^ vcpu_bits \<le> gsMaxObjectSize s)
+      and ret_zero regionBase (2 ^ vcpu_bits)
+      and K (regionBase \<noteq> 0 \<and> range_cover regionBase vcpu_bits vcpu_bits 1
+      \<and> ({regionBase..+2 ^ vcpu_bits}
+          \<inter> kernel_data_refs = {})
+      ))
+    ({s. region_actually_is_zero_bytes regionBase (2 ^ vcpu_bits) s})
+    hs
+    (placeNewObject regionBase (makeObject :: vcpu) 0)
+    (global_htd_update (\<lambda>_. (ptr_retyp (vcpu_Ptr regionBase)));; CALL vcpu_init(vcpu_Ptr regionBase))"
+  sorry (* vcpu *)
+
+
 lemma Arch_createObject_ccorres:
   assumes t: "toAPIType newType = None"
   shows "ccorres (\<lambda>a b. ccap_relation (ArchObjectCap a) b) ret__struct_cap_C_'
@@ -5410,7 +5421,6 @@ proof -
            simp_all add: toAPIType_def
                bind_assoc
                ARMLargePageBits_def)
-sorry (* FIXME ARMHYP annotations in C are for non-HYP arm, this won't work at the moment
          apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
           apply (simp add: object_type_from_H_def Kernel_C_defs)
           apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
@@ -5479,7 +5489,7 @@ sorry (* FIXME ARMHYP annotations in C are for non-HYP arm, this won't work at t
           intro!: ccorres_rhs_assoc)
         apply ((rule ccorres_return_C | simp | wp | vcg
           | (rule match_ccorres, ctac add:
-                  placeNewDataObject_ccorres[where us=8 and newType=newType, simplified]
+                  placeNewDataObject_ccorres[where us=9 and newType=newType, simplified]
                   gsUserPages_update_ccorres[folded modify_gsUserPages_update])
           | (rule match_ccorres, csymbr))+)[1]
        apply (intro conjI)
@@ -5506,7 +5516,7 @@ sorry (* FIXME ARMHYP annotations in C are for non-HYP arm, this won't work at t
          intro!: ccorres_rhs_assoc)
        apply ((rule ccorres_return_C | simp | wp | vcg
          | (rule match_ccorres, ctac add:
-                 placeNewDataObject_ccorres[where us=12 and newType=newType, simplified]
+                 placeNewDataObject_ccorres[where us=13 and newType=newType, simplified]
                  gsUserPages_update_ccorres[folded modify_gsUserPages_update])
          | (rule match_ccorres, csymbr))+)[1]
       apply (intro conjI)
@@ -5549,7 +5559,9 @@ sorry (* FIXME ARMHYP annotations in C are for non-HYP arm, this won't work at t
                 is_aligned_neg_mask_eq vmrights_to_H_def
                 Kernel_C.VMReadWrite_def Kernel_C.VMNoAccess_def
                 Kernel_C.VMKernelOnly_def Kernel_C.VMReadOnly_def)
-     apply (simp add: to_bool_def false_def isFrameType_def)
+     apply (clarsimp simp: to_bool_def false_def isFrameType_def)
+     apply (rule sym)
+     apply (simp add: is_aligned_neg_mask_eq'[symmetric] is_aligned_weaken)
 
     -- "PageDirectoryObject"
     apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
@@ -5594,14 +5606,33 @@ sorry (* FIXME ARMHYP annotations in C are for non-HYP arm, this won't work at t
     apply (frule invs_arch_state')
     apply (frule range_cover.aligned)
     apply (frule is_aligned_addrFromPPtr_n, simp)
-    apply (intro conjI, simp_all)
-         apply fastforce
+    apply (intro conjI, simp_all add: table_bits_defs)[1]
         apply fastforce
-       apply (clarsimp simp: pageBits_def
-                             valid_arch_state'_def page_directory_at'_def pdBits_def)
-      apply (clarsimp simp: is_aligned_no_overflow'[where n=14, simplified]
-                            field_simps is_aligned_mask[symmetric] mask_AND_less_0)+
-    done*)
+       apply ((clarsimp simp: is_aligned_no_overflow'[where n=14, simplified]
+                             field_simps is_aligned_mask[symmetric] mask_AND_less_0)+)[3]
+
+    apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
+     apply (simp add: object_type_from_H_def Kernel_C_defs)
+     apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff
+                asidInvalid_def sle_positive APIType_capBits_def shiftL_nat
+                objBits_simps archObjSize_def word_sle_def word_sless_def)
+     apply (clarsimp simp: hrs_htd_update ptBits_def objBits_simps archObjSize_def
+                           ARM_HYP_H.createObject_def pageBits_def pdBits_def)
+     apply (rule ccorres_rhs_assoc)+
+     apply (rule ccorres_rhs_assoc2)
+     apply (ctac pre only: add: placeNewObject_vcpu)
+       apply csymbr
+       apply (rule ccorres_return_C; simp)
+      apply wp
+     apply (vcg exspec=vcpu_init_modifies)
+    apply (clarsimp simp: invs_pspace_aligned' invs_pspace_distinct'
+               invs_valid_global' range_cover.aligned APIType_capBits_def
+               invs_valid_objs' isFrameType_def invs_urz)
+    apply (frule range_cover.aligned)
+    apply (clarsimp simp: ccap_relation_def cap_vcpu_cap_lift cap_to_H_def)
+    apply (rule sym, rule is_aligned_neg_mask_eq)
+    apply (simp add: vcpu_bits_def table_bits_defs is_aligned_weaken)
+    done
 qed
 
 lemma add_ge0_weak:
@@ -7601,17 +7632,21 @@ lemma Arch_createObject_preserves_bytes:
     exspec=addrFromPPtr_modifies
     exspec=cleanCacheRange_PoU_preserves_bytes
     exspec=cap_page_directory_cap_new_modifies
-    exspec=vcpu_init_modifies)
+    exspec=cap_vcpu_cap_new_modifies)
   apply (safe intro!: byte_regions_unmodified_hrs_mem_update,
-    (simp_all add: h_t_valid_field hrs_htd_update)+)
-  apply (safe intro!: ptr_retyp_d ptr_retyps_out)
-  apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
-    split: object_type.split_asm ArchTypes_H.apiobject_type.split_asm)
-  sorry  (* FIXME ARMHYP Arch_createObject spec needs update before proof can proceed
+         (simp_all add: h_t_valid_field hrs_htd_update)+)
+             apply (safe intro!: ptr_retyp_d ptr_retyps_out)
+             apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
+                           split: object_type.split_asm ArchTypes_H.apiobject_type.split_asm)
    apply (rule byte_regions_unmodified_flip, simp)
-  apply (rule byte_regions_unmodified_trans[rotated],
-    assumption, simp_all add: hrs_htd_update_canon hrs_htd_update)
-  done *)
+   apply (rule byte_regions_unmodified_trans[rotated],
+          assumption, simp_all add: hrs_htd_update_canon hrs_htd_update)
+  apply (drule intvlD)
+  apply clarsimp
+  apply (erule notE)
+  apply (rule intvlI)
+  apply (simp add: vcpu_bits_def pageBits_def)
+  done
 
 lemma ptr_arr_retyps_eq_outside_dom:
   "x \<notin> {ptr_val (p :: 'a ptr) ..+ n * size_of TYPE ('a :: wf_type)}
@@ -7795,7 +7830,7 @@ lemma createObject_untyped_region_is_zero_bytes:
   apply (simp add: is_aligned_neg_mask_eq[OF is_aligned_weaken])
   apply (simp add:  APIType_capBits_def
                    less_mask_eq word_less_nat_alt)
-  sorry (* FIXME ARMHYP *)
+  done
 
 lemma createNewObjects_ccorres:
 notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
