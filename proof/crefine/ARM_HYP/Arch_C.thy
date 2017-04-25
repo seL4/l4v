@@ -5004,8 +5004,7 @@ lemma decodeVCPUWriteReg_ccorres:
               and (valid_cap' (ArchObjectCap cp)) and K (isVCPUCap cp))
        (UNIV \<inter> {s. unat (length_' s) = length args}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
-             \<inter> {s. buffer_' s = option_to_ptr buffer}
-             ) []
+             \<inter> {s. buffer_' s = option_to_ptr buffer}) hs
        (decodeVCPUWriteReg args cp
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeVCPUWriteReg_'proc)"
@@ -5078,7 +5077,7 @@ lemma decodeVCPUReadReg_ccorres:
        (UNIV \<inter> {s. unat (length_' s) = length args}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}
-             \<inter> \<lbrace>\<acute>call = from_bool isCall \<rbrace>) []
+             \<inter> \<lbrace>\<acute>call = from_bool isCall \<rbrace>) hs
        (decodeVCPUReadReg args cp
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeVCPUReadReg_'proc)"
@@ -5142,6 +5141,125 @@ lemma decodeVCPUReadReg_ccorres:
                     elim: obj_at'_weakenE)
   done
 
+lemma invokeVCPUSetTCB_ccorres:
+  notes Collect_const[simp del] dc_simp[simp del]
+  shows
+  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and tcb_at' tptr and vcpu_at' vcpuptr)
+       (UNIV \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tptr \<rbrace>
+             \<inter> \<lbrace>\<acute>vcpu = Ptr vcpuptr \<rbrace>) hs
+       (liftE (associateVCPUTCB vcpuptr tptr))
+       (Call invokeVCPUSetTCB_'proc)"
+  apply (cinit' lift:  tcb_' vcpu_' simp: gets_bind_ign liftE_liftM)
+   apply clarsimp
+   apply (rule ccorres_add_return2)
+   apply (ctac (no_vcg) add: associateVCPUTCB_ccorres)
+    apply (clarsimp simp: return_def dc_def)
+    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: return_def dc_def)
+  by (wpsimp simp: invs_no_0_obj')+
+
+lemma cap_case_TCBCap2:
+  "(case cap of ThreadCap pd
+                   \<Rightarrow> f pd | _ \<Rightarrow> g)
+   = (if isThreadCap cap
+      then f (capTCBPtr cap)
+      else g)"
+  by (simp add: isCap_simps
+         split: capability.split arch_capability.split)
+
+lemma liftE_associateVCPUTCB_empty_return:
+  "liftE (associateVCPUTCB vcpu val) >>=E (\<lambda>rv. m rv)
+    = liftE (associateVCPUTCB vcpu val) >>=E (\<lambda>_. m [])"
+  unfolding associateVCPUTCB_def
+  by (clarsimp simp: liftE_bindE bind_assoc)
+
+lemma decodeVCPUSetTCB_ccorres:
+  notes if_cong[cong] Collect_const[simp del]
+  shows
+  "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
+              and sysargs_rel args buffer
+              and (valid_cap' (ArchObjectCap cp))
+              and (excaps_in_mem extraCaps \<circ> ctes_of)
+              and K (isVCPUCap cp \<and> interpret_excaps extraCaps' = excaps_map extraCaps))
+       (UNIV \<inter> {s. unat (length_' s) = length args}
+             \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
+             (* FIXME ARMHYP this is a really inconvienient name *)
+             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             ) hs
+       (decodeVCPUSetTCB cp extraCaps
+              >>= invocationCatch thread isBlocking isCall InvokeArchObject)
+       (Call decodeVCPUSetTCB_'proc)"
+  apply (rule ccorres_grab_asm)
+  apply (cinit' lift: length_' cap_' extraCaps___struct_extra_caps_C_'
+                simp: decodeVCPUSetTCB_def Let_def)
+   apply (simp cong: StateSpace.state.fold_congs globals.fold_congs)
+   apply (rule ccorres_Cond_rhs_Seq ; clarsimp)
+    apply (rule ccorres_split_throws)
+     apply (subgoal_tac "null extraCaps")
+      prefer 2 subgoal by (clarsimp simp: interpret_excaps_test_null excaps_map_def null_def)
+     apply (simp add: throwError_bind invocationCatch_def)
+     apply (rule syscall_error_throwError_ccorres_n)
+     apply (simp add: syscall_error_to_H_cases)
+    apply vcg
+   apply (subgoal_tac "extraCaps \<noteq> []")
+     prefer 2 subgoal by (clarsimp simp: idButNot_def interpret_excaps_test_null
+                                          excaps_map_def neq_Nil_conv)
+   apply (clarsimp simp: null_def bindE)
+   (* lookup first slot in extracaps and its type *)
+   apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
+   apply (rule ccorres_move_c_guard_cte)
+   apply ctac
+     apply (rule ccorres_assert2)
+     apply clarsimp
+     apply csymbr
+     apply (simp add: cap_case_TCBCap2 unlessE_def if_to_top_of_bind if_to_top_of_bindE
+                      ccorres_seq_cond_raise)
+     apply (rule ccorres_cond2'[where R=\<top>])
+       apply (cases extraCaps ; clarsimp simp add: cap_get_tag_isCap cnode_cap_case_if)
+      apply (simp add: throwError_bind invocationCatch_def)
+      apply (rule syscall_error_throwError_ccorres_n)
+      apply (simp add: syscall_error_to_H_cases)
+     apply clarsimp
+     apply (simp add: returnOk_bind bindE_assoc
+                        performARMMMUInvocations performARMVCPUInvocation_def)
+       -- "we want the second alternative - nothing to return to user"
+       apply (subst liftE_associateVCPUTCB_empty_return, clarsimp)
+     apply (ctac add: setThreadState_ccorres)
+       apply csymbr
+       apply csymbr
+       apply (ctac add: invokeVCPUSetTCB_ccorres)
+          apply (rule ccorres_alternative2)
+          apply (rule ccorres_return_CE, simp+)[1]
+         apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+        apply wp
+       apply (vcg exspec=invokeVCPUSetTCB_modifies)
+      apply (wpsimp wp: sts_invs_minor' ct_in_state'_set)+
+     apply (vcg exspec=setThreadState_modifies)
+    apply (wpsimp | wp_once hoare_drop_imps)+
+   apply vcg
+
+  apply (clarsimp simp: word_less_nat_alt word_le_nat_alt conj_commute
+                        invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                        rf_sr_ksCurThread msgRegisters_unfold
+                        valid_tcb_state'_def ThreadState_Restart_def mask_def)
+  apply (clarsimp simp: idButNot_def interpret_excaps_test_null
+                        excaps_map_def neq_Nil_conv)
+  apply (rule conjI; clarsimp)
+   apply (drule interpret_excaps_eq)
+   apply (clarsimp simp: excaps_in_mem_def slotcap_in_mem_def isCap_simps ctes_of_cte_at)
+   apply (rule conjI)
+    apply (fastforce simp: ct_in_state'_def st_tcb_at'_def comp_def elim: obj_at'_weakenE)
+   apply (rule conjI)
+    apply (fastforce simp: ct_in_state'_def st_tcb_at'_def comp_def
+                     elim: obj_at'_weakenE dest!: interpret_excaps_eq)
+   apply (frule ctes_of_valid'; simp add: invs_valid_objs' valid_cap'_def)
+  apply (fastforce simp: isCap_simps valid_cap'_def valid_tcb_state'_def excaps_map_def
+                          cap_get_tag_ThreadCap capVCPUPtr_eq isVCPUCap_def cap_get_tag_isCap
+                  dest!: interpret_excaps_eq)[1]
+done
 
 lemma decodeARMVCPUInvocation_ccorres:
   notes if_cong[cong] Collect_const[simp del]
@@ -5173,10 +5291,8 @@ lemma decodeARMVCPUInvocation_ccorres:
    apply (rule ccorres_Cond_rhs)
     apply (simp add: invocation_eq_use_types)
     apply (rule ccorres_trim_returnE, simp+)
-    subgoal sorry (* FIXME ARMHYP TODO
-      apply (rule ccorres_call,
-             rule decodeVCPUSetTCB_ccorres, simp+)[1]
-      *)
+    apply (rule ccorres_call[OF decodeVCPUSetTCB_ccorres]; simp)
+
    apply (rule ccorres_Cond_rhs)
     apply (simp add: invocation_eq_use_types)
     apply (rule ccorres_trim_returnE, simp+)
