@@ -1781,14 +1781,26 @@ lemma scast_maxIRQ_is_not_less: "(\<not> (Kernel_C.maxIRQ) <s (ucast \<circ> (uc
   apply (uint_arith)
 done
 
+lemma ccorres_vgicMaintenance:
+  "ccorres dc xfdc \<top> UNIV hs vgicMaintenance (Call VGICMaintenance_'proc)"
+  apply (cinit)
+  sorry (* FIXME: waiting for C change *)
+
 lemma ccorres_handleReserveIRQ:
   "ccorres dc xfdc \<top> (UNIV \<inter> {s. irq_' s = ucast irq}) hs
     (handleReservedIRQ irq) (Call handleReservedIRQ_'proc)"
   supply dc_simp[simp del]
   apply (cinit lift: irq_')
-  apply (clarsimp simp: irqVGICMaintenance_def INTERRUPT_PPI_9_def ucast_up_ucast is_up when_def)
-  sorry (* FIXME ARMHYP cond rules are unhappy
-           FIXME ARMHYP TODO VGICMaintenance_ccorres *)
+   apply (rule ccorres_when[where R=\<top>])
+    apply (clarsimp simp: irqVGICMaintenance_def INTERRUPT_PPI_9_def ucast_up_ucast is_up)
+    apply (rule iffI, simp)
+    apply (rule upcast_ucast_id[where 'b="32 signed"]; simp)
+   apply (rule ccorres_add_return2)
+   apply (ctac (no_vcg) add: ccorres_vgicMaintenance)
+    apply (rule ccorres_return_void_C)
+   apply wp
+  apply simp
+  done
 
 lemma handleInterrupt_ccorres:
   "ccorres dc xfdc
