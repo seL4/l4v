@@ -43,7 +43,7 @@ where
            if flags && vgic_misr_eoi \<noteq> 0
            then
                 if eisr0 = 0 \<and> eisr1 = 0
-                   then return $ VGICMaintenance [0, 0]
+                   then return $ VGICMaintenance None
                    else do
                        irq_idx \<leftarrow> return (if eisr0 \<noteq> 0 then word_ctz eisr0 else word_ctz eisr1);
                        gic_vcpu_num_list_regs \<leftarrow> gets (arm_gicvcpu_numlistregs o arch_state);
@@ -51,9 +51,9 @@ where
                          virq \<leftarrow> get_gic_vcpu_ctrl_lr (of_nat irq_idx);
                          set_gic_vcpu_ctrl_lr (of_nat irq_idx) $ virqSetEOIIRQEN virq 0
                        od);
-                       return $ VGICMaintenance [of_nat irq_idx, 1]
+                       return $ VGICMaintenance $ Some $ of_nat irq_idx
                    od
-           else return $ VGICMaintenance [0, 0];
+           else return $ VGICMaintenance None;
        ct \<leftarrow> gets cur_thread;
        handle_fault ct $ ArchFault fault
      od

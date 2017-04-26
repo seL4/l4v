@@ -27,7 +27,10 @@ where
      upc \<leftarrow> do_machine_op (addressTranslateS1CPR pc);
      return (5, (upc && ~~ mask pageBits || pc && mask pageBits) # vptr # archData) od"
 | "make_arch_fault_msg (VCPUFault hsr) thread = return (7, [hsr])"
-| "make_arch_fault_msg (VGICMaintenance archData) thread = return (6, archData)" (* FIXME ARMHYP check vgic index here? *)
+| "make_arch_fault_msg (VGICMaintenance archData) thread = do
+      msg \<leftarrow> return $ (case archData of None \<Rightarrow> [-1] | Some idx \<Rightarrow> [idx]);
+      return (6, msg)
+   od"
 
 definition
   handle_arch_fault_reply :: "arch_fault \<Rightarrow> obj_ref \<Rightarrow> data \<Rightarrow> data list \<Rightarrow> (bool,'z::state_ext) s_monad"

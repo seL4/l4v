@@ -156,7 +156,7 @@ definition
 datatype arch_fault =
     VMFault vspace_ref "machine_word list"
   (* FIXME ARMHYP are these truly arch-independant, or just in the current C version *)
-  | VGICMaintenance "data list" (* idx *) (* idxValid? second arguments? *)
+  | VGICMaintenance "data option" (* idx *) (* idxValid? second arguments? *)
   | VCPUFault data (* hsr *) (* FIXME ARMHYP: this is a 64-bit struct, 2x data? *)
 
 
