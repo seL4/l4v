@@ -26,7 +26,7 @@ hypervisor extensions on ARM.
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.Object.Structures.TARGET
-> import SEL4.Machine.Hardware.ARM_HYP
+> import SEL4.Machine.Hardware.ARM_HYP as M
 > import SEL4.Model.StateData.TARGET
 > import SEL4.API.Failures
 > import SEL4.Object.Instances()
@@ -374,73 +374,63 @@ For initialisation, see makeVCPUObject.
 >         setHCR hcrNative
 >         isb
 
+> vcpuUpdate :: PPtr VCPU -> (VCPU -> VCPU) -> Kernel ()
+> vcpuUpdate vcpuPtr f = do
+>     vcpu <- getObject vcpuPtr;
+>     setObject vcpuPtr (f vcpu)
+
+> vcpuSaveRegister :: PPtr VCPU -> VCPUReg -> M.MachineMonad Word -> Kernel ()
+> vcpuSaveRegister vcpuPtr r mop = do
+>     rval <- doMachineOp mop;
+>     vcpuUpdate vcpuPtr (\vcpu -> vcpu { vcpuRegs = (vcpuRegs vcpu) // [(r,rval)] })
+
+> vgicUpdate :: PPtr VCPU -> (GICVCPUInterface -> GICVCPUInterface) -> Kernel ()
+> vgicUpdate vcpuPtr f = vcpuUpdate vcpuPtr (\vcpu -> vcpu { vcpuVGIC = f (vcpuVGIC vcpu) })
+
 > vcpuSave :: Maybe (PPtr VCPU, Bool) -> Kernel ()
 > vcpuSave (Just (vcpuPtr, active)) = do
 >     doMachineOp dsb
 >
->     vcpu <- getObject vcpuPtr
->
 >     -- disabled vcpus already had SCTLR and HCR stored
->     (hcr, sctlr) <- if active
->                         then do
->                             sctlr <- doMachineOp getSCTLR
->                             hcr <- doMachineOp get_gic_vcpu_ctrl_hcr
->                             return (sctlr, hcr)
->                         else return (vcpuSCTLR vcpu, vgicHCR . vcpuVGIC $ vcpu)
+>     when active $ do
+>           vcpuSaveRegister vcpuPtr VCPURegSCTLR getSCTLR
+>           hcr <- doMachineOp get_gic_vcpu_ctrl_hcr
+>           vgicUpdate vcpuPtr (\vgic -> vgic { vgicHCR = hcr })
 >
 >     actlr <- doMachineOp getACTLR
+>     vcpuUpdate vcpuPtr (\vcpu -> vcpu { vcpuACTLR = actlr })
+>
 >     vmcr <- doMachineOp get_gic_vcpu_ctrl_vmcr
+>     vgicUpdate vcpuPtr (\vgic -> vgic { vgicVMCR = vmcr })
+>
 >     apr <- doMachineOp get_gic_vcpu_ctrl_apr
+>     vgicUpdate vcpuPtr (\vgic -> vgic { vgicAPR = vmcr })
 >
 >     numListRegs <- gets (armKSGICVCPUNumListRegs . ksArchState)
 >     let gicIndices = init [0..numListRegs]
->     lrVals <- doMachineOp $ mapM (get_gic_vcpu_ctrl_lr . fromIntegral) gicIndices
->     let vcpuLR = (vgicLR . vcpuVGIC $ vcpu) // zip gicIndices lrVals
+>     mapM_ (\vreg -> do
+>           val <- doMachineOp $ get_gic_vcpu_ctrl_lr (fromIntegral vreg)
+>           vgicUpdate vcpuPtr (\vgic -> vgic { vgicLR = (vgicLR vgic) // [(fromIntegral vreg, val)] }) ) gicIndices
 >
 >     -- save banked registers
->     lr_svc <- doMachineOp get_lr_svc
->     sp_svc <- doMachineOp get_sp_svc
->     lr_abt <- doMachineOp get_lr_abt
->     sp_abt <- doMachineOp get_sp_abt
->     lr_und <- doMachineOp get_lr_und
->     sp_und <- doMachineOp get_sp_und
->     lr_irq <- doMachineOp get_lr_irq
->     sp_irq <- doMachineOp get_sp_irq
->     lr_fiq <- doMachineOp get_lr_fiq
->     sp_fiq <- doMachineOp get_sp_fiq
->     r8_fiq <- doMachineOp get_r8_fiq
->     r9_fiq <- doMachineOp get_r9_fiq
->     r10_fiq <- doMachineOp get_r10_fiq
->     r11_fiq <- doMachineOp get_r11_fiq
->     r12_fiq <- doMachineOp get_r12_fiq
+>     vcpuSaveRegister vcpuPtr VCPURegLRsvc get_lr_svc
+>     vcpuSaveRegister vcpuPtr VCPURegSPsvc get_sp_svc
+>     vcpuSaveRegister vcpuPtr VCPURegLRabt get_lr_abt
+>     vcpuSaveRegister vcpuPtr VCPURegSPabt get_sp_abt
+>     vcpuSaveRegister vcpuPtr VCPURegLRund get_lr_und
+>     vcpuSaveRegister vcpuPtr VCPURegSPund get_sp_und
+>     vcpuSaveRegister vcpuPtr VCPURegLRirq get_lr_irq
+>     vcpuSaveRegister vcpuPtr VCPURegSPirq get_sp_irq
+>     vcpuSaveRegister vcpuPtr VCPURegLRfiq get_lr_fiq
+>     vcpuSaveRegister vcpuPtr VCPURegSPfiq get_sp_fiq
+>     vcpuSaveRegister vcpuPtr VCPURegR8fiq get_r8_fiq
+>     vcpuSaveRegister vcpuPtr VCPURegR9fiq get_r9_fiq
+>     vcpuSaveRegister vcpuPtr VCPURegR10fiq get_r10_fiq
+>     vcpuSaveRegister vcpuPtr VCPURegR11fiq get_r11_fiq
+>     vcpuSaveRegister vcpuPtr VCPURegR12fiq get_r12_fiq
 >
->     let regs' = (vcpuRegs vcpu) // [(VCPURegSCTLR, sctlr)
->                                    ,(VCPURegLRsvc, lr_svc)
->                                    ,(VCPURegSPsvc, sp_svc)
->                                    ,(VCPURegLRabt, lr_abt)
->                                    ,(VCPURegSPabt, sp_abt)
->                                    ,(VCPURegLRund, lr_und)
->                                    ,(VCPURegSPund, sp_und)
->                                    ,(VCPURegLRirq, lr_irq)
->                                    ,(VCPURegSPirq, sp_irq)
->                                    ,(VCPURegLRfiq, lr_fiq)
->                                    ,(VCPURegSPfiq, sp_fiq)
->                                    ,(VCPURegR8fiq, r8_fiq)
->                                    ,(VCPURegR9fiq, r9_fiq)
->                                    ,(VCPURegR10fiq, r10_fiq)
->                                    ,(VCPURegR11fiq, r11_fiq)
->                                    ,(VCPURegR12fiq, r12_fiq)
->                                    ]
->
->     setObject vcpuPtr $ vcpu {
->           vcpuACTLR = actlr
->         , vcpuVGIC = (vcpuVGIC vcpu) { vgicHCR = hcr
->                                      , vgicVMCR = vmcr
->                                      , vgicAPR = apr
->                                      , vgicLR = vcpuLR }
->         , vcpuRegs = regs'
->         }
 >     doMachineOp isb
+>
 > vcpuSave _ = fail "vcpuSave: no VCPU to save"
 
 > vcpuRestore :: PPtr VCPU -> Kernel ()
