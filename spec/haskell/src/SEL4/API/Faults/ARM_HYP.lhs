@@ -50,7 +50,10 @@ in handleVMFault?
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > makeArchFaultMessage (VCPUFault hsr) thread = return (7, [hsr])
 > makeArchFaultMessage (VGICMaintenance archData) thread = do
->     return (6, archData)
+>     let msg = (case archData of
+>                    Nothing -> [-1]
+>                    Just idx -> [idx])
+>     return (6, msg)
 #endif
 
 > handleArchFaultReply :: ArchFault -> PPtr TCB -> Word -> [Word] -> Kernel Bool
