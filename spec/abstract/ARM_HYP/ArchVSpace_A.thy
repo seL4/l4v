@@ -407,70 +407,71 @@ where "associate_vcpu_tcb vr t \<equiv> do
 od"
 
 text {* Register + context save for VCPUs *}
+
+definition vcpu_update :: "obj_ref \<Rightarrow> (vcpu \<Rightarrow> vcpu) \<Rightarrow> (unit,'z::state_ext) s_monad"
+where "vcpu_update vr f \<equiv> do
+  vcpu \<leftarrow> get_vcpu vr;
+  set_vcpu vr (f vcpu)
+  od"
+
+definition vcpu_save_register :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> word32 machine_monad \<Rightarrow> (unit,'z::state_ext) s_monad"
+where "vcpu_save_register vr r mop \<equiv> do
+  rval \<leftarrow> do_machine_op mop;
+  vcpu_update vr (\<lambda>vcpu. vcpu \<lparr> vcpu_regs := (vcpu_regs vcpu)(r := rval) \<rparr> )
+  od"
+
+definition
+vgic_update :: "obj_ref \<Rightarrow> (gic_vcpu_interface \<Rightarrow> gic_vcpu_interface) \<Rightarrow> (unit,'z::state_ext) s_monad"
+where "vgic_update vr f \<equiv> vcpu_update vr (\<lambda>vcpu. vcpu \<lparr> vcpu_vgic := f (vcpu_vgic vcpu) \<rparr> )"
+
 definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "vcpu_save vb \<equiv> case vb of
    Some (vr, active) \<Rightarrow>
      do
        do_machine_op dsb;
-       vcpu \<leftarrow> get_vcpu vr;
-       (* disabled VCPU already had SCTLR and HCR stored *)
-       (hcr, sctlr) \<leftarrow> (if active
-                        then do
-                                 sctlr \<leftarrow> do_machine_op getSCTLR;
-                                 hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
-                                 return (sctlr, hcr)
-                            od
-                        else return (vcpu_regs vcpu VCPURegSCTLR, vgic_hcr $ vcpu_vgic vcpu));
+
+       when active $ do
+          vcpu_save_register vr VCPURegSCTLR getSCTLR;
+          hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
+          vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>)
+       od;
+
        actlr \<leftarrow> do_machine_op getACTLR;
+       vcpu_update vr (\<lambda>vcpu. vcpu \<lparr>vcpu_actlr := actlr\<rparr>);
+
        vmcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_vmcr;
+       vgic_update vr (\<lambda>vgic. vgic \<lparr>vgic_vmcr := vmcr\<rparr>);
+
        apr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_apr;
+       vgic_update vr (\<lambda>vgic. vgic \<lparr>vgic_apr := apr\<rparr>);
+
        num_list_regs \<leftarrow> gets (arm_gicvcpu_numlistregs \<circ> arch_state);
        gicIndices \<leftarrow> return [0..<num_list_regs];
-       lr_vals \<leftarrow> do_machine_op $ mapM (get_gic_vcpu_ctrl_lr \<circ> of_nat) gicIndices;
-       pairs \<leftarrow> return (zip gicIndices lr_vals);
-       vcpuLR \<leftarrow> return (foldl (\<lambda>f p. f (fst p := snd p)) (vgic_lr $ vcpu_vgic vcpu) pairs);
+
+       mapM (\<lambda>vreg. do
+                val \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_lr (of_int vreg);
+                vgic_update vr (\<lambda>vgic. vgic \<lparr> vgic_lr := (vgic_lr vgic)(vreg := val) \<rparr>)
+               od)
+            gicIndices;
 
        (* save banked registers *)
-       lr_svc \<leftarrow> do_machine_op get_lr_svc;
-       sp_svc \<leftarrow> do_machine_op get_sp_svc;
-       lr_abt \<leftarrow> do_machine_op get_lr_abt;
-       sp_abt \<leftarrow> do_machine_op get_sp_abt;
-       lr_und \<leftarrow> do_machine_op get_lr_und;
-       sp_und \<leftarrow> do_machine_op get_sp_und;
-       lr_irq \<leftarrow> do_machine_op get_lr_irq;
-       sp_irq \<leftarrow> do_machine_op get_sp_irq;
-       lr_fiq \<leftarrow> do_machine_op get_lr_fiq;
-       sp_fiq \<leftarrow> do_machine_op get_sp_fiq;
-       r8_fiq \<leftarrow> do_machine_op get_r8_fiq;
-       r9_fiq \<leftarrow> do_machine_op get_r9_fiq;
-       r10_fiq \<leftarrow> do_machine_op get_r10_fiq;
-       r11_fiq \<leftarrow> do_machine_op get_r11_fiq;
-       r12_fiq \<leftarrow> do_machine_op get_r12_fiq;
+       vcpu_save_register vr VCPURegLRsvc get_lr_svc;
+       vcpu_save_register vr VCPURegSPsvc get_sp_svc;
+       vcpu_save_register vr VCPURegLRabt get_lr_abt;
+       vcpu_save_register vr VCPURegSPabt get_sp_abt;
+       vcpu_save_register vr VCPURegLRund get_lr_und;
+       vcpu_save_register vr VCPURegSPund get_sp_und;
+       vcpu_save_register vr VCPURegLRirq get_lr_irq;
+       vcpu_save_register vr VCPURegSPirq get_sp_irq;
+       vcpu_save_register vr VCPURegLRfiq get_lr_fiq;
+       vcpu_save_register vr VCPURegSPfiq get_sp_fiq;
+       vcpu_save_register vr VCPURegR8fiq get_r8_fiq;
+       vcpu_save_register vr VCPURegR9fiq get_r9_fiq;
+       vcpu_save_register vr VCPURegR10fiq get_r10_fiq;
+       vcpu_save_register vr VCPURegR11fiq get_r11_fiq;
+       vcpu_save_register vr VCPURegR12fiq get_r12_fiq;
 
-       regs' \<leftarrow> return $ (vcpu_regs vcpu) (VCPURegSCTLR:= sctlr,
-                                           VCPURegLRsvc:= lr_svc,
-                                           VCPURegSPsvc:= sp_svc,
-                                           VCPURegLRabt:= lr_abt,
-                                           VCPURegSPabt:= sp_abt,
-                                           VCPURegLRund:= lr_und,
-                                           VCPURegSPund:= sp_und,
-                                           VCPURegLRirq:= lr_irq,
-                                           VCPURegSPirq:= sp_irq,
-                                           VCPURegLRfiq:= lr_fiq,
-                                           VCPURegSPfiq:= sp_fiq,
-                                           VCPURegR8fiq:= r8_fiq,
-                                           VCPURegR9fiq:= r9_fiq,
-                                           VCPURegR10fiq:= r10_fiq,
-                                           VCPURegR11fiq:= r11_fiq,
-                                           VCPURegR12fiq:= r12_fiq);
-
-       set_vcpu vr (vcpu \<lparr>vcpu_actlr := actlr,
-                          vcpu_vgic  := (vcpu_vgic vcpu) \<lparr> vgic_hcr := hcr,
-                                                           vgic_vmcr := vmcr,
-                                                           vgic_apr := apr,
-                                                           vgic_lr := vcpuLR \<rparr>,
-                          vcpu_regs := regs' \<rparr>);
        do_machine_op isb
      od
  | _ \<Rightarrow> fail (* vcpu_save: no VCPU to save *)
