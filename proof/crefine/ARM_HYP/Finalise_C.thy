@@ -1950,7 +1950,7 @@ lemma vcpuInvalidateActive_ccorres:
         apply ccorres_rewrite
           apply (rule ccorres_guard_imp)
           apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
-            apply (ctac add: vcpuDisable_ccorres)
+            apply (ctac add: vcpu_disable_ccorres)
            apply ceqv
               apply (rule armHSCurVCPU_update_active_false_ccorres)
              apply wp
