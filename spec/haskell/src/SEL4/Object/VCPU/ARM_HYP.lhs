@@ -233,7 +233,7 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 >     rangeCheck grp (0::Int) 1
 >     gic_vcpu_num_list_regs <- withoutFailure $
 >         gets (armKSGICVCPUNumListRegs . ksArchState)
->     rangeCheck index 0 gic_vcpu_num_list_regs
+>     rangeCheck index 0 (gic_vcpu_num_list_regs - 1)
 >     vcpuLR <- withoutFailure $ liftM (vgicLR . vcpuVGIC) $ getObject vcpuPtr
 >
 >     when (vcpuLR ! (fromIntegral index) .&. vgicIRQMask == vgicIRQActive) $
