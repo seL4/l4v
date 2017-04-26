@@ -558,7 +558,22 @@ lemma cteInsert_cap_to'2:
   apply auto
   done
 
+lemma why_oh_why:"  (if \<exists>a b. snd (the buf) = Some (a, b)
+         then P (snd (the buf)) else Q) =
+    (case the buf of (ptr, None) \<Rightarrow> Q | (ptr, Some (cap, slot)) \<Rightarrow> P (Some (cap, slot)))"
+  by (clarsimp simp: split_def case_option_If2)
+
+lemma shouldnt_need_this: "(case buf of None \<Rightarrow> Q
+                       | Some (ptr, None) \<Rightarrow> Q
+                       | Some (ptr, Some (cap, slot)) \<Rightarrow> P cap slot) =
+             (if \<exists>a b. buf = Some (a, b) then case the buf of (ptr, None) \<Rightarrow> Q
+              | (ptr, Some (cap, slot)) \<Rightarrow> P cap slot
+         else Q)"
+  by (simp add: case_option_If2)
+
 lemma invokeTCB_ThreadControl_ccorres:
+  notes prod.case_cong_weak[cong]
+  shows
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
    (invs' and sch_act_simple
           and tcb_inv_wf' (ThreadControl target slot faultep mcp priority cRoot vRoot buf)
@@ -584,15 +599,15 @@ lemma invokeTCB_ThreadControl_ccorres:
    (invokeTCB (ThreadControl target slot faultep mcp priority cRoot vRoot buf))
    (Call invokeTCB_ThreadControl_'proc)"
   (is "ccorres ?rvr ?xf (?P and (\<lambda>_. ?P')) ?Q [] ?af ?cf")
-  apply (rule ccorres_gen_asm)
+  apply (rule ccorres_gen_asm) using [[goals_limit=1]]
   apply (cinit lift: target_' slot_' faultep_' mcp_' priority_' cRoot_newCap_' cRoot_srcSlot_'
                      vRoot_newCap_' vRoot_srcSlot_' bufferAddr_' bufferSrcSlot_' bufferCap_'
                      updateFlags_')
    apply csymbr
-   apply (simp add: liftE_bindE case_option_If2 thread_control_flag_defs
-                    word_ao_dist if_and_helper if_n_0_0
+   apply(simp add: liftE_bindE thread_control_flag_defs case_option_If2
+                    word_ao_dist if_and_helper if_n_0_0  fun_app_def
                     tcb_cnode_index_defs[THEN ptr_add_assertion_positive[OF ptr_add_assertion_positive_helper]]
-               del: Collect_const cong: call_ignore_cong if_cong)
+               del: Collect_const cong add: call_ignore_cong if_cong)
    apply (rule_tac P="ptr_val (tcb_ptr_to_ctcb_ptr target) && ~~ mask 4
                           = ptr_val (tcb_ptr_to_ctcb_ptr target)
                         \<and> ptr_val (tcb_ptr_to_ctcb_ptr target) && 0xFFFFFE00 = target"
@@ -645,7 +660,7 @@ lemma invokeTCB_ThreadControl_ccorres:
              apply csymbr
              apply (simp add: liftE_bindE[symmetric] bindE_assoc getThreadBufferSlot_def
                               locateSlot_conv o_def
-                         del: Collect_const)
+                         del: Collect_const) using [[goals_limit=1]]
              apply (simp add: liftE_bindE del: Collect_const)
              apply (ctac(no_vcg) add: cteDelete_ccorres)
                apply (simp del: Collect_const add: Collect_False)
@@ -701,8 +716,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                     apply (clarsimp simp: ccap_relation_def cap_thread_cap_lift
                                           cap_to_H_def)
                    apply (rule ccorres_cond_false_seq | simp)+
-sorry (* FIXME ARMHYP proof breaks here, good luck
-                   apply (simp split: option.split_asm)
+                   apply (clarsimp split: option.split_asm)
                    apply (rule ccorres_return_CE, simp+)[1]
                   apply simp
                   apply (strengthen cte_is_derived_capMasterCap_strg
@@ -716,7 +730,7 @@ sorry (* FIXME ARMHYP proof breaks here, good luck
                apply (wp threadSet_ipcbuffer_trivial static_imp_wp | simp )+
              apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
                                    option_to_0_def ARM_HYP_H.tpidrurwRegister_def ARM_HYP.tpidrurwRegister_def
-                            split: option.split_asm)
+                            split: option.split_asm if_split_asm)
             apply simp
             apply (rule ccorres_split_throws)
              apply (rule ccorres_return_C_errorE, simp+)[1]
@@ -739,7 +753,7 @@ sorry (* FIXME ARMHYP proof breaks here, good luck
          apply csymbr
          apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq)+
          apply (simp add: split_def getThreadVSpaceRoot_def locateSlot_conv
-                          bindE_assoc
+                          bindE_assoc liftE_bindE
                      del: Collect_const)
          apply csymbr
          apply (ctac(no_vcg) add: cteDelete_ccorres)
@@ -782,8 +796,9 @@ sorry (* FIXME ARMHYP proof breaks here, good luck
                           del: Collect_const)
               apply (rule ccorres_return_Skip[unfolded dc_def])
              apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
-                                   tcbVTable_def tcbVTableSlot_def
-                                   cte_level_bits_def size_of_def option_to_0_def)
+                                   tcbVTable_def tcbVTableSlot_def Kernel_C.tcbVTable_def
+                                   cte_level_bits_def size_of_def option_to_0_def
+                           split: )
             apply csymbr
             apply (simp add: if_1_0_0 false_def Collect_False
                         del: Collect_const)
@@ -809,7 +824,7 @@ sorry (* FIXME ARMHYP proof breaks here, good luck
         apply csymbr
         apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq)+
         apply (simp add: split_def getThreadCSpaceRoot_def locateSlot_conv
-                         bindE_assoc
+                         bindE_assoc liftE_bindE
                     del: Collect_const)
         apply csymbr
         apply (ctac(no_vcg) add: cteDelete_ccorres)
@@ -906,7 +921,7 @@ sorry (* FIXME ARMHYP proof breaks here, good luck
                   dest!: isValidVTableRootD)
   apply (clarsimp simp: valid_cap'_def capAligned_def  word_bits_conv
                         obj_at'_def objBits_simps projectKOs)
-  done *)
+  done
 
 lemma setupReplyMaster_ccorres:
   "ccorres dc xfdc (tcb_at' t)
@@ -948,10 +963,8 @@ lemma setupReplyMaster_ccorres:
         apply clarsimp
         apply (rule conjI)
          apply (erule(2) cmap_relation_updI)
-sorry (* FIXME ARMHYP some simp rule is not firing properly; large goal, clarsimp seems stuck for
-          apply (clarsimp simp: ccte_relation_def cap_reply_cap_lift
-                                cte_lift_def)
-          several minutes
+          apply (clarsimp simp: ccte_relation_def cap_reply_cap_lift cte_lift_def
+                                cong: option.case_cong_weak)
           apply (simp add: cte_to_H_def cap_to_H_def mdb_node_to_H_def
                            nullMDBNode_def c_valid_cte_def)
           apply (simp add: cap_reply_cap_lift)
@@ -970,7 +983,7 @@ sorry (* FIXME ARMHYP some simp rule is not firing properly; large goal, clarsim
    apply vcg
   apply (clarsimp simp: word_sle_def cte_wp_at_ctes_of
                         tcb_cnode_index_defs tcbReplySlot_def)
-  done *)
+  done
 
 lemma restart_ccorres:
   "ccorres dc xfdc (invs' and tcb_at' thread and sch_act_simple)
@@ -1131,12 +1144,14 @@ lemma invokeTCB_CopyRegisters_ccorres:
 
 (* FIXME: move *)
 lemmas mapM_x_append = mapM_x_append2
-
+typ arch_tcb
 lemma invokeTCB_WriteRegisters_ccorres_helper:
   "\<lbrakk> unat (f (of_nat n)) = incn
          \<and> g (of_nat n) = register_from_H reg \<and> n'=incn
          \<and> of_nat n < bnd \<and> of_nat n < bnd2 \<rbrakk> \<Longrightarrow>
-   ccorres dc xfdc (sysargs_rel args buffer and sysargs_rel_n args buffer n' and tcb_at' dst and P)
+   ccorres dc xfdc (sysargs_rel args buffer and sysargs_rel_n args buffer n' and
+                    obj_at' (\<lambda>t. atcbVCPUPtr (tcbArch t) = atcbVCPUPtr (tcbArch tcb)) dst
+                    and valid_objs' and no_0_obj' and P)
                    (\<lbrace>\<acute>i = of_nat n\<rbrace>) hs
      (asUser dst (setRegister reg
           (sanitiseRegister tcb reg (args ! incn))))
@@ -1151,17 +1166,17 @@ lemma invokeTCB_WriteRegisters_ccorres_helper:
    apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n="incn" and buffer=buffer])
      apply (rule ccorres_symb_exec_r)
        apply (ctac add: setRegister_ccorres)
-      apply vcg
+      apply (vcg exspec=sanitiseRegister_spec')
      apply clarsimp
      apply (rule conseqPre, vcg, clarsimp)
-     apply fastforce
-   apply simp
-   apply (vcg exspec=getSyscallArg_modifies)
-  apply clarsimp
-sorry (* FIXME ARMHYP might not be true anymore due to changed sanitiseRegister on hyp platform,
-         consequently requiring investigation at the point this is used
-  apply (fastforce)
-  done *)
+   apply (rule tcb_at_h_t_valid)
+    apply (fastforce simp add: obj_at'_def projectKOs)
+   apply clarsimp
+  apply fastforce
+  apply simp
+  apply (vcg exspec=getSyscallArg_modifies)
+  apply (auto simp: obj_at'_def projectKOs sanitiseRegister_def split: register.splits)
+  done
 
 lemma doMachineOp_context:
   "(rv,s') \<in> fst (doMachineOp f s) \<Longrightarrow>
@@ -1452,8 +1467,10 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
            apply (rule ccorres_stateAssert)
            apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
                apply (rule_tac F="\<lambda>n. sysargs_rel args buffer and sysargs_rel_n args buffer (n + 2)
-                                     and tcb_at' dst and (\<lambda>s. dst \<noteq> ksCurThread s)"
+                                     and obj_at' (\<lambda>t. atcbVCPUPtr (tcbArch t) = atcbVCPUPtr (tcbArch rvb))
+            dst and valid_objs' and no_0_obj' and (\<lambda>s. dst \<noteq> ksCurThread s)"
                            and Q=UNIV in ccorres_mapM_x_whileQ)
+thm ccorres_mapM_x_whileQ
                    apply clarsimp
                    apply (rule invokeTCB_WriteRegisters_ccorres_helper [where args=args])
                    apply (simp add: unat_word_ariths frame_gp_registers_convs n_frameRegisters_def
@@ -1467,7 +1484,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
                             exspec=sanitiseRegister_modifies)
                  apply clarsimp
                 apply (simp add: sysargs_rel_n_def)
-                apply (rule hoare_pre, wp asUser_sysargs_rel)
+                apply (rule hoare_pre, wp asUser_sysargs_rel asUser_setRegister_ko_at')
                 apply (clarsimp simp: n_msgRegisters_def sysargs_rel_def)
                apply (simp add: frame_gp_registers_convs n_frameRegisters_def word_bits_def)
               apply simp
@@ -1476,7 +1493,8 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
              apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
                  apply (rule_tac F="\<lambda>n. sysargs_rel args buffer
                                      and sysargs_rel_n args buffer (n + length ARM_HYP_H.frameRegisters + 2)
-                                     and tcb_at' dst
+                                     and obj_at' (\<lambda>t. atcbVCPUPtr (tcbArch t) = atcbVCPUPtr (tcbArch rvb)) dst
+                                     and valid_objs' and no_0_obj'
                                      and (\<lambda>s. dst \<noteq> ksCurThread s)"
                              and Q=UNIV in ccorres_mapM_x_whileQ)
                      apply clarsimp
@@ -1550,9 +1568,9 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
    apply (case_tac list, simp)
    apply (case_tac lista, clarsimp simp: unat_eq_0)
    apply simp
-  apply (clarsimp simp: frame_gp_registers_convs word_less_nat_alt
+  apply (fastforce simp: frame_gp_registers_convs word_less_nat_alt obj_at'_def projectKOs
                         sysargs_rel_def n_frameRegisters_def n_msgRegisters_def
-                 split: if_split_asm)
+                  split: if_split_asm)+
   done
 
 lemma invokeTCB_Suspend_ccorres:
