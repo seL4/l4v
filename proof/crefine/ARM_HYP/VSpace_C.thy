@@ -1995,7 +1995,6 @@ lemma vcpu_switch_ccorres_Some:
     (* v \<noteq> None & CurVCPU \<noteq> None *)
    apply wpc
    apply (rename_tac ccurv cactive)
-   apply clarsimp
    apply (rule_tac R="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = Some (ccurv, cactive)" in ccorres_cond)
      apply (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
                      simp: Collect_const_mem cur_vcpu_relation_def from_bool_def true_def
@@ -2023,29 +2022,22 @@ lemma vcpu_switch_ccorres_Some:
     (* ccactive = false *)
     apply (rule ccorres_rhs_assoc)
     apply (ctac (no_vcg) add: isb_ccorres)
-      apply (ctac (no_vcg) add: vcpu_enable_ccorres)
-        apply (rule_tac v="(v, True)" in armHSCurVCPU_update_active_ccorres[simplified dc_def])
-         apply (simp add: from_bool_def true_def)
-        apply simp
-       apply wp
-      apply clarsimp
-     apply (wpsimp wp: hoare_vcg_conj_lift vcpuSave_invs_no_cicd' vcpuSave_typ_at')
-    (* ccactive =true *)
+     apply (ctac (no_vcg) add: vcpu_enable_ccorres)
+      apply (rule_tac v="(v, cactive)" in armHSCurVCPU_update_active_ccorres[simplified dc_def])
+       apply (simp add: from_bool_def true_def)
+      apply simp
+     apply wp
+    apply (wpsimp wp: hoare_vcg_conj_lift vcpuSave_invs_no_cicd' vcpuSave_typ_at')
+   (* ccactive =true *)
    apply (rule ccorres_return_Skip[unfolded dc_def])
-    (* last goal *)
+  (* last goal *)
   apply simp
   apply (rule conjI
       | clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
                  simp: Collect_const_mem cur_vcpu_relation_def from_bool_def true_def
       | fastforce dest: invs_cicd_arch_state'  split: option.splits
                   simp: valid_arch_state'_def vcpu_at_is_vcpu' ko_wp_at'_def Collect_const_mem)+
-   defer
-   apply (rule conjI
-      | clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
-                simp: Collect_const_mem cur_vcpu_relation_def from_bool_def true_def
-      | fastforce dest: invs_cicd_arch_state'  split: option.splits
-                  simp: valid_arch_state'_def vcpu_at_is_vcpu' ko_wp_at'_def Collect_const_mem)+
-sorry  (* almost there *)
+  done
 
 lemma vcpu_switch_ccorres:
   "ccorres dc xfdc
@@ -2059,7 +2051,6 @@ lemma vcpu_switch_ccorres:
 lemma invs_no_cicd_sym_hyp' [elim!]:
   "invs_no_cicd' s \<Longrightarrow> sym_refs (state_hyp_refs_of' s)"
   by (simp add: invs_no_cicd'_def valid_state'_def)
-
 
 lemma setVMRoot_ccorres:
   "ccorres dc xfdc
