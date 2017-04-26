@@ -180,7 +180,7 @@ where
      range_check priority 0 31;
      range_check group 0 1;
      num_list_regs \<leftarrow> liftE $ gets (arm_gicvcpu_numlistregs \<circ> arch_state);
-     range_check index 0 (of_nat num_list_regs);
+     range_check index 0 ((of_nat num_list_regs) - 1);
      vcpu \<leftarrow> liftE $ get_vcpu p;
      vcpuLR \<leftarrow> returnOk (vgic_lr $ vcpu_vgic $ vcpu);
 
