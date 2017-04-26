@@ -445,7 +445,7 @@ lemma do_ipc_transfer_tcb_caps [Ipc_AI_assms]:
   done
 
 
-crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply "P (typ_at T p s)"
+crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply, arch_tcb_sanitise_condition "P (typ_at T p s)"
 
 lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
   "\<lbrace>valid_vspace_objs\<rbrace>

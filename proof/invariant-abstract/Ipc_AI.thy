@@ -278,6 +278,11 @@ locale Ipc_AI =
       \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
         handle_arch_fault_reply x4 t label msg
       \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  assumes arch_tcb_sanitise_condition_typ_at[wp]:
+    "\<And> P T p t.
+      \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
+        arch_tcb_sanitise_condition t
+      \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   assumes do_fault_transfer_cte_wp_at[wp]:
   "\<And> P p x t label msg.
       \<lbrace>cte_wp_at P p :: 'state_ext state \<Rightarrow> bool\<rbrace>

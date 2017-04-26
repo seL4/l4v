@@ -35,7 +35,7 @@ lemma vcpu_switch_valid_etcbs[wp]:
   by (rule valid_etcbs_lift; wp)
 
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
-  arch_switch_to_idle_thread, arch_switch_to_thread, vcpu_disable, vcpu_restore, vcpu_save, set_vm_root
+  arch_switch_to_idle_thread, arch_switch_to_thread, vcpu_disable, vcpu_restore, vcpu_save, set_vm_root, arch_tcb_sanitise_condition
   valid_etcbs
   (simp: whenE_def ignore: clearExMonitor set_object do_machine_op wp: crunch_wps)
 
@@ -66,7 +66,7 @@ lemma vcpu_switch_valid_queues[wp]:
   by (rule valid_queues_lift; wp)
 
 crunch valid_queues[wp, DetSchedSchedule_AI_assms]:
-  arch_switch_to_idle_thread, arch_switch_to_thread, vcpu_disable, vcpu_restore, vcpu_save, set_vm_root
+  arch_switch_to_idle_thread, arch_switch_to_thread, vcpu_disable, vcpu_restore, vcpu_save, set_vm_root, arch_tcb_sanitise_condition
   valid_queues
   (simp: whenE_def ignore: set_tcb_queue tcb_sched_action clearExMonitor wp: crunch_wps)
 
@@ -79,7 +79,7 @@ lemma vcpu_switch_weak_valid_sched_action[wp]:
   by (rule weak_valid_sched_action_lift; wp)
 
 crunch weak_valid_sched_action[wp, DetSchedSchedule_AI_assms]:
-  arch_switch_to_idle_thread, arch_switch_to_thread, vcpu_disable, vcpu_restore, vcpu_save, set_vm_root
+  arch_switch_to_idle_thread, arch_switch_to_thread, vcpu_disable, vcpu_restore, vcpu_save, set_vm_root, arch_tcb_sanitise_condition
   weak_valid_sched_action
   (simp: whenE_def wp: crunch_wps)
 
@@ -160,13 +160,13 @@ lemma set_vm_root_valid_sched_action[wp]:
   "\<lbrace>valid_sched_action\<rbrace> set_vm_root param_a \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
   by (rule valid_sched_action_lift; wp)
 
-crunch ct_not_in_q[wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread ct_not_in_q
+crunch ct_not_in_q[wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_tcb_sanitise_condition ct_not_in_q
   (simp: whenE_def ignore: clearExMonitor)
 
-crunch is_activatable[wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread "is_activatable t"
+crunch is_activatable[wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_tcb_sanitise_condition "is_activatable t"
   (simp: whenE_def ignore: clearExMonitor)
 
-crunch valid_sched_action[wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread valid_sched_action
+crunch valid_sched_action[wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_tcb_sanitise_condition valid_sched_action
   (simp: whenE_def ignore: clearExMonitor)
 
 crunch it[wp]: set_vm_root "\<lambda>s. P (idle_thread s)"
@@ -176,7 +176,7 @@ lemma set_vm_root_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> set_vm_root tcb \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   by (rule valid_sched_lift; wp)
 
-crunch valid_sched[wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread valid_sched
+crunch valid_sched[wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_tcb_sanitise_condition valid_sched
   (simp: whenE_def ignore: clearExMonitor)
 
 lemma set_vm_rootct_in_cur_domain_2[wp]:
@@ -415,14 +415,14 @@ crunch valid_sched [wp, DetSchedSchedule_AI_assms]: arch_invoke_irq_control "val
 crunch valid_list [wp, DetSchedSchedule_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread "valid_list"
 
-crunch cur_tcb [wp, DetSchedSchedule_AI_assms]: handle_arch_fault_reply, handle_vm_fault cur_tcb
+crunch cur_tcb [wp, DetSchedSchedule_AI_assms]: handle_arch_fault_reply, handle_vm_fault, arch_tcb_sanitise_condition cur_tcb
 
-crunch not_cur_thread [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg "not_cur_thread t'"
+crunch not_cur_thread [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_tcb_sanitise_condition "not_cur_thread t'"
 crunch valid_sched    [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg valid_sched
-crunch ready_queues   [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg "\<lambda>s. P (ready_queues s)"
+crunch ready_queues   [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_tcb_sanitise_condition "\<lambda>s. P (ready_queues s)"
 crunch valid_etcbs    [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg valid_etcbs
 
-crunch scheduler_action [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg "\<lambda>s. P (scheduler_action s)"
+crunch scheduler_action [wp, DetSchedSchedule_AI_assms]: make_arch_fault_msg, arch_tcb_sanitise_condition "\<lambda>s. P (scheduler_action s)"
 
 end
 

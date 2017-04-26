@@ -773,7 +773,7 @@ qed
 
 lemma dissociate_vcpu_tcb_sym_refs_hyp[wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> dissociate_vcpu_tcb vr t \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  apply (simp add: dissociate_vcpu_tcb_def)
+  apply (simp add: dissociate_vcpu_tcb_def arch_tcb_sanitise_condition_def)
   apply (wp arch_thread_set_wp set_vcpu_wp)
        apply (rule_tac Q="\<lambda>_ s. obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_vcpu (tcb_arch tcb) = Some vr) t s
                              \<and> sym_refs (state_hyp_refs_of s)" in hoare_post_imp)
@@ -811,12 +811,12 @@ lemma as_user_unlive_hyp[wp]:
 
 lemma dissociate_vcpu_tcb_unlive_hyp_vr[wp]:
   "\<lbrace>\<top>\<rbrace> dissociate_vcpu_tcb vr t \<lbrace> \<lambda>_. obj_at (Not \<circ> hyp_live) vr\<rbrace>"
-  unfolding dissociate_vcpu_tcb_def
+  unfolding dissociate_vcpu_tcb_def arch_tcb_sanitise_condition_def
   by (wpsimp wp: get_vcpu_wp hoare_vcg_const_imp_lift hoare_drop_imps)
 
 lemma dissociate_vcpu_tcb_unlive_hyp_t[wp]:
   "\<lbrace>\<top>\<rbrace> dissociate_vcpu_tcb vr t \<lbrace> \<lambda>_. obj_at (Not \<circ> hyp_live) t\<rbrace>"
-  unfolding dissociate_vcpu_tcb_def
+  unfolding dissociate_vcpu_tcb_def arch_tcb_sanitise_condition_def
   by (wpsimp wp: hoare_vcg_const_imp_lift hoare_drop_imps get_vcpu_wp)
 
 lemma arch_thread_set_unlive0[wp]:
@@ -885,7 +885,7 @@ crunch if_live_then_nonz_cap[wp]: vcpu_invalidate_active if_live_then_nonz_cap
 
 lemma dissociate_vcpu_tcb_if_live_then_nonz_cap[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> dissociate_vcpu_tcb vr t \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  unfolding dissociate_vcpu_tcb_def
+  unfolding dissociate_vcpu_tcb_def arch_tcb_sanitise_condition_def
   by (wpsimp wp: get_vcpu_wp arch_thread_get_wp hoare_drop_imps)
 
 lemma vcpu_invalidate_active_ivs[wp]: "\<lbrace>invs\<rbrace> vcpu_invalidate_active \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -990,7 +990,7 @@ lemma set_vcpu_None_valid_arch[wp]:
 
 lemma dissociate_vcpu_valid_arch[wp]:
   "\<lbrace>valid_arch_state\<rbrace> dissociate_vcpu_tcb vr t \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
-  unfolding dissociate_vcpu_tcb_def vcpu_invalidate_active_def
+  unfolding dissociate_vcpu_tcb_def vcpu_invalidate_active_def arch_tcb_sanitise_condition_def
   by (wpsimp wp: get_vcpu_wp arch_thread_get_wp
        | strengthen valid_arch_state_vcpu_update_str | wp_once hoare_drop_imps)+
 
@@ -1013,7 +1013,7 @@ lemma dissociate_vcpu_tcb_invs[wp]: "\<lbrace>invs\<rbrace> dissociate_vcpu_tcb 
   apply (simp add: pred_conj_def)
   apply (rule hoare_vcg_conj_lift[rotated])+
   apply (wpsimp wp: weak_if_wp get_vcpu_wp arch_thread_get_wp as_user_only_idle
-         | simp add: dissociate_vcpu_tcb_def vcpu_invalidate_active_def
+         | simp add: dissociate_vcpu_tcb_def vcpu_invalidate_active_def arch_tcb_sanitise_condition_def
          | strengthen valid_arch_state_vcpu_update_str valid_global_refs_vcpu_update_str
          | simp add: vcpu_disable_def
          | wp_once hoare_drop_imps)+
@@ -1058,7 +1058,7 @@ lemma dissociate_vcpu_tcb_unlive_v:
   "\<lbrace>\<top>\<rbrace> dissociate_vcpu_tcb vr t \<lbrace> \<lambda>_. obj_at (Not \<circ> live) vr\<rbrace>"
   unfolding dissociate_vcpu_tcb_def
   by (wpsimp wp: arch_thread_set_unlive_other get_vcpu_wp arch_thread_get_wp hoare_drop_imps
-           simp: obj_at_def)
+           simp:  bind_assoc)
 
 lemma vcpu_finalise_unlive:
   "\<lbrace>\<top>\<rbrace> vcpu_finalise r \<lbrace> \<lambda>_. obj_at (Not \<circ> live) r \<rbrace>"

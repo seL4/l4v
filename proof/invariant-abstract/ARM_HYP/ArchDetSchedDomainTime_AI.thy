@@ -49,12 +49,12 @@ crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<l
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects, arch_tcb_set_ipc_buffer,
-  arch_invoke_irq_control, handle_vm_fault,
+  arch_invoke_irq_control, handle_vm_fault, arch_tcb_sanitise_condition,
   prepare_thread_delete
   "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps)
 
-crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_time s)"
+crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap, arch_tcb_sanitise_condition "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:

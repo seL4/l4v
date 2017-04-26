@@ -17,7 +17,7 @@ context Arch begin global_naming ARM
 named_theorems Deterministic_AI_assms
 
 crunch valid_list[wp, Deterministic_AI_assms]:
- vcpu_save, vcpu_enable, vcpu_disable, vcpu_restore, arch_tcb_set_ipc_buffer valid_list
+ vcpu_save, vcpu_enable, vcpu_disable, vcpu_restore, arch_tcb_set_ipc_buffer, arch_tcb_sanitise_condition valid_list
   (wp: crunch_wps simp: unless_def crunch_simps)
 
 lemma vcpu_switch_valid_list[wp, Deterministic_AI_assms]:
