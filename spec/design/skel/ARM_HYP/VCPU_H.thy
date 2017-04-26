@@ -18,7 +18,7 @@ begin
 context Arch begin global_naming ARM_HYP_H
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs CONTEXT ARM_HYP_H
-#INCLUDE_HASKELL SEL4/Object/VCPU/ARM_HYP.lhs CONTEXT ARM_HYP_H ArchInv=Arch NOT vcpuDisable vcpuEnable vcpuRestore vcpuSave vcpuSwitch vcpuInvalidateActive vcpuCleanInvalidateActive countTrailingZeros virqSetEOIIRQEN vgicMaintenance
+#INCLUDE_HASKELL SEL4/Object/VCPU/ARM_HYP.lhs CONTEXT ARM_HYP_H ArchInv=Arch NOT vcpuUpdate vgicUpdate vcpuSaveRegister vcpuDisable vcpuEnable vcpuRestore vcpuSave vcpuSwitch vcpuInvalidateActive vcpuCleanInvalidateActive countTrailingZeros virqSetEOIIRQEN vgicMaintenance
 
 
 end

@@ -24,7 +24,7 @@ context Arch begin global_naming ARM_HYP_H
 #INCLUDE_HASKELL SEL4/Object/VCPU/ARM_HYP.lhs CONTEXT ARM_HYP_H decls_only ONLY countTrailingZeros
 #INCLUDE_HASKELL SEL4/Object/VCPU/ARM_HYP.lhs CONTEXT ARM_HYP_H bodies_only ONLY countTrailingZeros
 
-#INCLUDE_HASKELL SEL4/Object/VCPU/ARM_HYP.lhs CONTEXT ARM_HYP_H ArchInv=Arch ONLY vcpuDisable vcpuEnable vcpuRestore vcpuSave vcpuSwitch vcpuInvalidateActive vcpuCleanInvalidateActive virqSetEOIIRQEN vgicMaintenance
+#INCLUDE_HASKELL SEL4/Object/VCPU/ARM_HYP.lhs CONTEXT ARM_HYP_H ArchInv=Arch ONLY vcpuUpdate vgicUpdate vcpuSaveRegister vcpuDisable vcpuEnable vcpuRestore vcpuSave vcpuSwitch vcpuInvalidateActive vcpuCleanInvalidateActive virqSetEOIIRQEN vgicMaintenance
 
 #INCLUDE_HASKELL SEL4/Kernel/Hypervisor/ARM_HYP.lhs Arch= CONTEXT ARM_HYP_H decls_only
 #INCLUDE_HASKELL SEL4/Kernel/Hypervisor/ARM_HYP.lhs Arch= CONTEXT ARM_HYP_H bodies_only
