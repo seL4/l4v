@@ -26,7 +26,7 @@ hypervisor extensions on ARM.
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.Object.Structures.TARGET
-> import SEL4.Machine.Hardware.ARM_HYP as M
+> import SEL4.Machine.Hardware.ARM_HYP hiding (MachineMonad)
 > import SEL4.Model.StateData.TARGET
 > import SEL4.API.Failures
 > import SEL4.Object.Instances()
@@ -376,12 +376,12 @@ For initialisation, see makeVCPUObject.
 
 > vcpuUpdate :: PPtr VCPU -> (VCPU -> VCPU) -> Kernel ()
 > vcpuUpdate vcpuPtr f = do
->     vcpu <- getObject vcpuPtr;
+>     vcpu <- getObject vcpuPtr
 >     setObject vcpuPtr (f vcpu)
 
-> vcpuSaveRegister :: PPtr VCPU -> VCPUReg -> M.MachineMonad Word -> Kernel ()
+> vcpuSaveRegister :: PPtr VCPU -> VCPUReg -> MachineMonad Word -> Kernel ()
 > vcpuSaveRegister vcpuPtr r mop = do
->     rval <- doMachineOp mop;
+>     rval <- doMachineOp mop
 >     vcpuUpdate vcpuPtr (\vcpu -> vcpu { vcpuRegs = (vcpuRegs vcpu) // [(r,rval)] })
 
 > vgicUpdate :: PPtr VCPU -> (GICVCPUInterface -> GICVCPUInterface) -> Kernel ()
