@@ -2134,13 +2134,14 @@ lemma setVMRoot_ccorres:
         apply (ctac (no_vcg) add: armv_contextSwitch_ccorres[unfolded dc_def])
          apply (rule ccorres_move_c_guard_tcb)
          apply (rule ccorres_symb_exec_l3)
+            apply (rename_tac tcb)
+            apply (rule_tac P="ko_at' tcb thread" in ccorres_cross_over_guard)
             apply (ctac add: vcpu_switch_ccorres[unfolded dc_def]) (* c *)
            apply wp
           apply (wp getObject_tcb_wp)
          apply simp
         apply clarsimp
         apply (wp hoare_drop_imp hoare_vcg_ex_lift armv_contextSwitch_invs_no_cicd' valid_case_option_post_wp')
-       apply clarsimp
        apply (simp add: checkPDNotInASIDMap_def checkPDASIDMapMembership_def)
        apply (rule ccorres_stateAssert)
        apply (rule ccorres_rhs_assoc)+
@@ -2155,11 +2156,11 @@ lemma setVMRoot_ccorres:
        apply wp
       apply simp
       apply (wp hoare_drop_imps)[1]
-     apply (clarsimp simp: Collect_const_mem )
-     apply (vcg exspec=findPDForASID_modifies) (*BAD*)
+     apply (simp add: Collect_const_mem)
+     apply (vcg exspec=findPDForASID_modifies)
     apply (simp add: getSlotCap_def)
     apply (wp getCTE_wp')
-   apply (clarsimp simp add:  if_1_0_0 simp del: Collect_const )
+   apply (clarsimp simp add:  if_1_0_0 simp del: Collect_const)
    apply vcg
   apply (clarsimp simp: Collect_const_mem word_sle_def)
   apply (rule conjI)
@@ -2178,15 +2179,16 @@ lemma setVMRoot_ccorres:
                         cte_at_tcb_at_16' addrFromPPtr_def)
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject2
                  dest!: isCapDs)
-apply (rule conjI)
-prefer 2
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]
                         cap_lift_page_directory_cap cap_to_H_def
                         cap_page_directory_cap_lift_def
                         to_bool_def
                  elim!: ccap_relationE split: if_split_asm)
-
-  sorry  (* almost there *)
+  apply (rename_tac s'')
+  apply (drule_tac s=s'' in obj_at_cslift_tcb, assumption)
+  apply (clarsimp simp: typ_heap_simps)
+  apply (clarsimp simp: ctcb_relation_def carch_tcb_relation_def)
+  done
 
 (* FIXME: move *)
 lemma invs'_invs_no_cicd:
