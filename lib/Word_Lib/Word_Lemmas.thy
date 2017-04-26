@@ -5480,4 +5480,44 @@ proof -
   thus ?thesis by simp
 qed
 
+(* Miscellaneous conditional injectivity rules. *)
+
+lemma drop_eq_mono:
+  assumes le: "m \<le> n"
+  assumes drop: "drop m xs = drop m ys"
+  shows "drop n xs = drop n ys"
+  proof -
+    have ex: "\<exists>p. n = p + m" by (rule exI[of _ "n - m"]) (simp add: le)
+    then obtain p where p: "n = p + m" by blast
+    show ?thesis unfolding p drop_drop[symmetric] drop by simp
+  qed
+
+lemma mult_pow2_inj:
+  assumes ws: "m + n \<le> LENGTH('a)"
+  assumes le: "x \<le> mask m" "y \<le> mask m"
+  assumes eq: "x * 2^n = y * (2^n::'a::len word)"
+  shows "x = y"
+  proof (cases n)
+    case 0 thus ?thesis using eq by simp
+  next
+    case (Suc n')
+    have m_lt: "m < LENGTH('a)" using Suc ws by simp
+    have xylt: "x < 2^m" "y < 2^m" using le m_lt unfolding mask_2pm1 by auto
+    have lenm: "n \<le> LENGTH('a) - m" using ws by simp
+    show ?thesis
+      using eq xylt
+      apply (fold shiftl_t2n[where n=n, simplified mult.commute])
+      apply (simp only: word_bl.Rep_inject[symmetric] bl_shiftl)
+      apply (erule ssubst[OF less_is_drop_replicate])+
+      apply (clarsimp elim!: drop_eq_mono[OF lenm])
+      done
+  qed
+
+lemma word_of_nat_inj:
+  assumes bounded: "x < 2 ^ LENGTH('a)" "y < 2 ^ LENGTH('a)"
+  assumes of_nats: "of_nat x = (of_nat y :: 'a::len word)"
+  shows "x = y"
+  by (rule contrapos_pp[OF of_nats]; cases "x < y"; cases "y < x")
+     (auto dest: bounded[THEN of_nat_mono_maybe])
+
 end
