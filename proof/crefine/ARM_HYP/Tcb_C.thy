@@ -1659,6 +1659,8 @@ lemma invokeTCB_ReadRegisters_ccorres:
 notes
   nat_min_simps [simp del]
   wordSize_def' [simp]
+  option.case_cong_weak [cong]
+  prod.case_cong_weak [cong]
 shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' (op = Restart)
@@ -1672,7 +1674,7 @@ shows
        (doE reply \<leftarrow> invokeTCB (ReadRegisters target susp n archCp);
            liftE (replyOnRestart thread reply isCall) odE)
        (Call invokeTCB_ReadRegisters_'proc)"
-  apply (rule ccorres_gen_asm)
+  apply (rule ccorres_gen_asm) using [[goals_limit=1]]
   apply (cinit' lift: tcb_src_' suspendSource_' n_' call_'
                 simp: invokeTCB_def liftE_bindE bind_assoc)
    apply (rule ccorres_symb_exec_r)
@@ -1985,7 +1987,6 @@ shows
                          apply clarsimp
                         apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
                         apply (simp add: message_info_to_H_def)
-sorry (* FIXME ARMHYP good luck
                         apply (clarsimp simp: n_frameRegisters_def n_msgRegisters_def
                                               n_gpRegisters_def field_simps upto_enum_word
                                               word_less_nat_alt Types_H.msgMaxLength_def
@@ -2061,7 +2062,7 @@ sorry (* FIXME ARMHYP good luck
    apply (rule conseqPre, vcg, clarsimp)
   apply (clarsimp simp: rf_sr_ksCurThread ct_in_state'_def true_def
                  split: if_split)
-  done *)
+  done
 
 lemma decodeReadRegisters_ccorres:
   "ccorres (intr_and_se_rel \<currency> dc)  (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -3682,6 +3683,9 @@ lemma nTFN_case_If_ptr:
   by (auto simp: isNotificationCap_def split: capability.splits)
 
 lemma decodeBindNotification_ccorres:
+  notes prod.case_cong_weak[cong]
+        option.case_cong_weak[cong]
+  shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
@@ -3697,13 +3701,12 @@ lemma decodeBindNotification_ccorres:
      (Call decodeBindNotification_'proc)"
   using [[goals_limit=1]]
   apply (simp, rule ccorres_gen_asm)
-  apply (cinit lift: cap_' excaps_' simp: decodeBindNotification_def)
+  apply (cinit' lift: cap_' excaps_' simp: decodeBindNotification_def)
    apply (simp add: bind_assoc whenE_def bind_bindE_assoc interpret_excaps_test_null
                del: Collect_const cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: excaps_map_def invocationCatch_def throwError_bind null_def
                cong: StateSpace.state.fold_congs globals.fold_congs)
-sorry (* FIXME ARMHYP good luck
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
    apply (simp add: excaps_map_def null_def del: Collect_const cong: call_ignore_cong)
@@ -3872,7 +3875,7 @@ sorry (* FIXME ARMHYP good luck
        apply (auto simp: word_sless_alt typ_heap_simps cap_get_tag_ThreadCap ctcb_relation_def
                          option_to_ptr_def option_to_0_def
                   split: if_split)
-  done *)
+  done
 
 
 lemma decodeSetSpace_ccorres:
