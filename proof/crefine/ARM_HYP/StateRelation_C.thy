@@ -334,8 +334,9 @@ where
   | "fault_to_H (SeL4_Fault_VCPUFault vf) lf
           = Some (ArchFault (VCPUFault (seL4_Fault_VCPUFault_CL.hsr_CL vf)))"
   | "fault_to_H (SeL4_Fault_VGICMaintenance vf) lf
-          = Some (ArchFault (VGICMaintenance [seL4_Fault_VGICMaintenance_CL.idx_CL vf,
-                                              seL4_Fault_VGICMaintenance_CL.idxValid_CL vf]))"
+          = Some (ArchFault (VGICMaintenance (if seL4_Fault_VGICMaintenance_CL.idxValid_CL vf = 1
+                                              then Some (seL4_Fault_VGICMaintenance_CL.idx_CL vf)
+                                              else None)))"
 
 definition
   cfault_rel :: "Fault_H.fault option \<Rightarrow> seL4_Fault_CL option \<Rightarrow> lookup_fault_CL option \<Rightarrow> bool"
