@@ -384,10 +384,9 @@ where "dissociate_vcpu_tcb vr t \<equiv> do
   when (\<exists>a. cur_v = Some (vr,a)) vcpu_invalidate_active;
   arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := None \<rparr>) t;
   set_vcpu vr (v\<lparr> vcpu_tcb := None \<rparr>);
-  tcb \<leftarrow> gets_the $ get_tcb t;
   as_user t $ do
     cpsr \<leftarrow> getRegister CPSR;
-    setRegister CPSR $ sanitise_register tcb CPSR cpsr
+    setRegister CPSR $ sanitise_register False CPSR cpsr
   od
 od"
 

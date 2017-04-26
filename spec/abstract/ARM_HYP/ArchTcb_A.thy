@@ -26,16 +26,24 @@ where
   "arch_tcb_set_ipc_buffer target ptr \<equiv> as_user target $ set_register TPIDRURW ptr"
 
 definition
-  sanitise_register :: "tcb \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
+  sanitise_register :: "bool \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 where
   "sanitise_register t r v \<equiv> case r of
       CPSR \<Rightarrow>
-       if tcb_vcpu (tcb_arch t) \<noteq> None \<and>
+       if t \<and>
           v && 0x1f \<in> {0x10, 0x11, 0x12, 0x13, 0x17, 0x1b, 0x1f}
              (* PMODE_(USER/FIQ/IRQ/SUPERVISOR/ABORT/UNDEFINED/SYSTEM) *)
        then v
        else (v && 0xf8000000) || 0x150
     | _    \<Rightarrow> v"
+
+definition
+  arch_tcb_sanitise_condition :: "obj_ref \<Rightarrow> (bool, 'a::state_ext) s_monad"
+where
+  "arch_tcb_sanitise_condition t \<equiv> do
+          vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
+          return (vcpu \<noteq> None)
+   od"
 
 end
 end
