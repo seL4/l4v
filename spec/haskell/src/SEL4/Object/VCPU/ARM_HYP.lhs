@@ -451,11 +451,12 @@ For initialisation, see makeVCPUObject.
 >     vcpu <- getObject vcpuPtr
 >     let vgic = vcpuVGIC vcpu
 >
+>     numListRegs <- gets (armKSGICVCPUNumListRegs . ksArchState)
 >     doMachineOp $ do
 >         set_gic_vcpu_ctrl_vmcr (vgicVMCR vgic)
 >         set_gic_vcpu_ctrl_apr (vgicAPR vgic)
 >
->         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (fromIntegral i, (vgicLR vgic) ! i)) [0..gicVCPUMaxNumLR-1])
+>         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (fromIntegral i, (vgicLR vgic) ! i)) [0..numListRegs])
 >
 >         -- restore banked VCPU registers except SCTLR (that's in VCPUEnable)
 >         set_lr_svc (vcpuRegs vcpu ! VCPURegLRsvc)
