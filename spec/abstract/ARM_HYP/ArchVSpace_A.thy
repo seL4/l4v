@@ -485,11 +485,12 @@ where
      do_machine_op $ isb;
      vcpu \<leftarrow> get_vcpu vr;   (* restore GIC VCPU control state *)
      vgic \<leftarrow> return (vcpu_vgic vcpu);
+     num_list_regs \<leftarrow> gets (arm_gicvcpu_numlistregs \<circ> arch_state);
      do_machine_op $ do
          set_gic_vcpu_ctrl_vmcr (vgic_vmcr vgic);
          set_gic_vcpu_ctrl_apr (vgic_apr vgic);
          mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (of_int (fst p)) (snd p))
-              (map (\<lambda>i. (i, (vgic_lr vgic) i)) [0 ..< gicVCPUMaxNumLR]);
+              (map (\<lambda>i. (i, (vgic_lr vgic) i)) [0 ..< num_list_regs + 1]);
          (* restore banked VCPU registers except SCTLR (that's in VCPUEnable) *)
          set_lr_svc (vcpu_regs vcpu VCPURegLRsvc);
          set_sp_svc (vcpu_regs vcpu VCPURegSPsvc);
