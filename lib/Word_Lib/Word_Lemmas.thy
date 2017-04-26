@@ -2021,6 +2021,9 @@ lemma and_mask_shiftl_comm:
   "m+n \<le> size w \<Longrightarrow> (w && mask m) << n = (w << n) && mask (m+n)"
   by (simp add: and_mask word_size shiftl_shiftl) (simp add: shiftl_shiftr1)
 
+lemma le_mask_shiftl_le_mask: "s = m + n \<Longrightarrow> x \<le> mask n \<Longrightarrow> x << m \<le> mask s"
+  by (simp add: le_mask_iff shiftl_shiftr3)
+
 lemma and_not_mask_twice:
   "(w && ~~ mask n) && ~~ mask m = w && ~~ mask (max m n)"
   apply (simp add: and_not_mask)
