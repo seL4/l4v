@@ -464,6 +464,17 @@ lemma pde_at_base:
   "pde_at p s \<Longrightarrow> pde_at (p && ~~mask (pde_bits + 4)) s"
   by (simp add: pde_at_def vspace_bits_defs mask_lower_twice2 is_aligned_andI1)
 
+lemma of_nat_8_less_16_le_mask_7_is_aligned_3:
+  fixes p :: machine_word
+  shows "(\<exists>n. p = of_nat n * 8 \<and> n < 16) \<longleftrightarrow> p \<le> mask 7 \<and> is_aligned p 3"
+  apply (rule iffI; clarsimp simp: word_shift_by_3)
+   apply (clarsimp simp: is_aligned_mask le_mask_shiftl_le_mask of_nat_le_pow)
+  apply (rule_tac x="unat (p >> 3)" in exI)
+  apply (clarsimp simp: ucast_nat_def is_aligned_shiftr_shiftl
+                intro!: unat_less_helper shiftr_less_t2n[where m=4, simplified])
+  apply (clarsimp simp: mask_def elim!: le_less_trans)
+  done
+
 lemma superSectionPDEOffsets_nth:
   "n < length superSectionPDEOffsets \<Longrightarrow> superSectionPDEOffsets ! n = of_nat n * 8"
   apply (simp add: superSectionPDEOffsets_def vspace_bits_defs
@@ -479,13 +490,20 @@ lemma length_superSectionPDEOffsets:
   "length superSectionPDEOffsets = 16"
   by (simp add: superSectionPDEOffsets_def vspace_bits_defs upto_enum_step_def)
 
+lemma set_superSectionPDEOffsets:
+  "set superSectionPDEOffsets = {of_nat n * 8 |n. n < 16}"
+  unfolding set_conv_nth length_superSectionPDEOffsets[symmetric]
+  by (rule Collect_cong; rule iffI; clarsimp; frule superSectionPDEOffsets_nth; force)
+
+lemma set_superSectionPDEOffsets':
+  "set superSectionPDEOffsets = {p. p \<le> mask 7 \<and> is_aligned p 3}"
+  unfolding set_superSectionPDEOffsets
+  by (rule Collect_cong, rule of_nat_8_less_16_le_mask_7_is_aligned_3)
+
 lemma in_superSectionPDEOffsets:
   "is_aligned p 3 \<Longrightarrow> \<exists>p' \<in> set superSectionPDEOffsets. (p && ~~ mask 7) + p' = p"
-  apply (simp add: mask_out_sub_mask)
-  apply (clarsimp simp: superSectionPDEOffsets_def upto_enum_def upto_enum_step_def Let_def
-                        vspace_bits_defs)
-  sorry (* word lemma *)
-
+  by (simp add: mask_out_sub_mask set_superSectionPDEOffsets'
+                and_mask_eq_iff_le_mask[symmetric] aligned_after_mask)
 
 lemma in_zip_set_snd:
   "\<lbrakk> x \<in> set xs; length ys = length xs \<rbrakk> \<Longrightarrow> \<exists>y. (x,y) \<in> set (zip xs ys)"
@@ -752,17 +770,35 @@ lemma pte_at_base:
   "pte_at p s \<Longrightarrow> pte_at (p && ~~mask (pte_bits + 4)) s"
   by (simp add: pte_at_def vspace_bits_defs mask_lower_twice2 is_aligned_andI1)
 
+lemma largePagePTEOffsets_nth:
+  "n < length largePagePTEOffsets \<Longrightarrow> largePagePTEOffsets ! n = of_nat n * 8"
+  apply (simp add: largePagePTEOffsets_def vspace_bits_defs
+                   upto_enum_step_def upto_enum_word nth_append
+            split: if_split)
+  apply clarsimp
+  apply (subgoal_tac "n = 15")
+   apply simp
+  apply arith
+  done
+
 lemma length_largePagePTEOffsets:
   "length largePagePTEOffsets = 16"
   by (simp add: largePagePTEOffsets_def vspace_bits_defs upto_enum_step_def)
 
+lemma set_largePagePTEOffsets:
+  "set largePagePTEOffsets = {of_nat n * 8 |n. n < 16}"
+  unfolding set_conv_nth length_largePagePTEOffsets[symmetric]
+  by (rule Collect_cong; rule iffI; clarsimp; frule largePagePTEOffsets_nth; force)
+
+lemma set_largePagePTEOffsets':
+  "set largePagePTEOffsets = {p. p \<le> mask 7 \<and> is_aligned p 3}"
+  unfolding set_largePagePTEOffsets
+  by (rule Collect_cong, rule of_nat_8_less_16_le_mask_7_is_aligned_3)
+
 lemma in_largePagePTEOffsets:
   "is_aligned p 3 \<Longrightarrow> \<exists>p' \<in> set largePagePTEOffsets. (p && ~~ mask 7) + p' = p"
-  apply (simp add: mask_out_sub_mask)
-  apply (clarsimp simp: largePagePTEOffsets_def upto_enum_def upto_enum_step_def Let_def
-                        vspace_bits_defs)
-  sorry (* word lemma *)
-
+  by (simp add: mask_out_sub_mask set_largePagePTEOffsets'
+                and_mask_eq_iff_le_mask[symmetric] aligned_after_mask)
 
 lemma in_zip_largePagePTEOffsets:
   "is_aligned (p::32 word) 3 \<Longrightarrow>

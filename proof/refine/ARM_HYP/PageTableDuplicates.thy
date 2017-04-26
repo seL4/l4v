@@ -1693,21 +1693,22 @@ lemma superSectionPDEOffsets_aligned:
 
 lemma largePagePTEOffsets_unfold:
   "is_aligned p 7 \<Longrightarrow> map (op + p) largePagePTEOffsets = [p , p + 8 .e. p + mask 7]"
-  apply (simp add: largePagePTEOffsets_def vspace_bits_defs)
-  sorry
+  by (fastforce simp: largePagePTEOffsets_def vspace_bits_defs mask_def upto_enum_step_def
+                dest: is_aligned_no_overflow')
 
 lemma slots_length:
-  "is_aligned p 7 \<Longrightarrow> length [p , p + 8 .e. p + mask 7::32 word] = 16"
+  "is_aligned p 7 \<Longrightarrow> length [p , p + 8 .e. p + mask 7 :: machine_word] = 16"
   apply (drule is_aligned_no_overflow)
   apply (clarsimp simp: upto_enum_step_def mask_def word_le_not_less add_ac)
   done
 
 lemma slots_distinct:
-  "distinct [p , p + 8 .e. p + mask 7::32 word]"
-  apply (clarsimp simp: distinct_map upto_enum_step_def upto_enum_def mask_def o_def)
-  apply (rule inj_onI)
-  apply clarsimp
-  sorry
+  "distinct [p , p + 8 .e. p + mask 7 :: machine_word]"
+  apply (clarsimp simp: distinct_map upto_enum_step_def upto_enum_def mask_def o_def
+                intro!: inj_onI)
+  apply (rule word_of_nat_inj[where 'a=machine_word_len], fastforce+)
+  apply (rule mult_pow2_inj[where n=3 and m=4]; simp add: mask_def word_of_nat_le)
+  done
 
 lemma addPTEOffset_LargePage:
   "addPTEOffset (LargePagePTE f a b c) x = LargePagePTE (addPAddr f (x * 0x1000)) a b c"
@@ -1719,15 +1720,57 @@ lemma the_i_slot_0:
   apply (subst map_length_unfold_one; simp add: mask_def)
   done
 
+lemma the_i_map: "z \<in> set zs \<Longrightarrow> inj_on f (set zs) \<Longrightarrow> the_i (map f zs) (f z) = the_i zs z"
+  unfolding inj_on_def
+  apply (induct zs, fastforce)
+  apply (case_tac "z \<in> set zs"; clarsimp)
+  done
+
+lemma the_i_app_in1: "x \<in> set xs \<Longrightarrow> the_i (xs @ ys) x = the_i xs x"
+  by (induct xs) auto
+
+lemma the_i_app_in2: "y \<notin> set xs \<Longrightarrow> y \<in> set ys \<Longrightarrow> the_i (xs @ ys) y = length xs + the_i ys y"
+  by (induct xs) auto
+
+lemma the_i_range: "i < n \<Longrightarrow> the_i [0..<n] i = i"
+  apply (induct n; simp)
+  apply (case_tac "i=n"; simp add: the_i_app_in1 the_i_app_in2)
+  done
+
+lemma table_offset_the_i_helper:
+  fixes a b p :: machine_word
+  assumes "is_aligned p 7" "a = of_nat n * 8" "n < 16" "b = [0.e.0xF] ! n"
+  shows "of_nat (the_i [p , p + 8 .e. p + mask 7] (p + of_nat n * 8))
+          = [0.e.0xF::machine_word] ! n"
+  using assms
+  apply (clarsimp simp: upto_enum_step_def)
+  apply (frule is_aligned_no_wrap'[where off="mask 7"]; simp add: mask_2pm1)
+  apply (case_tac "p + 0x7F < p"; simp)
+  apply (subst the_i_map)
+    apply (simp add: word_of_nat_le)
+   apply (rule inj_onI; simp)
+   apply (rule mult_pow2_inj[where n=3 and m=4, simplified mask_def, simplified]; simp)
+  apply (simp add: upto_enum_def)
+  apply (rule subst[where P="\<lambda>w. of_nat (the_i _ w) = _", OF toEnum_of_nat])
+   apply simp
+  apply (subst the_i_map)
+    apply simp
+   apply (rule inj_onI; simp)
+   apply (rule word_of_nat_inj[where 'a=machine_word_len]; simp)
+  apply (simp add: the_i_range)
+  done
+
 lemma largePagePTEOffsets_the_i:
-  "\<lbrakk> (a, b) \<in> set (zip largePagePTEOffsets [0.e.0xF]); is_aligned p 7 \<rbrakk>
+  "\<lbrakk> (a, b) \<in> set (zip largePagePTEOffsets [0.e.0xF::machine_word]); is_aligned p 7 \<rbrakk>
    \<Longrightarrow> of_nat (the_i [p, p + 8 .e. p + mask 7] (p + a)) = b"
-  sorry
+  by (clarsimp simp: in_set_zip largePagePTEOffsets_nth length_largePagePTEOffsets
+                     table_offset_the_i_helper)
 
 lemma superSectionPDEOffsets_the_i:
-  "\<lbrakk> (a, b) \<in> set (zip superSectionPDEOffsets [0.e.0xF]); is_aligned p 7 \<rbrakk>
+  "\<lbrakk> (a, b) \<in> set (zip superSectionPDEOffsets [0.e.0xF::machine_word]); is_aligned p 7 \<rbrakk>
    \<Longrightarrow> of_nat (the_i [p, p + 8 .e. p + mask 7] (p + a)) = b"
-  sorry
+  by (clarsimp simp: in_set_zip superSectionPDEOffsets_nth length_superSectionPDEOffsets
+                     table_offset_the_i_helper)
 
 lemma vmsz_aligned'_redundant:
   "vmsz_aligned' = vmsz_aligned"
