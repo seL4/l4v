@@ -910,9 +910,12 @@ lemma dec_vcpu_inv_corres:
     apply (clarsimp simp: shiftL_nat whenE_bindE_throwError_to_if)
     supply corresK(7)[corresK del]
     apply (corressimp corresK: corresK_if wp: get_vcpu_wp corres_rv_defer_left)
-    apply (fastforce simp: archinv_relation_def vcpu_invocation_map_def ucast_id
+    apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def ucast_id
                        valid_cap'_def valid_cap_def
                        make_virq_def makeVIRQ_def split:if_split)
+    apply (subgoal_tac "of_nat (rva - Suc 0) = (of_nat rva) - 1")
+     apply (rule conjI; auto)[1]
+  subgoal sorry
    (* read register *)
    apply (clarsimp simp: decode_vcpu_read_register_def decodeVCPUReadReg_def)
    apply (cases args; clarsimp simp: isCap_simps whenE_def split: if_split)

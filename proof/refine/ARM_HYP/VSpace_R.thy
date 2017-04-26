@@ -871,50 +871,55 @@ lemma vcpuRestore_corres:
              (vcpu_restore vcpu)
              (vcpuRestore vcpu)"
   apply (simp add: vcpu_restore_def vcpuRestore_def gicVCPUMaxNumLR_def
-                   set_gic_vcpu_ctrl_hcr_def isb_def)
+      set_gic_vcpu_ctrl_hcr_def isb_def)
   apply (rule corres_split'[OF _ _ do_machine_op_typ_at doMachineOp_typ_at'],
-         rule corres_guard_imp[OF corres_machine_op[OF corres_underlying_trivial]],
-         simp+)+
+      rule corres_guard_imp[OF corres_machine_op[OF corres_underlying_trivial]],
+      simp+)+
   apply (rule corres_split'[OF corres_get_vcpu, rotated])
     apply (rule get_vcpu_typ_at)
    apply (rule getObject_inv_vcpu)
   apply (rule corres_split')
-    apply (rename_tac vcpuobj vcpuobj')
+     apply (rename_tac vcpuobj vcpuobj')
      apply (rule corres_guard_imp)
-       apply (rule corres_machine_op)
-       apply (rule corres_split')
-       apply (clarsimp simp add: vcpu_relation_def)
-       apply (drule sym[of "vgic_map _"])
-       apply (clarsimp simp add: vgic_map_def)
-       apply (rule corres_underlying_trivial, simp add: set_gic_vcpu_ctrl_vmcr_def)
+       apply (rule corres_gets_gicvcpu_numlistregs[simplified comp_def])
+      apply simp
+     apply simp
+    apply (rule corres_split')
+       apply (rule corres_guard_imp)
+         apply (rule corres_machine_op)
          apply (rule corres_split')
             apply (clarsimp simp add: vcpu_relation_def)
             apply (drule sym[of "vgic_map _"])
             apply (clarsimp simp add: vgic_map_def)
-            apply (rule corres_underlying_trivial, simp add: set_gic_vcpu_ctrl_apr_def)
-            apply (rule no_fail_machine_op_lift)
-           apply (subst mapM_mapM_x)
+            apply (rule corres_underlying_trivial, simp add: set_gic_vcpu_ctrl_vmcr_def)
            apply (rule corres_split')
-              apply (simp add: mapM_x_mapM)
-              apply (rule corres_split')
-                 apply (rule_tac S =  "{((x1,x2),y1,y2). \<exists>x2'. of_int x1 = y1 \<and> x2 = y2}"
-                                 in corres_mapM[OF refl refl])
-                     apply (clarsimp simp add: uncurry_def)
-                     apply (rule corres_underlying_trivial)
-                     apply (simp add: set_gic_vcpu_ctrl_lr_def)
-                     apply (rule no_fail_machine_op_lift)
-                    apply (rule wp_post_taut)+
-                  apply simp
-                 apply (clarsimp simp add: zip_map_map vcpu_relation_def)
-                 apply (drule sym[of "vgic_map _"])
-                 apply (simp add: vgic_map_def)
-                apply (rule corres_underlying_trivial[OF no_fail_return])
-               apply (rule wp_post_taut)+
-             apply (simp add: vcpu_relation_def)
-             apply(rule corres_underlying_trivial)
-             apply wpsimp+
-    apply (rule vcpuEnable_corres[simplified dc_def])
-   apply wp+
+              apply (clarsimp simp add: vcpu_relation_def)
+              apply (drule sym[of "vgic_map _"])
+              apply (clarsimp simp add: vgic_map_def)
+              apply (rule corres_underlying_trivial, simp add: set_gic_vcpu_ctrl_apr_def)
+              apply (rule no_fail_machine_op_lift)
+             apply (subst mapM_mapM_x)
+             apply (rule corres_split')
+                apply (simp add: mapM_x_mapM)
+                apply (rule corres_split')
+                   apply (rule_tac S =  "{((x1,x2),y1,y2). \<exists>x2'. of_int x1 = y1 \<and> x2 = y2}"
+                                in corres_mapM[OF refl refl])
+                      apply (clarsimp simp add: uncurry_def)
+                      apply (rule corres_underlying_trivial)
+                      apply (simp add: set_gic_vcpu_ctrl_lr_def)
+                      apply (rule no_fail_machine_op_lift)
+                      apply (rule wp_post_taut)+
+                    apply simp
+                   apply (clarsimp simp add: zip_map_map vcpu_relation_def)
+                   apply (drule sym[of "vgic_map _"])
+                   apply (clarsimp simp add: vgic_map_def)
+                  apply (rule corres_underlying_trivial[OF no_fail_return])
+                 apply (rule wp_post_taut)+
+               apply (simp add: vcpu_relation_def)
+               apply(rule corres_underlying_trivial)
+               apply wpsimp+
+      apply (rule vcpuEnable_corres[simplified dc_def])
+     apply wpsimp+
   done
 
 lemma getObject_typ_at' : "(getObject r :: vcpu kernel) \<lbrace> P (vcpu_at' t p) \<rbrace>"
@@ -4007,13 +4012,12 @@ lemma vcpuDisable_invs_no_cicd'[wp]:
 lemma vcpuRestore_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> vcpuRestore v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
   including no_pre
-  apply (wpsimp simp: vcpuRestore_def uncurry_def split_def doMachineOp_mapM_x
+  apply (wpsimp simp: vcpuRestore_def uncurry_def split_def doMachineOp_mapM_x gets_wp
        | subst doMachineOp_bind | rule empty_fail_bind)+
-       apply (rule_tac S="(\<lambda>i. (of_nat i, vgicLR (vcpuVGIC vcpu) i)) ` {0..<gicVCPUMaxNumLR}" in mapM_x_wp)
+       apply (rule_tac S="(\<lambda>i. (of_nat i, vgicLR (vcpuVGIC vcpu) i)) ` {0..<numListRegs+1}" in mapM_x_wp)
        apply wpsimp
        apply (auto simp: image_def gicVCPUMaxNumLR_def)[1]
-      apply (rule_tac x=63 in bexI, auto)
-     apply wpsimp+
+      apply wpsimp+
   done
 
 lemma vcpuSave_invs_no_cicd':
@@ -4292,10 +4296,9 @@ lemma vcpuRestore_invs'[wp]:
 including no_pre
   apply (wpsimp simp: vcpuRestore_def uncurry_def split_def doMachineOp_mapM_x
        | subst doMachineOp_bind | rule empty_fail_bind)+
-       apply (rule_tac S="(\<lambda>i. (of_nat i, vgicLR (vcpuVGIC vcpu) i)) ` {0..<gicVCPUMaxNumLR}" in mapM_x_wp)
+       apply (rule_tac S="(\<lambda>i. (of_nat i, vgicLR (vcpuVGIC vcpu) i)) ` {0..<numListRegs+1}" in mapM_x_wp)
        apply wpsimp
-       apply (auto simp: image_def gicVCPUMaxNumLR_def)[1]
-      apply (rule_tac x=63 in bexI, auto)
+       apply (auto simp: image_def)[1]
      apply wpsimp+
   done
 
