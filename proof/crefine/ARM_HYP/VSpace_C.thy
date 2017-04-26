@@ -1569,16 +1569,18 @@ lemma vcpu_enable_ccorres:
         (vcpuEnable v) (Call vcpu_enable_'proc)"
   apply (cinit lift: vcpu_')
    apply (clarsimp simp: doMachineOp_bind empty_fail_isb)
-   apply (ctac (no_vcg) add: setSCTLR_ccorres
-           pre: ccorres_pre_getObject_vcpu ccorres_move_c_guard_vcpu)
+   apply (ctac (no_vcg) add: setSCTLR_ccorres pre: ccorres_pre_getObject_vcpu ccorres_move_c_guard_vcpu)
     apply (ctac (no_vcg) add: setHCR_ccorres)
-     apply (ctac (no_vcg) add: isb_ccorres)
-      apply (ctac (no_vcg) pre: ccorres_move_c_guard_vcpu
-            add: set_gic_vcpu_ctrl_hcr_ccorres[unfolded dc_def])
+     apply (ctac  (no_vcg) add: isb_ccorres)
+      apply (rule_tac P="ko_at' rv v" in ccorres_cross_over_guard)
+      apply (ctac pre: ccorres_move_c_guard_vcpu add: set_gic_vcpu_ctrl_hcr_ccorres[unfolded dc_def])
      apply wp+
   apply (clarsimp simp: typ_heap_simps' Collect_const_mem cvcpu_relation_def
-      cvcpu_regs_relation_def Let_def cvgic_relation_def hcrVCPU_def | rule conjI | simp)+
-  sorry (* almost there *)
+                        cvcpu_regs_relation_def Let_def cvgic_relation_def hcrVCPU_def
+         | rule conjI | simp)+
+  apply (drule (1) vcpu_at_rf_sr)
+  apply (clarsimp simp: typ_heap_simps' cvcpu_relation_def cvgic_relation_def)
+  done
 
 (*
 lemma set_gic_vcpu_ctrl_lr_while_ccorres:
@@ -2191,7 +2193,7 @@ prefer 2
                         cap_lift_page_directory_cap cap_to_H_def
                         cap_page_directory_cap_lift_def
                         to_bool_def
-                 elim!: ccap_relationE split: if_split_asm)+
+                 elim!: ccap_relationE split: if_split_asm)
 
   sorry  (* almost there *)
 
