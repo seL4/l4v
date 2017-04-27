@@ -33,7 +33,8 @@ export CREFINE_QUICK_AND_DIRTY=1
 # Run the tests from the script directory.
 cd ${DIR}
 
-default="ASpec ExecSpec ASpec_ARM ExecSpec_ARM AInvs HaskellKernel BaseRefine Refine CParser CKernel CSpec CBaseRefine CRefine Licenses"
+# temporarily removed: ASpec_ARM ExecSpec_ARM
+default="ASpec ExecSpec AInvs HaskellKernel BaseRefine Refine CParser CKernel CSpec CBaseRefine CRefine Licenses"
 if [ "${bamboo_l4v_regression_identifier}" == "test board"  ]
 then
     bamboo_args=$(echo "$@" | ( [ -z "${bamboo_l4v_regression_options}" ] && cat - || sed 's/'"${bamboo_l4v_regression_options}"'//'))
