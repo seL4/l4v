@@ -1400,17 +1400,16 @@ lemma invokeVCPUInjectIRQ_corres:
   unfolding invokeVCPUInjectIRQ_def invoke_vcpu_inject_irq_def
   apply (clarsimp simp: bind_assoc)
   apply (corressimp corres: corres_get_vcpu set_vcpu_corres  wp: corres_rv_wp_left get_vcpu_wp)
-(*  apply (rule conjI, fastforce)
-  apply (clarsimp simp: vcpu_relation_def vgic_map_def)
-  apply (rename_tac vcpu vcpu')
-  apply (case_tac vcpu; case_tac vcpu'; clarsimp)
-  apply (rename_tac vgic regs)
-  apply (case_tac vgic)
-  apply simp
-  apply (rule ext)
-  apply simp
-  done*)
- sorry
+      apply (rule corresK_split)
+          apply (rule corresK_if[where F=True])
+           apply (corressimp corres: corres_get_vcpu set_vcpu_corres  wp: corres_rv_wp_left wp_post_taut get_vcpu_wp)+
+  apply clarsimp
+  apply (safe
+        ; case_tac "vcpuVGIC rv'"
+        ; clarsimp simp: vcpu_relation_def vgic_map_def if_split
+        ; rule ext ; rename_tac x
+        ; case_tac "index = x"; clarsimp)
+  done
 
 lemmas corres_discard_r =
   corres_symb_exec_r [where P'=P' and Q'="\<lambda>_. P'" for P', simplified]
