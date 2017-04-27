@@ -79,10 +79,9 @@ It is not possible to dissociate a VCPU and a TCB by using SetTCB. Final outcome
 >         _ -> return ()
 >     archThreadSet (\atcb -> atcb { atcbVCPUPtr = Nothing }) tcbPtr
 >     setObject vcpuPtr $ vcpu { vcpuTCBPtr = Nothing }
->     tcb <- getObject tcbPtr
 >     asUser tcbPtr $ (do
 >         cpsr <- getRegister (Register CPSR)
->         setRegister (Register CPSR) $ sanitiseRegister tcb (Register CPSR) cpsr
+>         setRegister (Register CPSR) $ sanitiseRegister False (Register CPSR) cpsr
 >         )
 
 > associateVCPUTCB :: PPtr VCPU -> PPtr TCB -> Kernel [Word]

@@ -25,12 +25,14 @@ There are presently no ARM-specific register subsets defined, but in future this
 > import SEL4.Machine(PPtr)
 > import SEL4.Model
 > import SEL4.Object.Structures
+> import SEL4.Object.Instances()
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.ARM_HYP
 > import SEL4.Machine.RegisterSet.ARM_HYP
 > import Data.Bits
 
 > import Data.Word(Word8)
+> import Data.Maybe
 
 \end{impdetails}
 
@@ -40,12 +42,12 @@ There are presently no ARM-specific register subsets defined, but in future this
 > performTransfer :: CopyRegisterSets -> PPtr TCB -> PPtr TCB -> Kernel ()
 > performTransfer _ _ _ = return ()
 
-> sanitiseRegister :: TCB -> Register -> Word -> Word
+> sanitiseRegister :: Bool -> Register -> Word -> Word
 #ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 > sanitiseRegister _ CPSR v = (v .&. 0xf8000000) .|. 0x150
 #else
-> sanitiseRegister tcb CPSR v =
->   if (atcbVCPUPtr (tcbArch tcb) /= Nothing && ((v .&. 0x1f) `elem` modes))
+> sanitiseRegister b CPSR v =
+>   if (b && ((v .&. 0x1f) `elem` modes))
 >       then v
 >       else v'
 >   where v' = (v .&. 0xf8000000) .|. 0x150
@@ -53,4 +55,10 @@ There are presently no ARM-specific register subsets defined, but in future this
 >         modes = [0x10, 0x11, 0x12, 0x13, 0x17, 0x1b, 0x1f]
 #endif
 > sanitiseRegister _ _ v = v
+
+> archTCBSanitise :: PPtr TCB -> Kernel Bool
+> archTCBSanitise t = do
+>    v <- liftM (atcbVCPUPtr . tcbArch) $ getObject t
+>    return $ isJust v
+
 
