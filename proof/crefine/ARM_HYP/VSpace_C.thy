@@ -1644,7 +1644,7 @@ apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_hcr_ccorres)
 apply (ctac (no_vcg) add: isb_ccorres)
 apply (rule ccorres_move_c_guard_vcpu)
 apply (rule ccorres_pre_getObject_vcpu)
-apply (rename_tac vcpu)
+apply (rename_tac vcpu) sorry (* vcpuRestore
 apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_vmcr_ccorres)
 apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_apr_ccorres)
 apply (rule ccorres_rhs_assoc2)
@@ -1652,7 +1652,7 @@ apply (rule ccorres_split_nothrow)
 apply (clarsimp simp: gicVCPUMaxNumLR_def)
 apply (rule ccorres_guard_imp)
    apply (rule_tac xf'="\<lambda>s. gic_vcpu_num_list_regs_' (globals s)" in ccorres_abstract)
-apply ceqv(*
+apply ceqv
 find_theorems name:ccorres name: rewrite
    apply (rule_tac P="end' = ve" in ccorres_gen_asm2)
 apply (rule ccorres_abstract)
@@ -1768,9 +1768,6 @@ apply (fastforce dest!: vcpu_at_ko vcpu_at_rf_sr)
 
 *)
 
-
-
-  sorry
 
 lemma ccorres_pre_gets_armKSGICVCPUNumListRegs_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
