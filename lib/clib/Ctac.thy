@@ -485,6 +485,19 @@ lemma ccorres_rewrite_cond_sr:
   apply (clarsimp simp add: semantic_equiv_Cond_cases abs semantic_equiv_refl)
   done
 
+lemma ccorres_rewrite_cond_sr_Seq:
+  assumes abs: "\<forall>s s'. (s, s') \<in> sr \<and> Q s \<and> s' \<in> Q' \<longrightarrow> (s' \<in> C) = (s' \<in> C') "
+  and     c1: "ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs m (Cond C' c d ;; e)"
+  shows   "ccorres_underlying sr \<Gamma> r xf arrel axf (P and Q) (P' \<inter> Q') hs
+                              m (Cond C c d ;; e)"
+  apply (rule ccorres_name_pre)
+  apply (rule_tac Q="op = s" and Q'="P' \<inter> Q' \<inter> {s'. (s, s') \<in> sr}" in stronger_ccorres_guard_imp)
+    apply (rule ccorres_semantic_equiv[THEN iffD1, rotated])
+     apply (rule ccorres_guard_imp, rule c1, simp_all)
+  apply (rule semantic_equiv_Seq_cong)
+   apply (clarsimp simp add: semantic_equiv_Cond_cases abs semantic_equiv_refl)+
+  done
+
 definition
   "push_in_stmt G stmt c c' \<equiv> (\<forall>s s'. semantic_equiv G s s' (c ;; stmt) c')"
 
