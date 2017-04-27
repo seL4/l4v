@@ -1400,12 +1400,6 @@ lemma heap_to_device_data_update_region:
   apply (simp add: field_simps)
   done
 
-(* FIXME: move *)
-lemma ccorres_grab_asm:
-  "(Q \<Longrightarrow> ccorres_underlying sr G rr xf ar ax P P' hs f g) \<Longrightarrow>
-   ccorres_underlying sr G rr xf ar ax (P and K Q) P' hs f g"
-  by (fastforce simp: ccorres_underlying_def)
-
 lemma ksPSpace_ksMSu_comm:
   "ksPSpace_update f (ksMachineState_update g s) =
    ksMachineState_update g (ksPSpace_update f s)"

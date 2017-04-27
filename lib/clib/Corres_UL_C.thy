@@ -1653,4 +1653,10 @@ lemma ccorres_lhs_assoc:
   shows "ccorres_underlying sr E r xf arrel axf G G' hs (do x \<leftarrow> m; f x >>= g od) c"
   using cc by (simp add: bind_assoc)
 
+(* FIXME: move *)
+lemma ccorres_grab_asm:
+  "(Q \<Longrightarrow> ccorres_underlying sr G rr xf ar ax P P' hs f g) \<Longrightarrow>
+   ccorres_underlying sr G rr xf ar ax (P and K Q) P' hs f g"
+  by (fastforce simp: ccorres_underlying_def)
+
 end
