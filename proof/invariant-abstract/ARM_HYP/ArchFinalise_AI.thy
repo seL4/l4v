@@ -1362,8 +1362,18 @@ interpretation Finalise_AI_2?: Finalise_AI_2
 
 context Arch begin global_naming ARM
 
-crunch irq_node[wp]: vcpu_disable, vcpu_restore, vcpu_save
+crunch irq_node[wp]: vcpu_update, vcpu_save_register, vgic_update
   "\<lambda>s. P (interrupt_irq_node s)"
+
+crunch irq_node[wp]: vcpu_disable, vcpu_restore
+  "\<lambda>s. P (interrupt_irq_node s)"
+
+lemma vcpu_save_irq_node[wp]:
+  "\<lbrace> \<lambda>s. P (interrupt_irq_node s) \<rbrace> vcpu_save v  \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
+  apply (simp add: vcpu_save_def)
+  apply (cases v; simp; case_tac a;simp)
+  apply (wp | wpc | clarsimp | rule_tac S="set [0..<num_list_regs]" in mapM_wp)+
+  done
 
 lemma vcpu_switch_irq_node[wp]:
   "\<lbrace> \<lambda>s. P (interrupt_irq_node s) \<rbrace> vcpu_switch v  \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
@@ -1418,8 +1428,19 @@ lemma set_vcpu_empty[wp]:
                  split: kernel_object.splits arch_kernel_obj.splits)
   done
 
-crunch empty[wp]: vcpu_disable, vcpu_enable, vcpu_save
+crunch empty[wp]: vcpu_update, vcpu_save_register, vgic_update
     "\<lambda>s. P (obj_at (empty_table {}) word s)"
+
+crunch empty[wp]: vcpu_disable, vcpu_enable
+    "\<lambda>s. P (obj_at (empty_table {}) word s)"
+
+lemma vcpu_save_empty[wp]:
+  "\<lbrace>\<lambda>s. P (obj_at (empty_table {}) word s)\<rbrace> vcpu_save v \<lbrace>\<lambda>_ s. P (obj_at (empty_table {}) word s)\<rbrace>"
+  apply (simp add: vcpu_save_def)
+  apply (cases v; simp)
+  apply (case_tac a; simp)
+  apply (wp | wpc | clarsimp | rule_tac S="set [0..<num_list_regs]" in mapM_wp)+
+  done
 
 lemma vcpu_switch_empty[wp]:
   "\<lbrace>\<lambda>s. P (obj_at (empty_table {}) word s)\<rbrace> vcpu_switch v \<lbrace>\<lambda>_ s. P (obj_at (empty_table {}) word s)\<rbrace>"

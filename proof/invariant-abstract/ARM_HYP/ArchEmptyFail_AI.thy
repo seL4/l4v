@@ -117,6 +117,9 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
 
 context Arch begin global_naming ARM
 
+lemma vcpu_save_empty_fail[wp]: "empty_fail (vcpu_save v)"
+  sorry
+
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
     setHardwareASID, set_current_pd, finalise_cap, preemption_point,
     cap_swap_for_delete, decode_invocation
@@ -165,6 +168,10 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   qed
 
 context Arch begin global_naming ARM
+
+lemma vgic_maintenance_empty_fail[wp]: "empty_fail vgic_maintenance"
+  sorry
+
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_thread
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits
