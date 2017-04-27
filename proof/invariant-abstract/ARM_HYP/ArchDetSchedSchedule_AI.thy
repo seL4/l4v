@@ -18,6 +18,7 @@ named_theorems DetSchedSchedule_AI_assms
 
 crunch exst[wp]: set_vcpu "\<lambda>s. P (exst s)" (wp: crunch_wps)
 crunch exst[wp]: vcpu_disable,vcpu_restore,vcpu_save "\<lambda>s. P (exst s)"
+  (wp: crunch_wps)
 
 lemma vcpu_switch_exst[wp]:
   "\<lbrace>\<lambda>s. P (exst s)\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_ s. P (exst s)\<rbrace>"

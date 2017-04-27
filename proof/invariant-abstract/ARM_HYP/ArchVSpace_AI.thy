@@ -4889,13 +4889,12 @@ lemma respects_device_region_vcpu_helper: "\<And>x2 b.
   apply (wp pspace_respects_device_region_dmo | simp add:)+
 done
 
-lemma perform_page_invocation_pspace_respects_device_region[wp]:
-  "\<lbrace>pspace_respects_device_region\<rbrace> vcpu_save v
-\<lbrace>\<lambda>_. pspace_respects_device_region\<rbrace> "
-  apply (simp add: vcpu_save_def)
-  apply (cases v; simp)
-  apply (case_tac a; simp)
-  sorry
+crunch pspace_respects_device_region[wp]: vcpu_update pspace_respects_device_region
+
+lemma vcpu_save_register_pspace_respects_device_region[wp]:
+  "(\<And>P. m \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>) \<Longrightarrow> vcpu_save_register p r m \<lbrace> pspace_respects_device_region \<rbrace>"
+  unfolding vcpu_save_register_def
+  by (wpsimp wp: pspace_respects_device_region_dmo)
 
 crunch pspace_respects_device_region[wp]: vcpu_disable, vcpu_restore, vcpu_enable "pspace_respects_device_region"
   (simp: crunch_simps respects_device_region_vcpu_helper vcpuregs_sets vcpuregs_gets
