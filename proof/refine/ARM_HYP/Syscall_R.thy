@@ -799,7 +799,7 @@ lemma handleFaultReply_invs[wp]:
   done
 
 crunch sch_act_simple[wp]: handleFaultReply sch_act_simple
-  (wp: crunch_wps)
+  (wp: crunch_wps ignore: getObject setObject)
 
 lemma transferCaps_non_null_cte_wp_at':
   assumes PUC: "\<And>cap. P cap \<Longrightarrow> \<not> isUntypedCap cap"
@@ -2099,7 +2099,7 @@ lemmas attemptSwitchTo_sane
 crunch sane [wp]: handleFaultReply sch_act_sane
   (  wp: threadGet_inv hoare_drop_imps crunch_wps
    simp: crunch_simps
-   ignore: setSchedulerAction)
+   ignore: setSchedulerAction getObject)
 
 crunch sane [wp]: doIPCTransfer sch_act_sane
   (  wp: threadGet_inv hoare_drop_imps crunch_wps
@@ -2133,6 +2133,7 @@ lemma handleReply_nonz_cap_to_ct:
   done
 
 crunch ksQ[wp]: handleFaultReply "\<lambda>s. P (ksReadyQueues s p)"
+  (ignore: getObject)
 
 lemma doReplyTransfer_ct_not_ksQ:
   "\<lbrace> invs' and sch_act_simple

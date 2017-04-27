@@ -313,6 +313,9 @@ lemma readreg_corres:
 crunch sch_act_simple [wp]: asUser "sch_act_simple"
   (rule: sch_act_simple_lift)
 
+crunch invs'[wp]: archTCBSanitise invs'
+  (ignore: getObject setObject)
+
 lemma writereg_corres:
   "corres (intr \<oplus> op =) (einvs  and tcb_at dest and ex_nonz_cap_to dest)
         (invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest)
@@ -323,7 +326,7 @@ lemma writereg_corres:
                    sanitiseRegister_def sanitise_register_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gct_corres])
-      apply (rule corres_split [OF _ threadget_corres, where r'=tcb_relation])
+      apply (rule corres_split [OF _ arch_tcb_sanitise_corres])
          apply (rule corres_split_nor)
             prefer 2
             apply (rule corres_as_user)
@@ -447,6 +450,11 @@ lemma readreg_invs':
   by (simp add: invokeTCB_def performTransfer_def | wp
        | clarsimp simp: invs'_def valid_state'_def
                  dest!: global'_no_ex_cap)+
+
+crunch ex_nonz_cap_to'[wp]: archTCBSanitise "ex_nonz_cap_to' d"
+  (ignore: getObject setObject)
+crunch it'[wp]: archTCBSanitise "\<lambda>s. P (ksIdleThread s)"
+  (ignore: getObject setObject)
 
 lemma writereg_invs':
   "\<lbrace>invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest\<rbrace>

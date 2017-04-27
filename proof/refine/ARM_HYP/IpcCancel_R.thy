@@ -1506,13 +1506,12 @@ lemma no_fail_setRegister[wp]: "no_fail \<top> (setRegister r v)"
   by (simp add: setRegister_def)
 
 lemma asUser_sanitise_corres[corres]:
-  "tcb_relation tcb tcb' \<Longrightarrow>
-   corres dc (tcb_at t) (tcb_at' t)
+  "b=b' \<Longrightarrow> corres dc (tcb_at t) (tcb_at' t)
             (as_user t (do cpsr \<leftarrow> getRegister CPSR;
-                           setRegister CPSR (sanitise_register tcb CPSR cpsr)
+                           setRegister CPSR (sanitise_register b CPSR cpsr)
                         od))
             (asUser t (do cpsr \<leftarrow> getRegister CPSR;
-                          setRegister CPSR (sanitiseRegister tcb' CPSR cpsr)
+                          setRegister CPSR (sanitiseRegister b' CPSR cpsr)
                        od))"
   unfolding sanitiseRegister_def sanitise_register_def
   apply (corres corres: corres_as_user')

@@ -1000,7 +1000,8 @@ lemma invokeUntyped_valid_duplicates[wp]:
 crunch valid_duplicates'[wp]:
   doReplyTransfer "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 (wp: crunch_wps isFinalCapability_inv
- simp: crunch_simps unless_def)
+ simp: crunch_simps unless_def
+ ignore: getObject)
 
 lemma setVCPU_valid_duplicates'[wp]:
  "setObject a (vcpu::vcpu) \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"

@@ -61,7 +61,7 @@ lemma finaliseSlot_ksDomSchedule_inv[wp]:
 
 crunch ksDomSchedule_inv[wp]: invokeTCB "\<lambda>s. P (ksDomSchedule s)"
   (wp: cteDelete_preservation checkCap_inv crunch_wps simp: crunch_simps unless_def
-   ignore: checkCapAt cteDelete)
+   ignore: checkCapAt cteDelete getObject)
 
 crunch ksDomSchedule_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomSchedule s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
@@ -172,7 +172,8 @@ lemma finaliseSlot_ksDomainTime_inv[wp]:
   by (wp finaliseSlot_preservation | clarsimp)+
 
 crunch ksDomainTime_inv[wp]: invokeTCB "\<lambda>s. P (ksDomainTime s)"
-  (wp: crunch_wps checkCap_inv finaliseSlot'_preservation simp: if_apply_def2 crunch_simps)
+  (wp: crunch_wps checkCap_inv finaliseSlot'_preservation simp: if_apply_def2 crunch_simps
+   ignore: getObject)
 
 crunch ksDomainTime_inv[wp]: doReplyTransfer "\<lambda>s. P (ksDomainTime s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct

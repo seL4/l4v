@@ -2069,9 +2069,19 @@ lemma atcbVCPUPtr:
   "tcb_relation t t' \<Longrightarrow> atcbVCPUPtr (tcbArch t') = tcb_vcpu (tcb_arch t)"
   unfolding tcb_relation_def arch_tcb_relation_def by simp
 
+lemma arch_tcb_sanitise_corres:
+  "corres (op =) (tcb_at t) (tcb_at' t)
+      (arch_tcb_sanitise_condition t)
+      (archTCBSanitise t)"
+  unfolding arch_tcb_sanitise_condition_def archTCBSanitise_def
+  apply (fold archThreadGet_def)
+  by (corressimp corres: archThreadGet_vcpu_corres)
+
+crunch tcb_at'[wp]: archTCBSanitise "tcb_at' t"
+
 lemma handle_fault_reply_registers_corres:
   "corres (op =) (tcb_at t) (tcb_at' t)
-           (do t' \<leftarrow> thread_get id t;
+           (do t' \<leftarrow> arch_tcb_sanitise_condition t;
                y \<leftarrow> as_user t
                 (zipWithM_x
                   (\<lambda>r v. set_register r
@@ -2079,15 +2089,16 @@ lemma handle_fault_reply_registers_corres:
                   msg_template msg);
                return (label = 0)
             od)
-           (do t' \<leftarrow> threadGet id t;
+           (do t' \<leftarrow> archTCBSanitise t;
                y \<leftarrow> asUser t
                 (zipWithM_x
                   (\<lambda>r v. setRegister r (sanitiseRegister t' r v))
                   msg_template msg);
                return (label = 0)
             od)"
+
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ threadget_corres, where r'=tcb_relation])
+    apply (rule corres_split [OF _ arch_tcb_sanitise_corres])
        apply (rule corres_split)
        apply (rule corres_trivial, simp)
       apply (rule corres_as_user')
@@ -2119,6 +2130,13 @@ crunch tcb_at'[wp]: attemptSwitchTo "tcb_at' t"
 
 crunch valid_pspace'[wp]: attemptSwitchTo valid_pspace'
   (wp: crunch_wps)
+
+lemmas archTCBSanitise_def2 = archTCBSanitise_def[folded archThreadGet_def]
+
+lemma archTCBSanitise_ct'[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> archTCBSanitise t \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
+  apply (simp add: archTCBSanitise_def)
+  by (wpsimp simp: getObject_inv_tcb setObject_ct_inv)
 
 crunch ct'[wp]: handleFaultReply "\<lambda>s. P (ksCurThread s)"
 
@@ -2294,6 +2312,7 @@ crunch valid_objs'[wp]: cteDeleteOne "valid_objs'"
    ignore: getObject)
 
 crunch nosch[wp]: handleFaultReply "\<lambda>s. P (ksSchedulerAction s)"
+  (ignore: getObject setObject)
 
 lemma emptySlot_weak_sch_act[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
@@ -2333,10 +2352,14 @@ lemma cteDeleteOne_weak_sch_act[wp]:
 
 crunch weak_sch_act_wf[wp]: emptySlot "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
 
-crunch pred_tcb_at'[wp]: handleFaultReply "pred_tcb_at' proj P t"
-crunch valid_queues[wp]: handleFaultReply "Invariants_H.valid_queues"
-crunch valid_queues'[wp]: handleFaultReply "valid_queues'"
-crunch tcb_in_cur_domain'[wp]: handleFaultReply "tcb_in_cur_domain' t"
+crunch pred_tcb_at'[wp]: archThreadGet, handleFaultReply "pred_tcb_at' proj P t"
+  (ignore: getObject setObject)
+crunch valid_queues[wp]: archThreadGet, handleFaultReply "Invariants_H.valid_queues"
+  (ignore:  getObject setObject)
+crunch valid_queues'[wp]: archThreadGet, handleFaultReply "valid_queues'"
+  (ignore:  getObject setObject)
+crunch tcb_in_cur_domain'[wp]: archThreadGet, handleFaultReply "tcb_in_cur_domain' t"
+  (ignore:  getObject setObject)
 
 lemma as_user_valid_etcbs[wp]:
   "\<lbrace>valid_etcbs\<rbrace> as_user tptr f \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
@@ -2388,7 +2411,8 @@ apply (rule hoare_pre)
 apply simp
 done
 
-crunch valid_objs'[wp]: handleFaultReply valid_objs'
+crunch valid_objs'[wp]: archThreadGet, handleFaultReply valid_objs'
+    (ignore:  getObject setObject)
 
 lemma valid_tcb'_tcbFault_update[simp]: "\<And>tcb s. valid_tcb' tcb s \<Longrightarrow> valid_tcb' (tcbFault_update f tcb) s"
   by (clarsimp simp: valid_tcb'_def  tcb_cte_cases_def)
