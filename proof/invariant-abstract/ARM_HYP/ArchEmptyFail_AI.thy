@@ -117,8 +117,16 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
 
 context Arch begin global_naming ARM
 
-lemma vcpu_save_empty_fail[wp]: "empty_fail (vcpu_save v)"
-  sorry
+crunch (empty_fail) empty_fail[wp]: vcpu_update
+  (ignore: set_object get_object)
+
+lemma vcpu_save_register_empty_fail[wp]: "empty_fail c \<Longrightarrow> empty_fail (vcpu_save_register vcpu f c)"
+  by (simp add:  vcpu_save_register_def) wpsimp
+
+lemma vcpu_save_empty_fail[wp,EmptyFail_AI_assms]: "empty_fail (vcpu_save a)"
+  apply (simp add:  vcpu_save_def)
+  apply (wpsimp wp: empty_fail_dsb empty_fail_isb  simp: vgic_update_def)
+  done
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
     setHardwareASID, set_current_pd, finalise_cap, preemption_point,
@@ -170,7 +178,10 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
 context Arch begin global_naming ARM
 
 lemma vgic_maintenance_empty_fail[wp]: "empty_fail vgic_maintenance"
-  sorry
+  by (wpsimp simp: get_gic_vcpu_ctrl_eisr0_def
+                   get_gic_vcpu_ctrl_eisr1_def
+                   get_gic_vcpu_ctrl_misr_def
+                   vgic_maintenance_def)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_thread
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
