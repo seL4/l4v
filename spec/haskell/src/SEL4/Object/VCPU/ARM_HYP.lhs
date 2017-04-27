@@ -203,7 +203,7 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 
 > makeVIRQ :: Word -> Word -> Word -> VIRQ
 > makeVIRQ grp prio irq =
->     (grp `shiftL` groupShift) .|. (prio `shiftL` prioShift) .|. irq .|.
+>     ((grp .&. 1) `shiftL` groupShift) .|. ((prio .&. 0x1F) `shiftL` prioShift) .|. (irq .&. 0x3FF) .|.
 >         irqPending .|. eoiirqen
 >     where groupShift = 30
 >           prioShift = 23
