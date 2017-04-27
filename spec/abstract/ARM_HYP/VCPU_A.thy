@@ -194,13 +194,13 @@ where
 definition invoke_vcpu_inject_irq :: "obj_ref \<Rightarrow> nat \<Rightarrow> virq \<Rightarrow> (unit,'z::state_ext) s_monad"
 where "invoke_vcpu_inject_irq vr index virq \<equiv> do
    cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
-   (case cur_v of
-      Some (vr, _) \<Rightarrow> do_machine_op $ set_gic_vcpu_ctrl_lr (of_nat index) virq
-    | None \<Rightarrow> do
+   if (cur_v \<noteq> None \<and> fst (the cur_v) = vr)
+   then do_machine_op $ set_gic_vcpu_ctrl_lr (of_nat index) virq
+   else do
            vcpu \<leftarrow> get_vcpu vr;
            vcpuLR \<leftarrow> return $ (vgic_lr $ vcpu_vgic vcpu) (index := virq);
            set_vcpu vr $ vcpu \<lparr> vcpu_vgic := (vcpu_vgic vcpu) \<lparr> vgic_lr := vcpuLR \<rparr>\<rparr>
-           od)
+           od
    od"
 
 text {* VCPU perform and decode main functions *}
