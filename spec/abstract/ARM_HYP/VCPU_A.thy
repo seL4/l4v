@@ -165,7 +165,7 @@ definition make_virq :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<R
     prioShift = 23;
     irqPending = 1 << 28;
     eoiirqen = 1 << 19
-  in (grp << groupShift) || (prio << prioShift) || irq || irqPending || eoiirqen"
+  in ((grp && 1) << groupShift) || ((prio && 0x1F) << prioShift) || (irq && 0x3FF) || irqPending || eoiirqen"
 
 
 definition decode_vcpu_inject_irq :: "obj_ref list \<Rightarrow> arch_cap \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
