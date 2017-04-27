@@ -12,15 +12,6 @@ theory Arch_C
 imports Recycle_C
 begin
 
-(* FIXME: move *)
-lemma of_bool_from_bool: "of_bool = from_bool"
-  by (rule ext, simp add: from_bool_def split: bool.split)
-
-lemma ksPSpace_update_eq_ExD:
-  "s = t\<lparr> ksPSpace := ksPSpace s\<rparr>
-     \<Longrightarrow> \<exists>ps. s = t \<lparr> ksPSpace := ps \<rparr>"
-  by (erule exI)
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 crunch ctes_of[wp]: unmapPageTable "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
@@ -3941,13 +3932,6 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlushLabel_def
      | rule word_of_nat_less,simp add: pbfs_less)+
 
-(* FIXME: move *)
-lemma cond_throw_whenE:
-   "(if P then f else throwError e) = (whenE (\<not> P) (throwError e) >>=E (\<lambda>_. f))"
-   by (auto split: if_splits
-             simp: throwError_def bindE_def
-                   whenE_def bind_def returnOk_def return_def)
-
 lemma decodeARMMMUInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
@@ -5159,15 +5143,6 @@ lemma invokeVCPUSetTCB_ccorres:
     apply (rule allI, rule conseqPre, vcg)
     apply (clarsimp simp: return_def dc_def)
   by (wpsimp simp: invs_no_0_obj')+
-
-lemma cap_case_TCBCap2:
-  "(case cap of ThreadCap pd
-                   \<Rightarrow> f pd | _ \<Rightarrow> g)
-   = (if isThreadCap cap
-      then f (capTCBPtr cap)
-      else g)"
-  by (simp add: isCap_simps
-         split: capability.split arch_capability.split)
 
 lemma liftE_associateVCPUTCB_empty_return:
   "liftE (associateVCPUTCB vcpu val) >>=E (\<lambda>rv. m rv)

@@ -1768,29 +1768,6 @@ apply (fastforce dest!: vcpu_at_ko vcpu_at_rf_sr)
 
 *)
 
-
-lemma ccorres_pre_gets_armKSGICVCPUNumListRegs_ksArchState:
-  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
-  shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. armKSGICVCPUNumListRegs (ksArchState s) = rv  \<longrightarrow> P rv s))
-                  {s. \<forall>rv. s \<in> P' rv }
-                          hs (gets (armKSGICVCPUNumListRegs \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (rule gets_sp)
-     apply (clarsimp simp: empty_fail_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply clarsimp
-  done
-
 thm carch_state_relation_def
 lemma ccorres_pre_getsNumListRegs:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"

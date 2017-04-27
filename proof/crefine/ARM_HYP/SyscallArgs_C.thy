@@ -392,6 +392,14 @@ lemma is_syscall_error_codes:
         Basic_with_globals (globals_update (current_syscall_error_'_update f'));;
         Basic_with_globals (globals_update (current_syscall_error_'_update f''));;
         return_C ret__unsigned_long_'_update (\<lambda>_. scast EXCEPTION_SYSCALL_ERROR))"
+  "is_syscall_error_code (f'''' \<circ> f''' \<circ> f'' o f' o f)
+       (
+        Basic_with_globals (globals_update (current_syscall_error_'_update f));;
+        Basic_with_globals (globals_update (current_syscall_error_'_update f'));;
+        Basic_with_globals (globals_update (current_syscall_error_'_update f''));;
+        Basic_with_globals (globals_update (current_syscall_error_'_update f'''));;
+        Basic_with_globals (globals_update (current_syscall_error_'_update f''''));;
+        return_C ret__unsigned_long_'_update (\<lambda>_. scast EXCEPTION_SYSCALL_ERROR))"
   "is_syscall_error_code f
        (SKIP;;
         Basic_with_globals (globals_update (current_syscall_error_'_update f));;

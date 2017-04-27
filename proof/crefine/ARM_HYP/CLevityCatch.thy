@@ -300,4 +300,8 @@ lemma option_to_ptr_not_0:
   "\<lbrakk> p \<noteq> 0 ; option_to_ptr v = Ptr p \<rbrakk> \<Longrightarrow> v = Some p"
   by (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
 
+(* FIXME: move *)
+lemma of_bool_from_bool: "of_bool = from_bool"
+  by (rule ext, simp add: from_bool_def split: bool.split)
+
 end

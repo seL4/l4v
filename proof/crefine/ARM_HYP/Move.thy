@@ -165,4 +165,34 @@ lemma fromEnum_maxBound_vcpureg_def:
 
 end
 
+(* FIXME move *)
+lemma shiftr_and_eq_shiftl:
+  fixes w x y :: "'a::len word"
+  assumes r: "(w >> n) && x = y"
+  shows "w && (x << n) = (y << n)"
+  using assms
+  proof -
+    { fix i
+      assume i: "i < LENGTH('a)"
+      hence "test_bit (w && (x << n)) i \<longleftrightarrow> test_bit (y << n) i"
+        using word_eqD[where x="i-n", OF r]
+        by (cases "n \<le> i") (auto simp: nth_shiftl nth_shiftr)
+    } note bits = this
+    show ?thesis
+      by (rule word_eqI, rule bits, simp add: word_size)
+  qed
+
+(* FIXME: move *)
+lemma cond_throw_whenE:
+   "(if P then f else throwError e) = (whenE (\<not> P) (throwError e) >>=E (\<lambda>_. f))"
+   by (auto split: if_splits
+             simp: throwError_def bindE_def
+                   whenE_def bind_def returnOk_def return_def)
+
+lemma ksPSpace_update_eq_ExD:
+  "s = t\<lparr> ksPSpace := ksPSpace s\<rparr>
+     \<Longrightarrow> \<exists>ps. s = t \<lparr> ksPSpace := ps \<rparr>"
+  by (erule exI)
+
+
 end

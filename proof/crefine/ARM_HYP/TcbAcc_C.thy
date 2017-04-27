@@ -456,5 +456,53 @@ next
     by (clarsimp elim!: exI simp: Collect_const_mem)
 qed
 
+lemma cap_case_TCBCap2:
+  "(case cap of ThreadCap pd
+                   \<Rightarrow> f pd | _ \<Rightarrow> g)
+   = (if isThreadCap cap
+      then f (capTCBPtr cap)
+      else g)"
+  by (simp add: isCap_simps
+         split: capability.split arch_capability.split)
+
+(* FIXME move *)
+lemma ccorres_pre_gets_armKSGICVCPUNumListRegs_ksArchState:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>rv. (armKSGICVCPUNumListRegs \<circ> ksArchState) s = rv \<longrightarrow> P rv s))
+                  {s. \<forall>rv vcpu' act'. of_nat rv = gic_vcpu_num_list_regs_' (globals s)
+                                 \<longrightarrow> s \<in> P' rv }
+                          hs (gets (armKSGICVCPUNumListRegs \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (rule gets_sp)
+     apply (clarsimp simp: empty_fail_def simpler_gets_def)
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply (simp add: rf_sr_armKSGICVCPUNumListRegs)
+  done
+
+
+lemma length_of_msgRegisters:
+  "length ARM_HYP_H.msgRegisters = 4"
+  by (auto simp: msgRegisters_unfold)
+
+lemma setMRs_single:
+  "setMRs thread buffer [val] = do y \<leftarrow> asUser thread (setRegister register.R2 val);
+       return 1
+    od"
+  apply (clarsimp simp: setMRs_def length_of_msgRegisters zipWithM_x_def zipWith_def split: option.splits)
+  apply (subst zip_commute, subst zip_singleton)
+   apply (simp add: length_of_msgRegisters length_0_conv[symmetric])
+  apply (clarsimp simp: msgRegisters_unfold sequence_x_def)
+  done
+
 end
 end

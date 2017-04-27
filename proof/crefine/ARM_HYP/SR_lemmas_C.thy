@@ -2447,6 +2447,11 @@ lemma capVCPUPtr_eq:
   apply clarsimp
   done
 
+lemma rf_sr_armKSGICVCPUNumListRegs:
+  "(s, s') \<in> rf_sr
+   \<Longrightarrow> gic_vcpu_num_list_regs_' (globals s') = of_nat (armKSGICVCPUNumListRegs (ksArchState s))"
+  by (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def Let_def)
+
 lemma update_vcpu_map_to_vcpu:
   "map_to_vcpus (ksPSpace s(p \<mapsto> KOArch (KOVCPU vcpu)))
              = (map_to_vcpus (ksPSpace s))(p \<mapsto> vcpu)"
