@@ -404,7 +404,7 @@ For initialisation, see makeVCPUObject.
 >     vgicUpdate vcpuPtr (\vgic -> vgic { vgicVMCR = vmcr })
 >
 >     apr <- doMachineOp get_gic_vcpu_ctrl_apr
->     vgicUpdate vcpuPtr (\vgic -> vgic { vgicAPR = vmcr })
+>     vgicUpdate vcpuPtr (\vgic -> vgic { vgicAPR = apr })
 >
 >     numListRegs <- gets (armKSGICVCPUNumListRegs . ksArchState)
 >     let gicIndices = init [0..numListRegs]
