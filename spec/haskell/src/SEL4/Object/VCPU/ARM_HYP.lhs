@@ -246,13 +246,13 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 > invokeVCPUInjectIRQ :: PPtr VCPU -> Int -> VIRQ -> Kernel [Word]
 > invokeVCPUInjectIRQ vcpuPtr index virq = do
 >     hsCurVCPU <- gets (armHSCurVCPU . ksArchState)
->     case hsCurVCPU of
->         Just (vcpuPtr, _) ->
->             doMachineOp $ set_gic_vcpu_ctrl_lr (fromIntegral index) virq
->         _ -> do
->              vcpu <- getObject vcpuPtr
->              let vcpuLR = (vgicLR . vcpuVGIC $ vcpu) // [(index, virq)]
->              setObject vcpuPtr $ vcpu { vcpuVGIC = (vcpuVGIC vcpu) { vgicLR = vcpuLR }}
+>     if (isJust hsCurVCPU && fst (fromJust hsCurVCPU) == vcpuPtr)
+>       then
+>          doMachineOp $ set_gic_vcpu_ctrl_lr (fromIntegral index) virq
+>       else do
+>           vcpu <- getObject vcpuPtr
+>           let vcpuLR = (vgicLR . vcpuVGIC $ vcpu) // [(index, virq)]
+>           setObject vcpuPtr $ vcpu { vcpuVGIC = (vcpuVGIC vcpu) { vgicLR = vcpuLR }}
 >     return []
 
 
