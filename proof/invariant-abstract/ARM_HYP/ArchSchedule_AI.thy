@@ -83,7 +83,16 @@ lemma idle_strg:
   by (clarsimp simp: invs_def valid_state_def valid_idle_def cur_tcb_def
                      pred_tcb_at_def valid_machine_state_def obj_at_def is_tcb_def)
 
-crunch it[wp]: vcpu_enable, vcpu_disable, vcpu_restore, vcpu_save "\<lambda>s. P (idle_thread s)"
+crunch it[wp]: vcpu_update, vcpu_save_register, vgic_update "\<lambda>s. P (idle_thread s)"
+crunch it[wp]: vcpu_enable, vcpu_disable, vcpu_restore "\<lambda>s. P (idle_thread s)"
+
+lemma vcpu_save_it[wp]:
+  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> vcpu_save v \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
+  unfolding vcpu_save_def
+  apply (cases v; simp)
+  apply (case_tac a; simp)
+  apply (wp | wpc | clarsimp | rule_tac S="set [0..<num_list_regs]" in mapM_wp)+
+  done
 
 lemma vcpu_switch_it[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> vcpu_switch v \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"

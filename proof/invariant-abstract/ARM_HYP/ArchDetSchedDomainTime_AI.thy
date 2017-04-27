@@ -20,7 +20,16 @@ lemma set_vcpu_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   by (wp set_vcpu_wp) simp
 
-crunch domain_list_inv[wp]: vcpu_save, vcpu_enable, vcpu_disable, vcpu_restore "\<lambda>s. P (domain_list s)"
+crunch domain_list_inv[wp]: vcpu_update, vcpu_save_register, vgic_update "\<lambda>s. P (domain_list s)"
+crunch domain_list_inv[wp]: vcpu_enable, vcpu_disable, vcpu_restore "\<lambda>s. P (domain_list s)"
+
+lemma vcpu_save_domain_list_inv[wp]:
+  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> vcpu_save v \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+  apply (simp add: vcpu_save_def)
+  apply (cases v; simp)
+  apply (case_tac a; simp)
+  apply (wp | wpc | clarsimp | rule_tac S="set [0..<num_list_regs]" in mapM_wp)+
+  done
 
 lemma vcpu_switch_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
@@ -34,7 +43,18 @@ lemma set_vcpu_domain_time_inv[wp]:
   by (wp set_vcpu_wp) simp
 
 crunch domain_time_inv[wp]:
-  vcpu_save, vcpu_enable, vcpu_disable, vcpu_restore "\<lambda>s. P (domain_time s)"
+  vcpu_update, vcpu_save_register, vgic_update "\<lambda>s. P (domain_time s)"
+
+crunch domain_time_inv[wp]:
+  vcpu_enable, vcpu_disable, vcpu_restore "\<lambda>s. P (domain_time s)"
+
+lemma vcpu_save_domain_time_inv[wp]:
+  "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> vcpu_save v \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+  apply (simp add: vcpu_save_def)
+  apply (cases v; simp)
+  apply (case_tac a; simp)
+  apply (wp | wpc | clarsimp | rule_tac S="set [0..<num_list_regs]" in mapM_wp)+
+  done
 
 lemma vcpu_switch_domain_time_inv[wp]:
   "\<lbrace>\<lambda>s. P (domain_time s)\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
