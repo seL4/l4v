@@ -1500,8 +1500,13 @@ lemma setVCPU_cap_to'[wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace> setObject p' (v::vcpu) \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
   by (wp ex_nonz_cap_to_pres')
 
-crunch cap_to'[wp]: vcpuDisable, vcpuSave, vcpuRestore, vcpuEnable "ex_nonz_cap_to' p"
+crunch cap_to'[wp]: vcpuDisable, vcpuRestore, vcpuEnable "ex_nonz_cap_to' p"
   (ignore: doMachineOp getObject setObject)
+
+lemma vcpuSave_cap_to'[wp]:
+  "\<lbrace>ex_nonz_cap_to' p\<rbrace> vcpuSave param_a \<lbrace>\<lambda>_. ex_nonz_cap_to' p\<rbrace>"
+  apply (wpsimp simp: vcpuSave_def modifyArchState_def | simp)+
+  sorry
 
 lemma vcpuSwitch_cap_to'[wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. ex_nonz_cap_to' p\<rbrace>"

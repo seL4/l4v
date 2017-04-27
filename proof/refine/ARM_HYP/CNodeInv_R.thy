@@ -9555,7 +9555,7 @@ lemma setVCPU_valid_irq_states' [wp]:
   "setObject p (vcpu::vcpu) \<lbrace>valid_irq_states'\<rbrace>"
   by (wp valid_irq_states_lift')
 
-crunch irq_states' [wp]: vcpuDisable, vcpuEnable, vcpuSave, vcpuRestore valid_irq_states'
+crunch irq_states' [wp]: vcpuDisable, vcpuEnable, vcpuRestore valid_irq_states'
   (wp: crunch_wps no_irq no_irq_mapM_x
    simp: crunch_simps
          set_gic_vcpu_ctrl_hcr_def setSCTLR_def setHCR_def get_gic_vcpu_ctrl_hcr_def
@@ -9564,6 +9564,10 @@ crunch irq_states' [wp]: vcpuDisable, vcpuEnable, vcpuSave, vcpuRestore valid_ir
          set_gic_vcpu_ctrl_vmcr_def set_gic_vcpu_ctrl_apr_def uncurry_def
          set_gic_vcpu_ctrl_lr_def setACTLR_def
    ignore: getObject setObject)
+
+lemma vcpuSave_irq_states' [wp]:
+  "vcpuSave v \<lbrace>valid_irq_states'\<rbrace>"
+  sorry
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
