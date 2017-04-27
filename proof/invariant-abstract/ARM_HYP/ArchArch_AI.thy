@@ -1047,8 +1047,7 @@ lemma invoke_vcpu_inject_irq_invs[wp]:
                     hoare_vcg_all_lift hoare_vcg_disj_lift
                     set_vcpu_valid_arch_eq_hyp
               simp: set_gic_vcpu_ctrl_lr_def valid_machine_state_def)
-  apply (clarsimp simp: obj_at_def valid_pspace_def)
-  apply (erule (2) valid_objsE)
+  apply (rule conjI; clarsimp simp: obj_at_def valid_pspace_def, erule (2) valid_objsE)
   done
 
 lemma perform_vcpu_invs[wp]:
