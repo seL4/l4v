@@ -729,14 +729,43 @@ lemma setVCPU_isolatable:
   apply (case_tac arch_tcb, simp)
   done
 
+lemma vcpuUpdate_isolatable:
+  "thread_actions_isolatable idx (vcpuUpdate p f)"
+  apply (clarsimp simp: vcpuUpdate_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               getVCPU_isolatable setVCPU_isolatable
+         |wp|assumption|clarsimp)+
+  done
+
+lemma vgicUpdate_isolatable:
+  "thread_actions_isolatable idx (vgicUpdate p f)"
+  by (clarsimp simp: vgicUpdate_def vcpuUpdate_isolatable)
+
+lemma vcpuSaveRegister_isolatable:
+  "thread_actions_isolatable idx (vcpuSaveRegister p v m)"
+  apply (clarsimp simp: vcpuSaveRegister_def)
+  apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
+               vcpuUpdate_isolatable doMachineOp_isolatable
+         |wp|assumption|clarsimp)+
+  done
+
+lemma thread_actions_isolatable_mapM_x:
+  "\<lbrakk> \<And>x. thread_actions_isolatable idx (f x);
+     \<And>x t. f x \<lbrace>tcb_at' t\<rbrace> \<rbrakk> \<Longrightarrow> thread_actions_isolatable idx (mapM_x f xs)"
+  apply (induct xs; clarsimp simp: mapM_x_Nil mapM_x_Cons thread_actions_isolatable_returns)
+  apply (rule thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]; clarsimp?)
+   apply assumption+
+  done
+
 lemma vcpuSave_isolatable:
   "thread_actions_isolatable idx (vcpuSave v)"
-  apply (clarsimp simp: vcpuSave_def thread_actions_isolatable_fail split: option.splits)
+  apply (clarsimp simp: vcpuSave_def thread_actions_isolatable_fail when_def split: option.splits)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                thread_actions_isolatable_if thread_actions_isolatable_returns
                thread_actions_isolatable_fail getVCPU_isolatable setVCPU_isolatable
-               gets_isolatable doMachineOp_isolatable
-         |wp|assumption|clarsimp)+
+               gets_isolatable doMachineOp_isolatable vcpuSaveRegister_isolatable
+               vgicUpdate_isolatable vcpuUpdate_isolatable thread_actions_isolatable_mapM_x
+         |wp mapM_x_wp|assumption|clarsimp|fastforce)+
   done
 
 
@@ -1150,7 +1179,7 @@ lemma oblivious_setVMRoot_schact:
   "oblivious (ksSchedulerAction_update f) (setVMRoot t)"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def locateSlot_conv
                    getSlotCap_def getCTE_def armv_contextSwitch_def)
-  by (safe intro!: oblivious_bind oblivious_bindE oblivious_catch
+  by (safe intro!: oblivious_bind oblivious_bindE oblivious_catch oblivious_mapM_x
              | simp_all add: liftE_def getHWASID_def
                              findPDForASID_def liftME_def loadHWASID_def
                              findPDForASIDAssert_def checkPDAt_def
@@ -1160,7 +1189,8 @@ lemma oblivious_setVMRoot_schact:
                              invalidateHWASIDEntry_def storeHWASID_def
                              checkPDNotInASIDMap_def armv_contextSwitch_def
                              vcpuSwitch_def vcpuDisable_def vcpuRestore_def
-                             vcpuEnable_def vcpuSave_def
+                             vcpuEnable_def vcpuSave_def vcpuSaveRegister_def
+                             vcpuUpdate_def vgicUpdate_def
                       split: if_split capability.split arch_capability.split option.split)+
 
 
