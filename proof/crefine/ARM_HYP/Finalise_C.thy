@@ -1457,179 +1457,6 @@ lemma no_0_pd_at'[elim!]:
   apply (drule spec[where x=0], clarsimp)
   done
 
-lemma Arch_finaliseCap_ccorres:
-  "\<And>final.
-   ccorres ccap_relation ret__struct_cap_C_'
-   (invs' and valid_cap' (ArchObjectCap cap)
-       and (\<lambda>s. 2 ^ acapBits cap \<le> gsMaxObjectSize s))
-   (UNIV \<inter> {s. ccap_relation (ArchObjectCap cap) (cap_' s)}
-                        \<inter> {s. final_' s = from_bool final}) []
-   (Arch.finaliseCap cap final) (Call Arch_finaliseCap_'proc)"
-  apply (cinit lift: cap_' final_' cong: call_ignore_cong)
-   apply csymbr
-   apply (simp add: ARM_HYP_H.finaliseCap_def cap_get_tag_isCap_ArchObject
-               del: Collect_const)
-sorry
-(* FIXME ARMHYP: shape of finaliseCap_def is completely different (ifs instead of cases,
-                 since it came through a caseconv)
-   apply (wpc, simp_all add: isCap_simps Collect_False Collect_True
-                             case_bool_If
-                        del: Collect_const)[1]
-       apply (rule ccorres_if_lhs)
-        apply (simp add: from_bool_0 true_def)
-        apply (rule ccorres_rhs_assoc)+
-        apply csymbr
-        apply csymbr
-        apply simp
-        apply (ctac(no_vcg) add: deleteASIDPool_ccorres)
-         apply (rule return_Null_ccorres)
-        apply wp
-       apply (simp add: from_bool_0 false_def)
-       apply (rule return_Null_ccorres)+
-     apply (rule ccorres_Cond_rhs_Seq)
-      apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
-      apply (frule small_frame_cap_is_mapped_alt)
-      apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
-                            case_option_over_if
-                     elim!: ccap_relationE simp del: Collect_const)
-      apply (rule ccorres_rhs_assoc)+
-      apply csymbr
-      apply (simp cong: if_cong del: Collect_const)
-      apply (rule ccorres_Cond_rhs_Seq, simp_all del: Collect_const)[1]
-       apply (rule ccorres_rhs_assoc)+
-       apply (csymbr, csymbr, csymbr)
-       apply (ctac(no_vcg) add: unmapPage_ccorres)
-        apply (rule return_Null_ccorres)
-       apply wp
-      apply (rule return_Null_ccorres)
-     apply simp
-     apply (rule ccorres_rhs_assoc)+
-     apply csymbr
-     apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
-     apply (frule frame_cap_is_mapped_alt)
-     apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
-                           case_option_over_if
-                    elim!: ccap_relationE simp del: Collect_const)
-     apply (rule ccorres_Cond_rhs_Seq, simp_all del: Collect_const)[1]
-      apply (rule ccorres_rhs_assoc)+
-      apply (csymbr, csymbr, csymbr, csymbr)
-      apply (ctac(no_vcg) add: unmapPage_ccorres)
-       apply (rule return_Null_ccorres)
-      apply wp
-     apply (rule return_Null_ccorres)
-    apply (rule ccorres_rhs_assoc)+
-    apply csymbr
-    apply (simp add: if_1_0_0 from_bool_0 del: Collect_const)
-    apply (rule ccorres_Cond_rhs_Seq)
-     apply (rule ccorres_rhs_assoc)+
-     apply csymbr
-     apply csymbr
-     apply (frule cap_get_tag_isCap_unfolded_H_cap)
-     apply (clarsimp simp: cap_page_table_cap_lift cap_to_H_def
-                           case_option_over_if if_1_0_0
-                    elim!: ccap_relationE
-                 simp del: Collect_const)
-     apply (rule ccorres_Cond_rhs_Seq)
-      apply (simp add: from_bool_0 to_bool_def)
-      apply (rule ccorres_rhs_assoc)+
-      apply csymbr
-      apply csymbr
-      apply csymbr
-      apply (ctac(no_vcg) add: unmapPageTable_ccorres)
-       apply (rule return_Null_ccorres)
-      apply wp
-     apply (simp add: to_bool_def)
-     apply (rule return_Null_ccorres)
-    apply (simp only: bool.simps)
-    apply (simp cong: option.case_cong
-                 add: case_option_If)
-    apply (rule ccorres_cond_false_seq)
-    apply simp
-    apply (rule return_Null_ccorres)
-   apply (rule ccorres_rhs_assoc)+
-   apply csymbr
-   apply (simp only: if_1_0_0 simp_thms from_bool_0)
-   apply (rule ccorres_Cond_rhs_Seq)
-    apply (rule ccorres_rhs_assoc)+
-    apply csymbr+
-    apply (simp only: if_1_0_0 simp_thms)
-    apply (frule cap_get_tag_isCap_unfolded_H_cap)
-    apply (clarsimp simp: cap_page_directory_cap_lift cap_to_H_def
-                          case_option_over_if
-                   elim!: ccap_relationE simp del: Collect_const)
-     apply (rule ccorres_Cond_rhs_Seq)
-     apply (rule ccorres_rhs_assoc)+
-     apply csymbr
-     apply csymbr
-     apply (simp add: to_bool_def)
-     apply (ctac(no_vcg) add: deleteASID_ccorres)
-      apply (rule return_Null_ccorres)
-     apply wp
-    apply simp
-    apply (rule return_Null_ccorres)
-   apply (simp cong: option.case_cong add: case_option_If)
-   apply (rule ccorres_cond_false_seq, simp)
-   apply (rule return_Null_ccorres)
-  apply (clarsimp simp: from_bool_0 Collect_const_mem)
-  apply (intro conjI)
-         apply (clarsimp simp: valid_cap'_def)
-         apply (clarsimp simp: asid_bits_def)
-        apply clarsimp
-        apply (rule conjI)
-         apply (clarsimp simp: valid_cap'_def mask_def)
-         apply (frule cap_get_tag_isCap_unfolded_H_cap, rule refl)
-         subgoal by (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def to_bool_def
-                               vmsz_aligned_aligned_pageBits
-                        elim!: ccap_relationE
-                        split: option.split_asm if_split_asm)
-        apply (clarsimp simp: valid_cap'_def mask_def)
-        apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
-        subgoal by (clarsimp simp: cap_frame_cap_lift cap_to_H_def to_bool_def
-                              vmsz_aligned_aligned_pageBits
-                       elim!: ccap_relationE
-                       split: option.split_asm if_split_asm)
-       apply (clarsimp simp: valid_cap'_def mask_def)
-       apply (frule cap_get_tag_isCap_unfolded_H_cap)
-       apply (clarsimp simp: cap_page_table_cap_lift cap_to_H_def to_bool_def
-                      elim!: ccap_relationE
-                      split: option.split_asm if_split_asm)
-       apply (clarsimp simp: valid_cap'_def)
-       apply (frule cap_get_tag_isCap_unfolded_H_cap)
-       apply (frule cap_lift_page_directory_cap)
-       apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
-                             to_bool_def cap_page_directory_cap_lift_def
-                       split: if_split_asm)
-       apply (rule conjI)
-        apply (clarsimp simp: asid_bits_def cap_page_directory_cap_lift_def)
-       apply clarsimp
-      apply clarsimp
-      apply (frule cap_get_tag_isCap_unfolded_H_cap)
-      apply (clarsimp simp: cap_asid_pool_cap_lift cap_to_H_def
-                     elim!: ccap_relationE simp del: Collect_const)
-    apply (clarsimp simp: gen_framesize_to_H_def cap_get_tag_isCap_unfolded_H_cap)
-    apply (rule conjI)
-     apply clarsimp
-     apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
-     apply (clarsimp simp: cap_lift_small_frame_cap cap_to_H_simps
-                           cap_small_frame_cap_lift_def Kernel_C.ARMSmallPage_def
-                    elim!: ccap_relationE)
-    apply clarsimp
-    apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
-    apply (frule frame_cap_size)
-    apply (simp add: mask_eq_iff_w2p word_size del: frame_cap_size)
-    apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
-                          vm_page_size_defs framesize_to_H_def
-                   elim!: ccap_relationE simp del: Collect_const frame_cap_size
-                   split: if_split)
-    apply (clarsimp simp: c_valid_cap_def cl_valid_cap_def
-                          Kernel_C.ARMSmallPage_def)
-   apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap)
-   apply (frule cap_get_tag_isCap_unfolded_H_cap)
-   apply (clarsimp simp: cap_page_table_cap_lift cap_to_H_def
-                  elim!: ccap_relationE simp del: Collect_const)
-  apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap)
-  done *)
-
 lemma ccte_relation_ccap_relation:
   "ccte_relation cte cte' \<Longrightarrow> ccap_relation (cteCap cte) (cte_C.cap_C cte')"
   by (clarsimp simp: ccte_relation_def ccap_relation_def
@@ -2376,6 +2203,448 @@ lemma associateVCPUTCB_ccorres:
    apply (vcg exspec=dissociateVCPUTCB_modifies)
   apply (fastforce simp: ctcb_relation_def carch_tcb_relation_def typ_heap_simps
                          cvcpu_relation_def option_to_ctcb_ptr_def)
+  done
+
+lemma vcpuFinalise_ccorres:
+  "ccorres dc xfdc (invs' and vcpu_at' vcpuptr)
+      ({s. vcpu_' s = Ptr vcpuptr}) []
+      (vcpuFinalise vcpuptr) (Call vcpu_finalise_'proc)"
+  supply dc_simp[simp del]
+  apply (cinit lift: vcpu_')
+   apply (rule ccorres_move_c_guard_vcpu)
+   apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+   apply (rule_tac Q="(\<lambda>s. \<exists>tcb. ko_at' vcpu vcpuptr s) and
+                           no_0_obj' and
+                           valid_objs'"
+                   and Q'=UNIV
+                   and C'="{s. (vcpuTCBPtr vcpu \<noteq> None)}"
+                   in ccorres_rewrite_cond_sr)
+    apply clarsimp
+    apply (frule cmap_relation_vcpu)
+    apply (erule cmap_relationE1)
+     apply (erule ko_at_projectKO_opt, rename_tac cvcpu)
+    apply (clarsimp simp add: typ_heap_simps')
+    apply (case_tac "vcpuTCBPtr vcpu \<noteq> None")
+     apply(frule valid_objs_valid_vcpu', simp)
+     apply (clarsimp simp add: cvcpu_relation_def
+                               option_to_ctcb_ptr_def
+                               tcb_ptr_to_ctcb_ptr_def
+                               typ_at_tcb'
+                               valid_vcpu'_def)
+     apply (frule tcb_aligned')
+     apply (frule_tac y=ctcb_offset and n=9 in aligned_offset_non_zero
+           ; clarsimp simp: ctcb_offset_def)
+    apply (clarsimp simp: cvcpu_relation_def option_to_ctcb_ptr_def)
+   apply (wpc ; clarsimp ; ccorres_rewrite)
+    apply (rule ccorres_return_Skip)
+   apply (rule ccorres_move_c_guard_vcpu)
+   apply (ctac add: dissociateVCPUTCB_vcpu_ccorres)
+  apply (fastforce simp: ctcb_relation_def carch_tcb_relation_def typ_heap_simps
+                         cvcpu_relation_def option_to_ctcb_ptr_def)
+  done
+
+lemma capFSize_eq: "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capability.PageCap x31 x32 x33 x34 (Some (a, b)))) cap;
+              x34 \<noteq> Wellformed_C.ARMSmallPage\<rbrakk>
+  \<Longrightarrow> gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap)) = x34"
+  apply (frule (1) cap_get_tag_isCap_unfolded_H_cap)
+  apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
+                            case_option_over_if gen_framesize_to_H_def
+                            ARM_HYP_H.kernelBase_def
+                            framesize_to_H_def valid_cap'_def
+                     elim!: ccap_relationE simp del: Collect_const)
+  apply (subgoal_tac "capFSize_CL (cap_frame_cap_lift cap) \<noteq> scast Kernel_C.ARMSmallPage")
+  apply simp
+  apply (clarsimp simp: c_valid_cap_def cl_valid_cap_def)
+  done
+
+lemma Arch_finaliseCap_ccorres:
+  notes dc_simp[simp del] Collect_const[simp del]
+  shows
+  "ccorres ccap_relation ret__struct_cap_C_'
+   (invs' and valid_cap' (ArchObjectCap cp)
+       and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s))
+   (UNIV \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
+                        \<inter> {s. final_' s = from_bool is_final}) []
+   (Arch.finaliseCap cp is_final) (Call Arch_finaliseCap_'proc)"
+  apply (cinit lift: cap_' final_' cong: call_ignore_cong)
+   apply csymbr
+   apply (simp add: ARM_HYP_H.finaliseCap_def cap_get_tag_isCap_ArchObject)
+   apply (simp add: split_def)
+   apply (rule ccorres_cases[where P=is_final]; clarsimp)
+    prefer 2
+    apply (subgoal_tac "isPageCap cp \<longrightarrow> \<not> isPageTableCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isVCPUCap cp \<and> \<not> isPageDirectoryCap cp")
+     apply (rule ccorres_cases[where P="isPageCap cp"]; clarsimp)
+      prefer 2
+      apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+      apply (cases cp; clarsimp simp: isCap_simps; ccorres_rewrite)
+          apply (rule return_Null_ccorres)+
+        apply (subst ccorres_cond_seq2_seq[symmetric])
+        apply (rule ccorres_guard_imp)
+          apply (rule ccorres_rhs_assoc)
+          apply csymbr
+          apply clarsimp
+          apply ccorres_rewrite
+          apply (rule return_Null_ccorres, simp+)
+       apply (subst ccorres_cond_seq2_seq[symmetric])
+       apply (rule ccorres_guard_imp)
+         apply (rule ccorres_rhs_assoc)
+         apply csymbr
+         apply clarsimp
+         apply ccorres_rewrite
+         apply (rule return_Null_ccorres, simp+)
+      apply (rule return_Null_ccorres)+
+     apply ccorres_rewrite
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (subgoal_tac "isPageCap cp \<longrightarrow> \<not> isPageDirectoryCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isVCPUCap cp \<and> \<not> isPageTableCap cp")
+       apply clarsimp
+       apply (rule ccorres_rhs_assoc)+
+       apply csymbr
+       apply clarsimp
+       apply (rule ccorres_Cond_rhs_Seq)
+        apply (subgoal_tac "capVPMappedAddress cp \<noteq> None")
+         prefer 2
+         apply (clarsimp simp: isCap_simps)
+         apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
+         apply (frule small_frame_cap_is_mapped_alt)
+         apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
+                               case_option_over_if
+                         elim!: ccap_relationE simp del: Collect_const)
+        apply (simp add: split_def)
+        apply (rule ccorres_rhs_assoc)+
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply (ctac (no_vcg) add:  unmapPage_ccorres)
+         apply (rule return_Null_ccorres)
+        apply (rule wp_post_taut)
+       apply (subgoal_tac "capVPMappedAddress cp = None")
+        prefer 2
+        apply (clarsimp simp: isCap_simps)
+        apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
+        apply (frule small_frame_cap_is_mapped_alt)
+        apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
+                              case_option_over_if
+                        elim!: ccap_relationE simp del: Collect_const)
+       apply (simp add: split_def)
+       apply (rule return_Null_ccorres)
+      apply (clarsimp simp: isCap_simps)
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (subgoal_tac "isPageCap cp \<longrightarrow> \<not> isPageDirectoryCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isVCPUCap cp \<and> \<not> isPageTableCap cp")
+       apply clarsimp
+       apply (rule ccorres_rhs_assoc)+
+       apply csymbr
+       apply clarsimp
+       apply (rule ccorres_Cond_rhs_Seq)
+        apply (subgoal_tac "capVPMappedAddress cp \<noteq> None")
+         prefer 2
+         apply (clarsimp simp: isCap_simps)
+         apply (frule (1) cap_get_tag_isCap_unfolded_H_cap)
+         apply (frule frame_cap_is_mapped_alt)
+         apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
+                               case_option_over_if
+                         elim!: ccap_relationE simp del: Collect_const)
+        apply simp
+        apply (rule ccorres_rhs_assoc)+
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply (ctac (no_vcg) add:  unmapPage_ccorres)
+         apply (rule return_Null_ccorres)
+        apply (rule wp_post_taut)
+       apply (subgoal_tac "capVPMappedAddress cp = None")
+        prefer 2
+        apply (clarsimp simp: isCap_simps)
+        apply (frule (1) cap_get_tag_isCap_unfolded_H_cap)
+        apply (frule frame_cap_is_mapped_alt)
+        apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
+                              case_option_over_if
+                    elim!: ccap_relationE simp del: Collect_const)
+       apply clarsimp
+       apply (rule return_Null_ccorres)
+      apply (clarsimp simp: isCap_simps)
+     apply (clarsimp simp: isCap_simps)
+    apply (clarsimp simp: isCap_simps)
+   apply ccorres_rewrite
+   apply (rule ccorres_Cond_rhs_Seq; clarsimp)
+  apply (rule ccorres_rhs_assoc)+
+    apply csymbr
+    apply csymbr
+  apply (ctac (no_vcg) add: deleteASIDPool_ccorres)
+  apply (rule return_Null_ccorres)
+    apply (rule wp_post_taut)
+   apply (rule ccorres_Cond_rhs_Seq; clarsimp)
+  apply (rule ccorres_rhs_assoc)+
+    apply csymbr
+    apply clarsimp
+    apply ccorres_rewrite
+    apply (rule ccorres_rhs_assoc)+
+    apply csymbr
+    apply csymbr
+    apply (simp add: if_1_0_0)
+    apply (subgoal_tac "isPageDirectoryCap cp \<longrightarrow> \<not> isPageTableCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isVCPUCap cp \<and> \<not> isPageCap cp")
+     apply clarsimp
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (subgoal_tac "capPDMappedASID cp \<noteq> None")
+       prefer 2
+       apply (clarsimp simp add: isCap_simps)
+       apply (frule cap_get_tag_isCap_unfolded_H_cap)
+       apply (frule cap_lift_page_directory_cap)
+       apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
+                             to_bool_def cap_page_directory_cap_lift_def
+                             asid_bits_def
+                       split: if_split_asm)
+      apply simp
+      apply (rule ccorres_rhs_assoc)+
+      apply csymbr
+      apply csymbr
+      apply (ctac (no_vcg) add: deleteASID_ccorres)
+       apply (rule return_Null_ccorres)
+      apply (rule wp_post_taut)
+     apply (subgoal_tac "capPDMappedASID cp = None")
+      prefer 2
+      apply (clarsimp simp add: isCap_simps)
+      apply (frule cap_get_tag_isCap_unfolded_H_cap)
+      apply (frule cap_lift_page_directory_cap)
+      apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
+                            to_bool_def cap_page_directory_cap_lift_def
+                            asid_bits_def
+                      split: if_split_asm)
+     apply simp
+     apply (rule return_Null_ccorres)
+    apply (clarsimp simp add: isCap_simps)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply (subgoal_tac "isPageTableCap cp \<longrightarrow> \<not> isPageDirectoryCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isVCPUCap cp \<and> \<not> isPageCap cp")
+     apply clarsimp
+     apply (rule ccorres_rhs_assoc)+
+     apply csymbr
+     apply simp
+     apply ccorres_rewrite
+     apply (rule ccorres_rhs_assoc)+
+     apply csymbr
+     apply csymbr
+     apply (simp add: if_1_0_0)
+     apply clarsimp
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (subgoal_tac "capPTMappedAddress cp \<noteq> None")
+       prefer 2
+       apply (clarsimp simp add: isCap_simps)
+       apply (frule cap_get_tag_isCap_unfolded_H_cap)
+       apply (frule cap_lift_page_table_cap)
+       apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
+                             to_bool_def cap_page_table_cap_lift_def
+                             asid_bits_def
+                       split: if_split_asm)
+      apply simp
+      apply (rule ccorres_rhs_assoc)+
+      apply csymbr
+      apply csymbr
+      apply csymbr
+      apply (simp add: split_def)
+      apply (ctac (no_vcg) add: unmapPageTable_ccorres)
+       apply (rule return_Null_ccorres)
+      apply (rule wp_post_taut)
+     apply clarsimp
+     apply (subgoal_tac "capPTMappedAddress cp = None")
+      prefer 2
+      apply (clarsimp simp add: isCap_simps)
+      apply (frule cap_get_tag_isCap_unfolded_H_cap)
+      apply (frule cap_lift_page_table_cap)
+      apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
+                            to_bool_def cap_page_table_cap_lift_def
+                            asid_bits_def
+                      split: if_split_asm)
+     apply simp
+     apply (rule return_Null_ccorres)
+    apply (clarsimp simp: isCap_simps)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply (subgoal_tac "isPageCap cp \<longrightarrow> \<not> isPageDirectoryCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isVCPUCap cp \<and> \<not> isPageTableCap cp")
+     apply clarsimp
+     apply (rule ccorres_rhs_assoc)+
+     apply csymbr
+     apply clarsimp
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (subgoal_tac "capVPMappedAddress cp \<noteq> None")
+       prefer 2
+       apply (clarsimp simp: isCap_simps)
+       apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
+       apply (frule small_frame_cap_is_mapped_alt)
+       apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
+                             case_option_over_if
+                       elim!: ccap_relationE simp del: Collect_const)
+      apply (simp add: split_def)
+      apply (rule ccorres_rhs_assoc)+
+      apply csymbr
+      apply csymbr
+      apply csymbr
+      apply (ctac (no_vcg) add:  unmapPage_ccorres)
+       apply (rule return_Null_ccorres)
+      apply (rule wp_post_taut)
+     apply (subgoal_tac "capVPMappedAddress cp = None")
+      prefer 2
+      apply (clarsimp simp: isCap_simps)
+      apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
+      apply (frule small_frame_cap_is_mapped_alt)
+      apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
+                            case_option_over_if
+                     elim!: ccap_relationE simp del: Collect_const)
+     apply (simp add: split_def)
+     apply (rule return_Null_ccorres)
+    apply (clarsimp simp: isCap_simps)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply (subgoal_tac "isPageCap cp \<longrightarrow> \<not> isPageDirectoryCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isVCPUCap cp \<and> \<not> isPageTableCap cp")
+     apply clarsimp
+     apply (rule ccorres_rhs_assoc)+
+     apply csymbr
+     apply clarsimp
+     apply (rule ccorres_Cond_rhs_Seq)
+      apply (subgoal_tac "capVPMappedAddress cp \<noteq> None")
+       prefer 2
+       apply (clarsimp simp: isCap_simps)
+       apply (frule (1) cap_get_tag_isCap_unfolded_H_cap)
+       apply (frule frame_cap_is_mapped_alt)
+       apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
+                             case_option_over_if
+                       elim!: ccap_relationE simp del: Collect_const)
+      apply simp
+      apply (rule ccorres_rhs_assoc)+
+      apply csymbr
+      apply csymbr
+      apply csymbr
+      apply csymbr
+      apply (ctac (no_vcg) add:  unmapPage_ccorres)
+       apply (rule return_Null_ccorres)
+      apply (rule wp_post_taut)
+     apply (subgoal_tac "capVPMappedAddress cp = None")
+      prefer 2
+      apply (clarsimp simp: isCap_simps)
+      apply (frule (1) cap_get_tag_isCap_unfolded_H_cap)
+      apply (frule frame_cap_is_mapped_alt)
+      apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
+                            case_option_over_if
+                      elim!: ccap_relationE simp del: Collect_const)
+     apply clarsimp
+     apply (rule return_Null_ccorres)
+    apply (clarsimp simp: isCap_simps)
+   apply (rule ccorres_Cond_rhs_Seq)
+    apply (subgoal_tac "isVCPUCap cp \<longrightarrow> \<not> isPageDirectoryCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isPageCap cp \<and> \<not> isPageTableCap cp")
+     apply clarsimp
+     apply (rule ccorres_rhs_assoc)+
+     apply csymbr
+     apply (ctac (no_vcg) add: vcpuFinalise_ccorres)
+      apply (rule return_Null_ccorres)
+     apply (rule wp_post_taut)
+    apply (clarsimp simp: isCap_simps)
+   apply clarsimp
+   apply (rule return_Null_ccorres)
+  apply (clarsimp simp: isCap_simps)
+  apply (cases cp ; clarsimp)
+      apply (cases is_final; clarsimp)
+      apply (frule cap_get_tag_isCap_unfolded_H_cap)
+      apply (frule cap_lift_asid_pool_cap)
+      apply (clarsimp simp: valid_cap'_def)
+      apply (clarsimp simp: ccap_relation_def cap_to_H_def
+                            cap_asid_pool_cap_lift_def asid_bits_def)
+     apply (intro conjI; clarsimp)
+        apply (subgoal_tac "capVPMappedAddress cp \<noteq> None")
+         apply (clarsimp simp: valid_cap'_def asid_bits_def mask_def word_less_sub_1)
+        apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
+        apply (frule small_frame_cap_is_mapped_alt)
+        apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
+                              case_option_over_if
+                        elim!: ccap_relationE)
+       apply (subgoal_tac "capVPMappedAddress cp \<noteq> None")
+        apply (clarsimp simp: valid_cap'_def asid_bits_def mask_def word_less_sub_1)
+       apply (frule (1) cap_get_tag_isCap_unfolded_H_cap, simp)
+       apply (frule frame_cap_is_mapped_alt)
+       apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
+                             case_option_over_if
+                       elim!: ccap_relationE)
+      apply (rule conjI, clarsimp)
+       apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
+       apply (frule small_frame_cap_is_mapped_alt)
+       apply (subgoal_tac "capVPMappedAddress cp \<noteq> None")
+        apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
+                              case_option_over_if gen_framesize_to_H_def
+                              Kernel_C.ARMSmallPage_def ARM_HYP_H.kernelBase_def
+                              if_split
+                       elim!: ccap_relationE simp del: Collect_const)
+       apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
+                             case_option_over_if
+                        elim!: ccap_relationE simp del: Collect_const)
+      apply (frule cap_get_tag_isCap_unfolded_H_cap, simp, simp)
+     apply (rule conjI, clarsimp)
+      apply (subgoal_tac "capVPMappedAddress cp \<noteq> None")
+       apply clarsimp
+       apply (frule (1) cap_get_tag_isCap_unfolded_H_cap)
+       apply (frule frame_cap_is_mapped_alt)
+       apply (frule capFSize_eq, simp)
+       apply simp
+       apply (rule conjI)
+        apply (frule (1) cap_get_tag_isCap_unfolded_H_cap)
+        apply (frule capFSize_range)
+        apply (rule order_le_less_trans, assumption, simp)
+       apply (clarsimp simp: word_less_sub_1)
+       apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
+                             case_option_over_if gen_framesize_to_H_def
+                             if_split
+                       elim!: ccap_relationE)
+      apply (frule (1) cap_get_tag_isCap_unfolded_H_cap)
+      apply (frule frame_cap_is_mapped_alt)
+      apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
+                            case_option_over_if
+                     elim!: ccap_relationE simp del: Collect_const)
+     apply (frule (1) cap_get_tag_isCap_unfolded_H_cap, simp)
+    apply (cases is_final; clarsimp)
+    apply (intro conjI; clarsimp?)
+      apply (frule cap_get_tag_isCap_unfolded_H_cap)
+      apply (frule cap_lift_page_table_cap)
+      apply (subgoal_tac "x42 \<noteq> None")
+       apply (clarsimp simp: valid_cap'_def asid_bits_def mask_def word_less_sub_1)
+      apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
+                             to_bool_def cap_page_table_cap_lift_def
+                             asid_bits_def
+                      split: if_split_asm)
+     apply (frule cap_get_tag_isCap_unfolded_H_cap)
+     apply (frule cap_lift_page_table_cap)
+     apply (subgoal_tac "x42 \<noteq> None")
+      apply ((clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
+                             to_bool_def cap_page_table_cap_lift_def
+                             asid_bits_def
+                      split: if_split_asm)+)[2]
+  apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
+   apply (cases is_final; clarsimp)
+   apply (intro conjI; clarsimp?)
+     apply (subgoal_tac "x52 \<noteq> None")
+      apply (clarsimp simp: valid_cap'_def)
+      apply (clarsimp simp: asid_bits_def mask_def word_less_sub_1)
+     apply (frule cap_get_tag_isCap_unfolded_H_cap)
+     apply (frule cap_lift_page_directory_cap)
+     apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
+                           to_bool_def cap_page_directory_cap_lift_def
+                           asid_bits_def
+                     split: if_split_asm)
+    apply (subgoal_tac "x52 \<noteq> None")
+     apply (frule cap_get_tag_isCap_unfolded_H_cap)
+     apply (frule cap_lift_page_directory_cap)
+     apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
+                           to_bool_def cap_page_directory_cap_lift_def
+                           asid_bits_def
+                     split: if_split_asm)
+    apply (frule cap_get_tag_isCap_unfolded_H_cap)
+    apply (frule cap_lift_page_directory_cap)
+    apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
+                          to_bool_def cap_page_directory_cap_lift_def
+                          asid_bits_def
+                    split: if_split_asm)
+   apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_cap'_def)
+  apply (frule cap_get_tag_isCap_unfolded_H_cap)
+  apply (frule cap_lift_vcpu_cap)
+  apply (clarsimp simp: cap_vcpu_cap_lift cap_to_H_def
+                        case_option_over_if gen_framesize_to_H_def
+                  elim!: ccap_relationE)
   done
 
 lemma prepareThreadDelete_ccorres:
