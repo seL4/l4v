@@ -1144,20 +1144,19 @@ lemma invokeTCB_CopyRegisters_ccorres:
 
 (* FIXME: move *)
 lemmas mapM_x_append = mapM_x_append2
-typ arch_tcb
+
 lemma invokeTCB_WriteRegisters_ccorres_helper:
   "\<lbrakk> unat (f (of_nat n)) = incn
          \<and> g (of_nat n) = register_from_H reg \<and> n'=incn
          \<and> of_nat n < bnd \<and> of_nat n < bnd2 \<rbrakk> \<Longrightarrow>
    ccorres dc xfdc (sysargs_rel args buffer and sysargs_rel_n args buffer n' and
-                    obj_at' (\<lambda>t. atcbVCPUPtr (tcbArch t) = atcbVCPUPtr (tcbArch tcb)) dst
-                    and valid_objs' and no_0_obj' and P)
+                    tcb_at' dst and P)
                    (\<lbrace>\<acute>i = of_nat n\<rbrace>) hs
      (asUser dst (setRegister reg
-          (sanitiseRegister tcb reg (args ! incn))))
+          (sanitiseRegister t reg (args ! incn))))
      (\<acute>ret__unsigned_long :== CALL getSyscallArg(f (\<acute>i),option_to_ptr buffer);;
       Guard ArrayBounds \<lbrace>\<acute>i < bnd\<rbrace>
-          (\<acute>unsigned_long_eret_2 :== CALL sanitiseRegister(g (\<acute>i),\<acute>ret__unsigned_long,tcb_ptr_to_ctcb_ptr dst));;
+          (\<acute>unsigned_long_eret_2 :== CALL sanitiseRegister(g (\<acute>i),\<acute>ret__unsigned_long,from_bool t));;
       Guard ArrayBounds \<lbrace>\<acute>i < bnd2\<rbrace>
         (CALL setRegister(tcb_ptr_to_ctcb_ptr dst,g (\<acute>i),\<acute>unsigned_long_eret_2)))"
   apply (rule ccorres_guard_imp2)
@@ -1166,16 +1165,13 @@ lemma invokeTCB_WriteRegisters_ccorres_helper:
    apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n="incn" and buffer=buffer])
      apply (rule ccorres_symb_exec_r)
        apply (ctac add: setRegister_ccorres)
-      apply (vcg exspec=sanitiseRegister_spec')
+      apply (vcg)
      apply clarsimp
      apply (rule conseqPre, vcg, clarsimp)
-   apply (rule tcb_at_h_t_valid)
-    apply (fastforce simp add: obj_at'_def projectKOs)
-   apply clarsimp
+    apply wp
+   apply simp
+   apply (vcg exspec=getSyscallArg_modifies)
   apply fastforce
-  apply simp
-  apply (vcg exspec=getSyscallArg_modifies)
-  apply (auto simp: obj_at'_def projectKOs sanitiseRegister_def split: register.splits)
   done
 
 lemma doMachineOp_context:
@@ -1440,7 +1436,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
   apply (cinit lift: n_' dest_' resumeTarget_' buffer_'
                simp: whileAnno_def)
    (* using S not univ seems to stop cinit doing this? *)
-   apply (csymbr, csymbr, csymbr)
+   apply (csymbr, csymbr, csymbr, csymbr)
    apply (simp add: liftE_def bind_assoc
                del: Collect_const)
    apply (rule ccorres_pre_getCurThread)
@@ -1457,7 +1453,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
           apply (clarsimp simp: return_def min_def)
           apply (simp add: linorder_not_less[symmetric] n_gpRegisters_def n_frameRegisters_def)
          apply ceqv
-        apply (rule ccorres_symb_exec_l)
+        apply (ctac add: hasVCPU_ccorres)
            apply (simp add: zipWithM_mapM split_def zip_append1 mapM_discarded mapM_x_append
                        del: Collect_const)
            apply (simp add: asUser_bind_distrib getRestartPC_def setNextPC_def bind_assoc
@@ -1466,11 +1462,10 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
            apply (simp add: asUser_mapM_x bind_assoc)
            apply (rule ccorres_stateAssert)
            apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
-               apply (rule_tac F="\<lambda>n. sysargs_rel args buffer and sysargs_rel_n args buffer (n + 2)
-                                     and obj_at' (\<lambda>t. atcbVCPUPtr (tcbArch t) = atcbVCPUPtr (tcbArch rvb))
-            dst and valid_objs' and no_0_obj' and (\<lambda>s. dst \<noteq> ksCurThread s)"
+             apply (drule_tac t="hasVCPU" in sym, simp only:)
+               apply (rule_tac F="\<lambda>n. sysargs_rel args buffer and sysargs_rel_n args buffer (n + 2) and
+                                     tcb_at' dst and (\<lambda>s. dst \<noteq> ksCurThread s)"
                            and Q=UNIV in ccorres_mapM_x_whileQ)
-thm ccorres_mapM_x_whileQ
                    apply clarsimp
                    apply (rule invokeTCB_WriteRegisters_ccorres_helper [where args=args])
                    apply (simp add: unat_word_ariths frame_gp_registers_convs n_frameRegisters_def
@@ -1491,11 +1486,10 @@ thm ccorres_mapM_x_whileQ
               apply (rule ceqv_refl)
              apply (rule ccorres_stateAssert)
              apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
+               apply (drule_tac t="hasVCPU" in sym, simp only:)
                  apply (rule_tac F="\<lambda>n. sysargs_rel args buffer
                                      and sysargs_rel_n args buffer (n + length ARM_HYP_H.frameRegisters + 2)
-                                     and obj_at' (\<lambda>t. atcbVCPUPtr (tcbArch t) = atcbVCPUPtr (tcbArch rvb)) dst
-                                     and valid_objs' and no_0_obj'
-                                     and (\<lambda>s. dst \<noteq> ksCurThread s)"
+                                     and tcb_at' dst and (\<lambda>s. dst \<noteq> ksCurThread s)"
                              and Q=UNIV in ccorres_mapM_x_whileQ)
                      apply clarsimp
                      apply (rule invokeTCB_WriteRegisters_ccorres_helper [where args=args])
@@ -1553,24 +1547,24 @@ thm ccorres_mapM_x_whileQ
             apply wpsimp
            apply (simp add: guard_is_UNIV_def)
           apply (wp)
+apply vcg
          apply (wp threadGet_wp)
-        apply simp
-       apply wp
       apply vcg
      apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
      apply simp
     apply (simp add: performTransfer_def)
     apply wp
+   apply clarsimp
    apply vcg
-  apply (clarsimp simp: n_msgRegisters_def sysargs_rel_n_def split: if_split)
+  apply (clarsimp simp: n_msgRegisters_def sysargs_rel_n_def invs_valid_objs' invs_no_0_obj' split: if_split)
   apply (rule conjI)
    apply (cases args, simp)
    apply (case_tac list, simp)
    apply (case_tac lista, clarsimp simp: unat_eq_0)
-   apply simp
+   apply fastforce
   apply (fastforce simp: frame_gp_registers_convs word_less_nat_alt obj_at'_def projectKOs
                         sysargs_rel_def n_frameRegisters_def n_msgRegisters_def
-                  split: if_split_asm)+
+                  split: if_split_asm)
   done
 
 lemma invokeTCB_Suspend_ccorres:

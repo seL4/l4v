@@ -1979,21 +1979,26 @@ lemma vcpuInvalidateActive_ccorres:
   apply (rule UNIV_I)
   done
 
+lemmas Kernel_C_reg_simps = Kernel_C.R0_def Kernel_C.R1_def  Kernel_C.CPSR_def
+    Kernel_C.R2_def Kernel_C.R3_def Kernel_C.R4_def Kernel_C.R5_def Kernel_C.R6_def Kernel_C.R7_def
+    Kernel_C.R8_def Kernel_C.R9_def Kernel_C.R10_def Kernel_C.R11_def Kernel_C.R12_def Kernel_C.SP_def
+    Kernel_C.LR_def Kernel_C.FaultInstruction_def Kernel_C.TPIDRURW_def Kernel_C.LR_svc_def
+
 lemma sanitiseSetRegister_ccorres:
   "\<lbrakk> val = val'; reg' = register_from_H reg\<rbrakk> \<Longrightarrow>
-     ccorres dc xfdc (valid_objs' and ko_at' tcb tptr and no_0_obj')
+     ccorres dc xfdc (tcb_at' tptr)
                       UNIV
                       hs
-             (asUser tptr (setRegister reg (local.sanitiseRegister tcb reg val)))
-             (\<acute>unsigned_long_eret_2 :== CALL sanitiseRegister(reg',val',tcb_ptr_to_ctcb_ptr tptr);;
+             (asUser tptr (setRegister reg (local.sanitiseRegister False reg val)))
+             (\<acute>unsigned_long_eret_2 :== CALL sanitiseRegister(reg',val',0);;
               CALL setRegister(tcb_ptr_to_ctcb_ptr tptr,reg',\<acute>unsigned_long_eret_2))"
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_symb_exec_r)
      apply (ctac add: setRegister_ccorres)
-    apply (vcg exspec=sanitiseRegister_spec')
-   apply (rule conseqPre, vcg exspec=sanitiseRegister_spec')
-   apply fastforce+
-  done
+    apply (vcg)
+   apply (rule conseqPre, vcg)
+   apply (fastforce simp: sanitiseRegister_def Kernel_C_reg_simps split: register.splits)
+  by (auto simp: sanitiseRegister_def from_bool_def simp del: Collect_const split: register.splits bool.splits)
 
 lemma dissociateVCPUTCB_ccorres:
   "ccorres dc xfdc
@@ -2064,7 +2069,6 @@ lemma dissociateVCPUTCB_ccorres:
          apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
              apply (rule setObject_vcpuTCB_Basic_ccorres[of _ _ _ None, simplified option_to_ctcb_ptr_def, simplified])
             apply ceqv
-           apply (rule ccorres_pre_getObject_tcb, rename_tac tcb)
            apply (subst asUser_bind_distrib; simp)
            apply (rule ccorres_split_nothrow[where r'="op =" and xf'=ret__unsigned_long_'])
                apply clarsimp
@@ -2078,7 +2082,6 @@ lemma dissociateVCPUTCB_ccorres:
        apply wpsimp
       apply vcg
      apply (wpsimp simp: valid_arch_tcb'_def valid_vcpu'_def)
-     apply (strengthen invs_valid_objs' invs_no_0_obj')
      apply wpsimp
     apply (vcg exspec=vcpu_invalidate_active_modifies)
    apply vcg

@@ -35,6 +35,7 @@ crunch valid_queues[wp]: handleFaultReply valid_queues
 crunch valid_queues'[wp]: handleFaultReply valid_queues'
 
 crunch sch_act_wf: handleFaultReply "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+  (ignore: getObject)
 
 crunch valid_ipc_buffer_ptr' [wp]: copyMRs "valid_ipc_buffer_ptr' p"
   (rule: hoare_valid_ipc_buffer_ptr_typ_at' wp: crunch_wps)
@@ -299,6 +300,25 @@ lemma asUser_getRegister_threadGet_comm:
    od"
   by (rule bind_inv_inv_comm, auto; wp)
 
+crunch inv[wp]: archTCBSanitise P
+  (ignore: getObject)
+
+lemma empty_fail_archTCBSanitise[wp, simp]:
+  "empty_fail (archTCBSanitise t)"
+  by (wpsimp simp: archTCBSanitise_def2 wp: kernel.empty_fail_archThreadGet)
+
+lemma asUser_getRegister_archTCBSanitise_comm:
+  "do
+     ra \<leftarrow> asUser a (getRegister r);
+     rb \<leftarrow> archTCBSanitise b;
+     c ra rb
+   od = do
+     rb \<leftarrow> archTCBSanitise b;
+     ra \<leftarrow> asUser a (getRegister r);
+     c ra rb
+   od"
+  by (rule bind_inv_inv_comm; wpsimp)
+
 lemma asUser_mapMloadWordUser_threadGet_comm:
   "do
      ra \<leftarrow> mapM loadWordUser xs;
@@ -306,6 +326,18 @@ lemma asUser_mapMloadWordUser_threadGet_comm:
      c ra rb
    od = do
      rb \<leftarrow> threadGet fb b;
+     ra \<leftarrow> mapM loadWordUser xs;
+     c ra rb
+   od"
+  by (rule bind_inv_inv_comm, auto; wp mapM_wp')
+
+lemma asUser_mapMloadWordUser_archTCBSanitise_comm:
+  "do
+     ra \<leftarrow> mapM loadWordUser xs;
+     rb \<leftarrow> archTCBSanitise b;
+     c ra rb
+   od = do
+     rb \<leftarrow> archTCBSanitise b;
      ra \<leftarrow> mapM loadWordUser xs;
      c ra rb
    od"
@@ -505,7 +537,7 @@ definition
        CapFault _ _ _ \<Rightarrow> return True
      | ArchFault af \<Rightarrow> handleArchFaultReply' af sender receiver tag
      | UnknownSyscallException _ \<Rightarrow> do
-         t \<leftarrow> threadGet id receiver;
+         t \<leftarrow> archTCBSanitise receiver;
          regs \<leftarrow> return $ take (unat mlen) syscallMessage;
          zipWithM_x (\<lambda>rs rd. do
            v \<leftarrow> asUser sender $ getRegister rs;
@@ -514,17 +546,15 @@ definition
          sendBuf \<leftarrow> lookupIPCBuffer False sender;
          case sendBuf of
            None \<Rightarrow> return ()
-         | Some bufferPtr \<Rightarrow> do
-             t \<leftarrow> threadGet id receiver;
+         | Some bufferPtr \<Rightarrow>
              zipWithM_x (\<lambda>i rd. do
                v \<leftarrow> loadWordUser (bufferPtr + PPtr (i * 4));
                asUser receiver $ setRegister rd $ sanitiseRegister t rd v
-             od) [(scast n_msgRegisters :: word32) + 1.e. scast n_syscallMessage] (drop (unat (scast n_msgRegisters :: word32)) regs)
-           od;
-         return (label = 0)
+             od) [(scast n_msgRegisters :: word32) + 1.e. scast n_syscallMessage] (drop (unat (scast n_msgRegisters :: word32)) regs);
+       return (label = 0)
        od
      | UserException _ _ \<Rightarrow> do
-         t \<leftarrow> threadGet id receiver;
+         t \<leftarrow> archTCBSanitise receiver;
          regs \<leftarrow> return $ take (unat mlen) exceptionMessage;
          zipWithM_x (\<lambda>rs rd. do
            v \<leftarrow> asUser sender $ getRegister rs;
@@ -632,6 +662,18 @@ lemma threadGet_lookupIPCBuffer_comm:
   od"
   by (rule bind_inv_inv_comm; wp?; auto)
 
+lemma archTCBSanitise_lookupIPCBuffer_comm:
+  "do
+     a \<leftarrow> lookupIPCBuffer x y;
+     t \<leftarrow> archTCBSanitise r;
+     c a t
+   od = do
+     t \<leftarrow> archTCBSanitise r;
+     a \<leftarrow> lookupIPCBuffer x y;
+     c a t
+  od"
+  by (rule bind_inv_inv_comm; wp?; auto)
+
 lemma threadGet_moreMapM_comm:
   "do
      a \<leftarrow>
@@ -641,6 +683,27 @@ lemma threadGet_moreMapM_comm:
      c a t
    od = do
      t \<leftarrow> threadGet id r;
+     a \<leftarrow>
+       case sb of None \<Rightarrow> return []
+       | Some bufferPtr \<Rightarrow> return (xs bufferPtr) >>= mapM loadWordUser;
+     c a t
+  od"
+  apply (rule bind_inv_inv_comm)
+     apply (rule hoare_pre, wpc; (wp mapM_wp')?)
+     apply simp
+    apply wp
+   apply (auto split: option.splits)
+  done
+
+lemma archTCBSanitise_moreMapM_comm:
+  "do
+     a \<leftarrow>
+       case sb of None \<Rightarrow> return []
+       | Some bufferPtr \<Rightarrow> return (xs bufferPtr) >>= mapM loadWordUser;
+     t \<leftarrow> archTCBSanitise r;
+     c a t
+   od = do
+     t \<leftarrow> archTCBSanitise r;
      a \<leftarrow>
        case sb of None \<Rightarrow> return []
        | Some bufferPtr \<Rightarrow> return (xs bufferPtr) >>= mapM loadWordUser;
@@ -666,6 +729,32 @@ lemma monadic_rewrite_symb_exec_r':
 
 lemma monadic_rewrite_threadGet_return:
   "monadic_rewrite True False (tcb_at' r) (return x) (do t \<leftarrow> threadGet f r; return x od)"
+  apply (rule monadic_rewrite_symb_exec_r')
+     apply wp+
+   apply (rule monadic_rewrite_refl)
+  apply wp
+  done
+
+context begin interpretation Arch .
+
+lemma no_fail_archTCBSanitise[wp, simp]:
+  "no_fail (tcb_at' r) (archTCBSanitise r)"
+  apply (simp add: archTCBSanitise_def)
+  by wpsimp
+
+end
+
+
+lemma monadic_rewrite_archTCBSanitise_return:
+  "monadic_rewrite True False (tcb_at' r) (return x) (do t \<leftarrow> archTCBSanitise r; return x od)"
+  apply (rule monadic_rewrite_symb_exec_r')
+     apply wp+
+   apply (rule monadic_rewrite_refl)
+  apply wp
+  done
+
+lemma monadic_rewrite_archTCBSanitise_drop:
+  "monadic_rewrite True False (tcb_at' r) (d) (do t \<leftarrow> archTCBSanitise r; d od)"
   apply (rule monadic_rewrite_symb_exec_r')
      apply wp+
    apply (rule monadic_rewrite_refl)
@@ -713,6 +802,8 @@ lemma handleFaultReply':
                (erule disjE[OF word_less_cases],
                  ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
                                   mapM_x_Cons mapM_x_Nil bind_assoc
+                                  asUser_mapMloadWordUser_archTCBSanitise_comm
+                                  asUser_getRegister_archTCBSanitise_comm
                                   asUser_getRegister_discarded asUser_mapMloadWordUser_threadGet_comm
                                   asUser_comm[OF neq] asUser_getRegister_threadGet_comm
                                   bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
@@ -735,6 +826,7 @@ lemma handleFaultReply':
     apply (simp add: zip_append2 mapM_x_append asUser_bind_distrib split_def bind_assoc)
     apply (rule monadic_rewrite_imp)
      apply (rule monadic_rewrite_trans[rotated])
+ sorry (*
       apply (rule monadic_rewrite_do_flip)
       apply (rule monadic_rewrite_bind_tail)
        apply (rule_tac P="inj (case_bool s r)" in monadic_rewrite_gen_asm)
@@ -757,7 +849,7 @@ lemma handleFaultReply':
                             zip_Cons syscallMessage_unfold
                             n_syscallMessage_def
                             upto_enum_word mapM_x_Cons mapM_x_Nil)
-     apply (simp add: threadGet_moreMapM_comm asUser_getRegister_threadGet_comm threadGet_lookupIPCBuffer_comm)
+     apply (simp add: archTCBSanitise_moreMapM_comm asUser_getRegister_archTCBSanitise_comm archTCBSanitise_lookupIPCBuffer_comm)
      apply (rule monadic_rewrite_bind_tail)
      apply (rule monadic_rewrite_bind_tail [where Q="\<lambda>_. tcb_at' r"])
       apply (case_tac sb)
@@ -785,6 +877,7 @@ lemma handleFaultReply':
                         monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
                         monadic_rewrite_symb_exec_l[OF stateAssert_inv]
                         monadic_rewrite_threadGet_return
+                        monadic_rewrite_archTCBSanitise_return
                  | wp asUser_tcb_at' mapM_wp')+)+
       apply (simp add: n_msgRegisters_def word_le_nat_alt n_syscallMessage_def
                        linorder_not_less syscallMessage_unfold)
@@ -822,10 +915,11 @@ lemma handleFaultReply':
                               monadic_rewrite_symb_exec_l[OF stateAssert_inv]
                               monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
                               monadic_rewrite_threadGet_return
+                              monadic_rewrite_archTCBSanitise_return
+                              monadic_rewrite_archTCBSanitise_drop
                        | wp asUser_tcb_at' empty_fail_loadWordUser)+)+
 find_theorems monadic_rewrite
 thm monadic_rewrite_bind_tail
-sorry (* FIXME ARMHYP this might not be true anymore, consider the threadGet
       apply (clarsimp simp: upto_enum_word word_le_nat_alt simp del: upt.simps cong: if_weak_cong)
       apply (cut_tac i="unat n" and j="Suc (unat (scast n_syscallMessage :: word32))"
                                 and k="Suc msgMaxLength" in upt_add_eq_append')
@@ -3814,10 +3908,31 @@ lemma length_exceptionMessage:
   "length ARM_HYP_H.exceptionMessage = unat n_exceptionMessage"
   by (simp add: ARM_HYP_H.exceptionMessage_def ARM_HYP.exceptionMessage_def n_exceptionMessage_def)
 
+lemma hasVCPU_ccorres:
+  "ccorres (op = \<circ> from_bool) ret__unsigned_long_'
+     (tcb_at' r and no_0_obj' and valid_objs')
+     (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr r}) hs
+     (archTCBSanitise r)
+     (Call Arch_hasVCPU_'proc)"
+  apply (cinit' lift: thread_' simp: archTCBSanitise_def2)
+   apply (rule ccorres_move_c_guard_tcb)
+   apply (rule ccorres_pre_archThreadGet)
+  apply (rule_tac P="\<lambda>s. rv \<noteq> Some 0" in ccorres_cross_over_guard)
+   apply (rule ccorres_return_C, simp+)
+  apply (clarsimp simp: typ_heap_simps ctcb_relation_def carch_tcb_relation_def)
+  apply (rule conjI)
+   apply clarsimp
+   apply (drule (1) valid_objs_valid_tcb')
+   apply (clarsimp simp: valid_tcb'_def valid_arch_tcb'_def)
+  apply (clarsimp simp: typ_heap_simps)
+  apply (case_tac "atcbVCPUPtr (tcbArch tcb) \<noteq> None")
+   apply (clarsimp simp:if_1_0_0 true_def false_def split: if_splits)+
+  done
+
+
 lemma copyMRsFaultReply_ccorres_exception:
   "ccorres dc xfdc
-           (valid_pspace' and tcb_at' s
-                          and ko_at' t r
+           (valid_pspace' and tcb_at' s and tcb_at' r
                           and obj_at' (\<lambda>t. tcbFault t = Some f) r
                           and K (r \<noteq> s)
                           and K (len \<le> unat n_exceptionMessage))
@@ -3825,10 +3940,12 @@ lemma copyMRsFaultReply_ccorres_exception:
                  \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr r\<rbrace>
                  \<inter> \<lbrace>\<acute>id___anonymous_enum = MessageID_Exception \<rbrace>
                  \<inter> \<lbrace>\<acute>length___unsigned_long = of_nat len \<rbrace>) hs
-           (zipWithM_x (\<lambda>rs rd. do v \<leftarrow> asUser s (getRegister rs);
+           (do t \<leftarrow> archTCBSanitise r;
+               zipWithM_x (\<lambda>rs rd. do v \<leftarrow> asUser s (getRegister rs);
                                         asUser r (setRegister rd (ARM_HYP_H.sanitiseRegister t rd v))
                                         od)
-               ARM_HYP_H.msgRegisters (take len ARM_HYP_H.exceptionMessage))
+               ARM_HYP_H.msgRegisters (take len ARM_HYP_H.exceptionMessage)
+            od)
            (Call copyMRsFaultReply_'proc)"
 proof -
   show ?thesis
@@ -3837,6 +3954,7 @@ proof -
                         id___anonymous_enum_'
                         length___unsigned_long_'
                   simp: whileAnno_def)
+apply (ctac(no_vcg) add: hasVCPU_ccorres)
      apply (rule ccorres_rhs_assoc2)
      apply (simp add: MessageID_Exception_def)
      apply ccorres_rewrite
@@ -3849,10 +3967,10 @@ proof -
                apply ctac
                  apply (rule ccorres_symb_exec_r)
                    apply ctac
-                  apply (vcg exspec=sanitiseRegister_spec')
+                  apply (vcg)
                  apply clarsimp
-                 apply (rule conseqPre, vcg exspec=sanitiseRegister_spec')
-                 apply fastforce
+                 apply (rule conseqPre, vcg)
+                 apply (auto simp: from_bool_def sanitiseRegister_def)[1]
                 apply wp
                apply clarsimp
                apply vcg
@@ -3861,10 +3979,10 @@ proof -
               apply (rule conjI, simp add: ARM_HYP_H.exceptionMessage_def
                                            ARM_HYP.exceptionMessage_def word_of_nat_less)
               apply (simp add: msgRegisters_ccorres n_msgRegisters_def length_msgRegisters
+                               ARM_HYP_H.exceptionMessage_def ARM_HYP.exceptionMessage_def
                                unat_of_nat exceptionMessage_ccorres[symmetric,simplified MessageID_Exception_def,simplified]
-                               n_exceptionMessage_def length_exceptionMessage sanitiseRegister_def Let_def cong: if_cong)
-              apply (simp add: word_less_nat_alt unat_of_nat)
-subgoal sorry (* FIXME arm-hyp: no idea *)
+                               n_exceptionMessage_def length_exceptionMessage sanitiseRegister_def Let_def)
+               apply (auto simp add: word_less_nat_alt unat_of_nat)[1]
              apply (rule conseqPre, vcg)
              apply (clarsimp simp: word_of_nat_less ARM_HYP_H.exceptionMessage_def
                                    ARM_HYP.exceptionMessage_def)
@@ -3899,8 +4017,9 @@ subgoal sorry (* FIXME arm-hyp: no idea *)
      apply (clarsimp simp: guard_is_UNIV_def message_info_to_H_def
                            Collect_const_mem
                     split: if_split)
-    apply (fastforce intro: obj_tcb_at')
-    done
+   apply wp
+  apply (auto)
+  done
 qed
 
 lemma valid_drop_case: "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. P' rv s\<rbrace> \<rbrakk>
@@ -3915,7 +4034,7 @@ lemma copyMRsFaultReply_ccorres_syscall:
   fixes word_size :: "'a::len"
   shows "ccorres dc xfdc
            (valid_pspace' and tcb_at' s
-                          and ko_at' t r
+                          and tcb_at' r
                           and obj_at' (\<lambda>t. tcbFault t = Some f) r
                           and K (r \<noteq> s)
                           and K (len \<le> unat n_syscallMessage))
@@ -3923,33 +4042,33 @@ lemma copyMRsFaultReply_ccorres_syscall:
                  \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr r\<rbrace>
                  \<inter> \<lbrace>\<acute>id___anonymous_enum = MessageID_Syscall \<rbrace>
                  \<inter> \<lbrace>\<acute>length___unsigned_long = of_nat len \<rbrace>) hs
-           (do a \<leftarrow> zipWithM_x (\<lambda>rs rd. do v \<leftarrow> asUser s (getRegister rs);
+           (do t \<leftarrow> archTCBSanitise r;
+               a \<leftarrow> zipWithM_x (\<lambda>rs rd. do v \<leftarrow> asUser s (getRegister rs);
                                            asUser r (setRegister rd (ARM_HYP_H.sanitiseRegister t rd v))
                                         od)
                ARM_HYP_H.msgRegisters (take len ARM_HYP_H.syscallMessage);
                sendBuf \<leftarrow> lookupIPCBuffer False s;
                case sendBuf of None \<Rightarrow> return ()
-                            | Some bufferPtr \<Rightarrow> do
-                                   t \<leftarrow> threadGet id r;
+                            | Some bufferPtr \<Rightarrow>
                                    zipWithM_x (\<lambda>i rd. do v \<leftarrow> loadWordUser (bufferPtr + i * 4);
                                                          asUser r (setRegister rd (ARM_HYP_H.sanitiseRegister t rd v))
                                                       od)
                                       [scast n_msgRegisters + 1.e.scast n_syscallMessage]
                                       (drop (unat (scast n_msgRegisters :: word32))
                                             (take len  ARM_HYP_H.syscallMessage))
-                                 od
-            od)
+                                 od)
            (Call copyMRsFaultReply_'proc)"
   proof -
   let ?obj_at_ft = "obj_at' (\<lambda>tcb. tcbFault tcb = Some f) s"
   note symb_exec_r_fault = ccorres_symb_exec_r_known_rv_UNIV
           [where xf'=ret__unsigned_' and R="?obj_at_ft" and R'=UNIV]
   show ?thesis
-    apply (unfold K_def, rule ccorres_gen_asm)
+    apply (unfold K_def, rule ccorres_gen_asm) using [[goals_limit=1]]
     apply (cinit' lift: sender_' receiver_'
                         id___anonymous_enum_'
                         length___unsigned_long_'
                   simp: whileAnno_def)
+apply (ctac(no_vcg) add: hasVCPU_ccorres)
      apply (rule ccorres_rhs_assoc2)
      apply (simp add: MessageID_Syscall_def)
      apply ccorres_rewrite
@@ -3961,8 +4080,8 @@ lemma copyMRsFaultReply_ccorres_syscall:
                apply ctac
                  apply (rule ccorres_symb_exec_r)
                    apply ctac
-                  apply (vcg exspec=sanitiseRegister_spec')
-                 apply (rule conseqPre, vcg exspec=sanitiseRegister_spec')
+                  apply (vcg)
+                 apply (rule conseqPre, vcg)
                  apply fastforce
                 apply wp
                apply vcg
@@ -3974,8 +4093,7 @@ lemma copyMRsFaultReply_ccorres_syscall:
               apply (simp add: msgRegisters_ccorres n_msgRegisters_def length_msgRegisters unat_of_nat
                                syscallMessage_ccorres[symmetric,simplified MessageID_Syscall_def,simplified]
                                n_syscallMessage_def length_syscallMessage sanitiseRegister_def)
-              apply (simp add: word_less_nat_alt unat_of_nat)
-subgoal sorry
+              apply (auto simp add: word_less_nat_alt unat_of_nat)[1]
              apply (rule conseqPre, vcg)
              apply (clarsimp simp: word_of_nat_less syscallMessage_unfold length_msgRegisters
                                    n_syscallMessage_def n_msgRegisters_def)
@@ -4008,7 +4126,6 @@ subgoal sorry
          apply wpc
           apply (simp add: option_to_0_def ccorres_cond_iffs option_to_ptr_def)
           apply (rule ccorres_return_Skip')
-         apply (rule ccorres_symb_exec_l)
             apply (rule_tac P="sb \<noteq> Some 0" in ccorres_gen_asm)
             apply (rule_tac P="case_option True (\<lambda>x. is_aligned x msg_align_bits) sb"
                             in ccorres_gen_asm)
@@ -4036,8 +4153,8 @@ subgoal sorry
                     apply (rule ccorres_symb_exec_r)
                       apply (rule ccorres_symb_exec_r)
                         apply ctac
-                       apply (vcg exspec=sanitiseRegister_spec')
-                      apply (rule conseqPre, vcg exspec=sanitiseRegister_spec')
+                       apply (vcg)
+                      apply (rule conseqPre, vcg)
                       apply fastforce
                      apply vcg
                     apply (rule conseqPre, vcg)
@@ -4066,7 +4183,7 @@ subgoal sorry
                                        msg_align_bits sanitiseRegister_def
                              simp del: upt_rec_numeral cong: if_cong register.case_cong,
                         simp_all add: word_less_nat_alt unat_add_lem[THEN iffD1] unat_of_nat)[1]
-subgoal sorry (* FIXME arm-hyp: need to get ko_at' somehow *)
+               apply (rule_tac x=rv in exI, auto)[1]
                 apply (clarsimp simp: n_syscallMessage_def n_msgRegisters_def
                                       msgRegisters_ccorres
                                       syscallMessage_ccorres
@@ -4086,9 +4203,6 @@ subgoal sorry (* FIXME arm-hyp: need to get ko_at' somehow *)
                                    word_bits_def not_less)
              apply (simp add: n_syscallMessage_def)
             apply simp
-           apply wp
-          apply (wpsimp wp: threadGet_wp)
-         apply simp
         apply (subst option.split[symmetric,where P=id, simplified])
         apply (rule valid_drop_case)
         apply (wp hoare_drop_imps hoare_vcg_all_lift lookupIPCBuffer_aligned[simplified K_def]
@@ -4103,20 +4217,19 @@ subgoal sorry (* FIXME arm-hyp: need to get ko_at' somehow *)
        apply ccorres_rewrite
        apply (rule ccorres_guard_imp)
          apply (rule ccorres_symb_exec_l)
-            apply (case_tac rv ; clarsimp)
+            apply (case_tac rva ; clarsimp)
              apply (rule ccorres_return_Skip[simplified dc_def])+
-            apply (rule ccorres_guard_imp)
-              apply (rule ccorres_symb_exec_l)
-                 apply (rule ccorres_return_Skip[simplified dc_def])+
                 apply (wp mapM_x_wp_inv user_getreg_inv'
                        | clarsimp simp: zipWithM_x_mapM_x split: prod.split)+
      apply (cases  "4 < len")
-      apply (fastforce simp: guard_is_UNIV_def
+      apply ((fastforce simp: guard_is_UNIV_def
                             msgRegisters_unfold
                             syscallMessage_unfold
                             n_syscallMessage_def
                             n_msgRegisters_def
-                       intro: obj_tcb_at')+
+                       intro: obj_tcb_at')+)[2]
+    apply wp
+   apply auto
   done
 qed
 
@@ -4242,8 +4355,8 @@ lemma handleFaultReply_ccorres [corres]:
            apply (rename_tac number code)
            apply (clarsimp simp: bind_assoc seL4_Fault_tag_defs ccorres_cond_iffs
                            split del: if_split)
-           apply (rule ccorres_symb_exec_l)
               apply (subst take_min_len[symmetric,where n="unat (msgLength _)"])
+           apply (simp add: bind_assoc[symmetric])
               apply (ctac add: copyMRsFaultReply_ccorres_exception)
                 apply (ctac add: ccorres_return_C)
                apply wp
@@ -4257,7 +4370,6 @@ lemma handleFaultReply_ccorres [corres]:
          apply (rename_tac number)
          apply (clarsimp simp: seL4_Fault_tag_defs ccorres_cond_iffs
                          split del: if_split)
-         apply (rule ccorres_symb_exec_l)
             apply (subst take_min_len[symmetric,where n="unat (msgLength _)"])
             apply (subst take_min_len[symmetric,where n="unat (msgLength _)"])
             apply (fold bind_assoc id_def)

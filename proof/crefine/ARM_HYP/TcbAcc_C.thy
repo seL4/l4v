@@ -279,26 +279,13 @@ lemma valid_tcb'_vcpuE [elim_format]:
     unfolding valid_tcb'_def valid_arch_tcb'_def
     by auto
 
-lemma sanitiseRegister_spec':
-  "\<forall>s t v r. \<Gamma> \<turnstile> (\<lbrace>s. \<exists>hs. (hs,s) \<in> rf_sr \<and> valid_objs' hs \<and> no_0_obj' hs
-                           \<and> ko_at' t (ctcb_ptr_to_tcb_ptr \<acute>thread) hs\<rbrace>
-                  \<inter> \<lbrace>\<acute>v___unsigned_long = v\<rbrace>
-                  \<inter> \<lbrace>\<acute>reg = register_from_H r\<rbrace>
-                  )
-                 Call sanitiseRegister_'proc
+lemma sanitiseRegister_spec:
+  "\<forall>s t v r. \<Gamma> \<turnstile> ({s} \<inter> \<lbrace>\<acute>v___unsigned_long = v\<rbrace> \<inter> \<lbrace>\<acute>reg = register_from_H r\<rbrace> \<inter> \<lbrace>\<acute>hasVCPU = from_bool t\<rbrace>)
+                   Call sanitiseRegister_'proc
                  \<lbrace>\<acute>ret__unsigned_long = sanitiseRegister t r v\<rbrace>"
-  apply (intro allI, rule conseqPre)
-   apply vcg
-  apply (case_tac "r \<noteq> CPSR")
-   subgoal by (auto simp: sanitiseRegister_def Let_def C_register_defs split: register.split)
-  apply (clarsimp simp: sanitiseRegister_def word_0_sle_from_less)
-  apply (intro conjI
-          ; clarsimp simp: sanitiseRegister_def Let_def C_register_defs split: register.split
-          ; frule (1) obj_at_cslift_tcb
-          ; clarsimp simp: typ_heap_simps ctcb_relation_tcbVCPU)
-  apply (subgoal_tac "valid_tcb' t hs")
-   apply (fastforce dest: typ_at'_no_0_objD elim: valid_tcb'_vcpuE)
-  apply (erule (1) valid_objs_valid_tcb')
+  apply vcg
+  apply (auto simp: C_register_defs sanitiseRegister_def word_0_sle_from_less
+             split: register.split)
   done
 
 lemma rf_sr_ksArchState_armHSCurVCPU:
