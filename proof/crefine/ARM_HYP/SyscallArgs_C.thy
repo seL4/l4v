@@ -637,14 +637,6 @@ lemma msgRegisters_scast:
                    Kernel_C.R6_def Kernel_C.R7_def)
   done
 
-lemma msgRegisters_ccorres:
-  "n < unat n_msgRegisters \<Longrightarrow>
-  register_from_H (ARM_HYP_H.msgRegisters ! n) = (index msgRegistersC n)"
-  apply (simp add: msgRegistersC_def msgRegisters_unfold fupdate_def)
-  apply (simp add: Arrays.update_def n_msgRegisters_def fcp_beta nth_Cons' split: if_split)
-  done
-
-
 lemma asUser_cur_obj_at':
   assumes f: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   shows "\<lbrace>\<lambda>s. obj_at' (\<lambda>tcb. P (atcbContextGet (tcbArch tcb))) (ksCurThread s) s \<and> t = ksCurThread s\<rbrace>

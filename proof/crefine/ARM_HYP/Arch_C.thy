@@ -4813,46 +4813,6 @@ lemma readVCPUReg_ccorres:
 
 end (* readVCPUReg_ccorres *)
 
-lemma setMRs_single:
-  "setMRs thread buffer [val] = do y \<leftarrow> asUser thread (setRegister register.R2 val);
-       return 1
-    od"
-  apply (clarsimp simp: setMRs_def length_of_msgRegisters zipWithM_x_def zipWith_def split: option.splits)
-  apply (subst zip_commute, subst zip_singleton)
-   apply (simp add: length_of_msgRegisters length_0_conv[symmetric])
-  apply (clarsimp simp: msgRegisters_unfold sequence_x_def)
-  done
-
-(* usually when we call setMR directly, we mean to only set a registers, which will
-   fit in actual registers *)
-lemma setMR_as_setRegister_ccorres:
-  notes dc_simp[simp del]
-  shows
-  "ccorres (\<lambda>rv rv'. rv' = of_nat offset + 1) ret__unsigned_'
-      (tcb_at' thread and K (TCB_H.msgRegisters ! offset = reg \<and> offset < length msgRegisters))
-      (UNIV \<inter> \<lbrace>\<acute>reg = val\<rbrace>
-            \<inter> \<lbrace>\<acute>offset = of_nat offset\<rbrace>
-            \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
-    (asUser thread (setRegister reg val))
-    (Call setMR_'proc)"
-  apply (rule ccorres_grab_asm)
-  apply (cinit' lift:  reg_' offset_' receiver_')
-   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters)
-   apply (rule ccorres_cond_false)
-   apply (rule ccorres_move_const_guards)
-   apply (rule ccorres_add_return2)
-   apply (ctac add: setRegister_ccorres)
-     apply (rule ccorres_from_vcg_throws[where P'=UNIV and P=\<top>])
-     apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: dc_def return_def)
-    apply (rule hoare_post_taut[of \<top>])
-   apply (vcg exspec=setRegister_modifies)
-  apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters not_le conj_commute)
-  apply (subst msgRegisters_ccorres[symmetric])
-   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters unat_of_nat_eq)
-  apply (fastforce simp: unat_of_nat_eq word_of_nat_less)
-  done
-
 lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres *)
   notes Collect_const[simp del] dc_simp[simp del]
   shows
