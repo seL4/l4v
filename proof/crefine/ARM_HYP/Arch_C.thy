@@ -5093,17 +5093,22 @@ apply (clarsimp simp: typ_heap_simps')
   apply simp+
   done
 
-thm virq_virq_pending_new_body_def
-thm makeVIRQ_def
+lemma makeVIRQ_def_FIXME:
+"makeVIRQ grp prio irq \<equiv>
+let groupShift = 30; prioShift = 23; irqPending = bit 28; eoiirqen = bit 19
+in (grp && 1) `~shiftL~` groupShift || (prio && 0x1F) `~shiftL~` prioShift || (irq && 0x3FF) || irqPending || eoiirqen"
+  sorry (* FIXME ARMHYP REMOVE when spec updated *)
+
 (* Note: only works for virqEOIIRQEN = 1 because that is the only type we are using *)
 lemma virq_virq_pending_EN_new_spec:
+  shows
   "\<forall>s. \<Gamma> \<turnstile> {s}
        Call virq_virq_pending_new_'proc
        \<lbrace> virqEOIIRQEN_' s = 1 \<longrightarrow> virq_to_H \<acute>ret__struct_virq_C = makeVIRQ (virqGroup_' s) (virqPriority_' s) (virqIRQ_' s) \<rbrace>"
   apply (hoare_rule HoarePartial.ProcNoRec1) (* force vcg to unfold non-recursive procedure *)
   apply vcg
-  apply (clarsimp simp: virq_to_H_def makeVIRQ_def virq_virq_pending_def)
-  sorry
+  apply (clarsimp simp: virq_to_H_def makeVIRQ_def_FIXME virq_virq_pending_def)
+  by (simp add: word_bool_alg.disj_commute  word_bool_alg.disj_assoc word_bool_alg.disj_ac)
 
 lemma decodeVCPUInjectIRQ_def_FIXME:
 "decodeVCPUInjectIRQ x0 x1 = (let (ls, cap) = (x0, x1) in
