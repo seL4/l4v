@@ -1854,7 +1854,7 @@ lemma vcpu_save_ccorres:
   (* v = Some (vcpuPtr, active) *)
 apply wpc
 apply (rename_tac vcpuPtr act)
-  apply (ctac (no_vcg) add: dsb_ccorres)
+  apply (ctac (no_vcg) add: dsb_ccorres) sorry (* loop
   apply (rule ccorres_pre_getObject_vcpu)
 apply (rule ccorres_split_nothrow)
   apply (rule ccorres_cond[where R=\<top>])
@@ -1905,7 +1905,7 @@ apply (rule ccorres_symb_exec_r)
 apply (rule ccorres_split_nothrow)
 apply (clarsimp simp: doMachineOp_mapM o_def)
 apply (clarsimp simp: mapM_def)
-
+*)
 (* vcpu_save loop
 apply (rule_tac F="\<lambda>_. (all_invs_but_ct_idle_or_in_cur_domain'
         and (case v of None \<Rightarrow> \<top> | Some new \<Rightarrow> vcpu_at' (fst new)))"
@@ -1932,7 +1932,6 @@ apply (rule ccorres_return)
 apply clarsimp
 apply (rule conseqPre, vcg)
 *)
-  sorry
 
 lemma vcpu_switch_ccorres_None:
    "ccorres dc xfdc

@@ -426,7 +426,7 @@ lemma invs'_HScurVCPU_vcpu_at':
 by (fastforce dest: invs_arch_state' simp: valid_arch_state'_def vcpu_at_is_vcpu' ko_wp_at'_def split: option.splits)
 
 crunch ksArch[wp]: vcpuDisable, vcpuRestore, vcpuSave, vcpuEnable "\<lambda>s. P (ksArchState s)"
-  (ignore: getObject setObject)
+  (ignore: getObject setObject wp: crunch_wps)
 
 (* FIXME move to Invariants_H *)
 lemma invs_cicd_arch_state' [elim!]:
