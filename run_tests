@@ -16,7 +16,29 @@ DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 # Add repo version of Isabelle to our path.
 export PATH="${DIR}/isabelle/bin:$PATH"
 
+# Export L4V_ARCH variable as X64
+export L4V_ARCH="${L4V_ARCH:-X64}"
+echo "Testing for L4V_ARCH=${L4V_ARCH}:"
+
+# For the time being, we allow sorries in invariant proofs:
+#export INVS_QUICK_AND_DIRTY=1
+
+# For the time being, we also allow sorries in refine proofs:
+# export REFINE_QUICK_AND_DIRTY=1
+
+# For the time being, we also allow sorries in CRefine proofs:
+# export SKIP_REFINE_PROOFS=1
+# export CREFINE_QUICK_AND_DIRTY=1
+
 # Run the tests from the script directory.
 cd ${DIR}
-python ./misc/regression/run_tests.py "$@"
 
+default="ASpec ExecSpec AInvs SpecCheck HaskellKernel BaseRefine Refine Licenses"
+if [ "${bamboo_l4v_regression_identifier}" == "test board"  ]
+then
+    bamboo_args=$(echo "$@" | ( [ -z "${bamboo_l4v_regression_options}" ] && cat - || sed 's/'"${bamboo_l4v_regression_options}"'//'))
+    echo "python ./misc/regression/run_tests.py ${bamboo_args} $default"
+    python ./misc/regression/run_tests.py ${bamboo_args} $default
+else
+    python ./misc/regression/run_tests.py ${@:-${default}} $([ -z ${bamboo_planKey} ] || echo $default)
+fi
