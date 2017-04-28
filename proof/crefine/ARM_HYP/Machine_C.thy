@@ -18,6 +18,11 @@ theory Machine_C
 imports Ctac_lemmas_C
 begin
 
+(* FIXME: somewhere automation has failed, resulting in virq_C arrays not being in packed_type! *)
+instance virq_C :: twoToSix_packed
+  apply intro_classes
+  by (simp add: size_of_def)
+
 definition (* FIXME ARMHYP REMOVE, missing machine op stub *)
   setCurrentPDPL2 :: "machine_word \<Rightarrow> unit machine_monad"
 where
