@@ -1022,17 +1022,6 @@ lemma pde_pde_section_size_0_1:
   apply simp
   done
 
-(* FIXME ARMHYP UNUSED? we have memattr but I don't see any more abstract constant for it ...
-lemma pde_bits_from_cacheable_simps [simp]:
-  "shared_bit_from_cacheable (from_bool b) = s_from_cacheable b"
-  "tex_bits_from_cacheable (from_bool b) = tex_from_cacheable b"
-  "iwb_from_cacheable (from_bool b) =  b_from_cacheable b"
-  by (simp_all add: shared_bit_from_cacheable_def s_from_cacheable_def
-                    tex_bits_from_cacheable_def tex_from_cacheable_def
-                    iwb_from_cacheable_def b_from_cacheable_def
-               split: bool.splits)
-*)
-
 lemma createSafeMappingEntries_PDE_ccorres:
   "ccorres (syscall_error_rel \<currency> (\<lambda>rv rv'. isRight rv \<and> cpde_relation (fst (theRight rv)) (fst rv')
                                          \<and> pde_range_relation (snd (theRight rv)) (snd rv')))
@@ -5095,7 +5084,7 @@ lemma virq_virq_pending_EN_new_spec:
        \<lbrace> virqEOIIRQEN_' s = 1 \<longrightarrow> virq_to_H \<acute>ret__struct_virq_C = makeVIRQ (virqGroup_' s) (virqPriority_' s) (virqIRQ_' s) \<rbrace>"
   apply (hoare_rule HoarePartial.ProcNoRec1) (* force vcg to unfold non-recursive procedure *)
   apply vcg
-  apply (clarsimp simp: virq_to_H_def makeVIRQ_def_FIXME virq_virq_pending_def)
+  apply (clarsimp simp: virq_to_H_def makeVIRQ_def virq_virq_pending_def)
   by (simp add: word_bool_alg.disj_commute  word_bool_alg.disj_assoc word_bool_alg.disj_ac)
 
 lemma decodeVCPUInjectIRQ_ccorres:
@@ -5117,7 +5106,7 @@ lemma decodeVCPUInjectIRQ_ccorres:
        (Call decodeVCPUInjectIRQ_'proc)"
   apply (rule ccorres_grab_asm)
   apply (cinit' lift: length_' cap_' buffer_'
-                simp: decodeVCPUInjectIRQ_def_FIXME Let_def shiftL_nat )
+                simp: decodeVCPUInjectIRQ_def Let_def shiftL_nat )
    apply csymbr
    apply csymbr
    apply clarsimp
