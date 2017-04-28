@@ -22,7 +22,7 @@ instantiation "unit" ::  stronger_sep_algebra
        definition "plus_unit  \<equiv> (\<lambda>h2 h2.  ()) :: unit \<Rightarrow> unit \<Rightarrow> unit"
        definition "sep_disj_unit \<equiv>(\<lambda>h1 h2. True) :: unit \<Rightarrow> unit \<Rightarrow> bool"
      instance
- apply (default)
+ apply (standard)
    apply (clarsimp simp: zero_unit_def plus_unit_def sep_disj_unit_def)+
  done
 end
@@ -33,7 +33,7 @@ instantiation "bool" ::  stronger_sep_algebra
        definition "plus_bool  \<equiv> (op \<or>)"
        definition "sep_disj_bool \<equiv> \<lambda>p q. p \<longrightarrow> \<not>q"
      instance
- apply (default)
+ apply (standard)
    apply (auto simp: zero_bool_def plus_bool_def sep_disj_bool_def)+
  done
 end
@@ -44,7 +44,7 @@ end
   definition "plus_fun f f'  \<equiv> (\<lambda>x. if f x = 0 then f' x else f x)"
   definition "sep_disj_fun   \<equiv> (\<lambda>f f'.  \<forall>x. (f x = 0 \<or> f' x = 0)) :: ('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> bool "
  instance
-  apply default
+  apply standard
        apply (fastforce simp: zero_fun_def sep_disj_fun_def plus_fun_def)+
   apply (clarsimp simp: zero_fun_def sep_disj_fun_def plus_fun_def, safe)
      apply (fastforce)+
@@ -303,7 +303,8 @@ ML {*
     let
          val (arrowt, _, ctxt') =  Utils.define_const_args "sep_generic_arrow" true
                                (@{mk_term "undefined :: (?'h ptr => ?'h => ?'T \<Rightarrow> bool)" ('T, 'h) } (stateT, @{typ 'h})) [] ctxt
-         val ctxt'' = Local_Theory.notation true Syntax.mode_default [(arrowt, Infixl ("\<mapsto>s", 50))] ctxt'
+         val ctxt'' = Local_Theory.notation true Syntax.mode_default
+               [(arrowt, Infixl (Input.string "\<mapsto>s", 50, Position.no_range))] ctxt'
         fun setup_arrow (heap_type,(sep_info,ctxt)) =
          let
           val pointer = (Free ("p", Utils.gen_typ @{typ "'a ptr"} [heap_type]))
@@ -311,7 +312,7 @@ ML {*
           val term = (make_arrow stateT heap_type heap_getters heap_valid_getters pointer value)
           val arr_name = "sep_map_" ^  HeapLiftBase.name_from_type heap_type
           val arrow = "\<mapsto>"  ^ (HeapLiftBase.name_from_type heap_type |> hds)
-          val fix = Infixl (arrow, 50)
+          val fix = Infixl (Input.string arrow, 50, Position.no_range)
           val (t , thm, ctxt') = Utils.define_const_args arr_name false term
                [("p", Utils.gen_typ @{typ "'a ptr"} [heap_type]) ,  ("v", heap_type) ] ctxt
           val ctxt'' = Local_Theory.notation true Syntax.mode_default [(t , fix)] ctxt'
@@ -453,9 +454,9 @@ ML {*
                val name = heap_setter |> dest_Const |> fst |> Long_Name.base_name
                val heap_update_lemma = prove_update_heap_lemma (heap_arrow, heap_arrow_def) (heap_updater) ctxt
                fun proof_tac ctxt = clarsimp_tac (ctxt addsimps [heap_setter_def]) THEN'
-                                    etac @{thm sep_conjE} THEN'
-                                    rtac @{thm sep_conjI} THEN'
-                                    etac heap_update_lemma THEN'
+                                    eresolve0_tac [@{thm sep_conjE}] THEN'
+                                    resolve0_tac [@{thm sep_conjI}] THEN'
+                                    eresolve0_tac [heap_update_lemma] THEN'
                                     fast_force_tac (ctxt) THEN_ALL_NEW
                                     fast_force_tac (ctxt addsimps thms)
                val set_wp = Goal.prove ctxt ["x", "p","R", "v"] [] proof_term (fn x =>  proof_tac (#context x) 1 )
@@ -482,11 +483,11 @@ ML {*
        zipWith _ _ _ = []
 
     fun tester str thy =
-         let val data = get_data thy str |> the
-             val typ = data  |> #globals_type |> print_type
+         let val data = get_data thy str |> the |> #heap_info
+             val typ = data |> #globals_type |> print_type
              val stateT = data |> #globals_type |> dest_Type ||> (K [@{typ 'b}]) |> Type
-             val heap_types = data  |> #heap_getters |> Typtab.dest |> map fst
-             val heap_valid_getters = data  |> #heap_valid_getters
+             val heap_types = data |> #heap_getters |> Typtab.dest |> map fst
+             val heap_valid_getters = data |> #heap_valid_getters
              val heap_getters = data |> #heap_getters
              val heap_setters = data |> #heap_setters
              val global_types =  data |> #global_fields |> map (fn (_,_,z) => z)
@@ -506,7 +507,7 @@ ML {*
                                                        commute} addsimps thms
                      val intros = [equality, @{thm ext}]
                   in
-                         Class.default_intro_tac ctxt [] THEN
+                         Class.standard_intro_classes_tac ctxt [] THEN
                          ((resolve_tac ctxt intros  ORELSE'
                            force_tac simpset ) |> REPEAT_ALL_NEW |> TRYALL)
                 end;

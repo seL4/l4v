@@ -11,14 +11,15 @@
 structure AutoCorresLegacy = struct
 
 fun mk_l1corres_trivial_thm fn_info ctxt fn_name = let
-    val info = Symtab.lookup (FunctionInfo.get_functions fn_info) fn_name
+    val info = Symtab.lookup (FunctionInfo.get_all_functions fn_info) fn_name
         |> the
     val const = #const info
     val impl_thm = Proof_Context.get_thm ctxt (fn_name ^ "_impl")
     val gamma = safe_mk_meta_eq impl_thm |> Thm.concl_of |> Logic.dest_equals
         |> fst |> (fn (f $ _) => f | t => raise TERM ("gamma", [t]))
-    val thm = @{thm L1corres_call_simpl}
-        WHERE [("proc", Thm.cterm_of ctxt const), ("Gamma", Thm.cterm_of ctxt gamma)]
+    val thm = Utils.named_cterm_instantiate ctxt
+              [("proc", Thm.cterm_of ctxt const), ("Gamma", Thm.cterm_of ctxt gamma)]
+              @{thm L1corres_call_simpl}
     val body = SimplConv.get_body_of_l1corres_thm thm
     val term = Abs ("measure", @{typ nat}, body)
   in (term, thm) end
@@ -30,7 +31,7 @@ fun get_ext_l1corres_thm prog_info fn_info ctxt fn_name = let
       in (nm, (false, term, thm)) end
     val callee_tab = Symtab.make (map fake_callee callees)
   in SimplConv.get_l1corres_thm prog_info fn_info ctxt true false fn_name
-    callee_tab @{term "ameasure :: nat"} |> fst
+                                callee_tab @{term "ameasure :: nat"} |> fst
   end
 
 fun mk_l2corres_trivial_thm fn_info ctxt gs fn_name = let
@@ -58,10 +59,11 @@ fun mk_l2corres_trivial_thm fn_info ctxt gs fn_name = let
     val arg_frees = map (fn (s, T) => Var ((s, 0), T)) args
     val arg_v = HOLogic.mk_tuple arg_frees
 
-    val thm = @{thm L2corres_L2_call_simpl}
-        WHERE (map (apsnd (Thm.cterm_of ctxt))
-            [("proc", const), ("Gamma", gamma), ("ex_xf", ex_xf), ("gs", gs),
-             ("ret_xf", ret_xf), ("arg_fn", arg_xf), ("args", arg_v)])
+    val thm = Utils.named_cterm_instantiate ctxt
+              (map (apsnd (Thm.cterm_of ctxt))
+                   [("proc", const), ("Gamma", gamma), ("ex_xf", ex_xf), ("gs", gs),
+                    ("ret_xf", ret_xf), ("arg_fn", arg_xf), ("args", arg_v)])
+              @{thm L2corres_L2_call_simpl}
     val body = LocalVarExtract.get_body_of_thm ctxt thm
     val term = fold_rev Term.lambda (@{term "ameasure :: nat"} :: arg_frees) body
   in (term, thm) end
@@ -83,7 +85,7 @@ fun get_ext_type_strengthen_thm ctxt prog_info fn_info fn_name body = let
     val rules = Monad_Types.get_ordered_rules ["nondet"] (Context.Proof @{context})
         |> hd
     val res = TypeStrengthen.perform_lift_and_polish ctxt prog_info fn_info rules true
-        ((@{thm refl} WHERE [("t", Thm.cterm_of ctxt body)]) |> mk_meta_eq)
+        ((Utils.named_cterm_instantiate ctxt [("t", Thm.cterm_of ctxt body)] @{thm refl}) |> mk_meta_eq)
         fn_name
     val args = Symtab.lookup (FunctionInfo.get_functions fn_info) fn_name
         |> the |> #args
@@ -106,8 +108,8 @@ fun tac prog_info fn_info globals ctxt = SUBGOAL (fn (t, i) => let
         globals fn_name (SimplConv.get_body_of_l1corres_thm l1corres)
     val ts = get_ext_type_strengthen_thm ctxt prog_info fn_info
         fn_name (fst l2corres)
-  in rtac @{thm ccorres_underlying_autocorres}
-    THEN' rtac l1corres THEN' rtac (snd l2corres) THEN' rtac ts end i)
+  in resolve0_tac [@{thm ccorres_underlying_autocorres}]
+    THEN' resolve0_tac [l1corres] THEN' resolve0_tac [snd l2corres] THEN' resolve0_tac [ts] end i)
 
 fun method prog_info fn_info globals
     = Scan.succeed (fn ctxt => Method.SIMPLE_METHOD (tac
