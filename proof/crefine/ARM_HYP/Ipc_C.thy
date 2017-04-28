@@ -641,15 +641,6 @@ lemma mapM_x_zip_take_Cons_append:
       od"
   by (cases n, simp_all add: mapM_x_Cons)
 
-lemma monadic_rewrite_do_flip:
-  "monadic_rewrite E F P (do c \<leftarrow> j; a \<leftarrow> f c; b \<leftarrow> g c; return (a, b) od)
-    (do c \<leftarrow> j; b \<leftarrow> g c; a \<leftarrow> f c; return (a, b) od)
-    \<Longrightarrow> monadic_rewrite E F P (do c \<leftarrow> j; a \<leftarrow> f c; b \<leftarrow> g c; h a b od)
-    (do c \<leftarrow> j; b \<leftarrow> g c; a \<leftarrow> f c; h a b od)"
-  apply (drule_tac h="\<lambda>(a, b). h a b" in monadic_rewrite_bind_head)
-  apply (simp add: bind_assoc)
-  done
-
 lemma threadGet_lookupIPCBuffer_comm:
   "do
      a \<leftarrow> lookupIPCBuffer x y;
@@ -773,6 +764,15 @@ lemma threadGet_discarded:
   apply (simp add: bind_def simpler_gets_def get_def)
   done
 
+lemma monadic_rewrite_do_flip:
+  "monadic_rewrite E F P (do c \<leftarrow> j; a \<leftarrow> f; b \<leftarrow> g c; return (a, c) od)
+    (do c \<leftarrow> j; b \<leftarrow> g c; a \<leftarrow> f; return (a, c) od)
+    \<Longrightarrow> monadic_rewrite E F P (do c \<leftarrow> j; a \<leftarrow> f; b \<leftarrow> g c; h a c od)
+    (do c \<leftarrow> j; b \<leftarrow> g c; a \<leftarrow> f; h a c od)"
+  apply (drule_tac h="\<lambda>(a, b). h a b" in monadic_rewrite_bind_head)
+  apply (simp add: bind_assoc)
+  done
+
 lemma handleFaultReply':
   notes option.case_cong_weak [cong] wordSize_def'[simp] take_append[simp del] prod.case_cong_weak[cong]
   assumes neq: "s \<noteq> r"
@@ -826,7 +826,6 @@ lemma handleFaultReply':
     apply (simp add: zip_append2 mapM_x_append asUser_bind_distrib split_def bind_assoc)
     apply (rule monadic_rewrite_imp)
      apply (rule monadic_rewrite_trans[rotated])
- sorry (*
       apply (rule monadic_rewrite_do_flip)
       apply (rule monadic_rewrite_bind_tail)
        apply (rule_tac P="inj (case_bool s r)" in monadic_rewrite_gen_asm)
@@ -899,9 +898,12 @@ lemma handleFaultReply':
                              word_size msgLengthBits_def n_syscallMessage_def Let_def
                   split del: if_split
                        cong: if_weak_cong register.case_cong)
+
+
        apply (rule monadic_rewrite_bind_tail)+
                apply (subst (2) upto_enum_word)
                apply (case_tac "ma < unat n_syscallMessage - 4")
+
                 apply (erule disjE[OF nat_less_cases'],
                        ( clarsimp simp: n_syscallMessage_def bind_assoc asUser_bind_distrib
                                         mapM_x_Cons mapM_x_Nil zipWithM_x_mapM_x mapM_Cons
@@ -910,6 +912,7 @@ lemma handleFaultReply':
                                         zip_take_triv2 msgMaxLength_def
                                         no_fail_stateAssert
                                   cong: if_weak_cong
+                       | simp
                        | rule monadic_rewrite_bind_tail
                               monadic_rewrite_refl
                               monadic_rewrite_symb_exec_l[OF stateAssert_inv]
@@ -918,8 +921,6 @@ lemma handleFaultReply':
                               monadic_rewrite_archTCBSanitise_return
                               monadic_rewrite_archTCBSanitise_drop
                        | wp asUser_tcb_at' empty_fail_loadWordUser)+)+
-find_theorems monadic_rewrite
-thm monadic_rewrite_bind_tail
       apply (clarsimp simp: upto_enum_word word_le_nat_alt simp del: upt.simps cong: if_weak_cong)
       apply (cut_tac i="unat n" and j="Suc (unat (scast n_syscallMessage :: word32))"
                                 and k="Suc msgMaxLength" in upt_add_eq_append')
@@ -939,9 +940,9 @@ thm monadic_rewrite_bind_tail
                   bit_def msgLengthBits_def msgRegisters_unfold
                   fromIntegral_simp1 fromIntegral_simp2 shiftL_word)
     apply (clarsimp simp: mapM_def sequence_def bind_assoc asUser_bind_distrib
-                          asUser_return submonad_asUser.fn_stateAssert bit_def)
+                          asUser_return submonad_asUser.fn_stateAssert)
    apply wpsimp+
-  done *)
+  done
 
 end
 
