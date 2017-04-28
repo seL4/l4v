@@ -14,6 +14,32 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+lemma ccorres_name_pre_C:
+  "(\<And>s. s \<in> P' \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P {s} hs f g)
+  \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs f g"
+  apply (rule ccorres_guard_imp)
+    apply (rule_tac xf'=id in ccorres_abstract, rule ceqv_refl)
+    apply (rule_tac P="rv' \<in> P'" in ccorres_gen_asm2)
+    apply assumption
+   apply simp
+  apply simp
+  done
+
+lemma ccorres_flip_Guard:
+  assumes cc: "ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a (Guard F S (Guard F1 S1 c))"
+  shows "ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a (Guard F1 S1 (Guard F S c))"
+  apply (rule ccorres_name_pre_C)
+  using cc
+  apply (case_tac "s \<in> (S1 \<inter> S)")
+   apply (clarsimp simp: ccorres_underlying_def)
+   apply (erule exec_handlers.cases;
+    fastforce elim!: exec_Normal_elim_cases intro: exec_handlers.intros exec.Guard)
+  apply (clarsimp simp: ccorres_underlying_def)
+  apply (case_tac "s \<in> S")
+   apply (fastforce intro: exec.Guard exec.GuardFault exec_handlers.intros)
+  apply (fastforce intro: exec.Guard exec.GuardFault exec_handlers.intros)
+  done
+
 (* FIXME: move *)
 lemma empty_fail_findPDForASID[iff]:
   "empty_fail (findPDForASID asid)"
@@ -827,7 +853,6 @@ lemma cpde_relation_pde_coarse:
   apply (simp add: pde_pde_coarse_lift_def)
 done
 
-thm lookupPTSlot_def
 lemma lookupPTSlot_ccorres:
   "ccorres (lookup_failure_rel \<currency> (\<lambda>rv rv'. rv' = pte_Ptr rv)) lookupPTSlot_xf
        (page_directory_at' pd)
@@ -1458,7 +1483,6 @@ lemma ccorres_h_t_valid_armUSGlobalPD:
    apply simp
   by (simp add:rf_sr_def cstate_relation_def Let_def)
 
-(*here*)
 lemma ccorres_pre_gets_armHSCurVCPU_ksArchState: (* not used: insufficient preconditions *)
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
@@ -1481,16 +1505,11 @@ lemma ccorres_pre_gets_armHSCurVCPU_ksArchState: (* not used: insufficient preco
   apply clarsimp
   done
 
-(* FIXME copied from FInalise_C *)
+(* FIXME copied from Finalise_C *)
 lemma update_vcpu_map_to_vcpu:
   "map_to_vcpus (ksPSpace s(p \<mapsto> KOArch (KOVCPU vcpu)))
              = (map_to_vcpus (ksPSpace s))(p \<mapsto> vcpu)"
   by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
-
-
-(*
-declare [[goals_limit=20]]
-*)
 
 lemma vcpu_disable_ccorres:
   "ccorres dc xfdc
@@ -1582,21 +1601,6 @@ lemma vcpu_enable_ccorres:
   apply (clarsimp simp: typ_heap_simps' cvcpu_relation_def cvgic_relation_def)
   done
 
-(*
-lemma set_gic_vcpu_ctrl_lr_while_ccorres:
-  "ccorres dc xfdc (all_invs_but_ct_idle_or_in_cur_domain' and vcpu_at' v) UNIV hs
-       (mapM_x (\<lambda>a. doMachineOp (set_gic_vcpu_ctrl_lr (fst a) (snd a)))
-          (map (\<lambda>i. (of_nat i, vgicLR (vcpuVGIC vcpua) i)) [0..<63] @
-           [(0x3F, vgicLR (vcpuVGIC vcpua) 63)]))
-        (\<acute>i :== 0;;
-         While \<lbrace>\<acute>i < \<acute>gic_vcpu_num_list_regs\<rbrace>
-          (Guard ArrayBounds \<lbrace>\<acute>i < 0x40\<rbrace>
-            (Guard C_Guard {s. s \<Turnstile>\<^sub>c vcpu_Ptr v}
-              (CALL set_gic_vcpu_ctrl_lr(ucast \<acute>i,
-               h_val (hrs_mem \<acute>t_hrs) (Ptr &(Ptr &(vcpu_Ptr v\<rightarrow>[''vgic_C''])\<rightarrow>[''lr_C''])).[unat \<acute>i])));;
-           \<acute>i :== \<acute>i + 1))"
-  *)
-
 lemmas empty_fail_vcpuregs_sets [intro] =
  empty_fail_set_lr_svc
  empty_fail_set_sp_svc
@@ -1631,144 +1635,126 @@ next
     by (clarsimp elim!: exI)
 qed
 
-lemma vcpu_restore_ccorres: "ccorres dc xfdc
-             (all_invs_but_ct_idle_or_in_cur_domain' and vcpu_at' v)
-             (UNIV \<inter> {s. vcpu_' s = vcpu_Ptr v}) hs
-              (vcpuRestore v) (Call vcpu_restore_'proc)"
-(*using [[goals_limit=25]]*)
+(* FIXME move *)
+lemma fromIntegral_simp_nat[simp]: "(fromIntegral :: nat \<Rightarrow> nat) = id"
+  by (simp add: fromIntegral_def fromInteger_nat toInteger_nat)
+
+(* FIXME shadows two other identical versions in other files *)
+lemma ccorres_abstract_known:
+  "\<lbrakk> \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' g (g' rv'); ccorres rvr xf P P' hs f (g' val) \<rbrakk>
+     \<Longrightarrow> ccorres rvr xf P (P' \<inter> {s. xf' s = val}) hs f g"
+  apply (rule ccorres_guard_imp2)
+   apply (rule_tac xf'=xf' in ccorres_abstract)
+    apply assumption
+   apply (rule_tac P="rv' = val" in ccorres_gen_asm2)
+   apply simp
+  apply simp
+  done
+
+lemma vcpu_restore_ccorres:
+  notes upt_Suc[simp del] dc_simp[simp del] Collect_const[simp del]
+  shows
+  "ccorres dc xfdc
+       (all_invs_but_ct_idle_or_in_cur_domain' and vcpu_at' vcpuPtr)
+       (UNIV \<inter> {s. vcpu_' s = vcpu_Ptr vcpuPtr}) hs
+     (vcpuRestore vcpuPtr) (Call vcpu_restore_'proc)"
   apply (cinit lift: vcpu_' simp: whileAnno_def)
-apply (simp add: doMachineOp_bind uncurry_def split_def
-                 empty_fail_vcpuregs_sets doMachineOp_mapM_x)+
-apply (clarsimp simp: bind_assoc)
-apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_hcr_ccorres)
-apply (ctac (no_vcg) add: isb_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (rule ccorres_pre_getObject_vcpu)
-apply (rename_tac vcpu) sorry (* vcpuRestore
-apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_vmcr_ccorres)
-apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_apr_ccorres)
-apply (rule ccorres_rhs_assoc2)
-apply (rule ccorres_split_nothrow)
-apply (clarsimp simp: gicVCPUMaxNumLR_def)
-apply (rule ccorres_guard_imp)
-   apply (rule_tac xf'="\<lambda>s. gic_vcpu_num_list_regs_' (globals s)" in ccorres_abstract)
-apply ceqv
-find_theorems name:ccorres name: rewrite
-   apply (rule_tac P="end' = ve" in ccorres_gen_asm2)
-apply (rule ccorres_abstract)
-apply (clift gic_vcpu_num_list_regs_')
-apply (rule ccorres_mapM_x_while)
+   apply (simp add: doMachineOp_bind uncurry_def split_def
+                     empty_fail_vcpuregs_sets doMachineOp_mapM_x)+
+   apply (clarsimp simp: bind_assoc)
+   apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_hcr_ccorres)
+    apply (ctac (no_vcg) add: isb_ccorres)
+     apply (rule ccorres_pre_getObject_vcpu)
+     apply (rule ccorres_move_c_guard_vcpu, rename_tac vcpu)
+     apply (rule ccorres_pre_gets_armKSGICVCPUNumListRegs_ksArchState, rename_tac lr_num)
+     apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_vmcr_ccorres)
+    apply (rule_tac P="ko_at' vcpu vcpuPtr" in ccorres_cross_over_guard)
+      apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_apr_ccorres)
+       apply (rule_tac xf'=lr_num_' and R="\<lambda>s. lr_num = (armKSGICVCPUNumListRegs \<circ> ksArchState) s"
+                   and val="of_nat lr_num" in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
+        apply vcg
+    apply (fastforce intro!: rf_sr_armKSGICVCPUNumListRegs)
+    apply ceqv
+      apply (rule ccorres_rhs_assoc2)
+      apply (rule ccorres_split_nothrow_novcg)
+      (* the loop *)
+          apply (rule_tac P="lr_num \<le> 63" in ccorres_gen_asm)
+          apply (rule_tac F="\<lambda>_ s. lr_num \<le> 63 \<and> ko_at' vcpu vcpuPtr s" in ccorres_mapM_x_while)
+              apply (intro allI impI)
+              apply clarsimp
+              apply (rule ccorres_guard_imp2)
+               apply (rule_tac P="\<lambda>s. lr_num \<le> 63" in ccorres_cross_over_guard)
+               apply (rule ccorres_Guard)
+               apply (rule_tac val="of_nat n" in ccorres_abstract_known[where xf'=i_'], ceqv)
+               apply (rule_tac P="n \<le> 63" in ccorres_gen_asm)
+               apply (rule ccorres_move_c_guard_vcpu)
+               apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_lr_ccorres)
 
+              apply (clarsimp simp: virq_to_H_def ko_at_vcpu_at'D dc_def upt_Suc)
+              apply (rule conjI)
 
-apply (rule set_gic_vcpu_ctrl_lr_while_ccorres)  (*88*)
-apply clarsimp
-apply ceqv
-apply clarsimp
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_lr_svc_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_sp_svc_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_lr_abt_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_sp_abt_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_lr_und_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_sp_und_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_lr_irq_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_sp_irq_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_lr_fiq_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_sp_fiq_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_r8_fiq_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_r9_fiq_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_r10_fiq_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_r11_fiq_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: set_r12_fiq_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (ctac add: setACTLR_ccorres)
-apply (ctac add: vcpu_enable_ccorres[unfolded dc_def])
-apply wp
-apply (vcg exspec=setACTLR_modifies)
+  subgoal (* FIXME extract into separate lemma *)
+    by (subst scast_eq_ucast, rule not_msb_from_less)
+       (fastforce simp: word_less_nat_alt unat_of_nat_eq elim: order_less_le_trans)+
 
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_r12_fiq_modifies)
+                apply (frule (1) vcpu_at_rf_sr)
+                apply (clarsimp simp: typ_heap_simps cvcpu_relation_regs_def cvgic_relation_def virq_to_H_def)
+                apply (fastforce simp: word_less_nat_alt unat_of_nat_eq elim: order_less_le_trans)+
+               apply (simp add: word_less_nat_alt upt_Suc)
+              apply vcg
+              apply clarsimp
+             apply wpsimp
+            apply (simp add: upt_Suc)
+            apply (fastforce simp: word_less_nat_alt unat_of_nat_eq word_bits_def elim: order_less_le_trans)
+           apply ceqv
 
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_r11_fiq_modifies)
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_r10_fiq_modifies)
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_r9_fiq_modifies)
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_r8_fiq_modifies)
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_sp_fiq_modifies)
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_lr_fiq_modifies)
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_sp_irq_modifies)
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_lr_irq_modifies)
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_sp_und_modifies)
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_lr_und_modifies)
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_sp_abt_modifies)
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_lr_abt_modifies)
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_sp_svc_modifies)
-apply (clarsimp, wp)
-apply clarsimp
-apply (vcg exspec=set_lr_svc_modifies)
-apply (wpsimp wp: mapM_x_wp' doMachineOp_typ_at')
-apply clarsimp
+          apply (rule_tac P="invs_no_cicd' and ko_at' vcpu vcpuPtr" in ccorres_inst[where P'=UNIV])
+          apply (rule ccorres_guard_imp2)
 
-apply (rule conseqPre)
-apply (vcg exspec=set_gic_vcpu_ctrl_lr_modifies)
+           apply (rule_tac P="ko_at' vcpu vcpuPtr" in ccorres_cross_over_guard)
 
-apply (clarsimp simp: guard_is_UNIV_def)
+           apply ((
+                    (rule_tac ccorres_split_nothrow_novcg, clarsimp)
+                   ,rule_tac P="ko_at' vcpu vcpuPtr" in ccorres_cross_over_guard
+                   ,(rule ccorres_move_c_guard_vcpu, rule ccorres_call)
+                   ,(ctac (no_vcg) add: set_lr_svc_ccorres
+                                        set_lr_svc_ccorres
+                           set_sp_svc_ccorres
+                          set_lr_abt_ccorres
+                          set_sp_abt_ccorres
+                          set_lr_und_ccorres
+                          set_sp_und_ccorres
+                          set_lr_irq_ccorres
+                          set_sp_irq_ccorres
+                          set_lr_fiq_ccorres
+                          set_sp_fiq_ccorres
+                          set_r8_fiq_ccorres
+                          set_r9_fiq_ccorres
+                          set_r10_fiq_ccorres
+                          set_r11_fiq_ccorres
+                          set_r12_fiq_ccorres
+                          setACTLR_ccorres)
+                   ,(fastforce simp: upt_Suc dc_simp xfdc_def)+
+                   ,simp
+                   ,ceqv)+)[1]
 
+           apply (ctac add: vcpu_enable_ccorres)
 
-apply (rule conjI
-     | clarsimp simp: cvcpu_relation_def cvcpu_regs_relation_def
-                      typ_heap_simps' Let_def Collect_const_mem)+
-apply simp
-apply (wpsimp wp: hoare_drop_imp)+
-apply (rule context_conjI; clarsimp simp: Collect_const_mem)
+  (* 41 subgoals *)
+  (* need to re-establish relationship between updated registers post-update
+     these are all the same *)
+  apply ((wpsimp simp: guard_is_UNIV_def dc_def upt_Suc ko_at_vcpu_at'D wp: mapM_x_wp_inv | rule UNIV_I | wp hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_disj_lift)+
+  ,solves \<open>drule (1) vcpu_at_rf_sr, clarsimp simp: typ_heap_simps',
+                fastforce simp: cvcpu_relation_regs_def cvgic_relation_def\<close>)+
 
+ apply (wpsimp simp: guard_is_UNIV_def dc_def upt_Suc  wp: mapM_x_wp_inv | rule UNIV_I | wp hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_disj_lift)+
 
-apply (drule vcpu_at_ko, clarsimp)
-apply (fastforce dest!: vcpu_at_ko vcpu_at_rf_sr)
+  apply (rule conjI)
+   apply (clarsimp simp: invs_no_cicd'_def valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
+  apply (fastforce dest!: vcpu_at_rf_sr
+                   simp: typ_heap_simps' cvcpu_relation_def cvgic_relation_def)
+  done
 
-*)
-
-thm carch_state_relation_def
 lemma ccorres_pre_getsNumListRegs:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
@@ -1792,120 +1778,295 @@ lemma ccorres_pre_getsNumListRegs:
   apply (clarsimp simp: rf_sr_ksArchState_armHSCurVCPU)
   done
 
-(*
-lemma get_gic_vcpu_ctrl_lr_while_ccorres:
-  "\<forall>s. (armKSGICVCPUNumListRegs \<circ> ksArchState) s = rve \<Longrightarrow>
-    ccorres dc xfdc (all_invs_but_ct_idle_or_in_cur_domain' and vcpu_at' v) UNIV hs
-     (NonDetMonad.sequence (map (\<lambda>x. doMachineOp (get_gic_vcpu_ctrl_lr (of_nat x))) [0..<rve]))
-        (While \<lbrace>\<acute>i < \<acute>gic_vcpu_num_list_regs\<rbrace>
-          (\<acute>ret__struct_virq_C :== CALL get_gic_vcpu_ctrl_lr(ucast \<acute>i);;
-           Guard ArrayBounds \<lbrace>\<acute>i < 0x40\<rbrace>
-            (Guard C_Guard {s. s \<Turnstile>\<^sub>c vcpu_Ptr vcpuPtr}
-              (\<acute>globals :==
-                 t_hrs_'_update
-                  (hrs_mem_update
-                    (heap_update (Ptr &(Ptr &(vcpu_Ptr vcpuPtr\<rightarrow>[''vgic_C''])\<rightarrow>[''lr_C'']))
-                      (Arrays.update
-                        (h_val (hrs_mem \<acute>t_hrs)
-                          (Ptr &(Ptr &(vcpu_Ptr vcpuPtr\<rightarrow>[''vgic_C''])\<rightarrow>[''lr_C''])))
-                        (unat \<acute>i) \<acute>ret__struct_virq_C)))));;
-                          Basic (\<acute>i :== \<acute>i + 1)))"
-*)
+lemma ccorres_gets_armKSGICVCPUNumListRegs:
+  "ccorres (op = \<circ> of_nat) lr_num_' \<top> UNIV hs
+           (gets (armKSGICVCPUNumListRegs \<circ> ksArchState)) (\<acute>lr_num :== \<acute>gic_vcpu_num_list_regs)"
+  apply (rule ccorres_from_vcg_nofail)
+  apply clarsimp
+  apply (rule conseqPre, vcg)
+  apply (clarsimp simp: simpler_gets_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def)
+  done
 
+lemma setObject_modify:
+  fixes v :: "'a :: pspace_storable" shows
+  "\<lbrakk> obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
+         (1 :: word32) < 2 ^ objBits v \<rbrakk>
+    \<Longrightarrow> setObject p v s
+      = modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))) s"
+  apply (clarsimp simp: setObject_def split_def exec_gets
+                        obj_at'_def projectKOs lookupAround2_known1
+                        assert_opt_def updateObject_default_def
+                        bind_assoc)
+  apply (simp add: projectKO_def alignCheck_assert)
+  apply (simp add: project_inject objBits_def)
+  apply (clarsimp simp only: objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
+  apply (frule(2) in_magnitude_check[where s'=s])
+  apply (simp add: magnitudeCheck_assert in_monad)
+  apply (simp add: simpler_modify_def)
+  done
+
+lemma ccorres_name_pre_C:
+  "(\<And>s. s \<in> P' \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P {s} hs f g)
+  \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs f g"
+  apply (rule ccorres_guard_imp)
+    apply (rule_tac xf'=id in ccorres_abstract, rule ceqv_refl)
+    apply (rule_tac P="rv' \<in> P'" in ccorres_gen_asm2)
+    apply assumption
+   apply simp
+  apply simp
+  done
+
+(* FIXME shadows existing name! *)
+lemma storePTE_Basic_ccorres':
+  "ccorres dc xfdc \<top> Q hs
+     (storePTE p pte) c
+   \<Longrightarrow> ccorres dc xfdc \<top> (Q \<inter> {s. P (i_' s) }) hs
+     (storePTE p pte) (Guard C_Guard {s. P (i_' s)} c)"
+  by (rule ccorres_guard_imp2, erule ccorres_Guard, simp)
+
+(* FIXME ARMHYP This lemma is in terrible shape and needs cleanup - Raf *)
 lemma vcpu_save_ccorres:
+  notes dc_simp[simp del] Collect_const[simp del]
+  shows
   "ccorres dc xfdc
-             (all_invs_but_ct_idle_or_in_cur_domain'
-        and (case v of None \<Rightarrow> \<top> | Some new \<Rightarrow> vcpu_at' (fst new))
-               )
-             (UNIV \<inter> {s. vcpu_' s = (case v of None \<Rightarrow> NULL
-                          | Some vr \<Rightarrow> vcpu_Ptr (fst vr))}
-                  \<inter> {s. active_' s = (case v of None \<Rightarrow> 0 | Some vr \<Rightarrow> from_bool (snd vr))}) hs
-              (vcpuSave v) (Call vcpu_save_'proc)"
+      (all_invs_but_ct_idle_or_in_cur_domain'
+        and case_option \<top> (vcpu_at' \<circ> fst) v
+        )
+      (UNIV \<inter> {s. vcpu_' s = case_option NULL (vcpu_Ptr \<circ> fst) v}
+            \<inter> {s. active_' s = case_option 0 (from_bool \<circ> snd) v}) hs
+    (vcpuSave v) (Call vcpu_save_'proc)"
   apply (cinit lift: vcpu_' active_' simp: whileAnno_def)
-  apply wpc
-  (* v = None *)
-  apply (rule ccorres_fail)
-  (* v = Some (vcpuPtr, active) *)
-apply wpc
-apply (rename_tac vcpuPtr act)
-  apply (ctac (no_vcg) add: dsb_ccorres) sorry (* loop
-  apply (rule ccorres_pre_getObject_vcpu)
-apply (rule ccorres_split_nothrow)
-  apply (rule ccorres_cond[where R=\<top>])
-     apply (clarsimp simp: cur_vcpu_relation_def Collect_const_mem
-                     dest!: rf_sr_ksArchState_armHSCurVCPU)
-apply (rule ccorres_rhs_assoc)+
-apply (ctac add: getSCTLR_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (rule ccorres_symb_exec_r)
-apply (ctac add: get_gic_vcpu_ctrl_hcr_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (rule ccorres_return)
-apply clarsimp
-apply (rule conseqPre, vcg)
-defer
-defer
-apply clarsimp
-apply (vcg exspec=get_gic_vcpu_ctrl_hcr_modifies)
-apply clarsimp
-apply vcg
+   apply wpc
+    (* v = None *)
+    apply (rule ccorres_fail)
+    (* v = Some (vcpuPtr, active) *)
+   apply wpc
+   apply (rename_tac vcpuPtr act)
+   apply (ctac (no_vcg) add: dsb_ccorres)
+  apply (rule ccorres_split_nothrow_novcg)
+      apply (rule_tac R=\<top> in ccorres_when)
+       apply clarsimp
 
-apply clarsimp
+        apply (clarsimp simp: vcpuSaveRegister_def bind_assoc)
+        apply (rule ccorres_rhs_assoc)+
+        apply (ctac (no_vcg) add: getSCTLR_ccorres)
+        apply (rule ccorres_split_nothrow)
+        (* this pattern keeps repeating - abstract it *)
+         apply (clarsimp simp: vcpuUpdate_def)
+             apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+             apply (rule_tac P="ko_at' vcpu vcpuPtr"
+                               in setObject_ccorres_helper[where P'=UNIV],
+                              rule conseqPre, vcg)
+               apply (clarsimp simp: dc_def)
+               apply (rule cmap_relationE1[OF cmap_relation_vcpu]
+                             ; (clarsimp simp: objBits_simps archObjSize_def machine_bits_defs)?)
+                 apply (assumption, erule ko_at_projectKO_opt)
+               apply (thin_tac "ko_at' ko' vcpuPtr \<sigma>", clarsimp)
+               apply (frule h_t_valid_clift)
+               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                                            cmachine_state_relation_def update_vcpu_map_to_vcpu
+                                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
+               apply (erule (1) cmap_relation_updI
+                  ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def ; (rule refl)?)
+              apply (simp add: objBits_simps archObjSize_def machine_bits_defs)+
+            apply ceqv
+
+        apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_hcr_ccorres)
+         apply (rule ccorres_move_c_guard_vcpu)
+         apply (clarsimp simp: vgicUpdate_def vcpuUpdate_def)
+         apply (rule ccorres_abstract_cleanup)
+            apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+            apply (rule_tac P="ko_at' vcpu vcpuPtr" in setObject_ccorres_helper[where P'=UNIV],
+                   rule conseqPre, vcg)
+           apply (clarsimp simp: dc_def)
+           apply (rule cmap_relationE1[OF cmap_relation_vcpu]
+                  ; (clarsimp simp: objBits_simps archObjSize_def machine_bits_defs)?)
+             apply (assumption, erule ko_at_projectKO_opt)
+           apply (thin_tac "ko_at' ko' vcpuPtr \<sigma>", clarsimp)
+           apply (frule h_t_valid_clift)
+           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                                 cmachine_state_relation_def update_vcpu_map_to_vcpu
+                                 typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
+           apply (erule (1) cmap_relation_updI
+                  ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def ; (rule refl)?)
+          apply (simp add: objBits_simps archObjSize_def machine_bits_defs)+
+        apply wpsimp
+       apply wp
+      apply clarsimp
 apply vcg
-apply (wp hoare_vcg_conj_lift)+
 apply wpsimp
-defer
-apply wp
-apply clarsimp
-apply vcg
-apply (rule ccorres_return_Skip)
 apply ceqv
 
-apply wpc
-apply (rename_tac hcr sctlr)
-  apply (ctac (no_vcg) add: getACTLR_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (rule ccorres_symb_exec_r)
-  apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_vmcr_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (rule ccorres_symb_exec_r)
-  apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_apr_ccorres)
+    apply (ctac (no_vcg) add: getACTLR_ccorres)
+     apply (rule ccorres_split_nothrow_novcg)
 
-apply (rule ccorres_pre_getsNumListRegs)
-apply clarsimp
-apply (rule ccorres_move_c_guard_vcpu)
-apply (rule ccorres_symb_exec_r)
-apply (rule ccorres_symb_exec_r)
-apply (rule ccorres_split_nothrow)
-apply (clarsimp simp: doMachineOp_mapM o_def)
-apply (clarsimp simp: mapM_def)
-*)
-(* vcpu_save loop
-apply (rule_tac F="\<lambda>_. (all_invs_but_ct_idle_or_in_cur_domain'
-        and (case v of None \<Rightarrow> \<top> | Some new \<Rightarrow> vcpu_at' (fst new)))"
-                  in ccorres_sequence_while_gen')
+        (* this pattern keeps repeating - abstract it *)
+        apply (clarsimp simp: vcpuSaveRegister_def bind_assoc)
+         apply (clarsimp simp: vcpuUpdate_def)
+             apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+             apply (rule_tac P="ko_at' vcpu vcpuPtr"
+                               in setObject_ccorres_helper[where P'=UNIV],
+                              rule conseqPre, vcg)
+               apply (clarsimp simp: dc_def)
+               apply (rule cmap_relationE1[OF cmap_relation_vcpu]
+                             ; (clarsimp simp: objBits_simps archObjSize_def machine_bits_defs)?)
+                 apply (assumption, erule ko_at_projectKO_opt)
+               apply (thin_tac "ko_at' ko' vcpuPtr \<sigma>", clarsimp)
+               apply (frule h_t_valid_clift)
+               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                                            cmachine_state_relation_def update_vcpu_map_to_vcpu
+                                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
+               apply (erule (1) cmap_relation_updI
+                  ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def ; (rule refl)?)
+              apply (simp add: objBits_simps archObjSize_def machine_bits_defs)+
+            apply ceqv
 
-(* mapM while *)
+       apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_vmcr_ccorres)
+        apply (simp only: vgicUpdate_def)
+        apply (rule ccorres_split_nothrow_novcg)
 
-apply (rule ccorres_sequence_while_gen')
-  apply (ctac add: corres_gets_numlistregs)*)
+        (* this pattern keeps repeating - abstract it *)
+        apply (clarsimp simp: vcpuSaveRegister_def bind_assoc)
+         apply (clarsimp simp: vcpuUpdate_def)
 
-(*
-apply clarsimp
-apply (drule rf_sr_ksArchState_armHSCurVCPU)
-apply (case_tac b; simp)
-apply (rule ccorres_rhs_assoc)+
-apply (ctac add: getSCTLR_ccorres)
-apply clarsimp
-apply (rule ccorres_move_c_guard_vcpu)
-apply (rule ccorres_symb_exec_r)
-apply (ctac add: get_gic_vcpu_ctrl_hcr_ccorres)
-apply (rule ccorres_move_c_guard_vcpu)
-apply (rule ccorres_return)
+             apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+             apply (rule_tac P="ko_at' vcpu vcpuPtr"
+                               in setObject_ccorres_helper[where P'=UNIV],
+                              rule conseqPre, vcg)
+               apply (clarsimp simp: dc_def)
+               apply (rule cmap_relationE1[OF cmap_relation_vcpu]
+                             ; (clarsimp simp: objBits_simps archObjSize_def machine_bits_defs)?)
+                 apply (assumption, erule ko_at_projectKO_opt)
+               apply (thin_tac "ko_at' ko' vcpuPtr \<sigma>", clarsimp)
+               apply (frule h_t_valid_clift)
+               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                                            cmachine_state_relation_def update_vcpu_map_to_vcpu
+                                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
+               apply (erule (1) cmap_relation_updI
+                  ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def ; (rule refl)?)
+              apply (simp add: objBits_simps archObjSize_def machine_bits_defs)+
+            apply ceqv
 
-apply clarsimp
-apply (rule conseqPre, vcg)
-*)
+          apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_apr_ccorres)
+           apply (rule ccorres_split_nothrow_novcg)
+
+        (* this pattern keeps repeating - abstract it *)
+        apply (clarsimp simp: vcpuSaveRegister_def bind_assoc)
+         apply (clarsimp simp: vcpuUpdate_def)
+             apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+             apply (rule_tac P="ko_at' vcpu vcpuPtr"
+                               in setObject_ccorres_helper[where P'=UNIV],
+                              rule conseqPre, vcg)
+               apply (clarsimp simp: dc_def)
+               apply (rule cmap_relationE1[OF cmap_relation_vcpu]
+                             ; (clarsimp simp: objBits_simps archObjSize_def machine_bits_defs)?)
+                 apply (assumption, erule ko_at_projectKO_opt)
+               apply (thin_tac "ko_at' ko' vcpuPtr \<sigma>", clarsimp)
+               apply (frule h_t_valid_clift)
+               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                                            cmachine_state_relation_def update_vcpu_map_to_vcpu
+                                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
+               apply (erule (1) cmap_relation_updI
+                  ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def ; (rule refl)?)
+              apply (simp add: objBits_simps archObjSize_def machine_bits_defs)+
+            apply ceqv
+
+             apply (ctac (no_vcg) add: ccorres_gets_armKSGICVCPUNumListRegs)
+               apply (rename_tac lr_num lr_num')
+               apply (rule ccorres_rhs_assoc2)
+               apply (rule ccorres_split_nothrow_novcg)
+                     (* the loop *)
+                      apply (rule_tac P="lr_num \<le> 63" in ccorres_gen_asm)
+                     apply (rule_tac F="\<lambda>_ s. lr_num \<le> 63 \<and> vcpu_at' vcpuPtr s" in ccorres_mapM_x_while)
+                      apply (intro allI impI)
+                      apply clarsimp
+
+                      apply (rule ccorres_guard_imp2)
+                      apply (rule_tac P="\<lambda>s. lr_num \<le> 63" in ccorres_cross_over_guard)
+                      apply (ctac (no_vcg) add: get_gic_vcpu_ctrl_lr_ccorres)
+
+                      apply (rule ccorres_Guard)
+                      apply (rule_tac val="of_nat n" in ccorres_abstract_known[where xf'=i_'], ceqv)
+                      apply (rule_tac P="n \<le> 63" in ccorres_gen_asm)
+                      apply (rule ccorres_move_c_guard_vcpu)
+                      apply (clarsimp simp: vgicUpdate_def vcpuUpdate_def)
+                      apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+                      apply (rule_tac P="ko_at' vcpu vcpuPtr"
+                               in setObject_ccorres_helper[where P'=UNIV],
+                              rule conseqPre, vcg)
+                      apply (clarsimp simp: dc_def)
+                      apply (rule cmap_relationE1[OF cmap_relation_vcpu]
+                             ; (clarsimp simp: objBits_simps archObjSize_def machine_bits_defs)?)
+                      apply (assumption, erule ko_at_projectKO_opt)
+                      apply (thin_tac "ko_at' ko' vcpuPtr \<sigma>", clarsimp)
+                      apply (frule h_t_valid_clift)
+                      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                                            cmachine_state_relation_def update_vcpu_map_to_vcpu
+                                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
+           apply (erule (1) cmap_relation_updI
+                  ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def ; (rule refl)?)
+          apply (simp add: objBits_simps archObjSize_def machine_bits_defs)+
+                      apply (clarsimp simp: virq_to_H_def)
+                      apply (subst unat_of_nat_eq)
+                      apply clarsimp
+                      apply (case_tac "i = n"; clarsimp split: if_splits)
+                      apply (simp add: objBits_simps archObjSize_def machine_bits_defs)+
+                      apply wpsimp
+                      apply (clarsimp simp: word_less_nat_alt)
+                      apply (subst unat_of_nat_eq)
+                      apply simp
+                      apply simp
+                      apply clarsimp
+                      apply clarsimp
+                      apply (rule conseqPre, vcg)
+                      apply clarsimp
+                      apply unat_arith
+                      apply wpsimp
+                     apply (clarsimp simp: word_bits_def)
+                    apply ceqv
+
+  (* 18 subgoals, but this one is the remainder of the C function *)
+  apply (clarsimp simp: vcpuSaveRegister_def)
+
+  (* around 10s per iteration, very slow *)
+  apply ((timeit \<open> (rule ccorres_rhs_assoc2, rule_tac P="vcpu_at' vcpuPtr"
+            in ccorres_split_nothrow_novcg)
+          , match conclusion in "_ (heap_update (Ptr x))" for x \<Rightarrow> \<open>print_term x\<close>
+            , (rule ccorres_guard_imp)
+            , (ctac (no_vcg) add: get_lr_svc_ccorres
+                                  get_sp_svc_ccorres
+                                  get_lr_abt_ccorres
+                                  get_sp_abt_ccorres
+                                  get_lr_und_ccorres
+                                  get_sp_und_ccorres
+                                  get_lr_irq_ccorres
+                                  get_sp_irq_ccorres
+                                  get_lr_fiq_ccorres
+                                  get_sp_fiq_ccorres
+                                  get_r8_fiq_ccorres
+                                  get_r9_fiq_ccorres
+                                  get_r10_fiq_ccorres
+                                  get_r11_fiq_ccorres
+                                  get_r12_fiq_ccorres)
+            , (rule ccorres_move_c_guard_vcpu)
+            , (clarsimp simp: vcpuUpdate_def)
+            , (rule ccorres_pre_getObject_vcpu)
+            , (rule_tac P="ko_at' vcpu vcpuPtr" in setObject_ccorres_helper[where P'=UNIV],
+               rule conseqPre, vcg,
+               determ \<open>solve_rf_sr_vcpu_update\<close>)
+            , (fastforce simp: ko_at_vcpu_at'D objBits_simps archObjSize_def machine_bits_defs)
+            , (fastforce simp: ko_at_vcpu_at'D objBits_simps archObjSize_def machine_bits_defs)
+            , wpsimp+
+            , ceqv\<close>)+)[1]
+
+  (* 48 subgoals *)
+  apply (ctac (no_vcg) add: isb_ccorres)
+  apply (wpsimp simp: guard_is_UNIV_def  wp: mapM_x_wp_inv | rule UNIV_I)+
+  (* 1 subgoal *)
+  apply (simp add: invs_no_cicd'_def valid_arch_state'_def max_armKSGICVCPUNumListRegs_def dc_def)
+  apply fastforce
+  done
 
 lemma vcpu_switch_ccorres_None:
    "ccorres dc xfdc
@@ -2814,40 +2975,6 @@ lemma pte_pte_invalid_new_spec:
                         pte_lift_def Let_def pte_get_tag_def pte_tag_defs)
   done
 
-lemma ccorres_name_pre_C:
-  "(\<And>s. s \<in> P' \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P {s} hs f g)
-  \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs f g"
-  apply (rule ccorres_guard_imp)
-    apply (rule_tac xf'=id in ccorres_abstract, rule ceqv_refl)
-    apply (rule_tac P="rv' \<in> P'" in ccorres_gen_asm2)
-    apply assumption
-   apply simp
-  apply simp
-  done
-
-lemma ccorres_flip_Guard:
-  assumes cc: "ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a (Guard F S (Guard F1 S1 c))"
-  shows "ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a (Guard F1 S1 (Guard F S c))"
-  apply (rule ccorres_name_pre_C)
-  using cc
-  apply (case_tac "s \<in> (S1 \<inter> S)")
-   apply (clarsimp simp: ccorres_underlying_def)
-   apply (erule exec_handlers.cases;
-    fastforce elim!: exec_Normal_elim_cases intro: exec_handlers.intros exec.Guard)
-  apply (clarsimp simp: ccorres_underlying_def)
-  apply (case_tac "s \<in> S")
-   apply (fastforce intro: exec.Guard exec.GuardFault exec_handlers.intros)
-  apply (fastforce intro: exec.Guard exec.GuardFault exec_handlers.intros)
-  done
-
-lemma ccorres_second_Guard:
-  assumes cc: "ccorres_underlying sr \<Gamma> r xf arrel axf A C' hs a (Guard F1 S1 c)"
-  shows "ccorres_underlying sr \<Gamma> r xf arrel axf A (C' \<inter> S) hs a (Guard F1 S1 (Guard F S c))"
-  apply (rule ccorres_flip_Guard)
-  apply (rule ccorres_Guard)
-  apply (rule cc)
-  done
-
 lemma multiple_add_less_nat:
   "a < (c :: nat) \<Longrightarrow> x dvd a \<Longrightarrow> x dvd c \<Longrightarrow> b < x
     \<Longrightarrow> a + b < c"
@@ -3652,27 +3779,6 @@ lemma makeUserPDE_spec:
    apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
      split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask)
   done
-
-(*
-  | SmallPagePTE frame cacheable xn rights \<Rightarrow>
-    cpte' = Some (Pte_pte_small
-     \<lparr> pte_pte_small_CL.XN_CL = of_bool xn,
-       contiguous_hint_CL = 0,
-       pte_pte_small_CL.address_CL = frame,
-       AF_CL = 1,
-       SH_CL = 0,
-       HAP_CL = hap_from_vm_rights rights,
-       MemAttr_CL = memattr_from_cacheable cacheable \<rparr>)
-
-  \<lbrace>s. (\<acute>page_size = scast Kernel_C.ARMSection \<or> \<acute>page_size = scast Kernel_C.ARMSuperSection) \<and>
-      \<acute>vm_rights < 4 \<and> vmsz_aligned' (\<acute>paddr) (gen_framesize_to_H \<acute>page_size)  \<and>
-      \<acute>cacheable && 1 = \<acute>cacheable \<and>
-      \<acute>nonexecutable && 1 = \<acute>nonexecutable\<rbrace>
-
-*)
-
-term Pte_pte_small
-term Pte_pte_large
 
 lemma makeUserPTE_spec:
   "\<forall>s. \<Gamma> \<turnstile>
