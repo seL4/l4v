@@ -1817,14 +1817,6 @@ lemma ccorres_name_pre_C:
   apply simp
   done
 
-(* FIXME shadows existing name! *)
-lemma storePTE_Basic_ccorres':
-  "ccorres dc xfdc \<top> Q hs
-     (storePTE p pte) c
-   \<Longrightarrow> ccorres dc xfdc \<top> (Q \<inter> {s. P (i_' s) }) hs
-     (storePTE p pte) (Guard C_Guard {s. P (i_' s)} c)"
-  by (rule ccorres_guard_imp2, erule ccorres_Guard, simp)
-
 (* FIXME ARMHYP This lemma is in terrible shape and needs cleanup - Raf *)
 lemma vcpu_save_ccorres:
   notes dc_simp[simp del] Collect_const[simp del]
