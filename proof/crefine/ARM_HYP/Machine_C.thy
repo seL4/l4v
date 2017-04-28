@@ -324,13 +324,13 @@ assumes get_gic_vcpu_ctrl_vtr_ccorres:
   "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_vtr) (Call get_gic_vcpu_ctrl_vtr_'proc)"
 assumes get_gic_vcpu_ctrl_eisr0_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (op =) ret__unsigned_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_eisr0) (Call get_gic_vcpu_ctrl_eisr0_'proc)"
 assumes get_gic_vcpu_ctrl_eisr1_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (op =) ret__unsigned_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_eisr1) (Call get_gic_vcpu_ctrl_eisr1_'proc)"
 assumes get_gic_vcpu_ctrl_misr_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+  "ccorres (op =) ret__unsigned_' \<top> UNIV []
            (doMachineOp get_gic_vcpu_ctrl_misr) (Call get_gic_vcpu_ctrl_misr_'proc)"
 
 assumes set_gic_vcpu_ctrl_hcr_ccorres:
@@ -348,7 +348,7 @@ assumes set_gic_vcpu_ctrl_lr_ccorres:
      (doMachineOp (set_gic_vcpu_ctrl_lr n lr)) (Call set_gic_vcpu_ctrl_lr_'proc)"
 
 assumes get_gic_vcpu_ctrl_lr_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> (\<lbrace>\<acute>num = scast n \<rbrace>) []
+  "ccorres (\<lambda>v virq. virq = virq_C (FCP (\<lambda>_. v))) ret__struct_virq_C_' \<top> (\<lbrace>\<acute>num = scast n \<rbrace>) hs
            (doMachineOp (get_gic_vcpu_ctrl_lr n)) (Call get_gic_vcpu_ctrl_lr_'proc)"
 
 (* The following are fastpath specific assumptions.
