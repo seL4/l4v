@@ -161,6 +161,8 @@ tools/c-parser/testfiles/**/*.minfo
 tools/c-parser/testfiles/**/ROOT
 tools/c-parser/testfiles/umm_types.txt
 tools/c-parser/testfiles/modifies_speed.c
+tools/c-parser/testfiles/jiraver473.minfo
+tools/c-parser/testfiles/ROOT
 
 tools/haskell-translator/caseconvs-useful
 tools/haskell-translator/primrecs
