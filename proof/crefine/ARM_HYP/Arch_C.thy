@@ -5087,12 +5087,6 @@ lemma invokeVCPUInjectIRQ_ccorres:
   apply simp+
   done
 
-lemma makeVIRQ_def_FIXME:
-"makeVIRQ grp prio irq \<equiv>
-let groupShift = 30; prioShift = 23; irqPending = bit 28; eoiirqen = bit 19
-in (grp && 1) `~shiftL~` groupShift || (prio && 0x1F) `~shiftL~` prioShift || (irq && 0x3FF) || irqPending || eoiirqen"
-  sorry (* FIXME ARMHYP REMOVE when spec updated *)
-
 (* Note: only works for virqEOIIRQEN = 1 because that is the only type we are using *)
 lemma virq_virq_pending_EN_new_spec:
   shows
@@ -5103,34 +5097,6 @@ lemma virq_virq_pending_EN_new_spec:
   apply vcg
   apply (clarsimp simp: virq_to_H_def makeVIRQ_def_FIXME virq_virq_pending_def)
   by (simp add: word_bool_alg.disj_commute  word_bool_alg.disj_assoc word_bool_alg.disj_ac)
-
-lemma decodeVCPUInjectIRQ_def_FIXME:
-"decodeVCPUInjectIRQ x0 x1 = (let (ls, cap) = (x0, x1) in
-  if isVCPUCap cap \<and> length ls > 1
-  then let mr0 = ls ! 0; mr1 = ls ! 1
-  in   (doE
-    vcpuPtr \<leftarrow> returnOk ( capVCPUPtr cap);
-    vid \<leftarrow> returnOk ( mr0 && 0xffff);
-    priority \<leftarrow> returnOk ( (mr0 `~shiftR~` 16) && 0xff);
-    grp \<leftarrow> returnOk ( (mr0 `~shiftR~` 24) && 0xff);
-    index \<leftarrow> returnOk ( mr1 && 0xff);
-    rangeCheck vid (0::nat) ((1 `~shiftL~` 10) - 1);
-    rangeCheck priority (0::nat) 31;
-    rangeCheck grp (0::nat) 1;
-    gic_vcpu_num_list_regs \<leftarrow> withoutFailure $
-        gets (armKSGICVCPUNumListRegs \<circ> ksArchState);
-    whenE (index \<ge> fromIntegral gic_vcpu_num_list_regs)
-        (throw $ RangeError 0 (fromIntegral gic_vcpu_num_list_regs - 1));
-
-    vcpuLR \<leftarrow> withoutFailure $ liftM (vgicLR \<circ> vcpuVGIC) $ getObject vcpuPtr;
-    whenE (vcpuLR (fromIntegral index) && vgicIRQMask = vgicIRQActive) $
-        throw DeleteFirst;
-    virq \<leftarrow> returnOk ( makeVIRQ (fromIntegral grp) (fromIntegral priority) (fromIntegral vid));
-    returnOk $ InvokeVCPU $ VCPUInjectIRQ vcpuPtr (fromIntegral index) virq
-  odE)
-  else   throw TruncatedMessage
-  )"
-  sorry (* FIXME ARMHYP REMOVE when spec updated *)
 
 lemma decodeVCPUInjectIRQ_ccorres:
   notes if_cong[cong] Collect_const[simp del]
