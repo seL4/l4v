@@ -44,17 +44,12 @@ lemma autocorres_modifies_transfer:
   shows "\<lbrace> \<lambda>s. s = \<sigma> \<rbrace> f' \<lbrace> \<lambda>_ s. modifies_eqn s \<sigma> \<rbrace>"
   apply (clarsimp simp: f'_def AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
   apply (simp add: liftM_def bind_assoc)
-  apply wp
-      apply (clarsimp split: sum.splits)
-      apply wp
+  apply wpsimp
   apply (clarsimp simp: in_monad select_def split: xstate.splits)
   apply (case_tac xa; clarsimp)
     apply (drule exec_normal[OF singletonI _ f_modifies[rule_format]])
     apply (clarsimp simp: mex_def meq_def)
-   apply (drule exec_abrupt[OF singletonI _ f_modifies[rule_format]])
-   apply (clarsimp simp: mex_def meq_def)
-  apply blast
-  done
+   by auto
 
 text \<open>
   A monadic Hoare triple for a modifies spec looks like
@@ -113,8 +108,7 @@ lemma when_inv[valid_inv]:
 
 lemma bind_inv[valid_inv]:
   "\<lbrace>I\<rbrace> f \<lbrace>\<lambda>_. I\<rbrace> \<Longrightarrow> (\<And>x. \<lbrace>I\<rbrace> g x \<lbrace>\<lambda>_. I\<rbrace>) \<Longrightarrow> \<lbrace>I\<rbrace> f >>= g \<lbrace>\<lambda>_. I\<rbrace>"
-  apply wp
-   apply auto
+  apply (wp; assumption)
   done
 
 lemma guard_inv[valid_inv]:
@@ -166,10 +160,10 @@ lemma throwError_inv[valid_inv]:
 
 lemma catch_inv[valid_inv]:
   "\<lbrakk> \<lbrace>I\<rbrace> f \<lbrace>\<lambda>_. I\<rbrace>; \<And>e. \<lbrace>I\<rbrace> h e \<lbrace>\<lambda>_. I\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>I\<rbrace> catch f h \<lbrace>\<lambda>_. I\<rbrace>"
-  apply wp
-   apply assumption
-  apply (simp add: validE_def)
-  done
+  apply wpsimp
+    apply assumption
+   apply (simp add: validE_def)
+  by assumption
 
 lemma whileLoopE_inv[valid_inv]:
   "(\<And>r. \<lbrace>I\<rbrace> b r \<lbrace>\<lambda>_. I\<rbrace>) \<Longrightarrow> \<lbrace>I\<rbrace> whileLoopE c b r \<lbrace>\<lambda>_. I\<rbrace>"
