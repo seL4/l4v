@@ -1503,10 +1503,15 @@ lemma setVCPU_cap_to'[wp]:
 crunch cap_to'[wp]: vcpuDisable, vcpuRestore, vcpuEnable "ex_nonz_cap_to' p"
   (ignore: doMachineOp getObject setObject)
 
+crunch cap_to'[wp]: vcpuUpdate, vcpuSaveRegister, vgicUpdate "ex_nonz_cap_to' p"
+  (ignore: doMachineOp getObject setObject)
+
 lemma vcpuSave_cap_to'[wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace> vcpuSave param_a \<lbrace>\<lambda>_. ex_nonz_cap_to' p\<rbrace>"
   apply (wpsimp simp: vcpuSave_def modifyArchState_def | simp)+
-  sorry
+  apply (rule_tac S="set gicIndices" in mapM_x_wp)
+  apply wpsimp+
+  done
 
 lemma vcpuSwitch_cap_to'[wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. ex_nonz_cap_to' p\<rbrace>"
