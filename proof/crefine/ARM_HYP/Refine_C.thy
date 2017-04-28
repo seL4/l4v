@@ -239,7 +239,18 @@ lemma ct_active_not_idle'_strengthen:
   "invs' s \<and> ct_active' s \<longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
   by clarsimp
 
+lemma invs'_irq_strg:
+  "invs' s \<and> (\<forall>y. rv = Some y \<longrightarrow> P y s) \<Longrightarrow> \<forall>y. rv = Some y \<longrightarrow> invs' s \<and> P y s"
+  by simp
 
+lemma dmo'_getActiveIRQ_non_kernel[wp]:
+  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ True)
+   \<lbrace>\<lambda>rv s. \<forall>irq. rv = Some irq \<longrightarrow> irq \<in> non_kernel_IRQs \<longrightarrow> P irq s\<rbrace>"
+  unfolding doMachineOp_def
+  apply wpsimp
+  apply (drule use_valid, rule getActiveIRQ_neq_non_kernel, rule TrueI)
+  apply clarsimp
+  done
 
 lemma handleSyscall_ccorres:
   "ccorres dc xfdc
@@ -286,14 +297,8 @@ lemma handleSyscall_ccorres:
                   apply wp
                  apply (simp add: guard_is_UNIV_def)
                 apply clarsimp
-                apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-                 (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM_HYP.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
-                                             in hoare_post_imp)
-                 apply (clarsimp simp: Kernel_C.maxIRQ_def ARM_HYP.maxIRQ_def)
-                apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
-               apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
-               apply (simp add: invs'_def valid_state'_def)
-              apply clarsimp
+                apply (wp dmo'_getActiveIRQ_non_kernel getActiveIRQ_neq_Some0xFF | simp
+                          |  strengthen None_drop invs'_irq_strg | subst Ex_Some_conv)+
               apply (vcg exspec=handleInvocation_modifies)
              prefer 3
              -- "SysNBSend"
@@ -326,14 +331,8 @@ lemma handleSyscall_ccorres:
                  apply wp
                 apply (simp add: guard_is_UNIV_def)
                apply clarsimp
-               apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-                (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM_HYP.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
-                                     in hoare_post_imp)
-                apply (clarsimp simp: Kernel_C.maxIRQ_def ARM_HYP.maxIRQ_def)
-               apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
-              apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
-              apply (simp add: invs'_def valid_state'_def)
-             apply clarsimp
+               apply (wp dmo'_getActiveIRQ_non_kernel getActiveIRQ_neq_Some0xFF | simp
+                      |  strengthen None_drop invs'_irq_strg | subst Ex_Some_conv)+
              apply (vcg exspec=handleInvocation_modifies)
             -- "SysCall"
             apply (clarsimp simp: syscall_from_H_def syscall_defs)
@@ -365,14 +364,8 @@ lemma handleSyscall_ccorres:
                 apply wp
                apply (simp add: guard_is_UNIV_def)
               apply clarsimp
-              apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
-               (\<forall>x. rv = Some x \<longrightarrow> x \<le> ARM_HYP.maxIRQ) \<and> rv \<noteq> Some 0x3FF"
-                                        in hoare_post_imp)
-               apply (clarsimp simp: Kernel_C.maxIRQ_def ARM_HYP.maxIRQ_def)
-              apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
-             apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
-             apply (simp add: invs'_def valid_state'_def)
-            apply clarsimp
+              apply (wp dmo'_getActiveIRQ_non_kernel getActiveIRQ_neq_Some0xFF | simp
+                      |  strengthen None_drop invs'_irq_strg | subst Ex_Some_conv)+
             apply (vcg exspec=handleInvocation_modifies)
            prefer 2
            -- "SysRecv"
