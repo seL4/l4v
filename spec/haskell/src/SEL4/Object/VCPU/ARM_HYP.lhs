@@ -444,11 +444,12 @@ For initialisation, see makeVCPUObject.
 >     let vgic = vcpuVGIC vcpu
 >
 >     numListRegs <- gets (armKSGICVCPUNumListRegs . ksArchState)
+>     let gicIndices = init [0..numListRegs]
 >     doMachineOp $ do
 >         set_gic_vcpu_ctrl_vmcr (vgicVMCR vgic)
 >         set_gic_vcpu_ctrl_apr (vgicAPR vgic)
 >
->         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (fromIntegral i, (vgicLR vgic) ! i)) [0..numListRegs])
+>         mapM_ (uncurry set_gic_vcpu_ctrl_lr) (map (\i -> (fromIntegral i, (vgicLR vgic) ! i)) gicIndices)
 >
 >         -- restore banked VCPU registers except SCTLR (that's in VCPUEnable)
 >         set_lr_svc (vcpuRegs vcpu ! VCPURegLRsvc)
