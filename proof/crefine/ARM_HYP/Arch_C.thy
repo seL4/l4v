@@ -5014,29 +5014,6 @@ lemma liftE_invokeVCPUInjectIRQ_empty_return:
   unfolding invokeVCPUInjectIRQ_def
   by (clarsimp simp: liftE_bindE bind_assoc)
 
-lemma vcpu_vgic_lr_update_cmap_relation:
-  defines "vgic_Ptr \<equiv> Ptr :: (machine_word \<Rightarrow> gicVCpuIface_C ptr)"
-  defines "lr_Ptr \<equiv> Ptr :: 32 word \<Rightarrow> (virq_C[64]) ptr"
-  assumes ko_at: "ko_at' vcpu vcpuptr \<sigma>"
-  assumes vmap_before: "map_to_vcpus (ksPSpace \<sigma>) vcpuptr = Some vcpu"
-  assumes vcpu_rel: "cvcpu_relation vcpu cvcpu"
-  assumes clift: "cslift \<sigma>' (vcpu_Ptr vcpuptr) = Some cvcpu"
-  assumes cmap_rel: "cmap_relation (map_to_vcpus (ksPSpace \<sigma>)) (cslift \<sigma>') vcpu_Ptr cvcpu_relation"
-  shows
-  "cmap_relation
-       (map_to_vcpus (ksPSpace \<sigma>)(vcpuptr \<mapsto>
-        vcpuVGIC_update
-         (\<lambda>_. vgicLR_update (\<lambda>_ a. if a = idx then virq_to_H virq else vgicLR (vcpuVGIC vcpu) a)
-               (vcpuVGIC vcpu))
-         vcpu))
-       (clift (hrs_mem_update
-                (heap_update (lr_ptrPtr &(vgic_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''vgic_C''])\<rightarrow>[''lr_C'']))
-                  (Arrays.update (gicVCpuIface_C.lr_C (vgic_C cvcpu)) idx virq))
-                (t_hrs_' (globals \<sigma>'))))
-       vcpu_Ptr cvcpu_relation"
-  thm cnc_tcb_helper
-  sorry (* FIXME ARMHYP extremely hard, potentially use cnc_tcb_helper as inspiration *)
-
 lemma invokeVCPUInjectIRQ_ccorres:
   notes Collect_const[simp del] dc_simp[simp del]
   shows
@@ -5080,25 +5057,26 @@ lemma invokeVCPUInjectIRQ_ccorres:
          apply clarsimp
          apply (rule conjI)
           apply (rule word_of_nat_less, simp)
-         apply (rule cmap_relationE1[OF cmap_relation_vcpu])
+         apply (rule cmap_relationE1[OF cmap_relation_vcpu]; clarsimp?)
            apply (assumption, erule ko_at_projectKO_opt)
          apply (rule context_conjI)
-         apply (simp add: typ_heap_simps')
+          apply (simp add: typ_heap_simps')
          apply (thin_tac "ko_at' ko' vcpuptr \<sigma>", clarsimp)
          apply (subst unat_of_nat_eq)
   subgoal by (erule order_less_le_trans, fastforce)
+         apply (frule h_t_valid_clift)
          apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
                                cmachine_state_relation_def update_vcpu_map_to_vcpu
                                typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
-         apply (frule h_t_valid_clift)
-         apply (clarsimp simp: typ_heap_simps)
-         apply (rule vcpu_vgic_lr_update_cmap_relation, fastforce+)
-      apply (fastforce simp: ko_at_vcpu_at'D objBits_simps archObjSize_def machine_bits_defs)+
-    apply ceqv
-   apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-   apply (rule allI, rule conseqPre, vcg, clarsimp simp: dc_def return_def)
+         apply (erule (1) cmap_relation_updI
+                ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def)
+         apply (clarsimp split: if_splits)
+        apply (simp add: objBits_simps archObjSize_def machine_bits_defs)+
+      apply ceqv
+     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+     apply (rule allI, rule conseqPre, vcg, clarsimp simp: dc_def return_def)
   apply (rule wp_post_taut)
-  apply vcg
+   apply vcg
   apply clarsimp
   apply (rule conjI, clarsimp)
   apply clarsimp
@@ -5668,4 +5646,5 @@ proof -
 qed
 
 end
+
 end
