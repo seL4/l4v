@@ -20,6 +20,9 @@ declare word_neq_0_conv [simp del]
 instance cte_C :: oneMB_size
   by intro_classes simp
 
+instance virq_C :: twoToSix_packed
+  by intro_classes simp
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma sint_eq_uintI:
@@ -846,12 +849,7 @@ lemma ptr_add_orth:
   apply (drule unat_cong)
   apply (simp only: unat_of_nat)
   apply (unfold word_bits_len_of)
-  apply (subst (asm) mod_less)
-   apply (erule order_less_trans)
    apply (simp add: addr_card_wb [symmetric])
-  apply (subst (asm) mod_less)
-   apply simp
-  apply simp
   done
 
 lemma dom_lift_t_heap_update:
@@ -5383,6 +5381,318 @@ lemma is_aligned_neg_mask_eq_concrete:
   apply (metis word_bw_assocs word_bw_comms)
   done
 
+lemma shiftr_and_eq_shiftl:
+  fixes w x y :: "'a::len word"
+  assumes r: "(w >> n) && x = y"
+  shows "w && (x << n) = (y << n)"
+  using assms
+  proof -
+    { fix i
+      assume i: "i < LENGTH('a)"
+      hence "test_bit (w && (x << n)) i \<longleftrightarrow> test_bit (y << n) i"
+        using word_eqD[where x="i-n", OF r]
+        by (cases "n \<le> i") (auto simp: nth_shiftl nth_shiftr)
+    } note bits = this
+    show ?thesis
+      by (rule word_eqI, rule bits, simp add: word_size)
+  qed
+
+lemma cvariable_array_ptr_kill:
+  "cvariable_array_map_relation m ns ptrfun htd
+    \<Longrightarrow> cvariable_array_map_relation (m(x := None))
+          ns (ptrfun :: _ \<Rightarrow> ('b :: mem_type) ptr) htd"
+  by (clarsimp simp: cvariable_array_map_relation_def
+              split: if_split)
+
+lemma init_vcpu_rf_sr:
+  fixes p' :: "vcpu_C ptr"
+  defines "ko_vcpu \<equiv> KOArch (KOVCPU (makeObject :: vcpu))"
+  defines "sctlr \<equiv> 0xC5187C :: machine_word"
+  defines "actlr \<equiv> 0x40 :: machine_word"
+  defines "hcr \<equiv> 1 :: machine_word"
+  assumes p: "p = ptr_val p'"
+  assumes "valid_global_refs' \<sigma>"
+  assumes pal: "pspace_aligned' \<sigma>"
+  assumes pdst: "pspace_distinct' \<sigma>"
+  assumes pno: "pspace_no_overlap' p vcpu_bits \<sigma>"
+  assumes "2 ^ vcpu_bits \<le> gsMaxObjectSize \<sigma>"
+  assumes vo: "valid_objs' \<sigma>"
+  assumes urz: "untyped_ranges_zero' \<sigma>"
+  assumes cor: "caps_overlap_reserved' {p ..+ 2 ^ vcpu_bits} \<sigma>"
+  assumes ptr0: "p \<noteq> 0"
+  assumes kdr: "{p ..+ 2 ^ vcpu_bits} \<inter> kernel_data_refs = {}"
+  assumes subr: "{p ..+ 340} \<subseteq> {p ..+ 2 ^ vcpu_bits}"
+  assumes act_bytes: "region_actually_is_bytes p (2 ^ vcpu_bits) x"
+  assumes rep0: "heap_list (hrs_mem (t_hrs_' (globals x))) (2 ^ vcpu_bits) p = replicate (2 ^ vcpu_bits) 0"
+  assumes "\<not> snd (placeNewObject p makeObject 0 \<sigma>)"
+  assumes cover: "range_cover p vcpu_bits vcpu_bits 1"
+  assumes al: "is_aligned p vcpu_bits"
+  assumes "unat (2 ^ vcpu_bits) = 2 ^ vcpu_bits"
+  assumes sr: "(\<sigma>, x) \<in> rf_sr"
+  shows "(\<sigma>\<lparr>ksPSpace := ksPSpace \<sigma>(p \<mapsto> ko_vcpu)\<rparr>,
+          globals_update
+            (t_hrs_'_update
+              (\<lambda>h. hrs_mem_update (heap_update (Ptr &(Ptr &(p'\<rightarrow>[''vgic_C''])::gicVCpuIface_C ptr\<rightarrow>[''hcr_C''])) hcr)
+                     (hrs_mem_update (heap_update (Ptr &(Ptr &(p'\<rightarrow>[''cpx_C''])::cpXRegs_C ptr\<rightarrow>[''actlr_C''])) actlr)
+                       (hrs_mem_update (heap_update (Ptr &(Ptr &(p'\<rightarrow>[''cpx_C''])::cpXRegs_C ptr\<rightarrow>[''sctlr_C''])) sctlr)
+                         (hrs_htd_update (ptr_retyp p') h))))) x)
+               \<in> rf_sr"
+  (is "(\<sigma>\<lparr>ksPSpace := ?ks\<rparr>, globals_update ?gs' x) \<in> rf_sr")
+  proof -
+    let ?gs = "?gs' (globals x)"
+    let ?s' = "\<sigma>\<lparr>ksPSpace := ?ks\<rparr>"
+
+    note arg_defs = sctlr_def actlr_def hcr_def
+    note vcpu_C_size[simp del]
+
+    have sz: "objBitsKO ko_vcpu = vcpu_bits"
+      by (simp add: ko_vcpu_def objBits_simps archObjSize_def
+                    vcpuBits_def vcpu_bits_def)
+
+    have sz': "objBitsKO ko_vcpu \<le> vcpu_bits"
+      using sz by simp
+
+    have bits: "vcpu_bits < word_bits"
+      by (simp add: vcpu_bits_def pageBits_def word_bits_def)
+
+    have cover': "range_cover p vcpu_bits (objBitsKO ko_vcpu) 1"
+      using cover sz by simp
+
+    have mk: "makeObjectKO False (Inl (KOArch (KOVCPU undefined))) = Some ko_vcpu"
+      by (simp add: makeObjectKO_def ko_vcpu_def)
+
+    have "ptr_aligned p'" using al
+      by (auto simp: p align_of_def vcpu_bits_def pageBits_def
+             intro!: is_aligned_ptr_aligned[of _ 2]
+              elim!: is_aligned_weaken)
+
+    have "c_null_guard p'" using ptr0 al
+      by (auto simp: p c_null_guard_def vcpu_bits_def pageBits_def vcpu_C_size
+              elim!: intvl_nowrap[where x = 0, simplified] is_aligned_no_wrap_le)
+
+    have "c_guard p'"
+      using \<open>ptr_aligned p'\<close> \<open>c_null_guard p'\<close>
+      by (simp add: c_guard_def)
+
+    have is_bytes: "region_is_bytes (ptr_val p') (size_of TYPE(vcpu_C)) x"
+      using p region_actually_is_bytes[OF act_bytes] region_is_bytes_subset[OF _ subr]
+      by (simp add: vcpu_C_size)
+
+    have cl_rest [simplified arg_defs, simplified]:
+      "\<lbrakk> typ_uinfo_t TYPE(vcpu_C) \<bottom>\<^sub>t typ_uinfo_t TYPE('z); typ_uinfo_t TYPE('z) \<noteq> typ_uinfo_t TYPE(word8) \<rbrakk>
+         \<Longrightarrow> cslift (x\<lparr>globals := ?gs\<rparr>) = (cslift x :: 'z::mem_type typ_heap)"
+      using \<open>c_guard p'\<close>
+      apply (clarsimp simp: clift_heap_update_same hrs_htd_update
+                            ptr_retyp_h_t_valid typ_heap_simps)
+      apply (rule trans[OF _ clift_ptr_retyps_gen_other[where nptrs=1 and arr=False,
+                                                        simplified, OF is_bytes]])
+      by (auto simp: ptr_retyps_gen_def word_bits_def vcpu_C_size)
+
+    have zero_bytes [simplified]:
+      "heap_list (hrs_mem (t_hrs_' (globals x))) (size_of TYPE(vcpu_C)) (ptr_val p')
+        = replicate (size_of TYPE(vcpu_C)) 0"
+      (is "?hl = ?rep0")
+      proof -
+        have "?hl = take (size_of TYPE(vcpu_C)) (heap_list (hrs_mem (t_hrs_' (globals x))) (2 ^ vcpu_bits) (ptr_val p'))"
+          by (simp add: drop_heap_list_le take_heap_list_le size_of_def vcpu_bits_def pageBits_def)
+        also have "\<dots> = ?rep0"
+          apply (subst rep0[simplified p])
+          by (simp add: vcpu_bits_def pageBits_def vcpu_C_size)
+        finally show ?thesis .
+      qed
+
+    let ?zero_vcpu = "from_bytes (replicate (size_of TYPE(vcpu_C)) 0) :: vcpu_C"
+    let ?init_vcpu = "?zero_vcpu
+      \<lparr> cpx_C := cpx_C ?zero_vcpu \<lparr> sctlr_C := sctlr, actlr_C := actlr \<rparr>,
+        vgic_C := vgic_C ?zero_vcpu \<lparr> gicVCpuIface_C.hcr_C := hcr \<rparr> \<rparr>"
+
+    have retyp_p': "ptr_retyp p' (snd (t_hrs_' (globals x))) \<Turnstile>\<^sub>t p'"
+      using \<open>c_guard p'\<close> by (rule ptr_retyp_h_t_valid)
+
+    have clift_retyp_p':
+      "clift (hrs_mem (t_hrs_' (globals x)), ptr_retyp p' (snd (t_hrs_' (globals x)))) p'
+            = Some (from_bytes (replicate (size_of TYPE(vcpu_C)) 0))"
+      using retyp_p' by (simp add: lift_t_if h_val_def zero_bytes)
+
+    have cl_vcpu [simplified arg_defs, simplified]:
+      "(cslift (x\<lparr>globals := ?gs\<rparr>) :: vcpu_C typ_heap) = (cslift x)(p' \<mapsto> ?init_vcpu)"
+      using clift_retyp_p' \<open>c_guard p'\<close>
+      apply (clarsimp simp: typ_heap_simps hrs_mem_update hrs_htd_update ptr_retyp_h_t_valid
+                            h_val_heap_update h_val_field_from_bytes h_val_clift)
+      (* It is unclear why simp isn't applying these rules for us. *)
+      apply (simp add: typ_heap_simps
+             | rule lift_t_h_t_valid
+             | assumption
+             | subst h_val_clift
+             | subst lift_t_heap_update
+             | subst typ_heap_simps)+
+      apply (rule ext; rename_tac p''; case_tac "p''=p'"; simp)
+      apply (cut_tac clift_ptr_retyps_gen_prev_memset_same
+                       [where n=1 and arr=False, simplified, OF _ is_bytes _ refl])
+          apply (simp_all add: zero_bytes[folded hrs_mem_def] ptr_retyps_gen_def)
+      by (simp add: vcpu_C_size word_bits_def)
+
+    have span: "ptr_span p' \<subseteq> {p..+2 ^ vcpu_bits}"
+      apply (clarsimp; rule intvl_mem_weaken[where n="2 ^ vcpu_bits - size_of (TYPE (vcpu_C))"])
+      by (clarsimp simp: vcpu_bits_def pageBits_def vcpu_C_size p)
+
+    have htd_safe:
+      "htd_safe (- kernel_data_refs) (hrs_htd (t_hrs_' (globals x)))
+          \<Longrightarrow> htd_safe (- kernel_data_refs) (hrs_htd (t_hrs_' ?gs))"
+      using kdr
+      apply (simp add: hrs_htd_update)
+      apply (intro ptr_retyp_htd_safe_neg ptr_retyps_htd_safe_neg, simp_all)
+      apply (erule disjoint_subset[rotated])
+      by (rule span)
+
+    have zro:
+      "zero_ranges_are_zero (gsUntypedZeroRanges \<sigma>) (t_hrs_' (globals x))"
+      using sr
+      by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+
+    have h_t_valid_p:
+      "h_t_valid (hrs_htd (t_hrs_' ?gs)) c_guard p'"
+      using fun_cong[OF cl_vcpu, where x=p']
+      by (clarsimp dest!: h_t_valid_clift)
+
+    have zro':
+      "zero_ranges_are_zero (gsUntypedZeroRanges \<sigma>) (t_hrs_' ?gs)"
+      using zro h_t_valid_p vo urz cor al
+      apply (clarsimp simp: hrs_htd_update typ_heap_simps')
+      apply (intro zero_ranges_ptr_retyps[where n=1 and arr=False,
+                                          simplified ptr_retyps_gen_def, simplified])
+         apply simp_all
+      apply (erule caps_overlap_reserved'_subseteq; clarsimp)
+      apply (rule intvl_mem_weaken[where n="2 ^ vcpu_bits - size_of (TYPE (vcpu_C))"])
+      apply (clarsimp simp: vcpu_bits_def pageBits_def vcpu_C_size p)
+      done
+
+    note ht_rest = clift_eq_h_t_valid_eq[OF cl_rest, simplified]
+
+    have rl:
+      "(\<forall>v :: 'z::pre_storable. projectKO_opt ko_vcpu \<noteq> Some v) \<Longrightarrow>
+      (projectKO_opt \<circ>\<^sub>m (ksPSpace \<sigma>(ptr_val p' \<mapsto> KOArch (KOVCPU makeObject))) :: word32 \<Rightarrow> 'z option)
+      = projectKO_opt \<circ>\<^sub>m ksPSpace \<sigma>" using pno al unfolding p ko_vcpu_def
+      apply -
+      apply (drule projectKO_opt_retyp_other'[where ptr="ptr_val p'", OF _ _ pal])
+      by (auto simp: objBitsKO_simps archObjSize_def vcpuBits_def vcpu_bits_def)
+
+    have rl_vcpu: "(projectKO_opt \<circ>\<^sub>m (ksPSpace \<sigma>(ptr_val p' \<mapsto> KOArch (KOVCPU makeObject))) :: word32 \<Rightarrow> vcpu option)
+      = (projectKO_opt \<circ>\<^sub>m ksPSpace \<sigma>)(ptr_val p' \<mapsto> makeObject)"
+      apply (rule ext)
+      apply (clarsimp simp: projectKOs map_comp_def split: if_split)
+      done
+
+    have al': "is_aligned p (objBitsKO ko_vcpu)"
+      using al by (simp add: objBits_simps ko_vcpu_def archObjSize_def
+                             vcpu_bits_def vcpuBits_def)
+
+    have ctes: "map_to_ctes (ksPSpace \<sigma>(ptr_val p' \<mapsto> KOArch (KOVCPU makeObject))) = ctes_of \<sigma>"
+      unfolding retype_ctes_helper[OF pal pdst pno al' sz' bits mk cover', simplified, symmetric]
+      by (simp add: p ko_vcpu_def new_cap_addrs_def fun_upd_def)
+
+    let ?lr_words = "\<lambda>(arr::virq_C[64]) n. virq_C.words_C_update
+                                             (\<lambda>_. Arrays.update (virq_C.words_C (arr.[n])) 0 0)
+                                             (arr.[n])"
+
+    { fix arr :: "virq_C[64]" and n
+      have "?lr_words arr n = virq_C (ARRAY _. 0)"
+        apply (cases "arr.[n]"; simp)
+        apply (rule array_ext)
+        apply (case_tac i; simp)
+        done
+    } note lr_words = this
+
+    let ?gicVCpuIface_lr = "foldr (\<lambda>n arr. Arrays.update arr n (?lr_words arr n))
+                                  [0..<64]
+                                  (gicVCpuIface_C.lr_C (vgic_C undefined))"
+
+    { fix i :: nat
+      assume i: "i < 64"
+      have "virq_C.words_C (?gicVCpuIface_lr.[i]).[0] = 0"
+        by (simp add: lr_words index_foldr_update[OF i])
+    } note virq_words = this
+
+    let ?zero_vcpu_struct = "undefined
+        \<lparr> vcpuTCB_C := NULL,
+          cpx_C := cpx_C undefined \<lparr> sctlr_C := 0, actlr_C := 0 \<rparr>,
+          vgic_C := vgic_C undefined
+            \<lparr> gicVCpuIface_C.hcr_C := 0,
+              gicVCpuIface_C.vmcr_C := 0,
+              gicVCpuIface_C.apr_C := 0,
+              gicVCpuIface_C.lr_C := ?gicVCpuIface_lr \<rparr>,
+          lr_svc_C := 0, sp_svc_C := 0,
+          lr_abt_C := 0, sp_abt_C := 0,
+          lr_und_C := 0, sp_und_C := 0,
+          lr_irq_C := 0, sp_irq_C := 0,
+          lr_fiq_C := 0, sp_fiq_C := 0,
+          r8_fiq_C := 0, r9_fiq_C := 0,
+          r10_fiq_C := 0, r11_fiq_C := 0,
+          r12_fiq_C := 0
+        \<rparr>"
+
+    have zero_vcpu: "?zero_vcpu = ?zero_vcpu_struct"
+      apply (simp add: from_bytes_def)
+      apply (simp add: typ_info_simps vcpu_C_tag_def)
+      apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
+                       final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
+      apply (simp add: update_ti_adjust_ti update_ti_t_word32_0s
+                       typ_info_simps gicVCpuIface_C_tag_def virq_C_tag_def cpXRegs_C_tag_def
+                       update_ti_t_ptr_0s ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td
+                       ti_typ_combine_empty_ti ti_typ_combine_td
+                       align_of_def padup_def replicate_def update_ti_t_array_rep
+                       final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def
+                       align_td_array' size_td_array)
+      done
+
+    have pks: "map_to_vcpus (ksPSpace \<sigma>) p = None"
+      apply (rule map_comp_simps)
+      apply (rule pspace_no_overlap_base'[OF pal pno al, simplified])
+      done
+
+    note cmap_vcpus = cmap_relation_updI2[where am="map_to_vcpus (ksPSpace \<sigma>)"
+                                            and cm="cslift x"
+                                            and dest=p and f=vcpu_Ptr,
+                                          OF _ pks, simplified p, simplified]
+
+    have map_vcpus:
+      "cmap_relation (map_to_vcpus (ksPSpace \<sigma>)) (cslift x) vcpu_Ptr cvcpu_relation
+         \<Longrightarrow> cmap_relation (map_to_vcpus (ksPSpace \<sigma>)(ptr_val p' \<mapsto> makeObject))
+                           (cslift x(p' \<mapsto> ?init_vcpu)) vcpu_Ptr cvcpu_relation"
+      apply (erule cmap_vcpus)
+      apply (simp add: cvcpu_relation_def cvgic_relation_def cvcpu_regs_relation_def
+                       arg_defs actlrDefault_def sctlrDefault_def vgicHCREN_def vcpuSCTLR_def
+                       makeObject_vcpu makeVCPUObject_def option_to_ctcb_ptr_def virq_to_H_def
+                       zero_vcpu virq_words)
+      done
+
+    have csrel: "cpspace_relation (ksPSpace \<sigma>) (underlying_memory (ksMachineState \<sigma>)) (t_hrs_' (globals x))"
+      using sr unfolding rf_sr_def cstate_relation_def by (simp add: Let_def)
+
+    have csrel': "cpspace_relation ?ks (underlying_memory (ksMachineState \<sigma>))  (t_hrs_' ?gs)"
+      using csrel map_vcpus unfolding p arg_defs cpspace_relation_def
+      apply (clarsimp simp: cl_vcpu cl_rest ht_rest tag_disj_via_td_name)
+      apply (simp add: ctes rl ko_vcpu_def projectKOs rl_vcpu)
+      done
+
+    have arel: "cte_array_relation \<sigma> ?gs \<and> tcb_cte_array_relation ?s' ?gs"
+      using sr
+      apply (clarsimp simp: p rf_sr_def cstate_relation_def Let_def
+                            hrs_htd_update ko_vcpu_def map_comp_update)
+      apply (intro conjI cvariable_array_ptr_kill
+                   cvariable_array_ptr_retyps[OF refl, where n=1 and arr=False,
+                                              simplified ptr_retyps_gen_def, simplified])
+      by (auto simp: is_bytes)
+
+    show ?thesis
+      using assms zro' csrel' arel
+      apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def
+                            cmachine_state_relation_def Let_def h_t_valid_clift_Some_iff)
+      apply (simp add: cl_rest cl_vcpu tag_disj_via_td_name)
+      apply (simp add: htd_safe[simplified] kernel_data_refs_domain_eq_rotate)
+      done
+  qed
+
 lemma placeNewObject_vcpu:
   "ccorresG rf_sr \<Gamma> dc xfdc
    (valid_global_refs' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase vcpu_bits
@@ -5396,8 +5706,44 @@ lemma placeNewObject_vcpu:
     hs
     (placeNewObject regionBase (makeObject :: vcpu) 0)
     (global_htd_update (\<lambda>_. (ptr_retyp (vcpu_Ptr regionBase)));; CALL vcpu_init(vcpu_Ptr regionBase))"
-  sorry (* vcpu *)
-
+  apply (rule ccorres_from_vcg_nofail, clarsimp)
+  apply (rule conseqPre, vcg)
+  apply (clarsimp simp: rf_sr_htd_safe)
+  apply (subgoal_tac "{regionBase..+340} \<subseteq> {regionBase..+2^vcpu_bits}")
+   prefer 2
+   apply clarsimp
+   apply (drule intvlD, clarsimp)
+   apply (rule intvlI, simp add: vcpu_bits_def pageBits_def)
+  apply (intro conjI allI impI)
+    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                          kernel_data_refs_domain_eq_rotate
+                   elim!: ptr_retyp_htd_safe_neg)
+    apply blast
+   apply (frule range_cover_rel[where sbit' = vcpu_bits]; simp?)
+   apply (frule range_cover.aligned)
+   apply (rule h_t_valid_clift)
+   apply (clarsimp simp: hrs_htd_update_def split_def)
+   apply (subst lift_t_retyp_heap_same)
+    apply (clarsimp simp: c_guard_def c_null_guard_def)
+    apply (rule conjI)
+     apply (drule is_aligned_weaken[where y=2], simp add: vcpu_bits_def pageBits_def)
+     apply (clarsimp simp: ptr_aligned_def is_aligned_def align_of_def)
+    apply clarsimp
+    apply (drule (1) subsetD)
+    apply (simp add: upto_intvl_eq)
+   apply simp
+  apply (frule range_cover_rel[where sbit' = vcpu_bits]; simp?)
+  apply (frule range_cover.aligned)
+  apply (frule range_cover.unat_of_nat_shift[where gbits=vcpu_bits])
+    apply simp
+   apply (rule le_refl)
+  apply (rule bexI [OF _ placeNewObject_eq]; simp add: word_bits_def objBits_simps archObjSize_def vcpuBits_eq)
+   prefer 2
+   apply (clarsimp simp: no_fail_def)
+  apply (clarsimp simp: new_cap_addrs_def)
+  apply (cut_tac \<sigma>=\<sigma> and x=x and p'="vcpu_Ptr regionBase" in init_vcpu_rf_sr[OF refl])
+  by (auto cong: Kernel_C.globals.unfold_congs StateSpace.state.unfold_congs
+                 kernel_state.unfold_congs)
 
 lemma Arch_createObject_ccorres:
   assumes t: "toAPIType newType = None"
