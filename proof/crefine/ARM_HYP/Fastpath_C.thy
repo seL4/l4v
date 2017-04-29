@@ -1008,6 +1008,13 @@ lemma armv_contextSwitch_HWASID_fp_rewrite:
   apply simp
   done
 
+lemma dmo_contextSwitch_HWASID_atcbVCPUPtr_cases_helper:
+  "\<lbrace> \<lambda>s. (case atcbVCPUPtr (tcbArch tcb) of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> vcpu_at' x) s \<rbrace>
+   doMachineOp
+     (armv_contextSwitch_HWASID (capPDBasePtr (capCap (cteCap cte))) (the (pde_stored_asid v)))
+   \<lbrace>\<lambda>rv s. (case atcbVCPUPtr (tcbArch tcb) of None \<Rightarrow> \<lambda>_. True | Some x \<Rightarrow> vcpu_at' x) s \<rbrace>"
+  by (clarsimp split: option.splits; safe; wp+)
+
 lemma switchToThread_fp_ccorres:
   "ccorres dc xfdc (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj'
                           and valid_pde_mappings' and valid_arch_state'
@@ -1056,8 +1063,9 @@ lemma switchToThread_fp_ccorres:
         apply (rule monadic_rewrite_bind_head)
         apply (rule_tac pd=pd and v=v
                      in armv_contextSwitch_HWASID_fp_rewrite)
-sorry (* FIXME ARMHYP this is where the fast path needs an update, vcpu_switch is involved!
        apply (ctac(no_vcg) add: armv_contextSwitch_HWASID_ccorres)
+        apply (rule ccorres_pre_getObject_tcb)
+        apply (ctac (no_vcg) add: vcpu_switch_ccorres)
         apply (simp add: storeWordUser_def bind_assoc case_option_If2
                          split_def
                     del: Collect_const)
@@ -1073,7 +1081,9 @@ sorry (* FIXME ARMHYP this is where the fast path needs an update, vcpu_switch i
           apply (ctac add: clearExMonitor_fp_ccorres)
          apply wp
         apply (simp add: guard_is_UNIV_def)
-       apply wp
+    apply clarsimp
+    apply (rule wp_post_taut)
+    apply (wpsimp wp: dmo_contextSwitch_HWASID_atcbVCPUPtr_cases_helper hoare_vcg_all_lift hoare_vcg_imp_lift)
       apply (simp add: bind_assoc checkPDNotInASIDMap_def
                        checkPDASIDMapMembership_def)
       apply (rule ccorres_stateAssert)
@@ -1092,13 +1102,16 @@ sorry (* FIXME ARMHYP this is where the fast path needs an update, vcpu_switch i
             in subst[OF meta_eq_to_obj_eq, OF asid_map_pd_to_hwasids_def])
   apply (clarsimp simp: isCap_simps dest!: isValidVTableRootD)
   apply (rule context_conjI)
-   apply (drule singleton_eqD[OF sym])
-   apply clarsimp
    apply (fastforce simp: ran_def)
   apply (frule ctes_of_valid', clarsimp, clarsimp simp: valid_cap'_def)
-  apply (auto simp: singleton_eq_o2s projectKOs obj_at'_def
+  apply (rule conjI, clarsimp)
+  apply (rule conjI, clarsimp split: option.splits)
+  apply (rule valid_tcb'_vcpuE)
+    apply (erule (3) valid_objs_valid_tcb')
+  apply (frule (1) obj_at_cslift_tcb, clarsimp simp: typ_heap_simps')
+  by (auto simp: singleton_eq_o2s projectKOs obj_at'_def ctcb_relation_tcbVCPU typ_heap_simps'
                     pde_stored_asid_def split: if_split_asm)
-  done *)
+
 
 lemma thread_state_ptr_set_tsType_np_spec:
   defines "ptr s \<equiv> cparent \<^bsup>s\<^esup>ts_ptr [''tcbState_C''] :: tcb_C ptr"
@@ -2591,7 +2604,7 @@ proof -
                                     apply (simp add: imp_conjL rf_sr_ksCurThread del: all_imp_to_ex)
                                     apply (clarsimp simp: ccap_relation_ep_helpers guard_is_UNIV_def
                                                           mi_from_H_def)
-                                   apply (simp add: pd_has_hwasid_def)
+                                   apply (simp add: pd_has_hwasid_def invs_no_cicd'_def)
                                    apply (wp sts_ct_in_state_neq' sts_valid_objs')
                                   apply (simp del: Collect_const)
                                   apply (vcg exspec=thread_state_ptr_set_tsType_np_modifies)
@@ -4051,13 +4064,12 @@ crunch cte_wp_at'[wp]: attemptSwitchTo "cte_wp_at' P p"
 crunch tcbContext[wp]: attemptSwitchTo "obj_at' (\<lambda>tcb. P ( (atcbContextGet o tcbArch) tcb)) t"
   (wp: crunch_wps simp_del: comp_apply)
 
-lemma makeFaultMessage_only_cnode_caps [wp]:
-  "\<lbrace>\<lambda>s. P (only_cnode_caps (ctes_of s))\<rbrace> makeFaultMessage param_a param_b
-             \<lbrace>\<lambda>_ s. P (only_cnode_caps (ctes_of s))\<rbrace>"
-  sorry (* FIXME ARMHYP this used to be part of the crunch below, but no longer seems to work *)
+context begin interpretation Arch .
 
 crunch only_cnode_caps[wp]: doFaultTransfer "\<lambda>s. P (only_cnode_caps (ctes_of s))"
   (wp: crunch_wps ignore: asUser simp: crunch_simps)
+
+end
 
 context kernel_m begin
 
