@@ -1513,7 +1513,8 @@ lemma update_vcpu_map_to_vcpu:
 
 lemma vcpu_disable_ccorres:
   "ccorres dc xfdc
-     (all_invs_but_ct_idle_or_in_cur_domain'
+     (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj'
+                     and valid_arch_state'
       and (case v of None \<Rightarrow> \<top> | Some new \<Rightarrow> vcpu_at' new))
      (UNIV \<inter>  {s. vcpu_' s = option_to_ptr v}) hs
          (vcpuDisable v) (Call vcpu_disable_'proc)"
@@ -1583,7 +1584,9 @@ lemma vcpu_disable_ccorres:
 
 lemma vcpu_enable_ccorres:
   "ccorres dc xfdc
-     (all_invs_but_ct_idle_or_in_cur_domain' and vcpu_at' v)
+     (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj'
+                     and valid_arch_state'
+      and vcpu_at' v)
      (UNIV \<inter> {s. vcpu_' s = vcpu_Ptr v}) hs
         (vcpuEnable v) (Call vcpu_enable_'proc)"
   apply (cinit lift: vcpu_')
@@ -1655,7 +1658,8 @@ lemma vcpu_restore_ccorres:
   notes upt_Suc[simp del] dc_simp[simp del] Collect_const[simp del]
   shows
   "ccorres dc xfdc
-       (all_invs_but_ct_idle_or_in_cur_domain' and vcpu_at' vcpuPtr)
+       (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj' and valid_arch_state'
+        and vcpu_at' vcpuPtr)
        (UNIV \<inter> {s. vcpu_' s = vcpu_Ptr vcpuPtr}) hs
      (vcpuRestore vcpuPtr) (Call vcpu_restore_'proc)"
   apply (cinit lift: vcpu_' simp: whileAnno_def)
@@ -1708,7 +1712,9 @@ lemma vcpu_restore_ccorres:
             apply (fastforce simp: word_less_nat_alt unat_of_nat_eq word_bits_def elim: order_less_le_trans)
            apply ceqv
 
-          apply (rule_tac P="invs_no_cicd' and ko_at' vcpu vcpuPtr" in ccorres_inst[where P'=UNIV])
+          apply (rule_tac P="pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj'
+                               and valid_arch_state' and ko_at' vcpu vcpuPtr"
+                    in ccorres_inst[where P'=UNIV])
           apply (rule ccorres_guard_imp2)
 
            apply (rule_tac P="ko_at' vcpu vcpuPtr" in ccorres_cross_over_guard)
@@ -1747,7 +1753,7 @@ lemma vcpu_restore_ccorres:
   ,solves \<open>drule (1) vcpu_at_rf_sr, clarsimp simp: typ_heap_simps',
                 fastforce simp: cvcpu_relation_regs_def cvgic_relation_def\<close>)+
 
- apply (wpsimp simp: guard_is_UNIV_def dc_def upt_Suc  wp: mapM_x_wp_inv | rule UNIV_I | wp hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_disj_lift)+
+ apply (wpsimp simp: guard_is_UNIV_def dc_def upt_Suc ko_at_vcpu_at'D  wp: mapM_x_wp_inv | rule UNIV_I | wp hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_disj_lift)+
 
   apply (rule conjI)
    apply (clarsimp simp: invs_no_cicd'_def valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
@@ -1822,7 +1828,7 @@ lemma vcpu_save_ccorres:
   notes dc_simp[simp del] Collect_const[simp del]
   shows
   "ccorres dc xfdc
-      (all_invs_but_ct_idle_or_in_cur_domain'
+      (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj' and valid_arch_state'
         and case_option \<top> (vcpu_at' \<circ> fst) v
         )
       (UNIV \<inter> {s. vcpu_' s = case_option NULL (vcpu_Ptr \<circ> fst) v}
@@ -2062,7 +2068,8 @@ apply ceqv
 
 lemma vcpu_switch_ccorres_None:
    "ccorres dc xfdc
-             (all_invs_but_ct_idle_or_in_cur_domain')
+             (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj'
+                     and valid_arch_state')
              (UNIV \<inter> {s. new_' s = NULL}) hs
              (vcpuSwitch None) (Call vcpu_switch_'proc)"
   apply (cinit lift: new_')
@@ -2099,7 +2106,8 @@ lemma vcpu_switch_ccorres_None:
 
 lemma vcpu_switch_ccorres_Some:
   "ccorres dc xfdc
-    (all_invs_but_ct_idle_or_in_cur_domain' and (vcpu_at' v))
+    (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj'
+                     and valid_arch_state' and vcpu_at' v)
     (UNIV \<inter> {s. new_' s = vcpu_Ptr v}) hs
         (vcpuSwitch (Some v)) (Call vcpu_switch_'proc)"
   apply (cinit lift: new_')
@@ -2167,7 +2175,8 @@ lemma vcpu_switch_ccorres_Some:
 
 lemma vcpu_switch_ccorres:
   "ccorres dc xfdc
-    (all_invs_but_ct_idle_or_in_cur_domain'
+    (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj'
+                     and valid_arch_state'
           and (case v of None \<Rightarrow> \<top> | Some new \<Rightarrow> vcpu_at' new))
     (UNIV \<inter> {s. new_' s = option_to_ptr v (*(case v of None \<Rightarrow> NULL | Some new \<Rightarrow> vcpu_Ptr new)*) }) hs
         (vcpuSwitch v) (Call vcpu_switch_'proc)"

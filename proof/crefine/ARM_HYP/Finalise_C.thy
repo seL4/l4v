@@ -1973,7 +1973,7 @@ lemma vcpuInvalidateActive_ccorres:
      apply wpsimp
     apply wp
    apply (vcg exspec=vcpu_disable_modifies)
-  apply (clarsimp simp: invs'_to_invs_no_cicd'_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
   apply safe
   apply simp
   apply (rule UNIV_I)

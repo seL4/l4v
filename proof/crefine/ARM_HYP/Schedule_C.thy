@@ -152,7 +152,8 @@ lemma ccorres_pre_getDomainTime:
   done
 
 lemma Arch_switchToIdleThread_ccorres:
-  "ccorres dc xfdc (all_invs_but_ct_idle_or_in_cur_domain') UNIV []
+  "ccorres dc xfdc (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj'
+                    and valid_pde_mappings' and valid_arch_state') UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
   apply (cinit simp: ARM_HYP_H.switchToIdleThread_def)
   apply (ctac add: vcpu_switch_ccorres_None)
@@ -165,7 +166,8 @@ lemma empty_fail_getIdleThread [simp,intro!]:
   by (simp add: getIdleThread_def)
 
 lemma switchToIdleThread_ccorres:
-  "ccorres dc xfdc all_invs_but_ct_idle_or_in_cur_domain' UNIV []
+  "ccorres dc xfdc (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj'
+and valid_pde_mappings' and valid_arch_state') UNIV hs
            switchToIdleThread (Call switchToIdleThread_'proc)"
   apply (cinit)
    apply (rule ccorres_symb_exec_l)
@@ -516,7 +518,7 @@ lemma unat_add_lem':
   by (subst unat_add_lem[symmetric], assumption)
 
 lemma chooseThread_ccorres:
-  "ccorres dc xfdc all_invs_but_ct_idle_or_in_cur_domain' UNIV [] chooseThread (Call chooseThread_'proc)"
+  "ccorres dc xfdc all_invs_but_ct_idle_or_in_cur_domain' UNIV hs chooseThread (Call chooseThread_'proc)"
 proof -
 
   note prio_and_dom_limit_helpers [simp]
@@ -630,7 +632,7 @@ proof -
      apply (rename_tac s' d)
      apply (clarsimp simp: Let_def)
      apply (safe, simp_all add: invs_no_cicd'_max_CurDomain)
-    (*10 subgoals *)
+    (*12 subgoals *)
            apply (drule invs_no_cicd'_queues)
            apply (clarsimp simp: rf_sr_ksReadyQueuesL1Bitmap_simp signed_word_log2)
            apply (simp add: rf_sr_ksReadyQueuesL2Bitmap_simp signed_word_log2)
@@ -703,10 +705,11 @@ proof -
       apply (blast intro: cons_set_intro)
      apply (simp add: lookupBitmapPriority_def)
      apply (clarsimp simp: obj_at'_def st_tcb_at'_def)
-
     apply (fold lookupBitmapPriority_def)
     apply (drule invs_no_cicd'_queues)
     apply (erule (1) lookupBitmapPriority_le_maxPriority)
+    (* 4 subgoals *)
+    apply (simp add: invs_no_cicd'_def valid_pspace'_def)+
     done
 qed
 
