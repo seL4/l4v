@@ -314,17 +314,17 @@ For initialisation, see makeVCPUObject.
 >       eisr1 <- doMachineOp $ get_gic_vcpu_ctrl_eisr1
 >       flags <- doMachineOp $ get_gic_vcpu_ctrl_misr
 >       let vgic_misr_eoi = 1 -- defined to be VGIC_HCR_EN
+>       let irq_idx = irqIndex eisr0 eisr1
 >
+>       gic_vcpu_num_list_regs <- gets (armKSGICVCPUNumListRegs . ksArchState)
 >       fault <-
 >           if (flags .&. vgic_misr_eoi /= 0)
 >           then
->               if (eisr0 == 0 && eisr1 == 0) -- irq_idx invalid
+>               if (eisr0 == 0 && eisr1 == 0 ||
+>                   irq_idx >= gic_vcpu_num_list_regs) -- irq_idx invalid
 >                   then return $ VGICMaintenance Nothing
 >                   else (do
->                       let irq_idx = irqIndex eisr0 eisr1
->                       gic_vcpu_num_list_regs <-
->                           gets (armKSGICVCPUNumListRegs . ksArchState)
->                       when (irq_idx < gic_vcpu_num_list_regs) (badIndex irq_idx)
+>                       setIndex irq_idx
 >                       return $ VGICMaintenance $ Just $ fromIntegral irq_idx
 >                       )
 >           else return $ VGICMaintenance Nothing
@@ -336,7 +336,7 @@ For initialisation, see makeVCPUObject.
 >         irqIndex eisr0 eisr1 =
 >             if eisr0 /= 0 then countTrailingZeros eisr0
 >                           else (countTrailingZeros eisr1) + 32
->         badIndex irq_idx = doMachineOp $ (do
+>         setIndex irq_idx = doMachineOp $ (do
 >               virq <- get_gic_vcpu_ctrl_lr (fromIntegral irq_idx)
 >               set_gic_vcpu_ctrl_lr (fromIntegral irq_idx) $ virqSetEOIIRQEN virq 0
 >               )
