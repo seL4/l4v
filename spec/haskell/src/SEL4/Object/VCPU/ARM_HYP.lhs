@@ -333,7 +333,7 @@ For initialisation, see makeVCPUObject.
 >     where
 >         irqIndex eisr0 eisr1 =
 >             if eisr0 /= 0 then countTrailingZeros eisr0
->                           else countTrailingZeros eisr1
+>                           else (countTrailingZeros eisr1) + 32
 >         badIndex irq_idx = doMachineOp $ (do
 >               virq <- get_gic_vcpu_ctrl_lr (fromIntegral irq_idx)
 >               set_gic_vcpu_ctrl_lr (fromIntegral irq_idx) $ virqSetEOIIRQEN virq 0
