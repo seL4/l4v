@@ -41,19 +41,20 @@ where
        eisr1 \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_eisr1;
        flags \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_misr;
        vgic_misr_eoi \<leftarrow> return $ 1;
+       irq_idx \<leftarrow> return (if eisr0 \<noteq> 0 then word_ctz eisr0 else word_ctz eisr1 + 32);
+       gic_vcpu_num_list_regs \<leftarrow> gets (arm_gicvcpu_numlistregs o arch_state);
 
        fault \<leftarrow>
            if flags && vgic_misr_eoi \<noteq> 0
            then
-                if eisr0 = 0 \<and> eisr1 = 0
+                if eisr0 = 0 \<and> eisr1 = 0 \<or>
+                   irq_idx \<ge> gic_vcpu_num_list_regs
                    then return $ VGICMaintenance None
                    else do
-                       irq_idx \<leftarrow> return (if eisr0 \<noteq> 0 then word_ctz eisr0 else word_ctz eisr1 + 32);
-                       gic_vcpu_num_list_regs \<leftarrow> gets (arm_gicvcpu_numlistregs o arch_state);
-                       when (irq_idx < gic_vcpu_num_list_regs) (do_machine_op $ do
+                       do_machine_op $ do
                          virq \<leftarrow> get_gic_vcpu_ctrl_lr (of_nat irq_idx);
                          set_gic_vcpu_ctrl_lr (of_nat irq_idx) $ virqSetEOIIRQEN virq 0
-                       od);
+                       od;
                        return $ VGICMaintenance $ Some $ of_nat irq_idx
                    od
            else return $ VGICMaintenance None;
