@@ -1946,7 +1946,7 @@ proof -
           [where xf'=ret__unsigned_' and R="?obj_at_ft" and R'=UNIV]
   show ?thesis
     apply (unfold K_def)
-    using [[goals_limit = 1]]
+    using [[goals_limit = 5]]
     apply (intro ccorres_gen_asm)
     apply (cinit' lift: sender_' receiver_' faultType_' receiveIPCBuffer_')
      apply (simp only: makeArchFaultMessage_def setMRs_to_setMR
@@ -2022,7 +2022,7 @@ proof -
       apply (rule ccorres_stateAssert)
       apply (rule ccorres_rhs_assoc)+
 
-      apply (rule ccorres_move_c_guard_tcb) thm makeArchFaultMessage_def
+      apply (rule ccorres_move_c_guard_tcb)
       apply (rule_tac val="vcpuHSR aft" in symb_exec_r_fault)
          apply (rule conseqPre, vcg)
          apply clarsimp
@@ -2040,22 +2040,129 @@ proof -
 
       (*VGICMaintenanceFault*)
      apply (simp add: Collect_True Collect_False ccorres_cond_iffs zip_upt_Cons msgMaxLength_unfold
-        zipWithM_mapM mapM_Cons bind_assoc seL4_Fault_tag_defs del: Collect_const)
+                      zipWithM_mapM mapM_Cons bind_assoc seL4_Fault_tag_defs
+                  del: Collect_const)
+     apply (subst option.case_distrib[where h="\<lambda>x. mapM (\<lambda>(x, y). setMR receiver buffer x y) (zip [0..<120] x)"])
      apply (rule ccorres_stateAssert)
-    thm vgicMaintenance_def makeArchFaultMessage_def seL4_VGICMaintenance_IDX_def
-    thm makeFaultMessage_def (* FIXME ARM-HYP: needs spec change *)
      apply (rule ccorres_move_c_guard_tcb)
-    sorry (*
-apply (rule ccorres_rhs_assoc)+
-
-
-
-    apply (drule(1) obj_at_cslift_tcb[where thread=sender])
-    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
-    apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def
-                        Let_def zip_upt_Cons
-                  split: if_split_asm)
-  done *)
+     apply (rule_tac val="case_option 0 (K 1) (vgicMaintenanceData aft)" in symb_exec_r_fault)
+        apply (rule conseqPre, vcg)
+        apply clarsimp
+        apply (drule(1) obj_at_cslift_tcb)
+        apply (clarsimp simp: typ_heap_simps)
+        apply (rule conjI)
+         apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def Let_def
+                         split: if_split_asm)
+        apply (subgoal_tac "seL4_Fault_get_tag (tcbFault_C ko') = scast seL4_Fault_VGICMaintenance")
+         apply (frule seL4_Fault_lift_VGICMaintenance)
+         apply (clarsimp simp: seL4_Fault_VGICMaintenance_lift_def)
+         apply (clarsimp simp: ctcb_relation_def is_cap_fault_def word_and_1 cfault_rel_def
+                         split: if_split_asm option.splits)
+        apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def Let_def
+                        split: if_split_asm)
+       apply ceqv
+      apply wpc
+      (* x3 = None *)
+       apply (simp add: option_to_0_def zip_upt_Cons mapM_Cons mapM_Nil
+        del: Collect_const split: option.split_asm)
+      (* buffer = None *)
+        apply ccorres_rewrite
+        apply (rule_tac P="valid_pspace'
+                  and (case buffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)" and P'=UNIV
+        in ccorres_inst)
+        apply (rule ccorres_guard_imp)
+          apply (ctac(no_vcg) add: setMR_ccorres)
+           apply (rule ccorres_return_C, simp+)[1]
+          apply wp
+         apply (clarsimp simp: msgMaxLength_def)
+        apply (clarsimp simp: Collect_const_mem seL4_VGICMaintenance_IDX_def)
+      (* buffer = Some x2 *)
+       apply ccorres_rewrite
+       apply (rule_tac P="valid_pspace'
+                  and (case buffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)" and P'=UNIV
+        in ccorres_inst)
+       apply (rule ccorres_guard_imp)
+         apply (ctac(no_vcg) add: setMR_ccorres)
+          apply (rule ccorres_return_C, simp+)[1]
+         apply wp
+        apply (clarsimp simp: msgMaxLength_def)
+       apply (clarsimp simp: Collect_const_mem seL4_VGICMaintenance_IDX_def)
+      (* x3 = Some a *)
+      apply (clarsimp simp: option_to_0_def zip_upt_Cons mapM_Cons mapM_Nil
+        split: option.split_asm)
+       apply ccorres_rewrite
+       apply (rule ccorres_rhs_assoc)+
+       apply (rule ccorres_move_c_guard_tcb)
+       apply (rule_tac val="x2" in symb_exec_r_fault)
+          apply (rule conseqPre, vcg)
+          apply clarsimp
+          apply (drule(1) obj_at_cslift_tcb)
+          apply (clarsimp simp: typ_heap_simps)
+          apply (rule conjI)
+           apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def Let_def
+                           split: if_split_asm)
+          apply (subgoal_tac "seL4_Fault_get_tag (tcbFault_C ko') = scast seL4_Fault_VGICMaintenance")
+           apply (frule seL4_Fault_lift_VGICMaintenance)
+           apply (clarsimp simp: seL4_Fault_VGICMaintenance_lift_def)
+           apply (clarsimp simp: ctcb_relation_def is_cap_fault_def word_and_1 cfault_rel_def
+                           split: if_split_asm option.splits)
+          apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def Let_def
+                          split: if_split_asm)
+         apply ceqv
+        apply (rule_tac P="valid_pspace'
+                  and (case buffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)" and P'=UNIV
+                          in ccorres_inst)
+        apply (rule ccorres_guard_imp)
+          apply (ctac(no_vcg) add: setMR_ccorres)
+           apply (rule ccorres_return_C, simp+)[1]
+          apply wp
+         apply (simp add: msgMaxLength_def Collect_const_mem seL4_VGICMaintenance_IDX_def)+
+       apply (simp add: guard_is_UNIV_def)
+      apply ccorres_rewrite
+      apply (rule ccorres_rhs_assoc)+
+      apply (rule ccorres_move_c_guard_tcb)
+      apply (rule_tac val="x2" in symb_exec_r_fault)
+         apply (rule conseqPre, vcg)
+         apply clarsimp
+         apply (drule(1) obj_at_cslift_tcb)
+         apply (clarsimp simp: typ_heap_simps)
+         apply (rule conjI)
+          apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def Let_def
+                          split: if_split_asm)
+         apply (subgoal_tac "seL4_Fault_get_tag (tcbFault_C ko') = scast seL4_Fault_VGICMaintenance")
+          apply (frule seL4_Fault_lift_VGICMaintenance)
+          apply (clarsimp simp: seL4_Fault_VGICMaintenance_lift_def)
+          apply (clarsimp simp: ctcb_relation_def is_cap_fault_def word_and_1 cfault_rel_def
+                          split: if_split_asm option.splits)
+         apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def Let_def
+                          split: if_split_asm)
+        apply ceqv
+       apply (rule ccorres_guard_imp)
+         apply (ctac(no_vcg) add: setMR_ccorres)
+          apply (rule ccorres_return_C, simp+)[1]
+         apply wp
+        apply (clarsimp simp: msgMaxLength_def Collect_const_mem seL4_VGICMaintenance_IDX_def)
+       apply assumption
+      apply clarsimp
+      apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem seL4_VGICMaintenance_IDX_def)
+     apply (clarsimp simp: guard_is_UNIV_def)
+    apply (clarsimp simp: msgMaxLength_def seL4_VMFault_IP_def option_to_ptr_def
+                          pageBits_def mask_def Collect_const_mem | rule conjI
+         | (drule(1) obj_at_cslift_tcb,
+            clarsimp simp: typ_heap_simps ctcb_relation_def,
+            fastforce simp: typ_at_to_obj_at_arches elim: obj_at'_weakenE))+
+     apply (subgoal_tac "[Suc (Suc 0)..<120] = 2#3#[Suc (Suc (Suc (Suc 0)))..<120]")
+      apply (drule(1) obj_at_cslift_tcb)
+      apply (clarsimp simp: zip_Cons ctcb_relation_def
+        cfault_rel_def seL4_Fault_lift_def
+        seL4_Fault_VMFault_lift_def Let_def
+        split: if_split_asm)
+     apply (subst upt_rec, simp)+
+    apply (clarsimp simp: msgMaxLength_def seL4_VMFault_IP_def option_to_ptr_def
+                          pageBits_def mask_def Collect_const_mem | rule conjI
+          | (drule(1) obj_at_cslift_tcb, clarsimp simp: typ_heap_simps ctcb_relation_def,
+            fastforce simp: typ_at_to_obj_at_arches elim: obj_at'_weakenE))+
+ done
 qed
 
 lemma setMRs_fault_ccorres [corres]:
