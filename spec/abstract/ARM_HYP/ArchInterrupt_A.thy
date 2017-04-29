@@ -45,7 +45,7 @@ where
                 if eisr0 = 0 \<and> eisr1 = 0
                    then return $ VGICMaintenance None
                    else do
-                       irq_idx \<leftarrow> return (if eisr0 \<noteq> 0 then word_ctz eisr0 else word_ctz eisr1);
+                       irq_idx \<leftarrow> return (if eisr0 \<noteq> 0 then word_ctz eisr0 else word_ctz eisr1 + 32);
                        gic_vcpu_num_list_regs \<leftarrow> gets (arm_gicvcpu_numlistregs o arch_state);
                        when (irq_idx < gic_vcpu_num_list_regs) (do_machine_op $ do
                          virq \<leftarrow> get_gic_vcpu_ctrl_lr (of_nat irq_idx);
