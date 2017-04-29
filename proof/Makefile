@@ -8,8 +8,15 @@
 # @TAG(GD_GPL)
 #
 
+export L4V_ARCH ?= X64
+
 ## Targets
+ifeq ($(L4V_ARCH),X64)
+images: AInvs BaseRefine RefineOnly
+else
 images: BaseRefine CBaseRefine Refine CRefine
+endif
+
 default: images test
 test:
 all: images test
