@@ -2117,8 +2117,6 @@ lemma  ccorres_vgicMaintenance:
              apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
            apply vcg
           apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
-          apply (rule hoare_lift_Pf[where f=ksCurThread])
-           apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift)+
          apply vcg
         apply ccorres_rewrite
         apply csymbr
@@ -2214,7 +2212,7 @@ lemma  ccorres_vgicMaintenance:
              apply (cut_tac w=eisr0 in word_ctz_le)
              apply (simp add: word_le_nat_alt unat_of_nat)
             apply (rule conseqPre, vcg, clarsimp)
-           apply (wpsimp, rule hoare_lift_Pf[where f=ksCurThread]; wpsimp)
+           apply (wpsimp)
           apply vcg
          apply (wpsimp | rule hoare_lift_Pf[where f=ksCurThread]; wpsimp)+
         apply (vcg)
