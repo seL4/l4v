@@ -26,7 +26,7 @@ definition
   virqSetEOIIRQEN :: "virq \<Rightarrow> 32 word \<Rightarrow> virq"
 where
   "virqSetEOIIRQEN virq v =
-    (if ((virq >> 28) && 3 = 4)
+    (if ((virq >> 28) && 3 = 3)
     then virq
     else (virq && ~~0x80000) || ((v << 19) && 0x80000))"
 
