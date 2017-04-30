@@ -212,11 +212,11 @@ lemma vgic_maintenance_invs[wp]:
   "\<lbrace>invs\<rbrace> vgic_maintenance \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding vgic_maintenance_def get_gic_vcpu_ctrl_misr_def
             get_gic_vcpu_ctrl_eisr1_def get_gic_vcpu_ctrl_eisr0_def
-  apply (wpsimp simp: valid_fault_def do_machine_op_bind ct_in_state_def
+  apply (wpsimp simp: do_machine_op_bind submonad_do_machine_op.gets valid_fault_def
                   wp: thread_get_wp'
-         | strengthen conj_imp_strg)+
+         | intro conjI impI)+
   apply (fastforce intro!: st_tcb_ex_cap[where P=active]
-                     simp: st_tcb_at_def obj_at_def runnable_eq halted_eq)
+                     simp: st_tcb_at_def obj_at_def runnable_eq halted_eq)+
   done
 
 lemma handle_reserved_irq_invs[wp]:

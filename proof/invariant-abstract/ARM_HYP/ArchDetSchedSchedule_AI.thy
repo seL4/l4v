@@ -446,8 +446,8 @@ lemma vgic_maintenance_irq_valid_sched[wp]:
   unfolding vgic_maintenance_def
             get_gic_vcpu_ctrl_misr_def get_gic_vcpu_ctrl_eisr1_def get_gic_vcpu_ctrl_eisr0_def
   apply (wpsimp wp: handle_fault_valid_sched thread_get_wp'
-              simp: do_machine_op_bind valid_fault_def
-         | rule conjI | strengthen conj_imp_strg)+
+              simp: do_machine_op_bind valid_fault_def submonad_do_machine_op.gets
+         | intro conjI impI)+
   apply (clarsimp simp: st_tcb_at_def obj_at_def runnable_eq)
   done
 
