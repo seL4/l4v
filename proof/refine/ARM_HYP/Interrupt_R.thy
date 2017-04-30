@@ -620,45 +620,44 @@ lemma no_fail_get_gic_vcpu_ctrl_eisr1[wp]: "no_fail \<top> get_gic_vcpu_ctrl_eis
 lemma no_fail_get_gic_vcpu_ctrl_misr[wp]: "no_fail \<top> get_gic_vcpu_ctrl_misr"
   by (wpsimp simp: get_gic_vcpu_ctrl_misr_def)
 
+crunch sch_act_ct_rq [wp]: doMachineOp "\<lambda>s. P (ksSchedulerAction s) (ksCurThread s) (ksReadyQueues s)"
+crunch pred_tcb_at'_ct [wp]: doMachineOp "\<lambda>s. pred_tcb_at' proj test (ksCurThread s) s"
+crunch ex_nonz_cap_to' [wp]: doMachineOp "\<lambda>s. P (ex_nonz_cap_to' (ksCurThread s) s)"
+
+lemma runnable_not_halted: "runnable st \<Longrightarrow> \<not> halted st"
+  by (auto simp: runnable_eq)
+
 lemma vgic_maintenance_corres [corres]:
   "corres dc einvs
-      (\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
-      vgic_maintenance vgicMaintenance"
+    (\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
+    vgic_maintenance vgicMaintenance"
   apply (simp add: vgic_maintenance_def vgicMaintenance_def isRunnable_def Let_def
                    get_thread_state_def[symmetric] virqSetEOIIRQEN_def ARM_A.virqSetEOIIRQEN_def
                    bind_assoc do_machine_op_bind doMachineOp_bind
+                   get_gic_vcpu_ctrl_eisr0_def get_gic_vcpu_ctrl_eisr1_def
+                   get_gic_vcpu_ctrl_misr_def
+                   get_gic_vcpu_ctrl_lr_def set_gic_vcpu_ctrl_lr_def
              cong: if_cong)
-  apply (corressimp corresK: corresK_if corres: gct_corres [unfolded getCurThread_def] gts_corres
-                    wp: corres_rv_wp_left no_fail_get_gic_vcpu_ctrl_lr
-       | simp split del: if_split cong: if_cong )+
-                   apply (corressimp corres: hf_corres wp: hoare_vcg_all_lift hoare_drop_imps )+  (* corres_rv_wp_left causes loop here *)
-                 apply (rule hoare_lift_Pf[where f=ksCurThread])
-                  apply wp+
-               apply (rule hoare_lift_Pf[where f=ksCurThread])
-                apply wp+
-            apply (simp split del: if_split cong: if_cong | wp hoare_TrueI[where P=\<top>])+
-           apply (wpsimp split_del: if_split
-                          simp: get_gic_vcpu_ctrl_misr_def valid_fault_def get_gic_vcpu_ctrl_eisr0_def get_gic_vcpu_ctrl_eisr1_def
-                          wp: hoare_TrueI[where P=\<top>] gts_wp gts_wp' hoare_vcg_const_imp_lift
-                              hoare_drop_imps hoare_vcg_if_lift2 hoare_vcg_if_lift3
-                   | (rule corres_rv_proveT, fastforce simp: thread_state_relation_def))+
-      defer
-      apply (wpsimp split_del: if_splits)+
-   apply (clarsimp simp: invs_def invs'_def cur_tcb_def cur_tcb'_def cong: conj_cong)
-   apply (rule conjI, assumption)
-   apply (rule conjI)
-    apply (clarsimp simp: runnable_eq, rule conjI; clarsimp, rule context_conjI,
-          clarsimp simp: st_tcb_at_def obj_at_def;
-          fastforce elim!: st_tcb_ex_cap simp: valid_state_def valid_pspace_def)
-   apply (rule conjI, assumption)
-   apply (clarsimp cong: conj_cong simp: conj_commute)
-   apply (rule conjI)
-    apply (fastforce elim!: st_tcb_ex_cap'' simp: valid_state'_def valid_pspace'_def)
-   apply (clarsimp simp: st_tcb_at'_def obj_at'_def split: thread_state.splits)
-  apply (rule corres_rv_prove)
-  apply (clarsimp simp: runnable_eq)
-  apply (rename_tac st st')
-  by (rule context_conjI, (case_tac st; simp), simp)
+  apply (corres corres: gct_corres[unfolded getCurThread_def] gts_corres
+               corresK: corresK_if)
+  (* 33 subgoals; the following solves all but one. *)
+  apply (corres corres: hf_corres
+         | (rule corres_rv_weaken[OF _ corres_rv_trivial]; fastforce)
+         | (rule corres_rv_weaken[OF _ corres_rv_trivial]; case_tac rv; case_tac rv';
+            fastforce simp: runnable_eq)
+         | unfold valid_fault_def
+         | solves \<open>wp dmo'_gets_wp gts_wp gts_wp'\<close>
+         | solves \<open>simp; intro conjI impI; wp\<close>
+         | solves \<open>simp only: submonad_do_machine_op.gets; wp\<close>
+         )+
+  apply (auto simp: valid_fault_def
+              elim: ct_active_st_tcb_at_weaken
+                      [OF _ iffD1[OF runnable_eq], simplified ct_in_state_def]
+                    st_tcb_ex_cap'[OF _ _ runnable_not_halted]
+                    st_tcb_ex_cap''
+                    pred_tcb'_weakenE
+             split: Structures_H.thread_state.splits)
+  done
 
 lemma handle_reserved_irq_corres[corres]:
   "corres dc einvs
