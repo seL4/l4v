@@ -1396,10 +1396,12 @@ lemma invokeVCPUInjectIRQ_corres:
         (invokeVCPUInjectIRQ v index virq)"
   unfolding invokeVCPUInjectIRQ_def invoke_vcpu_inject_irq_def
   apply (clarsimp simp: bind_assoc)
-  apply (corressimp corres: corres_get_vcpu set_vcpu_corres  wp: corres_rv_wp_left get_vcpu_wp)
+  apply (corressimp corres: corres_get_vcpu set_vcpu_corres wp: corres_rv_wp_left get_vcpu_wp)
       apply (rule corresK_split)
           apply (rule corresK_if[where F=True])
-           apply (corressimp corres: corres_get_vcpu set_vcpu_corres  wp: corres_rv_wp_left wp_post_taut get_vcpu_wp)+
+           apply (corressimp corres: corres_get_vcpu set_vcpu_corres
+                            corresK: corresK_machine_op
+                                 wp: corres_rv_wp_left wp_post_taut get_vcpu_wp)+
   apply clarsimp
   apply (safe
         ; case_tac "vcpuVGIC rv'"
@@ -1413,7 +1415,7 @@ lemmas corres_discard_r =
 
 lemma dmo_gets_corres:
   "corres (op =) P P' (do_machine_op (gets f)) (doMachineOp (gets f))"
-  apply (corres corres: corresK_machine_op)
+  apply (corres corresK: corresK_machine_op)
   apply (auto simp : corres_underlyingK_def)
   done
 
@@ -1431,7 +1433,9 @@ lemma invoke_vcpu_read_register_corres:
   apply corres
   apply (corres_once corresK: corresK_if)
   apply (corresc)
-  apply (corressimp corres: corres_get_vcpu corresK: corresK_if wp: corres_rv_defer_left)+
+  apply (corressimp corres: corres_get_vcpu
+                   corresK: corresK_machine_op corresK_if
+                        wp: corres_rv_defer_left)+
   apply (rule conjI)
   apply (intro allI impI conjI; rule TrueI) (* FIXME where is this coming from? *)
   apply (clarsimp simp: vcpu_relation_def split: option.splits)
@@ -1463,7 +1467,9 @@ lemma invoke_vcpu_write_register_corres:
   apply corres
   apply (corres_once corresK: corresK_if)
   apply (corresc)
-  apply (corressimp corres: set_vcpu_corres corres_get_vcpu corresK: corresK_if wp: corres_rv_defer_left)+
+  apply (corressimp corres: set_vcpu_corres corres_get_vcpu
+                   corresK: corresK_if corresK_machine_op
+                        wp: corres_rv_defer_left)+
   apply (rule conjI)
   apply (intro allI impI conjI; rule TrueI) (* FIXME where is this coming from? *)
   apply (auto simp: vcpu_relation_def split: option.splits)[1]

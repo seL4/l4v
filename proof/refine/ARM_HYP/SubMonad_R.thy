@@ -32,7 +32,7 @@ lemma corres_machine_op:
   done
 
 lemmas corresK_machine_op =
-  corres_machine_op[atomized, THEN corresK_lift_rule, rule_format, corresK]
+  corres_machine_op[atomized, THEN corresK_lift_rule, rule_format]
 
 lemma doMachineOp_mapM:
   assumes "\<And>x. empty_fail (m x)"
