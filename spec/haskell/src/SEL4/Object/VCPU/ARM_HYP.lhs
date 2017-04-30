@@ -216,7 +216,7 @@ FIXME ARMHYP: this does not at this instance correspond to exactly what the C
 > -- this is identical for pending/active/invalid VIRQs
 > virqSetEOIIRQEN :: VIRQ -> Word -> VIRQ
 > virqSetEOIIRQEN virq v =
->     if virq `shiftR` 28 .&. 3 == 4
+>     if virq `shiftR` 28 .&. 3 == 3
 >     then virq
 >     else (virq .&. complement 0x80000) .|. ((v `shiftL` 19) .&. 0x80000)
 
