@@ -14,7 +14,6 @@ UMM_TYPES=../../umm_types.txt
 PARSERPATH=../../../tools/c-parser/standalone-parser
 PATH:=${PARSERPATH}:${PATH}
 export PATH
-TOOLPREFIX ?= arm-none-eabi-
 SHELL=bash
 
 ifeq ($(L4V_ARCH),ARM)
@@ -23,6 +22,7 @@ ifeq ($(L4V_ARCH),ARM)
     PLAT=imx6
     CPU=cortex-a9
     CONFIG_DOMAIN_SCHEDULE=config_arm.c
+    TOOLPREFIX ?= arm-none-eabi-
 endif
 
 ifeq ($(L4V_ARCH),ARM_HYP)
@@ -31,6 +31,13 @@ ifeq ($(L4V_ARCH),ARM_HYP)
     PLAT=tk1
     CPU=cortex-a15
     CONFIG_DOMAIN_SCHEDULE=config_arm.c
+    TOOLPREFIX ?= arm-none-eabi-
+endif
+
+ifeq ($(L4V_ARCH),X64)
+    ARCH=x86
+    SEL4_ARCH=x86_64
+    PLAT=pc99
 endif
 
 ifndef ARCH
