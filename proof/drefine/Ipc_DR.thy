@@ -2113,6 +2113,7 @@ lemma dcorres_handle_fault_reply:
   "dcorres dc \<top> (tcb_at y and valid_idle and not_idle_thread y and  valid_etcbs)
    (corrupt_tcb_intent y)
    (handle_fault_reply a y mi mrs)"
+  unfolding arch_get_sanitise_register_info_def
   apply (case_tac a)
      apply (simp_all)
      apply (rule dummy_corrupt_tcb_intent_corres)+
@@ -2120,10 +2121,9 @@ lemma dcorres_handle_fault_reply:
     apply (rule corres_guard_imp)
       apply (rule corres_symb_exec_r)
          apply (rule corres_split[OF corres_trivial[OF corres_free_return] corrupt_tcb_intent_as_user_corres])
-          apply (wp|clarsimp)+
+          apply (wp|clarsimp simp: arch_get_sanitise_register_info_def)+
    apply (rule corres_dummy_return_l)
    apply (rule corres_guard_imp)
-     apply (rule corres_symb_exec_r)
         apply (rule corres_split[OF corres_trivial[OF corres_free_return] corrupt_tcb_intent_as_user_corres])
          apply (wp|clarsimp)+
   apply (rule dcorres_handle_arch_fault_reply)

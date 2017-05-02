@@ -2251,7 +2251,7 @@ lemma handle_fault_reply_respects:
      handle_fault_reply fault thread x y
     \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (cases fault, simp_all)
-  apply (wp as_user_integrity_autarch | simp add: handle_arch_fault_reply_def)+
+  apply (wp as_user_integrity_autarch | simp add: handle_arch_fault_reply_def arch_get_sanitise_register_info_def)+
   done
 
 lemma tcb_st_to_auth_Restart_Inactive [simp]:

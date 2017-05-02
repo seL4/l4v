@@ -28,6 +28,7 @@ requalify_consts
   setNextPC
   getRestartPC
   sanitiseRegister
+  getSanitiseRegisterInfo
   setRegister
   performTransfer
   msgInfoRegister
@@ -36,7 +37,7 @@ requalify_consts
   fromVPtr
 end
 
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= bodies_only NOT liftFnMaybe assertDerived archThreadGet archThreadSet asUser sanitiseRegister
+#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= bodies_only NOT liftFnMaybe assertDerived archThreadGet archThreadSet asUser sanitiseRegister getSanitiseRegisterInfo
 
 defs asUser_def:
 "asUser tptr f\<equiv> (do

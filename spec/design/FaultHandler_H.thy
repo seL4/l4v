@@ -89,16 +89,16 @@ defs handleFaultReply_def:
 "handleFaultReply x0 thread label msg\<equiv> (case x0 of
     (CapFault _ _ _) \<Rightarrow>    return True
   | (UnknownSyscallException _) \<Rightarrow>    (do
-    t \<leftarrow> threadGet id thread;
+    b \<leftarrow> getSanitiseRegisterInfo thread;
     asUser thread $ zipWithM_x
-        (\<lambda> r v. setRegister r $ sanitiseRegister t r v)
+        (\<lambda> r v. setRegister r $ sanitiseRegister b r v)
         syscallMessage msg;
     return (label = 0)
   od)
   | (UserException _ _) \<Rightarrow>    (do
-    t \<leftarrow> threadGet id thread;
+    b \<leftarrow> getSanitiseRegisterInfo thread;
     asUser thread $ zipWithM_x
-        (\<lambda> r v. setRegister r $ sanitiseRegister t r v)
+        (\<lambda> r v. setRegister r $ sanitiseRegister b r v)
         exceptionMessage msg;
     return (label = 0)
   od)

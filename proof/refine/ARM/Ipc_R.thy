@@ -2011,7 +2011,7 @@ crunch nosch[wp]: doIPCTransfer "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma handle_fault_reply_registers_corres:
   "corres (op =) (tcb_at t) (tcb_at' t)
-           (do t' \<leftarrow> thread_get id t;
+           (do t' \<leftarrow> arch_get_sanitise_register_info t;
                y \<leftarrow> as_user t
                 (zipWithM_x
                   (\<lambda>r v. set_register r
@@ -2019,7 +2019,7 @@ lemma handle_fault_reply_registers_corres:
                   msg_template msg);
                return (label = 0)
             od)
-           (do t' \<leftarrow> threadGet id t;
+           (do t' \<leftarrow> getSanitiseRegisterInfo t;
                y \<leftarrow> asUser t
                 (zipWithM_x
                   (\<lambda>r v. setRegister r (sanitiseRegister t' r v))
@@ -2027,7 +2027,7 @@ lemma handle_fault_reply_registers_corres:
                return (label = 0)
             od)"
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ threadget_corres, where r'=tcb_relation])
+    apply (clarsimp simp: arch_get_sanitise_register_info_def getSanitiseRegisterInfo_def)
        apply (rule corres_split)
        apply (rule corres_trivial, simp)
       apply (rule corres_as_user')

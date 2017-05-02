@@ -19,7 +19,7 @@ This module uses the C preprocessor to select a target architecture.
 \end{impdetails}
 
 > module SEL4.Object.TCB (
->         threadGet, threadSet, asUser, sanitiseRegister,
+>         threadGet, threadSet, asUser, sanitiseRegister, getSanitiseRegisterInfo,
 >         getThreadCSpaceRoot, getThreadVSpaceRoot,
 >         getThreadReplySlot, getThreadCallerSlot,
 >         getThreadBufferSlot,
@@ -466,7 +466,7 @@ The "ReadRegisters" and "WriteRegisters" functions are similar to "CopyRegisters
 >   withoutPreemption $ do
 >     self <- getCurThread
 >     Arch.performTransfer arch self dest
->     t <- threadGet id dest
+>     t <- getSanitiseRegisterInfo dest
 >     asUser dest $ do
 >         zipWithM (\r v -> setRegister r (sanitiseRegister t r v))
 >             (frameRegisters ++ gpRegisters) values
@@ -760,6 +760,9 @@ identified by "tcbPtr".
 
 On some architectures, the thread context may include registers that may be modified by user level code, but cannot safely be given arbitrary values. For example, some of the bits in the ARM architecture's CPSR are used for conditional execution, and others enable kernel mode. This function is used to filter out any bits that should not be modified by user level programs.
 
-> sanitiseRegister :: TCB -> Register -> Word -> Word
+> sanitiseRegister :: Bool -> Register -> Word -> Word
 > sanitiseRegister t (Register r) (Word w) = Word $ Arch.sanitiseRegister t r w
+
+> getSanitiseRegisterInfo :: PPtr TCB -> Kernel Bool
+> getSanitiseRegisterInfo t = Arch.getSanitiseRegisterInfo t
 

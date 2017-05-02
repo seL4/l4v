@@ -283,7 +283,7 @@ lemma invoke_tcb_tc_respects_aag:
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"]
         )+)[1]),(rule_tac x="\<lambda>_. invs and valid_list and valid_sched and integrity aag X st and pas_refined aag and simple_sched_action" in simplify_post,simp,erule use_safe_id)?)+
   (* clocked at around 3min 20secs on my home machine - TS *)
-  apply (clarsimp simp: authorised_tcb_inv_def)
+  apply (clarsimp simp: authorised_tcb_inv_def )
   by (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
                         is_cap_simps is_valid_vtable_root_def
                         is_cnode_or_valid_arch_def tcb_cap_valid_def
@@ -362,7 +362,7 @@ lemma invoke_tcb_respects:
                             del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps K_def)
   apply (safe intro!: hoare_gen_asm)
   apply ((wp itr_wps mapM_x_wp' | simp add: if_apply_def2 split del: if_split
-            | wpc | clarsimp simp: authorised_tcb_inv_def
+            | wpc | clarsimp simp: authorised_tcb_inv_def arch_get_sanitise_register_info_def
             | rule conjI | subst(asm) idle_no_ex_cap)+)
   done
 
@@ -409,6 +409,7 @@ lemma invoke_tcb_pas_refined:
   apply (cases ti, simp_all add: authorised_tcb_inv_def)
       apply (wp ita_wps hoare_drop_imps mapM_x_wp'
                | simp add: emptyable_def if_apply_def2 authorised_tcb_inv_def
+                           arch_get_sanitise_register_info_def
                | rule ball_tcb_cap_casesI
                | wpc)+
   done

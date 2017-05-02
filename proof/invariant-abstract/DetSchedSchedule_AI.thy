@@ -744,6 +744,28 @@ locale DetSchedSchedule_AI =
     "\<And>t. \<lbrace>simple_sched_action\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. simple_sched_action\<rbrace>"
   assumes prepare_thread_delete_valid_sched'[wp]:
     "\<And>t. \<lbrace>valid_sched\<rbrace> prepare_thread_delete t \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  assumes make_fault_arch_msg_not_cur_thread[wp] :
+    "\<And>ft t t'. make_arch_fault_msg ft t \<lbrace>not_cur_thread t'\<rbrace>"
+  assumes make_fault_arch_msg_valid_sched[wp] :
+    "\<And>ft t. make_arch_fault_msg ft t \<lbrace>valid_sched\<rbrace>"
+  assumes make_fault_arch_msg_scheduler_action[wp] :
+    "\<And>P ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  assumes make_fault_arch_msg_ready_queues[wp] :
+    "\<And>P ft t. make_arch_fault_msg ft t \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace>"
+  assumes make_fault_arch_msg_valid_etcbs[wp] :
+    "\<And>ft t. make_arch_fault_msg ft t \<lbrace>valid_etcbs\<rbrace>"
+  assumes arch_get_sanitise_register_info_not_cur_thread[wp] :
+    "\<And>ft t'. arch_get_sanitise_register_info ft \<lbrace>not_cur_thread t'\<rbrace>"
+  assumes arch_get_sanitise_register_info_valid_sched[wp] :
+    "\<And>ft. arch_get_sanitise_register_info ft \<lbrace>valid_sched\<rbrace>"
+  assumes arch_get_sanitise_register_info_scheduler_action[wp] :
+    "\<And>P ft. arch_get_sanitise_register_info ft \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  assumes arch_get_sanitise_register_info_ready_queues[wp] :
+    "\<And>P ft. arch_get_sanitise_register_info ft \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace>"
+  assumes arch_get_sanitise_register_info_valid_etcbs[wp] :
+    "\<And>ft. arch_get_sanitise_register_info ft \<lbrace>valid_etcbs\<rbrace>"
+  assumes arch_get_sanitise_register_info_cur'[wp]:
+    "\<And>f. \<lbrace>cur_tcb :: det_ext state \<Rightarrow> bool\<rbrace> arch_get_sanitise_register_info f \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
 
 context DetSchedSchedule_AI begin
 

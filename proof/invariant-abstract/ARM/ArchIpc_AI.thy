@@ -441,7 +441,7 @@ lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_assms]:
    apply (wp sts_obj_at_impossible | simp add: tcb_not_empty_table)+
   done
 
-crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply "P (typ_at T p s)"
+crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "P (typ_at T p s)"
 
 end
 

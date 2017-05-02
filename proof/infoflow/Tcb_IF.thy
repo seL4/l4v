@@ -431,13 +431,14 @@ lemma invoke_tcb_globals_equiv:
   including no_pre
   apply(case_tac ti)
        prefer 4
-       apply (simp del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps)
+       apply (simp del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps )
        apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv
                  cap_insert_globals_equiv'' thread_set_globals_equiv 
                  set_mcpriority_globals_equiv
               | clarsimp simp add: invs_valid_ko_at_arm split del: if_split)+
        apply (simp_all del: Tcb_AI.tcb_inv_wf.simps split del: if_split)
-       apply (wp | clarsimp simp: invs_valid_ko_at_arm no_cap_to_idle_thread | intro conjI impI)+
+       apply (wp | clarsimp simp: invs_valid_ko_at_arm no_cap_to_idle_thread
+                 | intro conjI impI)+
        apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arm_copy_register_sets)
        apply (rule_tac Q="\<lambda>_. valid_ko_at_arm and globals_equiv st and (\<lambda>s. word1 \<noteq> idle_thread s) 
                               and (\<lambda>s. word2 \<noteq> idle_thread s)" in hoare_strengthen_post)
@@ -664,14 +665,21 @@ lemma invoke_tcb_reads_respects_f:
   including no_pre
   apply(case_tac ti)
         apply(wp thread_get_reads_respects_f when_ev restart_reads_respects_f as_user_reads_respects_f static_imp_wp thread_get_wp'| simp)+
-        apply(auto intro: requiv_cur_thread_eq intro!: det_zipWithM simp: det_setRegister det_getRestartPC det_setNextPC authorised_tcb_inv_def simp: reads_equiv_f_def)[1]
-       apply(wp as_user_reads_respects_f suspend_silc_inv when_ev suspend_reads_respects_f[where st=st] | simp | elim conjE, assumption)+
-       apply(auto simp: authorised_tcb_inv_def intro!: det_mapM[OF _ subset_refl] simp: det_getRegister simp: reads_equiv_f_def)[1]
+        apply(auto intro: requiv_cur_thread_eq
+                  intro!: det_zipWithM
+                    simp: det_setRegister det_getRestartPC det_setNextPC authorised_tcb_inv_def reads_equiv_f_def)[1]
+       apply(wp as_user_reads_respects_f suspend_silc_inv when_ev suspend_reads_respects_f[where st=st]
+                | simp | elim conjE, assumption)+
+       apply(auto simp: authorised_tcb_inv_def  det_getRegister reads_equiv_f_def
+                intro!: det_mapM[OF _ subset_refl])[1]
       apply(wp when_ev mapM_x_ev'' as_user_reads_respects_f[where st=st]  hoare_vcg_ball_lift mapM_x_wp' restart_reads_respects_f restart_silc_inv hoare_vcg_if_lift suspend_reads_respects_f suspend_silc_inv
            | simp split del: if_split add: det_setRegister det_setNextPC)+
-      apply(auto simp add: authorised_tcb_inv_def simp: idle_no_ex_cap[OF invs_valid_global_refs invs_valid_objs] det_getRestartPC det_getRegister)[1]
+      apply(auto simp: authorised_tcb_inv_def
+                       idle_no_ex_cap[OF invs_valid_global_refs invs_valid_objs] det_getRestartPC
+                       det_getRegister)[1]
      defer
-     apply((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st]  | simp add: authorised_tcb_inv_def)+)[2]
+     apply((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st]
+             | simp add: authorised_tcb_inv_def )+)[2]
     -- "NotificationControl"
    apply (rename_tac option)
    apply (case_tac option, simp_all)[1]
@@ -715,7 +723,7 @@ lemma invoke_tcb_reads_respects_f:
             thread_set_cte_at  thread_set_no_cap_to_trivial
             thread_set_tcb_fault_handler_update_only_timer_irq_inv
         | simp add: tcb_cap_cases_def | wpc)+
-  apply (clarsimp simp: authorised_tcb_inv_def authorised_tcb_inv_extra_def emptyable_def)
+  apply (clarsimp simp: authorised_tcb_inv_def  authorised_tcb_inv_extra_def emptyable_def)
   by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def
                      set_register_det
                    | intro impI

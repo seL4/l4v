@@ -26,12 +26,17 @@ where
 "performTransfer arg1 arg2 arg3 \<equiv> return ()"
 
 definition
-sanitiseRegister :: "tcb \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
+sanitiseRegister :: "bool \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 where
 "sanitiseRegister x0 x1 v\<equiv> (case x1 of
     CPSR \<Rightarrow>    (v && 0xf8000000) || 0x150
   | _ \<Rightarrow>    v
   )"
+
+definition
+getSanitiseRegisterInfo :: "machine_word \<Rightarrow> bool kernel"
+where
+"getSanitiseRegisterInfo arg1 \<equiv> return False"
 
 
 

@@ -2005,6 +2005,8 @@ lemma mapM_x_swp_store_kernel_base_globals_equiv:
                    pde_ref_def)+
 done
 
+declare arch_get_sanitise_register_info_def[simp]
+
 end
 
 end

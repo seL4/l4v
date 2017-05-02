@@ -325,12 +325,11 @@ lemma writereg_corres:
         (invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest)
         (invoke_tcb (tcb_invocation.WriteRegisters dest resume values arch))
         (invokeTCB (tcbinvocation.WriteRegisters dest resume values arch'))"
-  apply (simp add: invokeTCB_def performTransfer_def
-                   frameRegisters_def gpRegisters_def
+  apply (simp add: invokeTCB_def performTransfer_def arch_get_sanitise_register_info_def
+                   frameRegisters_def gpRegisters_def getSanitiseRegisterInfo_def
                    sanitiseRegister_def sanitise_register_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gct_corres])
-      apply (rule corres_split [OF _ threadget_corres, where r'=tcb_relation])
          apply (rule corres_split_nor)
             prefer 2
             apply (rule corres_as_user)
@@ -454,11 +453,22 @@ lemma readreg_invs':
        | clarsimp simp: invs'_def valid_state'_def
                  dest!: global'_no_ex_cap)+
 
+crunch invs'[wp]: getSanitiseRegisterInfo invs'
+  (ignore: getObject setObject)
+
+crunch ex_nonz_cap_to'[wp]: getSanitiseRegisterInfo "ex_nonz_cap_to' d"
+  (ignore: getObject setObject)
+crunch it'[wp]: getSanitiseRegisterInfo "\<lambda>s. P (ksIdleThread s)"
+  (ignore: getObject setObject)
+crunch tcb_at'[wp]: getSanitiseRegisterInfo "tcb_at' a"
+  (ignore: getObject setObject)
+
+
 lemma writereg_invs':
   "\<lbrace>invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest\<rbrace>
      invokeTCB (tcbinvocation.WriteRegisters dest resume values arch)
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  by (simp add: invokeTCB_def performTransfer_def | wp restart_invs' | rule conjI
+  by (simp add: invokeTCB_def performTransfer_def  | wp restart_invs' | rule conjI
        | clarsimp
        | clarsimp simp: invs'_def valid_state'_def
                  dest!: global'_no_ex_cap)+

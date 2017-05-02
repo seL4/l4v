@@ -626,28 +626,25 @@ lemma invoke_tcb_corres_read_regs:
      apply (wp | simp)+
   done
 
-end
 
 (* Write the reigsters of another thread. *)
 lemma invoke_tcb_corres_write_regs:
   "\<lbrakk> t' = tcb_invocation.WriteRegisters obj_id resume data flags;
      t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
    dcorres (dc \<oplus> dc) \<top> (invs and not_idle_thread obj_id and tcb_at obj_id and valid_etcbs) (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
-  apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
+  apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def arch_get_sanitise_register_info_def)
   apply (rule corres_symb_exec_r)
-     apply (rule corres_symb_exec_r)
-        apply (rule corres_guard_imp)
-          apply (rule corres_split [where r'=dc])
-             apply (rule corres_cases [where R=resume])
-              apply (clarsimp simp: when_def)
-              apply (rule corres_bind_return_r)
-              apply (clarsimp simp: dc_def, rule restart_corres [unfolded dc_def])
-             apply (clarsimp simp: when_def)
-            apply (rule corrupt_tcb_intent_as_user_corres)
-           apply (wp wp_post_taut | simp add:invs_def valid_state_def | fastforce)+
+     apply (rule corres_guard_imp)
+       apply (rule corres_split [where r'=dc])
+          apply (rule corres_cases [where R=resume])
+           apply (clarsimp simp: when_def)
+           apply (rule corres_bind_return_r)
+           apply (clarsimp simp: dc_def, rule restart_corres [unfolded dc_def])
+          apply (clarsimp simp: when_def)
+         apply (rule corrupt_tcb_intent_as_user_corres)
+        apply (wp wp_post_taut | simp add:invs_def valid_state_def | fastforce)+
   done
 
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma corres_mapM_x_rhs_induct:
   "\<lbrakk> corres_underlying sr nf nf' dc P P' g (return ());

@@ -30,6 +30,7 @@ requalify_consts
   setNextPC
   getRestartPC
   sanitiseRegister
+  getSanitiseRegisterInfo
   setRegister
   performTransfer
   msgInfoRegister
@@ -374,7 +375,7 @@ defs invokeTCB_def:
   withoutPreemption $ (do
     self \<leftarrow> getCurThread;
     performTransfer arch self dest;
-    t \<leftarrow> threadGet id dest;
+    t \<leftarrow> getSanitiseRegisterInfo dest;
     asUser dest $ (do
         zipWithM (\<lambda> r v. setRegister r (sanitiseRegister t r v))
             (frameRegisters @ gpRegisters) values;

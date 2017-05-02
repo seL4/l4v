@@ -130,7 +130,10 @@ consts'
 asUser :: "machine_word \<Rightarrow> 'a user_monad \<Rightarrow> 'a kernel"
 
 consts'
-sanitiseRegister :: "tcb \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
+sanitiseRegister :: "bool \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
+
+consts'
+getSanitiseRegisterInfo :: "machine_word \<Rightarrow> bool kernel"
 
 
 end

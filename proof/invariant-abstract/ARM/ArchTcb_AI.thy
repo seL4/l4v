@@ -138,6 +138,9 @@ lemma checked_insert_tcb_invs[wp]: (* arch specific *)
   apply (auto simp: is_cnode_or_valid_arch_def is_cap_simps)
   done
 
+crunch tcb_at[wp, Tcb_AI_asms]: arch_get_sanitise_register_info "tcb_at a"
+crunch invs[wp, Tcb_AI_asms]: arch_get_sanitise_register_info "invs"
+crunch ex_nonz_cap_to[wp, Tcb_AI_asms]: arch_get_sanitise_register_info "ex_nonz_cap_to a"
 
 lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
   assumes x: "P cap.NullCap"

@@ -3897,6 +3897,8 @@ locale Deterministic_AI_1 =
     "\<And>param_a. \<lbrace>valid_list\<rbrace> get_cap param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes arch_tcb_set_ipc_buffer_valid_list[wp]:
     "\<And>t ptr. \<lbrace>valid_list\<rbrace> arch_tcb_set_ipc_buffer t ptr \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes arch_tcb_sanitse_condition_valid_list[wp]:
+    "\<And>t. \<lbrace>valid_list\<rbrace> arch_get_sanitise_register_info t \<lbrace>\<lambda>_. valid_list\<rbrace>"
 
 
 context Deterministic_AI_1 begin

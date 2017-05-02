@@ -35,7 +35,10 @@ There are presently no ARM-specific register subsets defined, but in future this
 > performTransfer :: CopyRegisterSets -> PPtr TCB -> PPtr TCB -> Kernel ()
 > performTransfer _ _ _ = return ()
 
-> sanitiseRegister :: TCB -> Register -> Word -> Word
+> sanitiseRegister :: Bool -> Register -> Word -> Word
 > sanitiseRegister _ CPSR v = (v .&. 0xf8000000) .|. 0x150
 > sanitiseRegister _ _ v = v
+
+> getSanitiseRegisterInfo :: PPtr TCB -> Kernel Bool
+> getSanitiseRegisterInfo _ = return False
 

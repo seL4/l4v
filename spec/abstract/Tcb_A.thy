@@ -24,6 +24,7 @@ requalify_consts
   arch_activate_idle_thread
   arch_tcb_set_ipc_buffer
   sanitise_register
+  arch_get_sanitise_register_info
 
 end
 
@@ -220,9 +221,9 @@ where
 | "invoke_tcb (WriteRegisters dest resume_target values arch) =
   (liftE $ do
     self \<leftarrow> gets cur_thread;
-    t \<leftarrow> thread_get id dest;
+    b \<leftarrow> arch_get_sanitise_register_info dest;
     as_user dest $ do
-        zipWithM (\<lambda>r v. setRegister r (sanitise_register t r v))
+        zipWithM (\<lambda>r v. setRegister r (sanitise_register b r v))
             (frameRegisters @ gpRegisters) values;
         pc \<leftarrow> getRestartPC;
         setNextPC pc

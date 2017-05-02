@@ -48,6 +48,8 @@ locale DetSchedDomainTime_AI =
     "\<And>P t. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_activate_idle_thread t \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_switch_to_thread_domain_list_inv'[wp]:
     "\<And>P t. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+  assumes arch_get_sanitise_register_info_domain_list_inv'[wp]:
+    "\<And>P t. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_get_sanitise_register_info t \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes arch_switch_to_idle_thread_domain_list_inv'[wp]:
     "\<And>P. \<lbrace>\<lambda>s. P (domain_list s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
   assumes handle_arch_fault_reply_domain_list_inv'[wp]:
@@ -72,6 +74,8 @@ locale DetSchedDomainTime_AI =
     "\<And>P t. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_activate_idle_thread t \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_switch_to_thread_domain_time_inv'[wp]:
     "\<And>P t. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
+  assumes arch_get_sanitise_register_info_domain_time_inv'[wp]:
+    "\<And>P t. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_get_sanitise_register_info t \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes arch_switch_to_idle_thread_domain_time_inv'[wp]:
     "\<And>P. \<lbrace>\<lambda>s. P (domain_time s)\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (domain_time s)\<rbrace>"
   assumes handle_arch_fault_reply_domain_time_inv'[wp]:

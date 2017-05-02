@@ -1139,7 +1139,7 @@ lemma invokeTCB_WriteRegisters_ccorres_helper:
           (sanitiseRegister tcb reg (args ! incn))))
      (\<acute>ret__unsigned_long :== CALL getSyscallArg(f (\<acute>i),option_to_ptr buffer);;
       Guard ArrayBounds \<lbrace>\<acute>i < bnd\<rbrace>
-          (\<acute>unsigned_long_eret_2 :== CALL sanitiseRegister(g (\<acute>i),\<acute>ret__unsigned_long,tcb_ptr_to_ctcb_ptr dst));;
+          (\<acute>unsigned_long_eret_2 :== CALL sanitiseRegister(g (\<acute>i),\<acute>ret__unsigned_long,from_bool t));;
       Guard ArrayBounds \<lbrace>\<acute>i < bnd2\<rbrace>
         (CALL setRegister(tcb_ptr_to_ctcb_ptr dst,g (\<acute>i),\<acute>unsigned_long_eret_2)))"
   apply (rule ccorres_guard_imp2)
@@ -1418,7 +1418,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
   apply (cinit lift: n_' dest_' resumeTarget_' buffer_'
                simp: whileAnno_def)
    (* using S not univ seems to stop cinit doing this? *)
-   apply (csymbr, csymbr, csymbr)
+   apply (csymbr, csymbr, csymbr, csymbr)
    apply (simp add: liftE_def bind_assoc
                del: Collect_const)
    apply (rule ccorres_pre_getCurThread)
@@ -1435,7 +1435,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
           apply (clarsimp simp: return_def min_def)
           apply (simp add: linorder_not_less[symmetric] n_gpRegisters_def n_frameRegisters_def)
          apply ceqv
-        apply (rule ccorres_symb_exec_l)
+        apply (ctac add: Arch_getSanitiseRegisterInfo_ccorres)
            apply (simp add: zipWithM_mapM split_def zip_append1 mapM_discarded mapM_x_append
                        del: Collect_const)
            apply (simp add: asUser_bind_distrib getRestartPC_def setNextPC_def bind_assoc
@@ -1498,44 +1498,44 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
                 apply (rule ceqv_refl)
                apply (ctac(no_vcg) add: getRestartPC_ccorres)
                 apply simp
-                apply (ctac(no_vcg) add: setNextPC_ccorres)
-                 apply (rule ccorres_split_nothrow_novcg)
-                     apply (rule ccorres_when[where R=\<top>])
-                      apply (simp add: from_bool_0 Collect_const_mem)
-                     apply (rule_tac xf'="\<lambda>_. 0" in ccorres_call)
+               apply (ctac(no_vcg) add: setNextPC_ccorres)
+                apply (rule ccorres_split_nothrow_novcg)
+                    apply (rule ccorres_when[where R=\<top>])
+                     apply (simp add: from_bool_0 Collect_const_mem)
+                    apply (rule_tac xf'="\<lambda>_. 0" in ccorres_call)
                       apply (rule restart_ccorres)
                       apply simp
-                      apply (simp add: xfdc_def)
-                     apply simp
-                    apply (rule ceqv_refl)
-                   apply (unfold return_returnOk)[1]
-                   apply (rule ccorres_return_CE, simp+)[1]
-                  apply wp
-                 apply (simp add: guard_is_UNIV_def)
-                apply wp+
-               apply simp
-               apply (rule mapM_x_wp')
-               apply (rule hoare_pre, wp)
-               apply clarsimp
+                     apply (simp add: xfdc_def)
+                    apply simp
+                   apply (rule ceqv_refl)
+                  apply (unfold return_returnOk)[1]
+                  apply (rule ccorres_return_CE, simp+)[1]
+                 apply wp
+                apply (simp add: guard_is_UNIV_def)
+               apply wp+
               apply simp
-              apply wp
-             apply (simp add: guard_is_UNIV_def)
-            apply (rule hoare_drop_imps)
-            apply (simp add: sysargs_rel_n_def)
-            apply (wp mapM_x_wp')
-             apply (rule hoare_pre, wp asUser_sysargs_rel)
-             apply clarsimp
-            apply wpsimp
-           apply (simp add: guard_is_UNIV_def)
-          apply (wp)
-         apply (wp threadGet_wp)
-        apply simp
-       apply wp
+              apply (rule mapM_x_wp')
+              apply (rule hoare_pre, wp)
+              apply clarsimp
+             apply simp
+             apply wp
+            apply (simp add: guard_is_UNIV_def)
+           apply (rule hoare_drop_imps)
+           apply (simp add: sysargs_rel_n_def)
+           apply (wp mapM_x_wp')
+            apply (rule hoare_pre, wp asUser_sysargs_rel)
+            apply clarsimp
+           apply wpsimp
+          apply (simp add: guard_is_UNIV_def)
+         apply (wp)
+        apply vcg
+       apply (wp threadGet_wp)
       apply vcg
      apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
      apply simp
     apply (simp add: performTransfer_def)
     apply wp
+   apply clarsimp
    apply vcg
   apply (clarsimp simp: n_msgRegisters_def sysargs_rel_n_def split: if_split)
   apply (rule conjI)
