@@ -313,7 +313,7 @@ lemma readreg_corres:
 crunch sch_act_simple [wp]: asUser "sch_act_simple"
   (rule: sch_act_simple_lift)
 
-crunch invs'[wp]: archTCBSanitise invs'
+crunch invs'[wp]: getSanitiseRegisterInfo invs'
   (ignore: getObject setObject)
 
 lemma writereg_corres:
@@ -451,9 +451,9 @@ lemma readreg_invs':
        | clarsimp simp: invs'_def valid_state'_def
                  dest!: global'_no_ex_cap)+
 
-crunch ex_nonz_cap_to'[wp]: archTCBSanitise "ex_nonz_cap_to' d"
+crunch ex_nonz_cap_to'[wp]: getSanitiseRegisterInfo "ex_nonz_cap_to' d"
   (ignore: getObject setObject)
-crunch it'[wp]: archTCBSanitise "\<lambda>s. P (ksIdleThread s)"
+crunch it'[wp]: getSanitiseRegisterInfo "\<lambda>s. P (ksIdleThread s)"
   (ignore: getObject setObject)
 
 lemma writereg_invs':

@@ -56,8 +56,8 @@ There are presently no ARM-specific register subsets defined, but in future this
 #endif
 > sanitiseRegister _ _ v = v
 
-> archTCBSanitise :: PPtr TCB -> Kernel Bool
-> archTCBSanitise t = do
+> getSanitiseRegisterInfo :: PPtr TCB -> Kernel Bool
+> getSanitiseRegisterInfo t = do
 >    v <- liftM (atcbVCPUPtr . tcbArch) $ getObject t
 >    return $ isJust v
 

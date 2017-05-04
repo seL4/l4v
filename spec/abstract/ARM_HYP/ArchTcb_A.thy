@@ -38,9 +38,9 @@ where
     | _    \<Rightarrow> v"
 
 definition
-  arch_tcb_sanitise_condition :: "obj_ref \<Rightarrow> (bool, 'a::state_ext) s_monad"
+  arch_get_sanitise_register_info :: "obj_ref \<Rightarrow> (bool, 'a::state_ext) s_monad"
 where
-  "arch_tcb_sanitise_condition t \<equiv> do
+  "arch_get_sanitise_register_info t \<equiv> do
           vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
           return (vcpu \<noteq> None)
    od"

@@ -2071,17 +2071,17 @@ lemma atcbVCPUPtr:
 
 lemma arch_tcb_sanitise_corres:
   "corres (op =) (tcb_at t) (tcb_at' t)
-      (arch_tcb_sanitise_condition t)
-      (archTCBSanitise t)"
-  unfolding arch_tcb_sanitise_condition_def archTCBSanitise_def
+      (arch_get_sanitise_register_info t)
+      (getSanitiseRegisterInfo t)"
+  unfolding arch_get_sanitise_register_info_def getSanitiseRegisterInfo_def
   apply (fold archThreadGet_def)
   by (corressimp corres: archThreadGet_vcpu_corres)
 
-crunch tcb_at'[wp]: archTCBSanitise "tcb_at' t"
+crunch tcb_at'[wp]: getSanitiseRegisterInfo "tcb_at' t"
 
 lemma handle_fault_reply_registers_corres:
   "corres (op =) (tcb_at t) (tcb_at' t)
-           (do t' \<leftarrow> arch_tcb_sanitise_condition t;
+           (do t' \<leftarrow> arch_get_sanitise_register_info t;
                y \<leftarrow> as_user t
                 (zipWithM_x
                   (\<lambda>r v. set_register r
@@ -2089,7 +2089,7 @@ lemma handle_fault_reply_registers_corres:
                   msg_template msg);
                return (label = 0)
             od)
-           (do t' \<leftarrow> archTCBSanitise t;
+           (do t' \<leftarrow> getSanitiseRegisterInfo t;
                y \<leftarrow> asUser t
                 (zipWithM_x
                   (\<lambda>r v. setRegister r (sanitiseRegister t' r v))
@@ -2131,11 +2131,11 @@ crunch tcb_at'[wp]: attemptSwitchTo "tcb_at' t"
 crunch valid_pspace'[wp]: attemptSwitchTo valid_pspace'
   (wp: crunch_wps)
 
-lemmas archTCBSanitise_def2 = archTCBSanitise_def[folded archThreadGet_def]
+lemmas getSanitiseRegisterInfo_def2 = getSanitiseRegisterInfo_def[folded archThreadGet_def]
 
-lemma archTCBSanitise_ct'[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> archTCBSanitise t \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: archTCBSanitise_def)
+lemma getSanitiseRegisterInfo_ct'[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> getSanitiseRegisterInfo t \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
+  apply (simp add: getSanitiseRegisterInfo_def)
   by (wpsimp simp: getObject_inv_tcb setObject_ct_inv)
 
 crunch ct'[wp]: handleFaultReply "\<lambda>s. P (ksCurThread s)"

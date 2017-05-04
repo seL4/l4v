@@ -1453,7 +1453,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
           apply (clarsimp simp: return_def min_def)
           apply (simp add: linorder_not_less[symmetric] n_gpRegisters_def n_frameRegisters_def)
          apply ceqv
-        apply (ctac add: hasVCPU_ccorres)
+        apply (ctac add: Arch_getSanitiseRegisterInfo_ccorres)
            apply (simp add: zipWithM_mapM split_def zip_append1 mapM_discarded mapM_x_append
                        del: Collect_const)
            apply (simp add: asUser_bind_distrib getRestartPC_def setNextPC_def bind_assoc
@@ -1462,7 +1462,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
            apply (simp add: asUser_mapM_x bind_assoc)
            apply (rule ccorres_stateAssert)
            apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
-             apply (drule_tac t="hasVCPU" in sym, simp only:)
+             apply (drule_tac t="archInfo" in sym, simp only:)
                apply (rule_tac F="\<lambda>n. sysargs_rel args buffer and sysargs_rel_n args buffer (n + 2) and
                                      tcb_at' dst and (\<lambda>s. dst \<noteq> ksCurThread s)"
                            and Q=UNIV in ccorres_mapM_x_whileQ)
@@ -1486,7 +1486,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
               apply (rule ceqv_refl)
              apply (rule ccorres_stateAssert)
              apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
-               apply (drule_tac t="hasVCPU" in sym, simp only:)
+               apply (drule_tac t="archInfo" in sym, simp only:)
                  apply (rule_tac F="\<lambda>n. sysargs_rel args buffer
                                      and sysargs_rel_n args buffer (n + length ARM_HYP_H.frameRegisters + 2)
                                      and tcb_at' dst and (\<lambda>s. dst \<noteq> ksCurThread s)"

@@ -300,20 +300,20 @@ lemma asUser_getRegister_threadGet_comm:
    od"
   by (rule bind_inv_inv_comm, auto; wp)
 
-crunch inv[wp]: archTCBSanitise P
+crunch inv[wp]: getSanitiseRegisterInfo P
   (ignore: getObject)
 
-lemma empty_fail_archTCBSanitise[wp, simp]:
-  "empty_fail (archTCBSanitise t)"
-  by (wpsimp simp: archTCBSanitise_def2 wp: kernel.empty_fail_archThreadGet)
+lemma empty_fail_getSanitiseRegisterInfo[wp, simp]:
+  "empty_fail (getSanitiseRegisterInfo t)"
+  by (wpsimp simp: getSanitiseRegisterInfo_def2 wp: kernel.empty_fail_archThreadGet)
 
-lemma asUser_getRegister_archTCBSanitise_comm:
+lemma asUser_getRegister_getSanitiseRegisterInfo_comm:
   "do
      ra \<leftarrow> asUser a (getRegister r);
-     rb \<leftarrow> archTCBSanitise b;
+     rb \<leftarrow> getSanitiseRegisterInfo b;
      c ra rb
    od = do
-     rb \<leftarrow> archTCBSanitise b;
+     rb \<leftarrow> getSanitiseRegisterInfo b;
      ra \<leftarrow> asUser a (getRegister r);
      c ra rb
    od"
@@ -331,13 +331,13 @@ lemma asUser_mapMloadWordUser_threadGet_comm:
    od"
   by (rule bind_inv_inv_comm, auto; wp mapM_wp')
 
-lemma asUser_mapMloadWordUser_archTCBSanitise_comm:
+lemma asUser_mapMloadWordUser_getSanitiseRegisterInfo_comm:
   "do
      ra \<leftarrow> mapM loadWordUser xs;
-     rb \<leftarrow> archTCBSanitise b;
+     rb \<leftarrow> getSanitiseRegisterInfo b;
      c ra rb
    od = do
-     rb \<leftarrow> archTCBSanitise b;
+     rb \<leftarrow> getSanitiseRegisterInfo b;
      ra \<leftarrow> mapM loadWordUser xs;
      c ra rb
    od"
@@ -537,7 +537,7 @@ definition
        CapFault _ _ _ \<Rightarrow> return True
      | ArchFault af \<Rightarrow> handleArchFaultReply' af sender receiver tag
      | UnknownSyscallException _ \<Rightarrow> do
-         t \<leftarrow> archTCBSanitise receiver;
+         t \<leftarrow> getSanitiseRegisterInfo receiver;
          regs \<leftarrow> return $ take (unat mlen) syscallMessage;
          zipWithM_x (\<lambda>rs rd. do
            v \<leftarrow> asUser sender $ getRegister rs;
@@ -554,7 +554,7 @@ definition
        return (label = 0)
        od
      | UserException _ _ \<Rightarrow> do
-         t \<leftarrow> archTCBSanitise receiver;
+         t \<leftarrow> getSanitiseRegisterInfo receiver;
          regs \<leftarrow> return $ take (unat mlen) exceptionMessage;
          zipWithM_x (\<lambda>rs rd. do
            v \<leftarrow> asUser sender $ getRegister rs;
@@ -653,13 +653,13 @@ lemma threadGet_lookupIPCBuffer_comm:
   od"
   by (rule bind_inv_inv_comm; wp?; auto)
 
-lemma archTCBSanitise_lookupIPCBuffer_comm:
+lemma getSanitiseRegisterInfo_lookupIPCBuffer_comm:
   "do
      a \<leftarrow> lookupIPCBuffer x y;
-     t \<leftarrow> archTCBSanitise r;
+     t \<leftarrow> getSanitiseRegisterInfo r;
      c a t
    od = do
-     t \<leftarrow> archTCBSanitise r;
+     t \<leftarrow> getSanitiseRegisterInfo r;
      a \<leftarrow> lookupIPCBuffer x y;
      c a t
   od"
@@ -686,15 +686,15 @@ lemma threadGet_moreMapM_comm:
    apply (auto split: option.splits)
   done
 
-lemma archTCBSanitise_moreMapM_comm:
+lemma getSanitiseRegisterInfo_moreMapM_comm:
   "do
      a \<leftarrow>
        case sb of None \<Rightarrow> return []
        | Some bufferPtr \<Rightarrow> return (xs bufferPtr) >>= mapM loadWordUser;
-     t \<leftarrow> archTCBSanitise r;
+     t \<leftarrow> getSanitiseRegisterInfo r;
      c a t
    od = do
-     t \<leftarrow> archTCBSanitise r;
+     t \<leftarrow> getSanitiseRegisterInfo r;
      a \<leftarrow>
        case sb of None \<Rightarrow> return []
        | Some bufferPtr \<Rightarrow> return (xs bufferPtr) >>= mapM loadWordUser;
@@ -728,24 +728,24 @@ lemma monadic_rewrite_threadGet_return:
 
 context begin interpretation Arch .
 
-lemma no_fail_archTCBSanitise[wp, simp]:
-  "no_fail (tcb_at' r) (archTCBSanitise r)"
-  apply (simp add: archTCBSanitise_def)
+lemma no_fail_getSanitiseRegisterInfo[wp, simp]:
+  "no_fail (tcb_at' r) (getSanitiseRegisterInfo r)"
+  apply (simp add: getSanitiseRegisterInfo_def)
   by wpsimp
 
 end
 
 
-lemma monadic_rewrite_archTCBSanitise_return:
-  "monadic_rewrite True False (tcb_at' r) (return x) (do t \<leftarrow> archTCBSanitise r; return x od)"
+lemma monadic_rewrite_getSanitiseRegisterInfo_return:
+  "monadic_rewrite True False (tcb_at' r) (return x) (do t \<leftarrow> getSanitiseRegisterInfo r; return x od)"
   apply (rule monadic_rewrite_symb_exec_r')
      apply wp+
    apply (rule monadic_rewrite_refl)
   apply wp
   done
 
-lemma monadic_rewrite_archTCBSanitise_drop:
-  "monadic_rewrite True False (tcb_at' r) (d) (do t \<leftarrow> archTCBSanitise r; d od)"
+lemma monadic_rewrite_getSanitiseRegisterInfo_drop:
+  "monadic_rewrite True False (tcb_at' r) (d) (do t \<leftarrow> getSanitiseRegisterInfo r; d od)"
   apply (rule monadic_rewrite_symb_exec_r')
      apply wp+
    apply (rule monadic_rewrite_refl)
@@ -802,8 +802,8 @@ lemma handleFaultReply':
                (erule disjE[OF word_less_cases],
                  ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
                                   mapM_x_Cons mapM_x_Nil bind_assoc
-                                  asUser_mapMloadWordUser_archTCBSanitise_comm
-                                  asUser_getRegister_archTCBSanitise_comm
+                                  asUser_mapMloadWordUser_getSanitiseRegisterInfo_comm
+                                  asUser_getRegister_getSanitiseRegisterInfo_comm
                                   asUser_getRegister_discarded asUser_mapMloadWordUser_threadGet_comm
                                   asUser_comm[OF neq] asUser_getRegister_threadGet_comm
                                   bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
@@ -848,7 +848,7 @@ lemma handleFaultReply':
                             zip_Cons syscallMessage_unfold
                             n_syscallMessage_def
                             upto_enum_word mapM_x_Cons mapM_x_Nil)
-     apply (simp add: archTCBSanitise_moreMapM_comm asUser_getRegister_archTCBSanitise_comm archTCBSanitise_lookupIPCBuffer_comm)
+     apply (simp add: getSanitiseRegisterInfo_moreMapM_comm asUser_getRegister_getSanitiseRegisterInfo_comm getSanitiseRegisterInfo_lookupIPCBuffer_comm)
      apply (rule monadic_rewrite_bind_tail)
      apply (rule monadic_rewrite_bind_tail [where Q="\<lambda>_. tcb_at' r"])
       apply (case_tac sb)
@@ -876,7 +876,7 @@ lemma handleFaultReply':
                         monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
                         monadic_rewrite_symb_exec_l[OF stateAssert_inv]
                         monadic_rewrite_threadGet_return
-                        monadic_rewrite_archTCBSanitise_return
+                        monadic_rewrite_getSanitiseRegisterInfo_return
                  | wp asUser_tcb_at' mapM_wp')+)+
       apply (simp add: n_msgRegisters_def word_le_nat_alt n_syscallMessage_def
                        linorder_not_less syscallMessage_unfold)
@@ -918,8 +918,8 @@ lemma handleFaultReply':
                               monadic_rewrite_symb_exec_l[OF stateAssert_inv]
                               monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
                               monadic_rewrite_threadGet_return
-                              monadic_rewrite_archTCBSanitise_return
-                              monadic_rewrite_archTCBSanitise_drop
+                              monadic_rewrite_getSanitiseRegisterInfo_return
+                              monadic_rewrite_getSanitiseRegisterInfo_drop
                        | wp asUser_tcb_at' empty_fail_loadWordUser)+)+
       apply (clarsimp simp: upto_enum_word word_le_nat_alt simp del: upt.simps cong: if_weak_cong)
       apply (cut_tac i="unat n" and j="Suc (unat (scast n_syscallMessage :: word32))"
@@ -4016,13 +4016,13 @@ lemma length_exceptionMessage:
   "length ARM_HYP_H.exceptionMessage = unat n_exceptionMessage"
   by (simp add: ARM_HYP_H.exceptionMessage_def ARM_HYP.exceptionMessage_def n_exceptionMessage_def)
 
-lemma hasVCPU_ccorres:
+lemma Arch_getSanitiseRegisterInfo_ccorres:
   "ccorres (op = \<circ> from_bool) ret__unsigned_long_'
      (tcb_at' r and no_0_obj' and valid_objs')
      (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr r}) hs
-     (archTCBSanitise r)
-     (Call Arch_hasVCPU_'proc)"
-  apply (cinit' lift: thread_' simp: archTCBSanitise_def2)
+     (getSanitiseRegisterInfo r)
+     (Call Arch_getSanitiseRegisterInfo_'proc)"
+  apply (cinit' lift: thread_' simp: getSanitiseRegisterInfo_def2)
    apply (rule ccorres_move_c_guard_tcb)
    apply (rule ccorres_pre_archThreadGet)
   apply (rule_tac P="\<lambda>s. rv \<noteq> Some 0" in ccorres_cross_over_guard)
@@ -4048,7 +4048,7 @@ lemma copyMRsFaultReply_ccorres_exception:
                  \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr r\<rbrace>
                  \<inter> \<lbrace>\<acute>id___anonymous_enum = MessageID_Exception \<rbrace>
                  \<inter> \<lbrace>\<acute>length___unsigned_long = of_nat len \<rbrace>) hs
-           (do t \<leftarrow> archTCBSanitise r;
+           (do t \<leftarrow> getSanitiseRegisterInfo r;
                zipWithM_x (\<lambda>rs rd. do v \<leftarrow> asUser s (getRegister rs);
                                         asUser r (setRegister rd (ARM_HYP_H.sanitiseRegister t rd v))
                                         od)
@@ -4062,7 +4062,7 @@ proof -
                         id___anonymous_enum_'
                         length___unsigned_long_'
                   simp: whileAnno_def)
-apply (ctac(no_vcg) add: hasVCPU_ccorres)
+apply (ctac(no_vcg) add: Arch_getSanitiseRegisterInfo_ccorres)
      apply (rule ccorres_rhs_assoc2)
      apply (simp add: MessageID_Exception_def)
      apply ccorres_rewrite
@@ -4150,7 +4150,7 @@ lemma copyMRsFaultReply_ccorres_syscall:
                  \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr r\<rbrace>
                  \<inter> \<lbrace>\<acute>id___anonymous_enum = MessageID_Syscall \<rbrace>
                  \<inter> \<lbrace>\<acute>length___unsigned_long = of_nat len \<rbrace>) hs
-           (do t \<leftarrow> archTCBSanitise r;
+           (do t \<leftarrow> getSanitiseRegisterInfo r;
                a \<leftarrow> zipWithM_x (\<lambda>rs rd. do v \<leftarrow> asUser s (getRegister rs);
                                            asUser r (setRegister rd (ARM_HYP_H.sanitiseRegister t rd v))
                                         od)
@@ -4176,7 +4176,7 @@ lemma copyMRsFaultReply_ccorres_syscall:
                         id___anonymous_enum_'
                         length___unsigned_long_'
                   simp: whileAnno_def)
-apply (ctac(no_vcg) add: hasVCPU_ccorres)
+apply (ctac(no_vcg) add: Arch_getSanitiseRegisterInfo_ccorres)
      apply (rule ccorres_rhs_assoc2)
      apply (simp add: MessageID_Syscall_def)
      apply ccorres_rewrite
