@@ -1108,6 +1108,7 @@ lemma page_table_at_lift:
 lemmas checkPTAt_corres [corresK] =
   corres_stateAssert_implied_frame[OF page_table_at_lift, folded checkPTAt_def]
 
+
 lemma lookup_pt_slot_corres [@lift_corres_args, corres]:
   "corres (lfr \<oplus> op =)
           (pde_at (lookup_pd_slot pd vptr) and pspace_aligned and valid_vspace_objs
@@ -1118,7 +1119,7 @@ lemma lookup_pt_slot_corres [@lift_corres_args, corres]:
           (lookup_pt_slot pd vptr) (lookupPTSlot pd vptr)"
   unfolding lookup_pt_slot_def lookupPTSlot_def lookupPTSlotFromPT_def
   apply (corressimp simp: pde_relation_aligned_def lookup_failure_map_def
-                      wp: get_pde_wp_valid getPDE_wp corres_rv_defer)
+                      wp: get_pde_wp_valid getPDE_wp)
   by (auto simp: lookup_failure_map_def obj_at_def)
 
 declare in_set_zip_refl[simp]
@@ -1184,7 +1185,7 @@ lemma copy_global_mappings_corres [@lift_corres_args, corres]:
           by (auto intro!: page_directory_pde_atI page_directory_pde_atI'
                      simp: pde_relation_aligned_def corres_protect_def
                      dest: align_entry_add_cong[of globalPD])
-  apply wpsimp+
+  apply corressimp+
   apply (clarsimp simp: valid_arch_state_def obj_at_def dest!:pspace_alignedD)
   by (auto intro: is_aligned_weaken[of _ 14] simp: valid_arch_state'_def)
 
