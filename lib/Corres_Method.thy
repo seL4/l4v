@@ -638,7 +638,14 @@ private method corres_apply =
 
 private method corres_alternate = corres_inst | corres_rv
 
+private definition "my_true \<equiv> True"
+
+private lemma my_true: "my_true" by (simp add: my_true_def)
+
+method no_schematic_concl = (fails \<open>rule my_true\<close>)
+
 method corres_once declares corres_splits corres corresK corresc_simp =
+  (no_schematic_concl,
    (corres_alternate |
      (corres_fold_dc?,
      (corres_pre,
@@ -648,7 +655,7 @@ method corres_once declares corres_splits corres corresK corresc_simp =
       | corres_concrete_r
       | corresc
       | (rule corres_splits, corres_once)
-      ))))
+      )))))
 
 
 method corres declares corres_splits corres corresK corresc_simp =
@@ -1007,13 +1014,34 @@ lemmas [correswp_wp_comb] =
 declare hoare_post_comb_imp_conj[correswp_wp_comb_del]
 
 section \<open>Corressimp\<close>
+text \<open>Combines corres, wp and clarsimp\<close>
 
-text \<open>Wrap all the previous methods up in one big hammer.\<close>
+text
+\<open>If clarsimp solves a terminal subgoal, its preconditions are left uninstantiated. We can
+try to catch this by first attempting a trivial instantiation before invoking clarsimp, but
+only keeping the result if clarsimp solves the goal,\<close>
+
+lemmas hoare_True_inst =
+  hoare_pre[where P="\<lambda>_. True", of "\<lambda>_. True", # \<open>-\<close> \<open>simp\<close>]
+  asm_rl[of "\<lbrace>\<lambda>_. True\<rbrace> f \<lbrace>E\<rbrace>,\<lbrace>R\<rbrace>" for f E R]
+
+lemmas corres_rv_True_inst =
+  asm_rl[of "corres_rv True r (\<lambda>_. True) (\<lambda>_. True) f f' Q" for r f f' Q]
+  asm_rl[of "corres_rvE_R True r (\<lambda>_. True) (\<lambda>_. True) f f' Q" for r f f' Q]
+
+lemmas corresK_True_inst =
+  asm_rl[of "corres_underlyingK sr nf nf' True dc (\<lambda>_. True) (\<lambda>_. True) f g" for sr nf nf' f g]
+  asm_rl[of "corres_underlyingK sr nf nf' True r (\<lambda>_. True) (\<lambda>_. True) f g" for sr nf nf' r f g]
+  asm_rl[of "corres_underlying sr nf nf' dc (\<lambda>_. True) (\<lambda>_. True) f g" for sr nf nf' f g]
+  asm_rl[of "corres_underlying sr nf nf' r (\<lambda>_. True) (\<lambda>_. True) f g" for sr nf nf' r f g]
+
+lemmas calculus_True_insts = hoare_True_inst corres_rv_True_inst corresK_True_inst
 
 method corressimp uses simp cong search wp
   declares corres corresK corres_splits corresc_simp =
   ((corres corresc_simp: simp
     | correswp wp: wp
+    | (rule calculus_True_insts, solves \<open>clarsimp cong: cong simp: simp corres_protect_def\<close>)
     | clarsimp cong: cong simp: simp simp del: corres_simp_del split del: if_split
     | (match search in _ \<Rightarrow> \<open>corres_search search: search\<close>))+)[1]
 
