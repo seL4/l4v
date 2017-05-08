@@ -28,9 +28,9 @@ There are presently no ARM-specific register subsets defined, but in future this
 > import SEL4.Object.Instances()
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.ARM_HYP
-> import SEL4.Machine.RegisterSet.ARM_HYP
+> import SEL4.Machine.RegisterSet(setRegister, tpidrurwRegister, UserMonad, VPtr(..))
+> import SEL4.Machine.RegisterSet.ARM_HYP(Register(CPSR), Word)
 > import Data.Bits
-
 > import Data.Word(Word8)
 > import Data.Maybe
 
@@ -61,4 +61,6 @@ There are presently no ARM-specific register subsets defined, but in future this
 >    v <- liftM (atcbVCPUPtr . tcbArch) $ getObject t
 >    return $ isJust v
 
+> setTCBIPCBuffer :: VPtr -> UserMonad ()
+> setTCBIPCBuffer ptr = setRegister tpidrurwRegister $ fromVPtr ptr
 

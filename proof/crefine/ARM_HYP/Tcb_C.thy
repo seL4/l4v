@@ -571,6 +571,16 @@ lemma shouldnt_need_this: "(case buf of None \<Rightarrow> Q
          else Q)"
   by (simp add: case_option_If2)
 
+lemma archSetIPCBuffer_ccorres:
+  "ccorres dc xfdc \<top> (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr target} \<inter> {s. bufferAddr_' s = buf}) []
+     (asUser target $ setTCBIPCBuffer buf)
+     (Call Arch_setTCBIPCBuffer_'proc)"
+  apply (cinit lift: thread_' bufferAddr_')
+   apply (simp add: setTCBIPCBuffer_def)
+   apply (ctac add: setRegister_ccorres[simplified dc_def])
+  apply (clarsimp simp: ARM_HYP_H.tpidrurwRegister_def ARM_HYP.tpidrurwRegister_def)
+  done
+
 lemma invokeTCB_ThreadControl_ccorres:
   notes prod.case_cong_weak[cong]
   shows
@@ -674,7 +684,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                     apply (rule ball_tcb_cte_casesI, simp+)
                    apply (clarsimp simp: ctcb_relation_def option_to_0_def)
                   apply (rule ceqv_refl)
-                 apply (ctac)
+                 apply (ctac(no_vcg) add: archSetIPCBuffer_ccorres[simplified])
                    apply csymbr
                    apply (simp add: ccorres_cond_iffs Collect_False split_def
                                del: Collect_const)
@@ -724,7 +734,6 @@ lemma invokeTCB_ThreadControl_ccorres:
                          simp add: o_def)
                   apply (wp static_imp_wp )
                   apply (wp hoare_drop_imp)
-                 apply vcg
                 apply (rule_tac P="is_aligned (fst (the buf)) msg_align_bits"
                                in hoare_gen_asm)
                apply (wp threadSet_ipcbuffer_trivial static_imp_wp | simp )+
