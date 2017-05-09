@@ -19,10 +19,15 @@
 -->
 <testsuite cpu-timeout="3600">
 
+    <!-- Run the haskell translator. -->
+    <set>
+        <test name="haskell-translator" cwd="design" cpu-timeout="600">make design</test>
+    </set>
+
     <set depends="isabelle">
         <!-- Various seL4 specifications. -->
-        <test name="ASpec">make ASpec</test>
-        <test name="ExecSpec">make ExecSpec</test>
+        <test name="ASpec" depends="haskell-translator">make ASpec</test>
+        <test name="ExecSpec" depends="haskell-translator">make ExecSpec</test>
         <test name="DSpec">make DSpec</test>
         <test name="TakeGrant">make TakeGrant</test>
         <test name="ASepSpec" depends="ASpec">make ASepSpec</test>

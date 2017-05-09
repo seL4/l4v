@@ -64,7 +64,7 @@
     </sequence>
 
     <!-- Separation Logic. -->
-    <sequence>
+    <sequence depends="haskell-translator">
         <test name="SepTactics">make SepTactics</test>
         <test name="SepTacticsExamples">make SepTacticsExamples</test>
     </sequence>

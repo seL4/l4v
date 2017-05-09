@@ -26,6 +26,12 @@
 /spec/haskell/doc/**/*.out
 /spec/haskell/doc/**/*.toc
 
+/spec/design/version
+/spec/design/*.thy
+/spec/design/ARM/*.thy
+
+/spec/machine/ARM/MachineTypes.thy
+
 CFunDump.txt
 umm_types.txt
 

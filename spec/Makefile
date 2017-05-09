@@ -33,6 +33,10 @@ HEAPS += ASpec ExecSpec DSpec CKernel CSpec TakeGrant ASepSpec
 
 CKernel CSpec: c-kernel
 
+# NOTE: The abstract spec imports Events from Haskell hence the dependency
+
+ExecSpec ASpec : design-spec
+
 # NOTE: the install_C_file in Kernel_C.thy invocation generates a spurious
 #       umm_types.txt file in this folder. This file is never used nor
 #       depended on.
@@ -46,6 +50,11 @@ spec-check: .FORCE
 c-kernel: .FORCE
 	cd cspec/$(L4V_ARCH)/c && L4V_REPO_PATH=$(L4V_REPO_PATH) $(MAKE) cspec
 .PHONY: c-kernel
+
+# Run the haskell translator
+design-spec: .FORCE
+	cd design/ && L4V_REPO_PATH=$(L4V_REPO_PATH) $(MAKE) design
+.PHONY: design-spec
 
 # Produce the input data for the binary verification problem at -O1
 binary-verification-input: c-kernel
