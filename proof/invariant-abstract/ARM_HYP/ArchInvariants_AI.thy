@@ -276,17 +276,6 @@ where
 | Some vt \<Rightarrow> typ_at ATCB vt"
 
 primrec
-  valid_arch_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "valid_arch_obj (ASIDPool pool) =
-   (\<lambda>s. \<forall>x \<in> ran pool. typ_at (AArch APageDirectory) x s)"
-| "valid_arch_obj (PageDirectory pd) =
-   (\<lambda>s. \<forall>x . valid_pde (pd x) s)"
-| "valid_arch_obj (PageTable pt) = (\<lambda>s. \<forall>x. valid_pte (pt x) s)" (* ARMHYP? *)
-| "valid_arch_obj (DataPage dev sz) = \<top>"
-| "valid_arch_obj (VCPU v) = valid_vcpu v"
-
-primrec
   valid_vspace_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_vspace_obj (ASIDPool pool) =
@@ -296,6 +285,24 @@ where
 | "valid_vspace_obj (PageTable pt) = (\<lambda>s. \<forall>x. valid_pte (pt x) s)"
 | "valid_vspace_obj (DataPage dev sz) = \<top>"
 | "valid_vspace_obj (VCPU v) = \<top>"
+(*
+primrec
+  valid_arch_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_arch_obj (ASIDPool pool) =
+   (\<lambda>s. \<forall>x \<in> ran pool. typ_at (AArch APageDirectory) x s)"
+| "valid_arch_obj (PageDirectory pd) =
+   (\<lambda>s. \<forall>x . valid_pde (pd x) s)"
+| "valid_arch_obj (PageTable pt) = (\<lambda>s. \<forall>x. valid_pte (pt x) s)" (* ARMHYP? *)
+| "valid_arch_obj (DataPage dev sz) = \<top>"
+| "valid_arch_obj (VCPU v) = valid_vcpu v"
+*)
+definition
+  valid_arch_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_arch_obj ao \<equiv> case ao of
+    VCPU v \<Rightarrow> valid_vcpu v
+  | _ \<Rightarrow> valid_vspace_obj ao"
 
 lemma valid_arch_imp_valid_vspace_obj: "valid_arch_obj ko s \<Longrightarrow> valid_vspace_obj ko s"
   by (case_tac ko; clarsimp simp: valid_arch_obj_def valid_vspace_obj_def)
@@ -1077,10 +1084,10 @@ lemma valid_arch_cap_typ:
 definition is_avcpu_aatyp :: "arch_kernel_obj \<Rightarrow> bool"
 where "is_avcpu_aatyp ob \<equiv> aa_type ob = AVCPU"
 
-lemma valid_arch_obj_typ: (* ARMHYP: does this hold for vcpu? *)
+lemma valid_arch_obj_typ:
   assumes P: "\<And>p T. \<lbrace>\<lambda>s. (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s.  (typ_at (AArch T) p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. aa_type ob \<noteq> AVCPU \<longrightarrow> valid_arch_obj ob s\<rbrace> f \<lbrace>\<lambda>rv s. aa_type ob \<noteq> AVCPU \<longrightarrow> valid_arch_obj ob s\<rbrace>"
-  apply (cases ob, simp_all add: aa_type_def)
+  apply (cases ob, simp_all add: aa_type_def valid_arch_obj_def)
       apply (rule hoare_vcg_const_Ball_lift [OF P])
      apply (rule hoare_vcg_all_lift)
      apply (rename_tac "fun" x)
@@ -1093,7 +1100,7 @@ lemma valid_arch_obj_typ: (* ARMHYP: does this hold for vcpu? *)
 done
 
 
-lemma valid_vspace_obj_typ: (* ARMHYP: does this hold for vcpu? *)
+lemma valid_vspace_obj_typ:
   assumes P: "\<And>p T. \<lbrace>\<lambda>s. (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s.  (typ_at (AArch T) p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_vspace_obj ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_vspace_obj ob s\<rbrace>"
   apply (cases ob, simp_all add: aa_type_def)
@@ -1112,7 +1119,7 @@ lemma valid_arch_obj_typ_gen: (* ARMHYP *)
   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
       and t: "\<And>P p. \<lbrace>\<lambda>s. P (typ_at ATCB p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at ATCB p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_arch_obj ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_obj ob s\<rbrace>"
-  apply (cases ob, simp_all)
+  apply (cases ob, simp_all add: valid_arch_obj_def)
       apply (rule hoare_vcg_const_Ball_lift [OF P])
      apply (rule hoare_vcg_all_lift)
      apply (rename_tac "fun" x)
@@ -1174,7 +1181,7 @@ done
 
 lemma valid_arch_obj_pspaceI:
   "\<lbrakk> valid_arch_obj obj s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_obj obj s'"
-  apply (cases obj, simp_all)
+  apply (cases obj, simp_all add: valid_arch_obj_def)
      apply (simp add: obj_at_def)
     apply (erule allEI)
     apply (rename_tac "fun" x)
@@ -1267,7 +1274,7 @@ lemma valid_vspace_obj_update [iff]:
 
 lemma valid_arch_obj_update [iff]:
   "valid_arch_obj ao (f s) = valid_arch_obj ao s"
-  by (cases ao) auto
+  by (cases ao) (auto simp: valid_arch_obj_def)
 
 lemma valid_ao_at_update [iff]:
   "valid_ao_at p (f s) = valid_ao_at p s"
@@ -1987,7 +1994,7 @@ lemma empty_table_is_valid: (* ARMHYP? *)
   "\<lbrakk>empty_table {} (ArchObj ao);
     valid_arch_state s\<rbrakk>
    \<Longrightarrow> valid_arch_obj ao s"
-  by (cases ao, simp_all add: empty_table_def)
+  by (cases ao, simp_all add: empty_table_def valid_arch_obj_def)
 
 lemma empty_table_pde_refD:
   "\<lbrakk> pde_ref (pd x) = Some r; empty_table S (ArchObj (PageDirectory pd)) \<rbrakk> \<Longrightarrow>
@@ -2112,7 +2119,7 @@ lemma vcpu_not_vspace_obj: "\<And>s p rs ao. (rs \<rhd> p) s \<Longrightarrow> k
 lemma valid_arch_obj_typ2:
   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. Q s \<and> P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. Q s \<and>  (aa_type ob \<noteq> AVCPU \<longrightarrow> valid_arch_obj ob s)\<rbrace> f \<lbrace>\<lambda>rv s.  aa_type ob \<noteq> AVCPU \<longrightarrow> valid_arch_obj ob s\<rbrace>"
-  apply (cases ob, simp_all add: aa_type_def)
+  apply (cases ob, simp_all add: aa_type_def valid_arch_obj_def)
     apply (wp hoare_vcg_const_Ball_lift [OF P], simp)
    apply (rule hoare_pre, wp hoare_vcg_all_lift valid_pte_lift2 P)
     apply clarsimp
@@ -2361,7 +2368,7 @@ lemma wellformed_arch_default:
 lemma valid_arch_obj_default':
   "valid_arch_obj (default_arch_object aobject_type dev us) s"
   unfolding default_arch_object_def
-  by (cases aobject_type; simp add: default_vcpu_def valid_vcpu_def)
+  by (cases aobject_type; simp add: default_vcpu_def valid_vcpu_def valid_arch_obj_def)
 
 lemma valid_vspace_obj_default':
   "valid_vspace_obj (default_arch_object aobject_type dev us) s"

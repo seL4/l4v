@@ -1030,7 +1030,7 @@ lemma set_pd_vspace_objs_unmap:
   apply (simp add: set_pd_def)
   apply (wp set_object_vspace_objs get_object_wp)
   including unfold_objects
-  by (fastforce simp: a_type_def)
+  by (fastforce simp: a_type_def valid_arch_obj_def)
 
 declare graph_of_None_update[simp]
 declare graph_of_Some_update[simp]
@@ -2655,13 +2655,12 @@ lemma store_pde_arch_objs_unmap: (* ARMHYP *)
     and K (pde_ref pde = None)\<rbrace>
   store_pde p pde \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   apply (simp add: store_pde_def)
-  apply (wp set_pd_vspace_objs_unmap)
-  apply clarsimp
+  apply (wpsimp wp: set_pd_vspace_objs_unmap simp: valid_arch_obj_def)
   apply (rule conjI)
    apply clarsimp
    apply (drule (1) valid_vspace_objsD, fastforce)
    apply simp
-  apply (clarsimp simp add: obj_at_def vs_refs_def)
+  apply (clarsimp simp add: obj_at_def vs_refs_def )
   apply (rule pair_imageI)
   apply (simp add: graph_of_def split: if_split_asm)
   done
@@ -3057,7 +3056,7 @@ lemma vs_refs_pages_subset2:
                A="{(x, y). (pde_ref (fun x)) = Some y}"
                and f="(\<lambda>(r, y). (VSRef (ucast r) (Some APageDirectory), y))" and x="(a,b)"])
          apply simp
-        apply (clarsimp simp: pde_ref_def pde_ref_pages_def
+        apply (clarsimp simp: pde_ref_def pde_ref_pages_def valid_arch_obj_def
           split: pde.splits)
          apply (drule_tac x=a in spec)+
          apply (simp add: valid_pde_def)
@@ -3107,7 +3106,7 @@ lemma store_pde_invs_unmap:
    apply (drule invs_valid_objs)
    apply (fastforce simp: valid_objs_def dom_def obj_at_def valid_obj_def)
   apply (rule conjI)
-   apply (clarsimp simp: )
+   apply (clarsimp simp: valid_arch_obj_def)
    apply (drule (1) valid_vspace_objsD, fastforce)
    apply simp
   apply (rule conjI)

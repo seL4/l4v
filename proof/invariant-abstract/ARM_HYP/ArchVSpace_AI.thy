@@ -3857,7 +3857,7 @@ lemma set_pd_invs_unmap':
              set_pd_vspace_objs_unmap set_pd_valid_vs_lookup_map[where T=T and S="{}" and T'=T' and S'=S']
              valid_irq_handlers_lift
              set_pd_unmap_mappings set_pd_equal_kernel_mappings_triv)
-  apply (clarsimp simp: cte_wp_at_caps_of_state valid_arch_caps_def valid_objs_caps obj_at_def
+  apply (clarsimp simp: valid_arch_obj_def cte_wp_at_caps_of_state valid_arch_caps_def valid_objs_caps obj_at_def
     del: disjCI)
   apply (rule conjI, clarsimp)
   apply (rule conjI)

@@ -789,7 +789,7 @@ lemma valid_arch_obj_same_type:
   "\<lbrakk>valid_arch_obj ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
   \<Longrightarrow> valid_arch_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)"
   apply (induction ao rule: arch_kernel_obj.induct;
-         clarsimp simp: valid_arch_obj.simps typ_at_same_type)
+         clarsimp simp: valid_arch_obj_def typ_at_same_type)
     apply (rule hoare_to_pure_kheap_upd; assumption?)
       apply (rule valid_pte_lift, assumption)
      apply blast
@@ -827,7 +827,7 @@ lemma wellformed_arch_obj_same_type:
   "\<lbrakk> wellformed_arch_obj ao s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
    \<Longrightarrow> wellformed_arch_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
   by (induction ao rule: arch_kernel_obj.induct;
-         clarsimp simp: valid_arch_obj.simps typ_at_same_type valid_vcpu_same_type)
+         clarsimp simp: valid_arch_obj_def typ_at_same_type valid_vcpu_same_type)
 
 
 lemma default_arch_object_not_live: "\<not> live (ArchObj (default_arch_object aty dev us))"
