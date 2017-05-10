@@ -16,10 +16,9 @@ L4V_ARCH?=ARM
 ## Targets
 images: ASpec CKernel
 default: images test
-test: spec-check
 all: images test
 report-regression:
-	@echo spec-check ASpec ExecSpec DSpec TakeGrant CKernel CSpec \
+	@echo ASpec ExecSpec DSpec TakeGrant CKernel CSpec \
 	      binary-verification-input
 
 #
@@ -40,11 +39,6 @@ ExecSpec ASpec : design-spec
 # NOTE: the install_C_file in Kernel_C.thy invocation generates a spurious
 #       umm_types.txt file in this folder. This file is never used nor
 #       depended on.
-
-# Ensure haskell spec is up-to-date with haskell code.
-spec-check: .FORCE
-	cd ../misc/scripts && bash test_spec.sh
-.PHONY: spec-check
 
 # Preprocess the kernel's source code and bitfield theory files.
 c-kernel: .FORCE
