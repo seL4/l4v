@@ -1180,15 +1180,15 @@ lemma copy_global_mappings_corres [@lift_corres_args, corres]:
                         and (\<lambda>_. is_aligned global_pd 6 \<and> is_aligned pd 6) and ?apre" and
                     P'="page_directory_at' globalPD and page_directory_at' pd"
               in corresK_mapM_x[OF order_refl])
-        apply (corressimp wp: get_pde_wp getPDE_wp corres_rv_wp_left)
-        subgoal for _ globalPD
-          by (auto intro!: page_directory_pde_atI page_directory_pde_atI'
-                     simp: pde_relation_aligned_def corres_protect_def
-                     dest: align_entry_add_cong[of globalPD])
-  apply corressimp+
-  apply (clarsimp simp: valid_arch_state_def obj_at_def dest!:pspace_alignedD)
-  by (auto intro: is_aligned_weaken[of _ 14] simp: valid_arch_state'_def)
-
+        apply (corressimp wp: get_pde_wp getPDE_wp)+
+        apply (rule conjI)
+          subgoal by (fastforce intro!: page_directory_pde_atI page_directory_pde_atI'
+                     simp: pde_relation_aligned_def
+                     dest: align_entry_add_cong
+                     split : if_splits)
+  by (auto simp: valid_arch_state_def obj_at_def valid_arch_state'_def
+          intro: is_aligned_weaken[of _ 14]
+          dest!:pspace_alignedD)
 
 lemma arch_cap_rights_update:
   "acap_relation c c' \<Longrightarrow>
