@@ -30,6 +30,16 @@ chapter \<open>Corres Methods\<close>
 
 section \<open>Boilerplate\<close>
 
+context begin
+
+private definition "my_true \<equiv> True"
+
+private lemma my_true: "my_true" by (simp add: my_true_def)
+
+method no_schematic_concl = (fails \<open>rule my_true\<close>)
+
+end
+
 lemma corres_name_pre:
   "\<lbrakk> \<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk>
                  \<Longrightarrow> corres_underlying sr nf nf' r (op = s) (op = s') f g \<rbrakk>
@@ -154,8 +164,24 @@ private
 method corres_raw_pre =
   (check_corres, (fails \<open>rule corres_my_false\<close>, rule corresK_start)?)
 
+lemma corresK_weaken_states:
+  "corres_underlyingK sr nf nf' F r Q Q' f g \<Longrightarrow>
+    corres_underlyingK sr nf nf' (F \<and> (\<forall>s s'. P s \<longrightarrow> P' s' \<longrightarrow> (s, s') \<in> sr \<longrightarrow> Q s \<and> Q' s'))
+     r P P' f g"
+  apply (erule corresK_weaken)
+  apply simp
+  done
+
+private lemma
+  corresK_my_falseF:
+  "corres_underlyingK sr nf nf' (my_false undefined) r P P' f f'"
+  by (simp add: corres_underlyingK_def my_false_def)
+
 method corresK_pre =
-  (check_corresK, (fails \<open>rule corresK_my_false\<close>, rule corresK_weaken[where F=True] corresK_weaken)?)
+  (check_corresK,
+    (fails \<open>rule corresK_my_false\<close>,
+      ((succeeds \<open>rule corresK_my_falseF\<close>, rule corresK_weaken_states) |
+       rule corresK_weaken)))
 
 method corres_pre = (corres_raw_pre | corresK_pre)?
 
@@ -491,6 +517,7 @@ lemmas corres_rv_proves =
 lemmas corres_rv_trivials =
   corres_rv_proves[where Q="\<lambda>_ _. True", OF TrueI]
   corres_rv_proves[where Q="\<lambda>rv rv'. F rv rv' \<longrightarrow> True" for F, # \<open>simp\<close>]
+  corres_rv_proves[where Q=r and r=r for r, # \<open>simp\<close>]
 
 lemmas corres_rv_defers =
   corres_rv_defer_no_args corres_rvE_R_defer_no_args
@@ -512,8 +539,11 @@ lemmas corres_rv_lifts =
   corres_rv_lifts'[where P="\<lambda>_. True" and P'="\<lambda>_. True" and f="corres_noop", simplified]
   corres_rv_lifts'[where PP="\<lambda>_. True" and PP'="\<lambda>_. True" and g="corres_noop", simplified]
 
+lemmas corres_rv_prove_simple =
+  corres_rv_proveT[# \<open>thin_tac _, thin_tac _\<close>, simplified]
+
 method corres_rv =
-  (((repeat_new \<open>rule corres_rv_lifts\<close>)?);
+  (((repeat_new \<open>rule corres_rv_trivials corres_rv_lifts\<close>)?);
     ((rule corres_rv_trivials corres_rv_defers corres_rv_noops |
      (succeeds \<open>rule corres_rv_defer_left corres_rvE_R_defer_left\<close>,
       rule corres_rv_wp_lefts) |
@@ -584,8 +614,9 @@ lemma corres_inst_test: "False \<Longrightarrow> corres_inst_eq x y" by simp
 method corres_inst =
   (succeeds \<open>rule corres_inst_test\<close>, fails \<open>rule TrueI\<close>,
     (rule corres_inst_eqI |
-      (clarsimp simp: corres_protect_def, rule corres_inst_eqI)
-     | (clarsimp simp: corres_protect_def, fastforce intro!: corres_inst_eqI)))[1]
+      (clarsimp simp: corres_protect_def split del: if_split, rule corres_inst_eqI)
+     | (clarsimp simp: corres_protect_def split del: if_split,
+         fastforce intro!: corres_inst_eqI)))[1]
 
 section \<open>Corres Method\<close>
 
@@ -638,11 +669,7 @@ private method corres_apply =
 
 private method corres_alternate = corres_inst | corres_rv
 
-private definition "my_true \<equiv> True"
 
-private lemma my_true: "my_true" by (simp add: my_true_def)
-
-method no_schematic_concl = (fails \<open>rule my_true\<close>)
 
 method corres_once declares corres_splits corres corresK corresc_simp =
   (no_schematic_concl,
@@ -1039,11 +1066,12 @@ lemmas calculus_True_insts = hoare_True_inst corres_rv_True_inst corresK_True_in
 
 method corressimp uses simp cong search wp
   declares corres corresK corres_splits corresc_simp =
-  ((corres corresc_simp: simp
+  ((no_schematic_concl,
+    (corres corresc_simp: simp
     | correswp wp: wp
     | (rule calculus_True_insts, solves \<open>clarsimp cong: cong simp: simp corres_protect_def\<close>)
     | clarsimp cong: cong simp: simp simp del: corres_simp_del split del: if_split
-    | (match search in _ \<Rightarrow> \<open>corres_search search: search\<close>))+)[1]
+    | (match search in _ \<Rightarrow> \<open>corres_search search: search\<close>)))+)[1]
 
 declare corres_return[corres_simp_del]
 
