@@ -103,7 +103,7 @@ lemma asid_low_bits [simp]:
   "asidLowBits = asid_low_bits"
   by (simp add: asid_low_bits_def asidLowBits_def)
 
-lemma get_asid_pool_corres [corres]:
+lemma get_asid_pool_corres [@lift_corres_args, corres]:
   "corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
           (asid_pool_at p) (asid_pool_at' p)
           (get_asid_pool p) (getObject p)"
@@ -264,7 +264,7 @@ lemma pde_relation_aligned_simp:
   by (clarsimp simp: pde_relation_aligned_def pde_bits_def
               split: ARM_HYP_H.pde.splits if_splits)
 
-lemma get_pde_corres [corres]:
+lemma get_pde_corres [@lift_corres_args, corres]:
   "corres (pde_relation_aligned (p >> pde_bits)) (pde_at p) (pde_at' p)
      (get_pde p) (getObject p)"
   apply (simp add: getObject_def get_pde_def get_pd_def get_object_def split_def bind_assoc)
@@ -558,7 +558,7 @@ lemma valid_pde_duplicates_at'_pde_obj:
   done
 
 
-lemma get_master_pde_corres [corres]:
+lemma get_master_pde_corres [@lift_corres_args, corres]:
   "corres master_pde_relation (pde_at p)
      (pde_at' p and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
       pspace_aligned' and pspace_distinct')
@@ -568,7 +568,7 @@ lemma get_master_pde_corres [corres]:
    apply (rule no_fail_pre, wp)
    apply clarsimp
   apply (clarsimp simp: in_monad)
-  using get_pde_corres [of p]
+  using get_pde_corres [OF refl, of p]
   apply (clarsimp simp: corres_underlying_def)
   apply (drule bspec, assumption, clarsimp)
   apply (drule (1) bspec, clarsimp)
@@ -642,7 +642,7 @@ lemma pte_relation_aligned_simp:
   by (clarsimp simp: pte_relation_aligned_def pte_bits_def
               split: ARM_HYP_H.pte.splits if_splits)
 
-lemma get_pte_corres [corres]:
+lemma get_pte_corres [@lift_corres_args, corres]:
   "corres (pte_relation_aligned (p >> pte_bits)) (pte_at p) (pte_at' p)
      (get_pte p) (getObject p)"
   apply (simp add: getObject_def get_pte_def get_pt_def get_object_def split_def bind_assoc)
@@ -851,7 +851,7 @@ lemma get_master_pte_corres [corres]:
    apply (rule no_fail_pre, wp)
    apply clarsimp
   apply (clarsimp simp: in_monad)
-  using get_pte_corres [of p]
+  using get_pte_corres [OF refl, of p]
   apply (clarsimp simp: corres_underlying_def)
   apply (drule bspec, assumption, clarsimp)
   apply (drule (1) bspec, clarsimp)
@@ -1273,11 +1273,10 @@ lemma getPTE_wp:
 lemmas get_pde_wp_valid = hoare_add_post'[OF get_pde_valid get_pde_wp]
 
 lemma page_table_at_lift:
-  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
-  (pspace_aligned s \<and> valid_pde (ARM_A.PageTablePDE ptr) s \<and> (ptrFromPAddr ptr) = ptr') \<longrightarrow>
+  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow> (ptrFromPAddr ptr) = ptr' \<longrightarrow>
+  (pspace_aligned s \<and> valid_pde (ARM_A.PageTablePDE ptr) s) \<longrightarrow>
   pspace_distinct' s' \<longrightarrow> page_table_at' ptr' s'"
   by (fastforce intro!: page_table_at_state_relation)
-
 
 lemmas checkPTAt_corres [corresK] =
   corres_stateAssert_implied_frame[OF page_table_at_lift, folded checkPTAt_def]
@@ -1457,8 +1456,7 @@ lemma createMappingEntries_valid_slots' [wp]:
   apply (auto elim: is_aligned_weaken)
   done
 
-lemmas mapME_x_corresK_inv =
-  mapME_x_corres_inv[OF corresK_unlift[where F=F], THEN corresK_lift[where F=F], corresK] for F
+lemmas [corresc_simp] = master_pte_relation_def master_pde_relation_def
 
 lemma ensure_safe_mapping_corres [corres]:
   "mapping_map m m' \<Longrightarrow>
@@ -1470,10 +1468,8 @@ lemma ensure_safe_mapping_corres [corres]:
   apply (cases m; cases m'; simp;
          match premises in "(_ \<otimes> op =) p p'" for p p' \<Rightarrow> \<open>cases "fst p"; cases "fst p'"\<close>; clarsimp)
         by (corressimp corresK: mapME_x_corresK_inv
-                          simp: master_pte_relation_def master_pde_relation_def
                             wp: get_master_pte_wp get_master_pde_wp getPTE_wp getPDE_wp;
             auto simp add: valid_mapping_entries_def)+
-
 
 lemma asidHighBitsOf [simp]:
   "asidHighBitsOf asid = ucast (asid_high_bits_of asid)"
@@ -1483,10 +1479,10 @@ lemma asidHighBitsOf [simp]:
   done
 
 lemma page_directory_at_lift:
-  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+  "corres_inst_eq ptr ptr' \<Longrightarrow> \<forall>s s'. (s, s') \<in> state_relation \<longrightarrow> True \<longrightarrow>
   (pspace_aligned s \<and> page_directory_at ptr s) \<longrightarrow>
-  pspace_distinct' s' \<longrightarrow> page_directory_at' ptr s'"
-  by (fastforce intro!: page_directory_at_state_relation)
+  pspace_distinct' s' \<longrightarrow> page_directory_at' ptr' s'"
+  by (fastforce simp: corres_inst_eq_def intro!: page_directory_at_state_relation )
 
 lemmas checkPDAt_corres =
   corres_stateAssert_implied_frame[OF page_directory_at_lift, folded checkPDAt_def]
@@ -1501,9 +1497,7 @@ lemma ko_at_typ_at_asidpool:
   "ko_at (ArchObj (arch_kernel_obj.ASIDPool pool)) x s \<Longrightarrow> typ_at (AArch AASIDPool) x s"
   by (clarsimp simp: obj_at_def a_type_simps)
 
-lemma find_pd_for_asid_corres [corres]:
-  notes [corres del] = get_asid_pool_corres and [corres] = get_asid_pool_corres'
-  shows
+lemma find_pd_for_asid_corres [@lift_corres_args, corres]:
   "corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s)
                            and valid_vspace_objs and pspace_aligned
                            and K (0 < asid \<and> asid \<le> mask asidBits))
@@ -1544,6 +1538,7 @@ lemma find_pd_for_asid_corres [corres]:
       by (simp add: ranI)+
     apply (insert prems)
     apply (fastforce simp add: asidRange_def mask_2pm1[symmetric])
+  subgoal for x by (insert asid_pool_at[of x], auto simp: arm_asid_table_related)
   subgoal for x ko xa
    apply (cases ko; simp)
    apply (frule arm_asid_table_related[where s'=s', simplified o_def])
@@ -1562,7 +1557,7 @@ lemma find_pd_for_asid_corres':
                            and pspace_aligned and  K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
                        (find_pd_for_asid asid) (findPDForASID asid)"
-  apply (rule corres_guard_imp, rule find_pd_for_asid_corres)
+  apply (rule corres_guard_imp, rule find_pd_for_asid_corres[OF refl])
    apply fastforce
   apply simp
   done

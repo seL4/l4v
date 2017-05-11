@@ -558,7 +558,6 @@ lemma getSlotCap_valid:
    apply (clarsimp)
   apply (clarsimp simp add: valid_def)
   done
-
 lemma rab_corres':
   "\<lbrakk> cap_relation (fst a) c'; drop (32-bits) (to_bl cref') = snd a;
      bits = length (snd a) \<rbrakk> \<Longrightarrow>
@@ -599,7 +598,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (clarsimp simp: in_monad)
         apply (rule get_cap_success)
       by (auto simp: in_monad intro!: get_cap_success) (* takes time *)
-    note if_split [split del] isCNodeCap_cap_map[simp del] drop_append[simp del]
+    note if_split [split del]
     { assume "cbits + length guard = 0 \<or> cbits = 0 \<and> guard = []"
       hence ?thesis
         apply (simp add: caps isCap_defs
@@ -613,7 +612,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
       hence [simp]: "((cbits + length guard = 0) = False) \<and>
                      ((cbits = 0 \<and> guard = []) = False) \<and>
                     (0 < cbits \<or> guard \<noteq> []) " by simp
-      note if_split [split del]
+      note if_split [split del] drop_append[simp del]
       from "1.prems"
       have ?thesis
         apply -
@@ -624,56 +623,48 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (subst cnode_cap_case_if)
         apply (corressimp search: getSlotCap_corres IH
                               wp: get_cap_wp getSlotCap_valid no_fail_stateAssert
-                                  corres_rv_defer_right
                             simp: locateSlot_conv)
-        supply isCNodeCap_cap_map[simp]
         apply (simp add: drop_postfix_eq)
         apply clarsimp
         apply (prove "is_aligned ptr (4 + cbits) \<and> cbits \<le> word_bits - cte_level_bits")
         apply (erule valid_CNodeCapE; fastforce)
         subgoal premises prems for s s' x
           apply (insert prems)
-          apply (rule conjI)
-           apply (clarsimp split: if_splits)
-           apply safe[1]
-            apply (clarsimp simp: valid_cap_def)
-            apply (erule cap_table_at_cte_at)
-            subgoal by simp
-           apply (frule (1) cte_wp_valid_cap)
-           subgoal for cap by (cases cap; simp)
-          apply (simp add: caps lookup_failure_map_def)
-          apply (frule guard_mask_shift[where guard=guard])
-           apply (intro conjI)
-              apply fastforce
-             apply clarsimp
-             apply (rule conjI)
-              apply (clarsimp simp add: objBits_simps cte_level_bits_def)
-              apply (erule (2) valid_CNodeCapE)
-              apply (erule (3) cte_map_shift')
-             subgoal by simp
-             apply (clarsimp simp add: objBits_simps cte_level_bits_def)
-             apply (erule (1) cte_map_shift; assumption?)
-             subgoal by simp
-             apply (clarsimp simp: cte_level_bits_def)
-            apply (clarsimp simp: valid_cap_def cap_table_at_gsCNodes isCap_simps)
-            apply (rule and_mask_less_size, simp add: word_bits_def word_size cte_level_bits_def)
-           apply (clarsimp simp: isCap_simps caps split: if_splits)
-           apply (intro conjI impI allI;clarsimp?)
+          apply (rule context_conjI)
+            apply (simp add: guard_mask_shift[OF \<open>to_bl _ = _\<close>, where guard=guard,symmetric])
+            apply (simp add: caps lookup_failure_map_def)
+            apply (rule conjI)
+            apply (clarsimp split: if_splits)
+            apply (intro conjI impI allI;clarsimp?)
             apply (subst \<open>to_bl _ = _\<close>[symmetric])
             apply (drule postfix_dropD)
-           apply clarsimp
+            apply clarsimp
             apply (prove "32 + (cbits + length guard) - length cref =
                          (cbits + length guard) + (32 - length cref)")
              apply (drule len_drop_lemma, simp, arith)
             apply simp
             apply (subst drop_drop [symmetric])
            subgoal by simp
-           apply (simp add: objBits_simps cte_level_bits_def)
-           apply (erule (1) cte_map_shift; assumption?)
-            apply clarsimp
-           subgoal by (simp add: cte_level_bits_def)
-          done
-        done
+              apply (erule (2) valid_CNodeCapE)
+              apply (rule cap_table_at_cte_at[OF _ refl])
+              apply (simp add: obj_at_def is_cap_table_def well_formed_cnode_n_def)
+             apply (frule (2) cte_wp_valid_cap)
+           apply (rule context_conjI)
+           apply (intro conjI impI allI;clarsimp?)
+           apply (clarsimp simp add: objBits_simps cte_level_bits_def)
+            apply (erule (2) valid_CNodeCapE)
+            apply (erule (3) cte_map_shift')
+            apply simp
+              apply (clarsimp simp add: objBits_simps cte_level_bits_def)
+              apply (erule (1) cte_map_shift; assumption?)
+              subgoal by simp
+              apply (clarsimp simp: cte_level_bits_def)
+           apply (rule conjI)
+             apply (clarsimp simp: valid_cap_def cap_table_at_gsCNodes isCap_simps)
+             apply (rule and_mask_less_size, simp add: word_bits_def word_size cte_level_bits_def)
+           apply (clarsimp split: if_splits)
+           done
+         done
     }
     ultimately
     show ?thesis by fast

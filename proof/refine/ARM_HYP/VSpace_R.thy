@@ -2110,7 +2110,7 @@ lemma unmap_page_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch [where E="\<lambda>_. \<top>" and E'="\<lambda>_. \<top>"], simp)
       apply (rule corres_split_strengthen_ftE[where ftr'=dc],
-             rule find_pd_for_asid_corres)
+             rule find_pd_for_asid_corres[OF refl])
         apply (rule corres_splitEE)
            apply clarsimp
            apply (rule flush_page_corres)

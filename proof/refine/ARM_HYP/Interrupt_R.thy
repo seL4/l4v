@@ -627,6 +627,46 @@ crunch ex_nonz_cap_to' [wp]: doMachineOp "\<lambda>s. P (ex_nonz_cap_to' (ksCurT
 lemma runnable_not_halted: "runnable st \<Longrightarrow> \<not> halted st"
   by (auto simp: runnable_eq)
 
+lemma dmo_wp_no_rest:
+  "\<lbrace>K((\<forall>s f. P s = (P (machine_state_update (machine_state_rest_update f) s)))) and P\<rbrace> do_machine_op (machine_op_lift f) \<lbrace>\<lambda>_. P\<rbrace>"
+  apply (simp add: do_machine_op_def machine_op_lift_def bind_assoc)
+  apply wpsimp
+  apply (clarsimp simp add: machine_rest_lift_def in_monad select_f_def ignore_failure_def)
+  apply (clarsimp split: if_splits)
+  apply (drule_tac x=s in spec)
+  apply (drule_tac x="\<lambda>_. b" in spec)
+  apply simp
+  apply (erule rsubst[OF _ arg_cong[where f=P]])
+  apply clarsimp
+  done
+
+lemma dmo_gets_wp:
+  "\<lbrace>\<lambda>s. P (f (machine_state s)) s\<rbrace> do_machine_op (gets f) \<lbrace>P\<rbrace>"
+  apply (simp add: submonad_do_machine_op.gets)
+  apply wpsimp
+  done
+
+lemma thread_state_relation_frame:
+  "thread_state_relation st'' st' \<Longrightarrow>
+     thread_state_relation st st' = (st = st'')"
+  by (cases st''; cases st'; cases st; fastforce)
+
+lemma thread_state_relation_send_rev_simp:
+  "thread_state_relation st (BlockedOnSend a b c d) =
+  (\<exists>y. (st = (Structures_A.BlockedOnSend a y)) \<and> b = sender_badge y \<and> c = sender_can_grant y \<and> d = sender_is_call y)"
+  by (cases st; fastforce)
+
+lemmas thread_state_rev_simps'[#\<open>solves \<open>simp\<close>\<close>] =
+  thread_state_relation_frame[of Structures_A.thread_state.Running Structures_H.thread_state.Running]
+  thread_state_relation_frame[of Structures_A.thread_state.Inactive Structures_H.thread_state.Inactive]
+  thread_state_relation_frame[of "Structures_A.thread_state.BlockedOnReceive x" "Structures_H.thread_state.BlockedOnReceive x" for x]
+  thread_state_relation_frame[of Structures_A.thread_state.Restart Structures_H.thread_state.Restart]
+  thread_state_relation_frame[of "Structures_A.thread_state.BlockedOnNotification x" "Structures_H.thread_state.BlockedOnNotification x" for x]
+  thread_state_relation_frame[of Structures_A.thread_state.IdleThreadState Structures_H.thread_state.IdleThreadState]
+  thread_state_relation_frame[of "Structures_A.thread_state.BlockedOnReply" "Structures_H.thread_state.BlockedOnReply"]
+
+lemmas thread_state_rev_simps = thread_state_rev_simps' thread_state_relation_send_rev_simp
+
 lemma vgic_maintenance_corres [corres]:
   "corres dc einvs
     (\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
@@ -638,26 +678,19 @@ lemma vgic_maintenance_corres [corres]:
                    get_gic_vcpu_ctrl_misr_def
                    get_gic_vcpu_ctrl_lr_def set_gic_vcpu_ctrl_lr_def
              cong: if_cong)
-  apply (corres corres: gct_corres[unfolded getCurThread_def] gts_corres
-               corresK: corresK_if)
-  (* 33 subgoals; the following solves all but one. *)
-  apply (corres corres: hf_corres
-         | (rule corres_rv_weaken[OF _ corres_rv_trivial]; fastforce)
-         | (rule corres_rv_weaken[OF _ corres_rv_trivial]; case_tac rv; case_tac rv';
-            fastforce simp: runnable_eq)
-         | unfold valid_fault_def
-         | solves \<open>wp dmo'_gets_wp gts_wp gts_wp'\<close>
-         | solves \<open>simp; intro conjI impI; wp\<close>
-         | solves \<open>simp only: submonad_do_machine_op.gets; wp\<close>
-         )+
-  apply (auto simp: valid_fault_def
+  apply (corressimp corres: gct_corres[unfolded getCurThread_def]
+                        gts_corres[@lift_corres_args]
+                     wp: no_fail_machine_op_lift dmo_wp_no_rest)
+  apply (corressimp corres: hf_corres[@lift_corres_args]
+                        wp: dmo_gets_wp dmo'_gets_wp gts_wp gts_wp')+
+  apply safe
+  by (auto simp: valid_fault_def thread_state_rev_simps
               elim: ct_active_st_tcb_at_weaken
                       [OF _ iffD1[OF runnable_eq], simplified ct_in_state_def]
                     st_tcb_ex_cap'[OF _ _ runnable_not_halted]
                     st_tcb_ex_cap''
                     pred_tcb'_weakenE
              split: Structures_H.thread_state.splits)
-  done
 
 lemma handle_reserved_irq_corres[corres]:
   "corres dc einvs
@@ -725,8 +758,7 @@ lemma handle_interrupt_corres:
          apply wp+
     apply clarsimp
    apply clarsimp
-  apply (corres corresK: corresK_machine_op)
-      apply (wpsimp simp: no_fail_ackInterrupt)+
+  apply corressimp
   done
 
 lemma invs_ChooseNewThread:

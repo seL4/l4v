@@ -567,7 +567,7 @@ lemma resolve_vaddr_corres:
        apply (clarsimp simp: page_table_pte_at_lookupI' page_table_at_state_relation)
       apply clarsimp
       apply (erule(3) page_table_at_state_relation)
-     apply wp+
+     apply wpsimp+
    apply (clarsimp simp: page_directory_pde_at_lookupI)
   apply (clarsimp simp: page_directory_pde_at_lookupI' page_directory_at_state_relation)
   done
@@ -622,7 +622,7 @@ lemma dec_arch_inv_page_flush_corres:
     apply (rule corres_splitEE)
        prefer 2
        apply (rule corres_lookup_error)
-       apply (rule find_pd_for_asid_corres)
+       apply (rule find_pd_for_asid_corres[OF refl])
       apply (rule whenE_throwError_corres, simp)
        apply simp
       apply (rule whenE_throwError_corres, simp)
@@ -908,8 +908,7 @@ lemma dec_vcpu_inv_corres:
     apply (cases args; clarsimp)
     apply (case_tac list; clarsimp simp add: rangeCheck_def range_check_def unlessE_whenE)
     apply (clarsimp simp: shiftL_nat whenE_bindE_throwError_to_if)
-    supply corresK(7)[corresK del]
-    apply (corressimp corresK: corresK_if wp: get_vcpu_wp corres_rv_defer_left)
+    apply (corressimp wp: get_vcpu_wp)
     apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def ucast_id
                        valid_cap'_def valid_cap_def
                        make_virq_def makeVIRQ_def split:if_split)
@@ -1119,7 +1118,7 @@ shows
                              valid_cap (cap.ArchObjectCap
                                          (arch_cap.PageDirectoryCap wd (Some optv)))"
                      in corres_guard_imp)
-            apply (rule find_pd_for_asid_corres)
+            apply (rule find_pd_for_asid_corres[OF refl])
            apply (clarsimp simp: valid_cap_def)
            apply (simp add: mask_def)
           apply assumption
@@ -1198,7 +1197,7 @@ shows
          apply (rule corres_splitEE)
             prefer 2
             apply (rule corres_lookup_error)
-            apply (rule find_pd_for_asid_corres)
+            apply (rule find_pd_for_asid_corres[OF refl])
            apply (rule whenE_throwError_corres)
              apply simp
             apply simp
@@ -1270,7 +1269,7 @@ shows
       apply (rule corres_splitEE)
          prefer 2
          apply (rule corres_lookup_error)
-         apply (rule find_pd_for_asid_corres)
+         apply (rule find_pd_for_asid_corres [OF refl])
         apply (rule whenE_throwError_corres, simp, simp)
         apply (rule corres_splitEE)
            prefer 2
@@ -1347,7 +1346,7 @@ shows
      apply (rule corres_splitEE)
         prefer 2
         apply (rule corres_lookup_error)
-        apply (rule find_pd_for_asid_corres)
+        apply (rule find_pd_for_asid_corres [OF refl])
        apply (rule whenE_throwError_corres, simp)
         apply clarsimp
        apply (simp add: liftE_bindE)
@@ -1389,6 +1388,7 @@ shows
   apply (simp, rule corres_guard_imp[OF dec_vcpu_inv_corres]; simp)
   done
 
+
 lemma invokeVCPUInjectIRQ_corres:
   "corres (op =) (vcpu_at v) (vcpu_at' v)
         (do y \<leftarrow> invoke_vcpu_inject_irq v index virq;
@@ -1397,12 +1397,7 @@ lemma invokeVCPUInjectIRQ_corres:
         (invokeVCPUInjectIRQ v index virq)"
   unfolding invokeVCPUInjectIRQ_def invoke_vcpu_inject_irq_def
   apply (clarsimp simp: bind_assoc)
-  apply (corressimp corres: corres_get_vcpu set_vcpu_corres wp: corres_rv_wp_left get_vcpu_wp)
-      apply (rule corresK_split)
-          apply (rule corresK_if[where F=True])
-           apply (corressimp corres: corres_get_vcpu set_vcpu_corres
-                            corresK: corresK_machine_op
-                                 wp: corres_rv_wp_left wp_post_taut get_vcpu_wp)+
+  apply (corressimp corres: corres_get_vcpu set_vcpu_corres wp: get_vcpu_wp)
   apply clarsimp
   apply (safe
         ; case_tac "vcpuVGIC rv'"
@@ -1416,7 +1411,7 @@ lemmas corres_discard_r =
 
 lemma dmo_gets_corres:
   "corres (op =) P P' (do_machine_op (gets f)) (doMachineOp (gets f))"
-  apply (corres corresK: corresK_machine_op)
+  apply (corres)
   apply (auto simp : corres_underlyingK_def)
   done
 
@@ -1431,14 +1426,7 @@ lemma invoke_vcpu_read_register_corres:
                  (invokeVCPUReadReg v r)"
   unfolding invoke_vcpu_read_register_def invokeVCPUReadReg_def read_vcpu_register_def readVCPUReg_def
   apply (rule corres_discard_r)
-  apply corres
-  apply (corres_once corresK: corresK_if)
-  apply (corresc)
-  apply (corressimp corres: corres_get_vcpu
-                   corresK: corresK_machine_op corresK_if
-                        wp: corres_rv_defer_left)+
-  apply (rule conjI)
-  apply (intro allI impI conjI; rule TrueI) (* FIXME where is this coming from? *)
+  apply (corressimp corres: corres_get_vcpu wp: get_vcpu_wp)
   apply (clarsimp simp: vcpu_relation_def split: option.splits)
   apply (wpsimp simp: getCurThread_def)+
   done
@@ -1465,15 +1453,8 @@ lemma invoke_vcpu_write_register_corres:
   unfolding invokeVCPUWriteReg_def invoke_vcpu_write_register_def write_vcpu_register_def
             writeVCPUReg_def
   apply (rule corres_discard_r)
-  apply corres
-  apply (corres_once corresK: corresK_if)
-  apply (corresc)
-  apply (corressimp corres: set_vcpu_corres corres_get_vcpu
-                   corresK: corresK_if corresK_machine_op
-                        wp: corres_rv_defer_left)+
-  apply (rule conjI)
-  apply (intro allI impI conjI; rule TrueI) (* FIXME where is this coming from? *)
-  apply (auto simp: vcpu_relation_def split: option.splits)[1]
+  apply (corressimp corres: set_vcpu_corres corres_get_vcpu wp: get_vcpu_wp)
+  subgoal by (auto simp: vcpu_relation_def split: option.splits)
   apply (wpsimp simp: getCurThread_def)+
   done
 
@@ -1504,8 +1485,9 @@ lemma associate_vcpu_tcb_corres:
                (associateVCPUTCB v t)"
   unfolding associate_vcpu_tcb_def associateVCPUTCB_def
   apply (clarsimp simp: bind_assoc)
-  apply (corressimp search: corres_get_vcpu set_vcpu_corres simp: vcpu_relation_def)
-              apply (wpsimp wp: get_vcpu_wp getVCPU_wp)+
+  apply (corressimp search: corres_get_vcpu set_vcpu_corres
+                       wp: get_vcpu_wp getVCPU_wp
+                     simp: vcpu_relation_def)
       apply (rule_tac Q="\<lambda>_. invs and tcb_at t" in hoare_strengthen_post)
        apply wp
       apply clarsimp
@@ -1524,15 +1506,15 @@ lemma associate_vcpu_tcb_corres:
       apply (simp add: valid_vcpu'_def typ_at_tcb')
       apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_def)
      apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_def)
-    apply (rule corres_rv_proveT, clarsimp)
-    apply (wpsimp wp: arch_thread_get_wp getObject_tcb_wp simp: archThreadGet_def)+
+    apply (corressimp wp: arch_thread_get_wp getObject_tcb_wp
+                    simp: archThreadGet_def)+
   apply (rule conjI)
    apply clarsimp
    apply (rule conjI)
     apply clarsimp
     apply (frule (1) sym_refs_tcb_vcpu, fastforce)
     apply (clarsimp simp: obj_at_def)
-   apply clarsimp
+   apply (clarsimp simp: vcpu_relation_def)
    apply (frule (1) sym_refs_vcpu_tcb, fastforce)
    apply (clarsimp simp: obj_at_def)
   apply normalise_obj_at'

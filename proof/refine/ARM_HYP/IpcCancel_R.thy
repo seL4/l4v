@@ -1433,15 +1433,8 @@ lemma archThreadGet_corres:
   "(\<And>a a'. arch_tcb_relation a a' \<Longrightarrow> f a = f' a') \<Longrightarrow>
    corres (op =) (tcb_at t) (tcb_at' t) (arch_thread_get f t) (archThreadGet f' t)"
   unfolding arch_thread_get_def archThreadGet_def
-  apply corres
-   apply (rule corresK_drop)
-   apply (rule corres_bind_return2)
-   apply (rule corres_split)
-      prefer 2
-      apply (rule get_tcb_corres)
-     apply (rule corres_return[where P=\<top> and P'=\<top>,THEN iffD2])
-     apply (clarsimp simp: tcb_relation_def)
-    apply wpsimp+
+  apply (corressimp corres: get_tcb_corres)
+  apply (clarsimp simp: tcb_relation_def)
   done
 
 lemma tcb_vcpu_relation:
@@ -1469,11 +1462,10 @@ lemma corres_gets_current_vcpu[corres]:
 lemma vcpuInvalidateActive_corres[corres]:
   "corres dc \<top> \<top> vcpu_invalidate_active vcpuInvalidateActive"
   unfolding vcpuInvalidateActive_def vcpu_invalidate_active_def
-  apply (corressimp corres: vcpuDisable_corres simp: modifyArchState_def)
-  apply (rule corresK_assume_guard)
-      apply (rule corres_modify[where P=\<top> and P'=\<top>])
-      apply (clarsimp simp: state_relation_def arch_state_relation_def)
-     apply wpsimp+
+  apply (corressimp  corres: vcpuDisable_corres
+                    corresK: corresK_modifyT
+                       simp: modifyArchState_def)
+  apply (clarsimp simp: state_relation_def arch_state_relation_def)
   done
 
 lemma tcb_ko_at':
@@ -1484,17 +1476,15 @@ lemma archThreadSet_corres:
   "(\<And>a a'. arch_tcb_relation a a' \<Longrightarrow> arch_tcb_relation (f a) (f' a')) \<Longrightarrow>
   corres dc (tcb_at t) (tcb_at' t) (arch_thread_set f t) (archThreadSet f' t)"
   apply (simp add: arch_thread_set_def archThreadSet_def)
-  apply (corres corres: get_tcb_corres)
-     apply (rule corresK_drop)
-     apply (rename_tac tcb tcb')
-     apply (rule_tac tcb=tcb and tcb'=tcb' in tcb_update_corres')
-         apply (simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def exst_same_def)+
-    apply wpsimp+
+  apply (corres corres: get_tcb_corres tcb_update_corres')
+  apply wpsimp+
+  apply (auto simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def exst_same_def)+
   done
 
 lemma archThreadSet_corres_vcpu_None[corres]:
-  "corres dc (tcb_at t) (tcb_at' t)
-    (arch_thread_set (tcb_vcpu_update Map.empty) t) (archThreadSet (atcbVCPUPtr_update Map.empty) t)"
+  "t = t' \<Longrightarrow> corres dc (tcb_at t) (tcb_at' t')
+    (arch_thread_set (tcb_vcpu_update Map.empty) t) (archThreadSet (atcbVCPUPtr_update Map.empty) t')"
+  apply simp
   apply (rule archThreadSet_corres)
   apply (simp add: arch_tcb_relation_def)
   done
@@ -1505,19 +1495,19 @@ lemma no_fail_getRegister[wp]: "no_fail \<top> (getRegister r)"
 lemma no_fail_setRegister[wp]: "no_fail \<top> (setRegister r v)"
   by (simp add: setRegister_def)
 
+lemmas corresK_as_user' =
+  corres_as_user'[atomized, THEN corresK_lift_rule, THEN mp]
+
 lemma asUser_sanitise_corres[corres]:
-  "b=b' \<Longrightarrow> corres dc (tcb_at t) (tcb_at' t)
+  "b=b' \<Longrightarrow> t = t' \<Longrightarrow> corres dc (tcb_at t) (tcb_at' t')
             (as_user t (do cpsr \<leftarrow> getRegister CPSR;
                            setRegister CPSR (sanitise_register b CPSR cpsr)
                         od))
-            (asUser t (do cpsr \<leftarrow> getRegister CPSR;
+            (asUser t' (do cpsr \<leftarrow> getRegister CPSR;
                           setRegister CPSR (sanitiseRegister b' CPSR cpsr)
                        od))"
   unfolding sanitiseRegister_def sanitise_register_def
-  apply (corres corres: corres_as_user')
-   apply (clarsimp simp: tcb_relation_def arch_tcb_relation_def)
-   apply (rule corres_Id, simp, simp)
-   apply wpsimp
+  apply (corressimp corresK: corresK_as_user')
   done
 
 crunch typ_at'[wp]: vcpuInvalidateActive "\<lambda>s. P (typ_at' T p s)"
@@ -1553,7 +1543,7 @@ lemma helper: "vcpu_relation v1 v2 \<Longrightarrow> vcpu_relation v1 v3 \<Longr
   apply (cases v2; cases v3; clarsimp)
   done
 
-lemma dissociateVCPUTCB_corres [corres]:
+lemma dissociateVCPUTCB_corres [@lift_corres_args, corres]:
   "corres dc (obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_vcpu (tcb_arch tcb) = Some v) t and
               obj_at (\<lambda>ko. \<exists>vcpu. ko = ArchObj (VCPU vcpu) \<and> vcpu_tcb vcpu = Some t) v)
              (tcb_at' t and vcpu_at' v)
@@ -1565,7 +1555,7 @@ lemma dissociateVCPUTCB_corres [corres]:
       simp: archThreadSet_def tcb_ko_at' tcb_at_typ_at'
       | strengthen imp_drop_strg[where Q="tcb_at t s" for s]
         imp_drop_strg[where Q="vcpu_at' v s \<and> typ_at' TCBT t s" for s]
-      | (rule corres_rv_proveT, fastforce simp: vcpu_relation_def ))+
+      | corres_rv)+
   apply (corressimp wp: get_vcpu_wp getVCPU_wp getObject_tcb_wp arch_thread_get_wp corres_rv_wp_left
       simp: archThreadGet_def tcb_ko_at')+
   apply (clarsimp simp: typ_at_tcb' typ_at_to_obj_at_arches)
@@ -1592,8 +1582,6 @@ lemma prepareThreadDelete_corres:
   apply (corressimp simp: tcb_vcpu_relation)
     apply (wp arch_thread_get_wp)
    apply (wpsimp wp: getObject_tcb_wp simp: archThreadGet_def)
-  apply clarsimp
-  apply (rule corres_rv_proveT, simp)
   apply clarsimp
   apply (rule conjI)
    apply clarsimp
