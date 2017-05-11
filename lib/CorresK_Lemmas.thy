@@ -106,4 +106,46 @@ lemmas corresK_whenE [corres_splits] =
     corresK_subst_both[OF whenE_def[THEN meta_eq_to_obj_eq] whenE_def[THEN meta_eq_to_obj_eq]],
     OF _ corresK_returnOk[where r="f \<oplus> dc" for f], simplified, simplified if_fun_true]
 
+lemmas corresK_head_splits[corres_splits] =
+  corresK_split[where d="return", simplified]
+  corresK_splitE[where d="returnOk", simplified]
+  corresK_split[where b="return", simplified]
+  corresK_splitE[where b="returnOk", simplified]
+
+lemmas corresK_modify =
+  corres_modify[atomized, @corresK_convert]
+
+lemmas corresK_modifyT = corresK_modify[where P=\<top> and P'=\<top>, simplified]
+
+lemma corresK_Id:
+  "(nf' \<Longrightarrow> no_fail P' g) \<Longrightarrow>
+    corres_underlyingK Id nf nf' (f = g \<and> (\<forall>rv. r rv rv)) r (\<lambda>_. True) P' f g"
+  apply (rule corresK_assume_guard)
+  apply (rule corres_Id;simp)
+  done
+
+lemmas [corresK] =
+  corresK_Id[where nf'=False and r="op =",simplified]
+  corresK_Id[where nf'=False,simplified]
+  corresK_Id[where nf'=True and r="op =", simplified]
+  corresK_Id[where nf'=True, simplified]
+
+lemma corresK_unit_rv_eq_any[corres_concrete_r]:
+  "corres_underlyingK sr nf nf' F r P P' f f' \<Longrightarrow>
+    corres_underlyingK sr nf nf' F
+      (\<lambda>(x :: unit) (y :: unit). x = y) P P' f f'"
+  apply (clarsimp simp add: corres_underlyingK_def)
+  apply (erule corres_rel_imp)
+  apply simp
+  done
+
+lemma corresK_unit_rv_dc_any[corres_concrete_r]:
+  "corres_underlyingK sr nf nf' F r P P' f f' \<Longrightarrow>
+    corres_underlyingK sr nf nf' F
+      (\<lambda>(x :: unit) (y :: unit). dc x y) P P' f f'"
+  apply (clarsimp simp add: corres_underlyingK_def)
+  apply (erule corres_rel_imp)
+  apply simp
+  done
+
 end
