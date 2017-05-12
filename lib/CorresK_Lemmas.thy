@@ -57,43 +57,108 @@ lemma corresK_mapM:
                   ((length xs = length ys) \<and>
                    (r [] []) \<and> (\<forall>x xs y ys. r xs ys \<longrightarrow> r' x y \<longrightarrow> r (x # xs) (y # ys)) \<and>
                   (\<forall>(x,y)\<in>S. F x y)) r P P' (mapM f xs) (mapM f' ys)"
-  apply (rule corresK_use_guard, elim conjE)
-  subgoal premises prems
-proof (insert \<open>length xs = length ys\<close>, insert S, induct xs ys rule: list_induct2)
-  case Nil
-  show ?case
-    by (simp add: mapM_def sequence_def corres_underlyingK_def)
-next
-  case (Cons a as b bs)
-  from Cons have P: "(a, b) \<in> S"
-    by simp
-  from Cons have Q: "corres_underlyingK R nf nf' ((\<forall>x y. (x,y) \<in> set (zip as bs) \<longrightarrow> F x y)) r P P' (mapM f as) (mapM f' bs)"
-    apply -
-    apply (corres_pre)
-    apply (erule meta_mp)
-    by (clarsimp simp: prems)+
-  show ?case
-    apply (simp add: mapM_Cons)
-    apply (corressimp corresK: z Q wp: P simp: corres_protect_def)
-      apply (rule corres_rv_proveT)
-      apply (fastforce simp: prems)
-      apply (corressimp wp: w | rule P | rule hoare_drop_imps)+
-      apply (insert prems Cons)
-      apply (auto)
-    done
-qed
-done
+  unfolding corres_underlyingK_def
+  apply (rule impI, rule corres_mapM[of r r' S])
+  using assms unfolding corres_underlyingK_def by (auto simp: corres_protect_def)
 
-lemma corresK_mapM_x:
-  assumes S: "(set (zip xs ys) \<subseteq> S)"
-  assumes x: "\<And>x y. corres_protect ((x, y) \<in> S) \<Longrightarrow> corres_underlyingK sr nf nf' (F x y) dc P P' (f x) (f' y)"
-  assumes y: "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
-             "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>P'\<rbrace> f' y \<lbrace>\<lambda>rv. P'\<rbrace>"
-  shows      "corres_underlyingK sr nf nf'
-                (length xs = length ys \<and> (\<forall>(x,y)\<in>S. F x y)) dc P P' (mapM_x f xs) (mapM_x f' ys)"
-  apply (simp add: mapM_x_mapM)
-  apply (corressimp corresK: corresK_mapM[where S=S and r=dc and r'=dc] x wp: y simp: S | assumption)+
+definition
+  "F_all2 F xs ys =
+    (\<exists>F'.
+      (\<forall>x y xs ys.
+        (F' x y \<longrightarrow> list_all2 F' xs ys \<longrightarrow> F x y xs ys)) \<and> list_all2 F' xs ys)"
+
+
+lemma F_all2_pointwise[simp]:
+  "F_all2 (\<lambda>x y _ _. F x y) xs ys = list_all2 F xs ys"
+  apply (rule iffI)
+  apply (clarsimp simp: F_all2_def)
+  subgoal for F'
+  apply (rule list_all2_induct_suffixeq[where Q=F']; simp)
+  apply (drule_tac x=x in spec)
+  apply (drule_tac x=y in spec)
+  apply fastforce
   done
+  apply (clarsimp simp:F_all2_def)
+  apply (rule_tac x=F in exI)
+  apply clarsimp
+  done
+
+lemma F_all2_list:
+   "F xs ys \<Longrightarrow> \<exists>F'. (\<forall>xs ys. (F xs ys = list_all2 F' xs ys)) \<Longrightarrow> F_all2 (\<lambda>_ _ xs ys. F xs ys) xs ys"
+  apply (clarsimp simp: F_all2_def)
+  apply (rule_tac x=F' in exI)
+  by auto
+
+lemma list_all2_conjD:
+  "list_all2 (\<lambda>x y. Q x y \<and> P x y) xs ys \<Longrightarrow> list_all2 Q xs ys \<and> list_all2 P xs ys"
+  by (induct rule: list_all2_induct; simp)
+
+
+lemma
+  list_all2_to_list_all:
+  "list_all2 P xs xs = list_all (\<lambda>x. P x x) xs"
+  by (induct xs;simp)
+
+lemma list_all_mem_subset:
+  "list_all (\<lambda>y. y \<in> set xs) ys = (set ys \<subseteq> set xs)"
+  by (induct ys; simp)
+
+lemma F_all2_eq:
+  "(\<And>x xs'. x \<in> set xs \<Longrightarrow> set xs' \<subseteq> set xs \<Longrightarrow> F x x xs' xs') \<Longrightarrow> F_all2 F xs xs"
+ apply (simp add: F_all2_def)
+ apply (rule_tac x="\<lambda>x y. x \<in> set xs \<and> x = y" in exI)
+ apply (intro conjI impI allI)
+ apply (drule list_all2_conjD)
+ apply (simp add: list.rel_eq)
+ apply clarsimp
+ apply (simp add: list_all2_to_list_all list_all_mem_subset)
+ apply (rule list.rel_refl_strong;simp)
+ done
+
+lemma F_all2_conjI:
+  "F_all2 F xs ys \<Longrightarrow> F_all2 F' xs ys \<Longrightarrow>
+    F_all2 (\<lambda>x y xs ys. F x y xs ys \<and> F' x y xs ys) xs ys"
+  apply (clarsimp simp: F_all2_def)
+  apply (rule_tac x="\<lambda>x y. F'a x y \<and> F'aa x y" in exI)
+  by (auto dest: list_all2_conjD intro: list_all2_conj)
+
+lemma corresK_mapM_list_all2:
+  assumes x: "\<And>x y xs ys. corres_underlyingK sr nf nf' (F x y xs ys) r' (I (x#xs)) (I' (y#ys)) (f x) (f' y)"
+  assumes "\<And>x y xs. \<lbrakk> S x y; suffix (x#xs) as \<rbrakk> \<Longrightarrow> \<lbrace> I  (x#xs) \<rbrace> f  x \<lbrace> \<lambda>rv. I  xs \<rbrace>"
+  assumes "\<And>x y ys. \<lbrakk> S x y; suffix (y#ys) cs \<rbrakk> \<Longrightarrow> \<lbrace> I' (y#ys) \<rbrace> f' y \<lbrace> \<lambda>rv. I' ys \<rbrace>"
+  shows "corres_underlyingK sr nf nf'
+          (r [] [] \<and> (\<forall> x y xs ys. r' x y \<longrightarrow> r xs ys \<longrightarrow> r (x # xs) (y # ys)) \<and>
+            list_all2 S as cs \<and> F_all2 F as cs)
+                            r (I as) (I' cs) (mapM f as) (mapM f' cs)"
+  unfolding corres_underlyingK_def
+  apply (clarsimp simp: F_all2_def)
+  subgoal for F'
+  apply (rule corres_mapM_list_all2[of r r' "\<lambda>x y. S x y \<and> F' x y"]; (rule assms | assumption | clarsimp)?)
+  apply (rule x[THEN corresK_unlift])
+  apply (drule list_all2_conjD)
+  apply (clarsimp simp: assms | assumption)+
+  apply (rule list_all2_conj; simp)
+  done
+  done
+
+lemma corresK_discard_rv:
+  assumes A[corresK]: "corres_underlyingK sr nf nf' F r' P P' a c"
+  shows "corres_underlyingK sr nf nf' F dc P P' (do x \<leftarrow> a; return () od) (do x \<leftarrow> c; return () od)"
+  by corressimp
+
+lemma corresK_mapM_mapM_x:
+  assumes "corres_underlyingK sr nf nf' F r' P P' (mapM f as) (mapM f' cs)"
+  shows "corres_underlyingK sr nf nf' F dc P P' (mapM_x f as) (mapM_x f' cs)"
+  unfolding mapM_x_mapM by (rule corresK_discard_rv, rule assms)
+
+lemmas corresK_mapM_x_list_all2
+  = corresK_mapM_list_all2[where r'=dc,
+                           THEN corresK_mapM_mapM_x[where r'=dc],
+                           simplified]
+lemmas corresK_mapM_x
+  = corresK_mapM[where r'=dc,
+                 THEN corresK_mapM_mapM_x[where r'=dc],
+                 simplified]
 
 lemma corresK_subst_both: "g' = f' \<Longrightarrow> g = f \<Longrightarrow>
   corres_underlyingK sr nf nf' F r P P' f f' \<Longrightarrow>
