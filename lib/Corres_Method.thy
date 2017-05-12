@@ -477,17 +477,18 @@ text \<open>This method propagate corres_rv obligations into each precondition a
 heuristic:
  For each conjunct in the obligation:
 
-   1) If it does not depend on function return values, propagate it as a stateless precondition
-   2) If either side is a corres_noop (used by symbolic execution), propagate as hoare triple
+   1) Try to solve trivially (to handle schematic conditions)
+   2) If it does not depend on function return values, propagate it as a stateless precondition
+   3) If either side is a corres_noop (used by symbolic execution), propagate as hoare triple
       for other side.
-   3) If it can be phrased entirely with variables accessible to the left side, propagate it as
+   4) If it can be phrased entirely with variables accessible to the left side, propagate it as
       a left hoare triple.
-   4) As in 2) but on the right.
+   5) As in 3) but on the right.
 
- Fail if any of 1-4 are unsuccessful for any conjunct.
+ Fail if any of 1-5 are unsuccessful for any conjunct.
 
-In the case where no more corres_rv progress can be made, the user will need to intervene, either
-by specifying where to defer the obligation
+In the case where corres_rv fails, the user will need to intervene, either
+by specifying where to defer the obligation or solving the goal in-place.
 \<close>
 
 definition "corres_noop = return undefined"
