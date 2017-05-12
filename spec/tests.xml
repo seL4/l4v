@@ -33,11 +33,6 @@
         <test name="ASepSpec" depends="ASpec">make ASepSpec</test>
     </set>
 
-    <set depends="isabelle_ARM">
-      <test name="ASpec_ARM">L4V_ARCH=ARM make ASpec</test>
-      <test name="ExecSpec_ARM">L4V_ARCH=ARM make ExecSpec</test>
-    </set>
-
     <set>
         <!-- Build Haskell kernel code. -->
         <test name="HaskellKernel" cwd="haskell" cpu-timeout="600">./check-newlines.sh &amp;&amp; make</test>
