@@ -8,6 +8,26 @@
  * @TAG(NICTA_BSD)
  *)
 
+structure ASM_Ignore_Hooks = struct
+
+structure Data = Generic_Data
+(
+  type T = (int * (ProgramAnalysis.asm_stmt_elements -> bool)) list
+  val empty = []
+  val extend = I
+  fun merge data = Ord_List.merge (int_ord o apply2 fst) data
+)
+
+fun add_hook hk = Data.map (Ord_List.insert (int_ord o apply2 fst)
+    (serial (), hk))
+
+fun ignore' nm = exists (fn (_, f) => f nm) o Data.get
+
+fun ignore_thy nm thy = ignore' nm (Context.Theory thy)
+fun ignore nm ctxt = ignore' nm (Context.Proof ctxt)
+
+end
+
 structure stmt_translation =
 struct
 
@@ -637,6 +657,8 @@ in
   | AsmStmt st =>
     (let
       val (nm, vol, ret, args) = ProgramAnalysis.split_asm_stmt (AsmStmt st)
+      val _ = if ASM_Ignore_Hooks.ignore_thy (nm, vol, ret, args) sg
+        then raise Fail "hook fired" else ()
       val sty = hd styargs
       val ret = case ret of NONE => (fn x => (fn s => s))
         | SOME r => valOf (lval_of (expr_term r))

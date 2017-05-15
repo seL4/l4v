@@ -97,10 +97,9 @@ sig
                   return offset in bytes of field with number i (indexing from
                   zero).  offset env flds 0 always equals 0. *)
 
-  val split_asm_stmt : Absyn.statement_node
-    -> (string * bool * expr option * expr list)
-  val merge_asm_stmt : (string * bool * expr option * expr list)
-    -> Absyn.statement_node
+  type asm_stmt_elements = (string * bool * expr option * expr list)
+  val split_asm_stmt : Absyn.statement_node -> asm_stmt_elements
+  val merge_asm_stmt : asm_stmt_elements -> Absyn.statement_node
 
   val get_globals_rcd : csenv -> senv
   val export_mungedb : csenv -> unit
@@ -1570,6 +1569,8 @@ in
     end
   | EnumDecl eninfo => (puredecl d, process_enumdecl eninfo e)
 end
+
+type asm_stmt_elements = (string * bool * expr option * expr list)
 
 fun split_asm_stmt (AsmStmt dets) = let
   open Feedback
