@@ -490,7 +490,7 @@ lemma get_hw_asid_corres:
          apply (rule corres_split [OF _ store_hw_asid_corres[where pd=pd]])
            apply (rule corres_trivial, simp)
           apply (wp load_hw_asid_wp | simp)+
-   apply (simp add: pd_at_asid_uniq)
+   apply (simp add: pd_at_asid_uniq valid_global_objs_def)
   apply simp
   done
 
@@ -1800,7 +1800,8 @@ lemma flush_table_corres:
            apply simp
           apply (rule no_fail_invalidateTLB_ASID)
          apply (wpsimp wp: hoare_drop_imps | fold cur_tcb_def cur_tcb'_def)+
-       apply (wpsimp wp: hoare_post_taut load_hw_asid_wp | rule hoare_drop_imps)+
+       apply (wpsimp wp: hoare_post_taut load_hw_asid_wp simp: valid_global_objs_def
+            | rule hoare_drop_imps)+
   done
 
 lemma flush_page_corres:
@@ -1834,7 +1835,7 @@ lemma flush_page_corres:
           apply (rule no_fail_pre, wp no_fail_invalidateTLB_VAASID)
           apply simp
          apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
-         apply (wpsimp wp: hoare_post_taut load_hw_asid_wp
+         apply (wpsimp wp: hoare_post_taut load_hw_asid_wp simp: valid_global_objs_def
                | rule hoare_drop_imps
                | fold cur_tcb_def cur_tcb'_def)+
   done
@@ -2136,7 +2137,7 @@ lemma unmap_page_corres:
                       apply (rule no_fail_cleanByVA_PoU)
                      apply (wp hoare_drop_imps lookup_pt_slot_inv
                        lookupPTSlot_inv lookup_pt_slot_is_aligned
-                                 | simp add: pte_relation_aligned_def)+
+                                 | simp add: pte_relation_aligned_def valid_global_objs_def)+
               apply (clarsimp simp: page_directory_pde_at_lookupI
                 page_directory_at_aligned_pd_bits vmsz_aligned_def)
               apply (simp add:valid_unmap_def pageBits_def)+
@@ -2169,7 +2170,7 @@ lemma unmap_page_corres:
                                  lookup_pt_slot_is_aligned lookup_pt_slot_is_aligned_6
                              simp: largePagePTEOffsets_def pte_bits_def)+
              apply (clarsimp simp: page_directory_pde_at_lookupI vmsz_aligned_def pd_aligned
-                                   pd_bits_def pageBits_def valid_unmap_def
+                                   pd_bits_def pageBits_def valid_unmap_def valid_global_objs_def
                                    page_directory_at_aligned_pd_bits pde_bits_def)
             apply (simp add:pd_bits_def pageBits_def)
            apply (rule corres_guard_imp)

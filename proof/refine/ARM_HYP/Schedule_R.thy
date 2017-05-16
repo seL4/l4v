@@ -2272,7 +2272,7 @@ lemma guarded_switch_to_corres:
       apply (rule switch_thread_corres)
      apply (force simp: st_tcb_at_tcb_at)
     apply (wp gts_st_tcb_at)
-    apply (force simp: st_tcb_at_tcb_at)+
+    apply (force simp: st_tcb_at_tcb_at valid_global_objs_def)+
     done
 
  lemma findM_gets_outside:

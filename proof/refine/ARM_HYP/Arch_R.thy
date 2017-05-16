@@ -1157,7 +1157,8 @@ shows
                   apply (wp hoare_whenE_wp check_vp_wpR)+
             apply (clarsimp simp: valid_cap_def  dest!: vmsz_aligned_less_kernel_base_eq)
             apply (frule_tac vptr="hd args" in page_directory_pde_at_lookupI, assumption)
-            apply (clarsimp simp: vmsz_aligned_def pageBitsForSize_def page_directory_at_aligned_pd_bits
+            apply (clarsimp simp: vmsz_aligned_def pageBitsForSize_def
+                                  valid_global_objs_def page_directory_at_aligned_pd_bits
               split: vmpage_size.splits)
            apply (clarsimp simp: valid_cap'_def)
           apply simp
@@ -1227,7 +1228,7 @@ shows
              apply assumption
             apply clarsimp
             apply (frule_tac pd = aa and vptr = bc in page_directory_pde_at_lookupI,assumption)
-            apply (clarsimp simp: vmsz_aligned_def pageBitsForSize_def
+            apply (clarsimp simp: vmsz_aligned_def pageBitsForSize_def valid_global_objs_def
               page_directory_at_aligned_pd_bits split:vmpage_size.splits)
            apply wp
           apply (wpc | wp throwE_R | wp_once hoare_drop_imps)+

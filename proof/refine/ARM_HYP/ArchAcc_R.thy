@@ -49,8 +49,7 @@ declare valid_arch_state_def[@def_to_elim, conjuncts]
 
 lemmas valid_arch_state_elims[rule_format, elim!] = conjuncts
 
-lemmas valid_arch_obj_elims[rule_format, elim!] =
-  valid_arch_obj.simps[@simp_to_elim, @ \<open>(drule bspec)?\<close>]
+declare valid_arch_obj_def[simp]
 
 lemmas valid_vspace_obj_elims[rule_format, elim!] =
   valid_vspace_obj.simps[@simp_to_elim, @ \<open>(drule bspec)?\<close>]
