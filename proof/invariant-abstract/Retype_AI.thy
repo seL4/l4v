@@ -22,7 +22,6 @@ abbreviation "down_aligned_area ptr sz \<equiv> {(ptr && ~~ mask sz) + (2 ^ sz -
 context begin interpretation Arch .
 requalify_facts
   global_refs_kheap
-  valid_vspace_obj_default' (* move to invariants_AI? *)
 requalify_consts
   clearMemory
   clearMemoryVM
@@ -1123,9 +1122,9 @@ abbreviation(input)
        and if_unsafe_then_cap and valid_reply_caps
        and valid_reply_masters and valid_global_refs and valid_arch_state
        and valid_irq_node and valid_irq_handlers and valid_vspace_objs
-       and valid_irq_states
+       and valid_irq_states and valid_global_objs
        and valid_arch_caps and valid_kernel_mappings
-       and valid_asid_map
+       and valid_asid_map and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
        and cur_tcb and valid_ioc and valid_machine_state"
@@ -1150,6 +1149,7 @@ locale Retype_AI_dmo_eq_kernel_restricted =
 
 crunch only_idle[wp]: do_machine_op "only_idle"
 crunch valid_global_refs[wp]: do_machine_op "valid_global_refs"
+crunch global_mappings[wp]: do_machine_op "valid_global_vspace_mappings"
 crunch valid_kernel_mappings[wp]: do_machine_op "valid_kernel_mappings"
 crunch cap_refs_in_kernel_window[wp]: do_machine_op "cap_refs_in_kernel_window"
 
@@ -1626,7 +1626,6 @@ lemma valid_obj_default_object:
    apply (clarsimp split: if_split_asm)
   apply (clarsimp simp add: wellformed_arch_default)
   done
-
 
 lemma valid_vspace_obj_default:
   assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"

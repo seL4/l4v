@@ -416,11 +416,13 @@ lemma unique_table_refs:
                split: if_split)
     apply blast
     done
-    
-  
+
 lemma valid_pspace: "valid_pspace s" using invs
   by (simp add: invs_def valid_state_def)
-  
+
+lemma valid_global_objs: "valid_global_objs s"
+  using invs by (clarsimp simp: invs_def valid_state_def)
+
 lemma cap_is_valid: "valid_cap cap s"
   by (rule cte_wp_valid_cap[OF cap invs_valid_objs[OF invs]])
   
@@ -465,8 +467,10 @@ locale detype_locale_gen_2 = detype_locale_gen_1 cap ptr s
     "valid_vspace_objs (detype (untyped_range cap) s)"
     "valid_arch_caps (detype (untyped_range cap) s)"
     "valid_kernel_mappings (detype (untyped_range cap) s)"
+    "valid_global_objs (detype (untyped_range cap) s)"
     "valid_asid_map (detype (untyped_range cap) s)"
-    "equal_kernel_mappings (detype (untyped_range cap) s)"  
+    "valid_global_vspace_mappings (detype (untyped_range cap) s)"
+    "equal_kernel_mappings (detype (untyped_range cap) s)"
     "pspace_in_kernel_window (detype (untyped_range cap) s)"
     "valid_machine_state (clear_um (untyped_range cap) (detype (untyped_range cap) s))"  
     "pspace_respects_device_region (clear_um (untyped_range cap) (detype (untyped_range cap) s))"

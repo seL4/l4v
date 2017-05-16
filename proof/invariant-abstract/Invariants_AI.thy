@@ -26,7 +26,6 @@ requalify_consts
   is_nondevice_page_cap
   state_hyp_refs_of
   hyp_refs_of
-  arch_live
   hyp_live
 
   wellformed_acap
@@ -45,8 +44,10 @@ requalify_consts
   valid_arch_objs
   valid_vspace_objs
   valid_arch_caps
+  valid_global_objs
   valid_kernel_mappings
   equal_kernel_mappings
+  valid_global_vspace_mappings
   pspace_in_kernel_window
 
   ASIDPoolObj
@@ -84,6 +85,7 @@ requalify_facts
   physical_arch_cap_has_ref
   wellformed_arch_default
   valid_arch_obj_default'
+  valid_vspace_obj_default'
   vs_lookup1_stateI2
   vs_lookup_pages1_stateI2
   typ_at_pg
@@ -624,6 +626,11 @@ where
    | Notification ntfn => live0 ko
    | ArchObj ao        => hyp_live ko"
 
+lemma a_type_arch_live:
+  "a_type ko = AArch tp \<Longrightarrow> \<not> live0 ko"
+  by (simp add: a_type_def
+         split: Structures_A.kernel_object.split_asm)
+
 fun
   zobj_refs :: "cap \<Rightarrow> obj_ref set"
 where
@@ -895,9 +902,11 @@ where
 (*                  and valid_arch_objs *)
                   and valid_vspace_objs
                   and valid_arch_caps
+                  and valid_global_objs
                   and valid_kernel_mappings
                   and equal_kernel_mappings
                   and valid_asid_map
+                  and valid_global_vspace_mappings
                   and pspace_in_kernel_window
                   and cap_refs_in_kernel_window
                   and pspace_respects_device_region
@@ -975,8 +984,9 @@ abbreviation(input)
        and valid_reply_caps and valid_reply_masters and valid_global_refs
        and valid_arch_state and valid_machine_state and valid_irq_states
        and valid_irq_node and valid_irq_handlers and valid_vspace_objs (* and valid_arch_objs *)
-       and valid_arch_caps and valid_kernel_mappings
+       and valid_arch_caps and valid_global_objs and valid_kernel_mappings
        and equal_kernel_mappings and valid_asid_map
+       and valid_global_vspace_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
        and pspace_respects_device_region and cap_refs_respects_device_region
        and cur_tcb"
@@ -2539,6 +2549,14 @@ lemma valid_arch_cap_update [iff]:
   "valid_arch_caps (f s) = valid_arch_caps s"
   by (simp add: valid_arch_caps_def)
 
+lemma valid_global_objs_update [iff]:
+  "valid_global_objs (f s) = valid_global_objs s"
+  by (simp add: valid_global_objs_def arch)
+
+lemma valid_global_vspace_mappings_update [iff]:
+  "valid_global_vspace_mappings (f s) = valid_global_vspace_mappings s"
+  by (simp add: valid_global_vspace_mappings_def arch)
+
 lemma pspace_in_kernel_window_update [iff]:
   "pspace_in_kernel_window (f s) = pspace_in_kernel_window s"
   by (simp add: pspace_in_kernel_window_def arch pspace)
@@ -3182,6 +3200,10 @@ lemma cur_tcb_revokable [iff]:
 lemma cur_tcb_arch [iff]:
   "cur_tcb (arch_state_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
+
+lemma invs_valid_global_objs[elim!]:
+  "invs s \<Longrightarrow> valid_global_objs s"
+  by (clarsimp simp: invs_def valid_state_def)
 
 lemma get_irq_slot_real_cte:
   "\<lbrace>invs\<rbrace> get_irq_slot irq \<lbrace>real_cte_at\<rbrace>"

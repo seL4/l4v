@@ -27,9 +27,11 @@ requalify_facts
   vs_lookup_vspace_obj_at_lift
   vs_lookup_pages_vspace_obj_at_lift
   valid_arch_caps_lift_weak
+  valid_global_objs_lift_weak
   valid_asid_map_lift
   valid_kernel_mappings_lift
   equal_kernel_mappings_lift
+  valid_global_vspace_mappings_lift
   valid_machine_state_lift
   valid_vso_at_lift
   valid_vso_at_lift_aobj_at
@@ -1253,7 +1255,7 @@ lemma set_object_non_pagetable:
   apply (clarsimp simp: obj_at_def)
   by (rule vspace_obj_predE)
 
-
+(*
 lemma set_object_vspace_objs_non_pagetable:
   "\<lbrace>valid_vspace_objs and K (non_vspace_obj ko) and obj_at non_vspace_obj p\<rbrace>
   set_object p ko
@@ -1262,7 +1264,7 @@ lemma set_object_vspace_objs_non_pagetable:
   apply (rule hoare_pre)
   apply (rule valid_vspace_objs_lift_weak)
   apply (wpsimp wp: set_object_non_pagetable)+
-  done
+  done*)
 
 lemma set_object_memory[wp]:
   "\<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace> 
@@ -1310,6 +1312,13 @@ by (rule vs_lookup_vspace_obj_at_lift; wp vsobj_at; simp)
 
 lemma vs_lookup_pages[wp]: "\<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
 by (rule vs_lookup_pages_vspace_obj_at_lift; wp vsobj_at; simp)
+
+lemma valid_global_objs[wp]: "\<lbrace>valid_global_objs\<rbrace> f \<lbrace>\<lambda>_. valid_global_objs\<rbrace>"
+by (rule valid_global_objs_lift_weak, (wp vsobj_at)+)
+
+lemma valid_global_vspace_mappings[wp]:
+  "\<lbrace>valid_global_vspace_mappings\<rbrace> f \<lbrace>\<lambda>_. valid_global_vspace_mappings\<rbrace>"
+by (rule valid_global_vspace_mappings_lift, (wp vsobj_at)+)
 
 lemma valid_asid_map[wp]: "\<lbrace>valid_asid_map\<rbrace> f \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
 by (rule valid_asid_map_lift, (wp vsobj_at)+)
@@ -1691,6 +1700,10 @@ crunch reply[wp]: do_machine_op "valid_reply_caps"
 crunch reply_masters[wp]: do_machine_op "valid_reply_masters"
 
 crunch valid_irq_handlers[wp]: do_machine_op "valid_irq_handlers"
+
+crunch valid_global_objs[wp]: do_machine_op "valid_global_objs"
+
+crunch valid_global_vspace_mappings[wp]: do_machine_op "valid_global_vspace_mappings"
 
 crunch valid_arch_caps[wp]: do_machine_op "valid_arch_caps"
 

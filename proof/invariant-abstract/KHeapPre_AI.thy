@@ -73,7 +73,7 @@ lemma arch_obj_pred_a_type[intro, simp]: "arch_obj_pred (\<lambda>ko. a_type ko 
 
 lemma
   arch_obj_pred_arch_obj_l[intro, simp]: "arch_obj_pred (\<lambda>ko. ArchObj ako = ko)" and
-  arch_obj_pred_arch_obj_r[intro, simp]: "arch_obj_pred (\<lambda>ko. ko = ArchObj ako)"
+arch_obj_pred_arch_obj_r[intro, simp]: "arch_obj_pred (\<lambda>ko. ko = ArchObj ako)"
   by (auto simp add: arch_obj_pred_defs)
 
 lemma arch_obj_pred_fun_lift: "arch_obj_pred (\<lambda>ko. F (arch_obj_fun_lift P N ko))"
@@ -109,27 +109,15 @@ declare
 
 locale arch_only_obj_pred =
   fixes P :: "kernel_object \<Rightarrow> bool"
-  assumes arch_only: "arch_obj_pred P" 
-
-(**)
-
-(*
-lemma "arch_obj_pred P \<Longrightarrow> vspace_obj_pred P"
-  apply (clarsimp simp add: arch_obj_pred_def vspace_obj_pred_def)
-  apply (erule_tac x=ko in allE)
-  apply (simp add: non_vspace_obj_def)
-  apply
-*)
+  assumes arch_only: "arch_obj_pred P"
 
 locale vspace_only_obj_pred =
   fixes P :: "kernel_object \<Rightarrow> bool"
   fixes vspace_obj_pred :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool"
   assumes vspace_only: "vspace_obj_pred P"
 
-(**)
-
 lemma set_object_typ_at:
-  "\<lbrace>\<lambda>s. typ_at (a_type ko) p s \<and> P (typ_at T p' s)\<rbrace> 
+  "\<lbrace>\<lambda>s. typ_at (a_type ko) p s \<and> P (typ_at T p' s)\<rbrace>
   set_object p ko \<lbrace>\<lambda>rv s. P (typ_at T p' s)\<rbrace>"
   apply (simp add: set_object_def)
   apply wp

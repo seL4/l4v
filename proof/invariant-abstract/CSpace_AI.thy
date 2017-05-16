@@ -3954,6 +3954,12 @@ crunch empty_table_at[wp]: cap_insert "obj_at (empty_table S) p"
      simp: empty_table_caps_of)
 
 
+crunch valid_global_objs[wp]: cap_insert "valid_global_objs"
+  (wp: crunch_wps)
+
+crunch global_vspace_mappings[wp]: cap_insert "valid_global_vspace_mappings"
+  (wp: crunch_wps)
+
 crunch v_ker_map[wp]: cap_insert "valid_kernel_mappings"
   (wp: crunch_wps)
 
@@ -4636,6 +4642,10 @@ crunch empty_table_at[wp]: setup_reply_master "obj_at (empty_table S) p"
 lemmas setup_reply_master_valid_vso_at[wp]
     = valid_vso_at_lift [OF setup_reply_master_typ_at setup_reply_master_arch_ko_at]
 
+
+crunch valid_global_objs[wp]: setup_reply_master "valid_global_objs"
+
+crunch global_vspace_mappings[wp]: setup_reply_master "valid_global_vspace_mappings"
 
 crunch v_ker_map[wp]: setup_reply_master "valid_kernel_mappings"
 

@@ -1860,11 +1860,10 @@ lemma cap_swap_irq_handlers[wp]:
 
 crunch vspace_objs [wp]: cap_swap "valid_vspace_objs"
 
+crunch valid_global_objs [wp]: cap_swap "valid_global_objs"
+
+crunch valid_global_vspace_mappings [wp]: cap_swap "valid_global_vspace_mappings"
 (*
-crunch arch_objs [wp]: cap_swap "valid_arch_objs"
-
-crunch arch_objs [wp]: cap_move "valid_arch_objs"
-
 crunch arch_objs [wp]: empty_slot "valid_arch_objs"
 *)
 
@@ -1983,7 +1982,7 @@ lemma cap_swap_invs[wp]:
                           cte_wp_at_caps_of_state
                 simp del: split_paired_Ex split_paired_All
          | rule conjI
-         | fastforce dest!: valid_reply_caps_of_stateD)+
+         | clarsimp dest!: valid_reply_caps_of_stateD)+
   done
 
 lemma cap_swap_fd_invs[wp]:

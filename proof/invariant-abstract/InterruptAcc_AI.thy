@@ -53,6 +53,8 @@ definition all_invs_but_valid_irq_states_for where
   valid_kernel_mappings and
   equal_kernel_mappings and
   valid_asid_map and
+  valid_global_objs and
+  valid_global_vspace_mappings and
   pspace_in_kernel_window and
   cap_refs_in_kernel_window and
   pspace_respects_device_region and

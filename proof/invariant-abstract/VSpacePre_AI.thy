@@ -103,8 +103,8 @@ lemma hoare_name_pre_state2:
   by (auto simp: valid_def intro: hoare_name_pre_state)
 
 lemma pd_casting_shifting:
-  "size x + 3 < len_of TYPE('a) \<Longrightarrow>
-     ucast (ucast x << 3 >> 3 :: ('a :: len) word) = x"
+  "size x + n < len_of TYPE('a) \<Longrightarrow>
+     ucast (ucast x << n >> n :: ('a :: len) word) = x"
   apply (rule word_eqI)
   apply (simp add: nth_ucast nth_shiftr nth_shiftl word_size)
   done
