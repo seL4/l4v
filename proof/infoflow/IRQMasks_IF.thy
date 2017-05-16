@@ -77,7 +77,7 @@ crunch irq_masks[wp]: do_reply_transfer "\<lambda>s. P (irq_masks_of_state s)"
 
 
 crunch irq_masks[wp]: finalise_cap "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: select_wp crunch_wps dmo_wp no_irq simp: crunch_simps no_irq_setHardwareASID no_irq_setCurrentPD no_irq_invalidateTLB_ASID no_irq_invalidateTLB_VAASID no_irq_cleanByVA_PoU)
+  (wp: select_wp crunch_wps dmo_wp no_irq simp: crunch_simps no_irq_setHardwareASID no_irq_setCurrentPD no_irq_invalidateLocalTLB_ASID no_irq_invalidateLocalTLB_VAASID no_irq_cleanByVA_PoU)
 
 crunch irq_masks[wp]: send_signal "\<lambda>s. P (irq_masks_of_state s)"  
   (wp: crunch_wps ignore: do_machine_op wp: dmo_wp simp: crunch_simps)
@@ -192,7 +192,7 @@ lemma invoke_irq_control_irq_masks:
   done
       
 crunch irq_masks[wp]: arch_perform_invocation, bind_notification "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp crunch_wps no_irq simp: crunch_simps no_irq_cleanByVA_PoU no_irq_invalidateTLB_ASID no_irq_do_flush)
+  (wp: dmo_wp crunch_wps no_irq simp: crunch_simps no_irq_cleanByVA_PoU no_irq_invalidateLocalTLB_ASID no_irq_do_flush)
 
 crunch irq_masks[wp]: restart, set_mcpriority "\<lambda>s. P (irq_masks_of_state s)"
 
@@ -312,7 +312,7 @@ lemma cap_revoke_irq_masks':
 lemmas cap_revoke_irq_masks = use_spec(2)[OF cap_revoke_irq_masks']
 
 crunch irq_masks[wp]: cancel_badged_sends "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: crunch_wps dmo_wp no_irq hoare_unless_wp simp: filterM_mapM crunch_simps no_irq_clearMemory no_irq_invalidateTLB_ASID
+  (wp: crunch_wps dmo_wp no_irq hoare_unless_wp simp: filterM_mapM crunch_simps no_irq_clearMemory no_irq_invalidateLocalTLB_ASID
    ignore: filterM)
 
 lemma finalise_slot_irq_masks:

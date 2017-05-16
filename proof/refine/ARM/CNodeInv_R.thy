@@ -9533,8 +9533,8 @@ crunch irq_states' [wp]: capSwapForDelete valid_irq_states'
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
-       no_irq_invalidateTLB_ASID no_irq_setHardwareASID
-       no_irq_setCurrentPD no_irq_invalidateTLB_VAASID
+       no_irq_invalidateLocalTLB_ASID no_irq_setHardwareASID
+       no_irq_setCurrentPD no_irq_invalidateLocalTLB_VAASID
        no_irq_cleanByVA_PoU
    simp: crunch_simps armv_contextSwitch_HWASID_def ignore: getObject setObject)
 

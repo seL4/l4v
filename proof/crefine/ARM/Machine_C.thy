@@ -49,20 +49,20 @@ assumes dmb_ccorres:
            (doMachineOp dmb)
            (Call dmb_'proc)"
 
-assumes invalidateTLB_ccorres:
+assumes invalidateLocalTLB_ccorres:
   "ccorres dc xfdc \<top> UNIV []
-           (doMachineOp invalidateTLB)
-           (Call invalidateTLB_'proc)"
+           (doMachineOp invalidateLocalTLB)
+           (Call invalidateLocalTLB_'proc)"
 
-assumes invalidateTLB_ASID_ccorres:
+assumes invalidateLocalTLB_ASID_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>hw_asid = hw_asid \<rbrace>) []
-           (doMachineOp (invalidateTLB_ASID hw_asid))
-           (Call invalidateTLB_ASID_'proc)"
+           (doMachineOp (invalidateLocalTLB_ASID hw_asid))
+           (Call invalidateLocalTLB_ASID_'proc)"
 
-assumes invalidateTLB_VAASID_ccorres:
+assumes invalidateLocalTLB_VAASID_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>mva_plus_asid = w\<rbrace>) []
-           (doMachineOp (invalidateTLB_VAASID w))
-           (Call invalidateTLB_VAASID_'proc)"
+           (doMachineOp (invalidateLocalTLB_VAASID w))
+           (Call invalidateLocalTLB_VAASID_'proc)"
 
 assumes cleanByVA_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>vaddr = w1\<rbrace> \<inter> \<lbrace>\<acute>paddr = w2\<rbrace>) []
@@ -178,7 +178,7 @@ assumes maskInterrupt_ccorres:
            (doMachineOp (maskInterrupt m irq))
            (Call maskInterrupt_'proc)"
 
-assumes invalidateTLB_VAASID_spec:
+assumes invalidateLocalTLB_VAASID_spec:
  "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call invalidateMVA_'proc) UNIV"
 
 assumes cleanCacheRange_PoU_spec:

@@ -515,9 +515,9 @@ lemma machine_op_lift[wp]:
   apply (wpsimp simp:simpler_modify_def valid_def)
   done
 
-lemma invalidateTLB_ASID_underlying_memory[wp]:
-  "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> invalidateTLB_ASID a \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
-  apply (clarsimp simp: invalidateTLB_ASID_def, wp)
+lemma invalidateLocalTLB_ASID_underlying_memory[wp]:
+  "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> invalidateLocalTLB_ASID a \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
+  apply (clarsimp simp: invalidateLocalTLB_ASID_def, wp)
   done
 
 lemma dsb_underlying_memory[wp]: "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> dsb \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
@@ -777,9 +777,9 @@ lemma page_table_aligned:
   apply (simp add:is_aligned_neg_mask_eq)
 done
 
-lemma invalidateTLB_VAASID_underlying_memory[wp]:
-  "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> invalidateTLB_VAASID word \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
-  by (clarsimp simp: invalidateTLB_VAASID_def, wp)
+lemma invalidateLocalTLB_VAASID_underlying_memory[wp]:
+  "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> invalidateLocalTLB_VAASID word \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
+  by (clarsimp simp: invalidateLocalTLB_VAASID_def, wp)
 
 lemma dcorres_flush_page:
   "dcorres dc \<top> \<top>  (return x) (flush_page aa a b word)"

@@ -429,7 +429,7 @@ lemma find_free_hw_asid_corres:
               apply (rule corres_split' [where r'=dc])
                  apply (rule corres_trivial, rule corres_machine_op)
                  apply (rule corres_no_failI)
-                  apply (rule no_fail_invalidateTLB_ASID)
+                  apply (rule no_fail_invalidateLocalTLB_ASID)
                  apply fastforce
                 apply (rule corres_split)
                    prefer 2
@@ -584,7 +584,7 @@ lemma flush_space_corres:
         apply clarsimp
         apply (rule corres_machine_op)
         apply (rule corres_Id, rule refl, simp)
-        apply (rule no_fail_invalidateTLB_ASID)
+        apply (rule no_fail_invalidateLocalTLB_ASID)
        apply wp+
    apply clarsimp
    apply (simp add: pd_at_asid_uniq valid_vspace_objs_def')
@@ -611,7 +611,7 @@ lemma invalidate_tlb_by_asid_corres:
       apply clarsimp
       apply (rule corres_machine_op)
       apply (rule corres_Id, rule refl, simp)
-      apply (rule no_fail_invalidateTLB_ASID)
+      apply (rule no_fail_invalidateLocalTLB_ASID)
      apply wp+
    apply clarsimp
    apply (simp add: pd_at_asid_uniq valid_vspace_objs_def')
@@ -784,10 +784,10 @@ qed
 lemma invalidateTLBByASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> invalidateTLBByASID param_a \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: invalidateTLBByASID_def loadHWASID_def
-         | wp dmo_invs' no_irq_invalidateTLB_ASID no_irq | wpc)+
+         | wp dmo_invs' no_irq_invalidateLocalTLB_ASID no_irq | wpc)+
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
-    apply (clarsimp simp: invalidateTLB_ASID_def machine_op_lift_def
+    apply (clarsimp simp: invalidateLocalTLB_ASID_def machine_op_lift_def
                           machine_rest_lift_def split_def | wp)+
   done
 
@@ -1343,7 +1343,7 @@ lemma flush_table_corres:
                     wpc|simp|fold cur_tcb_def cur_tcb'_def)+)[4]
           apply (rule corres_Id[OF refl])
            apply simp
-          apply (rule no_fail_invalidateTLB_ASID)
+          apply (rule no_fail_invalidateLocalTLB_ASID)
          apply (wp hoare_drop_imps | simp)+
        apply (wp load_hw_asid_wp hoare_drop_imps | 
                 simp add: cur_tcb'_def [symmetric] cur_tcb_def [symmetric]  valid_vspace_objs_def')+
@@ -1377,7 +1377,7 @@ lemma flush_page_corres:
              apply (rule set_vm_root_corres)
             apply wp+
           apply (rule corres_Id, rule refl, simp)
-          apply (rule no_fail_pre, wp no_fail_invalidateTLB_VAASID)
+          apply (rule no_fail_pre, wp no_fail_invalidateLocalTLB_VAASID)
          apply simp
          apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
          apply (wp hoare_drop_imps)[1]
@@ -2722,11 +2722,11 @@ lemma findFreeHWASID_invs:
              ct_not_inQ_def
            split del: if_split)
   apply (intro conjI)
-    apply (fastforce dest: no_irq_use [OF no_irq_invalidateTLB_ASID])
+    apply (fastforce dest: no_irq_use [OF no_irq_invalidateLocalTLB_ASID])
    apply clarsimp
    apply (drule_tac x=p in spec)
    apply (drule use_valid)
-    apply (rule_tac p=p in invalidateTLB_ASID_underlying_memory)
+    apply (rule_tac p=p in invalidateLocalTLB_ASID_underlying_memory)
     apply blast
    apply clarsimp
   apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
@@ -2746,11 +2746,11 @@ lemma findFreeHWASID_invs_no_cicd':
              ct_not_inQ_def
            split del: if_split)
   apply (intro conjI)
-    apply (fastforce dest: no_irq_use [OF no_irq_invalidateTLB_ASID])
+    apply (fastforce dest: no_irq_use [OF no_irq_invalidateLocalTLB_ASID])
    apply clarsimp
    apply (drule_tac x=p in spec)
    apply (drule use_valid)
-    apply (rule_tac p=p in invalidateTLB_ASID_underlying_memory)
+    apply (rule_tac p=p in invalidateLocalTLB_ASID_underlying_memory)
     apply blast
    apply clarsimp
   done
@@ -3517,13 +3517,13 @@ lemma setVMRootForFlush_invs'[wp]: "\<lbrace>invs'\<rbrace> setVMRootForFlush a 
   done
 
 
-lemma dmo_invalidateTLB_VAASID_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTLB_VAASID x) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_invalidateTLB_VAASID no_irq)
+lemma dmo_invalidateLocalTLB_VAASID_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (invalidateLocalTLB_VAASID x) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_invalidateLocalTLB_VAASID no_irq)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
-    apply (clarsimp simp: invalidateTLB_VAASID_def machine_op_lift_def
+    apply (clarsimp simp: invalidateLocalTLB_VAASID_def machine_op_lift_def
                           machine_rest_lift_def split_def | wp)+
   done
 
@@ -3548,13 +3548,13 @@ lemma dmo_ccr_PoU_invs'[wp]:
   done
 
 (* FIXME: Move *)
-lemma dmo_invalidateTLB_ASID_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTLB_ASID a) \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_invalidateTLB_ASID no_irq)
+lemma dmo_invalidateLocalTLB_ASID_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (invalidateLocalTLB_ASID a) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_invalidateLocalTLB_ASID no_irq)
   apply clarsimp
   apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
          in use_valid[where P=P and Q="\<lambda>_. P" for P])
-    apply (simp add: invalidateTLB_ASID_def machine_op_lift_def
+    apply (simp add: invalidateLocalTLB_ASID_def machine_op_lift_def
                      machine_rest_lift_def split_def | wp)+
   done
 
@@ -3570,7 +3570,7 @@ lemma dmo_cleanCaches_PoU_invs'[wp]:
 
 crunch invs'[wp]: unmapPageTable "invs'"
   (ignore: getObject setObject storePDE doMachineOp
-       wp: dmo_invalidateTLB_VAASID_invs' dmo_setCurrentPD_invs'
+       wp: dmo_invalidateLocalTLB_VAASID_invs' dmo_setCurrentPD_invs'
            storePDE_Invalid_invs mapM_wp' no_irq_setCurrentPD
            crunch_wps 
      simp: crunch_simps)
@@ -3653,8 +3653,8 @@ crunch inv: lookupPTSlot P
 lemma flushPage_invs' [wp]:
   "\<lbrace>invs'\<rbrace> flushPage sz pd asid vptr \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: flushPage_def)
-  apply (wp dmo_invalidateTLB_VAASID_invs' hoare_drop_imps setVMRootForFlush_invs' 
-            no_irq_invalidateTLB_VAASID
+  apply (wp dmo_invalidateLocalTLB_VAASID_invs' hoare_drop_imps setVMRootForFlush_invs'
+            no_irq_invalidateLocalTLB_VAASID
          |simp)+
   done
 

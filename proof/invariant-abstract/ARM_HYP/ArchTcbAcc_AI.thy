@@ -55,10 +55,10 @@ lemma cap_master_cap_tcb_cap_valid_arch:
             split: option.splits cap.splits arch_cap.splits
                    Structures_A.thread_state.splits)
 
-crunch device_state_inv[wp]: invalidateTLB_ASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: invalidateLocalTLB_ASID "\<lambda>ms. P (device_state ms)"
   (ignore: ignore_failure)
 
-crunch device_state_inv[wp]: invalidateTLB_VAASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: invalidateLocalTLB_VAASID "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: setHardwareASID "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: isb "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: dsb "\<lambda>ms. P (device_state ms)"

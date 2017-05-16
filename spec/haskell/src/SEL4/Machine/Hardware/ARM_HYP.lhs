@@ -280,20 +280,20 @@ caches must be done separately.
 
 \subsubsection{Cache Cleaning and TLB Flushes}
 
-> invalidateTLB :: MachineMonad ()
-> invalidateTLB = do
+> invalidateLocalTLB :: MachineMonad ()
+> invalidateLocalTLB = do
 >     cbptr <- ask
->     liftIO $ Platform.invalidateTLBCallback cbptr
+>     liftIO $ Platform.invalidateLocalTLBCallback cbptr
 
-> invalidateTLB_ASID :: HardwareASID -> MachineMonad ()
-> invalidateTLB_ASID (HardwareASID hw_asid) = do
+> invalidateLocalTLB_ASID :: HardwareASID -> MachineMonad ()
+> invalidateLocalTLB_ASID (HardwareASID hw_asid) = do
 >     cbptr <- ask
->     liftIO $ Platform.invalidateTLB_ASIDCallback cbptr hw_asid
+>     liftIO $ Platform.invalidateLocalTLB_ASIDCallback cbptr hw_asid
 
-> invalidateTLB_VAASID :: Word -> MachineMonad ()
-> invalidateTLB_VAASID mva_plus_asid = do
+> invalidateLocalTLB_VAASID :: Word -> MachineMonad ()
+> invalidateLocalTLB_VAASID mva_plus_asid = do
 >     cbptr <- ask
->     liftIO $ Platform.invalidateTLB_VAASIDCallback cbptr mva_plus_asid
+>     liftIO $ Platform.invalidateLocalTLB_VAASIDCallback cbptr mva_plus_asid
 
 > cleanByVA :: VPtr -> PAddr -> MachineMonad ()
 > cleanByVA mva pa = do

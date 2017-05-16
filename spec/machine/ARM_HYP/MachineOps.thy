@@ -164,25 +164,25 @@ definition
 where "setCurrentPDPL2 pd \<equiv> machine_op_lift (setCurrentPDPL2_impl pd)"
 
 consts'
-  invalidateTLB_impl :: "unit machine_rest_monad"
+  invalidateLocalTLB_impl :: "unit machine_rest_monad"
 definition
-  invalidateTLB :: "unit machine_monad"
-where "invalidateTLB \<equiv> machine_op_lift invalidateTLB_impl"
+  invalidateLocalTLB :: "unit machine_monad"
+where "invalidateLocalTLB \<equiv> machine_op_lift invalidateLocalTLB_impl"
 
 
 consts'
-  invalidateTLB_ASID_impl :: "hardware_asid \<Rightarrow> unit machine_rest_monad"
+  invalidateLocalTLB_ASID_impl :: "hardware_asid \<Rightarrow> unit machine_rest_monad"
 definition
-  invalidateTLB_ASID :: "hardware_asid \<Rightarrow> unit machine_monad"
-where "invalidateTLB_ASID a \<equiv> machine_op_lift (invalidateTLB_ASID_impl a)"
+  invalidateLocalTLB_ASID :: "hardware_asid \<Rightarrow> unit machine_monad"
+where "invalidateLocalTLB_ASID a \<equiv> machine_op_lift (invalidateLocalTLB_ASID_impl a)"
 
 
 (* C implementation takes one argument, which is w || a *)
 consts'
-  invalidateTLB_VAASID_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+  invalidateLocalTLB_VAASID_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 definition
-  invalidateTLB_VAASID :: "machine_word \<Rightarrow> unit machine_monad"
-where "invalidateTLB_VAASID w \<equiv> machine_op_lift (invalidateTLB_VAASID_impl w)"
+  invalidateLocalTLB_VAASID :: "machine_word \<Rightarrow> unit machine_monad"
+where "invalidateLocalTLB_VAASID w \<equiv> machine_op_lift (invalidateLocalTLB_VAASID_impl w)"
 
 consts'
   cleanByVA_impl :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_rest_monad"
@@ -290,8 +290,8 @@ lemmas cache_machine_op_defs = isb_def dsb_def dmb_def writeContextID_def flushB
                                cleanInvalidateL2Range_def cleanInvalidate_D_PoC_def
                                clean_D_PoU_def branchFlush_def cleanInvalByVA_def
                                invalidate_I_PoU_def invalidateByVA_I_def invalidateByVA_def
-                               cleanByVA_PoU_def cleanByVA_def invalidateTLB_VAASID_def
-                               invalidateTLB_ASID_def invalidateTLB_def
+                               cleanByVA_PoU_def cleanByVA_def invalidateLocalTLB_VAASID_def
+                               invalidateLocalTLB_ASID_def invalidateLocalTLB_def
 consts'
   IFSR_val :: "machine_state \<Rightarrow> machine_word"
   DFSR_val :: "machine_state \<Rightarrow> machine_word"

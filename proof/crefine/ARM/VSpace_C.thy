@@ -1106,6 +1106,14 @@ lemma ccorres_pre_gets_armKSGlobalPD_ksArchState:
   apply simp
   done
 
+lemma invalidateTranslationASID_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>hw_asid = hw_asid \<rbrace>) []
+           (doMachineOp (invalidateLocalTLB_ASID hw_asid))
+           (Call invalidateTranslationASID_'proc)"
+  apply cinit'
+  apply (ctac (no_vcg) add: invalidateLocalTLB_ASID_ccorres)
+  apply clarsimp
+  done
 
 lemma flushSpace_ccorres:
   "ccorres dc xfdc (valid_pde_mappings' and (\<lambda>_. asid \<le> mask asid_bits)) (UNIV \<inter> {s. asid_' s = asid}) []
@@ -1131,7 +1139,7 @@ lemma flushSpace_ccorres:
        apply clarsimp
       apply clarsimp
       apply (rule ccorres_call, 
-             rule invalidateTLB_ASID_ccorres [simplified dc_def xfdc_def],
+             rule invalidateTranslationASID_ccorres [simplified dc_def xfdc_def],
              simp+)[1]
      apply vcg
     apply wp+
@@ -1335,7 +1343,7 @@ lemma findFreeHWASID_ccorres:
         apply (ctac(no_vcg) add: invalidateASID_ccorres)
          apply ((rule ccorres_move_const_guard 
                     | simp only: ccorres_seq_simps)+)?
-         apply (ctac(no_vcg) add: invalidateTLB_ASID_ccorres)
+         apply (ctac(no_vcg) add: invalidateTranslationASID_ccorres)
           apply (rule ccorres_split_nothrow)
               apply (rule ccorres_move_const_guard )+
               apply (rule ccorres_handlers_weaken)
@@ -1987,6 +1995,15 @@ lemma performPageDirectoryInvocationFlush_ccorres:
   apply (clarsimp simp: order_less_imp_le)
   done
 
+lemma invalidateTranslationSingle_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>vptr = w\<rbrace>) []
+           (doMachineOp (invalidateLocalTLB_VAASID w))
+           (Call invalidateTranslationSingle_'proc)"
+  apply cinit'
+  apply (ctac (no_vcg) add: invalidateLocalTLB_VAASID_ccorres)
+  apply clarsimp
+  done
+
 lemma flushPage_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. asid \<le> mask asid_bits \<and> is_aligned vptr pageBits))
       (UNIV \<inter> {s. gen_framesize_to_H (page_size_' s) = sz
@@ -2006,7 +2023,7 @@ lemma flushPage_ccorres:
       apply (rule ccorres_Guard_Seq ccorres_rhs_assoc)+
       apply csymbr
       apply csymbr
-      apply (ctac(no_vcg) add: invalidateTLB_VAASID_ccorres)
+      apply (ctac(no_vcg) add: invalidateTranslationSingle_ccorres)
        apply (rule ccorres_cond2[where R=\<top>])
          apply (simp add: from_bool_0 Collect_const_mem)
         apply (rule ccorres_pre_getCurThread)
@@ -3352,7 +3369,7 @@ lemma flushTable_ccorres:
       apply csymbr
         apply (simp add: word_sle_def mapM_discarded whileAnno_def Collect_False
                     del: Collect_const)
-        apply (ctac (no_vcg) add: invalidateTLB_ASID_ccorres)
+        apply (ctac (no_vcg) add: invalidateTranslationASID_ccorres)
        apply (rule_tac R=\<top> in ccorres_cond2)
          apply (clarsimp simp: from_bool_0 Collect_const_mem)
         apply (rule ccorres_pre_getCurThread)

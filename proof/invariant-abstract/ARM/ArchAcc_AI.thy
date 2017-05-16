@@ -3431,8 +3431,8 @@ lemma machine_op_lift_device_state[wp]:
                      select_def ignore_failure_def select_f_def
               split: if_splits)
 
-crunch device_state_inv[wp]: invalidateTLB_ASID "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: invalidateTLB_VAASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: invalidateLocalTLB_ASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: invalidateLocalTLB_VAASID "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: setHardwareASID "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: isb "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: dsb "\<lambda>ms. P (device_state ms)"

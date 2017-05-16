@@ -53,7 +53,7 @@ lemma irq_state_clearExMonitor[wp]: "\<lbrace> \<lambda>s. P (irq_state s) \<rbr
 
 crunch irq_state_of_state[wp]: schedule "\<lambda>(s::det_state). P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp crunch_wps hoare_whenE_wp
-       simp: invalidateTLB_ASID_def setHardwareASID_def setCurrentPD_def
+       simp: invalidateLocalTLB_ASID_def setHardwareASID_def setCurrentPD_def
              machine_op_lift_def machine_rest_lift_def crunch_simps storeWord_def
              dsb_def isb_def writeTTBR0_def)
 
@@ -81,10 +81,10 @@ crunch irq_state'[wp]: cleanCacheRange_PoU "\<lambda> s. P (irq_state s)"
 
 
 crunch irq_state_of_state[wp]: arch_perform_invocation "\<lambda>(s::det_state). P (irq_state_of_state s)"
-  (wp: dmo_wp modify_wp simp: setCurrentPD_def invalidateTLB_ASID_def invalidateTLB_VAASID_def cleanByVA_PoU_def do_flush_def cache_machine_op_defs do_flush_defs wp: crunch_wps simp: crunch_simps ignore: ignore_failure)
+  (wp: dmo_wp modify_wp simp: setCurrentPD_def invalidateLocalTLB_ASID_def invalidateLocalTLB_VAASID_def cleanByVA_PoU_def do_flush_def cache_machine_op_defs do_flush_defs wp: crunch_wps simp: crunch_simps ignore: ignore_failure)
 
 crunch irq_state_of_state[wp]: finalise_cap "\<lambda>(s::det_state). P (irq_state_of_state s)"
-  (wp: select_wp modify_wp crunch_wps dmo_wp simp: crunch_simps invalidateTLB_ASID_def cleanCaches_PoU_def dsb_def invalidate_I_PoU_def clean_D_PoU_def)
+  (wp: select_wp modify_wp crunch_wps dmo_wp simp: crunch_simps invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def invalidate_I_PoU_def clean_D_PoU_def)
 
 crunch irq_state_of_state[wp]: send_signal "\<lambda>s. P (irq_state_of_state s)"
 
@@ -93,7 +93,7 @@ crunch irq_state_of_state[wp]: cap_swap_for_delete "\<lambda>(s::det_state). P (
 crunch irq_state_of_state[wp]: load_hw_asid "\<lambda>(s::det_state). P (irq_state_of_state s)"
 
 crunch irq_state_of_state[wp]: cancel_badged_sends "\<lambda>(s::det_state). P (irq_state_of_state s)"
-  (wp: crunch_wps dmo_wp hoare_unless_wp modify_wp simp: filterM_mapM crunch_simps no_irq_clearMemory simp: clearMemory_def storeWord_def invalidateTLB_ASID_def 
+  (wp: crunch_wps dmo_wp hoare_unless_wp modify_wp simp: filterM_mapM crunch_simps no_irq_clearMemory simp: clearMemory_def storeWord_def invalidateLocalTLB_ASID_def
    ignore: filterM)
 
 crunch irq_state_of_state[wp]: restart,invoke_domain "\<lambda>(s::det_state). P (irq_state_of_state s)"
@@ -517,7 +517,7 @@ lemma do_machine_op_mol_states_equiv_for:
    the return values *)
 lemma find_free_hw_asid_revrv:
   "reads_equiv_valid_rv_inv (affects_equiv aag l) aag \<top>\<top> \<top> (find_free_hw_asid)"
-  unfolding find_free_hw_asid_def fun_app_def invalidateTLB_ASID_def
+  unfolding find_free_hw_asid_def fun_app_def invalidateLocalTLB_ASID_def
   apply(rule equiv_valid_2_unobservable)
      apply (wp modify_wp invalidate_hw_asid_entry_states_equiv_for 
                do_machine_op_mol_states_equiv_for
@@ -566,7 +566,7 @@ crunch states_equiv_for: store_hw_asid "states_equiv_for P Q R S st"
 lemma find_free_hw_asid_states_equiv_for:
   "invariant (find_free_hw_asid) (states_equiv_for P Q R S st)"
   apply(simp add: find_free_hw_asid_def)
-  apply(wp modify_wp invalidate_hw_asid_entry_states_equiv_for do_machine_op_mol_states_equiv_for invalidate_asid_states_equiv_for | wpc | simp add: states_equiv_for_arm_next_asid_update invalidateTLB_ASID_def)+
+  apply(wp modify_wp invalidate_hw_asid_entry_states_equiv_for do_machine_op_mol_states_equiv_for invalidate_asid_states_equiv_for | wpc | simp add: states_equiv_for_arm_next_asid_update invalidateLocalTLB_ASID_def)+
   done
 
 crunch states_equiv_for: get_hw_asid "states_equiv_for P Q R S st"
@@ -680,7 +680,7 @@ lemma set_vm_root_for_flush_reads_respects:
   done
 
 crunch states_equiv_for: flush_table "states_equiv_for P Q R S st"
-  (wp: crunch_wps do_machine_op_mol_states_equiv_for ignore: do_machine_op simp: invalidateTLB_ASID_def crunch_simps)
+  (wp: crunch_wps do_machine_op_mol_states_equiv_for ignore: do_machine_op simp: invalidateLocalTLB_ASID_def crunch_simps)
 
 crunch cur_thread: flush_table "\<lambda> s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -786,7 +786,7 @@ crunch wuc: flush_page "\<lambda>s. P (work_units_completed s)"
   (wp: crunch_wps simp: if_apply_def2)
 
 crunch states_equiv_for: flush_page "states_equiv_for P Q R S st"
-  (wp: do_machine_op_mol_states_equiv_for crunch_wps ignore: do_machine_op simp: invalidateTLB_VAASID_def if_apply_def2)
+  (wp: do_machine_op_mol_states_equiv_for crunch_wps ignore: do_machine_op simp: invalidateLocalTLB_VAASID_def if_apply_def2)
 
 lemma flush_page_reads_respects:
   "reads_respects aag l \<top> (flush_page page_size pd asid vptr)"
@@ -832,7 +832,7 @@ lemma tl_subseteq:
 
 
 crunch states_equiv_for: invalidate_tlb_by_asid "states_equiv_for P Q R S st"
-  (wp: do_machine_op_mol_states_equiv_for ignore: do_machine_op simp: invalidateTLB_ASID_def)
+  (wp: do_machine_op_mol_states_equiv_for ignore: do_machine_op simp: invalidateLocalTLB_ASID_def)
 
 
 crunch cur_thread[wp]: invalidate_tlb_by_asid "\<lambda>s. P (cur_thread s)"
@@ -1224,7 +1224,7 @@ crunch cur_thread: invalidate_asid_entry "\<lambda>s. P (cur_thread s)"
 crunch sched_act: invalidate_asid_entry "\<lambda>s. P (scheduler_action s)"
 crunch wuc: invalidate_asid_entry "\<lambda>s. P (work_units_completed s)"
 crunch states_equiv_for: flush_space "states_equiv_for P Q R S st"
-  (wp: mol_states_equiv_for dmo_wp ignore: do_machine_op simp: invalidateTLB_ASID_def cleanCaches_PoU_def dsb_def invalidate_I_PoU_def clean_D_PoU_def)
+  (wp: mol_states_equiv_for dmo_wp ignore: do_machine_op simp: invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def invalidate_I_PoU_def clean_D_PoU_def)
 crunch cur_thread: flush_space "\<lambda>s. P (cur_thread s)"
 crunch sched_act: flush_space "\<lambda>s. P (scheduler_action s)"
 crunch wuc: flush_space "\<lambda>s. P (work_units_completed s)"
@@ -1537,7 +1537,7 @@ lemma find_free_hw_asid_globals_equiv[wp]:
   unfolding find_free_hw_asid_def
   apply(wp modify_wp invalidate_hw_asid_entry_globals_equiv 
           dmo_mol_globals_equiv invalidate_asid_globals_equiv
-       | wpc | simp add: invalidateTLB_ASID_def)+
+       | wpc | simp add: invalidateLocalTLB_ASID_def)+
   done
 
 lemma store_hw_asid_globals_equiv[wp]:
@@ -1582,7 +1582,7 @@ lemma flush_space_globals_equiv[wp]:
 unfolding flush_space_def
 apply(wp dmo_mol_globals_equiv load_hw_asid_wp
     | wpc
-    | simp add: invalidateTLB_ASID_def cleanCaches_PoU_def dsb_def invalidate_I_PoU_def clean_D_PoU_def dmo_bind_valid)+
+    | simp add: invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def invalidate_I_PoU_def clean_D_PoU_def dmo_bind_valid)+
 done
 
 lemma delete_asid_pool_globals_equiv[wp]:
@@ -1592,7 +1592,7 @@ lemma delete_asid_pool_globals_equiv[wp]:
   done
 
 crunch globals_equiv[wp]: invalidate_tlb_by_asid "globals_equiv s"
-  (simp: invalidateTLB_ASID_def wp: dmo_mol_globals_equiv ignore: machine_op_lift do_machine_op)
+  (simp: invalidateLocalTLB_ASID_def wp: dmo_mol_globals_equiv ignore: machine_op_lift do_machine_op)
 
 lemma set_pt_globals_equiv:
   "\<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> set_pt ptr pt \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -1613,7 +1613,7 @@ lemma set_vm_root_for_flush_globals_equiv[wp]:
 
 lemma flush_table_globals_equiv[wp]:
   "\<lbrace>globals_equiv s\<rbrace> flush_table pd asid cptr pt \<lbrace>\<lambda>rv. globals_equiv s\<rbrace>"
-  unfolding flush_table_def invalidateTLB_ASID_def fun_app_def
+  unfolding flush_table_def invalidateLocalTLB_ASID_def fun_app_def
   apply (wp mapM_wp' dmo_mol_globals_equiv | wpc | simp add: do_machine_op_bind split del: if_split cong: if_cong)+
   done
 
@@ -1846,7 +1846,7 @@ lemma perform_page_directory_invocation_globals_equiv:
 
 lemma flush_page_globals_equiv[wp]:
   "\<lbrace>globals_equiv st\<rbrace> flush_page page_size pd asid vptr \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding flush_page_def invalidateTLB_VAASID_def
+  unfolding flush_page_def invalidateLocalTLB_VAASID_def
   apply(wp | simp cong: if_cong split del: if_split)+
   done
 

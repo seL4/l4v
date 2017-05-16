@@ -17,7 +17,7 @@ context Arch begin global_naming ARM
 named_theorems EmptyFail_AI_assms
 
 crunch_ignore (empty_fail)
-  (add: invalidateTLB_ASID_impl invalidateTLB_VAASID_impl cleanByVA_impl
+  (add: invalidateLocalTLB_ASID_impl invalidateLocalTLB_VAASID_impl cleanByVA_impl
         cleanByVA_PoU_impl invalidateByVA_impl invalidateByVA_I_impl
         invalidate_I_PoU_impl cleanInvalByVA_impl branchFlush_impl
         clean_D_PoU_impl cleanInvalidate_D_PoC_impl cleanInvalidateL2Range_impl

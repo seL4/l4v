@@ -42,7 +42,7 @@ crunch_ignore (add:
 context Arch begin (*FIXME: arch_split*)
 
 crunch_ignore (add:
-  invalidateTLB_ASID invalidateTLB_VAASID
+  invalidateLocalTLB_ASID invalidateLocalTLB_VAASID
   cleanByVA cleanByVA_PoU invalidateByVA invalidateByVA_I invalidate_I_PoU
   cleanInvalByVA branchFlush clean_D_PoU cleanInvalidate_D_PoC cleanInvalidateL2Range
   invalidateL2Range cleanL2Range flushBTAC writeContextID isb dsb dmb

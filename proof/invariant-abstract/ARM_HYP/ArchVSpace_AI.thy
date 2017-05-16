@@ -428,11 +428,11 @@ lemma page_directory_cap_pd_at_uniq:
   apply (drule(1) asid_low_high_bits, simp_all add: mask_def)
   done
 
-lemma invalidateTLB_ASID_underlying_memory:
+lemma invalidateLocalTLB_ASID_underlying_memory:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace>
-   invalidateTLB_ASID asid
+   invalidateLocalTLB_ASID asid
    \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (clarsimp simp: invalidateTLB_ASID_def machine_op_lift_def
+  by (clarsimp simp: invalidateLocalTLB_ASID_def machine_op_lift_def
                      machine_rest_lift_def split_def | wp)+
 
 lemma isb_underlying_memory[wp]:
@@ -456,23 +456,23 @@ lemma dmb_underlying_memory[wp]:
   by (clarsimp simp: dmb_def machine_op_lift_def
                      machine_rest_lift_def split_def | wp)+
 
-lemma invalidateTLB_underlying_memory:
+lemma invalidateLocalTLB_underlying_memory:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace>
-   invalidateTLB
+   invalidateLocalTLB
    \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (clarsimp simp: invalidateTLB_def machine_op_lift_def
+  by (clarsimp simp: invalidateLocalTLB_def machine_op_lift_def
                      machine_rest_lift_def split_def | wp)+
 
-lemmas invalidateTLB_ASID_irq_masks = no_irq[OF no_irq_invalidateTLB_ASID]
+lemmas invalidateLocalTLB_ASID_irq_masks = no_irq[OF no_irq_invalidateLocalTLB_ASID]
 
-lemma dmo_invalidateTLB_ASID_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (invalidateTLB_ASID asid) \<lbrace>\<lambda>_. invs\<rbrace>"
+lemma dmo_invalidateLocalTLB_ASID_invs[wp]:
+  "\<lbrace>invs\<rbrace> do_machine_op (invalidateLocalTLB_ASID asid) \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (wp dmo_invs)
   apply safe
    apply (drule use_valid)
-     apply (rule invalidateTLB_ASID_underlying_memory)
+     apply (rule invalidateLocalTLB_ASID_underlying_memory)
     apply fastforce+
-  apply(erule (1) use_valid[OF _ invalidateTLB_ASID_irq_masks])
+  apply(erule (1) use_valid[OF _ invalidateLocalTLB_ASID_irq_masks])
   done
 
 lemma load_hw_asid_invs[wp]: "\<lbrace>invs\<rbrace> load_hw_asid asid \<lbrace>\<lambda>y. invs\<rbrace>"
@@ -2179,10 +2179,10 @@ lemma store_hw_asid_invs:
                    pd_at_asid_arch_up)
   done
 
-lemma invalidateTLB_ASID_valid_irq_states:
-  "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> invalidateTLB_ASID x
+lemma invalidateLocalTLB_ASID_valid_irq_states:
+  "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> invalidateLocalTLB_ASID x
    \<lbrace>\<lambda>a b. valid_irq_states (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
-  apply(simp add: valid_irq_states_def | wp no_irq | simp add: no_irq_invalidateTLB_ASID)+
+  apply(simp add: valid_irq_states_def | wp no_irq | simp add: no_irq_invalidateLocalTLB_ASID)+
   done
 
 lemma find_free_hw_asid_invs [wp]:
@@ -2203,18 +2203,18 @@ lemma find_free_hw_asid_invs [wp]:
                    valid_machine_state_def valid_vs_lookup_arch_update)
   apply (elim conjE)
   apply (rule conjI)
-   apply(erule use_valid[OF _ invalidateTLB_ASID_valid_irq_states])
+   apply(erule use_valid[OF _ invalidateLocalTLB_ASID_valid_irq_states])
    apply fastforce
   apply(rule conjI)
    apply clarsimp
    apply (drule use_valid)
-     apply (rule_tac p=p in invalidateTLB_ASID_underlying_memory, simp, fastforce)
+     apply (rule_tac p=p in invalidateLocalTLB_ASID_underlying_memory, simp, fastforce)
   apply (clarsimp simp: valid_asid_map_def fun_upd_def[symmetric]
                         pd_at_asid_arch_up')
   apply (rule conjI, blast)
   apply (clarsimp simp: vspace_at_asid_def)
   apply (drule_tac P1 = "op = (device_state (machine_state s))" in
-    use_valid[OF _ invalidateTLB_ASID_device_state_inv])
+    use_valid[OF _ invalidateLocalTLB_ASID_device_state_inv])
    apply simp
   apply clarsimp
   done
@@ -4295,7 +4295,7 @@ lemma flush_table_invs[wp]:
   "\<lbrace>invs and K (asid \<le> mask asid_bits)\<rbrace>
   flush_table pd asid vptr pt \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: flush_table_def)
-  apply (wp dmo_invalidateTLB_ASID_invs | simp)+
+  apply (wp dmo_invalidateLocalTLB_ASID_invs | simp)+
   apply (simp only: if_cancel
             | clarsimp simp: machine_op_lift_def
                              machine_rest_lift_def split_def
@@ -5069,9 +5069,9 @@ crunch typ_at [wp]: unmap_page "\<lambda>s. P (typ_at T p s)"
 
 lemmas unmap_page_typ_ats [wp] = abs_typ_at_lifts [OF unmap_page_typ_at]
 
-lemma invalidateTLB_VAASID_underlying_memory[wp]:
-  "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> invalidateTLB_VAASID v \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (clarsimp simp: invalidateTLB_VAASID_def machine_rest_lift_def machine_op_lift_def split_def | wp)+
+lemma invalidateLocalTLB_VAASID_underlying_memory[wp]:
+  "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> invalidateLocalTLB_VAASID v \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
+  by (clarsimp simp: invalidateLocalTLB_VAASID_def machine_rest_lift_def machine_op_lift_def split_def | wp)+
 
 lemma flush_page_invs:
   "\<lbrace>invs and K (asid \<le> mask asid_bits)\<rbrace>
@@ -5087,7 +5087,7 @@ lemma flush_page_invs:
       apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
              in use_valid)
         apply ((clarsimp | wp)+)[3]
-       apply(erule use_valid, wp no_irq_invalidateTLB_VAASID no_irq, assumption)
+       apply(erule use_valid, wp no_irq_invalidateLocalTLB_VAASID no_irq, assumption)
       apply (wpsimp wp: set_vm_root_for_flush_invs hoare_drop_imps)+
   done
 

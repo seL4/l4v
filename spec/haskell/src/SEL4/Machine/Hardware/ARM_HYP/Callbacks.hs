@@ -37,13 +37,13 @@ foreign import ccall unsafe "qemu_store_word_phys"
     storeWordCallback :: Ptr CallbackData -> PAddr -> Word -> IO ()
 
 foreign import ccall unsafe "qemu_tlb_flush"
-    invalidateTLBCallback :: Ptr CallbackData -> IO ()
+    invalidateLocalTLBCallback :: Ptr CallbackData -> IO ()
 
 foreign import ccall unsafe "qemu_tlb_flush_asid"
-    invalidateTLB_ASIDCallback :: Ptr CallbackData -> Word8 -> IO ()
+    invalidateLocalTLB_ASIDCallback :: Ptr CallbackData -> Word8 -> IO ()
 
 foreign import ccall unsafe "qemu_tlb_flush_vptr"
-    invalidateTLB_VAASIDCallback :: Ptr CallbackData -> Word -> IO ()
+    invalidateLocalTLB_VAASIDCallback :: Ptr CallbackData -> Word -> IO ()
 
 foreign import ccall unsafe "qemu_set_asid"
     setHardwareASID :: Ptr CallbackData -> Word8 -> IO ()

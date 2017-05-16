@@ -62,7 +62,7 @@ lemma integrity_arm_next_asid [iff]:
 declare dmo_mol_respects [wp]
 
 crunch respects[wp]: arm_context_switch "integrity X aag st"
-  (simp: dmo_bind_valid dsb_def isb_def writeTTBR0_def invalidateTLB_ASID_def 
+  (simp: dmo_bind_valid dsb_def isb_def writeTTBR0_def invalidateLocalTLB_ASID_def
          setHardwareASID_def setCurrentPD_def 
  ignore: do_machine_op)
 
@@ -77,7 +77,7 @@ crunch respects[wp]: set_vm_root_for_flush "integrity X aag st"
   (wp: crunch_wps simp: setCurrentPD_def crunch_simps ignore: do_machine_op)
 
 crunch respects[wp]: flush_table "integrity X aag st"
-  (wp: crunch_wps simp: invalidateTLB_ASID_def crunch_simps ignore: do_machine_op)
+  (wp: crunch_wps simp: invalidateLocalTLB_ASID_def crunch_simps ignore: do_machine_op)
 
 crunch respects[wp]: page_table_mapped "integrity X aag st"
 
@@ -399,7 +399,7 @@ lemma mapM_set'':
   done
 
 crunch respects [wp]: flush_page "integrity aag X st"
-  (simp: invalidateTLB_VAASID_def ignore: do_machine_op)
+  (simp: invalidateLocalTLB_VAASID_def ignore: do_machine_op)
 
 lemma find_pd_for_asid_pd_owned[wp]:
   "\<lbrace>pas_refined aag and K (is_subject_asid aag asid)\<rbrace>
@@ -493,12 +493,12 @@ lemma invalidate_tlb_by_asid_respects[wp]:
   "\<lbrace>integrity aag X st\<rbrace> invalidate_tlb_by_asid asid
     \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: invalidate_tlb_by_asid_def)
-  apply (wp dmo_no_mem_respects | wpc | simp add: invalidateTLB_ASID_def )+
+  apply (wp dmo_no_mem_respects | wpc | simp add: invalidateLocalTLB_ASID_def )+
   done
 
 lemma invalidate_tlb_by_asid_pas_refined[wp]:
   "\<lbrace>pas_refined aag\<rbrace> invalidate_tlb_by_asid asid \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  by (wp dmo_no_mem_respects | wpc | simp add: invalidate_tlb_by_asid_def invalidateTLB_ASID_def)+
+  by (wp dmo_no_mem_respects | wpc | simp add: invalidate_tlb_by_asid_def invalidateLocalTLB_ASID_def)+
 
 crunch pas_refined[wp]: set_message_info "pas_refined aag"
 
@@ -1225,7 +1225,7 @@ lemma delete_asid_pool_pas_refined [wp]:
 crunch respects[wp]: invalidate_asid_entry "integrity aag X st"
 
 crunch respects[wp]: flush_space "integrity aag X st"
-  (ignore: do_machine_op simp: invalidateTLB_ASID_def cleanCaches_PoU_def dsb_def clean_D_PoU_def invalidate_I_PoU_def do_machine_op_bind)
+  (ignore: do_machine_op simp: invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def clean_D_PoU_def invalidate_I_PoU_def do_machine_op_bind)
 
 lemma delete_asid_pool_respects[wp]:
   "\<lbrace> integrity aag X st and K (\<forall>asid'.

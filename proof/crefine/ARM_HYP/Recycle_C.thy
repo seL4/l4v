@@ -537,7 +537,7 @@ lemma invalidateTLBByASID_ccorres:
       apply (rule ccorres_return_void_C[unfolded dc_def])
      apply (simp add: dc_def[symmetric])
      apply csymbr
-     apply (ctac add: invalidateTLB_ASID_ccorres)
+     apply (ctac add: invalidateTranslationASID_ccorres)
     apply vcg
    apply (wp hoare_drop_imps)
   apply (clarsimp simp: pde_stored_asid_def to_bool_def)

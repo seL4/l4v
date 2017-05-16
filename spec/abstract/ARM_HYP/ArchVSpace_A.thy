@@ -225,7 +225,7 @@ invalidate_tlb_by_asid :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" wher
     maybe_hw_asid \<leftarrow> load_hw_asid asid;
     (case maybe_hw_asid of
           None \<Rightarrow> return ()
-        | Some hw_asid \<Rightarrow> do_machine_op $ invalidateTLB_ASID hw_asid)
+        | Some hw_asid \<Rightarrow> do_machine_op $ invalidateLocalTLB_ASID hw_asid)
 od"
 
 text {* Flush all cache and TLB entries associated with this virtual ASID. *}
@@ -236,7 +236,7 @@ flush_space :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
     do_machine_op cleanCaches_PoU;
     (case maybe_hw_asid of
           None \<Rightarrow> return ()
-        | Some hw_asid \<Rightarrow> do_machine_op $ invalidateTLB_ASID hw_asid)
+        | Some hw_asid \<Rightarrow> do_machine_op $ invalidateLocalTLB_ASID hw_asid)
 od"
 
 text {* Remove any mapping from this virtual ASID to a hardware ASID. *}
@@ -281,7 +281,7 @@ find_free_hw_asid :: "(hardware_asid,'z::state_ext) s_monad" where
        Some hw_asid \<Rightarrow> return hw_asid
      | None \<Rightarrow>  do
             invalidate_asid $ the $ hw_asid_table next_asid;
-            do_machine_op $ invalidateTLB_ASID next_asid;
+            do_machine_op $ invalidateLocalTLB_ASID next_asid;
             invalidate_hw_asid_entry next_asid;
             new_next_asid \<leftarrow> return (next_asid + 1);
             modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_next_asid := new_next_asid \<rparr>\<rparr>);
@@ -684,7 +684,7 @@ flush_table :: "word32 \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow>
     maybe_hw_asid \<leftarrow> load_hw_asid asid;
     when (maybe_hw_asid \<noteq> None) $ do
       hw_asid \<leftarrow> return (the maybe_hw_asid);
-      do_machine_op $ invalidateTLB_ASID hw_asid;
+      do_machine_op $ invalidateLocalTLB_ASID hw_asid;
       when root_switched $ do
         tcb \<leftarrow> gets cur_thread;
         set_vm_root tcb
@@ -701,7 +701,7 @@ flush_page :: "vmpage_size \<Rightarrow> word32 \<Rightarrow> asid \<Rightarrow>
     maybe_hw_asid \<leftarrow> load_hw_asid asid;
     when (maybe_hw_asid \<noteq> None) $ do
       hw_asid \<leftarrow> return (the maybe_hw_asid);
-      do_machine_op $ invalidateTLB_VAASID (vptr || ucast hw_asid);
+      do_machine_op $ invalidateLocalTLB_VAASID (vptr || ucast hw_asid);
       when root_switched $ do
           tcb \<leftarrow> gets cur_thread;
           set_vm_root tcb

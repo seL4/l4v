@@ -161,14 +161,14 @@ lemma no_fail_cleanByVA: "no_fail \<top> (cleanByVA w p)"
 lemma no_fail_cleanByVA_PoU: "no_fail \<top> (cleanByVA_PoU w p)"
   by (simp add: cleanByVA_PoU_def)
 
-lemma no_fail_invalidateTLB: "no_fail \<top> invalidateTLB"
-  by (simp add: invalidateTLB_def)
+lemma no_fail_invalidateLocalTLB: "no_fail \<top> invalidateLocalTLB"
+  by (simp add: invalidateLocalTLB_def)
 
-lemma no_fail_invalidateTLB_ASID: "no_fail \<top> (invalidateTLB_ASID x)"
-  by (simp add: invalidateTLB_ASID_def)
+lemma no_fail_invalidateLocalTLB_ASID: "no_fail \<top> (invalidateLocalTLB_ASID x)"
+  by (simp add: invalidateLocalTLB_ASID_def)
 
-lemma no_fail_invalidateTLB_VAASID: "no_fail \<top> (invalidateTLB_VAASID x)"
-  by (simp add: invalidateTLB_VAASID_def)
+lemma no_fail_invalidateLocalTLB_VAASID: "no_fail \<top> (invalidateLocalTLB_VAASID x)"
+  by (simp add: invalidateLocalTLB_VAASID_def)
 
 lemma no_fail_invalidateByVA: "no_fail \<top> (invalidateByVA w p)"
   by (simp add: invalidateByVA_def)
@@ -386,14 +386,14 @@ lemma no_irq_cleanByVA: "no_irq  (cleanByVA w p)"
 lemma no_irq_cleanByVA_PoU: "no_irq  (cleanByVA_PoU w p)"
   by (simp add: cleanByVA_PoU_def)
 
-lemma no_irq_invalidateTLB: "no_irq  invalidateTLB"
-  by (simp add: invalidateTLB_def)
+lemma no_irq_invalidateLocalTLB: "no_irq  invalidateLocalTLB"
+  by (simp add: invalidateLocalTLB_def)
 
-lemma no_irq_invalidateTLB_ASID: "no_irq  (invalidateTLB_ASID x)"
-  by (simp add: invalidateTLB_ASID_def)
+lemma no_irq_invalidateLocalTLB_ASID: "no_irq  (invalidateLocalTLB_ASID x)"
+  by (simp add: invalidateLocalTLB_ASID_def)
 
-lemma no_irq_invalidateTLB_VAASID: "no_irq  (invalidateTLB_VAASID x)"
-  by (simp add: invalidateTLB_VAASID_def)
+lemma no_irq_invalidateLocalTLB_VAASID: "no_irq  (invalidateLocalTLB_VAASID x)"
+  by (simp add: invalidateLocalTLB_VAASID_def)
 
 lemma no_irq_invalidateByVA: "no_irq  (invalidateByVA w p)"
   by (simp add: invalidateByVA_def)
@@ -714,14 +714,14 @@ lemma empty_fail_cleanByVA: "empty_fail  (cleanByVA w p)"
 lemma empty_fail_cleanByVA_PoU: "empty_fail  (cleanByVA_PoU w p)"
   by (simp add: cleanByVA_PoU_def)
 
-lemma empty_fail_invalidateTLB: "empty_fail  invalidateTLB"
-  by (simp add: invalidateTLB_def)
+lemma empty_fail_invalidateLocalTLB: "empty_fail  invalidateLocalTLB"
+  by (simp add: invalidateLocalTLB_def)
 
-lemma empty_fail_invalidateTLB_ASID: "empty_fail  (invalidateTLB_ASID x)"
-  by (simp add: invalidateTLB_ASID_def)
+lemma empty_fail_invalidateLocalTLB_ASID: "empty_fail  (invalidateLocalTLB_ASID x)"
+  by (simp add: invalidateLocalTLB_ASID_def)
 
-lemma empty_fail_invalidateTLB_VAASID: "empty_fail  (invalidateTLB_VAASID x)"
-  by (simp add: invalidateTLB_VAASID_def)
+lemma empty_fail_invalidateLocalTLB_VAASID: "empty_fail  (invalidateLocalTLB_VAASID x)"
+  by (simp add: invalidateLocalTLB_VAASID_def)
 
 lemma empty_fail_invalidateByVA: "empty_fail  (invalidateByVA w p)"
   by (simp add: invalidateByVA_def)

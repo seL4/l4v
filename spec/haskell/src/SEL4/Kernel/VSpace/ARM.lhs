@@ -152,7 +152,7 @@ Any IO devices used directly by the kernel --- generally including the interrupt
 >     globalPD <- gets $ armKSGlobalPD . ksArchState
 >     doMachineOp $ do
 >         setCurrentPD $ addrFromPPtr globalPD
->         invalidateTLB
+>         invalidateLocalTLB
 
 Function pair "createITPDPTs" + "writeITPDPTs" init the memory space for the initial thread
 
@@ -929,7 +929,7 @@ round-robin.
 >         Just hw_asid -> return hw_asid
 >         Nothing -> do
 >             invalidateASID $ fromJust $ hwASIDTable ! nextASID
->             doMachineOp $ invalidateTLB_ASID nextASID
+>             doMachineOp $ invalidateLocalTLB_ASID nextASID
 >             invalidateHWASIDEntry nextASID
 >             let new_nextASID =
 >                     if nextASID == maxBound
@@ -975,7 +975,7 @@ round-robin.
 >     maybe_hw_asid <- loadHWASID asid
 >     when (isJust maybe_hw_asid) $ do
 >       let Just hw_asid = maybe_hw_asid
->       doMachineOp $ invalidateTLB_VAASID (fromVPtr vptr .|. (fromIntegral $ fromHWASID hw_asid))
+>       doMachineOp $ invalidateLocalTLB_VAASID (fromVPtr vptr .|. (fromIntegral $ fromHWASID hw_asid))
 >       when root_switched $ do
 >           tcb <- getCurThread
 >           setVMRoot tcb
@@ -987,7 +987,7 @@ round-robin.
 >     root_switched <- setVMRootForFlush pd asid
 >     maybe_hw_asid <- loadHWASID asid
 >     when (isJust maybe_hw_asid) $ do
->       doMachineOp $ invalidateTLB_ASID (fromJust maybe_hw_asid)
+>       doMachineOp $ invalidateLocalTLB_ASID (fromJust maybe_hw_asid)
 >       when root_switched $ do
 >           tcb <- getCurThread
 >           setVMRoot tcb
@@ -999,7 +999,7 @@ round-robin.
 >     case maybe_hw_asid of
 >         Nothing -> return ()
 >         Just hw_asid -> do
->             doMachineOp $ invalidateTLB_ASID hw_asid
+>             doMachineOp $ invalidateLocalTLB_ASID hw_asid
 
 > invalidateTLBByASID :: ASID -> Kernel ()
 > invalidateTLBByASID asid = do
@@ -1007,7 +1007,7 @@ round-robin.
 >     case maybe_hw_asid of
 >         Nothing -> return ()
 >         Just hw_asid -> do
->             doMachineOp $ invalidateTLB_ASID hw_asid
+>             doMachineOp $ invalidateLocalTLB_ASID hw_asid
 
 \subsection{Decoding ARM Invocations}
 

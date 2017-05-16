@@ -707,7 +707,7 @@ lemma rec_del_respects'_pre:
   by simp
 
 crunch respects[wp]: invalidate_tlb_by_asid "integrity aag X st"
-    (simp: invalidateTLB_ASID_def ignore: do_machine_op)
+    (simp: invalidateLocalTLB_ASID_def ignore: do_machine_op)
 
 crunch inv[wp]: page_table_mapped "P"
 
