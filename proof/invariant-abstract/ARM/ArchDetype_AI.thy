@@ -114,6 +114,10 @@ lemma region_in_kernel_window_delete_objects[wp]:
    \<lbrace>\<lambda>_. region_in_kernel_window S\<rbrace>"
   by (wp | simp add: delete_objects_def do_machine_op_def split_def)+
 
+lemma state_hyp_refs_of_detype:
+  "state_hyp_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else state_hyp_refs_of s x)"
+  by (rule ext, simp add: state_hyp_refs_of_def detype_def)
+
 end
 
 interpretation Detype_AI?: Detype_AI
@@ -126,6 +130,30 @@ interpretation Detype_AI?: Detype_AI
 context detype_locale_arch begin
 
 named_theorems detype_invs_proofs
+
+lemma state_hyp_refs: "state_hyp_refs_of (detype (untyped_range cap) s) = state_hyp_refs_of s"
+  apply (rule ext, clarsimp simp add: state_hyp_refs_of_detype)
+  apply (rule sym, rule equals0I, drule state_hyp_refs_of_elemD)
+  apply (drule live_okE, rule hyp_refs_of_live, clarsimp)
+  apply simp
+  done
+
+lemma hyp_refsym : "sym_refs (state_hyp_refs_of s)"
+  using invs by (simp add: invs_def valid_state_def valid_pspace_def)
+
+lemma hyp_refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightarrow> hyp_refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
+  by (fastforce intro: hyp_refs_of_live dest!: hyp_sym_refs_ko_atD[OF _ hyp_refsym] live_okE)
+
+lemma wellformed_arch_obj[detype_invs_proofs]:
+    "\<And>p ao. \<lbrakk>ko_at (ArchObj ao) p s; wellformed_arch_obj ao s\<rbrakk>
+       \<Longrightarrow> wellformed_arch_obj ao (detype (untyped_range cap) s)"
+  apply (frule hyp_refs_of)
+  apply (auto simp: wellformed_arch_obj_def split: arch_kernel_obj.splits option.splits)
+  done
+
+lemma sym_hyp_refs_detype[detype_invs_proofs]:
+  "sym_refs (state_hyp_refs_of (detype (untyped_range cap) s))"
+  using hyp_refsym by (simp add: state_hyp_refs)
 
 lemma valid_cap[detype_invs_proofs]:
     "\<And>cap'. \<lbrakk> s \<turnstile> cap'; obj_reply_refs cap' \<subseteq> (UNIV - untyped_range cap) \<rbrakk>
@@ -147,6 +175,20 @@ lemma valid_idle_detype[detype_invs_proofs]: "valid_idle (detype (untyped_range 
 
 lemma valid_vs_lookup: "valid_vs_lookup s"
     using valid_arch_caps by (simp add: valid_arch_caps_def)
+
+lemma hyp_live_strg:
+  "hyp_live ko \<Longrightarrow> live ko"
+  by (cases ko; simp add: live_def hyp_live_def)
+
+lemma obj_at_hyp_live_strg:
+  "obj_at hyp_live p s \<Longrightarrow> obj_at live p s"
+  by (erule obj_at_weakenE, rule hyp_live_strg)
+
+lemma tcb_arch_detype[detype_invs_proofs]:
+  "\<lbrakk>ko_at (TCB t) p s; valid_arch_tcb (tcb_arch t) s\<rbrakk>
+      \<Longrightarrow> valid_arch_tcb (tcb_arch t) (detype (untyped_range cap) s)"
+  apply (clarsimp simp: valid_arch_tcb_def)
+  done
 
 lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
@@ -242,9 +284,9 @@ lemma vs_lookup_pages_preserved:
 
 (* FIXME: This is really horrible but I can't get the automated methods
           to "get it". *)
-lemma valid_arch_obj:
-  "\<And>ao p. \<lbrakk> valid_arch_obj ao s; ko_at (ArchObj ao) p s; (\<exists>\<rhd>p) s \<rbrakk> \<Longrightarrow>
-       valid_arch_obj ao (detype (untyped_range cap) s)"
+lemma valid_vspace_obj:
+  "\<And>ao p. \<lbrakk> valid_vspace_obj ao s; ko_at (ArchObj ao) p s; (\<exists>\<rhd>p) s \<rbrakk> \<Longrightarrow>
+       valid_vspace_obj ao (detype (untyped_range cap) s)"
  apply (case_tac ao)
     apply (clarsimp simp: ran_def)
     apply (erule vs_lookup_preserved)
@@ -322,14 +364,14 @@ lemma valid_arch_obj:
   done
 
 
-lemma valid_arch_obj_detype[detype_invs_proofs]: "valid_arch_objs (detype (untyped_range cap) s)"
+lemma valid_vspace_obj_detype[detype_invs_proofs]: "valid_vspace_objs (detype (untyped_range cap) s)"
   proof -
-    have "valid_arch_objs s"
+    have "valid_vspace_objs s"
     using invs by fastforce
     thus ?thesis
-    unfolding valid_arch_objs_def
+    unfolding valid_vspace_objs_def
     apply (simp add: vs_lookup)
-    apply (auto intro: valid_arch_obj)
+    apply (auto intro: valid_vspace_obj)
     done
   qed
 
@@ -385,10 +427,9 @@ lemma valid_arch_caps_detype[detype_invs_proofs]: "valid_arch_caps (detype (unty
 lemma pd_at_global_pd: "page_directory_at (arm_global_pd (arch_state s)) s"
   using valid_arch_state by (simp add: valid_arch_state_def)
 
-
 lemma valid_global_objs_detype[detype_invs_proofs]: "valid_global_objs (detype (untyped_range cap) s)"
   using valid_global_objs valid_global_refsD [OF globals cap]
-  apply (simp add: valid_global_objs_def valid_ao_at_def arch_state_det)
+  apply (simp add: valid_global_objs_def valid_vso_at_def arch_state_det)
   apply (elim conjE, intro conjI)
      apply (simp add: global_refs_def cap_range_def arch_state_det)
     apply (erule exEI)

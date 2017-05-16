@@ -99,6 +99,17 @@ lemma valid_ipc_buffer_cap_0[simp, TcbAcc_AI_assms]:
   by (auto simp add: valid_ipc_buffer_cap_def case_bool_If
     split: cap.split arch_cap.split)
 
+lemma thread_set_hyp_refs_trivial [TcbAcc_AI_assms]:
+  assumes x: "\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb"
+  assumes y: "\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb"
+  shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: thread_set_def set_object_def)
+  apply wp
+  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (clarsimp elim!: rsubst[where P=P])
+  apply (rule all_ext;
+         clarsimp simp: state_hyp_refs_of_def hyp_refs_of_def tcb_hyp_refs_def get_tcb_def x y[simplified tcb_arch_ref_def])
+  done
 
 lemma mab_pb [simp]:
   "msg_align_bits \<le> pageBits"

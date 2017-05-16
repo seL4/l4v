@@ -308,6 +308,23 @@ lemma obj_ref_none_no_asid:
   "{} = obj_refs new_cap \<longrightarrow> None = table_cap_ref new_cap"
   "obj_refs new_cap = {} \<longrightarrow> table_cap_ref new_cap = None"
   by (simp add: table_cap_ref_def split: cap.split arch_cap.split)+
+
+lemma set_cap_hyp_refs_of [wp]:
+ "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
+  set_cap cp p
+  \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: set_cap_def set_object_def split_def)
+  apply (wp get_object_wp | wpc)+
+  apply (auto elim!: rsubst[where P=P]
+               simp: ARM.state_hyp_refs_of_def obj_at_def
+             intro!: ext
+             split: if_split_asm)
+  done
+
+lemma state_hyp_refs_of_revokable[simp]:
+  "state_hyp_refs_of (s \<lparr> is_original_cap := m \<rparr>) = state_hyp_refs_of s"
+  by (simp add: state_hyp_refs_of_def)
+
 end
 
 end
