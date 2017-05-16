@@ -218,7 +218,7 @@ lemma in_user_frame_obj_pred_lift:
  apply (clarsimp simp: vspace_obj_pred_def)
  apply (auto simp: a_type_def aa_type_def split: kernel_object.splits arch_kernel_obj.splits)
  done
-
+(*
 lemma vs_lookup_arch_obj_at_lift:
   assumes obj_at: "\<And>P P' p. arch_obj_pred P' \<Longrightarrow>
                              \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>"
@@ -235,7 +235,7 @@ lemma vs_lookup_arch_obj_at_lift:
   apply (erule use_valid, rule obj_at, simp)
   by (auto simp: vs_refs'.arch_only
            intro!: arch_obj_pred_fI[where f=Ex])
-(*
+
 lemma vs_lookup_pages_arch_obj_at_lift:
   assumes obj_at: "\<And>P P' p. arch_obj_pred P' \<Longrightarrow>
                             \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>"
@@ -502,15 +502,28 @@ lemma valid_arch_caps_lift:
   apply simp
   done
 
+lemma valid_global_objs_lift':
+  assumes obj: "\<And>p. \<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>rv. valid_ao_at p\<rbrace>"
+  assumes ko: "\<And>ako p. \<lbrace>ko_at (ArchObj ako) p\<rbrace> f \<lbrace>\<lambda>_. ko_at (ArchObj ako) p\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_global_objs s \<and> (v \<longrightarrow> P s)\<rbrace> f \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
+  by (clarsimp simp: valid_global_objs_def valid_def)
+
+lemmas valid_global_objs_lift
+    = valid_global_objs_lift' [where v=False, simplified]
+
 lemma arch_lifts_vspace:
   assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   assumes aobj_at: "\<And>P P' pd. vspace_obj_pred P' \<Longrightarrow>
     \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
   notes arch_obj_fun_lift_expand[simp del]
   shows
+  valid_global_vspace_mappings_lift:
+    "\<lbrace>valid_global_vspace_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>" and
   valid_arch_caps_lift_weak:
     "(\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>) \<Longrightarrow>
       \<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>" and
+  valid_global_objs_lift_weak:
+    "\<lbrace>valid_global_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>" and
   valid_asid_map_lift:
     "\<lbrace>valid_asid_map\<rbrace> f \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>" and
   valid_kernel_mappings_lift:
@@ -518,10 +531,16 @@ lemma arch_lifts_vspace:
   apply -
 
   subgoal
+  by (wpsimp simp: valid_global_vspace_mappings_def)
+
+  subgoal
   apply (rule valid_arch_caps_lift[OF _ _ aobj_at])
     apply (rule vs_lookup_pages_vspace_obj_at_lift[OF aobj_at arch], assumption+)
   apply (rule empty_table.vspace_only)
   done
+
+  subgoal
+  by (wpsimp simp: valid_global_objs_def)
 
   subgoal
   apply (simp add: valid_asid_map_def)

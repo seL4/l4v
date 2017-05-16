@@ -672,9 +672,9 @@ lemma invalidate_asid_entry_invs [wp]:
   apply (clarsimp simp del: fun_upd_apply)
   apply (clarsimp simp: invs_def valid_state_def valid_irq_node_def
                         valid_arch_caps_def valid_table_caps_def
-                        valid_kernel_mappings_def
+                        valid_kernel_mappings_def valid_global_vspace_mappings_def
                         valid_global_refs_def global_refs_def
-                        valid_vs_lookup_def
+                        valid_vs_lookup_def valid_global_objs_def
                         vs_lookup_arch_update vs_lookup_pages_arch_update
                         valid_vspace_objs_def valid_arch_state_def
                   simp del: fun_upd_apply split: option.split)
@@ -2171,7 +2171,8 @@ lemma store_hw_asid_invs:
   apply (clarsimp simp: invs_def valid_state_def)
   apply (simp add: valid_global_refs_def global_refs_def
                    valid_irq_node_def valid_vspace_objs_arch_update
-                   valid_arch_caps_def
+                   valid_arch_caps_def valid_global_objs_def
+                   valid_global_vspace_mappings_def
                    valid_table_caps_def valid_kernel_mappings_def
                    valid_machine_state_def valid_vs_lookup_arch_update)
   apply (simp add: valid_asid_map_def fun_upd_def[symmetric]
@@ -2196,7 +2197,8 @@ lemma find_free_hw_asid_invs [wp]:
   apply (clarsimp simp: invs_def valid_state_def split del: if_split)
   apply (simp add: valid_global_refs_def global_refs_def cur_tcb_def
                    valid_irq_node_def valid_vspace_objs_arch_update
-                   valid_arch_caps_def
+                   valid_arch_caps_def valid_global_objs_def
+                   valid_global_vspace_mappings_def
                    valid_table_caps_def valid_kernel_mappings_def
                    valid_machine_state_def valid_vs_lookup_arch_update)
   apply (elim conjE)
@@ -2224,7 +2226,7 @@ lemma get_hw_asid_invs [wp]:
   apply simp
   done
 
-lemma arm_context_switch_invs [wp]: (* ARMHYP callback undefined *)
+lemma arm_context_switch_invs [wp]:
   "\<lbrace>invs and K (a \<le> mask asid_bits)\<rbrace> arm_context_switch pd a \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: arm_context_switch_def writeContextIDAndPD_def)
   apply (wp dmo_invs)
@@ -2892,12 +2894,15 @@ lemma invs_current_vcpu_update:
                \<lparr>arm_current_vcpu := v\<rparr>\<rparr>) = invs s"
   by (auto simp: invs_def valid_state_def cur_tcb_def cur_vcpu_at_def obj_at_conj_distrib
                     valid_global_refs_def valid_asid_map_def valid_arch_state_def
+                    valid_global_objs_def valid_global_vspace_mappings_def
           split: option.split)
 
 lemma invs_current_vcpu_update': "\<lbrakk> cur_vcpu_at v s \<and> invs s \<rbrakk>
   \<Longrightarrow> invs (s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := v\<rparr>\<rparr>)"
   by (auto simp add: invs_def valid_state_def cur_tcb_def cur_vcpu_at_def obj_at_conj_distrib
-            valid_global_refs_def valid_asid_map_def valid_arch_state_def split: option.split)
+            valid_global_refs_def valid_asid_map_def valid_arch_state_def
+            valid_global_objs_def valid_global_vspace_mappings_def
+           split: option.split)
 
 lemma vcpu_switch_invs[wp]:
 "\<lbrace>invs and (\<lambda>s. v \<noteq> None \<longrightarrow> obj_at hyp_live (the v) s)\<rbrace> vcpu_switch v \<lbrace> \<lambda>_ . invs \<rbrace>"

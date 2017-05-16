@@ -643,6 +643,11 @@ definition (* ARMHYP? *)
   "valid_pd_kernel_mappings uses = (\<lambda>s. arch_obj_fun_lift (valid_pd_kernel_mappings_arch uses s) False)"
 
 definition
+  valid_global_vspace_mappings :: "'z::state_ext state \<Rightarrow> bool"
+where
+ "valid_global_vspace_mappings \<equiv> \<top>"
+
+definition
   valid_ao_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_ao_at p \<equiv> \<lambda>s. \<exists>ao. ko_at (ArchObj ao) p s \<and> valid_arch_obj ao s"
@@ -689,6 +694,13 @@ definition
 
 lemmas aligned_pte_simps[simp] =
        aligned_pte_def[split_simps pte.split]
+
+
+
+definition
+  valid_global_objs :: "'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_global_objs \<equiv> \<top>"
 
 definition
   valid_asid_table :: "(7 word \<rightharpoonup> obj_ref) \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -1721,9 +1733,9 @@ lemma stronger_vspace_objsD:
   apply (clarsimp simp: obj_at_def)
   done
 
-(* An alternative definition for valid_arch_objs.
+(* An alternative definition for valid_vspace_objs.
 
-   The predicates valid_asid_table and valid_arch_objs are very compact
+   The predicates valid_asid_table and valid_vspace_objs are very compact
    but sometimes hard to use.
    The lemma below basically unrolls vs_lookup.
    Though less elegant, this formulation better separates the relevant cases. *)

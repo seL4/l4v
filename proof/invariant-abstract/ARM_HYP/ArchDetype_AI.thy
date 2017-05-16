@@ -445,6 +445,9 @@ lemma valid_arch_caps_detype[detype_invs_proofs]: "valid_arch_caps (detype (unty
                                        unique_table_refs
                                        valid_table_caps)
 
+lemma valid_global_objs_detype[detype_invs_proofs]: "valid_global_objs (detype (untyped_range cap) s)"
+  using valid_global_objs valid_global_refsD [OF globals cap]
+  by (simp add: valid_global_objs_def)
 
 lemma valid_kernel_mappings_detype[detype_invs_proofs]: "valid_kernel_mappings (detype (untyped_range cap) s)"
   proof -
@@ -453,6 +456,16 @@ lemma valid_kernel_mappings_detype[detype_invs_proofs]: "valid_kernel_mappings (
     thus ?thesis by (simp add: valid_kernel_mappings_def detype_def
                   ball_ran_eq)
   qed
+
+lemma valid_global_mappings_detype[detype_invs_proofs]:
+  "valid_global_vspace_mappings (detype (untyped_range cap) s)"
+proof -
+  have "valid_global_vspace_mappings s"
+    using invs by (simp add: invs_def valid_state_def)
+  thus ?thesis
+  using valid_global_refsD [OF globals cap] valid_global_objs
+  by (clarsimp simp: valid_global_vspace_mappings_def)
+qed
 
 lemma valid_asid_map_detype[detype_invs_proofs]: "valid_asid_map (detype (untyped_range cap) s)"
 proof -

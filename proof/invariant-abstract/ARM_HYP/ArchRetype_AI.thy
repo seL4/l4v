@@ -244,7 +244,7 @@ lemma store_pde_map_global_valid_arch_caps:
   done
 
 
-lemma store_pde_map_global_valid_arch_objs:
+lemma store_pde_map_global_valid_vspace_objs:
   "\<lbrace>valid_vspace_objs and valid_arch_state
      and K (VSRef (p && mask pd_bits >> 3) (Some APageDirectory)
                 \<in> kernel_vsrefs)\<rbrace>
@@ -1069,12 +1069,12 @@ lemma post_retype_invs:
                      valid_reply_caps valid_reply_masters
                      valid_global_refs valid_arch_state
                      valid_irq_node_def obj_at_pres
-                     valid_arch_caps
+                     valid_arch_caps valid_global_objs_def
                      valid_vspace_objs' valid_irq_handlers
                      valid_mdb_rep2 mdb_and_revokable
                      valid_pspace cur_tcb only_idle
                      valid_kernel_mappings valid_asid_map
-                     valid_ioc vms
+                     valid_ioc vms valid_global_vspace_mappings_def
                      pspace_in_kernel_window
                      pspace_respects_device_region
                      cap_refs_respects_device_region

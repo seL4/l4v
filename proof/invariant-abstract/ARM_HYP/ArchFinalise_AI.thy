@@ -79,7 +79,8 @@ lemma invs_arm_asid_table_unmap:
   apply (strengthen valid_asid_map_unmap valid_vspace_objs_unmap_strg
                     valid_vs_lookup_unmap_strg valid_arch_state_unmap_strg)
   apply (simp add: valid_irq_node_def valid_kernel_mappings_def)
-  apply (simp add: valid_table_caps_def valid_machine_state_def)
+  apply (simp add: valid_table_caps_def valid_machine_state_def valid_global_objs_def
+                   valid_global_vspace_mappings_def)
   done
 
 lemma delete_asid_pool_invs[wp]:
@@ -1015,7 +1016,7 @@ lemma dissociate_vcpu_tcb_invs[wp]: "\<lbrace>invs\<rbrace> dissociate_vcpu_tcb 
   apply (wpsimp wp: weak_if_wp get_vcpu_wp arch_thread_get_wp as_user_only_idle
          | simp add: dissociate_vcpu_tcb_def vcpu_invalidate_active_def arch_get_sanitise_register_info_def
          | strengthen valid_arch_state_vcpu_update_str valid_global_refs_vcpu_update_str
-         | simp add: vcpu_disable_def
+         | simp add: vcpu_disable_def valid_global_vspace_mappings_def valid_global_objs_def
          | wp_once hoare_drop_imps)+
   done
 
@@ -2347,6 +2348,7 @@ lemma set_asid_pool_invs_table:
              set_asid_pool_empty_table_objs
              valid_irq_handlers_lift set_asid_pool_empty_table_lookup
              set_asid_pool_empty_valid_asid_map
+          | simp add: valid_global_objs_def valid_global_vspace_mappings_def
           | strengthen valid_arch_state_table_strg)+
   apply (clarsimp simp: conj_comms)
   apply (rule context_conjI)

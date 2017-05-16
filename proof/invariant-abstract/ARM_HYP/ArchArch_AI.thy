@@ -642,10 +642,11 @@ lemma cap_insert_ap_invs:
                     valid_asid_map_asid_upd_strg )
   apply (simp cong: conj_cong)
   apply (rule hoare_pre)
-   apply (wp cap_insert_simple_mdb cap_insert_iflive
+   apply (wpsimp wp: cap_insert_simple_mdb cap_insert_iflive
              cap_insert_zombies cap_insert_ifunsafe
              cap_insert_valid_global_refs cap_insert_idle
-             valid_irq_node_typ cap_insert_simple_arch_caps_ap)
+             valid_irq_node_typ cap_insert_simple_arch_caps_ap
+             simp: valid_global_objs_def valid_global_vspace_mappings_def)
   apply (clarsimp simp: is_simple_cap_def cte_wp_at_caps_of_state is_cap_simps)
   apply (frule safe_parent_cap_is_device)
   apply (drule safe_parent_cap_range)
@@ -1008,8 +1009,18 @@ lemma set_vcpu_valid_arch_Some[wp]:
   apply (clarsimp simp: obj_at_def is_vcpu_def hyp_live_def arch_live_def split: option.splits)
   done
 
+lemma valid_global_objs_vcpu_update_str:
+  "valid_global_objs s \<Longrightarrow> valid_global_objs (s\<lparr>arch_state := arm_current_vcpu_update f (arch_state s)\<rparr>)"
+  by (simp add: valid_global_objs_def)
+
+lemma valid_global_vspace_mappings_vcpu_update_str:
+  "valid_global_vspace_mappings s \<Longrightarrow> valid_global_vspace_mappings (s\<lparr>arch_state := arm_current_vcpu_update f (arch_state s)\<rparr>)"
+  by (simp add: valid_global_vspace_mappings_def)
+
+
 lemma associate_vcpu_tcb_invs[wp]:
   "\<lbrace>invs and ex_nonz_cap_to vcpu and ex_nonz_cap_to tcb and vcpu_at vcpu\<rbrace> associate_vcpu_tcb vcpu tcb \<lbrace>\<lambda>_. invs\<rbrace>"
+  using valid_global_vspace_mappings_def
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (simp add: pred_conj_def)
   apply (rule hoare_pre)
@@ -1019,6 +1030,7 @@ lemma associate_vcpu_tcb_invs[wp]:
         | wpc
         | clarsimp
         | strengthen valid_arch_state_vcpu_update_str valid_global_refs_vcpu_update_str
+                     valid_global_vspace_mappings_vcpu_update_str valid_global_objs_vcpu_update_str
         | simp add: associate_vcpu_tcb_def valid_obj_def[abs_def] valid_vcpu_def
                     dissociate_vcpu_tcb_def vcpu_invalidate_active_def vcpu_disable_def
         | simp add: obj_at_def)+
@@ -1632,6 +1644,7 @@ lemma arch_decode_inv_wf[wp]:
       apply (clarsimp simp: valid_cap_simps cap_aligned_def valid_kernel_mappings_def
                             aligned_sum_less_kernel_base asid_bits_def mask_def
                             is_arch_update_def cap_master_cap_simps is_arch_cap_def)
+      apply (rule conjI, fastforce)
       apply (rule conjI, fastforce)
       apply (rule conjI, fastforce)
       apply (rule conjI, fastforce)

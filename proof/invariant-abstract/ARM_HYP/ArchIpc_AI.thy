@@ -444,6 +444,12 @@ lemma do_ipc_transfer_tcb_caps [Ipc_AI_assms]:
        | wpc | simp add:imp)+
   done
 
+lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_assms]:
+  "\<lbrace>valid_global_objs\<rbrace> setup_caller_cap send recv \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
+  apply (simp add: valid_global_objs_def)
+  apply (simp_all add: setup_caller_cap_def)
+   apply (wp sts_obj_at_impossible | simp add: tcb_not_empty_table)+
+  done
 
 crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "P (typ_at T p s)"
 
@@ -494,6 +500,8 @@ crunch irq_node                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lam
 crunch valid_reply               [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_reply_caps"
 crunch irq_handlers              [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_irq_handlers"
 crunch vspace_objs               [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_vspace_objs"
+crunch global_objs               [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_global_objs"
+crunch global_vspace_mapping     [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_global_vspace_mappings"
 crunch arch_caps                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_arch_caps"
 crunch v_ker_map                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_kernel_mappings"
 crunch eq_ker_map                [wp, Ipc_AI_assms]:  make_arch_fault_msg "equal_kernel_mappings"
