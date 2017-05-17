@@ -267,7 +267,7 @@ lemma invs_A:
                           dom_if_Some cte_level_bits_def)
     apply (rule conjI)
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def 
-                           valid_cap_def obj_at_def valid_tcb_state_def 
+                           valid_cap_def obj_at_def valid_tcb_state_def valid_arch_tcb_def
                            cap_aligned_def word_bits_def valid_ipc_buffer_cap_simps)+
     apply (clarsimp simp: valid_cs_def word_bits_def cte_level_bits_def
                           init_irq_ptrs_all_ineqs valid_tcb_def
@@ -280,11 +280,11 @@ lemma invs_A:
    apply (rule conjI)
     apply (simp add:pspace_distinct_init_A)
    apply (rule conjI)
-    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs)
+    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs live_def hyp_live_def)
    apply (rule conjI)
     apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs 
                           tcb_cap_cases_def is_zombie_def)
-   apply (clarsimp simp: sym_refs_def state_refs_of_def state_defs)
+   apply (clarsimp simp: sym_refs_def state_refs_of_def state_defs state_hyp_refs_of_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_mdb_def init_cdt_def no_mloop_def 
                          mdb_cte_at_def)
@@ -339,7 +339,7 @@ lemma invs_A:
    apply (clarsimp simp: valid_machine_state_def init_A_st_def
                          init_machine_state_def init_underlying_memory_def)
   apply (rule conjI)
-   apply (clarsimp simp: valid_arch_objs_def obj_at_def state_defs)
+   apply (clarsimp simp: valid_arch_objs_def obj_at_def state_defs valid_vspace_objs_def)
    apply (clarsimp simp: vs_lookup_def vs_asid_refs_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_arch_caps_def)
@@ -351,7 +351,7 @@ lemma invs_A:
   apply (rule conjI)
    apply (clarsimp simp: valid_global_objs_def state_defs)
    apply (clarsimp simp: valid_ao_at_def obj_at_def empty_table_def pde_ref_def
-                         valid_pde_mappings_def)
+                         valid_pde_mappings_def valid_vso_at_def)
    apply (simp add: kernel_base_def kernel_mapping_slots_def 
                     Platform.ARM.addrFromPPtr_def physMappingOffset_def
                     kernelBase_addr_def physBase_def pageBits_def is_aligned_def)
