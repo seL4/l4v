@@ -618,7 +618,9 @@ lemma kernel_corres:
      apply (rule_tac Q="\<lambda>_. valid_sched and invs and valid_list" and E="\<lambda>_. valid_sched and invs and valid_list"
             in hoare_post_impErr)
        apply (wp handle_event_valid_sched |simp)+
-   apply (clarsimp simp: active_from_running)
+    subgoal sorry
+    apply (wp handle_event_valid_sched |simp)+
+  apply (clarsimp simp: active_from_running)
   apply (clarsimp simp: active_from_running')
   done
 

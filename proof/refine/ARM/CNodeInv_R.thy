@@ -596,7 +596,7 @@ text {* Various proofs about the two recursive deletion operations.
 text {* Proving the termination of rec_del *}
 
 crunch typ_at[wp]: cancel_ipc "\<lambda>s. P (typ_at T p s)" 
-  (wp: crunch_wps hoare_vcg_split_ifE simp: crunch_simps)
+  (wp: crunch_wps hoare_vcg_if_splitE simp: crunch_simps)
 
 declare if_split [split]
 
@@ -624,7 +624,7 @@ lemma finalise_cap_not_reachable_pg_cap:
       apply (clarsimp simp:reachable_pg_cap_def is_cap_simps|wp|intro conjI)+
     apply (wp arch_finalise_case_no_lookup)
     apply (clarsimp dest!: caps_of_state_valid_cap
-                    simp: cte_wp_at_caps_of_state)
+                    simp: cte_wp_at_caps_of_state valid_vspace_objs_def')
    apply (clarsimp simp:reachable_pg_cap_def is_cap_simps|wp|intro conjI)+
   done
 

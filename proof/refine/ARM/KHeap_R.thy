@@ -183,8 +183,8 @@ lemma updateObject_objBitsKO:
 lemma objBitsKO_bounded:
   "objBitsKO ko \<le> word_bits"
   apply (cases ko)
-  apply (simp_all add: word_bits_def pageBits_def 
-                       objBitsKO_simps archObjSize_def
+  apply (simp_all add: word_bits_def pageBits_def pdeBits_def
+                       objBitsKO_simps archObjSize_def pteBits_def
                 split: ARM_H.arch_kernel_object.splits)
   done
 

@@ -2222,9 +2222,8 @@ lemma hh_corres:
              (invs' and sch_act_not thread
                     and (\<lambda>s. \<forall>p. thread \<notin> set(ksReadyQueues s p))
                     and st_tcb_at' simple' thread and ex_nonz_cap_to' thread)
-          (do y \<leftarrow> handle_hypervisor_fault w fault;
-                return ()
-             od) (handleHypervisorFault w fault)"
+          (handle_hypervisor_fault w fault)
+          (handleHypervisorFault w fault)"
   apply (cases fault; clarsimp simp add: handleHypervisorFault_def returnOk_def2)
   done
 

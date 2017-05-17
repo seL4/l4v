@@ -194,7 +194,7 @@ lemma dmo_lift':
 
 lemma doMachineOp_getActiveIRQ_IRQ_active:
   "\<lbrace>valid_irq_states'\<rbrace>
-     doMachineOp getActiveIRQ
+     doMachineOp (getActiveIRQ in_kernel)
    \<lbrace>\<lambda>rv s. \<forall>irq. rv = Some irq \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive\<rbrace>"
   apply (rule hoare_lift_Pf3 [where f="ksInterruptState"])
    prefer 2
@@ -207,7 +207,7 @@ lemma doMachineOp_getActiveIRQ_IRQ_active:
 
 lemma doMachineOp_getActiveIRQ_IRQ_active':
   "\<lbrace>valid_irq_states'\<rbrace>
-     doMachineOp getActiveIRQ
+     doMachineOp (getActiveIRQ in_kernel)
    \<lbrace>\<lambda>rv s. rv = Some irq \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive\<rbrace>"
   apply (rule hoare_post_imp)
    prefer 2

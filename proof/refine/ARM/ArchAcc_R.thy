@@ -49,9 +49,11 @@ declare valid_arch_state_def[@def_to_elim, conjuncts]
 
 lemmas valid_arch_state_elims[rule_format, elim!] = conjuncts
 
-lemmas valid_arch_obj_elims[rule_format, elim!] =
-  valid_arch_obj.simps[@simp_to_elim, @ \<open>(drule bspec)?\<close>]
+lemmas valid_vspace_obj_elims [rule_format, elim!] =
+  valid_vspace_obj.simps[@simp_to_elim, @ \<open>(drule bspec)?\<close>]
 
+lemmas valid_arch_obj_elims[rule_format, elim!] =
+  valid_vspace_obj_elims [unfolded valid_arch_obj_def[symmetric]]
 
 end
 
@@ -271,7 +273,7 @@ lemma get_pde_corres [corres]:
   apply (clarsimp simp add: a_type_def return_def 
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
-  apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+  apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def pdeBits_def)
   apply (clarsimp simp: bind_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
@@ -384,7 +386,7 @@ lemma get_master_pde_corres [corres]:
                   bind_def get_pde_def get_object_def gets_def get_def
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
        apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-       apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+       apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def pdeBits_def)
        apply (clarsimp simp:state_relation_def)
        apply (frule_tac x = "(ucast (p && mask pd_bits >> 2))"
                      in pde_relation_alignedD)
@@ -411,7 +413,7 @@ lemma get_master_pde_corres [corres]:
         bind_def get_pde_def get_object_def gets_def get_def
         split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
       apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-      apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+      apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def pdeBits_def)
       apply (clarsimp simp:state_relation_def)
       apply (frule_tac x = "(ucast (p && mask pd_bits >> 2))" in pde_relation_alignedD)
         apply assumption
@@ -435,7 +437,7 @@ lemma get_master_pde_corres [corres]:
        bind_def get_pde_def get_object_def gets_def get_def
        split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
      apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-     apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+     apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def pdeBits_def)
      apply (clarsimp simp:state_relation_def)
      apply (frule_tac x = "(ucast (p && mask pd_bits >> 2))" in pde_relation_alignedD)
        apply assumption
@@ -459,7 +461,7 @@ lemma get_master_pde_corres [corres]:
       bind_def get_pde_def get_object_def gets_def get_def
       split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
     apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-    apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+    apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def pdeBits_def)
     apply (clarsimp simp:state_relation_def)
     apply (drule_tac s = a and s' = b and p = "p && ~~ mask 6"
       in aligned_distinct_relation_pde_atI'[rotated -1])
@@ -542,7 +544,7 @@ lemma get_pte_corres [corres]:
   apply (clarsimp simp add: a_type_def return_def 
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
-  apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+  apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def pteBits_def)
   apply (clarsimp simp: bind_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
@@ -654,7 +656,7 @@ lemma get_master_pte_corres [corres]:
                   bind_def get_pte_def get_object_def gets_def get_def
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
       apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-      apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+      apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def pteBits_def)
       apply (clarsimp simp:state_relation_def)
       apply (frule_tac x = "(ucast (p && mask pt_bits >> 2))" in pte_relation_alignedD)
         apply assumption
@@ -678,7 +680,7 @@ lemma get_master_pte_corres [corres]:
        bind_def get_pte_def get_object_def gets_def get_def
        split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
      apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-     apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+     apply (clarsimp simp: in_magnitude_check objBits_simps archObjSize_def pageBits_def pteBits_def)
      apply (clarsimp simp:state_relation_def)
      apply (drule_tac s = a and s' = b and p = "p && ~~ mask 6"
       in aligned_distinct_relation_pte_atI'[rotated -1])
@@ -712,7 +714,7 @@ lemma get_master_pte_corres [corres]:
                    arch_kernel_obj.splits)
    apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
    apply (clarsimp simp: in_magnitude_check objBits_simps
-                         archObjSize_def pageBits_def)
+                         archObjSize_def pageBits_def pteBits_def)
    apply (clarsimp simp:state_relation_def)
    apply (frule_tac x = "(ucast (p && mask pt_bits >> 2))"
                  in pte_relation_alignedD)
@@ -794,7 +796,7 @@ lemma set_pd_corres [corres]:
    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
    apply (simp add: objBits_simps archObjSize_def word_bits_def)
   apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def projectKOs)
-  apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+  apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def pdeBits_def)
   apply (clarsimp simp: obj_at_def exec_gets)
   apply (clarsimp simp: set_object_def bind_assoc exec_get)
   apply (clarsimp simp: put_def)
@@ -873,7 +875,7 @@ lemma set_pt_corres [corres]:
    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
    apply (simp add: objBits_simps archObjSize_def word_bits_def)
   apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def projectKOs)
-  apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
+  apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def pteBits_def)
   apply (clarsimp simp: obj_at_def exec_gets)
   apply (clarsimp simp: set_object_def bind_assoc exec_get)
   apply (clarsimp simp: put_def)
@@ -988,7 +990,7 @@ lemma store_pte_corres':
 
 lemma lookup_pd_slot_corres [simp]:
   "lookupPDSlot pd vptr = lookup_pd_slot pd vptr"
-  by (simp add: lookupPDSlot_def lookup_pd_slot_def)
+  by (simp add: lookupPDSlot_def lookup_pd_slot_def pageBits_def ptBits_def pdeBits_def)
 
 defs checkPDAt_def:
   "checkPDAt pd \<equiv> stateAssert (page_directory_at' pd) []"
@@ -1021,7 +1023,7 @@ lemma page_table_at_state_relation:
    apply fastforce
   apply clarsimp
   apply (frule(1) pspace_alignedD)
-   apply (simp add:ptrFromPAddr_def ptBits_def pageBits_def)
+   apply (simp add:ptrFromPAddr_def ptBits_def pageBits_def pteBits_def)
   apply clarsimp
   apply (drule_tac x = "ucast y" in spec)
   apply (drule sym[where s = "pspace_dom (kheap s)"])
@@ -1045,7 +1047,7 @@ lemma page_table_at_state_relation:
    apply (erule aligned_add_aligned)
     apply (rule is_aligned_shiftl_self)
    apply simp
-  apply simp
+  apply (simp add: pteBits_def)
   done
 
 lemma page_directory_at_state_relation:
@@ -1058,7 +1060,7 @@ lemma page_directory_at_state_relation:
    apply fastforce
   apply clarsimp
   apply (frule(1) pspace_alignedD)
-   apply (simp add: pdBits_def pageBits_def)
+   apply (simp add: pdBits_def pageBits_def pdeBits_def)
   apply clarsimp
   apply (drule_tac x = "ucast y" in spec)
   apply (drule sym[where s = "pspace_dom (kheap s)"])
@@ -1081,19 +1083,19 @@ lemma page_directory_at_state_relation:
    apply (erule aligned_add_aligned)
     apply (rule is_aligned_shiftl_self)
    apply simp
-  apply simp
+  apply (simp add: pdeBits_def)
   done
 
 lemma getPDE_wp:
   "\<lbrace>\<lambda>s. \<forall>ko. ko_at' (ko::pde) p s \<longrightarrow> Q ko s\<rbrace> getObject p \<lbrace>Q\<rbrace>"
   by (clarsimp simp: getObject_def split_def loadObject_default_def 
-                     archObjSize_def in_magnitude_check
+                     archObjSize_def in_magnitude_check pdeBits_def
                      projectKOs in_monad valid_def obj_at'_def objBits_simps)
 
 lemma getPTE_wp:
   "\<lbrace>\<lambda>s. \<forall>ko. ko_at' (ko::pte) p s \<longrightarrow> Q ko s\<rbrace> getObject p \<lbrace>Q\<rbrace>"
   by (clarsimp simp: getObject_def split_def loadObject_default_def 
-                     archObjSize_def in_magnitude_check 
+                     archObjSize_def in_magnitude_check pteBits_def
                      projectKOs in_monad valid_def obj_at'_def objBits_simps)
 
 lemmas get_pde_wp_valid = hoare_add_post'[OF get_pde_valid get_pde_wp]
@@ -1111,7 +1113,7 @@ lemmas checkPTAt_corres [corresK] =
 
 lemma lookup_pt_slot_corres [corres]:
   "corres (lfr \<oplus> op =)
-          (pde_at (lookup_pd_slot pd vptr) and pspace_aligned and valid_arch_objs 
+          (pde_at (lookup_pd_slot pd vptr) and pspace_aligned and valid_vspace_objs
           and (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits)) and
           K (is_aligned pd pd_bits \<and> vptr < kernel_base 
           \<and> ucast (lookup_pd_slot pd vptr && mask pd_bits >> 2) \<notin> kernel_mapping_slots))
@@ -1119,6 +1121,7 @@ lemma lookup_pt_slot_corres [corres]:
           (lookup_pt_slot pd vptr) (lookupPTSlot pd vptr)"
   unfolding lookup_pt_slot_def lookupPTSlot_def lookupPTSlotFromPT_def
   apply (corressimp simp: pde_relation_aligned_def lookup_failure_map_def
+                          ptBits_def pdeBits_def pageBits_def pteBits_def mask_def
                       wp: get_pde_wp_valid getPDE_wp)
   by (auto simp: lookup_failure_map_def obj_at_def)
 
@@ -1179,13 +1182,15 @@ lemma copy_global_mappings_corres [corres]:
                         and (\<lambda>_. is_aligned globalPD 6 \<and> is_aligned pd 6) and ?apre" and
                     P'="page_directory_at' globalPD and page_directory_at' pd"
               in corres_mapM_x[rotated -1, OF order_refl])
-        apply (corressimp wp: get_pde_wp getPDE_wp corres_rv_defer_left)
+        apply (corressimp simp: pdeBits_def ptBits_def pdeBits_def pageBits_def pteBits_def mask_def
+                          wp: get_pde_wp getPDE_wp corres_rv_defer_left)
         subgoal for globalPD
-          by (auto intro!: page_directory_pde_atI page_directory_pde_atI'
-                     simp: pde_relation_aligned_def
+          apply (auto intro!: page_directory_pde_atI page_directory_pde_atI'
+                     simp: pde_relation_aligned_def pageBits_def
                      dest: align_entry_add_cong[of globalPD])
-  apply wpsimp+
-  apply (clarsimp simp: valid_arch_state_def obj_at_def dest!:pspace_alignedD)
+                   sorry
+  apply (wpsimp simp: pageBits_def)+
+  apply (clarsimp simp: valid_arch_state_def obj_at_def pageBits_def dest!:pspace_alignedD)
   by (auto intro: is_aligned_weaken[of _ 14] simp: valid_arch_state'_def)
 
 
@@ -1248,13 +1253,14 @@ lemma create_mapping_entries_corres [corres]:
   \<Longrightarrow> corres (ser \<oplus> mapping_map) 
           (\<lambda>s. (pgsz = ARMSmallPage \<or> pgsz = ARMLargePage \<longrightarrow> pde_at (lookup_pd_slot pd vptr) s)
            \<and> (is_aligned pd pd_bits \<and> vmsz_aligned vptr pgsz \<and> vptr < kernel_base \<and> vm_rights \<in> valid_vm_rights)
-           \<and> valid_arch_objs s \<and> pspace_aligned s \<and> (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits)) s) 
+           \<and> valid_vspace_objs s \<and> pspace_aligned s \<and> (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits)) s)
           (pspace_aligned' and pspace_distinct')
           (create_mapping_entries base vptr pgsz vm_rights attrib pd) 
           (createMappingEntries base vptr pgsz vm_rights' attrib' pd)"
   unfolding createMappingEntries_def mapping_map_def
-  apply (cases pgsz; corressimp simp: vmattributes_map_def)
-  by (auto dest: less_kernel_base_mapping_slots simp: vmattributes_map_def)
+  apply (cases pgsz; corressimp simp: vmattributes_map_def pd_bits_def pageBits_def)
+  apply (auto dest: less_kernel_base_mapping_slots simp: vmattributes_map_def)
+  sorry
 
 
 lemma pte_relation'_Invalid_inv [simp]:
@@ -1508,7 +1514,7 @@ lemma pt_bits_stuff:
   "pt_bits = ptBits"
   "ptBits < word_bits"
   "2 \<le> ptBits"
-  by (simp add: pt_bits_def ptBits_def pageBits_def word_bits_def)+
+  by (simp add: pt_bits_def ptBits_def pageBits_def word_bits_def pteBits_def)+
 
 lemma page_table_pte_at_lookupI':
   "page_table_at' pt s \<Longrightarrow> pte_at' (lookup_pt_slot_no_fail pt vptr) s"

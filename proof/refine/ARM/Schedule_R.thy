@@ -513,7 +513,7 @@ lemma setQueue_ksReadyQueues_lift:
    setQueue d p ts
    \<lbrace> \<lambda>_ s. P s (ksReadyQueues s (d,p))\<rbrace>"
   unfolding setQueue_def
-  by (wp, clarsimp simp: fun_upd_def)
+  by (wp, clarsimp simp: fun_upd_def snd_def)
 
 lemma tcbSchedDequeue_valid_queues'[wp]:
   "\<lbrace>valid_queues' and tcb_at' t\<rbrace>
@@ -2402,7 +2402,8 @@ lemma guarded_switch_to_chooseThread_fragment_corres:
    apply (clarsimp simp: st_tcb_at_tcb_at invs_def valid_state_def valid_pspace_def valid_sched_def
                           invs_valid_vs_lookup invs_unique_refs)
   apply (auto elim!: pred_tcb'_weakenE split: thread_state.splits
-              simp: pred_tcb_at' runnable'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
+              simp: pred_tcb_at' runnable'_def all_invs_but_ct_idle_or_in_cur_domain'_def
+                    valid_vspace_objs_def')
   done
 
 lemma bitmap_lookup_queue_is_max_non_empty:
@@ -2645,7 +2646,7 @@ lemma schedule_corres:
                    apply (rule set_sa_corres)
                    apply (wp | simp)+
                apply (rule tcbSchedEnqueue_corres)
-              apply (wp thread_get_wp' | simp)+
+              apply (wpsimp wp: thread_get_wp')+
           apply (rule corres_split[OF _ thread_get_isRunnable_corres])
             apply (rule corres_split[OF _ corres_when])
                 apply (rule corres_split[OF _ domain_time_corres], clarsimp, fold dc_def)
@@ -2659,7 +2660,8 @@ lemma schedule_corres:
            apply ((wp thread_get_wp' hoare_vcg_conj_lift hoare_drop_imps | clarsimp)+)
    apply (rule conjI,simp)
    apply (clarsimp split: Deterministic_A.scheduler_action.splits
-                    simp: invs_psp_aligned invs_distinct invs_valid_objs invs_arch_state invs_arch_objs)
+                    simp: invs_psp_aligned invs_distinct invs_valid_objs invs_arch_state
+                          invs_vspace_objs[simplified valid_vspace_objs_def'])
    apply (intro impI conjI allI tcb_at_invs |
           (fastforce simp: invs_def cur_tcb_def valid_arch_caps_def valid_etcbs_def
                            valid_sched_def valid_sched_action_def is_activatable_def

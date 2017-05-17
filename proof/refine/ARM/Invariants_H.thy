@@ -3171,7 +3171,7 @@ lemma page_directory_pde_atI':
 
 lemma page_table_pte_atI':
   "\<lbrakk> page_table_at' p s; x < 2^(ptBits - 2) \<rbrakk> \<Longrightarrow> pte_at' (p + (x << 2)) s"
-  by (simp add: page_table_at'_def pageBits_def ptBits_def)
+  by (simp add: page_table_at'_def pageBits_def ptBits_def pteBits_def)
 
 lemma valid_global_refsD':
   "\<lbrakk> ctes_of s p = Some cte; valid_global_refs' s \<rbrakk> \<Longrightarrow>
@@ -3354,13 +3354,14 @@ lemma objBitsT_simps:
   "objBitsT (ArchT PTET) = 2"
   "objBitsT (ArchT ASIDPoolT) = pageBits"
   unfolding objBitsT_def makeObjectT_def
-  by (simp_all add: makeObject_simps objBits_simps archObjSize_def)
+  by (simp_all add: makeObject_simps objBits_simps archObjSize_def pteBits_def pdeBits_def)
 
 lemma objBitsT_koTypeOf :
   "(objBitsT (koTypeOf ko)) = objBitsKO ko"
   apply (cases ko; simp add: objBits_simps objBitsT_simps)
   apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps)
+  apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps
+                                                pteBits_def pdeBits_def)
   done
 
 lemma sane_update [intro!]:

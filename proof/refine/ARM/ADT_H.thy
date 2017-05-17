@@ -216,7 +216,7 @@ lemma
     using pspace_aligned'
     apply (simp add: pspace_aligned'_def dom_def)
     apply (erule_tac x=y in allE)
-    apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq
+    apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq pteBits_def
                      and_not_mask[symmetric] AND_NOT_mask_plus_AND_mask_eq)
    using fst_pde
    apply (erule_tac x=y in allE)
@@ -230,7 +230,7 @@ lemma
    using pspace_aligned'
    apply (simp add: pspace_aligned'_def dom_def)
    apply (erule_tac x=y in allE)
-   apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq
+   apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq pdeBits_def
                     and_not_mask[symmetric] AND_NOT_mask_plus_AND_mask_eq)
   apply (simp split: option.splits Structures_H.kernel_object.splits)
   apply (intro allI)
@@ -1928,7 +1928,7 @@ definition
   checkActiveIRQ :: "(kernel_state, bool) nondet_monad"
   where
   "checkActiveIRQ \<equiv>
-   do irq \<leftarrow> doMachineOp getActiveIRQ;
+   do irq \<leftarrow> doMachineOp (getActiveIRQ False);
       return (irq \<noteq> None)
    od"
 

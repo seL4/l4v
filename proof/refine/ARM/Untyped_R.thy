@@ -247,7 +247,7 @@ next
       apply (rename_tac apiobject_type)
       apply (case_tac apiobject_type)
        apply (simp_all add:apiGetObjectSize_def tcbBlockSizeBits_def epSizeBits_def
-         ntfnSizeBits_def slot_bits_def cteSizeBits_def)
+         ntfnSizeBits_def slot_bits_def cteSizeBits_def pdeBits_def pteBits_def)
       done
     obtain if_res where if_res_def: "\<And>reset. if_res reset = (if reset then 0 else idx)"
       by auto
@@ -504,14 +504,12 @@ lemma ctes_of_ko:
              (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
     -- "PT case"
     apply (rename_tac word option)
-    apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def
-                          page_table_at'_def typ_at'_def ko_wp_at'_def ptBits_def)
+    apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def pteBits_def asid_bits_def
+                          page_table_at'_def typ_at'_def ko_wp_at'_def)
     apply (frule_tac ptr=ptr and sz=2 in
                      nasty_range[where 'a=32 and bz="ptBits", folded word_bits_def,
-                                 simplified ptBits_def pageBits_def word_bits_def, simplified])
-      apply simp
-     apply simp
-    apply clarsimp
+                                 simplified pageBits_def word_bits_def, simplified,rotated])
+    apply (clarsimp simp add: ptBits_def pteBits_def)+
     apply (drule_tac x=idx in spec)
     apply clarsimp
     apply (intro exI conjI,assumption)
@@ -519,16 +517,15 @@ lemma ctes_of_ko:
     apply (case_tac ko; simp)
     apply (rename_tac arch_kernel_object)
     apply (case_tac arch_kernel_object; simp)
-    apply (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)
+    apply (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n
+                     ptBits_def pteBits_def)
    -- "PD case"
    apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def pdBits_def
                          page_directory_at'_def typ_at'_def ko_wp_at'_def)
    apply (frule_tac ptr=ptr and sz=2 in 
-                    nasty_range[where 'a=32 and bz="pdBits", folded word_bits_def,
+                    nasty_range[where 'a=32 and bz="pdBits", folded word_bits_def,rotated,
                                 simplified pdBits_def pageBits_def word_bits_def, simplified])
-     apply simp
-    apply simp
-   apply clarsimp
+      apply (clarsimp simp add: pdBits_def pdeBits_def)+
    apply (drule_tac x="idx" in spec)
    apply clarsimp
    apply (intro exI conjI, assumption)
@@ -536,7 +533,7 @@ lemma ctes_of_ko:
    apply (case_tac ko; simp)
    apply (rename_tac arch_kernel_object) 
    apply (case_tac arch_kernel_object; simp)
-   apply (simp add: field_simps archObjSize_def shiftl_t2n)
+   apply (simp add: field_simps archObjSize_def shiftl_t2n pdBits_def pdeBits_def)
   -- "CNode case"
   apply (clarsimp simp: valid_cap'_def obj_at'_def capAligned_def
                         objBits_simps projectKOs)
@@ -3231,6 +3228,7 @@ lemma createNewCaps_range_helper:
         apply (wp createObjects_ret2
           | clarsimp simp: APIType_capBits_def objBits_if_dev archObjSize_def
                         word_bits_def pdBits_def pageBits_def ptBits_def
+                        pteBits_def pdeBits_def
                         split del: if_split
           | simp add: objBits_simps
           | (rule exI, fastforce))+
@@ -3659,7 +3657,7 @@ lemma getObjectSize_def_eq:
                                   ARM_H.getObjectSize_def obj_bits_api_def tcbBlockSizeBits_def
                                   epSizeBits_def ntfnSizeBits_def cteSizeBits_def slot_bits_def
                                   arch_kobj_size_def default_arch_object_def ptBits_def pageBits_def
-                                  pdBits_def simp del: APIType_capBits)+
+                                  pdBits_def pteBits_def pdeBits_def simp del: APIType_capBits)+
   done
 
 lemma updateFreeIndex_pspace_no_overlap':

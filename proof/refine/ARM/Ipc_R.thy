@@ -4167,7 +4167,7 @@ lemma ri_invs' [wp]:
   apply (rule hoare_seq_ext [OF _ gbn_sp'])
   apply (rule hoare_seq_ext)
   (* set up precondition for old proof *)
-   apply (rule_tac R="ko_at' ep (capEPPtr cap) and ?pre" in hoare_vcg_split_if)
+   apply (rule_tac R="ko_at' ep (capEPPtr cap) and ?pre" in hoare_vcg_if_split)
     apply (wp completeSignal_invs)
    apply (case_tac ep)
      -- "endpoint = RecvEP"

@@ -760,6 +760,8 @@ lemma capUntypedSize_capBits:
   "capClass cap = PhysicalClass \<Longrightarrow> capUntypedSize cap = 2 ^ (capBits cap)"
   apply (simp add: capUntypedSize_def objBits_simps
                    ARM_H.capUntypedSize_def
+                   pteBits_def pdeBits_def
+                   ptBits_def pdBits_def
             split: capability.splits arch_capability.splits
                    zombie_type.splits)
   apply fastforce
@@ -1046,7 +1048,9 @@ lemma capUntypedSize_range:
                  isCap_simps
           split: capability.splits arch_capability.split
                  zombie_type.splits)
-   apply (auto simp: is_aligned_no_overflow objBits_simps word_bits_def)
+   apply (auto simp: is_aligned_no_overflow objBits_simps word_bits_def
+                     ptBits_def pteBits_def
+                     pdBits_def pdeBits_def)
   done
 
 lemma caps_no_overlap'_no_region:
