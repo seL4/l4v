@@ -261,7 +261,7 @@ lemma store_pde_map_global_valid_arch_caps:
      apply (rule conjI, clarsimp)
      apply (drule valid_vspace_objsD, simp add: obj_at_def, simp+)[1]
     apply (rule impI, rule disjI2)
-    apply (simp add: empty_table_def)
+    apply (simp add: empty_table_def second_level_tables_def)
    apply clarsimp
    apply (rule conjI, clarsimp)
    apply (thin_tac "All P" for P)
@@ -307,10 +307,10 @@ lemma store_pde_map_global_valid_vspace_objs:
 lemma store_pde_global_objs[wp]:
   "\<lbrace>valid_global_objs and valid_global_refs and
     valid_arch_state and
-    (\<lambda>s. (\<forall>pd. (obj_at (empty_table (set (arm_global_pts (arch_state s))))
+    (\<lambda>s. (\<forall>pd. (obj_at (empty_table (set (second_level_tables (arch_state s))))
                    (p && ~~ mask pd_bits) s
            \<and> ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s
-             \<longrightarrow> empty_table (set (arm_global_pts (arch_state s)))
+             \<longrightarrow> empty_table (set (second_level_tables (arch_state s)))
                                  (ArchObj (PageDirectory (pd(ucast (p && mask pd_bits >> 2) := pde))))))
         \<or> (\<exists>slot. cte_wp_at (\<lambda>cap. p && ~~ mask pd_bits \<in> obj_refs cap) slot s))\<rbrace>
      store_pde p pde \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
@@ -484,7 +484,7 @@ lemma copy_global_invs_mappings_restricted:
    apply (rule conjI)
     apply (simp add: valid_objs_def dom_def obj_at_def valid_obj_def)
     apply (drule spec, erule impE, fastforce, clarsimp)
-   apply (clarsimp simp: obj_at_def empty_table_def kernel_vsrefs_def)
+   apply (clarsimp simp: obj_at_def empty_table_def kernel_vsrefs_def second_level_tables_def)
   apply clarsimp
   apply (erule minus_one_helper5[rotated])
   apply (simp add: pd_bits_def pageBits_def)

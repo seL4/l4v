@@ -683,7 +683,7 @@ definition
 where
   "valid_global_objs \<equiv>
   \<lambda>s. valid_vso_at (arm_global_pd (arch_state s)) s \<and>
-           obj_at (empty_table (set (arm_global_pts (arch_state s))))
+           obj_at (empty_table (set (second_level_tables (arch_state s))))
                   (arm_global_pd (arch_state s)) s \<and>
       (\<forall>p\<in>set (arm_global_pts (arch_state s)).
           \<exists>pt. ko_at (ArchObj (PageTable pt)) p s \<and> (\<forall>x. aligned_pte (pt x)))"
@@ -825,7 +825,7 @@ definition
             (is_pd_cap cap \<or> is_pt_cap cap) \<longrightarrow>
             cap_asid cap = None \<longrightarrow>
             r \<in> obj_refs cap \<longrightarrow>
-            obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s"
+            obj_at (empty_table (set (second_level_tables (arch_state s)))) r s"
 
   (* needed to preserve valid_table_caps in map *)
 definition
@@ -1980,7 +1980,7 @@ lemma valid_global_ptsD:
 lemma valid_table_caps_pdD:
   "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PageDirectoryCap pd None));
      valid_table_caps s \<rbrakk> \<Longrightarrow>
-    obj_at (empty_table (set (arm_global_pts (arch_state s)))) pd s"
+    obj_at (empty_table (set (second_level_tables (arch_state s)))) pd s"
   apply (clarsimp simp: valid_table_caps_def simp del: split_paired_All)
   apply (erule allE)+
   apply (erule (1) impE)
@@ -2217,8 +2217,6 @@ lemma valid_arch_objs_lift:
   apply (wp hoare_vcg_all_lift hoare_convert_imp [OF x]
             hoare_convert_imp [OF y] valid_arch_obj_typ z)
   done
-
-
 
 lemma valid_validate_vm_rights[simp]:
   "validate_vm_rights rs \<in> valid_vm_rights"

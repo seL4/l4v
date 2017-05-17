@@ -84,7 +84,7 @@ lemma invs_arm_asid_table_unmap:
                     valid_vs_lookup_unmap_strg valid_arch_state_unmap_strg)
   apply (simp add: valid_irq_node_def valid_kernel_mappings_def
                    valid_global_objs_arch_update)
-  apply (simp add: valid_table_caps_def valid_machine_state_def)
+  apply (simp add: valid_table_caps_def valid_machine_state_def second_level_tables_def)
   done
 
 lemma delete_asid_pool_invs[wp]:
@@ -863,7 +863,7 @@ lemma replaceable_reset_pt:
    cte_wp_at (op = (ArchObjectCap cap)) slot s \<and>
    (\<forall>vs. vs_cap_ref (ArchObjectCap cap) = Some vs \<longrightarrow> \<not> (vs \<unrhd> p) s) \<and>
    is_final_cap' (ArchObjectCap cap) s \<and>
-   obj_at (empty_table (set (arm_global_pts (arch_state s)))) p s\<rbrakk> \<Longrightarrow>
+   obj_at (empty_table (set (second_level_tables (arch_state s)))) p s\<rbrakk> \<Longrightarrow>
    replaceable s slot (ArchObjectCap (PageTableCap p None))
                       (ArchObjectCap cap)"
   apply (elim conjE)
@@ -888,7 +888,7 @@ lemma replaceable_reset_pd:
    cte_wp_at (op = (ArchObjectCap cap)) slot s \<and>
    (\<forall>vs. vs_cap_ref (ArchObjectCap cap) = Some vs \<longrightarrow> \<not> (vs \<unrhd> p) s) \<and>
    is_final_cap' (ArchObjectCap cap) s \<and>
-   obj_at (empty_table (set (arm_global_pts (arch_state s)))) p s\<rbrakk> \<Longrightarrow>
+   obj_at (empty_table (set (second_level_tables (arch_state s)))) p s\<rbrakk> \<Longrightarrow>
    replaceable s slot (ArchObjectCap (PageDirectoryCap p None))
                       (ArchObjectCap cap)"
   apply (elim conjE)
@@ -1421,11 +1421,11 @@ lemma valid_arch_state_table_strg:
 
 lemma valid_table_caps_table [simp]:
   "valid_table_caps (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table'\<rparr>\<rparr>) = valid_table_caps s"
-  by (simp add: valid_table_caps_def)
+  by (simp add: valid_table_caps_def second_level_tables_def)
 
 lemma valid_global_objs_table [simp]:
   "valid_global_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table'\<rparr>\<rparr>) = valid_global_objs s"
-  by (simp add: valid_global_objs_def)
+  by (simp add: valid_global_objs_def second_level_tables_def)
 
 lemma valid_kernel_mappings [iff]:
   "valid_kernel_mappings (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table'\<rparr>\<rparr>) = valid_kernel_mappings s"

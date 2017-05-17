@@ -500,7 +500,7 @@ lemma pd_shifting_at:
 lemma kernel_mapping_slots_empty_pdeI:
   "\<lbrakk>equal_kernel_mappings s; valid_global_objs s; valid_arch_state s;
     kheap s p = Some (ArchObj (PageDirectory pd)); x \<in> kernel_mapping_slots\<rbrakk> \<Longrightarrow>
-   (\<forall>r. pde_ref (pd x) = Some r \<longrightarrow> r \<in> set (arm_global_pts (arch_state s))) \<and> valid_pde_mappings (pd x)"
+   (\<forall>r. pde_ref (pd x) = Some r \<longrightarrow> r \<in> set (second_level_tables (arch_state s))) \<and> valid_pde_mappings (pd x)"
   apply (clarsimp simp: invs_def valid_state_def equal_kernel_mappings_def valid_global_objs_def)
   apply (erule_tac x=p in allE, erule_tac x="arm_global_pd (arch_state s)" in allE)
   including unfold_objects
@@ -570,7 +570,7 @@ lemma lookup_pt_slot_ptes_aligned_valid:
       apply (bspec "(ucast (pd + (vptr >> 20 << 2) && mask pd_bits >> 2))";clarsimp)
       apply (frule kernel_mapping_slots_empty_pdeI)
       apply ((simp add: obj_at_def pte_at_def;fail)+)[4]
-      by (clarsimp simp: pde_ref_def valid_global_pts_def valid_arch_state_def)
+      by (clarsimp simp: pde_ref_def valid_global_pts_def valid_arch_state_def second_level_tables_def)
     apply (rule conjI)
      apply (rule is_aligned_add)
       apply (rule is_aligned_weaken, erule(1) is_aligned_pt)
@@ -614,7 +614,7 @@ lemma lookup_pt_slot_pte [wp]:
     apply (simp add: obj_at_def)+
   apply (clarsimp simp: pde_ref_def)
   apply (rule page_table_pte_atI, simp_all)
-   apply (simp add: valid_arch_state_def valid_global_pts_def)
+   apply (simp add: valid_arch_state_def valid_global_pts_def second_level_tables_def)
   apply (simp add: pt_bits_def pageBits_def)
   apply (rule order_le_less_trans, rule word_and_le1, simp)
   done
@@ -2272,7 +2272,7 @@ lemma lookup_pt_slot_looks_up [wp]:
                       split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
       apply (frule kernel_mapping_slots_empty_pdeI)
         apply ((simp add: obj_at_def)+)[4]
-      apply (clarsimp simp: pde_ref_def)
+      apply (clarsimp simp: pde_ref_def second_level_tables_def)
       apply (erule is_aligned_global_pt[unfolded pt_bits_def pageBits_def, simplified])
       apply simp+
      apply (subgoal_tac "(vptr >> 12) && 0xFF << 2 < 2 ^ 10")
@@ -2348,7 +2348,7 @@ lemma lookup_pt_slot_reachable2 [wp]:
     apply (simp add: obj_at_def)+
     apply clarsimp
     apply (erule_tac x="ptrFromPAddr x" in allE)
-    apply (clarsimp simp: pde_ref_def)
+    apply (clarsimp simp: pde_ref_def second_level_tables_def)
     apply (rule is_aligned_global_pt[unfolded pt_bits_def pageBits_def, simplified])
     apply simp+
    apply (subst add_mask_lower_bits)
@@ -3048,8 +3048,8 @@ lemmas unique_table_caps_pdE' = unique_table_caps_pdE[where cs="arch_caps_of x" 
 
 lemma set_pd_table_caps [wp]:
   "\<lbrace>valid_table_caps and (\<lambda>s.
-    (obj_at (empty_table (set (arm_global_pts (arch_state s)))) p s \<longrightarrow>
-     empty_table (set (arm_global_pts (arch_state s))) (ArchObj (PageDirectory pd))) \<or>
+    (obj_at (empty_table (set (second_level_tables (arch_state s)))) p s \<longrightarrow>
+     empty_table (set (second_level_tables (arch_state s))) (ArchObj (PageDirectory pd))) \<or>
     (\<exists>slot cap. caps_of_state s slot = Some cap \<and> is_pd_cap cap \<and> p \<in> obj_refs cap \<and> cap_asid cap \<noteq> None) \<and>
     valid_caps (caps_of_state s) s \<and>
     unique_table_caps (caps_of_state s))\<rbrace>
@@ -3082,17 +3082,17 @@ lemma set_pd_table_caps [wp]:
 lemma set_pd_global_objs[wp]:
   "\<lbrace>valid_global_objs and valid_global_refs and
     valid_arch_state and
-    (\<lambda>s. (obj_at (empty_table (set (arm_global_pts (arch_state s)))) p s
-             \<longrightarrow> empty_table (set (arm_global_pts (arch_state s)))
+    (\<lambda>s. (obj_at (empty_table (set (second_level_tables (arch_state s)))) p s
+             \<longrightarrow> empty_table (set (second_level_tables (arch_state s)))
                                  (ArchObj (PageDirectory pd)))
         \<or> (\<exists>slot. cte_wp_at (\<lambda>cap. p \<in> obj_refs cap) slot s))\<rbrace>
   set_pd p pd \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-  apply (simp add: set_pd_def set_object_def)
+  apply (simp add: set_pd_def set_object_def second_level_tables_def)
   apply (wp get_object_wp)
   apply (clarsimp simp del: fun_upd_apply
                   split: kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp add: valid_global_objs_def valid_vso_at_def
-                            cte_wp_at_caps_of_state)
+                            cte_wp_at_caps_of_state second_level_tables_def)
   apply (intro conjI)
     apply (clarsimp simp: obj_at_def
                 simp del: valid_vspace_obj.simps)
@@ -3355,8 +3355,8 @@ lemma set_pd_invs_unmap:
     obj_at (\<lambda>ko. \<exists>pd'. ko = ArchObj (PageDirectory pd')
                        \<and> (\<forall>x \<in> kernel_mapping_slots. pd x = pd' x)) p and
     (\<lambda>s. p \<notin> global_refs s) and
-    (\<lambda>s. (obj_at (empty_table (set (arm_global_pts (arch_state s)))) p s \<longrightarrow>
-     empty_table (set (arm_global_pts (arch_state s))) (ArchObj (PageDirectory pd))))\<rbrace>
+    (\<lambda>s. (obj_at (empty_table (set (second_level_tables (arch_state s)))) p s \<longrightarrow>
+     empty_table (set (second_level_tables (arch_state s))) (ArchObj (PageDirectory pd))))\<rbrace>
   set_pd p pd
   \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def)

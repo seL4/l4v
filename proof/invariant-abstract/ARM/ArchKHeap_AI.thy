@@ -501,19 +501,19 @@ lemma valid_vs_lookup_lift:
 
 lemma valid_table_caps_lift:
   assumes cap: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  assumes pts: "\<And>P. \<lbrace>\<lambda>s. P (arm_global_pts (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (arm_global_pts (arch_state s))\<rbrace>"
+  assumes pts: "\<And>P. \<lbrace>\<lambda>s. P (second_level_tables (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (second_level_tables (arch_state s))\<rbrace>"
   assumes obj: "\<And>S p. \<lbrace>obj_at (empty_table S) p\<rbrace> f \<lbrace>\<lambda>rv. obj_at (empty_table S) p\<rbrace>"
   shows "\<lbrace>valid_table_caps\<rbrace> f \<lbrace>\<lambda>_. valid_table_caps\<rbrace>"
   unfolding valid_table_caps_def
    apply (rule hoare_lift_Pf [where f="\<lambda>s. (caps_of_state s)"])
-    apply (rule hoare_lift_Pf [where f="\<lambda>s. arm_global_pts (arch_state s)"])
+    apply (rule hoare_lift_Pf [where f="\<lambda>s. second_level_tables (arch_state s)"])
      apply (wp cap pts hoare_vcg_all_lift hoare_vcg_const_imp_lift obj)+
   done
 
 lemma valid_arch_caps_lift:
   assumes lookup: "\<And>P. \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
   assumes cap: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  assumes pts: "\<And>P. \<lbrace>\<lambda>s. P (arm_global_pts (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (arm_global_pts (arch_state s))\<rbrace>"
+  assumes pts: "\<And>P. \<lbrace>\<lambda>s. P (second_level_tables (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (second_level_tables (arch_state s))\<rbrace>"
   assumes obj: "\<And>S p. \<lbrace>obj_at (empty_table S) p\<rbrace> f \<lbrace>\<lambda>rv. obj_at (empty_table S) p\<rbrace>"
   shows "\<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"
   unfolding valid_arch_caps_def
@@ -528,16 +528,16 @@ lemma valid_global_objs_lift':
   assumes obj: "\<And>p. \<lbrace>valid_vso_at p\<rbrace> f \<lbrace>\<lambda>rv. valid_vso_at p\<rbrace>"
   assumes ko: "\<And>ako p. \<lbrace>ko_at (ArchObj ako) p\<rbrace> f \<lbrace>\<lambda>_. ko_at (ArchObj ako) p\<rbrace>"
   assumes emp: "\<And>pd S. 
-       \<lbrace>\<lambda>s. (v \<longrightarrow> pd = arm_global_pd (arch_state s) \<and> S = set (arm_global_pts (arch_state s)) \<and> P s)
+       \<lbrace>\<lambda>s. (v \<longrightarrow> pd = arm_global_pd (arch_state s) \<and> S = set (second_level_tables (arch_state s)) \<and> P s)
             \<and> obj_at (empty_table S) pd s\<rbrace>
                  f \<lbrace>\<lambda>rv. obj_at (empty_table S) pd\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_global_objs s \<and> (v \<longrightarrow> P s)\<rbrace> f \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-  unfolding valid_global_objs_def
+  unfolding valid_global_objs_def second_level_tables_def
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f="\<lambda>s. arm_global_pts (arch_state s)", OF pts])
    apply (rule hoare_use_eq [where f="\<lambda>s. arm_global_pd (arch_state s)", OF pd])
    apply (wp obj ko emp hoare_vcg_const_Ball_lift hoare_ex_wp)
-  apply clarsimp
+  apply (clarsimp simp: second_level_tables_def)
   done
 
 lemmas valid_global_objs_lift
@@ -770,7 +770,7 @@ lemma valid_global_vspace_mappings_pres:
   apply (drule mp)
    apply (clarsimp simp: valid_global_objs_def obj_at_def empty_table_def)
    apply (drule_tac x=x in spec)
-   apply (simp add: pde_ref_def)[1]
+   apply (simp add: pde_ref_def second_level_tables_def)[1]
   apply clarsimp
   done
 
@@ -789,7 +789,7 @@ lemma set_object_global_vspace_mappings:
   apply (simp add: set_object_def, wp)
   apply clarsimp
   apply (erule valid_global_vspace_mappings_pres)
-     apply (clarsimp simp: obj_at_def a_type_def global_refs_def)+
+     apply (clarsimp simp: obj_at_def a_type_def global_refs_def second_level_tables_def)+
   done
 
 

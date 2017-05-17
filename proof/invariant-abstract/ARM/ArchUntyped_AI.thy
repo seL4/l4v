@@ -415,17 +415,17 @@ lemma store_pde_weaken:
   done
 
 lemma store_pde_nonempty_table:
-  "\<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)
+  "\<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
            \<and> (\<forall>rf. pde_ref pde = Some rf \<longrightarrow>
                    rf \<in> set (arm_global_pts (arch_state s)))
            \<and> ucast (pde_ptr && mask pd_bits >> 2) \<in> kernel_mapping_slots
            \<and> valid_pde_mappings pde\<rbrace>
      store_pde pde_ptr pde
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   apply (simp add: store_pde_def set_pd_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def nonempty_table_def a_type_def)
-  apply (clarsimp simp add: empty_table_def)
+  apply (clarsimp simp add: empty_table_def second_level_tables_def)
   done
 
 lemma store_pde_global_global_objs:
@@ -473,10 +473,10 @@ proof -
     apply (case_tac ao, simp_all add: typ_at valid_pde valid_pte)
     done
   have empty:
-    "\<And>p. obj_at (empty_table (set (arm_global_pts (arch_state s)))) p s
-          \<Longrightarrow> obj_at (empty_table (set (arm_global_pts (arch_state s)))) p ?s'"
+    "\<And>p. obj_at (empty_table (set (second_level_tables (arch_state s)))) p s
+          \<Longrightarrow> obj_at (empty_table (set (second_level_tables (arch_state s)))) p ?s'"
     using pd gr vp uc
-    by (clarsimp simp: obj_at_def empty_table_def)
+    by (clarsimp simp: obj_at_def empty_table_def second_level_tables_def)
   show "valid_global_objs ?s'"
     using vg pd
     apply (clarsimp simp add: valid_global_objs_def valid_ao_at valid_vso_at empty)
@@ -501,11 +501,11 @@ lemma pd_shifting':
 
 lemma copy_global_mappings_nonempty_table:
   "is_aligned pd pd_bits \<Longrightarrow>
-   \<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s) \<and>
+   \<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s) \<and>
         valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s\<rbrace>
    copy_global_mappings pd
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table
-                        (set (arm_global_pts (arch_state s)))) r s) \<and>
+                        (set (second_level_tables (arch_state s)))) r s) \<and>
            valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s\<rbrace>"
   apply (simp add: copy_global_mappings_def)
   apply (rule hoare_seq_ext [OF _ gets_sp])
@@ -526,7 +526,7 @@ lemma copy_global_mappings_nonempty_table:
      apply (erule shiftl_less_t2n)
      apply (simp add: pd_bits_def pageBits_def)
     apply (clarsimp simp: valid_arch_state_def valid_global_objs_def obj_at_def
-                          empty_table_def)
+                          empty_table_def second_level_tables_def)
     apply (simp add: kernel_mapping_slots_def)
     apply (subst is_aligned_add_helper[THEN conjunct1], assumption)
      apply (erule shiftl_less_t2n)
@@ -544,11 +544,11 @@ lemma copy_global_mappings_nonempty_table:
 
 
 lemma mapM_copy_global_mappings_nonempty_table[wp]:
-  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)
+  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
         \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>pd\<in>set pds. is_aligned pd pd_bits)\<rbrace>
    mapM_x copy_global_mappings pds
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_strengthen_post)
    apply (rule mapM_x_wp', rule copy_global_mappings_nonempty_table)
