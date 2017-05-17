@@ -41,7 +41,9 @@ FIXME ARMHYP this is so that disabling SMMU results in successful compile
 > import {-# SOURCE #-} SEL4.Object.TCB
 > import {-# SOURCE #-} SEL4.Kernel.Init
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > import SEL4.Object.VCPU.ARM_HYP
+#endif
 
 > import Data.Bits
 > import Data.Maybe
@@ -1095,8 +1097,9 @@ round-robin.
 
 \subsection {ARM Cache and TLB consistency}
 
-FIXME ARMHYP TODO clean up, fix for ifdef for ARM arch-parametrise
+FIXME ARMHYP TODO unify hyp/non-hyp to share more code
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > doFlush :: FlushType -> VPtr -> VPtr -> PAddr -> MachineMonad ()
 > doFlush flushType vstart vend pstart =
 >     case flushType of
@@ -1111,7 +1114,22 @@ FIXME ARMHYP TODO clean up, fix for ifdef for ARM arch-parametrise
 >                      isb
 >     where vstart' = VPtr $ fromPPtr $ ptrFromPAddr pstart
 >           vend' = vstart' + (vend - vstart)
->
+#else
+> doFlush :: FlushType -> VPtr -> VPtr -> PAddr -> MachineMonad ()
+> doFlush Clean vstart vend pstart =
+>     cleanCacheRange_RAM vstart vend pstart
+> doFlush Invalidate vstart vend pstart =
+>     invalidateCacheRange_RAM vstart vend pstart
+> doFlush CleanInvalidate vstart vend pstart =
+>     cleanInvalidateCacheRange_RAM vstart vend pstart
+> doFlush Unify vstart vend pstart = do
+>     cleanCacheRange_PoU vstart vend pstart
+>     dsb
+>     invalidateCacheRange_I vstart vend pstart
+>     branchFlushRange vstart vend pstart
+>     isb
+#endif
+
 > flushPage :: VMPageSize -> PPtr PDE -> ASID -> VPtr -> Kernel ()
 > flushPage _ pd asid vptr = do
 >     assert (vptr .&. mask pageBits == 0)
@@ -1168,8 +1186,13 @@ FIXME ARMHYP TODO clean up, fix for ifdef for ARM arch-parametrise
 >       ArchInvocationLabel ARMPageUnify_Instruction -> Unify
 >       _ -> error "Should never be called without a flush invocation"
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > pageBase :: (Num a, Bits a) => a -> VMPageSize -> a
 > pageBase vaddr size = vaddr .&. (complement $ mask (pageBitsForSize size))
+#else
+> pageBase :: VPtr -> VMPageSize -> VPtr
+> pageBase vaddr size = vaddr .&. (complement $ mask (pageBitsForSize size))
+#endif
 
 > resolveVAddr :: PPtr PDE -> VPtr -> Kernel (Maybe (VMPageSize, PAddr))
 > resolveVAddr pd vaddr = do
@@ -1562,6 +1585,7 @@ the PT/PD is consistent.
 >     pd <- getObject slot
 >     return $ pd /= InvalidPDE
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > addPTEOffset :: PTE -> Word -> PTE
 > addPTEOffset pte i = if pte == InvalidPTE then InvalidPTE
 >                      else pte { pteFrame = addPAddr (pteFrame pte)
@@ -1572,6 +1596,7 @@ the PT/PD is consistent.
 > addPDEOffset (PageTablePDE p) _ = PageTablePDE p
 > addPDEOffset pde i = pde { pdeFrame = addPAddr (pdeFrame pde)
 >                                 (i * bit (pageBitsForSize(ARMSection))) }
+#endif
 
 > performPageInvocation :: PageInvocation -> Kernel ()
 >
@@ -1580,8 +1605,12 @@ the PT/PD is consistent.
 >     case entries of
 >         Left (pte, slots) -> do
 >             tlbFlush <- pteCheckIfMapped (head slots)
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >             mapM (\(slot, i) -> storePTE slot (addPTEOffset pte i))
 >                  (zip slots [0 .. fromIntegral (length slots - 1)])
+#else
+>             mapM (flip storePTE pte) slots
+#endif
 >             doMachineOp $
 >                 cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
 >                                     (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1))
@@ -1589,8 +1618,12 @@ the PT/PD is consistent.
 >             when tlbFlush $ invalidateTLBByASID asid
 >         Right (pde, slots) -> do
 >             tlbFlush <- pdeCheckIfMapped (head slots)
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >             mapM (\(slot, i) -> storePDE slot (addPDEOffset pde i))
 >                  (zip slots [0 .. fromIntegral (length slots - 1)])
+#else
+>             mapM (flip storePDE pde) slots
+#endif
 >             doMachineOp $
 >                 cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
 >                                     (VPtr $ (fromPPtr (last slots)) + (bit pdeBits - 1))
@@ -1599,8 +1632,12 @@ the PT/PD is consistent.
 >
 > performPageInvocation (PageRemap asid (Left (pte, slots))) = do
 >     tlbFlush <- pteCheckIfMapped (head slots)
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >     mapM (\(slot, i) -> storePTE slot (addPTEOffset pte i))
 >          (zip slots [0 .. fromIntegral (length slots - 1)])
+#else
+>     mapM (flip storePTE pte) slots
+#endif
 >     doMachineOp $
 >         cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
 >                             (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1))
@@ -1609,8 +1646,12 @@ the PT/PD is consistent.
 >
 > performPageInvocation (PageRemap asid (Right (pde, slots))) = do
 >     tlbFlush <- pdeCheckIfMapped (head slots)
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >     mapM (\(slot, i) -> storePDE slot (addPDEOffset pde i))
 >          (zip slots [0 .. fromIntegral (length slots - 1)])
+#else
+>     mapM (flip storePDE pde) slots
+#endif
 >     doMachineOp $
 >         cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
 >                             (VPtr $ (fromPPtr (last slots)) + (bit pdeBits - 1))

@@ -57,9 +57,13 @@ There are presently no ARM-specific register subsets defined, but in future this
 > sanitiseRegister _ _ v = v
 
 > getSanitiseRegisterInfo :: PPtr TCB -> Kernel Bool
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
+> getSanitiseRegisterInfo _ = return False
+#else
 > getSanitiseRegisterInfo t = do
 >    v <- liftM (atcbVCPUPtr . tcbArch) $ getObject t
 >    return $ isJust v
+#endif
 
 > setTCBIPCBuffer :: VPtr -> UserMonad ()
 > setTCBIPCBuffer ptr = setRegister tpidrurwRegister $ fromVPtr ptr

@@ -20,7 +20,6 @@ The ARM target does not have any hypervisor support.
 
 \begin{impdetails}
 
-> import SEL4.Machine (PPtr(..))
 > import SEL4.Machine (PPtr (..))
 > import SEL4.Model
 > import SEL4.Object.Structures

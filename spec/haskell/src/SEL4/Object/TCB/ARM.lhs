@@ -8,6 +8,12 @@
 % @TAG(GD_GPL)
 %
 
+\begin{impdetails}
+
+> {-# LANGUAGE CPP, GeneralizedNewtypeDeriving #-}
+
+\end{impdetails}
+
 This module contains ARM-specific TCB management functions. Specifically, these functions are used by the "CopyRegisters" operation to transfer ARM-specific subsets of the register set.
 
 There are presently no ARM-specific register subsets defined, but in future this may be extended to transfer floating point registers and other coprocessor state.
@@ -19,12 +25,14 @@ There are presently no ARM-specific register subsets defined, but in future this
 > import SEL4.Machine(PPtr)
 > import SEL4.Model
 > import SEL4.Object.Structures
+> import SEL4.Object.Instances()
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.ARM
 > import SEL4.Machine.RegisterSet(setRegister, tpidrurwRegister, UserMonad, VPtr(..))
 > import SEL4.Machine.RegisterSet.ARM(Register(CPSR), Word)
 > import Data.Bits
 > import Data.Word(Word8)
+> import Data.Maybe
 
 \end{impdetails}
 
