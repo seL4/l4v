@@ -27,7 +27,7 @@ crunch invs[wp,Syscall_AI_assms]: handle_arch_fault_reply "invs"
 crunch cap_to[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "ex_nonz_cap_to c"
 crunch it[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (idle_thread s)"
 crunch caps[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (caps_of_state s)"
-crunch cur_thread[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (cur_thread s)"
+crunch cur_thread[wp,Syscall_AI_assms]: handle_arch_fault_reply, make_fault_msg, arch_get_sanitise_register_info "\<lambda>s. P (cur_thread s)"
 crunch valid_objs[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "valid_objs"
 crunch cte_wp_at[wp,Syscall_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "\<lambda>s. P (cte_wp_at P' p s)"
 

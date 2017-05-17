@@ -1,10 +1,10 @@
 (*
  * Copyright 2016, Data61, CSIRO
- * 
+ *
  * This software may be distributed and modified according to the terms of
  * the GNU General Public License version 2. Note that NO WARRANTY is provided.
  * See "LICENSE_GPLv2.txt" for details.
- * 
+ *
  * @TAG(DATA61_GPL)
  *)
 
@@ -23,11 +23,8 @@ crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects, arch_tcb_set_ipc_buffer,
   arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
-  prepare_thread_delete, handle_hypervisor_fault
+  prepare_thread_delete, handle_hypervisor_fault, make_arch_fault_msg
   "\<lambda>s. P (domain_list s)"
-
-crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps check_cap_inv)
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
@@ -36,10 +33,23 @@ crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
   handle_arch_fault_reply, init_arch_objects, arch_tcb_set_ipc_buffer,
   arch_invoke_irq_control, handle_vm_fault, arch_get_sanitise_register_info,
-  prepare_thread_delete, handle_hypervisor_fault
+  prepare_thread_delete, handle_hypervisor_fault, make_arch_fault_msg
   "\<lambda>s. P (domain_time s)"
 
+end
+
+global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
+  proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (unfold_locales; (fact DetSchedDomainTime_AI_assms)?)
+  qed
+
+context Arch begin global_naming ARM
+
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_time s)"
+  (wp: crunch_wps check_cap_inv)
+
+crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
 
 lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
@@ -62,9 +72,15 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
     apply clarsimp
    done
 
+crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: handle_reserved_irq "\<lambda>s. P (domain_time s)"
+  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
+
+crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: handle_reserved_irq "\<lambda>s. P (domain_list s)"
+  (wp: crunch_wps mapM_wp subset_refl simp: crunch_simps ignore: make_fault_msg)
+
 end
 
-global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
+global_interpretation DetSchedDomainTime_AI_2?: DetSchedDomainTime_AI_2
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact DetSchedDomainTime_AI_assms)?)

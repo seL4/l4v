@@ -821,6 +821,15 @@ lemma mask_pt_bits_shift_ucast_align[simp]:
   by (clarsimp simp: is_aligned_mask mask_def pt_bits_def pageBits_def)
      word_bitwise
 
+lemma ucast_pt_index:
+  "\<lbrakk>is_aligned (p::word32) 6\<rbrakk>
+   \<Longrightarrow> ucast ((pa && mask 4) + (ucast (p && mask pt_bits >> 2)::8 word))
+   =  ucast (pa && mask 4) + (p && mask pt_bits >> 2)"
+  apply (simp add:is_aligned_mask mask_def pt_bits_def pageBits_def)
+  apply word_bitwise
+  apply (auto simp: carry_def)
+  done
+
 lemma store_pte_valid_pdpt:
   "\<lbrace>valid_pdpt_objs and page_inv_entries_safe (Inl (pte, slots))\<rbrace>
        store_pte (hd slots) pte \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
@@ -873,7 +882,7 @@ lemma store_pte_valid_pdpt:
     apply (drule_tac s = "ucast (p && mask pt_bits >> 2)" in sym)
     apply (simp add:mask_out_sub_mask field_simps)
     apply (drule_tac f = "ucast::(word8\<Rightarrow>word32)" in arg_cong)
-    apply (simp add:ucast_pt_index pt_bits_def pageBits_def)
+    apply (simp add:ucast_pt_index)
     apply (simp add:unat_ucast_8_32)
     apply (rule conjI)
      apply (subgoal_tac "unat (pa && mask 4)\<noteq> 0")
@@ -896,6 +905,24 @@ lemma store_pte_valid_pdpt:
   apply (simp add:fun_upd_def entries_align_def)
   apply (rule is_aligned_weaken[OF _ pte_range_sz_le])
   apply (simp add:is_aligned_shiftr)
+  done
+
+
+lemma ucast_pd_index:
+  "\<lbrakk>is_aligned (p::word32) 6\<rbrakk>
+   \<Longrightarrow> ucast ((pa && mask 4) + (ucast (p && mask pd_bits >> 2)::12 word))
+   =  ucast (pa && mask 4) + (p && mask pd_bits >> 2)"
+  apply (simp add:is_aligned_mask mask_def pd_bits_def pageBits_def)
+  apply word_bitwise
+  apply (auto simp:carry_def)
+  done
+
+lemma unat_ucast_12_32:
+  "unat (ucast (x::(12 word))::word32) = unat x"
+  apply (subst unat_ucast)
+  apply (rule mod_less)
+  apply (rule less_le_trans[OF unat_lt2p])
+  apply simp
   done
 
 lemma store_pde_valid_pdpt:
@@ -950,7 +977,7 @@ lemma store_pde_valid_pdpt:
     apply (drule_tac s = "ucast (p && mask pd_bits >> 2)" in sym)
     apply (simp add:mask_out_sub_mask field_simps)
     apply (drule_tac f = "ucast::(12 word\<Rightarrow>word32)" in arg_cong)
-    apply (simp add:ucast_pd_index pd_bits_def pageBits_def)
+    apply (simp add:ucast_pd_index)
     apply (simp add:unat_ucast_12_32)
     apply (rule conjI)
      apply (subgoal_tac "unat (pa && mask 4)\<noteq> 0")
@@ -1359,7 +1386,7 @@ qed
 lemma create_mapping_entries_safe[wp]:
   "\<lbrace>\<exists>\<rhd>pd and K (vmsz_aligned vptr sz) and K (is_aligned pd pd_bits)
           and K (vptr < kernel_base)
-          and valid_arch_objs and pspace_aligned and
+          and valid_vspace_objs and pspace_aligned and
           (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits))\<rbrace>
       create_mapping_entries ptr vptr sz rights attrib pd
    \<lbrace>\<lambda>entries. case entries of (Inl (SmallPagePTE _ _ _, [_])) \<Rightarrow> \<top>
@@ -1392,7 +1419,7 @@ lemma create_mapping_entries_safe[wp]:
   apply (wp get_pde_wp | simp add:lookup_pt_slot_def | wpc)+
   apply (clarsimp simp:upto_enum_def upto_enum_step_def
     page_inv_entries_pre_def Let_def )
-  apply (drule_tac ref = refa in valid_arch_objsD)
+  apply (drule_tac ref = refa in valid_vspace_objsD)
     apply (simp add:obj_at_def)
    apply simp
   apply (simp)
@@ -1425,6 +1452,8 @@ lemma create_mapping_entries_safe[wp]:
    apply (simp add:vmsz_aligned_def)
   apply simp
   done
+
+crunch vspace_objs[wp]: find_pd_for_asid valid_vspace_objs
 
 lemma arch_decode_invocation_valid_pdpt[wp]:
   notes find_pd_for_asid_inv[wp del]
@@ -1468,11 +1497,11 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
              | simp only: obj_at_def)+)
          apply (rule_tac Q'="\<lambda>rv. \<exists>\<rhd> rv and K (is_aligned rv pd_bits) and
                   (\<exists>\<rhd> (lookup_pd_slot rv (args ! 0) && ~~ mask pd_bits)) and
-                     valid_arch_objs and pspace_aligned and valid_pdpt_objs"
+                     valid_vspace_objs and pspace_aligned and valid_pdpt_objs"
                      and f="find_pd_for_asid p" for p
                     in hoare_post_imp_R)
           apply (wp| simp)+
-         apply (fastforce simp:pd_bits_def pageBits_def)
+         apply (fastforce simp:pd_bits_def pageBits_def intro: valid_arch_imp_valid_vspace_objs)
         apply ((wp get_pde_wp
              ensure_safe_mapping_ensures[THEN hoare_post_imp_R]
              create_mapping_entries_safe check_vp_wpR
@@ -1488,12 +1517,12 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
              | simp only: obj_at_def)+)
          apply (rule_tac Q'="\<lambda>rv. \<exists>\<rhd> rv and K (is_aligned rv pd_bits) and
                   (\<exists>\<rhd> (lookup_pd_slot rv (snd pa) && ~~ mask pd_bits)) and
-                     valid_arch_objs and pspace_aligned and valid_pdpt_objs and
+                     valid_vspace_objs and pspace_aligned and valid_pdpt_objs and
                      K ((snd pa) < kernel_base)"
                      and f="find_pd_for_asid p" for p
                     in hoare_post_imp_R)
           apply (wp| simp)+
-         apply (auto simp:pd_bits_def pageBits_def)[1]
+         apply (auto simp:pd_bits_def pageBits_def intro: valid_arch_imp_valid_vspace_objs)[1]
         apply ((wp get_pde_wp
              ensure_safe_mapping_ensures[THEN hoare_post_imp_R]
              create_mapping_entries_safe check_vp_wpR
