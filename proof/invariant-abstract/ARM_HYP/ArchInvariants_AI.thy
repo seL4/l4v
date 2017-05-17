@@ -433,6 +433,11 @@ definition
 where
   "vs_lookup \<equiv> \<lambda>s. vs_lookup_trans s `` vs_asid_refs (arm_asid_table (arch_state s))"
 
+definition
+  second_level_tables :: "'a arch_state_scheme \<Rightarrow> obj_ref list"
+where
+  "second_level_tables \<equiv> \<lambda>s. []"
+
 end
 
 context begin interpretation Arch .

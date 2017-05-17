@@ -272,7 +272,7 @@ lemma set_untyped_cap_invs_simple[Untyped_AI_assms]:
     set_cap_idle update_cap_ifunsafe)
   apply (simp add:valid_irq_node_def)
   apply wps
-  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_arch_objs set_cap_valid_arch_caps
+  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_valid_arch_caps
     set_cap_valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at
     set_untyped_cap_refs_respects_device_simple)
   apply (clarsimp simp:cte_wp_at_caps_of_state is_cap_simps)
@@ -460,7 +460,14 @@ proof -
     by (case_tac pte, auto simp add: typ_at data_at_def)
   have valid_ao_at: "\<And>p. valid_ao_at p s \<Longrightarrow> valid_ao_at p ?s'"
     using pd uc
-    apply (clarsimp simp: valid_ao_at_def obj_at_def)
+    apply (clarsimp simp: valid_ao_at_def obj_at_def valid_arch_obj_def)
+    apply (intro conjI impI allI)
+      apply (clarsimp simp: valid_pde vp)
+    apply (case_tac ao, simp_all add: typ_at valid_pde valid_pte)
+    done
+  have valid_vso_at: "\<And>p. valid_vso_at p s \<Longrightarrow> valid_vso_at p ?s'"
+    using pd uc
+    apply (clarsimp simp: valid_vso_at_def obj_at_def)
     apply (intro conjI impI allI)
       apply (clarsimp simp: valid_pde vp)
     apply (case_tac ao, simp_all add: typ_at valid_pde valid_pte)
@@ -472,7 +479,7 @@ proof -
     by (clarsimp simp: obj_at_def empty_table_def)
   show "valid_global_objs ?s'"
     using vg pd
-    apply (clarsimp simp add: valid_global_objs_def valid_ao_at empty)
+    apply (clarsimp simp add: valid_global_objs_def valid_ao_at valid_vso_at empty)
     apply (fastforce simp add: obj_at_def)
     done
 qed

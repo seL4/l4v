@@ -337,7 +337,7 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
       and valid_cap (default_cap tp oref sz dev)
       and (\<lambda>(s::'state_ext::state_ext state). \<forall>r\<in>obj_refs (default_cap tp oref sz dev).
                 (\<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> obj_refs cap) p' s)
-              \<and> \<not> obj_at (nonempty_table {}) r s)
+              \<and> \<not> obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
       and cte_wp_at (op = cap.NullCap) cref
       and K (tp \<noteq> ArchObject ASIDPoolObj)\<rbrace>
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
@@ -356,7 +356,7 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
     apply (case_tac cref, fastforce)
    apply (simp add: obj_ref_none_no_asid)
   apply (rule conjI)
-   apply (auto simp: is_cap_simps valid_cap_def
+   apply (auto simp: is_cap_simps valid_cap_def second_level_tables_def
                      obj_at_def nonempty_table_def a_type_simps)[1]
   apply (clarsimp simp del: imp_disjL)
   apply (case_tac "\<exists>x. x \<in> obj_refs cap")
@@ -389,7 +389,7 @@ lemma init_arch_objects_excap[wp]:
 (**)
 
 crunch nonempty_table[wp]: do_machine_op
-  "\<lambda>s. P' (obj_at (nonempty_table {}) r s)"
+  "\<lambda>s. P' (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)"
 
 lemma store_pde_weaken:
   "\<lbrace>\<lambda>s. page_directory_at (p && ~~ mask pd_bits) s \<longrightarrow> P s\<rbrace> store_pde p e \<lbrace>Q\<rbrace> =
@@ -442,22 +442,22 @@ lemma pd_shifting':
 
 lemma copy_global_mappings_nonempty_table: (* ARMHYP need change *)
   "is_aligned pd pd_bits \<Longrightarrow>
-   \<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table {}) r s) \<and>
+   \<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s) \<and>
         valid_arch_state s \<and> pspace_aligned s\<rbrace>
    copy_global_mappings pd
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table
-                        {}) r s) \<and>
+                        (set (second_level_tables (arch_state s)))) r s) \<and>
            valid_arch_state s \<and> pspace_aligned s\<rbrace>"
   apply (simp add: copy_global_mappings_def)
   done
 
 
 lemma mapM_copy_global_mappings_nonempty_table[wp]:
-  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table {}) r s)
+  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
         \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>pd\<in>set pds. is_aligned pd pd_bits)\<rbrace>
    mapM_x copy_global_mappings pds
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table {}) r s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_strengthen_post)
    apply (rule mapM_x_wp', rule copy_global_mappings_nonempty_table)
@@ -465,11 +465,11 @@ lemma mapM_copy_global_mappings_nonempty_table[wp]:
   done
 
 lemma init_arch_objects_nonempty_table[Untyped_AI_assms, wp]:
-  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table {}) r s)
-         \<and> valid_arch_state s \<and> pspace_aligned s) and
+  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
+         \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>ref\<in>set refs. is_aligned ref (obj_bits_api tp us))\<rbrace>
         init_arch_objects tp ptr bits us refs
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table {}) r s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: init_arch_objects_def split del: if_split)
   apply (rule hoare_pre)
