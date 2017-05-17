@@ -149,6 +149,13 @@ lemma pred_tcb_cap_wp_at [TcbAcc_AI_assms]:
    apply fastforce+
   done
 
+lemma as_user_hyp_refs_of[wp, TcbAcc_AI_assms]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
+     as_user t m
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (wp as_user_wp_thread_set_helper
+            thread_set_hyp_refs_trivial | simp)+
+  done
 
 lemmas sts_typ_ats = sts_typ_ats abs_atyp_at_lifts [OF set_thread_state_typ_at]
 
