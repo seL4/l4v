@@ -23,6 +23,8 @@ sig
   val interactive_install : string -> theory -> theory
   val mk_thy_relative : theory -> string -> string
 
+  val extra_trace_filename : string Config.T
+
   val installed_C_files : theory
     -> {c_filename : string, locale_names : string list,
         options: (bool * bool * bool),
@@ -35,10 +37,34 @@ struct
 type 'a wrap = 'a Region.Wrap.t
 val bogus = SourcePos.bogus
 
+fun setup_feedback extra_output_filename = let
+    val trace_extra = case extra_output_filename of
+        NONE => K ()
+      | SOME f => let
+        val out = TextIO.openOut f
+      in fn s => (TextIO.output (out, s); TextIO.flushOut out) end
+    val add_extra = case extra_output_filename of
+        NONE => (fn pfx => fn f => f)
+      | SOME _ => (fn pfx => fn f => fn s => (trace_extra (pfx ^ s); f s))
+  in
+    Feedback.errorf := add_extra "ERROR: " (ignore o error);
+    Feedback.warnf := add_extra "" warning;
+    Feedback.informf := add_extra "" (Output.tracing o Feedback.timestamp)
+  end
 
-val _ = Feedback.errorf := (ignore o error)
-val _ = Feedback.warnf := warning
-val _ = Feedback.informf := (Output.tracing o Feedback.timestamp)
+val extra_trace_filename = let
+  val (config, setup) =
+      Attrib.config_string @{binding "CParser_extra_trace_file"} (K "")
+in
+  Context.>>(Context.map_theory setup);
+  config
+end
+
+fun setup_feedback_thy thy = let
+    val str = Config.get_global thy extra_trace_filename
+  in setup_feedback (if str = "" then NONE else SOME str) end
+
+val _ = setup_feedback NONE
 
 structure C_Includes = Theory_Data
 (struct
@@ -120,6 +146,7 @@ fun do_cpp {error_detail, cpp_path} {includes, filename} =
       end
 
 fun get_Csyntax thy s = let
+  val _ = setup_feedback_thy thy
   val cpp_option =
       case Config.get_global thy cpp_path of
           "" => NONE
@@ -270,6 +297,7 @@ in
 end
 
 fun install_C_file0 (((((memsafe),ctyps),cdefs),s),statetylist_opt) thy = let
+  val _ = setup_feedback_thy thy
   val {base = localename,...} = OS.Path.splitBaseExt (OS.Path.file s)
   val _ = not (Long_Name.is_qualified localename) orelse
             raise Fail ("Base of filename looks like qualified Isabelle ID: "^
@@ -368,7 +396,8 @@ in
                   glob_table
                   thy
             end
-          else (warning "Ignoring initialisations of modified globals (if any)";
+          else (Feedback.informStr (0,
+                    "Ignoring initialisations of modified globals (if any)");
                 thy)
       open TermsTypes
       val (globty, styargs) = let
@@ -394,7 +423,7 @@ in
                           " (derived from "^
                           String.concatWith ", " (valOf roots_opt) ^ ")"
       val _ =
-          tracing ("Beginning function translation for " ^
+          Feedback.informStr (0, "Beginning function translation for " ^
                     toTranslate_s)
       val toTranslateP =
           case toTranslate of
@@ -435,7 +464,7 @@ in
           options = (ms, install_typs, install_defs),
           additional_options = statetylist} :: ss) thy
 end handle e as TYPE (s,tys,tms) =>
-         (tracing (s ^ "\n" ^
+         (Feedback.informStr (0, s ^ "\n" ^
                    Int.toString (length tms) ^ " term(s): " ^
                    String.concatWith
                        ", "
@@ -454,7 +483,7 @@ fun install_C_file args thy =
 fun interactive_install s thy =
   install_C_file ((((NONE, NONE), NONE), s), NONE) thy
   handle TYPE (s,tys,tms) =>
-         (tracing (s ^ "\n" ^
+         (Feedback.informStr (0, s ^ "\n" ^
                    Int.toString (length tms) ^ " term(s): " ^
                    String.concatWith
                        ", "

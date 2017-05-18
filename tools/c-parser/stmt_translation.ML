@@ -783,7 +783,7 @@ fun fndefn_term (state : CalculateState.mungedb) cse fninfo rcdinfo ms globty st
       decl
   val fname = node fname
   val bilist = node locbodyw
-  val _ = tracing ("Translating function "^fname)
+  val _ = Feedback.informStr (0, "Translating function "^fname)
   val body = bilist2stmts bilist
   fun varinfo s = state_varlookup fname s state
 

@@ -196,7 +196,7 @@ fun modifies_vcg_tactic ctxt i t = let
   val res = Seq.list_of (DETERM tac t)
   val {usr, sys} = Timer.checkCPUTimer timer
 in
-  tracing ("modifies vcg-time:" ^ Time.fmt 2 (Time.+ (usr, sys)));
+  Feedback.informStr (0, "modifies vcg-time:" ^ Time.fmt 2 (Time.+ (usr, sys)));
   Seq.of_list res
 end
 
@@ -218,9 +218,9 @@ end
 
 fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
   open ProgramAnalysis
-  val _ = tracing "Proving automatically calculated modifies proofs"
+  val _ = Feedback.informStr (0, "Proving automatically calculated modifies proofs")
   val globs_all_addressed = Config.get lthy CalculateState.globals_all_addressed
-  val _ = tracing ("Globals_all_addressed mode = " ^ Bool.toString globs_all_addressed)
+  val _ = Feedback.informStr (0, "Globals_all_addressed mode = " ^ Bool.toString globs_all_addressed)
   (* first enter the locale where \<Gamma> exists, and where all the
      mappings from function name to function body exist *)
   val lconsts = Proof_Context.consts_of lthy
@@ -229,13 +229,13 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
   val {callgraph,callers} = compute_callgraphs csenv
 
   fun do_one (fname, (failedsofar, lthy)) = let
-      val _ = tracing("Beginning modifies proof for singleton " ^ fname)
+      val _ = Feedback.informStr (0, "Beginning modifies proof for singleton " ^ fname)
       val timer = Timer.startCPUTimer ()
 
       fun modifies_msg msg = let
           val {usr, sys} = Timer.checkCPUTimer timer
         in
-          tracing ("modifies:" ^ fname ^ ":" ^
+          Feedback.informStr (0, "modifies:" ^ fname ^ ":" ^
                    Time.fmt 2 (Time.+ (usr, sys)) ^ "s:" ^ msg)
         end;
     in
@@ -279,7 +279,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
     val n = length fnlist (* >= 1 *)
     val rec_thm = HoarePackage.gen_proc_rec lthy HoarePackage.Partial n
     val mods = valOf (get_modifies csenv (hd fnlist))
-        handle Option => (tracing ("No modifies info for "^hd fnlist);
+        handle Option => (Feedback.informStr (0, "No modifies info for "^hd fnlist);
                           raise NoMods (Binaryset.addList(failedsofar, fnlist)))
     val mvlist = Binaryset.listItems mods
     fun gen_modgoal (fname : string) : term = let
@@ -294,7 +294,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                         gamma_t fname mvlist
       else let
           val example = valOf (Binaryset.find (fn _ => true) i)
-          val _ = tracing ("Not attempting modifies proof for "^fname^
+          val _ = Feedback.informStr (0, "Not attempting modifies proof for "^fname^
                            " (or its recursive component) as it calls a\
                            \ function ("^example^") that has failed")
         in
@@ -312,7 +312,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
       val _ = length nway_thms = length fnlist orelse
               raise Fail "CONJUNCTS nway_thm and fnlist don't match up!"
       fun note_it (nm, th, lthy) =
-          (tracing ("Modifies proof for "^nm^" successful");
+          (Feedback.informStr (0, "Modifies proof for "^nm^" successful");
            #2 (Local_Theory.note ((Binding.name (nm ^ "_modifies"), []),
                                   [th])
                                  lthy))

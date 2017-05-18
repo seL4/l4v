@@ -140,8 +140,8 @@ fun mk_fninfo thy csenv includeP decllist : fninfo list = let
                          raise Fail ("mk_fninfo: No function information for "^
                                      fname)
               val rettype = valOf (get_rettype fname csenv)
-	      val _ = tracing ("Added external decl for " ^ fname ^
-			       " with " ^ Int.toString (length params) ^
+	      val _ = Feedback.informStr (0, "Added external decl for " ^
+                               fname ^ " with " ^ Int.toString (length params) ^
                                " args.")
               val spec = parse_specs fname specs
               val mod_annotated_protop = isSome (get_modifies csenv fname)
@@ -403,14 +403,14 @@ let
   val thy = List.foldr (uncurry add_syntax) thy name_pars
   val lthy = Named_Target.init NONE globloc thy
   val name_body = compile_fninfos globloc cse styargs compfn lthy fninfo
-  val _ = tracing "Translated all functions"
+  val _ = Feedback.informStr (0, "Translated all functions")
   val globs = extract_fixes globals_elems
 
   val body_elems = map (create_bodyloc_elems globs thy) name_body
 
   fun add_body_defs ((elems, _ (* name-body *)), lthy) = let
     fun foldthis (e, lthy) = let
-      val _ = tracing ("Adding body_def for " ^ Binding.name_of (#1 (#1 e)))
+      val _ = Feedback.informStr (0, "Adding body_def for " ^ Binding.name_of (#1 (#1 e)))
     in
       Local_Theory.reset (#2 (Local_Theory.define e lthy))
     end
@@ -458,7 +458,7 @@ let
            is dropped and not used again *)
         val lthy = Named_Target.init NONE globloc thy
         val t = Syntax.read_term lthy tstr
-        val _ = tracing ("Adding spec locale "^speclocalename^
+        val _ = Feedback.informStr (0, "Adding spec locale "^speclocalename^
                          (if speclocalename = "" then "" else " ")^
                          "for function "^name ^ " (" ^ tstr ^ ")")
         val e' = Element.Assumes [((speclocalename_b,[]),
