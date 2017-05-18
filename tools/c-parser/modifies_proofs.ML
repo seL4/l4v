@@ -180,14 +180,17 @@ in
                      arg5_t $ arg6_t)
 end
 
-fun munge_tactic ctxt goal tac = let
+fun munge_tactic ctxt goal msgf tac = let
   fun tacticfn {prems = _,context} st =
       if !sorry_modifies_proofs then
          Skip_Proof.cheat_tac ctxt 1 st
       else
          tac context st
+  fun tacticmsg st t = case Seq.pull (tacticfn st t) of
+      NONE => Seq.empty
+    | SOME (t, _) => (msgf (); Seq.single t)
 in
-  Goal.prove_future ctxt [] [] (TermsTypes.mk_prop goal) tacticfn
+  Goal.prove_future ctxt [] [] (TermsTypes.mk_prop goal) tacticmsg
 end
 
 fun modifies_vcg_tactic ctxt i t = let
@@ -232,7 +235,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
       val _ = Feedback.informStr (0, "Beginning modifies proof for singleton " ^ fname)
       val timer = Timer.startCPUTimer ()
 
-      fun modifies_msg msg = let
+      fun modifies_msg msg () = let
           val {usr, sys} = Timer.checkCPUTimer timer
         in
           Feedback.informStr (0, "modifies:" ^ fname ^ ":" ^
@@ -240,7 +243,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
         end;
     in
       case get_modifies csenv fname of
-        NONE => (modifies_msg "can't do modifies proof";
+        NONE => (modifies_msg "can't do modifies proof" ();
                  (Binaryset.add(failedsofar,fname), lthy))
       | SOME mods => let
           val mvlist = Binaryset.listItems mods
@@ -256,13 +259,14 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
           if Binaryset.isEmpty i then let
               val thy = Proof_Context.theory_of lthy
               val goal = gen_modify_goal thy tyargs gamma_t fname mvlist
-              val th = munge_tactic lthy goal modifies_tactic
+              val th = munge_tactic lthy goal (modifies_msg "completed")
+                modifies_tactic
               val (_, lthy) =
                       Local_Theory.note
                           ((Binding.name (fname ^ "_modifies"), []), [th])
                           lthy
             in
-              (failedsofar, lthy) before modifies_msg "successful"
+              (failedsofar, lthy)
             end
           else let
               val example = valOf (Binaryset.find (fn _ => true) i)
@@ -307,12 +311,15 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
         ALLGOALS (HoarePackage.vcg_tac "_modifies" "false" [] ctxt)
   in
     let
-      val nway_thm = munge_tactic lthy nway_goal tac
+      val pnm = "Modifies proof for recursive clique " ^ commas fnlist
+      val _ = Feedback.informStr (0, pnm ^ " commencing.")
+      fun msg () = Feedback.informStr (0, pnm ^ " completed.")
+      val nway_thm = munge_tactic lthy nway_goal msg tac
       val nway_thms = HOLogic.conj_elims lthy nway_thm
       val _ = length nway_thms = length fnlist orelse
               raise Fail "CONJUNCTS nway_thm and fnlist don't match up!"
       fun note_it (nm, th, lthy) =
-          (Feedback.informStr (0, "Modifies proof for "^nm^" successful");
+          (Feedback.informStr (0, "Modifies rule for "^nm^" extracted");
            #2 (Local_Theory.note ((Binding.name (nm ^ "_modifies"), []),
                                   [th])
                                  lthy))
