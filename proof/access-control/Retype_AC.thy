@@ -573,17 +573,16 @@ lemma empty_table_update_from_arm_global_pts:
     kernel_base >> 20 \<le> y >> 20; y >> 20 \<le> 2 ^ (pd_bits - 2) - 1;
     is_aligned pd pd_bits;
     kheap s (arm_global_pd (arch_state s)) = Some (ArchObj (PageDirectory pda));
-    obj_at (empty_table (set (arm_global_pts (arch_state s)))) pd s\<rbrakk>
+    obj_at (empty_table (set (second_level_tables (arch_state s)))) pd s\<rbrakk>
    \<Longrightarrow>
    (\<forall>pdb. ko_at (ArchObj (PageDirectory pdb)) pd s \<longrightarrow>
-       empty_table (set (arm_global_pts (arch_state s)))
+       empty_table (set (second_level_tables (arch_state s)))
                    (ArchObj
                      (PageDirectory
                        (pdb(ucast (y >> 20) := pda (ucast (y >> 20)))))))"
   apply(clarsimp simp: empty_table_def obj_at_def)
   apply(clarsimp simp: valid_global_objs_def obj_at_def empty_table_def)
   done
-
 
 lemma copy_global_mappings_pas_refined:
   "is_aligned pd pd_bits \<Longrightarrow>

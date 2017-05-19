@@ -309,7 +309,9 @@ lemma handle_invocation_pas_refined:
               as_user_pas_refined
               lookup_cap_and_slot_valid_fault3
          | simp add: split comp_def runnable_eq_active del: if_split)+),
-         (auto intro: guarded_to_cur_domain simp: ct_in_state_def st_tcb_at_def intro: if_live_then_nonz_capD)[1])+
+         (auto intro: guarded_to_cur_domain
+               simp: ct_in_state_def st_tcb_at_def live_def hyp_live_def
+               intro: if_live_then_nonz_capD)[1])+
   done
 
 lemma handle_invocation_respects:

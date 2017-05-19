@@ -110,7 +110,7 @@ lemma find_pd_for_asid_authority1:
 
 lemma find_pd_for_asid_authority2:
   "\<lbrace>\<lambda>s. \<forall>pd. (\<forall>aag. pas_refined aag s \<longrightarrow> (pasASIDAbs aag asid, Control, pasObjectAbs aag pd) \<in> pasPolicy aag)
-           \<and> (pspace_aligned s \<and> valid_arch_objs s \<longrightarrow> is_aligned pd pd_bits)
+           \<and> (pspace_aligned s \<and> valid_vspace_objs s \<longrightarrow> is_aligned pd pd_bits)
            \<and> (\<exists>\<rhd> pd) s
            \<longrightarrow> Q pd s\<rbrace> find_pd_for_asid asid \<lbrace>Q\<rbrace>, -"
   (is "\<lbrace>?P\<rbrace> ?f \<lbrace>Q\<rbrace>,-")
@@ -123,7 +123,7 @@ lemma find_pd_for_asid_authority2:
   done
 
 lemma find_pd_for_asid_pd_slot_authorised [wp]:
-  "\<lbrace>pas_refined aag and K (is_subject_asid aag asid) and pspace_aligned and valid_arch_objs\<rbrace>
+  "\<lbrace>pas_refined aag and K (is_subject_asid aag asid) and pspace_aligned and valid_vspace_objs\<rbrace>
   find_pd_for_asid asid
   \<lbrace>\<lambda>rv s. is_subject aag (lookup_pd_slot rv vptr && ~~ mask pd_bits) \<rbrace>, -"
   apply (wp find_pd_for_asid_authority2)
@@ -286,7 +286,7 @@ lemma aag_has_auth_to_Control_eq_owns:
   by (auto simp: pas_refined_refl elim: aag_Control_into_owns)
 
 lemma lookup_pt_slot_authorised:
-  "\<lbrace>\<exists>\<rhd> pd and valid_arch_objs and pspace_aligned and pas_refined aag
+  "\<lbrace>\<exists>\<rhd> pd and valid_vspace_objs and pspace_aligned and pas_refined aag
             and K (is_subject aag pd) and K (is_aligned pd 14 \<and> vptr < kernel_base)\<rbrace>
     lookup_pt_slot pd vptr
   \<lbrace>\<lambda>rv s. is_subject aag (rv && ~~ mask pt_bits)\<rbrace>, -"
@@ -294,7 +294,7 @@ lemma lookup_pt_slot_authorised:
   apply (wp get_pde_wp | wpc)+
   apply (subgoal_tac "is_aligned pd pd_bits")
    apply (clarsimp simp: lookup_pd_slot_pd)
-   apply (drule(2) valid_arch_objsD)
+   apply (drule(2) valid_vspace_objsD)
    apply (clarsimp simp: obj_at_def)
    apply (drule kheap_eq_state_vrefs_pas_refinedD)
      apply (erule vs_refs_no_global_pts_pdI)
@@ -333,7 +333,7 @@ lemma is_aligned_6_masks:
 lemma lookup_pt_slot_authorised2:
   "\<lbrace>\<exists>\<rhd> pd and K (is_subject aag pd) and
     K (is_aligned pd 14 \<and> is_aligned vptr 16 \<and> vptr < kernel_base) and
-    valid_arch_objs and valid_arch_state and equal_kernel_mappings and
+    valid_vspace_objs and valid_arch_state and equal_kernel_mappings and
     valid_global_objs and pspace_aligned and pas_refined aag\<rbrace>
     lookup_pt_slot pd vptr
   \<lbrace>\<lambda>rv s.  \<forall>x\<in>set [0 , 4 .e. 0x3C]. is_subject aag (x + rv && ~~ mask pt_bits)\<rbrace>, -"
@@ -349,7 +349,7 @@ lemma lookup_pt_slot_authorised2:
 lemma lookup_pt_slot_authorised3:
   "\<lbrace>\<exists>\<rhd> pd and K (is_subject aag pd) and
     K (is_aligned pd 14 \<and> is_aligned vptr 16 \<and> vptr < kernel_base) and
-    valid_arch_objs and valid_arch_state and equal_kernel_mappings and
+    valid_vspace_objs and valid_arch_state and equal_kernel_mappings and
     valid_global_objs and pspace_aligned and pas_refined aag\<rbrace>
     lookup_pt_slot pd vptr
   \<lbrace>\<lambda>rv s.  \<forall>x\<in>set [rv , rv + 4 .e. rv + 0x3C]. is_subject aag (x && ~~ mask pt_bits)\<rbrace>, -"
@@ -419,7 +419,7 @@ crunch pas_refined[wp]: unmap_page "pas_refined aag"
 crunch pspace_aligned[wp]: flush_page "pspace_aligned"
 
 lemma unmap_page_respects:
-  "\<lbrace>integrity aag X st and K (is_subject_asid aag asid) and pas_refined aag and pspace_aligned and valid_arch_objs
+  "\<lbrace>integrity aag X st and K (is_subject_asid aag asid) and pas_refined aag and pspace_aligned and valid_vspace_objs
         and K (vmsz_aligned vptr sz \<and> vptr < kernel_base)\<rbrace>
     unmap_page sz asid vptr pptr
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
@@ -627,7 +627,7 @@ lemma set_mrs_integrity_autarch:
   done
 
 lemma perform_page_invocation_respects:
-  "\<lbrace>integrity aag X st and pas_refined aag and K (authorised_page_inv aag pgi) and valid_page_inv pgi and valid_arch_objs and pspace_aligned and is_subject aag  \<circ> cur_thread\<rbrace>
+  "\<lbrace>integrity aag X st and pas_refined aag and K (authorised_page_inv aag pgi) and valid_page_inv pgi and valid_vspace_objs and pspace_aligned and is_subject aag  \<circ> cur_thread\<rbrace>
      perform_page_invocation pgi
    \<lbrace>\<lambda>s. integrity aag X st\<rbrace>"
 proof -
@@ -1115,7 +1115,7 @@ lemma decode_arch_invocation_authorised:
                   del: hoare_post_taut hoare_True_E_R
                   split del: if_split)+
   apply (clarsimp simp: authorised_asid_pool_inv_def authorised_page_table_inv_def
-                        neq_Nil_conv invs_psp_aligned invs_arch_objs cli_no_irqs)
+                        neq_Nil_conv invs_psp_aligned invs_vspace_objs cli_no_irqs)
   apply (drule diminished_cte_wp_at_valid_cap, clarsimp+)
   apply (cases cap, simp_all)
       -- "asid pool"

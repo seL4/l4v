@@ -532,7 +532,7 @@ lemma zombie_ptr_emptyable:
   apply (rule ccontr)
   apply (clarsimp simp: get_tcb_ko_at)
   apply (drule if_live_then_nonz_capD[rotated])
-    apply auto[2]
+    apply (auto simp: live_def hyp_live_def)[2]
   apply (clarsimp simp: ex_nonz_cap_to_def cte_wp_at_caps_of_state
                         zobj_refs_to_obj_refs)
   apply (drule(2) zombies_final_helperE, clarsimp, simp+)
@@ -552,7 +552,7 @@ lemma finalise_cap_makes_halted:
                            split: option.split
                  | intro impI conjI
                  | rule hoare_drop_imp)+
-   apply (fastforce simp: st_tcb_at_def obj_at_def is_tcb
+   apply (fastforce simp: st_tcb_at_def obj_at_def is_tcb live_def
                   dest!: final_zombie_not_live)
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all add: arch_finalise_cap_def)

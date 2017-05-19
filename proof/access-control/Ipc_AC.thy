@@ -1357,6 +1357,9 @@ lemma sts_receive_Inactive_respects:
   apply (fastforce simp add: st_tcb_at_def obj_at_def)
   done
 
+crunch pred_tcb: do_ipc_transfer "pred_tcb_at proj P t"
+  (wp: crunch_wps transfer_caps_loop_pres make_fault_message_inv simp: zipWithM_x_mapM)
+
 lemma receive_ipc_base_integrity:
   notes do_nbrecv_failed_transfer_def[simp]
   shows "\<lbrace>pas_refined aag
