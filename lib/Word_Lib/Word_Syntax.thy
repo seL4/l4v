@@ -16,6 +16,7 @@ imports
   WordBitwise_Signed
   Hex_Words
   Norm_Words
+  Word_Type_Syntax
 begin
 
 text \<open>Additional bit and type syntax that forces word types.\<close>
