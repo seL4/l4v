@@ -1432,7 +1432,7 @@ lemma arch_finalise_cap_reads_respects:
             unmap_page_table_reads_respects
             delete_asid_reads_respects
 
-    | simp add: invs_psp_aligned invs_arch_objs invs_valid_objs valid_cap_def
+    | simp add: invs_psp_aligned invs_vspace_objs invs_valid_objs valid_cap_def
     split: option.splits bool.splits | intro impI conjI allI |
     elim conjE |
     (rule aag_cap_auth_subject,assumption,assumption) |
@@ -1566,7 +1566,8 @@ lemma rec_del_spec_reads_respects_f:
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del]
         drop_spec_ev[wp_split del] rec_del.simps[simp del]
   shows
-  "spec_reads_respects_f s aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and pas_refined aag and
+  "spec_reads_respects_f s aag l (silc_inv aag st and only_timer_irq_inv irq st' and
+   einvs and simple_sched_action and pas_refined aag and
    valid_rec_del_call call and
    emptyable (slot_rdcall call) and
    (\<lambda>s. \<not> exposed_rdcall call \<longrightarrow>
@@ -1625,10 +1626,14 @@ next
                                  \<and> emptyable slot s
                                  \<and> simple_sched_action s
                                  \<and> pas_cap_cur_auth aag (fst fin)
-                                 \<and> is_subject aag (fst slot) \<and>
-(case (fst fin) of Zombie ptr bits n \<Rightarrow> is_subject aag (obj_ref_of (fst fin)) | _ \<Rightarrow> True) \<and> (is_zombie (fst fin) \<or> fst fin = NullCap) \<and>
+                                 \<and> is_subject aag (fst slot)
+                                 \<and> (case (fst fin) of Zombie ptr bits n \<Rightarrow> is_subject aag (obj_ref_of (fst fin))
+                                                     | _ \<Rightarrow> True)
+                                 \<and> (is_zombie (fst fin) \<or> fst fin = NullCap) \<and>
                                    (is_zombie (fst fin) \<or> fst fin = NullCap)" in hoare_vcg_conj_lift)
-           apply(wp finalise_cap_invs finalise_cap_replaceable finalise_cap_makes_halted finalise_cap_auth' finalise_cap_ret_is_subject finalise_cap_ret' finalise_cap_silc_inv finalise_cap_ret_is_silc finalise_cap_only_timer_irq_inv)[1]
+           apply(wp finalise_cap_invs finalise_cap_replaceable Finalise_AC.finalise_cap_makes_halted finalise_cap_auth'
+                    finalise_cap_ret_is_subject finalise_cap_ret' finalise_cap_silc_inv
+                    finalise_cap_ret_is_silc finalise_cap_only_timer_irq_inv)[1]
           apply(rule finalise_cap_cases[where slot=slot])
          apply (clarsimp simp: cte_wp_at_caps_of_state)
          apply (erule disjE)
@@ -1966,7 +1971,7 @@ lemma pagebitsforsize_ge_2[simp] :
 done
 
 lemma arch_finalise_cap_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_global_objs and valid_arch_state and pspace_aligned and valid_arch_objs and valid_global_refs and valid_vs_lookup\<rbrace>
+  "\<lbrace>globals_equiv st and valid_global_objs and valid_arch_state and pspace_aligned and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
      arch_finalise_cap cap b
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct cap)

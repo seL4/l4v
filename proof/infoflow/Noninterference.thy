@@ -388,7 +388,7 @@ lemma kernel_entry_if_integrity:
     apply(fastforce intro: integrity_update_reference_state)
    apply(wp thread_set_integrity_autarch thread_set_pas_refined 
            guarded_pas_domain_lift thread_set_invs_trivial thread_set_not_state_valid_sched
-          | simp add: tcb_cap_cases_def schact_is_rct_def arch_tcb_update_aux2)+
+          | simp add: tcb_cap_cases_def schact_is_rct_def arch_tcb_update_aux2 tcb_arch_ref_def)+
    apply(wp_once prop_of_two_valid[where f="ct_active" and g="cur_thread"])
      apply (wp | simp)+
    apply(wp thread_set_tcb_context_update_wp)+
@@ -2743,7 +2743,7 @@ lemma kernel_entry_if_reads_respects_f_g:
             thread_set_invs_trivial
             thread_set_not_state_valid_sched
             thread_set_pas_refined
-        | simp add: tcb_cap_cases_def arch_tcb_update_aux2)+
+        | simp add: tcb_cap_cases_def arch_tcb_update_aux2 tcb_arch_ref_def)+
   apply(elim conjE)
   apply(frule (1) ct_active_cur_thread_not_idle_thread[OF invs_valid_idle])
   apply(clarsimp simp:  ct_in_state_def runnable_eq_active)
@@ -3304,7 +3304,7 @@ lemma confidentiality_part_not_PSched:
   apply(fastforce dest: non_PSched_steps_run_in_lock_step)
   done
   
-lemma getActiveIRQ_ret_no_dmo[wp]: "\<lbrace>\<lambda>_. True\<rbrace> getActiveIRQ \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
+lemma getActiveIRQ_ret_no_dmo[wp]: "\<lbrace>\<lambda>_. True\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: getActiveIRQ_def)
   apply(rule hoare_pre)
    apply (insert irq_oracle_max_irq)

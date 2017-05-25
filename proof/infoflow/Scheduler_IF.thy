@@ -1600,7 +1600,7 @@ lemma schedule_reads_respects_scheduler_cur_domain: "reads_respects_scheduler aa
          apply (rule bind_ev)
            apply simp
            apply (rule next_domain_snippit)
-          apply (wp_trace when_ev gts_wp get_thread_state_reads_respects_scheduler)+
+          apply (wp when_ev gts_wp get_thread_state_reads_respects_scheduler)+
   apply (clarsimp simp: reads_lrefl)
   apply (intro impI conjI allI)
           apply (simp add: guarded_pas_domain_def)
@@ -2035,7 +2035,7 @@ lemma dmo_return_distr: "do_machine_op (return x) = return x"
 
 (*FIXME: Move to scheduler_if*)
 lemma dmo_getActive_IRQ_reads_respect_scheduler: "reads_respects_scheduler aag l (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)
-          (do_machine_op getActiveIRQ)"
+          (do_machine_op (getActiveIRQ in_kernel))"
   apply (simp add: getActiveIRQ_def)
   apply (simp add: dmo_distr dmo_if_distr dmo_gets_distr dmo_modify_distr dmo_return_distr cong: if_cong)
   apply wp

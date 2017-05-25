@@ -51,6 +51,9 @@ lemma thread_set_globals_equiv':
   apply(fastforce simp: valid_ko_at_arm_def obj_at_def get_tcb_def)+
   done
 
+crunch valid_global_objs[wp]: cap_move valid_global_objs
+  (wp: cap_move_ext.valid_global_objs dxo_wp_weak)
+
 lemma invoke_cnode_globals_equiv:
   "\<lbrace>globals_equiv st and invs and valid_cnode_inv cinv\<rbrace> invoke_cnode cinv \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding invoke_cnode_def without_preemption_def fun_app_def
@@ -1029,7 +1032,7 @@ lemma perform_invocation_globals_equiv:
              invoke_irq_handler_globals_equiv
              arch_perform_invocation_globals_equiv
          | wpc | simp)+
-  apply (auto simp add: invs_imps invs_arch_objs
+  apply (auto simp add: invs_imps invs_vspace_objs
                         invs_psp_aligned invs_kernel_mappings
                         authorised_for_globals_inv_def)
   done

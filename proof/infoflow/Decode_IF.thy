@@ -484,13 +484,13 @@ lemma resolve_vaddr_reads_respects:
   done
 
 lemma lookup_pt_slot_no_fail_is_subject:
-  "\<lbrakk>(\<exists>\<rhd> pd) s; valid_arch_objs s; pspace_aligned s; pas_refined aag s;
+  "\<lbrakk>(\<exists>\<rhd> pd) s; valid_vspace_objs s; pspace_aligned s; pas_refined aag s;
     is_subject aag pd; is_aligned pd pd_bits; vptr < kernel_base;
     kheap s pd = Some (ArchObj (PageDirectory pdo));
     pdo (ucast (vptr >> 20)) = PageTablePDE p x xa\<rbrakk>
     \<Longrightarrow> is_subject aag (lookup_pt_slot_no_fail (ptrFromPAddr p) vptr && ~~ mask pt_bits)"
   apply (clarsimp simp: lookup_pt_slot_no_fail_def)
-  apply (drule valid_arch_objsD)
+  apply (drule valid_vspace_objsD)
      apply (simp add: obj_at_def)
     apply assumption
   apply (drule kheap_eq_state_vrefs_pas_refinedD)

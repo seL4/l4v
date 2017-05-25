@@ -515,6 +515,12 @@ lemma valid_pdpt_align_pdD:
   apply (clarsimp simp: entries_align_def)
   done
 
+lemma valid_vspace_objsD2:
+  "\<lbrakk>(\<exists>\<rhd> p) s; ko_at (ArchObj ao) p s;
+     valid_vspace_objs s\<rbrakk>
+    \<Longrightarrow> valid_vspace_obj ao s"
+  by (clarsimp simp: valid_vspace_objsD)
+
 lemma ptable_lift_data_consistant:
   assumes vs: "valid_state s"
           and vpdpt: "valid_pdpt_objs s"
@@ -538,7 +544,7 @@ lemma ptable_lift_data_consistant:
     apply word_bitwise
     apply (simp add: mask_def)
     done
-   have vs': "valid_objs s \<and> valid_arch_objs s \<and> pspace_distinct s \<and> pspace_aligned s"
+   have vs': "valid_objs s \<and> valid_vspace_objs s \<and> pspace_distinct s \<and> pspace_aligned s"
     using vs
     by (simp add: valid_state_def valid_pspace_def)
    have x_less_kb: "x < kernel_base"
@@ -557,14 +563,14 @@ lemma ptable_lift_data_consistant:
                    split: option.splits arch_kernel_obj.split_asm kernel_object.splits)
     apply (rename_tac pd_base vmattr mw pd pt)
     apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
-    apply (frule(1) valid_arch_objsD2[rotated,unfolded obj_at_def,simplified],simp)
-    apply (simp add: valid_arch_obj_def)
+    apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
+    apply (simp add:)
     apply (drule bspec)
     apply (rule Compl_iff[THEN iffD2])
     apply (rule kernel_mappings_kernel_mapping_slots[OF misc(2)])
     apply (clarsimp simp: valid_pde_def obj_at_def a_type_def)
     apply (case_tac "pt (ucast ((x >> 12) && mask 8))",simp_all)
-     apply (frule valid_arch_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
+     apply (frule valid_vspace_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
       apply (rule exI)
       apply (erule vs_lookup_step)
        apply (simp add: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting 
@@ -586,7 +592,7 @@ lemma ptable_lift_data_consistant:
                            get_arch_obj_def entries_align_def aligned_stuff mask_AND_NOT_mask
                     dest!: data_at_aligned is_aligned_ptrFromPAddrD[where a = 16,simplified])
      apply (simp add: neg_mask_add_aligned[OF _ and_mask_less'] is_aligned_neg_mask_eq)
-    apply (frule valid_arch_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
+    apply (frule valid_vspace_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
      apply (rule exI)
      apply (erule vs_lookup_step)
       apply (simp add: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting 
@@ -613,7 +619,7 @@ lemma ptable_lift_data_consistant:
                    split: option.splits arch_kernel_obj.split_asm kernel_object.splits)
     apply (rename_tac pd_base vmattr mw pd caprights)
     apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
-    apply (frule(1) valid_arch_objsD2[rotated,unfolded obj_at_def,simplified],simp)
+    apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
     apply (simp add: valid_arch_obj_def)
     apply (drule bspec)
     apply (rule Compl_iff[THEN iffD2])
@@ -631,7 +637,7 @@ lemma ptable_lift_data_consistant:
                  split: option.splits arch_kernel_obj.split_asm kernel_object.splits)
   apply (rename_tac pd_base vmattr rights pd)
   apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
-  apply (frule(1) valid_arch_objsD2[rotated,unfolded obj_at_def,simplified],simp)
+  apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
   apply (simp add: valid_arch_obj_def)
   apply (drule bspec)
   apply (rule Compl_iff[THEN iffD2])
@@ -669,7 +675,7 @@ lemma ptable_rights_data_consistant:
     apply word_bitwise
     apply (simp add: mask_def)
     done
-   have vs': "valid_objs s \<and> valid_arch_objs s \<and> pspace_distinct s \<and> pspace_aligned s"
+   have vs': "valid_objs s \<and> valid_vspace_objs s \<and> pspace_distinct s \<and> pspace_aligned s"
     using vs
     by (simp add: valid_state_def valid_pspace_def)
    have x_less_kb: "x < kernel_base"
@@ -688,14 +694,14 @@ lemma ptable_rights_data_consistant:
                    split: option.splits arch_kernel_obj.split_asm kernel_object.splits)
     apply (rename_tac pd_base vmattr mw pd pt)
     apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
-    apply (frule(1) valid_arch_objsD2[rotated,unfolded obj_at_def,simplified],simp)
+    apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
     apply (simp add: valid_arch_obj_def)
     apply (drule bspec)
     apply (rule Compl_iff[THEN iffD2])
     apply (rule kernel_mappings_kernel_mapping_slots[OF misc(2)])
     apply (clarsimp simp: valid_pde_def obj_at_def a_type_def)
     apply (case_tac "pt (ucast ((x >> 12) && mask 8))",simp_all)
-     apply (frule valid_arch_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
+     apply (frule valid_vspace_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
       apply (rule exI)
       apply (erule vs_lookup_step)
        apply (simp add: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting 
@@ -716,7 +722,7 @@ lemma ptable_rights_data_consistant:
      apply (clarsimp simp: mask_shift_le get_pt_info_def get_pt_entry_def
                            get_arch_obj_def entries_align_def aligned_stuff mask_AND_NOT_mask
                     dest!: data_at_aligned is_aligned_ptrFromPAddrD[where a = 16,simplified])
-    apply (frule valid_arch_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
+    apply (frule valid_vspace_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
      apply (rule exI)
      apply (erule vs_lookup_step)
       apply (simp add: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting 
@@ -743,7 +749,7 @@ lemma ptable_rights_data_consistant:
                    split: option.splits arch_kernel_obj.split_asm kernel_object.splits)
     apply (rename_tac pd_base vmattr mw pd caprights)
     apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
-    apply (frule(1) valid_arch_objsD2[rotated,unfolded obj_at_def,simplified],simp)
+    apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
     apply (simp add: valid_arch_obj_def)
     apply (drule bspec)
     apply (rule Compl_iff[THEN iffD2])
@@ -758,7 +764,7 @@ lemma ptable_rights_data_consistant:
                  split: option.splits arch_kernel_obj.split_asm kernel_object.splits)
   apply (rename_tac pd_base vmattr rights pd)
   apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
-  apply (frule(1) valid_arch_objsD2[rotated,unfolded obj_at_def,simplified],simp)
+  apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
   apply (simp add: valid_arch_obj_def)
   apply (drule bspec)
   apply (rule Compl_iff[THEN iffD2])

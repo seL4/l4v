@@ -302,7 +302,7 @@ lemma find_pd_for_asid_reads_respects:
   done
 
 lemma find_pd_for_asid_assert_reads_respects:
-  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_arch_objs and
+  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs and
     K (is_subject_asid aag asid))
   (find_pd_for_asid_assert asid)"
   unfolding find_pd_for_asid_assert_def catch_def
@@ -705,7 +705,7 @@ lemma flush_table_reads_respects:
 lemma page_table_mapped_reads_respects:
   "reads_respects aag l
     (pas_refined aag and pspace_aligned
-     and valid_arch_objs and K (is_subject_asid aag asid))
+     and valid_vspace_objs and K (is_subject_asid aag asid))
   (page_table_mapped asid vaddr pt)"
   unfolding page_table_mapped_def catch_def fun_app_def
   apply(wp get_pde_rev | wpc | simp)+
@@ -714,7 +714,7 @@ lemma page_table_mapped_reads_respects:
 
 
 lemma unmap_page_table_reads_respects:
-  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_arch_objs and K (is_subject_asid aag asid))
+  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs and K (is_subject_asid aag asid))
    (unmap_page_table asid vaddr pt)"
   unfolding unmap_page_table_def fun_app_def page_table_mapped_def 
   apply(wp find_pd_for_asid_pd_slot_authorised 
@@ -725,7 +725,7 @@ lemma unmap_page_table_reads_respects:
 
 
 lemma perform_page_table_invocation_reads_respects:
-  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_arch_objs and K (authorised_page_table_inv aag pti))
+  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs and K (authorised_page_table_inv aag pti))
     (perform_page_table_invocation pti)"
   unfolding perform_page_table_invocation_def fun_app_def cleanCacheRange_PoU_def
   apply(rule equiv_valid_guard_imp)
@@ -795,7 +795,7 @@ lemma flush_page_reads_respects:
 
 (* clagged some help from unmap_page_respects in Arch_AC *)
 lemma unmap_page_reads_respects:
-  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_arch_objs and K (is_subject_asid aag asid \<and> vptr < kernel_base)) (unmap_page pgsz asid vptr pptr)"
+  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs and K (is_subject_asid aag asid \<and> vptr < kernel_base)) (unmap_page pgsz asid vptr pptr)"
   unfolding unmap_page_def catch_def fun_app_def cleanCacheRange_PoU_def
   apply (simp add: unmap_page_def swp_def cong: vmpage_size.case_cong)
   apply(wp dmo_mol_reads_respects dmo_cacheRangeOp_reads_respects
@@ -1050,7 +1050,7 @@ lemma set_mrs_reads_respects:
   done
 
 lemma perform_page_invocation_reads_respects:
-  "reads_respects aag l (pas_refined aag and K (authorised_page_inv aag pgi) and valid_page_inv pgi and valid_arch_objs and pspace_aligned and is_subject aag \<circ> cur_thread) (perform_page_invocation pgi)"
+  "reads_respects aag l (pas_refined aag and K (authorised_page_inv aag pgi) and valid_page_inv pgi and valid_vspace_objs and pspace_aligned and is_subject aag \<circ> cur_thread) (perform_page_invocation pgi)"
   unfolding perform_page_invocation_def fun_app_def when_def cleanCacheRange_PoU_def
   apply(rule equiv_valid_guard_imp)
   apply wpc
@@ -1179,7 +1179,7 @@ lemma perform_asid_pool_invocation_reads_respects:
   done
 
 lemma arch_perform_invocation_reads_respects:
-  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_arch_objs and K (authorised_arch_inv aag ai) and valid_arch_inv ai and is_subject aag \<circ> cur_thread) 
+  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs and K (authorised_arch_inv aag ai) and valid_arch_inv ai and is_subject aag \<circ> cur_thread)
     (arch_perform_invocation ai)"
   unfolding arch_perform_invocation_def fun_app_def
   apply(wp perform_page_table_invocation_reads_respects perform_page_directory_invocation_reads_respects perform_page_invocation_reads_respects perform_asid_control_invocation_reads_respects perform_asid_pool_invocation_reads_respects | wpc)+
@@ -1659,7 +1659,7 @@ lemma hoare_add_postE : "\<lbrace>Q\<rbrace> f \<lbrace>\<lambda> r. P r\<rbrace
 done
 
 lemma find_pd_for_asid_not_arm_global_pd:
-  "\<lbrace>pspace_aligned and valid_arch_objs and valid_global_objs and valid_vs_lookup
+  "\<lbrace>pspace_aligned and valid_vspace_objs and valid_global_objs and valid_vs_lookup
   and valid_global_refs and valid_arch_state\<rbrace>
   find_pd_for_asid asid 
   \<lbrace>\<lambda>rv s. lookup_pd_slot rv vptr && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s)\<rbrace>, -"
@@ -1677,7 +1677,7 @@ lemma find_pd_for_asid_not_arm_global_pd:
 done
 
 lemma find_pd_for_asid_not_arm_global_pd_large_page:
-  "\<lbrace>pspace_aligned and valid_arch_objs and valid_global_objs and valid_vs_lookup
+  "\<lbrace>pspace_aligned and valid_vspace_objs and valid_global_objs and valid_vs_lookup
   and valid_global_refs and valid_arch_state\<rbrace>
   find_pd_for_asid asid 
   \<lbrace>\<lambda>rv s. 
@@ -1702,7 +1702,7 @@ done
 declare dmo_mol_globals_equiv[wp]
 
 lemma unmap_page_table_globals_equiv:
-  "\<lbrace>pspace_aligned and valid_arch_objs and valid_global_objs and valid_vs_lookup
+  "\<lbrace>pspace_aligned and valid_vspace_objs and valid_global_objs and valid_vs_lookup
   and valid_global_refs and valid_arch_state and globals_equiv st\<rbrace> unmap_page_table asid vaddr pt \<lbrace>\<lambda>rv. globals_equiv st\<rbrace>"
   unfolding unmap_page_table_def page_table_mapped_def including no_pre
   apply(wp store_pde_globals_equiv | wpc | simp add: cleanByVA_PoU_def)+
@@ -1818,7 +1818,7 @@ definition authorised_for_globals_page_table_inv ::
 
 lemma perform_page_table_invocation_globals_equiv:
   "\<lbrace>valid_global_refs and valid_global_objs and valid_arch_state and
-    globals_equiv st and pspace_aligned and valid_arch_objs and
+    globals_equiv st and pspace_aligned and valid_vspace_objs and
     valid_vs_lookup and valid_kernel_mappings and authorised_for_globals_page_table_inv pti\<rbrace>
   perform_page_table_invocation pti \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding perform_page_table_invocation_def cleanCacheRange_PoU_def
@@ -1895,7 +1895,7 @@ crunch valid_ko_at_arm[wp]: flush_page "valid_ko_at_arm"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma unmap_page_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_arch_state and pspace_aligned and valid_arch_objs
+  "\<lbrace>globals_equiv st and valid_arch_state and pspace_aligned and valid_vspace_objs
   and valid_global_objs and valid_vs_lookup and valid_global_refs \<rbrace> unmap_page pgsz asid vptr pptr 
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding unmap_page_def cleanCacheRange_PoU_def including no_pre
@@ -2039,7 +2039,7 @@ crunch valid_ko_at_arm[wp]: set_mrs valid_ko_at_arm
 
 lemma perform_page_invocation_globals_equiv:
   "\<lbrace>authorised_for_globals_page_inv pgi and valid_page_inv pgi and globals_equiv st
-    and valid_arch_state and pspace_aligned and valid_arch_objs and valid_global_objs
+    and valid_arch_state and pspace_aligned and valid_vspace_objs and valid_global_objs
     and valid_vs_lookup and valid_global_refs and ct_active and valid_idle\<rbrace> 
    perform_page_invocation pgi
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
@@ -2253,7 +2253,7 @@ lemma arch_perform_invocation_globals_equiv:
   done
 
 lemma find_pd_for_asid_authority3:
-  "\<lbrace>\<lambda>s. \<forall>pd. (pspace_aligned s \<and> valid_arch_objs s \<longrightarrow> is_aligned pd pd_bits)
+  "\<lbrace>\<lambda>s. \<forall>pd. (pspace_aligned s \<and> valid_vspace_objs s \<longrightarrow> is_aligned pd pd_bits)
            \<and> (\<exists>\<rhd> pd) s
            \<longrightarrow> Q pd s\<rbrace> find_pd_for_asid asid \<lbrace>Q\<rbrace>, -"
   (is "\<lbrace>?P\<rbrace> ?f \<lbrace>Q\<rbrace>,-")
@@ -2290,7 +2290,7 @@ lemma decode_arch_invocation_authorised_for_globals:
      apply(rule hoare_drop_imps)
      apply((wp hoare_TrueI hoare_vcg_all_lift hoare_drop_imps | wpc | simp)+)[3]
   apply (clarsimp simp: authorised_asid_pool_inv_def authorised_page_table_inv_def
-                        neq_Nil_conv invs_psp_aligned invs_arch_objs cli_no_irqs)
+                        neq_Nil_conv invs_psp_aligned invs_vspace_objs cli_no_irqs)
   apply (drule diminished_cte_wp_at_valid_cap, clarsimp+)
   apply (cases cap, simp_all)
     -- "PageCap"
@@ -2360,9 +2360,43 @@ lemma valid_arch_objs_arm_asid_table_unmap:
   apply (clarsimp simp: valid_state_def valid_arch_objs_unmap_strg)
   done
 
+lemma valid_vspace_objs_arm_asid_table_unmap:
+  "valid_vspace_objs s
+       \<and> tab = arm_asid_table (arch_state s)
+     \<longrightarrow> valid_vspace_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := tab(asid_high_bits_of base := None)\<rparr>\<rparr>)"
+  apply (clarsimp simp: valid_state_def valid_vspace_objs_unmap_strg)
+  done
+
 crunch valid_arch_objs[wp]: set_vm_root "valid_arch_objs"
 crunch valid_arch_objs[wp]: invalidate_asid_entry "valid_arch_objs"
 crunch valid_arch_objs[wp]: flush_space "valid_arch_objs"
+
+lemma invalidate_hw_asid_vspace_objs [wp]:
+  "\<lbrace>valid_vspace_objs\<rbrace> invalidate_hw_asid_entry asid \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
+  apply (wpsimp simp: invalidate_hw_asid_entry_def valid_vspace_objs_arch_update)+
+  apply assumption
+  apply wpsimp+
+  done
+
+crunch vspace_objs[wp]: invalidate_asid valid_vspace_objs
+  (simp: valid_vspace_objs_arch_update)
+
+lemma find_free_hw_asid_vspace_objs[wp]:
+  "find_free_hw_asid \<lbrace> valid_vspace_objs \<rbrace>"
+  by (wpsimp simp: find_free_hw_asid_def valid_vspace_objs_arch_update
+                 wp: hoare_drop_imp | simp)+
+
+crunch vspace_objs[wp]: arm_context_switch "valid_vspace_objs"
+  (simp: valid_vspace_objs_arch_update)
+
+lemmas arm_context_switch_valid_vspace_objs_aux =
+  hoare_drop_imp[of valid_vspace_objs "arm_context_switch _ _" "\<lambda>_ s. valid_vspace_objs s"
+                , OF arm_context_switch_vspace_objs]
+
+crunch valid_vspace_objs [wp]: set_vm_root valid_vspace_objs
+  (simp: crunch_simps valid_vspace_objs_arch_update wp: arm_context_switch_valid_vspace_objs_aux)
+crunch valid_vspace_objs[wp]: invalidate_asid_entry "valid_vspace_objs"
+crunch valid_vspace_objs[wp]: flush_space "valid_vspace_objs"
 
 lemma delete_asid_pool_valid_arch_obsj[wp]:
   "\<lbrace>valid_arch_objs\<rbrace>
@@ -2374,20 +2408,41 @@ lemma delete_asid_pool_valid_arch_obsj[wp]:
       apply (wpsimp wp: mapM_wp')+
   done
 
+lemma delete_asid_pool_valid_vspace_objs[wp]:
+  "\<lbrace>valid_vspace_objs\<rbrace>
+    delete_asid_pool base pptr
+  \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
+  unfolding delete_asid_pool_def
+  apply (wp modify_wp)
+      apply (strengthen valid_vspace_objs_arm_asid_table_unmap)
+      apply (wpsimp wp: mapM_wp')+
+  done
+
 crunch pspace_aligned[wp]: cap_swap_for_delete, set_cap, empty_slot "pspace_aligned" (ignore: empty_slot_ext wp: dxo_wp_weak)
 crunch pspace_aligned[wp]: finalise_cap "pspace_aligned"
   (wp: mapM_x_wp' select_wp hoare_vcg_if_lift2 hoare_drop_imps modify_wp mapM_wp' dxo_wp_weak
    simp: unless_def crunch_simps arch_update.pspace_aligned_update
    ignore: tcb_sched_action reschedule_required)
 
-crunch valid_arch_objs[wp]: cap_swap_for_delete "valid_arch_objs"
-crunch valid_arch_objs[wp]: empty_slot "valid_arch_objs"
+crunch valid_vspace_objs[wp]: cap_swap_for_delete "valid_vspace_objs"
 
+crunch valid_vspace_objs[wp]: empty_slot_ext "valid_vspace_objs"
+(*
+crunch valid_vspace_objs[wp]: empty_slot "valid_arch_objs"
+  (wp: crunch_wps simp: crunch_simps ignore: )
+*)
 lemma set_asid_pool_arch_objs_unmap'':
  "\<lbrace>(valid_arch_objs and ko_at (ArchObj (ASIDPool ap)) p) and K(f = (ap |` S))\<rbrace> set_asid_pool p f \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
   apply (rule hoare_gen_asm)
   apply simp
   apply (rule set_asid_pool_arch_objs_unmap)
+  done
+
+lemma set_asid_pool_vspace_objs_unmap'':
+ "\<lbrace>(valid_vspace_objs and ko_at (ArchObj (ASIDPool ap)) p) and K(f = (ap |` S))\<rbrace> set_asid_pool p f \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply simp
+  apply (rule set_asid_pool_vspace_objs_unmap)
   done
 
 lemma restrict_eq_asn_none: "f(N := None) = f |` {s. s \<noteq> N}" by auto
@@ -2399,8 +2454,27 @@ lemma delete_asid_valid_arch_objs[wp]:
   apply (fastforce simp: restrict_eq_asn_none)
   done
 
-crunch valid_arch_objs[wp]: finalise_cap "valid_arch_objs"
-  (wp: mapM_wp' mapM_x_wp' select_wp hoare_vcg_if_lift2 dxo_wp_weak hoare_drop_imps store_pde_arch_objs_unmap
+lemma delete_asid_valid_vspace_objs[wp]:
+  "\<lbrace>valid_vspace_objs and pspace_aligned\<rbrace> delete_asid a b \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
+  unfolding delete_asid_def
+  apply (wpsimp wp: set_asid_pool_vspace_objs_unmap'')
+  apply (fastforce simp: restrict_eq_asn_none)
+  done
+
+lemma store_pte_valid_vspace_objs[wp]:
+  "\<lbrace>valid_vspace_objs and valid_pte pte\<rbrace>
+    store_pte p pte
+  \<lbrace>\<lambda>_. (valid_vspace_objs)\<rbrace>"
+  unfolding store_pte_def
+  apply wp
+  apply clarsimp
+  apply (unfold valid_vspace_objs_def)
+  apply (erule_tac x="p && ~~ mask pt_bits" in allE)
+  apply auto
+done
+
+crunch valid_vspace_objs[wp]: finalise_cap "valid_vspace_objs"
+  (wp: mapM_wp' mapM_x_wp' select_wp hoare_vcg_if_lift2 dxo_wp_weak hoare_drop_imps store_pde_vspace_objs_unmap
    simp: crunch_simps pde_ref_def unless_def
    ignore: tcb_sched_action reschedule_required)
 

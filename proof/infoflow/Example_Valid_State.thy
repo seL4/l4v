@@ -1244,7 +1244,7 @@ lemma valid_obj_s0[simp]:
          apply (clarsimp simp: Low_pd'_def High_pd'_def Low_pt'_def High_pt'_def
                                valid_vm_rights_def vm_kernel_only_def)+
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def
-                           valid_ipc_buffer_cap_def valid_tcb_state_def
+                           valid_ipc_buffer_cap_def valid_tcb_state_def valid_arch_tcb_def
            | simp add: obj_at_def s0_internal_def kh0_def kh0_obj_def is_ntfn_def)+
   apply (simp add: valid_vm_rights_def vm_kernel_only_def)
   done
@@ -1387,7 +1387,7 @@ lemma valid_pspace_s0[simp]:
   apply (rule conjI)
    apply (clarsimp simp: if_live_then_nonz_cap_def)
    apply (subst(asm) s0_internal_def)
-   apply (clarsimp simp: obj_at_def kh0_def kh0_obj_def s0_ptr_defs split: if_split_asm)
+   apply (clarsimp simp: live_def hyp_live_def obj_at_def kh0_def kh0_obj_def s0_ptr_defs split: if_split_asm)
      apply (clarsimp simp: ex_nonz_cap_to_def)
      apply (rule_tac x="High_cnode_ptr" in exI)
      apply (rule_tac x="the_nat_to_bl_10 1" in exI)
@@ -1403,7 +1403,12 @@ lemma valid_pspace_s0[simp]:
   apply (rule conjI)
    apply (simp add: Invariants_AI.cte_wp_at_caps_of_state zombies_final_def)
    apply (force dest: s0_caps_of_state simp: is_zombie_def)
-  apply (clarsimp simp: sym_refs_def state_refs_of_def s0_internal_def)
+  apply (rule conjI)
+   apply (clarsimp simp: sym_refs_def state_refs_of_def state_hyp_refs_of_def s0_internal_def)
+   apply (subst(asm) kh0_def)
+   apply (clarsimp split: if_split_asm)
+   apply (simp add: refs_of_def kh0_def s0_ptr_defs kh0_obj_def)+
+  apply (clarsimp simp: sym_refs_def state_hyp_refs_of_def s0_internal_def)
   apply (subst(asm) kh0_def)
   apply (clarsimp split: if_split_asm)
              by (simp add: refs_of_def kh0_def s0_ptr_defs kh0_obj_def)+
@@ -1579,6 +1584,17 @@ lemma valid_arch_objs_s0[simp]:
      | erule vs_lookupE, force simp: vs_lookup_def arch_state0_def vs_asid_refs_def)+
   done
 
+lemma valid_vspace_objs_s0[simp]:
+  "valid_vspace_objs s0_internal"
+  apply (clarsimp simp: valid_vspace_objs_def obj_at_def s0_internal_def)
+  apply (drule kh0_SomeD)
+  apply (erule disjE | clarsimp simp:  pageBits_def addrFromPPtr_def
+      physMappingOffset_def kernelBase_addr_def physBase_def is_aligned_def
+      obj_at_def kh0_def kh0_obj_def a_type_def kernel_mapping_slots_def
+      High_pt'_def Low_pt'_def High_pd'_def Low_pd'_def ptrFromPAddr_def
+     | erule vs_lookupE, force simp: vs_lookup_def arch_state0_def vs_asid_refs_def)+
+  done
+
 lemma valid_arch_caps_s0[simp]:
   "valid_arch_caps s0_internal"
   apply (clarsimp simp: valid_arch_caps_def)
@@ -1598,7 +1614,7 @@ lemma valid_arch_caps_s0[simp]:
 lemma valid_global_objs_s0[simp]:
   "valid_global_objs s0_internal"
   apply (clarsimp simp: valid_global_objs_def s0_internal_def arch_state0_def)
-  by (force simp: valid_ao_at_def obj_at_def kh0_def kh0_obj_def s0_ptr_defs
+  by (force simp: valid_vso_at_def obj_at_def kh0_def kh0_obj_def s0_ptr_defs
                      addrFromPPtr_def physMappingOffset_def kernelBase_addr_def
                      physBase_def is_aligned_def a_type_def pageBits_def
                      kernel_mapping_slots_def empty_table_def pde_ref_def

@@ -673,7 +673,7 @@ lemma retype_region_globals_equiv:
    apply (rule conjI)
     apply(clarsimp simp: pspace_no_overlap_def)
     apply(drule_tac x="arm_global_pd (arch_state sa)" in spec)
-    apply(clarsimp simp: invs_def valid_state_def valid_global_objs_def valid_ao_at_def obj_at_def ptr_add_def)
+    apply(clarsimp simp: invs_def valid_state_def valid_global_objs_def valid_vso_at_def obj_at_def ptr_add_def)
     apply(frule_tac p=p in range_cover_subset)
       apply(simp add: blah)
      apply simp
@@ -1116,6 +1116,13 @@ lemma untyped_cap_refs_in_kernel_window_helper:
   apply (simp add: untyped_range_def)
   apply blast
   done
+
+crunch valid_global_objs[wp]: create_cap "valid_global_objs"
+  (simp: crunch_simps)
+
+lemma invs_valid_global_objs_strg:
+  "invs s \<longrightarrow> valid_global_objs s"
+  by (clarsimp simp: invs_def valid_state_def)
 
 lemma invoke_untyped_reads_respects_g_wcap:
   notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff

@@ -352,7 +352,7 @@ lemma set_cap_globals_equiv:
   unfolding set_cap_def
   apply(simp only: split_def)
   apply(wp set_object_globals_equiv hoare_vcg_all_lift get_object_wp | wpc | simp)+
-   apply(fastforce simp: valid_global_objs_def valid_ao_at_def obj_at_def is_tcb_def)+
+   apply(fastforce simp: valid_global_objs_def valid_vso_at_def obj_at_def is_tcb_def)+
   done
 
 
@@ -646,7 +646,7 @@ lemma preemption_point_def2:
            rv \<leftarrow> liftE work_units_limit_reached;
            if rv then doE
              liftE reset_work_units;
-             liftE (do_machine_op getActiveIRQ) >>=E
+             liftE (do_machine_op (getActiveIRQ True)) >>=E
              case_option (returnOk ()) (throwError \<circ> Interrupted)
            odE else returnOk()
        odE"
@@ -675,13 +675,13 @@ definition irq_is_recurring :: "irq \<Rightarrow> ('z::state_ext) state \<Righta
 
 
 lemma dmo_getActiveIRQ_wp:
-  "\<lbrace>\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s))) (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>)\<rbrace> do_machine_op getActiveIRQ \<lbrace>P\<rbrace>"
-  apply(simp add: do_machine_op_def getActiveIRQ_def)
+  "\<lbrace>\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s))) (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>)\<rbrace> do_machine_op (getActiveIRQ in_kernel) \<lbrace>P\<rbrace>"
+  apply(simp add: do_machine_op_def getActiveIRQ_def non_kernel_IRQs_def)
   apply(wp modify_wp | wpc)+
   apply clarsimp
   apply(erule use_valid)
    apply (wp modify_wp)
-  apply(auto simp: irq_at_def)
+  apply(auto simp: irq_at_def Let_def split: if_splits)
   done
 
 lemma only_timer_irqs:
@@ -697,7 +697,7 @@ lemma only_timer_irqs:
 
 lemma dmo_getActiveIRQ_only_timer:
   "\<lbrace>domain_sep_inv False st and valid_irq_states\<rbrace> 
-   do_machine_op getActiveIRQ 
+   do_machine_op (getActiveIRQ in_kernel)
    \<lbrace>\<lambda>rv s. (\<forall>x. rv = Some x \<longrightarrow> interrupt_states s x = IRQTimer)\<rbrace>"
   apply(wp dmo_getActiveIRQ_wp)
   apply clarsimp
@@ -904,7 +904,7 @@ lemma equiv_valid_inv_conj_lift:
 lemma dmo_getActiveIRQ_reads_respects:
   notes gets_ev[wp del]
   shows
-  "reads_respects aag l (invs and only_timer_irq_inv irq st) (do_machine_op getActiveIRQ)"
+  "reads_respects aag l (invs and only_timer_irq_inv irq st) (do_machine_op (getActiveIRQ in_kernel))"
   apply(rule use_spec_ev)
   apply(rule do_machine_op_spec_reads_respects')
    apply(simp add: getActiveIRQ_def)
@@ -916,13 +916,13 @@ lemma dmo_getActiveIRQ_reads_respects:
   done
 
 lemma dmo_getActiveIRQ_globals_equiv:
-  "\<lbrace>globals_equiv st\<rbrace> do_machine_op getActiveIRQ \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  "\<lbrace>globals_equiv st\<rbrace> do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (wp dmo_getActiveIRQ_wp)
   apply(auto simp: globals_equiv_def idle_equiv_def)
   done
 
 lemma dmo_getActiveIRQ_reads_respects_g :
-  "reads_respects_g aag l (invs and only_timer_irq_inv irq st) (do_machine_op getActiveIRQ)"
+  "reads_respects_g aag l (invs and only_timer_irq_inv irq st) (do_machine_op (getActiveIRQ in_kernel))"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
     apply(rule dmo_getActiveIRQ_reads_respects)
    apply(rule doesnt_touch_globalsI)

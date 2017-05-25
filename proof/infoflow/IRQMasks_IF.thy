@@ -396,7 +396,7 @@ crunch irq_masks[wp]: handle_vm_fault, handle_hypervisor_fault "\<lambda>s. P (i
 
 lemma dmo_getActiveIRQ_irq_masks[wp]:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s))\<rbrace>
-    do_machine_op getActiveIRQ 
+    do_machine_op (getActiveIRQ in_kernel)
     \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)  \<rbrace>" 
   apply(rule hoare_pre, rule dmo_wp)
   apply(simp add: getActiveIRQ_def | wp | simp add: no_irq_def | clarsimp)+
@@ -404,7 +404,7 @@ lemma dmo_getActiveIRQ_irq_masks[wp]:
   
 lemma dmo_getActiveIRQ_return_axiom[wp]:
   "\<lbrace>\<top>\<rbrace> 
-  do_machine_op getActiveIRQ 
+  do_machine_op (getActiveIRQ in_kernel)
   \<lbrace>(\<lambda>rv s. (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)) \<rbrace>"
   apply (simp add: getActiveIRQ_def)
   apply(rule hoare_pre, rule dmo_wp)

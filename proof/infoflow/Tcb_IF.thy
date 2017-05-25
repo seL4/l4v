@@ -128,7 +128,7 @@ crunch globals_equiv[wp]: suspend,prepare_thread_delete "globals_equiv st"
   (wp: dxo_wp_weak)
 
 lemma finalise_cap_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_global_objs and valid_arch_state and pspace_aligned and valid_arch_objs and valid_global_refs and valid_vs_lookup\<rbrace>
+  "\<lbrace>globals_equiv st and valid_global_objs and valid_arch_state and pspace_aligned and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
     finalise_cap cap b
    \<lbrace>\<lambda> _. globals_equiv st\<rbrace>"
   apply (induct cap)
@@ -204,7 +204,7 @@ next
                    in hoare_vcg_conj_lift)
          apply (wp finalise_cap_invs[where slot=slot]
                    finalise_cap_replaceable[where sl=slot]
-                   finalise_cap_makes_halted[where slot=slot]
+                   Finalise_AC.finalise_cap_makes_halted[where slot=slot]
                    finalise_cap_P)[1]
          
          apply (rule finalise_cap_cases[where slot=slot])
@@ -285,7 +285,7 @@ lemma rec_del_globals_equiv:
   "\<lbrace>\<lambda>s. invs s \<and> globals_equiv st s \<and> emptyable (slot_rdcall call) s \<and> valid_rec_del_call call s\<rbrace>
      rec_del call
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (wp rec_del_preservation2[where Q="valid_ko_at_arm" and R="valid_global_objs and valid_arch_state and pspace_aligned and valid_arch_objs and
+  apply (wp rec_del_preservation2[where Q="valid_ko_at_arm" and R="valid_global_objs and valid_arch_state and pspace_aligned and valid_vspace_objs and
  valid_global_refs and
  valid_vs_lookup"] finalise_cap_globals_equiv)
              apply simp
