@@ -1396,7 +1396,7 @@ lemma create_mapping_entries_safe[wp]:
                   | (Inr (SectionPDE _ _ _ _, _)) \<Rightarrow> \<bottom>
                   | (Inr (SuperSectionPDE _ _ _, [])) \<Rightarrow> \<bottom>
                   | _ \<Rightarrow> page_inv_entries_pre entries\<rbrace>,-"
-  apply (cases sz, simp_all)
+  apply (cases sz, simp_all add: largePagePTE_offsets_def superSectionPDE_offsets_def)
      defer 2
      apply (wp | simp)+
    apply (simp split:list.split)
@@ -1438,12 +1438,6 @@ lemma create_mapping_entries_safe[wp]:
      = pde.PageTablePDE x xa xb)
      \<longrightarrow> is_aligned (ptrFromPAddr x + ((vptr >> 12) && 0xFF << 2)) 6")
    apply clarsimp
-   apply (subgoal_tac "
-     ptrFromPAddr x + ((vptr >> 12) && 0xFF << 2) \<le>
-     ptrFromPAddr x + ((vptr >> 12) && 0xFF << 2) + 0x3C")
-    apply (clarsimp simp:not_less[symmetric])
-   apply (erule is_aligned_no_wrap')
-   apply simp
   apply clarsimp
   apply (rule aligned_add_aligned)
     apply (erule(1) pt_aligned)

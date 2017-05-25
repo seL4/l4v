@@ -678,7 +678,7 @@ lemma create_mapping_entries_valid [wp]:
   \<lbrace>\<lambda>m. valid_mapping_entries m\<rbrace>, -"
   apply (cases sz)
      apply (rule hoare_pre)
-      apply (wp|simp add: valid_mapping_entries_def)+
+      apply (wp|simp add: valid_mapping_entries_def largePagePTE_offsets_def)+
    apply clarsimp
    apply (erule (1) page_directory_pde_at_lookupI)
   apply (rule hoare_pre)
@@ -689,12 +689,7 @@ lemma create_mapping_entries_valid [wp]:
    apply (clarsimp simp: obj_at_def add.commute invs_def valid_state_def valid_pspace_def pspace_aligned_def)
    apply (drule bspec, blast)
    apply (clarsimp simp: a_type_def split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
-  apply (subst p_0x3C_shift)
-   apply clarsimp
-   apply (erule aligned_add_aligned)
-     apply (clarsimp intro!: is_aligned_shiftl is_aligned_shiftr)
-    apply (clarsimp simp: word_bits_def)
-   apply clarsimp
+  apply (clarsimp simp: superSectionPDE_offsets_def)
   apply (clarsimp simp: upto_enum_step_def word_shift_by_2)
   apply (clarsimp simp: pde_at_def)
   apply (simp add: add.commute add.left_commute)
@@ -2654,6 +2649,10 @@ lemma lookup_pt_slot_non_empty:
 lemma pd_bits: "pd_bits = 14"
    by (simp add: pd_bits_def pageBits_def)
 
+lemma word_shift_by_n:
+  "x * (2^n) = (x::'a::len word) << n"
+  by (simp add: shiftl_t2n)
+
 lemma create_mapping_entries_valid_slots [wp]:
   "\<lbrace>valid_arch_state and valid_vspace_objs and equal_kernel_mappings
    and pspace_aligned and valid_global_objs
@@ -2667,13 +2666,14 @@ lemma create_mapping_entries_valid_slots [wp]:
   apply  (wp lookup_pt_slot_inv | simp add: valid_slots_def)+
   apply (clarsimp simp: pd_aligned)
     apply (rule hoare_pre)
-     apply (wp lookup_pt_slot_inv |simp add: valid_slots_def ball_conj_distrib)+
-     apply (wp lookup_pt_slot_non_empty lookup_pt_slot_inv)
-    apply (clarsimp simp: pd_aligned vmsz_aligned_def)
+    apply (simp add: valid_slots_def largePagePTE_offsets_def pd_bits_def)
+     apply (wpsimp wp: lookup_pt_slot_inv lookup_pt_slot_non_empty
+           | simp add: valid_slots_def ball_conj_distrib largePagePTE_offsets_def)+
+    apply (clarsimp simp: pd_aligned vmsz_aligned_def upto_enum_def upto_enum_step_def)
    apply (clarsimp simp add: valid_slots_def)
    apply (rule hoare_pre)
     apply wp
-   apply (clarsimp simp: valid_slots_def )
+   apply (clarsimp simp: valid_slots_def)
    apply (rule conjI)
     apply (simp add: lookup_pd_slot_def Let_def)
     apply (fastforce simp: pd_shifting pd_aligned)
@@ -2681,6 +2681,7 @@ lemma create_mapping_entries_valid_slots [wp]:
    apply (erule less_kernel_base_mapping_slots)
    apply (simp add: pd_aligned pd_bits)
   apply simp
+    apply (clarsimp simp: superSectionPDE_offsets_def)
   apply (rule hoare_pre)
    apply (clarsimp simp add: valid_slots_def)
    apply wp
@@ -2690,46 +2691,30 @@ lemma create_mapping_entries_valid_slots [wp]:
   apply (subgoal_tac "is_aligned pd 14")
    prefer 2
    apply (clarsimp simp: pd_aligned)
-  apply (subst p_0x3C_shift)
-   apply (clarsimp simp: lookup_pd_slot_def Let_def)
-   apply (erule aligned_add_aligned)
-     apply (clarsimp simp: vmsz_aligned_def
-                   intro!: is_aligned_shiftl is_aligned_shiftr)
-    apply (clarsimp simp: word_bits_def)
-   apply clarsimp
-  apply (clarsimp simp: upto_enum_step_def word_shift_by_2)
+  apply (clarsimp simp: upto_enum_step_def word_shift_by_n[of _ 2, simplified])
   apply (clarsimp simp: obj_at_def pde_at_def)
   apply (subgoal_tac "is_aligned pd pd_bits")
-   prefer 2
-   apply (simp add: pd_bits)
-  apply (rule conjI)
-   apply (simp add:not_less)
-   apply (rule is_aligned_no_wrap'[where sz = 6])
-    apply (rule is_aligned_lookup_pd_slot)
-     apply (simp add:vmsz_aligned_def)
-    apply (erule is_aligned_weaken,simp)
-   apply simp
-  apply (clarsimp simp: not_less)
+    prefer 2
+   apply (simp add: pd_bits_def pageBits_def)
   apply (rule conjI)
    apply (simp add: upto_enum_def)
   apply (intro allI impI)
-  apply (subst less_kernel_base_mapping_slots_both,assumption+)
-   apply (simp add: minus_one_helper5)
-  apply (simp add: pd_bits vmsz_aligned_def)
-  apply (frule (1) is_aligned_lookup_pd_slot
-                   [OF _ is_aligned_weaken[of _ 14 6, simplified]])
-  apply (subgoal_tac "(x<<2) + lookup_pd_slot pd vptr && ~~ mask 14 = pd")
+  apply (simp add: pd_bits_def vmsz_aligned_def pageBits_def)
+  apply (frule (1) is_aligned_lookup_pd_slot [OF _ is_aligned_weaken[of _ 14 6]], simp)
+  apply (subgoal_tac "(p<<2) + lookup_pd_slot pd vptr && ~~ mask 14 = pd")
   prefer 2
    apply (subst add.commute add.left_commute)
    apply (subst and_not_mask_twice[where n=6 and m=14, simplified, symmetric])
    apply (subst is_aligned_add_helper[THEN conjunct2], simp)
     apply (rule shiftl_less_t2n)
      apply (rule word_less_sub_le[THEN iffD1], simp+)
-   apply (erule lookup_pd_slot_eq[simplified pd_bits])
+   apply (erule lookup_pd_slot_eq[simplified pd_bits_def pageBits_def, simplified])
   apply (simp add: a_type_simps)
   apply (subst add.commute)
-  apply (fastforce intro!: aligned_add_aligned is_aligned_shiftl_self)
-  done
+  apply (safe ; (fastforce intro!: aligned_add_aligned is_aligned_shiftl_self)?)
+  apply (frule less_kernel_base_mapping_slots[unfolded pd_bits_def pageBits_def, simplified], assumption)
+  apply (clarsimp simp: kernel_mapping_slots_def kernel_base_def)
+  sorry
 
 lemma is_aligned_addrFromPPtr_n:
   "\<lbrakk> is_aligned p n; n \<le> 28 \<rbrakk> \<Longrightarrow> is_aligned (Platform.ARM.addrFromPPtr p) n"

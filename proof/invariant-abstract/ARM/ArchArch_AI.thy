@@ -1000,6 +1000,14 @@ lemma shiftr_irrelevant:
   apply simp
   done
 
+lemma map_up_enum_0x3C:
+  "is_aligned (r::32 word) 6 \<Longrightarrow> map (\<lambda>x. x + r) [0 , 4 .e. 0x3C] = [r, r + 4 .e. r + 0x3C]"
+  apply (simp add: upto_enum_step_def upto_enum_def not_less)
+  apply (drule is_aligned_no_overflow')
+  apply simp
+  apply (erule word_plus_mono_right2)
+  apply simp
+  done
 
 lemma create_mapping_entries_parent_for_refs:
   "\<lbrace>invs and \<exists>\<rhd> pd and page_directory_at pd
@@ -1009,7 +1017,8 @@ lemma create_mapping_entries_parent_for_refs:
                  rights attribs pd
    \<lbrace>\<lambda>rv s. \<exists>a b. cte_wp_at (parent_for_refs rv) (a, b) s\<rbrace>, -"
   apply (rule hoare_gen_asmE)+
-  apply (cases pgsz, simp_all add: vmsz_aligned_def)
+  apply (cases pgsz, simp_all add: vmsz_aligned_def largePagePTE_offsets_def
+                                   superSectionPDE_offsets_def)
      apply (rule hoare_pre)
       apply wp
       apply (rule hoare_post_imp_R, rule lookup_pt_slot_cap_to)
@@ -1022,7 +1031,7 @@ lemma create_mapping_entries_parent_for_refs:
       apply (rule lookup_pt_slot_cap_to_multiple1)
      apply (elim conjE exEI cte_wp_at_weakenE)
      apply (clarsimp simp: cte_wp_at_caps_of_state parent_for_refs_def
-                           subset_iff p_0x3C_shift)
+                           subset_iff p_0x3C_shift map_up_enum_0x3C)
     apply simp
    apply (rule hoare_pre, wp)
    apply (clarsimp dest!:vs_lookup_pages_vs_lookupI)
@@ -1045,13 +1054,7 @@ lemma create_mapping_entries_parent_for_refs:
   apply (clarsimp simp: cte_wp_at_caps_of_state parent_for_refs_def)
   apply (rule conjI)
    apply (simp add: subset_eq)
-   apply (subst p_0x3C_shift)
-    apply (simp add: lookup_pd_slot_def Let_def)
-    apply (erule aligned_add_aligned)
-     apply (intro is_aligned_shiftl is_aligned_shiftr)
-     apply simp
-    apply (simp add: pd_bits_def pageBits_def)
-   apply (clarsimp simp: lookup_pd_slot_add_eq)
+    apply (clarsimp simp: lookup_pd_slot_add_eq)
   apply (clarsimp simp: vs_cap_ref_def
                  split: cap.split_asm arch_cap.split_asm option.split_asm)
        apply (auto simp: valid_cap_def obj_at_def is_cap_simps cap_asid_def
@@ -1139,7 +1142,8 @@ lemma create_mapping_entries_same_refs:
    create_mapping_entries (addrFromPPtr p) vaddr pgsz rights attribs pd
    \<lbrace>\<lambda>rv s. same_refs rv cap s\<rbrace>,-"
   apply (rule hoare_gen_asmE)
-  apply (cases pgsz, simp_all add: lookup_pt_slot_def)
+  apply (cases pgsz, simp_all add: lookup_pt_slot_def
+                                   largePagePTE_offsets_def superSectionPDE_offsets_def)
      apply (wp get_pde_wp | wpc)+
      apply (clarsimp simp: lookup_pd_slot_def)
      apply (frule (1) pd_aligned)
