@@ -23,6 +23,19 @@ context Arch begin global_naming ARM_A
 text {* Save the set of entries that would be inserted into a page table or
 page directory to map various different sizes of frame at a given virtual
 address. *}
+
+definition largePagePTE_offsets :: "obj_ref list"
+  where
+  "largePagePTE_offsets \<equiv>
+    let pts = of_nat 2
+    in [0, 2 ^ pts  .e.  (15 << 2)]"
+
+definition superSectionPDE_offsets :: "obj_ref list"
+  where
+  "superSectionPDE_offsets \<equiv>
+    let pts = of_nat 2
+    in [0, 2 ^ pts  .e.  (15 << 2)]"
+
 fun create_mapping_entries ::
   "paddr \<Rightarrow> vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vm_rights \<Rightarrow> vm_attributes \<Rightarrow> word32 \<Rightarrow>
   ((pte * word32 list) + (pde * word32 list),'z::state_ext) se_monad"
@@ -38,7 +51,7 @@ where
   doE
     p \<leftarrow> lookup_error_on_failure False $ lookup_pt_slot pd vptr;
     returnOk $ Inl (LargePagePTE base (attrib - {Global, ParityEnabled})
-                                 vm_rights, [p, p + 4  .e.  p + 60])
+                                 vm_rights, map (\<lambda>x. x + p) largePagePTE_offsets)
   odE"
 
 | "create_mapping_entries base vptr ARMSection vm_rights attrib pd =
@@ -50,7 +63,7 @@ where
 | "create_mapping_entries base vptr ARMSuperSection vm_rights attrib pd =
   doE
     p \<leftarrow> returnOk (lookup_pd_slot pd vptr);
-    returnOk $ Inr (SuperSectionPDE base (attrib - {Global}) vm_rights, [p, p + 4  .e.  p + 60])
+    returnOk $ Inr (SuperSectionPDE base (attrib - {Global}) vm_rights, map (\<lambda>x. x + p) superSectionPDE_offsets)
   odE"
 
 definition get_master_pde :: "word32 \<Rightarrow> (pde,'z::state_ext)s_monad"
