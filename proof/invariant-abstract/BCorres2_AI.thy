@@ -172,6 +172,10 @@ lemma valid_vspace_objs[wp]: "I valid_vspace_objs" by (rule lift_inv,simp)
 
 lemma valid_arch_caps[wp]: "I valid_arch_caps" by (rule lift_inv,simp)
 
+lemma valid_global_objs[wp]: "I valid_global_objs" by (rule lift_inv,simp)
+
+lemma valid_global_vspace_mappings[wp]: "I valid_global_vspace_mappings" by (rule lift_inv,simp)
+
 lemma valid_kernel_mappings[wp]: "I valid_kernel_mappings" by (rule lift_inv,simp)
 
 lemma equal_kernel_mappings[wp]: "I equal_kernel_mappings" by (rule lift_inv,simp)
