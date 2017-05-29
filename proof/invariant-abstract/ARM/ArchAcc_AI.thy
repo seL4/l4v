@@ -2691,16 +2691,18 @@ lemma create_mapping_entries_valid_slots [wp]:
   apply (subgoal_tac "is_aligned pd 14")
    prefer 2
    apply (clarsimp simp: pd_aligned)
-  apply (clarsimp simp: upto_enum_step_def word_shift_by_n[of _ 2, simplified])
+  apply (clarsimp simp: upto_enum_step_def  word_shift_by_2)
   apply (clarsimp simp: obj_at_def pde_at_def)
   apply (subgoal_tac "is_aligned pd pd_bits")
-    prefer 2
-   apply (simp add: pd_bits_def pageBits_def)
-  apply (rule conjI)
-   apply (simp add: upto_enum_def)
+   prefer 2
+   apply (simp add: pd_bits)
+  apply (rule conjI, simp add: upto_enum_def)
   apply (intro allI impI)
-  apply (simp add: pd_bits_def vmsz_aligned_def pageBits_def)
-  apply (frule (1) is_aligned_lookup_pd_slot [OF _ is_aligned_weaken[of _ 14 6]], simp)
+  apply (subst less_kernel_base_mapping_slots_both,assumption+)
+   apply (simp add: minus_one_helper5)
+  apply (simp add: pd_bits vmsz_aligned_def)
+  apply (frule (1) is_aligned_lookup_pd_slot
+                   [OF _ is_aligned_weaken[of _ 14 6, simplified]])
   apply (subgoal_tac "(p<<2) + lookup_pd_slot pd vptr && ~~ mask 14 = pd")
   prefer 2
    apply (subst add.commute add.left_commute)
@@ -2708,13 +2710,11 @@ lemma create_mapping_entries_valid_slots [wp]:
    apply (subst is_aligned_add_helper[THEN conjunct2], simp)
     apply (rule shiftl_less_t2n)
      apply (rule word_less_sub_le[THEN iffD1], simp+)
-   apply (erule lookup_pd_slot_eq[simplified pd_bits_def pageBits_def, simplified])
+   apply (erule lookup_pd_slot_eq[simplified pd_bits])
   apply (simp add: a_type_simps)
   apply (subst add.commute)
-  apply (safe ; (fastforce intro!: aligned_add_aligned is_aligned_shiftl_self)?)
-  apply (frule less_kernel_base_mapping_slots[unfolded pd_bits_def pageBits_def, simplified], assumption)
-  apply (clarsimp simp: kernel_mapping_slots_def kernel_base_def)
-  sorry
+  apply (fastforce intro!: aligned_add_aligned is_aligned_shiftl_self)
+  done
 
 lemma is_aligned_addrFromPPtr_n:
   "\<lbrakk> is_aligned p n; n \<le> 28 \<rbrakk> \<Longrightarrow> is_aligned (Platform.ARM.addrFromPPtr p) n"
