@@ -1186,9 +1186,9 @@ lemma copy_global_mappings_corres [corres]:
                           wp: get_pde_wp getPDE_wp corres_rv_defer_left)
         subgoal for globalPD
           apply (auto intro!: page_directory_pde_atI page_directory_pde_atI'
-                     simp: pde_relation_aligned_def pageBits_def
+                     simp: pde_relation_aligned_def pageBits_def le_less_trans
                      dest: align_entry_add_cong[of globalPD])
-                   sorry
+          done
   apply (wpsimp simp: pageBits_def)+
   apply (clarsimp simp: valid_arch_state_def obj_at_def pageBits_def dest!:pspace_alignedD)
   by (auto intro: is_aligned_weaken[of _ 14] simp: valid_arch_state'_def)
@@ -1258,10 +1258,16 @@ lemma create_mapping_entries_corres [corres]:
           (create_mapping_entries base vptr pgsz vm_rights attrib pd) 
           (createMappingEntries base vptr pgsz vm_rights' attrib' pd)"
   unfolding createMappingEntries_def mapping_map_def
-  apply (cases pgsz; corressimp simp: vmattributes_map_def pd_bits_def pageBits_def)
-  apply (auto dest: less_kernel_base_mapping_slots simp: vmattributes_map_def)
-  sorry
-
+  apply (cases pgsz; corressimp simp: vmattributes_map_def less_kernel_base_mapping_slots)
+    apply (rule corres_rv_defer_left)
+   apply (auto dest: less_kernel_base_mapping_slots
+               simp: vmattributes_map_def
+                     largePagePTEOffsets_def
+                     largePagePTE_offsets_def
+                     superSectionPDEOffsets_def
+                     superSectionPDE_offsets_def
+                     pteBits_def pdeBits_def)
+  done
 
 lemma pte_relation'_Invalid_inv [simp]:
   "pte_relation' x ARM_H.pte.InvalidPTE = (x = ARM_A.pte.InvalidPTE)"

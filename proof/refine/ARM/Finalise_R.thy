@@ -3521,12 +3521,13 @@ lemma arch_finalise_cap_corres:
                  (final_matters' (ArchObjectCap cap') \<longrightarrow>
                       final' = isFinal (ArchObjectCap cap') (cte_map sl) (cteCaps_of s)))
            (arch_finalise_cap cap final) (Arch.finaliseCap cap' final')"
-  apply (cases cap,
-         simp_all add: arch_finalise_cap_def ARM_H.finaliseCap_def
+  apply (cases cap;
+        clarsimp simp: arch_finalise_cap_def ARM_H.finaliseCap_def
                        final_matters'_def case_bool_If liftM_def[symmetric]
+                       isASIDPoolCap_def isPageCap_def isPageDirectoryCap_def
+                       isPageTableCap_def
                        o_def dc_def[symmetric]
                 split: option.split)
-(*
      apply (rule corres_guard_imp, rule delete_asid_pool_corres)
       apply (clarsimp simp: valid_cap_def mask_def)
      apply (clarsimp simp: valid_cap'_def)
@@ -3542,7 +3543,6 @@ lemma arch_finalise_cap_corres:
   apply (rule corres_guard_imp, rule delete_asid_corres)
    apply (auto elim!: invs_valid_asid_map simp: mask_def valid_cap_def)[2]
   done
-*) sorry
 
 lemma ntfnBoundTCB_update_ntfnObj_inv[simp]:
   "ntfnObj (ntfnBoundTCB_update f ntfn) = ntfnObj ntfn"

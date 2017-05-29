@@ -1228,7 +1228,7 @@ lemma createObject_valid_duplicates'[wp]:
     apply (simp add:objBits_simps archObjSize_def)
     apply (rule range_cover_rel[OF range_cover_full])
        apply simp
-      apply (simp add:APIType_capBits_def word_bits_def)+
+      apply (simp add:APIType_capBits_def word_bits_def pdeBits_def)+
    apply (frule(2) retype_aligned_distinct'(2)[where n = 4096 and ko = "KOArch (KOPDE makeObject)"])
     apply (simp add:objBits_simps archObjSize_def)
     apply (rule range_cover_rel[OF range_cover_full])
@@ -1239,7 +1239,6 @@ lemma createObject_valid_duplicates'[wp]:
                   (map (\<lambda>n. ptr + (n << 2)) [0.e.2 ^ (pdBits - 2) - 1]) (ksPSpace s))")
     apply (simp add:APIType_capBits_def pdBits_def pageBits_def pdeBits_def
      data_map_insert_def[abs_def])
-   subgoal sorry
    apply (clarsimp simp: archObjSize_def pdBits_def pageBits_def pdeBits_def)
    apply (rule valid_duplicates'_insert_ko[where us = 12,simplified])
       apply (simp add: ARM_H.toAPIType_def archObjSize_def vs_entry_align_def

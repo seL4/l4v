@@ -614,13 +614,12 @@ lemma kernel_corres:
        apply (simp add: invs'_def valid_state'_def)
       apply (rule corres_split [OF _ schedule_corres])
         apply (rule activate_corres)
-       apply (wp schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps |simp)+
+       apply (wp handle_interrupt_valid_sched[unfolded non_kernel_IRQs_def, simplified]
+                 schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps |simp)+
      apply (rule_tac Q="\<lambda>_. valid_sched and invs and valid_list" and E="\<lambda>_. valid_sched and invs and valid_list"
             in hoare_post_impErr)
        apply (wp handle_event_valid_sched |simp)+
-    subgoal sorry
-    apply (wp handle_event_valid_sched |simp)+
-  apply (clarsimp simp: active_from_running)
+   apply (clarsimp simp: active_from_running)
   apply (clarsimp simp: active_from_running')
   done
 
