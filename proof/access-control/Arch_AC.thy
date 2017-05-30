@@ -1061,13 +1061,11 @@ lemma create_mapping_entries_authorised_slots [wp]:
      apply (wp lookup_pt_slot_authorised
                  | simp add: pte_ref_simps | fold validE_R_def)+
      apply (auto simp: pd_bits_def pageBits_def)[1]
-    apply (wp lookup_pt_slot_authorised3 | simp add: pte_ref_simps | fold validE_R_def)+
+    apply (wp lookup_pt_slot_authorised2 | simp add: pte_ref_simps largePagePTE_offsets_def | fold validE_R_def)+
     apply (auto simp: pd_bits_def pageBits_def vmsz_aligned_def intro: invs_equal_kernel_mappings)[1]
    apply (wp | simp)+
    apply (auto simp: pde_ref2_def lookup_pd_slot_pd)[1]
-  apply (wp | simp)+
-  apply (subst p_0x3C_shift, rule lookup_pd_slot_aligned_6, simp)
-   apply (simp add: pd_bits_def pageBits_def)
+  apply (wp | simp add: superSectionPDE_offsets_def)+
   apply (auto simp: pde_ref2_def vmsz_aligned_def lookup_pd_slot_add_eq)
   done
 
