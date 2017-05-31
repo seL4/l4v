@@ -2311,7 +2311,7 @@ lemma dcorres_unmap_page_table:
      apply (wp page_table_mapped_wp)[1]
     apply (wp pd_pt_relation_page_table_mapped_wp)
    apply simp
-  apply (clarsimp simp:invs_psp_aligned invs_arch_objs 
+  apply (clarsimp simp:invs_psp_aligned invs_vspace_objs
     invs_mdb_cte[unfolded swp_def] invs_valid_idle
     valid_cap_def pd_bits_def pageBits_def)
   done
@@ -2344,7 +2344,7 @@ lemma valid_pde_pt_at:
 
 lemma dcorres_lookup_pt_slot:
   "dcorres (dc \<oplus> (\<lambda>r r'. r = transform_pt_slot_ref r')) \<top> 
-    (valid_arch_objs and \<exists>\<rhd> (lookup_pd_slot v a && ~~ mask pd_bits) and pspace_aligned 
+    (valid_vspace_objs and \<exists>\<rhd> (lookup_pd_slot v a && ~~ mask pd_bits) and pspace_aligned
        and valid_idle and K(is_aligned v pd_bits)
        and K (ucast (lookup_pd_slot v a && mask pd_bits >> 2) \<notin> kernel_mapping_slots))
     (cdl_lookup_pt_slot v a)
@@ -2367,7 +2367,7 @@ lemma dcorres_lookup_pt_slot:
   done
 
 lemma find_pd_for_asid_kernel_mapping_help:
-  "\<lbrace>pspace_aligned and valid_arch_objs and K (v<kernel_base) \<rbrace> find_pd_for_asid a 
+  "\<lbrace>pspace_aligned and valid_vspace_objs and K (v<kernel_base) \<rbrace> find_pd_for_asid a
    \<lbrace>\<lambda>rv s. ucast (lookup_pd_slot rv v && mask pd_bits >> 2) \<notin> kernel_mapping_slots \<rbrace>,-"
   apply (rule hoare_gen_asmE)
   apply (rule hoare_post_imp_R)
@@ -3610,16 +3610,16 @@ next
         apply clarsimp
        apply (erule caps_of_state_cteD)
      
-      apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
+      apply (clarsimp simp: obj_at_def live_def hyp_live_def dest!: get_tcb_SomeD)
       apply (auto simp: infer_tcb_pending_op_def)[1]
      apply (frule final_zombie_not_live[rotated 1, OF caps_of_state_cteD], clarsimp)
       apply (rule ccontr, erule zombies_finalE)
         apply (simp add: is_cap_simps)
        apply clarsimp
       apply (erule caps_of_state_cteD)
-     apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
+     apply (clarsimp simp: obj_at_def live_def hyp_live_def dest!: get_tcb_SomeD)
      apply (auto simp: infer_tcb_bound_notification_def)[1]
-    apply (clarsimp simp: obj_at_def is_cap_table_def)
+    apply (clarsimp simp: obj_at_def live_def hyp_live_def is_cap_table_def)
     apply (clarsimp simp: opt_cap_cnode
                    split: Structures_A.kernel_object.split_asm)
     apply (rule exI, rule conjI, erule sym)

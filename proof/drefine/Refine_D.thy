@@ -55,7 +55,7 @@ lemma dcorres_call_kernel:
          apply ((wp | simp)+)[3]
       apply (rule hoare_post_imp_dc2E, rule handle_event_invs_and_valid_sched)
       apply (clarsimp simp: invs_def valid_state_def)
-     apply (simp add: conj_comms if_apply_def2
+     apply (simp add: conj_comms if_apply_def2 non_kernel_IRQs_def
             | wp | strengthen valid_etcbs_sched valid_idle_invs_strg)+
     apply (rule valid_validE2)
       apply (rule hoare_vcg_conj_lift)

@@ -988,7 +988,7 @@ lemma generate_object_ids_exec:
         apply clarify
         apply assumption
        apply (clarsimp simp:return_def exs_valid_def)
-      apply (rule hoare_vcg_split_if)
+      apply (rule hoare_vcg_if_split)
        apply (wp|simp)+
     apply (intro conjI impI)
       apply (clarsimp simp:distinct_map distinct_retype_addrs)

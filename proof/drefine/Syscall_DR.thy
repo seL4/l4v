@@ -1588,7 +1588,7 @@ lemma handle_vm_fault_wp:
   done
 
 lemma get_active_irq_corres:
-  "dcorres (\<lambda>r r'. r' = r) \<top> \<top> get_active_irq (do_machine_op getActiveIRQ)"
+  "dcorres (\<lambda>r r'. r' = r) \<top> \<top> get_active_irq (do_machine_op (getActiveIRQ in_kernel))"
   apply (clarsimp simp: corres_underlying_def do_machine_op_def
                         select_f_def bind_def in_monad getActiveIRQ_def
                         return_def get_active_irq_def select_def
@@ -1685,7 +1685,7 @@ lemma handle_event_corres:
     apply (frule (1) ct_running_not_idle_etc)
     apply (clarsimp simp:invs_def valid_state_def st_tcb_at_def generates_pending_def obj_at_def)
    apply (wp|simp)+
-    apply (rule corres_symb_exec_r[OF handle_hypervisor_fault_corres], wp+)
+    apply (rule corres_symb_exec_r[OF handle_hypervisor_fault_corres[simplified]], wp+)
   done
 
 end

@@ -148,7 +148,7 @@ lemmas less_kernel_base_mapping_slots = less_kernel_base_mapping_slots_both[wher
 
 lemma dcorres_lookup_pt_slot:
   "dcorres (dc \<oplus> (\<lambda>r r'. r = transform_pt_slot_ref r')) \<top>
-  ( valid_arch_objs
+  ( valid_vspace_objs
   and (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits))
   and valid_idle and pspace_aligned
   and K (is_aligned pd 14 \<and> ucast (lookup_pd_slot pd vptr && mask pd_bits >> 2) \<notin> kernel_mapping_slots))
@@ -184,7 +184,7 @@ lemma dcorres_lookup_pt_slot:
   done
 
 lemma lookup_pt_slot_aligned_6':
-  "\<lbrace> valid_arch_objs
+  "\<lbrace> valid_vspace_objs
   and (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits))
   and valid_idle and pspace_aligned
   and K (is_aligned pd 14 \<and> is_aligned vptr 16 \<and> ucast (lookup_pd_slot pd vptr && mask pd_bits >> 2) \<notin> kernel_mapping_slots)\<rbrace>
@@ -216,17 +216,16 @@ lemma create_mapping_entries_dcorres:
                            = FrameCap False (ptrFromPAddr base)
                                vm_rights (pageBitsForSize pgsz) Fake None))
      \<top>
-     (page_directory_at pd_ptr and valid_idle and valid_arch_objs and pspace_aligned
+     (page_directory_at pd_ptr and valid_idle and valid_vspace_objs and pspace_aligned
              and (\<exists>\<rhd> (lookup_pd_slot pd_ptr vptr && ~~ mask pd_bits)))
      (cdl_page_mapping_entries vptr (pageBitsForSize pgsz) pd_ptr)
      (create_mapping_entries base vptr pgsz vm_rights attrib pd_ptr)"
 proof -
 
   have aligned_4_hd:
-    "\<And>r :: word32. is_aligned r 6 \<Longrightarrow> hd [r , r + 4 .e. r + 0x3C] = r"
+    "\<And>r :: word32. is_aligned r 6 \<Longrightarrow> hd (map (\<lambda>x. x + r) [0 , 4 .e. 0x3C]) = r"
     apply (subgoal_tac "r \<le> r + 0x3C")
-     apply (clarsimp simp: upto_enum_step_def less_def | intro conjI)+
-      apply fastforce
+     apply (clarsimp simp: upto_enum_step_def less_def o_def | intro conjI)+
      apply (subst hd_map)
       apply (clarsimp simp:upto_enum_def)
      apply (clarsimp simp:upto_enum_def hd_map)
@@ -262,10 +261,10 @@ proof -
     next
       case ARMLargePage
       show ?case using ARMLargePage.prems
-        apply (simp add: liftME_def[symmetric] o_def transform_pte_def
+        apply (simp add: liftME_def[symmetric] o_def transform_pte_def pd_bits_def pageBits_def
                                      lookup_error_injection dc_def[symmetric])
         apply (rule dcorres_injection_handler_rhs)
-        apply (simp add:liftE_bindE cdl_page_mapping_entries_def)
+        apply (simp add:liftE_bindE cdl_page_mapping_entries_def largePagePTE_offsets_def)
         apply (rule corres_dummy_returnOk_r)
         apply (rule corres_guard_imp)
           apply (rule corres_splitEE)
@@ -276,13 +275,13 @@ proof -
              apply assumption
             apply (clarsimp)
            apply (rule dcorres_lookup_pt_slot)
-          apply (wp lookup_pt_slot_aligned_6')+
-         apply simp
+          apply (wpsimp wp: lookup_pt_slot_aligned_6')+
         apply (clarsimp simp:
           dest!:page_directory_at_aligned_pd_bits )
         apply (frule less_kernel_base_mapping_slots_both[OF kb,where x = 0])
          apply simp
-        apply (simp add:pageBits_def pd_bits_def vmsz_aligned_def)
+        apply (clarsimp simp:pageBits_def pd_bits_def vmsz_aligned_def)
+        apply (rule_tac x=ref in exI, simp)
       done
     next
       case ARMSection
@@ -305,7 +304,7 @@ proof -
         using pd_aligned
         apply (simp add: liftME_def[symmetric] o_def transform_pte_def
                                      lookup_error_injection dc_def[symmetric])
-        apply (simp add:liftE_bindE cdl_page_mapping_entries_def)
+        apply (simp add:liftE_bindE cdl_page_mapping_entries_def superSectionPDE_offsets_def)
         apply (rule corres_guard_imp)
           apply (rule_tac F = "is_aligned pd_ptr 14" in corres_gen_asm2)
           apply (rule dcorres_returnOk)
@@ -334,7 +333,7 @@ lemma create_mapping_entries_dcorres_select:
                                vm_rights (pageBitsForSize pgsz) Fake None))
      (\<lambda>s. frslots = all_pd_pt_slots pd pdid s
               \<and> cdl_objects s pdid = Some pd)
-     (page_directory_at pd_ptr and valid_idle and valid_arch_objs and pspace_aligned
+     (page_directory_at pd_ptr and valid_idle and valid_vspace_objs and pspace_aligned
              and (\<exists>\<rhd> (lookup_pd_slot pd_ptr vptr && ~~ mask pd_bits)))
      (liftE (select {M. set M \<subseteq> frslots \<and> distinct M}) \<sqinter> Monads_D.throw)
      (create_mapping_entries base vptr pgsz vm_rights attrib pd_ptr)"
@@ -385,7 +384,7 @@ proof -
                               pd_aligned
                        dest!: a_type_pdD
                          del: disjCI)
-        apply (drule valid_arch_objsD, simp add: obj_at_def, simp+)
+        apply (drule valid_vspace_objsD, simp add: obj_at_def, simp+)
         apply (cut_tac less_kernel_base_mapping_slots[OF kb pd_aligned])
         apply (drule_tac x="ucast (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)" in bspec)
          apply simp
@@ -415,7 +414,7 @@ proof -
     next
       case ARMLargePage
       show ?case using ARMLargePage.prems
-        apply (simp add: liftME_def[symmetric] o_def transform_pte_def
+        apply (simp add: liftME_def[symmetric] o_def transform_pte_def largePagePTE_offsets_def
                                      lookup_error_injection dc_def[symmetric])
         apply (rule dcorres_injection_handler_rhs)
         apply (simp add: lookup_pt_slot_def liftE_bindE)
@@ -428,7 +427,7 @@ proof -
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: pd_aligned obj_at_def lookup_pd_slot_pd
                               a_type_simps)
-        apply (drule valid_arch_objsD, simp add: obj_at_def, simp+)
+        apply (drule valid_vspace_objsD, simp add: obj_at_def, simp+)
         apply (cut_tac less_kernel_base_mapping_slots[OF kb pd_aligned])
         apply (drule_tac x="ucast (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)" in bspec)
          apply simp
@@ -443,7 +442,7 @@ proof -
                                object_slots_def transform_page_directory_contents_def
                                unat_map_def kernel_pde_mask_def
                           del: disjCI UnCI)
-         apply (subgoal_tac "x && ~~ mask pt_bits = ptrFromPAddr word1")
+         apply (subgoal_tac "x + (ptrFromPAddr word1 + ((vptr >> 12) && 0xFF << 2)) && ~~ mask pt_bits = ptrFromPAddr word1")
           apply (rule disjI2, rule conjI)
            apply (rule_tac x="unat (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)"
                       in exI)
@@ -454,7 +453,7 @@ proof -
           apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
          apply (clarsimp simp: upto_enum_step_def pt_bits_def pageBits_def
                         split: if_split_asm)
-         apply (subst add.assoc, subst is_aligned_add_helper, assumption)
+         apply (subst add.commute, subst add.assoc, subst is_aligned_add_helper, assumption)
           apply (simp only: word_shift_by_2 word_shiftl_add_distrib[symmetric])
           apply (rule shiftl_less_t2n)
            apply (rule is_aligned_add_less_t2n[where n=4])
@@ -467,12 +466,6 @@ proof -
           apply simp
          apply simp
         apply (simp add: upto_enum_step_def not_less upto_enum_def)
-        apply (rule is_aligned_no_wrap'[where sz = 6])
-         apply (erule aligned_add_aligned[OF _ is_aligned_shiftl])
-          apply (rule is_aligned_andI1[OF is_aligned_shiftr])
-          apply (simp add:vmsz_aligned_def)
-         apply simp
-        apply simp
         done
     next
       case ARMSection
@@ -510,11 +503,7 @@ proof -
          apply (clarsimp simp: all_pd_pt_slots_def transform_pd_slot_ref_def
                                object_slots_def transform_page_directory_contents_def
                                dom_def unat_map_def)
-        apply (simp add: not_less upto_enum_step_def upto_enum_def)
-        apply (rule is_aligned_no_wrap'[where sz = 6])
-         apply (erule lookup_pd_slot_aligned_6)
-         apply (simp add:pd_bits_def pageBits_def)
-        apply simp
+        apply (simp add: not_less upto_enum_step_def upto_enum_def superSectionPDE_offsets_def)
         done
     qed
 qed

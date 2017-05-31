@@ -2655,6 +2655,8 @@ lemma dcorres_dummy_set_pending_cap_Restart:
   done
 
 crunch valid_etcbs[wp]: attempt_switch_to "valid_etcbs"
+crunch pred_tcb[wp]: do_ipc_transfer "pred_tcb_at proj P t"
+  (wp: crunch_wps transfer_caps_loop_pres make_fault_message_inv simp: zipWithM_x_mapM)
 
 lemma send_sync_ipc_corres:
   "\<lbrakk>ep_id = epptr;tcb_id_sender= thread\<rbrakk> \<Longrightarrow>

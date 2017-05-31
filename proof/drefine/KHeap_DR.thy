@@ -2599,7 +2599,8 @@ lemma unbind_notification_valid_state[wp]:
        | clarsimp)+
           defer 4
           apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
-                       simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def)[8]
+                       simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def
+                             live_def hyp_live_def)[8]
   apply (clarsimp simp: if_split)
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
@@ -2629,7 +2630,8 @@ lemma unbind_maybe_notification_valid_state[wp]:
        | clarsimp)+
           defer 4
           apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
-                       simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def)[8]
+                       simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def
+                             live_def hyp_live_def)[8]
   apply (clarsimp simp: if_split)
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
