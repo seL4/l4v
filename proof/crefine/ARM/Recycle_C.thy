@@ -645,7 +645,7 @@ lemma clearMemory_setObject_PTE_ccorres:
                 and (\<lambda>_. is_aligned ptr ptBits \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
             (UNIV \<inter> {s. ptr___ptr_to_unsigned_long_' s = Ptr ptr} \<inter> {s. bits_' s = of_nat ptBits}) []
        (do x \<leftarrow> mapM_x (\<lambda>a. setObject a ARM_H.InvalidPTE)
-                       [ptr , ptr + 2 ^ objBits ARM_H.InvalidPTE .e. ptr + 2 ^ ptBits - 1];
+                       [ptr , ptr + 2 ^ pteBits .e. ptr + 2 ^ ptBits - 1];
            doMachineOp (cleanCacheRange_PoU ptr (ptr + 2 ^ ptBits - 1) pstart)
         od)
        (Call clearMemory_'proc)"
