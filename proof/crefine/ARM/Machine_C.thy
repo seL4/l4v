@@ -151,18 +151,20 @@ assumes getFAR_ccorres:
            (Call getFAR_'proc)"
 
 assumes getActiveIRQ_ccorres:
-"ccorres (\<lambda>(a::10 word option) c::16 word.
-     case a of None \<Rightarrow> c = (0xFFFF::16 word)
-     | Some (x::10 word) \<Rightarrow> c = ucast x \<and> c \<noteq> (0xFFFF::16 word))
-     (\<lambda>t. irq_' (s\<lparr>globals := globals t, irq_' := ret__unsigned_short_' t\<rparr> ))
-     \<top> UNIV hs
- (doMachineOp getActiveIRQ) (Call getActiveIRQ_'proc)"
+"\<And>in_kernel.
+  ccorres (\<lambda>(a::10 word option) c::16 word.
+       case a of None \<Rightarrow> c = (0xFFFF::16 word)
+       | Some (x::10 word) \<Rightarrow> c = ucast x \<and> c \<noteq> (0xFFFF::16 word))
+       (\<lambda>t. irq_' (s\<lparr>globals := globals t, irq_' := ret__unsigned_short_' t\<rparr> ))
+       \<top> UNIV hs
+   (doMachineOp (getActiveIRQ in_kernel)) (Call getActiveIRQ_'proc)"
 
 (* This is not very correct, however our current implementation of Hardware in haskell is stateless *)
 assumes isIRQPending_ccorres:
-  "ccorres (\<lambda>rv rv'. rv' = from_bool (rv \<noteq> None)) ret__unsigned_long_'
-      \<top> UNIV []
-      (doMachineOp getActiveIRQ) (Call isIRQPending_'proc)"
+  "\<And>in_kernel.
+     ccorres (\<lambda>rv rv'. rv' = from_bool (rv \<noteq> None)) ret__unsigned_long_'
+        \<top> UNIV []
+        (doMachineOp (getActiveIRQ in_kernel)) (Call isIRQPending_'proc)"
 
 assumes armv_contextSwitch_HWASID_ccorres:
   "ccorres dc xfdc \<top> (UNIV \<inter> {s. cap_pd_' s = pde_Ptr pd} \<inter> {s. hw_asid_' s = hwasid}) []
