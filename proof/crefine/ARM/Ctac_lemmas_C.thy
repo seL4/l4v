@@ -134,7 +134,7 @@ lemma array_assertion_abs_pt:
   apply (intro allI impI disjCI2, clarsimp)
   apply (drule(1) page_table_at_rf_sr, clarsimp)
   apply (erule clift_array_assertion_imp,
-         simp_all add: pd_bits_def pt_bits_def pte_bits_def)
+         simp_all add: pd_bits_def pt_bits_def ptBits_def pteBits_def)
   apply (rule_tac x=0 in exI, simp)
   done
 

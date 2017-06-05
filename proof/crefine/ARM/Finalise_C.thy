@@ -1385,7 +1385,7 @@ lemma pageTableMapped_ccorres:
       apply vcg
      apply (wp hoare_drop_imps findPDForASID_nonzero)
     apply (simp add: guard_is_UNIV_def word_sle_def pdBits_def pageBits_def
-                     unat_gt_0 unat_shiftr_le_bound)
+                     unat_gt_0 unat_shiftr_le_bound pdeBits_def)
    apply (simp add: guard_is_UNIV_def option_to_0_def option_to_ptr_def)
   apply auto[1]
   done
@@ -1438,7 +1438,7 @@ lemma unmapPageTable_ccorres:
   apply (clarsimp simp: word_sle_def lookup_pd_slot_def
                         Let_def shiftl_t2n field_simps
                         Collect_const_mem pdBits_def pageBits_def)
-  apply (simp add: unat_shiftr_le_bound unat_eq_0)
+  apply (simp add: unat_shiftr_le_bound unat_eq_0 pdeBits_def)
   done
 
 lemma return_Null_ccorres:

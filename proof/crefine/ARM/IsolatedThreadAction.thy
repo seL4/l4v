@@ -413,6 +413,7 @@ lemma getCTE_isolatable:
 lemma objBits_2n:
   "(1 :: word32) < 2 ^ objBits obj"
   by (simp add: objBits_def objBitsKO_def archObjSize_def pageBits_def
+                pteBits_def pdeBits_def
          split: kernel_object.split arch_kernel_object.split)
 
 lemma magnitudeCheck_assert2:

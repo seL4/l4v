@@ -2199,9 +2199,10 @@ lemma page_directory_at_carray_map_relation:
   apply (clarsimp simp: shiftr_shiftl1)
   apply (drule mp)
    apply (simp add: shiftr_over_and_dist pdBits_def pageBits_def mask_def
-                    order_le_less_trans[OF word_and_le1])
+                    order_le_less_trans[OF word_and_le1] pdeBits_def)
   apply (clarsimp simp: typ_at_to_obj_at_arches objBits_simps archObjSize_def
                         is_aligned_andI1 add.commute word_plus_and_or_coroll2
+                        pdeBits_def
                  dest!: obj_at_ko_at' ko_at_projectKO_opt)
   done
 
@@ -2221,9 +2222,10 @@ lemma page_table_at_carray_map_relation:
   apply (clarsimp simp: shiftr_shiftl1)
   apply (drule mp)
    apply (simp add: shiftr_over_and_dist ptBits_def pageBits_def mask_def
-                    order_le_less_trans[OF word_and_le1])
+                    order_le_less_trans[OF word_and_le1] pteBits_def)
   apply (clarsimp simp: typ_at_to_obj_at_arches objBits_simps archObjSize_def
                         is_aligned_andI1 add.commute word_plus_and_or_coroll2
+                        pteBits_def
                  dest!: obj_at_ko_at' ko_at_projectKO_opt)
   done
 

@@ -210,7 +210,7 @@ lemma pd_at_asid_cross_over:
                    pd_asid_slot_def mask_add_aligned)
   apply (simp add: mask_def pdBits_def pageBits_def)
   apply (clarsimp simp add: cpde_relation_def Let_def)
-  by (simp add: pde_lift_def Let_def split: if_split_asm)
+  by (simp add: pde_lift_def Let_def pdeBits_def split: if_split_asm)
 
 lemma findPDForASIDAssert_pd_at_wp2:
   "\<lbrace>\<lambda>s. \<forall>pd. pd_at_asid' pd asid s
@@ -750,7 +750,7 @@ lemma lookupPTSlot_nofail_spec:
   apply (subst array_assertion_shrink_right, assumption)
    apply (rule order_less_imp_le, rule unat_less_helper, simp)
    apply (rule order_le_less_trans, rule word_and_le1, simp add: ptBits_def pageBits_def)
-  apply (simp add: Let_def word_sle_def)
+  apply (simp add: Let_def word_sle_def pteBits_def)
   apply (case_tac pt)
   apply (simp add: word_shift_by_2)
   done
@@ -2106,7 +2106,7 @@ lemma checkMappingPPtr_pte_ccorres:
       apply (erule cmap_relationE1[OF rf_sr_cpte_relation])
        apply (erule ko_at_projectKO_opt)
       apply simp
-     apply (wp empty_fail_getObject | simp add: objBits_simps archObjSize_def)+
+     apply (wp empty_fail_getObject | simp add: objBits_simps archObjSize_def pteBits_def)+
   done
 
 lemma checkMappingPPtr_pde_ccorres:
@@ -2142,7 +2142,7 @@ lemma checkMappingPPtr_pde_ccorres:
       apply (erule cmap_relationE1[OF rf_sr_cpde_relation])
        apply (erule ko_at_projectKO_opt)
       apply simp
-     apply (wp empty_fail_getObject | simp add: objBits_simps archObjSize_def)+
+     apply (wp empty_fail_getObject | simp add: objBits_simps archObjSize_def pdeBits_def)+
   done
 
 
@@ -2248,7 +2248,7 @@ lemma large_ptSlot_array_constraint:
   apply (erule order_trans[rotated], simp)
   apply (rule unat_le_helper)
   apply (simp add: is_aligned_mask mask_def ptBits_def pageBits_def)
-  apply (word_bitwise, simp?)
+  apply (word_bitwise, simp add: pteBits_def)
   done
 
 lemma large_pdSlot_array_constraint:
@@ -2375,7 +2375,8 @@ lemma unmapPage_ccorres:
            apply (vcg exspec=lookupPTSlot_modifies)
           -- "ARMLargePage"
           apply (rule ccorres_Cond_rhs)
-           apply (simp add: gen_framesize_to_H_def dc_def[symmetric])
+           apply (simp add: gen_framesize_to_H_def dc_def[symmetric]
+                            largePagePTEOffsets_def pteBits_def)
            apply (rule ccorres_rhs_assoc)+
            apply csymbr
            apply csymbr
@@ -2438,7 +2439,7 @@ lemma unmapPage_ccorres:
                    apply (simp add: storePTE_def)
                    apply (rule obj_at_setObject3)
                     apply simp
-                   apply (simp add: objBits_simps archObjSize_def)
+                   apply (simp add: objBits_simps archObjSize_def pteBits_def)
                   apply (simp add: typ_at_to_obj_at_arches[symmetric])
                   apply wp
                  apply clarify
@@ -2508,6 +2509,7 @@ lemma unmapPage_ccorres:
             apply (simp, rule ccorres_empty)
            apply (simp add: gen_framesize_to_H_def dc_def[symmetric]
                          liftE_liftM mapM_discarded whileAnno_def
+                         superSectionPDEOffsets_def pdeBits_def
                     del: Collect_const)
            apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
                rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
@@ -2571,7 +2573,7 @@ lemma unmapPage_ccorres:
                 apply (simp add: storePDE_def)
                 apply (rule obj_at_setObject3)
                  apply simp
-                apply (simp add: objBits_simps archObjSize_def)
+                apply (simp add: objBits_simps archObjSize_def pdeBits_def)
                apply (simp add: typ_at_to_obj_at_arches[symmetric])
                apply wp
               apply (clarsimp simp: vmsz_aligned_def vmsz_aligned'_def)
@@ -2581,7 +2583,7 @@ lemma unmapPage_ccorres:
                apply (simp add: upto_enum_step_def upto_enum_word
                                 hd_map last_map typ_at_to_obj_at_arches field_simps
                                 objBits_simps archObjSize_def vmsz_aligned'_def 
-                                pageBitsForSize_def pdBits_def pageBits_def)
+                                pageBitsForSize_def pdBits_def pageBits_def pdeBits_def)
                apply (frule_tac x=14 and y=6 in is_aligned_weaken, clarsimp+)
                apply (drule is_aligned_lookup_pd_slot, simp) 
                apply (clarsimp dest!: is_aligned_cache_preconds)

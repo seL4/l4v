@@ -575,7 +575,7 @@ lemma invalidateCacheRange_RAM_ccorres:
    apply (clarsimp simp: word_sle_def whileAnno_def split del: if_split)
    apply (ccorres_remove_UNIV_guard)
    apply (simp add: invalidateCacheRange_RAM_def doMachineOp_bind when_def
-                    split_if_empty_fail empty_fail_cleanCacheRange_RAM
+                    if_split_empty_fail empty_fail_cleanCacheRange_RAM
                     empty_fail_invalidateL2Range empty_fail_cacheRangeOp empty_fail_invalidateByVA
                     empty_fail_dsb dmo_if
               split del: if_split)

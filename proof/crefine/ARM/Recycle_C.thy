@@ -607,7 +607,7 @@ lemma page_table_at_rf_sr_dom_s:
     \<subseteq> dom_s (hrs_htd (t_hrs_' (globals s')))"
   apply (rule_tac m=2 in intvl_2_power_times_decomp,
          simp_all add: shiftl_t2n field_simps ptBits_def pageBits_def
-                       word_bits_def)
+                       word_bits_def pteBits_def)
   apply (clarsimp simp: page_table_at'_def intvl_def)
   apply (drule spec, drule(1) mp)
   apply (simp add: typ_at_to_obj_at_arches)
@@ -626,7 +626,7 @@ lemma page_directory_at_rf_sr_dom_s:
     \<subseteq> dom_s (hrs_htd (t_hrs_' (globals s')))"
   apply (rule_tac m=2 in intvl_2_power_times_decomp,
          simp_all add: shiftl_t2n field_simps pdBits_def pageBits_def
-                       word_bits_def)
+                       word_bits_def pdeBits_def)
   apply (clarsimp simp: page_directory_at'_def intvl_def)
   apply (drule spec, drule(1) mp)
   apply (simp add: typ_at_to_obj_at_arches)
@@ -658,25 +658,25 @@ lemma clearMemory_setObject_PTE_ccorres:
       apply (rule allI, rule conseqPre, vcg)
       apply clarsimp
       apply (subst ghost_assertion_size_logic[unfolded o_def])
-        apply (simp add: ptBits_def pageBits_def)
+        apply (simp add: ptBits_def pageBits_def pteBits_def)
        apply simp
       apply (clarsimp simp: replicateHider_def[symmetric])
       apply (frule is_aligned_no_overflow')
       apply (intro conjI)
-          apply (clarsimp simp add: ptBits_def pageBits_def
+          apply (clarsimp simp add: ptBits_def pageBits_def pteBits_def
                           cong: StateSpace.state.fold_congs globals.fold_congs)
          apply (erule is_aligned_weaken, simp add: ptBits_def pageBits_def)
-        apply (clarsimp simp: is_aligned_def ptBits_def pageBits_def)
+        apply (clarsimp simp: is_aligned_def ptBits_def pageBits_def pteBits_def)
        apply (simp add: unat_of_nat32 order_less_le_trans[OF pt_bits_stuff(2)]
                         word_bits_def page_table_at_rf_sr_dom_s)
-      apply (clarsimp simp add: ptBits_def pageBits_def
+      apply (clarsimp simp add: ptBits_def pageBits_def pteBits_def
                       cong: StateSpace.state.fold_congs globals.fold_congs)
       apply (simp add: upto_enum_step_def objBits_simps ptBits_def pageBits_def
                        field_simps linorder_not_less[symmetric] archObjSize_def
-                       upto_enum_word split_def)
+                       upto_enum_word split_def pteBits_def)
       apply (erule mapM_x_store_memset_ccorres_assist
                       [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
-             simp_all add: shiftl_t2n hd_map objBits_simps archObjSize_def)[1]
+             simp_all add: shiftl_t2n hd_map objBits_simps archObjSize_def pteBits_def)[1]
       apply (rule cmap_relationE1, erule rf_sr_cpte_relation, erule ko_at_projectKO_opt)
       apply (subst coerce_memset_to_heap_update_pte)
       apply (clarsimp simp: rf_sr_def Let_def cstate_relation_def typ_heap_simps)
@@ -692,8 +692,8 @@ lemma clearMemory_setObject_PTE_ccorres:
      apply (rule ccorres_Guard)
      apply (ctac add: cleanCacheRange_PoU_ccorres)
     apply (wp mapM_x_wp' setObject_ksPSpace_only updateObject_default_inv | simp)+
-   apply (clarsimp simp: guard_is_UNIV_def ptBits_def pageBits_def)
-  apply (clarsimp simp: ptBits_def pageBits_def)
+   apply (clarsimp simp: guard_is_UNIV_def ptBits_def pageBits_def pteBits_def)
+  apply (clarsimp simp: ptBits_def pageBits_def pteBits_def)
   apply (frule is_aligned_addrFromPPtr_n, simp)
   apply (clarsimp simp: is_aligned_no_overflow'[where n=10, simplified] pageBits_def
                         field_simps is_aligned_mask[symmetric] mask_AND_less_0)

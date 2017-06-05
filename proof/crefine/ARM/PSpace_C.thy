@@ -133,6 +133,7 @@ lemma storePTE_Basic_ccorres':
                    Let_def typ_heap_simps
                    cteCaps_of_def update_pte_map_tos
                    )
+  apply (simp add: pteBits_def)
   done
 
 
@@ -154,7 +155,7 @@ lemma pde_stored_asid_update_valid_offset:
             = (pde_stored_asid  \<circ>\<^sub>m clift (t_hrs_' cstate) \<circ>\<^sub>m pd_pointer_to_asid_slot)"
   apply (rule ext, clarsimp simp add: pd_pointer_to_asid_slot_def map_comp_eq)
   apply (simp add: valid_pde_mapping_offset'_def mask_add_aligned)
-  apply (simp add: pd_asid_slot_def pdBits_def pageBits_def mask_def)
+  apply (simp add: pd_asid_slot_def pdBits_def pageBits_def mask_def pdeBits_def)
   done
 
 lemma storePDE_Basic_ccorres':
@@ -189,6 +190,7 @@ lemma storePDE_Basic_ccorres':
                    Let_def typ_heap_simps
                    pde_stored_asid_update_valid_offset
                    cteCaps_of_def update_pde_map_tos)
+  apply (simp add: pdeBits_def)
   done
 
 lemma storePDE_Basic_ccorres:

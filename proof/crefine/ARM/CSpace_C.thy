@@ -3207,7 +3207,7 @@ lemma ccap_relation_get_capSizeBits_physical:
      defer 2 (* page caps last *)
      apply (fold_subgoals (prefix))[3]
      subgoal premises prems by ((frule cap_get_tag_isCap_unfolded_H_cap,
-               clarsimp simp: unfolds
+               clarsimp simp: unfolds ptBits_def pteBits_def pdBits_def pdeBits_def
                        split: if_split_asm)+)
   apply (rename_tac vmpage_size option)
   apply (case_tac "vmpage_size = ARMSmallPage", simp_all)

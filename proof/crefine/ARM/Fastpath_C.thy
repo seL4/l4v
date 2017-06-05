@@ -819,7 +819,8 @@ lemma stored_hw_asid_get_ccorres_split':
                         valid_pde_mapping'_def)
   apply (clarsimp simp: pd_pointer_to_asid_slot_def page_directory_at'_def
                         add_mask_eq pdBits_def pageBits_def word_bits_def
-                        valid_pde_mapping_offset'_def pd_asid_slot_def)
+                        valid_pde_mapping_offset'_def pd_asid_slot_def
+                         pdeBits_def)
   apply (simp add: cpde_relation_def Let_def pde_lift_def
             split: if_split_asm)
   done
@@ -2758,7 +2759,7 @@ proof -
                         pdBits_def pageBits_def
                         cap_get_tag_isCap_ArchObject2
                         ccap_relation_pd_helper)
-  apply (clarsimp simp: isCap_simps dest!: isValidVTableRootD)
+  apply (clarsimp simp: isCap_simps pdeBits_def dest!: isValidVTableRootD)
   done
 qed
 
@@ -3460,10 +3461,10 @@ lemma fastpath_reply_recv_ccorres:
     apply (clarsimp simp: ccte_relation_eq_ccap_relation
                           if_1_0_0 ccap_relation_case_sum_Null_endpoint
                           isRight_case_sum typ_heap_simps'
-                        pdBits_def pageBits_def
+                          pdBits_def pageBits_def pdeBits_def
                           cap_get_tag_isCap mi_from_H_def)
     apply (auto simp: isCap_simps capAligned_def objBits_simps ccap_relation_pd_helper
-                      cap_get_tag_isCap_ArchObject2
+                      cap_get_tag_isCap_ArchObject2 pdeBits_def
                dest!: ptr_val_tcb_ptr_mask2[unfolded mask_def] isValidVTableRootD)
   done
 qed

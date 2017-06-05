@@ -669,7 +669,7 @@ lemma threadSet_all_invs_triv':
     apply (wp thread_set_invs_trivial thread_set_ct_running thread_set_not_state_valid_sched
               threadSet_invs_trivial threadSet_ct_running' static_imp_wp
               thread_set_ct_idle
-           | simp add: tcb_cap_cases_def
+           | simp add: tcb_cap_cases_def tcb_arch_ref_def
            | rule threadSet_ct_in_state'
            | wp_once hoare_vcg_disj_lift)+
   apply clarsimp

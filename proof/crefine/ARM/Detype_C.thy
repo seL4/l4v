@@ -1730,7 +1730,7 @@ proof -
   note cmap_array_helper = arg_cong2[where f=carray_map_relation, OF refl map_comp_restrict_map]
   have trivia: "size_of TYPE(pte_C[256]) = 2 ^ ptBits"
                "size_of TYPE(pde_C[4096]) = 2 ^ pdBits"
-    by (auto simp: ptBits_def pageBits_def pdBits_def)
+    by (auto simp: ptBits_def pageBits_def pdBits_def pdeBits_def pteBits_def)
   note cmap_array = cmap_array_typ_region_bytes[where 'a=pte, OF refl _ al _ trivia(1)]
      cmap_array_typ_region_bytes[where 'a=pde, OF refl _ al _ trivia(2)]
   note cmap_array = cmap_array[simplified, simplified objBitsT_simps b2
@@ -1765,6 +1765,7 @@ proof -
             rule cm_disj cm_disj_tcb cm_disj_cte cm_disj_user cm_disj_device
             , assumption +, 
             simp_all add: objBits_simps archObjSize_def pageBits_def projectKOs
+                          pteBits_def pdeBits_def
                           heap_to_user_data_restrict heap_to_device_data_restrict)[1])+ -- "waiting ..."
     apply (simp add: map_to_ctes_delete' cmap_relation_restrict_both_proj
                      cmap_relation_restrict_both cmap_array_helper hrs_htd_update
@@ -1785,8 +1786,9 @@ proof -
       apply (clarsimp simp: restrict_map_Some_iff image_iff
                             map_comp_restrict_map_Some_iff)
      apply (simp add: cmap_relation_restrict_both_proj)
-    done
-
+    apply (rule cmap_array; simp add: pdeBits_def)
+   apply (rule cmap_array; simp add: pteBits_def)
+   done
   moreover
   from invs have "valid_queues s" ..
   hence "\<And>p. \<forall>t \<in> set (ksReadyQueues s p). tcb_at' t s \<and> ko_wp_at' live' t s"
@@ -1853,7 +1855,7 @@ proof -
       apply (subst lift_t_typ_region_bytes[OF cm_disj], simp_all)
         apply (fastforce simp: cpspace_relation_def)
        apply (simp add: projectKOs)
-      apply (simp add: objBits_simps archObjSize_def) 
+      apply (simp add: objBits_simps archObjSize_def pdeBits_def)
       done
 
     have "set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot) =
