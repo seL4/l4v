@@ -1930,6 +1930,8 @@ lemma pspace_distinct'_split:
   done
 
 lemma s0H_pspace_distinct':
+  notes pdeBits_def[simp] pteBits_def[simp]
+  shows
   "pspace_distinct' s0H_internal"
   apply (clarsimp simp: pspace_distinct'_def ps_clear_def)
   apply (rule disjointI)
@@ -2091,6 +2093,8 @@ lemma pd_offs_aligned:
   by (rule is_aligned_add[OF _ is_aligned_shift], simp add: s0_ptr_defs is_aligned_def)+
 
 lemma valid_caps_s0H[simp]:
+  notes pdeBits_def[simp]
+  shows
   "valid_cap' NullCap s0H_internal"
   "valid_cap' (ThreadCap Low_tcb_ptr) s0H_internal"
   "valid_cap' (ThreadCap High_tcb_ptr) s0H_internal"
@@ -2206,13 +2210,13 @@ lemma s0H_valid_objs':
                             physMappingOffset_def ARM.kernelBase_def ARM.physBase_def
                             kernelBase_addr_def physBase_def
                      split: if_split_asm)
-     apply (clarsimp simp: valid_obj'_def High_pdH_def High_pd'H_def valid_pde'_def
+     apply (clarsimp simp: valid_obj'_def High_pdH_def High_pd'H_def valid_pde'_def pteBits_def
                            valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def 
                            ARM.kernelBase_def ARM.physBase_def ARM.ptrFromPAddr_def ptBits_def
                            pageBits_def physMappingOffset_def kernelBase_addr_def physBase_def
                     split: if_split_asm)
     apply (clarsimp simp: valid_obj'_def Low_pdH_def Low_pd'H_def valid_pde'_def valid_mapping'_def
-                          s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def 
+                          s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def pteBits_def
                           ARM.ptrFromPAddr_def ARM.physBase_def ptBits_def pageBits_def
                           physMappingOffset_def kernelBase_addr_def physBase_def
                    split: if_split_asm)
@@ -2636,6 +2640,8 @@ lemma mdb_nextI:
   by (simp add: mdb_next_unfold)
 
 lemma s0H_valid_pspace':
+  notes pdeBits_def[simp] pteBits_def[simp]
+  shows
   "valid_pspace' s0H_internal"
   apply (clarsimp simp: valid_pspace'_def s0H_pspace_distinct' s0H_valid_objs')
   apply (intro conjI)
@@ -2809,6 +2815,8 @@ axiomatization kernel_data_refs_valid where
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma s0H_invs:
+  notes pdeBits_def[simp] pteBits_def[simp]
+  shows
   "invs' s0H_internal"
   apply (clarsimp simp: invs'_def valid_state'_def s0H_valid_pspace')
   apply (rule conjI)
