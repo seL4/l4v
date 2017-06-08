@@ -1372,7 +1372,7 @@ definition
   check_active_irq_if :: "user_context \<Rightarrow> (irq option \<times> user_context, ('z :: state_ext)) s_monad"
   where
   "check_active_irq_if tc \<equiv>
-   do irq \<leftarrow> do_machine_op (getActiveIRQ True);
+   do irq \<leftarrow> do_machine_op (getActiveIRQ False);
       return (irq, tc)
    od"
 
