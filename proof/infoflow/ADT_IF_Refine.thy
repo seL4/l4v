@@ -543,14 +543,14 @@ definition
 definition checkActiveIRQ_if :: "(MachineTypes.register \<Rightarrow> 32 word) \<Rightarrow> (10 word option \<times> (MachineTypes.register \<Rightarrow> 32 word)) kernel" where
 "checkActiveIRQ_if tc \<equiv>
 do 
-   irq \<leftarrow> doMachineOp getActiveIRQ;
+   irq \<leftarrow> doMachineOp (getActiveIRQ False);
    return (irq, tc)
 od"
 
 crunch (empty_fail) empty_fail: checkActiveIRQ_if
 
 
-lemma getActiveIRQ_nf: "no_fail (\<lambda>_. True) getActiveIRQ"
+lemma getActiveIRQ_nf: "no_fail (\<lambda>_. True) (getActiveIRQ in_kernel)"
   apply (simp add: getActiveIRQ_def)
   apply (rule no_fail_pre)
    apply (rule non_fail_gets non_fail_modify
@@ -559,11 +559,11 @@ lemma getActiveIRQ_nf: "no_fail (\<lambda>_. True) getActiveIRQ"
      apply (wp del: no_irq | simp)+
   done
 
-lemma dmo_getActiveIRQ_corres: "corres op = \<top> \<top> (do_machine_op getActiveIRQ)
-     (doMachineOp getActiveIRQ)"
+lemma dmo_getActiveIRQ_corres: "corres op = \<top> \<top> (do_machine_op (getActiveIRQ in_kernel))
+     (doMachineOp (getActiveIRQ in_kernel'))"
   apply (rule SubMonad_R.corres_machine_op)
      apply (rule corres_Id)
-       apply simp
+       apply (simp add: getActiveIRQ_def non_kernel_IRQs_def)
       apply simp
      apply (rule getActiveIRQ_nf)
    done
@@ -578,8 +578,8 @@ lemma check_active_irq_if_corres:
   done
 
 lemma dmo'_getActiveIRQ_wp:
-  "\<lbrace>\<lambda>s. P (irq_at (irq_state (ksMachineState s) + 1) (irq_masks (ksMachineState s))) (s\<lparr>ksMachineState := (ksMachineState s\<lparr>irq_state := irq_state (ksMachineState s) + 1\<rparr>)\<rparr>)\<rbrace> doMachineOp getActiveIRQ \<lbrace>P\<rbrace>"
-  apply(simp add: doMachineOp_def getActiveIRQ_def)
+  "\<lbrace>\<lambda>s. P (irq_at (irq_state (ksMachineState s) + 1) (irq_masks (ksMachineState s))) (s\<lparr>ksMachineState := (ksMachineState s\<lparr>irq_state := irq_state (ksMachineState s) + 1\<rparr>)\<rparr>)\<rbrace> doMachineOp (getActiveIRQ in_kernel)\<lbrace>P\<rbrace>"
+  apply(simp add: doMachineOp_def getActiveIRQ_def non_kernel_IRQs_def)
   apply(wp modify_wp | wpc)+
   apply clarsimp
   apply(erule use_valid)
@@ -629,7 +629,7 @@ definition
 definition
   handlePreemption_if :: "(MachineTypes.register \<Rightarrow> 32 word) \<Rightarrow> (MachineTypes.register \<Rightarrow> 32 word) kernel" where
   "handlePreemption_if tc \<equiv> do 
-     irq \<leftarrow> doMachineOp getActiveIRQ; 
+     irq \<leftarrow> doMachineOp (getActiveIRQ False);
      when (irq \<noteq> None) $ handleInterrupt (the irq);
      return tc
    od"
@@ -678,7 +678,7 @@ lemma handlePreemption_ex_abs[wp]:
   apply (rule hoare_pre)
    apply (rule corres_ex_abs_lift[OF handle_preemption_if_corres])
    apply (wp handle_preemption_if_invs)
-  apply (fastforce simp: ex_abs_def)
+  apply (fastforce simp: ex_abs_def non_kernel_IRQs_def)
    done
 
 lemma handle_preemption_if_valid_domain_time:
@@ -1099,6 +1099,7 @@ lemmas preserves_lifts = preserves_lift_ret preserves_lift preserves_lift'
 defs step_restrict_def: 
   "step_restrict \<equiv> \<lambda>s. s \<in> has_srel_state (lift_fst_rel (lift_snd_rel state_relation)) full_invs_if'"
 
+context begin interpretation Arch .
 lemma abstract_invs:
   "global_automaton_invs check_active_irq_A_if (do_user_op_A_if uop)
                          kernel_call_A_if kernel_handle_preemption_if
@@ -1149,7 +1150,8 @@ lemma abstract_invs:
       subgoal for tc
         apply (rule hoare_pre)
          apply (wp handle_preemption_if_invs)
-         apply (wp handle_preemption_if_valid_domain_time, fastforce)
+         apply (wp handle_preemption_if_valid_domain_time)
+        apply (clarsimp simp: non_kernel_IRQs_def)
         done
      (* KernelSchedule \<rightarrow> KernelExit *)
      apply (rule preserves_lifts, simp add: full_invs_if_def)
@@ -1159,6 +1161,7 @@ lemma abstract_invs:
     subgoal by (clarsimp cong: conj_cong | wp)+
    apply (fastforce simp: full_invs_if_def ADT_A_if_def step_restrict_def)+
   done
+end
 
 definition ADT_H_if where
 "ADT_H_if uop \<equiv> \<lparr>Init = \<lambda>s. ({user_context_of s} \<times> {s'. absKState s' = (internal_state_if s)}) \<times> {sys_mode_of s} \<inter> full_invs_if', 
