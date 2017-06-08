@@ -1741,6 +1741,17 @@ lemma createMappingEntries_valid_pte_slots'2:
    apply (wp | simp add:valid_pte_slots'2_def)+
  done
 
+(* FIXME: move *)
+(* this one is specialised to a PDE for a supersection *)
+lemma vaddr_segment_nonsense6:
+  "is_aligned (p :: word32) pdBits \<Longrightarrow>
+   (p + (vaddr >> 20 << 2) && ~~ mask pdBits) = p"
+  apply (rule is_aligned_add_helper[THEN conjunct2])
+   apply (erule is_aligned_weaken, simp)
+  apply (simp add: pdBits_def pdeBits_def)
+  apply (rule shiftl_less_t2n[where m=14 and n=2 and 'a=machine_word_len, simplified])
+  apply (rule shiftr_less_t2n'[where m=12 and n=20 and 'a=machine_word_len, simplified])
+  done
 
 (* replay of proof in Arch_R with stronger validity result *)
 lemma createMappingEntries_valid_pde_slots'2:
@@ -1755,6 +1766,8 @@ lemma createMappingEntries_valid_pde_slots'2:
    apply (clarsimp simp: lookup_pd_slot_def Let_def mask_add_aligned)
    apply (rule conjI)
     apply (erule less_kernelBase_valid_pde_offset'')
+    apply (rule conjI)
+    apply (clarsimp simp: vaddr_segment_nonsense6)
     apply (rule_tac x= 0 in exI)
     apply simp
     apply (erule aligned_add_aligned
@@ -1762,35 +1775,31 @@ lemma createMappingEntries_valid_pde_slots'2:
       apply (simp add:pdBits_def)
      apply (simp add:vmsz_aligned'_def)
     apply simp
-  apply (rule hoare_pre, wp)
-  apply (clarsimp simp: vmsz_aligned'_def page_directory_at'_def del: ballI)
-  apply (subst p_0x3C_shift)
-   apply (clarsimp simp: lookup_pd_slot_def Let_def page_directory_at'_def)
-   apply (erule aligned_add_aligned)
-     apply (rule is_aligned_shiftl, rule is_aligned_shiftr)
-     apply simp
-    apply (simp add: pdBits_def pageBits_def word_bits_def)
-   apply (simp add: pdBits_def pageBits_def)
+    apply (rule hoare_pre, wp)
+    apply (clarsimp simp: vmsz_aligned'_def page_directory_at'_def lookup_pd_slot_def)
+    apply (rule conjI)
+    subgoal -- "valid_pde_mapping_offset'"
+     apply (clarsimp simp: superSectionPDEOffsets_def length_upto_enum_step pdeBits_def)
+     apply (clarsimp simp: upto_enum_step_def upto_enum_def comp_def)
+     apply (clarsimp simp: linorder_not_less field_simps mask_add_aligned)
+     apply (erule less_kernelBase_valid_pde_offset', simp+)
+     apply (rule word_of_nat_le, simp)
+     done
   apply (rule conjI)
-   apply (clarsimp simp: upto_enum_step_def linorder_not_less pd_bits_def
-     lookup_pd_slot_def Let_def field_simps mask_add_aligned
-     page_directory_at'_def pdBits_def pageBits_def)
-   apply (erule less_kernelBase_valid_pde_offset'[unfolded pdBits_def pageBits_def, simplified], 
-     simp+)
-  apply (clarsimp simp:upto_enum_step_def
-                 split: if_split)
-  apply (clarsimp simp: upto_enum_def upt_conv_Cons[where i=0]
-                        lookup_pd_slot_eq[unfolded pd_bits_def pageBits_def, simplified])
-  apply (rule context_conjI)
-   apply (rule leD)
-   apply (rule is_aligned_no_wrap'[where sz = 6,rotated],simp)
-   apply (erule is_aligned_lookup_pd_slot)
-   apply (erule is_aligned_weaken,simp)
-  apply (clarsimp simp:upto_enum_def hd_map_simp)
-  apply (rule exI[where x=4], simp)
-  apply (erule is_aligned_lookup_pd_slot)
-  apply (erule is_aligned_weaken,simp)
- done
+   subgoal -- "pde_at'"
+     apply (clarsimp simp: superSectionPDEOffsets_def length_upto_enum_step pdeBits_def)
+     apply (clarsimp simp:upto_enum_step_def upto_enum_def hd_map_simp comp_def)
+       apply (simp add: vaddr_segment_nonsense6)
+     done
+  apply (rule_tac x = 4 in exI)
+  apply (clarsimp simp: superSectionPDEOffsets_def length_upto_enum_step pdeBits_def)
+  apply (clarsimp simp:upto_enum_step_def upto_enum_def hd_map_simp comp_def isSuperSectionPDE_def)
+  apply (erule aligned_add_aligned)
+   apply (rule is_aligned_shiftl, simp)
+   apply (rule is_aligned_shiftr)
+   apply simp
+  apply (simp add: pdBits_def)
+  done
 
 (* FIXME : move *)
 lemma of_nat_ucast:
