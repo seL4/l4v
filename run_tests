@@ -16,8 +16,8 @@ DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 # Add repo version of Isabelle to our path.
 export PATH="${DIR}/isabelle/bin:$PATH"
 
-# Export L4V_ARCH variable as ARM_HYP
-export L4V_ARCH="${L4V_ARCH:-ARM_HYP}"
+# Export L4V_ARCH variable as ARM (Default)
+export L4V_ARCH="${L4V_ARCH:-ARM}"
 echo "Testing for L4V_ARCH=${L4V_ARCH}:"
 
 # Enable quick_and_dirty mode for various images
