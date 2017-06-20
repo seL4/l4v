@@ -27,7 +27,7 @@
     </sequence>
 
     <!-- CRefine -->
-    <sequence depends="CParser">
+    <sequence depends="CParser haskell-translator">
         <test name="CKernel" cpu-timeout="10800">make CKernel</test>
         <test name="CSpec" cpu-timeout="7200">make CSpec</test>
         <test name="CBaseRefine" depends="Refine" cpu-timeout="28800">make CBaseRefine</test>
