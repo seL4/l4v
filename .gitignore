@@ -31,7 +31,7 @@
 /spec/design/ARM/*.thy
 /spec/design/ARM_HYP/*.thy
 
-/spec/machine/ARM/MachineTypes.thy
+/spec/machine/*/MachineTypes.thy
 
 CFunDump.txt
 umm_types.txt
