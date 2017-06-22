@@ -40,7 +40,7 @@ sig
   val gen_modify_goalstring : csenv -> string -> string list -> string
 
   val modifies_vcg_tactic : local_theory -> int -> tactic
-  val modifies_tactic : local_theory -> tactic
+  val modifies_tactic : thm -> local_theory -> tactic
 
   val prove_all_modifies_goals_local : csenv -> (string -> bool) -> typ list ->
                                        local_theory -> local_theory
@@ -135,8 +135,7 @@ in
   List.foldl mk_mex meq_t vartypes
 end
 
-
-fun gen_modify_goal thy tyargs gamma fname mvars = let
+fun gen_modify_goal_pair thy tyargs gamma fname mvars = let
   val state_ty = hd tyargs
   val name_ty = List.nth(tyargs, 1)
   val com_ty = mk_com_ty tyargs
@@ -145,39 +144,44 @@ fun gen_modify_goal thy tyargs gamma fname mvars = let
   val sigma = Free("\<sigma>", state_ty)
   val t = Free("t", state_ty)
 
-  val arg1_element_ty =
+  val theta_element_ty =
       list_mk_prod_ty [stateset_ty, name_ty, stateset_ty, stateset_ty]
-  val arg1_ty = mk_set_type arg1_element_ty
+  val theta_ty = mk_set_type theta_element_ty
   val hoarep_t =
       Const(@{const_name "hoarep"},
             (name_ty --> mk_option_ty com_ty) -->
-            arg1_ty -->
+            theta_ty -->
             mk_set_type error_ty -->
             stateset_ty -->
             com_ty -->
             stateset_ty -->
             stateset_ty -->
             bool)
-  val arg1_t = mk_empty arg1_element_ty
-  val arg2_t = mk_UNIV error_ty
-  val arg3_t = list_mk_set state_ty [sigma]
-  val arg4_t = Const(@{const_name "Language.com.Call"},
+  val theta_t = mk_empty theta_element_ty
+  val faults_t = mk_UNIV error_ty
+  val pre_t = list_mk_set state_ty [sigma]
+  val prog_t = Const(@{const_name "Language.com.Call"},
                      name_ty --> mk_com_ty tyargs) $
                Const(Sign.intern_const
                          thy
                          (fname ^ HoarePackage.proc_deco),
                      name_ty)
-  (* arg5 is the complicated Collect term *)
-  val arg5_t = let
+  (* post_t is the complicated Collect term *)
+  val post_t = let
     val mexxed_t = gen_modify_body thy state_ty sigma t mvars
   in
     mk_collect_t state_ty $ mk_abs(t, mexxed_t)
   end
-  val arg6_t = mk_empty state_ty
+  val abr_t = mk_empty state_ty
+  val goal_t = hoarep_t $ gamma $ theta_t $ faults_t $ pre_t $ prog_t $ post_t $ abr_t
 in
-  mk_forall(sigma,
-            hoarep_t $ gamma $ arg1_t $ arg2_t $ arg3_t $ arg4_t $
-                     arg5_t $ arg6_t)
+  (mk_abs(sigma, post_t), mk_forall(sigma, goal_t))
+end
+
+fun gen_modify_goal thy tyargs gamma fname mvars = let
+  val (_, goal) = gen_modify_goal_pair thy tyargs gamma fname mvars
+in
+  goal
 end
 
 fun munge_tactic ctxt goal msgf tac = let
@@ -203,20 +207,62 @@ in
   Seq.of_list res
 end
 
-fun modifies_tactic ctxt = let
+fun modifies_tactic mod_inv_prop ctxt = let
+  val mip_intros = [mod_inv_prop] RL @{thms modifies_inv_intros}
   val gsurj = Proof_Context.get_thm ctxt "globals.surjective"
-  val geqs = map (fn t => [gsurj, gsurj] MRS t)
-    @{thms asm_store_eq_helper}
+  val geqs = map (fn t => [gsurj, gsurj] MRS t) @{thms asm_store_eq_helper}
   val gsp = Proof_Context.get_thms ctxt "globals.splits"
 in
-  modifies_vcg_tactic ctxt 1 THEN
-  ALLGOALS (clarsimp_tac ctxt) THEN
-  ALLGOALS (TRY o resolve_tac ctxt @{thms asm_spec_enabled}) THEN
-  ALLGOALS (clarsimp_tac (ctxt addSEs @{thms asm_specE state_eqE}
-      addsimps (gsp @ @{thms state.splits}))) THEN
-  ALLGOALS (clarsimp_tac (ctxt addsimps geqs)) THEN
-  ALLGOALS (TRY o REPEAT_ALL_NEW (resolve_tac ctxt [exI])) THEN
-  ALLGOALS (asm_full_simp_tac ctxt)
+  EVERY [
+    HoarePackage.hoare_rule_tac ctxt @{thms HoarePartial.ProcNoRec1} 1,
+    REPEAT_ALL_NEW (resolve_tac ctxt (@{thms allI} @ mip_intros)) 1,
+    ALLGOALS (modifies_vcg_tactic ctxt),
+    ALLGOALS (clarsimp_tac ctxt),
+    ALLGOALS (TRY o resolve_tac ctxt @{thms asm_spec_enabled}),
+    ALLGOALS (clarsimp_tac
+                (ctxt addSEs @{thms asm_specE state_eqE} addsimps (gsp @ @{thms state.splits}))),
+    ALLGOALS (clarsimp_tac (ctxt addsimps geqs)),
+    ALLGOALS (TRY o REPEAT_ALL_NEW (resolve_tac ctxt [exI])),
+    ALLGOALS (asm_full_simp_tac ctxt)
+  ]
+end
+
+fun get_mod_inv_prop ctxt post_abs mod_inv_props = let
+  fun prove_mod_inv_prop () = let
+    val mi_prop_ty = fastype_of post_abs --> HOLogic.boolT
+    fun mi_goal prop = HOLogic.mk_Trueprop (Const (prop, mi_prop_ty) $ post_abs)
+    fun mi_prop_tac _ = let
+      val globals_equality = Proof_Context.get_thm ctxt "globals.equality"
+      fun mi_refl_tac _ =
+        simp_tac (clear_simpset ctxt addsimps @{thms modifies_inv_refl_def mex_def meq_def}) 1 THEN
+        resolve_tac ctxt @{thms allI} 1 THEN
+        resolve_tac ctxt @{thms CollectI} 1 THEN
+        TRY (REPEAT_ALL_NEW (resolve_tac ctxt @{thms exI}) 1) THEN
+        resolve_tac ctxt [globals_equality] 1 THEN
+        ALLGOALS (simp_tac (clear_simpset ctxt addsimprocs [Record.simproc]))
+      fun mi_incl_tac _ =
+        simp_tac (clear_simpset ctxt addsimps @{thms modifies_inv_incl_def mex_def meq_def}) 1 THEN
+        resolve_tac ctxt @{thms allI} 1 THEN
+        resolve_tac ctxt @{thms allI} 1 THEN
+        resolve_tac ctxt @{thms impI} 1 THEN
+        resolve_tac ctxt @{thms Collect_mono} 1 THEN
+        TRY (REPEAT_ALL_NEW (resolve_tac ctxt @{thms ex_mono}) 1) THEN
+        eresolve_tac ctxt @{thms CollectE} 1 THEN
+        TRY (REPEAT_ALL_NEW (eresolve_tac ctxt @{thms exE}) 1) THEN
+        clarsimp_tac ctxt 1
+      val mi_refl = Goal.prove ctxt [] [] (mi_goal @{const_name modifies_inv_refl}) mi_refl_tac
+      val mi_incl = Goal.prove ctxt [] [] (mi_goal @{const_name modifies_inv_incl}) mi_incl_tac
+    in
+      REPEAT_ALL_NEW (resolve_tac ctxt (mi_refl :: mi_incl :: @{thms modifies_inv_prop})) 1
+    end
+    val mi_prop = Goal.prove_future ctxt [] [] (mi_goal @{const_name modifies_inv_prop}) mi_prop_tac
+  in
+    (mi_prop, Termtab.update (post_abs, mi_prop) mod_inv_props)
+  end
+in
+  case Termtab.lookup mod_inv_props post_abs of
+      SOME mi_prop => (mi_prop, mod_inv_props)
+    | NONE => prove_mod_inv_prop ()
 end
 
 fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
@@ -231,7 +277,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
   val gamma_t = Syntax.check_term lthy (Const(gamma_nm, dummyT))
   val {callgraph,callers} = compute_callgraphs csenv
 
-  fun do_one (fname, (failedsofar, lthy)) = let
+  fun do_one (fname, (failedsofar, mod_inv_props, lthy)) = let
       val _ = Feedback.informStr (0, "Beginning modifies proof for singleton " ^ fname)
       val timer = Timer.startCPUTimer ()
 
@@ -244,7 +290,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
     in
       case get_modifies csenv fname of
         NONE => (modifies_msg "can't do modifies proof" ();
-                 (Binaryset.add(failedsofar,fname), lthy))
+                 (Binaryset.add(failedsofar,fname), mod_inv_props, lthy))
       | SOME mods => let
           val mvlist = Binaryset.listItems mods
           val mvlist =
@@ -258,15 +304,12 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
         in
           if Binaryset.isEmpty i then let
               val thy = Proof_Context.theory_of lthy
-              val goal = gen_modify_goal thy tyargs gamma_t fname mvlist
-              val th = munge_tactic lthy goal (modifies_msg "completed")
-                modifies_tactic
-              val (_, lthy) =
-                      Local_Theory.note
-                          ((Binding.name (fname ^ "_modifies"), []), [th])
-                          lthy
+              val (post_abs, goal) = gen_modify_goal_pair thy tyargs gamma_t fname mvlist
+              val (mod_inv_prop, mod_inv_props') = get_mod_inv_prop lthy post_abs mod_inv_props
+              val th = munge_tactic lthy goal (modifies_msg "completed") (modifies_tactic mod_inv_prop)
+              val (_, lthy) = Local_Theory.note ((Binding.name (fname ^ "_modifies"), []), [th]) lthy
             in
-              (failedsofar, lthy)
+              (failedsofar, mod_inv_props', lthy)
             end
           else let
               val example = valOf (Binaryset.find (fn _ => true) i)
@@ -274,12 +317,12 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                           ("not attempted, as it calls a function ("
                            ^ example ^ ") that has failed")
             in
-              (Binaryset.add(failedsofar, fname), lthy)
+              (Binaryset.add(failedsofar, fname), mod_inv_props, lthy)
             end
         end
     end
   exception NoMods of string Binaryset.set
-  fun do_recgroup (fnlist, (failedsofar, lthy)) = let
+  fun do_recgroup (fnlist, (failedsofar, mod_inv_props, lthy)) = let
     val n = length fnlist (* >= 1 *)
     val rec_thm = HoarePackage.gen_proc_rec lthy HoarePackage.Partial n
     val mods = valOf (get_modifies csenv (hd fnlist))
@@ -325,9 +368,9 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                                  lthy))
       val noted = ListPair.foldl note_it lthy (fnlist, nway_thms)
     in
-      (failedsofar, noted)
+      (failedsofar, mod_inv_props, noted)
     end
-  end handle NoMods newset => (newset, lthy)
+  end handle NoMods newset => (newset, mod_inv_props, lthy)
 
 
   fun do_scc (args as (fnlist, acc)) =
@@ -350,8 +393,8 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                             graph = lift callgraph,
                             converse = lift callers}
                           (get_functions csenv)
-  val (_, lthy) =
-      List.foldl do_scc (Binaryset.empty String.compare, lthy) sorted_fnames
+  val acc_init = (Binaryset.empty String.compare, Termtab.empty, lthy)
+  val (_, _, lthy) = List.foldl do_scc acc_init sorted_fnames
 in
   lthy
 end

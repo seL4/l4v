@@ -15,6 +15,7 @@ imports
   "PrettyProgs"
   "StaticFun"
   "IndirectCalls"
+  "ModifiesProofs"
 keywords
   "install_C_file"
   "install_C_types"
@@ -38,38 +39,6 @@ definition
   ptr_range :: "'a::c_type ptr \<Rightarrow> addr set" where
   "ptr_range p \<equiv> {ptr_val (p::'a ptr) ..<
       ptr_val p + word_of_int(int(size_of (TYPE('a)))) }"
-
-definition
-  creturn :: "((c_exntype \<Rightarrow> c_exntype) \<Rightarrow> ('c, 'd) state_scheme \<Rightarrow> ('c, 'd) state_scheme)
-      \<Rightarrow> (('a \<Rightarrow> 'a) \<Rightarrow> ('c, 'd) state_scheme \<Rightarrow> ('c, 'd) state_scheme)
-      \<Rightarrow> (('c, 'd) state_scheme \<Rightarrow> 'a) \<Rightarrow> (('c, 'd) state_scheme,'p,'f) com"
-where
-  "creturn rtu xfu v \<equiv> (Basic (\<lambda>s. xfu (\<lambda>_. v s) s);; (Basic (rtu (\<lambda>_. Return));; THROW))"
-
-definition
-  creturn_void :: "((c_exntype \<Rightarrow> c_exntype) \<Rightarrow> ('c, 'd) state_scheme
-      \<Rightarrow> ('c, 'd) state_scheme) \<Rightarrow> (('c, 'd) state_scheme,'p,'f) com"
-where
-  "creturn_void rtu \<equiv> (Basic (rtu (\<lambda>_. Return));; THROW)"
-
-definition
-  cbreak :: "((c_exntype \<Rightarrow> c_exntype) \<Rightarrow> ('c, 'd) state_scheme
-      \<Rightarrow> ('c, 'd) state_scheme) \<Rightarrow> (('c, 'd) state_scheme,'p,'f) com"
-where
-  "cbreak rtu \<equiv> (Basic (rtu (\<lambda>_. Break));; THROW)"
-
-definition
-  ccatchbrk :: "( ('c, 'd) state_scheme \<Rightarrow> c_exntype) \<Rightarrow> (('c, 'd) state_scheme,'p,'f) com"
-where
-  "ccatchbrk rt \<equiv> Cond {s. rt s = Break} SKIP THROW"
-
-definition
-  cchaos :: "('b \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> ('a,'c,'d) com"
-where
-  "cchaos upd \<equiv> Spec { (s0,s) . \<exists>v. s = upd v s0 }"
-
-definition
-  "guarded_spec_body F R = Guard F (fst ` R) (Spec R)"
 
 lemma guarded_spec_body_wp [vcg_hoare]:
 "P \<subseteq>
