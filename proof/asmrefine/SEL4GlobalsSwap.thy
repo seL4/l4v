@@ -32,9 +32,9 @@ lemma globals_update_eq_iff:
   apply (rule state.fold_congs, simp+)
   done
 
-instance ptr :: (c_type)oneMB_packed ..
-instance tcb_queue_C :: oneMB_packed ..
-instance region_C :: oneMB_packed ..
+instance ptr :: (c_type)array_outer_packed ..
+instance tcb_queue_C :: array_outer_packed ..
+instance region_C :: array_outer_packed ..
 
 locale graph_refine_locale = kernel_all_substitute
     + assumes globals_list_distinct:

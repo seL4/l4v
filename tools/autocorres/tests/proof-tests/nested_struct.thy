@@ -16,8 +16,8 @@ theory nested_struct imports "../../AutoCorres" begin
 
 install_C_file "nested_struct.c"
 (* Nested struct translation currently only works for packed_type types. *)
-instance s1_C :: oneMB_packed by intro_classes auto
-instance s3_C :: oneMB_packed by intro_classes auto
+instance s1_C :: array_outer_packed by intro_classes auto
+instance s3_C :: array_outer_packed by intro_classes auto
 autocorres "nested_struct.c"
 
 context nested_struct begin

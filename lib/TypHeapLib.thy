@@ -412,7 +412,7 @@ lemma c_guard_array_c_guard:
 lemma c_guard_array_field:
   assumes parent_cguard: "c_guard (p :: 'a :: mem_type ptr)"
   and subfield: "field_ti TYPE('a :: mem_type) f = Some t"
-  and type_match: "export_uinfo t = export_uinfo (typ_info_t TYPE(('b :: oneMB_size, 'c :: fourthousand_count) array))"
+  and type_match: "export_uinfo t = export_uinfo (typ_info_t TYPE(('b :: array_outer_max_size, 'c :: array_max_count) array))"
   shows "c_guard (Ptr &(p\<rightarrow>f) :: 'b ptr)"
   by (metis c_guard_array_c_guard c_guard_field parent_cguard ptr_coerce.simps subfield type_match)
 

@@ -656,22 +656,19 @@ end
 
 text {* Arrays of packed types are in turn packed *}
 
-class oneMB_packed = packed_type + oneMB_size
-class twoToSix_packed = oneMB_packed + twoToSix_size
+class array_outer_packed = packed_type + array_outer_max_size
+class array_inner_packed = array_outer_packed + array_inner_max_size
 
-instance word :: (len8)oneMB_packed ..
-instance word :: (len8)twoToSix_packed ..
+instance word :: (len8)array_outer_packed ..
+instance word :: (len8)array_inner_packed ..
 
-instantiation array :: (oneMB_packed, fourthousand_count) packed_type
-begin
-instance
- apply(intro_classes)
+instance array :: (array_outer_packed, array_max_count) packed_type
+  apply(intro_classes)
    apply (simp add: td_fafu_idem_intro_simps)
   apply (simp add: td_fa_hi_intro_simps)
   done
-end
 
-instance array :: (twoToSix_packed, fourthousand_count) oneMB_packed ..
+instance array :: (array_inner_packed, array_max_count) array_outer_packed ..
 
 section {* Theorems about packed types *}
 

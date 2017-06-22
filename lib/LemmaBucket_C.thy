@@ -845,15 +845,15 @@ lemma heap_update_Array_element'':
 lemmas heap_update_Array_element'
     = heap_update_Array_element''[simplified array_ptr_index_simps]
 
-lemma fourthousand_size:
-  "CARD('b :: fourthousand_count) * size_of TYPE('a :: oneMB_size) < 2 ^ 32"
-  using oneMB_size_ax[where 'a='a] fourthousand_count_ax[where 'a='b]
+lemma array_count_size:
+  "CARD('b :: array_max_count) * size_of TYPE('a :: array_outer_max_size) < 2 ^ 32"
+  using array_outer_max_size_ax[where 'a='a] array_max_count_ax[where 'a='b]
   apply (clarsimp dest!: nat_le_Suc_less_imp)
   apply (drule(1) mult_mono, simp+)
   done
 
 lemmas heap_update_Array_element
-    = heap_update_Array_element'[OF refl _ fourthousand_size]
+    = heap_update_Array_element'[OF refl _ array_count_size]
 
 lemma typ_slice_list_cut:
   "\<lbrakk> (\<forall>x \<in> set xs. size_td (dt_fst x) = m); m \<noteq> 0; n < (length xs * m) \<rbrakk>

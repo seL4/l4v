@@ -674,11 +674,11 @@ lemma struct_rewrite_guard_c_guard_field [heap_abs]:
      (\<lambda>s. c_guard (Ptr (field_lvalue (p s :: 'a ptr) field_name) :: 'f ptr))"
   by (simp add: valid_struct_field_def struct_rewrite_expr_def struct_rewrite_guard_def)
 
-lemma align_of_array: "align_of TYPE(('a :: oneMB_size)['b' :: fourthousand_count]) = align_of TYPE('a)"
+lemma align_of_array: "align_of TYPE(('a :: array_outer_max_size)['b' :: array_max_count]) = align_of TYPE('a)"
   by (simp add: align_of_def align_td_array)
 
 lemma c_guard_array:
-  "\<lbrakk> 0 \<le> k; nat k < CARD('b); c_guard (p :: (('a::oneMB_size)['b::fourthousand_count]) ptr) \<rbrakk>
+  "\<lbrakk> 0 \<le> k; nat k < CARD('b); c_guard (p :: (('a::array_outer_max_size)['b::array_max_count]) ptr) \<rbrakk>
    \<Longrightarrow> c_guard (ptr_coerce p +\<^sub>p k :: 'a ptr)"
   apply (clarsimp simp: ptr_add_def c_guard_def c_null_guard_def)
   apply (rule conjI[rotated])
@@ -698,7 +698,7 @@ lemma c_guard_array:
   done
 
 lemma struct_rewrite_guard_c_guard_Array_field [heap_abs]:
-  "\<lbrakk> valid_struct_field st field_name (field_getter :: ('a :: packed_type) \<Rightarrow> ('f::oneMB_packed ['n::fourthousand_count])) field_setter t_hrs t_hrs_update;
+  "\<lbrakk> valid_struct_field st field_name (field_getter :: ('a :: packed_type) \<Rightarrow> ('f::array_outer_packed ['n::array_max_count])) field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_guard Q (\<lambda>s. c_guard (p' s)) \<rbrakk> \<Longrightarrow>
    struct_rewrite_guard (\<lambda>s. P s \<and> Q s \<and> 0 \<le> k \<and> nat k < CARD('n))
@@ -764,7 +764,7 @@ lemma struct_rewrite_expr_field [heap_abs]:
 (* Descend into struct fields that are themselves arrays. *)
 lemma struct_rewrite_expr_Array_field [heap_abs]:
   "\<lbrakk> valid_struct_field st field_name
-                        (field_getter :: ('a :: packed_type) \<Rightarrow> 'f::oneMB_packed ['n::fourthousand_count])
+                        (field_getter :: ('a :: packed_type) \<Rightarrow> 'f::array_outer_packed ['n::array_max_count])
                         field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_expr Q a (\<lambda>s. h_val (hrs_mem (t_hrs s)) (p' s)) \<rbrakk>
@@ -819,9 +819,9 @@ lemma heap_update_field_unpacked:
 
 (* \<approx> heap_update_Array_element. Would want this for struct_rewrite_modifies_Array_field. *)
 lemma heap_update_Array_element_unpacked:
-  "n < CARD('b::fourthousand_count) \<Longrightarrow>
+  "n < CARD('b::array_max_count) \<Longrightarrow>
    heap_update (ptr_coerce p' +\<^sub>p int n) w hp =
-   heap_update (p'::('a::oneMB_size['b::fourthousand_count]) ptr)
+   heap_update (p'::('a::array_outer_max_size['b::array_max_count]) ptr)
                (Arrays.update (h_val hp p') n w) hp"
   oops
 
@@ -918,7 +918,7 @@ lemma struct_rewrite_modifies_field__unused:
   done
 
 lemma struct_rewrite_modifies_Array_field__unused:
-  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::packed_type) \<Rightarrow> (('f::oneMB_packed)['n::fourthousand_count])) field_setter t_hrs t_hrs_update;
+  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::packed_type) \<Rightarrow> (('f::array_outer_packed)['n::array_max_count])) field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_expr Q f' f;
      struct_rewrite_modifies R
@@ -1021,7 +1021,7 @@ lemma struct_rewrite_modifies_field [heap_abs]:
 
 (* FIXME: this is nearly a duplicate. Would a standalone array rule work instead? *)
 lemma struct_rewrite_modifies_Array_field [heap_abs]:
-  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::packed_type) \<Rightarrow> (('f::oneMB_packed)['n::fourthousand_count])) field_setter t_hrs t_hrs_update;
+  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::packed_type) \<Rightarrow> (('f::array_outer_packed)['n::array_max_count])) field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_expr Q f' f;
      \<And>s. heap_lift__wrap_h_val (h_val_p' s) (h_val (hrs_mem (t_hrs s)) (p' s));
@@ -1385,7 +1385,7 @@ lemma heap_abs_expr_c_guard_array [heap_abs]:
       abs_expr st P x' (\<lambda>s. ptr_coerce (x s) :: 'a ptr) \<rbrakk> \<Longrightarrow>
      abs_guard st
         (\<lambda>s. P s \<and> (\<forall>a \<in> set (array_addrs (x' s) CARD('b)). vgetter s a))
-        (\<lambda>s. c_guard (x s :: ('a::oneMB_size, 'b::fourthousand_count) array ptr))"
+        (\<lambda>s. c_guard (x s :: ('a::array_outer_max_size, 'b::array_max_count) array ptr))"
   apply (clarsimp simp: abs_expr_def abs_guard_def simple_lift_def heap_ptr_valid_def)
   apply (subgoal_tac "\<forall>a\<in>set (array_addrs (x' (st s)) CARD('b)). c_guard a")
    apply (erule allE, erule (1) impE)
@@ -1521,9 +1521,9 @@ lemma concat_nth_chunk:
   done
 
 lemma array_update_split:
-  "\<lbrakk> valid_typ_heap st (getter :: 's \<Rightarrow> ('a::oneMB_size) ptr \<Rightarrow> 'a) setter
+  "\<lbrakk> valid_typ_heap st (getter :: 's \<Rightarrow> ('a::array_outer_max_size) ptr \<Rightarrow> 'a) setter
                     vgetter vsetter t_hrs t_hrs_update;
-     \<forall>x \<in> set (array_addrs (ptr_coerce p) CARD('b::fourthousand_count)).
+     \<forall>x \<in> set (array_addrs (ptr_coerce p) CARD('b::array_max_count)).
         vgetter (st s) x
    \<rbrakk> \<Longrightarrow> st (t_hrs_update (hrs_mem_update (heap_update p (arr :: 'a['b]))) s) =
           fold (\<lambda>i. setter (\<lambda>x. x(ptr_coerce p +\<^sub>p int i := index arr i)))
@@ -1561,7 +1561,7 @@ lemma array_update_split:
    apply simp
 
   (* remove false dependency *)
-  apply (subst fold_heap_update_list[OF fourthousand_size])
+  apply (subst fold_heap_update_list[OF array_count_size])
   apply (rule fold_cong[OF refl refl])
 
   apply (clarsimp simp: ptr_add_def)
@@ -1620,10 +1620,10 @@ lemma fold_update_id:
   apply simp
   done
 
-lemma fourthousand_index:
-  "\<lbrakk> i < CARD('b::fourthousand_count); j < CARD('b) \<rbrakk>
+lemma array_count_index:
+  "\<lbrakk> i < CARD('b::array_max_count); j < CARD('b) \<rbrakk>
    \<Longrightarrow> (i = j) =
-        ((of_nat (i * size_of TYPE('a::oneMB_size)) :: word32)
+        ((of_nat (i * size_of TYPE('a::array_outer_max_size)) :: word32)
           = of_nat (j * size_of TYPE('a)))"
   apply (rule_tac t = "i = j" and s = "i * size_of TYPE('a) = j * size_of TYPE('a)" in subst)
    apply clarsimp
@@ -1635,7 +1635,7 @@ lemma fourthousand_index:
          rule less_trans,
           erule_tac b = "CARD('b)" in mult_strict_right_mono,
           rule sz_nzero,
-         rule fourthousand_size)+
+         rule array_count_size)+
   done
 
 (* end machinery for heap_abs_array_update *)
@@ -1652,7 +1652,7 @@ theorem heap_abs_array_update [heap_abs]:
       (\<lambda>s. setter (\<lambda>v. v(ptr_coerce (b' s) +\<^sub>p int (n' s) := v' s)) s)
       (\<lambda>s. t_hrs_update (hrs_mem_update (
               heap_update (b s) (Arrays.update ((h_val (hrs_mem (t_hrs s)) (b s))
-                                 :: ('a::oneMB_size)['b::fourthousand_count]) (n s) (v s)))) s)"
+                                 :: ('a::array_outer_max_size)['b::array_max_count]) (n s) (v s)))) s)"
   apply (clarsimp simp: abs_modifies_def abs_expr_def)
   (* rewrite heap_update of array *)
   apply (subst array_update_split
@@ -1687,7 +1687,7 @@ theorem heap_abs_array_update [heap_abs]:
      apply assumption
     apply (clarsimp simp: ptr_add_def)
     apply (subst of_nat_mult[symmetric])+
-    apply (rule fourthousand_index)
+    apply (rule array_count_index)
      apply (erule less_trans, assumption)+
    apply clarsimp
 
@@ -1696,7 +1696,7 @@ theorem heap_abs_array_update [heap_abs]:
      apply assumption
     apply (clarsimp simp: ptr_add_def)
     apply (subst of_nat_mult[symmetric])+
-    apply (erule fourthousand_index)
+    apply (erule array_count_index)
     apply assumption
    apply clarsimp
    (* index n is disjoint *)
@@ -1705,7 +1705,7 @@ theorem heap_abs_array_update [heap_abs]:
    apply (clarsimp simp: ptr_add_def)
    apply (subgoal_tac "of_nat (i * size_of TYPE('a)) \<noteq> of_nat (n s * size_of TYPE('a))")
     apply force
-   apply (subst fourthousand_index[symmetric])
+   apply (subst array_count_index[symmetric])
      apply assumption
     apply simp
    apply simp

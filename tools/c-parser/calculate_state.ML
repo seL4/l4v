@@ -227,6 +227,7 @@ in
 end
 
 fun isa_type_to_typ ctxt (ity : isa_type) = let
+  open CalculateStateArch
   fun m s = let
     val thy = Proof_Context.theory_of ctxt
     val known = (Syntax.parse_typ ctxt s; true) handle ERROR _ => false
@@ -234,16 +235,13 @@ fun isa_type_to_typ ctxt (ity : isa_type) = let
   in
     f s
   end
-  fun mk_numeral_type' sz =
-      if sz = 8192 then @{typ "ty8192"}
-      else mk_numeral_type sz
 in
   case ity of
     refty (NONE, _) => mk_ptr_ty unit
   | refty (SOME ity0, _) => mk_ptr_ty (isa_type_to_typ ctxt ity0)
   | recd (s, _) => Type (m s, [])
   | array (ity, sz, _) =>
-    Type("Arrays.array", [isa_type_to_typ ctxt ity, mk_numeral_type' sz])
+    Type("Arrays.array", [isa_type_to_typ ctxt ity, mk_array_size_type sz])
   | existing (ty, _) => ty
 end
 

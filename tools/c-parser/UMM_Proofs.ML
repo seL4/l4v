@@ -596,7 +596,7 @@ end
 
 
   (* prove that the new type is an instance of the class finite *)
-  (* prove that the new type is an instance of the class fourthousand_count *)
+  (* prove that the new type is an instance of the class array_max_count *)
 fun umm_array_calculation el_ty n st thy = let
   val _ = Feedback.informStr (0, "Proving that an array of "^Int.toString n^" "^
                    Syntax.string_of_typ (thy2ctxt thy) el_ty ^" is a mem_type")
@@ -611,19 +611,19 @@ fun umm_array_calculation el_ty n st thy = let
      This is done exploiting the fact that we have the following instance
      in our context already
 
-        instance array :: (oneMB_size, fourthousand_count) mem_type
+        instance array :: (array_outer_max_size, array_max_count) mem_type
 
-     Thanks to the neat instance declarations in ArraysMemInstance.thy
-     (all those classes with names lt<n>), the fourthousand_count for
+     Thanks to the neat instance declarations in ArchArraysMemInstance.thy
+     (all those classes with names lt<n>), the array_max_count for
      the array size will be handled automatically by type-checking.
 
      This means that we just need to do one independent instance proofs,
-     for el_ty :: oneMB_size
+     for el_ty :: array_outer_max_size
 
      Even that may be done automatically, for certain element types.  For
      example all the word types have this happen through
 
-       instance word :: (len8) oneMB_size
+       instance word :: (len8) array_outer_max_size
        instance word_length8 :: len8
        instance word_length16 :: len8
        instance word_length32 :: len8
@@ -633,7 +633,7 @@ fun umm_array_calculation el_ty n st thy = let
 
      Arrays get to use the
 
-       instance array :: (twoToSix_size, fourthousand_count) oneMB_size
+       instance array :: (array_inner_max_size, array_max_count) array_outer_max_size
 
      information.
 
@@ -647,7 +647,7 @@ in
       val (st,thy) =
           case args of
             [] => (* will be a record type *)
-                  prove_type_in_szclass (st, thy) el_ty "ArraysMemInstance.oneMB_size"
+                  prove_type_in_szclass (st, thy) el_ty "ArchArraysMemInstance.array_outer_max_size"
           | [_] => (* can compute sizes for words and ptrs *)
             if tyname = @{type_name "Word.word"} then (st, thy)
             else if tyname = @{type_name "CTypesBase.ptr"} then (st, thy)
@@ -655,12 +655,12 @@ in
           | [a,_] => let
               val _ = tyname = @{type_name "array"} orelse
                       error "Binary type operator is not array."
-              (* a is an element type and must be in twoToSix_size *)
+              (* a is an element type and must be in array_inner_max_size *)
               val (atyname, aargs) = case a of Type p => p
                                              | _ => error "Array eltype is not Type"
             in
               case aargs of
-                [] => prove_type_in_szclass (st,thy) a "ArraysMemInstance.twoToSix_size"
+                [] => prove_type_in_szclass (st,thy) a "ArchArraysMemInstance.array_inner_max_size"
               | [_] => if atyname = @{type_name "word"} orelse
                            atyname = @{type_name "ptr"}
                         then (st, thy)

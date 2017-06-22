@@ -17,7 +17,7 @@ begin
 
 declare word_neq_0_conv [simp del]
 
-instance cte_C :: oneMB_size
+instance cte_C :: array_outer_max_size
   by intro_classes simp
 
 context begin interpretation Arch . (*FIXME: arch_split*)
