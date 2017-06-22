@@ -55,11 +55,11 @@ definition
   "mem_upd mem addr v = heap_update (Ptr addr) v mem"
 
 definition
- "store_word32 (addr :: word32) (w :: word32)
+ "store_word32 (addr :: addr) (w :: word32)
     = heap_update_list addr (rev (word_rsplit w))"
 
 definition
- "load_word32 (addr :: word32) memory
+ "load_word32 (addr :: addr) memory
     = (word_rcat (rev (heap_list memory 4 addr)) :: word32)"
 
 definition
@@ -79,7 +79,7 @@ where
       (msb x \<noteq> msb y) \<and> (msb x \<noteq> msb (x + y + cinw)))"
 
 definition
-  all_htd_updates :: "('a :: c_type) itself \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> word32
+  all_htd_updates :: "('a :: c_type) itself \<Rightarrow> word32 \<Rightarrow> addr \<Rightarrow> word32
         \<Rightarrow> heap_typ_desc \<Rightarrow> heap_typ_desc"
 where
   "all_htd_updates (tp :: ('a :: c_type) itself) x y z
@@ -91,17 +91,17 @@ where
         else if x = 4 then ptr_arr_retyps (unat z) (Ptr y :: 'a ptr)
         else ptr_arr_retyps (2 ^ unat z) (Ptr y :: 'a ptr))"
 
-type_synonym ghost_assertions = "word64 \<Rightarrow> word32"
+type_synonym ghost_assertions = "int \<Rightarrow> addr"
 
 definition
-  ghost_assertion_data_get :: "int \<Rightarrow> ('a \<Rightarrow> ghost_assertions) \<Rightarrow> 'a \<Rightarrow> word32"
+  ghost_assertion_data_get :: "int \<Rightarrow> ('a \<Rightarrow> ghost_assertions) \<Rightarrow> 'a \<Rightarrow> addr"
 where
-  "ghost_assertion_data_get k acc s = (acc s) (word_of_int k)"
+  "ghost_assertion_data_get k acc s = (acc s) k"
 
 definition
-  ghost_assertion_data_set :: "int \<Rightarrow> word32 \<Rightarrow> ((ghost_assertions \<Rightarrow> ghost_assertions) \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a"
+  ghost_assertion_data_set :: "int \<Rightarrow> addr \<Rightarrow> ((ghost_assertions \<Rightarrow> ghost_assertions) \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a"
 where
-  "ghost_assertion_data_set k v upd = upd (\<lambda>f. f (word_of_int k := v))"
+  "ghost_assertion_data_set k v upd = upd (\<lambda>f. f (k := v))"
 
 definition
   "pvalid htd (v :: ('a :: c_type) itself) x = h_t_valid htd c_guard (Ptr x :: 'a ptr)"

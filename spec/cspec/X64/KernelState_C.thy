@@ -10,10 +10,10 @@
 
 theory KernelState_C
 imports
-  "../../lib/$L4V_ARCH/WordSetup"
-  "../../lib/BitFieldProofsLib"
+  "../../../lib/$L4V_ARCH/WordSetup"
+  "../../../lib/BitFieldProofsLib"
   Kernel_C
-  Substitute
+  "../Substitute"
 begin
 
 type_synonym c_ptr_name = int

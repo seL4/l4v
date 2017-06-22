@@ -9,40 +9,17 @@
 #
 
 # Config makefile for building sel4 within the l4.verified repository
-SOURCE_ROOT=../../../../seL4
-UMM_TYPES=../../umm_types.txt
-PARSERPATH=../../../tools/c-parser/standalone-parser
+SOURCE_ROOT=../../../../../seL4
+UMM_TYPES=../umm_types.txt
+PARSERPATH=../../../../tools/c-parser/standalone-parser
 PATH:=${PARSERPATH}:${PATH}
 export PATH
 SHELL=bash
 
-ifeq ($(L4V_ARCH),ARM)
-    ARCH=arm
-    ARMV=armv7-a
-    PLAT=imx6
-    CPU=cortex-a9
-    CONFIG_DOMAIN_SCHEDULE=config_arm.c
-    TOOLPREFIX ?= arm-none-eabi-
-endif
-
-ifeq ($(L4V_ARCH),ARM_HYP)
-    ARCH=arm
-    ARMV=armv7-a
-    PLAT=tk1
-    CPU=cortex-a15
-    CONFIG_DOMAIN_SCHEDULE=config_arm.c
-    TOOLPREFIX ?= arm-none-eabi-
-endif
-
-ifeq ($(L4V_ARCH),X64)
-    ARCH=x86
-    SEL4_ARCH=x86_64
-    PLAT=pc99
-endif
-
-ifndef ARCH
-    $(error Bad value for L4V_ARCH)
-endif
+ARCH=x86
+SEL4_ARCH=x86_64
+PLAT=pc99
+CONFIG_DOMAIN_SCHEDULE=config_sched.c
 
 ifeq ($(shell which ${TOOLPREFIX}cpp),)
   ifeq ($(shell which cpp),)
@@ -52,6 +29,7 @@ ifeq ($(shell which ${TOOLPREFIX}cpp),)
     TOOLPREFIX :=
   endif
 endif
+
 # modifies are produced by the parser
 SKIP_MODIFIES=1
 FASTPATH=yes
@@ -64,7 +42,7 @@ cspec: kernel_all.c_pp ${UMM_TYPES} theories
 
 # Create "umm_types" if necessary.
 ${UMM_TYPES}: kernel_all.c_pp
-	python mk_umm_types.py --root $(L4V_REPO_PATH) $< $@
+	python ../../mk_umm_types.py --root $(L4V_REPO_PATH) $< $@
 
 include ${SOURCE_ROOT}/Makefile
 

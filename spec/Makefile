@@ -37,7 +37,7 @@ spec-check: .FORCE
 
 # Preprocess the kernel's source code and bitfield theory files.
 c-kernel: .FORCE
-	cd cspec/c && L4V_REPO_PATH=$(L4V_REPO_PATH) $(MAKE) cspec
+	cd cspec/$(L4V_ARCH)/c && L4V_REPO_PATH=$(L4V_REPO_PATH) $(MAKE) cspec
 .PHONY: c-kernel
 
 # Produce the input data for the binary verification problem at -O1
@@ -49,7 +49,8 @@ binary-verification-input: c-kernel
 # Clean
 clean:
 	rm -rf abstract/generated
-	cd cspec/c && $(MAKE) clean SKIP_PATH_CHECKS=1
+	cd cspec/$(L4V_ARCH)/c && $(MAKE) clean SKIP_PATH_CHECKS=1
+	rm -f cspec/$(L4V_ARCH)/umm_types.txt
 	rm -f umm_types.txt
 .PHONY: clean
 

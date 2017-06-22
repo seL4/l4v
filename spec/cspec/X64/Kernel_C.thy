@@ -10,9 +10,9 @@
 
 theory Kernel_C
 imports
-  "../machine/$L4V_ARCH/MachineTypes"
-  "../../lib/CTranslationNICTA"
-  "../../tools/asmrefine/CommonOps"
+  "../../machine/$L4V_ARCH/MachineTypes"
+  "../../../lib/CTranslationNICTA"
+  "../../../tools/asmrefine/CommonOps"
 begin
 
 declare Char_eq_Char_iff [simp del]
@@ -32,13 +32,13 @@ type_synonym cghost_state = "(machine_word \<rightharpoonup> vmpage_size) * (mac
     * ghost_assertions"
 
 definition
-  gs_clear_region :: "word32 \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
+  gs_clear_region :: "addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
   "gs_clear_region ptr bits gs \<equiv>
    (%x. if x \<in> {ptr..+2 ^ bits} then None else fst gs x,
     %x. if x \<in> {ptr..+2 ^ bits} then None else fst (snd gs) x, snd (snd gs))"
 
 definition
-  gs_new_frames:: "vmpage_size \<Rightarrow> word32 \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
+  gs_new_frames:: "vmpage_size \<Rightarrow> addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
   where
   "gs_new_frames sz ptr bits \<equiv> \<lambda>gs.
    if bits < pageBitsForSize sz then gs
@@ -47,7 +47,7 @@ definition
              else fst gs x, snd gs)"
 
 definition
-  gs_new_cnodes:: "nat \<Rightarrow> word32 \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
+  gs_new_cnodes:: "nat \<Rightarrow> addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
   where
   "gs_new_cnodes sz ptr bits \<equiv> \<lambda>gs.
    if bits < sz + 4 then gs
@@ -56,12 +56,12 @@ definition
                      else fst (snd gs) x, snd (snd gs))"
 
 abbreviation
-  gs_get_assn :: "int \<Rightarrow> cghost_state \<Rightarrow> word32"
+  gs_get_assn :: "int \<Rightarrow> cghost_state \<Rightarrow> machine_word"
   where
   "gs_get_assn k \<equiv> ghost_assertion_data_get k (snd o snd)"
 
 abbreviation
-  gs_set_assn :: "int \<Rightarrow> word32 \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
+  gs_set_assn :: "int \<Rightarrow> machine_word \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
   where
   "gs_set_assn k v \<equiv> ghost_assertion_data_set k v (apsnd o apsnd)"
 
@@ -70,36 +70,24 @@ declare [[allow_underscore_idents = true]]
 
 end
 
-(* workaround for the fact that the C parser wants to know the vmpage sizes*)
+(* x86-64 asm statements are not yet supported by the c-parser *)
+setup {* Context.theory_map (ASM_Ignore_Hooks.add_hook (fn _ => true)) *}
 
-(* create appropriately qualified aliases *)
 context begin interpretation Arch . global_naming vmpage_size
-
-requalify_consts ARMSmallPage ARMLargePage ARMSection ARMSuperSection
-
+requalify_consts X64SmallPage X64LargePage X64HugePage
 end
 
 install_C_file "c/kernel_all.c_pp"
   [machinety=machine_state, ghostty=cghost_state]
 
-(* hide them again *)
+hide_const
+  vmpage_size.X64SmallPage
+  vmpage_size.X64LargePage
+  vmpage_size.X64HugePage
 
-hide_const 
- vmpage_size.ARMSmallPage 
- vmpage_size.ARMLargePage 
- vmpage_size.ARMSection 
- vmpage_size.ARMSuperSection
-
-(* re-allow fully qualified accesses (for consistency). Slightly clunky *)
-
-context Arch begin 
-
-global_naming "ARM.vmpage_size"
-requalify_consts ARMSmallPage ARMLargePage ARMSection ARMSuperSection
-
-global_naming ARM
-requalify_consts ARMSmallPage ARMLargePage ARMSection ARMSuperSection
+context Arch begin
+global_naming "X64.vmpage_size" requalify_consts X64SmallPage X64LargePage X64HugePage
+global_naming "X64" requalify_consts X64SmallPage X64LargePage X64HugePage
 end
-
 
 end

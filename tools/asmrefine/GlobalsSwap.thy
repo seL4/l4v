@@ -16,11 +16,11 @@ imports
 begin
 
 datatype 'g global_data =
-    GlobalData "string" "nat" "word32 \<Rightarrow> bool" "'g \<Rightarrow> word8 list"
+    GlobalData "string" "nat" "addr \<Rightarrow> bool" "'g \<Rightarrow> word8 list"
         "word8 list \<Rightarrow> 'g \<Rightarrow> 'g"
-  | ConstGlobalData "string" "nat" "word32 \<Rightarrow> bool"
+  | ConstGlobalData "string" "nat" "addr \<Rightarrow> bool"
         "word8 list" "word8 list \<Rightarrow> bool"
-  | AddressedGlobalData "string" "nat" "word32 \<Rightarrow> bool"
+  | AddressedGlobalData "string" "nat" "addr \<Rightarrow> bool"
   (* in each case the symbol name, length in bytes, tag and constraint on
      address. for active globals a getter/setter, for const globals
      a sample value and a way to check a value *)
@@ -70,7 +70,7 @@ type_synonym 'g hrs_update = "(heap_raw_state \<Rightarrow> heap_raw_state) \<Ri
 
 definition
   global_swap :: "('g \<Rightarrow> heap_raw_state) \<Rightarrow> 'g hrs_update
-        \<Rightarrow> (string \<Rightarrow> word32) \<Rightarrow> 'g global_data \<Rightarrow> 'g \<Rightarrow> 'g"
+        \<Rightarrow> (string \<Rightarrow> addr) \<Rightarrow> 'g global_data \<Rightarrow> 'g \<Rightarrow> 'g"
 where
  "global_swap g_hrs g_hrs_upd symtab gd \<equiv>
     (case gd of GlobalData name len n g p \<Rightarrow> \<lambda>gs.
@@ -82,7 +82,7 @@ where
 
 definition
   globals_swap :: "('g \<Rightarrow> heap_raw_state) \<Rightarrow> 'g hrs_update
-        \<Rightarrow> (string \<Rightarrow> word32) \<Rightarrow> 'g global_data list \<Rightarrow> 'g \<Rightarrow> 'g"
+        \<Rightarrow> (string \<Rightarrow> addr) \<Rightarrow> 'g global_data list \<Rightarrow> 'g \<Rightarrow> 'g"
 where
  "globals_swap g_hrs g_hrs_upd symtab gds
     = foldr (global_swap g_hrs g_hrs_upd symtab) gds"
@@ -217,7 +217,7 @@ lemma hrs_htd_globals_swap:
 lemmas foldr_hrs_htd_global_swap = hrs_htd_globals_swap[unfolded globals_swap_def]
 
 definition
-  globals_list_distinct :: "word32 set \<Rightarrow> (string \<Rightarrow> word32)
+  globals_list_distinct :: "addr set \<Rightarrow> (string \<Rightarrow> addr)
         \<Rightarrow> 'g global_data list \<Rightarrow> bool"
 where
   "globals_list_distinct D symtab gds = distinct_prop (\<lambda>S T. S \<inter> T = {})
@@ -605,7 +605,7 @@ lemma globals_list_valid_optimisation:
   by blast
 
 definition
-  const_globals_in_memory :: "(string \<Rightarrow> word32) \<Rightarrow> 'g global_data list
+  const_globals_in_memory :: "(string \<Rightarrow> addr) \<Rightarrow> 'g global_data list
         \<Rightarrow> heap_mem \<Rightarrow> bool"
 where
   "const_globals_in_memory symtab xs hmem =
