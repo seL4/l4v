@@ -455,7 +455,7 @@ def main():
     args.exclude = set(args.exclude)
     bad_names = args.exclude - set(t.name for t in tests)
     if bad_names:
-        parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
+        print("[Warning] Unknown test names: %s" % (", ".join(sorted(bad_names))))
     tests_to_run = [t for t in tests_to_run if t.name not in args.exclude]
 
     # Run the tests.
