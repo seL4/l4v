@@ -18,7 +18,7 @@ hypervisor extensions on ARM.
 
 \end{impdetails}
 
-> module SEL4.Object.VCPU.ARM_HYP(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, dissociateVCPUTCB, vgicMaintenance) where
+> module SEL4.Object.VCPU.ARM(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, dissociateVCPUTCB, vgicMaintenance) where
 
 \begin{impdetails}
 
@@ -26,14 +26,14 @@ hypervisor extensions on ARM.
 > import SEL4.Model
 > import SEL4.Object.Structures
 > import SEL4.Object.Structures.TARGET
-> import SEL4.Machine.Hardware.ARM_HYP hiding (MachineMonad)
+> import SEL4.Machine.Hardware.ARM hiding (MachineMonad)
 > import SEL4.Model.StateData.TARGET
 > import SEL4.API.Failures
 > import SEL4.Object.Instances()
-> import SEL4.API.InvocationLabels.ARM_HYP
+> import SEL4.API.InvocationLabels.ARM
 > import SEL4.API.Invocation
-> import SEL4.API.Invocation.ARM_HYP as ArchInv
-> import SEL4.Machine.RegisterSet.ARM_HYP (Register(..), VCPUReg(..))
+> import SEL4.API.Invocation.ARM as ArchInv
+> import SEL4.Machine.RegisterSet.ARM (Register(..), VCPUReg(..))
 > import SEL4.API.Types
 > import SEL4.API.InvocationLabels
 > import SEL4.API.Failures.TARGET

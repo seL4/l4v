@@ -28,11 +28,13 @@ This module contains the architecture-specific thread switch code for the ARM.
 > import SEL4.Kernel.VSpace.ARM
 > import qualified SEL4.Machine.Hardware.ARM as ARMHardware
 > import {-# SOURCE #-} SEL4.Kernel.Init
-
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> import SEL4.Object.VCPU.ARM
+#endif
 
 \end{impdetails}
 
-The ARM thread switch function invalidates all caches and the TLB.
+The ARM thread switch function invalidates all caches and the TLB, and writes the IPC buffer pointer to the first word of the globals page.
 
 > switchToThread :: PPtr TCB -> Kernel ()
 > switchToThread tcb = do
@@ -51,7 +53,11 @@ Since the idle thread only accesses global mappings, there is nothing to be done
 
 > switchToIdleThread :: Kernel ()
 > switchToIdleThread = do
->     return ()
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>    vcpuSwitch Nothing
+#else
+>    return ()
+#endif
 
 There is nothing special about idle thread activation on ARM.
 

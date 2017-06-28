@@ -12,14 +12,14 @@
 
 -- this is mostly a copy of KZM with extra info for virtualisation thrown in
 -- FIXME ARMHYP TODO review other constants against C!
-module SEL4.Machine.Hardware.ARM_HYP.TK1 where
+module SEL4.Machine.Hardware.ARM.TK1 where
 
 import SEL4.Machine.RegisterSet
 import Foreign.Ptr
 import Data.Bits
 import Data.Word(Word8)
 import Data.Ix
-import SEL4.Machine.Hardware.ARM_HYP.Callbacks
+import SEL4.Machine.Hardware.ARM.Callbacks
 
 
 newtype IRQ = IRQ Word8

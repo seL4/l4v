@@ -28,6 +28,9 @@ This module contains operations on machine-specific object types for the ARM.
 > import SEL4.API.Invocation.ARM as ArchInv
 > import SEL4.Object.Structures
 > import SEL4.Kernel.VSpace.ARM
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> import SEL4.Object.VCPU.ARM
+#endif
 > import {-# SOURCE #-} SEL4.Object.TCB
 
 > import Data.Bits
@@ -59,6 +62,15 @@ ASID capabilities can be copied without modification.
 
 > deriveCap _ c@ASIDControlCap = return c
 > deriveCap _ (c@ASIDPoolCap {}) = return c
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> deriveCap _ (c@VCPUCap {}) = return c
+#endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
+
+#ifdef CONFIG_ARM_SMMU
+> deriveCap _ (c@IOSpaceCap {}) = return c
+> deriveCap _ (c@IOPageTableCap {}) = error "FIXME ARMHYP TODO IO"
+#endif /* CONFIG_ARM_SMMU */
 
 None of the ARM-specific capabilities have a user writeable data word.
 
@@ -102,9 +114,25 @@ Deletion of any mapped frame capability requires the page table slot to be locat
 
 > finaliseCap (cap@PageCap { capVPMappedAddress = Just (a, v),
 >                            capVPSize = s, capVPBasePtr = ptr }) _ =
+#ifdef CONFIG_ARM_SMMU
+>     if capVPisIOSpace cap
+>       then error "FIXME ARMHYP TODO IO"
+>       else
+#endif
 >            do
 >               unmapPage s a v ptr
 >               return NullCap
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> finaliseCap (VCPUCap { capVCPUPtr = vcpu }) True = do
+>     vcpuFinalise vcpu
+>     return NullCap
+#endif
+
+#ifdef CONFIG_ARM_SMMU
+> finaliseCap (IOSpaceCap {}) _ = error "FIXME ARMHYP TODO IOSpace"
+> finaliseCap (IOPageTableCap {}) _ = error "FIXME ARMHYP TODO IOSpace" -- IO page directory does not need to be finalised
+#endif
 
 All other capabilities need no finalisation action.
 
@@ -128,6 +156,15 @@ All other capabilities need no finalisation action.
 > sameRegionAs ASIDControlCap ASIDControlCap = True
 > sameRegionAs (a@ASIDPoolCap {}) (b@ASIDPoolCap {}) =
 >     capASIDPool a == capASIDPool b
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> sameRegionAs (a@VCPUCap {}) (b@VCPUCap {}) = capVCPUPtr a == capVCPUPtr b
+#endif
+#ifdef CONFIG_ARM_SMMU
+> sameRegionAs (a@IOSpaceCap {}) (b@IOSpaceCap {}) =
+>     capIOSpaceModuleID a == capIOSpaceModuleID b
+> sameRegionAs (a@IOPageTableCap {}) (b@IOPageTableCap {}) =
+>     capIOPTBasePtr a == capIOPTBasePtr b
+#endif
 > sameRegionAs _ _ = False
 
 > isPhysicalCap :: ArchCapability -> Bool
@@ -143,18 +180,24 @@ All other capabilities need no finalisation action.
 
 \subsection{Creating New Capabilities}
 
-Create an architecture-specific object.
+Creates a page-sized object that consists of plain words observable to the user.
 
 > placeNewDataObject :: PPtr () -> Int -> Bool -> Kernel ()
 > placeNewDataObject regionBase sz isDevice = if isDevice
 >     then placeNewObject regionBase UserDataDevice sz
 >     else placeNewObject regionBase UserData sz
 
+Create an architecture-specific object.
+
 > createObject :: ObjectType -> PPtr () -> Int -> Bool -> Kernel ArchCapability
 > createObject t regionBase _ isDevice =
 >     let funupd = (\f x v y -> if y == x then v else f y) in
 >     let pointerCast = PPtr . fromPPtr in
+#ifndef CONFIG_ARM_SMMU
 >     let mkPageCap = \sz -> PageCap isDevice (pointerCast regionBase) VMReadWrite sz Nothing
+#else
+>     let mkPageCap = \sz -> PageCap isDevice (pointerCast regionBase) VMReadWrite sz False Nothing
+#endif
 >     in case t of
 >         Arch.Types.APIObjectType _ ->
 >             fail "Arch.createObject got an API type"
@@ -171,13 +214,21 @@ Create an architecture-specific object.
 >                      (fromPPtr regionBase) (Just ARMLargePage)})
 >             return $! mkPageCap ARMLargePage
 >         Arch.Types.SectionObject -> do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>             placeNewDataObject regionBase 9 isDevice
+#else
 >             placeNewDataObject regionBase 8 isDevice
+#endif
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSection)})
 >             return $! mkPageCap ARMSection
 >         Arch.Types.SuperSectionObject -> do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>             placeNewDataObject regionBase 13 isDevice
+#else
 >             placeNewDataObject regionBase 12 isDevice
+#endif
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSuperSection)})
@@ -196,6 +247,16 @@ Create an architecture-specific object.
 >                       (VPtr $ fromPPtr regionBase + regionSize - 1)
 >                       (addrFromPPtr regionBase)
 >             return $! PageDirectoryCap (pointerCast regionBase) Nothing
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>         Arch.Types.VCPUObject -> do
+>             placeNewObject regionBase (makeObject :: VCPU) 0
+>             return $! VCPUCap (PPtr $ fromPPtr regionBase)
+#endif
+#ifdef CONFIG_ARM_SMMU
+>         Arch.Types.IOPageTableObject -> do
+>             let ptSize = ioptBits -- see comment at ioptBits
+>             error "FIXME ARMHYP TODO IO"
+#endif
 
 \subsection{Capability Invocation}
 
@@ -204,11 +265,28 @@ Create an architecture-specific object.
 >         KernelF SyscallError ArchInv.Invocation
 > decodeInvocation label args capIndex slot cap extraCaps =
 >     case cap of
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>        VCPUCap {} -> decodeARMVCPUInvocation label args capIndex slot cap extraCaps
+#endif
+#ifdef CONFIG_ARM_SMMU
+>        IOSpaceCap {} -> error "FIXME ARMHYP TODO IOSpace"
+>        IOPageTableCap {} -> error "FIXME ARMHYP TODO IO"
+#endif
 >        _ -> decodeARMMMUInvocation label args capIndex slot cap extraCaps
 
 > performInvocation :: ArchInv.Invocation -> KernelP [Word]
 > performInvocation i =
 >     case i of
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>                  ArchInv.InvokeVCPU iv -> do
+>                      withoutPreemption $ performARMVCPUInvocation iv
+#endif
+#ifdef CONFIG_ARM_SMMU
+>                  ArchInv.InvokeIOSpace _ ->
+>                      withoutPreemption $ error "FIXME ARMHYP TODO IOSpace"
+>                  ArchInv.InvokeIOPageTable _ ->
+>                      withoutPreemption $ error "FIXME ARMHYP TODO IO"
+#endif
 >                  _ -> performARMMMUInvocation i
 
 \subsection{Helper Functions}
@@ -219,6 +297,13 @@ Create an architecture-specific object.
 > capUntypedPtr (PageDirectoryCap { capPDBasePtr = PPtr p }) = PPtr p
 > capUntypedPtr ASIDControlCap = error "ASID control has no pointer"
 > capUntypedPtr (ASIDPoolCap { capASIDPool = PPtr p }) = PPtr p
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> capUntypedPtr (VCPUCap { capVCPUPtr = PPtr p }) = PPtr p
+#endif
+#ifdef CONFIG_ARM_SMMU
+> capUntypedPtr (IOSpaceCap {}) = error "FIXME ARMHYP TODO IOSpace"
+> capUntypedPtr (IOPageTableCap { capIOPTBasePtr = PPtr p }) = PPtr p
+#endif
 
 > capUntypedSize :: ArchCapability -> Word
 > capUntypedSize (PageCap {capVPSize = sz}) = bit (pageBitsForSize sz)
@@ -226,11 +311,25 @@ Create an architecture-specific object.
 > capUntypedSize (PageDirectoryCap {}) = bit pdBits
 > capUntypedSize (ASIDControlCap {}) = bit (asidHighBits + 2)
 > capUntypedSize (ASIDPoolCap {}) = bit (asidLowBits + 2)
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> capUntypedSize (VCPUCap {}) = bit vcpuBits
+#endif
+#ifdef CONFIG_ARM_SMMU
+> capUntypedSize (IOSpaceCap {}) = 0 -- invalid, use C default FIXME ARMHYP
+> capUntypedSize (IOPageTableCap {}) = bit ioptBits
+#endif
 
 
-No arch-specific thread deletion operations needed on ARM platform.
+A function called from finaliseCap in ObjectType.lhs to prepare a tcb for deletion:
 
 > prepareThreadDelete :: PPtr TCB -> Kernel ()
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> prepareThreadDelete thread = do
+>     tcbVCPU <- archThreadGet atcbVCPUPtr thread
+>     case tcbVCPU of
+>       Just ptr -> dissociateVCPUTCB ptr thread
+>       _ -> return ()
+#else
 > prepareThreadDelete _ = return ()
-
+#endif
 

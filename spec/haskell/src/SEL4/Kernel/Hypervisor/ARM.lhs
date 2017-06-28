@@ -5,10 +5,8 @@
 % the GNU General Public License version 2. Note that NO WARRANTY is provided.
 % See "LICENSE_GPLv2.txt" for details.
 %
-% @TAG(DATA61_GPL)
+% @TAG(GD_GPL)
 %
-
-The ARM target does not have any hypervisor support.
 
 \begin{impdetails}
 
@@ -31,7 +29,12 @@ The ARM target does not have any hypervisor support.
 \end{impdetails}
 
 > handleHypervisorFault :: PPtr TCB -> HypFaultType -> Kernel ()
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> handleHypervisorFault thread (ARMVCPUFault hsr) = do
+>     handleFault thread (ArchFault $ VCPUFault $ fromIntegral hsr)
+#else
 > handleHypervisorFault _ (ARMNoHypFaults) =
 >     -- no hypervisor faults on this platform
 >     return ()
+#endif
 

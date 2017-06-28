@@ -10,7 +10,12 @@
 
 This module defines the encoding of arch-specific faults.
 
+\begin{impdetails}
+
 > {-# LANGUAGE CPP #-}
+
+\end{impdetails}
+
 > module SEL4.API.Failures.ARM where
 
 \begin{impdetails}
@@ -23,5 +28,10 @@ This module defines the encoding of arch-specific faults.
 >     = VMFault {
 >             vmFaultAddress :: VPtr,
 >             vmFaultArchData :: [Word] }
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     | VCPUFault {
+>             vcpuHSR :: Word }
+>     | VGICMaintenance { vgicMaintenanceData :: Maybe Word }
+#endif
 >     deriving Show
 

@@ -8,13 +8,13 @@
 % @TAG(GD_GPL)
 %
 
-This module defines the ARM register set.
-
 \begin{impdetails}
 
 > {-# LANGUAGE CPP, GeneralizedNewtypeDeriving #-}
 
 \end{impdetails}
+
+This module defines the ARM register set.
 
 > module SEL4.Machine.RegisterSet.ARM where
 
@@ -42,7 +42,32 @@ This module defines the ARM register set.
 > exceptionMessage = [FaultInstruction, SP, CPSR]
 > syscallMessage = [R0 .. R7] ++ [FaultInstruction, SP, LR, CPSR]
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> elr_hyp = LR_svc
+
+\subsection{VCPU-saved Registers}
+
+> data VCPUReg =
+>       VCPURegSCTLR
+>     | VCPURegLRsvc
+>     | VCPURegSPsvc
+>     | VCPURegLRabt
+>     | VCPURegSPabt
+>     | VCPURegLRund
+>     | VCPURegSPund
+>     | VCPURegLRirq
+>     | VCPURegSPirq
+>     | VCPURegLRfiq
+>     | VCPURegSPfiq
+>     | VCPURegR8fiq
+>     | VCPURegR9fiq
+>     | VCPURegR10fiq
+>     | VCPURegR11fiq
+>     | VCPURegR12fiq
+>     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
+
+#endif
+
 > initContext :: [(Register, Word)]
 > initContext = [(CPSR,0x150)] -- User mode
-
 

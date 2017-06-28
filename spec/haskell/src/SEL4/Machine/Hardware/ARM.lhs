@@ -31,7 +31,7 @@ This module defines the low-level ARM hardware interface.
 
 The ARM-specific register set definitions are qualified with the "ARM" prefix, and the platform-specific hardware access functions are qualified with the "Platform" prefix. The latter module is outside the scope of the reference manual; for the executable model, it is specific to the external simulator used for user-level code.
 
-> import qualified SEL4.Machine.RegisterSet.ARM as ARM
+> import qualified SEL4.Machine.RegisterSet.TARGET as ARM
 > import qualified SEL4.Machine.Hardware.TARGET.Callbacks as Platform
 > import qualified SEL4.Machine.Hardware.TARGET.PLATFORM as Platform
 
@@ -71,7 +71,11 @@ ARM virtual memory faults are handled by one of two trap handlers: one for data 
 \subsection{Hypervisor}
 
 > data HypFaultType
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     = ARMVCPUFault Word32 -- HSR
+#else
 >     = ARMNoHypFaults
+#endif
 >     deriving Show
 
 \subsubsection{Physical Memory}
@@ -102,8 +106,13 @@ The following functions define the ARM-specific interface between the kernel and
 > pageBitsForSize :: VMPageSize -> Int
 > pageBitsForSize ARMSmallPage = 12
 > pageBitsForSize ARMLargePage = 16
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 > pageBitsForSize ARMSection = 20
 > pageBitsForSize ARMSuperSection = 24
+#else
+> pageBitsForSize ARMSection = 21
+> pageBitsForSize ARMSuperSection = 25
+#endif
 
 > getMemoryRegions :: MachineMonad [(PAddr, PAddr)]
 > getMemoryRegions = do
@@ -160,7 +169,6 @@ The following functions define the ARM-specific interface between the kernel and
 > initIRQController = do
 >     cbptr <- ask
 >     liftIO $ Platform.initIRQController cbptr
-
 
 > resetTimer :: MachineMonad ()
 > resetTimer = do
@@ -230,14 +238,28 @@ caches must be done separately.
 
 > setCurrentPD :: PAddr -> MachineMonad ()
 > setCurrentPD pd = do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     setCurrentPDPL2 pd
+#else
 >     dsb
 >     writeTTBR0 pd
 >     isb
+#endif
 
 > setHardwareASID :: HardwareASID -> MachineMonad ()
 > setHardwareASID (HardwareASID hw_asid) = do
 >     cbptr <- ask
 >     liftIO $ Platform.setHardwareASID cbptr hw_asid
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+> setCurrentPDPL2 :: PAddr -> MachineMonad ()
+> setCurrentPDPL2 = error "FIXME ARMHYP machine callback unimplemented"
+
+> writeContextIDAndPD :: HardwareASID -> PAddr -> MachineMonad ()
+> writeContextIDAndPD = error "FIXME ARMHYP  machine callback unimplemented"
+
+#endif
 
 \subsubsection{Memory Barriers}
 
@@ -426,15 +448,109 @@ implementation assumes the monitor is not modelled in our simulator.
 > getDFSR = do
 >     cbptr <- ask
 >     liftIO $ Platform.getDFSR cbptr
-
+>
 > getFAR :: MachineMonad VPtr
 > getFAR = do
 >     cbptr <- ask
 >     liftIO $ Platform.getFAR cbptr
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+> getHSR :: MachineMonad Word
+> getHSR = error "FIXME ARMHYP machine callback unimplemented"
+
+> setHCR :: Word -> MachineMonad ()
+> setHCR _hcr = error "FIXME ARMHYP machine callback unimplemented"
+
+> getHDFAR :: MachineMonad VPtr
+> getHDFAR = error "FIXME ARMHYP machine callback unimplemented"
+
+> addressTranslateS1CPR :: VPtr -> MachineMonad VPtr
+> addressTranslateS1CPR = error "FIXME ARMHYP machine callback unimplemented"
+
+> getSCTLR :: MachineMonad Word
+> getSCTLR = error "FIXME ARMHYP machine callback unimplemented"
+
+> setSCTLR :: Word -> MachineMonad ()
+> setSCTLR _sctlr = error "FIXME ARMHYP machine callback unimplemented"
+
+> getACTLR :: MachineMonad Word
+> getACTLR = error "FIXME ARMHYP machine callback unimplemented"
+
+> setACTLR :: Word -> MachineMonad ()
+> setACTLR _actlr = error "FIXME ARMHYP machine callback unimplemented"
+
+Hypervisor banked registers
+
+> set_lr_svc :: Word -> MachineMonad ()
+> set_lr_svc _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_sp_svc :: Word -> MachineMonad ()
+> set_sp_svc _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_lr_abt :: Word -> MachineMonad ()
+> set_lr_abt _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_sp_abt :: Word -> MachineMonad ()
+> set_sp_abt _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_lr_und :: Word -> MachineMonad ()
+> set_lr_und _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_sp_und :: Word -> MachineMonad ()
+> set_sp_und _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_lr_irq :: Word -> MachineMonad ()
+> set_lr_irq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_sp_irq :: Word -> MachineMonad ()
+> set_sp_irq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_lr_fiq :: Word -> MachineMonad ()
+> set_lr_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_sp_fiq :: Word -> MachineMonad ()
+> set_sp_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_r8_fiq :: Word -> MachineMonad ()
+> set_r8_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_r9_fiq :: Word -> MachineMonad ()
+> set_r9_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_r10_fiq :: Word -> MachineMonad ()
+> set_r10_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_r11_fiq :: Word -> MachineMonad ()
+> set_r11_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+> set_r12_fiq :: Word -> MachineMonad ()
+> set_r12_fiq _w = error "FIXME ARMHYP machine callback unimplemented"
+
+> get_lr_svc :: MachineMonad Word
+> get_lr_svc = error "FIXME ARMHYP machine callback unimplemented"
+> get_sp_svc :: MachineMonad Word
+> get_sp_svc = error "FIXME ARMHYP machine callback unimplemented"
+> get_lr_abt :: MachineMonad Word
+> get_lr_abt = error "FIXME ARMHYP machine callback unimplemented"
+> get_sp_abt :: MachineMonad Word
+> get_sp_abt = error "FIXME ARMHYP machine callback unimplemented"
+> get_lr_und :: MachineMonad Word
+> get_lr_und = error "FIXME ARMHYP machine callback unimplemented"
+> get_sp_und :: MachineMonad Word
+> get_sp_und = error "FIXME ARMHYP machine callback unimplemented"
+> get_lr_irq :: MachineMonad Word
+> get_lr_irq = error "FIXME ARMHYP machine callback unimplemented"
+> get_sp_irq :: MachineMonad Word
+> get_sp_irq = error "FIXME ARMHYP machine callback unimplemented"
+> get_lr_fiq :: MachineMonad Word
+> get_lr_fiq = error "FIXME ARMHYP machine callback unimplemented"
+> get_sp_fiq :: MachineMonad Word
+> get_sp_fiq = error "FIXME ARMHYP machine callback unimplemented"
+> get_r8_fiq :: MachineMonad Word
+> get_r8_fiq = error "FIXME ARMHYP machine callback unimplemented"
+> get_r9_fiq :: MachineMonad Word
+> get_r9_fiq = error "FIXME ARMHYP machine callback unimplemented"
+> get_r10_fiq :: MachineMonad Word
+> get_r10_fiq = error "FIXME ARMHYP machine callback unimplemented"
+> get_r11_fiq :: MachineMonad Word
+> get_r11_fiq = error "FIXME ARMHYP machine callback unimplemented"
+> get_r12_fiq :: MachineMonad Word
+> get_r12_fiq = error "FIXME ARMHYP machine callback unimplemented"
+
+#endif
+
 \subsubsection{Page Table Structure}
 
 The ARM architecture defines a two-level hardware-walked page table. The kernel must write entries to this table in the defined format to construct address spaces for user-level tasks.
+
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 
 The following types are Haskell representations of an entry in an ARMv6 page table. The "PDE" (page directory entry) type is an entry in the first level, and the "PTE" (page table entry) type is an entry in the second level. Note that "SuperSectionPDE" is an extension provided by some ARMv6 cores.
 
@@ -515,6 +631,92 @@ The following types are Haskell representations of an entry in an ARMv6 page tab
 >     (if global then 0 else bit 11) .|.
 >     (fromIntegral $ fromEnum rights `shiftL` 4)
 
+#else /* CONFIG_ARM_HYPERVISOR_SUPPORT */
+
+Hypervisor extensions use long page table descriptors (64-bit) for the stage 2
+translation (host-to-hypervisor). This is a three-level table system, but the
+hardware can be configured to omit the first level entirely if all second
+levels are stored contiguously. We use this configuration to preserve the usual
+page table/directory nomenclature.
+
+> -- FIXME ARMHYP global (SH) is never used so I don't know what a global page's SH would look like
+
+seL4 does not use hardware domains or parity on ARM hypervisor systems.
+
+> data PDE
+>     = InvalidPDE
+>     | PageTablePDE {
+>         pdeTable :: PAddr }
+>     | SectionPDE {
+>         pdeFrame :: PAddr,
+>         pdeCacheable :: Bool,
+>         pdeExecuteNever :: Bool,
+>         pdeRights :: VMRights }
+>     | SuperSectionPDE {
+>         pdeFrame :: PAddr,
+>         pdeCacheable :: Bool,
+>         pdeExecuteNever :: Bool,
+>         pdeRights :: VMRights }
+>     deriving (Show, Eq)
+
+> hapFromVMRights :: VMRights -> Word
+> hapFromVMRights VMKernelOnly = 0
+> hapFromVMRights VMNoAccess = 0
+> hapFromVMRights VMReadOnly = 1
+> hapFromVMRights VMReadWrite = 3
+
+> wordsFromPDE :: PDE -> [Word]
+> wordsFromPDE InvalidPDE = [0, 0]
+> wordsFromPDE (PageTablePDE table) = [w0, 0]
+>     where w0 = 3 .|. (fromIntegral table .&. 0xfffff000)
+> wordsFromPDE (SectionPDE frame cacheable xn rights) = [w0, w1]
+>     where w1 = 0 .|. (if xn then bit 22 else 0) -- no contig. hint
+>           w0 = 1 .|.
+>                (fromIntegral frame .&. 0xfffff000) .|.
+>                bit 10 .|. -- AF
+>                (hapFromVMRights rights `shiftL` 6) .|.
+>                (if cacheable then 0xf `shiftL` 2 else 0)
+> wordsFromPDE (SuperSectionPDE frame cacheable xn rights) = [w0, w1]
+>     where w1 = 0 .|. (if xn then bit 22 else 0) .|. bit 20 -- contig. hint
+>           w0 = 1 .|.
+>                (fromIntegral frame .&. 0xfffff000) .|.
+>                bit 10 .|. -- AF
+>                (hapFromVMRights rights `shiftL` 6) .|.
+>                (if cacheable then 0xf `shiftL` 2 else 0)
+
+> data PTE
+>     = InvalidPTE
+>     | LargePagePTE {
+>         pteFrame :: PAddr,
+>         pteCacheable :: Bool,
+>         pteExecuteNever :: Bool,
+>         pteRights :: VMRights }
+>     | SmallPagePTE {
+>         pteFrame :: PAddr,
+>         pteCacheable :: Bool,
+>         pteExecuteNever :: Bool,
+>         pteRights :: VMRights }
+>     deriving (Show, Eq)
+
+> wordsFromPTE :: PTE -> [Word]
+> wordsFromPTE InvalidPTE = [0, 0]
+> wordsFromPTE (SmallPagePTE frame cacheable xn rights) = [w0, w1]
+>     where w1 = 0 .|. (if xn then bit 22 else 0) .|. bit 20 -- contig. hint
+>           w0 = 3 .|.
+>                (fromIntegral frame .&. 0xfffff000) .|.
+>                bit 10 .|. -- AF
+>                (hapFromVMRights rights `shiftL` 6) .|.
+>                (if cacheable then 0xf `shiftL` 2 else 0)
+> wordsFromPTE (LargePagePTE frame cacheable xn rights) = [w0, w1]
+>     where w1 = 0 .|. (if xn then bit 22 else 0) -- no contig. hint
+>           w0 = 3 .|.
+>                (fromIntegral frame .&. 0xfffff000) .|.
+>                bit 10 .|. -- AF
+>                (hapFromVMRights rights `shiftL` 6) .|.
+>                (if cacheable then 0xf `shiftL` 2 else 0)
+
+#endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
+
 > data VMRights
 >     = VMNoAccess
 >     | VMKernelOnly
@@ -525,12 +727,29 @@ The following types are Haskell representations of an entry in an ARMv6 page tab
 > data VMAttributes = VMAttributes {
 >     armPageCacheable, armParityEnabled, armExecuteNever :: Bool }
 
+Convenient references to size and log of size of PDEs and PTEs.
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+With hypervisor extensions enabled, page table and page directory entries occupy
+8 bytes. Page directories occupy four frames, and page tables occupy a frame.
+
+> pteBits = (3 :: Int)
+> pdeBits = (3 :: Int)
+> pdBits = (11 :: Int) + pdeBits
+> ptBits = (9 :: Int) + pteBits
+> vcpuBits = pageBits
+
+#else /* CONFIG_ARM_HYPERVISOR_SUPPORT */
+
 ARM page directories and page tables occupy four frames and one quarter of a frame, respectively.
 
 > pteBits = (2 :: Int)
 > pdeBits = (2 :: Int)
 > pdBits = (12 :: Int) + pdeBits
 > ptBits = (8 :: Int) + pteBits
+
+#endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 
 > pteSize :: Int
 > pteSize = bit pteBits
@@ -540,11 +759,134 @@ ARM page directories and page tables occupy four frames and one quarter of a fra
 > cacheLineBits = Platform.cacheLineBits
 > cacheLine = Platform.cacheLine
 
+#ifdef CONFIG_ARM_SMMU
+
+\subsubsection{IO Page Table Structure}
+
+> ioptBits :: Int
+> ioptBits = pageBits
+
+FIXME ARMHYP this is really platform code (TK1), move there
+
+Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bit. What actually happens is that a non-read, non-write entry is considered invalid. In pracice, the kernel writes an IOPTE/IOPDE of all zeros here.
+
+> data IOPDE
+>     = InvalidIOPDE
+>     | PageTableIOPDE {
+>         iopdeFrame :: PAddr,
+>         iopdeRead :: Bool,
+>         iopdeWrite :: Bool,
+>         iopdeNonsecure :: Bool }
+>     | SectionIOPDE {
+>         iopdeFrame :: PAddr,
+>         iopdeRead :: Bool,
+>         iopdeWrite :: Bool,
+>         iopdeNonsecure :: Bool }
+>     deriving (Show, Eq)
+
+> iopteBits = 2 :: Int
+> iopdeBits = 2 :: Int
+> iopteSize = bit iopteBits :: Int
+> iopdeSize = bit iopdeBits :: Int
+
+> wordFromIOPDE :: IOPDE -> Word
+> wordFromIOPDE InvalidIOPDE = 0
+> wordFromIOPDE (PageTableIOPDE addr r w ns) = bit 28 .|.
+>         ((fromIntegral addr .&. 0xfffffc00) `shiftR` 10) .|.
+>         (if r then bit 31 else 0) .|.
+>         (if w then bit 30 else 0) .|.
+>         (if ns then bit 29 else 0)
+> wordFromIOPDE (SectionIOPDE addr r w ns) = 0 .|.
+>         ((fromIntegral addr .&. 0xffc00000) `shiftR` 12) .|.
+>         (if r then bit 31 else 0) .|.
+>         (if w then bit 30 else 0) .|.
+>         (if ns then bit 29 else 0)
+
+> data IOPTE
+>     = InvalidIOPTE
+>     | PageIOPTE {
+>         iopteFrame :: PAddr,
+>         iopteRead :: Bool,
+>         iopteWrite :: Bool,
+>         iopteNonsecure :: Bool }
+>     deriving (Show, Eq)
+
+> wordFromIOPTE :: IOPTE -> Word
+> wordFromIOPTE InvalidIOPTE = 0
+> wordFromIOPTE (PageIOPTE addr r w ns) = 0 .|.
+>         ((fromIntegral addr .&. 0xfffff000) `shiftR` 12) .|.
+>         (if r then bit 31 else 0) .|.
+>         (if w then bit 30 else 0) .|.
+>         (if ns then bit 29 else 0)
+
+#endif /* CONFIG_ARM_SMMU */
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+\subsection{GIC VCPU interface}
+
+FIXME ARMHYP consider moving to platform code?
+
+> vgicIRQActive :: Word
+> vgicIRQActive = 2 `shiftL` 28
+
+> vgicIRQMask :: Word
+> vgicIRQMask = 3 `shiftL` 28
+
+> get_gic_vcpu_ctrl_hcr :: MachineMonad Word
+> get_gic_vcpu_ctrl_hcr = error "FIXME ARMHYP Unimplemented callback"
+
+> set_gic_vcpu_ctrl_hcr :: Word -> MachineMonad ()
+> set_gic_vcpu_ctrl_hcr = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_vmcr :: MachineMonad Word
+> get_gic_vcpu_ctrl_vmcr = error "FIXME ARMHYP Unimplemented callback"
+
+> set_gic_vcpu_ctrl_vmcr :: Word -> MachineMonad ()
+> set_gic_vcpu_ctrl_vmcr = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_apr :: MachineMonad Word
+> get_gic_vcpu_ctrl_apr = error "FIXME ARMHYP Unimplemented callback"
+
+> set_gic_vcpu_ctrl_apr :: Word -> MachineMonad ()
+> set_gic_vcpu_ctrl_apr = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_vtr :: MachineMonad Word
+> get_gic_vcpu_ctrl_vtr = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_eisr0 :: MachineMonad Word
+> get_gic_vcpu_ctrl_eisr0 = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_eisr1 :: MachineMonad Word
+> get_gic_vcpu_ctrl_eisr1 = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_misr :: MachineMonad Word
+> get_gic_vcpu_ctrl_misr = error "FIXME ARMHYP Unimplemented callback"
+
+> get_gic_vcpu_ctrl_lr :: Word -> MachineMonad Word
+> get_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
+
+> set_gic_vcpu_ctrl_lr :: Word -> Word -> MachineMonad ()
+> set_gic_vcpu_ctrl_lr = error "FIXME ARMHYP Unimplemented callback"
+
+#endif
+
 \subsection{Constants}
 
 > physBase :: PAddr
 > physBase = toPAddr Platform.physBase
 
 > kernelBase :: VPtr
-> kernelBase = Platform.kernelBase 
+> kernelBase = Platform.kernelBase
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+> hcrVCPU =  (0x87039 :: Word) -- HCR_VCPU
+> hcrNative = (0xfe8703b :: Word) -- HCR_NATIVE
+> vgicHCREN = (0x1 :: Word) -- VGIC_HCR_EN
+> sctlrDefault = (0xc5187c :: Word) -- SCTLR_DEFAULT
+> actlrDefault = (0x40 :: Word) -- ACTLR_DEFAULT
+> gicVCPUMaxNumLR = (64 :: Int)
+
+#endif
 

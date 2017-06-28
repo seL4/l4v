@@ -124,26 +124,26 @@ Library
     -- TODO consolidate later
     if flag(ArchArmHyp)
         other-modules:
-                            SEL4.Machine.Hardware.ARM_HYP.TK1
-                            SEL4.Machine.Hardware.ARM_HYP.Callbacks
+                            SEL4.Machine.Hardware.ARM.TK1
+                            SEL4.Machine.Hardware.ARM.Callbacks
 
-                            SEL4.API.Types.ARM_HYP
-                            SEL4.API.InvocationLabels.ARM_HYP
-                            SEL4.API.Invocation.ARM_HYP
-                            SEL4.API.Faults.ARM_HYP
-                            SEL4.API.Failures.ARM_HYP
-                            SEL4.Kernel.VSpace.ARM_HYP
-                            SEL4.Kernel.Thread.ARM_HYP
-                            SEL4.Kernel.Hypervisor.ARM_HYP
-                            SEL4.Object.ObjectType.ARM_HYP
-                            SEL4.Object.Structures.ARM_HYP
-                            SEL4.Object.Interrupt.ARM_HYP
-                            SEL4.Object.Instances.ARM_HYP
-                            SEL4.Object.VCPU.ARM_HYP
-                            SEL4.Object.TCB.ARM_HYP
-                            SEL4.Model.StateData.ARM_HYP
-                            SEL4.Machine.RegisterSet.ARM_HYP
-                            SEL4.Machine.Hardware.ARM_HYP
+                            SEL4.API.Types.ARM
+                            SEL4.API.InvocationLabels.ARM
+                            SEL4.API.Invocation.ARM
+                            SEL4.API.Faults.ARM
+                            SEL4.API.Failures.ARM
+                            SEL4.Kernel.VSpace.ARM
+                            SEL4.Kernel.Thread.ARM
+                            SEL4.Kernel.Hypervisor.ARM
+                            SEL4.Object.ObjectType.ARM
+                            SEL4.Object.Structures.ARM
+                            SEL4.Object.Interrupt.ARM
+                            SEL4.Object.Instances.ARM
+                            SEL4.Object.VCPU.ARM
+                            SEL4.Object.TCB.ARM
+                            SEL4.Model.StateData.ARM
+                            SEL4.Machine.RegisterSet.ARM
+                            SEL4.Machine.Hardware.ARM
 
     if flag(ArchX64)
         other-modules:

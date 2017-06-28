@@ -8,9 +8,10 @@
 % @TAG(GD_GPL)
 %
 
-This module contains an instance of the machine-specific kernel API for the ARM architecture.
+This module contains an instance of the machine-specific kernel API for the ARM architecture with hypervisor extensions.
 
 > {-# LANGUAGE CPP #-}
+
 > module SEL4.API.Types.ARM where
 
 > import SEL4.API.Types.Universal(APIObjectType, apiGetObjectSize)
@@ -20,6 +21,10 @@ This module contains an instance of the machine-specific kernel API for the ARM 
 
 There are three ARM-specific object types: virtual pages, page tables, and page directories.
 
+Hypervisor additions add VCPUs.
+
+I/O MMU additions add IO page table objects. Note that there is only one IO page directory created at kernel boot, which cannot be created or deleted. Hence IO page directories are not considered kernel objects.
+
 > data ObjectType
 >     = APIObjectType APIObjectType
 >     | SmallPageObject
@@ -28,6 +33,12 @@ There are three ARM-specific object types: virtual pages, page tables, and page 
 >     | SuperSectionObject
 >     | PageTableObject
 >     | PageDirectoryObject
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     | VCPUObject
+#endif
+#ifdef CONFIG_ARM_SMMU
+>     | IOPageTableObject
+#endif
 >     deriving (Show, Eq)
 
 > instance Bounded ObjectType where
@@ -47,6 +58,12 @@ There are three ARM-specific object types: virtual pages, page tables, and page 
 >                     ,SuperSectionObject
 >                     ,PageTableObject
 >                     ,PageDirectoryObject
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>                     ,VCPUObject
+#endif
+#ifdef CONFIG_ARM_SMMU
+>                     ,IOPageTableObject
+#endif
 >                     ]
 >     toEnum n
 >         | n <= apiMax = APIObjectType $ toEnum n
@@ -56,6 +73,12 @@ There are three ARM-specific object types: virtual pages, page tables, and page 
 >         | n == fromEnum SuperSectionObject = SuperSectionObject
 >         | n == fromEnum PageTableObject = PageTableObject
 >         | n == fromEnum PageDirectoryObject = PageDirectoryObject
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>         | n == fromEnum VCPUObject = VCPUObject
+#endif
+#ifdef CONFIG_ARM_SMMU
+>         | n == fromEnum IOPageTableObject = IOPageTableObject
+#endif
 >         | otherwise = error "toEnum out of range for ARM.ObjectType"
 >         where apiMax = fromEnum (maxBound :: APIObjectType)
 
@@ -73,7 +96,14 @@ There are three ARM-specific object types: virtual pages, page tables, and page 
 > getObjectSize SuperSectionObject _ = pageBitsForSize ARMSuperSection
 > getObjectSize PageTableObject _ = ptBits
 > getObjectSize PageDirectoryObject _ = pdBits
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> getObjectSize VCPUObject _ = vcpuBits
+#endif
+#ifdef CONFIG_ARM_SMMU
+> getObjectSize IOPageTableObject _ = ioptBits
+#endif
 > getObjectSize (APIObjectType apiObjectType) size = apiGetObjectSize apiObjectType size
+
 
 > isFrameType :: ObjectType -> Bool
 > isFrameType SmallPageObject = True

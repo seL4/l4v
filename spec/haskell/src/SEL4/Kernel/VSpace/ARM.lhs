@@ -10,7 +10,17 @@
 
 This module defines the handling of the ARM hardware-defined page tables.
 
+FIXME ARMHYP this file is only for ARM\_HYP, uses preprocessor only to disable SMMU unlike nearly all the other ones; fixable, but too much clutter for the moment
+
+FIXME ARMHYP the amount of magic numbers is staggering
+
+\begin{impdetails}
+
+FIXME ARMHYP this is so that disabling SMMU results in successful compile
+
 > {-# LANGUAGE CPP #-}
+
+\end{impdetails}
 
 > module SEL4.Kernel.VSpace.ARM where
 
@@ -31,6 +41,9 @@ This module defines the handling of the ARM hardware-defined page tables.
 > import {-# SOURCE #-} SEL4.Object.TCB
 > import {-# SOURCE #-} SEL4.Kernel.Init
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> import SEL4.Object.VCPU.ARM
+#endif
 
 > import Data.Bits
 > import Data.Maybe
@@ -59,6 +72,8 @@ The idle thread's code is at an arbitrary location in kernel memory. For conveni
 
 The idle thread executes a short loop that drains the CPU's write buffer and then waits for an interrupt. Note that the wait for interrupt instruction always completes before the interrupt is delivered, so the interrupt handler will return to the following branch instruction.
 
+FIXME ARMHYP not checked
+
 > idleThreadCode :: [Word]
 > idleThreadCode =
 >     [ 0xe3a00000 -- mov r0, \#0
@@ -70,6 +85,73 @@ The idle thread executes a short loop that drains the CPU's write buffer and the
 \subsection{Creating the vspace for the initial thread}
 
 Function mapKernelWindow will create a virtual address space for the initial thread
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+FIXME ARMHYP this completely doesn't make any sense at the moment until we decide what to do about modeling stage 1 translations and hence the kernel map
+
+FIXME ARMHYP as a result this entire subsection has been stripped into undefinedness to reduce clutter; it should be re-added for both ARM and ARM\_HYP once we know what to do
+
+FIXME ARMHYP also this is BOOT CODE, adding to confusion
+
+> mapKernelWindow :: Kernel ()
+> mapKernelWindow = error "FIXME ARM_HYP BOOT unimplemented"
+
+> mapKernelDevice :: (PAddr, PPtr Word) -> Kernel ()
+> mapKernelDevice (addr, ptr) = error "FIXME ARM_HYP BOOT unimplemented"
+
+> activateGlobalVSpace :: Kernel ()
+> activateGlobalVSpace = error "FIXME ARM_HYP BOOT unimplemented"
+
+> createITPDPTs :: Capability -> VPtr -> VPtr -> KernelInit Capability
+> createITPDPTs rootCNCap vptrStart biFrameVPtr = error "FIXME ARM_HYP BOOT unimplemented"
+
+> writeITPDPTs :: Capability -> Capability -> KernelInit ()
+> writeITPDPTs rootCNCap pdCap = error "FIXME ARM_HYP BOOT unimplemented"
+
+> createITASIDPool :: Capability -> KernelInit Capability
+> createITASIDPool rootCNCap = error "FIXME ARM_HYP BOOT unimplemented"
+
+> writeITASIDPool :: Capability -> Capability -> Kernel ()
+> writeITASIDPool apCap pdCap = error "FIXME ARM_HYP BOOT unimplemented"
+
+> mapITPTCap :: Capability -> Capability -> Kernel ()
+> mapITPTCap pdCap ptCap = error "FIXME ARM_HYP BOOT unimplemented"
+
+> mapITFrameCap :: Capability -> Capability -> Kernel ()
+> mapITFrameCap pdCap frameCap = error "FIXME ARM_HYP BOOT unimplemented"
+
+> createIPCBufferFrame :: Capability -> VPtr -> KernelInit Capability
+> createIPCBufferFrame rootCNCap vptr = error "FIXME ARM_HYP BOOT unimplemented"
+
+> createBIFrame :: Capability -> VPtr -> Word32 -> Word32 -> KernelInit Capability
+> createBIFrame rootCNCap vptr nodeId numNodes = error "FIXME ARM_HYP BOOT unimplemented"
+
+> createITFrameCap :: PPtr Word -> VPtr -> Maybe ASID -> Bool -> KernelInit Capability
+> createITFrameCap pptr vptr asid large = error "FIXME ARM_HYP BOOT unimplemented"
+
+> vptrFromPPtr :: PPtr a -> KernelInit VPtr
+> vptrFromPPtr (PPtr ptr) = error "FIXME ARM_HYP BOOT unimplemented"
+
+> createFramesOfRegion :: Capability -> Region -> Bool -> KernelInit ()
+> createFramesOfRegion rootCNCap region doMap = error "FIXME ARM_HYP BOOT unimplemented"
+
+> mapGlobalsFrame :: Kernel ()
+> mapGlobalsFrame = error "FIXME ARM_HYP BOOT unimplemented"
+
+> writeIdleCode :: Kernel ()
+> writeIdleCode = error "FIXME ARM_HYP BOOT unimplemented"
+
+> mapKernelFrame :: PAddr -> VPtr -> VMRights -> VMAttributes -> Kernel ()
+> mapKernelFrame paddr vaddr vmrights attributes = error "FIXME ARM_HYP BOOT unimplemented"
+
+> getARMGlobalPT :: Kernel (PPtr PTE)
+> getARMGlobalPT = error "FIXME ARM_HYP BOOT unimplemented"
+
+> createDeviceFrames :: Capability -> KernelInit ()
+> createDeviceFrames rootCNodeCap = error "FIXME ARM_HYP BOOT unimplemented"
+
+#else /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 
 > mapKernelWindow :: Kernel ()
 > mapKernelWindow = do
@@ -120,7 +202,7 @@ However we assume that the result of getMemoryRegions is actually [0,1<<24] and 
 
 Helper function used above to create PDE for Section:
 
-> createSectionPDE :: VPtr -> Kernel () 
+> createSectionPDE :: VPtr -> Kernel ()
 > createSectionPDE offset = do
 >     globalPD <- gets $ armKSGlobalPD . ksArchState
 >     let virt = fromVPtr $ offset `shiftL` pageBitsForSize (ARMSection)
@@ -361,7 +443,7 @@ Function "createBIFrame" will create the biframe cap for the initial thread
 >     noInitFailure $ modify (\s -> s { initBootInfo = bootInfo' })
 
 
-The "mapKernelFrame" helper function is used when mapping the globals frame, kernel IO devices, and the trap frame. We simply store pte into our globalPT 
+The "mapKernelFrame" helper function is used when mapping the globals frame, kernel IO devices, and the trap frame. We simply store pte into our globalPT
 
 > mapKernelFrame :: PAddr -> VPtr -> VMRights -> VMAttributes -> Kernel ()
 > mapKernelFrame paddr vaddr vmrights attributes = do
@@ -408,11 +490,16 @@ The "mapKernelFrame" helper function is used when mapping the globals frame, ker
 >     let bInfo' = bInfo { bifNumDeviceRegions = (fromIntegral . length . bifDeviceRegions) bInfo }
 >     noInitFailure $ modify (\st -> st { initBootInfo = bInfo' })
 
+#endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
+
 \subsubsection{Creating a New Address Space}
 
-When a new page directory is created, the kernel copies all of the global mappings from the kernel page directory into the new page directory.
+With hypervisor extensions, kernel and user MMUs are completely independent. However, we still need to share the globals page.
 
 > copyGlobalMappings :: PPtr PDE -> Kernel ()
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> copyGlobalMappings newPD = return ()
+#else
 > copyGlobalMappings newPD = do
 >     globalPD <- gets (armKSGlobalPD . ksArchState)
 >     let pdSize = 1 `shiftL` (pdBits - pdeBits)
@@ -420,6 +507,7 @@ When a new page directory is created, the kernel copies all of the global mappin
 >         let offset = PPtr index `shiftL` pdeBits
 >         pde <- getObject (globalPD + offset)
 >         storePDE (newPD + offset) pde
+#endif
 
 \subsection{Creating and Updating Mappings}
 
@@ -440,7 +528,9 @@ When a frame is being mapped, or an existing mapping updated, the following func
 >     return $ Left (SmallPagePTE {
 >         pteFrame = base,
 >         pteCacheable = armPageCacheable attrib,
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 >         pteGlobal = False,
+#endif
 >         pteExecuteNever = armExecuteNever attrib,
 >         pteRights = vmRights }, [p])
 >
@@ -449,7 +539,9 @@ When a frame is being mapped, or an existing mapping updated, the following func
 >     return $ Left (LargePagePTE {
 >         pteFrame = base,
 >         pteCacheable = armPageCacheable attrib,
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 >         pteGlobal = False,
+#endif
 >         pteExecuteNever = armExecuteNever attrib,
 >         pteRights = vmRights }, map (+p) largePagePTEOffsets)
 >
@@ -457,10 +549,14 @@ When a frame is being mapped, or an existing mapping updated, the following func
 >     let p = lookupPDSlot pd vptr
 >     return $ Right (SectionPDE {
 >         pdeFrame = base,
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 >         pdeParity = armParityEnabled attrib,
 >         pdeDomain = 0,
+#endif
 >         pdeCacheable = armPageCacheable attrib,
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 >         pdeGlobal = False,
+#endif
 >         pdeExecuteNever = armExecuteNever attrib,
 >         pdeRights = vmRights }, [p])
 >
@@ -468,9 +564,13 @@ When a frame is being mapped, or an existing mapping updated, the following func
 >     let p = lookupPDSlot pd vptr
 >     return $ Right (SuperSectionPDE {
 >         pdeFrame = base,
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 >         pdeParity = armParityEnabled attrib,
+#endif
 >         pdeCacheable = armPageCacheable attrib,
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 >         pdeGlobal = False,
+#endif
 >         pdeExecuteNever = armExecuteNever attrib,
 >         pdeRights = vmRights }, map (+p) superSectionPDEOffsets)
 
@@ -600,6 +700,8 @@ These checks are too expensive to run in haskell. The first function checks that
 
 The "lookupPTSlot" function locates the page table slot that maps a given virtual address, and returns a pointer to the slot. It will throw a lookup failure if the required page directory slot does not point to a page table.
 
+FIXME ARMHYP the normal ARM has magic numbers everywhere here! can't be certain these are all right now
+
 > lookupPTSlot :: PPtr PDE -> VPtr -> KernelF LookupFailure (PPtr PTE)
 > lookupPTSlot pd vptr = do
 >     let pdSlot = lookupPDSlot pd vptr
@@ -608,7 +710,11 @@ The "lookupPTSlot" function locates the page table slot that maps a given virtua
 >         PageTablePDE {} -> do
 >             let pt = ptrFromPAddr $ pdeTable pde
 >             withoutFailure $ lookupPTSlotFromPT pt vptr
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>         _ -> throw $ MissingCapability 21
+#else
 >         _ -> throw $ MissingCapability 20
+#endif
 
 > lookupPTSlotFromPT :: PPtr PTE -> VPtr -> Kernel (PPtr PTE)
 > lookupPTSlotFromPT pt vptr = do
@@ -628,16 +734,35 @@ Similarly, "lookupPDSlot" locates a slot in the top-level page directory. Howeve
 
 If the kernel receives a VM fault from the CPU, it must determine the address and cause of the fault and then throw it to the user-level fault handler. The C datastructure to store the cause of the fault has only 12 bits space, hence the mask. Only the lower bits are significant anyway.
 
+Hypervisor mode requires extra translation here.
+
 > handleVMFault :: PPtr TCB -> VMFaultType -> KernelF Fault ()
 > handleVMFault _ ARMDataAbort = do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     addr <- withoutFailure $ doMachineOp getHDFAR
+>     uaddr <- withoutFailure $ doMachineOp (addressTranslateS1CPR addr)
+>     let faddr = (uaddr .&. complement (mask pageBits)) .|.
+>                 (addr .&. mask pageBits)
+>     fault <- withoutFailure $ doMachineOp getHSR
+>     throw $ ArchFault $ VMFault faddr [0, fault .&. 0x3ffffff]
+#else
 >     addr <- withoutFailure $ doMachineOp getFAR
 >     fault <- withoutFailure $ doMachineOp getDFSR
 >     throw $ ArchFault $ VMFault addr [0, fault .&. mask 14]
+#endif
 >
 > handleVMFault thread ARMPrefetchAbort = do
 >     pc <- withoutFailure $ asUser thread $ getRestartPC
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     upc <- withoutFailure $ doMachineOp (addressTranslateS1CPR $ VPtr pc)
+>     let faddr = (upc .&. complement (mask pageBits)) .|.
+>                 (VPtr pc .&. mask pageBits)
+>     fault <- withoutFailure $ doMachineOp getHSR
+>     throw $ ArchFault $ VMFault faddr [1, fault .&. 0x3ffffff]
+#else
 >     fault <- withoutFailure $ doMachineOp getIFSR
 >     throw $ ArchFault $ VMFault (VPtr pc) [1, fault .&. mask 14]
+#endif
 
 \subsection{Unmapping and Deletion}
 
@@ -706,6 +831,8 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 
 \subsubsection{Unmapping a Frame}
 
+FIXME ARMHYP checks contiguous hint here, but that should be built into the getObject inside checkMappingPPtr
+
 > unmapPage :: VMPageSize -> ASID -> VPtr -> PPtr Word -> Kernel ()
 > unmapPage size asid vptr ptr = ignoreFailure $ do
 >     pd <- findPDForASID asid
@@ -724,7 +851,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >                 mapM (flip storePTE InvalidPTE) slots
 >                 doMachineOp $
 >                     cleanCacheRange_PoU (VPtr $ fromPPtr $ (head slots))
->                                         (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1 ))
+>                                         (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1))
 >                                         (addrFromPPtr (head slots))
 >         ARMSection -> do
 >             let p = lookupPDSlot pd vptr
@@ -740,7 +867,7 @@ When a capability backing a virtual memory mapping is deleted, or when an explic
 >                 mapM (flip storePDE InvalidPDE) slots
 >                 doMachineOp $
 >                     cleanCacheRange_PoU (VPtr $ fromPPtr $ (head slots))
->                                         (VPtr $ (fromPPtr  (last slots)) + (bit pdeBits - 1))
+>                                         (VPtr $ (fromPPtr (last slots)) + (bit pdeBits - 1))
 >                                         (addrFromPPtr (head slots))
 >     withoutFailure $ flushPage size pd asid vptr
 
@@ -768,14 +895,17 @@ This helper function checks that the mapping installed at a given PT or PD slot 
 
 > armv_contextSwitch_HWASID :: PPtr PDE -> HardwareASID -> MachineMonad ()
 > armv_contextSwitch_HWASID pd hwasid = do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>    writeContextIDAndPD hwasid (addrFromPPtr pd)
+#else
 >    setCurrentPD $ addrFromPPtr pd
 >    setHardwareASID hwasid
+#endif
 
 > armv_contextSwitch :: PPtr PDE -> ASID -> Kernel ()
 > armv_contextSwitch pd asid = do
 >    hwasid <- getHWASID asid
 >    doMachineOp $ armv_contextSwitch_HWASID pd hwasid
-
 
 \subsection{Address Space Switching}
 
@@ -797,6 +927,10 @@ If the current thread has no page directory, or if it has an invalid ASID, the h
 >                     throw InvalidRoot
 >                 withoutFailure $ do
 >                     armv_contextSwitch pd asid
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>                     tcbobj <- getObject tcb
+>                     vcpuSwitch (atcbVCPUPtr $ tcbArch tcbobj)
+#endif
 >             _ -> throw InvalidRoot)
 >         (\_ -> do
 >             case threadRoot of
@@ -804,8 +938,12 @@ If the current thread has no page directory, or if it has an invalid ASID, the h
 >                     capPDMappedASID = Just _,
 >                     capPDBasePtr = pd }) -> checkPDNotInASIDMap pd
 >                 _ -> return ()
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>             globalPD <- gets (armUSGlobalPD . ksArchState)
+#else
 >             globalPD <- gets (armKSGlobalPD . ksArchState)
->             doMachineOp $ setCurrentPD $ addrFromPPtr globalPD )
+#endif
+>             doMachineOp $ setCurrentPD $ addrFromPPtr globalPD)
 
 When cleaning the cache by user virtual address on ARM11, the active address space must be the one that contains the mappings being cleaned. The following function is used to temporarily switch to a given page directory and ASID, in order to clean the cache. It returns "True" if the address space was not the same as the current one, in which case the caller must switch back to the current address space once the cache is clean.
 
@@ -839,7 +977,7 @@ The IPC buffer frame must be an ARM frame capability, and the buffer must be ali
 Note that implementations with separate high and low memory regions may also wish to limit valid IPC buffer frames to low memory, so the kernel can access them without extra mappings. This function may also be used to enforce cache colouring restrictions.
 
 > checkValidIPCBuffer :: VPtr -> Capability -> KernelF SyscallError ()
-> checkValidIPCBuffer vptr (ArchObjectCap (PageCap { capVPIsDevice = False})) = do
+> checkValidIPCBuffer vptr (ArchObjectCap (PageCap {capVPIsDevice = False})) = do
 >     when (vptr .&. mask msgAlignBits /= 0) $ throw AlignmentError
 >     return ()
 > checkValidIPCBuffer _ _ = throw IllegalOperation
@@ -859,12 +997,18 @@ ARM memory mappings may be marked cacheable or non-cacheable. Also, parity check
 > attribsFromWord :: Word -> VMAttributes
 > attribsFromWord w = VMAttributes {
 >     armPageCacheable = w `testBit` 0,
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     armParityEnabled = False,
+#else
 >     armParityEnabled = w `testBit` 1,
+#endif
 >     armExecuteNever = w `testBit` 2 }
 
 \subsection{ARM Hardware ASID allocation}
 
 Manage the stored HW ASID.
+
+XXX ARMHYP no changes in this subsection
 
 > storeHWASID :: ASID -> HardwareASID -> Kernel ()
 > storeHWASID asid hw_asid = do
@@ -953,6 +1097,24 @@ round-robin.
 
 \subsection {ARM Cache and TLB consistency}
 
+FIXME ARMHYP TODO unify hyp/non-hyp to share more code
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> doFlush :: FlushType -> VPtr -> VPtr -> PAddr -> MachineMonad ()
+> doFlush flushType vstart vend pstart =
+>     case flushType of
+>         Clean           -> cleanCacheRange_RAM vstart' vend' pstart
+>         Invalidate      -> invalidateCacheRange_RAM vstart' vend' pstart
+>         CleanInvalidate -> cleanInvalidateCacheRange_RAM vstart' vend' pstart
+>         Unify           -> do
+>                      cleanCacheRange_PoU vstart' vend' pstart
+>                      dsb
+>                      invalidateCacheRange_I vstart' vend' pstart
+>                      branchFlushRange vstart' vend' pstart
+>                      isb
+>     where vstart' = VPtr $ fromPPtr $ ptrFromPAddr pstart
+>           vend' = vstart' + (vend - vstart)
+#else
 > doFlush :: FlushType -> VPtr -> VPtr -> PAddr -> MachineMonad ()
 > doFlush Clean vstart vend pstart =
 >     cleanCacheRange_RAM vstart vend pstart
@@ -966,6 +1128,7 @@ round-robin.
 >     invalidateCacheRange_I vstart vend pstart
 >     branchFlushRange vstart vend pstart
 >     isb
+#endif
 
 > flushPage :: VMPageSize -> PPtr PDE -> ASID -> VPtr -> Kernel ()
 > flushPage _ pd asid vptr = do
@@ -1023,26 +1186,49 @@ round-robin.
 >       ArchInvocationLabel ARMPageUnify_Instruction -> Unify
 >       _ -> error "Should never be called without a flush invocation"
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> pageBase :: (Num a, Bits a) => a -> VMPageSize -> a
+> pageBase vaddr size = vaddr .&. (complement $ mask (pageBitsForSize size))
+#else
 > pageBase :: VPtr -> VMPageSize -> VPtr
 > pageBase vaddr size = vaddr .&. (complement $ mask (pageBitsForSize size))
+#endif
 
 > resolveVAddr :: PPtr PDE -> VPtr -> Kernel (Maybe (VMPageSize, PAddr))
 > resolveVAddr pd vaddr = do
 >     let pdSlot = lookupPDSlot pd vaddr
 >     pde <- getObject pdSlot
 >     case pde of
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>         SectionPDE frame _ _ _ -> return $ Just (ARMSection, frame)
+>         SuperSectionPDE frame _ _ _ -> return $ Just (ARMSuperSection, pageBase frame ARMSuperSection)
+>         PageTablePDE table -> do
+#else
 >         SectionPDE frame _ _ _ _ _ _ -> return $ Just (ARMSection, frame)
 >         SuperSectionPDE frame _ _ _ _ _ -> return $ Just (ARMSuperSection, frame)
 >         PageTablePDE table _ _ -> do
+#endif
 >             let pt = ptrFromPAddr table
 >             pteSlot <- lookupPTSlotFromPT pt vaddr
 >             pte <- getObject pteSlot
 >             case pte of
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>                 LargePagePTE frame _ _ _ -> return $ Just (ARMLargePage, pageBase frame ARMLargePage)
+>                 SmallPagePTE frame _ _ _ -> return $ Just (ARMSmallPage, frame)
+#else
 >                 LargePagePTE frame _ _ _ _ -> return $ Just (ARMLargePage, frame)
 >                 SmallPagePTE frame _ _ _ _ -> return $ Just (ARMSmallPage, frame)
->                 _ -> return Nothing 
+#endif
+>                 _ -> return Nothing
 >         _ -> return Nothing
->     
+
+FIXME ARMHYP implement after decision re PageCap contents and MOVE
+
+#ifdef CONFIG_ARM_SMMU
+> isIOSpaceFrameCap :: ArchCapability -> Bool
+> isIOSpaceFrameCap (PageCap {}) = error "FIXME ARMHYP undecided on PageCap contents"
+> isIOSpaceFrameCap _ = error "isIOSpaceFrameCap: not a frame/page cap"
+#endif
 
 > decodeARMMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 >         ArchCapability -> [(Capability, PPtr CTE)] ->
@@ -1055,16 +1241,16 @@ Capabilities for page directories --- the top level of the hardware-defined page
 > decodeARMMMUInvocation label args _ _ cap@(PageDirectoryCap {}) _ =
 >     case (isPDFlushLabel (invocationType label), args) of
 >         (True, start:end:_) -> do
->             when (end <= start) $ 
+>             when (end <= start) $
 >                 throw $ InvalidArgument 1
 >             when (VPtr start >= kernelBase || VPtr end > kernelBase) $
->                 throw IllegalOperation 
+>                 throw IllegalOperation
 >             (pd,asid) <- case cap of
 >                 PageDirectoryCap {
 >                          capPDMappedASID = Just asid,
 >                          capPDBasePtr = pd}
 >                     -> return (pd,asid)
->                 _ -> throw $ InvalidCapability 0 
+>                 _ -> throw $ InvalidCapability 0
 >             pdCheck <- lookupErrorOnFailure False $ findPDForASID asid
 >             when (pdCheck /= pd) $ throw $ InvalidCapability 0
 >             frameInfo <-
@@ -1077,7 +1263,7 @@ Capabilities for page directories --- the top level of the hardware-defined page
 >                     let baseStart = pageBase (VPtr start) (fst frameInfo)
 >                     let baseEnd = pageBase (VPtr end - 1) (fst frameInfo)
 >                     when (baseStart /= baseEnd) $
->                         throw $ RangeError start $ fromVPtr $ baseStart + 
+>                         throw $ RangeError start $ fromVPtr $ baseStart +
 >                                   mask (pageBitsForSize (fst frameInfo))
 >                     let offset = start .&. mask (pageBitsForSize (fst frameInfo))
 >                     let pStart = snd frameInfo + toPAddr offset
@@ -1117,8 +1303,10 @@ Note that these capabilities cannot be copied until they have been mapped, so an
 >             unless (oldpde == InvalidPDE) $ throw DeleteFirst
 >             let pde = PageTablePDE {
 >                     pdeTable = addrFromPPtr $ capPTBasePtr cap
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 >                     ,pdeParity = armParityEnabled $ attribsFromWord attr
 >                     ,pdeDomain = 0
+#endif
 >                     }
 >             return $ InvokePageTable $ PageTableMap {
 >                 ptMapCap = ArchObjectCap $
@@ -1138,8 +1326,12 @@ Note that these capabilities cannot be copied until they have been mapped, so an
 
 Virtual page capabilities may each represent a single mapping into a page table. Unlike page table capabilities, they may be unmapped without deletion, and may be freely copied to allow multiple mappings of the same page. Along with the \emph{Map} and \emph{Unmap} operations, there is a \emph{Remap} operation, which is used to change the access permissions on an existing mapping.
 
+FIXME ARMHYP TODO check SMMU isIOSpaceFrameCap(cap) for remap / unmap
+FIXME ARMHYP TODO add call to ARMPageMapIO decode for map and unmap; remap not allowed
+FIXME ARMHYP capVPMappedAddress is not what we want for ARM\_HYP? C code has capFMappedAddress for ARM, capFBasePtr for ARM\_HYP here
+
 > decodeARMMMUInvocation label args _ cte cap@(PageCap {}) extraCaps =
->  do 
+>  do
 >     case (invocationType label, args, extraCaps) of
 >         (ArchInvocationLabel ARMPageMap, vaddr:rightsMask:attr:_, (pdCap,_):_) -> do
 >             when (isJust $ capVPMappedAddress cap) $
@@ -1169,7 +1361,13 @@ Virtual page capabilities may each represent a single mapping into a page table.
 >                 pageMapCTSlot = cte,
 >                 pageMapEntries = entries }
 >         (ArchInvocationLabel ARMPageMap, _, _) -> throw TruncatedMessage
+#ifdef CONFIG_ARM_SMMU
+>         (ArchInvocationLabel ARMPageMapIO, _, _) -> error "FIXME ARMHYP TODO IO"
+#endif
 >         (ArchInvocationLabel ARMPageRemap, rightsMask:attr:_, (pdCap, _):_) -> do
+#ifdef CONFIG_ARM_SMMU
+>             when (isIOSpaceFrameCap cap) $ throw IllegalOperation
+#endif
 >             (pd,asid) <- case pdCap of
 >                 ArchObjectCap (PageDirectoryCap {
 >                         capPDMappedASID = Just asid,
@@ -1193,6 +1391,11 @@ Virtual page capabilities may each represent a single mapping into a page table.
 >         (ArchInvocationLabel ARMPageRemap, _, _) -> throw TruncatedMessage
 >         (ArchInvocationLabel ARMPageUnmap, _, _) ->
 >                 return $
+#ifdef CONFIG_ARM_SMMU
+>                          if (isIOSpaceFrameCap cap)
+>                          then error "FIXME ARMHYP TODO IO"
+>                          else
+#endif
 >                               InvokePage $ PageUnmap {
 >                                              pageUnmapCap = cap,
 >                                              pageUnmapCapSlot = cte }
@@ -1202,7 +1405,6 @@ Virtual page capabilities may each represent a single mapping into a page table.
 >         (ArchInvocationLabel ARMPageUnify_Instruction, _, _) -> decodeARMPageFlush label args cap
 >         (ArchInvocationLabel ARMPageGetAddress, _, _) -> return $ InvokePage $ PageGetAddr (capVPBasePtr cap)
 >         _ -> throw IllegalOperation
-
 
 The ASID control capability refers to the top level of a global two-level table used for allocating address space identifiers. It has only one method, "MakePool", which creates an ASID allocation pool given a single frame of untyped memory. Since this method allocates part of a global range of ASIDs, it may return a "DeleteFirst" error if the entire range has been allocated to existing ASID pools.
 
@@ -1216,7 +1418,7 @@ The ASID control capability refers to the top level of a global two-level table 
 >             let base = (fst $ head free) `shiftL` asidLowBits
 >             let pool = makeObject :: ASIDPool
 >             frame <- case untyped of
->                 UntypedCap { capIsDevice = False } | capBlockSize untyped == objBits pool -> do
+>                 UntypedCap {capIsDevice = False} | capBlockSize untyped == objBits pool -> do
 >                     ensureNoChildren parentSlot
 >                     return $ capPtr untyped
 >                 _ -> throw $ InvalidCapability 1
@@ -1258,20 +1460,36 @@ ASID pool capabilities are used to allocate unique address space identifiers for
 >         (ArchInvocationLabel ARMASIDPoolAssign, _) -> throw TruncatedMessage
 >         _ -> throw IllegalOperation
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> decodeARMMMUInvocation _ _ _ _ (VCPUCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
+#endif
+#ifdef CONFIG_ARM_SMMU
+> decodeARMMMUInvocation label _ _ _ (IOSpaceCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
+> decodeARMMMUInvocation label _ _ _ (IOPageTableCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
+#endif
+
 > decodeARMPageFlush :: Word -> [Word] -> ArchCapability ->
 >                       KernelF SyscallError ArchInv.Invocation
 > decodeARMPageFlush label args cap = case (args, capVPMappedAddress cap) of
 >     (start:end:_, Just (asid, vaddr)) -> do
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>         let vaddr' = capVPBasePtr cap
+#endif
 >         pd <- lookupErrorOnFailure False $ findPDForASID asid
->         when (end <= start) $ 
+>         when (end <= start) $
 >             throw $ InvalidArgument 1
 >         let pageSize = bit (pageBitsForSize (capVPSize cap))
 >         let pageBase = addrFromPPtr $ capVPBasePtr cap
 >         when (start >= pageSize || end > pageSize) $
 >             throw $ InvalidArgument 0
 >         let pstart = pageBase + toPAddr start
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>         let start' = start + fromPPtr vaddr'
+>         let end' = end + fromPPtr vaddr'
+#else
 >         let start' = start + fromVPtr vaddr
 >         let end' = end + fromVPtr vaddr
+#endif
 >         return $ InvokePage $ PageFlush {
 >               pageFlushType = labelToFlushType label,
 >               pageFlushStart = VPtr $ start',
@@ -1279,9 +1497,8 @@ ASID pool capabilities are used to allocate unique address space identifiers for
 >               pageFlushPStart = pstart,
 >               pageFlushPD = pd,
 >               pageFlushASID = asid }
->     (_:_:_, Nothing) -> throw IllegalOperation     
+>     (_:_:_, Nothing) -> throw IllegalOperation
 >     _ -> throw TruncatedMessage
-
 
 Checking virtual address for page size dependent alignment:
 
@@ -1308,6 +1525,13 @@ notion of the largest permitted object size, and checks it appropriately.
 >         InvokePage oper -> performPageInvocation oper
 >         InvokeASIDControl oper -> performASIDControlInvocation oper
 >         InvokeASIDPool oper -> performASIDPoolInvocation oper
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>         InvokeVCPU _ -> fail "performARMMMUInvocation: not an MMU invocation"
+#endif
+#ifdef CONFIG_ARM_SMMU
+>         InvokeIOSpace _ -> fail "performARMMMUInvocation: not an MMU invocation"
+>         InvokeIOPageTable _ -> fail "performARMMMUInvocation: not an MMU invocation"
+#endif
 >     return $ []
 
 > performPageDirectoryInvocation :: PageDirectoryInvocation -> Kernel ()
@@ -1361,6 +1585,19 @@ the PT/PD is consistent.
 >     pd <- getObject slot
 >     return $ pd /= InvalidPDE
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> addPTEOffset :: PTE -> Word -> PTE
+> addPTEOffset pte i = if pte == InvalidPTE then InvalidPTE
+>                      else pte { pteFrame = addPAddr (pteFrame pte)
+>                                  (i * bit (pageBitsForSize(ARMSmallPage))) }
+
+> addPDEOffset :: PDE -> Word -> PDE
+> addPDEOffset InvalidPDE _ = InvalidPDE
+> addPDEOffset (PageTablePDE p) _ = PageTablePDE p
+> addPDEOffset pde i = pde { pdeFrame = addPAddr (pdeFrame pde)
+>                                 (i * bit (pageBitsForSize(ARMSection))) }
+#endif
+
 > performPageInvocation :: PageInvocation -> Kernel ()
 >
 > performPageInvocation (PageMap asid cap ctSlot entries) = do
@@ -1368,7 +1605,12 @@ the PT/PD is consistent.
 >     case entries of
 >         Left (pte, slots) -> do
 >             tlbFlush <- pteCheckIfMapped (head slots)
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>             mapM (\(slot, i) -> storePTE slot (addPTEOffset pte i))
+>                  (zip slots [0 .. fromIntegral (length slots - 1)])
+#else
 >             mapM (flip storePTE pte) slots
+#endif
 >             doMachineOp $
 >                 cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
 >                                     (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1))
@@ -1376,7 +1618,12 @@ the PT/PD is consistent.
 >             when tlbFlush $ invalidateTLBByASID asid
 >         Right (pde, slots) -> do
 >             tlbFlush <- pdeCheckIfMapped (head slots)
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>             mapM (\(slot, i) -> storePDE slot (addPDEOffset pde i))
+>                  (zip slots [0 .. fromIntegral (length slots - 1)])
+#else
 >             mapM (flip storePDE pde) slots
+#endif
 >             doMachineOp $
 >                 cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
 >                                     (VPtr $ (fromPPtr (last slots)) + (bit pdeBits - 1))
@@ -1385,7 +1632,12 @@ the PT/PD is consistent.
 >
 > performPageInvocation (PageRemap asid (Left (pte, slots))) = do
 >     tlbFlush <- pteCheckIfMapped (head slots)
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     mapM (\(slot, i) -> storePTE slot (addPTEOffset pte i))
+>          (zip slots [0 .. fromIntegral (length slots - 1)])
+#else
 >     mapM (flip storePTE pte) slots
+#endif
 >     doMachineOp $
 >         cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
 >                             (VPtr $ (fromPPtr (last slots)) + (bit pteBits - 1))
@@ -1394,7 +1646,12 @@ the PT/PD is consistent.
 >
 > performPageInvocation (PageRemap asid (Right (pde, slots))) = do
 >     tlbFlush <- pdeCheckIfMapped (head slots)
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     mapM (\(slot, i) -> storePDE slot (addPDEOffset pde i))
+>          (zip slots [0 .. fromIntegral (length slots - 1)])
+#else
 >     mapM (flip storePDE pde) slots
+#endif
 >     doMachineOp $
 >         cleanCacheRange_PoU (VPtr $ fromPPtr $ head slots)
 >                             (VPtr $ (fromPPtr (last slots)) + (bit pdeBits - 1))
@@ -1410,7 +1667,7 @@ the PT/PD is consistent.
 >     updateCap ctSlot (ArchObjectCap $
 >                            cap { capVPMappedAddress = Nothing })
 >
-> performPageInvocation (PageFlush typ start end pstart pd asid) = 
+> performPageInvocation (PageFlush typ start end pstart pd asid) =
 >     when (start < end) $ do
 >         root_switched <- setVMRootForFlush pd asid
 >         doMachineOp $ doFlush typ start end pstart
@@ -1460,11 +1717,24 @@ The kernel model's ARM targets use an external simulation of the physical addres
 > storePDE :: PPtr PDE -> PDE -> Kernel ()
 > storePDE slot pde = do
 >     setObject slot pde
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 >     doMachineOp $ storeWordVM (PPtr $ fromPPtr slot) $ wordFromPDE pde
+#else
+>     let [w0, w1] = wordsFromPDE pde
+>     doMachineOp $ storeWordVM (PPtr $ fromPPtr slot) w0
+>     doMachineOp $ storeWordVM (PPtr $ fromPPtr slot + fromIntegral wordSize) w1
+#endif
 
 > storePTE :: PPtr PTE -> PTE -> Kernel ()
 > storePTE slot pte = do
 >     setObject slot pte
+#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 >     doMachineOp $ storeWordVM (PPtr $ fromPPtr slot) $ wordFromPTE pte
+#else
+>     let [w0, w1] = wordsFromPTE pte
+>     doMachineOp $ storeWordVM (PPtr $ fromPPtr slot) w0
+>     doMachineOp $ storeWordVM (PPtr $ fromPPtr slot + fromIntegral wordSize) w1
+#endif
 
+FIXME ARMHYP IOPTE IOPDE - here or in IOSpace?
 
