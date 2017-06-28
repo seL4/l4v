@@ -17,10 +17,10 @@ begin
 context Arch begin global_naming ARM_HYP_H
 
 
-#INCLUDE_HASKELL_PREPARSE SEL4/API/Failures/ARM_HYP.lhs
+#INCLUDE_HASKELL_PREPARSE SEL4/API/Failures/ARM.lhs
 
-#INCLUDE_HASKELL SEL4/API/Faults/ARM_HYP.lhs decls_only
-#INCLUDE_HASKELL SEL4/API/Faults/ARM_HYP.lhs bodies_only
+#INCLUDE_HASKELL SEL4/API/Faults/ARM.lhs decls_only
+#INCLUDE_HASKELL SEL4/API/Faults/ARM.lhs bodies_only
 
 end
 

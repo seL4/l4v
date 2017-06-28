@@ -21,11 +21,11 @@ imports
 begin
 context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/API/Invocation/ARM_HYP.lhs CONTEXT ARM_HYP_H decls_only NOT isPageFlushLabel isPDFlushLabel Invocation IRQControlInvocation CopyRegisterSets
+#INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs CONTEXT ARM_HYP_H decls_only NOT isPageFlushLabel isPDFlushLabel Invocation IRQControlInvocation CopyRegisterSets
 
-#INCLUDE_HASKELL SEL4/API/Invocation/ARM_HYP.lhs CONTEXT ARM_HYP_H decls_only ONLY Invocation IRQControlInvocation CopyRegisterSets
+#INCLUDE_HASKELL SEL4/API/Invocation/ARM.lhs CONTEXT ARM_HYP_H decls_only ONLY Invocation IRQControlInvocation CopyRegisterSets
 
-#INCLUDE_HASKELL SEL4/Object/ObjectType/ARM_HYP.lhs CONTEXT ARM_HYP_H Arch.Types=ArchTypes_H ArchInv= decls_only
+#INCLUDE_HASKELL SEL4/Object/ObjectType/ARM.lhs CONTEXT ARM_HYP_H Arch.Types=ArchTypes_H ArchInv= decls_only
 
 end
 end

@@ -13,7 +13,7 @@ imports "../TCBDecls_H"
 begin
 context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/Object/TCB/ARM_HYP.lhs CONTEXT ARM_HYP_H
+#INCLUDE_HASKELL SEL4/Object/TCB/ARM.lhs CONTEXT ARM_HYP_H
 
 #INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= ONLY archThreadGet archThreadSet
 

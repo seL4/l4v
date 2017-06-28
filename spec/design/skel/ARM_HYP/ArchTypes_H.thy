@@ -25,7 +25,7 @@ begin
 
 context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/API/Types/ARM_HYP.lhs CONTEXT ARM_HYP_H
+#INCLUDE_HASKELL SEL4/API/Types/ARM.lhs CONTEXT ARM_HYP_H
 
 end
 

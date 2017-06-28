@@ -128,16 +128,16 @@ lemmas (in Arch) [simp] =
 
 #INCLUDE_SETTINGS keep_constructor = asidpool
 
-#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/ARM_HYP.lhs
-#INCLUDE_HASKELL_PREPARSE SEL4/Machine/Hardware/ARM_HYP.lhs
-#INCLUDE_HASKELL_PREPARSE SEL4/Object/VCPU/ARM_HYP.lhs
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/ARM.lhs
+#INCLUDE_HASKELL_PREPARSE SEL4/Machine/Hardware/ARM.lhs
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/VCPU/ARM.lhs
 
 
 instantiation ARM_HYP_H.pde :: pspace_storable
 begin
 interpretation Arch .
 
-#INCLUDE_HASKELL SEL4/Object/Instances/ARM_HYP.lhs instanceproofs bodies_only ONLY PDE
+#INCLUDE_HASKELL SEL4/Object/Instances/ARM.lhs instanceproofs bodies_only ONLY PDE
 
 instance
   apply (intro_classes)
@@ -152,9 +152,9 @@ instantiation ARM_HYP_H.pte :: pspace_storable
 begin
 interpretation Arch .
 
-#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/ARM_HYP.lhs
-#INCLUDE_HASKELL_PREPARSE SEL4/Object/VCPU/ARM_HYP.lhs
-#INCLUDE_HASKELL SEL4/Object/Instances/ARM_HYP.lhs instanceproofs bodies_only ONLY PTE
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/ARM.lhs
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/VCPU/ARM.lhs
+#INCLUDE_HASKELL SEL4/Object/Instances/ARM.lhs instanceproofs bodies_only ONLY PTE
 
 instance
   apply (intro_classes)
@@ -169,9 +169,9 @@ instantiation ARM_HYP_H.vcpu :: pspace_storable
 begin
 interpretation Arch .
 
-#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/ARM_HYP.lhs
-#INCLUDE_HASKELL_PREPARSE SEL4/Object/VCPU/ARM_HYP.lhs
-#INCLUDE_HASKELL SEL4/Object/Instances/ARM_HYP.lhs instanceproofs bodies_only ONLY VCPU
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/ARM.lhs
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/VCPU/ARM.lhs
+#INCLUDE_HASKELL SEL4/Object/Instances/ARM.lhs instanceproofs bodies_only ONLY VCPU
 
 instance
   apply (intro_classes)

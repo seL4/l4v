@@ -22,7 +22,7 @@ imports
 begin
 context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/Model/StateData/ARM_HYP.lhs CONTEXT ARM_HYP_H NOT ArmVSpaceRegionUse
+#INCLUDE_HASKELL SEL4/Model/StateData/ARM.lhs CONTEXT ARM_HYP_H NOT ArmVSpaceRegionUse
 
 end
 

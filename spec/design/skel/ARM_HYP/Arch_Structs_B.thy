@@ -17,7 +17,7 @@ imports "~~/src/HOL/Main" "../../machine/Setup_Locale"
 begin
 context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/Model/StateData/ARM_HYP.lhs CONTEXT ARM_HYP_H ONLY ArmVSpaceRegionUse
+#INCLUDE_HASKELL SEL4/Model/StateData/ARM.lhs CONTEXT ARM_HYP_H ONLY ArmVSpaceRegionUse
 
 end
 end

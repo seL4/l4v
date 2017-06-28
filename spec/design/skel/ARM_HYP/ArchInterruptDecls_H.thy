@@ -14,7 +14,7 @@ begin
 
 context Arch begin global_naming ARM_HYP_H
 
-#INCLUDE_HASKELL SEL4/Object/Interrupt/ARM_HYP.lhs CONTEXT Arch decls_only ArchInv=
+#INCLUDE_HASKELL SEL4/Object/Interrupt/ARM.lhs CONTEXT Arch decls_only ArchInv=
 
 end
 
