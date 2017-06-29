@@ -9,7 +9,7 @@
  *)
 
 theory TypHeapLib
-imports "../tools/c-parser/CTranslation"
+imports "$L4V_ARCH/PtrEnum"
 begin
 
 (* This file contains everything you need to know and use for the
@@ -416,33 +416,6 @@ lemma c_guard_array_field:
   shows "c_guard (Ptr &(p\<rightarrow>f) :: 'b ptr)"
   by (metis c_guard_array_c_guard c_guard_field parent_cguard ptr_coerce.simps subfield type_match)
 
-instantiation ptr :: (type) enum
-begin
-
-  definition "enum_ptr \<equiv> map Ptr (enum_class.enum :: 32 word list)"
-  definition "enum_all_ptr P \<equiv> enum_class.enum_all (\<lambda>v :: 32 word. P (Ptr v))"
-  definition "enum_ex_ptr P \<equiv> enum_class.enum_ex (\<lambda>v :: 32 word. P (Ptr v))"
-
-  instance
-    apply (intro_classes)
-       apply (clarsimp simp: enum_ptr_def)
-       apply (metis ptr.exhaust surj_def)
-      apply (clarsimp simp: enum_ptr_def distinct_map)
-      apply (metis injI ptr.inject)
-     apply (clarsimp simp: enum_all_ptr_def)
-     apply (rule iffI)
-      apply (rule allI)
-      apply (erule_tac x="ptr_val x" in allE)
-      apply force
-     apply force
-    apply (clarsimp simp: enum_ex_ptr_def)
-    apply (rule iffI)
-     apply force
-    apply clarsimp
-    apply (rule_tac x="ptr_val x" in exI)
-    apply clarsimp
-    done
-end
 
 (* Simplifier setup *)
 

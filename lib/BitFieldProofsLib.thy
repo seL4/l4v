@@ -14,6 +14,23 @@ imports
   TypHeapLib
 begin
 
+(* FIXME: should probably move to Word_Lib *)
+definition
+  sign_extend :: "nat \<Rightarrow> 'a::len word \<Rightarrow> 'a word"
+where
+  "sign_extend n w \<equiv> if w!!n then w || ~~mask n else w"
+
+lemma sign_extend_def':
+  "sign_extend n w = (if w!!n then w || ~~mask (Suc n) else w)"
+  apply (rule word_eqI)
+  apply (auto dest: less_antisym simp: sign_extend_def word_size word_ops_nth_size)
+  done
+
+(* FIXME: move to Word_Lib *)
+lemma nth_is_and_neq_0:
+  "(x::'a::len word) !! n = (x && 2 ^ n \<noteq> 0)"
+  by (subst and_neq_0_is_nth; rule refl)
+
 lemmas guard_simps =
   word_sle_def word_sless_def scast_id
 
