@@ -3984,6 +3984,7 @@ lemma Arch_decodeInvocation_ccorres:
               apply (rule ccorres_Guard_Seq)+
               apply (simp add: whenE_bindE_throwError_to_if if_to_top_of_bind
                           del: Collect_const)
+              apply (simp add: conj_commute[of "\<not> capIsDevice _"])
               apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
                  apply clarsimp
                  apply (rule conseqPre, vcg, rule subset_refl)
