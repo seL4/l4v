@@ -44,7 +44,7 @@ where
 | "default_cap TCBObject oref s _ = ThreadCap oref"
 | "default_cap EndpointObject oref s _ = EndpointCap oref 0 UNIV"
 | "default_cap NotificationObject oref s _ = NotificationCap oref 0 {AllowRead, AllowWrite}"
-| "default_cap SchedContextObject oref s _ = SchedContextCap oref"
+| "default_cap SchedContextObject oref s _ = SchedContextCap oref s"
 | "default_cap ReplyObject oref _ _ = ReplyCap oref"
 | "default_cap (ArchObject aobj) oref s dev = ArchObjectCap (arch_default_cap aobj oref s dev)"
 

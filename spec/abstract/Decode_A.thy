@@ -505,7 +505,7 @@ where
     whenE (length args < TIME_ARG_SIZE*2 + 1) $ throwError TruncatedMessage;
     budget_\<mu>s \<leftarrow> returnOk $ parse_time_arg 0 args;
     period_\<mu>s \<leftarrow> returnOk $ parse_time_arg TIME_ARG_SIZE args;
-    max_refills \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE);
+    extra_refills \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE);
     target_cap \<leftarrow> returnOk $ hd excaps;
     whenE (\<not>is_sched_context_cap target_cap) $ throwError (InvalidCapability 1);
     sc_ptr \<leftarrow> returnOk $ obj_ref_of target_cap;
@@ -515,10 +515,10 @@ where
       throwError (RangeError (ucast MIN_BUDGET_US) (ucast maxTimer_us));
     whenE (period_\<mu>s < budget_\<mu>s) $
       throwError (RangeError (ucast MIN_BUDGET_US) (ucast period_\<mu>s));
-    whenE (MAX_REFILLS < max_refills) $
-      throwError (RangeError 0 (of_nat (MAX_REFILLS - MIN_REFILLS - 1)));
+    whenE (unat (extra_refills + MIN_REFILLS) > refill_absolute_max(target_cap)) $
+      throwError (RangeError 0 (of_nat (refill_absolute_max(target_cap) - MIN_REFILLS)));
     returnOk $ InvokeSchedControlConfigure sc_ptr
-                 (us_to_ticks budget_\<mu>s) (us_to_ticks period_\<mu>s) (unat $ max_refills + MIN_REFILLS)
+                 (us_to_ticks budget_\<mu>s) (us_to_ticks period_\<mu>s) (unat $ extra_refills + MIN_REFILLS)
   odE"
 
 
@@ -613,6 +613,8 @@ where
     $ throwError (InvalidArgument 1);
   whenE (new_type = Untyped \<and> user_obj_size < untyped_min_bits)
     $ throwError (InvalidArgument 1);
+  whenE (new_type = SchedContextObject \<and> user_obj_size < 8) (* seL4_MfsinSchedContextBits *)
+    $ throwError (InvalidArgument 1);
   node_index \<leftarrow> returnOk $ data_to_cptr (args!2);
   node_depth \<leftarrow> returnOk $ data_to_nat (args!3);
 
@@ -704,7 +706,7 @@ where
       liftME InvokeTCB $ decode_tcb_invocation label args cap slot excaps
   | DomainCap \<Rightarrow>
       liftME (case_prod InvokeDomain) $ decode_domain_invocation label args excaps
-  | SchedContextCap sc \<Rightarrow>
+  | SchedContextCap sc sz \<Rightarrow>
       liftME InvokeSchedContext $ decode_sched_context_invocation label sc (map fst excaps)
   | SchedControlCap \<Rightarrow>
       liftME InvokeSchedControl $ decode_sched_control_invocation label args (map fst excaps)

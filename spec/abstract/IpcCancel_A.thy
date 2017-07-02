@@ -141,9 +141,12 @@ definition
 where
   "reply_push caller callee reply_ptr can_donate = do
     sc_opt \<leftarrow> thread_get tcb_sched_context caller;
+    sc_callee \<leftarrow> thread_get tcb_sched_context callee;
 
     reply_caller_opt \<leftarrow> get_reply_caller reply_ptr;
     when (reply_caller_opt \<noteq> None) $ reply_remove reply_ptr;
+
+    can_donate \<leftarrow> return (if (sc_callee = None) then can_donate else False);
 
     reply \<leftarrow> get_reply reply_ptr;
     assert (reply_caller reply = None);
@@ -456,7 +459,7 @@ where
           unbind_maybe_notification r;
           cancel_all_signals r
        od)"
-| "fast_finalise (SchedContextCap sc)    final =
+| "fast_finalise (SchedContextCap sc b)    final =
       (when final $ do
           sched_context_unbind_all_tcbs sc;
           sched_context_unbind_ntfn sc;

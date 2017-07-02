@@ -78,20 +78,14 @@ definition
    st \<leftarrow> get_irq_state irq;
    case st of
      IRQSignal \<Rightarrow> do
-       update_time_stamp;
        slot \<leftarrow> get_irq_slot irq;
        cap \<leftarrow> get_cap slot;
        when (is_ntfn_cap cap \<and> AllowSend \<in> cap_rights cap)
          $ send_signal (obj_ref_of cap) (cap_ep_badge cap); 
-       do_machine_op $ maskInterrupt True irq;
-       commit \<leftarrow> check_budget;
-       when commit commit_time
+       do_machine_op $ maskInterrupt True irq
      od
    | IRQTimer \<Rightarrow> do
-       update_time_stamp;
        do_machine_op ackDeadlineIRQ;
-       commit \<leftarrow> check_budget;
-       when commit commit_time;
        modify $ reprogram_timer_update (K True)
      od
    | IRQInactive \<Rightarrow> fail \<comment> \<open>not meant to be able to get IRQs from inactive lines\<close>

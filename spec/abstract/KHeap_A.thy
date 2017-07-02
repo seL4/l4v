@@ -94,6 +94,82 @@ where
      set_object ref (TCB (tcb \<lparr> tcb_bound_notification := ntfn \<rparr>))
    od"
 
+section {* Scheduling Contexts *}
+
+definition
+  get_sched_context :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad"
+where
+  "get_sched_context ptr \<equiv> do
+     kobj \<leftarrow> get_object ptr;
+     case kobj of SchedContext sc \<Rightarrow> return sc
+                 | _ \<Rightarrow> fail
+   od"
+
+definition
+  set_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_sched_context ptr sc \<equiv> do
+     obj \<leftarrow> get_object ptr;
+     assert (case obj of SchedContext sc \<Rightarrow> True | _ \<Rightarrow> False);
+     set_object ptr (SchedContext sc)
+   od"
+
+
+
+(****)
+
+definition
+  is_schedulable :: "obj_ref \<Rightarrow> bool \<Rightarrow> ('z::state_ext state, bool) nondet_monad"
+where
+  "is_schedulable tcb_ptr in_release_q \<equiv> do
+    tcb \<leftarrow> gets_the $ get_tcb tcb_ptr;
+    if Option.is_none (tcb_sched_context tcb)
+    then return False
+    else do
+      sc \<leftarrow> get_sched_context $ the $ tcb_sched_context tcb;
+      return (runnable (tcb_state tcb)
+              \<and> sc_refill_max sc > 0 \<and> \<not>in_release_q)
+    od
+  od"
+
+definition
+  is_schedulable_opt :: "obj_ref \<Rightarrow> bool \<Rightarrow> 'z::state_ext state \<Rightarrow> bool option"
+where 
+  "is_schedulable_opt tcb_ptr in_release_q \<equiv> \<lambda>s.
+    case get_tcb tcb_ptr s of None \<Rightarrow> None | Some tcb \<Rightarrow>
+      (case tcb_sched_context tcb of None => Some False
+       | Some sc_ptr => 
+           Some (runnable (tcb_state tcb)   (* FIXME *)
+           \<and> \<not>in_release_q))"
+
+definition reschedule_required :: "unit det_ext_monad" where
+  "reschedule_required \<equiv> do
+     action \<leftarrow> gets scheduler_action;
+     case action of 
+       switch_thread t \<Rightarrow> do
+         in_release_q \<leftarrow> gets $ in_release_queue t;
+         sched \<leftarrow> is_schedulable t in_release_q;
+         when sched $ tcb_sched_action (tcb_sched_enqueue) t
+       od
+     | _ \<Rightarrow> return ();
+     set_scheduler_action choose_new_thread
+   od"
+
+definition
+  schedule_tcb :: "obj_ref \<Rightarrow> unit det_ext_monad"
+where
+  "schedule_tcb tcb_ptr \<equiv> do
+    cur \<leftarrow> gets cur_thread;
+    sched_act \<leftarrow> gets scheduler_action;
+    in_release_q \<leftarrow> gets $ in_release_queue tcb_ptr;
+    schedulable \<leftarrow> is_schedulable tcb_ptr in_release_q;
+    when (tcb_ptr = cur \<and> sched_act = resume_cur_thread \<and> \<not>schedulable) $ reschedule_required
+  od"
+
+
+
+(***)
+
 definition
   set_thread_state :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
@@ -156,27 +232,6 @@ where
      assert (case partial_inv f obj of Some e \<Rightarrow> a_type obj = a_type (f ep) | _ \<Rightarrow> False);
      set_object ptr (f ep)
    od"
-
-section {* Scheduling Contexts *}
-
-definition
-  get_sched_context :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad"
-where
-  "get_sched_context ptr \<equiv> do
-     kobj \<leftarrow> get_object ptr;
-     case kobj of SchedContext sc \<Rightarrow> return sc
-                 | _ \<Rightarrow> fail
-   od"
-
-definition
-  set_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "set_sched_context ptr sc \<equiv> do
-     obj \<leftarrow> get_object ptr;
-     assert (case obj of SchedContext sc \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (SchedContext sc)
-   od"
-
 
 section {* Reply Objects *}
 

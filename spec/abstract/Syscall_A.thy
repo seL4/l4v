@@ -275,12 +275,9 @@ definition
   handle_yield :: "unit det_ext_monad" where
   "handle_yield \<equiv> do
      cur_sc \<leftarrow> gets cur_sc;
-     consumed \<leftarrow> gets consumed_time;
-     refill_budget_check cur_sc consumed;
-     modify $ consumed_time_update $ K 0;
-     end_timeslice;
-     reschedule_required
-   od"
+     refills \<leftarrow> get_refills cur_sc;
+     charge_budget 0 (r_amount (hd refills))
+ od"
 
 definition
   handle_send :: "bool \<Rightarrow> (unit, det_ext) p_monad" where
@@ -432,8 +429,7 @@ definition
            (\<lambda>_. without_preemption $ do
                   irq \<leftarrow> do_machine_op $ getActiveIRQ True;
                   when (irq \<noteq> None) $ do
-                    commit \<leftarrow> check_budget;
-                    when commit commit_time;
+                    check_budget;
                     handle_interrupt (the irq)
                   od
                 od);

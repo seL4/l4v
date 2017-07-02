@@ -326,7 +326,6 @@ where
                     od
                   | _ \<Rightarrow> fail;
                 sc_opt \<leftarrow> thread_get tcb_sched_context dest;
-                can_donate \<leftarrow> return (if sc_opt = None then can_donate else False);
 
                 fault \<leftarrow> thread_get tcb_fault thread;
                 if call \<or> fault \<noteq> None then
@@ -336,8 +335,8 @@ where
                     set_thread_state thread BlockedOnReply
                   od
                   else set_thread_state thread Inactive
-                else when can_donate $ sched_context_donate (the sc_opt) dest;
-                
+                else when (can_donate \<and> sc_opt = None) $ sched_context_donate (the sc_opt) dest;
+
                 set_thread_state dest Running;
                 possible_switch_to dest
               od
@@ -425,9 +424,8 @@ where
               then
                 if sender_can_grant data \<and> reply \<noteq> None
                 then do
-                  thread_sc \<leftarrow> thread_get tcb_sched_context thread;
                   sender_sc \<leftarrow> thread_get tcb_sched_context sender;
-                  donate \<leftarrow> return (thread_sc = None \<and> sender_sc \<noteq> None);
+                  donate \<leftarrow> return (sender_sc \<noteq> None);
                   reply_push sender thread (the reply) donate;
                   set_thread_state sender BlockedOnReply
                 od

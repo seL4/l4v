@@ -42,7 +42,9 @@ definition
       set_thread_state thread Restart;
       sc_ptr \<leftarrow> assert_opt sc_opt;
       do_extended_op (sched_context_resume sc_ptr);
-      switch_if_required_to thread
+      in_release_q \<leftarrow> gets $ in_release_queue thread;
+      schedulable \<leftarrow> is_schedulable thread in_release_q;
+      when schedulable $ switch_if_required_to thread
     od
   od"
 

@@ -447,11 +447,6 @@ where
    od"
 
 definition
-  is_cur_domain_expired :: "det_ext state \<Rightarrow> bool"
-where
-  "is_cur_domain_expired = (\<lambda>s. domain_time  s < consumed_time s + kernelWCET_ticks)"
-
-definition
   commit_domain_time :: "unit det_ext_monad"
 where
   "commit_domain_time = do
@@ -470,67 +465,6 @@ where
     | Some kobj \<Rightarrow> (case kobj of
         TCB tcb \<Rightarrow> Some tcb
       | _       \<Rightarrow> None)"
-
-
-definition
-  is_schedulable_opt :: "obj_ref \<Rightarrow> bool \<Rightarrow> 'z::state_ext state \<Rightarrow> bool option"
-where 
-  "is_schedulable_opt tcb_ptr in_release_q \<equiv> \<lambda>s.
-    case get_tcb tcb_ptr s of None \<Rightarrow> None | Some tcb \<Rightarrow>
-      Some (runnable (tcb_state tcb) \<and> tcb_sched_context tcb \<noteq> None \<and> \<not>in_release_q)"
-
-definition
-  is_schedulable :: "obj_ref \<Rightarrow> bool \<Rightarrow> ('z::state_ext state, bool) nondet_monad"
-where
-  "is_schedulable tcb_ptr in_release_q \<equiv> gets_the $ is_schedulable_opt tcb_ptr in_release_q"
-
-definition reschedule_required :: "unit det_ext_monad" where
-  "reschedule_required \<equiv> do
-     action \<leftarrow> gets scheduler_action;
-     case action of 
-       switch_thread t \<Rightarrow> do
-         in_release_q \<leftarrow> gets $ in_release_queue t;
-         sched \<leftarrow> is_schedulable t in_release_q;
-         when sched $ tcb_sched_action (tcb_sched_enqueue) t
-       od
-     | _ \<Rightarrow> return ();
-     set_scheduler_action choose_new_thread;
-     modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>)
-   od"
-(*
-definition
-  possible_switch_to :: "obj_ref \<Rightarrow> unit det_ext_monad" where
-  "possible_switch_to target \<equiv> do
-     sc_opt \<leftarrow> thread_get tcb_sched_context target;
-     inq \<leftarrow> gets $ in_release_queue target;
-     when (sc_opt \<noteq> None \<and> \<not>inq) $ do
-
-     cur_dom \<leftarrow> gets cur_domain;
-     target_dom \<leftarrow> ethread_get tcb_domain target;
-     action \<leftarrow> gets scheduler_action;
-     if (target_dom \<noteq> cur_dom) then
-       tcb_sched_action tcb_sched_enqueue target
-     else if (action \<noteq> resume_cur_thread) then
-       do
-         reschedule_required;
-         tcb_sched_action tcb_sched_enqueue target
-       od
-     else
-       set_scheduler_action $ switch_thread target
-   od
-
-   od"
-*)
-definition
-  schedule_tcb :: "obj_ref \<Rightarrow> unit det_ext_monad"
-where
-  "schedule_tcb tcb_ptr \<equiv> do
-    cur \<leftarrow> gets cur_thread;
-    sched_act \<leftarrow> gets scheduler_action;
-    in_release_q \<leftarrow> gets $ in_release_queue tcb_ptr;
-    schedulable \<leftarrow> is_schedulable tcb_ptr in_release_q;
-    when (tcb_ptr = cur \<and> sched_act = resume_cur_thread \<and> \<not>schedulable) $ reschedule_required
-  od"
 
 definition "\<mu>s_to_ms = 1000"
 
