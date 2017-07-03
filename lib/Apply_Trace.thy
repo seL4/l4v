@@ -94,7 +94,7 @@ let
       val (name', idx) = get_ref_from_nm xnm |> the;
       val entry = try (Facts.retrieve (Context.Proof ctxt) facts) (name', Position.none) |> the;
       val thm = maybe_nth (#thms entry) (idx - 1) |> the;
-    in SOME (#name entry, thm) end handle Option => NONE;
+    in SOME (xnm, thm) end handle Option => NONE;
 
   fun non_idx_result () =
     let
