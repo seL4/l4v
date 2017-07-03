@@ -98,7 +98,7 @@ The following data type defines the set of possible TCB invocation operations. T
 >             bindCap :: Capability }
 >         | InvokeSchedContextUnbindObject {
 >             unbindObjectScPtr :: PPtr SchedContext,
->             unbindObjectCap :: Capability }       
+>             unbindObjectCap :: Capability }
 >         | InvokeSchedContextUnbind { unbindScPtr :: PPtr SchedContext }
 >         deriving Show
 

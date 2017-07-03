@@ -186,7 +186,6 @@ is set to an incorrect value.
 >             st <- getIRQState irq
 >             case st of
 >                 IRQSignal -> do
->                     updateTimeStamp
 >                     slot <- getIRQSlot irq
 >                     cap <- getSlotCap slot
 >                     case cap of
@@ -195,15 +194,9 @@ is set to an incorrect value.
 >                         _ -> doMachineOp $ debugPrint $
 >                             "Undelivered interrupt: " ++ show irq
 >                     doMachineOp $ maskInterrupt True irq
->                     commit <- checkBudget
->                     when commit commitTime
 >                 IRQTimer -> do
->                     updateTimeStamp
 >                     doMachineOp ackDeadlineIRQ
->                     commit <- checkBudget
->                     when commit commitTime
 >                     setReprogramTimer True
-
 >                 IRQReserved -> Arch.handleReservedIRQ irq
 >                 IRQInactive -> fail $ "Received disabled IRQ " ++ show irq
 >             doMachineOp $ ackInterrupt irq

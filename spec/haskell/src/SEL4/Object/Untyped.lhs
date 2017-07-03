@@ -101,6 +101,9 @@ Because of capability size limitations, the kernel does not allow creation of ob
 >     when (newType == fromAPIType Untyped && userObjSize < minUntypedSizeBits) $
 >         throw $ InvalidArgument 1
 
+>     when (newType == fromAPIType SchedContextObject && userObjSize < 8) $
+>         throw $ InvalidArgument 1
+
 The node index and depth arguments, and the root capability, specify a CNode to place newly created capabilities in. This is similar to the source argument of the Insert and Move operations. However, unlike those operations, the specified slot must contain a CNode capability, and the new capabilities will be placed in \emph{that} CNode. % XXX should have either a diagram, or a more intuitive way to specify the destination.
 
 >     let nodeIndex = CPtr nodeIndexW

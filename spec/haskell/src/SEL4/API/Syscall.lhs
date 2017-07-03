@@ -220,11 +220,8 @@ The "Yield" system call is trivial; it simply moves the current thread to the en
 > handleYield :: Kernel ()
 > handleYield = do
 >     curSc <- getCurSc
->     consumed <- getConsumedTime
->     refillBudgetCheck curSc consumed
->     setConsumedTime 0
->     endTimeSlice
->     rescheduleRequired
+>     refills <- getRefills curSc
+>     chargeBudget 0 (rAmount (head refills))
 
 \subsection{Capability Invocations}\label{sel4:api:syscall:invoke}
 

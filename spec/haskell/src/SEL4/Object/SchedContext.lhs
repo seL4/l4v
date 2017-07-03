@@ -21,7 +21,8 @@ This module specifies the behavior of schedule context objects.
 >         guardedSwitchTo, refillSufficient, postpone, replyUnbindSc,
 >         schedContextDonate, schedContextClearReplies,
 >         maybeDonateSc, maybeReturnSc,
->         schedContextMaybeUnbindNtfn, schedContextUnbindNtfn
+>         schedContextMaybeUnbindNtfn, schedContextUnbindNtfn,
+>         isRoundRobin, getRefills, setRefills, refillFull, refillAbsoluteMax
 >     ) where
 
 \begin{impdetails}
@@ -35,15 +36,13 @@ This module specifies the behavior of schedule context objects.
 > import {-# SOURCE #-} SEL4.Object.Notification
 > import {-# SOURCE #-} SEL4.Object.Reply
 > import SEL4.Object.Structures
-> import {-# SOURCE #-} SEL4.Object.TCB(threadGet, threadSet)
+> import {-# SOURCE #-} SEL4.Object.TCB(threadGet, threadSet, checkBudget, chargeBudget)
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 > import SEL4.API.Invocation(SchedContextInvocation(..), SchedControlInvocation(..))
 
 > import Data.List(delete)
 > import Data.Word(Word64)
 > import Data.Maybe
-> import qualified Data.Foldable as Foldable
-> import Data.Set(fromList)
 
 \end{impdetails}
 
@@ -61,6 +60,9 @@ This module specifies the behavior of schedule context objects.
 
 > refillHd :: SchedContext -> Refill
 > refillHd sc = head (scRefills sc)
+
+> refillTl :: SchedContext -> Refill
+> refillTl sc = last (scRefills sc)
 
 > getScTime :: PPtr TCB -> Kernel Time
 > getScTime tcbPtr = do
@@ -83,7 +85,7 @@ This module specifies the behavior of schedule context objects.
 >         else rAmount (head refills) - usage
 
 > sufficientRefills :: Time -> [Refill] -> Bool
-> sufficientRefills usage refills = minBudget < refillsCapacity usage refills
+> sufficientRefills usage refills = minBudget <= refillsCapacity usage refills
 
 > refillSufficient :: PPtr SchedContext -> Time -> Kernel Bool
 > refillSufficient scPtr usage = do
@@ -115,13 +117,19 @@ This module specifies the behavior of schedule context objects.
 >     refills <- getRefills scPtr
 >     return $ length refills
 
+> refillFull :: PPtr SchedContext -> Kernel Bool
+> refillFull scPtr = do
+>     sc <- getSchedContext scPtr
+>     sz <- refillSize scPtr
+>     return $ sz == scRefillMax sc
+
 > refillSingle :: PPtr SchedContext -> Kernel Bool
 > refillSingle scPtr = do
 >     sz <- refillSize scPtr
 >     return (sz == 1)
 
 > refillsSum :: [Refill] -> Time
-> refillsSum rf = Foldable.sum (fromList (map rAmount rf))
+> refillsSum rf = sum (map rAmount rf)
 
 > refillSum :: PPtr SchedContext -> Kernel Time
 > refillSum scPtr = do
@@ -142,11 +150,17 @@ This module specifies the behavior of schedule context objects.
 
 > refillAddTail :: PPtr SchedContext -> Refill -> Kernel ()
 > refillAddTail scPtr rfl = do
->     assert (rAmount rfl /= 0) "rAmount of Refill must be non-zero"
 >     sc <- getSchedContext scPtr
 >     refills <- return $ scRefills sc
 >     assert (length refills < scRefillMax sc) "Length of Refill list must be less than the maximum"
 >     setRefills scPtr (refills ++ [rfl])
+
+> maybeAddEmptyTail :: PPtr SchedContext -> Kernel ()
+> maybeAddEmptyTail scPtr = do
+>     robin <- isRoundRobin scPtr
+>     when robin $ do
+>         curTime <- getCurTime
+>         refillAddTail scPtr (Refill { rTime = curTime, rAmount = 0 })
 
 > refillNew :: PPtr SchedContext -> Int -> Ticks -> Ticks -> Kernel ()
 > refillNew scPtr maxRefills budget period = do
@@ -156,6 +170,22 @@ This module specifies the behavior of schedule context objects.
 >     refill <- return Refill { rTime = curTime, rAmount = budget }
 >     sc' <- return $ sc { scPeriod = period, scRefills = [refill], scRefillMax = maxRefills }
 >     setSchedContext scPtr sc'
+>     maybeAddEmptyTail scPtr
+
+> scheduleUsed :: [Refill] -> Refill -> [Refill]
+> scheduleUsed [] new = [new]
+> scheduleUsed (x:rs) new =
+>     let rTl = last (x:rs)
+>     in
+>         if (rAmount new < minBudget && not (null rs))
+>             then
+>                 init (x:rs) ++ [rTl { rAmount = rAmount rTl + rAmount new, rTime = max (rTime new) (rTime rTl) }]
+>             else
+>                 if (rTime new <= rTime rTl)
+>                     then
+>                         init (x:rs) ++ [rTl { rAmount = rAmount rTl + rAmount new }]
+>                     else
+>                         (x:rs) ++ [new]
 
 > mergeRefill :: Refill -> Refill -> Refill
 > mergeRefill r1 r2 =
@@ -173,37 +203,46 @@ This module specifies the behavior of schedule context objects.
 
 > refillUnblockCheck :: PPtr SchedContext -> Kernel ()
 > refillUnblockCheck scPtr = do
->     ct <- getCurTime
->     refills <- getRefills scPtr
->     refills' <- return $ refillsMergePrefix ((head refills) { rTime = ct } : tail refills)
->     refills'' <- return
->         (if sufficientRefills 0 refills'
->              then refills'
->              else
->                  let
->                      r1 = head refills'
->                      r2 = head (tail refills')
->                      rs = tail (tail refills')
->                  in Refill { rTime = rTime r2, rAmount = rAmount r2 + rAmount r1 } : rs)
->     setRefills scPtr refills''
+>     robin <- isRoundRobin scPtr
+>     when (not robin) $ do
+>         setReprogramTimer True
+>         ct <- getCurTime
+>         refills <- getRefills scPtr
+>         refills' <- return $ refillsMergePrefix ((head refills) { rTime = ct } : tail refills)
+>         assert (sufficientRefills 0 refills') "refillUnblockCheck: error for sufficientRefills"
+>         setRefills scPtr refills'
 
 > refillsBudgetCheck :: Ticks -> Ticks -> [Refill] -> (Ticks, [Refill])
 > refillsBudgetCheck _ usage [] = (usage, [])
 > refillsBudgetCheck period usage (r:rs) =
 >     (if rAmount r <= usage && 0 < rAmount r
->          then refillsBudgetCheck period (usage - rAmount r) (rs ++ [r { rTime = rTime r + period }])
+>          then refillsBudgetCheck period (usage - rAmount r)
+>              (scheduleUsed rs (r { rTime = rTime r + period }))
 >          else (usage, r:rs))
 
-> refillBudgetCheck :: PPtr SchedContext -> Ticks -> Kernel Ticks
-> refillBudgetCheck scPtr usage = do
+> minBudgetMerge :: Bool -> [Refill] -> [Refill]
+> minBudgetMerge _ [] = []
+> minBudgetMerge _ [r] = [r]
+> minBudgetMerge full (r0:r1:rs) =
+>     if rAmount r0 < minBudget || full
+>         then minBudgetMerge full (r1 { rAmount = rAmount r1 + rAmount r0 } : rs)
+>         else (r0:r1:rs)
+
+> refillBudgetCheck :: PPtr SchedContext -> Ticks -> Ticks -> Kernel ()
+> refillBudgetCheck scPtr usage capacity = do
 >     sc <- getSchedContext scPtr
+>     full <- refillFull scPtr
+>     assert (capacity < minBudget || full) "refillBudgetCheck: capacity must be less than minimun budget or full"
 >     period <- return $ scPeriod sc
+>     assert (period > 0) "refillBudgetCheck: period must be greater than 0"
 >     refills <- return $ scRefills sc
 
->     (usage', refills') <- return $ refillsBudgetCheck period usage refills
+>     (usage', refills') <- return (if (capacity == 0) then
+>         refillsBudgetCheck period usage refills
+>         else (usage, refills))
 
 >     refills'' <- return
->         (if 0 < usage' && 0 < period
+>         (if capacity == 0 && 0 < usage'
 >          then
 >              let r1 = head refills'
 >                  r1' = r1 { rTime = rTime r1 + usage }
@@ -213,10 +252,15 @@ This module specifies the behavior of schedule context objects.
 >                 else [r1]
 >          else refills')
 
-TODO: refills'' or refills'?
-
 >     setRefills scPtr refills''
->     return usage'
+
+>     capacity <- refillCapacity scPtr usage'
+>     ready <- refillReady scPtr
+>     when (capacity > 0 && ready) $ refillSplitCheck scPtr usage'
+>     cscPtr <- getCurSc
+>     csc <- getSchedContext cscPtr
+>     full <- refillFull cscPtr
+>     setRefills cscPtr (minBudgetMerge full (scRefills csc))
 
 > refillSplitCheck :: PPtr SchedContext -> Time -> Kernel ()
 > refillSplitCheck scPtr usage = do
@@ -224,21 +268,20 @@ TODO: refills'' or refills'?
 >     sc <- getSchedContext scPtr
 >     refills <- return $ scRefills sc
 >     rfhd <- return $ head refills
->     assert (0 < usage && usage <= rAmount rfhd) "Time usage must be within (0, rAmount)"
+>     assert (0 < usage && usage <= rAmount rfhd) "Time usage must be within (0, rAmount)"  
 >     assert (rTime rfhd <= ct) "rTime must not be greater than the current time"
 
 >     remaining <- return $ rAmount rfhd - usage
->     if remaining < minBudget && length refills == 1
->         then setRefills scPtr [Refill { rTime = rTime rfhd + scPeriod sc, rAmount = rAmount rfhd }]
->         else do
->             if length refills == scRefillMax sc || remaining < minBudget
->                 then
->                     let r2 = head (tail refills)
->                         rs = tail (tail refills)
->                     in setRefills scPtr (r2 { rAmount = rAmount r2 + remaining } : rs)
->                 else setRefills scPtr (rfhd { rAmount = remaining } : tail refills)
->             new <- return Refill { rTime = rTime rfhd + scPeriod sc, rAmount = usage }
->             refillAddTail scPtr new
+>     new <- return (Refill { rTime = rTime rfhd + scPeriod sc, rAmount = usage })
+
+>     if length refills == scRefillMax sc || remaining < minBudget
+>         then if length refills == 1
+>                  then setRefills scPtr [new { rAmount = rAmount new + remaining }]
+>                  else
+>                      let r2 = head (tail refills)
+>                          rs = tail (tail refills)
+>                      in setRefills scPtr (scheduleUsed (r2 { rAmount = rAmount r2 + remaining } : rs) new)
+>         else setRefills scPtr (scheduleUsed (rfhd { rAmount = remaining, rTime = rTime rfhd + usage } : tail refills) new)
 
 > refillUpdate :: PPtr SchedContext -> Ticks -> Ticks -> Int -> Kernel ()
 > refillUpdate scPtr newPeriod newBudget newMaxRefills =
@@ -258,16 +301,15 @@ TODO: refills'' or refills'?
 > schedContextResume scPtr = do
 >     sc <- getSchedContext scPtr
 >     tptrOpt <- return $ scTCB sc
->     assert (tptrOpt /= Nothing) "schedContextResume: scTCB must not be Nothing"
+>     assert (tptrOpt /= Nothing) "schedContextResume: option of TCB pointer must not be Nothing"
 >     tptr <- return $ fromJust tptrOpt
 >     inRlsQueue <- inReleaseQueue tptr
 >     sched <- isSchedulable tptr inRlsQueue
 >     when sched $ do
->     refillUnblockCheck scPtr
->     ready <- refillReady scPtr
->     sufficient <- refillSufficient scPtr 0
->     runnable <- isRunnable tptr
->     when (runnable && 0 < scRefillMax sc && not (ready && sufficient)) $ postpone scPtr
+>         ready <- refillReady scPtr
+>         sufficient <- refillSufficient scPtr 0
+>         runnable <- isRunnable tptr
+>         when (runnable && 0 < scRefillMax sc && not (ready && sufficient)) $ postpone scPtr
 
 > schedContextBindTCB :: PPtr SchedContext -> PPtr TCB -> Kernel ()
 > schedContextBindTCB scPtr tcbPtr = do
@@ -283,7 +325,7 @@ TODO: refills'' or refills'?
 > schedContextUnbindTCB scPtr = do
 >     sc <- getSchedContext scPtr
 >     tptrOpt <- return $ scTCB sc
->     assert (tptrOpt /= Nothing) "schedContextUnbind: scTCB must not be Nothing"
+>     assert (tptrOpt /= Nothing) "schedContextUnbind: option of TCB pointer must not be Nothing"
 >     tptr <- return $ fromJust tptrOpt
 >     tcbSchedDequeue tptr
 >     tcbReleaseRemove tptr
@@ -330,17 +372,30 @@ TODO: refills'' or refills'?
 >     InvokeSchedControlConfigure scPtr budget period mRefills -> withoutFailure $ do
 >         sc <- getSchedContext scPtr
 >         period <- return (if budget == period then 0 else period)
+>         mRefills <- return (if budget == period then minRefills else mRefills)
 >         tptrOpt <- return $ scTCB sc
 >         when (tptrOpt /= Nothing) $ do
->             assert (tptrOpt /= Nothing) "invokeSchedControlConfigure: scTCB must not be Nothing"
+>             assert (tptrOpt /= Nothing) "invokeSchedControlConfigure: option of TCB pointer must not be Nothing"
 >             tptr <- return $ fromJust tptrOpt
 >             tcbReleaseRemove tptr
+>             tcbSchedDequeue tptr
+>             curSc <- getCurSc
+>             when (curSc == scPtr) $ do
+>                 consumed <- getConsumedTime
+>                 capacity <- refillCapacity scPtr consumed
+>                 result <- checkBudget
+>                 if result
+>                     then commitTime
+>                     else chargeBudget capacity consumed
 >             runnable <- isRunnable tptr
->             if 0 < scRefillMax sc && runnable
+>             if 0 < scRefillMax sc
 >                 then do
->                     refillUpdate scPtr period budget mRefills
+>                     when runnable $ refillUpdate scPtr period budget mRefills
 >                     schedContextResume scPtr
->                     switchIfRequiredTo tptr
+>                     ct <- getCurThread
+>                     if (tptr == ct)
+>                         then rescheduleRequired
+>                         else when runnable $ switchIfRequiredTo tptr
 >                 else
 >                     refillNew scPtr mRefills budget period
 
@@ -348,7 +403,12 @@ TODO: refills'' or refills'?
 > isCurDomainExpired = do
 >     domainTime <- getDomainTime
 >     consumedTime <- getConsumedTime
->     return $! domainTime < consumedTime + kernelWCETTicks
+>     return $! domainTime < consumedTime + minBudget
+
+> isRoundRobin :: PPtr SchedContext -> Kernel Bool
+> isRoundRobin scPtr = do
+>     sc <- getSchedContext scPtr
+>     return (scPeriod sc == 0)
 
 > commitDomainTime :: Kernel ()
 > commitDomainTime = do
@@ -360,17 +420,23 @@ TODO: refills'' or refills'?
 > commitTime :: Kernel ()
 > commitTime = do
 >     consumed <- getConsumedTime
->     ct <- getCurThread
->     it <- getIdleThread
->     when (0 < consumed && ct /= it) $ do
+>     when (0 < consumed) $ do
 >         csc <- getCurSc
->         refillSplitCheck csc consumed
+>         robin <- isRoundRobin csc
+>         sc <- getSchedContext csc
+>         if robin
+>             then let newHd = ((refillHd sc) { rTime = rTime (refillHd sc) - consumed })
+>                      newTl = ((refillTl sc) { rTime = rTime (refillTl sc) + consumed })
+>                  in setRefills csc (newHd : [newTl])
+>             else refillSplitCheck csc consumed
 >     commitDomainTime
 >     setConsumedTime 0
 
 > rollbackTime :: Kernel ()
 > rollbackTime = do
+>     reprogram <- getReprogramTimer
 >     consumed <- getConsumedTime
+>     assert (not reprogram || consumed == 0) "rollbackTime: it is invalid to rollback time if we have already acted on the new time"
 >     curTime <- getCurTime
 >     setCurTime (curTime - consumed)
 >     setConsumedTime 0
@@ -458,4 +524,14 @@ TODO: refills'' or refills'?
 >         threadSet (\tcb -> tcb { tcbSchedContext = Nothing }) tcbPtr
 >         sc <- getSchedContext scPtr
 >         setSchedContext scPtr (sc { scTCB = Nothing })
+
+> coreSchedContextBytes :: Int
+> coreSchedContextBytes = 72
+
+> refillSizeBytes :: Int
+> refillSizeBytes = 16
+
+> refillAbsoluteMax :: Capability -> Int
+> refillAbsoluteMax (SchedContextCap _ sc) = (sc - coreSchedContextBytes) `div` refillSizeBytes + minRefills
+> refillAbsoluteMax _ = 0
 

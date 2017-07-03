@@ -51,6 +51,9 @@ This module specifies the behavior of reply objects.
 >     replyCallerOpt <- getReplyCaller replyPtr
 >     when (replyCallerOpt /= Nothing) $ replyRemove replyPtr
 
+>     scOpt' <- threadGet tcbSchedContext callee
+>     canDonate <- return (if scOpt' == Nothing then canDonate else False)
+
 >     reply <- getReply replyPtr
 >     assert (replyCaller reply == Nothing) "replyPush: reply caller must be Nothing"
 >     tcbReplyOpt <- threadGet tcbReply caller

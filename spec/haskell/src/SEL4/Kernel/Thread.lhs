@@ -121,9 +121,13 @@ Note that the idle thread is not considered runnable; this is to prevent it bein
 
 > isSchedulable :: PPtr TCB -> Bool -> Kernel Bool
 > isSchedulable tcbPtr inReleaseQ = do
->     runnable <- isRunnable tcbPtr
 >     tcb <- getObject tcbPtr
->     return $! runnable && tcbSchedContext tcb /= Nothing && not inReleaseQ
+>     if tcbSchedContext tcb == Nothing
+>         then return False
+>         else do
+>             sc <- getSchedContext $ fromJust $ tcbSchedContext tcb
+>             runnable <- isRunnable tcbPtr
+>             return $! runnable && scRefillMax sc > 0 && not inReleaseQ
 
 \subsubsection{Suspending a Thread}
 
@@ -150,7 +154,9 @@ The invoked thread will return to the instruction that caused it to enter the ke
 >         setThreadState Restart target
 >         assert (scOpt /= Nothing) "restart: scOpt must not be Nothing"
 >         schedContextResume (fromJust scOpt)
->         switchIfRequiredTo target
+>         inReleaseQ <- inReleaseQueue target
+>         schedulable <- isSchedulable target inReleaseQ
+>         when schedulable $ switchIfRequiredTo target
 
 \subsection{IPC Transfers}
 
@@ -318,8 +324,7 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 
 > schedule :: Kernel ()
 > schedule = do
->         reprogram <- getReprogramTimer
->         when reprogram awaken
+>         awaken
 >         curThread <- getCurThread
 >         inq <- inReleaseQueue curThread
 >         curSched <- isSchedulable curThread inq
@@ -476,12 +481,12 @@ The following function is used to alter the priority of a thread.
 >         tcbSchedEnqueue tptr
 >         cur <- getCurThread
 >         when (tptr == cur) rescheduleRequired
->         case (epBlocked ts) of
->             Just ep -> reorderEp ep
->             _ -> return ()
->         case (ntfnBlocked ts) of
->             Just ntfn -> reorderNtfn ntfn
->             _ -> return ()
+>     case (epBlocked ts) of
+>         Just ep -> reorderEp ep
+>         _ -> return ()
+>     case (ntfnBlocked ts) of
+>         Just ntfn -> reorderNtfn ntfn
+>         _ -> return ()
 
 \subsubsection{Switching to Woken Threads}
 
@@ -533,10 +538,6 @@ a thread.
 
 > getThreadState :: PPtr TCB -> Kernel ThreadState
 > getThreadState = threadGet tcbState
-
-When setting the scheduler state, we check for blocking of the current thread; in that case, we tell the scheduler to choose a new thread.
-
-TODO: Just a placeholder. It'll be changed in a later version.
 
 > setThreadState :: ThreadState -> PPtr TCB -> Kernel ()
 > setThreadState ts tptr = do
@@ -645,16 +646,19 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 
 > initTCB = (makeObject::TCB){ tcbPriority=maxBound }
 
-> endTimeSlice :: Kernel ()
-> endTimeSlice = do
->     scPtr <- getCurSc
->     ready <- refillReady scPtr
->     sufficient <- refillSufficient scPtr 0
->     if ready && sufficient
->         then do
->             cur <- getCurThread
->             tcbSchedAppend cur
->         else postpone scPtr
+> endTimeslice :: Kernel ()
+> endTimeslice = do
+>     ct <- getCurThread
+>     it <- getIdleThread
+>     when (ct /= it) $ do
+>         scPtr <- getCurSc
+>         ready <- refillReady scPtr
+>         sufficient <- refillSufficient scPtr 0
+>         if ready && sufficient
+>             then do
+>                 cur <- getCurThread
+>                 tcbSchedAppend cur
+>             else postpone scPtr
 
 > inReleaseQueue :: PPtr TCB -> Kernel Bool
 > inReleaseQueue tcbPtr = do

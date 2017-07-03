@@ -18,7 +18,7 @@ This module defines the set of kernel object types that are available on all imp
 
 \subsubsection{Object Types}
 
-The following is the definition of the five object types that are always available, as well as untyped memory. This enumeration may be extended on some platforms to add platform-specific object types.
+The following is the definition of the seven object types that are always available, as well as untyped memory. This enumeration may be extended on some platforms to add platform-specific object types.
 
 > data APIObjectType
 >         = Untyped
@@ -41,9 +41,6 @@ The following is the definition of the five object types that are always availab
 
 (ntfnSizeBits should maybe 5 6 if we are doing rt for x64)
 
-> scSizeBits :: Int
-> scSizeBits = 8
-
 > cteSizeBits :: Int
 > cteSizeBits = wordSizeCase 4 5
 
@@ -56,7 +53,7 @@ The following is the definition of the five object types that are always availab
 > apiGetObjectSize EndpointObject _ = epSizeBits
 > apiGetObjectSize NotificationObject _ = ntfnSizeBits
 > apiGetObjectSize CapTableObject size = cteSizeBits + size
-> apiGetObjectSize SchedContextObject _ = scSizeBits
+> apiGetObjectSize SchedContextObject size = size
 > apiGetObjectSize ReplyObject _ = replySizeBits
 
 

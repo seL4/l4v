@@ -91,7 +91,6 @@ If the endpoint is receiving, then a thread is removed from its queue, and an IP
 >                         return reply
 >                     _ -> fail "TCB in receive endpoint queue must be blocked on send"
 >                 scOpt <- threadGet tcbSchedContext dest
->                 canDonate <- return (if scOpt == Nothing then canDonate else False)
 >                 fault <- threadGet tcbFault thread
 >                 flag <- return $
 >                     (case fault of
@@ -106,7 +105,7 @@ If the endpoint is receiving, then a thread is removed from its queue, and an IP
 >                                 replyPush thread dest (fromJust reply) canDonate
 >                                 setThreadState BlockedOnReply thread
 >                             else setThreadState Inactive thread
->                     else when canDonate $ schedContextDonate (fromJust scOpt) dest
+>                     else when (canDonate && scOpt == Nothing) $ schedContextDonate (fromJust scOpt) dest
 
 The receiving thread has now completed its blocking operation and can run. If the receiving thread has higher priority than the current thread, the scheduler is instructed to switch to it immediately.
 
@@ -170,10 +169,8 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                         setThreadState Running sender
 >                         possibleSwitchTo sender
 >                     (_, _, True, Just _) -> do
->                         threadSc <- threadGet tcbSchedContext thread
 >                         senderSc <- threadGet tcbSchedContext sender
->                         donate <- return (threadSc == Nothing && senderSc /= Nothing)
->                         replyPush sender thread (fromJust reply) donate
+>                         replyPush sender thread (fromJust reply) (senderSc /= Nothing)
 >                         setThreadState BlockedOnReply sender
 >                     _ -> setThreadState Inactive sender
 >             SendEP [] -> fail "Send endpoint queue must not be empty"
