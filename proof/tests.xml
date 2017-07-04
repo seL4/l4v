@@ -28,8 +28,8 @@
 
     <!-- CRefine -->
     <sequence depends="CParser">
-        <test name="CKernel" cpu-timeout="14400">make CKernel</test>
-        <test name="CSpec" cpu-timeout="7200">make CSpec</test>
+        <test name="CKernel" cpu-timeout="28800">make CKernel</test>
+        <test name="CSpec" cpu-timeout="14400">make CSpec</test>
         <test name="CBaseRefine" depends="Refine" cpu-timeout="28800">make CBaseRefine</test>
         <test name="CRefine" cpu-timeout="28800">make CRefine</test>
     </sequence>
