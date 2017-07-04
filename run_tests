@@ -33,6 +33,9 @@ echo "Testing for L4V_ARCH=${L4V_ARCH}:"
 # Run the tests from the script directory.
 cd ${DIR}
 
+# Bitfield proofs aren't ready yet.
+export SORRY_BITFIELD_PROOFS=1
+
 default="ASpec ExecSpec AInvs SpecCheck HaskellKernel BaseRefine Refine Licenses CKernel"
 if [ "${bamboo_l4v_regression_identifier}" == "test board"  ]
 then
