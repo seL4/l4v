@@ -113,10 +113,17 @@ lemma vcpu_switch_valid_idle[wp]:
   "\<lbrace>valid_idle\<rbrace> vcpu_switch v \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   unfolding valid_idle_def by (rule hoare_lift_Pf[where f=idle_thread]; wp)
 
+lemma set_vm_root_valid_idle[wp]:
+  "\<lbrace>valid_idle\<rbrace> set_vm_root v \<lbrace>\<lambda>_. valid_idle\<rbrace>"
+  unfolding valid_idle_def by (rule hoare_lift_Pf[where f=idle_thread]; wp)
+
 lemma valid_sched_action_idle_strg:
   "thread = idle_thread s \<and> valid_sched_action s \<and> valid_idle s \<Longrightarrow>
    valid_sched_action (s\<lparr>cur_thread := thread\<rparr>)"
   by (auto simp: valid_sched_action_def is_activatable_def valid_idle_def pred_tcb_at_def obj_at_def)
+
+crunch valid_sched_action[wp]: set_vm_root "valid_sched_action"
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma switch_to_idle_thread_valid_sched_action[wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_sched_action and valid_idle\<rbrace>
@@ -156,10 +163,6 @@ lemma vcpu_switch_is_activatable[wp]:
 
 crunch is_activatable[wp]: set_vm_root "is_activatable t"
   (wp: crunch_wps simp: crunch_simps)
-
-lemma set_vm_root_valid_sched_action[wp]:
-  "\<lbrace>valid_sched_action\<rbrace> set_vm_root param_a \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
-  by (rule valid_sched_action_lift; wp)
 
 crunch ct_not_in_q[wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info ct_not_in_q
   (simp: whenE_def ignore: clearExMonitor)

@@ -2119,6 +2119,7 @@ lemma arch_switch_to_idle_thread_reads_respects_g[wp]:
   "reads_respects_g aag l \<top> (arch_switch_to_idle_thread)"
   apply(simp add: arch_switch_to_idle_thread_def)
   apply wp
+  apply (clarsimp simp: reads_equiv_g_def globals_equiv_idle_thread_ptr)
   done
 
 lemma cur_thread_update_idle_reads_respects_g':

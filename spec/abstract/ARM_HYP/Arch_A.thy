@@ -41,7 +41,11 @@ definition
 text {* The idle thread does not need to be handled specially on ARM. *}
 definition
    arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where
-   "arch_switch_to_idle_thread \<equiv> vcpu_switch None"
+   "arch_switch_to_idle_thread \<equiv> do
+     vcpu_switch None;
+     t \<leftarrow> gets idle_thread;
+     set_vm_root t
+   od"
 
 definition
   arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where

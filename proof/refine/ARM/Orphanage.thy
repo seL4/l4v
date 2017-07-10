@@ -1164,7 +1164,8 @@ lemma createNewCaps_no_orphans:
                                     objBits_if_dev
                           split del: if_split
                    | simp add: objBits_simps
-                   | fastforce simp:pageBits_def archObjSize_def ptBits_def pdBits_def)+
+                   | fastforce simp:pageBits_def pteBits_def archObjSize_def ptBits_def pdBits_def
+                                    pdeBits_def objBits_simps)+
   done
 
 lemma createObject_no_orphans:
@@ -1219,14 +1220,14 @@ lemma createObject_no_orphans:
        clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
                       is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def
                       projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
-                      APIType_capBits_def objBits_simps
+                      APIType_capBits_def objBits_simps pteBits_def
                split: option.splits)+)[1]
   apply ((wp createObjects'_wp_subst
               createObjects_no_orphans[where sz = sz] | 
       clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
                      is_active_thread_state_def makeObject_tcb pageBits_def ptBits_def pdBits_def
                      projectKO_opt_tcb isRunning_def isRestart_def archObjSize_def
-                     APIType_capBits_def objBits_simps
+                     APIType_capBits_def objBits_simps pdeBits_def
               split: option.splits))+
   done
 
@@ -1594,8 +1595,8 @@ lemma arch_finaliseCap_no_orphans [wp]:
    Arch.finaliseCap cap fin
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding ARM_H.finaliseCap_def
-  apply (rule hoare_pre)
-   apply (wp | wpc | clarsimp)+
+  apply (wpsimp simp: isCap_simps)
+  apply (safe; wpsimp)
   done
 
 lemma deletingIRQHandler_no_orphans [wp]:

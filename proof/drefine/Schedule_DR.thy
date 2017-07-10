@@ -51,8 +51,12 @@ lemma allActiveTCBs_corres:
 
 crunch idle_thread[wp]: switch_to_idle_thread "\<lambda>s. P (idle_thread s)"
 
-lemma dcorres_arch_switch_to_idle_thread_return: "dcorres dc \<top> (invs and valid_etcbs) (return ()) arch_switch_to_idle_thread"
-  by (clarsimp simp: arch_switch_to_idle_thread_def)
+lemma dcorres_arch_switch_to_idle_thread_return: "dcorres dc \<top> \<top> (return ()) arch_switch_to_idle_thread"
+  apply (clarsimp simp: arch_switch_to_idle_thread_def)
+  apply (rule corres_guard_imp)
+    apply (rule dcorres_gets_all_param)
+    apply (rule dcorres_set_vm_root)
+   by simp+
 
 lemma change_current_domain_same: "\<lbrace>op = s\<rbrace> change_current_domain \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
   apply (clarsimp simp: change_current_domain_def exs_valid_def bind_def return_def gets_def modify_def put_def fst_def snd_def get_def select_def)

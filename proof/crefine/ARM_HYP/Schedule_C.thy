@@ -121,43 +121,25 @@ end
 
 context kernel_m begin
 
-(* FIXME: MOVE to CSpaceAcc_C *)
-lemma rf_sr_ksDomainTime:
-  "(s, s') \<in> rf_sr \<Longrightarrow> ksDomainTime_' (globals s') = ksDomainTime s"
-  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+(* FIXME: move to Refine *)
+lemma valid_idle'_tcb_at'_ksIdleThread:
+  "valid_idle' s \<Longrightarrow> tcb_at' (ksIdleThread s) s"
+  by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def)
 
-(* FIXME: MOVE to CSpaceAcc_C *)
-lemma ccorres_pre_getDomainTime:
-  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
-  shows   "ccorres r xf
-                  (\<lambda>s. (\<forall>rv. ksDomainTime s = rv \<longrightarrow> P rv s))
-                  {s. \<forall>rv. ksDomainTime_' (globals s) = rv
-                                 \<longrightarrow> s \<in> P' rv }
-                          hs (getDomainTime >>= (\<lambda>rv. f rv)) c"
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_symb_exec_l)
-       defer
-       apply wp[1]
-      apply (simp add: getDomainTime_def)
-      apply (rule gets_sp)
-     apply (clarsimp simp: empty_fail_def getDomainTime_def simpler_gets_def)
-    apply assumption
-   apply clarsimp
-   defer
-   apply (rule ccorres_guard_imp)
-     apply (rule cc)
-    apply clarsimp
-   apply assumption
-  apply (clarsimp simp: rf_sr_ksDomainTime)
-  done
+(* FIXME: move to Refine *)
+lemma invs_no_cicd'_valid_idle':
+  "invs_no_cicd' s \<Longrightarrow> valid_idle' s"
+  by (simp add: invs_no_cicd'_def)
 
 lemma Arch_switchToIdleThread_ccorres:
-  "ccorres dc xfdc (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj'
-                    and valid_pde_mappings' and valid_arch_state') UNIV []
+  "ccorres dc xfdc invs_no_cicd' UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
   apply (cinit simp: ARM_HYP_H.switchToIdleThread_def)
-  apply (ctac add: vcpu_switch_ccorres_None)
-  apply simp
+   apply (ctac (no_vcg) add: vcpu_switch_ccorres_None)
+    apply (rule ccorres_pre_getIdleThread)
+    apply (ctac (no_vcg) add: setVMRoot_ccorres)
+   apply (wp hoare_vcg_all_lift vcpuSwitch_invs_no_cicd' hoare_vcg_imp_lift vcpuSwitch_it')
+  apply (clarsimp simp: invs_no_cicd'_def valid_pspace'_def valid_idle'_tcb_at'_ksIdleThread)
   done
 
 (* FIXME: move *)
@@ -166,8 +148,7 @@ lemma empty_fail_getIdleThread [simp,intro!]:
   by (simp add: getIdleThread_def)
 
 lemma switchToIdleThread_ccorres:
-  "ccorres dc xfdc (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj'
-and valid_pde_mappings' and valid_arch_state') UNIV hs
+  "ccorres dc xfdc invs_no_cicd' UNIV hs
            switchToIdleThread (Call switchToIdleThread_'proc)"
   apply (cinit)
    apply (rule ccorres_symb_exec_l)
@@ -708,8 +689,6 @@ proof -
     apply (fold lookupBitmapPriority_def)
     apply (drule invs_no_cicd'_queues)
     apply (erule (1) lookupBitmapPriority_le_maxPriority)
-    (* 4 subgoals *)
-    apply (simp add: invs_no_cicd'_def valid_pspace'_def)+
     done
 qed
 

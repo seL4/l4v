@@ -520,7 +520,7 @@ where
    equiv_valid (scheduler_equiv aag) (weak_scheduler_affects_equiv aag l) (weak_scheduler_affects_equiv aag l) P f"
 
 lemma store_cur_thread_midstrength_reads_respects: "equiv_valid (scheduler_equiv aag) (midstrength_scheduler_affects_equiv aag l)
-           (scheduler_affects_equiv aag l) (invs and (\<lambda>s. rva = arm_globals_frame (arch_state s)) and (\<lambda>s. t = idle_thread s))
+           (scheduler_affects_equiv aag l) (invs and (\<lambda>s. t = idle_thread s))
            (do x \<leftarrow> modify (cur_thread_update (\<lambda>_. t));
                set_scheduler_action resume_cur_thread
             od)"
@@ -1081,9 +1081,7 @@ lemma arch_switch_to_idle_thread_globals_equiv_scheduler[wp]:
   "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace> arch_switch_to_idle_thread 
        \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
   unfolding arch_switch_to_idle_thread_def storeWord_def
-  apply (wp dmo_wp modify_wp thread_get_wp')
-  apply clarsimp
-  done
+  by (wp dmo_wp modify_wp thread_get_wp' arch_switch_to_thread_globals_equiv_scheduler')
 
 lemma switch_to_idle_thread_globals_equiv_scheduler[wp]:
   "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace> switch_to_idle_thread 
@@ -1096,14 +1094,33 @@ crunch cur_domain[wp]: guarded_switch_to,arch_switch_to_idle_thread,choose_threa
 
 crunch domain_fields[wp]: guarded_switch_to,arch_switch_to_idle_thread, choose_thread "domain_fields P" (wp: crunch_wps simp: crunch_simps)
 
-lemma switch_to_idle_thread_midstrength_reads_respects_scheduler[wp]: "midstrength_reads_respects_scheduler aag l (invs and pas_refined aag) (switch_to_idle_thread >>= (\<lambda>_. set_scheduler_action resume_cur_thread))"
+lemma gets_evrv':
+  "equiv_valid_rv I A B R (K (\<forall>s t. I s t \<and> A s t  \<longrightarrow> R (f s) (f t) \<and> B s t)) (gets f)"
+  apply (auto simp: equiv_valid_2_def in_monad)
+  done
+
+lemma gets_ev_no_inv:
+  shows "equiv_valid I A B (\<lambda> s. \<forall> s t. I s t \<and> A s t  \<longrightarrow> f s = f t \<and> B s t) (gets f)"
+  apply (simp add: equiv_valid_def2)
+  apply (auto intro: equiv_valid_rv_guard_imp[OF gets_evrv'])
+  done
+
+lemma switch_to_idle_thread_midstrength_reads_respects_scheduler[wp]:
+  "midstrength_reads_respects_scheduler aag l (invs and pas_refined aag)
+       (switch_to_idle_thread >>= (\<lambda>_. set_scheduler_action resume_cur_thread))"
   apply (simp add: switch_to_idle_thread_def)
   apply (rule equiv_valid_guard_imp)
-   apply (simp add: arch_switch_to_idle_thread_def bind_assoc)
+   apply (simp add: arch_switch_to_idle_thread_def bind_assoc double_gets_drop_regets)
+   apply (rule bind_ev_general)
    apply (rule bind_ev_general)
        apply (rule store_cur_thread_midstrength_reads_respects)
-      apply wp+
-  apply (clarsimp simp add: scheduler_equiv_def domain_fields_equiv_def globals_equiv_scheduler_def)
+      apply (rule_tac P="\<top>" and P'="\<top>" in equiv_valid_inv_unobservable)
+          apply (rule hoare_pre)
+           apply (rule scheduler_equiv_lift'[where P=\<top>])
+                apply (wp globals_equiv_scheduler_inv silc_dom_lift  | simp)+
+         apply (wp midstrength_scheduler_affects_equiv_unobservable set_vm_root_states_equiv_for | simp)+
+        apply (wp cur_thread_update_not_subject_reads_respects_scheduler | assumption | simp | fastforce)+
+  apply (clarsimp simp: scheduler_equiv_def)
   done
 
 lemma gets_read_queue_reads_respects_scheduler[wp]: "weak_reads_respects_scheduler aag l (\<lambda>s. pasDomainAbs aag d \<in> reads_scheduler aag l) (gets (\<lambda>s. ready_queues s d))"

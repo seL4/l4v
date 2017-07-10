@@ -2940,6 +2940,16 @@ lemma monad_eq_split_tail:
   "\<lbrakk>f = g;a s = b s\<rbrakk> \<Longrightarrow> (a >>= f) s = ((b >>= g) s)"
   by (simp add:bind_def)
 
+lemma double_gets_drop_regets:
+  "(do x \<leftarrow> gets f;
+       xa \<leftarrow> gets f;
+       m xa x
+    od) =
+   (do xa \<leftarrow> gets f;
+       m xa xa
+    od)"
+  by (simp add: gets_def get_def bind_def return_def)
+
 definition monad_commute where
   "monad_commute P a b \<equiv>
   (\<forall>s. (P s \<longrightarrow> ((do x\<leftarrow>a;y\<leftarrow>b; return (x, y) od) s) = ((do y\<leftarrow>b;x\<leftarrow>a; return (x, y) od) s)))"

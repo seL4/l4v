@@ -42,7 +42,10 @@ text {* The idle thread does not need to be handled specially on ARM. *}
     specificially to ease infoflow reasoning VER-207 *)
 definition
    arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad" where
-   "arch_switch_to_idle_thread \<equiv> return ()"
+   "arch_switch_to_idle_thread \<equiv> do
+     thread \<leftarrow> gets idle_thread;
+     set_vm_root thread
+   od"
 
 definition
   arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where

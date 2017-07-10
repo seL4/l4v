@@ -49,15 +49,15 @@ The ARM idle thread runs in system mode with interrupts enabled, with the PC poi
 >         setRegister (Register CPSR) 0x1f
 >         setRegister (Register LR_svc) $ fromVPtr idleThreadStart
 
-Since the idle thread only accesses global mappings, there is nothing to be done when switching to it.
+When switching to the idle thread, we ensure that it runs in the address space of the kernel to prevent the possibility of a user-level address space being deleted whilst the idle thread is running (which is possible in a multi-core scenario).
 
 > switchToIdleThread :: Kernel ()
 > switchToIdleThread = do
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >    vcpuSwitch Nothing
-#else
->    return ()
 #endif
+>    t <- getIdleThread
+>    setVMRoot t
 
 There is nothing special about idle thread activation on ARM.
 

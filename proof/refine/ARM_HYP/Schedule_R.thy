@@ -1001,14 +1001,81 @@ lemma typ_at'_typ_at'_mask: "\<And>s. \<lbrakk> typ_at' t (P s) s \<rbrakk> \<Lo
   apply (clarsimp dest!: is_aligned_neg_mask_eq)
   done
 
+lemma tcb_at_idle_thread_lift:
+  assumes T: "\<And>T' t. \<lbrace>typ_at T' t\<rbrace> f \<lbrace>\<lambda>rv. typ_at T' t\<rbrace>"
+  assumes I: "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. tcb_at (idle_thread s) s \<rbrace> f \<lbrace>\<lambda>rv s. tcb_at (idle_thread s) s\<rbrace>"
+  apply (simp add: tcb_at_typ)
+  apply (rule hoare_lift_Pf[where f=idle_thread])
+  by (wpsimp wp: T I)+
+
+crunch valid_asid_map[wp]: vcpu_update, vcpu_save_register, vgic_update, vcpu_disable, vcpu_restore, vcpu_enable "valid_asid_map"
+  (simp: crunch_simps wp: crunch_wps)
+
+lemma vcpu_switch_valid_asid_map[wp]:
+  "\<lbrace>valid_asid_map\<rbrace> vcpu_switch v \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
+  by (wpsimp simp: vcpu_switch_def)
+
+lemma valid_vs_lookup_arm_current_vcpu_inv[simp]: "valid_vs_lookup (s\<lparr>arch_state := arch_state s \<lparr>arm_current_vcpu := X\<rparr>\<rparr>) = valid_vs_lookup s"
+  by (clarsimp simp: valid_vs_lookup_def vs_lookup_pages_def vs_lookup_pages1_def)
+
+lemma vs_lookup_pages1_vcpu_update:
+  "kheap s p = Some (ArchObj (VCPU x)) \<Longrightarrow>
+    vs_lookup_pages1 (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (VCPU x'))\<rparr>) = vs_lookup_pages1 s"
+  by (clarsimp simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def intro!: set_eqI)
+
+lemma vs_lookup_pages_vcpu_update:
+  "kheap s p = Some (ArchObj (VCPU x)) \<Longrightarrow>
+    vs_lookup_pages (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (VCPU x'))\<rparr>) = vs_lookup_pages s"
+  by (clarsimp simp: vs_lookup_pages_def vs_lookup_pages1_vcpu_update)
+
+lemma vs_lookup_pages_vcpu_update':
+  "kheap s y = Some (ArchObj (VCPU x)) \<Longrightarrow>
+    (ref \<unrhd> p) s = (ref \<unrhd> p) (s\<lparr>kheap := kheap s(y \<mapsto> ArchObj (VCPU x'))\<rparr>)"
+  by (clarsimp simp: vs_lookup_pages_def vs_lookup_pages1_vcpu_update)
+
+lemma set_vcpu_valid_vs_lookup[wp]:
+  "\<lbrace>valid_vs_lookup\<rbrace> set_vcpu x v \<lbrace>\<lambda>rv. valid_vs_lookup\<rbrace>"
+  apply (wpsimp simp: set_vcpu_def set_object_def wp: get_object_wp)
+  apply (fold fun_upd_def)
+  apply (case_tac ko; simp)
+  apply (case_tac x5; simp)
+  apply (erule valid_vs_lookupE)
+  apply (simp add: obj_at_def vs_lookup_pages_vcpu_update')
+  apply (subst vs_lookup_pages_vcpu_update', assumption, assumption)
+  apply simp
+  by (rule caps_of_state_VCPU_update[symmetric], simp add: obj_at_def)
+
+crunch valid_vs_lookup[wp]: vcpu_restore, vcpu_disable, vcpu_save "valid_vs_lookup"
+  (wp: crunch_wps)
+
+lemma vcpu_switch_valid_vs_lookup[wp]:
+  "\<lbrace>valid_vs_lookup\<rbrace> vcpu_switch v \<lbrace>\<lambda>rv. valid_vs_lookup\<rbrace>"
+  by (wpsimp simp: vcpu_switch_def)
+
+lemma tcb_at'_ksIdleThread_lift:
+  assumes T: "\<And>T' t. \<lbrace>typ_at' T' t\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T' t\<rbrace>"
+  assumes I: "\<And>P. \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. tcb_at' (ksIdleThread s) s \<rbrace> f \<lbrace>\<lambda>rv s. tcb_at' (ksIdleThread s) s\<rbrace>"
+  apply (simp add: tcb_at_typ_at')
+  apply (rule hoare_lift_Pf[where f=ksIdleThread])
+  by (wpsimp wp: T I)+
+
 lemma arch_switch_idle_thread_corres:
-  "corres dc invs (valid_arch_state' and pspace_aligned') arch_switch_to_idle_thread Arch.switchToIdleThread"
+  "corres dc
+         invs
+         (valid_arch_state' and pspace_aligned' and pspace_distinct' and no_0_obj' and valid_idle')
+          arch_switch_to_idle_thread
+          Arch.switchToIdleThread"
   unfolding arch_switch_to_idle_thread_def ARM_HYP_H.switchToIdleThread_def
-  apply (rule corres_guard_imp)
-    apply (simp only: Nothing_def)
-  apply (rule vcpuSwitch_corres[where vcpu=None])
-  apply (clarsimp simp: invs_def valid_state_def valid_arch_state_def is_vcpu_def obj_at_def)
-  apply (clarsimp simp: valid_arch_state'_def is_vcpu'_def ko_wp_at'_def typ_at'_def)
+  apply (corressimp corres: git_corres set_vm_root_corres vcpuSwitch_corres[where vcpu=None, simplified]
+                        wp: tcb_at_idle_thread_lift tcb_at'_ksIdleThread_lift vcpuSwitch_it')
+  apply (clarsimp simp: invs_valid_objs invs_arch_state invs_valid_asid_map invs_valid_vs_lookup
+                        invs_psp_aligned invs_distinct invs_unique_refs invs_vspace_objs)
+  apply (frule invs_arch_state, frule invs_valid_idle)
+  apply (fastforce simp: valid_arch_state_def valid_idle_def valid_arch_state'_def valid_idle'_def
+                         is_vcpu_def is_tcb obj_at_def pred_tcb_at_def obj_at'_def pred_tcb_at'_def
+                         projectKOs typ_at'_def ko_wp_at'_def is_vcpu'_def)
   done
 
 lemma switch_idle_thread_corres:

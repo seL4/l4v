@@ -99,6 +99,54 @@ lemma vcpu_switch_it[wp]:
   unfolding vcpu_switch_def
   by (rule hoare_pre, wpsimp) simp
 
+lemma set_vcpu_ct[wp]:
+  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_vcpu v v' \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  by (wpsimp simp: set_vcpu_def wp: get_object_wp)
+
+crunch ct[wp]: vcpu_update, vcpu_save_register, vgic_update "\<lambda>s. P (cur_thread s)"
+  (ignore: get_object)
+crunch ct[wp]: vcpu_enable, vcpu_disable, vcpu_restore "\<lambda>s. P (cur_thread s)"
+
+lemma vcpu_save_ct[wp]:
+  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> vcpu_save v \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  unfolding vcpu_save_def
+  apply (cases v; simp)
+  apply (case_tac a; simp)
+  apply (wp | wpc | clarsimp | rule_tac S="set [0..<num_list_regs]" in mapM_wp)+
+  done
+
+lemma vcpu_switch_ct[wp]:
+  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> vcpu_switch v \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  unfolding vcpu_switch_def
+  by wpsimp
+
+lemma arch_stit_invs[wp, Schedule_AI_asms]:
+  "\<lbrace>invs\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>r. invs\<rbrace>"
+  by (wpsimp wp: svr_invs simp: arch_switch_to_idle_thread_def)
+
+lemma arch_stit_tcb_at[wp]:
+  "\<lbrace>tcb_at t\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>r. tcb_at t\<rbrace>"
+  apply (simp add: arch_switch_to_idle_thread_def )
+  apply (wp tcb_at_typ_at)
+  done
+
+crunch st_tcb_at[wp]: set_vm_root "st_tcb_at P t"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunch ct[wp]: set_vm_root "\<lambda>s. P (cur_thread s)"
+  (simp: crunch_simps wp: hoare_drop_imps)
+
+crunch it[wp]: set_vm_root "\<lambda>s. P (idle_thread s)"
+  (simp: crunch_simps wp: hoare_drop_imps)
+
+lemma arch_stit_activatable[wp, Schedule_AI_asms]:
+  "\<lbrace>ct_in_state activatable\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
+  apply (clarsimp simp: arch_switch_to_idle_thread_def)
+  apply (wpsimp simp: ct_in_state_def wp: ct_in_state_thread_state_lift)
+  done
+
+crunch inv[wp]: set_vm_root "\<lambda>s. P"
+
 lemma stit_invs [wp,Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)

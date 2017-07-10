@@ -1230,8 +1230,8 @@ lemma guarded_pas_domain_machine_state_update[simp]: "guarded_pas_domain aag (s\
 declare storeWord_irq_masks[wp]
 
 lemma switch_to_idle_thread_guarded_pas_domain[wp]: "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>xb. guarded_pas_domain aag\<rbrace>"
-  apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
-  apply (wp modify_wp dmo_wp | wp_once hoare_drop_imps | simp add: guarded_pas_domain_def)+
+  apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def bind_assoc double_gets_drop_regets)
+  apply (wp modify_wp dmo_wp hoare_vcg_imp_lift | wp_once | simp add: guarded_pas_domain_def)+
   done
 
 lemma choose_thread_guarded_pas_domain: "\<lbrace>pas_refined aag and valid_queues\<rbrace> choose_thread 

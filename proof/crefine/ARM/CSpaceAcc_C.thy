@@ -106,6 +106,67 @@ lemma ccorres_pre_getCurThread:
   apply (clarsimp simp: rf_sr_ksCurThread)
   done
 
+lemma rf_sr_ksDomainTime:
+  "(s, s') \<in> rf_sr \<Longrightarrow> ksDomainTime_' (globals s') = ksDomainTime s"
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+
+lemma ccorres_pre_getDomainTime:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>rv. ksDomainTime s = rv \<longrightarrow> P rv s))
+                  {s. \<forall>rv. ksDomainTime_' (globals s) = rv
+                                 \<longrightarrow> s \<in> P' rv }
+                          hs (getDomainTime >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (simp add: getDomainTime_def)
+      apply (rule gets_sp)
+     apply (clarsimp simp: empty_fail_def getDomainTime_def simpler_gets_def)
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply (clarsimp simp: rf_sr_ksDomainTime)
+  done
+
+lemma rf_sr_ksIdleThread:
+  "(s, s') \<in> rf_sr \<Longrightarrow> ksIdleThread_' (globals s')
+                       = tcb_ptr_to_ctcb_ptr (ksIdleThread s)"
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+
+lemma getIdleThread_sp:
+  "\<lbrace>P\<rbrace> getIdleThread \<lbrace>\<lambda>rv s. ksIdleThread s = rv \<and> P s\<rbrace>"
+  by wpsimp
+
+lemma ccorres_pre_getIdleThread:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>rv. ksIdleThread s = rv \<longrightarrow> P rv s))
+                  {s. \<forall>rv. ksIdleThread_' (globals s) = tcb_ptr_to_ctcb_ptr rv
+                                 \<longrightarrow> s \<in> P' rv }
+                          hs (getIdleThread >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (rule getIdleThread_sp)
+     apply (clarsimp simp: empty_fail_def getIdleThread_def simpler_gets_def)
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply (clarsimp simp: rf_sr_ksIdleThread)
+  done
+
+
 lemma cd_wp [wp]: "\<lbrace>\<lambda>s. P (ksCurDomain s) s\<rbrace> curDomain \<lbrace>P\<rbrace>"
   by (unfold curDomain_def, wp)
 
