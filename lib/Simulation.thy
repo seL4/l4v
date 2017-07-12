@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-(* 
+(*
    A general calculus of refinement in Isabelle.
 *)
 
@@ -21,9 +21,9 @@ begin
 text {*
   A data type is a collection of three functions on three basic types.
   The three basic types are the private state space @{typ 'a}, the observable
-  state space @{typ 'b} and the operations @{typ 'j}. 
+  state space @{typ 'b} and the operations @{typ 'j}.
 
-  The three functions are the initialisation @{term "Init"} which (potentially 
+  The three functions are the initialisation @{term "Init"} which (potentially
   nondeterministically) produces a private state space from an observable one,
   the finalisation @{term Fin} which projects the observable part of
   the state space out of the private one, and finally @{term Step} that gives
@@ -33,7 +33,7 @@ text {*
   In the simple case, the private state space is something like a
   tuple @{typ "'a \<times> 'b"} fully containing the observable part such
   that @{term Fin} just becomes the projection @{term snd}, and @{term
-  "Init s"} constructs an additional private part, e.g. just 
+  "Init s"} constructs an additional private part, e.g. just
   @{term "{(f x, x)}"}.
 
   Hoare triples on the system and refinement are defined over the observable
@@ -46,7 +46,7 @@ record ('a,'b,'j) data_type =
   Step :: "'j \<Rightarrow> ('a \<times> 'a) set"
 
 text {*
-  A sequence of operations over a transition relation @{term \<delta>} is executed 
+  A sequence of operations over a transition relation @{term \<delta>} is executed
   by applying the relation repeatedly.
 *}
 definition
@@ -56,7 +56,7 @@ definition
 text {*
   The sequence of operations in the data type is then executed
   in an initial state by initialising the private state, executing
-  the transition relation over this private state, and finally 
+  the transition relation over this private state, and finally
   projecting back out the set of final, observable states.
 *}
 definition
@@ -64,7 +64,7 @@ definition
   "execution A s js \<equiv> Fin A ` steps (Step A) (Init A s) js"
 
 text {*
-  A Hoare triple over a list of operations in the data type is 
+  A Hoare triple over a list of operations in the data type is
   the usual: given a state in the pre-condition, all resulting states
   of the execution must be in the post-condition:
 *}
@@ -74,10 +74,10 @@ where
   "hoare_triple A P js Q \<equiv> \<forall>s \<in> P. execution A s js \<subseteq> Q"
 
 text {*
-  Refinement is defined by saying that all concrete behaviours are contained in 
+  Refinement is defined by saying that all concrete behaviours are contained in
   their corresponding abstract ones. Only the private state spaces of the
-  data type may differ. 
-*} 
+  data type may differ.
+*}
 definition
   refines :: "('c,'b,'j) data_type \<Rightarrow> ('a,'b,'j) data_type \<Rightarrow> bool" (infix "\<sqsubseteq>" 60)
 where
@@ -90,23 +90,23 @@ text {*
 lemma hoare_triple_refinement:
   "C \<sqsubseteq> A = (\<forall>P Q js. hoare_triple A P js Q \<longrightarrow> hoare_triple C P js Q)"
   by (simp add: refines_def hoare_triple_def) blast
-  
+
 
 -- "composing two relations"
 definition
-  rel_semi :: "('a \<times> 'b) set \<Rightarrow> ('b \<times> 'c) set \<Rightarrow> ('a \<times> 'c) set" (infixl ";;;" 65) 
+  rel_semi :: "('a \<times> 'b) set \<Rightarrow> ('b \<times> 'c) set \<Rightarrow> ('a \<times> 'c) set" (infixl ";;;" 65)
 where
   "A ;;; B \<equiv> A O B"
 
 text {*
-  Refinement is a global property over all executions and/or all 
+  Refinement is a global property over all executions and/or all
   hoare triples. As this is hard to show, we define the weaker concept
   of forward simulation.
 *}
 definition
   fw_sim :: "('a \<times> 'c) set \<Rightarrow> ('c,'b,'j) data_type \<Rightarrow> ('a,'b,'j) data_type \<Rightarrow> bool"
 where
-  "fw_sim R C A \<equiv> (\<forall>s. Init C s \<subseteq> R `` Init A s) \<and> 
+  "fw_sim R C A \<equiv> (\<forall>s. Init C s \<subseteq> R `` Init A s) \<and>
                   (\<forall>j. R ;;; Step C j \<subseteq> Step A j ;;; R) \<and>
                   (\<forall>s s'. (s,s') \<in> R \<longrightarrow> Fin C s' = Fin A s)"
 
@@ -129,7 +129,7 @@ next
   moreover {
     from Cons.prems
     have "S' \<subseteq> R `` S" by simp
-    moreover 
+    moreover
     from sim
     have "R ;;; Step C j \<subseteq> Step A j ;;; R" by (simp add: fw_sim_def)
     ultimately
@@ -139,7 +139,7 @@ next
   ultimately
   show ?case using Cons.hyps
     by (auto simp: steps_def)
-qed  
+qed
 
 lemma sim_imp_refines:
   "C \<sqsubseteq>\<^sub>F A \<Longrightarrow> C \<sqsubseteq> A"
@@ -190,21 +190,21 @@ lemma invariant_conjI:
   by (simp add: invariant_holds_def) blast
 
 lemma invariant_conjI2:
-  "\<lbrakk> D \<Turnstile> I; \<And>s. Init D s \<subseteq> I \<Longrightarrow> Init D s \<subseteq> J; 
-    \<forall>j. Step D j `` (I \<inter> J) \<subseteq> J \<rbrakk> \<Longrightarrow> D \<Turnstile> I \<inter> J"    
+  "\<lbrakk> D \<Turnstile> I; \<And>s. Init D s \<subseteq> I \<Longrightarrow> Init D s \<subseteq> J;
+    \<forall>j. Step D j `` (I \<inter> J) \<subseteq> J \<rbrakk> \<Longrightarrow> D \<Turnstile> I \<inter> J"
   by (simp add: invariant_holds_def) blast
 
 
 text {*
-  We can now define forward simulation with an invariant. The proof 
-  obligation for the step and final case in the correspondence proof 
+  We can now define forward simulation with an invariant. The proof
+  obligation for the step and final case in the correspondence proof
   can now assume that the invariant holds. The invariant itself can be
-  shown separately.  
+  shown separately.
 *}
 definition
   LI :: "('a,'b,'j) data_type \<Rightarrow> ('c,'b,'j) data_type \<Rightarrow> ('a \<times> 'c) set \<Rightarrow> ('a \<times> 'c) set \<Rightarrow> bool"
 where
-  "LI A C R I \<equiv> (\<forall>s. Init C s \<subseteq> R `` Init A s) \<and> 
+  "LI A C R I \<equiv> (\<forall>s. Init C s \<subseteq> R `` Init A s) \<and>
                 (\<forall>j. (R \<inter> I) ;;; Step C j \<subseteq> Step A j ;;; R) \<and>
                 (\<forall>s s'. (s,s') \<in> R \<inter> I \<longrightarrow> Fin C s' = Fin A s)"
 
@@ -213,42 +213,42 @@ lemma LI_fw_sim:
   assumes  ia: "A \<Turnstile> I\<^sub>a" and ic: "C \<Turnstile> I\<^sub>c" and li: "LI A C r (I\<^sub>a \<times> I\<^sub>c)"
   shows "fw_sim (r \<inter> I\<^sub>a \<times> I\<^sub>c) C A"
 proof -
-  from li have 
+  from li have
     init: "\<forall>s. Init C s \<subseteq> r `` Init A s" and
     step: "\<forall>j. (r \<inter> (I\<^sub>a \<times> I\<^sub>c)) ;;; Step C j \<subseteq> Step A j ;;; r" and
     fin: "(\<forall>s s'. (s,s') \<in> r \<inter> (I\<^sub>a \<times> I\<^sub>c) \<longrightarrow> Fin C s' = Fin A s)"
     by (auto simp: LI_def)
   from ia have  "\<forall>s. (r \<inter> (UNIV \<times> I\<^sub>c) ) `` Init A s = (r \<inter> (I\<^sub>a \<times> I\<^sub>c)) `` Init A s"
     by (simp add: invariant_holds_def, blast)
-  moreover from init ic have "\<forall>s. Init C s \<subseteq> (r \<inter> (UNIV \<times> I\<^sub>c)) `` Init A s" 
+  moreover from init ic have "\<forall>s. Init C s \<subseteq> (r \<inter> (UNIV \<times> I\<^sub>c)) `` Init A s"
     by (simp add: invariant_holds_def, blast)
   ultimately have initI: "\<forall>s. Init C s \<subseteq> (r \<inter> (I\<^sub>a \<times> I\<^sub>c)) `` Init A s" by simp
   moreover {
     fix j
     from step have "r \<inter> (I\<^sub>a \<times> I\<^sub>c) ;;; Step C j \<subseteq> Step A j ;;; r"..
-    also 
-    have "r \<inter> (I\<^sub>a \<times> I\<^sub>c) = ((UNIV \<times> I\<^sub>a) \<inter> Id) ;;; r ;;; ((I\<^sub>c \<times> UNIV) \<inter> Id)"  
+    also
+    have "r \<inter> (I\<^sub>a \<times> I\<^sub>c) = ((UNIV \<times> I\<^sub>a) \<inter> Id) ;;; r ;;; ((I\<^sub>c \<times> UNIV) \<inter> Id)"
       (is "_ = ?I\<^sub>a ;;; r ;;; ?I\<^sub>c")
       by (simp add: rel_semi_def, blast)
     finally
     have "?I\<^sub>a ;;; r ;;; ?I\<^sub>c ;;; Step C j \<subseteq> ?I\<^sub>a ;;; Step A j ;;; r"
       by (simp add: rel_semi_def, blast)
-    also 
+    also
     from ia have "\<dots> \<subseteq> Step A j ;;; ?I\<^sub>a ;;; r"
       by (simp add: invariant_holds_def rel_semi_def, blast)
     finally
     have "?I\<^sub>a ;;;  r ;;; ?I\<^sub>c ;;; Step C j;;; ?I\<^sub>c \<subseteq>  Step A j ;;; ?I\<^sub>a ;;; r ;;; ?I\<^sub>c"
       by (simp add: rel_semi_def, blast)
     also
-    from ic 
+    from ic
     have "?I\<^sub>a ;;; r ;;; ?I\<^sub>c ;;; Step C j;;; ?I\<^sub>c =  ?I\<^sub>a ;;; r ;;; ?I\<^sub>c ;;; Step C j"
       by (simp add: invariant_holds_def rel_semi_def, blast)
     finally
-    have "r \<inter> (I\<^sub>a \<times> I\<^sub>c) ;;; Step C j \<subseteq> Step A j ;;; r \<inter> (I\<^sub>a \<times> I\<^sub>c)" 
+    have "r \<inter> (I\<^sub>a \<times> I\<^sub>c) ;;; Step C j \<subseteq> Step A j ;;; r \<inter> (I\<^sub>a \<times> I\<^sub>c)"
       by (simp add: rel_semi_def, blast)
   }
   ultimately show "fw_sim (r \<inter> I\<^sub>a \<times> I\<^sub>c) C A" using fin
-    by (simp add: fw_sim_def) 
+    by (simp add: fw_sim_def)
 qed
 
 
@@ -289,7 +289,7 @@ lemma fw_inv_transport:
   apply (clarsimp simp: LI_def invariant_holds_def)
   apply (rule conjI)
    apply (rule allI)
-   apply clarsimp   
+   apply clarsimp
    apply (subgoal_tac "x \<in> (R `` Init A s)")
     prefer 2
     apply fastforce

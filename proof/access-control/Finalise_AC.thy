@@ -173,13 +173,13 @@ lemma unbind_notification_pas_refined[wp]:
   "\<lbrace>pas_refined aag\<rbrace> unbind_notification t \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (clarsimp simp: unbind_notification_def)
   apply (wp set_notification_pas_refined | wpc | simp)+
-  done    
+  done
 
 lemma unbind_maybe_notification_pas_refined[wp]:
   "\<lbrace>pas_refined aag\<rbrace> unbind_maybe_notification a \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (clarsimp simp: unbind_maybe_notification_def)
   apply (wp set_notification_pas_refined | wpc | simp)+
-  done  
+  done
 
 crunch pas_refined[wp]: cap_delete_one "pas_refined aag"
   (wp: crunch_wps thread_set_pas_refined_triv select_wp set_thread_state_pas_refined
@@ -275,11 +275,11 @@ lemma bound_tcb_at_implies_reset:
   by (fastforce dest!: bound_tcb_at_thread_bound_ntfns sta_bas pas_refined_mem)
 
 lemma unbind_notification_bound_respects:
-  "\<lbrace>integrity aag X st and pas_refined aag and (\<lambda>s. bound_tcb_at (\<lambda>a. a = Some ntfn) t s \<and> 
+  "\<lbrace>integrity aag X st and pas_refined aag and (\<lambda>s. bound_tcb_at (\<lambda>a. a = Some ntfn) t s \<and>
      (pasSubject aag, Reset, pasObjectAbs aag ntfn) \<in> pasPolicy aag)\<rbrace> unbind_notification t \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (clarsimp simp: unbind_notification_def)
   apply (wp_trace set_ntfn_respects hoare_vcg_imp_lift hoare_vcg_ex_lift gbn_wp | wpc | simp del: set_bound_notification_def)+
-   apply clarsimp 
+   apply clarsimp
    apply (fastforce simp: pred_tcb_at_def obj_at_def)+
   done
 
@@ -319,11 +319,11 @@ lemma fast_finalise_respects[wp]:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (cases cap, simp_all)
      apply (wp unbind_maybe_notification_valid_objs get_ntfn_wp unbind_maybe_notification_respects
-             | wpc 
-             | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def when_def 
+             | wpc
+             | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def when_def
                   split: if_split_asm
              | fastforce)+
-      apply (clarsimp simp: obj_at_def valid_cap_def is_ntfn invs_def valid_state_def valid_pspace_def 
+      apply (clarsimp simp: obj_at_def valid_cap_def is_ntfn invs_def valid_state_def valid_pspace_def
                      split: option.splits)+
   apply (wp, simp)
   done
@@ -437,37 +437,37 @@ lemma finalise_cap_respects[wp]:
     and K (pas_cap_cur_auth aag cap)\<rbrace>
        finalise_cap cap final \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (cases cap, simp_all, safe)
-                apply (wp |clarsimp simp: invs_valid_objs invs_sym_refs cap_auth_conferred_def 
+                apply (wp |clarsimp simp: invs_valid_objs invs_sym_refs cap_auth_conferred_def
                                           cap_rights_to_auth_def aag_cap_auth_def)+
               (*NTFN Cap*)
-              apply ((wp unbind_maybe_notification_valid_objs get_ntfn_wp 
-                         unbind_maybe_notification_respects 
-                         | wpc 
+              apply ((wp unbind_maybe_notification_valid_objs get_ntfn_wp
+                         unbind_maybe_notification_respects
+                         | wpc
                          | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def                               split: if_split_asm
                          | fastforce)+)[3]
-                apply (clarsimp simp: obj_at_def valid_cap_def is_ntfn invs_def 
-                                      valid_state_def valid_pspace_def 
+                apply (clarsimp simp: obj_at_def valid_cap_def is_ntfn invs_def
+                                      valid_state_def valid_pspace_def
                                      split: option.splits)+
                               (*other caps*)
-            apply ((wp unbind_notification_invs 
-                   | fastforce simp: cap_auth_conferred_def cap_rights_to_auth_def 
-                                         aag_cap_auth_def unbind_maybe_notification_def 
+            apply ((wp unbind_notification_invs
+                   | fastforce simp: cap_auth_conferred_def cap_rights_to_auth_def
+                                         aag_cap_auth_def unbind_maybe_notification_def
                               elim!: pas_refined_Control[symmetric])+)[3]
             (* tcb cap *)
          including no_pre
          apply (wp unbind_notification_respects unbind_notification_invs
-                 | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def 
-                                  unbind_maybe_notification_def 
+                 | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def
+                                  unbind_maybe_notification_def
                            elim!: pas_refined_Control[symmetric]
                  | simp add: if_apply_def2 split del: if_split )+
-         apply (clarsimp simp: valid_cap_def pred_tcb_at_def obj_at_def is_tcb 
+         apply (clarsimp simp: valid_cap_def pred_tcb_at_def obj_at_def is_tcb
                         dest!: tcb_at_ko_at)
          apply (clarsimp split: option.splits elim!: pas_refined_Control[symmetric])
          apply (frule bound_tcb_at_implies_reset, fastforce simp add: pred_tcb_at_def obj_at_def)
          apply (drule pas_refined_Control, simp, simp)
          (* other caps *)
         apply (wp | simp add: if_apply_def2 split del: if_split
-                  | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def is_cap_simps 
+                  | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def is_cap_simps
                                    pas_refined_all_auth_is_owns aag_cap_auth_def
                                    deleting_irq_handler_def cap_links_irq_def invs_valid_objs
                         split del: if_split
@@ -883,9 +883,9 @@ lemma finalise_cap_caps_of_state_nullinv:
   \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   including no_pre
   apply (cases cap, simp_all split del: if_split)
-             apply (wp suspend_caps_of_state unbind_notification_caps_of_state 
-                       unbind_notification_cte_wp_at 
-                       hoare_vcg_all_lift hoare_drop_imps 
+             apply (wp suspend_caps_of_state unbind_notification_caps_of_state
+                       unbind_notification_cte_wp_at
+                       hoare_vcg_all_lift hoare_drop_imps
                     | simp split del: if_split
                     | fastforce simp: fun_upd_def )+
     apply (rule hoare_pre)
@@ -1039,7 +1039,7 @@ lemma invoke_cnode_respects:
             split: Invocations_A.cnode_invocation.split,
          safe)
   apply (wp get_cap_wp cap_insert_integrity_autarch
-            cap_revoke_respects cap_delete_respects 
+            cap_revoke_respects cap_delete_respects
             | wpc | simp add: real_cte_emptyable_strg
             | clarsimp simp: cte_wp_at_caps_of_state invs_valid_objs invs_sym_refs
                              cnode_inv_auth_derivations_def
@@ -1056,7 +1056,7 @@ lemma invoke_cnode_pas_refined:
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
    apply (wp cap_insert_pas_refined cap_delete_pas_refined cap_revoke_pas_refined
-             get_cap_wp 
+             get_cap_wp
              | wpc
              | simp split del: if_split)+
   apply (cases ci, simp_all add: authorised_cnode_inv_def

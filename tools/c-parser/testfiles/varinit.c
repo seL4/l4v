@@ -13,7 +13,7 @@
 int f(int n)
 {
   int m = n + 3, j = 1;
-  unsigned i = 0; 
+  unsigned i = 0;
   while (n < m) { m = m + 1; n = n + 2; }
   return m;
 }

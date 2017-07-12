@@ -9,7 +9,7 @@
  *)
 
 theory ADT_IF_Refine_C
-imports    
+imports
     "ADT_IF_Refine" "../crefine/$L4V_ARCH/Refine_C"
 begin
 
@@ -28,7 +28,7 @@ definition handleInterruptEntry_C_body_if (*:: "(globals myvars, int, l4c_errort
 
 definition handleSyscall_C_body_if
   where
-  "handleSyscall_C_body_if s \<equiv> 
+  "handleSyscall_C_body_if s \<equiv>
         (IF s = Kernel_C.SysSend THEN
            \<acute>ret__unsigned_long :== CALL handleInvocation(scast false,
            scast true)
@@ -101,7 +101,7 @@ end
 
 context kernel_m begin
 
-definition 
+definition
   "callKernel_C_body_if e \<equiv> case e of
     SyscallEvent n \<Rightarrow> (handleSyscall_C_body_if (ucast (syscall_from_H n)))
   | UnknownSyscall n \<Rightarrow>  (handleUnknownSyscall_C_body_if (of_nat n))
@@ -179,7 +179,7 @@ lemma handleEvent_ccorres:
                (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
                 (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s) and
                (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-           (UNIV) [] 
+           (UNIV) []
            (handleEvent e) (callKernel_C_body_if e)"
   apply (rule_tac r'="K dc \<currency> dc" and xf'="liftxf errstate id (K ()) ret__unsigned_long_'"
         in ccorres_rel_imp[rotated])
@@ -316,7 +316,7 @@ lemma kernelEntry_corres_C:
   apply (rule corres_guard_imp)
     apply (rule corres_split [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
        prefer 2
-       apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)  
+       apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
       apply (rule corres_split)
          prefer 2
          apply (subst archTcbUpdate_aux2[symmetric])
@@ -380,7 +380,7 @@ definition doUserOp_C_if
   :: "user_transition_if \<Rightarrow> user_context \<Rightarrow> (cstate, (event option \<times> user_context)) nondet_monad"
    where
   "doUserOp_C_if uop tc \<equiv>
-   do 
+   do
       pr \<leftarrow> gets ptable_rights_s'';
       pxn \<leftarrow> gets (\<lambda>s x. pr x \<noteq> {} \<and> ptable_xn_s'' s x);
       pl \<leftarrow> gets (\<lambda>s. restrict_map (ptable_lift_s'' s) {x. pr x \<noteq> {}});
@@ -430,7 +430,7 @@ lemma corres_dmo_getExMonitor_C:
   "corres_underlying rf_sr nf nf' op = \<top> \<top> (doMachineOp getExMonitor) (doMachineOp_C getExMonitor)"
   apply (clarsimp simp: doMachineOp_def doMachineOp_C_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac r'="\<lambda>ms ms'. exclusive_state ms = exclusive_state ms' \<and> machine_state_rest ms = machine_state_rest ms' 
+    apply (rule_tac r'="\<lambda>ms ms'. exclusive_state ms = exclusive_state ms' \<and> machine_state_rest ms = machine_state_rest ms'
       \<and> irq_masks ms = irq_masks ms' \<and> equiv_irq_state ms ms' \<and> device_state ms = device_state ms'" and P="\<top>" and P'="\<top>" in corres_split)
        apply (rule_tac r'="\<lambda>(r, ms) (r', ms'). r = r' \<and> ms = rv \<and> ms' = rv'" in corres_split)
           apply (clarsimp simp: split_def)
@@ -453,7 +453,7 @@ lemma corres_dmo_setExMonitor_C:
   "corres_underlying rf_sr nf nf' dc \<top> \<top> (doMachineOp (setExMonitor es)) (doMachineOp_C (setExMonitor es))"
   apply (clarsimp simp: doMachineOp_def doMachineOp_C_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac r'="\<lambda>ms ms'. exclusive_state ms = exclusive_state ms' \<and> machine_state_rest ms = machine_state_rest ms' 
+    apply (rule_tac r'="\<lambda>ms ms'. exclusive_state ms = exclusive_state ms' \<and> machine_state_rest ms = machine_state_rest ms'
       \<and> irq_masks ms = irq_masks ms' \<and> equiv_irq_state ms ms' \<and> device_state ms = device_state ms'" and P="\<top>" and P'="\<top>" in corres_split)
        apply (rule_tac r'="\<lambda>(r, ms) (r', ms'). ms = rv\<lparr>exclusive_state := es\<rparr> \<and> ms' = rv'\<lparr>exclusive_state := es\<rparr>" in corres_split)
           apply (simp add: split_def)
@@ -480,7 +480,7 @@ lemma dmo_getExMonitor_C_wp[wp]:
   apply simp
   done
 
-lemma cur_thread_of_absKState[simp]: 
+lemma cur_thread_of_absKState[simp]:
    "cur_thread (absKState s) = (ksCurThread s)"
    by (clarsimp simp: cstate_relation_def Let_def absKState_def cstate_to_H_def)
 
@@ -498,7 +498,7 @@ lemma absKState_crelation:
               split: if_splits)
 
 lemma do_user_op_if_C_corres:
-   "corres_underlying rf_sr False False op = 
+   "corres_underlying rf_sr False False op =
    (invs' and ex_abs einvs and (\<lambda>_. uop_nonempty f)) \<top>
    (doUserOp_if f tc) (doUserOp_C_if f tc)"
   apply (rule corres_gen_asm)
@@ -573,17 +573,17 @@ lemma do_user_op_if_C_corres:
    apply (clarsimp simp add: invs'_def valid_state'_def valid_pspace'_def ex_abs_def)
    done
 
-definition 
+definition
   checkActiveIRQ_C_if :: "user_context \<Rightarrow> (cstate, irq option \<times> user_context) nondet_monad"
   where
   "checkActiveIRQ_C_if tc \<equiv>
-   do 
+   do
       getActiveIRQ_C;
       irq \<leftarrow>  gets ret__unsigned_short_';
       return (if irq = 0xFFFF then None else Some (ucast irq), tc)
    od"
 
-definition 
+definition
   check_active_irq_C_if
   where
   "check_active_irq_C_if \<equiv> {((tc, s), irq, (tc', s')). ((irq, tc'), s') \<in> fst (checkActiveIRQ_C_if tc s)}"
@@ -612,10 +612,10 @@ lemma check_active_irq_corres_C:
 
 definition
   handlePreemption_C_if :: "user_context \<Rightarrow> (cstate,user_context) nondet_monad" where
-  "handlePreemption_C_if tc \<equiv> 
+  "handlePreemption_C_if tc \<equiv>
        do (exec_C \<Gamma> handleInterruptEntry_C_body_if); return tc od"
 
-lemma handlePreemption_if_def2: "handlePreemption_if tc = do 
+lemma handlePreemption_if_def2: "handlePreemption_if tc = do
                                    r \<leftarrow> handleEvent Interrupt;
                                    return tc
                                 od"
@@ -683,7 +683,7 @@ definition
 
 definition
   schedule_C_if' :: "user_context \<Rightarrow> (cstate,user_context) nondet_monad" where
-  "schedule_C_if' tc \<equiv> 
+  "schedule_C_if' tc \<equiv>
     do exec_C \<Gamma> (Call schedule_'proc); exec_C \<Gamma> (Call activateThread_'proc); return tc od"
 
 
@@ -742,7 +742,7 @@ definition
   "schedule_C_if \<equiv>
       {(s, (e :: unit), s'). s' \<in> fst (split schedule_C_if' s)}"
 
-definition 
+definition
  kernelExit_C_if :: "user_context \<Rightarrow> (cstate,user_context) nondet_monad" where
   "kernelExit_C_if tc \<equiv>
    do t \<leftarrow> gets (ksCurThread_' \<circ> globals);
@@ -791,9 +791,9 @@ context kernel_m begin
 
 
 definition ADT_C_if where
-"ADT_C_if fp uop \<equiv> \<lparr>Init = \<lambda>s. ({user_context_of s} \<times> {s'. cstate_to_A s' = (internal_state_if s)}) \<times> {sys_mode_of s} \<inter> {s''. \<exists>s'. ((internal_state_if s'),(internal_state_if s'')) \<in> rf_sr \<and> s' \<in> full_invs_if' \<and> sys_mode_of s = sys_mode_of s'}, 
+"ADT_C_if fp uop \<equiv> \<lparr>Init = \<lambda>s. ({user_context_of s} \<times> {s'. cstate_to_A s' = (internal_state_if s)}) \<times> {sys_mode_of s} \<inter> {s''. \<exists>s'. ((internal_state_if s'),(internal_state_if s'')) \<in> rf_sr \<and> s' \<in> full_invs_if' \<and> sys_mode_of s = sys_mode_of s'},
                   Fin = \<lambda>((uc,s),m). ((uc, cstate_to_A s),m),
-                  Step = (\<lambda>(u :: unit). global_automaton_if 
+                  Step = (\<lambda>(u :: unit). global_automaton_if
                               check_active_irq_C_if (do_user_op_C_if uop)
                               (kernel_call_C_if fp) handle_preemption_C_if
                               schedule_C_if kernel_exit_C_if)\<rparr>"
@@ -833,7 +833,7 @@ lemma obs_cpspace_user_data_relation:
     apply (rule nat_add_offset_less [where n = 2, simplified])
       apply simp
      apply (rule unat_lt2p)
-    apply (simp add: pageBits_def objBits_simps) 
+    apply (simp add: pageBits_def objBits_simps)
    apply (frule(1) pspace_distinctD')
    apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def objBits_simps)
   apply simp
@@ -853,11 +853,11 @@ lemma obs_cpspace_device_data_relation:
 lemma cstate_relation_observable_memory:
   "\<lbrakk>invs' bs;cstate_relation bs gs\<rbrakk>
   \<Longrightarrow> cstate_relation (bs\<lparr>ksMachineState := observable_memory (ksMachineState bs) (user_mem' bs)\<rparr>) gs"
-  by (clarsimp simp: cstate_relation_def Let_def obs_cpspace_user_data_relation 
+  by (clarsimp simp: cstate_relation_def Let_def obs_cpspace_user_data_relation
                      obs_cpspace_device_data_relation cpspace_relation_def invs'_def
-                     valid_state'_def valid_pspace'_def 
+                     valid_state'_def valid_pspace'_def
                      cmachine_state_relation_def observable_memory_def)
-  
+
 
 lemma c_to_haskell: "uop_nonempty uop \<Longrightarrow> global_automata_refine checkActiveIRQ_H_if (doUserOp_H_if uop) kernelCall_H_if
      handlePreemption_H_if schedule'_H_if kernelExit_H_if full_invs_if' (ADT_H_if uop) UNIV

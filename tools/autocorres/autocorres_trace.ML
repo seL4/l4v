@@ -263,7 +263,7 @@ fun trace_solve_tac (ctxt : Proof.context)
                               val exn = THM ("AutoCorresTrace.trace_solve_tac: could not apply subgoal proof", 0,
                                              [state, output', output, input])
                               val state' = (case my_unify_fact_tac ctxt output' 1 state |> Seq.pull of
-                                               NONE => 
+                                               NONE =>
                                                  let val _ = if !replay_failures <= 0 then () else
                                                                @{trace} ("AutoCorresTrace.trace_solve_tac: using slow replay", state, output)
                                                      val _ = replay_failures := !replay_failures - 1;

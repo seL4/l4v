@@ -74,7 +74,7 @@ be performed using a capability.
 
 The rights are:
 
-\begin{itemize} 
+\begin{itemize}
 
 \item the right to write or send data to an object, and to retain this right on received capabilities;
 
@@ -84,7 +84,7 @@ The rights are:
 
 >     capAllowRead,
 
-\item and the right to send capabilities via IPC. 
+\item and the right to send capabilities via IPC.
 
 >     capAllowGrant :: Bool }
 >     deriving (Show, Eq)
@@ -108,7 +108,7 @@ The following function finds the intersection of two sets of capability rights.
 A set of capability rights may be converted to or from a machine word.
 
 > rightsFromWord :: Word -> CapRights
-> rightsFromWord p = 
+> rightsFromWord p =
 >          CapRights (p `testBit` 0) (p `testBit` 1) (p `testBit` 2)
 
 > wordFromRights :: CapRights -> Word

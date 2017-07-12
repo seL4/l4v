@@ -121,7 +121,7 @@ where
 definition
   handle_interrupt :: "cdl_irq \<Rightarrow> unit k_monad"
 where
-  "handle_interrupt irq \<equiv> if (irq > maxIRQ) then return () else 
+  "handle_interrupt irq \<equiv> if (irq > maxIRQ) then return () else
     do
       irq_slot \<leftarrow> gets $ get_irq_slot irq;
       c \<leftarrow> gets $ opt_cap irq_slot;

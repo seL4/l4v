@@ -27,7 +27,7 @@ fun scan_transs_depths [] _ = []
 fun dict_of_props props
     = "{" ^ commas (map (fn (a, b) => a ^ " = " ^ b) props) ^ "}";
 
-val long_site_of = dict_of_props o Position.properties_of o Toplevel.pos_of; 
+val long_site_of = dict_of_props o Position.properties_of o Toplevel.pos_of;
 
 fun apply_transs [] s = s
   | apply_transs ((t, n) :: ts) s
@@ -43,7 +43,7 @@ fun apply_transs [] s = s
     tracing ("  (" ^ long_site_of t ^ " - " ^ long_site_of t' ^ ")");
     s |> Toplevel.command (IsarCmd.skip_proof Toplevel.empty)
       |> apply_transs (Library.drop (i, ts))
-  end 
+  end
 
 fun set_flags () = let in
     quick_and_dirty := true;

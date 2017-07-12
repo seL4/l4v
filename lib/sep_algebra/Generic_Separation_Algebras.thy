@@ -9,9 +9,9 @@
  *)
 
 theory Generic_Separation_Algebras
-imports Sep_Algebra_L4v 
+imports Sep_Algebra_L4v
 begin
-             
+
 
 instantiation "prod" :: (stronger_sep_algebra,stronger_sep_algebra) zero
 begin
@@ -58,7 +58,7 @@ where
 definition
   onlyone :: "'a option => 'a option => bool"
 where
-  "onlyone x y \<equiv> case x of 
+  "onlyone x y \<equiv> case x of
                    Some x' => (case y of Some y' => False | _ => True)
                  | None => True"
 
@@ -71,7 +71,7 @@ definition "plus_option  \<equiv> orelse"
 
 instance
   by intro_classes
-     (clarsimp simp: sep_disj_option_def zero_option_def plus_option_def onlyone_def orelse_def 
+     (clarsimp simp: sep_disj_option_def zero_option_def plus_option_def onlyone_def orelse_def
                split: option.splits)+
 end
 
@@ -90,7 +90,7 @@ definition "sep_disj_generic_heap_record_ext h1 h2 \<equiv> Rep_generic_heap_rec
 instance
   apply intro_classes
        apply (fastforce simp:  sep_add_left_commute sep_disj_commute Rep_generic_heap_record_ext_inverse
-                               sep_disj_commuteI sep_add_assoc sep_add_commute Abs_generic_heap_record_ext_inverse 
+                               sep_disj_commuteI sep_add_assoc sep_add_commute Abs_generic_heap_record_ext_inverse
                                zero_generic_heap_record_ext_def sep_disj_generic_heap_record_ext_def
                                plus_generic_heap_record_ext_def)+
   done

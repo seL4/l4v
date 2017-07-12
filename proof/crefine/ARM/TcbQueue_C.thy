@@ -20,14 +20,14 @@ lemma tcb_queueD:
   and     valid_ntfn: "distinct queue"
   and      in_queue: "tcbp \<in> set queue"
   and        cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
-  shows "(if tcbp = hd queue then getPrev tcb = qprev 
+  shows "(if tcbp = hd queue then getPrev tcb = qprev
                   else (\<exists>n < (length queue) - 1. getPrev tcb = tcb_ptr_to_ctcb_ptr (queue ! n)
                                                                     \<and> tcbp = queue ! Suc n))
          \<and> (if tcbp = last queue then getNext tcb = NULL
                   else (\<exists>n < (length queue) - 1. tcbp = queue ! n
                         \<and> getNext tcb = tcb_ptr_to_ctcb_ptr (queue ! Suc n)))"
   (is "?prev tcb queue qprev \<and> ?next tcb queue")
-  using queue_rel in_queue valid_ntfn 
+  using queue_rel in_queue valid_ntfn
 proof (induct queue arbitrary: qprev qhead)
   case Nil
   thus ?case by simp
@@ -58,24 +58,24 @@ next
     ultimately show ?thesis ..
   next
     assume tcbp: "tcbp \<in> set tcbs"
-    obtain tcb2 where cs_tcb2: "mp (tcb_ptr_to_ctcb_ptr tcb') = Some tcb2" 
-      and rel2: "tcb_queue_relation getNext getPrev mp tcbs (tcb_ptr_to_ctcb_ptr tcb') (getNext tcb2)" 
-      using Cons.prems 
+    obtain tcb2 where cs_tcb2: "mp (tcb_ptr_to_ctcb_ptr tcb') = Some tcb2"
+      and rel2: "tcb_queue_relation getNext getPrev mp tcbs (tcb_ptr_to_ctcb_ptr tcb') (getNext tcb2)"
+      using Cons.prems
       by clarsimp
-    
+
     have ih: "?prev tcb tcbs (tcb_ptr_to_ctcb_ptr tcb') \<and> ?next tcb tcbs"
     proof (rule Cons.hyps)
-      from Cons.prems show (* "\<forall>t\<in>set tcbs. tcb_at' t s" 
+      from Cons.prems show (* "\<forall>t\<in>set tcbs. tcb_at' t s"
 	and *) "distinct tcbs" by simp_all
     qed fact+
-    
+
     from tcbp Cons.prems have tcbp_not_tcb': "tcbp \<noteq> tcb'" by clarsimp
     from tcbp have tcbsnz: "tcbs \<noteq> []" by clarsimp
     hence hd_tcbs: "hd tcbs = tcbs ! 0" by (simp add: hd_conv_nth)
-    
-    show ?case 
+
+    show ?case
     proof (rule conjI)
-      show "?prev tcb (tcb' # tcbs) qprev'" 
+      show "?prev tcb (tcb' # tcbs) qprev'"
 	using ih [THEN conjunct1] tcbp_not_tcb' hd_tcbs tcbsnz
 	apply (clarsimp split: if_split_asm)
 	apply fastforce
@@ -83,7 +83,7 @@ next
 	apply simp
 	done
     next
-      show "?next tcb (tcb' # tcbs)" 
+      show "?next tcb (tcb' # tcbs)"
 	using ih [THEN conjunct2] tcbp_not_tcb' hd_tcbs tcbsnz
 	apply (clarsimp split: if_split_asm)
 	apply (rule_tac x = "Suc n" in exI)
@@ -96,7 +96,7 @@ qed
 lemma tcb_queue_memberD:
   assumes queue_rel: "tcb_queue_relation getNext getPrev (cslift s') queue qprev qhead"
   and      in_queue: "tcbp \<in> set queue"
-  and     valid_ntfn: "\<forall>t\<in>set queue. tcb_at' t s"  
+  and     valid_ntfn: "\<forall>t\<in>set queue. tcb_at' t s"
   and        rf_sr: "(s, s') \<in> rf_sr"
   shows "\<exists>tcb. cslift s' (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   using assms
@@ -109,9 +109,9 @@ lemma tcb_queue_memberD:
 lemma tcb_queue_valid_ptrsD:
   assumes in_queue: "tcbp \<in> set queue"
   and        rf_sr: "(s, s') \<in> rf_sr"
-  and    valid_ntfn: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"  
+  and    valid_ntfn: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and    queue_rel: "tcb_queue_relation getNext getPrev (cslift s') queue NULL qhead"
-  shows "\<exists>tcb. cslift s' (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb 
+  shows "\<exists>tcb. cslift s' (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb
                \<and> (getPrev tcb \<noteq> NULL \<longrightarrow> s' \<Turnstile>\<^sub>c (getPrev tcb)
                                            \<and> getPrev tcb \<in> tcb_ptr_to_ctcb_ptr ` set queue)
                \<and> (getNext tcb \<noteq> NULL \<longrightarrow> s' \<Turnstile>\<^sub>c (getNext tcb)
@@ -125,7 +125,7 @@ lemma tcb_queue_valid_ptrsD:
   done
 
 lemma tcb_queue_relation_restrict0:
-  "set queue \<subseteq> S \<Longrightarrow> tcb_queue_relation getNext getPrev mp queue qprev qhead = 
+  "set queue \<subseteq> S \<Longrightarrow> tcb_queue_relation getNext getPrev mp queue qprev qhead =
   tcb_queue_relation getNext getPrev (restrict_map mp (tcb_ptr_to_ctcb_ptr ` S)) queue qprev qhead"
 proof (induct queue arbitrary: S qprev qhead)
   case Nil thus ?case by simp
@@ -136,7 +136,7 @@ next
 qed
 
 lemma tcb_queue_relation_restrict:
-  "tcb_queue_relation getNext getPrev mp queue qprev qhead = 
+  "tcb_queue_relation getNext getPrev mp queue qprev qhead =
   tcb_queue_relation getNext getPrev (restrict_map mp (tcb_ptr_to_ctcb_ptr ` set queue)) queue qprev qhead"
   apply (rule tcb_queue_relation_restrict0)
   apply simp
@@ -149,14 +149,14 @@ proof (induct queue arbitrary: qprev qhead)
   case Nil thus ?case by simp
 next
   case (Cons tcb tcbs qprev' qhead')
-  thus ?case 
+  thus ?case
     apply clarsimp
     apply (rule iffI)
      apply clarsimp
      apply (frule compD [OF mapeq(1)])
      apply clarsimp
      apply (frule compD [OF mapeq(2)])
-     apply clarsimp   
+     apply clarsimp
     apply clarsimp
     apply (frule compD [OF mapeq(1) [symmetric]])
     apply clarsimp
@@ -171,12 +171,12 @@ lemma tcb_queue_relation_cong:
   and        qpc: "qprev = qprev'"
   and        qhc: "qhead = qhead'"
   and        mpc: "\<And>p. p \<in> tcb_ptr_to_ctcb_ptr ` set queue' \<Longrightarrow> mp p = mp' p"
-  shows "tcb_queue_relation getNext getPrev mp queue qprev qhead = 
+  shows "tcb_queue_relation getNext getPrev mp queue qprev qhead =
   tcb_queue_relation getNext getPrev mp' queue' qprev' qhead'" (is "?LHS = ?RHS")
 proof -
   have "?LHS = tcb_queue_relation getNext getPrev (mp |` (tcb_ptr_to_ctcb_ptr ` set queue')) queue' qprev' qhead'"
     by (simp add: queuec qpc qhc, subst tcb_queue_relation_restrict, rule refl)
-  
+
   also have "\<dots> = tcb_queue_relation getNext getPrev (mp' |` (tcb_ptr_to_ctcb_ptr ` set queue')) queue' qprev' qhead'"
     by (simp add: mpc cong: restrict_map_cong)
 
@@ -191,7 +191,7 @@ lemma tcb_queue_relation'_cong:
   and        qhc: "qhead = qhead'"
   and        qpc: "qend = qend'"
   and        mpc: "\<And>p. p \<in> tcb_ptr_to_ctcb_ptr ` set queue' \<Longrightarrow> mp p = mp' p"
-  shows "tcb_queue_relation' getNext getPrev mp queue qhead qend = 
+  shows "tcb_queue_relation' getNext getPrev mp queue qhead qend =
   tcb_queue_relation' getNext getPrev mp' queue' qhead' qend'" (is "?LHS = ?RHS")
 proof -
   have "?LHS = tcb_queue_relation' getNext getPrev (mp |` (tcb_ptr_to_ctcb_ptr ` set queue')) queue' qhead' qend'"
@@ -220,39 +220,39 @@ lemma tcb_at_not_NULL:
   shows "tcb_ptr_to_ctcb_ptr t \<noteq> NULL"
 proof
   assume "tcb_ptr_to_ctcb_ptr t = NULL"
-  with tat have "tcb_at' (ctcb_ptr_to_tcb_ptr NULL) s" 
+  with tat have "tcb_at' (ctcb_ptr_to_tcb_ptr NULL) s"
     apply -
     apply (erule subst)
     apply simp
     done
-  
+
   hence "is_aligned (ctcb_ptr_to_tcb_ptr NULL) 9"
     by (rule tcb_aligned')
-    
+
   moreover have "ctcb_ptr_to_tcb_ptr NULL !! 8"
     unfolding ctcb_ptr_to_tcb_ptr_def ctcb_offset_def
-    by simp  
+    by simp
   ultimately show False by (simp add: is_aligned_nth)
 qed
 
 lemma tcb_queue_relation_not_NULL:
-  assumes   tq: "tcb_queue_relation getNext getPrev mp queue qprev qhead" 
+  assumes   tq: "tcb_queue_relation getNext getPrev mp queue qprev qhead"
   and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s"
   shows   "\<forall>t \<in> set queue. tcb_ptr_to_ctcb_ptr t \<noteq> NULL"
 proof (cases "queue = []")
-  case True thus ?thesis by simp  
+  case True thus ?thesis by simp
 next
   case False
   show ?thesis
   proof (rule ballI, rule notI)
     fix t
     assume tq: "t \<in> set queue" and "tcb_ptr_to_ctcb_ptr t = NULL"
-    hence "ctcb_ptr_to_tcb_ptr NULL \<in> set queue" 
+    hence "ctcb_ptr_to_tcb_ptr NULL \<in> set queue"
       apply -
       apply (erule subst)
-      apply simp 
+      apply simp
       done
-    
+
     with valid_ep(1) have "tcb_at' (ctcb_ptr_to_tcb_ptr NULL) s" ..
     thus False
       apply -
@@ -265,7 +265,7 @@ qed
 lemmas tcb_queue_relation_not_NULL' = bspec [OF tcb_queue_relation_not_NULL]
 
 lemma tcb_queue_relation_head_hd:
-  assumes   tq: "tcb_queue_relation getNext getPrev mp queue qprev qhead" 
+  assumes   tq: "tcb_queue_relation getNext getPrev mp queue qprev qhead"
   and     tcbs: "queue \<noteq> []"
   shows   "ctcb_ptr_to_tcb_ptr qhead = hd queue"
   using assms
@@ -273,32 +273,32 @@ lemma tcb_queue_relation_head_hd:
    apply simp
   apply simp
   done
-  
+
 lemma tcb_queue_relation_next_not_NULL:
-  assumes   tq: "tcb_queue_relation getNext getPrev mp queue qprev qhead" 
+  assumes   tq: "tcb_queue_relation getNext getPrev mp queue qprev qhead"
   and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and     tcbs: "queue \<noteq> []"
-  shows   "qhead \<noteq> NULL"  
+  shows   "qhead \<noteq> NULL"
 proof -
   have "ctcb_ptr_to_tcb_ptr qhead \<in> set queue" using tq tcbs
     by (simp add: tcb_queue_relation_head_hd)
-    
-  with tq valid_ep(1) have "tcb_ptr_to_ctcb_ptr (ctcb_ptr_to_tcb_ptr qhead) \<noteq> NULL" 
+
+  with tq valid_ep(1) have "tcb_ptr_to_ctcb_ptr (ctcb_ptr_to_tcb_ptr qhead) \<noteq> NULL"
     by (rule tcb_queue_relation_not_NULL')
-  
+
   thus ?thesis by simp
 qed
 
 lemma tcb_queue_relation_ptr_rel:
-  assumes   tq: "tcb_queue_relation getNext getPrev mp queue qprev qhead" 
+  assumes   tq: "tcb_queue_relation getNext getPrev mp queue qprev qhead"
   and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and   cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   and prev_not_queue: "ctcb_ptr_to_tcb_ptr qprev \<notin> set queue"
   and in_queue: "tcbp \<in> set queue"
-  shows "tcb_ptr_to_ctcb_ptr tcbp \<noteq> getNext tcb \<and> tcb_ptr_to_ctcb_ptr tcbp \<noteq> getPrev tcb 
+  shows "tcb_ptr_to_ctcb_ptr tcbp \<noteq> getNext tcb \<and> tcb_ptr_to_ctcb_ptr tcbp \<noteq> getPrev tcb
          \<and> (getNext tcb \<noteq> NULL \<longrightarrow> getNext tcb \<noteq> getPrev tcb)"
   using tq valid_ep in_queue cs_tcb prev_not_queue
-  apply -  
+  apply -
   apply (frule (3) tcb_queueD)
   apply (frule (2) tcb_queue_relation_not_NULL')
   apply (simp split: if_split_asm)
@@ -319,7 +319,7 @@ lemma tcb_queue_relation_ptr_rel:
    apply clarsimp
   apply (case_tac "na = Suc n")
    apply hypsubst
-    apply (clarsimp simp: distinct_conv_nth) 
+    apply (clarsimp simp: distinct_conv_nth)
   apply (clarsimp simp: distinct_conv_nth)
   done
 
@@ -330,12 +330,12 @@ lemma distinct_cons_nth:
   shows    "(x # xs) ! n \<noteq> xs ! n"
 proof
   assume n: "(x # xs) ! n = xs ! n"
-  have ln': "n < length (x # xs)" using ln by simp  
-  have sln: "Suc n < length (x # xs)" using ln by simp    
-  
+  have ln': "n < length (x # xs)" using ln by simp
+  have sln: "Suc n < length (x # xs)" using ln by simp
+
   from n have "(x # xs) ! n = (x # xs) ! Suc n" by simp
   moreover have "distinct (x # xs)" using dxs x by simp
-  ultimately show False 
+  ultimately show False
     unfolding distinct_conv_nth
     apply -
     apply (drule spec, drule mp [OF _ ln'])
@@ -366,12 +366,12 @@ proof (cases "n = Suc m")
   thus ?thesis by simp
 next
   case False
-  
-  have ln': "n < length (x # xs)" using ln by simp 
-  have lm': "Suc m < length (x # xs)" using lm by simp  
+
+  have ln': "n < length (x # xs)" using ln by simp
+  have lm': "Suc m < length (x # xs)" using lm by simp
 
   have "distinct (x # xs)" using dist xxs by simp
-  thus ?thesis using False 
+  thus ?thesis using False
     unfolding distinct_conv_nth
     apply -
     apply (drule spec, drule mp [OF _ ln'])
@@ -391,12 +391,12 @@ proof (cases "m = Suc n")
   thus ?thesis by simp
 next
   case False
-  
-  have ln': "Suc n < length (x # xs)" using ln by simp 
-  have lm': "m < length (x # xs)" using lm by simp  
+
+  have ln': "Suc n < length (x # xs)" using ln by simp
+  have lm': "m < length (x # xs)" using lm by simp
 
   have "distinct (x # xs)" using dist xxs by simp
-  thus ?thesis using False 
+  thus ?thesis using False
     unfolding distinct_conv_nth
     apply -
     apply (drule spec, drule mp [OF _ ln'])
@@ -416,14 +416,14 @@ lemma nth_first_not_member:
   done
 
 lemma tcb_queue_next_prev:
-  assumes    qr: "tcb_queue_relation getNext getPrev mp queue qprev qhead" 
-  and       valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"    
+  assumes    qr: "tcb_queue_relation getNext getPrev mp queue qprev qhead"
+  and       valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and       tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
-  and      tcb': "mp (tcb_ptr_to_ctcb_ptr tcbp') = Some tcb'"  
+  and      tcb': "mp (tcb_ptr_to_ctcb_ptr tcbp') = Some tcb'"
   and        tq: "tcbp \<in> set queue" "tcbp' \<in> set queue"
-  and prev_not_queue: "ctcb_ptr_to_tcb_ptr qprev \<notin> set queue" 
+  and prev_not_queue: "ctcb_ptr_to_tcb_ptr qprev \<notin> set queue"
   and      tcbs: "tcbp \<noteq> tcbp'"
-  shows    "(getNext tcb = tcb_ptr_to_ctcb_ptr tcbp') = 
+  shows    "(getNext tcb = tcb_ptr_to_ctcb_ptr tcbp') =
             (getPrev tcb' = tcb_ptr_to_ctcb_ptr tcbp)"
   using qr valid_ep prev_not_queue tq tcb tcb' tcbs
   apply -
@@ -434,9 +434,9 @@ lemma tcb_queue_next_prev:
     apply (rule tq(2))
    apply (rule tcb')
   apply (cases queue)
-   apply simp  
+   apply simp
   apply (cut_tac bspec [OF tcb_queue_relation_not_NULL, OF qr valid_ep(1) tq(1)])
-  apply (cut_tac bspec [OF tcb_queue_relation_not_NULL, OF qr valid_ep(1) tq(2)])        
+  apply (cut_tac bspec [OF tcb_queue_relation_not_NULL, OF qr valid_ep(1) tq(2)])
   apply (simp add: inj_eq split: if_split_asm)
 	   apply clarsimp
 	  apply clarsimp
@@ -451,9 +451,9 @@ lemma tcb_queue_next_prev:
     by (fastforce simp: last_conv_nth distinct_nth distinct_nth_cons distinct_nth_cons' nth_first_not_member)
 
 
-lemma null_not_in: 
+lemma null_not_in:
   "\<lbrakk>tcb_queue_relation getNext getPrev mp queue qprev qhead; \<forall>t\<in>set queue. tcb_at' t s; distinct queue\<rbrakk>
-   \<Longrightarrow> ctcb_ptr_to_tcb_ptr NULL \<notin> set queue" 
+   \<Longrightarrow> ctcb_ptr_to_tcb_ptr NULL \<notin> set queue"
     apply -
     apply (rule notI)
     apply (drule (2) tcb_queue_relation_not_NULL')
@@ -461,15 +461,15 @@ lemma null_not_in:
     done
 
 lemma tcb_queue_relationI':
-  "\<lbrakk> tcb_queue_relation getNext getPrev hp queue NULL qhead; 
+  "\<lbrakk> tcb_queue_relation getNext getPrev hp queue NULL qhead;
      qend = (if queue = [] then NULL else (tcb_ptr_to_ctcb_ptr (last queue))) \<rbrakk>
   \<Longrightarrow> tcb_queue_relation' getNext getPrev hp queue qhead qend"
   unfolding tcb_queue_relation'_def
   by simp
 
 lemma tcb_queue_relationE':
-  "\<lbrakk> tcb_queue_relation' getNext getPrev hp queue qhead qend;  
-   \<lbrakk> tcb_queue_relation getNext getPrev hp queue NULL qhead; 
+  "\<lbrakk> tcb_queue_relation' getNext getPrev hp queue qhead qend;
+   \<lbrakk> tcb_queue_relation getNext getPrev hp queue NULL qhead;
      qend = (if queue = [] then NULL else (tcb_ptr_to_ctcb_ptr (last queue))) \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   unfolding tcb_queue_relation'_def
   by simp
@@ -481,7 +481,7 @@ lemma tcb_queue_relation'_queue_rel:
   by simp
 
 lemma tcb_queue_singleton_iff:
-  assumes queue_rel: "tcb_queue_relation getNext getPrev mp queue NULL qhead" 
+  assumes queue_rel: "tcb_queue_relation getNext getPrev mp queue NULL qhead"
   and      in_queue: "tcbp \<in> set queue"
   and    valid_ntfn: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and       cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
@@ -509,7 +509,7 @@ next
     apply (cut_tac x = "queue ! Suc n" in bspec [OF tcb_queue_relation_not_NULL [OF  queue_rel valid_ntfn(1)]])
     apply clarsimp
     apply simp
-    done   
+    done
   moreover have "queue \<noteq> []" using in_queue by clarsimp
   ultimately show "queue = [tcbp]" using valid_ntfn in_queue
     apply clarsimp
@@ -527,14 +527,14 @@ proof (induct ls arbitrary: n)
   case Nil thus ?case by simp
 next
   case (Cons x xs n)
-  
+
   show ?case
   proof (cases n)
     case 0
     thus ?thesis by simp
   next
     case (Suc m)
-  
+
     hence "((x # xs) ! n) \<noteq> x" using Cons.prems by clarsimp
     thus ?thesis using Suc Cons.prems by (clarsimp simp add: Cons.hyps)
   qed
@@ -558,8 +558,8 @@ lemma upd_unless_null_cong_helper:
 lemma tcbDequeue_update0:
   assumes in_queue: "tcbp \<in> set queue"
   and    valid_ntfn: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
-  and    queue_rel: "tcb_queue_relation tn tp mp queue qprev qhead" 
-  and prev_not_queue: "ctcb_ptr_to_tcb_ptr qprev \<notin> set queue" 
+  and    queue_rel: "tcb_queue_relation tn tp mp queue qprev qhead"
+  and prev_not_queue: "ctcb_ptr_to_tcb_ptr qprev \<notin> set queue"
   and       cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   and            f: "\<And>v f g. tn (tn_update f v) = f (tn v) \<and> tp (tp_update g v) = g (tp v)
                            \<and> tn (tp_update f v) = tn v \<and> tp (tn_update g v) = tp v"
@@ -577,40 +577,40 @@ proof (induct queue arbitrary: qprev qhead)
 next
   case (Cons tcb' tcbs qprev' qhead')
 
-  have "tcbp = tcb' \<or> tcbp \<in> set tcbs" using Cons.prems by simp  
+  have "tcbp = tcb' \<or> tcbp \<in> set tcbs" using Cons.prems by simp
   thus ?case
   proof
     assume tcbp: "tcbp = tcb'"
     hence qp: "qprev' = tp tcb" and qh: "qhead' = tcb_ptr_to_ctcb_ptr tcb'"
       using Cons.prems cs_tcb by auto
-      
+
     from Cons.prems have tq: "tcb_queue_relation tn tp mp tcbs (tcb_ptr_to_ctcb_ptr tcb') (tn tcb)"
       using Cons.prems cs_tcb tcbp by clarsimp
-       
+
     note ind_prems = Cons.prems
     note ind_hyp   = Cons.hyps
-    
-    show ?thesis 
+
+    show ?thesis
     proof (cases tcbs)
       case Nil thus ?thesis using Cons.prems tcbp cs_tcb by clarsimp
     next
       case (Cons tcbs_hd tcbss)
-      
-      have nnull: "tn tcb \<noteq> NULL" using tq 
+
+      have nnull: "tn tcb \<noteq> NULL" using tq
       proof (rule tcb_queue_relation_next_not_NULL)
-    	from ind_prems show "\<forall>t\<in>set tcbs. tcb_at' t s" 
+    	from ind_prems show "\<forall>t\<in>set tcbs. tcb_at' t s"
 	  and "distinct tcbs" by simp_all
 	show "tcbs \<noteq> []" using Cons by simp
       qed
-      
+
       from Cons ind_prems have "tcbs_hd \<notin> set tcbss" by simp
-      hence mpeq: "\<And>p. p \<in> tcb_ptr_to_ctcb_ptr ` set tcbss \<Longrightarrow> ?mp p = mp p" 
+      hence mpeq: "\<And>p. p \<in> tcb_ptr_to_ctcb_ptr ` set tcbss \<Longrightarrow> ?mp p = mp p"
 	using tq cs_tcb tcbp Cons nnull ind_prems
 	apply -
 	apply (subst upd_unless_null_cong_helper, assumption, clarsimp)+
 	apply simp
 	done
-        
+
       have "tcb_ptr_to_ctcb_ptr tcbp \<noteq> tn tcb \<and> tcb_ptr_to_ctcb_ptr tcbp \<noteq> tp tcb
          \<and> tn tcb \<noteq> tp tcb" using tq cs_tcb ind_prems nnull
 	apply -
@@ -621,8 +621,8 @@ next
       hence "?mp (tcb_ptr_to_ctcb_ptr tcbs_hd) = Some (tp_update (\<lambda>_. tp tcb) (the (mp (tn tcb))))"
 	using qp qh tq cs_tcb tcbp Cons nnull
 	by (simp add: upd_unless_null_def)
-      
-      thus ?thesis using qp qh tq cs_tcb tcbp Cons nnull 
+
+      thus ?thesis using qp qh tq cs_tcb tcbp Cons nnull
 	apply (simp (no_asm) add: tcbp Cons split del: if_split)
 	apply (subst tcb_queue_relation_cong [OF refl refl refl mpeq])
 	apply assumption
@@ -632,34 +632,34 @@ next
   next
     assume inset: "tcbp \<in> set tcbs"
     hence  tcbp: "tcbp \<noteq> tcb'" using Cons.prems by clarsimp
-    
-    obtain tcb2 where cs_tcb2: "mp (tcb_ptr_to_ctcb_ptr tcb') = Some tcb2" 
-      and rel2: "tcb_queue_relation tn tp mp tcbs (tcb_ptr_to_ctcb_ptr tcb') (tn tcb2)" 
+
+    obtain tcb2 where cs_tcb2: "mp (tcb_ptr_to_ctcb_ptr tcb') = Some tcb2"
+      and rel2: "tcb_queue_relation tn tp mp tcbs (tcb_ptr_to_ctcb_ptr tcb') (tn tcb2)"
       and qh: "qhead' = tcb_ptr_to_ctcb_ptr tcb'"
       and qp: "qprev' = tp tcb2"
-      using Cons.prems 
+      using Cons.prems
       by clarsimp
-    
+
     have nnull: "tcb_ptr_to_ctcb_ptr tcb' \<noteq> NULL" using Cons.prems
       apply -
       apply (erule (1) tcb_queue_relation_not_NULL')
       apply simp
       done
-      
-    have ih: "tcb_queue_relation tn tp ?mp (remove1 tcbp tcbs) 
+
+    have ih: "tcb_queue_relation tn tp ?mp (remove1 tcbp tcbs)
                                      (?qprev (tcb_ptr_to_ctcb_ptr tcb') (tn tcb2))
                                      (?qhead (tn tcb2))" using rel2
     proof (rule Cons.hyps)
-      from Cons.prems show "\<forall>t\<in>set tcbs. tcb_at' t s" 
+      from Cons.prems show "\<forall>t\<in>set tcbs. tcb_at' t s"
 	and "distinct tcbs"
-	and "ctcb_ptr_to_tcb_ptr (tcb_ptr_to_ctcb_ptr tcb') \<notin> set tcbs" by simp_all      
+	and "ctcb_ptr_to_tcb_ptr (tcb_ptr_to_ctcb_ptr tcb') \<notin> set tcbs" by simp_all
     qed fact
 
     have tcb_next: "tn tcb \<noteq> tcb_ptr_to_ctcb_ptr tcb'"
       using Cons.prems tcb_queue_next_prev[OF Cons.prems(1), OF _ _ cs_tcb cs_tcb2]
             tcbp qp[symmetric]
       by auto
-    
+
     show ?thesis using tcbp
     proof (cases "tn tcb2 = tcb_ptr_to_ctcb_ptr tcbp")
       case True
@@ -674,7 +674,7 @@ next
 	done
 
       hence "?mp (tcb_ptr_to_ctcb_ptr tcb') = Some (tn_update (\<lambda>_. tn tcb) tcb2)"
-	using tcb_next nnull cs_tcb2 unfolding upd_unless_null_def by simp 
+	using tcb_next nnull cs_tcb2 unfolding upd_unless_null_def by simp
 
       thus ?thesis using tcbp cs_tcb qh qp True ih tcb_prev
 	by (simp add: inj_eq f)
@@ -690,9 +690,9 @@ next
          apply (rule not_sym [OF tcbp])
         apply simp
 	done
-      hence "?mp (tcb_ptr_to_ctcb_ptr tcb') = Some tcb2" 
+      hence "?mp (tcb_ptr_to_ctcb_ptr tcb') = Some tcb2"
 	using tcb_next nnull cs_tcb2 unfolding upd_unless_null_def by simp
-	
+
       thus ?thesis using tcbp cs_tcb qh qp False ih tcb_prev
 	by (simp add: inj_eq)
     qed
@@ -700,7 +700,7 @@ next
 qed
 
 lemma tcbDequeue_update:
-  assumes queue_rel: "tcb_queue_relation' tn tp mp queue qhead qend" 
+  assumes queue_rel: "tcb_queue_relation' tn tp mp queue qhead qend"
   and      in_queue: "tcbp \<in> set queue"
   and    valid_ntfn: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and       cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
@@ -709,11 +709,11 @@ lemma tcbDequeue_update:
   shows "tcb_queue_relation' tn tp
           (upd_unless_null (tn tcb) (tp_update (\<lambda>_. tp tcb) (the (mp (tn tcb))))
             (upd_unless_null (tp tcb) (tn_update (\<lambda>_. tn tcb) (the (mp (tp tcb)))) mp))
-            (remove1 tcbp queue) 
-            (if tp tcb = NULL then tn tcb else qhead) 
+            (remove1 tcbp queue)
+            (if tp tcb = NULL then tn tcb else qhead)
             (if tn tcb = NULL then tp tcb else qend)"
 proof -
-  have ne: "NULL = (if tcb_ptr_to_ctcb_ptr tcbp = qhead then tp tcb else NULL)" 
+  have ne: "NULL = (if tcb_ptr_to_ctcb_ptr tcbp = qhead then tp tcb else NULL)"
     using queue_rel in_queue cs_tcb
     apply -
     apply (drule tcb_queue_relation'_queue_rel)
@@ -722,19 +722,19 @@ proof -
      apply simp
     apply clarsimp
     done
-  
-  have if2: "(if tp tcb = NULL then tn tcb else qhead) = 
+
+  have if2: "(if tp tcb = NULL then tn tcb else qhead) =
              (if tcb_ptr_to_ctcb_ptr tcbp = qhead then tn tcb else qhead)"
     using tcb_queue_relation'_queue_rel [OF queue_rel] in_queue cs_tcb valid_ntfn
     apply -
     apply (cases queue)
      apply simp
-    apply (frule (3) tcb_queueD)  
+    apply (frule (3) tcb_queueD)
     apply (simp add: inj_eq)
     apply (intro impI)
     apply simp
     apply (elim conjE exE)
-    apply (cut_tac x = "queue ! n" 
+    apply (cut_tac x = "queue ! n"
       in bspec [OF tcb_queue_relation_not_NULL [OF  tcb_queue_relation'_queue_rel [OF queue_rel] valid_ntfn(1)]])
     apply (rule nth_mem)
     apply clarsimp
@@ -742,7 +742,7 @@ proof -
     done
 
   note null_not_in' = null_not_in [OF tcb_queue_relation'_queue_rel [OF queue_rel] valid_ntfn(1) valid_ntfn(2)]
-  
+
   show ?thesis
   proof (rule tcb_queue_relationI')
     show "tcb_queue_relation tn tp
@@ -758,24 +758,24 @@ proof -
     have r1: "(remove1 tcbp queue = []) = (tn tcb = NULL \<and> tp tcb = NULL)"
       using in_queue tcb_queue_relation'_queue_rel [OF queue_rel] cs_tcb valid_ntfn null_not_in'
       apply -
-      apply (subst tcb_queue_singleton_iff [symmetric], assumption+) 
-      apply (fastforce simp: remove1_empty)      
+      apply (subst tcb_queue_singleton_iff [symmetric], assumption+)
+      apply (fastforce simp: remove1_empty)
       done
     have "queue \<noteq> []" using in_queue by clarsimp
     thus "(if tn tcb = NULL then tp tcb else qend) =
           (if remove1 tcbp queue = [] then NULL else tcb_ptr_to_ctcb_ptr (last (remove1 tcbp queue)))"
-      using queue_rel in_queue cs_tcb valid_ntfn 
+      using queue_rel in_queue cs_tcb valid_ntfn
 	tcb_queue_relation_not_NULL [OF tcb_queue_relation'_queue_rel [OF queue_rel] valid_ntfn(1)]
       apply -
-      apply (erule tcb_queue_relationE') 
-      apply (frule (3) tcb_queueD)  
+      apply (erule tcb_queue_relationE')
+      apply (frule (3) tcb_queueD)
       apply (subst r1)
       apply simp
       apply (intro impI conjI)
        apply (subgoal_tac "tcbp = last queue")
 	apply simp
 	apply (subgoal_tac "(remove1 (last queue) queue) \<noteq> []")
-	 apply (clarsimp simp: inj_eq last_conv_nth nth_eq_iff_index_eq length_remove1 
+	 apply (clarsimp simp: inj_eq last_conv_nth nth_eq_iff_index_eq length_remove1
 	   distinct_remove1_take_drop split: if_split_asm)
 	 apply arith
 	apply (clarsimp simp: remove1_empty last_conv_nth hd_conv_nth nth_eq_iff_index_eq not_le split: if_split_asm)
@@ -798,17 +798,17 @@ lemmas tcbEPDequeue_update
                         simplified]
 
 lemma tcb_queue_relation_ptr_rel':
-  assumes   tq: "tcb_queue_relation getNext getPrev mp queue NULL qhead" 
+  assumes   tq: "tcb_queue_relation getNext getPrev mp queue NULL qhead"
   and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and   cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   and in_queue: "tcbp \<in> set queue"
-  shows "tcb_ptr_to_ctcb_ptr tcbp \<noteq> getNext tcb \<and> tcb_ptr_to_ctcb_ptr tcbp \<noteq> getPrev tcb 
+  shows "tcb_ptr_to_ctcb_ptr tcbp \<noteq> getNext tcb \<and> tcb_ptr_to_ctcb_ptr tcbp \<noteq> getPrev tcb
          \<and> (getNext tcb \<noteq> NULL \<longrightarrow> getNext tcb \<noteq> getPrev tcb)"
   using tq valid_ep cs_tcb null_not_in [OF tq valid_ep(1) valid_ep(2)] in_queue
   by (rule tcb_queue_relation_ptr_rel)
 
 lemma tcb_queue_head_empty_iff:
-  "\<lbrakk> tcb_queue_relation getNext getPrev mp queue NULL qhead; \<forall>t \<in> set queue. tcb_at' t s \<rbrakk> \<Longrightarrow> 
+  "\<lbrakk> tcb_queue_relation getNext getPrev mp queue NULL qhead; \<forall>t \<in> set queue. tcb_at' t s \<rbrakk> \<Longrightarrow>
   (qhead = NULL) = (queue = [])"
   apply (rule classical)
   apply (cases queue)
@@ -836,9 +836,9 @@ qed
 lemma is_aligned_neg_mask:
   "\<lbrakk> is_aligned p n; m \<le> n \<rbrakk> \<Longrightarrow> p && ~~ mask m = p"
   by (simp add: is_aligned_nth)
-  
+
 lemma tcb_queue_relation_next_mask_4:
-  assumes   tq: "tcb_queue_relation getNext getPrev mp queue NULL qhead" 
+  assumes   tq: "tcb_queue_relation getNext getPrev mp queue NULL qhead"
   and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and   cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   and in_queue: "tcbp \<in> set queue"
@@ -847,23 +847,23 @@ proof (cases "(getNext tcb) = NULL")
   case True
   thus ?thesis by simp
 next
-  case False 
-  
+  case False
+
   hence "ctcb_ptr_to_tcb_ptr (getNext tcb) \<in> set queue" using assms
     apply -
     apply (drule (3) tcb_queueD)
     apply (clarsimp split: if_split_asm)
     done
-  
+
   with valid_ep(1) have "tcb_at' (ctcb_ptr_to_tcb_ptr (getNext tcb)) s" ..
   hence "is_aligned (ctcb_ptr_to_tcb_ptr (getNext tcb)) 9" by (rule tcb_aligned')
   hence "is_aligned (ptr_val (getNext tcb)) 8" by (rule ctcb_ptr_to_tcb_ptr_aligned)
   thus ?thesis by (simp add: is_aligned_neg_mask)
 qed
 
-  
+
 lemma tcb_queue_relation_prev_mask_4:
-  assumes   tq: "tcb_queue_relation getNext getPrev mp queue NULL qhead" 
+  assumes   tq: "tcb_queue_relation getNext getPrev mp queue NULL qhead"
   and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and   cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   and in_queue: "tcbp \<in> set queue"
@@ -872,14 +872,14 @@ proof (cases "(getPrev tcb) = NULL")
   case True
   thus ?thesis by simp
 next
-  case False 
-  
+  case False
+
   hence "ctcb_ptr_to_tcb_ptr (getPrev tcb) \<in> set queue" using assms
     apply -
     apply (drule (3) tcb_queueD)
     apply (clarsimp split: if_split_asm)
     done
-  
+
   with valid_ep(1) have "tcb_at' (ctcb_ptr_to_tcb_ptr (getPrev tcb)) s" ..
   hence "is_aligned (ctcb_ptr_to_tcb_ptr (getPrev tcb)) 9" by (rule tcb_aligned')
   hence "is_aligned (ptr_val (getPrev tcb)) 8" by (rule ctcb_ptr_to_tcb_ptr_aligned)
@@ -887,7 +887,7 @@ next
 qed
 
 lemma tcb_queue_relation'_next_mask_4:
-  assumes   tq: "tcb_queue_relation' getNext getPrev mp queue qhead qend" 
+  assumes   tq: "tcb_queue_relation' getNext getPrev mp queue qhead qend"
   and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and   cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   and in_queue: "tcbp \<in> set queue"
@@ -895,7 +895,7 @@ lemma tcb_queue_relation'_next_mask_4:
   by (rule tcb_queue_relation_next_mask_4 [OF tcb_queue_relation'_queue_rel], fact+)
 
 lemma tcb_queue_relation'_prev_mask_4:
-  assumes   tq: "tcb_queue_relation' getNext getPrev mp queue qhead qend" 
+  assumes   tq: "tcb_queue_relation' getNext getPrev mp queue qhead qend"
   and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and   cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   and in_queue: "tcbp \<in> set queue"
@@ -907,7 +907,7 @@ lemma cready_queues_relation_null_queue_ptrs:
   assumes rel: "cready_queues_relation mp cq aq"
   and same: "option_map tcb_null_ep_ptrs \<circ> mp' = option_map tcb_null_ep_ptrs \<circ> mp"
   shows "cready_queues_relation mp' cq aq"
-  using rel 
+  using rel
   apply (clarsimp simp: cready_queues_relation_def Let_def all_conj_distrib)
   apply (drule spec, drule spec, drule mp, (erule conjI)+, assumption)
   apply (clarsimp simp: tcb_queue_relation'_def)
@@ -936,10 +936,10 @@ lemma cready_queues_relation_not_queue_ptrs:
   and same: "option_map tcbSchedNext_C \<circ> mp' = option_map tcbSchedNext_C \<circ> mp"
   "option_map tcbSchedPrev_C \<circ> mp' = option_map tcbSchedPrev_C \<circ> mp"
   shows "cready_queues_relation mp' cq aq"
-  using rel 
+  using rel
   apply (clarsimp simp: cready_queues_relation_def tcb_queue_relation'_def Let_def all_conj_distrib)
   apply (drule spec, drule spec, drule mp, (erule conjI)+, assumption)
-  apply clarsimp    
+  apply clarsimp
   apply (erule iffD2 [OF tcb_queue_relation_only_next_prev, rotated -1])
    apply (rule same)
   apply (rule same)
@@ -947,8 +947,8 @@ lemma cready_queues_relation_not_queue_ptrs:
 
 lemma ntfn_ep_disjoint:
   assumes  srs: "sym_refs (state_refs_of' s)"
-  and     epat: "ko_at' ep epptr s"    
-  and    ntfnat: "ko_at' ntfn ntfnptr s"  
+  and     epat: "ko_at' ep epptr s"
+  and    ntfnat: "ko_at' ntfn ntfnptr s"
   and  ntfnq: "isWaitingNtfn (ntfnObj ntfn)"
   and   epq: "isSendEP ep \<or> isRecvEP ep"
   shows  "set (epQueue ep) \<inter> set (ntfnQueue (ntfnObj ntfn)) = {}"
@@ -967,8 +967,8 @@ lemma ntfn_ep_disjoint:
 
 lemma ntfn_ntfn_disjoint:
   assumes  srs: "sym_refs (state_refs_of' s)"
-  and    ntfnat: "ko_at' ntfn ntfnptr s"    
-  and   ntfnat': "ko_at' ntfn' ntfnptr' s"  
+  and    ntfnat: "ko_at' ntfn ntfnptr s"
+  and   ntfnat': "ko_at' ntfn' ntfnptr' s"
   and     ntfnq: "isWaitingNtfn (ntfnObj ntfn)"
   and    ntfnq': "isWaitingNtfn (ntfnObj ntfn')"
   and      neq: "ntfnptr' \<noteq> ntfnptr"
@@ -990,15 +990,15 @@ lemma tcb_queue_relation'_empty[simp]:
 
 lemma cnotification_relation_ntfn_queue:
   fixes ntfn :: "Structures_H.notification"
-  defines "qs \<equiv> if isWaitingNtfn (ntfnObj ntfn) then set (ntfnQueue (ntfnObj ntfn)) else {}"  
+  defines "qs \<equiv> if isWaitingNtfn (ntfnObj ntfn) then set (ntfnQueue (ntfnObj ntfn)) else {}"
   assumes  ntfn: "cnotification_relation (cslift t) ntfn' b"
   and      srs: "sym_refs (state_refs_of' s)"
   and     koat: "ko_at' ntfn ntfnptr s"
   and    koat': "ko_at' ntfn' ntfnptr' s"
-  and     mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` qs))) = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` qs)))"  
+  and     mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` qs))) = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` qs)))"
   and      neq: "ntfnptr' \<noteq> ntfnptr"
   shows  "cnotification_relation (cslift t') ntfn' b"
-proof -  
+proof -
     have rl: "\<And>p. \<lbrakk> p \<in> tcb_ptr_to_ctcb_ptr ` set (ntfnQueue (ntfnObj ntfn'));
                     isWaitingNtfn (ntfnObj ntfn); isWaitingNtfn (ntfnObj ntfn')\<rbrakk>
     \<Longrightarrow> cslift t p = cslift t' p" using srs koat' koat mpeq neq
@@ -1009,7 +1009,7 @@ proof -
     apply (fastforce simp: disjoint_iff_not_equal inj_eq qs_def)
     done
 
-  show ?thesis using ntfn rl mpeq unfolding cnotification_relation_def 
+  show ?thesis using ntfn rl mpeq unfolding cnotification_relation_def
     apply (simp add: Let_def)
     apply (cases "ntfnObj ntfn'")
        apply simp
@@ -1026,7 +1026,7 @@ lemma cpspace_relation_ntfn_update_ntfn:
   assumes koat: "ko_at' ntfn ntfnptr s"
   and     invs: "invs' s"
   and      cp: "cpspace_ntfn_relation (ksPSpace s) (t_hrs_' (globals t))"
-  and     rel: "cnotification_relation (cslift t') ntfn' notification" 
+  and     rel: "cnotification_relation (cslift t') ntfn' notification"
   and    mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` qs))) = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` qs)))"
   shows "cmap_relation (map_to_ntfns (ksPSpace s(ntfnptr \<mapsto> KONotification ntfn')))
            (cslift t(Ptr ntfnptr \<mapsto> notification)) Ptr (cnotification_relation (cslift t'))"
@@ -1034,7 +1034,7 @@ lemma cpspace_relation_ntfn_update_ntfn:
   apply -
   apply (subst map_comp_update)
   apply (simp add: projectKO_opts_defs)
-  apply (frule ko_at_projectKO_opt)  
+  apply (frule ko_at_projectKO_opt)
   apply (rule cmap_relationE1, assumption+)
   apply (erule (3) cmap_relation_upd_relI)
    apply (erule (1) cnotification_relation_ntfn_queue [OF _ invs_sym' koat])
@@ -1049,9 +1049,9 @@ lemma cendpoint_relation_upd_tcb_no_queues:
   and   next_pres: "option_map tcbEPNext_C \<circ> mp = option_map tcbEPNext_C \<circ> mp'"
   and   prev_pres: "option_map tcbEPPrev_C \<circ> mp = option_map tcbEPPrev_C \<circ> mp'"
   shows "cendpoint_relation mp a b = cendpoint_relation mp' a b"
-proof -  
+proof -
   show ?thesis
-    unfolding cendpoint_relation_def 
+    unfolding cendpoint_relation_def
     apply (simp add: Let_def)
     apply (cases a)
     apply (simp add: tcb_queue_relation'_def tcb_queue_relation_only_next_prev [OF next_pres prev_pres, symmetric])+
@@ -1063,9 +1063,9 @@ lemma cnotification_relation_upd_tcb_no_queues:
   and   next_pres: "option_map tcbEPNext_C \<circ> mp = option_map tcbEPNext_C \<circ> mp'"
   and   prev_pres: "option_map tcbEPPrev_C \<circ> mp = option_map tcbEPPrev_C \<circ> mp'"
   shows "cnotification_relation mp a b = cnotification_relation mp' a b"
-proof -  
+proof -
   show ?thesis
-    unfolding cnotification_relation_def 
+    unfolding cnotification_relation_def
     apply (simp add: Let_def)
     apply (cases "ntfnObj a")
       apply (simp add: tcb_queue_relation'_def tcb_queue_relation_only_next_prev [OF next_pres prev_pres, symmetric])+
@@ -1077,10 +1077,10 @@ lemma cendpoint_relation_ntfn_queue:
   and      koat: "ko_at' ntfn ntfnptr s"
   and iswaiting: "isWaitingNtfn (ntfnObj ntfn)"
   and      mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` set (ntfnQueue (ntfnObj ntfn)))))
-  = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` set (ntfnQueue (ntfnObj ntfn)))))"  
+  = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` set (ntfnQueue (ntfnObj ntfn)))))"
   and      koat': "ko_at' a epptr s"
   shows "cendpoint_relation (cslift t) a b = cendpoint_relation (cslift t') a b"
-proof -  
+proof -
   have rl: "\<And>p. \<lbrakk> p \<in> tcb_ptr_to_ctcb_ptr ` set (epQueue a); isSendEP a \<or> isRecvEP a \<rbrakk>
     \<Longrightarrow> cslift t p = cslift t' p" using srs koat' koat iswaiting mpeq
     apply -
@@ -1106,8 +1106,8 @@ lemma cvariable_relation_upd_const:
         = cvariable_array_map_relation m (\<lambda>x. n)"
   by (auto simp: fun_eq_iff cvariable_array_map_relation_def)
 
-lemma rf_sr_tcb_update_no_queue: 
-  "\<lbrakk> (s, s') \<in> rf_sr; ko_at' tcb thread s; 
+lemma rf_sr_tcb_update_no_queue:
+  "\<lbrakk> (s, s') \<in> rf_sr; ko_at' tcb thread s;
   t_hrs_' (globals t) = hrs_mem_update (heap_update
     (tcb_ptr_to_ctcb_ptr thread) ctcb) (t_hrs_' (globals s'));
   tcbEPNext_C ctcb = tcbEPNext_C (the (cslift s' (tcb_ptr_to_ctcb_ptr thread)));
@@ -1121,7 +1121,7 @@ lemma rf_sr_tcb_update_no_queue:
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
   apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes
                         heap_to_user_data_def)
-  apply (frule (1) cmap_relation_ko_atD) 
+  apply (frule (1) cmap_relation_ko_atD)
   apply (erule obj_atE')
   apply (clarsimp simp: projectKOs)
   apply (clarsimp simp: map_comp_update projectKO_opt_tcb cvariable_relation_upd_const
@@ -1132,12 +1132,12 @@ lemma rf_sr_tcb_update_no_queue:
       apply simp
       apply (rule cendpoint_relation_upd_tcb_no_queues, assumption+)
        subgoal by (clarsimp intro!: ext)
-      subgoal by (clarsimp intro!: ext)   
-     apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-     apply simp 
-     apply (rule cnotification_relation_upd_tcb_no_queues, assumption+) 
       subgoal by (clarsimp intro!: ext)
-     subgoal by (clarsimp intro!: ext)       
+     apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+     apply simp
+     apply (rule cnotification_relation_upd_tcb_no_queues, assumption+)
+      subgoal by (clarsimp intro!: ext)
+     subgoal by (clarsimp intro!: ext)
     apply (erule cready_queues_relation_not_queue_ptrs)
      subgoal by (clarsimp intro!: ext)
     subgoal by (clarsimp intro!: ext)

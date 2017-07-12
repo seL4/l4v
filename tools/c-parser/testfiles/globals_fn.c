@@ -45,4 +45,4 @@ int test3(int (*arrayptr)[10], int i)
   // this is wacky, but legitimate C
   return (*arrayptr)[i];
 }
-  
+

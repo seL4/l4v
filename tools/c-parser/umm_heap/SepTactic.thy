@@ -189,7 +189,7 @@ rusc "_ O_o _"
 
 ML{*
 
-fun sep_select_tacs s ctxt  = 
+fun sep_select_tacs s ctxt  =
   let val (str, vars) = rusc s
       val subst = [((Lexicon.read_indexname "P", Position.none), str)]
       val fixes = map (fn v => (Binding.name v, NONE, Mixfix.NoSyn)) vars

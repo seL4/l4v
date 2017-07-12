@@ -42,7 +42,7 @@ lemma ef_mk_ef: "empty_fail f \<Longrightarrow> mk_ef (f s) = f s"
   apply force
   done
 
-lemma all_but_obvious: "all_but_exst (\<lambda>a b c d e f g h i. 
+lemma all_but_obvious: "all_but_exst (\<lambda>a b c d e f g h i.
                     x = \<lparr>kheap = a, cdt = b, is_original_cap = c,
                      cur_thread = d, idle_thread = e,
                      machine_state = f, interrupt_irq_node = g,
@@ -73,7 +73,7 @@ lemma valid_tcb_state[simp]: "valid_tcb_state a (trans_state g s) = valid_tcb_st
 
 lemma valid_bound_ntfn[simp]: "valid_bound_ntfn a (trans_state g s) = valid_bound_ntfn a s"
   by (simp add: valid_bound_ntfn_def split: option.splits)
-  
+
 lemma valid_arch_tcb_trans[simp]: "valid_arch_tcb t (trans_state g s) = valid_arch_tcb t s"
   by (auto elim: valid_arch_tcb_pspaceI)
 
@@ -100,7 +100,7 @@ lemma dxo_ex: "((),x :: det_ext state) \<in> fst (do_extended_op f s) \<Longrigh
        \<exists>e :: det_ext. x = (trans_state (\<lambda>_. e) s)"
   apply (clarsimp simp add: do_extended_op_def
                             bind_def gets_def in_monad
-                            select_f_def mk_ef_def 
+                            select_f_def mk_ef_def
                             trans_state_update'
                             wrap_ext_op_det_ext_ext_def)
   apply force
@@ -126,7 +126,7 @@ lemma ex_st: "(a,x :: det_ext state) \<in> fst (f s) \<Longrightarrow>
 lemmas all_but_exst[wp] = a[simplified all_but_exst_def]
 
 lemma lift_inv: "(\<And>s g. P (trans_state g s) = P s) \<Longrightarrow>
-       \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>" 
+       \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
   apply (clarsimp simp add: valid_def)
   apply (drule ex_st)
   apply force
@@ -139,7 +139,7 @@ lemma obj_at[wp]: "I (obj_at a b)" by (rule lift_inv,simp)
 lemma st_tcb_at[wp]: "I (st_tcb_at a b)" by (rule lift_inv,simp)
 
 lemma valid_obj[wp]: "I (valid_obj a b)" by (rule lift_inv,simp)
-  
+
 lemma valid_pspace[wp]: "I (valid_pspace)" by (rule lift_inv,simp)
 
 lemma valid_mdb[wp]: "I valid_mdb" by (rule lift_inv,simp)
@@ -221,7 +221,7 @@ locale is_extended = is_extended' +
 
 context is_extended begin
 
-lemma dxo_eq[simp]: 
+lemma dxo_eq[simp]:
   "do_extended_op f = f"
   apply (simp add: do_extended_op_def all_but_exst_def
                    get_def select_f_def modify_def put_def
@@ -265,12 +265,12 @@ lemmas rec_del_simps_ext =
     rec_del.simps [THEN ext[where f="rec_del args" for args]]
 
 
-lemma rec_del_s_bcorres: 
+lemma rec_del_s_bcorres:
 notes rec_del.simps[simp del]
 shows
 "s_bcorres (rec_del c) (rec_del c) s"
   proof (induct s rule: rec_del.induct, simp_all only: fail_s_bcorres_underlying rec_del_simps_ext(5-))
-  
+
   case (1 slot exposed s) show ?case
     apply (simp add: rec_del.simps)
     apply wp
@@ -278,10 +278,10 @@ shows
     apply (wp drop_sbcorres_underlying)[1]
     apply (wp "1")
     done
-  
+
   next
-  case (2 slot exposed s) 
-   
+  case (2 slot exposed s)
+
   show ?case
     apply (simp add: rec_del.simps)
     apply (wp "2" | wpc | simp split: prod.splits | intro impI conjI allI | (rule ssubst[rotated, where s="fst x" for x], rule "2",simp+) | wp_once drop_sbcorres_underlying)+
@@ -304,8 +304,8 @@ shows
 lemmas rec_del_bcorres = use_sbcorres_underlying[OF rec_del_s_bcorres]
 
 crunch (bcorres)bcorres[wp]: cap_delete truncate_state
-   
-lemma cap_revoke_s_bcorres: 
+
+lemma cap_revoke_s_bcorres:
   shows
   "s_bcorres (cap_revoke slot) (cap_revoke slot) s"
 proof (induct rule: cap_revoke.induct[where ?a1.0=s])
@@ -341,7 +341,7 @@ lemma truncate_state_detype[simp]: "truncate_state (detype x s) = detype x (trun
 lemma resolve_address_bits'_sbcorres:
   shows
   "s_bcorres (resolve_address_bits' TYPE('a::state_ext) a)
-            (resolve_address_bits' TYPE(unit) a) s"  
+            (resolve_address_bits' TYPE(unit) a) s"
 proof (induct a arbitrary: s rule: resolve_address_bits'.induct[where ?a0.0="TYPE('a::state_ext)"])
   case (1 z cap cref s')
   show ?case
@@ -435,12 +435,12 @@ lemma bcorres_underlying_dest: "bcorres_underlying l f k \<Longrightarrow> ((),s
 
 lemma trans_state_twice[simp]: "trans_state (\<lambda>_. e) (trans_state f s) = trans_state (\<lambda>_. e) s"
   by (rule trans_state_update'')
-  
+
 lemma guarded_sub_switch: "((),x) \<in> fst (guarded_switch_to word s) \<Longrightarrow>
        ((),x) \<in> fst (switch_to_thread word s)
        \<and> (\<exists>y. get_tcb word s = Some y \<and> runnable (tcb_state y))"
   apply (clarsimp simp add: guarded_switch_to_def bind_def
-                            get_thread_state_def 
+                            get_thread_state_def
                             thread_get_def
                             in_monad)
   done
@@ -466,7 +466,7 @@ lemma truncate_state_updates[simp]:
 lemma schedule_bcorres[wp]: "bcorres (schedule :: (unit,det_ext) s_monad) schedule"
 
   apply (simp add: schedule_def)
-  apply (clarsimp simp add: schedule_def gets_def bind_def get_def 
+  apply (clarsimp simp add: schedule_def gets_def bind_def get_def
                             return_def s_bcorres_underlying_def
                             allActiveTCBs_def bcorres_underlying_def
                             select_def getActiveTCB_def
@@ -497,7 +497,7 @@ lemma schedule_bcorres[wp]: "bcorres (schedule :: (unit,det_ext) s_monad) schedu
     apply (rule_tac x=word in exI)
     apply (intro conjI impI)
       apply (rule alternative_second)
-  
+
       apply simp
      apply (rule_tac x=y in exI)
      apply clarsimp

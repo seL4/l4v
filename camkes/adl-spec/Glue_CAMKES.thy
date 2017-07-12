@@ -100,7 +100,7 @@ lemma "\<lbrakk>marshal_primitive [] p = i2; wellformed_parameter p; p_type p = 
 (* Unmarshalling anything from an empty IPC gives you nothing. *)
 lemma "\<forall>t. \<exists>p. (unmarshal_primitive [] t = (\<lparr>p_type = p, p_value = [hd []]\<rparr>, []))"
   by (simp add:unmarshal_primitive_def)
- 
+
 (* TODO: Definitions of send/receive as basically thin wrappers around the syscalls. *)
 
 (* TODO: Definitions of the connectors' operations in terms of send and receive. *)

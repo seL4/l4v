@@ -650,10 +650,10 @@ lemma option_to_ptr_not_NULL:
   by (auto simp: option_to_ptr_def option_to_0_def split: option.splits)
 
 lemma doUnbindNotification_ccorres:
-  "ccorres dc xfdc (invs' and tcb_at' tcb) 
+  "ccorres dc xfdc (invs' and tcb_at' tcb)
     (UNIV \<inter> {s. ntfnPtr_' s = ntfn_Ptr ntfnptr} \<inter> {s. tcbptr_' s = tcb_ptr_to_ctcb_ptr tcb}) []
    (do ntfn \<leftarrow> getNotification ntfnptr; doUnbindNotification ntfnptr ntfn tcb od)
-   (Call doUnbindNotification_'proc)" 
+   (Call doUnbindNotification_'proc)"
   apply (cinit' lift: ntfnPtr_' tcbptr_')
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
     apply (rule_tac P="invs' and ko_at' rv ntfnptr" and P'=UNIV
@@ -686,7 +686,7 @@ lemma doUnbindNotification_ccorres:
        apply ceqv
       apply (rule ccorres_move_c_guard_tcb)
       apply (simp add: setBoundNotification_def)
-      apply (rule_tac P'="\<top>" and P="\<top>"  
+      apply (rule_tac P'="\<top>" and P="\<top>"
                    in threadSet_ccorres_lemma3[unfolded dc_def])
        apply vcg
       apply simp
@@ -699,10 +699,10 @@ lemma doUnbindNotification_ccorres:
   done
 
 lemma doUnbindNotification_ccorres':
-  "ccorres dc xfdc (invs' and tcb_at' tcb and ko_at' ntfn ntfnptr) 
+  "ccorres dc xfdc (invs' and tcb_at' tcb and ko_at' ntfn ntfnptr)
     (UNIV \<inter> {s. ntfnPtr_' s = ntfn_Ptr ntfnptr} \<inter> {s. tcbptr_' s = tcb_ptr_to_ctcb_ptr tcb}) []
    (doUnbindNotification ntfnptr ntfn tcb)
-   (Call doUnbindNotification_'proc)" 
+   (Call doUnbindNotification_'proc)"
   apply (cinit' lift: ntfnPtr_' tcbptr_')
     apply (rule_tac P="invs' and ko_at' ntfn ntfnptr" and P'=UNIV
                 in ccorres_split_nothrow_novcg)
@@ -736,7 +736,7 @@ lemma doUnbindNotification_ccorres':
        apply ceqv
       apply (rule ccorres_move_c_guard_tcb)
       apply (simp add: setBoundNotification_def)
-      apply (rule_tac P'="\<top>" and P="\<top>"  
+      apply (rule_tac P'="\<top>" and P="\<top>"
                    in threadSet_ccorres_lemma3[unfolded dc_def])
        apply vcg
       apply simp
@@ -789,7 +789,7 @@ lemma unbindMaybeNotification_ccorres:
   apply (cinit lift: ntfnPtr_')
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
     apply (rule ccorres_rhs_assoc2)
-    apply (rule_tac P="ntfnBoundTCB rv \<noteq> None \<longrightarrow> 
+    apply (rule_tac P="ntfnBoundTCB rv \<noteq> None \<longrightarrow>
                              option_to_ctcb_ptr (ntfnBoundTCB rv) \<noteq> NULL"
                      in ccorres_gen_asm)
     apply (rule_tac xf'=boundTCB_'
@@ -815,7 +815,7 @@ lemma unbindMaybeNotification_ccorres:
    apply (wp getNotification_wp)
   apply (clarsimp )
   apply (frule (1) ko_at_valid_ntfn'[OF _ invs_valid_objs'])
-  by (auto simp: valid_ntfn'_def valid_bound_tcb'_def obj_at'_def projectKOs 
+  by (auto simp: valid_ntfn'_def valid_bound_tcb'_def obj_at'_def projectKOs
                       objBitsKO_def is_aligned_def option_to_ctcb_ptr_def tcb_at_not_NULL
              split: ntfn.splits)
 
@@ -928,9 +928,9 @@ lemma finaliseCap_True_cases_ccorres:
   apply (clarsimp simp: Collect_const_mem cap_get_tag_isCap)
   apply (rule TrueI conjI impI TrueI)+
    apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
-   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def isNotificationCap_def 
-                         isEndpointCap_def valid_obj'_def projectKOs valid_ntfn'_def 
-                         valid_bound_tcb'_def 
+   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def isNotificationCap_def
+                         isEndpointCap_def valid_obj'_def projectKOs valid_ntfn'_def
+                         valid_bound_tcb'_def
                   dest!: obj_at_valid_objs')
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
@@ -1110,7 +1110,7 @@ lemma deleteASIDPool_ccorres:
          apply (rule allI, rule conseqPre, vcg)
          apply (clarsimp simp: simpler_modify_def)
          apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                               carch_state_relation_def cmachine_state_relation_def 
+                               carch_state_relation_def cmachine_state_relation_def
                                carch_globals_def h_t_valid_clift_Some_iff)
          apply (erule array_relation_update[unfolded fun_upd_def])
            apply (simp add: asid_high_bits_of_def unat_ucast asid_low_bits_def)
@@ -1234,7 +1234,7 @@ lemma deleteASID_ccorres:
                subgoal by (simp add: mask_def)
               subgoal by (simp add: option_to_ptr_def option_to_0_def)
              subgoal by (simp add: asid_low_bits_def)
-            subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def 
+            subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
                              carch_globals_def update_asidpool_map_tos
                              typ_heap_simps')
            apply (rule ccorres_pre_getCurThread)
@@ -1962,14 +1962,14 @@ lemma cteDeleteOne_ccorres:
          apply (simp add: dc_def[symmetric])
          apply (ctac add: emptySlot_ccorres)
         apply (simp add: pred_conj_def finaliseCapTrue_standin_simple_def)
-        apply (strengthen invs_mdb_strengthen' invs_urz) 
+        apply (strengthen invs_mdb_strengthen' invs_urz)
         apply (wp typ_at_lifts isFinalCapability_inv
             | strengthen invs_valid_objs')+
        apply (clarsimp simp: from_bool_def true_def irq_opt_relation_def
                              invs_pspace_aligned' cte_wp_at_ctes_of)
        apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
        apply (clarsimp simp: typ_heap_simps ccte_relation_ccap_relation)
-      apply (wp isFinalCapability_inv)  
+      apply (wp isFinalCapability_inv)
      apply simp
     apply (simp del: Collect_const add: false_def)
    apply (rule ccorres_return_Skip)
@@ -2065,7 +2065,7 @@ lemma irq_opt_relation_Some_ucast:
   done
 
 lemma upcast_ucast_id:
-    "len_of TYPE('a) \<le> len_of TYPE('b) \<Longrightarrow> 
+    "len_of TYPE('a) \<le> len_of TYPE('b) \<Longrightarrow>
     ((ucast (a :: 'a::len word) :: 'b ::len word) = ucast b) \<Longrightarrow> (a = b)"
   apply (rule word_eqI)
   apply (simp add:word_size)
@@ -2074,7 +2074,7 @@ lemma upcast_ucast_id:
   done
 
 lemma mask_eq_ucast_eq:
-  "\<lbrakk> x && mask (len_of TYPE('a)) = (x :: ('c :: len word)); 
+  "\<lbrakk> x && mask (len_of TYPE('a)) = (x :: ('c :: len word));
      len_of TYPE('a) \<le> len_of TYPE('b)\<rbrakk>
     \<Longrightarrow> ucast (ucast x :: ('a :: len word)) = (ucast x :: ('b :: len word))"
   apply (rule word_eqI)

@@ -63,14 +63,14 @@ declare dmo_mol_respects [wp]
 
 crunch respects[wp]: arm_context_switch "integrity X aag st"
   (simp: dmo_bind_valid dsb_def isb_def writeTTBR0_def invalidateLocalTLB_ASID_def
-         setHardwareASID_def setCurrentPD_def 
+         setHardwareASID_def setCurrentPD_def
  ignore: do_machine_op)
 
 crunch respects[wp]: find_pd_for_asid "integrity X aag st"
 
 crunch respects[wp]: set_vm_root "integrity X aag st"
-    (wp: crunch_wps 
-   simp: setCurrentPD_def isb_def dsb_def writeTTBR0_def dmo_bind_valid crunch_simps 
+    (wp: crunch_wps
+   simp: setCurrentPD_def isb_def dsb_def writeTTBR0_def dmo_bind_valid crunch_simps
  ignore: do_machine_op)
 
 crunch respects[wp]: set_vm_root_for_flush "integrity X aag st"
@@ -553,7 +553,7 @@ lemma set_mrs_pas_refined[wp]:
 crunch integrity_autarch: set_message_info "integrity aag X st"
 
 lemma dmo_storeWord_respects_Write:
-  "\<lbrace>integrity aag X st and K (\<forall>p' \<in> ptr_range p 2. aag_has_auth_to aag Write p')\<rbrace> 
+  "\<lbrace>integrity aag X st and K (\<forall>p' \<in> ptr_range p 2. aag_has_auth_to aag Write p')\<rbrace>
   do_machine_op (storeWord p v)
   \<lbrace>\<lambda>a. integrity aag X st\<rbrace>"
   apply (rule hoare_pre)
@@ -565,11 +565,11 @@ lemma dmo_storeWord_respects_Write:
 definition
   ipc_buffer_has_auth :: "'a PAS \<Rightarrow> word32 \<Rightarrow> word32 option \<Rightarrow> bool"
 where
-   "ipc_buffer_has_auth aag thread \<equiv> 
+   "ipc_buffer_has_auth aag thread \<equiv>
     case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. (pasObjectAbs aag thread, Write, pasObjectAbs aag x) \<in> pasPolicy aag))"
 
 lemma ipc_buffer_has_auth_wordE:
-  "\<lbrakk> ipc_buffer_has_auth aag thread (Some buf); p \<in> ptr_range (buf + off) sz; is_aligned off sz; sz \<le> msg_align_bits; off < 2 ^ msg_align_bits \<rbrakk> 
+  "\<lbrakk> ipc_buffer_has_auth aag thread (Some buf); p \<in> ptr_range (buf + off) sz; is_aligned off sz; sz \<le> msg_align_bits; off < 2 ^ msg_align_bits \<rbrakk>
   \<Longrightarrow> (pasObjectAbs aag thread, Write, pasObjectAbs aag p) \<in> pasPolicy aag"
   unfolding ipc_buffer_has_auth_def
   apply clarsimp
@@ -580,7 +580,7 @@ lemma ipc_buffer_has_auth_wordE:
 
 lemma is_aligned_word_size_2 [simp]:
   "is_aligned (p * of_nat word_size) 2"
-  unfolding word_size_def 
+  unfolding word_size_def
   by (simp add: is_aligned_mult_triv2 [where n = 2, simplified] word_bits_conv)
 
 
@@ -640,12 +640,12 @@ proof -
 
   show ?thesis
   apply (simp add: perform_page_invocation_def mapM_discarded swp_def
-                   valid_page_inv_def valid_unmap_def 
-                   authorised_page_inv_def authorised_slots_def 
+                   valid_page_inv_def valid_unmap_def
+                   authorised_page_inv_def authorised_slots_def
             split: page_invocation.split sum.split
                    arch_cap.split option.split,
          safe)
-        apply (wp set_cap_integrity_autarch unmap_page_respects 
+        apply (wp set_cap_integrity_autarch unmap_page_respects
                   mapM_x_and_const_wp[OF store_pte_respects] store_pte_respects
                   mapM_x_and_const_wp[OF store_pde_respects] store_pde_respects
              | elim conjE hd_valid_slots[THEN bspec[rotated]]
@@ -1147,7 +1147,7 @@ lemma decode_arch_invocation_authorised:
                 validate_vm_rights_def vm_read_write_def vm_read_only_def
                 vm_kernel_only_def)
   -- "Remap"
-   apply (clarsimp simp: cap_auth_conferred_def 
+   apply (clarsimp simp: cap_auth_conferred_def
      is_page_cap_def pas_refined_all_auth_is_owns)
    apply (rule conjI, fastforce)
    apply clarsimp

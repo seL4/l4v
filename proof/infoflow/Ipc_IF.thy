@@ -60,13 +60,13 @@ lemma get_object_reads_respects:
   apply(subst gets_apply)
   apply(wp gets_apply_ev | wpc | simp)+
   apply(blast intro: reads_affects_equiv_kheap_eq)
-  done  
+  done
 
 lemma get_cap_reads_respects:
   "reads_respects aag l (K (aag_can_read aag (fst slot) \<or> aag_can_affect aag l (fst slot))) (get_cap slot)"
   apply(simp add: get_cap_def split_def)
   apply(wp get_object_reads_respects | wpc | simp)+
-  done  
+  done
 
 lemma lookup_ipc_buffer_reads_respects:
   "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread)) (lookup_ipc_buffer is_receiver thread)"
@@ -107,7 +107,7 @@ lemma storeWord_equiv_but_for_labels:
            apply(rule equiv_forI)
           apply clarsimp
           apply(drule_tac f=device_state in equiv_forD,fastforce)
-          apply clarsimp 
+          apply clarsimp
          apply(fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt])
         apply(fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=ekheap])
        apply(fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=cdt_list])
@@ -137,9 +137,9 @@ where
 
 
 lemma set_mrs_equiv_but_for_labels:
-  "\<lbrace> equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L \<and> 
+  "\<lbrace> equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L \<and>
        (case buf of (Some buf') \<Rightarrow>
-        is_aligned buf' msg_align_bits \<and> 
+        is_aligned buf' msg_align_bits \<and>
         (\<forall>x \<in> ptr_range buf' msg_align_bits. pasObjectAbs aag x \<in> L)
                  | _ \<Rightarrow> True)) \<rbrace>
    set_mrs thread buf msgs
@@ -149,7 +149,7 @@ lemma set_mrs_equiv_but_for_labels:
        apply(subst zipWithM_x_mapM_x)
        apply(rule_tac Q="\<lambda>_. equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L  \<and>
        (case buf of (Some buf') \<Rightarrow>
-        is_aligned buf' msg_align_bits \<and> 
+        is_aligned buf' msg_align_bits \<and>
         (\<forall>x \<in> ptr_range buf' msg_align_bits. pasObjectAbs aag x \<in> L)
                  | _ \<Rightarrow> True))" in hoare_strengthen_post)
        apply(wp mapM_x_wp' store_word_offs_equiv_but_for_labels | simp add: split_def)+
@@ -191,7 +191,7 @@ lemma set_mrs_equiv_but_for_labels:
 
 definition all_to_which_has_auth where
   "all_to_which_has_auth aag auth source \<equiv> {t. (source,auth,t) \<in> pasPolicy aag}"
- 
+
 definition all_with_auth_to where
   "all_with_auth_to aag auth target \<equiv> {x. (x, auth, target) \<in> pasPolicy aag}"
 
@@ -284,20 +284,20 @@ crunch etcb_at_cdom[wp]: set_thread_state_ext, set_thread_state, set_notificatio
 lemma update_waiting_ntfn_equiv_but_for_labels:
   notes tl_drop_1[simp del]
   shows
-  "\<lbrace> equiv_but_for_labels aag L st and pas_refined aag and valid_objs and 
+  "\<lbrace> equiv_but_for_labels aag L st and pas_refined aag and valid_objs and
      ko_at (Notification ntfn) ntfnptr and
      sym_refs \<circ> state_refs_of and
      (\<lambda>s. \<forall>t\<in> set list. etcb_at (\<lambda>etcb. tcb_domain etcb \<noteq> cur_domain s) t s) and
      K (ntfn_obj ntfn = WaitingNtfn list \<and> pasObjectAbs aag ntfnptr \<in> L \<and>
-        all_with_auth_to aag Receive (pasObjectAbs aag ntfnptr) \<subseteq> L \<and> 
+        all_with_auth_to aag Receive (pasObjectAbs aag ntfnptr) \<subseteq> L \<and>
        \<Union> ((all_to_which_has_auth aag Write) ` (all_with_auth_to aag Receive (pasObjectAbs aag ntfnptr))) \<subseteq> L)\<rbrace>
    update_waiting_ntfn ntfnptr list boundtcb badge
    \<lbrace> \<lambda>_. equiv_but_for_labels aag L st \<rbrace>"
   unfolding update_waiting_ntfn_def
-  apply (wp static_imp_wp as_user_equiv_but_for_labels set_thread_state_runnable_equiv_but_for_labels 
-            set_thread_state_pas_refined set_notification_equiv_but_for_labels set_ntfn_valid_objs_at 
-            set_notification_pred_tcb_at set_notification_cte_wp_at set_notification_pas_refined 
-            hoare_vcg_disj_lift switch_if_required_to_equiv_but_for_labels 
+  apply (wp static_imp_wp as_user_equiv_but_for_labels set_thread_state_runnable_equiv_but_for_labels
+            set_thread_state_pas_refined set_notification_equiv_but_for_labels set_ntfn_valid_objs_at
+            set_notification_pred_tcb_at set_notification_cte_wp_at set_notification_pas_refined
+            hoare_vcg_disj_lift switch_if_required_to_equiv_but_for_labels
         | wpc | simp add: split_def)+
   apply (clarsimp simp: conj_ac)
   apply(frule_tac P="receive_blocked_on ntfnptr" and t="hd list" in ntfn_queued_st_tcb_at')
@@ -316,14 +316,14 @@ lemma update_waiting_ntfn_equiv_but_for_labels:
 
 
 lemma update_waiting_ntfn_modifies_at_most:
-  "modifies_at_most aag 
+  "modifies_at_most aag
           ({pasObjectAbs aag ntfnptr} \<union>
            all_with_auth_to aag Receive (pasObjectAbs aag ntfnptr) \<union>
-           \<Union> ((all_to_which_has_auth aag Write) ` (all_with_auth_to aag Receive (pasObjectAbs aag ntfnptr)))) 
-          (pas_refined aag and valid_objs and 
+           \<Union> ((all_to_which_has_auth aag Write) ` (all_with_auth_to aag Receive (pasObjectAbs aag ntfnptr))))
+          (pas_refined aag and valid_objs and
            ko_at (Notification ntfn) ntfnptr and
            (\<lambda>s. \<forall>t\<in> set list. etcb_at (\<lambda>etcb. tcb_domain etcb \<noteq> cur_domain s) t s) and
-           sym_refs \<circ> state_refs_of and K (ntfn_obj ntfn = WaitingNtfn list))  
+           sym_refs \<circ> state_refs_of and K (ntfn_obj ntfn = WaitingNtfn list))
           (update_waiting_ntfn ntfnptr list boundtcb badge)"
   apply(rule modifies_at_mostI)
   apply(wp update_waiting_ntfn_equiv_but_for_labels | fastforce)+
@@ -352,7 +352,7 @@ lemma invisible_ntfn_invisible_receivers_and_receivers:
           all_with_auth_to aag Receive (pasObjectAbs aag ntfnptr))) \<union>
          (\<Union>(all_to_which_has_auth aag Write `
           all_with_auth_to aag Receive (pasObjectAbs aag ntfnptr))))"
-  by (auto simp: labels_are_invisible_def aag_can_affect_label_def 
+  by (auto simp: labels_are_invisible_def aag_can_affect_label_def
         dest: read_sync_ep_read_senders_strong read_sync_ep_read_receivers_strong
               reads_read_queued_thread_read_ep
               reads_read_page_read_thread
@@ -401,7 +401,7 @@ lemma tcb_at_ntfn_queue:
 
 lemma invisible_ep_invisible_receiver:
   "\<lbrakk>labels_are_invisible aag l {pasObjectAbs aag epptr};
-    (pasObjectAbs aag tcb, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag; 
+    (pasObjectAbs aag tcb, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag;
     (pasObjectAbs aag tcb, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag\<rbrakk>
    \<Longrightarrow> labels_are_invisible aag l
           ({pasObjectAbs aag epptr} \<union> {pasObjectAbs aag tcb})"
@@ -420,7 +420,7 @@ lemma no_fail_gts:"no_fail (tcb_at tcb) (get_thread_state tcb)"
 lemma monadic_rewrite_impossible: "monadic_rewrite F E (\<lambda>_. False) f g"
   by (clarsimp simp: monadic_rewrite_def)
 
-lemma monadic_rewrite_add_get: 
+lemma monadic_rewrite_add_get:
   "monadic_rewrite F E P (do x <- get; f od) (do x <- get; g od) \<Longrightarrow>
        monadic_rewrite F E P f g"
        by (clarsimp simp: bind_def get_def)
@@ -449,8 +449,8 @@ lemma sts_noop:
    apply wp
   by (auto simp: pred_tcb_at_def obj_at_def is_tcb_def get_tcb_def)
 
-lemma sts_to_modify': 
-  "monadic_rewrite True True (tcb_at tcb and (\<lambda>s :: det_ext state. tcb \<noteq> cur_thread s)) 
+lemma sts_to_modify':
+  "monadic_rewrite True True (tcb_at tcb and (\<lambda>s :: det_ext state. tcb \<noteq> cur_thread s))
        (set_thread_state tcb st)  (modify (\<lambda>s. s\<lparr>kheap := kheap s(tcb \<mapsto> TCB (the (get_tcb tcb s)\<lparr>tcb_state := st\<rparr>))\<rparr>))"
   apply (clarsimp simp: set_thread_state_def set_object_def)
   apply (rule monadic_rewrite_add_get)
@@ -471,10 +471,10 @@ lemma sts_to_modify':
   by (clarsimp simp: get_tcb_def tcb_at_def)
 
 
-lemma 
+lemma
   monadic_rewrite_weaken_failure:
   "monadic_rewrite True True P f f' \<Longrightarrow>
-  no_fail P' f \<Longrightarrow> no_fail Q' f' \<Longrightarrow> 
+  no_fail P' f \<Longrightarrow> no_fail Q' f' \<Longrightarrow>
    monadic_rewrite F E (P and P' and Q') f f'"
   by (clarsimp simp: monadic_rewrite_def no_fail_def)
 
@@ -489,7 +489,7 @@ lemma
 
 lemmas sts_to_modify = monadic_rewrite_weaken_failure[OF sts_to_modify' sts_no_fail no_fail_modify,simplified]
 
-definition "blocked_cancel_ipc_nosts tcb \<equiv> 
+definition "blocked_cancel_ipc_nosts tcb \<equiv>
   do state <- get_thread_state tcb;
      epptr \<leftarrow> get_blocking_object state;
      ep \<leftarrow> get_endpoint epptr;
@@ -542,7 +542,7 @@ lemma gts_reads_respects:
   by (wp thread_get_reads_respects)
 
 
-lemma ev2_invisible_simple: 
+lemma ev2_invisible_simple:
   "labels_are_invisible aag l L \<Longrightarrow>
        modifies_at_most aag L Q f \<Longrightarrow>
        reads_respects aag l Q (f :: det_ext state \<Rightarrow> (unit \<times> det_ext state) set \<times> bool)"
@@ -558,7 +558,7 @@ lemma blocked_cancel_ipc_nosts_equiv_but_for_labels:
     equiv_but_for_labels aag L st and
     K(pasObjectAbs aag x \<in> L) and
     K(pasObjectAbs aag t \<in> L) \<rbrace>
-   blocked_cancel_ipc_nosts t 
+   blocked_cancel_ipc_nosts t
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   unfolding blocked_cancel_ipc_nosts_def get_blocking_object_def
   apply (wp set_endpoint_equiv_but_for_labels get_object_wp gts_wp
@@ -568,13 +568,13 @@ lemma blocked_cancel_ipc_nosts_equiv_but_for_labels:
   by (clarsimp simp: pred_tcb_at_def obj_at_def)
 
 lemma blocked_cancel_ipc_nosts_reads_respects:
-  "reads_respects aag l (pas_refined aag  
+  "reads_respects aag l (pas_refined aag
                           and st_tcb_at (\<lambda>st. \<exists>xa. st = (BlockedOnReceive x)) t
-                          
-                          and bound_tcb_at (op = (Some ntfnptr)) t 
+
+                          and bound_tcb_at (op = (Some ntfnptr)) t
                           and (\<lambda>s. is_subject aag (cur_thread s))
                           and K (
-                              (pasObjectAbs aag t, Receive, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag 
+                              (pasObjectAbs aag t, Receive, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag
                             \<and> (pasSubject aag, Notify, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag
                             \<and> (pasObjectAbs aag t, Receive, pasObjectAbs aag x) \<in> pasPolicy aag))
            (blocked_cancel_ipc_nosts t)"
@@ -583,7 +583,7 @@ lemma blocked_cancel_ipc_nosts_reads_respects:
   apply (rule bind_ev[where P''=\<top>,simplified])
     apply (wp set_thread_state_runnable_reads_respects,simp)
 
-    subgoal 
+    subgoal
     proof (cases "aag_can_read_label aag (pasObjectAbs aag x) \<or> aag_can_affect aag l x")
       case True thus ?thesis -- "boring case, can read or affect ep"
       unfolding blocked_cancel_ipc_nosts_def get_blocking_object_def
@@ -598,7 +598,7 @@ lemma blocked_cancel_ipc_nosts_reads_respects:
       apply (clarsimp simp: pred_tcb_at_def obj_at_def)
       by (fastforce dest:read_sync_ep_read_receivers_strong )
 
-    next 
+    next
       case False thus ?thesis apply -  -- "can't read or affect ep"
       apply (rule gen_asm_ev)
       apply (drule label_is_invisible[THEN iffD2])
@@ -618,7 +618,7 @@ lemma blocked_cancel_ipc_nosts_reads_respects:
 
 crunch silc_inv[wp]: "blocked_cancel_ipc_nosts" "silc_inv aag st"
 
-lemmas blocked_cancel_ipc_nosts_reads_respects_f = 
+lemmas blocked_cancel_ipc_nosts_reads_respects_f =
   reads_respects_f[where Q=\<top>,simplified,
                    OF blocked_cancel_ipc_nosts_reads_respects
                       blocked_cancel_ipc_nosts_silc_inv,
@@ -630,10 +630,10 @@ lemma monadic_rewrite_is_valid:
   by (fastforce simp: monadic_rewrite_def valid_def bind_def)
 
 lemma monadic_rewrite_reads_respects:
-  "monadic_rewrite False False P f f' \<Longrightarrow> 
-   reads_respects l aag P' (do x <- f; g x od) \<Longrightarrow> 
+  "monadic_rewrite False False P f f' \<Longrightarrow>
+   reads_respects l aag P' (do x <- f; g x od) \<Longrightarrow>
    reads_respects l aag (P and P') (do x <- f'; g x od)"
-  apply (clarsimp simp: monadic_rewrite_def equiv_valid_def 
+  apply (clarsimp simp: monadic_rewrite_def equiv_valid_def
                         spec_equiv_valid_def equiv_valid_2_def
                         bind_def)
   apply (frule_tac x=st in spec)
@@ -644,7 +644,7 @@ lemma monadic_rewrite_reads_respects:
 lemmas cancel_ipc_reads_respects_rewrite =
   monadic_rewrite_reads_respects[OF cancel_ipc_to_blocked_nosts, simplified bind_assoc]
 
-lemmas cancel_ipc_valid_rewrite = 
+lemmas cancel_ipc_valid_rewrite =
   monadic_rewrite_is_valid[OF cancel_ipc_to_blocked_nosts, simplified bind_assoc]
 
 crunch etcb_at[wp]: blocked_cancel_ipc_nosts "etcb_at P t"
@@ -652,7 +652,7 @@ crunch cur_domain[wp]: blocked_cancel_ipc_nosts "\<lambda>s. P (cur_domain s)"
 crunch pas_refined[wp]: blocked_cancel_ipc_nosts "pas_refined aag"
 crunch cur_thread[wp]: blocked_cancel_ipc_nosts "\<lambda>s. P (cur_thread s)"
 
-lemma BlockedOnReceive_inj: 
+lemma BlockedOnReceive_inj:
   "x = (case (BlockedOnReceive x) of BlockedOnReceive x \<Rightarrow> x)"
   by (cases "BlockedOnReceive x";simp)
 
@@ -661,13 +661,13 @@ lemma send_signal_reads_respects:
   notes set_thread_state_owned_reads_respects[wp del]
         cancel_ipc_pas_refined[wp del]
   shows
-  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and 
+  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and
     (\<lambda>s. is_subject aag (cur_thread s)) and valid_etcbs and ct_active and
     (\<lambda>s. sym_refs (state_refs_of s)) and valid_objs and
     K ((pasSubject aag, Notify, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag))
     (send_signal ntfnptr badge)"
   unfolding send_signal_def fun_app_def
-  subgoal  
+  subgoal
   proof (cases "aag_can_read aag ntfnptr \<or> aag_can_affect aag l ntfnptr")
     case True
     note visible = this
@@ -729,14 +729,14 @@ lemma send_signal_reads_respects:
                   split:thread_state.splits)
 
   next
-    case False note invisible = this show ?thesis 
+    case False note invisible = this show ?thesis
     apply (insert label_is_invisible[THEN iffD2, OF invisible])
     apply (rule gen_asm_ev)
     apply (drule (1) invisible_ntfn_invisible_receivers_and_receivers)
      apply simp
      apply (rule ev2_invisible_simple,assumption)
      apply (rule modifies_at_mostI)
-    
+
      apply ( simp split del: if_split
            | rule cancel_ipc_valid_rewrite
            | wp_once
@@ -749,7 +749,7 @@ lemma send_signal_reads_respects:
                gts_wp
                update_waiting_ntfn_equiv_but_for_labels
                get_ntfn_wp
-           | wpc 
+           | wpc
            | wps
            )+
 
@@ -766,7 +766,7 @@ lemma send_signal_reads_respects:
        apply(frule (7) read_queued_thread_reads_ntfn)
        using invisible
        by (fastforce simp add: all_with_auth_to_def all_to_which_has_auth_def)
-    
+
      apply (frule (1)
        ntfn_bound_tcb_at[where P="op = (Some ntfnptr)",OF _ _ _ _ refl])
        apply (fastforce simp: obj_at_def)
@@ -819,7 +819,7 @@ lemma receive_signal_reads_respects:
              \<in> pasPolicy aag \<and> is_subject aag thread)))
          (receive_signal thread cap is_blocking)"
   unfolding receive_signal_def fun_app_def do_nbrecv_failed_transfer_def
-  apply(wp set_notification_reads_respects set_thread_state_reads_respects 
+  apply(wp set_notification_reads_respects set_thread_state_reads_respects
            as_user_set_register_reads_respects' get_notification_reads_respects hoare_vcg_all_lift
        | wpc
        | wp_once hoare_drop_imps)+
@@ -836,7 +836,7 @@ lemma conj_imp:
 
 (* basically clagged directly from lookup_ipc_buffer_has_auth *)
 lemma lookup_ipc_buffer_has_read_auth:
-  "\<lbrace>pas_refined aag and valid_objs\<rbrace> 
+  "\<lbrace>pas_refined aag and valid_objs\<rbrace>
    lookup_ipc_buffer is_receiver thread
    \<lbrace>\<lambda>rv s. ipc_buffer_has_read_auth aag (pasObjectAbs aag thread) rv\<rbrace>"
   apply (rule hoare_pre)
@@ -889,11 +889,11 @@ lemma cptrs_in_ipc_buffer:
     is_aligned a msg_align_bits;
     buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - 2)\<rbrakk>
    \<Longrightarrow>
-     ptr_range (a + of_nat x * of_nat word_size) 2 \<subseteq> 
+     ptr_range (a + of_nat x * of_nat word_size) 2 \<subseteq>
      ptr_range (a :: word32) msg_align_bits"
   apply(rule ptr_range_subset)
      apply assumption
-    apply(simp add: msg_align_bits) 
+    apply(simp add: msg_align_bits)
    apply(simp add: msg_align_bits word_bits_def)
   apply(simp add: word_size_def)
   apply(subst upto_enum_step_shift_red[where us=2, simplified])
@@ -954,7 +954,7 @@ lemma msg_in_ipc_buffer:
     unat (mi_length mi) < 2 ^ (msg_align_bits - 2);
     is_aligned a msg_align_bits\<rbrakk>
    \<Longrightarrow>
-     ptr_range (a + of_nat x * of_nat word_size) 2 \<subseteq> 
+     ptr_range (a + of_nat x * of_nat word_size) 2 \<subseteq>
      ptr_range (a::word32) msg_align_bits"
   apply(rule ptr_range_subset)
      apply assumption
@@ -1028,7 +1028,7 @@ lemma set_extra_badge_reads_respects:
 
 lemma reads_equiv_cdt_has_children:
   "\<lbrakk>pas_refined aag s; pas_refined aag s'; is_subject aag (fst slot);
-    equiv_for (aag_can_read aag \<circ> fst) cdt s s'\<rbrakk> \<Longrightarrow> 
+    equiv_for (aag_can_read aag \<circ> fst) cdt s s'\<rbrakk> \<Longrightarrow>
     (\<exists> c. (cdt s) c = Some slot) = (\<exists> c. (cdt s') c = Some slot)"
   apply(rule iffI)
    apply(erule exE)
@@ -1042,7 +1042,7 @@ lemma reads_equiv_cdt_has_children:
   done
 
 lemma ensure_no_children_rev:
-  "reads_equiv_valid_inv A aag (pas_refined aag and K (is_subject aag (fst slot))) 
+  "reads_equiv_valid_inv A aag (pas_refined aag and K (is_subject aag (fst slot)))
   (ensure_no_children slot)"
   unfolding ensure_no_children_def fun_app_def equiv_valid_def2
   apply(rule equiv_valid_rv_guard_imp)
@@ -1079,9 +1079,9 @@ lemma derive_cap_rev:
 
 
 lemma transfer_caps_loop_reads_respects:
-  "reads_respects aag l 
+  "reads_respects aag l
        (pas_refined aag and
-        K ((\<forall>cap\<in>set caps. is_subject aag (fst (snd cap)) \<and> 
+        K ((\<forall>cap\<in>set caps. is_subject aag (fst (snd cap)) \<and>
                            pas_cap_cur_auth aag (fst cap)) \<and>
            (\<forall>slot\<in>set slots. is_subject aag (fst slot))))
     (transfer_caps_loop ep rcv_buffer n caps slots mi)"
@@ -1229,7 +1229,7 @@ lemma get_endpoint_rev:
   done
 
 lemma send_endpoint_threads_blocked:
-"\<lbrakk>valid_objs s; (sym_refs \<circ> state_refs_of) s; 
+"\<lbrakk>valid_objs s; (sym_refs \<circ> state_refs_of) s;
   ko_at (Endpoint (SendEP list)) ep s; x\<in>set list\<rbrakk> \<Longrightarrow>
   st_tcb_at (send_blocked_on ep) x s"
   apply (rule ep_queued_st_tcb_at'')
@@ -1287,7 +1287,7 @@ lemma rewrite_huh:
 (*
 lemma cancel_badged_sends_equiv_but_for_labels:
   "\<lbrace> pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of and
-     equiv_but_for_labels aag L st and 
+     equiv_but_for_labels aag L st and
       K ({pasObjectAbs aag epptr} \<union> all_with_auth_to aag SyncSend (pasObjectAbs aag epptr) \<subseteq> L) \<rbrace>
      cancel_badged_sends epptr badge
    \<lbrace> \<lambda>_. equiv_but_for_labels aag L st \<rbrace>"
@@ -1312,16 +1312,16 @@ lemma cancel_badged_sends_reads_respects:
   apply (rule gen_asm_ev)+
   apply(case_tac "aag_can_read aag epptr \<or> aag_can_affect aag l epptr")
    apply(simp add: cancel_badged_sends_def fun_app_def)
-   apply wp 
-      apply (rule_tac Q="\<lambda>s. 
-    (case rv of SendEP list \<Rightarrow> \<forall>x\<in>set list. aag_can_read aag x \<or> aag_can_affect aag l x | _ \<Rightarrow> True)" in equiv_valid_guard_imp) 
+   apply wp
+      apply (rule_tac Q="\<lambda>s.
+    (case rv of SendEP list \<Rightarrow> \<forall>x\<in>set list. aag_can_read aag x \<or> aag_can_affect aag l x | _ \<Rightarrow> True)" in equiv_valid_guard_imp)
        apply (case_tac rv)
          apply ((wp mapM_ev'' get_thread_state_reads_respects set_thread_state_reads_respects set_endpoint_reads_respects get_endpoint_reads_respects hoare_vcg_ball_lift  | wpc | simp add: filterM_mapM tcb_at_st_tcb_at[symmetric])+)
     apply (wp get_endpoint_wp)
    apply (intro impI allI conjI)
     apply simp
    apply (case_tac ep,simp_all)
-   apply (elim conjE, rule ballI) 
+   apply (elim conjE, rule ballI)
    apply (rule send_endpoint_reads_affects_queued, (simp | assumption)+)
   apply(simp add: equiv_valid_def2)
   apply(rule equiv_valid_rv_guard_imp)
@@ -1371,19 +1371,19 @@ lemma get_receive_slots_rev:
    (get_receive_slots thread buf)"
   apply(case_tac buf)
    apply(fastforce intro: return_ev_pre)
-  apply(simp add: lookup_cap_def split_def 
+  apply(simp add: lookup_cap_def split_def
        | wp empty_on_failure_ev unify_failure_ev lookup_slot_for_cnode_op_rev get_cap_rev
-            lookup_slot_for_thread_rev lookup_slot_for_thread_authorised 
-            get_cap_ret_is_subject get_cap_ret_is_subject' load_cap_transfer_rev 
+            lookup_slot_for_thread_rev lookup_slot_for_thread_authorised
+            get_cap_ret_is_subject get_cap_ret_is_subject' load_cap_transfer_rev
        | wp_once hoare_drop_imps)+
   done
 
 lemma transfer_caps_reads_respects:
   "reads_respects aag l (pas_refined aag
      and K (is_subject aag receiver \<and>
-        ipc_buffer_has_read_auth aag (pasSubject aag) receive_buffer \<and> 
+        ipc_buffer_has_read_auth aag (pasSubject aag) receive_buffer \<and>
         (\<forall>cap\<in>set caps.
-            is_subject aag (fst (snd cap)) \<and> pas_cap_cur_auth aag (fst cap)))) 
+            is_subject aag (fst (snd cap)) \<and> pas_cap_cur_auth aag (fst cap))))
      (transfer_caps mi caps endpoint receiver receive_buffer)"
   unfolding transfer_caps_def fun_app_def
   apply(wp transfer_caps_loop_reads_respects get_receive_slots_rev get_receive_slots_authorised
@@ -1427,14 +1427,14 @@ lemma aag_has_auth_to_read_mrs:
   apply assumption
   done
 
-   
+
 lemma get_register_det:
   "det (get_register x)"
   apply(clarsimp simp: get_register_def)
   done
 
 abbreviation aag_can_read_or_affect where
-  "aag_can_read_or_affect aag l x \<equiv> 
+  "aag_can_read_or_affect aag l x \<equiv>
     aag_can_read aag x \<or> aag_can_affect aag l x"
 
 lemma dmo_loadWord_reads_respects:
@@ -1478,10 +1478,10 @@ lemma copy_mrs_reads_respects:
   "reads_respects aag l (K (aag_can_read_or_affect aag l sender \<and> aag_can_read_or_affect_ipc_buffer aag l sbuf \<and> unat n < 2 ^ (msg_align_bits - 2))) (copy_mrs sender sbuf receiver rbuf n)"
   unfolding copy_mrs_def fun_app_def
   apply(rule gen_asm_ev)
-  apply(wp mapM_ev'' store_word_offs_reads_respects 
-           load_word_offs_reads_respects as_user_set_register_reads_respects' 
-           as_user_reads_respects 
-       | wpc 
+  apply(wp mapM_ev'' store_word_offs_reads_respects
+           load_word_offs_reads_respects as_user_set_register_reads_respects'
+           as_user_reads_respects
+       | wpc
        | simp add: set_register_det get_register_det split del: if_split)+
   apply clarsimp
   apply(rename_tac n')
@@ -1504,7 +1504,7 @@ lemma copy_mrs_reads_respects:
   done
 
 lemma get_mi_length':
-   "\<lbrace>\<top>\<rbrace> get_message_info sender 
+   "\<lbrace>\<top>\<rbrace> get_message_info sender
     \<lbrace>\<lambda>rv s. buffer_cptr_index + unat (mi_extra_caps rv)
             < 2 ^ (msg_align_bits - 2)\<rbrace>"
   apply(rule hoare_post_imp[OF _ get_mi_valid'])
@@ -1543,18 +1543,18 @@ lemma get_message_info_reads_respects:
   done
 
 lemma do_normal_transfer_reads_respects:
-  "reads_respects aag l (pas_refined aag and 
-          K (aag_can_read_or_affect aag l sender \<and> 
-             ipc_buffer_has_read_auth aag (pasObjectAbs aag sender) sbuf \<and> 
-             ipc_buffer_has_read_auth aag (pasObjectAbs aag receiver) rbuf \<and> 
-             (grant \<longrightarrow> (is_subject aag sender \<and> is_subject aag receiver)))) 
+  "reads_respects aag l (pas_refined aag and
+          K (aag_can_read_or_affect aag l sender \<and>
+             ipc_buffer_has_read_auth aag (pasObjectAbs aag sender) sbuf \<and>
+             ipc_buffer_has_read_auth aag (pasObjectAbs aag receiver) rbuf \<and>
+             (grant \<longrightarrow> (is_subject aag sender \<and> is_subject aag receiver))))
    (do_normal_transfer sender sbuf endpoint badge grant receiver rbuf)"
   apply(case_tac grant)
    apply(rule gen_asm_ev)
    apply(simp add: do_normal_transfer_def)
    apply(wp get_message_info_rev lookup_extra_caps_rev
             as_user_set_register_reads_respects' set_message_info_reads_respects
-            transfer_caps_reads_respects copy_mrs_reads_respects 
+            transfer_caps_reads_respects copy_mrs_reads_respects
             lookup_extra_caps_rev lookup_extra_caps_authorised
             lookup_extra_caps_auth get_message_info_rev
             get_mi_length' get_mi_length validE_E_wp_post_taut
@@ -1565,7 +1565,7 @@ lemma do_normal_transfer_reads_respects:
   apply(simp add: do_normal_transfer_def transfer_caps_def)
   apply(subst transfer_caps_loop.simps)
   apply(wp ev_irrelevant_bind[where f="get_receive_slots receiver rbuf"]
-           as_user_set_register_reads_respects' 
+           as_user_set_register_reads_respects'
            set_message_info_reads_respects copy_mrs_reads_respects
            get_message_info_reads_respects get_mi_length
        |wpc
@@ -1599,9 +1599,9 @@ lemma make_fault_msg_reads_respects:
 lemma set_mrs_returns_a_constant:
   "\<exists> x. \<lbrace> \<top> \<rbrace> set_mrs thread buf msgs \<lbrace> \<lambda> rv s. rv = x \<rbrace>"
   apply(case_tac buf)
-   apply(rule exI) 
+   apply(rule exI)
    apply((simp add: set_mrs_def | wp | rule impI)+)[1]
-  apply(rule exI) 
+  apply(rule exI)
   apply((simp add: set_mrs_def split del: if_split | wp | rule impI)+)[1]
   done
 
@@ -1616,8 +1616,8 @@ lemma set_mrs_ret_eq:
   apply(rule conjI)
    apply(erule (1) use_valid | simp)+
   done
-   
-  
+
+
 lemma set_mrs_reads_respects':
   "reads_respects aag l (K (ipc_buffer_has_auth aag thread buf \<and>  (case buf of (Some buf') \<Rightarrow>
         is_aligned buf' msg_align_bits | _ \<Rightarrow> True))) (set_mrs thread buf msgs)"
@@ -1627,7 +1627,7 @@ lemma set_mrs_reads_respects':
   apply(simp add: equiv_valid_def2)
   apply(rule equiv_valid_rv_guard_imp)
   apply(case_tac buf)
-   apply(rule_tac Q="\<top>" and P="\<top>" and L="{pasObjectAbs aag thread}" in ev_invisible) 
+   apply(rule_tac Q="\<top>" and P="\<top>" and L="{pasObjectAbs aag thread}" in ev_invisible)
       apply(clarsimp simp: labels_are_invisible_def)
      apply(rule modifies_at_mostI)
      apply(simp add: set_mrs_def)
@@ -1641,7 +1641,7 @@ lemma set_mrs_reads_respects':
     apply(wp set_mrs_equiv_but_for_labels | simp)+
    apply(rule set_mrs_ret_eq)
   by simp
-   
+
 lemma do_fault_transfer_reads_respects:
   "reads_respects aag l (K (aag_can_read_or_affect aag l sender \<and> ipc_buffer_has_auth aag receiver buf \<and>
     (case buf of None \<Rightarrow> True | Some buf' \<Rightarrow> is_aligned buf' msg_align_bits))) (do_fault_transfer badge sender receiver buf)"
@@ -1658,7 +1658,7 @@ lemma tl_tl_in_set:
 
 (* GENERALIZE the following is possible *)
 lemma ptr_in_obj_range:
-  "\<lbrakk>valid_objs s; pspace_aligned s; kheap s ptr = Some obj\<rbrakk> 
+  "\<lbrakk>valid_objs s; pspace_aligned s; kheap s ptr = Some obj\<rbrakk>
   \<Longrightarrow> ptr + (a && mask (obj_bits obj)) \<in> obj_range ptr obj"
   apply (simp add: obj_range_def)
   apply (rule context_conjI)
@@ -1681,9 +1681,9 @@ lemma ptr_in_obj_range:
 lemma do_ipc_transfer_reads_respects:
   "reads_respects aag l (valid_objs and valid_global_refs and pspace_distinct and pspace_aligned
                          and valid_arch_state and pas_refined aag and
-                         K ((grant \<longrightarrow> (is_subject aag sender \<and> 
-                                       is_subject aag receiver)) \<and> 
-                           aag_can_read_or_affect aag l sender \<and> 
+                         K ((grant \<longrightarrow> (is_subject aag sender \<and>
+                                       is_subject aag receiver)) \<and>
+                           aag_can_read_or_affect aag l sender \<and>
                            aag_can_read_or_affect aag l receiver
                            ))
      (do_ipc_transfer sender ep badge grant receiver)"
@@ -1729,7 +1729,7 @@ lemma receive_ipc_base_reads_respects:
   apply (simp add: thread_get_def split: endpoint.split)
   apply (intro conjI impI)
     prefer 2 defer
-    apply ((wp set_thread_state_reads_respects set_endpoint_reads_respects 
+    apply ((wp set_thread_state_reads_respects set_endpoint_reads_respects
                as_user_set_register_reads_respects'
         | simp | intro allI impI | rule pre_ev, wpc)+)[2]
   apply (intro allI impI)
@@ -1839,7 +1839,7 @@ lemma receive_ipc_reads_respects:
   done
 
 lemma receive_endpoint_threads_blocked:
-"\<lbrakk>valid_objs s; (sym_refs \<circ> state_refs_of) s; 
+"\<lbrakk>valid_objs s; (sym_refs \<circ> state_refs_of) s;
   ko_at (Endpoint (RecvEP list)) ep s; x\<in>set list\<rbrakk> \<Longrightarrow>
   st_tcb_at (receive_blocked_on ep) x s"
   apply (rule ep_queued_st_tcb_at'')
@@ -1872,7 +1872,7 @@ lemma receive_endpoint_reads_affects_queued:
   done
 
 lemma send_ipc_reads_respects:
-  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and valid_objs and pspace_distinct and 
+  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and valid_objs and pspace_distinct and
                          pspace_aligned and valid_arch_state and valid_global_refs and sym_refs \<circ> state_refs_of and
          (\<lambda>s. is_subject aag (cur_thread s)) and
          (\<lambda>s. \<exists>ep. ko_at (Endpoint ep) epptr s
@@ -1880,14 +1880,14 @@ lemma send_ipc_reads_respects:
                                       \<and> aag_has_auth_to aag Grant epptr))) and K (is_subject aag thread \<and> (pasSubject aag, SyncSend, pasObjectAbs aag epptr) \<in> pasPolicy aag)) (send_ipc block call badge can_grant thread epptr)"
   apply(rule gen_asm_ev)
   apply(simp add: send_ipc_def)
-  apply (wp set_endpoint_reads_respects set_thread_state_reads_respects 
+  apply (wp set_endpoint_reads_respects set_thread_state_reads_respects
             when_ev setup_caller_cap_reads_respects thread_get_reads_respects
         | wpc | simp split del: if_split)+
                apply(rename_tac list word list' rvb)
-               apply(rule_tac Q="\<lambda>r s. is_subject aag (cur_thread s) \<and> 
+               apply(rule_tac Q="\<lambda>r s. is_subject aag (cur_thread s) \<and>
                                        (can_grant \<longrightarrow> is_subject aag (hd list))"
                               in hoare_strengthen_post)
-                apply(wp set_thread_state_reads_respects 
+                apply(wp set_thread_state_reads_respects
                          do_ipc_transfer_reads_respects
                          set_endpoint_reads_respects
                          hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
@@ -1933,7 +1933,7 @@ lemma send_ipc_reads_respects:
 subsection "Faults"
 
 lemma send_fault_ipc_reads_respects:
-  "reads_respects aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag 
+  "reads_respects aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag
         and valid_objs and pspace_distinct and pspace_aligned
         and valid_global_refs and valid_arch_state and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag thread \<and> valid_fault fault)) (send_fault_ipc thread fault)"
   apply (rule gen_asm_ev)
@@ -1942,8 +1942,8 @@ lemma send_fault_ipc_reads_respects:
             thread_set_refs_trivial thread_set_obj_at_impossible
             thread_set_valid_objs''
             hoare_vcg_conj_lift hoare_vcg_ex_lift hoare_vcg_all_lift
-            thread_set_pas_refined cap_fault_on_failure_rev 
-            lookup_slot_for_thread_rev 
+            thread_set_pas_refined cap_fault_on_failure_rev
+            lookup_slot_for_thread_rev
             lookup_slot_for_thread_authorised hoare_vcg_all_lift_R
             thread_get_reads_respects get_cap_auth_wp[where aag=aag] get_cap_rev
        | wpc
@@ -1954,7 +1954,7 @@ lemma send_fault_ipc_reads_respects:
                           \<and> valid_objs s \<and> pspace_distinct s \<and> pspace_aligned s
                           \<and> valid_global_refs s \<and> valid_arch_state s
                           \<and> sym_refs (state_refs_of s)
-                          \<and> valid_fault fault 
+                          \<and> valid_fault fault
                           \<and> is_subject aag (fst (fst rv))
                           \<and> is_subject aag (cur_thread s)"
                in hoare_post_imp_R[rotated])
@@ -1978,8 +1978,8 @@ lemma send_fault_ipc_reads_respects:
 
 
 lemma handle_fault_reads_respects:
-  "reads_respects aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag 
-  and valid_objs and pspace_distinct and pspace_aligned 
+  "reads_respects aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag
+  and valid_objs and pspace_distinct and pspace_aligned
   and valid_global_refs and valid_arch_state and (\<lambda>s. is_subject aag (cur_thread s))
   and K (is_subject aag thread \<and> valid_fault fault)) (handle_fault thread fault)"
   unfolding handle_fault_def catch_def fun_app_def handle_double_fault_def
@@ -2005,7 +2005,7 @@ lemma handle_fault_reply_reads_respects:
   done
 
 lemma lookup_ipc_buffer_has_read_auth':
-  "\<lbrace>pas_refined aag and valid_objs and K (is_subject aag thread)\<rbrace> 
+  "\<lbrace>pas_refined aag and valid_objs and K (is_subject aag thread)\<rbrace>
    lookup_ipc_buffer is_receiver thread
    \<lbrace>\<lambda>rv s. ipc_buffer_has_read_auth aag (pasSubject aag) rv\<rbrace>"
   apply(rule hoare_gen_asm)
@@ -2032,7 +2032,7 @@ lemma do_reply_transfer_reads_respects_f:
             set_thread_state_pas_refined thread_set_fault_pas_refined'
             attempt_switch_to_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]] when_ev
         | wpc | simp split del: if_split | wp_once reads_respects_f[where aag=aag and st=st] | elim conjE | assumption | simp split del: if_split cong: if_cong
- | wp_once hoare_drop_imps)+ 
+ | wp_once hoare_drop_imps)+
          apply(rule_tac Q="\<lambda> rv s. pas_refined aag s \<and> pas_cur_domain aag s \<and> invs s \<and> is_subject aag (cur_thread s) \<and> is_subject aag sender \<and> silc_inv aag st s \<and> is_subject aag receiver" in hoare_strengthen_post)
           apply((wp_once hoare_drop_imps
                | wp cap_delete_one_invs  hoare_vcg_all_lift
@@ -2073,7 +2073,7 @@ lemma handle_reply_reads_respects_f:
 lemma reply_from_kernel_reads_respects:
   "reads_respects aag l (K (is_subject aag thread)) (reply_from_kernel thread x)"
   unfolding reply_from_kernel_def fun_app_def
-  apply (wp set_message_info_reads_respects set_mrs_reads_respects 
+  apply (wp set_message_info_reads_respects set_mrs_reads_respects
             as_user_reads_respects lookup_ipc_buffer_reads_respects
         | simp add: split_def reads_lrefl set_register_det)+
   done
@@ -2168,7 +2168,7 @@ lemma validE_to_valid:
 
 
 lemma do_normal_transfer_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_global_objs and 
+  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_global_objs and
     (\<lambda>sa. receiver \<noteq> idle_thread sa)\<rbrace>
     do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
@@ -2183,7 +2183,7 @@ lemma do_normal_transfer_globals_equiv:
 
 
 lemma do_fault_transfer_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arm and 
+  "\<lbrace>globals_equiv s and valid_ko_at_arm and
     (\<lambda>sa. receiver \<noteq> idle_thread sa)\<rbrace>
       do_fault_transfer badge sender receiver buf
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
@@ -2199,7 +2199,7 @@ lemma do_fault_transfer_globals_equiv:
 
 lemma lookup_ipc_buffer_ptr_range':
   "\<lbrace>valid_objs\<rbrace>
-  lookup_ipc_buffer True thread 
+  lookup_ipc_buffer True thread
   \<lbrace>\<lambda>rv s. rv = Some buf' \<longrightarrow> auth_ipc_buffers s thread = ptr_range buf' msg_align_bits\<rbrace>"
   unfolding lookup_ipc_buffer_def
   apply (rule hoare_pre)
@@ -2214,7 +2214,7 @@ lemma lookup_ipc_buffer_ptr_range':
   done
 
 lemma lookup_ipc_buffer_aligned':
-  "\<lbrace>valid_objs\<rbrace> lookup_ipc_buffer True thread 
+  "\<lbrace>valid_objs\<rbrace> lookup_ipc_buffer True thread
 \<lbrace>\<lambda>rv s. rv = Some buf' \<longrightarrow> is_aligned buf' msg_align_bits\<rbrace>"
   apply(insert lookup_ipc_buffer_aligned)
   apply(fastforce simp: valid_def)
@@ -2224,7 +2224,7 @@ lemma set_collection: "a = {x. x\<in>a}"
   by simp
 
 lemma do_ipc_transfer_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_objs and valid_arch_state and valid_global_refs 
+  "\<lbrace>globals_equiv st and valid_ko_at_arm and valid_objs and valid_arch_state and valid_global_refs
     and pspace_distinct and pspace_aligned and valid_global_objs and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
     do_ipc_transfer sender ep badge grant receiver
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
@@ -2244,12 +2244,12 @@ lemma do_ipc_transfer_globals_equiv:
 crunch valid_ko_at_arm[wp]: do_ipc_transfer "valid_ko_at_arm"
 
 lemma send_ipc_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs 
+  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs
     and pspace_distinct and pspace_aligned and valid_global_objs and valid_idle and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
     send_ipc block call badge can_grant thread epptr
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding send_ipc_def
-  apply(wp set_endpoint_globals_equiv set_thread_state_globals_equiv 
+  apply(wp set_endpoint_globals_equiv set_thread_state_globals_equiv
            setup_caller_cap_globals_equiv | wpc)+
          apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_global_objs"
                in hoare_strengthen_post)
@@ -2261,7 +2261,7 @@ lemma send_ipc_globals_equiv:
     apply(clarsimp)
     apply(rule hoare_drop_imps)
     apply(wp set_endpoint_globals_equiv)+
-  apply(rule_tac Q="\<lambda>ep. ko_at (Endpoint ep) epptr and globals_equiv st and valid_objs 
+  apply(rule_tac Q="\<lambda>ep. ko_at (Endpoint ep) epptr and globals_equiv st and valid_objs
         and valid_arch_state and valid_global_refs and pspace_distinct and pspace_aligned
         and valid_global_objs and (\<lambda>s. sym_refs (state_refs_of s)) and valid_idle"
         in hoare_strengthen_post)
@@ -2287,7 +2287,7 @@ crunch globals_equiv[wp]: complete_signal "globals_equiv st"
 lemma receive_ipc_globals_equiv:
   notes do_nbrecv_failed_transfer_def[simp]
   shows "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct
-     and pspace_aligned and valid_global_objs and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> 
+     and pspace_aligned and valid_global_objs and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
      receive_ipc thread cap is_blocking
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding receive_ipc_def thread_get_def including no_pre
@@ -2339,16 +2339,16 @@ lemma update_waiting_ntfn_globals_equiv:
   by (auto intro: valid_arch_state_ko_at_arm simp: neq_Nil_conv)
 
 lemma
-  blocked_cancel_ipc_globals_equiv[wp]: 
+  blocked_cancel_ipc_globals_equiv[wp]:
   "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace> blocked_cancel_ipc a b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding blocked_cancel_ipc_def
   by (wp set_thread_state_globals_equiv set_endpoint_globals_equiv | wpc | simp)+
 
 
-      
 
-lemma cancel_ipc_blocked_globals_equiv: 
-  "\<lbrace>globals_equiv st and valid_ko_at_arm and st_tcb_at receive_blocked a\<rbrace> 
+
+lemma cancel_ipc_blocked_globals_equiv:
+  "\<lbrace>globals_equiv st and valid_ko_at_arm and st_tcb_at receive_blocked a\<rbrace>
     cancel_ipc a \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding cancel_ipc_def
   apply (rule hoare_seq_ext[OF _ gts_sp])
@@ -2358,15 +2358,15 @@ lemma cancel_ipc_blocked_globals_equiv:
   apply clarsimp
   apply (case_tac state;(clarsimp simp: pred_tcb_at_def obj_at_def receive_blocked_def))
   by (simp add: eq_commute)
-  
+
 
 crunch globals_equiv[wp]: switch_if_required_to "globals_equiv (st :: det_ext state)"
   (wp: tcb_sched_action_extended.globals_equiv reschedule_required_ext_extended.globals_equiv
        crunch_wps)
 
 lemma send_signal_globals_equiv:
-  "\<lbrace>globals_equiv (s :: det_ext state) and valid_objs and valid_arch_state 
-     and valid_global_refs and sym_refs \<circ> state_refs_of and 
+  "\<lbrace>globals_equiv (s :: det_ext state) and valid_objs and valid_arch_state
+     and valid_global_refs and sym_refs \<circ> state_refs_of and
      pspace_distinct and valid_idle\<rbrace> send_signal ntfnptr badge
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding send_signal_def
@@ -2378,7 +2378,7 @@ lemma send_signal_globals_equiv:
             update_waiting_ntfn_globals_equiv
             get_ntfn_wp
             gts_wp
-       | wpc 
+       | wpc
        | simp)+
   apply clarsimp
   apply (frule (1) sym_refs_ko_atD)
@@ -2387,13 +2387,13 @@ lemma send_signal_globals_equiv:
            apply clarsimp
            apply (frule_tac t="idle_thread sa" and P="\<lambda>ref. \<not> idle ref" in ntfn_queued_st_tcb_at')
                by (auto intro: valid_arch_state_ko_at_arm
-                         simp: pred_tcb_at_def obj_at_def valid_idle_def receive_blocked_def) 
+                         simp: pred_tcb_at_def obj_at_def valid_idle_def receive_blocked_def)
 
 (*FIXME: belongs in Arch_IF*)
 
 lemma receive_signal_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_objs and valid_arch_state and valid_global_refs 
-     and pspace_distinct and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> 
+  "\<lbrace>globals_equiv s and valid_objs and valid_arch_state and valid_global_refs
+     and pspace_distinct and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
      receive_signal thread cap is_blocking
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding receive_signal_def fun_app_def do_nbrecv_failed_transfer_def
@@ -2430,8 +2430,8 @@ lemma send_fault_ipc_globals_equiv:
   apply(wp)
     apply(simp add: Let_def)
     apply(wp send_ipc_globals_equiv thread_set_globals_equiv thread_set_valid_objs'' thread_set_fault_valid_global_refs thread_set_valid_idle_trivial thread_set_refs_trivial | wpc | simp)+
-   apply(rule_tac Q'="\<lambda>_. globals_equiv st and valid_objs and valid_arch_state and valid_global_refs 
-        and pspace_distinct and pspace_aligned and 
+   apply(rule_tac Q'="\<lambda>_. globals_equiv st and valid_objs and valid_arch_state and valid_global_refs
+        and pspace_distinct and pspace_aligned and
         valid_global_objs and K (valid_fault fault) and valid_idle and (\<lambda>s. sym_refs (state_refs_of s))"
         in hoare_post_imp_R)
     apply(wp | simp)+
@@ -2488,8 +2488,8 @@ lemma send_fault_ipc_valid_ko_at_arm[wp]:
 done
 
 lemma handle_fault_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs 
-    and pspace_distinct and pspace_aligned 
+  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs
+    and pspace_distinct and pspace_aligned
     and valid_global_objs and valid_idle and (\<lambda>s. sym_refs (state_refs_of s))
     and K (valid_fault ex)\<rbrace> handle_fault thread ex
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
@@ -2497,7 +2497,7 @@ lemma handle_fault_globals_equiv:
   apply(wp handle_double_fault_globals_equiv)
    apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arm" and
              E="\<lambda>_. globals_equiv st and valid_ko_at_arm" in hoare_post_impErr)
-     apply(wp send_fault_ipc_globals_equiv 
+     apply(wp send_fault_ipc_globals_equiv
           | simp add: valid_arch_state_ko_at_arm)+
      done
 
@@ -2525,7 +2525,7 @@ lemma do_reply_transfer_globals_equiv:
     done
 
 lemma handle_reply_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs 
+  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs
     and pspace_distinct and pspace_aligned and valid_global_objs and valid_idle\<rbrace> handle_reply
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding handle_reply_def
@@ -2552,9 +2552,9 @@ section "reads_respects_g"
 subsection "Notifications"
 
 lemma send_signal_reads_respects_g:
-  "reads_respects_g aag l (pas_refined aag and pas_cur_domain aag and valid_etcbs and 
-      valid_objs and valid_global_objs and valid_arch_state and valid_global_refs and 
-      pspace_distinct and valid_idle and sym_refs \<circ> state_refs_of and ct_active and 
+  "reads_respects_g aag l (pas_refined aag and pas_cur_domain aag and valid_etcbs and
+      valid_objs and valid_global_objs and valid_arch_state and valid_global_refs and
+      pspace_distinct and valid_idle and sym_refs \<circ> state_refs_of and ct_active and
       is_subject aag \<circ> cur_thread and K ((pasSubject aag, Notify, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag)) (send_signal ntfnptr badge)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
     apply(rule send_signal_reads_respects)
@@ -2576,7 +2576,7 @@ lemma receive_signal_reads_respects_g:
 subsection "Sycn IPC"
 
 lemma send_ipc_reads_respects_g:
-  "reads_respects_g aag l (pas_refined aag and pas_cur_domain aag and valid_objs and valid_global_objs 
+  "reads_respects_g aag l (pas_refined aag and pas_cur_domain aag and valid_objs and valid_global_objs
      and valid_arch_state and valid_global_refs and pspace_distinct and pspace_aligned
      and valid_idle and sym_refs \<circ> state_refs_of and is_subject aag \<circ> cur_thread and (\<lambda> s. \<exists>ep. ko_at (Endpoint ep) epptr s \<and>
              (can_grant \<longrightarrow>
@@ -2611,11 +2611,11 @@ lemma send_fault_ipc_reads_respects_g:
    apply(rule doesnt_touch_globalsI)
    apply(wp send_fault_ipc_globals_equiv | simp)+
   done
-  
+
 
 lemma handle_fault_reads_respects_g:
-  "reads_respects_g aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag 
-    and valid_objs and valid_global_objs and valid_arch_state and valid_global_refs 
+  "reads_respects_g aag l (sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag
+    and valid_objs and valid_global_objs and valid_arch_state and valid_global_refs
     and pspace_distinct and pspace_aligned and valid_idle and is_subject aag \<circ> cur_thread and K (is_subject aag thread \<and> valid_fault fault)) (handle_fault thread fault)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
     apply(rule handle_fault_reads_respects)

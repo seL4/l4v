@@ -69,7 +69,7 @@ where
   "update_thread p f \<equiv>
      do
        t \<leftarrow> get_object p;
-       case t of 
+       case t of
           Tcb tcb \<Rightarrow> set_object p (Tcb (f tcb))
        | _ \<Rightarrow> fail
      od"
@@ -81,7 +81,7 @@ where
   "update_thread_fault p f \<equiv>
      do
        t \<leftarrow> get_object p;
-       case t of 
+       case t of
           Tcb tcb \<Rightarrow> set_object p (Tcb (tcb\<lparr>cdl_tcb_has_fault := f (cdl_tcb_has_fault tcb)\<rparr>))
        | _ \<Rightarrow> fail
      od"
@@ -113,14 +113,14 @@ where
 
 (* --- caps --- *)
 
-(* The slots of an object, returns an empty map for non-existing objects 
+(* The slots of an object, returns an empty map for non-existing objects
    or objects that do not have caps *)
 definition
   slots_of :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_map"
 where
-  "slots_of obj_id \<equiv> \<lambda>s. 
-  case opt_object obj_id s of 
-    None \<Rightarrow> empty 
+  "slots_of obj_id \<equiv> \<lambda>s.
+  case opt_object obj_id s of
+    None \<Rightarrow> empty
   | Some obj \<Rightarrow> object_slots obj"
 
 (* The cap at the given cap_ref. None if object or cap does not exist *)
@@ -135,7 +135,7 @@ abbreviation
   "get_cap p \<equiv> gets_the (opt_cap p)"
 
 
-(* Setting a cap at specific cap_ref. Object must exist and have cap slots. *) 
+(* Setting a cap at specific cap_ref. Object must exist and have cap slots. *)
 definition
   set_cap :: "cdl_cap_ref \<Rightarrow> cdl_cap \<Rightarrow> unit k_monad"
 where
@@ -144,7 +144,7 @@ where
     assert (has_slots obj);
     slots \<leftarrow> return $ object_slots obj;
     obj' \<leftarrow> return $ update_slots (slots (slot \<mapsto> cap)) obj;
-    obj'' \<leftarrow> case obj' of 
+    obj'' \<leftarrow> case obj' of
               Tcb t \<Rightarrow> if slot = tcb_ipcbuffer_slot \<and> slots slot \<noteq> Some cap then do
                    intent' \<leftarrow> select UNIV;
                    return $ Tcb (t \<lparr> cdl_tcb_intent := intent' \<rparr>)
@@ -165,7 +165,7 @@ abbreviation
   get_parent :: "cdl_cap_ref \<Rightarrow> cdl_cap_ref k_monad" where
   "get_parent p \<equiv> gets_the (opt_parent p)"
 
-(* setting a cap derivation of a specific cap_ref  *) 
+(* setting a cap derivation of a specific cap_ref  *)
 definition
   set_parent :: "cdl_cap_ref \<Rightarrow> cdl_cap_ref \<Rightarrow> unit k_monad" where
   "set_parent child parent \<equiv> do
@@ -184,7 +184,7 @@ definition
                                      then cdl_cdt s parent
                                      else cdl_cdt s x )) \<rparr>)"
 
-(* Swaps the parents of two cap_refs *) 
+(* Swaps the parents of two cap_refs *)
 definition
   swap_parents :: "cdl_cap_ref \<Rightarrow> cdl_cap_ref \<Rightarrow> unit k_monad" where
   "swap_parents p p' = modify (cdl_cdt_update
@@ -201,13 +201,13 @@ definition
   "cdt_parent_rel \<equiv> \<lambda>s. {(p,c). is_cdt_parent s p c}"
 
 abbreviation
-  parent_of :: "cdl_state \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cap_ref \<Rightarrow> bool" 
+  parent_of :: "cdl_state \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cap_ref \<Rightarrow> bool"
   ("_ \<turnstile> _ cdt'_parent'_of _" [60,0,60] 61)
 where
   "s \<turnstile> p cdt_parent_of c \<equiv> (p,c) \<in> cdt_parent_rel s"
 
 abbreviation
-  parent_of_trancl :: "cdl_state \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cap_ref \<Rightarrow> bool" 
+  parent_of_trancl :: "cdl_state \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cap_ref \<Rightarrow> bool"
   ("_ \<turnstile> _ cdt'_parent'_of\<^sup>+ _" [60,0,60] 61)
 where
   "s \<turnstile> x cdt_parent_of\<^sup>+ y \<equiv> (x, y) \<in> (cdt_parent_rel s)\<^sup>+"
@@ -232,23 +232,23 @@ where
                               Some (FrameCap _ oid _ _ _ _) \<Rightarrow> Some oid
                               | _                       \<Rightarrow> None"
 
-(* 
- * Dealing with writes to message registers or other locations that 
+(*
+ * Dealing with writes to message registers or other locations that
  * may have an effect on how intents are interpreted.
  *)
 definition
   corrupt_intents ::"(word32 \<Rightarrow> cdl_full_intent) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_state"
 where
-  "corrupt_intents f bufp s \<equiv> 
-  let changed = (\<lambda>ptr. case cdl_objects s ptr of 
-    Some (Tcb tcb) 
+  "corrupt_intents f bufp s \<equiv>
+  let changed = (\<lambda>ptr. case cdl_objects s ptr of
+    Some (Tcb tcb)
       \<Rightarrow> if tcb_ipcframe_id tcb = Some bufp then Some (Tcb (tcb\<lparr> cdl_tcb_intent := f ptr \<rparr> ) ) else None
-  | _ \<Rightarrow> None) 
-  in  
+  | _ \<Rightarrow> None)
+  in
   s\<lparr>cdl_objects := cdl_objects s ++ changed\<rparr>"
- 
-(* When a memory frame has been corrupted, 
- * we need to change all the intents of tcbs 
+
+(* When a memory frame has been corrupted,
+ * we need to change all the intents of tcbs
  * whose ipc_buffer is located within that frame
  *)
 definition

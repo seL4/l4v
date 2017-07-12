@@ -186,7 +186,7 @@ crunch ksDomainTime_inv[wp]: finaliseCap "\<lambda>s. P (ksDomainTime s)"
 
 crunch ksDomainTime_inv[wp]: cancelBadgedSends "\<lambda>s. P (ksDomainTime s)"
   (ignore: filterM setObject getObject
-     simp: filterM_mapM crunch_simps 
+     simp: filterM_mapM crunch_simps
        wp: crunch_wps)
 
 crunch ksDomainTime_inv[wp]: createNewObjects "\<lambda>s. P (ksDomainTime s)"

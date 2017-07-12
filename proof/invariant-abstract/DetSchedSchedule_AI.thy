@@ -1152,7 +1152,7 @@ lemma set_scheduler_action_rct_switch_thread_valid_sched:
 
 context DetSchedSchedule_AI begin
 lemma switch_to_thread_sched_act_is_cur:
-  "\<lbrace>\<lambda>s. scheduler_action s = switch_thread word\<rbrace> switch_to_thread word 
+  "\<lbrace>\<lambda>s. scheduler_action s = switch_thread word\<rbrace> switch_to_thread word
        \<lbrace>\<lambda>rv s. scheduler_action s = switch_thread (cur_thread s)\<rbrace>"
   by (simp add: switch_to_thread_def | wp)+
 end
@@ -1642,7 +1642,7 @@ lemma set_priority_valid_sched[wp]:
              tcb_sched_action_dequeue_valid_blocked_except
              tcb_sched_action_dequeue_valid_sched_not_runnable
              reschedule_required_valid_sched ethread_set_valid_idle_etcb
-            
+
          | simp add: ct_in_state_def2[symmetric])+
   apply (force simp: valid_sched_def valid_sched_action_def
                 not_cur_thread_def ct_in_state_def not_pred_tcb st_tcb_at_def obj_at_def)
@@ -1849,7 +1849,7 @@ crunch valid_sched[wp]: set_mrs valid_sched
   (wp: valid_sched_lift)
 
 lemmas gts_drop_imp = hoare_drop_imp[where f="get_thread_state p" for p]
-   
+
 lemma reschedule_required_switch_valid_blocked:
   "\<lbrace>\<lambda>s. case scheduler_action s of switch_thread t \<Rightarrow> valid_blocked_except t s | _ \<Rightarrow> False\<rbrace>
     reschedule_required \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
@@ -1986,7 +1986,7 @@ lemma update_waiting_ntfn_valid_sched[wp]:
             set_thread_state_runnable_valid_sched
             set_thread_state_runnable_valid_queues
             set_thread_state_runnable_valid_sched_action
-            set_thread_state_valid_blocked_except 
+            set_thread_state_valid_blocked_except
             | clarsimp)+
   apply (clarsimp simp add: valid_sched_def not_cur_thread_def ct_not_in_q_def)
   done
@@ -2353,8 +2353,8 @@ lemma possible_switch_to_sched_act_not[wp]:
      possible_switch_to target b
    \<lbrace>\<lambda>_. scheduler_act_not t\<rbrace>"
   apply (simp add: possible_switch_to_def reschedule_required_def
-                   set_scheduler_action_def tcb_sched_action_def 
-              split del: if_split 
+                   set_scheduler_action_def tcb_sched_action_def
+              split del: if_split
         | wp | wpc)+
   apply (clarsimp simp: etcb_at_def scheduler_act_not_def split: option.splits)
   done
@@ -2522,7 +2522,7 @@ lemma handle_fault_valid_sched:
 end
 
 lemma idle_not_queued'':
-  "\<lbrakk>valid_idle s; sym_refs (state_refs_of s); queue \<times> {rt} \<subseteq> state_refs_of s ptr\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>valid_idle s; sym_refs (state_refs_of s); queue \<times> {rt} \<subseteq> state_refs_of s ptr\<rbrakk> \<Longrightarrow>
      idle_thread s \<notin> queue"
   by (frule idle_no_refs, fastforce simp: valid_idle_def sym_refs_def)
 
@@ -2531,7 +2531,7 @@ context DetSchedSchedule_AI begin
 lemma send_signal_valid_sched[wp]:
   "\<lbrace> valid_sched and invs \<rbrace> send_signal ntfnptr badge \<lbrace> \<lambda>_. valid_sched \<rbrace>"
   apply (simp add: send_signal_def)
-  apply (wp get_ntfn_wp switch_if_required_to_valid_sched'  
+  apply (wp get_ntfn_wp switch_if_required_to_valid_sched'
             set_thread_state_runnable_valid_queues set_thread_state_runnable_valid_sched_action
             set_thread_state_valid_blocked_except sts_st_tcb_at' gts_wp  | wpc | clarsimp)+
        apply (rename_tac ntfn a st)
@@ -2543,7 +2543,7 @@ lemma send_signal_valid_sched[wp]:
     apply (clarsimp simp: receive_blocked_def split: thread_state.splits)
     apply (drule (1) st_tcb_at_idle_thread, clarsimp)
    apply (clarsimp simp: receive_blocked_def split: thread_state.splits)
-   apply ((auto simp: pred_tcb_at_def obj_at_def valid_sched_action_def 
+   apply ((auto simp: pred_tcb_at_def obj_at_def valid_sched_action_def
             is_activatable_def not_cur_thread_def | drule sym)+)[1]
   apply (clarsimp)
   apply (frule invs_valid_idle)
@@ -2591,7 +2591,7 @@ lemma receive_ipc_valid_sched:
             apply ((wp | wpc)+)[1]
            apply (simp | wp gts_wp hoare_vcg_all_lift)+
           apply (wp hoare_vcg_imp_lift)
-           apply ((simp add: set_endpoint_def set_object_def | 
+           apply ((simp add: set_endpoint_def set_object_def |
                    wp hoare_drop_imps | wpc)+)[1]
           apply (wp hoare_vcg_imp_lift get_object_wp
                     set_thread_state_sched_act_not_valid_sched gbn_wp
@@ -2721,8 +2721,8 @@ lemma unbind_maybe_notification_valid_objs:
   done
 
 lemma unbind_maybe_notification_sym_refs[wp]:
-  "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s\<rbrace> 
-     unbind_maybe_notification a 
+  "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<and> valid_objs s\<rbrace>
+     unbind_maybe_notification a
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: unbind_maybe_notification_def)
   apply (rule hoare_seq_ext [OF _ get_ntfn_sp])
@@ -2740,8 +2740,8 @@ lemma unbind_maybe_notification_sym_refs[wp]:
   apply (rule delta_sym_refs, assumption)
    apply (clarsimp split: if_split_asm, frule ko_at_state_refs_ofD, simp)+
    apply (frule_tac P="op = (Some a)" in ntfn_bound_tcb_at, simp_all add: obj_at_def)[1]
-   apply (fastforce simp: ntfn_q_refs_no_NTFNBound obj_at_def is_tcb state_refs_of_def 
-                          tcb_st_refs_of_no_NTFNBound tcb_bound_refs_def2 tcb_ntfn_is_bound_def 
+   apply (fastforce simp: ntfn_q_refs_no_NTFNBound obj_at_def is_tcb state_refs_of_def
+                          tcb_st_refs_of_no_NTFNBound tcb_bound_refs_def2 tcb_ntfn_is_bound_def
                           tcb_st_refs_no_TCBBound
                    dest!: pred_tcb_at_tcb_at bound_tcb_at_state_refs_ofD)
   apply (frule ko_at_state_refs_ofD, simp)
@@ -2932,7 +2932,7 @@ lemma ethread_set_not_idle_valid_idle_etcb:
   apply wp
   apply(clarsimp simp: get_etcb_def valid_idle_etcb_def etcb_at'_def valid_idle_def st_tcb_at_def obj_at_def)
   done
-  
+
 lemma ethread_set_not_idle_valid_sched:
   "\<lbrace>valid_sched and simple_sched_action and not_queued tptr and (\<lambda>s. tptr \<noteq> cur_thread s) and (\<lambda>s. tptr \<noteq> idle_thread s) and valid_idle\<rbrace>
      ethread_set f tptr \<lbrace>\<lambda>_. valid_sched\<rbrace>"
@@ -2963,7 +2963,7 @@ lemma invoke_domain_valid_sched[wp]:
   including no_pre
   apply wp
   apply (simp add: set_domain_def thread_set_domain_def)
-  apply (wp gts_st_tcb_at hoare_vcg_if_lift hoare_vcg_if_lift2 hoare_vcg_imp_lift 
+  apply (wp gts_st_tcb_at hoare_vcg_if_lift hoare_vcg_if_lift2 hoare_vcg_imp_lift
             hoare_vcg_disj_lift ethread_set_not_queued_valid_queues reschedule_required_valid_sched
             tcb_sched_action_enqueue_valid_blocked ethread_set_valid_blocked_except
             ethread_set_valid_blocked ethread_set_ssa_valid_sched_action
@@ -3079,7 +3079,7 @@ end
 
 crunch weak_valid_sched_action[wp]: empty_slot_ext, cap_delete_one weak_valid_sched_action
   (wp: crunch_wps set_thread_state_runnable_weak_valid_sched_action
-       set_bound_notification_weak_valid_sched_action 
+       set_bound_notification_weak_valid_sched_action
    simp: cur_tcb_def unless_def)
 
 context DetSchedSchedule_AI begin
@@ -3092,7 +3092,7 @@ lemma do_reply_transfer_not_queued[wp]:
   apply (simp add: do_reply_transfer_def)
   apply (wp cap_delete_one_not_queued hoare_vcg_if_lift | wpc |
          clarsimp split del: if_split | wp_once hoare_drop_imps)+
-   apply (simp add: invs_def valid_state_def valid_pspace_def)+ 
+   apply (simp add: invs_def valid_state_def valid_pspace_def)+
   done
 
 lemma do_reply_transfer_schedact_not[wp]:
@@ -3190,7 +3190,7 @@ lemma handle_event_valid_sched:
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all add: handle_send_def handle_call_def)
             apply ((rule hoare_pre, wp handle_invocation_valid_sched handle_recv_valid_sched'
-              handle_reply_valid_sched 
+              handle_reply_valid_sched
               | fastforce simp: invs_valid_objs invs_sym_refs valid_sched_ct_not_queued)+)[5]
        apply (wp handle_fault_valid_sched hvmf_active hoare_drop_imps hoare_vcg_disj_lift
                  handle_recv_valid_sched' handle_reply_valid_sched hoare_vcg_all_lift|

@@ -31,8 +31,8 @@ text {*
   The data types generated for a system involving events are similar to those
   for a system involving procedures, however an additional instance is
   derived for every
-  connection in the system that carries event messages. 
-  This generated instance models the state of the event; 
+  connection in the system that carries event messages.
+  This generated instance models the state of the event;
   that is, whether it is pending or not.
 *}
 

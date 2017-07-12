@@ -20,5 +20,5 @@ begin
   begin
     thm f_body_def
   end (* context *)
-  
+
 end

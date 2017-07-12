@@ -27,7 +27,7 @@ end
 interpretation IpcCancel_AI?: IpcCancel_AI
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales; fact IpcCancel_AI_asms)?) 
+  case 1 show ?case by (intro_locales; (unfold_locales; fact IpcCancel_AI_asms)?)
   qed
 
 end

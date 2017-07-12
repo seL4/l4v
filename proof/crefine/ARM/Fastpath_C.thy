@@ -97,7 +97,7 @@ definition
     ctab \<leftarrow> liftE $ getThreadCSpaceRoot curThread >>= getCTE;
     epCap \<leftarrow> unifyFailure (doE t \<leftarrow> resolveAddressBits (cteCap ctab) cptr (size cptr);
          liftE (getSlotCap (fst t)) odE);
-    
+
     unlessE (isEndpointCap epCap \<and> capEPCanReceive epCap)
        $ throwError ();
 
@@ -1051,7 +1051,7 @@ lemma switchToThread_fp_ccorres:
                          catch_throwError)
         apply (rule ccorres_stateAssert)
         apply (rule ccorres_False[where P'=UNIV])
-       apply (simp add: catch_liftE bind_assoc 
+       apply (simp add: catch_liftE bind_assoc
                    del: Collect_const cong: call_ignore_cong)
        apply (rule monadic_rewrite_ccorres_assemble[rotated])
         apply (rule monadic_rewrite_bind_head)
@@ -2142,9 +2142,9 @@ lemma option_case_liftM_getNotification_wp:
   done
 
 lemma threadSet_st_tcb_at_state:
-  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (if p = t 
-        then obj_at' (\<lambda>tcb. P (tcbState (f tcb))) t s 
-        else st_tcb_at' P p s)\<rbrace> 
+  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (if p = t
+        then obj_at' (\<lambda>tcb. P (tcbState (f tcb))) t s
+        else st_tcb_at' P p s)\<rbrace>
   threadSet f t \<lbrace>\<lambda>_. st_tcb_at' P p\<rbrace>"
   apply (rule hoare_chain)
     apply (rule threadSet_obj_at'_really_strongest)
@@ -2168,7 +2168,7 @@ proof -
     have [simp]: "scast Kernel_C.tcbVTable = tcbVTableSlot"
      by (simp add:Kernel_C.tcbVTable_def tcbVTableSlot_def)
 
-    have tcbs_of_cte_wp_at_vtable: 
+    have tcbs_of_cte_wp_at_vtable:
       "\<And>s tcb ptr. tcbs_of s ptr = Some tcb \<Longrightarrow>
       cte_wp_at' \<top> (ptr + 0x10 * tcbVTableSlot) s"
     apply (clarsimp simp:tcbs_of_def cte_at'_obj_at'
@@ -3215,7 +3215,7 @@ lemma fastpath_reply_recv_ccorres:
                                          cvariable_relation_upd_const ko_at_projectKO_opt)
                        apply ceqv
                       apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
-                      apply (rule_tac xf'=xfdc and r'=dc in ccorres_split_nothrow) 
+                      apply (rule_tac xf'=xfdc and r'=dc in ccorres_split_nothrow)
                           apply (rule fastpath_enqueue_ccorres[unfolded o_def,simplified])
                           apply simp
                          apply ceqv
@@ -3439,7 +3439,7 @@ lemma fastpath_reply_recv_ccorres:
      apply (frule ko_at_valid_ep', clarsimp)
      apply (safe del: notI)[1]
        apply (simp add: isSendEP_def valid_ep'_def tcb_at_invs'
-                 split: Structures_H.endpoint.split_asm)       
+                 split: Structures_H.endpoint.split_asm)
        apply (rule subst[OF epQueue.simps(1)],
               erule st_tcb_at_not_in_ep_queue[where P="op = Running", rotated],
               clarsimp+)
@@ -3664,7 +3664,7 @@ lemma fastpath_callKernel_SysCall_corres:
                     apply (simp add: isRecvEP_endpoint_case list_case_helper bind_assoc)
                     apply (rule monadic_rewrite_bind_tail)
                     apply (elim conjE)
-                     apply (match premises in "isEndpointCap ep" for ep \<Rightarrow> 
+                     apply (match premises in "isEndpointCap ep" for ep \<Rightarrow>
                        \<open>rule monadic_rewrite_symb_exec[where x="BlockedOnReceive (capEPPtr ep)"]\<close>,
                         (wp empty_fail_getThreadState)+)
                      apply (rule monadic_rewrite_symb_exec2, (wp | simp)+)
@@ -3904,7 +3904,7 @@ context kernel_m begin
 
 lemma receiveIPC_simple_rewrite:
   "monadic_rewrite True False
-     ((\<lambda>_. isEndpointCap ep_cap \<and> \<not> isSendEP ep) and (ko_at' ep (capEPPtr ep_cap) and 
+     ((\<lambda>_. isEndpointCap ep_cap \<and> \<not> isSendEP ep) and (ko_at' ep (capEPPtr ep_cap) and
       (\<lambda>s. \<forall>ntfnptr. bound_tcb_at' (op = (Some ntfnptr)) thread s \<longrightarrow> obj_at' (Not \<circ> isActive) ntfnptr s)))
      (receiveIPC thread ep_cap True)
      (do
@@ -4725,7 +4725,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                       apply (unfold setSchedulerAction_def)[3]
                       apply ((wp setThreadState_oa_queued user_getreg_rv setThreadState_no_sch_change
                                  setThreadState_obj_at_unchanged
-                                 sts_st_tcb_at'_cases sts_bound_tcb_at' 
+                                 sts_st_tcb_at'_cases sts_bound_tcb_at'
                                  emptySlot_obj_at'_not_queued
                                  emptySlot_cte_wp_at_cteCap
                                  emptySlot_cnode_caps

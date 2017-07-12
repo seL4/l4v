@@ -7,7 +7,7 @@
 (*  Title:      VcgExTotal.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2006-2008 Norbert Schirmer 
+Copyright (C) 2006-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -50,29 +50,29 @@ apply vcg
 apply (auto)
 done
 
-lemma "\<Gamma>\<turnstile>\<^sub>t \<lbrace>\<acute>I \<le> 3\<rbrace> 
+lemma "\<Gamma>\<turnstile>\<^sub>t \<lbrace>\<acute>I \<le> 3\<rbrace>
      WHILE \<acute>I < 10 INV \<lbrace>\<acute>I\<le> 10\<rbrace> VAR MEASURE 10 - \<acute>I
      DO
-       \<acute>I :== \<acute>I + 1 
+       \<acute>I :== \<acute>I + 1
      OD
   \<lbrace>\<acute>I = 10\<rbrace>"
 apply vcg
 apply auto
 done
 
-text \<open>Total correctness of a nested loop. In the inner loop we have to 
+text \<open>Total correctness of a nested loop. In the inner loop we have to
 express that the loop variable of the outer loop is not changed. We use
 \<open>FIX\<close> to introduce a new logical variable
 \<close>
 
-lemma "\<Gamma>\<turnstile>\<^sub>t \<lbrace>\<acute>M=0 \<and> \<acute>N=0\<rbrace> 
-      WHILE (\<acute>M < i) 
+lemma "\<Gamma>\<turnstile>\<^sub>t \<lbrace>\<acute>M=0 \<and> \<acute>N=0\<rbrace>
+      WHILE (\<acute>M < i)
       INV \<lbrace>\<acute>M \<le> i \<and> (\<acute>M \<noteq> 0 \<longrightarrow> \<acute>N = j) \<and> \<acute>N \<le> j\<rbrace>
       VAR MEASURE (i - \<acute>M)
       DO
          \<acute>N :== 0;;
          WHILE (\<acute>N < j)
-         FIX m. 
+         FIX m.
          INV \<lbrace>\<acute>M=m \<and> \<acute>N \<le> j\<rbrace>
          VAR MEASURE (j - \<acute>N)
          DO
@@ -111,15 +111,15 @@ lemma (in Fac_impl) Fac_spec:
 
 procedures
   p91(R,N | R) = "IF 100 < \<acute>N THEN \<acute>R :== \<acute>N - 10
-                      ELSE \<acute>R :== CALL p91(\<acute>R,\<acute>N+11);; 
+                      ELSE \<acute>R :== CALL p91(\<acute>R,\<acute>N+11);;
                            \<acute>R :== CALL p91(\<acute>R,\<acute>R) FI"
 
-  
-  p91_spec: "\<forall>n. \<Gamma>\<turnstile>\<^sub>t \<lbrace>\<acute>N=n\<rbrace> \<acute>R :== PROC p91(\<acute>R,\<acute>N) 
+
+  p91_spec: "\<forall>n. \<Gamma>\<turnstile>\<^sub>t \<lbrace>\<acute>N=n\<rbrace> \<acute>R :== PROC p91(\<acute>R,\<acute>N)
                         \<lbrace>if 100 < n then \<acute>R = n - 10 else \<acute>R = 91\<rbrace>,{}"
 
 lemma (in p91_impl) p91_spec:
-  shows "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^sub>t {\<sigma>} \<acute>R :== PROC p91(\<acute>R,\<acute>N) 
+  shows "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^sub>t {\<sigma>} \<acute>R :== PROC p91(\<acute>R,\<acute>N)
                        \<lbrace>if 100 < \<^bsup>\<sigma>\<^esup>N then \<acute>R = \<^bsup>\<sigma>\<^esup>N - 10 else \<acute>R = 91\<rbrace>,{}"
   apply (hoare_rule HoareTotal.ProcRec1 [where r="measure (\<lambda>(s,p). 101 - \<^bsup>s\<^esup>N)"])
   apply vcg
@@ -127,7 +127,7 @@ lemma (in p91_impl) p91_spec:
   apply arith
   done
 
-record globals_list = 
+record globals_list =
   next_' :: "ref \<Rightarrow> ref"
   cont_' :: "ref \<Rightarrow> nat"
 
@@ -139,14 +139,14 @@ record 'g list_vars = "'g state" +
   tmp_'  :: "ref"
 
 procedures
-  append(p,q|p) = 
+  append(p,q|p) =
     "IF \<acute>p=Null THEN \<acute>p :== \<acute>q ELSE \<acute>p\<rightarrow>\<acute>next :== CALL append(\<acute>p\<rightarrow>\<acute>next,\<acute>q) FI"
 
 lemma (in append_impl)
-  shows 
-   "\<forall>\<sigma> Ps Qs. \<Gamma>\<turnstile>\<^sub>t 
-      \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps \<and>  List \<acute>q \<acute>next Qs \<and> set Ps \<inter> set Qs = {} \<rbrace>  
-       \<acute>p :== PROC append(\<acute>p,\<acute>q) 
+  shows
+   "\<forall>\<sigma> Ps Qs. \<Gamma>\<turnstile>\<^sub>t
+      \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps \<and>  List \<acute>q \<acute>next Qs \<and> set Ps \<inter> set Qs = {} \<rbrace>
+       \<acute>p :== PROC append(\<acute>p,\<acute>q)
       \<lbrace>List \<acute>p \<acute>next (Ps@Qs) \<and> (\<forall>x. x\<notin>set Ps \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
    apply (hoare_rule HoareTotal.ProcRec1
             [where r="measure (\<lambda>(s,p). length (list \<^bsup>s\<^esup>p \<^bsup>s\<^esup>next))"])
@@ -156,10 +156,10 @@ lemma (in append_impl)
 
 
 lemma (in append_impl)
-  shows 
-   "\<forall>\<sigma> Ps Qs. \<Gamma>\<turnstile>\<^sub>t 
-      \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps \<and>  List \<acute>q \<acute>next Qs \<and> set Ps \<inter> set Qs = {} \<rbrace>  
-       \<acute>p :== PROC append(\<acute>p,\<acute>q) 
+  shows
+   "\<forall>\<sigma> Ps Qs. \<Gamma>\<turnstile>\<^sub>t
+      \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps \<and>  List \<acute>q \<acute>next Qs \<and> set Ps \<inter> set Qs = {} \<rbrace>
+       \<acute>p :== PROC append(\<acute>p,\<acute>q)
       \<lbrace>List \<acute>p \<acute>next (Ps@Qs) \<and> (\<forall>x. x\<notin>set Ps \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
    apply (hoare_rule HoareTotal.ProcRec1
             [where r="measure (\<lambda>(s,p). length (list \<^bsup>s\<^esup>p \<^bsup>s\<^esup>next))"])
@@ -169,9 +169,9 @@ lemma (in append_impl)
 
 lemma (in append_impl)
   shows
-  append_spec: 
-   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^sub>t ({\<sigma>} \<inter> \<lbrace>islist \<acute>p \<acute>next\<rbrace>)  \<acute>p :== PROC append(\<acute>p,\<acute>q) 
-    \<lbrace>\<forall>Ps Qs. List \<^bsup>\<sigma>\<^esup>p \<^bsup>\<sigma>\<^esup>next Ps \<and>  List \<^bsup>\<sigma>\<^esup>q \<^bsup>\<sigma>\<^esup>next Qs \<and> set Ps \<inter> set Qs = {} 
+  append_spec:
+   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^sub>t ({\<sigma>} \<inter> \<lbrace>islist \<acute>p \<acute>next\<rbrace>)  \<acute>p :== PROC append(\<acute>p,\<acute>q)
+    \<lbrace>\<forall>Ps Qs. List \<^bsup>\<sigma>\<^esup>p \<^bsup>\<sigma>\<^esup>next Ps \<and>  List \<^bsup>\<sigma>\<^esup>q \<^bsup>\<sigma>\<^esup>next Qs \<and> set Ps \<inter> set Qs = {}
      \<longrightarrow>
      List \<acute>p \<acute>next (Ps@Qs) \<and> (\<forall>x. x\<notin>set Ps \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
    apply (hoare_rule HoareTotal.ProcRec1
@@ -179,19 +179,19 @@ lemma (in append_impl)
    apply vcg
    apply fastforce
    done
- 
+
 lemma "\<Gamma>\<turnstile>\<lbrace>List \<acute>p \<acute>next Ps\<rbrace>
        \<acute>q :== Null;;
        WHILE \<acute>p \<noteq> Null INV \<lbrace>\<exists>Ps' Qs'. List \<acute>p \<acute>next Ps' \<and> List \<acute>q \<acute>next Qs' \<and>
                              set Ps' \<inter> set Qs' = {} \<and>
-                             rev Ps' @ Qs' = rev Ps\<rbrace> 
+                             rev Ps' @ Qs' = rev Ps\<rbrace>
         DO
          \<acute>r :== \<acute>p;; \<acute>p :== \<acute>p\<rightarrow>\<acute>next;;
          \<acute>r\<rightarrow>\<acute>next :== \<acute>q;; \<acute>q :== \<acute>r
        OD;;
        \<acute>p :==\<acute>q
        \<lbrace>List \<acute>p \<acute>next (rev Ps)\<rbrace> "
-apply vcg 
+apply vcg
 apply   clarsimp
 apply  clarsimp
 apply force
@@ -203,13 +203,13 @@ by blast
 
 procedures Rev(p|p) =
       "\<acute>q :== Null;;
-       WHILE \<acute>p \<noteq> Null 
+       WHILE \<acute>p \<noteq> Null
        DO
          \<acute>r :== \<acute>p;; \<lbrace>\<acute>p \<noteq> Null\<rbrace>\<longmapsto> \<acute>p :== \<acute>p\<rightarrow>\<acute>next;;
          \<lbrace>\<acute>r \<noteq> Null\<rbrace>\<longmapsto> \<acute>r\<rightarrow>\<acute>next :== \<acute>q;; \<acute>q :== \<acute>r
        OD;;
        \<acute>p :==\<acute>q"
- Rev_spec: 
+ Rev_spec:
   "\<forall>Ps. \<Gamma>\<turnstile>\<^sub>t \<lbrace>List \<acute>p \<acute>next Ps\<rbrace> \<acute>p :== PROC Rev(\<acute>p) \<lbrace>List \<acute>p \<acute>next (rev Ps)\<rbrace>"
  Rev_modifies:
   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} \<acute>p :== PROC Rev(\<acute>p) {t. t may_only_modify_globals \<sigma> in [next]}"
@@ -223,14 +223,14 @@ lemma upd_hd_next:
   shows "List (next p) (next(p := q)) ps"
 proof -
   from p_ps
-  have "p \<notin> set ps" 
+  have "p \<notin> set ps"
     by auto
   with p_ps show ?thesis
     by simp
 qed
 
 lemma (in Rev_impl) shows
- Rev_spec: 
+ Rev_spec:
   "\<forall>Ps. \<Gamma>\<turnstile>\<^sub>t \<lbrace>List \<acute>p \<acute>next Ps\<rbrace> \<acute>p :== PROC Rev(\<acute>p) \<lbrace>List \<acute>p \<acute>next (rev Ps)\<rbrace>"
 apply (hoare_rule HoareTotal.ProcNoRec1)
 apply (hoare_rule anno =
@@ -244,7 +244,7 @@ apply (hoare_rule anno =
          \<lbrace>\<acute>r \<noteq> Null\<rbrace>\<longmapsto>\<acute>r\<rightarrow>\<acute>next :== \<acute>q;; \<acute>q :== \<acute>r
        OD;;
        \<acute>p :==\<acute>q" in HoareTotal.annotateI)
-apply vcg 
+apply vcg
 apply   clarsimp
 apply  clarsimp
 apply  (rule conjI2)
@@ -278,7 +278,7 @@ lemma "\<Gamma>\<turnstile>\<^sub>t \<lbrace>List \<acute>p \<acute>next Ps\<rbr
        OD;;
        \<acute>p :==\<acute>q
        \<lbrace>List \<acute>p \<acute>next (rev Ps)\<rbrace> "
-apply vcg 
+apply vcg
 apply   clarsimp
 apply  clarsimp
 apply  (rule conjI2)
@@ -295,14 +295,14 @@ done
 
 
 
-procedures 
+procedures
   pedal(N,M) = "IF 0 < \<acute>N THEN
                             IF 0 < \<acute>M THEN CALL coast(\<acute>N- 1,\<acute>M- 1) FI;;
                             CALL pedal(\<acute>N- 1,\<acute>M)
                          FI"
 
 and
- 
+
   coast(N,M) = "CALL pedal(\<acute>N,\<acute>M);;
                          IF 0 < \<acute>M THEN CALL coast(\<acute>N,\<acute>M- 1) FI"
 
@@ -314,7 +314,7 @@ lemma (in pedal_coast_clique)
   shows "(\<Gamma>\<turnstile>\<^sub>t \<lbrace>True\<rbrace>  PROC pedal(\<acute>N,\<acute>M) \<lbrace>True\<rbrace>) \<and>
          (\<Gamma>\<turnstile>\<^sub>t \<lbrace>True\<rbrace> PROC coast(\<acute>N,\<acute>M) \<lbrace>True\<rbrace>)"
   apply (hoare_rule HoareTotal_ProcRec2
-          [where ?r= "inv_image (measure (\<lambda>m. m) <*lex*> 
+          [where ?r= "inv_image (measure (\<lambda>m. m) <*lex*>
                                   measure (\<lambda>p. if p = coast_'proc then 1 else 0))
                       (\<lambda>(s,p). (\<^bsup>s\<^esup>N + \<^bsup>s\<^esup>M,p))"])
   apply simp_all
@@ -328,7 +328,7 @@ lemma (in pedal_coast_clique)
   shows "(\<Gamma>\<turnstile>\<^sub>t \<lbrace>True\<rbrace> PROC pedal(\<acute>N,\<acute>M) \<lbrace>True\<rbrace>) \<and>
          (\<Gamma>\<turnstile>\<^sub>t \<lbrace>True\<rbrace> PROC coast(\<acute>N,\<acute>M) \<lbrace>True\<rbrace>)"
   apply (hoare_rule HoareTotal_ProcRec2
-          [where ?r= "inv_image (measure (\<lambda>m. m) <*lex*> 
+          [where ?r= "inv_image (measure (\<lambda>m. m) <*lex*>
                                   measure (\<lambda>p. if p = coast_'proc then 1 else 0))
                       (\<lambda>(s,p). (\<^bsup>s\<^esup>N + \<^bsup>s\<^esup>M,p))"])
   apply simp_all
@@ -355,7 +355,7 @@ lemma (in pedal_coast_clique)
   done
 
 
-lemma (in pedal_coast_clique) 
+lemma (in pedal_coast_clique)
   shows "(\<Gamma>\<turnstile>\<^sub>t \<lbrace>True\<rbrace> PROC pedal(\<acute>N,\<acute>M) \<lbrace>True\<rbrace>) \<and>
          (\<Gamma>\<turnstile>\<^sub>t \<lbrace>True\<rbrace> PROC coast(\<acute>N,\<acute>M) \<lbrace>True\<rbrace>)"
   apply(hoare_rule HoareTotal_ProcRec2
@@ -373,7 +373,7 @@ lemma (in pedal_coast_clique)
   shows "(\<Gamma>\<turnstile>\<^sub>t \<lbrace>True\<rbrace> PROC pedal(\<acute>N,\<acute>M) \<lbrace>True\<rbrace>) \<and>
          (\<Gamma>\<turnstile>\<^sub>t \<lbrace>True\<rbrace> PROC coast(\<acute>N,\<acute>M) \<lbrace>True\<rbrace>)"
   apply(hoare_rule HoareTotal_ProcRec2
-     [where ?r= "measure (\<lambda>s. \<^bsup>s\<^esup>N + \<^bsup>s\<^esup>M) <*lex*> 
+     [where ?r= "measure (\<lambda>s. \<^bsup>s\<^esup>N + \<^bsup>s\<^esup>M) <*lex*>
                  measure (\<lambda>p. if p = coast_'proc then 1 else 0)"])
    apply simp_all
    apply  vcg

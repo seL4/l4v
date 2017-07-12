@@ -51,8 +51,8 @@ $exports =~ s/\(.*?\)//g;
 # find and print all the type definitions...
 while($exports =~ / ([A-Z][a-zA-Z0-9']*)/g) {
     $name = $1;
-    
-    if (not $literate and 
+
+    if (not $literate and
         $input =~ /^((type|newtype|data|class)\s+([A-Z][a-zA-Z0-9_' ]*=>\s+)?$name\W.*?)^\S/ms)
     {
         print "$1";
@@ -66,7 +66,7 @@ while($exports =~ / ([A-Z][a-zA-Z0-9']*)/g) {
 # ...and the type signatures
 while($exports =~ / ([a-z][a-zA-Z0-9']*)/g) {
     $name = $1;
-    
+
     if (not $literate and $input =~ /^($name\s+::.*?)^\S/ms) {
         print "$1";
     } elsif ($literate and $input =~ /^(> $name\s+::.*?)^> \S/ms) {

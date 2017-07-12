@@ -43,7 +43,7 @@ text {*
   These definitions are more general than the implementation allows, in that
   they permit an untrusted component to perform actions such as sending on an
   incoming interface which may not be possible in the implementation.
-  
+
   Recall from \autoref{h:userstubs} that the user is expected to provide a
   mapping describing trusted components in their intermediate theory. A
   definition of untrusted execution for each component is generated regardless

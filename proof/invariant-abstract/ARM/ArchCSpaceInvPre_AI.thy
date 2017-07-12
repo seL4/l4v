@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 CSpace invariants
 *)
 
@@ -113,7 +113,7 @@ lemma unique_table_refsD:
 
 lemma table_cap_ref_vs_cap_ref_Some:
   "table_cap_ref x = Some y \<Longrightarrow> vs_cap_ref x = Some y"
-  by (clarsimp simp: table_cap_ref_def vs_cap_ref_def 
+  by (clarsimp simp: table_cap_ref_def vs_cap_ref_def
                  split: cap.splits arch_cap.splits)
 
 lemma set_cap_valid_vs_lookup:
@@ -296,7 +296,7 @@ lemma acap_rights_update_idem [simp]:
 
 lemma cap_master_arch_cap_rights [simp]:
   "cap_master_arch_cap (acap_rights_update R cap) = cap_master_arch_cap cap"
-  by (simp add: cap_master_arch_cap_def acap_rights_update_def 
+  by (simp add: cap_master_arch_cap_def acap_rights_update_def
            split: arch_cap.splits)
 
 lemma acap_rights_update_id [intro!, simp]:

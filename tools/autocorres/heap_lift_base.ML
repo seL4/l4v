@@ -49,7 +49,7 @@ type heap_info =
   structs : struct_info Symtab.table,
   struct_types : struct_info Typtab.table
 };
- 
+
 type heap_lift_setup =
 {
   heap_info : heap_info,
@@ -435,7 +435,7 @@ let
   (*
    * HACK: Exit and enter the context again, so the simpset created by the new
    * record gets imported in. No idea what the "correct" way of doing this is.
-   *) 
+   *)
   val lthy = Local_Theory.exit_global lthy |> Named_Target.init NONE (the (Named_Target.locale_of lthy))
 
   (* Generate a function mapping old globals to the new globals. *)

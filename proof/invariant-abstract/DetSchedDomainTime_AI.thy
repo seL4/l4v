@@ -291,7 +291,7 @@ crunch domain_time_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_time s)"
 crunch domain_time_inv[wp]: copy_mrs "\<lambda>s. P (domain_time s)"
 
 crunch domain_time_inv[wp]: handle_fault "\<lambda>s. P (domain_time s)"
-  (wp: mapM_wp hoare_drop_imps simp: crunch_simps ignore:copy_mrs) 
+  (wp: mapM_wp hoare_drop_imps simp: crunch_simps ignore:copy_mrs)
 
 crunch domain_time_inv[wp]:
   reply_from_kernel, create_cap, retype_region
@@ -339,7 +339,7 @@ lemma cap_revoke_domain_time_inv[wp]:
 end
 
 crunch domain_time_inv[wp]: cancel_badged_sends "\<lambda>s. P (domain_time s)"
-  (ignore: filterM clearMemory 
+  (ignore: filterM clearMemory
      simp: filterM_mapM crunch_simps
        wp: crunch_wps)
 

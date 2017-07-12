@@ -30,7 +30,7 @@ lemma asUser_obj_at' :
 lemma getObject_sched:
   "(x::tcb, s') \<in> fst (getObject t s) \<Longrightarrow>
   (x,s'\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>) \<in> fst (getObject t (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>))"
-  apply (clarsimp simp: in_monad getObject_def split_def loadObject_default_def 
+  apply (clarsimp simp: in_monad getObject_def split_def loadObject_default_def
                         magnitudeCheck_def projectKOs
                   split: option.splits)
   done
@@ -114,13 +114,13 @@ lemma getMRs_rel_sched:
 
 lemma getObject_state:
   " \<lbrakk>(x, s') \<in> fst (getObject t' s); ko_at' ko t s\<rbrakk>
-  \<Longrightarrow> (if t = t' then tcbState_update (\<lambda>_. st) x else x, 
+  \<Longrightarrow> (if t = t' then tcbState_update (\<lambda>_. st) x else x,
       s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>)
       \<in> fst (getObject t' (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
   apply (simp split: if_split)
   apply (rule conjI)
    apply clarsimp
-   apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad 
+   apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad
                          Corres_C.in_magnitude_check' projectKOs objBits_simps)
    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs objBits_simps)
    apply (simp add: magnitudeCheck_def in_monad split: option.splits)
@@ -132,13 +132,13 @@ lemma getObject_state:
    apply (drule_tac x=x2 in orthD2)
     apply fastforce
    apply clarsimp
-   apply (erule impE) 
+   apply (erule impE)
     apply simp
    apply (erule notE, rule word_diff_ls'(3))
     apply unat_arith
    apply (drule is_aligned_no_overflow, simp add: word_bits_def)
   apply clarsimp
-  apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad 
+  apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad
                         Corres_C.in_magnitude_check' projectKOs objBits_simps)
   apply (simp add: magnitudeCheck_def in_monad split: option.splits)
   apply clarsimp
@@ -146,7 +146,7 @@ lemma getObject_state:
   apply (clarsimp split: if_split_asm)
    apply (erule_tac x=t in allE)
    apply simp
-   apply (clarsimp simp: obj_at'_real_def projectKOs 
+   apply (clarsimp simp: obj_at'_real_def projectKOs
                          ko_wp_at'_def objBits_simps)
    apply (simp add: ps_clear_def)
    apply (drule_tac x=t in orthD2)
@@ -174,10 +174,10 @@ lemma getObject_state:
 
 lemma threadGet_state:
   "\<lbrakk> (uc, s') \<in> fst (threadGet (atcbContextGet o tcbArch) t' s); ko_at' ko t s \<rbrakk> \<Longrightarrow>
-   (uc, s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>) \<in> 
+   (uc, s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>) \<in>
   fst (threadGet (atcbContextGet o tcbArch) t' (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
   apply (clarsimp simp: threadGet_def liftM_def in_monad)
-  apply (drule (1) getObject_state [where st=st])   
+  apply (drule (1) getObject_state [where st=st])
   apply (rule exI)
   apply (erule conjI)
   apply (simp split: if_splits)
@@ -185,7 +185,7 @@ lemma threadGet_state:
 
 lemma asUser_state:
   "\<lbrakk>(x,s) \<in> fst (asUser t' f s); ko_at' ko t s; \<And>s. \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>_. op = s\<rbrace> \<rbrakk> \<Longrightarrow>
-  (x,s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>) \<in> 
+  (x,s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>) \<in>
   fst (asUser t' f (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
   apply (clarsimp simp: asUser_def in_monad select_f_def)
   apply (frule use_valid, rule threadGet_inv [where P="op = s"], rule refl)
@@ -311,10 +311,10 @@ next
      apply assumption
     apply simp
     done
-qed 
+qed
 
 lemma getMRs_rel_state:
-  "\<lbrakk>getMRs_rel args buffer s; 
+  "\<lbrakk>getMRs_rel args buffer s;
     (cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer) s;
     ko_at' ko t s \<rbrakk> \<Longrightarrow>
   getMRs_rel args buffer (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>)"
@@ -325,7 +325,7 @@ lemma getMRs_rel_state:
   apply (subst det_wp_use, rule det_wp_getMRs)
    apply (simp add: cur_tcb'_def)
    apply (rule conjI)
-    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs 
+    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs
                           objBits_simps ps_clear_def split: if_split)
    apply (clarsimp simp: valid_ipc_buffer_ptr'_def split: option.splits)
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def projectKOs obj_at'_real_def
@@ -341,8 +341,8 @@ lemma getMRs_rel_state:
   apply (erule conjI)
   apply (cases buffer)
    apply (clarsimp simp: return_def)
-  apply clarsimp 
-  apply (drule mapM_upd_inv [rotated -1]) 
+  apply clarsimp
+  apply (drule mapM_upd_inv [rotated -1])
     prefer 3
     apply fastforce
    prefer 2
@@ -350,7 +350,7 @@ lemma getMRs_rel_state:
   apply (clarsimp simp: loadWordUser_def in_monad stateAssert_def word_size
                   simp del: fun_upd_apply)
   apply (rule conjI)
-   apply (clarsimp simp: pointerInUserData_def typ_at'_def ko_wp_at'_def 
+   apply (clarsimp simp: pointerInUserData_def typ_at'_def ko_wp_at'_def
                          projectKOs ps_clear_def obj_at'_real_def
                   split: if_split)
   apply (erule doMachineOp_state)
@@ -368,7 +368,7 @@ lemma setTCB_cur:
 
 lemma setThreadState_getMRs_rel:
   "\<lbrace>getMRs_rel args buffer and cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer
-           and (\<lambda>_. runnable' st)\<rbrace> 
+           and (\<lambda>_. runnable' st)\<rbrace>
       setThreadState st t \<lbrace>\<lambda>_. getMRs_rel args buffer\<rbrace>"
   apply (rule hoare_gen_asm')
   apply (simp add: setThreadState_runnable_simp)
@@ -387,14 +387,14 @@ lemma setThreadState_getMRs_rel:
   done
 
 lemma setThreadState_sysargs_rel:
-  "\<lbrace>sysargs_rel args buffer and (\<lambda>_. runnable' st)\<rbrace> setThreadState st t \<lbrace>\<lambda>_. sysargs_rel args buffer\<rbrace>" 
+  "\<lbrace>sysargs_rel args buffer and (\<lambda>_. runnable' st)\<rbrace> setThreadState st t \<lbrace>\<lambda>_. sysargs_rel args buffer\<rbrace>"
   apply (cases buffer, simp_all add: sysargs_rel_def)
    apply (rule hoare_pre)
    apply (wp setThreadState_getMRs_rel hoare_valid_ipc_buffer_ptr_typ_at'|simp)+
   done
 
 lemma ccorres_abstract_known:
-  "\<lbrakk> \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' g (g' rv'); ccorres rvr xf P P' hs f (g' val) \<rbrakk> 
+  "\<lbrakk> \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' g (g' rv'); ccorres rvr xf P P' hs f (g' val) \<rbrakk>
      \<Longrightarrow> ccorres rvr xf P (P' \<inter> {s. xf' s = val}) hs f g"
   apply (rule ccorres_guard_imp2)
    apply (rule_tac xf'=xf' in ccorres_abstract)
@@ -567,7 +567,7 @@ lemma archSetIPCBuffer_ccorres:
    apply (ctac add: setRegister_ccorres[simplified dc_def])
   apply (clarsimp simp: ARM_H.tpidrurwRegister_def ARM.tpidrurwRegister_def)
   done
-  
+
 lemma threadSet_ipcbuffer_invs:
   "is_aligned a msg_align_bits \<Longrightarrow>
   \<lbrace>invs' and tcb_at' t\<rbrace> threadSet (tcbIPCBuffer_update (\<lambda>_. a)) t \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -576,7 +576,7 @@ lemma threadSet_ipcbuffer_invs:
 
 lemma invokeTCB_ThreadControl_ccorres:
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
-   (invs' and sch_act_simple 
+   (invs' and sch_act_simple
           and tcb_inv_wf' (ThreadControl target slot faultep mcp priority cRoot vRoot buf)
           and (\<lambda>_. (faultep = None) = (cRoot = None) \<and> (cRoot = None) = (vRoot = None)
                     \<and> (case buf of Some (ptr, Some (cap, slot)) \<Rightarrow> slot \<noteq> 0 | _ \<Rightarrow> True)))
@@ -1048,7 +1048,7 @@ lemma setupReplyMaster_ccorres:
            apply simp
           apply (simp add: true_def mask_def to_bool_def)
          apply simp
-        apply (simp add: cmachine_state_relation_def 
+        apply (simp add: cmachine_state_relation_def
                          typ_heap_simps'
                          carch_state_relation_def carch_globals_def
                          cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
@@ -1281,13 +1281,13 @@ lemma doMachineOp_context:
 
 lemma getObject_context:
   " \<lbrakk>(x, s') \<in> fst (getObject t' s); ko_at' ko t s\<rbrakk>
-  \<Longrightarrow> (if t = t' then tcbContext_update (\<lambda>_. st) x else x, 
+  \<Longrightarrow> (if t = t' then tcbContext_update (\<lambda>_. st) x else x,
       s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>)
       \<in> fst (getObject t' (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>))"
   apply (simp split: if_split)
   apply (rule conjI)
    apply clarsimp
-   apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad 
+   apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad
                          Corres_C.in_magnitude_check' projectKOs objBits_simps)
    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs objBits_simps)
    apply (simp add: magnitudeCheck_def in_monad split: option.splits)
@@ -1306,7 +1306,7 @@ lemma getObject_context:
    apply (drule is_aligned_no_overflow)
    apply simp
   apply clarsimp
-  apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad 
+  apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad
                         Corres_C.in_magnitude_check' projectKOs objBits_simps)
   apply (simp add: magnitudeCheck_def in_monad split: option.splits)
   apply clarsimp
@@ -1314,7 +1314,7 @@ lemma getObject_context:
   apply (clarsimp split: if_split_asm)
    apply (erule_tac x=t in allE)
    apply simp
-   apply (clarsimp simp: obj_at'_real_def projectKOs 
+   apply (clarsimp simp: obj_at'_real_def projectKOs
                          ko_wp_at'_def objBits_simps)
    apply (simp add: ps_clear_def)
    apply (drule_tac x=t in orthD2)
@@ -1325,7 +1325,7 @@ lemma getObject_context:
    apply (erule notE, rule word_diff_ls'(3))
     apply unat_arith
    apply (drule is_aligned_no_overflow)
-   apply simp  
+   apply simp
   apply (erule_tac x=x2 in allE)
   apply (clarsimp simp: ps_clear_def)
   apply (drule_tac x=x2 in orthD2)
@@ -1344,16 +1344,16 @@ lemma threadGet_context:
       t \<noteq> ksCurThread s \<rbrakk> \<Longrightarrow>
    (uc, s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>) \<in>
   fst (threadGet (atcbContextGet o tcbArch) (ksCurThread s) (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>))"
-  apply (clarsimp simp: threadGet_def liftM_def in_monad) 
-  apply (drule (1) getObject_context [where st=st])   
+  apply (clarsimp simp: threadGet_def liftM_def in_monad)
+  apply (drule (1) getObject_context [where st=st])
   apply (rule exI)
   apply (erule conjI)
-  apply (simp split: if_splits) 
+  apply (simp split: if_splits)
 done
 
 
 lemma asUser_context:
-  "\<lbrakk>(x,s) \<in> fst (asUser (ksCurThread s) f s); ko_at' ko t s; \<And>s. \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>_. op = s\<rbrace> ; 
+  "\<lbrakk>(x,s) \<in> fst (asUser (ksCurThread s) f s); ko_at' ko t s; \<And>s. \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>_. op = s\<rbrace> ;
     t \<noteq> ksCurThread s\<rbrakk> \<Longrightarrow>
   (x,s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>) \<in>
   fst (asUser (ksCurThread s) f (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>))"
@@ -1424,7 +1424,7 @@ done
 
 
 lemma getMRs_rel_context:
-  "\<lbrakk>getMRs_rel args buffer s; 
+  "\<lbrakk>getMRs_rel args buffer s;
     (cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer) s;
     ko_at' ko t s ; t \<noteq> ksCurThread s\<rbrakk> \<Longrightarrow>
   getMRs_rel args buffer (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>)"
@@ -1435,7 +1435,7 @@ lemma getMRs_rel_context:
   apply (subst det_wp_use, rule det_wp_getMRs)
    apply (simp add: cur_tcb'_def)
    apply (rule conjI)
-    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs 
+    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs
                           objBits_simps ps_clear_def split: if_split)
    apply (clarsimp simp: valid_ipc_buffer_ptr'_def split: option.splits)
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def projectKOs obj_at'_real_def
@@ -1446,14 +1446,14 @@ lemma getMRs_rel_context:
    apply simp
   apply clarsimp
   apply (drule (1) asUser_context)
-    apply (wp mapM_wp' getRegister_inv)[1] 
+    apply (wp mapM_wp' getRegister_inv)[1]
    apply assumption
   apply (intro exI)
   apply (erule conjI)
   apply (cases buffer)
    apply (clarsimp simp: return_def)
-  apply clarsimp 
-  apply (drule mapM_upd_inv [rotated -1]) 
+  apply clarsimp
+  apply (drule mapM_upd_inv [rotated -1])
     prefer 3
     apply fastforce
    prefer 2
@@ -1461,15 +1461,15 @@ lemma getMRs_rel_context:
   apply (clarsimp simp: loadWordUser_def in_monad stateAssert_def word_size
                   simp del: fun_upd_apply)
   apply (rule conjI)
-   apply (clarsimp simp: pointerInUserData_def typ_at'_def ko_wp_at'_def 
+   apply (clarsimp simp: pointerInUserData_def typ_at'_def ko_wp_at'_def
                          projectKOs ps_clear_def obj_at'_real_def
                   split: if_split)
   apply (erule doMachineOp_context)
 done
 
 lemma asUser_getMRs_rel:
-  "\<lbrace>(\<lambda>s. t \<noteq> ksCurThread s) and getMRs_rel args buffer and cur_tcb' 
-        and case_option \<top> valid_ipc_buffer_ptr' buffer \<rbrace> 
+  "\<lbrace>(\<lambda>s. t \<noteq> ksCurThread s) and getMRs_rel args buffer and cur_tcb'
+        and case_option \<top> valid_ipc_buffer_ptr' buffer \<rbrace>
   asUser t f \<lbrace>\<lambda>_. getMRs_rel args buffer\<rbrace>"
   apply (simp add: asUser_def)
   apply (rule hoare_pre, wp)
@@ -1491,7 +1491,7 @@ done
 
 
 lemma asUser_sysargs_rel:
-  "\<lbrace>\<lambda>s. t \<noteq> ksCurThread s \<and> sysargs_rel args buffer s\<rbrace> 
+  "\<lbrace>\<lambda>s. t \<noteq> ksCurThread s \<and> sysargs_rel args buffer s\<rbrace>
   asUser t f \<lbrace>\<lambda>_. sysargs_rel args buffer\<rbrace>"
   apply (cases buffer, simp_all add: sysargs_rel_def)
    apply (rule hoare_pre)
@@ -2082,10 +2082,10 @@ shows
                          apply clarsimp
                         apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
                         apply (simp add: message_info_to_H_def)
-                        apply (clarsimp simp: n_frameRegisters_def n_msgRegisters_def 
+                        apply (clarsimp simp: n_frameRegisters_def n_msgRegisters_def
                                               n_gpRegisters_def field_simps upto_enum_word
                                               word_less_nat_alt Types_H.msgMaxLength_def
-                                              Types_H.msgLengthBits_def 
+                                              Types_H.msgLengthBits_def
                                     simp del: upt.simps
                                        split: option.split_asm)
                          apply (clarsimp simp: min_def iffD2 [OF mask_eq_iff_w2p] word_size
@@ -2093,7 +2093,7 @@ shows
                                        split: if_split_asm dest!: word_unat.Rep_inverse')
                         apply (clarsimp simp: length_msgRegisters n_msgRegisters_def)
                         apply (clarsimp simp: min_def iffD2 [OF mask_eq_iff_w2p] word_size
-                                              word_less_nat_alt 
+                                              word_less_nat_alt
                                       split: if_split_asm dest!: word_unat.Rep_inverse')
                         apply unat_arith
                        apply simp
@@ -2258,7 +2258,7 @@ lemma decodeReadRegisters_ccorres:
           apply (simp split: if_split)
           apply (rule conjI[rotated], rule impI, rule is_nondet_refinement_refl)
           apply (rule impI)
-          apply (rule is_nondet_refinement_alternative1)         
+          apply (rule is_nondet_refinement_alternative1)
          apply (simp add: performInvocation_def)
          apply (rule ccorres_add_returnOk)
          apply (ctac(no_vcg) add: invokeTCB_ReadRegisters_ccorres)
@@ -2292,7 +2292,7 @@ lemma decodeReadRegisters_ccorres:
 
 lemma decodeWriteRegisters_ccorres:
   "ccorres (intr_and_se_rel \<currency> dc)  (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and sch_act_simple 
+       (invs' and sch_act_simple
               and (\<lambda>s. ksCurThread s = thread) and ct_active' and K (isThreadCap cp)
               and valid_cap' cp and (\<lambda>s. \<forall>x \<in> zobj_refs' cp. ex_nonz_cap_to' x s)
               and sysargs_rel args buffer)
@@ -2303,7 +2303,7 @@ lemma decodeWriteRegisters_ccorres:
      (decodeWriteRegisters args cp
             >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeWriteRegisters_'proc)"
-  apply (cinit' lift: cap_' length___unsigned_long_' buffer_' simp: decodeWriteRegisters_def) 
+  apply (cinit' lift: cap_' length___unsigned_long_' buffer_' simp: decodeWriteRegisters_def)
    apply (rename_tac length' cap')
    apply (rule ccorres_Cond_rhs_Seq)
     apply wpc
@@ -2340,7 +2340,7 @@ lemma decodeWriteRegisters_ccorres:
        apply csymbr
        apply (simp add: liftE_bindE bind_assoc)
        apply (rule ccorres_pre_getCurThread)
-       apply (rule ccorres_cond_seq) 
+       apply (rule ccorres_cond_seq)
        apply (rule_tac R="\<lambda>s. rv = ksCurThread s \<and> isThreadCap cp" and P="\<lambda>s. capTCBPtr cp = rv" in ccorres_cond_both)
          apply clarsimp
          apply (frule rf_sr_ksCurThread)
@@ -2394,7 +2394,7 @@ lemma decodeWriteRegisters_ccorres:
    apply (rule conjI, clarsimp simp: sysargs_rel_n_def n_msgRegisters_def word_less_nat_alt)
    apply (auto simp: genericTake_def cur_tcb'_def linorder_not_less word_le_nat_alt
                      valid_tcb_state'_def
-              elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')[1]   
+              elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')[1]
   apply (intro allI impI)
   apply (rule disjCI2)
   apply (clarsimp simp: genericTake_def linorder_not_less)
@@ -2418,7 +2418,7 @@ lemmas and_neq_0_is_nth = arg_cong [where f=Not, OF and_eq_0_is_nth, simplified]
 lemma decodeCopyRegisters_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc)  (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and sch_act_simple 
+       (invs' and sch_act_simple
               and (\<lambda>s. ksCurThread s = thread) and ct_active'
               and (excaps_in_mem extraCaps o ctes_of)
               and (\<lambda>s. \<forall>v \<in> set extraCaps.
@@ -2479,7 +2479,7 @@ lemma decodeCopyRegisters_ccorres:
                       del: Collect_const cong: if_cong)
           apply (simp add: to_bool_def returnOk_bind Collect_True
                            ccorres_invocationCatch_Inr performInvocation_def
-                      del: Collect_const) 
+                      del: Collect_const)
           apply (ctac add: setThreadState_ccorres)
             apply csymbr
             apply (rule ccorres_Guard_Seq)+
@@ -2570,7 +2570,7 @@ lemma ccap_relation_gen_framesize_to_H:
 lemma isDevice_PageCap_ccap_relation:
   "ccap_relation (capability.ArchObjectCap (arch_capability.PageCap d ref rghts sz data)) cap
   \<Longrightarrow> (generic_frame_cap_get_capFIsDevice_CL (cap_lift cap) \<noteq> 0)  = d"
-   by (clarsimp elim!: ccap_relationE 
+   by (clarsimp elim!: ccap_relationE
                  simp: isPageCap_def generic_frame_cap_get_capFIsDevice_CL_def cap_to_H_def
                        Let_def to_bool_def
                 split: arch_capability.split_asm cap_CL.split_asm if_split_asm)
@@ -2650,7 +2650,7 @@ apply (simp add:checkValidIPCBuffer_def ARM_H.checkValidIPCBuffer_def)
                     split: capability.split arch_capability.split if_split_asm)+
    apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def Cond_if_mem)
    apply (frule ccap_relation_page_is_device)
-   apply (auto simp add: isCap_simps isDeviceCap.simps pageSize_def 
+   apply (auto simp add: isCap_simps isDeviceCap.simps pageSize_def
                   split: if_splits)[1]
   apply (cinit lift: vptr_' cap_')
    apply csymbr
@@ -2826,17 +2826,17 @@ lemma tcb_at_capTCBPtr_CL:
                  dest!: cap_get_tag_to_H)
   apply (frule ctcb_ptr_to_tcb_ptr_mask[OF tcb_aligned'], simp add: mask_def)
   done
-  
+
 lemma prioPropsFromWord_spec:
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. True\<rbrace> Call prioPropsFromWord_'proc 
-  \<lbrace> seL4_PrioProps_lift \<acute>ret__struct_seL4_PrioProps_C = 
+  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. True\<rbrace> Call prioPropsFromWord_'proc
+  \<lbrace> seL4_PrioProps_lift \<acute>ret__struct_seL4_PrioProps_C =
       \<lparr>  mcp_CL =  (\<^bsup>s\<^esup>w >> 8) && mask 8,
         prio_CL = (\<^bsup>s\<^esup>w) && mask 8 \<rparr>  \<rbrace>"
   by vcg (simp add: seL4_PrioProps_lift_def mask_def)
 
 lemma checkPrio_ccorres:
-  "ccorres (syscall_error_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_') 
-      \<top> 
+  "ccorres (syscall_error_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+      \<top>
       (UNIV \<inter> {s. prio_' s = prio}) []
       (checkPrio prio)
       (Call checkPrio_'proc)"
@@ -3638,14 +3638,14 @@ lemma bindNTFN_alignment_junk:
   done
 
 lemma bindNotification_ccorres:
-  "ccorres dc xfdc (invs' and tcb_at' tcb) 
+  "ccorres dc xfdc (invs' and tcb_at' tcb)
     (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr tcb}
           \<inter> {s. ntfnPtr_' s = ntfn_Ptr ntfnptr}) []
    (bindNotification tcb ntfnptr)
    (Call bindNotification_'proc)"
   apply (cinit lift: tcb_' ntfnPtr_' simp: bindNotification_def)
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
-    apply (rule_tac P="invs' and ko_at' rv ntfnptr and tcb_at' tcb" and P'=UNIV 
+    apply (rule_tac P="invs' and ko_at' rv ntfnptr and tcb_at' tcb" and P'=UNIV
                     in ccorres_split_nothrow_novcg)
         apply (rule ccorres_from_vcg[where rrel=dc and xf=xfdc])
         apply (rule allI, rule conseqPre, vcg)
@@ -3666,7 +3666,7 @@ lemma bindNotification_ccorres:
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
                apply (case_tac "ntfnObj rv")
-                 apply ((clarsimp simp: option_to_ctcb_ptr_def  
+                 apply ((clarsimp simp: option_to_ctcb_ptr_def
                                   tcb_ptr_to_ctcb_ptr_def ctcb_offset_def obj_at'_def projectKOs
                                   objBitsKO_def bindNTFN_alignment_junk)+)[4]
              apply (simp add: carch_state_relation_def typ_heap_simps')
@@ -3711,7 +3711,7 @@ lemma invokeTCB_NotificationControl_unbind_ccorres:
     (invs' and tcb_inv_wf' (tcbinvocation.NotificationControl t None))
     (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr t} \<inter> {s. ntfnPtr_' s = NULL}) []
     (invokeTCB (tcbinvocation.NotificationControl t None))
-    (Call invokeTCB_NotificationControl_'proc)" 
+    (Call invokeTCB_NotificationControl_'proc)"
   apply (cinit lift: tcb_' ntfnPtr_')
    apply (clarsimp simp add: option_to_0_def liftE_def)
    apply (ctac(no_vcg) add: unbindNotification_ccorres)
@@ -3784,14 +3784,14 @@ lemma decodeUnbindNotification_ccorres:
   done
 
 lemma nTFN_case_If_ptr:
-  "(case x of capability.NotificationCap a b c d \<Rightarrow> P a d | _ \<Rightarrow> Q) = (if (isNotificationCap x) then P (capNtfnPtr x) (capNtfnCanReceive x) else Q)" 
+  "(case x of capability.NotificationCap a b c d \<Rightarrow> P a d | _ \<Rightarrow> Q) = (if (isNotificationCap x) then P (capNtfnPtr x) (capNtfnCanReceive x) else Q)"
   by (auto simp: isNotificationCap_def split: capability.splits)
 
 lemma decodeBindNotification_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
-              and valid_cap' cp 
+              and valid_cap' cp
               and tcb_at' (capTCBPtr cp) and ex_nonz_cap_to' (capTCBPtr cp)
               and (\<lambda>s. \<forall>rf \<in> zobj_refs' cp. ex_nonz_cap_to' rf s)
               and (\<lambda>s. \<forall>v \<in> set extraCaps. \<forall>y \<in> zobj_refs' (fst v). ex_nonz_cap_to' y s )

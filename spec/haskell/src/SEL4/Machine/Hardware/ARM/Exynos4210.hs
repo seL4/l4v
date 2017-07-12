@@ -20,9 +20,9 @@ import qualified SEL4.Machine.Hardware.MCTInterface as MCT
 import Foreign.Ptr
 import Data.Bits
 
--- Following harded coded address pair are used in getKernelDevices 
+-- Following harded coded address pair are used in getKernelDevices
 -- and will get mapped into kernel address space via mapKernelFrame
-uart = (PAddr 0x13810000, PPtr 0xfff01000) 
+uart = (PAddr 0x13810000, PPtr 0xfff01000)
 mct = (PAddr 0x10050000, PPtr 0xfff02000)
 l2cc = (PAddr 0x10502000, PPtr 0xfff03000)
 gicController = (PAddr 0x10480000, PPtr 0xfff04000)
@@ -77,7 +77,7 @@ maskInterrupt env mask irq = do
 -- the vectored interrupt controller.
 ackInterrupt :: Ptr CallbackData -> IRQ -> IO ()
 ackInterrupt env irq = callGICApi gic (GIC.ackInterrupt irq)
-      where gic = GicState { env = env, 
+      where gic = GicState { env = env,
         gicDistBase = gicDistributorBase,
         gicIFBase = gicInterfaceBase }
 
@@ -88,15 +88,15 @@ getActiveIRQ :: Ptr CallbackData -> IO (Maybe IRQ)
 getActiveIRQ env = do
     runDevicesCallback
     active <- callGICApi gicdata $ GIC.getActiveIRQ
-    case active of 
+    case active of
         Just 0x3FF -> return Nothing
         _ -> return active
-      where gicdata = GicState { env = env, 
+      where gicdata = GicState { env = env,
         gicDistBase = gicDistributorBase,
         gicIFBase = gicInterfaceBase }
 
 
--- FIXME: This is not accurate, need to check MCT Freq 
+-- FIXME: This is not accurate, need to check MCT Freq
 timerFreq :: Word
 timerFreq = 100
 
@@ -105,21 +105,21 @@ timerLimit = 1000000 `div` timerFreq
 
 configureTimer :: Ptr CallbackData -> IO IRQ
 configureTimer env = do
-    MCT.callMCTApi mctdata $ MCT.mctInit 
+    MCT.callMCTApi mctdata $ MCT.mctInit
     return timerIRQ
-      where mctdata = MCT.MCTState { MCT.env = env, 
+      where mctdata = MCT.MCTState { MCT.env = env,
         MCT.mctBase = mctBase }
 
 initIRQController :: Ptr CallbackData -> IO ()
 initIRQController env = callGICApi gicdata $ GIC.initIRQController
-  where gicdata = GicState { env = env, 
+  where gicdata = GicState { env = env,
     gicDistBase = gicDistributorBase,
     gicIFBase = gicInterfaceBase }
 
 resetTimer :: Ptr CallbackData -> IO ()
 resetTimer env = do
     MCT.callMCTApi mctdata $ MCT.resetTimer
-      where mctdata = MCT.MCTState { MCT.env = env, 
+      where mctdata = MCT.MCTState { MCT.env = env,
         MCT.mctBase = mctBase }
 
 

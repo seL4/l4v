@@ -2580,7 +2580,7 @@ proof (simp add: descendants_of'_def subset_iff,
       apply (simp add: cap'_def)
       apply (cases cte)
       apply (case_tac cte')
-      apply (rename_tac cap' node') 
+      apply (rename_tac cap' node')
       apply (clarsimp)
       apply (frule(1) ztc_child)
       apply (case_tac "isUntypedCap cap'")
@@ -4448,7 +4448,7 @@ lemma set_untyped_cap_corres:
   apply (erule impE)
    apply (clarsimp simp: cte_wp_at_caps_of_state split:if_splits)
   apply auto
-  done           
+  done
 
 lemma getCTE_get:
   "\<lbrace>cte_wp_at' P src\<rbrace> getCTE src \<lbrace>\<lambda>rv s. P rv\<rbrace>"
@@ -4505,7 +4505,7 @@ lemma isUntypedCap_simps[simp]:
 lemma cap_relation_masked_as_full:
   "\<lbrakk>cap_relation src_cap src_cap';cap_relation c c'\<rbrakk> \<Longrightarrow>
     cap_relation (masked_as_full src_cap c) (maskedAsFull src_cap' c')"
-  apply (clarsimp simp: masked_as_full_def maskedAsFull_def 
+  apply (clarsimp simp: masked_as_full_def maskedAsFull_def
                  split: if_splits)
   apply (case_tac src_cap; clarsimp)
   by (case_tac c; clarsimp)

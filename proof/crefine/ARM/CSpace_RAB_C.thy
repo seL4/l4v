@@ -16,14 +16,14 @@ context kernel
 begin
 
 abbreviation
-  "rab_xf \<equiv> (liftxf errstate resolveAddressBits_ret_C.status_C 
+  "rab_xf \<equiv> (liftxf errstate resolveAddressBits_ret_C.status_C
               (\<lambda>v. (resolveAddressBits_ret_C.slot_C v, bitsRemaining_C v))
               ret__struct_resolveAddressBits_ret_C_')"
 
 lemma rab_failure_case_ccorres:
   fixes v :: "word32" and ist :: "cstate \<Rightarrow> cstate" and f :: int
   defines "call_part \<equiv> (call ist f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>)
-             (\<lambda>ts s'. Basic (\<lambda>s. 
+             (\<lambda>ts s'. Basic (\<lambda>s.
                   globals_update (current_lookup_fault_'_update
                      (\<lambda>_. ret__struct_lookup_fault_C_' s')) s)))"
   assumes spec: "\<Gamma>\<turnstile> G' call_part {s. v \<noteq> scast EXCEPTION_NONE \<and> lookup_failure_rel e v (errstate s)}"
@@ -33,13 +33,13 @@ lemma rab_failure_case_ccorres:
    (call_part ;;
    \<acute>ret___struct_resolveAddressBits_ret_C :==
 		       resolveAddressBits_ret_C.status_C_update (\<lambda>_. v) \<acute>ret___struct_resolveAddressBits_ret_C;;
-    return_C ret__struct_resolveAddressBits_ret_C_'_update ret___struct_resolveAddressBits_ret_C_')"   
+    return_C ret__struct_resolveAddressBits_ret_C_'_update ret___struct_resolveAddressBits_ret_C_')"
   apply (rule ccorres_rhs_assoc)+
-  apply (rule ccorres_symb_exec_r [where R=\<top>, OF _ spec])   
+  apply (rule ccorres_symb_exec_r [where R=\<top>, OF _ spec])
    apply (rule ccorres_from_vcg_throws)
    apply (simp add: throwError_def return_def)
    apply (rule allI)
-   apply (rule conseqPre)    
+   apply (rule conseqPre)
    apply vcg
    apply (auto simp add: exception_defs errstate_def)[1]
   apply (rule conseqPre [OF mod])
@@ -52,14 +52,14 @@ lemma not_snd_bindE_I1:
   by (erule not_snd_bindI1)
 
 lemma ccorres_remove_bind_returnOk_noguard:
-  assumes ac: "ccorres (f \<currency> r') xf P P' (SKIP # hs) a c"    
-  and     rr: "\<And>v s'. r' v (exvalue (xf s')) \<Longrightarrow> r (g v) (exvalue (xf s'))"  
+  assumes ac: "ccorres (f \<currency> r') xf P P' (SKIP # hs) a c"
+  and     rr: "\<And>v s'. r' v (exvalue (xf s')) \<Longrightarrow> r (g v) (exvalue (xf s'))"
   shows   "ccorres (f \<currency> r) xf P P' (SKIP # hs) (a >>=E (\<lambda>v. returnOk (g v))) c"
   apply (rule ccorresI')
   apply clarsimp
   apply (drule not_snd_bindE_I1)
   apply (erule (4) ccorresE[OF ac])
-  apply (clarsimp simp add: bindE_def returnOk_def NonDetMonad.lift_def bind_def return_def 
+  apply (clarsimp simp add: bindE_def returnOk_def NonDetMonad.lift_def bind_def return_def
     split_def)
   apply (rule bexI [rotated], assumption)
   apply (simp add: throwError_def return_def unif_rrel_def
@@ -115,11 +115,11 @@ declare resolveAddressBits.simps [simp del]
 
 lemma if_then_1_else_0:
   "((if P then 1 else 0) = (0 :: word32)) = (\<not> P)"
-  by (simp del:  word_neq_0_conv) 
+  by (simp del:  word_neq_0_conv)
 
 lemma if_then_0_else_1:
   "((if P then 0 else 1) = (0 :: word32)) = (P)"
-  by (simp del:  word_neq_0_conv) 
+  by (simp del:  word_neq_0_conv)
 
 lemmas if_then_simps = if_then_0_else_1 if_then_1_else_0
 
@@ -157,7 +157,7 @@ lemma wordFromRights_rightsFromWord:
 
 lemma le_32_mask_eq:
   " (bits::word32) \<le> 32 \<Longrightarrow> bits && mask 6 = bits  "
-  apply (rule less_mask_eq) apply simp 
+  apply (rule less_mask_eq) apply simp
   apply (erule le_less_trans) apply simp
 done
 
@@ -195,28 +195,28 @@ lemma ccorres_locateSlotCap_push:
   apply simp
   done
 
-declare Kernel_C.cte_C_size[simp del] 
+declare Kernel_C.cte_C_size[simp del]
 
 lemma resolveAddressBits_ccorres [corres]:
-  shows "ccorres (lookup_failure_rel \<currency> 
+  shows "ccorres (lookup_failure_rel \<currency>
     (\<lambda>(cte, bits) (cte', bits'). cte' = Ptr cte \<and> bits = unat bits' \<and> bits'\<le> 32)) rab_xf
   (valid_pspace' and valid_cap' cap'
         and K (guard' \<le> 32))
   ({s. ccap_relation cap' (nodeCap_' s)} \<inter>
-  {s. capptr_' s = cptr'} \<inter> {s. unat (n_bits_' s) = guard'}) [] 
+  {s. capptr_' s = cptr'} \<inter> {s. unat (n_bits_' s) = guard'}) []
   (resolveAddressBits cap' cptr' guard') (Call resolveAddressBits_'proc)"
   (is "ccorres ?rvr rab_xf ?P ?P' [] ?rab ?rab'")
 proof (cases "isCNodeCap cap'")
   case False
-  
+
   note Collect_const [simp del]
-    
-  show ?thesis using False 
+
+  show ?thesis using False
     apply (cinit' lift: nodeCap_' capptr_' n_bits_')
     apply csymbr+
       -- "Exception stuff"
     apply (rule ccorres_split_throws)
-    apply (simp add: Collect_const cap_get_tag_isCap isCap_simps ccorres_cond_iffs 
+    apply (simp add: Collect_const cap_get_tag_isCap isCap_simps ccorres_cond_iffs
                      resolveAddressBits.simps scast_id)
     apply (rule ccorres_from_vcg_throws [where P = \<top> and P' = UNIV])
     apply (rule allI)
@@ -230,9 +230,9 @@ proof (cases "isCNodeCap cap'")
     done
 next
   case True
-  
+
   note word_neq_0_conv [simp del]
-  
+
   from True show ?thesis
     apply -
     apply (cinit' simp add: whileAnno_def ucast_id)
@@ -241,10 +241,10 @@ next
      apply (rule ccorres_abstract [where xf' = nodeCap_'])
       apply ceqv
      apply (rename_tac "nodeCap")
-     apply (rule ccorres_abstract [where xf' = n_bits_'])    
+     apply (rule ccorres_abstract [where xf' = n_bits_'])
       apply ceqv
      apply (rename_tac "n_bits")
-     apply (rule ccorres_abstract [where xf' = capptr_'])    
+     apply (rule ccorres_abstract [where xf' = capptr_'])
       apply ceqv
      apply (rename_tac "capptr")
      apply (rule_tac P = "capptr = cptr' \<and> ccap_relation cap' nodeCap" in ccorres_gen_asm2)
@@ -254,7 +254,7 @@ next
      apply (simp add: cap_get_tag_isCap split del: if_split)
      apply (thin_tac "ret__unsigned = X" for X)
      apply (rule ccorres_split_throws [where P = "?P"])
-      apply (rule_tac G' = "\<lambda>w_rightsMask. ({s. nodeCap_' s = nodeCap} 
+      apply (rule_tac G' = "\<lambda>w_rightsMask. ({s. nodeCap_' s = nodeCap}
                               \<inter> {s. unat (n_bits_' s) = guard'})"
          in ccorres_abstract  [where xf' = w_rightsMask_'])
        apply (rule ceqv_refl)
@@ -264,7 +264,7 @@ next
        apply (case_tac x)
         apply clarsimp
        apply clarsimp
-      apply (rule_tac I = "{s. cap_get_tag (nodeCap_' s) = scast cap_cnode_cap}" 
+      apply (rule_tac I = "{s. cap_get_tag (nodeCap_' s) = scast cap_cnode_cap}"
          in HoarePartial.While [unfolded whileAnno_def, OF subset_refl])
        apply (vcg strip_guards=true) -- "takes a while"
        apply clarsimp
@@ -276,12 +276,12 @@ next
 
     note conj_refl = conjI [OF refl refl]
     have imp_rem: "\<And>P X. P \<Longrightarrow> P \<and> (P \<longrightarrow> X = X)" by clarsimp
-    have imp_rem': "\<And>P R X. P \<and> R \<Longrightarrow> P \<and> R \<and> (P \<and> R \<longrightarrow> X = X)" by clarsimp    
-    note conj_refl_r = conjI [OF _ refl]    
+    have imp_rem': "\<And>P R X. P \<and> R \<Longrightarrow> P \<and> R \<and> (P \<and> R \<longrightarrow> X = X)" by clarsimp
+    note conj_refl_r = conjI [OF _ refl]
 
     have getSlotCap_in_monad:
-      "\<And>a b p rs s. ((a, b) \<in> fst (getSlotCap p s)) = 
-      (option_map cteCap (ctes_of s p) = Some a 
+      "\<And>a b p rs s. ((a, b) \<in> fst (getSlotCap p s)) =
+      (option_map cteCap (ctes_of s p) = Some a
        \<and> b = s)"
        apply (simp add: getSlotCap_def return_def bind_def objBits_simps split_def)
        apply rule
@@ -354,12 +354,12 @@ next
        done
 
     (* Move outside this context? *)
-    note cap_simps = rxgd cgD [OF refl] 
-      rbD [OF refl, THEN conjunct1] rbD [OF refl, THEN conjunct2] 
+    note cap_simps = rxgd cgD [OF refl]
+      rbD [OF refl, THEN conjunct1] rbD [OF refl, THEN conjunct2]
       gbD [OF refl, THEN conjunct1] gbD [OF refl, THEN conjunct2]
-    
+
     have cond1: "\<And>(nb :: word32) guardBits capGuard.
-       \<lbrakk>unat nb = guard; unat guardBits = capCNodeGuardSize cap; capGuard = capCNodeGuard cap; 
+       \<lbrakk>unat nb = guard; unat guardBits = capCNodeGuardSize cap; capGuard = capCNodeGuard cap;
         guard \<le> 32\<rbrakk>
        \<Longrightarrow> \<forall>s s'.
              (s, s') \<in> rf_sr \<and> True \<and> True \<longrightarrow>
@@ -389,7 +389,7 @@ next
 
     have cond2: "\<And>nb (radixBits :: word32) (guardBits :: word32).
       \<lbrakk> unat nb = guard; unat radixBits = capCNodeBits cap; capCNodeBits cap < 32; capCNodeGuardSize cap < 32;
-      unat guardBits = capCNodeGuardSize cap \<rbrakk> \<Longrightarrow> 
+      unat guardBits = capCNodeGuardSize cap \<rbrakk> \<Longrightarrow>
       \<forall>s s'. (s, s') \<in> rf_sr \<and> True \<and> True \<longrightarrow>
                 (guard < capCNodeBits cap + capCNodeGuardSize cap) = (s' \<in> \<lbrace>nb < radixBits + guardBits\<rbrace>)"
       by (simp add: Collect_const_mem word_less_nat_alt unat_word_ariths)
@@ -402,15 +402,15 @@ next
                 (guard = capCNodeBits cap + capCNodeGuardSize cap) = (s' \<in> \<lbrace>nb \<le> radixBits + guardBits\<rbrace>)"
       by (simp add: Collect_const_mem word_le_nat_alt unat_word_ariths)
 
-    have cond4: 
+    have cond4:
       "\<And>rva nodeCapb ret__unsigned_long.
       \<lbrakk> ccap_relation rva nodeCapb; ret__unsigned_long = cap_get_tag nodeCapb\<rbrakk>
        \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr \<and> True \<and> True \<longrightarrow> (\<not> isCNodeCap rva) = (s' \<in> \<lbrace>ret__unsigned_long \<noteq> scast cap_cnode_cap\<rbrace>)"
       by (simp add: cap_get_tag_isCap Collect_const_mem)
-            
+
     let ?p = "(capCNodePtr cap + 0x10 * ((cptr >> guard - (capCNodeBits cap + capCNodeGuardSize cap)) &&
                                             mask (capCNodeBits cap)))"
-    
+
     have n_bits_guard: "\<And>nb :: word32. \<lbrakk> guard \<le> 32; unat nb = guard \<rbrakk> \<Longrightarrow> unat (nb && mask 6) = guard"
       apply (subgoal_tac "nb \<le> 32")
       apply (clarsimp)
@@ -468,9 +468,9 @@ next
       apply (unfold case_into_if)
       apply (simp add: Let_def ccorres_cond_iffs split del: if_split)
       apply (rule ccorres_rhs_assoc)+
-      apply (cinitlift nodeCap_' n_bits_')      
+      apply (cinitlift nodeCap_' n_bits_')
       apply (erule_tac t = nodeCapa in ssubst)
-      apply (rule ccorres_guard_imp2) 
+      apply (rule ccorres_guard_imp2)
        apply (rule ccorres_gen_asm [where P="0 < capCNodeBits cap \<or> 0 < capCNodeGuardSize cap"])
        apply (rule ccorres_assertE)
        apply (csymbr | rule iffD2 [OF ccorres_seq_skip])+
@@ -520,8 +520,8 @@ next
                 apply (rule ccorres_return_CE, simp_all)[1]
                apply (frule_tac v1 = rva in iffD1 [OF isCap_simps(4)])
                apply (elim exE)
-               apply (rule_tac 
-                    Q = "\<lambda>s. option_map cteCap (ctes_of s ?p) = Some rva" 
+               apply (rule_tac
+                    Q = "\<lambda>s. option_map cteCap (ctes_of s ?p) = Some rva"
                     and F = "\<lambda>s s'.
                     (option_map cteCap (ctes_of s ?p) = Some rva
                     \<and> (ccap_relation rva (h_val (hrs_mem (t_hrs_' (globals s'))) (Ptr &(Ptr ?p :: cte_C ptr\<rightarrow>[''cap_C'']) :: cap_C ptr))))"
@@ -562,12 +562,12 @@ next
         apply (clarsimp simp: isCap_simps valid_cap_simps' cte_level_bits_def
                               real_cte_at')
        apply (clarsimp simp: isCap_simps valid_cap'_def)
-       -- "C guard" 
+       -- "C guard"
       apply (frule (1) cgD [OF refl], frule (1) rbD [OF refl], frule (1) gbD [OF refl])
-      apply (simp add: Collect_const_mem cap_get_tag_isCap exception_defs lookup_fault_lifts 
+      apply (simp add: Collect_const_mem cap_get_tag_isCap exception_defs lookup_fault_lifts
         n_bits_guard mask6_eqs word_le_nat_alt word_less_nat_alt gm)
       apply (elim conjE)
-      apply (frule rf_sr_cte_at_valid [where p = 
+      apply (frule rf_sr_cte_at_valid [where p =
         "cte_Ptr (capCNodePtr cap + 0x10 * ((cptr >> guard - (capCNodeBits cap + capCNodeGuardSize cap)) && mask (capCNodeBits cap)))", rotated])
        apply simp
        apply (erule (1) valid_cap_cte_at')
@@ -610,7 +610,7 @@ lemma rightsFromWord_spec:
   apply vcg
   apply (simp add: seL4_CapRights_lift_def nth_shiftr mask_shift_simps nth_shiftr
     cap_rights_from_word_canon_def from_bool_def word_and_1 eval_nat_numeral
-    word_sless_def word_sle_def)  
+    word_sless_def word_sle_def)
   done
 
 
@@ -639,7 +639,7 @@ lemma tcb_aligned':
   apply (simp add: objBits_simps)
   done
 
-(* FIXME: FROM ArchAcc.thy *)  
+(* FIXME: FROM ArchAcc.thy *)
 lemma add_mask_lower_bits:
   "\<lbrakk> is_aligned (x :: 'a :: len word) n; \<forall>n' \<ge> n. n' < len_of TYPE('a) \<longrightarrow> \<not> p !! n' \<rbrakk> \<Longrightarrow> x + p && ~~mask n = x"
   apply (subst word_plus_and_or_coroll)
@@ -660,7 +660,7 @@ lemma tcb_ptr_to_ctcb_ptr_mask [simp]:
   shows   "ptr_val (tcb_ptr_to_ctcb_ptr thread) && 0xFFFFFE00 = thread"
 proof -
   have "thread + 2 ^ 8 && ~~ mask 9 = thread"
-  proof (rule add_mask_lower_bits)   
+  proof (rule add_mask_lower_bits)
     show "is_aligned thread 9" using tcbat by (rule tcb_aligned')
     show "\<forall>n'\<ge>9. n' < len_of TYPE(32) \<longrightarrow> \<not> ((2 :: word32) ^ 8) !! n'"  by simp
   qed
@@ -683,8 +683,8 @@ where
 lemma lookupSlotForThread_ccorres':
   "ccorres (lookup_failure_rel \<currency> lookupSlot_raw_rel) lookupSlot_raw_xf
   (valid_pspace' and tcb_at' thread)
-  ({s. capptr_' s = cptr} \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}) [] 
-  (lookupSlotForThread thread cptr) (Call lookupSlot_'proc)"  
+  ({s. capptr_' s = cptr} \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}) []
+  (lookupSlotForThread thread cptr) (Call lookupSlot_'proc)"
   apply (cinit lift: capptr_' thread_'
            simp add: getThreadCSpaceRoot_def locateSlot_conv
                      returnOk_liftE [symmetric] split_def)
@@ -710,10 +710,10 @@ lemma lookupSlotForThread_ccorres':
 lemma lookupSlotForThread_ccorres[corres]:
   "ccorres (lookup_failure_rel \<currency> lookupSlot_raw_rel) lookupSlot_raw_xf
   (invs' and tcb_at' thread)
-  (UNIV \<inter> {s. capptr_' s = cptr} \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}) [] 
+  (UNIV \<inter> {s. capptr_' s = cptr} \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}) []
   (lookupSlotForThread thread cptr) (Call lookupSlot_'proc)"
   apply (rule ccorres_guard_imp2, rule lookupSlotForThread_ccorres')
-  apply fastforce  
+  apply fastforce
   done
 
 end

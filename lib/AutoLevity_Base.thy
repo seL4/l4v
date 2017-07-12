@@ -6,9 +6,9 @@
  * See "LICENSE_BSD2.txt" for details.
  *
  * @TAG(NICTA_BSD)
- * 
+ *
  * Base of autolevity.
- * Needs to be installed to track command start/end locations 
+ * Needs to be installed to track command start/end locations
  *)
 
 theory AutoLevity_Base
@@ -29,23 +29,23 @@ val is_simp_installed = is_some (
 
 ML\<open>
 (* Describing a ordering on Position.T. Optionally we compare absolute document position, or
-   just line numbers. Somewhat complicated by the fact that jEdit positions don't have line or 
+   just line numbers. Somewhat complicated by the fact that jEdit positions don't have line or
    file identifiers. *)
 
 fun pos_ord use_offset (pos1, pos2) =
   let
     fun get_offset pos = if use_offset then Position.offset_of pos else SOME 0;
 
-    fun get_props pos = 
+    fun get_props pos =
       (SOME (Position.file_of pos |> the,
             (Position.line_of pos |> the,
              get_offset pos |> the)), NONE)
       handle Option => (NONE, Position.parse_id pos)
-   
+
     val props1 = get_props pos1;
     val props2 = get_props pos2;
 
-  in prod_ord 
+  in prod_ord
       (option_ord (prod_ord string_ord (prod_ord int_ord int_ord)))
       (option_ord (int_ord))
       (props1, props2) end
@@ -82,7 +82,7 @@ val setup_command_hook: {trace_apply : bool} -> theory -> theory;
 val pre_apply_hook: Proof.context -> Method.text -> thm -> thm;
 val post_apply_hook: Proof.context -> Method.text -> thm -> thm -> thm;
 
-  
+
 end;
 
 
@@ -91,7 +91,7 @@ end;
 structure AutoLevity_Base : AUTOLEVITY_BASE =
 struct
 
-val applys = Synchronized.var "applys" 
+val applys = Synchronized.var "applys"
   (Symtab.empty : (((string * string list) list) Postab_strict.table) Symtab.table)
 
 fun get_applys () = Synchronized.value applys;
@@ -99,7 +99,7 @@ fun get_applys () = Synchronized.value applys;
 type extras = {levity_tag : string option, subgoals : int}
 
 
-val transactions = Synchronized.var "hook" 
+val transactions = Synchronized.var "hook"
   (Symtab.empty : ((string * extras) Postab_strict.table * ((string list) Postab_strict.table)) Symtab.table);
 
 fun get_transactions () =
@@ -109,7 +109,7 @@ fun get_transactions () =
 structure Data = Theory_Data
   (
     type T = (bool *
-        string option * 
+        string option *
        (Proof.context -> thm -> bool) Symtab.table); (* command_hook * levity tag * attribute tests *)
     val empty = (false, NONE, Symtab.empty);
     val extend = I;
@@ -125,7 +125,7 @@ val get_levity_tag = #2 o Data.get
 fun update_attrib_tab f = Data.map (@{apply 3(3)} f);
 
 
-fun add_attribute_test nm f = 
+fun add_attribute_test nm f =
 let
   val f' = (fn ctxt => fn thm => the_default false (try (f ctxt) thm))
 in update_attrib_tab (Symtab.update_new (nm,f')) end;
@@ -145,7 +145,7 @@ in if is_some idx andalso base <> "" then SOME (base, the idx) else NONE end
 
 fun get_ref_from_nm nm = Option.join (try get_ref_from_nm' nm);
 
-fun maybe_nth l = try (curry List.nth l) 
+fun maybe_nth l = try (curry List.nth l)
 
 
 
@@ -161,29 +161,29 @@ let
       val entry = try (Facts.retrieve (Context.Proof ctxt) facts) (name', Position.none) |> the;
       val thm = maybe_nth (#thms entry) (idx - 1) |> the;
     in SOME thm end handle Option => NONE;
-  
+
   fun non_idx_result () =
     let
       val entry = try (Facts.retrieve (Context.Proof ctxt) facts) (xnm, Position.none) |> the;
       val thm = try the_single (#thms entry) |> the;
-    in SOME thm end handle Option => NONE; 
+    in SOME thm end handle Option => NONE;
 
-in 
-  case idx_result of 
-    SOME thm => SOME thm 
-  | NONE => non_idx_result () 
+in
+  case idx_result of
+    SOME thm => SOME thm
+  | NONE => non_idx_result ()
 end
 
 (* Local facts (from locales) aren't marked in proof bodies, we only
    see their external variants. We guess the local name from the external one
-   (i.e. "Theory_Name.Locale_Name.foo" -> "foo") 
-  
+   (i.e. "Theory_Name.Locale_Name.foo" -> "foo")
+
    This is needed to perform localized attribute tests (e.g.. is this locale assumption marked as simp?) *)
 
-(* TODO: extend_locale breaks this naming scheme by adding the "chunk" qualifier. This can 
+(* TODO: extend_locale breaks this naming scheme by adding the "chunk" qualifier. This can
    probably just be handled as a special case *)
 
-fun most_local_fact_of ctxt xnm = 
+fun most_local_fact_of ctxt xnm =
 let
   val local_name = try (fn xnm => Long_Name.explode xnm |> tl |> tl |> Long_Name.implode) xnm |> the;
 in SOME (fact_from_derivation ctxt local_name |> the) end handle Option =>
@@ -200,8 +200,8 @@ fun thms_of (PBody {thms,...}) = thms
 fun proof_body_descend' f get_fact (ident,(nm,_ , body)) deptab =
 (if not (f nm) then
   (Inttab.update_new (ident, SOME (nm, get_fact nm |> the)) deptab handle Inttab.DUP _ => deptab)
-else raise Option) handle Option => 
-  ((fold (proof_body_descend' f get_fact) (thms_of (Future.join body)) 
+else raise Option) handle Option =>
+  ((fold (proof_body_descend' f get_fact) (thms_of (Future.join body))
     (Inttab.update_new (ident, NONE) deptab)) handle Inttab.DUP _ => deptab)
 
 
@@ -252,29 +252,29 @@ fun get_pos_of_text text = case get_pos_of_text' text of
   SOME pos => if is_some (Position.line_of pos) then SOME pos else NONE
   | NONE => NONE
 
-(* Clear the theorem dependencies using the apply_trace oracle, then 
+(* Clear the theorem dependencies using the apply_trace oracle, then
    pick up the new ones after the apply step is finished. *)
 
-fun pre_apply_hook ctxt text thm = 
+fun pre_apply_hook ctxt text thm =
   case get_pos_of_text text of NONE => thm
-  | SOME _ => 
-      if Apply_Trace.can_clear (Proof_Context.theory_of ctxt) 
+  | SOME _ =>
+      if Apply_Trace.can_clear (Proof_Context.theory_of ctxt)
       then Apply_Trace.clear_deps thm
       else thm;
 
 
-val post_apply_hook = (fn ctxt => fn text => fn pre_thm => fn post_thm => 
+val post_apply_hook = (fn ctxt => fn text => fn pre_thm => fn post_thm =>
   case get_pos_of_text text of NONE => post_thm
   | SOME pos => if Apply_Trace.can_clear (Proof_Context.theory_of ctxt) then
     (let
       val thy_nm = Context.theory_name (Thm.theory_of_thm post_thm);
 
       val used_facts = the_default [] (try (used_facts_attribs ctxt) post_thm);
-      val _ =        
-        Synchronized.change applys 
-         (Symtab.map_default 
+      val _ =
+        Synchronized.change applys
+         (Symtab.map_default
            (thy_nm, Postab_strict.empty) (Postab_strict.update (pos, used_facts)))
-   
+
       (* We want to keep our old theorem dependencies around, so we put them back into
          the goal thm when we are done *)
 
@@ -287,11 +287,11 @@ val post_apply_hook = (fn ctxt => fn text => fn pre_thm => fn post_thm =>
 (* The Proof hooks need to be patched in to track apply dependencies, but the rest of levity
    can work without them. Here we graciously fail if the hook interface is missing *)
 
-fun setup_pre_apply_hook () = 
+fun setup_pre_apply_hook () =
  try (ML_Context.eval ML_Compiler.flags @{here})
   (ML_Lex.read_pos @{here} "Proof.set_pre_apply_hook AutoLevity_Base.pre_apply_hook");
 
-fun setup_post_apply_hook () = 
+fun setup_post_apply_hook () =
  try (ML_Context.eval ML_Compiler.flags @{here})
   (ML_Lex.read_pos @{here} "Proof.set_post_apply_hook AutoLevity_Base.post_apply_hook");
 
@@ -301,7 +301,7 @@ fun setup_post_apply_hook () =
 val _ =
   Outer_Syntax.command @{command_keyword levity_tag} "tag for levity"
     (Parse.string >> (fn str =>
-      Toplevel.local_theory NONE NONE 
+      Toplevel.local_theory NONE NONE
         (Local_Theory.raw_theory (set_levity_tag (SOME str)))))
 
 fun get_subgoals' state =
@@ -312,9 +312,9 @@ in Thm.nprems_of goal end
 
 fun get_subgoals state = the_default ~1 (try get_subgoals' state);
 
-fun setup_toplevel_command_hook () = 
+fun setup_toplevel_command_hook () =
 Toplevel.add_hook (fn transition => fn start_state => fn end_state =>
-  let val name = Toplevel.name_of transition 
+  let val name = Toplevel.name_of transition
       val pos = Toplevel.pos_of transition;
       val thy = Toplevel.theory_of start_state;
       val thynm = Context.theory_name thy;
@@ -324,22 +324,22 @@ Toplevel.add_hook (fn transition => fn start_state => fn end_state =>
   (let
 
     val levity_input = if name = "levity_tag" then get_levity_tag end_thy else NONE;
- 
+
     val subgoals = get_subgoals start_state;
 
     val entry = {levity_tag = levity_input, subgoals = subgoals}
-                                                 
-    val _ = 
-      Synchronized.change transactions 
-              (Symtab.map_default (thynm, (Postab_strict.empty, Postab_strict.empty)) 
+
+    val _ =
+      Synchronized.change transactions
+              (Symtab.map_default (thynm, (Postab_strict.empty, Postab_strict.empty))
                 (apfst (Postab_strict.update (pos, (name, entry)))))
   in () end) handle e => if Exn.is_interrupt e then Exn.reraise e else
-    Synchronized.change transactions 
-              (Symtab.map_default (thynm, (Postab_strict.empty, Postab_strict.empty)) 
+    Synchronized.change transactions
+              (Symtab.map_default (thynm, (Postab_strict.empty, Postab_strict.empty))
                 (apsnd (Postab_strict.map_default (pos, []) (cons (@{make_string} e)))))
   end)
 
-fun setup_attrib_tests theory = if not (is_simp_installed) then 
+fun setup_attrib_tests theory = if not (is_simp_installed) then
 error "Missing interface into Raw_Simplifier. Can't trace apply statements with unpatched isabelle."
 else
 let
@@ -348,9 +348,9 @@ let
       val simpset = Raw_Simplifier.internal_ss (Raw_Simplifier.simpset_of ctxt);
       val (congs, _) = #congs simpset;
       val cong_thm = #mk_cong (#mk_rews simpset) ctxt thm;
-    in                                           
+    in
       case (find_first (fn (_, thm') => Thm.eq_thm_prop (cong_thm, thm')) congs) of
-        SOME (nm, _) => 
+        SOME (nm, _) =>
           Thm.eq_thm_prop (find_first (fn (nm', _) => nm' = nm) congs |> the |> snd, cong_thm)
       | NONE => false
     end
@@ -372,13 +372,13 @@ in
 |> add_attribute_test "dest!" (fn ctxt => fn thm => is_classical #safeEs ctxt (Tactic.make_elim thm))
 end
 
-  
-fun setup_command_hook {trace_apply, ...} theory = 
+
+fun setup_command_hook {trace_apply, ...} theory =
 if get_command_hook_flag theory then theory else
 let
   val _ = if trace_apply then
-    (the (setup_pre_apply_hook ()); 
-     the (setup_post_apply_hook ())) 
+    (the (setup_pre_apply_hook ());
+     the (setup_post_apply_hook ()))
        handle Option => error "Missing interface into Proof module. Can't trace apply statements with unpatched isabelle"
     else ()
 
@@ -389,7 +389,7 @@ let
     |> set_command_hook_flag
 
 in theory' end;
-  
+
 
 end
 \<close>

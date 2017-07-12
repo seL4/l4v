@@ -18,11 +18,11 @@ begin
 lemma sep_curry': "\<lbrakk>(P \<and>* F) s; \<And>s. (Q \<and>* P \<and>* F) s \<Longrightarrow> R s\<rbrakk> \<Longrightarrow> (Q \<longrightarrow>* R) s"
   by (metis (full_types) sep.mult_commute sep_curry)
 
-lemma sep_conj_sep_impl_safe: 
-  "(P \<longrightarrow>* P') s \<Longrightarrow> (\<And>s. ((P \<longrightarrow>* P') \<and>* Q) s \<Longrightarrow> (Q') s) \<Longrightarrow> (Q \<longrightarrow>* Q') s" 
+lemma sep_conj_sep_impl_safe:
+  "(P \<longrightarrow>* P') s \<Longrightarrow> (\<And>s. ((P \<longrightarrow>* P') \<and>* Q) s \<Longrightarrow> (Q') s) \<Longrightarrow> (Q \<longrightarrow>* Q') s"
   by (rule sep_curry)
 
-lemma  sep_conj_sep_impl_safe': "P s \<Longrightarrow> (\<And>s. (P \<and>* Q) s \<Longrightarrow> (P \<and>* R) s) \<Longrightarrow> (Q \<longrightarrow>* P \<and>* R) s" 
+lemma  sep_conj_sep_impl_safe': "P s \<Longrightarrow> (\<And>s. (P \<and>* Q) s \<Longrightarrow> (P \<and>* R) s) \<Longrightarrow> (Q \<longrightarrow>* P \<and>* R) s"
   by (rule sep_curry)
 
 lemma sep_wand_lens_simple: "(\<And>s. T s = (Q \<and>* R) s) \<Longrightarrow> (P \<longrightarrow>* T) s \<Longrightarrow> (P \<longrightarrow>* Q \<and>* R) s"
@@ -30,8 +30,8 @@ lemma sep_wand_lens_simple: "(\<And>s. T s = (Q \<and>* R) s) \<Longrightarrow> 
 
 schematic_goal schem_impAny: " (?C \<and>* B) s \<Longrightarrow> A s" by (erule sep_mp)
 
-ML {* 
-  fun sep_cancel_tactic ctxt concl  = 
+ML {*
+  fun sep_cancel_tactic ctxt concl  =
     let val thms = rev (SepCancel_Rules.get ctxt)
         val tac  = assume_tac ctxt ORELSE'
                    eresolve_tac ctxt [@{thm sep_mp}, @{thm sep_conj_empty}, @{thm sep_empty_conj}] ORELSE'
@@ -49,20 +49,20 @@ ML {*
   fun sep_cancel_tactic' ctxt concl =
     let
       val sep_cancel = sep_cancel_tactic ctxt
-    in 
+    in
       (sep_flatten ctxt THEN_ALL_NEW sep_cancel concl) ORELSE' sep_cancel concl
     end
 
   fun sep_cancel_method (concl,_) ctxt = SIMPLE_METHOD' (sep_cancel_tactic' ctxt concl)
-  
+
   val sep_cancel_syntax =
     Method.sections [Args.add -- Args.colon >> K (Method.modifier SepCancel_Rules.add @{here})];
-  
+
   val sep_cancel_syntax' =
-    Scan.lift (Args.mode "concl") -- sep_cancel_syntax  
+    Scan.lift (Args.mode "concl") -- sep_cancel_syntax
 *}
 
-method_setup sep_cancel = 
+method_setup sep_cancel =
   {* sep_cancel_syntax' >> sep_cancel_method *}  {* Simple elimination of conjuncts *}
 
 end

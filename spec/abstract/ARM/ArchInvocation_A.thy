@@ -53,18 +53,18 @@ datatype page_directory_invocation =
                        (pd_flush_pd: obj_ref) (pd_flush_asid: asid)
   | PageDirectoryNothing
 
-datatype page_table_invocation = 
+datatype page_table_invocation =
     PageTableMap cap cslot_ptr pde obj_ref
   | PageTableUnmap cap cslot_ptr
 
-datatype asid_control_invocation = 
+datatype asid_control_invocation =
     MakePool obj_ref cslot_ptr cslot_ptr asid
 
-datatype asid_pool_invocation = 
+datatype asid_pool_invocation =
     Assign asid obj_ref cslot_ptr
 
 datatype page_invocation
-     = PageMap 
+     = PageMap
          (page_map_asid: asid)
          (page_map_cap: cap)
          (page_map_ct_slot: cslot_ptr)
@@ -72,7 +72,7 @@ datatype page_invocation
      | PageRemap
          (page_remap_asid: asid)
          (page_remap_entries: "pte \<times> (obj_ref list) + pde \<times> (obj_ref list)")
-     | PageUnmap 
+     | PageUnmap
          (page_unmap_cap: arch_cap)
          (page_unmap_cap_slot: cslot_ptr)
      | PageFlush

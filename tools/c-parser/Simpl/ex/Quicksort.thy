@@ -7,7 +7,7 @@
 (*  Title:      Quicksort.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2004-2008 Norbert Schirmer 
+Copyright (C) 2004-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -32,7 +32,7 @@ theory Quicksort
 imports "../Vcg" "../HeapList" "~~/src/HOL/Library/Permutation"
 begin
 
-record globals_heap = 
+record globals_heap =
   next_' :: "ref \<Rightarrow> ref"
   cont_' :: "ref \<Rightarrow> nat"
 
@@ -45,20 +45,20 @@ record 'g vars = "'g state" +
   tl_'   :: "ref"
 
 procedures
-  append(p,q|p) = 
+  append(p,q|p) =
     "IF \<acute>p=Null THEN \<acute>p :== \<acute>q ELSE \<acute>p\<rightarrow>\<acute>next :== CALL append(\<acute>p\<rightarrow>\<acute>next,\<acute>q) FI"
 
-  append_spec: 
-   "\<forall>\<sigma> Ps Qs. 
+  append_spec:
+   "\<forall>\<sigma> Ps Qs.
      \<Gamma>\<turnstile> \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps \<and>  List \<acute>q \<acute>next Qs \<and> set Ps \<inter> set Qs = {}\<rbrace>
-           \<acute>p :== PROC append(\<acute>p,\<acute>q) 
+           \<acute>p :== PROC append(\<acute>p,\<acute>q)
          \<lbrace>List \<acute>p \<acute>next (Ps@Qs) \<and> (\<forall>x. x\<notin>set Ps \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
 
   append_modifies:
    "\<forall>\<sigma>. \<Gamma>\<turnstile> {\<sigma>} \<acute>p :== PROC append(\<acute>p,\<acute>q){t. t may_only_modify_globals \<sigma> in [next]}"
 
 
-lemma (in append_impl) append_modifies: 
+lemma (in append_impl) append_modifies:
   shows
    "\<forall>\<sigma>. \<Gamma>\<turnstile> {\<sigma>} \<acute>p :== PROC append(\<acute>p,\<acute>q){t. t may_only_modify_globals \<sigma> in [next]}"
   apply (hoare_rule HoarePartial.ProcRec1)
@@ -66,10 +66,10 @@ lemma (in append_impl) append_modifies:
   done
 
 
-lemma (in append_impl) append_spec: 
-  shows "\<forall>\<sigma> Ps Qs. \<Gamma>\<turnstile> 
+lemma (in append_impl) append_spec:
+  shows "\<forall>\<sigma> Ps Qs. \<Gamma>\<turnstile>
             \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps \<and>  List \<acute>q \<acute>next Qs \<and> set Ps \<inter> set Qs = {}\<rbrace>
-                \<acute>p :== PROC append(\<acute>p,\<acute>q) 
+                \<acute>p :== PROC append(\<acute>p,\<acute>q)
             \<lbrace>List \<acute>p \<acute>next (Ps@Qs) \<and> (\<forall>x. x\<notin>set Ps \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
   apply (hoare_rule HoarePartial.ProcRec1)
   apply vcg
@@ -81,9 +81,9 @@ where
 "sorted le [] = True" |
 "sorted le (x#xs) = ((\<forall>y\<in>set xs. le x y) \<and> sorted le xs)"
 
-lemma perm_set_eq: 
+lemma perm_set_eq:
   assumes perm: "xs <~~> ys"
-  shows "set xs = set ys" 
+  shows "set xs = set ys"
   using perm
   by induct auto
 
@@ -95,14 +95,14 @@ proof -
   have app_Cons: "xs@y#ys <~~> y#xs@ys"
     by (rule perm_sym, rule perm_append_Cons)
   show ?thesis
-  proof 
+  proof
     assume "xs@y#ys <~~> zs"
-    with app_Cons [THEN perm_sym] 
+    with app_Cons [THEN perm_sym]
     show "y#xs@ys <~~> zs"
       by (rule perm.trans)
   next
     assume " y#xs@ys <~~> zs"
-    with app_Cons 
+    with app_Cons
     show "xs@y#ys <~~> zs"
       by (rule perm.trans)
   qed
@@ -116,7 +116,7 @@ proof -
     by (iprover intro: perm_sym)
 qed
 
-lemmas perm_app_Cons_simps = perm_app_Cons_eq1 [THEN sym] 
+lemmas perm_app_Cons_simps = perm_app_Cons_eq1 [THEN sym]
                              perm_app_Cons_eq2 [THEN sym]
 
 lemma sorted_append[simp]:
@@ -124,13 +124,13 @@ lemma sorted_append[simp]:
                        (\<forall>x \<in> set xs. \<forall>y \<in> set ys. le x y))"
 by (induct xs, auto)
 
-lemma perm_append_blocks: 
-  assumes ws_ys: "ws <~~> ys" 
+lemma perm_append_blocks:
+  assumes ws_ys: "ws <~~> ys"
   assumes xs_zs: "xs <~~> zs"
-  shows "ws@xs <~~> ys@zs" 
+  shows "ws@xs <~~> ys@zs"
 using ws_ys
 proof (induct)
-  case (swap l x y) 
+  case (swap l x y)
   from xs_zs
   show "(l # x # y) @ xs <~~> (x # l # y) @ zs"
   by (induct) auto
@@ -139,12 +139,12 @@ qed (insert xs_zs , auto)
 procedures quickSort(p|p) =
  "IF \<acute>p=Null THEN SKIP
   ELSE \<acute>tl :== \<acute>p\<rightarrow>\<acute>next;;
-       \<acute>le :== Null;; 
+       \<acute>le :== Null;;
        \<acute>gt :== Null;;
        WHILE \<acute>tl\<noteq>Null DO
          \<acute>hd :== \<acute>tl;;
          \<acute>tl :== \<acute>tl\<rightarrow>\<acute>next;;
-         IF \<acute>hd\<rightarrow>\<acute>cont \<le> \<acute>p\<rightarrow>\<acute>cont 
+         IF \<acute>hd\<rightarrow>\<acute>cont \<le> \<acute>p\<rightarrow>\<acute>cont
          THEN \<acute>hd\<rightarrow>\<acute>next :== \<acute>le;;
               \<acute>le :== \<acute>hd
          ELSE \<acute>hd\<rightarrow>\<acute>next :== \<acute>gt;;
@@ -160,7 +160,7 @@ procedures quickSort(p|p) =
 
   quickSort_spec:
   "\<forall>\<sigma> Ps. \<Gamma>\<turnstile> \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps\<rbrace> \<acute>p :== PROC quickSort(\<acute>p)
-       \<lbrace>(\<exists>sortedPs. List \<acute>p \<acute>next sortedPs \<and> 
+       \<lbrace>(\<exists>sortedPs. List \<acute>p \<acute>next sortedPs \<and>
         sorted (op \<le>) (map \<^bsup>\<sigma>\<^esup>cont sortedPs) \<and>
         Ps <~~> sortedPs) \<and>
         (\<forall>x. x\<notin>set Ps \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
@@ -178,21 +178,21 @@ done
 
 lemma (in quickSort_impl) quickSort_spec:
 shows
-  "\<forall>\<sigma> Ps. \<Gamma>\<turnstile> \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps\<rbrace> 
+  "\<forall>\<sigma> Ps. \<Gamma>\<turnstile> \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps\<rbrace>
                   \<acute>p :== PROC quickSort(\<acute>p)
-                \<lbrace>(\<exists>sortedPs. List \<acute>p \<acute>next sortedPs \<and> 
+                \<lbrace>(\<exists>sortedPs. List \<acute>p \<acute>next sortedPs \<and>
                  sorted (op \<le>) (map \<^bsup>\<sigma>\<^esup>cont sortedPs) \<and>
                  Ps <~~> sortedPs) \<and>
                  (\<forall>x. x\<notin>set Ps \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
 apply (hoare_rule HoarePartial.ProcRec1)
-apply (hoare_rule anno = 
+apply (hoare_rule anno =
  "IF \<acute>p=Null THEN SKIP
   ELSE \<acute>tl :== \<acute>p\<rightarrow>\<acute>next;;
-       \<acute>le :== Null;; 
+       \<acute>le :== Null;;
        \<acute>gt :== Null;;
-       WHILE \<acute>tl\<noteq>Null 
-       INV \<lbrace> (\<exists>les grs tls. List \<acute>le \<acute>next les \<and> List \<acute>gt \<acute>next grs \<and> 
-               List \<acute>tl \<acute>next tls \<and> 
+       WHILE \<acute>tl\<noteq>Null
+       INV \<lbrace> (\<exists>les grs tls. List \<acute>le \<acute>next les \<and> List \<acute>gt \<acute>next grs \<and>
+               List \<acute>tl \<acute>next tls \<and>
                Ps <~~> \<acute>p#tls@les@grs \<and>
                distinct(\<acute>p#tls@les@grs) \<and>
                (\<forall>x\<in>set les. x\<rightarrow>\<acute>cont \<le> \<acute>p\<rightarrow>\<acute>cont) \<and>
@@ -204,7 +204,7 @@ apply (hoare_rule anno =
        DO
          \<acute>hd :== \<acute>tl;;
          \<acute>tl :== \<acute>tl\<rightarrow>\<acute>next;;
-         IF \<acute>hd\<rightarrow>\<acute>cont \<le> \<acute>p\<rightarrow>\<acute>cont 
+         IF \<acute>hd\<rightarrow>\<acute>cont \<le> \<acute>p\<rightarrow>\<acute>cont
          THEN \<acute>hd\<rightarrow>\<acute>next :== \<acute>le;;
               \<acute>le :== \<acute>hd
          ELSE \<acute>hd\<rightarrow>\<acute>next :== \<acute>gt;;
@@ -246,7 +246,7 @@ apply   simp
 apply   (simp add: perm_app_Cons_simps)
 apply  (simp add: perm_set_eq)
 apply clarsimp
-apply (rule_tac ?x=grs in exI) 
+apply (rule_tac ?x=grs in exI)
 apply (rule conjI)
 apply  (erule heap_eq_ListI1)
 apply  clarify

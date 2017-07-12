@@ -96,7 +96,7 @@ let
   val ctxt = Proof_Context.init_global thy;
   val ss = Simplifier.make_simproc ctxt ("simp_strategy_" ^ fst (dest_Const name))
     {lhss = [@{term simp_strategy} $ name $ @{term x}],
-     proc = (fn _ => fn ctxt' => fn ct => 
+     proc = (fn _ => fn ctxt' => fn ct =>
         ct
         |> (Conv.arg_conv (Simplifier.rewrite (put_simpset ss ctxt'))
           then_conv (if rewr_True then simp_strategy_True_conv

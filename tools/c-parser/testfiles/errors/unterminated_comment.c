@@ -8,5 +8,5 @@
  * @TAG(NICTA_BSD)
  */
 
-int f /* hellow this is a comment 
+int f /* hellow this is a comment
 

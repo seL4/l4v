@@ -59,7 +59,7 @@ lemmas C_register_defs =
   Kernel_C.R12_def Kernel_C.SP_def Kernel_C.LR_def Kernel_C.LR_svc_def
   Kernel_C.CPSR_def Kernel_C.TPIDRURW_def Kernel_C.FaultInstruction_def
 
-(* Levity: moved from Retype_C (20090419 09:44:41) *)  
+(* Levity: moved from Retype_C (20090419 09:44:41) *)
 lemma no_overlap_new_cap_addrs_disjoint:
   "\<lbrakk> range_cover ptr sz (objBitsKO ko) n;
      pspace_aligned' s;
@@ -104,8 +104,8 @@ lemma empty_fail_emptyOnFailure [intro!, simp]:
   by (auto simp: emptyOnFailure_def catch_def split: sum.splits)
 
 lemma empty_fail_unifyFailure [intro!, simp]:
-  "empty_fail m \<Longrightarrow> empty_fail (unifyFailure m)" 
-  by (auto simp: unifyFailure_def catch_def rethrowFailure_def 
+  "empty_fail m \<Longrightarrow> empty_fail (unifyFailure m)"
+  by (auto simp: unifyFailure_def catch_def rethrowFailure_def
                  handleE'_def throwError_def
            split: sum.splits)
 
@@ -154,7 +154,7 @@ lemma is_aligned_neg_mask2 [simp]:
   apply (cases "n < len_of TYPE('a)")
    apply (simp add: and_not_mask)
    apply (subst shiftl_t2n)
-   apply (rule is_aligned_mult_triv1) 
+   apply (rule is_aligned_mult_triv1)
   apply (simp add: not_less NOT_mask power_overflow)
   done
 
@@ -214,7 +214,7 @@ qed
 lemma empty_fail_getReceiveSlots:
   "empty_fail (getReceiveSlots r rbuf)"
 proof -
-  note 
+  note
     empty_fail_assertE[iff]
     empty_fail_resolveAddressBits[iff]
   show ?thesis
@@ -225,8 +225,8 @@ proof -
   apply (simp add: emptyOnFailure_def unifyFailure_def)
   apply (intro empty_fail_catch empty_fail_bindE empty_fail_rethrowFailure,
          simp_all add: empty_fail_whenEs)
-   apply (simp_all add: lookupCap_def split_def lookupCapAndSlot_def 
-                        lookupSlotForThread_def liftME_def 
+   apply (simp_all add: lookupCap_def split_def lookupCapAndSlot_def
+                        lookupSlotForThread_def liftME_def
                         getThreadCSpaceRoot_def locateSlot_conv bindE_assoc
                         lookupSlotForCNodeOp_def lookupErrorOnFailure_def
                   cong: if_cong)

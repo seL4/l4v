@@ -18,18 +18,18 @@ imports
 begin
 
 (* This still looks a bit wrong to me, although it is more or less what I want \<emdash> we want to be
-   able to move hoare triples across bisimulations, and this allows guards to be left behind, more or less 
+   able to move hoare triples across bisimulations, and this allows guards to be left behind, more or less
 definition
-  "bisim_underlying SR R P P' m m' \<equiv> 
-    \<forall>s s'. SR s s' \<longrightarrow> (P s \<longrightarrow> (\<forall>(r, t) \<in> fst (m s). \<exists>(r', t') \<in> fst (m' s'). R r r' \<and> SR t t')) \<and> 
+  "bisim_underlying SR R P P' m m' \<equiv>
+    \<forall>s s'. SR s s' \<longrightarrow> (P s \<longrightarrow> (\<forall>(r, t) \<in> fst (m s). \<exists>(r', t') \<in> fst (m' s'). R r r' \<and> SR t t')) \<and>
                        (P' s' \<longrightarrow> (\<forall>(r', t') \<in> fst (m' s'). \<exists>(r, t) \<in> fst (m s). R r r' \<and> SR t t'))"
 *)
 
 definition
   bisim_underlying :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> (('c \<times> 'a) set) \<times> bool) \<Rightarrow> ('b \<Rightarrow> (('d \<times> 'b) set) \<times> bool) \<Rightarrow> bool"
 where
-  "bisim_underlying SR R P P' m m' \<equiv> 
-    \<forall>s s'. SR s  s' \<and> P s \<and> P' s' \<longrightarrow> ((\<forall>(r, t) \<in> fst (m s). \<exists>(r', t') \<in> fst (m' s'). R r r' \<and> SR t t') \<and> 
+  "bisim_underlying SR R P P' m m' \<equiv>
+    \<forall>s s'. SR s  s' \<and> P s \<and> P' s' \<longrightarrow> ((\<forall>(r, t) \<in> fst (m s). \<exists>(r', t') \<in> fst (m' s'). R r r' \<and> SR t t') \<and>
                                       (\<forall>(r', t') \<in> fst (m' s'). \<exists>(r, t) \<in> fst (m s). R r r' \<and> SR t t'))"
 
 (*
@@ -40,7 +40,7 @@ lemma bisim_is_corres_both_ways:
 *)
 
 lemma bisim_valid:
-  assumes ac: "bisim_underlying (op =)  (op =) P P' a a'" 
+  assumes ac: "bisim_underlying (op =)  (op =) P P' a a'"
   and     rl: "\<lbrace>Q\<rbrace> a \<lbrace>S\<rbrace>"
   shows   "\<lbrace>P and P' and Q\<rbrace> a' \<lbrace>S\<rbrace>"
   using ac rl
@@ -48,7 +48,7 @@ lemma bisim_valid:
   by (fastforce simp: split_def)
 
 lemma bisim_valid2:
-  assumes ac: "bisim_underlying (op =) (op =) P P' a a'" 
+  assumes ac: "bisim_underlying (op =) (op =) P P' a a'"
   and     rl: "\<lbrace>Q\<rbrace> a' \<lbrace>S\<rbrace>"
   shows   "\<lbrace>P and P' and Q\<rbrace> a \<lbrace>S\<rbrace>"
   using ac rl
@@ -59,35 +59,35 @@ lemma bisim_underlyingI [consumes 0, case_names Left Right]:
   assumes r1: "\<And>s s' r t. \<lbrakk>SR s s'; P s; P' s'; (r, t) \<in> fst (m s) \<rbrakk> \<Longrightarrow> \<exists>(r', t') \<in> fst (m' s'). R r r' \<and> SR t t'"
   and     r2: "\<And>s s' r' t'. \<lbrakk>SR s s'; P s; P' s'; (r', t') \<in> fst (m' s') \<rbrakk> \<Longrightarrow> \<exists>(r, t) \<in> fst (m s). R r r' \<and> SR t t'"
   shows   "bisim_underlying SR R P P' m m'"
-  unfolding bisim_underlying_def 
+  unfolding bisim_underlying_def
   by (fastforce dest: r1 r2 simp: split_def)
 
 lemma bisim_underlyingE1:
   assumes bs: "bisim_underlying SR R P P' m m'"
-  and     sr: "SR s s'" 
+  and     sr: "SR s s'"
   and     ps: "P s" "P' s'"
   and     ms: "(r, t) \<in> fst (m s)"
   and     rl: "\<And>r' t'. \<lbrakk> (r', t') \<in> fst (m' s'); R r r'; SR t t' \<rbrakk> \<Longrightarrow> X"
   shows X
-  using bs sr ps ms unfolding bisim_underlying_def 
+  using bs sr ps ms unfolding bisim_underlying_def
   by (fastforce intro: rl)
 
 lemma bisim_underlyingE2:
   assumes bs: "bisim_underlying SR R P P' m m'"
-  and     sr: "SR s s'" 
+  and     sr: "SR s s'"
   and     ps: "P s" "P' s'"
   and     ms: "(r', t') \<in> fst (m' s')"
   and     rl: "\<And>r t. \<lbrakk> (r, t) \<in> fst (m s); R r r'; SR t t' \<rbrakk> \<Longrightarrow> X"
   shows X
-  using bs sr ps ms unfolding bisim_underlying_def 
+  using bs sr ps ms unfolding bisim_underlying_def
   by (fastforce intro: rl)
 
 lemma bisim_split:
-  assumes ac: "bisim_underlying SR R' P P' a c"  
-  and     bd: "\<And>r r'. R' r r' \<Longrightarrow> bisim_underlying SR R (Q r) (Q' r') (b r) (d r')"  
+  assumes ac: "bisim_underlying SR R' P P' a c"
+  and     bd: "\<And>r r'. R' r r' \<Longrightarrow> bisim_underlying SR R (Q r) (Q' r') (b r) (d r')"
   and     v1: "\<lbrace>S\<rbrace> a \<lbrace>Q\<rbrace>"
   and     v2: "\<lbrace>S'\<rbrace> c \<lbrace>Q'\<rbrace>"
-  shows "bisim_underlying SR R (P and S) (P' and S') (a >>= b) (c >>= d)"  
+  shows "bisim_underlying SR R (P and S) (P' and S') (a >>= b) (c >>= d)"
   using ac
   apply -
   apply (rule bisim_underlyingI)
@@ -130,14 +130,14 @@ lemma bisim_guard_imp:
   assumes bs: "bisim_underlying SR R Q Q' m m'"
   and   rls: "\<And>s. P s \<Longrightarrow> Q s" "\<And>s. P' s \<Longrightarrow> Q' s"
   shows "bisim_underlying SR R P P' m m'"
-  using bs rls 
+  using bs rls
   by (fastforce intro!: bisim_underlyingI elim: bisim_underlyingE1  bisim_underlyingE2)
 
 lemma bisim_return':
   assumes Rxx: "R x x'"
   shows "bisim_underlying SR R P P' (return x) (return x')"
   apply (rule bisim_underlyingI)
-  apply (clarsimp simp: in_monad split_def Bex_def Rxx) 
+  apply (clarsimp simp: in_monad split_def Bex_def Rxx)
   apply (clarsimp simp: in_monad split_def Bex_def Rxx)
   done
 
@@ -175,7 +175,7 @@ wpc_setup "\<lambda>m. bisim_underlying SR r P P' a (m >>= c)" wpc_helper_bisim
 
 lemma bisim_split_refl:
   assumes bs: "\<And>r. bisim R (Q r) (Q' r) (b r) (d r)"
-  and    v1: "\<lbrace>S\<rbrace> a \<lbrace>Q\<rbrace>" 
+  and    v1: "\<lbrace>S\<rbrace> a \<lbrace>Q\<rbrace>"
   and   v2: "\<lbrace>S'\<rbrace> a \<lbrace>Q'\<rbrace>"
   shows "bisim R S S' (a >>= b) (a >>= d)"
   apply (rule bisim_guard_imp)
@@ -187,7 +187,7 @@ lemma bisim_split_refl:
   done
 
 lemma bisim_throwError':
-  "f e e' \<Longrightarrow> bisim_underlying SR (f \<oplus> R') P P' (throwError e) (throwError e')"  
+  "f e e' \<Longrightarrow> bisim_underlying SR (f \<oplus> R') P P' (throwError e) (throwError e')"
   apply (rule bisim_underlyingI)
   apply (clarsimp simp: in_monad Bex_def)+
   done
@@ -195,11 +195,11 @@ lemma bisim_throwError':
 lemmas bisim_throwError = bisim_throwError' [where P = \<top> and P' = \<top>]
 
 lemma bisim_splitE:
-  assumes ac: "bisim_underlying SR (f \<oplus> R') P P' a c"  
+  assumes ac: "bisim_underlying SR (f \<oplus> R') P P' a c"
   and     bd: "\<And>r r'. R' r r' \<Longrightarrow> bisim_underlying SR (f \<oplus> R) (Q r) (Q' r') (b r) (d r')"
   and     v1: "\<lbrace>S\<rbrace> a \<lbrace>Q\<rbrace>, -"
   and     v2: "\<lbrace>S'\<rbrace> c \<lbrace>Q'\<rbrace>, -"
-  shows "bisim_underlying SR (f \<oplus> R) (P and S) (P' and S') (a >>=E b) (c >>=E d)"  
+  shows "bisim_underlying SR (f \<oplus> R) (P and S) (P' and S') (a >>=E b) (c >>=E d)"
   apply (simp add: bindE_def lift_def[abs_def])
   apply (rule bisim_split [where Q = "\<lambda>r s. case_sum  (\<lambda>_. True) (\<lambda>l. Q l s) r" and Q' = "\<lambda>r s. case_sum  (\<lambda>_. True) (\<lambda>l. Q' l s) r", OF ac, folded validE_def, folded validE_R_def])
   apply (case_tac r')
@@ -216,7 +216,7 @@ lemma bisim_split_reflE:
   and     v1: "\<lbrace>S\<rbrace> m \<lbrace>Q\<rbrace>, -"
   and     v2: "\<lbrace>S'\<rbrace> m \<lbrace>Q'\<rbrace>, -"
   and  refls: "\<And>e. f e e" "\<And>r. R r r"
-  shows "bisim (f \<oplus> R) S S' (m >>=E a) (m >>=E b)"  
+  shows "bisim (f \<oplus> R) S S' (m >>=E a) (m >>=E b)"
   using refls
   apply -
   apply (rule bisim_guard_imp)
@@ -239,7 +239,7 @@ lemma bisim_split_bind_case_sum:
    apply clarsimp
   apply assumption+
   done
-  
+
 lemma bisim_liftE [simp]:
   "bisim_underlying SR (f \<oplus> R) P P' (liftE a) (liftE b) = bisim_underlying SR R P P' a b"
   by (fastforce simp: in_monad intro: bisim_underlyingI elim: bisim_underlyingE1  bisim_underlyingE2)
@@ -255,7 +255,7 @@ lemma bisim_when:
 
 
 (* not really used *)
-definition 
+definition
   "det_on P f \<equiv> \<forall>s. P s \<longrightarrow> (\<exists>r. f s = ({r}, False))"
 
 lemma det_onE:
@@ -268,7 +268,7 @@ lemma bisim_noop_det_on:
   and    da: "det_on P a"
   and    db: "det_on P' b"
   shows   "bisim_underlying sr dc (Pa and P) (Pb and P') a b"
-  using da db 
+  using da db
   apply -
   apply (rule bisim_underlyingI)
   apply clarsimp
@@ -285,7 +285,7 @@ lemma bisim_noop_det_on:
   done
 
 lemma det_on_gets:
-  "det_on \<top> (gets f)" unfolding det_on_def 
+  "det_on \<top> (gets f)" unfolding det_on_def
   by (clarsimp simp: gets_def return_def bind_def get_def)
 
 lemma hoare_gen_asmE':
@@ -309,8 +309,8 @@ lemma det_on_split [wp_split]:
   and     db: "\<And>x. det_on (Pb x) (b x)"
   and      v: "\<lbrace>Pb'\<rbrace> a \<lbrace>Pb\<rbrace>"
   shows "det_on (Pa and Pb') (a >>= b)"
-  unfolding det_on_def using da 
-  apply -               
+  unfolding det_on_def using da
+  apply -
   apply clarsimp
   apply (erule (1) det_onE)
   apply (frule (1) use_valid [OF _ v])
@@ -338,11 +338,11 @@ lemma det_on_lift [wp]:
   unfolding lift_def
   by (auto simp: det_on_def throwError_def return_def split: sum.splits)
 
-lemma det_on_assert_opt [wp]: 
+lemma det_on_assert_opt [wp]:
   "det_on (\<lambda>_. x \<noteq> None) (assert_opt x)"
   unfolding det_on_def assert_opt_def by (fastforce split: option.splits simp: fail_def return_def)
 
-lemmas dets_to_det_on [wp] = det_det_on [OF det_gets] det_det_on [OF return_det] 
+lemmas dets_to_det_on [wp] = det_det_on [OF det_gets] det_det_on [OF return_det]
 
 (* Set up wpc *)
 lemma wpc_helper_det_on:
@@ -360,17 +360,17 @@ lemma bisim_symb_exec_r_det_on:
   assumes nf: "det_on Pd m"
   shows      "bisim_underlying sr r P (P' and Pe and Pd) x (m >>= (\<lambda>rv. y rv))"
   apply (rule bisim_guard_imp)
-    apply (subst gets_bind_ign [symmetric], rule bisim_split) 
+    apply (subst gets_bind_ign [symmetric], rule bisim_split)
       apply (rule bisim_noop_det_on [OF _ x det_on_gets])
       apply wp
       apply fastforce
      apply (rule nf)
     apply (rule z)
    apply (wp y)+
-  apply simp+ 
+  apply simp+
   done
 
-definition 
+definition
   not_empty :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b set \<times> bool) \<Rightarrow> bool"
 where
   "not_empty P f \<equiv> \<forall>s. P s \<longrightarrow> (fst (f s) \<noteq> {})"
@@ -391,8 +391,8 @@ lemma not_empty_split [wp_split]:
   and     db: "\<And>x. not_empty (Pb x) (b x)"
   and      v: "\<lbrace>Pb'\<rbrace> a \<lbrace>Pb\<rbrace>"
   shows "not_empty (Pa and Pb') (a >>= b)"
-  unfolding not_empty_def using da 
-  apply -               
+  unfolding not_empty_def using da
+  apply -
   apply clarsimp
   apply (erule (1) not_emptyE)
   apply (frule (1) use_valid [OF _ v])
@@ -403,7 +403,7 @@ lemma not_empty_split [wp_split]:
 
 lemma not_empty_return [wp]:
   "not_empty \<top> (return x)"
-  unfolding not_empty_def 
+  unfolding not_empty_def
   by (simp add: return_def)
 
 lemma not_empty_liftE [wp]:
@@ -420,12 +420,12 @@ lemma not_empty_lift [wp]:
   unfolding lift_def
   by (auto simp: not_empty_def throwError_def return_def split: sum.splits)
 
-lemma not_empty_assert_opt [wp]: 
+lemma not_empty_assert_opt [wp]:
   "not_empty (\<lambda>_. x \<noteq> None) (assert_opt x)"
   unfolding not_empty_def assert_opt_def by (fastforce split: option.splits simp: fail_def return_def)
 
 lemma not_empty_gets [wp]:
-  "not_empty \<top> (gets f)" unfolding not_empty_def 
+  "not_empty \<top> (gets f)" unfolding not_empty_def
   by (clarsimp simp: gets_def return_def bind_def get_def)
 
 (* Set up wpc *)
@@ -443,7 +443,7 @@ lemma bisim_noop:
   and    da: "not_empty P a"
   and    db: "not_empty P' b"
   shows   "bisim_underlying sr dc (Pa and P) (Pb and P') a b"
-  using da db 
+  using da db
   apply -
   apply (rule bisim_underlyingI)
   apply clarsimp
@@ -466,7 +466,7 @@ lemma bisim_symb_exec_r:
   assumes ne: "not_empty Pd m"
   shows      "bisim_underlying sr r P (P' and Pe and Pd) x (m >>= (\<lambda>rv. y rv))"
   apply (rule bisim_guard_imp)
-    apply (subst gets_bind_ign [symmetric], rule bisim_split) 
+    apply (subst gets_bind_ign [symmetric], rule bisim_split)
       apply (rule bisim_noop [OF _ x not_empty_gets])
       apply wp
       apply fastforce
@@ -488,10 +488,10 @@ lemma bisim_not_empty:
   done
 
 lemma bisim_split_req:
-  assumes ac: "bisim (op =) P P' a c"  
-  and     bd: "\<And>r. bisim R (Q r) (Q' r) (b r) (d r)"  
+  assumes ac: "bisim (op =) P P' a c"
+  and     bd: "\<And>r. bisim R (Q r) (Q' r) (b r) (d r)"
   and     v1: "\<lbrace>S\<rbrace> a \<lbrace>\<lambda>r. Q r and Q' r\<rbrace>"
-  shows "bisim R (P and S) P' (a >>= b) (c >>= d)"  
+  shows "bisim R (P and S) P' (a >>= b) (c >>= d)"
   using ac
   apply -
   apply (rule bisim_underlyingI)
@@ -525,10 +525,10 @@ lemma bisim_split_req:
   done
 
 lemma bisim_splitE_req:
-  assumes ac: "bisim (f \<oplus> op =) P P' a c"  
+  assumes ac: "bisim (f \<oplus> op =) P P' a c"
   and     bd: "\<And>r. bisim (f \<oplus> R) (Q r) (Q' r) (b r) (d r)"
   and     v1: "\<lbrace>S\<rbrace> a \<lbrace>\<lambda>r. Q r and Q' r\<rbrace>, -"
-  shows "bisim (f \<oplus> R) (P and S) P' (a >>=E b) (c >>=E d)"  
+  shows "bisim (f \<oplus> R) (P and S) P' (a >>=E b) (c >>=E d)"
   using ac
   apply -
   apply (simp add: bindE_def lift_def[abs_def])
@@ -579,12 +579,12 @@ lemma bisim_symb_exec_r_bs:
   and      z: "\<And>rv. bisim r P P' x (y rv)"
   shows      "bisim r (P and R and P') R' x (m >>= (\<lambda>rv. y rv))"
   apply (rule bisim_guard_imp)
-    apply (subst return_bind [symmetric, where f = "\<lambda>(_ :: unit).x"],  rule bisim_split_req) 
+    apply (subst return_bind [symmetric, where f = "\<lambda>(_ :: unit).x"],  rule bisim_split_req)
     apply (rule bs)
      apply (rule z)
      apply wp
    apply simp
-  apply simp+ 
+  apply simp+
   done
 
 end

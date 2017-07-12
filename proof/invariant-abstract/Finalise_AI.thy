@@ -1204,7 +1204,7 @@ lemma gbn_wp:
 locale Finalise_AI_4 = Finalise_AI_3 a b _ c
   for a :: "('a :: state_ext) itself"
   and b :: "('b :: state_ext) itself"
-  and c :: "'c itself" 
+  and c :: "'c itself"
 
 value Finalise_AI_4
 

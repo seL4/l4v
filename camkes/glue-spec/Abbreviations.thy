@@ -116,8 +116,8 @@ text {*
   state of the component using the user-provided function @{text embed_data}.
 *}
 definition
-  EventPoll :: "'channel \<Rightarrow> 
-    ('component_state local_state \<Rightarrow> bool \<Rightarrow> 'component_state local_state) \<Rightarrow> 
+  EventPoll :: "'channel \<Rightarrow>
+    ('component_state local_state \<Rightarrow> bool \<Rightarrow> 'component_state local_state) \<Rightarrow>
     ('channel, 'component_state) comp"
 where
   "EventPoll c embed_data \<equiv>
@@ -133,8 +133,8 @@ text {*
   execution until the event is available.
 *}
 definition
-  EventWait :: "'channel \<Rightarrow> 
-    ('component_state local_state \<Rightarrow> bool \<Rightarrow> 'component_state local_state) \<Rightarrow> 
+  EventWait :: "'channel \<Rightarrow>
+    ('component_state local_state \<Rightarrow> bool \<Rightarrow> 'component_state local_state) \<Rightarrow>
     ('channel, 'component_state) comp"
 where
   "EventWait c embed_data \<equiv>
@@ -151,13 +151,13 @@ text {*
   the local state with the same mechanism as above.
 *}
 definition
-  MemoryRead :: "'channel \<Rightarrow> 
-    ('component_state local_state \<Rightarrow> nat) \<Rightarrow> 
+  MemoryRead :: "'channel \<Rightarrow>
+    ('component_state local_state \<Rightarrow> nat) \<Rightarrow>
     ('component_state local_state \<Rightarrow> variable \<Rightarrow> 'component_state local_state) \<Rightarrow>
     ('channel, 'component_state) comp"
 where
   "MemoryRead c addr embed_data \<equiv>
-    Request (\<lambda>s. {\<lparr>q_channel = c, q_data = Read (addr s)\<rparr>}) 
+    Request (\<lambda>s. {\<lparr>q_channel = c, q_data = Read (addr s)\<rparr>})
             (\<lambda>a s. case a_data a of Value v \<Rightarrow> {embed_data s v} | _ \<Rightarrow> {})"
 
 subsubsection {* \label{ssec:memorywrite}Memory Write *}
@@ -167,8 +167,8 @@ text {*
   and does not expect a response.
 *}
 definition
-  MemoryWrite :: "'channel \<Rightarrow> ('component_state local_state \<Rightarrow> nat) \<Rightarrow> 
-    ('component_state local_state \<Rightarrow> variable) \<Rightarrow> 
+  MemoryWrite :: "'channel \<Rightarrow> ('component_state local_state \<Rightarrow> nat) \<Rightarrow>
+    ('component_state local_state \<Rightarrow> variable) \<Rightarrow>
     ('channel, 'component_state) comp"
 where
   "MemoryWrite c addr val \<equiv>

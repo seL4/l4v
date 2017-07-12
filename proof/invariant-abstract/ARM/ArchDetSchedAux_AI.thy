@@ -28,7 +28,7 @@ crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s
 crunch ready_queues[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (ready_queues s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
     simp: detype_def detype_ext_def whenE_def unless_def
-          wrap_ext_det_ext_ext_def mapM_x_defsym 
+          wrap_ext_det_ext_ext_def mapM_x_defsym
   ignore: freeMemory)
 crunch scheduler_action[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'

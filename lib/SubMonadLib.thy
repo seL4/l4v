@@ -64,7 +64,7 @@ lemma modify_modify:
   by (simp add: bind_def modify_def get_def put_def)
 
 lemma select_f_walk:
-  assumes m1: "empty_fail m1" 
+  assumes m1: "empty_fail m1"
   assumes S: "fst S = {} \<Longrightarrow> snd S"
   shows "(do a \<leftarrow> m1; b \<leftarrow> select_f S; m2 a b od) = (do b \<leftarrow> select_f S; a \<leftarrow> m1; m2 a b od)"
   apply (rule ext)
@@ -73,7 +73,7 @@ lemma select_f_walk:
    apply (simp add: select_f_def bind_def split_def)
    apply fastforce
   apply (simp add: select_f_def bind_def split_def)
-  apply (case_tac "fst S = {}")   
+  apply (case_tac "fst S = {}")
    apply clarsimp
    apply (case_tac "fst (m1 x) = {}")
     apply (simp add: empty_failD [OF m1] S)
@@ -117,7 +117,7 @@ lemma select_f_stateAssert:
   apply (simp only: image_def)
   apply (clarsimp simp: stateAssert_def bind_def select_f_def get_def
                         assert_def return_def fail_def split_def image_image)
-  apply (simp only: image_def mem_simps empty_fail_def simp_thms)  
+  apply (simp only: image_def mem_simps empty_fail_def simp_thms)
   apply fastforce
   done
 
@@ -227,7 +227,7 @@ proof (induct xs)
     by (simp add: mapM_def sequence_def return_def)
   next
   case (Cons x xs)
-  thus ?case 
+  thus ?case
     apply (clarsimp simp: o_def mapM_Cons return_def bind_def)
     apply (drule guard_preserved)
     apply fastforce
@@ -242,7 +242,7 @@ proof (induct xs)
     by (simp add: mapM_x_def sequence_x_def return_def)
   next
   case (Cons x xs)
-  thus ?case 
+  thus ?case
     apply (clarsimp simp: o_def mapM_x_Cons return_def bind_def)
     apply (drule guard_preserved)
     apply fastforce
@@ -259,7 +259,7 @@ lemma (in submonad) fn_stateAssert:
   apply (simp add: fn_is_sm submonad_fn_def bind_assoc split_def)
   apply (rule ext)
   apply (rule bind_apply_cong [OF refl])+
-  apply (clarsimp simp: stateAssert_def bind_assoc in_monad select_f_def) 
+  apply (clarsimp simp: stateAssert_def bind_assoc in_monad select_f_def)
   apply (drule iffD2 [OF replace_preserves_guard])
   apply (fastforce simp: bind_def assert_def get_def return_def)
   done
@@ -268,7 +268,7 @@ lemma submonad_mapM:
   assumes sm: "submonad f r g sm" and sm': "submonad f r g sm'"
   assumes efm: "\<And>x. empty_fail (m x)"
   shows
-  "(sm (mapM m l)) = (stateAssert g [] >>= (\<lambda>u. mapM (sm' \<circ> m) l))" 
+  "(sm (mapM m l)) = (stateAssert g [] >>= (\<lambda>u. mapM (sm' \<circ> m) l))"
 proof (induct l)
   case Nil
   thus ?case
@@ -293,7 +293,7 @@ lemma submonad_mapM_x:
   assumes sm: "submonad f r g sm" and sm': "submonad f r g sm'"
   assumes efm: "\<And>x. empty_fail (m x)"
   shows
-  "(sm (mapM_x m l)) = (stateAssert g [] >>= (\<lambda>u. mapM_x (sm' \<circ> m) l))" 
+  "(sm (mapM_x m l)) = (stateAssert g [] >>= (\<lambda>u. mapM_x (sm' \<circ> m) l))"
 proof (induct l)
   case Nil
   thus ?case
@@ -511,7 +511,7 @@ lemma assert_opt_submonad:
    apply (rule fail_submonad)
   apply (rule return_submonad)
   apply assumption
-  done 
+  done
 
 lemma is_stateAssert_gets:
   "\<lbrakk> \<forall>s. \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>_. op = s\<rbrace>; \<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>_. guard\<rbrace>;

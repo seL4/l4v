@@ -15,11 +15,11 @@ int f(int i)
   else return i + 3;
 }
 
-int g(int i) 
+int g(int i)
 {
   int acc = i < 0 ? i : 0;
   while (acc < i) /** INV: "\<lbrace> \<acute>acc <=s \<acute>i \<rbrace>" */ {
     acc++;
   }
   return acc;
-} 
+}

@@ -109,13 +109,13 @@ lemma ran_upd:
 
 lemma nat_less_power_trans:
   fixes n :: nat
-  assumes nv: "n < 2 ^ (m - k)" 
+  assumes nv: "n < 2 ^ (m - k)"
   and     kv: "k \<le> m"
   shows "2 ^ k * n < 2 ^ m"
 proof (rule order_less_le_trans)
   show "2 ^ k * n < 2 ^ k * 2 ^ (m - k)"
     by (rule mult_less_mono2 [OF nv zero_less_power]) simp
-    
+
   show "(2::nat) ^ k * 2 ^ (m - k) \<le> 2 ^ m" using nv kv
     by (subst power_add [symmetric]) simp
 qed
@@ -125,7 +125,7 @@ lemma nat_le_power_trans:
   shows "\<lbrakk>n \<le> 2 ^ (m - k); k \<le> m\<rbrakk> \<Longrightarrow> 2 ^ k * n \<le> 2 ^ m"
   by (metis le_imp_less_or_eq less_imp_le nat_less_power_trans power_sub split_div_lemma
             zero_less_numeral zero_less_power)
-  
+
 lemma x_power_minus_1:
   fixes x :: "'a :: {ab_group_add, power, numeral, one}"
   shows "x + (2::'a) ^ n - (1::'a) = x + (2 ^ n - 1)" by simp

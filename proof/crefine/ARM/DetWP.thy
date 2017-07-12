@@ -45,7 +45,7 @@ declare det_wp_unless[wp]
 declare word_neq_0_conv [simp del]
 
 lemma det_wp_loadObject_default [wp]:
-  "det_wp (\<lambda>s. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and> 
+  "det_wp (\<lambda>s. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and>
                       is_aligned p (objBits obj) \<and> q = p
                       \<and> case_option True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n)
            (loadObject_default p q n ko :: ('a::pre_storable) kernel)"
@@ -73,7 +73,7 @@ lemma det_wp_getTCB [wp]:
   done
 
 lemma det_wp_setObject_other [wp]:
-  fixes ob :: "'a :: pspace_storable"  
+  fixes ob :: "'a :: pspace_storable"
   assumes x: "updateObject ob = updateObject_default ob"
   shows "det_wp (obj_at' (\<lambda>k::'a. objBits k = objBits ob) ptr)
                   (setObject ptr ob)"

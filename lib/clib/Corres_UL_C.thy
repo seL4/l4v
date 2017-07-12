@@ -8,9 +8,9 @@
  * @TAG(NICTA_BSD)
  *)
 
-(* This theory is a general framework for refinement on C programs. 
+(* This theory is a general framework for refinement on C programs.
    It is in this directory rather than lib/ because it refers to parts
-   of the translated state space of the kernel for convenience. 
+   of the translated state space of the kernel for convenience.
 *)
 
 theory Corres_UL_C
@@ -43,15 +43,15 @@ where
   | EHEmpty: "\<Gamma> \<turnstile>\<^sub>h \<langle>[], s\<rangle> \<Rightarrow> (0, Abrupt s)"
 
 lemma exec_handlers_use_hoare_nothrow:
-  assumes valid': "E \<turnstile>\<^bsub>/F\<^esub> R' c Q', {}"  
+  assumes valid': "E \<turnstile>\<^bsub>/F\<^esub> R' c Q', {}"
   and         ce: "E \<turnstile>\<^sub>h \<langle>c # hs, s'\<rangle> \<Rightarrow> (n, t)"
   and       asms: "s' \<in> R'"
   shows   "(t \<in> Normal ` Q' \<or> t \<in> Fault ` F) \<and> n = length hs"
   using valid' ce asms
   apply -
   apply (drule hoare_sound)
-  apply (clarsimp elim: exec_Normal_elim_cases 
-    simp: NonDetMonad.bind_def cvalid_def split_def HoarePartialDef.valid_def)  
+  apply (clarsimp elim: exec_Normal_elim_cases
+    simp: NonDetMonad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
   apply (erule exec_handlers.cases)
     apply clarsimp
     apply (drule spec, drule spec, drule (1) mp)
@@ -99,7 +99,7 @@ lemma ccorresI [case_names fail nofail]:
   and nfc: "\<And>n t' s s'. \<lbrakk>(s, s') \<in> sr; G s; s' \<in> G'; \<Gamma> \<turnstile>\<^sub>h \<langle>c # hs, s'\<rangle> \<Rightarrow> (n, Normal t'); \<not> snd (m s)\<rbrakk>
   \<Longrightarrow> (\<exists>(r, t) \<in> fst (m s). (t, t') \<in> sr \<and> unif_rrel (n = length hs) rrel xf arrel axf r t')"
   shows "ccorres_underlying sr \<Gamma> rrel xf arrel axf G G' hs m c"
-  unfolding ccorres_underlying_def 
+  unfolding ccorres_underlying_def
   apply -
   apply clarsimp
   apply (case_tac t)
@@ -141,13 +141,13 @@ lemma exec_handlers_le:
 
 lemma ccorresE:
   assumes cc: "ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs m c"
-  and ps: "(s, s') \<in> srel" "G s" "s' \<in> G'"  "\<not> snd (m s)" "\<Gamma>\<turnstile>\<^sub>h \<langle>c#hs , s'\<rangle> \<Rightarrow> (n, x)" 
+  and ps: "(s, s') \<in> srel" "G s" "s' \<in> G'"  "\<not> snd (m s)" "\<Gamma>\<turnstile>\<^sub>h \<langle>c#hs , s'\<rangle> \<Rightarrow> (n, x)"
   and nc: "\<And>t' r t. \<lbrakk>x = Normal t'; (r, t) \<in> fst (m s); (t, t') \<in> srel;
                            unif_rrel (n = length hs) rrel xf arrel axf r t';
                            n \<le> length hs \<rbrakk> \<Longrightarrow> P"
   shows P
-  using cc ps nc unfolding ccorres_underlying_def 
-  apply clarsimp 
+  using cc ps nc unfolding ccorres_underlying_def
+  apply clarsimp
   apply (drule (1) bspec)
   apply simp
   apply (elim allE, drule (1) mp)
@@ -158,7 +158,7 @@ lemma ccorresE:
   apply simp
   done
 
-lemma ccorres_empty_handler_abrupt:  
+lemma ccorres_empty_handler_abrupt:
   assumes cc: "ccorres_underlying sr \<Gamma> rrel xf' arrel axf P P' [] a c"
   and   asms: "(s, s') \<in> sr" "P s" "s' \<in> P'" "\<not> snd (a s)"
   and     eh: "\<Gamma> \<turnstile> \<langle>c, Normal s'\<rangle> \<Rightarrow> t"
@@ -173,7 +173,7 @@ lemma ccorres_empty_handler_abrupt:
   apply simp
   done
 
-lemma ccorres_empty_handler_abrupt':  
+lemma ccorres_empty_handler_abrupt':
   assumes cc: "ccorres_underlying sr \<Gamma> rrel xf' arrel axf P P' [] a c"
   and   asms: "(s, s') \<in> sr" "P s" "s' \<in> P'" "\<not> snd (a s)"
   and     eh: "\<Gamma> \<turnstile>\<^sub>h \<langle>c # hs, s'\<rangle> \<Rightarrow> (n, t)"
@@ -209,14 +209,14 @@ lemma ccorres_handlers_weaken:
   done
 
 lemma ccorres_from_vcg0:
-  "(\<forall>\<sigma>. \<Gamma> \<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel} 
-          c 
+  "(\<forall>\<sigma>. \<Gamma> \<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel}
+          c
         {s. \<exists>(rv, \<sigma>') \<in> fst (a \<sigma>). (\<sigma>', s) \<in> srel \<and> rrel rv (xf s)})
   \<Longrightarrow> ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' hs a c"
   apply (rule ccorresI')
   apply (drule_tac x = s in spec)
   apply (drule hoare_sound)
-  apply (clarsimp simp add: HoarePartialDef.valid_def cvalid_def)  
+  apply (clarsimp simp add: HoarePartialDef.valid_def cvalid_def)
   apply (erule exec_handlers.cases)
     apply clarsimp
     apply (drule spec, drule spec, drule (1) mp)
@@ -229,17 +229,17 @@ lemma ccorres_from_vcg0:
   apply simp
   done
 
-lemmas ccorres_from_vcg = ccorres_from_vcg0 [THEN ccorres_handlers_weaken] 
+lemmas ccorres_from_vcg = ccorres_from_vcg0 [THEN ccorres_handlers_weaken]
 
 lemma ccorres_from_vcg_nofail0:
-  "(\<forall>\<sigma>. \<Gamma> \<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel \<and> \<not> snd (a \<sigma>)} 
-  c 
+  "(\<forall>\<sigma>. \<Gamma> \<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel \<and> \<not> snd (a \<sigma>)}
+  c
   {s. \<exists>(rv, \<sigma>') \<in> fst (a \<sigma>). (\<sigma>', s) \<in> srel \<and> rrel rv (xf s)})
   \<Longrightarrow> ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c"
   apply (rule ccorresI')
   apply (drule_tac x = s in spec)
   apply (drule hoare_sound)
-  apply (simp add: HoarePartialDef.valid_def cvalid_def)  
+  apply (simp add: HoarePartialDef.valid_def cvalid_def)
   apply (erule exec_handlers.cases)
     apply clarsimp
     apply (drule spec, drule spec, drule (1) mp)
@@ -252,13 +252,13 @@ lemma ccorres_from_vcg_nofail0:
   apply simp
   done
 
-lemmas ccorres_from_vcg_nofail2 
+lemmas ccorres_from_vcg_nofail2
   = ccorres_from_vcg_nofail0 [THEN ccorres_handlers_weaken]
 
 
 lemma ccorres_from_vcg_nofail:
-  "(\<forall>\<sigma>. \<Gamma> \<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel} 
-  c 
+  "(\<forall>\<sigma>. \<Gamma> \<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel}
+  c
   {s. \<not> snd (a \<sigma>) \<longrightarrow> (\<exists>(rv, \<sigma>') \<in> fst (a \<sigma>). (\<sigma>', s) \<in> srel \<and> rrel rv (xf s))})
   \<Longrightarrow> ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' hs a c"
   apply (rule ccorres_from_vcg_nofail2)
@@ -271,13 +271,13 @@ lemma ccorres_from_vcg_nofail:
 lemma ccorres_to_vcg:
   "ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c \<Longrightarrow>
   (\<forall>\<sigma>. \<not> snd (a \<sigma>) \<longrightarrow> \<Gamma> \<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel}
-  c 
+  c
   {s. (\<exists>(rv, \<sigma>') \<in> fst (a \<sigma>). (\<sigma>', s) \<in> srel \<and> rrel rv (xf s))})"
   apply -
   apply rule
   apply (rule impI)
   apply (rule hoare_complete)
-  apply (simp add: HoarePartialDef.valid_def cvalid_def)  
+  apply (simp add: HoarePartialDef.valid_def cvalid_def)
   apply (intro impI allI)
   apply clarsimp
   apply (frule (5) ccorres_empty_handler_abrupt)
@@ -288,7 +288,7 @@ lemma ccorres_to_vcg:
    apply simp
   apply (fastforce simp: unif_rrel_simps)
   done
-  
+
 lemma exec_handlers_Seq_cases0':
   assumes eh: "\<Gamma> \<turnstile>\<^sub>h \<langle>h, s\<rangle> \<Rightarrow> (n, t)"
   and     hv: "h = (a ;; b) # hs"
@@ -296,7 +296,7 @@ lemma exec_handlers_Seq_cases0':
   ((\<not> isAbr z \<or> hs = []) \<and> n = length hs \<and> z = t) \<or> (\<exists>q. z = Abrupt q \<and> \<Gamma> \<turnstile>\<^sub>h \<langle>hs, q\<rangle> \<Rightarrow> (n, t));  \<not> isAbr t'  \<rbrakk> \<Longrightarrow> P"
   and     r2: "\<And>t'. \<lbrakk>\<Gamma> \<turnstile> \<langle>a, Normal s\<rangle> \<Rightarrow> Abrupt t'; \<Gamma> \<turnstile>\<^sub>h \<langle>hs, t'\<rangle> \<Rightarrow> (n, t) \<rbrakk> \<Longrightarrow> P"
   shows P
-  using eh hv r1 r2 
+  using eh hv r1 r2
 proof induct
   case (EHOther h s t hs')
   hence ex: "\<Gamma> \<turnstile> \<langle>a ;; b, Normal s\<rangle> \<Rightarrow> t" by simp
@@ -315,7 +315,7 @@ proof induct
     show "((\<not> isAbr t \<or> hs = []) \<and> length hs' = length hs \<and> t = t)
         \<or> (\<exists>q. t = Abrupt q \<and> \<Gamma>\<turnstile>\<^sub>h \<langle>hs,q\<rangle> \<Rightarrow> (length hs', t))" using EHOther by simp
   qed fact+
-next     
+next
   case (EHAbrupt h s z hs' n t)
   hence ex: "\<Gamma> \<turnstile> \<langle>a ;; b, Normal s\<rangle> \<Rightarrow> Abrupt z" and hs: "hs' = hs" by simp_all
 
@@ -331,18 +331,18 @@ next
     proof (rule rb)
       show "\<Gamma>\<turnstile>\<^sub>h \<langle>hs,z\<rangle> \<Rightarrow> (n, t)" by (fold hs) fact+
     qed
-  } moreover 
-  { 
+  } moreover
+  {
     fix s''
-    assume "\<Gamma> \<turnstile> \<langle>a, Normal s\<rangle> \<Rightarrow> Normal s''" and 
+    assume "\<Gamma> \<turnstile> \<langle>a, Normal s\<rangle> \<Rightarrow> Normal s''" and
       "\<Gamma> \<turnstile> \<langle>b, Normal s''\<rangle> \<Rightarrow> Abrupt z"
-    
+
     hence ?case
     proof (rule ra)
       show "((\<not> isAbr (Abrupt z) \<or> hs = []) \<and> n = length hs \<and> Abrupt z = t)
                \<or> (\<exists>q. Abrupt z = Abrupt q \<and> \<Gamma>\<turnstile>\<^sub>h \<langle>hs,q\<rangle> \<Rightarrow> (n, t))" using EHAbrupt(2)
 	by (simp add: hs)
-      
+
       show "\<not> isAbr (Normal s'')" by simp
     qed
   } ultimately show ?case using ex
@@ -461,7 +461,7 @@ lemma ccorres_master_split:
   shows "ccorres_underlying sr \<Gamma> r xf arrel axf (P and Q) (P' \<inter> Q') hs (a >>= (\<lambda>rv. b rv)) (c ;; d)"
   apply (rule ccorresI')
   apply (erule exec_handlers_Seq_cases')
-   apply (clarsimp simp add: bind_def) 
+   apply (clarsimp simp add: bind_def)
    apply (erule(3) ccorresE [OF ac])
     apply (erule(1) EHOther)
    apply simp
@@ -521,7 +521,7 @@ lemma ccorres_empty:
   apply (rule ccorresI')
   apply simp
   done
-  
+
 lemma ccorres_False:
   "ccorres_underlying sr \<Gamma> r xf arrel axf (\<lambda>s. False) P' hs a c"
   apply (rule ccorresI')
@@ -538,7 +538,7 @@ lemma stronger_ccorres_guard_imp:
   assumes y: "\<And>s s'. \<lbrakk> A s; s' \<in> A'; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> Q s"
   assumes z: "\<And>s s'. \<lbrakk> A s; s' \<in> A'; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> s' \<in> Q'"
   shows      "ccorres_underlying sr \<Gamma> r xf arrel axf A A' hs f g"
-  using x 
+  using x
   apply -
   apply (rule ccorresI')
   apply (erule (1) ccorresE)
@@ -556,7 +556,7 @@ lemma ccorres_guard_imp:
     apply (rule x)
    apply (simp add: y)+
   done
- 
+
 lemma ccorres_split_nothrow':
   fixes R' :: "'a set"
   assumes ac: "ccorres_underlying sr \<Gamma> r' xf' dc axf P P' hs a c"
@@ -674,7 +674,7 @@ lemma ccorres_split_throw:
 
 
 lemma ccorres_tmp_lift1:
-  assumes rl: "\<And>rv'. P rv' 
+  assumes rl: "\<And>rv'. P rv'
   \<Longrightarrow> ccorres_underlying srel \<Gamma> rrel xf arrel axf G (G' \<inter> {s. xf' s = rv'}) hs m c"
   shows "ccorres_underlying srel \<Gamma> rrel xf arrel axf G (G' \<inter> {s. P (xf' s)}) hs m c"
   by (auto intro!: ccorresI dest!: rl elim: ccorresE)
@@ -712,7 +712,7 @@ lemma ccorres_tmp_lift2:
      apply fastforce
     apply assumption
    apply simp
-   apply (erule conjE)+   
+   apply (erule conjE)+
    apply (erule (1) ceqvhD1 [OF _ _ rl])
    apply simp
   apply fastforce
@@ -803,7 +803,7 @@ lemma ccorres_call:
 declare semantic_equivD1 [dest]
 declare semantic_equivD2 [dest]
 
-lemma exec_handlers_semantic_equiv0:  
+lemma exec_handlers_semantic_equiv0:
   assumes se: "\<And>s'. semantic_equiv \<Gamma> s s' a b"
   and     eh: "\<Gamma> \<turnstile>\<^sub>h \<langle>a # hs, s\<rangle> \<Rightarrow> (n, t)"
   shows   "\<Gamma> \<turnstile>\<^sub>h \<langle>b # hs,s\<rangle> \<Rightarrow> (n, t)"
@@ -818,7 +818,7 @@ lemmas exec_handlers_semantic_equivD1 = exec_handlers_semantic_equiv0 [rotated]
 lemmas exec_handlers_semantic_equivD2
   = exec_handlers_semantic_equiv0 [OF iffD1 [OF semantic_equiv_sym], rotated]
 
-lemma exec_handlers_semantic_equiv:  
+lemma exec_handlers_semantic_equiv:
   assumes se: "\<And>s'. semantic_equiv \<Gamma> s s' a b"
   shows   "\<Gamma> \<turnstile>\<^sub>h \<langle>a # hs, s\<rangle> \<Rightarrow> (n, t) = \<Gamma> \<turnstile>\<^sub>h \<langle>b # hs,s\<rangle> \<Rightarrow> (n, t)"
   using se
@@ -828,7 +828,7 @@ lemma exec_handlers_semantic_equiv:
   apply (subst (asm) semantic_equiv_sym)
   apply (erule (1) exec_handlers_semantic_equiv0)
   done
-  
+
 lemma ccorres_semantic_equiv0:
   assumes rl: "\<And>s s'. s \<in> G' \<Longrightarrow> semantic_equiv \<Gamma> s s' c c'"
   and      c: "ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs m c"
@@ -843,10 +843,10 @@ lemma ccorres_semantic_equiv0:
   done
 
 lemmas ccorres_semantic_equivD1  = ccorres_semantic_equiv0 [rotated]
-lemmas ccorres_semantic_equivD2 
+lemmas ccorres_semantic_equivD2
   = ccorres_semantic_equiv0 [OF iffD1 [OF semantic_equiv_sym], rotated]
 
-(* This is so we can get the name --- if it is done at lemmas, it uses the 
+(* This is so we can get the name --- if it is done at lemmas, it uses the
   (nameless) RHS *)
 declare ccorres_semantic_equivD1
 declare ccorres_semantic_equivD2
@@ -879,7 +879,7 @@ lemma test_ccorres_exec_congs:
   apply (simp add: exec_eq_simps cong: ccorres_exec_congs)
   oops
 
-lemma exec_handlers_assoc:  
+lemma exec_handlers_assoc:
   "E \<turnstile>\<^sub>h \<langle>(c1;; (c2 ;; c3)) # hs, s\<rangle> \<Rightarrow> (n, t) = E \<turnstile>\<^sub>h \<langle>(c1;;c2;;c3) # hs,s\<rangle> \<Rightarrow> (n, t)"
   apply (rule exec_handlers_semantic_equiv)
   apply (rule semantic_equivI)
@@ -905,14 +905,14 @@ lemma ccorres_rhs_assoc2:
 
 lemma ccorres_basic_srnoop:
   assumes asm: "ccorres_underlying sr E r xf arrel axf G G' hs a c"
-  and   gsr: "\<And>s s'. (s, s') \<in> sr \<Longrightarrow> (s, g s') \<in> sr" 
-  and   gG: "\<And>s'. s' \<in> G' \<Longrightarrow> g s' \<in> G'" 
+  and   gsr: "\<And>s s'. (s, s') \<in> sr \<Longrightarrow> (s, g s') \<in> sr"
+  and   gG: "\<And>s'. s' \<in> G' \<Longrightarrow> g s' \<in> G'"
   shows "ccorres_underlying sr E r xf arrel axf G G' hs a (Basic g ;; c)"
   using asm
   apply -
   apply (rule ccorresI')
   apply clarsimp
-  apply (erule exec_handlers.cases)  
+  apply (erule exec_handlers.cases)
     apply clarsimp
     apply (erule exec_Normal_elim_cases)
     apply (erule exec_Normal_elim_cases)
@@ -924,7 +924,7 @@ lemma ccorres_basic_srnoop:
     apply simp
    apply clarsimp
    apply (erule exec_Normal_elim_cases)
-   apply (erule exec_Normal_elim_cases)   
+   apply (erule exec_Normal_elim_cases)
    apply simp
    apply (erule (4) ccorresE [OF _ gsr _ gG])
     apply (erule (1) EHOther)
@@ -990,7 +990,7 @@ lemma ccorres_liftM_simp [simp]:
   apply (simp add: unif_rrel_def split: if_split_asm)
   done
 
-lemma ccorres_cond_weak:  
+lemma ccorres_cond_weak:
   assumes c1: "ccorres_underlying sr \<Gamma> r xf arrel axf Pt Rt hs a c"
   and     c2: "ccorres_underlying sr \<Gamma> r xf arrel axf Pf Rf hs a c'"
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf (Pt and Pf) ((Rt \<inter> b) \<union> (Rf \<inter> -b)) hs a (Cond b  c c')"
@@ -1006,7 +1006,7 @@ lemma ccorres_cond_weak:
   apply (fastforce elim: ccorresE [OF c2] elim!: bexI [rotated])
   done
 
-lemma ccorres_cond_empty:  
+lemma ccorres_cond_empty:
   assumes c2: "ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs a c'"
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs a (Cond {} c c')"
   apply (rule ccorres_guard_imp)
@@ -1015,8 +1015,8 @@ lemma ccorres_cond_empty:
    apply simp
   apply simp
   done
-    
-lemma ccorres_cond_univ:  
+
+lemma ccorres_cond_univ:
   assumes c1: "ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs a c"
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs a (Cond UNIV c c')"
   apply (rule ccorres_guard_imp)
@@ -1030,18 +1030,18 @@ lemma ccorres_Guard:
   assumes cc: "ccorres_underlying sr \<Gamma> r xf arrel axf A C' hs a c"
   shows "ccorres_underlying sr \<Gamma> r xf arrel axf A (C' \<inter> S) hs a (Guard F S c)"
   using cc
-  apply -  
+  apply -
   apply (rule ccorresI')
   apply (erule exec_handlers.cases)
     apply clarsimp
     apply (erule exec_Normal_elim_cases)
-     apply (erule (4) ccorresE)       
+     apply (erule (4) ccorresE)
       apply (erule (1) EHAbrupt)
      apply (clarsimp elim!: bexI [rotated])
     apply clarsimp
    apply clarsimp
    apply (erule exec_Normal_elim_cases)
-    apply (erule (4) ccorresE)       
+    apply (erule (4) ccorresE)
      apply (erule (1) EHOther)
     apply (clarsimp elim!: bexI [rotated])
    apply clarsimp
@@ -1050,12 +1050,12 @@ lemma ccorres_Guard:
 
 lemma ccorres_Guard_Seq:
   assumes cc: "ccorres_underlying sr \<Gamma> r xf arrel axf A C' hs a (c ;; d)"
-  shows "ccorres_underlying sr \<Gamma> r xf arrel axf A (C' \<inter> S) hs a (Guard F S c ;; d)"  
+  shows "ccorres_underlying sr \<Gamma> r xf arrel axf A (C' \<inter> S) hs a (Guard F S c ;; d)"
   apply (rule ccorres_semantic_equivD2 [OF _ Guard_Seq_semantic_equiv])
   apply (rule ccorres_Guard [OF cc])
   done
 
-lemma ccorres_cond_const:  
+lemma ccorres_cond_const:
   assumes c1: "P \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf Pt Rt hs a c"
   and     c2: "\<not> P \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf Pf Rf hs a c'"
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf ((\<lambda>s. P \<longrightarrow> Pt s) and (\<lambda>s. \<not> P \<longrightarrow> Pf s)) ((Rt \<inter> {_. P}) \<union> (Rf \<inter> {_. \<not> P})) hs a (Cond {_. P} c c')"
@@ -1089,13 +1089,13 @@ lemma ccorres_symb_exec_l:
   assumes cc: "\<And>rv. ccorres_underlying sr \<Gamma> r xf arrel axf (Q rv) (Q' rv) hs (f rv) c"
   and   pres: "\<And>s. \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>"
   and    val: "\<lbrace>G\<rbrace> m \<lbrace>Q\<rbrace>"
-  and     ef: "empty_fail m" 
+  and     ef: "empty_fail m"
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf G {s'. \<forall>rv s. (s, s') \<in> sr \<and> Q rv s \<longrightarrow> s' \<in> Q' rv} hs (m >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorresI')
   apply (frule not_snd_bindI1)
   apply (erule empty_fail_not_snd [OF _ ef, THEN exE])
   apply (case_tac x)
-  apply simp  
+  apply simp
   apply (frule (1) use_valid [OF _  val])
   apply (frule use_valid [OF _ pres])
    apply (rule refl)
@@ -1114,7 +1114,7 @@ lemma ccorres_symb_exec_l':
   assumes cc: "\<And>rv. ccorres_underlying sr \<Gamma> r xf arrel axf (Q rv) G' hs (f rv) c"
   and     v1: "\<And>s. NonDetMonad.valid (op = s) m (\<lambda>r. op = s)"
   and     v2: "NonDetMonad.valid G m Q"
-  and     ef: "empty_fail m" 
+  and     ef: "empty_fail m"
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs (m >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l [OF cc v1 v2 ef])
@@ -1134,7 +1134,7 @@ lemma ccorres_symb_exec_l2:
   apply (drule (1) not_snd_bindD)
   apply (rule ccorresE [OF cc])
        apply assumption
-      apply assumption     
+      apply assumption
      apply (drule spec, erule mp)
      apply fastforce
     apply simp
@@ -1149,7 +1149,7 @@ lemma exec_handlers_SkipD:
     apply (erule exec_Normal_elim_cases)
     apply simp
    apply clarsimp
-   apply (erule exec_Normal_elim_cases)   
+   apply (erule exec_Normal_elim_cases)
    apply simp
    apply simp
    done
@@ -1170,18 +1170,18 @@ lemma ccorres_trim_redundant_throw':
     apply clarsimp
     apply (erule_tac x = "t'" in ccorresE [OF cc])
 	apply assumption
-       apply assumption	
-      apply assumption      
-     apply (erule (1) EHOther) 
+       apply assumption
+      apply assumption
+     apply (erule (1) EHOther)
     apply simp
-    apply (erule exec_Normal_elim_cases | simp)+ 
+    apply (erule exec_Normal_elim_cases | simp)+
    -- "Abrupt case"
    apply clarsimp
    apply (erule_tac x = "t'" in ccorresE [OF cc])
        apply assumption
       apply assumption
      apply assumption
-    apply (erule (1) EHOther) 
+    apply (erule (1) EHOther)
    apply clarsimp
    apply (frule exec_handlers_Cons_le)
    apply (erule exec_Normal_elim_cases | simp)+
@@ -1193,7 +1193,7 @@ lemma ccorres_trim_redundant_throw':
      apply assumption
     apply assumption
    apply (erule EHAbrupt)
-   apply simp   
+   apply simp
   apply (clarsimp simp: xfg unif_rrel_simps elim!: bexI [rotated])
   done
 
@@ -1207,7 +1207,7 @@ lemma ccorres_req:
   apply (erule (5) ccorresE)
   apply fastforce
   done
-  
+
 lemma ccorres_gen_asm:
   assumes rl: "P \<Longrightarrow> ccorres_underlying \<Gamma> sr r xf arrel axf G G' hs a c"
   shows   "ccorres_underlying \<Gamma> sr r xf arrel axf (G and (\<lambda>_. P)) G' hs a c"
@@ -1227,7 +1227,7 @@ lemma ccorres_gen_asm2:
    apply (erule rl)
     apply (simp split: if_split_asm)+
     done
- 
+
 lemma ccorres_guard_imp2:
   assumes cc: "ccorres_underlying sr \<Gamma> r xf arrel axf Q Q' hs f g"
   and     rl: "\<And>s s'. \<lbrakk> (s, s') \<in> sr; A s; s' \<in> A' \<rbrakk> \<Longrightarrow> Q s \<and> s' \<in> Q'"
@@ -1240,9 +1240,9 @@ lemma ccorres_guard_imp2:
   apply (erule (5) ccorresE)
   apply (fastforce elim: bexI [rotated])
   done
-    
 
-lemma ccorres_cond_both:  
+
+lemma ccorres_cond_both:
   assumes abs: "\<forall>s s'. (s, s') \<in> sr \<and> R s \<longrightarrow> P s = (s' \<in> P')"
   and     c1: "ccorres_underlying sr \<Gamma> r xf arrel axf Pt Rt hs a c"
   and     c2: "ccorres_underlying sr \<Gamma> r xf arrel axf Pf Rf hs a c'"
@@ -1293,7 +1293,7 @@ lemma ccorres_split_nothrow:
 
 
 
-(* We use composition here (over something like xf'') so that we can detect hand-rolled 
+(* We use composition here (over something like xf'') so that we can detect hand-rolled
    corres lemmas --- otherwise, there is no real way. *)
 
 lemma ccorres_split_nothrow_record:
@@ -1383,8 +1383,8 @@ lemma ccorres_split_nothrow_record_novcg:
   and     bd: "\<And>rv rv'. r' rv rv' \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (Q rv) (Q' rv rv') hs (b rv) (d' (xfru (\<lambda>_. rv') oldv))"
   and  valid: "\<lbrace>R\<rbrace> a \<lbrace>Q\<rbrace>"
   and  novcg: "guard_is_UNIV r' (xfr \<circ> xf') Q'"
-  -- "This might cause problems \<dots> has to be preserved across c in vcg case, but we can't do that"  
-  and xfoldv: "\<And>s. xf' s = xfru (\<lambda>_. (xfr \<circ> xf') s) oldv" 
+  -- "This might cause problems \<dots> has to be preserved across c in vcg case, but we can't do that"
+  and xfoldv: "\<And>s. xf' s = xfru (\<lambda>_. (xfr \<circ> xf') s) oldv"
   shows "ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) P' hs (a >>= (\<lambda>rv. b rv)) (c ;; d)"
   apply (rule ccorres_master_split_nohs_UNIV)
      apply (rule ac)
@@ -1525,7 +1525,7 @@ lemma ccorres_seq_cond_empty:
   apply (rule semantic_equivI)
   apply (auto elim!: exec_Normal_elim_cases intro: exec.intros)
   done
-  
+
 lemma ccorres_seq_cond_univ:
   "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (Cond UNIV x y ;; c) = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (x ;; c)"
   apply (rule ccorres_semantic_equiv)
@@ -1546,7 +1546,7 @@ lemma ccorres_cond_false:
   "ccorres_underlying sr \<Gamma> r xf arrel axf R R' hs a d
      \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf R (R' \<inter> - P) hs a (Cond P c d)"
   apply (rule ccorres_guard_imp2)
-  apply (rule ccorres_cond_weak)    
+  apply (rule ccorres_cond_weak)
    apply (rule ccorres_gen_asm2 [where P = False])
     apply simp
    apply simp
@@ -1602,22 +1602,22 @@ lemma ccorres_Catch:
   done
 
 lemma ccorres_cond_seq:
-  "ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H (Cond Q (c;;d) (c';;d)) \<Longrightarrow> 
+  "ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H (Cond Q (c;;d) (c';;d)) \<Longrightarrow>
    ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H (Cond Q c c';; d)"
   apply (erule ccorres_semantic_equivD2)
   apply (simp only: semantic_equiv_def)
   apply (clarsimp simp: ceqv_def)
   apply (rule iffI)
-   apply (erule exec_elim_cases, simp_all)[1]   
+   apply (erule exec_elim_cases, simp_all)[1]
    apply (erule exec_elim_cases, simp_all)[1]
     apply (erule exec.CondTrue)
     apply (erule (1) exec.Seq)
    apply (erule exec.CondFalse)
    apply (erule (1) exec.Seq)
-  apply (erule exec_elim_cases, simp_all)[1]    
+  apply (erule exec_elim_cases, simp_all)[1]
    apply (erule exec_elim_cases, simp_all)[1]
    apply (rule exec.Seq)
-    apply (erule exec.CondTrue) 
+    apply (erule exec.CondTrue)
     apply assumption
    apply assumption
   apply (erule exec_elim_cases, simp_all)[1]

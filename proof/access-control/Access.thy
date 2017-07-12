@@ -84,7 +84,7 @@ in a scheduling domain has to have the same label. We will want to
 weaken this in the future.
 
 The booleans @{text pasMayActivate} and @{text pasMayEditReadyQueues}
-are used to weaken the integrity property. When @{const True}, 
+are used to weaken the integrity property. When @{const True},
 @{text pasMayActivate} causes the integrity property to permit
 activation of newly-scheduled threads. Likewise, @{text pasMayEditReadyQueues}
 has the integrity property permit the removal of threads from ready queues,
@@ -702,13 +702,13 @@ definition
     \<Rightarrow> 'a set \<Rightarrow> 'a PAS \<Rightarrow> bool"
 where
   "tcb_bound_notification_reset_integrity ntfn ntfn' subjects aag
-    = ((ntfn = ntfn') (*NO CHANGE TO BOUND NTFN *) 
-       \<or> (ntfn' = None \<and> aag_subjects_have_auth_to subjects aag Reset (the ntfn)) (* NTFN IS UNBOUND *))" 
+    = ((ntfn = ntfn') (*NO CHANGE TO BOUND NTFN *)
+       \<or> (ntfn' = None \<and> aag_subjects_have_auth_to subjects aag Reset (the ntfn)) (* NTFN IS UNBOUND *))"
 
 definition direct_send :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> obj_ref \<Rightarrow> tcb \<Rightarrow> bool"
 where
-  "direct_send subjects aag ep tcb \<equiv> receive_blocked_on ep (tcb_state tcb) \<and> 
-                                   (aag_subjects_have_auth_to subjects aag SyncSend ep 
+  "direct_send subjects aag ep tcb \<equiv> receive_blocked_on ep (tcb_state tcb) \<and>
+                                   (aag_subjects_have_auth_to subjects aag SyncSend ep
                                      \<or> aag_subjects_have_auth_to subjects aag Notify ep)"
 
 abbreviation ep_recv_blocked :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> bool"
@@ -740,13 +740,13 @@ where
            \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_ep_unblock: "\<lbrakk> ko  = Some (Endpoint ep);
              ko' = Some (Endpoint ep');
-             \<exists>tcb ntfn. (tcb, Receive, pasObjectAbs aag ntfn) \<in> pasPolicy aag \<and> 
-                       (tcb, Receive, l') \<in> pasPolicy aag \<and> 
+             \<exists>tcb ntfn. (tcb, Receive, pasObjectAbs aag ntfn) \<in> pasPolicy aag \<and>
+                       (tcb, Receive, l') \<in> pasPolicy aag \<and>
                        aag_subjects_have_auth_to subjects aag Notify ntfn \<rbrakk>
            \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 
 | tro_tcb_send: "\<lbrakk> ko  = Some (TCB tcb);
-                   ko' = Some (TCB tcb'); 
+                   ko' = Some (TCB tcb');
                    \<exists>ctxt'. tcb' = tcb \<lparr>tcb_arch := arch_tcb_context_set ctxt' (tcb_arch tcb), tcb_state := Structures_A.Running,
                      tcb_bound_notification := ntfn'\<rparr>;
                    tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
@@ -1017,7 +1017,7 @@ lemma tro_trans: (* this takes a long time to process *)
        | drule(1) clear_asidpool_trans
        | drule sym[where s = "Some x" for x]
        | blast intro: integrity_obj.intros)+)[1]
-  by (((fastforce intro: integrity_obj.intros simp: indirect_send_def direct_send_def) 
+  by (((fastforce intro: integrity_obj.intros simp: indirect_send_def direct_send_def)
                               | erule integrity_obj.cases)+)
 
 lemma tre_trans:
@@ -1087,8 +1087,8 @@ lemma auth_ipc_buffers_tro:
           pasObjectAbs aag p \<notin> subjects \<rbrakk>
   \<Longrightarrow> x \<in> auth_ipc_buffers s p "
   apply (drule_tac x = p in spec)
-  apply (erule integrity_obj.cases, 
-        simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def 
+  apply (erule integrity_obj.cases,
+        simp_all add: tcb_states_of_state_def get_tcb_def auth_ipc_buffers_def
                split: cap.split_asm arch_cap.split_asm if_split_asm bool.splits)
   apply fastforce
   done
@@ -1504,7 +1504,7 @@ lemma ntfn_queued_st_tcb_at':
    \<Longrightarrow> st_tcb_at P t s"
   apply (case_tac "ntfn_obj ntfn", simp_all)
   apply (frule(1) sym_refs_ko_atD)
-  apply (clarsimp) 
+  apply (clarsimp)
   apply (erule_tac y="(t, NTFNSignal)" in my_BallE, clarsimp)
   apply (clarsimp simp: pred_tcb_at_def refs_of_rev elim!: obj_at_weakenE)+
   done

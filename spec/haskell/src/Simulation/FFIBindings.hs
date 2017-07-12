@@ -143,7 +143,7 @@ seL4Bootstrap breakFlag errorFlag errorString
 
     where
         f uf kf bf = runVoid (initKernel (fromIntegral start) (fromIntegral vpOffset)
-                                         uf kf bf) st 
+                                         uf kf bf) st
 ---- seL4Shutdown ----
 -- Destroy an seL4 instance.
 foreign export ccall seL4Shutdown :: Ptr CInt -> Ptr StatePtr -> IO ()
@@ -270,7 +270,7 @@ seL4RestoreContext breakFlag errorFlag errorString
 --foreign export ccall seL4Inspect :: Ptr CInt -> CString -> Ptr CString ->
                                     --Ptr CInt -> Ptr CString ->
                                     --StatePtr -> IO ()
---seL4Inspect breakFlag cmdline strptr errorFlag errorString st = do 
+--seL4Inspect breakFlag cmdline strptr errorFlag errorString st = do
     --setBreak breakFlag
     --_cmdline <- peekCString cmdline
     --response <- runCatch (f _cmdline) errorFlag errorString ""

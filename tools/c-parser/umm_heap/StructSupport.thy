@@ -619,7 +619,7 @@ lemma td_names_array [simp]:
   \<union> td_names (typ_info_t TYPE('a))"
   by (simp add: typ_info_array array_tag_def td_names_array_tag_n)
 
-lemma tag_disj_via_td_name: 
+lemma tag_disj_via_td_name:
   assumes ta: "typ_name (typ_info_t TYPE('a :: c_type)) \<noteq> pad_typ_name"
   and     tb: "typ_name (typ_info_t TYPE('b :: c_type)) \<noteq> pad_typ_name"
   and   tina: "typ_name (typ_info_t TYPE('a :: c_type)) \<notin> td_names (typ_info_t TYPE('b :: c_type))"
@@ -688,5 +688,5 @@ lemma typ_name_array [simp]:
   "typ_name (typ_info_t TYPE('a::c_type['b :: finite])) =
     typ_name (typ_info_t TYPE('a)) @ ''_array_'' @ nat_to_bin_string (card (UNIV :: 'b set))"
   by (simp add: typ_info_array array_tag_def typ_name_array_tag_n)
- 
+
 end

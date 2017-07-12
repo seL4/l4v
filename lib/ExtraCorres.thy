@@ -40,12 +40,12 @@ next
     done
 qed
 
-(* list_all2 has _much_ nicer simps than set (zip _ _). 
+(* list_all2 has _much_ nicer simps than set (zip _ _).
     See KernelInit_R: corres_init_objs for an example *)
 lemma corres_mapM_list_all2:
   assumes rn: "r [] []"
   and     rc: "\<And>x xs y ys. \<lbrakk> r xs ys; r' x y \<rbrakk> \<Longrightarrow> r (x # xs) (y # ys)"
-  and   corr: "\<And>x xs y ys. \<lbrakk> S x y; list_all2 S xs ys \<rbrakk> 
+  and   corr: "\<And>x xs y ys. \<lbrakk> S x y; list_all2 S xs ys \<rbrakk>
                \<Longrightarrow> corres_underlying sr nf nf' r' (Q (x # xs)) (Q' (y # ys)) (f x) (f' y)"
   and     ha: "\<And>x xs y. \<lbrakk> S x y; suffix (x#xs) as \<rbrakk> \<Longrightarrow> \<lbrace>Q  (x # xs)\<rbrace> f x \<lbrace>\<lambda>r. Q xs\<rbrace>"
   and     hc: "\<And>x y ys. \<lbrakk> S x y; suffix (y#ys) cs \<rbrakk> \<Longrightarrow> \<lbrace>Q' (y # ys) \<rbrace> f' y \<lbrace>\<lambda>r. Q' ys\<rbrace>"
@@ -54,17 +54,17 @@ lemma corres_mapM_list_all2:
   using lall
 proof (induct rule: list_all2_induct_suffixeq)
   case Nil
-  thus ?case 
+  thus ?case
     unfolding mapM_def sequence_def by (auto intro: rn)
 next
   case  (Cons x xs y ys)
-  
+
   have corr': "corres_underlying sr nf nf' r' (Q (x # xs)) (Q' (y # ys)) (f x) (f' y)"
   proof (rule corr)
     show "list_all2 S xs ys" by (simp add: Cons)
   qed fact+
-  
-  show ?case 
+
+  show ?case
     apply (simp add: mapM_Cons)
     apply (rule corres_split' [OF corr' _ ha [OF Cons(2)] hc [OF Cons(2)]])
     apply (rule corres_split' [OF Cons(3) _ hoare_post_taut hoare_post_taut])
@@ -109,7 +109,7 @@ next
   show ?case
     apply (simp add: mapME_Cons)
     apply (rule corres_guard_imp)
-    apply (unfold bindE_def validE_def)    
+    apply (unfold bindE_def validE_def)
       apply (rule corres_underlying_split [OF z [OF P]])
         prefer 3
         apply clarify
@@ -191,7 +191,7 @@ lemma wp_from_corres_u:
 
 lemma wp_from_corres_u_unit:
   "\<lbrakk> corres_underlying R nf nf' r G G' f f'; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace>; \<lbrace>P'\<rbrace> f' \<lbrace>\<lambda>_. Q'\<rbrace>; nf \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow>
-  \<lbrace>\<lambda>s'. \<exists>s. (s,s') \<in> R \<and> P s \<and> G s \<and> P' s' \<and> G' s'\<rbrace> 
+  \<lbrace>\<lambda>s'. \<exists>s. (s,s') \<in> R \<and> P s \<and> G s \<and> P' s' \<and> G' s'\<rbrace>
   f' \<lbrace>\<lambda>_ s'. \<exists>s. (s,s') \<in> R \<and> Q s \<and> Q' s'\<rbrace>"
   apply (fastforce dest: wp_from_corres_u elim: hoare_strengthen_post)
   done
@@ -204,7 +204,7 @@ lemma corres_nofail:
 lemma wp_from_corres_unit:
   "\<lbrakk> corres_underlying state_relation nf nf' r G G' f f';
      \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace>; \<lbrace>P'\<rbrace> f' \<lbrace>\<lambda>_. Q'\<rbrace>; nf \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow>
-  \<lbrace>\<lambda>s'. \<exists>s. (s,s') \<in> state_relation \<and> P s \<and> G s \<and> P' s' \<and> G' s'\<rbrace> 
+  \<lbrace>\<lambda>s'. \<exists>s. (s,s') \<in> state_relation \<and> P s \<and> G s \<and> P' s' \<and> G' s'\<rbrace>
   f' \<lbrace>\<lambda>_ s'. \<exists>s. (s,s') \<in> state_relation \<and> Q s \<and> Q' s'\<rbrace>"
   by (auto intro!: wp_from_corres_u_unit)
 

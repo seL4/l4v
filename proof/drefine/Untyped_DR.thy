@@ -586,7 +586,7 @@ lemma retype_region_dcorres:
   \<and> range_cover ptr sz (obj_bits_api type us) n
   \<and> (type = Structures_A.Untyped \<longrightarrow> 4 \<le> us)
   \<and> (type = Structures_A.CapTableObject \<longrightarrow> us \<noteq> 0))
-  (Untyped_D.retype_region 
+  (Untyped_D.retype_region
   us (translate_object_type type) (map (retype_transform_obj_ref type us) (retype_addrs ptr type n us)))
   (Retype_A.retype_region ptr n us type dev)"
   apply (simp add: retype_region_def Untyped_D.retype_region_def

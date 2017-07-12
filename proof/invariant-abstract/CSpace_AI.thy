@@ -202,7 +202,7 @@ proof (induct args arbitrary: s rule: resolve_address_bits'.induct)
     apply (simp add: split_def cong: if_cong split del: if_split)
     apply (rule hoare_pre_spec_validE)
      apply (wp P [OF "1.hyps"], (simp add: in_monad | rule conjI refl)+)
-          apply (wp | simp | rule get_cap_wp)+ 
+          apply (wp | simp | rule get_cap_wp)+
     apply (fastforce simp: ex_cte_cap_wp_to_def elim!: cte_wp_at_weakenE)
     done
 qed
@@ -213,7 +213,7 @@ lemmas rab_cte_cap_to = use_spec(2) [OF rab_cte_cap_to']
 
 lemma resolve_address_bits_real_cte_at:
   "\<lbrace> valid_objs and valid_cap (fst args) \<rbrace>
-  resolve_address_bits args 
+  resolve_address_bits args
   \<lbrace>\<lambda>rv. real_cte_at (fst rv)\<rbrace>, -"
 unfolding resolve_address_bits_def
 proof (induct args rule: resolve_address_bits'.induct)
@@ -253,7 +253,7 @@ qed
 
 
 lemma resolve_address_bits_cte_at:
-  "\<lbrace> valid_objs and valid_cap (fst args) \<rbrace> 
+  "\<lbrace> valid_objs and valid_cap (fst args) \<rbrace>
   resolve_address_bits args
   \<lbrace>\<lambda>rv. cte_at (fst rv)\<rbrace>, -"
   apply (rule hoare_post_imp_R, rule resolve_address_bits_real_cte_at)
@@ -261,7 +261,7 @@ lemma resolve_address_bits_cte_at:
   done
 
 
-lemma lookup_slot_real_cte_at_wp [wp]: 
+lemma lookup_slot_real_cte_at_wp [wp]:
   "\<lbrace> valid_objs \<rbrace> lookup_slot_for_thread t addr \<lbrace>\<lambda>rv. real_cte_at (fst rv)\<rbrace>,-"
   apply (simp add: lookup_slot_for_thread_def)
   apply wp
@@ -272,7 +272,7 @@ lemma lookup_slot_real_cte_at_wp [wp]:
   apply (erule(1) objs_valid_tcb_ctable)
   done
 
-lemma lookup_slot_cte_at_wp[wp]: 
+lemma lookup_slot_cte_at_wp[wp]:
   "\<lbrace> valid_objs \<rbrace> lookup_slot_for_thread t addr \<lbrace>\<lambda>rv. cte_at (fst rv)\<rbrace>,-"
   by (rule hoare_post_imp_R, wp, erule real_cte_at_cte)
 
@@ -280,21 +280,21 @@ lemma get_cap_success:
   fixes s cap ptr offset
   defines "s' \<equiv> s\<lparr>kheap := [ptr \<mapsto> CNode (length offset) (\<lambda>x. if length x = length offset then Some cap else None)]\<rparr>"
   shows "(cap, s') \<in> fst (get_cap (ptr, offset) s')"
-  by (simp add: get_cap_def get_object_def 
+  by (simp add: get_cap_def get_object_def
                 in_monad s'_def well_formed_cnode_n_def length_set_helper dom_def
            split: Structures_A.kernel_object.splits)
 
 
 lemma len_drop_lemma:
   assumes drop: "drop (n - length ys) xs = ys"
-  assumes l: "n = length xs" 
+  assumes l: "n = length xs"
   shows "length ys \<le> n"
 proof -
-  from drop 
+  from drop
   have "length (drop (n - length ys) xs) = length ys"
     by simp
   with l
-  have "length ys = n - (n - length ys)" 
+  have "length ys = n - (n - length ys)"
     by simp
   thus ?thesis by arith
 qed
@@ -307,7 +307,7 @@ proof (induct xs arbitrary: ys)
 next
   case (Cons x xs)
   from Cons.prems
-  have "length ys \<le> length (x # xs)" 
+  have "length ys \<le> length (x # xs)"
     by (rule len_drop_lemma) simp
   moreover
   { assume "length ys = length (x # xs)"
@@ -317,14 +317,14 @@ next
   moreover {
     assume "length ys < length (x # xs)"
     hence "length ys \<le> length xs" by simp
-    hence "drop (length xs - length ys) xs = 
+    hence "drop (length xs - length ys) xs =
            drop (length (x # xs) - length ys) (x # xs)"
       by (simp add: Suc_diff_le)
     with Cons.prems
     have ?case by (auto dest: Cons.hyps)
   }
   ultimately
-  show ?case by (auto simp: order_le_less) 
+  show ?case by (auto simp: order_le_less)
 qed
 
 
@@ -343,9 +343,9 @@ lemmas is_cap_defs = is_arch_cap_def is_zombie_def
 
 lemma guard_mask_shift:
   fixes cref' :: "'a::len word"
-  assumes postfix: "to_bl cref' = xs @ cref" 
+  assumes postfix: "to_bl cref' = xs @ cref"
   shows
-  "(length guard \<le> length cref \<and> 
+  "(length guard \<le> length cref \<and>
     (cref' >> (length cref - length guard)) && mask (length guard) = of_bl guard)
   = (guard \<le> cref)" (is "(_ \<and> ?l = ?r) = _ " is "(?len \<and> ?shift) = ?prefix")
 proof
@@ -353,7 +353,7 @@ proof
   from postfix
   have "length (to_bl cref') = length xs + length cref" by simp
   hence w_len: "?w_len = \<dots>" by simp
-  
+
   assume "?len \<and> ?shift"
   hence shift: ?shift and c_len: ?len by auto
 
@@ -365,7 +365,7 @@ proof
   have "\<dots> = replicate (?w_len - length guard) False @
         drop (?w_len - length guard) (to_bl (cref' >> (length cref - length guard)))"
     by (simp add: bl_and_mask)
-  also 
+  also
   from c_len
   have "\<dots> = replicate (?w_len - length guard) False @ take (length guard) cref"
     by (simp add: bl_shiftr w_len word_size postfix)
@@ -375,7 +375,7 @@ proof
 next
   let ?w_len = "len_of TYPE('a)"
   assume ?prefix
-  then obtain zs where cref: "cref = guard @ zs" 
+  then obtain zs where cref: "cref = guard @ zs"
     by (auto simp: prefix_def less_eq_list_def)
   with postfix
   have to_bl_c: "to_bl cref' = xs @ guard @ zs" by simp
@@ -422,7 +422,7 @@ lemma gets_the_tcb_get_cap:
 
 
 lemma upd_other_cte_wp_at:
-  "\<lbrakk> cte_wp_at P p s; fst p \<noteq> ptr \<rbrakk> \<Longrightarrow> 
+  "\<lbrakk> cte_wp_at P p s; fst p \<noteq> ptr \<rbrakk> \<Longrightarrow>
   cte_wp_at P p (kheap_update (\<lambda>ps. (kheap s)(ptr \<mapsto> ko)) s)"
   by (auto elim!: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
 
@@ -439,7 +439,7 @@ lemma get_cap_sp:
 lemma wf_cs_nD:
   "\<lbrakk> f x = Some y; well_formed_cnode_n n f \<rbrakk> \<Longrightarrow> length x = n"
   unfolding well_formed_cnode_n_def by blast
- 
+
 
 lemma set_cdt_valid_pspace:
   "\<lbrace>valid_pspace\<rbrace> set_cdt m \<lbrace>\<lambda>_. valid_pspace\<rbrace>"
@@ -495,11 +495,11 @@ lemma well_formed_cnode_invsI:
 
 
 lemma set_cap_cte_eq:
-  "(x,t) \<in> fst (set_cap c p' s) \<Longrightarrow> 
+  "(x,t) \<in> fst (set_cap c p' s) \<Longrightarrow>
   cte_at p' s \<and> cte_wp_at P p t = (if p = p' then P c else cte_wp_at P p s)"
   apply (cases p)
   apply (cases p')
-  apply (auto simp: set_cap_def2 split_def in_monad cte_wp_at_cases 
+  apply (auto simp: set_cap_def2 split_def in_monad cte_wp_at_cases
                     get_object_def set_object_def wf_cs_upd
              split: Structures_A.kernel_object.splits if_split_asm
                     option.splits,
@@ -508,7 +508,7 @@ lemma set_cap_cte_eq:
 
 
 lemma descendants_of_cte_at:
-  "\<lbrakk> p \<in> descendants_of x (cdt s); valid_mdb s \<rbrakk> 
+  "\<lbrakk> p \<in> descendants_of x (cdt s); valid_mdb s \<rbrakk>
   \<Longrightarrow> cte_at p s"
   apply (simp add: descendants_of_def)
   apply (drule tranclD2)
@@ -519,7 +519,7 @@ lemma descendants_of_cte_at:
 
 
 lemma descendants_of_cte_at2:
-  "\<lbrakk> p \<in> descendants_of x (cdt s); valid_mdb s \<rbrakk> 
+  "\<lbrakk> p \<in> descendants_of x (cdt s); valid_mdb s \<rbrakk>
   \<Longrightarrow> cte_at x s"
   apply (simp add: descendants_of_def)
   apply (drule tranclD)
@@ -546,14 +546,14 @@ lemma take_to_bl_len:
   fixes a :: "'a::len word"
   fixes b :: "'a::len word"
   assumes t: "take x (to_bl a) = take y (to_bl b)"
-  assumes x: "x \<le> size a" 
+  assumes x: "x \<le> size a"
   assumes y: "y \<le> size b"
   shows "x = y"
 proof -
-  from t 
+  from t
   have "length (take x (to_bl a)) = length (take y (to_bl b))"
     by simp
-  also 
+  also
   from x have "length (take x (to_bl a)) = x"
     by (simp add: word_size)
   also
@@ -621,7 +621,7 @@ lemma set_cap_caps_of_state_monad:
 definition
   "revokable src_cap new_cap \<equiv>
    if is_ep_cap new_cap then cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap
-   else if is_ntfn_cap new_cap then cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap 
+   else if is_ntfn_cap new_cap then cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap
    else if \<exists>irq. new_cap = cap.IRQHandlerCap irq then src_cap = cap.IRQControlCap
    else is_untyped_cap new_cap"
 
@@ -639,7 +639,7 @@ lemma descendants_of_empty:
   apply clarsimp
   done
 
-  
+
 
 lemma descendants_of_None:
   "(\<forall>c. d \<notin> descendants_of c m) = (m d = None)"
@@ -651,7 +651,7 @@ lemma descendants_of_None:
    apply clarsimp
   apply (erule contrapos_pp)
   apply fastforce
-  done  
+  done
 
 
 lemma not_should_be_parent_Null [simp]:
@@ -666,7 +666,7 @@ lemma mdb_None_no_parent:
 
 lemma descendants_of_self:
   assumes "descendants_of dest m = {}"
-  shows "descendants_of x (m(dest \<mapsto> dest)) = 
+  shows "descendants_of x (m(dest \<mapsto> dest)) =
    (if x = dest then {dest} else descendants_of x m - {dest})" using assms
   apply (clarsimp simp: descendants_of_def cdt_parent_defs)
   apply (rule conjI)
@@ -695,8 +695,8 @@ lemma descendants_of_self:
 lemma descendants_of_self_None:
   assumes "descendants_of dest m = {}"
   assumes n: "m dest = None"
-  shows "descendants_of x (m(dest \<mapsto> dest)) = 
-   (if x = dest then {dest} else descendants_of x m)" 
+  shows "descendants_of x (m(dest \<mapsto> dest)) =
+   (if x = dest then {dest} else descendants_of x m)"
   apply (subst descendants_of_self[OF assms(1)])
   apply clarsimp
   apply (subgoal_tac "dest \<notin> descendants_of x m")
@@ -708,8 +708,8 @@ lemma descendants_of_self_None:
 
 lemma descendants_insert_evil_trancl_induct:
   assumes "src \<noteq> dest"
-  assumes d: "descendants_of dest m = {}" 
-  assumes "src \<in> descendants_of x m" 
+  assumes d: "descendants_of dest m = {}"
+  assumes "src \<in> descendants_of x m"
   shows "src \<in> descendants_of x (m (dest \<mapsto> src))"
 proof -
   have r: "\<And>t. \<lbrakk> src \<in> descendants_of x m; t = src \<rbrakk> \<Longrightarrow> src \<noteq> dest \<longrightarrow> src \<in> descendants_of x (m (dest \<mapsto> t))"
@@ -737,13 +737,13 @@ proof -
     apply assumption
     done
 qed
-  
+
 
 lemma descendants_of_insert_child:
-  assumes d: "descendants_of dest m = {}" 
+  assumes d: "descendants_of dest m = {}"
   assumes s: "src \<noteq> dest"
   shows
-  "descendants_of x (m (dest \<mapsto> src)) = 
+  "descendants_of x (m (dest \<mapsto> src)) =
    (if src \<in> descendants_of x m \<or> x = src
     then descendants_of x m \<union> {dest} else descendants_of x m - {dest})"
   using assms
@@ -763,7 +763,7 @@ lemma descendants_of_insert_child:
      prefer 2
      apply simp
     apply assumption
-   apply (erule disjE) 
+   apply (erule disjE)
     apply (drule descendants_insert_evil_trancl_induct [OF _ d])
      apply (simp add: descendants_of_def cdt_parent_defs)
     apply (simp add: descendants_of_def cdt_parent_defs del: fun_upd_apply)
@@ -817,7 +817,7 @@ lemma descendants_of_insert_child:
   apply (rule set_eqI)
   apply (simp del: fun_upd_apply)
   apply (rule iffI)
-   apply (erule trancl_induct) 
+   apply (erule trancl_induct)
     apply (fastforce split: if_split_asm)
    apply (clarsimp split: if_split_asm)
    apply (fastforce elim: trancl_into_trancl)
@@ -841,13 +841,13 @@ lemma descendants_of_NoneD:
 
 
 lemma descendants_of_insert_child':
-  assumes d: "descendants_of dest m = {}" 
+  assumes d: "descendants_of dest m = {}"
   assumes s: "src \<noteq> dest"
   assumes m: "m dest = None"
   shows
-  "descendants_of x (m (dest \<mapsto> src)) = 
+  "descendants_of x (m (dest \<mapsto> src)) =
    (if src \<in> descendants_of x m \<or> x = src
-    then descendants_of x m \<union> {dest} else descendants_of x m)" 
+    then descendants_of x m \<union> {dest} else descendants_of x m)"
   apply (subst descendants_of_insert_child [OF d s])
   apply clarsimp
   apply (subgoal_tac "dest \<notin> descendants_of x m")
@@ -905,14 +905,14 @@ end
 definition
   is_derived :: "cdt \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
 where
-  "is_derived m p cap' cap \<equiv> 
+  "is_derived m p cap' cap \<equiv>
   cap' \<noteq> cap.NullCap \<and>
   \<not> is_zombie cap \<and>
   cap' \<noteq> cap.IRQControlCap \<and>
-  (if is_untyped_cap cap 
+  (if is_untyped_cap cap
   then
     cap_master_cap cap = cap_master_cap cap' \<and> descendants_of p m = {}
-  else 
+  else
     (cap_master_cap cap = cap_master_cap cap') \<and>
     (cap_badge cap, cap_badge cap') \<in> capBadge_ordering False) \<and>
     (is_master_reply_cap cap = is_reply_cap cap') \<and>
@@ -958,10 +958,10 @@ lemma yes_indeed [simp]:
 
 lemma master_cap_obj_refs:
   "cap_master_cap c = cap_master_cap c' \<Longrightarrow> obj_refs c = obj_refs c'"
-  by (clarsimp simp add: cap_master_cap_def 
-                 intro!: master_arch_cap_obj_refs[THEN arg_cong[where f=set_option]] 
+  by (clarsimp simp add: cap_master_cap_def
+                 intro!: master_arch_cap_obj_refs[THEN arg_cong[where f=set_option]]
                   split: cap.splits)
- 
+
 
 lemma master_cap_untyped_range:
   "cap_master_cap c = cap_master_cap c' \<Longrightarrow> untyped_range c = untyped_range c'"
@@ -985,7 +985,7 @@ lemma master_cap_ntfn:
 
 lemma cap_master_cap_zombie:
   "cap_master_cap c = cap_master_cap c' \<Longrightarrow> is_zombie c = is_zombie c'"
-  by (simp add: cap_master_cap_def is_cap_simps split: cap.splits)  
+  by (simp add: cap_master_cap_def is_cap_simps split: cap.splits)
 
 lemma zobj_refs_def2:
   "zobj_refs c = (case c of Zombie _ _ _ \<Rightarrow> {} | _ \<Rightarrow> obj_refs c)"
@@ -993,12 +993,12 @@ lemma zobj_refs_def2:
 
 lemma cap_master_cap_zobj_refs:
   "cap_master_cap c = cap_master_cap c' \<Longrightarrow> zobj_refs c = zobj_refs c'"
-  by (clarsimp simp add: cap_master_cap_def 
-                 intro!: master_arch_cap_obj_refs[THEN arg_cong[where f=set_option]] 
-                  split: cap.splits)  
+  by (clarsimp simp add: cap_master_cap_def
+                 intro!: master_arch_cap_obj_refs[THEN arg_cong[where f=set_option]]
+                  split: cap.splits)
 
 lemma caps_of_state_obj_refs:
-  "\<lbrakk> caps_of_state s p = Some cap; r \<in> obj_refs cap; valid_objs s \<rbrakk> 
+  "\<lbrakk> caps_of_state s p = Some cap; r \<in> obj_refs cap; valid_objs s \<rbrakk>
   \<Longrightarrow> \<exists>ko. kheap s r = Some ko"
   apply (subgoal_tac "valid_cap cap s")
    prefer 2
@@ -1031,7 +1031,7 @@ lemma dest_no_parent_trancl [iff]:
 
 
 lemma dest_no_parent [iff]:
-  "(m \<Turnstile> dest \<leadsto> p) = False" 
+  "(m \<Turnstile> dest \<leadsto> p) = False"
   by (fastforce dest: r_into_trancl)
 
 
@@ -1049,17 +1049,17 @@ lemma dest_no_child [iff]:
 
 
 lemma dest_no_child_trancl [iff]:
-  "(m \<Turnstile> p \<rightarrow> dest) = False" 
+  "(m \<Turnstile> p \<rightarrow> dest) = False"
   by (clarsimp dest!: tranclD2)
 
 
 lemma descendants_child:
   "descendants_of x (m(dest \<mapsto> src)) =
-  (if src \<in> descendants_of x m \<or> x = src 
+  (if src \<in> descendants_of x m \<or> x = src
    then descendants_of x m \<union> {dest} else descendants_of x m)"
   apply (rule descendants_of_insert_child')
     apply (rule desc)
-   apply (rule neq)  
+   apply (rule neq)
   apply (rule dest)
   done
 
@@ -1127,7 +1127,7 @@ lemma parent_n:
   apply (erule trancl_induct)
    apply simp
    apply (rule conjI)
-    apply (rule impI) 
+    apply (rule impI)
     apply simp
    apply (clarsimp simp: n_def cdt_parent_defs)
    apply fastforce
@@ -1183,10 +1183,10 @@ lemma parent_n_eq:
    apply (erule parent_m_dest)
   apply (erule parent_m)
   done
-  
+
 
 lemma descendants:
-  "descendants_of p n = 
+  "descendants_of p n =
    descendants_of p m \<union> (if src \<in> descendants_of p m then {dest} else {})"
   by (rule set_eqI) (simp add: descendants_of_def parent_n_eq)
 
@@ -1197,25 +1197,25 @@ end
 definition
   copy_of :: "cap \<Rightarrow> cap \<Rightarrow> bool"
 where
-  "copy_of cap' cap \<equiv> 
+  "copy_of cap' cap \<equiv>
   if (is_untyped_cap cap \<or> is_reply_cap cap \<or> is_master_reply_cap cap)
      then cap = cap' else same_object_as cap cap'"
 
 definition
-  "weak_derived cap cap' \<equiv> 
-  (copy_of cap cap' \<and> 
-   cap_asid cap = cap_asid cap' \<and> 
+  "weak_derived cap cap' \<equiv>
+  (copy_of cap cap' \<and>
+   cap_asid cap = cap_asid cap' \<and>
    cap_asid_base cap = cap_asid_base cap' \<and>
-   cap_vptr cap = cap_vptr cap') \<or> 
+   cap_vptr cap = cap_vptr cap') \<or>
   cap' = cap"
 
 
-lemma (in mdb_insert_abs) untyped_mdb:  
+lemma (in mdb_insert_abs) untyped_mdb:
   assumes u: "untyped_mdb m cs"
   assumes src: "cs src = Some c"
   assumes dst: "cs dest = Some cap.NullCap"
   assumes d: "is_derived m src cap c"
-  shows "untyped_mdb (m(dest \<mapsto> src)) (cs(dest \<mapsto> cap))"  
+  shows "untyped_mdb (m(dest \<mapsto> src)) (cs(dest \<mapsto> cap))"
   unfolding untyped_mdb_def
   apply (intro allI impI)
   apply (simp add: descendants_child)
@@ -1259,9 +1259,9 @@ lemma (in mdb_insert_abs) untyped_mdb:
    apply (erule (1) impE)
    subgoal by simp
   apply (rule impI)
-  apply (erule conjE)   
+  apply (erule conjE)
   apply (simp split: if_split_asm)
-     subgoal by (clarsimp simp: is_cap_simps)    
+     subgoal by (clarsimp simp: is_cap_simps)
     apply (insert u)[1]
     apply (unfold untyped_mdb_def)
     apply (erule allE)+
@@ -1285,7 +1285,7 @@ lemma (in mdb_insert_abs) untyped_mdb:
    apply (erule (1) impE)
    apply (erule impE, rule src)
    apply (erule impE)
-    apply (clarsimp simp:  is_derived_def 
+    apply (clarsimp simp:  is_derived_def
                    split: if_split_asm)
     apply (drule master_cap_obj_refs)
     apply (fastforce dest: master_cap_obj_refs)
@@ -1318,7 +1318,7 @@ lemma is_derived_cap_class_range:
   done
 
 
-lemma (in mdb_insert_abs_sib) descendants_inc:  
+lemma (in mdb_insert_abs_sib) descendants_inc:
   assumes dinc: "descendants_inc m cs"
   assumes src: "cs src = Some c"
   assumes d: "cap_class cap = cap_class c \<and> cap_range cap \<subseteq> cap_range c"
@@ -1346,7 +1346,7 @@ lemma (in mdb_insert_abs_sib) descendants_inc:
   done
 
 
-lemma (in mdb_insert_abs_sib) untyped_mdb_sib:  
+lemma (in mdb_insert_abs_sib) untyped_mdb_sib:
   assumes u: "untyped_mdb m cs"
   assumes src: "cs src = Some c"
   assumes dst: "cs dest = Some cap.NullCap"
@@ -1413,7 +1413,7 @@ lemma (in mdb_insert_abs_sib) untyped_mdb_sib:
 
 
 lemma mdb_cte_at_Null_None:
-  "\<lbrakk> cs p = Some cap.NullCap; 
+  "\<lbrakk> cs p = Some cap.NullCap;
      mdb_cte_at (\<lambda>p. \<exists>c. cs p = Some c \<and> cap.NullCap \<noteq> c) m \<rbrakk>
   \<Longrightarrow> m p = None"
   apply (simp add: mdb_cte_at_def)
@@ -1423,7 +1423,7 @@ lemma mdb_cte_at_Null_None:
 
 
 lemma mdb_cte_at_Null_descendants:
-  "\<lbrakk> cs p = Some cap.NullCap; 
+  "\<lbrakk> cs p = Some cap.NullCap;
      mdb_cte_at (\<lambda>p. \<exists>c. cs p = Some c \<and> cap.NullCap \<noteq> c) m \<rbrakk>
   \<Longrightarrow> descendants_of p m = {}"
   apply (simp add: mdb_cte_at_def descendants_of_def)
@@ -1436,12 +1436,12 @@ lemma mdb_cte_at_Null_descendants:
 
 
 lemma (in mdb_insert_abs) parency:
-  "(m (dest \<mapsto> src) \<Turnstile> p \<rightarrow> p') = 
+  "(m (dest \<mapsto> src) \<Turnstile> p \<rightarrow> p') =
   (if m \<Turnstile> p \<rightarrow> src \<or> p = src then p' = dest \<or> m \<Turnstile> p \<rightarrow> p' else m \<Turnstile> p \<rightarrow> p')"
   using descendants_child [where x=p]
   unfolding descendants_of_def
   by simp fastforce
- 
+
 
 context mdb_insert_abs begin
 
@@ -1477,7 +1477,7 @@ proof -
     using ut'
     apply (clarsimp simp:is_cap_simps)
     done
-    
+
   from ut ut' dsc dst
   show ?thesis using u src desc
   unfolding untyped_inc_def
@@ -1521,12 +1521,12 @@ lemma untyped_inc:
   assumes usable:"is_untyped_cap c \<longrightarrow> usable_untyped_range c = {}"
   shows "untyped_inc (m(dest \<mapsto> src)) (cs(dest \<mapsto> cap))"
 proof -
-  from d 
+  from d
   have "untyped_range cap = untyped_range c"
     by (clarsimp simp: is_derived_def cap_master_cap_def is_cap_simps
                 split: cap.split_asm if_split_asm)
   moreover
-  from d 
+  from d
   have "is_untyped_cap cap \<longrightarrow> descendants_of src m = {}"
     by (auto simp: is_derived_def cap_master_cap_def is_cap_simps
              split: if_split_asm cap.splits)
@@ -1670,9 +1670,9 @@ lemma (in mdb_insert_abs_sib) reply_mdb_sib:
 
 
 lemma not_parent_not_untyped:
-  assumes p: "\<not>should_be_parent_of c r c' f" "is_derived m p c' c" "cap_aligned c'" 
+  assumes p: "\<not>should_be_parent_of c r c' f" "is_derived m p c' c" "cap_aligned c'"
   assumes r: "is_untyped_cap c \<longrightarrow> r"
-  shows "\<not>is_untyped_cap c" using p r 
+  shows "\<not>is_untyped_cap c" using p r
   apply (clarsimp simp: cap_master_cap_def should_be_parent_of_def is_cap_simps is_derived_def
     split: if_split_asm cap.splits)
   apply (simp add: cap_aligned_def is_physical_def)
@@ -1683,7 +1683,7 @@ lemma not_parent_not_untyped:
 
 context mdb_insert_abs_sib begin
 
-lemma untyped_inc:  
+lemma untyped_inc:
   assumes u: "untyped_inc m cs"
   assumes d: "is_derived m src cap c"
   assumes p: "\<not>should_be_parent_of c r cap f" "cap_aligned cap"
@@ -1691,13 +1691,13 @@ lemma untyped_inc:
   shows "untyped_inc n (cs(dest \<mapsto> cap))"
 proof -
   from p d r
-  have u1: "\<not>is_untyped_cap c" by - (rule not_parent_not_untyped) 
+  have u1: "\<not>is_untyped_cap c" by - (rule not_parent_not_untyped)
   moreover
   with d
-  have u2: "\<not>is_untyped_cap cap" 
-    by (auto simp: is_derived_def cap_master_cap_def is_cap_simps 
+  have u2: "\<not>is_untyped_cap cap"
+    by (auto simp: is_derived_def cap_master_cap_def is_cap_simps
              split: if_split_asm cap.splits)
-  ultimately  
+  ultimately
   show ?thesis using u desc
     unfolding untyped_inc_def
     by (auto simp: descendants split: if_split_asm)
@@ -1722,9 +1722,9 @@ lemma update_cdt_mdb_cte_at:
   "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at P) s) (cdt s) \<and>
         (case (f (cdt s)) of Some p \<Rightarrow> cte_wp_at P p s \<and> cte_wp_at P c s
                            | None \<Rightarrow> True)\<rbrace>
-   update_cdt (\<lambda>cdt. cdt(c := (f cdt))) 
+   update_cdt (\<lambda>cdt. cdt(c := (f cdt)))
    \<lbrace>\<lambda>xc s. mdb_cte_at (swp (cte_wp_at P) s) (cdt s)\<rbrace>"
-  apply (clarsimp simp: update_cdt_def gets_def get_def set_cdt_def 
+  apply (clarsimp simp: update_cdt_def gets_def get_def set_cdt_def
                         put_def bind_def return_def valid_def)
   apply (clarsimp simp: mdb_cte_at_def split:option.splits)+
   done
@@ -1806,9 +1806,9 @@ lemma set_untyped_cap_as_full_cdt[wp]:
 
 lemma mdb_cte_at_set_untyped_cap_as_full:
   assumes localcong:"\<And>a cap. P (cap\<lparr>free_index:= a\<rparr>) = P cap"
-  shows " 
+  shows "
   \<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at P) s) (cdt s) \<and> cte_wp_at (op = src_cap) src s\<rbrace>
-  set_untyped_cap_as_full src_cap cap src 
+  set_untyped_cap_as_full src_cap cap src
   \<lbrace>\<lambda>rv s'. mdb_cte_at (swp (cte_wp_at P) s') (cdt s') \<rbrace>"
   apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_splits)
   apply (rule hoare_pre)
@@ -1824,7 +1824,7 @@ done
 
 lemma set_untyped_cap_as_full_is_original[wp]:
   "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace>
-   set_untyped_cap_as_full src_cap cap src 
+   set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s'. P (is_original_cap s') \<rbrace>"
   apply (simp add:set_untyped_cap_as_full_def split del:if_splits)
   apply (rule hoare_pre)
@@ -1846,7 +1846,7 @@ lemma free_index_update_ut_revocable[simp]:
 
 
 lemma free_index_update_irq_revocable[simp]:
-  "ms src = Some src_cap \<Longrightarrow> 
+  "ms src = Some src_cap \<Longrightarrow>
    irq_revocable P (ms(src \<mapsto> src_cap\<lparr>free_index:=a\<rparr>)) = irq_revocable P ms"
   unfolding irq_revocable_def
   apply (rule iffI)
@@ -1856,7 +1856,7 @@ lemma free_index_update_irq_revocable[simp]:
        apply (clarsimp simp:free_index_update_def)+
   apply (simp add: free_index_update_def split:cap.splits)
 done
-  
+
 
 lemma free_index_update_reply_master_revocable[simp]:
   "ms src = Some src_cap \<Longrightarrow>
@@ -1886,7 +1886,7 @@ crunch cte_wp_at[wp]: set_original "\<lambda>s. cte_wp_at P p s"
 
 lemma cap_insert_weak_cte_wp_at:
   "\<lbrace>(\<lambda>s. if p = dest then P cap else p \<noteq> src \<and> cte_wp_at P p s)\<rbrace>
-   cap_insert cap src dest 
+   cap_insert cap src dest
    \<lbrace>\<lambda>uu. cte_wp_at P p\<rbrace>"
   unfolding cap_insert_def error_def set_untyped_cap_as_full_def
   apply (simp add: bind_assoc split del: if_split )
@@ -1896,7 +1896,7 @@ lemma cap_insert_weak_cte_wp_at:
 
 lemma mdb_cte_at_more_swp[simp]: "mdb_cte_at
             (swp (cte_wp_at P)
-              (trans_state f s)) = 
+              (trans_state f s)) =
        mdb_cte_at
             (swp (cte_wp_at P)
               (s))"
@@ -1905,16 +1905,16 @@ lemma mdb_cte_at_more_swp[simp]: "mdb_cte_at
 
 lemma cap_insert_mdb_cte_at:
   "\<lbrace>(\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)) and (\<lambda>s. no_mloop (cdt s))
-    and valid_cap cap and 
+    and valid_cap cap and
     (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s) and
-    K (src \<noteq> dest) \<rbrace> 
-    cap_insert cap src dest 
+    K (src \<noteq> dest) \<rbrace>
+    cap_insert cap src dest
    \<lbrace>\<lambda>_ s.  mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
   unfolding cap_insert_def
   apply (wp | simp cong: update_original_mdb_cte_at split del: if_split)+
   apply (wp update_cdt_mdb_cte_at set_cap_mdb_cte_at[simplified swp_def] | simp split del: if_split)+
   apply wps
-  apply (wp valid_case_option_post_wp hoare_vcg_if_lift hoare_impI mdb_cte_at_set_untyped_cap_as_full[simplified swp_def] 
+  apply (wp valid_case_option_post_wp hoare_vcg_if_lift hoare_impI mdb_cte_at_set_untyped_cap_as_full[simplified swp_def]
     set_cap_cte_wp_at get_cap_wp)+
   apply (clarsimp simp:free_index_update_def split:cap.splits)
   apply (wp)+
@@ -1949,7 +1949,7 @@ lemma mdb_cte_at_rewrite:
  apply (erule impE)
  apply simp
  apply (clarsimp simp:cte_wp_at_caps_of_state)
-done 
+done
 
 
 lemma untyped_mdb_update_free_index:
@@ -2059,7 +2059,7 @@ lemma set_untyped_cap_as_full_valid_mdb:
 lemma set_free_index_valid_mdb:
   "\<lbrace>\<lambda>s. valid_objs s \<and> valid_mdb s \<and> cte_wp_at (op = cap ) cref s \<and>
         (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap)\<rbrace>
-   set_cap (free_index_update (\<lambda>_. idx) cap) cref 
+   set_cap (free_index_update (\<lambda>_. idx) cap) cref
    \<lbrace>\<lambda>rv s'. valid_mdb s'\<rbrace>"
   apply (simp add:valid_mdb_def)
   apply (rule hoare_pre)
@@ -2181,7 +2181,7 @@ lemma set_free_index_valid_mdb:
 
 lemma descendants_inc_upd_nullcap:
   "\<lbrakk> mdb_cte_at (\<lambda>p. \<exists>c. cs p = Some c \<and> cap.NullCap \<noteq> c) m;
-  descendants_inc m cs; 
+  descendants_inc m cs;
   cs slot = Some cap.NullCap\<rbrakk>
   \<Longrightarrow> descendants_inc m (cs(slot \<mapsto> cap))"
   apply (simp add:descendants_inc_def descendants_of_def del:split_paired_All)
@@ -2236,9 +2236,9 @@ lemma cap_range_free_index_update2[simp]:
 
 lemma cap_insert_mdb [wp]:
   "\<lbrace>valid_mdb and valid_cap cap and valid_objs and
-    (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s) 
-    and K (src \<noteq> dest) \<rbrace> 
-    cap_insert cap src dest 
+    (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)
+    and K (src \<noteq> dest) \<rbrace>
+    cap_insert cap src dest
    \<lbrace>\<lambda>_. valid_mdb\<rbrace>"
   apply (simp add:valid_mdb_def)
   apply (wp cap_insert_mdb_cte_at)
@@ -2386,7 +2386,7 @@ lemma derived_not_Null [simp]:
 
 lemma set_untyped_cap_as_full_impact:
   "\<lbrace>cte_wp_at (op = src_cap) src\<rbrace>
-   set_untyped_cap_as_full src_cap c src 
+   set_untyped_cap_as_full src_cap c src
    \<lbrace>\<lambda>r. cte_wp_at (op = (masked_as_full src_cap c)) src\<rbrace>"
   apply (simp only: set_untyped_cap_as_full_def)
   apply (rule hoare_pre)
@@ -2484,8 +2484,8 @@ lemma cte_at_get_cap_wp:
 
 
 definition
-  "s_d_swap p src dest \<equiv> 
-    if p = src then dest 
+  "s_d_swap p src dest \<equiv>
+    if p = src then dest
     else if p = dest then src
     else p"
 
@@ -2506,10 +2506,10 @@ lemma s_d_snd [simp]:
   "s_d_swap a a b = b" by (simp add: s_d_swap_def)
 
 
-lemma s_d_swap_0_eq [simp]: 
+lemma s_d_swap_0_eq [simp]:
   "\<lbrakk> src \<noteq> 0; dest \<noteq> 0 \<rbrakk> \<Longrightarrow> (s_d_swap c src dest = 0) = (c = 0)"
   by (simp add: s_d_swap_def)
- 
+
 
 lemma s_d_swap_other:
   "\<lbrakk> p \<noteq> src; p \<noteq> dest \<rbrakk> \<Longrightarrow> s_d_swap p src dest = p"
@@ -2534,8 +2534,8 @@ locale mdb_swap_abs =
   fixes m src dest s s'
 
   fixes n'
-  defines "n' \<equiv> \<lambda>n. if m n = Some src then Some dest 
-                    else if m n = Some dest then Some src 
+  defines "n' \<equiv> \<lambda>n. if m n = Some src then Some dest
+                    else if m n = Some dest then Some src
                     else m n"
 
   fixes n
@@ -2563,9 +2563,9 @@ lemma no_mloop:
 
 lemma no_loops [iff]:
   "m \<Turnstile> p \<rightarrow> p = False"
-  using no_mloop 
+  using no_mloop
   by (cases p) (clarsimp simp add: no_mloop_def)
-  
+
 
 lemma no_loops_d [iff]:
   "m \<Turnstile> p \<leadsto> p = False"
@@ -2580,7 +2580,7 @@ lemma no_loops_m [iff]:
   done
 
 
-definition 
+definition
   "s_d_swp p \<equiv> s_d_swap p src dest"
 
 
@@ -2647,9 +2647,9 @@ next
            simp add: n_def n'_def cdt_parent_defs split: if_split_asm)
     done
 qed
-      
 
-lemmas parency_m_n' = 
+
+lemmas parency_m_n' =
   parency_m_n [where p="s_d_swp p" and p'="s_d_swp p'", simplified, folded s_d_swp_def]
 
 
@@ -2659,9 +2659,9 @@ lemma parency:
 
 
 lemma descendants:
-  "descendants_of p n = 
-  (let swap = \<lambda>S. S - {src,dest} \<union>  
-                (if src \<in> S then {dest} else {}) \<union> 
+  "descendants_of p n =
+  (let swap = \<lambda>S. S - {src,dest} \<union>
+                (if src \<in> S then {dest} else {}) \<union>
                 (if dest \<in> S then {src} else {}) in
   swap (descendants_of (s_d_swp p) m))"
   apply (simp add: Let_def parency descendants_of_def s_d_swap_def)
@@ -2715,12 +2715,12 @@ lemma weak_derived_refl [intro!, simp]:
 
 
 lemma ensure_no_children_descendants:
-  "ensure_no_children p = 
-  (\<lambda>s. if descendants_of p (cdt s) = {} 
+  "ensure_no_children p =
+  (\<lambda>s. if descendants_of p (cdt s) = {}
    then returnOk () s
    else throwError ExceptionTypes_A.RevokeFirst s)"
   apply (rule ext)
-  apply (simp add: ensure_no_children_def bindE_def liftE_def gets_def 
+  apply (simp add: ensure_no_children_def bindE_def liftE_def gets_def
                    get_def bind_def return_def lift_def whenE_def)
   apply (rule conjI)
    apply (clarsimp simp: descendants_of_def cdt_parent_defs)
@@ -2729,20 +2729,20 @@ lemma ensure_no_children_descendants:
   apply (drule tranclD)
   apply clarsimp
   done
-  
+
 
 locale mdb_move_abs =
   fixes src dest and m :: cdt and s' s
   fixes m''
   defines "m'' \<equiv> \<lambda>r. if r = src then None else (m(dest := m src)) r"
   fixes m'
-  defines "m' \<equiv> \<lambda>r. if  m'' r = Some src 
+  defines "m' \<equiv> \<lambda>r. if  m'' r = Some src
                     then Some dest
                     else (m(dest := m src, src := None)) r"
 
   assumes valid_mdb: "valid_mdb s"
 
-  assumes dest_null: "cte_wp_at (op = cap.NullCap) dest s" 
+  assumes dest_null: "cte_wp_at (op = cap.NullCap) dest s"
 
   assumes m: "m = cdt s"
 
@@ -2753,7 +2753,7 @@ context mdb_move_abs begin
 
 lemma dest_None:
   "m dest = None"
-  using valid_mdb dest_null 
+  using valid_mdb dest_null
   unfolding valid_mdb_def mdb_cte_at_def
   apply (clarsimp simp: m [symmetric])
   apply (cases dest)
@@ -2761,21 +2761,21 @@ lemma dest_None:
   apply (clarsimp simp: cte_wp_at_def)
   apply fastforce
   done
-   
 
-lemma desc_dest [intro?, simp]: 
+
+lemma desc_dest [intro?, simp]:
   "dest \<notin> descendants_of x m"
   using dest_None
   apply (clarsimp simp add: descendants_of_def)
   apply (drule tranclD2)
   apply (clarsimp simp: cdt_parent_of_def)
   done
-  
 
-lemma dest_desc: 
+
+lemma dest_desc:
   "descendants_of dest m = {}"
-  using valid_mdb dest_null 
-  unfolding valid_mdb_def mdb_cte_at_def 
+  using valid_mdb dest_null
+  unfolding valid_mdb_def mdb_cte_at_def
   apply (clarsimp simp add: descendants_of_def m[symmetric])
   apply (drule tranclD)
   apply (clarsimp simp: cdt_parent_of_def)
@@ -2796,7 +2796,7 @@ lemma no_mloop:
 lemma no_loops [iff]:
   "m \<Turnstile> p \<rightarrow> p = False"
   using no_mloop by (cases p) (clarsimp simp add: no_mloop_def)
-  
+
 
 lemma no_src_parent' [iff]:
   "m' \<Turnstile> src \<leadsto> p = False"
@@ -2806,7 +2806,7 @@ lemma no_src_parent' [iff]:
 lemma no_src_parent_trans' [iff]:
   "m' \<Turnstile> src \<rightarrow> p = False"
   by (clarsimp dest!: tranclD)
-  
+
 
 lemma no_dest_parent_trans [iff]:
   "m \<Turnstile> dest \<rightarrow> p = False"
@@ -2821,10 +2821,10 @@ lemma no_dest_parent [iff]:
 
 lemma no_dest_parent_unfold [iff]:
   "(m x = Some dest) = False"
-  using no_dest_parent 
+  using no_dest_parent
   unfolding cdt_parent_defs
   by simp
-  
+
 
 lemma no_src_child [iff]:
   "m' \<turnstile> p cdt_parent_of src = False"
@@ -2863,7 +2863,7 @@ lemma from_dest_direct [simp]:
 
 lemma parent_m_m':
   assumes p_neq: "p \<noteq> dest" "p \<noteq> src"
-  assumes px: "m \<Turnstile> p \<rightarrow> x" 
+  assumes px: "m \<Turnstile> p \<rightarrow> x"
   shows "if x = src then m' \<Turnstile> p \<rightarrow> dest else m' \<Turnstile> p \<rightarrow> x" using px
 proof induct
   case (base y)
@@ -2894,7 +2894,7 @@ qed
 
 lemma parent_m'_m:
   assumes p_neq: "p \<noteq> dest" "p \<noteq> src"
-  assumes px: "m' \<Turnstile> p \<rightarrow> x" 
+  assumes px: "m' \<Turnstile> p \<rightarrow> x"
   shows "if x = dest then m \<Turnstile> p \<rightarrow> src else m \<Turnstile> p \<rightarrow> x" using px
 proof induct
   case (base y)
@@ -2908,7 +2908,7 @@ proof induct
     done
 next
   case (step y z)
-  thus ?case  
+  thus ?case
     apply simp
     apply (rule conjI)
      apply (clarsimp split: if_split_asm)
@@ -2927,7 +2927,7 @@ lemma src_dest:
   shows "m \<Turnstile> src \<rightarrow> x" using d
 proof induct
   case (base y)
-  thus ?case 
+  thus ?case
     by (fastforce simp add: cdt_parent_defs m'_def m''_def split: if_split_asm)
 next
   fix y z
@@ -2935,7 +2935,7 @@ next
   assume y: "m' \<Turnstile> y \<leadsto> z"
   assume src: "m \<Turnstile> src \<rightarrow> y"
 
-  from src 
+  from src
   have "y \<noteq> src" by clarsimp
   moreover {
     assume "m z = Some src"
@@ -2956,19 +2956,19 @@ next
     hence "m \<Turnstile> y \<rightarrow> z" by (fastforce simp add: cdt_parent_defs)
     with src
     have "m \<Turnstile> src \<rightarrow> z" by (rule trancl_trans)
-  } 
+  }
   ultimately
   show "m \<Turnstile> src \<rightarrow> z" using y
     by (simp add: cdt_parent_defs m'_def m''_def split: if_split_asm)
 qed
-    
+
 
 lemma dest_src:
-  assumes "m \<Turnstile> src \<rightarrow> x" 
+  assumes "m \<Turnstile> src \<rightarrow> x"
   shows "m' \<Turnstile> dest \<rightarrow> x" using assms
 proof induct
   case (base y)
-  thus ?case 
+  thus ?case
     by (fastforce simp add: cdt_parent_defs m'_def m''_def)
 next
   case (step y z)
@@ -2997,15 +2997,15 @@ qed
 
 lemma descendants:
   "descendants_of p m' =
-  (if p = src 
-   then {} 
-   else if p = dest 
+  (if p = src
+   then {}
+   else if p = dest
    then descendants_of src m
-   else descendants_of p m - {src} \<union> 
+   else descendants_of p m - {src} \<union>
         (if src \<in> descendants_of p m then {dest} else {}))" (is "?d = ?d'")
 proof  (rule set_eqI)
   fix x
-  show "(x \<in> ?d) = (x \<in> ?d')" 
+  show "(x \<in> ?d) = (x \<in> ?d')"
     apply (simp add: descendants_of_def)
     apply safe
           apply (fastforce simp: parent_m'_m)
@@ -3022,7 +3022,7 @@ qed
 lemma parency:
   "(m' \<Turnstile> p \<rightarrow> p') =
   (p \<noteq> src \<and> p' \<noteq> src \<and>
-   (if p = dest then m \<Turnstile> src \<rightarrow> p' 
+   (if p = dest then m \<Turnstile> src \<rightarrow> p'
     else m \<Turnstile> p \<rightarrow> p' \<or> (m \<Turnstile> p \<rightarrow> src \<and> p' = dest)))"
   using descendants [where p=p]
   apply (simp add: descendants_of_def cong: if_cong)
@@ -3042,7 +3042,7 @@ lemma copy_untyped1:
 lemma copy_untyped2:
   "\<lbrakk> copy_of cap cap'; is_untyped_cap cap \<rbrakk> \<Longrightarrow> cap' = cap"
   apply (cases cap)
-  apply (auto simp: copy_of_def same_object_as_def is_cap_simps 
+  apply (auto simp: copy_of_def same_object_as_def is_cap_simps
               split: if_split_asm cap.splits)
   done
 
@@ -3063,7 +3063,7 @@ locale CSpace_AI_weak_derived =
     "\<And>(s:: 'state_ext state) c c'. \<lbrakk> s \<turnstile> c; wellformed_cap c'; weak_derived c' c\<rbrakk> \<Longrightarrow> s \<turnstile> c'"
   assumes copy_obj_refs:
     "\<And>cap cap'. copy_of cap cap' \<Longrightarrow> obj_refs cap' = obj_refs cap"
-  assumes weak_derived_cap_class[simp]: 
+  assumes weak_derived_cap_class[simp]:
     "\<And>cap src_cap. weak_derived cap src_cap \<Longrightarrow> cap_class cap = cap_class src_cap"
   assumes weak_derived_obj_refs:
     "\<And>dcap cap. weak_derived dcap cap \<Longrightarrow> obj_refs dcap = obj_refs cap"
@@ -3073,8 +3073,8 @@ locale CSpace_AI_weak_derived =
 
 lemma weak_derived_untyped_range:
   "weak_derived dcap cap \<Longrightarrow> untyped_range dcap = untyped_range cap"
-  by (cases dcap, auto simp: is_cap_simps weak_derived_def copy_of_def 
-                             same_object_as_def 
+  by (cases dcap, auto simp: is_cap_simps weak_derived_def copy_of_def
+                             same_object_as_def
                        split: if_split_asm cap.splits)
 
 
@@ -3134,13 +3134,13 @@ proof -
        "is_untyped_cap cap \<longrightarrow> usable_untyped_range cap = usable_untyped_range src_cap"
     by (auto simp: copy_of_def same_object_as_def is_cap_simps weak_derived_def
              split: if_split_asm cap.splits)
-  with ut s d 
+  with ut s d
   show ?thesis
     apply (simp add: untyped_inc_def descendants del: split_paired_All split del: if_splits)
     apply (intro allI)
     apply (case_tac "p = src")
      apply (simp  del: split_paired_All split del: if_splits)
-    apply (simp  del: split_paired_All split del: if_splits)   
+    apply (simp  del: split_paired_All split del: if_splits)
     apply (case_tac "p = dest")
      apply (simp del: split_paired_All split del: if_splits)
     apply (case_tac "p' = src")
@@ -3189,20 +3189,20 @@ lemma weak_derived_eq_Null [simp]:
 
 lemma weak_derived_is_untyped:
   "weak_derived dcap cap \<Longrightarrow> is_untyped_cap dcap = is_untyped_cap cap"
-  by (cases dcap, auto simp: is_cap_simps weak_derived_def copy_of_def 
-                             same_object_as_def 
+  by (cases dcap, auto simp: is_cap_simps weak_derived_def copy_of_def
+                             same_object_as_def
                        split: if_split_asm cap.splits)
 
 
 lemma weak_derived_irq [simp]:
   "weak_derived IRQControlCap cap = (cap = IRQControlCap)"
-  by (auto simp add: weak_derived_def copy_of_def same_object_as_def 
+  by (auto simp add: weak_derived_def copy_of_def same_object_as_def
            split: cap.splits)
 
 
 lemmas (in CSpace_AI_weak_derived) weak_derived_ranges =
-  weak_derived_is_untyped 
-  weak_derived_untyped_range 
+  weak_derived_is_untyped
+  weak_derived_untyped_range
   weak_derived_obj_refs
 
 
@@ -3261,7 +3261,7 @@ lemma reply_caps_mdb:
    apply (erule allE)+
    apply (erule(1) impE)
    apply (erule exEI)
-   apply simp 
+   apply simp
    apply blast
   apply (rule conjI)
    apply (unfold reply_caps_mdb_def)[1]
@@ -3288,7 +3288,7 @@ lemma reply_masters_mdb:
         (cs (dest \<mapsto> cap, src \<mapsto> cap.NullCap))"
   unfolding reply_masters_mdb_def
   using r c s d
-  apply (intro allI impI) 
+  apply (intro allI impI)
   apply (subst mdb_move_abs.descendants, rule mdb_move_abs.intro)
       apply (rule valid_mdb)
      apply (rule dest_null)
@@ -3346,9 +3346,9 @@ lemma mdb_move_abs_gen:
 lemma cap_move_mdb [wp]:
   fixes dest cap src
   shows
-  "\<lbrace>valid_mdb and cte_wp_at (op = cap.NullCap) dest and 
-    cte_wp_at (\<lambda>c. weak_derived cap c \<and> c \<noteq> cap.NullCap) src\<rbrace> 
-  cap_move cap src dest 
+  "\<lbrace>valid_mdb and cte_wp_at (op = cap.NullCap) dest and
+    cte_wp_at (\<lambda>c. weak_derived cap c \<and> c \<noteq> cap.NullCap) src\<rbrace>
+  cap_move cap src dest
   \<lbrace>\<lambda>_. valid_mdb :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: cap_move_def set_cdt_def valid_mdb_def2
                    pred_conj_def cte_wp_at_caps_of_state)
@@ -3390,11 +3390,11 @@ lemma cap_move_mdb [wp]:
    apply (rule conjI)
     apply clarsimp
     apply (rule conjI, clarsimp simp: is_cap_simps)
-    apply clarsimp 
+    apply clarsimp
     apply (drule (1) weak_derived_untyped2)
     apply (cases src)
     apply clarsimp
-   apply clarsimp 
+   apply clarsimp
    apply (drule weak_derived_obj_refs)
    apply clarsimp
    apply (cases src)
@@ -3409,7 +3409,7 @@ lemma cap_move_mdb [wp]:
   apply (rule conjI)
    apply (simp add: ut_revocable_def weak_derived_is_untyped del: split_paired_All)
   apply (rule conjI)
-   apply (simp add: irq_revocable_def del: split_paired_All) 
+   apply (simp add: irq_revocable_def del: split_paired_All)
    apply clarsimp
    apply (metis surj_pair)
   apply (rule conjI)
@@ -3465,7 +3465,7 @@ lemma set_untyped_cap_as_full_cap_to:
   notes hoare_pre [wp_pre del]
   shows
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> cte_wp_at (op = src_cap) src s\<rbrace>
-   set_untyped_cap_as_full src_cap cap src 
+   set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. if_live_then_nonz_cap s\<rbrace>"
   apply (clarsimp simp:if_live_then_nonz_cap_def set_untyped_cap_as_full_def | rule conjI | wp hoare_allI)+
    apply (wp hoare_vcg_imp_lift set_cap_cap_to)+
@@ -3501,7 +3501,7 @@ lemma tcb_cap_slot_regular:
 lemma set_free_index_valid_pspace:
   "\<lbrace>\<lambda>s. valid_pspace s \<and> cte_wp_at (op = cap) cref s \<and>
         (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and>idx \<le> 2^ cap_bits cap)\<rbrace>
-   set_cap (free_index_update (\<lambda>_. idx) cap) cref  
+   set_cap (free_index_update (\<lambda>_. idx) cap) cref
    \<lbrace>\<lambda>rv s'. valid_pspace s'\<rbrace>"
   apply (clarsimp simp: valid_pspace_def)
   apply (wp set_cap_valid_objs update_cap_iflive set_cap_zombies')
@@ -3541,14 +3541,14 @@ locale CSpace_AI_set_free_index_invs =
     "\<And>cap idx.
       \<lbrace>\<lambda>s::'state_ext state. (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap)
            \<and> invs s \<and> cte_wp_at (op = cap ) cref s\<rbrace>
-        set_cap (free_index_update (\<lambda>_. idx) cap) cref 
+        set_cap (free_index_update (\<lambda>_. idx) cap) cref
       \<lbrace>\<lambda>rv s'. invs s'\<rbrace>"
 
 lemma (in CSpace_AI_set_free_index_invs) set_free_index_invs:
   "\<lbrace>\<lambda>s::'state_ext state. (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and> idx \<le> 2^cap_bits cap) \<and>
         invs s \<and> cte_wp_at (\<lambda>cp. \<exists>ptr sz dev idx' idx''. idx' \<le> idx
             \<and> cp = UntypedCap dev ptr sz idx' \<and> cap = UntypedCap dev ptr sz idx'') cref s\<rbrace>
-   set_cap (free_index_update (\<lambda>_. idx) cap) cref 
+   set_cap (free_index_update (\<lambda>_. idx) cap) cref
    \<lbrace>\<lambda>rv s'. invs s'\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (simp add: cte_wp_at_caps_of_state)
@@ -3562,7 +3562,7 @@ lemma (in CSpace_AI_set_free_index_invs) set_free_index_invs:
 
 lemma set_untyped_cap_as_full_cap_zombies_final:
   "\<lbrace>zombies_final and cte_wp_at (op = src_cap) src\<rbrace>
-   set_untyped_cap_as_full src_cap cap src 
+   set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s.  zombies_final s\<rbrace>"
   apply (clarsimp simp:set_untyped_cap_as_full_def
     split:if_split_asm | rule conjI | wp set_cap_zombies )+
@@ -3581,7 +3581,7 @@ lemma set_untyped_cap_as_full_cap_zombies_final:
 (* FIXME: MOVE *)
 lemma set_untyped_cap_as_full_valid_pspace:
   "\<lbrace>valid_pspace and cte_wp_at (op = src_cap) src\<rbrace>
-   set_untyped_cap_as_full src_cap cap src 
+   set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. valid_pspace s \<rbrace>"
   apply (clarsimp simp:valid_pspace_def)
     apply (clarsimp | wp set_untyped_cap_full_valid_objs
@@ -3596,7 +3596,7 @@ lemma cap_insert_valid_pspace:
                                     \<longrightarrow> (cte_wp_at (Not \<circ> is_zombie) p' s \<and> \<not> is_zombie cap))\<rbrace>
      cap_insert cap src dest
    \<lbrace>\<lambda>_. valid_pspace\<rbrace>"
-  unfolding cap_insert_def 
+  unfolding cap_insert_def
   apply (simp add: update_cdt_def)
   apply (wp new_cap_valid_pspace set_cdt_valid_pspace set_cdt_cte_at
     set_untyped_cap_as_full_cte_wp_at set_untyped_cap_as_full_valid_cap
@@ -3647,7 +3647,7 @@ crunch reply[wp]: set_cdt "valid_reply_caps"
 
 lemma set_untyped_cap_as_full_has_reply_cap:
   "\<lbrace>\<lambda>s. (has_reply_cap t s) \<and> cte_wp_at (op = src_cap) src s\<rbrace>
-   set_untyped_cap_as_full src_cap cap src 
+   set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. (has_reply_cap t s)\<rbrace>"
   apply (clarsimp simp:has_reply_cap_def)
   apply (wp hoare_ex_wp)
@@ -3661,7 +3661,7 @@ lemma set_untyped_cap_as_full_has_reply_cap:
 
 lemma set_untyped_cap_as_full_has_reply_cap_neg:
   "\<lbrace>\<lambda>s. \<not> (has_reply_cap t s) \<and> cte_wp_at (op = src_cap) src s\<rbrace>
-   set_untyped_cap_as_full src_cap cap src 
+   set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. \<not> (has_reply_cap t s)\<rbrace>"
   apply (clarsimp simp:has_reply_cap_def)
   apply (wp hoare_vcg_all_lift)
@@ -3674,7 +3674,7 @@ lemma set_untyped_cap_as_full_has_reply_cap_neg:
 
 
 lemma caps_of_state_cte_wp_at_neq:
-  "(caps_of_state s slot \<noteq> Some capa) = (\<not> cte_wp_at (op = capa) slot s)" 
+  "(caps_of_state s slot \<noteq> Some capa) = (\<not> cte_wp_at (op = capa) slot s)"
   by (clarsimp simp:cte_wp_at_caps_of_state)
 
 
@@ -3709,7 +3709,7 @@ lemma set_untyped_cap_as_full_unique_reply_caps:
 
 lemma set_untyped_cap_as_full_valid_reply_masters:
   "\<lbrace>\<lambda>s. valid_reply_masters s \<and> cte_wp_at (op = src_cap) src s\<rbrace>
-   set_untyped_cap_as_full src_cap cap src 
+   set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. valid_reply_masters s \<rbrace>"
   apply (clarsimp simp:set_untyped_cap_as_full_def)
   apply (intro conjI impI)
@@ -3720,7 +3720,7 @@ lemma set_untyped_cap_as_full_valid_reply_masters:
   done
 
 
-crunch global_refs[wp]: set_untyped_cap_as_full "\<lambda>s. P (global_refs s)" 
+crunch global_refs[wp]: set_untyped_cap_as_full "\<lambda>s. P (global_refs s)"
 
 
 lemma set_untyped_cap_as_full_valid_global_refs[wp]:
@@ -3769,7 +3769,7 @@ lemma cap_insert_aobj_at:
   by (wpsimp wp: set_cap.aobj_at get_cap_wp)
 
 lemma cap_insert_valid_arch [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>_. valid_arch_state\<rbrace>" 
+  "\<lbrace>valid_arch_state\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift_aobj_at; wp cap_insert_aobj_at)
 
 
@@ -3785,8 +3785,8 @@ lemma update_cdt_global [wp]:
 
 
 lemma cap_insert_valid_global_refs[wp]:
-  "\<lbrace>valid_global_refs and (\<lambda>s. cte_wp_at (\<lambda>scap. cap_range cap \<subseteq> cap_range scap) src s)\<rbrace> 
-  cap_insert cap src dest 
+  "\<lbrace>valid_global_refs and (\<lambda>s. cte_wp_at (\<lambda>scap. cap_range cap \<subseteq> cap_range scap) src s)\<rbrace>
+  cap_insert cap src dest
   \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
   apply (simp add: cap_insert_def)
   apply (wp get_cap_wp|simp split del: if_split)+
@@ -3813,7 +3813,7 @@ lemma is_derived_obj_refs:
   done
 
 
-lemma unique_table_refs_upd_eqD: 
+lemma unique_table_refs_upd_eqD:
   "\<lbrakk>ms a = Some b; obj_refs b = obj_refs b'; table_cap_ref b = table_cap_ref b'\<rbrakk>
    \<Longrightarrow> unique_table_refs (ms (a \<mapsto> b')) = unique_table_refs (ms)"
   unfolding unique_table_refs_def
@@ -3861,18 +3861,18 @@ locale CSpace_AI_set_untyped_cap_as_full =
   assumes set_untyped_cap_as_full_valid_arch_caps:
     "\<And>src_cap src cap.
       \<lbrace>valid_arch_caps and cte_wp_at (op = src_cap) src\<rbrace>
-        set_untyped_cap_as_full src_cap cap src 
+        set_untyped_cap_as_full src_cap cap src
       \<lbrace>\<lambda>ya. valid_arch_caps :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes set_untyped_cap_as_full[wp]:
     "\<And>src_cap a b src cap.
       \<lbrace>\<lambda>s::'state_ext state. no_cap_to_obj_with_diff_ref a b s \<and> cte_wp_at (op = src_cap) src s\<rbrace>
-        set_untyped_cap_as_full src_cap cap src 
+        set_untyped_cap_as_full src_cap cap src
       \<lbrace>\<lambda>rv s. no_cap_to_obj_with_diff_ref a b s\<rbrace>"
 
 
 lemma set_untyped_cap_as_full_is_final_cap':
   "\<lbrace>is_final_cap' cap' and cte_wp_at (op = src_cap) src\<rbrace>
-   set_untyped_cap_as_full src_cap cap src 
+   set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. is_final_cap' cap' s\<rbrace>"
    apply (simp add:set_untyped_cap_as_full_def)
    apply (intro conjI impI)
@@ -3993,7 +3993,7 @@ crunch cap_refs_respects_device_region[wp]: update_cdt "cap_refs_respects_device
 lemma cap_insert_cap_refs_respects_device_region[wp]:
   "\<lbrace>cap_refs_respects_device_region
           and cte_wp_at (\<lambda>c. cap_range cap \<subseteq> cap_range c \<and> ((cap_range cap \<noteq> {}) \<longrightarrow> cap_is_device cap = cap_is_device c)) src\<rbrace>
-     cap_insert cap src dest                                            
+     cap_insert cap src dest
    \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
   apply (simp add: cap_insert_def set_untyped_cap_as_full_def)
   apply (wp get_cap_wp set_cap_cte_wp_at' set_cap_cap_refs_respects_device_region_spec[where ptr = src]
@@ -4011,7 +4011,7 @@ lemma is_derived_cap_is_device:
   "\<lbrakk>is_derived m srcptr cap cap'\<rbrakk>
     \<Longrightarrow> cap_is_device cap' = cap_is_device cap"
   apply (case_tac cap)
-  apply (clarsimp simp: is_derived_def  
+  apply (clarsimp simp: is_derived_def
     cap_range_def is_cap_simps cap_master_cap_def
               split: if_split_asm cap.splits )+
   apply (drule arch_derived_is_device[rotated])
@@ -4044,7 +4044,7 @@ lemma valid_ioc_NullCap_not_original:
 lemma cap_insert_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
   apply (simp add: cap_insert_def set_untyped_cap_as_full_def)
-  apply (wp set_object_valid_ioc_caps set_cap_cte_wp_at get_cap_wp 
+  apply (wp set_object_valid_ioc_caps set_cap_cte_wp_at get_cap_wp
     | clarsimp simp:is_cap_simps split del: if_split)+
   apply (auto simp: valid_ioc_NullCap_not_original elim: cte_wp_cte_at)
   done
@@ -4163,7 +4163,7 @@ lemma cap_swap_typ_at:
 lemma cap_swap_valid_cap:
   "\<lbrace>valid_cap c\<rbrace> cap_swap cap x cap' y \<lbrace>\<lambda>_. valid_cap c\<rbrace>"
   by (simp add: cap_swap_typ_at valid_cap_typ)
-     
+
 
 lemma cap_swap_cte_at:
   "\<lbrace>cte_at p\<rbrace> cap_swap c x c' y \<lbrace>\<lambda>_. cte_at p\<rbrace>"
@@ -4290,7 +4290,7 @@ lemma guarded_lookup_valid_cap:
    apply (simp split: sum.splits)
   apply assumption
   done
-  
+
 crunch inv[wp]: lookup_slot_for_cnode_op "P"
   (wp:  simp: crunch_simps)
 
@@ -4326,7 +4326,7 @@ proof -
 qed
 
 
-lemma ct_from_words_inv [wp]: 
+lemma ct_from_words_inv [wp]:
   "\<lbrace>P\<rbrace> captransfer_from_words ws \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: captransfer_from_words_def | wp dmo_inv loadWord_inv)+
 
@@ -4349,11 +4349,11 @@ lemma enc_inv [wp]:
   apply wp
   apply simp
   done
-  
+
 
 lemma badge_update_valid [iff]:
   "valid_cap (badge_update d cap) = valid_cap cap"
-  by (rule ext, cases cap) 
+  by (rule ext, cases cap)
      (auto simp: badge_update_def valid_cap_def cap_aligned_def)
 
 
@@ -4420,7 +4420,7 @@ crunch irq_states[wp]: setup_reply_master "\<lambda>s. P (interrupt_states s)"
 
 lemma cns_of_heap_typ_at:
   "cns_of_heap (kheap s) p = Some n \<longleftrightarrow> typ_at (ACapTable n) p s"
-  by (auto simp: typ_at_eq_kheap_obj(4) cns_of_heap_def 
+  by (auto simp: typ_at_eq_kheap_obj(4) cns_of_heap_def
                  wf_unique wf_cs_n_unique
            split: option.splits Structures_A.kernel_object.splits)
 
@@ -4719,17 +4719,17 @@ end
 definition
   "is_simple_cap cap \<equiv>
     cap \<noteq> cap.NullCap \<and> cap \<noteq> cap.IRQControlCap \<and> \<not>is_untyped_cap cap \<and>
-    \<not>is_master_reply_cap cap \<and> \<not>is_reply_cap cap \<and> 
-    \<not>is_ep_cap cap \<and> \<not>is_ntfn_cap cap \<and> 
+    \<not>is_master_reply_cap cap \<and> \<not>is_reply_cap cap \<and>
+    \<not>is_ep_cap cap \<and> \<not>is_ntfn_cap cap \<and>
     \<not>is_thread_cap cap \<and> \<not>is_cnode_cap cap \<and> \<not>is_zombie cap \<and>
     is_simple_cap_arch cap"
 
 
 definition
-  "safe_parent_for m p cap parent \<equiv> 
+  "safe_parent_for m p cap parent \<equiv>
    cap_is_device cap = cap_is_device parent \<and>
-   same_region_as parent cap \<and> 
-   ((\<exists>irq. cap = cap.IRQHandlerCap irq) \<and> parent = cap.IRQControlCap \<or> 
+   same_region_as parent cap \<and>
+   ((\<exists>irq. cap = cap.IRQHandlerCap irq) \<and> parent = cap.IRQControlCap \<or>
     is_untyped_cap parent \<and> descendants_of p m = {})"
 
 
@@ -4754,7 +4754,7 @@ lemma safe_parent_not_Null [simp]:
 
 
 lemma safe_parent_is_parent:
-  "\<lbrakk> safe_parent_for m p cap pcap; caps_of_state s p = Some pcap; valid_mdb s \<rbrakk> 
+  "\<lbrakk> safe_parent_for m p cap pcap; caps_of_state s p = Some pcap; valid_mdb s \<rbrakk>
   \<Longrightarrow> should_be_parent_of pcap (is_original_cap s p) cap f"
   apply (clarsimp simp: should_be_parent_of_def safe_parent_for_def valid_mdb_def)
   apply (erule disjE)
@@ -4800,17 +4800,17 @@ lemma safe_parent_refs_or_descendants:
 end
 
 
-lemma (in mdb_insert_abs) untyped_mdb_simple:  
+lemma (in mdb_insert_abs) untyped_mdb_simple:
   assumes u: "untyped_mdb m cs"
   assumes inc: "untyped_inc m cs"
   assumes src: "cs src = Some c"
   assumes dst: "cs dest = Some cap.NullCap"
   assumes ut: "\<not>is_untyped_cap cap"
-  assumes cr: "(obj_refs cap \<subseteq> obj_refs c) \<or> 
-               (descendants_of src m = {} \<and> obj_refs cap \<subseteq> untyped_range c)" 
-  shows "untyped_mdb (m(dest \<mapsto> src)) (cs(dest \<mapsto> cap))" 
-  unfolding untyped_mdb_def 
-  using u ut cr src dst 
+  assumes cr: "(obj_refs cap \<subseteq> obj_refs c) \<or>
+               (descendants_of src m = {} \<and> obj_refs cap \<subseteq> untyped_range c)"
+  shows "untyped_mdb (m(dest \<mapsto> src)) (cs(dest \<mapsto> cap))"
+  unfolding untyped_mdb_def
+  using u ut cr src dst
   apply (intro allI impI)
   apply (simp add: descendants_child)
   apply (case_tac "ptr = dest", simp)
@@ -4836,7 +4836,7 @@ lemma (in mdb_insert_abs) untyped_mdb_simple:
    apply (erule disjE, fastforce)
    apply blast
   apply (simp add: untyped_mdbD del: split_paired_All)
-  apply (intro impI)  
+  apply (intro impI)
   apply (frule_tac ptr=src and ptr'=ptr' in untyped_mdbD)
       apply clarsimp
      apply assumption
@@ -4910,14 +4910,14 @@ context CSpace_AI begin
 lemma cap_insert_simple_mdb:
   fixes dest src cap
   shows
-  "\<lbrace>valid_mdb and valid_objs and 
-    cte_wp_at (\<lambda>c. c = cap.NullCap) dest and 
+  "\<lbrace>valid_mdb and valid_objs and
+    cte_wp_at (\<lambda>c. c = cap.NullCap) dest and
     (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src cap) src s) and
     K (is_simple_cap cap)\<rbrace>
   cap_insert cap src dest \<lbrace>\<lambda>rv. valid_mdb :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  apply (simp add: cap_insert_def valid_mdb_def2 update_cdt_def set_cdt_def set_untyped_cap_as_full_def) 
+  apply (simp add: cap_insert_def valid_mdb_def2 update_cdt_def set_cdt_def set_untyped_cap_as_full_def)
   apply (wp set_cap_caps_of_state2 get_cap_wp|simp del: fun_upd_apply split del: if_split)+
-  apply (clarsimp simp: cte_wp_at_caps_of_state safe_parent_is_parent valid_mdb_def2 
+  apply (clarsimp simp: cte_wp_at_caps_of_state safe_parent_is_parent valid_mdb_def2
                   simp del: fun_upd_apply
                   split del: if_split)
   apply (rule conjI)
@@ -4946,7 +4946,7 @@ lemma cap_insert_simple_mdb:
    apply (simp add: mdb_insert_abs.dest_no_parent_trancl)
    apply (erule(2)  mdb_insert_abs.untyped_inc_simple)
     apply (drule(1) caps_of_state_valid)+
-    apply (simp add:valid_cap_aligned) 
+    apply (simp add:valid_cap_aligned)
    apply (simp add:is_simple_cap_def)+
    apply (clarsimp simp: ut_revocable_def is_simple_cap_def)
    apply (clarsimp simp: irq_revocable_def is_simple_cap_def)
@@ -4960,7 +4960,7 @@ end
 
 lemma set_untyped_cap_as_full_caps_of_state_diff:
   "\<lbrace>\<lambda>s. src \<noteq> dest \<and> P (caps_of_state s dest)\<rbrace>
-   set_untyped_cap_as_full src_cap cap src 
+   set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. P (caps_of_state s dest)\<rbrace>"
   apply (clarsimp simp:set_untyped_cap_as_full_def)
   apply (intro conjI impI allI)

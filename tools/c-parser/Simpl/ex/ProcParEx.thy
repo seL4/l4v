@@ -7,7 +7,7 @@
 (*  Title:      ProcParEx.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2006-2008 Norbert Schirmer 
+Copyright (C) 2006-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -36,7 +36,7 @@ lemma DynProcProcPar':
          (\<exists>Z. init s \<in> P' Z \<and>
               (\<forall>t \<in> Q' Z. return s t \<in> R s t) \<and>
               (\<forall>t \<in> A' Z. return s t \<in> A))}"
- assumes result: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F \<^esub>(R s t) result s t Q,A" 
+ assumes result: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F \<^esub>(R s t) result s t Q,A"
  assumes q: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F \<^esub>(P' Z) Call q (Q' Z),(A' Z)"
  shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F \<^esub>P dynCall init p return result Q,A"
 apply (rule HoarePartial.DynProcProcPar [OF _ result q])
@@ -73,14 +73,14 @@ lemma conseq_exploit_pre''':
   done
 
 
-  
+
 record 'g vars = "'g state" +
   compare_' :: string
   n_'   :: nat
   m_'   :: nat
   b_'   :: bool
   k_'  :: nat
- 
+
 
 
 procedures compare(n,m|b) = "NoBody"
@@ -108,21 +108,21 @@ definition mx:: "('a \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> 'a \<Rig
   where "mx leq a b = (if leq a b then a else b)"
 
 procedures
-  Max (compare, n, m | k) = 
+  Max (compare, n, m | k) =
   "\<acute>b :== DYNCALL \<acute>compare(\<acute>n,\<acute>m);;
    IF \<acute>b THEN \<acute>k :== \<acute>n ELSE \<acute>k :== \<acute>m FI"
 
-  Max_spec: "\<And>leq. \<forall>\<sigma>. \<Gamma>\<turnstile> 
-  ({\<sigma>} \<inter> {s. (\<forall>\<tau>. \<Gamma>\<turnstile> {\<tau>} \<acute>b :== PROC \<^bsup>s\<^esup>compare(\<acute>n,\<acute>m) \<lbrace>\<acute>b = (leq \<^bsup>\<tau>\<^esup>n \<^bsup>\<tau>\<^esup>m)\<rbrace>) \<and> 
+  Max_spec: "\<And>leq. \<forall>\<sigma>. \<Gamma>\<turnstile>
+  ({\<sigma>} \<inter> {s. (\<forall>\<tau>. \<Gamma>\<turnstile> {\<tau>} \<acute>b :== PROC \<^bsup>s\<^esup>compare(\<acute>n,\<acute>m) \<lbrace>\<acute>b = (leq \<^bsup>\<tau>\<^esup>n \<^bsup>\<tau>\<^esup>m)\<rbrace>) \<and>
               (\<forall>\<tau>. \<Gamma>\<turnstile> {\<tau>} \<acute>b :== PROC \<^bsup>s\<^esup>compare(\<acute>n,\<acute>m) {t. t may_only_modify_globals \<tau> in []})})
     PROC Max(\<acute>compare,\<acute>n,\<acute>m,\<acute>k)
   \<lbrace>\<acute>k = mx leq \<^bsup>\<sigma>\<^esup>n \<^bsup>\<sigma>\<^esup>m\<rbrace>"
 
 
-lemma (in Max_impl ) Max_spec1: 
+lemma (in Max_impl ) Max_spec1:
 shows
-"\<forall>\<sigma> leq. \<Gamma>\<turnstile> 
-  ({\<sigma>} \<inter> \<lbrace> (\<forall>\<tau>. \<Gamma>\<turnstile>{\<tau>} \<acute>b :== PROC \<acute>compare(\<acute>n,\<acute>m) \<lbrace>\<acute>b = (leq \<^bsup>\<tau>\<^esup>n \<^bsup>\<tau>\<^esup>m)\<rbrace>) \<and> 
+"\<forall>\<sigma> leq. \<Gamma>\<turnstile>
+  ({\<sigma>} \<inter> \<lbrace> (\<forall>\<tau>. \<Gamma>\<turnstile>{\<tau>} \<acute>b :== PROC \<acute>compare(\<acute>n,\<acute>m) \<lbrace>\<acute>b = (leq \<^bsup>\<tau>\<^esup>n \<^bsup>\<tau>\<^esup>m)\<rbrace>) \<and>
       (\<forall>\<tau>. \<Gamma>\<turnstile> {\<tau>} \<acute>b :== PROC \<acute>compare(\<acute>n,\<acute>m) {t. t may_only_modify_globals \<tau> in []})\<rbrace>)
     \<acute>k :== PROC Max(\<acute>compare,\<acute>n,\<acute>m)
   \<lbrace>\<acute>k = mx leq \<^bsup>\<sigma>\<^esup>n \<^bsup>\<sigma>\<^esup>m\<rbrace>"
@@ -133,11 +133,11 @@ apply (rule)
 apply clarify
 proof -
   fix \<sigma>:: "('a,'b) vars_scheme" and s::"('a,'b) vars_scheme" and leq
-   assume compare_spec: 
+   assume compare_spec:
        "\<forall>\<tau>. \<Gamma>\<turnstile>{\<tau>} \<acute>b :== PROC \<^bsup>s\<^esup>compare(\<acute>n,\<acute>m) \<lbrace>\<acute>b = leq \<^bsup>\<tau>\<^esup>n \<^bsup>\<tau>\<^esup>m\<rbrace>"
- 
+
   assume compare_modifies:
-        "\<forall>\<tau>. \<Gamma>\<turnstile>{\<tau>} \<acute>b :== PROC \<^bsup>s\<^esup>compare(\<acute>n,\<acute>m) 
+        "\<forall>\<tau>. \<Gamma>\<turnstile>{\<tau>} \<acute>b :== PROC \<^bsup>s\<^esup>compare(\<acute>n,\<acute>m)
                 {t. t may_only_modify_globals \<tau> in []}"
 
    show "\<Gamma>\<turnstile>({s} \<inter> {\<sigma>})
@@ -150,10 +150,10 @@ proof -
  qed
 
 
-lemma (in Max_impl) Max_spec2: 
+lemma (in Max_impl) Max_spec2:
 shows
-"\<forall>\<sigma> leq. \<Gamma>\<turnstile> 
-  ({\<sigma>} \<inter> \<lbrace>(\<forall>\<tau>. \<Gamma>\<turnstile> {\<tau>} \<acute>b :== PROC \<acute>compare(\<acute>n,\<acute>m) \<lbrace>\<acute>b = (leq \<^bsup>\<tau>\<^esup>n \<^bsup>\<tau>\<^esup>m)\<rbrace>) \<and> 
+"\<forall>\<sigma> leq. \<Gamma>\<turnstile>
+  ({\<sigma>} \<inter> \<lbrace>(\<forall>\<tau>. \<Gamma>\<turnstile> {\<tau>} \<acute>b :== PROC \<acute>compare(\<acute>n,\<acute>m) \<lbrace>\<acute>b = (leq \<^bsup>\<tau>\<^esup>n \<^bsup>\<tau>\<^esup>m)\<rbrace>) \<and>
       (\<forall>\<tau>. \<Gamma>\<turnstile> {\<tau>} \<acute>b :== PROC \<acute>compare(\<acute>n,\<acute>m) {t. t may_only_modify_globals \<tau> in []})\<rbrace>)
     \<acute>k :== PROC Max(\<acute>compare,\<acute>n,\<acute>m)
   \<lbrace>\<acute>k = mx leq \<^bsup>\<sigma>\<^esup>n \<^bsup>\<sigma>\<^esup>m\<rbrace>"
@@ -166,11 +166,11 @@ apply vcg
 apply (clarsimp simp add: mx_def)
 done
 
-lemma (in Max_impl) Max_spec3: 
+lemma (in Max_impl) Max_spec3:
 shows
-"\<forall>n m leq. \<Gamma>\<turnstile> 
-  (\<lbrace>\<acute>n=n \<and> \<acute>m=m\<rbrace>  \<inter> 
-   \<lbrace>(\<forall>\<tau>. \<Gamma>\<turnstile> {\<tau>} \<acute>b :== PROC \<acute>compare(\<acute>n,\<acute>m) \<lbrace>\<acute>b = (leq \<^bsup>\<tau>\<^esup>n \<^bsup>\<tau>\<^esup>m)\<rbrace>) \<and> 
+"\<forall>n m leq. \<Gamma>\<turnstile>
+  (\<lbrace>\<acute>n=n \<and> \<acute>m=m\<rbrace>  \<inter>
+   \<lbrace>(\<forall>\<tau>. \<Gamma>\<turnstile> {\<tau>} \<acute>b :== PROC \<acute>compare(\<acute>n,\<acute>m) \<lbrace>\<acute>b = (leq \<^bsup>\<tau>\<^esup>n \<^bsup>\<tau>\<^esup>m)\<rbrace>) \<and>
      (\<forall>\<tau>. \<Gamma>\<turnstile> {\<tau>} \<acute>b :== PROC \<acute>compare(\<acute>n,\<acute>m) {t. t may_only_modify_globals \<tau> in []})\<rbrace>)
     \<acute>k :== PROC Max(\<acute>compare,\<acute>n,\<acute>m)
   \<lbrace>\<acute>k = mx leq n m\<rbrace>"
@@ -183,9 +183,9 @@ apply vcg
 apply (clarsimp simp add: mx_def)
 done
 
-lemma (in Max_impl) Max_spec4: 
+lemma (in Max_impl) Max_spec4:
 shows
-"\<forall>n m leq. \<Gamma>\<turnstile> 
+"\<forall>n m leq. \<Gamma>\<turnstile>
   (\<lbrace>\<acute>n=n \<and> \<acute>m=m\<rbrace> \<inter> \<lbrace>\<forall>\<tau>. \<Gamma>\<turnstile> {\<tau>} \<acute>b :== PROC \<acute>compare(\<acute>n,\<acute>m) \<lbrace>\<acute>b = (leq \<^bsup>\<tau>\<^esup>n \<^bsup>\<tau>\<^esup>m)\<rbrace>\<rbrace>)
     \<acute>k :== PROC Max(\<acute>compare,\<acute>n,\<acute>m)
   \<lbrace>\<acute>k = mx leq n m\<rbrace>"
@@ -198,8 +198,8 @@ apply vcg
 apply (clarsimp simp add: mx_def)
 done
 
-locale Max_test = Max_spec + LEQ_spec + LEQ_modifies 
-lemma (in Max_test) 
+locale Max_test = Max_spec + LEQ_spec + LEQ_modifies
+lemma (in Max_test)
 
   shows
   "\<Gamma>\<turnstile> {\<sigma>} \<acute>k :== CALL Max(LEQ_'proc,\<acute>n,\<acute>m) \<lbrace>\<acute>k = mx (op \<le>) \<^bsup>\<sigma>\<^esup>n \<^bsup>\<sigma>\<^esup>m\<rbrace>"
@@ -217,7 +217,7 @@ qed
 
 lemma (in Max_impl) Max_spec5:
 shows
-"\<forall>n m leq. \<Gamma>\<turnstile> 
+"\<forall>n m leq. \<Gamma>\<turnstile>
   (\<lbrace>\<acute>n=n \<and> \<acute>m=m\<rbrace> \<inter> \<lbrace>\<forall>n' m'. \<Gamma>\<turnstile> \<lbrace>\<acute>n=n' \<and> \<acute>m=m'\<rbrace> \<acute>b :== PROC \<acute>compare(\<acute>n,\<acute>m) \<lbrace>\<acute>b = (leq n' m')\<rbrace>\<rbrace>)
     \<acute>k :== PROC Max(\<acute>compare,\<acute>n,\<acute>m)
   \<lbrace>\<acute>k = mx leq n m\<rbrace>"
@@ -239,7 +239,7 @@ lemma (in LEQ_impl)
 
 
 locale Max_test' = Max_impl + LEQ_impl
-lemma (in Max_test') 
+lemma (in Max_test')
   shows
   "\<forall>n m. \<Gamma>\<turnstile> \<lbrace>\<acute>n=n \<and> \<acute>m=m\<rbrace> \<acute>k :== CALL Max(LEQ_'proc,\<acute>n,\<acute>m) \<lbrace>\<acute>k = mx (op \<le>) n m\<rbrace>"
 proof -

@@ -12,7 +12,7 @@
  *
  * usage:
  *   ML_file "l4.verified/lib/show_abbrevs.ML";
- * 
+ *
  * To turn them back on:
  *   ML {* show_abbrevs true; *}
  *)

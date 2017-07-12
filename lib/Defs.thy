@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-(* Resurrect old "defs" command which was removed in Isabelle 2016. 
+(* Resurrect old "defs" command which was removed in Isabelle 2016.
  * Should be replaced with overloading..definition..end blocks. *)
 
 theory Defs

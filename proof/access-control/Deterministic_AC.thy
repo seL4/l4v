@@ -44,7 +44,7 @@ lemma list_filter_replace_list: "\<forall>x \<in> set list'. P x \<Longrightarro
   apply (induct list,simp+)
   done
 
-lemma list_filter_insert_after: "P b \<Longrightarrow> 
+lemma list_filter_insert_after: "P b \<Longrightarrow>
  filtered_eq P (list_insert_after list a b) list"
   apply (induct list,simp+)
   done
@@ -68,8 +68,8 @@ lemma list_filter_remove: "P a \<Longrightarrow>
 (* Here P is meant to decide whether a cslot_ptr is part of the current
    subject. Integrity is said to hold of two cdt_lists if either an
    entry is part of the current subject, or their lists are equivalent
-   with all entries from the current subject removed. 
-  
+   with all entries from the current subject removed.
+
    We use this to reason that changes to a non-subject entry are only allowed
    if that entry's list contains a child that is part of the current subject.
    It is stated in this way so that the property can be shown to be transitive.*)

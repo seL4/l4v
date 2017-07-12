@@ -12,7 +12,7 @@ theory Sep_Tactic_Helpers
 imports Separation_Algebra
 begin
 
-lemmas sep_curry = sep_conj_sep_impl[rotated] 
+lemmas sep_curry = sep_conj_sep_impl[rotated]
 
 lemma sep_mp: "((Q \<longrightarrow>* R) \<and>* Q) s \<Longrightarrow> R s"
   by (rule sep_conj_sep_impl2)

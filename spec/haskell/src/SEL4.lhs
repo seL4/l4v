@@ -44,7 +44,7 @@ faults, and system calls; the set of possible events is defined in
 > callKernel :: Event -> Kernel ()
 > callKernel ev = do
 >     runErrorT $ handleEvent ev
->         `catchError` (\_ -> withoutPreemption $ do 
+>         `catchError` (\_ -> withoutPreemption $ do
 >                       irq <- doMachineOp (getActiveIRQ True)
 >                       when (isJust irq) $ handleInterrupt (fromJust irq))
 >     schedule

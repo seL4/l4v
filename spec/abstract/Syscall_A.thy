@@ -294,7 +294,7 @@ definition
                  receive_ipc thread ep_cap is_blocking
                 od
               else flt)
-           | NotificationCap ref badge rights \<Rightarrow> 
+           | NotificationCap ref badge rights \<Rightarrow>
              (if AllowRecv \<in> rights
               then doE
                 ntfn \<leftarrow> liftE $ get_notification ref;

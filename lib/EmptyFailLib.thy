@@ -14,7 +14,7 @@ imports
   HaskellLib_H
 begin
 
-(* Collect generic empty_fail lemmas here. naming convention is emtpy_fail_NAME. 
+(* Collect generic empty_fail lemmas here. naming convention is emtpy_fail_NAME.
    Unless there is a good reason, they should all be [intro!, simp] *)
 
 lemma empty_fail_when [simp, intro!]:

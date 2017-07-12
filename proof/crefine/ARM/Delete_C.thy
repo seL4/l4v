@@ -663,7 +663,7 @@ lemma reduceZombie_ccorres1:
   done
 
 lemma induction_setup_helper:
-  "\<lbrakk> \<And>s slot exposed. P s slot exposed \<Longrightarrow> Q s slot exposed; 
+  "\<lbrakk> \<And>s slot exposed. P s slot exposed \<Longrightarrow> Q s slot exposed;
      \<lbrakk> \<And>s slot exposed. P s slot exposed \<Longrightarrow> Q s slot exposed \<rbrakk>
             \<Longrightarrow> P s slot exposed \<rbrakk>
         \<Longrightarrow> Q s slot exposed"
@@ -790,7 +790,7 @@ lemma finaliseSlot_ccorres:
                       rule_tac r'="\<lambda>rv rv'. rv' = from_bool True"
                           and xf'=ret__unsigned_long_' in ccorres_split_nothrow_novcg)
                    apply (rule_tac P="\<lambda>s. capAligned (fst rvb)"
-                               in ccorres_from_vcg[where P'=UNIV]) 
+                               in ccorres_from_vcg[where P'=UNIV])
                    apply (rule allI, rule conseqPre, vcg)
                    apply (clarsimp simp: return_def)
                    apply (auto simp: isCap_simps capCyclicZombie_def)[1]
@@ -885,7 +885,7 @@ lemma finaliseSlot_ccorres:
           apply (rule_tac Q="\<lambda>fin s. invs' s \<and> sch_act_simple s \<and> s \<turnstile>' (fst fin)
                                    \<and> (expo \<or> ex_cte_cap_to' slot' s)
                                    \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cteCap rv) slot' s"
-                     in hoare_vcg_conj_lift) 
+                     in hoare_vcg_conj_lift)
            apply (wp hoare_vcg_disj_lift finaliseCap_invs[where sl=slot'])[1]
           apply (rule hoare_vcg_conj_lift)
            apply (rule finaliseCap_cte_refs)
@@ -939,7 +939,7 @@ lemma cteRevoke_ccorres1:
    apply simp
    apply (rule ccorres_inst[where P="invs' and sch_act_simple" and P'=UNIV])
    prefer 2
-   apply simp   
+   apply simp
   apply (induct rule: cteRevoke.induct[where ?a0.0=slot and ?a1.0=s])
   subgoal premises hyps for slot' s'
     apply (rule ccorres_guard_imp2)
@@ -955,7 +955,7 @@ lemma cteRevoke_ccorres1:
                      in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
          apply vcg
          apply (clarsimp simp: cte_wp_at_ctes_of)
-         apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])         
+         apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
          apply (simp add: typ_heap_simps)
          apply (clarsimp simp: ccte_relation_def map_option_Some_eq2)
         apply ceqv

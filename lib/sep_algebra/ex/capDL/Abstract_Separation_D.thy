@@ -99,9 +99,9 @@ lemma the_set_inter_empty:
 definition
   slots_of_heap :: "cdl_heap \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cap_map"
 where
-  "slots_of_heap h \<equiv> \<lambda>obj_id. 
-  case h obj_id of 
-    None \<Rightarrow> empty 
+  "slots_of_heap h \<equiv> \<lambda>obj_id.
+  case h obj_id of
+    None \<Rightarrow> empty
   | Some obj \<Rightarrow> object_slots obj"
 
 (* Adds new caps to an object. It won't overwrite on a collision. *)
@@ -111,7 +111,7 @@ where
   "add_to_slots new_val obj \<equiv> update_slots (new_val ++ (object_slots obj)) obj"
 
 lemma add_to_slots_assoc:
-  "add_to_slots x (add_to_slots (y ++ z) obj) = 
+  "add_to_slots x (add_to_slots (y ++ z) obj) =
    add_to_slots (x ++ y) (add_to_slots z obj)"
   apply (clarsimp simp: add_to_slots_def update_slots_def object_slots_def)
   apply (fastforce simp: cdl_tcb.splits cdl_cnode.splits
@@ -165,7 +165,7 @@ where
      heap_b = sep_heap state_b;
      gs_a = sep_ghost_state state_a;
      gs_b = sep_ghost_state state_b
- in case (heap_a obj_id, heap_b obj_id) of 
+ in case (heap_a obj_id, heap_b obj_id) of
     (Some o1, Some o2) \<Rightarrow> object_type o1 = object_type o2 \<and> gs_a obj_id \<inter> gs_b obj_id = {}
    | _ \<Rightarrow> True)"
 
@@ -232,7 +232,7 @@ where
   in
     case heap_b obj_id of
       None \<Rightarrow> heap_a obj_id
-    | Some obj_b \<Rightarrow> 
+    | Some obj_b \<Rightarrow>
         (case heap_a obj_id of
            None \<Rightarrow> heap_b obj_id
          | Some obj_a \<Rightarrow> Some (object_add obj_a obj_b (gs_a obj_id) (gs_b obj_id)))"
@@ -383,7 +383,7 @@ lemma object_type_object_clean_slots [simp]:
 
 lemma object_type_object_clean_fields [simp]:
   "object_type (object_clean_fields x cmp) = object_type x"
-  by (clarsimp simp: object_clean_fields_def object_type_def split: cdl_object.splits)  
+  by (clarsimp simp: object_clean_fields_def object_type_def split: cdl_object.splits)
 
 lemma object_type_object_clean [simp]:
   "object_type (object_clean x cmp) = object_type x"
@@ -520,16 +520,16 @@ lemma cdl_heap_add_assoc':
    apply (subgoal_tac "has_slots obj_y")
     apply (subgoal_tac "has_slots obj_x")
      apply ((clarsimp simp: has_slots_object_clean_fields has_slots_object_clean_slots has_slots_object_clean
-                           map_add_restrict union_intersection | 
-            drule inter_empty_not_both | 
+                           map_add_restrict union_intersection |
+            drule inter_empty_not_both |
             erule update_slots_object_clean_fields |
             erule object_type_has_slots, simp |
             simp | safe)+)[3]
    apply (subgoal_tac "\<not> has_slots obj_y")
     apply (subgoal_tac "\<not> has_slots obj_x")
      apply ((clarsimp simp: has_slots_object_clean_fields has_slots_object_clean_slots has_slots_object_clean
-                           map_add_restrict union_intersection | 
-            drule inter_empty_not_both | 
+                           map_add_restrict union_intersection |
+            drule inter_empty_not_both |
             erule object_clean_fields_no_slots |
             erule object_type_has_slots, simp |
             simp | safe)+)

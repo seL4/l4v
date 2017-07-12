@@ -24,7 +24,7 @@ lemma typ_bytes_region_out:
 
 lemma h_t_valid_ptr_clear_region:
   fixes p :: "'a :: c_type ptr"
-  shows "typ_clear_region ptr bits hp,g \<Turnstile>\<^sub>t p = 
+  shows "typ_clear_region ptr bits hp,g \<Turnstile>\<^sub>t p =
    ({ptr_val p ..+ size_of (TYPE ('a))} \<inter> {ptr ..+ 2 ^ bits} = {} \<and> hp,g \<Turnstile>\<^sub>t p)"
   unfolding h_t_valid_def
   apply (clarsimp simp: valid_footprint_def Let_def)
@@ -127,13 +127,13 @@ lemma h_t_valid_typ_region_bytes:
   by (simp add: valid_footprint_typ_region_bytes[OF neq_byte]
                 size_of_def)
 
-lemma proj_d_lift_state_hrs_htd_update [simp]:  
+lemma proj_d_lift_state_hrs_htd_update [simp]:
   "proj_d (lift_state (hrs_htd_update f hp)) = f (hrs_htd hp)"
   by (cases hp) (simp add: hrs_htd_update_def proj_d_lift_state hrs_htd_def)
 
 lemma proj_d_lift_state_hrs_htd [simp]:
   "proj_d (lift_state hp), g \<Turnstile>\<^sub>t x = hrs_htd hp, g \<Turnstile>\<^sub>t x"
-  apply (cases hp) 
+  apply (cases hp)
   apply (simp add: proj_d_lift_state hrs_htd_def)
   done
 
@@ -149,7 +149,7 @@ lemma heap_list_s_heap_list':
 lemma lift_t_typ_clear_region:
   assumes doms: "\<And>x :: 'a :: mem_type ptr. \<lbrakk> hrs_htd hp,g \<Turnstile>\<^sub>t x; x \<in> - (Ptr ` {ptr ..+2 ^ bits}) \<rbrakk>
   \<Longrightarrow> {ptr_val x..+size_of TYPE('a)} \<inter> {ptr..+2 ^ bits} = {}"
-  shows "(lift_t g (hrs_htd_update (typ_clear_region ptr bits) hp) :: 'a :: mem_type typ_heap) = 
+  shows "(lift_t g (hrs_htd_update (typ_clear_region ptr bits) hp) :: 'a :: mem_type typ_heap) =
           lift_t g hp |` (- Ptr ` {ptr ..+2 ^ bits})"
   apply (rule ext)
   apply (case_tac "({ptr_val x..+size_of TYPE('a)} \<inter> {ptr..+2 ^ bits} = {} \<and> hrs_htd hp,g \<Turnstile>\<^sub>t x)")
@@ -219,7 +219,7 @@ lemma cmap_relation_h_t_valid:
   shows "\<lbrakk>cmap_relation am (cslift s' :: 'a typ_heap) f rel; s' \<Turnstile>\<^sub>c p;
   \<And>v v' x. \<lbrakk>f x = p; am x = Some v; cslift s' p = Some v'; rel v v'\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding cmap_relation_def
-  apply (clarsimp simp: h_t_valid_clift_Some_iff)  
+  apply (clarsimp simp: h_t_valid_clift_Some_iff)
   apply (drule equalityD2)
   apply (drule (1) subsetD [OF _ domI])
   apply clarsimp
@@ -234,7 +234,7 @@ lemma valid_untyped_capE:
 proof (rule rl)
   from vuc show al: "is_aligned ptr bits" and vu: "valid_untyped' d ptr bits idx s" and p0: "ptr \<noteq> 0"
     unfolding valid_cap'_def capAligned_def by auto
-  
+
   from al p0 show wb: "bits < word_bits"
     by (clarsimp elim!: is_aligned_get_word_bits[where 'a=32, folded word_bits_def])
 qed
@@ -253,7 +253,7 @@ proof -
   from vuc have al: "is_aligned ptr bits" and vu: "valid_untyped' d ptr bits idx s" and p0: "ptr \<noteq> 0"
     and wb: "bits < word_bits"
     by (auto elim!: valid_untyped_capE)
-  
+
   from vuc idx
    have [simp]: "(ptr + (of_nat idx) && ~~ mask bits) = ptr"
     apply -
@@ -262,7 +262,7 @@ proof -
     apply (rule word_of_nat_less)
     apply simp
     done
-  
+
   show "pspace_no_overlap' (ptr + of_nat idx) bits s"
     using vuc idx psp_al
     apply -
@@ -293,21 +293,21 @@ proof -
 
   note blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-   
+
   let ?ran = "{ptr..ptr + 2 ^ bits - 1}"
   let ?s = "(s\<lparr>ksPSpace := (ksPSpace s) |` (- ?ran)\<rparr>)"
   from cm ht obtain ko and v :: 'a where ks: "ksPSpace s (ptr_val x) = Some ko" and po: "proj ko = Some v"
     apply (rule cmap_relation_h_t_valid)
     apply (clarsimp simp: map_comp_Some_iff)
     done
-  
+
   let ?oran = "{ptr_val x .. ptr_val x + 2 ^ objBitsKO ko - 1}"
-  let ?ran' = "{ptr..+2 ^ bits}" 
+  let ?ran' = "{ptr..+2 ^ bits}"
   let ?oran' = "{ptr_val x..+2 ^ objBitsKO ko}"
-  
+
   have ran' [simp]: "?ran' = ?ran" using al wb upto_intvl_eq by blast
-  
-  have oran' [simp]: "?oran' = ?oran" 
+
+  have oran' [simp]: "?oran' = ?oran"
   proof (rule upto_intvl_eq)
     from invs have "pspace_aligned' s" ..
     with ks show "is_aligned (ptr_val x) (objBitsKO ko)"  ..
@@ -393,9 +393,9 @@ proof -
   from vu have "is_aligned ptr bits"
     unfolding valid_cap'_def capAligned_def by simp
 
-  moreover from koat have "is_aligned x (objBits ko)" 
+  moreover from koat have "is_aligned x (objBits ko)"
     by (rule obj_atE') (simp add: projectKOs objBits_def project_inject)
-  
+
   ultimately show ?thesis
   proof (cases rule: aligned_ranges_subset_or_disjointE)
     case disjoint
@@ -406,7 +406,7 @@ proof -
     case subset1
     note blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-    have  "\<not> ko_wp_at' (\<lambda>ko. {ptr..ptr + 2 ^ bits - 1} \<subset> obj_range' x ko) x s" 
+    have  "\<not> ko_wp_at' (\<lambda>ko. {ptr..ptr + 2 ^ bits - 1} \<subset> obj_range' x ko) x s"
       using vu unfolding valid_cap'_def valid_untyped'_def
       apply clarsimp
       apply (drule_tac x = x in spec)
@@ -418,7 +418,7 @@ proof -
       apply (erule obj_atE')+
       apply (simp add: ko_wp_at'_def projectKOs obj_range'_def not_less objBits_def project_inject)
       done
-   
+
     thus ?thesis using subset1
       by (simp add: psubset_eq del: Icc_eq_Icc)
   qed
@@ -432,10 +432,10 @@ proof -
   from tat have al: "is_aligned x 9" by (clarsimp elim!: obj_atE' simp: projectKOs objBits_simps)
   hence "x \<le> x + 2 ^ 9 - 1"
     by (rule is_aligned_no_overflow)
-    
+
   moreover from al have "x \<le> x + 2 ^ 8"
     by (rule is_aligned_no_wrap') simp
-  
+
   ultimately show ?thesis
     unfolding tcb_ptr_to_ctcb_ptr_def
     by (simp add: ctcb_offset_def objBits_simps field_simps word_plus_mono_right)
@@ -444,22 +444,22 @@ qed
 lemma tcb_ptr_to_ctcb_ptr_in_range':
   fixes tcb :: tcb
   assumes al: "is_aligned (ctcb_ptr_to_tcb_ptr x) 9"
-  shows "{ptr_val x ..+ size_of TYPE (tcb_C)} 
+  shows "{ptr_val x ..+ size_of TYPE (tcb_C)}
           \<subseteq> {ctcb_ptr_to_tcb_ptr x..+2 ^ objBits tcb}"
 proof -
   from al have "ctcb_ptr_to_tcb_ptr x \<le> ctcb_ptr_to_tcb_ptr x + 2 ^ 9 - 1"
     by (rule is_aligned_no_overflow)
-    
+
   moreover from al have "ctcb_ptr_to_tcb_ptr x \<le> ctcb_ptr_to_tcb_ptr x + 2 ^ 8"
     by (rule is_aligned_no_wrap') simp
 
   moreover from al have "is_aligned (ptr_val x) 8" by (rule ctcb_ptr_to_tcb_ptr_aligned)
   moreover from al have "{ctcb_ptr_to_tcb_ptr x..+2 ^ objBits tcb} = {ctcb_ptr_to_tcb_ptr x.. ctcb_ptr_to_tcb_ptr x + 2 ^ objBits tcb - 1}"
-    apply - 
+    apply -
     apply (rule upto_intvl_eq)
      apply (simp add: objBits_simps)
     done
-  
+
   ultimately show ?thesis
     unfolding ctcb_ptr_to_tcb_ptr_def ctcb_offset_def
     apply -
@@ -468,7 +468,7 @@ proof -
     apply clarsimp
     apply (rule conjI)
      apply (erule order_trans, erule is_aligned_no_wrap')
-     apply (rule of_nat_power) 
+     apply (rule of_nat_power)
       apply simp
      apply simp
     apply (rule word_plus_mono_right)
@@ -485,7 +485,7 @@ lemma valid_untyped_cap_ctcb_member:
   and     pv: "ptr_val (tcb_ptr_to_ctcb_ptr x) \<in> {ptr .. ptr + 2 ^ bits - 1}"
   shows   "x \<in> {ptr .. ptr + 2 ^ bits - 1}"
   using vu
-proof -    
+proof -
   from vu koat have "{x..x + 2 ^ objBits tcb - 1} \<subseteq> {ptr..ptr + 2 ^ bits - 1}"
   proof (rule valid_untyped_cap_ko_at_disjoint)
     from koat have "ptr_val (tcb_ptr_to_ctcb_ptr x) \<in> {x..x + 2 ^ objBits tcb - 1}"
@@ -497,11 +497,11 @@ proof -
       apply simp
       done
   qed
-    
+
   thus ?thesis
-  proof (rule set_mp) 
+  proof (rule set_mp)
     from koat have "is_aligned x (objBits tcb)"  by (clarsimp elim!: obj_atE' simp: objBits_simps projectKOs)
-    thus "x \<in> {x..x + 2 ^ objBits tcb - 1}" 
+    thus "x \<in> {x..x + 2 ^ objBits tcb - 1}"
       apply (rule base_member_set [simplified field_simps])
       apply (simp add: objBits_simps word_bits_conv)
       done
@@ -518,7 +518,7 @@ lemma cmap_relation_disjoint_tcb:
   fixes x :: "tcb_C ptr"
   assumes vuc: "s \<turnstile>' UntypedCap d ptr bits idx"
   and    invs: "invs' s"
-  and      cm: "cmap_relation (projectKO_opt \<circ>\<^sub>m (ksPSpace s)) (cslift s') tcb_ptr_to_ctcb_ptr ctcb_relation"  
+  and      cm: "cmap_relation (projectKO_opt \<circ>\<^sub>m (ksPSpace s)) (cslift s') tcb_ptr_to_ctcb_ptr ctcb_relation"
   and      ht: "s' \<Turnstile>\<^sub>c x"
   and      xv: "x \<notin> Ptr ` {ptr..+2 ^ bits}"
   shows  "{ptr_val x..+size_of TYPE(tcb_C)} \<inter> {ptr..+2 ^ bits} = {}"
@@ -531,18 +531,18 @@ proof -
     apply (drule (1) map_to_ko_atI')
     apply clarsimp
     done
-  
-  let ?oran = "{ctcb_ptr_to_tcb_ptr x .. ctcb_ptr_to_tcb_ptr x + 2 ^ objBits tcb - 1}"  
+
+  let ?oran = "{ctcb_ptr_to_tcb_ptr x .. ctcb_ptr_to_tcb_ptr x + 2 ^ objBits tcb - 1}"
   let ?ran' = "{ptr..+2 ^ bits}"
   let ?oran' = "{ctcb_ptr_to_tcb_ptr x..+2 ^ objBits tcb}"
 
   from vuc have al: "is_aligned ptr bits" and vu: "valid_untyped' d ptr bits idx s" and p0: "ptr \<noteq> 0"
     and wb: "bits < word_bits"
     by (auto elim!: valid_untyped_capE)
-  
+
   have ran' [simp]: "?ran' = ?ran" using al wb upto_intvl_eq by blast
-  
-  have oran' [simp]: "?oran' = ?oran" 
+
+  have oran' [simp]: "?oran' = ?oran"
   proof (rule upto_intvl_eq)
     from koat show "is_aligned (ctcb_ptr_to_tcb_ptr x) (objBits tcb)"  ..
   qed
@@ -558,13 +558,13 @@ proof -
       apply (drule (1) subsetD)
       apply simp
       done
-    
+
     thus "{ctcb_ptr_to_tcb_ptr x..+2 ^ objBits tcb} \<inter> {ptr..+2 ^ bits} = {}"
       apply (rule contrapos_np)
       apply (rule valid_untyped_cap_ko_at_disjoint [OF vuc koat])
       apply simp
       done
-    
+
     from koat show "{ptr_val x..+size_of TYPE(tcb_C)} \<subseteq> {ctcb_ptr_to_tcb_ptr x..+2 ^ objBits tcb}"
       by (metis tcb_ptr_to_ctcb_ptr_in_range' tcb_aligned' obj_at'_weakenE)
   qed
@@ -587,7 +587,7 @@ proof -
     apply simp
     done
 qed
-  
+
 lemma cte_wp_at_casesE' [consumes 1, case_names cte tcb]:
   "\<lbrakk>cte_wp_at' P p s;
   \<And>cte. \<lbrakk> ksPSpace s p = Some (KOCTE cte); is_aligned p cte_level_bits; P cte; ps_clear p 4 s \<rbrakk> \<Longrightarrow> R;
@@ -597,7 +597,7 @@ lemma cte_wp_at_casesE' [consumes 1, case_names cte tcb]:
      tcb_cte_cases n = Some (getF, setF);
      P (getF tcb); ps_clear (p - n) 9 s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   by (fastforce simp: cte_wp_at_cases')
-  
+
 
 (* FIXME: MOVE *)
 lemma tcb_cte_cases_in_range3:
@@ -608,11 +608,11 @@ proof -
   from tc obtain q where yq: "y = x + q" and qv: "q \<le> 2 ^ 7 - 1"
     unfolding tcb_cte_cases_def
     by (simp add: diff_eq_eq split: if_split_asm)
-   
+
   have "q + (2 ^ 4 - 1) \<le> (2 ^ 7 - 1) + (2 ^ 4 - 1)" using qv
     by (rule word_plus_mcs_3) simp
   also have "\<dots> \<le> 2 ^ 9 - 1" by simp
-  finally have "x + (q + (2 ^ 4 - 1)) \<le> x + (2 ^ 9 - 1)" 
+  finally have "x + (q + (2 ^ 4 - 1)) \<le> x + (2 ^ 9 - 1)"
     apply (rule word_plus_mono_right)
     apply (rule is_aligned_no_overflow' [OF al])
     done
@@ -623,7 +623,7 @@ qed
 
 lemma tcb_cte_in_range:
   "\<lbrakk> ksPSpace s p = Some (KOTCB tcb); is_aligned p 9;
-  tcb_cte_cases n = Some (getF, setF) \<rbrakk> 
+  tcb_cte_cases n = Some (getF, setF) \<rbrakk>
   \<Longrightarrow> {p + n.. (p + n) + 2 ^ objBits (cte :: cte) - 1} \<subseteq> {p .. p + 2 ^ objBits tcb - 1}"
   apply (rule range_subsetI)
   apply (erule (1) tcb_cte_cases_in_range1 [where y = "p + n" and x = p, simplified])
@@ -632,7 +632,7 @@ lemma tcb_cte_in_range:
   done
 
 lemma tcb_cte_cases_aligned:
-  "\<lbrakk>is_aligned p 9; tcb_cte_cases n = Some (getF, setF)\<rbrakk> 
+  "\<lbrakk>is_aligned p 9; tcb_cte_cases n = Some (getF, setF)\<rbrakk>
   \<Longrightarrow> is_aligned (p + n) (objBits (cte :: cte))"
   apply (erule aligned_add_aligned)
    apply (simp add: tcb_cte_cases_def is_aligned_def objBits_simps split: if_split_asm)
@@ -641,22 +641,22 @@ lemma tcb_cte_cases_aligned:
 
 lemma tcb_cte_in_range':
   "\<lbrakk> ksPSpace s p = Some (KOTCB tcb); is_aligned p 9;
-  tcb_cte_cases n = Some (getF, setF) \<rbrakk> 
+  tcb_cte_cases n = Some (getF, setF) \<rbrakk>
   \<Longrightarrow> {p + n..+2 ^ objBits (cte :: cte)} \<subseteq> {p ..+ 2 ^ objBits tcb}"
   apply (subst upto_intvl_eq)
     apply (erule (1) tcb_cte_cases_aligned)
    apply (simp add: objBits_def)
-  apply (subst upto_intvl_eq)    
+  apply (subst upto_intvl_eq)
    apply (simp add: objBits_simps)
   apply (simp add: objBits_def)
   apply (erule (2) tcb_cte_in_range[unfolded objBits_def, simplified])
   done
 
-(* clagged from above :( Were I smarter or if I cared more I could probably factor out more \<dots>*)  
+(* clagged from above :( Were I smarter or if I cared more I could probably factor out more \<dots>*)
 lemma cmap_relation_disjoint_cte:
   assumes vuc: "s \<turnstile>' UntypedCap d ptr bits idx"
   and   invs: "invs' s"
-  and     cm: "cmap_relation (ctes_of s) (cslift s') Ptr ccte_relation"  
+  and     cm: "cmap_relation (ctes_of s) (cslift s') Ptr ccte_relation"
   and     ht: "s' \<Turnstile>\<^sub>c (x :: cte_C ptr)"
   and     xv: "x \<notin> Ptr ` {ptr..+2 ^ bits}"
   shows  "{ptr_val x..+size_of TYPE(cte_C)} \<inter> {ptr..+2 ^ bits} = {}"
@@ -670,25 +670,25 @@ proof -
 
   let ?ran = "{ptr..ptr + 2 ^ bits - 1}"
   let ?s = "(s\<lparr>ksPSpace := (ksPSpace s) |` (- ?ran)\<rparr>)"
-  from cm ht obtain cte where ks: "ctes_of s (ptr_val x) = Some cte"   
+  from cm ht obtain cte where ks: "ctes_of s (ptr_val x) = Some cte"
     apply (rule cmap_relation_h_t_valid)
     apply (clarsimp simp: map_comp_Some_iff)
     done
 
   let ?oran = "{ptr_val x .. ptr_val x + 2 ^ objBits cte - 1}"
-  
+
   let ?ran' = "{ptr..+2 ^ bits}"
   let ?oran' = "{ptr_val x..+2 ^ objBits cte}"
-  
+
   have ran' [simp]: "?ran' = ?ran" using al wb upto_intvl_eq by auto
-  
-  have oran' [simp]: "?oran' = ?oran" 
+
+  have oran' [simp]: "?oran' = ?oran"
   proof (rule upto_intvl_eq)
     from ks show "is_aligned (ptr_val x) (objBits cte)"
       by (rule ctes_of_is_aligned)
   qed
 
-  from xv have px: "ptr_val x \<in> (- ?ran)" 
+  from xv have px: "ptr_val x \<in> (- ?ran)"
     apply (simp only: ran' Compl_iff)
     apply (erule contrapos_nn)
     apply (erule image_eqI [rotated])
@@ -699,14 +699,14 @@ proof -
   thus ?thesis
   proof (cases rule: cte_wp_at_casesE')
     case (cte cte')
-      
+
     hence "ksPSpace ?s (ptr_val x) = Some (injectKOS cte)" using px by simp
-    hence "?oran \<inter> ?ran = {}" 
+    hence "?oran \<inter> ?ran = {}"
       unfolding objBits_def
     proof (rule pspace_no_overlapD'[where p = ptr and bits = bits,simplified])
       from invs have "valid_pspace' s" ..
       with vu al show "pspace_no_overlap' ptr bits ?s" by (rule valid_untyped_no_overlap)
-    qed    
+    qed
     hence "?oran' \<inter> ?ran' = {}" by simp
     thus ?thesis by (simp add: objBits_simps size_of_def)
   next
@@ -721,12 +721,12 @@ proof -
     have ot: "?oran \<subseteq> ?tran"
       by (rule tcb_cte_in_range[where p = "ptr_val x - n" and n = "n",
                                 simplified diff_add_cancel]) fact+
-    
+
     also
     from xv have "\<not> \<dots> \<subseteq> ?ran"
     proof (rule contrapos_nn)
-      assume "?tran \<subseteq> ?ran"  
-      with ot have "?oran \<subseteq> ?ran" by (rule order_trans)      
+      assume "?tran \<subseteq> ?ran"
+      with ot have "?oran \<subseteq> ?ran" by (rule order_trans)
       hence "ptr_val x \<in> ?ran"
       proof (rule subsetD)
         from tcb have "is_aligned (ptr_val x) (objBits cte)"
@@ -737,18 +737,18 @@ proof -
         hence "ptr_val x \<le> ptr_val x + 2 ^ objBits cte - 1"
           by (rule is_aligned_no_overflow)
         thus "ptr_val x \<in> ?oran" by (rule first_in_uptoD)
-      qed          
+      qed
       thus "x \<in> Ptr ` {ptr..+2 ^ bits}"
         unfolding ran'
         by (rule image_eqI [where x = "ptr_val x", rotated]) simp
     qed
-    
+
     hence "?tran \<inter> ?ran' = {}"
       apply (rule contrapos_np)
       apply (rule valid_untyped_cap_ko_at_disjoint [OF vuc koat])
       apply simp
       done
-   
+
     finally have "{ptr_val x..+2 ^ objBits cte} \<inter> ?ran' = {}"
       using ot unfolding oran'
       by blast
@@ -771,10 +771,10 @@ proof -
 
   note blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-  
+
   let ?ran = "{ptr..ptr + 2 ^ bits - 1}"
   let ?s = "(s\<lparr>ksPSpace := (ksPSpace s) |` (- ?ran)\<rparr>)"
-  from cm ht have ks: "ksPSpace s (ptr_val x) = Some KOUserData" 
+  from cm ht have ks: "ksPSpace s (ptr_val x) = Some KOUserData"
     apply (rule cmap_relation_h_t_valid)
     apply (clarsimp simp: map_comp_Some_iff heap_to_user_data_def Let_def projectKO_opts_defs)
     apply (case_tac k')
@@ -782,36 +782,36 @@ proof -
     done
 
   let ?oran = "{ptr_val x .. ptr_val x + 2 ^ objBitsKO KOUserData - 1}"
-  
+
   let ?ran' = "{ptr..+2 ^ bits}"
   let ?oran' = "{ptr_val x..+2 ^ objBitsKO KOUserData}"
-  
+
   have ran' [simp]: "?ran' = ?ran" using al wb upto_intvl_eq by auto
-  
-  have oran' [simp]: "?oran' = ?oran" 
+
+  have oran' [simp]: "?oran' = ?oran"
   proof (rule upto_intvl_eq)
     from invs have "pspace_aligned' s" ..
     with ks show "is_aligned (ptr_val x) (objBitsKO KOUserData)"  ..
   qed
-  
-  from xv have "ptr_val x \<in> (- ?ran)" 
+
+  from xv have "ptr_val x \<in> (- ?ran)"
     apply (simp only: ran' Compl_iff)
     apply (erule contrapos_nn)
     apply (erule image_eqI [rotated])
     apply simp
     done
-  
+
   hence "ksPSpace ?s (ptr_val x) = Some KOUserData" using ks by simp
-  hence "?oran \<inter> ?ran = {}" 
+  hence "?oran \<inter> ?ran = {}"
   proof (rule pspace_no_overlapD'[where p = ptr and bits = bits,simplified])
     from invs have "valid_pspace' s" ..
     with vu al show "pspace_no_overlap' ptr bits ?s" by (rule valid_untyped_no_overlap)
   qed
-    
+
   hence "?oran' \<inter> ?ran' = {}" by simp
-  thus "{ptr_val x..+size_of TYPE(user_data_C)} \<inter> ?ran' = {}"  
-  proof (rule disjoint_subset [rotated])    
-    show "{ptr_val x..+size_of TYPE(user_data_C)} \<subseteq> ?oran'" 
+  thus "{ptr_val x..+size_of TYPE(user_data_C)} \<inter> ?ran' = {}"
+  proof (rule disjoint_subset [rotated])
+    show "{ptr_val x..+size_of TYPE(user_data_C)} \<subseteq> ?oran'"
       apply -
       apply (rule intvl_start_le)
       apply (simp add: size_of_def objBits_simps pageBits_def)
@@ -834,10 +834,10 @@ proof -
 
   note blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-  
+
   let ?ran = "{ptr..ptr + 2 ^ bits - 1}"
   let ?s = "(s\<lparr>ksPSpace := (ksPSpace s) |` (- ?ran)\<rparr>)"
-  from cm ht have ks: "ksPSpace s (ptr_val x) = Some KOUserDataDevice" 
+  from cm ht have ks: "ksPSpace s (ptr_val x) = Some KOUserDataDevice"
     apply (rule cmap_relation_h_t_valid)
     apply (clarsimp simp: map_comp_Some_iff heap_to_device_data_def Let_def projectKO_opts_defs)
     apply (case_tac k')
@@ -845,36 +845,36 @@ proof -
     done
 
   let ?oran = "{ptr_val x .. ptr_val x + 2 ^ objBitsKO KOUserDataDevice - 1}"
-  
+
   let ?ran' = "{ptr..+2 ^ bits}"
   let ?oran' = "{ptr_val x..+2 ^ objBitsKO KOUserDataDevice}"
-  
+
   have ran' [simp]: "?ran' = ?ran" using al wb upto_intvl_eq by auto
-  
-  have oran' [simp]: "?oran' = ?oran" 
+
+  have oran' [simp]: "?oran' = ?oran"
   proof (rule upto_intvl_eq)
     from invs have "pspace_aligned' s" ..
     with ks show "is_aligned (ptr_val x) (objBitsKO KOUserDataDevice)"  ..
   qed
-  
-  from xv have "ptr_val x \<in> (- ?ran)" 
+
+  from xv have "ptr_val x \<in> (- ?ran)"
     apply (simp only: ran' Compl_iff)
     apply (erule contrapos_nn)
     apply (erule image_eqI [rotated])
     apply simp
     done
-  
+
   hence "ksPSpace ?s (ptr_val x) = Some KOUserDataDevice" using ks by simp
-  hence "?oran \<inter> ?ran = {}" 
+  hence "?oran \<inter> ?ran = {}"
   proof (rule pspace_no_overlapD'[where p = ptr and bits = bits,simplified])
     from invs have "valid_pspace' s" ..
     with vu al show "pspace_no_overlap' ptr bits ?s" by (rule valid_untyped_no_overlap)
   qed
-    
+
   hence "?oran' \<inter> ?ran' = {}" by simp
-  thus "{ptr_val x..+size_of TYPE(user_data_device_C)} \<inter> ?ran' = {}"  
-  proof (rule disjoint_subset [rotated])    
-    show "{ptr_val x..+size_of TYPE(user_data_device_C)} \<subseteq> ?oran'" 
+  thus "{ptr_val x..+size_of TYPE(user_data_device_C)} \<inter> ?ran' = {}"
+  proof (rule disjoint_subset [rotated])
+    show "{ptr_val x..+size_of TYPE(user_data_device_C)} \<subseteq> ?oran'"
       apply -
       apply (rule intvl_start_le)
       apply (simp add: size_of_def objBits_simps pageBits_def)
@@ -893,22 +893,22 @@ lemma tcb_queue_relation_live_restrict:
 proof (rule tcb_queue_relation'_cong [OF refl refl refl])
   fix p
   assume "p \<in> tcb_ptr_to_ctcb_ptr ` set q"
-  
+
   hence pin: "ctcb_ptr_to_tcb_ptr p \<in> set q" by (rule tcb_ptr_to_ctcb_ptr_imageD)
-  
+
   with rel have "tcb_at' (ctcb_ptr_to_tcb_ptr p) s" ..
   then obtain tcb :: tcb where koat: "ko_at' tcb (ctcb_ptr_to_tcb_ptr p) s"
     by (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-  
-  from live pin have "ko_wp_at' live' (ctcb_ptr_to_tcb_ptr p) s" ..  
+
+  from live pin have "ko_wp_at' live' (ctcb_ptr_to_tcb_ptr p) s" ..
   hence notin: "(ctcb_ptr_to_tcb_ptr p) \<notin> {ptr..ptr + 2 ^ bits - 1}"
-    by (fastforce intro!: rl [rule_format]) 
-  
+    by (fastforce intro!: rl [rule_format])
+
   from vuc have al: "is_aligned ptr bits" and wb: "bits < word_bits"
     by (auto elim!: valid_untyped_capE)
-  
+
   hence ran': " {ptr..+2 ^ bits} = {ptr..ptr + 2 ^ bits - 1}" by (simp add: upto_intvl_eq)
-  
+
   hence "p \<in> - Ptr ` {ptr..+2 ^ bits}" using vuc koat notin
     apply -
     apply (erule contrapos_np)
@@ -925,7 +925,7 @@ fun
   "epQ IdleEP = []"
   | "epQ (RecvEP ts) = ts"
   | "epQ (SendEP ts) = ts"
-  
+
 lemma ep_queue_live:
   assumes invs: "invs' s"
   and     koat: "ko_at' ep p s"
@@ -933,7 +933,7 @@ lemma ep_queue_live:
 proof
   fix t
   assume tin: "t \<in> set (epQ ep)"
-  
+
   from invs koat tin show "ko_wp_at' live' t s"
     apply -
     apply (drule sym_refs_ko_atD')
@@ -955,7 +955,7 @@ lemma ntfn_queue_live:
 proof
   fix t
   assume tin: "t \<in> set (ntfnQ (ntfnObj ntfn))"
-  
+
   from invs koat tin show "ko_wp_at' live' t s"
     apply -
     apply (drule sym_refs_ko_atD')
@@ -974,19 +974,19 @@ lemma cendpoint_relation_restrict:
   shows "cendpoint_relation (cslift s' |` (- Ptr ` {ptr..+2 ^ bits})) ep b = cendpoint_relation (cslift s') ep b"
 proof -
   from invs have "valid_objs' s" ..
-  with meps have vep: "valid_ep' ep s"  
+  with meps have vep: "valid_ep' ep s"
     apply -
     apply (clarsimp simp add: map_comp_Some_iff projectKOs)
     apply (erule (1) valid_objsE')
     apply (simp add: valid_obj'_def)
     done
-  
+
   from meps have koat: "ko_at' ep p s" by (rule map_to_ko_atI') fact+
-  
+
   show ?thesis
   proof (cases ep)
     case (RecvEP ts)
-    
+
     from vep RecvEP have tats: "\<forall>t \<in> set ts. tcb_at' t s"
       by (simp add: valid_ep'_def)
 
@@ -995,13 +995,13 @@ proof -
       apply (drule (1) ep_queue_live)
       apply simp
       done
-    
+
     show ?thesis using RecvEP
       unfolding cendpoint_relation_def Let_def
       by (simp add: tcb_queue_relation_live_restrict [OF vuc tats tlive rl])
   next
     case (SendEP ts)
-    
+
     from vep SendEP have tats: "\<forall>t \<in> set ts. tcb_at' t s"
       by (simp add: valid_ep'_def)
 
@@ -1010,12 +1010,12 @@ proof -
       apply (drule (1) ep_queue_live)
       apply simp
       done
-    
+
     show ?thesis using SendEP
       unfolding cendpoint_relation_def Let_def
       by (simp add: tcb_queue_relation_live_restrict [OF vuc tats tlive rl])
   next
-    case IdleEP 
+    case IdleEP
     thus ?thesis unfolding cendpoint_relation_def Let_def by simp
   qed
 qed
@@ -1028,19 +1028,19 @@ lemma cnotification_relation_restrict:
   shows "cnotification_relation (cslift s' |` (- Ptr ` {ptr..+2 ^ bits})) ntfn b = cnotification_relation (cslift s') ntfn b"
 proof -
   from invs have "valid_objs' s" ..
-  with meps have vep: "valid_ntfn' ntfn s"  
+  with meps have vep: "valid_ntfn' ntfn s"
     apply -
     apply (clarsimp simp add: map_comp_Some_iff projectKOs)
     apply (erule (1) valid_objsE')
     apply (simp add: valid_obj'_def)
     done
-  
+
   from meps have koat: "ko_at' ntfn p s" by (rule map_to_ko_atI') fact+
-  
+
   show ?thesis
   proof (cases "ntfnObj ntfn")
     case (WaitingNtfn ts)
-    
+
     with vep have tats: "\<forall>t \<in> set ts. tcb_at' t s"
       by (simp add: valid_ntfn'_def)
 
@@ -1049,7 +1049,7 @@ proof -
       apply (drule (1) ntfn_queue_live)
       apply simp
       done
-    
+
     show ?thesis using WaitingNtfn
       unfolding cnotification_relation_def Let_def
       by (simp add: tcb_queue_relation_live_restrict [OF vuc tats tlive rl])
@@ -1063,11 +1063,11 @@ declare bij_Ptr[simp]
 lemma surj_tcb_ptr_to_ctcb_ptr [simp]:
   "surj tcb_ptr_to_ctcb_ptr"
   by (rule surjI [where f = "ctcb_ptr_to_tcb_ptr"], simp)
-  
+
 lemma bij_tcb_ptr_to_ctcb_ptr [simp]:
   "bij tcb_ptr_to_ctcb_ptr" by (simp add: bijI)
-  
-  
+
+
 lemma inj_ctcb_ptr_to_tcb_ptr [simp]:
   "inj ctcb_ptr_to_tcb_ptr"
   apply (rule injI)
@@ -1077,7 +1077,7 @@ lemma inj_ctcb_ptr_to_tcb_ptr [simp]:
 lemma surj_ctcb_ptr_to_tcb_ptr [simp]:
   "surj ctcb_ptr_to_tcb_ptr"
   by (rule surjI [where f = "tcb_ptr_to_ctcb_ptr"], simp)
-  
+
 lemma bij_ctcb_ptr_to_tcb_ptr [simp]:
   "bij ctcb_ptr_to_tcb_ptr" by (simp add: bijI)
 
@@ -1091,7 +1091,7 @@ lemma cmap_relation_restrict_both:
   done
 
 lemma cmap_relation_restrict_both_proj:
-  "\<lbrakk> cmap_relation (projectKO_opt \<circ>\<^sub>m am) cm f rel; bij f\<rbrakk> 
+  "\<lbrakk> cmap_relation (projectKO_opt \<circ>\<^sub>m am) cm f rel; bij f\<rbrakk>
   \<Longrightarrow> cmap_relation (projectKO_opt \<circ>\<^sub>m (am |` (- S))) (cm |` (- f ` S)) f rel"
   unfolding cmap_relation_def
   apply (rule conjI)
@@ -1167,33 +1167,33 @@ lemma valid_untyped_cap_ctcb_member':
   apply (simp only: upto_intvl_eq)
   apply (erule (2) valid_untyped_cap_ctcb_member)
   done
-    
+
 lemma cpspace_tcb_relation_address_subset:
   assumes     vuc: "s \<turnstile>' capability.UntypedCap d ptr bits idx"
   and        invs: "invs' s"
   and     ctcbrel: "cpspace_tcb_relation (ksPSpace s) (t_hrs_' (globals s'))"
   shows "cmap_relation (map_to_tcbs (ksPSpace s |` (- {ptr..+2 ^ bits - unat ctcb_offset})))
       (cslift s' |` (- tcb_ptr_to_ctcb_ptr ` {ptr..+2 ^ bits - unat ctcb_offset})) tcb_ptr_to_ctcb_ptr
-      ctcb_relation  
+      ctcb_relation
    = cmap_relation (map_to_tcbs (ksPSpace s |` (- {ptr..+2 ^ bits})))
         (cslift s' |` (- Ptr ` {ptr..+2 ^ bits})) tcb_ptr_to_ctcb_ptr
         ctcb_relation" (is "cmap_relation ?am ?cm tcb_ptr_to_ctcb_ptr ctcb_relation
   = cmap_relation ?am' ?cm' tcb_ptr_to_ctcb_ptr ctcb_relation")
 proof (rule cmap_relation_cong)
   from vuc have al: "is_aligned ptr bits" and wb: "bits < word_bits" by (auto elim: valid_untyped_capE)
-    
+
   have r1: "\<And>x tcb. \<lbrakk> (map_to_tcbs (ksPSpace s) x) = Some tcb; x \<in> {ptr..+2 ^ bits}\<rbrakk>
     \<Longrightarrow> x \<in> {ptr..+2 ^ bits - unat ctcb_offset}"
   proof (subst intvl_aligned_top [where 'a=32, folded word_bits_def, OF _ al _ _ wb])
     fix x tcb
     assume mtcb: "map_to_tcbs (ksPSpace s) x = Some tcb" and xin: "x \<in> {ptr..+2 ^ bits}"
-    
+
     from mtcb invs have koat: "ko_at' tcb x s"
-      by (fastforce simp: map_comp_Some_iff projectKOs intro: aligned_distinct_obj_atI')  
-    
+      by (fastforce simp: map_comp_Some_iff projectKOs intro: aligned_distinct_obj_atI')
+
     thus "is_aligned x (objBits tcb)"
       by (clarsimp elim!: obj_atE' simp: projectKOs objBits_def)
-        
+
     (* FIXME: generalise *)
     with xin koat show "objBits tcb \<le> bits" using wb
       apply -
@@ -1215,36 +1215,36 @@ proof (rule cmap_relation_cong)
        apply (simp add: word_le_nat_alt unat_minus_one le_diff_iff word_bits_def)
       apply (simp add: objBits_simps)
       done
-    
-    show "unat ctcb_offset < 2 ^ objBits tcb" 
+
+    show "unat ctcb_offset < 2 ^ objBits tcb"
       by (fastforce simp add: ctcb_offset_def objBits_simps project_inject)
-    
+
     show "x \<in> {ptr..+2 ^ bits}" by fact
   qed
-  
+
   show "dom ?am = dom ?am'"
     apply (rule dom_eqI)
     apply (clarsimp dest!: r1 simp: map_comp_restrict_map_Some_iff)
     apply (clarsimp dest!: intvl_mem_weaken simp: map_comp_restrict_map_Some_iff)
     done
-  
-  let ?ran = "{ptr..+2 ^ bits}" 
+
+  let ?ran = "{ptr..+2 ^ bits}"
   let ?small_ran = "{ptr..+2 ^ bits - unat ctcb_offset}"
-  
-  show "dom ?cm = dom ?cm'" 
+
+  show "dom ?cm = dom ?cm'"
   proof (rule dom_eqI)
     fix x y
     assume "?cm' x = Some y"
     hence cl: "cslift s' x = Some y" and xni: "x \<notin> Ptr ` ?ran"
       by (auto simp: restrict_map_Some_iff)
-    
-    with ctcbrel obtain x' tcb where mt: "map_to_tcbs (ksPSpace s) x' = Some tcb" 
+
+    with ctcbrel obtain x' tcb where mt: "map_to_tcbs (ksPSpace s) x' = Some tcb"
       and xv: "x = tcb_ptr_to_ctcb_ptr x'"
       by (fastforce elim!: cmap_relation_h_t_valid simp add: h_t_valid_clift_Some_iff)
-    
+
     have "(cslift s' |` (- tcb_ptr_to_ctcb_ptr ` ?small_ran)) x = Some y"
     proof (subst restrict_in)
-      show "x \<in> - tcb_ptr_to_ctcb_ptr ` ?small_ran" using xni 
+      show "x \<in> - tcb_ptr_to_ctcb_ptr ` ?small_ran" using xni
       proof (rule contrapos_np)
         assume "x \<notin> - tcb_ptr_to_ctcb_ptr ` ?small_ran"
         hence "x \<in> tcb_ptr_to_ctcb_ptr ` ?small_ran" by simp
@@ -1253,18 +1253,18 @@ proof (rule cmap_relation_cong)
           by (clarsimp intro!: imageI elim!: intvl_plus_sub_offset)
       qed
     qed fact
-    thus "\<exists>y. (cslift s' |` (- tcb_ptr_to_ctcb_ptr ` ?small_ran)) x = Some y" ..    
+    thus "\<exists>y. (cslift s' |` (- tcb_ptr_to_ctcb_ptr ` ?small_ran)) x = Some y" ..
   next
     fix x y
     assume "?cm x = Some y"
     hence cl: "cslift s' x = Some y" and xni: "x \<notin> tcb_ptr_to_ctcb_ptr ` ?small_ran"
       by (auto simp: restrict_map_Some_iff)
-    
+
     with ctcbrel obtain x' tcb where mt: "map_to_tcbs (ksPSpace s) x' = Some tcb" and xv: "x = tcb_ptr_to_ctcb_ptr x'"
       by (fastforce elim!: cmap_relation_h_t_valid simp add: h_t_valid_clift_Some_iff)
-    
+
     from mt invs have koat: "ko_at' tcb x' s" by (rule map_to_ko_atI')
-    
+
     have "(cslift s' |` (- Ptr ` ?ran)) x = Some y"
     proof (subst restrict_in)
       show "x \<in> - Ptr ` ?ran" using xni
@@ -1701,7 +1701,7 @@ proof -
 
   let ?th = "hrs_htd_update (typ_region_bytes ptr bits)"
   let ?th_s = "?th (t_hrs_' (globals s'))"
-  
+
   have map_to_ctes_delete':
     "map_to_ctes ?ks' = ctes_of s |` (- {ptr..+2 ^ bits})" using invs
     apply (subst ks' [symmetric])
@@ -1711,7 +1711,7 @@ proof -
     apply (subst upto_intvl_eq [OF al])
     apply clarsimp
     done
-  
+
   note cm_disj = cmap_relation_disjoint [OF D.valid_untyped invs, atomize]
   note cm_disj_tcb = cmap_relation_disjoint_tcb [OF D.valid_untyped invs]
   note cm_disj_cte = cmap_relation_disjoint_cte [OF D.valid_untyped invs]
@@ -1756,14 +1756,14 @@ proof -
     using sr
     by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
   hence "cpspace_relation ?ks' (underlying_memory (ksMachineState s)) ?th_s"
-    unfolding cpspace_relation_def 
+    unfolding cpspace_relation_def
     using cendpoint_relation_restrict [OF D.valid_untyped invs rl]
       cnotification_relation_restrict [OF D.valid_untyped invs rl]
     apply -
     apply (elim conjE)
     apply ((subst lift_t_typ_region_bytes,
             rule cm_disj cm_disj_tcb cm_disj_cte cm_disj_user cm_disj_device
-            , assumption +, 
+            , assumption +,
             simp_all add: objBits_simps archObjSize_def pageBits_def projectKOs
                           pteBits_def pdeBits_def
                           heap_to_user_data_restrict heap_to_device_data_restrict)[1])+ -- "waiting ..."
@@ -1782,7 +1782,7 @@ proof -
                              map_comp_restrict_map_Some_iff)
       apply (simp add: cmap_relation_restrict_both_proj)
      apply (subst cmap_relation_cong[OF refl refl,
-                    where rel' = "cnotification_relation (cslift s')"])     
+                    where rel' = "cnotification_relation (cslift s')"])
       apply (clarsimp simp: restrict_map_Some_iff image_iff
                             map_comp_restrict_map_Some_iff)
      apply (simp add: cmap_relation_restrict_both_proj)
@@ -1814,7 +1814,7 @@ proof -
     apply (clarsimp simp: Let_def all_conj_distrib)
     apply (drule spec, drule spec, drule mp)
     apply fastforce
-    apply ((subst lift_t_typ_region_bytes, rule cm_disj_tcb, assumption+, 
+    apply ((subst lift_t_typ_region_bytes, rule cm_disj_tcb, assumption+,
       simp_all add: objBits_simps archObjSize_def pageBits_def projectKOs)[1])+
       -- "waiting ..."
     apply (simp add: tcb_queue_relation_live_restrict
@@ -1824,13 +1824,13 @@ proof -
   moreover
 
   { assume asid_map:
-    "asid_map_pd_to_hwasids (armKSASIDMap (ksArchState s)) = 
+    "asid_map_pd_to_hwasids (armKSASIDMap (ksArchState s)) =
        set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot)"
-    
+
     hence asid:
-      "\<And>p pd_ptr pde. \<lbrakk> cslift s' (pde_Ptr p) = Some pde; 
+      "\<And>p pd_ptr pde. \<lbrakk> cslift s' (pde_Ptr p) = Some pde;
                         pd_pointer_to_asid_slot pd_ptr = Some (pde_Ptr p);
-                        pde_stored_asid pde \<noteq> None \<rbrakk> \<Longrightarrow> 
+                        pde_stored_asid pde \<noteq> None \<rbrakk> \<Longrightarrow>
       \<exists>asid. (asid, pd_ptr) \<in> ran (armKSASIDMap (ksArchState s))"
       apply -
       apply (drule_tac x=pd_ptr in fun_cong)
@@ -1843,7 +1843,7 @@ proof -
     from safe_asids
     have pds:
       "\<And>p asid pd_ptr. armKSASIDMap (ksArchState (s\<lparr>ksPSpace := ?ks\<rparr>)) p =
-                        Some (asid, pd_ptr) \<Longrightarrow> 
+                        Some (asid, pd_ptr) \<Longrightarrow>
                         page_directory_at' pd_ptr (s\<lparr>ksPSpace := ?ks\<rparr>)"
       by (clarsimp simp: ksASIDMapSafe_def)
 
@@ -1889,7 +1889,7 @@ proof -
     from sr ptr_refs have "ptr_span (pd_Ptr (symbol_table ''armKSGlobalPD''))
       \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
       by (fastforce simp: rf_sr_def cstate_relation_def Let_def)
-    ultimately    
+    ultimately
     have "hrs_htd (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s')))
       \<Turnstile>\<^sub>t (Ptr::(32 word \<Rightarrow> (pde_C[4096]) ptr)) (symbol_table ''armKSGlobalPD'')"
       using al wb
@@ -2119,5 +2119,5 @@ lemma deleteObjects_ccorres[corres]:
                         kernel_data_refs_domain_eq_rotate htd_safe_typ_region_bytes
                         untyped_cap_rf_sr_ptr_bits_domain)
 
-end  
-end  
+end
+end

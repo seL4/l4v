@@ -12,7 +12,7 @@ theory DetWPLib
 imports "../GenericLib_C"
 begin
 
-definition 
+definition
   "det_wp P f \<equiv> \<forall>s. P s \<longrightarrow> (\<exists>r. f s = ({r}, False))"
 
 lemma det_result:

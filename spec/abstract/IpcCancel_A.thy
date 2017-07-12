@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Functions for cancelling IPC.
 *)
 
@@ -23,8 +23,8 @@ text {* Getting and setting endpoint queues. *}
 definition
   get_ep_queue :: "endpoint \<Rightarrow> (obj_ref list,'z::state_ext) s_monad"
 where
- "get_ep_queue ep \<equiv> case ep of SendEP q \<Rightarrow> return q 
-                              | RecvEP q \<Rightarrow> return q 
+ "get_ep_queue ep \<equiv> case ep of SendEP q \<Rightarrow> return q
+                              | RecvEP q \<Rightarrow> return q
                               | _ \<Rightarrow> fail"
 
 primrec (nonexhaustive)
@@ -92,7 +92,7 @@ endpoint. *}
 
 text {* Miscellaneous NTFN binding stuff
 FIXME! *}
-abbreviation 
+abbreviation
   ntfn_set_bound_tcb :: "notification \<Rightarrow> obj_ref option \<Rightarrow> notification"
 where
   "ntfn_set_bound_tcb ntfn t \<equiv> ntfn \<lparr> ntfn_bound_tcb := t \<rparr>"
@@ -145,7 +145,7 @@ where
                                      do_extended_op (tcb_sched_action tcb_sched_enqueue t) od) queue;
                       do_extended_op (reschedule_required)
                      od
-               | _ \<Rightarrow> return ()    
+               | _ \<Rightarrow> return ()
    od"
 
 text {* The endpoint pointer stored by a thread waiting for a message to be
@@ -168,12 +168,12 @@ where
      ep \<leftarrow> get_endpoint epptr;
      queue \<leftarrow> get_ep_queue ep;
      queue' \<leftarrow> return $ remove1 tptr queue;
-     ep' \<leftarrow> return (case queue' of [] \<Rightarrow> IdleEP 
+     ep' \<leftarrow> return (case queue' of [] \<Rightarrow> IdleEP
                                 |  _ \<Rightarrow> update_ep_queue ep queue');
      set_endpoint epptr ep';
      set_thread_state tptr Inactive
    od"
- 
+
 text {* Finalise a capability if the capability is known to be of the kind
 which can be finalised immediately. This is a simplified version of the
 @{text finalise_cap} operation. *}
@@ -238,7 +238,7 @@ definition
 where
  "empty_slot slot free_irq \<equiv> do
       cap \<leftarrow> get_cap slot;
-      if cap = NullCap then 
+      if cap = NullCap then
         return ()
       else do
         slot_p \<leftarrow> gets (\<lambda>s. cdt s slot);
@@ -293,7 +293,7 @@ definition
 where
   "cancel_signal threadptr ntfnptr \<equiv> do
      ntfn \<leftarrow> get_notification ntfnptr;
-     queue \<leftarrow> (case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> return queue 
+     queue \<leftarrow> (case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> return queue
                         | _ \<Rightarrow> fail);
      queue' \<leftarrow> return $ remove1 threadptr queue;
      newNTFN \<leftarrow> return $ ntfn_set_obj ntfn (case queue' of [] \<Rightarrow> IdleNtfn
@@ -308,8 +308,8 @@ definition
 where
   "cancel_ipc tptr \<equiv> do
      state \<leftarrow> get_thread_state tptr;
-     case state  
-       of 
+     case state
+       of
           BlockedOnSend x y \<Rightarrow> blocked_cancel_ipc state tptr
         | BlockedOnReceive x \<Rightarrow> blocked_cancel_ipc state tptr
         | BlockedOnNotification event \<Rightarrow> cancel_signal tptr event

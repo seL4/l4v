@@ -23,7 +23,7 @@ ML {* val proof_spec = Proof_Graph.merge_multi_thms proof_spec_raw *}
 
 
 (*TODO: Can possibly extract lemmas from the middle of locales *)
-ML {* 
+ML {*
 
 fun range (beg,fin) l = List.take (List.drop (l,beg),fin - beg)
 
@@ -36,7 +36,7 @@ in
 
 fun add_thy thy_deps thy thys' =
 let
-  fun reachable i j = 
+  fun reachable i j =
     let
       val deps = Option.map snd (Symtab.lookup thy_deps i)
     in
@@ -45,7 +45,7 @@ let
    val thys = distinct (op =) thys'
 
 in
-  if exists (fn ex_thy => reachable ex_thy thy) thys then thys else 
+  if exists (fn ex_thy => reachable ex_thy thy) thys then thys else
   thys
   |> filter_out (fn ex_thy => reachable thy ex_thy)
   |> cons thy
@@ -62,10 +62,10 @@ fun add_thy_consts spec_graph (e : Proof_Graph.proof_entry) =
 
 
 
-fun sort_lemmas (proof_graph,spec_graph : Spec_Graph.graph_entry Int_Graph.T,thy_deps) spec_theories facts  = 
+fun sort_lemmas (proof_graph,spec_graph : Spec_Graph.graph_entry Int_Graph.T,thy_deps) spec_theories facts  =
 let
 
-  fun do_sort (nm,e) (thy_names,thy_imports) = 
+  fun do_sort (nm,e) (thy_names,thy_imports) =
   let
     val thy_list = thy_list thy_deps (add_thy_consts spec_graph e [])
     val i = (space_implode "__" thy_list) ^ "_Bucket"
@@ -83,8 +83,8 @@ let
     val all_succs  = String_Graph.all_succs proof_graph [nm]
 
 
-    fun get_dep nm' b = 
-    let      
+    fun get_dep nm' b =
+    let
       val thyn = Long_Name.explode nm' |> hd
       fun warn _ = if not (Symtab.defined thy_names nm') then (warning (nm ^ " depends on " ^ nm' ^ " which is not marked for levitation and is outside theory import chain. NOT levitating.");true) else b
 
@@ -102,25 +102,25 @@ let
     (if rem then (thm_deps,thytab) else
       (Symtab.update (nm,(e,imm_succs)) thm_deps,fold (fn dep => Symtab.insert_list (op =) (thy_name,dep)) deps thytab)) end
 
-  fun rem_cycles (thy_names,thy_imports) = 
+  fun rem_cycles (thy_names,thy_imports) =
   let
     val thy_graph = thy_imports
       |> Symtab.dest
       |> map (fn (id,e) => ((id,()),filter (Symtab.defined thy_imports) e))
       |> String_Graph.make
-      
-   fun merge_deps (n :: l) (thy_names,thy_graph) = 
-   let
-   
 
-    val thy_graph' = 
+   fun merge_deps (n :: l) (thy_names,thy_graph) =
+   let
+
+
+    val thy_graph' =
     Proof_Graph.restrict_subgraph (fn (i,_) => not (member (op =) l i)) thy_graph
 
     val thy_names' = Symtab.map (fn _ => fn thyn => if member (op =) l thyn then n else thyn) thy_names
    in
     (thy_names',thy_graph') end;
 
-  fun cycles_of i = 
+  fun cycles_of i =
     fold (fn j => append (String_Graph.irreducible_paths thy_graph (j,i))) (String_Graph.immediate_succs thy_graph i) []
 
    val cycles = map (flat o cycles_of) (String_Graph.keys thy_graph)
@@ -139,7 +139,7 @@ let
    val thy_imports' = map (fn i => (i,String_Graph.all_succs thy_graph' [i] |> remove (op =) i)) (String_Graph.keys thy_graph')
     |> filter (fn (i,_) => Symtab.defined thy_imports i)
     |> Symtab.make
-   
+
   in
     (thy_names',thy_imports') end
 
@@ -157,12 +157,12 @@ let
 
   val compare_facts = make_ord (fn ((nm,_),(nm',_)) => (do_lookup "order" order nm) < (do_lookup "order" order nm'))
 
-  
+
   val thys = Symtab.fold (fn (nm,e) => Symtab.insert_list (K false) (do_lookup "thy_names" thy_names' nm,(nm,e))) thm_deps Symtab.empty
   |> Symtab.map (K (sort compare_facts))
   |> Symtab.map (fn i => fn e => (do_lookup "thy_imports" thy_imports' i,e))
   |> Symtab.dest
-  
+
   val base_thy =
   let
     val all_imports = thy_imports'
@@ -178,7 +178,7 @@ let
     ("AutoLevity_Base",(all_imports,[])) end
 
   val toplevel_thy = ("AutoLevity_Top",(thy_list thy_deps (Symtab.keys thy_imports'),[]))
- 
+
 in
   (toplevel_thy :: base_thy :: thys) end
 
@@ -191,13 +191,13 @@ let
   |> filter (Token.is_proper)
   ) @ ([Token.eof])
 
-  val ((nm,attribs),_) = 
+  val ((nm,attribs),_) =
     (Parse.command |-- Parse_Spec.opt_thm_name ":") toks handle _  => error ("Failed to parse lemma attributes" ^ str)
 in
   map (fst o fst o Args.dest_src) attribs
   |> filter (member (op =) declare_attribs) end
 
-fun parse_attribs sorted = 
+fun parse_attribs sorted =
 let
   fun do_parse (id,(e : Proof_Graph.proof_entry,thm_deps)) =
   let
@@ -205,7 +205,7 @@ let
     val (begin,fin) = (#lines e)
     val text = range (begin -1,fin) thy_file
       |> space_implode "\n"
-    
+
     val new_attribs = get_attribs text
   in
     (id,(e,thm_deps,new_attribs)) end
@@ -214,13 +214,13 @@ in
 
 
 
-fun get_raw_proofs debug (id : string,(e : Proof_Graph.proof_entry,thm_deps,attribs)) = 
+fun get_raw_proofs debug (id : string,(e : Proof_Graph.proof_entry,thm_deps,attribs)) =
   let
     val thy_file = File.read_lines (Path.explode (#file e))
     val (begin,fin) = (#lines e)
     val text = range (begin -1,fin) thy_file
       |> space_implode "\n"
-    
+
     val new_attribs = attribs
     |> map (fn s => s ^ " del")
     |> space_implode ","
@@ -228,14 +228,14 @@ fun get_raw_proofs debug (id : string,(e : Proof_Graph.proof_entry,thm_deps,attr
 
     val text' = text ^ (if new_attribs = "" then "" else ("\ndeclare " ^ (#name e) ^ "[" ^ new_attribs ^ "]"))
      ^ (if debug then "\n(* THM_DEPS: " ^ space_implode " " thm_deps ^ "*)\n" else "")
-    
+
     (* Make sure we don't have any ride-alongs *)
     val _ = if (String.isSubstring "method_setup" text) then warning ("Found method setup" ^ (@{make_string} (id,e)) ^ "\n" ^ text) else ()
   in
-    cons (#file e,text') end 
+    cons (#file e,text') end
 
 
-fun add_buffer (f,text) (cur_f,buf) = 
+fun add_buffer (f,text) (cur_f,buf) =
 let
   val buf' = buf
     |> Buffer.add (if f = cur_f then "" else "\n(* " ^ f ^ " *)\n\n")
@@ -245,7 +245,7 @@ in
 
 fun get_thy debug (nm,(imports,lemmas)) =
 let
-  
+
   val lemma_text = fold (get_raw_proofs debug) lemmas []
 
   val buf = Buffer.empty
@@ -255,8 +255,8 @@ let
   |> (fn b => fold add_buffer lemma_text ("",b))
   |> snd
   |> Buffer.add ("\nend")
-  
-in 
+
+in
   (nm,buf) end
 
 
@@ -269,14 +269,14 @@ in
 
 
 
-fun remove_lemma thy_nm (nm,(e : Proof_Graph.proof_entry,thm_deps,attribs)) (new_deps,cache) = 
+fun remove_lemma thy_nm (nm,(e : Proof_Graph.proof_entry,thm_deps,attribs)) (new_deps,cache) =
 let
   val (beg',fin) = #lines e
   val beg = beg' -1
 
   val thy_file = case Symtab.lookup cache (#file e) of SOME s => s | NONE => File.read_lines (Path.explode (#file e)) |> map SOME
-  
-  
+
+
 
   val header = "(* " ^ #name e ^ " moved to " ^ thy_nm ^ " *)"
 
@@ -316,19 +316,19 @@ let
   let
     val deps = Symtab.lookup new_deps file_nm |> the
     |> filter_out (is_already_imported file_nm)
-    
-   
+
+
     val index_line = find_index (fn (SOME s) => String.isPrefix "imports" s | NONE => false) file
-    
+
     val new_dep_line = if null deps then "" else " " ^ (space_implode " " deps)
 
-    val file' = 
-      map_range (fn SOME s => SOME (s ^ new_dep_line) | NONE => error ("No import line in file " ^ file_nm)) (index_line,index_line) file    
+    val file' =
+      map_range (fn SOME s => SOME (s ^ new_dep_line) | NONE => error ("No import line in file " ^ file_nm)) (index_line,index_line) file
   in
     file' end
 
    val cache' = Symtab.map add_deps cache
-in                    
+in
   (Symtab.map (fn file => fn body => File.write_list (Path.explode file) (map (fn SOME s => s ^ "\n" | NONE => "") body)) cache';()) end;
 
 

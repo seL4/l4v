@@ -1597,7 +1597,7 @@ lemma get_receive_slot_dcorres:
     apply (rule dcorres_expand_pfx)
     apply clarsimp
     apply (frule get_tcb_rev,frule valid_tcb_objs,simp)
-    apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_nondevice_page_cap_simps 
+    apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_nondevice_page_cap_simps
                           is_nondevice_page_cap_arch_def
                    split: bool.split_asm)
     apply (drule get_ipc_buffer_words_receive_slots)
@@ -1667,7 +1667,7 @@ lemma dcorres_dummy_corrupt_ipc_buffer:
     apply (clarsimp | rule conjI)+
       apply (rule corres_guard_imp[OF dcorres_dummy_corrupt_frame],clarsimp+)
   apply (rule corres_guard_imp[OF dummy_corrupt_tcb_intent_corres]
-    ,(clarsimp simp:not_idle_thread_def tcb_at_def)+)+ 
+    ,(clarsimp simp:not_idle_thread_def tcb_at_def)+)+
 done
 
 lemma transfer_caps_loop_None:
@@ -1851,8 +1851,8 @@ done
 
 
 lemma opt_cap_valid_etcbs:
-  "\<lbrakk>tcb_at ptr s; valid_etcbs s; ptr \<noteq> idle_thread s; 
-    sl \<in> tcb_abstract_slots \<or> sl = tcb_pending_op_slot\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>tcb_at ptr s; valid_etcbs s; ptr \<noteq> idle_thread s;
+    sl \<in> tcb_abstract_slots \<or> sl = tcb_pending_op_slot\<rbrakk> \<Longrightarrow>
   \<exists>cap. opt_cap (ptr, sl) (transform s) = Some cap"
   apply (clarsimp simp: tcb_at_def)
   apply (frule(1) valid_etcbs_get_tcb_get_etcb)
@@ -1875,7 +1875,7 @@ lemma dcorres_set_mrs':
            apply simp+
       apply (clarsimp simp:get_ipc_buffer_def gets_the_def exs_valid_def gets_def
         get_def bind_def return_def assert_opt_def fail_def split:option.splits | rule conjI)+
-      apply (clarsimp simp:not_idle_thread_def) 
+      apply (clarsimp simp:not_idle_thread_def)
       apply (rule opt_cap_valid_etcbs, clarsimp+)
     apply (simp split:cdl_cap.splits)
       apply (wp cdl_get_ipc_buffer_None)
@@ -2403,7 +2403,7 @@ lemma dcorres_receive_sync:
   "\<lbrakk> ep_at word1 s; ko_at (kernel_object.Endpoint rv) word1 s; not_idle_thread thread s;
         not_idle_thread (cur_thread s) s; st_tcb_at active thread s; valid_state s;
         valid_etcbs s \<rbrakk> \<Longrightarrow>
-    dcorres dc (op = (transform s)) (op = s) 
+    dcorres dc (op = (transform s)) (op = s)
         (receive_sync thread word1)
         (case rv of
             Structures_A.endpoint.IdleEP \<Rightarrow> case is_blocking of
@@ -2728,7 +2728,7 @@ lemma send_sync_ipc_corres:
                            apply (rule dcorres_if_rhs)
                             apply (simp only:if_True)
                             apply (rule corres_alternate1)+
-                            apply (rule corres_setup_caller_cap) 
+                            apply (rule corres_setup_caller_cap)
                             apply (clarsimp simp:ep_waiting_set_recv_def pred_tcb_at_def obj_at_def generates_pending_def)
                            apply (rule corres_alternate1[OF corres_alternate2])
                            apply (rule set_thread_state_corres)

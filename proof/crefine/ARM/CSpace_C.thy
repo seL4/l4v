@@ -20,7 +20,7 @@ lemma maskCapRights_cap_cases:
   "return (maskCapRights R c) =
   (case c of
     ArchObjectCap ac \<Rightarrow> return (Arch.maskCapRights R ac)
-  | EndpointCap _ _ _ _ _ \<Rightarrow> 
+  | EndpointCap _ _ _ _ _ \<Rightarrow>
     return (capEPCanGrant_update
        (\<lambda>_. capEPCanGrant c \<and> capAllowGrant R)
             (capEPCanReceive_update
@@ -49,24 +49,24 @@ lemma vmRightsFromWord_spec:
   by vcg simp?
 
 lemmas vmrights_defs =
-  Kernel_C.VMNoAccess_def 
+  Kernel_C.VMNoAccess_def
   Kernel_C.VMReadOnly_def
   Kernel_C.VMKernelOnly_def
   Kernel_C.VMReadWrite_def
 
 lemma maskVMRights_spec:
-  "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter> 
+  "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter>
            \<lbrace> \<acute>vm_rights && mask 2 = \<acute>vm_rights \<rbrace>)
   Call maskVMRights_'proc
-  \<lbrace> vmrights_to_H \<acute>ret__unsigned_long = 
+  \<lbrace> vmrights_to_H \<acute>ret__unsigned_long =
     maskVMRights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) (cap_rights_to_H (seL4_CapRights_lift \<^bsup>s\<^esup>cap_rights_mask)) \<and>
     \<acute>ret__unsigned_long && mask 2 = \<acute>ret__unsigned_long \<rbrace>"
   apply vcg
   apply clarsimp
-  apply (rule conjI) 
-   apply ((auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs 
+  apply (rule conjI)
+   apply ((auto simp: vmrights_to_H_def maskVMRights_def vmrights_defs
                       cap_rights_to_H_def to_bool_def
-               split: bool.split 
+               split: bool.split
          | simp add: mask_def
          | word_bitwise)+)[1]
   apply clarsimp
@@ -162,7 +162,7 @@ lemma to_bool_mask_to_bool_bf:
   apply (simp add: to_bool_bf_def to_bool_def)
   apply (rule iffI)
    prefer 2
-   apply simp  
+   apply simp
   apply (subgoal_tac "x && mask (Suc 0) < 2^(Suc 0)")
    apply simp
    apply (drule word_less_cases [where y=2])
@@ -178,11 +178,11 @@ lemma to_bool_cap_rights_bf:
    to_bool_bf (capAllowWrite_CL (seL4_CapRights_lift R))"
   "to_bool (capAllowGrant_CL (seL4_CapRights_lift R)) =
    to_bool_bf (capAllowGrant_CL (seL4_CapRights_lift R))"
-  by (subst to_bool_bf_to_bool_mask, 
+  by (subst to_bool_bf_to_bool_mask,
       simp add: seL4_CapRights_lift_def mask_def word_bw_assocs, simp)+
 
 lemma to_bool_ntfn_cap_bf:
-  "cap_lift c = Some (Cap_notification_cap cap) \<Longrightarrow> 
+  "cap_lift c = Some (Cap_notification_cap cap) \<Longrightarrow>
   to_bool (capNtfnCanSend_CL cap) = to_bool_bf (capNtfnCanSend_CL cap) \<and>
   to_bool (capNtfnCanReceive_CL cap) = to_bool_bf (capNtfnCanReceive_CL cap)"
   apply (simp add:cap_lift_def Let_def split: if_split_asm)
@@ -190,9 +190,9 @@ lemma to_bool_ntfn_cap_bf:
          clarsimp simp: cap_lift_thread_cap mask_def word_bw_assocs)+
   apply simp
   done
-   
+
 lemma to_bool_ep_cap_bf:
-  "cap_lift c = Some (Cap_endpoint_cap cap) \<Longrightarrow> 
+  "cap_lift c = Some (Cap_endpoint_cap cap) \<Longrightarrow>
   to_bool (capCanSend_CL cap) = to_bool_bf (capCanSend_CL cap) \<and>
   to_bool (capCanReceive_CL cap) = to_bool_bf (capCanReceive_CL cap) \<and>
   to_bool (capCanGrant_CL cap) = to_bool_bf (capCanGrant_CL cap)"
@@ -211,10 +211,10 @@ lemma isArchCap_spec:
   done
 
 lemma maskCapRights_ccorres [corres]:
-  "ccorres ccap_relation ret__struct_cap_C_' 
-           \<top> 
-           (UNIV \<inter> \<lbrace>ccap_relation cap \<acute>cap\<rbrace> \<inter> \<lbrace>ccap_rights_relation R \<acute>cap_rights\<rbrace>) 
-           [] 
+  "ccorres ccap_relation ret__struct_cap_C_'
+           \<top>
+           (UNIV \<inter> \<lbrace>ccap_relation cap \<acute>cap\<rbrace> \<inter> \<lbrace>ccap_rights_relation R \<acute>cap_rights\<rbrace>)
+           []
            (return (RetypeDecls_H.maskCapRights R cap)) (Call maskCapRights_'proc)"
   apply (cinit' lift: cap_' cap_rights_')
   apply csymbr
@@ -223,7 +223,7 @@ lemma maskCapRights_ccorres [corres]:
               apply (simp add: Collect_const_mem from_bool_def)
               apply csymbr
               apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
-              apply (simp add: ccorres_cond_iffs) 
+              apply (simp add: ccorres_cond_iffs)
               apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
               apply (rule allI)
               apply (rule conseqPre)
@@ -233,7 +233,7 @@ lemma maskCapRights_ccorres [corres]:
              apply (simp add: Collect_const_mem from_bool_def)
              apply csymbr
              apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
-             apply (simp add: ccorres_cond_iffs) 
+             apply (simp add: ccorres_cond_iffs)
              apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
              apply (rule allI)
              apply (rule conseqPre)
@@ -242,7 +242,7 @@ lemma maskCapRights_ccorres [corres]:
             apply (simp add: Collect_const_mem from_bool_def)
             apply csymbr
             apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
-            apply (simp add: ccorres_cond_iffs) 
+            apply (simp add: ccorres_cond_iffs)
             apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
             apply (rule allI)
             apply (rule conseqPre)
@@ -304,7 +304,7 @@ lemma maskCapRights_ccorres [corres]:
          apply (simp add: Collect_const_mem from_bool_def)
          apply csymbr
          apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
-         apply (simp add: ccorres_cond_iffs) 
+         apply (simp add: ccorres_cond_iffs)
          apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
          apply (rule allI)
          apply (rule conseqPre)
@@ -334,7 +334,7 @@ lemma maskCapRights_ccorres [corres]:
       apply (simp add: Collect_const_mem from_bool_def)
       apply csymbr
       apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
-      apply (simp add: ccorres_cond_iffs) 
+      apply (simp add: ccorres_cond_iffs)
       apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
       apply (rule allI)
       apply (rule conseqPre)
@@ -343,7 +343,7 @@ lemma maskCapRights_ccorres [corres]:
      apply (simp add: Collect_const_mem from_bool_def)
      apply csymbr
      apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
-     apply (simp add: ccorres_cond_iffs) 
+     apply (simp add: ccorres_cond_iffs)
      apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
      apply (rule allI)
      apply (rule conseqPre)
@@ -352,7 +352,7 @@ lemma maskCapRights_ccorres [corres]:
     apply (simp add: Collect_const_mem from_bool_def)
     apply csymbr
     apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
-    apply (simp add: ccorres_cond_iffs) 
+    apply (simp add: ccorres_cond_iffs)
     apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
     apply (rule allI)
     apply (rule conseqPre)
@@ -362,7 +362,7 @@ lemma maskCapRights_ccorres [corres]:
    apply (simp add: Collect_const_mem from_bool_def)
    apply csymbr
    apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
-   apply (simp add: ccorres_cond_iffs) 
+   apply (simp add: ccorres_cond_iffs)
    apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
    apply (rule allI)
    apply (rule conseqPre)
@@ -378,31 +378,31 @@ lemma ccorres_return_cte_cteCap [corres]:
   fixes ptr' :: "cstate \<Rightarrow> cte_C ptr"
   assumes r1: "\<And>s s' g. (s, s') \<in> rf_sr \<Longrightarrow> (s, xfu g s') \<in> rf_sr"
   and xf_xfu: "\<And>s g. xf (xfu g s) = g s"
-  shows "ccorres ccap_relation xf 
-         (\<lambda>s. ctes_of s ptr = Some cte) {s. ptr_val (ptr' s) = ptr}  hs 
+  shows "ccorres ccap_relation xf
+         (\<lambda>s. ctes_of s ptr = Some cte) {s. ptr_val (ptr' s) = ptr}  hs
          (return (cteCap cte))
-         (Basic (\<lambda>s. xfu (\<lambda>_. h_val (hrs_mem (t_hrs_' (globals s))) 
+         (Basic (\<lambda>s. xfu (\<lambda>_. h_val (hrs_mem (t_hrs_' (globals s)))
            (Ptr &(ptr' s \<rightarrow>[''cap_C'']))) s))"
   apply (rule ccorres_return)
   apply (rule conseqPre)
    apply vcg
   apply (clarsimp simp: xf_xfu ccap_relation_def)
   apply rule
-  apply (erule r1)  
+  apply (erule r1)
   apply (drule (1) rf_sr_ctes_of_clift)
   apply (clarsimp simp: typ_heap_simps)
   apply (simp add: c_valid_cte_def)
 done
 
-     
+
 lemma ccorres_return_cte_mdbnode [corres]:
   fixes ptr' :: "cstate \<Rightarrow> cte_C ptr"
   assumes r1: "\<And>s s' g. (s, s') \<in> rf_sr \<Longrightarrow> (s, xfu g s') \<in> rf_sr"
   and xf_xfu: "\<And>s g. xf (xfu g s) = g s"
-  shows "ccorres cmdbnode_relation xf 
-         (\<lambda>s. ctes_of s ptr = Some cte) {s. ptr_val (ptr' s) = ptr}  hs 
+  shows "ccorres cmdbnode_relation xf
+         (\<lambda>s. ctes_of s ptr = Some cte) {s. ptr_val (ptr' s) = ptr}  hs
          (return (cteMDBNode cte))
-         (Basic (\<lambda>s. xfu (\<lambda>_. h_val (hrs_mem (t_hrs_' (globals s))) 
+         (Basic (\<lambda>s. xfu (\<lambda>_. h_val (hrs_mem (t_hrs_' (globals s)))
            (Ptr &(ptr' s \<rightarrow>[''cteMDBNode_C'']))) s))"
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
@@ -415,7 +415,7 @@ lemma ccorres_return_cte_mdbnode [corres]:
 
 (* FIXME: MOVE *)
 lemma heap_update_field_ext:
-  "\<lbrakk>field_ti TYPE('a :: packed_type) f = Some t; c_guard p; 
+  "\<lbrakk>field_ti TYPE('a :: packed_type) f = Some t; c_guard p;
   export_uinfo t = export_uinfo (typ_info_t TYPE('b :: packed_type))\<rbrakk>
   \<Longrightarrow> heap_update (Ptr &(p\<rightarrow>f) :: 'b ptr) =
   (\<lambda>v hp. heap_update p (update_ti t (to_bytes_p v) (h_val hp p)) hp)"
@@ -428,8 +428,8 @@ lemma ccorres_updateCap [corres]:
   shows "ccorres dc xfdc \<top>
         ({s. ccap_relation cap (val s)} \<inter> {s. ptr s = Ptr dest}) hs
         (updateCap dest cap)
-        (Basic 
-  (\<lambda>s. globals_update 
+        (Basic
+  (\<lambda>s. globals_update
    (t_hrs_'_update
      (hrs_mem_update (heap_update (Ptr &(ptr s\<rightarrow>[''cap_C''])) (val s)))) s))"
   unfolding updateCap_def
@@ -447,7 +447,7 @@ lemma ccorres_updateCap [corres]:
    apply (erule bexI [rotated])
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (frule (1) rf_sr_ctes_of_clift)
-   apply (clarsimp simp add: rf_sr_def cstate_relation_def 
+   apply (clarsimp simp add: rf_sr_def cstate_relation_def
      Let_def cpspace_relation_def
      cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
    apply (simp add:typ_heap_simps)
@@ -468,8 +468,8 @@ lemma ccorres_updateMDB_const [corres]:
   shows "ccorres dc xfdc (\<lambda>_. dest \<noteq> 0)
         ({s. cmdbnode_relation m (val s)} \<inter> {s. ptr s = Ptr dest}) hs
         (updateMDB dest (const m))
-        (Basic 
-  (\<lambda>s. globals_update 
+        (Basic
+  (\<lambda>s. globals_update
    (t_hrs_'_update
      (hrs_mem_update (heap_update (Ptr &(ptr s\<rightarrow>[''cteMDBNode_C''])) (val s)))) s))"
   unfolding updateMDB_def
@@ -477,7 +477,7 @@ lemma ccorres_updateMDB_const [corres]:
   apply (erule ssubst)
   apply (rule ccorres_gen_asm [where G = \<top>, simplified])
   apply (simp only: Let_def)
-  apply simp  
+  apply simp
   apply (rule ccorres_guard_imp2)
   apply (rule ccorres_pre_getCTE)
   apply (rule_tac P = "\<lambda>s. ctes_of s dest = Some cte" in ccorres_from_vcg [where P' = "{s. cmdbnode_relation m (val s)}"])
@@ -487,7 +487,7 @@ lemma ccorres_updateMDB_const [corres]:
   apply clarsimp
    apply (rule fst_setCTE [OF ctes_of_cte_at], assumption )
    apply (erule bexI [rotated])
-   apply (frule (1) rf_sr_ctes_of_clift)    
+   apply (frule (1) rf_sr_ctes_of_clift)
    apply (clarsimp simp add: rf_sr_def cstate_relation_def typ_heap_simps
      Let_def cpspace_relation_def
      cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
@@ -562,7 +562,7 @@ lemma revokable_ccorres:
  	   apply (frule cap_get_tag_NotificationCap [where cap' = newCap, THEN iffD1])
     	    apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
 	   apply (fastforce simp: cap_get_tag_isCap isCap_simps)
-	 
+
           apply (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
 	  rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
 	 apply (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
@@ -584,14 +584,14 @@ lemma from_bool_mask_simp [simp]:
   done
 
 lemma cteInsert_ccorres_mdb_helper:
-  "\<lbrakk>cmdbnode_relation rva srcMDB; from_bool rvc = (newCapIsRevocable :: word32); srcSlot = Ptr src\<rbrakk> 
+  "\<lbrakk>cmdbnode_relation rva srcMDB; from_bool rvc = (newCapIsRevocable :: word32); srcSlot = Ptr src\<rbrakk>
        \<Longrightarrow> ccorres cmdbnode_relation newMDB_' (K (is_aligned src 3))
            UNIV hs
            (return
              (mdbFirstBadged_update (\<lambda>_. rvc)
                (mdbRevocable_update (\<lambda>_. rvc)
                  (mdbPrev_update (\<lambda>_. src) rva))))
-           (\<acute>newMDB :== CALL mdb_node_set_mdbPrev(srcMDB, 
+           (\<acute>newMDB :== CALL mdb_node_set_mdbPrev(srcMDB,
             ptr_val srcSlot);;
             \<acute>newMDB :== CALL mdb_node_set_mdbRevocable(\<acute>newMDB,
             newCapIsRevocable);;
@@ -607,7 +607,7 @@ lemma cteInsert_ccorres_mdb_helper:
 
 lemma ccorres_updateMDB_set_mdbNext [corres]:
   "src=src' \<Longrightarrow>
-   ccorres dc xfdc ((\<lambda>_. src \<noteq> 0 \<and> (dest\<noteq>0 \<longrightarrow> is_aligned dest 3))) 
+   ccorres dc xfdc ((\<lambda>_. src \<noteq> 0 \<and> (dest\<noteq>0 \<longrightarrow> is_aligned dest 3)))
   ({s. mdb_node_ptr_' s = Ptr &((Ptr src' :: cte_C ptr)\<rightarrow>[''cteMDBNode_C''])} \<inter>
    {s. v_' s = dest}) []
   (updateMDB src (mdbNext_update (\<lambda>_. dest)))
@@ -618,10 +618,10 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
   apply (simp only: Let_def)
   apply simp
   apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_pre_getCTE [where P = "\<lambda>cte s. ctes_of s src' = Some cte" and 
-     P' = "\<lambda>_. (\<lbrace>\<acute>mdb_node_ptr = Ptr &((Ptr src' :: cte_C ptr)\<rightarrow>[''cteMDBNode_C''])\<rbrace> \<inter> \<lbrace>\<acute>v = dest\<rbrace>)"]) 
+   apply (rule ccorres_pre_getCTE [where P = "\<lambda>cte s. ctes_of s src' = Some cte" and
+     P' = "\<lambda>_. (\<lbrace>\<acute>mdb_node_ptr = Ptr &((Ptr src' :: cte_C ptr)\<rightarrow>[''cteMDBNode_C''])\<rbrace> \<inter> \<lbrace>\<acute>v = dest\<rbrace>)"])
    apply (rule ccorres_from_spec_modifies_heap)
-        apply (rule mdb_node_ptr_set_mdbNext_spec) 
+        apply (rule mdb_node_ptr_set_mdbNext_spec)
        apply (rule mdb_node_ptr_set_mdbNext_modifies)
       apply simp
      apply clarsimp
@@ -634,20 +634,20 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
     apply (clarsimp simp: typ_heap_simps)
     apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
     apply (erule bexI [rotated])
-    apply (clarsimp simp add: rf_sr_def cstate_relation_def 
+    apply (clarsimp simp add: rf_sr_def cstate_relation_def
       Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_user_data_def
      cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
      typ_heap_simps')
     apply (rule conjI)
      apply (erule (2) cspace_cte_relation_upd_mdbI)
      apply (simp add: cmdbnode_relation_def)
- 
+
      subgoal for _ s' by (cases "v_' s' = 0"; simp)
 
     apply (erule_tac t = s'a in ssubst)
     apply simp
     apply (rule conjI)
-     apply (erule (1) setCTE_tcb_case) 
+     apply (erule (1) setCTE_tcb_case)
     subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
                      typ_heap_simps h_t_valid_clift_Some_iff)
    apply clarsimp
@@ -666,10 +666,10 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
   apply (simp only: Let_def)
   apply simp
   apply (rule ccorres_guard_imp2)
-  apply (rule ccorres_pre_getCTE [where P = "\<lambda>cte s. ctes_of s src' = Some cte" and 
+  apply (rule ccorres_pre_getCTE [where P = "\<lambda>cte s. ctes_of s src' = Some cte" and
     P' = "\<lambda>_. (\<lbrace>\<acute>mdb_node_ptr = Ptr &((Ptr src' :: cte_C ptr)\<rightarrow>[''cteMDBNode_C''])\<rbrace> \<inter> \<lbrace>\<acute>v = dest\<rbrace>)"])
   apply (rule ccorres_from_spec_modifies_heap)
-       apply (rule mdb_node_ptr_set_mdbPrev_spec)  
+       apply (rule mdb_node_ptr_set_mdbPrev_spec)
       apply (rule mdb_node_ptr_set_mdbPrev_modifies)
      apply simp
     apply clarsimp
@@ -682,13 +682,13 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
    apply (clarsimp simp: typ_heap_simps)
    apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
    apply (erule bexI [rotated])
-   apply (clarsimp simp add: rf_sr_def cstate_relation_def 
+   apply (clarsimp simp add: rf_sr_def cstate_relation_def
      Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_user_data_def
      cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
      typ_heap_simps')
-   apply (rule conjI)   
+   apply (rule conjI)
     apply (erule (2) cspace_cte_relation_upd_mdbI)
-    apply (simp add: cmdbnode_relation_def)   
+    apply (simp add: cmdbnode_relation_def)
 
     subgoal for _ s' by (cases "v_' s' = 0"; simp)
    apply (erule_tac t = s'a in ssubst)
@@ -718,12 +718,12 @@ definition
     \<and> tag \<noteq> scast cap_zombie_cap \<and> tag \<noteq> scast cap_small_frame_cap
     \<and> tag \<noteq> scast cap_frame_cap"
 
-definition 
+definition
   "cteInsert_newCapIsRevocable_if newCap srcCap \<equiv> (if (cap_get_tag newCap = scast cap_endpoint_cap)
-             then (if (capEPBadge_CL (cap_endpoint_cap_lift newCap) = capEPBadge_CL (cap_endpoint_cap_lift srcCap)) 
+             then (if (capEPBadge_CL (cap_endpoint_cap_lift newCap) = capEPBadge_CL (cap_endpoint_cap_lift srcCap))
                      then 0 else 1)
              else if (cap_get_tag newCap = scast cap_notification_cap)
-                  then (if (capNtfnBadge_CL (cap_notification_cap_lift newCap) = capNtfnBadge_CL (cap_notification_cap_lift srcCap)) 
+                  then (if (capNtfnBadge_CL (cap_notification_cap_lift newCap) = capNtfnBadge_CL (cap_notification_cap_lift srcCap))
                      then 0 else 1)
              else if (cap_get_tag newCap = scast cap_irq_handler_cap)
                   then (if cap_get_tag srcCap = scast cap_irq_control_cap then 1 else 0)
@@ -732,8 +732,8 @@ definition
 lemma cteInsert_if_helper:
   assumes cgt: "rv = cap_get_tag newCap"
   and     rul: "\<And>s g. (s \<in> Q) = (s\<lparr> ret__unsigned_' := undefined,
-  unsigned_eret_2_':= undefined \<rparr> \<in> Q')" 
-  shows "\<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s. (cap_get_tag srcCap = cap_get_tag newCap 
+  unsigned_eret_2_':= undefined \<rparr> \<in> Q')"
+  shows "\<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s. (cap_get_tag srcCap = cap_get_tag newCap
                           \<or> is_simple_cap_tag (cap_get_tag newCap)) \<and>
             (s\<lparr>newCapIsRevocable_' := cteInsert_newCapIsRevocable_if newCap srcCap\<rparr> \<in> Q)}
           (IF rv = scast cap_endpoint_cap THEN
@@ -762,7 +762,7 @@ lemma cteInsert_if_helper:
   apply (unfold cgt)
   apply (rule conseqPre)
   apply vcg
-  apply (clarsimp simp: true_def false_def 
+  apply (clarsimp simp: true_def false_def
                         is_simple_cap_tag_def
                   cong: if_cong)
   apply (simp add: cap_tag_defs)
@@ -782,7 +782,7 @@ declare word_neq_0_conv [simp del]
 
 schematic_goal ccap_relation_tag_Master:
   "\<And>ccap. \<lbrakk> ccap_relation cap ccap \<rbrakk>
-      \<Longrightarrow> cap_get_tag ccap = 
+      \<Longrightarrow> cap_get_tag ccap =
             case_capability ?a ?b ?c ?d ?e ?f ?g
                (case_arch_capability ?aa ?ab
                         (\<lambda>dev ptr rghts sz data. if sz = ARMSmallPage
@@ -794,13 +794,13 @@ schematic_goal ccap_relation_tag_Master:
               split: if_split_asm)
 
 lemma ccap_relation_is_derived_tag_equal:
-  "\<lbrakk> is_derived' cs p cap cap'; ccap_relation cap ccap; ccap_relation cap' ccap' \<rbrakk> 
+  "\<lbrakk> is_derived' cs p cap cap'; ccap_relation cap ccap; ccap_relation cap' ccap' \<rbrakk>
   \<Longrightarrow> cap_get_tag ccap' = cap_get_tag ccap"
   unfolding badge_derived'_def is_derived'_def
   by (clarsimp simp: ccap_relation_tag_Master)
 
 lemma ccap_relation_Master_tags_eq:
-  "\<lbrakk> capMasterCap cap = capMasterCap cap'; ccap_relation cap ccap; ccap_relation cap' ccap' \<rbrakk> 
+  "\<lbrakk> capMasterCap cap = capMasterCap cap'; ccap_relation cap ccap; ccap_relation cap' ccap' \<rbrakk>
   \<Longrightarrow> cap_get_tag ccap' = cap_get_tag ccap"
   by (clarsimp simp: ccap_relation_tag_Master)
 
@@ -831,13 +831,13 @@ lemma valid_cap_untyped_inv:
 
 lemma and_and_mask_simple: "(y && mask n) = mask n \<Longrightarrow> ((x && y) && mask n) = x && mask n"
   by (simp add: word_bool_alg.conj.assoc)
-  
+
 lemma and_and_mask_simple_not: "(y && mask n) = 0 \<Longrightarrow> ((x && y) && mask n) = 0"
   by (simp add: word_bool_alg.conj.assoc)
-  
+
 lemma update_freeIndex:
   "ccorres dc xfdc
-           (valid_objs' and cte_wp_at' (\<lambda>cte. \<exists>i. cteCap cte = UntypedCap d p sz i) srcSlot 
+           (valid_objs' and cte_wp_at' (\<lambda>cte. \<exists>i. cteCap cte = UntypedCap d p sz i) srcSlot
            and (\<lambda>_. is_aligned (of_nat i' :: word32) 4 \<and> i' \<le> 2 ^ sz))
            (UNIV \<inter> {s. cap_ptr_' s = Ptr &(cte_Ptr srcSlot\<rightarrow>[''cap_C''])} \<inter> {s.  v_' s = (of_nat (i') :: word32)>> 4})
            [] (updateCap srcSlot (UntypedCap d p sz i'))
@@ -874,7 +874,7 @@ proof -
     apply (rule word_eqI)
     apply (simp add:nth_shiftr)
     apply (simp add:neg_mask_bang word_size)
-    done    
+    done
   have terrible_word_stuff: "\<And>x1. to_bool
             ((cap_C.words_C x1.[Suc 0] >> 5) && 1) =
            to_bool
@@ -919,7 +919,7 @@ show "ccorresG rf_sr \<Gamma> dc xfdc (cte_wp_at' (\<lambda>cte. \<exists>i. cte
         (updateCap srcSlot (capability.UntypedCap d p sz i')) (Call cap_untyped_cap_ptr_set_capFreeIndex_'proc)"
   apply (cinit lift: cap_ptr_' v_')
    apply (rule ccorres_pre_getCTE)
-   apply (rule_tac P = "\<lambda>s. ctes_of s srcSlot = Some rv \<and> (\<exists>i. cteCap rv = UntypedCap d p sz i)" in 
+   apply (rule_tac P = "\<lambda>s. ctes_of s srcSlot = Some rv \<and> (\<exists>i. cteCap rv = UntypedCap d p sz i)" in
     ccorres_from_vcg[where P' = UNIV])
    apply (rule allI)
    apply (rule conseqPre)
@@ -1006,7 +1006,7 @@ lemma setUntypedCapAsFull_ccorres [corres]:
   shows
   "ccorres dc xfdc
       ((cte_wp_at' (\<lambda>c. (cteCap c) = srcCap) srcSlot) and valid_mdb' and pspace_aligned' and valid_objs'
-          and (K (isUntypedCap newCap \<longrightarrow> (4 \<le> (capBlockSize newCap)))) 
+          and (K (isUntypedCap newCap \<longrightarrow> (4 \<le> (capBlockSize newCap))))
           and (K (isUntypedCap srcCap \<longrightarrow> (4 \<le> capBlockSize srcCap))))
       (UNIV \<inter>  {s. ccap_relation srcCap (srcCap_' s)} \<inter> {s. ccap_relation newCap (newCap_' s)} \<inter> {s. srcSlot_' s = Ptr srcSlot})
       []
@@ -1133,8 +1133,8 @@ thm ccorres_move_c_guard_cte
 
 lemma ccorres_move_ptr_safe:
   "ccorres_underlying rf_sr \<Gamma> r xf arrel axf A C' hs a c \<Longrightarrow>
-  ccorres_underlying rf_sr \<Gamma> r xf arrel axf 
-  (A and K (dest = cte_Ptr (ptr_val dest)) and cte_wp_at' (\<lambda>_. True) (ptr_val dest)) 
+  ccorres_underlying rf_sr \<Gamma> r xf arrel axf
+  (A and K (dest = cte_Ptr (ptr_val dest)) and cte_wp_at' (\<lambda>_. True) (ptr_val dest))
   (C' \<inter> \<lbrace>True\<rbrace>) hs a (Guard MemorySafety \<lbrace>ptr_safe (dest) (hrs_htd \<acute>t_hrs) \<rbrace> c)"
   apply (rule ccorres_guard_imp2)
   apply (rule ccorres_Guard)
@@ -1148,7 +1148,7 @@ lemma ccorres_move_ptr_safe:
 
 lemma ccorres_move_ptr_safe_Seq:
   "ccorres_underlying rf_sr \<Gamma> r xf arrel axf A C' hs a (c;;d) \<Longrightarrow>
-  ccorres_underlying rf_sr \<Gamma> r xf arrel axf 
+  ccorres_underlying rf_sr \<Gamma> r xf arrel axf
   (A and cte_wp_at' (\<lambda>_. True) (ptr_val dest) and K (dest = cte_Ptr (ptr_val dest)))
   (C' \<inter> \<lbrace>True\<rbrace>) hs a
   (Guard MemorySafety \<lbrace>ptr_safe (dest) (hrs_htd \<acute>t_hrs) \<rbrace> c;;d)"
@@ -1178,7 +1178,7 @@ lemma cteInsert_ccorres:
              (cteInsert cap src dest)
              (Call cteInsert_'proc)"
 thm cteInsert_body_def
-  apply (cinit (no_ignore_call) lift: destSlot_' srcSlot_' newCap_' 
+  apply (cinit (no_ignore_call) lift: destSlot_' srcSlot_' newCap_'
     simp del: return_bind simp add: Collect_const)
    apply (rule ccorres_move_c_guard_cte)
    apply (ctac pre: ccorres_pre_getCTE)
@@ -1265,13 +1265,13 @@ thm cteInsert_body_def
 (****************************************************************************)
 
 lemma updateMDB_mdbNext_set_mdbPrev:
- "\<lbrakk> slotc = Ptr slota; cmdbnode_relation mdba mdbc\<rbrakk> \<Longrightarrow> 
-  ccorres dc xfdc 
+ "\<lbrakk> slotc = Ptr slota; cmdbnode_relation mdba mdbc\<rbrakk> \<Longrightarrow>
+  ccorres dc xfdc
      ( \<lambda>s. is_aligned (mdbNext mdba) 3 \<and> (slota\<noteq>0\<longrightarrow>is_aligned slota 3))
-     UNIV hs 
+     UNIV hs
       (updateMDB (mdbNext mdba) (mdbPrev_update (\<lambda>_. slota)))
 
-      (IF mdbNext_CL (mdb_node_lift mdbc) \<noteq> 0 
+      (IF mdbNext_CL (mdb_node_lift mdbc) \<noteq> 0
        THEN
           Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t (Ptr (mdbNext_CL (mdb_node_lift mdbc)) :: cte_C ptr)\<rbrace>
                (call (\<lambda>ta. ta(| mdb_node_ptr_' := Ptr &(Ptr (mdbNext_CL (mdb_node_lift mdbc)):: cte_C ptr
@@ -1282,32 +1282,32 @@ lemma updateMDB_mdbNext_set_mdbPrev:
   apply (rule ccorres_guard_imp2) -- "replace preconditions by schematics"
   -- "Main Goal"
    apply (rule ccorres_cond_both [where R="\<lambda>_.True", simplified])  -- "generates 3 subgoals (one for 'then', one for 'else')"
-   -- "***instanciate the condition***" 
+   -- "***instanciate the condition***"
      apply (rule mdbNext_not_zero_eq)
      apply assumption
    -- "***cond True: ptr \<noteq> 0***"
     apply (rule ccorres_updateMDB_cte_at)
     apply (ctac add: ccorres_updateMDB_set_mdbPrev)
-   apply (ctac ccorres: ccorres_updateMDB_skip) 
+   apply (ctac ccorres: ccorres_updateMDB_skip)
   -- " instanciate generalized preconditions"
-  apply (case_tac "mdbNext_CL (mdb_node_lift mdbc)=0")  
+  apply (case_tac "mdbNext_CL (mdb_node_lift mdbc)=0")
 
   -- "Next is zero"
-  apply (clarsimp simp: cmdbnode_relation_def) 
+  apply (clarsimp simp: cmdbnode_relation_def)
 
   -- "Next is not zero"
-  apply (clarsimp simp: cmdbnode_relation_def cte_wp_at_ctes_of) 
+  apply (clarsimp simp: cmdbnode_relation_def cte_wp_at_ctes_of)
 done
 
 lemma updateMDB_mdbPrev_set_mdbNext:
- "\<lbrakk> slotc = Ptr slota; cmdbnode_relation mdba mdbc\<rbrakk> \<Longrightarrow> 
-  ccorres dc xfdc 
+ "\<lbrakk> slotc = Ptr slota; cmdbnode_relation mdba mdbc\<rbrakk> \<Longrightarrow>
+  ccorres dc xfdc
      ( \<lambda>s. (is_aligned (mdbPrev mdba) 3 \<and> (slota\<noteq>0\<longrightarrow>is_aligned slota 3)))
       UNIV
      hs
      (updateMDB (mdbPrev mdba) (mdbNext_update (\<lambda>_. slota)))
 
-     (IF mdbPrev_CL (mdb_node_lift mdbc) \<noteq> 0 
+     (IF mdbPrev_CL (mdb_node_lift mdbc) \<noteq> 0
       THEN
           Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t (Ptr (mdbPrev_CL (mdb_node_lift mdbc)):: cte_C ptr)\<rbrace>
                (call (\<lambda>ta. ta(| mdb_node_ptr_' := Ptr &(Ptr (mdbPrev_CL (mdb_node_lift mdbc)):: cte_C ptr
@@ -1319,20 +1319,20 @@ lemma updateMDB_mdbPrev_set_mdbNext:
   -- "Main Goal"
    apply (rule ccorres_cond_both[where R="\<lambda>_.True", simplified])  -- "generates 3 subgoals (one for 'then', one for 'else')"
    -- "***instanciate the condition***"
-     apply (rule mdbPrev_not_zero_eq) 
+     apply (rule mdbPrev_not_zero_eq)
      apply assumption
    -- "***cond True: ptr \<noteq> 0***"
      apply (rule ccorres_updateMDB_cte_at)
     apply (ctac add: ccorres_updateMDB_set_mdbNext)
                    -- "-- ccorres_call generates 4 subgoals, the 3 last being solved by simp "
    -- "***cond False: ptr = 0***"
-   apply (ctac ccorres: ccorres_updateMDB_skip) 
+   apply (ctac ccorres: ccorres_updateMDB_skip)
 
   -- " instanciate generalized preconditions"
-  apply (case_tac "mdbPrev_CL (mdb_node_lift mdbc)=0")  
+  apply (case_tac "mdbPrev_CL (mdb_node_lift mdbc)=0")
 
   -- "Next is zero"
-  apply (clarsimp simp: cmdbnode_relation_def) 
+  apply (clarsimp simp: cmdbnode_relation_def)
 
   -- "Next is not zero"
   apply (clarsimp simp: cte_wp_at_ctes_of cmdbnode_relation_def)
@@ -1368,12 +1368,12 @@ lemma is_aligned_3_next:
   done
 
 lemma cteMove_ccorres:
-  "ccorres dc xfdc 
-       (valid_mdb' and pspace_aligned' ) 
-       (UNIV \<inter> {s. destSlot_' s = Ptr dest} \<inter> 
+  "ccorres dc xfdc
+       (valid_mdb' and pspace_aligned' )
+       (UNIV \<inter> {s. destSlot_' s = Ptr dest} \<inter>
                {s. srcSlot_' s = Ptr src} \<inter>
-               {s. ccap_relation cap (newCap_' s)}) [] 
-       (cteMove cap src dest) 
+               {s. ccap_relation cap (newCap_' s)}) []
+       (cteMove cap src dest)
        (Call cteMove_'proc)"
   apply (cinit (no_ignore_call) lift: destSlot_' srcSlot_' newCap_' simp del: return_bind)
    apply (ctac pre: ccorres_pre_getCTE ccorres_assert iffD2 [OF ccorres_seq_skip])
@@ -1393,46 +1393,46 @@ lemma cteMove_ccorres:
   apply (clarsimp simp: dc_def split del: if_split)
   apply (simp add: ccap_relation_NullCap_iff)
   apply (clarsimp simp add: cmdbnode_relation_def
-    mdb_node_to_H_def nullMDBNode_def 
+    mdb_node_to_H_def nullMDBNode_def
     false_def to_bool_def)
   done
 
 lemma cteMove_ccorres_verbose:
-  "ccorres dc xfdc 
-       (valid_mdb' and pspace_aligned' ) 
-       (UNIV \<inter> {s. destSlot_' s = Ptr dest} \<inter> 
+  "ccorres dc xfdc
+       (valid_mdb' and pspace_aligned' )
+       (UNIV \<inter> {s. destSlot_' s = Ptr dest} \<inter>
                {s. srcSlot_' s = Ptr src} \<inter>
-               {s. ccap_relation cap (newCap_' s)}) [] 
-       (cteMove cap src dest) 
+               {s. ccap_relation cap (newCap_' s)}) []
+       (cteMove cap src dest)
        (Call cteMove_'proc)"
 
   apply (cinit (no_ignore_call) lift: destSlot_' srcSlot_' newCap_' simp del: return_bind)
-(* previous line replaces all the following:  
+(* previous line replaces all the following:
   unfolding cteMove_def           -- "unfolds Haskell side"
-  apply (rule ccorres_Call)       -- "unfolds C side" 
-   apply (rule cteMove_impl [unfolded cteMove_body_def]) 
+  apply (rule ccorres_Call)       -- "unfolds C side"
+   apply (rule cteMove_impl [unfolded cteMove_body_def])
                                   -- "retrieves the C body definition"
   apply (rule ccorres_rhs_assoc)+ -- "re-associates C sequences to the right: i0;(the rest)"
   apply (simp del: return_bind Int_UNIV_left)
                                   -- "gets rid of SKIP and print all haskells instruction as y \<leftarrow> \<dots>"
-  apply (cinitlift destSlot_' srcSlot_' newCap_') 
+  apply (cinitlift destSlot_' srcSlot_' newCap_')
   apply (rule ccorres_guard_imp2) -- "replaces the preconditions by schematics (to be instanciated along the proof)"
                                   -- " \<Rightarrow> creates 2 subgoals (1 for main proof and 1 for ''conjunction of "
                                   -- "    preconditions implies conjunction of generalized (schematics) guards'')"
-    
+
   -- "Start proofs"
 
   apply csymbr -- "Remove undefined"
   apply csymbr
-  apply csymbr  
-*)    
+  apply csymbr
+*)
   -- "***Main goal***"
   -- "--- instruction: oldCTE \<leftarrow> getCTE dest; ---"
-  -- "---              y \<leftarrow> assert (cteCap oldCTE = capability.NullCap); ---"  
+  -- "---              y \<leftarrow> assert (cteCap oldCTE = capability.NullCap); ---"
   -- "---              y \<leftarrow> assert (mdbPrev (cteMDBNode oldCTE) = nullPointer \<and> mdbNext (...)); ---"
    apply (ctac pre: ccorres_pre_getCTE ccorres_assert iffD2 [OF ccorres_seq_skip])
 
-                                  -- "ccorres_Guard_Seq puts the C guards into the precondition" 
+                                  -- "ccorres_Guard_Seq puts the C guards into the precondition"
                                   -- "ccorres_getCTE applies the corres proof for getCTE"
                                   -- "ccorres_assert add the asserted proposition to the precondition"
                                   -- "iffD2 [\<dots>] removes the SKIPS"
@@ -1448,10 +1448,10 @@ lemma cteMove_ccorres_verbose:
           apply ctac
 	                             -- "implicit symbolic execution \<Rightarrow> 2 new subgoals for 1st updateCap"
 
-          -- "***Main Goal***" 
+          -- "***Main Goal***"
 	  -- "--- instruction: y \<leftarrow> updateCap src capability.NullCap; (but with CALL on C side)"
             apply csymbr           -- "symb exec of C instruction CALL to create Null Cap"
-            -- "--- instruction: y \<leftarrow> updateCap src capability.NullCap; (no CALL on C side)" 
+            -- "--- instruction: y \<leftarrow> updateCap src capability.NullCap; (no CALL on C side)"
             apply ctac
                                    -- "implicit symbolic execution \<Rightarrow> 2 new subgoals for 2st updateCap"
             -- "***Main Goal***"
@@ -1459,8 +1459,8 @@ lemma cteMove_ccorres_verbose:
                                    -- "if not ctac won't work, because of the eta-expansion\<dots>"
              apply ctac
                                    -- "implicit symbolic execution \<Rightarrow> 2 new subgoals for 1st updateMDB"
-             -- "***Main Goal***" 
-             -- "--- instruction: y \<leftarrow> updateMDB dest (const nullMDBNode); (but with CALL on C side) ---" 
+             -- "***Main Goal***"
+             -- "--- instruction: y \<leftarrow> updateMDB dest (const nullMDBNode); (but with CALL on C side) ---"
                apply csymbr       -- "symb exec of C instruction CALL to create Null MDB"
                -- "--- instruction: y \<leftarrow> updateMDB dest (const nullMDBNode); (no CALL on C side) ---"
                apply ctac
@@ -1469,9 +1469,9 @@ lemma cteMove_ccorres_verbose:
                -- "--- instruction: y <- updateMDB (mdbPrev rv) (mdbNext_update (%_. dest); (but with CALL on C side) ---"
                  apply csymbr    -- "symb exec of C instruction CALL to mdbPrev"
                  -- "--- instruction: y <- updateMDB (mdbPrev rv) (mdbNext_update (%_. dest); (no CALL on C side) ---"
-                 -- "--- (IF instruction in the C side) ---" 
+                 -- "--- (IF instruction in the C side) ---"
                  apply (erule_tac t = prev_ptr in ssubst)
-                 apply (ctac add: updateMDB_mdbPrev_set_mdbNext) 
+                 apply (ctac add: updateMDB_mdbPrev_set_mdbNext)
 
                  -- "***the correspondance proof for the rest***"
                  -- "--- instruction: updateMDB (mdbNext rv) (mdbPrev_update (%_. dest)) (but with CALL on C side) ---"
@@ -1479,11 +1479,11 @@ lemma cteMove_ccorres_verbose:
                    -- "--- instruction: updateMDB (mdbNext rv) (mdbPrev_update (%_. dest)) (no CALL on C side) ---"
                    -- "--- (IF instruction in the C side) ---"
 
-                   apply (erule_tac t = next_ptr in ssubst) 
-                   apply (rule updateMDB_mdbNext_set_mdbPrev) 
+                   apply (erule_tac t = next_ptr in ssubst)
+                   apply (rule updateMDB_mdbNext_set_mdbPrev)
 		    apply simp
 		   apply simp
-		   
+
 
                  -- "***the pre/post for Haskell side"
                   apply wp
@@ -1493,9 +1493,9 @@ lemma cteMove_ccorres_verbose:
                 apply wp
                -- "***pre/post for C side of 2nd updateMDB***"
                apply vcg
-             -- "***pre/post for Haskell side of 1st updateMDB***" 
+             -- "***pre/post for Haskell side of 1st updateMDB***"
               apply wp
-             -- "***pre/post for C side of 1st updateMDB***" 
+             -- "***pre/post for C side of 1st updateMDB***"
              apply vcg
             -- "***pre/post for Haskell side of 2st updateCap***"
             apply wp
@@ -1504,18 +1504,18 @@ lemma cteMove_ccorres_verbose:
           -- "***pre/post for Haskell side of 1st updateCap***"
            apply wp
           -- "***pre/post for C side of 1st updateCap***"
-          apply vcg 
+          apply vcg
         -- "***pre/post for Haskell side of return***"
-         apply wp                   
-        -- "***pre/post for C side of return***" 
+         apply wp
+        -- "***pre/post for C side of return***"
         apply vcg
 
   -- "********************"
   -- "*** LAST SUBGOAL ***"
   -- "********************"
-  -- "***conjunction of generalised precondition ***" 
+  -- "***conjunction of generalised precondition ***"
   apply (rule conjI)
-  
+
   -- "***--------------------------------***"
   -- "***Haskell generalised precondition***"
   -- "***--------------------------------***"
@@ -1530,16 +1530,16 @@ lemma cteMove_ccorres_verbose:
    apply (rule conjI)
    apply (erule (2) is_aligned_3_prev)
    apply (erule (2) is_aligned_3_next)
-   
+
   -- "***--------------------------***"
   -- "***C generalised precondition***"
   -- "***--------------------------***"
   apply (unfold dc_def)
   apply (clarsimp simp: ccap_relation_NullCap_iff split del: if_split)
   -- "cmdbnode_relation nullMDBNode va"
-  apply (simp add: cmdbnode_relation_def) 
-  apply (simp add: mdb_node_to_H_def) 
-  apply (simp add: nullMDBNode_def) 
+  apply (simp add: cmdbnode_relation_def)
+  apply (simp add: mdb_node_to_H_def)
+  apply (simp add: nullMDBNode_def)
   apply (simp add: false_def to_bool_def)
   done
 
@@ -1559,10 +1559,10 @@ lemma ccorres_return_cte_mdbnode_safer:
   fixes ptr' :: "cstate \<Rightarrow> cte_C ptr"
   assumes r1: "\<And>s s' g. (s, s') \<in> rf_sr \<Longrightarrow> (s, xfu g s') \<in> rf_sr"
   and xf_xfu: "\<And>s g. xf (xfu g s) = g s"
-  shows "ccorres cmdbnode_relation xf 
-         (\<lambda>s. \<exists> cte'. ctes_of s ptr = Some cte' \<and> cteMDBNode cte = cteMDBNode cte') {s. ptr_val (ptr' s) = ptr}  hs 
+  shows "ccorres cmdbnode_relation xf
+         (\<lambda>s. \<exists> cte'. ctes_of s ptr = Some cte' \<and> cteMDBNode cte = cteMDBNode cte') {s. ptr_val (ptr' s) = ptr}  hs
          (return (cteMDBNode cte))
-         (Basic (\<lambda>s. xfu (\<lambda>_. h_val  (hrs_mem (t_hrs_' (globals s))) 
+         (Basic (\<lambda>s. xfu (\<lambda>_. h_val  (hrs_mem (t_hrs_' (globals s)))
            (Ptr &(ptr' s \<rightarrow>[''cteMDBNode_C'']))) s))"
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
@@ -1595,22 +1595,22 @@ declare modify_map_exists_cte[simp]
 (* lemmas about pointer equality given valid_mdb (prev\<noteq>next, prev\<noteq>myself, etc) *)
 (*------------------------------------------------------------------------------*)
 
-lemma valid_mdb_Prev_neq_Next: 
-    "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte; mdbPrev (cteMDBNode cte) \<noteq> 0  \<rbrakk> \<Longrightarrow> 
+lemma valid_mdb_Prev_neq_Next:
+    "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte; mdbPrev (cteMDBNode cte) \<noteq> 0  \<rbrakk> \<Longrightarrow>
      (mdbNext (cteMDBNode cte)) \<noteq> (mdbPrev (cteMDBNode cte))"
   apply (simp add: valid_mdb'_def)
-  apply (simp add: valid_mdb_ctes_def) 
+  apply (simp add: valid_mdb_ctes_def)
   apply (elim conjE)
   apply (drule (1) mdb_chain_0_no_loops)
   apply (simp add: valid_dlist_def)
   apply (erule_tac x=p in allE)
   apply (erule_tac x=cte in allE)
-  apply (simp add: Let_def)  
-  apply clarsimp 
+  apply (simp add: Let_def)
+  apply clarsimp
   apply (drule_tac s="mdbNext (cteMDBNode cte)" in sym)
-  apply simp  
-  apply (simp add: no_loops_def) 
-  apply (erule_tac x= "(mdbNext (cteMDBNode cte))" in allE) 
+  apply simp
+  apply (simp add: no_loops_def)
+  apply (erule_tac x= "(mdbNext (cteMDBNode cte))" in allE)
   apply (erule notE, rule trancl_trans)
     apply (rule r_into_trancl)
     apply (simp add: mdb_next_unfold)
@@ -1618,23 +1618,23 @@ lemma valid_mdb_Prev_neq_Next:
   apply (simp add: mdb_next_unfold)
 done
 
-lemma valid_mdb_Prev_neq_itself: 
-    "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte  \<rbrakk> \<Longrightarrow> 
+lemma valid_mdb_Prev_neq_itself:
+    "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte  \<rbrakk> \<Longrightarrow>
      (mdbPrev (cteMDBNode cte)) \<noteq>  p"
   apply (unfold valid_mdb'_def)
   apply (simp add: CSpace_I.no_self_loop_prev)
 done
 
-lemma valid_mdb_Next_neq_itself: 
-    "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte  \<rbrakk> \<Longrightarrow> 
+lemma valid_mdb_Next_neq_itself:
+    "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte  \<rbrakk> \<Longrightarrow>
      (mdbNext (cteMDBNode cte)) \<noteq>  p"
   apply (unfold valid_mdb'_def)
   apply (simp add: CSpace_I.no_self_loop_next)
 done
 
 lemma valid_mdb_not_same_Next :
-    "\<lbrakk> valid_mdb' s; p\<noteq>p'; ctes_of s p = Some cte; ctes_of s p' = Some cte'; 
-       (mdbNext (cteMDBNode cte))\<noteq>0 \<or> (mdbNext (cteMDBNode cte'))\<noteq>0 \<rbrakk> \<Longrightarrow> 
+    "\<lbrakk> valid_mdb' s; p\<noteq>p'; ctes_of s p = Some cte; ctes_of s p' = Some cte';
+       (mdbNext (cteMDBNode cte))\<noteq>0 \<or> (mdbNext (cteMDBNode cte'))\<noteq>0 \<rbrakk> \<Longrightarrow>
      (mdbNext (cteMDBNode cte)) \<noteq>  (mdbNext (cteMDBNode cte'))  "
   apply (clarsimp)
   apply (case_tac cte, clarsimp)
@@ -1648,7 +1648,7 @@ lemma valid_mdb_not_same_Next :
 
 lemma valid_mdb_not_same_Prev :
     "\<lbrakk> valid_mdb' s; p\<noteq>p'; ctes_of s p = Some cte; ctes_of s p' = Some cte';
-       (mdbPrev (cteMDBNode cte))\<noteq>0 \<or> (mdbPrev (cteMDBNode cte'))\<noteq>0 \<rbrakk> \<Longrightarrow> 
+       (mdbPrev (cteMDBNode cte))\<noteq>0 \<or> (mdbPrev (cteMDBNode cte'))\<noteq>0 \<rbrakk> \<Longrightarrow>
      (mdbPrev (cteMDBNode cte)) \<noteq>  (mdbPrev (cteMDBNode cte'))  "
   apply (clarsimp)
   apply (case_tac cte, clarsimp)
@@ -1672,10 +1672,10 @@ lemma c_guard_and_h_t_valid_eq_h_t_valid:
          c_guard ((Ptr &(Ptr POINTER ::cte_C ptr \<rightarrow>[''cteMDBNode_C''])) ::mdb_node_C ptr)  \<and>
          s' \<Turnstile>\<^sub>c (Ptr (POINTER)::cte_C ptr)) =
       (POINTER \<noteq> 0 \<longrightarrow>
-         s' \<Turnstile>\<^sub>c (Ptr (POINTER)::cte_C ptr))" 
+         s' \<Turnstile>\<^sub>c (Ptr (POINTER)::cte_C ptr))"
   apply (rule iffI, clarsimp+)
   apply (rule c_guard_field_lvalue)
-  apply (rule c_guard_h_t_valid, assumption) 
+  apply (rule c_guard_h_t_valid, assumption)
   apply (fastforce simp: typ_uinfo_t_def)+
 done
 
@@ -1685,10 +1685,10 @@ lemma c_guard_and_h_t_valid_and_rest_eq_h_t_valid_and_rest:
          c_guard ((Ptr &(Ptr POINTER ::cte_C ptr \<rightarrow>[''cteMDBNode_C''])) ::mdb_node_C ptr)  \<and>
          s' \<Turnstile>\<^sub>c (Ptr (POINTER)::cte_C ptr) \<and> REST) =
       (POINTER \<noteq> 0 \<longrightarrow>
-         s' \<Turnstile>\<^sub>c (Ptr (POINTER)::cte_C ptr) \<and> REST)" 
+         s' \<Turnstile>\<^sub>c (Ptr (POINTER)::cte_C ptr) \<and> REST)"
   apply (rule iffI, clarsimp+)
   apply (rule c_guard_field_lvalue)
-  apply (rule c_guard_h_t_valid, assumption) 
+  apply (rule c_guard_h_t_valid, assumption)
   apply (fastforce simp: typ_uinfo_t_def)+
 done
 
@@ -1709,9 +1709,9 @@ done
 
 (* FIXME: the cte_ats aren't required here, can be shown using ccorres_guard_from_wp *)
 lemma cteSwap_ccorres:
-  "ccorres dc xfdc 
+  "ccorres dc xfdc
           (cte_at' slot  and cte_at' slot' and valid_mdb' and pspace_aligned' and (\<lambda>_. slot \<noteq> slot'))
-          (UNIV \<inter> {s. slot1_' s = Ptr slot} 
+          (UNIV \<inter> {s. slot1_' s = Ptr slot}
               \<inter> {s. slot2_' s = Ptr slot'}
               \<inter> {s. ccap_relation cap1 (cap1_' s)}
               \<inter> {s. ccap_relation cap2 (cap2_' s)})
@@ -1723,17 +1723,17 @@ lemma cteSwap_ccorres:
   unfolding cteSwap_def
   apply (rule ccorres_Call)
   apply (rule cteSwap_impl [unfolded cteSwap_body_def])
-  apply (rule ccorres_rhs_assoc)+ 
+  apply (rule ccorres_rhs_assoc)+
   apply (simp del: return_bind Int_UNIV_left)
-  apply (cinitlift slot1_' slot2_' cap1_' cap2_')  
- 
+  apply (cinitlift slot1_' slot2_' cap1_' cap2_')
+
   apply (erule ssubst)+
   apply (rule ccorres_guard_imp2) -- "We will need the abstract guards to solve the conc. guard obligations"
 *)
-    
+
   -- "Start proofs"
 
-  -- "***Main goal***" 
+  -- "***Main goal***"
   -- "--- instruction: cte1 \<leftarrow> getCTE slot;              ---"
   -- "---              y \<leftarrow> updateCap slot cap2          ---"
   -- "---              y \<leftarrow> updateCap slot' cap1;        ---"
@@ -1747,14 +1747,14 @@ lemma cteSwap_ccorres:
 
      -- "generates maingoal + 2 subgoals (Haskell pre/post and C pre/post) for each instruction (except getCTE)"
 
-   -- "***Main Goal***"  
-   -- "--- instruction: y <- updateMDB (mdbPrev rvc) (mdbNext_update (%_. slot')) ---" 
+   -- "***Main Goal***"
+   -- "--- instruction: y <- updateMDB (mdbPrev rvc) (mdbNext_update (%_. slot')) ---"
          apply csymbr
 	 -- "added by sjw \<dots>"
          apply (erule_tac t = prev_ptr in ssubst)
 	 apply (ctac (no_vcg) add: updateMDB_mdbPrev_set_mdbNext)
 	 apply csymbr
-         apply (erule_tac t = next_ptr in ssubst)	 
+         apply (erule_tac t = next_ptr in ssubst)
 	 apply (ctac (no_vcg) add: updateMDB_mdbNext_set_mdbPrev)
              apply (rule ccorres_move_c_guard_cte)
 	     apply (ctac (no_vcg) pre: ccorres_getCTE
@@ -1762,54 +1762,54 @@ lemma cteSwap_ccorres:
                add: ccorres_return_cte_mdbnode [where ptr = slot']
                ccorres_move_guard_ptr_safe )+
 	     apply csymbr
-	     apply (erule_tac t = prev_ptr in ssubst)	 
+	     apply (erule_tac t = prev_ptr in ssubst)
 	     apply (ctac (no_vcg) add: updateMDB_mdbPrev_set_mdbNext)
 	     apply csymbr
-             apply (erule_tac t = next_ptr in ssubst)	 
+             apply (erule_tac t = next_ptr in ssubst)
 	     apply (ctac (no_vcg) add: updateMDB_mdbNext_set_mdbPrev)
-(*	 
+(*
          apply (rule ccorres_split_nothrow [where xf'=xfdc])
-         -- "***the correspondance proof for 1st instruction***"  
+         -- "***the correspondance proof for 1st instruction***"
              apply (erule_tac t = prev_ptr in ssubst)
-             apply (rule updateMDB_mdbPrev_set_mdbNext, rule refl, assumption) 
+             apply (rule updateMDB_mdbPrev_set_mdbNext, rule refl, assumption)
 
          -- "***the ceqv proof***"
 	     apply ceqv
 
-         -- "***the correspondance proof for the rest***" 
-         -- "--- instruction: updateMDB (mdbNext rvc) (mdbPrev_update (%_. slot'))  ---" 
-           apply csymbr 
-           apply (rule ccorres_split_nothrow [where xf'=xfdc]) 
-           -- "***the correspondance proof for 1st instruction***"   
-               apply (erule_tac t = next_ptr in ssubst)		
+         -- "***the correspondance proof for the rest***"
+         -- "--- instruction: updateMDB (mdbNext rvc) (mdbPrev_update (%_. slot'))  ---"
+           apply csymbr
+           apply (rule ccorres_split_nothrow [where xf'=xfdc])
+           -- "***the correspondance proof for 1st instruction***"
+               apply (erule_tac t = next_ptr in ssubst)
                apply (rule updateMDB_mdbNext_set_mdbPrev, rule refl, assumption)
-  
-           -- "***the ceqv proof***" 
-	       apply ceqv 
- 
-           -- "***the correspondance proof for the rest***"  
-           -- "--- instruction: cte2 \<leftarrow> getCTE slot';              ---" 
-           -- "---              mdb2 \<leftarrow> return (cteMDBNode cte2);  ---" 
+
+           -- "***the ceqv proof***"
+	       apply ceqv
+
+           -- "***the correspondance proof for the rest***"
+           -- "--- instruction: cte2 \<leftarrow> getCTE slot';              ---"
+           -- "---              mdb2 \<leftarrow> return (cteMDBNode cte2);  ---"
            -- "---              y <- updateMDB slot (const mdb2);  ---"
            -- "---              y <- updateMDB slot' (const rvc);  ---"
-             apply (ctac pre: ccorres_getCTE)+ 
+             apply (ctac pre: ccorres_getCTE)+
                         -- "generates maingoal + 2 subgoals (Haskell pre/post and C pre/post) for each instruction (except getCTE)"
-             -- "Main Goal" 
+             -- "Main Goal"
              -- "---instruction:  y <- updateMDB (mdbPrev mdb2) (mdbNext_update (%_. slot)) --"
                    apply csymbr
                    apply (rule ccorres_split_nothrow [where xf'=xfdc])
-                   -- "***the correspondance proof for 1st instruction***"  
+                   -- "***the correspondance proof for 1st instruction***"
                        apply (erule_tac t = prev_ptr in ssubst)
-                       apply (rule updateMDB_mdbPrev_set_mdbNext, rule refl, assumption) 
-          
+                       apply (rule updateMDB_mdbPrev_set_mdbNext, rule refl, assumption)
+
                    -- "***the ceqv proof***"
           	      apply ceqv
-          
+
                    -- "***the correspondance proof for the rest***"
                    -- "--- instruction: updateMDB (mdbNext rvg) (mdbPrev_update (%_. slot)) ---"
                      apply csymbr
-                     apply (erule_tac t = next_ptr in ssubst)		
-                     apply (rule updateMDB_mdbNext_set_mdbPrev, rule refl, assumption) 
+                     apply (erule_tac t = next_ptr in ssubst)
+                     apply (rule updateMDB_mdbNext_set_mdbPrev, rule refl, assumption)
 *)
                     -- "***Haskell pre/post for updateMDB (mdbPrev rvg) (mdbNext_update (%_. slot)) "
                     apply wp
@@ -1850,7 +1850,7 @@ lemma cteSwap_ccorres:
    -- "***C       pre/post for (updateCap slot' cap1) ***"
      apply simp
    -- "***Haskell pre/post for (updateCap slot cap2) ***"
-      apply (clarsimp simp : cte_wp_at_ctes_of) 
+      apply (clarsimp simp : cte_wp_at_ctes_of)
       apply (wp updateCap_ctes_of_wp)
    -- "***C       pre/post for (updateCap slot cap2) ***"
    apply simp
@@ -1860,7 +1860,7 @@ lemma cteSwap_ccorres:
   -- "********************"
   -- "*** LAST SUBGOAL ***"
   -- "********************"
-  -- "***conjunction of generalised precondition ***" 
+  -- "***conjunction of generalised precondition ***"
   apply (rule conjI)
 
   -- "***--------------------------------***"
@@ -1870,13 +1870,13 @@ lemma cteSwap_ccorres:
   apply (frule (2) is_aligned_3_prev [where p = slot])
   apply (frule (2) is_aligned_3_next [where p = slot])
   apply simp
-  apply (intro conjI impI) 
-  
+  apply (intro conjI impI)
+
   --  "\<exists>cte'. modify_map (\<dots>) slot = Some cte' \<and> cteMDBNode ctea = cteMDBNode cte'"
              apply (simp add: modify_map_if)
 	     apply (case_tac ctea)
 	     apply simp
-	     apply (cases "(slot'=slot)", simp+) 
+	     apply (cases "(slot'=slot)", simp+)
     -- "no_0 (ctes_of s)"
 	   apply (simp add: valid_mdb'_def) -- "yuck"
       apply (erule valid_mdb_ctesE)
@@ -1887,10 +1887,10 @@ lemma cteSwap_ccorres:
   apply (rule impI)
    -- "modify_map (modify_map \<dots>) (?P3540 \<dots>) = Some cte"
    -- "\<dots>\<longrightarrow> (\<exists>ctea. ctes_of s (mdbPrev (cteMDBNode cte)) = Some ctea) \<and> is_aligned (mdbPrev (cteMDBNode cte)) 3"
-   -- "   Important: we need the first part to prove the second \<Longrightarrow> we need conj_cong"      
+   -- "   Important: we need the first part to prove the second \<Longrightarrow> we need conj_cong"
       apply (clarsimp simp: modify_map_if cong: if_cong split: if_split_asm)
       apply (erule disjE)
-       apply clarsimp      
+       apply clarsimp
       apply clarsimp
       apply (drule (2) is_aligned_3_next)
       apply simp
@@ -1971,7 +1971,7 @@ lemma emptySlot_helper:
   defines "nextcte \<equiv> Ptr ((mdbNext_CL (mdb_node_lift mdbNode)))::cte_C ptr"
   shows "\<lbrakk>cmdbnode_relation rva mdbNode\<rbrakk>
     \<Longrightarrow> ccorres dc xfdc \<top> UNIV hs
-           (updateMDB (mdbNext rva) 
+           (updateMDB (mdbNext rva)
              (\<lambda>mdb. mdbFirstBadged_update (\<lambda>_. mdbFirstBadged mdb \<or> mdbFirstBadged rva) (mdbPrev_update (\<lambda>_. mdbPrev rva) mdb)))
            (IF mdbNext_CL (mdb_node_lift mdbNode) \<noteq> 0 THEN
               Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t  nextcte\<rbrace>
@@ -2014,7 +2014,7 @@ lemma emptySlot_helper:
    apply (clarsimp simp: typ_heap_simps' nextmdb_def if_1_0_0 nextcte_def)
    apply (intro conjI impI allI)
 
-     -- "\<dots> \<exists>x\<in>fst \<dots>" 
+     -- "\<dots> \<exists>x\<in>fst \<dots>"
      apply clarsimp
      apply (rule fst_setCTE [OF ctes_of_cte_at], assumption )
      apply (erule bexI [rotated])
@@ -2029,22 +2029,22 @@ lemma emptySlot_helper:
                        typ_heap_simps'
                   cong: lifth_update)
       apply (erule (1) setCTE_tcb_case)
-   
-     apply (erule (2)  cspace_cte_relation_upd_mdbI) 
+
+     apply (erule (2)  cspace_cte_relation_upd_mdbI)
      apply (simp add: cmdbnode_relation_def)
      apply (simp add: mdb_node_to_H_def)
-    
-     apply (subgoal_tac "mdbFirstBadged_CL (mdb_node_lift mdbNode) && mask (Suc 0) = 
+
+     apply (subgoal_tac "mdbFirstBadged_CL (mdb_node_lift mdbNode) && mask (Suc 0) =
                          mdbFirstBadged_CL (mdb_node_lift mdbNode)")
       prefer 2
       subgoal by (simp add: mdb_node_lift_def mask_def word_bw_assocs)
-     apply (subgoal_tac "mdbFirstBadged_CL (cteMDBNode_CL y) && mask (Suc 0) = 
+     apply (subgoal_tac "mdbFirstBadged_CL (cteMDBNode_CL y) && mask (Suc 0) =
                          mdbFirstBadged_CL (cteMDBNode_CL y)")
-      prefer 2 
+      prefer 2
       apply (drule cteMDBNode_CL_lift [symmetric])
       subgoal by (simp add: mdb_node_lift_def mask_def word_bw_assocs)
      subgoal by (simp add: to_bool_def mask_def)
-   -- "\<dots> \<exists>x\<in>fst \<dots>" 
+   -- "\<dots> \<exists>x\<in>fst \<dots>"
    apply clarsimp
    apply (rule fst_setCTE [OF ctes_of_cte_at], assumption )
    apply (erule bexI [rotated])
@@ -2054,24 +2054,24 @@ lemma emptySlot_helper:
    apply (rule conjI)
     prefer 2
     apply (erule_tac t = s' in ssubst)
-    apply (simp add: carch_state_relation_def cmachine_state_relation_def 
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def
                      h_t_valid_clift_Some_iff
                      cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
                      typ_heap_simps'
                 cong: lifth_update)
     apply (erule (1) setCTE_tcb_case)
- 
-   apply (erule (2)  cspace_cte_relation_upd_mdbI) 
+
+   apply (erule (2)  cspace_cte_relation_upd_mdbI)
    apply (simp add: cmdbnode_relation_def)
    apply (simp add: mdb_node_to_H_def)
-    
-   apply (subgoal_tac "mdbFirstBadged_CL (mdb_node_lift mdbNode) && mask (Suc 0) = 
+
+   apply (subgoal_tac "mdbFirstBadged_CL (mdb_node_lift mdbNode) && mask (Suc 0) =
                        mdbFirstBadged_CL (mdb_node_lift mdbNode)")
     prefer 2
     subgoal by (simp add: mdb_node_lift_def mask_def word_bw_assocs)
-   apply (subgoal_tac "mdbFirstBadged_CL (cteMDBNode_CL y) && mask (Suc 0) = 
+   apply (subgoal_tac "mdbFirstBadged_CL (cteMDBNode_CL y) && mask (Suc 0) =
                        mdbFirstBadged_CL (cteMDBNode_CL y)")
-    prefer 2 
+    prefer 2
     apply (drule cteMDBNode_CL_lift [symmetric])
     subgoal by (simp add: mdb_node_lift_def mask_def word_bw_assocs)
    apply (simp add: to_bool_def mask_def split: if_split)
@@ -2107,7 +2107,7 @@ lemma mdbPrev_CL_mdb_node_lift_eq_mdbPrev:
 
 lemma mdbNext_not_zero_eq_simpler:
   "cmdbnode_relation n n' \<Longrightarrow> (mdbNext n \<noteq> 0) = (mdbNext_CL (mdb_node_lift n') \<noteq> 0)"
-  apply clarsimp 
+  apply clarsimp
   apply (erule cmdbnode_relationE)
   apply (fastforce simp: mdbNext_to_H)
   done
@@ -2116,7 +2116,7 @@ lemma mdbNext_not_zero_eq_simpler:
 
 lemma mdbPrev_not_zero_eq_simpler:
   "cmdbnode_relation n n' \<Longrightarrow> (mdbPrev n \<noteq> 0) = (mdbPrev_CL (mdb_node_lift n') \<noteq> 0)"
-  apply clarsimp 
+  apply clarsimp
   apply (erule cmdbnode_relationE)
   apply (fastforce simp: mdbPrev_to_H)
   done
@@ -2127,7 +2127,7 @@ lemma h_t_valid_and_cslift_and_c_guard_field_mdbPrev_CL:
            s' \<Turnstile>\<^sub>c ( Ptr (mdbPrev_CL (mdb_node_lift (cteMDBNode_C cte'))) :: cte_C ptr) \<and>
            (\<exists> cten. cslift s' (Ptr (mdbPrev_CL (mdb_node_lift (cteMDBNode_C cte'))) :: cte_C ptr) = Some cten)  \<and>
            c_guard (Ptr &(Ptr (mdbPrev_CL (mdb_node_lift (cteMDBNode_C cte')))::cte_C ptr\<rightarrow>[''cteMDBNode_C'']) :: mdb_node_C ptr)"
-  apply (clarsimp simp: cte_wp_at_ctes_of) 
+  apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (drule (1) valid_mdb_ctes_of_prev)
   apply (frule (2) rf_sr_cte_relation)
   apply (drule ccte_relation_cmdbnode_relation)
@@ -2148,7 +2148,7 @@ lemma h_t_valid_and_cslift_and_c_guard_field_mdbNext_CL:
            s' \<Turnstile>\<^sub>c ( Ptr (mdbNext_CL (mdb_node_lift (cteMDBNode_C cte'))) :: cte_C ptr) \<and>
            (\<exists> cten. cslift s' (Ptr (mdbNext_CL (mdb_node_lift (cteMDBNode_C cte'))) :: cte_C ptr) = Some cten)  \<and>
            c_guard (Ptr &(Ptr (mdbNext_CL (mdb_node_lift (cteMDBNode_C cte')))::cte_C ptr\<rightarrow>[''cteMDBNode_C'']) :: mdb_node_C ptr)"
-  apply (clarsimp simp: cte_wp_at_ctes_of) 
+  apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (drule (1) valid_mdb_ctes_of_next)
   apply (frule (2) rf_sr_cte_relation)
   apply (drule ccte_relation_cmdbnode_relation)
@@ -2164,23 +2164,23 @@ lemma h_t_valid_and_cslift_and_c_guard_field_mdbNext_CL:
 done
 
 
-lemma valid_mdb_Prev_neq_Next_better: 
+lemma valid_mdb_Prev_neq_Next_better:
     "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte \<rbrakk> \<Longrightarrow>  mdbPrev (cteMDBNode cte) \<noteq> 0   \<longrightarrow>
      (mdbNext (cteMDBNode cte)) \<noteq> (mdbPrev (cteMDBNode cte))"
   apply (rule impI)
   apply (simp add: valid_mdb'_def)
-  apply (simp add: valid_mdb_ctes_def) 
+  apply (simp add: valid_mdb_ctes_def)
   apply (elim conjE)
   apply (drule (1) mdb_chain_0_no_loops)
   apply (simp add: valid_dlist_def)
   apply (erule_tac x=p in allE)
   apply (erule_tac x=cte in allE)
-  apply (simp add: Let_def)  
-  apply clarsimp 
+  apply (simp add: Let_def)
+  apply clarsimp
   apply (drule_tac s="mdbNext (cteMDBNode cte)" in sym)
-  apply simp  
-  apply (simp add: no_loops_def) 
-  apply (erule_tac x= "(mdbNext (cteMDBNode cte))" in allE) 
+  apply simp
+  apply (simp add: no_loops_def)
+  apply (erule_tac x= "(mdbNext (cteMDBNode cte))" in allE)
   apply (erule notE, rule trancl_trans)
     apply (rule r_into_trancl)
     apply (simp add: mdb_next_unfold)
@@ -2206,7 +2206,7 @@ declare unat_ucast_up_simp[simp]
 lemma setIRQState_ccorres:
   "ccorres dc xfdc
           (\<top> and (\<lambda>s. ucast irq \<le> (scast Kernel_C.maxIRQ :: word16)))
-          (UNIV \<inter> {s. irqState_' s = irqstate_to_C irqState} 
+          (UNIV \<inter> {s. irqState_' s = irqstate_to_C irqState}
                 \<inter> {s. irq_' s = (ucast irq :: word16)}  )
           []
          (setIRQState irqState irq)
@@ -2224,17 +2224,17 @@ show ?thesis
       apply (rule_tac r'="dc" and xf'="xfdc" in ccorres_split_nothrow)
 
           apply (rule_tac P= "\<lambda>s. st = (ksInterruptState s)"
-                      and P'= "(UNIV \<inter> {s. irqState_' s = irqstate_to_C irqState} 
-                                     \<inter> {s. irq_' s = ucast irq}  )" 
+                      and P'= "(UNIV \<inter> {s. irqState_' s = irqstate_to_C irqState}
+                                     \<inter> {s. irq_' s = ucast irq}  )"
                    in ccorres_from_vcg)
           apply (rule allI, rule conseqPre, vcg)
           apply (clarsimp simp: setInterruptState_def)
-          apply (clarsimp simp: simpler_modify_def) 
+          apply (clarsimp simp: simpler_modify_def)
           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                 carch_state_relation_def cmachine_state_relation_def)
           apply (simp add: cinterrupt_relation_def Kernel_C.maxIRQ_def)
           apply (clarsimp simp:  word_sless_msb_less order_le_less_trans
-                            unat_ucast_no_overflow_le word_le_nat_alt ucast_ucast_b 
+                            unat_ucast_no_overflow_le word_le_nat_alt ucast_ucast_b
                          split: if_split )
           apply (rule word_0_sle_from_less)
 
@@ -2242,21 +2242,21 @@ show ?thesis
            apply (simp add: unat_ucast_no_overflow_le)
           apply simp
          apply ceqv
- 
+
         apply (ctac add:  maskInterrupt_ccorres)
 
        apply wp
       apply vcg
 
-     apply wp  
-    apply (simp add: getInterruptState_def gets_def) 
+     apply wp
+    apply (simp add: getInterruptState_def gets_def)
     apply wp
-   apply (simp add: empty_fail_def getInterruptState_def simpler_gets_def) 
+   apply (simp add: empty_fail_def getInterruptState_def simpler_gets_def)
 
   apply clarsimp
   apply (simp add: from_bool_def)
   apply (cases irqState, simp_all)
-  apply (simp add: Kernel_C.IRQSignal_def Kernel_C.IRQInactive_def) 
+  apply (simp add: Kernel_C.IRQSignal_def Kernel_C.IRQInactive_def)
   apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def)
   apply (simp add: Kernel_C.IRQInactive_def Kernel_C.IRQReserved_def)
   done
@@ -2276,8 +2276,8 @@ done
 
 lemma deletedIRQHandler_opt_ccorres:
   "irq_opt_relation irq cirq \<Longrightarrow>
-    ccorres dc xfdc \<top> UNIV [SKIP] 
-     (case irq of None \<Rightarrow> return () | Some a \<Rightarrow> deletedIRQHandler a) 
+    ccorres dc xfdc \<top> UNIV [SKIP]
+     (case irq of None \<Rightarrow> return () | Some a \<Rightarrow> deletedIRQHandler a)
      (IF ucast cirq \<noteq> irqInvalid THEN CALL deletedIRQHandler (cirq)  FI) "
   apply (simp only: irq_opt_relation_def)
   apply (cases irq)
@@ -2307,7 +2307,7 @@ val () = show_abbrevs false;
 
 *}
 
-then 
+then
 ML {*show_abbrevs true*}
 ML {*show_abbrevs false*}
 
@@ -2526,10 +2526,10 @@ lemma clearUntypedFreeIndex_noop_ccorres:
   done
 
 lemma emptySlot_ccorres:
-  "ccorres dc xfdc 
+  "ccorres dc xfdc
           (valid_mdb' and valid_objs' and pspace_aligned'
                       and untyped_ranges_zero')
-          (UNIV \<inter> {s. slot_' s = Ptr slot} 
+          (UNIV \<inter> {s. slot_' s = Ptr slot}
                 \<inter> {s. irq_opt_relation irq (irq_' s)}  )
           []
           (emptySlot slot irq)
@@ -2540,7 +2540,7 @@ lemma emptySlot_ccorres:
    apply (rule ccorres_split_noop_lhs, rule clearUntypedFreeIndex_noop_ccorres)
 
   -- "--- instruction: newCTE \<leftarrow> getCTE slot;                 ---"
-    apply (rule ccorres_pre_getCTE) 
+    apply (rule ccorres_pre_getCTE)
   -- "--- instruction: CALL on C side"
     apply (rule ccorres_move_c_guard_cte)
     apply csymbr
@@ -2563,7 +2563,7 @@ lemma emptySlot_ccorres:
     -- "*** proof for the 'then' branch ***"
 
     -- "---instructions: multiple on C side, including mdbNode fetch"
-    apply (rule ccorres_rhs_assoc)+   
+    apply (rule ccorres_rhs_assoc)+
               -- "we have to do it here because the first assoc did not apply inside the then block"
     apply (rule ccorres_move_c_guard_cte | csymbr)+
     apply (rule ccorres_symb_exec_r)
@@ -2579,7 +2579,7 @@ lemma emptySlot_ccorres:
       -- "--- instruction: y \<leftarrow> updateMDB (mdbPrev rva) (mdbNext_update (\<lambda>_. mdbNext rva)) "
       apply (ctac (no_simp, no_vcg) pre:ccorres_move_guard_ptr_safe
         add: updateMDB_mdbPrev_set_mdbNext)
-            -- "here ctac alone does not apply because the subgoal generated 
+            -- "here ctac alone does not apply because the subgoal generated
                 by the rule are not solvable by simp"
             -- "so we have to use (no_simp) (or apply (rule ccorres_split_nothrow))"
           apply (simp add: cmdbnode_relation_def)
@@ -2603,7 +2603,7 @@ lemma emptySlot_ccorres:
 
                   -- "the case irq "
 
-                  apply (erule deletedIRQHandler_opt_ccorres [unfolded dc_def]) 
+                  apply (erule deletedIRQHandler_opt_ccorres [unfolded dc_def])
 
                 -- "Haskell pre/post for y \<leftarrow> updateMDB slot (\<lambda>a. nullMDBNode);"
                  apply wp
@@ -2665,17 +2665,17 @@ lemma ccorres_return_void_C:
 declare Collect_const [simp del]
 
 lemma capSwapForDelete_ccorres:
-  "ccorres dc xfdc 
+  "ccorres dc xfdc
           (valid_mdb' and pspace_aligned')
           (UNIV \<inter> {s. slot1_' s = Ptr slot1} \<inter> {s. slot2_' s = Ptr slot2})
           []
           (capSwapForDelete slot1 slot2)
           (Call capSwapForDelete_'proc)"
   apply (cinit lift: slot1_' slot2_' simp del: return_bind)
-  -- "***Main goal***" 
-  -- "--- instruction: when (slot1 \<noteq> slot2) \<dots> / IF Ptr slot1 = Ptr slot2 THEN \<dots>" 
+  -- "***Main goal***"
+  -- "--- instruction: when (slot1 \<noteq> slot2) \<dots> / IF Ptr slot1 = Ptr slot2 THEN \<dots>"
    apply (simp add:when_def)
-   apply (rule ccorres_if_cond_throws2 [where Q = \<top> and Q' = \<top>]) 
+   apply (rule ccorres_if_cond_throws2 [where Q = \<top> and Q' = \<top>])
       apply (case_tac "slot1=slot2", simp+)
      apply (rule ccorres_return_void_C [simplified dc_def])
 
@@ -2705,9 +2705,9 @@ lemma capSwapForDelete_ccorres:
   -- "Hoare triple for return_void"
    apply vcg
 
-  -- "***Generalized preconditions***" 
+  -- "***Generalized preconditions***"
   apply simp
-  apply (clarsimp simp: cte_wp_at_ctes_of map_comp_Some_iff 
+  apply (clarsimp simp: cte_wp_at_ctes_of map_comp_Some_iff
     typ_heap_simps ccap_relation_def)
   apply (simp add: cl_valid_cte_def c_valid_cap_def)
 done
@@ -2736,7 +2736,7 @@ lemma cap_get_tag_PageCap_small_frame:
           cap_small_frame_cap_CL.capFMappedASIDLow_CL (cap_small_frame_cap_lift cap'),
           cap_small_frame_cap_CL.capFMappedAddress_CL (cap_small_frame_cap_lift cap')))))"
   apply (rule iffI)
-   apply (erule ccap_relationE)  
+   apply (erule ccap_relationE)
    apply (clarsimp simp add: cap_lifts cap_to_H_def Let_def split: if_split)
   apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def)
 done
@@ -2756,8 +2756,8 @@ lemma cap_get_tag_PageCap_frame:
      Some ((cap_frame_cap_CL.capFMappedASIDHigh_CL (cap_frame_cap_lift cap') << asid_low_bits) +
           cap_frame_cap_CL.capFMappedASIDLow_CL (cap_frame_cap_lift cap'),
           cap_frame_cap_CL.capFMappedAddress_CL (cap_frame_cap_lift cap')))))"
-  apply (rule iffI)   
-   apply (erule ccap_relationE)  
+  apply (rule iffI)
+   apply (erule ccap_relationE)
    apply (clarsimp simp add: cap_lifts cap_to_H_def Let_def  split: if_split)
   apply (simp add: cap_get_tag_isCap isCap_simps pageSize_def)
 done
@@ -2767,7 +2767,7 @@ done
 
 lemma is_aligned_small_frame_cap_lift:
    "cap_get_tag cap = scast cap_small_frame_cap \<Longrightarrow>
-    is_aligned (cap_small_frame_cap_CL.capFBasePtr_CL 
+    is_aligned (cap_small_frame_cap_CL.capFBasePtr_CL
                         (cap_small_frame_cap_lift cap)) 12"
   apply (simp add: cap_small_frame_cap_lift_def
                    cap_lift_small_frame_cap)
@@ -2776,7 +2776,7 @@ lemma is_aligned_small_frame_cap_lift:
   done
 
 lemma fff_is_pageBits:
-  "(0xFFF :: word32) = 2 ^ pageBits - 1" 
+  "(0xFFF :: word32) = 2 ^ pageBits - 1"
   by (simp add: pageBits_def)
 
 
@@ -2784,7 +2784,7 @@ lemma fff_is_pageBits:
 lemma valid_cap'_PageCap_is_aligned:
   "valid_cap' (ArchObjectCap (arch_capability.PageCap d w r sz option)) t  \<Longrightarrow>
   is_aligned w (pageBitsForSize sz)"
-  apply (simp add: valid_cap'_def capAligned_def) 
+  apply (simp add: valid_cap'_def capAligned_def)
 done
 
 
@@ -2804,11 +2804,11 @@ lemma Arch_sameRegionAs_spec:
   apply clarsimp
 
   apply (simp add: ARM_H.sameRegionAs_def)
-  subgoal for capa capb cap_b cap_a  
+  subgoal for capa capb cap_b cap_a
   apply (cases capa; simp add: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
 
   -- "capa is ASIDPoolCap"
-      apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap 
+      apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap
                          isCap_simps cap_tag_defs from_bool_def false_def)
       -- "capb is also ASIDPoolCap"
        apply (frule cap_get_tag_isCap_unfolded_H_cap(13)[where cap'=cap_a])
@@ -2817,28 +2817,28 @@ lemma Arch_sameRegionAs_spec:
        apply (simp add: ccap_relation_def  map_option_case)
        apply (simp add: cap_asid_pool_cap_lift)
        apply (simp add: cap_to_H_def)
-       apply (cases "capASIDPool_CL (cap_asid_pool_cap_lift cap_a) = 
+       apply (cases "capASIDPool_CL (cap_asid_pool_cap_lift cap_a) =
                         capASIDPool_CL (cap_asid_pool_cap_lift cap_b)"; simp)
 
       -- "capb is ASIDControlCap"
       subgoal for \<dots> vmpage_size option
       apply clarsimp
       apply (cases "vmpage_size=ARMSmallPage")
-       apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b], 
+       apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b],
               assumption, simp add: cap_tag_defs)
-      apply (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap'=cap_b], 
+      apply (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap'=cap_b],
              assumption, simp add: cap_tag_defs)
       done
-     
+
   -- "capa is ASIDControlCap"
-     apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap 
+     apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap
                         isCap_simps cap_tag_defs from_bool_def false_def true_def)
      -- " capb is PageCap"
      subgoal for \<dots> vmpage_size option
      apply (case_tac "vmpage_size=ARMSmallPage")
-      apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16), 
+      apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16),
              assumption, simp add: cap_tag_defs)
-     apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(17), 
+     apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(17),
              assumption, simp add: cap_tag_defs)
      done
 
@@ -2847,36 +2847,36 @@ lemma Arch_sameRegionAs_spec:
     apply (cases "vmpage_size=ARMSmallPage")
     -- "capa is a small frame"
      apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap' = cap_a], assumption)
-     apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap 
+     apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap
                         isCap_simps cap_tag_defs from_bool_def false_def true_def)
    -- " capb is PageCap"
 
      subgoal for \<dots> vmpage_sizea optiona
      apply (cases "vmpage_sizea=ARMSmallPage")
       -- "capb is a small frame"
-      apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b], 
+      apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b],
              assumption, simp add: cap_tag_defs)
       apply (intro conjI)
           apply (simp add:Kernel_C.ARMSmallPage_def)
          apply (simp add: gen_framesize_to_H_def)
         apply (simp add:Kernel_C.ARMSmallPage_def)
        apply (simp add: gen_framesize_to_H_def)
-      
-      apply (simp add: Let_def) 
+
+      apply (simp add: Let_def)
       apply (clarsimp simp: if_distrib [where f="scast"])
       apply (simp add: cap_get_tag_PageCap_small_frame [unfolded cap_tag_defs, simplified])
       apply (thin_tac "ccap_relation x cap_b" for x)
       apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(16)[simplified], simp)
-      apply (simp add: cap_get_tag_PageCap_small_frame) 
+      apply (simp add: cap_get_tag_PageCap_small_frame)
       apply (thin_tac "ccap_relation x cap_a" for x)
       apply clarsimp
-  
+
       apply (simp add: if_0_1_eq)
       apply (simp add: Kernel_C.ARMSmallPage_def gen_framesize_to_H_def)
       apply (simp add: field_simps)
 
      -- "capb is a frame"
-     apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(17), 
+     apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(17),
             assumption, simp add: cap_tag_defs)
      apply (intro conjI)
          apply (simp add:Kernel_C.ARMSmallPage_def)
@@ -2892,17 +2892,17 @@ lemma Arch_sameRegionAs_spec:
        apply (simp add: cap_frame_cap_lift [unfolded cap_tag_defs, simplified])
        apply (simp add: c_valid_cap_def cl_valid_cap_def)
 
-     apply (simp add: Let_def) 
+     apply (simp add: Let_def)
      apply (clarsimp simp: if_distrib [where f=scast])
-     apply (simp add: cap_get_tag_PageCap_frame [unfolded cap_tag_defs, simplified]) 
+     apply (simp add: cap_get_tag_PageCap_frame [unfolded cap_tag_defs, simplified])
      apply (thin_tac "ccap_relation x cap_b" for x)
      apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[simplified, where cap'=cap_a], simp)
-     apply (simp add: cap_get_tag_PageCap_small_frame) 
+     apply (simp add: cap_get_tag_PageCap_small_frame)
      apply (thin_tac "ccap_relation x cap_a" for x)
      apply clarsimp
-  
+
      apply (simp add: if_0_1_eq)
-     apply (cut_tac x="(pageBitsForSize (gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))))" 
+     apply (cut_tac x="(pageBitsForSize (gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))))"
               in unat_of_nat32)
       apply (simp add: pageBitsForSize_def)
       apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))", simp_all add: word_bits_def)[1]
@@ -2925,15 +2925,15 @@ lemma Arch_sameRegionAs_spec:
        apply (drule_tac c'=cap_a in ccap_relation_c_valid_cap)
        apply (simp add: cap_frame_cap_lift)
        apply (simp add: c_valid_cap_def cl_valid_cap_def)
-  
-    apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap 
+
+    apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap
                        isCap_simps cap_tag_defs from_bool_def false_def true_def)
     -- " capb is PageCap"
     subgoal for \<dots> vmpage_sizea optiona
-  
+
     apply (cases "vmpage_sizea=ARMSmallPage")
      -- "capb is a small frame"
-     apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b], 
+     apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b],
             assumption, simp add: cap_tag_defs)
      apply (simp add: Let_def)
 
@@ -2945,14 +2945,14 @@ lemma Arch_sameRegionAs_spec:
 
      apply (frule cap_get_tag_isCap_unfolded_H_cap(17)[simplified, where cap'=cap_a], simp)
      apply (simp add: cap_tag_defs)
-     apply (simp add: cap_get_tag_PageCap_small_frame [unfolded cap_tag_defs, simplified]) 
-     apply (simp add: cap_get_tag_PageCap_frame [unfolded cap_tag_defs, simplified]) 
+     apply (simp add: cap_get_tag_PageCap_small_frame [unfolded cap_tag_defs, simplified])
+     apply (simp add: cap_get_tag_PageCap_frame [unfolded cap_tag_defs, simplified])
      apply (clarsimp simp: if_distrib [where f=scast])
      apply (thin_tac "ccap_relation x y" for x y)+
-     
+
      apply (simp add: if_0_1_eq)
 
-     apply (cut_tac x="(pageBitsForSize (gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))))" 
+     apply (cut_tac x="(pageBitsForSize (gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))))"
               in unat_of_nat32)
       apply (simp add: pageBitsForSize_def)
       apply (cases "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))"; simp add: word_bits_def)
@@ -2964,7 +2964,7 @@ lemma Arch_sameRegionAs_spec:
      apply (simp add: field_simps)
 
     -- "capb is a frame"
-    apply (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap'=cap_b], 
+    apply (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap'=cap_b],
            assumption, simp add: cap_tag_defs)
 
     apply (subgoal_tac "capFSize_CL (cap_frame_cap_lift cap_b) \<noteq> scast Kernel_C.ARMSmallPage")
@@ -2985,16 +2985,16 @@ lemma Arch_sameRegionAs_spec:
        subgoal by (simp add:cap_frame_cap_lift_def cap_lift_def cap_tag_defs mask_def word_bw_assocs)
       apply (simp add: pageBitsForSize_def)
       apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))"; simp)
-    apply (simp add: Let_def) 
+    apply (simp add: Let_def)
     apply (simp add: if_0_1_eq if_distrib [where f=scast])
 
 
-    apply (cut_tac x="(pageBitsForSize (gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))))" 
+    apply (cut_tac x="(pageBitsForSize (gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))))"
              in unat_of_nat32)
      apply (simp add: pageBitsForSize_def)
      apply (cases "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))"; simp add: word_bits_def)
     apply clarsimp
-    apply (cut_tac x="(pageBitsForSize (gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))))" 
+    apply (cut_tac x="(pageBitsForSize (gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))))"
              in unat_of_nat32)
      apply (simp add: pageBitsForSize_def)
      apply (cases "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))"; simp add: word_bits_def)
@@ -3005,14 +3005,14 @@ lemma Arch_sameRegionAs_spec:
    done
 
   -- "capa is PageTableCap"
-   apply (cases capb; simp_all add: cap_get_tag_isCap_unfolded_H_cap 
+   apply (cases capb; simp_all add: cap_get_tag_isCap_unfolded_H_cap
                       isCap_simps cap_tag_defs from_bool_def false_def true_def)
     -- " capb is PageCap"
     subgoal for \<dots> vmpage_size option
     apply (cases "vmpage_size=ARMSmallPage")
-     apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b],   
+     apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b],
                       assumption, simp add: cap_tag_defs)
-    by (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap'=cap_b], 
+    by (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap'=cap_b],
             assumption, simp add: cap_tag_defs)
    -- " capb is a PageTableCap"
    subgoal
@@ -3022,18 +3022,18 @@ lemma Arch_sameRegionAs_spec:
    apply (simp add: ccap_relation_def  map_option_case)
    apply (simp add: cap_page_table_cap_lift)
    apply (simp add: cap_to_H_def)
-   by (cases "capPTBasePtr_CL (cap_page_table_cap_lift cap_a) = 
+   by (cases "capPTBasePtr_CL (cap_page_table_cap_lift cap_a) =
                     capPTBasePtr_CL (cap_page_table_cap_lift cap_b)"; simp)
 
   -- "capa is PageDirectoryCap"
-  apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap 
+  apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap
                       isCap_simps cap_tag_defs from_bool_def false_def true_def)
    -- " capb is PageCap"
    subgoal for \<dots> vmpage_size option
    apply (cases "vmpage_size=ARMSmallPage")
-    apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b], 
+    apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b],
             assumption, simp add: cap_tag_defs)
-   by (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap'=cap_b], 
+   by (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap'=cap_b],
            assumption, simp add: cap_tag_defs)
   -- " capb is a PageDirectoryCap"
   subgoal
@@ -3043,7 +3043,7 @@ lemma Arch_sameRegionAs_spec:
   apply (simp add: ccap_relation_def  map_option_case)
   apply (simp add: cap_page_directory_cap_lift)
   apply (simp add: cap_to_H_def)
-  by (cases "capPDBasePtr_CL (cap_page_directory_cap_lift cap_a) = 
+  by (cases "capPDBasePtr_CL (cap_page_directory_cap_lift cap_a) =
                    capPDBasePtr_CL (cap_page_directory_cap_lift cap_b)"; simp)
   done
 done
@@ -3087,13 +3087,13 @@ lemma generic_frame_cap_get_capFBasePtr_spec:
    apply (clarsimp simp: cap_lift_frame_cap cap_frame_cap_lift_def)
   apply (clarsimp simp: cap_lifts [THEN sym])
   done
-  
+
 definition
   "generic_frame_cap_get_capFIsDevice_CL \<equiv> \<lambda>cap. case cap of
       Some (Cap_small_frame_cap c) \<Rightarrow> cap_small_frame_cap_CL.capFIsDevice_CL c
     | Some (Cap_frame_cap c) \<Rightarrow> cap_frame_cap_CL.capFIsDevice_CL c
     | Some _ \<Rightarrow> 0 | None \<Rightarrow> 0"
-    
+
 lemma generic_frame_cap_get_capFIsDevice_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. cap_get_tag \<acute>cap = scast cap_small_frame_cap \<or>
                 cap_get_tag \<acute>cap = scast cap_frame_cap\<rbrace>
@@ -3108,7 +3108,7 @@ lemma generic_frame_cap_get_capFIsDevice_spec:
   by (clarsimp simp: generic_frame_cap_get_capFIsDevice_CL_def
                         cap_lift_small_frame_cap cap_lift_frame_cap
                         cap_small_frame_cap_lift_def cap_frame_cap_lift_def)
-  
+
 definition
  "generic_frame_cap_get_capFVMRights_CL \<equiv> \<lambda>cap. case cap of
       Some (Cap_small_frame_cap c) \<Rightarrow> cap_small_frame_cap_CL.capFVMRights_CL c
@@ -3157,7 +3157,7 @@ lemma generic_frame_cap_size[simp]:
   apply (erule disjE)
    subgoal by (simp add: cap_lift_def cap_tag_defs mask_def word_bw_assocs)
   by (simp add: cap_lift_def cap_tag_defs mask_def Kernel_C.ARMSmallPage_def)
- 
+
 lemma cap_get_capSizeBits_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s}
        \<acute>ret__unsigned_long :== PROC cap_get_capSizeBits(\<acute>cap)
@@ -3333,7 +3333,7 @@ definition
     | Some (Cap_zombie_cap c) \<Rightarrow> get_capZombiePtr_CL c
     | _ \<Rightarrow> 0)"
 
-lemma cap_get_capPtr_spec: 
+lemma cap_get_capPtr_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. (cap_get_tag \<acute>cap = scast cap_zombie_cap
                    \<longrightarrow> get_capZombieBits_CL (cap_zombie_cap_lift \<acute>cap) < 0x1F)\<rbrace>
        \<acute>ret__ptr_to_void :== PROC cap_get_capPtr(\<acute>cap)
@@ -3341,7 +3341,7 @@ lemma cap_get_capPtr_spec:
   apply vcg
   apply (clarsimp simp: get_capPtr_CL_def generic_frame_cap_get_capFBasePtr_CL_def)
   apply (intro impI conjI)
-                    apply (clarsimp simp: cap_lifts pageBitsForSize_def 
+                    apply (clarsimp simp: cap_lifts pageBitsForSize_def
                                           cap_lift_asid_control_cap word_sle_def
                                           cap_lift_irq_control_cap cap_lift_null_cap
                                           mask_def objBits_simps cap_lift_domain_cap
@@ -3373,7 +3373,7 @@ where
     | Some (Cap_asid_pool_cap c) \<Rightarrow> True
     | Some (Cap_zombie_cap c) \<Rightarrow> True
     | _ \<Rightarrow> False)"
-    
+
 lemma cap_get_capIsPhysical_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s}
        Call cap_get_capIsPhysical_'proc
@@ -3381,7 +3381,7 @@ lemma cap_get_capIsPhysical_spec:
   apply vcg
   apply (clarsimp simp: get_capIsPhysical_CL_def)
   apply (intro impI conjI)
-                    apply (clarsimp simp: cap_lifts pageBitsForSize_def 
+                    apply (clarsimp simp: cap_lifts pageBitsForSize_def
                                           cap_lift_asid_control_cap word_sle_def
                                           cap_lift_irq_control_cap cap_lift_null_cap
                                           mask_def objBits_simps cap_lift_domain_cap
@@ -3403,15 +3403,15 @@ lemma ccap_relation_get_capPtr_not_physical:
    get_capPtr_CL (cap_lift ccap) = Ptr 0"
   by (clarsimp simp: ccap_relation_def get_capPtr_CL_def cap_to_H_def Let_def
               split: option.split cap_CL.split_asm if_split_asm)
-  
+
 lemma ccap_relation_get_capIsPhysical:
   "ccap_relation hcap ccap \<Longrightarrow> isPhysicalCap hcap = get_capIsPhysical_CL (cap_lift ccap)"
-  apply (case_tac hcap; clarsimp simp: cap_lifts cap_lift_domain_cap cap_lift_null_cap 
-                                       cap_lift_irq_control_cap cap_to_H_def 
-                                       get_capIsPhysical_CL_def 
+  apply (case_tac hcap; clarsimp simp: cap_lifts cap_lift_domain_cap cap_lift_null_cap
+                                       cap_lift_irq_control_cap cap_to_H_def
+                                       get_capIsPhysical_CL_def
                        dest!: cap_get_tag_isCap_unfolded_H_cap)
   apply (rename_tac arch_cap)
-  apply (case_tac arch_cap; clarsimp simp: cap_lifts cap_lift_asid_control_cap                                        
+  apply (case_tac arch_cap; clarsimp simp: cap_lifts cap_lift_asid_control_cap
                       dest!: cap_get_tag_isCap_unfolded_H_cap)
   apply (rename_tac p R sz asid)
   apply (case_tac sz)
@@ -3479,7 +3479,7 @@ lemma ccap_relation_get_capPtr_untyped:
 lemma cap_get_tag_isArchCap_unfolded_H_cap:
   "ccap_relation (capability.ArchObjectCap a_cap) cap' \<Longrightarrow>
    (isArchCap_tag (cap_get_tag cap'))"
-  apply (frule cap_get_tag_isCap(11), simp) 
+  apply (frule cap_get_tag_isCap(11), simp)
   done
 
 lemma ucast_ucast_mask_eq:
@@ -3491,7 +3491,7 @@ lemma ucast_ucast_mask_eq:
   done
 
 lemma ucast_up_eq:
-  "\<lbrakk> ucast x = (ucast y::'b::len word); 
+  "\<lbrakk> ucast x = (ucast y::'b::len word);
     len_of TYPE('a) \<le> len_of TYPE ('b) \<rbrakk>
   \<Longrightarrow> ucast x = (ucast y::'a::len word)"
   apply (subst (asm) bang_eq)
@@ -3499,7 +3499,7 @@ lemma ucast_up_eq:
   done
 
 lemma ucast_up_neq:
-  "\<lbrakk> ucast x \<noteq> (ucast y::'b::len word); 
+  "\<lbrakk> ucast x \<noteq> (ucast y::'b::len word);
     len_of TYPE('b) \<le> len_of TYPE ('a) \<rbrakk>
   \<Longrightarrow> ucast x \<noteq> (ucast y::'a::len word)"
   apply (clarsimp)
@@ -3518,7 +3518,7 @@ lemma sameRegionAs_spec:
   apply (simp add: sameRegionAs_def isArchCap_tag_def2)
   apply (case_tac capa, simp_all add: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
             -- "capa is a ThreadCap"
-             apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
+             apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                           isCap_simps cap_tag_defs from_bool_def false_def)[1]
               apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(1))
               apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(1))
@@ -3532,7 +3532,7 @@ lemma sameRegionAs_spec:
            -- "capa is a NullCap"
             apply (simp add: cap_tag_defs from_bool_def false_def)
           -- "capa is an NotificationCap"
-           apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
+           apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                         isCap_simps cap_tag_defs from_bool_def false_def)[1]
             apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(3))
             apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(3))
@@ -3543,7 +3543,7 @@ lemma sameRegionAs_spec:
            apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
            apply (clarsimp simp: isArchCap_tag_def2)
           -- "capa is an IRQHandlerCap"
-          apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
+          apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                       isCap_simps cap_tag_defs from_bool_def false_def)[1]
            apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(5))
            apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(5))
@@ -3561,7 +3561,7 @@ lemma sameRegionAs_spec:
           apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
           apply (clarsimp simp: isArchCap_tag_def2)
          -- "capa is an EndpointCap"
-         apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
+         apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                       isCap_simps cap_tag_defs from_bool_def false_def)[1]
           apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(4))
           apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(4))
@@ -3588,10 +3588,10 @@ lemma sameRegionAs_spec:
       apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
       apply (fastforce simp: isArchCap_tag_def2 cap_tag_defs linorder_not_less [THEN sym])
      -- "capa is a ReplyCap"
-     apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
+     apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                   isCap_simps cap_tag_defs from_bool_def false_def)[1]
       apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
-      apply (clarsimp simp: isArchCap_tag_def2)     
+      apply (clarsimp simp: isArchCap_tag_def2)
      apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(8))
      apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(8))
      apply (simp add: ccap_relation_def map_option_case)
@@ -3629,10 +3629,10 @@ lemma sameRegionAs_spec:
     apply (rule impI, simp add: from_bool_0 ccap_relation_get_capIsPhysical[symmetric])
     apply (simp add: from_bool_def false_def)
    -- "capa is a CNodeCap"
-   apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
+   apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                 isCap_simps cap_tag_defs from_bool_def false_def)[1]
     apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
-    apply (clarsimp simp: isArchCap_tag_def2)     
+    apply (clarsimp simp: isArchCap_tag_def2)
    apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(10))
    apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(10))
    apply (simp add: ccap_relation_def map_option_case)
@@ -3640,7 +3640,7 @@ lemma sameRegionAs_spec:
    apply (simp add: cap_to_H_def)
    apply (clarsimp split: if_split bool.split)
   -- "capa is an IRQControlCap"
-  apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
+  apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                isCap_simps cap_tag_defs from_bool_def false_def true_def)[1]
   apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
   apply (fastforce simp: isArchCap_tag_def2 split: if_split)
@@ -3697,7 +3697,7 @@ lemma Arch_sameObjectAs_spec:
        apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16), simp)
        apply (simp add: ccap_relation_def map_option_case)
        apply (simp add: cap_small_frame_cap_lift)
-       apply (clarsimp simp: cap_to_H_def capAligned_def to_bool_def from_bool_def 
+       apply (clarsimp simp: cap_to_H_def capAligned_def to_bool_def from_bool_def
                       split: if_split bool.split
                       dest!: is_aligned_no_overflow)
       apply (case_tac "vmpage_sizea = ARMSmallPage",
@@ -3891,7 +3891,7 @@ lemma updateCapData_spec:
 
   apply (simp add: updateCapData_def)
 
-  apply (case_tac cap, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
+  apply (case_tac cap, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                         isCap_simps from_bool_def isArchCap_tag_def2 cap_tag_defs Let_def)
   -- "NotificationCap"
      apply clarsimp
@@ -3901,18 +3901,18 @@ lemma updateCapData_spec:
 
      apply (intro conjI impI)
      -- "preserve is zero and capNtfnBadge_CL \<dots> = 0"
-       apply clarsimp 
+       apply clarsimp
        apply (clarsimp simp:cap_notification_cap_lift_def cap_lift_def cap_tag_defs)
        apply (simp add: ccap_relation_def cap_lift_def cap_tag_defs cap_to_H_def)
      -- "preserve is zero and capNtfnBadge_CL \<dots> \<noteq> 0"
-      apply clarsimp 
+      apply clarsimp
       apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
      -- "preserve is not zero"
      apply clarsimp
      apply (simp add: to_bool_def)
-     apply (case_tac "preserve_' x = 0 \<and> capNtfnBadge_CL (cap_notification_cap_lift (cap_' x))= 0", 
+     apply (case_tac "preserve_' x = 0 \<and> capNtfnBadge_CL (cap_notification_cap_lift (cap_' x))= 0",
             clarsimp)
-     apply (simp add: if_not_P) 
+     apply (simp add: if_not_P)
      apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
 
   -- "EndpointCap"
@@ -3927,20 +3927,20 @@ lemma updateCapData_spec:
       apply (clarsimp simp:cap_endpoint_cap_lift_def cap_lift_def cap_tag_defs)
       apply (simp add: ccap_relation_def cap_lift_def cap_tag_defs cap_to_H_def)
     -- "preserve is zero and capNtfnBadge_CL \<dots> \<noteq> 0"
-     apply clarsimp 
+     apply clarsimp
      apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
     -- "preserve is not zero"
     apply clarsimp
     apply (simp add: to_bool_def)
     apply (case_tac "preserve_' x = 0 \<and> capEPBadge_CL (cap_endpoint_cap_lift (cap_' x))= 0", clarsimp)
-    apply (simp add: if_not_P) 
+    apply (simp add: if_not_P)
     apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
 
   -- "ArchObjectCap"
    apply clarsimp
    apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
    apply (simp add: isArchCap_tag_def2)
-   apply (simp add: ARM_H.updateCapData_def) 
+   apply (simp add: ARM_H.updateCapData_def)
 
   -- "CNodeCap"
   apply clarsimp
@@ -3992,7 +3992,7 @@ lemma ensureNoChildren_ccorres:
    apply (rule ccorres_getCTE)
    apply (rule ccorres_move_c_guard_cte)
 
-   apply (rule_tac P= "\<lambda> s. valid_objs' s \<and> valid_mdb' s \<and> ctes_of s (ptr_val slota) = Some cte" 
+   apply (rule_tac P= "\<lambda> s. valid_objs' s \<and> valid_mdb' s \<and> ctes_of s (ptr_val slota) = Some cte"
                and P' =UNIV in ccorres_from_vcg_throws)
    apply (rule allI, rule conseqPre, vcg)
    apply clarsimp
@@ -4010,9 +4010,9 @@ lemma ensureNoChildren_ccorres:
    apply (frule_tac cte="cte_to_H y" in valid_mdb_ctes_of_next, simp+)
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (frule_tac cte=cte in rf_sr_ctes_of_clift, assumption, clarsimp)
-   apply (rule conjI) 
+   apply (rule conjI)
     apply (frule_tac cte="(cte_to_H ya)" in ctes_of_valid', assumption, simp)
-    apply (rule valid_capAligned, assumption)       
+    apply (rule valid_capAligned, assumption)
    apply (rule conjI)
     apply (frule_tac cte="(cte_to_H y)" in ctes_of_valid', assumption, simp)
     apply blast
@@ -4038,7 +4038,7 @@ lemma ensureNoChildren_ccorres:
    apply (simp add: split_paired_Bex)
    apply (clarsimp simp: in_getCTE_cte_wp_at')
    apply (simp add: cte_wp_at_ctes_of)
-   apply (simp add: returnOk_def return_def) 
+   apply (simp add: returnOk_def return_def)
 
   -- " last goal"
   apply clarsimp
@@ -4052,7 +4052,7 @@ lemma cap_small_frame_cap_set_capFMappedASID_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. cap_get_tag \<^bsup>s\<^esup>cap = scast cap_small_frame_cap\<rbrace>
     Call cap_small_frame_cap_set_capFMappedASID_'proc
    \<lbrace>cap_small_frame_cap_lift \<acute>ret__struct_cap_C
-         = cap_small_frame_cap_lift \<^bsup>s\<^esup>cap 
+         = cap_small_frame_cap_lift \<^bsup>s\<^esup>cap
                \<lparr> cap_small_frame_cap_CL.capFMappedASIDHigh_CL := (\<^bsup>s\<^esup>asid >> asidLowBits) && mask asidHighBits,
                  cap_small_frame_cap_CL.capFMappedASIDLow_CL  := \<^bsup>s\<^esup>asid && mask asidLowBits \<rparr>
         \<and> cap_get_tag \<acute>ret__struct_cap_C = scast cap_small_frame_cap\<rbrace>"
@@ -4064,7 +4064,7 @@ lemma cap_frame_cap_set_capFMappedASID_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. cap_get_tag \<^bsup>s\<^esup>cap = scast cap_frame_cap\<rbrace>
     Call cap_frame_cap_set_capFMappedASID_'proc
    \<lbrace>cap_frame_cap_lift \<acute>ret__struct_cap_C
-         = cap_frame_cap_lift \<^bsup>s\<^esup>cap 
+         = cap_frame_cap_lift \<^bsup>s\<^esup>cap
                \<lparr> cap_frame_cap_CL.capFMappedASIDHigh_CL := (\<^bsup>s\<^esup>asid >> asidLowBits) && mask asidHighBits,
                  cap_frame_cap_CL.capFMappedASIDLow_CL  := \<^bsup>s\<^esup>asid && mask asidLowBits \<rparr>
         \<and> cap_get_tag \<acute>ret__struct_cap_C = scast cap_frame_cap\<rbrace>"
@@ -4172,7 +4172,7 @@ lemma Arch_deriveCap_ccorres:
 
 lemma isArchCap_T_isArchObjectCap:
   "isArchCap \<top> = isArchObjectCap"
-  by (rule ext, auto simp: isCap_simps) 
+  by (rule ext, auto simp: isCap_simps)
 
 lemma deriveCap_ccorres':
   "ccorres (syscall_error_rel \<currency> ccap_relation) deriveCap_xf
@@ -4286,7 +4286,7 @@ lemma ensureEmptySlot_ccorres:
    apply (rule ccorres_liftE_Seq)
    apply (rule ccorres_getCTE)
    apply (rule ccorres_move_c_guard_cte)
-   apply (rule_tac P= "\<lambda> s. ctes_of s (ptr_val slota) = Some cte" 
+   apply (rule_tac P= "\<lambda> s. ctes_of s (ptr_val slota) = Some cte"
                and P' =UNIV in ccorres_from_vcg_throws)
    apply (rule allI, rule conseqPre, vcg)
    apply clarsimp
@@ -4301,7 +4301,7 @@ lemma ensureEmptySlot_ccorres:
      apply (simp add: syscall_error_rel_def EXCEPTION_NONE_def EXCEPTION_SYSCALL_ERROR_def)
      apply (rule syscall_error_to_H_cases(8))
      apply simp
-    apply (subst cap_get_tag_NullCap [symmetric]) 
+    apply (subst cap_get_tag_NullCap [symmetric])
      prefer 2 apply assumption
     apply (simp add: ccap_relation_def c_valid_cte_def)
 
@@ -4309,7 +4309,7 @@ lemma ensureEmptySlot_ccorres:
    apply (subgoal_tac "cap_to_H (cap_CL y) = capability.NullCap")
     apply simp
     apply (simp add: returnOk_def return_def)
-   apply (subst cap_get_tag_NullCap [symmetric]) 
+   apply (subst cap_get_tag_NullCap [symmetric])
     prefer 2 apply assumption
    apply (simp add: ccap_relation_def c_valid_cte_def)
 
@@ -4320,12 +4320,12 @@ done
 
 
 lemma (in kernel_m) updateMDB_set_mdbPrev:
- "ccorres dc xfdc 
+ "ccorres dc xfdc
      ( \<lambda>s. is_aligned ptr 3 \<and> (slota\<noteq>0 \<longrightarrow> is_aligned slota 3))
      {s. slotc = slota } hs
       (updateMDB ptr (mdbPrev_update (\<lambda>_. slota)))
 
-      (IF ptr \<noteq> 0 
+      (IF ptr \<noteq> 0
        THEN
           Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t (Ptr ptr:: cte_C ptr)\<rbrace>
                (call (\<lambda>ta. ta(| mdb_node_ptr_' := Ptr &(Ptr ptr:: cte_C ptr
@@ -4343,11 +4343,11 @@ lemma (in kernel_m) updateMDB_set_mdbPrev:
   done
 
 lemma (in kernel_m) updateMDB_set_mdbNext:
- "ccorres dc xfdc 
+ "ccorres dc xfdc
      ( \<lambda>s. is_aligned ptr 3 \<and> (slota\<noteq>0 \<longrightarrow> is_aligned slota 3))
-     {s. slotc = slota} hs 
+     {s. slotc = slota} hs
       (updateMDB ptr (mdbNext_update (\<lambda>_. slota)))
-      (IF ptr \<noteq> 0 
+      (IF ptr \<noteq> 0
        THEN
           Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t (Ptr ptr:: cte_C ptr)\<rbrace>
                (call (\<lambda>ta. ta(| mdb_node_ptr_' := Ptr &(Ptr ptr:: cte_C ptr
@@ -4363,6 +4363,6 @@ lemma (in kernel_m) updateMDB_set_mdbNext:
    apply (ctac ccorres: ccorres_updateMDB_skip)
   apply simp
   done
-     
+
 end
 end

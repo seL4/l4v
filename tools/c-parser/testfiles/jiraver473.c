@@ -8,12 +8,12 @@
  * @TAG(NICTA_BSD)
  */
 
-int f(unsigned int x) 
+int f(unsigned int x)
 {
   return x + 1;
 }
 
-char g(unsigned char x) 
-{ 
-  return x * 2; 
+char g(unsigned char x)
+{
+  return x * 2;
 }

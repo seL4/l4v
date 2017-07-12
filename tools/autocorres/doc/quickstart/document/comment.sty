@@ -25,13 +25,13 @@
 % modify it under the terms of the GNU General Public License
 % as published by the Free Software Foundation; either version 2
 % of the License, or (at your option) any later version.
-% 
+%
 % This program is distributed in the hope that it will be useful,
 % but WITHOUT ANY WARRANTY; without even the implied warranty of
 % MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 % GNU General Public License for more details.
 %
-% For a copy of the GNU General Public License, write to the 
+% For a copy of the GNU General Public License, write to the
 % Free Software Foundation, Inc.,
 % 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA,
 % or find it on the net, for instance at
@@ -44,7 +44,7 @@
 % Usage: all text included between
 %    \comment ... \endcomment
 % or \begin{comment} ... \end{comment}
-% is discarded. 
+% is discarded.
 %
 % The opening and closing commands should appear on a line
 % of their own. No starting spaces, nothing after it.
@@ -59,12 +59,12 @@
 % These environments are used as
 % \versiona ... \endversiona
 % or \begin{versiona} ... \end{versiona}
-% with the opening and closing commands again on a line of 
+% with the opening and closing commands again on a line of
 % their own.
 %
 % LaTeX users note: for an included comment, the
 % \begin and \end lines act as if they don't exist.
-% In particular, they don't imply grouping, so assignments 
+% In particular, they don't imply grouping, so assignments
 % &c are not local.
 %
 % Special comments are defined as
@@ -85,7 +85,7 @@
 % Processing comments can apply processing to each line.
 % \processcomment{name}{each-line commands}%
 %    {before commands}{after commands}
-% By defining a control sequence 
+% By defining a control sequence
 % \def\Thiscomment##1{...} in the before commands the user can
 % specify what is to be done with each comment line.
 % BUG this does not work quite yet BUG
@@ -154,13 +154,13 @@
 \def\ProcessComment#1% start it all of
    {\begingroup
     \def\CurrentComment{#1}%
-    \let\do\makeinnocent \dospecials 
+    \let\do\makeinnocent \dospecials
     \makeinnocent\^^L% and whatever other special cases
     \endlinechar`\^^M \catcode`\^^M=12 \xComment}
 %\def\ProcessCommentWithArg#1#2% to be used in \leveledcomment
 %   {\begingroup
 %    \def\CurrentComment{#1}%
-%    \let\do\makeinnocent \dospecials 
+%    \let\do\makeinnocent \dospecials
 %    \makeinnocent\^^L% and whatever other special cases
 %    \endlinechar`\^^M \catcode`\^^M=12 \xComment}
 {\catcode`\^^M=12 \endlinechar=-1 %
@@ -186,11 +186,11 @@
 
 % 3.1 change: in LaTeX and LaTeX2e prevent grouping
 \if 0%
-\ifx\fmtname\latexename 
+\ifx\fmtname\latexename
     0%
-\else \ifx\fmtname\latexname 
+\else \ifx\fmtname\latexname
           0%
-      \else 
+      \else
           1%
 \fi   \fi
 %%%%
@@ -230,7 +230,7 @@
     \csarg\def{#1}{\BeforeIncludedComment
         \ProcessCommentWithArg{#1}}%
     \CommentEndDef{#1}}
-\else 
+\else
 %%%%
 %%%%plain TeX and other formats
 %%%%
@@ -256,11 +256,11 @@
     \CommentEndDef{#1}}
 
 \if 0%
-\ifx\fmtname\latexename 
+\ifx\fmtname\latexename
     0%
-\else \ifx\fmtname\latexname 
+\else \ifx\fmtname\latexname
           0%
-      \else 
+      \else
           1%
 \fi   \fi
 % latex & latex2e:

@@ -47,7 +47,7 @@ local
   fun REPEAT_TRYOF'_N thm1 _    0 = thm1
     | REPEAT_TRYOF'_N thm1 thm2 n = REPEAT_TRYOF'_N (thm1 OF [thm2]) thm2 (n-1)
 
-  fun attribute_thm ctxt thm  thm' = 
+  fun attribute_thm ctxt thm  thm' =
     REPEAT_TRYOF_N @{thm sep_remove_pure_imp_sep_imp} (thm OF [atomize_thm ctxt thm']) (Thm.nprems_of thm' - 1)
 
   fun attribute_thm' thm ctxt thm' =

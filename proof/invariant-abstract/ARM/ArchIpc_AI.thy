@@ -58,8 +58,8 @@ lemma cap_asid_PageCap_None [simp]:
 
 lemma arch_derive_cap_is_derived:
   "\<lbrace>\<lambda>s. cte_wp_at (\<lambda>cap . cap_master_cap cap =
-                          cap_master_cap (ArchObjectCap c') \<and> 
-                          cap_aligned cap \<and> 
+                          cap_master_cap (ArchObjectCap c') \<and>
+                          cap_aligned cap \<and>
                           cap_asid cap = cap_asid (ArchObjectCap c') \<and>
                           vs_cap_ref cap = vs_cap_ref (ArchObjectCap c')) p s\<rbrace>
      arch_derive_cap c'
@@ -83,7 +83,7 @@ lemma derive_cap_is_derived [Ipc_AI_assms]:
                      \<and> vs_cap_ref cap = vs_cap_ref c') slot s
        \<and> valid_objs s\<rbrace>
   derive_cap slot c'
-  \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow> 
+  \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow>
           cte_wp_at (is_derived (cdt s) slot rv) slot s\<rbrace>, -"
   unfolding derive_cap_def
   apply (cases c', simp_all add: is_cap_simps)
@@ -168,7 +168,7 @@ lemma cap_range_update [simp, Ipc_AI_assms]:
 
 lemma derive_cap_idle[wp, Ipc_AI_assms]:
   "\<lbrace>\<lambda>s. global_refs s \<inter> cap_range cap = {}\<rbrace>
-   derive_cap slot cap 
+   derive_cap slot cap
   \<lbrace>\<lambda>c s. global_refs s \<inter> cap_range c = {}\<rbrace>, -"
   apply (simp add: derive_cap_def)
   apply (rule hoare_pre)
@@ -304,7 +304,7 @@ lemma lookup_ipc_buffer_in_user_frame[wp, Ipc_AI_assms]:
   apply (clarsimp simp: caps_of_state_cteD'[where P = "\<lambda>x. True",simplified,symmetric])
   apply (drule(1) CSpace_AI.tcb_cap_slot_regular)
    apply simp
-  apply (simp add: is_nondevice_page_cap_def is_nondevice_page_cap_arch_def case_bool_If 
+  apply (simp add: is_nondevice_page_cap_def is_nondevice_page_cap_arch_def case_bool_If
             split: if_splits)
   done
 
@@ -319,16 +319,16 @@ lemma transfer_caps_loop_cte_wp_at:
                   cong: if_cong list.case_cong
              split del: if_split)
   apply (rule hoare_pre)
-   apply (wp hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift 
+   apply (wp hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift
               derive_cap_is_derived_foo
              hoare_drop_imps
         | assumption | simp split del: if_split)+
       apply (wp hoare_vcg_conj_lift cap_insert_weak_cte_wp_at2)
        apply (erule imp)
-      apply (wp hoare_vcg_ball_lift            
+      apply (wp hoare_vcg_ball_lift
              | clarsimp simp: is_cap_simps split del:if_split
              | unfold derive_cap_def arch_derive_cap_def
-             | wpc 
+             | wpc
              | rule conjI
              | case_tac slots)+
   done
@@ -341,8 +341,8 @@ lemma transfer_caps_tcb_caps:
      transfer_caps mi caps ep receiver recv_buf
    \<lbrace>\<lambda>rv. cte_wp_at P (t, ref)\<rbrace>"
   apply (simp add: transfer_caps_def)
-  apply (wp hoare_vcg_const_Ball_lift hoare_vcg_const_imp_lift 
-            transfer_caps_loop_cte_wp_at 
+  apply (wp hoare_vcg_const_Ball_lift hoare_vcg_const_imp_lift
+            transfer_caps_loop_cte_wp_at
          | wpc | simp)+
   apply (erule imp)
   apply (wp hoare_vcg_conj_lift hoare_vcg_const_imp_lift hoare_vcg_all_lift
@@ -369,7 +369,7 @@ lemma transfer_caps_non_null_cte_wp_at:
   unfolding transfer_caps_def
   apply simp
   apply (rule hoare_pre)
-   apply (wp hoare_vcg_ball_lift transfer_caps_loop_cte_wp_at static_imp_wp 
+   apply (wp hoare_vcg_ball_lift transfer_caps_loop_cte_wp_at static_imp_wp
      | wpc | clarsimp simp:imp)+
    apply (rule hoare_strengthen_post
             [where Q="\<lambda>rv s'. (cte_wp_at (op \<noteq> cap.NullCap) ptr) s'
@@ -525,7 +525,7 @@ crunch cap_refs_respects_device_region[wp, Ipc_AI_assms]: make_arch_fault_msg "c
 
 end
 
-interpretation Ipc_AI?: Ipc_AI 
+interpretation Ipc_AI?: Ipc_AI
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)

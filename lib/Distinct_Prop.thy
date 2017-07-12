@@ -49,7 +49,7 @@ lemma distinct_prop_True [simp]:
 
 lemma distinct_prefix:
   "\<lbrakk> distinct xs; ys \<le> xs \<rbrakk> \<Longrightarrow> distinct ys"
-  apply (induct xs arbitrary: ys; clarsimp) 
+  apply (induct xs arbitrary: ys; clarsimp)
   apply (case_tac ys; clarsimp)
   by (fastforce simp: less_eq_list_def dest: set_mono_prefix)
 
@@ -63,7 +63,7 @@ lemma distinct_take_strg:
 
 lemma distinct_prop_prefixE:
   "\<lbrakk> distinct_prop P ys; prefix xs ys \<rbrakk> \<Longrightarrow> distinct_prop P xs"
-  apply (induct xs arbitrary: ys; clarsimp) 
+  apply (induct xs arbitrary: ys; clarsimp)
   apply (case_tac ys; clarsimp)
   by (fastforce dest: set_mono_prefix)
 
@@ -221,7 +221,7 @@ lemma enumerate_member:
   shows "(n + i, xs ! i) \<in> set (enumerate n xs)"
 proof -
   have pair_unpack: "\<And>a b x. ((a, b) = x) = (a = fst x \<and> b = snd x)" by fastforce
-  from assms have "(n + i, xs ! i) = enumerate n xs ! i"  
+  from assms have "(n + i, xs ! i) = enumerate n xs ! i"
     by (auto simp: fst_enumerate snd_enumerate pair_unpack)
   with assms show ?thesis by simp
 qed

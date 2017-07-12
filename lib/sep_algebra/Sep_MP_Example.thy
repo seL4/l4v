@@ -23,7 +23,7 @@ lemma "((P \<and>* Q \<and>* R \<longrightarrow>* B) \<and>* P \<and>* A \<and>*
 axiomatization
   Moo :: "'a :: stronger_sep_algebra => bool" and
   Bar :: "'a :: stronger_sep_algebra => bool"
-where  Moo_Bar[sep_cancel] : "Moo s \<Longrightarrow> Bar s" 
+where  Moo_Bar[sep_cancel] : "Moo s \<Longrightarrow> Bar s"
 
 
 lemma "((Bar \<and>* Q \<and>* R \<longrightarrow>* B) \<and>* Moo \<and>* A \<and>* R \<and>* Q) s \<Longrightarrow> (A \<and>* B) s"

@@ -1949,11 +1949,11 @@ lemma gets_the_bind_eq:
 lemma hoare_const_imp_R:
   "\<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> Q s\<rbrace> f \<lbrace>\<lambda>rv s. P \<longrightarrow> R rv s\<rbrace>,-"
   by (cases P, simp_all)
-  
+
 lemma hoare_vcg_imp_lift_R:
   "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, -; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, - \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P' s \<or> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, -"
   by (auto simp add: valid_def validE_R_def validE_def split_def split: sum.splits)
-  
+
 lemma hoare_disj_division:
   "\<lbrakk> P \<or> Q; P \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>S\<rbrace>; Q \<Longrightarrow> \<lbrace>T\<rbrace> f \<lbrace>S\<rbrace> \<rbrakk>
      \<Longrightarrow> \<lbrace>\<lambda>s. (P \<longrightarrow> R s) \<and> (Q \<longrightarrow> T s)\<rbrace> f \<lbrace>S\<rbrace>"
@@ -2599,7 +2599,7 @@ lemma no_throw_bindE_simple: "\<lbrakk> no_throw \<top> L; \<And>x. no_throw \<t
   apply wp
   done
 
-lemma no_throw_handleE_simple: 
+lemma no_throw_handleE_simple:
   notes hoare_pre [wp_pre del]
   shows "\<lbrakk> \<And>x. no_throw \<top> L \<or> no_throw \<top> (R x) \<rbrakk> \<Longrightarrow> no_throw \<top> (L <handle> R)"
   apply (clarsimp simp: no_throw_def)

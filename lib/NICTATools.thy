@@ -10,7 +10,7 @@
 
 (* Miscellaneous Isabelle tools. *)
 theory NICTATools
-imports 
+imports
   Apply_Trace_Cmd
   Apply_Debug
   (* Solves_Tac *)

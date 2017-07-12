@@ -60,9 +60,9 @@ For capability or VM faults, the reply is used only to restart the thread. For u
 This function returns "True" if the faulting thread should be restarted after the reply is received; otherwise it will remain suspended.
 
 > handleFaultReply :: Fault -> PPtr TCB -> Word -> [Word] -> Kernel Bool
-> 
+>
 > handleFaultReply (CapFault {}) _ _ _ = return True
-> 
+>
 > handleFaultReply (UnknownSyscallException _) thread label msg = do
 >     b <- getSanitiseRegisterInfo thread
 >     asUser thread $ zipWithM_

@@ -12,7 +12,7 @@ theory EmptyFail
 imports Bits_R
 begin
 
-(* Collect empty_fail lemmas here. naming convention is emtpy_fail_NAME. 
+(* Collect empty_fail lemmas here. naming convention is emtpy_fail_NAME.
    Unless there is a good reason, they should all be [intro!, wp, simp] *)
 
 lemma empty_fail_projectKO [simp, intro!]:
@@ -28,7 +28,7 @@ lemma empty_fail_alignCheck [intro!, wp, simp]:
 lemma empty_fail_magnitudeCheck [intro!, wp, simp]:
   "empty_fail (magnitudeCheck a b c)"
   unfolding magnitudeCheck_def
-  by (simp split: option.splits)  
+  by (simp split: option.splits)
 
 lemma empty_fail_loadObject_default [intro!, wp, simp]:
   shows "empty_fail (loadObject_default x b c d)"
@@ -45,7 +45,7 @@ lemma empty_fail_getCTE [intro!, wp, simp]:
   apply (intro empty_fail_bind, simp_all)
   apply (simp add: loadObject_cte typeError_def alignCheck_def alignError_def
                    magnitudeCheck_def
-            split: Structures_H.kernel_object.split) 
+            split: Structures_H.kernel_object.split)
   apply (auto split: option.split)
   done
 
@@ -94,7 +94,7 @@ lemma empty_fail_updateNewFreeIndex [intro!, wp, simp]:
 lemma empty_fail_insertNewCap [intro!, wp, simp]:
   "empty_fail (insertNewCap p p' cap)"
   unfolding insertNewCap_def by simp
-        
+
 lemma empty_fail_getIRQSlot [intro!, wp, simp]:
   "empty_fail (getIRQSlot irq)"
   by (simp add: getIRQSlot_def getInterruptState_def locateSlot_conv)

@@ -14,7 +14,7 @@
 **.lhs-boot
 /dist/
 
-# cabal dependencies 
+# cabal dependencies
 
 /.stack-work/
 /.cabal-sandbox/

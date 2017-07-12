@@ -64,7 +64,7 @@ adjust f (False:a) n@(Node {}) = n { btFalse = adjust f a $ btFalse n }
 adjust _ _ _ = error "BinaryTree.adjust: object not found"
 
 adjustM :: Monad m => ([Bool] -> a -> m a) -> [Bool] -> BinaryTree a -> m (BinaryTree a)
-adjustM f a (Leaf v) = f a v >>= return . Leaf 
+adjustM f a (Leaf v) = f a v >>= return . Leaf
 adjustM f (True:a) n@(Node {}) = do { v <- adjustM f a $ btTrue n
                                     ; return $ n { btTrue = v }}
 adjustM f (False:a) n@(Node {}) = do { v <- adjustM f a $ btFalse n

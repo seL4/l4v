@@ -121,7 +121,7 @@ The dependencies for installing Isabelle in this repository are
  * Perl 5.x with `libwww-perl`
  * Python 2.x
  * LaTeX, for instance on Ubuntu 14.04
-   `sudo apt-get install texlive-fonts-recommended texlive-latex-extra texlive-metapost texlive-bibtex-extra`     
+   `sudo apt-get install texlive-fonts-recommended texlive-latex-extra texlive-metapost texlive-bibtex-extra`
  * 32-bit C/C++ standard libraries on 64-bit platforms (optional)
 
 For running the standalone version of the C Parser you will additionally need
@@ -161,9 +161,9 @@ need a gcc-compatible C pre-processor and python. Try the following steps:
     installation of the command line tools.
   * install `Tempita`, for instance using `sudo easy_install tempita`.
     `easy_install` is part of Python's [`setuptools`][9].
-  * install the [`misc/scripts/cpp`](misc/scripts/cpp) wrapper for clang, 
+  * install the [`misc/scripts/cpp`](misc/scripts/cpp) wrapper for clang,
     by putting it in `~/bin`, or somewhere else in your `PATH`.
-    
+
 
 [7]: http://mlton.org                               "MLton ML compiler"
 [8]: http://sel4.systems/Info/GettingStarted/DebianToolChain.pml  "seL4 tool chain setup"

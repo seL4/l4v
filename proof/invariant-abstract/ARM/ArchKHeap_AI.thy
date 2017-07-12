@@ -217,7 +217,7 @@ lemma cap_refs_in_kernel_window_arch_update[simp]:
   by (simp add: cap_refs_in_kernel_window_def)
 
 lemma
-  ex_ko_at_def2: 
+  ex_ko_at_def2:
   "(\<exists>ko. ko_at ko p s \<and> P ko) = (obj_at P p s)"
   by (simp add: obj_at_def)
 
@@ -325,7 +325,7 @@ lemma valid_arch_objs_lift_weak:
   done
 
 lemma set_object_neg_lookup:
-  "\<lbrace>\<lambda>s. \<not> (\<exists>rs. (rs \<rhd> p') s) \<and> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s \<rbrace> 
+  "\<lbrace>\<lambda>s. \<not> (\<exists>rs. (rs \<rhd> p') s) \<and> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s \<rbrace>
   set_object p ko
   \<lbrace>\<lambda>_ s. \<not> (\<exists>rs. (rs \<rhd> p') s)\<rbrace>"
   apply (simp add: set_object_def)
@@ -339,7 +339,7 @@ lemma set_object_neg_lookup:
   done
 
 lemma set_object_vs_lookup:
-  "\<lbrace>\<lambda>s. obj_at (\<lambda>ko'. vs_refs ko = vs_refs ko') p s \<and> P (vs_lookup s) \<rbrace> 
+  "\<lbrace>\<lambda>s. obj_at (\<lambda>ko'. vs_refs ko = vs_refs ko') p s \<and> P (vs_lookup s) \<rbrace>
   set_object p ko
   \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
   apply (simp add: set_object_def)
@@ -358,7 +358,7 @@ lemma set_object_vs_lookup:
 lemma set_object_pt_not_vs_lookup_pages:
   "\<lbrace>\<lambda>s. \<not>(ref \<unrhd> p') s
     \<and> ((\<exists>\<unrhd>p) s \<longrightarrow> (\<forall>x. case pte_ref_pages (pt x) of
-              Some ptr \<Rightarrow> 
+              Some ptr \<Rightarrow>
                 obj_at (\<lambda>ko. vs_refs_pages ko = {}) ptr s \<and>
                 ptr \<noteq> p'
             | None \<Rightarrow> True))\<rbrace>
@@ -410,7 +410,7 @@ lemma set_object_pt_not_vs_lookup_pages:
 
 
 lemma set_object_vs_lookup_pages:
-  "\<lbrace>\<lambda>s. obj_at (\<lambda>ko'. vs_refs_pages ko = vs_refs_pages ko') p s \<and> P (vs_lookup_pages s) \<rbrace> 
+  "\<lbrace>\<lambda>s. obj_at (\<lambda>ko'. vs_refs_pages ko = vs_refs_pages ko') p s \<and> P (vs_lookup_pages s) \<rbrace>
   set_object p ko
   \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
   apply (simp add: set_object_def)
@@ -428,7 +428,7 @@ lemma set_object_vs_lookup_pages:
 
 
 lemma set_object_atyp_at:
-  "\<lbrace>\<lambda>s. typ_at (AArch (aa_type ako)) p s \<and> P (typ_at (AArch T) p' s)\<rbrace> 
+  "\<lbrace>\<lambda>s. typ_at (AArch (aa_type ako)) p s \<and> P (typ_at (AArch T) p' s)\<rbrace>
     set_object p (ArchObj ako)
    \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p' s)\<rbrace>"
   apply (simp add: set_object_def)
@@ -439,16 +439,16 @@ lemma set_object_atyp_at:
   done
 
 lemma set_object_arch_objs:
-  "\<lbrace>valid_arch_objs and typ_at (a_type ko) p and 
+  "\<lbrace>valid_arch_objs and typ_at (a_type ko) p and
     obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p  and
     (\<lambda>s. case ko of ArchObj ao \<Rightarrow>
              (\<exists>\<rhd>p)s \<longrightarrow> valid_arch_obj ao s
             | _ \<Rightarrow> True)\<rbrace>
-  set_object p ko 
+  set_object p ko
   \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
   apply (simp add: valid_arch_objs_def)
   apply (subst imp_conv_disj)+
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift set_object_neg_lookup set_object_neg_ko 
+  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift set_object_neg_lookup set_object_neg_ko
             valid_arch_obj_typ2 [where Q="typ_at (a_type ko) p"] set_object_typ_at
          | simp)+
   apply (clarsimp simp: pred_neg_def obj_at_def)
@@ -527,7 +527,7 @@ lemma valid_global_objs_lift':
   assumes pd: "\<And>P. \<lbrace>\<lambda>s. P (arm_global_pd (arch_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (arm_global_pd (arch_state s))\<rbrace>"
   assumes obj: "\<And>p. \<lbrace>valid_vso_at p\<rbrace> f \<lbrace>\<lambda>rv. valid_vso_at p\<rbrace>"
   assumes ko: "\<And>ako p. \<lbrace>ko_at (ArchObj ako) p\<rbrace> f \<lbrace>\<lambda>_. ko_at (ArchObj ako) p\<rbrace>"
-  assumes emp: "\<And>pd S. 
+  assumes emp: "\<And>pd S.
        \<lbrace>\<lambda>s. (v \<longrightarrow> pd = arm_global_pd (arch_state s) \<and> S = set (second_level_tables (arch_state s)) \<and> P s)
             \<and> obj_at (empty_table S) pd s\<rbrace>
                  f \<lbrace>\<lambda>rv. obj_at (empty_table S) pd\<rbrace>"
@@ -551,8 +551,8 @@ lemma arch_lifts_vspace:
   shows
   valid_global_vspace_mappings_lift:
     "\<lbrace>valid_global_vspace_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>" and
-  valid_arch_caps_lift_weak: 
-    "(\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>) \<Longrightarrow> 
+  valid_arch_caps_lift_weak:
+    "(\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>) \<Longrightarrow>
       \<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>" and
   valid_global_objs_lift_weak:
     "\<lbrace>valid_global_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>" and
@@ -795,7 +795,7 @@ lemma set_object_global_vspace_mappings:
 
 lemma valid_table_caps_ptD:
   "\<lbrakk> (caps_of_state s) p = Some (ArchObjectCap (arch_cap.PageTableCap p' None));
-     page_table_at p' s; valid_table_caps s \<rbrakk> \<Longrightarrow> 
+     page_table_at p' s; valid_table_caps s \<rbrakk> \<Longrightarrow>
     \<exists>pt. ko_at (ArchObj (PageTable pt)) p' s \<and> valid_arch_obj (PageTable pt) s"
   apply (clarsimp simp: valid_table_caps_def simp del: split_paired_All)
   apply (erule allE)+
@@ -821,7 +821,7 @@ lemma store_pde_pred_tcb_at:
 lemma empty_table_lift:
   assumes S: "\<And>P. \<lbrace>\<lambda>s. P (S s)\<rbrace> f \<lbrace>\<lambda>_ s. P (S s)\<rbrace>"
   assumes o: "\<And>P. \<lbrace>obj_at P p and Q\<rbrace> f \<lbrace>\<lambda>_. obj_at P p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. obj_at (empty_table (S s)) p s \<and> Q s\<rbrace> 
+  shows "\<lbrace>\<lambda>s. obj_at (empty_table (S s)) p s \<and> Q s\<rbrace>
          f \<lbrace>\<lambda>_ s. obj_at (empty_table (S s)) p s\<rbrace>"
   apply (rule hoare_lift_Pf2 [where f="S"])
    apply (wp o S|simp)+
@@ -878,7 +878,7 @@ lemma device_mem_obj_upd_dom:
 lemma pspace_respects_region_cong[cong]:
   "\<lbrakk>kheap a  = kheap b; device_state (machine_state a) = device_state (machine_state b)\<rbrakk>
   \<Longrightarrow> pspace_respects_device_region a = pspace_respects_device_region b"
-  by (simp add: pspace_respects_device_region_def device_mem_def user_mem_def in_device_frame_def 
+  by (simp add: pspace_respects_device_region_def device_mem_def user_mem_def in_device_frame_def
     in_user_frame_def obj_at_def dom_def)
 
 definition "obj_is_device tp dev \<equiv>

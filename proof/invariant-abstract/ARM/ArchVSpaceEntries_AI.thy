@@ -1210,7 +1210,7 @@ lemma ensure_safe_mapping_ensures[wp]:
         apply (simp add:word_of_nat_less word_bits_def)+
       apply (simp add: of_nat_neq_0)
      apply simp
-     done 
+     done
     have neq_pt_offset: "\<And>z zs xa (p::word32). \<lbrakk>[0 , 4 .e. 0x3C] = z # zs;
         xa \<in> set zs;is_aligned p 6 \<rbrakk> \<Longrightarrow>
         ucast (p + xa && mask pt_bits >> 2) && ~~ mask 4 \<noteq> ((ucast (p + xa && mask pt_bits >> 2))::word8)"

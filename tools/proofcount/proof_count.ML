@@ -10,7 +10,7 @@
 
 signature PROOF_COUNT =
 sig
-  
+
   datatype lemmaT = Lemma of string | Declare of string
 
   datatype transactionT = Start | Qed | Declaration | Qed_Global | Unknown
@@ -20,7 +20,7 @@ sig
   val get_size_report : unit -> count_report
 
   val compute_sizes : count_report -> (lemmaT * Position.range) Symtab.table
-  
+
 end
 
 structure Proof_Count : PROOF_COUNT =
@@ -32,13 +32,13 @@ type count_report = (((transactionT * string) * string list * (Position.range)) 
 
 val transactions = Synchronized.var "hooked" (Symtab.empty : ((transactionT * string) * string list * (Position.range)) list Symtab.table)
 
-fun get_transactionT k = 
+fun get_transactionT k =
     if Keyword.is_theory_goal k orelse Keyword.is_proof_goal k then Start
     else if Keyword.is_qed k then Qed
     else if Keyword.is_qed_global k then Qed_Global
     else if member (op =) (Keyword.command_tags k) "thy_decl" orelse k = "lemmas" then Declaration
     else Unknown
-  
+
 fun needs_hook k = case get_transactionT k of Unknown => false
                  | _ => if k = "lemmas" orelse k = "by" then false else true
 
@@ -54,11 +54,11 @@ let
   val realnms = map (fn (_,thms) => filter Thm.has_name_hint thms |> map Thm.get_name_hint) nms |> flat
 in
   Synchronized.change transactions (Symtab.map_default (file,[]) (cons ((get_transactionT trans,trans),realnms,(beg,fin)))) end
-  
+
 
 val _ =
   Outer_Syntax.command @{command_keyword "by"} "terminal backward proof"
-    ((fn toks => 
+    ((fn toks =>
     let
       val (beg,fin) = (Token.pos_of (hd toks),Token.pos_of (List.last toks))
       val file = Position.file_of beg |> the_default ""
@@ -67,7 +67,7 @@ val _ =
       (Method.parse -- Scan.option Method.parse >> Isar_Cmd.terminal_proof) toks
     end))
 
-fun wrap_lthy' ttyp parser toks = 
+fun wrap_lthy' ttyp parser toks =
   let
     val (flthy,toks') = parser toks
   in
@@ -92,12 +92,12 @@ fun bracket_list leftbr rightbr superbr l =
 let
   fun err () = error ("Mismatched parenthesis: " ^ Position.here @{here})
 
-  fun bracket_list_aux stack pairs extras [] = 
+  fun bracket_list_aux stack pairs extras [] =
       if null stack then (rev pairs,rev extras) else err ()
-  
+
   |  bracket_list_aux stack pairs extras (x :: l) =
     if leftbr x then bracket_list_aux (x :: stack) pairs extras l
-    else if rightbr x then 
+    else if rightbr x then
     case stack of
       (s :: stack') => bracket_list_aux stack' ((s,x) :: pairs) extras l
       | _ => err ()
@@ -109,12 +109,12 @@ end
 
 fun merge_duplicates ord merge =
 let
-  fun merge_duplicates_aux (a :: b :: l) = 
-  (case (ord (a,b)) of 
+  fun merge_duplicates_aux (a :: b :: l) =
+  (case (ord (a,b)) of
       EQUAL => merge_duplicates_aux ((merge a b) :: l)
     | GREATER => error "Merging duplicates requires sorted list"
     | _ => a :: (merge_duplicates_aux (b :: l)))
-    
+
     | merge_duplicates_aux x = x
 in
   merge_duplicates_aux
@@ -130,8 +130,8 @@ datatype lemmaT = Lemma of string | Declare of string
 
 fun compute_sizes (transactions) =
   let
-    
-    fun trans_less (Start,Qed) = true 
+
+    fun trans_less (Start,Qed) = true
        | trans_less (Start,Declaration) = true
        | trans_less (Qed,Declaration) = true
        | trans_less (Start,Qed_Global) = true
@@ -141,7 +141,7 @@ fun compute_sizes (transactions) =
     fun do_prod (((trans,_),_,(st1,_)),((trans',_),_,(st2,_))) = ((st1,trans),(st2,trans'))
 
     val ord = (prod_ord pos_ord (make_ord trans_less)) o do_prod
-        
+
     fun proc_entry (_,trans) =
       let
         val _ = map (fn  ((Unknown,_),_,_) =>
@@ -151,14 +151,14 @@ fun compute_sizes (transactions) =
         val sorted_transactions = sort ord trans
         |> merge_duplicates ord (fn (t,nms,s) => fn (_,nms',_) => (t,merge (op =) (nms,nms'),s))
 
-        val (paired,singles) = bracket_list 
+        val (paired,singles) = bracket_list
             (fn ((t,_),_,_) => t = Start)
             (fn ((t,_),_,_) => t = Qed)
             (fn ((t,_),_,_) => t = Qed_Global)
             sorted_transactions
 
         fun fix_range ((x,xs,(st1,_)),(_,ys,(_,fin2))) = (x,xs @ ys,(st1,fin2))
-      in                                                      
+      in
         (map fix_range paired) @ singles end
 
       fun translate_trans t nm = case t of Start => Lemma nm
@@ -175,7 +175,7 @@ fun compute_sizes (transactions) =
 end
 
 (*FIXME: Redundant?*)
-val _ = Toplevel.add_hook (fn trans => fn state => fn state' => 
+val _ = Toplevel.add_hook (fn trans => fn state => fn state' =>
         if needs_hook (Toplevel.name_of trans) then
           (let
             val pos = Toplevel.pos_of trans
@@ -187,6 +187,6 @@ val _ = Toplevel.add_hook (fn trans => fn state => fn state' =>
           in
             add_new_lemmas thy thy' pos pos name end)
         else ())
-   
+
 
 end

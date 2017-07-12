@@ -6,7 +6,7 @@
  * See "LICENSE_BSD2.txt" for details.
  *
  * @TAG(NICTA_BSD)
- * 
+ *
  *)
 
 theory AutoLevity_Hooks
@@ -15,7 +15,7 @@ begin
 
 setup \<open>
 case getenv "AUTOLEVITY" of
-  "1" => AutoLevity_Base.setup_command_hook {trace_apply = false} 
+  "1" => AutoLevity_Base.setup_command_hook {trace_apply = false}
 | "2" => AutoLevity_Base.setup_command_hook {trace_apply = true}
 | _ => I
 \<close>

@@ -22,12 +22,12 @@ no_notation bind_drop (infixl ">>" 60)
 (* Clagged from Bits_R *)
 
 crunch_ignore (add:
-  bind return "when" get gets fail 
+  bind return "when" get gets fail
   assert put modify unless select
   alternative assert_opt gets_the
   returnOk throwError lift bindE
-  liftE whenE unlessE throw_opt 
-  assertE liftM liftME sequence_x 
+  liftE whenE unlessE throw_opt
+  assertE liftM liftME sequence_x
   zipWithM_x mapM_x sequence mapM sequenceE_x
   sequenceE mapME mapME_x catch select_f
   handleE' handleE handle_elseE forM forM_x

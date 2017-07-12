@@ -94,7 +94,7 @@ getActiveIRQ env = do
     runDevicesCallback env
     interruptCallback env
 
--- 1kHz tick; qemu's SP804s always run at 1MHz 
+-- 1kHz tick; qemu's SP804s always run at 1MHz
 timerFreq :: Word
 timerFreq = 100
 
@@ -107,7 +107,7 @@ configureTimer env = do
     storeWordCallback env timerAddr 0
     let timerCtrl = bit 24 .|. bit 17 .|. bit 3 .|. bit 2 .|. bit 1
     storeWordCallback env timerAddr timerCtrl
-    storeWordCallback env (timerAddr+0x8) (100 * 1000 * 1000) 
+    storeWordCallback env (timerAddr+0x8) (100 * 1000 * 1000)
     storeWordCallback env (timerAddr+0xc) 0
     storeWordCallback env (timerAddr+0x4) 1
     let timerCtrl2 = timerCtrl .|. 1
@@ -118,7 +118,7 @@ initIRQController :: Ptr CallbackData -> IO ()
 initIRQController env = runDevicesCallback env
 
 resetTimer :: Ptr CallbackData -> IO ()
-resetTimer env = storeWordCallback env (timerAddr+0x4) 1 
+resetTimer env = storeWordCallback env (timerAddr+0x4) 1
 
 isbCallback :: Ptr CallbackData -> IO ()
 isbCallback _ = return ()

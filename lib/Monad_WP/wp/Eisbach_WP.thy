@@ -20,7 +20,7 @@ imports
 begin
 
 
-text \<open> 
+text \<open>
   Methods for manipulating the post conditions of hoare triples as if they
   were proper subgoals.
 
@@ -59,17 +59,17 @@ named_theorems hoare_post_imps
 
 lemmas [hoare_post_imps] = hoare_post_imp_R hoare_post_imp[rotated]
 
-method post_asm_raw methods m = 
+method post_asm_raw methods m =
   (drule hoare_post_imps,
    atomize (full),
-   focus_concl 
-     \<open>intro impI allI, 
-      m, 
+   focus_concl
+     \<open>intro impI allI,
+      m,
       atomize (full),
       ((rule uncurry2)+)?\<close>,
    rule trivial_imp)
 
-method post_asm methods m = 
+method post_asm methods m =
   (post_asm_raw \<open>(simp only: bipred_conj_def pred_conj_def)?,(elim conjE)?,m\<close>)
 
 
@@ -81,14 +81,14 @@ named_theorems packed_validIs
 
 lemmas [packed_validIs] = packed_validI packed_validRI
 
-method post_raw methods m = 
-  (focus_concl 
+method post_raw methods m =
+  (focus_concl
     \<open>rule packed_validEs,
-     focus_concl \<open>m,fold_subgoals\<close>, 
+     focus_concl \<open>m,fold_subgoals\<close>,
      atomize (full),
      rule packed_validI\<close>)
 
-method post_strong methods m_distinct m_all = 
+method post_strong methods m_distinct m_all =
   (post_raw
      \<open>(simp only: pred_conj_def bipred_conj_def)?,
       (intro impI conjI allI)?,
@@ -102,21 +102,21 @@ end
 
 
 text \<open>
-  Method (meant to be used with @ as an attribute) used for producing multiple facts out of 
+  Method (meant to be used with @ as an attribute) used for producing multiple facts out of
   a single hoare triple with a conjunction in its post condition.
 \<close>
 
 context begin
 
-private lemma hoare_decompose: 
+private lemma hoare_decompose:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> Q' r s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<and> \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>"
   by (fastforce simp add: valid_def pred_conj_def)
 
-private lemma hoare_decomposeE_R: 
+private lemma hoare_decomposeE_R:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> Q' r s\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<and> \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>,-"
   by (fastforce simp add: validE_R_def validE_def valid_def pred_conj_def split: prod.splits sum.splits)
 
-private lemma hoare_decomposeE_E: 
+private lemma hoare_decomposeE_E:
   "\<lbrace>P\<rbrace> f -,\<lbrace>\<lambda>r s. Q r s \<and> Q' r s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f -,\<lbrace>Q\<rbrace> \<and> \<lbrace>P\<rbrace> f -,\<lbrace>Q'\<rbrace>"
   by (fastforce simp add: validE_E_def validE_def valid_def pred_conj_def split: prod.splits sum.splits)
 
@@ -129,8 +129,8 @@ private lemmas hoare_decomposes' = hoare_decompose hoare_decomposeE_R hoare_deco
 private method add_pred_conj = (subst pred_conj_def[symmetric])
 private method add_bipred_conj = (subst bipred_conj_def[symmetric])
 
-private lemmas hoare_decomposes[THEN conjE] = 
-  hoare_decomposes' 
+private lemmas hoare_decomposes[THEN conjE] =
+  hoare_decomposes'
   hoare_decomposes'[# \<open>add_pred_conj\<close>]
   hoare_decomposes'[# \<open>add_bipred_conj\<close>]
   hoare_decomposeE[# \<open>add_pred_conj, add_pred_conj\<close>]
@@ -164,7 +164,7 @@ notepad begin
   apply (post_strong \<open>simp\<close> \<open>-\<close>)
   apply (wp f_valid')
   by simp
-    
+
   (* All rotations are attempted when strengthening *)
 
   have f_valid_interm: "\<lbrace>A\<rbrace> f \<lbrace>\<lambda>_. (\<lambda>s. D s \<longrightarrow> B s) and B and C \<rbrace>"

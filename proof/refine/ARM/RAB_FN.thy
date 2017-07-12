@@ -31,8 +31,8 @@ definition
 abbreviation (input)
   "cnode_caps_gsCNodes' s \<equiv> cnode_caps_gsCNodes (only_cnode_caps (ctes_of s)) (gsCNodes s)"
 
-function 
-  resolveAddressBitsFn :: 
+function
+  resolveAddressBitsFn ::
   "capability \<Rightarrow> cptr \<Rightarrow> nat \<Rightarrow> (word32 \<Rightarrow> capability option)
     \<Rightarrow> (lookup_failure + (machine_word * nat))"
 where

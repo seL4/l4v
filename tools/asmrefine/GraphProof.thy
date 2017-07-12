@@ -597,7 +597,7 @@ primrec
     \<Rightarrow> (trace \<times> trace) \<Rightarrow> bool"
 where
     "first_reached_prop [] p trs = False"
-  | "first_reached_prop (v # vs) p trs = 
+  | "first_reached_prop (v # vs) p trs =
     (if double_pc v trs then p v trs
         else first_reached_prop vs p trs)"
 
@@ -1054,7 +1054,7 @@ lemma trace_end_visit_Ret:
   done
 
 definition
-  "output_rel orel gfs restrs trs = 
+  "output_rel orel gfs restrs trs =
     orel (\<lambda>(x, y). acc_vars (tuple_switch (function_inputs, function_outputs) y
                 (tuple_switch gfs x))
             (the (double_visit (x, tuple_switch (NextNode (entry_point (tuple_switch gfs x)), Ret) y,
@@ -1624,7 +1624,7 @@ proof -
        \<longrightarrow> \<not> restrs_condition tr restrs j"
     using restrs_single_visit[OF tr _ _ i cut]
     by clarsimp
-  
+
   note eq = Least_equality[where x=i, OF _ ccontr, unfolded linorder_not_le]
 
   show ?thesis using i
@@ -1874,7 +1874,7 @@ lemma infinite_subset:
 
 lemma restr_trace_refine_Split_orig:
   fixes rs1 rs2 hyps Gamma1 f1 Gamma2 f2
-  defines "H trs \<equiv> 
+  defines "H trs \<equiv>
           exec_double_trace Gamma1 f1 Gamma2 f2 (fst trs) (snd trs)
         \<and> restrs_eventually_condition (fst trs) (restrs_list rs1)
         \<and> restrs_eventually_condition (snd trs) (restrs_list rs2)"

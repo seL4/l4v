@@ -73,7 +73,7 @@ lemma decode_page_map_intent_rv_20_24:
   apply (wp alternativeE_wp select_wp | wpc)+
   apply (rule validE_validE_R)
    apply (wp alternativeE_wp)
-    apply (simp add:cdl_page_mapping_entries_def 
+    apply (simp add:cdl_page_mapping_entries_def
       split del:if_splits | wp | wpc)+
 
    apply auto

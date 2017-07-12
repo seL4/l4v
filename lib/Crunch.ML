@@ -43,7 +43,7 @@ struct
   val pre_thms = @{thms "hoare_pre"};
   val wpc_tactic = wp_cases_tactic_weak;
   fun parse_extra ctxt extra
-        = case extra of 
+        = case extra of
             "" => error "A post condition is required"
           | extra => let val post = Syntax.parse_term ctxt extra in (post, post) end;
   val magic = Syntax.parse_term @{context}
@@ -125,7 +125,7 @@ struct
   val pre_thms = @{thms "hoare_pre"};
   val wpc_tactic = wp_cases_tactic_weak;
   fun parse_extra ctxt extra
-        = case extra of 
+        = case extra of
             "" => error "A post condition is required"
           | extra => let val post = Syntax.parse_term ctxt extra in (post, (post, post)) end;
   val magic = Syntax.parse_term @{context}
@@ -160,13 +160,13 @@ local structure P = Parse and K = Keyword in
 
 (* Read a list of names, up to the next section identifier *)
 fun read_thm_list sections =
-    let val match_section_name = Scan.first (map P.reserved sections) 
+    let val match_section_name = Scan.first (map P.reserved sections)
 in
     Scan.repeat (Scan.unless match_section_name (P.name || P.long_ident))
 end
 
 fun read_section all_sections section =
-    (P.reserved section -- P.$$$ ":") |-- read_thm_list all_sections >> map (fn n => (section, n)) 
+    (P.reserved section -- P.$$$ ":") |-- read_thm_list all_sections >> map (fn n => (section, n))
 
 fun read_sections sections =
     Scan.repeat (Scan.first (map (read_section sections) sections)) >> List.concat

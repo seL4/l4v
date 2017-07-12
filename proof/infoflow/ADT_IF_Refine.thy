@@ -190,7 +190,7 @@ crunch (empty_fail) empty_fail[wp]: device_memory_update
 lemma getExMonitor_empty_fail[wp]:
   "empty_fail getExMonitor"
   by (simp add: getExMonitor_def)
- 
+
 lemma setExMonitor_empty_fail[wp]:
   "empty_fail (setExMonitor es)"
   by (simp add: setExMonitor_def)
@@ -198,7 +198,7 @@ lemma setExMonitor_empty_fail[wp]:
 lemma getExMonitor_no_fail[wp]:
   "no_fail \<top> getExMonitor"
   by (simp add: getExMonitor_def)
- 
+
 lemma setExMonitor_no_fail'[wp]:
   "no_fail \<top> (setExMonitor (x, y))"
   by (simp add: setExMonitor_def)
@@ -244,7 +244,7 @@ lemma corres_gets_same:
   assumes equiv: "\<And>s s'. \<lbrakk>P s; Q s'; (s, s') \<in> sr\<rbrakk>\<Longrightarrow> f s = g s'"
      and rimp : "\<And>s. P s \<Longrightarrow> R (f s) s"
      and corres: "\<And>r.  corres_underlying sr b c rr (P and (R r) and (\<lambda>s. r = f s)) Q (n r) (m r)"
-  shows "corres_underlying sr b c rr P Q 
+  shows "corres_underlying sr b c rr P Q
   (do r \<leftarrow> gets f; n r od)
   (do r \<leftarrow> gets g; m r od)"
   apply (rule corres_guard_imp)
@@ -373,7 +373,7 @@ lemma doUserOp_if_invs'[wp]:
    "\<lbrace>invs'  and
     (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
     ct_running' and ex_abs (einvs)\<rbrace>
-   doUserOp_if f tc 
+   doUserOp_if f tc
   \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: doUserOp_if_def split_def ex_abs_def)
   apply (wp device_update_invs' dmo_setExMonitor_wp' dmo_invs' | simp)+
@@ -386,7 +386,7 @@ lemma doUserOp_if_invs'[wp]:
   done
 
 lemma doUserOp_valid_duplicates[wp]:
-  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace> doUserOp_if f tc 
+  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace> doUserOp_if f tc
   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: doUserOp_if_def split_def)
   apply (wp dmo_setExMonitor_wp' dmo_invs' select_wp | simp)+
@@ -418,7 +418,7 @@ lemma doUserOp_if_cur_thread[wp]:
 
 lemma doUserOp_if_ct_in_state[wp]:
   "\<lbrace>ct_in_state' st\<rbrace>
-    doUserOp_if f tc 
+    doUserOp_if f tc
    \<lbrace>\<lambda>_. ct_in_state' st\<rbrace>"
   apply (rule hoare_pre)
    apply (rule ct_in_state_thread_state_lift')
@@ -512,7 +512,7 @@ lemma do_user_op_if_corres':
            apply (clarsimp simp: select_def corres_underlying_def)
            apply (simp only: comp_def | wp hoare_TrueI)+
        apply (rule corres_assert')
-       apply (wp hoare_TrueI[where P = \<top>] | simp | rule corres_underlying_trivial)+      
+       apply (wp hoare_TrueI[where P = \<top>] | simp | rule corres_underlying_trivial)+
    apply clarsimp
    apply force
   apply force
@@ -520,7 +520,7 @@ lemma do_user_op_if_corres':
 
 lemma doUserOp_if_ex_abs[wp]:
    "\<lbrace>invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and ex_abs (einvs)\<rbrace>
-  doUserOp_if f tc 
+  doUserOp_if f tc
 \<lbrace>\<lambda>_. ex_abs (einvs)\<rbrace>"
   apply (rule hoare_pre)
    apply (rule corres_ex_abs_lift'[OF do_user_op_if_corres'])
@@ -532,7 +532,7 @@ lemma doUserOp_if_ex_abs[wp]:
   apply (clarsimp simp: active_from_running ct_running_related
                           schedaction_related)+
   done
-  
+
 
 
 definition
@@ -542,7 +542,7 @@ definition
 
 definition checkActiveIRQ_if :: "(MachineTypes.register \<Rightarrow> 32 word) \<Rightarrow> (10 word option \<times> (MachineTypes.register \<Rightarrow> 32 word)) kernel" where
 "checkActiveIRQ_if tc \<equiv>
-do 
+do
    irq \<leftarrow> doMachineOp (getActiveIRQ False);
    return (irq, tc)
 od"
@@ -621,14 +621,14 @@ lemma checkActiveIRQ_ex_abs[wp]: "\<lbrace>ex_abs (einvs)\<rbrace> checkActiveIR
   apply (clarsimp simp: ex_abs_def)
   done
 
-definition 
+definition
   checkActiveIRQ_H_if
   where
   "checkActiveIRQ_H_if \<equiv> {((tc, s), irq, (tc', s')). ((irq, tc'), s') \<in> fst (checkActiveIRQ_if tc s)}"
 
 definition
   handlePreemption_if :: "(MachineTypes.register \<Rightarrow> 32 word) \<Rightarrow> (MachineTypes.register \<Rightarrow> 32 word) kernel" where
-  "handlePreemption_if tc \<equiv> do 
+  "handlePreemption_if tc \<equiv> do
      irq \<leftarrow> doMachineOp (getActiveIRQ False);
      when (irq \<noteq> None) $ handleInterrupt (the irq);
      return tc
@@ -666,7 +666,7 @@ lemma handlePreemption_invs'[wp]:
   done
 
 lemma handlePreemption_if_valid_duplicates[wp]:
-  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace> handlePreemption_if tc 
+  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace> handlePreemption_if tc
   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: handlePreemption_if_def)
   apply (wp dmo'_getActiveIRQ_wp)
@@ -700,7 +700,7 @@ definition
 
 definition
   schedule'_if :: "(MachineTypes.register \<Rightarrow> 32 word) \<Rightarrow> (MachineTypes.register \<Rightarrow> 32 word) kernel" where
-  "schedule'_if tc \<equiv> do 
+  "schedule'_if tc \<equiv> do
      schedule;
      activateThread;
      return tc
@@ -742,7 +742,7 @@ lemma schedule_if'_ct_running_or_idle[wp]:
   apply (rule hoare_post_imp[OF _ schedule_if'_invs'_post])
   apply simp
   done
-  
+
 
 lemma schedule_if'_rct[wp]:
   "\<lbrace>invs'\<rbrace> schedule'_if tc \<lbrace>\<lambda>r s. ksSchedulerAction s = ResumeCurrentThread\<rbrace>"
@@ -752,7 +752,7 @@ lemma schedule_if'_rct[wp]:
 
 
 lemma scheduler_if'_valid_duplicates[wp]:
-  "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace> schedule'_if tc 
+  "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace> schedule'_if tc
   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: schedule'_if_def)
   apply (wp | simp)+
@@ -856,7 +856,7 @@ definition full_invs_if' where
 definition has_srel_state where
 "has_srel_state srel P \<equiv> {s. \<exists>s'. (s,s') \<in> srel \<and> s' \<in> P}"
 
-definition lift_fst_rel where 
+definition lift_fst_rel where
   "lift_fst_rel srel \<equiv> {(r,r'). snd r = snd r' \<and> (fst r, fst r') \<in> srel}"
 
 (*Includes serializability*)
@@ -868,7 +868,7 @@ definition step_corres where
                          (\<exists>e t. (s,e,t) \<in> mabs \<and> (t,t') \<in> srel \<and> e = e')))"
 
 
-definition lift_snd_rel where 
+definition lift_snd_rel where
   "lift_snd_rel srel \<equiv> {(r,r'). fst r = fst r' \<and> (snd r, snd r') \<in> srel}"
 
 definition preserves where
@@ -989,14 +989,14 @@ locale global_automaton_invs =
   assumes check_active_irq_idle_invs: "preserves InIdleMode InIdleMode invs check_active_irq"
   assumes check_active_irq_invs_entry: "preserves InUserMode (KernelEntry Interrupt) invs check_active_irq"
   assumes check_active_irq_idle_invs_entry: "preserves InIdleMode (KernelEntry Interrupt) invs check_active_irq"
-  
+
   assumes do_user_op_invs: "preserves InUserMode InUserMode invs do_user_op"
   assumes do_user_op_invs_entry: "preserves InUserMode (KernelEntry e) invs do_user_op"
   assumes kernel_call_invs: "e \<noteq> Interrupt \<Longrightarrow> preserves (KernelEntry e) KernelPreempted invs (kernel_call e)"
   assumes kernel_call_invs_sched: "preserves (KernelEntry e) (KernelSchedule (e = Interrupt)) invs (kernel_call e)"
   assumes handle_preemption_invs: "preserves KernelPreempted (KernelSchedule True) invs handle_preemption"
   assumes schedule_invs: "preserves (KernelSchedule b) KernelExit invs schedule"
-  assumes kernel_exit_invs: "preserves' KernelExit invs kernel_exit" 
+  assumes kernel_exit_invs: "preserves' KernelExit invs kernel_exit"
   assumes init_invs: "(Init ADT) s \<subseteq> invs"
   assumes init_extras: "(Init ADT) s \<subseteq> extras"
   begin
@@ -1071,16 +1071,16 @@ lemma preserves_lift'':
   apply fastforce
   done
 
-lemma preserves_lift''': "(\<And>tc. \<lbrace>\<lambda>s. ((tc,s),mode) \<in> P\<rbrace> f tc \<lbrace>\<lambda>tc' s'. ((tc',s'),mode') \<in> P\<rbrace>) 
+lemma preserves_lift''': "(\<And>tc. \<lbrace>\<lambda>s. ((tc,s),mode) \<in> P\<rbrace> f tc \<lbrace>\<lambda>tc' s'. ((tc',s'),mode') \<in> P\<rbrace>)
         \<Longrightarrow>
-        preserves mode mode' P 
+        preserves mode mode' P
            {(s, u, s'). s' \<in> fst (case s of (x, xa) \<Rightarrow> f x xa)}"
   apply (clarsimp simp: preserves_def valid_def)
   done
 
 
 lemma preserves'_lift:
-  "(\<And>tc. \<lbrace>\<lambda>s. ((tc,s),mode) \<in> P\<rbrace> f tc \<lbrace>\<lambda>tc' s'. ((tc',s'),y s') \<in> P\<rbrace>) 
+  "(\<And>tc. \<lbrace>\<lambda>s. ((tc,s),mode) \<in> P\<rbrace> f tc \<lbrace>\<lambda>tc' s'. ((tc',s'),y s') \<in> P\<rbrace>)
         \<Longrightarrow>
   preserves' mode P
         {(s, m, s').
@@ -1096,7 +1096,7 @@ lemmas preserves_lifts = preserves_lift_ret preserves_lift preserves_lift'
 
 
 
-defs step_restrict_def: 
+defs step_restrict_def:
   "step_restrict \<equiv> \<lambda>s. s \<in> has_srel_state (lift_fst_rel (lift_snd_rel state_relation)) full_invs_if'"
 
 context begin interpretation Arch .
@@ -1108,10 +1108,10 @@ lemma abstract_invs:
   supply conj_cong[cong]
   apply (unfold_locales)
                apply (simp add: ADT_A_if_def)
-              apply (simp_all add: check_active_irq_A_if_def do_user_op_A_if_def 
+              apply (simp_all add: check_active_irq_A_if_def do_user_op_A_if_def
                                     kernel_call_A_if_def kernel_handle_preemption_if_def
                                     kernel_schedule_if_def kernel_exit_A_if_def split del: if_split)[12]
-              apply (rule preserves_lifts | 
+              apply (rule preserves_lifts |
                      wp check_active_irq_if_wp do_user_op_if_invs
                     | clarsimp simp add: full_invs_if_def)+
           apply (rule_tac Q="\<lambda>r s'. (invs and ct_running) s' \<and>
@@ -1164,9 +1164,9 @@ lemma abstract_invs:
 end
 
 definition ADT_H_if where
-"ADT_H_if uop \<equiv> \<lparr>Init = \<lambda>s. ({user_context_of s} \<times> {s'. absKState s' = (internal_state_if s)}) \<times> {sys_mode_of s} \<inter> full_invs_if', 
+"ADT_H_if uop \<equiv> \<lparr>Init = \<lambda>s. ({user_context_of s} \<times> {s'. absKState s' = (internal_state_if s)}) \<times> {sys_mode_of s} \<inter> full_invs_if',
                   Fin = \<lambda>((uc,s),m). ((uc, absKState s),m),
-                  Step = (\<lambda>u. global_automaton_if 
+                  Step = (\<lambda>u. global_automaton_if
                               checkActiveIRQ_H_if (doUserOp_H_if uop)
                               kernelCall_H_if handlePreemption_H_if
                               schedule'_H_if kernelExit_H_if)\<rparr>"
@@ -1301,24 +1301,24 @@ lemma step_corres_exE:
   apply (rule ex)
   apply assumption+
   done
-    
-  
 
-locale global_automata_refine = 
+
+
+locale global_automata_refine =
 abs : global_automaton_invs check_active_irq_abs do_user_op_abs
                       kernel_call_abs handle_preemption_abs
-                      schedule_abs kernel_exit_abs invs_abs 
+                      schedule_abs kernel_exit_abs invs_abs
                       ADT_abs extras_abs +
 conc: global_automaton_invs check_active_irq_conc do_user_op_conc
                       kernel_call_conc handle_preemption_conc
                       schedule_conc kernel_exit_conc invs_conc
                       ADT_conc "UNIV"
-for                   check_active_irq_abs and 
+for                   check_active_irq_abs and
                       do_user_op_abs and
                       kernel_call_abs and handle_preemption_abs and
                       schedule_abs and kernel_exit_abs and invs_abs and
-                      ADT_abs :: "(('a global_sys_state),'o, unit) data_type" and extras_abs and                      
-                      check_active_irq_conc and 
+                      ADT_abs :: "(('a global_sys_state),'o, unit) data_type" and extras_abs and
+                      check_active_irq_conc and
                       do_user_op_conc  and
                       kernel_call_conc and handle_preemption_conc and
                       schedule_conc and kernel_exit_conc and
@@ -1351,7 +1351,7 @@ lemma extras_inter'[dest!]: "(t,mode) \<in> has_srel_state (lift_fst_rel srel) i
 
   lemma fw_sim_abs_conc:
   "LI (ADT_abs)
-      (ADT_conc) 
+      (ADT_conc)
       (lift_fst_rel srel)
       (invs_abs \<times> invs_conc)"
   apply (unfold LI_def )
@@ -1393,7 +1393,7 @@ lemma extras_inter'[dest!]: "(t,mode) \<in> has_srel_state (lift_fst_rel srel) i
     done
 
   lemma conc_serial:
-    assumes uop_sane: "\<And>s e t. (s,e,t) \<in> do_user_op_conc \<Longrightarrow> 
+    assumes uop_sane: "\<And>s e t. (s,e,t) \<in> do_user_op_conc \<Longrightarrow>
                        e \<noteq> Some Interrupt"
     assumes no_fail: "nf"
     shows
@@ -1436,10 +1436,10 @@ lemma extras_inter'[dest!]: "(t,mode) \<in> has_srel_state (lift_fst_rel srel) i
     apply fastforce
     done
 
-lemma abs_serial: 
+lemma abs_serial:
   assumes constrained_B: "\<And>s. s \<in> invs_abs \<inter> extras_abs \<Longrightarrow>
         \<exists>s'. s' \<in> invs_conc \<and> (s, s') \<in> lift_fst_rel srel"
-  assumes uop_sane: "\<And>s e t. (s,e,t) \<in> do_user_op_conc \<Longrightarrow> 
+  assumes uop_sane: "\<And>s e t. (s,e,t) \<in> do_user_op_conc \<Longrightarrow>
                        e \<noteq> Some Interrupt"
   assumes no_fail: "nf"
   shows
@@ -1458,7 +1458,7 @@ lemma abs_serial:
   apply (clarsimp simp: lift_fst_rel_def)
   apply auto
   done
-    
+
 
 end
 
@@ -1470,7 +1470,7 @@ end
     apply (case_tac a)
     apply simp
     done
-    
+
 (*Unused*)
   lemma Fin_Init_ADT_H: "s' \<in> (Init (ADT_H_if uop) s) \<Longrightarrow> s' \<in> full_invs_if' \<Longrightarrow> s \<in> Fin (ADT_H_if uop) ` Init (ADT_H_if uop) s"
     apply (clarsimp simp: ADT_H_if_def)
@@ -1484,8 +1484,8 @@ end
     done
 
 
-lemma 
-  step_corres_lift:  
+lemma
+  step_corres_lift:
    "(\<And>tc. corres_underlying srel False nf (op =)
              (\<lambda>s. ((tc,s),mode) \<in> P) (\<lambda>s'. ((tc,s'),mode) \<in> P') (f tc) (f' tc)) \<Longrightarrow>
     (\<And>tc. nf \<Longrightarrow> empty_fail (f' tc)) \<Longrightarrow>
@@ -1569,7 +1569,7 @@ lemma step_corres_lift'''':
   apply (drule_tac x=a in meta_spec)+
   apply fastforce
   done
- 
+
 
 lemmas step_corres_lifts = step_corres_lift step_corres_lift'
                            step_corres_lift'' step_corres_lift'''
@@ -1578,10 +1578,10 @@ lemmas step_corres_lifts = step_corres_lift step_corres_lift'
 
 lemma st_tcb_at_coerce_haskell: "\<lbrakk>st_tcb_at P t a; (a, c) \<in> state_relation; tcb_at' t c\<rbrakk>
 \<Longrightarrow> st_tcb_at' (\<lambda>st'. \<exists>st. thread_state_relation st st' \<and> P st) t c"
-  apply (clarsimp simp: state_relation_def 
+  apply (clarsimp simp: state_relation_def
                         pspace_relation_def
                         obj_at_def st_tcb_at'_def
-                        
+
                         st_tcb_at_def)
   apply (drule_tac x=t in bspec)
    apply fastforce
@@ -1627,14 +1627,14 @@ lemma sched_act_cnt_related:
   by (case_tac "scheduler_action a", simp_all add: state_relation_def)
 
 
-lemma haskell_to_abs: "uop_nonempty uop \<Longrightarrow> global_automata_refine 
+lemma haskell_to_abs: "uop_nonempty uop \<Longrightarrow> global_automata_refine
                                check_active_irq_A_if (do_user_op_A_if uop)
                                kernel_call_A_if kernel_handle_preemption_if
-                               kernel_schedule_if kernel_exit_A_if 
+                               kernel_schedule_if kernel_exit_A_if
                                full_invs_if (ADT_A_if uop) {s. step_restrict s}
                                checkActiveIRQ_H_if (doUserOp_H_if uop)
                                kernelCall_H_if handlePreemption_H_if
-                               schedule'_H_if kernelExit_H_if 
+                               schedule'_H_if kernelExit_H_if
                                full_invs_if' (ADT_H_if uop) (lift_snd_rel state_relation) True"
   apply (simp add: global_automata_refine_def)
   apply (intro conjI)

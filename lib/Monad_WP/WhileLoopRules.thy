@@ -428,7 +428,7 @@ lemma whileLoop_wp_inv [wp]:
   done
 
 lemma validE_whileLoopE:
-  "\<lbrakk>\<And>s. P r s \<Longrightarrow> I r s; 
+  "\<lbrakk>\<And>s. P r s \<Longrightarrow> I r s;
     \<And>r. \<lbrace> \<lambda>s. I r s \<and> C r s \<rbrace> B r \<lbrace> I \<rbrace>,\<lbrace> A \<rbrace>;
     \<And>r s. \<lbrakk> I r s; \<not> C r s \<rbrakk> \<Longrightarrow> Q r s
    \<rbrakk> \<Longrightarrow> \<lbrace> P r \<rbrace> whileLoopE C B r \<lbrace> Q \<rbrace>,\<lbrace> A \<rbrace>"

@@ -145,7 +145,7 @@ lemma sep_add_zero_sym [simp]: "0 + x = x"
   by (simp add: sep_add_commute)
 
 lemma sep_disj_addD2: "\<lbrakk> x ## y + z; y ## z \<rbrakk> \<Longrightarrow> x ## z"
-  by (metis sep_add_commute sep_disj_addD1 sep_disj_commuteI)  
+  by (metis sep_add_commute sep_disj_addD1 sep_disj_commuteI)
 
 lemma sep_disj_addD: "\<lbrakk> x ## y + z; y ## z \<rbrakk> \<Longrightarrow> x ## y \<and> x ## z"
   by (metis sep_disj_addD1 sep_disj_addD2)

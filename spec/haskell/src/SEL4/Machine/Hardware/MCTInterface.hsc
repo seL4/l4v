@@ -24,7 +24,7 @@ import SEL4.Machine.Hardware.ARM.Callbacks
 import SEL4.Machine.RegisterSet
 
 data MCTData = MCTState {
-    env :: Ptr CallbackData, 
+    env :: Ptr CallbackData,
     mctBase :: PAddr }
 
 type MCTMonad = StateT MCTData IO
@@ -67,7 +67,7 @@ mctInit = do
     mctpoke (#{ptr mct_global_map, comp0l} mct_base) (cnth + timerFreq)
 
 
-    mctpoke (#{ptr mct_global_map, int_en} mct_base) comp0IRQ 
+    mctpoke (#{ptr mct_global_map, int_en} mct_base) comp0IRQ
 
     mctpoke (#{ptr mct_global_map, tcon} mct_base) (enGTC .|. enGTCComp0 .|. autoincGTCComp0)
 
@@ -76,15 +76,15 @@ mctInit = do
         wstat <- lift $ mctpeek (#{ptr mct_global_map, wstat} mct_base)
         if (wstat == tconGWSTAT) then (return Nothing) else (return $ Just wstat)
       )
-    case wstat_error of 
+    case wstat_error of
       Nothing -> resetTimer
       Just _ -> return ()
 
 resetTimer :: MCTMonad ()
 resetTimer = do
     mct_base <- gets mctBase
-    mctpoke (#{ptr mct_global_map, int_stat} mct_base) inGTCComp0 
-      
+    mctpoke (#{ptr mct_global_map, int_stat} mct_base) inGTCComp0
+
 
 callMCTApi :: MCTData -> MCTMonad a -> IO a
 callMCTApi mct oper = do

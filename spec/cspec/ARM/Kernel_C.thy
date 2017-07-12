@@ -84,15 +84,15 @@ install_C_file "c/kernel_all.c_pp"
 
 (* hide them again *)
 
-hide_const 
- vmpage_size.ARMSmallPage 
- vmpage_size.ARMLargePage 
- vmpage_size.ARMSection 
+hide_const
+ vmpage_size.ARMSmallPage
+ vmpage_size.ARMLargePage
+ vmpage_size.ARMSection
  vmpage_size.ARMSuperSection
 
 (* re-allow fully qualified accesses (for consistency). Slightly clunky *)
 
-context Arch begin 
+context Arch begin
 
 global_naming "ARM.vmpage_size"
 requalify_consts ARMSmallPage ARMLargePage ARMSection ARMSuperSection

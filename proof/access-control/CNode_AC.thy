@@ -198,14 +198,14 @@ lemma get_cap_prop_imp:
   apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
-  
+
 lemma get_cap_prop_imp2:
   "\<lbrace>cte_wp_at (\<lambda>cap. P cap) slot\<rbrace> get_cap slot \<lbrace>\<lambda>rv s. P rv\<rbrace>"
   apply (rule hoare_pre)
    apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_def)
   done
-  
+
 lemma get_cap_cur_auth:
   "\<lbrace>pas_refined aag and cte_wp_at (\<lambda>_. True) slot and K (is_subject aag (fst slot))\<rbrace> get_cap slot \<lbrace>\<lambda>rv s. pas_cap_cur_auth aag rv\<rbrace>"
   apply (rule hoare_pre)
@@ -221,7 +221,7 @@ lemma decode_cnode_inv_authorised:
                  cong: if_cong Invocations_A.cnode_invocation.case_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
-              lsfco_cte_at 
+              lsfco_cte_at
         | simp only: simp_thms if_simps fst_conv snd_conv Invocations_A.cnode_invocation.simps K_def
         | wpc
         | wp_once get_cap_cur_auth)+
@@ -689,7 +689,7 @@ lemma sts_thread_bound_ntfns[wp]:
   "\<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. P (thread_bound_ntfns s)\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def)
   apply (wp dxo_wp_weak |simp)+
-  apply (clarsimp simp: thread_bound_ntfns_def get_tcb_def 
+  apply (clarsimp simp: thread_bound_ntfns_def get_tcb_def
                  split: if_split option.splits kernel_object.splits
                  elim!: rsubst[where P=P, OF _ ext])
   done

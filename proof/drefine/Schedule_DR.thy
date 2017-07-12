@@ -374,7 +374,7 @@ lemma idle_thread_not_in_queue:
 
 lemma change_current_domain_dcorres: "dcorres dc \<top> \<top> change_current_domain next_domain"
   by (auto simp: corres_underlying_def change_current_domain_def next_domain_def bind_def return_def modify_def Let_def put_def select_def
-                    get_def transform_def trans_state_def transform_objects_def transform_cdt_def transform_current_thread_def 
+                    get_def transform_def trans_state_def transform_objects_def transform_cdt_def transform_current_thread_def
                     transform_asid_table_def)
 
 lemma max_set_not_empty:

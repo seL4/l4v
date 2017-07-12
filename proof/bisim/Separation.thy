@@ -56,7 +56,7 @@ text {*
 
   Systems with such a setup satisfy the preconditions of our separate
   non-intereference proof, which shows that information travels only along
-  these authorised channels. 
+  these authorised channels.
 *}
 
 definition

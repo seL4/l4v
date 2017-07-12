@@ -174,7 +174,7 @@ sub read_thy {
 
   my ($dir, $tn, $ty) = splitname($afn);
   foreach my $i (@{$o{prune}}) { $leaves{$afn} = 1 and return if $i eq $tn; };
-  
+
   open(FILE, "<", "$afn") || die "$afn: $!";
   my $content = '';
   while (not eof(FILE) and
@@ -273,7 +273,7 @@ sub read_ml {
   while ($content =~ s/\b(?:with_quick_and_dirty_)?use_thy\s*"([^"]*)"//) {
     thy_dep($1, $ofn, $afn);
   }
-  while ($content =~ 
+  while ($content =~
          s/\b(?:use_thys|with_skip_proofs_use_thys)\s*(\[\s*$re_string\s*(?:,\s*$re_string\s*)*\])//c) {
     $1 =~ m/^\[(.*)\]$/;
     $_ = $1;
@@ -313,7 +313,7 @@ sub write_make {
 
 sub write_dot {
   my $fn = shift;
-  
+
   ## clustering according to directories
   my %clusters;
   my $deps;

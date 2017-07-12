@@ -16,27 +16,27 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma syscall_bisim:
   assumes bs:
-    "bisim (fr \<oplus> r_flt_rel) P P' m_flt m_flt'" 
-    "\<And>flt flt'. fr flt flt' \<Longrightarrow> 
+    "bisim (fr \<oplus> r_flt_rel) P P' m_flt m_flt'"
+    "\<And>flt flt'. fr flt flt' \<Longrightarrow>
         bisim r (P_flt flt) (P'_flt flt') (h_flt flt) (h_flt' flt')"
-    "\<And>rv rv'. r_flt_rel rv rv' \<Longrightarrow> 
-        bisim (ser \<oplus> r_err_rel rv rv') 
+    "\<And>rv rv'. r_flt_rel rv rv' \<Longrightarrow>
+        bisim (ser \<oplus> r_err_rel rv rv')
                (P_no_flt rv) (P'_no_flt rv')
                (m_err rv) (m_err' rv')"
     "\<And>rv rv' err err'. \<lbrakk>r_flt_rel rv rv'; ser err err'\<rbrakk>
-     \<Longrightarrow> bisim r (P_err rv err) 
+     \<Longrightarrow> bisim r (P_err rv err)
             (P'_err rv' err') (h_err err) (h_err' err')"
     "\<And>rvf rvf' rve rve'. \<lbrakk>r_flt_rel rvf rvf'; r_err_rel rvf rvf' rve rve'\<rbrakk>
      \<Longrightarrow> bisim (f \<oplus> r)
-           (P_no_err rvf rve) (P'_no_err rvf' rve') 
+           (P_no_err rvf rve) (P'_no_err rvf' rve')
            (m_fin rve) (m_fin' rve')"
   assumes wp:  "\<And>rv.  \<lbrace>Q_no_flt rv\<rbrace>   m_err rv   \<lbrace>P_no_err rv\<rbrace>,  \<lbrace>P_err rv\<rbrace>"
                "\<And>rv'. \<lbrace>Q'_no_flt rv'\<rbrace> m_err' rv' \<lbrace>P'_no_err rv'\<rbrace>,\<lbrace>P'_err rv'\<rbrace>"
-               "\<lbrace>Q\<rbrace> m_flt \<lbrace>\<lambda>rv. P_no_flt rv and Q_no_flt rv\<rbrace>, \<lbrace>P_flt\<rbrace>" 
+               "\<lbrace>Q\<rbrace> m_flt \<lbrace>\<lambda>rv. P_no_flt rv and Q_no_flt rv\<rbrace>, \<lbrace>P_flt\<rbrace>"
                "\<lbrace>Q'\<rbrace> m_flt' \<lbrace>\<lambda>rv. P'_no_flt rv and Q'_no_flt rv\<rbrace>, \<lbrace>P'_flt\<rbrace>"
 
   shows "bisim (f \<oplus> r) (P and Q) (P' and Q')
-           (syscall m_flt  h_flt m_err h_err m_fin) 
+           (syscall m_flt  h_flt m_err h_err m_fin)
            (syscall m_flt' h_flt' m_err' h_err' m_fin')"
   apply (simp add: syscall_def liftE_bindE)
   apply (rule bisim_split_bind_case_sum)
@@ -73,7 +73,7 @@ lemma bisim_catch_faults_r:
   done
 
 lemma bisim_validE_R:
-  assumes ac: "bisim_underlying (op =) (dc \<oplus> op =) P P' a a'" 
+  assumes ac: "bisim_underlying (op =) (dc \<oplus> op =) P P' a a'"
   and     rl: "\<lbrace>Q\<rbrace> a \<lbrace>S\<rbrace>, -"
   shows   "\<lbrace>P and P' and Q\<rbrace> a' \<lbrace>S\<rbrace>, -"
   using ac rl
@@ -81,7 +81,7 @@ lemma bisim_validE_R:
   by (fastforce simp: split_def split: sum.splits)
 
 lemma bisim_validE_R2:
-  assumes ac: "bisim_underlying (op =) (op =) P P' a a'" 
+  assumes ac: "bisim_underlying (op =) (op =) P P' a a'"
   and     rl: "\<lbrace>Q\<rbrace> a' \<lbrace>S\<rbrace>, -"
   shows   "\<lbrace>P and P' and Q\<rbrace> a \<lbrace>S\<rbrace>, -"
   using ac rl
@@ -90,13 +90,13 @@ lemma bisim_validE_R2:
 
 
 lemma bisim_rab:
-  "bisim (dc \<oplus> op =) \<top> (\<lambda>s. separate_cnode_cap (caps_of_state s) cap \<and> valid_cap cap s)  
-                       (doE 
+  "bisim (dc \<oplus> op =) \<top> (\<lambda>s. separate_cnode_cap (caps_of_state s) cap \<and> valid_cap cap s)
+                       (doE
                             _ \<leftarrow> whenE (length cref < word_bits) (throwError undefined);
-                            case cap of 
-                                 CNodeCap p bits guard \<Rightarrow> if guard \<le> cref then 
+                            case cap of
+                                 CNodeCap p bits guard \<Rightarrow> if guard \<le> cref then
                                                              returnOk ((p, take bits (drop (length guard) cref)), drop (bits + length guard) cref)
-                                                          else 
+                                                          else
                                                              (throwError undefined)
                                 | _ \<Rightarrow> throwError undefined
                         odE)
@@ -105,7 +105,7 @@ lemma bisim_rab:
   apply (cases "length cref < word_bits")
    apply (auto intro!: bisim_underlyingI
                elim!: separate_cnode_capE
-               simp: whenE_def in_monad Bex_def in_bindE word_bits_def in_get_cap_cte_wp_at cte_wp_at_caps_of_state 
+               simp: whenE_def in_monad Bex_def in_bindE word_bits_def in_get_cap_cte_wp_at cte_wp_at_caps_of_state
                simp del: add_is_0 split: if_split_asm)[1]
   apply simp
   apply (rule bisim_underlyingI)
@@ -126,7 +126,7 @@ lemma bisim_rab:
   apply (fastforce simp: in_monad Bex_def in_bindE word_bits_def in_get_cap_cte_wp_at cte_wp_at_caps_of_state whenE_def
               simp del: add_is_0 split: if_split_asm)
   done
- 
+
 
 lemma lsft_sep:
   "\<lbrace>separate_state and valid_objs\<rbrace> lookup_slot_for_thread tcb cptr \<lbrace>\<lambda>rv s. \<forall>cap. caps_of_state s (fst rv) = Some cap \<longrightarrow> separate_cap cap\<rbrace>, -"
@@ -149,21 +149,21 @@ lemma lc_sep [wp]:
   unfolding lookup_cap_def
   apply (simp add: split_def)
   apply (rule hoare_pre)
-   apply (wp get_cap_wp' lsft_sep) 
+   apply (wp get_cap_wp' lsft_sep)
   apply simp
   done
 
 
 lemma not_empty_thread_get [wp]:
   "not_empty (tcb_at p) (thread_get f p)"
-  unfolding thread_get_def 
+  unfolding thread_get_def
   apply (rule not_empty_guard_imp)
   apply (simp add: gets_the_def bind_assoc)
   apply (wp )
   apply (simp add: tcb_at_def)
   done
 
-lemma not_empty_throwError [wp]:  
+lemma not_empty_throwError [wp]:
   "not_empty \<top> (throwError e)"
   unfolding not_empty_def throwError_def by (fastforce simp: return_def)
 
@@ -224,11 +224,11 @@ lemma not_empty_lc:
   apply simp
   done
 
-lemma not_empty_get [wp]: 
+lemma not_empty_get [wp]:
   "not_empty \<top> get"
   unfolding not_empty_def get_def by simp
 
-lemma not_empty_put [wp]: 
+lemma not_empty_put [wp]:
   "not_empty \<top> (put s)"
   unfolding not_empty_def put_def by simp
 
@@ -245,7 +245,7 @@ lemma not_empty_assert_opt [wp]:
   "not_empty (\<lambda>_. v \<noteq> None) (assert_opt v)"
   unfolding not_empty_def assert_opt_def
   by (clarsimp simp: return_def)
-  
+
 lemma not_empty_thread_set [wp]:
   "not_empty (tcb_at p) (thread_set f p)"
   unfolding thread_set_def
@@ -329,7 +329,7 @@ lemma bisim_liftME_same:
   done
 
 lemma bisim_split_if:
-  "\<lbrakk> P \<Longrightarrow> bisim R Pt Pt' a a'; \<not> P \<Longrightarrow> bisim R Pf Pf' b b' \<rbrakk> \<Longrightarrow> 
+  "\<lbrakk> P \<Longrightarrow> bisim R Pt Pt' a a'; \<not> P \<Longrightarrow> bisim R Pf Pf' b b' \<rbrakk> \<Longrightarrow>
      bisim R (\<lambda>s. (P \<longrightarrow> Pt s) \<and> (\<not> P \<longrightarrow> Pf s)) (\<lambda>s. (P \<longrightarrow> Pt' s) \<and> (\<not> P \<longrightarrow> Pf' s))
                                                (if P then a else b) (if P then a' else b')"
   by simp
@@ -349,7 +349,7 @@ lemma bisim_reflE_dc:
   done
 
 lemma decode_invocation_bisim:
-  "bisim (op = \<oplus> op =) \<top> (K (separate_cap cap)) 
+  "bisim (op = \<oplus> op =) \<top> (K (separate_cap cap))
      (decode_invocation a b c d cap f) (Decode_A.decode_invocation a b c d cap f)"
   unfolding decode_invocation_def Decode_A.decode_invocation_def
   apply (rule bisim_guard_imp)
@@ -359,10 +359,10 @@ lemma decode_invocation_bisim:
      apply (simp split del: if_split)
      apply (rule bisim_reflE)
     apply (fastforce intro!: bisim_throwError bisim_returnOk simp: AllowRecv_def AllowSend_def)
-   apply simp   
+   apply simp
   done
 
-abbreviation 
+abbreviation
   "separate_inv c \<equiv> \<exists>ptr badge. c = InvokeNotification ptr badge"
 
 lemma perform_invocation_bisim:
@@ -372,7 +372,7 @@ lemma perform_invocation_bisim:
     apply clarsimp
     apply (rule bisim_reflE_dc)
   done
-   
+
 lemmas bisim_split_reflE_eq = bisim_split_reflE [where R = "op =" and f = "op =", OF _ _ _ refl refl]
 lemmas bisim_split_reflE_dc = bisim_split_reflE [where R = "op =" and f = "dc", OF _ _ _ dc_refl refl]
 
@@ -383,17 +383,17 @@ lemma decode_separate_inv:
   apply clarify
   apply (erule separate_capE, simp_all split del: if_split)
     apply (rule hoare_pre, (wp | simp add: comp_def)+)[1]
-   apply (rule hoare_pre) 
+   apply (rule hoare_pre)
    apply (wp | simp)+
 done
 
 lemma lcas_sep [wp]:
-  "\<lbrace>separate_state and valid_objs\<rbrace> lookup_cap_and_slot t v \<lbrace>\<lambda>rv s. separate_cap (fst rv)\<rbrace>, -"  
+  "\<lbrace>separate_state and valid_objs\<rbrace> lookup_cap_and_slot t v \<lbrace>\<lambda>rv s. separate_cap (fst rv)\<rbrace>, -"
   apply (simp add: lookup_cap_and_slot_def split_def bind_assoc)
   apply (rule hoare_pre)
    apply (wp lsft_sep get_cap_wp'|simp)+
   done
-  
+
 lemma lec_separate_caps:
   "\<lbrace>separate_state and valid_objs\<rbrace> lookup_extra_caps t buffer ra \<lbrace>\<lambda>rv s. (\<forall>c\<in>set rv. separate_cap (fst c))\<rbrace>, -"
   unfolding lookup_extra_caps_def
@@ -417,7 +417,7 @@ lemma handle_invocation_bisim:
                   apply simp
                   apply (rule decode_invocation_bisim)
                  apply wp+
-               apply (simp, rule bisim_refl') 
+               apply (simp, rule bisim_refl')
               apply simp
               apply (rule bisim_split_reflE_dc)
                 apply (rule bisim_splitE_req)
@@ -428,7 +428,7 @@ lemma handle_invocation_bisim:
              apply (rule decode_separate_inv)
             apply (wp lec_separate_caps | simp add: cur_tcb_def)+
   done
-  
+
 lemma bisim_split_catch:
   assumes bm: "bisim (f' \<oplus> r) Pn Pn' m m'"
   and     bc: "\<And>x x'. f' x x' \<Longrightarrow> bisim r (Pf x) (Pf' x') (c x) (c' x')"
@@ -447,7 +447,7 @@ lemma bisim_split_catch:
   apply (rule v2)
   done
 
-lemma rel_sum_comb_eq: 
+lemma rel_sum_comb_eq:
   "(op = \<oplus> op =) = (op =)"
   apply (rule ext, rule ext)
   apply (case_tac x)
@@ -518,11 +518,11 @@ lemma separate_state_pres:
   shows  "\<lbrace>separate_state\<rbrace> f \<lbrace>\<lambda>_. separate_state\<rbrace>"
   unfolding separate_state_def[abs_def]
   apply (simp add: tcb_at_typ)
-  apply (wp hoare_vcg_all_lift rl) 
+  apply (wp hoare_vcg_all_lift rl)
   done
 
 lemma separate_state_pres':
-  assumes rl: "(\<And>P t p. \<lbrace>\<lambda>s. P (typ_at t p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at t p s)\<rbrace>)" 
+  assumes rl: "(\<And>P t p. \<lbrace>\<lambda>s. P (typ_at t p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at t p s)\<rbrace>)"
   "(\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>)"
   shows  "\<lbrace>separate_state\<rbrace> f \<lbrace>\<lambda>_. separate_state\<rbrace>"
   apply (rule separate_state_pres)
@@ -590,7 +590,7 @@ lemma delete_caller_cap_bisim:
   apply (rule bisim_refl')
   apply simp_all
   done
-  
+
 lemma bisim_guard_imp_both:
   "\<lbrakk> bisim r P P' m m'; \<And>s. R s \<Longrightarrow> P s \<and> P' s \<rbrakk> \<Longrightarrow> bisim r \<top> R m m'"
   unfolding bisim_underlying_def by auto
@@ -619,7 +619,7 @@ lemma handle_recv_bisim:
                     prefer 2
                     apply simp
                    apply (wp | simp add: cur_tcb_def)+
-  done                 
+  done
 
 lemma handle_reply_bisim:
   "bisim op = \<top> (separate_state and cur_tcb) (return ()) Syscall_A.handle_reply"
@@ -639,7 +639,7 @@ lemma handle_event_bisim:
                              handle_call_def Syscall_A.handle_call_def
                              handle_reply_def
                         cong: syscall.case_cong)
-  
+
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all)[1]
 
@@ -711,7 +711,7 @@ lemma call_kernel_bisim:
   done
 
 
-lemma as_user_separate_state [wp]: 
+lemma as_user_separate_state [wp]:
   "\<lbrace>separate_state\<rbrace> as_user t f \<lbrace>\<lambda>_. separate_state\<rbrace>"
   by (wp separate_state_pres')
 
@@ -785,7 +785,7 @@ crunch separate_state [wp]: set_notification "separate_state"
 crunch separate_state [wp]: "Syscall_SA.handle_event" "separate_state"
    (wp: crunch_wps without_preemption_wp syscall_valid simp: crunch_simps separate_state_machine_state ignore: set_thread_state do_machine_op)
 
-  
+
 lemma call_kernel_separate_state:
   "\<lbrace>separate_state and cur_tcb and valid_objs\<rbrace> Syscall_A.call_kernel ev :: (unit,unit) s_monad \<lbrace>\<lambda>_. separate_state\<rbrace>"
   apply (rule hoare_pre)

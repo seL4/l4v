@@ -19,7 +19,7 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 text {*
-  Toplevel @{text dcorres} theorem. 
+  Toplevel @{text dcorres} theorem.
 *}
 
 lemma valid_etcbs_sched: "valid_sched s \<longrightarrow> valid_etcbs s" by fastforce

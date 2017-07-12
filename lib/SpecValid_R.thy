@@ -19,7 +19,7 @@ where
  "spec_valid st P f Q \<equiv> valid (\<lambda>s. s = st \<and> P s) f Q"
 
 definition
-  spec_validE :: "'s \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s, 'e + 'r) nondet_monad \<Rightarrow> 
+  spec_validE :: "'s \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s, 'e + 'r) nondet_monad \<Rightarrow>
                    ('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('e \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
                  ("_ \<turnstile> /\<lbrace>_\<rbrace>/ _ /(\<lbrace>_\<rbrace>, /\<lbrace>_\<rbrace>)" [60,0,0,0] 100)
 where
@@ -39,7 +39,7 @@ lemma use_specE':
   apply (simp add: validE_def spec_validE_def)
   apply (fold spec_valid_def)
   apply (simp add: use_spec')
-  done  
+  done
 
 lemmas use_spec = use_spec' use_specE'
 
@@ -63,7 +63,7 @@ lemma drop_spec_validE[wp_split]:
 
 lemma split_spec_bindE[wp_split]:
   assumes x: "\<And>rv s''. (Inr rv, s'') \<in> fst (f s') \<Longrightarrow> s'' \<turnstile> \<lbrace>B rv\<rbrace> g rv \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>"
-  shows "s' \<turnstile> \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>,\<lbrace>E\<rbrace> 
+  shows "s' \<turnstile> \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>,\<lbrace>E\<rbrace>
    \<Longrightarrow> s' \<turnstile> \<lbrace>A\<rbrace> f >>=E g \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>"
   apply (clarsimp simp: spec_validE_def validE_def valid_def bind_def bindE_def lift_def split_def)
   apply (case_tac a)
@@ -78,7 +78,7 @@ lemma split_spec_bindE[wp_split]:
 
 lemma split_spec_bind[wp_split]:
   assumes x: "\<And>rv s''. (rv, s'') \<in> fst (f s') \<Longrightarrow> s'' \<turnstile> \<lbrace>B rv\<rbrace> g rv \<lbrace>C\<rbrace>"
-  shows "s' \<turnstile> \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace> 
+  shows "s' \<turnstile> \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>
    \<Longrightarrow> s' \<turnstile> \<lbrace>A\<rbrace> f >>= g \<lbrace>C\<rbrace>"
   apply (clarsimp simp: spec_valid_def valid_def bind_def lift_def split_def)
   apply (erule(1) my_BallE, simp)
@@ -174,12 +174,12 @@ lemma spec_validE_if:
 
 lemma spec_strengthen_post:
   "\<lbrakk> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>; \<And>s r. Q' s r \<Longrightarrow> Q s r \<rbrakk> \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
-  by (simp add: spec_valid_def valid_def 
+  by (simp add: spec_valid_def valid_def
                 split_def split: sum.splits)
 
 lemma spec_strengthen_postE:
   "\<lbrakk> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>, \<lbrace>E\<rbrace>; \<And>s r. Q' s r \<Longrightarrow> Q s r \<rbrakk> \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
-  by (simp add: spec_valid_def spec_validE_def validE_def valid_def 
+  by (simp add: spec_valid_def spec_validE_def validE_def valid_def
                 split_def split: sum.splits)
- 
+
 end

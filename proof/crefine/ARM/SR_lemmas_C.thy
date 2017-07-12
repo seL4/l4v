@@ -26,7 +26,7 @@ lemma cteMDBNode_cte_to_H [simp]:
   by simp
 
 lemma cteMDBNode_CL_lift [simp]:
-  "cte_lift cte' = Some ctel \<Longrightarrow> 
+  "cte_lift cte' = Some ctel \<Longrightarrow>
   mdb_node_lift (cteMDBNode_C cte') = cteMDBNode_CL ctel"
   unfolding cte_lift_def
   by (fastforce split: option.splits)
@@ -49,8 +49,8 @@ lemma cteCap_update_cte_to_H [simp]:
   by (clarsimp simp: cte_to_H_def split: option.splits)
 
 lemma cteMDBNode_C_update_lift [simp]:
-  "cte_lift cte' = Some ctel \<Longrightarrow> 
-  (cte_lift (cteMDBNode_C_update (\<lambda>_. m) cte') = Some x) 
+  "cte_lift cte' = Some ctel \<Longrightarrow>
+  (cte_lift (cteMDBNode_C_update (\<lambda>_. m) cte') = Some x)
   = (cteMDBNode_CL_update (\<lambda>_. mdb_node_lift m) ctel = x)"
   unfolding cte_lift_def
   by (fastforce split: option.splits)
@@ -59,7 +59,7 @@ lemma cteMDBNode_C_update_lift [simp]:
 
 lemma ccap_relationE:
   "\<lbrakk>ccap_relation c v; \<And>vl. \<lbrakk> cap_lift v = Some vl; c = cap_to_H vl; c_valid_cap v\<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
-  unfolding ccap_relation_def map_option_case 
+  unfolding ccap_relation_def map_option_case
   apply clarsimp
   apply (drule sym)
   apply (clarsimp split: option.splits)
@@ -116,13 +116,13 @@ lemma cap_get_tag_isCap:
   and "(cap_get_tag cap' = scast cap_zombie_cap) = (isZombie cap)"
   and "(cap_get_tag cap' = scast cap_reply_cap) = isReplyCap cap"
   and "(cap_get_tag cap' = scast cap_untyped_cap) = (isUntypedCap cap)"
-  and "(cap_get_tag cap' = scast cap_cnode_cap) = (isCNodeCap cap)"  
+  and "(cap_get_tag cap' = scast cap_cnode_cap) = (isCNodeCap cap)"
   and "isArchCap_tag (cap_get_tag cap') = isArchCap \<top> cap"
   and "(cap_get_tag cap' = scast cap_small_frame_cap) = (isArchPageCap cap \<and> pageSize cap = ARMSmallPage)"
   and "(cap_get_tag cap' = scast cap_frame_cap) = (isArchPageCap cap \<and> pageSize cap \<noteq> ARMSmallPage)"
   and "(cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap"
   using cap_get_tag_isCap0 [OF cr] by auto
-  
+
 lemma cap_get_tag_NullCap:
   assumes cr: "ccap_relation cap cap'"
   shows "(cap_get_tag cap' = scast cap_null_cap) = (cap = NullCap)"
@@ -135,7 +135,7 @@ lemma cap_get_tag_NullCap:
 
 lemma cap_get_tag_ThreadCap:
   assumes cr: "ccap_relation cap cap'"
-  shows "(cap_get_tag cap' = scast cap_thread_cap) = 
+  shows "(cap_get_tag cap' = scast cap_thread_cap) =
   (cap = ThreadCap (ctcb_ptr_to_tcb_ptr (Ptr (cap_thread_cap_CL.capTCBPtr_CL (cap_thread_cap_lift cap')))))"
   using cr
   apply -
@@ -147,7 +147,7 @@ lemma cap_get_tag_ThreadCap:
 
 lemma cap_get_tag_NotificationCap:
   assumes cr: "ccap_relation cap cap'"
-  shows "(cap_get_tag cap' = scast cap_notification_cap) = 
+  shows "(cap_get_tag cap' = scast cap_notification_cap) =
   (cap = NotificationCap
          (capNtfnPtr_CL (cap_notification_cap_lift cap'))
          (capNtfnBadge_CL (cap_notification_cap_lift cap'))
@@ -159,11 +159,11 @@ lemma cap_get_tag_NotificationCap:
    apply (erule ccap_relationE)
    apply (clarsimp simp add: cap_lifts cap_to_H_def)
   apply (simp add: cap_get_tag_isCap isCap_simps)
-  done 
+  done
 
 lemma cap_get_tag_EndpointCap:
   assumes cr: "ccap_relation cap cap'"
-  shows "(cap_get_tag cap' = scast cap_endpoint_cap) = 
+  shows "(cap_get_tag cap' = scast cap_endpoint_cap) =
   (cap = EndpointCap (capEPPtr_CL (cap_endpoint_cap_lift cap'))
         (capEPBadge_CL (cap_endpoint_cap_lift cap'))
         (to_bool (capCanSend_CL (cap_endpoint_cap_lift cap')))
@@ -179,7 +179,7 @@ lemma cap_get_tag_EndpointCap:
 
 lemma cap_get_tag_CNodeCap:
   assumes cr: "ccap_relation cap cap'"
-  shows "(cap_get_tag cap' = scast cap_cnode_cap) = 
+  shows "(cap_get_tag cap' = scast cap_cnode_cap) =
   (cap = capability.CNodeCap (capCNodePtr_CL (cap_cnode_cap_lift cap'))
           (unat (capCNodeRadix_CL (cap_cnode_cap_lift cap')))
           (capCNodeGuard_CL (cap_cnode_cap_lift cap'))
@@ -194,7 +194,7 @@ lemma cap_get_tag_CNodeCap:
 
 lemma cap_get_tag_IRQHandlerCap:
   assumes cr: "ccap_relation cap cap'"
-  shows "(cap_get_tag cap' = scast cap_irq_handler_cap) = 
+  shows "(cap_get_tag cap' = scast cap_irq_handler_cap) =
   (cap = capability.IRQHandlerCap (ucast (capIRQ_CL (cap_irq_handler_cap_lift cap'))))"
   using cr
   apply -
@@ -206,7 +206,7 @@ lemma cap_get_tag_IRQHandlerCap:
 
 lemma cap_get_tag_IRQControlCap:
   assumes cr: "ccap_relation cap cap'"
-  shows "(cap_get_tag cap' = scast cap_irq_control_cap) = 
+  shows "(cap_get_tag cap' = scast cap_irq_control_cap) =
   (cap = capability.IRQControlCap)"
   using cr
   apply -
@@ -217,8 +217,8 @@ lemma cap_get_tag_IRQControlCap:
 
 lemma cap_get_tag_ZombieCap:
   assumes cr: "ccap_relation cap cap'"
-  shows "(cap_get_tag cap' = scast cap_zombie_cap) = 
-  (cap = 
+  shows "(cap_get_tag cap' = scast cap_zombie_cap) =
+  (cap =
    (if isZombieTCB_C (capZombieType_CL (cap_zombie_cap_lift cap'))
      then capability.Zombie (capZombieID_CL (cap_zombie_cap_lift cap') && ~~ mask 5) ZombieTCB
            (unat (capZombieID_CL (cap_zombie_cap_lift cap') && mask 5))
@@ -239,13 +239,13 @@ lemma cap_get_tag_ZombieCap:
 
 lemma cap_get_tag_ReplyCap:
   assumes cr: "ccap_relation cap cap'"
-  shows "(cap_get_tag cap' = scast cap_reply_cap) = 
-  (cap = 
+  shows "(cap_get_tag cap' = scast cap_reply_cap) =
+  (cap =
       ReplyCap (ctcb_ptr_to_tcb_ptr (Ptr (cap_reply_cap_CL.capTCBPtr_CL (cap_reply_cap_lift cap'))))
                (to_bool (capReplyMaster_CL (cap_reply_cap_lift cap'))))"
   using cr
   apply -
-  apply (rule iffI)   
+  apply (rule iffI)
    apply (erule ccap_relationE)
    apply (clarsimp simp add: cap_lifts cap_to_H_def)
   apply (simp add: cap_get_tag_isCap isCap_simps)
@@ -253,14 +253,14 @@ lemma cap_get_tag_ReplyCap:
 
 lemma cap_get_tag_UntypedCap:
   assumes cr: "ccap_relation cap cap'"
-  shows "(cap_get_tag cap' = scast cap_untyped_cap) = 
+  shows "(cap_get_tag cap' = scast cap_untyped_cap) =
   (cap = UntypedCap (to_bool (capIsDevice_CL (cap_untyped_cap_lift cap')))
                     (capPtr_CL (cap_untyped_cap_lift cap'))
                     (unat (capBlockSize_CL (cap_untyped_cap_lift cap')))
                     (unat (capFreeIndex_CL (cap_untyped_cap_lift cap') << 4)))"
   using cr
   apply -
-  apply (rule iffI)   
+  apply (rule iffI)
    apply (erule ccap_relationE)
    apply (clarsimp simp add: cap_lifts cap_to_H_def)
   apply (simp add: cap_get_tag_isCap isCap_simps)
@@ -307,16 +307,16 @@ proof -
   from tc obtain q where yq: "y = x + q" and qv: "q < 2 ^ 9"
     unfolding tcb_cte_cases_def
     by (simp add: diff_eq_eq split: if_split_asm)
-   
+
   have "x \<le> x + 2 ^ 9 - 1" using al
     by (rule is_aligned_no_overflow)
-    
+
   hence "x \<le> x + q" using qv
     apply simp
     apply unat_arith
     apply simp
     done
-    
+
   thus ?thesis using yq by simp
 qed
 
@@ -328,7 +328,7 @@ proof -
   from tc obtain q where yq: "y = x + q" and qv: "q \<le> 2 ^ 9 - 1"
     unfolding tcb_cte_cases_def
     by (simp add: diff_eq_eq split: if_split_asm)
-   
+
   have "x + q \<le> x + (2 ^ 9 - 1)" using qv
     apply (rule word_plus_mono_right)
     apply (rule is_aligned_no_overflow' [OF al])
@@ -336,8 +336,8 @@ proof -
 
   thus ?thesis using yq by (simp add: field_simps)
 qed
-  
-lemmas tcbSlots = 
+
+lemmas tcbSlots =
   tcbCTableSlot_def tcbVTableSlot_def
   tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
 
@@ -350,7 +350,7 @@ lemma updateObject_cte_tcb:
     od)"
   using tc unfolding tcb_cte_cases_def
   apply -
-  apply (clarsimp simp add: updateObject_cte Let_def 
+  apply (clarsimp simp add: updateObject_cte Let_def
     tcb_cte_cases_def objBits_simps tcbSlots shiftl_t2n
     split: if_split_asm cong: if_cong)
   done
@@ -362,7 +362,7 @@ definition
                             tcbMCP t, tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
-  "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow> 
+  "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow>
   tcb_no_ctes_proj tcb = tcb_no_ctes_proj (setF f tcb)"
   unfolding tcb_no_ctes_proj_def tcb_cte_cases_def
   by (auto split: if_split_asm)
@@ -374,7 +374,7 @@ lemma map_to_ctes_upd_cte':
   apply (simp add: field_simps ps_clear_def3)
   done
 
-lemma map_to_ctes_upd_tcb':  
+lemma map_to_ctes_upd_tcb':
   "[| ksPSpace s p = Some (KOTCB tcb'); is_aligned p 9;
    ps_clear p 9 s |]
 ==> map_to_ctes (ksPSpace s(p |-> KOTCB tcb)) =
@@ -393,7 +393,7 @@ lemma tcb_cte_cases_inv [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow> getF (setF (\<lambda>_. v) tcb) = v"
   unfolding tcb_cte_cases_def
   by (simp split: if_split_asm)
-  
+
 declare insert_dom [simp]
 
 lemma in_alignCheck':
@@ -420,16 +420,16 @@ lemma fst_setCTE0:
   using ct
   apply -
   apply (clarsimp simp: setCTE_def setObject_def
-    bind_def return_def assert_opt_def gets_def split_beta get_def 
+    bind_def return_def assert_opt_def gets_def split_beta get_def
     modify_def put_def)
   apply (erule cte_wp_atE')
    apply (rule ps_clear_lookupAround2, assumption+)
      apply simp
     apply (erule is_aligned_no_overflow)
-   apply (simp (no_asm_simp) del: fun_upd_apply cong: option.case_cong)   
+   apply (simp (no_asm_simp) del: fun_upd_apply cong: option.case_cong)
    apply (simp add: return_def updateObject_cte
-     bind_def assert_opt_def gets_def split_beta get_def 
-     modify_def put_def unless_def when_def 
+     bind_def assert_opt_def gets_def split_beta get_def
+     modify_def put_def unless_def when_def
      cte_level_bits_def objBits_simps
      cong: bex_cong)
    apply (rule bexI [where x = "((), s)"])
@@ -457,7 +457,7 @@ lemma fst_setCTE0:
     cong: bex_cong if_cong)
    apply (simp split: kernel_object.splits)
    apply (fastforce simp: tcb_no_ctes_proj_def)
-  apply (simp add: magnitudeCheck_def when_def return_def fail_def 
+  apply (simp add: magnitudeCheck_def when_def return_def fail_def
     linorder_not_less
     split: option.splits
     cong: bex_cong if_cong)
@@ -490,11 +490,11 @@ proof (rule ctes_of_eq_cte_wp_at')
   from ks show "cte_wp_at' (op = cte) x s"
   proof (rule cte_wp_at_cteI' [OF _ _ _ refl])
     from ks pa have "is_aligned x (objBitsKO (KOCTE cte))" ..
-    thus "is_aligned x cte_level_bits" 
+    thus "is_aligned x cte_level_bits"
       unfolding cte_level_bits_def by (simp add: objBits_simps)
-    
+
     from ks pd have "ps_clear x (objBitsKO (KOCTE cte)) s" ..
-    thus "ps_clear x cte_level_bits s"  
+    thus "ps_clear x cte_level_bits s"
       unfolding cte_level_bits_def by (simp add: objBits_simps)
   qed
 qed
@@ -512,7 +512,7 @@ lemma fst_setCTE:
            (map_to_asidpools (ksPSpace s) = map_to_asidpools (ksPSpace s'));
            (map_to_user_data (ksPSpace s) = map_to_user_data (ksPSpace s'));
            (map_to_user_data_device (ksPSpace s) = map_to_user_data_device (ksPSpace s'));
-           (map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s) 
+           (map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s)
               = map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s'));
            \<forall>T p. typ_at' T p s = typ_at' T p s'\<rbrakk> \<Longrightarrow> P"
   shows   "P"
@@ -520,13 +520,13 @@ proof -
   (* Unpack the existential and bind x, theorems in this.  Yuck *)
   from fst_setCTE0 [where cte = cte, OF ct] guess s' by clarsimp
   note thms = this
-  
+
   from thms have ceq: "ctes_of s' = ctes_of s(dest \<mapsto> cte)"
-    apply -    
+    apply -
     apply (erule use_valid [OF _ setCTE_ctes_of_wp])
     apply simp
     done
-  
+
   show ?thesis
   proof (rule rl)
     show "map_to_eps (ksPSpace s) = map_to_eps (ksPSpace s')"
@@ -537,10 +537,10 @@ proof -
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
       ultimately have "(projectKO_opt ko' :: endpoint option) = projectKO_opt ko" using xin thms(4) ceq
 	      by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_ep)
-      thus "(projectKO_opt (the (ksPSpace s' x)) :: endpoint option) = projectKO_opt (the (ksPSpace s x))"  using ko ko' 
+      thus "(projectKO_opt (the (ksPSpace s' x)) :: endpoint option) = projectKO_opt (the (ksPSpace s x))"  using ko ko'
 	      by simp
     qed fact
-    
+
     (* clag \<dots> *)
     show "map_to_ntfns (ksPSpace s) = map_to_ntfns (ksPSpace s')"
     proof (rule map_comp_eqI)
@@ -550,7 +550,7 @@ proof -
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
       ultimately have "(projectKO_opt ko' :: Structures_H.notification option) = projectKO_opt ko" using xin thms(4) ceq
 	      by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_ntfn)
-      thus "(projectKO_opt (the (ksPSpace s' x)) :: Structures_H.notification option) = projectKO_opt (the (ksPSpace s x))" using ko ko' 
+      thus "(projectKO_opt (the (ksPSpace s' x)) :: Structures_H.notification option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
 	      by simp
     qed fact
 
@@ -562,7 +562,7 @@ proof -
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
       ultimately have "(projectKO_opt ko' :: pde option) = projectKO_opt ko" using xin thms(4) ceq
 	      by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_pde)
-      thus "(projectKO_opt (the (ksPSpace s' x)) :: pde option) = projectKO_opt (the (ksPSpace s x))" using ko ko' 
+      thus "(projectKO_opt (the (ksPSpace s' x)) :: pde option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
 	      by simp
     qed fact
 
@@ -574,7 +574,7 @@ proof -
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
       ultimately have "(projectKO_opt ko' :: pte option) = projectKO_opt ko" using xin thms(4) ceq
 	      by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_pte)
-      thus "(projectKO_opt (the (ksPSpace s' x)) :: pte option) = projectKO_opt (the (ksPSpace s x))" using ko ko' 
+      thus "(projectKO_opt (the (ksPSpace s' x)) :: pte option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
 	      by simp
     qed fact
 
@@ -586,7 +586,7 @@ proof -
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
       ultimately have "(projectKO_opt ko' :: asidpool option) = projectKO_opt ko" using xin thms(4) ceq
 	      by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_asidpool)
-      thus "(projectKO_opt (the (ksPSpace s' x)) :: asidpool option) = projectKO_opt (the (ksPSpace s x))" using ko ko' 
+      thus "(projectKO_opt (the (ksPSpace s' x)) :: asidpool option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
 	      by simp
     qed fact
 
@@ -598,10 +598,10 @@ proof -
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
       ultimately have "(projectKO_opt ko' :: user_data option) = projectKO_opt ko" using xin thms(4) ceq
 	      by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_user_data)
-      thus "(projectKO_opt (the (ksPSpace s' x)) :: user_data option) = projectKO_opt (the (ksPSpace s x))" using ko ko' 
+      thus "(projectKO_opt (the (ksPSpace s' x)) :: user_data option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
 	      by simp
     qed fact
-    
+
     show "map_to_user_data_device (ksPSpace s) = map_to_user_data_device (ksPSpace s')"
     proof (rule map_comp_eqI)
       fix x
@@ -610,7 +610,7 @@ proof -
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
       ultimately have "(projectKO_opt ko' :: user_data_device option) = projectKO_opt ko" using xin thms(4) ceq
              by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_user_data_device)
-      thus "(projectKO_opt (the (ksPSpace s' x)) :: user_data_device option) = projectKO_opt (the (ksPSpace s x))" using ko ko' 
+      thus "(projectKO_opt (the (ksPSpace s' x)) :: user_data_device option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
              by simp
     qed fact
 
@@ -624,7 +624,7 @@ proof -
       map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s')"
     proof (rule ext)
       fix x
-  
+
       have dm: "dom (map_to_tcbs (ksPSpace s)) = dom (map_to_tcbs (ksPSpace s'))"
 	using thms(3) thms(4)
 	apply -
@@ -676,18 +676,18 @@ lemma ctes_of_cte_at:
 
 lemma cor_map_relI:
   assumes dm: "dom am = dom am'"
-  and     rl: "\<And>x y y' z. \<lbrakk> am x = Some y; am' x = Some y'; 
+  and     rl: "\<And>x y y' z. \<lbrakk> am x = Some y; am' x = Some y';
   rel y z \<rbrakk> \<Longrightarrow> rel y' z"
   shows "cmap_relation am cm sz rel \<Longrightarrow> cmap_relation am' cm sz rel"
-  unfolding cmap_relation_def 
+  unfolding cmap_relation_def
   apply -
   apply clarsimp
   apply rule
    apply (simp add: dm)
   apply rule
-  apply (frule_tac P = "\<lambda>s. x \<in> s" in ssubst [OF dm])   
+  apply (frule_tac P = "\<lambda>s. x \<in> s" in ssubst [OF dm])
   apply (drule (1) bspec)
-  apply (erule domD [where m = am, THEN exE]) 
+  apply (erule domD [where m = am, THEN exE])
   apply (rule rl, assumption+)
    apply (clarsimp simp add: dom_def)
   apply simp
@@ -703,14 +703,14 @@ proof (rule cor_map_relI [OF map_option_eq_dom_eq])
   fix x tcb tcb' z
   assume y: "map_to_tcbs (ksPSpace s) x = Some tcb"
     and y': "map_to_tcbs (ksPSpace s') x = Some tcb'" and rel: "ctcb_relation tcb z"
-    
+
   hence "tcb_no_ctes_proj tcb = tcb_no_ctes_proj tcb'" using om
-    apply -    
+    apply -
     apply (simp add: o_def)
     apply (drule fun_cong [where x = x])
     apply simp
     done
-  
+
   thus "ctcb_relation tcb' z" using rel
     unfolding tcb_no_ctes_proj_def ctcb_relation_def cfault_rel_def
     by auto
@@ -721,7 +721,7 @@ lemma lifth_update:
   \<Longrightarrow> lifth ptr s = lifth ptr s'"
   unfolding lifth_def
   by simp
-  
+
 lemma getCTE_exs_valid:
   "cte_at' dest s \<Longrightarrow> \<lbrace>op = s\<rbrace> getCTE dest \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
   unfolding exs_valid_def getCTE_def cte_wp_at'_def
@@ -734,7 +734,7 @@ lemma cmap_domE1:
    apply (erule imageI [OF domI])
   apply (clarsimp simp: dom_def)
   done
-  
+
 lemma cmap_domE2:
   "\<lbrakk> f ` dom am = dom cm; cm x = Some v'; \<And>x' v. \<lbrakk> x = f x'; am x' = Some v \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   apply (drule equalityD2)
@@ -768,7 +768,7 @@ lemma cmap_relationI:
   and     rel:   "\<And>x v v'. \<lbrakk>am x = Some v; cm (f x) = Some v' \<rbrakk> \<Longrightarrow> rel v v'"
   shows "cmap_relation am cm f rel"
   unfolding cmap_relation_def using doms
-proof (rule conjI)      
+proof (rule conjI)
   show "\<forall>x\<in>dom am. rel (the (am x)) (the (cm (f x)))"
   proof
     fix x
@@ -793,7 +793,7 @@ lemma cspace_cte_relationE:
   \<And>z k'. \<lbrakk>cm (Ptr x) = Some k'; cte_lift k' = Some z; cte_to_H z = y; c_valid_cte k' \<rbrakk> \<Longrightarrow> P
   \<rbrakk> \<Longrightarrow> P"
   apply (erule (1) cmap_relationE1)
-  apply (clarsimp simp: ccte_relation_def map_option_Some_eq2) 
+  apply (clarsimp simp: ccte_relation_def map_option_Some_eq2)
   done
 
 lemma cmdbnode_relationE:
@@ -816,7 +816,7 @@ lemma cmap_relation_upd_relI:
   using assms
   apply -
   apply (rule cmap_relationE1, assumption+)
-  apply clarsimp  
+  apply clarsimp
   apply (rule cmap_relationI)
   apply (simp add: cmap_relation_def)
   apply (case_tac "x = dest")
@@ -842,7 +842,7 @@ lemma cmap_relation_updI:
 
 declare inj_Ptr[simp]
 
-(* Ugh *)  
+(* Ugh *)
 lemma cpspace_cte_relation_upd_capI:
   assumes cr: "cmap_relation (map_to_ctes am) (clift cm) Ptr ccte_relation"
   and   cof: "map_to_ctes am dest = Some cte"
@@ -854,7 +854,7 @@ lemma cpspace_cte_relation_upd_capI:
   apply -
   apply (frule (2) cmap_relation_relI)
   apply (erule (2) cmap_relation_updI)
-   apply (clarsimp elim!: ccap_relationE simp: map_comp_Some_iff ccte_relation_def) 
+   apply (clarsimp elim!: ccap_relationE simp: map_comp_Some_iff ccte_relation_def)
     apply (subst (asm) map_option_Some_eq2)
     apply clarsimp
     apply (simp add: c_valid_cte_def cl_valid_cte_def)
@@ -894,22 +894,22 @@ lemma aligned_neg_mask [simp]:
   done
 
 lemma mdb_node_to_H_mdbPrev_update[simp]:
-  "mdb_node_to_H (mdbPrev_CL_update (\<lambda>_. x) m) 
+  "mdb_node_to_H (mdbPrev_CL_update (\<lambda>_. x) m)
   = mdbPrev_update (\<lambda>_. x) (mdb_node_to_H m)"
   unfolding mdb_node_to_H_def by simp
 
 lemma mdb_node_to_H_mdbNext_update[simp]:
-  "mdb_node_to_H (mdbNext_CL_update (\<lambda>_. x) m) 
+  "mdb_node_to_H (mdbNext_CL_update (\<lambda>_. x) m)
   = mdbNext_update (\<lambda>_. x) (mdb_node_to_H m)"
   unfolding mdb_node_to_H_def by simp
 
 lemma mdb_node_to_H_mdbRevocable_update[simp]:
-  "mdb_node_to_H (mdbRevocable_CL_update (\<lambda>_. x) m) 
+  "mdb_node_to_H (mdbRevocable_CL_update (\<lambda>_. x) m)
   = mdbRevocable_update (\<lambda>_. to_bool x) (mdb_node_to_H m)"
   unfolding mdb_node_to_H_def by simp
 
 lemma mdb_node_to_H_mdbFirstBadged_update[simp]:
-  "mdb_node_to_H (mdbFirstBadged_CL_update (\<lambda>_. x) m) 
+  "mdb_node_to_H (mdbFirstBadged_CL_update (\<lambda>_. x) m)
   = mdbFirstBadged_update (\<lambda>_. to_bool x) (mdb_node_to_H m)"
   unfolding mdb_node_to_H_def by simp
 
@@ -947,7 +947,7 @@ qed
 lemma mdbNext_not_zero_eq:
   "cmdbnode_relation n n' \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr (*ja \<and> (is_aligned (mdbNext n) 3)*)
   \<longrightarrow> (mdbNext n \<noteq> 0) = (s' \<in> {_. mdbNext_CL (mdb_node_lift n') \<noteq> 0})"
-  apply clarsimp 
+  apply clarsimp
   apply (erule cmdbnode_relationE)
   apply (fastforce simp: mdbNext_to_H)
   done
@@ -955,14 +955,14 @@ lemma mdbNext_not_zero_eq:
 lemma mdbPrev_not_zero_eq:
   "cmdbnode_relation n n' \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr (*ja\<and> (is_aligned (mdbPrev n) 3)*)
   \<longrightarrow> (mdbPrev n \<noteq> 0) = (s' \<in> {_. mdbPrev_CL (mdb_node_lift n') \<noteq> 0})"
-  apply clarsimp 
+  apply clarsimp
   apply (erule cmdbnode_relationE)
   apply (unfold mdb_node_to_H_def)
   apply (fastforce)
   done
 
 declare is_aligned_0 [simp]
-      
+
 abbreviation
   "nullCapPointers cte \<equiv> cteCap cte = NullCap \<and> mdbNext (cteMDBNode cte) = nullPointer \<and> mdbPrev (cteMDBNode cte) = nullPointer"
 
@@ -1051,7 +1051,7 @@ lemma ccte_relation_cmdbnode_relation:
 lemma rf_sr_ctes_of_clift:
   assumes sr: "(s, s') \<in> rf_sr"
   and    cof: "ctes_of s p = Some cte"
-  shows "\<exists>cte'. cslift s' (Ptr p) = Some cte' \<and> cte_lift cte' \<noteq> None \<and> cte = cte_to_H (the (cte_lift cte')) 
+  shows "\<exists>cte'. cslift s' (Ptr p) = Some cte' \<and> cte_lift cte' \<noteq> None \<and> cte = cte_to_H (the (cte_lift cte'))
          \<and> c_valid_cte cte'"
 proof -
   from sr have "cpspace_cte_relation (ksPSpace s) (t_hrs_' (globals s'))" ..
@@ -1062,7 +1062,7 @@ proof -
 qed
 
 lemma c_valid_cte_eq:
- "c_valid_cte c = case_option True cl_valid_cte (cte_lift c)" 
+ "c_valid_cte c = case_option True cl_valid_cte (cte_lift c)"
  apply (clarsimp simp: c_valid_cte_def cl_valid_cte_def c_valid_cap_def  split: option.splits)
  apply (unfold cte_lift_def)
  apply simp
@@ -1090,16 +1090,16 @@ lemma rf_sr_ctes_of_cliftE:
   done
 
 lemma cstate_relation_only_t_hrs:
-  "\<lbrakk> t_hrs_' s = t_hrs_' t; 
+  "\<lbrakk> t_hrs_' s = t_hrs_' t;
   ksReadyQueues_' s = ksReadyQueues_' t;
   ksReadyQueuesL1Bitmap_' s = ksReadyQueuesL1Bitmap_' t;
   ksReadyQueuesL2Bitmap_' s = ksReadyQueuesL2Bitmap_' t;
-  ksSchedulerAction_' s = ksSchedulerAction_' t; 
+  ksSchedulerAction_' s = ksSchedulerAction_' t;
   ksCurThread_' s = ksCurThread_' t;
   ksIdleThread_' s = ksIdleThread_' t;
   ksWorkUnitsCompleted_' s = ksWorkUnitsCompleted_' t;
   intStateIRQNode_' s = intStateIRQNode_' t;
-  intStateIRQTable_' s = intStateIRQTable_' t; 
+  intStateIRQTable_' s = intStateIRQTable_' t;
   armKSHWASIDTable_' s = armKSHWASIDTable_' t;
   armKSASIDTable_' s = armKSASIDTable_' t;
   armKSNextASID_' s = armKSNextASID_' t;
@@ -1108,19 +1108,19 @@ lemma cstate_relation_only_t_hrs:
   ksDomScheduleIdx_' s = ksDomScheduleIdx_' t;
   ksCurDomain_' s = ksCurDomain_' t;
   ksDomainTime_' s = ksDomainTime_' t
-  \<rbrakk> 
+  \<rbrakk>
   \<Longrightarrow> cstate_relation a s = cstate_relation a t"
   unfolding cstate_relation_def
   by (clarsimp simp add: Let_def carch_state_relation_def cmachine_state_relation_def)
 
 lemma rf_sr_upd:
-  assumes 
+  assumes
     "(t_hrs_' (globals x)) = (t_hrs_' (globals y))"
-    "(ksReadyQueues_' (globals x)) = (ksReadyQueues_' (globals y))"  
-    "(ksReadyQueuesL1Bitmap_' (globals x)) = (ksReadyQueuesL1Bitmap_' (globals y))"  
-    "(ksReadyQueuesL2Bitmap_' (globals x)) = (ksReadyQueuesL2Bitmap_' (globals y))"  
+    "(ksReadyQueues_' (globals x)) = (ksReadyQueues_' (globals y))"
+    "(ksReadyQueuesL1Bitmap_' (globals x)) = (ksReadyQueuesL1Bitmap_' (globals y))"
+    "(ksReadyQueuesL2Bitmap_' (globals x)) = (ksReadyQueuesL2Bitmap_' (globals y))"
     "(ksSchedulerAction_' (globals x)) = (ksSchedulerAction_' (globals y))"
-    "(ksCurThread_' (globals x)) = (ksCurThread_' (globals y))"  
+    "(ksCurThread_' (globals x)) = (ksCurThread_' (globals y))"
     "(ksIdleThread_' (globals x)) = (ksIdleThread_' (globals y))"
     "(ksWorkUnitsCompleted_' (globals x)) = (ksWorkUnitsCompleted_' (globals y))"
     "intStateIRQNode_'(globals x) = intStateIRQNode_' (globals y)"
@@ -1139,11 +1139,11 @@ lemma rf_sr_upd:
 
 lemma rf_sr_upd_safe[simp]:
   assumes rl: "(t_hrs_' (globals (g y))) = (t_hrs_' (globals y))"
-  and     rq: "(ksReadyQueues_' (globals (g y))) = (ksReadyQueues_' (globals y))"  
-  and     rqL1: "(ksReadyQueuesL1Bitmap_' (globals (g y))) = (ksReadyQueuesL1Bitmap_' (globals y))"  
-  and     rqL2: "(ksReadyQueuesL2Bitmap_' (globals (g y))) = (ksReadyQueuesL2Bitmap_' (globals y))"  
+  and     rq: "(ksReadyQueues_' (globals (g y))) = (ksReadyQueues_' (globals y))"
+  and     rqL1: "(ksReadyQueuesL1Bitmap_' (globals (g y))) = (ksReadyQueuesL1Bitmap_' (globals y))"
+  and     rqL2: "(ksReadyQueuesL2Bitmap_' (globals (g y))) = (ksReadyQueuesL2Bitmap_' (globals y))"
   and     sa: "(ksSchedulerAction_' (globals (g y))) = (ksSchedulerAction_' (globals y))"
-  and     ct: "(ksCurThread_' (globals (g y))) = (ksCurThread_' (globals y))"  
+  and     ct: "(ksCurThread_' (globals (g y))) = (ksCurThread_' (globals y))"
   and     it: "(ksIdleThread_' (globals (g y))) = (ksIdleThread_' (globals y))"
   and     isn: "intStateIRQNode_'(globals (g y)) = intStateIRQNode_' (globals y)"
   and     ist: "intStateIRQTable_'(globals (g y)) = intStateIRQTable_' (globals y)"
@@ -1171,9 +1171,9 @@ proof -
   from vmdb cof nz obtain cten where
     "ctes_of s (mdbNext (cteMDBNode cte)) = Some cten"
     by (auto simp: cte_wp_at_ctes_of dest!: valid_mdb_ctes_of_next)
-  
-  with sr show ?thesis 
-    apply -  
+
+  with sr show ?thesis
+    apply -
     apply (drule (1) rf_sr_ctes_of_clift)
     apply clarsimp
     done
@@ -1189,9 +1189,9 @@ proof -
   from vmdb cof nz obtain cten where
     "ctes_of s (mdbPrev (cteMDBNode cte)) = Some cten"
     by (auto simp: cte_wp_at_ctes_of dest!: valid_mdb_ctes_of_prev)
-  
-  with sr show ?thesis 
-    apply -  
+
+  with sr show ?thesis
+    apply -
     apply (drule (1) rf_sr_ctes_of_clift)
     apply clarsimp
     done
@@ -1212,7 +1212,7 @@ lemma rf_sr_cte_at_validD:
 lemma ccap_relation_NullCap_iff:
   "(ccap_relation NullCap cap') = (cap_get_tag cap' = scast cap_null_cap)"
   unfolding ccap_relation_def
-  apply (clarsimp simp: map_option_Some_eq2 c_valid_cap_def cl_valid_cap_def 
+  apply (clarsimp simp: map_option_Some_eq2 c_valid_cap_def cl_valid_cap_def
             cap_to_H_def cap_lift_def Let_def cap_tag_defs split: if_split)
   done
 
@@ -1223,10 +1223,10 @@ lemma ko_at_valid_ntfn':
   apply (erule (1) valid_objsE')
    apply (simp add: projectKOs valid_obj'_def)
    done
-    
+
 (* MOVE *)
 lemma ntfn_blocked_in_queueD:
-  "\<lbrakk> st_tcb_at' (op = (Structures_H.thread_state.BlockedOnNotification ntfn)) thread \<sigma>; ko_at' ntfn' ntfn \<sigma>; invs' \<sigma> \<rbrakk> 
+  "\<lbrakk> st_tcb_at' (op = (Structures_H.thread_state.BlockedOnNotification ntfn)) thread \<sigma>; ko_at' ntfn' ntfn \<sigma>; invs' \<sigma> \<rbrakk>
    \<Longrightarrow> thread \<in> set (ntfnQueue (ntfnObj ntfn')) \<and> isWaitingNtfn (ntfnObj ntfn')"
   apply (drule sym_refs_st_tcb_atD')
    apply clarsimp
@@ -1236,7 +1236,7 @@ lemma ntfn_blocked_in_queueD:
     apply (simp_all add: isWaitingNtfn_def)
     done
 
-(* MOVE *)  
+(* MOVE *)
 lemma valid_ntfn_isWaitingNtfnD:
   "\<lbrakk> valid_ntfn' ntfn s; isWaitingNtfn (ntfnObj ntfn) \<rbrakk>
   \<Longrightarrow> (ntfnQueue (ntfnObj ntfn)) \<noteq> [] \<and> (\<forall>t\<in>set (ntfnQueue (ntfnObj ntfn)). tcb_at' t s)
@@ -1273,7 +1273,7 @@ lemma cmap_relation_ko_atE:
   apply (clarsimp)
   apply (erule (1) rl)
   done
-  
+
 lemma ntfn_to_ep_queue:
   assumes ko: "ko_at' ntfn' ntfn s"
   and     waiting: "isWaitingNtfn (ntfnObj ntfn')"
@@ -1287,7 +1287,7 @@ proof -
   from rf have
     "cmap_relation (map_to_ntfns (ksPSpace s)) (cslift s') Ptr (cnotification_relation (cslift s'))"
     by (rule cmap_relation_ntfn)
-  
+
   thus ?thesis using ko waiting
     apply -
     apply (erule (1) cmap_relation_ko_atE)
@@ -1298,7 +1298,7 @@ qed
 
 lemma map_to_tcbs_from_tcb_at:
   "tcb_at' thread s \<Longrightarrow> map_to_tcbs (ksPSpace s) thread \<noteq> None"
-  unfolding obj_at'_def 
+  unfolding obj_at'_def
   by (clarsimp simp: projectKOs)
 
 lemma tcb_at_h_t_valid:
@@ -1306,7 +1306,7 @@ lemma tcb_at_h_t_valid:
   apply (drule cmap_relation_tcb)
   apply (drule map_to_tcbs_from_tcb_at)
   apply (clarsimp simp add: cmap_relation_def)
-  apply (drule (1) bspec [OF _ domI])  
+  apply (drule (1) bspec [OF _ domI])
   apply (clarsimp simp add: dom_def tcb_ptr_to_ctcb_ptr_def image_def)
   apply (drule equalityD1)
   apply (drule subsetD)
@@ -1336,7 +1336,7 @@ lemma exs_getObject:
    apply (clarsimp simp: split_def)
   apply (simp add: projectKO_def fail_def split: option.splits)
   apply (clarsimp simp: loadObject_default_def getObject_def in_monad return_def lookupAround2_char1
-                        split_def x P lookupAround2_char1 projectKOs    
+                        split_def x P lookupAround2_char1 projectKOs
                         objBits_def[symmetric] in_magnitude_check project_inject)
   done
 
@@ -1347,13 +1347,13 @@ lemma setObject_eq:
                 (updateObject_default val old ptr ptr' next :: kernel_object kernel)"
   assumes P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
   and     ob: "\<And>(v :: 'a) (v' :: 'a). objBits v = objBits v'"
-  and objat: "obj_at' (P :: ('a::pspace_storable \<Rightarrow> bool)) p s"  
+  and objat: "obj_at' (P :: ('a::pspace_storable \<Rightarrow> bool)) p s"
   shows  "((), s\<lparr> ksPSpace := (ksPSpace s)(p \<mapsto> injectKO ko)\<rparr>) \<in> fst (setObject p ko s)"
   using objat unfolding setObject_def obj_at'_def
   apply (clarsimp simp: updateObject_default_def in_monad return_def lookupAround2_char1
-                        split_def x P lookupAround2_char1 projectKOs 
+                        split_def x P lookupAround2_char1 projectKOs
                         objBits_def[symmetric] in_magnitude_check project_inject)
-  apply (frule ssubst [OF ob, where P = "is_aligned p" and v1 = ko])  
+  apply (frule ssubst [OF ob, where P = "is_aligned p" and v1 = ko])
   apply (simp add: P in_magnitude_check)
   apply (rule conjI)
    apply (rule_tac x = obj in exI)
@@ -1372,12 +1372,12 @@ lemma getObject_eq:
   apply clarsimp
   apply (simp add: projectKO_def fail_def split: option.splits)
   apply (clarsimp simp: loadObject_default_def getObject_def in_monad return_def lookupAround2_char1
-                        split_def x P lookupAround2_char2 projectKOs    
+                        split_def x P lookupAround2_char2 projectKOs
                         objBits_def[symmetric] in_magnitude_check project_inject)
   done
 
 lemma threadSet_eq:
-  "ko_at' tcb thread s \<Longrightarrow> 
+  "ko_at' tcb thread s \<Longrightarrow>
   ((), s\<lparr> ksPSpace := (ksPSpace s)(thread \<mapsto> injectKO (f tcb))\<rparr>) \<in> fst (threadSet f thread s)"
   unfolding threadSet_def
   apply (clarsimp simp add: in_monad)
@@ -1407,16 +1407,16 @@ definition
 lemma null_sched_queue:
   "map_option tcb_null_sched_ptrs \<circ> mp = map_option tcb_null_sched_ptrs \<circ> mp'
   \<Longrightarrow> map_option tcb_null_queue_ptrs \<circ> mp = map_option tcb_null_queue_ptrs \<circ> mp'"
-  apply (rule ext)  
+  apply (rule ext)
   apply (erule_tac x = x in map_option_comp_eqE)
    apply simp
   apply (clarsimp simp: tcb_null_queue_ptrs_def tcb_null_sched_ptrs_def)
   done
-  
+
 lemma null_ep_queue:
   "map_option tcb_null_ep_ptrs \<circ> mp = map_option tcb_null_ep_ptrs \<circ> mp'
   \<Longrightarrow> map_option tcb_null_queue_ptrs \<circ> mp = map_option tcb_null_queue_ptrs \<circ> mp'"
-  apply (rule ext)  
+  apply (rule ext)
   apply (erule_tac x = x in map_option_comp_eqE)
    apply simp
   apply (case_tac v, case_tac v')
@@ -1430,16 +1430,16 @@ lemma null_sched_epD:
   using om
   apply -
   apply (rule conjI)
-   apply (rule ext)  
+   apply (rule ext)
    apply (erule_tac x = x in map_option_comp_eqE )
     apply simp
    apply (case_tac v, case_tac v')
    apply (clarsimp simp: tcb_null_sched_ptrs_def)
-  apply (rule ext)  
+  apply (rule ext)
   apply (erule_tac x = x in map_option_comp_eqE )
    apply simp
   apply (case_tac v, case_tac v')
-  apply (clarsimp simp: tcb_null_sched_ptrs_def)  
+  apply (clarsimp simp: tcb_null_sched_ptrs_def)
   done
 
 lemma null_ep_schedD:
@@ -1449,16 +1449,16 @@ lemma null_ep_schedD:
   using om
   apply -
   apply (rule conjI)
-   apply (rule ext)  
+   apply (rule ext)
    apply (erule_tac x = x in map_option_comp_eqE )
     apply simp
    apply (case_tac v, case_tac v')
    apply (clarsimp simp: tcb_null_ep_ptrs_def)
-  apply (rule ext)  
+  apply (rule ext)
   apply (erule_tac x = x in map_option_comp_eqE )
    apply simp
   apply (case_tac v, case_tac v')
-  apply (clarsimp simp: tcb_null_ep_ptrs_def)  
+  apply (clarsimp simp: tcb_null_ep_ptrs_def)
   done
 
 lemma cmap_relation_cong:
@@ -1471,8 +1471,8 @@ lemma cmap_relation_cong:
   apply (clarsimp simp: adom cdom)
   apply (rule iffI)
    apply simp
-   apply (erule conjE) 
-   apply (drule equalityD1)  
+   apply (erule conjE)
+   apply (drule equalityD1)
    apply (rule ballI)
    apply (drule (1) bspec)
    apply (erule iffD1 [OF rel, rotated -1])
@@ -1487,8 +1487,8 @@ lemma cmap_relation_cong:
    apply (erule imageI)
   -- "clag"
    apply simp
-   apply (erule conjE) 
-   apply (drule equalityD1)  
+   apply (erule conjE)
+   apply (drule equalityD1)
    apply (rule ballI)
    apply (drule (1) bspec)
    apply (erule iffD2 [OF rel, rotated -1])
@@ -1507,7 +1507,7 @@ lemma ctcb_relation_null_queue_ptrs:
   assumes rel: "cmap_relation mp mp' tcb_ptr_to_ctcb_ptr ctcb_relation"
   and same: "map_option tcb_null_queue_ptrs \<circ> mp'' = map_option tcb_null_queue_ptrs \<circ> mp'"
   shows "cmap_relation mp mp'' tcb_ptr_to_ctcb_ptr ctcb_relation"
-  using rel 
+  using rel
   apply (rule iffD1 [OF cmap_relation_cong, OF _ map_option_eq_dom_eq, rotated -1])
     apply simp
    apply (rule same [symmetric])
@@ -1537,7 +1537,7 @@ lemma map_to_ctes_upd_tcb_no_ctes:
   "\<lbrakk>ko_at' tcb thread s ; \<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF tcb' = getF tcb) x \<rbrakk>
   \<Longrightarrow> map_to_ctes (ksPSpace s(thread \<mapsto> KOTCB tcb')) = map_to_ctes (ksPSpace s)"
   apply (erule obj_atE')
-  apply (simp add: projectKOs objBits_simps)  
+  apply (simp add: projectKOs objBits_simps)
   apply (subst map_to_ctes_upd_tcb')
      apply assumption+
   apply (rule ext)
@@ -1666,7 +1666,7 @@ lemma heap_to_page_data_cong [cong]:
 lemma heap_to_device_data_cong [cong]:
   "\<lbrakk> map_to_user_data_device ks = map_to_user_data_device ks'; bhp = bhp' \<rbrakk>
   \<Longrightarrow> heap_to_device_data ks bhp = heap_to_device_data ks' bhp'"
-  unfolding heap_to_device_data_def by simp 
+  unfolding heap_to_device_data_def by simp
 
 lemma map_leD:
   "\<lbrakk> map_le m m'; m x = Some y \<rbrakk> \<Longrightarrow> m' x = Some y"
@@ -1714,7 +1714,7 @@ lemmas tcb_ptr_to_ctcb_ptr_eq [simp] = inj_eq [OF inj_tcb_ptr_to_ctcb_ptr]
 
 lemma obj_at_cslift_tcb:
   fixes P :: "tcb \<Rightarrow> bool"
-  shows "\<lbrakk>obj_at' P thread s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow> 
+  shows "\<lbrakk>obj_at' P thread s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow>
   \<exists>ko ko'. ko_at' ko thread s \<and> P ko \<and>
         cslift s' (tcb_ptr_to_ctcb_ptr thread) = Some ko' \<and>
         ctcb_relation ko ko'"
@@ -1756,22 +1756,22 @@ lemma ctcb_ptr_to_ctcb_ptr [simp]:
 
 declare ucast_id [simp]
 
-definition 
+definition
   cap_rights_from_word_canon :: "word32 \<Rightarrow> seL4_CapRights_CL"
   where
-  "cap_rights_from_word_canon wd \<equiv> 
+  "cap_rights_from_word_canon wd \<equiv>
     \<lparr> capAllowGrant_CL = from_bool (wd !! 2),
       capAllowRead_CL = from_bool (wd !! 1),
       capAllowWrite_CL = from_bool (wd !! 0)\<rparr>"
 
-definition 
+definition
   cap_rights_from_word :: "word32 \<Rightarrow> seL4_CapRights_CL"
   where
-  "cap_rights_from_word wd \<equiv> SOME cr. 
+  "cap_rights_from_word wd \<equiv> SOME cr.
    to_bool (capAllowGrant_CL cr) = wd !! 2 \<and>
-   to_bool (capAllowRead_CL cr) = wd !! 1 \<and> 
+   to_bool (capAllowRead_CL cr) = wd !! 1 \<and>
    to_bool (capAllowWrite_CL cr) = wd !! 0"
-  
+
 lemma cap_rights_to_H_from_word [simp]:
   "cap_rights_to_H (cap_rights_from_word wd) = rightsFromWord wd"
   unfolding cap_rights_from_word_def rightsFromWord_def
@@ -2069,20 +2069,20 @@ lemma cap_get_tag_isCap_unfolded_H_cap:
   and "ccap_relation (capability.Zombie v14 v15 v16) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_zombie_cap)"
   and "ccap_relation (capability.ReplyCap v17 v18) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_reply_cap)"
   and "ccap_relation (capability.UntypedCap v100 v19 v20 v20b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_untyped_cap)"
-  and "ccap_relation (capability.CNodeCap v21 v22 v23 v24) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_cnode_cap)"  
+  and "ccap_relation (capability.CNodeCap v21 v22 v23 v24) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_cnode_cap)"
   and "ccap_relation (capability.DomainCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_domain_cap)"
 
-  and "ccap_relation (capability.ArchObjectCap arch_capability.ASIDControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_control_cap)"  
-  and "ccap_relation (capability.ArchObjectCap (arch_capability.ASIDPoolCap v28 v29)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_pool_cap)"  
-  and "ccap_relation (capability.ArchObjectCap (arch_capability.PageTableCap v30 v31)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_table_cap)"   
-  and "ccap_relation (capability.ArchObjectCap (arch_capability.PageDirectoryCap v32 v33)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_directory_cap)"   
+  and "ccap_relation (capability.ArchObjectCap arch_capability.ASIDControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_control_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.ASIDPoolCap v28 v29)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_pool_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.PageTableCap v30 v31)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_table_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.PageDirectoryCap v32 v33)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_directory_cap)"
 
-  and "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capability.PageCap v101 v34 v35 v36 v37)) cap'; v36=ARMSmallPage\<rbrakk>  \<Longrightarrow> (cap_get_tag cap' = scast cap_small_frame_cap)"   
-  and "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capability.PageCap v102 v38 v39 v40 v41)) cap'; v40\<noteq>ARMSmallPage\<rbrakk>  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"   
-  and "ccap_relation (capability.ArchObjectCap (arch_capability.PageDirectoryCap v42 v43)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_directory_cap)"   
+  and "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capability.PageCap v101 v34 v35 v36 v37)) cap'; v36=ARMSmallPage\<rbrakk>  \<Longrightarrow> (cap_get_tag cap' = scast cap_small_frame_cap)"
+  and "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capability.PageCap v102 v38 v39 v40 v41)) cap'; v40\<noteq>ARMSmallPage\<rbrakk>  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.PageDirectoryCap v42 v43)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_directory_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.PageDirectoryCap v44 v45)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_directory_cap)"
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)
-  apply (frule cap_get_tag_isCap(2), simp) 
+  apply (frule cap_get_tag_isCap(2), simp)
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps pageSize_def)+
 done
 

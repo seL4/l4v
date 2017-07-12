@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Types of exceptions in the abstract model.
 *)
 
@@ -24,11 +24,11 @@ end
 
 text {*
   There are two types of exceptions that can occur in the kernel:
-  faults and errors. Faults are reported to the user's fault handler. 
+  faults and errors. Faults are reported to the user's fault handler.
   Errors are reported to the user directly.
 
   Capability lookup failures can be be either fault or error,
-  depending on context.  
+  depending on context.
 *}
 
 datatype lookup_failure

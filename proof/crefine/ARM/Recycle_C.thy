@@ -42,13 +42,13 @@ lemma coerce_memset_to_heap_update_user_data:
   apply (simp add: to_bytes_def size_of_def typ_info_simps user_data_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-  apply (simp add: typ_info_simps 
+  apply (simp add: typ_info_simps
                    user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
                    lookup_fault_C_tag_def update_ti_t_ptr_0s
-                   ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td 
-                   ti_typ_combine_empty_ti ti_typ_combine_td       
+                   ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td
+                   ti_typ_combine_empty_ti ti_typ_combine_td
                    align_of_def padup_def
-                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def 
+                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def
                    align_td_array' size_td_array)
   apply (simp add: typ_info_array')
   apply (subst access_ti_list_array)
@@ -233,7 +233,7 @@ lemma heap_to_device_data_disj_mdf':
   apply (simp add: pbfs_atleast_pageBits pbfs_less_wb' field_simps| intro range_cover_full )+
   done
 
-lemma range_cover_nca_neg: "\<And>x p (off :: 10 word). 
+lemma range_cover_nca_neg: "\<And>x p (off :: 10 word).
   \<lbrakk>(x::word32) < 4; {p..+2 ^pageBits } \<inter> {ptr..ptr + (of_nat n * 2 ^ bits - 1)} = {};
     range_cover ptr sz bits n\<rbrakk>
    \<Longrightarrow> p + ucast off * 4 + x \<notin> {ptr..+n * 2 ^ bits}"
@@ -303,7 +303,7 @@ lemma clearMemory_PageCap_ccorres:
        apply (subst(asm) of_nat_power, assumption)
         apply simp
         apply (insert pageBitsForSize_32 [of sz])[1]
-        apply (erule order_le_less_trans [rotated])        
+        apply (erule order_le_less_trans [rotated])
         apply simp
        apply (simp, drule ko_at_projectKO_opt[OF user_data_at_ko])
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
@@ -313,7 +313,7 @@ lemma clearMemory_PageCap_ccorres:
       apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
       apply (clarsimp simp: cpspace_relation_def typ_heap_simps
                             clift_foldl_hrs_mem_update foldl_id
-                            carch_state_relation_def        
+                            carch_state_relation_def
                             cmachine_state_relation_def
                             foldl_fun_upd_const[unfolded fun_upd_def]
                             power_user_page_foldl_zero_ranges
@@ -360,8 +360,8 @@ lemma clearMemory_PageCap_ccorres:
         apply (rule order_le_less_trans[rotated], erule shiftl_less_t2n [OF of_nat_power],
                simp_all add: word_bits_def)[1]
          apply (insert pageBitsForSize_32 [of sz])[1]
-         apply (erule order_le_less_trans [rotated])        
-         subgoal by simp        
+         apply (erule order_le_less_trans [rotated])
+         subgoal by simp
         subgoal by (simp add: pageBits_def shiftl_t2n field_simps)
        apply clarsimp
        apply (drule_tac x="of_nat n" in spec)
@@ -393,13 +393,13 @@ lemma coerce_memset_to_heap_update_asidpool:
   apply (simp add: to_bytes_def size_of_def typ_info_simps asid_pool_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-  apply (simp add: typ_info_simps 
+  apply (simp add: typ_info_simps
                    user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
                    lookup_fault_C_tag_def update_ti_t_ptr_0s
-                   ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td 
-                   ti_typ_combine_empty_ti ti_typ_combine_td       
+                   ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td
+                   ti_typ_combine_empty_ti ti_typ_combine_td
                    align_of_def padup_def
-                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def 
+                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def
                    align_td_array' size_td_array)
   apply (simp add: typ_info_array')
   apply (subst access_ti_list_array)
@@ -554,7 +554,7 @@ lemma ignoreFailure_liftM:
 end
 
 lemma option_to_0_user_mem':
-  "option_to_0 \<circ> user_mem' as =(\<lambda>x. if x \<in> {y. \<not> pointerInUserData y as} then 0 
+  "option_to_0 \<circ> user_mem' as =(\<lambda>x. if x \<in> {y. \<not> pointerInUserData y as} then 0
   else underlying_memory (ksMachineState as) x) "
   apply (rule ext)
   apply (simp add:user_mem'_def option_to_0_def split:if_splits)
@@ -704,7 +704,7 @@ lemma ccorres_make_xfdc:
   apply (erule ccorres_rel_imp)
   apply simp
   done
-  
+
 lemma ccorres_if_True_False_simps:
   "ccorres r xf P P' hs a (IF True THEN c ELSE c' FI) = ccorres r xf P P' hs a c"
   "ccorres r xf P P' hs a (IF False THEN c ELSE c' FI) = ccorres r xf P P' hs a c'"
@@ -741,7 +741,7 @@ lemma ccorres_return_C_seq:
 lemma ccap_relation_VPIsDevice:
   "\<lbrakk>isPageCap cp; ccap_relation (ArchObjectCap cp) cap  \<rbrakk> \<Longrightarrow>
    (generic_frame_cap_get_capFIsDevice_CL (cap_lift cap) = 0) = (\<not> (capVPIsDevice cp))"
-   by (clarsimp elim!:ccap_relationE 
+   by (clarsimp elim!:ccap_relationE
      simp : isPageCap_def generic_frame_cap_get_capFIsDevice_CL_def cap_to_H_def
             Let_def to_bool_def
      split: arch_capability.split_asm cap_CL.split_asm if_split_asm)
@@ -846,9 +846,9 @@ context kernel_m begin
 
 lemma ccorres_abstract_h_val:
   "(\<And>rv. P rv \<Longrightarrow> ccorres r xf G (G' rv) hs a c) \<Longrightarrow>
-   ccorres r xf G ({s. P (h_val (hrs_mem (t_hrs_' (globals s))) p) 
-            \<longrightarrow> s \<in> G' (h_val (hrs_mem (t_hrs_' (globals s))) 
-            p)} 
+   ccorres r xf G ({s. P (h_val (hrs_mem (t_hrs_' (globals s))) p)
+            \<longrightarrow> s \<in> G' (h_val (hrs_mem (t_hrs_' (globals s)))
+            p)}
    \<inter> {s. P (h_val (hrs_mem (t_hrs_' (globals s))) p)}) hs a c"
    apply (rule ccorres_tmp_lift1 [where P = P])
    apply (clarsimp simp: Collect_conj_eq [symmetric])
@@ -1069,7 +1069,7 @@ lemma cancelBadgedSends_ccorres:
            apply (rule_tac P=\<top>
                       and P'="{s. ep_queue_relation' (cslift s) (x @ a # lista)
                                         (head_C (queue_' s)) (end_C (queue_' s))}"
-                      and f'="\<lambda>s. s \<lparr> next___ptr_to_struct_tcb_C_' := (case lista of [] \<Rightarrow> tcb_Ptr 0 
+                      and f'="\<lambda>s. s \<lparr> next___ptr_to_struct_tcb_C_' := (case lista of [] \<Rightarrow> tcb_Ptr 0
                                               | v # vs \<Rightarrow> tcb_ptr_to_ctcb_ptr v) \<rparr>"
                       and xf'="next___ptr_to_struct_tcb_C_'"
                            in ccorres_subst_basic_helper)
@@ -1103,7 +1103,7 @@ lemma cancelBadgedSends_ccorres:
                    apply (clarsimp simp: ball_Un)
                    apply (rule exI, rule conjI)
                     apply (rule exI, erule conjI)
-                    apply (intro conjI[rotated]) 
+                    apply (intro conjI[rotated])
                     apply (assumption)
                     apply (fold_subgoals (prefix))[3]
                     subgoal premises prems using prems by (fastforce intro: pred_tcb_at')+
@@ -1136,7 +1136,7 @@ lemma cancelBadgedSends_ccorres:
                    apply (rule conjI)
                     apply (erule cready_queues_relation_not_queue_ptrs,
                            auto dest: null_ep_schedD[unfolded o_def] simp: o_def)[1]
-                   apply (simp add: carch_state_relation_def 
+                   apply (simp add: carch_state_relation_def
                                     cmachine_state_relation_def
                                     h_t_valid_clift_Some_iff)
                   apply (rule ccorres_symb_exec_r2)
@@ -1222,7 +1222,7 @@ lemma cancelBadgedSends_ccorres:
    apply (clarsimp split: if_split)
    apply (drule sym_refsD, clarsimp)
    apply (drule(1) bspec)+
-   by (auto simp: obj_at'_def projectKOs state_refs_of'_def pred_tcb_at'_def tcb_bound_refs'_def 
+   by (auto simp: obj_at'_def projectKOs state_refs_of'_def pred_tcb_at'_def tcb_bound_refs'_def
               dest!: symreftype_inverse')
 
 
@@ -1245,13 +1245,13 @@ lemma coerce_memset_to_heap_update:
   apply (simp add: to_bytes_def size_of_def typ_info_simps tcb_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-  apply (simp add: typ_info_simps 
+  apply (simp add: typ_info_simps
                    user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
                    lookup_fault_C_tag_def update_ti_t_ptr_0s arch_tcb_C_tag_def
-                   ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td 
-                   ti_typ_combine_empty_ti ti_typ_combine_td       
+                   ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td
+                   ti_typ_combine_empty_ti ti_typ_combine_td
                    align_of_def padup_def
-                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def 
+                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def
                    align_td_array' size_td_array)
   apply (simp add: typ_info_array')
   apply (simp add: typ_info_word word_rsplit_0 upt_conv_Cons)
@@ -1274,7 +1274,7 @@ lemma cte_lift_ccte_relation:
 lemma updateFreeIndex_ccorres:
   "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter> {s. \<exists>cte cte'. cslift s (cte_Ptr srcSlot) = Some cte'
                \<and> cteCap cte = cap' \<and> ccte_relation cte cte'})
-          c 
+          c
         {t. \<exists>cap. cap_untyped_cap_lift cap = (cap_untyped_cap_lift
                     (cte_C.cap_C (the (cslift s (cte_Ptr srcSlot)))))
                         \<lparr> cap_untyped_cap_CL.capFreeIndex_CL := ((of_nat idx') >> 4) \<rparr>
@@ -1357,13 +1357,13 @@ lemma ccap_relation_isDeviceCap:
  "\<lbrakk>ccap_relation cp cap; isUntypedCap cp
   \<rbrakk> \<Longrightarrow> to_bool (capIsDevice_CL (cap_untyped_cap_lift cap)) =  (capIsDevice cp)"
   apply (frule cap_get_tag_UntypedCap)
-  apply (simp add:cap_get_tag_isCap ) 
+  apply (simp add:cap_get_tag_isCap )
   done
 
 lemma ccap_relation_isDeviceCap2:
  "\<lbrakk>ccap_relation cp cap; isUntypedCap cp
   \<rbrakk> \<Longrightarrow> (capIsDevice_CL (cap_untyped_cap_lift cap) = 0) = (\<not> (capIsDevice cp))"
   apply (frule cap_get_tag_UntypedCap)
-  apply (simp add:cap_get_tag_isCap to_bool_def) 
+  apply (simp add:cap_get_tag_isCap to_bool_def)
   done
 end

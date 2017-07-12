@@ -91,7 +91,7 @@ lemma retype_region_valid_etcbs[wp]:"\<lbrace>valid_etcbs\<rbrace> retype_region
   apply (blast intro: valid_etcb_fold_update)
   done
 
-lemma typ_at_pred_tcb_at_lift: 
+lemma typ_at_pred_tcb_at_lift:
   assumes typ_lift: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>r s. P (typ_at T p s)\<rbrace>"
   assumes pred_lift: "\<And>P. \<lbrace>pred_tcb_at proj P t\<rbrace> f \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   shows "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P t s\<rbrace> f \<lbrace>\<lambda>r s. \<not> pred_tcb_at proj P t s\<rbrace>"
@@ -123,7 +123,7 @@ lemma create_cap_no_pred_tcb_at: "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P
           \<lbrace>\<lambda>r s. \<not> pred_tcb_at proj P t s\<rbrace>"
   by (rule typ_at_pred_tcb_at_lift; wp)
 
-lemma cap_insert_no_pred_tcb_at: 
+lemma cap_insert_no_pred_tcb_at:
   "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P t s\<rbrace>
      cap_insert cap src dest
    \<lbrace>\<lambda>r s. \<not> pred_tcb_at proj P t s\<rbrace>"
@@ -297,7 +297,7 @@ lemma valid_sched_tcb_state_preservation:
    apply simp
    apply (case_tac st, simp+)
   apply(frule (1) use_valid[OF _ valid_idle])
-  apply(simp add: valid_idle_etcb_def)  
+  apply(simp add: valid_idle_etcb_def)
   apply(frule use_valid[OF _ stuff[where t=idle_thread_ptr]])
    apply simp
   apply(erule mp)

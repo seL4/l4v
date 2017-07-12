@@ -39,7 +39,7 @@ The following type can specify any kernel object invocation. It contains physica
 > data Invocation
 >         = InvokeUntyped UntypedInvocation
 >         | InvokeEndpoint (PPtr Endpoint) Word Bool
->         | InvokeNotification (PPtr Notification) Word 
+>         | InvokeNotification (PPtr Notification) Word
 >         | InvokeReply (PPtr TCB) (PPtr CTE)
 >         | InvokeDomain (PPtr TCB) Domain
 >         | InvokeTCB TCBInvocation
@@ -64,7 +64,7 @@ The following data type defines the set of possible TCB invocation operations. T
 >             tcNewPriority :: Maybe Priority,
 >             tcNewCRoot, tcNewVRoot :: Maybe (Capability, PPtr CTE),
 >             tcNewIPCBuffer :: Maybe (VPtr, Maybe (Capability, PPtr CTE)) }
->         | NotificationControl { 
+>         | NotificationControl {
 >             notificationTCB :: PPtr TCB,
 >             notificationPtr :: Maybe (PPtr Notification) }
 >         | WriteRegisters {
@@ -80,7 +80,7 @@ The following data type defines the set of possible TCB invocation operations. T
 >         | CopyRegisters {
 >             copyRegsTarget :: PPtr TCB,
 >             copyRegsSource :: PPtr TCB,
->             copyRegsSuspendSource, copyRegsResumeTarget :: Bool, 
+>             copyRegsSuspendSource, copyRegsResumeTarget :: Bool,
 >             copyRegsTransferFrame, copyRegsTransferInteger :: Bool,
 >             copyRegsTransferArch :: Arch.CopyRegisterSets }
 >         deriving Show
@@ -118,7 +118,7 @@ The following data type defines the parameters expected for invocations of Untyp
 >             retypeFreeRegionBase :: PPtr (),
 >             retypeNewType :: ObjectType,
 >             retypeNewSizeBits :: Int,
->             retypeSlots :: [PPtr CTE], 
+>             retypeSlots :: [PPtr CTE],
 >             retypeIsDevice :: Bool }
 >         deriving Show
 

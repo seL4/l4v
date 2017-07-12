@@ -50,7 +50,7 @@ definition
 definition
   cmap_relation :: "(word32 \<rightharpoonup> 'a) \<Rightarrow> 'b typ_heap \<Rightarrow> (word32 \<Rightarrow> 'b ptr) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> bool"
   where
-  "cmap_relation as cs addr_fun rel \<equiv> 
+  "cmap_relation as cs addr_fun rel \<equiv>
           (addr_fun ` (dom as) = dom cs) \<and>
           (\<forall>x \<in> dom as. rel (the (as x)) (the (cs (addr_fun x))))"
 
@@ -113,8 +113,8 @@ context state_rel
 begin
 
 (* relates fixed adresses *)
-definition 
-  "carch_globals s \<equiv> 
+definition
+  "carch_globals s \<equiv>
   (armKSGlobalPD s = symbol_table ''armKSGlobalPD'') \<and>
   (armKSGlobalPTs s  = [symbol_table ''armKSGlobalPT''])"
 
@@ -137,7 +137,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 definition
   cmachine_state_relation :: "machine_state \<Rightarrow> globals \<Rightarrow> bool"
 where
-  "cmachine_state_relation s s' \<equiv> 
+  "cmachine_state_relation s s' \<equiv>
   irq_masks s = irq_masks (phantom_machine_state_' s') \<and>
   irq_state s = irq_state (phantom_machine_state_' s') \<and>
   device_state s = device_state (phantom_machine_state_' s') \<and>
@@ -150,37 +150,37 @@ definition
 
 type_synonym ('a, 'b) ltyp_heap = "'a ptr \<rightharpoonup> 'b"
 
-abbreviation 
+abbreviation
   map_to_tcbs :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> tcb"
   where
   "map_to_tcbs hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
 
-abbreviation 
+abbreviation
   map_to_eps :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> endpoint"
   where
   "map_to_eps hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
 
-abbreviation 
+abbreviation
   map_to_ntfns :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> notification"
   where
   "map_to_ntfns hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
 
-abbreviation 
+abbreviation
   map_to_pdes :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> pde"
   where
   "map_to_pdes hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
 
-abbreviation 
+abbreviation
   map_to_ptes :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> pte"
   where
   "map_to_ptes hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
 
-abbreviation 
+abbreviation
   map_to_asidpools :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> asidpool"
   where
   "map_to_asidpools hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
 
-abbreviation 
+abbreviation
   map_to_user_data :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> user_data"
   where
   "map_to_user_data hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
@@ -209,7 +209,7 @@ lemma ccte_relation_c_valid_cte: "ccte_relation  c c' \<Longrightarrow> c_valid_
 definition
   tcb_queue_relation' :: "(tcb_C \<Rightarrow> tcb_C ptr) \<Rightarrow> (tcb_C \<Rightarrow> tcb_C ptr) \<Rightarrow> (tcb_C ptr \<Rightarrow> tcb_C option) \<Rightarrow> word32 list \<Rightarrow> tcb_C ptr \<Rightarrow> tcb_C ptr \<Rightarrow> bool"
   where
-  "tcb_queue_relation' getNext getPrev hp queue qhead end \<equiv> 
+  "tcb_queue_relation' getNext getPrev hp queue qhead end \<equiv>
   (end = (if queue = [] then NULL else (tcb_ptr_to_ctcb_ptr (last queue))))
   \<and> tcb_queue_relation getNext getPrev hp queue NULL qhead"
 
@@ -226,13 +226,13 @@ fun
   | "register_from_H ARM.R7 = scast Kernel_C.R7"
   | "register_from_H ARM.R8 = scast Kernel_C.R8"
   | "register_from_H ARM.R9 = scast Kernel_C.R9"
-  | "register_from_H ARM.SL = scast Kernel_C.R10" 
-  | "register_from_H ARM.FP = scast Kernel_C.R11" 
-  | "register_from_H ARM.IP = scast Kernel_C.R12" 
+  | "register_from_H ARM.SL = scast Kernel_C.R10"
+  | "register_from_H ARM.FP = scast Kernel_C.R11"
+  | "register_from_H ARM.IP = scast Kernel_C.R12"
   | "register_from_H ARM.SP = scast Kernel_C.SP"
   | "register_from_H ARM.LR = scast Kernel_C.LR"
   | "register_from_H ARM.LR_svc = scast Kernel_C.LR_svc"
-  | "register_from_H ARM.CPSR = scast Kernel_C.CPSR" 
+  | "register_from_H ARM.CPSR = scast Kernel_C.CPSR"
   | "register_from_H ARM.TPIDRURW = scast Kernel_C.TPIDRURW"
   | "register_from_H ARM.FaultInstruction = scast Kernel_C.FaultInstruction"
 
@@ -242,7 +242,7 @@ where
   "ccontext_relation regs uc \<equiv>  \<forall>r. regs r = index (registers_C uc) (unat (register_from_H r))"
 
 primrec
-  cthread_state_relation_lifted :: "Structures_H.thread_state \<Rightarrow> 
+  cthread_state_relation_lifted :: "Structures_H.thread_state \<Rightarrow>
    (thread_state_CL \<times> seL4_Fault_CL option) \<Rightarrow> bool"
 where
   "cthread_state_relation_lifted (Structures_H.Running) ts'
@@ -259,8 +259,8 @@ where
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReceive \<and>
         oref = blockingObject_CL (fst ts'))"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnSend oref badge cg isc) ts'
-     = (tsType_CL (fst ts') = scast ThreadState_BlockedOnSend 
-        \<and> oref = blockingObject_CL (fst ts') 
+     = (tsType_CL (fst ts') = scast ThreadState_BlockedOnSend
+        \<and> oref = blockingObject_CL (fst ts')
         \<and> badge = blockingIPCBadge_CL (fst ts')
         \<and> cg    = to_bool (blockingIPCCanGrant_CL (fst ts'))
         \<and> isc   = to_bool (blockingIPCIsCall_CL (fst ts')))"
@@ -270,7 +270,7 @@ where
 
 
 definition
-  cthread_state_relation :: "Structures_H.thread_state \<Rightarrow> 
+  cthread_state_relation :: "Structures_H.thread_state \<Rightarrow>
   (thread_state_C \<times> seL4_Fault_C) \<Rightarrow> bool"
 where
   "cthread_state_relation \<equiv> \<lambda>a (cs, cf).
@@ -302,10 +302,10 @@ fun
   | "lookup_fault_to_H (Lookup_fault_depth_mismatch lf) =
                       (DepthMismatch (unat (lookup_fault_depth_mismatch_CL.bitsLeft_CL lf))
                                      (unat (lookup_fault_depth_mismatch_CL.bitsFound_CL lf)))"
-  | "lookup_fault_to_H (Lookup_fault_missing_capability lf) =  
+  | "lookup_fault_to_H (Lookup_fault_missing_capability lf) =
                         (MissingCapability (unat (lookup_fault_missing_capability_CL.bitsLeft_CL lf)))"
 
-fun 
+fun
   fault_to_H :: "seL4_Fault_CL \<Rightarrow> lookup_fault_CL \<Rightarrow> fault option"
 where
   "fault_to_H SeL4_Fault_NullFault lf = None"
@@ -321,7 +321,7 @@ where
 definition
   cfault_rel :: "Fault_H.fault option \<Rightarrow> seL4_Fault_CL option \<Rightarrow> lookup_fault_CL option \<Rightarrow> bool"
 where
-  "cfault_rel af cf lf \<equiv> \<exists>cf'. cf = Some cf' \<and> 
+  "cfault_rel af cf lf \<equiv> \<exists>cf'. cf = Some cf' \<and>
          (if (is_cap_fault cf') then (\<exists>lf'. lf = Some lf' \<and> fault_to_H cf' lf' = af)
            else (fault_to_H cf' undefined = af))"
 
@@ -334,8 +334,8 @@ where
 definition
   ctcb_relation :: "Structures_H.tcb \<Rightarrow> tcb_C \<Rightarrow> bool"
 where
-  "ctcb_relation atcb ctcb \<equiv> 
-       tcbFaultHandler atcb = tcbFaultHandler_C ctcb 
+  "ctcb_relation atcb ctcb \<equiv>
+       tcbFaultHandler atcb = tcbFaultHandler_C ctcb
      \<and> cthread_state_relation (tcbState atcb) (tcbState_C ctcb, tcbFault_C ctcb)
      \<and> tcbIPCBuffer atcb    = tcbIPCBuffer_C ctcb
      \<and> carch_tcb_relation (tcbArch atcb) (tcbArch_C ctcb)
@@ -356,10 +356,10 @@ definition
 where
   "cendpoint_relation h ntfn cep \<equiv>
      let cstate = state_CL (endpoint_lift cep);
-         chead  = (Ptr o epQueue_head_CL o endpoint_lift) cep; 
+         chead  = (Ptr o epQueue_head_CL o endpoint_lift) cep;
          cend   = (Ptr o epQueue_tail_CL o endpoint_lift) cep in
        case ntfn of
-         IdleEP \<Rightarrow> cstate = scast EPState_Idle \<and> ep_queue_relation' h [] chead cend 
+         IdleEP \<Rightarrow> cstate = scast EPState_Idle \<and> ep_queue_relation' h [] chead cend
        | SendEP q \<Rightarrow> cstate = scast EPState_Send \<and> ep_queue_relation' h q chead cend
        | RecvEP q \<Rightarrow> cstate = scast EPState_Recv \<and> ep_queue_relation' h q chead cend"
 
@@ -383,7 +383,7 @@ where
        \<and> option_to_ctcb_ptr (ntfnBoundTCB antfn) = cbound"
 
 definition
-  "ap_from_vm_rights R \<equiv> case R of 
+  "ap_from_vm_rights R \<equiv> case R of
     VMNoAccess \<Rightarrow> 0
   | VMKernelOnly \<Rightarrow> 1
   | VMReadOnly \<Rightarrow> 2
@@ -394,12 +394,12 @@ definition
     True \<Rightarrow> 5
   | False \<Rightarrow> 0"
 
-definition 
+definition
   "s_from_cacheable c \<equiv> case c of
     True \<Rightarrow> 0
   | False \<Rightarrow> 1"
 
-definition 
+definition
   "b_from_cacheable c \<equiv> case c of
     True \<Rightarrow> 1
   | False \<Rightarrow> 0"
@@ -410,37 +410,37 @@ where
   "cpde_relation pde cpde \<equiv>
   (let cpde' = pde_lift cpde in
   case pde of
-    InvalidPDE \<Rightarrow> 
+    InvalidPDE \<Rightarrow>
     (\<exists>inv. cpde' = Some (Pde_pde_invalid inv))
-  | PageTablePDE frame parity domain \<Rightarrow> 
-    cpde' = Some (Pde_pde_coarse 
-     \<lparr> pde_pde_coarse_CL.address_CL = frame, 
-       P_CL = of_bool parity, 
+  | PageTablePDE frame parity domain \<Rightarrow>
+    cpde' = Some (Pde_pde_coarse
+     \<lparr> pde_pde_coarse_CL.address_CL = frame,
+       P_CL = of_bool parity,
        Domain_CL = domain \<rparr>)
-  | SectionPDE frame parity domain cacheable global xn rights \<Rightarrow> 
+  | SectionPDE frame parity domain cacheable global xn rights \<Rightarrow>
     cpde' = Some (Pde_pde_section
-     \<lparr> pde_pde_section_CL.address_CL = frame, 
-       size_CL = 0, 
+     \<lparr> pde_pde_section_CL.address_CL = frame,
+       size_CL = 0,
        nG_CL = of_bool (~global),
        S_CL = s_from_cacheable cacheable,
        APX_CL = 0,
        TEX_CL = tex_from_cacheable cacheable,
-       AP_CL = ap_from_vm_rights rights, 
+       AP_CL = ap_from_vm_rights rights,
        P_CL = of_bool parity,
        Domain_CL = domain,
        XN_CL = of_bool xn,
        C_CL = 0,
        B_CL = b_from_cacheable cacheable
   \<rparr>)
-  | SuperSectionPDE frame parity cacheable global xn rights \<Rightarrow> 
+  | SuperSectionPDE frame parity cacheable global xn rights \<Rightarrow>
     cpde' = Some (Pde_pde_section
-     \<lparr> pde_pde_section_CL.address_CL = frame, 
-       size_CL = 1, 
+     \<lparr> pde_pde_section_CL.address_CL = frame,
+       size_CL = 1,
        nG_CL = of_bool (~global),
        S_CL = s_from_cacheable cacheable,
        APX_CL = 0,
        TEX_CL = tex_from_cacheable cacheable,
-       AP_CL = ap_from_vm_rights rights, 
+       AP_CL = ap_from_vm_rights rights,
        P_CL = of_bool parity,
        Domain_CL = 0,
        XN_CL = of_bool xn,
@@ -454,10 +454,10 @@ where
   "cpte_relation pte cpte \<equiv>
   (let cpte' = pte_lift cpte in
   case pte of
-    InvalidPTE \<Rightarrow> 
+    InvalidPTE \<Rightarrow>
     cpte' = Some (Pte_pte_large
      \<lparr> pte_pte_large_CL.address_CL = 0,
-       XN_CL = 0, 
+       XN_CL = 0,
        TEX_CL = 0,
        nG_CL = 0,
        S_CL = 0,
@@ -467,10 +467,10 @@ where
        B_CL = 0,
        reserved_CL = 0
      \<rparr>)
-  | LargePagePTE frame cacheable global xn rights \<Rightarrow> 
+  | LargePagePTE frame cacheable global xn rights \<Rightarrow>
     cpte' = Some (Pte_pte_large
      \<lparr> pte_pte_large_CL.address_CL = frame,
-       XN_CL = of_bool xn, 
+       XN_CL = of_bool xn,
        TEX_CL = tex_from_cacheable cacheable,
        nG_CL = of_bool (~global),
        S_CL = s_from_cacheable cacheable,
@@ -480,7 +480,7 @@ where
        B_CL = b_from_cacheable cacheable,
        reserved_CL = 1
      \<rparr>)
-  | SmallPagePTE frame cacheable global xn rights \<Rightarrow> 
+  | SmallPagePTE frame cacheable global xn rights \<Rightarrow>
     cpte' = Some (Pte_pte_small
      \<lparr> address_CL = frame,
        nG_CL = of_bool (~global),
@@ -497,7 +497,7 @@ where
 lemma pte_0:
   "index (pte_C.words_C cpte) 0 = 0 \<Longrightarrow> pte_lift cpte = Some (Pte_pte_large
      \<lparr> pte_pte_large_CL.address_CL = 0,
-       XN_CL = 0, 
+       XN_CL = 0,
        TEX_CL = 0,
        nG_CL = 0,
        S_CL = 0,
@@ -512,7 +512,7 @@ lemma pte_0:
 definition
   casid_pool_relation :: "asidpool \<Rightarrow> asid_pool_C \<Rightarrow> bool"
 where
-  "casid_pool_relation asid_pool casid_pool \<equiv> 
+  "casid_pool_relation asid_pool casid_pool \<equiv>
   case asid_pool of ASIDPool pool \<Rightarrow>
   case casid_pool of asid_pool_C cpool \<Rightarrow>
   array_relation (op = \<circ> option_to_ptr) (2^asid_low_bits - 1) pool cpool"
@@ -573,9 +573,9 @@ abbreviation
 definition
   cpspace_relation :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> heap_raw_state \<Rightarrow> bool"
 where
-  "cpspace_relation ah bh ch \<equiv>  
+  "cpspace_relation ah bh ch \<equiv>
   cpspace_cte_relation ah ch \<and> cpspace_tcb_relation ah ch \<and> cpspace_ep_relation ah ch \<and> cpspace_ntfn_relation ah ch \<and>
-  cpspace_pde_relation ah ch \<and> cpspace_pte_relation ah ch \<and> cpspace_asidpool_relation ah ch \<and> 
+  cpspace_pde_relation ah ch \<and> cpspace_pte_relation ah ch \<and> cpspace_asidpool_relation ah ch \<and>
   cpspace_user_data_relation ah bh ch \<and> cpspace_device_data_relation ah bh ch \<and>
   cpspace_pde_array_relation ah ch \<and> cpspace_pte_array_relation ah ch"
 
@@ -798,14 +798,14 @@ primrec
   lookup_failure_rel :: "lookup_failure \<Rightarrow> word32 \<Rightarrow> errtype \<Rightarrow> bool"
 where
   "lookup_failure_rel InvalidRoot fl es = (fl = scast EXCEPTION_LOOKUP_FAULT \<and> errlookup_fault es = Some Lookup_fault_invalid_root)"
-| "lookup_failure_rel (GuardMismatch bl gf sz) fl es = (fl = scast EXCEPTION_LOOKUP_FAULT \<and> 
+| "lookup_failure_rel (GuardMismatch bl gf sz) fl es = (fl = scast EXCEPTION_LOOKUP_FAULT \<and>
     (\<exists>lf. errlookup_fault es = Some (Lookup_fault_guard_mismatch lf) \<and>
           guardFound_CL lf = gf \<and> unat (bitsLeft_CL lf) = bl \<and> unat (bitsFound_CL lf) = sz))"
-| "lookup_failure_rel (DepthMismatch bl bf) fl es = (fl = scast EXCEPTION_LOOKUP_FAULT \<and> 
+| "lookup_failure_rel (DepthMismatch bl bf) fl es = (fl = scast EXCEPTION_LOOKUP_FAULT \<and>
     (\<exists>lf. errlookup_fault es = Some (Lookup_fault_depth_mismatch lf) \<and>
-          unat (lookup_fault_depth_mismatch_CL.bitsLeft_CL lf) = bl 
+          unat (lookup_fault_depth_mismatch_CL.bitsLeft_CL lf) = bl
         \<and> unat (lookup_fault_depth_mismatch_CL.bitsFound_CL lf) = bf))"
-| "lookup_failure_rel (MissingCapability bl) fl es = (fl = scast EXCEPTION_LOOKUP_FAULT \<and> 
+| "lookup_failure_rel (MissingCapability bl) fl es = (fl = scast EXCEPTION_LOOKUP_FAULT \<and>
     (\<exists>lf. errlookup_fault es = Some (Lookup_fault_missing_capability lf) \<and>
           unat (lookup_fault_missing_capability_CL.bitsLeft_CL lf) = bl))"
 
@@ -828,7 +828,7 @@ where
     else if type_C se = scast seL4_TruncatedMessage then Some TruncatedMessage
     else if type_C se = scast seL4_DeleteFirst then Some DeleteFirst
     else if type_C se = scast seL4_RevokeFirst then Some RevokeFirst
-    else if type_C se = scast seL4_NotEnoughMemory then Some (NotEnoughMemory (memoryLeft_C se)) 
+    else if type_C se = scast seL4_NotEnoughMemory then Some (NotEnoughMemory (memoryLeft_C se))
     else None"
 
 lemmas syscall_error_type_defs
@@ -899,10 +899,10 @@ lemma (in kernel) syscall_error_to_H_cases_rev:
   by (clarsimp simp: syscall_error_to_H_def syscall_error_type_defs
               split: if_split_asm)+
 
-definition 
+definition
   syscall_from_H :: "syscall \<Rightarrow> word32"
 where
-  "syscall_from_H c \<equiv> case c of 
+  "syscall_from_H c \<equiv> case c of
     SysSend \<Rightarrow> scast Kernel_C.SysSend
   | SysNBSend \<Rightarrow> scast Kernel_C.SysNBSend
   | SysCall \<Rightarrow> scast Kernel_C.SysCall
@@ -922,7 +922,7 @@ lemma (in kernel) cmap_relation_cs_atD:
   apply (subgoal_tac "addr_fun x \<in> addr_fun ` dom as")
    prefer 2
    apply fastforce
-  apply (erule imageE) 
+  apply (erule imageE)
   apply (drule (1) injD)
   apply simp
   done

@@ -34,7 +34,7 @@ ML {*
                                   (sep_mp_solver ctxt THEN' (TRY o sep_flatten ctxt)) goal) ctxt) i
       | NONE => default [thm] ctxt i
     end
-  in 
+  in
     if direct then default thms ctxt i else FIRST (map (make_sep_rule_inner i) thms)
   end
 

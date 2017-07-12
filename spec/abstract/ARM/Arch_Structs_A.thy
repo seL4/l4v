@@ -24,7 +24,7 @@ begin
 context Arch begin global_naming ARM_A
 
 text {*
-This theory provides architecture-specific definitions and datatypes 
+This theory provides architecture-specific definitions and datatypes
 including architecture-specific capabilities and objects.
 *}
 
@@ -52,7 +52,7 @@ lemmas arch_cap_cases =
   arch_cap.induct[where arch_cap=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
 
 lemmas arch_cap_cases_asm =
-arch_cap.induct[where arch_cap=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x, 
+arch_cap.induct[where arch_cap=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x,
   simplified, rule_format, rotated -1]
 
 definition
@@ -102,7 +102,7 @@ lemmas arch_kernel_obj_cases =
   arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
 
 lemmas arch_kernel_obj_cases_asm =
-arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x, 
+arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x,
   simplified, rule_format, rotated -1]
 
 primrec
@@ -154,7 +154,7 @@ definition
 section {* Architecture-specific object types and default objects *}
 
 datatype
-  aobject_type = 
+  aobject_type =
     SmallPageObj
   | LargePageObj
   | SectionObj
@@ -187,7 +187,7 @@ definition
 definition
   default_arch_object :: "aobject_type \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> arch_kernel_obj" where
  "default_arch_object tp dev n \<equiv> case tp of
-    SmallPageObj \<Rightarrow> DataPage dev ARMSmallPage 
+    SmallPageObj \<Rightarrow> DataPage dev ARMSmallPage
   | LargePageObj \<Rightarrow> DataPage dev ARMLargePage
   | SectionObj \<Rightarrow> DataPage dev ARMSection
   | SuperSectionObj \<Rightarrow> DataPage dev ARMSuperSection
@@ -204,12 +204,12 @@ section {* Architecture-specific state *}
 text {* The architecture-specific state for the ARM model
 consists of a reference to the globals page (@{text "arm_globals_frame"}),
 the first level of the ASID table (@{text "arm_asid_table"}), a
-map from hardware ASIDs to seL4 ASIDs (@{text "arm_hwasid_table"}), 
+map from hardware ASIDs to seL4 ASIDs (@{text "arm_hwasid_table"}),
 the next hardware ASID to preempt (@{text "arm_next_asid"}), the
 inverse map from seL4 ASIDs to hardware ASIDs (first component of
 @{text "arm_asid_map"}), and the address of the page directory and
 page tables mapping the shared address space, along with a description
-of this space (@{text "arm_global_pd"}, @{text "arm_global_pts"}, and 
+of this space (@{text "arm_global_pd"}, @{text "arm_global_pts"}, and
 @{text "arm_kernel_vspace"} respectively).
 
 Hardware ASIDs are only ever associated with seL4 ASIDs that have a
@@ -253,7 +253,7 @@ datatype aa_type =
   | ADeviceData vmpage_size
 
 definition aa_type :: "arch_kernel_obj \<Rightarrow> aa_type"
-where 
+where
  "aa_type ao \<equiv> (case ao of
            PageTable pt             \<Rightarrow> APageTable
          | PageDirectory pd         \<Rightarrow> APageDirectory

@@ -446,7 +446,7 @@ where
 | "finalise_cap (ReplyCap r m)           final = return (NullCap, None)"
 | "finalise_cap (EndpointCap r b R)      final =
       (liftM (K (NullCap, None)) $ when final $ cancel_all_ipc r)"
-| "finalise_cap (NotificationCap r b R) final = 
+| "finalise_cap (NotificationCap r b R) final =
       (liftM (K (NullCap, None)) $ when final $ do
           unbind_maybe_notification r;
           cancel_all_signals r
@@ -848,7 +848,7 @@ definition
           NullCap \<Rightarrow> return ()
         | ReplyCap _ False \<Rightarrow> cap_move cap src_slot slot
         | _ \<Rightarrow> fail) od
-  | CancelBadgedSendsCall (EndpointCap ep b R) \<Rightarrow> 
+  | CancelBadgedSendsCall (EndpointCap ep b R) \<Rightarrow>
     without_preemption $ when (b \<noteq> 0) $ cancel_badged_sends ep b
   | CancelBadgedSendsCall _ \<Rightarrow> fail"
 

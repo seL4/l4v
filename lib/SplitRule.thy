@@ -57,7 +57,7 @@ fun better_split ctxt splitthms thm = conjunct_rules
                  THEN (REPEAT (FIRST (map (do_split ctxt) splitthms)))) thm));
 
 val split_att
-  = Attrib.thms >> 
+  = Attrib.thms >>
     (fn thms => Thm.rule_attribute thms (fn context => better_split (Context.proof_of context) thms));
 
 

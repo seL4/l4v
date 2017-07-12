@@ -1166,7 +1166,7 @@ case \x of (Zombie {}) -> (IRQControlCap) -> cap@(UntypedCap { capBlockSize = b 
     then let cap = capCap cap
         in ->5
     else ->6
-    
+
 case \x of ((Zombie { capZombieNumber = 0 }), _) -> ((Zombie { capZombiePtr = ptr }), False) -> (z@(Zombie { capZombiePtr = ptr, capZombieNumber = n }), True) -> (_, _) ->  ---> let (\v0\, \v1\) = \x in
     if isZombie \v0\ \<and> capZombieNumber \v0\ = 0
     then ->1
@@ -1323,7 +1323,7 @@ case \x of cap@(PageDirectoryCap {}) -> cap@(PageTableCap {}) -> cap@(PageCap {}
     else if isASIDPoolCap cap
     then ->5
     else undefined
- 
+
 case \x of (c@PageTableCap { capPTMappedAddress = Just _ }) -> (PageTableCap { capPTMappedAddress = Nothing }) -> (c@PageDirectoryCap { capPDMappedAddress = Just _ }) -> (PageDirectoryCap { capPDMappedAddress = Nothing }) -> (c@PDPointerTableCap { capPDPTMappedAddress = Just _ }) -> (PDPointerTableCap { capPDPTMappedAddress = Nothing }) -> (c@PML4Cap { capPML4MappedASID = Just _ }) -> (PML4Cap { capPML4MappedASID = Nothing }) -> (c@PageCap {}) -> c@ASIDControlCap -> (c@ASIDPoolCap {}) -> (c@IOPortCap {}) -> (c@IOSpaceCap {}) -> (c@IOPageTableCap { capIOPTMappedAddress = Just _ }) -> (IOPageTableCap { capIOPTMappedAddress = Nothing }) ->  ---> let c = \x in
     if isPageTableCap c \<and> capPTMappedAddress c \<noteq> None
     then ->1
@@ -1395,7 +1395,7 @@ case \x of (cap@PageCap {}) -> (cap@PageTableCap { capPTBasePtr = ptr }) -> (cap
 
 case \x of (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerIOAPIC, index:depth:ioapic:pin:level:polarity:irqW:_, cnode:_) -> (ArchInvocationLabel ArchLabels.X64IRQIssueIRQHandlerMSI, index:depth:pciBus:pciDev:pciFunc:handle:irqW:_, cnode:_) -> _ ->  ---> let (label, args, extraCaps) = \x in
     case (label, args, extraCaps) of
-      (ArchInvocationLabel X64IRQIssueIRQHandlerIOAPIC, 
+      (ArchInvocationLabel X64IRQIssueIRQHandlerIOAPIC,
         index#depth#ioapic#pin#level#polarity#irqW#_, cnode#_) => ->1
     | (ArchInvocationLabel X64IRQIssueIRQHandlerMSI,
         index#depth#pciBus#pciDev#pciFunc#handle#irqW#_, cnode#_) => ->2
@@ -1426,11 +1426,11 @@ case \x of (cap@PageCap {}) -> (cap@PageTableCap { capPTBasePtr = ptr }) -> (cap
     else if isASIDControlCap cap
     then ->9
     else if isASIDPoolCap cap
-    then let base = capASIDBase cap; ptr = capASIDPool cap in ->10 
+    then let base = capASIDBase cap; ptr = capASIDPool cap in ->10
     else undefined
 
 case \x of Arch.Types.APIObjectType _ -> Arch.Types.SmallPageObject -> Arch.Types.LargePageObject -> Arch.Types.HugePageObject -> Arch.Types.PageTableObject -> Arch.Types.PageDirectoryObject -> Arch.Types.PDPointerTableObject -> Arch.Types.PML4Object ->  ---> let t = \x in
-    case t of 
+    case t of
      APIObjectType _ => ->1
    | SmallPageObject => ->2
    | LargePageObject => ->3
@@ -1481,14 +1481,14 @@ case \x of (ArchInvocationLabel X64PDPTMap, vaddr':attr:_, (vspaceCap,_):_) -> (
 
 case \x of (ArchInvocationLabel X64PageDirectoryMap, vaddr':attr:_, (pml4Cap,_):_) -> (ArchInvocationLabel X64PageDirectoryMap, _, _) -> (ArchInvocationLabel X64PageDirectoryUnmap, _, _) -> _ ->  ---> let (label, args, extraCaps) = \x in
     case (label, args, extraCaps) of
-      (ArchInvocationLabel X64PageDirectoryMap, vaddr'#attr#_, (pml4Cap,_)#_) => ->1 
+      (ArchInvocationLabel X64PageDirectoryMap, vaddr'#attr#_, (pml4Cap,_)#_) => ->1
     | (ArchInvocationLabel X64PageDirectoryMap, _, _) => ->2
     | (ArchInvocationLabel X64PageDirectoryUnmap, _, _) => ->3
     | _ => ->4
 
 case \x of (ArchInvocationLabel X64PageTableMap, vaddr':attr:_, (pml4Cap,_):_) -> (ArchInvocationLabel X64PageTableMap, _, _) -> (ArchInvocationLabel X64PageTableUnmap, _, _) -> _ ->  --->let (label, args, extraCaps) = \x in
     case (label, args, extraCaps) of
-      (ArchInvocationLabel X64PageTableMap, vaddr'#attr#_, (pml4Cap,_)#_) => ->1 
+      (ArchInvocationLabel X64PageTableMap, vaddr'#attr#_, (pml4Cap,_)#_) => ->1
     | (ArchInvocationLabel X64PageTableMap, _, _) => ->2
     | (ArchInvocationLabel X64PageTableUnmap, _, _) => ->3
     | _ => ->4
@@ -1500,7 +1500,7 @@ case \x of (ArchInvocationLabel X64ASIDControlMakePool, index:depth:_, (untyped,
     | (ArchInvocationLabel X64ASIDControlMakePool, _, _) => ->2
     | _ => ->3
 
-case \x of (ArchInvocationLabel X64ASIDPoolAssign, (vspaceCap,vspaceCapSlot):_) -> (ArchInvocationLabel X64ASIDPoolAssign, _) -> _ ->  ---> let (label, extraCaps) = \x in 
+case \x of (ArchInvocationLabel X64ASIDPoolAssign, (vspaceCap,vspaceCapSlot):_) -> (ArchInvocationLabel X64ASIDPoolAssign, _) -> _ ->  ---> let (label, extraCaps) = \x in
     case (label, extraCaps) of
       (ArchInvocationLabel X64ASIDPoolAssign, (vspaceCap,vspaceCapSlot)#_) => ->1
     | (ArchInvocationLabel X64ASIDPoolAssign, _) => ->2
@@ -1531,8 +1531,8 @@ case \x of (cap@(IOPortCap { capIOPortFirstPort = first_allowed, capIOPortLastPo
 case \x of (ArchInvocationLabel X64IOPortIn8, port':_) -> (ArchInvocationLabel X64IOPortIn16, port':_) -> (ArchInvocationLabel X64IOPortIn32, port':_) -> (ArchInvocationLabel X64IOPortOut8, port':out:_) -> (ArchInvocationLabel X64IOPortOut16, port':out:_) -> (ArchInvocationLabel X64IOPortOut32, port':out:_) -> (_, _) ->  ---> let (label, args) = \x in
     case (label, args) of
       (ArchInvocationLabel X64IOPortIn8, port'#_) => ->1
-    | (ArchInvocationLabel X64IOPortIn16, port'#_) => ->2 
-    | (ArchInvocationLabel X64IOPortIn32, port'#_) => ->3 
+    | (ArchInvocationLabel X64IOPortIn16, port'#_) => ->2
+    | (ArchInvocationLabel X64IOPortIn32, port'#_) => ->3
     | (ArchInvocationLabel X64IOPortOut8, port'#out:_) => ->4
     | (ArchInvocationLabel X64IOPortOut16, port'#out#_) => ->5
     | (ArchInvocationLabel X64IOPortOut32, port'#out#_) => ->6
@@ -1555,10 +1555,10 @@ case \x of (cap @ (CNodeCap {})) -> (cap @ (ThreadCap {})) -> (cap @ (Zombie {})
 case \x of ArchInv.IOPortIn8 -> ArchInv.IOPortIn16 -> ArchInv.IOPortIn32 -> ArchInv.IOPortOut8 w -> ArchInv.IOPortOut16 w -> ArchInv.IOPortOut32 w ->  ---> let port_data = \x in
     case port_data of
       IOPortIn8 => ->1
-    | IOPortIn16 => ->2 
-    | IOPortIn32 => ->3 
-    | IOPortOut8 w => ->4 
-    | IOPortOut16 w => ->5 
+    | IOPortIn16 => ->2
+    | IOPortIn32 => ->3
+    | IOPortOut8 w => ->4
+    | IOPortOut16 w => ->5
     | IOPortOut32 w => ->6
 
 case \x of (ArchInvocationLabel X64PageMap, vaddr:rightsMask:attr:_, (vspaceCap,_):_) -> (ArchInvocationLabel X64PageMap, _, _) -> (ArchInvocationLabel X64PageRemap, rightsMask:attr:_, (vspaceCap,_):_) -> (ArchInvocationLabel X64PageRemap, _, _) -> (ArchInvocationLabel X64PageUnmap, _, _) -> (ArchInvocationLabel X64PageMapIO, _, _) -> (ArchInvocationLabel X64PageGetAddress, _, _) -> _ ->  ---> let (ilabel, args, extraCaps) = \x in

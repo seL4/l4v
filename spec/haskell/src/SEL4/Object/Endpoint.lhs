@@ -108,7 +108,7 @@ Empty receive endpoints are invalid.
 
 The IPC receive operation is essentially the same as the send operation, but with the send and receive states swapped. There are a few other differences: the badge must be retrieved from the TCB when completing an operation, and is not set when adding a TCB to the queue; also, the operation always blocks if no partner is immediately available; lastly, the receivers thread state does not need updating to Running however the senders state may.
 
-> isActive :: Notification -> Bool 
+> isActive :: Notification -> Bool
 > isActive (NTFN (ActiveNtfn _) _) = True
 > isActive _ = False
 
@@ -122,7 +122,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >         if (isJust ntfnPtr && isActive ntfn)
 >           then completeSignal (fromJust ntfnPtr) thread
 >           else case ep of
->             IdleEP -> case isBlocking of 
+>             IdleEP -> case isBlocking of
 >               True -> do
 >                   setThreadState (BlockedOnReceive {
 >                       blockingObject = epptr }) thread
@@ -133,13 +133,13 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                   setThreadState (BlockedOnReceive {
 >                       blockingObject = epptr }) thread
 >                   setEndpoint epptr $ RecvEP $ queue ++ [thread]
->               False -> doNBRecvFailedTransfer thread 
+>               False -> doNBRecvFailedTransfer thread
 >             SendEP (sender:queue) -> do
 >                 setEndpoint epptr $ case queue of
 >                     [] -> IdleEP
 >                     _ -> SendEP queue
 >                 senderState <- getThreadState sender
->                 assert (isSend senderState) 
+>                 assert (isSend senderState)
 >                        "TCB in send endpoint queue must be blocked on send"
 >                 let badge = blockingIPCBadge senderState
 >                 let canGrant = blockingIPCCanGrant senderState
@@ -226,12 +226,12 @@ Finally, replace the IPC block with a fault block (which will retry the operatio
 If an endpoint is deleted, then every pending IPC operation using it must be cancelled.
 
 > cancelAllIPC :: PPtr Endpoint -> Kernel ()
-> cancelAllIPC epptr = do 
->         ep <- getEndpoint epptr 
->         case ep of 
->             IdleEP ->   
->                 return () 
->             _ -> do 
+> cancelAllIPC epptr = do
+>         ep <- getEndpoint epptr
+>         case ep of
+>             IdleEP ->
+>                 return ()
+>             _ -> do
 >                 setEndpoint epptr IdleEP
 >                 forM_ (epQueue ep) (\t -> do
 >                     setThreadState Restart t

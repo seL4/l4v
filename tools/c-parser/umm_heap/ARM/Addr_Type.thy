@@ -22,7 +22,7 @@ declare addr_align_def[simp]
 
 definition addr_card :: nat where
   "addr_card \<equiv> card (UNIV::addr set)"
-  
+
 
 
 declare addr_bitsize_def[simp]

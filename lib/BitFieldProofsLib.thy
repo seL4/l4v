@@ -10,7 +10,7 @@
 
 theory BitFieldProofsLib
 imports
-  Eisbach_Methods 
+  Eisbach_Methods
   TypHeapLib
 begin
 

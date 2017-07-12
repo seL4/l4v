@@ -599,7 +599,7 @@
  \else\if#1!
   \xdef\hs@tok{}%
   \let\next=\hs@varcollect
- \else 
+ \else
   \xdef\hs@tok{#1}%
   \let\next=\hs@funcollect
  \fi\fi\fi\fi\fi
@@ -617,7 +617,7 @@
  \else\ifnum`#1=32
   \typeset{\hs@tok}{{\hs@funface\hs@tok\hs@scripts}}%
   \let\next=\hs@funbegin
- \else 
+ \else
   \xdef\hs@tok{\hs@tok#1}%
   \let\next=\hs@funcollect
  \fi\fi\fi\fi
@@ -635,7 +635,7 @@
  \else\ifnum`#1=32
   \typeset{\hs@tok}{{\hs@varface\hs@tok\hs@scripts}}%
   \let\next=\hs@funbegin
- \else 
+ \else
   \xdef\hs@tok{\hs@tok#1}%
   \let\next=\hs@varcollect
  \fi\fi\fi\fi
@@ -733,7 +733,7 @@
          \hs@cc=\hs@SY
        \fi\fi
      \fi
-    \fi      
+    \fi
   \else %%% A - DEL
     \ifnum\hs@cc<97 %%% A - `
       \ifnum\hs@cc<91 %%% A - Z
@@ -912,7 +912,7 @@
 	\errmessage{Illegal character in Haskell mode: #1}%
  \fi
  \next}
-	
+
 \def\hs@con@state#1{%
  \hs@getcc#1%
  \ifcase\hs@cc
@@ -961,7 +961,7 @@
 	\errmessage{Illegal character in Haskell mode: #1}%
  \fi
  \next}
-	
+
 \def\hs@sym@state#1{%
  \hs@getcc#1%
  \ifcase\hs@cc

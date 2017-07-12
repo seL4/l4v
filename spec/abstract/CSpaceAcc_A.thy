@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Accessor functions for capability spaces.
 *)
 
@@ -18,7 +18,7 @@ theory CSpaceAcc_A
 imports KHeap_A
 begin
 
-text {* 
+text {*
 This theory contains basic definitions for manipulating capabilities and
 CDTs.
 *}
@@ -26,7 +26,7 @@ CDTs.
 section {* Capability access *}
 
 text {*
- Recall that a capability may reside in either a CNode, or inside a TCB; 
+ Recall that a capability may reside in either a CNode, or inside a TCB;
 the following definitions allow the kernel model to retrieve and update
 capabilities in a uniform fashion.*}
 definition
@@ -34,7 +34,7 @@ definition
 where
   "get_cap \<equiv> \<lambda>(oref, cref). do
      obj \<leftarrow> get_object oref;
-     caps \<leftarrow> case obj of 
+     caps \<leftarrow> case obj of
              CNode sz cnode \<Rightarrow> do
                                 assert (well_formed_cnode_n sz cnode);
                                 return cnode
@@ -53,18 +53,18 @@ where
                CNode sz cn \<Rightarrow> if cref \<in> dom cn \<and> well_formed_cnode_n sz cn
                                 then return $ CNode sz $ cn (cref \<mapsto> cap)
                                 else fail
-             | TCB tcb \<Rightarrow> 
-                   if cref = tcb_cnode_index 0 then 
+             | TCB tcb \<Rightarrow>
+                   if cref = tcb_cnode_index 0 then
                        return $ TCB $ tcb \<lparr> tcb_ctable := cap \<rparr>
-                   else if cref = tcb_cnode_index 1 then 
+                   else if cref = tcb_cnode_index 1 then
                        return $ TCB $ tcb \<lparr> tcb_vtable := cap \<rparr>
-                   else if cref = tcb_cnode_index 2 then 
+                   else if cref = tcb_cnode_index 2 then
                        return $ TCB $ tcb \<lparr> tcb_reply := cap \<rparr>
-                   else if cref = tcb_cnode_index 3 then 
+                   else if cref = tcb_cnode_index 3 then
                        return $ TCB $ tcb \<lparr> tcb_caller := cap \<rparr>
-                   else if cref = tcb_cnode_index 4 then 
+                   else if cref = tcb_cnode_index 4 then
                        return $ TCB $ tcb \<lparr> tcb_ipcframe := cap \<rparr>
-                   else 
+                   else
                        fail
              | _ \<Rightarrow> fail;
      set_object oref obj'
@@ -85,16 +85,16 @@ text {* Set the capability derivation tree. *}
 definition
   set_cdt :: "cdt \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
-  "set_cdt t \<equiv> do 
-    s \<leftarrow> get; 
-    put $ s\<lparr> cdt := t \<rparr> 
+  "set_cdt t \<equiv> do
+    s \<leftarrow> get;
+    put $ s\<lparr> cdt := t \<rparr>
   od"
 
 text {* Update the capability derivation tree. *}
 definition
   update_cdt :: "(cdt \<Rightarrow> cdt) \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "update_cdt f \<equiv> do 
+  "update_cdt f \<equiv> do
      t \<leftarrow> gets cdt;
      set_cdt (f t)
   od"
@@ -103,7 +103,7 @@ text {* Set the original flag for a given cap slot. *}
 definition
   set_original :: "cslot_ptr \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "set_original slot v \<equiv> do 
+  "set_original slot v \<equiv> do
      r \<leftarrow> gets is_original_cap;
      modify (\<lambda>s. s \<lparr> is_original_cap := r (slot := v) \<rparr>)
   od"
@@ -118,19 +118,19 @@ definition
   "cdt_parent_rel t \<equiv> {(p,c). is_cdt_parent t p c}"
 
 abbreviation
-  parent_of :: "cdt \<Rightarrow> cslot_ptr \<Rightarrow> cslot_ptr \<Rightarrow> bool" 
+  parent_of :: "cdt \<Rightarrow> cslot_ptr \<Rightarrow> cslot_ptr \<Rightarrow> bool"
   ("_ \<turnstile> _ cdt'_parent'_of _" [60,0,60] 61)
 where
   "t \<turnstile> p cdt_parent_of c \<equiv> (p,c) \<in> cdt_parent_rel t"
 
 abbreviation
-  parent_of_trancl :: "cdt \<Rightarrow> cslot_ptr \<Rightarrow> cslot_ptr \<Rightarrow> bool" 
+  parent_of_trancl :: "cdt \<Rightarrow> cslot_ptr \<Rightarrow> cslot_ptr \<Rightarrow> bool"
   ("_ \<turnstile> _ cdt'_parent'_of\<^sup>+ _" [60,0,60] 61)
 where
   "t \<turnstile> x cdt_parent_of\<^sup>+ y \<equiv> (x, y) \<in> (cdt_parent_rel t)\<^sup>+"
 
 abbreviation
-  parent_of_rtrancl :: "cdt \<Rightarrow> cslot_ptr \<Rightarrow> cslot_ptr \<Rightarrow> bool" 
+  parent_of_rtrancl :: "cdt \<Rightarrow> cslot_ptr \<Rightarrow> cslot_ptr \<Rightarrow> bool"
   ("_ \<turnstile> _ cdt'_parent'_of\<^sup>* _" [60,0,60] 61)
 where
   "t \<turnstile> x cdt_parent_of\<^sup>* y \<equiv> (x, y) \<in> (cdt_parent_rel t)\<^sup>*"

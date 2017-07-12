@@ -194,7 +194,7 @@ session AutoLevity = AutoLevity_Base +
   theories
    "../lib/autolevity_buckets/AutoLevity_Top"
 
-session AutoLevity_Base = Word_Lib + 
+session AutoLevity_Base = Word_Lib +
   theories
     "../lib/autolevity_buckets/AutoLevity_Base"
 

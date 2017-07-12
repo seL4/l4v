@@ -20,13 +20,13 @@ imports
   "./$L4V_ARCH/Arch_Structs_A"
   "../machine/MachineExports"
 
-begin     
+begin
 
 context begin interpretation Arch .
 
 requalify_types
-  aobject_type 
-  arch_cap 
+  aobject_type
+  arch_cap
   vm_rights
   arch_kernel_obj
   arch_state
@@ -58,10 +58,10 @@ datatype apiobject_type =
   | CapTableObject
   | ArchObject aobject_type
 
-definition 
+definition
   is_frame_type :: "apiobject_type \<Rightarrow> bool"
 where
-  "is_frame_type obj \<equiv> case obj of 
+  "is_frame_type obj \<equiv> case obj of
         ArchObject aobj \<Rightarrow> arch_is_frame_type aobj
       | _ \<Rightarrow> False"
 
@@ -116,7 +116,7 @@ lemmas cap_cases =
   cap.induct[where cap=cap and P="\<lambda>cap'. cap' = cap \<longrightarrow> P cap'" for cap P, simplified, rule_format]
 
 lemmas cap_cases_asm =
-cap.induct[where cap=cap and P="\<lambda>cap'. cap = cap' \<longrightarrow> P cap' \<longrightarrow> R" for P R cap, 
+cap.induct[where cap=cap and P="\<lambda>cap'. cap = cap' \<longrightarrow> P cap' \<longrightarrow> R" for P R cap,
   simplified, rule_format, rotated -1]
 
 text {* The CNode object is an array of capability slots. The domain of the
@@ -173,7 +173,7 @@ definition
   is_arch_cap :: "cap \<Rightarrow> bool" where
   "is_arch_cap cap \<equiv> case cap of ArchObjectCap _ \<Rightarrow> True | _ \<Rightarrow> False"
 
-context 
+context
 notes [[function_internals =true]]
 begin
 
@@ -297,9 +297,9 @@ receive, but not to send. *}
 datatype ntfn
            = IdleNtfn
            | WaitingNtfn "obj_ref list"
-           | ActiveNtfn badge 
+           | ActiveNtfn badge
 
-record notification = 
+record notification =
   ntfn_obj :: ntfn
   ntfn_bound_tcb :: "obj_ref option"
 
@@ -314,7 +314,7 @@ definition
 
 definition
   default_notification :: notification where
-  "default_notification \<equiv> \<lparr> 
+  "default_notification \<equiv> \<lparr>
      ntfn_obj = default_ntfn,
      ntfn_bound_tcb = None \<rparr>"
 
@@ -401,7 +401,7 @@ definition
       tcb_state    = Inactive,
       tcb_fault_handler = to_bl (0::machine_word),
       tcb_ipc_buffer = 0,
-      tcb_fault      = None, 
+      tcb_fault      = None,
       tcb_bound_notification  = None,
       tcb_mcpriority = minBound,
       tcb_arch       = default_arch_tcb\<rparr>"
@@ -421,7 +421,7 @@ lemmas kernel_object_cases =
   kernel_object.induct[where kernel_object=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
 
 lemmas kernel_object_cases_asm =
-kernel_object.induct[where kernel_object=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x, 
+kernel_object.induct[where kernel_object=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x,
   simplified, rule_format, rotated -1]
 
 

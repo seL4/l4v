@@ -188,7 +188,7 @@ lemma bind_select_fail_corres:
   assumes x: "corres (\<lambda>rvs rv'. \<exists>rv\<in>rvs. r rv rv') P P' m m'"
   shows      "corres r P P' (m >>= (\<lambda>x. select x \<sqinter> fail)) m'"
   apply (insert x)
-  apply (clarsimp simp: corres_underlying_def bind_def 
+  apply (clarsimp simp: corres_underlying_def bind_def
                         select_def fail_def alternative_def split_def)
   done
 
@@ -251,11 +251,11 @@ lemma tcbSchedAppend_corres:
    apply (clarsimp simp: in_monad ethread_get_def gets_the_def bind_assoc
                          assert_opt_def exec_gets is_etcb_at_def get_etcb_def get_tcb_queue_def
                          set_tcb_queue_def simpler_modify_def)
-    
+
    apply (subgoal_tac "tcb_sched_append t (ready_queues a (tcb_domain y) (tcb_priority y))
                        = (ready_queues a (tcb_domain y) (tcb_priority y))")
     apply (simp add: state_relation_def ready_queues_relation_def)
-   apply (clarsimp simp: tcb_sched_append_def state_relation_def 
+   apply (clarsimp simp: tcb_sched_append_def state_relation_def
                          valid_queues'_def ready_queues_relation_def
                          ekheap_relation_def etcb_relation_def
                          obj_at'_def inQ_def projectKO_eq project_inject)
@@ -278,7 +278,7 @@ lemma tcbSchedAppend_corres:
                  prefer 3
                  apply (rule_tac P=\<top> and Q="K (t \<notin> set queuea)" in corres_assume_pre)
                  apply (wp getQueue_corres getObject_tcb_wp  | simp add: etcb_relation_def threadGet_def)+
-  apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def inQ_def 
+  apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def inQ_def
                          projectKO_eq project_inject)
   done
 
@@ -645,7 +645,7 @@ crunch pde_mappings'[wp]: tcbSchedAppend "valid_pde_mappings'"
   (simp: unless_def)
 crunch pde_mappings'[wp]: tcbSchedDequeue "valid_pde_mappings'"
 
-lemma tcbSchedEnqueue_vms'[wp]: 
+lemma tcbSchedEnqueue_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
   apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift tcbSchedEnqueue_ksMachine)
@@ -954,8 +954,8 @@ crunch valid_queues[wp]: "Arch.switchToThread" "Invariants_H.valid_queues"
 (wp: crunch_wps simp: crunch_simps ignore: clearExMonitor)
 
 lemma switch_thread_corres:
-  "corres dc (valid_arch_state and valid_objs and valid_asid_map 
-                and valid_arch_objs and pspace_aligned and pspace_distinct 
+  "corres dc (valid_arch_state and valid_objs and valid_asid_map
+                and valid_arch_objs and pspace_aligned and pspace_distinct
                 and valid_vs_lookup and valid_global_objs
                 and unique_table_refs o caps_of_state
                 and st_tcb_at runnable t and valid_etcbs)
@@ -1165,7 +1165,7 @@ proof (rule ccontr)
   from st [THEN pred_tcb_at', THEN tcb_at'_has_tcbDomain]
   obtain d where td: "obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s"
     by clarsimp
-  
+
   ultimately
   have "t \<in> set (ksReadyQueues s (d, p))" using vq'
     unfolding valid_queues'_def
@@ -1652,7 +1652,7 @@ proof -
 
   with oa tp have "obj_at' (inQ d p) t s"
     by (fastforce simp add: inQ_def obj_at'_def)
-  
+
   with vq' have "t \<in> set (ksReadyQueues s (d, p))"
     unfolding valid_queues'_def
     by (fastforce)
@@ -2024,7 +2024,7 @@ lemma setCurThread_const:
 
 
 
-crunch it[wp]: switchToIdleThread "\<lambda>s. P (ksIdleThread s)" 
+crunch it[wp]: switchToIdleThread "\<lambda>s. P (ksIdleThread s)"
 crunch it[wp]: switchToThread "\<lambda>s. P (ksIdleThread s)"
     (ignore: clearExMonitor)
 
@@ -2261,8 +2261,8 @@ lemma gts_exs_valid[wp]:
   done
 
 lemma guarded_switch_to_corres:
-  "corres dc (valid_arch_state and valid_objs and valid_asid_map 
-                and valid_arch_objs and pspace_aligned and pspace_distinct 
+  "corres dc (valid_arch_state and valid_objs and valid_asid_map
+                and valid_arch_objs and pspace_aligned and pspace_distinct
                 and valid_vs_lookup and valid_global_objs
                 and unique_table_refs o caps_of_state
                 and st_tcb_at runnable t and valid_etcbs)
@@ -2279,7 +2279,7 @@ lemma guarded_switch_to_corres:
     apply (force simp: st_tcb_at_tcb_at)+
     done
 
- lemma findM_gets_outside: 
+ lemma findM_gets_outside:
    assumes terminate_False: "(\<And>s s' x. (False,s') \<in> fst (g x s) \<Longrightarrow> s = s')"
    shows
    "findM (\<lambda>x. gets (\<lambda>ks. f ks x) >>= g) l = do f' \<leftarrow> gets (\<lambda>ks. f ks); findM (\<lambda>x. (g (f' x))) l od"
@@ -2651,7 +2651,7 @@ lemma schedule_corres:
             apply (rule_tac P="tcb_at cur" in corres_symb_exec_l')
               apply (rule_tac corres_symb_exec_l')
                 apply simp
-                apply (rule corres_assert_ret) 
+                apply (rule corres_assert_ret)
                apply (wpsimp wp: thread_get_wp' gets_exs_valid)+
            apply (rule corres_split[OF _ thread_get_isRunnable_corres])
              apply (rule corres_split[OF _ corres_when])
@@ -2691,7 +2691,7 @@ lemma schedule_corres:
                split: scheduler_action.splits)
 
 lemma ssa_all_invs_but_ct_not_inQ':
-  "\<lbrace>all_invs_but_ct_not_inQ' and sch_act_wf sa and 
+  "\<lbrace>all_invs_but_ct_not_inQ' and sch_act_wf sa and
    (\<lambda>s. sa = ResumeCurrentThread \<longrightarrow> ksCurThread s = ksIdleThread s \<or> tcb_in_cur_domain' (ksCurThread s) s)\<rbrace>
    setSchedulerAction sa \<lbrace>\<lambda>rv. all_invs_but_ct_not_inQ'\<rbrace>"
 proof -
@@ -2730,7 +2730,7 @@ lemma ssa_ct_not_inQ:
   by (simp add: setSchedulerAction_def ct_not_inQ_def, wp, clarsimp)
 
 lemma ssa_all_invs_but_ct_not_inQ''[simplified]:
-  "\<lbrace>\<lambda>s. (all_invs_but_ct_not_inQ' s \<and> sch_act_wf sa s) 
+  "\<lbrace>\<lambda>s. (all_invs_but_ct_not_inQ' s \<and> sch_act_wf sa s)
     \<and> (sa = ResumeCurrentThread \<longrightarrow> ksCurThread s = ksIdleThread s \<or> tcb_in_cur_domain' (ksCurThread s) s)
     \<and> (sa = ResumeCurrentThread \<longrightarrow> obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s)\<rbrace>
    setSchedulerAction sa \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -2803,7 +2803,7 @@ lemma switchToIdleThread_activatable_2[wp]:
   done
 
 lemma switchToThread_tcb_in_cur_domain':
-  "\<lbrace>tcb_in_cur_domain' thread\<rbrace> ThreadDecls_H.switchToThread thread 
+  "\<lbrace>tcb_in_cur_domain' thread\<rbrace> ThreadDecls_H.switchToThread thread
   \<lbrace>\<lambda>y s. tcb_in_cur_domain' (ksCurThread s) s\<rbrace>"
   apply (simp add: Thread_H.switchToThread_def)
   apply (rule hoare_pre)

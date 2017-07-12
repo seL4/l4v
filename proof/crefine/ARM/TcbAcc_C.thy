@@ -17,7 +17,7 @@ begin
 
 lemma ccorres_pre_threadGet:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (g rv) c"
-  shows   "ccorres r xf 
+  shows   "ccorres r xf
            (\<lambda>s. \<forall>tcb. ko_at' tcb p s \<longrightarrow> P (f tcb) s)
            ({s'. \<forall>tcb ctcb. cslift s' (tcb_ptr_to_ctcb_ptr p) = Some ctcb \<and> ctcb_relation tcb ctcb \<longrightarrow> s' \<in> P' (f tcb)})
            hs (threadGet f p >>= (\<lambda>rv. g rv)) c"
@@ -57,11 +57,11 @@ lemma get_tsType_ccorres [corres]:
   "ccorres (\<lambda>r r'. r' = thread_state_to_tsType r) ret__unsigned_' (tcb_at' thread)
            (UNIV \<inter> {s. thread_state_ptr_' s = Ptr &(tcb_ptr_to_ctcb_ptr thread\<rightarrow>[''tcbState_C''])}) []
   (getThreadState thread) (Call thread_state_ptr_get_tsType_'proc)"
-  unfolding getThreadState_def 
+  unfolding getThreadState_def
   apply (rule ccorres_from_spec_modifies)
       apply (rule thread_state_ptr_get_tsType_spec)
      apply (rule thread_state_ptr_get_tsType_modifies)
-    apply simp    
+    apply simp
    apply (frule (1) obj_at_cslift_tcb)
    apply (clarsimp simp: typ_heap_simps)
   apply (frule (1) obj_at_cslift_tcb)
@@ -78,7 +78,7 @@ lemma threadGet_obj_at2:
    apply (rule tg_sp')
   apply simp
   done
-  
+
 lemma register_from_H_less:
   "register_from_H hr < 19"
   by (cases hr, simp_all add: "StrictC'_register_defs")
@@ -95,7 +95,7 @@ lemma register_from_H_0_sle[simp]:
 lemma getRegister_ccorres [corres]:
   "ccorres (op =) ret__unsigned_long_' \<top>
              ({s. thread_' s = tcb_ptr_to_ctcb_ptr thread} \<inter> {s. reg_' s = register_from_H reg}) []
-             (asUser thread (getRegister reg)) (Call getRegister_'proc)"  
+             (asUser thread (getRegister reg)) (Call getRegister_'proc)"
   apply (unfold asUser_def)
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l [where Q="\<lambda>u. obj_at' (\<lambda>t. (atcbContextGet o tcbArch) t = u) thread" and
@@ -122,7 +122,7 @@ lemma getRegister_ccorres [corres]:
   apply (subst fun_upd_idem)
    apply (case_tac ko)
    apply clarsimp
-  apply simp   
+  apply simp
   done
 
 lemma getRestartPC_ccorres [corres]:
@@ -147,7 +147,7 @@ lemma threadSet_corres_lemma:
   shows "ccorres dc xfdc (tcb_at' thread) P' [] (threadSet g thread) (Call f)"
   apply (rule ccorres_Call_call_for_vcg)
    apply (rule ccorres_from_vcg)
-   apply (rule allI, rule conseqPre)   
+   apply (rule allI, rule conseqPre)
    apply (rule HoarePartial.ProcModifyReturnNoAbr [where return' = "\<lambda>s t. t\<lparr> globals := globals s\<lparr>t_hrs_' := t_hrs_' (globals t) \<rparr>\<rparr>"])
      apply (rule HoarePartial.ProcSpecNoAbrupt [OF _ _ spec])
       apply (rule subset_refl)
@@ -156,7 +156,7 @@ lemma threadSet_corres_lemma:
     apply (rule mod)
    apply (clarsimp simp: mex_def meq_def)
   apply clarsimp
-  apply (rule conjI)   
+  apply (rule conjI)
    apply (erule (2) g)
   apply clarsimp
    apply (frule obj_at_ko_at')

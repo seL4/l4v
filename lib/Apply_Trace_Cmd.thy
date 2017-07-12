@@ -19,8 +19,8 @@ ML{*
 
 val _ =
   Outer_Syntax.command @{command_keyword "apply_trace"} "initial refinement step (unstructured)"
-    
-  (Args.mode "only_names" -- (Scan.option (Parse.position Parse.cartouche)) --  Method.parse >> 
+
+  (Args.mode "only_names" -- (Scan.option (Parse.position Parse.cartouche)) --  Method.parse >>
     (fn ((on,query),text) => Toplevel.proofs (Apply_Trace.apply_results {silent_fail = false}
      (Pretty.writeln ooo (Apply_Trace.pretty_deps on query)) text)));
 
@@ -34,7 +34,7 @@ lemma "(a \<and> b) = (b \<and> a)"
   oops
 
 (* Test. *)
-lemma "(a \<and> b) = (b \<and> a)"  
+lemma "(a \<and> b) = (b \<and> a)"
   apply_trace \<open>intro\<close> auto
   oops
 

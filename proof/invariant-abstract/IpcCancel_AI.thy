@@ -12,11 +12,11 @@ theory IpcCancel_AI
 imports "./$L4V_ARCH/ArchSchedule_AI"
 begin
 
-locale IpcCancel_AI = 
-  fixes state_ext_type :: "('a :: state_ext) itself" 
-  assumes set_endpoint_eq_ker_map: 
+locale IpcCancel_AI =
+  fixes state_ext_type :: "('a :: state_ext) itself"
+  assumes set_endpoint_eq_ker_map:
     "\<And>a b. \<lbrace>equal_kernel_mappings\<rbrace> (set_endpoint a b :: (unit, 'a) s_monad) \<lbrace>\<lambda>_. equal_kernel_mappings\<rbrace>"
-  assumes set_endpoint_v_ker_map: 
+  assumes set_endpoint_v_ker_map:
     "\<And>a b. \<lbrace>valid_kernel_mappings\<rbrace> (set_endpoint a b :: (unit, 'a) s_monad) \<lbrace>\<lambda>_. valid_kernel_mappings\<rbrace>"
 
 lemma blocked_cancel_ipc_simple:
@@ -82,7 +82,7 @@ lemma unbind_notification_valid_objs:
    apply (clarsimp simp:valid_obj_def valid_tcb_def)+
   done
 
-      
+
 lemma cancel_all_signals_valid_objs:
   "\<lbrace>valid_objs and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
    cancel_all_signals ptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
@@ -210,7 +210,7 @@ lemma blocked_cancel_ipc_tcb_at [wp]:
 
 
 crunch typ_at[wp]: cancel_ipc, reply_cancel_ipc, unbind_maybe_notification
-                   "\<lambda>s. P (typ_at T p s)" 
+                   "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps hoare_vcg_if_splitE select_wp
      simp: crunch_simps unless_def)
 
@@ -220,15 +220,15 @@ lemma cancel_ipc_tcb [wp]:
 
 
 lemma gbep_ret:
-  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr \<or> 
+  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr \<or>
      st = Structures_A.BlockedOnSend epPtr p \<rbrakk> \<Longrightarrow>
   get_blocking_object st = return epPtr"
   by (auto simp add: get_blocking_object_def)
 
 
-lemma st_tcb_at_valid_st2: 
+lemma st_tcb_at_valid_st2:
   "\<lbrakk> st_tcb_at (op = st) t s; valid_objs s \<rbrakk> \<Longrightarrow> valid_tcb_state st s"
-  apply (clarsimp simp add: valid_objs_def get_tcb_def pred_tcb_at_def 
+  apply (clarsimp simp add: valid_objs_def get_tcb_def pred_tcb_at_def
                   obj_at_def)
   apply (drule_tac x=t in bspec)
    apply (erule domI)
@@ -252,7 +252,7 @@ locale delete_one_abs =
     "\<And>P p. \<lbrace>\<lambda>s. cte_wp_at can_fast_finalise p s
                   \<longrightarrow> P ((caps_of_state s) (p \<mapsto> cap.NullCap))\<rbrace>
              (cap_delete_one p :: (unit,'a) s_monad)
-            \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>" 
+            \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
 
 
 lemma reply_master_no_descendants_no_reply:
@@ -310,7 +310,7 @@ lemma gbi_ep_sp:
 
 
 lemma get_epq_sp:
-  "\<lbrace>P\<rbrace> 
+  "\<lbrace>P\<rbrace>
   get_ep_queue ep
   \<lbrace>\<lambda>q. P and K (ep \<in> {Structures_A.SendEP q, Structures_A.RecvEP q})\<rbrace>"
   apply (simp add: get_ep_queue_def)
@@ -322,7 +322,7 @@ lemma set_ep_cap_refs_in_kernel_window [wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_endpoint ep p \<lbrace>\<lambda>_. cap_refs_in_kernel_window\<rbrace>"
   unfolding set_endpoint_def
   apply (wp set_object_cap_refs_in_kernel_window get_object_wp)
-  apply (clarsimp simp: obj_at_def is_ep_def 
+  apply (clarsimp simp: obj_at_def is_ep_def
                   split: Structures_A.kernel_object.splits)
   done
 
@@ -383,8 +383,8 @@ lemma symreftype_inverse':
   by (cases ref) simp_all
 
 lemma cancel_signal_invs:
-  "\<lbrace>invs and st_tcb_at (op = (Structures_A.BlockedOnNotification ntfn)) t\<rbrace> 
-  cancel_signal t ntfn 
+  "\<lbrace>invs and st_tcb_at (op = (Structures_A.BlockedOnNotification ntfn)) t\<rbrace>
+  cancel_signal t ntfn
   \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cancel_signal_def
                    invs_def valid_state_def valid_pspace_def)
@@ -709,11 +709,11 @@ crunch bound_tcb_at[wp]: cancel_all_ipc, empty_slot, is_final_cap, get_cap "boun
   (wp: mapM_x_wp_inv)
 
 
-lemma fast_finalise_bound_tcb_at: 
+lemma fast_finalise_bound_tcb_at:
   "\<lbrace>\<lambda>s. bound_tcb_at P t s \<and> (\<exists>tt b. cap = ReplyCap tt b) \<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   by (case_tac cap, simp_all)
 
- 
+
 lemma get_cap_reply_cap_helper:
   "\<lbrace>\<lambda>s. \<exists>t b. Some (ReplyCap t b) = caps_of_state s slot \<rbrace> get_cap slot \<lbrace>\<lambda>rv s. \<exists>t b. rv = ReplyCap t b\<rbrace>"
   by (auto simp: valid_def get_cap_caps_of_state[symmetric])
@@ -748,7 +748,7 @@ lemma caps_of_state_tcb_index_trans:
    apply (clarsimp simp: in_monad)
   apply (clarsimp simp: get_cap_def get_object_def)
   apply (rule ccontr)
-  apply (drule not_sym) 
+  apply (drule not_sym)
   apply (auto simp: set_eq_iff in_monad)
   done
 
@@ -791,8 +791,8 @@ lemma reply_cancel_ipc_bound_tcb_at[wp]:
    apply fastforce
   apply simp
   done
- 
-  
+
+
 crunch bound_tcb_at[wp]: cancel_ipc "bound_tcb_at P t"
 (ignore: set_object thread_set wp: mapM_x_wp_inv)
 
@@ -836,7 +836,7 @@ lemma cancel_all_invs_helper:
   apply wp
    apply (simp add:bound_refs_of_tcb_trans)
   apply wp[1]
-          apply (rule hoare_pre, wp hoare_vcg_const_Ball_lift 
+          apply (rule hoare_pre, wp hoare_vcg_const_Ball_lift
                                     valid_irq_node_typ sts_only_idle)
            apply (rule sts_st_tcb_at_cases, simp)
           apply (strengthen reply_cap_doesnt_exist_strg)
@@ -870,8 +870,8 @@ lemma ep_list_tcb_at:
 
 lemma tcb_at_no_ntfn_bound:
   "\<lbrakk> valid_objs s; tcb_at x s \<rbrakk> \<Longrightarrow> (t, NTFNBound) \<notin> state_refs_of s x"
-  by (auto elim!: obj_at_valid_objsE 
-           simp: state_refs_of_def is_tcb valid_obj_def tcb_bound_refs_def tcb_st_refs_of_def 
+  by (auto elim!: obj_at_valid_objsE
+           simp: state_refs_of_def is_tcb valid_obj_def tcb_bound_refs_def tcb_st_refs_of_def
            split:thread_state.splits option.splits)
 
 lemma ep_no_ntfn_bound:
@@ -970,7 +970,7 @@ lemma valid_ntfn_set_bound_None:
   by (auto simp: valid_ntfn_def split:ntfn.splits)
 
 lemma ntfn_bound_tcb_at:
-  "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s ntfnptr = Some (Notification ntfn); 
+  "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s ntfnptr = Some (Notification ntfn);
     ntfn_bound_tcb ntfn = Some tcbptr; P (Some ntfnptr)\<rbrakk>
   \<Longrightarrow> bound_tcb_at P tcbptr s"
   apply (drule_tac x=ntfnptr in sym_refsD[rotated])
@@ -1044,7 +1044,7 @@ lemma tcb_state_refs_no_tcb:
   apply (erule (1) obj_at_valid_objsE)
   apply (clarsimp simp: is_tcb valid_obj_def)
   apply (erule disjE)
-   apply (clarsimp simp: tcb_st_refs_of_def valid_tcb_def valid_tcb_state_def obj_at_def is_ep is_ntfn 
+   apply (clarsimp simp: tcb_st_refs_of_def valid_tcb_def valid_tcb_state_def obj_at_def is_ep is_ntfn
                   split:thread_state.splits)
   apply (clarsimp simp: tcb_bound_refs_def valid_tcb_def obj_at_def is_ntfn
                   split:option.splits)

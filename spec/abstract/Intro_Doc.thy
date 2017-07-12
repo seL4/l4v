@@ -103,7 +103,7 @@ The basic services the microkernel provides are as follows:
 \item[Interprocess Communication] (IPC) via \emph{endpoints} allows
 threads to communicate using message passing;
 \item[Device Primitives] allow device drivers to be implemented as unprivileged
-  applications.  The kernel exports hardware device interrupts 
+  applications.  The kernel exports hardware device interrupts
   via IPC messages; and
 \item[Capability Spaces] store capabilities (i.e., access rights) to kernel services along
 with their book-keeping information.
@@ -137,7 +137,7 @@ the case of delivery to an application (via an \obj{Endpoint}), an
 additional capability is added to the arguments and delivered to the
 receiver to give it the right to respond to the sender.
 
-\item[\meth{Recv}] is used by an application to block until the target 
+\item[\meth{Recv}] is used by an application to block until the target
 object is ready.
 
 \item[\meth{Reply}] is used to respond to a \meth{Call}, using the
@@ -166,7 +166,7 @@ capability possession are permitted.
 
 A capability is an unforgeable token that references a specific kernel
 object (such as a thread control block) and carries access
-rights that control what operations may be performed when it is invoked.  
+rights that control what operations may be performed when it is invoked.
 Conceptually, a capability resides in an application's
 \emph{capability space}; an address in this space refers to a
 \emph{slot} which may or may not contain a capability.  An application
@@ -181,8 +181,8 @@ Capability spaces are implemented as a directed graph of kernel-managed
 slots, where each slot may contain further \obj{CNode} capabilities.
 An address in a capability space is then the concatenation of the
 indices of the \obj{CNode} capabilities forming the path to the
-destination slot; we discuss \obj{CNode} objects further in 
-\autoref{s:cnode_obj}.  
+destination slot; we discuss \obj{CNode} objects further in
+\autoref{s:cnode_obj}.
 
 Capabilities can be copied and moved within capability spaces, and
 also sent via IPC. This allows creation of applications with specific
@@ -253,7 +253,7 @@ from an existing capability.  The newly created capability may have fewer rights
 
 \subsubsection{IPC Endpoints and Notifications}
 
-The seL4 microkernel supports \emph{synchronous} IPC (\obj{EP}) endpoints, 
+The seL4 microkernel supports \emph{synchronous} IPC (\obj{EP}) endpoints,
 used to facilitate
 interprocess communication between threads. Capabilities to endpoints
 can be restricted to be send-only or receive-only. They can also
@@ -289,7 +289,7 @@ There is also a non-blocking (polling) variant of this invocaction.
 The \emph{thread control block} (\obj{TCB}) object represents a thread
 of execution in seL4. Threads are the unit of execution that is
 scheduled, blocked, unblocked, etc., depending on the applications
-interaction with other threads. 
+interaction with other threads.
 
 As illustrated in
 \autoref{fig:sel4_internals}, a thread needs both a \obj{CSpace} and a
@@ -321,7 +321,7 @@ The TCB object has the following methods:
   transfer; the invoked thread is the destination. The caller may
   select which of several subsets of the register context will be
   transferred between the threads. The operation may also suspend the
-  source thread, and resume the destination thread.  
+  source thread, and resume the destination thread.
 
   Two subsets of the context that might be copied (if indicated by the
   caller) include: firstly, the parts of the register state that are used or preserved
@@ -456,7 +456,7 @@ capability that authorises the use of a subset of available address
 space identifiers. This newly created capability is called an
 \obj{ASID Pool}. \obj{ASID Control} only has a single method:
 \begin{description}
-\item[\meth{MakePool}] together with a capability to 
+\item[\meth{MakePool}] together with a capability to
 \obj{Untyped Memory} (described shortly) as argument creates an \obj{ASID Pool}.
 \end{description}
 
@@ -474,7 +474,7 @@ must be assigned to an ASID. This is done using a capability to an
 \subsubsection{Interrupt Objects}
 
 Device driver applications need the ability to receive and acknowledge
-interrupts from hardware devices.  
+interrupts from hardware devices.
 
 A capability to \obj{IRQControl} has the ability to create a new
 capability to manage a specific interrupt source associated with a
@@ -504,7 +504,7 @@ interrupts for the device it manages. It has three methods:
 The \obj{Untyped Memory} object is the foundation of memory allocation
 in the seL4 kernel.  Untyped memory capabilities have a single method:
 \begin{description}
- \item[\meth{Retype}] creates a number of new kernel objects.  If this 
+ \item[\meth{Retype}] creates a number of new kernel objects.  If this
 method succeeds, it returns capabilities to the newly-created objects.
 \end{description}
 
@@ -530,7 +530,7 @@ the hardware\footnote{The treatment of virtual ASIDs imposes a fixed
 number of address spaces, but this limitation is to be removed in
 future versions of seL4.}, and so many denial-of-service attacks via
 resource exhaustion are obviated.
-  
+
 At boot time, seL4 pre-allocates all the memory required for the
 kernel itself, including the code, data, and stack sections (seL4 is a
 single kernel-stack operating system). The remainder of the memory is
@@ -569,8 +569,8 @@ For obvious security reasons, kernel data must be protected from user
 access.  The seL4 kernel prevents such access by using two mechanisms.
 First, the above allocation policy guarantees that typed objects never
 overlap.  Second, the kernel ensures that each physical frame mapped
-by the MMU at a user-accessible address corresponds to a 
-\obj{Page} object (described above); \obj{Page} objects contain no kernel 
+by the MMU at a user-accessible address corresponds to a
+\obj{Page} object (described above); \obj{Page} objects contain no kernel
 data, so direct
 user access to kernel data is not possible. All other kernel objects
 are only indirectly manipulated via their corresponding capabilities.
@@ -611,10 +611,10 @@ in-kernel dependencies between it and other objects.
 
 By calling \meth{Revoke} on the original
 capability to an untyped memory object, the user removes all of the
-untyped memory object's children --- that is, all capabilities pointing to 
-objects in the untyped memory region.  
+untyped memory object's children --- that is, all capabilities pointing to
+objects in the untyped memory region.
 Thus, after this operation there are no valid references
-to any object within the untyped region, and the region may be 
+to any object within the untyped region, and the region may be
 safely retyped and reused.
 
 \section{Summary}
@@ -634,9 +634,9 @@ last chapter (\autoref{c:syscall}). The following section shows
 the dependency graph between the theory modules in this specification.
 We assume a familiarity with Isabelle syntax; see Nipkow et
 al.~\cite{LNCS2283} for an introduction. In addition to the standard
-Isabelle/HOL notation, we sometimes write @{text "f $ x"} for 
-@{text "(f x)"} and use monadic do-notation extensively. The latter 
-is defined in \autoref{c:monads}. 
+Isabelle/HOL notation, we sometimes write @{text "f $ x"} for
+@{text "(f x)"} and use monadic do-notation extensively. The latter
+is defined in \autoref{c:monads}.
 
 \section{Theory Dependencies}
 

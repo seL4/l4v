@@ -26,7 +26,7 @@ We use the C preprocessor to select a target architecture.
 >     setIRQState
 >   ) where
 
-> {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures #-}     
+> {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures #-}
 > {-# BOOT-EXPORTS: setIRQState #-}
 
 The architecture-specific definitions are imported qualified with the "Arch" prefix.
@@ -205,7 +205,7 @@ The following functions are used within this module to access the global interru
 > setIRQState :: IRQState -> IRQ -> Kernel ()
 > setIRQState irqState irq = do
 >     st <- getInterruptState
->     let table = intStateIRQTable st 
+>     let table = intStateIRQTable st
 >     setInterruptState $ st { intStateIRQTable = table//[(irq, irqState)] }
 >     doMachineOp $ maskInterrupt (irqState==IRQInactive) irq
 

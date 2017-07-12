@@ -119,13 +119,13 @@ structure WPData = Generic_Data
     val merge = rules_merge;
 end);
 
-fun is_wp_rule ctxt thm = 
+fun is_wp_rule ctxt thm =
 let
   val ({rules, trips, ...}) = WPData.get (Context.Proof ctxt);
   val (triples, _, others) = rules;
   val trip_conv = (snd trips);
   val results = case get_key trip_conv thm of
-    SOME k => Net.lookup triples (Net.key_of_term k) 
+    SOME k => Net.lookup triples (Net.key_of_term k)
   | NONE => others
 
 in exists (fn (_, thm') => Thm.eq_thm_prop (thm, thm')) results end
@@ -254,7 +254,7 @@ fun resolve_ruleset_tac' ctxt rs used_rules_ref n t =
   of Const (@{const_name Trueprop}, _) $
       (Const (@{const_name triple_judgement}, _) $ _ $ f $ _) => let
         val ts = Net.unify_term (#1 (#rules rs)) f |> order_list |> rev;
-        val combapps = Seq.maps (fn combapp => Seq.map 
+        val combapps = Seq.maps (fn combapp => Seq.map
                                       (fn combapp' => (combapp, combapp')) (resolve_tac ctxt [combapp] n t))
                                 (Seq.of_list (#combs rs)) |> Seq.list_of |> Seq.of_list;
         fun per_rule_tac t = (fn thm => append_rule t (resolve_tac ctxt [t] n thm)) ORELSE

@@ -1126,11 +1126,11 @@ lemma dcorres_tcb_update_ipc_buffer:
                  apply (rule dcorres_insert_cap_combine)
                  apply (clarsimp+)[2]
                apply (rule hoare_strengthen_post[OF hoare_TrueI[where P = \<top>]],simp)
-              apply (rule_tac Q = "\<lambda>r s. cte_wp_at (op = cap.NullCap) (obj_id', tcb_cnode_index 4) s 
+              apply (rule_tac Q = "\<lambda>r s. cte_wp_at (op = cap.NullCap) (obj_id', tcb_cnode_index 4) s
                                          \<and> cte_wp_at (\<lambda>_. True) (ab, ba) s
                                          \<and> valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s
                                          \<and> valid_mdb s \<and> valid_objs s\<and> not_idle_thread ab s \<and> valid_etcbs s
-                                         \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow> 
+                                         \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow>
                                              ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index 4) s)"
                      in hoare_strengthen_post)
                apply (wp get_cap_ex_cte_cap_wp_to,clarsimp)
@@ -1712,7 +1712,7 @@ lemma invoke_tcb_corres_unbind:
   "\<lbrakk> t' = tcb_invocation.NotificationControl obj_id' None;
      t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
    dcorres (dc \<oplus> dc) \<top> (invs and not_idle_thread obj_id' and tcb_at obj_id' and valid_etcbs)
-  (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')" 
+  (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
   apply (rule corres_dummy_return_l)
   apply (rule corres_guard_imp)

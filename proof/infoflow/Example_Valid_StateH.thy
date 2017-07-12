@@ -36,19 +36,19 @@ abbreviation (input)
 where
   "Null_mdb \<equiv> MDB 0 0 False False"
 
-definition 
-  Low_capsH :: "cnode_index \<Rightarrow> (capability \<times> mdbnode) option" 
+definition
+  Low_capsH :: "cnode_index \<Rightarrow> (capability \<times> mdbnode) option"
 where
-  "Low_capsH \<equiv> 
+  "Low_capsH \<equiv>
    (empty_cte 10)
-      ( (the_nat_to_bl_10 1)  
-            \<mapsto> (Structures_H.ThreadCap Low_tcb_ptr, Null_mdb), 
+      ( (the_nat_to_bl_10 1)
+            \<mapsto> (Structures_H.ThreadCap Low_tcb_ptr, Null_mdb),
         (the_nat_to_bl_10 2)
-            \<mapsto> (Structures_H.CNodeCap Low_cnode_ptr 10 2 10, MDB 0 Low_tcb_ptr False False), 
+            \<mapsto> (Structures_H.CNodeCap Low_cnode_ptr 10 2 10, MDB 0 Low_tcb_ptr False False),
         (the_nat_to_bl_10 3)
-            \<mapsto> (Structures_H.ArchObjectCap (ARM_H.PageDirectoryCap Low_pd_ptr 
+            \<mapsto> (Structures_H.ArchObjectCap (ARM_H.PageDirectoryCap Low_pd_ptr
                                              (Some Low_asid)), MDB 0 (Low_tcb_ptr + 0x10) False False),
-        (the_nat_to_bl_10 318) 
+        (the_nat_to_bl_10 318)
             \<mapsto> (Structures_H.NotificationCap ntfn_ptr 0 True False,
                MDB (Silc_cnode_ptr + 318 * 0x10) 0 False False))"
 
@@ -67,16 +67,16 @@ where
 text {* High's Cspace *}
 
 definition
-  High_capsH :: "cnode_index \<Rightarrow> (capability \<times> mdbnode) option" 
+  High_capsH :: "cnode_index \<Rightarrow> (capability \<times> mdbnode) option"
 where
-  "High_capsH \<equiv> 
+  "High_capsH \<equiv>
    (empty_cte 10)
-      ( (the_nat_to_bl_10 1)  
-            \<mapsto> (Structures_H.ThreadCap High_tcb_ptr, Null_mdb), 
+      ( (the_nat_to_bl_10 1)
+            \<mapsto> (Structures_H.ThreadCap High_tcb_ptr, Null_mdb),
         (the_nat_to_bl_10 2)
             \<mapsto> (Structures_H.CNodeCap High_cnode_ptr 10 2 10, MDB 0 High_tcb_ptr False False),
         (the_nat_to_bl_10 3)
-           \<mapsto> (Structures_H.ArchObjectCap (ARM_H.PageDirectoryCap High_pd_ptr 
+           \<mapsto> (Structures_H.ArchObjectCap (ARM_H.PageDirectoryCap High_pd_ptr
                                             (Some High_asid)), MDB 0 (High_tcb_ptr + 0x10) False False),
         (the_nat_to_bl_10 318)
            \<mapsto> (Structures_H.NotificationCap ntfn_ptr 0 False True,
@@ -96,14 +96,14 @@ where
 text {* We need a copy of boundary crossing caps owned by SilcLabel.
         The only such cap is Low's cap to the notification *}
 
-definition 
+definition
   Silc_capsH :: "cnode_index \<Rightarrow> (capability \<times> mdbnode) option"
 where
-  "Silc_capsH \<equiv> 
+  "Silc_capsH \<equiv>
    (empty_cte 10)
       ( (the_nat_to_bl_10 2)
             \<mapsto> (Structures_H.CNodeCap Silc_cnode_ptr 10 2 10, Null_mdb),
-        (the_nat_to_bl_10 318) 
+        (the_nat_to_bl_10 318)
             \<mapsto> (Structures_H.NotificationCap ntfn_ptr 0 True False,
                MDB (High_cnode_ptr + 318 * 0x10) (Low_cnode_ptr + 318 * 0x10) False False))"
 
@@ -129,12 +129,12 @@ where
 text {* Low's VSpace (PageDirectory)*}
 
 definition
-  Low_pt'H :: "word8 \<Rightarrow> ARM_H.pte " 
+  Low_pt'H :: "word8 \<Rightarrow> ARM_H.pte "
 where
   "Low_pt'H \<equiv> (\<lambda>_. ARM_H.InvalidPTE)
             (0 := ARM_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {}) (vmrights_map vm_read_write))"
 
-definition 
+definition
   Low_ptH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "Low_ptH \<equiv>
@@ -144,18 +144,18 @@ where
 
 definition
   [simp]:
-  "global_pdH \<equiv> (\<lambda>_. ARM_H.InvalidPDE)( ucast (kernel_base >> 20) := 
-       ARM_H.SectionPDE (addrFromPPtr kernel_base) (ParityEnabled \<in> {}) 0 
+  "global_pdH \<equiv> (\<lambda>_. ARM_H.InvalidPDE)( ucast (kernel_base >> 20) :=
+       ARM_H.SectionPDE (addrFromPPtr kernel_base) (ParityEnabled \<in> {}) 0
                              (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {}) (vmrights_map {}))"
 
 
 definition
-  Low_pd'H :: "12 word \<Rightarrow> ARM_H.pde " 
+  Low_pd'H :: "12 word \<Rightarrow> ARM_H.pde "
 where
-  "Low_pd'H \<equiv> 
+  "Low_pd'H \<equiv>
     global_pdH
-     (0 := ARM_H.PageTablePDE 
-              (addrFromPPtr Low_pt_ptr) 
+     (0 := ARM_H.PageTablePDE
+              (addrFromPPtr Low_pt_ptr)
               (ParityEnabled \<in> {})
               undefined)"
 
@@ -175,9 +175,9 @@ text {* High's VSpace (PageDirectory)*}
 
 
 definition
-  High_pt'H :: "word8 \<Rightarrow> ARM_H.pte " 
+  High_pt'H :: "word8 \<Rightarrow> ARM_H.pte "
 where
-  "High_pt'H \<equiv> 
+  "High_pt'H \<equiv>
     (\<lambda>_. ARM_H.InvalidPTE)
      (0 := ARM_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {})
                       (vmrights_map vm_read_only))"
@@ -193,20 +193,20 @@ where
 
 
 definition
-  High_pd'H :: "12 word \<Rightarrow> ARM_H.pde " 
+  High_pd'H :: "12 word \<Rightarrow> ARM_H.pde "
 where
   "High_pd'H \<equiv>
     global_pdH
-     (0 := ARM_H.PageTablePDE  
-             (addrFromPPtr High_pt_ptr) 
+     (0 := ARM_H.PageTablePDE
+             (addrFromPPtr High_pt_ptr)
              (ParityEnabled \<in> {})
-             undefined )" 
+             undefined )"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
 
 definition
-  High_pdH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option" 
+  High_pdH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "High_pdH \<equiv>
      \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARM_H.KOPDE (High_pd'H x)))) \<circ>
@@ -237,7 +237,7 @@ where
      (* tcbIPCBuffer       = *) 0
      (* tcbBoundNotification        = *) None
      (* tcbContext         = *) (ArchThread undefined)"
-   
+
 
 text {* High's tcb *}
 definition
@@ -262,7 +262,7 @@ where
      (* tcbBoundNotification        = *) None
      (* tcbContext         = *) (ArchThread undefined)"
 
-   
+
 text {* idle's tcb *}
 
 definition
@@ -306,7 +306,7 @@ where
 
 definition
   kh0H :: "(word32 \<rightharpoonup> Structures_H.kernel_object)"
-where 
+where
   "kh0H \<equiv> (option_update_range
            (\<lambda>x. if \<exists>irq::10 word. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
                 then Some (KOCTE (CTE capability.NullCap Null_mdb)) else None) \<circ>
@@ -683,7 +683,7 @@ lemma cnode_offs_range_correct:
   "x \<in> cnode_offs_range High_cnode_ptr \<Longrightarrow> \<exists>y. length y = 10 \<and> (x = High_cnode_ptr + of_bl y * 0x10)"
   "x \<in> cnode_offs_range Silc_cnode_ptr \<Longrightarrow> \<exists>y. length y = 10 \<and> (x = Silc_cnode_ptr + of_bl y * 0x10)"
   by (simp_all add: cnode_offs_range_correct' s0_ptrs_aligned)
-  
+
 
 lemma tcb_offs_min':
   "is_aligned ptr 9 \<Longrightarrow> (ptr::word32) \<le> ptr + ucast (x:: 9 word)"
@@ -780,7 +780,7 @@ lemma dom_caps:
     apply fastforce+
     done
 
-lemmas kh0H_obj_def = 
+lemmas kh0H_obj_def =
   Low_cte_def High_cte_def Silc_cte_def ntfnH_def irq_cte_def Low_pdH_def
   High_pdH_def Low_ptH_def High_ptH_def Low_tcbH_def High_tcbH_def idle_tcbH_def
   global_pdH'_def
@@ -1280,7 +1280,7 @@ lemma gt_imp_neq:
   by simp
 
 lemma map_to_ctes_kh0H:
-  "map_to_ctes kh0H = 
+  "map_to_ctes kh0H =
           (option_update_range
            (\<lambda>x. if \<exists>irq::10 word. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
                 then Some (CTE NullCap Null_mdb) else None) \<circ>
@@ -2211,7 +2211,7 @@ lemma s0H_valid_objs':
                             kernelBase_addr_def physBase_def
                      split: if_split_asm)
      apply (clarsimp simp: valid_obj'_def High_pdH_def High_pd'H_def valid_pde'_def pteBits_def
-                           valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def 
+                           valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def
                            ARM.kernelBase_def ARM.physBase_def ARM.ptrFromPAddr_def ptBits_def
                            pageBits_def physMappingOffset_def kernelBase_addr_def physBase_def
                     split: if_split_asm)

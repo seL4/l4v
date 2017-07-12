@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 The TCB and thread related specifications.
 *)
 
@@ -152,7 +152,7 @@ other threads. *}
 fun
   invoke_tcb :: "tcb_invocation \<Rightarrow> (data list,'z::state_ext) p_monad"
 where
-  "invoke_tcb (Suspend thread) = liftE (do suspend thread; return [] od)" 
+  "invoke_tcb (Suspend thread) = liftE (do suspend thread; return [] od)"
 | "invoke_tcb (Resume thread) = liftE (do restart thread; return [] od)"
 
 | "invoke_tcb (ThreadControl target slot faultep mcp priority croot vroot buffer)
@@ -192,7 +192,7 @@ where
     returnOk []
   odE"
 
-| "invoke_tcb (CopyRegisters dest src suspend_source resume_target transfer_frame transfer_integer transfer_arch) =  
+| "invoke_tcb (CopyRegisters dest src suspend_source resume_target transfer_frame transfer_integer transfer_arch) =
   (liftE $ do
     when suspend_source $ suspend src;
     when resume_target $ restart dest;
@@ -204,7 +204,7 @@ where
         pc \<leftarrow> as_user dest getRestartPC;
         as_user dest $ setNextPC pc
     od;
-    when transfer_integer $ 
+    when transfer_integer $
         mapM_x (\<lambda>r. do
                 v \<leftarrow> as_user src $ getRegister r;
                 as_user dest $ setRegister r v
@@ -237,7 +237,7 @@ where
     return []
   od)"
 
-| "invoke_tcb (NotificationControl tcb (Some ntfnptr)) = 
+| "invoke_tcb (NotificationControl tcb (Some ntfnptr)) =
   (liftE $ do
     bind_notification tcb ntfnptr;
     return []
@@ -267,7 +267,7 @@ definition
 definition invoke_domain:: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad"
 where
   "invoke_domain thread domain \<equiv>
-     liftE (do do_extended_op (set_domain thread domain); return [] od)" 
+     liftE (do do_extended_op (set_domain thread domain); return [] od)"
 
 text {* Get all of the message registers, both from the sending thread's current
 register file and its IPC buffer. *}

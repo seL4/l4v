@@ -39,14 +39,14 @@ lemma magnitudeCheck_assert:
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemmas makeObject_simps =
   makeObject_endpoint makeObject_notification makeObject_cte
-  makeObject_tcb makeObject_user_data makeObject_pde makeObject_pte 
+  makeObject_tcb makeObject_user_data makeObject_pde makeObject_pte
   makeObject_asidpool
 end
 definition
   "diminished' cap cap' \<equiv> \<exists>R. cap = maskCapRights R cap'"
 
 lemma projectKO_inv : "\<lbrace>P\<rbrace> projectKO ko \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: projectKO_def fail_def valid_def return_def 
+  by (simp add: projectKO_def fail_def valid_def return_def
            split: option.splits)
 
 (****** From GeneralLib *******)
@@ -75,7 +75,7 @@ lemma updateObject_default_inv:
   by (simp, wp magnitudeCheck_inv alignCheck_inv projectKO_inv, simp)
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma to_from_apiType [simp]: "toAPIType (fromAPIType x) = Some x"
-  by (cases x) (auto simp add: fromAPIType_def ARM_H.fromAPIType_def 
+  by (cases x) (auto simp add: fromAPIType_def ARM_H.fromAPIType_def
     toAPIType_def ARM_H.toAPIType_def)
 end
 end

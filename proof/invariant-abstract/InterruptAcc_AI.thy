@@ -37,7 +37,7 @@ definition valid_irq_states_but where
   "valid_irq_states_but irq s \<equiv> valid_irq_masks_but irq (interrupt_states s) (irq_masks (machine_state s))"
 
 definition all_invs_but_valid_irq_states_for where
-  "all_invs_but_valid_irq_states_for irq \<equiv> valid_pspace and valid_mdb and 
+  "all_invs_but_valid_irq_states_for irq \<equiv> valid_pspace and valid_mdb and
   valid_ioc and valid_idle and only_idle and
   if_unsafe_then_cap and
   valid_reply_caps and
@@ -65,8 +65,8 @@ locale InterruptAcc_AI =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   assumes dmo_maskInterrupt_invs:
     "\<And>irq state.
-      \<lbrace>all_invs_but_valid_irq_states_for irq and (\<lambda>s. state = interrupt_states s irq)\<rbrace> 
-        do_machine_op (maskInterrupt (state = IRQInactive) irq) 
+      \<lbrace>all_invs_but_valid_irq_states_for irq and (\<lambda>s. state = interrupt_states s irq)\<rbrace>
+        do_machine_op (maskInterrupt (state = IRQInactive) irq)
       \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
 
 context InterruptAcc_AI begin
@@ -83,7 +83,7 @@ lemma set_irq_state_invs[wp]:
   apply (simp add: mdb_cte_at_def valid_irq_node_def
                    valid_irq_handlers_def irq_issued_def)
   apply (rule conjI)
-   apply (clarsimp simp: cap_irqs_def cap_irq_opt_def 
+   apply (clarsimp simp: cap_irqs_def cap_irq_opt_def
               split: cap.split_asm)
   apply(clarsimp simp: valid_machine_state_def valid_irq_states_but_def valid_irq_masks_but_def, blast elim: valid_irq_statesE)
   done

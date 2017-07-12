@@ -1664,16 +1664,16 @@ definition
   store_word32s_equality :: "word32 \<Rightarrow> (word32 \<times> word32) list
     \<Rightarrow> (word32 \<times> word32) list \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> bool"
 where
-  "store_word32s_equality p xs ys hp hp' \<equiv> 
+  "store_word32s_equality p xs ys hp hp' \<equiv>
     fold (apply_store_word32 p) xs hp = fold (apply_store_word32 p) ys hp'"
 
-lemma store_word32s_equality_fold:                                                                                 
+lemma store_word32s_equality_fold:
   "p' - p AND 3 = 0 \<Longrightarrow>
     (store_word32 p w hp = store_word32 p' w' hp')
     = store_word32s_equality p [(0, w)] [(p' - p, w')] hp hp'"
   "p' - p AND 3 = 0 \<Longrightarrow>
     store_word32s_equality p xs ys (store_word32 p' w' hp) hp'
-        = store_word32s_equality p ((p' - p, w') # xs) ys hp hp'"                                               
+        = store_word32s_equality p ((p' - p, w') # xs) ys hp hp'"
   "p' - p AND 3 = 0 \<Longrightarrow>
     store_word32s_equality p xs ys hp (store_word32 p' w' hp')
         = store_word32s_equality p xs ((p' - p, w') # ys) hp hp'"
@@ -1866,7 +1866,7 @@ datatype hints = Hints of { deps: (string * term) list Inttab.table,
 fun mk_graph_eqs Gamma (Hints hints) nm n = let
     val vs = case (Inttab.lookup (#deps hints) n) of
       SOME vs => vs
-    | NONE => raise TERM ("mk_graph_eqs: " ^ nm ^ " " ^ string_of_int n, []) 
+    | NONE => raise TERM ("mk_graph_eqs: " ^ nm ^ " " ^ string_of_int n, [])
     val sT = gammaT_to_stateT (fastype_of Gamma)
     val sst = Free ("sst", sT)
 
@@ -2049,7 +2049,7 @@ fun simpl_ss ctxt = put_simpset HOL_basic_ss ctxt
 
 val immediates = @{thms
     simpl_to_graph_Skip_immediate simpl_to_graph_Throw_immediate}
-                        
+
 fun except_tac ctxt msg = SUBGOAL (fn (t, _) => let
   in warning msg; Syntax.pretty_term ctxt t |> Pretty.writeln;
     raise TERM (msg, [t]) end)
@@ -2290,7 +2290,7 @@ fun get_var_deps nodes ep outputs = let
       (maps (Inttab.lookup_list preds) [~1, ~2])
   in (preds, deps) end
 
-fun get_loop_var_upd_nodes nodes = 
+fun get_loop_var_upd_nodes nodes =
     nodes
     |> filter (snd #> (fn (@{term Basic} $ _ $ _) => true | _ => false))
     |> filter (snd #> get_lvals_rvals #> fst

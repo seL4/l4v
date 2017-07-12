@@ -240,8 +240,8 @@ lemma invoke_tcb_tc_respects_aag:
         | rule wp_split_const_if wp_split_const_if_R
                    hoare_vcg_all_lift_R
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
-                   hoare_vcg_R_conj 
-        | (wp 
+                   hoare_vcg_R_conj
+        | (wp
              restart_integrity_autarch set_mcpriority_integrity_autarch
              as_user_integrity_autarch thread_set_integrity_autarch
              option_update_thread_integrity_autarch thread_set_pas_refined_triv
@@ -278,7 +278,7 @@ lemma invoke_tcb_tc_respects_aag:
                     emptyable_def
                del: hoare_post_taut hoare_True_E_R
         | wpc
-        | strengthen use_no_cap_to_obj_asid_strg                    
+        | strengthen use_no_cap_to_obj_asid_strg
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"]
         )+)[1]),(rule_tac x="\<lambda>_. invs and valid_list and valid_sched and integrity aag X st and pas_refined aag and simple_sched_action" in simplify_post,simp,erule use_safe_id)?)+
@@ -296,10 +296,10 @@ lemma invoke_tcb_tc_respects_aag:
 
 lemma invoke_tcb_unbind_notification_respects:
   "\<lbrace>integrity aag X st and pas_refined aag
-       and einvs and Tcb_AI.tcb_inv_wf (tcb_invocation.NotificationControl t None) 
+       and einvs and Tcb_AI.tcb_inv_wf (tcb_invocation.NotificationControl t None)
        and simple_sched_action and K (authorised_tcb_inv aag (tcb_invocation.NotificationControl t None))\<rbrace>
      invoke_tcb (tcb_invocation.NotificationControl t None)
-   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>" 
+   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (clarsimp)
   apply (wp unbind_notification_respects)
   apply (clarsimp simp: authorised_tcb_inv_def tcb_at_def pred_tcb_def2)
@@ -310,7 +310,7 @@ lemma invoke_tcb_unbind_notification_respects:
   done
 
 lemma sbn_bind_respects:
-  "\<lbrace>integrity aag X st and bound_tcb_at (op = None) t 
+  "\<lbrace>integrity aag X st and bound_tcb_at (op = None) t
     and K ((pasSubject aag, Receive, pasObjectAbs aag ntfn) \<in> pasPolicy aag \<and> is_subject aag t)\<rbrace>
        set_bound_notification t (Some ntfn)
    \<lbrace>\<lambda>rv. integrity aag X st \<rbrace>"
@@ -352,7 +352,7 @@ lemma invoke_tcb_ntfn_control_respects[wp]:
   apply (case_tac ntfn, simp_all del: invoke_tcb.simps Tcb_AI.tcb_inv_wf.simps K_def)
    apply (wp invoke_tcb_bind_notification_respects invoke_tcb_unbind_notification_respects)+
   done
-  
+
 lemma invoke_tcb_respects:
   "\<lbrace>integrity aag X st and pas_refined aag
          and einvs and simple_sched_action and Tcb_AI.tcb_inv_wf ti and K (authorised_tcb_inv aag ti)\<rbrace>
@@ -382,12 +382,12 @@ lemma bind_notification_pas_refined[wp]:
   "\<lbrace>pas_refined aag and K (\<forall>auth \<in> {Receive, Reset}. (pasObjectAbs aag t, auth, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag)\<rbrace> bind_notification t ntfnptr \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (clarsimp simp: bind_notification_def)
   apply (wp set_notification_pas_refined | wpc | simp)+
-  done    
+  done
 
 lemma invoke_tcb_ntfn_control_pas_refined[wp]:
-  "\<lbrace>pas_refined aag and Tcb_AI.tcb_inv_wf (tcb_invocation.NotificationControl t ntfn) and einvs and simple_sched_action 
-     and K (authorised_tcb_inv aag (tcb_invocation.NotificationControl t ntfn))\<rbrace> 
-     invoke_tcb (tcb_invocation.NotificationControl t ntfn) 
+  "\<lbrace>pas_refined aag and Tcb_AI.tcb_inv_wf (tcb_invocation.NotificationControl t ntfn) and einvs and simple_sched_action
+     and K (authorised_tcb_inv aag (tcb_invocation.NotificationControl t ntfn))\<rbrace>
+     invoke_tcb (tcb_invocation.NotificationControl t ntfn)
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (case_tac ntfn, simp_all del: K_def)
    apply (safe intro!: hoare_gen_asm)
@@ -427,7 +427,7 @@ lemma decode_registers_authorised:
 
 
 lemma stupid_strg:
-  "cap_links_asid_slot aag (pasObjectAbs aag (fst y)) x \<longrightarrow> 
+  "cap_links_asid_slot aag (pasObjectAbs aag (fst y)) x \<longrightarrow>
   (x = cap \<and> (\<exists>b. y = (a, b)) \<longrightarrow> cap_links_asid_slot aag (pasObjectAbs aag a) cap)"
   by auto
 
@@ -439,7 +439,7 @@ lemma decode_set_ipc_buffer_authorised:
   unfolding decode_set_ipc_buffer_def authorised_tcb_inv_def
   apply (cases "excaps ! 0")
   apply (clarsimp cong: list.case_cong split del: if_split)
-  apply (rule hoare_pre)  
+  apply (rule hoare_pre)
   apply (clarsimp simp: ball_Un aag_cap_auth_def split del: if_split split: prod.split
        | strengthen stupid_strg
        | wp_once derive_cap_obj_refs_auth derive_cap_untyped_range_subset derive_cap_clas derive_cap_cli
@@ -448,7 +448,7 @@ lemma decode_set_ipc_buffer_authorised:
   apply (cases excaps, simp)
   apply fastforce
   done
-  
+
 lemma decode_set_space_authorised:
   "\<lbrace>K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
                       \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x))) \<rbrace>
@@ -460,7 +460,7 @@ lemma decode_set_space_authorised:
   apply (clarsimp simp: ball_Un split del: if_split
        | wp_once derive_cap_obj_refs_auth derive_cap_untyped_range_subset derive_cap_clas derive_cap_cli
                  hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R whenE_throwError_wp slot_long_running_inv)+
-  apply (clarsimp simp: not_less all_set_conv_all_nth dest!: P_0_1_spec)  
+  apply (clarsimp simp: not_less all_set_conv_all_nth dest!: P_0_1_spec)
   apply (auto simp: aag_cap_auth_def update_cap_cli intro: update_cap_obj_refs_subset dest!: update_cap_untyped_range_subset update_cap_cap_auth_conferred_subset)
   done
 
@@ -474,7 +474,7 @@ lemma decode_set_space_authorised':
                                     (tc_new_mcpriority mcp) (tc_new_priority prio) (tc_new_croot rv)
                                     (tc_new_vroot rv) (tc_new_buffer set_param))\<rbrace>, -"
   apply (rule hoare_gen_asmE)
-  apply (cases set_param)  
+  apply (cases set_param)
   apply (simp_all add: is_thread_control_def decode_set_space_def authorised_tcb_inv_def
                  cong: list.case_cong option.case_cong prod.case_cong
                 split: prod.split_asm split del: if_split)
@@ -485,7 +485,7 @@ lemma decode_set_space_authorised':
        | wp_once derive_cap_obj_refs_auth derive_cap_untyped_range_subset derive_cap_clas derive_cap_cli
                  hoare_vcg_all_lift_R whenE_throwError_wp slot_long_running_inv)+
   apply (clarsimp cong: list.case_cong option.case_cong prod.case_cong split: prod.split_asm)
-  apply (clarsimp simp: not_less all_set_conv_all_nth dest!: P_0_1_spec)  
+  apply (clarsimp simp: not_less all_set_conv_all_nth dest!: P_0_1_spec)
   apply (auto simp: aag_cap_auth_def update_cap_cli intro: update_cap_untyped_range_subset update_cap_obj_refs_subset dest!: update_cap_cap_auth_conferred_subset elim: bspec)
   done
 

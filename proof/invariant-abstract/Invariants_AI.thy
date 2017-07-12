@@ -231,7 +231,7 @@ text {* cte with property at *}
 
 definition
   cte_wp_at :: "(cap \<Rightarrow> bool) \<Rightarrow> cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where                             
+where
   "cte_wp_at P p s \<equiv> \<exists>cap. fst (get_cap p s) = {(cap,s)} \<and> P cap"
 
 abbreviation
@@ -472,10 +472,10 @@ where
 definition
   valid_ntfn :: "notification \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_ntfn ntfn s \<equiv> (case ntfn_obj ntfn of 
+  "valid_ntfn ntfn s \<equiv> (case ntfn_obj ntfn of
     IdleNtfn \<Rightarrow>  True
   | WaitingNtfn ts \<Rightarrow>
-      (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) 
+      (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s)
        \<and> distinct ts
        \<and> (case ntfn_bound_tcb ntfn of Some tcb \<Rightarrow> ts = [tcb] | _ \<Rightarrow> True))
   | ActiveNtfn b \<Rightarrow> True)
@@ -546,7 +546,7 @@ where
 definition
   ep_q_refs_of   :: "endpoint      \<Rightarrow> (obj_ref \<times> reftype) set"
 where
-  "ep_q_refs_of x \<equiv> case x of  
+  "ep_q_refs_of x \<equiv> case x of
     IdleEP    => {}
   | (RecvEP q) => set q \<times> {EPRecv}
   | (SendEP q) => set q \<times> {EPSend}"
@@ -561,9 +561,9 @@ where
 
 (* FIXME-NTFN: two new functions: ntfn_bound_refs and tcb_bound_refs, include below by union *)
 
-definition 
+definition
   ntfn_bound_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
-where 
+where
   "ntfn_bound_refs t \<equiv> case t of
      Some tcb \<Rightarrow> {(tcb, NTFNBound)}
    | None \<Rightarrow> {}"
@@ -807,7 +807,7 @@ definition
 abbreviation "idle_tcb_at \<equiv> pred_tcb_at (\<lambda>t. (itcb_state t, itcb_bound_notification t))"
 
 definition
-  "valid_idle \<equiv> \<lambda>s. idle_tcb_at (\<lambda>p. (idle (fst p)) \<and> (snd p = None)) (idle_thread s) s 
+  "valid_idle \<equiv> \<lambda>s. idle_tcb_at (\<lambda>p. (idle (fst p)) \<and> (snd p = None)) (idle_thread s) s
                    \<and> idle_thread s = idle_thread_ptr"
 
 definition
@@ -868,7 +868,7 @@ definition valid_irq_states :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_irq_states \<equiv> \<lambda>s.
     valid_irq_masks (interrupt_states s) (irq_masks (machine_state s))"
 
-definition "cap_range_respects_device_region c s \<equiv> 
+definition "cap_range_respects_device_region c s \<equiv>
   if (cap_is_device c) then cap_range c \<subseteq> device_region s
   else cap_range c \<subseteq> - device_region s"
 
@@ -1179,7 +1179,7 @@ lemma st_tcb_idle_cap_valid_Null [simp]:
                       pred_tcb_at_def obj_at_def
                       valid_ipc_buffer_cap_null)
 
- 
+
 lemma valid_objsI [intro]:
   "(\<And>obj x. kheap s x = Some obj \<Longrightarrow> valid_obj x obj s) \<Longrightarrow> valid_objs s"
   unfolding valid_objs_def by auto
@@ -1336,7 +1336,7 @@ lemma sym_refs_ko_atD:
 
 lemma sym_refs_st_tcb_atD:
   "\<lbrakk> st_tcb_at P t s; sym_refs (state_refs_of s) \<rbrakk> \<Longrightarrow>
-     \<exists>ts ntfn. P ts \<and> obj_at (tcb_ntfn_is_bound ntfn) t s 
+     \<exists>ts ntfn. P ts \<and> obj_at (tcb_ntfn_is_bound ntfn) t s
         \<and> state_refs_of s t = tcb_st_refs_of ts \<union> tcb_bound_refs ntfn
         \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of ts \<union> tcb_bound_refs ntfn. obj_at (\<lambda>ko. (t, symreftype tp) \<in> refs_of ko) x s)"
   apply (drule st_tcb_at_state_refs_ofD)
@@ -1347,7 +1347,7 @@ lemma sym_refs_st_tcb_atD:
   apply (frule obj_at_state_refs_ofD)
   apply (drule (1)sym_refs_obj_atD)
   apply auto
-  done 
+  done
 
 lemma pspace_alignedE [elim]:
   "\<lbrakk> pspace_aligned s;
@@ -1609,7 +1609,7 @@ end
 
 lemma valid_cap_pspaceI:
   "\<lbrakk> s \<turnstile> cap; kheap s = kheap s' \<rbrakk> \<Longrightarrow> s' \<turnstile> cap"
-  unfolding valid_cap_def 
+  unfolding valid_cap_def
   apply (cases cap)
   by (auto intro: obj_at_pspaceI cte_wp_at_pspaceI valid_arch_cap_pspaceI
             simp: obj_range_def valid_untyped_def pred_tcb_at_def
@@ -2116,12 +2116,12 @@ lemma length_helper:
 lemma pspace_typ_at:
   "kheap s p = Some obj \<Longrightarrow> \<exists>T. typ_at T p s"
   by (clarsimp simp: obj_at_def)
-  
+
 
 lemma obj_bits_T:
   "obj_bits v = obj_bits_type (a_type v)"
   apply (cases v, simp_all add: obj_bits_type_def a_type_def)
-   apply (clarsimp simp: well_formed_cnode_n_def 
+   apply (clarsimp simp: well_formed_cnode_n_def
                          length_set_helper length_helper cte_level_bits_def)
   apply (rule aobj_bits_T)
   done
@@ -2328,7 +2328,7 @@ lemma typ_at_range:
         apply (erule notE)
         apply (erule is_aligned_no_overflow)
        apply (clarsimp simp: valid_obj_def valid_cs_def valid_cs_size_def)
-      apply (auto simp: a_type_def typ_range_def  obj_bits_type_def 
+      apply (auto simp: a_type_def typ_range_def  obj_bits_type_def
                         aobj_bits_T
                   dest!: is_aligned_no_overflow
                | simp)+
@@ -3049,7 +3049,7 @@ lemma only_idle_lift:
   shows "\<lbrace>only_idle\<rbrace> f \<lbrace>\<lambda>_. only_idle\<rbrace>"
   apply (simp add: only_idle_def)
   apply (rule hoare_vcg_all_lift)
-  apply (subst imp_conv_disj not_pred_tcb)+ 
+  apply (subst imp_conv_disj not_pred_tcb)+
   apply (rule hoare_vcg_disj_lift)+
     apply (simp add: tcb_at_typ)
     apply (rule T)
@@ -3270,7 +3270,7 @@ locale invs_locale =
 lemma invs_locale_trivial:
   "invs_locale \<top>"
   by (unfold_locales; wp)
-  
+
 lemma in_dxo_pspaceD:
   "((), s') \<in> fst (do_extended_op f s) \<Longrightarrow> kheap s' = kheap s"
   by (clarsimp simp: do_extended_op_def select_f_def in_monad)
@@ -3328,7 +3328,7 @@ lemma sym_refs_bound_tcb_atD:
 
 lemma vs_lookup_trans_sub2:
   assumes ko: "\<And>ko p. \<lbrakk> ko_at ko p s; vs_refs ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s'"
-  shows "vs_lookup_trans s \<subseteq> vs_lookup_trans s'" 
+  shows "vs_lookup_trans s \<subseteq> vs_lookup_trans s'"
 proof -
   have "vs_lookup1 s \<subseteq> vs_lookup1 s'"
     by (fastforce dest: ko elim: vs_lookup1_stateI2)
@@ -3337,7 +3337,7 @@ qed
 
 lemma vs_lookup_pages_trans_sub2:
   assumes ko: "\<And>ko p. \<lbrakk> ko_at ko p s; vs_refs_pages ko \<noteq> {} \<rbrakk> \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs_pages ko \<subseteq> vs_refs_pages ko') p s'"
-  shows "vs_lookup_pages_trans s \<subseteq> vs_lookup_pages_trans s'" 
+  shows "vs_lookup_pages_trans s \<subseteq> vs_lookup_pages_trans s'"
 proof -
   have "vs_lookup_pages1 s \<subseteq> vs_lookup_pages1 s'"
     by (fastforce dest: ko elim: vs_lookup_pages1_stateI2)

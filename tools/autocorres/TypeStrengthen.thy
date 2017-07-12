@@ -156,7 +156,7 @@ Monad_Types.new_monad_type
   (fn _ => error "monad_mono not applicable for gets monad")
 |> Context.theory_map
 *}
-  
+
 lemma TS_gets_L2_seq:
     "L2_seq (TS_gets A) (\<lambda>x. TS_gets (B x)) = (TS_gets (\<lambda>s. let x = A s in B x s))"
   by (monad_eq simp: L2_defs TS_gets_def)
@@ -420,7 +420,7 @@ lemma liftE_exec_abstract:
   apply (clarsimp simp: snd_exec_abstract snd_liftE)
   done
 
-lemma liftE_measure_call: 
+lemma liftE_measure_call:
   "\<lbrakk> monad_mono A; \<And>m. L2_call (A m) = liftE (B m) \<rbrakk>
    \<Longrightarrow> L2_call (measure_call A) = liftE (measure_call B)"
   apply (monad_eq simp: measure_call_def L2_call_def L2_defs)

@@ -31,12 +31,12 @@ lemma  ptrFormPAddr_addFromPPtr :
 (****** From GeneralLib *******)
 
 lemma asid_high_bits_of_add_ucast:
-  "is_aligned w asid_low_bits \<Longrightarrow> 
+  "is_aligned w asid_low_bits \<Longrightarrow>
   asid_high_bits_of (ucast (x::10 word) + w) = asid_high_bits_of w"
   apply (rule word_eqI)
   apply (simp add: word_size asid_high_bits_of_def nth_ucast nth_shiftr is_aligned_nth)
   apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI) 
+   apply (rule word_eqI)
    apply (clarsimp simp: nth_ucast)
    apply (drule test_bit_size)
    apply (simp add: word_size asid_low_bits_def)
@@ -58,11 +58,11 @@ lemma asid_high_bits_of_add:
   apply (auto dest: test_bit_size
               simp: asid_low_bits_def word_bits_def nth_ucast)
   done
- 
+
 lemma preemption_point_success [simp,intro]:
-  "((Inr (), s') \<in> fst (preemption_point s)) \<Longrightarrow> 
+  "((Inr (), s') \<in> fst (preemption_point s)) \<Longrightarrow>
   \<exists>f es. s' = s \<lparr> machine_state := machine_state s \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr>, exst := es \<rparr>"
-  apply (auto simp: in_monad preemption_point_def do_machine_op_def 
+  apply (auto simp: in_monad preemption_point_def do_machine_op_def
                     select_f_def select_def getActiveIRQ_def alternative_def
                     do_extended_op_def OR_choiceE_def mk_ef_def
              split: option.splits if_splits

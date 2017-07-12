@@ -48,13 +48,13 @@ lemma Arch_finaliseInterrupt_ccorres:
   done
 
 lemma handleInterruptEntry_ccorres:
-  "ccorres dc xfdc 
+  "ccorres dc xfdc
            (invs' and sch_act_simple)
-           UNIV [] 
+           UNIV []
            (callKernel Interrupt) (Call handleInterruptEntry_'proc)"
   proof -
   have unifyhelp :
-    "\<And>s t. irq_' (s\<lparr>globals := globals t, irq_' := ret__unsigned_short_' t\<rparr>) = 
+    "\<And>s t. irq_' (s\<lparr>globals := globals t, irq_' := ret__unsigned_short_' t\<rparr>) =
       ret__unsigned_short_' (t::globals myvars)"
       by simp
   show ?thesis
@@ -78,7 +78,7 @@ lemma handleInterruptEntry_ccorres:
       apply (simp add: ucast_not_helper_cheating irqInvalid_def)
       apply vcg
      apply vcg
-    apply (clarsimp simp: irqInvalid_def ucast_ucast_b 
+    apply (clarsimp simp: irqInvalid_def ucast_ucast_b
       is_up ucast_not_helper_cheating)
     apply (rule ccorres_rhs_assoc)
     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
@@ -99,10 +99,10 @@ lemma handleInterruptEntry_ccorres:
 qed
 
 lemma handleUnknownSyscall_ccorres:
-  "ccorres dc xfdc 
+  "ccorres dc xfdc
            (invs' and ct_running' and
               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-           (UNIV \<inter> {s. of_nat n = w_' s}) [] 
+           (UNIV \<inter> {s. of_nat n = w_' s}) []
            (callKernel (UnknownSyscall n)) (Call handleUnknownSyscall_'proc)"
   apply (cinit' lift: w_')
    apply (simp add: callKernel_def handleEvent_def)
@@ -135,10 +135,10 @@ lemma handleUnknownSyscall_ccorres:
   done
 
 lemma handleVMFaultEvent_ccorres:
-  "ccorres dc xfdc 
+  "ccorres dc xfdc
            (invs' and sch_act_simple and ct_running' and
                (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-           (UNIV \<inter> {s.  vm_faultType_' s = vm_fault_type_from_H vmfault_type}) [] 
+           (UNIV \<inter> {s.  vm_faultType_' s = vm_fault_type_from_H vmfault_type}) []
            (callKernel (VMFaultEvent vmfault_type)) (Call handleVMFaultEvent_'proc)"
   apply (cinit' lift:vm_faultType_')
    apply (simp add: callKernel_def handleEvent_def)
@@ -184,10 +184,10 @@ lemma handleVMFaultEvent_ccorres:
 
 
 lemma handleUserLevelFault_ccorres:
-  "ccorres dc xfdc 
+  "ccorres dc xfdc
            (invs' and sch_act_simple and ct_running' and
                (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-           (UNIV \<inter> {s.  w_a_' s = word1} \<inter> {s. w_b_' s = word2 }) [] 
+           (UNIV \<inter> {s.  w_a_' s = word1} \<inter> {s. w_b_' s = word2 }) []
            (callKernel (UserLevelFault word1 word2)) (Call handleUserLevelFault_'proc)"
   apply (cinit' lift:w_a_' w_b_')
    apply (simp add: callKernel_def handleEvent_def)
@@ -200,7 +200,7 @@ lemma handleUserLevelFault_ccorres:
        apply (ctac (no_vcg) add: activateThread_ccorres)
         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
         apply (rule allI, rule conseqPre, vcg)
-        apply (clarsimp simp: return_def)  
+        apply (clarsimp simp: return_def)
        apply (wp schedule_sch_act_wf schedule_invs'
               | strengthen invs_queues_imp invs_valid_objs_strengthen)+
     apply (clarsimp, vcg)
@@ -223,7 +223,7 @@ lemma handleUserLevelFault_ccorres:
   apply (simp add: is_cap_fault_def)
   done
 
-lemmas syscall_defs = 
+lemmas syscall_defs =
   Kernel_C.SysSend_def Kernel_C.SysNBSend_def
   Kernel_C.SysCall_def Kernel_C.SysRecv_def Kernel_C.SysNBRecv_def
   Kernel_C.SysReply_def Kernel_C.SysReplyRecv_def Kernel_C.SysYield_def
@@ -235,12 +235,12 @@ lemma ct_active_not_idle'_strengthen:
 
 
 lemma handleSyscall_ccorres:
-  "ccorres dc xfdc 
+  "ccorres dc xfdc
            (invs' and
                (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
                sch_act_simple and ct_running' and
                (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-           (UNIV \<inter> {s. syscall_' s = syscall_from_H sysc }) [] 
+           (UNIV \<inter> {s. syscall_' s = syscall_from_H sysc }) []
            (callKernel (SyscallEvent sysc)) (Call handleSyscall_'proc)"
   apply (cinit' lift: syscall_')
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
@@ -268,7 +268,7 @@ lemma handleSyscall_ccorres:
                  apply (subst ccorres_seq_skip'[symmetric])
                  apply (rule ccorres_split_nothrow_novcg)
                      apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                      apply (case_tac rv, clarsimp, 
+                      apply (case_tac rv, clarsimp,
                         clarsimp simp: ucast_not_helper_cheating ucast_ucast_b
                           is_up)
                      apply (rule ccorres_add_return2)
@@ -308,8 +308,8 @@ lemma handleSyscall_ccorres:
                 apply (rule ccorres_split_nothrow_novcg)
                     apply (rule ccorres_Guard)?
                     apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
-                     apply (case_tac rv, clarsimp, 
-                       clarsimp simp: ucast_not_helper_cheating is_up 
+                     apply (case_tac rv, clarsimp,
+                       clarsimp simp: ucast_not_helper_cheating is_up
                          ucast_ucast_b)
                      apply (rule ccorres_add_return2)
                     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
@@ -518,7 +518,7 @@ lemma no_fail_callKernel:
   done
 
 lemma handleHypervisorEvent_ccorres:
-  "ccorres dc xfdc 
+  "ccorres dc xfdc
            (invs' and sch_act_simple)
            UNIV []
            (callKernel (HypervisorEvent t)) handleHypervisorEvent_C"
@@ -544,15 +544,15 @@ lemma callKernel_corres_C:
   apply (cases e, simp_all)
       prefer 4
       apply (rule ccorres_corres_u)
-       apply simp 
-       apply (rule ccorres_guard_imp) 
+       apply simp
+       apply (rule ccorres_guard_imp)
          apply (rule handleInterruptEntry_ccorres)
         apply (clarsimp simp: all_invs'_def sch_act_simple_def)
        apply simp
       apply assumption
      prefer 2
      apply (rule ccorres_corres_u [rotated], assumption)
-     apply simp 
+     apply simp
      apply (rule ccorres_guard_imp)
        apply (rule ccorres_call)
           apply (rule handleUnknownSyscall_ccorres)
@@ -679,8 +679,8 @@ lemma threadSet_all_invs_triv':
   done
 
 lemma getContext_corres:
-  "t' = tcb_ptr_to_ctcb_ptr t \<Longrightarrow> 
-  corres_underlying rf_sr False True (op =) (tcb_at' t) \<top> 
+  "t' = tcb_ptr_to_ctcb_ptr t \<Longrightarrow>
+  corres_underlying rf_sr False True (op =) (tcb_at' t) \<top>
                     (threadGet (atcbContextGet o tcbArch) t) (gets (getContext_C t'))"
   apply (clarsimp simp: corres_underlying_def simpler_gets_def)
   apply (drule obj_at_ko_at')
@@ -698,13 +698,13 @@ lemma getContext_corres:
 
 lemma callKernel_cur:
   "\<lbrace>all_invs' e\<rbrace> callKernel e \<lbrace>\<lambda>rv s. tcb_at' (ksCurThread s) s\<rbrace>"
-  apply (rule hoare_chain) 
+  apply (rule hoare_chain)
     apply (rule ckernel_invs)
    apply (clarsimp simp: all_invs'_def sch_act_simple_def)
   apply clarsimp
   done
 
-lemma entry_corres_C: 
+lemma entry_corres_C:
   "corres_underlying rf_sr False True (op =)
            (all_invs' e)
            \<top>
@@ -713,7 +713,7 @@ lemma entry_corres_C:
   apply (rule corres_guard_imp)
     apply (rule corres_split [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
        prefer 2
-       apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)  
+       apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
       apply (rule corres_split)
          prefer 2
          apply (rule setArchTCB_C_corres, simp, rule ccontext_rel_to_C)
@@ -754,22 +754,22 @@ lemma ct_running'_C:
    apply simp
   apply clarsimp
   apply (frule (1) map_to_ko_atI')
-  apply (erule obj_at'_weakenE) 
+  apply (erule obj_at'_weakenE)
   apply (clarsimp simp: ctcb_relation_def cthread_state_relation_def)
-  apply (case_tac "tcbState ko", simp_all add: 
-    ThreadState_Running_def 
-    ThreadState_BlockedOnReceive_def 
-    ThreadState_BlockedOnSend_def 
-    ThreadState_BlockedOnReply_def 
-    ThreadState_BlockedOnNotification_def 
-    ThreadState_Inactive_def 
-    ThreadState_IdleThreadState_def 
+  apply (case_tac "tcbState ko", simp_all add:
+    ThreadState_Running_def
+    ThreadState_BlockedOnReceive_def
+    ThreadState_BlockedOnSend_def
+    ThreadState_BlockedOnReply_def
+    ThreadState_BlockedOnNotification_def
+    ThreadState_Inactive_def
+    ThreadState_IdleThreadState_def
     ThreadState_Restart_def)
   done
 
 lemma full_invs_both:
-  "ADT_H uop \<Turnstile> 
-  {s'. \<exists>s. (s,s') \<in> lift_state_relation state_relation \<and> 
+  "ADT_H uop \<Turnstile>
+  {s'. \<exists>s. (s,s') \<in> lift_state_relation state_relation \<and>
      s \<in> full_invs \<and> s' \<in> full_invs'}"
   apply (rule fw_inv_transport)
     apply (rule akernel_invariant)
@@ -837,7 +837,7 @@ lemma user_memory_update_corres_C:
      (doMachineOp (user_memory_update um)) (setUserMem_C um)"
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
-   prefer 2 
+   prefer 2
    apply (clarsimp simp add: setUserMem_C_def simpler_modify_def)
   apply (subgoal_tac
        "doMachineOp (user_memory_update um) a =
@@ -870,11 +870,11 @@ lemma device_update_corres_C:
    (setDeviceState_C ms)"
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
-    prefer 2 
+    prefer 2
     apply (clarsimp simp add: setDeviceState_C_def simpler_modify_def)
   apply (rule ballI)
   apply (clarsimp simp: simpler_modify_def setDeviceState_C_def)
-  apply (clarsimp simp: doMachineOp_def device_memory_update_def NonDetMonad.bind_def in_monad 
+  apply (clarsimp simp: doMachineOp_def device_memory_update_def NonDetMonad.bind_def in_monad
                         gets_def get_def return_def simpler_modify_def select_f_def)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
                         cmachine_state_relation_def)
@@ -993,7 +993,7 @@ lemma check_active_irq_corres_C:
   apply (simp add: checkActiveIRQ_C_def checkActiveIRQ_def getActiveIRQ_C_def)
   apply (rule corres_guard_imp)
     apply (subst bind_assoc[symmetric])
-    apply (rule corres_split) 
+    apply (rule corres_split)
        apply simp
        apply (rule ccorres_corres_u_xf)
        apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
@@ -1129,7 +1129,7 @@ lemma no_fail_getActiveIRQ_C:
   apply (clarsimp simp: getActiveIRQ_C_def exec_C_def)
   apply (drule getActiveIRQ_Normal)
   apply (clarsimp simp: isNormal_def)
-  done  
+  done
 
 lemma kernel_all_subset_kernel:
   "global_automaton (kernel_global.check_active_irq_C symbol_table) (do_user_op_C uop)
@@ -1149,7 +1149,7 @@ lemma kernel_all_subset_kernel:
                     check_active_irq_C_def checkActiveIRQ_C_def
                     kernel_global.check_active_irq_C_def kernel_global.checkActiveIRQ_C_def
                     check_active_irq_H_def checkActiveIRQ_def)
-       apply clarsimp 
+       apply clarsimp
        apply (erule in_monad_imp_rewriteE[where F=True])
         apply (rule monadic_rewrite_imp)
          apply (rule monadic_rewrite_bind_tail)+

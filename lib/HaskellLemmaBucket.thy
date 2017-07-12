@@ -176,7 +176,7 @@ lemma fun_is_in_assocs:
 lemma empty_set_is_null:
   "(set xs = {}) = null xs"
   by (clarsimp simp: null_def)
-  
+
 lemma assert_into_when:
   "(assert P) = (when (\<not> P) (haskell_fail []))"
   by (simp add: assert_def when_def)
@@ -197,12 +197,12 @@ lemma headM_tailM_Cons:
 lemma replicateM_mapM:
   "replicateM n f = mapM (\<lambda>x. f) (replicate n ())"
   by (simp add: replicateM_def mapM_def)
-  
+
 lemma orList_False:
   "(\<not> orList bs) = (set bs \<subseteq> {False})"
   apply (induct bs)
   apply (simp_all add: orList_def foldl_True)
-  apply (case_tac a)   
+  apply (case_tac a)
   apply (simp_all add: orList_def foldl_True)
   done
 
@@ -274,10 +274,10 @@ lemma filter_assocs_Cons:
 lemma snd_stateAssert_after:
   "\<not> snd ((do _ \<leftarrow> f; stateAssert R vs od) s) \<Longrightarrow>
   \<not>snd (f s) \<and> (\<forall>(rv, s') \<in> fst (f s). R s')"
-  apply (clarsimp simp: bind_def stateAssert_def get_def assert_def 
+  apply (clarsimp simp: bind_def stateAssert_def get_def assert_def
       return_def fail_def split_def split: if_split_asm)
   done
-    
+
 lemma oblivious_stateAssert [simp]:
   "oblivious f (stateAssert g xs) = (\<forall>s. g (f s) = g s)"
   apply (simp add: oblivious_def stateAssert_def exec_get

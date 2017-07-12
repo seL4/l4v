@@ -7,7 +7,7 @@
 (*  Title:      XVcg.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2006-2008 Norbert Schirmer 
+Copyright (C) 2006-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-theory XVcg 
+theory XVcg
 imports Vcg
 
 begin
@@ -40,7 +40,7 @@ by the verification condition generator, while simplifying assertions.
 
 syntax
 "_Let'" :: "[letbinds, basicblock] => basicblock"  ("(LET (_)/ IN (_))" 23)
- 
+
 translations
   "_Let' (_binds b bs) e"  == "_Let' b (_Let' bs e)"
   "_Let' (_bind x a) e"    == "CONST Let' a (%x. e)"
@@ -48,9 +48,9 @@ translations
 
 lemma Let'_unfold [vcg_simp]: "Let' x f = f x"
   by (simp add: Let'_def Let_def)
-  
-lemma Let'_split_conv [vcg_simp]: 
-  "(Let' x  (\<lambda>p. (case_prod (f p) (g p)))) = 
+
+lemma Let'_split_conv [vcg_simp]:
+  "(Let' x  (\<lambda>p. (case_prod (f p) (g p)))) =
    (Let' x  (\<lambda>p. (f p) (fst (g p)) (snd (g p))))"
   by (simp add: split_def)
 

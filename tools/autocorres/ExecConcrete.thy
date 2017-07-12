@@ -90,7 +90,7 @@ lemma exec_transformed_fail_wp_nf [wp]:
   done
 
 lemma exec_transformed_fail_wp [wp]:
-    "\<lbrace> \<lambda>_. True \<rbrace> exec_transformed st fail \<lbrace> P \<rbrace>"    
+    "\<lbrace> \<lambda>_. True \<rbrace> exec_transformed st fail \<lbrace> P \<rbrace>"
   including no_pre by wp
 
 (*
@@ -209,7 +209,7 @@ lemma exec_concrete_empty_fail [wp]:
 (*
  * Execute the given monad in a modified state.
  *)
-definition "exec_abstract st M \<equiv> 
+definition "exec_abstract st M \<equiv>
        \<lambda>s'. ({(r', t'). \<exists>t. t = st t' \<and> (r', t) \<in> fst (M (st s'))},
             \<exists>s. s = st s' \<and> snd (M (st s')))"
 

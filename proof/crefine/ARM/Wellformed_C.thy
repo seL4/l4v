@@ -162,12 +162,12 @@ primrec
   capBits_C :: "cap_CL \<Rightarrow> nat"
 where
   "capBits_C Cap_null_cap = 0"
-| "capBits_C (Cap_untyped_cap uc) = unat (capBlockSize_CL uc)" 
+| "capBits_C (Cap_untyped_cap uc) = unat (capBlockSize_CL uc)"
 | "capBits_C (Cap_endpoint_cap ec) = wordSizeCase 4 5"
 | "capBits_C (Cap_notification_cap aec) = wordSizeCase 4 5"
 | "capBits_C (Cap_cnode_cap cnc) =  wordSizeCase 4 5"
 | "capBits_C (Cap_thread_cap tc) = 10"
-| "capBits_C (Cap_zombie_cap zc) =  (wordSizeCase 4 5)" 
+| "capBits_C (Cap_zombie_cap zc) =  (wordSizeCase 4 5)"
 
 
 definition

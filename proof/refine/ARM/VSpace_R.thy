@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
    ARM VSpace refinement
 *)
 
@@ -27,8 +27,8 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 crunch_ignore (add: throw_on_false)
 
 definition
-  "pd_at_asid' pd asid \<equiv> \<lambda>s. \<exists>ap pool. 
-             armKSASIDTable (ksArchState s) (ucast (asid_high_bits_of asid)) = Some ap \<and> 
+  "pd_at_asid' pd asid \<equiv> \<lambda>s. \<exists>ap pool.
+             armKSASIDTable (ksArchState s) (ucast (asid_high_bits_of asid)) = Some ap \<and>
              ko_at' (ASIDPool pool) ap s \<and> pool (asid && mask asid_low_bits) = Some pd \<and>
              page_directory_at' pd s"
 
@@ -69,10 +69,10 @@ crunch inv[wp]: findPDForASIDAssert "P"
   (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps)
 
 lemma pspace_relation_pd:
-  assumes p: "pspace_relation (kheap a) (ksPSpace c)" 
+  assumes p: "pspace_relation (kheap a) (ksPSpace c)"
   assumes pa: "pspace_aligned a"
   assumes pad: "pspace_aligned' c" "pspace_distinct' c"
-  assumes t: "page_directory_at p a" 
+  assumes t: "page_directory_at p a"
   shows "page_directory_at' p c" using assms pd_aligned [OF pa t]
   apply (clarsimp simp: obj_at_def)
   apply (drule(1) pspace_relation_absD)
@@ -275,7 +275,7 @@ lemma findPDForASIDAssert_known_corres:
   corres r (vspace_at_asid asid pd and pd_at_uniq asid pd
                and valid_vspace_objs and valid_asid_map
                and pspace_aligned and pspace_distinct
-               and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits) and P) 
+               and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits) and P)
            (P' and pspace_aligned' and pspace_distinct' and no_0_obj')
        f (findPDForASIDAssert asid >>= g)"
   apply (subst return_bind[symmetric])
@@ -325,7 +325,7 @@ crunch inv[wp]: loadHWASID "P"
   (wp: crunch_wps)
 
 lemma store_hw_asid_corres:
-  "corres dc 
+  "corres dc
           (vspace_at_asid a pd and pd_at_uniq a pd
                   and valid_vspace_objs and pspace_distinct
                   and pspace_aligned and K (a \<noteq> 0 \<and> a \<le> mask asid_bits)
@@ -357,7 +357,7 @@ lemma store_hw_asid_corres:
   done
 
 lemma invalidate_asid_corres:
-  "corres dc 
+  "corres dc
           (valid_asid_map and valid_vspace_objs
                and pspace_aligned and pspace_distinct
                and vspace_at_asid a pd and pd_at_uniq a pd
@@ -379,7 +379,7 @@ lemma invalidate_asid_corres:
   done
 
 lemma invalidate_asid_ext_corres:
-  "corres dc 
+  "corres dc
           (\<lambda>s. \<exists>pd. valid_asid_map s \<and> valid_vspace_objs s
                \<and> pspace_aligned s \<and> pspace_distinct s
                \<and> vspace_at_asid a pd s \<and> pd_at_uniq a pd s
@@ -405,7 +405,7 @@ lemma invalidate_hw_asid_entry_corres:
   done
 
 lemma find_free_hw_asid_corres:
-  "corres (op =) 
+  "corres (op =)
           (valid_asid_map and valid_vspace_objs
               and pspace_aligned and pspace_distinct
               and (unique_table_refs o caps_of_state)
@@ -476,11 +476,11 @@ lemma valid_vspace_objs_def' : "valid_vspace_objs s = valid_arch_objs s"
   by (simp add: valid_arch_objs_def valid_arch_obj_def valid_vspace_objs_def)
 
 lemma get_hw_asid_corres:
-  "corres op = 
+  "corres op =
           (vspace_at_asid a pd and K (a \<noteq> 0 \<and> a \<le> mask asid_bits)
            and unique_table_refs o caps_of_state
            and valid_global_objs and valid_vs_lookup
-           and valid_asid_map and valid_arch_objs 
+           and valid_asid_map and valid_arch_objs
            and pspace_aligned and pspace_distinct
            and valid_arch_state)
           (pspace_aligned' and pspace_distinct' and no_0_obj')
@@ -499,11 +499,11 @@ lemma get_hw_asid_corres:
   done
 
 lemma arm_context_switch_corres:
-  "corres dc 
+  "corres dc
           (vspace_at_asid a pd and K (a \<noteq> 0 \<and> a \<le> mask asid_bits)
            and unique_table_refs o caps_of_state
            and valid_global_objs and valid_vs_lookup
-           and valid_asid_map and valid_arch_objs 
+           and valid_asid_map and valid_arch_objs
            and pspace_aligned and pspace_distinct
            and valid_arch_state)
           (pspace_aligned' and pspace_distinct' and no_0_obj')
@@ -518,7 +518,7 @@ lemma arm_context_switch_corres:
         apply (wp no_fail_setCurrentPD no_fail_setHardwareASID no_irq_setCurrentPD | clarsimp)+
   done
 
-lemma hv_corres: 
+lemma hv_corres:
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   apply (simp add: ARM_H.handleVMFault_def)
@@ -552,7 +552,7 @@ lemma hv_corres:
          prefer 2
          apply simp
          apply (rule corres_machine_op [where r="op ="])
-         apply (rule corres_Id, rule refl, simp) 
+         apply (rule corres_Id, rule refl, simp)
          apply (rule no_fail_getIFSR)
         apply (rule corres_trivial, simp add: arch_fault_map_def)
        apply wp+
@@ -560,7 +560,7 @@ lemma hv_corres:
   done
 
 lemma flush_space_corres:
-  "corres dc 
+  "corres dc
           (K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
            and valid_asid_map and valid_arch_objs
            and pspace_aligned and pspace_distinct
@@ -592,7 +592,7 @@ lemma flush_space_corres:
   done
 
 lemma invalidate_tlb_by_asid_corres:
-  "corres dc 
+  "corres dc
           (K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
            and valid_asid_map and valid_arch_objs
            and pspace_aligned and pspace_distinct
@@ -619,7 +619,7 @@ lemma invalidate_tlb_by_asid_corres:
   done
 
 lemma invalidate_tlb_by_asid_corres_ex:
-  "corres dc 
+  "corres dc
           (\<lambda>s. asid \<le> mask asid_bits \<and> asid \<noteq> 0
             \<and> valid_asid_map s \<and> valid_arch_objs s
             \<and> pspace_aligned s \<and> pspace_distinct s
@@ -670,21 +670,21 @@ lemma setCurrentPD_corres:
     apply (rule corres_split_eqr)
        apply (rule corres_split_eqr)
           apply (rule corres_rel_imp)
-           apply (wp 
+           apply (wp
                 | rule corres_underlying_trivial
                 | rule setCurrentPD_no_fails
                 | rule setCurrentPD_no_irqs
                 | simp add: dc_def)+
   done
-           
+
 lemma set_vm_root_corres:
-  "corres dc (tcb_at t and valid_arch_state and valid_objs and valid_asid_map 
+  "corres dc (tcb_at t and valid_arch_state and valid_objs and valid_asid_map
               and unique_table_refs o caps_of_state and valid_vs_lookup
               and valid_global_objs and pspace_aligned and pspace_distinct
               and valid_arch_objs)
              (pspace_aligned' and pspace_distinct'
                  and valid_arch_state' and tcb_at' t and no_0_obj')
-             (set_vm_root t) (setVMRoot t)" 
+             (set_vm_root t) (setVMRoot t)"
 proof -
   have P: "corres dc \<top> \<top>
         (do global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
@@ -717,7 +717,7 @@ proof -
     done
   show ?thesis
     unfolding set_vm_root_def setVMRoot_def locateSlot_conv
-                     getThreadVSpaceRoot_def 
+                     getThreadVSpaceRoot_def
     apply (rule corres_guard_imp)
       apply (rule corres_split' [where r'="op = \<circ> cte_map"])
          apply (simp add: tcbVTableSlot_def cte_map_def objBits_def cte_level_bits_def
@@ -734,7 +734,7 @@ proof -
            apply (case_tac rv, simp_all add: isCap_simps Q[simplified])[1]
            apply (rename_tac arch_cap)
            apply (case_tac arch_cap, simp_all add: isCap_simps Q[simplified])[1]
-           apply (rename_tac word option) 
+           apply (rename_tac word option)
            apply (case_tac option, simp_all add: Q[simplified])[1]
            apply (clarsimp simp: cap_asid_def)
            apply (rule corres_guard_imp)
@@ -797,7 +797,7 @@ crunch valid_arch' [wp]: flushSpace valid_arch_state' (ignore: getObject wp: get
 crunch cur_tcb' [wp]: flushSpace cur_tcb' (ignore: getObject wp: getASID_wp)
 
 lemma get_asid_pool_corres_inv':
-  "corres (\<lambda>p. (\<lambda>p'. p = p' o ucast) \<circ> inv ASIDPool) 
+  "corres (\<lambda>p. (\<lambda>p'. p = p' o ucast) \<circ> inv ASIDPool)
           (asid_pool_at p) (pspace_aligned' and pspace_distinct')
           (get_asid_pool p) (getObject p)"
   apply (rule corres_rel_imp)
@@ -845,7 +845,7 @@ lemma invalidateASID_cur' [wp]:
   "\<lbrace>cur_tcb'\<rbrace> invalidateASID x \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
   by (simp add: invalidateASID_def|wp)+
 
-crunch aligned' [wp]: invalidateASIDEntry pspace_aligned' 
+crunch aligned' [wp]: invalidateASIDEntry pspace_aligned'
 crunch distinct' [wp]: invalidateASIDEntry pspace_distinct'
 crunch cur' [wp]: invalidateASIDEntry cur_tcb'
 
@@ -868,17 +868,17 @@ crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
        wp: crunch_wps getObject_inv loadObject_default_inv)
 
 lemma delete_asid_corres:
-  "corres dc 
+  "corres dc
           (invs and valid_etcbs and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0))
           (pspace_aligned' and pspace_distinct' and no_0_obj'
-              and valid_arch_state' and cur_tcb') 
+              and valid_arch_state' and cur_tcb')
           (delete_asid asid pd) (deleteASID asid pd)"
   apply (simp add: delete_asid_def deleteASID_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ corres_gets_asid])
       apply (case_tac "asid_table (asid_high_bits_of asid)", simp)
       apply clarsimp
-      apply (rule_tac P="\<lambda>s. asid_high_bits_of asid \<in> dom (asidTable o ucast) \<longrightarrow> 
+      apply (rule_tac P="\<lambda>s. asid_high_bits_of asid \<in> dom (asidTable o ucast) \<longrightarrow>
                              asid_pool_at (the ((asidTable o ucast) (asid_high_bits_of asid))) s" and
                       P'="pspace_aligned' and pspace_distinct'" and
                       Q="invs and valid_etcbs and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0) and
@@ -888,7 +888,7 @@ lemma delete_asid_corres:
          apply (simp add: dom_def)
          apply (rule get_asid_pool_corres_inv')
         apply (rule corres_when, simp add: mask_asid_low_bits_ucast_ucast)
-        apply (rule corres_split [OF _ flush_space_corres[where pd=pd]]) 
+        apply (rule corres_split [OF _ flush_space_corres[where pd=pd]])
           apply (rule corres_split [OF _ invalidate_asid_entry_corres[where pd=pd]])
             apply (rule_tac P="asid_pool_at (the (asidTable (ucast (asid_high_bits_of asid))))
                                and valid_etcbs"
@@ -901,10 +901,10 @@ lemma delete_asid_corres:
                apply (rule ext)
                apply (clarsimp simp: o_def)
                apply (erule notE)
-               apply (erule ucast_ucast_eq, simp, simp) 
+               apply (erule ucast_ucast_eq, simp, simp)
               apply (rule corres_split [OF _ gct_corres])
                 apply simp
-                apply (rule set_vm_root_corres) 
+                apply (rule set_vm_root_corres)
                apply wp+
              apply (simp del: fun_upd_apply)
              apply (fold cur_tcb_def)
@@ -958,16 +958,16 @@ crunch armKSASIDTable_inv[wp]: flushSpace
     "\<lambda>s. P (armKSASIDTable (ksArchState s))"
 
 lemma delete_asid_pool_corres:
-  "corres dc 
+  "corres dc
           (invs and K (is_aligned base asid_low_bits
                          \<and> base \<le> mask asid_bits)
            and asid_pool_at ptr)
           (pspace_aligned' and pspace_distinct' and no_0_obj'
                and valid_arch_state' and cur_tcb')
           (delete_asid_pool base ptr) (deleteASIDPool base ptr)"
-  apply (simp add: delete_asid_pool_def deleteASIDPool_def) 
+  apply (simp add: delete_asid_pool_def deleteASIDPool_def)
   apply (rule corres_assume_pre, simp add: is_aligned_mask
-                                     cong: corres_weak_cong) 
+                                     cong: corres_weak_cong)
   apply (thin_tac P for P)+
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ corres_gets_asid])
@@ -976,7 +976,7 @@ lemma delete_asid_pool_corres:
       apply (simp add: liftM_def)
       apply (rule corres_split [OF _ get_asid_pool_corres'])
         apply (rule corres_split)
-           prefer 2 
+           prefer 2
            apply (rule corres_mapM [where r=dc and r'=dc], simp, simp)
                prefer 5
                apply (rule order_refl)
@@ -1001,7 +1001,7 @@ lemma delete_asid_pool_corres:
                apply (clarsimp simp: invs_def valid_state_def
                                      valid_arch_caps_def valid_pspace_def
                                      vspace_at_asid_def cong: conj_cong)
-               apply (rule conjI)               
+               apply (rule conjI)
                 apply (clarsimp simp: mask_def asid_low_bits_word_bits
                                elim!: is_alignedE)
                 apply (subgoal_tac "of_nat q < (2 ^ asid_high_bits :: word32)")
@@ -1073,7 +1073,7 @@ lemma delete_asid_pool_corres:
          apply simp
          apply (fold cur_tcb_def)
          apply (strengthen valid_arch_state_unmap_strg
-                           valid_arch_objs_unmap_strg 
+                           valid_arch_objs_unmap_strg
                            valid_asid_map_unmap
                            valid_vs_lookup_unmap_strg)
          apply (simp add: valid_global_objs_arch_update)
@@ -1098,18 +1098,18 @@ lemma delete_asid_pool_corres:
   done
 
 lemma set_vm_root_for_flush_corres:
-  "corres (op =) 
+  "corres (op =)
           (cur_tcb and vspace_at_asid asid pd
            and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
            and valid_asid_map and valid_vs_lookup
            and valid_vspace_objs and valid_global_objs
            and unique_table_refs o caps_of_state
            and valid_arch_state
-           and pspace_aligned and pspace_distinct) 
+           and pspace_aligned and pspace_distinct)
           (pspace_aligned' and pspace_distinct' and no_0_obj')
           (set_vm_root_for_flush pd asid)
           (setVMRootForFlush pd asid)"
-proof - 
+proof -
   have X: "corres op = (vspace_at_asid asid pd and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
                           and valid_asid_map and valid_vs_lookup
                           and valid_arch_objs and valid_global_objs
@@ -1140,9 +1140,9 @@ proof -
                                                and pspace_aligned and pspace_distinct"
                                   and R'="\<lambda>_. pspace_aligned' and pspace_distinct' and no_0_obj'",
                                   OF _ getSlotCap_corres])
-         apply (case_tac "isArchObjectCap rv' \<and> 
+         apply (case_tac "isArchObjectCap rv' \<and>
                           isPageDirectoryCap (capCap rv') \<and>
-                          capPDMappedASID (capCap rv') \<noteq> None \<and> 
+                          capPDMappedASID (capCap rv') \<noteq> None \<and>
                           capPDBasePtr (capCap rv') = pd")
           apply (case_tac rv, simp_all add: isCap_simps)[1]
           apply (rename_tac arch_cap)
@@ -1170,7 +1170,7 @@ crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps)
 
 lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
- 
+
 lemmas loadHWASID_typ_ats [wp] = typ_at_lifts [OF loadHWASID_typ_at']
 
 crunch typ_at' [wp]: setVMRootForFlush "\<lambda>s. P (typ_at' T p s)"
@@ -1183,7 +1183,7 @@ crunch aligned' [wp]: setVMRootForFlush pspace_aligned'
 crunch distinct' [wp]: setVMRootForFlush pspace_distinct'
   (wp: hoare_drop_imps)
 
-crunch cur' [wp]: setVMRootForFlush cur_tcb' 
+crunch cur' [wp]: setVMRootForFlush cur_tcb'
   (wp: hoare_drop_imps)
 
 lemma findPDForASID_inv2:
@@ -1196,9 +1196,9 @@ lemma findPDForASID_inv2:
 
 lemma storeHWASID_valid_arch' [wp]:
   "\<lbrace>valid_arch_state' and
-    (\<lambda>s. armKSASIDMap (ksArchState s) asid = None \<and> 
+    (\<lambda>s. armKSASIDMap (ksArchState s) asid = None \<and>
          armKSHWASIDTable (ksArchState s) hw_asid = None)\<rbrace>
-  storeHWASID asid hw_asid 
+  storeHWASID asid hw_asid
   \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   apply (simp add: storeHWASID_def)
   apply wp
@@ -1233,15 +1233,15 @@ lemma storeHWASID_obj_at [wp]:
 
 lemma findFreeHWASID_obj_at [wp]:
   "\<lbrace>\<lambda>s. P (obj_at' P' t s)\<rbrace> findFreeHWASID \<lbrace>\<lambda>rv s. P (obj_at' P' t s)\<rbrace>"
-  apply (simp add: findFreeHWASID_def invalidateASID_def 
-                   invalidateHWASIDEntry_def bind_assoc 
+  apply (simp add: findFreeHWASID_def invalidateASID_def
+                   invalidateHWASIDEntry_def bind_assoc
               cong: option.case_cong)
   apply (wp doMachineOp_obj_at|wpc|simp)+
   done
-  
+
 lemma findFreeHWASID_valid_arch [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> findFreeHWASID \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
-  apply (simp add: findFreeHWASID_def invalidateHWASIDEntry_def 
+  apply (simp add: findFreeHWASID_def invalidateHWASIDEntry_def
                    invalidateASID_def doMachineOp_def split_def
               cong: option.case_cong)
   apply (wp|wpc|simp split del: if_split)+
@@ -1267,8 +1267,8 @@ lemma findFreeHWASID_valid_arch [wp]:
   done
 
 lemma findFreeHWASID_None_map [wp]:
-  "\<lbrace>\<lambda>s. armKSASIDMap (ksArchState s) asid = None\<rbrace> 
-  findFreeHWASID 
+  "\<lbrace>\<lambda>s. armKSASIDMap (ksArchState s) asid = None\<rbrace>
+  findFreeHWASID
   \<lbrace>\<lambda>rv s. armKSASIDMap (ksArchState s) asid = None\<rbrace>"
   apply (simp add: findFreeHWASID_def invalidateHWASIDEntry_def invalidateASID_def
                    doMachineOp_def split_def
@@ -1278,7 +1278,7 @@ lemma findFreeHWASID_None_map [wp]:
   apply auto
   done
 
-lemma findFreeHWASID_None_HWTable [wp]: 
+lemma findFreeHWASID_None_HWTable [wp]:
   "\<lbrace>\<top>\<rbrace> findFreeHWASID \<lbrace>\<lambda>rv s. armKSHWASIDTable (ksArchState s) rv = None\<rbrace>"
   apply (simp add: findFreeHWASID_def invalidateHWASIDEntry_def invalidateASID_def
                    doMachineOp_def
@@ -1316,16 +1316,16 @@ crunch no_0_obj'[wp]: flushTable "no_0_obj'"
   (ignore: getObject wp: crunch_wps simp: crunch_simps loadObject_default_inv)
 
 lemma flush_table_corres:
-  "corres dc 
-          (pspace_aligned and valid_objs and valid_arch_state and 
+  "corres dc
+          (pspace_aligned and valid_objs and valid_arch_state and
            cur_tcb and vspace_at_asid asid pd and valid_asid_map and valid_arch_objs and
            pspace_aligned and pspace_distinct and valid_vs_lookup and valid_global_objs
            and unique_table_refs o caps_of_state and
-           K (is_aligned vptr (pageBitsForSize ARMSection) \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0)) 
+           K (is_aligned vptr (pageBitsForSize ARMSection) \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0))
           (pspace_aligned' and pspace_distinct' and no_0_obj' and
            valid_arch_state' and cur_tcb')
-          (flush_table pd asid vptr ptr) 
-          (flushTable pd asid vptr)" 
+          (flush_table pd asid vptr ptr)
+          (flushTable pd asid vptr)"
   apply (simp add: flush_table_def flushTable_def)
   apply (rule corres_assume_pre)
   apply (simp add: ptBits_def pt_bits_def pageBits_def is_aligned_mask cong: corres_weak_cong)
@@ -1345,23 +1345,23 @@ lemma flush_table_corres:
            apply simp
           apply (rule no_fail_invalidateLocalTLB_ASID)
          apply (wp hoare_drop_imps | simp)+
-       apply (wp load_hw_asid_wp hoare_drop_imps | 
+       apply (wp load_hw_asid_wp hoare_drop_imps |
                 simp add: cur_tcb'_def [symmetric] cur_tcb_def [symmetric]  valid_vspace_objs_def')+
   done
 
 lemma flush_page_corres:
-  "corres dc 
-          (K (is_aligned vptr pageBits \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0) and 
+  "corres dc
+          (K (is_aligned vptr pageBits \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0) and
            cur_tcb and valid_arch_state and valid_objs and
            vspace_at_asid asid pd and valid_asid_map and valid_arch_objs and
            valid_vs_lookup and valid_global_objs and
            unique_table_refs o caps_of_state and
-           pspace_aligned and pspace_distinct) 
+           pspace_aligned and pspace_distinct)
           (pspace_aligned' and pspace_distinct' and no_0_obj'
              and valid_arch_state' and cur_tcb')
-          (flush_page pageSize pd asid vptr) 
+          (flush_page pageSize pd asid vptr)
           (flushPage pageSize pd asid vptr)"
-  apply (clarsimp simp: flush_page_def flushPage_def) 
+  apply (clarsimp simp: flush_page_def flushPage_def)
   apply (rule corres_assume_pre)
   apply (simp add: is_aligned_mask cong: corres_weak_cong)
   apply (thin_tac P for P)+
@@ -1394,7 +1394,7 @@ lemmas flushTable_typ_ats' [wp] = typ_at_lifts [OF flushTable_typ_at']
 lemmas findPDForASID_typ_ats' [wp] = typ_at_lifts [OF findPDForASID_typ_at']
 
 crunch inv [wp]: findPDForASID P
-  (simp: assertE_def whenE_def loadObject_default_def 
+  (simp: assertE_def whenE_def loadObject_default_def
    wp: crunch_wps getObject_inv ignore: getObject)
 
 crunch aligned'[wp]: unmapPageTable "pspace_aligned'"
@@ -1438,7 +1438,7 @@ crunch cur_tcb'[wp]: storePDE, storePTE cur_tcb'
 (ignore: setObject)
 
 lemma unmap_page_table_corres:
-  "corres dc 
+  "corres dc
           (invs and valid_etcbs and page_table_at pt and
            K (0 < asid \<and> is_aligned vptr 20 \<and> asid \<le> mask asid_bits))
           (valid_arch_state' and pspace_aligned' and pspace_distinct'
@@ -1551,7 +1551,7 @@ lemma store_pte_pd_at_asid[wp]:
 lemma unmap_page_corres:
   "corres dc (invs and valid_etcbs and
               K (valid_unmap sz (asid,vptr) \<and> vptr < kernel_base \<and> asid \<le> mask asid_bits))
-             (valid_objs' and valid_arch_state' and pspace_aligned' and 
+             (valid_objs' and valid_arch_state' and pspace_aligned' and
               pspace_distinct' and no_0_obj' and cur_tcb')
              (unmap_page sz asid vptr pptr)
              (unmapPage sz asid vptr pptr)"
@@ -1584,10 +1584,10 @@ lemma unmap_page_corres:
                       apply (rule corres_machine_op)
                       apply (rule corres_Id, rule refl, simp)
                       apply (rule no_fail_cleanByVA_PoU)
-                     apply (wp hoare_drop_imps lookup_pt_slot_inv 
+                     apply (wp hoare_drop_imps lookup_pt_slot_inv
                        lookupPTSlot_inv lookup_pt_slot_is_aligned
                                  | simp add: pte_relation_aligned_def)+
-              apply (clarsimp simp: page_directory_pde_at_lookupI 
+              apply (clarsimp simp: page_directory_pde_at_lookupI
                                     page_directory_at_aligned_pd_bits vmsz_aligned_def
                                     valid_vspace_objs_def')
               apply (simp add:valid_unmap_def pageBits_def)
@@ -1751,16 +1751,16 @@ lemma perform_page_directory_corres:
 
 definition
   "page_invocation_map pgi pgi' \<equiv> case pgi of
-    ARM_A.PageMap a c ptr m \<Rightarrow> 
+    ARM_A.PageMap a c ptr m \<Rightarrow>
       \<exists>c' m'. pgi' = PageMap a c' (cte_map ptr) m' \<and>
-              cap_relation c c' \<and> 
+              cap_relation c c' \<and>
               mapping_map m m'
-              
-  | ARM_A.PageRemap a m \<Rightarrow> 
+
+  | ARM_A.PageRemap a m \<Rightarrow>
       \<exists>m'. pgi' = PageRemap a m' \<and> mapping_map m m'
   | ARM_A.PageUnmap c ptr \<Rightarrow>
       \<exists>c'. pgi' = PageUnmap c' (cte_map ptr) \<and>
-         acap_relation c c' 
+         acap_relation c c'
   | ARM_A.PageFlush typ start end pstart pd asid \<Rightarrow>
       pgi' = PageFlush (flush_type_map typ) start end pstart pd asid
   | ARM_A.PageGetAddr ptr \<Rightarrow>
@@ -1776,13 +1776,13 @@ definition
              | KOArch (KOPDE pde) \<Rightarrow> pde_align' pde
              | _ \<Rightarrow> 0"
 
-definition "valid_slots_duplicated' \<equiv> \<lambda>m s. case m of 
-  Inl (pte, xs) \<Rightarrow> (case pte of 
+definition "valid_slots_duplicated' \<equiv> \<lambda>m s. case m of
+  Inl (pte, xs) \<Rightarrow> (case pte of
     pte.LargePagePTE _ _ _ _ _ \<Rightarrow> \<exists>p. xs = [p, p+4 .e. p + mask 6] \<and> is_aligned p 6
         \<and> page_table_at' (p && ~~ mask ptBits) s
     | _ \<Rightarrow> \<exists>p. xs = [p] \<and> ko_wp_at' (\<lambda>ko. vs_entry_align ko = 0) p s
       \<and> page_table_at' (p && ~~ mask ptBits) s)
-  | Inr (pde, xs) \<Rightarrow> (case pde of 
+  | Inr (pde, xs) \<Rightarrow> (case pde of
     pde.SuperSectionPDE _ _ _ _ _ _ \<Rightarrow> \<exists>p. xs = [p, p+4 .e. p + mask 6] \<and> is_aligned p 6
         \<and> page_directory_at' (p && ~~ mask pdBits) s
     | _ \<Rightarrow> \<exists>p. xs = [p] \<and> ko_wp_at' (\<lambda>ko. vs_entry_align ko = 0) p s
@@ -1806,7 +1806,7 @@ proof -
   show ?thesis
   using assms
   apply -
-  apply (clarsimp simp:valid_slots_duplicated'_def 
+  apply (clarsimp simp:valid_slots_duplicated'_def
     split:ARM_H.pte.splits)
   apply (subgoal_tac "p \<le> p + mask 6")
    apply (clarsimp simp:upto_enum_step_def not_less)
@@ -1854,7 +1854,7 @@ proof -
   show ?thesis
   using assms
   apply -
-  apply (clarsimp simp:valid_slots_duplicated'_def 
+  apply (clarsimp simp:valid_slots_duplicated'_def
     split:ARM_H.pde.splits)
   apply (subgoal_tac "p \<le> p + mask 6")
    apply (clarsimp simp:upto_enum_step_def not_less)
@@ -1889,8 +1889,8 @@ proof -
 qed
 
 lemma setCTE_vs_entry_align[wp]:
-  "\<lbrace>\<lambda>s. ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p s\<rbrace> 
-    setCTE ptr cte 
+  "\<lbrace>\<lambda>s. ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p s\<rbrace>
+    setCTE ptr cte
   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p\<rbrace>"
   apply (clarsimp simp: setCTE_def setObject_def split_def
                         valid_def in_monad ko_wp_at'_def
@@ -1912,7 +1912,7 @@ lemma updateCap_vs_entry_align[wp]:
   done
 
 lemma valid_slots_duplicated_updateCap[wp]:
-  "\<lbrace>valid_slots_duplicated' m'\<rbrace> updateCap cap c' 
+  "\<lbrace>valid_slots_duplicated' m'\<rbrace> updateCap cap c'
   \<lbrace>\<lambda>rv s. valid_slots_duplicated' m' s\<rbrace>"
   apply (case_tac m')
    apply (simp_all add:valid_slots_duplicated'_def)
@@ -1924,18 +1924,18 @@ lemma valid_slots_duplicated_updateCap[wp]:
 
 definition
   "valid_page_inv' pgi \<equiv> case pgi of
-    PageMap asid cap ptr m \<Rightarrow> 
+    PageMap asid cap ptr m \<Rightarrow>
       cte_wp_at' (is_arch_update' cap) ptr and valid_slots' m and valid_cap' cap
           and K (valid_pde_slots' m) and (valid_slots_duplicated' m)
   | PageRemap asid m \<Rightarrow> valid_slots' m and K (valid_pde_slots' m) and (valid_slots_duplicated' m)
-  | PageUnmap cap ptr \<Rightarrow> 
-      \<lambda>s. \<exists>d r R sz m. cap = PageCap d r R sz m \<and> 
+  | PageUnmap cap ptr \<Rightarrow>
+      \<lambda>s. \<exists>d r R sz m. cap = PageCap d r R sz m \<and>
           cte_wp_at' (is_arch_update' (ArchObjectCap cap)) ptr s \<and>
           s \<turnstile>' (ArchObjectCap cap)
   | PageFlush typ start end pstart pd asid \<Rightarrow> \<top>
   | PageGetAddr ptr \<Rightarrow> \<top>"
 
-crunch ctes [wp]: unmapPage "\<lambda>s. P (ctes_of s)" 
+crunch ctes [wp]: unmapPage "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: crunch_simps ignore: getObject)
 
 lemma corres_store_pde_with_invalid_tail:
@@ -1998,7 +1998,7 @@ lemma pte_check_if_mapped_corres:
   apply (simp add: pte_check_if_mapped_def pteCheckIfMapped_def)
     apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ get_master_pte_corres', simplified])
-      apply (rule corres_return[where P="pte_at slot" and 
+      apply (rule corres_return[where P="pte_at slot" and
                           P'="pspace_aligned' and pspace_distinct'", THEN iffD2])
       apply (clarsimp simp: pte_relation'_def split: )
       apply (case_tac pt, simp_all)[1]
@@ -2012,7 +2012,7 @@ lemma pde_check_if_mapped_corres:
   apply (simp add: pde_check_if_mapped_def pdeCheckIfMapped_def)
     apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ get_master_pde_corres', simplified])
-      apply (rule corres_return[where P="pde_at slot" and 
+      apply (rule corres_return[where P="pde_at slot" and
                           P'="pspace_aligned' and pspace_distinct'", THEN iffD2])
       apply (clarsimp simp: pte_relation'_def split: )
       apply (case_tac pd, simp_all)[1]
@@ -2061,7 +2061,7 @@ lemma set_cap_valid_page_map_inv:
   "\<lbrace>valid_page_inv (ARM_A.page_invocation.PageMap asid cap slot m)\<rbrace> set_cap cap slot \<lbrace>\<lambda>rv. valid_page_map_inv asid cap slot m\<rbrace>"
   apply (simp add: valid_page_inv_def valid_page_map_inv_def)
   apply (wp set_cap_cte_wp_at_cases hoare_vcg_ex_lift| simp)+
-  apply clarsimp 
+  apply clarsimp
   apply (rule conjI, fastforce simp: cte_wp_at_def)
   apply (rule_tac x=a in exI, rule_tac x=b in exI)
   apply (subgoal_tac "(a,b) \<noteq> slot")
@@ -2073,7 +2073,7 @@ lemma set_cap_valid_page_map_inv:
 lemma duplicate_address_set_simp:
   "\<lbrakk>koTypeOf m \<noteq> ArchT PDET; koTypeOf m \<noteq> ArchT PTET \<rbrakk>
   \<Longrightarrow> p && ~~ mask (vs_ptr_align m) = p"
-  by (auto simp:vs_ptr_align_def koTypeOf_def 
+  by (auto simp:vs_ptr_align_def koTypeOf_def
     split:kernel_object.splits arch_kernel_object.splits)+
 
 lemma valid_duplicates'_non_pd_pt_I:
@@ -2088,7 +2088,7 @@ lemma valid_duplicates'_non_pd_pt_I:
      apply assumption
     apply simp
    apply (simp add:duplicate_address_set_simp)+
-  apply (drule_tac m = "ksPSpace s" 
+  apply (drule_tac m = "ksPSpace s"
     and p = x in valid_duplicates'_D)
      apply simp+
   done
@@ -2102,14 +2102,14 @@ lemma setCTE_valid_duplicates'[wp]:
                         objBits_def[symmetric] lookupAround2_char1
                  split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = cte,simplified])
-  apply (clarsimp simp:ObjectInstances_H.updateObject_cte assert_def bind_def 
+  apply (clarsimp simp:ObjectInstances_H.updateObject_cte assert_def bind_def
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
     assert_opt_def return_def fail_def typeError_def
     split:if_splits option.splits Structures_H.kernel_object.splits)
      apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
   done
 crunch valid_duplicates'[wp]: updateCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps  
+  (wp: crunch_wps
    simp: crunch_simps unless_def
    ignore: getObject setObject)
 
@@ -2122,9 +2122,9 @@ lemma message_info_to_data_eqv:
     shiftL_nat)
   done
 
-lemma message_info_from_data_eqv: 
+lemma message_info_from_data_eqv:
   "message_info_map (data_to_message_info rv) = messageInfoFromWord rv"
-  apply (auto simp add: data_to_message_info_def messageInfoFromWord_def 
+  apply (auto simp add: data_to_message_info_def messageInfoFromWord_def
     msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def
     shiftL_nat Let_def not_less msgMaxLength_def)
   done
@@ -2134,9 +2134,9 @@ lemma set_mi_corres:
   corres dc (tcb_at t) (tcb_at' t)
          (set_message_info t mi) (setMessageInfo t mi')"
   apply (simp add: setMessageInfo_def set_message_info_def)
-  apply (subgoal_tac "wordFromMessageInfo (message_info_map mi) = 
+  apply (subgoal_tac "wordFromMessageInfo (message_info_map mi) =
                       message_info_to_data mi")
-   apply (simp add: user_setreg_corres msg_info_register_def 
+   apply (simp add: user_setreg_corres msg_info_register_def
                     msgInfoRegister_def)
   apply (simp add: message_info_to_data_eqv)
   done
@@ -2377,7 +2377,7 @@ proof -
         apply clarsimp
        apply (rule conjI)
         apply (rule_tac x=ad in exI, rule_tac x=bc in exI, rule_tac x=capa in exI)
-        apply (clarsimp simp: same_refs_def pde_ref_def pde_ref_pages_def 
+        apply (clarsimp simp: same_refs_def pde_ref_def pde_ref_pages_def
                               valid_pde_def invs_def valid_state_def valid_pspace_def)
         apply (drule valid_objs_caps)
         apply (clarsimp simp: valid_caps_def)
@@ -2483,7 +2483,7 @@ proof -
 qed
 
 definition
-  "page_table_invocation_map pti pti' \<equiv> case pti of 
+  "page_table_invocation_map pti pti' \<equiv> case pti of
      ARM_A.PageTableMap cap ptr pde p \<Rightarrow>
     \<exists>cap' pde'. pti' = PageTableMap cap' (cte_map ptr) pde' p \<and>
                 cap_relation cap cap' \<and>
@@ -2493,12 +2493,12 @@ definition
            cap_relation cap (ArchObjectCap cap')"
 
 definition
-  "valid_pti' pti \<equiv> case pti of 
-     PageTableMap cap slot pde pdeSlot \<Rightarrow> 
+  "valid_pti' pti \<equiv> case pti of
+     PageTableMap cap slot pde pdeSlot \<Rightarrow>
      cte_wp_at' (is_arch_update' cap) slot and
      ko_wp_at' (\<lambda>ko. vs_entry_align ko = 0) pdeSlot and
      valid_cap' cap and
-     valid_pde' pde and 
+     valid_pde' pde and
      K (valid_pde_mapping' (pdeSlot && mask pdBits) pde \<and> vs_entry_align (KOArch (KOPDE pde)) = 0)
    | PageTableUnmap cap slot \<Rightarrow> cte_wp_at' (is_arch_update' (ArchObjectCap cap)) slot
                                  and valid_cap' (ArchObjectCap cap)
@@ -2542,7 +2542,7 @@ lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
 
 lemma perform_page_table_corres:
   "page_table_invocation_map pti pti' \<Longrightarrow>
-   corres dc 
+   corres dc
           (invs and valid_etcbs and valid_pti pti)
           (invs' and valid_pti' pti')
           (perform_page_table_invocation pti)
@@ -2553,7 +2553,7 @@ lemma perform_page_table_corres:
    apply (clarsimp simp: page_table_invocation_map_def)
    apply (rule corres_guard_imp)
       apply (rule corres_split [OF _ updateCap_same_master])
-         prefer 2 
+         prefer 2
          apply assumption
         apply (rule corres_split [OF _ store_pde_corres'])
            apply (rule corres_machine_op)
@@ -2562,7 +2562,7 @@ lemma perform_page_table_corres:
           apply (simp add: pde_relation_aligned_def)
          apply (wp set_cap_typ_at)+
     apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state is_arch_update_def)
-    apply (clarsimp simp: is_cap_simps cap_master_cap_simps 
+    apply (clarsimp simp: is_cap_simps cap_master_cap_simps
                     dest!: cap_master_cap_eqDs)
     apply auto[1]
    apply (clarsimp simp: cte_wp_at_ctes_of valid_pti'_def)
@@ -2611,20 +2611,20 @@ lemma perform_page_table_corres:
   done
 
 definition
-  "asid_pool_invocation_map ap \<equiv> case ap of 
+  "asid_pool_invocation_map ap \<equiv> case ap of
   asid_pool_invocation.Assign asid p slot \<Rightarrow> Assign asid p (cte_map slot)"
 
 definition
   "isPDCap cap \<equiv> \<exists>p asid. cap = ArchObjectCap (PageDirectoryCap p asid)"
 
 definition
-  "valid_apinv' ap \<equiv> case ap of Assign asid p slot \<Rightarrow> 
-  asid_pool_at' p and cte_wp_at' (isPDCap o cteCap) slot and K 
+  "valid_apinv' ap \<equiv> case ap of Assign asid p slot \<Rightarrow>
+  asid_pool_at' p and cte_wp_at' (isPDCap o cteCap) slot and K
   (0 < asid \<and> asid \<le> 2^asid_bits - 1)"
 
 lemma pap_corres:
   "ap' = asid_pool_invocation_map ap \<Longrightarrow>
-  corres dc 
+  corres dc
           (valid_objs and pspace_aligned and pspace_distinct and valid_apinv ap and valid_etcbs)
           (pspace_aligned' and pspace_distinct' and valid_apinv' ap')
           (perform_asid_pool_invocation ap)
@@ -2637,10 +2637,10 @@ lemma pap_corres:
       apply (rule_tac F="\<exists>p asid. rv = Structures_A.ArchObjectCap (ARM_A.PageDirectoryCap p asid)" in corres_gen_asm)
       apply clarsimp
       apply (rule_tac Q="valid_objs and pspace_aligned and pspace_distinct and asid_pool_at word2 and valid_etcbs and
-                         cte_wp_at (\<lambda>c. cap_master_cap c = 
-                                        cap_master_cap (cap.ArchObjectCap (arch_cap.PageDirectoryCap p asid))) (a,b)" 
+                         cte_wp_at (\<lambda>c. cap_master_cap c =
+                                        cap_master_cap (cap.ArchObjectCap (arch_cap.PageDirectoryCap p asid))) (a,b)"
                       in corres_split)
-         prefer 2 
+         prefer 2
          apply simp
          apply (rule get_asid_pool_corres_inv')
         apply (rule corres_split)
@@ -2865,18 +2865,18 @@ lemma setVMRoot_invs_no_cicd':
   done
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
-  (wp: crunch_wps getObject_inv simp: crunch_simps 
+  (wp: crunch_wps getObject_inv simp: crunch_simps
        loadObject_default_def ignore: getObject)
 
 crunch it' [wp]: findPDForASID "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def wp: getObject_inv ignore: getObject)
 
 crunch it' [wp]: deleteASIDPool "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp' 
+  (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp'
    ignore: getObject)
 
 crunch it' [wp]: lookupPTSlot "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def wp: getObject_inv 
+  (simp: crunch_simps loadObject_default_def wp: getObject_inv
    ignore: getObject)
 
 crunch it' [wp]: storePTE "\<lambda>s. P (ksIdleThread s)"
@@ -2888,12 +2888,12 @@ crunch it' [wp]: storePDE "\<lambda>s. P (ksIdleThread s)"
    ignore: setObject)
 
 crunch it' [wp]: flushTable "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def 
+  (simp: crunch_simps loadObject_default_def
    wp: setObject_idle' hoare_drop_imps mapM_wp'
    ignore: getObject)
 
 crunch it' [wp]: deleteASID "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps loadObject_default_def updateObject_default_def 
+  (simp: crunch_simps loadObject_default_def updateObject_default_def
    wp: getObject_inv
    ignore: getObject setObject)
 
@@ -2901,7 +2901,7 @@ lemma valid_slots_lift':
   assumes t: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
   shows "\<lbrace>valid_slots' x\<rbrace> f \<lbrace>\<lambda>rv. valid_slots' x\<rbrace>"
   apply (clarsimp simp: valid_slots'_def split: sum.splits prod.splits)
-  apply safe 
+  apply safe
    apply (rule hoare_pre, wp hoare_vcg_const_Ball_lift t valid_pde_lift' valid_pte_lift', simp)+
   done
 
@@ -2916,10 +2916,10 @@ crunch typ_at' [wp]: performPageInvocation "\<lambda>s. P (typ_at' T p s)"
 
 crunch typ_at' [wp]: performASIDPoolInvocation "\<lambda>s. P (typ_at' T p s)"
   (ignore: getObject wp: getObject_cte_inv getASID_wp)
-  
+
 lemmas performPageTableInvocation_typ_ats' [wp] =
   typ_at_lifts [OF performPageTableInvocation_typ_at']
-  
+
 lemmas performPageDirectoryInvocation_typ_ats' [wp] =
   typ_at_lifts [OF performPageDirectoryInvocation_typ_at']
 
@@ -2988,7 +2988,7 @@ lemma storePDE_valid_queues' [wp]:
   "\<lbrace>valid_queues'\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
   by (wp valid_queues_lift')
 
-lemma storePDE_state_refs' [wp]: 
+lemma storePDE_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> storePDE p pde \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: storePDE_def)
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
@@ -3002,7 +3002,7 @@ lemma storePDE_state_refs' [wp]:
 lemma storePDE_iflive [wp]:
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: storePDE_def)
-  apply (rule hoare_pre) 
+  apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps archObjSize_def)
      apply (auto simp: updateObject_default_def in_monad projectKOs pdeBits_def)
@@ -3018,13 +3018,13 @@ crunch ksInterruptState [wp]: storePDE "\<lambda>s. P (ksInterruptState s)"
 lemma storePDE_ifunsafe [wp]:
   "\<lbrace>if_unsafe_then_cap'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   apply (simp add: storePDE_def)
-  apply (rule hoare_pre) 
+  apply (rule hoare_pre)
    apply (rule setObject_ifunsafe' [where P=\<top>], simp)
      apply (auto simp: updateObject_default_def in_monad projectKOs)[2]
    apply wp
   apply simp
   done
-  
+
 lemma storePDE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   unfolding valid_idle'_def
@@ -3036,7 +3036,7 @@ crunch arch' [wp]: storePDE "\<lambda>s. P (ksArchState s)"
 crunch cur' [wp]: storePDE "\<lambda>s. P (ksCurThread s)"
   (ignore: setObject)
 
-lemma storePDE_irq_states' [wp]: 
+lemma storePDE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> storePDE pde p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (simp add: storePDE_def)
   apply (wpsimp wp: valid_irq_states_lift' dmo_lift' no_irq_storeWord setObject_ksMachine
@@ -3126,7 +3126,7 @@ lemma setObject_pde_ksDomScheduleIdx [wp]:
   by (wp updateObject_default_inv|simp add:setObject_def | wpc)+
 
 crunch ksDomScheduleIdx[wp]: storePTE, storePDE "\<lambda>s. P (ksDomScheduleIdx s)"
-(ignore: getObject setObject) 
+(ignore: getObject setObject)
 
 crunch gsMaxObjectSize[wp]: storePTE, storePDE "\<lambda>s. P (gsMaxObjectSize s)"
 (ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
@@ -3141,9 +3141,9 @@ lemma storePDE_invs[wp]:
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
-   apply (wp sch_act_wf_lift valid_global_refs_lift'  
-             irqs_masked_lift 
-             valid_arch_state_lift' valid_irq_node_lift 
+   apply (wp sch_act_wf_lift valid_global_refs_lift'
+             irqs_masked_lift
+             valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift
            | simp add: cteCaps_of_def o_def)+
@@ -3181,7 +3181,7 @@ lemma storePTE_valid_queues' [wp]:
   "\<lbrace>valid_queues'\<rbrace> storePTE p pde \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
   by (wp valid_queues_lift')
 
-lemma storePTE_state_refs' [wp]: 
+lemma storePTE_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> storePTE p pte \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: storePTE_def)
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
@@ -3195,7 +3195,7 @@ lemma storePTE_state_refs' [wp]:
 lemma storePTE_iflive [wp]:
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: storePTE_def)
-  apply (rule hoare_pre) 
+  apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps archObjSize_def)
      apply (auto simp: updateObject_default_def in_monad projectKOs pteBits_def)
@@ -3211,7 +3211,7 @@ crunch ksInt' [wp]: storePTE "\<lambda>s. P (ksInterruptState s)"
 lemma storePTE_ifunsafe [wp]:
   "\<lbrace>if_unsafe_then_cap'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   apply (simp add: storePTE_def)
-  apply (rule hoare_pre) 
+  apply (rule hoare_pre)
    apply (rule setObject_ifunsafe' [where P=\<top>], simp)
      apply (auto simp: updateObject_default_def in_monad projectKOs)[2]
    apply wp
@@ -3229,7 +3229,7 @@ crunch arch' [wp]: storePTE "\<lambda>s. P (ksArchState s)"
 crunch cur' [wp]: storePTE "\<lambda>s. P (ksCurThread s)"
   (ignore: setObject)
 
-lemma storePTE_irq_states' [wp]: 
+lemma storePTE_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> storePTE pte p \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (simp add: storePTE_def)
   apply (wpsimp wp: valid_irq_states_lift' dmo_lift' no_irq_storeWord setObject_ksMachine
@@ -3320,7 +3320,7 @@ lemma storePTE_invs [wp]:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
-             valid_arch_state_lift' valid_irq_node_lift 
+             valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift
            | simp add: cteCaps_of_def o_def)+
@@ -3338,19 +3338,19 @@ lemma setASIDPool_valid_objs [wp]:
   done
 
 lemma setASIDPool_valid_mdb [wp]:
-  "\<lbrace>valid_mdb'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>" 
+  "\<lbrace>valid_mdb'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
   by (simp add: valid_mdb'_def) wp
 
 lemma setASIDPool_nosch [wp]:
-  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>" 
+  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
   by (wp setObject_nosch updateObject_default_inv|simp)+
 
 lemma setASIDPool_ksQ [wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>" 
+  "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>"
   by (wp setObject_qs updateObject_default_inv|simp)+
 
 lemma setASIDPool_inQ[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace> 
+  "\<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace>
      setObject ptr (ap::asidpool)
    \<lbrace>\<lambda>rv s. P (obj_at' (inQ d p) t s)\<rbrace>"
   apply (simp add: obj_at'_real_def)
@@ -3361,7 +3361,7 @@ lemma setASIDPool_inQ[wp]:
   done
 
 lemma setASIDPool_qsL1 [wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksReadyQueuesL1Bitmap s)\<rbrace>" 
+  "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
   by (wp setObject_qs updateObject_default_inv|simp)+
 
 lemma setASIDPool_qsL2 [wp]:
@@ -3376,7 +3376,7 @@ lemma setASIDPool_valid_queues' [wp]:
   "\<lbrace>valid_queues'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
   by (wp valid_queues_lift')
 
-lemma setASIDPool_state_refs' [wp]: 
+lemma setASIDPool_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def projectKOs objBits_simps
@@ -3388,7 +3388,7 @@ lemma setASIDPool_state_refs' [wp]:
 
 lemma setASIDPool_iflive [wp]:
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (rule hoare_pre) 
+  apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps archObjSize_def)
      apply (auto simp: updateObject_default_def in_monad projectKOs pageBits_def)
@@ -3400,13 +3400,13 @@ lemma setASIDPool_ksInt [wp]:
 
 lemma setASIDPool_ifunsafe [wp]:
   "\<lbrace>if_unsafe_then_cap'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
-  apply (rule hoare_pre) 
+  apply (rule hoare_pre)
    apply (rule setObject_ifunsafe' [where P=\<top>], simp)
      apply (auto simp: updateObject_default_def in_monad projectKOs)[2]
    apply wp
   apply simp
   done
-  
+
 lemma setASIDPool_it' [wp]:
   "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. \<lambda>s. P (ksIdleThread s)\<rbrace>"
   by (wp setObject_it updateObject_default_inv|simp)+
@@ -3416,7 +3416,7 @@ lemma setASIDPool_idle [wp]:
   unfolding valid_idle'_def
   by (rule hoare_lift_Pf [where f="ksIdleThread"]; wp)
 
-lemma setASIDPool_irq_states' [wp]: 
+lemma setASIDPool_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f=ksInterruptState, OF setObject_ksInterrupt])
@@ -3495,7 +3495,7 @@ lemma setASIDPool_invs [wp]:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
-             valid_arch_state_lift' valid_irq_node_lift 
+             valid_arch_state_lift' valid_irq_node_lift
              cur_tcb_lift valid_irq_handlers_lift''
              untyped_ranges_zero_lift
              updateObject_default_inv
@@ -3572,7 +3572,7 @@ crunch invs'[wp]: unmapPageTable "invs'"
   (ignore: getObject setObject storePDE doMachineOp
        wp: dmo_invalidateLocalTLB_VAASID_invs' dmo_setCurrentPD_invs'
            storePDE_Invalid_invs mapM_wp' no_irq_setCurrentPD
-           crunch_wps 
+           crunch_wps
      simp: crunch_simps)
 
 lemma perform_pti_invs [wp]:
@@ -3596,7 +3596,7 @@ lemma perform_pti_invs [wp]:
   done
 
 crunch invs'[wp]: setVMRootForFlush "invs'"
-  
+
 lemma mapM_x_storePTE_invs:
   "\<lbrace>invs' and valid_pte' pte\<rbrace> mapM_x (swp storePTE pte) ps \<lbrace>\<lambda>xa. invs'\<rbrace>"
   apply (rule hoare_post_imp)
@@ -3714,7 +3714,7 @@ lemma perform_pt_invs [wp]:
   apply (wp arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp|wpc)+
   apply (rename_tac acap word a b)
   apply (rule_tac Q="\<lambda>_. invs' and cte_wp_at' (\<lambda>cte. \<exists>d r R sz m. cteCap cte =
-                                       ArchObjectCap (PageCap d r R sz m)) word" 
+                                       ArchObjectCap (PageCap d r R sz m)) word"
                in hoare_strengthen_post)
     apply (wp unmapPage_cte_wp_at')
    apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -3733,7 +3733,7 @@ lemma perform_pt_invs [wp]:
 
 lemma ucast_ucast_le_low_bits [simp]:
   "ucast (ucast x :: 10 word) \<le> (2 ^ asid_low_bits - 1 :: word32)"
-  apply (rule word_less_sub_1) 
+  apply (rule word_less_sub_1)
   apply (rule order_less_le_trans)
    apply (rule ucast_less)
    apply simp

@@ -170,7 +170,7 @@ lemma Arch_switchToThread_ccorres:
   "ccorres dc xfdc
            (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t)
            (UNIV \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace>)
-           [] 
+           []
            (Arch.switchToThread t) (Call Arch_switchToThread_'proc)"
   apply (cinit lift: tcb_')
    apply (unfold ARM_H.switchToThread_def)[1]
@@ -189,8 +189,8 @@ lemma Arch_switchToThread_ccorres:
 
 (* FIXME: move *)
 lemma switchToThread_ccorres:
-  "ccorres dc xfdc 
-           (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t) 
+  "ccorres dc xfdc
+           (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t)
            (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t\<rbrace>)
            hs
            (switchToThread t)
@@ -202,7 +202,7 @@ lemma switchToThread_ccorres:
      apply clarsimp
      apply (rule conseqPre, vcg)
      apply (clarsimp simp: setCurThread_def simpler_modify_def)
-     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def 
+     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                            carch_state_relation_def cmachine_state_relation_def)
     apply wp+
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def)
@@ -210,14 +210,14 @@ lemma switchToThread_ccorres:
 
 lemma get_tsType_ccorres2:
   "ccorres (\<lambda>r r'. r' = thread_state_to_tsType r) ret__unsigned_' (tcb_at' thread)
-           (UNIV \<inter> {s. f s = tcb_ptr_to_ctcb_ptr thread} \<inter> 
+           (UNIV \<inter> {s. f s = tcb_ptr_to_ctcb_ptr thread} \<inter>
             {s. cslift s (Ptr &(f s\<rightarrow>[''tcbState_C''])) = Some (thread_state_' s)}) []
   (getThreadState thread) (Call thread_state_get_tsType_'proc)"
   unfolding getThreadState_def
-  apply (rule ccorres_from_spec_modifies [where P=\<top>, simplified]) 
+  apply (rule ccorres_from_spec_modifies [where P=\<top>, simplified])
      apply (rule thread_state_get_tsType_spec)
     apply (rule thread_state_get_tsType_modifies)
-   apply simp    
+   apply simp
   apply (frule (1) obj_at_cslift_tcb)
   apply (clarsimp simp: typ_heap_simps)
   apply (rule bexI [rotated, OF threadGet_eq], assumption)
@@ -227,7 +227,7 @@ lemma get_tsType_ccorres2:
   done
 
 lemma activateThread_ccorres:
-  "ccorres dc xfdc 
+  "ccorres dc xfdc
            (ct_in_state' activatable' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
                    and valid_queues and valid_objs')
            UNIV []
@@ -242,7 +242,7 @@ lemma activateThread_ccorres:
            apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
           apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
          apply simp
-         apply (rule ccorres_cond_true) 
+         apply (rule ccorres_cond_true)
          apply (rule ccorres_return_Skip)
         apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
        apply (simp add: "StrictC'_thread_state_defs" del: Collect_const)
@@ -265,7 +265,7 @@ lemma activateThread_ccorres:
        apply vcg
       apply wp
      apply vcg
-    apply (wp gts_wp') 
+    apply (wp gts_wp')
    apply vcg
   apply (clarsimp simp: ct_in_state'_def)
   apply (rule conjI, clarsimp)
@@ -350,7 +350,7 @@ lemma getReadyQueuesL1Bitmap_sp:
    use ccorres_cross_over_guard to do that *)
 lemma ccorres_pre_getReadyQueuesL1Bitmap:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
-  shows   "ccorres r xf 
+  shows   "ccorres r xf
                   (\<lambda>s. d \<le> maxDomain \<and> (\<forall>rv. ksReadyQueuesL1Bitmap s d = rv \<longrightarrow> P rv s))
                   {s. \<forall>rv. (ksReadyQueuesL1Bitmap_' (globals s)).[unat d] = ucast rv
                                  \<longrightarrow> s \<in> P' rv }
@@ -407,8 +407,8 @@ lemma ccorres_pre_getReadyQueuesL2Bitmap:
   done
 
 lemma switchToThread_ccorres':
-  "ccorres (\<lambda>_ _. True) xfdc 
-           (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t) 
+  "ccorres (\<lambda>_ _. True) xfdc
+           (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t)
            (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t\<rbrace>)
            hs
            (switchToThread t)
@@ -581,7 +581,7 @@ proof -
      apply (rule ccorres_rhs_assoc)+
      apply (rule ccorres_Guard_Seq)
      apply (rule ccorres_pre_getReadyQueuesL2Bitmap)
-     apply (rename_tac l2) 
+     apply (rename_tac l2)
      apply (rule ccorres_pre_getQueue)
      apply (rule_tac P="queue \<noteq> []" in ccorres_cross_over_guard_no_st)
      apply (rule ccorres_symb_exec_l)
@@ -838,7 +838,7 @@ lemma schedule_ccorres:
           apply (auto simp: Collect_const_mem cscheduler_action_relation_def st_tcb_at'_def
                       elim: obj_at'_weakenE
                       dest: obj_at_cslift_tcb)[1]
-     apply (rename_tac word)     
+     apply (rename_tac word)
      apply (rule ccorres_guard_imp2)
       apply (rule ccorres_cond_false)
       apply (rule ccorres_cond_true)
@@ -906,11 +906,11 @@ lemma cep_relations_drop_fun_upd:
           | simp split: if_split)+
 
 lemma threadSet_timeSlice_ccorres [corres]:
-  "ccorres dc xfdc (tcb_at' thread) {s. thread' s = tcb_ptr_to_ctcb_ptr thread \<and> unat (v' s) = v} hs 
+  "ccorres dc xfdc (tcb_at' thread) {s. thread' s = tcb_ptr_to_ctcb_ptr thread \<and> unat (v' s) = v} hs
            (threadSet (tcbTimeSlice_update (\<lambda>_. v)) thread)
            (Basic (\<lambda>s. globals_update (t_hrs_'_update (hrs_mem_update (heap_update (Ptr &(thread' s\<rightarrow>[''tcbTimeSlice_C''])::word32 ptr) (v' s)))) s))"
   apply (rule ccorres_guard_imp2)
-   apply (rule threadSet_ccorres_lemma4 [where P=\<top> and P'=\<top>])   
+   apply (rule threadSet_ccorres_lemma4 [where P=\<top> and P'=\<top>])
     apply vcg
    prefer 2
    apply (rule conjI, simp)
@@ -951,7 +951,7 @@ lemma timerTick_ccorres:
               apply (clarsimp simp: cur_tcb'_def)
               apply (drule (1) tcb_at_h_t_valid)
               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-             apply (rule_tac Q="\<lambda>s. obj_at' (\<lambda>tcb. tcbTimeSlice tcb = rva) (ksCurThread s) s" 
+             apply (rule_tac Q="\<lambda>s. obj_at' (\<lambda>tcb. tcbTimeSlice tcb = rva) (ksCurThread s) s"
                          and Q'=\<top> in ccorres_cond_both')
                apply clarsimp
                apply (drule (1) obj_at_cslift_tcb)

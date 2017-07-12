@@ -8,8 +8,8 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
-Accessor functions for architecture specific parts of the specification. 
+(*
+Accessor functions for architecture specific parts of the specification.
 *)
 
 chapter "Accessing the ARM VSpace"
@@ -20,10 +20,10 @@ begin
 
 context Arch begin global_naming ARM_A
 
-text {* 
+text {*
   This part of the specification is fairly concrete as the machine architecture
   is visible to the user in seL4 and therefore needs to be described.
-  The abstraction compared to the implementation is in the data types for 
+  The abstraction compared to the implementation is in the data types for
   kernel objects. The interface which is rich in machine details remains the same.
 *}
 
@@ -68,7 +68,7 @@ definition
   "set_pd ptr pd \<equiv> do
      kobj \<leftarrow> get_object ptr;
      assert (case kobj of ArchObj (PageDirectory pd) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (PageDirectory pd)) 
+     set_object ptr (ArchObj (PageDirectory pd))
    od"
 
 text {* The following function takes a pointer to a PDE in kernel memory
@@ -106,7 +106,7 @@ definition
   "set_pt ptr pt \<equiv> do
      kobj \<leftarrow> get_object ptr;
      assert (case kobj of ArchObj (PageTable _) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (PageTable pt)) 
+     set_object ptr (ArchObj (PageTable pt))
    od"
 
 text {* The following function takes a pointer to a PTE in kernel memory
@@ -146,7 +146,7 @@ copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" whe
         offset \<leftarrow> return (index << pde_bits);
         pde \<leftarrow> get_pde (global_pd + offset);
         store_pde (new_pd + offset) pde
-    od) [kernel_base >> 20  .e.  pd_size - 1] 
+    od) [kernel_base >> 20  .e.  pd_size - 1]
 od"
 
 text {* Walk the page directories and tables in software. *}
@@ -166,7 +166,7 @@ text {* The following function takes a page-directory reference as well as
 definition
 lookup_pt_slot :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> (word32,'z::state_ext) lf_monad" where
 "lookup_pt_slot pd vptr \<equiv> doE
-    pd_slot \<leftarrow> returnOk (lookup_pd_slot pd vptr); 
+    pd_slot \<leftarrow> returnOk (lookup_pd_slot pd vptr);
     pde \<leftarrow> liftE $ get_pde pd_slot;
     (case pde of
           PageTablePDE ptab _ _ \<Rightarrow>   (doE
@@ -180,11 +180,11 @@ odE"
 
 
 text {* A non-failing version of @{const lookup_pt_slot} when the pd is already known *}
-definition 
+definition
   lookup_pt_slot_no_fail :: "word32 \<Rightarrow> vspace_ref \<Rightarrow> word32"
 where
-  "lookup_pt_slot_no_fail pt vptr \<equiv> 
-     let pt_index = ((vptr >> 12) && 0xff) 
+  "lookup_pt_slot_no_fail pt vptr \<equiv>
+     let pt_index = ((vptr >> 12) && 0xff)
      in pt + (pt_index << 2)"
 
 end

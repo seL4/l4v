@@ -21,7 +21,7 @@ definition
   inject_reply_cap :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
 where
   "inject_reply_cap src_tcb_id dst_tcb_id \<equiv> do
-     set_cap (src_tcb_id,tcb_pending_op_slot) $ cdl_cap.PendingSyncRecvCap src_tcb_id True; 
+     set_cap (src_tcb_id,tcb_pending_op_slot) $ cdl_cap.PendingSyncRecvCap src_tcb_id True;
      insert_cap_child (ReplyCap src_tcb_id) (src_tcb_id, tcb_replycap_slot) (dst_tcb_id, tcb_caller_slot);
      return ()
   od"
@@ -37,7 +37,7 @@ where
   "get_receive_slot thread \<equiv>
     do
       tcb \<leftarrow> get_thread thread;
-      recv_slot \<leftarrow> (case (cdl_tcb_caps tcb tcb_ipcbuffer_slot) of (Some (FrameCap _ _ rights _ _ _)) \<Rightarrow> 
+      recv_slot \<leftarrow> (case (cdl_tcb_caps tcb tcb_ipcbuffer_slot) of (Some (FrameCap _ _ rights _ _ _)) \<Rightarrow>
         if (Read \<in> rights \<and> Write \<in> rights)
           then return (cdl_intent_recv_slot (cdl_tcb_intent tcb))
         else
@@ -84,7 +84,7 @@ where
         | _ \<Rightarrow> return None)
    od"
 
-definition 
+definition
   corrupt_ipc_buffer :: "cdl_object_id \<Rightarrow> bool \<Rightarrow> unit k_monad"
   where
   "corrupt_ipc_buffer oid in_receive \<equiv> do
@@ -96,20 +96,20 @@ definition
 
 (*
  * Transfers at most one cap in addition to a number of endpoint badges.
- * 
- * Endpoint badges are transferred if the cap to be transferred is to 
+ *
+ * Endpoint badges are transferred if the cap to be transferred is to
  * the endpoint used in the transfer.
  *)
 fun
-  transfer_caps_loop :: "cdl_object_id option \<Rightarrow> cdl_object_id \<Rightarrow> 
-                         (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow> cdl_cap_ref option 
+  transfer_caps_loop :: "cdl_object_id option \<Rightarrow> cdl_object_id \<Rightarrow>
+                         (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow> cdl_cap_ref option
                          \<Rightarrow> unit k_monad"
 where
   "transfer_caps_loop ep receiver [] dest = return ()"
-| "transfer_caps_loop ep receiver ((cap,slot)#caps) dest = 
-      (* Transfer badge, transfer cap, or abort early if more than 
-         one cap to transfer *)   
-      (if is_ep_cap cap \<and> ep = Some (cap_object cap) 
+| "transfer_caps_loop ep receiver ((cap,slot)#caps) dest =
+      (* Transfer badge, transfer cap, or abort early if more than
+         one cap to transfer *)
+      (if is_ep_cap cap \<and> ep = Some (cap_object cap)
       then do
         (* transfer badge *)
         corrupt_ipc_buffer receiver True;
@@ -118,13 +118,13 @@ where
       od
       else if dest \<noteq> None then doE
         (* Possibly diminish rights (if diminish flag was set on endpoint) *)
-        new_cap \<leftarrow> returnOk (update_cap_rights (cap_rights cap - {Write}) cap) \<sqinter> 
+        new_cap \<leftarrow> returnOk (update_cap_rights (cap_rights cap - {Write}) cap) \<sqinter>
                   returnOk cap;
 
         (* Target cap is derived. This may abort transfer early. *)
         target_cap \<leftarrow> derive_cap slot new_cap;
         whenE (target_cap = NullCap) throw;
-  
+
         (* Copy the cap across as either a child or sibling. *)
         liftE (insert_cap_child target_cap slot (the dest)
                \<sqinter> insert_cap_sibling target_cap slot (the dest));
@@ -132,7 +132,7 @@ where
         (* Transfer rest of badges *)
         liftE $ transfer_caps_loop ep receiver caps None
       odE <catch> (\<lambda>_. return ())
-      else 
+      else
         return ())"
 
 
@@ -165,13 +165,13 @@ where
  * We remove some of the details, replacing them with nondeterminism.
  *)
 definition
-  transfer_caps :: "cdl_object_id option \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow> 
+  transfer_caps :: "cdl_object_id option \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow>
                     cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
 where
   "transfer_caps ep caps sender receiver \<equiv>
     do
       dest_slot \<leftarrow> get_receive_slot receiver \<sqinter> return None;
-      transfer_caps_loop ep receiver caps dest_slot      
+      transfer_caps_loop ep receiver caps dest_slot
     od"
 
 (*
@@ -246,12 +246,12 @@ where
       (* look up cap transfer *)
       src_slots \<leftarrow> get_send_slots sender_id;
       do (* do normal transfer *)
-        caps \<leftarrow> if can_grant then 
+        caps \<leftarrow> if can_grant then
                 lookup_extra_caps sender_id src_slots <catch> (\<lambda>_. return [])
               else
                 return [];
         (* copy registers, transfer message or fault *)
-        corrupt_ipc_buffer receiver_id True; 
+        corrupt_ipc_buffer receiver_id True;
         (* transfer caps if no fault occured *)
         transfer_caps ep_id caps sender_id receiver_id
       od  \<sqinter>  (* fault transfer *)
@@ -278,15 +278,15 @@ definition
 where
   "do_reply_transfer sender_id receiver_id reply_cap_slot \<equiv>
     do
-      has_fault \<leftarrow> get_thread_fault receiver_id; 
+      has_fault \<leftarrow> get_thread_fault receiver_id;
       when (\<not> has_fault) $ do_ipc_transfer None sender_id receiver_id True;
       (* Clear out any pending operation caps. *)
       delete_cap_simple reply_cap_slot;
       when (has_fault) $ (do corrupt_tcb_intent receiver_id;
         update_thread_fault receiver_id (\<lambda>_. False) od );
       if ( \<not> has_fault) then set_cap (receiver_id,tcb_pending_op_slot) RunningCap
-      else 
-         (set_cap (receiver_id,tcb_pending_op_slot) NullCap 
+      else
+         (set_cap (receiver_id,tcb_pending_op_slot) NullCap
         \<sqinter> set_cap (receiver_id,tcb_pending_op_slot) RestartCap )
     od"
 
@@ -341,7 +341,7 @@ definition
   recv_signal :: "cdl_object_id \<Rightarrow> cdl_cap \<Rightarrow> unit k_monad"
 where
   "recv_signal tcb_id_receiver ep_cap  \<equiv> do
-     ep_id \<leftarrow> return $ cap_object ep_cap; 
+     ep_id \<leftarrow> return $ cap_object ep_cap;
      block_thread_on_ipc tcb_id_receiver (PendingNtfnRecvCap ep_id) \<sqinter> corrupt_tcb_intent tcb_id_receiver
    od"
 
@@ -365,7 +365,7 @@ where
               return ()
         | Some tcb_id_receiver \<Rightarrow> do
              do_ipc_transfer (Some ep_id) tcb_id_sender tcb_id_receiver can_grant;
-             set_cap (tcb_id_receiver,tcb_pending_op_slot) RunningCap; 
+             set_cap (tcb_id_receiver,tcb_pending_op_slot) RunningCap;
              (when (can_grant) $ (inject_reply_cap tcb_id_sender tcb_id_receiver)) \<sqinter>
              set_cap (tcb_id_sender,tcb_pending_op_slot) NullCap \<sqinter> return ()
           od
@@ -389,7 +389,7 @@ where
             case ((cdl_tcb_caps tcb) tcb_pending_op_slot) of
               Some (PendingSyncSendCap target _ call grant rights)\<Rightarrow>(do
                  do_ipc_transfer (Some ep_id) tcb_id_sender thread grant;
-                 (when (grant) $ (inject_reply_cap tcb_id_sender thread)) \<sqinter> 
+                 (when (grant) $ (inject_reply_cap tcb_id_sender thread)) \<sqinter>
                  set_cap (tcb_id_sender,tcb_pending_op_slot) RunningCap \<sqinter>
                  set_cap (tcb_id_sender, tcb_pending_op_slot) NullCap
               od)
@@ -446,7 +446,7 @@ definition
       (case handler_cap of
           EndpointCap ref badge rights \<Rightarrow>
             if Write \<in> rights \<and> Grant \<in> rights then
-              liftE $ do 
+              liftE $ do
                 update_thread_fault tcb_id (\<lambda>_. True);
                 send_ipc True False badge True tcb_id ref
               od

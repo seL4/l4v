@@ -120,8 +120,8 @@ lemma liftE_alternative_distrib: "(liftE (a \<sqinter> b)) = ((liftE a) \<sqinte
 lemma corres_skip_catch:
   "corres_underlying sr nf nf' dc P P' f g \<Longrightarrow>
    corres_underlying sr nf nf' dc P P' f (g <catch> (\<lambda>_. return x))"
-  by (clarsimp simp: corres_underlying_def catch_def return_def bind_def 
-                     split_def 
+  by (clarsimp simp: corres_underlying_def catch_def return_def bind_def
+                     split_def
                split: sum.splits)
 
 end

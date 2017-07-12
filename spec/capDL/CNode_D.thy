@@ -67,7 +67,7 @@ where
            (src_root, _) \<leftarrow> throw_on_none $ get_index caps 0;
            dest_slot \<leftarrow> lookup_slot_for_cnode_op target dest_index (unat dest_depth);
            ensure_empty dest_slot;
-           src_slot \<leftarrow> lookup_slot_for_cnode_op src_root src_index (unat src_depth);   
+           src_slot \<leftarrow> lookup_slot_for_cnode_op src_root src_index (unat src_depth);
            src_cap \<leftarrow> liftE $ get_cap src_slot;
            whenE (src_cap = NullCap) throw;
            returnOk $ MoveCall src_cap src_slot dest_slot
@@ -135,7 +135,7 @@ where
            pivot_slot \<leftarrow> lookup_slot_for_cnode_op pivot_root pivot_index (unat pivot_depth);
 
            whenE (pivot_slot = src_slot \<or> pivot_slot = dest_slot) throw;
-           
+
            unlessE (src_slot = dest_slot) $ ensure_empty dest_slot;
 
            src_cap \<leftarrow> liftE $ get_cap src_slot;
@@ -161,7 +161,7 @@ where
   "invoke_cnode params \<equiv> case params of
     (* Insert a new cap. *)
       InsertCall cap src_slot dest_slot \<Rightarrow>
-        liftE $ 
+        liftE $
           insert_cap_sibling cap src_slot dest_slot
           \<sqinter>
           insert_cap_child cap src_slot dest_slot

@@ -146,7 +146,7 @@ lemma thread_set_no_change_tcb_pred_converse:
 lemmas thread_set_no_change_tcb_state_converse=
   thread_set_no_change_tcb_pred_converse[where proj="itcb_state", simplified]
 
-lemmas thread_set_no_change_tcb_bound_notification_converse = 
+lemmas thread_set_no_change_tcb_bound_notification_converse =
   thread_set_no_change_tcb_pred_converse[where proj="itcb_bound_notification", simplified]
 
 lemma pspace_valid_objsE:
@@ -223,7 +223,7 @@ lemma thread_set_valid_objs_triv:
   assumes a: "\<And>tcb. tcb_fault (f tcb) \<noteq> tcb_fault tcb
                        \<longrightarrow> (case tcb_fault (f tcb) of None \<Rightarrow> True
                                                    | Some f \<Rightarrow> valid_fault f)"
-  assumes b: "\<And>tcb. tcb_bound_notification (f tcb) \<noteq> tcb_bound_notification tcb 
+  assumes b: "\<And>tcb. tcb_bound_notification (f tcb) \<noteq> tcb_bound_notification tcb
                        \<longrightarrow> tcb_bound_notification (f tcb) = None"
   assumes c: "\<And>tcb s::'z::state_ext state.
                      valid_arch_tcb (tcb_arch (f tcb)) s = valid_arch_tcb (tcb_arch tcb) s"
@@ -272,7 +272,7 @@ lemma thread_set_distinct [wp]:
 lemma thread_set_cur_tcb:
   shows "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. cur_tcb s\<rbrace>"
   apply (simp add: cur_tcb_def)
-  apply (clarsimp simp: thread_set_def pred_tcb_at_def set_object_def in_monad 
+  apply (clarsimp simp: thread_set_def pred_tcb_at_def set_object_def in_monad
                         gets_the_def valid_def)
   apply (clarsimp dest!: get_tcb_SomeD simp: obj_at_def is_tcb)
   done
@@ -402,7 +402,7 @@ lemma tcb_not_empty_table:
   by (simp add: empty_table_def)
 (*
 lemmas thread_set_arch_caps_trivial
-  = valid_arch_caps_lift_weak[OF thread_set_arch thread_set.aobj_at 
+  = valid_arch_caps_lift_weak[OF thread_set_arch thread_set.aobj_at
                                  thread_set_caps_of_state_trivial, simplified] *)
 lemmas thread_set_arch_caps_trivial
   = valid_arch_caps_lift_weak[OF thread_set_arch thread_set.vsobj_at
@@ -645,7 +645,7 @@ lemma as_user_idle[wp]:
   apply (simp add: as_user_def set_object_def split_def)
   apply wp
   apply (clarsimp cong: if_cong)
-  apply (clarsimp simp: obj_at_def get_tcb_def valid_idle_def pred_tcb_at_def 
+  apply (clarsimp simp: obj_at_def get_tcb_def valid_idle_def pred_tcb_at_def
                   split: option.splits Structures_A.kernel_object.splits)
   done
 
@@ -819,7 +819,7 @@ lemma set_thread_state_valid_objs[wp]:
        | clarsimp simp: st_tcb_def2 tcb_cap_cases_def
                  dest!: get_tcb_SomeD
                  split: Structures_A.thread_state.splits)+
-  
+
 lemma set_bound_notification_valid_objs[wp]:
   "\<lbrace>valid_objs and valid_bound_ntfn ntfn\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (simp add: set_bound_notification_def)
@@ -839,8 +839,8 @@ lemma set_thread_state_aligned[wp]:
   done
 
 lemma set_bound_notification_aligned[wp]:
- "\<lbrace>pspace_aligned\<rbrace> 
-  set_bound_notification thread ntfn 
+ "\<lbrace>pspace_aligned\<rbrace>
+  set_bound_notification thread ntfn
   \<lbrace>\<lambda>r. pspace_aligned\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (wp set_object_aligned)
@@ -875,7 +875,7 @@ lemma set_thread_state_cte_wp_at [wp]:
   done
 
 lemma set_bound_notification_cte_wp_at [wp]:
-  "\<lbrace>cte_wp_at P c\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>rv. cte_wp_at P c\<rbrace>" 
+  "\<lbrace>cte_wp_at P c\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>rv. cte_wp_at P c\<rbrace>"
   apply (simp add: set_bound_notification_def set_object_def)
   apply (wp, simp)
   apply (clarsimp cong: if_cong)
@@ -1121,7 +1121,7 @@ lemma sts_iflive[wp]:
   by (fastforce dest: get_tcb_SomeD if_live_then_nonz_capD2
                 simp: tcb_cap_cases_def live_def
                 split: Structures_A.thread_state.splits)
- 
+
 lemma sbn_iflive[wp]:
   "\<lbrace>\<lambda>s. (bound ntfn \<longrightarrow> ex_nonz_cap_to t s)
          \<and> if_live_then_nonz_cap s\<rbrace>
@@ -1319,7 +1319,7 @@ lemma sts_reply [wp]:
   done
 
 lemma sbn_reply [wp]:
-  "\<lbrace>valid_reply_caps\<rbrace> 
+  "\<lbrace>valid_reply_caps\<rbrace>
    set_bound_notification p ntfn \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
   apply (simp only: valid_reply_caps_def imp_conv_disj
                     cte_wp_at_caps_of_state has_reply_cap_def)
@@ -1432,7 +1432,7 @@ lemma dom_tcb_cap_cases:
 
 lemmas st_tcb_at_reply_cap_valid =
        pred_tcb_cap_wp_at [OF _ _ _ st_tcb_reply_cap_valid,
-                         simplified dom_tcb_cap_cases] 
+                         simplified dom_tcb_cap_cases]
 
 lemmas st_tcb_at_caller_cap_null =
        pred_tcb_cap_wp_at [OF _ _ _ st_tcb_caller_cap_null,
@@ -1474,7 +1474,7 @@ lemma sts_only_idle:
   done
 
 lemma sbn_only_idle[wp]:
-  "\<lbrace>only_idle\<rbrace> 
+  "\<lbrace>only_idle\<rbrace>
   set_bound_notification t ntfn \<lbrace>\<lambda>_. only_idle\<rbrace>"
   apply (simp add: set_bound_notification_def set_object_def)
   apply (wp, simp)
@@ -1620,7 +1620,7 @@ lemma sts_invs_minor2:
 
 
 lemma sbn_invs_minor:
-  "\<lbrace>bound_tcb_at (\<lambda>ntfn'. tcb_bound_refs ntfn' = tcb_bound_refs ntfn) t 
+  "\<lbrace>bound_tcb_at (\<lambda>ntfn'. tcb_bound_refs ntfn' = tcb_bound_refs ntfn) t
     and (\<lambda>s. bound ntfn \<longrightarrow> ex_nonz_cap_to t s)
     and (\<lambda>s. t \<noteq> idle_thread s)
     and invs \<rbrace>
@@ -1872,7 +1872,7 @@ lemma set_mrs_thread_set_dmo:
 
 lemma set_mrs_st_tcb [wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_mrs r t' mrs \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-  apply (rule set_mrs_thread_set_dmo) 
+  apply (rule set_mrs_thread_set_dmo)
    apply (rule thread_set_no_change_tcb_pred)
    apply (simp add: tcb_to_itcb_def)
   apply wp

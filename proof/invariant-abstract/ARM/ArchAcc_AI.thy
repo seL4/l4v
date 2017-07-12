@@ -17,20 +17,20 @@ imports "../SubMonad_AI"
  "../../../lib/Crunch"
 begin
 
-  
+
 context Arch begin global_naming ARM
 
 
-bundle unfold_objects = 
+bundle unfold_objects =
   obj_at_def[simp]
   kernel_object.splits[split]
   arch_kernel_obj.splits[split]
   get_object_wp [wp]
-  
+
 bundle unfold_objects_asm =
   obj_at_def[simp]
   kernel_object.split_asm[split]
-  arch_kernel_obj.split_asm[split]  
+  arch_kernel_obj.split_asm[split]
 
 definition
   "valid_asid asid s \<equiv> arm_asid_map (arch_state s) asid \<noteq> None"
@@ -73,13 +73,13 @@ lemma get_pde_wp:
 lemma get_pde_inv [wp]: "\<lbrace>P\<rbrace> get_pde p \<lbrace>\<lambda>_. P\<rbrace>"
   by (wpsimp wp: get_pde_wp)
 
-bundle pagebits = 
+bundle pagebits =
   pd_bits_def[simp] pt_bits_def[simp]
   pageBits_def[simp] mask_lower_twice[simp]
   word_bool_alg.conj_assoc[symmetric,simp] obj_at_def[simp]
   pde.splits[split]
   pte.splits[split]
-  
+
 lemma get_master_pde_wp:
   "\<lbrace>\<lambda>s. \<forall>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s
         \<longrightarrow> Q (case (pd (ucast (p && ~~ mask 6 && mask pd_bits >> 2))) of
@@ -423,7 +423,7 @@ lemma pde_shifting:
         apply (drule_tac z="2 ^ 4" in order_le_less_trans, assumption)
         apply (drule word_power_increasing)
         by simp+
-  
+
     apply (clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth)
     apply (erule disjE)
      apply (insert H)[1]
@@ -565,7 +565,7 @@ lemma lookup_pt_slot_ptes_aligned_valid:
   apply (frule (2) valid_vspace_objsD)
   apply (clarsimp simp: )
   subgoal for s _ _ x
-    apply (prove "page_table_at (ptrFromPAddr x) s") 
+    apply (prove "page_table_at (ptrFromPAddr x) s")
     subgoal
       apply (bspec "(ucast (pd + (vptr >> 20 << 2) && mask pd_bits >> 2))";clarsimp)
       apply (frule kernel_mapping_slots_empty_pdeI)
@@ -659,11 +659,11 @@ lemma page_table_pte_at_lookupI:
   apply (rule vptr_shiftr_le_2pt)
   done
 
-lemmas lookup_pt_slot_ptes[wp] = 
+lemmas lookup_pt_slot_ptes[wp] =
  lookup_pt_slot_ptes_aligned_valid
    [@ \<open>post_asm \<open>thin_tac "is_aligned x y" for x y\<close>\<close>]
 
-lemmas lookup_pt_slot_ptes2[wp] = 
+lemmas lookup_pt_slot_ptes2[wp] =
  lookup_pt_slot_ptes_aligned_valid
    [@ \<open>post_asm \<open>drule (1) p_0x3C_shift[THEN iffD2], thin_tac _\<close>\<close>]
 
@@ -1561,7 +1561,7 @@ lemma set_pt_valid_ioc[wp]:
 
 lemma valid_machine_stateE:
   assumes vm: "valid_machine_state s"
-  assumes e: "\<lbrakk>in_user_frame p s 
+  assumes e: "\<lbrakk>in_user_frame p s
     \<or> underlying_memory (machine_state s) p = 0 \<rbrakk> \<Longrightarrow> E "
   shows E
   using vm
@@ -1635,7 +1635,7 @@ lemma set_pt_vms[wp]:
   apply (wp get_object_wp)
   apply clarify
   apply (erule valid_machine_state_heap_updI)
-   apply (fastforce simp: obj_at_def a_type_def 
+   apply (fastforce simp: obj_at_def a_type_def
                    split: kernel_object.splits arch_kernel_obj.splits)+
   done
 
@@ -1959,7 +1959,7 @@ lemma set_asid_pool_table_caps [wp]:
   apply (wp get_object_wp)
   by (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
      (fastforce simp: obj_at_def empty_table_def)
-  
+
 
 
 (* FIXME: Move to Invariants_A *)
@@ -1969,7 +1969,7 @@ lemma vs_lookup_pages_stateI:
   assumes table: "graph_of (arm_asid_table (arch_state s)) \<subseteq> graph_of (arm_asid_table (arch_state s'))"
   shows "(ref \<unrhd> p) s'"
   using 1 vs_lookup_pages_sub [OF ko table] by blast
-  
+
 lemma set_asid_pool_vs_lookup_unmap':
   "\<lbrace>valid_vs_lookup and
     obj_at (\<lambda>ko. \<exists>ap'. ko = ArchObj (ASIDPool ap') \<and> graph_of ap \<subseteq> graph_of ap') p\<rbrace>
@@ -3135,9 +3135,9 @@ lemma set_pd_unmap_mappings:
       apply (clarsimp simp: valid_kernel_mappings_def
                       dest!: graph_ofD)
       apply (drule bspec, erule ranI)
-      by (simp add: valid_kernel_mappings_if_pd_def)   
+      by (simp add: valid_kernel_mappings_if_pd_def)
     next
-     case True 
+     case True
      with prems show ?thesis
      apply clarsimp
      apply (bspec x)
@@ -3285,7 +3285,7 @@ lemma set_pd_vms[wp]:
            split: Structures_A.kernel_object.splits arch_kernel_obj.splits)+
   done
 
-    
+
 (* FIXME: Move to Invariants_A *)
 lemma vs_refs_pages_subset: "vs_refs ko \<subseteq> vs_refs_pages ko"
   apply (clarsimp simp: vs_refs_pages_def vs_refs_def graph_of_def pde_ref_def pde_ref_pages_def

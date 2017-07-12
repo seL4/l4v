@@ -23,7 +23,7 @@ echo -n "cpufreq governor is now "
 cat ${FREQ_GOV}
 
 for f in ${FREQ_LIST}
-do 
+do
     echo $f > ${FREQ_CONTROL}
     echo -n "CPU frequency is now "
     cat ${FREQ_CUR}

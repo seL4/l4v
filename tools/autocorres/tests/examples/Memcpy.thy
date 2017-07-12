@@ -139,7 +139,7 @@ lemma memcpy_word:
          apply (erule impE)
           apply (rule_tac x="unat a" in exI, clarsimp)
           apply unat_arith
-          
+
          apply (erule_tac x="ptr_val y + i" and
                           P="\<lambda>ya. (\<exists>k. ya = ptr_val y + of_nat k \<and> k < 4) \<longrightarrow> ptr_val y + i \<noteq> ya" in allE, clarsimp)
          apply (erule_tac x="unat i" in allE, clarsimp)
@@ -344,7 +344,7 @@ lemma update_bytes_append: "length bs \<le> ADDR_MAX \<Longrightarrow>
    apply (clarsimp simp:fun_upd_def)
   apply (subst hrs_mem_update_collapse)
   apply (rule hrs_mem_update_cong')
-  apply (clarsimp simp:ptr_add_def) 
+  apply (clarsimp simp:ptr_add_def)
   apply (rule ext)
   apply (cut_tac xs="[b]" and ys=bs and s="ptr_val p" and hp=x in heap_update_list_append)
   apply (clarsimp simp:fun_upd_def intro!:ext)
@@ -385,7 +385,7 @@ lemma update_bytes_postpend: "length bs = x + 1 \<Longrightarrow>
   apply (subst heap_update_list_concat_fold_hrs_mem)
    apply clarsimp+
   by (metis append_eq_conv_conj append_self_conv hd_drop_conv_nth2 lessI take_hd_drop)
-  
+
 lemma h_val_not_id_general:
   fixes y :: "'a::mem_type ptr"
   shows "\<forall>i \<in> {0..+size_of TYPE('a)}. \<forall>g. f g (ptr_val y + i) = g (ptr_val y + i)
@@ -723,12 +723,12 @@ lemma memcpy_int_wp'[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
   apply (subst h_val_not_id_update_bytes)
     apply clarsimp+
   apply (clarsimp simp:h_val_def)
-  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 4 (ptr_val src) = 
+  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 4 (ptr_val src) =
                       deref s (byte_cast src) # (heap_list (hrs_mem (t_hrs_' s)) 3 (ptr_val src + 1))")
    prefer 2
    apply (clarsimp simp:h_val_def)
    apply (metis Suc_numeral from_bytes_eq heap_list_rec semiring_norm(2) semiring_norm(8))
-  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 3 (ptr_val src + 1) = 
+  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 3 (ptr_val src + 1) =
                       deref s (byte_cast src +\<^sub>p 1) # (heap_list (hrs_mem (t_hrs_' s)) 2 (ptr_val src + 2))")
    prefer 2
    apply (clarsimp simp:h_val_def ptr_add_def)
@@ -736,7 +736,7 @@ lemma memcpy_int_wp'[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
    apply clarsimp
    apply (simp add: add.commute from_bytes_eq)
   apply clarsimp
-  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 2 (ptr_val src + 2) = 
+  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 2 (ptr_val src + 2) =
                       deref s (byte_cast src +\<^sub>p 2) # (heap_list (hrs_mem (t_hrs_' s)) 1 (ptr_val src + 3))")
    prefer 2
    apply (cut_tac h="hrs_mem (t_hrs_' s)" and p="ptr_val src + 2" and n=3 in heap_list_rec)
@@ -789,13 +789,13 @@ lemma memcpy_int_wp''[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
   apply clarsimp
   apply (subst h_val_not_id_update_bytes, clarsimp+)
   apply (clarsimp simp:h_val_def)
-  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 4 (ptr_val src) = 
+  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 4 (ptr_val src) =
                       deref s (byte_cast src) # (heap_list (hrs_mem (t_hrs_' s)) 3 (ptr_val src + 1))")
    prefer 2
    apply (clarsimp simp:h_val_def from_bytes_eq)
    apply (subst heap_list_rec[symmetric])
    apply simp
-  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 3 (ptr_val src + 1) = 
+  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 3 (ptr_val src + 1) =
                       deref s (byte_cast src +\<^sub>p 1) # (heap_list (hrs_mem (t_hrs_' s)) 2 (ptr_val src + 2))")
    prefer 2
    apply (clarsimp simp:h_val_def ptr_add_def)
@@ -803,7 +803,7 @@ lemma memcpy_int_wp''[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
    apply (clarsimp simp: from_bytes_eq)
    apply (metis add.commute)
   apply clarsimp
-  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 2 (ptr_val src + 2) = 
+  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 2 (ptr_val src + 2) =
                       deref s (byte_cast src +\<^sub>p 2) # (heap_list (hrs_mem (t_hrs_' s)) 1 (ptr_val src + 3))")
    prefer 2
    apply (cut_tac h="hrs_mem (t_hrs_' s)" and p="ptr_val src + 2" and n=3 in heap_list_rec)

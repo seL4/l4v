@@ -38,7 +38,7 @@ lemma pbfs_atleast_pageBits:
 lemmas is_cap_simps = is_cap_simps is_arch_cap_simps
 lemmas valid_cap_def = valid_cap_def[simplified valid_arch_cap_def]
 
-lemmas valid_cap_simps = 
+lemmas valid_cap_simps =
   valid_cap_def[split_simps cap.split arch_cap.split]
 
 end

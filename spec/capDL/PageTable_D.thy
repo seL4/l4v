@@ -30,7 +30,7 @@ where
      \<union> {(x, y). \<exists> a b c. (object_slots pd) a = Some (PageTableCap x b c) \<and> x \<in> dom (cdl_objects state)}"
 
 definition
-  "cdl_get_pt_mapped_addr cap \<equiv> 
+  "cdl_get_pt_mapped_addr cap \<equiv>
     case cap of PageTableCap pid ctype maddr \<Rightarrow>  maddr
     | _ \<Rightarrow> None"
 
@@ -47,10 +47,10 @@ where
      * The concrete implementation only allows a PageTable to be mapped
      * once at any point in time, but we don't enforce that here.
      *)
-    PageTableMapIntent vaddr attr \<Rightarrow> 
+    PageTableMapIntent vaddr attr \<Rightarrow>
       doE
         case cdl_get_pt_mapped_addr target of Some a \<Rightarrow> throw
-        | None \<Rightarrow> returnOk (); 
+        | None \<Rightarrow> returnOk ();
         (* Ensure that a PD was passed in. *)
         pd \<leftarrow> throw_on_none $ get_index caps 0;
         (pd_object_id, asid) \<leftarrow>
@@ -76,9 +76,9 @@ definition
   decode_page_directory_invocation :: "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow>
       cdl_page_directory_intent \<Rightarrow> cdl_page_directory_invocation except_monad"
 where
-  "decode_page_directory_invocation target target_ref caps intent \<equiv> 
+  "decode_page_directory_invocation target target_ref caps intent \<equiv>
       (returnOk $ PageDirectoryNothing) \<sqinter>
-      (returnOk $ PageDirectoryFlush Unify)  \<sqinter>  (returnOk $ PageDirectoryFlush Clean)  \<sqinter> 
+      (returnOk $ PageDirectoryFlush Unify)  \<sqinter>  (returnOk $ PageDirectoryFlush Clean)  \<sqinter>
       (returnOk $ PageDirectoryFlush CleanInvalidate )  \<sqinter> (returnOk $ PageDirectoryFlush Invalidate)
       \<sqinter> throw "
 
@@ -123,7 +123,7 @@ where
 
     (* Unmap this PageTable. *)
     | PageUnmapIntent \<Rightarrow> doE
-        (frame, asid, sz) \<leftarrow> (case target of 
+        (frame, asid, sz) \<leftarrow> (case target of
            FrameCap _ p R sz m mp \<Rightarrow> returnOk (p, mp , sz)
         | _ \<Rightarrow> throw);
       (returnOk $ PageUnmap asid frame target_ref sz) \<sqinter> throw
@@ -156,7 +156,7 @@ where
 
     (* Flush the caches associated with this page. *)
     | PageFlushCachesIntent \<Rightarrow>
-       (returnOk $ PageFlushCaches Unify)  \<sqinter>  (returnOk $ PageFlushCaches Clean)  \<sqinter> 
+       (returnOk $ PageFlushCaches Unify)  \<sqinter>  (returnOk $ PageFlushCaches Clean)  \<sqinter>
       (returnOk $ PageFlushCaches CleanInvalidate )  \<sqinter> (returnOk $ PageFlushCaches Invalidate)
       \<sqinter> throw
 
@@ -173,7 +173,7 @@ where
     | PageDirectoryNothing => return ()
   "
 
-definition "option_exec f \<equiv> \<lambda>x. case x of Some a \<Rightarrow> f a | None \<Rightarrow> return ()" 
+definition "option_exec f \<equiv> \<lambda>x. case x of Some a \<Rightarrow> f a | None \<Rightarrow> return ()"
 
 (* Invoke a page table. *)
 definition
@@ -190,10 +190,10 @@ where
            insert_cap_orphan pt_cap pd_target_slot
         od
     | PageTableUnmap mapped_addr pt_id pt_cap_ref \<Rightarrow> do
-        (case mapped_addr of Some maddr \<Rightarrow> do 
+        (case mapped_addr of Some maddr \<Rightarrow> do
                  unmap_page_table maddr pt_id;
                  clear_object_caps pt_id \<sqinter> return ()
-               od 
+               od
           | _ \<Rightarrow> return ());
         cap \<leftarrow> get_cap pt_cap_ref;
         set_cap pt_cap_ref (reset_mem_mapping cap)
@@ -219,15 +219,15 @@ where
         | _ \<Rightarrow> return ());
         cap \<leftarrow> get_cap frame_cap_ref;
         set_cap frame_cap_ref (reset_mem_mapping cap)
-      od 
+      od
 
 
     | PageRemap pseudo_frame_cap target_slots \<Rightarrow>
           mapM_x (swp set_cap pseudo_frame_cap) target_slots
 
     | PageFlushCaches flush \<Rightarrow> return ()
-    
-    | PageGetAddress \<Rightarrow> 
+
+    | PageGetAddress \<Rightarrow>
         do
           ct \<leftarrow> gets_the cdl_current_thread;
           corrupt_tcb_intent ct

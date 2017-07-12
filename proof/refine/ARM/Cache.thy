@@ -21,7 +21,7 @@ ML {* DupSkip.skip_dup_proofs := true *}
 
 text {* If executed in reverse order, save the cache *}
 ML {* val cache_thy_save_cache = ref false; *}
-ML {* 
+ML {*
 if (! cache_thy_save_cache)
 then File.open_output (XML_Syntax.output_forest
            (XML_Syntax.xml_forest_of_cache (! DupSkip.the_cache)))
@@ -30,10 +30,10 @@ else () *}
 ML {* cache_thy_save_cache := true *}
 ML {* cache_thy_save_cache := false *}
 
-text {* Load the proof cache 
+text {* Load the proof cache
            - can take up to a minute *}
 
-ML {* 
+ML {*
 DupSkip.the_cache := XML_Syntax.cache_of_xml_forest (
     File.open_input (XML_Syntax.input_forest)
            (Path.basic "proof_cache.xml")) *}

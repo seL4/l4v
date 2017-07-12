@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Decoding system calls
 *)
 
@@ -35,13 +35,13 @@ end
 
 
 text {*
-  This theory includes definitions describing how user arguments are 
-decoded into invocation structures; these structures are then used 
-to perform the actual system call (see @{text "perform_invocation"}).  
-In addition, these definitions check the validity of these arguments, 
+  This theory includes definitions describing how user arguments are
+decoded into invocation structures; these structures are then used
+to perform the actual system call (see @{text "perform_invocation"}).
+In addition, these definitions check the validity of these arguments,
 throwing an error if given an invalid request.
 
-  As such, this theory describes the binary interface between the 
+  As such, this theory describes the binary interface between the
 user and the kernel, along with the preconditions on each argument.
 *}
 
@@ -51,7 +51,7 @@ section "CNode"
 text {* This definition decodes CNode invocations. *}
 
 definition
-  decode_cnode_invocation :: 
+  decode_cnode_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cap \<Rightarrow> cap list \<Rightarrow> (cnode_invocation,'z::state_ext) se_monad"
 where
 "decode_cnode_invocation label args cap excaps \<equiv> doE
@@ -66,14 +66,14 @@ where
         \<and> invocation_type label \<in> set [CNodeCopy .e. CNodeMutate] then
   doE
     src_index \<leftarrow> returnOk $ data_to_cptr $ args ! 0;
-    src_depth \<leftarrow> returnOk $ data_to_nat $ args ! 1;  
+    src_depth \<leftarrow> returnOk $ data_to_nat $ args ! 1;
     args \<leftarrow> returnOk $ drop 2 args;
     src_root_cap \<leftarrow> returnOk $ excaps ! 0;
     ensure_empty dest_slot;
-    src_slot \<leftarrow> 
+    src_slot \<leftarrow>
          lookup_source_slot src_root_cap src_index src_depth;
     src_cap \<leftarrow> liftE $ get_cap src_slot;
-    whenE (src_cap = NullCap) $ 
+    whenE (src_cap = NullCap) $
          throwError $ FailedLookup True $ MissingCapability src_depth;
     (rights, cap_data, is_move) \<leftarrow> case (invocation_type label, args) of
       (CNodeCopy, rightsWord # _) \<Rightarrow> doE
@@ -108,15 +108,15 @@ where
   else if invocation_type label = CNodeRotate \<and> length args > 5
           \<and> length excaps > 1 then
   doE
-    pivot_new_data \<leftarrow> returnOk $ args ! 0;  
-    pivot_index \<leftarrow> returnOk $ data_to_cptr $ args ! 1; 
-    pivot_depth \<leftarrow> returnOk $ data_to_nat $ args ! 2; 
+    pivot_new_data \<leftarrow> returnOk $ args ! 0;
+    pivot_index \<leftarrow> returnOk $ data_to_cptr $ args ! 1;
+    pivot_depth \<leftarrow> returnOk $ data_to_nat $ args ! 2;
     src_new_data \<leftarrow> returnOk $ args ! 3;
-    src_index \<leftarrow> returnOk $ data_to_cptr $ args ! 4; 
-    src_depth \<leftarrow> returnOk $ data_to_nat $ args ! 5; 
+    src_index \<leftarrow> returnOk $ data_to_cptr $ args ! 4;
+    src_depth \<leftarrow> returnOk $ data_to_nat $ args ! 5;
     pivot_root_cap <- returnOk $ excaps ! 0;
     src_root_cap <- returnOk $ excaps ! 1;
-  
+
     src_slot <- lookup_source_slot src_root_cap src_index src_depth;
     pivot_slot <- lookup_pivot_slot pivot_root_cap pivot_index pivot_depth;
 
@@ -147,12 +147,12 @@ odE"
 
 section "Threads"
 
-text {* The definitions in this section decode invocations 
+text {* The definitions in this section decode invocations
 on TCBs.
 *}
 
-text {* This definition checks whether the first argument is 
-between the second and third. 
+text {* This definition checks whether the first argument is
+between the second and third.
 *}
 
 definition
@@ -178,13 +178,13 @@ where
     transfer_frame \<leftarrow> returnOk (flags !! 2);
     transfer_integer \<leftarrow> returnOk (flags !! 3);
     whenE (extra_caps = []) $ throwError TruncatedMessage;
-    src_tcb \<leftarrow> (case extra_caps of 
-      ThreadCap p # _ \<Rightarrow> returnOk p 
+    src_tcb \<leftarrow> (case extra_caps of
+      ThreadCap p # _ \<Rightarrow> returnOk p
     | _ \<Rightarrow> throwError $ InvalidCapability 1);
     p \<leftarrow> case cap of ThreadCap p \<Rightarrow> returnOk p;
     returnOk $ CopyRegisters p src_tcb
                              suspend_source resume_target
-                             transfer_frame transfer_integer 
+                             transfer_frame transfer_integer
                              ArchDefaultExtraRegisters
   odE
 | _ \<Rightarrow>  throwError TruncatedMessage"
@@ -212,7 +212,7 @@ where
     doE
       cur \<leftarrow> liftE $ gets cur_thread;
       mcp \<leftarrow> liftE $ thread_get tcb_mcpriority cur;
-      whenE (new_prio > ucast mcp) $ throwError (RangeError 0 (ucast mcp))      
+      whenE (new_prio > ucast mcp) $ throwError (RangeError 0 (ucast mcp))
     odE"
 
 definition
@@ -239,10 +239,10 @@ where
 
 
 definition
-  decode_set_ipc_buffer :: 
+  decode_set_ipc_buffer ::
   "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
-"decode_set_ipc_buffer args cap slot excs \<equiv> doE 
+"decode_set_ipc_buffer args cap slot excs \<equiv> doE
   whenE (length args = 0) $ throwError TruncatedMessage;
   whenE (length excs = 0) $ throwError TruncatedMessage;
   buffer \<leftarrow> returnOk $ data_to_vref $ args ! 0;
@@ -253,20 +253,20 @@ where
       check_valid_ipc_buffer buffer buffer_cap;
       returnOk $ Some (buffer_cap, bslot)
     odE;
-  returnOk $ 
+  returnOk $
     ThreadControl (obj_ref_of cap) slot None None None None None (Some (buffer, newbuf))
 odE"
 
 
 definition
-  decode_set_space 
+  decode_set_space
   :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
   "decode_set_space args cap slot excaps \<equiv> doE
    whenE (length args < 3 \<or> length excaps < 2) $ throwError TruncatedMessage;
    fault_ep \<leftarrow> returnOk $ args ! 0;
    croot_data  \<leftarrow> returnOk $ args ! 1;
-   vroot_data  \<leftarrow> returnOk $ args ! 2; 
+   vroot_data  \<leftarrow> returnOk $ args ! 2;
    croot_arg  \<leftarrow> returnOk $ excaps ! 0;
    vroot_arg  \<leftarrow> returnOk $ excaps ! 1;
    can_chg_cr \<leftarrow> liftE $ liftM Not $ slot_cap_long_running_delete
@@ -277,20 +277,20 @@ where
 
    croot_cap  \<leftarrow> returnOk $ fst croot_arg;
    croot_slot \<leftarrow> returnOk $ snd croot_arg;
-   croot_cap' \<leftarrow> derive_cap croot_slot $ 
-                   (if croot_data = 0 then id else update_cap_data False croot_data) 
+   croot_cap' \<leftarrow> derive_cap croot_slot $
+                   (if croot_data = 0 then id else update_cap_data False croot_data)
                    croot_cap;
    unlessE (is_cnode_cap croot_cap') $ throwError IllegalOperation;
    croot \<leftarrow> returnOk (croot_cap', croot_slot);
 
    vroot_cap  \<leftarrow> returnOk $ fst vroot_arg;
    vroot_slot \<leftarrow> returnOk $ snd vroot_arg;
-   vroot_cap' \<leftarrow> derive_cap vroot_slot $ 
-                   (if vroot_data = 0 then id else update_cap_data False vroot_data) 
+   vroot_cap' \<leftarrow> derive_cap vroot_slot $
+                   (if vroot_data = 0 then id else update_cap_data False vroot_data)
                    vroot_cap;
    unlessE (is_valid_vtable_root vroot_cap') $ throwError IllegalOperation;
-   vroot \<leftarrow> returnOk (vroot_cap', vroot_slot);       
-   
+   vroot \<leftarrow> returnOk (vroot_cap', vroot_slot);
+
    returnOk $ ThreadControl (obj_ref_of cap) slot (Some (to_bl fault_ep)) None None
                             (Some croot) (Some vroot) None
  odE"
@@ -308,7 +308,7 @@ where
 
 
 definition
-  decode_tcb_configure :: 
+  decode_tcb_configure ::
   "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
   "decode_tcb_configure args cap slot extra_caps \<equiv> doE
@@ -327,9 +327,9 @@ where
      set_space \<leftarrow> decode_set_space [fault_ep, croot_data, vroot_data] cap slot crootvroot;
      returnOk $ ThreadControl (obj_ref_of cap) slot (tc_new_fault_ep set_space)
                               (tc_new_mcpriority set_mcp) (tc_new_priority set_prio)
-                              (tc_new_croot set_space) (tc_new_vroot set_space) 
+                              (tc_new_croot set_space) (tc_new_vroot set_space)
                               (tc_new_buffer set_params)
-   odE" 
+   odE"
 
 definition
   decode_bind_notification ::
@@ -354,9 +354,9 @@ where
       returnOk $ NotificationControl tcb (Some ntfnptr)
    odE
  | _ \<Rightarrow> throwError IllegalOperation"
-     
-     
-definition 
+
+
+definition
   decode_unbind_notification :: "cap \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
   "decode_unbind_notification cap \<equiv> case cap of
@@ -370,8 +370,8 @@ where
  | _ \<Rightarrow> throwError IllegalOperation"
 
 definition
-  decode_tcb_invocation :: 
-  "data \<Rightarrow> data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> 
+  decode_tcb_invocation ::
+  "data \<Rightarrow> data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
   (tcb_invocation,'z::state_ext) se_monad"
 where
  "decode_tcb_invocation label args cap slot excs \<equiv>
@@ -382,7 +382,7 @@ where
     | TCBSuspend \<Rightarrow> returnOk $ Suspend $ obj_ref_of cap
     | TCBResume \<Rightarrow> returnOk $ Resume $ obj_ref_of cap
     | TCBConfigure \<Rightarrow> decode_tcb_configure args cap slot excs
-    | TCBSetPriority \<Rightarrow> decode_set_priority args cap slot 
+    | TCBSetPriority \<Rightarrow> decode_set_priority args cap slot
     | TCBSetMCPriority \<Rightarrow> decode_set_mcpriority args cap slot
     | TCBSetIPCBuffer \<Rightarrow> decode_set_ipc_buffer args cap slot excs
     | TCBSetSpace \<Rightarrow> decode_set_space args cap slot excs
@@ -443,7 +443,7 @@ definition
 definition
   data_to_bool :: "data \<Rightarrow> bool"
 where
-  "data_to_bool d \<equiv> d \<noteq> 0" 
+  "data_to_bool d \<equiv> d \<noteq> 0"
 
 definition
   decode_irq_handler_invocation :: "data \<Rightarrow> irq \<Rightarrow> (cap \<times> cslot_ptr) list
@@ -464,8 +464,8 @@ definition
 
 section "Untyped"
 
-text {* The definitions in this section deal with decoding invocations 
-of untyped memory capabilities. 
+text {* The definitions in this section deal with decoding invocations
+of untyped memory capabilities.
 *}
 
 definition
@@ -488,7 +488,7 @@ definition
   odE"
 
 definition
-  decode_untyped_invocation :: 
+  decode_untyped_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap list \<Rightarrow> (untyped_invocation,'z::state_ext) se_monad"
 where
 "decode_untyped_invocation label args slot cap excaps \<equiv> doE
@@ -501,9 +501,9 @@ where
   user_obj_size \<leftarrow> returnOk $ data_to_nat (args!1);
   unlessE (user_obj_size < word_bits - 2)
     $ throwError (RangeError 0 (of_nat word_bits - 3)); (* max size of untyped = 2^30 *)
-  whenE (new_type = CapTableObject \<and> user_obj_size = 0) 
+  whenE (new_type = CapTableObject \<and> user_obj_size = 0)
     $ throwError (InvalidArgument 1);
-  whenE (new_type = Untyped \<and> user_obj_size < 4) 
+  whenE (new_type = Untyped \<and> user_obj_size < 4)
     $ throwError (InvalidArgument 1);
   node_index \<leftarrow> returnOk $ data_to_cptr (args!2);
   node_depth \<leftarrow> returnOk $ data_to_nat (args!3);
@@ -516,7 +516,7 @@ where
             liftE $ get_cap node_slot
         odE;
 
-  if is_cnode_cap node_cap 
+  if is_cnode_cap node_cap
         then  returnOk ()
         else  throwError $ FailedLookup False $ MissingCapability node_depth;
 
@@ -534,7 +534,7 @@ where
     throwError $ RangeError 1 (of_nat (node_size - node_offset));
 
   oref \<leftarrow> returnOk $ obj_ref_of node_cap;
-  offsets \<leftarrow> returnOk $ map (nat_to_cref radix_bits) 
+  offsets \<leftarrow> returnOk $ map (nat_to_cref radix_bits)
                            [node_offset ..< node_offset + node_window];
   slots \<leftarrow> returnOk $ map (\<lambda>cref. (oref, cref)) offsets;
 
@@ -567,15 +567,15 @@ odE"
 section "Toplevel invocation decode."
 
 text {* This definition is the toplevel decoding definition; it dispatches
-to the above definitions, after checking, in some cases, whether the 
+to the above definitions, after checking, in some cases, whether the
 invocation is allowed.
 *}
 
 definition
-  decode_invocation :: 
+  decode_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (invocation,'z::state_ext) se_monad"
 where
-  "decode_invocation label args cap_index slot cap excaps \<equiv> 
+  "decode_invocation label args cap_index slot cap excaps \<equiv>
   case cap of
     EndpointCap ptr badge rights \<Rightarrow>
       if AllowSend \<in> rights then
@@ -602,9 +602,9 @@ where
   | UntypedCap dev ptr sz fi \<Rightarrow>
       liftME InvokeUntyped $ decode_untyped_invocation label args slot cap (map fst excaps)
   | ArchObjectCap arch_cap \<Rightarrow>
-      liftME InvokeArchObject $ 
+      liftME InvokeArchObject $
         arch_decode_invocation label args cap_index slot arch_cap excaps
-  | _ \<Rightarrow> 
+  | _ \<Rightarrow>
       throwError $ InvalidCapability 0"
 
 end

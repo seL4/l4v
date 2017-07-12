@@ -71,12 +71,12 @@ lemmas unify_failure_wp[wp] = injection_wp [OF unify_failure_injection]
 lemmas unify_failure_wp_E[wp] = injection_wp_E [OF unify_failure_injection]
 
 lemma ep_cases_weak_wp:
-  assumes "\<lbrace>P_A\<rbrace> a \<lbrace>Q\<rbrace>" 
+  assumes "\<lbrace>P_A\<rbrace> a \<lbrace>Q\<rbrace>"
   assumes "\<And>q. \<lbrace>P_B\<rbrace> b q \<lbrace>Q\<rbrace>"
   assumes "\<And>q. \<lbrace>P_C\<rbrace> c q \<lbrace>Q\<rbrace>"
-  shows 
-  "\<lbrace>P_A and P_B and P_C\<rbrace> 
-    case ts of 
+  shows
+  "\<lbrace>P_A and P_B and P_C\<rbrace>
+    case ts of
       Structures_A.IdleEP \<Rightarrow> a
     | Structures_A.SendEP q \<Rightarrow> b q
     | Structures_A.RecvEP q \<Rightarrow> c q \<lbrace>Q\<rbrace>"
@@ -85,12 +85,12 @@ lemma ep_cases_weak_wp:
   done
 
 lemma ntfn_cases_weak_wp:
-  assumes "\<lbrace>P_A\<rbrace> a \<lbrace>Q\<rbrace>" 
+  assumes "\<lbrace>P_A\<rbrace> a \<lbrace>Q\<rbrace>"
   assumes "\<And>q. \<lbrace>P_B\<rbrace> b q \<lbrace>Q\<rbrace>"
   assumes "\<And>bdg msg. \<lbrace>P_C\<rbrace> c bdg msg \<lbrace>Q\<rbrace>"
-  shows 
-  "\<lbrace>P_A and P_B and P_C\<rbrace> 
-    case ts of 
+  shows
+  "\<lbrace>P_A and P_B and P_C\<rbrace>
+    case ts of
       Structures_A.IdleNtfn \<Rightarrow> a
     | Structures_A.WaitingNtfn q \<Rightarrow> b q
     | Structures_A.ActiveNtfn bdg \<Rightarrow> c bdg msg \<lbrace>Q\<rbrace>"

@@ -70,7 +70,7 @@ lemma typ_dt_pair_induct:
    by (rule compat_typ_desc_char_list_dt_pair.induct)
 
 -- "Declare as default induct rule with old case names"
-lemmas typ_desc_typ_struct_inducts [case_names 
+lemmas typ_desc_typ_struct_inducts [case_names
   TypDesc TypScalar TypAggregate Nil_typ_desc Cons_typ_desc DTPair_typ_desc, induct type] =
   typ_desc_induct typ_struct_induct typ_list_induct typ_dt_pair_induct
 

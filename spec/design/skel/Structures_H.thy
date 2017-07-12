@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
    datatypes/records for the various kernel data structures.
 *)
 

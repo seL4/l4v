@@ -55,10 +55,10 @@ let
   in Thm.bicompose (SOME ctxt) {flatten = false, match = false, incremented = false}
               (false, rl', 1) 1 st end;
 
-val drop_trivial_imp = 
+val drop_trivial_imp =
 let
-  val asm = 
-    Thm.assume (Drule.protect @{cprop "(PROP A \<Longrightarrow> PROP A) \<Longrightarrow> PROP A"}) 
+  val asm =
+    Thm.assume (Drule.protect @{cprop "(PROP A \<Longrightarrow> PROP A) \<Longrightarrow> PROP A"})
     |> Goal.conclude;
 
 in
@@ -68,10 +68,10 @@ in
   |> Drule.zero_var_indexes
  end
 
-val drop_trivial_imp' = 
+val drop_trivial_imp' =
 let
-  val asm = 
-    Thm.assume (Drule.protect @{cprop "(PROP P \<Longrightarrow> A) \<Longrightarrow> A"}) 
+  val asm =
+    Thm.assume (Drule.protect @{cprop "(PROP P \<Longrightarrow> A) \<Longrightarrow> A"})
     |> Goal.conclude;
 
   val asm' = Thm.assume @{cprop "PROP P == Trueprop A"}
@@ -84,10 +84,10 @@ in
   |> Thm.generalize ([],["A","P"]) 1
   |> Drule.zero_var_indexes
  end
- 
-fun atomize_equiv_tac ctxt i = 
+
+fun atomize_equiv_tac ctxt i =
   Object_Logic.full_atomize_tac ctxt i
-  THEN PRIMITIVE (fn st'  => 
+  THEN PRIMITIVE (fn st'  =>
   let val (_,[A,_]) = Drule.strip_comb (Thm.cprem_of st' i) in
   if Object_Logic.is_judgment ctxt (Thm.term_of A) then st'
   else error ("Failed to fully atomize result:\n" ^ (Syntax.string_of_term ctxt (Thm.term_of A))) end)
@@ -111,7 +111,7 @@ fun with_rule_prems enabled parse =
   in Scan.lift (Scan.pass context' parse) end)
 
 
-fun get_rule_prems ctxt = 
+fun get_rule_prems ctxt =
   let
     val (thms,b) = Data.get ctxt
   in if (not b) then [] else thms end
@@ -132,9 +132,9 @@ let
     val nprems = Thm.nprems_of st';
     val st'' = Thm.permute_prems 0 nprems (Goal.conclude st');
   in (ctxt,st'') end;
-    
 
-in 
+
+in
   tac ctxt (Goal.protect 1 st)
   |> Seq.map (if assume then bind_prems else defer_prems)  end
 
@@ -172,8 +172,8 @@ fun rule_by_tac' ctxt {vars,prop} tac asm_tacs pos raw_st =
         | [x] => x
         | _ => err st "More than one result obtained");
      in st |> Thm.permute_prems 0 i  end
-        
-    val asm_st = 
+
+    val asm_st =
     (revcut_rl' OF [st])
     |> (fn st => Goal.protect (Thm.nprems_of st - 1) st)
 
@@ -199,7 +199,7 @@ fun rule_by_tac' ctxt {vars,prop} tac asm_tacs pos raw_st =
 
     val drop_rule = if prop then drop_trivial_imp else drop_trivial_imp'
 
-    val result' = ((Goal.protect (Thm.nprems_of result -1) result) RS drop_rule)    
+    val result' = ((Goal.protect (Thm.nprems_of result -1) result) RS drop_rule)
     |> (if prop then all_tac else
        (atomize_equiv_tac ctxt (Thm.nprems_of result)
        THEN resolve_tac ctxt @{thms Pure.reflexive} (Thm.nprems_of result)))

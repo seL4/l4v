@@ -34,7 +34,7 @@ lemma same_caps_more_simps[simp]:
 
 lemma dmo_return [simp]:
   "do_machine_op (return x) = return x"
-  by (simp add: do_machine_op_def select_f_def return_def gets_def get_def 
+  by (simp add: do_machine_op_def select_f_def return_def gets_def get_def
                 bind_def modify_def put_def)
 
 lemma get_object_sp:
@@ -56,7 +56,7 @@ lemma non_arch_objs[intro]:
 
 definition arch_obj_pred :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool" where
   "arch_obj_pred P \<equiv>
-    \<forall>ko ko'. non_arch_obj ko \<longrightarrow> non_arch_obj ko' \<longrightarrow> 
+    \<forall>ko ko'. non_arch_obj ko \<longrightarrow> non_arch_obj ko' \<longrightarrow>
       P ko = P ko'"
 
 lemma arch_obj_predE:
@@ -127,8 +127,8 @@ lemma set_object_typ_at:
   done
 
 lemma set_object_neg_ko:
-  "\<lbrace>not ko_at ko' p' and K (p = p' \<longrightarrow> ko \<noteq> ko')\<rbrace> 
-  set_object p ko 
+  "\<lbrace>not ko_at ko' p' and K (p = p' \<longrightarrow> ko \<noteq> ko')\<rbrace>
+  set_object p ko
   \<lbrace>\<lambda>_ s. \<not> ko_at ko' p' s\<rbrace>"
   apply (simp add: set_object_def)
   apply wp

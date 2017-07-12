@@ -198,7 +198,7 @@ lemma monadic_rewrite_symb_exec_r:
 
 lemma monadic_rewrite_symb_exec_l'':
   "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>; empty_fail m;
-     \<not> F \<longrightarrow> no_fail P' m; 
+     \<not> F \<longrightarrow> no_fail P' m;
      \<And>rv. monadic_rewrite F False (Q rv) (x rv) y;
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
       \<Longrightarrow> monadic_rewrite F False (P and P') (m >>= x) y"
@@ -217,7 +217,7 @@ lemma monadic_rewrite_symb_exec_l'':
 
 lemma monadic_rewrite_symb_exec_l':
   "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> m \<lbrace>\<lambda>r. P\<rbrace>; empty_fail m;
-     \<not> F \<longrightarrow> no_fail P' m; 
+     \<not> F \<longrightarrow> no_fail P' m;
      \<And>rv. monadic_rewrite F E (Q rv) (x rv) y;
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
       \<Longrightarrow> monadic_rewrite F E (P and P') (m >>= x) y"
@@ -467,21 +467,21 @@ lemma monadic_rewrite_corres:
   and     me: "monadic_rewrite False True Q a a'"
   shows   "corres_underlying R False nf' r (P and Q) P' a c"
 proof (rule corres_underlyingI)
-  fix s t rv' t' 
+  fix s t rv' t'
   assume st: "(s, t) \<in> R" and pq: "(P and Q) s" and pt: "P' t" and ct: "(rv', t') \<in> fst (c t)"
   from pq have Ps: "P s" and Qs: "Q s" by simp_all
 
-  from cu st Ps pt ct obtain s' rv where 
+  from cu st Ps pt ct obtain s' rv where
      as': "(rv, s') \<in> fst (a' s)" and rest: "nf' \<longrightarrow> \<not> snd (c t)" "(s', t') \<in> R" "r rv rv'"
     by (fastforce elim: corres_underlyingE)
-  
+
   from me st Qs as' have as: "(rv, s') \<in> fst (a s)"
     by (clarsimp simp: monadic_rewrite_def)
 
   with rest show "\<exists>(rv, s')\<in>fst (a s). (s', t') \<in> R \<and> r rv rv'" by auto
 next
   fix s t
-  assume "(s, t) \<in> R" "(P and Q) s" "P' t" "nf'" 
+  assume "(s, t) \<in> R" "(P and Q) s" "P' t" "nf'"
   thus "\<not> snd (c t)" using cu
     by (fastforce simp: corres_underlying_def split_def)
 qed

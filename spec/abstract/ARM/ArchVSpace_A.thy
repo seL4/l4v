@@ -303,7 +303,7 @@ abbreviation
   "arm_context_switch_hwasid pd hwasid \<equiv> do
               setCurrentPD $ addrFromPPtr pd;
               setHardwareASID hwasid
-          od" 
+          od"
 
 definition
   arm_context_switch :: "word32 \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -683,7 +683,7 @@ where
   "resolve_vaddr pd vaddr \<equiv> do
      pd_slot \<leftarrow> return $ lookup_pd_slot pd vaddr;
      pde \<leftarrow> get_master_pde pd_slot;
-     case pde of 
+     case pde of
          SectionPDE f _ _ _ \<Rightarrow> return $ Some (ARMSection, f)
        | SuperSectionPDE f _ _ \<Rightarrow> return $ Some (ARMSuperSection, f)
        | PageTablePDE t _ _ \<Rightarrow> (do
@@ -705,7 +705,7 @@ definition
   in_user_frame :: "word32 \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "in_user_frame p s \<equiv>
    \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) =
-        Some (ArchObj (DataPage False sz))"           
+        Some (ArchObj (DataPage False sz))"
 
 end
 end

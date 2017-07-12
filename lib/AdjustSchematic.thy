@@ -34,7 +34,7 @@ fun mk_inst (nm, t) = let
     val xTs = xs ~~ take (length xs) Ts
     val ranT = drop (length xs) Ts ---> T
     val bs = map Bound (rev (0 upto (length xs - 1)))
-    
+
     fun mk_var s T (Bound n) = Var ((s, n), T)
       | mk_var _ _ t = raise TERM ("mk_inst: mk_var:", [t])
 

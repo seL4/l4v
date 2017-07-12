@@ -94,7 +94,7 @@ These methods are generally not useful when invoked on the current thread. For r
 
 Note that the registers copied by "Arch.performTransfer", such as the floating point registers, are always preserved by system calls. Therefore, all three operations can safely read or write those registers when the current thread is the source or destination. It will often be possible to perform such transfers without copying data, because those parts of the context are switched lazily.
 
-The "CopyRegisters" call transfers parts of the user-level context between two different threads, and suspends or resumes each thread. The context is divided into two or more parts, depending on the architecture. The caller is able to select which parts are copied. 
+The "CopyRegisters" call transfers parts of the user-level context between two different threads, and suspends or resumes each thread. The context is divided into two or more parts, depending on the architecture. The caller is able to select which parts are copied.
 
 > decodeCopyRegisters :: [Word] -> Capability -> [Capability] ->
 >         KernelF SyscallError TCBInvocation
@@ -167,7 +167,7 @@ For both of these operations, the first argument is a flags field. The lowest bi
 
 \subsubsection{The Configure Call}
 
-The "Configure" call is a batched call to "SetPriority", "SetIPCParams" and "SetSpace". 
+The "Configure" call is a batched call to "SetPriority", "SetIPCParams" and "SetSpace".
 
 > decodeTCBConfigure :: [Word] -> Capability -> PPtr CTE ->
 >         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
@@ -321,7 +321,7 @@ This is to ensure that the source capability is not made invalid by the deletion
 >     -- get ptr to notification
 >     (ntfnPtr, rights) <- case fst (head extraCaps) of
 >         NotificationCap ptr _ _ recv  -> return (ptr, recv)
->         _ -> throw IllegalOperation 
+>         _ -> throw IllegalOperation
 >     when (not rights) $ throw IllegalOperation
 >     -- check if notification is bound
 >     -- check if anything is waiting on the notification
@@ -368,7 +368,7 @@ The "Suspend" and "Resume" calls are simple scheduler operations.
 
 The "ThreadControl" operation is used to implement the "SetSpace", "SetPriority", "SetIPCParams" and "Configure" methods.
 
-The use of "checkCapAt" addresses a corner case in which the only capability to a certain thread is in its own CSpace, which is otherwise unreachable. Replacement of the CSpace root results in "cteDelete" cleaning up both CSpace and thread, after which "cteInsert" should not be called. Error reporting in this case is unimportant, as the requesting thread cannot continue to execute. 
+The use of "checkCapAt" addresses a corner case in which the only capability to a certain thread is in its own CSpace, which is otherwise unreachable. Replacement of the CSpace root results in "cteDelete" cleaning up both CSpace and thread, after which "cteInsert" should not be called. Error reporting in this case is unimportant, as the requesting thread cannot continue to execute.
 
 > invokeTCB (ThreadControl target slot faultep mcp priority cRoot vRoot buffer)
 >   = do
@@ -498,7 +498,7 @@ Modifying the current thread may require rescheduling because modified registers
 
 > -- UNBIND
 > invokeTCB (NotificationControl tcb Nothing) =
->   withoutPreemption $ do 
+>   withoutPreemption $ do
 >     unbindNotification tcb
 >     return []
 
@@ -639,14 +639,14 @@ The following functions read and set the extra capability fields of the IPC buff
 >           capFaultOnFailure cptr False $ lookupCapAndSlot thread cptr) cptrs
 
 The next function is for convenience in transferCapsLoop. It is equivalent in
-the sense that 
-getExtraCPtrs (Some buffer) (MI { msgExtraCaps = count }) = 
-mapM (getExtraCPtr buffer) [0..count-1] 
+the sense that
+getExtraCPtrs (Some buffer) (MI { msgExtraCaps = count }) =
+mapM (getExtraCPtr buffer) [0..count-1]
 
 > getExtraCPtr :: PPtr Word -> Int -> Kernel CPtr
 > getExtraCPtr buffer n = do
 >         let intSize = fromIntegral wordSize
->         let ptr = buffer + bufferCPtrOffset + 
+>         let ptr = buffer + bufferCPtrOffset +
 >                   PPtr ((fromIntegral n) * intSize)
 >         cptr <- loadWordUser ptr
 >         return $ CPtr cptr
@@ -656,12 +656,12 @@ Write the unwrapped badge into the IPC buffer for cap n.
 > setExtraBadge :: PPtr Word -> Word -> Int -> Kernel ()
 > setExtraBadge buffer badge n = do
 >         let intSize = fromIntegral wordSize
->         let badgePtr = buffer + bufferCPtrOffset + 
+>         let badgePtr = buffer + bufferCPtrOffset +
 >                        PPtr ((fromIntegral n) * intSize)
 >         storeWordUser badgePtr badge
 
 > bufferCPtrOffset :: PPtr Word
-> bufferCPtrOffset = 
+> bufferCPtrOffset =
 >         let intSize = fromIntegral wordSize
 >         in PPtr ((msgMaxLength+2)*intSize)
 

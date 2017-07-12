@@ -23,15 +23,15 @@ context noninterference_system begin
 
 (* the following definition turns out to yield an information flow property equivalent
    to the above one -- see below *)
-primrec  
+primrec
  xources :: "'e list \<Rightarrow> 's \<Rightarrow> 'd \<Rightarrow> 'd set" where
  xources_Nil: "xources [] s u = {u}"|
- xources_Cons: "xources (a#as) s u = (\<Inter>{xources as s' u| s'. (s,s') \<in> Step a}) \<union> 
+ xources_Cons: "xources (a#as) s u = (\<Inter>{xources as s' u| s'. (s,s') \<in> Step a}) \<union>
       {w. w = dom a s \<and> (\<forall> s'. (s,s') \<in> Step a \<longrightarrow> (\<exists> v. dom a s \<leadsto> v \<and> v \<in> xources as s' u))}"
 
 lemma in_xources_ConsD:
   "x \<in> (xources (a # as) s u) \<Longrightarrow>
-   (\<forall> s'. (s,s') \<in> Step a \<longrightarrow> x \<in> xources as s' u) \<or> 
+   (\<forall> s'. (s,s') \<in> Step a \<longrightarrow> x \<in> xources as s' u) \<or>
    (x = dom a s \<and> (\<forall> s'. (s,s') \<in> Step a \<longrightarrow> (\<exists> v. dom a s \<leadsto> v \<and> v \<in> xources as s' u)))"
   by auto
 
@@ -40,13 +40,13 @@ lemma in_xources_ConsI1:
   by auto
 
 lemma in_xources_ConsI2:
-  "\<lbrakk>x = dom a s; \<forall> s'. (s,s') \<in> Step a \<longrightarrow> (\<exists> v. dom a s \<leadsto> v \<and> v \<in> xources as s' u)\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>x = dom a s; \<forall> s'. (s,s') \<in> Step a \<longrightarrow> (\<exists> v. dom a s \<leadsto> v \<and> v \<in> xources as s' u)\<rbrakk> \<Longrightarrow>
   x \<in> xources (a#as) s u"
   by auto
 
 
-declare xources_Nil [simp del]     
-declare xources_Cons [simp del]     
+declare xources_Nil [simp del]
+declare xources_Cons [simp del]
 
 
 lemma xources_subset_xources_Cons:
@@ -54,30 +54,30 @@ lemma xources_subset_xources_Cons:
   by(fastforce simp: xources_Cons)
 
 
-primrec gen_purgx :: "('e list \<Rightarrow> 's \<Rightarrow> 'd \<Rightarrow> 'd set) \<Rightarrow> 'd \<Rightarrow> 'e list \<Rightarrow> 's set \<Rightarrow> 'e list" 
+primrec gen_purgx :: "('e list \<Rightarrow> 's \<Rightarrow> 'd \<Rightarrow> 'd set) \<Rightarrow> 'd \<Rightarrow> 'e list \<Rightarrow> 's set \<Rightarrow> 'e list"
 where
   Nil : "gen_purgx sf u []     ss = []" |
-  Cons: "gen_purgx sf u (a#as) ss = 
-            (if (\<forall>s\<in>ss. dom a s \<in> sf (a#as) s u) then 
+  Cons: "gen_purgx sf u (a#as) ss =
+            (if (\<forall>s\<in>ss. dom a s \<in> sf (a#as) s u) then
                a#gen_purgx sf u as (\<Union>s\<in>ss. {s'. (s,s') \<in> Step a})
-             else 
+             else
                gen_purgx sf u as ss)"
 
 
 
-definition 
+definition
   xpurge :: "'d \<Rightarrow> 'e list \<Rightarrow> 's set \<Rightarrow> 'e list" where
  "xpurge \<equiv> gen_purge xources"
 
-definition 
+definition
   ipurgx :: "'d \<Rightarrow> 'e list \<Rightarrow> 's set \<Rightarrow> 'e list" where
  "ipurgx \<equiv> gen_purgx sources"
 
-definition 
+definition
   xpurgx :: "'d \<Rightarrow> 'e list \<Rightarrow> 's set \<Rightarrow> 'e list" where
  "xpurgx \<equiv> gen_purgx xources"
 
-  
+
 lemma xpurge_Nil:
   "xpurge u [] ss = []"
   by(auto simp: xpurge_def)
@@ -90,27 +90,27 @@ lemma xpurgx_Nil:
   "xpurgx u [] ss = []"
   by(auto simp: xpurgx_def)
 
-lemma xpurge_Cons: 
-  "xpurge u (a#as) ss = 
-     (if (\<exists>s\<in>ss. dom a s \<in> xources (a#as) s u) then 
+lemma xpurge_Cons:
+  "xpurge u (a#as) ss =
+     (if (\<exists>s\<in>ss. dom a s \<in> xources (a#as) s u) then
          a#xpurge u as (\<Union>s\<in>ss. {s'. (s,s') \<in> Step a})
-      else 
+      else
          xpurge u as ss)"
   by (auto simp: xpurge_def)
 
-lemma ipurgx_Cons: 
-  "ipurgx u (a#as) ss = 
-     (if (\<forall>s\<in>ss. dom a s \<in> sources (a#as) s u) then 
+lemma ipurgx_Cons:
+  "ipurgx u (a#as) ss =
+     (if (\<forall>s\<in>ss. dom a s \<in> sources (a#as) s u) then
          a#ipurgx u as (\<Union>s\<in>ss. {s'. (s,s') \<in> Step a})
-      else 
+      else
          ipurgx u as ss)"
   by (auto simp: ipurgx_def)
 
-lemma xpurgx_Cons: 
-  "xpurgx u (a#as) ss = 
-     (if (\<forall>s\<in>ss. dom a s \<in> xources (a#as) s u) then 
+lemma xpurgx_Cons:
+  "xpurgx u (a#as) ss =
+     (if (\<forall>s\<in>ss. dom a s \<in> xources (a#as) s u) then
          a#xpurgx u as (\<Union>s\<in>ss. {s'. (s,s') \<in> Step a})
-      else 
+      else
          xpurgx u as ss)"
   by (auto simp: xpurgx_def)
 
@@ -139,7 +139,7 @@ lemma xources_sources:
     apply (clarsimp simp: Step_def)
     apply(erule reachable_enabled)
    apply clarsimp
-   apply(drule_tac x=s'a in meta_spec, clarsimp simp: reachable_Step) 
+   apply(drule_tac x=s'a in meta_spec, clarsimp simp: reachable_Step)
    apply(rule sources_eq)
       apply assumption
      apply(fastforce intro: sched_equiv_preserved uwr_refl)
@@ -331,7 +331,7 @@ lemma xNoninfluence_strong_uwr_xources_xpurge_Noninfluence_strong_uwr:
   apply(clarsimp simp: xNoninfluence_strong_uwr_xources_xpurge_def Noninfluence_strong_uwr_def)
   apply(frule (1) confidentiality_u_weak)
   apply(simp add: xources_sources xpurge_ipurge)
-  done  
+  done
 
 lemma xNoninfluence_strong_uwr_sources_ipurgx_Noninfluence_strong_uwr:
   "\<lbrakk>confidentiality_u_weak; integrity_u\<rbrakk> \<Longrightarrow>
@@ -384,7 +384,7 @@ lemma xources_Step_2:
   xources [a] s u = {dom a s,u}"
   apply(auto simp: xources_Cons xources_Nil enabled_Step dest: enabled_Step)
   done
-  
+
 lemma xNoninfluence_strong_uwr_xources_ipurge_confidentiality_u_weak:
   "xNoninfluence_strong_uwr_xources_ipurge \<Longrightarrow> confidentiality_u_weak"
   apply(clarsimp simp: xNoninfluence_strong_uwr_xources_ipurge_def confidentiality_u_weak_def)

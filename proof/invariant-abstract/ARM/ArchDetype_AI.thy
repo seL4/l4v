@@ -29,7 +29,7 @@ lemma caps_of_state_ko[Detype_AI_asms]:
        cap_range cap = {} \<or>
        (\<forall>ptr \<in> cap_range cap. \<exists>ko. kheap s ptr = Some ko)"
   apply (case_tac cap)
-    apply (clarsimp simp: cap_range_def valid_cap_def obj_at_def is_cap_simps 
+    apply (clarsimp simp: cap_range_def valid_cap_def obj_at_def is_cap_simps
                    split: option.splits)+
   apply (rename_tac arch_cap ptr)
   apply (case_tac arch_cap)
@@ -535,7 +535,7 @@ lemma in_user_frame_eq:
       done
     done
 
-lemma in_device_frame_eq: 
+lemma in_device_frame_eq:
   notes blah[simp del] =  atLeastAtMost_iff
           atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex

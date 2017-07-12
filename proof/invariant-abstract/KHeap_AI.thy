@@ -102,7 +102,7 @@ lemma a_type_TCB[simp]:
   by (simp add: a_type_def)
 
 
-lemma pspace_aligned_obj_update:  
+lemma pspace_aligned_obj_update:
   assumes obj: "obj_at P t s"
   assumes pa: "pspace_aligned s"
   assumes R: "\<And>k. P k \<Longrightarrow> a_type k = a_type k'"
@@ -135,7 +135,7 @@ lemma untyped_same_type:
   by (clarsimp simp: obj_range_def obj_bits_T)
 
 lemma valid_cap_same_type:
-  "\<lbrakk> s \<turnstile> cap; a_type k = a_type ko; kheap s p = Some ko \<rbrakk> 
+  "\<lbrakk> s \<turnstile> cap; a_type k = a_type ko; kheap s p = Some ko \<rbrakk>
   \<Longrightarrow> s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr> \<turnstile> cap"
   apply (simp add: valid_cap_def split: cap.split)
   apply (auto elim!: typ_at_same_type untyped_same_type
@@ -176,8 +176,8 @@ lemma valid_vspace_obj_same_type:
     by (auto simp: obj_at_def)
 
 lemma set_object_valid_objs:
-  "\<lbrace>valid_objs and valid_obj p k and obj_at (\<lambda>ko. a_type k = a_type ko) p\<rbrace> 
-  set_object p k 
+  "\<lbrace>valid_objs and valid_obj p k and obj_at (\<lambda>ko. a_type k = a_type ko) p\<rbrace>
+  set_object p k
   \<lbrace>\<lambda>r. valid_objs\<rbrace>"
   apply (clarsimp simp: valid_def set_object_def in_monad obj_at_def)
   apply (clarsimp simp: valid_objs_def dom_def)
@@ -190,10 +190,10 @@ lemma set_object_valid_objs:
    apply fastforce
   apply (erule(3) valid_obj_same_type)
   done
-   
+
 
 lemma set_object_aligned:
-  "\<lbrace>pspace_aligned and obj_at (\<lambda>ko. a_type k = a_type ko) p\<rbrace> 
+  "\<lbrace>pspace_aligned and obj_at (\<lambda>ko. a_type k = a_type ko) p\<rbrace>
   set_object p k
   \<lbrace>\<lambda>r. pspace_aligned\<rbrace>"
   apply (clarsimp simp: valid_def in_monad set_object_def)
@@ -274,7 +274,7 @@ lemmas obj_at_cdt = cdt_update.obj_at_update
 lemmas valid_cap_cdt = cdt_update.valid_cap_update
 
 
-lemma set_object_at_obj3: 
+lemma set_object_at_obj3:
   "\<lbrace>K (P obj)\<rbrace> set_object p obj \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
   by (clarsimp simp: set_object_def obj_at_def valid_def in_monad)
 
@@ -337,11 +337,11 @@ lemma get_ntfn_inv[wp]: "\<lbrace>P\<rbrace> get_notification ep \<lbrace>\<lamb
   by (wp|wpc)+ clarsimp
 
 lemma get_ep_actual_ep[wp]:
-  "\<lbrace> invs and ep_at ep \<rbrace> 
-   get_endpoint ep 
+  "\<lbrace> invs and ep_at ep \<rbrace>
+   get_endpoint ep
    \<lbrace> \<lambda>rv. obj_at (\<lambda>k. k = Endpoint rv) ep \<rbrace>"
-   apply (clarsimp simp add: get_endpoint_def get_object_def bind_def 
-                             valid_def gets_def get_def return_def fail_def 
+   apply (clarsimp simp add: get_endpoint_def get_object_def bind_def
+                             valid_def gets_def get_def return_def fail_def
                              assert_def obj_at_def is_ep_def)
    apply (case_tac y, simp_all add: return_def)
    done
@@ -352,11 +352,11 @@ lemma get_object_valid [wp]:
   apply wp
   apply (clarsimp simp add: valid_pspace_def valid_objs_def dom_def)
   apply fastforce
-  done  
+  done
 
 lemma get_ep_valid_ep[wp]:
-  "\<lbrace> invs and ep_at ep \<rbrace> 
-   get_endpoint ep 
+  "\<lbrace> invs and ep_at ep \<rbrace>
+   get_endpoint ep
    \<lbrace> valid_ep \<rbrace>"
   apply (simp add: get_endpoint_def)
   apply (rule hoare_seq_ext)
@@ -368,18 +368,18 @@ lemma get_ep_valid_ep[wp]:
 done
 
 lemma get_ntfn_actual_ntfn[wp]:
-  "\<lbrace> ntfn_at ntfn \<rbrace> 
-   get_notification ntfn 
+  "\<lbrace> ntfn_at ntfn \<rbrace>
+   get_notification ntfn
    \<lbrace> \<lambda>rv. obj_at (\<lambda>k. k = Notification rv) ntfn \<rbrace>"
-   apply (clarsimp simp add: get_notification_def get_object_def bind_def 
-                             valid_def gets_def get_def return_def fail_def 
+   apply (clarsimp simp add: get_notification_def get_object_def bind_def
+                             valid_def gets_def get_def return_def fail_def
                              assert_def obj_at_def is_ntfn_def)
    apply (case_tac y, simp_all add: return_def)
 done
 
 lemma get_ntfn_valid_ntfn[wp]:
-  "\<lbrace> valid_objs and ntfn_at ntfn \<rbrace> 
-   get_notification ntfn 
+  "\<lbrace> valid_objs and ntfn_at ntfn \<rbrace>
+   get_notification ntfn
    \<lbrace> valid_ntfn \<rbrace>"
   apply (simp add: get_notification_def)
   apply (rule hoare_seq_ext)
@@ -475,7 +475,7 @@ lemma obj_set_prop_at:
   done
 
 
-lemma get_ntfn_sp: 
+lemma get_ntfn_sp:
   "\<lbrace>P\<rbrace> get_notification p \<lbrace>\<lambda>ntfn. ko_at (Notification ntfn) p and P\<rbrace>"
   apply wp
    apply (rule hoare_vcg_conj_lift)
@@ -561,13 +561,13 @@ lemma set_object_pspace_in_kernel_window:
 
 
 lemma set_object_pspace_respect_device_region:
-  "\<lbrace>pspace_respects_device_region and obj_at (\<lambda>ko. a_type k = a_type ko) p\<rbrace> 
+  "\<lbrace>pspace_respects_device_region and obj_at (\<lambda>ko. a_type k = a_type ko) p\<rbrace>
   set_object p k
   \<lbrace>\<lambda>r. pspace_respects_device_region\<rbrace>"
   apply (simp add: set_object_def, wp)
-  apply (clarsimp simp: pspace_respects_device_region_def 
+  apply (clarsimp simp: pspace_respects_device_region_def
                         device_mem_obj_upd_dom user_mem_obj_upd_dom
-                        obj_at_def in_user_frame_obj_upd in_device_frame_obj_upd 
+                        obj_at_def in_user_frame_obj_upd in_device_frame_obj_upd
                  split: if_split_asm)
   done
 
@@ -625,7 +625,7 @@ lemma valid_mdb_lift:
    apply (erule allE)+
    apply (erule (1) impE)
    apply clarsimp
-   apply (rule conjI) 
+   apply (rule conjI)
     apply (erule use_valid [OF _ c [THEN hoare_cte_wp_caps_of_state_lift]])
     apply simp
    apply (erule use_valid [OF _ c [THEN hoare_cte_wp_caps_of_state_lift]])
@@ -635,7 +635,7 @@ lemma valid_mdb_lift:
   apply simp
   done
 
-crunch no_cdt[wp]: set_endpoint "\<lambda>s. P (cdt s)" 
+crunch no_cdt[wp]: set_endpoint "\<lambda>s. P (cdt s)"
   (wp: crunch_wps)
 
 
@@ -668,7 +668,7 @@ lemma set_ep_mdb [wp]:
 lemma cte_wp_at_after_update:
   "\<lbrakk> obj_at (same_caps val) p' s \<rbrakk>
     \<Longrightarrow> cte_wp_at P p (kheap_update (\<lambda>a b. if b = p' then Some val else kheap s b) s)
-         = cte_wp_at P p s" 
+         = cte_wp_at P p s"
   by (fastforce simp: obj_at_def cte_wp_at_cases split: if_split_asm dest: bspec [OF _ ranI])
 
 
@@ -744,8 +744,8 @@ lemma set_ep_zombies[wp]:
 
 
 lemma set_ntfn_distinct[wp]:
-  "\<lbrace>pspace_distinct\<rbrace> 
-  set_notification ntfn v 
+  "\<lbrace>pspace_distinct\<rbrace>
+  set_notification ntfn v
   \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
   apply (simp add: set_notification_def)
   apply (wp set_object_distinct)
@@ -800,7 +800,7 @@ lemma set_ntfn_caps_of_state[wp]:
   done
 
 lemma set_object_cap_refs_in_kernel_window:
-  "\<lbrace>cap_refs_in_kernel_window and obj_at (same_caps ko) p\<rbrace> 
+  "\<lbrace>cap_refs_in_kernel_window and obj_at (same_caps ko) p\<rbrace>
   set_object p ko
   \<lbrace>\<lambda>r. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: set_object_def, wp)
@@ -809,7 +809,7 @@ lemma set_object_cap_refs_in_kernel_window:
   done
 
 lemma set_object_cap_refs_respects_device_region:
-  "\<lbrace>cap_refs_respects_device_region and obj_at (same_caps ko) p\<rbrace> 
+  "\<lbrace>cap_refs_respects_device_region and obj_at (same_caps ko) p\<rbrace>
   set_object p ko
   \<lbrace>\<lambda>r. cap_refs_respects_device_region\<rbrace>"
   apply (simp add: set_object_def, wp)
@@ -824,11 +824,11 @@ lemma set_object_cap_refs_respects_device_region:
   done
 
 
-crunch no_cdt[wp]: set_notification "\<lambda>s. P (cdt s)" 
+crunch no_cdt[wp]: set_notification "\<lambda>s. P (cdt s)"
   (wp: crunch_wps)
 
 
-crunch no_revokable[wp]: set_notification "\<lambda>s. P (is_original_cap s)" 
+crunch no_revokable[wp]: set_notification "\<lambda>s. P (is_original_cap s)"
   (wp: crunch_wps)
 
 
@@ -1009,7 +1009,7 @@ lemma dmo_invs:
   assumes valid_mf: "\<And>P. \<lbrace>\<lambda>ms.  P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms.  P (device_state ms)\<rbrace>"
   shows "\<lbrace>(\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). (\<forall>p.
        in_user_frame p s  \<or> underlying_memory m' p = underlying_memory m p) \<and>
-         ((\<forall>irq. m = machine_state s \<longrightarrow> 
+         ((\<forall>irq. m = machine_state s \<longrightarrow>
            (interrupt_states s irq = IRQInactive \<longrightarrow> irq_masks m' irq) \<or> (irq_masks m' irq = irq_masks m irq))))
     and invs\<rbrace>
    do_machine_op f
@@ -1030,31 +1030,31 @@ unfolding as_user_def
   apply (clarsimp simp: a_type_def)
   done
 
-lemma as_user_no_del_ntfn[wp]: 
+lemma as_user_no_del_ntfn[wp]:
   "\<lbrace>ntfn_at p\<rbrace> as_user t m \<lbrace>\<lambda>rv. ntfn_at p\<rbrace>"
   by (simp add: ntfn_at_typ, rule as_user_typ_at)
 
 
-lemma as_user_no_del_ep[wp]: 
+lemma as_user_no_del_ep[wp]:
   "\<lbrace>ep_at p\<rbrace> as_user t m \<lbrace>\<lambda>rv. ep_at p\<rbrace>"
   by (simp add: ep_at_typ, rule as_user_typ_at)
 
-lemma set_ep_tcb[wp]: 
+lemma set_ep_tcb[wp]:
   "\<lbrace> tcb_at t \<rbrace>
-   set_endpoint ep v 
+   set_endpoint ep v
    \<lbrace> \<lambda>rv. tcb_at t \<rbrace>"
   by (simp add: tcb_at_typ) wp
 
 lemma set_ntfn_tcb[wp]:
   "\<lbrace> tcb_at t \<rbrace>
-   set_notification e v 
+   set_notification e v
    \<lbrace> \<lambda>rv. tcb_at t \<rbrace>"
   by (simp add: tcb_at_typ) wp
 
 
 lemma set_ep_pred_tcb_at [wp]:
-  "\<lbrace> pred_tcb_at proj f t \<rbrace> 
-   set_endpoint ep v 
+  "\<lbrace> pred_tcb_at proj f t \<rbrace>
+   set_endpoint ep v
    \<lbrace> \<lambda>rv. pred_tcb_at proj f t \<rbrace>"
   apply (simp add: set_endpoint_def pred_tcb_at_def)
   apply (wp set_object_at_obj2|simp)+
@@ -1267,8 +1267,8 @@ lemma set_object_vspace_objs_non_pagetable:
   done*)
 
 lemma set_object_memory[wp]:
-  "\<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace> 
-    set_object p ko 
+  "\<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace>
+    set_object p ko
    \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
   unfolding set_object_def
   apply wp
@@ -1387,7 +1387,7 @@ lemma shows
     "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_bound_notification t e \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
   as_user_caps_of_state[wp]:
     "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> as_user p f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  
+
   unfolding set_thread_state_def set_bound_notification_def as_user_def set_object_def
             set_mrs_def
   apply (all \<open>(wp | wpc | simp)+ ; clarsimp, erule rsubst[where P=P], rule cte_wp_caps_of_lift\<close>)
@@ -1620,7 +1620,7 @@ lemma set_ntfn_minor_invs:
 done
 
 crunch asid_map[wp]: set_bound_notification "valid_asid_map"
- 
+
 lemma dmo_aligned[wp]:
   "\<lbrace>pspace_aligned\<rbrace> do_machine_op f \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
@@ -1648,7 +1648,7 @@ lemma dmo_zombies[wp]:
 
 
 lemma dmo_iflive[wp]:
-  "\<lbrace>if_live_then_nonz_cap\<rbrace> do_machine_op oper \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>" 
+  "\<lbrace>if_live_then_nonz_cap\<rbrace> do_machine_op oper \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply wp
   apply (clarsimp elim!: iflive_pspaceI)
@@ -1656,7 +1656,7 @@ lemma dmo_iflive[wp]:
 
 
 lemma dmo_ifunsafe[wp]:
-  "\<lbrace>if_unsafe_then_cap\<rbrace> do_machine_op oper \<lbrace>\<lambda>_. if_unsafe_then_cap\<rbrace>" 
+  "\<lbrace>if_unsafe_then_cap\<rbrace> do_machine_op oper \<lbrace>\<lambda>_. if_unsafe_then_cap\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply wp
   apply (clarsimp elim!: ifunsafe_pspaceI)
@@ -1682,12 +1682,12 @@ lemma dmo_hyp_refs_of[wp]:
   apply (clarsimp elim!: state_hyp_refs_of_pspaceI)
   done
 
-crunch it[wp]: do_machine_op "\<lambda>s. P (idle_thread s)" 
+crunch it[wp]: do_machine_op "\<lambda>s. P (idle_thread s)"
 
-crunch irq_node[wp]: do_machine_op "\<lambda>s. P (interrupt_irq_node s)" 
+crunch irq_node[wp]: do_machine_op "\<lambda>s. P (interrupt_irq_node s)"
 
 
-crunch cte_wp_at[wp]: do_machine_op "\<lambda>s. P (cte_wp_at P' c s)" 
+crunch cte_wp_at[wp]: do_machine_op "\<lambda>s. P (cte_wp_at P' c s)"
  (wp: crunch_wps)
 
 
@@ -1729,7 +1729,7 @@ lemma do_machine_op_arch [wp]:
   apply wp
   apply simp
   done
-  
+
 
 lemma do_machine_op_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
@@ -1752,7 +1752,7 @@ lemma dmo_inv:
   apply (clarsimp simp del: )
   apply (drule in_inv_by_hoareD [OF R])
   apply simp
-  done  
+  done
 
 
 lemma dom_objs [wp]:
@@ -1771,7 +1771,7 @@ lemma do_machine_op_arch_objs [wp]:
   done
 
 
-lemma tcb_cap_wp_at: 
+lemma tcb_cap_wp_at:
   "\<lbrakk>tcb_at t s; valid_objs s; ref \<in> dom tcb_cap_cases;
     \<forall>cap st getF setF restr.
     tcb_cap_cases ref = Some (getF, setF, restr) \<and> restr t st cap \<longrightarrow> Q cap\<rbrakk> \<Longrightarrow>

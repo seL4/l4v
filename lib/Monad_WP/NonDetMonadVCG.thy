@@ -1211,7 +1211,7 @@ lemma hoare_vcg_all_lift:
   "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x rv s\<rbrace>"
   by (fastforce simp: valid_def)
 
-lemma hoare_vcg_all_lift_R: 
+lemma hoare_vcg_all_lift_R:
   "(\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>, -) \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x rv s\<rbrace>, -"
   by (rule hoare_vcg_const_Ball_lift_R[where S=UNIV, simplified])
 

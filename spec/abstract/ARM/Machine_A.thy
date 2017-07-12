@@ -8,9 +8,9 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Types and operations to access the underlying machine, instantiated
-for ARM. 
+for ARM.
 *)
 
 chapter "ARM Machine Instantiation"
@@ -25,7 +25,7 @@ context Arch begin global_naming ARM_A
 text {*
   The specification is written with abstract type names for object
   references, user pointers, word-based data, cap references, and so
-  on. This theory provides an instantiation of these names to concrete 
+  on. This theory provides an instantiation of these names to concrete
   types for the ARM architecture. Other architectures may have slightly
   different instantiations.
 *}
@@ -91,15 +91,15 @@ definition
 text {* These definitions will be unfolded automatically in proofs. *}
 lemmas data_convs [simp] =
   oref_to_data_def data_to_oref_def vref_to_data_def data_to_vref_def
-  nat_to_len_def data_to_nat_def data_to_16_def data_to_cptr_def 
+  nat_to_len_def data_to_nat_def data_to_16_def data_to_cptr_def
   data_offset_to_nat_def
 
 
 text {* The following definitions provide architecture-dependent sizes
   such as the standard page size and capability size of the underlying
-  machine. 
+  machine.
 *}
-definition 
+definition
   slot_bits :: nat where
   "slot_bits \<equiv> 4"
 

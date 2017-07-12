@@ -196,7 +196,7 @@ The "Recv" system call blocks waiting to receive a message through a specified e
 >         epCap <- lookupCap thread epCPtr
 >         case epCap of
 >             EndpointCap { capEPCanReceive = True } -> do
->                 withoutFailure $ do 
+>                 withoutFailure $ do
 >                     deleteCallerCap thread
 >                     receiveIPC thread epCap isBlocking
 >             NotificationCap { capNtfnCanReceive = True, capNtfnPtr = ntfnPtr } -> do

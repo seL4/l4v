@@ -38,7 +38,7 @@ lemma arch_cap_fun_lift_expand[simp]:
                               | PageCap dev obj_ref rights sz vr \<Rightarrow> P_PageCap dev obj_ref rights sz vr
                               | PageTableCap obj_ref vr \<Rightarrow> P_PageTableCap obj_ref vr
                               | PageDirectoryCap obj_ref asid \<Rightarrow> P_PageDirectoryCap obj_ref asid)
-                      F) = (\<lambda>c. 
+                      F) = (\<lambda>c.
    (case c of
       ArchObjectCap (ASIDPoolCap obj_ref asid) \<Rightarrow> P_ASIDPoolCap obj_ref asid
     | ArchObjectCap (ASIDControlCap) \<Rightarrow> P_ASIDControlCap
@@ -55,7 +55,7 @@ lemma arch_obj_fun_lift_expand[simp]:
                               | PageTable pt \<Rightarrow> P_PageTable pt
                               | PageDirectory pd \<Rightarrow> P_PageDirectory pd
                               | DataPage dev s \<Rightarrow> P_DataPage dev s)
-                      F) = (\<lambda>ko. 
+                      F) = (\<lambda>ko.
    (case ko of
       ArchObj (ASIDPool pool) \<Rightarrow> P_ASIDPool pool
     | ArchObj (PageTable pt) \<Rightarrow> P_PageTable pt
@@ -150,7 +150,7 @@ where
   "valid_arch_cap_ref ac s \<equiv> (case ac of
     ASIDPoolCap r as \<Rightarrow> typ_at (AArch AASIDPool) r s
   | ASIDControlCap \<Rightarrow> True
-  | PageCap dev r rghts sz mapdata \<Rightarrow> if dev then (typ_at (AArch (ADeviceData sz)) r s) 
+  | PageCap dev r rghts sz mapdata \<Rightarrow> if dev then (typ_at (AArch (ADeviceData sz)) r s)
                                       else (typ_at (AArch (AUserData sz)) r s)
   | PageTableCap r mapdata \<Rightarrow> typ_at (AArch APageTable) r s
   | PageDirectoryCap r mapdata\<Rightarrow> typ_at (AArch APageDirectory) r s)"
@@ -167,7 +167,7 @@ where
            \<and> as \<le> 2^asid_bits - 1
   | ASIDControlCap \<Rightarrow> True
   | PageCap dev r rghts sz mapdata \<Rightarrow>
-    (if dev then (typ_at (AArch (ADeviceData sz)) r s) 
+    (if dev then (typ_at (AArch (ADeviceData sz)) r s)
                                       else (typ_at (AArch (AUserData sz)) r s)) \<and>
     rghts \<in> valid_vm_rights \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le> 2^asid_bits - 1
@@ -216,8 +216,8 @@ where
 declare valid_ipc_buffer_cap_arch_def[simp]
 
 definition
-  "valid_ipc_buffer_cap c bufptr \<equiv> 
-     case c of NullCap \<Rightarrow> True 
+  "valid_ipc_buffer_cap c bufptr \<equiv>
+     case c of NullCap \<Rightarrow> True
      | ArchObjectCap acap \<Rightarrow> valid_ipc_buffer_cap_arch acap bufptr
      | _ \<Rightarrow> False"
 
@@ -785,8 +785,8 @@ definition
 
 declare cap_asid_arch_def[abs_def, simp]
 
-definition  
-  "cap_asid cap = arch_cap_fun_lift cap_asid_arch None cap" 
+definition
+  "cap_asid cap = arch_cap_fun_lift cap_asid_arch None cap"
 
 
   (* needed for retype: if reachable, then cap, if cap then protected by untyped cap.
@@ -957,7 +957,7 @@ lemma vs_lookup1_stateI:
 
 lemma vs_lookup_pages1_stateI2:
   assumes 1: "(r \<unrhd>1 r') s"
-  assumes ko: "\<And>ko. \<lbrakk> ko_at ko (snd r) s; vs_refs_pages ko \<noteq> {} \<rbrakk> 
+  assumes ko: "\<And>ko. \<lbrakk> ko_at ko (snd r) s; vs_refs_pages ko \<noteq> {} \<rbrakk>
                \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs_pages ko \<subseteq> vs_refs_pages ko') (snd r) s'"
   shows "(r \<unrhd>1 r') s'" using 1 ko
   by (fastforce simp: obj_at_def vs_lookup_pages1_def)
@@ -1097,7 +1097,7 @@ lemma atyp_at_eq_kheap_obj:
   done
 
 
-lemmas kernel_object_exhaust = 
+lemmas kernel_object_exhaust =
   kernel_object.exhaust
     [rotated -1, OF arch_kernel_obj.exhaust, of _ "\<lambda>x. x", simplified]
 
@@ -1351,7 +1351,7 @@ lemma aobj_at_default_arch_cap_valid:
   using assms
   by (auto elim!: obj_at_weakenE
         simp add: arch_default_cap_def valid_arch_cap_def default_arch_object_def
-                  a_type_def 
+                  a_type_def
                   valid_vm_rights_def
            split: apiobject_type.splits aobject_type.splits option.splits)
 
@@ -1422,7 +1422,7 @@ lemma page_table_pte_atI:
   apply (simp add: pt_bits_def pageBits_def)
   done
 
-lemma physical_arch_cap_has_ref: 
+lemma physical_arch_cap_has_ref:
   "(acap_class arch_cap = PhysicalClass) = (\<exists>y. aobj_ref arch_cap = Some y)"
   by (cases arch_cap; simp)
 
@@ -2187,7 +2187,7 @@ lemma pspace_in_kernel_window_arch_update[simp]:
   by (simp add: pspace_in_kernel_window_def)
 
 lemmas vs_cap_ref_simps =
-       vs_cap_ref_def [simplified vs_cap_ref_arch_def[abs_def] arch_cap_fun_lift_def[abs_def], 
+       vs_cap_ref_def [simplified vs_cap_ref_arch_def[abs_def] arch_cap_fun_lift_def[abs_def],
        split_simps cap.split arch_cap.split vmpage_size.split]
 
 lemmas table_cap_ref_simps =
@@ -2282,12 +2282,12 @@ lemma in_user_frame_lift:
  unfolding in_user_frame_def
  by (wp hoare_vcg_ex_lift typ_at)
 
-lemma wellformed_arch_default: 
+lemma wellformed_arch_default:
   "wellformed_arch_obj (default_arch_object aobject_type dev us) s"
   unfolding wellformed_arch_obj_def default_arch_object_def
   by (cases aobject_type; simp)
 
-lemma valid_arch_obj_default': 
+lemma valid_arch_obj_default':
   "valid_arch_obj (default_arch_object aobject_type dev us) s"
   unfolding default_arch_object_def
   by (cases aobject_type; simp add: valid_arch_obj_def)

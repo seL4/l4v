@@ -337,7 +337,7 @@ fun convert_upd_phase1 ctxt params (t as (Const (@{const_name globals_update}, _
 *}
 
 text {* Phase 2 eliminates compound types, so we access and
-update only words from memory and local values. *} 
+update only words from memory and local values. *}
 
 ML {*
 fun ptr_simp ctxt = ctxt addsimps @{thms CTypesDefs.ptr_add_def size_of_def size_td_array
@@ -407,7 +407,7 @@ fun mk_ptr_offs opt_T p offs = let
 
 fun get_acc_type [] T = T
   | get_acc_type accs _ = (List.last accs $ @{term x})
-      |> fastype_of 
+      |> fastype_of
 
 val normalise_ring_ops = let
     fun gather_plus (Const (@{const_name "plus"}, _) $ a $ b)
@@ -482,7 +482,7 @@ fun triv_mem_upd ctxt p v = case dest_mem_acc_addr v of
       val t = @{term "op - :: word32 \<Rightarrow> _"} $ get_ptr_val p $ get_ptr_val p'
       val thm = ptr_simp ctxt (Thm.cterm_of ctxt t)
       val t' = Thm.rhs_of thm |> Thm.term_of
-    in t' = @{term "0 :: word32"} 
+    in t' = @{term "0 :: word32"}
         orelse (Thm.pretty_thm ctxt thm |> Pretty.writeln; false)
     end
 

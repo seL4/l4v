@@ -49,8 +49,8 @@ lemma update_cap_zobjrefs [CNodeInv_AI_assms]:
 lemma copy_mask [simp, CNodeInv_AI_assms]:
   "copy_of (mask_cap R c) = copy_of c"
   apply (rule ext)
-  apply (auto simp: copy_of_def is_cap_simps mask_cap_def 
-                    cap_rights_update_def same_object_as_def 
+  apply (auto simp: copy_of_def is_cap_simps mask_cap_def
+                    cap_rights_update_def same_object_as_def
                     bits_of_def acap_rights_update_def
          split: cap.splits arch_cap.splits)
   done
@@ -91,10 +91,10 @@ lemma same_object_as_cap_master [CNodeInv_AI_assms]:
   "same_object_as cap cap' \<Longrightarrow> cap_master_cap cap = cap_master_cap cap'"
   by (simp add: same_object_as_def2)
 
-lemma weak_derived_cap_is_device[CNodeInv_AI_assms]: 
+lemma weak_derived_cap_is_device[CNodeInv_AI_assms]:
   "\<lbrakk>weak_derived c' c\<rbrakk> \<Longrightarrow>  cap_is_device c = cap_is_device c'"
   apply (auto simp: weak_derived_def copy_of_def is_cap_simps
-                    same_object_as_def2 
+                    same_object_as_def2
              split: if_split_asm
              dest!: master_cap_eq_is_device_cap_eq)
   done
@@ -127,19 +127,19 @@ lemma cap_asid_base_update_cap_data [CNodeInv_AI_assms]:
   done
 
 lemma same_object_as_update_cap_data [CNodeInv_AI_assms]:
-  "\<lbrakk> update_cap_data P x c \<noteq> NullCap; same_object_as c' c \<rbrakk> \<Longrightarrow> 
+  "\<lbrakk> update_cap_data P x c \<noteq> NullCap; same_object_as c' c \<rbrakk> \<Longrightarrow>
   same_object_as c' (update_cap_data P x c)"
-  apply (clarsimp simp: same_object_as_def is_cap_simps 
+  apply (clarsimp simp: same_object_as_def is_cap_simps
                   split: cap.split_asm arch_cap.splits if_split_asm)
   apply (simp add: update_cap_data_def badge_update_def cap_rights_update_def is_cap_simps arch_update_cap_data_def
                    Let_def split_def the_cnode_cap_def bits_of_def split: if_split_asm cap.splits)+
   done
 
 lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:
-  "\<lbrakk>update_cap_data P x c \<noteq> NullCap; weak_derived c c'\<rbrakk> 
-  \<Longrightarrow> weak_derived (update_cap_data P x c) c'" 
-  apply (simp add: weak_derived_def copy_of_def 
-                   cap_master_update_cap_data cap_asid_update_cap_data 
+  "\<lbrakk>update_cap_data P x c \<noteq> NullCap; weak_derived c c'\<rbrakk>
+  \<Longrightarrow> weak_derived (update_cap_data P x c) c'"
+  apply (simp add: weak_derived_def copy_of_def
+                   cap_master_update_cap_data cap_asid_update_cap_data
                    cap_asid_base_update_cap_data
                    cap_vptr_update_cap_data
               split del: if_split cong: if_cong)
@@ -157,7 +157,7 @@ lemma weak_derived_update_cap_data [CNodeInv_AI_assms]:
   apply clarsimp
   apply (rule conjI, clarsimp simp: is_cap_simps update_cap_data_def split del: if_split)+
   apply clarsimp
-  apply (clarsimp simp: same_object_as_def is_cap_simps 
+  apply (clarsimp simp: same_object_as_def is_cap_simps
                   split: cap.split_asm arch_cap.splits if_split_asm)
   apply (simp add: update_cap_data_def badge_update_def cap_rights_update_def is_cap_simps arch_update_cap_data_def
                    Let_def split_def the_cnode_cap_def bits_of_def split: if_split_asm cap.splits)+
@@ -177,7 +177,7 @@ lemma cap_badge_update_cap_data [CNodeInv_AI_assms]:
 
 lemma cap_vptr_rights_update[simp, CNodeInv_AI_assms]:
   "cap_vptr (cap_rights_update f c) = cap_vptr c"
-  by (simp add: cap_vptr_def cap_rights_update_def acap_rights_update_def 
+  by (simp add: cap_vptr_def cap_rights_update_def acap_rights_update_def
            split: cap.splits arch_cap.splits)
 
 lemma cap_vptr_mask[simp, CNodeInv_AI_assms]:
@@ -186,7 +186,7 @@ lemma cap_vptr_mask[simp, CNodeInv_AI_assms]:
 
 lemma cap_asid_base_rights [simp, CNodeInv_AI_assms]:
   "cap_asid_base (cap_rights_update R c) = cap_asid_base c"
-  by (simp add: cap_rights_update_def acap_rights_update_def 
+  by (simp add: cap_rights_update_def acap_rights_update_def
            split: cap.splits arch_cap.splits)
 
 lemma cap_asid_base_mask[simp, CNodeInv_AI_assms]:
@@ -217,17 +217,17 @@ lemma vs_cap_ref_update_cap_data[simp, CNodeInv_AI_assms]:
 
 lemma in_preempt[simp, intro, CNodeInv_AI_assms]:
   "(Inr rv, s') \<in> fst (preemption_point s) \<Longrightarrow>
-  (\<exists>f es. s' = s \<lparr> machine_state := machine_state s \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr>, exst := es\<rparr>)"  
-  apply (clarsimp simp: preemption_point_def in_monad do_machine_op_def 
+  (\<exists>f es. s' = s \<lparr> machine_state := machine_state s \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr>, exst := es\<rparr>)"
+  apply (clarsimp simp: preemption_point_def in_monad do_machine_op_def
                         return_def returnOk_def throwError_def o_def
-                        select_f_def select_def getActiveIRQ_def) 
+                        select_f_def select_def getActiveIRQ_def)
   done
 
 
 lemma invs_irq_state_independent[intro!, simp, CNodeInv_AI_assms]:
   "invs (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
    = invs s"
-  by (clarsimp simp: irq_state_independent_A_def invs_def 
+  by (clarsimp simp: irq_state_independent_A_def invs_def
       valid_state_def valid_pspace_def valid_mdb_def valid_ioc_def valid_idle_def
       only_idle_def if_unsafe_then_cap_def valid_reply_caps_def
       valid_reply_masters_def valid_global_refs_def valid_arch_state_def
@@ -236,7 +236,7 @@ lemma invs_irq_state_independent[intro!, simp, CNodeInv_AI_assms]:
       valid_kernel_mappings_def equal_kernel_mappings_def
       valid_asid_map_def valid_global_vspace_mappings_def
       pspace_in_kernel_window_def cap_refs_in_kernel_window_def
-      cur_tcb_def sym_refs_def state_refs_of_def vspace_at_asid_def 
+      cur_tcb_def sym_refs_def state_refs_of_def vspace_at_asid_def
       swp_def valid_irq_states_def)
 
 
@@ -299,7 +299,7 @@ lemma weak_derived_vs_cap_ref [CNodeInv_AI_assms]:
 lemma weak_derived_table_cap_ref [CNodeInv_AI_assms]:
   "weak_derived c c' \<Longrightarrow> table_cap_ref c = table_cap_ref c'"
   apply (clarsimp simp: weak_derived_def copy_of_def
-                 same_object_as_def2 
+                 same_object_as_def2
           split: if_split_asm)
    apply (elim disjE,simp_all add:is_cap_simps)
   apply (elim disjE,simp_all)
@@ -330,7 +330,7 @@ lemma weak_derived_ASIDPool1:
   apply (clarsimp simp: weak_derived_def copy_of_def split: if_split_asm)
   apply (clarsimp simp: same_object_as_def2 cap_master_cap_simps dest!: cap_master_cap_eqDs)
   done
-  
+
 lemma weak_derived_ASIDPool2:
   "weak_derived cap (ArchObjectCap (ASIDPoolCap ap asid)) =
   (cap = ArchObjectCap (ASIDPoolCap ap asid))"
@@ -341,14 +341,14 @@ lemma weak_derived_ASIDPool2:
   apply (auto simp: same_object_as_def2 cap_master_cap_simps dest!: cap_master_cap_eqDs)
   done
 
-lemmas weak_derived_ASIDPool [simp] = 
+lemmas weak_derived_ASIDPool [simp] =
   weak_derived_ASIDPool1 weak_derived_ASIDPool2
 
 
 lemma swap_of_caps_valid_arch_caps [CNodeInv_AI_assms]:
   "\<lbrace>valid_arch_caps and
     cte_wp_at (weak_derived c) a and
-    cte_wp_at (weak_derived c') b\<rbrace> 
+    cte_wp_at (weak_derived c') b\<rbrace>
    do
      y \<leftarrow> set_cap c b;
      set_cap c' a
@@ -395,7 +395,7 @@ lemma swap_of_caps_valid_arch_caps [CNodeInv_AI_assms]:
 lemma cap_swap_asid_map[wp, CNodeInv_AI_assms]:
   "\<lbrace>valid_asid_map and
     cte_wp_at (weak_derived c) a and
-    cte_wp_at (weak_derived c') b\<rbrace> 
+    cte_wp_at (weak_derived c') b\<rbrace>
      cap_swap c a c' b \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
   apply (simp add: cap_swap_def set_cdt_def valid_asid_map_def vspace_at_asid_def)
   apply (rule hoare_pre)
@@ -407,7 +407,7 @@ lemma cap_swap_asid_map[wp, CNodeInv_AI_assms]:
 lemma cap_swap_cap_refs_in_kernel_window[wp, CNodeInv_AI_assms]:
   "\<lbrace>cap_refs_in_kernel_window and
     cte_wp_at (weak_derived c) a and
-    cte_wp_at (weak_derived c') b\<rbrace> 
+    cte_wp_at (weak_derived c') b\<rbrace>
      cap_swap c a c' b \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: cap_swap_def)
   apply (rule hoare_pre)
@@ -465,7 +465,7 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
   apply (case_tac cap, simp_all)
             apply (wp unbind_notification_valid_objs
                  | clarsimp simp: o_def valid_cap_def cap_table_at_typ
-                                  is_tcb obj_at_def 
+                                  is_tcb obj_at_def
                  | clarsimp simp: halted_if_tcb_def
                            split: option.split
                  | intro impI conjI
@@ -491,7 +491,7 @@ crunch emptyable[wp, CNodeInv_AI_assms]: finalise_cap "emptyable sl"
 lemma finalise_cap_not_reply_master_unlifted [CNodeInv_AI_assms]:
   "(rv, s') \<in> fst (finalise_cap cap sl s) \<Longrightarrow>
    \<not> is_master_reply_cap (fst rv)"
-  by (case_tac cap, auto simp: is_cap_simps in_monad liftM_def 
+  by (case_tac cap, auto simp: is_cap_simps in_monad liftM_def
                                arch_finalise_cap_def
                         split: if_split_asm arch_cap.split_asm bool.split_asm option.split_asm)
 
@@ -586,7 +586,7 @@ next
          apply (wp preemption_point_Q | simp)+
          apply (wp preemption_point_inv, simp+)
          apply (wp preemption_point_Q)
-         apply ((wp preemption_point_inv irq_state_independent_A_conjI irq_state_independent_AI 
+         apply ((wp preemption_point_inv irq_state_independent_A_conjI irq_state_independent_AI
                     emptyable_irq_state_independent invs_irq_state_independent
                | simp add: valid_rec_del_call_def irq_state_independent_A_def)+)[1]
         apply (simp(no_asm))
@@ -784,7 +784,7 @@ context Arch begin global_naming ARM
 
 lemma finalise_cap_rvk_prog [CNodeInv_AI_assms]:
    "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>
-   finalise_cap a b 
+   finalise_cap a b
    \<lbrace>\<lambda>_ s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>"
   apply (case_tac a,simp_all add:liftM_def)
     apply (wp cancel_all_ipc_rvk_prog cancel_all_signals_rvk_prog

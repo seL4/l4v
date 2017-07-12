@@ -43,7 +43,7 @@ abbreviation partition_label where
   "partition_label x \<equiv> OrdinaryLabel x"
 
 definition Sys1AuthGraph :: "(auth_graph_label subject_label) auth_graph" where
-  "Sys1AuthGraph \<equiv> 
+  "Sys1AuthGraph \<equiv>
    { (partition_label High,Read,partition_label Low),
      (partition_label Low,Notify,partition_label High),
      (partition_label Low,Reset,partition_label High),
@@ -128,8 +128,8 @@ lemmas partsSubjectAffects =
 
 
 definition example_policy where
-  "example_policy \<equiv> {(PSched, d)|d. True} \<union> 
-                    {(d,e). d = e} \<union> 
+  "example_policy \<equiv> {(PSched, d)|d. True} \<union>
+                    {(d,e). d = e} \<union>
                     {(Partition Low, Partition High)}"
 
 lemma "policyFlows Sys1AuthGraph = example_policy"
@@ -165,7 +165,7 @@ Both Low and High contains:
          one to the tcb
          one to the cnode itself
          one to the vspace
-         one to the ntfn 
+         one to the ntfn
 
 Low can send to the ntfn while High can receive from it.
 
@@ -187,7 +187,7 @@ Low_pt(3072)---------------->shared_page<-----------------High_pt(3077)
 (the references are derived from the dump of the SAC system)
 
 
-The aim is to be able to prove 
+The aim is to be able to prove
 
   valid_initial_state s0_internal Sys1PAS timer_irq utf
 
@@ -258,17 +258,17 @@ the object is included in the right ASID-label *}
 
 text {* Low's ASID *}
 
-definition 
-  Low_asid :: machine_word 
+definition
+  Low_asid :: machine_word
 where
-  "Low_asid \<equiv> 1<<asid_low_bits" 
+  "Low_asid \<equiv> 1<<asid_low_bits"
 
 text {* High's ASID *}
 
-definition 
-  High_asid :: machine_word 
+definition
+  High_asid :: machine_word
 where
-  "High_asid \<equiv> 2<<asid_low_bits" 
+  "High_asid \<equiv> 2<<asid_low_bits"
 
 lemma "asid_high_bits_of High_asid \<noteq> asid_high_bits_of Low_asid"
 by (simp add: Low_asid_def asid_high_bits_of_def High_asid_def asid_low_bits_def)
@@ -291,7 +291,7 @@ lemma nat_to_bl_id [simp]: "nat_to_bl (size (x :: (('a::len) word))) (unat x) = 
   done
 
 definition
-  the_nat_to_bl :: "nat \<Rightarrow> nat \<Rightarrow> bool list" 
+  the_nat_to_bl :: "nat \<Rightarrow> nat \<Rightarrow> bool list"
 where
   "the_nat_to_bl sz n \<equiv>
       the (nat_to_bl sz (n mod 2^sz))"
@@ -385,23 +385,23 @@ lemma empty_cnode_eq_None [simp]:
 
 text {* Low's CSpace *}
 
-definition 
-  Low_caps :: cnode_contents 
+definition
+  Low_caps :: cnode_contents
 where
-  "Low_caps \<equiv> 
+  "Low_caps \<equiv>
    (empty_cnode 10)
-      ( (the_nat_to_bl_10 1)  
-            \<mapsto> ThreadCap Low_tcb_ptr, 
+      ( (the_nat_to_bl_10 1)
+            \<mapsto> ThreadCap Low_tcb_ptr,
         (the_nat_to_bl_10 2)
-            \<mapsto> CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2), 
+            \<mapsto> CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2),
         (the_nat_to_bl_10 3)
-            \<mapsto> ArchObjectCap (PageDirectoryCap Low_pd_ptr 
+            \<mapsto> ArchObjectCap (PageDirectoryCap Low_pd_ptr
                                              (Some Low_asid)),
-        (the_nat_to_bl_10 318) 
+        (the_nat_to_bl_10 318)
             \<mapsto> NotificationCap ntfn_ptr 0 {AllowSend} )"
 
 definition
-  Low_cnode :: kernel_object 
+  Low_cnode :: kernel_object
 where
   "Low_cnode \<equiv> CNode 10 Low_caps"
 
@@ -422,7 +422,7 @@ lemma in_ran_If [simp]:
 lemma Low_caps_ran:
   "ran Low_caps = {ThreadCap Low_tcb_ptr,
                    CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2),
-                   ArchObjectCap (PageDirectoryCap Low_pd_ptr 
+                   ArchObjectCap (PageDirectoryCap Low_pd_ptr
                                               (Some Low_asid)),
                    NotificationCap ntfn_ptr 0 {AllowSend},
                    NullCap}"
@@ -437,21 +437,21 @@ lemma Low_caps_ran:
 text {* High's Cspace *}
 
 definition
-  High_caps :: cnode_contents 
+  High_caps :: cnode_contents
 where
-  "High_caps \<equiv> 
+  "High_caps \<equiv>
    (empty_cnode 10)
-      ( (the_nat_to_bl_10 1)  
-            \<mapsto> ThreadCap High_tcb_ptr, 
+      ( (the_nat_to_bl_10 1)
+            \<mapsto> ThreadCap High_tcb_ptr,
         (the_nat_to_bl_10 2)
             \<mapsto> CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2),
         (the_nat_to_bl_10 3)
-           \<mapsto> ArchObjectCap (PageDirectoryCap High_pd_ptr 
+           \<mapsto> ArchObjectCap (PageDirectoryCap High_pd_ptr
                                             (Some High_asid)),
         (the_nat_to_bl_10 318)
            \<mapsto> NotificationCap ntfn_ptr 0 {AllowRecv}) "
 
-definition 
+definition
   High_cnode :: kernel_object
 where
   "High_cnode \<equiv> CNode 10 High_caps"
@@ -459,7 +459,7 @@ where
 lemma High_caps_ran:
   "ran High_caps = {ThreadCap High_tcb_ptr,
                     CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2),
-                    ArchObjectCap (PageDirectoryCap High_pd_ptr 
+                    ArchObjectCap (PageDirectoryCap High_pd_ptr
                                                (Some High_asid)),
                     NotificationCap ntfn_ptr 0 {AllowRecv},
                     NullCap}"
@@ -474,19 +474,19 @@ lemma High_caps_ran:
 text {* We need a copy of boundary crossing caps owned by SilcLabel.
         The only such cap is Low's cap to the notification *}
 
-definition 
-  Silc_caps :: cnode_contents 
+definition
+  Silc_caps :: cnode_contents
 where
-  "Silc_caps \<equiv> 
+  "Silc_caps \<equiv>
    (empty_cnode 10)
       ( (the_nat_to_bl_10 2)
             \<mapsto> CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2),
-        (the_nat_to_bl_10 318) 
+        (the_nat_to_bl_10 318)
             \<mapsto> NotificationCap ntfn_ptr 0 {AllowSend} )"
 
 
 definition
-  Silc_cnode :: kernel_object 
+  Silc_cnode :: kernel_object
 where
   "Silc_cnode \<equiv> CNode 10 Silc_caps"
 
@@ -504,7 +504,7 @@ lemma Silc_caps_ran:
 text {* notification between Low and High *}
 
 definition
-  ntfn :: kernel_object 
+  ntfn :: kernel_object
 where
   "ntfn \<equiv> Notification \<lparr>ntfn_obj = WaitingNtfn [High_tcb_ptr], ntfn_bound_tcb=None\<rparr>"
 
@@ -512,24 +512,24 @@ where
 text {* Low's VSpace (PageDirectory)*}
 
 definition
-  Low_pt' :: "word8 \<Rightarrow> pte " 
+  Low_pt' :: "word8 \<Rightarrow> pte "
 where
   "Low_pt' \<equiv> (\<lambda>_. InvalidPTE)
             (0 := SmallPagePTE shared_page_ptr {} vm_read_write)"
 
-definition 
-  Low_pt :: kernel_object 
+definition
+  Low_pt :: kernel_object
 where
   "Low_pt \<equiv> ArchObj (PageTable Low_pt')"
 
 
 definition
-  Low_pd' :: "12 word \<Rightarrow> pde " 
+  Low_pd' :: "12 word \<Rightarrow> pde "
 where
-  "Low_pd' \<equiv> 
+  "Low_pd' \<equiv>
     global_pd
-     (0 := PageTablePDE 
-              (addrFromPPtr Low_pt_ptr) 
+     (0 := PageTablePDE
+              (addrFromPPtr Low_pt_ptr)
               {}
               undefined )"
 
@@ -537,7 +537,7 @@ where
 if it's right *)
 
 definition
-  Low_pd :: kernel_object 
+  Low_pd :: kernel_object
 where
   "Low_pd \<equiv> ArchObj (PageDirectory Low_pd')"
 
@@ -546,34 +546,34 @@ text {* High's VSpace (PageDirectory)*}
 
 
 definition
-  High_pt' :: "word8 \<Rightarrow> pte " 
+  High_pt' :: "word8 \<Rightarrow> pte "
 where
-  "High_pt' \<equiv> 
+  "High_pt' \<equiv>
     (\<lambda>_. InvalidPTE)
      (0 := SmallPagePTE shared_page_ptr {} vm_read_only)"
 
 
 definition
-  High_pt :: kernel_object 
+  High_pt :: kernel_object
 where
   "High_pt \<equiv> ArchObj (PageTable High_pt')"
 
 
 definition
-  High_pd' :: "12 word \<Rightarrow> pde " 
+  High_pd' :: "12 word \<Rightarrow> pde "
 where
   "High_pd' \<equiv>
     global_pd
-     (0 := PageTablePDE  
-             (addrFromPPtr High_pt_ptr) 
+     (0 := PageTablePDE
+             (addrFromPPtr High_pt_ptr)
              {}
-             undefined )" 
+             undefined )"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
 
 definition
-  High_pd :: kernel_object 
+  High_pd :: kernel_object
 where
   "High_pd \<equiv> ArchObj (PageDirectory High_pd')"
 
@@ -581,18 +581,18 @@ where
 text {* Low's tcb *}
 
 definition
-  Low_tcb :: kernel_object 
+  Low_tcb :: kernel_object
 where
-  "Low_tcb \<equiv> 
-   TCB \<lparr> 
+  "Low_tcb \<equiv>
+   TCB \<lparr>
      tcb_ctable        = CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2),
-     tcb_vtable        = ArchObjectCap 
+     tcb_vtable        = ArchObjectCap
                            (PageDirectoryCap Low_pd_ptr (Some Low_asid)),
      tcb_reply         = ReplyCap Low_tcb_ptr True, (* master reply cap to itself *)
      tcb_caller        = NullCap,
      tcb_ipcframe      = NullCap,
-     tcb_state         = Running, 
-     tcb_fault_handler = replicate word_bits False, 
+     tcb_state         = Running,
+     tcb_fault_handler = replicate word_bits False,
      tcb_ipc_buffer    = 0,
      tcb_fault         = None,
      tcb_bound_notification     = None,
@@ -605,23 +605,23 @@ where
   "Low_etcb \<equiv> \<lparr>tcb_priority   = Low_prio,
                tcb_time_slice = Low_time_slice,
                tcb_domain     = Low_domain\<rparr>"
-   
+
 
 text {* High's tcb *}
 
 definition
-  High_tcb :: kernel_object 
+  High_tcb :: kernel_object
 where
-  "High_tcb \<equiv> 
-   TCB \<lparr> 
+  "High_tcb \<equiv>
+   TCB \<lparr>
      tcb_ctable        = CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2) ,
-     tcb_vtable        = ArchObjectCap 
+     tcb_vtable        = ArchObjectCap
                            (PageDirectoryCap High_pd_ptr (Some High_asid)),
      tcb_reply         = ReplyCap High_tcb_ptr True, (* master reply cap to itself *)
      tcb_caller        = NullCap,
      tcb_ipcframe      = NullCap,
      tcb_state         = BlockedOnNotification ntfn_ptr,
-     tcb_fault_handler = replicate word_bits False, 
+     tcb_fault_handler = replicate word_bits False,
      tcb_ipc_buffer    = 0,
      tcb_fault         = None,
      tcb_bound_notification     = None,
@@ -635,21 +635,21 @@ where
                 tcb_time_slice = High_time_slice,
                 tcb_domain     = High_domain\<rparr>"
 
-   
+
 text {* idle's tcb *}
 
 definition
-  idle_tcb :: kernel_object 
+  idle_tcb :: kernel_object
 where
-  "idle_tcb \<equiv> 
-   TCB \<lparr> 
+  "idle_tcb \<equiv>
+   TCB \<lparr>
      tcb_ctable        = NullCap,
      tcb_vtable        = NullCap,
      tcb_reply         = NullCap,
      tcb_caller        = NullCap,
      tcb_ipcframe      = NullCap,
      tcb_state         = IdleThreadState,
-     tcb_fault_handler = replicate word_bits False, 
+     tcb_fault_handler = replicate word_bits False,
      tcb_ipc_buffer    = 0,
      tcb_fault         = None,
      tcb_bound_notification     = None,
@@ -661,8 +661,8 @@ definition
  "irq_cnode \<equiv> CNode 0 (Map.empty([] \<mapsto> cap.NullCap))"
 
 definition
-  kh0 :: kheap 
-where 
+  kh0 :: kheap
+where
   "kh0 \<equiv> (\<lambda>x. if \<exists>irq::10 word. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
           then Some (CNode 0 (empty_cnode 0)) else None)
          (Low_cnode_ptr  \<mapsto> Low_cnode,
@@ -833,7 +833,7 @@ definition exst0 :: "det_ext" where
              ready_queues_internal = (const (const [])),
              cdt_list_internal = const []\<rparr>"
 
-lemmas ekh0_obj_def = 
+lemmas ekh0_obj_def =
   Low_etcb_def High_etcb_def default_etcb_def
 
 definition machine_state0 :: "machine_state" where
@@ -857,7 +857,7 @@ definition
 where
   "s0_internal \<equiv>  \<lparr>
     kheap = kh0,
-    cdt = empty, 
+    cdt = empty,
     is_original_cap =  (\<lambda>_. False) ((Low_tcb_ptr, tcb_cnode_index 2) := True,
                                     (High_tcb_ptr, tcb_cnode_index 2) := True),
     cur_thread = Low_tcb_ptr,
@@ -877,9 +877,9 @@ subsubsection {* Defining the policy graph *}
 (* There is an NTFN in the High label, a SharedPage in the Low label *)
 
 definition
-  Sys1AgentMap :: "(auth_graph_label subject_label) agent_map" 
-where 
-  "Sys1AgentMap \<equiv> 
+  Sys1AgentMap :: "(auth_graph_label subject_label) agent_map"
+where
+  "Sys1AgentMap \<equiv>
    (\<lambda>p. if ptrFromPAddr shared_page_ptr \<le> p \<and> p < ptrFromPAddr shared_page_ptr + 0x1000
           then partition_label Low else partition_label IRQ0)
             (* set the range of the shared_page to Low, default everything else to IRQ0 *)
@@ -890,7 +890,7 @@ where
       Silc_cnode_ptr := SilcLabel,
       Low_pd_ptr := partition_label Low,
       High_pd_ptr := partition_label High,
-      Low_pt_ptr := partition_label Low, 
+      Low_pt_ptr := partition_label Low,
       High_pt_ptr := partition_label High,
       Low_tcb_ptr := partition_label Low,
       High_tcb_ptr := partition_label High,
@@ -904,7 +904,7 @@ lemma Sys1AgentMap_simps:
       "Sys1AgentMap Silc_cnode_ptr = SilcLabel"
       "Sys1AgentMap Low_pd_ptr = partition_label Low"
       "Sys1AgentMap High_pd_ptr = partition_label High"
-      "Sys1AgentMap Low_pt_ptr = partition_label Low" 
+      "Sys1AgentMap Low_pt_ptr = partition_label Low"
       "Sys1AgentMap High_pt_ptr = partition_label High"
       "Sys1AgentMap Low_tcb_ptr = partition_label Low"
       "Sys1AgentMap High_tcb_ptr = partition_label High"
@@ -917,12 +917,12 @@ lemma Sys1AgentMap_simps:
           kernelBase_addr_def physBase_def s0_ptr_defs)
 
 definition
-  Sys1ASIDMap :: "(auth_graph_label subject_label) agent_asid_map" 
-where 
-  "Sys1ASIDMap \<equiv> 
-    (\<lambda>x. if (asid_high_bits_of x = asid_high_bits_of Low_asid) 
-          then partition_label Low 
-         else if (asid_high_bits_of x = asid_high_bits_of High_asid) 
+  Sys1ASIDMap :: "(auth_graph_label subject_label) agent_asid_map"
+where
+  "Sys1ASIDMap \<equiv>
+    (\<lambda>x. if (asid_high_bits_of x = asid_high_bits_of Low_asid)
+          then partition_label Low
+         else if (asid_high_bits_of x = asid_high_bits_of High_asid)
           then partition_label High else undefined)"
 
 (* We include 2 domains, Low is associated to domain 0, High to domain 1, we default the rest of the possible domains to High *)
@@ -943,23 +943,23 @@ lemma Low_caps_well_formed: "well_formed_cnode_n 10 Low_caps"
 lemma Silc_caps_well_formed: "well_formed_cnode_n 10 Silc_caps"
   by (auto simp: Silc_caps_def well_formed_cnode_n_def  split: if_split_asm)
 
-lemma s0_caps_of_state : 
+lemma s0_caps_of_state :
   "caps_of_state s0_internal p = Some cap \<Longrightarrow>
      cap = NullCap \<or>
-     (p,cap) \<in>  
+     (p,cap) \<in>
        { ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap Low_tcb_ptr),
          ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2)),
-         ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap Low_pd_ptr (Some Low_asid))), 
+         ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap Low_pd_ptr (Some Low_asid))),
          ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),NotificationCap ntfn_ptr 0 {AllowSend}),
-         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap High_tcb_ptr), 
+         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap High_tcb_ptr),
          ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2)),
-         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid))), 
+         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid))),
          ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),NotificationCap  ntfn_ptr 0 {AllowRecv}) ,
          ((Silc_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2)),
          ((Silc_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),NotificationCap ntfn_ptr 0 {AllowSend}),
          ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 0)), CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2)),
          ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap Low_pd_ptr (Some Low_asid))),
-         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 2)), ReplyCap Low_tcb_ptr True), 
+         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 2)), ReplyCap Low_tcb_ptr True),
          ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 4)), NullCap),
          ((High_tcb_ptr::obj_ref, (tcb_cnode_index 0)), CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2)),
@@ -1034,7 +1034,7 @@ lemma Sys1_pas_refined:
                            Sys1PAS_def Sys1AgentMap_def
                            default_domain_def minBound_word
                            High_domain_def Low_domain_def cte_level_bits_def)
-    apply (clarsimp simp: auth_graph_map_def 
+    apply (clarsimp simp: auth_graph_map_def
                           Sys1PAS_def
                           state_objs_to_policy_def
                           state_bits_to_policy_def)
@@ -1048,14 +1048,14 @@ lemma Sys1_pas_refined:
              Sys1AuthGraph_def Sys1AgentMap_simps split: if_splits)
       apply (clarsimp simp: state_refs_of_def thread_states_def thread_bounds_of_state_s0)
      apply (simp add: s0_internal_def) (* this is OK because cdt is empty..*)
-    apply (clarsimp simp: state_vrefs_def 
+    apply (clarsimp simp: state_vrefs_def
                            vs_refs_no_global_pts_def
                            s0_internal_def kh0_def  Sys1AgentMap_simps
                            kh0_obj_def comp_def Low_pt'_def High_pt'_def
                            pte_ref_def pde_ref2_def Low_pd'_def High_pd'_def
                            Sys1AuthGraph_def ptr_range_def vspace_cap_rights_to_auth_def
                            vm_read_only_def vm_read_write_def
-                           
+
                      dest!: graph_ofD
                      split: if_splits)
      apply (rule Sys1AgentMap_simps(13))
@@ -1078,9 +1078,9 @@ lemma Sys1_pas_refined:
      apply (drule s0_caps_of_state, clarsimp)
      apply (simp add: Sys1AuthGraph_def Sys1PAS_def Sys1ASIDMap_def)
      apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def
-                                            cap_rights_to_auth_def Low_asid_def High_asid_def 
+                                            cap_rights_to_auth_def Low_asid_def High_asid_def
        asid_low_bits_def asid_high_bits_of_def )[1]
-    apply (clarsimp simp: state_vrefs_def 
+    apply (clarsimp simp: state_vrefs_def
                            vs_refs_no_global_pts_def
                            s0_internal_def kh0_def  Sys1AgentMap_simps
                            kh0_obj_def comp_def Low_pt'_def High_pt'_def
@@ -1094,7 +1094,7 @@ lemma Sys1_pas_refined:
    apply (simp add: Sys1AuthGraph_def Sys1PAS_def Sys1ASIDMap_def)
    apply (drule s0_caps_of_state)
    apply (simp add: Sys1AuthGraph_def Sys1PAS_def Sys1ASIDMap_def)
-   apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def Low_asid_def High_asid_def 
+   apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def Low_asid_def High_asid_def
      asid_low_bits_def asid_high_bits_of_def )[1]
    done
 
@@ -1150,7 +1150,7 @@ lemma silc_inv_s0:
   apply (clarsimp simp: all_children_def s0_internal_def silc_dom_equiv_def equiv_for_refl)
   done
 
-  
+
 lemma only_timer_irq_s0:
   "only_timer_irq timer_irq s0_internal"
   apply (clarsimp simp: only_timer_irq_def s0_internal_def irq_is_recurring_def is_irq_at_def
@@ -1668,7 +1668,7 @@ lemma valid_global_pd_mappings_s0[simp]:
    apply (subgoal_tac "(0xE0000000::32 word) - 0x100000 \<ge> ucast x << 20")
     apply (subgoal_tac "0xFFFFF + (ucast x << 20) \<le> 0xDFFFFFFF")
      apply (drule_tac y="0xFFFFF + (ucast x << 20)" and z="0xDFFFFFFF::32 word" in order_trans_rules(23))
-      apply simp      
+      apply simp
      apply ((drule(1) order_trans_rules(23))+, force)
     apply (simp add: add.commute
                word_plus_mono_left[where x="0xFFFFF" and z="0xDFF00000", simplified])
@@ -1798,7 +1798,7 @@ lemma Sys1_valid_initial_state_noenabled:
   apply (unfold_locales, simp_all only: pasMaySendIrqs_Sys1PAS)
                      apply (insert det_inv_invariant)[9]
                      apply (erule(2) invariant_over_ADT_if.det_inv_abs_state)
-                     apply (erule invariant_over_ADT_if.det_inv_abs_state 
+                     apply (erule invariant_over_ADT_if.det_inv_abs_state
                             invariant_over_ADT_if.check_active_irq_if_Idle_det_inv
                             invariant_over_ADT_if.check_active_irq_if_User_det_inv
                             invariant_over_ADT_if.do_user_op_if_det_inv

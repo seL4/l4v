@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Decoding system calls
 *)
 
@@ -29,11 +29,11 @@ to the given page size. *}
 definition
   check_vp_alignment :: "vmpage_size \<Rightarrow> word32 \<Rightarrow> (unit,'z::state_ext) se_monad" where
   "check_vp_alignment sz vptr \<equiv>
-     unlessE (is_aligned vptr (pageBitsForSize sz)) $ 
+     unlessE (is_aligned vptr (pageBitsForSize sz)) $
        throwError AlignmentError"
 
 text {* This definition converts a user-supplied argument into an
-invocation label, used to determine the method to invoke. 
+invocation label, used to determine the method to invoke.
 *}
 
 definition
@@ -59,10 +59,10 @@ definition
 where
   "page_base vaddr vmsize \<equiv> vaddr && ~~ mask (pageBitsForSize vmsize)"
 
-  
+
 definition
-  arch_decode_invocation :: 
-  "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> 
+  arch_decode_invocation ::
+  "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
    (arch_invocation,'z::state_ext) se_monad"
 where
 "arch_decode_invocation label args x_slot cte cap extra_caps \<equiv> case cap of
@@ -91,7 +91,7 @@ where
                     in doE
                         whenE (base_start \<noteq> base_end) $ throwError $
                             RangeError start (base_start + mask (pageBitsForSize frame_size));
-                        returnOk $ InvokePageDirectory $ 
+                        returnOk $ InvokePageDirectory $
                             PageDirectoryFlush (label_to_flush_type (invocation_type label))
                             start (end - 1) pstart pd asid
                     odE
@@ -99,7 +99,7 @@ where
     else throwError TruncatedMessage
     else throwError IllegalOperation
 
-| PageTableCap p mapped_address \<Rightarrow> 
+| PageTableCap p mapped_address \<Rightarrow>
     if invocation_type label = ArchInvocationLabel ARMPageTableMap then
     if length args > 1 \<and> length extra_caps > 0
     then let vaddr = args ! 0;
@@ -107,8 +107,8 @@ where
              pd_cap = fst (extra_caps ! 0)
     in doE
             whenE (mapped_address \<noteq> None) $ throwError $ InvalidCapability 0;
-            (pd,asid) \<leftarrow> (case pd_cap of 
-                            ArchObjectCap (PageDirectoryCap pd (Some asid)) \<Rightarrow> 
+            (pd,asid) \<leftarrow> (case pd_cap of
+                            ArchObjectCap (PageDirectoryCap pd (Some asid)) \<Rightarrow>
                               returnOk (pd,asid)
                          | _ \<Rightarrow> throwError $ InvalidCapability 1);
             whenE (vaddr \<ge> kernel_base) $ throwError $ InvalidArgument 0;
@@ -118,10 +118,10 @@ where
             vaddr' \<leftarrow> returnOk (vaddr && ~~ mask 20);
             pd_slot \<leftarrow> returnOk (pd + (pd_index << 2));
             oldpde \<leftarrow> liftE $ get_master_pde pd_slot;
-            unlessE (oldpde = InvalidPDE) $ throwError DeleteFirst;             
+            unlessE (oldpde = InvalidPDE) $ throwError DeleteFirst;
             pde \<leftarrow> returnOk (PageTablePDE (addrFromPPtr p)
                                (attribs_from_word attr \<inter> {ParityEnabled}) 0);
-            returnOk $ InvokePageTable $ 
+            returnOk $ InvokePageTable $
                 PageTableMap
                 (ArchObjectCap $ PageTableCap p (Some (asid, vaddr')))
                 cte pde pd_slot
@@ -144,8 +144,8 @@ where
              pd_cap = fst (extra_caps ! 0)
         in doE
             whenE (mapped_address \<noteq> None) $ throwError $ InvalidCapability 0;
-            (pd,asid) \<leftarrow> (case pd_cap of 
-                            ArchObjectCap (PageDirectoryCap pd (Some asid)) \<Rightarrow> 
+            (pd,asid) \<leftarrow> (case pd_cap of
+                            ArchObjectCap (PageDirectoryCap pd (Some asid)) \<Rightarrow>
                               returnOk (pd,asid)
                          | _ \<Rightarrow> throwError $ InvalidCapability 1);
             pd' \<leftarrow> lookup_error_on_failure False $ find_pd_for_asid asid;
@@ -155,11 +155,11 @@ where
             vm_rights \<leftarrow> returnOk (mask_vm_rights R (data_to_rights rights_mask));
             check_vp_alignment pgsz vaddr;
             entries \<leftarrow> create_mapping_entries (addrFromPPtr p)
-                                              vaddr pgsz vm_rights 
+                                              vaddr pgsz vm_rights
                                               (attribs_from_word attr) pd;
             ensure_safe_mapping entries;
             returnOk $ InvokePage $ PageMap asid
-                (ArchObjectCap $ PageCap dev p R pgsz (Some (asid, vaddr))) 
+                (ArchObjectCap $ PageCap dev p R pgsz (Some (asid, vaddr)))
                 cte entries
         odE
     else  throwError TruncatedMessage
@@ -169,19 +169,19 @@ where
                   attr = args ! 1;
                   pd_cap = fst (extra_caps ! 0)
          in doE
-            (pd,asid) \<leftarrow> (case pd_cap of 
-                            ArchObjectCap (PageDirectoryCap pd (Some asid)) \<Rightarrow> 
+            (pd,asid) \<leftarrow> (case pd_cap of
+                            ArchObjectCap (PageDirectoryCap pd (Some asid)) \<Rightarrow>
                               returnOk (pd,asid)
                          | _ \<Rightarrow> throwError $ InvalidCapability 1);
             (asid', vaddr) \<leftarrow> (case mapped_address of
                   Some a \<Rightarrow> returnOk a
                 | _ \<Rightarrow> throwError $ InvalidCapability 0);
             pd' \<leftarrow> lookup_error_on_failure False $ find_pd_for_asid asid';
-            whenE (pd' \<noteq> pd \<or> asid' \<noteq> asid) $ throwError $ InvalidCapability 1;  
+            whenE (pd' \<noteq> pd \<or> asid' \<noteq> asid) $ throwError $ InvalidCapability 1;
             vm_rights \<leftarrow> returnOk (mask_vm_rights R $ data_to_rights rights_mask);
             check_vp_alignment pgsz vaddr;
             entries \<leftarrow> create_mapping_entries (addrFromPPtr p)
-                                              vaddr pgsz vm_rights 
+                                              vaddr pgsz vm_rights
                                               (attribs_from_word attr) pd;
             ensure_safe_mapping entries;
             returnOk $ InvokePage $ PageRemap asid' entries
@@ -223,7 +223,7 @@ where
             whenE (free_set = {}) $ throwError DeleteFirst;
             free \<leftarrow> liftE $ select_ext (\<lambda>_. free_asid_select asid_table) free_set;
             base \<leftarrow> returnOk (ucast free << asid_low_bits);
-            (p,n) \<leftarrow> (case untyped of UntypedCap False p n f \<Rightarrow> returnOk (p,n) 
+            (p,n) \<leftarrow> (case untyped of UntypedCap False p n f \<Rightarrow> returnOk (p,n)
                                     | _ \<Rightarrow> throwError $ InvalidCapability 1);
             frame \<leftarrow> (if n = pageBits
                       then doE
@@ -241,7 +241,7 @@ where
 | ASIDPoolCap p base \<Rightarrow>
   if invocation_type label = ArchInvocationLabel ARMASIDPoolAssign then
   if length extra_caps > 0
-  then 
+  then
     let (pd_cap, pd_cap_slot) = extra_caps ! 0
      in case pd_cap of
           ArchObjectCap (PageDirectoryCap _ None) \<Rightarrow> doE
@@ -250,7 +250,7 @@ where
             whenE (pool_ptr = None) $ throwError $ FailedLookup False InvalidRoot;
             whenE (p \<noteq> the pool_ptr) $ throwError $ InvalidCapability 0;
             pool \<leftarrow> liftE $ get_asid_pool p;
-            free_set \<leftarrow> returnOk 
+            free_set \<leftarrow> returnOk
                    (- dom pool \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + base \<noteq> 0});
             whenE (free_set = {}) $ throwError DeleteFirst;
             offset \<leftarrow> liftE $ select_ext (\<lambda>_. free_asid_pool_select pool base) free_set;

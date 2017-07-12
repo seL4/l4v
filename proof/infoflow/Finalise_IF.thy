@@ -1168,16 +1168,16 @@ lemma bound_tcb_at_eq:
   done
 
 lemma unbind_maybe_notification_reads_respects:
-  "reads_respects aag l 
+  "reads_respects aag l
      (pas_refined aag and invs and K (is_subject aag ntfnptr))
      (unbind_maybe_notification ntfnptr)"
   apply (clarsimp simp: unbind_maybe_notification_def)
 apply wp
   apply (case_tac "ntfn_bound_tcb rv")
-   apply (clarsimp, wp)[1] 
+   apply (clarsimp, wp)[1]
   -- "interesting case, ntfn is bound"
   apply (clarsimp)
-   apply ((wp set_bound_notification_none_reads_respects set_notification_reads_respects 
+   apply ((wp set_bound_notification_none_reads_respects set_notification_reads_respects
               get_notification_reads_respects
           | wpc
           | simp)+)
@@ -1187,10 +1187,10 @@ lemma unbind_notification_is_subj_reads_respects:
   "reads_respects aag l (pas_refined aag and invs and K (is_subject aag t))
        (unbind_notification t)"
   apply (clarsimp simp: unbind_notification_def)
-  apply (wp set_bound_notification_owned_reads_respects set_notification_reads_respects 
+  apply (wp set_bound_notification_owned_reads_respects set_notification_reads_respects
             get_notification_reads_respects get_bound_notification_reads_respects
             gbn_wp[unfolded get_bound_notification_def, simplified]
-       | wpc 
+       | wpc
        | simp add: get_bound_notification_def)+
   apply (clarsimp)
   apply (rule bound_tcb_at_implies_read, auto)
@@ -1208,7 +1208,7 @@ lemma fast_finalise_reads_respects:
            unbind_notification_is_subj_reads_respects
            unbind_maybe_notification_reads_respects
            get_notification_reads_respects get_ntfn_wp
-      | simp add: when_def 
+      | simp add: when_def
       | wpc
       | intro conjI impI
       | fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)+
@@ -1288,7 +1288,7 @@ lemma blocked_cancel_ipc_reads_respects:
   done
 
 
-  
+
 
 
 lemma select_singleton_ev:
@@ -1467,7 +1467,7 @@ lemma finalise_cap_reads_respects:
                   | rule aag_Control_into_owns_irq
                   | clarsimp split del: if_split
                   | rule conjI
-                  | wp_once reads_respects_f[where st=st] 
+                  | wp_once reads_respects_f[where st=st]
                   | blast
                   | clarsimp)+)[11]
   apply (rule equiv_valid_guard_imp)
@@ -1650,7 +1650,7 @@ next
           apply(rule conjI)
            apply(fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def
                                                       only_timer_irq_inv_def)
-          
+
           apply(rule conjI[rotated], force)
           apply(clarsimp simp: ex_cte_cap_wp_to_def)+
           apply(rule_tac x="a" in exI, rule_tac x="b" in exI)
@@ -1852,9 +1852,9 @@ lemma unbind_notification_globals_equiv:
    unbind_notification t
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding unbind_notification_def
-  by (wp gbn_wp set_bound_notification_globals_equiv set_notification_valid_ko_at_arm 
-            set_notification_globals_equiv 
-          | wpc 
+  by (wp gbn_wp set_bound_notification_globals_equiv set_notification_valid_ko_at_arm
+            set_notification_globals_equiv
+          | wpc
           | simp)+
 
 lemma unbind_notification_valid_ko_at_arm[wp]:
@@ -1862,9 +1862,9 @@ lemma unbind_notification_valid_ko_at_arm[wp]:
    unbind_notification t
    \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
   unfolding unbind_notification_def
-  by (wp gbn_wp set_bound_notification_valid_ko_at_arm set_notification_valid_ko_at_arm 
-             
-          | wpc 
+  by (wp gbn_wp set_bound_notification_valid_ko_at_arm set_notification_valid_ko_at_arm
+
+          | wpc
           | simp)+
 
 lemma unbind_maybe_notification_globals_equiv:
@@ -1872,9 +1872,9 @@ lemma unbind_maybe_notification_globals_equiv:
    unbind_maybe_notification a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding unbind_maybe_notification_def
-  by (wp gbn_wp set_bound_notification_globals_equiv set_notification_valid_ko_at_arm 
-            set_notification_globals_equiv get_ntfn_wp 
-          | wpc 
+  by (wp gbn_wp set_bound_notification_globals_equiv set_notification_valid_ko_at_arm
+            set_notification_globals_equiv get_ntfn_wp
+          | wpc
           | simp)+
 
 lemma unbind_maybe_notification_valid_ko_at_arm[wp]:
@@ -1882,9 +1882,9 @@ lemma unbind_maybe_notification_valid_ko_at_arm[wp]:
    unbind_maybe_notification a
    \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
   unfolding unbind_maybe_notification_def
-  by (wp gbn_wp set_bound_notification_valid_ko_at_arm set_notification_valid_ko_at_arm 
+  by (wp gbn_wp set_bound_notification_valid_ko_at_arm set_notification_valid_ko_at_arm
          get_ntfn_wp
-          | wpc 
+          | wpc
           | simp)+
 
 crunch valid_global_objs: fast_finalise "valid_global_objs"

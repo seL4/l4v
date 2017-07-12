@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Refinement for handleEvent and syscalls
 *)
 
@@ -50,7 +50,7 @@ lemma diminished_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
       \<Longrightarrow> no_cap_to_obj_with_diff_ref cap S s"
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_arch_caps_def)
   apply (frule(1) unique_table_refs_no_cap_asidD)
-  apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def 
+  apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def
     table_cap_ref_mask_cap diminished_def Ball_def)
   done
 

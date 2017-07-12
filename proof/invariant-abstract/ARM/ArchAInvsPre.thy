@@ -238,7 +238,7 @@ lemma (* ptable_rights_imp_frame *)[AInvsPre_asms]:
   done
 end
 
-global_interpretation AInvsPre?: AInvsPre 
+global_interpretation AInvsPre?: AInvsPre
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales, fact AInvsPre_asms)?)

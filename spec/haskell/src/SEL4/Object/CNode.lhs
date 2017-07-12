@@ -111,14 +111,14 @@ The moving system calls, "Move" and "Mutate", are differentiated from the copyin
 >             let isMove = inv `elem` [CNodeMove, CNodeMutate]
 
 The rights and capability data word are applied to the source capability to create a new capability.
-             
+
 >             let srcCap = maskCapRights rights $ cteCap srcCTE
 >             newCap <- (if isMove then return else deriveCap srcSlot) $
 >               case capData of
 >                 Just w -> updateCapData isMove w srcCap
 >                 Nothing -> srcCap
 >             when (isNullCap newCap) $ throw IllegalOperation
->             
+>
 >             return $!
 >                 (if isMove then Move else Insert) newCap srcSlot destSlot
 
@@ -130,7 +130,7 @@ The "Revoke", "Delete", "SaveCaller" and "CancelBadgedSends" operations have no 
 >             ensureEmptySlot destSlot
 >             return $ SaveCaller destSlot
 
-For "CancelBadgedSends", the slot must contain a valid Endpoint capability. 
+For "CancelBadgedSends", the slot must contain a valid Endpoint capability.
 
 >         (_, CNodeCancelBadgedSends, _, _) -> do
 >             cte <- withoutFailure $ getCTE destSlot
@@ -200,21 +200,21 @@ The function "invokeCNode" dispatches an invocation to one of the handlers defin
 > invokeCNode (Revoke destSlot) = cteRevoke destSlot
 >
 > invokeCNode (Delete destSlot) = cteDelete destSlot True
-> 
-> invokeCNode (CancelBadgedSends (EndpointCap { capEPPtr = ptr, capEPBadge = b})) = 
+>
+> invokeCNode (CancelBadgedSends (EndpointCap { capEPPtr = ptr, capEPBadge = b})) =
 >     withoutPreemption $ unless (b == 0) $ cancelBadgedSends ptr b
 > invokeCNode (CancelBadgedSends _) = fail "should never happen"
 
 > invokeCNode (Insert cap srcSlot destSlot) =
 >     withoutPreemption $ cteInsert cap srcSlot destSlot
->     
+>
 > invokeCNode (Move cap srcSlot destSlot) =
 >     withoutPreemption $ cteMove cap srcSlot destSlot
->     
+>
 > invokeCNode (Rotate cap1 cap2 slot1 slot2 slot3) = withoutPreemption $
 >     if (slot1 == slot3)
 >       then cteSwap cap1 slot1 cap2 slot2
->       else do 
+>       else do
 >              cteMove cap2 slot2 slot3
 >              cteMove cap1 slot1 slot2
 
@@ -285,13 +285,13 @@ The "mdbRevocable" bit is set if the capability is revocable, as determined by t
 The destination slot must be empty.
 
 >         oldCTE <- getCTE destSlot
->         assert (isNullCap $ cteCap oldCTE) 
+>         assert (isNullCap $ cteCap oldCTE)
 >                 "cteInsert to non-empty destination"
->         assert (mdbPrev (cteMDBNode oldCTE) == nullPointer && 
->                 mdbNext (cteMDBNode oldCTE) == nullPointer) 
+>         assert (mdbPrev (cteMDBNode oldCTE) == nullPointer &&
+>                 mdbNext (cteMDBNode oldCTE) == nullPointer)
 >                 "cteInsert: mdb entry must be empty"
->         setUntypedCapAsFull srcCap newCap srcSlot 
- 
+>         setUntypedCapAsFull srcCap newCap srcSlot
+
 Store the new entry in the destination slot and update the mapping database.
 
 >         updateCap destSlot newCap
@@ -307,10 +307,10 @@ Store the new entry in the destination slot and update the mapping database.
 The destination slot must be empty.
 
 >         oldCTE <- getCTE destSlot
->         assert (isNullCap $ cteCap oldCTE) 
+>         assert (isNullCap $ cteCap oldCTE)
 >                 "cteMove to non-empty destination"
->         assert (mdbPrev (cteMDBNode oldCTE) == nullPointer && 
->                 mdbNext (cteMDBNode oldCTE) == nullPointer) 
+>         assert (mdbPrev (cteMDBNode oldCTE) == nullPointer &&
+>                 mdbNext (cteMDBNode oldCTE) == nullPointer)
 >                 "cteMove: mdb entry must be empty"
 
 Move the "CTE" into the new slot and update the mapping database.
@@ -571,8 +571,8 @@ The following function is used by the bootstrap code to create the initial set o
 >     oldCTE <- getCTE slot
 >     assert (isNullCap $ cteCap oldCTE) "insertInitCap: slot must be empty"
 >     assert (not $ isNullCap cap) "insertInitCap: cannot insert null"
->     assert (mdbPrev (cteMDBNode oldCTE) == nullPointer && 
->             mdbNext (cteMDBNode oldCTE) == nullPointer) 
+>     assert (mdbPrev (cteMDBNode oldCTE) == nullPointer &&
+>             mdbNext (cteMDBNode oldCTE) == nullPointer)
 >            "insertInitCap: mdb entry must be empty"
 >     updateCap slot cap
 >     updateMDB slot (const (nullMDBNode {

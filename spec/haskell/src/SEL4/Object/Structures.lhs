@@ -43,11 +43,11 @@ This module uses the C preprocessor to select a target architecture.
 
 This is the type used to represent a capability.
 
-> data Capability 
+> data Capability
 >         = ThreadCap {
 >             capTCBPtr :: PPtr TCB }
 >         | NullCap
->         | NotificationCap { 
+>         | NotificationCap {
 >             capNtfnPtr :: PPtr Notification,
 >             capNtfnBadge :: Word,
 >             capNtfnCanSend, capNtfnCanReceive :: Bool }
@@ -70,7 +70,7 @@ This is the type used to represent a capability.
 >             capReplyMaster :: Bool }
 >         | UntypedCap {
 >             capIsDevice :: Bool,
->             capPtr :: PPtr (), 
+>             capPtr :: PPtr (),
 >             capBlockSize :: Int,
 >             capFreeIndex :: Int }
 >         | CNodeCap {
@@ -112,7 +112,7 @@ This is the type used to represent a capability.
 
 When stored in the physical memory model (described in \autoref{sec:model.pspace}), kernel objects must be encapsulated in "KernelObject", so the stored type is independent of the real type of the object.
 
-> data KernelObject 
+> data KernelObject
 >     = KOEndpoint  Endpoint
 >     | KONotification Notification
 >     | KOKernelData
@@ -123,8 +123,8 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 >     | KOArch      ArchKernelObject
 
 > kernelObjectTypeName :: KernelObject -> String
-> kernelObjectTypeName o = 
->     case o of 
+> kernelObjectTypeName o =
+>     case o of
 >         KOEndpoint   _ -> "Endpoint"
 >         KONotification  _ -> "Notification"
 >         KOKernelData   -> "KernelData"
@@ -173,7 +173,7 @@ list of pointers to waiting threads;
 
 \subsubsection{Notification Objects}
 
-Notification objects are represented in the physical memory model 
+Notification objects are represented in the physical memory model
 using the "Notification" data structure.
 
 > data NTFN
@@ -351,7 +351,7 @@ A user thread may be in the following states:
 
 \item blocked on an notification;
 
->     | BlockedOnNotification { 
+>     | BlockedOnNotification {
 >         waitingOnNotification :: PPtr Notification }
 
 \item ready to start executing the next instruction;
@@ -409,7 +409,7 @@ The interrupt controller state consists of an array with one entry for each of t
 >     intStateIRQNode :: PPtr CTE,
 >     intStateIRQTable :: Array IRQ IRQState }
 
-> data IRQState 
+> data IRQState
 >     = IRQInactive
 >     | IRQSignal
 >     | IRQTimer

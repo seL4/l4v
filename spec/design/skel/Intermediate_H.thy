@@ -77,7 +77,7 @@ defs createNewCaps_def:
               else gsCNodes ks addr)\<rparr>);
             return $ map (\<lambda> addr. CNodeCap addr userSize 0 0) addrs
           od)
-        | Some ArchTypes_H.Untyped \<Rightarrow>  
+        | Some ArchTypes_H.Untyped \<Rightarrow>
             return $ map
                 (\<lambda> n. UntypedCap dev (regionBase + n * 2 ^ (fromIntegral userSize)) userSize 0)
                 [0  .e.  (fromIntegral numObjects) - 1]

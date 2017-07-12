@@ -15,7 +15,7 @@ imports "Signed_Words"
 begin
 
 text \<open>
-  Normalise word numerals, including negative ones apart from @{term "-1"}, to the 
+  Normalise word numerals, including negative ones apart from @{term "-1"}, to the
   interval @{text "[0..2^len_of 'a)"}. Only for concrete word lengths.
 \<close>
 
@@ -67,10 +67,10 @@ simproc_setup
 declare word_pow_0 [simp]
 
 lemma minus_one_norm:
-  "(-1 :: 'a :: len word) = of_nat (2 ^ len_of TYPE('a) - 1)" 
+  "(-1 :: 'a :: len word) = of_nat (2 ^ len_of TYPE('a) - 1)"
   by (simp add:of_nat_diff)
 
-lemmas minus_one_norm_num = 
+lemmas minus_one_norm_num =
   minus_one_norm [where 'a="'b::len bit0"] minus_one_norm [where 'a="'b::len0 bit1"]
 
 lemma "f (7 :: 2 word) = f 3" by simp
@@ -107,7 +107,7 @@ lemma "f (-1) = f (7 :: 3 word)" by simp
 
 lemma "f (-1) = f (0xFFFF :: 16 word)" by simp
 
-lemma "f (-1) = f (0xFFFF + 1 :: 'a::len word)" 
+lemma "f (-1) = f (0xFFFF + 1 :: 'a::len word)"
   apply simp (* does not touch generic -1 *)
   oops
 

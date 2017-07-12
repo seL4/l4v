@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Entry point for architecture dependent definitions.
 *)
 
@@ -73,10 +73,10 @@ text {* The ASIDPool capability confers the authority to assign a virtual ASID
 to a page directory. *}
 definition
 perform_asid_pool_invocation :: "asid_pool_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"perform_asid_pool_invocation iv \<equiv> case iv of Assign asid pool_ptr ct_slot \<Rightarrow> 
+"perform_asid_pool_invocation iv \<equiv> case iv of Assign asid pool_ptr ct_slot \<Rightarrow>
 do
     pd_cap \<leftarrow> get_cap ct_slot;
-    case pd_cap of 
+    case pd_cap of
       ArchObjectCap (PageDirectoryCap pd_base _) \<Rightarrow> do
         pool \<leftarrow> get_asid_pool pool_ptr;
         pool' \<leftarrow> return (pool (ucast asid \<mapsto> pd_base));
@@ -89,10 +89,10 @@ od"
 text {* The PageDirectory capability confers the authority to flush cache entries
 associated with that PD *}
 definition
-  perform_page_directory_invocation :: "page_directory_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" 
+  perform_page_directory_invocation :: "page_directory_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "perform_page_directory_invocation iv \<equiv> case iv of
-       PageDirectoryFlush typ start end pstart pd asid \<Rightarrow> 
+       PageDirectoryFlush typ start end pstart pd asid \<Rightarrow>
          when (start < end) $ do
            root_switched \<leftarrow> set_vm_root_for_flush pd asid;
            do_machine_op $ do_flush typ start end pstart;
@@ -163,7 +163,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
                                         (addrFromPPtr (hd slots));
     if flush then (invalidate_tlb_by_asid asid) else return ()
   od
-| PageUnmap cap ct_slot \<Rightarrow> 
+| PageUnmap cap ct_slot \<Rightarrow>
     (case cap of
       PageCap dev p R vp_size vp_mapped_addr \<Rightarrow> do
         case vp_mapped_addr of
@@ -173,7 +173,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
         set_cap (ArchObjectCap $ update_map_data cap None) ct_slot
       od
     | _ \<Rightarrow> fail)
-| PageFlush typ start end pstart pd asid \<Rightarrow> 
+| PageFlush typ start end pstart pd asid \<Rightarrow>
     when (start < end) $ do
       root_switched \<leftarrow> set_vm_root_for_flush pd asid;
       do_machine_op $ do_flush typ start end pstart;
@@ -192,7 +192,7 @@ text {* PageTable capabilities confer the authority to map and unmap page
 tables. *}
 definition
 perform_page_table_invocation :: "page_table_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"perform_page_table_invocation iv \<equiv> 
+"perform_page_table_invocation iv \<equiv>
 case iv of PageTableMap cap ct_slot pde pd_slot \<Rightarrow> do
     set_cap cap ct_slot;
     store_pde pd_slot pde;

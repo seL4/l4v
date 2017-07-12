@@ -509,7 +509,7 @@ lemma partition_correct:
   apply (unfold partition'_def)
   apply (subst whileLoop_add_inv [where
          I = "\<lambda>(i, pivot_idx) s. is_array s a (unat n) \<and>
-                                 mset (the_array s a (unat n)) = 
+                                 mset (the_array s a (unat n)) =
                                  mset (the_array s0 a (unat n)) \<and>
                                  i \<le> n \<and> pivot_idx < i \<and>
                                  partitioned s a (unat i) (unat pivot_idx) \<and>
@@ -999,7 +999,7 @@ next
           apply unat_arith
          apply (simp add: is_array_def)
         apply simp
-       apply (simp add: unmodified_outside_range_def) 
+       apply (simp add: unmodified_outside_range_def)
       apply (rule_tac m = "unat rv" in partitioned_array_sorted)
          apply unat_arith
         apply (subgoal_tac "the_array s'b a (unat rv) = the_array s'a a (unat rv)", simp)

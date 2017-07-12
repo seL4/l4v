@@ -522,7 +522,7 @@ lemma ctes_of_ko:
    -- "PD case"
    apply (clarsimp simp: valid_cap'_def obj_at'_def pageBits_def pdBits_def
                          page_directory_at'_def typ_at'_def ko_wp_at'_def)
-   apply (frule_tac ptr=ptr and sz=2 in 
+   apply (frule_tac ptr=ptr and sz=2 in
                     nasty_range[where 'a=32 and bz="pdBits", folded word_bits_def,rotated,
                                 simplified pdBits_def pageBits_def word_bits_def, simplified])
       apply (clarsimp simp add: pdBits_def pdeBits_def)+
@@ -531,7 +531,7 @@ lemma ctes_of_ko:
    apply (intro exI conjI, assumption)
    apply (clarsimp simp: obj_range'_def objBitsKO_def field_simps)
    apply (case_tac ko; simp)
-   apply (rename_tac arch_kernel_object) 
+   apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object; simp)
    apply (simp add: field_simps archObjSize_def shiftl_t2n pdBits_def pdeBits_def)
   -- "CNode case"
@@ -723,7 +723,7 @@ lemma cte_cap_in_untyped_range:
    apply (case_tac cap; simp)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def)
   done
-  
+
 lemma cap_case_CNodeCap_True_throw:
   "(case cap of CNodeCap a b c d \<Rightarrow> returnOk ()
          |  _ \<Rightarrow> throw $ e)
@@ -4911,7 +4911,7 @@ end
 lemma deleteObjects_ex_cte_cap_wp_to':
   "\<lbrace>invs' and ex_cte_cap_wp_to' P slot and (\<lambda>s. descendants_of' p (ctes_of s) = {})
       and cte_wp_at' (\<lambda>cte. \<exists>idx d. cteCap cte = UntypedCap d ptr sz idx) p\<rbrace>
-    deleteObjects ptr sz 
+    deleteObjects ptr sz
   \<lbrace>\<lambda>rv. ex_cte_cap_wp_to' P slot\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: cte_wp_at_ctes_of)

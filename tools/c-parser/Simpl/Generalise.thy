@@ -7,7 +7,7 @@
 (*  Title:      Generalise.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2005-2008 Norbert Schirmer 
+Copyright (C) 2005-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -32,18 +32,18 @@ begin
 lemma protectRefl: "PROP Pure.prop (PROP C) \<Longrightarrow> PROP Pure.prop (PROP C)"
   by (simp add: prop_def)
 
-lemma protectImp: 
- assumes i: "PROP Pure.prop (PROP P \<Longrightarrow> PROP Q)" 
+lemma protectImp:
+ assumes i: "PROP Pure.prop (PROP P \<Longrightarrow> PROP Q)"
  shows "PROP Pure.prop (PROP Pure.prop P \<Longrightarrow> PROP Pure.prop Q)"
 proof -
   {
     assume P: "PROP Pure.prop P"
-    from i [unfolded prop_def, OF P [unfolded prop_def]] 
+    from i [unfolded prop_def, OF P [unfolded prop_def]]
     have "PROP Pure.prop Q"
       by (simp add: prop_def)
   }
   note i' = this
-  show "PROP ?thesis" 
+  show "PROP ?thesis"
     apply (rule protectI)
     apply (rule i')
     apply assumption
@@ -51,21 +51,21 @@ proof -
 qed
 
 
-lemma generaliseConj: 
+lemma generaliseConj:
   assumes i1: "PROP Pure.prop (PROP Pure.prop (Trueprop P) \<Longrightarrow> PROP Pure.prop (Trueprop Q))"
   assumes i2: "PROP Pure.prop (PROP Pure.prop (Trueprop P') \<Longrightarrow> PROP Pure.prop (Trueprop Q'))"
   shows "PROP Pure.prop (PROP Pure.prop (Trueprop (P \<and> P')) \<Longrightarrow> (PROP Pure.prop (Trueprop (Q \<and> Q'))))"
   using i1 i2
   by (auto simp add: prop_def)
 
-lemma generaliseAll: 
- assumes i: "PROP Pure.prop (\<And>s. PROP Pure.prop (Trueprop (P s)) \<Longrightarrow> PROP Pure.prop (Trueprop (Q s)))" 
+lemma generaliseAll:
+ assumes i: "PROP Pure.prop (\<And>s. PROP Pure.prop (Trueprop (P s)) \<Longrightarrow> PROP Pure.prop (Trueprop (Q s)))"
  shows "PROP Pure.prop (PROP Pure.prop (Trueprop (\<forall>s. P s)) \<Longrightarrow> PROP Pure.prop (Trueprop (\<forall>s. Q s)))"
   using i
   by (auto simp add: prop_def)
 
-lemma generalise_all: 
- assumes i: "PROP Pure.prop (\<And>s. PROP Pure.prop (PROP P s) \<Longrightarrow> PROP Pure.prop (PROP Q s))" 
+lemma generalise_all:
+ assumes i: "PROP Pure.prop (\<And>s. PROP Pure.prop (PROP P s) \<Longrightarrow> PROP Pure.prop (PROP Q s))"
  shows "PROP Pure.prop ((PROP Pure.prop (\<And>s. PROP P s)) \<Longrightarrow> (PROP Pure.prop (\<And>s. PROP Q s)))"
   using i
   proof (unfold prop_def)
@@ -75,14 +75,14 @@ lemma generalise_all:
       by (rule i1) (rule i2)
   qed
 
-lemma generaliseTrans: 
+lemma generaliseTrans:
   assumes i1: "PROP Pure.prop (PROP P \<Longrightarrow> PROP Q)"
-  assumes i2: "PROP Pure.prop (PROP Q \<Longrightarrow> PROP R)" 
+  assumes i2: "PROP Pure.prop (PROP Q \<Longrightarrow> PROP R)"
   shows "PROP Pure.prop (PROP P \<Longrightarrow> PROP R)"
   using i1 i2
   proof (unfold prop_def)
-    assume P_Q: "PROP P \<Longrightarrow> PROP Q" 
-    assume Q_R: "PROP Q \<Longrightarrow> PROP R" 
+    assume P_Q: "PROP P \<Longrightarrow> PROP Q"
+    assume Q_R: "PROP Q \<Longrightarrow> PROP R"
     assume P: "PROP P"
     show "PROP R"
       by (rule Q_R [OF P_Q [OF P]])
@@ -98,14 +98,14 @@ lemma meta_spec_protect:
 using g
 by (auto simp add: prop_def)
 
-lemma generaliseImp: 
+lemma generaliseImp:
   assumes i: "PROP Pure.prop (PROP Pure.prop (Trueprop P) \<Longrightarrow> PROP Pure.prop (Trueprop Q))"
   shows "PROP Pure.prop (PROP Pure.prop (Trueprop (X \<longrightarrow> P)) \<Longrightarrow> PROP Pure.prop (Trueprop (X \<longrightarrow> Q)))"
   using i
   by (auto simp add: prop_def)
 
-lemma generaliseEx: 
- assumes i: "PROP Pure.prop (\<And>s. PROP Pure.prop (Trueprop (P s)) \<Longrightarrow> PROP Pure.prop (Trueprop (Q s)))" 
+lemma generaliseEx:
+ assumes i: "PROP Pure.prop (\<And>s. PROP Pure.prop (Trueprop (P s)) \<Longrightarrow> PROP Pure.prop (Trueprop (Q s)))"
  shows "PROP Pure.prop (PROP Pure.prop (Trueprop (\<exists>s. P s)) \<Longrightarrow> PROP Pure.prop (Trueprop (\<exists>s. Q s)))"
   using i
   by (auto simp add: prop_def)
@@ -128,7 +128,7 @@ lemma generalise_allShift:
   shows "PROP Pure.prop (PROP Pure.prop (PROP P) \<Longrightarrow> PROP Pure.prop (\<And>s. PROP Q s))"
   using i
   proof (unfold prop_def)
-    assume P_Q: "\<And>s. PROP P \<Longrightarrow> PROP Q s" 
+    assume P_Q: "\<And>s. PROP P \<Longrightarrow> PROP Q s"
     assume P: "PROP P"
     show "\<And>s. PROP Q s"
       by (rule P_Q [OF P])

@@ -7,7 +7,7 @@
 (*  Title:      SmallStep.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2006-2008 Norbert Schirmer 
+Copyright (C) 2006-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -64,12 +64,12 @@ where
 | SpecStuck: "\<forall>t. (s,t) \<notin> r \<Longrightarrow> \<Gamma>\<turnstile>(Spec r,Normal s) \<rightarrow> (Skip,Stuck)"
 
 | Guard: "s\<in>g \<Longrightarrow> \<Gamma>\<turnstile>(Guard f g c,Normal s) \<rightarrow> (c,Normal s)"
-  
+
 | GuardFault: "s\<notin>g \<Longrightarrow> \<Gamma>\<turnstile>(Guard f g c,Normal s) \<rightarrow> (Skip,Fault f)"
 
 
 | Seq: "\<Gamma>\<turnstile>(c\<^sub>1,s) \<rightarrow> (c\<^sub>1',s')
-        \<Longrightarrow> 
+        \<Longrightarrow>
         \<Gamma>\<turnstile>(Seq c\<^sub>1 c\<^sub>2,s) \<rightarrow> (Seq c\<^sub>1' c\<^sub>2, s')"
 | SeqSkip: "\<Gamma>\<turnstile>(Seq Skip c\<^sub>2,s) \<rightarrow> (c\<^sub>2, s)"
 | SeqThrow: "\<Gamma>\<turnstile>(Seq Throw c\<^sub>2,Normal s) \<rightarrow> (Throw, Normal s)"
@@ -77,12 +77,12 @@ where
 | CondTrue:  "s\<in>b \<Longrightarrow> \<Gamma>\<turnstile>(Cond b c\<^sub>1 c\<^sub>2,Normal s) \<rightarrow> (c\<^sub>1,Normal s)"
 | CondFalse: "s\<notin>b \<Longrightarrow> \<Gamma>\<turnstile>(Cond b c\<^sub>1 c\<^sub>2,Normal s) \<rightarrow> (c\<^sub>2,Normal s)"
 
-| WhileTrue: "\<lbrakk>s\<in>b\<rbrakk> 
-              \<Longrightarrow> 
+| WhileTrue: "\<lbrakk>s\<in>b\<rbrakk>
+              \<Longrightarrow>
               \<Gamma>\<turnstile>(While b c,Normal s) \<rightarrow> (Seq c (While b c),Normal s)"
 
-| WhileFalse: "\<lbrakk>s\<notin>b\<rbrakk> 
-               \<Longrightarrow> 
+| WhileFalse: "\<lbrakk>s\<notin>b\<rbrakk>
+               \<Longrightarrow>
                \<Gamma>\<turnstile>(While b c,Normal s) \<rightarrow> (Skip,Normal s)"
 
 | Call: "\<Gamma> p=Some bdy \<Longrightarrow>
@@ -139,7 +139,7 @@ inductive_cases step_Normal_elim_cases [cases set]:
 
 
 text \<open>The final configuration is either of the form \<open>(Skip,_)\<close> for normal
-termination, or @{term "(Throw,Normal s)"} in case the program was started in 
+termination, or @{term "(Throw,Normal s)"} in case the program was started in
 a @{term "Normal"} state and terminated abruptly. The @{const "Abrupt"} state is not used to
 model abrupt termination, in contrast to the big-step semantics. Only if the
 program starts in an @{const "Abrupt"} states it ends in the same @{term "Abrupt"}
@@ -149,12 +149,12 @@ definition final:: "('s,'p,'f) config \<Rightarrow> bool" where
 "final cfg = (fst cfg=Skip \<or> (fst cfg=Throw \<and> (\<exists>s. snd cfg=Normal s)))"
 
 
-abbreviation 
+abbreviation
  "step_rtrancl" :: "[('s,'p,'f) body,('s,'p,'f) config,('s,'p,'f) config] \<Rightarrow> bool"
                                 ("_\<turnstile> (_ \<rightarrow>\<^sup>*/ _)" [81,81,81] 100)
  where
   "\<Gamma>\<turnstile>cf0 \<rightarrow>\<^sup>* cf1 \<equiv> (CONST step \<Gamma>)\<^sup>*\<^sup>* cf0 cf1"
-abbreviation 
+abbreviation
  "step_trancl" :: "[('s,'p,'f) body,('s,'p,'f) config,('s,'p,'f) config] \<Rightarrow> bool"
                                 ("_\<turnstile> (_ \<rightarrow>\<^sup>+/ _)" [81,81,81] 100)
  where
@@ -176,7 +176,7 @@ lemma redex_not_Seq: "redex c = Seq c1 c2 \<Longrightarrow> P"
   apply auto
   done
 
-lemma no_step_final: 
+lemma no_step_final:
   assumes step: "\<Gamma>\<turnstile>(c,s) \<rightarrow> (c',s')"
   shows "final (c,s) \<Longrightarrow> P"
 using step
@@ -188,25 +188,25 @@ lemma no_step_final':
 using step
   by (cases cfg, cases cfg') (auto intro: no_step_final)
 
-lemma step_Abrupt: 
+lemma step_Abrupt:
   assumes step: "\<Gamma>\<turnstile> (c, s) \<rightarrow> (c', s')"
   shows "\<And>x. s=Abrupt x \<Longrightarrow> s'=Abrupt x"
 using step
 by (induct) auto
 
-lemma step_Fault: 
+lemma step_Fault:
   assumes step: "\<Gamma>\<turnstile> (c, s) \<rightarrow> (c', s')"
   shows "\<And>f. s=Fault f \<Longrightarrow> s'=Fault f"
 using step
 by (induct) auto
 
-lemma step_Stuck: 
+lemma step_Stuck:
   assumes step: "\<Gamma>\<turnstile> (c, s) \<rightarrow> (c', s')"
   shows "\<And>f. s=Stuck \<Longrightarrow> s'=Stuck"
 using step
 by (induct) auto
 
-lemma SeqSteps: 
+lemma SeqSteps:
   assumes steps: "\<Gamma>\<turnstile>cfg\<^sub>1\<rightarrow>\<^sup>* cfg\<^sub>2"
   shows "\<And> c\<^sub>1 s c\<^sub>1' s'. \<lbrakk>cfg\<^sub>1 = (c\<^sub>1,s);cfg\<^sub>2=(c\<^sub>1',s')\<rbrakk>
           \<Longrightarrow> \<Gamma>\<turnstile>(Seq c\<^sub>1 c\<^sub>2,s) \<rightarrow>\<^sup>* (Seq c\<^sub>1' c\<^sub>2, s')"
@@ -222,7 +222,7 @@ next
   have cfg\<^sub>1: "cfg\<^sub>1 = (c\<^sub>1, s)" and cfg\<^sub>2: "cfg\<^sub>2 = (c\<^sub>1', s')"  by fact+
   obtain c\<^sub>1'' s'' where cfg'': "cfg''=(c\<^sub>1'',s'')"
     by (cases cfg'') auto
-  from step cfg\<^sub>1 cfg'' 
+  from step cfg\<^sub>1 cfg''
   have "\<Gamma>\<turnstile> (c\<^sub>1,s) \<rightarrow> (c\<^sub>1'',s'')"
     by simp
   hence "\<Gamma>\<turnstile> (Seq c\<^sub>1 c\<^sub>2,s) \<rightarrow> (Seq c\<^sub>1'' c\<^sub>2,s'')"
@@ -233,7 +233,7 @@ next
 qed
 
 
-lemma CatchSteps: 
+lemma CatchSteps:
   assumes steps: "\<Gamma>\<turnstile>cfg\<^sub>1\<rightarrow>\<^sup>* cfg\<^sub>2"
   shows "\<And> c\<^sub>1 s c\<^sub>1' s'. \<lbrakk>cfg\<^sub>1 = (c\<^sub>1,s); cfg\<^sub>2=(c\<^sub>1',s')\<rbrakk>
           \<Longrightarrow> \<Gamma>\<turnstile>(Catch c\<^sub>1 c\<^sub>2,s) \<rightarrow>\<^sup>* (Catch c\<^sub>1' c\<^sub>2, s')"
@@ -249,14 +249,14 @@ next
   have cfg\<^sub>1: "cfg\<^sub>1 = (c\<^sub>1, s)" and cfg\<^sub>2: "cfg\<^sub>2 = (c\<^sub>1', s')"  by fact+
   obtain c\<^sub>1'' s'' where cfg'': "cfg''=(c\<^sub>1'',s'')"
     by (cases cfg'') auto
-  from step cfg\<^sub>1 cfg'' 
+  from step cfg\<^sub>1 cfg''
   have s: "\<Gamma>\<turnstile> (c\<^sub>1,s) \<rightarrow> (c\<^sub>1'',s'')"
     by simp
   hence "\<Gamma>\<turnstile> (Catch c\<^sub>1 c\<^sub>2,s) \<rightarrow> (Catch c\<^sub>1'' c\<^sub>2,s'')"
     by (rule step.Catch)
   also from Trans.hyps (3) [OF cfg'' cfg\<^sub>2]
   have "\<Gamma>\<turnstile> (Catch c\<^sub>1'' c\<^sub>2, s'') \<rightarrow>\<^sup>* (Catch c\<^sub>1' c\<^sub>2, s')" .
-  finally show ?case .      
+  finally show ?case .
 qed
 
 lemma steps_Fault: "\<Gamma>\<turnstile> (c, Fault f) \<rightarrow>\<^sup>* (Skip, Fault f)"
@@ -276,7 +276,7 @@ next
   from CatchSteps [OF steps_c\<^sub>1 refl refl]
   have "\<Gamma>\<turnstile> (Catch c\<^sub>1 c\<^sub>2, Fault f) \<rightarrow>\<^sup>* (Catch Skip c\<^sub>2, Fault f)".
   also
-  have "\<Gamma>\<turnstile> (Catch Skip c\<^sub>2, Fault f) \<rightarrow> (Skip, Fault f)" by (rule CatchSkip) 
+  have "\<Gamma>\<turnstile> (Catch Skip c\<^sub>2, Fault f) \<rightarrow> (Skip, Fault f)" by (rule CatchSkip)
   finally show ?case by simp
 qed (fastforce intro: step.intros)+
 
@@ -297,7 +297,7 @@ next
   from CatchSteps [OF steps_c\<^sub>1 refl refl]
   have "\<Gamma>\<turnstile> (Catch c\<^sub>1 c\<^sub>2, Stuck) \<rightarrow>\<^sup>* (Catch Skip c\<^sub>2, Stuck)" .
   also
-  have "\<Gamma>\<turnstile> (Catch Skip c\<^sub>2, Stuck) \<rightarrow> (Skip, Stuck)" by (rule CatchSkip) 
+  have "\<Gamma>\<turnstile> (Catch Skip c\<^sub>2, Stuck) \<rightarrow> (Skip, Stuck)" by (rule CatchSkip)
   finally show ?case by simp
 qed (fastforce intro: step.intros)+
 
@@ -318,29 +318,29 @@ next
   from CatchSteps [OF steps_c\<^sub>1 refl refl]
   have "\<Gamma>\<turnstile> (Catch c\<^sub>1 c\<^sub>2, Abrupt s) \<rightarrow>\<^sup>* (Catch Skip c\<^sub>2, Abrupt s)".
   also
-  have "\<Gamma>\<turnstile> (Catch Skip c\<^sub>2, Abrupt s) \<rightarrow> (Skip, Abrupt s)" by (rule CatchSkip) 
+  have "\<Gamma>\<turnstile> (Catch Skip c\<^sub>2, Abrupt s) \<rightarrow> (Skip, Abrupt s)" by (rule CatchSkip)
   finally show ?case by simp
 qed (fastforce intro: step.intros)+
 
-lemma step_Fault_prop: 
+lemma step_Fault_prop:
   assumes step: "\<Gamma>\<turnstile> (c, s) \<rightarrow> (c', s')"
   shows "\<And>f. s=Fault f \<Longrightarrow> s'=Fault f"
 using step
 by (induct) auto
 
-lemma step_Abrupt_prop: 
+lemma step_Abrupt_prop:
   assumes step: "\<Gamma>\<turnstile> (c, s) \<rightarrow> (c', s')"
   shows "\<And>x. s=Abrupt x \<Longrightarrow> s'=Abrupt x"
 using step
 by (induct) auto
 
-lemma step_Stuck_prop: 
+lemma step_Stuck_prop:
   assumes step: "\<Gamma>\<turnstile> (c, s) \<rightarrow> (c', s')"
   shows "s=Stuck \<Longrightarrow> s'=Stuck"
 using step
 by (induct) auto
 
-lemma steps_Fault_prop: 
+lemma steps_Fault_prop:
   assumes step: "\<Gamma>\<turnstile> (c, s) \<rightarrow>\<^sup>* (c', s')"
   shows "s=Fault f \<Longrightarrow> s'=Fault f"
 using step
@@ -352,7 +352,7 @@ next
     by (auto intro: step_Fault_prop)
 qed
 
-lemma steps_Abrupt_prop: 
+lemma steps_Abrupt_prop:
   assumes step: "\<Gamma>\<turnstile> (c, s) \<rightarrow>\<^sup>* (c', s')"
   shows "s=Abrupt t \<Longrightarrow> s'=Abrupt t"
 using step
@@ -364,7 +364,7 @@ next
     by (auto intro: step_Abrupt_prop)
 qed
 
-lemma steps_Stuck_prop: 
+lemma steps_Stuck_prop:
   assumes step: "\<Gamma>\<turnstile> (c, s) \<rightarrow>\<^sup>* (c', s')"
   shows "s=Stuck \<Longrightarrow> s'=Stuck"
 using step
@@ -403,13 +403,13 @@ next
 next
   case SpecStuck thus ?case by (fastforce intro: step.SpecStuck rtranclp_trans)
 next
-  case (Seq c\<^sub>1 s s' c\<^sub>2 t) 
+  case (Seq c\<^sub>1 s s' c\<^sub>2 t)
   have exec_c\<^sub>1: "\<Gamma>\<turnstile> \<langle>c\<^sub>1,Normal s\<rangle> \<Rightarrow> s'" by fact
   have exec_c\<^sub>2: "\<Gamma>\<turnstile> \<langle>c\<^sub>2,s'\<rangle> \<Rightarrow> t" by fact
   show ?case
   proof (cases "\<exists>x. s'=Abrupt x")
     case False
-    from False Seq.hyps (2) 
+    from False Seq.hyps (2)
     have "\<Gamma>\<turnstile> (c\<^sub>1, Normal s) \<rightarrow>\<^sup>* (Skip, s')"
       by (cases s') auto
     hence seq_c\<^sub>1: "\<Gamma>\<turnstile> (Seq c\<^sub>1 c\<^sub>2, Normal s) \<rightarrow>\<^sup>* (Seq Skip c\<^sub>2, s')"
@@ -417,11 +417,11 @@ next
     from Seq.hyps (4) obtain c' t' where
       steps_c\<^sub>2: "\<Gamma>\<turnstile> (c\<^sub>2, s') \<rightarrow>\<^sup>* (c', t')" and
       t: "(case t of
-           Abrupt x \<Rightarrow> if s' = t then c' = Skip \<and> t' = t 
+           Abrupt x \<Rightarrow> if s' = t then c' = Skip \<and> t' = t
                        else c' = Throw \<and> t' = Normal x
            | _ \<Rightarrow> c' = Skip \<and> t' = t)"
       by auto
-    note seq_c\<^sub>1 
+    note seq_c\<^sub>1
     also have "\<Gamma>\<turnstile> (Seq Skip c\<^sub>2, s') \<rightarrow> (c\<^sub>2, s')" by (rule step.SeqSkip)
     also note steps_c\<^sub>2
     finally have "\<Gamma>\<turnstile> (Seq c\<^sub>1 c\<^sub>2, Normal s) \<rightarrow>\<^sup>* (c', t')".
@@ -431,7 +431,7 @@ next
     case True
     then obtain x where s': "s'=Abrupt x"
       by blast
-    from s' Seq.hyps (2) 
+    from s' Seq.hyps (2)
     have "\<Gamma>\<turnstile> (c\<^sub>1, Normal s) \<rightarrow>\<^sup>* (Throw, Normal x)"
       by auto
     hence seq_c\<^sub>1: "\<Gamma>\<turnstile> (Seq c\<^sub>1 c\<^sub>2, Normal s) \<rightarrow>\<^sup>* (Seq Throw c\<^sub>2, Normal x)"
@@ -450,7 +450,7 @@ next
 next
   case CondFalse thus ?case by (blast intro: step.CondFalse rtranclp_trans)
 next
-  case (WhileTrue s b c s' t) 
+  case (WhileTrue s b c s' t)
   have exec_c: "\<Gamma>\<turnstile> \<langle>c,Normal s\<rangle> \<Rightarrow> s'" by fact
   have exec_w: "\<Gamma>\<turnstile> \<langle>While b c,s'\<rangle> \<Rightarrow> t" by fact
   have b: "s \<in> b" by fact
@@ -459,7 +459,7 @@ next
   show ?case
   proof (cases "\<exists>x. s'=Abrupt x")
     case False
-    from False WhileTrue.hyps (3) 
+    from False WhileTrue.hyps (3)
     have "\<Gamma>\<turnstile> (c, Normal s) \<rightarrow>\<^sup>* (Skip, s')"
       by (cases s') auto
     hence seq_c: "\<Gamma>\<turnstile> (Seq c (While b c), Normal s) \<rightarrow>\<^sup>* (Seq Skip (While b c), s')"
@@ -467,12 +467,12 @@ next
     from WhileTrue.hyps (5) obtain c' t' where
       steps_c\<^sub>2: "\<Gamma>\<turnstile> (While b c, s') \<rightarrow>\<^sup>* (c', t')" and
       t: "(case t of
-           Abrupt x \<Rightarrow> if s' = t then c' = Skip \<and> t' = t 
+           Abrupt x \<Rightarrow> if s' = t then c' = Skip \<and> t' = t
                        else c' = Throw \<and> t' = Normal x
            | _ \<Rightarrow> c' = Skip \<and> t' = t)"
       by auto
-    note step also note seq_c 
-    also have "\<Gamma>\<turnstile> (Seq Skip (While b c), s') \<rightarrow> (While b c, s')" 
+    note step also note seq_c
+    also have "\<Gamma>\<turnstile> (Seq Skip (While b c), s') \<rightarrow> (While b c, s')"
       by (rule step.SeqSkip)
     also note steps_c\<^sub>2
     finally have "\<Gamma>\<turnstile> (While b c, Normal s) \<rightarrow>\<^sup>* (c', t')".
@@ -484,10 +484,10 @@ next
       by blast
     note step
     also
-    from s' WhileTrue.hyps (3) 
+    from s' WhileTrue.hyps (3)
     have "\<Gamma>\<turnstile> (c, Normal s) \<rightarrow>\<^sup>* (Throw, Normal x)"
       by auto
-    hence 
+    hence
       seq_c: "\<Gamma>\<turnstile> (Seq c (While b c), Normal s) \<rightarrow>\<^sup>* (Seq Throw (While b c), Normal x)"
       by (rule SeqSteps) auto
     also have "\<Gamma>\<turnstile> (Seq Throw (While b c), Normal x) \<rightarrow> (Throw, Normal x)"
@@ -510,7 +510,7 @@ next
 next
   case DynCom thus ?case by (blast intro: step.DynCom rtranclp_trans)
 next
-   case Throw thus ?case by simp 
+   case Throw thus ?case by simp
 next
   case AbruptProp thus ?case by (fastforce intro: steps_Abrupt)
 next
@@ -526,23 +526,23 @@ next
   from CatchMatch.hyps (4) obtain c' t' where
       steps_c\<^sub>2: "\<Gamma>\<turnstile> (c\<^sub>2, Normal s') \<rightarrow>\<^sup>* (c', t')" and
       t: "(case t of
-           Abrupt x \<Rightarrow> if Normal s' = t then c' = Skip \<and> t' = t 
+           Abrupt x \<Rightarrow> if Normal s' = t then c' = Skip \<and> t' = t
                        else c' = Throw \<and> t' = Normal x
            | _ \<Rightarrow> c' = Skip \<and> t' = t)"
       by auto
-  note steps_c\<^sub>2  
+  note steps_c\<^sub>2
   finally show ?case
     using t
     by (auto split: xstate.splits)
 next
-  case (CatchMiss c\<^sub>1 s t c\<^sub>2) 
+  case (CatchMiss c\<^sub>1 s t c\<^sub>2)
   have t: "\<not> isAbr t" by fact
   with CatchMiss.hyps (2)
   have "\<Gamma>\<turnstile> (c\<^sub>1, Normal s) \<rightarrow>\<^sup>* (Skip, t)"
     by (cases t) auto
   hence "\<Gamma>\<turnstile> (Catch c\<^sub>1 c\<^sub>2, Normal s) \<rightarrow>\<^sup>* (Catch Skip c\<^sub>2, t)"
     by (rule CatchSteps) auto
-  also 
+  also
   have "\<Gamma>\<turnstile> (Catch Skip c\<^sub>2, t) \<rightarrow> (Skip, t)"
     by (rule step.CatchSkip)
   finally show ?case
@@ -553,53 +553,53 @@ qed
 corollary exec_impl_steps_Normal:
   assumes exec: "\<Gamma>\<turnstile>\<langle>c,s\<rangle> \<Rightarrow> Normal t"
   shows "\<Gamma>\<turnstile>(c,s) \<rightarrow>\<^sup>* (Skip, Normal t)"
-using exec_impl_steps [OF exec]  
+using exec_impl_steps [OF exec]
 by auto
 
 corollary exec_impl_steps_Normal_Abrupt:
   assumes exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> Abrupt t"
   shows "\<Gamma>\<turnstile>(c,Normal s) \<rightarrow>\<^sup>* (Throw, Normal t)"
-using exec_impl_steps [OF exec]  
+using exec_impl_steps [OF exec]
 by auto
 
 corollary exec_impl_steps_Abrupt_Abrupt:
   assumes exec: "\<Gamma>\<turnstile>\<langle>c,Abrupt t\<rangle> \<Rightarrow> Abrupt t"
   shows "\<Gamma>\<turnstile>(c,Abrupt t) \<rightarrow>\<^sup>* (Skip, Abrupt t)"
-using exec_impl_steps [OF exec]  
+using exec_impl_steps [OF exec]
 by auto
 
 corollary exec_impl_steps_Fault:
   assumes exec: "\<Gamma>\<turnstile>\<langle>c,s\<rangle> \<Rightarrow> Fault f"
   shows "\<Gamma>\<turnstile>(c,s) \<rightarrow>\<^sup>* (Skip, Fault f)"
-using exec_impl_steps [OF exec]  
+using exec_impl_steps [OF exec]
 by auto
 
 corollary exec_impl_steps_Stuck:
   assumes exec: "\<Gamma>\<turnstile>\<langle>c,s\<rangle> \<Rightarrow> Stuck"
   shows "\<Gamma>\<turnstile>(c,s) \<rightarrow>\<^sup>* (Skip, Stuck)"
-using exec_impl_steps [OF exec]  
+using exec_impl_steps [OF exec]
 by auto
 
 
-lemma step_Abrupt_end: 
+lemma step_Abrupt_end:
   assumes step: "\<Gamma>\<turnstile> (c\<^sub>1, s) \<rightarrow> (c\<^sub>1', s')"
   shows "s'=Abrupt x \<Longrightarrow> s=Abrupt x"
 using step
 by induct auto
 
-lemma step_Stuck_end: 
+lemma step_Stuck_end:
   assumes step: "\<Gamma>\<turnstile> (c\<^sub>1, s) \<rightarrow> (c\<^sub>1', s')"
-  shows "s'=Stuck \<Longrightarrow> 
-          s=Stuck \<or> 
-          (\<exists>r x. redex c\<^sub>1 = Spec r \<and> s=Normal x \<and> (\<forall>t. (x,t)\<notin>r)) \<or> 
+  shows "s'=Stuck \<Longrightarrow>
+          s=Stuck \<or>
+          (\<exists>r x. redex c\<^sub>1 = Spec r \<and> s=Normal x \<and> (\<forall>t. (x,t)\<notin>r)) \<or>
           (\<exists>p x. redex c\<^sub>1=Call p \<and> s=Normal x \<and> \<Gamma> p = None)"
 using step
 by induct auto
 
-lemma step_Fault_end: 
+lemma step_Fault_end:
   assumes step: "\<Gamma>\<turnstile> (c\<^sub>1, s) \<rightarrow> (c\<^sub>1', s')"
-  shows "s'=Fault f \<Longrightarrow> 
-          s=Fault f \<or> 
+  shows "s'=Fault f \<Longrightarrow>
+          s=Fault f \<or>
           (\<exists>g c x. redex c\<^sub>1 = Guard f g c \<and> s=Normal x \<and> x \<notin> g)"
 using step
 by induct auto
@@ -631,7 +631,7 @@ qed simp_all
 lemma step_extend:
   assumes step: "\<Gamma>\<turnstile>(c,s) \<rightarrow> (c', s')"
   shows "\<And>t. \<Gamma>\<turnstile>\<langle>c',s'\<rangle> \<Rightarrow> t \<Longrightarrow> \<Gamma>\<turnstile>\<langle>c,s\<rangle> \<Rightarrow> t"
-using step 
+using step
 proof (induct)
   case Basic thus ?case
     by (fastforce intro: exec.intros elim: exec_Normal_elim_cases)
@@ -644,11 +644,11 @@ next
 next
   case Guard thus ?case
     by (fastforce intro: exec.intros elim: exec_Normal_elim_cases)
-next  
+next
   case GuardFault thus ?case
     by (fastforce intro: exec.intros elim: exec_Normal_elim_cases)
 next
-  case (Seq c\<^sub>1 s c\<^sub>1' s' c\<^sub>2) 
+  case (Seq c\<^sub>1 s c\<^sub>1' s' c\<^sub>2)
   have step: "\<Gamma>\<turnstile> (c\<^sub>1, s) \<rightarrow> (c\<^sub>1', s')" by fact
   have exec': "\<Gamma>\<turnstile> \<langle>Seq c\<^sub>1' c\<^sub>2,s'\<rangle> \<Rightarrow> t" by fact
   show ?case
@@ -681,7 +681,7 @@ next
     next
       case (Fault f)
       from step_Fault_end [OF step this] s_Normal
-      obtain g c where 
+      obtain g c where
         redex_c\<^sub>1: "redex c\<^sub>1 = Guard f g c" and
         fail: "x \<notin> g"
         by auto
@@ -767,14 +767,14 @@ next
   qed
 next
   case (SeqSkip c\<^sub>2 s t) thus ?case
-    by (cases s) (fastforce intro: exec.intros elim: exec_elim_cases)+      
+    by (cases s) (fastforce intro: exec.intros elim: exec_elim_cases)+
 next
   case (SeqThrow c\<^sub>2 s t) thus ?case
-    by (fastforce intro: exec.intros elim: exec_elim_cases)+      
-next      
+    by (fastforce intro: exec.intros elim: exec_elim_cases)+
+next
   case CondTrue thus ?case
     by (fastforce intro: exec.intros elim: exec_Normal_elim_cases)
-next      
+next
   case CondFalse thus ?case
     by (fastforce intro: exec.intros elim: exec_Normal_elim_cases)
 next
@@ -803,11 +803,11 @@ next
     show ?thesis
     proof (cases s')
       case (Normal x')
-      from exec' [simplified Normal] 
+      from exec' [simplified Normal]
       show ?thesis
       proof (cases)
         fix s''
-        assume exec_c\<^sub>1': "\<Gamma>\<turnstile> \<langle>c\<^sub>1',Normal x'\<rangle> \<Rightarrow> Abrupt s''" 
+        assume exec_c\<^sub>1': "\<Gamma>\<turnstile> \<langle>c\<^sub>1',Normal x'\<rangle> \<Rightarrow> Abrupt s''"
         assume exec_c\<^sub>2: "\<Gamma>\<turnstile> \<langle>c\<^sub>2,Normal s''\<rangle> \<Rightarrow> t"
         from Catch.hyps (2) Normal exec_c\<^sub>1' s_Normal
         have "\<Gamma>\<turnstile> \<langle>c\<^sub>1,Normal x\<rangle> \<Rightarrow> Abrupt s''"
@@ -815,7 +815,7 @@ next
         from exec.CatchMatch [OF this exec_c\<^sub>2] s_Normal
         show ?thesis by simp
       next
-        assume exec_c\<^sub>1': "\<Gamma>\<turnstile> \<langle>c\<^sub>1',Normal x'\<rangle> \<Rightarrow> t" 
+        assume exec_c\<^sub>1': "\<Gamma>\<turnstile> \<langle>c\<^sub>1',Normal x'\<rangle> \<Rightarrow> t"
         assume t: "\<not> isAbr t"
         from Catch.hyps (2) Normal exec_c\<^sub>1' s_Normal
         have "\<Gamma>\<turnstile> \<langle>c\<^sub>1,Normal x\<rangle> \<Rightarrow> t"
@@ -837,7 +837,7 @@ next
     next
       case (Fault f)
       from step_Fault_end [OF step this] s_Normal
-      obtain g c where 
+      obtain g c where
         redex_c\<^sub>1: "redex c\<^sub>1 = Guard f g c" and
         fail: "x \<notin> g"
         by auto
@@ -972,9 +972,9 @@ subsection \<open>Infinite Computations: \<open>\<Gamma>\<turnstile>(c, s) \<rig
 
 definition inf:: "('s,'p,'f) body \<Rightarrow> ('s,'p,'f) config \<Rightarrow> bool"
  ("_\<turnstile> _ \<rightarrow> \<dots>'(\<infinity>')" [60,80] 100) where
-"\<Gamma>\<turnstile> cfg \<rightarrow> \<dots>(\<infinity>) \<equiv> (\<exists>f. f (0::nat) = cfg \<and> (\<forall>i. \<Gamma>\<turnstile>f i \<rightarrow> f (i+1)))" 
+"\<Gamma>\<turnstile> cfg \<rightarrow> \<dots>(\<infinity>) \<equiv> (\<exists>f. f (0::nat) = cfg \<and> (\<forall>i. \<Gamma>\<turnstile>f i \<rightarrow> f (i+1)))"
 
-lemma not_infI: "\<lbrakk>\<And>f. \<lbrakk>f 0 = cfg; \<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)\<rbrakk> \<Longrightarrow> False\<rbrakk>  
+lemma not_infI: "\<lbrakk>\<And>f. \<lbrakk>f 0 = cfg; \<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)\<rbrakk> \<Longrightarrow> False\<rbrakk>
                 \<Longrightarrow> \<not>\<Gamma>\<turnstile> cfg \<rightarrow> \<dots>(\<infinity>)"
   by (auto simp add: inf_def)
 
@@ -983,9 +983,9 @@ subsection \<open>Equivalence between Termination and the Absence of Infinite Co
 (* ************************************************************************ *)
 
 
-lemma step_preserves_termination: 
+lemma step_preserves_termination:
   assumes step: "\<Gamma>\<turnstile>(c,s) \<rightarrow> (c',s')"
-  shows "\<Gamma>\<turnstile>c\<down>s \<Longrightarrow> \<Gamma>\<turnstile>c'\<down>s'"  
+  shows "\<Gamma>\<turnstile>c\<down>s \<Longrightarrow> \<Gamma>\<turnstile>c'\<down>s'"
 using step
 proof (induct)
   case Basic thus ?case by (fastforce intro: terminates.intros)
@@ -994,7 +994,7 @@ next
 next
   case SpecStuck thus ?case by (fastforce intro: terminates.intros)
 next
-  case Guard thus ?case 
+  case Guard thus ?case
     by (fastforce intro: terminates.intros elim: terminates_Normal_elim_cases)
 next
   case GuardFault thus ?case by (fastforce intro: terminates.intros)
@@ -1002,75 +1002,75 @@ next
   case (Seq c\<^sub>1 s c\<^sub>1' s' c\<^sub>2) thus ?case
     apply (cases s)
     apply     (cases s')
-    apply         (fastforce intro: terminates.intros step_extend 
+    apply         (fastforce intro: terminates.intros step_extend
                     elim: terminates_Normal_elim_cases)
-    apply (fastforce intro: terminates.intros dest: step_Abrupt_prop 
+    apply (fastforce intro: terminates.intros dest: step_Abrupt_prop
       step_Fault_prop step_Stuck_prop)+
     done
 next
-  case (SeqSkip c\<^sub>2 s) 
-  thus ?case 
+  case (SeqSkip c\<^sub>2 s)
+  thus ?case
     apply (cases s)
     apply (fastforce intro: terminates.intros exec.intros
             elim: terminates_Normal_elim_cases )+
     done
 next
-  case (SeqThrow c\<^sub>2 s) 
-  thus ?case 
+  case (SeqThrow c\<^sub>2 s)
+  thus ?case
     by (fastforce intro: terminates.intros exec.intros
             elim: terminates_Normal_elim_cases )
 next
-  case CondTrue 
-  thus ?case 
+  case CondTrue
+  thus ?case
     by (fastforce intro: terminates.intros exec.intros
             elim: terminates_Normal_elim_cases )
 next
-  case CondFalse 
-  thus ?case 
-    by (fastforce intro: terminates.intros 
+  case CondFalse
+  thus ?case
+    by (fastforce intro: terminates.intros
             elim: terminates_Normal_elim_cases )
 next
   case WhileTrue
-  thus ?case 
-    by (fastforce intro: terminates.intros 
+  thus ?case
+    by (fastforce intro: terminates.intros
             elim: terminates_Normal_elim_cases )
 next
-  case WhileFalse 
-  thus ?case 
-    by (fastforce intro: terminates.intros 
+  case WhileFalse
+  thus ?case
+    by (fastforce intro: terminates.intros
             elim: terminates_Normal_elim_cases )
 next
-  case Call 
-  thus ?case 
-    by (fastforce intro: terminates.intros 
+  case Call
+  thus ?case
+    by (fastforce intro: terminates.intros
             elim: terminates_Normal_elim_cases )
 next
   case CallUndefined
-  thus ?case 
-    by (fastforce intro: terminates.intros 
+  thus ?case
+    by (fastforce intro: terminates.intros
             elim: terminates_Normal_elim_cases )
 next
   case DynCom
-  thus ?case 
-    by (fastforce intro: terminates.intros 
+  thus ?case
+    by (fastforce intro: terminates.intros
             elim: terminates_Normal_elim_cases )
 next
   case (Catch c\<^sub>1 s c\<^sub>1' s' c\<^sub>2) thus ?case
     apply (cases s)
     apply     (cases s')
-    apply         (fastforce intro: terminates.intros step_extend 
+    apply         (fastforce intro: terminates.intros step_extend
                     elim: terminates_Normal_elim_cases)
-    apply (fastforce intro: terminates.intros dest: step_Abrupt_prop 
+    apply (fastforce intro: terminates.intros dest: step_Abrupt_prop
       step_Fault_prop step_Stuck_prop)+
     done
 next
   case CatchThrow
-  thus ?case 
+  thus ?case
    by (fastforce intro: terminates.intros exec.intros
             elim: terminates_Normal_elim_cases )
 next
-  case (CatchSkip c\<^sub>2 s) 
-  thus ?case 
+  case (CatchSkip c\<^sub>2 s)
+  thus ?case
     by (cases s) (fastforce intro: terminates.intros)+
 next
   case FaultProp thus ?case by (fastforce intro: terminates.intros)
@@ -1080,7 +1080,7 @@ next
   case AbruptProp thus ?case by (fastforce intro: terminates.intros)
 qed
 
-lemma steps_preserves_termination: 
+lemma steps_preserves_termination:
   assumes steps: "\<Gamma>\<turnstile>(c,s) \<rightarrow>\<^sup>* (c',s')"
   shows "\<Gamma>\<turnstile>c\<down>s \<Longrightarrow> \<Gamma>\<turnstile>c'\<down>s'"
 using steps
@@ -1099,7 +1099,7 @@ ML \<open>
       @{thm tranclp_induct}));
 \<close>
 
-lemma steps_preserves_termination': 
+lemma steps_preserves_termination':
   assumes steps: "\<Gamma>\<turnstile>(c,s) \<rightarrow>\<^sup>+ (c',s')"
   shows "\<Gamma>\<turnstile>c\<down>s \<Longrightarrow> \<Gamma>\<turnstile>c'\<down>s'"
 using steps
@@ -1121,7 +1121,7 @@ where
    | Catch c\<^sub>1 c\<^sub>2 \<Rightarrow> c\<^sub>1
    | _ \<Rightarrow> c)"
 
-  
+
 definition head:: "('s,'p,'f) config \<Rightarrow> ('s,'p,'f) config"
   where "head cfg = (head_com (fst cfg), snd cfg)"
 
@@ -1142,7 +1142,7 @@ lemma infinite_computation_extract_head_Seq:
   assumes inf_comp: "\<forall>i::nat. \<Gamma>\<turnstile>f i \<rightarrow> f (i+1)"
   assumes f_0: "f 0 = (Seq c\<^sub>1 c\<^sub>2,s)"
   assumes not_fin: "\<forall>i<k. \<not> final (head (f i))"
-  shows "\<forall>i<k. (\<exists>c' s'. f (i + 1) = (Seq c' c\<^sub>2, s')) \<and>  
+  shows "\<forall>i<k. (\<exists>c' s'. f (i + 1) = (Seq c' c\<^sub>2, s')) \<and>
                \<Gamma>\<turnstile>head (f i) \<rightarrow> head (f (i+1))"
         (is "\<forall>i<k. ?P i")
 using not_fin
@@ -1151,10 +1151,10 @@ proof (induct k)
   show ?case by simp
 next
   case (Suc k)
-  have not_fin_Suc: 
+  have not_fin_Suc:
     "\<forall>i<Suc k. \<not> final (head (f i))" by fact
-  from this[rule_format] have not_fin_k: 
-    "\<forall>i<k. \<not> final (head (f i))" 
+  from this[rule_format] have not_fin_k:
+    "\<forall>i<k. \<not> final (head (f i))"
     apply clarify
     apply (subgoal_tac "i < Suc k")
     apply blast
@@ -1162,11 +1162,11 @@ next
     done
 
   from Suc.hyps [OF this]
-  have hyp: "\<forall>i<k. (\<exists>c' s'. f (i + 1) = (Seq c' c\<^sub>2, s')) \<and> 
+  have hyp: "\<forall>i<k. (\<exists>c' s'. f (i + 1) = (Seq c' c\<^sub>2, s')) \<and>
                    \<Gamma>\<turnstile> head (f i) \<rightarrow> head (f (i + 1))".
   show ?case
   proof (rule le_Suc_cases)
-    fix i 
+    fix i
     assume "i < k"
     then show "?P i"
       by (rule hyp [rule_format])
@@ -1199,7 +1199,7 @@ lemma infinite_computation_extract_head_Catch:
   assumes inf_comp: "\<forall>i::nat. \<Gamma>\<turnstile>f i \<rightarrow> f (i+1)"
   assumes f_0: "f 0 = (Catch c\<^sub>1 c\<^sub>2,s)"
   assumes not_fin: "\<forall>i<k. \<not> final (head (f i))"
-  shows "\<forall>i<k. (\<exists>c' s'. f (i + 1) = (Catch c' c\<^sub>2, s')) \<and>  
+  shows "\<forall>i<k. (\<exists>c' s'. f (i + 1) = (Catch c' c\<^sub>2, s')) \<and>
                \<Gamma>\<turnstile>head (f i) \<rightarrow> head (f (i+1))"
         (is "\<forall>i<k. ?P i")
 using not_fin
@@ -1208,10 +1208,10 @@ proof (induct k)
   show ?case by simp
 next
   case (Suc k)
-  have not_fin_Suc: 
+  have not_fin_Suc:
     "\<forall>i<Suc k. \<not> final (head (f i))" by fact
-  from this[rule_format] have not_fin_k: 
-    "\<forall>i<k. \<not> final (head (f i))" 
+  from this[rule_format] have not_fin_k:
+    "\<forall>i<k. \<not> final (head (f i))"
     apply clarify
     apply (subgoal_tac "i < Suc k")
     apply blast
@@ -1219,11 +1219,11 @@ next
     done
 
   from Suc.hyps [OF this]
-  have hyp: "\<forall>i<k. (\<exists>c' s'. f (i + 1) = (Catch c' c\<^sub>2, s')) \<and> 
+  have hyp: "\<forall>i<k. (\<exists>c' s'. f (i + 1) = (Catch c' c\<^sub>2, s')) \<and>
                    \<Gamma>\<turnstile> head (f i) \<rightarrow> head (f (i + 1))".
   show ?case
   proof (rule le_Suc_cases)
-    fix i 
+    fix i
     assume "i < k"
     then show "?P i"
       by (rule hyp [rule_format])
@@ -1253,7 +1253,7 @@ next
 qed
 
 lemma no_inf_Throw: "\<not> \<Gamma>\<turnstile>(Throw,s) \<rightarrow> \<dots>(\<infinity>)"
-proof 
+proof
   assume "\<Gamma>\<turnstile> (Throw, s) \<rightarrow> \<dots>(\<infinity>)"
   then obtain f where
     step [rule_format]: "\<forall>i::nat. \<Gamma>\<turnstile>f i \<rightarrow> f (i+1)" and
@@ -1264,16 +1264,16 @@ proof
     by cases (auto elim: step_elim_cases)
 qed
 
-lemma split_inf_Seq: 
+lemma split_inf_Seq:
   assumes inf_comp: "\<Gamma>\<turnstile>(Seq c\<^sub>1 c\<^sub>2,s) \<rightarrow> \<dots>(\<infinity>)"
-  shows "\<Gamma>\<turnstile>(c\<^sub>1,s) \<rightarrow> \<dots>(\<infinity>) \<or> 
+  shows "\<Gamma>\<turnstile>(c\<^sub>1,s) \<rightarrow> \<dots>(\<infinity>) \<or>
          (\<exists>s'. \<Gamma>\<turnstile>(c\<^sub>1,s) \<rightarrow>\<^sup>* (Skip,s') \<and> \<Gamma>\<turnstile>(c\<^sub>2,s') \<rightarrow> \<dots>(\<infinity>))"
 proof -
   from inf_comp obtain f where
     step: "\<forall>i::nat. \<Gamma>\<turnstile>f i \<rightarrow> f (i+1)" and
     f_0: "f 0 = (Seq c\<^sub>1 c\<^sub>2, s)"
     by (auto simp add: inf_def)
-  from f_0 have head_f_0: "head (f 0) = (c\<^sub>1,s)" 
+  from f_0 have head_f_0: "head (f 0) = (c\<^sub>1,s)"
     by (simp add: head_def head_com_def)
   show ?thesis
   proof (cases "\<exists>i. final (head (f i))")
@@ -1288,7 +1288,7 @@ proof -
     from infinite_computation_extract_head_Seq [OF step f_0 this]
     obtain step_head: "\<forall>i<k. \<Gamma>\<turnstile> head (f i) \<rightarrow> head (f (i + 1))" and
            conf: "\<forall>i<k. (\<exists>c' s'. f (i + 1) = (Seq c' c\<^sub>2, s'))"
-      by blast 
+      by blast
     from True
     have final_f_k: "final (head (f k))"
       apply -
@@ -1360,7 +1360,7 @@ proof -
       have ?thesis
         by auto
     }
-    ultimately 
+    ultimately
     show ?thesis
       by (auto simp add: final_def head_def head_com_def)
   next
@@ -1368,12 +1368,12 @@ proof -
     then have not_fin: "\<forall>i. \<not> final (head (f i))"
       by blast
     have "\<forall>i. \<Gamma>\<turnstile>head (f i) \<rightarrow> head (f (i + 1))"
-    proof 
+    proof
       fix k
-      from not_fin 
+      from not_fin
       have "\<forall>i<(Suc k). \<not> final (head (f i))"
         by simp
-      
+
       from infinite_computation_extract_head_Seq [OF step f_0 this ]
       show "\<Gamma>\<turnstile> head (f k) \<rightarrow> head (f (k + 1))" by simp
     qed
@@ -1384,16 +1384,16 @@ proof -
   qed
 qed
 
-lemma split_inf_Catch: 
+lemma split_inf_Catch:
   assumes inf_comp: "\<Gamma>\<turnstile>(Catch c\<^sub>1 c\<^sub>2,s) \<rightarrow> \<dots>(\<infinity>)"
-  shows "\<Gamma>\<turnstile>(c\<^sub>1,s) \<rightarrow> \<dots>(\<infinity>) \<or> 
+  shows "\<Gamma>\<turnstile>(c\<^sub>1,s) \<rightarrow> \<dots>(\<infinity>) \<or>
          (\<exists>s'. \<Gamma>\<turnstile>(c\<^sub>1,s) \<rightarrow>\<^sup>* (Throw,Normal s') \<and> \<Gamma>\<turnstile>(c\<^sub>2,Normal s') \<rightarrow> \<dots>(\<infinity>))"
 proof -
   from inf_comp obtain f where
     step: "\<forall>i::nat. \<Gamma>\<turnstile>f i \<rightarrow> f (i+1)" and
     f_0: "f 0 = (Catch c\<^sub>1 c\<^sub>2, s)"
     by (auto simp add: inf_def)
-  from f_0 have head_f_0: "head (f 0) = (c\<^sub>1,s)" 
+  from f_0 have head_f_0: "head (f 0) = (c\<^sub>1,s)"
     by (simp add: head_def head_com_def)
   show ?thesis
   proof (cases "\<exists>i. final (head (f i))")
@@ -1408,7 +1408,7 @@ proof -
     from infinite_computation_extract_head_Catch [OF step f_0 this]
     obtain step_head: "\<forall>i<k. \<Gamma>\<turnstile> head (f i) \<rightarrow> head (f (i + 1))" and
            conf: "\<forall>i<k. (\<exists>c' s'. f (i + 1) = (Catch c' c\<^sub>2, s'))"
-      by blast 
+      by blast
     from True
     have final_f_k: "final (head (f k))"
       apply -
@@ -1477,7 +1477,7 @@ proof -
         using s'
         by auto
     }
-    ultimately 
+    ultimately
     show ?thesis
       by (auto simp add: final_def head_def head_com_def)
   next
@@ -1485,12 +1485,12 @@ proof -
     then have not_fin: "\<forall>i. \<not> final (head (f i))"
       by blast
     have "\<forall>i. \<Gamma>\<turnstile>head (f i) \<rightarrow> head (f (i + 1))"
-    proof 
+    proof
       fix k
-      from not_fin 
+      from not_fin
       have "\<forall>i<(Suc k). \<not> final (head (f i))"
         by simp
-      
+
       from infinite_computation_extract_head_Catch [OF step f_0 this ]
       show "\<Gamma>\<turnstile> head (f k) \<rightarrow> head (f (k + 1))" by simp
     qed
@@ -1513,29 +1513,29 @@ proof (induct c)
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Skip, Stuck)" 
+    assume f_0: "f 0 = (Skip, Stuck)"
     from f_step [of 0] f_0
     show False
       by (auto elim: Skip_no_step)
   qed
 next
-  case (Basic g) 
-  thus ?case 
+  case (Basic g)
+  thus ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Basic g, Stuck)" 
+    assume f_0: "f 0 = (Basic g, Stuck)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
-  case (Spec r) 
-  thus ?case 
+  case (Spec r)
+  thus ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Spec r, Stuck)" 
+    assume f_0: "f 0 = (Spec r, Stuck)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
@@ -1543,74 +1543,74 @@ next
 next
   case (Seq c\<^sub>1 c\<^sub>2)
   show ?case
-  proof 
+  proof
     assume "\<Gamma>\<turnstile> (Seq c\<^sub>1 c\<^sub>2, Stuck) \<rightarrow> \<dots>(\<infinity>)"
     from split_inf_Seq [OF this] Seq.hyps
     show False
       by (auto dest: steps_Stuck_prop)
   qed
 next
-  case (Cond b c\<^sub>1 c\<^sub>2) 
-  show ?case 
+  case (Cond b c\<^sub>1 c\<^sub>2)
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Cond b c\<^sub>1 c\<^sub>2, Stuck)" 
+    assume f_0: "f 0 = (Cond b c\<^sub>1 c\<^sub>2, Stuck)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
-  case (While b c) 
-  show ?case 
+  case (While b c)
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (While b c, Stuck)" 
+    assume f_0: "f 0 = (While b c, Stuck)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
-  case (Call p) 
-  show ?case 
+  case (Call p)
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Call p, Stuck)" 
+    assume f_0: "f 0 = (Call p, Stuck)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
-  case (DynCom d) 
-  show ?case 
+  case (DynCom d)
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (DynCom d, Stuck)" 
+    assume f_0: "f 0 = (DynCom d, Stuck)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
   case (Guard m g c)
-  show ?case 
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Guard m g c, Stuck)" 
+    assume f_0: "f 0 = (Guard m g c, Stuck)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
   case Throw
-  show ?case 
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Throw, Stuck)" 
+    assume f_0: "f 0 = (Throw, Stuck)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
@@ -1618,12 +1618,12 @@ next
 next
   case (Catch c\<^sub>1 c\<^sub>2)
   show ?case
-  proof 
+  proof
     assume "\<Gamma>\<turnstile> (Catch c\<^sub>1 c\<^sub>2, Stuck) \<rightarrow> \<dots>(\<infinity>)"
     from split_inf_Catch [OF this] Catch.hyps
     show False
       by (auto dest: steps_Stuck_prop)
-  qed  
+  qed
 qed
 
 lemma not_inf_Fault: "\<not> \<Gamma>\<turnstile>(c,Fault x) \<rightarrow> \<dots>(\<infinity>)"
@@ -1633,29 +1633,29 @@ proof (induct c)
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Skip, Fault x)" 
+    assume f_0: "f 0 = (Skip, Fault x)"
     from f_step [of 0] f_0
     show False
       by (auto elim: Skip_no_step)
   qed
 next
-  case (Basic g) 
-  thus ?case 
+  case (Basic g)
+  thus ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Basic g, Fault x)" 
+    assume f_0: "f 0 = (Basic g, Fault x)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
-  case (Spec r) 
-  thus ?case 
+  case (Spec r)
+  thus ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Spec r, Fault x)" 
+    assume f_0: "f 0 = (Spec r, Fault x)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
@@ -1663,74 +1663,74 @@ next
 next
   case (Seq c\<^sub>1 c\<^sub>2)
   show ?case
-  proof 
+  proof
     assume "\<Gamma>\<turnstile> (Seq c\<^sub>1 c\<^sub>2, Fault x) \<rightarrow> \<dots>(\<infinity>)"
     from split_inf_Seq [OF this] Seq.hyps
     show False
       by (auto dest: steps_Fault_prop)
   qed
 next
-  case (Cond b c\<^sub>1 c\<^sub>2) 
-  show ?case 
+  case (Cond b c\<^sub>1 c\<^sub>2)
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Cond b c\<^sub>1 c\<^sub>2, Fault x)" 
+    assume f_0: "f 0 = (Cond b c\<^sub>1 c\<^sub>2, Fault x)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
-  case (While b c) 
-  show ?case 
+  case (While b c)
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (While b c, Fault x)" 
+    assume f_0: "f 0 = (While b c, Fault x)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
-  case (Call p) 
-  show ?case 
+  case (Call p)
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Call p, Fault x)" 
+    assume f_0: "f 0 = (Call p, Fault x)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
-  case (DynCom d) 
-  show ?case 
+  case (DynCom d)
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (DynCom d, Fault x)" 
+    assume f_0: "f 0 = (DynCom d, Fault x)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
   case (Guard m g c)
-  show ?case 
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Guard m g c, Fault x)" 
+    assume f_0: "f 0 = (Guard m g c, Fault x)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
   case Throw
-  show ?case 
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Throw, Fault x)" 
+    assume f_0: "f 0 = (Throw, Fault x)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
@@ -1738,12 +1738,12 @@ next
 next
   case (Catch c\<^sub>1 c\<^sub>2)
   show ?case
-  proof 
+  proof
     assume "\<Gamma>\<turnstile> (Catch c\<^sub>1 c\<^sub>2, Fault x) \<rightarrow> \<dots>(\<infinity>)"
     from split_inf_Catch [OF this] Catch.hyps
     show False
       by (auto dest: steps_Fault_prop)
-  qed  
+  qed
 qed
 
 lemma not_inf_Abrupt: "\<not> \<Gamma>\<turnstile>(c,Abrupt s) \<rightarrow> \<dots>(\<infinity>)"
@@ -1753,29 +1753,29 @@ proof (induct c)
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Skip, Abrupt s)" 
+    assume f_0: "f 0 = (Skip, Abrupt s)"
     from f_step [of 0] f_0
     show False
       by (auto elim: Skip_no_step)
   qed
 next
-  case (Basic g) 
-  thus ?case 
+  case (Basic g)
+  thus ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Basic g, Abrupt s)" 
+    assume f_0: "f 0 = (Basic g, Abrupt s)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
-  case (Spec r) 
-  thus ?case 
+  case (Spec r)
+  thus ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Spec r, Abrupt s)" 
+    assume f_0: "f 0 = (Spec r, Abrupt s)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
@@ -1783,74 +1783,74 @@ next
 next
   case (Seq c\<^sub>1 c\<^sub>2)
   show ?case
-  proof 
+  proof
     assume "\<Gamma>\<turnstile> (Seq c\<^sub>1 c\<^sub>2, Abrupt s) \<rightarrow> \<dots>(\<infinity>)"
     from split_inf_Seq [OF this] Seq.hyps
     show False
       by (auto dest: steps_Abrupt_prop)
   qed
 next
-  case (Cond b c\<^sub>1 c\<^sub>2) 
-  show ?case 
+  case (Cond b c\<^sub>1 c\<^sub>2)
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Cond b c\<^sub>1 c\<^sub>2, Abrupt s)" 
+    assume f_0: "f 0 = (Cond b c\<^sub>1 c\<^sub>2, Abrupt s)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
-  case (While b c) 
-  show ?case 
+  case (While b c)
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (While b c, Abrupt s)" 
+    assume f_0: "f 0 = (While b c, Abrupt s)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
-  case (Call p) 
-  show ?case 
+  case (Call p)
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Call p, Abrupt s)" 
+    assume f_0: "f 0 = (Call p, Abrupt s)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
-  case (DynCom d) 
-  show ?case 
+  case (DynCom d)
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (DynCom d, Abrupt s)" 
+    assume f_0: "f 0 = (DynCom d, Abrupt s)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
   case (Guard m g c)
-  show ?case 
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Guard m g c, Abrupt s)" 
+    assume f_0: "f 0 = (Guard m g c, Abrupt s)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
   case Throw
-  show ?case 
+  show ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Throw, Abrupt s)" 
+    assume f_0: "f 0 = (Throw, Abrupt s)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
@@ -1858,12 +1858,12 @@ next
 next
   case (Catch c\<^sub>1 c\<^sub>2)
   show ?case
-  proof 
+  proof
     assume "\<Gamma>\<turnstile> (Catch c\<^sub>1 c\<^sub>2, Abrupt s) \<rightarrow> \<dots>(\<infinity>)"
     from split_inf_Catch [OF this] Catch.hyps
     show False
       by (auto dest: steps_Abrupt_prop)
-  qed  
+  qed
 qed
 
 
@@ -1876,29 +1876,29 @@ proof (induct)
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Skip, Normal s)" 
+    assume f_0: "f 0 = (Skip, Normal s)"
     from f_step [of 0] f_0
     show False
       by (auto elim: Skip_no_step)
   qed
 next
-  case (Basic g s) 
-  thus ?case 
+  case (Basic g s)
+  thus ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Basic g, Normal s)" 
+    assume f_0: "f 0 = (Basic g, Normal s)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
   qed
 next
-  case (Spec r s) 
-  thus ?case 
+  case (Spec r s)
+  thus ?case
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Spec r, Normal s)" 
+    assume f_0: "f 0 = (Spec r, Normal s)"
     from f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
@@ -1911,7 +1911,7 @@ next
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Guard m g c, Normal s)" 
+    assume f_0: "f 0 = (Guard m g c, Normal s)"
     from f_step [of 0] f_0  g
     have "f 1 = (c,Normal s)"
       by (fastforce elim: step_elim_cases)
@@ -1929,7 +1929,7 @@ next
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Guard m g c, Normal s)" 
+    assume f_0: "f 0 = (Guard m g c, Normal s)"
     from g f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
@@ -1941,7 +1941,7 @@ next
 next
   case (Seq c\<^sub>1 s c\<^sub>2)
   show ?case
-  proof 
+  proof
     assume "\<Gamma>\<turnstile> (Seq c\<^sub>1 c\<^sub>2, Normal s) \<rightarrow> \<dots>(\<infinity>)"
     from split_inf_Seq [OF this] Seq.hyps
     show False
@@ -1955,7 +1955,7 @@ next
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Cond b c1 c2, Normal s)" 
+    assume f_0: "f 0 = (Cond b c1 c2, Normal s)"
     from b f_step [of 0] f_0
     have "f 1 = (c1,Normal s)"
       by (auto elim: step_Normal_elim_cases)
@@ -1965,7 +1965,7 @@ next
       apply (rule_tac x="\<lambda>i. f (Suc i)" in exI)
       by simp
     with hyp_c1 show False by simp
-  qed    
+  qed
 next
   case (CondFalse s b c2 c1)
   have b: "s \<notin> b" by fact
@@ -1974,7 +1974,7 @@ next
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Cond b c1 c2, Normal s)" 
+    assume f_0: "f 0 = (Cond b c1 c2, Normal s)"
     from b f_step [of 0] f_0
     have "f 1 = (c2,Normal s)"
       by (auto elim: step_Normal_elim_cases)
@@ -1985,24 +1985,24 @@ next
       by simp
     with hyp_c2 show False by simp
   qed
-next    
+next
   case (WhileTrue s b c)
   have b: "s \<in> b" by fact
   have hyp_c: "\<not> \<Gamma>\<turnstile> (c, Normal s) \<rightarrow> \<dots>(\<infinity>)" by fact
-  have hyp_w: "\<forall>s'. \<Gamma>\<turnstile> \<langle>c,Normal s\<rangle> \<Rightarrow> s' \<longrightarrow> 
+  have hyp_w: "\<forall>s'. \<Gamma>\<turnstile> \<langle>c,Normal s\<rangle> \<Rightarrow> s' \<longrightarrow>
                      \<Gamma>\<turnstile>While b c \<down> s' \<and> \<not> \<Gamma>\<turnstile> (While b c, s') \<rightarrow> \<dots>(\<infinity>)" by fact
   have not_inf_Seq: "\<not> \<Gamma>\<turnstile> (Seq c (While b c), Normal s) \<rightarrow> \<dots>(\<infinity>)"
-  proof 
+  proof
     assume "\<Gamma>\<turnstile> (Seq c (While b c), Normal s) \<rightarrow> \<dots>(\<infinity>)"
     from split_inf_Seq [OF this] hyp_c hyp_w show False
       by (auto intro: steps_Skip_impl_exec)
   qed
   show ?case
-  proof 
+  proof
     assume "\<Gamma>\<turnstile> (While b c, Normal s) \<rightarrow> \<dots>(\<infinity>)"
     then obtain f where
       f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)" and
-      f_0: "f 0 = (While b c, Normal s)" 
+      f_0: "f 0 = (While b c, Normal s)"
       by (auto simp add: inf_def)
     from f_step [of 0] f_0 b
     have "f 1 = (Seq c (While b c),Normal s)"
@@ -2021,7 +2021,7 @@ next
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (While b c, Normal s)" 
+    assume f_0: "f 0 = (While b c, Normal s)"
     from b f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
@@ -2034,7 +2034,7 @@ next
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Call p, Normal s)" 
+    assume f_0: "f 0 = (Call p, Normal s)"
     from bdy f_step [of 0] f_0
     have "f 1 = (bdy,Normal s)"
       by (auto elim: step_Normal_elim_cases)
@@ -2044,7 +2044,7 @@ next
       apply (rule_tac x="\<lambda>i. f (Suc i)" in exI)
       by simp
     with hyp show False by simp
-  qed    
+  qed
 next
   case (CallUndefined p s)
   have no_bdy: "\<Gamma> p = None" by fact
@@ -2052,7 +2052,7 @@ next
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Call p, Normal s)" 
+    assume f_0: "f 0 = (Call p, Normal s)"
     from no_bdy f_step [of 0] f_0 f_step [of 1]
     show False
       by (fastforce elim: Skip_no_step step_elim_cases)
@@ -2068,7 +2068,7 @@ next
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (DynCom c, Normal s)" 
+    assume f_0: "f 0 = (DynCom c, Normal s)"
     from f_step [of 0] f_0
     have "f (Suc 0) = (c s, Normal s)"
       by (auto elim: step_elim_cases)
@@ -2084,11 +2084,11 @@ next
   proof (rule not_infI)
     fix f
     assume f_step: "\<And>i. \<Gamma>\<turnstile>f i \<rightarrow> f (Suc i)"
-    assume f_0: "f 0 = (Throw, Normal s)" 
+    assume f_0: "f 0 = (Throw, Normal s)"
     from f_step [of 0] f_0
     show False
       by (auto elim: step_elim_cases)
-  qed  
+  qed
 next
   case (Abrupt c)
   show ?case
@@ -2096,7 +2096,7 @@ next
 next
   case (Catch c\<^sub>1 s c\<^sub>2)
   show ?case
-  proof 
+  proof
     assume "\<Gamma>\<turnstile> (Catch c\<^sub>1 c\<^sub>2, Normal s) \<rightarrow> \<dots>(\<infinity>)"
     from split_inf_Catch [OF this] Catch.hyps
     show False
@@ -2109,7 +2109,7 @@ definition
  termi_call_steps :: "('s,'p,'f) body \<Rightarrow> (('s \<times> 'p) \<times> ('s \<times> 'p))set"
 where
 "termi_call_steps \<Gamma> =
- {((t,q),(s,p)). \<Gamma>\<turnstile>Call p\<down>Normal s \<and> 
+ {((t,q),(s,p)). \<Gamma>\<turnstile>Call p\<down>Normal s \<and>
        (\<exists>c. \<Gamma>\<turnstile>(Call p,Normal s) \<rightarrow>\<^sup>+ (c,Normal t) \<and> redex c = Call q)}"
 
 
@@ -2133,7 +2133,7 @@ lemma subst_redex_redex:
 
 lemma redex_subst_redex: "redex (subst_redex c r) = redex r"
   by (induct c) auto
-  
+
 lemma step_redex':
   shows "\<Gamma>\<turnstile>(redex c,s) \<rightarrow> (r',s') \<Longrightarrow> \<Gamma>\<turnstile>(c,s) \<rightarrow> (subst_redex c r',s')"
 by (induct c) (auto intro: step.Seq step.Catch)
@@ -2148,7 +2148,7 @@ lemma steps_redex:
   shows "\<And>c. \<Gamma>\<turnstile>(subst_redex c r,s) \<rightarrow>\<^sup>* (subst_redex c r',s')"
 using steps
 proof (induct rule: converse_rtranclp_induct2 [case_names Refl Trans])
-  case Refl 
+  case Refl
   show "\<Gamma>\<turnstile> (subst_redex c r', s') \<rightarrow>\<^sup>* (subst_redex c r', s')"
     by simp
 next
@@ -2156,7 +2156,7 @@ next
   have "\<Gamma>\<turnstile> (r, s) \<rightarrow> (r'', s'')" by fact
   from step_redex [OF this]
   have "\<Gamma>\<turnstile> (subst_redex c r, s) \<rightarrow> (subst_redex c r'', s'')".
-  also  
+  also
   have "\<Gamma>\<turnstile> (subst_redex c r'', s'') \<rightarrow>\<^sup>* (subst_redex c r', s')" by fact
   finally show ?case .
 qed
@@ -2195,8 +2195,8 @@ where
 
 
 lemma renumber':
-  assumes f: "\<forall>i. (a,f i) \<in> r\<^sup>* \<and> (f i,f(Suc i)) \<in> r" 
-  assumes a_b: "(a,b) \<in> r\<^sup>*" 
+  assumes f: "\<forall>i. (a,f i) \<in> r\<^sup>* \<and> (f i,f(Suc i)) \<in> r"
+  assumes a_b: "(a,b) \<in> r\<^sup>*"
   shows "b = f 0 \<Longrightarrow> (\<exists>f. f 0 = a \<and> (\<forall>i. (f i, f(Suc i)) \<in> r))"
 using a_b
 proof (induct rule: converse_rtrancl_induct [consumes 1])
@@ -2205,7 +2205,7 @@ proof (induct rule: converse_rtrancl_induct [consumes 1])
     by blast
 next
   fix a z
-  assume a_z: "(a, z) \<in> r" and "(z, b) \<in> r\<^sup>*" 
+  assume a_z: "(a, z) \<in> r" and "(z, b) \<in> r\<^sup>*"
   assume "b = f 0 \<Longrightarrow> \<exists>f. f 0 = z \<and> (\<forall>i. (f i, f (Suc i)) \<in> r)"
          "b = f 0"
   then obtain f where f0: "f 0 = z" and seq: "\<forall>i. (f i, f (Suc i)) \<in> r"
@@ -2221,12 +2221,12 @@ next
 qed
 
 lemma renumber:
- "\<forall>i. (a,f i) \<in> r\<^sup>* \<and> (f i,f(Suc i)) \<in> r 
+ "\<forall>i. (a,f i) \<in> r\<^sup>* \<and> (f i,f(Suc i)) \<in> r
  \<Longrightarrow> \<exists>f. f 0 = a \<and> (\<forall>i. (f i, f(Suc i)) \<in> r)"
   by (blast dest:renumber')
 
 lemma lem:
-  "\<forall>y. r\<^sup>+\<^sup>+ a y \<longrightarrow> P a \<longrightarrow> P y 
+  "\<forall>y. r\<^sup>+\<^sup>+ a y \<longrightarrow> P a \<longrightarrow> P y
    \<Longrightarrow> ((b,a) \<in> {(y,x). P x \<and> r x y}\<^sup>+) = ((b,a) \<in> {(y,x). P x \<and> r\<^sup>+\<^sup>+ x y})"
 apply(rule iffI)
  apply clarify
@@ -2268,12 +2268,12 @@ proof -
       f0: "f 0 = (c, s)" and
       seq: "\<forall>i. \<Gamma>\<turnstile>f i \<rightarrow>\<^sup>+ f (Suc i)"
       by iprover
-    show 
+    show
       "\<exists>f. \<forall>i. (f (Suc i), f i) \<in> {(y, x). \<Gamma>\<turnstile>(c, s) \<rightarrow>\<^sup>* x \<and> \<Gamma>\<turnstile>x \<rightarrow> y}\<^sup>+"
     proof (rule exI [where x=f],rule allI)
       fix i
       show "(f (Suc i), f i) \<in> {(y, x). \<Gamma>\<turnstile>(c, s) \<rightarrow>\<^sup>* x \<and> \<Gamma>\<turnstile>x \<rightarrow> y}\<^sup>+"
-      proof -   
+      proof -
         {
           fix i have "\<Gamma>\<turnstile>(c,s) \<rightarrow>\<^sup>* f i"
           proof (induct i)
@@ -2291,11 +2291,11 @@ proof -
         with seq have
           "(f (Suc i), f i) \<in> {(y, x). \<Gamma>\<turnstile>(c, s) \<rightarrow>\<^sup>* x \<and> \<Gamma>\<turnstile>x \<rightarrow>\<^sup>+ y}"
           by clarsimp
-        moreover 
+        moreover
         have "\<forall>y. \<Gamma>\<turnstile>f i \<rightarrow>\<^sup>+ y\<longrightarrow>\<Gamma>\<turnstile>(c, s) \<rightarrow>\<^sup>* f i\<longrightarrow>\<Gamma>\<turnstile>(c, s) \<rightarrow>\<^sup>* y"
           by (blast intro: tranclp_into_rtranclp rtranclp_trans)
-        ultimately 
-        show ?thesis 
+        ultimately
+        show ?thesis
           by (subst lem )
       qed
     qed
@@ -2314,7 +2314,7 @@ proof (simp only: termi_call_steps_def wf_iff_no_infinite_down_chain,
   define p where "p i = (snd (f i)::'b)" for i :: nat
   from inf
   have inf': "\<forall>i. \<Gamma>\<turnstile>Call (p i) \<down> Normal (s i) \<and>
-               (\<exists>c. \<Gamma>\<turnstile> (Call (p i), Normal (s i)) \<rightarrow>\<^sup>+ (c, Normal (s (i+1))) \<and> 
+               (\<exists>c. \<Gamma>\<turnstile> (Call (p i), Normal (s i)) \<rightarrow>\<^sup>+ (c, Normal (s (i+1))) \<and>
                     redex c = Call (p (i+1)))"
     apply -
     apply (rule allI)
@@ -2325,7 +2325,7 @@ proof (simp only: termi_call_steps_def wf_iff_no_infinite_down_chain,
   proof -
     from inf'
     have "\<exists>c. \<forall>i. \<Gamma>\<turnstile>Call (p i) \<down> Normal (s i) \<and>
-               \<Gamma>\<turnstile> (Call (p i), Normal (s i)) \<rightarrow>\<^sup>+ (c i, Normal (s (i+1))) \<and> 
+               \<Gamma>\<turnstile> (Call (p i), Normal (s i)) \<rightarrow>\<^sup>+ (c i, Normal (s (i+1))) \<and>
                     redex (c i) = Call (p (i+1))"
       apply -
       apply (rule choice)
@@ -2349,14 +2349,14 @@ proof (simp only: termi_call_steps_def wf_iff_no_infinite_down_chain,
         by (simp add: subst_redex_redex)
     } note subst_redex_seq = this
     have "\<forall>i. \<Gamma>\<turnstile> (g i) \<rightarrow>\<^sup>+ (g (i+1))"
-    proof 
+    proof
       fix i
       from steps_c [rule_format, of i]
       have "\<Gamma>\<turnstile> (Call (p i), Normal (s i)) \<rightarrow>\<^sup>+ (c i, Normal (s (i + 1)))".
       from steps_redex' [OF this, of "(seq c (p 0) i)"]
       have "\<Gamma>\<turnstile> (subst_redex (seq c (p 0) i) (Call (p i)), Normal (s i)) \<rightarrow>\<^sup>+
                 (subst_redex (seq c (p 0) i) (c i), Normal (s (i + 1)))" .
-      hence "\<Gamma>\<turnstile> (seq c (p 0) i, Normal (s i)) \<rightarrow>\<^sup>+ 
+      hence "\<Gamma>\<turnstile> (seq c (p 0) i, Normal (s i)) \<rightarrow>\<^sup>+
                  (seq c (p 0) (i+1), Normal (s (i + 1)))"
         by (simp add: subst_redex_seq)
       thus "\<Gamma>\<turnstile> (g i) \<rightarrow>\<^sup>+ (g (i+1))"
@@ -2371,7 +2371,7 @@ proof (simp only: termi_call_steps_def wf_iff_no_infinite_down_chain,
 qed
 
 
-lemma no_infinite_computation_implies_wf: 
+lemma no_infinite_computation_implies_wf:
   assumes not_inf: "\<not> \<Gamma>\<turnstile> (c, s) \<rightarrow> \<dots>(\<infinity>)"
   shows "wf {(c2,c1). \<Gamma> \<turnstile> (c,s) \<rightarrow>\<^sup>* c1 \<and> \<Gamma> \<turnstile> c1 \<rightarrow> c2}"
 proof (simp only: wf_iff_no_infinite_down_chain,clarify, simp)
@@ -2389,17 +2389,17 @@ qed
 lemma not_final_Stuck_step: "\<not> final (c,Stuck) \<Longrightarrow> \<exists>c' s'. \<Gamma>\<turnstile> (c, Stuck) \<rightarrow> (c',s')"
 by (induct c) (fastforce intro: step.intros simp add: final_def)+
 
-lemma not_final_Abrupt_step: 
+lemma not_final_Abrupt_step:
   "\<not> final (c,Abrupt s) \<Longrightarrow> \<exists>c' s'. \<Gamma>\<turnstile> (c, Abrupt s) \<rightarrow> (c',s')"
 by (induct c) (fastforce intro: step.intros simp add: final_def)+
 
-lemma not_final_Fault_step: 
+lemma not_final_Fault_step:
   "\<not> final (c,Fault f) \<Longrightarrow> \<exists>c' s'. \<Gamma>\<turnstile> (c, Fault f) \<rightarrow> (c',s')"
 by (induct c) (fastforce intro: step.intros simp add: final_def)+
 
-lemma not_final_Normal_step: 
+lemma not_final_Normal_step:
   "\<not> final (c,Normal s) \<Longrightarrow> \<exists>c' s'. \<Gamma>\<turnstile> (c, Normal s) \<rightarrow> (c',s')"
-proof (induct c) 
+proof (induct c)
   case Skip thus ?case by (fastforce intro: step.intros simp add: final_def)
 next
   case Basic thus ?case by (fastforce intro: step.intros)
@@ -2443,7 +2443,7 @@ lemma final_termi:
   by (cases s) (auto simp add: final_def terminates.intros)
 
 
-lemma split_computation: 
+lemma split_computation:
 assumes steps: "\<Gamma>\<turnstile> (c, s) \<rightarrow>\<^sup>* (c\<^sub>f, s\<^sub>f)"
 assumes not_final: "\<not> final (c,s)"
 assumes final: "final (c\<^sub>f,s\<^sub>f)"
@@ -2520,7 +2520,7 @@ next
       next
         case False
         from exec_impl_steps [OF exec_c\<^sub>1]
-        obtain c\<^sub>f t where 
+        obtain c\<^sub>f t where
           steps_c\<^sub>1: "\<Gamma>\<turnstile> (c\<^sub>1, Normal s) \<rightarrow>\<^sup>* (c\<^sub>f, t)" and
           fin:"(case s' of
                  Abrupt x \<Rightarrow> c\<^sub>f = Throw \<and> t = Normal x
@@ -2531,7 +2531,7 @@ next
         from split_computation [OF steps_c\<^sub>1 False this]
         obtain c'' s'' where
           first: "\<Gamma>\<turnstile> (c\<^sub>1, Normal s) \<rightarrow> (c'', s'')" and
-          rest: "\<Gamma>\<turnstile> (c'', s'') \<rightarrow>\<^sup>* (c\<^sub>f, t)" 
+          rest: "\<Gamma>\<turnstile> (c'', s'') \<rightarrow>\<^sup>* (c\<^sub>f, t)"
           by blast
         from step.Seq [OF first]
         have "\<Gamma>\<turnstile> (Seq c\<^sub>1 c\<^sub>2, Normal s) \<rightarrow> (Seq c'' c\<^sub>2, s'')".
@@ -2557,7 +2557,7 @@ next
             case True
             with fin obtain x' where s': "s'=Abrupt x'" and "c\<^sub>f=Throw" "t=Normal x'"
               by auto
-            from steps_Throw_impl_exec [OF rest [simplified this]] Normal 
+            from steps_Throw_impl_exec [OF rest [simplified this]] Normal
             have "\<Gamma>\<turnstile> \<langle>c'',Normal x\<rangle> \<Rightarrow> Abrupt x'"
               by simp
             from termi_c\<^sub>2 [rule_format, OF this] s'
@@ -2569,7 +2569,7 @@ next
           have "t=Abrupt x" by simp
           with fin have "s'=Abrupt x"
             by (cases s') auto
-          thus "\<Gamma>\<turnstile>c\<^sub>2 \<down> s'" 
+          thus "\<Gamma>\<turnstile>c\<^sub>2 \<down> s'"
             by auto
         next
           case (Fault f)
@@ -2577,7 +2577,7 @@ next
           have "t=Fault f" by simp
           with fin have "s'=Fault f"
             by (cases s') auto
-          thus "\<Gamma>\<turnstile>c\<^sub>2 \<down> s'" 
+          thus "\<Gamma>\<turnstile>c\<^sub>2 \<down> s'"
             by auto
         next
           case Stuck
@@ -2585,7 +2585,7 @@ next
           have "t=Stuck" by simp
           with fin have "s'=Stuck"
             by (cases s') auto
-          thus "\<Gamma>\<turnstile>c\<^sub>2 \<down> s'" 
+          thus "\<Gamma>\<turnstile>c\<^sub>2 \<down> s'"
             by auto
         qed
       qed
@@ -2595,7 +2595,7 @@ next
   case (Cond b c\<^sub>1 c\<^sub>2)
   have hyp: "\<And>c' s'. \<Gamma>\<turnstile> (Cond b c\<^sub>1 c\<^sub>2, Normal s) \<rightarrow> (c', s') \<Longrightarrow> \<Gamma>\<turnstile>c' \<down> s'" by fact
   show ?case
-  proof (cases "s\<in>b") 
+  proof (cases "s\<in>b")
     case True
     then have "\<Gamma>\<turnstile> (Cond b c\<^sub>1 c\<^sub>2, Normal s) \<rightarrow> (c\<^sub>1, Normal s)"
       by (rule step.CondTrue)
@@ -2614,7 +2614,7 @@ next
   case (While b c)
   have hyp: "\<And>c' s'. \<Gamma>\<turnstile> (While b c, Normal s) \<rightarrow> (c', s') \<Longrightarrow> \<Gamma>\<turnstile>c' \<down> s'" by fact
   show ?case
-  proof (cases "s\<in>b") 
+  proof (cases "s\<in>b")
     case True
     then have "\<Gamma>\<turnstile> (While b c, Normal s) \<rightarrow> (Seq c (While b c), Normal s)"
       by (rule step.WhileTrue)
@@ -2666,7 +2666,7 @@ next
     thus ?thesis
       by (auto intro: terminates.intros)
   qed
-next  
+next
   case Throw show ?case by (auto intro: terminates.intros)
 next
   case (Catch c\<^sub>1 c\<^sub>2)
@@ -2689,7 +2689,7 @@ next
     }
     from Catch.hyps (1) [OF this]
     show "\<Gamma>\<turnstile>c\<^sub>1 \<down> Normal s".
-  next  
+  next
     show "\<forall>s'. \<Gamma>\<turnstile> \<langle>c\<^sub>1,Normal s\<rangle> \<Rightarrow> Abrupt s' \<longrightarrow> \<Gamma>\<turnstile>c\<^sub>2 \<down> Normal s'"
     proof (intro allI impI)
       fix s'
@@ -2711,13 +2711,13 @@ next
       next
         case False
         from exec_impl_steps [OF exec_c\<^sub>1]
-        obtain c\<^sub>f t where 
-          steps_c\<^sub>1: "\<Gamma>\<turnstile> (c\<^sub>1, Normal s) \<rightarrow>\<^sup>* (Throw, Normal s')" 
+        obtain c\<^sub>f t where
+          steps_c\<^sub>1: "\<Gamma>\<turnstile> (c\<^sub>1, Normal s) \<rightarrow>\<^sup>* (Throw, Normal s')"
           by (fastforce split: xstate.splits)
         from split_computation [OF steps_c\<^sub>1 False]
         obtain c'' s'' where
           first: "\<Gamma>\<turnstile> (c\<^sub>1, Normal s) \<rightarrow> (c'', s'')" and
-          rest: "\<Gamma>\<turnstile> (c'', s'') \<rightarrow>\<^sup>* (Throw, Normal s')" 
+          rest: "\<Gamma>\<turnstile> (c'', s'') \<rightarrow>\<^sup>* (Throw, Normal s')"
           by (auto simp add: final_def)
         from step.Catch [OF first]
         have "\<Gamma>\<turnstile> (Catch c\<^sub>1 c\<^sub>2, Normal s) \<rightarrow> (Catch c'' c\<^sub>2, s'')".
@@ -2740,7 +2740,7 @@ qed
 lemma wf_implies_termi_reach:
 assumes wf: "wf {(cfg2,cfg1). \<Gamma> \<turnstile> (c,s) \<rightarrow>\<^sup>* cfg1 \<and> \<Gamma> \<turnstile> cfg1 \<rightarrow> cfg2}"
 shows "\<And>c1 s1. \<lbrakk>\<Gamma> \<turnstile> (c,s) \<rightarrow>\<^sup>* cfg1;  cfg1=(c1,s1)\<rbrakk>\<Longrightarrow> \<Gamma>\<turnstile>c1\<down>s1"
-using wf 
+using wf
 proof (induct cfg1, simp)
   fix c1 s1
   assume reach: "\<Gamma>\<turnstile> (c, s) \<rightarrow>\<^sup>* (c1, s1)"
@@ -2751,7 +2751,7 @@ proof (induct cfg1, simp)
     apply -
     apply (rule hyp_raw)
     apply   assumption
-    using reach 
+    using reach
     apply  simp
     apply (rule refl)
     done
@@ -2759,7 +2759,7 @@ proof (induct cfg1, simp)
   show "\<Gamma>\<turnstile>c1 \<down> s1"
   proof (cases s1)
     case (Normal s1')
-    with wf_implies_termi_reach_step_case [OF hyp [simplified Normal]] 
+    with wf_implies_termi_reach_step_case [OF hyp [simplified Normal]]
     show ?thesis
       by auto
   qed (auto intro: terminates.intros)
@@ -2775,7 +2775,7 @@ proof -
     by (rule wf_implies_termi_reach [OF wf]) auto
 qed
 
-corollary terminates_iff_no_infinite_computation: 
+corollary terminates_iff_no_infinite_computation:
   "\<Gamma>\<turnstile>c\<down>s = (\<not> \<Gamma>\<turnstile> (c, s) \<rightarrow> \<dots>(\<infinity>))"
   apply (rule)
   apply  (erule terminates_impl_no_infinite_computation)
@@ -2783,7 +2783,7 @@ corollary terminates_iff_no_infinite_computation:
   done
 
 (* ************************************************************************* *)
-subsection \<open>Generalised Redexes\<close> 
+subsection \<open>Generalised Redexes\<close>
 (* ************************************************************************* *)
 
 text \<open>
@@ -2816,13 +2816,13 @@ lemma redex_in_redexes: "redex c \<in> redexes c"
   apply auto
   done
 
-lemma redex_redexes: "\<And>c'. \<lbrakk>c' \<in> redexes c; redex c' = c'\<rbrakk> \<Longrightarrow> redex c = c'" 
+lemma redex_redexes: "\<And>c'. \<lbrakk>c' \<in> redexes c; redex c' = c'\<rbrakk> \<Longrightarrow> redex c = c'"
   apply (induct c)
   apply auto
   done
 
 lemma step_redexes:
-  shows "\<And>r r'. \<lbrakk>\<Gamma>\<turnstile>(r,s) \<rightarrow> (r',s'); r \<in> redexes c\<rbrakk> 
+  shows "\<And>r r'. \<lbrakk>\<Gamma>\<turnstile>(r,s) \<rightarrow> (r',s'); r \<in> redexes c\<rbrakk>
   \<Longrightarrow> \<exists>c'. \<Gamma>\<turnstile>(c,s) \<rightarrow> (c',s') \<and> r' \<in> redexes c'"
 proof (induct c)
   case Skip thus ?case by (fastforce intro: step.intros elim: step_elim_cases)
@@ -2837,15 +2837,15 @@ next
     by simp
   have step_r: "\<Gamma>\<turnstile> (r, s) \<rightarrow> (r', s')" by fact
   from r show ?case
-  proof 
+  proof
     assume "r = Seq c\<^sub>1 c\<^sub>2"
     with step_r
     show ?case
       by (auto simp add: root_in_redexes)
   next
     assume r: "r \<in> redexes c\<^sub>1"
-    from Seq.hyps (1) [OF step_r this] 
-    obtain c' where 
+    from Seq.hyps (1) [OF step_r this]
+    obtain c' where
       step_c\<^sub>1: "\<Gamma>\<turnstile> (c\<^sub>1, s) \<rightarrow> (c', s')" and
       r': "r' \<in> redexes c'"
       by blast
@@ -2856,24 +2856,24 @@ next
       by auto
   qed
 next
-  case Cond 
-  thus ?case 
+  case Cond
+  thus ?case
     by (fastforce intro: step.intros elim: step_elim_cases simp add: root_in_redexes)
 next
-  case While 
-  thus ?case 
+  case While
+  thus ?case
     by (fastforce intro: step.intros elim: step_elim_cases simp add: root_in_redexes)
 next
-  case Call thus ?case 
+  case Call thus ?case
     by (fastforce intro: step.intros elim: step_elim_cases simp add: root_in_redexes)
 next
-  case DynCom thus ?case 
+  case DynCom thus ?case
     by (fastforce intro: step.intros elim: step_elim_cases simp add: root_in_redexes)
 next
-  case Guard thus ?case 
+  case Guard thus ?case
     by (fastforce intro: step.intros elim: step_elim_cases simp add: root_in_redexes)
 next
-  case Throw thus ?case 
+  case Throw thus ?case
     by (fastforce intro: step.intros elim: step_elim_cases simp add: root_in_redexes)
 next
   case (Catch c\<^sub>1 c\<^sub>2)
@@ -2882,15 +2882,15 @@ next
     by simp
   have step_r: "\<Gamma>\<turnstile> (r, s) \<rightarrow> (r', s')" by fact
   from r show ?case
-  proof 
+  proof
     assume "r = Catch c\<^sub>1 c\<^sub>2"
     with step_r
     show ?case
       by (auto simp add: root_in_redexes)
   next
     assume r: "r \<in> redexes c\<^sub>1"
-    from Catch.hyps (1) [OF step_r this] 
-    obtain c' where 
+    from Catch.hyps (1) [OF step_r this]
+    obtain c' where
       step_c\<^sub>1: "\<Gamma>\<turnstile> (c\<^sub>1, s) \<rightarrow> (c', s')" and
       r': "r' \<in> redexes c'"
       by blast
@@ -2900,12 +2900,12 @@ next
     show ?case
       by auto
   qed
-qed 
+qed
 
 lemma steps_redexes:
   assumes steps: "\<Gamma>\<turnstile> (r, s) \<rightarrow>\<^sup>* (r', s')"
   shows "\<And>c. r \<in> redexes c \<Longrightarrow> \<exists>c'. \<Gamma>\<turnstile>(c,s) \<rightarrow>\<^sup>* (c',s') \<and> r' \<in> redexes c'"
-using steps 
+using steps
 proof (induct rule: converse_rtranclp_induct2 [case_names Refl Trans])
   case Refl
   then
@@ -2938,9 +2938,9 @@ qed
 lemma steps_redexes':
   assumes steps: "\<Gamma>\<turnstile> (r, s) \<rightarrow>\<^sup>+ (r', s')"
   shows "\<And>c. r \<in> redexes c \<Longrightarrow> \<exists>c'. \<Gamma>\<turnstile>(c,s) \<rightarrow>\<^sup>+ (c',s') \<and> r' \<in> redexes c'"
-using steps 
+using steps
 proof (induct rule: tranclp_induct2 [consumes 1, case_names Step Trans])
-  case (Step r' s' c') 
+  case (Step r' s' c')
   have "\<Gamma>\<turnstile> (r, s) \<rightarrow> (r', s')" "r \<in> redexes c'" by fact+
   from step_redexes [OF this]
   show ?case
@@ -2970,15 +2970,15 @@ lemma step_redexes_Seq:
 proof -
   from step.Seq [OF step]
   have "\<Gamma>\<turnstile> (Seq r c\<^sub>2, s) \<rightarrow> (Seq r' c\<^sub>2, s')".
-  from step_redexes [OF this Seq] 
+  from step_redexes [OF this Seq]
   show ?thesis .
 qed
 
 lemma steps_redexes_Seq:
   assumes steps: "\<Gamma>\<turnstile> (r, s) \<rightarrow>\<^sup>* (r', s')"
-  shows "\<And>c. Seq r c\<^sub>2 \<in> redexes c \<Longrightarrow> 
+  shows "\<And>c. Seq r c\<^sub>2 \<in> redexes c \<Longrightarrow>
               \<exists>c'. \<Gamma>\<turnstile>(c,s) \<rightarrow>\<^sup>* (c',s') \<and> Seq r' c\<^sub>2 \<in> redexes c'"
-using steps 
+using steps
 proof (induct rule: converse_rtranclp_induct2 [case_names Refl Trans])
   case Refl
   then show ?case
@@ -3008,11 +3008,11 @@ qed
 
 lemma steps_redexes_Seq':
   assumes steps: "\<Gamma>\<turnstile> (r, s) \<rightarrow>\<^sup>+ (r', s')"
-  shows "\<And>c. Seq r c\<^sub>2 \<in> redexes c 
+  shows "\<And>c. Seq r c\<^sub>2 \<in> redexes c
              \<Longrightarrow> \<exists>c'. \<Gamma>\<turnstile>(c,s) \<rightarrow>\<^sup>+ (c',s') \<and> Seq r' c\<^sub>2 \<in> redexes c'"
-using steps 
+using steps
 proof (induct rule: tranclp_induct2 [consumes 1, case_names Step Trans])
-  case (Step r' s' c') 
+  case (Step r' s' c')
   have "\<Gamma>\<turnstile> (r, s) \<rightarrow> (r', s')" "Seq r c\<^sub>2 \<in> redexes c'" by fact+
   from step_redexes_Seq [OF this]
   show ?case
@@ -3042,15 +3042,15 @@ lemma step_redexes_Catch:
 proof -
   from step.Catch [OF step]
   have "\<Gamma>\<turnstile> (Catch r c\<^sub>2, s) \<rightarrow> (Catch r' c\<^sub>2, s')".
-  from step_redexes [OF this Catch] 
+  from step_redexes [OF this Catch]
   show ?thesis .
 qed
 
 lemma steps_redexes_Catch:
   assumes steps: "\<Gamma>\<turnstile> (r, s) \<rightarrow>\<^sup>* (r', s')"
-  shows "\<And>c. Catch r c\<^sub>2 \<in> redexes c \<Longrightarrow> 
+  shows "\<And>c. Catch r c\<^sub>2 \<in> redexes c \<Longrightarrow>
               \<exists>c'. \<Gamma>\<turnstile>(c,s) \<rightarrow>\<^sup>* (c',s') \<and> Catch r' c\<^sub>2 \<in> redexes c'"
-using steps 
+using steps
 proof (induct rule: converse_rtranclp_induct2 [case_names Refl Trans])
   case Refl
   then show ?case
@@ -3080,11 +3080,11 @@ qed
 
 lemma steps_redexes_Catch':
   assumes steps: "\<Gamma>\<turnstile> (r, s) \<rightarrow>\<^sup>+ (r', s')"
-  shows "\<And>c. Catch r c\<^sub>2 \<in> redexes c 
+  shows "\<And>c. Catch r c\<^sub>2 \<in> redexes c
              \<Longrightarrow> \<exists>c'. \<Gamma>\<turnstile>(c,s) \<rightarrow>\<^sup>+ (c',s') \<and> Catch r' c\<^sub>2 \<in> redexes c'"
-using steps 
+using steps
 proof (induct rule: tranclp_induct2 [consumes 1, case_names Step Trans])
-  case (Step r' s' c') 
+  case (Step r' s' c')
   have "\<Gamma>\<turnstile> (r, s) \<rightarrow> (r', s')" "Catch r c\<^sub>2 \<in> redexes c'" by fact+
   from step_redexes_Catch [OF this]
   show ?case
@@ -3112,7 +3112,7 @@ lemma redexes_subset:"\<And>c'. c' \<in> redexes c \<Longrightarrow> redexes c' 
 
 lemma redexes_preserves_termination:
   assumes termi: "\<Gamma>\<turnstile>c\<down>s"
-  shows "\<And>c'. c' \<in> redexes c \<Longrightarrow> \<Gamma>\<turnstile>c'\<down>s"  
+  shows "\<And>c'. c' \<in> redexes c \<Longrightarrow> \<Gamma>\<turnstile>c'\<down>s"
 using termi
 by induct (auto intro: terminates.intros)
 

@@ -54,7 +54,7 @@ lemma is_aligned_to_bl:
 lemma unat_power_lower [simp]:
   assumes nv: "n < len_of TYPE('a::len)"
   shows "unat ((2::'a::len word) ^ n) = 2 ^ n"
-  by (simp add: assms nat_power_eq uint_2p_alt unat_def) 
+  by (simp add: assms nat_power_eq uint_2p_alt unat_def)
 
 lemma power_overflow:
   "n \<ge> len_of TYPE('a) \<Longrightarrow> 2 ^ n = (0 :: 'a::len word)"
@@ -101,9 +101,9 @@ proof (induct n arbitrary: m)
 next
   case (Suc n)
 
-  have ih: "\<And>m. 2 ^ n * q < 2 ^ m \<Longrightarrow> q < 2 ^ (m - n)" 
+  have ih: "\<And>m. 2 ^ n * q < 2 ^ m \<Longrightarrow> q < 2 ^ (m - n)"
     and prem: "2 ^ Suc n * q < 2 ^ m" by fact+
-  
+
   show ?case
   proof (cases m)
     case 0
@@ -134,10 +134,10 @@ proof -
 
     have r: "of_nat (2 ^ n) = (2::word32) ^ n"
       by (induct n) simp+
-    
+
     from wv have "of_nat (unat w) = of_nat (2 ^ n * q)" by simp
     then have "w = of_nat (2 ^ n * q)" by (subst word_unat.Rep_inverse [symmetric])
-    then show "w = 2 ^ n * (of_nat q)" by (simp add: r)      
+    then show "w = 2 ^ n * (of_nat q)" by (simp add: r)
   qed
 qed
 
@@ -152,7 +152,7 @@ lemma is_aligned_replicate:
   and          nv: "n \<le> len_of TYPE('a)"
   shows   "to_bl w = (take (len_of TYPE('a) - n) (to_bl w)) @ replicate n False"
 proof -
-  from nv have rl: "\<And>q. q < 2 ^ (len_of TYPE('a) - n) \<Longrightarrow> 
+  from nv have rl: "\<And>q. q < 2 ^ (len_of TYPE('a) - n) \<Longrightarrow>
       to_bl (2 ^ n * (of_nat q :: 'a word)) =
       drop n (to_bl (of_nat q :: 'a word)) @ replicate n False"
     by (metis bl_shiftl le_antisym min_def shiftl_t2n wsst_TYs(3))
@@ -165,7 +165,7 @@ lemma is_aligned_drop:
   assumes "is_aligned w n" "n \<le> len_of TYPE('a)"
   shows "drop (len_of TYPE('a) - n) (to_bl w) = replicate n False"
 proof -
-  have "to_bl w = take (len_of TYPE('a) - n) (to_bl w) @ replicate n False" 
+  have "to_bl w = take (len_of TYPE('a) - n) (to_bl w) @ replicate n False"
     by (rule is_aligned_replicate) fact+
   then have "drop (len_of TYPE('a) - n) (to_bl w) = drop (len_of TYPE('a) - n) \<dots>" by simp
   also have "\<dots> = replicate n False" by simp
@@ -182,7 +182,7 @@ lemma is_aligned_add_conv:
   fixes off::"'a::len word"
   assumes aligned: "is_aligned w n"
   and        offv: "off < 2 ^ n"
-  shows    "to_bl (w + off) = 
+  shows    "to_bl (w + off) =
    (take (len_of TYPE('a) - n) (to_bl w)) @ (drop (len_of TYPE('a) - n) (to_bl off))"
 proof cases
   assume nv: "n \<le> len_of TYPE('a)"
@@ -295,9 +295,9 @@ proof cases
 
   have "(2::nat) ^ m dvd unat (k << m)"
   proof
-    have kv: "(unat k div 2 ^ q) * 2 ^ q + unat k mod 2 ^ q = unat k" 
+    have kv: "(unat k div 2 ^ q) * 2 ^ q + unat k mod 2 ^ q = unat k"
       by (rule div_mult_mod_eq)
-    
+
     have "unat (k << m) = unat (2 ^ m * k)" by (simp add: shiftl_t2n)
     also have "\<dots> = (2 ^ m * unat k) mod (2 ^ len_of TYPE('a))" using mv
       by (subst unat_word_ariths(2))+ simp
@@ -353,7 +353,7 @@ lemma nat_add_offset_less:
   and     mn: "sz = m + n"
   shows   "x * 2 ^ n + y < 2 ^ sz"
 proof (subst mn)
-  from yv obtain qy where "y + qy = 2 ^ n" and "0 < qy" 
+  from yv obtain qy where "y + qy = 2 ^ n" and "0 < qy"
     by (auto dest: less_imp_add_positive)
 
   have "x * 2 ^ n + y < x * 2 ^ n + 2 ^ n" by simp fact+
@@ -375,7 +375,7 @@ proof -
 
   from al obtain q where ptrq: "ptr = 2 ^ sz * of_nat q" and
     qv: "q < 2 ^ (len_of TYPE('a) - sz)" by (auto elim: is_alignedE)
-  
+
   show ?thesis
   proof (cases "sz = 0")
     case True
@@ -383,7 +383,7 @@ proof -
   next
     case False
     then have sne: "0 < sz" ..
-    
+
     show ?thesis
     proof -
       have uq: "unat (of_nat q ::'a::len word) = q"
@@ -393,7 +393,7 @@ proof -
         apply (rule power_strict_increasing [OF diff_less [OF sne]])
          apply (simp_all)
         done
-      
+
       have uptr: "unat ptr = 2 ^ sz * q"
         apply (subst ptrq)
         apply (subst iffD1 [OF unat_mult_lem])
@@ -402,9 +402,9 @@ proof -
          apply (rule nat_less_power_trans [OF qv order_less_imp_le [OF szv]])
         apply (subst uq)
         apply (subst unat_power_lower [OF szv])
-        apply simp    
-        done  
-      
+        apply simp
+        done
+
       show "unat ptr + unat off < 2 ^ len_of TYPE('a)" using szv
         apply (subst uptr)
         apply (subst mult.commute, rule nat_add_offset_less [OF _ qv])
@@ -414,7 +414,7 @@ proof -
     qed
   qed
 qed
- 
+
 lemma is_aligned_no_wrap':
   fixes ptr :: "'a::len word"
   assumes al: "is_aligned ptr sz"
@@ -455,23 +455,23 @@ lemma is_aligned_replicateI:
    apply (simp add: replicate_not_True)
   apply (drule arg_cong [where f=length])
   apply simp
-  done 
+  done
 
 lemma to_bl_2p:
   "n < len_of TYPE('a) \<Longrightarrow>
-   to_bl ((2::'a::len word) ^ n) = 
+   to_bl ((2::'a::len word) ^ n) =
    replicate (len_of TYPE('a) - Suc n) False @ True # replicate n False"
-  apply (subst shiftl_1 [symmetric])  
+  apply (subst shiftl_1 [symmetric])
   apply (subst bl_shiftl)
   apply (simp add: to_bl_1 min_def word_size)
-  done  
+  done
 
 lemma map_zip_replicate_False_xor:
   "n = length xs \<Longrightarrow> map (\<lambda>(x, y). x = (\<not> y)) (zip xs (replicate n False)) = xs"
   by (induct xs arbitrary: n, auto)
 
 lemma drop_minus_lem:
-  "\<lbrakk> n \<le> length xs; 0 < n; n' = length xs \<rbrakk> \<Longrightarrow> drop (n' - n) xs = rev xs ! (n - 1)  # drop (Suc (n' - n)) xs"  
+  "\<lbrakk> n \<le> length xs; 0 < n; n' = length xs \<rbrakk> \<Longrightarrow> drop (n' - n) xs = rev xs ! (n - 1)  # drop (Suc (n' - n)) xs"
 proof (induct xs arbitrary: n n')
   case Nil then show ?case by simp
 next
@@ -500,14 +500,14 @@ lemma drop_minus:
 
 lemma xor_2p_to_bl:
   fixes x::"'a::len word"
-  shows "to_bl (x xor 2^n) = 
-  (if n < len_of TYPE('a) 
+  shows "to_bl (x xor 2^n) =
+  (if n < len_of TYPE('a)
    then take (len_of TYPE('a)-Suc n) (to_bl x) @ (\<not>rev (to_bl x)!n) # drop (len_of TYPE('a)-n) (to_bl x)
    else to_bl x)"
 proof -
   have x: "to_bl x = take (len_of TYPE('a)-Suc n) (to_bl x) @ drop (len_of TYPE('a)-Suc n) (to_bl x)"
     by simp
-  
+
   show ?thesis
   apply simp
   apply (rule conjI)
@@ -521,7 +521,7 @@ proof -
   done
 qed
 
-lemma aligned_add_xor: 
+lemma aligned_add_xor:
   assumes al: "is_aligned (x::'a::len word) n'" and le: "n < n'"
   shows "(x + 2^n) xor 2^n = x"
 proof cases
@@ -666,7 +666,7 @@ lemma is_aligned_nth:
   apply (rule iffI)
    apply clarsimp
    apply (case_tac "n < size p")
-    apply (simp add: word_size)      
+    apply (simp add: word_size)
    apply (drule test_bit_size)
    apply simp
   apply clarsimp

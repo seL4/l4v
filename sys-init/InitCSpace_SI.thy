@@ -1307,8 +1307,8 @@ lemma init_cspace_move_sep:
     si_caps_at t dup_caps spec dev cnode_set \<and>*
     si_objects \<and>* R\<guillemotright> and K(
     well_formed spec \<and>
-    (\<forall>obj_id \<in> set cnode_list. 
-     (cnode_at obj_id spec \<and> 
+    (\<forall>obj_id \<in> set cnode_list.
+     (cnode_at obj_id spec \<and>
      (\<forall>slot\<in>dom (slots_of obj_id spec). cap_at (\<lambda>c. is_device_cap c = dev) (obj_id, slot) spec)))
     \<and> distinct cnode_list \<and> cnode_set = set cnode_list)\<rbrace>
      mapM_x (init_cnode spec orig_caps dup_caps irq_caps Move) cnode_list
@@ -1598,7 +1598,7 @@ lemma init_cnode_slots_copy_sep:
   done
 
 lemma init_cnode_copy_sep:
-  "\<lbrakk>well_formed spec; obj_id \<in> cnodes; 
+  "\<lbrakk>well_formed spec; obj_id \<in> cnodes;
     \<forall>slot\<in> dom (slots_of obj_id spec). cap_at (\<lambda>c. is_device_cap c = dev) (obj_id,slot) spec;
     cnodes = {obj_id. cnode_at obj_id spec}\<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>object_empty spec t obj_id \<and>*
@@ -1625,7 +1625,7 @@ lemma init_cspace_copy_sep:
      si_objects \<and>* R\<guillemotright> and K(
     well_formed spec \<and>
     distinct cnode_list \<and> cnode_set = set cnode_list \<and>
-    set cnode_list = {obj_id. cnode_at obj_id spec} 
+    set cnode_list = {obj_id. cnode_at obj_id spec}
     \<and> (\<forall>obj_id\<in>cnode_set. \<forall>slot\<in> dom (slots_of obj_id spec). cap_at (\<lambda>c. is_device_cap c = dev) (obj_id,slot) spec))\<rbrace>
    mapM_x (init_cnode spec orig_caps dup_caps irq_caps Copy) cnode_list
    \<lbrace>\<lambda>_.\<guillemotleft>cnodes_half_initialised spec t cnode_set \<and>*

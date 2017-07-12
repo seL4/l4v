@@ -61,7 +61,7 @@ where
            | _ \<Rightarrow> throw);
          offset \<leftarrow> liftE $ select {x. x < 2 ^ asid_low_bits};
          returnOk $ Assign (base, offset) pd_cap_ref (cap_object target, offset)
-       odE \<sqinter> throw" 
+       odE \<sqinter> throw"
 
 definition
   invoke_asid_control :: "cdl_asid_control_invocation \<Rightarrow> unit k_monad"

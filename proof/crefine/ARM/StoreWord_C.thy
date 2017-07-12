@@ -12,7 +12,7 @@ theory StoreWord_C
 imports VSpace_C
 begin
 
-context kernel_m 
+context kernel_m
 begin
 
 lemma in_doMachineOp:
@@ -165,7 +165,7 @@ proof -
     apply (cut_tac aligned_neq_into_no_overlap [OF neq alw alp])
      apply (auto simp: field_simps range_inter)[1]
     done
-  
+
   thus ?thesis
     by (rule byte_to_word_heap_upd_outside_range)
 qed
@@ -247,7 +247,7 @@ lemma user_data_device_relation_upd:
               (\<lambda>ws. Arrays.update ws (unat (ucast ((ptr && mask pageBits) >> 2):: 10 word)) w)
               (the (cslift s (Ptr (ptr && ~~ mask pageBits)))))"
   by (simp add:cuser_user_data_device_relation_def )
-  (* If we use identity map, the following proof might be useful 
+  (* If we use identity map, the following proof might be useful
   unfolding cuser_user_data_device_relation_def
   apply -
   apply (erule allEI)
@@ -278,7 +278,7 @@ lemma user_data_device_relation_upd:
   done
   *)
 
-lemma deviceDataSeperate: 
+lemma deviceDataSeperate:
   "\<lbrakk>\<not> pointerInDeviceData ptr \<sigma>; pspace_distinct' \<sigma>; pspace_aligned' \<sigma>; ksPSpace \<sigma> x = Some KOUserDataDevice\<rbrakk>
   \<Longrightarrow> ptr \<noteq> x"
   apply (rule ccontr,clarsimp)
@@ -288,7 +288,7 @@ lemma deviceDataSeperate:
   apply (clarsimp simp: objBits_simps)
   done
 
-lemma userDataSeperate: 
+lemma userDataSeperate:
   "\<lbrakk>\<not> pointerInUserData ptr \<sigma>; pspace_distinct' \<sigma>; pspace_aligned' \<sigma>; ksPSpace \<sigma> x = Some KOUserData\<rbrakk>
   \<Longrightarrow> ptr \<noteq> x"
   apply (rule ccontr,clarsimp)
@@ -310,7 +310,7 @@ lemma pointerInDeviceData_whole_word[simp]:
   apply (simp add:pointerInDeviceData_def pageBits_def)
   apply (subst and_not_mask_twice[symmetric,where m = 12 and n =2,simplified])
   apply (simp add: neg_mask_add_aligned[where n=2,simplified])
-  done  
+  done
 
 lemma du_ptr_disjoint:
  "pointerInDeviceData ptr \<sigma> \<Longrightarrow> \<not> pointerInUserData ptr \<sigma>"
@@ -318,8 +318,8 @@ lemma du_ptr_disjoint:
  by (auto simp: pointerInDeviceData_def pointerInUserData_def typ_at'_def ko_wp_at'_def)
 
 lemma heap_to_device_data_seperate:
-  "\<lbrakk> \<not> pointerInDeviceData ptr \<sigma>; pspace_distinct' \<sigma>; pspace_aligned' \<sigma>\<rbrakk> 
-      \<Longrightarrow> heap_to_device_data (ksPSpace \<sigma>) (fun_upd ms ptr a) x 
+  "\<lbrakk> \<not> pointerInDeviceData ptr \<sigma>; pspace_distinct' \<sigma>; pspace_aligned' \<sigma>\<rbrakk>
+      \<Longrightarrow> heap_to_device_data (ksPSpace \<sigma>) (fun_upd ms ptr a) x
       = heap_to_device_data (ksPSpace \<sigma>) ms x"
   apply (simp add : heap_to_device_data_def)
   apply (case_tac "map_to_user_data_device (ksPSpace \<sigma>) x")
@@ -344,7 +344,7 @@ lemma heap_to_device_data_seperate:
     apply (rule word_less_power_trans2[where k = 2,simplified])
       apply (simp add: pageBits_def)
       apply (rule less_le_trans[OF ucast_less],simp+)
-    apply (clarsimp simp: typ_at'_def ko_wp_at'_def pageBits_def objBits_simps 
+    apply (clarsimp simp: typ_at'_def ko_wp_at'_def pageBits_def objBits_simps
                    dest!: pspace_distinctD')
     apply (rule word_and_less')
     apply (simp add:mask_def)
@@ -352,8 +352,8 @@ lemma heap_to_device_data_seperate:
   done
 
 lemma heap_to_user_data_seperate:
-  "\<lbrakk> \<not> pointerInUserData ptr \<sigma>; pspace_distinct' \<sigma>; pspace_aligned' \<sigma>\<rbrakk> 
-      \<Longrightarrow> heap_to_user_data (ksPSpace \<sigma>) (fun_upd ms ptr a) x 
+  "\<lbrakk> \<not> pointerInUserData ptr \<sigma>; pspace_distinct' \<sigma>; pspace_aligned' \<sigma>\<rbrakk>
+      \<Longrightarrow> heap_to_user_data (ksPSpace \<sigma>) (fun_upd ms ptr a) x
       = heap_to_user_data (ksPSpace \<sigma>) ms x"
   apply (simp add : heap_to_user_data_def)
   apply (case_tac "map_to_user_data (ksPSpace \<sigma>) x")
@@ -378,7 +378,7 @@ lemma heap_to_user_data_seperate:
     apply (rule word_less_power_trans2[where k = 2,simplified])
       apply (simp add: pageBits_def)
       apply (rule less_le_trans[OF ucast_less],simp+)
-    apply (clarsimp simp: typ_at'_def ko_wp_at'_def pageBits_def objBits_simps 
+    apply (clarsimp simp: typ_at'_def ko_wp_at'_def pageBits_def objBits_simps
                    dest!: pspace_distinctD')
     apply (rule word_and_less')
     apply (simp add:mask_def)
@@ -404,15 +404,15 @@ proof (intro allI impI)
   let ?ks' = "?ks' s"
   let ?ptr = "Ptr ptr :: word32 ptr"
   let ?hp = "t_hrs_' (globals s)"
-  
+
   assume "?P \<sigma> s"
   hence rf: "(\<sigma>, s) \<in> rf_sr" and al: "is_aligned ptr 2"
     and pal: "pspace_aligned' \<sigma>" and pdst: "pspace_distinct' \<sigma>"
     and piud: "pointerInUserData ptr \<sigma>"
     by simp_all
-  
-  def offset \<equiv> "ucast ((ptr && mask pageBits) >> 2) :: 10 word" 
-  def base \<equiv> "Ptr (ptr && ~~ mask  pageBits) :: user_data_C ptr" 
+
+  def offset \<equiv> "ucast ((ptr && mask pageBits) >> 2) :: 10 word"
+  def base \<equiv> "Ptr (ptr && ~~ mask  pageBits) :: user_data_C ptr"
 
   from piud
   obtain old_w where
@@ -422,7 +422,7 @@ proof (intro allI impI)
     apply (drule ko_at_projectKO_opt)
     apply (simp add: base_def)
     done
-    
+
   from rf
   obtain page :: user_data_C
     where page: "cslift s base = Some page"
@@ -442,7 +442,7 @@ proof (intro allI impI)
     done
 
   have user_data_upd:
-    "\<And>A f v. heap_update base (user_data_C.words_C_update f v) = 
+    "\<And>A f v. heap_update base (user_data_C.words_C_update f v) =
             heap_update (ptr_coerce base) (f (user_data_C.words_C v))"
     apply (rule ext)
     apply (simp add: heap_update_def to_bytes_def)
@@ -501,14 +501,14 @@ proof (intro allI impI)
     apply (subst if_P, arith)+
     apply simp
     done
-  
+
   from and_mask_less_size [of pageBits ptr]
-  have ptr_mask_less: "ptr && mask pageBits >> 2 < 2^10"    
+  have ptr_mask_less: "ptr && mask pageBits >> 2 < 2^10"
     apply -
     apply (rule shiftr_less_t2n)
     apply (simp add: pageBits_def word_size)
     done
-  hence uoffset: 
+  hence uoffset:
     "unat offset = unat (ptr && mask pageBits >> 2)"
     apply (simp add: offset_def)
     apply (simp add: unat_ucast)
@@ -517,8 +517,8 @@ proof (intro allI impI)
     done
 
   have heap_upd:
-    "heap_update ?ptr w = 
-    (\<lambda>hp. heap_update base (user_data_C.words_C_update (\<lambda>ws. Arrays.update ws (unat offset) w) (h_val hp base)) hp)"    
+    "heap_update ?ptr w =
+    (\<lambda>hp. heap_update base (user_data_C.words_C_update (\<lambda>ws. Arrays.update ws (unat offset) w) (h_val hp base)) hp)"
     apply (rule ext)
     apply (subst user_data_upd)
     apply (subst hval)
@@ -545,14 +545,14 @@ proof (intro allI impI)
       apply (clarsimp simp: word_size pageBits_def)
       apply arith
       done
-  qed 
+  qed
 
-  have x: "\<And>(x::word32) (y::10 word). 
+  have x: "\<And>(x::word32) (y::10 word).
     is_aligned x pageBits \<Longrightarrow> x + ucast y * 4 && ~~ mask pageBits = x"
     apply (subst mask_out_add_aligned [symmetric], assumption)
     apply (clarsimp simp: x')
     done
-  
+
   from piud al
   have relrl: "cmap_relation (heap_to_user_data (ksPSpace \<sigma>)
                                  (underlying_memory (ksMachineState \<sigma>)))
@@ -610,7 +610,7 @@ proof (intro allI impI)
     done
 
   have hrs_mem:
-    "\<And>f hp'. 
+    "\<And>f hp'.
     hrs_mem_update (\<lambda>hp. heap_update base (f (h_val hp base)) hp) hp'
     = hrs_mem_update (heap_update base (f (h_val (hrs_mem hp') base))) hp'"
     by (simp add: hrs_mem_update_def split_def hrs_mem_def)
@@ -657,7 +657,7 @@ proof (intro allI impI)
     unfolding rf_sr_def cstate_relation_def by (simp add: Let_def)
   hence "cpspace_relation (ksPSpace \<sigma>) (underlying_memory ?ms) ?ks'"
     unfolding cpspace_relation_def using page
-    apply - 
+    apply -
     apply (clarsimp simp: rl' tag_disj_via_td_name)
     apply (drule relrl)
     apply (simp add: heap_upd)
@@ -689,7 +689,7 @@ proof (intro allI impI)
   thus ?thesis using rf
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
     apply (simp add: carch_state_relation_def cmachine_state_relation_def carch_globals_def)
-    apply (simp add: rl' tag_disj_via_td_name zr)    
+    apply (simp add: rl' tag_disj_via_td_name zr)
     done
 qed
 
@@ -700,7 +700,7 @@ lemma storeWordDevice_rf_sr_upd':
                    \<and> pointerInDeviceData ptr \<sigma> \<and> is_aligned ptr 2 \<longrightarrow>
    (\<sigma>\<lparr>ksMachineState := underlying_memory_update (\<lambda>m.
            m(ptr := word_rsplit (w::word32) ! 3, ptr + 1 := word_rsplit w ! 2,
-             ptr + 2 := word_rsplit w ! 1, ptr + 3 := word_rsplit w ! 0)) 
+             ptr + 2 := word_rsplit w ! 1, ptr + 3 := word_rsplit w ! 0))
                    (ksMachineState \<sigma>)\<rparr>,
     s\<lparr>globals := globals s\<lparr>t_hrs_' := hrs_mem_update (heap_update (Ptr ptr) w) (t_hrs_' (globals s))\<rparr>\<rparr>) \<in> rf_sr"
   (is "\<forall>\<sigma> s. ?P \<sigma> s \<longrightarrow>
@@ -713,15 +713,15 @@ proof (intro allI impI)
   let ?ks' = "?ks' s"
   let ?ptr = "Ptr ptr :: word32 ptr"
   let ?hp = "t_hrs_' (globals s)"
-  
+
   assume "?P \<sigma> s"
   hence rf: "(\<sigma>, s) \<in> rf_sr" and al: "is_aligned ptr 2"
     and pal: "pspace_aligned' \<sigma>" and pdst: "pspace_distinct' \<sigma>"
     and piud: "pointerInDeviceData ptr \<sigma>"
     by simp_all
-  
-  def offset \<equiv> "ucast ((ptr && mask pageBits) >> 2) :: 10 word" 
-  def base \<equiv> "Ptr (ptr && ~~ mask  pageBits) :: user_data_device_C ptr" 
+
+  def offset \<equiv> "ucast ((ptr && mask pageBits) >> 2) :: 10 word"
+  def base \<equiv> "Ptr (ptr && ~~ mask  pageBits) :: user_data_device_C ptr"
 
   from piud
   obtain old_w where
@@ -731,7 +731,7 @@ proof (intro allI impI)
     apply (drule ko_at_projectKO_opt)
     apply (simp add: base_def)
     done
-    
+
   from rf
   obtain page :: user_data_device_C
     where page: "cslift s base = Some page"
@@ -751,7 +751,7 @@ proof (intro allI impI)
     done
 
   have user_data_upd:
-    "\<And>A f v. heap_update base (user_data_device_C.words_C_update f v) = 
+    "\<And>A f v. heap_update base (user_data_device_C.words_C_update f v) =
             heap_update (ptr_coerce base) (f (user_data_device_C.words_C v))"
     apply (rule ext)
     apply (simp add: heap_update_def to_bytes_def)
@@ -810,14 +810,14 @@ proof (intro allI impI)
     apply (subst if_P, arith)+
     apply simp
     done
-  
+
   from and_mask_less_size [of pageBits ptr]
-  have ptr_mask_less: "ptr && mask pageBits >> 2 < 2^10"    
+  have ptr_mask_less: "ptr && mask pageBits >> 2 < 2^10"
     apply -
     apply (rule shiftr_less_t2n)
     apply (simp add: pageBits_def word_size)
     done
-  hence uoffset: 
+  hence uoffset:
     "unat offset = unat (ptr && mask pageBits >> 2)"
     apply (simp add: offset_def)
     apply (simp add: unat_ucast)
@@ -826,8 +826,8 @@ proof (intro allI impI)
     done
 
   have heap_upd:
-    "heap_update ?ptr w = 
-    (\<lambda>hp. heap_update base (user_data_device_C.words_C_update (\<lambda>ws. Arrays.update ws (unat offset) w) (h_val hp base)) hp)"    
+    "heap_update ?ptr w =
+    (\<lambda>hp. heap_update base (user_data_device_C.words_C_update (\<lambda>ws. Arrays.update ws (unat offset) w) (h_val hp base)) hp)"
     apply (rule ext)
     apply (subst user_data_upd)
     apply (subst hval)
@@ -854,14 +854,14 @@ proof (intro allI impI)
       apply (clarsimp simp: word_size pageBits_def)
       apply arith
       done
-  qed 
+  qed
 
-  have x: "\<And>(x::word32) (y::10 word). 
+  have x: "\<And>(x::word32) (y::10 word).
     is_aligned x pageBits \<Longrightarrow> x + ucast y * 4 && ~~ mask pageBits = x"
     apply (subst mask_out_add_aligned [symmetric], assumption)
     apply (clarsimp simp: x')
     done
-  
+
   from piud al
   have relrl: "cmap_relation (heap_to_device_data (ksPSpace \<sigma>)
                                  (underlying_memory (ksMachineState \<sigma>)))
@@ -919,7 +919,7 @@ proof (intro allI impI)
     done
 
   have hrs_mem:
-    "\<And>f hp'. 
+    "\<And>f hp'.
     hrs_mem_update (\<lambda>hp. heap_update base (f (h_val hp base)) hp) hp'
     = hrs_mem_update (heap_update base (f (h_val (hrs_mem hp') base))) hp'"
     by (simp add: hrs_mem_update_def split_def hrs_mem_def)
@@ -966,7 +966,7 @@ proof (intro allI impI)
     unfolding rf_sr_def cstate_relation_def by (simp add: Let_def)
   hence "cpspace_relation (ksPSpace \<sigma>) (underlying_memory ?ms) ?ks'"
     unfolding cpspace_relation_def using page
-    apply - 
+    apply -
     apply (clarsimp simp: rl' tag_disj_via_td_name)
     apply (drule relrl)
     apply (simp add: heap_upd)
@@ -1024,13 +1024,13 @@ lemma storeWord_rf_sr_upd:
   apply (erule iffD1 [OF rf_sr_upd, rotated -1], simp_all)[1]
   done
 
-(* The following should be also true for pointerInDeviceData, 
+(* The following should be also true for pointerInDeviceData,
    but the reason why it is true is different *)
 lemma storeByteUser_rf_sr_upd:
   assumes asms: "(\<sigma>, s) \<in> rf_sr" "pspace_aligned' \<sigma>" "pspace_distinct' \<sigma>"
                 "pointerInUserData ptr \<sigma>"
   shows "(ksMachineState_update (underlying_memory_update (\<lambda>m. m(ptr := b))) \<sigma>,
-          globals_update (t_hrs_'_update (hrs_mem_update (\<lambda>m. m(ptr := b)))) s) 
+          globals_update (t_hrs_'_update (hrs_mem_update (\<lambda>m. m(ptr := b)))) s)
          \<in> rf_sr"
 proof -
   have horrible_helper:

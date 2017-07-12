@@ -14,7 +14,7 @@ begin
 
 (* We can build rotators on the basis of selectors *)
 
-ML {* 
+ML {*
 (* generic rotator *)
 
 fun range lo hi =
@@ -22,7 +22,7 @@ fun range lo hi =
     fun r lo = if lo > hi then [] else lo::r (lo+1)
   in r lo end
 
-fun rotator lens tactic ctxt i st = 
+fun rotator lens tactic ctxt i st =
   let
     val len  = case Seq.pull ((lens THEN' resolve0_tac [@{thm iffI}]) i st) of
                  NONE => 0

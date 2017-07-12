@@ -23,7 +23,7 @@ import SEL4.Machine.Hardware.ARM.Callbacks
 import SEL4.Machine.RegisterSet
 
 data MPTimerData = MPTimerState {
-    env :: Ptr CallbackData, 
+    env :: Ptr CallbackData,
     mptBase :: PAddr }
 
 type MPTimerMonad = StateT MPTimerData IO
@@ -57,7 +57,7 @@ mpTimerInit = do
     mptpoke (#{ptr priv_timer, ctrl} mpt_base) 0
     mptpoke (#{ptr priv_timer, ints} mpt_base) 0
 
--- setup 
+-- setup
     mptpoke (#{ptr priv_timer, load} mpt_base) (timerFreq `div` (prescale + 1))
     mptpoke (#{ptr priv_timer, ctrl} mpt_base) ctrl1
 

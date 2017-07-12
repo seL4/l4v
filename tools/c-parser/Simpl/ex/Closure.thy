@@ -7,7 +7,7 @@
 (*  Title:      Closure.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2006-2008 Norbert Schirmer 
+Copyright (C) 2006-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -46,9 +46,9 @@ definition
 
 
 lemma dynCallClosure_sound:
-assumes adapt: 
+assumes adapt:
   "P \<subseteq> {s. \<exists>P' Q' A'. \<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F \<^esub> P' (callClosure upd (cl s)) Q',A' \<and>
-                  init s \<in> P' \<and> 
+                  init s \<in> P' \<and>
                   (\<forall>t \<in> Q'. return s t \<in> R s t) \<and>
                   (\<forall>t \<in> A'. return s t \<in> A)}"
 assumes res: "\<forall>s t n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
@@ -57,14 +57,14 @@ shows
 proof (rule cnvalidI)
   fix s t
   assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P Call p Q,A"
-  assume exec: "\<Gamma>\<turnstile> \<langle>dynCallClosure init upd cl return c,Normal s\<rangle> =n\<Rightarrow> t" 
+  assume exec: "\<Gamma>\<turnstile> \<langle>dynCallClosure init upd cl return c,Normal s\<rangle> =n\<Rightarrow> t"
   from execn.Basic [where f="(upd (fst (cl s)))" and s="(init s)"]
-  have exec_upd: "\<Gamma>\<turnstile>\<langle>Basic (upd (fst (cl s))),Normal (init s)\<rangle> =n\<Rightarrow> 
+  have exec_upd: "\<Gamma>\<turnstile>\<langle>Basic (upd (fst (cl s))),Normal (init s)\<rangle> =n\<Rightarrow>
              Normal (((upd (fst (cl s))) \<circ> init) s)"
       by auto
   assume P: "s \<in> P"
   from P adapt obtain P' Q' A'
-      where 
+      where
       valid: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F \<^esub> P' (callClosure upd (cl s)) Q',A'" and
       init_P': "init s \<in> P'"  and
       R: "(\<forall>t \<in> Q'. return s t \<in> R s t)" and
@@ -80,12 +80,12 @@ proof (rule cnvalidI)
   proof (cases rule: execn_call_Normal_elim)
     fix bdy m t'
     assume bdy: "\<Gamma> (snd (cl s)) = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal ((upd (fst (cl s)) \<circ> init) s)\<rangle> =m\<Rightarrow> Normal t'" 
+    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal ((upd (fst (cl s)) \<circ> init) s)\<rangle> =m\<Rightarrow> Normal t'"
     assume exec_c: "\<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc m\<Rightarrow> t"
     assume n: "n = Suc m"
-    have "\<Gamma>\<turnstile>\<langle>Basic init,Normal s\<rangle> =m\<Rightarrow> Normal (init s)" 
+    have "\<Gamma>\<turnstile>\<langle>Basic init,Normal s\<rangle> =m\<Rightarrow> Normal (init s)"
       by (rule execn.Basic)
-    from bdy exec_body 
+    from bdy exec_body
     have exec_callC:
       "\<Gamma>\<turnstile>\<langle>Call (snd (cl s)),Normal ((upd (fst (cl s)) \<circ> init) s)\<rangle> =Suc m\<Rightarrow> Normal t'"
       by (rule execn.Call)
@@ -104,10 +104,10 @@ proof (rule cnvalidI)
   next
     fix bdy m t'
     assume bdy: "\<Gamma> (snd (cl s)) = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal ((upd (fst (cl s)) \<circ> init) s)\<rangle> =m\<Rightarrow> Abrupt t'" 
+    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal ((upd (fst (cl s)) \<circ> init) s)\<rangle> =m\<Rightarrow> Abrupt t'"
     assume t: "t=Abrupt (return s t')"
     assume n: "n = Suc m"
-    from bdy exec_body 
+    from bdy exec_body
     have exec_callC:
       "\<Gamma>\<turnstile>\<langle>Call (snd (cl s)),Normal ((upd (fst (cl s)) \<circ> init) s)\<rangle> =Suc m\<Rightarrow> Abrupt t'"
       by (rule execn.Call)
@@ -125,10 +125,10 @@ proof (rule cnvalidI)
   next
     fix bdy m f
     assume bdy: "\<Gamma> (snd (cl s)) = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal ((upd (fst (cl s)) \<circ> init) s)\<rangle> =m\<Rightarrow> Fault f" 
+    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal ((upd (fst (cl s)) \<circ> init) s)\<rangle> =m\<Rightarrow> Fault f"
     assume t: "t=Fault f"
     assume n: "n = Suc m"
-    from bdy exec_body 
+    from bdy exec_body
     have exec_callC:
       "\<Gamma>\<turnstile>\<langle>Call (snd (cl s)),Normal ((upd (fst (cl s)) \<circ> init) s)\<rangle> =Suc m\<Rightarrow> Fault f"
       by (rule execn.Call)
@@ -140,16 +140,16 @@ proof (rule cnvalidI)
       by auto
     thus ?thesis ..
   next
-    fix bdy m 
+    fix bdy m
     assume bdy: "\<Gamma> (snd (cl s)) = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal ((upd (fst (cl s)) \<circ> init) s)\<rangle> =m\<Rightarrow> Stuck" 
+    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal ((upd (fst (cl s)) \<circ> init) s)\<rangle> =m\<Rightarrow> Stuck"
     assume t: "t=Stuck"
     assume n: "n = Suc m"
     from execn.Basic [where f="(upd (fst (cl s)))" and s="(init s)"]
-    have exec_upd: "\<Gamma>\<turnstile>\<langle>Basic (upd (fst (cl s))),Normal (init s)\<rangle> =Suc m\<Rightarrow> 
+    have exec_upd: "\<Gamma>\<turnstile>\<langle>Basic (upd (fst (cl s))),Normal (init s)\<rangle> =Suc m\<Rightarrow>
              Normal (((upd (fst (cl s))) \<circ> init) s)"
       by auto
-    from bdy exec_body 
+    from bdy exec_body
     have exec_callC:
       "\<Gamma>\<turnstile>\<langle>Call (snd (cl s)),Normal ((upd (fst (cl s)) \<circ> init) s)\<rangle> =Suc m\<Rightarrow> Stuck"
       by (rule execn.Call)
@@ -165,7 +165,7 @@ proof (rule cnvalidI)
     assume no_bdy: "\<Gamma> (snd (cl s)) = None"
     assume t: "t=Stuck"
     assume n: "n = Suc m"
-    from no_bdy  
+    from no_bdy
     have exec_callC:
       "\<Gamma>\<turnstile>\<langle>Call (snd (cl s)),Normal ((upd (fst (cl s)) \<circ> init) s)\<rangle> =Suc m\<Rightarrow> Stuck"
       by (rule execn.CallUndefined)
@@ -179,10 +179,10 @@ proof (rule cnvalidI)
   qed
 qed
 
-      
+
 lemma dynCallClosure:
 assumes adapt: "P \<subseteq> {s. \<exists>P' Q' A'. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F \<^esub> P' (callClosure upd (cl s)) Q',A' \<and>
-                  init s \<in> P' \<and> 
+                  init s \<in> P' \<and>
                   (\<forall>t \<in> Q'. return s t \<in> R s t) \<and>
                   (\<forall>t \<in> A'. return s t \<in> A)}"
 assumes res: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
@@ -201,8 +201,8 @@ lemma in_subsetD: "\<lbrakk>P \<subseteq> P'; x \<in> P\<rbrakk> \<Longrightarro
   by blast
 
 lemma dynCallClosureFix:
-assumes adapt: "P \<subseteq> {s. \<exists>Z. cl'=cl s \<and>   
-                  init s \<in> P' Z \<and> 
+assumes adapt: "P \<subseteq> {s. \<exists>Z. cl'=cl s \<and>
+                  init s \<in> P' Z \<and>
                   (\<forall>t \<in> Q' Z. return s t \<in> R s t) \<and>
                   (\<forall>t \<in> A' Z. return s t \<in> A)}"
 assumes res: "\<forall>s t. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> (R s t) (c s t) Q,A"
@@ -227,9 +227,9 @@ lemma conseq_extract_pre:
               \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   apply (rule hoarep.Conseq)
   apply clarify
-  apply (rule_tac x="{s}" in exI)  
-  apply (rule_tac x="Q" in exI)  
-  apply (rule_tac x="A" in exI)  
+  apply (rule_tac x="{s}" in exI)
+  apply (rule_tac x="Q" in exI)
+  apply (rule_tac x="A" in exI)
   by simp
 
 
@@ -237,16 +237,16 @@ lemma conseq_extract_pre:
 lemma app_closure_sound:
   assumes adapt: "P \<subseteq> {s. \<exists>P' Q' A'. \<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P' (callClosure upd (e',p)) Q',A' \<and>
                            upd x s \<in> P' \<and> Q' \<subseteq> Q \<and> A' \<subseteq> A}"
-  assumes ap: "upd e = upd e' \<circ> upd x"     
+  assumes ap: "upd e = upd e' \<circ> upd x"
   shows "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P (callClosure upd (e,p)) Q,A"
 proof (rule cnvalidI)
   fix s t
   assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P Call p Q,A"
-  assume exec_e: "\<Gamma>\<turnstile> \<langle>callClosure upd (e, p),Normal s\<rangle> =n\<Rightarrow> t" 
-  assume P: "s \<in> P" 
+  assume exec_e: "\<Gamma>\<turnstile> \<langle>callClosure upd (e, p),Normal s\<rangle> =n\<Rightarrow> t"
+  assume P: "s \<in> P"
   assume t: "t \<notin> Fault ` F"
   from P adapt obtain P' Q' A'
-    where 
+    where
     valid: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F \<^esub> P' (callClosure upd (e',p)) Q',A'" and
     init_P': "upd x s \<in> P'"  and
     Q: "Q' \<subseteq> Q" and
@@ -261,7 +261,7 @@ proof (rule cnvalidI)
   have s': "s'=Normal (upd e s)"
     by cases simp
   from ap obtain s'' where
-   s'': "upd x s = s''" and upd_e': "upd e' s''=upd e s" 
+   s'': "upd x s = s''" and upd_e': "upd e' s''=upd e s"
     by auto
   from ap s' execn.Basic [where f="(upd (fst (e', p)))" and s="upd x s" and \<Gamma>=\<Gamma>]
   have exec_e': "\<Gamma>\<turnstile> \<langle>Basic (upd (fst (e', p))),Normal (upd x s)\<rangle> =n\<Rightarrow> s'"
@@ -277,7 +277,7 @@ qed
 lemma app_closure:
   assumes adapt: "P \<subseteq> {s. \<exists>P' Q' A'. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P' (callClosure upd (e',p)) Q',A' \<and>
                            upd x s \<in> P' \<and> Q' \<subseteq> Q \<and> A' \<subseteq> A}"
-  assumes ap: "upd e = upd e' \<circ> upd x"     
+  assumes ap: "upd e = upd e' \<circ> upd x"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (callClosure upd (e,p)) Q,A"
   apply (rule hoare_complete')
   apply (rule allI)
@@ -288,7 +288,7 @@ lemma app_closure:
 
 lemma app_closure_spec:
   assumes adapt: "P \<subseteq> {s. \<exists>Z. upd x s \<in> P' Z \<and> Q' Z \<subseteq> Q \<and> A' Z \<subseteq> A}"
-  assumes ap: "upd e = upd e' \<circ> upd x"     
+  assumes ap: "upd e = upd e' \<circ> upd x"
   assumes spec: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> (P' Z) (callClosure upd (e',p)) (Q' Z),(A' Z)"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (callClosure upd (e,p)) Q,A"
   apply (rule app_closure [OF _ ap])
@@ -326,7 +326,7 @@ lemma ap_closure:
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (callClosure (gen_upd var) (ap es c)) Q,A"
 proof -
   obtain es' p where c: "c=(es',p)"
-    by (cases c) 
+    by (cases c)
   have "gen_upd var (fst (ap es (es',p))) = gen_upd var es' \<circ> gen_upd var es"
     by (simp add: gen_upd_ap)
   from app_closure [OF adapt [simplified c] this]
@@ -341,7 +341,7 @@ lemma ap_closure_spec:
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (callClosure (gen_upd var) (ap es c)) Q,A"
 proof -
   obtain es' p where c: "c=(es',p)"
-    by (cases c) 
+    by (cases c)
   have "gen_upd var (fst (ap es (es',p))) = gen_upd var es' \<circ> gen_upd var es"
     by (simp add: gen_upd_ap)
   from app_closure_spec [OF adapt [simplified c] this spec [simplified c]]

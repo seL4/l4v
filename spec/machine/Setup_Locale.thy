@@ -13,7 +13,7 @@ theory Setup_Locale
 imports "../../lib/Qualify" "../../lib/Requalify" "../../lib/Extend_Locale"
 begin
 
-(* 
+(*
    We use a locale for namespacing architecture-specific definitions.
 
    The global_naming command changes the underlying naming of the locale. The intention is that

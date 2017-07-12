@@ -9,7 +9,7 @@
  *)
 
 theory PasUpdates
-imports    
+imports
     "Arch_IF"
     "FinalCaps"
     "../invariant-abstract/EmptyFail_AI"
@@ -20,16 +20,16 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch idle_thread[wp]: preemption_point "\<lambda>s::det_state. P (idle_thread s)"
 (wp: OR_choiceE_weak_wp crunch_wps simp: crunch_simps ignore: do_extended_op OR_choiceE)
-  
+
 crunch idle_thread[wp]: cap_swap_for_delete,finalise_cap,cap_move,cap_swap,cap_delete,cancel_badged_sends "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation modify_wp dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke)
- 
+
 crunch idle_thread[wp]: handle_event "\<lambda>s::det_state. P (idle_thread s)" (wp: syscall_valid crunch_wps rec_del_preservation cap_revoke_preservation dxo_wp_weak simp: crunch_simps check_cap_at_def filterM_mapM unless_def ignore: without_preemption filterM rec_del check_cap_at cap_revoke resetTimer ackInterrupt getFAR getDFSR getIFSR getActiveIRQ)
 
 abbreviation (input) domain_fields where "domain_fields P s \<equiv> P (domain_time s) (domain_index s) (domain_list s)"
 
 lemma preemption_point_domain_fields[wp]:
   "\<lbrace>domain_fields P\<rbrace> preemption_point \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
-  by (simp add: preemption_point_def 
+  by (simp add: preemption_point_def
       | wp OR_choiceE_weak_wp modify_wp
       | wpc
       | simp add: reset_work_units_def update_work_units_def)+
@@ -41,7 +41,7 @@ lemma cap_revoke_domain_fields[wp]:"\<lbrace>domain_fields P\<rbrace> cap_revoke
 
 lemma invoke_cnode_domain_fields[wp]: "\<lbrace>domain_fields P\<rbrace> invoke_cnode a \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
   unfolding invoke_cnode_def
-  by (wpsimp simp: without_preemption_def crunch_simps  
+  by (wpsimp simp: without_preemption_def crunch_simps
                wp: get_cap_wp hoare_vcg_all_lift hoare_vcg_imp_lift
       | rule conjI)+
 
@@ -67,11 +67,11 @@ crunch cur_domain[wp]: handle_event "\<lambda>s. P (cur_domain s)" (wp: syscall_
 
 definition pas_wellformed_noninterference where
   "pas_wellformed_noninterference aag \<equiv>
-    (\<forall>x\<in>range (pasObjectAbs aag) - {SilcLabel}. 
+    (\<forall>x\<in>range (pasObjectAbs aag) - {SilcLabel}.
          pas_wellformed (aag\<lparr> pasSubject := x \<rparr>)) \<and>
     (\<forall>x. pas_wellformed (aag\<lparr> pasSubject := pasDomainAbs aag x \<rparr>) \<and> pasDomainAbs aag x \<noteq> SilcLabel)"
 
-lemma pas_wellformed_noninterference_silc[intro!]: 
+lemma pas_wellformed_noninterference_silc[intro!]:
   "pas_wellformed_noninterference aag \<Longrightarrow> pasDomainAbs aag x \<noteq> SilcLabel"
   apply (simp add: pas_wellformed_noninterference_def)
   done
@@ -92,12 +92,12 @@ lemma pasIRQAbs_pasSubject_update:
   done
 
 lemma state_asids_to_policy_pasSubject_update:
-  "state_asids_to_policy_aux (aag\<lparr> pasSubject := x \<rparr>) caps asid vrefs = 
+  "state_asids_to_policy_aux (aag\<lparr> pasSubject := x \<rparr>) caps asid vrefs =
    state_asids_to_policy_aux aag caps asid vrefs"
   apply(rule equalityI)
    apply(clarify)
-   apply(erule state_asids_to_policy_aux.cases 
-        |simp 
+   apply(erule state_asids_to_policy_aux.cases
+        |simp
         |fastforce intro: state_asids_to_policy_aux.intros)+
   apply(clarify)
   apply(erule state_asids_to_policy_aux.cases)
@@ -108,11 +108,11 @@ lemma state_asids_to_policy_pasSubject_update:
   done
 
 lemma state_irqs_to_policy_pasSubject_update:
-  "state_irqs_to_policy_aux (aag\<lparr> pasSubject := x \<rparr>) caps = 
+  "state_irqs_to_policy_aux (aag\<lparr> pasSubject := x \<rparr>) caps =
    state_irqs_to_policy_aux aag caps"
   apply(rule equalityI)
    apply(clarify)
-   apply(erule state_irqs_to_policy_aux.cases, simp,         
+   apply(erule state_irqs_to_policy_aux.cases, simp,
          blast intro: state_irqs_to_policy_aux.intros)
   apply(clarify)
   apply(erule state_irqs_to_policy_aux.cases)
@@ -122,16 +122,16 @@ lemma state_irqs_to_policy_pasSubject_update:
   apply(rule state_irqs_to_policy_aux.intros)
    apply assumption+
   done
-  
+
 
 lemma irq_map_wellformed_pasSubject_update:
-  "irq_map_wellformed_aux (aag\<lparr> pasSubject := x \<rparr>) irqn = 
+  "irq_map_wellformed_aux (aag\<lparr> pasSubject := x \<rparr>) irqn =
    irq_map_wellformed_aux aag irqn"
   apply(clarsimp simp: irq_map_wellformed_aux_def)
   done
 
 lemma tcb_domain_map_wellformed_pasSubject_update:
-  "tcb_domain_map_wellformed_aux (aag\<lparr> pasSubject := x \<rparr>) irqn = 
+  "tcb_domain_map_wellformed_aux (aag\<lparr> pasSubject := x \<rparr>) irqn =
    tcb_domain_map_wellformed_aux aag irqn"
   apply(clarsimp simp: tcb_domain_map_wellformed_aux_def)
   done
@@ -149,13 +149,13 @@ lemma pas_refined_pasSubject_update':
   done
 
 lemma pas_wellformed_pasSubject_update:
-  "\<lbrakk>pas_wellformed_noninterference aag\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>pas_wellformed_noninterference aag\<rbrakk> \<Longrightarrow>
    pas_wellformed (aag\<lparr>pasSubject := pasDomainAbs aag x\<rparr>)"
   by (auto simp: pas_wellformed_noninterference_def)
- 
+
 lemmas pas_refined_pasSubject_update = pas_refined_pasSubject_update'[OF _ pas_wellformed_pasSubject_update]
 
-lemma guarded_pas_domain_pasSubject_update[simp]: 
+lemma guarded_pas_domain_pasSubject_update[simp]:
   "guarded_pas_domain (aag\<lparr>pasSubject := x\<rparr>) s = guarded_pas_domain aag s"
   apply (simp add: guarded_pas_domain_def)
   done
@@ -196,8 +196,8 @@ lemma state_asids_to_policy_pasMayActivate_update:
    state_asids_to_policy aag s"
   apply(rule equalityI)
    apply(clarify)
-   apply(erule state_asids_to_policy_aux.cases 
-        |simp 
+   apply(erule state_asids_to_policy_aux.cases
+        |simp
         |fastforce intro: state_asids_to_policy_aux.intros)+
   apply(clarify)
   apply(erule state_asids_to_policy_aux.cases)
@@ -212,8 +212,8 @@ lemma state_irqs_to_policy_pasMayActivate_update:
    state_irqs_to_policy aag s"
   apply(rule equalityI)
    apply(clarify)
-   apply(erule state_irqs_to_policy_aux.cases 
-        |simp 
+   apply(erule state_irqs_to_policy_aux.cases
+        |simp
         |fastforce intro: state_irqs_to_policy_aux.intros)+
   apply(clarify)
   apply(erule state_irqs_to_policy_aux.cases)
@@ -254,8 +254,8 @@ lemma state_asids_to_policy_pasMayEditReadyQueues_update:
    state_asids_to_policy aag s"
   apply(rule equalityI)
    apply(clarify)
-   apply(erule state_asids_to_policy_aux.cases 
-        |simp 
+   apply(erule state_asids_to_policy_aux.cases
+        |simp
         |fastforce intro: state_asids_to_policy_aux.intros)+
   apply(clarify)
   apply(erule state_asids_to_policy_aux.cases)
@@ -270,8 +270,8 @@ lemma state_irqs_to_policy_pasMayEditReadyQueues_update:
    state_irqs_to_policy aag s"
   apply(rule equalityI)
    apply(clarify)
-   apply(erule state_irqs_to_policy_aux.cases 
-        |simp 
+   apply(erule state_irqs_to_policy_aux.cases
+        |simp
         |fastforce intro: state_irqs_to_policy_aux.intros)+
   apply(clarify)
   apply(erule state_irqs_to_policy_aux.cases)

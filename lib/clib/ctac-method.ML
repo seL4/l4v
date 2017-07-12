@@ -661,7 +661,7 @@ fun ccorres_doit (opts : ctac_opts)
          *)
         val split_tac = case o_xfru of
                             SOME ((xfru, _), _) => let
-                                val insts = [(((xfN, 0), Position.none), xf), 
+                                val insts = [(((xfN, 0), Position.none), xf),
                                              (((xfrN, 0), Position.none), xfu_to_xf xfru),
                                              (((xfruN, 0), Position.none), xfru)]
                             in

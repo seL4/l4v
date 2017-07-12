@@ -79,7 +79,7 @@ in
 end
 
 val munge_info_fname = let
-  val (mifname_config, mifname_setup) = 
+  val (mifname_config, mifname_setup) =
       Attrib.config_string (Binding.name "munge_info_fname") (K "")
 in
   Context.>>(Context.map_theory mifname_setup);
@@ -316,7 +316,7 @@ fun install_C_file0 (((((memsafe),ctyps),cdefs),s),statetylist_opt) thy = let
   val mifname = case Config.get_global thy munge_info_fname of
                   "" => NONE
                 | s => SOME s
-              
+
   val ((ast, _ (* init_stmts *)), cse) =
       process_decls {anon_vars=anon_vars,owners = owners,
                      allow_underscore_idents = uscore_idents,

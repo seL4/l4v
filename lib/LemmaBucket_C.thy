@@ -22,7 +22,7 @@ lemma Ptr_not_null_pointer_not_zero: "(Ptr p \<noteq> NULL)=(p\<noteq>0)"
  by simp
 
 lemma hrs_mem_f: "f (hrs_mem s) = hrs_mem (hrs_mem_update f s)"
-  apply (cases s) 
+  apply (cases s)
   apply (clarsimp simp: hrs_mem_def hrs_mem_update_def)
   done
 
@@ -44,9 +44,9 @@ lemma inj_Ptr [simp]:
   apply (rule injI)
   apply simp
   done
-  
+
 lemma bij_Ptr :
-  "bij Ptr"  
+  "bij Ptr"
   by (simp add: bijI)
 
 lemma exec_Guard:
@@ -65,7 +65,7 @@ lemma byte_ptr_guarded:"ptr_val (x::8 word ptr) \<noteq> 0 \<Longrightarrow> c_g
 
 lemma heap_update_list_append:
   fixes v :: word8
-  shows "heap_update_list s (xs @ ys) hp = 
+  shows "heap_update_list s (xs @ ys) hp =
   heap_update_list (s + of_nat (length xs)) ys (heap_update_list s xs hp)"
 proof (induct xs arbitrary: ys rule: rev_induct)
   case Nil
@@ -82,7 +82,7 @@ qed
 
 lemma intvl_aligned_bottom_eq:
   fixes p :: "'a::len word"
-  assumes al1: "is_aligned x n" 
+  assumes al1: "is_aligned x n"
   and     al2: "is_aligned p bits"
   and      nb: "\<not> n < bits"
   and     off: "off \<le> 2 ^ bits" "off \<noteq> 0"
@@ -100,7 +100,7 @@ next
 
     from x_in_intvl obtain kp where xp: "x = p + of_nat kp" and kp: "kp < off"
       by (clarsimp dest!: intvlD)
-  
+
     hence "is_aligned (p + of_nat kp) n" using al1 by simp
     hence "2 ^ n dvd unat (p + of_nat kp)" unfolding is_aligned_def .
     hence "2 ^ n dvd unat p + kp" using kp off wb
@@ -120,25 +120,25 @@ next
   moreover from al2 obtain q2 where pbits: "p = 2 ^ bits * of_nat q2"
                                 and q2: "q2 < 2 ^ (len_of TYPE('a) - bits)"
     by (rule is_alignedE)
-  
+
   moreover from nb obtain kn where nbits: "n = bits + kn"
     by (clarsimp simp: linorder_not_less le_iff_add)
 
-  ultimately have "2 ^ bits dvd 2 ^ bits * q2 + kp" 
+  ultimately have "2 ^ bits dvd 2 ^ bits * q2 + kp"
     apply (simp add: power_add)
     apply (simp add: unat_mult_power_lem [OF q2])
     apply (erule dvd_mult_left)
     done
-  
+
   hence "2 ^ bits dvd kp" by (simp add: dvd_reduce_multiple)
-  with kp have "kp = 0" 
+  with kp have "kp = 0"
     apply -
     apply (erule contrapos_pp)
     apply (simp add: linorder_not_less)
     apply (drule (1) dvd_imp_le)
     apply (erule order_trans [OF off(1)])
     done
-  
+
   thus ?thesis using xp by simp
   next
     assume wb: "\<not> bits < len_of TYPE('a)"
@@ -201,7 +201,7 @@ next
     done
 qed
 
-lemma upto_intvl_eq':  
+lemma upto_intvl_eq':
   fixes x :: "'a :: len word"
   shows "\<lbrakk> x \<le> x + (of_nat b - 1); b \<noteq> 0; b \<le> 2 ^ len_of TYPE('a)\<rbrakk> \<Longrightarrow> {x..+b} = {x .. x + of_nat b - 1}"
   unfolding intvl_def
@@ -219,7 +219,7 @@ lemma upto_intvl_eq':
     apply simp
    apply simp
   apply clarsimp
-  apply (rule_tac x = "unat (xa - x)" in exI)    
+  apply (rule_tac x = "unat (xa - x)" in exI)
   apply simp
   apply (simp add: unat_sub)
   apply (rule nat_diff_less)
@@ -237,7 +237,7 @@ lemma upto_intvl_eq':
 
 lemma intvl_aligned_top:
   fixes x :: "'a::len word"
-  assumes al1: "is_aligned x n" 
+  assumes al1: "is_aligned x n"
   and     al2: "is_aligned p bits"
   and      nb: "n \<le> bits"
   and    offn: "off < 2 ^ n"
@@ -255,21 +255,21 @@ next
     with offn asm show ?thesis by simp
   next
     case False
-    
+
     from asm have "x \<in> {p .. p + 2 ^ bits - 1}"
       by (simp add: upto_intvl_eq [OF al2])
     then obtain q where xp: "x = p + of_nat (q * 2 ^ n)" and qb: "q < 2 ^ (bits - n)" using False nb
       by (fastforce dest!: is_aligned_diff[OF al1 al2 wb,simplified field_simps])
-    
+
     have "q * 2 ^ n < 2 ^ bits - off"
-    proof - 
+    proof -
       show ?thesis using offn qb nb
         apply (simp add: less_diff_conv)
         apply (erule (1) nat_add_offset_less)
         apply arith
         done
     qed
-    
+
     with xp show ?thesis
       apply -
       apply (erule ssubst)
@@ -297,7 +297,7 @@ lemma heap_update_list_update:
   apply (simp add: heap_update_list_append cong: if_cong)
   done
 
-(* FIXME: generalise *)  
+(* FIXME: generalise *)
 lemma heap_update_list_append2:
   "length xs + length ys < 2 ^ word_bits \<Longrightarrow>
     heap_update_list s (xs @ ys) hp
@@ -320,12 +320,12 @@ next
 
   have "(1 :: addr) + of_nat (length vs') = of_nat (length (v' # vs'))"
     by simp
-  also have "unat \<dots> + length ys < 2 ^ word_bits" using Cons.prems 
+  also have "unat \<dots> + length ys < 2 ^ word_bits" using Cons.prems
     apply (subst unat_of_nat)
     apply (simp add: word_bits_conv)
     done
   finally have lt: "unat ((1 :: addr) + of_nat (length vs')) + length ys < 2 ^ word_bits" .
-  
+
   from Cons.prems have "length vs' + length ys < 2 ^ word_bits" by simp
   thus ?case
     apply simp
@@ -374,26 +374,26 @@ lemma intvl_disjoint1:
   and     alb: "a \<le> a + of_nat b"
   and     cld: "c \<le> c + of_nat d"
   and     blt: "b < 2 ^ len_of TYPE('a)"
-  and     dlt: "d < 2 ^ len_of TYPE('a)"  
+  and     dlt: "d < 2 ^ len_of TYPE('a)"
   shows   "{a..+b} \<inter> {c..+d} = {}"
 proof (rule disjointI, rule notI)
   fix x y
   assume x: "x \<in> {a..+b}" and y: "y \<in> {c..+d}" and xy: "x = y"
-  
+
   from x obtain kx where "x = a + of_nat kx" and kx: "kx < b"
     by (clarsimp dest!: intvlD)
-  
+
   moreover from y obtain ky where "y = c + of_nat ky" and ky: "ky < d"
     by (clarsimp dest!: intvlD)
-  
+
   ultimately have ac: "a + of_nat kx = c + of_nat ky" using xy by simp
-   
+
   have "of_nat kx < (of_nat b :: 'a word)" using blt kx
-    by (rule of_nat_mono_maybe)    
+    by (rule of_nat_mono_maybe)
   hence "a + of_nat kx < a + of_nat b" using alb
     by (rule word_plus_strict_mono_right)
-  
-  also have "\<dots> \<le> c" by (rule abc)  
+
+  also have "\<dots> \<le> c" by (rule abc)
   also have "\<dots> \<le> c + of_nat ky" using cld dlt ky
     by - (rule word_random [OF _ iffD1 [OF Word_Lemmas.of_nat_mono_maybe_le]], simp+ )
   finally show False using ac by simp
@@ -405,12 +405,12 @@ lemma intvl_disjoint2:
   and     alb: "a \<le> a + of_nat b"
   and     cld: "c \<le> c + of_nat d"
   and     blt: "b < 2 ^ len_of TYPE('a)"
-  and     dlt: "d < 2 ^ len_of TYPE('a)"  
+  and     dlt: "d < 2 ^ len_of TYPE('a)"
   shows   "{c..+d} \<inter> {a..+b} = {}"
   using abc alb cld blt dlt
   by (subst Int_commute, rule intvl_disjoint1)
 
-  
+
 lemma intvl_off_disj:
   fixes x :: addr
   assumes ylt: "y \<le> off"
@@ -439,27 +439,27 @@ lemma intvl_off_disj:
 
 lemma list_map_comono:
   assumes  s: "list_map m \<subseteq>\<^sub>m list_map n"
-  shows    "m \<le> n"  
+  shows    "m \<le> n"
   using s
 proof (induct m arbitrary: n rule: rev_induct)
   case Nil thus ?case unfolding list_map_def by simp
 next
   case (snoc x xs)
 
-  from snoc.prems have 
+  from snoc.prems have
     sm: "[length xs \<mapsto> x] ++ list_map xs \<subseteq>\<^sub>m list_map n"
     unfolding list_map_def by simp
-  
-  hence xsn: "xs \<le> n" 
+
+  hence xsn: "xs \<le> n"
     by (rule snoc.hyps [OF map_add_le_mapE])
-  
+
   have "list_map n (length xs) = Some x" using sm
     by (simp add: map_le_def list_map_def merge_dom2 set_zip)
-  
+
   hence "length xs < length n" and "x = n ! length xs"
     by (auto simp add: list_map_eq split: if_split_asm)
-  
-  thus "xs @ [x] \<le> n" using xsn 
+
+  thus "xs @ [x] \<le> n" using xsn
     by (simp add: append_one_prefix less_eq_list_def)
 qed
 
@@ -506,7 +506,7 @@ lemma Guard_no_cong:
   by simp
 
 lemma heap_update_list_concat_fold:
-  assumes "ptr' = ptr + of_nat (length ys)" 
+  assumes "ptr' = ptr + of_nat (length ys)"
   shows "heap_update_list ptr' xs (heap_update_list ptr ys s)
     = heap_update_list ptr (ys @ xs) s"
   unfolding assms
@@ -650,7 +650,7 @@ lemma take_drop_foldl_concat:
    apply (induct x, simp_all)[1]
   apply simp
   done
-  
+
 definition
   array_ptr_index :: "(('a :: c_type)['b :: finite]) ptr \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> 'a ptr"
 where
@@ -690,7 +690,7 @@ lemma from_bytes_Array_element:
   assumes less: "of_nat n < card (UNIV :: 'b set)"
   assumes len: "length bs = size_of TYPE('a) * CARD('b)"
   shows
-  "index (from_bytes bs :: 'a['b]) n 
+  "index (from_bytes bs :: 'a['b]) n
       = from_bytes (take (size_of TYPE('a)) (drop (n * size_of TYPE('a)) bs))"
   using less
   apply (simp add: from_bytes_def size_of_def typ_info_array')
@@ -1003,7 +1003,7 @@ lemma ptr_add_disjoint2:
   apply (rule intvl_inter_le[where k=0 and ka="unat (ptr_val x - ptr_val y)"])
     apply clarsimp
    apply (metis (no_types, hide_lams) add.commute less_imp_le less_le_trans not_le unat_less_helper
-                word_diff_ls'(4))   
+                word_diff_ls'(4))
   apply simp
   done
 
@@ -1110,7 +1110,7 @@ lemma ptr_retyp_valid_footprint_disjoint2:
      \<Longrightarrow> valid_footprint d p s"
   apply(clarsimp simp: valid_footprint_def Let_def)
   apply (drule spec, drule (1) mp)
-  apply(subgoal_tac "p + of_nat y \<in> {p..+size_td s}")    
+  apply(subgoal_tac "p + of_nat y \<in> {p..+size_td s}")
   apply (subst (asm) ptr_retyp_d)
     apply clarsimp
     apply fast

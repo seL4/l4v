@@ -28,7 +28,7 @@ lemma (* decode_irq_control_invocation_inv *)[Interrupt_AI_asms]:
                    arch_decode_irq_control_invocation_def whenE_def, safe)
   apply (wp | simp)+
   done
-  
+
 lemma (* decode_irq_control_valid *)[Interrupt_AI_asms]:
   "\<lbrace>\<lambda>s. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> cap)
         \<and> (\<forall>cap \<in> set caps. is_cnode_cap cap \<longrightarrow>
@@ -48,7 +48,7 @@ lemma (* decode_irq_control_valid *)[Interrupt_AI_asms]:
   apply (cut_tac mod_le[where b = "2^10" and c = "2^16" and a = "unat (args ! 0)" ,simplified])
   apply (cases caps, auto simp:unat_mask_32_16_is_mod)
   done
-  
+
 lemma get_irq_slot_different_ARCH[Interrupt_AI_asms]:
   "\<lbrace>\<lambda>s. valid_global_refs s \<and> ex_cte_cap_wp_to is_cnode_cap ptr s\<rbrace>
       get_irq_slot irq
@@ -60,7 +60,7 @@ lemma get_irq_slot_different_ARCH[Interrupt_AI_asms]:
   apply (elim allE, erule notE, erule cte_wp_at_weakenE)
   apply (clarsimp simp: global_refs_def is_cap_simps cap_range_def)
   done
-  
+
 lemma is_derived_use_interrupt_ARCH[Interrupt_AI_asms]:
   "(is_ntfn_cap cap \<and> interrupt_derived cap cap') \<longrightarrow> (is_derived m p cap cap')"
   apply (clarsimp simp: is_cap_simps)
@@ -68,14 +68,14 @@ lemma is_derived_use_interrupt_ARCH[Interrupt_AI_asms]:
   apply (clarsimp simp: cap_master_cap_def split: cap.split_asm)
   apply (simp add: is_cap_simps is_pt_cap_def vs_cap_ref_def)
   done
-  
+
 lemma maskInterrupt_invs_ARCH[Interrupt_AI_asms]:
-  "\<lbrace>invs and (\<lambda>s. \<not>b \<longrightarrow> interrupt_states s irq \<noteq> IRQInactive)\<rbrace> 
-   do_machine_op (maskInterrupt b irq) 
+  "\<lbrace>invs and (\<lambda>s. \<not>b \<longrightarrow> interrupt_states s irq \<noteq> IRQInactive)\<rbrace>
+   do_machine_op (maskInterrupt b irq)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
    apply (simp add: do_machine_op_def split_def maskInterrupt_def)
    apply wp
-   apply (clarsimp simp: in_monad invs_def valid_state_def all_invs_but_valid_irq_states_for_def 
+   apply (clarsimp simp: in_monad invs_def valid_state_def all_invs_but_valid_irq_states_for_def
      valid_irq_states_but_def valid_irq_masks_but_def valid_machine_state_def cur_tcb_def valid_irq_states_def valid_irq_masks_def)
   done
 
@@ -83,14 +83,14 @@ lemma no_cap_to_obj_with_diff_IRQHandler_ARCH[Interrupt_AI_asms]:
   "no_cap_to_obj_with_diff_ref (IRQHandlerCap irq) S = \<top>"
   by (rule ext, simp add: no_cap_to_obj_with_diff_ref_def
                           cte_wp_at_caps_of_state
-                          obj_ref_none_no_asid)  
-  
+                          obj_ref_none_no_asid)
+
 lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
   "\<lbrace>valid_cap cap\<rbrace> set_irq_state IRQSignal irq \<lbrace>\<lambda>rv. valid_cap cap\<rbrace>"
   apply (clarsimp simp: set_irq_state_def)
   apply (wp do_machine_op_valid_cap)
-  apply (auto simp: valid_cap_def valid_untyped_def 
-             split: cap.splits option.splits arch_cap.splits 
+  apply (auto simp: valid_cap_def valid_untyped_def
+             split: cap.splits option.splits arch_cap.splits
          split del: if_split)
   done
 
@@ -179,19 +179,19 @@ lemma resetTimer_invs_ARCH[Interrupt_AI_asms]:
     apply (clarsimp+)[2]
   apply(erule use_valid, wp no_irq_resetTimer no_irq, assumption)
   done
-  
-lemma empty_fail_ackInterrupt_ARCH[Interrupt_AI_asms]: 
+
+lemma empty_fail_ackInterrupt_ARCH[Interrupt_AI_asms]:
   "empty_fail (ackInterrupt irq)"
   by (wp | simp add: ackInterrupt_def)+
 
-lemma empty_fail_maskInterrupt_ARCH[Interrupt_AI_asms]: 
+lemma empty_fail_maskInterrupt_ARCH[Interrupt_AI_asms]:
   "empty_fail (maskInterrupt f irq)"
   by (wp | simp add: maskInterrupt_def)+
 
-lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]: 
+lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: handle_interrupt_def  )
-  apply (rule conjI; rule impI)  
+  apply (rule conjI; rule impI)
   apply (simp add: do_machine_op_bind empty_fail_ackInterrupt_ARCH empty_fail_maskInterrupt_ARCH)
      apply (wp dmo_maskInterrupt_invs maskInterrupt_invs_ARCH dmo_ackInterrupt send_signal_interrupt_states | wpc | simp)+
      apply (wp get_cap_wp send_signal_interrupt_states )
@@ -205,10 +205,10 @@ lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]:
 
 end
 
-interpretation Interrupt_AI?: Interrupt_AI 
+interpretation Interrupt_AI?: Interrupt_AI
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales, simp_all add: Interrupt_AI_asms)?) 
+  case 1 show ?case by (intro_locales; (unfold_locales, simp_all add: Interrupt_AI_asms)?)
   qed
 
 end

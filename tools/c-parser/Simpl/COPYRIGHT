@@ -3,14 +3,14 @@ it under the terms of the GNU Lesser General Public License as
 published by the Free Software Foundation; either version 2.1 of the
 License, or (at your option) any later version.
 
- 
+
 
 This library is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 Lesser General Public License for more details.
 
- 
+
 
 You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
@@ -20,7 +20,7 @@ USA
 
 TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
 
- 
+
 
 0. This License Agreement applies to any software library or other
 program which contains a notice placed by the copyright holder or
@@ -28,7 +28,7 @@ other authorized party saying it may be distributed under the terms of
 this Lesser General Public License (also called "this License"). Each
 licensee is addressed as "you".
 
- 
+
 
 A "library" means a collection of software functions and/or data
 prepared so as to be conveniently linked with application programs
@@ -50,7 +50,7 @@ all the source code for all modules it contains, plus any associated
 interface definition files, plus the scripts used to control
 compilation and installation of the library.
 
- 
+
 
 Activities other than copying, distribution and modification are not
 covered by this License; they are outside its scope. The act of
@@ -81,13 +81,13 @@ such modifications or work under the terms of Section 1 above,
 provided that you also meet all of these conditions:
 
 
-a) The modified work must itself be a software library. 
+a) The modified work must itself be a software library.
 
 
 b) You must cause the files modified to carry prominent notices
 stating that you changed the files and the date of any change.
 
- 
+
 
 c) You must cause the whole of the work to be licensed at no charge to
 all third parties under the terms of this License.
@@ -167,7 +167,7 @@ code from the same place satisfies the requirement to distribute the
 source code, even though third parties are not compelled to copy the
 source along with the object code.
 
- 
+
 
 5. A program that contains no derivative of any portion of the
 Library, but is designed to work with the Library by being compiled or
@@ -257,7 +257,7 @@ specified materials from the same place.
 e) Verify that the user has already received a copy of these materials
 or that you have already sent this user a copy.
 
- 
+
 
 For an executable, the required form of the "work that uses the
 Library" must include any data and utility programs needed for
@@ -293,7 +293,7 @@ b) Give prominent notice with the combined library of the fact that
 part of it is a work based on the Library, and explaining where to
 find the accompanying uncombined form of the same work.
 
- 
+
 
 8. You may not copy, modify, sublicense, link with, or distribute the
 Library except as expressly provided under this License. Any attempt
@@ -373,7 +373,7 @@ versions of the Lesser General Public License from time to time. Such
 new versions will be similar in spirit to the present version, but may
 differ in detail to address new problems or concerns.
 
- 
+
 
 Each version is given a distinguishing version number. If the Library
 specifies a version number of this License which applies to it and
@@ -394,7 +394,7 @@ of all derivatives of our free software and of promoting the sharing
 and reuse of software generally.
 
 
-NO WARRANTY 
+NO WARRANTY
 
 
 15. BECAUSE THE LIBRARY IS LICENSED FREE OF CHARGE, THERE IS NO

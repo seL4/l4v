@@ -263,7 +263,7 @@ lemma equiv_valid_rv_bind:
   "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
   shows "equiv_valid_rv_inv I A R P (f >>= g)"
   using assms by(blast intro: equiv_valid_rv_bind_general)
-      
+
 lemma modify_ev2:
   assumes "\<And> s t. \<lbrakk>I s t; A s t; P s; P' t\<rbrakk> \<Longrightarrow> R () () \<and> I (f s) (f' t) \<and> B (f s) (f' t)"
   shows
@@ -419,7 +419,7 @@ lemma gets_the_ev:
   unfolding equiv_valid_def2
   apply(rule equiv_valid_rv_guard_imp[OF gets_the_evrv])
   by simp
-  
+
 lemma throwError_ev_pre:
   "equiv_valid_inv I A P (throwError e)"
   by (auto simp: throwError_def return_ev_pre)
@@ -778,7 +778,7 @@ lemma rel_sum_comb_equals:
   done
 
 definition spec_equiv_valid_2_inv where
-  "spec_equiv_valid_2_inv s I A R P P' f f' \<equiv> 
+  "spec_equiv_valid_2_inv s I A R P P' f f' \<equiv>
       equiv_valid_2 I A A R (P and (op = s)) P' f f'"
 
 lemma spec_equiv_valid_def2:
@@ -788,7 +788,7 @@ lemma spec_equiv_valid_def2:
   done
 
 lemma drop_spec_ev2_inv:
-  "equiv_valid_2 I A A R P P' f f' \<Longrightarrow> 
+  "equiv_valid_2 I A A R P P' f f' \<Longrightarrow>
    spec_equiv_valid_2_inv s I A R P P' f f'"
   apply(simp add: spec_equiv_valid_2_inv_def)
   apply(erule equiv_valid_2_guard_imp, auto)
@@ -875,14 +875,14 @@ lemma whenE_spec_ev2_inv:
   assumes a: "b \<Longrightarrow> spec_equiv_valid_2_inv s I A R P P' m m'"
   assumes r: "\<And> x. R x x"
   shows "spec_equiv_valid_2_inv s I A R P P' (whenE b m) (whenE b m')"
-  unfolding whenE_def 
+  unfolding whenE_def
   apply (auto intro: a simp: returnOk_def intro!: drop_spec_ev2_inv[OF return_ev2] intro: r)
   done
 
 lemma whenE_spec_ev:
   assumes a: "b \<Longrightarrow> spec_equiv_valid_inv s I A P m"
   shows "spec_equiv_valid_inv s I A P  (whenE b m) "
-  unfolding whenE_def 
+  unfolding whenE_def
   apply (auto intro: a simp: returnOk_def intro!: drop_spec_ev[OF return_ev_pre])
   done
 
@@ -917,7 +917,7 @@ lemma catch_ev[wp]:
   assumes ok:
     "equiv_valid I A A P f"
   assumes err:
-    "\<And> e. equiv_valid I A A (E e) (handler e)" 
+    "\<And> e. equiv_valid I A A (E e) (handler e)"
   assumes hoare:
     "\<lbrace> P \<rbrace> f -, \<lbrace> E \<rbrace>"
   shows

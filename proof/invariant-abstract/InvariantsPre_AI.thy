@@ -159,7 +159,7 @@ definition
 
 lemmas arch_obj_fun_lift_simps[simp] =
   arch_obj_fun_lift_def[split_simps kernel_object.split]
-  
+
 lemma
   arch_obj_fun_lift_in_empty[dest!]:
   "x \<in> arch_obj_fun_lift f {} ko

@@ -35,7 +35,7 @@ Once proofcount is installed it can be executed as an isabelle tool:
 This will re-check the invariant proof and emit l4v.xml when finished. This
 file contains the line information for each lemma, the lemma dependency graph,
 the constants used in each lemma, the constant dependency graph and the theory
-dependency graph. 
+dependency graph.
 
 Once this file exists, we can use proofcount to perform its default metric analysis.
 
@@ -59,7 +59,7 @@ The options are:
 
   * Counting flags:
 
-    * `-d DIR`: The ROOT directory for building the proof to be counted. 
+    * `-d DIR`: The ROOT directory for building the proof to be counted.
       Similar to the same flag given to `isabelle build`.
 
     * `-L LOGIC`: The name of the logic image to build the proof against. It must
@@ -85,7 +85,7 @@ The options are:
       metric collection. This should be chosen carefully so that only lemmas
       part of the desired proof are counted.
 
-    * `-t THEORY`: A top-level `proof` theory. This flag may be given multiple times. 
+    * `-t THEORY`: A top-level `proof` theory. This flag may be given multiple times.
       Any lemma which depends on a top-level theory, but is not from that theory
       (i.e. is `above` that theory) will not be considered in metric collection.
       This is used in cases where multiple proofs are part of the given logic image

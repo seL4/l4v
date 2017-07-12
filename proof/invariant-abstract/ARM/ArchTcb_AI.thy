@@ -50,7 +50,7 @@ lemma same_object_obj_refs[Tcb_AI_asms]:
   by (cases "the_arch_cap cap"; cases "the_arch_cap cap'"; simp)
 
 
-definition 
+definition
   is_cnode_or_valid_arch :: "cap \<Rightarrow> bool"
 where
  "is_cnode_or_valid_arch cap \<equiv>
@@ -164,7 +164,7 @@ lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_asms]:
   by (simp add: free_index_update_def table_cap_ref_def split: cap.splits)
 
 
-interpretation Tcb_AI_1? : Tcb_AI_1 
+interpretation Tcb_AI_1? : Tcb_AI_1
   where state_ext_t = state_ext_t
   and is_cnode_or_valid_arch = is_cnode_or_valid_arch
 by (unfold_locales; fact Tcb_AI_asms)
@@ -214,7 +214,7 @@ lemma as_user_ipc_tcb_cap_valid4[wp]:
   apply (clarsimp simp: get_tcb_def)
   done
 
-lemma tc_invs[Tcb_AI_asms]: 
+lemma tc_invs[Tcb_AI_asms]:
   "\<lbrace>invs and tcb_at a
        and (case_option \<top> (valid_cap o fst) e)
        and (case_option \<top> (valid_cap o fst) f)

@@ -21,8 +21,8 @@ context Arch begin global_naming ARM
 named_theorems InterruptAcc_AI_assms
 
 lemma dmo_maskInterrupt_invs [InterruptAcc_AI_assms]:
-  "\<lbrace>all_invs_but_valid_irq_states_for irq and (\<lambda>s. state = interrupt_states s irq)\<rbrace> 
-   do_machine_op (maskInterrupt (state = IRQInactive) irq) 
+  "\<lbrace>all_invs_but_valid_irq_states_for irq and (\<lambda>s. state = interrupt_states s irq)\<rbrace>
+   do_machine_op (maskInterrupt (state = IRQInactive) irq)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
    apply (simp add: do_machine_op_def split_def maskInterrupt_def)
    apply wp

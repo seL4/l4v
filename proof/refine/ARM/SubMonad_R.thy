@@ -62,11 +62,11 @@ definition
     | None \<Rightarrow> undefined"
 
 definition
-  "asUser_replace \<equiv> \<lambda>t uc s. 
+  "asUser_replace \<equiv> \<lambda>t uc s.
       let obj = case (ksPSpace s t) of
                    Some (KOTCB tcb) \<Rightarrow> Some (KOTCB (tcb \<lparr>tcbArch := atcbContextSet uc (tcbArch tcb)\<rparr>))
                  | obj \<Rightarrow> obj
-      in s \<lparr> ksPSpace := (ksPSpace s) (t := obj) \<rparr>" 
+      in s \<lparr> ksPSpace := (ksPSpace s) (t := obj) \<rparr>"
 
 
 lemma threadGet_stateAssert_gets_asUser:

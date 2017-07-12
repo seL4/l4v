@@ -7,7 +7,7 @@
 (*  Title:      ComposeEx.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2006-2008 Norbert Schirmer 
+Copyright (C) 2006-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -28,7 +28,7 @@ USA
 theory ComposeEx imports Compose "../Vcg" "../HeapList" begin
 
 
-record globals_list = 
+record globals_list =
   next_' :: "ref \<Rightarrow> ref"
 
 record state_list = "globals_list state" +
@@ -39,7 +39,7 @@ record state_list = "globals_list state" +
 
 procedures Rev(p|sl_q) =
       "\<acute>sl_q :== Null;;
-       WHILE \<acute>p \<noteq> Null 
+       WHILE \<acute>p \<noteq> Null
        DO
          \<acute>r :== \<acute>p;; \<lbrace>\<acute>p \<noteq> Null\<rbrace>\<longmapsto> \<acute>p :== \<acute>p\<rightarrow>\<acute>next;;
          \<lbrace>\<acute>r \<noteq> Null\<rbrace>\<longmapsto> \<acute>r\<rightarrow>\<acute>next :== \<acute>sl_q;; \<acute>sl_q :== \<acute>r
@@ -48,7 +48,7 @@ print_theorems
 
 
 
-lemma (in Rev_impl) 
+lemma (in Rev_impl)
  Rev_modifies:
   "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV \<^esub>{\<sigma>} \<acute>sl_q :== PROC Rev(\<acute>p) {t. t may_only_modify_globals \<sigma> in [next]}"
 apply (hoare_rule HoarePartial.ProcNoRec1)
@@ -56,7 +56,7 @@ apply (vcg spec=modifies)
 done
 
 lemma (in Rev_impl) shows
- Rev_spec: 
+ Rev_spec:
   "\<forall>Ps. \<Gamma>\<turnstile> \<lbrace>List \<acute>p \<acute>next Ps\<rbrace> \<acute>sl_q :== PROC Rev(\<acute>p) \<lbrace>List \<acute>sl_q \<acute>next (rev Ps)\<rbrace>"
 apply (hoare_rule HoarePartial.ProcNoRec1)
 apply (hoare_rule anno =
@@ -68,7 +68,7 @@ apply (hoare_rule anno =
          \<acute>r :== \<acute>p;; \<lbrace>\<acute>p \<noteq> Null\<rbrace>\<longmapsto>\<acute>p :== \<acute>p\<rightarrow>\<acute>next;;
          \<lbrace>\<acute>r \<noteq> Null\<rbrace>\<longmapsto> \<acute>r\<rightarrow>\<acute>next :== \<acute>sl_q;; \<acute>sl_q :== \<acute>r
        OD" in HoarePartial.annotateI)
-apply vcg 
+apply vcg
 apply   clarsimp
 apply  fastforce
 apply clarsimp
@@ -76,15 +76,15 @@ done
 
 declare [[names_unique = false]]
 
-record globals = 
+record globals =
   strnext_'   :: "ref \<Rightarrow> ref"
   chr_'    :: "ref \<Rightarrow> char"
 
-  qnext_' :: "ref \<Rightarrow> ref"  
+  qnext_' :: "ref \<Rightarrow> ref"
   cont_'   :: "ref \<Rightarrow> int"
 record state = "globals state" +
   str_'  :: "ref"
-  queue_':: "ref" 
+  queue_':: "ref"
   q_'    :: "ref"
   r_'    :: "ref"
 
@@ -98,7 +98,7 @@ where
   \<lparr>globals = project_globals_str (globals s),
    state_list.p_' = str_' s, sl_q_' = q_' s, state_list.r_' = r_' s\<rparr>"
 
-definition inject_globals_str:: 
+definition inject_globals_str::
   "globals \<Rightarrow> globals_list \<Rightarrow> globals"
 where
   "inject_globals_str G g =
@@ -109,25 +109,25 @@ definition "inject_str"::"state \<Rightarrow> state_list \<Rightarrow> state" wh
                 str_' := state_list.p_' s, q_' := sl_q_' s,
                 r_' := state_list.r_' s\<rparr>"
 
-lemma globals_inject_project_str_commutes: 
+lemma globals_inject_project_str_commutes:
   "inject_globals_str G (project_globals_str G) = G"
   by (simp add: inject_globals_str_def project_globals_str_def)
 
 lemma inject_project_str_commutes: "inject_str S (project_str S) = S"
   by (simp add: inject_str_def project_str_def globals_inject_project_str_commutes)
 
-lemma globals_project_inject_str_commutes: 
+lemma globals_project_inject_str_commutes:
   "project_globals_str (inject_globals_str G g) = g"
   by (simp add: inject_globals_str_def project_globals_str_def)
 
 lemma project_inject_str_commutes: "project_str (inject_str S s) = s"
   by (simp add: inject_str_def project_str_def globals_project_inject_str_commutes)
 
-lemma globals_inject_str_last: 
+lemma globals_inject_str_last:
   "inject_globals_str (inject_globals_str G g) g' = inject_globals_str G g'"
   by (simp add: inject_globals_str_def)
 
-lemma inject_str_last: 
+lemma inject_str_last:
   "inject_str (inject_str S s) s' = inject_str S s'"
   by (simp add: inject_str_def globals_inject_str_last)
 
@@ -158,7 +158,7 @@ interpretation ex: lift_state_space_ext project_str inject_str
 apply -
 apply intro_locales [1]
   apply (rule lift_state_space_ext_axioms.intro)
-  apply  (rule inject_project_str_commutes) 
+  apply  (rule inject_project_str_commutes)
   apply (rule inject_str_last)
 apply (simp_all add: lift\<^sub>e_def)
   done
@@ -166,7 +166,7 @@ apply (simp_all add: lift\<^sub>e_def)
 (*
   apply (intro_locales)
   apply (rule lift_state_space_ext_axioms.intro)
-  apply  (rule inject_project_str_commutes) 
+  apply  (rule inject_project_str_commutes)
   apply (rule inject_str_last)
   done
 *)
@@ -186,7 +186,7 @@ procedures RevStr(str|q) = "rename (\<N> RevStr_'proc)
                 (lift\<^sub>c project_str inject_str (Rev_body.Rev_body))"
 
 
-lemmas Rev_lift_spec' = 
+lemmas Rev_lift_spec' =
   Rev_lift_spec [of "[''Rev''\<mapsto>Rev_body.Rev_body]" ,
      simplified Rev_impl_def Rev_clique_def,simplified]
 thm Rev_lift_spec'
@@ -197,8 +197,8 @@ lemma Rev_lift_spec'':
        \<turnstile> \<lbrace>List \<acute>str \<acute>strnext Ps\<rbrace> Call ''Rev'' \<lbrace>List \<acute>q \<acute>strnext (rev Ps)\<rbrace>"
   by (rule Rev_lift_spec')
 
-lemma (in RevStr_impl) \<N>_ok: 
-"\<forall>p bdy. (lift\<^sub>e [''Rev'' \<mapsto> Rev_body.Rev_body]) p = Some bdy \<longrightarrow> 
+lemma (in RevStr_impl) \<N>_ok:
+"\<forall>p bdy. (lift\<^sub>e [''Rev'' \<mapsto> Rev_body.Rev_body]) p = Some bdy \<longrightarrow>
      \<Gamma> (\<N> RevStr_'proc p) = Some (rename (\<N> RevStr_'proc) bdy)"
 apply (insert RevStr_impl)
 apply (auto simp add: RevStr_body_def lift\<^sub>e_def \<N>_def)
@@ -215,8 +215,8 @@ lemmas (in RevStr_impl) RevStr_spec =
   simplified \<N>_def, simplified ]
 
 
-lemma (in RevStr_impl) RevStr_spec': 
-"\<forall>Ps. \<Gamma>\<turnstile> \<lbrace>List \<acute>str \<acute>strnext Ps\<rbrace> \<acute>q :== PROC RevStr(\<acute>str) 
+lemma (in RevStr_impl) RevStr_spec':
+"\<forall>Ps. \<Gamma>\<turnstile> \<lbrace>List \<acute>str \<acute>strnext Ps\<rbrace> \<acute>q :== PROC RevStr(\<acute>str)
           \<lbrace>List \<acute>q \<acute>strnext (rev Ps)\<rbrace>"
   by (rule RevStr_spec)
 
@@ -234,11 +234,11 @@ end
 
 
 lemma (in RevStr_impl) RevStr_modifies:
-"\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV \<^esub>{\<sigma>} \<acute>str :== PROC RevStr(\<acute>str) 
+"\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV \<^esub>{\<sigma>} \<acute>str :== PROC RevStr(\<acute>str)
   {t. t may_only_modify_globals \<sigma> in [strnext]}"
 apply (rule allI)
 apply (rule HoarePartialProps.ConseqMGT [OF RevStr_modifies'])
-apply (clarsimp simp add: 
+apply (clarsimp simp add:
   lift\<^sub>s_def mex_def meq_def
   project_str_def inject_str_def project_globals_str_def inject_globals_str_def)
 apply blast

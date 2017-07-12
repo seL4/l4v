@@ -10,7 +10,7 @@
 
 (*
  * Unmapping pages and page tables and what is needed for it:
- * short cut delete, revoke and finale of caps, ipc cancelling. 
+ * short cut delete, revoke and finale of caps, ipc cancelling.
  *)
 
 theory PageTableUnmap_D
@@ -23,8 +23,8 @@ begin
 definition
   slots_with :: "(cdl_cap \<Rightarrow> bool) \<Rightarrow> cdl_state \<Rightarrow> cdl_cap_ref set"
 where
-  "slots_with P s \<equiv> {(obj, slot). \<exists>x c. cdl_objects s obj = Some x \<and> 
-                                        has_slots x \<and> 
+  "slots_with P s \<equiv> {(obj, slot). \<exists>x c. cdl_objects s obj = Some x \<and>
+                                        has_slots x \<and>
                                         object_slots x slot = Some c \<and> P c}"
 
 
@@ -83,7 +83,7 @@ definition
   modify_bound_ntfn :: "cdl_tcb \<Rightarrow> cdl_cap \<Rightarrow> cdl_tcb"
 where
   "modify_bound_ntfn t cap \<equiv> t \<lparr> cdl_tcb_caps := (cdl_tcb_caps t)(tcb_boundntfn_slot \<mapsto> cap)\<rparr>"
- 
+
 
 abbreviation
   do_unbind_notification :: "cdl_object_id \<Rightarrow> unit k_monad"
@@ -99,7 +99,7 @@ where
       BoundNotificationCap _ \<Rightarrow> do_unbind_notification tcb
     | _ \<Rightarrow> return ())
    od"
-  
+
 definition
   unbind_maybe_notification :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
@@ -129,7 +129,7 @@ definition
                        | FrameCap _ _ _ _ x _ \<Rightarrow> \<not>(x = Real)
                        | _ \<Rightarrow> False"
 
-context 
+context
 notes [[function_internals =true]]
 begin
 
@@ -189,7 +189,7 @@ definition
 -- "Some caps don't count when determining if an entity should be deleted or not"
 definition
   is_final_cap' :: "cdl_cap \<Rightarrow> cdl_state \<Rightarrow> bool" where
- "is_final_cap' cap s \<equiv> ((cap_counts cap) \<and> 
+ "is_final_cap' cap s \<equiv> ((cap_counts cap) \<and>
   (\<exists>cref. {cref. \<exists>cap'. opt_cap cref s = Some cap'
                        \<and> (cap_object cap = cap_object cap'
                              \<and> cdl_cap_irq cap = cdl_cap_irq cap')
@@ -226,7 +226,7 @@ where
 
 text {*
  Non-premptable delete.
- 
+
  Should only be used on deletes guaranteed not to preempt
  (and you are happy to prove this). In particular, it is
  useful for deleting caps that exist at the CapDL level
@@ -247,7 +247,7 @@ where
 
 text {*
   Non-preemptable revoke.
- 
+
   Should only be used on bounded revokes.
    * PageTableUnmap pt_cap_ref
    * PageRemap _ frame_cap_ref _
@@ -263,7 +263,7 @@ where
     non_null \<leftarrow> gets (\<lambda>s. {slot. opt_cap slot s \<noteq> Some NullCap \<and> opt_cap slot s \<noteq> None});
     non_null_descendants \<leftarrow> return (descendants \<inter> non_null);
     if (non_null_descendants \<noteq> {}) then do
-      a \<leftarrow> select non_null_descendants;     
+      a \<leftarrow> select non_null_descendants;
       delete_cap_simple a;
       revoke_cap_simple victim
     od else return ()
@@ -272,14 +272,14 @@ where
 
 
 definition cdl_get_pde :: "(word32 \<times> nat)\<Rightarrow> cdl_cap k_monad"
-where "cdl_get_pde ptr \<equiv> 
+where "cdl_get_pde ptr \<equiv>
   KHeap_D.get_cap ptr"
 
 definition cdl_lookup_pd_slot :: "word32 \<Rightarrow> word32 \<Rightarrow> word32 \<times> nat "
   where "cdl_lookup_pd_slot pd vptr \<equiv> (pd, unat (vptr >> 20))"
 
 definition cdl_lookup_pt_slot :: "word32 \<Rightarrow> word32 \<Rightarrow> (word32 \<times> nat) except_monad"
-  where "cdl_lookup_pt_slot pd vptr \<equiv> 
+  where "cdl_lookup_pt_slot pd vptr \<equiv>
     doE pd_slot \<leftarrow> returnOk (cdl_lookup_pd_slot pd vptr);
         pdcap \<leftarrow> liftE $ cdl_get_pde pd_slot;
         (case pdcap of cdl_cap.PageTableCap ref Fake None
@@ -293,19 +293,19 @@ definition cdl_lookup_pt_slot :: "word32 \<Rightarrow> word32 \<Rightarrow> (wor
 definition
   cdl_find_pd_for_asid :: "cdl_mapped_addr \<Rightarrow> cdl_object_id except_monad"
 where
-  "cdl_find_pd_for_asid maddr \<equiv> doE 
+  "cdl_find_pd_for_asid maddr \<equiv> doE
      asid_table \<leftarrow> liftE $ gets cdl_asid_table;
      asid_pool \<leftarrow> returnOk $ asid_table (fst (fst maddr));
-     pd_cap_ref \<leftarrow> (case asid_pool of Some (AsidPoolCap ptr _) \<Rightarrow> returnOk (ptr, (snd \<circ> fst) maddr) 
+     pd_cap_ref \<leftarrow> (case asid_pool of Some (AsidPoolCap ptr _) \<Rightarrow> returnOk (ptr, (snd \<circ> fst) maddr)
               | _ \<Rightarrow> throw );
      pd_cap \<leftarrow> liftE $ get_cap pd_cap_ref;
      case pd_cap of (PageDirectoryCap pd _ _) \<Rightarrow> returnOk pd
      | _ \<Rightarrow> throw
    odE "
 
-definition cdl_page_mapping_entries :: "32 word \<Rightarrow> nat \<Rightarrow> 32 word 
+definition cdl_page_mapping_entries :: "32 word \<Rightarrow> nat \<Rightarrow> 32 word
                                        \<Rightarrow> ((32 word \<times> nat) list) except_monad"
-  where "cdl_page_mapping_entries vptr pgsz pd \<equiv> 
+  where "cdl_page_mapping_entries vptr pgsz pd \<equiv>
   if pgsz = 12 then doE
     p \<leftarrow> cdl_lookup_pt_slot pd vptr;
          returnOk [p]
@@ -332,14 +332,14 @@ where
      pd \<leftarrow> cdl_find_pd_for_asid maddr;
      pd_slot \<leftarrow> returnOk (cdl_lookup_pd_slot pd (snd maddr));
      pdcap \<leftarrow> liftE $ cdl_get_pde pd_slot;
-     (case pdcap of 
-       cdl_cap.PageTableCap ref Fake None \<Rightarrow> 
+     (case pdcap of
+       cdl_cap.PageTableCap ref Fake None \<Rightarrow>
          (returnOk $ if ref = pt_id then Some pd_slot else None)
      | _ \<Rightarrow> returnOk None )
    odE <catch> (K (return None))"
 
 text {*
-  Unmap a frame. 
+  Unmap a frame.
 *}
 
 definition
@@ -353,14 +353,14 @@ where
       pd \<leftarrow> cdl_find_pd_for_asid maddr;
       pslots \<leftarrow> cdl_page_mapping_entries (snd maddr) pgsz pd;
       might_throw;
-      liftE $ mapM_x delete_cap_simple pslots;    
+      liftE $ mapM_x delete_cap_simple pslots;
       returnOk ()
     odE <catch> (K $ return ())"
 
 
 text {*
   Unmap a page table.
- 
+
   This hits the same problems as 'unmap_page', so we also
   non-deterministically choose a bunch of page-tables to unmap.
 *}

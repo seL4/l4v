@@ -26,7 +26,7 @@ lemma invokeIRQHandler_AckIRQ_ccorres:
 lemma getIRQSlot_ccorres:
   "ccorres (op = \<circ> Ptr) irqSlot_'
           \<top> UNIV hs
-      (getIRQSlot irq) 
+      (getIRQSlot irq)
       (\<acute>irqSlot :== CTypesDefs.ptr_add \<acute>intStateIRQNode (sint (ucast (ucast irq ::word16) :: 32 signed word)))"
   apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
   apply (rule allI, rule conseqPre, vcg)
@@ -48,7 +48,7 @@ lemma ptr_add_assertion_irq_guard:
        c;;m)
   \<Longrightarrow> ccorres dc xfdc P Q hs a
             (Guard F
-              \<lbrace>ptr_add_assertion \<acute>intStateIRQNode 
+              \<lbrace>ptr_add_assertion \<acute>intStateIRQNode
                 (sint (ucast (irq :: 16 word)::32 signed word)) False
                 (hrs_htd \<acute>t_hrs)\<rbrace> c ;; m)"
   by (simp add: ptr_add_assertion_def sint_ucast_eq_uint is_down)
@@ -62,7 +62,7 @@ lemma cte_at_irq_node':
 
 lemma invokeIRQHandler_SetIRQHandler_ccorres:
   "ccorres dc xfdc
-          (invs' and sch_act_simple 
+          (invs' and sch_act_simple
             and irq_handler_inv_valid' (SetIRQHandler irq cp slot))
           (UNIV \<inter> {s. irq_' s = ucast irq} \<inter> {s. slot_' s = Ptr slot}
                 \<inter> {s. ccap_relation cp (cap_' s)}) []
@@ -142,20 +142,20 @@ lemma decodeIRQHandlerInvocation_ccorres:
   shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and (\<lambda>s. ksCurThread s = thread) 
+       (invs' and (\<lambda>s. ksCurThread s = thread)
               and ct_active' and sch_act_simple
               and (excaps_in_mem extraCaps o ctes_of)
               and (\<lambda>s. \<exists>slot. cte_wp_at' (\<lambda>cte. cteCap cte = IRQHandlerCap irq) slot s)
               and (\<lambda>s. \<forall>v \<in> set extraCaps.
                              ex_cte_cap_wp_to' isCNodeCap (snd v) s))
        (UNIV
-            \<inter> {s. invLabel_' s = label}  
+            \<inter> {s. invLabel_' s = label}
             \<inter> {s. irq_' s = ucast irq}
             \<inter> {s. excaps_' s = extraCaps'}) []
      (decodeIRQHandlerInvocation label irq extraCaps
             >>= invocationCatch thread isBlocking isCall InvokeIRQHandler)
      (Call decodeIRQHandlerInvocation_'proc)"
-  apply (cinit' lift: invLabel_' irq_' excaps_' 
+  apply (cinit' lift: invLabel_' irq_' excaps_'
            simp: decodeIRQHandlerInvocation_def invocation_eq_use_types)
    apply (rule ccorres_Cond_rhs)
     apply (simp add: returnOk_bind ccorres_invocationCatch_Inr)
@@ -220,7 +220,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
           apply (rule ccorres_return_CE, simp+)[1]
          apply (wp sts_invs_minor' hoare_vcg_ex_lift
                      | simp)+
-       apply (clarsimp simp: cap_get_tag_isCap[symmetric] 
+       apply (clarsimp simp: cap_get_tag_isCap[symmetric]
                       dest!: cap_get_tag_to_H)
        apply (simp add: to_bool_def)
       apply simp
@@ -262,7 +262,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
                         mask_def[where n=4]
                         "StrictC'_thread_state_defs")
   apply (subst pred_tcb'_weakenE, assumption, fastforce)+
-  apply (clarsimp simp: rf_sr_ksCurThread word_sle_def word_sless_def 
+  apply (clarsimp simp: rf_sr_ksCurThread word_sle_def word_sless_def
     sysargs_rel_n_def word_less_nat_alt)
   apply (clarsimp simp: cte_wp_at_ctes_of neq_Nil_conv sysargs_rel_def n_msgRegisters_def
                     excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
@@ -384,13 +384,13 @@ lemma maxIRQ_ucast_scast [simp]:
   "ucast (scast Kernel_C.maxIRQ :: 10 word) = scast Kernel_C.maxIRQ"
   by (clarsimp simp: Kernel_C.maxIRQ_def)
 
-lemma decodeIRQ_arch_helper: "x \<noteq> invocation_label.IRQIssueIRQHandler \<Longrightarrow> 
+lemma decodeIRQ_arch_helper: "x \<noteq> invocation_label.IRQIssueIRQHandler \<Longrightarrow>
          (case x of invocation_label.IRQIssueIRQHandler \<Rightarrow> f | _ \<Rightarrow> g) = g"
   by (clarsimp split: invocation_label.splits)
 
 
 lemma Arch_checkIRQ_ccorres:
-  "ccorres (syscall_error_rel \<currency> (\<lambda>r r'. irq \<le> scast Kernel_C.maxIRQ)) 
+  "ccorres (syscall_error_rel \<currency> (\<lambda>r r'. irq \<le> scast Kernel_C.maxIRQ))
            (liftxf errstate id undefined ret__unsigned_long_')
    \<top> (UNIV \<inter> \<lbrace>irq = \<acute>irq___unsigned_long\<rbrace>) []
    (checkIRQ irq) (Call Arch_checkIRQ_'proc)"
@@ -411,7 +411,7 @@ lemma Arch_checkIRQ_ccorres:
    apply clarsimp
    apply (rule ccorres_return_CE, simp+)
   done
-  
+
 lemma checkIRQ_ret_good:
   "\<lbrace>\<lambda>s. (irq \<le> scast Kernel_C.maxIRQ \<longrightarrow> P s) \<and> Q s\<rbrace> checkIRQ irq \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (clarsimp simp: checkIRQ_def rangeCheck_def Platform_maxIRQ minIRQ_def)
@@ -419,7 +419,7 @@ lemma checkIRQ_ret_good:
   by (clarsimp simp: Kernel_C.maxIRQ_def split: if_split)
 
 lemma toEnum_of_ucast:
-  "len_of TYPE('b) \<le> len_of TYPE('a) \<Longrightarrow> 
+  "len_of TYPE('b) \<le> len_of TYPE('a) \<Longrightarrow>
   (toEnum (unat (b::('b :: len word))):: ('a :: len word)) = of_nat (unat b)"
   apply (subst toEnum_of_nat)
    apply (rule less_le_trans[OF unat_lt2p])
@@ -443,7 +443,7 @@ lemma decodeIRQControlInvocation_ccorres:
   shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and (\<lambda>s. ksCurThread s = thread) 
+       (invs' and (\<lambda>s. ksCurThread s = thread)
               and sch_act_simple and ct_active'
               and (excaps_in_mem extraCaps o ctes_of)
               and cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) slot
@@ -458,7 +458,7 @@ lemma decodeIRQControlInvocation_ccorres:
             >>= invocationCatch thread isBlocking isCall InvokeIRQControl)
      (Call decodeIRQControlInvocation_'proc)"
   apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' excaps_' buffer_')
-   apply (simp add: decodeIRQControlInvocation_def invocation_eq_use_types 
+   apply (simp add: decodeIRQControlInvocation_def invocation_eq_use_types
                del: Collect_const
               cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule ccorres_Cond_rhs)
@@ -499,7 +499,7 @@ lemma decodeIRQControlInvocation_ccorres:
                              maxIRQ_ucast_scast
                         del: Collect_const cong: call_ignore_cong)
             apply (simp add: split_def invocationCatch_use_injection_handler injection_handler_bindE
-                             bindE_assoc 
+                             bindE_assoc
                         del: Collect_const)
             apply (ctac add: ccorres_injection_handler_csum1[OF Arch_checkIRQ_ccorres])
                apply (simp add: injection_liftE)
@@ -611,7 +611,7 @@ lemma decodeIRQControlInvocation_ccorres:
   apply (clarsimp simp add: Kernel_C.maxIRQ_def toEnum_of_nat word_le_nat_alt
                    ucast_nat_def ucast_ucast_mask mask_eq_ucast_eq unat_ucast_mask
                    less_mask_eq[unfolded word_less_nat_alt])
-   
+
   apply (subst ucast_mask_drop)
   apply (simp add:mask_def)+
   done

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Functions to access kernel memory.
 *)
 
@@ -87,17 +87,17 @@ where
    od"
 
 definition
-  get_thread_state :: "obj_ref \<Rightarrow> (thread_state,'z::state_ext) s_monad" 
+  get_thread_state :: "obj_ref \<Rightarrow> (thread_state,'z::state_ext) s_monad"
 where
   "get_thread_state ref \<equiv> thread_get tcb_state ref"
 
 definition
-  get_bound_notification :: "obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad" 
+  get_bound_notification :: "obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
 where
   "get_bound_notification ref \<equiv> thread_get tcb_bound_notification ref"
 
 definition
-  set_bound_notification :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad" 
+  set_bound_notification :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "set_bound_notification ref ntfn \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb ref;
@@ -113,7 +113,7 @@ definition set_thread_state_ext :: "obj_ref \<Rightarrow> unit det_ext_monad" wh
    od"
 
 definition
-  set_thread_state :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> (unit,'z::state_ext) s_monad" 
+  set_thread_state :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_thread_state ref ts \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb ref;
@@ -195,8 +195,8 @@ definition
 
 section "User Context"
 
-text {* 
-  Changes user context of specified thread by running 
+text {*
+  Changes user context of specified thread by running
   specified user monad.
 *}
 definition

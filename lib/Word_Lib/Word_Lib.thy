@@ -96,7 +96,7 @@ definition
   word_log2 :: "'a::len word \<Rightarrow> nat"
 where
   "word_log2 (w::'a::len word) \<equiv> size w - 1 - word_clz w"
-  
+
 
 (* Bit population count. Equivalent of __builtin_popcount. *)
 definition
@@ -291,7 +291,7 @@ lemma shiftr_mask_le:
 
 lemmas shiftr_mask = order_refl [THEN shiftr_mask_le, simp]
 
-lemma word_leI: 
+lemma word_leI:
   "(\<And>n.  \<lbrakk>n < size (u::'a::len0 word); u !! n \<rbrakk> \<Longrightarrow> (v::'a::len0 word) !! n) \<Longrightarrow> u <= v"
   apply (rule xtr4)
    apply (rule word_and_le2)
@@ -652,10 +652,10 @@ lemma to_bl_1:
 proof -
   have "to_bl (1 :: 'a::len word) = to_bl (mask 1 :: 'a::len word)"
     by (simp add: mask_def)
-  
+
   also have "\<dots> = replicate (len_of TYPE('a) - 1) False @ [True]"
     by (cases "len_of TYPE('a)"; clarsimp simp: to_bl_mask)
- 
+
   finally show ?thesis .
 qed
 

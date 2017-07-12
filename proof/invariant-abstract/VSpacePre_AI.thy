@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 VSpace refinement
 *)
 
@@ -150,8 +150,8 @@ lemma arch_update_cap_zombies:
   done
 
 lemma arch_update_cap_pspace:
-  "\<lbrace>cte_wp_at (is_arch_update cap) p and valid_pspace and valid_cap cap\<rbrace> 
-  set_cap cap p 
+  "\<lbrace>cte_wp_at (is_arch_update cap) p and valid_pspace and valid_cap cap\<rbrace>
+  set_cap cap p
   \<lbrace>\<lambda>rv. valid_pspace\<rbrace>"
   apply (simp add: valid_pspace_def)
   apply (rule hoare_pre)

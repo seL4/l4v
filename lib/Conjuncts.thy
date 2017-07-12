@@ -22,7 +22,7 @@ structure Conjuncts =
 struct
 
 local
-    
+
   structure Data = Generic_Data
   (
     type T = thm;
@@ -30,18 +30,18 @@ local
     val extend = I;
     val merge : T * T -> T = (K Drule.dummy_thm);
   );
-  
-  fun elim_conjuncts thm = 
+
+  fun elim_conjuncts thm =
     case try Conjunction.elim thm of
     SOME (thm', thm'') => elim_conjuncts thm' @ elim_conjuncts thm''
     | NONE => if Thm.prop_of thm = Thm.prop_of (Drule.dummy_thm) then [] else [thm]
-  
+
   in
-  
+
   val _ = Context.>> (Context.map_theory (
-    (Attrib.setup @{binding "conjuncts"} 
+    (Attrib.setup @{binding "conjuncts"}
       (Scan.lift (Args.mode "accumulate") >> (fn acc =>
-        if acc then 
+        if acc then
         Thm.declaration_attribute (Data.map o (fn x => fn y => Conjunction.intr y x))
         else
         Thm.declaration_attribute Data.put))
@@ -59,7 +59,7 @@ notepad begin
   fix A B C D
   assume ABC[conjuncts]: "(A &&& B) &&& (B &&& C)"
   note ABC' = conjuncts
-  
+
   have "A" by (rule ABC')
   have "B" by (rule \<open>B\<close>)
   have "C" by (rule ABC'(4))
@@ -72,10 +72,10 @@ notepad begin
   have "C" by (rule CD)
 
 
-  
+
   note ABCD(1)[conjuncts]
   note AB = conjuncts
-  
+
   note ABCD(2)[conjuncts]
   note CD = conjuncts
 

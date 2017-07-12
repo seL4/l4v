@@ -19,7 +19,7 @@ context begin interpretation Arch .
 term "id :: machine_word \<Rightarrow> machine_word_len word"
 
 requalify_types
-  machine_word 
+  machine_word
   machine_word_len
   vmfault_type
   hyp_fault_type

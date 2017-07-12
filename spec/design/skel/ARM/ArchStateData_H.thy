@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 	Kernel state and kernel monads, imports everything that SEL4.Model needs.
 *)
 

@@ -7,7 +7,7 @@
 (*  Title:      HoareTotalDef.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2004-2008 Norbert Schirmer 
+Copyright (C) 2004-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -28,7 +28,7 @@ USA
 
 section \<open>Hoare Logic for Total Correctness\<close>
 
-theory HoareTotalDef imports HoarePartialDef Termination begin 
+theory HoareTotalDef imports HoarePartialDef Termination begin
 
 subsection \<open>Validity of Hoare Tuples: \<open>\<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A\<close>\<close>
 
@@ -54,28 +54,28 @@ notation (ASCII)
 
 subsection \<open>Properties of Validity\<close>
 
-lemma validtI: 
+lemma validtI:
  "\<lbrakk>\<And>s t. \<lbrakk>\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> t;s \<in> P;t \<notin> Fault ` F\<rbrakk> \<Longrightarrow> t \<in> Normal ` Q \<union> Abrupt ` A;
    \<And>s. s \<in> P \<Longrightarrow> \<Gamma>\<turnstile> c\<down>(Normal s) \<rbrakk>
   \<Longrightarrow> \<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
   by (auto simp add: validt_def valid_def)
 
-lemma cvalidtI: 
- "\<lbrakk>\<And>s t. \<lbrakk>\<forall>(P,p,Q,A)\<in>\<Theta>. \<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P (Call p) Q,A;\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> t;s \<in> P; 
-          t \<notin> Fault ` F\<rbrakk> 
+lemma cvalidtI:
+ "\<lbrakk>\<And>s t. \<lbrakk>\<forall>(P,p,Q,A)\<in>\<Theta>. \<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P (Call p) Q,A;\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> t;s \<in> P;
+          t \<notin> Fault ` F\<rbrakk>
           \<Longrightarrow> t \<in> Normal ` Q \<union> Abrupt ` A;
    \<And>s. \<lbrakk>\<forall>(P,p,Q,A)\<in>\<Theta>. \<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P (Call p) Q,A; s\<in>P\<rbrakk> \<Longrightarrow>  \<Gamma>\<turnstile>c\<down>(Normal s)\<rbrakk>
   \<Longrightarrow> \<Gamma>,\<Theta>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
   by (auto simp add: cvalidt_def validt_def valid_def)
 
-lemma cvalidt_postD: 
+lemma cvalidt_postD:
  "\<lbrakk>\<Gamma>,\<Theta>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A; \<forall>(P,p,Q,A)\<in>\<Theta>. \<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P (Call p) Q,A;\<Gamma>\<turnstile>\<langle>c,Normal s \<rangle> \<Rightarrow> t;
-   s \<in> P;t \<notin> Fault ` F\<rbrakk> 
+   s \<in> P;t \<notin> Fault ` F\<rbrakk>
   \<Longrightarrow> t \<in> Normal ` Q \<union> Abrupt ` A"
   by (simp add: cvalidt_def validt_def valid_def)
 
-lemma cvalidt_termD: 
- "\<lbrakk>\<Gamma>,\<Theta>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A; \<forall>(P,p,Q,A)\<in>\<Theta>. \<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P (Call p) Q,A;s \<in> P\<rbrakk> 
+lemma cvalidt_termD:
+ "\<lbrakk>\<Gamma>,\<Theta>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A; \<forall>(P,p,Q,A)\<in>\<Theta>. \<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P (Call p) Q,A;s \<in> P\<rbrakk>
   \<Longrightarrow> \<Gamma>\<turnstile>c\<down>(Normal s)"
   by (simp add: cvalidt_def validt_def valid_def)
 
@@ -90,9 +90,9 @@ lemma validt_augment_Faults:
 subsection \<open>The Hoare Rules: \<open>\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A\<close>\<close>
 
 inductive "hoaret"::"[('s,'p,'f) body,('s,'p) quadruple set,'f set,
-                        's assn,('s,'p,'f) com,'s assn,'s assn] 
+                        's assn,('s,'p,'f) com,'s assn,'s assn]
                        => bool"
-    ("(3_,_/\<turnstile>\<^sub>t\<^bsub>'/_\<^esub> (_/ (_)/ _,_))" [61,60,60,1000,20,1000,1000]60)  
+    ("(3_,_/\<turnstile>\<^sub>t\<^bsub>'/_\<^esub> (_/ (_)/ _,_))" [61,60,60,1000,20,1000,1000]60)
    for \<Gamma>::"('s,'p,'f) body"
 where
   Skip: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> Q Skip Q,A"
@@ -104,9 +104,9 @@ where
 | Seq: "\<lbrakk>\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c\<^sub>1 R,A; \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> R c\<^sub>2 Q,A\<rbrakk>
         \<Longrightarrow>
         \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P Seq c\<^sub>1 c\<^sub>2 Q,A"
-  
+
 | Cond: "\<lbrakk>\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P \<inter> b) c\<^sub>1 Q,A; \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P \<inter> - b) c\<^sub>2 Q,A\<rbrakk>
-         \<Longrightarrow> 
+         \<Longrightarrow>
          \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (Cond b c\<^sub>1 c\<^sub>2) Q,A"
 
 | While: "\<lbrakk>wf r; \<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({\<sigma>} \<inter> P \<inter> b) c ({t. (t,\<sigma>)\<in>r} \<inter> P),A\<rbrakk>
@@ -121,19 +121,19 @@ where
               \<Longrightarrow>
               \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (Guard f g c) Q,A"
 
-| CallRec: 
+| CallRec:
   "\<lbrakk>(P,p,Q,A) \<in> Specs;
-    wf r; 
+    wf r;
     Specs_wf = (\<lambda>p \<sigma>. (\<lambda>(P,q,Q,A). (P \<inter> {s. ((s,q),(\<sigma>,p)) \<in> r},q,Q,A)) ` Specs);
-    \<forall>(P,p,Q,A)\<in> Specs. 
+    \<forall>(P,p,Q,A)\<in> Specs.
       p \<in> dom \<Gamma> \<and> (\<forall>\<sigma>. \<Gamma>,\<Theta> \<union> Specs_wf p \<sigma>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({\<sigma>} \<inter> P) (the (\<Gamma> p)) Q,A)
     \<rbrakk>
     \<Longrightarrow>
     \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (Call p) Q,A"
 
 
-| DynCom:  "\<forall>s \<in> P. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (c s) Q,A 
-            \<Longrightarrow> 
+| DynCom:  "\<forall>s \<in> P. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (c s) Q,A
+            \<Longrightarrow>
             \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (DynCom c) Q,A"
 
 
@@ -141,21 +141,21 @@ where
 
 | Catch: "\<lbrakk>\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c\<^sub>1 Q,R; \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> R c\<^sub>2 Q,A\<rbrakk> \<Longrightarrow>  \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P Catch c\<^sub>1 c\<^sub>2 Q,A"
 
-| Conseq: "\<forall>s \<in> P. \<exists>P' Q' A'. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' c Q',A' \<and> s \<in> P' \<and> Q' \<subseteq> Q \<and> A' \<subseteq> A 
+| Conseq: "\<forall>s \<in> P. \<exists>P' Q' A'. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' c Q',A' \<and> s \<in> P' \<and> Q' \<subseteq> Q \<and> A' \<subseteq> A
            \<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
 
 
-| Asm: "(P,p,Q,A) \<in> \<Theta> 
-        \<Longrightarrow> 
+| Asm: "(P,p,Q,A) \<in> \<Theta>
+        \<Longrightarrow>
         \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P (Call p) Q,A"
 
 | ExFalso: "\<lbrakk>\<Gamma>,\<Theta>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A; \<not> \<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A\<rbrakk> \<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
   \<comment> \<open>This is a hack rule that enables us to derive completeness for
         an arbitrary context \<open>\<Theta>\<close>, from completeness for an empty context.\<close>
 
-  
+
 text \<open>Does not work, because of rule ExFalso, the context \<open>\<Theta>\<close> is to blame.
- A weaker version with empty context can be derived from soundness 
+ A weaker version with empty context can be derived from soundness
  later on.\<close>
 lemma hoaret_to_hoarep:
   assumes hoaret: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P p Q,A"
@@ -181,25 +181,25 @@ next
   case Guard thus ?case by - (rule hoarep.intros)
 (*next
   case (CallRec A F P Procs Q Z \<Theta>  p r)
-  hence hyp: "\<forall>p\<in>Procs. \<forall>\<tau> Z. 
+  hence hyp: "\<forall>p\<in>Procs. \<forall>\<tau> Z.
            \<Gamma>,\<Theta> \<union> (\<Union>q\<in>Procs. \<Union>Z. {(P q Z \<inter> {s. ((s, q), \<tau>, p) \<in> r},
                       Call q, Q q Z,A q Z)})\<turnstile>\<^bsub>/F\<^esub>
               ({\<tau>} \<inter> P p Z) (the (\<Gamma> p)) (Q p Z),(A p Z)"
     by blast
-  have "\<forall>p\<in>Procs. \<forall>Z. 
+  have "\<forall>p\<in>Procs. \<forall>Z.
            \<Gamma>,\<Theta> \<union> (\<Union>q\<in>Procs. \<Union>Z. {(P q Z,
                       Call q, Q q Z,A q Z)})\<turnstile>\<^bsub>/F\<^esub>
-              (P p Z) (the (\<Gamma> p)) (Q p Z),(A p Z)" 
+              (P p Z) (the (\<Gamma> p)) (Q p Z),(A p Z)"
   proof (intro ballI allI)
     fix p Z
     assume "p \<in> Procs"
     with hyp
-    have hyp': "\<And> \<tau>. 
+    have hyp': "\<And> \<tau>.
            \<Gamma>,\<Theta> \<union> (\<Union>q\<in>Procs. \<Union>Z. {(P q Z \<inter> {s. ((s, q), \<tau>, p) \<in> r},
                       Call q, Q q Z, A q Z)})\<turnstile>\<^bsub>/F\<^esub>
               ({\<tau>} \<inter> P p Z) (the (\<Gamma> p)) (Q p Z),(A p Z)"
       by blast
-    have "\<forall>\<tau>. 
+    have "\<forall>\<tau>.
            \<Gamma>,\<Theta> \<union> (\<Union>q\<in>Procs. \<Union>Z. {(P q Z,
                       Call q, Q q Z,A q Z)})\<turnstile>\<^bsub>/F\<^esub>
               ({\<tau>} \<inter> P p Z) (the (\<Gamma> p)) (Q p Z),(A p Z)"
@@ -213,17 +213,17 @@ next
                   A q Z)})" (is "(P', c, Q', A') \<in> \<Theta> \<union> ?Spec")
       then show "\<Gamma>,?\<Theta>'\<turnstile>\<^bsub>/F\<^esub> P' c Q',A'"
       proof (cases rule: UnE [consumes 1])
-        assume "(P',c,Q',A') \<in> \<Theta>" 
+        assume "(P',c,Q',A') \<in> \<Theta>"
         then show ?thesis
           by (blast intro: HoarePartialDef.Asm)
       next
-        assume "(P',c,Q',A') \<in> ?Spec" 
+        assume "(P',c,Q',A') \<in> ?Spec"
         then show ?thesis
         proof (clarify)
           fix q Z
           assume q: "q \<in> Procs"
-          show "\<Gamma>,?\<Theta>'\<turnstile>\<^bsub>/F\<^esub> (P q Z \<inter> {s. ((s, q), \<tau>, p) \<in> r}) 
-                         Call  q 
+          show "\<Gamma>,?\<Theta>'\<turnstile>\<^bsub>/F\<^esub> (P q Z \<inter> {s. ((s, q), \<tau>, p) \<in> r})
+                         Call  q
                         (Q q Z),(A q Z)"
           proof -
             from q
@@ -258,7 +258,7 @@ next
     oops
 
 
-lemma hoaret_augment_context: 
+lemma hoaret_augment_context:
   assumes deriv: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P p Q,A"
   shows "\<And>\<Theta>'. \<Theta> \<subseteq> \<Theta>' \<Longrightarrow> \<Gamma>,\<Theta>'\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P p Q,A"
 using deriv
@@ -274,7 +274,7 @@ proof (induct)
            (\<forall>x. \<Theta> \<union> Specs_wf p \<tau>
                  \<subseteq> x \<longrightarrow>
                  \<Gamma>,x\<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({\<tau>} \<inter> P) (the (\<Gamma> p)) Q,A))" by fact
-  hence "\<forall>(P,p,Q,A)\<in>Specs. p \<in> dom \<Gamma> \<and> 
+  hence "\<forall>(P,p,Q,A)\<in>Specs. p \<in> dom \<Gamma> \<and>
          (\<forall>\<tau>. \<Gamma>,\<Theta>'\<union> Specs_wf p \<tau> \<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({\<tau>} \<inter> P) (the (\<Gamma> p)) Q,A)"
     apply (clarify)
     apply (rename_tac P p Q A)
@@ -305,8 +305,8 @@ qed (blast intro: hoaret.intros)+
 subsection \<open>Some Derived Rules\<close>
 
 
-lemma  Conseq': "\<forall>s. s \<in> P \<longrightarrow> 
-            (\<exists>P' Q' A'. 
+lemma  Conseq': "\<forall>s. s \<in> P \<longrightarrow>
+            (\<exists>P' Q' A'.
               (\<forall> Z. \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (P' Z) c (Q' Z),(A' Z)) \<and>
                     (\<exists>Z. s \<in> P' Z \<and> (Q' Z \<subseteq> Q) \<and> (A' Z \<subseteq> A)))
            \<Longrightarrow>
@@ -327,7 +327,7 @@ lemma conseq:"\<lbrakk>\<forall>Z. \<Gamma>,\<Theta> \<turnstile>\<^sub>t\<^bsub
               \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
   by (rule Conseq) blast
 
-theorem conseqPrePost: 
+theorem conseqPrePost:
   "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P' c Q',A' \<Longrightarrow> P \<subseteq> P' \<Longrightarrow>  Q' \<subseteq> Q \<Longrightarrow> A' \<subseteq> A \<Longrightarrow>  \<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
   by (rule conseq [where ?P'="\<lambda>Z. P'" and ?Q'="\<lambda>Z. Q'"]) auto
 
@@ -338,17 +338,17 @@ lemma conseqPost: "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q
   by (rule conseq) auto
 
 
-lemma Spec_wf_conv: 
+lemma Spec_wf_conv:
   "(\<lambda>(P, q, Q, A). (P \<inter> {s. ((s, q), \<tau>, p) \<in> r}, q, Q, A)) `
-                (\<Union>p\<in>Procs. \<Union>Z. {(P p Z, p, Q p Z, A p Z)}) = 
+                (\<Union>p\<in>Procs. \<Union>Z. {(P p Z, p, Q p Z, A p Z)}) =
         (\<Union>q\<in>Procs. \<Union>Z. {(P q Z \<inter> {s. ((s, q), \<tau>, p) \<in> r}, q, Q q Z, A q Z)})"
   by (auto intro!: image_eqI)
 
-lemma CallRec': 
+lemma CallRec':
   "\<lbrakk>p\<in>Procs; Procs \<subseteq> dom \<Gamma>;
-    wf r; 
-   \<forall>p\<in>Procs. \<forall>\<tau> Z. 
-   \<Gamma>,\<Theta>\<union>(\<Union>q\<in>Procs. \<Union>Z. 
+    wf r;
+   \<forall>p\<in>Procs. \<forall>\<tau> Z.
+   \<Gamma>,\<Theta>\<union>(\<Union>q\<in>Procs. \<Union>Z.
     {((P q Z) \<inter> {s. ((s,q),(\<tau>,p)) \<in> r},q,Q q Z,(A q Z))})
      \<turnstile>\<^sub>t\<^bsub>/F\<^esub> ({\<tau>} \<inter> (P p Z)) (the (\<Gamma> p)) (Q p Z),(A p Z)\<rbrakk>
    \<Longrightarrow>

@@ -1553,7 +1553,7 @@ lemma ntfn_waiting_set_lift:
 definition ntfn_bound_set :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
 where "ntfn_bound_set ntfnptr s \<equiv>
   {tcb. \<exists>t. ((kheap s tcb) = Some (TCB t))
-      \<and> ((tcb_bound_notification t) = Some ntfnptr)}" 
+      \<and> ((tcb_bound_notification t) = Some ntfnptr)}"
 
 lemma ntfn_bound_set_lift:
   "\<lbrakk>valid_idle s; valid_etcbs s\<rbrakk> \<Longrightarrow>
@@ -1567,7 +1567,7 @@ lemma ntfn_bound_set_lift:
    apply (clarsimp simp: infer_tcb_bound_notification_def transform_object_def
                          transform_tcb_def restrict_map_Some_iff tcb_slots
                   split: Structures_A.kernel_object.splits option.splits
-                         Structures_A.thread_state.splits 
+                         Structures_A.thread_state.splits
                          ARM_A.arch_kernel_obj.splits| drule(1) valid_etcbs_tcb_etcb)+
   apply (clarsimp simp: transform_def transform_object_def
                         transform_tcb_def transform_objects_def tcb_slots valid_idle_def obj_at_def
@@ -2495,7 +2495,7 @@ lemma set_bound_notification_corres:
 
 lemma dcorres_unbind_notification:
   "dcorres dc \<top> (valid_etcbs and not_idle_thread t) (PageTableUnmap_D.unbind_notification t) (IpcCancel_A.unbind_notification t)"
-  apply (simp add: PageTableUnmap_D.unbind_notification_def IpcCancel_A.unbind_notification_def 
+  apply (simp add: PageTableUnmap_D.unbind_notification_def IpcCancel_A.unbind_notification_def
                    get_bound_notification_def thread_get_def)
   apply (rule dcorres_gets_the)
    apply (clarsimp simp: opt_object_tcb transform_tcb_def not_idle_thread_def)
@@ -2508,7 +2508,7 @@ lemma dcorres_unbind_notification:
    apply (rule corres_underlying_split[where r'=dc and P="\<lambda>_. \<top>", OF _ _ set_ntfn_exec_wp])
      apply (rule corres_dummy_set_notification[THEN corres_guard_imp],simp+)
    apply (rule corres_guard_imp)
-     apply (rule set_bound_notification_corres[where ntfn_opt=None, unfolded infer_tcb_bound_notification_def 
+     apply (rule set_bound_notification_corres[where ntfn_opt=None, unfolded infer_tcb_bound_notification_def
                                       not_idle_thread_def tcb_slots, simplified])
     apply simp
    apply (clarsimp simp: valid_etcbs_def pred_tcb_at_def obj_at_def is_etcb_at_def)[1]
@@ -2519,9 +2519,9 @@ lemma dcorres_unbind_notification:
   apply (frule (1) valid_etcbs_get_tcb_get_etcb, clarsimp)
   apply (clarsimp simp: opt_cap_tcb)
   done
-   
+
 lemma dcorres_ntfn_bound_tcb:
-  "dcorres (\<lambda>rv rv'. rv = set_option (ntfn_bound_tcb rv'))  \<top> (valid_state and valid_etcbs) 
+  "dcorres (\<lambda>rv rv'. rv = set_option (ntfn_bound_tcb rv'))  \<top> (valid_state and valid_etcbs)
      (gets $ get_bound_notification_threads ntfn)
      (get_notification ntfn)"
     apply (clarsimp simp: gets_def get_notification_def get_object_def bind_assoc)
@@ -2531,7 +2531,7 @@ lemma dcorres_ntfn_bound_tcb:
   apply (frule get_notification_pick, simp)
   apply (clarsimp simp: valid_ntfn_abstract_def ntfn_bound_set_lift valid_state_def option_select_def split del: if_split)
   done
-  
+
 lemma option_set_option_select:
   "option_select (set_option x) = return x"
   by (auto simp: option_select_def)
@@ -2552,7 +2552,7 @@ lemma dcorres_do_unbind_notification:
     apply (rule corres_dummy_return_pl[where b="()"])
     apply (rule corres_split[OF _ corres_dummy_set_notification])
       apply (clarsimp simp: tcb_slots)
-      apply (rule set_bound_notification_corres[where ntfn_opt=None, unfolded infer_tcb_bound_notification_def 
+      apply (rule set_bound_notification_corres[where ntfn_opt=None, unfolded infer_tcb_bound_notification_def
                                        not_idle_thread_def tcb_slots, simplified])
      apply wp+
    apply simp
@@ -2560,9 +2560,9 @@ lemma dcorres_do_unbind_notification:
   done
 
 lemma dcorres_unbind_maybe_notification:
-  "dcorres dc \<top> (valid_etcbs and valid_idle and valid_state) 
-   (PageTableUnmap_D.unbind_maybe_notification ntfn) 
-   (unbind_maybe_notification ntfn)" 
+  "dcorres dc \<top> (valid_etcbs and valid_idle and valid_state)
+   (PageTableUnmap_D.unbind_maybe_notification ntfn)
+   (unbind_maybe_notification ntfn)"
   apply (simp add: PageTableUnmap_D.unbind_maybe_notification_def IpcCancel_A.unbind_maybe_notification_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ dcorres_ntfn_bound_tcb, unfolded  fun_app_def, simplified])
@@ -2616,7 +2616,7 @@ lemma unbind_notification_valid_state[wp]:
   apply (subst (asm) ko_at_state_refs_ofD, assumption)
   apply (fastforce simp: ntfn_bound_refs_def obj_at_def ntfn_q_refs_no_TCBBound
                   elim!: pred_tcb_weakenE
-                  dest!: bound_tcb_bound_notification_at refs_in_ntfn_bound_refs symreftype_inverse' 
+                  dest!: bound_tcb_bound_notification_at refs_in_ntfn_bound_refs symreftype_inverse'
                   split: option.splits)
   done
 
@@ -2649,7 +2649,7 @@ lemma unbind_maybe_notification_valid_state[wp]:
   apply (subst (asm) ko_at_state_refs_ofD, assumption)
   apply (fastforce simp: ntfn_bound_refs_def obj_at_def ntfn_q_refs_no_TCBBound
                   elim!: pred_tcb_weakenE
-                  dest!: bound_tcb_bound_notification_at refs_in_ntfn_bound_refs symreftype_inverse' 
+                  dest!: bound_tcb_bound_notification_at refs_in_ntfn_bound_refs symreftype_inverse'
                   split: option.splits)
   done
 
@@ -3127,7 +3127,7 @@ lemma resolve_address_bits_error_corres:
    apply (rule dcorres_expand_pfx)
    apply clarsimp
    apply (rule_tac Q="\<lambda>x y. y = transform s \<and>
-                            x = transform_object (machine_state s) oref etcb_opt 
+                            x = transform_object (machine_state s) oref etcb_opt
                                                  (kernel_object.CNode radix_bits fun) "
                    in corres_symb_exec_l)
       apply (rule dcorres_expand_pfx)
@@ -3329,7 +3329,7 @@ next
      apply (clarsimp simp: nat_case_split)
      apply (rule corres_underlying_split [where
                  P = "\<lambda>rv s. True" and
-                 P' = "\<lambda>next_cap. valid_objs and (\<lambda>a. a \<turnstile> next_cap) and valid_global_refs and 
+                 P' = "\<lambda>next_cap. valid_objs and (\<lambda>a. a \<turnstile> next_cap) and valid_global_refs and
                                   valid_idle and valid_etcbs"])
         apply (rule get_cap_corres[THEN corres_guard_imp])
           apply (clarsimp simp:transform_cslot_ptr_def cap_object_simps)
@@ -3380,7 +3380,7 @@ lemma not_idle_thread_resolve_address_bits:
   apply (rule validE_R_validE)
   apply (rule_tac hoare_vcg_precond_impE_R)
    apply (rule validE_validE_R)
-   apply (rule_tac Q="\<lambda>r. valid_etcbs and valid_global_refs and valid_objs and valid_idle and 
+   apply (rule_tac Q="\<lambda>r. valid_etcbs and valid_global_refs and valid_objs and valid_idle and
                           valid_irq_node and ex_cte_cap_to (fst r)"
           in hoare_post_impErr[where E="\<lambda>x y. True"])
      apply (wp resolve_address_bits_valid_etcbs rab_cte_cap_to)

@@ -16,8 +16,8 @@ begin
 
 
 definition
-  exec_C :: "(cstate, int, strictc_errortype) body \<Rightarrow> 
-             (cstate, int, strictc_errortype) com \<Rightarrow> 
+  exec_C :: "(cstate, int, strictc_errortype) body \<Rightarrow>
+             (cstate, int, strictc_errortype) com \<Rightarrow>
              (cstate,unit) nondet_monad"
 where
   "exec_C \<Gamma> c \<equiv> \<lambda>s. ({()} \<times> {s'. \<Gamma> \<turnstile> \<langle>c,Normal s\<rangle> \<Rightarrow> Normal s'},
@@ -26,11 +26,11 @@ where
 definition
   ct_running_C :: "cstate \<Rightarrow> bool"
 where
-  "ct_running_C s \<equiv> let 
+  "ct_running_C s \<equiv> let
     g = globals s;
     hp = clift (t_hrs_' g);
     ct = ksCurThread_' g
-  in \<exists>tcb. hp ct = Some tcb \<and> 
+  in \<exists>tcb. hp ct = Some tcb \<and>
            tsType_CL (thread_state_lift (tcbState_C tcb)) = scast ThreadState_Running"
 
 context kernel_m
@@ -39,7 +39,7 @@ begin
 definition
   "handleHypervisorEvent_C = (CALL schedule();; CALL activateThread())"
 
-definition 
+definition
   "callKernel_C e \<equiv> case e of
     SyscallEvent n \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleSyscall(syscall_from_H n))
   | UnknownSyscall n \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleUnknownSyscall(of_nat n))
@@ -58,10 +58,10 @@ definition
                    ELSE CALL fastpath_reply_recv(\<acute>cptr, \<acute>msgInfo) FI)
    else callKernel_C e"
 
-definition 
+definition
   setArchTCB_C :: "arch_tcb_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
 where
-  "setArchTCB_C ct thread \<equiv> 
+  "setArchTCB_C ct thread \<equiv>
   exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (Ptr &(thread\<rightarrow>[''tcbArch_C''])) ct) \<acute>t_hrs)"
 
 lemma Basic_sem_eq:
@@ -121,7 +121,7 @@ lemma setArchTCB_C_corres:
   done
 end
 
-definition 
+definition
   "register_to_H \<equiv> inv register_from_H"
 
 definition
@@ -148,7 +148,7 @@ where
 definition
   getContext_C :: "tcb_C ptr \<Rightarrow> cstate \<Rightarrow> user_context"
 where
-  "getContext_C thread \<equiv> 
+  "getContext_C thread \<equiv>
    \<lambda>s. from_user_context_C (tcbContext_C (the (clift (t_hrs_' (globals s)) (Ptr &(thread\<rightarrow>[''tcbArch_C''])))))"
 
 lemma from_user_context_C:
@@ -175,10 +175,10 @@ definition
                m = (if ct_running_C (snd s') then UserMode else IdleMode)
              \<or> snd (split (kernelEntry_C fp e) s)}"
 
-definition 
+definition
   "getActiveIRQ_C \<equiv> exec_C \<Gamma> (Call getActiveIRQ_'proc)"
 
-definition 
+definition
   checkActiveIRQ_C :: "(cstate, bool) nondet_monad"
   where
   "checkActiveIRQ_C \<equiv>
@@ -205,8 +205,8 @@ definition "Init_C \<equiv> \<lambda>((tc,s),m,e). Init_C' ((tc, truncate_state 
 definition
   user_mem_C :: "globals \<Rightarrow> word32 \<Rightarrow> word8 option"
 where
-  "user_mem_C s \<equiv> \<lambda>p. 
-  case clift (t_hrs_' s) (Ptr (p && ~~mask pageBits)) of 
+  "user_mem_C s \<equiv> \<lambda>p.
+  case clift (t_hrs_' s) (Ptr (p && ~~mask pageBits)) of
     Some v \<Rightarrow> let off = p && mask pageBits >> 2;
                   w = index (user_data_C.words_C v) (unat off);
                   i = 3 - unat (p && mask 2);
@@ -218,8 +218,8 @@ where
 definition
   device_mem_C :: "globals \<Rightarrow> word32 \<Rightarrow> word32 option"
 where
-  "device_mem_C s \<equiv> \<lambda>p. 
-  case clift (t_hrs_' s) (Ptr (p && ~~mask pageBits)) of 
+  "device_mem_C s \<equiv> \<lambda>p.
+  case clift (t_hrs_' s) (Ptr (p && ~~mask pageBits)) of
     Some (v::user_data_device_C) \<Rightarrow> Some p
   | None \<Rightarrow> None"
 
@@ -346,14 +346,14 @@ lemma ucast_ucast_mask_pageBits_shift:
   apply (auto simp: word_size nth_ucast nth_shiftr pageBits_def)
   done
 
-definition 
+definition
 "processMemory s \<equiv> (ksMachineState s) \<lparr>underlying_memory := option_to_0 \<circ> (user_mem' s)\<rparr>"
 
 
 lemma unat_ucast_mask_pageBits_shift:
   "unat (ucast (p && mask pageBits >> 2) :: 10 word) = unat ((p::word32) && mask pageBits >> 2)"
   apply (simp only: unat_ucast)
-  apply (rule mod_less) 
+  apply (rule mod_less)
   apply (rule unat_less_power)
    apply (simp add: word_bits_def)
   apply (rule shiftr_less_t2n)
@@ -362,7 +362,7 @@ lemma unat_ucast_mask_pageBits_shift:
   done
 
 lemma mask_pageBits_shift_sum:
-  "unat n = unat (p && mask 2) \<Longrightarrow> 
+  "unat n = unat (p && mask 2) \<Longrightarrow>
   (p && ~~ mask pageBits) + (p && mask pageBits >> 2) * 4 + n = (p::word32)"
   apply (clarsimp simp: word_shift_by_2)
   apply (subst word_plus_and_or_coroll)
@@ -391,7 +391,7 @@ lemma user_mem_C_relation:
    apply (clarsimp simp: pointerInUserData_def)
    apply (drule user_data_at_ko)
    apply (clarsimp simp: cmap_relation_def)
-   apply (subgoal_tac "(Ptr (p && ~~mask pageBits) :: user_data_C ptr) \<in> 
+   apply (subgoal_tac "(Ptr (p && ~~mask pageBits) :: user_data_C ptr) \<in>
                         Ptr ` dom (heap_to_user_data (ksPSpace s') (underlying_memory (ksMachineState s')))")
     apply simp
     apply clarsimp
@@ -451,7 +451,7 @@ lemma device_mem_C_relation:
   apply (rule conjI)
    apply (clarsimp simp: pointerInDeviceData_def)
    apply (clarsimp simp: cmap_relation_def)
-   apply (subgoal_tac "(Ptr (p && ~~mask pageBits) :: user_data_device_C ptr) \<in> 
+   apply (subgoal_tac "(Ptr (p && ~~mask pageBits) :: user_data_device_C ptr) \<in>
                         Ptr ` dom (heap_to_device_data (ksPSpace s') (underlying_memory (ksMachineState s')))")
     apply clarsimp
    apply (thin_tac "Ball A P" for A P)
@@ -496,7 +496,7 @@ proof -
   show ?thesis
  apply (simp add: cstate_to_machine_H_def)
  apply (intro MachineTypes.machine_state.equality,simp_all add:observable_memory_def)
- done 
+ done
 qed
 
 
@@ -839,7 +839,7 @@ lemma ran_tcb_cte_cases:
 lemma ps_clear_is_aligned_ksPSpace_None:
   "\<lbrakk>ps_clear p n s; is_aligned p n; 0<d; d \<le> mask n\<rbrakk>
    \<Longrightarrow> ksPSpace s (p + d) = None"
-  apply (simp add: ps_clear_def add_diff_eq[symmetric] mask_2pm1[symmetric]) 
+  apply (simp add: ps_clear_def add_diff_eq[symmetric] mask_2pm1[symmetric])
   apply (drule equals0D[where a="p + d"])
   apply (simp add: dom_def word_gt_0 del: word_neq_0_conv)
   apply (drule mp)
@@ -1015,7 +1015,7 @@ lemma cpspace_ntfn_relation_unique:
   assumes ntfns: "cpspace_ntfn_relation ah ch" "cpspace_ntfn_relation ah' ch"
       and   vs: "\<exists>s. ksPSpace s = ah \<and> valid_pspace' s"
       and   vs': "\<exists>s. ksPSpace s = ah' \<and> valid_pspace' s"
-  shows   "map_to_ntfns ah' = map_to_ntfns ah" 
+  shows   "map_to_ntfns ah' = map_to_ntfns ah"
   using ntfns
   apply (clarsimp simp: cmap_relation_def)
   apply (drule inj_image_inv[OF inj_Ptr])+
@@ -1035,8 +1035,8 @@ lemma cpspace_ntfn_relation_unique:
    apply (thin_tac "map_to_ntfns x y = Some z" for x y z)+
    apply (case_tac y, case_tac ya, case_tac "the (clift ch (ntfn_Ptr x))")
    by (auto simp: NtfnState_Active_def NtfnState_Idle_def NtfnState_Waiting_def typ_heap_simps
-                     cnotification_relation_def Let_def tcb_queue_rel'_clift_unique 
-                     option_to_ctcb_ptr_def valid_obj'_def valid_ntfn'_def valid_bound_tcb'_def 
+                     cnotification_relation_def Let_def tcb_queue_rel'_clift_unique
+                     option_to_ctcb_ptr_def valid_obj'_def valid_ntfn'_def valid_bound_tcb'_def
                      kernel.tcb_at_not_NULL tcb_ptr_to_ctcb_ptr_inj
               split: ntfn.splits option.splits) (* long *)
 
@@ -1160,7 +1160,7 @@ lemma cpspace_device_data_relation_unique:
 
 lemmas projectKO_opts = projectKO_opt_ep projectKO_opt_ntfn projectKO_opt_tcb
                         projectKO_opt_pte projectKO_opt_pde projectKO_opt_cte
-                        projectKO_opt_asidpool  projectKO_opt_user_data 
+                        projectKO_opt_asidpool  projectKO_opt_user_data
                         projectKO_opt_user_data_device
 
 (* Following from the definition of map_to_ctes,
@@ -1523,7 +1523,7 @@ lemma (in kernel_m) cstate_to_H_correct:
                      using valid
                      apply (simp add: valid_state'_def)
                     using cstate_rel valid
-                    apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def 
+                    apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def
                       observable_memory_def valid_state'_def
                       valid_pspace'_def)
                    using cstate_rel
@@ -1532,8 +1532,8 @@ lemma (in kernel_m) cstate_to_H_correct:
                   apply (clarsimp simp: cstate_relation_def cpspace_relation_def  Let_def prod_eq_iff)
                  using valid cstate_rel
                  apply (rule mk_gsUntypedZeroRanges_correct)
-                using cstate_rel 
-                apply (fastforce simp: cstate_relation_def cpspace_relation_def 
+                using cstate_rel
+                apply (fastforce simp: cstate_relation_def cpspace_relation_def
                   Let_def ghost_size_rel_def unat_eq_0
                             split: if_split)
                using valid cstate_rel
@@ -1613,7 +1613,7 @@ definition (in state_rel)
 
 definition (in state_rel)
   doUserOp_C
-    :: "user_transition \<Rightarrow> user_context \<Rightarrow> 
+    :: "user_transition \<Rightarrow> user_context \<Rightarrow>
         (cstate, event option \<times> user_context) nondet_monad"
   where
   "doUserOp_C uop tc \<equiv>
@@ -1670,7 +1670,7 @@ begin
 definition
   "handleHypervisorEvent_C = (CALL schedule();; CALL activateThread())"
 
-definition 
+definition
   "callKernel_C e \<equiv> case e of
     SyscallEvent n \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleSyscall(syscall_from_H n))
   | UnknownSyscall n \<Rightarrow> exec_C \<Gamma> (\<acute>ret__unsigned_long :== CALL handleUnknownSyscall(of_nat n))
@@ -1689,10 +1689,10 @@ definition
                    ELSE CALL fastpath_reply_recv(\<acute>cptr, \<acute>msgInfo) FI)
    else callKernel_C e"
 
-definition 
+definition
   setArchTCB_C :: "arch_tcb_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
 where
-  "setArchTCB_C ct thread \<equiv> 
+  "setArchTCB_C ct thread \<equiv>
   exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (Ptr &(thread\<rightarrow>[''tcbArch_C''])) ct) \<acute>t_hrs)"
 
 definition
@@ -1709,7 +1709,7 @@ definition
   {(s, m, s'). s' \<in> fst (split (kernelEntry_C fp e) s) \<and>
                m = (if ct_running_C (snd s') then UserMode else IdleMode)}"
 
-definition 
+definition
   "getActiveIRQ_C \<equiv> exec_C \<Gamma> (Call getActiveIRQ_'proc)"
 
 definition

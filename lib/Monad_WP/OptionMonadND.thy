@@ -76,7 +76,7 @@ where
   "opt_cons x xs \<equiv> case x of None \<Rightarrow> xs | Some x' \<Rightarrow> x' # xs"
 
 lemmas monad_simps =
-  gets_the_def bind_def assert_def assert_opt_def 
+  gets_the_def bind_def assert_def assert_opt_def
   simpler_gets_def fail_def return_def
 
 lemma gets_the_opt_map:

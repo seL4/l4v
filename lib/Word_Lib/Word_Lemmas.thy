@@ -2027,7 +2027,7 @@ lemma le_mask_shiftl_le_mask: "s = m + n \<Longrightarrow> x \<le> mask n \<Long
 lemma and_not_mask_twice:
   "(w && ~~ mask n) && ~~ mask m = w && ~~ mask (max m n)"
   apply (simp add: and_not_mask)
-  apply (case_tac "n<m"; 
+  apply (case_tac "n<m";
          simp add: shiftl_shiftr2 shiftl_shiftr1 not_less max_def shiftr_shiftr shiftl_shiftl)
    apply (cut_tac and_mask_shiftr_comm [where w=w and m="size w" and n=m, simplified,symmetric])
    apply (simp add: word_size mask_def)
@@ -2185,7 +2185,7 @@ lemmas finite_word = finite [where 'a="'a::len word"]
 lemma word_to_1_set:
   "{0 ..< (1 :: 'a :: len word)} = {0}"
   by fastforce
-                                                                                                   
+
 lemma range_subset_eq2:
   "{a :: 'a :: len word .. b} \<noteq> {} \<Longrightarrow> ({a .. b} \<subseteq> {c .. d}) = (c \<le> a \<and> b \<le> d)"
   by simp
@@ -2813,7 +2813,7 @@ lemma and_eq_0_is_nth:
   apply (simp add: nth_w2p)
   done
 
-lemmas arg_cong_Not = arg_cong [where f=Not] 
+lemmas arg_cong_Not = arg_cong [where f=Not]
 lemmas and_neq_0_is_nth = arg_cong_Not [OF and_eq_0_is_nth, simplified]
 
 lemma mask_Suc_0 : "mask (Suc 0) = 1"
@@ -4044,7 +4044,7 @@ lemma not_switch:"~~ a = x \<Longrightarrow> a = ~~ x"
   by auto
 
 (* The seL4 bitfield generator produces functions containing mask and shift operations, such that
- * invoking two of them consecutively can produce something like the following. 
+ * invoking two of them consecutively can produce something like the following.
  *)
 lemma bitfield_op_twice:
   "(x && ~~ (mask n << m) || ((y && mask n) << m)) && ~~ (mask n << m) = x && ~~ (mask n << m)"
@@ -4061,7 +4061,7 @@ lemma bitfield_op_twice'':
 
 lemma bit_twiddle_min:
   "(y::'a::len word) xor (((x::'a::len word) xor y) && (if x < y then -1 else 0)) = min x y"
-  by (metis (mono_tags) min_def word_bitwise_m1_simps(2) word_bool_alg.xor_left_commute 
+  by (metis (mono_tags) min_def word_bitwise_m1_simps(2) word_bool_alg.xor_left_commute
              word_bool_alg.xor_self word_bool_alg.xor_zero_right word_bw_comms(1)
              word_le_less_eq word_log_esimps(7))
 
@@ -4100,7 +4100,7 @@ lemma mask_subsume:
   apply (subst word_ao_dist)
   apply (subgoal_tac "(y && mask n) && ~~ mask m = 0")
    apply simp
-  by (metis (no_types, hide_lams) is_aligned_mask is_aligned_weaken word_and_not 
+  by (metis (no_types, hide_lams) is_aligned_mask is_aligned_weaken word_and_not
             word_bool_alg.conj_zero_right word_bw_comms(1) word_bw_lcs(1))
 
 lemma mask_twice2:
@@ -4304,7 +4304,7 @@ lemma cast_chunk_assemble_id:
 
 lemma cast_chunk_scast_assemble_id:
   "\<lbrakk>n = len_of TYPE('a::len); m = len_of TYPE('b::len); n * 2 = m\<rbrakk> \<Longrightarrow>
-  (((ucast ((scast (x::'b word))::'a word))::'b word) || 
+  (((ucast ((scast (x::'b word))::'a word))::'b word) ||
    (((ucast ((scast (x >> n))::'a word))::'b word) << n)) = x"
   apply (subgoal_tac "((scast x)::'a word) = ((ucast x)::'a word)")
    apply (subgoal_tac "((scast (x >> n))::'a word) = ((ucast (x >> n))::'a word)")
@@ -4389,8 +4389,8 @@ proof -
   {
     assume a1: "x \<le> word_of_int (uint (word_of_int (2 ^ len_of (TYPE('b)) - 1)::'b word))"
     have f2: "((\<exists>i ia. (0::int) \<le> i \<and> \<not> 0 \<le> i + - 1 * ia \<and> i mod ia \<noteq> i) \<or>
-              \<not> (0::int) \<le> - 1 + 2 ^ len_of TYPE('b) \<or> (0::int) \<le> - 1 + 2 ^ len_of TYPE('b) + - 1 * 2 ^ len_of TYPE('b) \<or> 
-              (- (1::int) + 2 ^ len_of TYPE('b)) mod 2 ^ len_of TYPE('b) = 
+              \<not> (0::int) \<le> - 1 + 2 ^ len_of TYPE('b) \<or> (0::int) \<le> - 1 + 2 ^ len_of TYPE('b) + - 1 * 2 ^ len_of TYPE('b) \<or>
+              (- (1::int) + 2 ^ len_of TYPE('b)) mod 2 ^ len_of TYPE('b) =
                 - 1 + 2 ^ len_of TYPE('b)) = ((\<exists>i ia. (0::int) \<le> i \<and> \<not> 0 \<le> i + - 1 * ia \<and> i mod ia \<noteq> i) \<or>
               \<not> (1::int) \<le> 2 ^ len_of TYPE('b) \<or>
               2 ^ len_of TYPE('b) + - (1::int) * ((- 1 + 2 ^ len_of TYPE('b)) mod 2 ^ len_of TYPE('b)) = 1)"
@@ -4423,7 +4423,7 @@ proof -
     done
 qed
 
-lemma remdups_enum_upto: 
+lemma remdups_enum_upto:
   fixes s::"'a::len word"
   shows "remdups [s .e. e] = [s .e. e]"
   by simp
@@ -4619,7 +4619,7 @@ lemma unat_ucast_no_overflow_le:
     have RL: "unat f < unat b \<Longrightarrow> ucast f < b"
       proof-
       assume ineq: "unat f < unat b"
-      have ucast_rewrite: "ucast (f::('a::len) word) < 
+      have ucast_rewrite: "ucast (f::('a::len) word) <
           ((ucast (ucast b ::('a::len) word)) :: 'b :: len word)"
         apply (simp add: ucast_less_ucast upward_cast)
         apply (simp add: ucast_nat_def[symmetric])
@@ -4633,7 +4633,7 @@ lemma unat_ucast_no_overflow_le:
    then show ?thesis by (simp add:RL LR iffI)
 qed
 
-(* casting a long word to a shorter word and casting back to the long word 
+(* casting a long word to a shorter word and casting back to the long word
    is equal to the original long word -- if the word is small enough.
   'l is the longer word.
   's is the shorter word.
@@ -4695,7 +4695,7 @@ proof -
     next
       case (Suc n)
       from Suc.prems
-      have "2 ^ n < (2 :: 'a :: len word) ^ Suc n"  
+      have "2 ^ n < (2 :: 'a :: len word) ^ Suc n"
         using power_strict_increasing unat_power_lower word_less_nat_alt by fastforce
       with Suc
       show ?case by (subst strict_part_mono_by_steps) simp
@@ -4714,7 +4714,7 @@ lemma word_len_min_2:
   by (metis less_trans_Suc n_less_equal_power_2 numeral_2_eq_2 of_nat_numeral unat_of_nat_len)
 
 lemma upper_bits_unset_is_l2p:
-  "n < len_of TYPE('a) \<Longrightarrow> 
+  "n < len_of TYPE('a) \<Longrightarrow>
   (\<forall>n' \<ge> n. n' < len_of TYPE('a) \<longrightarrow> \<not> p !! n') = ((p::'a::len word) < 2 ^ n)"
   apply (cases "Suc 0 < len_of TYPE('a)")
    prefer 2
@@ -4731,7 +4731,7 @@ lemma upper_bits_unset_is_l2p:
   done
 
 lemma le_2p_upper_bits:
-  "\<lbrakk> (p::'a::len word) \<le> 2^n - 1; n < len_of TYPE('a) \<rbrakk> \<Longrightarrow> 
+  "\<lbrakk> (p::'a::len word) \<le> 2^n - 1; n < len_of TYPE('a) \<rbrakk> \<Longrightarrow>
   \<forall>n'\<ge>n. n' < len_of TYPE('a) \<longrightarrow> \<not> p !! n'"
   by (subst upper_bits_unset_is_l2p; simp)
 
@@ -4826,7 +4826,7 @@ next
 qed
 
 lemma offset_not_aligned:
-  "\<lbrakk> is_aligned (p::'a::len word) n; i > 0; i < 2 ^ n; n < len_of TYPE('a)\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk> is_aligned (p::'a::len word) n; i > 0; i < 2 ^ n; n < len_of TYPE('a)\<rbrakk> \<Longrightarrow>
   \<not> is_aligned (p + of_nat i) n"
   apply (erule is_aligned_add_not_aligned)
   unfolding is_aligned_def
@@ -4882,10 +4882,10 @@ lemma alignUp_idem:
   assumes al: "is_aligned a n"
   and   sz: "n < len_of TYPE('a)"
   shows "alignUp a n = a"
-  using sz al unfolding alignUp_def 
+  using sz al unfolding alignUp_def
   apply (simp add: complement_mask)
   apply (subst x_power_minus_1)
-  apply (subst neg_mask_is_div)    
+  apply (subst neg_mask_is_div)
   apply (simp only: word_arith_nat_div  unat_word_ariths)
   apply (simp only: unat_power_lower)
   apply (subst power_mod_div)
@@ -4906,9 +4906,9 @@ lemma alignUp_not_aligned_eq:
   and     sz: "n < len_of TYPE('a)"
   shows   "alignUp a n = (a div 2 ^ n + 1) * 2 ^ n"
 proof -
-  have anz: "a mod 2 ^ n \<noteq> 0" 
+  have anz: "a mod 2 ^ n \<noteq> 0"
     by (rule not_aligned_mod_nz) fact+
-  
+
   then have um: "unat (a mod 2 ^ n - 1) div 2 ^ n = 0" using sz
     apply -
     apply (rule div_less)
@@ -4917,17 +4917,17 @@ proof -
      apply (rule diff_Suc_less)
      apply (erule contrapos_np)
      apply (simp add: unat_eq_zero)
-    apply (subst unat_power_lower [symmetric, OF sz])  
+    apply (subst unat_power_lower [symmetric, OF sz])
     apply (subst word_less_nat_alt [symmetric])
     apply (rule word_mod_less_divisor)
     apply (simp add: p2_gt_0)
     done
-    
+
   have "a + 2 ^ n - 1 = (a div 2 ^ n) * 2 ^ n + (a mod 2 ^ n) + 2 ^ n - 1"
     by (simp add: word_mod_div_equality)
   also have "\<dots> = (a mod 2 ^ n - 1) + (a div 2 ^ n + 1) * 2 ^ n"
     by (simp add: field_simps)
-  finally show "alignUp a n = (a div 2 ^ n + 1) * 2 ^ n" using sz    
+  finally show "alignUp a n = (a div 2 ^ n + 1) * 2 ^ n" using sz
     unfolding alignUp_def
     apply (subst complement_mask)
     apply (erule ssubst)
@@ -4984,7 +4984,7 @@ next
     apply simp
     done
   moreover have "2 ^ n * (unat a div 2 ^ n + 1) \<noteq> 2 ^ len_of TYPE('a)" using nowrap sz
-    apply -  
+    apply -
     apply (erule contrapos_nn)
     apply (subst alignUp_not_aligned_eq [OF False sz])
     apply (subst unat_arith_simps)
@@ -4995,7 +4995,7 @@ next
     apply (simp add: unat_div field_simps power_add[symmetric] mod_mod_power min.absorb2)
     done
   ultimately have lt: "2 ^ n * (unat a div 2 ^ n + 1) < 2 ^ len_of TYPE('a)" by simp
-      
+
   have "a = a div 2 ^ n * 2 ^ n + a mod 2 ^ n" by (rule word_mod_div_equality [symmetric])
   also have "\<dots> < (a div 2 ^ n + 1) * 2 ^ n" using sz lt
     apply (simp add: field_simps)
@@ -5006,7 +5006,7 @@ next
     apply (simp add: unat_div)
     done
   also have "\<dots> =  alignUp a n"
-    by (rule alignUp_not_aligned_eq [symmetric]) fact+  
+    by (rule alignUp_not_aligned_eq [symmetric]) fact+
   finally show ?thesis by (rule order_less_imp_le)
 qed
 
@@ -5022,13 +5022,13 @@ proof (cases "is_aligned a n")
 next
   case False
 
-  then have anz: "a mod 2 ^ n \<noteq> 0" 
+  then have anz: "a mod 2 ^ n \<noteq> 0"
     by (rule not_aligned_mod_nz)
-  
+
   from al obtain k where xk: "x = 2 ^ n * of_nat k" and kv: "k < 2 ^ (len_of TYPE('a) - n)"
     by (auto elim!: is_alignedE)
-  
-  then have kn: "unat (of_nat k :: 'a word) * unat ((2::'a word) ^ n) < 2 ^ len_of TYPE('a)" 
+
+  then have kn: "unat (of_nat k :: 'a word) * unat ((2::'a word) ^ n) < 2 ^ len_of TYPE('a)"
     using sz
     apply (subst unat_of_nat_eq)
      apply (erule order_less_le_trans)
@@ -5040,16 +5040,16 @@ next
     apply simp
     done
 
-  have au: "alignUp a n = (a div 2 ^ n + 1) * 2 ^ n" 
+  have au: "alignUp a n = (a div 2 ^ n + 1) * 2 ^ n"
     by (rule alignUp_not_aligned_eq) fact+
   also have "\<dots> \<le> of_nat k * 2 ^ n"
   proof (rule word_mult_le_mono1 [OF inc_le _ kn])
     show "a div 2 ^ n < of_nat k" using kv xk le sz anz
       by (simp add: alignUp_div_helper)
-  
+
     show "(0:: 'a word) < 2 ^ n" using sz by (simp add: p2_gt_0 sz)
   qed
-    
+
   finally show ?thesis using xk by (simp add: field_simps)
 qed
 
@@ -5066,7 +5066,7 @@ proof (cases "is_aligned a n")
   then show ?thesis using az by simp
 next
   case False
-  then have anz: "a mod 2 ^ n \<noteq> 0" 
+  then have anz: "a mod 2 ^ n \<noteq> 0"
     by (rule not_aligned_mod_nz)
 
   {
@@ -5085,7 +5085,7 @@ next
       apply simp
       apply (rule Suc_leI [OF lt0])
       apply simp
-      done    
+      done
 
     from al obtain k where  kv: "k < 2 ^ (len_of TYPE('a) - n)" and xk: "x = 2 ^ n * of_nat k"
       by (auto elim!: is_alignedE)
@@ -5100,10 +5100,10 @@ next
        apply (rule order_less_le_trans [OF kv])
        apply simp+
       done
-    
+
     have "alignUp a n = (a div 2 ^ n + 1) * 2 ^ n"
       by (rule alignUp_not_aligned_eq) fact+
-    
+
     then have "\<dots> = 0" using asm by simp
     then have "unat a div 2 ^ n = 2 ^ (len_of TYPE('a) - n) - 1" using sz leq
       apply -
@@ -5124,7 +5124,7 @@ next
       apply (drule (1) order_le_neq_trans)
       apply (simp)
       done
-    
+
     then have "2 ^ (len_of TYPE('a) - n) - 1 < k" using r
       by simp
     then have False using kv by simp
@@ -5138,23 +5138,23 @@ lemma alignUp_ar_helper:
   and    sub: "{x..x + 2 ^ n - 1} \<subseteq> {a..b}"
   and    anz: "a \<noteq> 0"
   shows "a \<le> alignUp a n \<and> alignUp a n + 2 ^ n - 1 \<le> b"
-proof 
+proof
   from al have xl: "x \<le> x + 2 ^ n - 1" by (simp add: is_aligned_no_overflow)
-    
+
   from xl sub have ax: "a \<le> x"
     by (clarsimp elim!: range_subset_lower [where x = x])
 
   show "a \<le> alignUp a n"
   proof (rule alignUp_ge)
     show "alignUp a n \<noteq> 0" using al sz ax anz
-      by (rule alignUp_is_aligned_nz)   
-  qed fact+  
-  
+      by (rule alignUp_is_aligned_nz)
+  qed fact+
+
   show "alignUp a n + 2 ^ n - 1 \<le> b"
   proof (rule order_trans)
     from xl show tp: "x + 2 ^ n - 1 \<le> b" using sub
       by (clarsimp elim!: range_subset_upper [where x = x])
-    
+
     from ax have "alignUp a n \<le> x"
       by (rule alignUp_le_greater_al) fact+
     then have "alignUp a n + (2 ^ n - 1) \<le> x + (2 ^ n - 1)" using xl
@@ -5195,7 +5195,7 @@ lemma gap_between_aligned:
   apply (drule(1) le_shiftr')
   apply simp
   done
-  
+
 lemma mask_out_add_aligned:
   assumes al: "is_aligned p n"
   shows "p + (q && ~~ mask n) = (p + q) && ~~ mask n"

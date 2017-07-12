@@ -122,7 +122,7 @@ crunch arch [wp]: retype_region "\<lambda>s. P (arch_state s)"
 
 lemma set_free_index_final_cap:
   "\<lbrace>\<lambda>s. P (is_final_cap' cap s) \<and> cte_wp_at (op = src_cap) src s\<rbrace>
-   set_cap (free_index_update f src_cap) src 
+   set_cap (free_index_update f src_cap) src
    \<lbrace>\<lambda>rv s. P (is_final_cap' cap s) \<rbrace>"
   apply (simp add:is_final_cap'_def2)
   apply (clarsimp simp:valid_def)
@@ -132,7 +132,7 @@ lemma set_free_index_final_cap:
   apply (subgoal_tac "\<And>slot. (cte_wp_at (\<lambda>c. obj_irq_refs cap \<inter> obj_irq_refs c \<noteq> {}) slot s
           = cte_wp_at (\<lambda>c. obj_irq_refs cap \<inter> obj_irq_refs c \<noteq> {}) slot b)")
    apply simp
-  apply (clarsimp split:cap.splits 
+  apply (clarsimp split:cap.splits
          simp:cte_wp_at_caps_of_state free_index_update_def
               obj_irq_refs_def)
   done
@@ -140,7 +140,7 @@ lemma set_free_index_final_cap:
 lemma set_cap_orth:
   "\<lbrace>\<lambda>s. P s \<and> Q cap' s\<rbrace> set_cap cap src \<lbrace>\<lambda>rv s. Q cap' s\<rbrace> \<Longrightarrow>
    \<lbrace>\<lambda>s. P s \<and> src\<noteq> dest \<and> (cte_wp_at (op = cap') dest s \<longrightarrow> Q cap' s)\<rbrace>
-   set_cap cap src 
+   set_cap cap src
    \<lbrace>\<lambda>rv s. cte_wp_at (op = cap') dest s \<longrightarrow> Q cap' s\<rbrace>"
    apply (clarsimp simp:valid_def cte_wp_at_caps_of_state)
    apply (drule_tac x = s in spec)
@@ -204,7 +204,7 @@ lemma diminished_cte_wp_at_valid_cap:
 
 
 lemma delete_objects_st_tcb_at:
-  "\<lbrace>pred_tcb_at proj P t and invs and K (t \<notin> {ptr .. ptr + 2 ^ bits - 1})\<rbrace> 
+  "\<lbrace>pred_tcb_at proj P t and invs and K (t \<notin> {ptr .. ptr + 2 ^ bits - 1})\<rbrace>
     delete_objects ptr bits
   \<lbrace>\<lambda>y. pred_tcb_at proj P t\<rbrace>"
   by (wp|simp add: delete_objects_def do_machine_op_def split_def)+

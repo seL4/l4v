@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 	Defines the instances of pspace_storable objects.
 *)
 
@@ -40,7 +40,7 @@ definition
 
 instance
   by (intro_classes,
-      auto simp: projectKO_opt_pde injectKO_pde koType_pde 
+      auto simp: projectKO_opt_pde injectKO_pde koType_pde
           split: kernel_object.splits arch_kernel_object.splits)
 
 end
@@ -87,12 +87,12 @@ definition
 
 instance
   by (intro_classes,
-      auto simp: projectKO_opt_asidpool injectKO_asidpool koType_asidpool 
+      auto simp: projectKO_opt_asidpool injectKO_asidpool koType_asidpool
           split: kernel_object.splits arch_kernel_object.splits)
 
 end
 
-lemmas (in Arch) projectKO_opts_defs = 
+lemmas (in Arch) projectKO_opts_defs =
   projectKO_opt_pde projectKO_opt_pte projectKO_opt_asidpool
   ObjectInstances_H.projectKO_opts_defs
 

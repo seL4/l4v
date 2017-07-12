@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Architecture-independent VSpace invariant proofs
 *)
 

@@ -157,8 +157,8 @@ For any other capability, no special action is required.
 
 
 > hasCancelSendRights :: Capability -> Bool
-> hasCancelSendRights (EndpointCap { capEPCanSend = True, 
->                                 capEPCanReceive = True, 
+> hasCancelSendRights (EndpointCap { capEPCanSend = True,
+>                                 capEPCanReceive = True,
 >                                 capEPCanGrant = True }) = True
 > hasCancelSendRights _ = False
 
@@ -171,7 +171,7 @@ This function will return "True" if the left hand capability grants access to th
 
 This function assumes that its arguments are in MDB order.
 
-> sameRegionAs a@(UntypedCap {}) b = 
+> sameRegionAs a@(UntypedCap {}) b =
 >     isPhysicalCap b && (baseA <= baseB) && (topB <= topA) && (baseB <= topB)
 >     where
 >         baseA = capPtr a
@@ -298,9 +298,9 @@ The "maskCapRights" function restricts the operations that can be performed on a
 
 > maskCapRights _ c@(ReplyCap {}) = c
 
-> maskCapRights _ c@(CNodeCap {}) = c 
+> maskCapRights _ c@(CNodeCap {}) = c
 
-> maskCapRights _ c@(ThreadCap {}) = c 
+> maskCapRights _ c@(ThreadCap {}) = c
 
 > maskCapRights _ c@IRQControlCap = c
 
@@ -362,7 +362,7 @@ The "decodeInvocation" function parses the message, determines the operation tha
 >         (capEPPtr cap) (capEPBadge cap) (capEPCanGrant cap)
 >
 > decodeInvocation _ _ _ _ cap@(NotificationCap {capNtfnCanSend=True}) _ = do
->     return $ InvokeNotification (capNtfnPtr cap) (capNtfnBadge cap) 
+>     return $ InvokeNotification (capNtfnPtr cap) (capNtfnBadge cap)
 >
 > decodeInvocation _ _ _ slot cap@(ReplyCap {capReplyMaster=False}) _ = do
 >     return $ InvokeReply (capTCBPtr cap) slot
@@ -386,7 +386,7 @@ The "decodeInvocation" function parses the message, determines the operation tha
 > decodeInvocation label args _ slot IRQControlCap extraCaps =
 >     liftM InvokeIRQControl $
 >         decodeIRQControlInvocation label args slot $ map fst extraCaps
-> 
+>
 > decodeInvocation label _ _ _ (IRQHandlerCap { capIRQ = irq }) extraCaps =
 >     liftM InvokeIRQHandler $
 >         decodeIRQHandlerInvocation label irq extraCaps
@@ -404,19 +404,19 @@ The "invoke" function performs the operation itself. It cannot throw faults, but
 This function just dispatches invocations to the type-specific invocation functions.
 
 > performInvocation :: Bool -> Bool -> Invocation -> KernelP [Word]
-> 
+>
 > performInvocation _ _ (InvokeUntyped invok) = do
 >     invokeUntyped invok
 >     return $! []
-> 
+>
 > performInvocation block call (InvokeEndpoint ep badge canGrant) =
 >   withoutPreemption $ do
 >     thread <- getCurThread
 >     sendIPC block call badge canGrant thread ep
 >     return $! []
-> 
+>
 > performInvocation _ _ (InvokeNotification ep badge) = do
->     withoutPreemption $ sendSignal ep badge 
+>     withoutPreemption $ sendSignal ep badge
 >     return $! []
 >
 > performInvocation _ _ (InvokeReply thread slot) = withoutPreemption $ do
@@ -429,19 +429,19 @@ This function just dispatches invocations to the type-specific invocation functi
 > performInvocation _ _ (InvokeDomain thread domain) = withoutPreemption $ do
 >     setDomain thread domain
 >     return $! []
-> 
+>
 > performInvocation _ _ (InvokeCNode invok) = do
 >     invokeCNode invok
 >     return $! []
-> 
+>
 > performInvocation _ _ (InvokeIRQControl invok) = do
 >     performIRQControl invok
 >     return $! []
-> 
+>
 > performInvocation _ _ (InvokeIRQHandler invok) = do
 >     withoutPreemption $ invokeIRQHandler invok
 >     return $! []
-> 
+>
 > performInvocation _ _ (InvokeArchObject invok) = Arch.performInvocation invok
 
 \subsection{Helper Functions}
@@ -470,7 +470,7 @@ The following two functions returns the base and size of the object a capability
 > capUntypedSize (EndpointCap {})
 >     = 1 `shiftL` objBits (undefined::Endpoint)
 > capUntypedSize (NotificationCap {})
->     = 1 `shiftL` objBits (undefined::Notification) 
+>     = 1 `shiftL` objBits (undefined::Notification)
 > capUntypedSize (ThreadCap {})
 >     = 1 `shiftL` objBits (undefined::TCB)
 > capUntypedSize (DomainCap {})

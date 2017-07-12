@@ -18,5 +18,5 @@ begin
   begin
   thm foo_body_def
   end
-  
+
 end

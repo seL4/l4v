@@ -129,7 +129,7 @@ fun benchmark name f =
     val dev_percent = (#time_stddev results) / (#time results);
     val cpu_string = (S (#time results * 1000000.0)) ^  " us"
     val dev_percent_str = S (dev_percent * 100.0)
-    val result_string = 
+    val result_string =
       (R 32 name) ^ ": "
       ^ (P 12 cpu_string)
       ^ " (sd " ^ P 5 dev_percent_str ^ "%,"

@@ -47,8 +47,8 @@ text {*
   much fewer system calls.
 
   We achieve this by modifying the cases distinctions that determine which API call is
-  to by executed. The new case distinctions 
-  on capabilities only provide code for the restricted capabilities in our reduced setup, 
+  to by executed. The new case distinctions
+  on capabilities only provide code for the restricted capabilities in our reduced setup,
   otherwise they fail (i.e. throw an exception).
 
   We then prove that \texttt{sep-abstract} and \texttt{abstract} have the same behaviour under the

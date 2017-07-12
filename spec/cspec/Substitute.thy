@@ -295,12 +295,12 @@ fun const_global_asserts ctxt cond
 fun guard_rewritable_globals const_cond ctxt =
   Pattern.rewrite_term @{theory} [hrs_htd_update_guard_rew2] []
   o Pattern.rewrite_term @{theory} [hrs_htd_update_guard_rew1] []
-  o com_rewrite (fn t => 
+  o com_rewrite (fn t =>
      (t, map (pair @{term C_Guard})
         (case const_cond of SOME cond => const_global_asserts ctxt cond t
                 | NONE => [])))
 
-val guard_htd_updates_with_domain = com_rewrite 
+val guard_htd_updates_with_domain = com_rewrite
   (fn t => if fastype_of t = @{typ "globals myvars \<Rightarrow> globals myvars"}
         andalso Term.exists_Const (fn (s, _) => s = @{const_name "hrs_htd_update"}) t
         then (t, [(@{term MemorySafety}, betapply (@{term "\<lambda>f :: globals myvars \<Rightarrow> globals myvars.
