@@ -544,7 +544,8 @@ lemma resolve_vaddr_corres:
       apply clarsimp
       apply (erule(3) page_table_at_state_relation)
      apply wpsimp+
-   apply (clarsimp simp: page_directory_pde_at_lookupI less_kernel_base_mapping_slots)
+   apply (clarsimp simp: page_directory_pde_at_lookupI less_kernel_base_mapping_slots
+                         valid_vspace_objs_def')
   apply (clarsimp simp: page_directory_pde_at_lookupI' page_directory_at_state_relation)
   done
 

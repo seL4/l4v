@@ -781,8 +781,8 @@ lemma pt_slot_eq:
 -- "set_other_obj_corres unfortunately doesn't work here"
 lemma set_pd_corres [@lift_corres_args, corres]:
   "pde_relation_aligned (p>>2) pde pde' \<Longrightarrow>
-         corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) 
-                     and pspace_aligned and valid_etcbs) 
+         corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits)
+                     and pspace_aligned and valid_etcbs)
                     (pde_at' p)
           (set_pd (p && ~~ mask pd_bits) (pd(ucast (p && mask pd_bits >> 2) := pde)))
           (setObject p pde')"
@@ -860,8 +860,8 @@ lemma set_pd_corres [@lift_corres_args, corres]:
 
 lemma set_pt_corres [@lift_corres_args, corres]:
   "pte_relation_aligned (p >> 2) pte pte' \<Longrightarrow>
-         corres dc  (ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits) 
-                     and pspace_aligned and valid_etcbs) 
+         corres dc  (ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits)
+                     and pspace_aligned and valid_etcbs)
                     (pte_at' p)
           (set_pt (p && ~~ mask pt_bits) (pt(ucast (p && mask pt_bits >> 2) := pte)))
           (setObject p pte')"
@@ -934,7 +934,7 @@ lemma set_pt_corres [@lift_corres_args, corres]:
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
 lemma store_pde_corres [@lift_corres_args, corres]:
-  "pde_relation_aligned (p >> 2) pde pde' \<Longrightarrow> 
+  "pde_relation_aligned (p >> 2) pde pde' \<Longrightarrow>
   corres dc (pde_at p and pspace_aligned and valid_etcbs) (pde_at' p) (store_pde p pde) (storePDE p pde')"
   apply (simp add: store_pde_def storePDE_def)
   apply (rule corres_symb_exec_l)
@@ -961,7 +961,7 @@ lemma store_pde_corres':
   done
 
 lemma store_pte_corres [@lift_corres_args, corres]:
-  "pte_relation_aligned (p>>2) pte pte' \<Longrightarrow> 
+  "pte_relation_aligned (p>>2) pte pte' \<Longrightarrow>
   corres dc (pte_at p and pspace_aligned and valid_etcbs) (pte_at' p) (store_pte p pte) (storePTE p pte')"
   apply (simp add: store_pte_def storePTE_def)
   apply (rule corres_symb_exec_l)
@@ -1119,6 +1119,7 @@ lemma lookup_pt_slot_corres [@lift_corres_args, corres]:
           (lookup_pt_slot pd vptr) (lookupPTSlot pd vptr)"
   unfolding lookup_pt_slot_def lookupPTSlot_def lookupPTSlotFromPT_def
   apply (corressimp simp: pde_relation_aligned_def lookup_failure_map_def
+                          ptBits_def pdeBits_def pageBits_def pteBits_def mask_def
                       wp: get_pde_wp_valid getPDE_wp)
   by (auto simp: lookup_failure_map_def obj_at_def)
 
@@ -1180,12 +1181,12 @@ lemma copy_global_mappings_corres [@lift_corres_args, corres]:
                         and (\<lambda>_. is_aligned global_pd 6 \<and> is_aligned pd 6) and ?apre" and
                     P'="page_directory_at' globalPD and page_directory_at' pd"
               in corresK_mapM_x[OF order_refl])
-        apply (corressimp wp: get_pde_wp getPDE_wp)+
+        apply (corressimp simp: pdeBits_def ptBits_def pdeBits_def pageBits_def pteBits_def mask_def
+                          wp: get_pde_wp getPDE_wp)+
         apply (rule conjI)
-          subgoal by (fastforce intro!: page_directory_pde_atI page_directory_pde_atI'
-                     simp: pde_relation_aligned_def
-                     dest: align_entry_add_cong
-                     split : if_splits)
+        subgoal by (auto intro!: page_directory_pde_atI page_directory_pde_atI'
+                     simp: pde_relation_aligned_def pageBits_def le_less_trans
+                     dest: align_entry_add_cong)
   by (auto simp: valid_arch_state_def obj_at_def valid_arch_state'_def
           intro: is_aligned_weaken[of _ 14]
           dest!:pspace_alignedD)
@@ -1245,25 +1246,21 @@ where
 
 lemma create_mapping_entries_corres [corres]:
   "\<lbrakk> vm_rights' = vmrights_map vm_rights;
-     attrib' = vmattributes_map attrib \<rbrakk>
+     attrib' = vmattributes_map attrib; base = base'; vptr = vptr'; pgsz = pgsz'; pd = pd' \<rbrakk>
   \<Longrightarrow> corres (ser \<oplus> mapping_map)
           (\<lambda>s. (pgsz = ARMSmallPage \<or> pgsz = ARMLargePage \<longrightarrow> pde_at (lookup_pd_slot pd vptr) s)
            \<and> (is_aligned pd pd_bits \<and> vmsz_aligned vptr pgsz \<and> vptr < kernel_base \<and> vm_rights \<in> valid_vm_rights)
            \<and> valid_vspace_objs s \<and> pspace_aligned s \<and> (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits)) s)
           (pspace_aligned' and pspace_distinct')
-          (create_mapping_entries base vptr pgsz vm_rights attrib pd) 
+          (create_mapping_entries base vptr pgsz vm_rights attrib pd)
           (createMappingEntries base' vptr' pgsz' vm_rights' attrib' pd')"
   unfolding createMappingEntries_def mapping_map_def
-  apply (cases pgsz; corressimp simp: vmattributes_map_def less_kernel_base_mapping_slots)
-    apply (rule corres_rv_defer_left)
-   apply (auto dest: less_kernel_base_mapping_slots
-               simp: vmattributes_map_def
-                     largePagePTEOffsets_def
-                     largePagePTE_offsets_def
-                     superSectionPDEOffsets_def
-                     superSectionPDE_offsets_def
-                     pteBits_def pdeBits_def)
-  done
+  by (cases pgsz; corressimp simp: vmattributes_map_def less_kernel_base_mapping_slots
+                                   largePagePTEOffsets_def
+                                   largePagePTE_offsets_def
+                                   superSectionPDEOffsets_def
+                                   superSectionPDE_offsets_def
+                                   pteBits_def pdeBits_def)
 
 lemma pte_relation'_Invalid_inv [simp]:
   "pte_relation' x ARM_H.pte.InvalidPTE = (x = ARM_A.pte.InvalidPTE)"

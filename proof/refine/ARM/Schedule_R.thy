@@ -1016,7 +1016,7 @@ lemma arch_switch_idle_thread_corres:
         Arch.switchToIdleThread"
   apply (simp add: arch_switch_to_idle_thread_def
                 ARM_H.switchToIdleThread_def)
-  apply (corressimp corres: git_corres set_vm_root_corres)
+  apply (corressimp corres: git_corres set_vm_root_corres[@lift_corres_args])
   apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb)
   done
 
