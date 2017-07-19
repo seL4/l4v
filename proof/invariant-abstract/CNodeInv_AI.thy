@@ -1843,9 +1843,6 @@ crunch vspace_objs [wp]: cap_swap "valid_vspace_objs"
 crunch valid_global_objs [wp]: cap_swap "valid_global_objs"
 
 crunch valid_global_vspace_mappings [wp]: cap_swap "valid_global_vspace_mappings"
-(*
-crunch arch_objs [wp]: empty_slot "valid_arch_objs"
-*)
 
 context CNodeInv_AI begin
 

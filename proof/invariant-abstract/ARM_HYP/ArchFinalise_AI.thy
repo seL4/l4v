@@ -1465,9 +1465,6 @@ lemma invalidate_tlb_by_asid_pspace_aligned:
   apply (simp add: invalidate_tlb_by_asid_def load_hw_asid_def | wp | wpc)+
   done
 
-crunch valid_arch_objs[wp]: invalidate_tlb_by_asid, page_table_mapped
-  "valid_arch_objs"
-
 crunch cte_wp_at[wp]: invalidate_tlb_by_asid, page_table_mapped
   "\<lambda>s. P (cte_wp_at P' p s)"
 
@@ -1965,12 +1962,6 @@ lemma replaceable_or_arch_update_pg:
   unfolding replaceable_or_arch_update_def
   apply (auto simp: is_cap_simps is_arch_update_def cap_master_cap_simps)
   done
-
-(*lemma store_pde_arch_objs_invalid: (* ARMHYP do we need this? *)
-  "\<lbrace>valid_arch_objs\<rbrace> store_pde p InvalidPDE \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-  apply (wp store_pde_arch_objs_unmap)
-  apply (simp add: pde_ref_def)
-  done *)
 
 lemma store_pde_vspace_objs_invalid:
   "\<lbrace>valid_vspace_objs\<rbrace> store_pde p InvalidPDE \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"

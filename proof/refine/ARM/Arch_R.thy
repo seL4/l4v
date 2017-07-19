@@ -522,7 +522,7 @@ lemma flush_type_map:
 
 lemma resolve_vaddr_corres:
   "\<lbrakk> is_aligned pd pd_bits; vaddr < kernel_base \<rbrakk> \<Longrightarrow>
-  corres (op =) (pspace_aligned and valid_arch_objs and page_directory_at pd
+  corres (op =) (pspace_aligned and valid_vspace_objs and page_directory_at pd
                  and (\<exists>\<rhd> (lookup_pd_slot pd vaddr && ~~ mask pd_bits)))
                 (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> vs_valid_duplicates' (ksPSpace s))
           (resolve_vaddr pd vaddr) (resolveVAddr pd vaddr)"
@@ -544,8 +544,7 @@ lemma resolve_vaddr_corres:
       apply clarsimp
       apply (erule(3) page_table_at_state_relation)
      apply wpsimp+
-   apply (clarsimp simp: page_directory_pde_at_lookupI less_kernel_base_mapping_slots
-                         valid_vspace_objs_def')
+   apply (clarsimp simp: page_directory_pde_at_lookupI less_kernel_base_mapping_slots)
   apply (clarsimp simp: page_directory_pde_at_lookupI' page_directory_at_state_relation)
   done
 
@@ -612,8 +611,8 @@ lemma dec_arch_inv_page_flush_corres:
                      split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
      apply wp+
    apply (fastforce simp: valid_cap_def mask_def
-                          invs_vspace_objs[simplified valid_vspace_objs_def'])
-  apply (auto simp: valid_vspace_objs_def')
+                          invs_vspace_objs[simplified])
+  apply (auto)
   done
 
 lemma lookup_pd_slot_mask_6_gumpf:
@@ -713,7 +712,7 @@ lemma get_master_pte_wp:
   done
 
 lemma resolve_vaddr_valid_mapping_size:
-  "\<lbrace> valid_vs_lookup and pspace_aligned and valid_arch_objs and page_directory_at pd
+  "\<lbrace> valid_vs_lookup and pspace_aligned and valid_vspace_objs and page_directory_at pd
                  and (\<exists>\<rhd> (lookup_pd_slot pd vaddr && ~~ mask pd_bits))
                  and valid_objs and K (vaddr < kernel_base) \<rbrace>
     resolve_vaddr pd vaddr \<lbrace> \<lambda>rv s. case rv of None \<Rightarrow> True
@@ -728,8 +727,8 @@ lemma resolve_vaddr_valid_mapping_size:
   apply (clarsimp simp: obj_at_def)
   apply (frule(1) pspace_alignedD, simp)
   apply (drule_tac y=pd_bits in is_aligned_weaken, simp add: pd_bits_def pageBits_def)
-  apply (frule valid_arch_objsD, simp add: obj_at_def lookup_pd_slot_eq, simp)
-  apply (simp add: lookup_pd_slot_eq less_kernel_base_mapping_slots valid_arch_obj_def)
+  apply (frule valid_vspace_objsD, simp add: obj_at_def lookup_pd_slot_eq, simp)
+  apply (simp add: lookup_pd_slot_eq less_kernel_base_mapping_slots)
   apply (drule bspec, simp)
   apply (rule conjI)
    apply clarsimp
@@ -743,10 +742,10 @@ lemma resolve_vaddr_valid_mapping_size:
    apply (frule is_aligned_weaken[where x=pt_bits and y=10])
     apply (simp add: pt_bits_def pageBits_def)
    apply (simp add: vaddr_segment_nonsense3)
-   apply (frule valid_arch_objsD, simp add: obj_at_def, simp)
+   apply (frule valid_vspace_objsD, simp add: obj_at_def, simp)
    apply (drule vs_lookup_pages_vs_lookupI)
    apply (rule conjI)
-    apply (clarsimp simp: valid_arch_obj_def)
+    apply (clarsimp simp:)
     apply (drule_tac x="ucast (pt_slot' && mask pt_bits >> 2)" in spec)
     apply (drule vs_lookup_pages_step)
      apply (rule vs_lookup_pages1I, simp add: obj_at_def)
@@ -760,7 +759,7 @@ lemma resolve_vaddr_valid_mapping_size:
     apply (frule(1) caps_of_state_valid_cap)
     apply (clarsimp simp: valid_cap_def obj_at_def data_at_def a_type_simps
                    split: if_split_asm)
-   apply (clarsimp simp: vaddr_segment_nonsense4 valid_arch_obj_def)
+   apply (clarsimp simp: vaddr_segment_nonsense4)
    apply (drule_tac x="ucast (pt_slot' && mask pt_bits >> 2)" in spec)
    apply (drule vs_lookup_pages_step)
     apply (rule vs_lookup_pages1I, simp add: obj_at_def)
@@ -998,7 +997,7 @@ shows
        apply (rule corres_splitEE)
           prefer 2
           apply (rule corres_lookup_error)
-          apply (rule_tac P="valid_arch_state and valid_arch_objs and
+          apply (rule_tac P="valid_arch_state and valid_vspace_objs and
                              pspace_aligned and equal_kernel_mappings and valid_global_objs and
                              valid_cap (cap.ArchObjectCap
                                          (arch_cap.PageDirectoryCap wd (Some optv)))"
@@ -1008,7 +1007,7 @@ shows
            apply (simp add: mask_def)
           apply assumption
          apply (rule whenE_throwError_corres, simp, simp)
-         apply (rule_tac R="\<lambda>_ s. valid_arch_objs s \<and> pspace_aligned s
+         apply (rule_tac R="\<lambda>_ s. valid_vspace_objs s \<and> pspace_aligned s
                                   \<and> hd args + 2 ^ pageBitsForSize vmpage_size - 1 < kernel_base \<and>
                                   valid_arch_state s \<and> equal_kernel_mappings s \<and> valid_global_objs s \<and>
                                   s \<turnstile> (fst (hd excaps)) \<and> (\<exists>\<rhd> (lookup_pd_slot (obj_ref_of (fst (hd excaps))) (hd args) && ~~ mask pd_bits)) s \<and>
@@ -1042,7 +1041,6 @@ shows
             apply (clarsimp simp: valid_cap_def  dest!: vmsz_aligned_less_kernel_base_eq)
             apply (frule_tac vptr="hd args" in page_directory_pde_at_lookupI, assumption)
             apply (clarsimp simp: vmsz_aligned_def pageBitsForSize_def page_directory_at_aligned_pd_bits
-                                  valid_vspace_objs_def'
               split: vmpage_size.splits)
            apply (clarsimp simp: valid_cap'_def)
           apply simp
@@ -1051,7 +1049,7 @@ shows
         apply (rule hoare_drop_imps)+
         apply (simp add:not_le)
         apply (wp hoare_drop_imps)+
-      apply (clarsimp simp: invs_def valid_state_def valid_vspace_objs_def')
+      apply (clarsimp simp: invs_def valid_state_def)
      apply fastforce
     apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageRemap")
      apply (case_tac "\<not>(1 < length args \<and> excaps \<noteq> [])")
@@ -1103,7 +1101,7 @@ shows
                  apply (rule corres_returnOk)
                  apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
                 apply wp+
-            apply (subgoal_tac "valid_arch_objs s \<and> pspace_aligned s \<and>
+            apply (subgoal_tac "valid_vspace_objs s \<and> pspace_aligned s \<and>
                                 (snd v')  < kernel_base \<and>
                                 equal_kernel_mappings s \<and> valid_global_objs s \<and> valid_arch_state s \<and>
                                 (\<exists>\<rhd> (lookup_pd_slot (fst pa) (snd v') && ~~ mask pd_bits)) s \<and>
@@ -1113,7 +1111,6 @@ shows
             apply clarsimp
             apply (frule_tac pd = aa and vptr = bc in page_directory_pde_at_lookupI,assumption)
             apply (clarsimp simp: vmsz_aligned_def pageBitsForSize_def
-                                  valid_vspace_objs_def'
                                   page_directory_at_aligned_pd_bits
                             split:vmpage_size.splits)
            apply wp
@@ -1122,7 +1119,7 @@ shows
       apply (drule bspec [where x = "excaps ! 0"])
        apply simp
       apply (clarsimp simp: valid_cap_def mask_def split: option.split)
-      apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_vspace_objs_def')
+      apply (fastforce simp: invs_def valid_state_def valid_pspace_def)
      apply (clarsimp split: option.split)
      apply fastforce
 
@@ -1181,7 +1178,7 @@ shows
            apply (wp hoare_whenE_wp get_master_pde_wp getPDE_wp find_pd_for_asid_inv
                      | wp_once hoare_drop_imps)+
      apply (fastforce simp: valid_cap_def mask_def
-                            invs_vspace_objs[simplified valid_vspace_objs_def'])
+                            invs_vspace_objs[simplified])
     apply (clarsimp simp: valid_cap'_def)
     apply fastforce
    apply (clarsimp simp: unlessE_whenE liftE_bindE)
@@ -1270,7 +1267,7 @@ shows
        apply (wp hoare_drop_imps)+
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_cap_simps mask_2pm1
                           valid_arch_state_def valid_arch_caps_def linorder_not_le
-                          invs_vspace_objs[simplified valid_vspace_objs_def']
+                          invs_vspace_objs[simplified]
                    split: option.splits)
    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                   split: option.splits)

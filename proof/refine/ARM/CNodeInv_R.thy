@@ -610,7 +610,7 @@ declare word_unat_power [symmetric, simp del]
 (* FIXME: move *)
 lemma finalise_cap_not_reachable_pg_cap:
   "\<lbrace>pspace_aligned and
-       valid_arch_objs and
+       valid_vspace_objs and
        valid_objs and
        cte_wp_at (op = cap) slot and
        (\<lambda>s. valid_asid_table (arm_asid_table (arch_state s)) s)
@@ -624,7 +624,7 @@ lemma finalise_cap_not_reachable_pg_cap:
       apply (clarsimp simp:reachable_pg_cap_def is_cap_simps|wp|intro conjI)+
     apply (wp arch_finalise_case_no_lookup)
     apply (clarsimp dest!: caps_of_state_valid_cap
-                    simp: cte_wp_at_caps_of_state valid_vspace_objs_def')
+                    simp: cte_wp_at_caps_of_state)
    apply (clarsimp simp:reachable_pg_cap_def is_cap_simps|wp|intro conjI)+
   done
 

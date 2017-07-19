@@ -1461,12 +1461,11 @@ lemma decode_mmu_invocation_valid_pdpt[wp]:
              | simp only: obj_at_def)+)
          apply (rule_tac Q'="\<lambda>rv. \<exists>\<rhd> rv and K (is_aligned rv pd_bits) and
                   (\<exists>\<rhd> (lookup_pd_slot rv (args ! 0) && ~~ mask pd_bits)) and
-                     valid_arch_objs and pspace_aligned and valid_pdpt_objs"
+                     valid_vspace_objs and pspace_aligned and valid_pdpt_objs"
                      and f="find_pd_for_asid p" for p
                     in hoare_post_imp_R)
           apply (wp| simp)+
-          apply (fastforce  simp:pd_bits_def pageBits_def pde_bits_def
-                            intro: valid_arch_imp_valid_vspace_objs)
+          apply (fastforce  simp:pd_bits_def pageBits_def pde_bits_def)
         apply ((wp get_pde_wp
              ensure_safe_mapping_ensures[THEN hoare_post_imp_R]
              create_mapping_entries_safe check_vp_wpR
@@ -1482,12 +1481,12 @@ lemma decode_mmu_invocation_valid_pdpt[wp]:
              | simp only: obj_at_def)+)
          apply (rule_tac Q'="\<lambda>rv. \<exists>\<rhd> rv and K (is_aligned rv pd_bits) and
                   (\<exists>\<rhd> (lookup_pd_slot rv (snd pa) && ~~ mask pd_bits)) and
-                     valid_arch_objs and pspace_aligned and valid_pdpt_objs and
+                     valid_vspace_objs and pspace_aligned and valid_pdpt_objs and
                      K ((snd pa) < kernel_base)"
                      and f="find_pd_for_asid p" for p
                     in hoare_post_imp_R)
           apply (wp| simp)+
-         apply (auto simp:pd_bits_def pageBits_def intro: valid_arch_imp_valid_vspace_objs)[1]
+         apply (auto simp:pd_bits_def pageBits_def)[1]
         apply ((wp get_pde_wp
              ensure_safe_mapping_ensures[THEN hoare_post_imp_R]
              create_mapping_entries_safe check_vp_wpR
@@ -1512,7 +1511,7 @@ lemma decode_mmu_invocation_valid_pdpt[wp]:
                      del: hoare_True_E_R
                      split del: if_split
              | simp only: obj_at_def)+)
-  apply (auto simp:valid_cap_simps intro: valid_arch_objs_lift)
+  apply (auto simp:valid_cap_simps)
 done
 qed
 

@@ -259,7 +259,7 @@ lemma invs_irq_state_independent[intro!, simp, CNodeInv_AI_assms]:
       only_idle_def if_unsafe_then_cap_def valid_reply_caps_def
       valid_reply_masters_def valid_global_refs_def valid_arch_state_def
       valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
-      valid_arch_objs_def valid_arch_caps_def
+      valid_arch_caps_def
       valid_kernel_mappings_def equal_kernel_mappings_def
       valid_asid_map_def
       pspace_in_kernel_window_def cap_refs_in_kernel_window_def

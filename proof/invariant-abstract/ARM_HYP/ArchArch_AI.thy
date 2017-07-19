@@ -347,12 +347,6 @@ lemma vs_lookup_pages':
   apply (clarsimp simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def)
   done
 
-
-lemma arch_obj [simp]:
-  "valid_arch_obj ao s' = valid_arch_obj ao s"
-  by (cases ao, simp_all add: s'_def)
-
-
 lemma obj_at [simp]:
   "obj_at P p s' = obj_at P p s"
   by (simp add: s'_def)
@@ -370,14 +364,6 @@ lemma vspace_objs':
          fastforce simp: obj_at_def s'_def
                    intro: vs_lookup_neq)
   done
-
-lemma arch_objs':
-  "valid_arch_objs s \<Longrightarrow> valid_arch_objs s'"
-  by (fastforce simp: valid_arch_objs_def
-                      valid_vcpu_def
-                      vspace_objs'
-                      vs_lookup'
-                split: option.split)
 
 lemma caps_of_state_s':
   "caps_of_state s' = caps_of_state s"
@@ -590,20 +576,6 @@ lemma valid_asid_map_asid_upd_strg:
     apply assumption+
   apply (erule (1) asid_update.valid_asid_map')
   done
-
-lemma valid_arch_objs_asid_upd_strg:
-  "valid_arch_objs s \<and>
-   ko_at (ArchObj (ASIDPool empty)) ap s \<and>
-   arm_asid_table (arch_state s) asid = None \<longrightarrow>
-   valid_arch_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
-  apply clarsimp
-  apply (subgoal_tac "asid_update ap asid s")
-   prefer 2
-   apply unfold_locales[1]
-    apply assumption+
-  apply (erule (1) asid_update.arch_objs')
-  done
-
 
 lemma valid_vspace_objs_asid_upd_strg:
   "valid_vspace_objs s \<and>

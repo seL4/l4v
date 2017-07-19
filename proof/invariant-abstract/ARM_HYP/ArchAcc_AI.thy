@@ -711,8 +711,7 @@ lemma create_mapping_entries_valid [wp]:
   apply (cases sz)
      apply (rule hoare_pre)
       apply (wpsimp simp: valid_mapping_entries_def largePagePTE_offsets_def vspace_bits_defs
-              superSectionPDE_offsets_def
-              valid_arch_imp_valid_vspace_objs add.commute)+
+              superSectionPDE_offsets_def add.commute)+
    apply (erule (1) page_directory_pde_at_lookupI)
    apply (wpsimp simp: valid_mapping_entries_def superSectionPDE_offsets_def vspace_bits_defs
                        lookup_pd_slot_def)
@@ -1025,13 +1024,13 @@ crunch interrupt_states[wp]: set_pd "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
 lemma set_pd_vspace_objs_unmap:
-  "\<lbrace>valid_vspace_objs and (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj (PageDirectory pd') s) and
+  "\<lbrace>valid_vspace_objs and (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_vspace_obj (PageDirectory pd') s) and
     obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd')) \<subseteq> vs_refs ko) p\<rbrace>
   set_pd p pd' \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   apply (simp add: set_pd_def)
   apply (wp set_object_vspace_objs get_object_wp)
   including unfold_objects
-  by (fastforce simp: a_type_def valid_arch_obj_def)
+  by (fastforce simp: a_type_def valid_vspace_obj_def)
 
 declare graph_of_None_update[simp]
 declare graph_of_Some_update[simp]
@@ -2695,7 +2694,7 @@ lemma store_pde_arch_objs_unmap: (* ARMHYP *)
     and K (pde_ref pde = None)\<rbrace>
   store_pde p pde \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   apply (simp add: store_pde_def)
-  apply (wpsimp wp: set_pd_vspace_objs_unmap simp: valid_arch_obj_def)
+  apply (wpsimp wp: set_pd_vspace_objs_unmap)
   apply (rule conjI)
    apply clarsimp
    apply (drule (1) valid_vspace_objsD, fastforce)
@@ -3074,8 +3073,8 @@ lemma vs_refs_pages_subset: "vs_refs ko \<subseteq> vs_refs_pages ko"
 
 lemma vs_refs_pages_subset2:
   "\<lbrakk>vs_refs_pages ko \<subseteq> vs_refs_pages ko';
-    (\<forall>ao. (ko = ArchObj ao) \<longrightarrow> valid_arch_obj ao s);
-    (\<forall>ao'. (ko' = ArchObj ao') \<longrightarrow> valid_arch_obj ao' s)\<rbrakk>
+    (\<forall>ao. (ko = ArchObj ao) \<longrightarrow> valid_vspace_obj ao s);
+    (\<forall>ao'. (ko' = ArchObj ao') \<longrightarrow> valid_vspace_obj ao' s)\<rbrakk>
    \<Longrightarrow> vs_refs ko \<subseteq> vs_refs ko'"
   apply clarsimp
   apply (drule (1) subsetD[OF _ subsetD[OF vs_refs_pages_subset]])
@@ -3096,7 +3095,7 @@ lemma vs_refs_pages_subset2:
                A="{(x, y). (pde_ref (fun x)) = Some y}"
                and f="(\<lambda>(r, y). (VSRef (ucast r) (Some APageDirectory), y))" and x="(a,b)"])
          apply simp
-        apply (clarsimp simp: pde_ref_def pde_ref_pages_def valid_arch_obj_def
+        apply (clarsimp simp: pde_ref_def pde_ref_pages_def
           split: pde.splits)
          apply (drule_tac x=a in spec)+
          apply (simp add: valid_pde_def)
@@ -3132,7 +3131,7 @@ lemma set_pd_global_mappings[wp]:
 
 lemma set_pd_invs_unmap: (* ARMHYP *)
   "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pde (pd i)) and
-    (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj (PageDirectory pd) s) and
+    (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_vspace_obj (PageDirectory pd) s) and
     obj_at (\<lambda>ko. vs_refs_pages (ArchObj (PageDirectory pd)) \<subseteq> vs_refs_pages ko) p and
     obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd)) \<subseteq> vs_refs ko) p and
 (*    obj_at (\<lambda>ko. \<exists>pd'. ko = ArchObj (PageDirectory pd')
@@ -3169,7 +3168,7 @@ lemma store_pde_invs_unmap:
    apply (drule invs_valid_objs)
    apply (fastforce simp: valid_objs_def dom_def obj_at_def valid_obj_def)
   apply (rule conjI)
-   apply (clarsimp simp: valid_arch_obj_def)
+   apply (clarsimp)
    apply (drule (1) valid_vspace_objsD, fastforce)
    apply simp
   apply (rule conjI)

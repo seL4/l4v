@@ -816,7 +816,7 @@ lemma invariants:
   shows "(invs and untyped_children_in_mdb)
          (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
 using detype_invs_lemmas detype_invs_assms ct_act
-by (simp add: invs_def valid_state_def valid_pspace_def valid_arch_imp_valid_vspace_objs
+by (simp add: invs_def valid_state_def valid_pspace_def
                  detype_clear_um_independent clear_um.state_refs_update clear_um.state_hyp_refs_update)
 
 end

@@ -2354,10 +2354,10 @@ lemma valid_arch_arm_asid_table_unmap:
 crunch valid_arch_state[wp]: load_hw_asid "valid_arch_state"
 
 lemma valid_arch_objs_arm_asid_table_unmap:
-  "valid_arch_objs s
+  "valid_vspace_objs s
        \<and> tab = arm_asid_table (arch_state s)
-     \<longrightarrow> valid_arch_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := tab(asid_high_bits_of base := None)\<rparr>\<rparr>)"
-  apply (clarsimp simp: valid_state_def valid_arch_objs_unmap_strg)
+     \<longrightarrow> valid_vspace_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := tab(asid_high_bits_of base := None)\<rparr>\<rparr>)"
+  apply (clarsimp simp: valid_state_def valid_vspace_objs_unmap_strg)
   done
 
 lemma valid_vspace_objs_arm_asid_table_unmap:
@@ -2367,16 +2367,13 @@ lemma valid_vspace_objs_arm_asid_table_unmap:
   apply (clarsimp simp: valid_state_def valid_vspace_objs_unmap_strg)
   done
 
-crunch valid_arch_objs[wp]: set_vm_root "valid_arch_objs"
-crunch valid_arch_objs[wp]: invalidate_asid_entry "valid_arch_objs"
-crunch valid_arch_objs[wp]: flush_space "valid_arch_objs"
+crunch valid_vspace_objs[wp]: set_vm_root "valid_vspace_objs"
+crunch valid_vspace_objs[wp]: invalidate_asid_entry "valid_vspace_objs"
+crunch valid_vspace_objs[wp]: flush_space "valid_vspace_objs"
 
 lemma invalidate_hw_asid_vspace_objs [wp]:
   "\<lbrace>valid_vspace_objs\<rbrace> invalidate_hw_asid_entry asid \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
-  apply (wpsimp simp: invalidate_hw_asid_entry_def valid_vspace_objs_arch_update)+
-  apply assumption
-  apply wpsimp+
-  done
+  by (wpsimp simp: invalidate_hw_asid_entry_def valid_vspace_objs_arch_update)+
 
 crunch vspace_objs[wp]: invalidate_asid valid_vspace_objs
   (simp: valid_vspace_objs_arch_update)
@@ -2399,12 +2396,12 @@ crunch valid_vspace_objs[wp]: invalidate_asid_entry "valid_vspace_objs"
 crunch valid_vspace_objs[wp]: flush_space "valid_vspace_objs"
 
 lemma delete_asid_pool_valid_arch_obsj[wp]:
-  "\<lbrace>valid_arch_objs\<rbrace>
+  "\<lbrace>valid_vspace_objs\<rbrace>
     delete_asid_pool base pptr
-  \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
+  \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   unfolding delete_asid_pool_def
   apply (wp modify_wp)
-      apply (strengthen valid_arch_objs_arm_asid_table_unmap)
+      apply (strengthen valid_vspace_objs_arm_asid_table_unmap)
       apply (wpsimp wp: mapM_wp')+
   done
 
@@ -2432,10 +2429,10 @@ crunch valid_vspace_objs[wp]: empty_slot "valid_arch_objs"
   (wp: crunch_wps simp: crunch_simps ignore: )
 *)
 lemma set_asid_pool_arch_objs_unmap'':
- "\<lbrace>(valid_arch_objs and ko_at (ArchObj (ASIDPool ap)) p) and K(f = (ap |` S))\<rbrace> set_asid_pool p f \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
+ "\<lbrace>(valid_vspace_objs and ko_at (ArchObj (ASIDPool ap)) p) and K(f = (ap |` S))\<rbrace> set_asid_pool p f \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   apply (rule hoare_gen_asm)
   apply simp
-  apply (rule set_asid_pool_arch_objs_unmap)
+  apply (rule set_asid_pool_vspace_objs_unmap)
   done
 
 lemma set_asid_pool_vspace_objs_unmap'':
@@ -2448,7 +2445,7 @@ lemma set_asid_pool_vspace_objs_unmap'':
 lemma restrict_eq_asn_none: "f(N := None) = f |` {s. s \<noteq> N}" by auto
 
 lemma delete_asid_valid_arch_objs[wp]:
-  "\<lbrace>valid_arch_objs and pspace_aligned\<rbrace> delete_asid a b \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
+  "\<lbrace>valid_vspace_objs and pspace_aligned\<rbrace> delete_asid a b \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   unfolding delete_asid_def
   apply (wpsimp wp: set_asid_pool_arch_objs_unmap'')
   apply (fastforce simp: restrict_eq_asn_none)

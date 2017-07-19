@@ -73,7 +73,7 @@ lemma some_get_page_info_umapsD:
     apply (case_tac ao, simp_all add: a_type_simps obj_at_def)[1]
      apply (simp add: get_pt_info_def get_pt_entry_def)
      apply (drule_tac x="(ucast ((p >> 12) && mask 9))" in spec)
-     apply (clarsimp simp: obj_at_def valid_arch_obj_def
+     apply (clarsimp simp: obj_at_def
       split: pte.splits,intro exI conjI,simp_all)[1]
       apply (frule obj_bits_data_at)
       apply (clarsimp simp: pspace_aligned_def data_at_def)

@@ -461,7 +461,7 @@ proof -
     by (case_tac pte, auto simp add: typ_at data_at_def)
   have valid_ao_at: "\<And>p. valid_ao_at p s \<Longrightarrow> valid_ao_at p ?s'"
     using pd uc
-    apply (clarsimp simp: valid_ao_at_def obj_at_def valid_arch_obj_def)
+    apply (clarsimp simp: valid_ao_at_def obj_at_def)
     apply (intro conjI impI allI)
       apply (clarsimp simp: valid_pde vp)
     apply (case_tac ao, simp_all add: typ_at valid_pde valid_pte)

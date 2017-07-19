@@ -49,8 +49,6 @@ declare valid_arch_state_def[@def_to_elim, conjuncts]
 
 lemmas valid_arch_state_elims[rule_format, elim!] = conjuncts
 
-declare valid_arch_obj_def[simp]
-
 lemmas valid_vspace_obj_elims[rule_format, elim!] =
   valid_vspace_obj.simps[@simp_to_elim, @ \<open>(drule bspec)?\<close>]
 
@@ -1513,7 +1511,7 @@ lemma find_pd_for_asid_corres [@lift_corres_args, corres]:
        apply (insert prems)
        apply (elim conjE disjE)
        apply (fastforce dest: valid_asid_tableD)
-       apply (clarsimp simp: vspace_at_asid_def valid_arch_objs_def)
+       apply (clarsimp simp: vspace_at_asid_def)
        apply (clarsimp simp: vs_asid_refs_def graph_of_def elim!: vs_lookupE)
         apply (erule rtranclE)
         subgoal by simp

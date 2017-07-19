@@ -37,11 +37,6 @@ lemma valid_vspace_is_vspace_lift:
       apply (rule hoare_vcg_conj_lift hoare_vcg_disj_lift | wp P | simp )+
   done
 
-lemma valid_arch_objs_lift: "valid_pspace s \<Longrightarrow> valid_vspace_objs s \<Longrightarrow> valid_arch_objs s"
-  apply (clarsimp simp add: valid_pspace_def valid_objs_def valid_arch_objs_def obj_at_def)
-  apply (erule_tac x=p in ballE; clarsimp simp add: valid_obj_def)
-  done
-
 lemma obj_at_split: "(obj_at (P xo) p s \<and> (Q xo)) = obj_at (\<lambda>ko. P xo ko \<and> Q xo) p s"
   by (auto simp: obj_at_def)
 
@@ -374,7 +369,7 @@ lemma set_object_atyp_at:
 lemma hoare_post_imp_conj_disj: "(\<lbrace> \<lambda>s. R \<rbrace> f \<lbrace> \<lambda>_ s. P \<longrightarrow> Q \<rbrace>) = (\<lbrace> \<lambda>s. R \<rbrace> f \<lbrace> \<lambda>_ s. \<not> P \<or> Q \<rbrace>)"
  by (subst imp_conv_disj, auto)
 
-lemma set_object_vspace_objs:
+lemma set_object_vspace_objs:  (* used in set_pd_arch_objs_unmap in ArchAcc_AI *) (* ARMHYP *)
   "\<lbrace>valid_vspace_objs and typ_at (a_type ko) p and
     obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p  and
     (\<lambda>s. case ko of ArchObj ao \<Rightarrow> (\<exists>\<rhd>p)s \<longrightarrow> valid_vspace_obj ao s
@@ -731,23 +726,6 @@ lemma state_hyp_refs_of_tcb_state_update:
   apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
-lemma valid_arch_obj_same_type:
-  "\<lbrakk>valid_arch_obj ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
-  \<Longrightarrow> valid_arch_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)"
-  apply (induction ao rule: arch_kernel_obj.induct;
-         clarsimp simp: valid_arch_obj_def typ_at_same_type)
-    apply (rule hoare_to_pure_kheap_upd; assumption?)
-      apply (rule valid_pte_lift, assumption)
-     apply blast
-    apply (simp add: obj_at_def)
-   apply (rule hoare_to_pure_kheap_upd; assumption?)
-     apply (rule valid_pde_lift, assumption)
-    apply blast
-   apply (simp add: obj_at_def)
-  apply (simp add: valid_vcpu_def split: option.splits)
-  apply (drule typ_at_same_type[rotated]; assumption)
-done
-
 lemma valid_vcpu_lift:
   assumes x: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   assumes t: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
@@ -773,7 +751,7 @@ lemma wellformed_arch_obj_same_type:
   "\<lbrakk> wellformed_arch_obj ao s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
    \<Longrightarrow> wellformed_arch_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
   by (induction ao rule: arch_kernel_obj.induct;
-         clarsimp simp: valid_arch_obj_def typ_at_same_type valid_vcpu_same_type)
+         clarsimp simp: typ_at_same_type valid_vcpu_same_type)
 
 
 lemma default_arch_object_not_live: "\<not> live (ArchObj (default_arch_object aty dev us))"

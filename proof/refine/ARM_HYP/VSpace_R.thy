@@ -96,7 +96,7 @@ lemma find_pd_for_asid_eq_helper:
          asid \<noteq> 0; pspace_aligned s \<rbrakk>
     \<Longrightarrow> find_pd_for_asid asid s = returnOk pd s
              \<and> page_directory_at pd s \<and> is_aligned pd pdBits"
-  apply (clarsimp simp: vspace_at_asid_def valid_vspace_objs_def valid_arch_objs_def)
+  apply (clarsimp simp: vspace_at_asid_def valid_vspace_objs_def)
   apply (frule spec, drule mp, erule exI)
   apply (clarsimp simp: vs_asid_refs_def graph_of_def
                  elim!: vs_lookupE)

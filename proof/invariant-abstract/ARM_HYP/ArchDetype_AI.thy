@@ -316,9 +316,6 @@ lemma vs_lookup_pages_preserved:
 
 (* FIXME: This is really horrible but I can't get the automated methods
           to "get it". *)
-(* lemma valid_arch_obj:
-  "\<And>ao p. \<lbrakk> valid_arch_obj ao s; ko_at (ArchObj ao) p s; (\<exists>\<rhd>p) s \<rbrakk> \<Longrightarrow>
-       valid_arch_obj ao (detype (untyped_range cap) s)" *)
 lemma valid_vspace_obj:
   "\<And>ao p. \<lbrakk> valid_vspace_obj ao s; ko_at (ArchObj ao) p s; (\<exists>\<rhd>p) s \<rbrakk> \<Longrightarrow>
        valid_vspace_obj ao (detype (untyped_range cap) s)"

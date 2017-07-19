@@ -1574,8 +1574,8 @@ lemma valid_machine_state_s0[simp]:
   done
 
 lemma valid_arch_objs_s0[simp]:
-  "valid_arch_objs s0_internal"
-  apply (clarsimp simp: valid_arch_objs_def obj_at_def s0_internal_def)
+  "valid_vspace_objs s0_internal"
+  apply (clarsimp simp: valid_vspace_objs_def obj_at_def s0_internal_def)
   apply (drule kh0_SomeD)
   apply (erule disjE | clarsimp simp:  pageBits_def addrFromPPtr_def
       physMappingOffset_def kernelBase_addr_def physBase_def is_aligned_def

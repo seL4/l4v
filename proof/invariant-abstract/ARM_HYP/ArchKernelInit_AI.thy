@@ -331,7 +331,7 @@ lemma invs_A:
    apply (clarsimp simp: valid_machine_state_def init_A_st_def
                          init_machine_state_def init_underlying_memory_def)
   apply (rule conjI)
-   apply (clarsimp simp: valid_arch_objs_def obj_at_def state_defs valid_vspace_objs_def)
+   apply (clarsimp simp: obj_at_def state_defs valid_vspace_objs_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_arch_caps_def)
    apply (rule conjI)

@@ -1495,7 +1495,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
                      and f="find_pd_for_asid p" for p
                     in hoare_post_imp_R)
           apply (wp| simp)+
-         apply (fastforce simp:pd_bits_def pageBits_def intro: valid_arch_imp_valid_vspace_objs)
+         apply (fastforce simp:pd_bits_def pageBits_def)
         apply ((wp get_pde_wp
              ensure_safe_mapping_ensures[THEN hoare_post_imp_R]
              create_mapping_entries_safe check_vp_wpR
@@ -1516,7 +1516,7 @@ lemma arch_decode_invocation_valid_pdpt[wp]:
                      and f="find_pd_for_asid p" for p
                     in hoare_post_imp_R)
           apply (wp| simp)+
-         apply (auto simp:pd_bits_def pageBits_def intro: valid_arch_imp_valid_vspace_objs)[1]
+         apply (auto simp:pd_bits_def pageBits_def)[1]
         apply ((wp get_pde_wp
              ensure_safe_mapping_ensures[THEN hoare_post_imp_R]
              create_mapping_entries_safe check_vp_wpR

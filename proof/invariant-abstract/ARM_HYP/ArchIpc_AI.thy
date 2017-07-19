@@ -391,15 +391,6 @@ lemma transfer_caps_non_null_cte_wp_at:
 
 crunch cte_wp_at[wp,Ipc_AI_assms]: do_fault_transfer "cte_wp_at P p"
 
-lemma set_cap_valid_arch_objs [wp, Ipc_AI_assms]:
-  "\<lbrace>valid_arch_objs\<rbrace> set_cap a b \<lbrace>\<lambda>_. valid_arch_objs \<rbrace>"
-  apply (rule valid_arch_objs_typ_at_lift)
-  apply (wp set_cap_typ_at)+
-  apply (rule set_cap.aobj_at)
-  apply (fastforce simp: arch_obj_pred_def non_arch_obj_def
-                   split: kernel_object.split arch_kernel_obj.splits)
-  done
-
 lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows  "\<lbrace>valid_objs and cte_wp_at (P and (op \<noteq> cap.NullCap)) ptr\<rbrace>

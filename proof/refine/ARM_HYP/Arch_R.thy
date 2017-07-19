@@ -930,8 +930,6 @@ lemma dec_arch_inv_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp] [[goals_limit = 1]]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)
-notes valid_arch_imp_valid_vspace_objs[simp add]
-notes valid_arch_objs_lift[simp add]
 shows
   "\<lbrakk> acap_relation arch_cap arch_cap';
      list_all2 cap_relation (map fst excaps) (map fst excaps');
@@ -1113,7 +1111,7 @@ shows
        apply (rule corres_splitEE)
           prefer 2
           apply (rule corres_lookup_error)
-          apply (rule_tac P="valid_arch_state and valid_arch_objs and
+          apply (rule_tac P="valid_arch_state and valid_vspace_objs and
                              pspace_aligned and equal_kernel_mappings and
                              valid_cap (cap.ArchObjectCap
                                          (arch_cap.PageDirectoryCap wd (Some optv)))"
@@ -1123,7 +1121,7 @@ shows
            apply (simp add: mask_def)
           apply assumption
          apply (rule whenE_throwError_corres, simp, simp)
-         apply (rule_tac R="\<lambda>_ s. valid_arch_objs s \<and> pspace_aligned s
+         apply (rule_tac R="\<lambda>_ s. valid_vspace_objs s \<and> pspace_aligned s
                                   \<and> hd args + 2 ^ pageBitsForSize vmpage_size - 1 < kernel_base \<and>
                                   valid_arch_state s \<and> equal_kernel_mappings s \<and>
                                   s \<turnstile> (fst (hd excaps)) \<and> (\<exists>\<rhd> (lookup_pd_slot (obj_ref_of (fst (hd excaps))) (hd args) && ~~ mask pd_bits)) s \<and>
@@ -1218,7 +1216,7 @@ shows
                  apply (rule corres_returnOk)
                  apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
                 apply wp+
-            apply (subgoal_tac "valid_arch_objs s \<and> pspace_aligned s \<and>
+            apply (subgoal_tac "valid_vspace_objs s \<and> pspace_aligned s \<and>
                                 (snd v')  < kernel_base \<and>
                                 equal_kernel_mappings s \<and> valid_arch_state s \<and>
                                 (\<exists>\<rhd> (lookup_pd_slot (fst pa) (snd v') && ~~ mask pd_bits)) s \<and>

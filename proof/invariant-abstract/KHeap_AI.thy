@@ -1748,14 +1748,6 @@ lemma dom_objs [wp]:
   done
 
 
-lemma do_machine_op_arch_objs [wp]:
-  "\<lbrace>valid_arch_objs\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply simp
-  done
-
-
 lemma tcb_cap_wp_at:
   "\<lbrakk>tcb_at t s; valid_objs s; ref \<in> dom tcb_cap_cases;
     \<forall>cap st getF setF restr.

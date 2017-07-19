@@ -36,12 +36,10 @@ requalify_consts
   wellformed_vspace_obj
   wellformed_arch_obj
   valid_asid_map
-  valid_arch_obj
   valid_vspace_obj
   valid_arch_tcb
 
   valid_arch_state
-  valid_arch_objs
   valid_vspace_objs
   valid_arch_caps
   valid_global_objs
@@ -71,11 +69,7 @@ requalify_facts
   idle_global
   valid_ipc_buffer_cap_null
   valid_arch_cap_typ
-  valid_arch_obj_typ
   valid_vspace_obj_typ
-  valid_arch_obj_typ_gen
-  valid_arch_imp_valid_vspace_obj
-  valid_arch_imp_valid_vspace_objs
   arch_kobj_size_bounded
   global_refs_lift
   valid_arch_state_lift
@@ -84,7 +78,6 @@ requalify_facts
   acap_rights_update_id
   physical_arch_cap_has_ref
   wellformed_arch_default
-  valid_arch_obj_default'
   valid_vspace_obj_default'
   vs_lookup1_stateI2
   vs_lookup_pages1_stateI2
@@ -905,7 +898,6 @@ where
                   and valid_irq_handlers
                   and valid_irq_states
                   and valid_machine_state
-(*                  and valid_arch_objs *)
                   and valid_vspace_objs
                   and valid_arch_caps
                   and valid_global_objs
@@ -989,7 +981,7 @@ abbreviation(input)
        and valid_mdb and valid_idle and only_idle and if_unsafe_then_cap
        and valid_reply_caps and valid_reply_masters and valid_global_refs
        and valid_arch_state and valid_machine_state and valid_irq_states
-       and valid_irq_node and valid_irq_handlers and valid_vspace_objs (* and valid_arch_objs *)
+       and valid_irq_node and valid_irq_handlers and valid_vspace_objs
        and valid_arch_caps and valid_global_objs and valid_kernel_mappings
        and equal_kernel_mappings and valid_asid_map
        and valid_global_vspace_mappings
@@ -1610,7 +1602,6 @@ end
 context begin interpretation Arch .
 requalify_facts
   valid_arch_cap_pspaceI
-  valid_arch_obj_pspaceI
 end
 
 lemma valid_cap_pspaceI:
@@ -1629,7 +1620,7 @@ lemma valid_obj_pspaceI:
       apply (auto simp add: valid_ntfn_def valid_cs_def valid_tcb_def valid_ep_def
                             valid_tcb_state_def pred_tcb_at_def valid_bound_ntfn_def
                             valid_bound_tcb_def wellformed_arch_pspace
-                 intro: obj_at_pspaceI valid_cap_pspaceI valid_arch_obj_pspaceI valid_arch_tcb_pspaceI
+                 intro: obj_at_pspaceI valid_cap_pspaceI valid_arch_tcb_pspaceI
                  split: ntfn.splits endpoint.splits
                         thread_state.splits option.split
           | auto split: kernel_object.split)+
@@ -2249,7 +2240,7 @@ lemma valid_obj_typ:
   shows      "\<lbrace>\<lambda>s. valid_obj p ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj p ob s\<rbrace>"
   apply (case_tac ob, simp_all add: valid_obj_def P P [where P=id, simplified]
          wellformed_arch_typ
-         valid_cs_typ valid_tcb_typ valid_ep_typ valid_ntfn_typ valid_arch_obj_typ_gen)
+         valid_cs_typ valid_tcb_typ valid_ep_typ valid_ntfn_typ)
   done
 
 lemma valid_irq_node_typ:
@@ -2537,10 +2528,6 @@ context p_arch_update_eq begin
 
 interpretation Arch_p_arch_update_eq f ..
 
-lemma valid_arch_objs_update [iff]:
-  "valid_arch_objs (f s) = valid_arch_objs s"
-  by (simp add: valid_arch_objs_def valid_vspace_objs_def)
-
 lemma valid_vspace_objs_update [iff]:
   "valid_vspace_objs (f s) = valid_vspace_objs s"
   by (simp add: valid_vspace_objs_def)
@@ -2825,7 +2812,7 @@ lemmas abs_typ_at_lifts  =
   ep_at_typ_at ntfn_at_typ_at tcb_at_typ_at
   cap_table_at_typ_at
   valid_tcb_state_typ valid_cte_at_typ valid_ntfn_typ
-  valid_ep_typ valid_cs_typ valid_arch_obj_typ valid_untyped_typ
+  valid_ep_typ valid_cs_typ valid_untyped_typ
   valid_tcb_typ valid_obj_typ valid_cap_typ valid_vspace_obj_typ
 
 lemma valid_idle_lift:

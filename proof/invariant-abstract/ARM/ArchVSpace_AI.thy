@@ -112,7 +112,7 @@ lemma table_cap_ref_ap_eq:
 lemma pd_at_asid_unique:
   "\<lbrakk> vspace_at_asid asid pd s; vspace_at_asid asid' pd s;
      unique_table_refs (caps_of_state s);
-     valid_vs_lookup s; valid_arch_objs s; valid_global_objs s;
+     valid_vs_lookup s; valid_vspace_objs s; valid_global_objs s;
      valid_arch_state s; asid < 2 ^ asid_bits; asid' < 2 ^ asid_bits \<rbrakk>
        \<Longrightarrow> asid = asid'"
   apply (clarsimp simp: vspace_at_asid_def)
@@ -143,7 +143,7 @@ lemma pd_at_asid_unique2:
 lemma pd_at_asid_uniq:
   "\<lbrakk> vspace_at_asid asid pd s; asid \<le> mask asid_bits; valid_asid_map s;
       unique_table_refs (caps_of_state s); valid_vs_lookup s;
-      valid_arch_objs s; valid_global_objs s; valid_arch_state s \<rbrakk>
+      valid_vspace_objs s; valid_global_objs s; valid_arch_state s \<rbrakk>
        \<Longrightarrow> pd_at_uniq asid pd s"
   apply (clarsimp simp: pd_at_uniq_def ran_option_map
                  dest!: ran_restrictD)
@@ -186,13 +186,13 @@ lemma valid_vs_lookupE:
   by (simp add: valid_vs_lookup_def, blast)
 
 
-lemma find_free_hw_asid_arch_objs [wp]:
-  "\<lbrace>valid_arch_objs\<rbrace> find_free_hw_asid \<lbrace>\<lambda>asid. valid_arch_objs\<rbrace>"
+lemma find_free_hw_asid_vspace_objs [wp]:
+  "\<lbrace>valid_vspace_objs\<rbrace> find_free_hw_asid \<lbrace>\<lambda>asid. valid_vspace_objs\<rbrace>"
   apply (simp add: find_free_hw_asid_def invalidate_hw_asid_entry_def invalidate_asid_def
                    do_machine_op_def split_def
               cong: option.case_cong)
   apply (wp|wpc)+
-  apply (simp add: valid_arch_objs_arch_update)
+  apply (simp add: valid_vspace_objs_arch_update)
   done
 
 lemma find_free_hw_asid_pd_at_asid [wp]:
@@ -383,11 +383,11 @@ crunch valid_arch [wp]: flush_space valid_arch_state
 crunch valid_objs [wp]: flush_space valid_objs
 
 
-lemma invalidate_hw_asid_arch_objs [wp]:
-  "\<lbrace>valid_arch_objs\<rbrace> invalidate_hw_asid_entry asid \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
+lemma invalidate_hw_asid_vspace_objs [wp]:
+  "\<lbrace>valid_vspace_objs\<rbrace> invalidate_hw_asid_entry asid \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   apply (simp add: invalidate_hw_asid_entry_def)
   apply wp
-  apply (simp add: valid_arch_objs_arch_update)
+  apply (simp add: valid_vspace_objs_arch_update)
   done
 
 
@@ -432,9 +432,9 @@ lemma flush_space_asid_map[wp]:
 
 
 lemma flush_space_arch_objs[wp]:
-  "\<lbrace>valid_arch_objs\<rbrace> flush_space space \<lbrace>\<lambda>rv. valid_arch_objs\<rbrace>"
+  "\<lbrace>valid_vspace_objs\<rbrace> flush_space space \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
   apply (simp add: flush_space_def)
-  apply (wp load_hw_asid_wp | wpc | simp | rule_tac Q="\<lambda>_. valid_arch_objs" in hoare_strengthen_post)+
+  apply (wp load_hw_asid_wp | wpc | simp | rule_tac Q="\<lambda>_. valid_vspace_objs" in hoare_strengthen_post)+
   done
 
 
@@ -491,8 +491,8 @@ lemma invalidate_asid_entry_invalidates:
   done
 
 
-crunch arch_objs [wp]: invalidate_asid_entry valid_arch_objs
-  (simp: valid_arch_objs_arch_update)
+crunch vspace_objs [wp]: invalidate_asid_entry valid_vspace_objs
+  (simp: valid_vspace_objs_arch_update)
 
 
 lemma flush_space_pd_at_asid [wp]:
@@ -670,14 +670,6 @@ lemma valid_arch_state_unmap_strg:
   apply (clarsimp simp: inj_on_def)
   done
 
-
-lemma valid_arch_objs_unmap_strg:
-  "valid_arch_objs s \<longrightarrow>
-   valid_arch_objs(s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (arm_asid_table (arch_state s))(ptr := None)\<rparr>\<rparr>)"
-  apply (clarsimp simp: valid_arch_objs_def)
-  apply (drule vs_lookup_clear_asid_table [rule_format])
-  apply blast
-  done
 
 lemma valid_vspace_objs_unmap_strg:
   "valid_vspace_objs s \<longrightarrow>
@@ -1045,9 +1037,8 @@ crunch valid_vs_lookup[wp]: set_vm_root_for_flush "valid_vs_lookup"
 crunch valid_global_objs[wp]: set_vm_root_for_flush "valid_global_objs"
   (simp: valid_global_objs_arch_update)
 
-
-crunch arch_objs [wp]: set_vm_root_for_flush valid_arch_objs
-  (simp: valid_arch_objs_arch_update)
+crunch vspace_objs [wp]: set_vm_root_for_flush valid_vspace_objs
+  (simp: valid_vspace_objs_arch_update)
 
 crunch typ_at [wp]: flush_table "\<lambda>s. P (typ_at T p s)"
   (simp: assertE_def whenE_def when_def wp: crunch_wps)
@@ -1373,8 +1364,8 @@ lemma lookup_pd_slot_pd:
   apply (simp add: pd_bits_def pageBits_def)
   done
 
-crunch arch_objs [wp]: flush_page valid_arch_objs
-  (simp: crunch_simps valid_arch_objs_arch_update)
+crunch vspace_objs [wp]: flush_page valid_vspace_objs
+  (simp: crunch_simps valid_vspace_objs_arch_update)
 
 crunch equal_mappings [wp]: flush_page equal_kernel_mappings
   (simp: crunch_simps)
@@ -1439,8 +1430,8 @@ lemma page_directory_at_aligned_pd_bits:
   apply (simp add:pd_bits_def pageBits_def)
   done
 
-crunch arch_objs [wp]: flush_page valid_arch_objs
-  (simp: crunch_simps valid_arch_objs_arch_update)
+crunch vspace_objs [wp]: flush_page valid_vspace_objs
+  (simp: crunch_simps valid_vspace_objs_arch_update)
 
 
 definition
@@ -1589,39 +1580,6 @@ definition
   and cte_wp_at (\<lambda>cap. is_pd_cap cap \<and> cap_asid cap = None) slot
   and K (0 < asid \<and> asid \<le> 2^asid_bits - 1)
   and ([VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> p)"
-
-(* FIXME Move to ArchInvariants *)
-lemma valid_vspace_objs_stateI:
-  assumes 1: "valid_vspace_objs s"
-  assumes ko: "\<And>ko p. ko_at ko p s' \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s"
-  assumes arch: "graph_of (arm_asid_table (arch_state s')) \<subseteq> graph_of (arm_asid_table (arch_state s))"
-  assumes vao: "\<And>p ref ao'.
-                \<lbrakk> (ref \<rhd> p) s; (ref \<rhd> p) s'; \<forall>ao. ko_at (ArchObj ao) p s \<longrightarrow> valid_vspace_obj ao s;
-                  ko_at (ArchObj ao') p s' \<rbrakk> \<Longrightarrow> valid_vspace_obj ao' s'"
-  shows "valid_vspace_objs s'"
-  using 1 unfolding valid_vspace_objs_def
-  apply clarsimp
-  apply (frule vs_lookup_stateI)
-    apply (erule ko)
-   apply (rule arch)
-  apply (erule allE, erule impE, fastforce)
-  apply (erule (3) vao)
-  done
-
-(* FIXME Move to ArchAcc_AI *)
-lemma valid_vspace_objs_arch_update:
-  "arm_asid_table (f (arch_state s)) = arm_asid_table (arch_state s) \<Longrightarrow>
-  valid_vspace_objs (arch_state_update f s) = valid_vspace_objs s"
-  apply (rule iffI)
-   apply (erule valid_vspace_objs_stateI)
-     apply (clarsimp simp: obj_at_def)
-    apply simp
-   apply simp
-  apply (erule valid_vspace_objs_stateI)
-    apply (clarsimp simp: obj_at_def)
-   apply simp
-  apply simp
-  done
 
 lemma store_hw_asid_invs:
   "\<lbrace>invs and
@@ -2893,11 +2851,11 @@ lemma simpler_store_pde_def:
                   split: Structures_A.kernel_object.splits option.splits arch_kernel_obj.splits if_split_asm)
   done
 
-lemma pde_update_valid_arch_objs:
-  "[|valid_arch_objs s; valid_pde pde s; pde_ref pde = None; kheap s (p && ~~ mask pd_bits) = Some (ArchObj (PageDirectory pd))|]
-   ==> valid_arch_objs
+lemma pde_update_valid_vspace_objs:
+  "[|valid_vspace_objs s; valid_pde pde s; pde_ref pde = None; kheap s (p && ~~ mask pd_bits) = Some (ArchObj (PageDirectory pd))|]
+   ==> valid_vspace_objs
          (s\<lparr>kheap := kheap s(p && ~~ mask pd_bits \<mapsto> ArchObj (PageDirectory (pd(ucast (p && mask pd_bits >> 2) := pde))))\<rparr>)"
-  apply (cut_tac pde=pde and p=p in store_pde_arch_objs_unmap)
+  apply (cut_tac pde=pde and p=p in store_pde_vspace_objs_unmap)
   apply (clarsimp simp: valid_def)
   apply (erule allE[where x=s])
   apply (clarsimp simp: split_def simpler_store_pde_def obj_at_def a_type_def
@@ -4569,7 +4527,7 @@ lemma unmap_page_unmapped:
        apply ((simp add: obj_at_def a_type_def)+)[3]
     apply (frule_tac p="rv" in valid_vspace_objsD)
       apply ((simp add: obj_at_def)+)[2]
-    apply (fastforce simp: valid_arch_obj_def data_at_def)
+    apply (fastforce simp: data_at_def)
    apply (fastforce simp: obj_at_def a_type_def pd_bits_def pageBits_def data_at_def
                    split: pde.splits)
    apply (fastforce simp: obj_at_def a_type_def data_at_def)

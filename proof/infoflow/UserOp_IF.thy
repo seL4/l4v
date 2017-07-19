@@ -374,13 +374,6 @@ lemma requiv_ptable_xn_eq:
    \<Longrightarrow> ptable_xn_s s x = ptable_xn_s s' x"
   by (simp add: ptable_xn_s_def requiv_ptable_attrs_eq)
 
-
-lemma valid_arch_objsD2:
-  "\<lbrakk>(\<exists>\<rhd> p) s; ko_at (ArchObj ao) p s;
-     valid_arch_objs s\<rbrakk>
-    \<Longrightarrow> valid_arch_obj ao s"
-  by (clarsimp simp: valid_arch_objsD)
-
 lemma mask_shift_le:
  "z \<le> y \<Longrightarrow> (x::'a:: len word) && ~~ mask z >> y = x >> y"
   proof -
@@ -584,7 +577,7 @@ lemma ptable_lift_data_consistant:
       apply (rule bang_big[simplified])
       apply (simp add: word_size)
      apply (frule(1) valid_pdpt_align_ptD[OF _ vpdpt])
-     apply (simp add: valid_arch_obj_def)
+     apply (simp add: )
      apply (drule_tac x = "(ucast ((x >> 12) && mask 8))" in spec)
       apply (frule data_at_same_size[where sz = sz and sz' = ARMLargePage,rotated,simplified],
         clarsimp+)
@@ -606,7 +599,7 @@ lemma ptable_lift_data_consistant:
      apply (rule bang_big[simplified])
      apply (simp add: word_size)
     apply (frule(1) valid_pdpt_align_ptD[OF _ vpdpt])
-    apply (simp add: valid_arch_obj_def)
+    apply (simp add: )
     apply (drule_tac x = "(ucast ((x >> 12) && mask 8))" in spec)
     apply (frule data_at_same_size[where sz = sz and sz' = ARMSmallPage,rotated,simplified],
         clarsimp+)
@@ -620,7 +613,7 @@ lemma ptable_lift_data_consistant:
     apply (rename_tac pd_base vmattr mw pd caprights)
     apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
     apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
-    apply (simp add: valid_arch_obj_def)
+    apply (simp add: )
     apply (drule bspec)
     apply (rule Compl_iff[THEN iffD2])
     apply (rule kernel_mappings_kernel_mapping_slots[OF misc(2)])
@@ -638,7 +631,7 @@ lemma ptable_lift_data_consistant:
   apply (rename_tac pd_base vmattr rights pd)
   apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
   apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
-  apply (simp add: valid_arch_obj_def)
+  apply (simp add: )
   apply (drule bspec)
   apply (rule Compl_iff[THEN iffD2])
   apply (rule kernel_mappings_kernel_mapping_slots[OF misc(2)])
@@ -695,7 +688,7 @@ lemma ptable_rights_data_consistant:
     apply (rename_tac pd_base vmattr mw pd pt)
     apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
     apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
-    apply (simp add: valid_arch_obj_def)
+    apply (simp add: )
     apply (drule bspec)
     apply (rule Compl_iff[THEN iffD2])
     apply (rule kernel_mappings_kernel_mapping_slots[OF misc(2)])
@@ -715,7 +708,7 @@ lemma ptable_rights_data_consistant:
       apply (rule bang_big[simplified])
       apply (simp add: word_size)
      apply (frule(1) valid_pdpt_align_ptD[OF _ vpdpt])
-     apply (simp add: valid_arch_obj_def)
+     apply (simp add: )
      apply (drule_tac x = "(ucast ((x >> 12) && mask 8))" in spec)
      apply (frule data_at_same_size[where sz = sz and sz' = ARMLargePage,rotated,simplified],
         clarsimp+)
@@ -736,7 +729,7 @@ lemma ptable_rights_data_consistant:
      apply (rule bang_big[simplified])
      apply (simp add: word_size)
     apply (frule(1) valid_pdpt_align_ptD[OF _ vpdpt])
-    apply (simp add: valid_arch_obj_def)
+    apply (simp add: )
     apply (drule_tac x = "(ucast ((x >> 12) && mask 8))" in spec)
     apply (frule data_at_same_size[where sz = sz and sz' = ARMSmallPage,rotated,simplified],
         clarsimp+)
@@ -750,7 +743,7 @@ lemma ptable_rights_data_consistant:
     apply (rename_tac pd_base vmattr mw pd caprights)
     apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
     apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
-    apply (simp add: valid_arch_obj_def)
+    apply (simp add: )
     apply (drule bspec)
     apply (rule Compl_iff[THEN iffD2])
     apply (rule kernel_mappings_kernel_mapping_slots[OF misc(2)])
@@ -765,7 +758,7 @@ lemma ptable_rights_data_consistant:
   apply (rename_tac pd_base vmattr rights pd)
   apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
   apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
-  apply (simp add: valid_arch_obj_def)
+  apply (simp add: )
   apply (drule bspec)
   apply (rule Compl_iff[THEN iffD2])
   apply (rule kernel_mappings_kernel_mapping_slots[OF misc(2)])

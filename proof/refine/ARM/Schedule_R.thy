@@ -218,7 +218,7 @@ declare objBitsT_koTypeOf [simp]
 
 lemma arch_switch_thread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
-              and valid_arch_objs and pspace_aligned and pspace_distinct
+              and valid_vspace_objs and pspace_aligned and pspace_distinct
               and valid_vs_lookup and valid_global_objs
               and unique_table_refs o caps_of_state
               and st_tcb_at runnable t)
@@ -955,7 +955,7 @@ crunch valid_queues[wp]: "Arch.switchToThread" "Invariants_H.valid_queues"
 
 lemma switch_thread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
-                and valid_arch_objs and pspace_aligned and pspace_distinct
+                and valid_vspace_objs and pspace_aligned and pspace_distinct
                 and valid_vs_lookup and valid_global_objs
                 and unique_table_refs o caps_of_state
                 and st_tcb_at runnable t and valid_etcbs)
@@ -1010,7 +1010,7 @@ lemma typ_at'_typ_at'_mask: "\<And>s. \<lbrakk> typ_at' t (P s) s \<rbrakk> \<Lo
 
 lemma arch_switch_idle_thread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map and unique_table_refs \<circ> caps_of_state and
-      valid_vs_lookup and valid_global_objs and pspace_aligned and pspace_distinct and valid_arch_objs and valid_idle)
+      valid_vs_lookup and valid_global_objs and pspace_aligned and pspace_distinct and valid_vspace_objs and valid_idle)
      (valid_arch_state' and pspace_aligned' and pspace_distinct' and no_0_obj' and valid_idle')
         arch_switch_to_idle_thread
         Arch.switchToIdleThread"
@@ -1019,9 +1019,6 @@ lemma arch_switch_idle_thread_corres:
   apply (corressimp corres: git_corres set_vm_root_corres[@lift_corres_args])
   apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb)
   done
-
-lemma invs_arch_objs[simp]: "invs s \<Longrightarrow> valid_arch_objs s"
-  by (drule invs_vspace_objs, simp add: valid_vspace_objs_def')
 
 lemma switch_idle_thread_corres:
   "corres dc invs invs_no_cicd' switch_to_idle_thread switchToIdleThread"
@@ -1035,7 +1032,7 @@ lemma switch_idle_thread_corres:
        apply (wp+, simp+)
    apply (simp add: invs_unique_refs invs_valid_vs_lookup invs_valid_objs invs_valid_asid_map
                     invs_arch_state invs_valid_global_objs invs_psp_aligned invs_distinct
-                    invs_valid_idle)
+                    invs_valid_idle invs_vspace_objs)
   apply (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_pspace'_def)
   done
 
@@ -2262,7 +2259,7 @@ lemma gts_exs_valid[wp]:
 
 lemma guarded_switch_to_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
-                and valid_arch_objs and pspace_aligned and pspace_distinct
+                and valid_vspace_objs and pspace_aligned and pspace_distinct
                 and valid_vs_lookup and valid_global_objs
                 and unique_table_refs o caps_of_state
                 and st_tcb_at runnable t and valid_etcbs)
@@ -2415,8 +2412,7 @@ lemma guarded_switch_to_chooseThread_fragment_corres:
    apply (clarsimp simp: st_tcb_at_tcb_at invs_def valid_state_def valid_pspace_def valid_sched_def
                           invs_valid_vs_lookup invs_unique_refs)
   apply (auto elim!: pred_tcb'_weakenE split: thread_state.splits
-              simp: pred_tcb_at' runnable'_def all_invs_but_ct_idle_or_in_cur_domain'_def
-                    valid_vspace_objs_def')
+              simp: pred_tcb_at' runnable'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
 
 lemma bitmap_lookup_queue_is_max_non_empty:
@@ -2674,7 +2670,7 @@ lemma schedule_corres:
    apply (rule conjI,simp)
    apply (clarsimp split: Deterministic_A.scheduler_action.splits
                     simp: invs_psp_aligned invs_distinct invs_valid_objs invs_arch_state
-                          invs_vspace_objs[simplified valid_vspace_objs_def'])
+                          invs_vspace_objs[simplified])
    apply (intro impI conjI allI tcb_at_invs |
           (fastforce simp: invs_def cur_tcb_def valid_arch_caps_def valid_etcbs_def
                            valid_sched_def valid_sched_action_def is_activatable_def

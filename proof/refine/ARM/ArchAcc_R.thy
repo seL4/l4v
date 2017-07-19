@@ -52,9 +52,6 @@ lemmas valid_arch_state_elims[rule_format, elim!] = conjuncts
 lemmas valid_vspace_obj_elims [rule_format, elim!] =
   valid_vspace_obj.simps[@simp_to_elim, @ \<open>(drule bspec)?\<close>]
 
-lemmas valid_arch_obj_elims[rule_format, elim!] =
-  valid_vspace_obj_elims [unfolded valid_arch_obj_def[symmetric]]
-
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -1342,7 +1339,7 @@ lemma ko_at_typ_at_asidpool:
 
 lemma find_pd_for_asid_corres [corres]:
   "asid = asid' \<Longrightarrow> corres (lfr \<oplus> op =) ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid asid pd s)
-                           and valid_arch_objs and pspace_aligned
+                           and valid_vspace_objs and pspace_aligned
                            and K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
                        (find_pd_for_asid asid) (findPDForASID asid')"
@@ -1357,7 +1354,7 @@ lemma find_pd_for_asid_corres [corres]:
        apply (insert prems)
        apply (elim conjE disjE)
        apply (fastforce dest: valid_asid_tableD)
-       apply (clarsimp simp: vspace_at_asid_def valid_arch_objs_def)
+       apply (clarsimp simp: vspace_at_asid_def)
        apply (clarsimp simp: vs_asid_refs_def graph_of_def elim!: vs_lookupE)
         apply (erule rtranclE)
         subgoal by simp
@@ -1373,8 +1370,8 @@ lemma find_pd_for_asid_corres [corres]:
         by (clarsimp dest!: vs_lookup1D)
      subgoal pd_at for x pool xa
       apply (insert prems)
-       apply (rule valid_arch_obj_elims)
-       apply (rule valid_arch_objsD)
+       apply (rule valid_vspace_obj_elims)
+       apply (rule valid_vspace_objsD)
         apply (rule vs_lookupI)
         apply (rule vs_asid_refsI)
        apply fastforce
@@ -1397,7 +1394,7 @@ lemma find_pd_for_asid_corres [corres]:
   done
 
 lemma find_pd_for_asid_corres':
-  "corres (lfr \<oplus> op =) (vspace_at_asid asid pd and valid_arch_objs
+  "corres (lfr \<oplus> op =) (vspace_at_asid asid pd and valid_vspace_objs
                            and pspace_aligned and  K (0 < asid \<and> asid \<le> mask asidBits))
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
                        (find_pd_for_asid asid) (findPDForASID asid)"

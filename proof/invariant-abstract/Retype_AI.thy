@@ -1632,14 +1632,6 @@ lemma valid_vspace_obj_default:
   apply (simp add: valid_vspace_obj_default')
   done
 
-lemma valid_arch_obj_default:
-  assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
-  shows "ArchObj ao = default_object ty dev us \<Longrightarrow> valid_arch_obj ao s'"
-  apply (cases ty, simp_all add: default_object_def tyunt)
-  apply (simp add: valid_arch_obj_default')
-  done
-
-
 lemma usable_range_subseteq:
   "\<lbrakk>cap_aligned cap;is_untyped_cap cap\<rbrakk> \<Longrightarrow> usable_untyped_range cap \<subseteq> untyped_range cap"
   apply (clarsimp simp:is_cap_simps cap_aligned_def split:if_splits)

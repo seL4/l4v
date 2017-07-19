@@ -324,11 +324,6 @@ lemma vs_lookup_pages':
   done
 
 
-lemma arch_obj [simp]:
-  "valid_arch_obj ao s' = valid_arch_obj ao s"
-  by (cases ao, simp_all add: s'_def)
-
-
 lemma obj_at [simp]:
   "obj_at P p s' = obj_at P p s"
   by (simp add: s'_def)
@@ -1088,7 +1083,7 @@ lemma find_pd_for_asid_ref_offset_voodoo:
                     mask_asid_low_bits_ucast_ucast)
    apply (fold asid_low_bits_def)
    apply (rule hoare_pre, wp find_pd_for_asid_lookup_ref)
-   apply (simp add: valid_arch_imp_valid_vspace_objs)
+   apply (simp add: )
   apply (simp add: pd_shifting)
   done
 
@@ -1550,7 +1545,7 @@ lemma arch_decode_inv_wf[wp]:
     apply (drule (1) diminished_is_update)
     apply (clarsimp simp: cap_rights_update_def acap_rights_update_def valid_cap_def)
     apply (drule (2) valid_table_caps_ptD)
-    apply (rule conjI, fastforce simp: valid_arch_obj_def)+
+    apply (rule conjI, fastforce simp:)+
     apply (clarsimp simp: kernel_vsrefs_def)
     apply (simp add: linorder_not_le, drule minus_one_helper3)
     apply (drule le_shiftr[where n=20], drule(1) order_trans)
