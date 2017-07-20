@@ -54,6 +54,9 @@ GRAMMAR_PRODUCTS = l4c.lex.sml l4c.grm.sml l4c.grm.sig
 include $(CPARSER_PFX)/standalone-parser/Makefile
 include $(CPARSER_PFX)/Makefile
 
+# Generate lexer and parser files for CParser
+CParser: c-parser-deps
+
 # Regression targets.
 report-regression:
 	@echo CParser cparser_test cparser_tools

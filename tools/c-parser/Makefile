@@ -32,6 +32,11 @@ RUN_MLYACC=$(TOOLRUN_PFX)$(MLYACC)
 %.grm.sml %.grm.sig: %.grm $(MLYACC)
 	$(RUN_MLYACC) $<
 
+GRAMMAR_PRODUCTS = StrictC.lex.sml StrictC.grm.sig StrictC.grm.sml
+
+c-parser-deps: $(GRAMMAR_PRODUCTS)
+
+.PHONY: c-parser-deps
 
 
 
