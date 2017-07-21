@@ -1749,7 +1749,7 @@ lemma set_cap_valid_mdb_simple:
   apply (rule hoare_pre)
   apply (wp set_cap_mdb_cte_at)
   apply (wps set_cap_rvk_cdt_ct_ms)
-  apply wp_trace
+  apply wp
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps
     reply_master_revocable_def irq_revocable_def reply_mdb_def)
   unfolding fun_upd_def[symmetric]
@@ -2814,8 +2814,8 @@ lemma set_untyped_cap_invs_simple:
      set_cap_idle update_cap_ifunsafe set_cap_valid_arch_caps_simple)
    apply (simp add:valid_irq_node_def)
    apply wps
-   apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_arch_objs
-     set_cap_valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid
+   apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_vspace_objs
+     set_cap_irq_handlers cap_table_at_lift_valid
      set_cap_typ_at set_cap_valid_arch_caps_simple set_cap_kernel_window_simple
      set_cap_cap_refs_respects_device_region)
   apply (clarsimp simp del: split_paired_Ex)
@@ -2980,6 +2980,15 @@ lemma set_cdt_state_refs_of[wp]:
   apply (clarsimp elim!: state_refs_of_pspaceI)
   done
 
+lemma set_cdt_state_hyp_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
+     set_cdt m
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: set_cdt_def)
+  apply wp
+  apply (clarsimp elim!: state_hyp_refs_of_pspaceI)
+  done
+
 lemma state_refs_of_rvk[simp]:
   "state_refs_of (is_original_cap_update f s) = state_refs_of s"
   by (simp add: state_refs_of_def)
@@ -2990,6 +2999,14 @@ lemma create_cap_state_refs_of[wp]:
      create_cap tp sz p dev (cref, oref)
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   unfolding create_cap_def by wpsimp
+
+lemma create_cap_state_hyp_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
+     create_cap tp sz p dev (cref, oref)
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: create_cap_def)
+  apply (wp | simp)+
+  done
 
 lemma create_cap_zombies[wp]:
   "\<lbrace>zombies_final and cte_wp_at (op = cap.NullCap) cref
@@ -3094,7 +3111,7 @@ lemma create_cap_irq_handlers[wp]:
   done
 
 
-crunch valid_arch_objs[wp]: create_cap "valid_arch_objs"
+crunch valid_vspace_objs[wp]: create_cap "valid_vspace_objs"
   (simp: crunch_simps)
 
 locale Untyped_AI_nonempty_table =
@@ -3123,9 +3140,6 @@ locale Untyped_AI_nonempty_table =
         init_arch_objects tp ptr bits us refs
    \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
 
-crunch valid_global_objs[wp]: create_cap "valid_global_objs"
-  (simp: crunch_simps)
-
 
 crunch v_ker_map[wp]: create_cap "valid_kernel_mappings"
   (simp: crunch_simps)
@@ -3141,9 +3155,6 @@ lemma create_cap_asid_map[wp]:
 crunch only_idle[wp]: create_cap only_idle
   (simp: crunch_simps)
 
-crunch global_pd_mappings[wp]: create_cap "valid_global_vspace_mappings"
-  (simp: crunch_simps)
-
 crunch pspace_in_kernel_window[wp]: create_cap "pspace_in_kernel_window"
   (simp: crunch_simps)
 
@@ -3155,12 +3166,14 @@ lemma set_original_valid_ioc[wp]:
   apply (cases tp; simp)
   done
 
-interpretation create_cap: non_arch_non_mem_op "create_cap tp sz p slot dev"
+interpretation create_cap: non_vspace_non_mem_op "create_cap tp sz p slot dev"
   apply (cases slot)
   apply (simp add: create_cap_def set_cdt_def)
   apply unfold_locales
-  apply (rule hoare_pre, (wp set_cap.aobj_at | wpc |simp add: create_cap_def set_cdt_def bind_assoc)+)+
+  apply (rule hoare_pre, (wp set_cap.vsobj_at | wpc |simp add: create_cap_def set_cdt_def bind_assoc)+)+
   done
+
+(*  by (wp set_cap.vsobj_at | simp)+ *) (* ARMHYP might need this *)
 
 crunch valid_irq_states[wp]: create_cap "valid_irq_states"
 crunch pspace_respects_device_region[wp]: create_cap pspace_respects_device_region
@@ -3506,8 +3519,6 @@ crunch irq_node[wp]: do_machine_op "\<lambda>s. P (interrupt_irq_node s)"
 lemma ge_mask_eq: "len_of TYPE('a) \<le> n \<Longrightarrow> (x::'a::len word) && mask n = x"
   by (simp add: mask_def p2_eq_0[THEN iffD2])
 
-crunch valid_global_objs[wp]: do_machine_op "valid_global_objs"
-
 (* FIXME: replace do_machine_op_obj_at in KHeap_R by the lemma below *)
 lemma do_machine_op_obj_at_arch_state[wp]:
   "\<lbrace>\<lambda>s. P (obj_at (Q (arch_state s)) p s)\<rbrace>
@@ -3526,10 +3537,6 @@ lemma (in Untyped_AI_nonempty_table) retype_nonempty_table[wp]:
   apply (simp add: foldr_upd_app_if)
   apply (clarsimp simp: obj_at_def split: if_split_asm)
   done
-
-lemma invs_valid_global_objs_strg:
-  "invs s \<longrightarrow> valid_global_objs s"
-  by (clarsimp simp: invs_def valid_state_def)
 
 
 lemma invs_arch_state_strg:
@@ -3946,7 +3953,6 @@ lemma invoke_untyp_invs':
       apply (frule untyped_mdb_descendants_range, clarsimp+,
         erule invoke_untyped_proofs.descendants_range, simp_all+)[1]
       apply (simp add: untyped_range_def atLeastatMost_subset_iff word_and_le2)
-
       done
 qed
 

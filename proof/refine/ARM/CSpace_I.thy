@@ -113,7 +113,7 @@ definition
   "no_mdb cte \<equiv> mdbPrev (cteMDBNode cte) = 0 \<and> mdbNext (cteMDBNode cte) = 0"
 
 lemma mdb_next_update:
-  "m (x \<mapsto> y) \<turnstile> a \<leadsto> b = 
+  "m (x \<mapsto> y) \<turnstile> a \<leadsto> b =
   (if a = x then mdbNext (cteMDBNode y) = b else m \<turnstile> a \<leadsto> b)"
   by (simp add: mdb_next_rel_def mdb_next_def)
 
@@ -122,22 +122,22 @@ lemma neg_no_loopsI:
   unfolding no_loops_def by auto
 
 lemma valid_dlistEp [elim?]:
-  "\<lbrakk> valid_dlist m; m p = Some cte; mdbPrev (cteMDBNode cte) \<noteq> 0;  
-     \<And>cte'. \<lbrakk> m (mdbPrev (cteMDBNode cte)) = Some cte'; 
+  "\<lbrakk> valid_dlist m; m p = Some cte; mdbPrev (cteMDBNode cte) \<noteq> 0;
+     \<And>cte'. \<lbrakk> m (mdbPrev (cteMDBNode cte)) = Some cte';
               mdbNext (cteMDBNode cte') = p \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow>
   P"
   unfolding valid_dlist_def Let_def by blast
 
 lemma valid_dlistEn [elim?]:
   "\<lbrakk> valid_dlist m; m p = Some cte; mdbNext (cteMDBNode cte) \<noteq> 0;
-     \<And>cte'. \<lbrakk> m (mdbNext (cteMDBNode cte)) = Some cte'; 
+     \<And>cte'. \<lbrakk> m (mdbNext (cteMDBNode cte)) = Some cte';
               mdbPrev (cteMDBNode cte') = p \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow>
   P"
   unfolding valid_dlist_def Let_def by blast
 
 lemmas valid_dlistE = valid_dlistEn valid_dlistEp
 
-lemma mdb_next_update_other:  
+lemma mdb_next_update_other:
   "\<lbrakk> m (x \<mapsto> y) \<turnstile> a \<leadsto> b; x \<noteq> a \<rbrakk> \<Longrightarrow> m \<turnstile> a \<leadsto> b"
   by (simp add: mdb_next_rel_def mdb_next_def)
 
@@ -148,22 +148,22 @@ lemma mdb_trancl_update_other:
   using upd nopath
 proof induct
   case (base y)
-   
-  have "m \<turnstile> x \<leadsto> y" 
+
+  have "m \<turnstile> x \<leadsto> y"
   proof (rule mdb_next_update_other)
     from base show "p \<noteq> x" by clarsimp
   qed fact+
-  
+
   thus ?case ..
 next
   case (step y z)
   hence ih: "m \<turnstile> x \<leadsto>\<^sup>+ y" by auto
 
   from ih show ?case
-  proof 
+  proof
     show "m \<turnstile> y \<leadsto> z"
     proof (rule mdb_next_update_other)
-      show "p \<noteq> y" 
+      show "p \<noteq> y"
       proof (cases "x = p")
 	case True thus ?thesis using step.prems by simp
       next
@@ -172,7 +172,7 @@ next
       qed
     qed fact+
   qed
-qed  
+qed
 
 lemma next_unfold':
   "m \<turnstile> c \<leadsto> y = (\<exists>cte. m c = Some cte \<and> mdbNext (cteMDBNode cte) = y)"
@@ -182,13 +182,13 @@ lemma next_unfold':
 lemma no_self_loop_next_noloop:
   assumes no_loop: "no_loops m"
   and     lup: "m ptr = Some cte"
-  shows   "mdbNext (cteMDBNode cte) \<noteq> ptr"  
+  shows   "mdbNext (cteMDBNode cte) \<noteq> ptr"
 proof -
   from no_loop have "\<not> m \<turnstile> ptr \<leadsto> ptr"
-    unfolding no_loops_def  
+    unfolding no_loops_def
     by - (drule spec, erule contrapos_nn, erule r_into_trancl)
-  
-  thus ?thesis using lup 
+
+  thus ?thesis using lup
     by (simp add: next_unfold')
 qed
 
@@ -206,11 +206,11 @@ lemma no_loops_tranclE:
   assumes nl: "no_loops m"
   and    nxt: "m \<turnstile> x \<leadsto>\<^sup>+ y"
   shows   "\<not> m \<turnstile> y \<leadsto>\<^sup>* x"
-proof 
+proof
   assume "m \<turnstile> y \<leadsto>\<^sup>* x"
   hence "m \<turnstile> x \<leadsto>\<^sup>+ x" using nxt
     by simp
-    
+
   thus False using nl
     unfolding no_loops_def by auto
 qed
@@ -226,25 +226,25 @@ lemma next_trancl_split_tt:
   assumes p1: "m \<turnstile> x \<leadsto>\<^sup>+ y"
   and     p2: "m \<turnstile> x \<leadsto>\<^sup>+ p"
   and     nm: "\<not> m \<turnstile> p \<leadsto>\<^sup>* y"
-  shows "m \<turnstile> y \<leadsto>\<^sup>* p" 
+  shows "m \<turnstile> y \<leadsto>\<^sup>* p"
   using p2 p1 nm
 proof induct
-  case base thus ?case 
+  case base thus ?case
     by (clarsimp dest!: tranclD) (drule (1)  next_single_value, simp)
 next
   case (step q r)
-  
+
   show ?case
   proof (cases "q = y")
     case True thus ?thesis using step
       by fastforce
   next
-    case False 
+    case False
     have "m \<turnstile> y \<leadsto>\<^sup>* q"
     proof (rule step.hyps)
       have "\<not> m \<turnstile> q \<leadsto>\<^sup>+ y"
-	by (rule neg_next_rtrancl_trancl) fact+   
-      thus "\<not> m \<turnstile> q \<leadsto>\<^sup>* y" using False 
+	by (rule neg_next_rtrancl_trancl) fact+
+      thus "\<not> m \<turnstile> q \<leadsto>\<^sup>* y" using False
 	by (clarsimp dest!: rtranclD)
     qed fact+
     thus ?thesis by (rule rtrancl_into_rtrancl) fact+
@@ -272,7 +272,7 @@ proof (cases "m \<turnstile> p \<leadsto>\<^sup>* y")
   qed
 next
   case False
-  
+
   show ?thesis
   proof (rule r2)
    from False show "\<not> m \<turnstile> p \<leadsto>\<^sup>+ y"
@@ -289,7 +289,7 @@ lemma no_loops_next_selfD:
    apply (drule (1) no_self_loop_next_noloop)
    apply simp
    done
- 
+
 lemma no_loops_upd_last:
   assumes noloop: "no_loops m"
   and     nxt: "m \<turnstile> x \<leadsto>\<^sup>+ p"
@@ -309,15 +309,15 @@ proof -
 
     from noloop step have xp: "z \<noteq> p"
       by (clarsimp dest!: neg_no_loopsI)
-    
+
     hence "m (p \<mapsto> cte) \<turnstile> y \<leadsto> z" using step
       by (simp add: mdb_next_update)
-    
+
     moreover from xp have "m (p \<mapsto> cte) \<turnstile> z \<leadsto>\<^sup>+ p" using step.hyps assms
       by (auto simp del: fun_upd_apply)
     ultimately show ?case by (rule trancl_into_trancl2)
   qed
-qed  
+qed
 
 
 lemma no_0_neq [intro?]:
@@ -326,12 +326,12 @@ lemma no_0_neq [intro?]:
 
 lemma no_0_update:
   assumes no0: "no_0 m"
-  and     pnz: "p \<noteq> 0"  
+  and     pnz: "p \<noteq> 0"
   shows "no_0 (m(p \<mapsto> cte))"
   using no0 pnz unfolding no_0_def by simp
-   
+
 lemma has_loop_update:
-  assumes lp: "m(p \<mapsto> cte) \<turnstile> c \<leadsto>\<^sup>+ c'"  
+  assumes lp: "m(p \<mapsto> cte) \<turnstile> c \<leadsto>\<^sup>+ c'"
   and    cn0: "c' \<noteq> 0"
   and  mnext: "mdbNext (cteMDBNode cte) = 0"
   and    mn0: "no_0 m"
@@ -340,16 +340,16 @@ lemma has_loop_update:
   using lp cn0
 proof induct
   case (base y)
-  have "m \<turnstile> c \<leadsto> y" 
+  have "m \<turnstile> c \<leadsto> y"
   proof (rule mdb_next_update_other)
     show "p \<noteq> c" using base
       by (clarsimp intro: contrapos_nn simp: mdb_next_update mnext)
   qed fact+
-  
+
   thus ?case ..
 next
   case (step y z)
-  
+
   show ?case
   proof
     have "y \<noteq> 0" by (rule no_0_lhs [OF _  no_0_update]) fact+
@@ -358,7 +358,7 @@ next
     have "z \<noteq> 0" by fact+
     hence "p \<noteq> y" using step.hyps mnext
       by (clarsimp simp: mdb_next_update)
-    thus "m \<turnstile> y \<leadsto> z" 
+    thus "m \<turnstile> y \<leadsto> z"
       by (rule mdb_next_update_other [OF step.hyps(2)])
   qed
 qed
@@ -375,11 +375,11 @@ next
     by (auto intro: trancl_into_rtrancl elim: mdb_trancl_update_other [OF _ nopath])
 qed
 
-lemma mdb_trancl_other_update:  
+lemma mdb_trancl_other_update:
   assumes upd: "m \<turnstile> x \<leadsto>\<^sup>+ y"
   and      np: "\<not> m \<turnstile> x \<leadsto>\<^sup>* p"
   shows   "m(p \<mapsto> cte) \<turnstile> x \<leadsto>\<^sup>+ y"
-  using upd 
+  using upd
 proof induct
   case (base q)
   from np have "x \<noteq> p" by clarsimp
@@ -388,18 +388,18 @@ proof induct
   thus ?case ..
 next
   case (step q r)
-  
+
   show ?case
-  proof 
+  proof
     from step.hyps(1) np have "q \<noteq> p"
       by (auto elim!: contrapos_nn)
-    
-    thus x: "m(p \<mapsto> cte) \<turnstile> q \<leadsto> r" 
+
+    thus x: "m(p \<mapsto> cte) \<turnstile> q \<leadsto> r"
       using step by (simp add: mdb_next_update del: fun_upd_apply)
   qed fact+
 qed
 
-lemma mdb_rtrancl_other_update:  
+lemma mdb_rtrancl_other_update:
   assumes upd: "m \<turnstile> x \<leadsto>\<^sup>* y"
   and  nopath: "\<not> m \<turnstile> x \<leadsto>\<^sup>* p"
   shows   "m(p \<mapsto> cte) \<turnstile> x \<leadsto>\<^sup>* y"
@@ -421,15 +421,15 @@ lemma mdb_chain_0_update:
    unfolding mdb_chain_0_def
 proof rule
   fix x
-  assume "x \<in> dom (m(p \<mapsto> cte))"    
-  hence x: "x = p \<or> x \<in> dom m" by simp 
-  
+  assume "x \<in> dom (m(p \<mapsto> cte))"
+  hence x: "x = p \<or> x \<in> dom m" by simp
+
   have cnxt: "m(p \<mapsto> cte) \<turnstile> mdbNext (cteMDBNode cte) \<leadsto>\<^sup>* 0"
     by (rule mdb_rtrancl_other_update) fact+
 
   from x show "m(p \<mapsto> cte) \<turnstile> x \<leadsto>\<^sup>+ 0"
   proof
-    assume xp: "x = p" 
+    assume xp: "x = p"
     show ?thesis
     proof (rule rtrancl_into_trancl2 [OF _ cnxt])
       show "m(p \<mapsto> cte) \<turnstile> x \<leadsto> mdbNext (cteMDBNode cte)" using xp
@@ -437,7 +437,7 @@ proof rule
     qed
   next
     assume x: "x \<in> dom m"
-       
+
     show ?thesis
     proof (cases "m \<turnstile> x \<leadsto>\<^sup>* p")
       case False
@@ -454,11 +454,11 @@ proof rule
 	      case eq thus ?thesis by simp
       next
 	      case trancl
-	      have "no_loops m" by (rule mdb_chain_0_no_loops) fact+ 
+	      have "no_loops m" by (rule mdb_chain_0_no_loops) fact+
 	      thus ?thesis
 	        by (rule trancl_into_rtrancl [OF no_loops_upd_last]) fact+
       qed
-      moreover 
+      moreover
       have "m(p \<mapsto> cte) \<turnstile> p \<leadsto> mdbNext (cteMDBNode cte)" by (simp add: mdb_next_update)
       ultimately show ?thesis using cnxt by simp
     qed
@@ -468,8 +468,8 @@ qed
 lemma mdb_chain_0_update_0:
   assumes x: "mdbNext (cteMDBNode cte) = 0"
   assumes p: "p \<noteq> 0"
-  assumes 0: "no_0 m"  
-  assumes n: "mdb_chain_0 m"  
+  assumes 0: "no_0 m"
+  assumes n: "mdb_chain_0 m"
   shows "mdb_chain_0 (m(p \<mapsto> cte))"
   using x 0 p
   apply -
@@ -483,10 +483,10 @@ lemma no_loops_0_update:
   assumes 0: "no_0 m"
   assumes n: "no_loops m"
   shows "no_loops (m(p \<mapsto> cte))"
-  unfolding no_loops_def 
+  unfolding no_loops_def
 proof (rule, rule contrapos_pn [OF n], rule neg_no_loopsI)
   fix c
-  assume lp: "m(p \<mapsto> cte) \<turnstile> c \<leadsto>\<^sup>+ c"  
+  assume lp: "m(p \<mapsto> cte) \<turnstile> c \<leadsto>\<^sup>+ c"
   thus "m \<turnstile> c \<leadsto>\<^sup>+ c"
   proof (rule has_loop_update)
     from lp show "c \<noteq> 0" by (rule no_0_lhs_trancl [OF _ no_0_update]) fact+
@@ -498,7 +498,7 @@ lemma valid_badges_0_update:
   assumes pv: "mdbPrev (cteMDBNode cte) = 0"
   assumes p: "m p = Some cte'"
   assumes m: "no_mdb cte'"
-  assumes 0: "no_0 m"  
+  assumes 0: "no_0 m"
   assumes d: "valid_dlist m"
   assumes v: "valid_badges m"
   shows "valid_badges (m(p \<mapsto> cte))"
@@ -507,17 +507,17 @@ proof (unfold valid_badges_def, clarify)
   assume c: "(m(p \<mapsto> cte)) c = Some (CTE cap n)"
   assume c': "(m(p \<mapsto> cte)) c' = Some (CTE cap' n')"
   assume nxt: "m(p \<mapsto> cte) \<turnstile> c \<leadsto> c'"
-  assume r: "sameRegionAs cap cap'" 
+  assume r: "sameRegionAs cap cap'"
 
   from p 0 have p0: "p \<noteq> 0" by (clarsimp simp: no_0_def)
 
   from c' p0 0
-  have "c' \<noteq> 0" by (clarsimp simp: no_0_def) 
+  have "c' \<noteq> 0" by (clarsimp simp: no_0_def)
   with nx nxt
   have cp: "c \<noteq> p" by (clarsimp simp add: mdb_next_unfold)
   moreover
   from pv nx nxt p p0 c d m 0
-  have "c' \<noteq> p" 
+  have "c' \<noteq> p"
     apply clarsimp
     apply (simp add: mdb_next_unfold split: if_split_asm)
     apply (erule (1) valid_dlistEn, simp)
@@ -527,20 +527,20 @@ proof (unfold valid_badges_def, clarify)
   with nxt c c' cp
   have "m \<turnstile> c \<leadsto> c'" by (simp add: mdb_next_unfold)
   ultimately
-  show "(isEndpointCap cap \<longrightarrow> 
-            capEPBadge cap \<noteq> capEPBadge cap' \<longrightarrow> 
-            capEPBadge cap' \<noteq> 0 \<longrightarrow> 
+  show "(isEndpointCap cap \<longrightarrow>
+            capEPBadge cap \<noteq> capEPBadge cap' \<longrightarrow>
+            capEPBadge cap' \<noteq> 0 \<longrightarrow>
             mdbFirstBadged n') \<and>
-        (isNotificationCap cap \<longrightarrow> 
-            capNtfnBadge cap \<noteq> capNtfnBadge cap' \<longrightarrow> 
-            capNtfnBadge cap' \<noteq> 0 \<longrightarrow> 
+        (isNotificationCap cap \<longrightarrow>
+            capNtfnBadge cap \<noteq> capNtfnBadge cap' \<longrightarrow>
+            capNtfnBadge cap' \<noteq> 0 \<longrightarrow>
             mdbFirstBadged n')"
     using r c c' v by (fastforce simp: valid_badges_def)
 qed
 
 definition
   "caps_no_overlap' m S \<equiv>
-  \<forall>p c n. m p = Some (CTE c n) \<longrightarrow> capRange c \<inter> S = {}" 
+  \<forall>p c n. m p = Some (CTE c n) \<longrightarrow> capRange c \<inter> S = {}"
 
 definition
   fresh_virt_cap_class :: "capclass \<Rightarrow> cte_heap \<Rightarrow> bool"
@@ -559,7 +559,7 @@ lemma fresh_virt_cap_classD:
 
 lemma capRange_untyped:
   "capRange cap' \<inter> untypedRange cap \<noteq> {} \<Longrightarrow> isUntypedCap cap"
-  by (cases cap, auto simp: isCap_simps) 
+  by (cases cap, auto simp: isCap_simps)
 
 lemma capRange_of_untyped [simp]:
   "capRange (UntypedCap d r n f) = untypedRange (UntypedCap d r n f)"
@@ -760,6 +760,8 @@ lemma capUntypedSize_capBits:
   "capClass cap = PhysicalClass \<Longrightarrow> capUntypedSize cap = 2 ^ (capBits cap)"
   apply (simp add: capUntypedSize_def objBits_simps
                    ARM_H.capUntypedSize_def
+                   pteBits_def pdeBits_def
+                   ptBits_def pdBits_def
             split: capability.splits arch_capability.splits
                    zombie_type.splits)
   apply fastforce
@@ -1046,12 +1048,14 @@ lemma capUntypedSize_range:
                  isCap_simps
           split: capability.splits arch_capability.split
                  zombie_type.splits)
-   apply (auto simp: is_aligned_no_overflow objBits_simps word_bits_def)
+   apply (auto simp: is_aligned_no_overflow objBits_simps word_bits_def
+                     ptBits_def pteBits_def
+                     pdBits_def pdeBits_def)
   done
 
 lemma caps_no_overlap'_no_region:
   "\<lbrakk> caps_no_overlap' m (capRange cap); valid_objs' s;
-    m = ctes_of s; s \<turnstile>' cap; fresh_virt_cap_class (capClass cap) m \<rbrakk> \<Longrightarrow> 
+    m = ctes_of s; s \<turnstile>' cap; fresh_virt_cap_class (capClass cap) m \<rbrakk> \<Longrightarrow>
   \<forall>c n p. m p = Some (CTE c n) \<longrightarrow>
          \<not> sameRegionAs c cap \<and> \<not> sameRegionAs cap c"
   apply (clarsimp simp add: caps_no_overlap'_def)
@@ -1077,11 +1081,11 @@ lemma init_prev [simp]:
   by (simp add: initMDBNode_def nullPointer_def)
 
 lemma mdb_chunked_init:
-  assumes x: "m x = Some cte" 
-  assumes no_m: "no_mdb cte" 
-  assumes no_c: "caps_no_overlap' m (capRange cap)" 
+  assumes x: "m x = Some cte"
+  assumes no_m: "no_mdb cte"
+  assumes no_c: "caps_no_overlap' m (capRange cap)"
   assumes no_v: "fresh_virt_cap_class (capClass cap) m"
-  assumes no_0: "no_0 m" 
+  assumes no_0: "no_0 m"
   assumes dlist: "valid_dlist m"
   assumes chain: "mdb_chain_0 m"
   assumes chunked: "mdb_chunked m"
@@ -1097,7 +1101,7 @@ proof clarify
   assume neq: "p \<noteq> p'"
 
   note no_region = caps_no_overlap'_no_region [OF no_c valid no_v]
-  
+
   from chain x no_0
   have chain': "mdb_chain_0 m'"
     unfolding m'_def
@@ -1114,11 +1118,11 @@ proof clarify
     apply assumption
     done
   moreover
-  from x no_0 
+  from x no_0
   have x0 [simp]: "x \<noteq> 0" by clarsimp
   with no_0
   have "no_0 m'"
-    unfolding m'_def    
+    unfolding m'_def
     by (rule no_0_update)
   ultimately
   have nl: "no_loops m'" by (rule mdb_chain_0_no_loops)
@@ -1153,10 +1157,10 @@ proof clarify
     with m
     have ch: "is_chunk m c p p'" by simp
 
-    from True npx 
-    have "m' \<turnstile> p \<leadsto>\<^sup>+ p'" 
+    from True npx
+    have "m' \<turnstile> p \<leadsto>\<^sup>+ p'"
       unfolding m'_def
-      by (rule mdb_trancl_other_update)      
+      by (rule mdb_trancl_other_update)
     moreover
     with nl
     have "\<not> m' \<turnstile> p' \<leadsto>\<^sup>+ p"
@@ -1184,8 +1188,8 @@ proof clarify
         apply (frule vdlist_nextD0, simp, assumption)
         apply (clarsimp simp: mdb_prev_def mdb_next_unfold no_mdb_def)
         done
-      moreover 
-      assume "m' \<turnstile> p'' \<leadsto>\<^sup>* p'" 
+      moreover
+      assume "m' \<turnstile> p'' \<leadsto>\<^sup>* p'"
       {
         moreover
         from x no_m p''x [symmetric] dlist no_0
@@ -1200,21 +1204,21 @@ proof clarify
             m p'' = Some (CTE cap'' n'') \<and> sameRegionAs c cap''"
         using ch
         by (simp add: is_chunk_def)
-      with p''x 
+      with p''x
       show "\<exists>cap'' n''.
              m' p'' = Some (CTE cap'' n'') \<and> sameRegionAs c cap''"
         by (simp add: m'_def)
-    qed      
+    qed
     ultimately
-    show ?thesis by simp 
+    show ?thesis by simp
   next
     case False
-    with m 
+    with m
     have p'p: "m \<turnstile> p' \<leadsto>\<^sup>+ p" by simp
     with m
     have ch: "is_chunk m c' p' p" by simp
     from p'p np'x
-    have "m' \<turnstile> p' \<leadsto>\<^sup>+ p" 
+    have "m' \<turnstile> p' \<leadsto>\<^sup>+ p"
       unfolding m'_def
       by (rule mdb_trancl_other_update)
     moreover
@@ -1225,7 +1229,7 @@ proof clarify
       apply (simp add: no_loops_def)
       done
     moreover
-    have "is_chunk m' c' p' p" 
+    have "is_chunk m' c' p' p"
       unfolding is_chunk_def
     proof clarify
       fix p''
@@ -1244,8 +1248,8 @@ proof clarify
         apply (frule vdlist_nextD0, simp, assumption)
         apply (clarsimp simp: mdb_prev_def mdb_next_unfold no_mdb_def)
         done
-      moreover 
-      assume "m' \<turnstile> p'' \<leadsto>\<^sup>* p" 
+      moreover
+      assume "m' \<turnstile> p'' \<leadsto>\<^sup>* p"
       {
         moreover
         from x no_m p''x [symmetric] dlist no_0
@@ -1260,11 +1264,11 @@ proof clarify
             m p'' = Some (CTE cap'' n'') \<and> sameRegionAs c' cap''"
         using ch
         by (simp add: is_chunk_def)
-      with p''x 
+      with p''x
       show "\<exists>cap'' n''.
              m' p'' = Some (CTE cap'' n'') \<and> sameRegionAs c' cap''"
         by (simp add: m'_def)
-    qed      
+    qed
     ultimately
     show ?thesis by simp
   qed
@@ -1285,7 +1289,7 @@ lemma cte_refs_capRange:
     apply simp
    defer
    -- "CNodeCap"
-   apply (rename_tac word1 nat1 word2 nat2) 
+   apply (rename_tac word1 nat1 word2 nat2)
    apply (clarsimp simp: objBits_simps capAligned_def dest!: valid_capAligned)
    apply (subgoal_tac "xa * 0x10 < 2 ^ (4 + nat1)")
     apply (intro conjI)
@@ -1390,14 +1394,14 @@ lemma no_loops_prev_next_0:
   assumes src: "m src = Some (CTE src_cap src_node)"
   assumes no_loops: "no_loops m"
   assumes dlist: "valid_dlist m"
-  shows "(mdbPrev src_node = mdbNext src_node) = 
+  shows "(mdbPrev src_node = mdbNext src_node) =
          (mdbPrev src_node = 0 \<and> mdbNext src_node = 0)"
 proof -
-  { assume "mdbPrev src_node = mdbNext src_node"    
+  { assume "mdbPrev src_node = mdbNext src_node"
     moreover
     assume "mdbNext src_node \<noteq> 0"
     ultimately
-    obtain cte where 
+    obtain cte where
       "m (mdbNext src_node) = Some cte"
       "mdbNext (cteMDBNode cte) = src"
       using src dlist
@@ -1411,7 +1415,7 @@ proof -
       apply (simp add: next_unfold')
       done
     with no_loops
-    have False by (simp add: no_loops_def)      
+    have False by (simp add: no_loops_def)
   }
   thus ?thesis by auto blast
 qed
@@ -1421,7 +1425,7 @@ lemma no_loops_next_prev_0:
   assumes "m src = Some (CTE src_cap src_node)"
   assumes "no_loops m"
   assumes "valid_dlist m"
-  shows "(mdbNext src_node = mdbPrev src_node) = 
+  shows "(mdbNext src_node = mdbPrev src_node) =
          (mdbPrev src_node = 0 \<and> mdbNext src_node = 0)"
   apply (rule iffI)
   apply (drule sym)
@@ -1442,20 +1446,20 @@ begin
 declare no_0 [intro!]
 declare no_loops [intro!]
 
-lemma dlist [intro!]: "valid_dlist m" 
+lemma dlist [intro!]: "valid_dlist m"
   using valid by (simp add: valid_mdb_ctes_def)
 
 lemmas m_0_simps [iff] = no_0_simps [OF no_0]
 
 lemma prev_next_0_p:
   assumes "m p = Some (CTE cap node)"
-  shows "(mdbPrev node = mdbNext node) = 
+  shows "(mdbPrev node = mdbNext node) =
          (mdbPrev node = 0 \<and> mdbNext node = 0)"
   using assms by (rule no_loops_prev_next_0) auto
 
 lemma next_prev_0_p:
   assumes "m p = Some (CTE cap node)"
-  shows "(mdbNext node = mdbPrev node) = 
+  shows "(mdbNext node = mdbPrev node) =
          (mdbPrev node = 0 \<and> mdbNext node = 0)"
   using assms by (rule no_loops_next_prev_0) auto
 
@@ -1469,14 +1473,14 @@ lemmas dlist_nextD0 = vdlist_nextD0 [OF _ _ dlist]
 lemmas dlist_prev_src_unique = vdlist_prev_src_unique [OF _ _ _ dlist]
 lemmas dlist_next_src_unique = vdlist_next_src_unique [OF _ _ _ dlist]
 
-lemma subtree_not_0 [simp]: 
+lemma subtree_not_0 [simp]:
   "\<not>m \<turnstile> p \<rightarrow> 0"
   apply clarsimp
   apply (erule subtree.cases)
   apply auto
   done
 
-lemma not_0_subtree [simp]: 
+lemma not_0_subtree [simp]:
   "\<not>m \<turnstile> 0 \<rightarrow> p"
   apply clarsimp
   apply (erule subtree.induct)
@@ -1501,7 +1505,7 @@ lemma valid_badges: "valid_badges m"
 lemma nullcaps: "valid_nullcaps m"
   using valid by (simp add: valid_mdb_ctes_def)
 
-lemma 
+lemma
   caps_contained: "caps_contained' m" and
   chunked: "mdb_chunked m" and
   untyped_mdb: "untyped_mdb' m" and
@@ -1519,10 +1523,10 @@ end (* of context vmdb *)
 lemma no_self_loop_next:
   assumes vmdb: "valid_mdb_ctes m"
   and     lup: "m ptr = Some cte"
-  shows   "mdbNext (cteMDBNode cte) \<noteq> ptr"  
+  shows   "mdbNext (cteMDBNode cte) \<noteq> ptr"
 proof -
   from vmdb have "no_loops m" ..
-  thus ?thesis 
+  thus ?thesis
     by (rule no_self_loop_next_noloop) fact+
 qed
 
@@ -1534,18 +1538,18 @@ proof
   assume prev: "mdbPrev (cteMDBNode cte) = ptr"
 
   from vmdb have "no_0 m" ..
-  with lup have "ptr \<noteq> 0" 
+  with lup have "ptr \<noteq> 0"
     by (rule no_0_neq)
 
   moreover have "mdbNext (cteMDBNode cte) \<noteq> ptr"
     by (rule no_self_loop_next) fact+
-  
+
   moreover from vmdb have "valid_dlist m" ..
-  
+
   ultimately show False using lup prev
     by - (erule (1) valid_dlistEp, simp_all)
 qed
-  
+
 
 locale mdb_ptr = vmdb +
   fixes p cap node
@@ -1576,20 +1580,20 @@ proof (cases "mdbNext node = 0")
 next
   case False
   with eq have n': "mdbNext node' \<noteq> 0" by simp
-  
+
   have "p = p'"
     apply (rule dlistEn [OF m_p, simplified, OF False])
     apply (simp add: eq)
     apply (rule dlistEn [OF p', simplified, OF n'])
     apply clarsimp
     done
-  
+
   thus ?thesis by blast
 qed
 
 lemma p_next_eq:
   assumes "m p' = Some (CTE cap' node')"
-  shows "(mdbNext node = mdbNext node') = 
+  shows "(mdbNext node = mdbNext node') =
          (p = p' \<or> mdbNext node = 0 \<and> mdbNext node' = 0)"
   using assms m_p
   apply -
@@ -1597,7 +1601,7 @@ lemma p_next_eq:
    apply (erule (1) p_nextD)
   apply auto
   done
-   
+
 lemma p_prevD:
   assumes p': "m p' = Some (CTE cap' node')"
   assumes eq: "mdbPrev node = mdbPrev node'"
@@ -1607,20 +1611,20 @@ proof (cases "mdbPrev node = 0")
 next
   case False
   with eq have n': "mdbPrev node' \<noteq> 0" by simp
-  
+
   have "p = p'"
     apply (rule dlistEp [OF m_p, simplified, OF False])
     apply (simp add: eq)
     apply (rule dlistEp [OF p', simplified, OF n'])
     apply clarsimp
     done
-  
+
   thus ?thesis by blast
 qed
 
 lemma p_prev_eq:
   assumes "m p' = Some (CTE cap' node')"
-  shows "(mdbPrev node = mdbPrev node') = 
+  shows "(mdbPrev node = mdbPrev node') =
          (p = p' \<or> mdbPrev node = 0 \<and> mdbPrev node' = 0)"
   using assms m_p
   apply -
@@ -1647,7 +1651,7 @@ lemma next_p_prev:
 lemma prev_p_next:
   "mdbPrev node \<noteq> 0 \<Longrightarrow> m \<turnstile> mdbPrev node \<leadsto> p"
   by (rule dlist_prevD0 [OF m_p_prev])
-  
+
 lemma p_next:
   "(m \<turnstile> p \<leadsto> p') = (p' = mdbNext node)"
   using m_p by (auto simp: mdb_next_unfold)
@@ -1659,7 +1663,7 @@ lemma no_mdb_not_source:
   by (clarsimp simp add: mdb_next_unfold no_mdb_def)
 
 lemma no_mdb_not_target:
-  "\<lbrakk> m \<turnstile> c \<leadsto> c'; m p = Some cte; no_mdb cte; valid_dlist m; no_0 m \<rbrakk> 
+  "\<lbrakk> m \<turnstile> c \<leadsto> c'; m p = Some cte; no_mdb cte; valid_dlist m; no_0 m \<rbrakk>
   \<Longrightarrow> c' \<noteq> p"
   apply clarsimp
   apply (subgoal_tac "c \<noteq> 0")
@@ -1672,7 +1676,7 @@ lemma no_mdb_not_target:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma valid_dlist_init:
-  "\<lbrakk> valid_dlist m; m p = Some cte; no_mdb cte \<rbrakk> \<Longrightarrow> 
+  "\<lbrakk> valid_dlist m; m p = Some cte; no_mdb cte \<rbrakk> \<Longrightarrow>
   valid_dlist (m (p \<mapsto> CTE cap initMDBNode))"
   apply (simp add: initMDBNode_def Let_def nullPointer_def)
   apply (clarsimp simp: no_mdb_def valid_dlist_def Let_def)
@@ -1684,11 +1688,11 @@ lemma (in mdb_ptr) descendants_of_init':
   assumes n: "no_mdb (CTE cap node)"
   shows
   "descendants_of' p' (m(p \<mapsto> CTE c initMDBNode)) =
-   descendants_of' p' m" 
+   descendants_of' p' m"
   apply (rule set_eqI)
   apply (simp add: descendants_of'_def)
   apply (rule iffI)
-   apply (erule subtree.induct) 
+   apply (erule subtree.induct)
     apply (frule no_mdb_not_target [where p=p])
         apply simp
        apply (simp add: no_mdb_def)
@@ -1748,17 +1752,17 @@ lemma (in mdb_ptr) descendants_of_init':
   apply (insert n)
   apply (clarsimp simp: mdb_next_unfold no_mdb_def m_p)
   done
-  
+
 lemma untyped_mdb_init:
   "\<lbrakk> valid_mdb_ctes m; m p = Some cte; no_mdb cte;
-     caps_no_overlap' m (capRange cap); untyped_mdb' m; 
+     caps_no_overlap' m (capRange cap); untyped_mdb' m;
      valid_objs' s; s \<turnstile>' cap;
      m = ctes_of s\<rbrakk>
     \<Longrightarrow> untyped_mdb' (m(p \<mapsto> CTE cap initMDBNode))"
   apply (clarsimp simp add: untyped_mdb'_def)
   apply (rule conjI)
    apply clarsimp
-   apply (simp add: caps_no_overlap'_def)   
+   apply (simp add: caps_no_overlap'_def)
    apply (erule_tac x=p' in allE, erule allE, erule impE, erule exI)
    apply (drule (1) ctes_of_valid_cap')+
    apply (drule valid_capAligned)+
@@ -1803,14 +1807,14 @@ lemma untypedRange_in_capRange: "untypedRange x \<subseteq> capRange x"
 
 lemma untyped_inc_init:
   "\<lbrakk> valid_mdb_ctes m; m p = Some cte; no_mdb cte;
-     caps_no_overlap' m (capRange cap); 
+     caps_no_overlap' m (capRange cap);
      valid_objs' s; s \<turnstile>' cap;
      m = ctes_of s\<rbrakk>
     \<Longrightarrow> untyped_inc' (m(p \<mapsto> CTE cap initMDBNode))"
   apply (clarsimp simp add: valid_mdb_ctes_def untyped_inc'_def)
   apply (intro conjI impI)
    apply clarsimp
-   apply (simp add: caps_no_overlap'_def)   
+   apply (simp add: caps_no_overlap'_def)
    apply (erule_tac x=p' in allE, erule allE, erule impE, erule exI)
    apply (drule (1) ctes_of_valid_cap')+
    apply (drule valid_capAligned)+
@@ -2016,7 +2020,7 @@ lemma distinct_zombies_seperate_if_zombiedE:
         \<And>y cte''. \<lbrakk> m y = Some cte''; x \<noteq> y;
                     isZombie (cteCap cte'); \<not> isZombie (cteCap cte);
                     \<not> isUntypedCap (cteCap cte''); \<not> isArchPageCap (cteCap cte'');
-                    capClass (cteCap cte'') = PhysicalClass; 
+                    capClass (cteCap cte'') = PhysicalClass;
                     capUntypedPtr (cteCap cte'') = capUntypedPtr (cteCap cte);
                     capBits (cteCap cte'') = capBits (cteCap cte)
                         \<rbrakk> \<Longrightarrow> False    \<rbrakk>

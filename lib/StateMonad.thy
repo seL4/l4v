@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-(* 
+(*
   The state and error monads in Isabelle,
 *)
 
@@ -27,9 +27,9 @@ where
 
 definition
   "return a \<equiv> \<lambda>s. (a,s)"
- 
+
 definition
-  bind :: "('s, 'a) state_monad \<Rightarrow> ('a \<Rightarrow> ('s, 'b) state_monad) \<Rightarrow> 
+  bind :: "('s, 'a) state_monad \<Rightarrow> ('a \<Rightarrow> ('s, 'b) state_monad) \<Rightarrow>
            ('s, 'b) state_monad" (infixl ">>=" 60)
 where
   "bind f g \<equiv> (\<lambda>s. let (v,s') = f s in (g v) s')"
@@ -67,8 +67,8 @@ lemma return_bind [simp]: "(return x >>= f) = f x"
 lemma bind_return [simp]: "(m >>= return) = m"
   unfolding bind_def return_def runState_def
   by (simp add: Let_def split_def)
- 
-lemma bind_assoc: 
+
+lemma bind_assoc:
   fixes m :: "('s,'a) state_monad"
   fixes f :: "'a \<Rightarrow> ('s,'b) state_monad"
   fixes g :: "'b \<Rightarrow> ('s,'c) state_monad"
@@ -107,7 +107,7 @@ where
   "raise \<equiv> return \<circ> Inl"
 
 definition
-  bindE :: "('s, 'e + 'a) state_monad \<Rightarrow> ('a \<Rightarrow> ('s, 'e + 'b) state_monad) \<Rightarrow> 
+  bindE :: "('s, 'e + 'a) state_monad \<Rightarrow> ('a \<Rightarrow> ('s, 'e + 'b) state_monad) \<Rightarrow>
             ('s, 'e + 'b) state_monad"  (infixl ">>=E" 60)
 where
   "bindE f g \<equiv> bind f (lift g)"
@@ -135,15 +135,15 @@ definition
   "bindEE' f g \<equiv> bindEE f (\<lambda>_. g)"
 
 definition
-  "modifyE \<equiv> (liftE \<circ> modify)" 
+  "modifyE \<equiv> (liftE \<circ> modify)"
 definition
   "getsE x \<equiv> liftE $ gets x"
 
-syntax 
+syntax
   bindEE :: "'a \<Rightarrow> 'b \<Rightarrow> 'c" (infixl ">>=EE" 60)
 
 declare
-  bindE'_def [iff] 
+  bindE'_def [iff]
   bindEE_def [iff]
   bindEE'_def [iff]
 
@@ -158,7 +158,7 @@ lemma lift_return [simp]:
 lemma bindE_returnOk [simp]: "(m >>=E returnOk) = m"
   by (simp add: bindE_def returnOk_def)
 
- lemma bindE_assoc: 
+ lemma bindE_assoc:
   shows "(m >>=E f) >>=E g  =  m >>=E (\<lambda>x. f x >>=E g)"
   by (auto simp: Let_def bindE_def bind_def lift_def split_def runState_def throwError_def return_def
            split: sum.splits)
@@ -180,7 +180,7 @@ syntax
   "_nobind"    :: "'a => dobind"                      ("_")
   "_dobinds"   :: "[dobind, dobinds] => dobinds"      ("(_);//(_)")
 
-  "_do"        :: "[dobinds, 'a] => 'a"               ("(do (_);//   (_)//od)" 100)  
+  "_do"        :: "[dobinds, 'a] => 'a"               ("(do (_);//   (_)//od)" 100)
 syntax (xsymbols)
   "_dobind"    :: "[pttrn, 'a] => dobind"             ("(_ \<leftarrow>/ _)" 10)
 
@@ -188,9 +188,9 @@ syntax (xsymbols)
 translations
   "_do (_dobinds b bs) e"  == "_do b (_do bs e)"
   "_do (_nobind b) e"      == "CONST bind' b e"
-  "do x <- a; e od"        == "a >>= (\<lambda>x. e)"  
+  "do x <- a; e od"        == "a >>= (\<lambda>x. e)"
 
-lemma "do x \<leftarrow> return 1; return 2; return x od = return 1" 
+lemma "do x \<leftarrow> return 1; return 2; return x od = return 1"
   by simp
 
 
@@ -199,7 +199,7 @@ subsection "Syntax for errorT state monad"
 
 syntax
   "_doE" :: "[dobinds, 'a] => 'a"  ("(doE (_);//    (_)//odE)" 100)
-  
+
 translations
   "_doE (_dobinds b bs) e"  == "_doE b (_doE bs e)"
   "_doE (_nobind b) e"      == "CONST bindE' b e"
@@ -210,21 +210,21 @@ subsection "Syntax for errorT errorT state monad"
 
 syntax
   "_doEE" :: "[dobinds, 'a] => 'a" ("(doEE (_);//     (_)//odEE)" 100)
-  
+
 translations
   "_doEE (_dobinds b bs) e"  == "_doEE b (_doEE bs e)"
   "_doEE (_nobind b) e"      == "CONST bindEE' b e"
   "doEE x <- a; e odEE"      == "a >>=EE (\<lambda>x. e)"
 
 primrec
-  inc_forloop :: "nat \<Rightarrow> 'g::{plus,one} \<Rightarrow> ('g \<Rightarrow> ('a, 'b + unit) state_monad) \<Rightarrow> 
+  inc_forloop :: "nat \<Rightarrow> 'g::{plus,one} \<Rightarrow> ('g \<Rightarrow> ('a, 'b + unit) state_monad) \<Rightarrow>
                   ('a, 'b + unit) state_monad"
 where
   "inc_forloop 0 current body = returnOk ()"
 | "inc_forloop (Suc left) current body = doE body current ; inc_forloop left (current+1) body odE"
 
 primrec
-  do_times :: "nat \<Rightarrow> ('a, 'b + unit) state_monad \<Rightarrow> ('a, 'b + unit) state_monad \<Rightarrow> 
+  do_times :: "nat \<Rightarrow> ('a, 'b + unit) state_monad \<Rightarrow> ('a, 'b + unit) state_monad \<Rightarrow>
               ('a, 'b + unit) state_monad"
 where
   "do_times 0 body increment = returnOk ()"
@@ -235,10 +235,10 @@ definition
   "function_update index modifier f \<equiv>
    \<lambda>x. if x = index then modifier (f x) else (f x)"
 
-lemma "doE x \<leftarrow> returnOk 1; returnOk 2; returnOk x odE = returnOk 1" 
+lemma "doE x \<leftarrow> returnOk 1; returnOk 2; returnOk x odE = returnOk 1"
   by simp
 
-term "doEE x \<leftarrow> returnOk $ Ok 1; returnOk $ Ok 2; returnOk $ Ok x odEE" 
+term "doEE x \<leftarrow> returnOk $ Ok 1; returnOk $ Ok 2; returnOk $ Ok x odEE"
 
 definition
   "skip \<equiv> returnOk $ Ok ()"
@@ -273,7 +273,7 @@ definition
 definition
   "mapMEE_x f xs \<equiv> sequenceEE_x (map f xs)"
 
-definition 
+definition
   catch :: "('s, 'a + 'b) state_monad \<Rightarrow> ('a \<Rightarrow> ('s, 'b) state_monad) \<Rightarrow> ('s, 'b) state_monad"
 where
   "catch f handler \<equiv> do x \<leftarrow> f;
@@ -283,10 +283,10 @@ where
                       od"
 
 definition
-  handleE :: "('s, 'x + 'a) state_monad \<Rightarrow> 
-              ('x \<Rightarrow> ('s, 'x + 'a) state_monad) \<Rightarrow> 
+  handleE :: "('s, 'x + 'a) state_monad \<Rightarrow>
+              ('x \<Rightarrow> ('s, 'x + 'a) state_monad) \<Rightarrow>
               ('s, 'x + 'a) state_monad" (infix "<handle>" 11) where
-  "f <handle> handler \<equiv> 
+  "f <handle> handler \<equiv>
    do v \<leftarrow> f; case v of Inl e \<Rightarrow> handler e | Inr v' \<Rightarrow> return v od"
 
 definition
@@ -301,7 +301,7 @@ where
                | Inr v \<Rightarrow> continue v
     od"
 
-definition 
+definition
   isSkip :: "('s, 'a) state_monad \<Rightarrow> bool" where
   "isSkip m \<equiv> \<forall>s. \<exists>r. m s = (r,s)"
 
@@ -332,7 +332,7 @@ lemma isSkip_liftE [iff]: "isSkip (liftE f) = isSkip f"
   apply simp
   done
 
-lemma isSkip_liftI [simp, intro!]: 
+lemma isSkip_liftI [simp, intro!]:
   "\<lbrakk> \<And>y. x = Inr y \<Longrightarrow> isSkip (f y) \<rbrakk> \<Longrightarrow> isSkip (lift f x)"
   by (simp add: lift_def throwError_def return_def isSkip_def split: sum.splits)
 
@@ -395,7 +395,7 @@ definition
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> split Q (f s)"
 
 definition
-  validE :: "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'a + 'b) state_monad \<Rightarrow> ('b \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 
+  validE :: "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'a + 'b) state_monad \<Rightarrow> ('b \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow>
              ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" ("\<lbrace>_\<rbrace> _ \<lbrace>_\<rbrace>, \<lbrace>_\<rbrace>") where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> split (\<lambda>r s. case r of Inr b \<Rightarrow> Q b s
                                                   | Inl a \<Rightarrow> R a s) (f s)"
@@ -408,7 +408,7 @@ lemma validE_def2:
 syntax top :: "'a \<Rightarrow> bool" ("\<top>")
        bottom :: "'a \<Rightarrow> bool" ("\<bottom>")
 
-translations 
+translations
   "\<top>" == "\<lambda>_. CONST True"
   "\<bottom>" == "\<lambda>_. CONST False"
 
@@ -576,7 +576,7 @@ lemma hoare_post_conj [intro!]:
   "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q And R \<rbrace>"
   by (simp add:valid_def split_def bipred_conj_def)
 
-lemma hoare_pre_disj [intro!]: 
+lemma hoare_pre_disj [intro!]:
   "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace>; \<lbrace> Q \<rbrace> a \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P or Q \<rbrace> a \<lbrace> R \<rbrace>"
   by (simp add:valid_def pred_disj_def)
 
@@ -616,7 +616,7 @@ lemma hoare_modifyE_var [intro!]: "\<lbrakk> \<And>s. P s \<Longrightarrow> Q (f
 lemma hoare_put [intro!]: "P x \<Longrightarrow> \<lbrace> Q \<rbrace> put x \<lbrace> \<guillemotleft>\<top>,P\<guillemotright>\<rbrace>"
   by (simp add:valid_def put_def pred_lift_exact_def)
 
-lemma hoare_if [intro!]: 
+lemma hoare_if [intro!]:
   "\<lbrakk> P \<Longrightarrow> \<lbrace> Q \<rbrace> a \<lbrace> R \<rbrace>; \<not> P \<Longrightarrow> \<lbrace> Q \<rbrace> b \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> Q \<rbrace> if P then a else b \<lbrace> R \<rbrace>"
   by (simp add:valid_def)
 
@@ -625,7 +625,7 @@ lemma hoare_when [intro!]:
    \<lbrace> Q \<rbrace> when P a \<lbrace> \<guillemotleft>\<top>,R\<guillemotright> \<rbrace>"
   by (simp add:valid_def when_def split_def return_def pred_lift_exact_def)
 
-lemma hoare_unless [intro!]: 
+lemma hoare_unless [intro!]:
   "\<lbrakk> \<And>s. \<lbrakk> P; Q s \<rbrakk> \<Longrightarrow> R s; \<lbrakk> \<not> P \<rbrakk> \<Longrightarrow> \<lbrace> Q \<rbrace> a \<lbrace> \<guillemotleft>\<top>,R\<guillemotright> \<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace> Q \<rbrace> unless P a \<lbrace> \<guillemotleft>\<top>,R\<guillemotright> \<rbrace>"
   by (simp add:valid_def unless_def split_def when_def return_def pred_lift_exact_def)

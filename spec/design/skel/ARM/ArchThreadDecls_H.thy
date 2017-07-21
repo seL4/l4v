@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 	Declarations from SEL4.Kernel.Thread.
 *)
 

@@ -20,28 +20,103 @@ export PATH="${DIR}/isabelle/bin:$PATH"
 export L4V_ARCH="${L4V_ARCH:-X64}"
 echo "Testing for L4V_ARCH=${L4V_ARCH}:"
 
-# For the time being, we allow sorries in invariant proofs:
-#export INVS_QUICK_AND_DIRTY=1
+# Enable quick_and_dirty mode for various images
+if [ -n "${QUICK_AND_DIRTY}" ]
+   then
+       export INVS_QUICK_AND_DIRTY=1
+       export REFINE_QUICK_AND_DIRTY=1
+       export CREFINE_QUICK_AND_DIRTY=1
+       echo "Testing with QUICK_AND_DIRTY"
+fi
 
-# For the time being, we also allow sorries in refine proofs:
-# export REFINE_QUICK_AND_DIRTY=1
+# Enable skip_proofs mode for various images
 
-# For the time being, we also allow sorries in CRefine proofs:
-# export SKIP_REFINE_PROOFS=1
-# export CREFINE_QUICK_AND_DIRTY=1
+if [ -n "${REFINE_PROOFS}" ]
+then
+    export SKIP_REFINE_PROOFS=1
+    export SKIP_INVS_PROOFS=1
+    echo "Testing with SKIP_PROOFS"
+fi
 
 # Run the tests from the script directory.
 cd ${DIR}
 
-# Bitfield proofs aren't ready yet.
+# Bitfield proofs aren't ready for X64 yet.
 export SORRY_BITFIELD_PROOFS=1
 
-default="ASpec ExecSpec AInvs SpecCheck HaskellKernel BaseRefine Refine Licenses CKernel"
-if [ "${bamboo_l4v_regression_identifier}" == "test board"  ]
-then
-    bamboo_args=$(echo "$@" | ( [ -z "${bamboo_l4v_regression_options}" ] && cat - || sed 's/'"${bamboo_l4v_regression_options}"'//'))
-    echo "python ./misc/regression/run_tests.py ${bamboo_args} $default"
-    python ./misc/regression/run_tests.py ${bamboo_args} $default
-else
-    python ./misc/regression/run_tests.py ${@:-${default}} $([ -z ${bamboo_planKey} ] || echo $default)
-fi
+# Default exclusions for ARM_HYP and X64
+
+declare -A EXCLUDE
+
+EXCLUDE[ARM_HYP]="
+-r CamkesAdlSpec \
+-r CamkesGlueSpec \
+-r SimpleSystem \
+-r RelyGuarantee \
+-r Sep_Algebra \
+-r tests-xml-correct \
+-r SepTactics \
+-r SepTacticsExamples \
+-r DBaseRefine \
+-r DRefine \
+-r Access \
+-r InfoFlow \
+-r ArmConfidentiality \
+-r DPolicy \
+-r CamkesCdlRefine \
+-r Bisim \
+-r DSpec \
+-r SepDSpec \
+-r DSpecProofs \
+-r TakeGrant \
+-r ASepSpec \
+-r HaskellKernel \
+-r SysInit \
+-r SysInitExamples \
+-r InfoFlowCBase \
+-r InfoFlowC \
+-r SimplExportAndRefine \
+-r CParserTest \
+-r CParserTestX64 \
+-r CParserTools \
+-r AutoCorres \
+-r CamkesGlueProofs \
+-r CamkesDarpaReport \
+-r theory_imports \
+-r AutoCorresDoc \
+-r AutoCorresTest \
+-r AutoCorresSEL4 \
+"
+
+EXCLUDE[X64]="
+-r Access \
+-r ASepSpec \
+-r AutoCorresSEL4 \
+-r Bisim \
+-r ArmConfidentiality \
+-r CamkesAdlSpec \
+-r CamkesCdlRefine \
+-r CamkesDarpaReport \
+-r CamkesGlueProofs \
+-r CamkesGlueSpec \
+-r DBaseRefine \
+-r DPolicy \
+-r DSpecProofs \
+-r DRefine \
+-r DSpec \
+-r InfoFlow \
+-r InfoFlowC \
+-r InfoFlowCBase \
+-r RelyGuarantee \
+-r Sep_Algebra \
+-r SepDSpec \
+-r SepTactics \
+-r SepTacticsExamples \
+-r SimpleSystem \
+-r SimplExportAndRefine \
+-r SysInit \
+-r SysInitExamples \
+-r TakeGrant \
+"
+
+python ./misc/regression/run_tests.py ${EXCLUDE[${L4V_ARCH}]} $@

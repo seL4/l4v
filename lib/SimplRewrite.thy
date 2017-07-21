@@ -415,7 +415,7 @@ lemma exec_statefn_simulates_While:
         \<Longrightarrow> exec_statefn_simulates f S T (While C a) (While C' b)"
   apply (rule exec_statefn_simulatesI)
   apply (rule_tac S="f ` S \<union> com_final_guards UNIV b"
-           in exec_statefn_simulates_While_lemma[rule_format])      
+           in exec_statefn_simulates_While_lemma[rule_format])
       apply (auto simp add: inj_image_mem_iff[OF bij_is_inj, OF bij])
   done
 
@@ -673,15 +673,15 @@ method gs_simple_cases =
      clarsimp simp: xstate_inv_set_simps,
      (fastforce intro: exec.intros guards_adjust_by_invariant.intros)[1])+)
 
-method gs_case methods m uses g_def = 
+method gs_case methods m uses g_def =
   ((erule guards_adjust_by_invariant.cases; simp),
    clarsimp simp: g_def xstate_inv_set_simps,
    m,
    auto intro: exec.intros guards_adjust_by_invariant.intros)[1]
 
 lemma gabi_simulation:
-  "\<lbrakk> G \<turnstile> \<langle>c, xs\<rangle> \<Rightarrow> xs'; 
-        guards_adjust_by_invariant S T c c'; 
+  "\<lbrakk> G \<turnstile> \<langle>c, xs\<rangle> \<Rightarrow> xs';
+        guards_adjust_by_invariant S T c c';
         xs \<in> xstate_inv_set (S \<inter> T); context_gabi S G G' \<rbrakk>
     \<Longrightarrow> G' \<turnstile> \<langle>c', xs\<rangle> \<Rightarrow> xs' \<and> xs' \<in> xstate_inv_set S"
 proof (induct arbitrary: c' T rule: exec.induct)

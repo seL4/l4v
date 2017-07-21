@@ -92,7 +92,7 @@ lemma Run_app:
 
 (* An ADT with an initial state. *)
 locale system =
-  fixes A :: "('a,'s,'e) data_type"  
+  fixes A :: "('a,'s,'e) data_type"
   and s0 :: "'s"  (* an initial state *)
 
 context system begin
@@ -116,7 +116,7 @@ lemma obs_detD:
  * don't abstract away information. *)
 definition no_abs where
   "no_abs \<equiv> \<forall> x s as . reachable s \<longrightarrow> x \<in> steps (Simulation.Step A) (Init A s) as \<longrightarrow>  Init A (Fin A x) = {x}"
-   
+
 lemma no_absD:
   "no_abs \<Longrightarrow> reachable s \<Longrightarrow> x \<in> steps (Simulation.Step A) (Init A s) as \<Longrightarrow> Init A (Fin A x) = {x}" by (auto simp: no_abs_def)
 
@@ -275,7 +275,7 @@ lemma Run_det:
   apply(rule_tac x="s'a" in exI)
   apply (auto dest: equalityD1)
   done
-  
+
 lemma eq:
   "\<lbrakk>S \<subseteq> T; \<exists> x. S = {x}; \<exists> y. T = {y}\<rbrakk> \<Longrightarrow> S = T"
   apply blast
@@ -327,18 +327,18 @@ lemma s0_reachable:
   done
 
 lemma foldl_foldl_Step:
-  "\<lbrakk>x \<in> foldl (\<lambda>S j. data_type.Step A j `` S) M as; 
+  "\<lbrakk>x \<in> foldl (\<lambda>S j. data_type.Step A j `` S) M as;
    M \<subseteq> foldl (\<lambda>S j. data_type.Step A j `` S) B js\<rbrakk>
        \<Longrightarrow> x \<in> foldl (\<lambda>S j. data_type.Step A j `` S)
                (foldl (\<lambda>S j. data_type.Step A j `` S) B js) as"
-  apply(induct  as arbitrary: x M js B rule: rev_induct) 
+  apply(induct  as arbitrary: x M js B rule: rev_induct)
    apply fastforce
   apply simp
   apply(erule ImageE)
   apply(drule_tac x=xb in meta_spec)
   apply(drule_tac x=M in meta_spec)
   apply simp
-  apply(drule_tac x=js in meta_spec) 
+  apply(drule_tac x=js in meta_spec)
   apply(drule_tac x=B in meta_spec, simp)
   apply(blast)
   done
@@ -357,10 +357,10 @@ lemma reachable_Fin:
    apply blast
   apply(blast dest: injD[OF Fin_inj])
   done
-  
+
 
 end
-  
+
 
 
 
@@ -408,7 +408,7 @@ locale noninterference_policy =
 
 context noninterference_policy begin
 
-abbreviation uwr2 :: "'s \<Rightarrow> 'd \<Rightarrow> 's \<Rightarrow> bool" ("(_/ \<sim>_\<sim>/ _)" [50,100,50] 1000) 
+abbreviation uwr2 :: "'s \<Rightarrow> 'd \<Rightarrow> 's \<Rightarrow> bool" ("(_/ \<sim>_\<sim>/ _)" [50,100,50] 1000)
 where "s \<sim>u\<sim> t \<equiv> (s,t) \<in> uwr u"
 
 abbreviation policy2 :: "'d \<Rightarrow> 'd \<Rightarrow> bool" (infix "\<leadsto>" 50) where
@@ -453,9 +453,9 @@ lemma sameFor_sym_dom:
 end
 
 locale noninterference_system = enabled_system A s0 + noninterference_policy dom uwr policy out schedDomain
-  for A :: "('a,'s,'e) data_type" 
+  for A :: "('a,'s,'e) data_type"
   and s0 :: "'s"
-  and dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"  
+  and dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"
   and uwr :: "'d \<Rightarrow> ('s \<times> 's) set"
   and policy :: "('d \<times> 'd) set"
   and out :: "'d \<Rightarrow> 's \<Rightarrow> 'p"
@@ -467,26 +467,26 @@ context noninterference_system begin
 
 (* The set of domains (which carry out actions in the list "as") which
  * may influence "u", assuming we start in state "s". *)
-primrec  
+primrec
  sources :: "'e list \<Rightarrow> 's \<Rightarrow> 'd \<Rightarrow> 'd set" where
  sources_Nil: "sources [] s u = {u}"|
- sources_Cons: "sources (a#as) s u = (\<Union>{sources as s' u| s'. (s,s') \<in> Step a}) \<union> 
+ sources_Cons: "sources (a#as) s u = (\<Union>{sources as s' u| s'. (s,s') \<in> Step a}) \<union>
       {w. w = dom a s \<and> (\<exists> v s'. dom a s \<leadsto> v \<and> (s,s') \<in> Step a \<and> v \<in> sources as s' u)}"
 
-declare sources_Nil [simp del]     
-declare sources_Cons [simp del]     
+declare sources_Nil [simp del]
+declare sources_Cons [simp del]
 
 
-  
-definition 
-  obs_equiv :: "'s \<Rightarrow> 'e list \<Rightarrow> 's \<Rightarrow> 'e list \<Rightarrow> 'd \<Rightarrow> bool"  
+
+definition
+  obs_equiv :: "'s \<Rightarrow> 'e list \<Rightarrow> 's \<Rightarrow> 'e list \<Rightarrow> 'd \<Rightarrow> bool"
 where
   "obs_equiv s as t bs d \<equiv> \<forall> s' t'. s' \<in> execution A s as \<and> t' \<in> execution A t bs \<longrightarrow>
                 out d s' = out d t'"
 
 
-definition 
-  uwr_equiv :: "'s \<Rightarrow> 'e list \<Rightarrow> 's \<Rightarrow> 'e list \<Rightarrow> 'd \<Rightarrow> bool"  
+definition
+  uwr_equiv :: "'s \<Rightarrow> 'e list \<Rightarrow> 's \<Rightarrow> 'e list \<Rightarrow> 'd \<Rightarrow> bool"
 where
   "uwr_equiv s as t bs d \<equiv> \<forall> s' t'. s' \<in> execution A s as \<and> t' \<in> execution A t bs \<longrightarrow>
                 s' \<sim>d\<sim> t'"
@@ -496,7 +496,7 @@ where
 text {* Nonleakage *}
 definition
   Nonleakage :: "bool" where
-  "Nonleakage \<equiv> \<forall>as s u t. reachable s \<and> reachable t \<longrightarrow> 
+  "Nonleakage \<equiv> \<forall>as s u t. reachable s \<and> reachable t \<longrightarrow>
      s \<sim>schedDomain\<sim> t \<longrightarrow>
      s \<approx>(sources as s u)\<approx> t \<longrightarrow> obs_equiv s as t as u"
 
@@ -522,13 +522,13 @@ lemma uwr_equiv_trans:
   apply(blast intro: uwr_trans)
   done
 
-primrec gen_purge :: "('e list \<Rightarrow> 's \<Rightarrow> 'd \<Rightarrow> 'd set) \<Rightarrow> 'd \<Rightarrow> 'e list \<Rightarrow> 's set \<Rightarrow> 'e list" 
+primrec gen_purge :: "('e list \<Rightarrow> 's \<Rightarrow> 'd \<Rightarrow> 'd set) \<Rightarrow> 'd \<Rightarrow> 'e list \<Rightarrow> 's set \<Rightarrow> 'e list"
 where
   Nil : "gen_purge sf u []     ss = []" |
-  Cons: "gen_purge sf u (a#as) ss = 
-            (if (\<exists>s\<in>ss. dom a s \<in> sf (a#as) s u) then 
+  Cons: "gen_purge sf u (a#as) ss =
+            (if (\<exists>s\<in>ss. dom a s \<in> sf (a#as) s u) then
                a#gen_purge sf u as (\<Union>s\<in>ss. {s'. (s,s') \<in> Step a})
-             else 
+             else
                gen_purge sf u as ss)"
 
 
@@ -540,11 +540,11 @@ lemma ipurge_Nil:
   "ipurge u [] ss = []"
   by(auto simp: ipurge_def)
 
-lemma ipurge_Cons: 
-  "ipurge u (a#as) ss = 
-     (if (\<exists> s\<in>ss. dom a s \<in> sources (a#as) s u) then 
+lemma ipurge_Cons:
+  "ipurge u (a#as) ss =
+     (if (\<exists> s\<in>ss. dom a s \<in> sources (a#as) s u) then
          a#ipurge u as (\<Union>s\<in>ss. {s'. (s,s') \<in> Step a})
-      else 
+      else
          ipurge u as ss)"
   by (auto simp: ipurge_def)
 
@@ -568,14 +568,14 @@ lemma INT_cong':
   "\<Inter>{P x|x. Q x} = \<Inter>{P' x|x. Q x}"
   apply (auto simp: a)
   done
-   
+
 
 text {* Standard Noninterfernce *}
 
 definition
   Noninterference :: "bool" where
  "Noninterference \<equiv>
-  \<forall> u as s. reachable s \<longrightarrow> 
+  \<forall> u as s. reachable s \<longrightarrow>
          (obs_equiv s as s (ipurge u as {s}) u)"
 
 
@@ -615,8 +615,8 @@ lemma Noninterference_Noninterference_strong:
   done
 
 
-text {* Noninfluence -- the combination of Noninterference and 
-   Nonleakage. 
+text {* Noninfluence -- the combination of Noninterference and
+   Nonleakage.
 
    We add the assumption about equivalence wrt the scheduler's domain, as
    is common in e.g. GVW.*}
@@ -668,7 +668,7 @@ definition
   Noninfluence_gen :: "bool" where
  "Noninfluence_gen \<equiv>
   \<forall> u as s ts. reachable s \<and> (\<forall> t \<in> ts. reachable t) \<longrightarrow>
-      (\<forall>t \<in> ts. s \<approx>(sources as s u)\<approx> t) \<longrightarrow>  (\<forall>t \<in> ts. s \<sim>schedDomain\<sim> t) \<longrightarrow>  
+      (\<forall>t \<in> ts. s \<approx>(sources as s u)\<approx> t) \<longrightarrow>  (\<forall>t \<in> ts. s \<sim>schedDomain\<sim> t) \<longrightarrow>
          (\<forall>t \<in> ts. uwr_equiv s as t (ipurge u as ts) u)"
 
 definition
@@ -695,8 +695,8 @@ definition output_consistent :: "bool" where
 definition confidentiality_u :: "bool" where
   "confidentiality_u \<equiv> \<forall> a u s t.  reachable s \<and> reachable t \<longrightarrow>
     s \<sim>schedDomain\<sim> t \<longrightarrow>
-    ((dom a s \<leadsto> u) \<longrightarrow> s \<sim>dom a s\<sim> t) \<longrightarrow> 
-      s \<sim>u\<sim> t \<longrightarrow> 
+    ((dom a s \<leadsto> u) \<longrightarrow> s \<sim>dom a s\<sim> t) \<longrightarrow>
+      s \<sim>u\<sim> t \<longrightarrow>
       (\<forall> s' t'. (s,s') \<in> Step a \<and> (t,t') \<in> Step a \<longrightarrow>
         s' \<sim>u\<sim> t')"
 
@@ -707,14 +707,14 @@ lemma no_domain_visible_nondeterminism:
   done
 
 definition integrity_u :: "bool" where
-  "integrity_u \<equiv> \<forall> a u s. reachable  s \<longrightarrow> 
+  "integrity_u \<equiv> \<forall> a u s. reachable  s \<longrightarrow>
    (dom a s,u) \<notin> policy  \<longrightarrow>
    (\<forall> s'. (s,s') \<in> Step a \<longrightarrow> s \<sim>u\<sim> s')"
 
 (*<*)
 (* integrity_u actually guarantees this (seemingly) stronger condition *)
 definition integrity_u_more :: "bool" where
-  "integrity_u_more \<equiv> \<forall> a u s. reachable s \<longrightarrow> 
+  "integrity_u_more \<equiv> \<forall> a u s. reachable s \<longrightarrow>
    (dom a s,u) \<notin> policy \<longrightarrow>
    (\<forall> s' t. s \<sim>u\<sim> t \<and> (s,s') \<in> Step a \<longrightarrow> s' \<sim>u\<sim> t)"
 
@@ -727,7 +727,7 @@ lemma integrity_u_more:
 
 lemma integrity_uD:
   "\<lbrakk>integrity_u; reachable s; (dom a s,u) \<notin> policy;
-    s \<sim>u\<sim> t; (s,s') \<in> Step a\<rbrakk> \<Longrightarrow> 
+    s \<sim>u\<sim> t; (s,s') \<in> Step a\<rbrakk> \<Longrightarrow>
    s' \<sim>u\<sim> t"
   apply(drule integrity_u_more)
   apply(simp add: integrity_u_more_def)
@@ -742,8 +742,8 @@ text {*
 *}
 definition confidentiality_u_weak where
   "confidentiality_u_weak \<equiv> \<forall> a u s t.  reachable s \<and> reachable t \<longrightarrow>
-    s \<sim>schedDomain\<sim> t \<longrightarrow> dom a s \<leadsto> u \<longrightarrow> s \<sim>(dom a s)\<sim> t \<longrightarrow> 
-      s \<sim>u\<sim> t \<longrightarrow> 
+    s \<sim>schedDomain\<sim> t \<longrightarrow> dom a s \<leadsto> u \<longrightarrow> s \<sim>(dom a s)\<sim> t \<longrightarrow>
+      s \<sim>u\<sim> t \<longrightarrow>
         (\<forall> s' t'. (s,s') \<in> Step a \<and> (t,t') \<in> Step a \<longrightarrow> s' \<sim>u\<sim> t')"
 
 lemma confidentiality_u_confidentiality_u_weak:
@@ -810,10 +810,10 @@ lemma sched_equiv_preserved:
 
 lemma sched_equiv_preserved_left:
   "\<lbrakk>integrity_u; s \<sim>schedDomain\<sim> t;
-    dom a s \<noteq> schedDomain; (s,s') \<in> Step a; reachable s\<rbrakk> \<Longrightarrow> 
+    dom a s \<noteq> schedDomain; (s,s') \<in> Step a; reachable s\<rbrakk> \<Longrightarrow>
     s' \<sim>schedDomain\<sim> t"
   apply(blast intro: integrity_uD schedNotGlobalChannel)
-  done       
+  done
 
 lemma Noninfluence_gen_Noninterference:
   "\<lbrakk>output_consistent; Noninfluence_gen\<rbrakk> \<Longrightarrow> Noninterference"
@@ -851,14 +851,14 @@ lemma Noninfluence_gen_Noninterference_strong:
 end
 
 locale enabled_Step_system = enabled_system A s0 + Step_system A s0
-  for A :: "('a,'s,'e) data_type" and s0 :: "'s" 
+  for A :: "('a,'s,'e) data_type" and s0 :: "'s"
 
 
 (* we define the unwinding conditions for any system *)
 locale unwinding_system = enabled_Step_system A s0 +  noninterference_policy dom uwr policy out schedDomain
-  for A :: "('a,'s,'e) data_type" 
+  for A :: "('a,'s,'e) data_type"
   and s0 :: "'s"
-  and dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"  
+  and dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"
   and uwr :: "'d \<Rightarrow> ('s \<times> 's) set"
   and policy :: "('d \<times> 'd) set"
   and out :: "'d \<Rightarrow> 's \<Rightarrow> 'p"
@@ -924,7 +924,7 @@ lemma sources_eq':
 
 
 lemma sources_eq:
-  "\<lbrakk>confidentiality_u; s \<sim>schedDomain\<sim> t; reachable s; reachable t\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>confidentiality_u; s \<sim>schedDomain\<sim> t; reachable s; reachable t\<rbrakk> \<Longrightarrow>
   sources as s u = sources as t u"
   apply(rule sources_eq'[rule_format], simp)
   done
@@ -981,8 +981,8 @@ lemma ipurge_eq'_helper:
    apply(fastforce intro: reachable_Step)
   apply(fastforce simp: schedIncludesCurrentDom)
   done
-  
-  
+
+
 
 lemma ipurge_eq':
   "(\<forall> s t. s\<in>ss \<and> t\<in>ts \<longrightarrow> s \<sim>schedDomain\<sim> t \<and> reachable s \<and> reachable t) \<and> (\<exists> s. s \<in> ss) \<and> (\<exists> t. t \<in> ts) \<and> confidentiality_u \<longrightarrow> ipurge u as ss = ipurge u as ts"
@@ -1002,12 +1002,12 @@ lemma ipurge_eq':
     apply clarsimp
     apply(drule ipurge_eq'_helper, (simp add: uwr_sym)+)[1]
    apply(rule "Cons.hyps"[rule_format], auto)
-   done  
+   done
   qed
 
 lemma ipurge_eq:
   "\<lbrakk>s \<sim>schedDomain\<sim> t; reachable s; reachable t;
-    confidentiality_u\<rbrakk> \<Longrightarrow> 
+    confidentiality_u\<rbrakk> \<Longrightarrow>
    ipurge u as {s} = ipurge u as {t}"
   apply(rule ipurge_eq'[rule_format], simp)
   done
@@ -1058,7 +1058,7 @@ lemma Noninfluence_Noninfluence_strong:
 lemma dom_in_sources_Cons:
   "\<lbrakk>confidentiality_u; reachable s; reachable t;
     s \<approx>(sources (a#as) s u)\<approx> t; s \<sim>schedDomain\<sim> t;
-    (dom a s \<in> sources (a#as) s u)\<rbrakk> \<Longrightarrow> 
+    (dom a s \<in> sources (a#as) s u)\<rbrakk> \<Longrightarrow>
     (dom a t \<in> sources (a#as) t u)"
   apply(subgoal_tac "dom a s = dom a t")
    apply(fastforce dest: sources_eq)
@@ -1097,9 +1097,9 @@ lemma sources_eq_Step:
   apply(rule sources_eq, simp+)
     apply(rule_tac t=s and s=s and a=a in sched_equiv_preserved_left, (simp add: uwr_refl reachable_Step)+)
   done
-  
+
 lemma sources_equiv_preserved_left:
-  "\<lbrakk>integrity_u; confidentiality_u; reachable s; reachable t; s \<sim>schedDomain\<sim> t; 
+  "\<lbrakk>integrity_u; confidentiality_u; reachable s; reachable t; s \<sim>schedDomain\<sim> t;
     dom a s \<notin> sources (a#as) s u; s \<approx>sources (a#as) s u\<approx> t; (s,s') \<in> Step a; dom a s \<noteq> schedDomain\<rbrakk> \<Longrightarrow>
    s' \<approx>sources as s' u\<approx> t"
   apply(clarsimp simp: sameFor_dom_def)
@@ -1164,7 +1164,7 @@ lemma Noninfluence_gen:
 lemma Nonleakage_gen:
   "\<lbrakk>confidentiality_u\<rbrakk> \<Longrightarrow> Nonleakage_gen"
   apply(subst Nonleakage_gen_def)
-  apply(rule allI)  
+  apply(rule allI)
   apply(induct_tac as)
    apply(simp add: sources_Nil uwr_equiv_def execution_Run sameFor_dom_def)
   apply(clarsimp)
@@ -1179,11 +1179,11 @@ lemma Nonleakage_gen:
   apply(erule mp)
   apply(blast intro: sources_unwinding_step)
   done
-   
+
 
 
 lemma Noninterference:
-  "\<lbrakk>confidentiality_u_weak; output_consistent; integrity_u\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>confidentiality_u_weak; output_consistent; integrity_u\<rbrakk> \<Longrightarrow>
    Noninterference"
   apply(rule Noninfluence_gen_Noninterference)
    apply assumption
@@ -1191,7 +1191,7 @@ lemma Noninterference:
   done
 
 lemma Noninterference_strong:
-  "\<lbrakk>confidentiality_u_weak; output_consistent; integrity_u\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>confidentiality_u_weak; output_consistent; integrity_u\<rbrakk> \<Longrightarrow>
    Noninterference_strong"
   apply(rule Noninfluence_gen_Noninterference_strong)
    apply assumption
@@ -1201,7 +1201,7 @@ lemma Noninterference_strong:
 
 
 lemma Noninfluence:
-  "\<lbrakk>confidentiality_u_weak; output_consistent; integrity_u\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>confidentiality_u_weak; output_consistent; integrity_u\<rbrakk> \<Longrightarrow>
    Noninfluence"
   apply(rule Noninfluence_gen_Noninfluence)
    apply assumption
@@ -1209,7 +1209,7 @@ lemma Noninfluence:
   done
 
 lemma Noninfluence_strong:
-  "\<lbrakk>confidentiality_u_weak; output_consistent; integrity_u\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>confidentiality_u_weak; output_consistent; integrity_u\<rbrakk> \<Longrightarrow>
    Noninfluence_strong"
   apply(rule Noninfluence_Noninfluence_strong)
    apply(blast intro: confidentiality_u_weak)
@@ -1218,14 +1218,14 @@ lemma Noninfluence_strong:
 
 
 lemma Noninfluence_uwr:
-  "\<lbrakk>confidentiality_u_weak; integrity_u\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>confidentiality_u_weak; integrity_u\<rbrakk> \<Longrightarrow>
    Noninfluence_uwr"
   apply(rule Noninfluence_gen_Noninfluence_uwr)
   apply(blast intro: Noninfluence_gen confidentiality_u_weak)
   done
 
 lemma Noninfluence_strong_uwr:
-  "\<lbrakk>confidentiality_u_weak; integrity_u\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>confidentiality_u_weak; integrity_u\<rbrakk> \<Longrightarrow>
    Noninfluence_strong_uwr"
   apply(rule Noninfluence_uwr_Noninfluence_strong_uwr)
    apply(blast intro: confidentiality_u_weak)
@@ -1360,7 +1360,7 @@ text {*
    @{prop Noninfluence_gen} actually turns out to be equivalent to @{prop Noninfluence_strong_uwr},
    when the policy is reflexive. So the two unwinding conditions for integrity
    and confidentiality actually turn out to be sound and sufficient for the
-   condition we were using them to prove in the first place. 
+   condition we were using them to prove in the first place.
 *}
 lemma Noninfluence_gen_equiv_Noninfluence_strong_uwr:
   "Noninfluence_gen = Noninfluence_strong_uwr"

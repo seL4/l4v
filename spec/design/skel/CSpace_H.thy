@@ -17,9 +17,9 @@ begin
 #INCLUDE_HASKELL SEL4/Kernel/CSpace.lhs bodies_only NOT resolveAddressBits
 
 
-function 
-  resolveAddressBits :: 
-  "capability \<Rightarrow> cptr \<Rightarrow> nat \<Rightarrow> 
+function
+  resolveAddressBits ::
+  "capability \<Rightarrow> cptr \<Rightarrow> nat \<Rightarrow>
    (lookup_failure, (machine_word * nat)) kernel_f"
 where
  "resolveAddressBits a b c =

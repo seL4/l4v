@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Formalisation of interrupt handling.
 *)
 
@@ -24,8 +24,8 @@ requalify_consts
   arch_invoke_irq_control
   handle_reserved_irq
 end
-  
-  
+
+
 text {* Tests whether an IRQ identifier is in use. *}
 definition
   is_irq_active :: "irq \<Rightarrow> (bool,'z::state_ext) s_monad" where
@@ -37,7 +37,7 @@ actions are available. *}
 fun
   invoke_irq_control :: "irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
 where
-  "invoke_irq_control (IRQControl irq handler_slot control_slot) = 
+  "invoke_irq_control (IRQControl irq handler_slot control_slot) =
      liftE (do set_irq_state IRQSignal irq;
                cap_insert (IRQHandlerCap irq) control_slot handler_slot od)"
 | "invoke_irq_control (ArchIRQControl invok) =
@@ -90,7 +90,7 @@ definition timer_tick :: "unit det_ext_monad" where
 
 definition
   handle_interrupt :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad" where
- "handle_interrupt irq \<equiv> 
+ "handle_interrupt irq \<equiv>
    if (irq > maxIRQ) then do_machine_op $ do
     maskInterrupt True irq;
     ackInterrupt irq
@@ -102,7 +102,7 @@ definition
        slot \<leftarrow> get_irq_slot irq;
        cap \<leftarrow> get_cap slot;
        when (is_ntfn_cap cap \<and> AllowSend \<in> cap_rights cap)
-         $ send_signal (obj_ref_of cap) (cap_ep_badge cap); 
+         $ send_signal (obj_ref_of cap) (cap_ep_badge cap);
        do_machine_op $ maskInterrupt True irq
      od
    | IRQTimer \<Rightarrow> do

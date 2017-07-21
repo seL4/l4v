@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Refinement for interrupt controller operations
 *)
 
@@ -16,8 +16,8 @@ theory Interrupt_AI
 imports "./$L4V_ARCH/ArchIpc_AI"
 begin
 
-  
-context begin interpretation Arch . 
+
+context begin interpretation Arch .
 requalify_consts
   maxIRQ
 end
@@ -67,49 +67,49 @@ locale Interrupt_AI =
       decode_irq_control_invocation label args slot caps
     \<lbrace>irq_control_inv_valid\<rbrace>,-"
   assumes get_irq_slot_different:
-    "\<And> irq ptr. 
+    "\<And> irq ptr.
     \<lbrace>\<lambda>s :: 'a state. valid_global_refs s \<and> ex_cte_cap_wp_to is_cnode_cap ptr s\<rbrace>
        get_irq_slot irq
     \<lbrace>\<lambda>rv s. rv \<noteq> ptr\<rbrace>"
   assumes is_derived_use_interrupt:
-    "\<And> cap cap' m p. 
+    "\<And> cap cap' m p.
     (is_ntfn_cap cap \<and> interrupt_derived cap cap') \<longrightarrow> (is_derived m p cap cap')"
   assumes maskInterrupt_invs:
     "\<And>b irq.
-    \<lbrace>invs and (\<lambda>s :: 'a state. \<not>b \<longrightarrow> interrupt_states s irq \<noteq> IRQInactive)\<rbrace> 
-      do_machine_op (maskInterrupt b irq) 
+    \<lbrace>invs and (\<lambda>s :: 'a state. \<not>b \<longrightarrow> interrupt_states s irq \<noteq> IRQInactive)\<rbrace>
+      do_machine_op (maskInterrupt b irq)
     \<lbrace>\<lambda>rv. invs\<rbrace>"
   assumes no_cap_to_obj_with_diff_IRQHandler[simp]:
     "\<And> irq S. (no_cap_to_obj_with_diff_ref (IRQHandlerCap irq) S :: 'a state \<Rightarrow> bool)= \<top>"
   assumes set_irq_state_valid_cap[wp]:
-    "\<And> cap irq. 
-    \<lbrace>valid_cap cap :: 'a state \<Rightarrow> bool\<rbrace> 
-      set_irq_state IRQSignal irq 
-    \<lbrace>\<lambda>rv. valid_cap cap\<rbrace>"    
-  assumes set_irq_state_valid_global_refs[wp]: 
-    "\<And> a b. 
-    \<lbrace>valid_global_refs :: 'a state \<Rightarrow> bool\<rbrace> 
-      set_irq_state a b 
+    "\<And> cap irq.
+    \<lbrace>valid_cap cap :: 'a state \<Rightarrow> bool\<rbrace>
+      set_irq_state IRQSignal irq
+    \<lbrace>\<lambda>rv. valid_cap cap\<rbrace>"
+  assumes set_irq_state_valid_global_refs[wp]:
+    "\<And> a b.
+    \<lbrace>valid_global_refs :: 'a state \<Rightarrow> bool\<rbrace>
+      set_irq_state a b
     \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
   assumes invoke_irq_handler_invs':
     "\<And> (ex_inv :: 'a state \<Rightarrow> bool) i.
      \<lbrakk> \<And>f. \<lbrace>invs and ex_inv\<rbrace> do_machine_op f \<lbrace>\<lambda>rv::unit. ex_inv\<rbrace>;
-       \<And>cap src dest. 
+       \<And>cap src dest.
        \<lbrace>ex_inv and invs and K (src \<noteq> dest)\<rbrace>
          cap_insert cap src dest
        \<lbrace>\<lambda>_.ex_inv\<rbrace>;
-       \<And>cap. \<lbrace>ex_inv and invs\<rbrace> cap_delete_one cap \<lbrace>\<lambda>_.ex_inv\<rbrace> 
-     \<rbrakk> \<Longrightarrow> 
+       \<And>cap. \<lbrace>ex_inv and invs\<rbrace> cap_delete_one cap \<lbrace>\<lambda>_.ex_inv\<rbrace>
+     \<rbrakk> \<Longrightarrow>
      \<lbrace>invs and ex_inv and irq_handler_inv_valid i\<rbrace> invoke_irq_handler i \<lbrace>\<lambda>rv s. invs s \<and> ex_inv s\<rbrace>"
   assumes invoke_irq_control_invs[wp]:
     "\<And> i. \<lbrace>invs and irq_control_inv_valid i\<rbrace> invoke_irq_control i \<lbrace>\<lambda>rv. invs :: 'a state \<Rightarrow> bool\<rbrace>"
   assumes resetTimer_invs[wp]:
     "\<lbrace>invs :: 'a state \<Rightarrow> bool\<rbrace> do_machine_op resetTimer \<lbrace>\<lambda>_. invs\<rbrace>"
-  assumes empty_fail_ackInterrupt[simp, intro!]: 
+  assumes empty_fail_ackInterrupt[simp, intro!]:
     "\<And> irq. empty_fail (ackInterrupt irq)"
-  assumes empty_fail_maskInterrupt[simp, intro!]: 
+  assumes empty_fail_maskInterrupt[simp, intro!]:
     "\<And> f irq. empty_fail (maskInterrupt f irq)"
-  assumes handle_interrupt_invs [wp]: 
+  assumes handle_interrupt_invs [wp]:
     "\<And> irq. \<lbrace>invs :: 'a state \<Rightarrow> bool\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
   assumes sts_arch_irq_control_inv_valid [wp]:
     "\<And>i t st.
@@ -246,7 +246,7 @@ lemma IRQHandler_valid:
   "(s \<turnstile> cap.IRQHandlerCap irq) = (irq \<le> maxIRQ)"
   by (simp add: valid_cap_def cap_aligned_def word_bits_conv)
 
-lemmas (in Interrupt_AI) 
+lemmas (in Interrupt_AI)
   invoke_irq_handler_invs[wp] = invoke_irq_handler_invs'[where ex_inv=\<top>
                                                              , simplified hoare_post_taut
                                                              , OF TrueI TrueI TrueI
@@ -258,7 +258,7 @@ crunch interrupt_states[wp]: update_waiting_ntfn, cancel_signal, blocked_cancel_
 lemma cancel_ipc_noreply_interrupt_states:
   "\<lbrace>\<lambda>s. st_tcb_at (\<lambda>st. st \<noteq> BlockedOnReply) t s \<and> P (interrupt_states s) \<rbrace> cancel_ipc t \<lbrace> \<lambda>_ s. P (interrupt_states s) \<rbrace>"
   apply (simp add: cancel_ipc_def)
-  apply wpsimp 
+  apply wpsimp
      apply (rule hoare_pre_cont)
     apply (wp)
    apply (wp gts_wp)+
@@ -278,5 +278,5 @@ lemma send_signal_interrupt_states[wp_unsafe]:
   apply (auto simp: pred_tcb_at_def obj_at_def receive_blocked_def)
   done
 
-  
+
 end

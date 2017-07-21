@@ -79,7 +79,7 @@ datatype cdl_page_invocation =
   | PageRemap cdl_cap "cdl_cap_ref list"
   | PageUnmap "cdl_mapped_addr option" cdl_object_id "cdl_cap_ref" nat
   | PageFlushCaches flush
-  | PageGetAddress 
+  | PageGetAddress
 
 
 datatype cdl_page_directory_invocation =

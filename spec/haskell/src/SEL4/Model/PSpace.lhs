@@ -78,14 +78,14 @@ The default definitions are sufficient for most kernel objects. There is one exc
 >                                 KernelObject -> m a
 >     loadObject ptr ptr' next obj = do
 >         unless (ptr == ptr') $ fail $ "no object at address given in pspace,target=" ++ (show ptr) ++",lookup=" ++ (show ptr')
->         val <- projectKO obj 
+>         val <- projectKO obj
 >         alignCheck ptr (objBits val)
 >         sizeCheck ptr next (objBits val)
 >         return val
 
 >     updateObject :: (Monad m) => a -> KernelObject -> Word ->
 >                         Word -> Maybe Word -> m KernelObject
->     updateObject val oldObj ptr ptr' next = do 
+>     updateObject val oldObj ptr ptr' next = do
 >         unless (ptr == ptr') $ fail $ "no object at address given in pspace,target=" ++ (show ptr) ++",lookup=" ++ (show ptr')
 >         liftM (asTypeOf val) $ projectKO oldObj -- for the type error
 >         alignCheck ptr (objBits val)
@@ -223,7 +223,7 @@ Update the state with the new "PSpace" map.
 \subsubsection{Deleting Objects}
 
 > deleteRange :: Data.Map.Map Word a -> Word -> Int -> Data.Map.Map Word a
-> deleteRange m pstart bits = 
+> deleteRange m pstart bits =
 >         let (_,lr) = Data.Map.split (pstart-1) m
 >             pend = pstart + 2^bits
 >             (mid,_) = Data.Map.split pend lr in
@@ -264,7 +264,7 @@ We also assert that the ghost CNodes are all either completely deleted or unchan
 > cNodePartialOverlap :: (Word -> Maybe Int) -> (Word -> Bool) -> Bool
 > cNodePartialOverlap _ _ = False
 
-After deletion, we assert ksASIDMapSafe which states that there are page directories at the addresses in the asid map. Again, the real assertion is only inserted in the translation to the theorem prover. 
+After deletion, we assert ksASIDMapSafe which states that there are page directories at the addresses in the asid map. Again, the real assertion is only inserted in the translation to the theorem prover.
 
 > ksASIDMapSafe :: KernelState -> Bool
 > ksASIDMapSafe _ = True
@@ -289,7 +289,7 @@ This is intended for use by alternate implementations of "placeNewObject", for o
 These two functions halt the kernel with an error message when a memory access is performed with incorrect type or alignment.
 
 > typeError :: Monad m => String -> KernelObject -> m a
-> typeError t1 t2 = fail ("Wrong object type - expected " ++ t1 ++ 
+> typeError t1 t2 = fail ("Wrong object type - expected " ++ t1 ++
 >                         ", found " ++ (kernelObjectTypeName t2))
 
 > alignError :: Monad m => Int -> m a

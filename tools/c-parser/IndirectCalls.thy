@@ -57,7 +57,7 @@ lemma procs_consistent_safe:
   done
 
 lemma hoare_indirect_call_procs_consistent:
-  "\<lbrakk> naming proc = Some nm; 
+  "\<lbrakk> naming proc = Some nm;
         \<Gamma> \<turnstile> P (call initf proc ret c) Q, A \<rbrakk>
     \<Longrightarrow> \<Gamma> \<turnstile> ({s. procs_consistent symtab naming \<and> x_fn s = symtab nm} \<inter> P)
             (dynCall initf (\<lambda>s. lookup_proc symtab naming (x_fn s))

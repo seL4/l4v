@@ -294,7 +294,7 @@ definition
                  receive_ipc thread ep_cap is_blocking
                 od
               else flt)
-           | NotificationCap ref badge rights \<Rightarrow> 
+           | NotificationCap ref badge rights \<Rightarrow>
              (if AllowRecv \<in> rights
               then doE
                 ntfn \<leftarrow> liftE $ get_notification ref;
@@ -353,7 +353,7 @@ where
   od)"
 
 | "handle_event Interrupt = (without_preemption $ do
-    active \<leftarrow> do_machine_op getActiveIRQ;
+    active \<leftarrow> do_machine_op $ getActiveIRQ False;
     case active of
        Some irq \<Rightarrow> handle_interrupt irq
      | None \<Rightarrow> return ()
@@ -367,8 +367,7 @@ where
 
 | "handle_event (HypervisorEvent hypfault_type) = (without_preemption $ do
     thread \<leftarrow> gets cur_thread;
-    handle_hypervisor_fault thread hypfault_type;
-    return ()
+    handle_hypervisor_fault thread hypfault_type
   od)"
 
 
@@ -385,7 +384,7 @@ definition
   "call_kernel ev \<equiv> do
        handle_event ev <handle>
            (\<lambda>_. without_preemption $ do
-                  irq \<leftarrow> do_machine_op getActiveIRQ;
+                  irq \<leftarrow> do_machine_op $ getActiveIRQ True;
                   when (irq \<noteq> None) $ handle_interrupt (the irq)
                 od);
        schedule;

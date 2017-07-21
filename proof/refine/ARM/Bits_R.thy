@@ -42,7 +42,7 @@ crunch_ignore (add:
 context Arch begin (*FIXME: arch_split*)
 
 crunch_ignore (add:
-  invalidateTLB_ASID invalidateTLB_VAASID
+  invalidateLocalTLB_ASID invalidateLocalTLB_VAASID
   cleanByVA cleanByVA_PoU invalidateByVA invalidateByVA_I invalidate_I_PoU
   cleanInvalByVA branchFlush clean_D_PoU cleanInvalidate_D_PoC cleanInvalidateL2Range
   invalidateL2Range cleanL2Range flushBTAC writeContextID isb dsb dmb
@@ -577,10 +577,5 @@ lemma constOnFailure_wp :
   done
 
 end
-
-lemma corres_throwError_str [corres_concrete_rER]:
-  "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throw b)"
-  "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throwError b)"
- by (simp add: corres_underlyingK_def)+
 
 end

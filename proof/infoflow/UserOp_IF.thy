@@ -90,10 +90,10 @@ where
        * We ignore changes that took place where they didn't have
        * write permissions. (uop shouldn't be doing that --- if it is,
        * uop isn't correctly modelling real hardware.) *)
-      do_machine_op (user_memory_update 
+      do_machine_op (user_memory_update
           (((um' |` allow_write) \<circ> addrFromPPtr) |` (-(dom ds))));
 
-      do_machine_op (device_memory_update 
+      do_machine_op (device_memory_update
           (((ds' |` allow_write) \<circ> addrFromPPtr) |` (dom ds)));
 
       (* Update exclusive monitor state used by the thread. *)
@@ -393,7 +393,7 @@ lemma mask_shift_le:
     apply (simp add: shiftr_shiftr le)
    done
   qed
-  
+
 
 lemma data_at_obj_range:
   "\<lbrakk>data_at sz ptr s;pspace_aligned s;valid_objs s \<rbrakk>
@@ -431,7 +431,7 @@ lemma data_at_aligned:
   "\<lbrakk>data_at sz base s;pspace_aligned s\<rbrakk> \<Longrightarrow> is_aligned base (pageBitsForSize sz)"
   apply (clarsimp simp: data_at_def)
   apply (elim disjE)
-  apply (clarsimp simp: obj_at_def 
+  apply (clarsimp simp: obj_at_def
                  split: kernel_object.split_asm if_split_asm arch_kernel_obj.split_asm
                  dest!: pspace_alignedD)+
   done
@@ -462,7 +462,7 @@ lemma data_at_same_size:
     done
     have sz_equiv: "(pageBitsForSize sz = pageBitsForSize sz') = (sz' = sz)"
     by (clarsimp simp: pageBitsForSize_def split: vmpage_size.splits)
-  show ?thesis 
+  show ?thesis
   apply (rule sz_equiv[THEN iffD1])
   apply (rule ccontr)
   apply (drule neq_iff[THEN iffD1])
@@ -509,11 +509,17 @@ lemma valid_pdpt_align_ptD:
   apply (clarsimp simp: entries_align_def)
   done
 
-lemma valid_pdpt_align_pdD: 
+lemma valid_pdpt_align_pdD:
   "\<lbrakk>kheap s ptr = Some (ArchObj (PageDirectory pd));valid_pdpt_objs s; pd a = entry\<rbrakk> \<Longrightarrow> is_aligned a (pde_range_sz entry)"
   apply (drule(1) valid_pdpt_objs_pdD)
   apply (clarsimp simp: entries_align_def)
   done
+
+lemma valid_vspace_objsD2:
+  "\<lbrakk>(\<exists>\<rhd> p) s; ko_at (ArchObj ao) p s;
+     valid_vspace_objs s\<rbrakk>
+    \<Longrightarrow> valid_vspace_obj ao s"
+  by (clarsimp simp: valid_vspace_objsD)
 
 lemma ptable_lift_data_consistant:
   assumes vs: "valid_state s"
@@ -525,20 +531,20 @@ lemma ptable_lift_data_consistant:
   shows "ptable_lift t s (x && ~~ mask (pageBitsForSize sz)) = Some (ptr && ~~ mask (pageBitsForSize sz))"
   proof -
    have aligned_stuff:
-   "\<lbrakk>is_aligned (ucast ((x >> 12) && mask 8) :: word8) 4\<rbrakk> \<Longrightarrow> 
+   "\<lbrakk>is_aligned (ucast ((x >> 12) && mask 8) :: word8) 4\<rbrakk> \<Longrightarrow>
     (x && ~~ mask 16 >> 12) = x >> 12"
     apply (simp add: is_aligned_mask)
     apply word_bitwise
     apply (simp add: mask_def)
     done
    have aligned_stuff':
-   "\<lbrakk>is_aligned ((ucast (x >> 20)):: 12 word) 4\<rbrakk> \<Longrightarrow> 
+   "\<lbrakk>is_aligned ((ucast (x >> 20)):: 12 word) 4\<rbrakk> \<Longrightarrow>
    (x && ~~ mask 24 >> 20) = x >> 20"
     apply (simp add: is_aligned_mask)
     apply word_bitwise
     apply (simp add: mask_def)
     done
-   have vs': "valid_objs s \<and> valid_arch_objs s \<and> pspace_distinct s \<and> pspace_aligned s"
+   have vs': "valid_objs s \<and> valid_vspace_objs s \<and> pspace_distinct s \<and> pspace_aligned s"
     using vs
     by (simp add: valid_state_def valid_pspace_def)
    have x_less_kb: "x < kernel_base"
@@ -552,22 +558,22 @@ lemma ptable_lift_data_consistant:
   apply (rename_tac base sz' attrs rights pde)
   apply (case_tac pde,simp_all)
     apply (clarsimp simp: get_pd_entry_def split: arch_kernel_obj.split_asm option.splits)
-    apply (clarsimp simp: get_pt_info_def get_arch_obj_def 
-                          get_pt_entry_def 
+    apply (clarsimp simp: get_pt_info_def get_arch_obj_def
+                          get_pt_entry_def
                    split: option.splits arch_kernel_obj.split_asm kernel_object.splits)
     apply (rename_tac pd_base vmattr mw pd pt)
     apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
-    apply (frule(1) valid_arch_objsD2[rotated,unfolded obj_at_def,simplified],simp)
-    apply (simp add: valid_arch_obj_def)
+    apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
+    apply (simp add:)
     apply (drule bspec)
     apply (rule Compl_iff[THEN iffD2])
     apply (rule kernel_mappings_kernel_mapping_slots[OF misc(2)])
     apply (clarsimp simp: valid_pde_def obj_at_def a_type_def)
     apply (case_tac "pt (ucast ((x >> 12) && mask 8))",simp_all)
-     apply (frule valid_arch_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
+     apply (frule valid_vspace_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
       apply (rule exI)
       apply (erule vs_lookup_step)
-       apply (simp add: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting 
+       apply (simp add: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting
          pd_shifting_dual obj_at_def)
        apply (rule_tac x = "VSRef (x>>20) (Some APageDirectory)" in exI)
        apply (rule context_conjI,simp)
@@ -586,10 +592,10 @@ lemma ptable_lift_data_consistant:
                            get_arch_obj_def entries_align_def aligned_stuff mask_AND_NOT_mask
                     dest!: data_at_aligned is_aligned_ptrFromPAddrD[where a = 16,simplified])
      apply (simp add: neg_mask_add_aligned[OF _ and_mask_less'] is_aligned_neg_mask_eq)
-    apply (frule valid_arch_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
+    apply (frule valid_vspace_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
      apply (rule exI)
      apply (erule vs_lookup_step)
-      apply (simp add: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting 
+      apply (simp add: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting
         pd_shifting_dual obj_at_def)
       apply (rule_tac x = "VSRef (x>>20) (Some APageDirectory)" in exI)
       apply (rule context_conjI,simp)
@@ -604,7 +610,7 @@ lemma ptable_lift_data_consistant:
     apply (drule_tac x = "(ucast ((x >> 12) && mask 8))" in spec)
     apply (frule data_at_same_size[where sz = sz and sz' = ARMSmallPage,rotated,simplified],
         clarsimp+)
-    apply (clarsimp simp: mask_shift_le get_pt_info_def get_pt_entry_def neg_mask_add_aligned[OF _ and_mask_less'] 
+    apply (clarsimp simp: mask_shift_le get_pt_info_def get_pt_entry_def neg_mask_add_aligned[OF _ and_mask_less']
                           is_aligned_neg_mask_eq  get_arch_obj_def entries_align_def  mask_AND_NOT_mask
                    dest!: data_at_aligned is_aligned_ptrFromPAddrD[where a = 12,simplified])
    apply (clarsimp simp: get_pd_entry_def get_arch_obj_def
@@ -613,7 +619,7 @@ lemma ptable_lift_data_consistant:
                    split: option.splits arch_kernel_obj.split_asm kernel_object.splits)
     apply (rename_tac pd_base vmattr mw pd caprights)
     apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
-    apply (frule(1) valid_arch_objsD2[rotated,unfolded obj_at_def,simplified],simp)
+    apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
     apply (simp add: valid_arch_obj_def)
     apply (drule bspec)
     apply (rule Compl_iff[THEN iffD2])
@@ -622,7 +628,7 @@ lemma ptable_lift_data_consistant:
    apply (frule(1) valid_pdpt_align_pdD[OF _ vpdpt])
    apply (frule data_at_same_size[where sz = sz and sz' = ARMSection,rotated,simplified],
         clarsimp+)
-   apply (clarsimp simp: mask_shift_le get_pt_info_def get_pt_entry_def neg_mask_add_aligned[OF _ and_mask_less'] 
+   apply (clarsimp simp: mask_shift_le get_pt_info_def get_pt_entry_def neg_mask_add_aligned[OF _ and_mask_less']
                          is_aligned_neg_mask_eq  get_arch_obj_def entries_align_def  mask_AND_NOT_mask
                   dest!: data_at_aligned is_aligned_ptrFromPAddrD[where a = 20,simplified])
   apply (clarsimp simp: get_pd_entry_def get_arch_obj_def
@@ -631,7 +637,7 @@ lemma ptable_lift_data_consistant:
                  split: option.splits arch_kernel_obj.split_asm kernel_object.splits)
   apply (rename_tac pd_base vmattr rights pd)
   apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
-  apply (frule(1) valid_arch_objsD2[rotated,unfolded obj_at_def,simplified],simp)
+  apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
   apply (simp add: valid_arch_obj_def)
   apply (drule bspec)
   apply (rule Compl_iff[THEN iffD2])
@@ -640,7 +646,7 @@ lemma ptable_lift_data_consistant:
   apply (frule(1) valid_pdpt_align_pdD[OF _ vpdpt])
   apply (frule data_at_same_size[where sz = sz and sz' = ARMSuperSection,rotated,simplified],
         clarsimp+)
-    apply (clarsimp simp: mask_shift_le get_pt_info_def get_pt_entry_def neg_mask_add_aligned[OF _ and_mask_less'] 
+    apply (clarsimp simp: mask_shift_le get_pt_info_def get_pt_entry_def neg_mask_add_aligned[OF _ and_mask_less']
                           is_aligned_neg_mask_eq  get_arch_obj_def entries_align_def aligned_stuff' mask_AND_NOT_mask
                    dest!: data_at_aligned is_aligned_ptrFromPAddrD[where a = 24,simplified])
   done
@@ -656,20 +662,20 @@ lemma ptable_rights_data_consistant:
   shows "ptable_rights t s (x && ~~ mask (pageBitsForSize sz)) = ptable_rights t s x"
   proof -
    have aligned_stuff:
-   "\<lbrakk>is_aligned (ucast ((x >> 12) && mask 8) :: word8) 4\<rbrakk> \<Longrightarrow> 
+   "\<lbrakk>is_aligned (ucast ((x >> 12) && mask 8) :: word8) 4\<rbrakk> \<Longrightarrow>
     (x && ~~ mask 16 >> 12) = x >> 12"
     apply (simp add: is_aligned_mask)
     apply word_bitwise
     apply (simp add: mask_def)
     done
    have aligned_stuff':
-   "\<lbrakk>is_aligned ((ucast (x >> 20)):: 12 word) 4\<rbrakk> \<Longrightarrow> 
+   "\<lbrakk>is_aligned ((ucast (x >> 20)):: 12 word) 4\<rbrakk> \<Longrightarrow>
    (x && ~~ mask 24 >> 20) = x >> 20"
     apply (simp add: is_aligned_mask)
     apply word_bitwise
     apply (simp add: mask_def)
     done
-   have vs': "valid_objs s \<and> valid_arch_objs s \<and> pspace_distinct s \<and> pspace_aligned s"
+   have vs': "valid_objs s \<and> valid_vspace_objs s \<and> pspace_distinct s \<and> pspace_aligned s"
     using vs
     by (simp add: valid_state_def valid_pspace_def)
    have x_less_kb: "x < kernel_base"
@@ -683,22 +689,22 @@ lemma ptable_rights_data_consistant:
   apply (rename_tac base sz' attrs rights pde)
   apply (case_tac pde,simp_all)
     apply (clarsimp simp: get_pd_entry_def split: arch_kernel_obj.split_asm option.splits)
-    apply (clarsimp simp: get_pt_info_def get_arch_obj_def 
-                          get_pt_entry_def 
+    apply (clarsimp simp: get_pt_info_def get_arch_obj_def
+                          get_pt_entry_def
                    split: option.splits arch_kernel_obj.split_asm kernel_object.splits)
     apply (rename_tac pd_base vmattr mw pd pt)
     apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
-    apply (frule(1) valid_arch_objsD2[rotated,unfolded obj_at_def,simplified],simp)
+    apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
     apply (simp add: valid_arch_obj_def)
     apply (drule bspec)
     apply (rule Compl_iff[THEN iffD2])
     apply (rule kernel_mappings_kernel_mapping_slots[OF misc(2)])
     apply (clarsimp simp: valid_pde_def obj_at_def a_type_def)
     apply (case_tac "pt (ucast ((x >> 12) && mask 8))",simp_all)
-     apply (frule valid_arch_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
+     apply (frule valid_vspace_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
       apply (rule exI)
       apply (erule vs_lookup_step)
-       apply (simp add: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting 
+       apply (simp add: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting
          pd_shifting_dual obj_at_def)
        apply (rule_tac x = "VSRef (x>>20) (Some APageDirectory)" in exI)
        apply (rule context_conjI,simp)
@@ -716,10 +722,10 @@ lemma ptable_rights_data_consistant:
      apply (clarsimp simp: mask_shift_le get_pt_info_def get_pt_entry_def
                            get_arch_obj_def entries_align_def aligned_stuff mask_AND_NOT_mask
                     dest!: data_at_aligned is_aligned_ptrFromPAddrD[where a = 16,simplified])
-    apply (frule valid_arch_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
+    apply (frule valid_vspace_objsD2[where p = "ptrFromPAddr p" for p,rotated,unfolded obj_at_def,simplified],simp)
      apply (rule exI)
      apply (erule vs_lookup_step)
-      apply (simp add: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting 
+      apply (simp add: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting
         pd_shifting_dual obj_at_def)
       apply (rule_tac x = "VSRef (x>>20) (Some APageDirectory)" in exI)
       apply (rule context_conjI,simp)
@@ -734,7 +740,7 @@ lemma ptable_rights_data_consistant:
     apply (drule_tac x = "(ucast ((x >> 12) && mask 8))" in spec)
     apply (frule data_at_same_size[where sz = sz and sz' = ARMSmallPage,rotated,simplified],
         clarsimp+)
-    apply (clarsimp simp: mask_shift_le get_pt_info_def get_pt_entry_def neg_mask_add_aligned[OF _ and_mask_less'] 
+    apply (clarsimp simp: mask_shift_le get_pt_info_def get_pt_entry_def neg_mask_add_aligned[OF _ and_mask_less']
                           is_aligned_neg_mask_eq  get_arch_obj_def entries_align_def  mask_AND_NOT_mask
                           dest!: data_at_aligned is_aligned_ptrFromPAddrD[where a = 12,simplified])
    apply (clarsimp simp: get_pd_entry_def get_arch_obj_def
@@ -743,7 +749,7 @@ lemma ptable_rights_data_consistant:
                    split: option.splits arch_kernel_obj.split_asm kernel_object.splits)
     apply (rename_tac pd_base vmattr mw pd caprights)
     apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
-    apply (frule(1) valid_arch_objsD2[rotated,unfolded obj_at_def,simplified],simp)
+    apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
     apply (simp add: valid_arch_obj_def)
     apply (drule bspec)
     apply (rule Compl_iff[THEN iffD2])
@@ -758,7 +764,7 @@ lemma ptable_rights_data_consistant:
                  split: option.splits arch_kernel_obj.split_asm kernel_object.splits)
   apply (rename_tac pd_base vmattr rights pd)
   apply (cut_tac get_pd_of_thread_reachable[OF misc(1)])
-  apply (frule(1) valid_arch_objsD2[rotated,unfolded obj_at_def,simplified],simp)
+  apply (frule(1) valid_vspace_objsD2[rotated,unfolded obj_at_def,simplified],simp)
   apply (simp add: valid_arch_obj_def)
   apply (drule bspec)
   apply (rule Compl_iff[THEN iffD2])
@@ -767,7 +773,7 @@ lemma ptable_rights_data_consistant:
   apply (frule(1) valid_pdpt_align_pdD[OF _ vpdpt])
   apply (frule data_at_same_size[where sz = sz and sz' = ARMSuperSection,rotated,simplified],
         clarsimp+)
-    apply (clarsimp simp: mask_shift_le get_pt_info_def get_pt_entry_def neg_mask_add_aligned[OF _ and_mask_less'] 
+    apply (clarsimp simp: mask_shift_le get_pt_info_def get_pt_entry_def neg_mask_add_aligned[OF _ and_mask_less']
                           is_aligned_neg_mask_eq  get_arch_obj_def entries_align_def aligned_stuff' mask_AND_NOT_mask
                    dest!: data_at_aligned is_aligned_ptrFromPAddrD[where a = 24,simplified])
   done
@@ -775,7 +781,7 @@ qed
 
 lemma user_op_access_data_at:
   "\<lbrakk> invs s; valid_pdpt_objs s;pas_refined aag s; is_subject aag tcb;
-     ptable_lift tcb s x = Some ptr; 
+     ptable_lift tcb s x = Some ptr;
      data_at sz ((ptrFromPAddr ptr) && ~~ mask (pageBitsForSize sz)) s;
      auth \<in> vspace_cap_rights_to_auth (ptable_rights tcb s x) \<rbrakk>
    \<Longrightarrow> (pasObjectAbs aag tcb, auth, pasObjectAbs aag (ptrFromPAddr (ptr && ~~ mask (pageBitsForSize sz)))) \<in> pasPolicy aag"
@@ -810,11 +816,11 @@ lemma device_frame_at_equiv:
   \<Longrightarrow> typ_at (AArch (ADeviceData sz)) p s'"
   by (clarsimp simp: equiv_for_def obj_at_def)
 
-lemma typ_at_user_data_at: 
+lemma typ_at_user_data_at:
   "typ_at (AArch (AUserData sz)) p s \<Longrightarrow> data_at sz p s"
   by (simp add: data_at_def)
 
-lemma typ_at_device_data_at: 
+lemma typ_at_device_data_at:
   "typ_at (AArch (ADeviceData sz)) p s \<Longrightarrow> data_at sz p s"
   by (simp add: data_at_def)
 
@@ -839,7 +845,7 @@ lemma requiv_device_mem_eq:
      apply (erule_tac f="underlying_memory" in equiv_forE)
      apply (frule_tac auth=Read in user_op_access_data_at[where s = s])
         apply (fastforce simp: ptable_lift_s_def ptable_rights_s_def
-           vspace_cap_rights_to_auth_def | intro typ_at_device_data_at)+ 
+           vspace_cap_rights_to_auth_def | intro typ_at_device_data_at)+
      apply (rule reads_read)
      apply (fastforce simp: ptrFromPAddr_mask_simp)
     apply clarsimp
@@ -856,7 +862,7 @@ lemma requiv_device_mem_eq:
     apply (erule equiv_symmetric[THEN iffD1])
     apply (frule_tac auth=Read in user_op_access_data_at[where s = s'])
        apply (fastforce simp: ptable_lift_s_def ptable_rights_s_def
-          vspace_cap_rights_to_auth_def | intro typ_at_device_data_at)+ 
+          vspace_cap_rights_to_auth_def | intro typ_at_device_data_at)+
     apply (rule reads_read)
     apply (fastforce simp: ptrFromPAddr_mask_simp)
   done
@@ -880,7 +886,7 @@ lemma requiv_user_mem_eq:
      apply (erule_tac f="underlying_memory" in equiv_forE)
      apply (frule_tac auth=Read in user_op_access_data_at[where s = s])
         apply (fastforce simp: ptable_lift_s_def ptable_rights_s_def
-           vspace_cap_rights_to_auth_def | intro typ_at_user_data_at)+ 
+           vspace_cap_rights_to_auth_def | intro typ_at_user_data_at)+
      apply (rule reads_read)
      apply (fastforce simp: ptrFromPAddr_mask_simp)
     apply clarsimp
@@ -907,7 +913,7 @@ lemma requiv_user_mem_eq:
     apply (erule equiv_symmetric[THEN iffD1])
     apply (frule_tac auth=Read in user_op_access_data_at[where s = s'])
        apply (fastforce simp: ptable_lift_s_def ptable_rights_s_def
-          vspace_cap_rights_to_auth_def | intro typ_at_user_data_at)+ 
+          vspace_cap_rights_to_auth_def | intro typ_at_user_data_at)+
     apply (rule reads_read)
     apply (fastforce simp: ptrFromPAddr_mask_simp)
   done
@@ -939,7 +945,7 @@ lemma requiv_user_device_eq:
   apply (erule_tac f="device_state" in equiv_forD)
   apply (frule_tac auth=Read in user_op_access_data_at[where s = s])
         apply ((fastforce simp: ptable_lift_s_def ptable_rights_s_def
-           vspace_cap_rights_to_auth_def | intro typ_at_user_data_at)+)[6] 
+           vspace_cap_rights_to_auth_def | intro typ_at_user_data_at)+)[6]
   apply (rule reads_read)
     apply (frule_tac auth=Read in user_op_access)
         apply (fastforce simp: ptable_lift_s_def ptable_rights_s_def
@@ -1065,15 +1071,15 @@ lemma spec_equiv_valid_inv_gets:
    apply fastforce
    done
 
-lemmas spec_equiv_valid_inv_gets_more = 
-   spec_equiv_valid_inv_gets[where proj = "\<lambda>x. (proj x,projsnd x)" 
+lemmas spec_equiv_valid_inv_gets_more =
+   spec_equiv_valid_inv_gets[where proj = "\<lambda>x. (proj x,projsnd x)"
      and g = "\<lambda>z. g (fst z) (snd z)"  for proj and projsnd and g,simplified]
 
-lemmas spec_equiv_valid_inv_gets_triple = 
-   spec_equiv_valid_inv_gets_more[where projsnd = "\<lambda>x. (p (projsnd x) , p' (projsnd x))" 
+lemmas spec_equiv_valid_inv_gets_triple =
+   spec_equiv_valid_inv_gets_more[where projsnd = "\<lambda>x. (p (projsnd x) , p' (projsnd x))"
      and g = "\<lambda>a z. g a (fst z) (snd z)"  for projsnd and p and p' and g,simplified]
 
-lemma restrict_eq_imp_dom_eq: 
+lemma restrict_eq_imp_dom_eq:
   "a |` r =  b|` r \<Longrightarrow> dom a \<inter> r = dom b \<inter> r"
   apply (clarsimp simp: set_eq_iff restrict_map_def)
   apply (drule_tac x = x in fun_cong)

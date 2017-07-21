@@ -20,7 +20,7 @@ imports "~~/src/HOL/Word/Word"
 begin
 
 (*
- * Objects are named by 32 bit words. 
+ * Objects are named by 32 bit words.
  * This name may correspond to the memory address of the object.
  *)
 type_synonym cdl_object_id = "32 word"
@@ -50,7 +50,7 @@ datatype cdl_right = AllowRead | AllowWrite | AllowGrant
  * they give the holder, or how the holder is allowed to interact with
  * the target object.
  *
- * This is a simplified, cut-down version of this datatype for 
+ * This is a simplified, cut-down version of this datatype for
  * demonstration purposes.
  *)
 datatype cdl_cap =
@@ -152,7 +152,7 @@ where
 
 definition cap_objects :: "cdl_cap \<Rightarrow> cdl_object_id set"
 where
-    "cap_objects cap \<equiv> 
+    "cap_objects cap \<equiv>
        case cap of
            TcbCap x \<Rightarrow> {x}
          | CNodeCap x \<Rightarrow> {x}
@@ -160,15 +160,15 @@ where
 
 definition cap_has_object :: "cdl_cap \<Rightarrow> bool"
 where
-    "cap_has_object cap \<equiv> 
+    "cap_has_object cap \<equiv>
        case cap of
            NullCap          \<Rightarrow> False
          | _                \<Rightarrow> True"
 
 definition cap_object :: "cdl_cap \<Rightarrow> cdl_object_id"
 where
-    "cap_object cap \<equiv> 
-       if cap_has_object cap 
+    "cap_object cap \<equiv>
+       if cap_has_object cap
          then THE obj_id. cap_objects cap = {obj_id}
          else undefined "
 
@@ -218,9 +218,9 @@ where
 definition
   slots_of :: "cdl_heap \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cap_map"
 where
-  "slots_of h \<equiv> \<lambda>obj_id. 
-  case h obj_id of 
-    None \<Rightarrow> empty 
+  "slots_of h \<equiv> \<lambda>obj_id.
+  case h obj_id of
+    None \<Rightarrow> empty
   | Some obj \<Rightarrow> object_slots obj"
 
 

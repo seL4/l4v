@@ -19,8 +19,8 @@ ML{*
 
 val _ =
   Outer_Syntax.command @{command_keyword "apply_trace"} "initial refinement step (unstructured)"
-    
-  (Args.mode "only_names" -- (Scan.option (Parse.position Parse.cartouche)) --  Method.parse >> 
+
+  (Args.mode "only_names" -- (Scan.option (Parse.position Parse.cartouche)) --  Method.parse >>
     (fn ((on,query),text) => Toplevel.proofs (Apply_Trace.apply_results {silent_fail = false}
      (Pretty.writeln ooo (Apply_Trace.pretty_deps on query)) text)));
 
@@ -34,7 +34,7 @@ lemma "(a \<and> b) = (b \<and> a)"
   oops
 
 (* Test. *)
-lemma "(a \<and> b) = (b \<and> a)"  
+lemma "(a \<and> b) = (b \<and> a)"
   apply_trace \<open>intro\<close> auto
   oops
 
@@ -61,5 +61,22 @@ begin
    oops
 end
 
+experiment begin
 
+text \<open>Example of trace for grouped lemmas\<close>
+definition ex :: "nat set"  where
+ "ex = {1,2,3,4}"
+
+lemma v1:  "1 \<in> ex"  by (simp add: ex_def)
+lemma v2:  "2 \<in> ex"  by (simp add: ex_def)
+lemma v3:  "3 \<in> ex"  by (simp add: ex_def)
+
+text \<open>Group several lemmas in a single one\<close>
+lemmas vs = v1 v2 v3
+
+lemma "2 \<in> ex"
+  apply_trace (simp add: vs)
+  oops
+
+end
 end

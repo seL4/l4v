@@ -16,7 +16,7 @@ begin
 
 text {*
   \label{sec:Event_H}
- 
+
   These are the user-level and machine generated events the kernel reacts to.
 *}
 

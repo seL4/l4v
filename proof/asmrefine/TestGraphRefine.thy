@@ -98,7 +98,7 @@ val debug_tac = ProveSimplToGraphGoals.debug_tac
 
 schematic_goal "PROP ?P"
   apply (tactic {* resolve_tac @{context} [init_thm] 1 *})
-  
+
   apply (tactic {* ALLGOALS (debug_tac @{context}) *})
   oops
 

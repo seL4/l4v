@@ -10,8 +10,6 @@ globalmakevars.local
 /standalone-parser/ARM_HYP/
 /standalone-parser/X64/
 
-/umm_heap/ARM_HYP/
-
 /tools/mllex/mllex
 /tools/mlyacc/mlyacc
 /tools/mlyacc/src/yacc.lex.sml

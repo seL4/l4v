@@ -32,7 +32,7 @@ fun get_upd_apps (f $ (g $ x)) = if
   | get_upd_apps (f $ x) = get_upd_apps f @ get_upd_apps x
   | get_upd_apps (Abs (_, _, t)) = get_upd_apps t
   | get_upd_apps _ = []
-   
+
 fun mk_upd_simps ctxt upd_app (simps, done, n) = let
     val n = n + 1
     val _ = n <= 5000 orelse raise TERM ("mk_upd_simps: 5000", [upd_app])

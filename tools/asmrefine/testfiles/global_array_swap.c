@@ -66,7 +66,7 @@ extern toplevel_struct_t toplevel;
 void
 modify_toplevel (int x)
 {
-  toplevel.config_data1 = x;  
+  toplevel.config_data1 = x;
 }
 
 void

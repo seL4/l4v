@@ -7,7 +7,7 @@
 (*  Title:      XVcgEx.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2006-2008 Norbert Schirmer 
+Copyright (C) 2006-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -28,7 +28,7 @@ USA
 
 section "Examples for Parallel Assignments"
 
-theory XVcgEx 
+theory XVcgEx
 imports "../XVcg"
 
 begin
@@ -51,12 +51,12 @@ record 'g vars = "'g state" +
 
 term "BASIC
          \<acute>A :== x,
-         \<acute>B :== y        
+         \<acute>B :== y
       END"
 
 term "BASIC
          \<acute>G :== \<acute>H,
-         \<acute>H :== \<acute>G        
+         \<acute>H :== \<acute>G
       END"
 
 term "BASIC
@@ -67,10 +67,10 @@ term "BASIC
       END"
 
 
-lemma "\<Gamma>\<turnstile> \<lbrace>\<acute>A = 0\<rbrace> 
+lemma "\<Gamma>\<turnstile> \<lbrace>\<acute>A = 0\<rbrace>
       \<lbrace>\<acute>A < 0\<rbrace> \<longmapsto> BASIC
        LET (a,b,c) = foo \<acute>A
-       IN 
+       IN
             \<acute>A :== a,
             \<acute>B :== b,
             \<acute>C :== c
@@ -79,10 +79,10 @@ lemma "\<Gamma>\<turnstile> \<lbrace>\<acute>A = 0\<rbrace>
 apply vcg
 oops
 
-lemma "\<Gamma>\<turnstile> \<lbrace>\<acute>A = 0\<rbrace> 
+lemma "\<Gamma>\<turnstile> \<lbrace>\<acute>A = 0\<rbrace>
       \<lbrace>\<acute>A < 0\<rbrace> \<longmapsto> BASIC
        LET (a,b,c) = foo \<acute>A
-       IN 
+       IN
             \<acute>A :== a,
             \<acute>G :== b + \<acute>B,
             \<acute>H :== c
@@ -94,10 +94,10 @@ oops
 definition foo:: "nat \<Rightarrow> (nat \<times> nat \<times> nat)"
   where "foo n = (n,n+1,n+2)"
 
-lemma "\<Gamma>\<turnstile> \<lbrace>\<acute>A = 0\<rbrace> 
+lemma "\<Gamma>\<turnstile> \<lbrace>\<acute>A = 0\<rbrace>
       \<lbrace>\<acute>A < 0\<rbrace> \<longmapsto> BASIC
        LET (a,b,c) = foo \<acute>A
-       IN 
+       IN
             \<acute>A :== a,
             \<acute>G :== b + \<acute>B,
             \<acute>H :== c

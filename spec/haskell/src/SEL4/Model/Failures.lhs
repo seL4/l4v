@@ -98,7 +98,7 @@ If the expected result is a list, silenced failures return the empty list.
 > emptyOnFailure :: Error f => KernelF f [a] -> Kernel [a]
 > emptyOnFailure m = m `catchFailure` (const $ return [])
 
-Returns the specified constant when execution fails. 
+Returns the specified constant when execution fails.
 
 > constOnFailure :: Error f => a -> KernelF f a -> Kernel a
 > constOnFailure x m = m `catchFailure` (const $ return x)

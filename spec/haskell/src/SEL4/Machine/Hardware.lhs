@@ -150,8 +150,8 @@ The following constant is used to determine the correct page colouring when allo
 
 After receiving an Interrupt event, or at preemption points, the kernel calls this function to check for any pending interrupts which might preempt the kernel. If there are any, it returns the one with highest priority. In a real kernel, this would be implemented by briefly enabling interrupts.
 
-> getActiveIRQ :: MachineMonad (Maybe IRQ)
-> getActiveIRQ = liftM (liftM IRQ) Arch.getActiveIRQ
+> getActiveIRQ :: Bool -> MachineMonad (Maybe IRQ)
+> getActiveIRQ inPreempt = liftM (liftM IRQ) (Arch.getActiveIRQ inPreempt)
 
 This function is used to enable or disable a specific interrupt, either when its handler is set or cleared, or when an IRQ has been forwarded to a user level handler and not yet acknowledged. If the argument is "True", delivery of the specified interrupt to the kernel will be disabled; otherwise it will be enabled.
 

@@ -81,23 +81,27 @@ text \<open>In this split rule for @{const corres_underlyingK} we see that the a
 may discuss both @{term rv} and @{term rv'}. To show that this condition is satisified, however,
 we can't use hoare logic and instead need a new definition: @{const corres_rv}.\<close>
 
-thm corres_rv_def[no_vars]
+thm corres_rv_def_I_know_what_I'm_doing[no_vars]
 
 text \<open>This is a weaker form of @{const corres_underlying} that is only interested in the return value
-of the functions. In essence, it states that assuming all other refinement conditions hold, the given
-functions will establish @{term F'} after executing.
+of the functions. In essence, it states the given functions will establish @{term Q} after executing,
+assuming the given return-value relation @{term r} holds, along with the given stateless precondition
+@{term F} and left/right preconditions @{term P} and @{term P'}.
 
-It turns out that in most cases (certainly those from existing corres proofs), the @{const corres_rv}
-obligations will simply be solved in-place and reduce to
-  @{term "corres_rv sr (\<lambda>_ _. True) (\<lambda>_. True) (\<lambda>_. True) f f'"} through simplification, or proved
- directly with @{thm corres_rv_proveT}.
-\<close>
+The assumption in general is that corres_rv rules should never be written, instead corres_rv obligations
+should be propagated into either the stateless precondition (@{term F} from @{term corres_underlyingK}),
+the left precondition (@{term P}) or the right precondition @{term P'}. This is implicitly handled
+by @{method corres_rv} (called from @{method corres}) by applying one of the following rules to each conjunct:\<close>
+
+thm corres_rv_defer
+thm corres_rv_wp_left
+thm corres_rv_wp_right
+
+text \<open>If none of these rules can be safely applied, then @{method corres_rv} will leave the
+  obligation untouched. The user can manually apply one of them if desired, but this is liable to
+  create unsolvable proof obligations. In the worst case, the user may manually solve the goal in-place.\<close>
+
 thm corres_rv_proveT[no_vars]
-
-text \<open>Additionally, the obligation can be pushed into the precondition for either the left or right side.\<close>
-
-thm corres_rv_defer_left
-thm corres_rv_defer_right
 
 section \<open>The corres method\<close>
 
@@ -163,9 +167,11 @@ thm corres_symb_exec_rs
 text \<open>A function may be symbolically executed if it does not modify the state, i.e. its only purpose
 is to compute some value and return it. After being symbolically executed,
 this value can only be discussed by the precondition of the associated side or the stateless
-precondition of corresK. Instead of @{const corres_rv} as seen in @{thm corresK_split}, we instead
-are obligated to show that our function establishes the stateless precondition of the generated
-corresK obligation.\<close>
+precondition of corresK. The resulting @{const corres_rv} goal has @{const corres_noop} as the
+function on the alternate side. This gives @{method corres_rv} a hint that the resulting obligation
+should be aggressively re-written into a hoare triple over @{term m} if it can't be propagated
+back statelessly safely.
+\<close>
 
 
 section \<open>Demo\<close>
@@ -176,13 +182,16 @@ context begin interpretation Arch .
 (* VSpace_R *)
 
 
+lemmas load_hw_asid_corres_args[corres] =
+  load_hw_asid_corres[@lift_corres_args]
+
+lemmas invalidate_asid_corres_args[corres] =
+  invalidate_asid_corres[@lift_corres_args]
+
+lemmas invalidate_hw_asid_entry_corres_args[corres] =
+  invalidate_hw_asid_entry_corres[@lift_corres_args]
+
 lemma invalidate_asid_entry_corres:
-  notes [where pd=pd, corres] =
-    load_hw_asid_corres
-    invalidate_asid_corres
-  notes [corres] =
-    invalidate_hw_asid_entry_corres
-  shows
   "corres dc (valid_arch_objs and valid_asid_map
                 and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
                 and vspace_at_asid asid pd and valid_vs_lookup
@@ -203,7 +212,8 @@ lemma invalidate_asid_entry_corres:
    continue (* invalidate _hw_asid_entry *)
    finish (* invalidate_asid *)
 
-  apply (wp load_hw_asid_wp | simp)+
+  apply (corressimp wp: load_hw_asid_wp)+
+  apply clarsimp
   apply (fastforce simp: pd_at_asid_uniq)
   done
 
@@ -214,21 +224,28 @@ crunch pspace_distinct'[wp]: invalidateASIDEntry "pspace_distinct'"
 crunch ksCurThread[wp]: invalidateASIDEntry, flushSpace "\<lambda>s. P (ksCurThread s)"
 crunch obj_at'[wp]: invalidateASIDEntry, flushSpace "obj_at' P p"
 
+lemmas flush_space_corres_args[corres] =
+  flush_space_corres[@lift_corres_args]
+
+lemmas invalidate_asid_entry_corres_args[corres] =
+  invalidate_asid_entry_corres[@lift_corres_args]
+
+
+lemma corres_inst_eq_ext:
+  "(\<And>x. corres_inst_eq (f x) (f' x)) \<Longrightarrow> corres_inst_eq f f'"
+  by (auto simp add: corres_inst_eq_def)
 
 lemma delete_asid_corresb:
-  notes [where pd=pd, corres] =
-    flush_space_corres invalidate_asid_entry_corres
-
-  notes [corres] = corres_gets_asid get_asid_pool_corres_inv'
-                   invalidate_asid_entry_corres
-                   set_asid_pool_corres gct_corres
-                   set_vm_root_corres
-  notes [wp] = set_asid_pool_asid_map_unmap[unfolded fun_upd_def] set_asid_pool_vs_lookup_unmap'
-               set_asid_pool_arch_objs_unmap'
-               invalidate_asid_entry_invalidates
-               getASID_wp
+  notes [corres] = corres_gets_asid gct_corres set_asid_pool_corres and
+    [@lift_corres_args, corres] =  get_asid_pool_corres_inv'
+    invalidate_asid_entry_corres
+    set_vm_root_corres
+  notes [wp] = set_asid_pool_asid_map_unmap set_asid_pool_vs_lookup_unmap'
+    set_asid_pool_arch_objs_unmap'
+    invalidate_asid_entry_invalidates
+    getASID_wp
   shows
-  "corres dc
+    "corres dc
           (invs and valid_etcbs and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0))
           (pspace_aligned' and pspace_distinct' and no_0_obj'
               and valid_arch_state' and cur_tcb')
@@ -237,64 +254,77 @@ lemma delete_asid_corresb:
   apply_debug (trace) (* apply_trace between steps *)
     (tags "corres") (* break at breakpoints labelled "corres" *)
     corres (* weaken precondition *)
-    continue (* split *)
-    continue (* gets rule *)
-    continue (* corresc *)
-    continue (* return rule *)
-    continue (* split *)
-    continue (* simplification *)
-    continue (* liftM rule *)
-    continue (* get_asid_pool_corres_inv' *)
-    continue (* simplification *)
-    continue (* corresK_when *)
-    continue (* split *)
-    continue (* flush_space_corres *)
-    continue (* split *)
-    continue (* invalidate_asid_entry_corres *)
-    continue (* split *)
-    continue (* set_asid_pool_corres *)
-    continue (* split *)
-    continue (* gct_corres *)
-    continue (* simplification *)
-    finish (* set_vm_root_corres *)
-  apply (wp corres_rv_defer_right | simp add: mask_asid_low_bits_ucast_ucast | fold cur_tcb_def | wps)+
+   continue (* split *)
+       continue (* gets rule *)
+      continue (* corresc *)
+       continue (* return rule *)
+      continue (* split *)
+          continue (* function application *)
+          continue (* liftM rule *)
+          continue (* get_asid_pool_corres_inv' *)
+         continue (* function application *)
+         continue (* function application *)
+         continue (* corresK_when *)
+         continue (* split *)
+             continue (* flush_space_corres *)
+            continue (* K_bind *)
+            continue (* K_bind *)
+            continue (* split *)
+                continue (* invalidate_asid_entry_corres *)
+               continue (* K_bind *)
+               continue (* return bind *)
+               continue (* K_bind *)
+               continue (* split *)
+                   continue (* backtracking *)
+               continue (* split *)
+                   continue (* function application *)
+                   continue (* set_asid_pool_corres *)
+                  continue (* K_bind *)
+                  continue (* K_bind *)
+                  continue (* split *)
+                      continue (* gct_corres *)
+                     continue (* set_vm_root_corres *)
+                    finish (* backtracking? *)
+                    apply (corressimp simp: mask_asid_low_bits_ucast_ucast
+      | fold cur_tcb_def | wps)+
+  apply (frule arm_asid_table_related,clarsimp)
   apply (rule conjI)
-  apply (intro impI allI)
-  apply (rule context_conjI)
-  apply (fastforce simp: o_def dest: valid_asid_tableD invs_valid_asid_table)
-  apply (intro allI impI)
-  apply (subgoal_tac "vspace_at_asid asid pd s")
-  prefer 2
-  apply (simp add: vspace_at_asid_def)
-         apply (rule vs_lookupI)
-        apply (simp add: vs_asid_refs_def)
-        apply (rule image_eqI[OF refl])
-        apply (rule graph_ofI)
-        apply fastforce
-        apply (rule r_into_rtrancl)
-               apply simp
-       apply (rule vs_lookup1I [OF _ _ refl], assumption)
-       apply (simp add: vs_refs_def)
-       apply (rule image_eqI[rotated], erule graph_ofI)
-       apply (simp add: mask_asid_low_bits_ucast_ucast)
-  prefer 2
-  apply (safe; assumption?)
- apply (clarsimp simp add: inv_def mask_asid_low_bits_ucast_ucast)
-  apply (rule ext)
-  apply clarsimp
-  apply (fastforce dest: ucast_ucast_eq)
-  apply (simp add: typ_at_to_obj_at_arches)
-  apply (clarsimp simp add: obj_at'_def)
-  apply (simp add: cur_tcb'_def)
-  apply safe
-  apply (erule ko_at_weakenE)
-  apply (clarsimp simp: graph_of_def)
-  apply (fastforce split: if_split_asm)
-  apply (frule invs_arch_objs)
-  apply (drule (2) valid_arch_objsD)
-  apply (erule ranE)
-  apply (fastforce split: if_split_asm)
+   apply (intro impI allI)
+    apply (rule conjI)
+     apply (safe; assumption?)
+     apply (rule ext)
+     apply (fastforce simp: inv_def dest: ucast_ucast_eq)
+    apply (rule context_conjI)
+    apply (fastforce simp: o_def dest: valid_asid_tableD invs_valid_asid_table)
+   apply (intro allI impI)
+   apply (subgoal_tac "vspace_at_asid asid pd s")
+    prefer 2
+    apply (simp add: vspace_at_asid_def)
+    apply (rule vs_lookupI)
+     apply (simp add: vs_asid_refs_def)
+     apply (rule image_eqI[OF refl])
+     apply (rule graph_ofI)
+     apply fastforce
+    apply (rule r_into_rtrancl)
+    apply simp
+    apply (rule vs_lookup1I [OF _ _ refl], assumption)
+    apply (simp add: vs_refs_def)
+    apply (rule image_eqI[rotated], erule graph_ofI)
+    apply (simp add: mask_asid_low_bits_ucast_ucast)
+   prefer 2
+   apply (intro allI impI context_conjI; assumption?)
+    apply (rule aligned_distinct_relation_asid_pool_atI'; fastforce?)
+    apply (fastforce simp: o_def dest: valid_asid_tableD invs_valid_asid_table)
+    apply (simp add: cur_tcb'_def)
+    apply (safe; assumption?)
     apply (erule ko_at_weakenE)
+    apply (clarsimp simp: graph_of_def)
+    apply (fastforce split: if_split_asm)
+   apply (frule invs_arch_objs)
+   apply (drule (2) valid_arch_objsD)
+   apply (erule ranE)
+   apply (fastforce split: if_split_asm)
+  apply (erule ko_at_weakenE)
   apply (clarsimp simp: graph_of_def)
   apply (fastforce split: if_split_asm)
   done
@@ -325,19 +355,17 @@ lemma set_vm_root_for_flush_corres:
     continue (* if rule *)
     continue (* failed corres on first subgoal, trying next *)
     continue (* fail corres on last subgoal, trying reverse if rule *)
-    continue (* successful goal discharged by corres *)
-    finish (* successful terminal goal discharged by corres_once with given rule *)
+    continue (* can't make corres progress here, trying other goal *)
+    finish (* successful goal discharged by corres *)
 
-  apply corres+
-
-  apply (wp get_cap_wp getSlotCap_wp corres_rv_defer_left | wpc| simp)+
+  apply (corressimp wp: get_cap_wp getSlotCap_wp)+
   apply (rule context_conjI)
   subgoal by (simp add: cte_map_def objBits_simps tcb_cnode_index_def
                         tcbVTableSlot_def to_bl_1 cte_level_bits_def)
   apply (rule context_conjI)
   subgoal by (fastforce simp: cur_tcb_def intro!: tcb_at_cte_at_1[simplified])
   apply (rule conjI)
-   apply (fastforce simp: isCap_simps)
+   subgoal by (fastforce simp: isCap_simps)
   apply (drule cte_wp_at_ex)
   apply clarsimp
   apply (drule (1) pspace_relation_cte_wp_at[rotated 1]; (assumption | clarsimp)?)
@@ -365,7 +393,7 @@ lemma set_vm_root_for_flush_corres':
           (setVMRootForFlush pd asid)"
   apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
   apply (corressimp search: arm_context_switch_corres
-                        wp: get_cap_wp getSlotCap_wp corres_rv_defer_left
+                        wp: get_cap_wp getSlotCap_wp
                       simp: isCap_simps)
   apply (rule context_conjI)
   subgoal by (simp add: cte_map_def objBits_simps tcb_cnode_index_def

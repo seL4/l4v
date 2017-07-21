@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
    Refinement for interrupt controller operations
 *)
 
@@ -241,7 +241,7 @@ lemma valid_globals_ex_cte_cap_irq:
    apply (clarsimp simp: isCap_simps)
   apply (subgoal_tac "irq_node' s + 2 ^ cte_level_bits * ucast irq \<in> global_refs' s")
    apply blast
-  apply (simp add: global_refs'_def cte_level_bits_def 
+  apply (simp add: global_refs'_def cte_level_bits_def
     mult.commute mult.left_commute)
   done
 
@@ -443,14 +443,14 @@ lemma weak_sch_act_wf_updateDomainTime[simp]:
 lemma tcbSchedAppend_valid_objs':
   "\<lbrace>valid_objs'\<rbrace>tcbSchedAppend t \<lbrace>\<lambda>r. valid_objs'\<rbrace>"
   apply (simp add:tcbSchedAppend_def)
-  apply (wp hoare_unless_wp 
+  apply (wp hoare_unless_wp
     threadSet_valid_objs' threadGet_wp
     | simp add:valid_tcb_tcbQueued)+
   apply (clarsimp simp add:obj_at'_def typ_at'_def)
   done
 
 lemma tcbSchedAppend_sch_act_wf:
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace> tcbSchedAppend thread 
+  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace> tcbSchedAppend thread
   \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp add:tcbSchedAppend_def bitmap_fun_defs)
   apply (wp hoare_unless_wp setQueue_sch_act threadGet_wp|simp)+
@@ -462,12 +462,12 @@ lemma valid_tcb_tcbTimeSlice_update[simp]:
   by (simp add:valid_tcb'_def tcb_cte_cases_def)
 
 lemma thread_state_case_if:
- "(case state of Structures_A.thread_state.Running \<Rightarrow> f | _ \<Rightarrow> g) = 
+ "(case state of Structures_A.thread_state.Running \<Rightarrow> f | _ \<Rightarrow> g) =
   (if state = Structures_A.thread_state.Running then f else g)"
   by (case_tac state,auto)
 
 lemma threadState_case_if:
- "(case state of Structures_H.thread_state.Running \<Rightarrow> f | _ \<Rightarrow> g) = 
+ "(case state of Structures_H.thread_state.Running \<Rightarrow> f | _ \<Rightarrow> g) =
   (if state = Structures_H.thread_state.Running then f else g)"
   by (case_tac state,auto)
 
@@ -484,7 +484,7 @@ lemma tcbSchedAppend_invs_but_ct_not_inQ':
   done
 
 lemma timerTick_corres:
-  "corres dc (cur_tcb and valid_sched) 
+  "corres dc (cur_tcb and valid_sched)
              invs'
              timer_tick timerTick"
   apply (simp add: timerTick_def timer_tick_def)
@@ -559,7 +559,7 @@ lemma timerTick_corres:
      apply (drule_tac x = "cur_thread s" in spec)
      apply clarsimp
     apply (clarsimp simp: invs'_def valid_state'_def
-    sch_act_wf_weak 
+    sch_act_wf_weak
     cur_tcb'_def inQ_def
     ct_in_state'_def obj_at'_def)
     apply (clarsimp simp:st_tcb_at'_def
@@ -573,17 +573,17 @@ lemmas corres_eq_trivial = corres_Id[where f = h and g = h for h, simplified]
 thm corres_Id
 
 lemma handle_interrupt_corres:
-  "corres dc 
+  "corres dc
      (einvs) (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
      (handle_interrupt irq) (handleInterrupt irq)"
   (is "corres dc (einvs) ?P' ?f ?g")
   apply (simp add: handle_interrupt_def handleInterrupt_def )
   apply (rule conjI[rotated]; rule impI)
-  
+
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_irq_state_corres,
                               where R="\<lambda>rv. einvs"
-                                and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])    
+                                and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
       defer
       apply (wp getIRQState_prop getIRQState_inv do_machine_op_bind doMachineOp_bind | simp add: do_machine_op_bind doMachineOp_bind )+
       apply (rule corres_guard_imp)
@@ -629,7 +629,7 @@ lemma invs_ChooseNewThread:
 lemma ksDomainTime_invs[simp]:
   "invs' (a\<lparr>ksDomainTime := t\<rparr>) = invs' a"
   by (simp add:invs'_def valid_state'_def
-    cur_tcb'_def ct_not_inQ_def ct_idle_or_in_cur_domain'_def 
+    cur_tcb'_def ct_not_inQ_def ct_idle_or_in_cur_domain'_def
     tcb_in_cur_domain'_def valid_machine_state'_def)
 
 lemma valid_machine_state'_ksDomainTime[simp]:
@@ -639,9 +639,9 @@ lemma valid_machine_state'_ksDomainTime[simp]:
 lemma cur_tcb'_ksDomainTime[simp]:
   "cur_tcb' (a\<lparr>ksDomainTime := 0\<rparr>) = cur_tcb' a"
   by (simp add:cur_tcb'_def)
-  
+
 lemma ct_idle_or_in_cur_domain'_ksDomainTime[simp]:
-  "ct_idle_or_in_cur_domain' (a\<lparr>ksDomainTime := t \<rparr>) = ct_idle_or_in_cur_domain' a" 
+  "ct_idle_or_in_cur_domain' (a\<lparr>ksDomainTime := t \<rparr>) = ct_idle_or_in_cur_domain' a"
   by (simp add:ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
 
 lemma threadSet_ksDomainTime[wp]:
@@ -657,22 +657,22 @@ crunch ksDomainTime[wp]: tcbSchedAppend "\<lambda>s. P (ksDomainTime s)"
 (simp:tcbSchedEnqueue_def wp:hoare_unless_wp)
 
 lemma updateTimeSlice_valid_pspace[wp]:
-  "\<lbrace>valid_pspace'\<rbrace> threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread 
+  "\<lbrace>valid_pspace'\<rbrace> threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
   \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
   apply (wp threadSet_valid_pspace'T)
   apply (auto simp:tcb_cte_cases_def)
   done
 
 lemma updateTimeSlice_sch_act_wf[wp]:
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<rbrace> 
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread 
+  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<rbrace>
+   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
    \<lbrace>\<lambda>r s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   by (wp threadSet_sch_act,simp)
 
 
 lemma updateTimeSlice_valid_queues[wp]:
-  "\<lbrace>\<lambda>s. Invariants_H.valid_queues s \<rbrace> 
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread 
+  "\<lbrace>\<lambda>s. Invariants_H.valid_queues s \<rbrace>
+   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
    \<lbrace>\<lambda>r s. Invariants_H.valid_queues s\<rbrace>"
   apply (wp threadSet_valid_queues,simp)
   apply (clarsimp simp:obj_at'_def inQ_def)
@@ -681,13 +681,13 @@ lemma updateTimeSlice_valid_queues[wp]:
 
 lemma updateTimeSlice_sym_refs[wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of' s)\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread   
+   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
   \<lbrace>\<lambda>r s. sym_refs (state_refs_of' s)\<rbrace>"
   apply (simp add: threadSet_def setObject_def split_def)
   apply (wp crunch_wps getObject_tcb_wp
     | simp add: updateObject_default_def loadObject_default_def
     | wpc)+
-   apply (clarsimp simp:state_refs_of'_def 
+   apply (clarsimp simp:state_refs_of'_def
      obj_at'_def lookupAround2_known1)
   apply (subst lookupAround2_known1)
    apply simp
@@ -697,7 +697,7 @@ lemma updateTimeSlice_sym_refs[wp]:
   apply (subst fst_conv)+
   apply (clarsimp simp:projectKO_eq projectKO_opt_tcb split:Structures_H.kernel_object.splits)
   apply (simp add:objBits_simps)
-  apply (frule_tac s' = s and 
+  apply (frule_tac s' = s and
     v' = "(KOTCB (tcbTimeSlice_update (\<lambda>_. ts') obj))" in ps_clear_updE)
    apply simp
   apply (clarsimp simp:fun_upd_def)
@@ -707,7 +707,7 @@ lemma updateTimeSlice_sym_refs[wp]:
    apply (intro conjI impI)
     apply simp
    apply clarsimp
-   apply (drule_tac s' = s and y = thread and x = x and 
+   apply (drule_tac s' = s and y = thread and x = x and
     v' = "(KOTCB (tcbTimeSlice_update (\<lambda>_. ts') obj))"
      in ps_clear_updE[rotated])
     apply simp
@@ -716,7 +716,7 @@ lemma updateTimeSlice_sym_refs[wp]:
   apply (intro conjI impI)
    apply simp
   apply clarsimp
-   apply (drule_tac y = thread and x = x and s' = s and 
+   apply (drule_tac y = thread and x = x and s' = s and
     v' = "KOTCB obj"
      in ps_clear_updE)
     apply simp
@@ -730,7 +730,7 @@ lemma updateTimeSlice_sym_refs[wp]:
 
 lemma updateTimeSlice_if_live_then_nonz_cap'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread   
+   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
   \<lbrace>\<lambda>r s. if_live_then_nonz_cap' s\<rbrace>"
   apply (wp threadSet_iflive'T)
    apply (simp add:tcb_cte_cases_def)
@@ -742,7 +742,7 @@ lemma updateTimeSlice_if_live_then_nonz_cap'[wp]:
 
 lemma updateTimeSlice_if_unsafe_then_cap'[wp]:
   "\<lbrace>\<lambda>s. if_unsafe_then_cap' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread   
+   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
   \<lbrace>\<lambda>r s. if_unsafe_then_cap' s\<rbrace>"
   apply (wp threadSet_ifunsafe'T)
    apply (simp add:tcb_cte_cases_def)+
@@ -750,7 +750,7 @@ lemma updateTimeSlice_if_unsafe_then_cap'[wp]:
 
 lemma updateTimeSlice_valid_idle'[wp]:
   "\<lbrace>\<lambda>s. valid_idle' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread   
+   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
   \<lbrace>\<lambda>r s. valid_idle' s\<rbrace>"
   apply (wp threadSet_idle'T)
   apply (simp add:tcb_cte_cases_def)
@@ -759,7 +759,7 @@ lemma updateTimeSlice_valid_idle'[wp]:
 
 lemma updateTimeSlice_valid_global_refs'[wp]:
   "\<lbrace>\<lambda>s. valid_global_refs' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread   
+   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
   \<lbrace>\<lambda>r s. valid_global_refs' s\<rbrace>"
   apply (wp threadSet_idle'T)
   apply (simp add:tcb_cte_cases_def)+
@@ -767,7 +767,7 @@ lemma updateTimeSlice_valid_global_refs'[wp]:
 
 lemma updateTimeSlice_valid_irq_node'[wp]:
   "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread   
+   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
   \<lbrace>\<lambda>r s. valid_irq_node' (irq_node' s) s\<rbrace>"
   apply (rule hoare_pre)
   apply wps
@@ -777,7 +777,7 @@ lemma updateTimeSlice_valid_irq_node'[wp]:
 
 lemma updateTimeSlice_irq_handlers'[wp]:
   "\<lbrace>\<lambda>s. valid_irq_handlers' s\<rbrace>
-   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread   
+   threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
   \<lbrace>\<lambda>r s. valid_irq_handlers' s\<rbrace>"
   apply (rule hoare_pre)
   apply (wp threadSet_irq_handlers' |
@@ -787,14 +787,14 @@ lemma updateTimeSlice_irq_handlers'[wp]:
 
 lemma updateTimeSlice_valid_queues'[wp]:
   "\<lbrace>\<lambda>s. valid_queues' s \<rbrace>
-  threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread 
+  threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread
   \<lbrace>\<lambda>r s. valid_queues' s\<rbrace>"
   apply (wp threadSet_valid_queues')
   apply (auto simp:inQ_def)
   done
 
 lemma rescheduleRequired_valid_irq_node'[wp]:
-  "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s\<rbrace> rescheduleRequired 
+  "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s\<rbrace> rescheduleRequired
   \<lbrace>\<lambda>rv s. valid_irq_node' (irq_node' s) s \<rbrace>"
   apply (simp add:rescheduleRequired_def valid_irq_node'_def)
   apply (wp hoare_vcg_all_lift | wpc |simp)+
@@ -805,7 +805,7 @@ lemma rescheduleRequired_valid_irq_node'[wp]:
   done
 
 lemma rescheduleRequired_cur_tcb'[wp]:
-  "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> rescheduleRequired 
+  "\<lbrace>\<lambda>s. cur_tcb' s\<rbrace> rescheduleRequired
   \<lbrace>\<lambda>rv s. cur_tcb' s \<rbrace>"
   apply (simp add:rescheduleRequired_def)
   apply wp
@@ -829,7 +829,7 @@ lemma timerTick_invs'[wp]:
     apply (rule_tac Q="\<lambda>rv. invs'"
       in hoare_post_imp)
      apply (clarsimp simp add:invs'_def valid_state'_def)
-    apply (wp threadGet_wp threadSet_cur threadSet_timeslice_invs 
+    apply (wp threadGet_wp threadSet_cur threadSet_timeslice_invs
       rescheduleRequired_all_invs_but_ct_not_inQ
       hoare_vcg_imp_lift threadSet_ct_idle_or_in_cur_domain'
       |wpc | simp)+
@@ -857,7 +857,7 @@ lemma resetTimer_invs'[wp]:
    apply clarsimp+
   done
 
-lemma dmo_ackInterrupt[wp]: 
+lemma dmo_ackInterrupt[wp]:
 "\<lbrace>invs'\<rbrace> doMachineOp (ackInterrupt irq) \<lbrace>\<lambda>y. invs'\<rbrace>"
   apply (wp dmo_invs' no_irq no_irq_ackInterrupt)
   apply safe
@@ -872,7 +872,7 @@ lemma hint_invs[wp]:
   apply (simp add: handleInterrupt_def getSlotCap_def
   cong: irqstate.case_cong)
   apply (rule conjI; rule impI)
-  
+
    apply (wp dmo_maskInterrupt_True getCTE_wp'
     | wpc | simp add: doMachineOp_bind )+
     apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
@@ -882,7 +882,7 @@ lemma hint_invs[wp]:
   apply (wp hoare_post_comb_imp_conj hoare_drop_imp getIRQState_inv)
   apply (assumption)+
   done
-  
+
 
 crunch st_tcb_at'[wp]: timerTick "st_tcb_at' P t"
   (wp: threadSet_pred_tcb_no_state)
@@ -890,8 +890,8 @@ crunch st_tcb_at'[wp]: timerTick "st_tcb_at' P t"
 lemma handleInterrupt_runnable:
   "\<lbrace>st_tcb_at' runnable' t\<rbrace> handleInterrupt irq \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
   apply (simp add: handleInterrupt_def)
-  apply (rule conjI; rule impI)  
-   apply (wp sai_st_tcb' hoare_vcg_all_lift hoare_drop_imps 
+  apply (rule conjI; rule impI)
+   apply (wp sai_st_tcb' hoare_vcg_all_lift hoare_drop_imps
              threadSet_pred_tcb_no_state getIRQState_inv haskell_fail_wp
           |wpc|simp add: handleReservedIRQ_def)+
   done

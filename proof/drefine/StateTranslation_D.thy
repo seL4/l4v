@@ -342,7 +342,7 @@ definition
     | ArchInvocationLabel ARMPageTableMap \<Rightarrow>
                           map_option PageTableIntent
                                    (transform_intent_page_table_map args)
-    | ArchInvocationLabel ARMPageTableUnmap \<Rightarrow> Some (PageTableIntent PageTableUnmapIntent) 
+    | ArchInvocationLabel ARMPageTableUnmap \<Rightarrow> Some (PageTableIntent PageTableUnmapIntent)
     | ArchInvocationLabel ARMPageMap \<Rightarrow>
                           map_option PageIntent
                                    (transform_intent_page_map args)
@@ -472,7 +472,7 @@ lemmas transform_intent_cnode_defs =
   transform_intent_cnode_mutate_def
   transform_intent_cnode_rotate_def
 
-method case_labels for label :: invocation_label = 
+method case_labels for label :: invocation_label =
   (cases label, find_goal \<open>match premises in "label = ArchInvocationLabel x" for x \<Rightarrow> \<open>cases x\<close>\<close>)
 
 lemma transform_intent_isnot_CNodeIntent:
@@ -527,7 +527,7 @@ lemma transform_intent_isnot_TcbIntent:
                          split: list.split)+
   apply(unfold transform_intent_def)
   apply(case_labels label, simp_all add: option_map_def split: option.split)
-  apply (auto simp: transform_intent_tcb_defs 
+  apply (auto simp: transform_intent_tcb_defs
                  split:  list.splits arch_invocation_label.splits)
 done
 

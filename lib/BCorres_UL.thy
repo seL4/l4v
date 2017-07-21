@@ -159,7 +159,7 @@ lemma when_bcorres_underlying[wp]:
   by (simp add: bcorres_underlying_def when_s_bcorres_underlying)
 
 lemma put_bcorres_underlying[wp]:
-  "t f = f' \<Longrightarrow>  bcorres_underlying t (put f) (put f')" 
+  "t f = f' \<Longrightarrow>  bcorres_underlying t (put f) (put f')"
   apply (simp add: bcorres_underlying_def s_bcorres_underlying_def put_def)
   done
 
@@ -198,7 +198,7 @@ lemma mapM_x_bcorres_underlying[wp]:
 lemma mapM_bcorres_underlying[wp]:
   "(\<And>x. bcorres_underlying t (f x) (f' x)) \<Longrightarrow> bcorres_underlying t (mapM f xs) (mapM f' xs)"
   by (simp add: mapM_def | wp)+
- 
+
 lemma gets_s_bcorres_underlyingE': "s_bcorres_underlying t (f (x s)) (f' (x' (t s))) s \<Longrightarrow> s_bcorres_underlying t (liftE (gets x) >>=E f) (liftE (gets x') >>=E f') s"
   by (simp add: gets_def liftE_def lift_def bindE_def) wp
 

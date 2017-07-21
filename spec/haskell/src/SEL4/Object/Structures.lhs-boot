@@ -1,0 +1,9 @@
+> module SEL4.Object.Structures( TCB) where
+
+The current perl script for generating hs-boot files cannot export the datatype
+without also exporting its constructors.
+
+Currently we only need TCB as a tag to a phantom type (PPtr TCB).
+
+> data TCB
+

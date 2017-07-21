@@ -8,7 +8,7 @@
 % @TAG(GD_GPL)
 %
 
-This module defines the instances of "PSpaceStorable" objects. 
+This module defines the instances of "PSpaceStorable" objects.
 
 \begin{impdetails}
 
@@ -36,20 +36,20 @@ This module uses the C preprocessor to select a target architecture.
 
 \subsection{Type Class Instances}
 
-The following are the instances of "Storable" for the four main types of kernel object: synchronous IPC endpoints, notification objects, thread control blocks, and capability table entries. 
+The following are the instances of "Storable" for the four main types of kernel object: synchronous IPC endpoints, notification objects, thread control blocks, and capability table entries.
 
 \subsubsection{Synchronous IPC Endpoint}
 
 > instance PSpaceStorable Endpoint where
 >     makeObject = IdleEP
 >     injectKO   = KOEndpoint
->     projectKO o = case o of 
+>     projectKO o = case o of
 >         KOEndpoint e -> return e
 >         _ -> typeError "Endpoint" o
 
 \subsubsection{Notification objects}
 
-> instance PSpaceStorable Notification where 
+> instance PSpaceStorable Notification where
 >     makeObject = NTFN IdleNtfn Nothing
 >     injectKO   = KONotification
 >     projectKO o = case o of
@@ -67,7 +67,7 @@ The following are the instances of "Storable" for the four main types of kernel 
 >         KOCTE e -> return e
 >         _ -> typeError "CTE" o
 
-\begin{impdetails} 
+\begin{impdetails}
 As mentioned in the documentation for the type class "PSpaceStorable", there is one kernel object which needs its own definitions for "loadObject" and "storeObject"; it is the capability table entry. The reason for this is that thread control blocks contain capability table entries for the root of the capability and page tables; the capability copy and revocation functions need to access those "CTE"s while unaware that they are actually inside a "TCB". So the "CTE" versions of "loadObject" and "storeObject" must be able to handle accesses to "TCB"s as well.
 \end{impdetails}
 
@@ -153,7 +153,7 @@ By default, new threads are unable to change the security domains of other threa
 > instance PSpaceStorable UserData where
 >     makeObject = UserData
 >     injectKO  _ = KOUserData
->     projectKO o = case o of 
+>     projectKO o = case o of
 >         KOUserData -> return UserData
 >         _ -> typeError "UserData" o
 

@@ -138,14 +138,14 @@ would most likely be embedded in the thread control blocks themselves.
 The following two functions are used to get and set the value of the
 current thread pointer which is stored in the kernel state.
 
-\begin{impdetails} 
+\begin{impdetails}
 
 These functions have the same basic form as many
 others in the kernel which fetch or set the value of some part of the
 state data. They make use of "gets" and "modify", two functions which
 each apply a given function to the current state --- either returning
 some value extracted from the state, or calculating a new state which
-replaces the previous one.  
+replaces the previous one.
 
 \end{impdetails}
 
@@ -188,8 +188,13 @@ Similarly, these functions access the idle thread pointer, the ready queue for a
 > setWorkUnits a = modify (\ks -> ks { ksWorkUnitsCompleted = a })
 
 > modifyWorkUnits :: (Word -> Word) -> Kernel ()
-> modifyWorkUnits f = modify (\ks -> ks { ksWorkUnitsCompleted = 
+> modifyWorkUnits f = modify (\ks -> ks { ksWorkUnitsCompleted =
 >                                         f (ksWorkUnitsCompleted ks) })
+
+TODO use this where update is restricted to arch state instead of fiddling in place
+
+> modifyArchState :: (Arch.KernelState -> Arch.KernelState) -> Kernel ()
+> modifyArchState f = modify (\s -> s { ksArchState = f (ksArchState s) })
 
 These functions access and modify the current domain and the number of ticks remaining until the current domain changes.
 

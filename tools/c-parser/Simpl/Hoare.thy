@@ -7,7 +7,7 @@
 (*  Title:      Hoare.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2004-2008 Norbert Schirmer 
+Copyright (C) 2004-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -30,7 +30,7 @@ section \<open>Auxiliary Definitions/Lemmas to Facilitate Hoare Logic\<close>
 theory Hoare imports HoarePartial HoareTotal begin
 
 
-syntax 
+syntax
 
 "_hoarep_emptyFaults"::
 "[('s,'p,'f) body,('s,'p) quadruple set,
@@ -158,14 +158,14 @@ syntax (ASCII)
    ("(3_/|-t(_/ (_)/ _))" [61,1000,20,1000]60)
 
 translations
- 
 
- "\<Gamma>\<turnstile> P c Q,A"  == "\<Gamma>\<turnstile>\<^bsub>/{}\<^esub> P c Q,A" 
+
+ "\<Gamma>\<turnstile> P c Q,A"  == "\<Gamma>\<turnstile>\<^bsub>/{}\<^esub> P c Q,A"
  "\<Gamma>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"  == "\<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
 
  "\<Gamma>,\<Theta>\<turnstile> P c Q"  == "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P c Q"
  "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q"  == "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,{}"
- "\<Gamma>,\<Theta>\<turnstile> P c Q,A" == "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P c Q,A" 
+ "\<Gamma>,\<Theta>\<turnstile> P c Q,A" == "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P c Q,A"
 
  "\<Gamma>\<turnstile> P c Q"    ==  "\<Gamma>\<turnstile>\<^bsub>/{}\<^esub> P c Q"
  "\<Gamma>\<turnstile>\<^bsub>/F\<^esub> P c Q"  == "\<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> P c Q"
@@ -181,7 +181,7 @@ translations
  "\<Gamma>,\<Theta>\<turnstile>\<^sub>t P c Q"   == "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/{}\<^esub> P c Q"
  "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q" == "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,{}"
  "\<Gamma>,\<Theta>\<turnstile>\<^sub>t P c Q,A"   == "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/{}\<^esub> P c Q,A"
- 
+
  "\<Gamma>\<turnstile>\<^sub>t P c Q"    == "\<Gamma>\<turnstile>\<^sub>t\<^bsub>/{}\<^esub> P c Q"
  "\<Gamma>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q"  == "\<Gamma>,{}\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q"
  "\<Gamma>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q"  <=  "\<Gamma>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,{}"
@@ -215,7 +215,7 @@ term "\<Gamma>,\<Theta>\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
 
 
 locale hoare =
-  fixes \<Gamma>::"('s,'p,'f) body" 
+  fixes \<Gamma>::"('s,'p,'f) body"
 
 
 primrec assoc:: "('a \<times>'b) list \<Rightarrow> 'a \<Rightarrow> 'b "
@@ -256,18 +256,18 @@ definition mex::"('a \<Rightarrow> bool) \<Rightarrow> bool"
 definition meq::"'a \<Rightarrow> 'a \<Rightarrow> bool"
   where "meq s Z = (s = Z)"
 
-lemma subset_unI1: "A \<subseteq> B \<Longrightarrow> A \<subseteq> B \<union> C" 
+lemma subset_unI1: "A \<subseteq> B \<Longrightarrow> A \<subseteq> B \<union> C"
   by blast
 
-lemma subset_unI2: "A \<subseteq> C \<Longrightarrow> A \<subseteq> B \<union> C" 
+lemma subset_unI2: "A \<subseteq> C \<Longrightarrow> A \<subseteq> B \<union> C"
   by blast
 
-lemma split_paired_UN: "(\<Union>p. (P p)) = (\<Union>a b. (P (a,b)))" 
+lemma split_paired_UN: "(\<Union>p. (P p)) = (\<Union>a b. (P (a,b)))"
   by auto
 
 lemma in_insert_hd: "f \<in> insert f X"
   by simp
- 
+
 lemma lookup_Some_in_dom: "\<Gamma> p = Some bdy \<Longrightarrow> p \<in> dom \<Gamma>"
   by auto
 
@@ -304,14 +304,14 @@ lemma image_Un_single_simp: "f ` (\<Union>Z. {P Z}) = (\<Union>Z. {f (P Z)}) "
 
 
 
-lemma measure_lex_prod_def': 
+lemma measure_lex_prod_def':
   "f <*mlex*> r \<equiv> ({(x,y). (x,y) \<in> measure f \<or> f x=f y \<and> (x,y) \<in>  r})"
   by (auto simp add: mlex_prod_def inv_image_def)
 
 lemma in_measure_iff: "(x,y) \<in> measure f = (f x < f y)"
   by (simp add: measure_def inv_image_def)
 
-lemma in_lex_iff: 
+lemma in_lex_iff:
   "((a,b),(x,y)) \<in> r <*lex*> s = ((a,x) \<in> r \<or> (a=x \<and> (b,y)\<in>s))"
   by (simp add: lex_prod_def)
 
@@ -319,7 +319,7 @@ lemma in_mlex_iff:
   "(x,y) \<in> f <*mlex*> r = (f x < f y \<or> (f x=f y \<and> (x,y) \<in> r))"
   by (simp add: measure_lex_prod_def' in_measure_iff)
 
-lemma in_inv_image_iff: "(x,y) \<in> inv_image r f = ((f x, f y) \<in> r)" 
+lemma in_inv_image_iff: "(x,y) \<in> inv_image r f = ((f x, f y) \<in> r)"
   by (simp add: inv_image_def)
 
 text \<open>This is actually the same as @{thm [source] wf_mlex}. However, this basic
@@ -345,15 +345,15 @@ proof (rule ccontr)
   from this [rule_format, of "g ` UNIV"]
   have "\<exists>z. z \<in> range g \<and> (\<forall>y. (y, z) \<in> measure f \<longrightarrow> y \<notin> range g)"
     by auto
-  then obtain z where 
+  then obtain z where
     z: "z \<in> range g" and
     min_z: "\<forall>y. f y < f z \<longrightarrow> y \<notin> range g"
     by (auto simp add: in_measure_iff)
-  from z obtain k where 
+  from z obtain k where
     k: "z = g k"
     by auto
-  have "\<forall>i. k \<le> i \<longrightarrow> f (g i) = f (g k)" 
-  proof (intro allI impI) 
+  have "\<forall>i. k \<le> i \<longrightarrow> f (g i) = f (g k)"
+  proof (intro allI impI)
     fix i
     assume "k \<le> i" then show "f (g i) = f (g k)"
     proof (induct i)
@@ -395,7 +395,7 @@ proof (rule ccontr)
       qed
     qed
   qed
-  with k [symmetric] have "\<forall>i. k \<le> i \<longrightarrow> f (g i) = f z" 
+  with k [symmetric] have "\<forall>i. k \<le> i \<longrightarrow> f (g i) = f z"
     by simp
   hence "\<forall>i. k \<le> i \<longrightarrow> f (g (Suc i)) = f (g i)"
     by simp
@@ -405,12 +405,12 @@ proof (rule ccontr)
     by simp
   then
   have "\<exists>f. \<forall>i. (f (Suc i), f i) \<in> r"
-    by - (rule exI [where x="\<lambda>i. g (i+k)"],simp) 
+    by - (rule exI [where x="\<lambda>i. g (i+k)"],simp)
   with wf_r show False
     by (simp add: wf_iff_no_infinite_down_chain)
 qed
 
-lemmas all_imp_to_ex = all_simps (5)  
+lemmas all_imp_to_ex = all_simps (5)
 (*"!!P Q. (ALL x. P x --> Q) = ((EX x. P x) --> Q)"
 
  Avoid introduction of existential quantification of states on negative
@@ -420,5 +420,5 @@ lemmas all_imp_to_ex = all_simps (5)
 lemma all_imp_eq_triv: "(\<forall>x. x = k \<longrightarrow> Q) = Q"
                        "(\<forall>x. k = x \<longrightarrow> Q) = Q"
   by auto
-  
+
 end

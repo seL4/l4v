@@ -49,16 +49,16 @@ definition
                       (newKernelState initDataStart))) \<times>
     {UserMode} \<times> {None}"
 
-definition 
+definition
   "user_mem' s \<equiv> \<lambda>p.
   if (pointerInUserData p s)
-  then Some (underlying_memory (ksMachineState s) p) 
+  then Some (underlying_memory (ksMachineState s) p)
   else None"
 
-definition 
+definition
   "device_mem' s \<equiv> \<lambda>p.
   if (pointerInDeviceData p s)
-  then Some p 
+  then Some p
   else None"
 
 
@@ -109,7 +109,7 @@ definition
    | Some (KOArch (KOPDE (ARM_H.SuperSectionPDE p e c g xn rights))) \<Rightarrow>
        if is_aligned offs 4 then
          ARM_A.SuperSectionPDE p
-           {x. e & x=ParityEnabled | c & x=PageCacheable 
+           {x. e & x=ParityEnabled | c & x=PageCacheable
              | g & x=Global | xn & x=XNever}
            (vm_rights_of rights)
        else ARM_A.InvalidPDE"
@@ -216,7 +216,7 @@ lemma
     using pspace_aligned'
     apply (simp add: pspace_aligned'_def dom_def)
     apply (erule_tac x=y in allE)
-    apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq
+    apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq pteBits_def
                      and_not_mask[symmetric] AND_NOT_mask_plus_AND_mask_eq)
    using fst_pde
    apply (erule_tac x=y in allE)
@@ -230,7 +230,7 @@ lemma
    using pspace_aligned'
    apply (simp add: pspace_aligned'_def dom_def)
    apply (erule_tac x=y in allE)
-   apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq
+   apply (simp add: objBitsKO_def archObjSize_def is_aligned_neg_mask_eq pdeBits_def
                     and_not_mask[symmetric] AND_NOT_mask_plus_AND_mask_eq)
   apply (simp split: option.splits Structures_H.kernel_object.splits)
   apply (intro allI)
@@ -408,7 +408,7 @@ lemma LookupFailureMap_lookup_failure_map:
   "(\<forall>n g. lf = ExceptionTypes_A.GuardMismatch n g \<longrightarrow> length g \<le> 32)
    \<Longrightarrow> LookupFailureMap (lookup_failure_map lf) = lf"
   by (clarsimp simp add: LookupFailureMap_def lookup_failure_map_def
-                         uint_of_bl_is_bl_to_bin 
+                         uint_of_bl_is_bl_to_bin
                simp del: bin_to_bl_def
                split: ExceptionTypes_A.lookup_failure.splits)
 
@@ -517,7 +517,7 @@ lemma unaligned_helper:
 
 lemma pspace_aligned_distinct_None:
   (* NOTE: life would be easier if pspace_aligned and pspace_distinct were defined on PSpace instead of the whole kernel state. *)
-assumes pspace_aligned: 
+assumes pspace_aligned:
   "\<forall>x\<in>dom ha. is_aligned (x :: word32) (obj_bits (the (ha x)))"
 assumes pspace_distinct:
   "\<forall>x y ko ko'.
@@ -1406,7 +1406,7 @@ proof -
      apply clarsimp
      apply (fastforce intro: trancl_rtrancl_trancl)
      done
-  
+
 
   show ?P
     apply (rule ext)
@@ -1480,16 +1480,16 @@ proof -
   thus ?Q
     apply (case_tac x)
     apply (case_tac "cdt s (a, b)")
-     apply (drule sym)   
+     apply (drule sym)
      apply (simp add: mdb_cte_at_def)
-     apply (simp add: absCDT_def split_def)   
+     apply (simp add: absCDT_def split_def)
      apply (simp add: parent_of'_def split: if_split_asm)
      apply (intro impI)
      apply (frule_tac a=a and b=b in cnp[simplified,rule_format])
      apply simp
     apply simp
     apply (clarsimp simp: is_parent)
-    done     
+    done
 qed
 
 lemmas absCDT_correct = absCDT_correct'(1)
@@ -1520,7 +1520,7 @@ definition sort_cdt_list where
 
 end
 
-locale partial_sort_cdt = partial_sort "\<lambda> x y.  m' \<turnstile> cte_map x \<leadsto>\<^sup>* cte_map y" 
+locale partial_sort_cdt = partial_sort "\<lambda> x y.  m' \<turnstile> cte_map x \<leadsto>\<^sup>* cte_map y"
                                        "\<lambda> x y. cte_at x (s::det_state) \<and> cte_at y s \<and> (\<exists>p. m' \<turnstile> p \<rightarrow> cte_map x \<and> m' \<turnstile> p \<rightarrow> cte_map y)" for m' s +
   fixes s'::"kernel_state"
   fixes m t
@@ -1531,7 +1531,7 @@ locale partial_sort_cdt = partial_sort "\<lambda> x y.  m' \<turnstile> cte_map 
   assumes valid_mdb: "valid_mdb s"
   assumes assms' : "pspace_aligned s" "pspace_distinct s" "pspace_aligned' s'"
                    "pspace_distinct' s'" "valid_objs s" "valid_mdb s" "valid_list s"
-  
+
 begin
 
 interpretation Arch . (*FIXME: arch_split*)
@@ -1541,7 +1541,7 @@ lemma valid_list_2 : "valid_list_2 t m"
     apply (simp add: t_def m_def)
     done
 
-lemma has_next_not_child_is_descendant: 
+lemma has_next_not_child_is_descendant:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows
   "next_not_child slot t m = Some slot2 \<Longrightarrow> (\<exists>p. slot \<in> descendants_of p m)"
@@ -1558,8 +1558,8 @@ lemma has_next_not_child_is_descendant:
   apply (elim conjE exE)
   apply force
   done
-  
-  
+
+
 lemma has_next_slot_is_descendant :
     notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows
@@ -1583,9 +1583,9 @@ lemma descendant_has_parent:
   apply (simp add: cdt_parent_of_def)
   apply force
   done
-  
-  
-  
+
+
+
 lemma next_slot_cte_at:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows
@@ -1611,7 +1611,7 @@ lemma cte_at_has_cap: "cte_at slot s \<Longrightarrow> \<exists>c. cte_wp_at (op
   done
 
 
-  lemma next_slot_mdb_next: 
+  lemma next_slot_mdb_next:
   notes split_paired_All[simp del]
   shows
  "next_slot slot t m = Some slot2 \<Longrightarrow> m' \<turnstile> (cte_map slot) \<leadsto> (cte_map slot2)"
@@ -1654,9 +1654,9 @@ lemma cte_at_has_cap: "cte_at slot s \<Longrightarrow> \<exists>c. cte_wp_at (op
        apply (rule next_slot_mdb_next)
        apply (simp add: assms' valid_list_2)+
     done
-    
 
-lemma next_sib_reachable: "next_sib slot t m = Some slot2 \<Longrightarrow> m slot = Some p \<Longrightarrow> 
+
+lemma next_sib_reachable: "next_sib slot t m = Some slot2 \<Longrightarrow> m slot = Some p \<Longrightarrow>
                              m' \<turnstile> (cte_map slot) \<leadsto>\<^sup>* (cte_map slot2)"
     apply (rule next_sib_2_reachable)
     apply (insert assms')
@@ -1664,7 +1664,7 @@ lemma next_sib_reachable: "next_sib slot t m = Some slot2 \<Longrightarrow> m sl
     apply (subst next_sib_def2,simp+)
     done
 
-lemma after_in_list_next_reachable: 
+lemma after_in_list_next_reachable:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows
   "after_in_list (t p) slot = Some slot2 \<Longrightarrow> m' \<turnstile> (cte_map slot) \<leadsto>\<^sup>* (cte_map slot2)"
@@ -1675,8 +1675,8 @@ lemma after_in_list_next_reachable:
   apply (insert valid_list_2)
   apply (simp add: valid_list_2_def)
     done
- 
-lemma sorted_lists: 
+
+lemma sorted_lists:
    "psorted (t p)"
     apply (rule after_order_sorted)
      apply (rule after_in_list_next_reachable)
@@ -1685,10 +1685,10 @@ lemma sorted_lists:
     apply (simp add: valid_list_def t_def del: split_paired_All)
     done
 
-lemma finite_children: 
+lemma finite_children:
 notes split_paired_All[simp del]
 shows
-"finite {c. m c = Some p}" 
+"finite {c. m c = Some p}"
   apply (insert assms')
   apply(subgoal_tac "{x. x \<in> descendants_of p (cdt s)} \<subseteq> {x. cte_wp_at (\<lambda>_. True) x s}")
    prefer 2
@@ -1715,7 +1715,7 @@ lemma ex1_sorted_cdt: "\<exists>!xs. set xs = {c. m c = Some p} \<and>
 
   apply (cut_tac s=s and s'=s' and x="(a,b)" in cdt_simple_rel, simp_all add: assms' rel)
   apply (simp add: m_def)
-  apply (cut_tac s=s and s'=s' and x="(aa,ba)" in cdt_simple_rel, simp_all add: assms' rel)  
+  apply (cut_tac s=s and s'=s' and x="(aa,ba)" in cdt_simple_rel, simp_all add: assms' rel)
   apply (rule_tac x="cte_map p" in exI)
   apply (simp add: m'_def)
   done
@@ -1730,7 +1730,7 @@ lemma sort_cdt_list_correct:
   apply (insert assms')
   apply (simp add: valid_list_def t_def m_def del: split_paired_All)
   done
-  
+
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -1740,7 +1740,7 @@ definition absCDTList where
 
 lemma no_loops_sym_eq: "no_loops m \<Longrightarrow> m \<turnstile> a \<leadsto>\<^sup>* b \<Longrightarrow> m \<turnstile> b \<leadsto>\<^sup>* a \<Longrightarrow> a = b"
   apply (rule ccontr)
-  apply (subgoal_tac "m \<turnstile> a \<leadsto>\<^sup>+ a")  
+  apply (subgoal_tac "m \<turnstile> a \<leadsto>\<^sup>+ a")
    apply (simp add: no_loops_def)
   apply (simp add: rtrancl_eq_or_trancl)
   done
@@ -1869,7 +1869,7 @@ by (clarsimp simp add: absArchState_def
              split: ARM_H.kernel_state.splits)
 
 definition absSchedulerAction where
-  "absSchedulerAction action \<equiv> 
+  "absSchedulerAction action \<equiv>
     case action of ResumeCurrentThread \<Rightarrow> resume_cur_thread
                  | SwitchToThread t \<Rightarrow> switch_thread t
                  | ChooseNewThread \<Rightarrow> choose_new_thread"
@@ -1924,11 +1924,11 @@ lemma invs_valid_ioc[elim!]: "invs s \<Longrightarrow> valid_ioc s"
 
 
 
-definition 
+definition
   checkActiveIRQ :: "(kernel_state, bool) nondet_monad"
   where
   "checkActiveIRQ \<equiv>
-   do irq \<leftarrow> doMachineOp getActiveIRQ;
+   do irq \<leftarrow> doMachineOp (getActiveIRQ False);
       return (irq \<noteq> None)
    od"
 
@@ -1956,12 +1956,12 @@ definition
       (e, tc',um',ds') \<leftarrow> select (fst (uop t (restrict_map trans {pa. perms pa \<noteq> {}}) perms
                    (tc, restrict_map um
                         {pa. \<exists>va. trans va = Some pa \<and> AllowRead \<in> perms va}
-                       ,(ds \<circ> ptrFromPAddr) |`  {pa. \<exists>va. trans va = Some pa \<and> AllowRead \<in> perms va} ) 
+                       ,(ds \<circ> ptrFromPAddr) |`  {pa. \<exists>va. trans va = Some pa \<and> AllowRead \<in> perms va} )
                        ));
       doMachineOp (user_memory_update
                        ((um' |` {pa. \<exists>va. trans va = Some pa \<and> AllowWrite \<in> perms va}
                       \<circ> addrFromPPtr) |` (- dom ds)));
-      doMachineOp (device_memory_update 
+      doMachineOp (device_memory_update
                        ((ds' |` {pa. \<exists>va. trans va = Some pa \<and> AllowWrite \<in> perms va}
                       \<circ> addrFromPPtr )|` (dom ds)));
       return (e, tc')
@@ -1976,7 +1976,7 @@ definition
 
 definition
   "kernelEntry e tc \<equiv> do
-    t \<leftarrow> getCurThread; 
+    t \<leftarrow> getCurThread;
     threadSet (\<lambda>tcb. tcb \<lparr> tcbArch := atcbContextSet tc (tcbArch tcb) \<rparr>) t;
     callKernel e;
     t' \<leftarrow> getCurThread;

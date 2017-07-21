@@ -16,7 +16,7 @@ This module contains configuration parameters that may be set at compile time to
 
 \subsection{Initialisation Parameters}
 
-The initial task is guaranteed to receive at least this many empty capability slots, allocated by the kernel during initialisation. 
+The initial task is guaranteed to receive at least this many empty capability slots, allocated by the kernel during initialisation.
 
 > minFreeSlots :: Int
 > minFreeSlots = 128

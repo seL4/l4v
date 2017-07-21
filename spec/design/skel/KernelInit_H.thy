@@ -31,11 +31,11 @@ end
 requalify_consts (in Arch)
   newKernelState
 
-fun coverOf :: "region list => region" 
+fun coverOf :: "region list => region"
 where "coverOf x0 = (case x0 of
     [] =>    Region (0,0)
   | [x] =>    x
-  | (x#xs) =>  
+  | (x#xs) =>
     let
         (l,h) = fromRegion x;
         (ll,hh) = fromRegion $ coverOf xs;

@@ -21,7 +21,7 @@ where
  "authorised_untyped_inv aag ui \<equiv> case ui of
      Invocations_A.untyped_invocation.Retype src_slot reset base aligned_free_ref new_type obj_sz slots dev \<Rightarrow>
        is_subject aag (fst src_slot) \<and> (0::word32) < of_nat (length slots) \<and>
-       (\<forall>x\<in>set (retype_addrs aligned_free_ref new_type (length slots) obj_sz). is_subject aag x) \<and> 
+       (\<forall>x\<in>set (retype_addrs aligned_free_ref new_type (length slots) obj_sz). is_subject aag x) \<and>
        (\<forall>x\<in>{aligned_free_ref..aligned_free_ref + of_nat (length slots)*2^(obj_bits_api new_type obj_sz) - 1}. is_subject aag x) \<and>
        new_type \<noteq> ArchObject ASIDPoolObj \<and>
        (\<forall>x\<in>set slots. is_subject aag (fst x))"
@@ -30,7 +30,7 @@ subsection{* invoke *}
 
 lemma create_cap_integrity:
   "\<lbrace>integrity aag X st and K (is_subject aag (fst (fst ref)))\<rbrace>
-     create_cap tp sz p dev ref 
+     create_cap tp sz p dev ref
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: create_cap_def split_def)
   apply (wp set_cap_integrity_autarch[unfolded pred_conj_def K_def]
@@ -482,7 +482,7 @@ lemma reset_untyped_cap_integrity:
                         pas_refined_refl)
   done
 
-lemma bool_enum[simp]: "(\<forall>x. d = (\<not> x)) = False" "(\<forall>x. d = x) = False" 
+lemma bool_enum[simp]: "(\<forall>x. d = (\<not> x)) = False" "(\<forall>x. d = x) = False"
   by blast+
 
 lemma invoke_untyped_integrity:
@@ -517,7 +517,7 @@ lemma clas_default_cap:
   "tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_asid_slot aag p (default_cap tp p' sz dev)"
   unfolding cap_links_asid_slot_def
   apply (cases tp, simp_all)
-  apply (rename_tac aobject_type) 
+  apply (rename_tac aobject_type)
   apply (case_tac aobject_type, simp_all add: arch_default_cap_def)
   done
 
@@ -573,17 +573,16 @@ lemma empty_table_update_from_arm_global_pts:
     kernel_base >> 20 \<le> y >> 20; y >> 20 \<le> 2 ^ (pd_bits - 2) - 1;
     is_aligned pd pd_bits;
     kheap s (arm_global_pd (arch_state s)) = Some (ArchObj (PageDirectory pda));
-    obj_at (empty_table (set (arm_global_pts (arch_state s)))) pd s\<rbrakk>
+    obj_at (empty_table (set (second_level_tables (arch_state s)))) pd s\<rbrakk>
    \<Longrightarrow>
    (\<forall>pdb. ko_at (ArchObj (PageDirectory pdb)) pd s \<longrightarrow>
-       empty_table (set (arm_global_pts (arch_state s)))
+       empty_table (set (second_level_tables (arch_state s)))
                    (ArchObj
                      (PageDirectory
                        (pdb(ucast (y >> 20) := pda (ucast (y >> 20)))))))"
   apply(clarsimp simp: empty_table_def obj_at_def)
   apply(clarsimp simp: valid_global_objs_def obj_at_def empty_table_def)
   done
-
 
 lemma copy_global_mappings_pas_refined:
   "is_aligned pd pd_bits \<Longrightarrow>
@@ -752,7 +751,7 @@ lemma use_retype_region_proofs_ext':
   shows
     "\<lbrakk> ty = CapTableObject \<Longrightarrow> 0 < us;
          \<And>s. P s \<Longrightarrow> Q (retype_addrs ptr ty n us) s \<rbrakk> \<Longrightarrow>
-    \<lbrace>\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n 
+    \<lbrace>\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n
         \<and> caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s
         \<and> caps_no_overlap ptr sz s \<and> pspace_no_overlap_range_cover ptr sz s
         \<and> (\<exists>slot. cte_wp_at (\<lambda>c. up_aligned_area ptr sz \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s) \<and>
@@ -761,7 +760,7 @@ lemma use_retype_region_proofs_ext':
   apply (rule hoare_pre, (wp|simp)+)
     apply (rule retype_region_ext_kheap_update[OF y])
    apply (wp|simp)+
-  apply (clarsimp simp: retype_addrs_fold 
+  apply (clarsimp simp: retype_addrs_fold
                         foldr_upd_app_if fun_upd_def[symmetric])
   apply safe
   apply (rule x)
@@ -801,7 +800,7 @@ lemma retype_region_ext_pas_refined:
   done
 
 lemma retype_region_pas_refined:
-  "\<lbrace>pas_refined aag and pas_cur_domain aag and 
+  "\<lbrace>pas_refined aag and pas_cur_domain aag and
     valid_pspace and valid_mdb and
     caps_overlap_reserved
             {ptr..ptr + of_nat num_objects * 2 ^ obj_bits_api type o_bits -
@@ -1314,7 +1313,7 @@ lemma pas_refined_work_units_complete[simp]:
 lemma reset_untyped_cap_pas_refined[wp]:
   "\<lbrace>pas_refined aag and cte_wp_at is_untyped_cap slot
       and K (is_subject aag (fst slot))\<rbrace>
-    reset_untyped_cap slot 
+    reset_untyped_cap slot
   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: reset_untyped_cap_def)
@@ -1336,7 +1335,7 @@ lemma retype_region_post_retype_invs_spec:
   "\<lbrace>invs and caps_no_overlap ptr sz and pspace_no_overlap_range_cover ptr sz
       and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
       and region_in_kernel_window {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}
-      and (\<lambda>s. \<exists>idx. cte_wp_at (op = (UntypedCap dev (ptr && ~~ mask sz) sz idx)) slot s) 
+      and (\<lambda>s. \<exists>idx. cte_wp_at (op = (UntypedCap dev (ptr && ~~ mask sz) sz idx)) slot s)
       and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
       and K (range_cover ptr sz (obj_bits_api ty us) n) \<rbrace>
       retype_region ptr n us ty dev\<lbrace>\<lambda>rv. post_retype_invs ty rv\<rbrace>"

@@ -20,7 +20,7 @@ signature APPLY_TRACE =
 sig
   val apply_results :
     {silent_fail : bool} ->
-    (Proof.context -> thm -> ((string * int option) * term) list -> unit) -> 
+    (Proof.context -> thm -> ((string * int option) * term) list -> unit) ->
     Method.text_range -> Proof.state -> Proof.state Seq.result Seq.seq
 
   (* Lower level interface. *)
@@ -38,7 +38,7 @@ struct
 (*TODO: Add more robust oracle without hyp clearing *)
 fun thm_to_cterm keep_hyps thm =
 let
-  
+
   val thy = Thm.theory_of_thm thm
   val pairs = Thm.tpairs_of thm
   val ceqs = map (Thm.global_cterm_of thy o Logic.mk_equals) pairs
@@ -55,7 +55,7 @@ val (_, clear_thm_deps') =
 
 fun clear_deps thm =
 let
-   
+
   val thm' = try clear_thm_deps' thm
   |> Option.map (fold (fn _ => fn t => (@{thm Pure.reflexive} RS t)) (Thm.tpairs_of thm))
 
@@ -70,7 +70,7 @@ let
     |> Thm.adjust_maxidx_thm (Thm.maxidx_of post_thm + 1)
 in
   Conjunction.intr pre_thm' post_thm |> Conjunction.elim |> snd
-end 
+end
 
 fun get_ref_from_nm' nm =
 let
@@ -94,7 +94,7 @@ let
       val (name', idx) = get_ref_from_nm xnm |> the;
       val entry = try (Facts.retrieve (Context.Proof ctxt) facts) (name', Position.none) |> the;
       val thm = maybe_nth (#thms entry) (idx - 1) |> the;
-    in SOME (#name entry, thm) end handle Option => NONE;
+    in SOME (xnm, thm) end handle Option => NONE;
 
   fun non_idx_result () =
     let
@@ -139,7 +139,7 @@ fun used_pbody_facts ctxt thm =
   end
 
 fun raw_primitive_text f = Method.Basic (fn _ => ((K (fn (ctxt, thm) => Seq.make_results (Seq.single (ctxt, f thm))))))
-    
+
 
 (*Find local facts from new hyps*)
 fun used_local_facts ctxt thm =
@@ -149,7 +149,7 @@ let
 
   fun match_hyp hyp =
   let
-    fun get (nm,thms) = 
+    fun get (nm,thms) =
       case (get_index (fn t => if (Thm.prop_of t) aconv hyp then SOME hyp else NONE) thms)
       of SOME t => SOME (nm,t)
         | NONE => NONE
@@ -181,9 +181,9 @@ let
 
   fun save_deps deps = f ctxt thm deps
 
-  
+
 in
- if (can_clear (Proof.theory_of state)) then  
+ if (can_clear (Proof.theory_of state)) then
    Proof.refine (Method.Combinator (Method.no_combinator_info,Method.Then, [raw_primitive_text (clear_deps),text,
 	raw_primitive_text (fn thm' => (save_deps (used_facts ctxt thm');join_deps thm thm'))])) state
  else
@@ -196,7 +196,7 @@ end
 fun method_error kind pos state =
   Seq.single (Proof_Display.method_error kind pos (Proof.raw_goal state));
 
-fun apply args f text = Proof.assert_backward #> refine args f text #> 
+fun apply args f text = Proof.assert_backward #> refine args f text #>
   Seq.maps_results (Proof.apply ((raw_primitive_text I),(Position.none, Position.none)));
 
 fun apply_results args f (text, range) =

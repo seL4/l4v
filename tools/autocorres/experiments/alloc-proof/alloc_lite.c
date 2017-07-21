@@ -50,7 +50,7 @@ max(word_t a, word_t b)
  *
  * Free'ing is the reverse process, ensuring that we correctly merge
  * mem_nodes as required.
- * 
+ *
  * This allocator ignores alignment.
  */
 
@@ -72,16 +72,16 @@ void*
 ualloc(struct heap* heap, word_t size)
 {
 	assert(size > 0);
-	
+
 	void* chunk = alloc(heap, size + 8);
 	if(chunk == NULL){
 		return NULL;
 	}
-	
+
 	word_t* store = chunk;
 	*store = size;
-	
-	return chunk + 8;	
+
+	return chunk + 8;
 }
 
 /* Allocate a chunk of memory. */
@@ -92,7 +92,7 @@ alloc(struct heap* heap, word_t size)
 
     struct mem_node *prev = heap->head;
     struct mem_node *current = prev->next;
-    
+
     size = align_up(size, ALLOC_CHUNK_SIZE_BITS);
 
     while (current != NULL) {
@@ -114,7 +114,7 @@ alloc(struct heap* heap, word_t size)
             /* If we have space after the allocation, create a new node
              * covering the area. */
 
-            if (desired_end != node_end) { 
+            if (desired_end != node_end) {
                 assert(node_end - desired_end >= ALLOC_CHUNK_SIZE_BITS);
                 struct mem_node *new_node = (struct mem_node *)(desired_end + 1);
                 new_node->size = node_end - desired_end;
@@ -129,7 +129,7 @@ alloc(struct heap* heap, word_t size)
             } else {
                 prev->next = current->next;
             }
-			
+
             /* Return the allocation. */
             heap->num_allocs++;
             return (void *)desired_start;
@@ -146,10 +146,10 @@ void
 udealloc(struct heap* heap, void* ptr)
 {
 	assert(ptr != NULL);
-	
+
 	word_t* store = ptr - 8;
 	word_t  size  = *store + 8;
-	
+
 	dealloc(heap, store, size);
 }
 
@@ -179,7 +179,7 @@ dealloc(struct heap* heap, void* ptr, word_t size)
         new->size = size;
         prev->next = new;
     }
-	
+
     /* Determine if we should merge the next with the new. */
     if ((word_t)new + new->size == (word_t)current) {
         new->size += current->size;

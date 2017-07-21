@@ -1057,7 +1057,7 @@ lemma dcorres_ep_cancel_badge_sends:
        apply (clarsimp simp: transform_tcb_def transform_objects_def infer_tcb_bound_notification_def
                              is_thread_blocked_on_endpoint_def infer_tcb_pending_op_def infer_tcb_bound_notification_def tcb_pending_op_slot_def tcb_boundntfn_slot_def tcb_slot_defs
                       dest!: get_tcb_SomeD get_etcb_SomeD)
-       apply (clarsimp simp:get_tcb_ep_badge_def tcb_slot_defs tcb_pending_op_slot_def 
+       apply (clarsimp simp:get_tcb_ep_badge_def tcb_slot_defs tcb_pending_op_slot_def
                       split: option.splits cdl_cap.splits)
       apply clarsimp+
     apply (wp get_endpoint_sp valid_ep_get_ep2 | clarsimp simp:valid_state_def)+
@@ -1083,8 +1083,8 @@ lemma transform_default_tcb:
                        transform_full_intent_def get_tcb_mrs_def Let_def neq_CPSR )
   apply (clarsimp simp:Suc_leI[OF msg_registers_lt_msg_max_length] split del:if_splits)
   apply (simp add:transform_intent_invalid_invocation)
-  apply (simp add:get_ipc_buffer_words_def cdl_default_tcb_def guess_error_def 
-                  data_to_message_info_def default_etcb_def default_domain_def tcb_slot_defs 
+  apply (simp add:get_ipc_buffer_words_def cdl_default_tcb_def guess_error_def
+                  data_to_message_info_def default_etcb_def default_domain_def tcb_slot_defs
                   tcb_boundntfn_slot_def tcb_pending_op_slot_def infer_tcb_bound_notification_def)
   done
 
@@ -1414,7 +1414,7 @@ lemma opt_cap_pd_Some:
   apply (clarsimp simp:opt_cap_def slots_of_def
     object_slots_def transform_objects_def  restrict_map_def not_idle_thread_def)
   apply (simp add:opt_object_page_directory object_slots_def)
-  apply (clarsimp simp:transform_page_directory_contents_def 
+  apply (clarsimp simp:transform_page_directory_contents_def
     transform_pde_def unat_map_def below_kernel_base)
 done
 
@@ -2064,7 +2064,7 @@ lemma invoke_cnode_corres:
                       ct_in_state_def not_idle_thread_def
                       cte_wp_at_caps_of_state
                 dest: st_tcb_at_idle_thread ex_cte_cap_to_not_idle)[2]
-  apply (case_tac "has_cancel_send_rights x7", frule has_cancel_send_rights_ep_cap, 
+  apply (case_tac "has_cancel_send_rights x7", frule has_cancel_send_rights_ep_cap,
               simp add: is_cap_simps)
    apply (clarsimp simp: when_def)
    apply (rule corres_guard_imp)
@@ -2360,7 +2360,7 @@ lemma has_recycle_rights_eq [simp]:
   "CNode_D.has_cancel_send_rights (transform_cap cap) =
    CSpace_A.has_cancel_send_rights cap"
   apply (simp add: CNode_D.has_cancel_send_rights_def CSpace_A.has_cancel_send_rights_def split: cap.splits)
-  apply (auto simp: transform_cap_def all_rights_def 
+  apply (auto simp: transform_cap_def all_rights_def
               split: rights.splits arch_cap.splits)
   done
 
@@ -2425,7 +2425,7 @@ lemma decode_cnode_corres:
                 transform_intent_cnode_move_def
                 transform_intent_cnode_mutate_def
                 transform_intent_cnode_mint_def
-                transform_intent_cnode_rotate_def 
+                transform_intent_cnode_rotate_def
                 transform_cap_list_def get_index_def
                 throw_on_none_def
                 transform_cnode_index_and_depth_def and
@@ -2570,7 +2570,7 @@ lemma decode_cnode_corres:
         apply (subgoal_tac "valid_mdb s")
          apply (fastforce simp: valid_mdb_def mdb_cte_at_def)
         apply fastforce
-      
+
       apply (clarsimp simp: defns split: splits)
        apply (rule corres_guard_imp)
          apply (rule corres_splitEE)
@@ -2625,9 +2625,9 @@ lemma decode_cnode_corres:
            apply (simp add: translate_cnode_invocation_def)
           apply (wp lsfco_not_idle hoare_drop_imps|simp)+
     apply fastforce
-   apply (clarsimp simp: defns 
+   apply (clarsimp simp: defns
                          transform_intent_cnode_mint_def
-                         transform_intent_cnode_rotate_def 
+                         transform_intent_cnode_rotate_def
                   split: splits)
 
    apply (rule corres_guard_imp)

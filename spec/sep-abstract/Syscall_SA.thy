@@ -47,8 +47,8 @@ text {*
   much fewer system calls.
 
   We achieve this by modifying the cases distinctions that determine which API call is
-  to by executed. The new case distinctions 
-  on capabilities only provide code for the restricted capabilities in our reduced setup, 
+  to by executed. The new case distinctions
+  on capabilities only provide code for the restricted capabilities in our reduced setup,
   otherwise they fail (i.e. throw an exception).
 
   We then prove that \texttt{sep-abstract} and \texttt{abstract} have the same behaviour under the
@@ -221,7 +221,7 @@ where
   od)"
 
 | "handle_event Interrupt = (without_preemption $ do
-    active \<leftarrow> do_machine_op getActiveIRQ;
+    active \<leftarrow> do_machine_op (getActiveIRQ False);
     case active of
        Some irq \<Rightarrow> handle_interrupt irq
      | None \<Rightarrow> return ()
@@ -252,7 +252,7 @@ definition
   "call_kernel ev \<equiv> do
        handle_event ev <handle>
            (\<lambda>_. without_preemption $ do
-                  irq \<leftarrow> do_machine_op getActiveIRQ;
+                  irq \<leftarrow> do_machine_op (getActiveIRQ True);
                   when (irq \<noteq> None) $ handle_interrupt (the irq)
                 od);
        schedule;

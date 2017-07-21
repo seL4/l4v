@@ -390,7 +390,7 @@ lemma big_step_ADT_C_if_enabled_system:
 end
 
 sublocale valid_initial_state_C \<subseteq>
-     abstract_to_C: noninterference_refinement 
+     abstract_to_C: noninterference_refinement
                            "big_step_ADT_A_if utf" (* the ADT that we prove infoflow for *)
                            s0                      (* initial state *)
                            "\<lambda>e s. part s"          (* dom function *)

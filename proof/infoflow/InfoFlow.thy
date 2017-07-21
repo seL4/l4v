@@ -22,7 +22,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
    the authority graph, that tells us when those two states are equal for
    all state readable by label l -- i.e. all state that falls within l's
    information flow domain. The set of all such state, we denote
-   subjectReads g l, where g is the authority graph. *) 
+   subjectReads g l, where g is the authority graph. *)
 
 
 (* TODO: consider putting the current subject as a parameter and restricting
@@ -36,7 +36,7 @@ where
   reads_lrefl: "l \<in> subjectReads g l" |
   (* if l has SyncSend or Receive authority to an endpoint, l can read it *)
   reads_ep:
-  "\<lbrakk>(l,auth,ep) \<in> g;  auth \<in> {SyncSend,Receive}\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>(l,auth,ep) \<in> g;  auth \<in> {SyncSend,Receive}\<rbrakk> \<Longrightarrow>
    ep \<in> subjectReads g l" |
   reads_read_queued_thread_read_ep:
   (* if someone can send on or reset an endpoint, and l can read from a thread t
@@ -47,7 +47,7 @@ where
      the affects caused to t depend of course on the state of the endpoint.
      Since t is in l's domain, the ep better be too. *)
   "\<lbrakk>(a, auth', ep) \<in> g; auth' \<in> {Notify,SyncSend,Reset};
-    (t, auth, ep) \<in> g; auth \<in> {SyncSend, Receive}; 
+    (t, auth, ep) \<in> g; auth \<in> {SyncSend, Receive};
    t \<in> subjectReads g l\<rbrakk>
    \<Longrightarrow> ep \<in> subjectReads g l" |
   (* if someone, t, can write to a page, and the page is in l's domain, that the
@@ -56,16 +56,16 @@ where
      The affects caused to the page in question naturally depend on t's state,
      so if the page is part of l's domain, t better be too. *)
   reads_read_page_read_thread:
-  "\<lbrakk>b \<in> subjectReads g l; (t,Write,b) \<in> g\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>b \<in> subjectReads g l; (t,Write,b) \<in> g\<rbrakk> \<Longrightarrow>
    t \<in> subjectReads g l" |
   (* This is the symmetric case for the rule reads_read_page_read_thread.
      Here now suppose t is a sender of an IPC and p is its IPC buffer, to which
      it necessarily has Read authority. Suppose t is blocked waiting to complete
-     the send, and the receiver completes the rendezvous. 
+     the send, and the receiver completes the rendezvous.
      IF t is in l's domain, then the IPC buffer  had better be too, since it
      will clearly be read during the operation to send the IPC *)
   reads_read_thread_read_pages:
-   "\<lbrakk>t \<in> subjectReads g l; (t,Read,p) \<in> g\<rbrakk> \<Longrightarrow> 
+   "\<lbrakk>t \<in> subjectReads g l; (t,Read,p) \<in> g\<rbrakk> \<Longrightarrow>
     p \<in> subjectReads g l" |
   (* This rule allows domain l to read from all senders to synchronous endpoints
      for all such endpoints in its domain. This is needed for when someone
@@ -80,7 +80,7 @@ where
      receivers can affect how the endpoint is affected. *)
   (* I'm not convinced that this rule is strictly necessary. I think that
      the specific state of the receiver doesn't affect the ep too much and
-     that we could probably do away with this rule at the cost of some way more 
+     that we could probably do away with this rule at the cost of some way more
      complex confidentiality proofs for send_ipc. We would have to prove that
      the affect on the ep is the same regardless of /who/ the reciever is
      (and which page their IPC buffer is etc.). This would involve some quite
@@ -108,7 +108,7 @@ lemma read_sync_ep_read_receivers:
     ep \<in> subjectReads g l; (b,Receive,ep) \<in> g\<rbrakk> \<Longrightarrow>
    b \<in> subjectReads g l"
    by (rule read_sync_ep_read_receivers_strong)
-  
+
 
 abbreviation aag_can_read :: "'a PAS \<Rightarrow> word32 \<Rightarrow> bool"
 where
@@ -167,28 +167,28 @@ abbreviation equiv_machine_state :: "(word32 \<Rightarrow> bool)  \<Rightarrow> 
 
 definition equiv_asid :: "asid \<Rightarrow> det_ext state \<Rightarrow> det_ext state \<Rightarrow> bool"
 where
-  "equiv_asid asid s s' \<equiv> 
-    ((arm_asid_table (arch_state s) (asid_high_bits_of asid)) = 
-     (arm_asid_table (arch_state s') (asid_high_bits_of asid))) \<and> 
-    (\<forall> pool_ptr. 
+  "equiv_asid asid s s' \<equiv>
+    ((arm_asid_table (arch_state s) (asid_high_bits_of asid)) =
+     (arm_asid_table (arch_state s') (asid_high_bits_of asid))) \<and>
+    (\<forall> pool_ptr.
          arm_asid_table (arch_state s) (asid_high_bits_of asid) = Some pool_ptr \<longrightarrow>
-          asid_pool_at pool_ptr s = asid_pool_at pool_ptr s' \<and> 
-          (\<forall> asid_pool asid_pool'. 
-             kheap s pool_ptr = Some (ArchObj (ASIDPool asid_pool)) \<and> 
+          asid_pool_at pool_ptr s = asid_pool_at pool_ptr s' \<and>
+          (\<forall> asid_pool asid_pool'.
+             kheap s pool_ptr = Some (ArchObj (ASIDPool asid_pool)) \<and>
              kheap s' pool_ptr = Some (ArchObj (ASIDPool asid_pool')) \<longrightarrow> asid_pool (ucast asid) = asid_pool' (ucast asid)))"
 
 
 definition equiv_asid' where
-  "equiv_asid' asid pool_ptr_opt pool_ptr_opt' kh kh' \<equiv> 
+  "equiv_asid' asid pool_ptr_opt pool_ptr_opt' kh kh' \<equiv>
     (case pool_ptr_opt of None \<Rightarrow> pool_ptr_opt' = None
-                        | Some pool_ptr \<Rightarrow> 
-       (case pool_ptr_opt' of None \<Rightarrow> False 
+                        | Some pool_ptr \<Rightarrow>
+       (case pool_ptr_opt' of None \<Rightarrow> False
                             | Some pool_ptr' \<Rightarrow>
-          (pool_ptr' = pool_ptr \<and> 
-           ((\<exists> asid_pool. kh pool_ptr = Some (ArchObj (ASIDPool asid_pool))) = 
-            (\<exists> asid_pool'. kh' pool_ptr' = Some (ArchObj (ASIDPool asid_pool')))) \<and> 
-           (\<forall> asid_pool asid_pool'. 
-             kh pool_ptr = Some (ArchObj (ASIDPool asid_pool)) \<and> 
+          (pool_ptr' = pool_ptr \<and>
+           ((\<exists> asid_pool. kh pool_ptr = Some (ArchObj (ASIDPool asid_pool))) =
+            (\<exists> asid_pool'. kh' pool_ptr' = Some (ArchObj (ASIDPool asid_pool')))) \<and>
+           (\<forall> asid_pool asid_pool'.
+             kh pool_ptr = Some (ArchObj (ASIDPool asid_pool)) \<and>
              kh' pool_ptr' = Some (ArchObj (ASIDPool asid_pool')) \<longrightarrow> asid_pool (ucast asid) = asid_pool' (ucast asid)))
        )
     )"
@@ -197,7 +197,7 @@ lemma asid_pool_at_kheap:
   "asid_pool_at ptr s = (\<exists> asid_pool. kheap s ptr = Some (ArchObj (ASIDPool asid_pool)))"
   apply(clarsimp simp:  obj_at_def)
   apply(rule iffI)
-   apply(erule exE, rename_tac ko, clarsimp) 
+   apply(erule exE, rename_tac ko, clarsimp)
   apply (clarsimp simp: a_type_simps)
   done
 
@@ -227,7 +227,7 @@ lemma equiv_asids_trans:
 
 
 definition non_asid_pool_kheap_update where
-  "non_asid_pool_kheap_update s kh \<equiv> 
+  "non_asid_pool_kheap_update s kh \<equiv>
     \<forall> x. (\<exists> asid_pool. kheap s x = Some (ArchObj (ASIDPool asid_pool)) \<or> kh x = Some (ArchObj (ASIDPool asid_pool))) \<longrightarrow>  kheap s x = kh x"
 
 definition identical_updates where
@@ -243,7 +243,7 @@ lemmas identical_kheap_updates_def = identical_updates_def
 lemmas identical_ekheap_updates_def = identical_updates_def
 
 lemma equiv_asids_non_asid_pool_kheap_update:
-  "\<lbrakk>equiv_asids R s s'; 
+  "\<lbrakk>equiv_asids R s s';
     non_asid_pool_kheap_update s kh; non_asid_pool_kheap_update s' kh'\<rbrakk> \<Longrightarrow>
   equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
   apply(clarsimp simp: equiv_asids_def equiv_asid non_asid_pool_kheap_update_def)
@@ -251,7 +251,7 @@ lemma equiv_asids_non_asid_pool_kheap_update:
   done
 
 lemma equiv_asids_identical_kheap_updates:
-  "\<lbrakk>equiv_asids R s s'; 
+  "\<lbrakk>equiv_asids R s s';
     identical_kheap_updates s s' kh kh'\<rbrakk> \<Longrightarrow>
   equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
   apply(clarsimp simp: equiv_asids_def identical_kheap_updates_def)
@@ -262,11 +262,11 @@ lemma equiv_asids_identical_kheap_updates:
   done
 
 lemma equiv_asids_triv:
-  "\<lbrakk>equiv_asids R s s'; 
+  "\<lbrakk>equiv_asids R s s';
     kheap t = kheap s; arm_asid_table (arch_state t) = arm_asid_table (arch_state s);
     kheap t' = kheap s'; arm_asid_table (arch_state t') = arm_asid_table (arch_state s')\<rbrakk> \<Longrightarrow>
    equiv_asids R t t'"
-  apply(fastforce simp: equiv_asids_def equiv_asid equiv_asid'_def)    
+  apply(fastforce simp: equiv_asids_def equiv_asid equiv_asid'_def)
   done
 
 (* The parameter X here allows us to exclude a (state-dependant) portion of the
@@ -283,11 +283,11 @@ where
    equiv_for P kheap s s' \<and>
    equiv_machine_state P (machine_state s) (machine_state s') \<and>
    equiv_for (P \<circ> fst) cdt s s' \<and>
-   equiv_for P ekheap s s' \<and> 
+   equiv_for P ekheap s s' \<and>
    equiv_for (P \<circ> fst) cdt_list s s' \<and>
    equiv_for (P \<circ> fst) is_original_cap s s' \<and>
    equiv_for Q interrupt_states s s' \<and>
-   equiv_for Q interrupt_irq_node s s' \<and> 
+   equiv_for Q interrupt_irq_node s s' \<and>
    equiv_for S  ready_queues s s' \<and>
    equiv_asids R s s'"
 
@@ -300,7 +300,7 @@ lemma states_equiv_forI:
   "\<lbrakk>equiv_for P kheap s s';
    equiv_machine_state P (machine_state s) (machine_state s');
    equiv_for (P \<circ> fst) cdt s s';
-   equiv_for P ekheap s s'; 
+   equiv_for P ekheap s s';
    equiv_for (P \<circ> fst) cdt_list s s';
    equiv_for (P \<circ> fst) is_original_cap s s';
    equiv_for Q interrupt_states s s';
@@ -314,7 +314,7 @@ lemma states_equiv_forI:
 lemma states_equiv_for_machine_state_update:
   "\<lbrakk>states_equiv_for P Q R S s s'; equiv_machine_state P kh kh'\<rbrakk> \<Longrightarrow>
    states_equiv_for P Q R S (s\<lparr> machine_state := kh \<rparr>) (s'\<lparr> machine_state := kh' \<rparr>)"
-  apply(fastforce simp: states_equiv_for_def elim: equiv_forE intro: equiv_forI 
+  apply(fastforce simp: states_equiv_for_def elim: equiv_forE intro: equiv_forI
                  elim!: equiv_asids_triv)
   done
 
@@ -389,7 +389,7 @@ lemma states_equiv_forE:
   assumes sef: "states_equiv_for P Q R S s s'"
   assumes e: "\<lbrakk>equiv_machine_state P (machine_state s) (machine_state s');
      equiv_for P kheap s s';
-     equiv_for (P \<circ> fst) cdt s s'; 
+     equiv_for (P \<circ> fst) cdt s s';
      equiv_for (P \<circ> fst) cdt_list s s';
      equiv_for P ekheap s s';
      equiv_for (P \<circ> fst) is_original_cap s s';
@@ -524,7 +524,7 @@ abbreviation exclusive_state_equiv where
 
 (* cur_thread is included here also to enforce this being an equivalence relation *)
 definition globals_equiv :: "('z :: state_ext) state \<Rightarrow> ('z :: state_ext) state \<Rightarrow> bool" where
-  "globals_equiv s s' \<equiv> 
+  "globals_equiv s s' \<equiv>
      arm_global_pd (arch_state s) = arm_global_pd (arch_state s') \<and>
      kheap s (arm_global_pd (arch_state s)) = kheap s' (arm_global_pd (arch_state s)) \<and>
       idle_equiv s s' \<and> dom (device_state (machine_state s)) = dom (device_state (machine_state s')) \<and>
@@ -536,8 +536,8 @@ definition globals_equiv :: "('z :: state_ext) state \<Rightarrow> ('z :: state_
    This also includes the things that are in the scheduler's domain, which
    the current domain is always allowed to read. *)
 definition reads_equiv :: "'a PAS \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool" where
-"reads_equiv aag s s' \<equiv> 
-   ((\<forall> d\<in>subjectReads (pasPolicy aag) (pasSubject aag). 
+"reads_equiv aag s s' \<equiv>
+   ((\<forall> d\<in>subjectReads (pasPolicy aag) (pasSubject aag).
      states_equiv_for (\<lambda>x. pasObjectAbs aag x = d) (\<lambda>x. pasIRQAbs aag x = d) (\<lambda>x. pasASIDAbs aag x = d) (\<lambda>x. pasDomainAbs aag x = d)  s s') \<and>
    cur_thread s = cur_thread s' \<and> cur_domain s = cur_domain s' \<and> scheduler_action s = scheduler_action s' \<and> work_units_completed s = work_units_completed s' \<and> irq_state (machine_state s) = irq_state (machine_state s'))"
 
@@ -547,7 +547,7 @@ definition reads_equiv :: "'a PAS \<Rightarrow> det_state \<Rightarrow> det_stat
 *)
 
 definition reads_equiv_g :: "'a PAS \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool" where
-"reads_equiv_g aag s s' \<equiv> 
+"reads_equiv_g aag s s' \<equiv>
    reads_equiv aag s s' \<and> globals_equiv s s'"
 
 lemma reads_equiv_def2:
@@ -559,14 +559,14 @@ lemma reads_equiv_def2:
 
 lemma reads_equivE:
   assumes sef: "reads_equiv aag s s'"
-  assumes e: "\<lbrakk>equiv_for (aag_can_read aag) kheap s s'; 
+  assumes e: "\<lbrakk>equiv_for (aag_can_read aag) kheap s s';
                equiv_machine_state (aag_can_read aag) (machine_state s) (machine_state s');
      equiv_for ((aag_can_read aag) \<circ> fst) cdt s s';
      equiv_for ((aag_can_read aag) \<circ> fst) cdt_list s s';
      equiv_for (aag_can_read aag) ekheap s s';
      equiv_for ((aag_can_read aag) \<circ> fst) is_original_cap s s'; equiv_for (aag_can_read_irq aag) interrupt_states s s';
-     equiv_for (aag_can_read_irq aag) interrupt_irq_node s s'; 
-     equiv_asids (aag_can_read_asid aag) s s'; 
+     equiv_for (aag_can_read_irq aag) interrupt_irq_node s s';
+     equiv_asids (aag_can_read_asid aag) s s';
      equiv_for (aag_can_read_domain aag) ready_queues s s'; cur_thread s = cur_thread s'; cur_domain s = cur_domain s'; scheduler_action s = scheduler_action s'; work_units_completed s = work_units_completed s'; irq_state (machine_state s) = irq_state (machine_state s')\<rbrakk> \<Longrightarrow> R"
   shows "R"
   apply(rule e)
@@ -588,7 +588,7 @@ lemma reads_equiv_non_asid_pool_kheap_update:
   done
 
 lemma reads_equiv_identical_kheap_updates:
-  "\<lbrakk>reads_equiv aag s s'; 
+  "\<lbrakk>reads_equiv aag s s';
     identical_kheap_updates s s' kh kh'\<rbrakk> \<Longrightarrow>
    reads_equiv aag (s\<lparr> kheap := kh \<rparr>) (s'\<lparr> kheap := kh' \<rparr>)"
   apply(fastforce simp: reads_equiv_def2 intro: states_equiv_for_identical_kheap_updates)
@@ -666,7 +666,7 @@ text {*
   This defines the other labels of the authority graph that subject l can
   affect, i.e. if there is some part of the state that carries a label l', and
   through the actions of l, this state can be modified, then we say that the
-  label l' can be affected by l. This is, of course, just a more coarse 
+  label l' can be affected by l. This is, of course, just a more coarse
   statement of the integrity property from the access proofs.
 
   The case in which @{thm tro_asidpool_clear} is covered when the graph is wellformed
@@ -707,7 +707,7 @@ for g :: "'a auth_graph" and l :: "'a" where
         ep \<in> subjectAffects g l"
 
 (* We define when the current subject can affect another domain whose label is
-   l. This occurs when the current subject can affect some label d that is 
+   l. This occurs when the current subject can affect some label d that is
    considered to be part of what domain l can read. *)
 definition aag_can_affect_label where
   "aag_can_affect_label aag l \<equiv> \<exists> d. d \<in> subjectAffects (pasPolicy aag) (pasSubject aag) \<and> d \<in> subjectReads (pasPolicy aag) l"
@@ -756,7 +756,7 @@ lemma affects_equiv_def2:
 
 lemma affects_equivE:
   assumes sef: "affects_equiv aag l s s'"
-  assumes e: "\<lbrakk>equiv_for (aag_can_affect aag l) kheap s s'; 
+  assumes e: "\<lbrakk>equiv_for (aag_can_affect aag l) kheap s s';
                equiv_machine_state (aag_can_affect aag l) (machine_state s) (machine_state s');
      equiv_for ((aag_can_affect aag l) \<circ> fst) cdt s s';
      equiv_for ((aag_can_affect aag l) \<circ> fst) cdt_list s s';
@@ -780,10 +780,10 @@ lemma affects_equiv_non_asid_pool_kheap_update:
    affects_equiv aag l (s\<lparr> kheap := kh \<rparr>) (s'\<lparr> kheap := kh' \<rparr>)"
   apply(fastforce simp: affects_equiv_def2 intro: states_equiv_for_non_asid_pool_kheap_update)
   done
-  
+
 
 lemma affects_equiv_identical_kheap_updates:
-  "\<lbrakk>affects_equiv aag l s s'; 
+  "\<lbrakk>affects_equiv aag l s s';
     identical_kheap_updates s s' kh kh'\<rbrakk> \<Longrightarrow>
    affects_equiv aag l (s\<lparr> kheap := kh \<rparr>) (s'\<lparr> kheap := kh' \<rparr>)"
   apply(fastforce simp: affects_equiv_def2 intro: states_equiv_for_identical_kheap_updates)
@@ -920,7 +920,7 @@ where
    equiv_valid_inv (reads_equiv_g aag) (affects_equiv aag l) P f"
 
 definition doesnt_touch_globals where
-  "doesnt_touch_globals P f \<equiv> 
+  "doesnt_touch_globals P f \<equiv>
    \<forall> s. P s \<longrightarrow> (\<forall>(rv,s')\<in>fst (f s). globals_equiv s s')"
 
 lemma globals_equivI:
@@ -978,7 +978,7 @@ lemma globals_equiv_invD:
   done
 
 lemma doesnt_touch_globalsI:
-  assumes globals_equiv_inv: 
+  assumes globals_equiv_inv:
     "\<And> st. \<lbrace> globals_equiv st and P \<rbrace> f \<lbrace> \<lambda>_. globals_equiv st \<rbrace>"
   shows "doesnt_touch_globals P f"
   apply(clarsimp simp: doesnt_touch_globals_def)
@@ -1015,7 +1015,7 @@ lemma reads_respects_g':
    apply (frule gev_imp)
    apply (simp add: and_imp)+
   done
-  
+
 
 lemma equiv_for_guard_imp:
   "\<lbrakk>equiv_for P f s s'; \<And> x. Q x \<Longrightarrow> P x\<rbrakk> \<Longrightarrow> equiv_for Q f s s'"
@@ -1074,7 +1074,7 @@ lemma set_object_reads_respects:
   "reads_respects aag l \<top> (set_object ptr obj)"
   unfolding equiv_valid_def2 equiv_valid_2_def
   apply(clarsimp simp: set_object_def bind_def get_def put_def return_def)
-  apply(fastforce intro: reads_equiv_identical_kheap_updates affects_equiv_identical_kheap_updates simp: identical_kheap_updates_def)  
+  apply(fastforce intro: reads_equiv_identical_kheap_updates affects_equiv_identical_kheap_updates simp: identical_kheap_updates_def)
   done
 
 lemma update_object_noop:
@@ -1298,7 +1298,7 @@ lemma syscall_reads_respects_g:
        | wpc
        | fastforce)+
   done
-  
+
 
 lemma do_machine_op_spec_reads_respects':
   assumes equiv_dmo:
@@ -1350,7 +1350,7 @@ lemma do_machine_op_spec_reads_respects:
   apply(drule bspec, assumption)
   apply simp
   done
-   
+
 
 lemma do_machine_op_spec_rev:
   assumes equiv_dmo:
@@ -1362,8 +1362,8 @@ lemma do_machine_op_spec_rev:
   apply(rule equiv_valid_2_guard_imp)
    apply(rule_tac  R'="\<lambda> rv rv'. equiv_machine_state (aag_can_read aag) rv rv' \<and> equiv_irq_state rv rv'" and Q="\<lambda> r s. st = s \<and> r = machine_state s" and Q'="\<lambda>r s. r = machine_state s" and P="op = st" and P'="\<top>" in equiv_valid_2_bind)
        apply(rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and> equiv_machine_state (aag_can_read aag) ms' ms''"
-                  and Q="\<lambda> (r,ms') s. ms' = rv \<and> rv = machine_state s \<and> st = s" 
-                  and Q'="\<lambda> (r,ms') s. ms' = rv' \<and> rv' = machine_state s" 
+                  and Q="\<lambda> (r,ms') s. ms' = rv \<and> rv = machine_state s \<and> st = s"
+                  and Q'="\<lambda> (r,ms') s. ms' = rv' \<and> rv' = machine_state s"
                   and P="\<lambda> s. st = s \<and> rv = machine_state s" and P'="\<lambda> s. rv' = machine_state s"
                   and S="\<lambda> s. st = s \<and> rv = machine_state s" and S'="\<lambda>s. rv' = machine_state s" in equiv_valid_2_bind_pre)
 
@@ -1484,7 +1484,7 @@ lemma auth_ipc_buffers_mem_Write':
    apply (auto dest: ipcframe_subset_page)
   done
 
-(*   
+(*
    We define here some machinery for reasoning about updates that occur
    outside of what the current subject can read, and the domain l in
    reads_respects. Such updates cannot be "observed" by reads_respects, which
@@ -1508,7 +1508,7 @@ definition equiv_but_for_labels where
 definition equiv_but_for_domain where
   "equiv_but_for_domain aag l s s' \<equiv> equiv_but_for_labels aag (subjectReads (pasPolicy aag) l) s s'"
 
-definition 
+definition
   "modifies_at_most aag L P f \<equiv> \<forall> s. P s \<longrightarrow> (\<forall> (rv,s')\<in>fst(f s). equiv_but_for_labels aag L s s')"
 
 lemma modifies_at_mostD:

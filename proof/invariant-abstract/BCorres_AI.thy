@@ -33,7 +33,7 @@ lemma OR_choice_bcorres[wp]:
   "bcorres f f' \<Longrightarrow> bcorres g g' \<Longrightarrow> bcorres (OR_choice b f g) (OR_choice b f' g')"
   apply (simp add: OR_choice_def  wrap_ext_bool_unit_def)
   apply (rule get_bcorres)
-  apply (simp add: 
+  apply (simp add:
  bind_def select_f_def mk_ef_def modify_def return_def get_def put_def gets_def select_def)
   apply (simp add: split_def)
 
@@ -58,7 +58,7 @@ lemma OR_choiceE_bcorres[wp]:
   "bcorres f f' \<Longrightarrow> bcorres g g' \<Longrightarrow> bcorres (OR_choiceE b f g) (OR_choiceE b f' g')"
   apply (simp add: OR_choiceE_def  wrap_ext_bool_unit_def)
   apply wp
-  apply (simp add: 
+  apply (simp add:
  bind_def select_f_def mk_ef_def modify_def return_def get_def put_def gets_def select_def)
   apply (simp add: split_def)
 
@@ -97,7 +97,7 @@ lemma assert_opt_bcorres_underlying[wp]: "bcorres_underlying t (assert_opt f) (a
 crunch_ignore (bcorres)
   (add: bind gets modify get put do_extended_op empty_slot_ext mapM_x "when"
         select unless mapM catch bindE liftE whenE alternative cap_swap_ext
-        cap_insert_ext cap_move_ext liftM create_cap_ext 
+        cap_insert_ext cap_move_ext liftM create_cap_ext
         attempt_switch_to reschedule_required set_priority
         switch_if_required_to set_thread_state_ext
         tcb_sched_action timer_tick
@@ -111,7 +111,7 @@ lemma bcorres_select_ext[wp]: "bcorres (select_ext a A) (select_ext a A)"
 
 crunch (bcorres)bcorres[wp]: set_original,set_object,set_cap,set_irq_state,
                         deleted_irq_handler,get_cap,set_cdt,empty_slot
-truncate_state (ignore: maskInterrupt) 
+truncate_state (ignore: maskInterrupt)
 
 lemma get_cap_det:
   "(r,s') \<in> fst (get_cap p s) \<Longrightarrow> get_cap p s = ({(r,s)}, False)"
@@ -202,7 +202,18 @@ lemma throw_on_false_bcorres[wp]: "bcorres f f' \<Longrightarrow>  bcorres (thro
   done
 
 context Arch begin
-  crunch (bcorres)bcorres[wp]: arch_finalise_cap,prepare_thread_delete truncate_state (simp: swp_def ignore: forM_x)
+
+lemma gets_the_get_tcb_bcorres[wp]: "bcorres (gets_the (get_tcb a)) (gets_the (get_tcb a)) "
+  apply (simp add: gets_the_def bcorres_underlying_def assert_opt_def| wp | wpc| clarsimp)+
+  apply (case_tac r; simp add: fail_s_bcorres_underlying return_s_bcorres_underlying)
+  apply (simp add: gets_s_bcorres_underlying)
+done
+
+
+crunch (bcorres)bcorres[wp]: arch_finalise_cap truncate_state (simp: swp_def ignore: forM_x) (* FIXME ARMHYP *)
+
+crunch (bcorres)bcorres[wp]: prepare_thread_delete truncate_state (simp: swp_def)
+
 end
 
 requalify_facts Arch.arch_finalise_cap_bcorres Arch.prepare_thread_delete_bcorres

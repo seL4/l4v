@@ -411,7 +411,7 @@ fun init_function_info ctxt filename = let
                   |> map (uncurry gen_fn_info);
   (* We discard the call graph info here.
    * After calling init_function_info, we often want to change some of the entries,
-   * which usually requires recalculating it anyway. *) 
+   * which usually requires recalculating it anyway. *)
   val (_, fn_infos) =
       calc_call_graph (Symtab.make (map (fn info => (#name info, info)) raw_infos));
   in

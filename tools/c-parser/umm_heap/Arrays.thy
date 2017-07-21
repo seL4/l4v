@@ -93,7 +93,7 @@ typedef ('a,'n::finite) array ("_[_]" [30,0] 31) = "UNIV :: ('n => 'a) set"
   by simp
 
 
-definition 
+definition
   index :: "('a,'n::finite) array \<Rightarrow> nat \<Rightarrow> 'a" ("_.[_]" [900,0] 901)
 where
   "index x i \<equiv> Rep_array x (finite_index i)"
@@ -261,7 +261,7 @@ lemma map_array_setI:
 
 lemma list_array_map_array:
   "list_array (map_array f a) = map f (list_array a)"
-  by (simp add: list_array_def map_array_index) 
+  by (simp add: list_array_def map_array_index)
 
 lemma list_array_FCP [simp]:
   "list_array (FCP f :: 'a['n]) = map f [0..<CARD('n::finite)]"

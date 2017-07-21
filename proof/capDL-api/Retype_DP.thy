@@ -223,7 +223,7 @@ lemma dummy_detype_if_untyped:
     object_to_sep_state_def object_project_def object_clean_def
     sep_state_disj_def)+
   done
-  
+
 lemma mapME_x_wp:
   "\<forall>x \<in> set xs. \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> mapME_x f xs \<lbrace>\<lambda>rv. P\<rbrace>,\<lbrace>E\<rbrace>"
   proof (induct xs)
@@ -249,13 +249,13 @@ lemma reset_untyped_cap_wp:
   "obj_range \<subseteq> tot_free_range
   \<Longrightarrow> \<lbrace>< (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
     \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range
-    \<and>* P >\<rbrace> reset_untyped_cap uref 
-  \<lbrace>\<lambda>y s. \<exists>fr. free_range \<subseteq> fr \<and> fr \<subseteq> obj_range \<and>  
+    \<and>* P >\<rbrace> reset_untyped_cap uref
+  \<lbrace>\<lambda>y s. \<exists>fr. free_range \<subseteq> fr \<and> fr \<subseteq> obj_range \<and>
     cdl.lift (uref \<mapsto>c UntypedCap dev obj_range fr \<and>* (\<And>*ptr\<in>tot_free_range. ptr \<mapsto>o Untyped) \<and>* P) s\<rbrace>,-"
   apply (simp add:reset_untyped_cap_def bind_assoc bindE_assoc)
   apply (rule hoare_pre)
    apply (wp hoare_whenE_wp)
-      apply (rule_tac P = "\<exists>fr. cap = UntypedCap dev obj_range fr 
+      apply (rule_tac P = "\<exists>fr. cap = UntypedCap dev obj_range fr
           \<and> (\<forall>fr\<in> set x. free_range \<subseteq> fr \<and> fr \<subseteq> obj_range)" in hoare_gen_asmE)
       apply clarsimp
       apply (wp hoare_whenE_wp mapME_x_wp alternativeE_wp)
@@ -300,7 +300,7 @@ crunch cdl_current_domain[wp]: reset_untyped_cap "\<lambda>s. P (cdl_current_dom
   simp: detype_def crunch_simps)
 
 crunch cdl_current_domain[wp]: invoke_untyped "\<lambda>s. P (cdl_current_domain s)"
-(wp: select_wp mapM_x_wp' mapME_x_inv_wp alternativeE_wp crunch_wps hoare_unless_wp 
+(wp: select_wp mapM_x_wp' mapME_x_inv_wp alternativeE_wp crunch_wps hoare_unless_wp
   simp: detype_def crunch_simps validE_E_def)
 
 lemma invoke_untyped_wp:
@@ -495,7 +495,7 @@ lemma invoke_untyped_exception:
     apply (simp add: whenE_def)
    apply wp+
   apply clarsimp
-  apply (cut_tac p = "(a,b)" in opt_cap_sep_imp) 
+  apply (cut_tac p = "(a,b)" in opt_cap_sep_imp)
    apply sep_solve
   apply (clarsimp dest!: reset_cap_asid_simps2)
   done
@@ -898,21 +898,21 @@ lemma do_notification_transfer_sep_wp:
   done
 
 lemma update_thread_no_pending:
-  "\<lbrace>no_pending and 
+  "\<lbrace>no_pending and
     K(\<forall>x. (case cdl_tcb_caps x tcb_pending_op_slot of Some cap \<Rightarrow> \<not> is_pending_cap cap | _ \<Rightarrow> True)\<longrightarrow>
-          (case cdl_tcb_caps (t x) tcb_pending_op_slot of Some cap \<Rightarrow> \<not> is_pending_cap cap | _ \<Rightarrow> True))\<rbrace> 
+          (case cdl_tcb_caps (t x) tcb_pending_op_slot of Some cap \<Rightarrow> \<not> is_pending_cap cap | _ \<Rightarrow> True))\<rbrace>
     update_thread thread_ptr t \<lbrace>\<lambda>rv. no_pending\<rbrace>"
   apply (simp add: update_thread_def set_object_def | (wp modify_wp)+ | wpc)+
   apply (clarsimp simp: no_pending_def)
   apply (intro conjI impI allI, simp_all)
   apply (drule_tac x = oid in spec)
-  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def 
-                        object_slots_def 
+  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def
+                        object_slots_def
                  split: if_splits option.splits)
   done
 
 lemma update_thread_tcb_at:
-  "\<lbrace>K(\<forall>x. P (t x))\<rbrace> 
+  "\<lbrace>K(\<forall>x. P (t x))\<rbrace>
     update_thread thread_ptr t \<lbrace>\<lambda>rv. tcb_at' P thread_ptr\<rbrace>"
   apply (rule hoare_pre)
   apply (simp add: update_thread_def set_object_def | wp modify_wp | wpc)+
@@ -952,7 +952,7 @@ lemma detype_one_wp:
 lemma detype_insert:
   "detype (insert a A) s = detype {a} (detype A s)"
   by (cases s, simp add: detype_def fun_eq_iff)
-  
+
 lemma detype_set_sep_helper:
   "finite S \<Longrightarrow> <(\<And>* x\<in> S. x \<mapsto>o -) \<and>* R> s
    \<Longrightarrow> <(\<And>* x \<in> S. x \<mapsto>o Untyped) \<and>* R> (detype S s)"
@@ -987,7 +987,7 @@ lemma invoke_untyped_preempt:
   "finite obj_range \<Longrightarrow>
   \<lbrace>cdl.lift (slot \<mapsto>c UntypedCap dev obj_range free_range \<and>*
          sep_map_set_conj sep_any_map_o obj_range \<and>* Q)\<rbrace>
-    invoke_untyped (Retype slot nt (unat ts) dests has_kids n) 
+    invoke_untyped (Retype slot nt (unat ts) dests has_kids n)
    -, \<lbrace>\<lambda>x s. \<exists>free_range. cdl.lift
          (slot \<mapsto>c UntypedCap dev obj_range free_range \<and>*
          sep_map_set_conj sep_any_map_o obj_range \<and>* Q) s\<rbrace>"
@@ -1116,17 +1116,17 @@ lemma default_object_no_pending_cap:
                         empty_cnode_def empty_cap_map_def empty_irq_node_def
                  split: if_split_asm)+
   done
- 
+
 lemma create_objects_no_pending[wp]:
   "\<lbrace>no_pending\<rbrace> create_objects a (default_object b c d) \<lbrace>\<lambda>rv. no_pending\<rbrace>"
   apply (clarsimp simp: create_objects_def no_pending_def)
   apply (drule_tac x = oid in spec)
-  apply (clarsimp simp: opt_cap_def default_object_no_pending_cap 
-                        slots_of_def opt_object_def 
+  apply (clarsimp simp: opt_cap_def default_object_no_pending_cap
+                        slots_of_def opt_object_def
                  split: if_splits option.split_asm)
   done
 
-  
+
 crunch no_pending[wp]: retype_region "no_pending"
   (wp: crunch_wps ignore: create_objects)
 
@@ -1154,7 +1154,7 @@ lemma reset_untyped_cap_no_pending[wp]:
 
 lemma set_cap_opt_cap:
   "\<lbrace>\<lambda>s. P (Some cap)\<rbrace>
-  set_cap cref cap 
+  set_cap cref cap
   \<lbrace>\<lambda>rv s. P (opt_cap cref s)\<rbrace>"
   apply (cases cref)
   apply (simp add: set_cap_def gets_the_def gets_def get_def assert_opt_def bind_assoc)
@@ -1172,9 +1172,9 @@ lemma set_cap_opt_cap:
 lemma set_cap_opt_cap_sep_imp:
   assumes asid:
     "\<And>c c'. reset_cap_asid c = reset_cap_asid c' \<Longrightarrow> P (Some c) = P (Some c')"
-  shows 
+  shows
     "\<lbrace>\<lambda>s. cdl.lift (ptr \<mapsto>c c \<and>* cref \<mapsto>c - \<and>* sep_true) s \<and> P (Some c)\<rbrace>
-    set_cap cref cap 
+    set_cap cref cap
     \<lbrace>\<lambda>rv s. P (opt_cap ptr s)\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
@@ -1189,7 +1189,7 @@ lemma set_cap_opt_cap_sep_imp:
   done
 
 lemma reset_untyped_cap_not_pending_cap[wp]:
-  "\<lbrace>\<lambda>s. \<not> is_pending_cap (the (opt_cap cref s))\<rbrace> 
+  "\<lbrace>\<lambda>s. \<not> is_pending_cap (the (opt_cap cref s))\<rbrace>
   reset_untyped_cap cref
   \<lbrace>\<lambda>rv s.  (\<exists>cap. opt_cap cref s = Some cap) \<longrightarrow> \<not> is_pending_cap (the (opt_cap cref s))\<rbrace>"
   apply (simp add: reset_untyped_cap_def)

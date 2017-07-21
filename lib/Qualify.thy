@@ -35,25 +35,25 @@ structure Data = Theory_Data
 
 fun get_qualify thy = Data.get thy;
 
-fun make_bind space thy nm = 
+fun make_bind space thy nm =
   let
-    val short_name = 
-      Name_Space.extern (Proof_Context.init_global thy |> Config.put Name_Space.names_short true) space nm 
+    val short_name =
+      Name_Space.extern (Proof_Context.init_global thy |> Config.put Name_Space.names_short true) space nm
       |> Long_Name.explode |> rev |> tl |> rev;
     val long_name = Long_Name.explode nm |> tl |> rev |> tl |> rev;
-    
+
     fun do_make_bind (short_qual :: l) (_ :: l') b = Binding.qualify true short_qual (do_make_bind l l' b)
       | do_make_bind [] (long_qual :: l) b = Binding.qualify false long_qual (do_make_bind [] l b)
       | do_make_bind [] [] b = b
-      | do_make_bind _ _ _ = 
-        raise Fail ("Mismatched long and short identifiers:\nsource:" ^ nm ^ "\nshort:" ^ (@{make_string} short_name) ^ "\nlong:" ^ 
-          (@{make_string} long_name)) 
+      | do_make_bind _ _ _ =
+        raise Fail ("Mismatched long and short identifiers:\nsource:" ^ nm ^ "\nshort:" ^ (@{make_string} short_name) ^ "\nlong:" ^
+          (@{make_string} long_name))
 
     val b = do_make_bind short_name long_name (Binding.make (Long_Name.base_name nm, Position.none))
-  
+
   in b end;
 
-fun get_new_facts old_thy facts = 
+fun get_new_facts old_thy facts =
   let
     val space = Facts.space_of facts;
   in
@@ -67,8 +67,8 @@ fun get_new_consts old_thy consts =
     |> map fst;
 
     val space = #const_space (Consts.dest consts);
-    
-    val consts = 
+
+    val consts =
       filter (fn nm => not (can (Consts.the_const (Sign.consts_of old_thy)) nm) andalso
                        can (Consts.the_const consts) nm) new_consts
       |> map (fn nm => `(make_bind space old_thy) nm);
@@ -81,9 +81,9 @@ fun get_new_types old_thy types =
     val space = Name_Space.space_of_table new_types;
 
     val old_types = #types (Type.rep_tsig (Sign.tsig_of old_thy));
-   
+
     val types = (new_types
-      |> Name_Space.fold_table (fn (nm, _) => 
+      |> Name_Space.fold_table (fn (nm, _) =>
            not (Name_Space.defined old_types nm) ? cons nm)) []
       |> map (fn nm => `(make_bind space old_thy) nm);
   in types end;
@@ -94,7 +94,7 @@ fun add_qualified qual nm =
   in if qual = nm' then cons nm else I end
   handle List.Empty => I
 
-fun make_bind_local nm = 
+fun make_bind_local nm =
   let
     val base = Long_Name.explode nm |> tl |> tl |> rev |> tl |> rev;
   in fold (Binding.qualify true) base (Binding.make (Long_Name.base_name nm, Position.none)) end;
@@ -110,8 +110,8 @@ fun set_global_qualify (args : qualify_args) thy =
 
 val _ =
   Outer_Syntax.command @{command_keyword qualify} "begin global qualification"
-    (Parse.name -- Parse.opt_target>> 
-      (fn (str, target) => 
+    (Parse.name -- Parse.opt_target>>
+      (fn (str, target) =>
           Toplevel.theory (set_global_qualify {name = str, target_name = case target of SOME (nm, _) => nm | _ => str})));
 
 fun syntax_alias global_alias local_alias b name =
@@ -127,9 +127,9 @@ val type_alias = syntax_alias Sign.type_alias Proof_Context.type_alias;
 
 fun end_global_qualify thy =
   let
-    val (old_thy, args) = 
+    val (old_thy, args) =
       case get_qualify thy of
-        SOME x => x 
+        SOME x => x
       | NONE => error "Not in a global qualify"
 
     val nm = #name args
@@ -145,7 +145,7 @@ fun end_global_qualify thy =
      |> (fn thy => fold (Sign.hide_const false o snd) consts thy)
      |> (fn thy => fold (Sign.hide_type false o snd) types thy);
 
-    val lthy = Named_Target.begin (#target_name args, Position.none) thy'' 
+    val lthy = Named_Target.begin (#target_name args, Position.none) thy''
       |> Local_Theory.map_background_naming (Name_Space.parent_path #> Name_Space.mandatory_path nm);
 
     val lthy' = lthy
@@ -163,8 +163,8 @@ val _ =
 
 \<close>
 
-setup \<open>Theory.at_end 
-  (fn thy => case get_qualify thy of SOME (_, nm) => 
+setup \<open>Theory.at_end
+  (fn thy => case get_qualify thy of SOME (_, nm) =>
     SOME (end_global_qualify thy) | NONE => NONE)\<close>
 
 end

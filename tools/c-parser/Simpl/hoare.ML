@@ -64,7 +64,7 @@ sig
   val vcg: (Proof.context -> Proof.method) context_parser
   val vcg_step: (Proof.context -> Proof.method) context_parser
   val hoare_rule: (Proof.context -> Proof.method) context_parser
-  
+
   val add_foldcongsimps: thm list -> theory -> theory
   val get_foldcong_ss : theory -> simpset
   val add_foldcongs : thm list -> theory -> theory
@@ -132,7 +132,7 @@ fun mk_Un T (A, B) = Const (@{const_name Lattices.sup}, T --> T --> T) $ A $ B;
 fun dest_Un (Const (@{const_name Lattices.sup}, _) $ t1 $ t2) = dest_Un t1 @ dest_Un t2
   | dest_Un t = [t]
 
-fun mk_UN' dT rT t = 
+fun mk_UN' dT rT t =
   let
     val dTs = HOLogic.mk_setT dT;
     val rTs = HOLogic.mk_setT rT;
@@ -794,7 +794,7 @@ fun add_parameter_info phi cname (name,(inpars,outpars,state_kind)) ctxt =
     in ctxt_decl
     end;
 
-fun mk_loc_exp xs = 
+fun mk_loc_exp xs =
   let fun mk_expr s = (s,(("",false),Expression.Named []))
   in (map mk_expr xs,[]) end;
 
@@ -813,18 +813,18 @@ fun expression_no_pos (expr, fixes) : Expression.expression =
   (map (fn (name, inst) => ((name, Position.none), inst)) expr, fixes);
 
 fun add_locale name expr elems thy =
-  thy 
+  thy
   |> Expression.add_locale (Binding.name name) (Binding.name name) expr elems
   |> snd
   |> Local_Theory.exit;
 
 fun add_locale' name expr elems thy =
-  thy 
+  thy
   |> Expression.add_locale (Binding.name name) (Binding.name name) expr elems
   ||> Local_Theory.exit;
 
 fun add_locale_cmd name expr elems thy =
-  thy 
+  thy
   |> Expression.add_locale_cmd (Binding.name name) (Binding.name name)
     (expression_no_pos expr) elems
   |> snd
@@ -1588,7 +1588,7 @@ fun string_eq_simp_tac ctxt =
   simp_tac (put_simpset HOL_basic_ss ctxt
     addsimps @{thms list.inject list.distinct Char_eq_Char_iff
       cut_eq_simps simp_thms});
-   
+
 
 fun assertion_string_eq_simp_tac ctxt state_kind thms i =
     assertion_simp_tac ctxt state_kind thms i THEN_MAYBE string_eq_simp_tac ctxt i;
@@ -3299,7 +3299,7 @@ fun get_state_space_in_subset_eq ctxt t =
         (strip_comb o HOLogic.dest_Trueprop o strip_qnt_body @{const_name Pure.all}) t;
       val Ts = map snd (strip_vars t);
       val T = fastype_of1 (Ts,subset_eq);
-      val Type (_, [_,Type (_, [Type (_, [state_spaceT]), _])]) = T; 
+      val Type (_, [_,Type (_, [Type (_, [state_spaceT]), _])]) = T;
               (* also works for "in": x : P *)
       val SOME Tids = stateT_ids state_spaceT;
     in (Tids,Partial, state_kind_of ctxt state_spaceT) end) ();

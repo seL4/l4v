@@ -364,7 +364,7 @@ next
 qed
 
 definition
-  "init_state fname gfun xs =  
+  "init_state fname gfun xs =
     (NextNode (entry_point gfun), save_vals (function_inputs gfun) xs default_state, fname)"
 
 lemma exec_graph_step_nonempty:
@@ -570,6 +570,7 @@ val opers = Symtab.make [
       ("WordArrayAccess", @{const_name "fun_app"}),
       ("WordArrayUpdate", @{const_name "fun_upd"}),
       ("CountLeadingZeroes", @{const_name "bv_clz"}),
+      ("CountTrailingZeroes", @{const_name "bv_ctz"}),
       ("True", @{const_name "True"}),
       ("False", @{const_name "False"}),
       ("IfThenElse", @{const_name "If"}),
@@ -739,7 +740,7 @@ fun fun_groups gp ((fs as ("Function" :: _)) :: sss) =
   | fun_groups gp (ss :: sss) = fun_groups (ss :: gp) sss
   | fun_groups gp [] = [rev gp]
 
-fun filename_relative thy name = 
+fun filename_relative thy name =
     Path.append (Resources.master_directory thy) (Path.explode name)
     |> Path.implode
 
@@ -771,7 +772,7 @@ fun define_graph s nodes = let
         else error "match_ts: idx too small"
       | match_ts _ [] = []
     val nodes = sort (int_ord o apply2 fst) nodes
-  in StaticFun.define_tree_and_save_thms (Binding.name s) 
+  in StaticFun.define_tree_and_save_thms (Binding.name s)
     (map (fst #> Int.toString #> prefix (s ^ "_")) nodes)
     (map (apfst (HOLogic.mk_number @{typ nat})) nodes)
     @{term "id :: nat => nat"} []

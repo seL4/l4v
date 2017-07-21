@@ -58,7 +58,7 @@ fun all_type (Const (@{const_name "All"}, T) $ _)
 
 fun split_thm prefix ctxt t = let
     val ok = not (String.isPrefix "Q" prefix orelse String.isPrefix "R" prefix)
-    val _ = ok orelse error ("split_thm: prefix has prefix Q/R: " ^ prefix) 
+    val _ = ok orelse error ("split_thm: prefix has prefix Q/R: " ^ prefix)
     fun params (@{term "op \<and>"} $ x $ y) Ts = params x Ts @ params y Ts
       | params (@{term "op \<or>"} $ _ $ y) Ts = (Ts, SOME @{typ bool}) :: params y Ts
       | params (all as (Const (@{const_name "All"}, _) $ t)) Ts

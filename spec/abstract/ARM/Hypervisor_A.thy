@@ -16,9 +16,9 @@ begin
 
 context Arch begin global_naming ARM_A
 
-fun handle_hypervisor_fault :: "word32 \<Rightarrow> hyp_fault_type \<Rightarrow> (unit, 'z::state_ext) f_monad"
+fun handle_hypervisor_fault :: "word32 \<Rightarrow> hyp_fault_type \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-"handle_hypervisor_fault thread ARMNoHypFaults = returnOk ()"
+"handle_hypervisor_fault thread ARMNoHypFaults = return ()"
 
 
 end

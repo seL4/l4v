@@ -119,7 +119,7 @@ lemma tcb_empty_thread_slot_wp: "\<lbrace><(target_tcb,slot) \<mapsto>c NullCap 
 
 lemma tcb_empty_thread_slot_wpE:
   "\<lbrace><(target_tcb,slot) \<mapsto>c NullCap \<and>* R>\<rbrace>
-  tcb_empty_thread_slot target_tcb slot 
+  tcb_empty_thread_slot target_tcb slot
   \<lbrace>\<lambda>_. <(target_tcb,slot) \<mapsto>c NullCap \<and>* R>\<rbrace>, \<lbrace>E\<rbrace>"
   apply (clarsimp simp: tcb_empty_thread_slot_def | wp)+
     apply (rule hoare_whenE_wp)
@@ -324,7 +324,7 @@ lemma invoke_tcb_threadcontrol_wp':
          tcb_cap_slot \<mapsto>c TcbCap target_tcb \<and>*
          (crt_slot) \<mapsto>c crt_cap'  \<and>*
          (target_tcb, tcb_vspace_slot) \<mapsto>c NullCap \<and>*
-         (ipcbuff_slot) \<mapsto>c ipcbuff_cap \<and>* 
+         (ipcbuff_slot) \<mapsto>c ipcbuff_cap \<and>*
          (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap \<and>*
          R> \<rbrace>
  invoke_tcb  (ThreadControl target_tcb tcb_cap_slot faultep croot vroot ipc_buffer)

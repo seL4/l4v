@@ -24,15 +24,15 @@ requalify_consts
 end
 
 lemma UserData_singleton [simp]:
-  "(v = UserData) = True" "(UserData = v) = True" 
+  "(v = UserData) = True" "(UserData = v) = True"
   by (cases v, simp)+
 
 lemma UserDataDevice_singleton [simp]:
-  "(v = UserDataDevice) = True" "(UserDataDevice = v) = True" 
+  "(v = UserDataDevice) = True" "(UserDataDevice = v) = True"
   by (cases v, simp)+
 
-datatype 
-  kernel_object_type = 
+datatype
+  kernel_object_type =
     EndpointT
   | NotificationT
   | CTET
@@ -84,7 +84,7 @@ begin
 definition
   projectKO :: "kernel_object \<Rightarrow> 'a kernel"
 where
-  "projectKO e \<equiv> 
+  "projectKO e \<equiv>
   case projectKO_opt e of None \<Rightarrow> fail | Some k \<Rightarrow> return k"
 
 definition
@@ -119,9 +119,9 @@ end
 class pspace_storable = pre_storable +
   fixes makeObject :: 'a
   fixes loadObject :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word option \<Rightarrow> kernel_object \<Rightarrow> 'a kernel"
-  fixes updateObject :: "'a \<Rightarrow> kernel_object \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> 
+  fixes updateObject :: "'a \<Rightarrow> kernel_object \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow>
                               machine_word option \<Rightarrow> kernel_object kernel"
-  assumes updateObject_type: 
+  assumes updateObject_type:
   "(ko', s') \<in> fst (updateObject v ko p p' p'' s) \<Longrightarrow> koTypeOf ko' = koTypeOf ko"
 
 end

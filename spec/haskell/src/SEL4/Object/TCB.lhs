@@ -19,7 +19,7 @@ This module uses the C preprocessor to select a target architecture.
 \end{impdetails}
 
 > module SEL4.Object.TCB (
->         threadGet, threadSet, asUser, sanitiseRegister,
+>         threadGet, threadSet, asUser, sanitiseRegister, getSanitiseRegisterInfo,
 >         getThreadCSpaceRoot, getThreadVSpaceRoot,
 >         getThreadReplySlot, getThreadCallerSlot,
 >         getThreadBufferSlot,
@@ -28,13 +28,14 @@ This module uses the C preprocessor to select a target architecture.
 >         tcbFaultHandler, tcbIPCBuffer, tcbTimeSlice,
 >         decodeTCBInvocation, invokeTCB,
 >         getExtraCPtrs, getExtraCPtr, lookupExtraCaps, setExtraBadge,
->         decodeDomainInvocation
+>         decodeDomainInvocation,
+>         archThreadSet, archThreadGet
 >     ) where
 
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.API.Types SEL4.API.Failures SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Invocation #-}
-% {-# BOOT-EXPORTS: threadGet threadSet asUser setMRs setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB setupCallerCap getThreadCallerSlot getThreadReplySlot getThreadBufferSlot decodeDomainInvocation #-}
+% {-# BOOT-EXPORTS: threadGet threadSet asUser setMRs setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB setupCallerCap getThreadCallerSlot getThreadReplySlot getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister #-}
 
 > import SEL4.Config (numDomains)
 > import SEL4.API.Types
@@ -93,7 +94,7 @@ These methods are generally not useful when invoked on the current thread. For r
 
 Note that the registers copied by "Arch.performTransfer", such as the floating point registers, are always preserved by system calls. Therefore, all three operations can safely read or write those registers when the current thread is the source or destination. It will often be possible to perform such transfers without copying data, because those parts of the context are switched lazily.
 
-The "CopyRegisters" call transfers parts of the user-level context between two different threads, and suspends or resumes each thread. The context is divided into two or more parts, depending on the architecture. The caller is able to select which parts are copied. 
+The "CopyRegisters" call transfers parts of the user-level context between two different threads, and suspends or resumes each thread. The context is divided into two or more parts, depending on the architecture. The caller is able to select which parts are copied.
 
 > decodeCopyRegisters :: [Word] -> Capability -> [Capability] ->
 >         KernelF SyscallError TCBInvocation
@@ -166,7 +167,7 @@ For both of these operations, the first argument is a flags field. The lowest bi
 
 \subsubsection{The Configure Call}
 
-The "Configure" call is a batched call to "SetPriority", "SetIPCParams" and "SetSpace". 
+The "Configure" call is a batched call to "SetPriority", "SetIPCParams" and "SetSpace".
 
 > decodeTCBConfigure :: [Word] -> Capability -> PPtr CTE ->
 >         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
@@ -320,7 +321,7 @@ This is to ensure that the source capability is not made invalid by the deletion
 >     -- get ptr to notification
 >     (ntfnPtr, rights) <- case fst (head extraCaps) of
 >         NotificationCap ptr _ _ recv  -> return (ptr, recv)
->         _ -> throw IllegalOperation 
+>         _ -> throw IllegalOperation
 >     when (not rights) $ throw IllegalOperation
 >     -- check if notification is bound
 >     -- check if anything is waiting on the notification
@@ -367,7 +368,7 @@ The "Suspend" and "Resume" calls are simple scheduler operations.
 
 The "ThreadControl" operation is used to implement the "SetSpace", "SetPriority", "SetIPCParams" and "Configure" methods.
 
-The use of "checkCapAt" addresses a corner case in which the only capability to a certain thread is in its own CSpace, which is otherwise unreachable. Replacement of the CSpace root results in "cteDelete" cleaning up both CSpace and thread, after which "cteInsert" should not be called. Error reporting in this case is unimportant, as the requesting thread cannot continue to execute. 
+The use of "checkCapAt" addresses a corner case in which the only capability to a certain thread is in its own CSpace, which is otherwise unreachable. Replacement of the CSpace root results in "cteDelete" cleaning up both CSpace and thread, after which "cteInsert" should not be called. Error reporting in this case is unimportant, as the requesting thread cannot continue to execute.
 
 > invokeTCB (ThreadControl target slot faultep mcp priority cRoot vRoot buffer)
 >   = do
@@ -401,14 +402,16 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >                 cteDelete bufferSlot True
 >                 withoutPreemption $ threadSet
 >                     (\t -> t {tcbIPCBuffer = ptr}) target
->--                 withoutPreemption $ asUser target $ setRegister tpidrurwRegister $ fromVPtr ptr
+>                 withoutPreemption $ asUser target $ Arch.setTCBIPCBuffer ptr
 >                 withoutPreemption $ case frame of
 >                     Just (newCap, srcSlot) ->
 >                         checkCapAt newCap srcSlot
 >                             $ checkCapAt tCap slot
 >                             $ assertDerived srcSlot newCap
 >                             $ cteInsert newCap srcSlot bufferSlot
->                     Nothing -> return ())
+>                     Nothing -> return ()
+>                 thread <- withoutPreemption $ getCurThread
+>                 withoutPreemption $ when (target == thread) $ rescheduleRequired)
 >             buffer
 >         return []
 
@@ -447,6 +450,11 @@ Transfer the other integer registers.
 >                 asUser dest $ setRegister r v)
 >             gpRegisters
 
+Modifying the current thread may require rescheduling because modified registers are only reloaded in Arch\_switchToThread
+
+>     thread <- getCurThread
+>     when (dest == thread) $ rescheduleRequired
+
 At this point, implementations may copy any registers indicated by the two implementation-defined transfer flags.
 
 >     Arch.performTransfer transferArch src dest
@@ -466,13 +474,17 @@ The "ReadRegisters" and "WriteRegisters" functions are similar to "CopyRegisters
 >   withoutPreemption $ do
 >     self <- getCurThread
 >     Arch.performTransfer arch self dest
->     t <- threadGet id dest
+>     t <- getSanitiseRegisterInfo dest
 >     asUser dest $ do
 >         zipWithM (\r v -> setRegister r (sanitiseRegister t r v))
 >             (frameRegisters ++ gpRegisters) values
 >         pc <- getRestartPC
 >         setNextPC pc
 >     when resumeTarget $ restart dest
+
+Modifying the current thread may require rescheduling because modified registers are only reloaded in Arch\_switchToThread
+
+>     when (dest == self) $ rescheduleRequired
 >     return []
 
 \subsubsection{Invoking Notication Control}
@@ -486,7 +498,7 @@ The "ReadRegisters" and "WriteRegisters" functions are similar to "CopyRegisters
 
 > -- UNBIND
 > invokeTCB (NotificationControl tcb Nothing) =
->   withoutPreemption $ do 
+>   withoutPreemption $ do
 >     unbindNotification tcb
 >     return []
 
@@ -627,14 +639,14 @@ The following functions read and set the extra capability fields of the IPC buff
 >           capFaultOnFailure cptr False $ lookupCapAndSlot thread cptr) cptrs
 
 The next function is for convenience in transferCapsLoop. It is equivalent in
-the sense that 
-getExtraCPtrs (Some buffer) (MI { msgExtraCaps = count }) = 
-mapM (getExtraCPtr buffer) [0..count-1] 
+the sense that
+getExtraCPtrs (Some buffer) (MI { msgExtraCaps = count }) =
+mapM (getExtraCPtr buffer) [0..count-1]
 
 > getExtraCPtr :: PPtr Word -> Int -> Kernel CPtr
 > getExtraCPtr buffer n = do
 >         let intSize = fromIntegral wordSize
->         let ptr = buffer + bufferCPtrOffset + 
+>         let ptr = buffer + bufferCPtrOffset +
 >                   PPtr ((fromIntegral n) * intSize)
 >         cptr <- loadWordUser ptr
 >         return $ CPtr cptr
@@ -644,12 +656,12 @@ Write the unwrapped badge into the IPC buffer for cap n.
 > setExtraBadge :: PPtr Word -> Word -> Int -> Kernel ()
 > setExtraBadge buffer badge n = do
 >         let intSize = fromIntegral wordSize
->         let badgePtr = buffer + bufferCPtrOffset + 
+>         let badgePtr = buffer + bufferCPtrOffset +
 >                        PPtr ((fromIntegral n) * intSize)
 >         storeWordUser badgePtr badge
 
 > bufferCPtrOffset :: PPtr Word
-> bufferCPtrOffset = 
+> bufferCPtrOffset =
 >         let intSize = fromIntegral wordSize
 >         in PPtr ((msgMaxLength+2)*intSize)
 
@@ -760,6 +772,9 @@ identified by "tcbPtr".
 
 On some architectures, the thread context may include registers that may be modified by user level code, but cannot safely be given arbitrary values. For example, some of the bits in the ARM architecture's CPSR are used for conditional execution, and others enable kernel mode. This function is used to filter out any bits that should not be modified by user level programs.
 
-> sanitiseRegister :: TCB -> Register -> Word -> Word
+> sanitiseRegister :: Bool -> Register -> Word -> Word
 > sanitiseRegister t (Register r) (Word w) = Word $ Arch.sanitiseRegister t r w
+
+> getSanitiseRegisterInfo :: PPtr TCB -> Kernel Bool
+> getSanitiseRegisterInfo t = Arch.getSanitiseRegisterInfo t
 

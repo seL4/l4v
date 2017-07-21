@@ -16,7 +16,7 @@
 
 PRG="$(basename "$0")"
 
-function realpath() { 
+function realpath() {
 	  echo "$(cd `dirname "$1"` &&  pwd)/`basename "$1"`"
 	}
 
@@ -76,7 +76,7 @@ do
     T)
       PROOFCOUNT_IMPORT_THEORY="$OPTARG"
       ;;
-    O)      
+    O)
       PROOFCOUNT_OUTPUT_PATH="$OPTARG"
       ;;
     N)
@@ -139,7 +139,7 @@ if [ "$PROOFCOUNT_PATCH" ] ; then
 
   if [ $? -ne 0 ] ; then
     echo "ProofCountTest failed ... patching this Isabelle install to support metric collection"
-  
+
     (cd "$ISABELLE_HOME" ; patch -p1 < "$ISABELLE_PROOFCOUNT_HOME/isabelle_patch.diff")
 
     (cd "$PROOFCOUNT_PATCH" ; "$ISABELLE_TOOL" build -d . ProofCountTest)
@@ -200,8 +200,8 @@ begin
 
 ML {*
   val (full_spec,proof_spec,thy_deps) = Proof_Graph.read_graph_spec_from \"$PROOFCOUNT_XML\"
-  
-  val default_config : Proof_Metrics.metric_configs = 
+
+  val default_config : Proof_Metrics.metric_configs =
   { min_proof_size = 0,
     filter_kinds = [Proof_Count.Lemma \"lemma\", Proof_Count.Lemma \"schematic_lemma\",
                    Proof_Count.Lemma \"corollary\", Proof_Count.Lemma \"schematic_corollary\",
@@ -230,11 +230,11 @@ ML {*
     *}"
 done
 
-echo "$PROOFCOUNT_METRIC_HEAD 
-$PROOFCOUNT_METRICS_THY 
+echo "$PROOFCOUNT_METRIC_HEAD
+$PROOFCOUNT_METRICS_THY
 end" > "$PROOFCOUNT_METRIC_ROOTS/ProofCount_Metrics.thy"
 
-[ "$PROOFCOUNT_VERBOSE" ] && cat "$PROOFCOUNT_METRIC_ROOTS/ProofCount_Metrics.thy" 
+[ "$PROOFCOUNT_VERBOSE" ] && cat "$PROOFCOUNT_METRIC_ROOTS/ProofCount_Metrics.thy"
 
 # execution
 

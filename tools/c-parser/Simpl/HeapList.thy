@@ -6,7 +6,7 @@
 (*  Title:      HeapList.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2004-2008 Norbert Schirmer 
+Copyright (C) 2004-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -47,14 +47,14 @@ apply fastforce
 apply fastforce
 done
 
-lemma Path_not_Null_iff [simp]: "p\<noteq>Null \<Longrightarrow> 
+lemma Path_not_Null_iff [simp]: "p\<noteq>Null \<Longrightarrow>
   Path p h q as = (as = [] \<and> q = p  \<or>  (\<exists>ps. as = p#ps \<and> Path (h p) h q ps ))"
 apply(case_tac as)
 apply fastforce
 apply fastforce
 done
 
-lemma Path_append [simp]: 
+lemma Path_append [simp]:
   "\<And>p. Path p f q (as@bs)  = (\<exists>y. Path p f y as \<and> Path y f q bs)"
 by(induct as, simp+)
 
@@ -62,13 +62,13 @@ lemma notin_Path_update[simp]:
  "\<And>p. u \<notin> set ps \<Longrightarrow> Path p (f(u := v)) q ps  = Path p f q ps "
 by(induct ps, simp, simp add:eq_sym_conv)
 
-lemma Path_upd_same [simp]: 
-  "Path p (f(p:=p)) q qs = 
+lemma Path_upd_same [simp]:
+  "Path p (f(p:=p)) q qs =
       ((p=Null \<and> q=Null \<and> qs = []) \<or> (p\<noteq>Null \<and> q=p \<and> (\<forall>x\<in>set qs. x=p)))"
 by (induct qs) auto
 
-text \<open>@{thm[source] Path_upd_same} prevents 
-@{term "p\<noteq>Null \<Longrightarrow> Path p (f(p:=p)) q qs = X"} from looping, because of 
+text \<open>@{thm[source] Path_upd_same} prevents
+@{term "p\<noteq>Null \<Longrightarrow> Path p (f(p:=p)) q qs = X"} from looping, because of
 @{thm[source] Path_not_Null_iff} and @{thm[source]fun_upd_apply}.
 \<close>
 
@@ -135,8 +135,8 @@ apply  simp
 apply (fast dest: List_upd_same_lemma)
 done
 
-text \<open>@{thm[source] List_upd_same} prevents 
-@{term "p\<noteq>Null \<Longrightarrow> List p (h(p:=p)) as = X"} from looping, because of 
+text \<open>@{thm[source] List_upd_same} prevents
+@{term "p\<noteq>Null \<Longrightarrow> List p (h(p:=p)) as = X"} from looping, because of
 @{thm[source] List_not_Null} and @{thm[source] fun_upd_apply}.
 \<close>
 
@@ -168,21 +168,21 @@ apply(induct ps, simp)
 apply(fastforce dest:List_hd_not_in_tl)
 done
 
-lemma heap_eq_List_eq: 
+lemma heap_eq_List_eq:
   "\<And>p. \<forall>x \<in> set ps. h x = g x \<Longrightarrow> List p h ps = List p g ps"
   by (induct ps) auto
 
 
-lemma heap_eq_ListI: 
-  assumes list: "List p h ps" 
+lemma heap_eq_ListI:
+  assumes list: "List p h ps"
   assumes hp_eq: "\<forall>x \<in> set ps. h x = g x"
   shows "List p g ps"
   using list
   by (simp add: heap_eq_List_eq [OF hp_eq])
 
 
-lemma heap_eq_ListI1: 
-  assumes list: "List p h ps" 
+lemma heap_eq_ListI1:
+  assumes list: "List p h ps"
   assumes hp_eq: "\<forall>x \<in> set ps. g x = h x"
   shows "List p g ps"
   using list
@@ -196,16 +196,16 @@ of the List predicate\<close>
 lemma conj_impl_simp: "(P \<and> Q \<longrightarrow> K) = (P \<longrightarrow> Q \<longrightarrow> K)"
 by auto
 
-lemma  List_unique_all_impl_simp [simp]: 
+lemma  List_unique_all_impl_simp [simp]:
  "List p h ps \<Longrightarrow> (\<forall>ps. List p h ps \<longrightarrow> P ps) = P ps"
 by (auto dest: List_unique)
 
 (*
-lemma  List_unique_all_impl_simp1 [simp]: 
+lemma  List_unique_all_impl_simp1 [simp]:
  "List p h ps \<Longrightarrow> (\<forall>ps. Q ps \<longrightarrow> List p h ps \<longrightarrow> P ps) = Q ps \<longrightarrow> P ps"
 by (auto dest: List_unique)
 *)
-lemma List_unique_ex_conj_simp [simp]: 
+lemma List_unique_ex_conj_simp [simp]:
 "List p h ps \<Longrightarrow> (\<exists>ps. List p h ps \<and> P ps) = P ps"
 by (auto dest: List_unique)
 
@@ -237,12 +237,12 @@ apply  assumption
 by (rule List_unique)
 
 
-lemma List_islist [intro]: 
+lemma List_islist [intro]:
   "List p h ps \<Longrightarrow> islist p h"
   apply (simp add: List_conv_islist_list)
   done
 
-lemma List_list: 
+lemma List_list:
   "List p h ps \<Longrightarrow> list p h = ps"
   apply (simp only: List_conv_islist_list)
   done

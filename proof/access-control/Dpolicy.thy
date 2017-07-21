@@ -289,7 +289,7 @@ lemma is_real_cap_infer_tcb_pending_op:
 
 lemma is_real_cap_infer_tcb_bound_notification:
   "is_real_cap (infer_tcb_bound_notification a)"
-  by (auto simp: infer_tcb_bound_notification_def is_real_cap_def split: cdl_cap.splits option.splits) 
+  by (auto simp: infer_tcb_bound_notification_def is_real_cap_def split: cdl_cap.splits option.splits)
 
 definition
   is_untyped_cap :: "cdl_cap \<Rightarrow> bool"
@@ -332,7 +332,7 @@ lemma caps_of_state_transform_opt_cap_rev:
    apply (drule valid_etcbs_tcb_etcb [rotated], fastforce)
    apply clarsimp
    apply (clarsimp simp:transform_tcb_def tcb_slot_defs split:if_split_asm)
-         apply (clarsimp simp: is_null_cap_def is_bound_ntfn_cap_def infer_tcb_bound_notification_def 
+         apply (clarsimp simp: is_null_cap_def is_bound_ntfn_cap_def infer_tcb_bound_notification_def
                          split: option.splits)
         apply (simp add:is_thread_state_cap_def infer_tcb_pending_op_def is_null_cap_def is_real_cap_def
                     split:Structures_A.thread_state.splits option.splits)
@@ -536,7 +536,7 @@ lemma thread_states_transform_rev:
    apply (case_tac "aa tcb", simp_all add:is_thread_state_cap_def split:if_split_asm)
    apply (rename_tac arch_cap)
    apply (case_tac "arch_cap", simp_all split:if_split_asm)
-  apply (case_tac "tcb_state tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def 
+  apply (case_tac "tcb_state tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def
                                              infer_tcb_bound_notification_def split: option.splits)
   done
 
@@ -708,7 +708,7 @@ lemma state_vrefs_transform_rev:
      apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
     apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
    apply (frule valid_etcbs_tcb_etcb [rotated], fastforce)
-   apply (clarsimp simp: transform_tcb_def is_real_cap_transform is_real_cap_infer_tcb_pending_op 
+   apply (clarsimp simp: transform_tcb_def is_real_cap_transform is_real_cap_infer_tcb_pending_op
                          is_real_cap_infer_tcb_bound_notification
                    split:if_split_asm)
   apply (rename_tac arch_kernel_obj)
@@ -956,8 +956,8 @@ lemma opt_cap_Some_asid_real:
      apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
     apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
    apply (frule valid_etcbs_tcb_etcb[rotated], fastforce)
-   apply (clarsimp simp: transform_tcb_def tcb_slot_defs is_real_cap_infer_tcb_bound_notification 
-                         is_real_cap_transform is_real_cap_infer_tcb_pending_op 
+   apply (clarsimp simp: transform_tcb_def tcb_slot_defs is_real_cap_infer_tcb_bound_notification
+                         is_real_cap_transform is_real_cap_infer_tcb_pending_op
                   split: if_split_asm)
   apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj; simp)

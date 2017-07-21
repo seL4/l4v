@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Data types for syscall invocations
 *)
 
@@ -45,7 +45,7 @@ datatype cnode_invocation =
 datatype untyped_invocation =
     Retype cslot_ptr bool obj_ref obj_ref apiobject_type nat "cslot_ptr list" bool
 
-datatype tcb_invocation =                                          
+datatype tcb_invocation =
     WriteRegisters machine_word bool "machine_word list" arch_copy_register_sets
   | ReadRegisters machine_word bool machine_word arch_copy_register_sets
   | CopyRegisters machine_word machine_word bool bool bool bool arch_copy_register_sets

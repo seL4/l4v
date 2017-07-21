@@ -14,9 +14,9 @@ begin
 
 abbreviation
   "activatable \<equiv> \<lambda>st. runnable st \<or> idle st"
-  
-  
-locale Schedule_AI = 
+
+
+locale Schedule_AI =
     fixes state_ext :: "('a::state_ext) itself"
     assumes dmo_mapM_storeWord_0_invs[wp]:
       "\<And>S. valid invs (do_machine_op (mapM (\<lambda>p. storeWord p 0) S)) (\<lambda>_. (invs :: 'a state \<Rightarrow> bool))"
@@ -34,7 +34,7 @@ locale Schedule_AI =
 context begin interpretation Arch .
 (* FIXME arch_split: some of these could be moved to generic theories
    so they don't need to be unqualified. *)
-requalify_facts 
+requalify_facts
   no_irq
   no_irq_storeWord
 end
@@ -174,9 +174,9 @@ lemma OR_choice_weak_wp:
           split: option.splits if_split_asm)
   done
 
-locale Schedule_AI_U = Schedule_AI "TYPE(unit)" 
-  
-lemma (in Schedule_AI_U) schedule_invs[wp]: 
+locale Schedule_AI_U = Schedule_AI "TYPE(unit)"
+
+lemma (in Schedule_AI_U) schedule_invs[wp]:
   "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,unit) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: Schedule_A.schedule_def allActiveTCBs_def)
   apply (wp OR_choice_weak_wp alternative_wp dmo_invs thread_get_inv

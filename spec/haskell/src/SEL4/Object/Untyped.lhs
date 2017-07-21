@@ -8,7 +8,7 @@
 % @TAG(GD_GPL)
 %
 
-This module defines the behavior of untyped objects. 
+This module defines the behavior of untyped objects.
 
 > module SEL4.Object.Untyped (
 >         decodeUntypedInvocation, invokeUntyped
@@ -36,7 +36,7 @@ This module defines the behavior of untyped objects.
 
 Invocation of an untyped object retypes the memory region, possibly creating
 new typed kernel objects. As shown in \autoref{fig:derive}, the
-retype operation will generate one or more new capabilities, which are inserted in the mapping database as children of the initial capability. These newly created capabilities will have all access rights, and other object specific fields will be initialised to some sensible value. 
+retype operation will generate one or more new capabilities, which are inserted in the mapping database as children of the initial capability. These newly created capabilities will have all access rights, and other object specific fields will be initialised to some sensible value.
 
 \begin{figure}[htp]
 \centering \includegraphics{figures/derive}
@@ -74,7 +74,7 @@ The value of this argument is the base 2 logarithm of the actual required size. 
 
 >     let userObjSize = fromIntegral userObjSizeW
 
-max untyped size is $2^30$ 
+max untyped size is $2^30$
 
 >     rangeCheck userObjSize 0 $ finiteBitSize nullPointer - 3
 
@@ -92,7 +92,7 @@ The node index and depth arguments, and the root capability, specify a CNode to 
 
 >     let nodeIndex = CPtr nodeIndexW
 >     let nodeDepth = fromIntegral nodeDepthW
->     
+>
 >     nodeCap <- if nodeDepth == 0
 >         then return rootCap
 >         else do
@@ -101,7 +101,7 @@ The node index and depth arguments, and the root capability, specify a CNode to 
 
 If the destination capability is not a CNode, an error is returned.
 
->     case nodeCap of 
+>     case nodeCap of
 >         CNodeCap {} -> return ()
 >         _ -> throw $ FailedLookup False $ MissingCapability {
 >             missingCapBitsLeft = nodeDepth }
@@ -112,7 +112,7 @@ The node offset and window arguments specify the start and the length of a conti
 >     rangeCheck nodeOffset 0 $ nodeSize - 1
 >     rangeCheck nodeWindow 1 retypeFanOutLimit
 >     rangeCheck nodeWindow 1 $ nodeSize - nodeOffset
->     
+>
 >     slots <- withoutFailure $
 >         mapM (locateSlotCap nodeCap)
 >             [nodeOffset .. nodeOffset+nodeWindow - 1]
@@ -135,7 +135,7 @@ The memory free for use begins at the current free pointer, unless we are perfor
 Ensure that sufficient space is available in the region of memory.
 
 >     let objectSize = getObjectSize newType userObjSize
->     let untypedFreeBytes = (bit (capBlockSize cap)) - freeIndex 
+>     let untypedFreeBytes = (bit (capBlockSize cap)) - freeIndex
 >     let maxCount = untypedFreeBytes `shiftR` objectSize
 >     when (fromIntegral maxCount < nodeWindow) $
 >         throw $ NotEnoughMemory $ fromIntegral untypedFreeBytes
@@ -177,7 +177,7 @@ A Retype operation may begin with a reset of an Untyped cap. This returns the fr
 
 \begin{impdetails}
 The objects in the Haskell model are removed at this time. This operation is specific to the Haskell physical memory model, in which memory objects are typed; it is not necessary (or possible) when running on real hardware.
- 
+
 >         withoutPreemption $ deleteObjects (capPtr cap) sz
 
 \end{impdetails}
@@ -213,9 +213,9 @@ For verification purposes a check is made that the region the objects are create
 >         updateFreeIndex srcSlot (getFreeIndex base freeRef)
 
 Create the new objects and insert caps to these objects into the destination slots.
- 
+
 >         createNewObjects newType srcSlot destSlots retypeBase userSize isDev
- 
+
 This function performs the check that CNodes do not overlap with the retyping region. Its actual definition is provided in the Isabelle translation.
 
 > cNodeOverlap :: (Word -> Maybe Int) -> (Word -> Bool) -> Bool

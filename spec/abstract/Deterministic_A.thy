@@ -27,16 +27,16 @@ we obtain different \emph{instantiations} of this specification, at differing
 levels of abstraction. The abstract specification is thus \emph{extensible}.
 The basic technique, and its motivation, are described in~\cite{Matichuk_Murray_12}.
 
-Here, we define two such instantiations. The first yields a 
+Here, we define two such instantiations. The first yields a
 largely-deterministic specification by instantiating @{typ "'a"} with
 a record that includes concrete scheduler state and
 information about sibling ordering in the capability derivation tree (CDT).
-We call the resulting 
+We call the resulting
 specification the \emph{deterministic abstract specification} and it is
 defined below in \autoref{s:det-spec}.
 
 The second instantiation uses the type @{typ unit} for @{typ 'a}, yielding
-a specification that is far more nondeterministic. In particular, the 
+a specification that is far more nondeterministic. In particular, the
 scheduling behaviour and the order in which capabilities are deleted during
 a \emph{revoke} system call both become completely nondeterministic.
 We call this second instantiation the
@@ -96,7 +96,7 @@ lemma trans_state_update''[simp]:
   done
 (*>*)
 
-text {* Truncate an extended state of type @{typ "'a state"} 
+text {* Truncate an extended state of type @{typ "'a state"}
   by effectively throwing away all the @{typ "'a"} information.
 *}
 abbreviation "truncate_state \<equiv> trans_state (\<lambda>_. ())"
@@ -108,7 +108,7 @@ text {* \label{s:det-spec}
 and ordering information about sibling nodes in the CDT. *}
 
 text {* The current scheduler action,
-  which is part of the scheduling state. *} 
+  which is part of the scheduling state. *}
 datatype scheduler_action =
     resume_cur_thread
   | switch_thread obj_ref
@@ -166,7 +166,7 @@ text {*
 *}
 type_synonym det_state = "det_ext state"
 
-text {* Accessor and update functions for the extended state of the 
+text {* Accessor and update functions for the extended state of the
   deterministic abstract specification.
 *}
 abbreviation
@@ -583,7 +583,7 @@ end
 
 section "Nondeterministic Abstract Specification"
 
-text {* \label{s:nondet-spec} 
+text {* \label{s:nondet-spec}
 The nondeterministic abstract specification instantiates the extended state
 with the unit type -- i.e. it doesn't have any meaningful extended state.
 *}

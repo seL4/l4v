@@ -22,7 +22,7 @@ where
   "authorised_irq_ctl_inv aag cinv \<equiv>
      case cinv of
          IRQControl word x1 x2 \<Rightarrow> is_subject aag (fst x1) \<and> is_subject aag (fst x2) \<and>
-                                  (pasSubject aag, Control, pasIRQAbs aag word) \<in> pasPolicy aag 
+                                  (pasSubject aag, Control, pasIRQAbs aag word) \<in> pasPolicy aag
         | _ \<Rightarrow> True"
 
 lemma invoke_irq_control_pas_refined:

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Properties of machine operations.
 *)
 
@@ -80,7 +80,7 @@ lemma det_setRegister: "det (setRegister x w)"
 
 lemma det_getRestartPC: "det getRestartPC"
   by (simp add: getRestartPC_def det_getRegister)
-  
+
 
 lemma det_setNextPC: "det (setNextPC p)"
   by (simp add: setNextPC_def det_setRegister)
@@ -163,14 +163,14 @@ lemma no_fail_cleanByVA: "no_fail \<top> (cleanByVA w p)"
 lemma no_fail_cleanByVA_PoU: "no_fail \<top> (cleanByVA_PoU w p)"
   by (simp add: cleanByVA_PoU_def)
 
-lemma no_fail_invalidateTLB: "no_fail \<top> invalidateTLB"
-  by (simp add: invalidateTLB_def)
+lemma no_fail_invalidateLocalTLB: "no_fail \<top> invalidateLocalTLB"
+  by (simp add: invalidateLocalTLB_def)
 
-lemma no_fail_invalidateTLB_ASID: "no_fail \<top> (invalidateTLB_ASID x)"
-  by (simp add: invalidateTLB_ASID_def)
+lemma no_fail_invalidateLocalTLB_ASID: "no_fail \<top> (invalidateLocalTLB_ASID x)"
+  by (simp add: invalidateLocalTLB_ASID_def)
 
-lemma no_fail_invalidateTLB_VAASID: "no_fail \<top> (invalidateTLB_VAASID x)"
-  by (simp add: invalidateTLB_VAASID_def)
+lemma no_fail_invalidateLocalTLB_VAASID: "no_fail \<top> (invalidateLocalTLB_VAASID x)"
+  by (simp add: invalidateLocalTLB_VAASID_def)
 
 lemma no_fail_invalidateByVA: "no_fail \<top> (invalidateByVA w p)"
   by (simp add: invalidateByVA_def)
@@ -257,7 +257,7 @@ lemma no_fail_cleanCacheRange_PoC[simp, wp]:
 
 lemma no_fail_cleanInvalidateCacheRange_RAM[simp, wp]:
   "no_fail \<top> (cleanInvalidateCacheRange_RAM s e p)"
-  by (simp add: cleanInvalidateCacheRange_RAM_def, rule no_fail_pre, 
+  by (simp add: cleanInvalidateCacheRange_RAM_def, rule no_fail_pre,
       wp no_fail_dsb no_fail_cleanInvalidateL2Range no_fail_cleanInvalByVA, simp)
 
 lemma no_fail_cleanCacheRange_RAM[simp, wp]:
@@ -276,22 +276,22 @@ lemma no_fail_invalidateCacheRange_RAM[simp, wp]:
   apply (rule no_fail_pre, wp no_fail_invalidateL2Range no_fail_invalidateByVA no_fail_dsb, simp)
    apply (auto intro: hoare_post_taut)
   done
-  
+
 lemma no_fail_branchFlushRange[simp, wp]:
   "no_fail \<top> (branchFlushRange s e p)"
   by (simp add: branchFlushRange_def, wp no_fail_branchFlush)
 
 lemma no_fail_cleanCaches_PoU[simp, wp]:
   "no_fail \<top> cleanCaches_PoU"
-  by (simp add: cleanCaches_PoU_def, rule no_fail_pre, 
+  by (simp add: cleanCaches_PoU_def, rule no_fail_pre,
       wp no_fail_dsb no_fail_clean_D_PoU no_fail_invalidate_I_PoU, simp)
 
 lemma no_fail_cleanInvalidateL1Caches[simp, wp]:
   "no_fail \<top> cleanInvalidateL1Caches"
-  by (simp add: cleanInvalidateL1Caches_def, rule no_fail_pre, 
+  by (simp add: cleanInvalidateL1Caches_def, rule no_fail_pre,
       wp no_fail_dsb no_fail_cleanInvalidate_D_PoC no_fail_invalidate_I_PoU, simp)
 
-lemma no_fail_clearMemory[simp, wp]: 
+lemma no_fail_clearMemory[simp, wp]:
   "no_fail (\<lambda>_. is_aligned p 2) (clearMemory p b)"
   apply (simp add: clearMemory_def mapM_x_mapM)
   apply (rule no_fail_pre)
@@ -317,7 +317,7 @@ lemma no_fail_freeMemory[simp, wp]:
 
 
 lemma no_fail_getActiveIRQ[wp]:
-  "no_fail \<top> getActiveIRQ"
+  "no_fail \<top> (getActiveIRQ in_kernel)"
   apply (simp add: getActiveIRQ_def)
   apply (rule no_fail_pre)
    apply (wp non_fail_select)
@@ -327,7 +327,7 @@ lemma no_fail_getActiveIRQ[wp]:
 definition "irq_state_independent P \<equiv> \<forall>f s. P s \<longrightarrow> P (irq_state_update f s)"
 
 lemma getActiveIRQ_inv [wp]:
-  "\<lbrakk>irq_state_independent P\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> getActiveIRQ \<lbrace>\<lambda>rv. P\<rbrace>"
+  "\<lbrakk>irq_state_independent P\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: getActiveIRQ_def)
   apply (wp alternative_wp select_wp)
   apply (simp add: irq_state_independent_def)
@@ -335,7 +335,7 @@ lemma getActiveIRQ_inv [wp]:
 
 lemma no_fail_ackInterrupt[wp]: "no_fail \<top> (ackInterrupt irq)"
   by (simp add: ackInterrupt_def)
-  
+
 
 lemma no_fail_maskInterrupt[wp]: "no_fail \<top> (maskInterrupt irq bool)"
   by (simp add: maskInterrupt_def)
@@ -377,14 +377,14 @@ lemma no_irq_cleanByVA: "no_irq  (cleanByVA w p)"
 lemma no_irq_cleanByVA_PoU: "no_irq  (cleanByVA_PoU w p)"
   by (simp add: cleanByVA_PoU_def)
 
-lemma no_irq_invalidateTLB: "no_irq  invalidateTLB"
-  by (simp add: invalidateTLB_def)
+lemma no_irq_invalidateLocalTLB: "no_irq  invalidateLocalTLB"
+  by (simp add: invalidateLocalTLB_def)
 
-lemma no_irq_invalidateTLB_ASID: "no_irq  (invalidateTLB_ASID x)"
-  by (simp add: invalidateTLB_ASID_def)
+lemma no_irq_invalidateLocalTLB_ASID: "no_irq  (invalidateLocalTLB_ASID x)"
+  by (simp add: invalidateLocalTLB_ASID_def)
 
-lemma no_irq_invalidateTLB_VAASID: "no_irq  (invalidateTLB_VAASID x)"
-  by (simp add: invalidateTLB_VAASID_def)
+lemma no_irq_invalidateLocalTLB_VAASID: "no_irq  (invalidateLocalTLB_VAASID x)"
+  by (simp add: invalidateLocalTLB_VAASID_def)
 
 lemma no_irq_invalidateByVA: "no_irq  (invalidateByVA w p)"
   by (simp add: invalidateByVA_def)
@@ -431,7 +431,7 @@ lemma no_irq_setHardwareASID: "no_irq (setHardwareASID hw_asid)"
 
 lemma no_irq_writeTTBR0: "no_irq (writeTTBR0 pd)"
   by (simp add: writeTTBR0_def)
- 
+
 lemma no_irq_gets [simp]:
   "no_irq (gets f)"
   by (simp add: no_irq_def)
@@ -467,7 +467,7 @@ lemma no_irq_loadWord: "no_irq (loadWord x)"
   done
 
 
-lemma no_irq_getActiveIRQ: "no_irq getActiveIRQ"
+lemma no_irq_getActiveIRQ: "no_irq (getActiveIRQ in_kernel)"
   apply (clarsimp simp: no_irq_def)
   apply (rule getActiveIRQ_inv)
   apply (simp add: irq_state_independent_def)
@@ -494,7 +494,7 @@ lemma no_irq_mapM_x:
    apply (rule order_refl)
   apply (wp; simp)
   done
-  
+
 
 lemma no_irq_swp:
   "no_irq (f y x) \<Longrightarrow> no_irq (swp f x y)"
@@ -544,7 +544,7 @@ lemma no_irq_clearExMonitor: "no_irq clearExMonitor"
 
 
 lemma no_irq_storeWord: "no_irq (storeWord w p)"
-  apply (simp add: storeWord_def)    
+  apply (simp add: storeWord_def)
   apply (wp no_irq_modify)
   apply simp
   done
@@ -566,7 +566,7 @@ lemma no_irq_cleanCacheRange_PoC[simp, wp]:
 
 lemma no_irq_cleanInvalidateCacheRange_RAM[simp, wp]:
   "no_irq (cleanInvalidateCacheRange_RAM s e p)"
-  by (simp add: cleanInvalidateCacheRange_RAM_def, 
+  by (simp add: cleanInvalidateCacheRange_RAM_def,
       wp no_irq_dsb no_irq_cleanInvalidateL2Range no_irq_cleanInvalByVA)
 
 lemma no_irq_cleanCacheRange_RAM[simp, wp]:
@@ -588,7 +588,7 @@ lemma no_irq_invalidateCacheRange_RAM[simp, wp]:
   apply (simp add: invalidateCacheRange_RAM_def lineStart_def cacheLineBits_def)
   apply (wp no_irq_invalidateL2Range no_irq_invalidateByVA no_irq_dsb no_irq_when)
   done
-  
+
 lemma no_irq_branchFlushRange[simp, wp]:
   "no_irq (branchFlushRange s e p)"
   by (simp add: branchFlushRange_def, wp no_irq_branchFlush)
@@ -600,7 +600,7 @@ lemma no_irq_cleanCaches_PoU[simp, wp]:
 
 lemma no_irq_cleanInvalidateL1Caches[simp, wp]:
   "no_irq cleanInvalidateL1Caches"
-  by (simp add: cleanInvalidateL1Caches_def, 
+  by (simp add: cleanInvalidateL1Caches_def,
       wp no_irq_dsb no_irq_cleanInvalidate_D_PoC no_irq_invalidate_I_PoU)
 
 
@@ -610,7 +610,7 @@ lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
   done
 
 lemma getActiveIRQ_le_maxIRQ':
-  "\<lbrace>\<lambda>s. \<forall>irq > maxIRQ. irq_masks s irq\<rbrace> getActiveIRQ \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>irq > maxIRQ. irq_masks s irq\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: getActiveIRQ_def)
   apply (wp alternative_wp select_wp)
   apply clarsimp
@@ -620,10 +620,26 @@ lemma getActiveIRQ_le_maxIRQ':
 
 (* FIXME: follows already from getActiveIRQ_le_maxIRQ *)
 lemma getActiveIRQ_neq_Some0xFF':
-  "\<lbrace>\<top>\<rbrace> getActiveIRQ \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
   apply (simp add: getActiveIRQ_def)
   apply (wp alternative_wp select_wp)
   apply simp
+  done
+
+lemma getActiveIRQ_neq_non_kernel:
+  "\<lbrace>\<top>\<rbrace> getActiveIRQ True \<lbrace>\<lambda>rv s. rv \<notin> Some ` non_kernel_IRQs \<rbrace>"
+  apply (simp add: getActiveIRQ_def)
+  apply (wp alternative_wp select_wp)
+  apply auto
+  done
+
+lemma dmo_getActiveIRQ_non_kernel[wp]:
+  "\<lbrace>\<top>\<rbrace> do_machine_op (getActiveIRQ True)
+   \<lbrace>\<lambda>rv s. \<forall>irq. rv = Some irq \<longrightarrow> irq \<in> non_kernel_IRQs \<longrightarrow> P irq s\<rbrace>"
+  unfolding do_machine_op_def
+  apply wpsimp
+  apply (drule use_valid, rule getActiveIRQ_neq_non_kernel, rule TrueI)
+  apply clarsimp
   done
 
 lemma empty_fail_isb: "empty_fail  isb"
@@ -641,14 +657,14 @@ lemma empty_fail_cleanByVA: "empty_fail  (cleanByVA w p)"
 lemma empty_fail_cleanByVA_PoU: "empty_fail  (cleanByVA_PoU w p)"
   by (simp add: cleanByVA_PoU_def)
 
-lemma empty_fail_invalidateTLB: "empty_fail  invalidateTLB"
-  by (simp add: invalidateTLB_def)
+lemma empty_fail_invalidateLocalTLB: "empty_fail  invalidateLocalTLB"
+  by (simp add: invalidateLocalTLB_def)
 
-lemma empty_fail_invalidateTLB_ASID: "empty_fail  (invalidateTLB_ASID x)"
-  by (simp add: invalidateTLB_ASID_def)
+lemma empty_fail_invalidateLocalTLB_ASID: "empty_fail  (invalidateLocalTLB_ASID x)"
+  by (simp add: invalidateLocalTLB_ASID_def)
 
-lemma empty_fail_invalidateTLB_VAASID: "empty_fail  (invalidateTLB_VAASID x)"
-  by (simp add: invalidateTLB_VAASID_def)
+lemma empty_fail_invalidateLocalTLB_VAASID: "empty_fail  (invalidateLocalTLB_VAASID x)"
+  by (simp add: invalidateLocalTLB_VAASID_def)
 
 lemma empty_fail_invalidateByVA: "empty_fail  (invalidateByVA w p)"
   by (simp add: invalidateByVA_def)
@@ -726,9 +742,9 @@ lemma empty_fail_invalidateCacheRange_I[simp, intro!]:
 
 lemma empty_fail_invalidateCacheRange_RAM[simp, intro!]:
   "empty_fail (invalidateCacheRange_RAM s e p)"
-  by (simp add: invalidateCacheRange_RAM_def lineStart_def cacheLineBits_def 
+  by (simp add: invalidateCacheRange_RAM_def lineStart_def cacheLineBits_def
                    empty_fail_invalidateL2Range empty_fail_invalidateByVA empty_fail_dsb)
-  
+
 lemma empty_fail_branchFlushRange[simp, intro!]:
   "empty_fail (branchFlushRange s e p)"
   by (simp add: branchFlushRange_def empty_fail_branchFlush)
@@ -739,7 +755,7 @@ lemma empty_fail_cleanCaches_PoU[simp, intro!]:
 
 lemma empty_fail_cleanInvalidateL1Caches[simp, intro!]:
   "empty_fail cleanInvalidateL1Caches"
-  by (simp add: cleanInvalidateL1Caches_def empty_fail_dsb empty_fail_cleanInvalidate_D_PoC 
+  by (simp add: cleanInvalidateL1Caches_def empty_fail_dsb empty_fail_cleanInvalidate_D_PoC
                 empty_fail_invalidate_I_PoU)
 
 lemma empty_fail_clearMemory [simp, intro!]:

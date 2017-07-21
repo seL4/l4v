@@ -15,7 +15,7 @@ begin
 axiomatization
   Moo :: "'a :: stronger_sep_algebra => bool" and
   Bar :: "'a :: stronger_sep_algebra => bool"
-where  Moo_Bar : "Moo s \<Longrightarrow> Bar s" 
+where  Moo_Bar : "Moo s \<Longrightarrow> Bar s"
 
 (* sep_rule is 'rule' with rotations of the conjuncts in the conclusions *)
 lemma "(A \<and>* B \<and>* C \<and>* Bar) s"
@@ -27,7 +27,7 @@ lemma "(A \<and>* B \<and>* C \<and>* Moo) s \<Longrightarrow> R"
   apply (sep_drule Moo_Bar)
   oops
 
-(* sep_erule is 'erule' with rotations of the conjuncts in either the assumptions, 
+(* sep_erule is 'erule' with rotations of the conjuncts in either the assumptions,
    the conclusions, or both. These are sep_erule, sep_erule_concl, and sep_erule_full respectively
     *)
 lemma "(A \<and>* B \<and>* C \<and>* Moo) s \<Longrightarrow> (A \<and>* B \<and>* C \<and>* Bar) s"
@@ -38,7 +38,7 @@ lemma "(A \<and>* B \<and>* C \<and>* Moo) s \<Longrightarrow> (A \<and>* B \<an
 
 axiomatization where Moo_Bar_R: "(Moo \<and>* R) s \<Longrightarrow> (Bar \<and>* R) s"
 
-(* When we have theorems with the frame explicitly mentioned, we have to invoke our tactics with 
+(* When we have theorems with the frame explicitly mentioned, we have to invoke our tactics with
    (direct) option *)
 
 lemma "(A \<and>* B \<and>* C \<and>* Moo) s \<Longrightarrow> (A \<and>* B \<and>* C \<and>* Bar) s"

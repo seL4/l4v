@@ -133,32 +133,6 @@ lemma neg_mask_add_mask:
   "((a && ~~ mask b) + c && mask b) = c && mask b"
   by (subst mask_add_aligned[OF is_aligned_neg_mask],simp+)
 
-lemma ucast_pt_index:
-  "\<lbrakk>is_aligned (p::word32) 6\<rbrakk>
-   \<Longrightarrow> ucast ((pa && mask 4) + (ucast (p && mask 10 >> 2)::word8))
-   =  ucast (pa && mask 4) + (p && mask 10 >> 2)"
-  apply (simp add:is_aligned_mask mask_def)
-  apply word_bitwise
-  apply (auto simp:carry_def)
-  done
-
-lemma ucast_pd_index:
-  "\<lbrakk>is_aligned (p::word32) 6\<rbrakk>
-   \<Longrightarrow> ucast ((pa && mask 4) + (ucast (p && mask 14 >> 2)::12 word))
-   =  ucast (pa && mask 4) + (p && mask 14 >> 2)"
-  apply (simp add:is_aligned_mask mask_def)
-  apply word_bitwise
-  apply (auto simp:carry_def)
-  done
-
-lemma unat_ucast_12_32:
-  "unat (ucast (x::(12 word))::word32) = unat x"
-  apply (subst unat_ucast)
-  apply (rule mod_less)
-  apply (rule less_le_trans[OF unat_lt2p])
-  apply simp
-  done
-
 lemma all_imp_ko_at_from_ex_strg:
   "((\<exists>v. ko_at (f v) p s \<and> P v) \<and> inj f) \<longrightarrow> (\<forall>v. ko_at (f v) p s \<longrightarrow> P v)"
   apply (clarsimp simp add: obj_at_def)

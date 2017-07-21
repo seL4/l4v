@@ -15,9 +15,9 @@ imports
 begin
 
 text {*
-  Reads/Affects sets: 
+  Reads/Affects sets:
   - NicA, NicB, NicD: reads all except T
-       affects {RM, R, NicA, NicB, NicD} 
+       affects {RM, R, NicA, NicB, NicD}
   - NicC: reads all except T, affects self only
   - R:  reads all except T
         affects {NicA, NicB, NicD, R, RM, NTFN3}
@@ -35,16 +35,16 @@ text {*
 
 subsection {* Definitions *}
 
-datatype SACLabels = 
+datatype SACLabels =
     NicA | NicB | NicC | NicD
   | R | RM |  SC | EP
   | T | NTFN1 | NTFN2 | NTFN3
 
-definition complete_AgentAuthGraph where 
-  "complete_AgentAuthGraph g \<equiv> 
-     g \<union> {(y,a,y) | a y. True} 
+definition complete_AgentAuthGraph where
+  "complete_AgentAuthGraph g \<equiv>
+     g \<union> {(y,a,y) | a y. True}
        \<union> {(x,a,y) | x a y. (x,Control,y) \<in> g }
-       \<union> {(x,a,y)|x a y. \<exists> z. (x,Control,z) \<in> g \<and> (z, Control,y) \<in> g} " 
+       \<union> {(x,a,y)|x a y. \<exists> z. (x,Control,z) \<in> g \<and> (z, Control,y) \<in> g} "
 declare complete_AgentAuthGraph_def [simp]
 
 abbreviation partition_label where
@@ -55,10 +55,10 @@ definition SACGraph where
   { (partition_label R, Read,  partition_label NicB), (partition_label R, Write, partition_label NicB),
     (partition_label R, Read,  partition_label NicD), (partition_label R, Write, partition_label NicD),
     (partition_label SC, Read,  partition_label NicC), (partition_label SC, Write, partition_label NicC),
-    (partition_label SC, SyncSend, partition_label EP), 
+    (partition_label SC, SyncSend, partition_label EP),
     (partition_label RM, Receive, partition_label EP),
-    (partition_label RM, Control, partition_label R), 
-    (partition_label RM, Control, partition_label NicA), 
+    (partition_label RM, Control, partition_label R),
+    (partition_label RM, Control, partition_label NicA),
     (partition_label RM, Control, partition_label NicB),
     (partition_label RM, Control, partition_label NicD),
     (partition_label T, Notify, partition_label NTFN1),
@@ -118,7 +118,7 @@ lemma reads_Control_rev:
   apply(subst SACAuthGraph_def)
   apply(erule reads_Control_rev')
   done
-     
+
 
 lemma abdrm_reads_ep : "x \<in> {NicA, NicB, NicD, RM} \<Longrightarrow> partition_label EP \<in> subjectReads SACAuthGraph (partition_label x)"
   apply (rule_tac t = "partition_label RM" and a = "partition_label SC" and auth' = "SyncSend" and auth = "Receive" in reads_read_queued_thread_read_ep)
@@ -147,7 +147,7 @@ done
 
 lemma abd_reads_r : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label R \<in> subjectReads SACAuthGraph (partition_label x)"
   apply (rule_tac p="partition_label R" and t="partition_label RM" in reads_read_thread_read_pages)
-  apply (rule abd_reads_rm, simp, simp) 
+  apply (rule abd_reads_rm, simp, simp)
 done
 
 lemma abd_reads_ntfn3 : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label NTFN3 \<in> subjectReads SACAuthGraph (partition_label x)"
@@ -176,7 +176,7 @@ lemma abd_reads_all_bw : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> {partitio
   apply (erule_tac a = xa in insertE, simp only:, rule reads_ntfn3_via_r, rule abd_reads_r, simp)
   apply simp
 done
-                  
+
 lemma abd_reads : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectReads SACAuthGraph (partition_label x) = {partition_label NicB, partition_label RM, partition_label R, partition_label NicA, partition_label NicD, partition_label EP, partition_label SC, partition_label NicC, partition_label NTFN1, partition_label NTFN2, partition_label NTFN3}"
    apply (rule subset_antisym)
    defer
@@ -186,7 +186,7 @@ lemma abd_reads : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectReads SAC
      apply (erule subjectReads.induct)
      (* warning: slow *)
      by (simp, blast?)+
- 
+
 
 definition abd_affects_set where
  "abd_affects_set \<equiv> {NicB, RM, R, NicA, NicD,
@@ -218,7 +218,7 @@ lemma abd_affects_bw : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_l
     apply (clarify)
     apply (erule notE)
     apply (rule_tac auth = SyncSend and ep = "partition_label x" and l' = "partition_label RM" in affects_send)
-    apply (simp, simp, simp, simp)    
+    apply (simp, simp, simp, simp)
   apply (erule_tac a = xa in insertE)
     apply (rule_tac auth = SyncSend and ep = "partition_label x" and l' = "partition_label RM" in affects_send)
     apply (simp, simp, simp, simp)
@@ -288,7 +288,7 @@ lemma c_reads : "subjectReads SACAuthGraph (partition_label NicC) = {partition_l
         apply (erule insertE, simp only:, rule reads_ntfn1_via_sc, rule c_reads_sc)
         apply (erule insertE, simp only:, rule reads_ntfn2_via_rm, rule c_reads_rm)
         apply (erule insertE, simp only:, rule reads_ntfn3_via_r, rule c_reads_any_controlled_by_rm, simp)
-        apply simp 
+        apply simp
     (* forward *)
     apply (rule subsetI)
     apply (erule subjectReads.induct)
@@ -331,7 +331,7 @@ done
 lemma r_reads_a : "partition_label NicA \<in> subjectReads SACAuthGraph (partition_label R)"
   apply (rule_tac a="partition_label NicA" and auth'="Reset" and ep="partition_label NicA" and t="partition_label RM" and auth="Receive" in reads_read_queued_thread_read_ep)
   apply (simp_all add:reads_Control_rev[simplified])
-done 
+done
 
 lemma r_reads_c : "partition_label NicC \<in> subjectReads SACAuthGraph (partition_label R)"
   apply (rule_tac t="partition_label SC" in reads_read_thread_read_pages)
@@ -366,7 +366,7 @@ lemma r_affects_bd : "x \<in> {partition_label NicB, partition_label NicD} \<Lon
 done
 
 lemma r_affects_rm : "partition_label RM \<in> subjectAffects SACAuthGraph (partition_label R)"
-  apply (rule_tac l="partition_label R" and ep="partition_label R" in affects_recv) 
+  apply (rule_tac l="partition_label R" and ep="partition_label R" in affects_recv)
   apply simp_all
 done
 
@@ -412,7 +412,7 @@ lemma r_affects : "subjectAffects SACAuthGraph (partition_label R) =
 
 subsection {* RM reads/affects *}
 
-lemma rm_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label RM)" 
+lemma rm_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label RM)"
   apply (rule_tac a="partition_label RM" and auth="Receive" and ep="partition_label EP" in read_sync_ep_read_senders)
   apply (simp_all add:reads_ep)
 done
@@ -513,7 +513,7 @@ apply (erule insertE, rule reads_all_rm_controlled_subjects, rule sc_reads_rm, s
 apply (erule insertE, rule reads_all_rm_controlled_subjects, rule sc_reads_rm, simp)
   apply (erule insertE, simp only:, rule_tac auth="SyncSend" in reads_ep, simp, simp)
   apply (erule insertE, simp only:, rule reads_lrefl)
-  apply (erule insertE, simp only:, rule reads_read, simp) 
+  apply (erule insertE, simp only:, rule reads_read, simp)
   apply (erule insertE, simp only:, rule reads_ntfn1_via_sc, rule reads_lrefl)
   apply (erule insertE, simp only:, rule reads_ntfn2_via_rm, rule sc_reads_rm)
   apply (erule insertE, simp only:, rule reads_ntfn3_via_r, rule reads_all_rm_controlled_subjects, rule sc_reads_rm, simp)
@@ -522,7 +522,7 @@ apply (erule insertE, rule reads_all_rm_controlled_subjects, rule sc_reads_rm, s
   apply (rule subsetI)
   apply (erule subjectReads.induct)
   apply (simp, blast?)+
-done 
+done
 
 lemma sc_affects_all_rm_controls : "l \<in> RMControls \<Longrightarrow> l \<in> subjectAffects SACAuthGraph (partition_label SC)"
   apply (simp only:RMControls_def)
@@ -578,9 +578,9 @@ lemma ep_reads : "subjectReads SACAuthGraph (partition_label EP) = {partition_la
   apply (erule insertE, rule reads_all_rm_controlled_subjects, rule ep_reads_rm, simp)
   apply (erule insertE, rule reads_all_rm_controlled_subjects, rule ep_reads_rm, simp)
   apply (erule insertE, rule reads_all_rm_controlled_subjects, rule ep_reads_rm, simp)
-  apply (erule insertE, simp only:, rule reads_lrefl)  
-  apply (erule insertE, simp only:, rule ep_reads_sc)  
-  apply (erule insertE, simp only:, rule ep_reads_c)  
+  apply (erule insertE, simp only:, rule reads_lrefl)
+  apply (erule insertE, simp only:, rule ep_reads_sc)
+  apply (erule insertE, simp only:, rule ep_reads_c)
   apply (erule insertE, simp only:, rule reads_ntfn1_via_sc, rule ep_reads_sc)
   apply (erule insertE, simp only:, rule reads_ntfn2_via_rm, rule ep_reads_rm)
   apply (erule insertE, simp only:, rule reads_ntfn3_via_r, rule reads_all_rm_controlled_subjects, rule ep_reads_rm, simp)
@@ -735,9 +735,9 @@ lemma ntfn123_reads : "l \<in> {NTFN1, NTFN2, NTFN3} \<Longrightarrow> subjectRe
   apply (rule subsetI)
   apply (erule_tac a=x in insertE, rule reads_all_rm_controlled_subjects, rule ntfn123_reads_rm, simp, simp)
   apply (erule_tac a=x in insertE, simp only:, rule ntfn123_reads_rm, simp)
-  apply (erule_tac a=x in insertE, rule reads_all_rm_controlled_subjects, rule ntfn123_reads_rm, simp, simp)  
-  apply (erule_tac a=x in insertE, rule reads_all_rm_controlled_subjects, rule ntfn123_reads_rm, simp, simp)  
-  apply (erule_tac a=x in insertE, rule reads_all_rm_controlled_subjects, rule ntfn123_reads_rm, simp, simp)  
+  apply (erule_tac a=x in insertE, rule reads_all_rm_controlled_subjects, rule ntfn123_reads_rm, simp, simp)
+  apply (erule_tac a=x in insertE, rule reads_all_rm_controlled_subjects, rule ntfn123_reads_rm, simp, simp)
+  apply (erule_tac a=x in insertE, rule reads_all_rm_controlled_subjects, rule ntfn123_reads_rm, simp, simp)
   apply (erule_tac a=x in insertE, simp only:, rule ntfn123_reads_ep, simp)
   apply (erule_tac a=x in insertE, simp only:, rule ntfn123_reads_sc, simp)
   apply (erule_tac a=x in insertE, simp only:, rule ntfn123_reads_c, simp)
@@ -908,7 +908,7 @@ definition SACFlowDoms where
 declare SACFlowDoms_def [simp]
 
 definition SACPolicyFlows :: "(SACLabels partition \<times> SACLabels partition) set" where
-  "SACPolicyFlows \<equiv> 
+  "SACPolicyFlows \<equiv>
      {(PSched,d)| d. True}
    \<union> {(Partition l, Partition k)| l k. (k = T \<longrightarrow> l = T)}"
 
@@ -921,7 +921,7 @@ lemma SAC_partsSubjectAffects_exceptT : "x \<noteq> T \<Longrightarrow> partsSub
      apply ((erule disjE, clarify, simp add:SAC_affects SAC_reads, blast?)+, simp add:SAC_affects SAC_reads, blast?)+
   apply (rule subsetI)
     apply (simp add:partsSubjectAffects_def image_def label_can_affect_partition_def)
-    apply (clarify)        
+    apply (clarify)
     apply (case_tac x)
       apply (case_tac[!] xaa)
         apply (auto simp: SAC_affects SAC_reads)

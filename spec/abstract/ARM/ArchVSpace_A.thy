@@ -23,6 +23,19 @@ context Arch begin global_naming ARM_A
 text {* Save the set of entries that would be inserted into a page table or
 page directory to map various different sizes of frame at a given virtual
 address. *}
+
+definition largePagePTE_offsets :: "obj_ref list"
+  where
+  "largePagePTE_offsets \<equiv>
+    let pts = of_nat 2
+    in [0, 2 ^ pts  .e.  (15 << 2)]"
+
+definition superSectionPDE_offsets :: "obj_ref list"
+  where
+  "superSectionPDE_offsets \<equiv>
+    let pts = of_nat 2
+    in [0, 2 ^ pts  .e.  (15 << 2)]"
+
 fun create_mapping_entries ::
   "paddr \<Rightarrow> vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vm_rights \<Rightarrow> vm_attributes \<Rightarrow> word32 \<Rightarrow>
   ((pte * word32 list) + (pde * word32 list),'z::state_ext) se_monad"
@@ -38,7 +51,7 @@ where
   doE
     p \<leftarrow> lookup_error_on_failure False $ lookup_pt_slot pd vptr;
     returnOk $ Inl (LargePagePTE base (attrib - {Global, ParityEnabled})
-                                 vm_rights, [p, p + 4  .e.  p + 60])
+                                 vm_rights, map (\<lambda>x. x + p) largePagePTE_offsets)
   odE"
 
 | "create_mapping_entries base vptr ARMSection vm_rights attrib pd =
@@ -50,7 +63,7 @@ where
 | "create_mapping_entries base vptr ARMSuperSection vm_rights attrib pd =
   doE
     p \<leftarrow> returnOk (lookup_pd_slot pd vptr);
-    returnOk $ Inr (SuperSectionPDE base (attrib - {Global}) vm_rights, [p, p + 4  .e.  p + 60])
+    returnOk $ Inr (SuperSectionPDE base (attrib - {Global}) vm_rights, map (\<lambda>x. x + p) superSectionPDE_offsets)
   odE"
 
 definition get_master_pde :: "word32 \<Rightarrow> (pde,'z::state_ext)s_monad"
@@ -206,7 +219,7 @@ invalidate_tlb_by_asid :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" wher
     maybe_hw_asid \<leftarrow> load_hw_asid asid;
     (case maybe_hw_asid of
           None \<Rightarrow> return ()
-        | Some hw_asid \<Rightarrow> do_machine_op $ invalidateTLB_ASID hw_asid)
+        | Some hw_asid \<Rightarrow> do_machine_op $ invalidateLocalTLB_ASID hw_asid)
 od"
 
 text {* Flush all cache and TLB entries associated with this virtual ASID. *}
@@ -217,7 +230,7 @@ flush_space :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
     do_machine_op cleanCaches_PoU;
     (case maybe_hw_asid of
           None \<Rightarrow> return ()
-        | Some hw_asid \<Rightarrow> do_machine_op $ invalidateTLB_ASID hw_asid)
+        | Some hw_asid \<Rightarrow> do_machine_op $ invalidateLocalTLB_ASID hw_asid)
 od"
 
 text {* Remove any mapping from this virtual ASID to a hardware ASID. *}
@@ -262,7 +275,7 @@ find_free_hw_asid :: "(hardware_asid,'z::state_ext) s_monad" where
        Some hw_asid \<Rightarrow> return hw_asid
      | None \<Rightarrow>  do
             invalidate_asid $ the $ hw_asid_table next_asid;
-            do_machine_op $ invalidateTLB_ASID next_asid;
+            do_machine_op $ invalidateLocalTLB_ASID next_asid;
             invalidate_hw_asid_entry next_asid;
             new_next_asid \<leftarrow> return (next_asid + 1);
             modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_next_asid := new_next_asid \<rparr>\<rparr>);
@@ -290,7 +303,7 @@ abbreviation
   "arm_context_switch_hwasid pd hwasid \<equiv> do
               setCurrentPD $ addrFromPPtr pd;
               setHardwareASID hwasid
-          od" 
+          od"
 
 definition
   arm_context_switch :: "word32 \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -403,7 +416,7 @@ flush_table :: "word32 \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow>
     maybe_hw_asid \<leftarrow> load_hw_asid asid;
     when (maybe_hw_asid \<noteq> None) $ do
       hw_asid \<leftarrow> return (the maybe_hw_asid);
-      do_machine_op $ invalidateTLB_ASID hw_asid;
+      do_machine_op $ invalidateLocalTLB_ASID hw_asid;
       when root_switched $ do
         tcb \<leftarrow> gets cur_thread;
         set_vm_root tcb
@@ -420,7 +433,7 @@ flush_page :: "vmpage_size \<Rightarrow> word32 \<Rightarrow> asid \<Rightarrow>
     maybe_hw_asid \<leftarrow> load_hw_asid asid;
     when (maybe_hw_asid \<noteq> None) $ do
       hw_asid \<leftarrow> return (the maybe_hw_asid);
-      do_machine_op $ invalidateTLB_VAASID (vptr || ucast hw_asid);
+      do_machine_op $ invalidateLocalTLB_VAASID (vptr || ucast hw_asid);
       when root_switched $ do
           tcb \<leftarrow> gets cur_thread;
           set_vm_root tcb
@@ -670,7 +683,7 @@ where
   "resolve_vaddr pd vaddr \<equiv> do
      pd_slot \<leftarrow> return $ lookup_pd_slot pd vaddr;
      pde \<leftarrow> get_master_pde pd_slot;
-     case pde of 
+     case pde of
          SectionPDE f _ _ _ \<Rightarrow> return $ Some (ARMSection, f)
        | SuperSectionPDE f _ _ \<Rightarrow> return $ Some (ARMSuperSection, f)
        | PageTablePDE t _ _ \<Rightarrow> (do
@@ -692,7 +705,7 @@ definition
   in_user_frame :: "word32 \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "in_user_frame p s \<equiv>
    \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) =
-        Some (ArchObj (DataPage False sz))"           
+        Some (ArchObj (DataPage False sz))"
 
 end
 end

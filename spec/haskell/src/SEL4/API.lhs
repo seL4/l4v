@@ -14,7 +14,7 @@
 >     module SEL4.API.Invocation,
 >     module SEL4.API.Syscall
 >     ) where
- 
+
 
 > import SEL4.API.Types
 > import SEL4.API.Failures

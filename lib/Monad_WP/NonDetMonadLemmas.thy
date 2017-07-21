@@ -18,7 +18,7 @@ subsection "Congruence Rules for the Function Package"
 
 lemma bind_cong[fundef_cong]:
   "\<lbrakk> f = f'; \<And>v s s'. (v, s') \<in> fst (f' s) \<Longrightarrow> g v s' = g' v s' \<rbrakk> \<Longrightarrow> f >>= g = f' >>= g'"
-  apply (rule ext) 
+  apply (rule ext)
   apply (auto simp: bind_def Let_def split_def intro: rev_image_eqI)
   done
 
@@ -39,7 +39,7 @@ lemma bindE_cong[fundef_cong]:
   done
 
 lemma bindE_apply_cong[fundef_cong]:
-  "\<lbrakk> f s = f' s'; \<And>rv st. (Inr rv, st) \<in> fst (f' s') \<Longrightarrow> g rv st = g' rv st \<rbrakk> 
+  "\<lbrakk> f s = f' s'; \<And>rv st. (Inr rv, st) \<in> fst (f' s') \<Longrightarrow> g rv st = g' rv st \<rbrakk>
   \<Longrightarrow> (f >>=E g) s = (f' >>=E g') s'"
   apply (simp add: bindE_def)
   apply (rule bind_apply_cong)

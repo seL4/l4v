@@ -13,7 +13,7 @@ theory jiraver443a
 begin
 
   install_C_file "jiraver443a.c"
-  
+
 context jiraver443a
 begin
 

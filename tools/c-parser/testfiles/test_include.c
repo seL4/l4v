@@ -10,7 +10,7 @@
 
 #include "test_include.h"
 
-int f(int x) 
+int f(int x)
 {
   return x + 3;
 }

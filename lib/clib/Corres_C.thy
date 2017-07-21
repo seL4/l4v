@@ -9,9 +9,9 @@
  *)
 
 theory Corres_C
-imports 
-	CCorresLemmas 
-	"../../proof/crefine/SR_lemmas_C"
+imports
+	CCorresLemmas
+	"../../proof/crefine/$L4V_ARCH/SR_lemmas_C"
 begin
 
 abbreviation
@@ -33,9 +33,9 @@ lemmas catchbrk_C_def = ccatchbrk_def
 (* This is to avoid typing this all the time \<dots> *)
 abbreviation (in kernel)
   "modifies_spec f \<equiv> \<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s} Call f {t. t may_not_modify_globals s}"
-  
+
 section "Error monad"
-  
+
 (* Dealing with THROW in a nice fashion --- it is always going to be catching break or skip at the end of the function.
    In retrospect, if ccatchbrk is always if ... then SKIP else THROW we are OK without the globals_update thing *)
 
@@ -77,12 +77,12 @@ lemma wfhandlers_skip:
     done
 
 lemmas wfhandlers_simps [simp] = wfhandlers_skip wfhandlers_ccatchbrk
-  
+
 lemma wfhandlersD:
   "\<lbrakk>wfhandlers hs; \<Gamma> \<turnstile>\<^sub>h \<langle>hs, s\<rangle> \<Rightarrow> (n, t); global_exn_var_' s = Return\<rbrakk> \<Longrightarrow> t = Normal s"
   unfolding wfhandlers_def by auto
 
-record 'b exxf = 
+record 'b exxf =
   exflag :: word32
   exstate :: errtype
   exvalue :: 'b
@@ -121,7 +121,7 @@ lemma ccorres_split_nothrowE:
                     (f' \<currency> r') (liftxf es ef' vf' xf')
                     P P' hs a c"
   and   ceqv: "\<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' d (d' rv')"
-  and     bd: "\<And>rv rv'. \<lbrakk> r' rv (vf' rv'); ef' rv' = scast EXCEPTION_NONE \<rbrakk> 
+  and     bd: "\<And>rv rv'. \<lbrakk> r' rv (vf' rv'); ef' rv' = scast EXCEPTION_NONE \<rbrakk>
             \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (Q rv) (Q' rv rv') hs (b rv) (d' rv')"
   and    err: "\<And>err rv' err'. \<lbrakk>ef' rv' \<noteq> scast EXCEPTION_NONE; f' err (ef' rv') err' \<rbrakk>
             \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (QE err) (Q'' err rv' err') hs
@@ -161,7 +161,7 @@ lemma ccorres_split_nothrow_novcgE:
                    (f' \<currency> r') (liftxf es ef' vf' xf')
                    P P' [] a c"
   and   ceqv: "\<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' d (d' rv')"
-  and     bd: "\<And>rv rv'. \<lbrakk> r' rv (vf' rv'); ef' rv' = scast EXCEPTION_NONE \<rbrakk> 
+  and     bd: "\<And>rv rv'. \<lbrakk> r' rv (vf' rv'); ef' rv' = scast EXCEPTION_NONE \<rbrakk>
                 \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (Q rv) (Q' rv rv') hs (b rv) (d' rv')"
   and    err: "\<And>err rv' err'. \<lbrakk> ef' rv' \<noteq> scast EXCEPTION_NONE; f' err (ef' rv') err' \<rbrakk>
                 \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf
@@ -195,7 +195,7 @@ lemma ccorres_split_nothrow_novcgE:
   done
 
 (* Unit would be more appropriate, but the record package will simplify xfdc to () *)
-definition 
+definition
   "xfdc (t :: cstate) \<equiv> (0 :: nat)"
 
 lemma xfdc_equal [simp]:
@@ -211,7 +211,7 @@ abbreviation
 lemma ccorres_return_C':
   assumes xfc: "\<And>s. (xf (global_exn_var_'_update (\<lambda>_. Return) (xfu (\<lambda>_. v s) s))) = v s"
   and     wfh: "wfhandlers hs"
-  and     srv: "\<And>s s'. (s, s') \<in> sr \<Longrightarrow> 
+  and     srv: "\<And>s s'. (s, s') \<in> sr \<Longrightarrow>
   (s, global_exn_var_'_update (\<lambda>_. Return) (xfu (\<lambda>_. v s') s')) \<in> sr"
   shows "ccorres_underlying sr \<Gamma> r rvxf arrel xf \<top> {s. arrel rv (v s)} hs
                (return rv) (return_C xfu v)"
@@ -264,7 +264,7 @@ lemma ccorres_return_C_errorE':
     \<top> {s. sf (v s) \<noteq> scast EXCEPTION_NONE \<and> f rv (sf (v s)) (es s)} hs
     (throwError rv) (return_C xfu v)"
   using wfh
-  unfolding creturn_def 
+  unfolding creturn_def
   apply -
   apply (rule ccorresI')
   apply (erule exec_handlers.cases)
@@ -288,8 +288,8 @@ abbreviation
 
 lemma ccorres_basic_srnoop:
   assumes asm: "ccorres_underlying rf_sr Gamm r xf arrel axf G G' hs a c"
-  and   gsr: "\<And>s'. globals (g s') = globals s'" 
-  and   gG: "\<And>s'. s' \<in> G' \<Longrightarrow> g s' \<in> G'" 
+  and   gsr: "\<And>s'. globals (g s') = globals s'"
+  and   gG: "\<And>s'. s' \<in> G' \<Longrightarrow> g s' \<in> G'"
   shows "ccorres_underlying rf_sr Gamm r xf arrel axf G G' hs a (Basic g ;; c)"
   using asm unfolding rf_sr_def
   apply (rule ccorres_basic_srnoop)
@@ -298,7 +298,7 @@ lemma ccorres_basic_srnoop:
   done
 
 lemma ccorres_basic_srnoop2:
-  assumes gsr: "\<And>s'. globals (g s') = globals s'" 
+  assumes gsr: "\<And>s'. globals (g s') = globals s'"
   assumes asm: "ccorres_underlying rf_sr Gamm r xf arrel axf G G' hs a c"
   shows "ccorres_underlying rf_sr Gamm r xf arrel axf G {s. g s \<in> G'} hs a (Basic g ;; c)"
   apply (rule ccorres_guard_imp2)
@@ -356,7 +356,7 @@ lemma ccorres_call_record:
            A {s. i s \<in> C'} hs a (call i f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>)
         (\<lambda>_ t. Basic (xfu' (\<lambda>_. xfru (\<lambda>_. xf'' t) oldv))))"
   apply (rule ccorres_call)
-     apply (rule cul) 
+     apply (rule cul)
     apply (rule ggl)
    apply (simp add: xfrxfru xfxfu)
   apply (rule igl)
@@ -373,9 +373,9 @@ lemma ccorres_split_nothrow_call_novcg:
   and   ceqv: "\<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' d (d' rv')"
   and     bd: "\<And>rv rv'. r' rv rv' \<Longrightarrow> ccorres_underlying rf_sr \<Gamma> r xf arrel axf (Q rv) (Q' rv rv') hs (b rv) (d' rv')"
   and  valid: "\<lbrace>R\<rbrace> a \<lbrace>Q\<rbrace>"
-  shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf (P and R) ({s. i s \<in> P'} \<inter> 
+  shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf (P and R) ({s. i s \<in> P'} \<inter>
              {s'. (\<forall>t rv. r' rv (xf'' t) \<longrightarrow> g s' t (s'\<lparr>globals := globals t\<rparr>) \<in> Q' rv (xf'' t))})
-            hs (a >>= (\<lambda>rv. b rv)) 
+            hs (a >>= (\<lambda>rv. b rv))
          (call i f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>x y. Basic (g x y)) ;; d)" (is "ccorres_underlying rf_sr \<Gamma> r xf arrel axf ?P (?Q1 \<inter> ?Q2) hs ?A ?B")
   apply (rule ccorres_master_split_nohs)
      apply (rule ccorres_call [OF ac])
@@ -402,7 +402,7 @@ lemma errstate_state_update [simp]:
   assumes f: "\<And>s. current_fault_' (globals (g s)) = current_fault_' (globals s)"
   and    lf: "\<And>s. current_lookup_fault_' (globals (g s)) = current_lookup_fault_' (globals s)"
   and    se: "\<And>s. current_syscall_error_' (globals (g s)) = current_syscall_error_' (globals s)"
-  shows  "errstate (g s) = errstate s"  
+  shows  "errstate (g s) = errstate s"
   by (simp add: f lf se errstate_def)
 
 lemma ccorres_split_nothrow_call_novcgE:
@@ -421,7 +421,7 @@ lemma ccorres_split_nothrow_call_novcgE:
   shows "ccorres_underlying rf_sr \<Gamma> (fl \<currency> r) xf arrel axf (P and R) ({s. i s \<in> P'} \<inter>
   {s. \<forall>t.  (ef' (xf'' t) = scast EXCEPTION_NONE \<longrightarrow> (\<forall>rv. r' rv (vf' (xf'' t)) \<longrightarrow> g s t (s\<lparr>globals := globals t\<rparr>) \<in> Q' rv (xf'' t))) \<and>
             (ef' (xf'' t) \<noteq> scast EXCEPTION_NONE \<longrightarrow>
-              (\<forall>err. f' err (ef' (xf'' t)) (errstate t) \<longrightarrow> g s t (s\<lparr>globals := globals t\<rparr>) \<in> Q'' err (xf'' t) (errstate t)))}  
+              (\<forall>err. f' err (ef' (xf'' t)) (errstate t) \<longrightarrow> g s t (s\<lparr>globals := globals t\<rparr>) \<in> Q'' err (xf'' t) (errstate t)))}
   ) hs (a >>=E b) (call i f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>x y. Basic (g x y));;
  d)" (is "ccorres_underlying rf_sr \<Gamma> ?r ?xf arrel axf ?P (?Q1 \<inter> ?Q2) hs ?A ?B")
   unfolding bindE_def
@@ -459,11 +459,11 @@ lemma ccorres_split_nothrow_call_record:
   and      ggl: "\<And>f s. globals (xfu' f s) = globals s"
   and    xfxfu: "\<And>v s. xf' (xfu' (\<lambda>_. v) s) = v"
   and  xfrxfru: "\<And>v s. xfr (xfru (\<lambda>_. v) s) = v"
-  and      igl: "\<And>s. globals (i s) = globals s"  
+  and      igl: "\<And>s. globals (i s) = globals s"
   and  valid: "\<lbrace>R\<rbrace> a \<lbrace>Q\<rbrace>"
   and  valid': "\<Gamma> \<turnstile>\<^bsub>/F\<^esub> R' call i f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>_ t. Basic (xfu' (\<lambda>_. xfru (\<lambda>_. xf'' t) oldv)))
-       {s. xf' s = xfru (\<lambda>_. (xfr \<circ> xf') s) oldv \<and> (\<forall>rv. r' rv ((xfr \<circ> xf') s) \<longrightarrow> s \<in> Q' rv ((xfr \<circ> xf') s))}"   
-  shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf (P and R) ({s. i s \<in> P'} \<inter> R') hs (a >>= (\<lambda>rv. b rv)) (call i f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) 
+       {s. xf' s = xfru (\<lambda>_. (xfr \<circ> xf') s) oldv \<and> (\<forall>rv. r' rv ((xfr \<circ> xf') s) \<longrightarrow> s \<in> Q' rv ((xfr \<circ> xf') s))}"
+  shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf (P and R) ({s. i s \<in> P'} \<inter> R') hs (a >>= (\<lambda>rv. b rv)) (call i f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>)
                 (\<lambda>_ t. Basic (xfu' (\<lambda>_. xfru (\<lambda>_. xf'' t) oldv))) ;; d)"
   using ac ggl xfxfu xfrxfru igl ceqv
   apply (rule  ccorres_split_nothrow_record [OF ccorres_call_record])
@@ -479,12 +479,12 @@ lemma ccorres_split_nothrow_call_record_novcg:
   and      ggl: "\<And>f s. globals (xfu' f s) = globals s"
   and    xfxfu: "\<And>v s. xf' (xfu' (\<lambda>_. v) s) = v"
   and  xfrxfru: "\<And>v s. xfr (xfru (\<lambda>_. v) s) = v"
-  and      igl: "\<And>s. globals (i s) = globals s"  
+  and      igl: "\<And>s. globals (i s) = globals s"
   and  valid: "\<lbrace>R\<rbrace> a \<lbrace>Q\<rbrace>"
   and  novcg: "guard_is_UNIV r' (xfr \<circ> xf') Q'"
-  -- "This might cause problems \<dots> has to be preserved across c in vcg case, but we can't do that"  
-  and xfoldv: "\<And>s. xf' s = xfru (\<lambda>_. (xfr \<circ> xf') s) oldv" 
-  shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf (P and R) ({s. i s \<in> P'}) hs (a >>= (\<lambda>rv. b rv)) (call i f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) 
+  -- "This might cause problems \<dots> has to be preserved across c in vcg case, but we can't do that"
+  and xfoldv: "\<And>s. xf' s = xfru (\<lambda>_. (xfr \<circ> xf') s) oldv"
+  shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf (P and R) ({s. i s \<in> P'}) hs (a >>= (\<lambda>rv. b rv)) (call i f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>)
                 (\<lambda>_ t. Basic (xfu' (\<lambda>_. xfru (\<lambda>_. xf'' t) oldv))) ;; d)"
   using ac ggl xfxfu xfrxfru igl ceqv
   apply (rule  ccorres_split_nothrow_record_novcg [OF ccorres_call_record])
@@ -524,7 +524,7 @@ lemma ccorres_return_CE:
 lemma ccorres_return_C_errorE:
   assumes xfc: "\<And>s. xf (global_exn_var_'_update (\<lambda>_. Return) (xfu (\<lambda>_. v s) s)) = v s"
   and     esc: "\<And>s. es (global_exn_var_'_update (\<lambda>_. Return) (xfu (\<lambda>_. v s) s)) = es s"
-  and     xfu: "\<And>s f. globals (xfu f s) = globals s"  
+  and     xfu: "\<And>s f. globals (xfu f s) = globals s"
   and     wfh: "wfhandlers hs"
   shows   "ccorres_underlying rf_sr \<Gamma> rvr rvxf (f \<currency> r) (liftxf es sf vf xf)
     \<top> {s. sf (v s) \<noteq> scast EXCEPTION_NONE \<and> f rv (sf (v s)) (es s)} hs
@@ -551,11 +551,11 @@ lemma ccorres_noop:
      apply (rule nop)
     apply clarsimp
     apply (erule iffD1 [OF rf_sr_upd, rotated -1])
-    apply (clarsimp simp: meq_def mex_def)+  
+    apply (clarsimp simp: meq_def mex_def)+
   done
-  
+
 lemma ccorres_noop_spec:
-  assumes  s: "\<forall>s. \<Gamma> \<turnstile> (P s) c (R s), (A s)"  
+  assumes  s: "\<forall>s. \<Gamma> \<turnstile> (P s) c (R s), (A s)"
   and    nop: "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/F\<^esub> {s} c {t. t may_not_modify_globals s}"
   shows "ccorres_underlying rf_sr \<Gamma> dc xf arrel axf \<top> {s. s \<in> P s} hs (return ()) c"
   apply (rule ccorres_from_vcg, rule allI, simp add: return_def)
@@ -567,7 +567,7 @@ lemma ccorres_noop_spec:
    apply (rule HoarePartialProps.Merge_PostConj)
       apply (rule_tac P = "{s} \<inter> P s" in conseqPre)
       apply (rule_tac x = s in spec [OF s])
-       apply clarsimp     
+       apply clarsimp
      apply (rule_tac x = s in spec [OF nop])
     apply simp
    apply clarsimp
@@ -625,7 +625,7 @@ lemma fd_cons_update_accessD:
 
 lemma fd_cons_access_updateD:
   "\<lbrakk> fd_cons_access_update d n; length bs = n; length bs' = n\<rbrakk> \<Longrightarrow> field_access d (field_update d bs v) bs' = field_access d (field_update d bs v') bs'"
-  unfolding fd_cons_access_update_def by clarsimp 
+  unfolding fd_cons_access_update_def by clarsimp
 
 context kernel
 begin
@@ -635,24 +635,24 @@ begin
 lemma cte_C_cap_C_tcb_C':
   fixes val :: "cap_C" and ptr :: "cte_C ptr"
   assumes cl: "clift hp ptr = Some z"
-  shows "(clift (hrs_mem_update (heap_update (Ptr &(ptr\<rightarrow>[''cap_C''])) val) hp)) = 
+  shows "(clift (hrs_mem_update (heap_update (Ptr &(ptr\<rightarrow>[''cap_C''])) val) hp)) =
   (clift hp :: tcb_C typ_heap)"
-  using cl 
+  using cl
   by (simp add: typ_heap_simps)
-   
+
 lemma cte_C_cap_C_update:
   fixes val :: "cap_C" and ptr :: "cte_C ptr"
   assumes  cl: "clift hp ptr = Some z"
-  shows "(clift (hrs_mem_update (heap_update (Ptr &(ptr\<rightarrow>[''cap_C''])) val) hp)) = 
+  shows "(clift (hrs_mem_update (heap_update (Ptr &(ptr\<rightarrow>[''cap_C''])) val) hp)) =
   clift hp(ptr \<mapsto> cte_C.cap_C_update (\<lambda>_. val) z)"
-  using cl 
+  using cl
   by (simp add: clift_field_update)
 
 abbreviation
   "modifies_heap_spec f \<equiv> \<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s} Call f {t. t may_only_modify_globals s in [t_hrs]}"
 
 (* Used for bitfield lemmas.  Note that this doesn't follow the usual schematic merging: we generally need concrete G and G' *)
-lemma ccorres_from_spec_modifies_heap: 
+lemma ccorres_from_spec_modifies_heap:
   assumes spec: "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. P s\<rbrace> Call f {t. Q s t}"
   and      mod: "modifies_heap_spec f"
   and      xfg: "\<And>f s. xf (globals_update f s) = xf s"
@@ -661,10 +661,10 @@ lemma ccorres_from_spec_modifies_heap:
             \<Longrightarrow> \<exists>(rv, t) \<in> fst (a s).
                   (t, t'\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t')\<rparr>\<rparr>) \<in> rf_sr
                        \<and> r rv (xf t')"
-  shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf G G' [] a (Call f)" 
+  shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf G G' [] a (Call f)"
   apply (rule ccorres_Call_call_for_vcg)
    apply (rule ccorres_from_vcg)
-   apply (rule allI, rule conseqPre)   
+   apply (rule allI, rule conseqPre)
    apply (rule HoarePartial.ProcModifyReturnNoAbr
                     [where return' = "\<lambda>s t. t\<lparr> globals := globals s\<lparr>t_hrs_' := t_hrs_' (globals t) \<rparr>\<rparr>"])
      apply (rule HoarePartial.ProcSpecNoAbrupt [OF _ _ spec])
@@ -675,7 +675,7 @@ lemma ccorres_from_spec_modifies_heap:
    apply (clarsimp simp: mex_def meq_def)
   apply (clarsimp simp: split_beta Pimp)
   apply (subst bex_cong [OF refl])
-   apply (rule arg_cong2 [where f = "op \<and>"])    
+   apply (rule arg_cong2 [where f = "op \<and>"])
   apply (rule_tac y = "t\<lparr>globals := globals x\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>" in rf_sr_upd, simp_all)
   apply (drule (3) rl)
   apply (clarsimp simp: xfg elim!: bexI [rotated])
@@ -685,14 +685,14 @@ lemma ccorres_from_spec_modifies_heap:
 lemma ccorres_from_spec_modifies:
   assumes spec: "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. P s\<rbrace> Call f {t. Q s t}"
   and      mod: "modifies_spec f"
-  and      xfg: "\<And>f s. xf (globals_update f s) = xf s"  
-  and    Pimp: "\<And>s s'. \<lbrakk> G s; s' \<in> G'; (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow> P s'"  
+  and      xfg: "\<And>f s. xf (globals_update f s) = xf s"
+  and    Pimp: "\<And>s s'. \<lbrakk> G s; s' \<in> G'; (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow> P s'"
   and     rl: "\<And>s s' t'. \<lbrakk>G s; s' \<in> G'; (s, s') \<in> rf_sr; Q s' t'\<rbrakk>
                  \<Longrightarrow> \<exists>(rv, t) \<in> fst (a s). (t, s') \<in> rf_sr \<and> r rv (xf t')"
   shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf G G' [] a (Call f)"
   apply (rule ccorres_Call_call_for_vcg)
    apply (rule ccorres_from_vcg)
-   apply (rule allI, rule conseqPre)   
+   apply (rule allI, rule conseqPre)
    apply (rule HoarePartial.ProcModifyReturnNoAbr
              [where return' = "\<lambda>s t. t\<lparr> globals := globals s \<rparr>"])
      apply (rule HoarePartial.ProcSpecNoAbrupt [OF _ _ spec])
@@ -703,7 +703,7 @@ lemma ccorres_from_spec_modifies:
    apply (clarsimp simp: mex_def meq_def)
   apply (clarsimp simp: split_beta Pimp)
   apply (subst bex_cong [OF refl])
-   apply (rule arg_cong2 [where f = "op \<and>"])    
+   apply (rule arg_cong2 [where f = "op \<and>"])
   apply (rule_tac y = "x" in rf_sr_upd, simp_all)
   apply (drule (3) rl)
   apply (clarsimp simp: xfg elim!: bexI [rotated])
@@ -712,9 +712,9 @@ lemma ccorres_from_spec_modifies:
 lemma ccorres_trim_return:
   assumes fg: "\<And>s. xfu (\<lambda>_. axf s) s = s"
   and    xfu: "\<And>f s. axf (global_exn_var_'_update f s) = axf s"
-  and     cc: "ccorres_underlying rf_sr \<Gamma> arrel axf arrel axf G G' (SKIP # hs) a c"  
+  and     cc: "ccorres_underlying rf_sr \<Gamma> arrel axf arrel axf G G' (SKIP # hs) a c"
   shows "ccorres_underlying rf_sr \<Gamma> r xf arrel axf G G' (SKIP # hs) a (c ;; return_C xfu axf)"
-  using fg unfolding creturn_def 
+  using fg unfolding creturn_def
   apply -
   apply (rule ccorres_rhs_assoc2)+
   apply (rule ccorres_trim_redundant_throw)
@@ -735,7 +735,7 @@ lemma ccorres_trim_returnE:
   assumes fg: "\<And>s. xfu (\<lambda>_. axf s) s = s"
   and    xfu: "\<And>f s. axf (global_exn_var_'_update f s) = axf s"
   and     cc: "ccorres r (liftxf errstate ef vf axf)
-                    G G' (SKIP # hs) a c"  
+                    G G' (SKIP # hs) a c"
   shows "ccorres_underlying rf_sr \<Gamma> rvr rvxf r (liftxf errstate ef vf axf)
                     G G' (SKIP # hs) a (c ;; return_C xfu axf)"
   unfolding creturn_def
@@ -766,7 +766,7 @@ lemma ccorres_sequence_while_genQ:
   and       j: "j > 0"
   shows  "ccorres (\<lambda>rv (i', rv'). r' rv rv' \<and> i' = of_nat (i + length xs * of_nat j))
                   (\<lambda>s. (xf s, xf' s))
-                  (\<lambda>s. P 0 \<longrightarrow> F 0 s) ({s. xf s = of_nat i \<and> r' [] (xf' s)} \<inter> Q) hs   
+                  (\<lambda>s. P 0 \<longrightarrow> F 0 s) ({s. xf s = of_nat i \<and> r' [] (xf' s)} \<inter> Q) hs
                   (sequence xs)
                   (While {s. P (xf s)}
                      (body ;; Basic (\<lambda>s. xf_update (\<lambda>_. xf s + of_nat j) s)))"
@@ -793,7 +793,7 @@ lemma ccorres_sequence_while_gen':
   and       j: "j > 0"
   shows  "ccorres (\<lambda>rv (i', rv'). r' rv rv' \<and> i' = of_nat (i + length xs * of_nat j))
                   (\<lambda>s. (xf s, xf' s))
-                  (F 0) ({s. xf s = of_nat i \<and> r' [] (xf' s)}) hs   
+                  (F 0) ({s. xf s = of_nat i \<and> r' [] (xf' s)}) hs
                   (sequence xs)
                   (While {s. P (xf s)}
                      (body ;; Basic (\<lambda>s. xf_update (\<lambda>_. xf s + of_nat j) s)))"
@@ -1047,13 +1047,13 @@ lemma ccorres_sequenceE_while_gen_either_way:
 proof -
   def init_xs \<equiv> xs
 
-  have rl: "xs = drop (length init_xs - length xs) init_xs" unfolding init_xs_def 
+  have rl: "xs = drop (length init_xs - length xs) init_xs" unfolding init_xs_def
     by fastforce
-    
+
   note pn' = pn [folded init_xs_def]
   note one' = one [folded init_xs_def]
   note hi'  = hi [folded init_xs_def]
-  
+
   let ?Q  = "\<lambda>xs. F (length init_xs - length xs)"
   let ?Q' = "\<lambda>xs zs. Q \<inter> {s. (xf s) = xfrel (length init_xs - length xs)
                          \<and> r' zs (xf' s)}"
@@ -1080,10 +1080,10 @@ proof -
     case (Cons y ys)
 
     from Cons.prems have ly: "length (y # ys) \<le> length init_xs" by simp
-    hence ln: "(length init_xs - length ys) = Suc (length init_xs - length (y # ys))"  by simp      
+    hence ln: "(length init_xs - length ys) = Suc (length init_xs - length (y # ys))"  by simp
     hence yv: "y = init_xs ! (length init_xs - length (y # ys))" using Cons.prems
       by (fastforce simp add: drop_Suc_nth not_le)
-    
+
     have lt0: "0 < length init_xs" using ly by clarsimp
     hence ly': "length init_xs - length (y # ys) < length init_xs" by simp
 
@@ -1093,9 +1093,9 @@ proof -
       using ln Cons.prems
         by (fastforce simp add: drop_Suc_nth not_le)
     note ih = Cons.hyps [OF ys_eq, rule_format]
-  
+
     note hi'' = hi' [OF ly', folded yv]
-    
+
     show ?case
       apply (clarsimp simp: sequenceE_Cons)
       apply (rule ccorres_guard_imp2)

@@ -129,12 +129,12 @@ It is the responsibility of each of the two
 threads involved, and their pagers, to ensure that their message buffers are
 present when an IPC transfer occurs. Pagers will typically consider pages
 containing these buffers to be pinned, and never unmap them while a thread is
-running, unless that thread is expected to be able to handle the resulting 
+running, unless that thread is expected to be able to handle the resulting
 truncation of all of its messages.
 
 \subsubsection{Capability Registers}
 
-The message words can be used to transfer arbitrary untyped data. However, since seL4 capabilities are opaque to user threads, a user thread cannot use message words to transfer capabilities to another thread. The kernel provides a small number of \emph{capability registers} in the IPC buffer; if there are valid capability pointers in those registers, and the sender indicates that the message includes capabilities, then the kernel will send the capabilities along with the message. There are two slightly different motivations for sending a capability along with a message; are two corresponding mechanisms for receiving them at the other end. 
+The message words can be used to transfer arbitrary untyped data. However, since seL4 capabilities are opaque to user threads, a user thread cannot use message words to transfer capabilities to another thread. The kernel provides a small number of \emph{capability registers} in the IPC buffer; if there are valid capability pointers in those registers, and the sender indicates that the message includes capabilities, then the kernel will send the capabilities along with the message. There are two slightly different motivations for sending a capability along with a message; are two corresponding mechanisms for receiving them at the other end.
 
 An obvious reason to send a capability is to allow the receiver to invoke it in future. For example, a client may send a notification capability to a server, to be used for notifications when asynchronous operations complete; or a server may return a capability representing a newly created object. For such capabilities, the receiver must specify a CSpace slot that the capability can be copied into; this is done by setting fields in the IPC buffer that correspond to the destination arguments of a CNode Copy operation (see \autoref{sec:overview.cspace.cnodes}).
 
@@ -358,7 +358,7 @@ capability to the root CNode.
 The capability table is constructed by copying a capability to the root CNode
 into the TCB's root slot, capabilities to lower-level CNodes into the root
 CNode's slots, and so on. The number of address bits resolved by each CNode
-depends on the node's size and on the number of \emph{guard bits} of the CNode. 
+depends on the node's size and on the number of \emph{guard bits} of the CNode.
 A capability will appear in the user thread's CSpace when it can be reached by
 translating address bits starting at the page table root capability.
 
@@ -462,7 +462,7 @@ send messages. If an endpoint capability that does not have this right is used t
 
 Newly created capabilities have all rights. They may be reduced when performing
 Copy, Mint or Move operations, either via a CSpace invocation or a capability
-transfer IPC. 
+transfer IPC.
 
 \section{Faults and Exceptions}\label{sec:overview.faults}
 
@@ -518,11 +518,11 @@ different locations in VSpace without possessing an appropriate capability.
 In some situations, it is appropriate to provide an asynchronous notification
 of an event. The kernel provides a \emph{signal} operation for this
 purpose. It is implemented using \emph{notification} objects, which
-contain a fixed size buffer of two machine words -- identifier and message word. 
+contain a fixed size buffer of two machine words -- identifier and message word.
 Each notification capability is marked with a badge, which is set when
 the capability is created. A thread may perform \emph{Send} or \emph{Recv}
 operations on a notification, by invoking the corresponding
-capability. 
+capability.
 
 When a Send operation is performed, the badge of the invoked capability is bitwise ORed with the corresponding values in the
 endpoint to produce its new contents. This operation is guaranteed not to block
@@ -530,7 +530,7 @@ a sufficiently authorised sender, even if there is no thread waiting to receive
 the message. The Recv operation, on the other hand, can be blocking --- unless the operation is specifically non-blocking, if the
 buffer is empty, the thread is blocked until a message arrives. However, in
 case of a non-empty buffer, the Recv operation will read the contents of the
-buffer, reset it to zero, and returns the value immediately. 
+buffer, reset it to zero, and returns the value immediately.
 
 Similar to synchronous endpoints, multiple threads may perform Signal or Recv
 operations on the same notification. When there are multiple messages
@@ -545,30 +545,30 @@ is not specified, but typically will be first in, first out order.
 
 \section{Interrupts}\label{sec:overview.interrupts}
 
-Interrupt handling in seL4 is performed using two special types of kernel 
+Interrupt handling in seL4 is performed using two special types of kernel
 capability. These capabilities cannot be created using the Retype operation,
 because they do not represent dynamically allocated memory resources.
 
-The system has a single global \emph{IRQ control} capability, which is provided 
+The system has a single global \emph{IRQ control} capability, which is provided
 to the initial user-level task at boot time. Copies of this capability may be
 made in the usual fashion, but every copy permits access to the same global
 state.
 
 The IRQ control capability is used to create \emph{IRQ handler} capabilities.
-Each IRQ handler capability refers to a single hardware IRQ line, specified when 
+Each IRQ handler capability refers to a single hardware IRQ line, specified when
 the capability is created; creation only succeeds if the specified IRQ is valid
 and has no existing handler (including any internal handler in the kernel, such
 as for the timer interrupt).
 
-The IRQ handler capability is used to set the mechanism used by the kernel for 
-dispatching interrupts on the corresponding IRQ line, and to enable and disable 
+The IRQ handler capability is used to set the mechanism used by the kernel for
+dispatching interrupts on the corresponding IRQ line, and to enable and disable
 the IRQ. The capability's IRQ is enabled when a delivery mechanism is set, or
 when the \emph{Ack} operation is performed. It is masked when the last handler
 capability for the IRQ is deleted, when an interrupt is delivered, or when the
 delivery mechanism becomes invalid (due to a \emph{Clear} operation on the IRQ
 handler capability, or revocation of a capability required for delivery).
 
-In the present Haskell implementation, only one delivery mechanism is supported: 
+In the present Haskell implementation, only one delivery mechanism is supported:
 delivery via signal to a specified notification. This may be complemented
 or replaced by a callback-based delivery model in future versions or
 real-hardware implementations.

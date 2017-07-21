@@ -7,7 +7,7 @@
 (*  Title:      HoarePartialProps.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2004-2008 Norbert Schirmer 
+Copyright (C) 2004-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -32,7 +32,7 @@ theory HoarePartialProps imports HoarePartialDef begin
 
 subsection \<open>Soundness\<close>
 
-lemma hoare_cnvalid: 
+lemma hoare_cnvalid:
  assumes hoare: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
  shows "\<And>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
 using hoare
@@ -54,7 +54,7 @@ next
     thus "t \<in> Normal ` P \<union> Abrupt ` A"
       by cases auto
   qed
-next 
+next
   case (Spec \<Theta> F r Q A)
   show "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> {s. (\<forall>t. (s, t) \<in> r \<longrightarrow> t \<in> Q) \<and> (\<exists>t. (s, t) \<in> r)} Spec r Q,A"
   proof (rule cnvalidI)
@@ -74,7 +74,7 @@ next
     fix s t
     assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
     assume exec: "\<Gamma>\<turnstile>\<langle>Seq c1 c2,Normal s\<rangle> =n\<Rightarrow> t"
-    assume t_notin_F: "t \<notin> Fault ` F" 
+    assume t_notin_F: "t \<notin> Fault ` F"
     assume P: "s \<in> P"
     from exec P obtain r where
       exec_c1: "\<Gamma>\<turnstile>\<langle>c1,Normal s\<rangle> =n\<Rightarrow> r" and exec_c2:  "\<Gamma>\<turnstile>\<langle>c2,r\<rangle> =n\<Rightarrow> t"
@@ -115,20 +115,20 @@ next
     assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
     assume exec: "\<Gamma>\<turnstile>\<langle>Cond b c1 c2,Normal s\<rangle> =n\<Rightarrow> t"
     assume P: "s \<in> P"
-    assume t_notin_F: "t \<notin> Fault ` F" 
+    assume t_notin_F: "t \<notin> Fault ` F"
     show "t \<in> Normal ` Q \<union> Abrupt ` A"
     proof (cases "s\<in>b")
       case True
       with exec have "\<Gamma>\<turnstile>\<langle>c1,Normal s\<rangle> =n\<Rightarrow> t"
         by cases auto
-      with P True 
+      with P True
       show ?thesis
         by - (rule cnvalidD [OF valid_c1 ctxt _ _ t_notin_F],auto)
     next
       case False
       with exec P have "\<Gamma>\<turnstile>\<langle>c2,Normal s\<rangle> =n\<Rightarrow> t"
         by cases auto
-      with P False 
+      with P False
       show ?thesis
         by - (rule cnvalidD [OF valid_c2 ctxt _ _ t_notin_F],auto)
     qed
@@ -142,12 +142,12 @@ next
     assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
     assume exec: "\<Gamma>\<turnstile>\<langle>While b c,Normal s\<rangle> =n\<Rightarrow> t"
     assume P: "s \<in> P"
-    assume t_notin_F: "t \<notin> Fault ` F" 
+    assume t_notin_F: "t \<notin> Fault ` F"
     show "t \<in> Normal ` (P \<inter> - b) \<union> Abrupt ` A"
     proof (cases "s \<in> b")
       case True
       {
-        fix d::"('b,'a,'c) com" fix s t 
+        fix d::"('b,'a,'c) com" fix s t
         assume exec: "\<Gamma>\<turnstile>\<langle>d,s\<rangle> =n\<Rightarrow> t"
         assume d: "d=While b c"
         assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
@@ -180,14 +180,14 @@ next
             case (Abrupt r')
             have "\<Gamma>\<turnstile>\<langle>While b' c',r\<rangle> =n\<Rightarrow> t" by fact
             with Abrupt have "t=r"
-              by (auto dest: execn_Abrupt_end) 
+              by (auto dest: execn_Abrupt_end)
             with r Abrupt show ?thesis
               by blast
           next
             case Fault with r show ?thesis by blast
           next
             case Stuck with r show ?thesis by blast
-          qed   
+          qed
         qed auto
       }
       with exec ctxt P t_notin_F
@@ -270,7 +270,7 @@ next
         have "\<forall>(P, p, Q, A)\<in>?\<Theta>'. \<Gamma> \<Turnstile>m:\<^bsub>/F\<^esub> P (Call p) Q,A"
           by fastforce
         with valid_body
-        have valid_body_m: 
+        have valid_body_m:
           "\<forall>(P,p,Q,A) \<in>Specs. \<forall>n. \<Gamma> \<Turnstile>m:\<^bsub>/F\<^esub> P (the (\<Gamma> p)) Q,A"
           by (fastforce simp add: cnvalid_def)
         show "\<forall>(P,p,Q,A) \<in>Specs. \<Gamma> \<Turnstile>Suc m:\<^bsub>/F\<^esub> P (Call p) Q,A"
@@ -279,14 +279,14 @@ next
           show "\<Gamma> \<Turnstile>Suc m:\<^bsub>/F\<^esub> P (Call p) Q,A"
           proof (rule nvalidI)
             fix s t
-            assume exec_call: 
+            assume exec_call:
               "\<Gamma>\<turnstile>\<langle>Call p,Normal s\<rangle> =Suc m\<Rightarrow> t"
             assume Pre: "s \<in> P"
             assume t_notin_F: "t \<notin> Fault ` F"
             from exec_call
             show "t \<in> Normal ` Q \<union> Abrupt ` A"
             proof (cases)
-              fix bdy m' 
+              fix bdy m'
               assume m: "Suc m = Suc m'"
               assume bdy: "\<Gamma> p = Some bdy"
               assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal s\<rangle> =m'\<Rightarrow> t"
@@ -312,12 +312,12 @@ next
   proof (rule cnvalidI)
     fix s t
     assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
-    assume exec: "\<Gamma>\<turnstile>\<langle>DynCom c,Normal s\<rangle> =n\<Rightarrow> t" 
+    assume exec: "\<Gamma>\<turnstile>\<langle>DynCom c,Normal s\<rangle> =n\<Rightarrow> t"
     assume P: "s \<in> P"
     assume t_notin_Fault: "t \<notin> Fault ` F"
     from exec show "t \<in> Normal ` Q \<union> Abrupt ` A"
     proof (cases)
-      assume "\<Gamma>\<turnstile>\<langle>c s,Normal s\<rangle> =n\<Rightarrow> t"      
+      assume "\<Gamma>\<turnstile>\<langle>c s,Normal s\<rangle> =n\<Rightarrow> t"
       from cnvalidD [OF valid_c [rule_format, OF P] ctxt this P t_notin_Fault]
       show ?thesis .
     qed
@@ -339,24 +339,24 @@ next
   proof (rule cnvalidI)
     fix s t
     assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
-    assume exec: "\<Gamma>\<turnstile>\<langle>Catch c\<^sub>1 c\<^sub>2,Normal s\<rangle> =n\<Rightarrow> t" 
+    assume exec: "\<Gamma>\<turnstile>\<langle>Catch c\<^sub>1 c\<^sub>2,Normal s\<rangle> =n\<Rightarrow> t"
     assume P: "s \<in> P"
     assume t_notin_Fault: "t \<notin> Fault ` F"
     from exec show "t \<in> Normal ` Q \<union> Abrupt ` A"
     proof (cases)
       fix s'
-      assume exec_c1: "\<Gamma>\<turnstile>\<langle>c\<^sub>1,Normal s\<rangle> =n\<Rightarrow> Abrupt s'" 
+      assume exec_c1: "\<Gamma>\<turnstile>\<langle>c\<^sub>1,Normal s\<rangle> =n\<Rightarrow> Abrupt s'"
       assume exec_c2: "\<Gamma>\<turnstile>\<langle>c\<^sub>2,Normal s'\<rangle> =n\<Rightarrow> t"
-      from cnvalidD [OF valid_c1 ctxt exec_c1 P ] 
+      from cnvalidD [OF valid_c1 ctxt exec_c1 P ]
       have "Abrupt s' \<in> Abrupt ` R"
         by auto
       with cnvalidD [OF valid_c2 ctxt _ _ t_notin_Fault] exec_c2
       show ?thesis
         by fastforce
     next
-      assume exec_c1: "\<Gamma>\<turnstile>\<langle>c\<^sub>1,Normal s\<rangle> =n\<Rightarrow> t" 
+      assume exec_c1: "\<Gamma>\<turnstile>\<langle>c\<^sub>1,Normal s\<rangle> =n\<Rightarrow> t"
       assume notAbr: "\<not> isAbr t"
-      from cnvalidD [OF valid_c1 ctxt exec_c1 P t_notin_Fault] 
+      from cnvalidD [OF valid_c1 ctxt exec_c1 P t_notin_Fault]
       have "t \<in> Normal ` Q \<union> Abrupt ` R" .
       with notAbr
       show ?thesis
@@ -381,7 +381,7 @@ next
         spec: "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P' c Q',A'" and
         P': "s \<in> P'"  and  strengthen: "Q' \<subseteq> Q \<and> A' \<subseteq> A"
         by auto
-      from spec [rule_format] ctxt exec P' t_notin_F  
+      from spec [rule_format] ctxt exec P' t_notin_F
       have "t \<in> Normal ` Q' \<union> Abrupt ` A'"
         by (rule cnvalidD)
       with strengthen show ?thesis
@@ -414,37 +414,37 @@ theorem hoare_sound: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A \<
 subsection \<open>Completeness\<close>
 
 lemma MGT_valid:
-"\<Gamma>\<Turnstile>\<^bsub>/F\<^esub>{s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union>  Fault ` (-F))} c 
+"\<Gamma>\<Turnstile>\<^bsub>/F\<^esub>{s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union>  Fault ` (-F))} c
    {t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Normal t}, {t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
-proof (rule validI) 
+proof (rule validI)
   fix s t
-  assume "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> t" 
+  assume "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> t"
          "s \<in> {s. s = Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union>  Fault ` (-F))}"
          "t \<notin> Fault ` F"
-  thus "t \<in> Normal ` {t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Normal t} \<union> 
+  thus "t \<in> Normal ` {t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Normal t} \<union>
             Abrupt ` {t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
     by (cases t) (auto simp add: final_notin_def)
 qed
 
 text \<open>The consequence rule where the existential @{term Z} is instantiated
 to @{term s}. Usefull in proof of \<open>MGT_lemma\<close>.\<close>
-lemma ConseqMGT: 
+lemma ConseqMGT:
   assumes modif: "\<forall>Z. \<Gamma>,\<Theta> \<turnstile>\<^bsub>/F\<^esub> (P' Z) c (Q' Z),(A' Z)"
-  assumes impl: "\<And>s. s \<in> P \<Longrightarrow> s \<in> P' s \<and> (\<forall>t. t \<in> Q' s \<longrightarrow> t \<in> Q) \<and> 
+  assumes impl: "\<And>s. s \<in> P \<Longrightarrow> s \<in> P' s \<and> (\<forall>t. t \<in> Q' s \<longrightarrow> t \<in> Q) \<and>
                                             (\<forall>t. t \<in> A' s \<longrightarrow> t \<in> A)"
   shows "\<Gamma>,\<Theta> \<turnstile>\<^bsub>/F\<^esub> P c Q,A"
-using impl 
+using impl
 by -  (rule conseq [OF modif],blast)
 
 
-lemma Seq_NoFaultStuckD1: 
+lemma Seq_NoFaultStuckD1:
   assumes noabort: "\<Gamma>\<turnstile>\<langle>Seq c1 c2,s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault `  F)"
   shows "\<Gamma>\<turnstile>\<langle>c1,s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault `  F)"
 proof (rule final_notinI)
   fix t
   assume exec_c1: "\<Gamma>\<turnstile>\<langle>c1,s\<rangle> \<Rightarrow> t"
   show "t \<notin> {Stuck} \<union> Fault `  F"
-  proof 
+  proof
     assume "t \<in> {Stuck} \<union> Fault `  F"
     moreover
     {
@@ -456,10 +456,10 @@ proof (rule final_notinI)
         by (auto simp add: final_notin_def)
       hence False ..
     }
-    moreover 
+    moreover
     {
       assume "t \<in> Fault ` F"
-      then obtain f where 
+      then obtain f where
       t: "t=Fault f" and f: "f \<in> F"
         by auto
       from t exec_c1
@@ -473,22 +473,22 @@ proof (rule final_notinI)
   qed
 qed
 
-lemma Seq_NoFaultStuckD2: 
+lemma Seq_NoFaultStuckD2:
   assumes noabort: "\<Gamma>\<turnstile>\<langle>Seq c1 c2,s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault `  F)"
-  shows "\<forall>t. \<Gamma>\<turnstile>\<langle>c1,s\<rangle> \<Rightarrow> t \<longrightarrow> t\<notin> ({Stuck} \<union> Fault `  F) \<longrightarrow> 
+  shows "\<forall>t. \<Gamma>\<turnstile>\<langle>c1,s\<rangle> \<Rightarrow> t \<longrightarrow> t\<notin> ({Stuck} \<union> Fault `  F) \<longrightarrow>
              \<Gamma>\<turnstile>\<langle>c2,t\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault `  F)"
 using noabort
 by (auto simp add: final_notin_def intro: exec_Seq')
 
 
 lemma MGT_implies_complete:
-  assumes MGT: "\<forall>Z. \<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union>  Fault ` (-F))} c 
+  assumes MGT: "\<forall>Z. \<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union>  Fault ` (-F))} c
                            {t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Normal t},
                            {t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
-  assumes valid: "\<Gamma> \<Turnstile>\<^bsub>/F\<^esub> P c Q,A" 
+  assumes valid: "\<Gamma> \<Turnstile>\<^bsub>/F\<^esub> P c Q,A"
   shows "\<Gamma>,{} \<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   using MGT
-  apply (rule ConseqMGT) 
+  apply (rule ConseqMGT)
   apply (insert valid)
   apply (auto simp add: valid_def intro!: final_notinI)
   done
@@ -498,11 +498,11 @@ text \<open>Equipped only with the classic consequence rule @{thm "conseqPrePost
         of completeness. But semantically it is equivalent to the "real" one
         (see below)\<close>
 lemma MGT_implies_complete':
-  assumes MGT: "\<forall>Z. \<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> 
-                       {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union>  Fault ` (-F))} c 
+  assumes MGT: "\<forall>Z. \<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub>
+                       {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union>  Fault ` (-F))} c
                            {t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Normal t},
                            {t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
-  assumes valid: "\<Gamma> \<Turnstile>\<^bsub>/F\<^esub> P c Q,A" 
+  assumes valid: "\<Gamma> \<Turnstile>\<^bsub>/F\<^esub> P c Q,A"
   shows "\<Gamma>,{} \<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> s \<in> P} c {t. Z \<in> P \<longrightarrow> t \<in> Q},{t. Z \<in> P \<longrightarrow> t \<in> A}"
   using MGT [rule_format, of Z]
   apply (rule conseqPrePost)
@@ -514,7 +514,7 @@ lemma MGT_implies_complete':
 
 text \<open>Semantic equivalence of both kind of formulations\<close>
 lemma valid_involved_to_valid:
-  assumes valid: 
+  assumes valid:
     "\<forall>Z. \<Gamma>\<Turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> s \<in> P} c {t. Z \<in> P \<longrightarrow> t \<in> Q},{t. Z \<in> P \<longrightarrow> t \<in> A}"
   shows "\<Gamma> \<Turnstile>\<^bsub>/F\<^esub> P c Q,A"
   using valid
@@ -526,12 +526,12 @@ lemma valid_involved_to_valid:
   apply fastforce
   done
 
-text \<open>The sophisticated consequence rule allow us to do this 
-        semantical transformation on the hoare-level, too. 
+text \<open>The sophisticated consequence rule allow us to do this
+        semantical transformation on the hoare-level, too.
         The magic is, that it allow us to
         choose the instance of @{term Z} under the assumption of an state @{term "s \<in> P"}\<close>
 lemma
-  assumes deriv: 
+  assumes deriv:
     "\<forall>Z. \<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> s \<in> P} c {t. Z \<in> P \<longrightarrow> t \<in> Q},{t. Z \<in> P \<longrightarrow> t \<in> A}"
   shows "\<Gamma>,{} \<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   apply (rule ConseqMGT [OF deriv])
@@ -550,8 +550,8 @@ lemma
   apply auto
   done
 
-lemma conseq_extract_state_indep_prop: 
-  assumes state_indep_prop:"\<forall>s \<in> P. R" 
+lemma conseq_extract_state_indep_prop:
+  assumes state_indep_prop:"\<forall>s \<in> P. R"
   assumes to_show: "R \<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   apply (rule Conseq)
@@ -564,13 +564,13 @@ lemma conseq_extract_state_indep_prop:
 
 
 lemma MGT_lemma:
-  assumes MGT_Calls: 
-    "\<forall>p\<in>dom \<Gamma>. \<forall>Z. \<Gamma>,\<Theta> \<turnstile>\<^bsub>/F\<^esub> 
+  assumes MGT_Calls:
+    "\<forall>p\<in>dom \<Gamma>. \<forall>Z. \<Gamma>,\<Theta> \<turnstile>\<^bsub>/F\<^esub>
        {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Call p,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}
         (Call p)
        {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Normal t},
        {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
-  shows "\<And>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c 
+  shows "\<And>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c
              {t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Normal t},{t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
 proof (induct c)
   case Skip
@@ -581,14 +581,14 @@ proof (induct c)
 next
   case (Basic f)
   show "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s = Z \<and> \<Gamma>\<turnstile>\<langle>Basic f,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} Basic f
-           {t. \<Gamma>\<turnstile>\<langle>Basic f,Normal Z\<rangle> \<Rightarrow> Normal t}, 
+           {t. \<Gamma>\<turnstile>\<langle>Basic f,Normal Z\<rangle> \<Rightarrow> Normal t},
            {t. \<Gamma>\<turnstile>\<langle>Basic f,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
     by (rule hoarep.Basic [THEN conseqPre])
        (auto elim: exec_elim_cases simp add: final_notin_def intro: exec.intros)
 next
   case (Spec r)
   show "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s = Z \<and> \<Gamma>\<turnstile>\<langle>Spec r,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} Spec r
-           {t. \<Gamma>\<turnstile>\<langle>Spec r,Normal Z\<rangle> \<Rightarrow> Normal t}, 
+           {t. \<Gamma>\<turnstile>\<langle>Spec r,Normal Z\<rangle> \<Rightarrow> Normal t},
            {t. \<Gamma>\<turnstile>\<langle>Spec r,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
     apply (rule hoarep.Spec [THEN conseqPre])
     apply (clarsimp simp add: final_notin_def)
@@ -596,30 +596,30 @@ next
     apply (auto elim: exec_elim_cases simp add: final_notin_def intro: exec.intros)
     done
 next
-  case (Seq c1 c2) 
-  have hyp_c1: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c1,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c1 
+  case (Seq c1 c2)
+  have hyp_c1: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c1,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c1
                            {t. \<Gamma>\<turnstile>\<langle>c1,Normal Z\<rangle> \<Rightarrow> Normal t},
-                           {t. \<Gamma>\<turnstile>\<langle>c1,Normal Z\<rangle> \<Rightarrow> Abrupt t}" 
+                           {t. \<Gamma>\<turnstile>\<langle>c1,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
     using Seq.hyps by iprover
-  have hyp_c2: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c2 
+  have hyp_c2: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c2
                           {t. \<Gamma>\<turnstile>\<langle>c2,Normal Z\<rangle> \<Rightarrow> Normal t},
-                          {t. \<Gamma>\<turnstile>\<langle>c2,Normal Z\<rangle> \<Rightarrow> Abrupt t}" 
+                          {t. \<Gamma>\<turnstile>\<langle>c2,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
     using Seq.hyps by iprover
-  from hyp_c1 
-  have "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Seq c1 c2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c1 
-              {t. \<Gamma>\<turnstile>\<langle>c1,Normal Z\<rangle> \<Rightarrow> Normal t \<and> 
+  from hyp_c1
+  have "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Seq c1 c2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c1
+              {t. \<Gamma>\<turnstile>\<langle>c1,Normal Z\<rangle> \<Rightarrow> Normal t \<and>
                   \<Gamma>\<turnstile>\<langle>c2,Normal t\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))},
               {t. \<Gamma>\<turnstile>\<langle>Seq c1 c2,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
     by (rule ConseqMGT)
        (auto dest: Seq_NoFaultStuckD1 [simplified] Seq_NoFaultStuckD2 [simplified]
              intro: exec.Seq)
-  thus "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Seq c1 c2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} 
+  thus "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Seq c1 c2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}
                    Seq c1 c2
               {t. \<Gamma>\<turnstile>\<langle>Seq c1 c2,Normal Z\<rangle> \<Rightarrow> Normal t},
               {t. \<Gamma>\<turnstile>\<langle>Seq c1 c2,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
   proof (rule hoarep.Seq )
-    show "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {t. \<Gamma>\<turnstile>\<langle>c1,Normal Z\<rangle> \<Rightarrow> Normal t \<and> 
-                      \<Gamma>\<turnstile>\<langle>c2,Normal t\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} 
+    show "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {t. \<Gamma>\<turnstile>\<langle>c1,Normal Z\<rangle> \<Rightarrow> Normal t \<and>
+                      \<Gamma>\<turnstile>\<langle>c2,Normal t\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}
                    c2
                  {t. \<Gamma>\<turnstile>\<langle>Seq c1 c2,Normal Z\<rangle> \<Rightarrow> Normal t},
                  {t. \<Gamma>\<turnstile>\<langle>Seq c1 c2,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
@@ -636,80 +636,80 @@ next
     qed
   qed
 next
-  case (Cond b c1 c2) 
-  have "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub>{s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c1,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c1 
+  case (Cond b c1 c2)
+  have "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub>{s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c1,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c1
                  {t. \<Gamma>\<turnstile>\<langle>c1,Normal Z\<rangle> \<Rightarrow> Normal t},
-                 {t. \<Gamma>\<turnstile>\<langle>c1,Normal Z\<rangle> \<Rightarrow> Abrupt t}" 
-    using Cond.hyps by iprover  
+                 {t. \<Gamma>\<turnstile>\<langle>c1,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
+    using Cond.hyps by iprover
   hence "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> ({s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Cond b c1 c2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}\<inter>b)
-                   c1 
+                   c1
                 {t. \<Gamma>\<turnstile>\<langle>Cond b c1 c2,Normal Z\<rangle> \<Rightarrow> Normal t},
-                {t. \<Gamma>\<turnstile>\<langle>Cond b c1 c2,Normal Z\<rangle> \<Rightarrow> Abrupt t}" 
+                {t. \<Gamma>\<turnstile>\<langle>Cond b c1 c2,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
     by (rule ConseqMGT)
        (fastforce intro: exec.CondTrue simp add: final_notin_def)
   moreover
-  have "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c2 
+  have "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c2
                     {t. \<Gamma>\<turnstile>\<langle>c2,Normal Z\<rangle> \<Rightarrow> Normal t},
-                    {t. \<Gamma>\<turnstile>\<langle>c2,Normal Z\<rangle> \<Rightarrow> Abrupt t}" 
-    using Cond.hyps by iprover  
+                    {t. \<Gamma>\<turnstile>\<langle>c2,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
+    using Cond.hyps by iprover
   hence "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub>({s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Cond b c1 c2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}\<inter>-b)
-                  c2 
+                  c2
                 {t. \<Gamma>\<turnstile>\<langle>Cond b c1 c2,Normal Z\<rangle> \<Rightarrow> Normal t},
-                {t. \<Gamma>\<turnstile>\<langle>Cond b c1 c2,Normal Z\<rangle> \<Rightarrow> Abrupt t}" 
+                {t. \<Gamma>\<turnstile>\<langle>Cond b c1 c2,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
     by (rule ConseqMGT)
        (fastforce intro: exec.CondFalse simp add: final_notin_def)
   ultimately
-  show "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Cond b c1 c2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} 
+  show "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Cond b c1 c2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}
                  Cond b c1 c2
               {t. \<Gamma>\<turnstile>\<langle>Cond b c1 c2,Normal Z\<rangle> \<Rightarrow> Normal t},
               {t. \<Gamma>\<turnstile>\<langle>Cond b c1 c2,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
-    by (rule hoarep.Cond)       
+    by (rule hoarep.Cond)
 next
   case (While b c)
   let ?unroll = "({(s,t). s\<in>b \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> Normal t})\<^sup>*"
-  let ?P' = "\<lambda>Z. {t. (Z,t)\<in>?unroll \<and> 
+  let ?P' = "\<lambda>Z. {t. (Z,t)\<in>?unroll \<and>
                     (\<forall>e. (Z,e)\<in>?unroll \<longrightarrow> e\<in>b
-                         \<longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and> 
-                             (\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>Abrupt u \<longrightarrow> 
+                         \<longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and>
+                             (\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>Abrupt u \<longrightarrow>
                                   \<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Abrupt u))}"
   let ?A' = "\<lambda>Z. {t. \<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
-  show "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>While b c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} 
+  show "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>While b c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}
                 While b c
               {t. \<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Normal t},
               {t. \<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
-  proof (rule ConseqMGT [where ?P'="?P'" 
+  proof (rule ConseqMGT [where ?P'="?P'"
                          and ?Q'="\<lambda>Z. ?P' Z \<inter> - b" and ?A'="?A'"])
     show "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> (?P' Z) (While b c) (?P' Z \<inter> - b),(?A' Z)"
     proof (rule allI, rule hoarep.While)
       fix Z
-      from While 
+      from While
       have "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c
                         {t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Normal t},
                         {t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Abrupt t}" by iprover
       then show "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> (?P' Z  \<inter> b) c (?P' Z),(?A' Z)"
       proof (rule ConseqMGT)
         fix s
-        assume  "s\<in> {t. (Z, t) \<in> ?unroll \<and> 
+        assume  "s\<in> {t. (Z, t) \<in> ?unroll \<and>
                       (\<forall>e. (Z,e)\<in>?unroll \<longrightarrow> e\<in>b
-                           \<longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and> 
-                               (\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>Abrupt u \<longrightarrow> 
+                           \<longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and>
+                               (\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>Abrupt u \<longrightarrow>
                                     \<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Abrupt u))}
                    \<inter> b"
-        then obtain 
+        then obtain
           Z_s_unroll: "(Z,s) \<in> ?unroll" and
           noabort:"\<forall>e. (Z,e)\<in>?unroll \<longrightarrow> e\<in>b
-                        \<longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and> 
-                            (\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>Abrupt u \<longrightarrow> 
+                        \<longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and>
+                            (\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>Abrupt u \<longrightarrow>
                                   \<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Abrupt u)" and
-          s_in_b: "s\<in>b" 
+          s_in_b: "s\<in>b"
           by blast
         show "s \<in> {t. t = s \<and> \<Gamma>\<turnstile>\<langle>c,Normal t\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} \<and>
         (\<forall>t. t \<in> {t. \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> Normal t} \<longrightarrow>
-             t \<in> {t. (Z, t) \<in> ?unroll \<and> 
-                  (\<forall>e. (Z,e)\<in>?unroll \<longrightarrow>  e\<in>b 
-                       \<longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and> 
-                           (\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>Abrupt u \<longrightarrow> 
-                                  \<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Abrupt u))}) \<and> 
+             t \<in> {t. (Z, t) \<in> ?unroll \<and>
+                  (\<forall>e. (Z,e)\<in>?unroll \<longrightarrow>  e\<in>b
+                       \<longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and>
+                           (\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>Abrupt u \<longrightarrow>
+                                  \<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Abrupt u))}) \<and>
          (\<forall>t. t \<in> {t. \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> Abrupt t} \<longrightarrow>
              t \<in> {t. \<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Abrupt t})"
           (is "?C1 \<and> ?C2 \<and> ?C3")
@@ -717,18 +717,18 @@ next
           from Z_s_unroll noabort s_in_b show ?C1 by blast
         next
           {
-            fix t 
+            fix t
             assume s_t: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> Normal t"
             moreover
-            from Z_s_unroll s_t s_in_b 
+            from Z_s_unroll s_t s_in_b
             have "(Z, t) \<in> ?unroll"
               by (blast intro: rtrancl_into_rtrancl)
             moreover note noabort
-            ultimately 
-            have "(Z, t) \<in> ?unroll \<and> 
+            ultimately
+            have "(Z, t) \<in> ?unroll \<and>
                   (\<forall>e. (Z,e)\<in>?unroll \<longrightarrow> e\<in>b
-                        \<longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and> 
-                            (\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>Abrupt u \<longrightarrow> 
+                        \<longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and>
+                            (\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>Abrupt u \<longrightarrow>
                                   \<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Abrupt u))"
               by iprover
           }
@@ -736,8 +736,8 @@ next
         next
           {
             fix t
-            assume s_t:  "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> Abrupt t" 
-            from Z_s_unroll noabort s_t s_in_b 
+            assume s_t:  "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> Abrupt t"
+            from Z_s_unroll noabort s_t s_in_b
             have "\<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Abrupt t"
               by blast
           } thus ?C3 by simp
@@ -749,7 +749,7 @@ next
     assume P: "s \<in> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>While b c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}"
     hence WhileNoFault: "\<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))"
       by auto
-    show "s \<in> ?P' s \<and> 
+    show "s \<in> ?P' s \<and>
     (\<forall>t. t\<in>(?P' s \<inter> - b)\<longrightarrow>
          t\<in>{t. \<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Normal t})\<and>
     (\<forall>t. t\<in>?A' s \<longrightarrow> t\<in>?A' Z)"
@@ -758,8 +758,8 @@ next
         fix e
         assume "(Z,e) \<in> ?unroll" "e \<in> b"
         from this WhileNoFault
-        have "\<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and> 
-               (\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>Abrupt u \<longrightarrow> 
+        have "\<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F)) \<and>
+               (\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>Abrupt u \<longrightarrow>
                     \<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Abrupt u)" (is "?Prop Z e")
         proof (induct rule: converse_rtrancl_induct [consumes 1])
           assume e_in_b: "e \<in> b"
@@ -778,7 +778,7 @@ next
             by iprover
         next
           fix Z r
-          assume e_in_b: "e\<in>b" 
+          assume e_in_b: "e\<in>b"
           assume WhileNoFault: "\<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))"
           assume hyp: "\<lbrakk>e\<in>b;\<Gamma>\<turnstile>\<langle>While b c,Normal r\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))\<rbrakk>
                        \<Longrightarrow> ?Prop r e"
@@ -789,10 +789,10 @@ next
             by (auto simp add: final_notin_def intro: exec.intros)
           from hyp [OF e_in_b this] obtain
             cNoFault: "\<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))" and
-            Abrupt_r: "\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow> Abrupt u \<longrightarrow> 
+            Abrupt_r: "\<forall>u. \<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow> Abrupt u \<longrightarrow>
                             \<Gamma>\<turnstile>\<langle>While b c,Normal r\<rangle> \<Rightarrow> Abrupt u"
             by simp
-          
+
            {
             fix u assume "\<Gamma>\<turnstile>\<langle>c,Normal e\<rangle> \<Rightarrow> Abrupt u"
             with Abrupt_r have "\<Gamma>\<turnstile>\<langle>While b c,Normal r\<rangle> \<Rightarrow> Abrupt u" by simp
@@ -815,12 +815,12 @@ next
         assume "(Z, t) \<in> ?unroll"
         hence "\<Gamma>\<turnstile>\<langle>While b c,Normal Z\<rangle> \<Rightarrow> Normal t"
         proof (induct rule: converse_rtrancl_induct [consumes 1])
-          from "termination" 
+          from "termination"
           show "\<Gamma>\<turnstile>\<langle>While b c,Normal t\<rangle> \<Rightarrow> Normal t"
             by (blast intro: exec.WhileFalse)
         next
           fix Z r
-          assume first_body: 
+          assume first_body:
                  "(Z, r) \<in> {(s, t). s \<in> b \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> Normal t}"
           assume "(r, t) \<in> ?unroll"
           assume rest_loop: "\<Gamma>\<turnstile>\<langle>While b c, Normal r\<rangle> \<Rightarrow> Normal t"
@@ -857,7 +857,7 @@ next
   proof (rule conseq_extract_state_indep_prop)
     assume p_definied: "p \<in> dom \<Gamma>"
     with MGT_Calls show
-      "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub>{s. s=Z \<and> 
+      "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub>{s. s=Z \<and>
                  \<Gamma>\<turnstile>\<langle>Call p,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}
                   (Call p)
                  {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Normal t},
@@ -866,7 +866,7 @@ next
   qed
 next
   case (DynCom c)
-  have hyp: 
+  have hyp:
     "\<And>s'. \<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub>{s. s = Z \<and> \<Gamma>\<turnstile>\<langle>c s',Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c s'
       {t. \<Gamma>\<turnstile>\<langle>c s',Normal Z\<rangle> \<Rightarrow> Normal t},{t. \<Gamma>\<turnstile>\<langle>c s',Normal Z\<rangle> \<Rightarrow> Abrupt t}"
     using DynCom by simp
@@ -875,7 +875,7 @@ next
         {t. \<Gamma>\<turnstile>\<langle>DynCom c,Normal Z\<rangle> \<Rightarrow> Normal t},{t. \<Gamma>\<turnstile>\<langle>DynCom c,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
     by (rule ConseqMGT [OF hyp])
        (fastforce simp add: final_notin_def intro: exec.intros)
-  show "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub>{s. s = Z \<and> \<Gamma>\<turnstile>\<langle>DynCom c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} 
+  show "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub>{s. s = Z \<and> \<Gamma>\<turnstile>\<langle>DynCom c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}
                DynCom c
              {t. \<Gamma>\<turnstile>\<langle>DynCom c,Normal Z\<rangle> \<Rightarrow> Normal t},
              {t. \<Gamma>\<turnstile>\<langle>DynCom c,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
@@ -883,7 +883,7 @@ next
     apply (clarsimp)
     apply (rule hyp' [simplified])
     done
-next  
+next
   case (Guard f g c)
   have hyp_c: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c
                     {t. \<Gamma>\<turnstile>\<langle>c,Normal Z\<rangle> \<Rightarrow> Normal t},
@@ -891,10 +891,10 @@ next
     using Guard by iprover
   show ?case
   proof (cases "f \<in> F")
-    case True 
+    case True
     from hyp_c
-    have "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F \<^esub>(g \<inter> {s. s = Z \<and> 
-                    \<Gamma>\<turnstile>\<langle>Guard f g c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (- F))}) 
+    have "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F \<^esub>(g \<inter> {s. s = Z \<and>
+                    \<Gamma>\<turnstile>\<langle>Guard f g c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (- F))})
              c
            {t. \<Gamma>\<turnstile>\<langle>Guard f g c,Normal Z\<rangle> \<Rightarrow> Normal t},
            {t. \<Gamma>\<turnstile>\<langle>Guard f g c,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
@@ -903,13 +903,13 @@ next
       apply (auto simp add: final_notin_def intro: exec.intros)
       done
     from True this
-    show ?thesis      
+    show ?thesis
       by (rule conseqPre [OF Guarantee]) auto
   next
     case False
     from hyp_c
-    have "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> 
-           (g \<inter> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Guard f g c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}) 
+    have "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub>
+           (g \<inter> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Guard f g c,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))})
            c
            {t. \<Gamma>\<turnstile>\<langle>Guard f g c,Normal Z\<rangle> \<Rightarrow> Normal t},
            {t. \<Gamma>\<turnstile>\<langle>Guard f g c,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
@@ -939,7 +939,7 @@ next
     using Catch.hyps by iprover
   hence "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s = Z \<and> \<Gamma>\<turnstile>\<langle>Catch c\<^sub>1 c\<^sub>2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} c\<^sub>1
                {t. \<Gamma>\<turnstile>\<langle>Catch c\<^sub>1 c\<^sub>2,Normal Z\<rangle> \<Rightarrow> Normal t},
-               {t. \<Gamma>\<turnstile>\<langle>c\<^sub>1,Normal Z\<rangle> \<Rightarrow> Abrupt t \<and> 
+               {t. \<Gamma>\<turnstile>\<langle>c\<^sub>1,Normal Z\<rangle> \<Rightarrow> Abrupt t \<and>
                    \<Gamma>\<turnstile>\<langle>Catch c\<^sub>1 c\<^sub>2,Normal Z\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}"
     by (rule ConseqMGT)
        (fastforce intro: exec.intros simp add: final_notin_def)
@@ -948,52 +948,52 @@ next
                   {t. \<Gamma>\<turnstile>\<langle>c\<^sub>2,Normal Z\<rangle> \<Rightarrow> Normal t},
                   {t. \<Gamma>\<turnstile>\<langle>c\<^sub>2,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
     using Catch.hyps by iprover
-  hence "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub>{s. \<Gamma>\<turnstile>\<langle>c\<^sub>1,Normal Z\<rangle> \<Rightarrow>Abrupt s \<and> 
-                   \<Gamma>\<turnstile>\<langle>Catch c\<^sub>1 c\<^sub>2,Normal Z\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} 
+  hence "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub>{s. \<Gamma>\<turnstile>\<langle>c\<^sub>1,Normal Z\<rangle> \<Rightarrow>Abrupt s \<and>
+                   \<Gamma>\<turnstile>\<langle>Catch c\<^sub>1 c\<^sub>2,Normal Z\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}
                c\<^sub>2
                {t. \<Gamma>\<turnstile>\<langle>Catch c\<^sub>1 c\<^sub>2,Normal Z\<rangle> \<Rightarrow> Normal t},
                {t. \<Gamma>\<turnstile>\<langle>Catch c\<^sub>1 c\<^sub>2,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
     by (rule ConseqMGT)
        (fastforce intro: exec.intros  simp add: final_notin_def)
   ultimately
-  show "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s = Z \<and> \<Gamma>\<turnstile>\<langle>Catch c\<^sub>1 c\<^sub>2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} 
+  show "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s = Z \<and> \<Gamma>\<turnstile>\<langle>Catch c\<^sub>1 c\<^sub>2,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}
                    Catch c\<^sub>1 c\<^sub>2
               {t. \<Gamma>\<turnstile>\<langle>Catch c\<^sub>1 c\<^sub>2,Normal Z\<rangle> \<Rightarrow> Normal t},
               {t. \<Gamma>\<turnstile>\<langle>Catch c\<^sub>1 c\<^sub>2,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
     by (rule hoarep.Catch)
 qed
 
-lemma MGT_Calls: 
- "\<forall>p\<in>dom \<Gamma>. \<forall>Z. 
+lemma MGT_Calls:
+ "\<forall>p\<in>dom \<Gamma>. \<forall>Z.
      \<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub>{s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Call p,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}
             (Call p)
           {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Normal t},
           {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
-proof - 
+proof -
   {
-    fix p Z 
+    fix p Z
     assume defined: "p \<in> dom \<Gamma>"
-    have 
-      "\<Gamma>,(\<Union>p\<in>dom \<Gamma>. \<Union>Z. 
-          {({s. s=Z \<and> 
+    have
+      "\<Gamma>,(\<Union>p\<in>dom \<Gamma>. \<Union>Z.
+          {({s. s=Z \<and>
              \<Gamma>\<turnstile>\<langle>Call p,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))},
              p,
              {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Normal t},
              {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Abrupt t})})
-       \<turnstile>\<^bsub>/F\<^esub>{s. s = Z \<and> \<Gamma>\<turnstile>\<langle>Call p,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))} 
+       \<turnstile>\<^bsub>/F\<^esub>{s. s = Z \<and> \<Gamma>\<turnstile>\<langle>Call p,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}
           (the (\<Gamma> p))
           {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Normal t},
           {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
       (is "\<Gamma>,?\<Theta> \<turnstile>\<^bsub>/F\<^esub> (?Pre p Z) (the (\<Gamma> p)) (?Post p Z),(?Abr p Z)")
     proof -
       have MGT_Calls:
-       "\<forall>p\<in>dom \<Gamma>. \<forall>Z. \<Gamma>,?\<Theta> \<turnstile>\<^bsub>/F\<^esub> 
+       "\<forall>p\<in>dom \<Gamma>. \<forall>Z. \<Gamma>,?\<Theta> \<turnstile>\<^bsub>/F\<^esub>
         {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>Call p,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}
          (Call p)
         {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Normal t},
         {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Abrupt t}"
         by (intro ballI allI, rule HoarePartialDef.Asm,auto)
-      have "\<forall>Z. \<Gamma>,?\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>the (\<Gamma> p) ,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault`(-F))} 
+      have "\<forall>Z. \<Gamma>,?\<Theta>\<turnstile>\<^bsub>/F\<^esub> {s. s=Z \<and> \<Gamma>\<turnstile>\<langle>the (\<Gamma> p) ,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault`(-F))}
                         (the (\<Gamma> p))
                         {t. \<Gamma>\<turnstile>\<langle>the (\<Gamma> p),Normal Z\<rangle> \<Rightarrow> Normal t},
                         {t. \<Gamma>\<turnstile>\<langle>the (\<Gamma> p),Normal Z\<rangle> \<Rightarrow> Abrupt t}"
@@ -1003,19 +1003,19 @@ proof -
         apply (clarify,safe)
       proof -
         assume "\<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))"
-        with defined show "\<Gamma>\<turnstile>\<langle>the (\<Gamma> p),Normal Z\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))" 
-          by (fastforce simp add: final_notin_def 
+        with defined show "\<Gamma>\<turnstile>\<langle>the (\<Gamma> p),Normal Z\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))"
+          by (fastforce simp add: final_notin_def
                 intro: exec.intros)
       next
         fix t
         assume "\<Gamma>\<turnstile>\<langle>the (\<Gamma> p),Normal Z\<rangle> \<Rightarrow> Normal t"
-        with defined 
+        with defined
         show "\<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow>Normal t"
           by  (auto intro: exec.Call)
       next
         fix t
         assume "\<Gamma>\<turnstile>\<langle>the (\<Gamma> p),Normal Z\<rangle> \<Rightarrow> Abrupt t"
-        with defined 
+        with defined
         show "\<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow>Abrupt t"
           by  (auto intro: exec.Call)
       qed
@@ -1024,12 +1024,12 @@ proof -
   then show ?thesis
     apply -
     apply (intro ballI allI)
-    apply (rule CallRec' [where Procs="dom \<Gamma>"  and 
-      P="\<lambda>p Z. {s. s=Z \<and> 
+    apply (rule CallRec' [where Procs="dom \<Gamma>"  and
+      P="\<lambda>p Z. {s. s=Z \<and>
                   \<Gamma>\<turnstile>\<langle>Call p,Normal s\<rangle> \<Rightarrow>\<notin>({Stuck} \<union> Fault ` (-F))}"and
-      Q="\<lambda>p Z. 
+      Q="\<lambda>p Z.
         {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Normal t}" and
-      A="\<lambda>p Z. 
+      A="\<lambda>p Z.
         {t. \<Gamma>\<turnstile>\<langle>Call p,Normal Z\<rangle> \<Rightarrow> Abrupt t}"] )
     apply simp+
     done
@@ -1038,7 +1038,7 @@ qed
 theorem hoare_complete: "\<Gamma>\<Turnstile>\<^bsub>/F\<^esub> P c Q,A \<Longrightarrow> \<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   by (iprover intro: MGT_implies_complete MGT_lemma [OF MGT_Calls])
 
-lemma hoare_complete': 
+lemma hoare_complete':
   assumes cvalid: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
   shows  "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
 proof (cases "\<Gamma>\<Turnstile>\<^bsub>/F\<^esub> P c Q,A")
@@ -1053,9 +1053,9 @@ next
   show ?thesis
     by (rule ExFalso)
 qed
-  
 
-lemma hoare_strip_\<Gamma>: 
+
+lemma hoare_strip_\<Gamma>:
   assumes deriv: "\<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> P p Q,A"
   assumes F': "F' \<subseteq> -F"
   shows "strip F' \<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> P p Q,A"
@@ -1069,12 +1069,12 @@ qed
 
 
 subsection \<open>And Now: Some Useful Rules\<close>
- 
+
 subsubsection \<open>Consequence\<close>
 
 
 lemma LiberalConseq_sound:
-fixes F::"'f set" 
+fixes F::"'f set"
 assumes cons: "\<forall>s \<in> P. \<forall>(t::('s,'f) xstate). \<exists>P' Q' A'. (\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P' c Q',A') \<and>
                 ((s \<in> P' \<longrightarrow> t \<in> Normal ` Q' \<union> Abrupt ` A')
                               \<longrightarrow> t \<in> Normal ` Q \<union> Abrupt ` A)"
@@ -1127,7 +1127,7 @@ apply (blast intro: hoare_cnvalid)
 apply assumption
 done
 
-lemma "\<forall>s \<in> P. \<exists>P' Q' A'. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P' c Q',A' \<and> s \<in> P' \<and> Q' \<subseteq> Q \<and> A' \<subseteq> A 
+lemma "\<forall>s \<in> P. \<exists>P' Q' A'. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P' c Q',A' \<and> s \<in> P' \<and> Q' \<subseteq> Q \<and> A' \<subseteq> A
            \<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   apply (rule LiberalConseq)
   apply (rule ballI)
@@ -1179,7 +1179,7 @@ done
 lemma LiberalConseq'':
 fixes F:: "'f set"
 assumes spec: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> (P' Z) c (Q' Z),(A' Z)"
-assumes cons: "\<forall>s (t::('s,'f) xstate). 
+assumes cons: "\<forall>s (t::('s,'f) xstate).
                  (\<forall>Z. s \<in> P' Z \<longrightarrow> t \<in> Normal ` Q' Z \<union> Abrupt ` A' Z)
                   \<longrightarrow> (s \<in> P \<longrightarrow> t \<in> Normal ` Q \<union> Abrupt ` A)"
 shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A "
@@ -1277,9 +1277,9 @@ proof (rule cnvalidI)
   proof -
     from execn_noguards_no_Fault [OF exec noguards_c noguards_\<Gamma>]
      execn_nothrows_no_Abrupt [OF exec nothrows_c nothrows_\<Gamma> ]
-     execn_noSpec_no_Stuck [OF exec  
-              noSpec_c  noSpec_\<Gamma> procs_subset 
-      procs_subset_\<Gamma>]                            
+     execn_noSpec_no_Stuck [OF exec
+              noSpec_c  noSpec_\<Gamma> procs_subset
+      procs_subset_\<Gamma>]
     obtain t' where t: "t=Normal t'"
       by (cases t) auto
     with exec spec ctxt
@@ -1306,16 +1306,16 @@ assumes procs_subset_\<Gamma>: "\<forall>p \<in> dom \<Gamma>. procs (the (\<Gam
 shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A "
 apply (rule hoare_complete')
 apply (rule allI)
-apply (rule LiberalConseq_noguards_nothrows_sound 
-             [OF _ cons noguards_c noguards_\<Gamma> nothrows_c nothrows_\<Gamma> 
-                 noSpec_c noSpec_\<Gamma> 
+apply (rule LiberalConseq_noguards_nothrows_sound
+             [OF _ cons noguards_c noguards_\<Gamma> nothrows_c nothrows_\<Gamma>
+                 noSpec_c noSpec_\<Gamma>
                  procs_subset procs_subset_\<Gamma>])
 apply (insert spec)
 apply (intro allI)
 apply (erule_tac x=Z in allE)
 by (rule hoare_cnvalid)
 
-lemma 
+lemma
 assumes spec: "\<forall>Z. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub>{s. s=fst Z \<and> P s (snd Z)} c {t. Q (fst Z) (snd Z) t},{}"
 assumes noguards_c: "noguards c"
 assumes noguards_\<Gamma>: "\<forall>p \<in> dom \<Gamma>. noguards (the (\<Gamma> p))"
@@ -1329,7 +1329,7 @@ shows "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub>{s. s=\
 apply (rule allI)
 apply (rule LiberalConseq_noguards_nothrows
               [OF spec _ noguards_c noguards_\<Gamma> nothrows_c nothrows_\<Gamma>
-                  noSpec_c noSpec_\<Gamma> 
+                  noSpec_c noSpec_\<Gamma>
                   procs_subset procs_subset_\<Gamma>])
 apply auto
 done
@@ -1338,12 +1338,12 @@ subsubsection \<open>Modify Return\<close>
 
 lemma ProcModifyReturn_sound:
   assumes valid_call: "\<forall>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P call init p return' c Q,A"
-  assumes valid_modif: 
-    "\<forall>\<sigma>. \<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/UNIV\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)" 
+  assumes valid_modif:
+    "\<forall>\<sigma>. \<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/UNIV\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)"
   assumes ret_modif:
-    "\<forall>s t. t \<in> Modif (init s) 
+    "\<forall>s t. t \<in> Modif (init s)
            \<longrightarrow> return' s t = return s t"
-  assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s) 
+  assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
                              \<longrightarrow> return' s t = return s t"
   shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P (call init p return c) Q,A"
 proof (rule cnvalidI)
@@ -1359,8 +1359,8 @@ proof (rule cnvalidI)
   proof (cases rule: execn_call_Normal_elim)
     fix bdy m t'
     assume bdy: "\<Gamma> p = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'" 
-    assume exec_c: "\<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc m\<Rightarrow> t" 
+    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'"
+    assume exec_c: "\<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc m\<Rightarrow> t"
     assume n: "n = Suc m"
     from exec_body n bdy
     have "\<Gamma>\<turnstile>\<langle>Call p,Normal (init s)\<rangle> =n\<Rightarrow> Normal t'"
@@ -1368,11 +1368,11 @@ proof (rule cnvalidI)
     from cnvalidD [OF valid_modif [rule_format, of n "init s"] ctxt' this] P
     have "t' \<in> Modif (init s)"
       by auto
-    with ret_modif have "Normal (return' s t') = 
+    with ret_modif have "Normal (return' s t') =
       Normal (return s t')"
       by simp
     with exec_body exec_c bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    have "\<Gamma>\<turnstile>\<langle>call init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_call)
     from cnvalidD [OF valid_call [rule_format] ctxt this] P t_notin_F
     show ?thesis
@@ -1380,7 +1380,7 @@ proof (rule cnvalidI)
   next
     fix bdy m t'
     assume bdy: "\<Gamma> p = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'" 
+    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'"
     assume n: "n = Suc m"
     assume t: "t = Abrupt (return s t')"
     also from exec_body n bdy
@@ -1393,7 +1393,7 @@ proof (rule cnvalidI)
       by simp
     finally have "t = Abrupt (return' s t')"  .
     with exec_body bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    have "\<Gamma>\<turnstile>\<langle>call init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_callAbrupt)
     from cnvalidD [OF valid_call [rule_format] ctxt this] P t_notin_F
     show ?thesis
@@ -1401,7 +1401,7 @@ proof (rule cnvalidI)
   next
     fix bdy m f
     assume bdy: "\<Gamma> p = Some bdy"
-    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Fault f" "n = Suc m" 
+    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Fault f" "n = Suc m"
       "t = Fault f"
     with bdy have "\<Gamma>\<turnstile>\<langle>call init p return' c ,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_callFault)
@@ -1411,7 +1411,7 @@ proof (rule cnvalidI)
   next
     fix bdy m
     assume bdy: "\<Gamma> p = Some bdy"
-    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m" 
+    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m"
       "t = Stuck"
     with bdy have "\<Gamma>\<turnstile>\<langle>call init p return' c ,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_callStuck)
@@ -1436,15 +1436,15 @@ lemma ProcModifyReturn:
   assumes result_conform:
       "\<forall>s t. t \<in> Modif (init s) \<longrightarrow> (return' s t) = (return s t)"
   assumes return_conform:
-      "\<forall>s t. t \<in> ModifAbr (init s) 
+      "\<forall>s t. t \<in> ModifAbr (init s)
              \<longrightarrow> (return' s t) = (return s t)"
-  assumes modifies_spec:  
+  assumes modifies_spec:
   "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (call init p return c) Q,A"
 apply (rule hoare_complete')
 apply (rule allI)
-apply (rule ProcModifyReturn_sound 
-          [where Modif=Modif and ModifAbr=ModifAbr, 
+apply (rule ProcModifyReturn_sound
+          [where Modif=Modif and ModifAbr=ModifAbr,
             OF _ _ result_conform return_conform] )
 using spec
 apply (blast intro: hoare_cnvalid)
@@ -1454,12 +1454,12 @@ done
 
 lemma ProcModifyReturnSameFaults_sound:
   assumes valid_call: "\<forall>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P call init p return' c Q,A"
-  assumes valid_modif: 
-    "\<forall>\<sigma>. \<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)" 
+  assumes valid_modif:
+    "\<forall>\<sigma>. \<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)"
   assumes ret_modif:
-    "\<forall>s t. t \<in> Modif (init s) 
+    "\<forall>s t. t \<in> Modif (init s)
            \<longrightarrow> return' s t = return s t"
-  assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s) 
+  assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
                              \<longrightarrow> return' s t = return s t"
   shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P (call init p return c) Q,A"
 proof (rule cnvalidI)
@@ -1473,20 +1473,20 @@ proof (rule cnvalidI)
   proof (cases rule: execn_call_Normal_elim)
     fix bdy m t'
     assume bdy: "\<Gamma> p = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'" 
-    assume exec_c: "\<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc m\<Rightarrow> t" 
+    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'"
+    assume exec_c: "\<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc m\<Rightarrow> t"
     assume n: "n = Suc m"
-    from exec_body n bdy 
+    from exec_body n bdy
     have "\<Gamma>\<turnstile>\<langle>Call p,Normal (init s)\<rangle> =n\<Rightarrow> Normal t'"
       by (auto simp add: intro: execn.intros)
     from cnvalidD [OF valid_modif [rule_format, of n "init s"] ctxt this] P
     have "t' \<in> Modif (init s)"
       by auto
-    with ret_modif have "Normal (return' s t') = 
+    with ret_modif have "Normal (return' s t') =
       Normal (return s t')"
       by simp
     with exec_body exec_c bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    have "\<Gamma>\<turnstile>\<langle>call init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_call)
     from cnvalidD [OF valid_call [rule_format] ctxt this] P t_notin_F
     show ?thesis
@@ -1494,10 +1494,10 @@ proof (rule cnvalidI)
   next
     fix bdy m t'
     assume bdy: "\<Gamma> p = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'" 
+    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'"
     assume n: "n = Suc m"
     assume t: "t = Abrupt (return s t')"
-    also 
+    also
     from exec_body n bdy
     have "\<Gamma>\<turnstile>\<langle>Call p,Normal (init s)\<rangle> =n \<Rightarrow> Abrupt t'"
       by (auto simp add: intro: execn.intros)
@@ -1508,7 +1508,7 @@ proof (rule cnvalidI)
       by simp
     finally have "t = Abrupt (return' s t')" .
     with exec_body bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    have "\<Gamma>\<turnstile>\<langle>call init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_callAbrupt)
     from cnvalidD [OF valid_call [rule_format] ctxt this] P t_notin_F
     show ?thesis
@@ -1526,7 +1526,7 @@ proof (rule cnvalidI)
   next
     fix bdy m
     assume bdy: "\<Gamma> p = Some bdy"
-    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m" 
+    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m"
       "t = Stuck"
     with bdy have "\<Gamma>\<turnstile>\<langle>call init p return' c ,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_callStuck)
@@ -1552,13 +1552,13 @@ lemma ProcModifyReturnSameFaults:
       "\<forall>s t. t \<in> Modif (init s) \<longrightarrow> (return' s t) = (return s t)"
   assumes return_conform:
   "\<forall>s t. t \<in> ModifAbr (init s) \<longrightarrow> (return' s t) = (return s t)"
-  assumes modifies_spec:  
+  assumes modifies_spec:
   "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (call init p return c) Q,A"
 apply (rule hoare_complete')
 apply (rule allI)
-apply (rule ProcModifyReturnSameFaults_sound 
-          [where Modif=Modif and ModifAbr=ModifAbr, 
+apply (rule ProcModifyReturnSameFaults_sound
+          [where Modif=Modif and ModifAbr=ModifAbr,
          OF _ _ result_conform return_conform])
 using spec
 apply (blast intro: hoare_cnvalid)
@@ -1567,16 +1567,16 @@ apply (blast intro: hoare_cnvalid)
 done
 
 subsubsection \<open>DynCall\<close>
-  
+
 lemma dynProcModifyReturn_sound:
 assumes valid_call: "\<And>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P dynCall init p return' c Q,A"
-assumes valid_modif: 
-    "\<forall>s \<in> P. \<forall>\<sigma>. \<forall>n. 
-       \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/UNIV\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)" 
+assumes valid_modif:
+    "\<forall>s \<in> P. \<forall>\<sigma>. \<forall>n.
+       \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/UNIV\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
 assumes ret_modif:
-    "\<forall>s t. t \<in> Modif (init s) 
+    "\<forall>s t. t \<in> Modif (init s)
            \<longrightarrow> return' s t = return s t"
-assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s) 
+assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
                              \<longrightarrow> return' s t = return s t"
 shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
 proof (rule cnvalidI)
@@ -1587,8 +1587,8 @@ proof (rule cnvalidI)
   assume exec: "\<Gamma>\<turnstile>\<langle>dynCall init p return c,Normal s\<rangle> =n\<Rightarrow> t"
   assume t_notin_F: "t \<notin> Fault ` F"
   assume P: "s \<in> P"
-  with valid_modif 
-  have valid_modif': "\<forall>\<sigma>. \<forall>n. 
+  with valid_modif
+  have valid_modif': "\<forall>\<sigma>. \<forall>n.
        \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/UNIV\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
     by blast
   from exec
@@ -1598,8 +1598,8 @@ proof (rule cnvalidI)
   proof (cases rule: execn_call_Normal_elim)
     fix bdy m t'
     assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'" 
-    assume exec_c: "\<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc m\<Rightarrow> t" 
+    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'"
+    assume exec_c: "\<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc m\<Rightarrow> t"
     assume n: "n = Suc m"
     from exec_body n bdy
     have "\<Gamma>\<turnstile>\<langle>Call (p s) ,Normal (init s)\<rangle> =n\<Rightarrow> Normal t'"
@@ -1610,9 +1610,9 @@ proof (rule cnvalidI)
     with ret_modif have "Normal (return' s t') = Normal (return s t')"
       by simp
     with exec_body exec_c bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_call)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (rule execn_dynCall)
     from cnvalidD [OF valid_call ctxt this] P t_notin_F
     show ?thesis
@@ -1620,7 +1620,7 @@ proof (rule cnvalidI)
   next
     fix bdy m t'
     assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'" 
+    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'"
     assume n: "n = Suc m"
     assume t: "t = Abrupt (return s t')"
     also from exec_body n bdy
@@ -1633,9 +1633,9 @@ proof (rule cnvalidI)
       by simp
     finally have "t = Abrupt (return' s t')" .
     with exec_body bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_callAbrupt)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (rule execn_dynCall)
     from cnvalidD [OF valid_call ctxt this] P t_notin_F
     show ?thesis
@@ -1643,11 +1643,11 @@ proof (rule cnvalidI)
   next
     fix bdy m f
     assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Fault f" "n = Suc m" 
+    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Fault f" "n = Suc m"
       "t = Fault f"
     with bdy have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c ,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_callFault)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (rule execn_dynCall)
     from valid_call ctxt this P t_notin_F
     show ?thesis
@@ -1655,11 +1655,11 @@ proof (rule cnvalidI)
   next
     fix bdy m
     assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m" 
+    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m"
       "t = Stuck"
     with bdy have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c ,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_callStuck)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (rule execn_dynCall)
     from valid_call ctxt this P t_notin_F
     show ?thesis
@@ -1670,7 +1670,7 @@ proof (rule cnvalidI)
     and  "n = Suc m" "t = Stuck"
     hence "\<Gamma>\<turnstile>\<langle>call init (p s) return' c ,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_callUndefined)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (rule execn_dynCall)
     from valid_call ctxt this P t_notin_F
     show ?thesis
@@ -1681,13 +1681,13 @@ qed
 lemma dynProcModifyReturn:
 assumes dyn_call: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P dynCall init p return' c Q,A"
 assumes ret_modif:
-    "\<forall>s t. t \<in> Modif (init s) 
+    "\<forall>s t. t \<in> Modif (init s)
            \<longrightarrow> return' s t = return s t"
-assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s) 
+assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
                              \<longrightarrow> return' s t = return s t"
-assumes modif: 
-    "\<forall>s \<in> P. \<forall>\<sigma>.  
-       \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)" 
+assumes modif:
+    "\<forall>s \<in> P. \<forall>\<sigma>.
+       \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
 shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
 apply (rule hoare_complete')
 apply (rule allI)
@@ -1700,9 +1700,9 @@ done
 
 lemma dynProcModifyReturnSameFaults_sound:
 assumes valid_call: "\<And>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P dynCall init p return' c Q,A"
-assumes valid_modif: 
-    "\<forall>s \<in> P. \<forall>\<sigma>. \<forall>n. 
-       \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)" 
+assumes valid_modif:
+    "\<forall>s \<in> P. \<forall>\<sigma>. \<forall>n.
+       \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
 assumes ret_modif:
     "\<forall>s t. t \<in> Modif (init s) \<longrightarrow> return' s t = return s t"
 assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s) \<longrightarrow> return' s t = return s t"
@@ -1713,8 +1713,8 @@ proof (rule cnvalidI)
   assume exec: "\<Gamma>\<turnstile>\<langle>dynCall init p return c,Normal s\<rangle> =n\<Rightarrow> t"
   assume t_notin_F: "t \<notin> Fault ` F"
   assume P: "s \<in> P"
-  with valid_modif 
-  have valid_modif': "\<forall>\<sigma>. \<forall>n. 
+  with valid_modif
+  have valid_modif': "\<forall>\<sigma>. \<forall>n.
     \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
     by blast
   from exec
@@ -1724,8 +1724,8 @@ proof (rule cnvalidI)
   proof (cases rule: execn_call_Normal_elim)
     fix bdy m t'
     assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'" 
-    assume exec_c: "\<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc m\<Rightarrow> t" 
+    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'"
+    assume exec_c: "\<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc m\<Rightarrow> t"
     assume n: "n = Suc m"
     from exec_body n bdy
     have "\<Gamma>\<turnstile>\<langle>Call (p s) ,Normal (init s)\<rangle> =n \<Rightarrow> Normal t'"
@@ -1736,9 +1736,9 @@ proof (rule cnvalidI)
     with ret_modif have "Normal (return' s t') = Normal (return s t')"
       by simp
     with exec_body exec_c bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_call)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (rule execn_dynCall)
     from cnvalidD [OF valid_call ctxt this] P t_notin_F
     show ?thesis
@@ -1746,7 +1746,7 @@ proof (rule cnvalidI)
   next
     fix bdy m t'
     assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'" 
+    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'"
     assume n: "n = Suc m"
     assume t: "t = Abrupt (return s t')"
     also from exec_body n bdy
@@ -1759,9 +1759,9 @@ proof (rule cnvalidI)
       by simp
     finally have "t = Abrupt (return' s t')" .
     with exec_body bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_callAbrupt)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (rule execn_dynCall)
     from cnvalidD [OF valid_call ctxt this] P t_notin_F
     show ?thesis
@@ -1773,7 +1773,7 @@ proof (rule cnvalidI)
       t: "t = Fault f"
     with bdy have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c ,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_callFault)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (rule execn_dynCall)
     from cnvalidD [OF valid_call ctxt this P] t t_notin_F
     show ?thesis
@@ -1781,11 +1781,11 @@ proof (rule cnvalidI)
   next
     fix bdy m
     assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m" 
+    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m"
       "t = Stuck"
     with bdy have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c ,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_callStuck)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (rule execn_dynCall)
     from valid_call ctxt this P t_notin_F
     show ?thesis
@@ -1796,7 +1796,7 @@ proof (rule cnvalidI)
     and  "n = Suc m" "t = Stuck"
     hence "\<Gamma>\<turnstile>\<langle>call init (p s) return' c ,Normal s\<rangle> =n\<Rightarrow> t"
       by (auto intro: execn_callUndefined)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t" 
+    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
       by (rule execn_dynCall)
     from valid_call ctxt this P t_notin_F
     show ?thesis
@@ -1807,16 +1807,16 @@ qed
 lemma dynProcModifyReturnSameFaults:
 assumes dyn_call: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P dynCall init p return' c Q,A"
 assumes ret_modif:
-    "\<forall>s t. t \<in> Modif (init s) 
+    "\<forall>s t. t \<in> Modif (init s)
            \<longrightarrow> return' s t = return s t"
-assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s) 
+assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
                              \<longrightarrow> return' s t = return s t"
-assumes modif: 
-    "\<forall>s \<in> P. \<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)" 
+assumes modif:
+    "\<forall>s \<in> P. \<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
 shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
 apply (rule hoare_complete')
 apply (rule allI)
-apply (rule dynProcModifyReturnSameFaults_sound 
+apply (rule dynProcModifyReturnSameFaults_sound
         [where Modif=Modif and ModifAbr=ModifAbr,
            OF hoare_cnvalid [OF dyn_call] _ ret_modif ret_modifAbr])
 apply (intro ballI allI)
@@ -1828,14 +1828,14 @@ done
 subsubsection \<open>Conjunction of Postcondition\<close>
 
 lemma PostConjI_sound:
-assumes valid_Q: "\<forall>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A" 
+assumes valid_Q: "\<forall>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
 assumes valid_R: "\<forall>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P c R,B"
 shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P c (Q \<inter> R),(A \<inter> B)"
 proof (rule cnvalidI)
-  fix s t 
-  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A" 
-  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t" 
-  assume P: "s \<in> P" 
+  fix s t
+  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
+  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
+  assume P: "s \<in> P"
   assume t_notin_F: "t \<notin> Fault ` F"
   from valid_Q [rule_format] ctxt exec P t_notin_F have "t \<in> Normal ` Q \<union> Abrupt ` A"
     by (rule cnvalidD)
@@ -1846,8 +1846,8 @@ proof (rule cnvalidI)
     by blast
 qed
 
-lemma PostConjI: 
-  assumes deriv_Q: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A" 
+lemma PostConjI:
+  assumes deriv_Q: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   assumes deriv_R: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c R,B"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c (Q \<inter> R),(A \<inter> B)"
 apply (rule hoare_complete')
@@ -1859,7 +1859,7 @@ using deriv_R
 apply (blast intro: hoare_cnvalid)
 done
 
-lemma Merge_PostConj_sound: 
+lemma Merge_PostConj_sound:
   assumes validF: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
   assumes validG: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/G\<^esub> P' c R,X"
   assumes F_G: "F \<subseteq> G"
@@ -1867,11 +1867,11 @@ lemma Merge_PostConj_sound:
   shows "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c (Q \<inter> R),(A \<inter> X)"
 proof (rule cnvalidI)
   fix s t
-  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A" 
-  with F_G have ctxt': "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/G\<^esub> P (Call p) Q,A" 
+  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
+  with F_G have ctxt': "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/G\<^esub> P (Call p) Q,A"
     by (auto intro: nvalid_augment_Faults)
-  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t" 
-  assume P: "s \<in> P" 
+  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
+  assume P: "s \<in> P"
   with P_P' have P': "s \<in> P'"
     by auto
   assume t_noFault: "t \<notin> Fault ` F"
@@ -1887,7 +1887,7 @@ proof (rule cnvalidI)
   qed
 qed
 
-lemma Merge_PostConj: 
+lemma Merge_PostConj:
   assumes validF: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   assumes validG: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/G\<^esub> P' c R,X"
   assumes F_G: "F \<subseteq> G"
@@ -1905,15 +1905,15 @@ subsubsection \<open>Weaken Context\<close>
 
 lemma WeakenContext_sound:
   assumes valid_c: "\<forall>n. \<Gamma>,\<Theta>'\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
-  assumes valid_ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>'. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A" 
+  assumes valid_ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>'. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
   shows "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
 proof (rule cnvalidI)
-  fix s t 
+  fix s t
   assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
   with valid_ctxt
   have ctxt': "\<forall>(P, p, Q, A)\<in>\<Theta>'. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
     by (simp add: cnvalid_def)
-  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t" 
+  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
   assume P: "s \<in> P"
   assume t_notin_F: "t \<notin> Fault ` F"
   from valid_c [rule_format] ctxt' exec P t_notin_F
@@ -1921,8 +1921,8 @@ proof (rule cnvalidI)
     by (rule cnvalidD)
 qed
 
-lemma WeakenContext: 
-  assumes deriv_c: "\<Gamma>,\<Theta>'\<turnstile>\<^bsub>/F\<^esub> P c Q,A" 
+lemma WeakenContext:
+  assumes deriv_c: "\<Gamma>,\<Theta>'\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   assumes deriv_ctxt: "\<forall>(P,p,Q,A)\<in>\<Theta>'. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (Call p) Q,A"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
 apply (rule hoare_complete')
@@ -1942,9 +1942,9 @@ assumes valid_c2: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub>
 assumes c: "(c\<^sub>1 \<inter>\<^sub>g c\<^sub>2) = Some c"
 shows "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
 proof (rule cnvalidI)
-  fix s t 
+  fix s t
   assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
-  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t" 
+  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
   assume P: "s \<in> P"
   assume t_notin_F: "t \<notin> Fault ` F"
   show "t \<in> Normal ` Q \<union> Abrupt ` A"
@@ -1989,9 +1989,9 @@ proof (rule cnvalidI)
   qed
 qed
 
-lemma SplitGuards: 
-  assumes c: "(c\<^sub>1 \<inter>\<^sub>g c\<^sub>2) = Some c" 
-  assumes deriv_c1: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c\<^sub>1 Q,A" 
+lemma SplitGuards:
+  assumes c: "(c\<^sub>1 \<inter>\<^sub>g c\<^sub>2) = Some c"
+  assumes deriv_c1: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c\<^sub>1 Q,A"
   assumes deriv_c2: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c\<^sub>2 UNIV,UNIV"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
 apply (rule hoare_complete')
@@ -2003,27 +2003,27 @@ using deriv_c2
 apply (blast intro: hoare_cnvalid)
 done
 
-lemma CombineStrip_sound: 
+lemma CombineStrip_sound:
   assumes valid: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
   assumes valid_strip: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/{}\<^esub> P (strip_guards (-F) c) UNIV,UNIV"
   shows "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/{}\<^esub> P c Q,A"
 proof (rule cnvalidI)
   fix s t
-  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/{}\<^esub> P (Call p) Q,A" 
-  hence ctxt': "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A" 
+  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/{}\<^esub> P (Call p) Q,A"
+  hence ctxt': "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
     by (auto intro: nvalid_augment_Faults)
-  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t" 
-  assume P: "s \<in> P" 
+  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
+  assume P: "s \<in> P"
   assume t_noFault: "t \<notin> Fault ` {}"
   show "t \<in> Normal ` Q \<union> Abrupt ` A"
   proof (cases t)
     case (Normal t')
-    from cnvalidD [OF valid [rule_format] ctxt' exec P] Normal 
+    from cnvalidD [OF valid [rule_format] ctxt' exec P] Normal
     show ?thesis
       by auto
   next
     case (Abrupt t')
-    from cnvalidD [OF valid [rule_format] ctxt' exec P] Abrupt 
+    from cnvalidD [OF valid [rule_format] ctxt' exec P] Abrupt
     show ?thesis
       by auto
   next
@@ -2033,7 +2033,7 @@ proof (rule cnvalidI)
       case True
       hence "f \<notin> -F" by simp
       with exec Fault
-      have "\<Gamma>\<turnstile>\<langle>strip_guards (-F) c,Normal s\<rangle> =n\<Rightarrow> Fault f" 
+      have "\<Gamma>\<turnstile>\<langle>strip_guards (-F) c,Normal s\<rangle> =n\<Rightarrow> Fault f"
         by (auto intro: execn_to_execn_strip_guards_Fault)
       from cnvalidD [OF valid_strip [rule_format] ctxt this P] Fault
       have False
@@ -2053,7 +2053,7 @@ proof (rule cnvalidI)
   qed
 qed
 
-lemma CombineStrip: 
+lemma CombineStrip:
   assumes deriv: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   assumes deriv_strip: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P (strip_guards (-F) c) UNIV,UNIV"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P c Q,A"
@@ -2064,29 +2064,29 @@ apply  (iprover intro: hoare_cnvalid [OF deriv])
 apply (iprover intro: hoare_cnvalid [OF deriv_strip])
 done
 
-lemma GuardsFlip_sound: 
+lemma GuardsFlip_sound:
   assumes valid: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
   assumes validFlip: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/-F\<^esub> P c UNIV,UNIV"
   shows "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/{}\<^esub> P c Q,A"
 proof (rule cnvalidI)
   fix s t
-  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/{}\<^esub> P (Call p) Q,A" 
-  hence ctxt': "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A" 
+  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/{}\<^esub> P (Call p) Q,A"
+  hence ctxt': "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
     by (auto intro: nvalid_augment_Faults)
-  from ctxt have ctxtFlip: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/-F\<^esub> P (Call p) Q,A" 
+  from ctxt have ctxtFlip: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/-F\<^esub> P (Call p) Q,A"
     by (auto intro: nvalid_augment_Faults)
-  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t" 
-  assume P: "s \<in> P" 
+  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
+  assume P: "s \<in> P"
   assume t_noFault: "t \<notin> Fault ` {}"
   show "t \<in> Normal ` Q \<union> Abrupt ` A"
   proof (cases t)
     case (Normal t')
-    from cnvalidD [OF valid [rule_format] ctxt' exec P] Normal 
+    from cnvalidD [OF valid [rule_format] ctxt' exec P] Normal
     show ?thesis
       by auto
   next
     case (Abrupt t')
-    from cnvalidD [OF valid [rule_format] ctxt' exec P] Abrupt 
+    from cnvalidD [OF valid [rule_format] ctxt' exec P] Abrupt
     show ?thesis
       by auto
   next
@@ -2113,7 +2113,7 @@ proof (rule cnvalidI)
   qed
 qed
 
-lemma GuardsFlip: 
+lemma GuardsFlip:
   assumes deriv: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   assumes derivFlip: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/-F\<^esub> P c UNIV,UNIV"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P c Q,A"
@@ -2124,18 +2124,18 @@ apply  (iprover intro: hoare_cnvalid [OF deriv])
 apply (iprover intro: hoare_cnvalid [OF derivFlip])
 done
 
-lemma MarkGuardsI_sound: 
+lemma MarkGuardsI_sound:
   assumes valid: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/{}\<^esub> P c Q,A"
   shows "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/{}\<^esub> P mark_guards f c Q,A"
 proof (rule cnvalidI)
   fix s t
-  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/{}\<^esub> P (Call p) Q,A" 
-  assume exec: "\<Gamma>\<turnstile>\<langle>mark_guards f c,Normal s\<rangle> =n\<Rightarrow> t" 
+  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/{}\<^esub> P (Call p) Q,A"
+  assume exec: "\<Gamma>\<turnstile>\<langle>mark_guards f c,Normal s\<rangle> =n\<Rightarrow> t"
   from execn_mark_guards_to_execn [OF exec] obtain t' where
     exec_c: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t'" and
     t'_noFault: "\<not> isFault t' \<longrightarrow> t' = t"
     by blast
-  assume P: "s \<in> P" 
+  assume P: "s \<in> P"
   assume t_noFault: "t \<notin> Fault ` {}"
   show "t \<in> Normal ` Q \<union> Abrupt ` A"
   proof -
@@ -2148,23 +2148,23 @@ proof (rule cnvalidI)
   qed
 qed
 
-lemma MarkGuardsI: 
+lemma MarkGuardsI:
   assumes deriv: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P c Q,A"
-  shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P mark_guards f c Q,A"  
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P mark_guards f c Q,A"
 apply (rule hoare_complete')
 apply (rule allI)
 apply (rule MarkGuardsI_sound)
 apply (iprover intro: hoare_cnvalid [OF deriv])
 done
 
-lemma MarkGuardsD_sound: 
-  assumes valid: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/{}\<^esub> P mark_guards f c Q,A" 
+lemma MarkGuardsD_sound:
+  assumes valid: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/{}\<^esub> P mark_guards f c Q,A"
   shows "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/{}\<^esub> P c Q,A"
 proof (rule cnvalidI)
   fix s t
-  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/{}\<^esub> P (Call p) Q,A" 
+  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/{}\<^esub> P (Call p) Q,A"
   assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
-  assume P: "s \<in> P" 
+  assume P: "s \<in> P"
   assume t_noFault: "t \<notin> Fault ` {}"
   show "t \<in> Normal ` Q \<union> Abrupt ` A"
   proof (cases "isFault t")
@@ -2187,8 +2187,8 @@ proof (rule cnvalidI)
   qed
 qed
 
-lemma MarkGuardsD: 
-  assumes deriv: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P mark_guards f c Q,A" 
+lemma MarkGuardsD:
+  assumes deriv: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P mark_guards f c Q,A"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P c Q,A"
 apply (rule hoare_complete')
 apply (rule allI)
@@ -2196,22 +2196,22 @@ apply (rule MarkGuardsD_sound)
 apply (iprover intro: hoare_cnvalid [OF deriv])
 done
 
-lemma MergeGuardsI_sound: 
+lemma MergeGuardsI_sound:
   assumes valid: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
   shows "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P merge_guards c Q,A"
 proof (rule cnvalidI)
   fix s t
-  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A" 
+  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
   assume exec_merge: "\<Gamma>\<turnstile>\<langle>merge_guards c,Normal s\<rangle> =n\<Rightarrow> t"
-  from execn_merge_guards_to_execn [OF exec_merge] 
+  from execn_merge_guards_to_execn [OF exec_merge]
   have exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t" .
-  assume P: "s \<in> P" 
+  assume P: "s \<in> P"
   assume t_notin_F: "t \<notin> Fault ` F"
   from cnvalidD [OF valid [rule_format] ctxt exec P t_notin_F]
   show "t \<in> Normal ` Q \<union> Abrupt ` A".
 qed
 
-lemma MergeGuardsI: 
+lemma MergeGuardsI:
   assumes deriv: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P merge_guards c Q,A"
 apply (rule hoare_complete')
@@ -2220,22 +2220,22 @@ apply (rule MergeGuardsI_sound)
 apply (iprover intro: hoare_cnvalid [OF deriv])
 done
 
-lemma MergeGuardsD_sound: 
+lemma MergeGuardsD_sound:
   assumes valid: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P merge_guards c Q,A"
   shows "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
 proof (rule cnvalidI)
   fix s t
-  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A" 
-  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t" 
-  from execn_to_execn_merge_guards [OF exec] 
+  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
+  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
+  from execn_to_execn_merge_guards [OF exec]
   have exec_merge: "\<Gamma>\<turnstile>\<langle>merge_guards c,Normal s\<rangle> =n\<Rightarrow> t".
-  assume P: "s \<in> P" 
+  assume P: "s \<in> P"
   assume t_notin_F: "t \<notin> Fault ` F"
   from cnvalidD [OF valid [rule_format] ctxt exec_merge P t_notin_F]
   show "t \<in> Normal ` Q \<union> Abrupt ` A".
 qed
 
-lemma MergeGuardsD: 
+lemma MergeGuardsD:
   assumes deriv: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P merge_guards c Q,A"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
 apply (rule hoare_complete')
@@ -2245,26 +2245,26 @@ apply (iprover intro: hoare_cnvalid [OF deriv])
 done
 
 
-lemma SubsetGuards_sound: 
+lemma SubsetGuards_sound:
   assumes c_c': "c \<subseteq>\<^sub>g c'"
   assumes valid: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/{}\<^esub> P c' Q,A"
   shows "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/{}\<^esub> P c Q,A"
 proof (rule cnvalidI)
   fix s t
-  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/{}\<^esub> P (Call p) Q,A" 
-  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t" 
+  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/{}\<^esub> P (Call p) Q,A"
+  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
   from execn_to_execn_subseteq_guards [OF c_c' exec] obtain t' where
     exec_c': "\<Gamma>\<turnstile>\<langle>c',Normal s\<rangle> =n\<Rightarrow> t'" and
     t'_noFault: "\<not> isFault t' \<longrightarrow> t' = t"
     by blast
-  assume P: "s \<in> P" 
+  assume P: "s \<in> P"
   assume t_noFault: "t \<notin> Fault ` {}"
   from cnvalidD [OF valid [rule_format] ctxt exec_c' P] t'_noFault t_noFault
   show "t \<in> Normal ` Q \<union> Abrupt ` A"
     by auto
 qed
 
-lemma SubsetGuards: 
+lemma SubsetGuards:
   assumes c_c': "c \<subseteq>\<^sub>g c'"
   assumes deriv: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P c' Q,A"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/{}\<^esub> P c Q,A"
@@ -2274,22 +2274,22 @@ apply (rule SubsetGuards_sound [OF c_c'])
 apply (iprover intro: hoare_cnvalid [OF deriv])
 done
 
-lemma NormalizeD_sound: 
+lemma NormalizeD_sound:
   assumes valid: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P (normalize c) Q,A"
   shows "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
 proof (rule cnvalidI)
   fix s t
-  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A" 
-  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t" 
-  hence exec_norm: "\<Gamma>\<turnstile>\<langle>normalize c,Normal s\<rangle> =n\<Rightarrow> t" 
+  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
+  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
+  hence exec_norm: "\<Gamma>\<turnstile>\<langle>normalize c,Normal s\<rangle> =n\<Rightarrow> t"
     by (rule execn_to_execn_normalize)
-  assume P: "s \<in> P" 
+  assume P: "s \<in> P"
   assume noFault: "t \<notin> Fault ` F"
   from cnvalidD [OF valid [rule_format] ctxt exec_norm P noFault]
   show "t \<in> Normal ` Q \<union> Abrupt ` A".
 qed
 
-lemma NormalizeD: 
+lemma NormalizeD:
   assumes deriv: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (normalize c) Q,A"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
 apply (rule hoare_complete')
@@ -2298,22 +2298,22 @@ apply (rule NormalizeD_sound)
 apply (iprover intro: hoare_cnvalid [OF deriv])
 done
 
-lemma NormalizeI_sound: 
+lemma NormalizeI_sound:
   assumes valid: "\<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
   shows "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P (normalize c) Q,A"
 proof (rule cnvalidI)
   fix s t
-  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A" 
-  assume "\<Gamma>\<turnstile>\<langle>normalize c,Normal s\<rangle> =n\<Rightarrow> t" 
-  hence exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t" 
+  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
+  assume "\<Gamma>\<turnstile>\<langle>normalize c,Normal s\<rangle> =n\<Rightarrow> t"
+  hence exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
     by (rule execn_normalize_to_execn)
-  assume P: "s \<in> P" 
+  assume P: "s \<in> P"
   assume noFault: "t \<notin> Fault ` F"
   from cnvalidD [OF valid [rule_format] ctxt exec P noFault]
   show "t \<in> Normal ` Q \<union> Abrupt ` A".
 qed
 
-lemma NormalizeI: 
+lemma NormalizeI:
   assumes deriv: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (normalize c) Q,A"
 apply (rule hoare_complete')
@@ -2330,7 +2330,7 @@ assumes valid_c: "\<Gamma>|\<^bsub>M\<^esub>\<Turnstile>n:\<^bsub>/F\<^esub> P c
 shows "\<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
 proof (rule nvalidI)
   fix s t
-  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t" 
+  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
   assume P: "s \<in> P"
   assume t_notin_F: "t \<notin> Fault ` F"
   show "t \<in> Normal ` Q \<union> Abrupt ` A"
@@ -2343,7 +2343,7 @@ proof (rule nvalidI)
       by blast
     from t_Fault t_notin_F t'_notStuck have "t' \<notin> Fault ` F"
       by (cases t') auto
-    with valid_c exec_res P 
+    with valid_c exec_res P
     have "t' \<in> Normal ` Q \<union> Abrupt ` A"
       by (auto simp add: nvalid_def)
     with t'_notStuck
@@ -2357,7 +2357,7 @@ assumes valid_c: "\<Gamma>|\<^bsub>M\<^esub>\<Turnstile>\<^bsub>/F\<^esub> P c Q
 shows "\<Gamma>\<Turnstile>\<^bsub>/F\<^esub> P c Q,A"
 proof (rule validI)
   fix s t
-  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> t" 
+  assume exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> t"
   assume P: "s \<in> P"
   assume t_notin_F: "t \<notin> Fault ` F"
   show "t \<in> Normal ` Q \<union> Abrupt ` A"

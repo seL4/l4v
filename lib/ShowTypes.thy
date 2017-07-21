@@ -131,10 +131,10 @@ experiment begin
     apply (case_tac x)
     apply (fastforce intro!: byte_ptr_guarded simp: c_guard_def dest: c_null_guard)
     done
-  
+
   thm c_guard_cast_byte[where x = "Ptr (ucast (0 :: 8 word))"]
   thm_show_types c_guard_cast_byte[where x = "Ptr (ucast (0 :: 8 word))"]
-  
+
   (* Round-trip test *)
   ML {*
   let val ctxt = Config.put show_sorts true @{context}
@@ -143,7 +143,7 @@ experiment begin
       val string_no_types = Syntax.pretty_term ctxt term
                             |> Pretty.string_of |> YXML.content_of
       val string_show_types = Show_Types.term_show_types true ctxt term
-  
+
       val _ = assert (Syntax.read_term ctxt string_no_types <> term) "Show_Types test (baseline)"
       val _ = assert (Syntax.read_term ctxt string_show_types = term) "Show_Types test"
   in () end

@@ -16,7 +16,7 @@ context Arch begin global_naming ARM
 
 named_theorems TcbAcc_AI_assms
 
-lemmas cap_master_cap_simps = 
+lemmas cap_master_cap_simps =
   cap_master_cap_def[simplified cap_master_arch_cap_def, split_simps cap.split arch_cap.split]
 
 lemma cap_master_cap_arch_eqDs:
@@ -34,10 +34,10 @@ lemma cap_master_cap_arch_eqDs:
   by (clarsimp simp: cap_master_cap_def
               split: cap.split_asm arch_cap.split_asm)+
 
-lemmas cap_master_cap_eqDs = 
+lemmas cap_master_cap_eqDs =
   cap_master_cap_eqDs1 cap_master_cap_arch_eqDs
   cap_master_cap_eqDs1 [OF sym] cap_master_cap_arch_eqDs[OF sym]
-  
+
 
 lemma vm_sets_diff[simp]:
   "vm_read_only \<noteq> vm_read_write"
@@ -55,10 +55,10 @@ lemma cap_master_cap_tcb_cap_valid_arch:
             split: option.splits cap.splits arch_cap.splits
                    Structures_A.thread_state.splits)
 
-crunch device_state_inv[wp]: invalidateTLB_ASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: invalidateLocalTLB_ASID "\<lambda>ms. P (device_state ms)"
   (ignore: ignore_failure)
 
-crunch device_state_inv[wp]: invalidateTLB_VAASID "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: invalidateLocalTLB_VAASID "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: setHardwareASID "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: isb "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: dsb "\<lambda>ms. P (device_state ms)"
@@ -99,6 +99,17 @@ lemma valid_ipc_buffer_cap_0[simp, TcbAcc_AI_assms]:
   by (auto simp add: valid_ipc_buffer_cap_def case_bool_If
     split: cap.split arch_cap.split)
 
+lemma thread_set_hyp_refs_trivial [TcbAcc_AI_assms]:
+  assumes x: "\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb"
+  assumes y: "\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb"
+  shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: thread_set_def set_object_def)
+  apply wp
+  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (clarsimp elim!: rsubst[where P=P])
+  apply (rule all_ext;
+         clarsimp simp: state_hyp_refs_of_def hyp_refs_of_def tcb_hyp_refs_def get_tcb_def x y[simplified tcb_arch_ref_def])
+  done
 
 lemma mab_pb [simp]:
   "msg_align_bits \<le> pageBits"
@@ -138,6 +149,13 @@ lemma pred_tcb_cap_wp_at [TcbAcc_AI_assms]:
    apply fastforce+
   done
 
+lemma as_user_hyp_refs_of[wp, TcbAcc_AI_assms]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
+     as_user t m
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (wp as_user_wp_thread_set_helper
+            thread_set_hyp_refs_trivial | simp)+
+  done
 
 lemmas sts_typ_ats = sts_typ_ats abs_atyp_at_lifts [OF set_thread_state_typ_at]
 

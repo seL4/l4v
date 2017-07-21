@@ -17,8 +17,8 @@ imports Invocations_D CSpace_D
 begin
 
 definition cdl_update_cnode_cap_data :: "cdl_cap \<Rightarrow> word32 \<Rightarrow> cdl_cap"
-where "cdl_update_cnode_cap_data cap data  \<equiv> 
-  case cap of cdl_cap.CNodeCap oid _ _ sz \<Rightarrow> if data\<noteq>0 then 
+where "cdl_update_cnode_cap_data cap data  \<equiv>
+  case cap of cdl_cap.CNodeCap oid _ _ sz \<Rightarrow> if data\<noteq>0 then
     (let reserved_bits = 3; guard_bits = 18; guard_size_bits = 5; new_guard_size = unat ((data >> reserved_bits) && mask guard_size_bits);
         new_guard =
           (data >> reserved_bits + guard_size_bits) && mask (min (unat ((data >> reserved_bits) && mask guard_size_bits)) guard_bits)
@@ -27,7 +27,7 @@ where "cdl_update_cnode_cap_data cap data  \<equiv>
   | _ \<Rightarrow> cap"
 
 definition cdl_same_arch_obj_as :: "cdl_cap \<Rightarrow> cdl_cap \<Rightarrow> bool"
-where "cdl_same_arch_obj_as capa capb \<equiv> 
+where "cdl_same_arch_obj_as capa capb \<equiv>
   case capa of AsidPoolCap x _ \<Rightarrow> (
         case capb of AsidPoolCap y _ \<Rightarrow>  y = x
         | _ \<Rightarrow> False)
@@ -132,7 +132,7 @@ definition
 where
   "tcb_empty_thread_slot target_tcb target_slot \<equiv> doE
     cap \<leftarrow> liftE $ get_cap (target_tcb,target_slot);
-    whenE (cap \<noteq> NullCap) $ 
+    whenE (cap \<noteq> NullCap) $
       delete_cap  (target_tcb, target_slot)
   odE"
 
@@ -142,7 +142,7 @@ where
 definition
   tcb_update_thread_slot :: "cdl_object_id \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cnode_index \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) \<Rightarrow> unit preempt_monad"
 where
-  "tcb_update_thread_slot target_tcb tcb_cap_slot target_slot pcap \<equiv> 
+  "tcb_update_thread_slot target_tcb tcb_cap_slot target_slot pcap \<equiv>
          liftE (do
            thread_cap \<leftarrow> get_cap tcb_cap_slot;
            when (thread_cap = TcbCap target_tcb)
@@ -158,7 +158,7 @@ where
   doE
      tcb_empty_thread_slot target_tcb tcb_cspace_slot;
      src_cap \<leftarrow> liftE $ get_cap (snd croot);
-     whenE (is_cnode_cap src_cap \<and> (cap_object src_cap = cap_object (fst croot))) 
+     whenE (is_cnode_cap src_cap \<and> (cap_object src_cap = cap_object (fst croot)))
        $ tcb_update_thread_slot target_tcb tcb_cap_ref tcb_cspace_slot croot
   odE"
 
@@ -170,7 +170,7 @@ where
   doE
      tcb_empty_thread_slot target_tcb tcb_vspace_slot;
      src_cap \<leftarrow> liftE $ get_cap (snd vroot);
-     whenE (cdl_same_arch_obj_as (fst vroot) src_cap) 
+     whenE (cdl_same_arch_obj_as (fst vroot) src_cap)
        $ tcb_update_thread_slot target_tcb tcb_cap_ref tcb_vspace_slot vroot
   odE"
 
@@ -203,10 +203,10 @@ where
 definition
   restart :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
-  "restart target_tcb \<equiv> 
-  do 
+  "restart target_tcb \<equiv>
+  do
      cap \<leftarrow> KHeap_D.get_cap (target_tcb,tcb_pending_op_slot);
-     when (cap \<noteq> RestartCap \<and> cap\<noteq> RunningCap) 
+     when (cap \<noteq> RestartCap \<and> cap\<noteq> RunningCap)
      (do
        CSpace_D.cancel_ipc target_tcb;
        KHeap_D.set_cap (target_tcb,tcb_replycap_slot) (cdl_cap.MasterReplyCap target_tcb);
@@ -232,7 +232,7 @@ where
   "invoke_tcb params \<equiv> case params of
     (* Modify a thread's registers. *)
       WriteRegisters target_tcb resume _ _ \<Rightarrow>
-        liftE $ 
+        liftE $
         do
           corrupt_tcb_intent target_tcb;
           when resume $ restart target_tcb

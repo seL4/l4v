@@ -49,7 +49,7 @@ lemma decode_irq_control_corres:
      (valid_objs and (\<lambda>s. \<forall>e \<in> set excaps'. valid_cap (fst e) s) and valid_global_refs and valid_idle and valid_etcbs)
      (Interrupt_D.decode_irq_control_invocation cap slot excaps ui)
      (Decode_A.decode_irq_control_invocation label' args' slot' (map fst excaps'))"
-  apply (unfold Interrupt_D.decode_irq_control_invocation_def Decode_A.decode_irq_control_invocation_def 
+  apply (unfold Interrupt_D.decode_irq_control_invocation_def Decode_A.decode_irq_control_invocation_def
                 arch_check_irq_def)
   apply (cases "invocation_type label' = IRQIssueIRQHandler")
    apply clarsimp

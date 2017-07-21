@@ -3387,7 +3387,7 @@ lemma next_child:
   notes next_child_antisym[where x=src and y = dest,simp]
   notes next_childD' = next_childD[OF _ valid_list]
   notes rdefs = t'_def t''_def n_def n'_def
-  shows 
+  shows
   "next_child p t'
     = (if p = src then
         (if next_child dest t = Some src then Some dest
@@ -3400,7 +3400,7 @@ lemma next_child:
       else next_child p t)"
   apply (simp add: rdefs split: option.splits)
   apply (intro impI conjI,simp_all)
-  by ((intro impI conjI allI | drule next_child_NoneD next_childD'  next_childD'' | 
+  by ((intro impI conjI allI | drule next_child_NoneD next_childD'  next_childD'' |
        rule next_childI'' | simp add: list_replace_def list_swap_def | elim exE conjE disjE |
        simp add: next_child_def)+) (*slow*)
 
@@ -3445,13 +3445,13 @@ lemma t_some[simp]: "set (t x) = {c. m c = Some x}"
 
 declare t_distinct [simp]
 
-lemmas list_swap_preservation_t = 
+lemmas list_swap_preservation_t =
   list_swap_preserve_after list_swap_preserve_after'
   list_swap_preserve_after'' list_swap_preserve_None list_swap_preserve_None'
   list_swap_preserve_Some_other' list_swap_preserve_Some_other_distinct[OF t_distinct]
   list_swap_preserve_Some_other_distinct[OF t_distinct, simplified list_swap_symmetric]
   list_swap_does_swap[OF t_distinct]
-  list_swap_does_swap[OF t_distinct,simplified list_swap_symmetric] 
+  list_swap_does_swap[OF t_distinct,simplified list_swap_symmetric]
   list_swap_preserve_after_None list_swap_preserve_separate list_swap_does_swap'
 
 lemma next_sibD':
@@ -3876,7 +3876,7 @@ crunch all_but_exst[wp]: reset_work_units "all_but_exst P"
 
 global_interpretation update_work_units_ext_extended: is_extended "update_work_units"
   by (unfold_locales; wp)
- 
+
 global_interpretation reset_work_units_ext_extended: is_extended "reset_work_units"
   by (unfold_locales; wp)
 
@@ -3897,6 +3897,8 @@ locale Deterministic_AI_1 =
     "\<And>param_a. \<lbrace>valid_list\<rbrace> get_cap param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes arch_tcb_set_ipc_buffer_valid_list[wp]:
     "\<And>t ptr. \<lbrace>valid_list\<rbrace> arch_tcb_set_ipc_buffer t ptr \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  assumes arch_get_sanitise_register_info_valid_list[wp]:
+    "\<And>t. \<lbrace>valid_list\<rbrace> arch_get_sanitise_register_info t \<lbrace>\<lambda>_. valid_list\<rbrace>"
 
 
 context Deterministic_AI_1 begin
@@ -3939,7 +3941,7 @@ crunch valid_list[wp]: cancel_badged_sends valid_list
 
 context Deterministic_AI_1 begin
 
-lemma invoke_cnode_valid_list[wp]: 
+lemma invoke_cnode_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> invoke_cnode ci \<lbrace>\<lambda>_.valid_list\<rbrace>"
   apply (rule hoare_pre)
    apply (wp crunch_wps cap_move_src_slot_Null hoare_drop_imps hoare_vcg_all_lift | wpc | simp add: invoke_cnode_def crunch_simps split del: if_split)+

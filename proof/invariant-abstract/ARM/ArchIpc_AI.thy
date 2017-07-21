@@ -16,7 +16,6 @@ context Arch begin global_naming ARM
 
 named_theorems Ipc_AI_assms
 
-
 crunch pspace_respects_device_region[wp]: set_extra_badge "pspace_respects_device_region"
 
 crunch cap_refs_respects_device_region[wp]: set_extra_badge "cap_refs_respects_device_region"
@@ -59,8 +58,8 @@ lemma cap_asid_PageCap_None [simp]:
 
 lemma arch_derive_cap_is_derived:
   "\<lbrace>\<lambda>s. cte_wp_at (\<lambda>cap . cap_master_cap cap =
-                          cap_master_cap (ArchObjectCap c') \<and> 
-                          cap_aligned cap \<and> 
+                          cap_master_cap (ArchObjectCap c') \<and>
+                          cap_aligned cap \<and>
                           cap_asid cap = cap_asid (ArchObjectCap c') \<and>
                           vs_cap_ref cap = vs_cap_ref (ArchObjectCap c')) p s\<rbrace>
      arch_derive_cap c'
@@ -84,7 +83,7 @@ lemma derive_cap_is_derived [Ipc_AI_assms]:
                      \<and> vs_cap_ref cap = vs_cap_ref c') slot s
        \<and> valid_objs s\<rbrace>
   derive_cap slot c'
-  \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow> 
+  \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow>
           cte_wp_at (is_derived (cdt s) slot rv) slot s\<rbrace>, -"
   unfolding derive_cap_def
   apply (cases c', simp_all add: is_cap_simps)
@@ -169,7 +168,7 @@ lemma cap_range_update [simp, Ipc_AI_assms]:
 
 lemma derive_cap_idle[wp, Ipc_AI_assms]:
   "\<lbrace>\<lambda>s. global_refs s \<inter> cap_range cap = {}\<rbrace>
-   derive_cap slot cap 
+   derive_cap slot cap
   \<lbrace>\<lambda>c s. global_refs s \<inter> cap_range c = {}\<rbrace>, -"
   apply (simp add: derive_cap_def)
   apply (rule hoare_pre)
@@ -266,7 +265,7 @@ lemma as_user_getRestart_invs[wp]: "\<lbrace>P\<rbrace> as_user t getRestartPC \
   apply (simp add: get_register_eq getRestartPC_def ; rule user_getreg_inv)
   done
 
-lemma make_arch_fault_msg_invs[wp]: "\<lbrace>P\<rbrace> make_arch_fault_msg f t \<lbrace>\<lambda>_. P\<rbrace>"
+lemma make_arch_fault_msg_inv[wp]: "\<lbrace>P\<rbrace> make_arch_fault_msg f t \<lbrace>\<lambda>_. P\<rbrace>"
   apply (cases f)
   apply simp
   apply wp
@@ -305,7 +304,7 @@ lemma lookup_ipc_buffer_in_user_frame[wp, Ipc_AI_assms]:
   apply (clarsimp simp: caps_of_state_cteD'[where P = "\<lambda>x. True",simplified,symmetric])
   apply (drule(1) CSpace_AI.tcb_cap_slot_regular)
    apply simp
-  apply (simp add: is_nondevice_page_cap_def is_nondevice_page_cap_arch_def case_bool_If 
+  apply (simp add: is_nondevice_page_cap_def is_nondevice_page_cap_arch_def case_bool_If
             split: if_splits)
   done
 
@@ -320,16 +319,16 @@ lemma transfer_caps_loop_cte_wp_at:
                   cong: if_cong list.case_cong
              split del: if_split)
   apply (rule hoare_pre)
-   apply (wp hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift 
+   apply (wp hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift
               derive_cap_is_derived_foo
              hoare_drop_imps
         | assumption | simp split del: if_split)+
       apply (wp hoare_vcg_conj_lift cap_insert_weak_cte_wp_at2)
        apply (erule imp)
-      apply (wp hoare_vcg_ball_lift            
+      apply (wp hoare_vcg_ball_lift
              | clarsimp simp: is_cap_simps split del:if_split
              | unfold derive_cap_def arch_derive_cap_def
-             | wpc 
+             | wpc
              | rule conjI
              | case_tac slots)+
   done
@@ -342,8 +341,8 @@ lemma transfer_caps_tcb_caps:
      transfer_caps mi caps ep receiver recv_buf
    \<lbrace>\<lambda>rv. cte_wp_at P (t, ref)\<rbrace>"
   apply (simp add: transfer_caps_def)
-  apply (wp hoare_vcg_const_Ball_lift hoare_vcg_const_imp_lift 
-            transfer_caps_loop_cte_wp_at 
+  apply (wp hoare_vcg_const_Ball_lift hoare_vcg_const_imp_lift
+            transfer_caps_loop_cte_wp_at
          | wpc | simp)+
   apply (erule imp)
   apply (wp hoare_vcg_conj_lift hoare_vcg_const_imp_lift hoare_vcg_all_lift
@@ -370,7 +369,7 @@ lemma transfer_caps_non_null_cte_wp_at:
   unfolding transfer_caps_def
   apply simp
   apply (rule hoare_pre)
-   apply (wp hoare_vcg_ball_lift transfer_caps_loop_cte_wp_at static_imp_wp 
+   apply (wp hoare_vcg_ball_lift transfer_caps_loop_cte_wp_at static_imp_wp
      | wpc | clarsimp simp:imp)+
    apply (rule hoare_strengthen_post
             [where Q="\<lambda>rv s'. (cte_wp_at (op \<noteq> cap.NullCap) ptr) s'
@@ -389,6 +388,15 @@ lemma transfer_caps_non_null_cte_wp_at:
   done
 
 crunch cte_wp_at[wp,Ipc_AI_assms]: do_fault_transfer "cte_wp_at P p"
+
+lemma set_cap_valid_arch_objs [wp, Ipc_AI_assms]:
+  "\<lbrace>valid_arch_objs\<rbrace> set_cap a b \<lbrace>\<lambda>_. valid_arch_objs \<rbrace>"
+  apply (rule valid_arch_objs_lift)
+  apply (wp set_cap_typ_at)+
+  apply (rule set_cap.aobj_at)
+  apply (fastforce simp: arch_obj_pred_def non_arch_obj_def
+                   split: kernel_object.split arch_kernel_obj.splits)
+  done
 
 lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
@@ -434,6 +442,16 @@ lemma do_ipc_transfer_tcb_caps [Ipc_AI_assms]:
        | wpc | simp add:imp)+
   done
 
+lemma set_thread_state_valid_vso_at[wp]:
+  "\<lbrace>valid_vso_at a\<rbrace> set_thread_state s st \<lbrace>\<lambda>rv. valid_vso_at a\<rbrace>"
+  apply (clarsimp simp: valid_vso_at_def)
+  by (wpsimp wp: sts_obj_at_impossible sts_typ_ats hoare_vcg_ex_lift)
+
+lemma cap_insert_valid_vso_at[wp]:
+  "\<lbrace>valid_vso_at a\<rbrace> cap_insert c sl sl' \<lbrace>\<lambda>rv. valid_vso_at a\<rbrace>"
+  apply (clarsimp simp: valid_vso_at_def)
+  by (wpsimp wp: sts_obj_at_impossible sts_typ_ats hoare_vcg_ex_lift)
+
 lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_assms]:
   "\<lbrace>valid_global_objs\<rbrace> setup_caller_cap send recv \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
   apply (wp valid_global_objs_lift valid_ao_at_lift)
@@ -441,11 +459,73 @@ lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_assms]:
    apply (wp sts_obj_at_impossible | simp add: tcb_not_empty_table)+
   done
 
-crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply "P (typ_at T p s)"
+crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "P (typ_at T p s)"
+
+lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
+  "\<lbrace>valid_vspace_objs\<rbrace>
+      transfer_caps_loop ep buffer n caps slots mi
+    \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
+  apply (induct caps arbitrary: slots n mi, simp)
+  apply (clarsimp simp: Let_def split_def whenE_def
+                  cong: if_cong list.case_cong
+             split del: if_split)
+  apply (rule hoare_pre)
+   apply (wp hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift
+              derive_cap_is_derived_foo
+             hoare_drop_imps
+        | assumption | simp split del: if_split)+
+  done
+
+crunch aligned                   [wp, Ipc_AI_assms]:  make_arch_fault_msg "pspace_aligned"
+crunch distinct                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "pspace_distinct"
+crunch vmdb                      [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_mdb"
+crunch vmdb                      [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_mdb"
+crunch ifunsafe                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "if_unsafe_then_cap"
+crunch iflive                    [wp, Ipc_AI_assms]:  make_arch_fault_msg "if_live_then_nonz_cap"
+crunch state_refs_of             [wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (state_refs_of s)"
+crunch ct                        [wp, Ipc_AI_assms]:  make_arch_fault_msg "cur_tcb"
+crunch zombies                   [wp, Ipc_AI_assms]:  make_arch_fault_msg "zombies_final"
+crunch it                        [wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (idle_thread s)"
+crunch valid_globals             [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_global_refs"
+crunch reply_masters             [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_reply_masters"
+crunch valid_idle                [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_idle"
+crunch arch                      [wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (arch_state s)"
+crunch typ_at                    [wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (typ_at T p s)"
+crunch irq_node                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (interrupt_irq_node s)"
+crunch valid_reply               [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_reply_caps"
+crunch irq_handlers              [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_irq_handlers"
+crunch vspace_objs               [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_vspace_objs"
+crunch global_objs               [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_global_objs"
+crunch global_vspace_mapping     [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_global_vspace_mappings"
+crunch arch_caps                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_arch_caps"
+crunch v_ker_map                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_kernel_mappings"
+crunch eq_ker_map                [wp, Ipc_AI_assms]:  make_arch_fault_msg "equal_kernel_mappings"
+crunch asid_map                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_asid_map"
+crunch only_idle                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "only_idle"
+crunch pspace_in_kernel_window   [wp, Ipc_AI_assms]:  make_arch_fault_msg "pspace_in_kernel_window"
+crunch cap_refs_in_kernel_window [wp, Ipc_AI_assms]:  make_arch_fault_msg "cap_refs_in_kernel_window"
+crunch valid_objs                [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_objs"
+crunch valid_ioc                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_ioc"
+crunch pred_tcb                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "pred_tcb_at proj P t"
+crunch cap_to                    [wp, Ipc_AI_assms]:  make_arch_fault_msg "ex_nonz_cap_to p"
+crunch pred_tcb                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "pred_tcb_at proj P t"
+crunch invs                      [wp, Ipc_AI_assms]:  make_arch_fault_msg "invs"
+
+crunch obj_at[wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (obj_at P' pd s)"
+  (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def)
+
+crunch vms[wp, Ipc_AI_assms]: make_arch_fault_msg valid_machine_state
+  (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
+
+crunch valid_irq_states[wp, Ipc_AI_assms]: make_arch_fault_msg "valid_irq_states"
+  (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
+
+crunch cap_refs_respects_device_region[wp, Ipc_AI_assms]: make_arch_fault_msg "cap_refs_respects_device_region"
+  (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
 end
 
-interpretation Ipc_AI?: Ipc_AI 
+interpretation Ipc_AI?: Ipc_AI
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
@@ -463,23 +543,21 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
    do_ipc_transfer t ep bg grt r
    \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
   including no_pre
-  apply (simp add: do_ipc_transfer_def)
-  apply (wp|wpc)+
-      apply (simp add: do_normal_transfer_def transfer_caps_def bind_assoc)
-      apply (wp|wpc)+
-         apply (rule hoare_vcg_all_lift)
-         apply (rule hoare_drop_imps)
-         apply wp
+  apply (wpsimp simp: do_ipc_transfer_def do_normal_transfer_def transfer_caps_def bind_assoc
+                  wp: hoare_vcg_all_lift hoare_drop_imps)+
          apply (subst ball_conj_distrib)
-         apply (wp get_rs_cte_at2 thread_get_wp static_imp_wp grs_distinct
-                   hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift | simp)+
-  apply (rule hoare_strengthen_post[where Q = "\<lambda>r s. cap_refs_respects_device_region s
-          \<and> valid_objs s \<and> valid_mdb s \<and> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb) t s"])
-   apply wp
-   apply (clarsimp simp: obj_at_def is_tcb_def)
-   apply (simp split: kernel_object.split_asm)
-  apply auto
+         apply (wpsimp wp: get_rs_cte_at2 thread_get_wp static_imp_wp grs_distinct
+                           hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift
+                     simp: obj_at_def is_tcb_def)+
+  apply (simp split: kernel_object.split_asm)
   done
+
+lemma set_mrs_state_hyp_refs_of[wp]:
+  "\<lbrace>\<lambda> s. P (state_hyp_refs_of s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
+  by (wp set_mrs_thread_set_dmo thread_set_hyp_refs_trivial | simp)+
+
+crunch state_hyp_refs_of[wp, Ipc_AI_cont_assms]: do_ipc_transfer "\<lambda> s. P (state_hyp_refs_of s)"
+  (wp: crunch_wps simp: zipWithM_x_mapM)
 
 end
 

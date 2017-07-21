@@ -63,6 +63,8 @@ val apply_debug : break_opts -> Method.text_range -> Proof.state -> Proof.state;
 val continue : int option -> (context_state -> context_state option) option -> Proof.state -> Proof.state;
 val finish : Proof.state -> Proof.state;
 
+val pretty_state: Toplevel.state -> Pretty.T option;
+
 end
 
 structure Apply_Debug : APPLY_DEBUG =
@@ -822,6 +824,65 @@ val _ =
   Outer_Syntax.command @{command_keyword finish} "finish debugging"
   (Scan.succeed (Toplevel.proof (continue NONE (SOME (fn _ => NONE)))))
 
+fun pretty_hidden_goals ctxt0 thm =
+  let
+    val ctxt = ctxt0
+      |> Config.put show_types (Config.get ctxt0 show_types orelse Config.get ctxt0 show_sorts)
+      |> Config.put show_sorts false;
+
+    val prt_term =
+      singleton (Syntax.uncheck_terms ctxt) #>
+      Type_Annotation.ignore_free_types #>
+      Syntax.unparse_term ctxt;
+    val prt_subgoal = prt_term
+
+    fun pretty_subgoal s A =
+      Pretty.markup (Markup.subgoal s) [Pretty.str (" " ^ s ^ ". "), prt_subgoal A];
+    fun pretty_subgoals n = map_index (fn (i, A) => pretty_subgoal (string_of_int (i + n)) A);
+
+    fun collect_extras prop =
+      case try Logic.unprotect prop of
+      SOME prop' =>
+      (if Logic.count_prems prop' > 0 then
+        (case try Logic.strip_horn prop'
+            of SOME (As, B) =>  As :: collect_extras B
+            | NONE => [])
+      else [])
+      | NONE => []
+
+     val (As,B) = Logic.strip_horn (Thm.prop_of thm);
+     val extras' = collect_extras B;
+     val extra_goals_limit = Int.max (Config.get ctxt0 Goal_Display.goals_limit - length As, 0);
+     val all_extras = flat (take (length extras' - 1) extras');
+     val extras = take extra_goals_limit all_extras;
+
+     val pretty = pretty_subgoals (length As + 1) extras @
+       (if extra_goals_limit < length all_extras then
+         [Pretty.str ("A total of " ^ (string_of_int (length all_extras)) ^ " hidden subgoals...")]
+       else [])
+  in pretty end
+
+fun pretty_state state =
+  if Toplevel.is_proof state
+    then
+  let
+    val st = Toplevel.proof_of state;
+    val {goal, context, ...} = Proof.raw_goal st;
+    val pretty = Toplevel.pretty_state state;
+    val hidden = pretty_hidden_goals context goal;
+    val out = pretty @
+      (if length hidden > 0 then [Pretty.keyword1 "hidden goals"] @ hidden else []);
+  in SOME (Pretty.chunks out) end
+  else NONE
+
 end
 \<close>
+
+ML \<open>val _ =
+  Query_Operation.register {name = "print_state", pri = Task_Queue.urgent_pri}
+    (fn {state = st, output_result, ...} =>
+      case Apply_Debug.pretty_state st of
+        SOME prt => output_result (Markup.markup Markup.state (Pretty.string_of prt))
+      | NONE => ());\<close>
+
 end

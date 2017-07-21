@@ -226,7 +226,7 @@ lemma intvl_overflow:
 proof -
   have witness:
     "\<And>x. x = p + of_nat (unat (x - p)) \<and> unat (x - p) < n"
-    using assms by simp unat_arith 
+    using assms by simp unat_arith
   show ?thesis unfolding intvl_def by (auto intro!: witness)
 qed
 

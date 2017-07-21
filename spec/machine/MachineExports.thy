@@ -19,7 +19,7 @@ context begin interpretation Arch .
 term "id :: machine_word \<Rightarrow> machine_word_len word"
 
 requalify_types
-  machine_word 
+  machine_word
   machine_word_len
   vmfault_type
   hyp_fault_type
@@ -47,6 +47,7 @@ requalify_consts
   minIRQ
   word_size_bits
   clearMemory
+  non_kernel_IRQs
 
 (* HERE IS THE PLACE FOR GENERIC WORD LEMMAS FOR ALL ARCHITECTURES *)
 

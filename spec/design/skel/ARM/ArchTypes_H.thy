@@ -8,8 +8,8 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
-   Types visible in the API. 
+(*
+   Types visible in the API.
 *)
 
 chapter "Arch-dependant Types visible in the API"
@@ -25,7 +25,7 @@ begin
 
 context Arch begin global_naming ARM_H
 
-#INCLUDE_HASKELL SEL4/API/Types/ARM.lhs CONTEXT ARM_H 
+#INCLUDE_HASKELL SEL4/API/Types/ARM.lhs CONTEXT ARM_H
 
 end
 
@@ -36,8 +36,8 @@ instantiation ARM_H.object_type :: enum
 begin
 interpretation Arch .
 definition
-  enum_object_type: "enum_class.enum \<equiv> 
-    map APIObjectType (enum_class.enum :: apiobject_type list) @ 
+  enum_object_type: "enum_class.enum \<equiv>
+    map APIObjectType (enum_class.enum :: apiobject_type list) @
      [SmallPageObject,
       LargePageObject,
       SectionObject,

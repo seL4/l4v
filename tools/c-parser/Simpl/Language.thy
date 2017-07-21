@@ -7,7 +7,7 @@
 (*  Title:      Language.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2004-2008 Norbert Schirmer 
+Copyright (C) 2004-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -33,7 +33,7 @@ theory Language imports "~~/src/HOL/Library/Old_Recdef" begin
 subsection \<open>The Core Language\<close>
 
 text \<open>We use a shallow embedding of boolean expressions as well as assertions
-as sets of states. 
+as sets of states.
 \<close>
 
 type_synonym 's bexp = "'s set"
@@ -43,12 +43,12 @@ datatype (dead 's, 'p, 'f) com =
     Skip
   | Basic "'s \<Rightarrow> 's"
   | Spec "('s \<times> 's) set"
-  | Seq "('s ,'p, 'f) com" "('s,'p, 'f) com"    
+  | Seq "('s ,'p, 'f) com" "('s,'p, 'f) com"
   | Cond "'s bexp" "('s,'p,'f) com"  "('s,'p,'f) com"
   | While "'s bexp" "('s,'p,'f) com"
-  | Call "'p" 
-  | DynCom "'s \<Rightarrow> ('s,'p,'f) com" 
-  | Guard "'f" "'s bexp" "('s,'p,'f) com" 
+  | Call "'p"
+  | DynCom "'s \<Rightarrow> ('s,'p,'f) com"
+  | Guard "'f" "'s bexp" "('s,'p,'f) com"
   | Throw
   | Catch "('s,'p,'f) com" "('s,'p,'f) com"
 
@@ -74,21 +74,21 @@ definition
 definition
   bseq:: "('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com" where
   "bseq = Seq"
- 
+
 definition
   block:: "['s\<Rightarrow>'s,('s,'p,'f) com,'s\<Rightarrow>'s\<Rightarrow>'s,'s\<Rightarrow>'s\<Rightarrow>('s,'p,'f) com]\<Rightarrow>('s,'p,'f) com"
 where
   "block init bdy return c =
-    DynCom (\<lambda>s. (Seq (Catch (Seq (Basic init) bdy) (Seq (Basic (return s)) Throw)) 
+    DynCom (\<lambda>s. (Seq (Catch (Seq (Basic init) bdy) (Seq (Basic (return s)) Throw))
                             (DynCom (\<lambda>t. Seq (Basic (return s)) (c s t))))
-                        )" 
+                        )"
 
 definition
   call:: "('s\<Rightarrow>'s) \<Rightarrow> 'p \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> 's)\<Rightarrow>('s\<Rightarrow>'s\<Rightarrow>('s,'p,'f) com)\<Rightarrow>('s,'p,'f)com" where
   "call init p return c = block init (Call p) return c"
 
 definition
-  dynCall:: "('s \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> 'p) \<Rightarrow> 
+  dynCall:: "('s \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> 'p) \<Rightarrow>
              ('s \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> ('s,'p,'f) com) \<Rightarrow> ('s,'p,'f) com" where
   "dynCall init p return c = DynCom (\<lambda>s. call init (p s) return c)"
 
@@ -101,7 +101,7 @@ definition
   lem:: "'x \<Rightarrow> ('s,'p,'f)com \<Rightarrow>('s,'p,'f)com" where
   "lem x c = c"
 
-primrec switch:: "('s \<Rightarrow> 'v) \<Rightarrow> ('v set \<times> ('s,'p,'f) com) list \<Rightarrow> ('s,'p,'f) com" 
+primrec switch:: "('s \<Rightarrow> 'v) \<Rightarrow> ('v set \<times> ('s,'p,'f) com) list \<Rightarrow> ('s,'p,'f) com"
 where
 "switch v [] = Skip" |
 "switch v (Vc#vs) = Cond {s. v s \<in> fst Vc} (snd Vc) (switch v vs)"
@@ -123,34 +123,34 @@ where
   "while gs b c = guards gs (While b (Seq c (guards gs Skip)))"
 
 definition
-  whileAnno:: 
+  whileAnno::
   "'s bexp \<Rightarrow> 's assn \<Rightarrow> ('s \<times> 's) assn \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com" where
   "whileAnno b I V c = While b c"
 
 definition
-  whileAnnoG:: 
-  "('f \<times> 's set) list \<Rightarrow> 's bexp \<Rightarrow> 's assn \<Rightarrow> ('s \<times> 's) assn \<Rightarrow> 
+  whileAnnoG::
+  "('f \<times> 's set) list \<Rightarrow> 's bexp \<Rightarrow> 's assn \<Rightarrow> ('s \<times> 's) assn \<Rightarrow>
      ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com" where
   "whileAnnoG gs b I V c = while gs b c"
- 
+
 definition
-  specAnno::  "('a \<Rightarrow> 's assn) \<Rightarrow> ('a \<Rightarrow> ('s,'p,'f) com) \<Rightarrow> 
+  specAnno::  "('a \<Rightarrow> 's assn) \<Rightarrow> ('a \<Rightarrow> ('s,'p,'f) com) \<Rightarrow>
                          ('a \<Rightarrow> 's assn) \<Rightarrow> ('a \<Rightarrow> 's assn) \<Rightarrow> ('s,'p,'f) com"
   where "specAnno P c Q A = (c undefined)"
 
 definition
-  whileAnnoFix:: 
-  "'s bexp \<Rightarrow> ('a \<Rightarrow> 's assn) \<Rightarrow> ('a \<Rightarrow> ('s \<times> 's) assn) \<Rightarrow> ('a \<Rightarrow> ('s,'p,'f) com) \<Rightarrow> 
+  whileAnnoFix::
+  "'s bexp \<Rightarrow> ('a \<Rightarrow> 's assn) \<Rightarrow> ('a \<Rightarrow> ('s \<times> 's) assn) \<Rightarrow> ('a \<Rightarrow> ('s,'p,'f) com) \<Rightarrow>
      ('s,'p,'f) com" where
   "whileAnnoFix b I V c = While b (c undefined)"
 
 definition
-  whileAnnoGFix:: 
-  "('f \<times> 's set) list \<Rightarrow> 's bexp \<Rightarrow> ('a \<Rightarrow> 's assn) \<Rightarrow> ('a \<Rightarrow> ('s \<times> 's) assn) \<Rightarrow> 
+  whileAnnoGFix::
+  "('f \<times> 's set) list \<Rightarrow> 's bexp \<Rightarrow> ('a \<Rightarrow> 's assn) \<Rightarrow> ('a \<Rightarrow> ('s \<times> 's) assn) \<Rightarrow>
      ('a \<Rightarrow> ('s,'p,'f) com) \<Rightarrow> ('s,'p,'f) com" where
   "whileAnnoGFix gs b I V c = while gs b (c undefined)"
 
-definition if_rel::"('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> ('s \<times> 's) set" 
+definition if_rel::"('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> ('s \<times> 's) set"
   where "if_rel b f g h = {(s,t). if b s then t = f s else t = g s \<or> t = h s}"
 
 lemma fst_guaranteeStripPair: "fst (guaranteeStripPair f g) = f"
@@ -165,7 +165,7 @@ subsection \<open>Operations on Simpl-Syntax\<close>
 
 subsubsection \<open>Normalisation of Sequential Composition: \<open>sequence\<close>, \<open>flatten\<close> and \<open>normalize\<close>\<close>
 
-primrec flatten:: "('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com list" 
+primrec flatten:: "('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com list"
 where
 "flatten Skip = [Skip]" |
 "flatten (Basic f) = [Basic f]" |
@@ -179,12 +179,12 @@ where
 "flatten Throw = [Throw]" |
 "flatten (Catch c\<^sub>1 c\<^sub>2) = [Catch c\<^sub>1 c\<^sub>2]"
 
-primrec sequence:: "(('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com) \<Rightarrow> 
+primrec sequence:: "(('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com) \<Rightarrow>
                       ('s,'p,'f) com list \<Rightarrow> ('s,'p,'f) com"
 where
 "sequence seq [] = Skip" |
 "sequence seq (c#cs) = (case cs of [] \<Rightarrow> c
-                        | _ \<Rightarrow> seq c (sequence seq cs))" 
+                        | _ \<Rightarrow> seq c (sequence seq cs))"
 
 
 primrec normalize:: "('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com"
@@ -223,7 +223,7 @@ apply (simp (no_asm_use))
 done
 
 
-lemma flatten_sequence_id: 
+lemma flatten_sequence_id:
   "\<lbrakk>cs\<noteq>[];\<forall>c \<in> set cs. flatten c = [c]\<rbrakk> \<Longrightarrow> flatten (sequence Seq cs) = cs"
   apply (induct cs)
   apply  simp
@@ -243,7 +243,7 @@ lemma flatten_app:
   done
 
 
-  
+
 lemma flatten_sequence_flatten: "flatten (sequence Seq (flatten c)) = flatten c"
   apply (induct c)
   apply (auto simp add: flatten_app)
@@ -255,16 +255,16 @@ apply (auto simp add:  flatten_app)
 done
 
 
-lemma flatten_normalize: "\<And>x xs. flatten (normalize c) = x#xs 
-       \<Longrightarrow> (case xs of [] \<Rightarrow> normalize c = x 
+lemma flatten_normalize: "\<And>x xs. flatten (normalize c) = x#xs
+       \<Longrightarrow> (case xs of [] \<Rightarrow> normalize c = x
               | (x'#xs') \<Rightarrow> normalize c= Seq x (sequence Seq xs))"
 proof (induct c)
   case (Seq c1 c2)
   have "flatten (normalize (Seq c1 c2)) = x # xs" by fact
-  hence "flatten (sequence Seq (flatten (normalize c1) @ flatten (normalize c2))) = 
+  hence "flatten (sequence Seq (flatten (normalize c1) @ flatten (normalize c2))) =
           x#xs"
     by simp
-  hence x_xs: "flatten (normalize c1) @ flatten (normalize c2) = x # xs" 
+  hence x_xs: "flatten (normalize c1) @ flatten (normalize c2) = x # xs"
     by (simp add: flatten_app)
   show ?case
   proof (cases "flatten (normalize c1)")
@@ -273,7 +273,7 @@ proof (induct c)
   next
     case (Cons x1 xs1)
     note Cons_x1_xs1 = this
-    with x_xs obtain 
+    with x_xs obtain
       x_x1: "x=x1" and xs_rest: "xs=xs1@flatten (normalize c2)"
       by auto
     show ?thesis
@@ -329,7 +329,7 @@ lemma flatten_fcall [simp]: "flatten (fcall init p return result c) = [fcall ini
 lemma flatten_switch [simp]: "flatten (switch v Vcs) = [switch v Vcs]"
   by (cases Vcs) auto
 
-lemma flatten_guaranteeStrip [simp]: 
+lemma flatten_guaranteeStrip [simp]:
   "flatten (guaranteeStrip f g c) = [guaranteeStrip f g c]"
   by (simp add: guaranteeStrip_def)
 
@@ -339,11 +339,11 @@ lemma flatten_while [simp]: "flatten (while gs b c) = [while gs b c]"
   apply  auto
   done
 
-lemma flatten_whileAnno [simp]: 
+lemma flatten_whileAnno [simp]:
   "flatten (whileAnno b I V c) = [whileAnno b I V c]"
   by (simp add: whileAnno_def)
 
-lemma flatten_whileAnnoG [simp]: 
+lemma flatten_whileAnnoG [simp]:
   "flatten (whileAnnoG gs b I V c) = [whileAnnoG gs b I V c]"
   by (simp add: whileAnnoG_def)
 
@@ -373,7 +373,7 @@ lemma normalize_bseq [simp]:
                             ((flatten (normalize c1)) @ (flatten (normalize c2)))"
   by (simp add: bseq_def)
 
-lemma normalize_block [simp]: "normalize (block init bdy return c) = 
+lemma normalize_block [simp]: "normalize (block init bdy return c) =
                          block init (normalize bdy) return (\<lambda>s t. normalize (c s t))"
   apply (simp add: block_def)
   apply (rule ext)
@@ -397,17 +397,17 @@ lemma normalize_block [simp]: "normalize (block init bdy return c) =
   apply simp
   done
 
-lemma normalize_call [simp]: 
+lemma normalize_call [simp]:
   "normalize (call init p return c) = call init p return (\<lambda>i t. normalize (c i t))"
   by (simp add: call_def)
 
 lemma normalize_dynCall [simp]:
-  "normalize (dynCall init p return c) = 
-    dynCall init p return (\<lambda>s t. normalize (c s t))" 
+  "normalize (dynCall init p return c) =
+    dynCall init p return (\<lambda>s t. normalize (c s t))"
   by (simp add: dynCall_def)
 
 lemma normalize_fcall [simp]:
-  "normalize (fcall init p return result c) = 
+  "normalize (fcall init p return result c) =
     fcall init p return result (\<lambda>v. normalize (c v))"
   by (simp add: fcall_def)
 
@@ -429,7 +429,7 @@ text \<open>Sequencial composition with guards in the body is not preserved by
         normalize\<close>
 lemma normalize_while [simp]:
   "normalize (while gs b c) = guards gs
-      (While b (sequence Seq (flatten (normalize c) @ flatten (guards gs Skip))))" 
+      (While b (sequence Seq (flatten (normalize c) @ flatten (guards gs Skip))))"
   by (simp add: while_def)
 
 lemma normalize_whileAnno [simp]:
@@ -438,17 +438,17 @@ lemma normalize_whileAnno [simp]:
 
 lemma normalize_whileAnnoG [simp]:
   "normalize (whileAnnoG gs b I V c) = guards gs
-      (While b (sequence Seq (flatten (normalize c) @ flatten (guards gs Skip))))" 
+      (While b (sequence Seq (flatten (normalize c) @ flatten (guards gs Skip))))"
   by (simp add: whileAnnoG_def)
 
 lemma normalize_specAnno [simp]:
   "normalize (specAnno P c Q A) = specAnno P (\<lambda>s. normalize (c undefined)) Q A"
   by (simp add: specAnno_def)
 
-lemmas normalize_simps = 
+lemmas normalize_simps =
   normalize.simps normalize_raise normalize_condCatch normalize_bind
   normalize_block normalize_call normalize_dynCall normalize_fcall normalize_switch
-  normalize_guaranteeStrip normalize_guards 
+  normalize_guaranteeStrip normalize_guards
   normalize_while normalize_whileAnno normalize_whileAnnoG normalize_specAnno
 
 
@@ -469,7 +469,7 @@ where
 "strip_guards F Throw = Throw" |
 "strip_guards F (Catch c\<^sub>1 c\<^sub>2) = Catch (strip_guards F c\<^sub>1) (strip_guards F c\<^sub>2)"
 
-definition strip:: "'f set \<Rightarrow> 
+definition strip:: "'f set \<Rightarrow>
                    ('p \<Rightarrow> ('s,'p,'f) com option) \<Rightarrow> ('p \<Rightarrow> ('s,'p,'f) com option)"
   where "strip F \<Gamma> = (\<lambda>p. map_option (strip_guards F) (\<Gamma> p))"
 
@@ -494,7 +494,7 @@ lemma strip_guards_raise [simp]:
   by (simp add: raise_def)
 
 lemma strip_guards_condCatch [simp]:
-  "strip_guards F (condCatch c1 b c2) = 
+  "strip_guards F (condCatch c1 b c2) =
     condCatch (strip_guards F c1) b (strip_guards F c2)"
   by (simp add: condCatch_def)
 
@@ -532,8 +532,8 @@ lemma strip_guards_switch [simp]:
   by (induct Vc) auto
 
 lemma strip_guards_guaranteeStrip [simp]:
-  "strip_guards F (guaranteeStrip f g c) = 
-    (if f \<in> F then strip_guards F c 
+  "strip_guards F (guaranteeStrip f g c) =
+    (if f \<in> F then strip_guards F c
      else guaranteeStrip f g (strip_guards F c))"
   by (simp add: guaranteeStrip_def)
 
@@ -545,7 +545,7 @@ lemma strip_guards_guards [simp]: "strip_guards F (guards gs c) =
   by (induct gs) auto
 
 lemma strip_guards_while [simp]:
- "strip_guards F (while gs b  c) = 
+ "strip_guards F (while gs b  c) =
      while (filter (\<lambda>(f,g). f \<notin> F) gs) b (strip_guards F c)"
   by (simp add: while_def)
 
@@ -554,18 +554,18 @@ lemma strip_guards_whileAnno [simp]:
   by (simp add: whileAnno_def  while_def)
 
 lemma strip_guards_whileAnnoG [simp]:
- "strip_guards F (whileAnnoG gs b I V c) = 
+ "strip_guards F (whileAnnoG gs b I V c) =
      whileAnnoG (filter (\<lambda>(f,g). f \<notin> F) gs) b I V (strip_guards F c)"
   by (simp add: whileAnnoG_def)
 
 lemma strip_guards_specAnno [simp]:
-  "strip_guards F (specAnno P c Q A) = 
+  "strip_guards F (specAnno P c Q A) =
     specAnno P (\<lambda>s. strip_guards F (c undefined)) Q A"
   by (simp add: specAnno_def)
 
-lemmas strip_guards_simps = strip_guards.simps strip_guards_raise 
+lemmas strip_guards_simps = strip_guards.simps strip_guards_raise
   strip_guards_condCatch strip_guards_bind strip_guards_bseq strip_guards_block
-  strip_guards_dynCall strip_guards_fcall strip_guards_switch 
+  strip_guards_dynCall strip_guards_fcall strip_guards_switch
   strip_guards_guaranteeStrip guaranteeStripPair_split_conv strip_guards_guards
   strip_guards_while strip_guards_whileAnno strip_guards_whileAnnoG
   strip_guards_specAnno
@@ -590,7 +590,7 @@ lemma mark_guards_raise: "mark_guards f (raise g) = raise g"
   by (simp add: raise_def)
 
 lemma mark_guards_condCatch [simp]:
-  "mark_guards f (condCatch c1 b c2) = 
+  "mark_guards f (condCatch c1 b c2) =
     condCatch (mark_guards f c1) b (mark_guards f c2)"
   by (simp add: condCatch_def)
 
@@ -622,8 +622,8 @@ lemma mark_guards_fcall [simp]:
      fcall init p return result (\<lambda>v. mark_guards f (c v))"
   by (simp add: fcall_def)
 
-lemma mark_guards_switch [simp]: 
-  "mark_guards f (switch v vs) = 
+lemma mark_guards_switch [simp]:
+  "mark_guards f (switch v vs) =
      switch v (map (\<lambda>(V,c). (V,mark_guards f c)) vs)"
   by (induct vs) auto
 
@@ -631,32 +631,32 @@ lemma mark_guards_guaranteeStrip [simp]:
   "mark_guards f (guaranteeStrip f' g c) = guaranteeStrip f g (mark_guards f c)"
   by (simp add: guaranteeStrip_def)
 
-lemma mark_guards_guards [simp]: 
+lemma mark_guards_guards [simp]:
   "mark_guards f (guards gs c) = guards (map (\<lambda>(f',g). (f,g)) gs) (mark_guards f c)"
   by (induct gs) auto
 
 lemma mark_guards_while [simp]:
- "mark_guards f (while gs b c) = 
+ "mark_guards f (while gs b c) =
     while (map (\<lambda>(f',g). (f,g)) gs) b (mark_guards f c)"
-  by (simp add: while_def) 
+  by (simp add: while_def)
 
 lemma mark_guards_whileAnno [simp]:
  "mark_guards f (whileAnno b I V c) = whileAnno b I V (mark_guards f c)"
   by (simp add: whileAnno_def while_def)
 
 lemma mark_guards_whileAnnoG [simp]:
- "mark_guards f (whileAnnoG gs b I V c) = 
+ "mark_guards f (whileAnnoG gs b I V c) =
     whileAnnoG (map (\<lambda>(f',g). (f,g)) gs) b I V (mark_guards f c)"
-  by (simp add: whileAnno_def whileAnnoG_def while_def) 
+  by (simp add: whileAnno_def whileAnnoG_def while_def)
 
 lemma mark_guards_specAnno [simp]:
-  "mark_guards f (specAnno P c Q A) = 
+  "mark_guards f (specAnno P c Q A) =
     specAnno P (\<lambda>s. mark_guards f (c undefined)) Q A"
   by (simp add: specAnno_def)
 
-lemmas mark_guards_simps = mark_guards.simps mark_guards_raise 
+lemmas mark_guards_simps = mark_guards.simps mark_guards_raise
   mark_guards_condCatch mark_guards_bind mark_guards_bseq mark_guards_block
-  mark_guards_dynCall mark_guards_fcall mark_guards_switch 
+  mark_guards_dynCall mark_guards_fcall mark_guards_switch
   mark_guards_guaranteeStrip guaranteeStripPair_split_conv mark_guards_guards
   mark_guards_while mark_guards_whileAnno mark_guards_whileAnnoG
   mark_guards_specAnno
@@ -715,17 +715,17 @@ where
 "merge_guards (While b c) = While b (merge_guards c)" |
 "merge_guards (Call p) = Call p" |
 "merge_guards (DynCom c) = DynCom (\<lambda>s. (merge_guards (c s)))" |
-(*"merge_guards (Guard f g c) = 
+(*"merge_guards (Guard f g c) =
     (case (merge_guards c) of
-      Guard f' g' c' \<Rightarrow> if f=f' then Guard f (g \<inter> g') c' 
+      Guard f' g' c' \<Rightarrow> if f=f' then Guard f (g \<inter> g') c'
                         else Guard f g (Guard f' g' c')
      | _ \<Rightarrow>  Guard f g (merge_guards c))"*)
 (* the following version works better with derived language constructs *)
-"merge_guards (Guard f g c) = 
+"merge_guards (Guard f g c) =
     (let c' = (merge_guards c)
-     in if is_Guard c' 
-        then let (f',g',c'') = dest_Guard c' 
-             in if f=f' then Guard f (g \<inter> g') c'' 
+     in if is_Guard c'
+        then let (f',g',c'') = dest_Guard c'
+             in if f=f' then Guard f (g \<inter> g') c''
                         else Guard f g (Guard f' g' c'')
         else Guard f g c')" |
 "merge_guards Throw = Throw" |
@@ -740,47 +740,47 @@ lemma merge_guards_res_Basic: "merge_guards c = Basic f \<Longrightarrow> c = Ba
 lemma merge_guards_res_Spec: "merge_guards c = Spec r \<Longrightarrow> c = Spec r"
   by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
-lemma merge_guards_res_Seq: "merge_guards c = Seq c1 c2 \<Longrightarrow> 
+lemma merge_guards_res_Seq: "merge_guards c = Seq c1 c2 \<Longrightarrow>
     \<exists>c1' c2'. c = Seq c1' c2' \<and> merge_guards c1' = c1 \<and> merge_guards c2' = c2"
   by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
-lemma merge_guards_res_Cond: "merge_guards c = Cond b c1 c2 \<Longrightarrow> 
+lemma merge_guards_res_Cond: "merge_guards c = Cond b c1 c2 \<Longrightarrow>
     \<exists>c1' c2'. c = Cond b c1' c2' \<and> merge_guards c1' = c1 \<and> merge_guards c2' = c2"
   by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
-lemma merge_guards_res_While: "merge_guards c = While b c' \<Longrightarrow> 
+lemma merge_guards_res_While: "merge_guards c = While b c' \<Longrightarrow>
     \<exists>c''. c = While b c''  \<and> merge_guards c'' = c'"
   by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
 lemma merge_guards_res_Call: "merge_guards c = Call p \<Longrightarrow> c = Call p"
   by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
-lemma merge_guards_res_DynCom: "merge_guards c = DynCom c' \<Longrightarrow> 
+lemma merge_guards_res_DynCom: "merge_guards c = DynCom c' \<Longrightarrow>
     \<exists>c''. c = DynCom c''  \<and> (\<lambda>s. (merge_guards (c'' s))) = c'"
   by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
 lemma merge_guards_res_Throw: "merge_guards c = Throw \<Longrightarrow> c = Throw"
   by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
-lemma merge_guards_res_Catch: "merge_guards c = Catch c1 c2 \<Longrightarrow> 
+lemma merge_guards_res_Catch: "merge_guards c = Catch c1 c2 \<Longrightarrow>
     \<exists>c1' c2'. c = Catch c1' c2' \<and> merge_guards c1' = c1 \<and> merge_guards c2' = c2"
   by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
-lemma merge_guards_res_Guard: 
+lemma merge_guards_res_Guard:
  "merge_guards c = Guard f g c' \<Longrightarrow> \<exists>c'' f' g'. c = Guard f' g' c''"
   by (cases c) (auto split: com.splits if_split_asm simp add: is_Guard_def Let_def)
 
-lemmas merge_guards_res_simps = merge_guards_res_Skip merge_guards_res_Basic 
- merge_guards_res_Spec merge_guards_res_Seq merge_guards_res_Cond 
+lemmas merge_guards_res_simps = merge_guards_res_Skip merge_guards_res_Basic
+ merge_guards_res_Spec merge_guards_res_Seq merge_guards_res_Cond
  merge_guards_res_While merge_guards_res_Call
- merge_guards_res_DynCom merge_guards_res_Throw merge_guards_res_Catch 
- merge_guards_res_Guard 
+ merge_guards_res_DynCom merge_guards_res_Throw merge_guards_res_Catch
+ merge_guards_res_Guard
 
 lemma merge_guards_raise: "merge_guards (raise g) = raise g"
   by (simp add: raise_def)
 
 lemma merge_guards_condCatch [simp]:
-  "merge_guards (condCatch c1 b c2) = 
+  "merge_guards (condCatch c1 b c2) =
     condCatch (merge_guards c1) b (merge_guards c2)"
   by (simp add: condCatch_def)
 
@@ -812,17 +812,17 @@ lemma merge_guards_fcall [simp]:
      fcall init p return result (\<lambda>v. merge_guards (c v))"
   by (simp add: fcall_def)
 
-lemma merge_guards_switch [simp]: 
-  "merge_guards (switch v vs) = 
+lemma merge_guards_switch [simp]:
+  "merge_guards (switch v vs) =
      switch v (map (\<lambda>(V,c). (V,merge_guards c)) vs)"
   by (induct vs) auto
 
-lemma merge_guards_guaranteeStrip [simp]: 
-  "merge_guards (guaranteeStrip f g c) = 
+lemma merge_guards_guaranteeStrip [simp]:
+  "merge_guards (guaranteeStrip f g c) =
     (let c' = (merge_guards c)
-     in if is_Guard c' 
-        then let (f',g',c') = dest_Guard c' 
-             in if f=f' then Guard f (g \<inter> g') c' 
+     in if is_Guard c'
+        then let (f',g',c') = dest_Guard c'
+             in if f=f' then Guard f (g \<inter> g') c'
                         else Guard f g (Guard f' g' c')
         else Guard f g c')"
   by (simp add: guaranteeStrip_def)
@@ -832,7 +832,7 @@ lemma merge_guards_whileAnno [simp]:
   by (simp add: whileAnno_def while_def)
 
 lemma merge_guards_specAnno [simp]:
-  "merge_guards (specAnno P c Q A) = 
+  "merge_guards (specAnno P c Q A) =
     specAnno P (\<lambda>s. merge_guards (c undefined)) Q A"
   by (simp add: specAnno_def)
 
@@ -840,9 +840,9 @@ text \<open>@{term "merge_guards"} for guard-lists as in @{const guards}, @{cons
  and @{const whileAnnoG} may have funny effects since the guard-list has to
  be merged with the body statement too.\<close>
 
-lemmas merge_guards_simps = merge_guards.simps merge_guards_raise 
+lemmas merge_guards_simps = merge_guards.simps merge_guards_raise
   merge_guards_condCatch merge_guards_bind merge_guards_bseq merge_guards_block
-  merge_guards_dynCall merge_guards_fcall merge_guards_switch 
+  merge_guards_dynCall merge_guards_fcall merge_guards_switch
   merge_guards_guaranteeStrip merge_guards_whileAnno merge_guards_specAnno
 
 primrec noguards:: "('s,'p,'f) com \<Rightarrow> bool"
@@ -923,50 +923,50 @@ done
 
 consts inter_guards:: "('s,'p,'f) com \<times> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com option"
 
-abbreviation 
+abbreviation
   inter_guards_syntax :: "('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com option"
            ("_ \<inter>\<^sub>g _" [20,20] 19)
-  where "c \<inter>\<^sub>g d == inter_guards (c,d)" 
+  where "c \<inter>\<^sub>g d == inter_guards (c,d)"
 
-recdef inter_guards "inv_image com_rel fst" 
+recdef inter_guards "inv_image com_rel fst"
 "(Skip \<inter>\<^sub>g Skip) = Some Skip"
 
 "(Basic f1 \<inter>\<^sub>g Basic f2) = (if (f1=f2) then Some (Basic f1) else None)"
 "(Spec r1 \<inter>\<^sub>g Spec r2) = (if (r1=r2) then Some (Spec r1) else None)"
-"(Seq a1 a2 \<inter>\<^sub>g Seq b1 b2) = 
+"(Seq a1 a2 \<inter>\<^sub>g Seq b1 b2) =
    (case (a1 \<inter>\<^sub>g b1) of
       None \<Rightarrow> None
     | Some c1 \<Rightarrow> (case (a2 \<inter>\<^sub>g b2) of
                     None \<Rightarrow> None
                   | Some c2 \<Rightarrow> Some (Seq c1 c2)))"
 
-"(Cond cnd1 t1 e1 \<inter>\<^sub>g Cond cnd2 t2 e2) = 
-   (if (cnd1=cnd2) 
-    then (case (t1 \<inter>\<^sub>g t2) of 
+"(Cond cnd1 t1 e1 \<inter>\<^sub>g Cond cnd2 t2 e2) =
+   (if (cnd1=cnd2)
+    then (case (t1 \<inter>\<^sub>g t2) of
             None \<Rightarrow> None
           | Some t \<Rightarrow> (case (e1 \<inter>\<^sub>g e2) of
                          None \<Rightarrow> None
                        | Some e \<Rightarrow> Some (Cond cnd1 t e)))
     else None)"
 
-"(While cnd1 c1 \<inter>\<^sub>g While cnd2 c2) = 
+"(While cnd1 c1 \<inter>\<^sub>g While cnd2 c2) =
     (if (cnd1=cnd2 )
      then (case (c1 \<inter>\<^sub>g c2) of
              None \<Rightarrow> None
            | Some c \<Rightarrow> Some (While cnd1 c))
      else None)"
 
-"(Call p1 \<inter>\<^sub>g Call p2) = 
+"(Call p1 \<inter>\<^sub>g Call p2) =
    (if p1 = p2
     then Some (Call p1)
     else None)"
 
-"(DynCom P1 \<inter>\<^sub>g DynCom P2) = 
+"(DynCom P1 \<inter>\<^sub>g DynCom P2) =
    (if (\<forall>s. ((P1 s) \<inter>\<^sub>g (P2 s)) \<noteq> None)
    then Some (DynCom (\<lambda>s.  the ((P1 s) \<inter>\<^sub>g (P2 s))))
    else None)"
 
-"(Guard m1 g1 c1 \<inter>\<^sub>g Guard m2 g2 c2) = 
+"(Guard m1 g1 c1 \<inter>\<^sub>g Guard m2 g2 c2) =
    (if m1=m2 then
        (case (c1 \<inter>\<^sub>g c2) of
           None \<Rightarrow> None
@@ -974,23 +974,23 @@ recdef inter_guards "inv_image com_rel fst"
     else None)"
 
 "(Throw \<inter>\<^sub>g Throw) = Some Throw"
-"(Catch a1 a2 \<inter>\<^sub>g Catch b1 b2) = 
+"(Catch a1 a2 \<inter>\<^sub>g Catch b1 b2) =
    (case (a1 \<inter>\<^sub>g b1) of
       None \<Rightarrow> None
     | Some c1 \<Rightarrow> (case (a2 \<inter>\<^sub>g b2) of
                     None \<Rightarrow> None
-                  | Some c2 \<Rightarrow> Some (Catch c1 c2)))" 
+                  | Some c2 \<Rightarrow> Some (Catch c1 c2)))"
 "(c \<inter>\<^sub>g d) = None"
 
-(hints cong add: option.case_cong if_cong  
+(hints cong add: option.case_cong if_cong
        recdef_wf: wf_com_rel simp: com_rel.intros)
 
 lemma inter_guards_strip_eq:
-  "\<And>c. (c1 \<inter>\<^sub>g c2) = Some c  \<Longrightarrow> 
-    (strip_guards UNIV c = strip_guards UNIV c1) \<and> 
+  "\<And>c. (c1 \<inter>\<^sub>g c2) = Some c  \<Longrightarrow>
+    (strip_guards UNIV c = strip_guards UNIV c1) \<and>
     (strip_guards UNIV c = strip_guards UNIV c2)"
-apply (induct c1 c2 rule: inter_guards.induct) 
-prefer 8 
+apply (induct c1 c2 rule: inter_guards.induct)
+prefer 8
 apply (simp split: if_split_asm)
 apply hypsubst
 apply simp
@@ -1019,24 +1019,24 @@ done
 lemma inter_guards_Skip: "(Skip \<inter>\<^sub>g c2) = Some c = (c2=Skip \<and> c=Skip)"
   by (cases c2) auto
 
-lemma inter_guards_Basic: 
+lemma inter_guards_Basic:
   "((Basic f) \<inter>\<^sub>g c2) = Some c = (c2=Basic f \<and> c=Basic f)"
   by (cases c2) auto
 
-lemma inter_guards_Spec: 
+lemma inter_guards_Spec:
   "((Spec r) \<inter>\<^sub>g c2) = Some c = (c2=Spec r \<and> c=Spec r)"
   by (cases c2) auto
 
-lemma inter_guards_Seq: 
-  "(Seq a1 a2 \<inter>\<^sub>g c2) = Some c = 
-     (\<exists>b1 b2 d1 d2. c2=Seq b1 b2 \<and> (a1 \<inter>\<^sub>g b1) = Some d1 \<and> 
+lemma inter_guards_Seq:
+  "(Seq a1 a2 \<inter>\<^sub>g c2) = Some c =
+     (\<exists>b1 b2 d1 d2. c2=Seq b1 b2 \<and> (a1 \<inter>\<^sub>g b1) = Some d1 \<and>
         (a2 \<inter>\<^sub>g b2) = Some d2 \<and> c=Seq d1 d2)"
   by (cases c2) (auto split: option.splits)
 
 lemma inter_guards_Cond:
   "(Cond cnd t1 e1 \<inter>\<^sub>g c2) = Some c =
-     (\<exists>t2 e2 t e. c2=Cond cnd t2 e2 \<and> (t1 \<inter>\<^sub>g t2) = Some t \<and> 
-        (e1 \<inter>\<^sub>g e2) = Some e \<and> c=Cond cnd t e)"  
+     (\<exists>t2 e2 t e. c2=Cond cnd t2 e2 \<and> (t1 \<inter>\<^sub>g t2) = Some t \<and>
+        (e1 \<inter>\<^sub>g e2) = Some e \<and> c=Cond cnd t e)"
   by (cases c2) (auto split: option.splits)
 
 lemma inter_guards_While:
@@ -1060,7 +1060,7 @@ lemma inter_guards_DynCom:
 lemma inter_guards_Guard:
   "(Guard f g1 bdy1 \<inter>\<^sub>g c2) = Some c =
      (\<exists>g2 bdy2 bdy. c2=Guard f g2 bdy2 \<and> (bdy1 \<inter>\<^sub>g bdy2) = Some bdy \<and>
-       c=Guard f (g1 \<inter> g2) bdy)" 
+       c=Guard f (g1 \<inter> g2) bdy)"
   by (cases c2) (auto split: option.splits)
 
 lemma inter_guards_Throw:
@@ -1068,18 +1068,18 @@ lemma inter_guards_Throw:
   by (cases c2) auto
 
 lemma inter_guards_Catch:
-  "(Catch a1 a2 \<inter>\<^sub>g c2) = Some c = 
-     (\<exists>b1 b2 d1 d2. c2=Catch b1 b2 \<and> (a1 \<inter>\<^sub>g b1) = Some d1 \<and> 
+  "(Catch a1 a2 \<inter>\<^sub>g c2) = Some c =
+     (\<exists>b1 b2 d1 d2. c2=Catch b1 b2 \<and> (a1 \<inter>\<^sub>g b1) = Some d1 \<and>
         (a2 \<inter>\<^sub>g b2) = Some d2 \<and> c=Catch d1 d2)"
   by (cases c2) (auto split: option.splits)
 
 
 lemmas inter_guards_simps = inter_guards_Skip inter_guards_Basic inter_guards_Spec
   inter_guards_Seq inter_guards_Cond inter_guards_While inter_guards_Call
-  inter_guards_DynCom inter_guards_Guard inter_guards_Throw 
+  inter_guards_DynCom inter_guards_Guard inter_guards_Throw
   inter_guards_Catch
 
-subsubsection \<open>Subset on Guards: \<open>c\<^sub>1 \<subseteq>\<^sub>g c\<^sub>2\<close>\<close> 
+subsubsection \<open>Subset on Guards: \<open>c\<^sub>1 \<subseteq>\<^sub>g c\<^sub>2\<close>\<close>
 
 
 consts subseteq_guards:: "('s,'p,'f) com \<times> ('s,'p,'f) com \<Rightarrow> bool"
@@ -1090,7 +1090,7 @@ abbreviation
   where "c \<subseteq>\<^sub>g d == subseteq_guards (c,d)"
 
 
-recdef subseteq_guards "inv_image com_rel snd" 
+recdef subseteq_guards "inv_image com_rel snd"
 "(Skip \<subseteq>\<^sub>g Skip) = True"
 "(Basic f1 \<subseteq>\<^sub>g Basic f2) = (f1=f2)"
 "(Spec r1 \<subseteq>\<^sub>g Spec r2) = (r1=r2)"
@@ -1099,15 +1099,15 @@ recdef subseteq_guards "inv_image com_rel snd"
 "(While cnd1 c1 \<subseteq>\<^sub>g While cnd2 c2) = ((cnd1=cnd2) \<and> (c1 \<subseteq>\<^sub>g c2))"
 "(Call p1 \<subseteq>\<^sub>g Call p2) = (p1 = p2)"
 "(DynCom P1 \<subseteq>\<^sub>g DynCom P2) = (\<forall>s. ((P1 s) \<subseteq>\<^sub>g (P2 s)))"
-"(Guard m1 g1 c1 \<subseteq>\<^sub>g Guard m2 g2 c2) = 
+"(Guard m1 g1 c1 \<subseteq>\<^sub>g Guard m2 g2 c2) =
     ((m1=m2 \<and> g1=g2 \<and> (c1 \<subseteq>\<^sub>g c2)) \<or> (Guard m1 g1 c1 \<subseteq>\<^sub>g c2))"
 "(c1 \<subseteq>\<^sub>g Guard m2 g2 c2) = (c1 \<subseteq>\<^sub>g c2)"
 
 "(Throw \<subseteq>\<^sub>g Throw) = True"
-"(Catch a1 a2 \<subseteq>\<^sub>g Catch b1 b2) = ((a1 \<subseteq>\<^sub>g b1) \<and> (a2 \<subseteq>\<^sub>g b2))" 
+"(Catch a1 a2 \<subseteq>\<^sub>g Catch b1 b2) = ((a1 \<subseteq>\<^sub>g b1) \<and> (a2 \<subseteq>\<^sub>g b2))"
 "(c \<subseteq>\<^sub>g d) = False"
 
-(hints cong add: if_cong  
+(hints cong add: if_cong
        recdef_wf: wf_com_rel simp: com_rel.intros)
 
 lemma subseteq_guards_Skip:
@@ -1143,7 +1143,7 @@ lemma subseteq_guards_DynCom:
   by (cases c) (auto)
 
 lemma subseteq_guards_Guard:
-  "c \<subseteq>\<^sub>g Guard f g c'  \<Longrightarrow> 
+  "c \<subseteq>\<^sub>g Guard f g c'  \<Longrightarrow>
      (c \<subseteq>\<^sub>g c') \<or> (\<exists>c''. c=Guard f g c'' \<and> (c'' \<subseteq>\<^sub>g c'))"
   by (cases c) (auto split: if_split_asm)
 
@@ -1158,9 +1158,9 @@ lemma subseteq_guards_Catch:
 lemmas subseteq_guardsD = subseteq_guards_Skip subseteq_guards_Basic
  subseteq_guards_Spec subseteq_guards_Seq subseteq_guards_Cond subseteq_guards_While
  subseteq_guards_Call subseteq_guards_DynCom subseteq_guards_Guard
- subseteq_guards_Throw subseteq_guards_Catch 
+ subseteq_guards_Throw subseteq_guards_Catch
 
-lemma subseteq_guards_Guard': 
+lemma subseteq_guards_Guard':
   "Guard f b c \<subseteq>\<^sub>g d \<Longrightarrow> \<exists>f' b' c'. d=Guard f' b' c'"
 apply (cases d)
 apply auto

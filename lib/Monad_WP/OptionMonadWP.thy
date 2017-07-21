@@ -48,7 +48,7 @@ lemma ovalidNF_combine: "\<lbrakk> ovalid P f Q; no_ofail P f \<rbrakk> \<Longri
 definition owhile_inv ::
   "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> 'a option) \<Rightarrow> 'a
    \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> nat) \<Rightarrow> 's \<Rightarrow> 'a option"
-  where "owhile_inv C B x I M = owhile C B x"  
+  where "owhile_inv C B x I M = owhile C B x"
 
 lemmas owhile_add_inv = owhile_inv_def[symmetric]
 

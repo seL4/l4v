@@ -25,7 +25,7 @@ We use the C preprocessor to select a target architecture.
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Failures #-}
-% {-# BOOT-EXPORTS: lookupIPCBuffer isValidVTableRoot checkValidIPCBuffer #-} 
+% {-# BOOT-EXPORTS: lookupIPCBuffer isValidVTableRoot checkValidIPCBuffer #-}
 
 > import SEL4.Machine
 > import SEL4.Model
@@ -68,14 +68,14 @@ This module defines architecture-specific virtual memory management procedures. 
 > createBIFrame :: Capability -> VPtr -> Word32 -> Word32 -> KernelInit Capability
 > createBIFrame  = Arch.createBIFrame
 
-> createFramesOfRegion :: Capability -> Region -> Bool -> KernelInit () 
+> createFramesOfRegion :: Capability -> Region -> Bool -> KernelInit ()
 > createFramesOfRegion = Arch.createFramesOfRegion
 
 > createITPDPTs :: Capability -> VPtr -> VPtr -> KernelInit Capability
 > createITPDPTs = Arch.createITPDPTs
 
 > writeITPDPTs :: Capability -> Capability -> KernelInit ()
-> writeITPDPTs = Arch.writeITPDPTs 
+> writeITPDPTs = Arch.writeITPDPTs
 
 > createITASIDPool :: Capability -> KernelInit Capability
 > createITASIDPool = Arch.createITASIDPool

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 	Defines the instances of pspace_storable objects.
 *)
 
@@ -163,14 +163,14 @@ instance
 end
 
 
-lemmas projectKO_opts_defs = 
-  projectKO_opt_tcb projectKO_opt_cte projectKO_opt_ntfn projectKO_opt_ep 
+lemmas projectKO_opts_defs =
+  projectKO_opt_tcb projectKO_opt_cte projectKO_opt_ntfn projectKO_opt_ep
   projectKO_opt_user_data projectKO_opt_user_data_device
 
-lemmas injectKO_defs = 
+lemmas injectKO_defs =
   injectKO_tcb injectKO_cte injectKO_ntfn injectKO_ep injectKO_user_data injectKO_user_data_device
 
-lemmas koType_defs = 
+lemmas koType_defs =
   koType_tcb koType_cte koType_ntfn koType_ep koType_user_data koType_user_data_device
 
 -- -----------------------------------
@@ -183,8 +183,8 @@ begin
 instance
   apply (intro_classes)
   apply simp
-  apply (case_tac ko, auto simp: projectKO_opt_ep updateObject_default_def 
-                                 in_monad projectKO_eq2 
+  apply (case_tac ko, auto simp: projectKO_opt_ep updateObject_default_def
+                                 in_monad projectKO_eq2
                            split: kernel_object.splits)
   done
 
@@ -198,8 +198,8 @@ begin
 
 instance
   apply (intro_classes)
-  apply (case_tac ko, auto simp: projectKO_opt_ntfn updateObject_default_def 
-                                 in_monad projectKO_eq2 
+  apply (case_tac ko, auto simp: projectKO_opt_ntfn updateObject_default_def
+                                 in_monad projectKO_eq2
                            split: kernel_object.splits)
   done
 
@@ -213,7 +213,7 @@ begin
 
 instance
   apply (intro_classes)
-  apply (case_tac ko, auto simp: projectKO_opt_cte updateObject_cte 
+  apply (case_tac ko, auto simp: projectKO_opt_cte updateObject_cte
                                  in_monad projectKO_eq2 typeError_def alignError_def
                            split: kernel_object.splits if_split_asm)
   done
@@ -228,8 +228,8 @@ begin
 
 instance
   apply (intro_classes)
-  apply (case_tac ko, auto simp: projectKO_opt_user_data updateObject_default_def 
-                                 in_monad projectKO_eq2 
+  apply (case_tac ko, auto simp: projectKO_opt_user_data updateObject_default_def
+                                 in_monad projectKO_eq2
                            split: kernel_object.splits)
   done
 
@@ -243,8 +243,8 @@ begin
 
 instance
   apply (intro_classes)
-  apply (case_tac ko, auto simp: projectKO_opt_user_data_device updateObject_default_def 
-                                 in_monad projectKO_eq2 
+  apply (case_tac ko, auto simp: projectKO_opt_user_data_device updateObject_default_def
+                                 in_monad projectKO_eq2
                            split: kernel_object.splits)
   done
 
@@ -258,8 +258,8 @@ begin
 
 instance
   apply (intro_classes)
-  apply (case_tac ko, auto simp: projectKO_opt_tcb updateObject_default_def 
-                                 in_monad projectKO_eq2 
+  apply (case_tac ko, auto simp: projectKO_opt_tcb updateObject_default_def
+                                 in_monad projectKO_eq2
                            split: kernel_object.splits)
   done
 

@@ -9,6 +9,10 @@ case \x of root@(CNodeCap {}) -> _ ->  ---> let root = \x in
  if isCNodeCap root
  then ->1 else ->2
 
+case \x of rt@(CNodeCap {}) -> _ ->  ---> let rt = \x in
+ if isCNodeCap rt
+ then ->1 else ->2
+
 case \x of cap@(EndpointCap { capEPCanSend = True }) -> cap@(NotificationCap { capNtfnCanSend = True }) -> cap ->  ---> let cap = \x in
  if isEndpointCap cap \<and> capEPCanSend cap
  then ->1 else if isNotificationCap cap \<and> capNtfnCanSend cap
@@ -616,18 +620,13 @@ case \x of (0, vaddr:rightsMask:attr:_, (pdCap,_):_) -> (0, _, _) -> (1, rightsM
     then ->6
     else ->7
 
-case \x of UntypedCap { capIsDevice = False } | capBlockSize untyped == objBits pool -> _ ->  ---> let \v0\ = \x in
-    if isUntypedCap \v0\ \<and> capBlockSize \v0\ == objBits pool \<and> \<not> capIsDevice \v0\
-    then ->1
-    else ->2
-
-case \x of (0, index:depth:_, (untyped,parentSlot):(root,_):_) -> (0, _, _) -> _ ->  ---> let (\v0\, \v1\, \v2\) = \x in
+case \x of (0, index:depth:_, (untyped,parentSlot):(croot,_):_) -> (0, _, _) -> _ ->  ---> let (\v0\, \v1\, \v2\) = \x in
     if \v0\ = 0 then
         if length \v1\ > 1 \<and> length \v2\ > 1
         then let index = \v1\ !! 0;
             depth = \v1\ !! 1;
             (untyped, parentSlot) = \v2\ !! 0;
-            root = fst (\v2\ !! 1)
+            croot = fst (\v2\ !! 1)
         in ->1
         else ->2
     else ->3
@@ -1719,4 +1718,210 @@ case \x of ((a@PageCap { capVPBasePtr = ptrA }), (b@PageCap {})) -> ((a@IOPortCa
 
 
 
+case \x of cap@(VCPUCap {}) -> _ ->  ---> let cap = \x in
+   if isVCPUCap cap then -> 1
+   else ->2
+
+case \x of ((field:_), cap@(VCPUCap {})) -> (_, _) ->  ---> let (ls, cap) = \x in
+   if isVCPUCap cap \<and> length ls > 0
+   then let field = ls !! 0 in ->1
+   else ->2
+
+case \x of ((field:val:_), cap@(VCPUCap {})) -> (_, _) ->  ---> let (ls, cap) = \x in
+   if isVCPUCap cap \<and> length ls > 1
+   then let field = ls !! 0; val = ls !! 1
+       in ->1
+   else ->2
+
+case \x of (c@PageTableCap { capPTMappedAddress = Just _ }) -> (PageTableCap { capPTMappedAddress = Nothing }) -> (c@PageDirectoryCap { capPDMappedASID = Just _ }) -> (PageDirectoryCap { capPDMappedASID = Nothing }) -> (c@PageCap {}) -> c@ASIDControlCap -> (c@ASIDPoolCap {}) -> (c@VCPUCap {}) ->  ---> let c = \x in
+    if isPageTableCap c \<and> capPTMappedAddress c \<noteq> None
+    then ->1
+    else if isPageTableCap c \<and> capPTMappedAddress c = None
+    then ->2
+    else if isPageDirectoryCap c \<and> capPDMappedASID c \<noteq> None
+    then ->3
+    else if isPageDirectoryCap c \<and> capPDMappedASID c = None
+    then ->4
+    else if isPageCap c
+    then ->5
+    else if isASIDControlCap c
+    then ->6
+    else if isASIDPoolCap c
+    then ->7
+    else if isVCPUCap c
+    then ->8
+    else undefined
+
+case \x of ((ASIDPoolCap { capASIDBase = b, capASIDPool = ptr }), True) -> ((PageDirectoryCap { capPDMappedASID = Just a, capPDBasePtr = ptr }), True) -> ((PageTableCap { capPTMappedAddress = Just (a, v), capPTBasePtr = ptr }), True) -> ((cap@PageCap { capVPMappedAddress = Just (a, v), capVPSize = s, capVPBasePtr = ptr }), _) -> ((VCPUCap {}), _) -> (_, _) ->  ---> let (cap, bl) = \x in
+    if isASIDPoolCap cap \<and> bl
+    then let b = capASIDBase cap; ptr = capASIDPool cap
+	in ->1
+    else if isPageDirectoryCap cap \<and> bl \<and> capPDMappedASID cap \<noteq> None
+    then let a = the (capPDMappedASID cap); ptr = capPDBasePtr cap
+	in ->2
+    else if isPageTableCap cap \<and> bl \<and> capPTMappedAddress cap \<noteq> None
+    then let (a, v) = the (capPTMappedAddress cap); ptr = capPTBasePtr cap
+        in ->3
+    else if isPageCap cap \<and> capVPMappedAddress cap \<noteq> None
+    then let (a, v) = the (capVPMappedAddress cap); s = capVPSize cap; ptr = capVPBasePtr cap in ->4
+    else if isVCPUCap cap then ->5
+    else ->6
+
+
+case \x of (cap@PageCap {}) -> (cap@PageTableCap { capPTBasePtr = ptr }) -> (cap@PageDirectoryCap { capPDBasePtr = ptr }) -> ASIDControlCap -> (cap@ASIDPoolCap { capASIDBase = base, capASIDPool = ptr }) -> (VCPUCap {}) ->  ---> let cap = \x in
+    if isPageCap cap
+    then ->1
+    else if isPageTableCap cap
+    then let ptr = capPTBasePtr cap
+        in ->2
+    else if isPageDirectoryCap cap
+    then let ptr = capPDBasePtr cap
+        in ->3
+    else if isASIDControlCap cap
+    then ->4
+    else if isASIDPoolCap cap
+    then let base = capASIDBase cap; ptr = capASIDPool cap
+        in ->5
+    else if isVCPUCap cap
+    then ->6
+    else undefined
+
+case \x of ((a@PageCap {}), (b@PageCap {})) -> ((a@PageTableCap {}), (b@PageTableCap {})) -> ((a@PageDirectoryCap {}), (b@PageDirectoryCap {})) -> (ASIDControlCap, ASIDControlCap) -> ((a@ASIDPoolCap {}), (b@ASIDPoolCap {})) -> ((a@VCPUCap {}), (b@VCPUCap {})) -> (_, _) ->  ---> let (a, b) = \x in
+    if isPageCap a \<and> isPageCap b
+    then ->1
+    else if isPageTableCap a \<and> isPageTableCap b
+    then ->2
+    else if isPageDirectoryCap a \<and> isPageDirectoryCap b
+    then ->3
+    else if isASIDControlCap a \<and> isASIDControlCap b
+    then ->4
+    else if isASIDPoolCap a \<and> isASIDPoolCap b
+    then ->5
+    else if isVCPUCap a \<and> isVCPUCap b
+    then ->6
+    else ->7
+
+case \x of Arch.Types.APIObjectType _ -> Arch.Types.SmallPageObject -> Arch.Types.LargePageObject -> Arch.Types.SectionObject -> Arch.Types.SuperSectionObject -> Arch.Types.PageTableObject -> Arch.Types.PageDirectoryObject -> Arch.Types.VCPUObject ->  ---> case \x of
+ Arch.Types.APIObjectType \v0\ \<Rightarrow> ->1 | Arch.Types.SmallPageObject \<Rightarrow> ->2 | Arch.Types.LargePageObject \<Rightarrow> ->3 | Arch.Types.SectionObject \<Rightarrow> ->4 | Arch.Types.SuperSectionObject \<Rightarrow> ->5 | Arch.Types.PageTableObject \<Rightarrow> ->6 | Arch.Types.PageDirectoryObject \<Rightarrow> ->7 | Arch.Type.VCPUObject \<Rightarrow> -> 8
+
+case \x of ArchInv.InvokeVCPU iv -> _ ->  ---> let inv = \x
+     in case inv of ArchInv.InvokeVCPU iv \<Rightarrow> ->1 | _ \<Rightarrow> ->2
+
+case \x of ((mr0:mr1:_), cap@(VCPUCap {})) -> (_, _) ->  ---> let (ls, cap) = \x in
+   if isVCPUCap cap \<and> length ls > 1
+   then let mr0 = ls !! 0; mr1 = ls !! 1
+       in ->1
+   else ->2
+
+
+case \x of cap@(PageDirectoryCap {}) -> cap@(PageTableCap {}) -> cap@(PageCap {}) -> ASIDControlCap -> cap@(ASIDPoolCap {}) -> (VCPUCap {}) ->   ---> let cap = \x in
+    if isPageDirectoryCap cap
+    then ->1
+    else if isPageTableCap cap
+    then ->2
+    else if isPageCap cap
+    then ->3
+    else if isASIDControlCap cap
+    then ->4
+    else if isASIDPoolCap cap
+    then ->5
+    else if isVCPUCap cap
+    then ->6
+    else undefined
+
+case \x of ((ASIDPoolCap { capASIDBase = b, capASIDPool = ptr }), True) -> ((PageDirectoryCap { capPDMappedASID = Just a, capPDBasePtr = ptr }), True) -> ((PageTableCap { capPTMappedAddress = Just (a, v), capPTBasePtr = ptr }), True) -> ((cap@PageCap { capVPMappedAddress = Just (a, v), capVPSize = s, capVPBasePtr = ptr }), _) -> ((VCPUCap { capVCPUPtr = vcpu }), True) -> (_, _) -> ---> let (cap, bl) = \x in
+    if isASIDPoolCap cap \<and> bl
+    then let b = capASIDBase cap; ptr = capASIDPool cap
+	in ->1
+    else if isPageDirectoryCap cap \<and> bl \<and> capPDMappedASID cap \<noteq> None
+    then let a = the (capPDMappedASID cap); ptr = capPDBasePtr cap
+	in ->2
+    else if isPageTableCap cap \<and> bl \<and> capPTMappedAddress cap \<noteq> None
+    then let (a, v) = the (capPTMappedAddress cap); ptr = capPTBasePtr cap
+        in ->3
+    else if isPageCap cap \<and> capVPMappedAddress cap \<noteq> None
+    then let (a, v) = the (capVPMappedAddress cap); s = capVPSize cap; ptr = capVPBasePtr cap
+        in ->4
+    else if isVCPUCap cap \<and> bl
+    then let vcpu = capVCPUPtr cap
+	in ->5
+    else ->6
+
+
+case \x of (cap@PageCap {}) -> (cap@PageTableCap { capPTBasePtr = ptr }) -> (cap@PageDirectoryCap { capPDBasePtr = ptr }) -> ASIDControlCap -> (cap@ASIDPoolCap { capASIDBase = base, capASIDPool = ptr }) -> (cap@VCPUCap { capVCPUPtr = vcpu }) ->  ---> let cap = \x in
+    if isPageCap cap
+    then ->1
+    else if isPageTableCap cap
+    then let ptr = capPTBasePtr cap
+        in ->2
+    else if isPageDirectoryCap cap
+    then let ptr = capPDBasePtr cap
+        in ->3
+    else if isASIDControlCap cap
+    then ->4
+    else if isASIDPoolCap cap
+    then let base = capASIDBase cap; ptr = capASIDPool cap
+        in ->5
+    else if isVCPUCap cap
+    then let vcpu = capVCPUPtr cap
+        in ->6
+    else undefined
+
+
+case \x of ((ASIDPoolCap { capASIDBase = b, capASIDPool = ptr }), True) -> ((PageDirectoryCap { capPDMappedASID = Just a, capPDBasePtr = ptr }), True) -> ((PageTableCap { capPTMappedAddress = Just (a, v), capPTBasePtr = ptr }), True) -> ((cap@PageCap { capVPMappedAddress = Just (a, v), capVPSize = s, capVPBasePtr = ptr }), _) -> ((VCPUCap { capVCPUPtr = vcpu }), True) -> (_, _) ->  ---> let (cap, bl) = \x in
+    if isASIDPoolCap cap \<and> bl
+    then let b = capASIDBase cap; ptr = capASIDPool cap
+	in ->1
+    else if isPageDirectoryCap cap \<and> bl \<and> capPDMappedASID cap \<noteq> None
+    then let a = the (capPDMappedASID cap); ptr = capPDBasePtr cap
+	in ->2
+    else if isPageTableCap cap \<and> bl \<and> capPTMappedAddress cap \<noteq> None
+    then let (a, v) = the (capPTMappedAddress cap); ptr = capPTBasePtr cap
+        in ->3
+    else if isPageCap cap \<and> capVPMappedAddress cap \<noteq> None
+    then let (a, v) = the (capVPMappedAddress cap); s = capVPSize cap; ptr = capVPBasePtr cap
+        in ->4
+    else if isVCPUCap cap \<and> bl
+    then let vcpu = capVCPUPtr cap
+	in ->5
+    else ->6
+
+case \x of ((ASIDPoolCap { capASIDBase = b, capASIDPool = ptr }), True) -> ((PageDirectoryCap { capPDMappedASID = Just a, capPDBasePtr = ptr }), True) -> ((PageTableCap { capPTMappedAddress = Just (a, v), capPTBasePtr = ptr }), True) -> ((cap@PageCap { capVPMappedAddress = Just (a, v), capVPSize = s, capVPBasePtr = ptr }), _) -> (_, _) ->  ---> let (cap, bl) = \x in
+    if isASIDPoolCap cap \<and> bl
+    then let b = capASIDBase cap; ptr = capASIDPool cap
+	in ->1
+    else if isPageDirectoryCap cap \<and> bl \<and> capPDMappedASID cap \<noteq> None
+    then let a = the (capPDMappedASID cap); ptr = capPDBasePtr cap
+	in ->2
+    else if isPageTableCap cap \<and> bl \<and> capPTMappedAddress cap \<noteq> None
+    then let (a, v) = the (capPTMappedAddress cap); ptr = capPTBasePtr cap
+        in ->3
+    else if isPageCap cap \<and> capVPMappedAddress cap \<noteq> None
+    then let (a, v) = the (capVPMappedAddress cap); s = capVPSize cap; ptr = capVPBasePtr cap
+        in ->4
+    else ->5
+
+case \x of cap@(PageDirectoryCap {}) -> cap@(PageTableCap {}) -> cap@(PageCap {}) -> ASIDControlCap -> cap@(ASIDPoolCap {}) -> (VCPUCap {}) ->   ---> let cap = \x in
+    if isPageDirectoryCap cap
+    then ->1
+    else if isPageTableCap cap
+    then ->2
+    else if isPageCap cap
+    then ->3
+    else if isASIDControlCap cap
+    then ->4
+    else if isASIDPoolCap cap
+    then ->5
+    else if isVCPUCap cap
+    then ->6
+    else undefined
+
+case \x of UntypedCap { capIsDevice = False } | capBlockSize untyped == objBits pool -> _ ->  ---> let \v0\ = \x in
+    if isUntypedCap \v0\ \<and> capBlockSize \v0\ == objBits pool \<and> \<not> capIsDevice \v0\
+    then ->1
+    else ->2
+
+case \x of UntypedCap {capIsDevice = False} | capBlockSize untyped == objBits pool -> _ ->  ---> if isUntypedCap \x \<and> (\<not> capIsDevice \x) \<and> (capBlockSize \x = objBits pool)
+    then ->1
+    else ->2
 

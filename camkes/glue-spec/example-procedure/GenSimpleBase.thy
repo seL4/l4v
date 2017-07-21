@@ -62,7 +62,7 @@ text {*
   For each component type, a data type is generated that enumerates the
   interfaces of that component.
 *}
-  
+
 datatype Client_channel
   = Client_s
 
@@ -94,7 +94,7 @@ text {*
   projection functions into and out of the component's local state. The types
   of these functions are derived from the parameter types of the method and are
   used for marshalling arguments.
-  
+
   For example, @{term echo_string} takes a
   @{term smallstring} input parameter, @{term s}, which necessitates a
   projection function, @{term s\<^sub>P}, as a parameter to

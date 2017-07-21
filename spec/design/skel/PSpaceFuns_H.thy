@@ -27,7 +27,7 @@ requalify_consts
 end
 
 definition deleteRange :: "( machine_word , 'a ) DataMap.map \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> ( machine_word , 'a ) DataMap.map"
-where "deleteRange m ptr bits \<equiv> 
+where "deleteRange m ptr bits \<equiv>
         let inRange = (\<lambda> x. x && ((- mask bits) - 1) = fromPPtr ptr) in
         data_map_filterWithKey (\<lambda> x _. Not (inRange x)) m"
 

@@ -23,7 +23,7 @@ abbreviation partition_label where
   "partition_label x \<equiv> OrdinaryLabel x"
 
 definition example_auth_graph :: "(auth_graph_label subject_label \<times> auth \<times> auth_graph_label subject_label) set" where
-  "example_auth_graph \<equiv> 
+  "example_auth_graph \<equiv>
    { (partition_label T,Notify,partition_label NTFN1),
      (partition_label CTR,Receive,partition_label NTFN1),
      (partition_label C,Read,partition_label CTR),
@@ -151,7 +151,7 @@ lemma NTFN1_in_subjectReads_CTR:
   apply(rule_tac t="partition_label CTR" and auth="Receive" and a="partition_label T" and auth'="Notify" in reads_read_queued_thread_read_ep)
   apply (auto intro: reads_lrefl)
   done
-  
+
 lemma NTFN2_in_subjectReads_CTR:
   "partition_label NTFN2 \<in> subjectReads example_auth_graph (partition_label CTR)"
   apply(rule_tac t="partition_label RM" and auth="Receive" and a="partition_label T" and auth'="Notify" in reads_read_queued_thread_read_ep)
@@ -216,7 +216,7 @@ lemma subjectReads_C:
            apply(auto)[9]
   apply(auto simp: subjectReads_C'[simplified])
   done
-  
+
 
 lemma CTR_in_subjectReads_EP:
   "partition_label CTR \<in> subjectReads example_auth_graph (partition_label EP)"
@@ -332,7 +332,7 @@ lemma RM_in_subjectAffects_T:
   "partition_label RM \<in> subjectAffects example_auth_graph (partition_label T)
 " apply(rule affects_send[where auth="Notify" and ep="partition_label NTFN2"], auto)
   done
-  
+
 lemma EP_in_subjectAffects_T:
   "partition_label EP \<in> subjectAffects example_auth_graph (partition_label T)"
   by (rule affects_ep_bound_trans, auto)
@@ -344,7 +344,7 @@ lemmas subjectAffects_T' = affects_lrefl[of "partition_label T"]
                            CTR_in_subjectAffects_T
                            RM_in_subjectAffects_T
                            EP_in_subjectAffects_T
- 
+
 
 
 lemma subjectAffects_T:
@@ -386,7 +386,7 @@ lemma RM_in_subjectAffects_NTFN2:
   "partition_label RM \<in> subjectAffects example_auth_graph (partition_label NTFN2)"
   apply(rule affects_send[where ep="partition_label NTFN2"], auto)
   done
-  
+
 lemma EP_in_subjectAffects_NTFN2:
   "partition_label EP \<in> subjectAffects example_auth_graph (partition_label NTFN2)"
   apply(rule affects_ep_bound_trans, auto)
@@ -418,7 +418,7 @@ lemma EP_in_subjectAffects_CTR:
   "partition_label EP \<in> subjectAffects example_auth_graph (partition_label CTR)"
   apply(rule affects_ep, auto)
   done
-  
+
 lemma NTFN1_in_subjectAffects_CTR:
   "partition_label NTFN1 \<in> subjectAffects example_auth_graph (partition_label CTR)"
   apply(rule affects_ep, auto)
@@ -476,7 +476,7 @@ lemma C_in_subjectAffects_EP:
   "partition_label C \<in> subjectAffects example_auth_graph (partition_label EP)"
   apply(rule affects_reset[where ep="partition_label EP" and l'="partition_label CTR"], auto)
   done
-  
+
 lemma NTFN2_in_subjectAffects_EP:
   "partition_label NTFN2 \<in> subjectAffects example_auth_graph (partition_label EP)"
   apply(rule affects_ep_bound_trans, auto)
@@ -571,8 +571,8 @@ lemma partsSubjectAffects_RM:
   apply(auto simp: partsSubjectAffects_def image_def label_can_affect_partition_def subjectReads subjectAffects_RM | rename_tac xa, case_tac xa)+
   done
 
-lemmas partsSubjectAffects = partsSubjectAffects_T partsSubjectAffects_NTFN1 
-                            partsSubjectAffects_NTFN2 partsSubjectAffects_CTR 
+lemmas partsSubjectAffects = partsSubjectAffects_T partsSubjectAffects_NTFN1
+                            partsSubjectAffects_NTFN2 partsSubjectAffects_CTR
                             partsSubjectAffects_C partsSubjectAffects_RM partsSubjectAffects_EP
 
 definition example_policy :: "(auth_graph_label partition \<times> auth_graph_label partition) set" where
@@ -606,7 +606,7 @@ lemma "example_policy = policyFlows example_auth_graph"
 datatype auth_graph_label2 = High | Low | SharedPage | NTFN
 
 definition example_auth_graph2 :: "(auth_graph_label2 subject_label \<times> auth \<times> auth_graph_label2 subject_label) set" where
-  "example_auth_graph2 \<equiv> 
+  "example_auth_graph2 \<equiv>
    { (partition_label Low,Write,partition_label SharedPage),
      (partition_label Low,Read,partition_label SharedPage),
      (partition_label High,Read,partition_label SharedPage),
@@ -712,7 +712,7 @@ lemma High_in_subjectAffects_NTFN:
   apply(rule affects_send[where ep="partition_label NTFN"])
   apply auto
   done
-  
+
 lemma subjectAffects_NTFN: "subjectAffects example_auth_graph2 (partition_label NTFN) = {partition_label NTFN,partition_label High}"
   apply(rule equalityI)
    apply(rule subsetI)
@@ -757,15 +757,15 @@ lemma partsSubjectAffects_High: "partsSubjectAffects example_auth_graph2 High = 
   done
 
 lemmas partsSubjectAffects2 =
-   partsSubjectAffects_High partsSubjectAffects_Low partsSubjectAffects_NTFN    
+   partsSubjectAffects_High partsSubjectAffects_Low partsSubjectAffects_NTFN
    partsSubjectAffects_SharedPage
 
 
 definition example_policy2 where
-  "example_policy2 \<equiv> {(PSched, d)|d. True} \<union> 
-                     {(d,e). d = e} \<union> 
-                     {(Partition Low, Partition NTFN), (Partition Low, Partition SharedPage), 
-                      (Partition Low, Partition High)} \<union> 
+  "example_policy2 \<equiv> {(PSched, d)|d. True} \<union>
+                     {(d,e). d = e} \<union>
+                     {(Partition Low, Partition NTFN), (Partition Low, Partition SharedPage),
+                      (Partition Low, Partition High)} \<union>
                      {(Partition SharedPage,Partition High), (Partition SharedPage, Partition Low),
                       (Partition SharedPage,Partition NTFN)} \<union>
                      {(Partition NTFN, Partition High)} \<union>
@@ -786,5 +786,5 @@ lemma "policyFlows example_auth_graph2 = example_policy2"
   apply(fastforce intro: policyFlows_refl refl_onD)
   done
 
- 
+
 end

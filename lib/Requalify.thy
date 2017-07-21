@@ -35,19 +35,19 @@ fun global_fact ctxt nm =
 let
    val facts = Proof_Context.facts_of ctxt;
    val {name, thms, ...} = (Facts.retrieve (Context.Proof ctxt) facts (nm, Position.none));
-   
+
    fun tl' (_ :: xs) = xs
      | tl' _ = []
 
    fun matches suf (gnm, gthms)  =
    let
      val gsuf = Long_Name.explode gnm |> tl' |> tl' |> Long_Name.implode;
-     
-   in suf = gsuf andalso eq_list Thm.eq_thm_prop (thms, gthms) 
+
+   in suf = gsuf andalso eq_list Thm.eq_thm_prop (thms, gthms)
    end
 in
   case Long_Name.dest_local name of NONE => (name, thms) | SOME suf =>
-    (case (find_first (matches suf) (all_facts_of ctxt)) of 
+    (case (find_first (matches suf) (all_facts_of ctxt)) of
        SOME x => x
      | NONE => raise Fail ("Couldn't find global equivalent of local fact: " ^ nm))
 end
@@ -63,12 +63,12 @@ val type_alias = syntax_alias Sign.type_alias Proof_Context.type_alias;
 
 in
 
-fun gen_requalify get_proper_nm parse_nm check_nm alias = 
+fun gen_requalify get_proper_nm parse_nm check_nm alias =
   (Parse.opt_target  --  Scan.repeat1 (Parse.position (Scan.ahead parse_nm -- Parse.name))
     >> (fn (target,bs) =>
       Toplevel.local_theory NONE target (fn lthy =>
       let
-     
+
         fun read_entry ((entry, t), pos) lthy =
         let
           val local_nm = get_proper_nm lthy t;
@@ -79,7 +79,7 @@ fun gen_requalify get_proper_nm parse_nm check_nm alias =
           |> alias b local_nm
 
         in lthy' end
-     
+
        in fold read_entry bs lthy  end)))
 
 local
@@ -107,7 +107,7 @@ val _ =
 val _ =
   Outer_Syntax.command @{command_keyword global_naming} "change global naming of context block"
     (Parse.binding >> (fn naming =>
-      Toplevel.local_theory NONE NONE 
+      Toplevel.local_theory NONE NONE
         (Local_Theory.map_background_naming (Name_Space.parent_path #> Name_Space.qualified_path true naming))))
 
 end
@@ -146,7 +146,7 @@ lemma "Requalify_Locale2.requalify_const = (undefined :: Requalify_Locale2.requa
 consts requalify_test_f :: "'a \<Rightarrow> 'b \<Rightarrow> bool"
 
 lemma
-  assumes f1: "requalify_test_f requalify_const Requalify_Locale2.requalify_const" 
+  assumes f1: "requalify_test_f requalify_const Requalify_Locale2.requalify_const"
   and f2: "requalify_test_f Requalify_Locale2.requalify_const Requalify.requalify_const"
   shows "requalify_test_f Requalify_Locale2.requalify_const requalify_const" "requalify_const = undefined"
   apply (rule f1)?
@@ -157,7 +157,7 @@ lemma
 context Requalify_Locale begin
 
 lemma
-  assumes f1: "requalify_test_f requalify_const Requalify_Locale2.requalify_const" 
+  assumes f1: "requalify_test_f requalify_const Requalify_Locale2.requalify_const"
   and f2: "requalify_test_f Requalify_Locale2.requalify_const Requalify.requalify_const"
   shows "requalify_test_f Requalify_Locale2.requalify_const requalify_const" "requalify_const = undefined"
   apply (rule f2)?
@@ -178,7 +178,7 @@ end
 context Requalify_Locale begin
 
 lemma
-  assumes f1: "requalify_test_f requalify_const Requalify_Locale2.requalify_const" 
+  assumes f1: "requalify_test_f requalify_const Requalify_Locale2.requalify_const"
   and f2: "requalify_test_f Requalify_Locale2.requalify_const global.requalify_const"
   shows "requalify_test_f Requalify_Locale2.requalify_const requalify_const" "requalify_const = undefined"
   apply (rule f1)?
@@ -190,7 +190,7 @@ end
 context begin interpretation Requalify_Locale .
 
 lemma
-  assumes f1: "requalify_test_f requalify_const Requalify_Locale2.requalify_const" 
+  assumes f1: "requalify_test_f requalify_const Requalify_Locale2.requalify_const"
   and f2: "requalify_test_f Requalify_Locale2.requalify_const global.requalify_const"
   shows "requalify_test_f Requalify_Locale2.requalify_const requalify_const" "requalify_const = undefined"
   apply (rule f1)?

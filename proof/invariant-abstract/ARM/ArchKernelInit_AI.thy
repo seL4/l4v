@@ -27,9 +27,9 @@ text {*
 lemma [simp]: "is_aligned (0x1000 :: word32) 9" by (simp add: is_aligned_def)
 lemma [simp]: "is_aligned (0x2000 :: word32) 9" by (simp add: is_aligned_def)
 
-lemmas ptr_defs = init_tcb_ptr_def idle_thread_ptr_def init_irq_node_ptr_def 
+lemmas ptr_defs = init_tcb_ptr_def idle_thread_ptr_def init_irq_node_ptr_def
                   init_globals_frame_def init_global_pd_def
-lemmas state_defs = init_A_st_def init_kheap_def init_arch_state_def ptr_defs 
+lemmas state_defs = init_A_st_def init_kheap_def init_arch_state_def ptr_defs
 
 lemma [simp]: "is_tcb (TCB t)" by (simp add: is_tcb_def)
 
@@ -95,7 +95,7 @@ lemma pde_mapping_bits_shift:
     apply (simp add: word_neq_0_conv word_less_alt)
    apply simp
   apply simp
-  done  
+  done
 
 lemma mask_pde_mapping_bits:
   "mask 20 = 2^pde_mapping_bits - 1"
@@ -111,7 +111,7 @@ lemma init_irq_ptrs_ineqs:
                 \<le> init_irq_node_ptr + 2 ^ 14 - 1"
 proof -
   have P: "ucast irq < (2 ^ (14 - cte_level_bits) :: word32)"
-    apply (rule order_le_less_trans[OF 
+    apply (rule order_le_less_trans[OF
         ucast_le_ucast[where 'a=10 and 'b=32,simplified,THEN iffD2, OF word_n1_ge]])
     apply (simp add: cte_level_bits_def minus_one_norm)
     done
@@ -174,7 +174,7 @@ lemma in_kernel_base:
   apply (intro conjI)
    apply (rule ccontr,simp add:not_le)
    apply (drule(1) le_less_trans)
-   apply (cut_tac is_aligned_no_wrap'[where ptr = kernel_base and off = m 
+   apply (cut_tac is_aligned_no_wrap'[where ptr = kernel_base and off = m
      and sz = 28,simplified])
      apply (drule(1) less_le_trans)
      apply simp
@@ -264,8 +264,8 @@ lemma invs_A:
                           valid_obj_def valid_vm_rights_def vm_kernel_only_def
                           dom_if_Some cte_level_bits_def)
     apply (rule conjI)
-     apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def 
-                           valid_cap_def obj_at_def valid_tcb_state_def 
+     apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def
+                           valid_cap_def obj_at_def valid_tcb_state_def valid_arch_tcb_def
                            cap_aligned_def word_bits_def valid_ipc_buffer_cap_simps)+
     apply (clarsimp simp: valid_cs_def word_bits_def cte_level_bits_def
                           init_irq_ptrs_all_ineqs valid_tcb_def
@@ -278,13 +278,13 @@ lemma invs_A:
    apply (rule conjI)
     apply (simp add:pspace_distinct_init_A)
    apply (rule conjI)
-    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs)
+    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs live_def hyp_live_def)
    apply (rule conjI)
-    apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs 
+    apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs
                           tcb_cap_cases_def is_zombie_def)
-   apply (clarsimp simp: sym_refs_def state_refs_of_def state_defs)
+   apply (clarsimp simp: sym_refs_def state_refs_of_def state_defs state_hyp_refs_of_def)
   apply (rule conjI)
-   apply (clarsimp simp: valid_mdb_def init_cdt_def no_mloop_def 
+   apply (clarsimp simp: valid_mdb_def init_cdt_def no_mloop_def
                          mdb_cte_at_def)
    apply (clarsimp simp: untyped_mdb_def caps_of_state_init_A_st_Null
                          untyped_inc_def ut_revocable_def
@@ -314,7 +314,7 @@ lemma invs_A:
    apply (rule conjI)
     apply (clarsimp simp: valid_asid_table_def state_defs)
    apply (rule conjI)
-    apply (clarsimp simp: valid_arch_state_def obj_at_def state_defs 
+    apply (clarsimp simp: valid_arch_state_def obj_at_def state_defs
                           a_type_def)
    apply (rule conjI)
     apply (simp add: valid_global_pts_def state_defs)
@@ -337,7 +337,7 @@ lemma invs_A:
    apply (clarsimp simp: valid_machine_state_def init_A_st_def
                          init_machine_state_def init_underlying_memory_def)
   apply (rule conjI)
-   apply (clarsimp simp: valid_arch_objs_def obj_at_def state_defs)
+   apply (clarsimp simp: valid_arch_objs_def obj_at_def state_defs valid_vspace_objs_def)
    apply (clarsimp simp: vs_lookup_def vs_asid_refs_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_arch_caps_def)
@@ -349,8 +349,8 @@ lemma invs_A:
   apply (rule conjI)
    apply (clarsimp simp: valid_global_objs_def state_defs)
    apply (clarsimp simp: valid_ao_at_def obj_at_def empty_table_def pde_ref_def
-                         valid_pde_mappings_def)
-   apply (simp add: kernel_base_def kernel_mapping_slots_def 
+                         valid_pde_mappings_def valid_vso_at_def)
+   apply (simp add: kernel_base_def kernel_mapping_slots_def
                     Platform.ARM.addrFromPPtr_def physMappingOffset_def
                     kernelBase_addr_def physBase_def pageBits_def is_aligned_def)
   apply (rule conjI)

@@ -126,7 +126,7 @@ When a thread is suspended, either explicitly by a TCB invocation or implicitly 
 
 \subsubsection{Restarting a Blocked Thread}
 
-The Restart operation forces a thread that has blocked to retry the operation that caused it to block. 
+The Restart operation forces a thread that has blocked to retry the operation that caused it to block.
 
 The invoked thread will return to the instruction that caused it to enter the kernel prior to blocking. If an IPC is in progress (including a fault IPC), it will be silently aborted. Beware of doing this to restart an atomic send and receive operation --- the thread will retry the send phase, even if it had previously succeeded in sending the message and was waiting for the receive phase to complete.
 
@@ -175,7 +175,7 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >     state <- getThreadState receiver
 >     assert (isReply state)
 >         "Reply transfer to a thread that isn't listening"
->     mdbNode <- liftM cteMDBNode $ getCTE slot 
+>     mdbNode <- liftM cteMDBNode $ getCTE slot
 >     assert (mdbPrev mdbNode /= nullPointer
 >                 && mdbNext mdbNode == nullPointer)
 >         "doReplyTransfer: ReplyCap not at end of MDB chain"
@@ -250,13 +250,13 @@ The recipient's argument registers are filled in with various information about 
 
 This function is called when an IPC message includes a capability to transfer. It attempts to perform the transfer, and returns an adjusted messageInfo containing the number of caps transferred and the bitmask of which caps were unwrapped.
 
-> transferCaps :: MessageInfo -> [(Capability, PPtr CTE)] -> 
->         Maybe (PPtr Endpoint) -> PPtr TCB -> Maybe (PPtr Word) -> 
+> transferCaps :: MessageInfo -> [(Capability, PPtr CTE)] ->
+>         Maybe (PPtr Endpoint) -> PPtr TCB -> Maybe (PPtr Word) ->
 >         Kernel MessageInfo
 > transferCaps info caps endpoint receiver receiveBuffer = do
 >     destSlots <- getReceiveSlots receiver receiveBuffer
 >     let info' = info { msgExtraCaps = 0, msgCapsUnwrapped = 0 }
->     case receiveBuffer of 
+>     case receiveBuffer of
 >         Nothing -> return info'
 >         Just rcvBuffer -> do
 >             transferCapsToSlots endpoint rcvBuffer 0
@@ -271,7 +271,7 @@ This function is called when an IPC message includes a capability to transfer. I
 >     constOnFailure (mi { msgExtraCaps = fromIntegral n }) $ do
 >         case (cap, ep, slots) of
 >             (EndpointCap { capEPPtr = p1 }, Just p2, _) | p1 == p2 -> do
->                 withoutFailure $ 
+>                 withoutFailure $
 >                     setExtraBadge rcvBuffer (capEPBadge cap) n
 >                 withoutFailure $ transferAgain slots miCapUnfolded
 >             (_, _, destSlot:slots') -> do
@@ -449,7 +449,7 @@ In most cases, the current thread has just sent a message to the woken thread, s
 > attemptSwitchTo :: PPtr TCB -> Kernel ()
 > attemptSwitchTo target = possibleSwitchTo target True
 
-The exception is when waking a thread that has just completed a "Send" system call. In this case, we switch only if the woken thread has a strictly higher priority; that is, when the priorities require the switch. This is done on the assumption that the recipient of a one-way message transfer is more likely to need to take action afterwards than the sender is. 
+The exception is when waking a thread that has just completed a "Send" system call. In this case, we switch only if the woken thread has a strictly higher priority; that is, when the priorities require the switch. This is done on the assumption that the recipient of a one-way message transfer is more likely to need to take action afterwards than the sender is.
 % FIXME: is this a sensible behaviour?
 
 > switchIfRequiredTo :: PPtr TCB -> Kernel ()
@@ -586,7 +586,7 @@ When the kernel's timer ticks, we decrement the timeslices of both the current t
 > timerTick = do
 >   thread <- getCurThread
 >   state <- getThreadState thread
->   case state of  
+>   case state of
 >     Running -> do
 >       ts <- threadGet tcbTimeSlice thread
 >       let ts' = ts - 1

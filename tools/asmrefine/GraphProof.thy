@@ -400,7 +400,7 @@ lemma exec_trace_step_reachable_induct:
   apply (auto simp: exec_graph_invariant_Cons reachable_step_def
                     get_state_function_call_def
              split: graph_function.split_asm,
-         auto split: next_node.splits option.split node.splits split_if_asm
+         auto split: next_node.splits option.split node.splits if_split_asm
                simp: trace_addr_def neq_Nil_conv)
   done
 
@@ -509,8 +509,7 @@ lemma restrs_single_visit_neq:
   apply (case_tac a, simp_all)
     apply (drule spec, drule(1) mp, clarsimp)
     apply (clarsimp simp: restrs_condition_def)
-    apply (drule_tac x=nat in spec)+
-    apply (drule(1) subsetD[rotated])+
+    apply (drule spec, drule(1) subsetD[rotated])+
     apply clarsimp
     apply (frule card_seteq[rotated -1, OF eq_imp_le], simp, clarsimp)[1]
     apply (blast dest: linorder_not_less[THEN iffD2])
@@ -598,7 +597,7 @@ primrec
     \<Rightarrow> (trace \<times> trace) \<Rightarrow> bool"
 where
     "first_reached_prop [] p trs = False"
-  | "first_reached_prop (v # vs) p trs = 
+  | "first_reached_prop (v # vs) p trs =
     (if double_pc v trs then p v trs
         else first_reached_prop vs p trs)"
 
@@ -763,7 +762,7 @@ lemma restrs_eventually_Cons:
     \<Longrightarrow> restrs_eventually_condition tr (restrs_list ((n, xs) # rs))"
   apply (clarsimp simp: restrs_eventually_condition_def)
   apply (rule_tac x="max na naa" in exI)
-  apply (simp add: restrs_condition_def restrs_list_Cons split: split_if_asm)
+  apply (simp add: restrs_condition_def restrs_list_Cons split: if_split_asm)
   apply (simp add: max_def)
   done
 
@@ -906,7 +905,7 @@ lemma num_visits_equals_j_first:
   apply (rule_tac x="k - 1" in exI)
   apply (case_tac k)
    apply (simp del: Collect_empty_eq)
-  apply (simp add: Collect_less_Suc split: split_if_asm)
+  apply (simp add: Collect_less_Suc split: if_split_asm)
   done
 
 lemma ex_least_nat:
@@ -963,13 +962,13 @@ theorem restr_trace_refine_Restr1:
    apply (rule exec_trace_addr_Suc[simplified], assumption)
    apply simp
   apply (clarsimp simp: fold_double_trace_imp double_trace_imp_def pc_def)
-  apply (thin_tac "0 < i \<longrightarrow> ?q")
+  apply (thin_tac "0 < i \<longrightarrow> q" for q)
   apply (clarsimp simp: visit_eqs)
   apply (frule num_visits_equals_j_first[OF refl, simplified neq0_conv])
   apply clarsimp
   apply (drule(5) restrs_eventually_at_visit)
   apply (drule_tac x=m' in spec, clarsimp)
-  apply (clarsimp simp: restrs_list_Cons restrs_condition_def split: split_if_asm)
+  apply (clarsimp simp: restrs_list_Cons restrs_condition_def split: if_split_asm)
   done
 
 theorem restr_trace_refine_Restr2:
@@ -997,13 +996,13 @@ theorem restr_trace_refine_Restr2:
    apply (rule exec_trace_addr_Suc[simplified], assumption)
    apply simp
   apply (clarsimp simp: fold_double_trace_imp double_trace_imp_def pc_def)
-  apply (thin_tac "0 < i \<longrightarrow> ?q")
+  apply (thin_tac "0 < i \<longrightarrow> q" for q)
   apply (clarsimp simp: visit_eqs)
   apply (frule num_visits_equals_j_first[OF refl, simplified neq0_conv])
   apply clarsimp
   apply (drule(5) restrs_eventually_at_visit)
   apply (drule_tac x=m' in spec, clarsimp)
-  apply (clarsimp simp: restrs_list_Cons restrs_condition_def split: split_if_asm)
+  apply (clarsimp simp: restrs_list_Cons restrs_condition_def split: if_split_asm)
   done
 
 lemma pc_Ret_Err_trace_end:
@@ -1055,7 +1054,7 @@ lemma trace_end_visit_Ret:
   done
 
 definition
-  "output_rel orel gfs restrs trs = 
+  "output_rel orel gfs restrs trs =
     orel (\<lambda>(x, y). acc_vars (tuple_switch (function_inputs, function_outputs) y
                 (tuple_switch gfs x))
             (the (double_visit (x, tuple_switch (NextNode (entry_point (tuple_switch gfs x)), Ret) y,
@@ -1089,7 +1088,7 @@ lemma first_reached_propD:
   "first_reached_prop addrs propn trs
     \<Longrightarrow> \<exists>addr \<in> set addrs. propn addr trs
     \<and> (\<forall>propn. first_reached_prop addrs propn trs = propn addr trs)"
-  by (induct addrs, simp_all split: split_if_asm)
+  by (induct addrs, simp_all split: if_split_asm)
 
 lemma double_pc_reds:
   "double_pc (False, nn, restrs) trs = pc nn restrs (fst trs)"
@@ -1143,6 +1142,8 @@ lemma visit_immediate_pred:
   apply auto
   done
 
+
+
 lemma pred_restrs:
   "\<lbrakk> tr \<in> exec_trace Gamma f; trace_bottom_addr tr i = Some nn \<rbrakk>
     \<Longrightarrow> restrs_condition tr restrs (Suc i)
@@ -1150,7 +1151,7 @@ lemma pred_restrs:
             else pred_restrs nn restrs) i"
   apply (clarsimp simp: restrs_condition_def Collect_less_Suc all_conj_distrib
                         pred_restrs_def
-                 split: split_if_asm next_node.split)
+                 split: if_split_asm next_node.split)
   apply (auto simp: trace_addr_trace_bottom_addr_eq)
   done
 
@@ -1334,6 +1335,26 @@ lemma visit_inconsistent:
   "restrs i = {} \<Longrightarrow> visit tr nn restrs = None"
   by (auto simp add: visit_def restrs_condition_def)
 
+lemma visit_immediate_pred_step:
+  "tr i = Some [(nn, st, fn')]
+    \<Longrightarrow> tr \<in> exec_trace Gamma fn \<Longrightarrow> Gamma fn = Some gf
+    \<Longrightarrow> wf_graph_function gf ilen olen
+    \<Longrightarrow> converse (reachable_step (function_graph gf)) `` {nn} \<subseteq> {NextNode n}
+    \<Longrightarrow> nn \<noteq> NextNode (entry_point gf)
+    \<Longrightarrow> (case (function_graph gf n) of None \<Rightarrow> False | Some (Call _ _ _ _) \<Rightarrow> False | _ \<Rightarrow> True)
+    \<Longrightarrow> \<exists>i' st'. i = Suc i' \<and> fn' = fn \<and> tr i' = Some [(NextNode n, st', fn)]
+      \<and> (([(NextNode n, st', fn)], [(nn, st, fn)]) \<in> exec_graph_step Gamma)"
+  apply (frule(2) visit_immediate_pred[where i=i], simp_all)
+   apply (simp add: trace_addr_def)
+  apply (clarsimp split: option.split_asm)
+  apply (frule(4) exec_trace_non_Call)
+  apply (clarsimp dest!: trace_addr_SomeD)
+  apply (frule_tac i=i' in exec_trace_step_cases, clarsimp)
+  apply (frule_tac i=i' in exec_trace_invariant')
+  apply (frule_tac i=i in exec_trace_invariant')
+  apply (clarsimp simp: exec_graph_invariant_def)
+  done
+
 lemma visit_Basic:
   "tr \<in> exec_trace Gamma fn \<Longrightarrow> Gamma fn = Some gf
     \<Longrightarrow> function_graph gf = graph
@@ -1360,7 +1381,7 @@ lemma visit_Basic:
   apply (frule(2) visit_immediate_pred, simp+)
   apply clarsimp
   apply (frule(2) exec_trace_non_Call, simp+)
-  apply (clarsimp simp: pred_restrs split: split_if_asm)
+  apply (clarsimp simp: pred_restrs split: if_split_asm)
   done
 
 definition
@@ -1380,7 +1401,7 @@ lemma visit_Cond:
     \<Longrightarrow> (r, NextNode n) \<notin> rtrancl (reachable_step graph \<inter> {(x, y). x \<notin> set cuts})
     \<Longrightarrow> visit tr nn restrs = option_guard (\<lambda>st. (nn = l \<and> cond st) \<or> (nn = r \<and> \<not> cond st))
         (visit tr (NextNode n) (pred_restrs' n restrs))"
-  apply (cases "visit tr (NextNode n) (pred_restrs' n restrs)", simp_all split del: split_if)
+  apply (cases "visit tr (NextNode n) (pred_restrs' n restrs)", simp_all split del: if_split_asm)
    apply (clarsimp simp: visit_eqs)
    apply (frule(5) visit_immediate_pred)
    apply (clarsimp simp: pred_restrs)
@@ -1393,10 +1414,16 @@ lemma visit_Cond:
   apply (clarsimp simp: all_exec_graph_step_cases exec_graph_invariant_Cons
               simp del: imp_disjL)
   apply (intro conjI impI)
+    apply (rule_tac x="Suc i" in exI)
+    apply (clarsimp simp: pred_restrs trace_bottom_addr_def)
+    apply (rule conjI, simp add: trace_addr_def)
+    apply clarsimp
+    apply (frule(3) visit_immediate_pred, simp, simp)
+    apply (clarsimp simp: pred_restrs)
+    apply (frule(2) exec_trace_non_Call, simp+)[1]
    apply (rule_tac x="Suc i" in exI)
    apply (clarsimp simp: pred_restrs trace_bottom_addr_def)
    apply (rule conjI, simp add: trace_addr_def)
-    apply auto[1]
    apply clarsimp
    apply (frule(3) visit_immediate_pred, simp, simp)
    apply (clarsimp simp: pred_restrs)
@@ -1408,7 +1435,7 @@ lemma visit_Cond:
   apply (drule(3) restrs_single_visit2, simp+)
    apply (clarsimp simp: reachable_step_def[THEN eqset_imp_iff] dest!: tranclD)
    apply auto[1]
-  apply (clarsimp dest!: trace_addr_SomeD split: split_if_asm)
+  apply (clarsimp dest!: trace_addr_SomeD split: if_split_asm)
   done
 
 lemma exec_trace_pc_Call:
@@ -1457,7 +1484,7 @@ lemma trace_bottom_addr_trace_addr_prev:
     apply simp
     apply (drule meta_mp)
      apply (simp add: restrs_condition_def Collect_less_Suc)
-    apply (clarsimp, clarsimp split: split_if_asm)
+    apply (clarsimp, clarsimp split: if_split_asm)
     apply (fastforce simp add: atLeastAtMostSuc_conv)
    apply (simp add: trace_addr_trace_bottom_addr_eq pred_restrs)
    apply (rule_tac x=i in exI, simp)
@@ -1467,7 +1494,7 @@ lemma trace_bottom_addr_trace_addr_prev:
    apply (clarsimp simp: trace_bottom_addr_def)
   apply (clarsimp simp: all_exec_graph_step_cases)
   apply (elim disjE conjE exE, simp_all add: trace_addr_def trace_bottom_addr_def
-              split: list.split_asm graph_function.split_asm split_if_asm)
+              split: list.split_asm graph_function.split_asm if_split_asm)
   done
 
 lemma visit_extended_pred:
@@ -1485,7 +1512,7 @@ lemma visit_extended_pred:
   apply (frule(4) trace_bottom_addr_trace_addr_prev)
   apply clarsimp
   apply (rule_tac x=j in exI, simp)
-  apply (clarsimp split: split_if_asm)
+  apply (clarsimp split: if_split_asm)
   apply (simp add: atLeastLessThanSuc_atLeastAtMost)
   done
 
@@ -1559,7 +1586,7 @@ lemma restrs_condition_no_change:
     \<Longrightarrow> (\<forall>k \<in> {i ..< j}. trace_addr tr k = None)
     \<Longrightarrow> restrs_condition tr restrs j"
   apply (clarsimp simp: restrs_condition_def)
-  apply (rule_tac P="\<lambda>S. card S \<in> ?SS" in subst[rotated])
+  apply (rule_tac P="\<lambda>S. card S \<in> SS" for SS in subst[rotated])
    apply (erule spec)
   apply (auto intro: linorder_not_le[THEN iffD1, OF notI])
   done
@@ -1597,7 +1624,7 @@ proof -
        \<longrightarrow> \<not> restrs_condition tr restrs j"
     using restrs_single_visit[OF tr _ _ i cut]
     by clarsimp
-  
+
   note eq = Least_equality[where x=i, OF _ ccontr, unfolded linorder_not_le]
 
   show ?thesis using i
@@ -1677,7 +1704,7 @@ lemma pred_restrs_list:
   apply (rule sym)
   apply (induct xs, simp_all)
    apply (rule ext, simp add: restrs_list_def)
-  apply (clarsimp simp: restrs_list_Cons split del: split_if
+  apply (clarsimp simp: restrs_list_Cons split del: if_split
                 intro!: ext cong: if_cong)
   apply (auto intro: image_eqI[rotated])
   done
@@ -1711,7 +1738,7 @@ lemma visit_Call:
             (option_guard (\<lambda>_. tr' \<noteq> None \<and> trace_end (the tr') \<noteq> None
                 \<and> fst (hd (the (trace_end (the tr')))) = Ret) v')"
   apply (cases "visit tr (NextNode n) (pred_restrs' n restrs)",
-         simp_all split del: split_if)
+         simp_all split del: if_split)
    apply (clarsimp simp: visit_eqs function_call_trace_embed_def)
    apply (rule context_conjI)
     apply (clarsimp simp: function_call_trace_def pc_def visit_eqs)
@@ -1721,13 +1748,13 @@ lemma visit_Call:
   apply (drule visit_eqs[THEN iffD1])
   apply (drule(2) visit_Call_loop_lemma)
   apply (frule_tac nn="NextNode n" in pred_restrs_cut2)
-  apply (clarsimp simp: Let_def split del: split_if)
-  apply (frule trace_addr_SomeD, clarsimp split del: split_if)
+  apply (clarsimp simp: Let_def split del: if_split)
+  apply (frule trace_addr_SomeD, clarsimp split del: if_split)
   apply (frule(1) exec_trace_invariant)
-  apply (clarsimp simp: exec_graph_invariant_Cons split del: split_if)
+  apply (clarsimp simp: exec_graph_invariant_Cons split del: if_split)
   apply (frule(4) exec_trace_drop_n)
   apply (clarsimp simp: function_call_trace_eq visit_eqs Let_def
-              simp del: imp_disjL split del: split_if)
+              simp del: imp_disjL split del: if_split)
   apply (rule conjI)
    apply (clarsimp simp: function_call_trace_embed_def simp del: map_option_eq_Some)
    apply (rule conjI, blast intro: trace_end_trace_drop_n_None)
@@ -1847,7 +1874,7 @@ lemma infinite_subset:
 
 lemma restr_trace_refine_Split_orig:
   fixes rs1 rs2 hyps Gamma1 f1 Gamma2 f2
-  defines "H trs \<equiv> 
+  defines "H trs \<equiv>
           exec_double_trace Gamma1 f1 Gamma2 f2 (fst trs) (snd trs)
         \<and> restrs_eventually_condition (fst trs) (restrs_list rs1)
         \<and> restrs_eventually_condition (snd trs) (restrs_list rs2)"
@@ -1875,8 +1902,8 @@ lemma restr_trace_refine_Split_orig:
             orel tr tr'"
   shows "restr_trace_refine prec Gamma1 f1 Gamma2 f2 (restrs_list rs1) (restrs_list rs2) orel tr tr'"
 proof -
-  have pc_ccall_less: "\<And>n m. double_pc (ccall n) (tr, tr')
-    \<longrightarrow> m \<le> n \<longrightarrow> double_pc (ccall m) (tr, tr')"
+  have pc_ccall_less: "double_pc (ccall n) (tr, tr')
+    \<longrightarrow> m \<le> n \<longrightarrow> double_pc (ccall m) (tr, tr')" for n m
     apply (induct_tac n, simp_all)
     apply clarsimp
     apply (frule Suc[rule_format])
@@ -1903,13 +1930,14 @@ proof -
 
   note H_intro = H_def[THEN meta_eq_to_obj_eq, THEN iffD2, OF conjI]
 
-  have Suc_Max: "\<And>x S. finite S \<Longrightarrow> Suc (Max S) \<notin> S"
+  have Suc_Max: "finite S \<Longrightarrow> Suc (Max S) \<notin> S" for x S
     by (auto dest: Max_ge)
 
   have unreached:
-    "\<And>x. finite {n. \<forall>j<k. double_pc (ccall (n + j)) (tr, tr')}
+    "finite {n. \<forall>j<k. double_pc (ccall (n + j)) (tr, tr')}
         \<Longrightarrow> x \<in> {n. \<forall>j<k. double_pc (ccall (n + j)) (tr, tr')}
         \<Longrightarrow> \<not> double_pc (ccall (Max {n. \<forall>j<k. double_pc (ccall (n + j)) (tr, tr')} + k)) (tr, tr')"
+    for x
     apply (frule Suc_Max)
     apply (frule Max_in, rule notI, clarsimp)
     apply clarsimp
@@ -1918,11 +1946,12 @@ proof -
     done
 
   have infinite_helper:
-    "\<And>tr G f vis. tr \<in> exec_trace G f
+    "tr \<in> exec_trace G f
         \<Longrightarrow> \<forall>i j k. restrs_condition tr (snd (vis i)) k
             \<longrightarrow> restrs_condition tr (snd (vis j)) k \<longrightarrow> i = j
         \<Longrightarrow> \<not> finite {n. pc (fst (vis n)) (snd (vis n)) tr}
         \<Longrightarrow> trace_end tr = None"
+    for tr G f vis
     apply (clarsimp simp: trace_end_def)
     apply (drule(1) exec_trace_None_dom_subset)
     apply (drule_tac R="\<lambda>n i. restrs_condition tr (snd (vis n)) i"
@@ -1988,7 +2017,7 @@ lemma restrs_condition_unique:
     \<Longrightarrow> restrs_condition tr (restrs_list ((n, [y]) # rs)) k
     \<Longrightarrow> x = y"
   by (clarsimp simp: restrs_condition_def restrs_list_Cons
-              split: split_if_asm)
+              split: if_split_asm)
 
 abbreviation(input)
   "split_restr split_seq restrs i \<equiv> (restrs_list ((fst split_seq,
@@ -2175,13 +2204,13 @@ lemma stepwise_graph_refine_Cond:
   apply (frule_tac i=i and tr=tr in exec_trace_step_cases)
   apply (frule_tac i=j and tr=tr' in exec_trace_step_cases)
   apply (clarsimp simp: exec_graph_step_def exec_graph_invariant_Cons
-                 split: graph_function.split_asm split: split_if_asm
+                 split: graph_function.split_asm split: if_split_asm
               simp del: last.simps not_None_eq)
      apply (simp_all only: exI all_simps[symmetric] simp_thms)
    apply (erule_tac i="Suc i" and j="Suc j"
-     and nns="(l # ?xs, ?ys)" in stepwise_graph_refineD, simp)
+     and nns="(l # xs, ys)" for xs ys in stepwise_graph_refineD, simp)
   apply (erule_tac i="Suc i" and j="Suc j"
-    and nns="(r # ?xs, ?ys)" in stepwise_graph_refineD, simp)
+    and nns="(r # xs, ys)" for xs ys in stepwise_graph_refineD, simp)
   done
 
 lemma stepwise_graph_refine_Call_same:

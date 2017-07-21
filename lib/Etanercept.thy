@@ -389,7 +389,7 @@ ML {*
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " && " ^ s2 ^ ")")
             end
-        | @{term_pat "?a \<or> ?b"} => 
+        | @{term_pat "?a \<or> ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " || " ^ s2 ^ ")")
             end
@@ -418,7 +418,7 @@ ML {*
     in
       "#include <inttypes.h>\n" ^
       "#include <limits.h>\n" ^
-      "#include <stdbool.h>\n" ^ 
+      "#include <stdbool.h>\n" ^
       "#include <stdint.h>\n" ^
       "#include <stdio.h>\n" ^
       "int main(void) {\n" ^

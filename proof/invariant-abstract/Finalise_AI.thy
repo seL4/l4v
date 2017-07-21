@@ -30,11 +30,13 @@ requalify_consts
   vs_cap_ref
   unmap_page
   clearMemory
+
 requalify_facts
   final_cap_lift
   no_irq_clearMemory
   valid_global_refsD
   valid_global_refsD2
+
 end
 
 locale Finalise_AI_1 =
@@ -96,9 +98,9 @@ locale Finalise_AI_1 =
   "\<And> cap final.\<lbrace>invs and (valid_cap (ArchObjectCap cap) :: 'a state \<Rightarrow> bool)\<rbrace>
      arch_finalise_cap cap final
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  assumes obj_at_not_live_valid_arch_cap_strg:
+(*  assumes obj_at_not_live_valid_arch_cap_strg:
     "\<And>(s :: 'a state) cap r. (s \<turnstile> ArchObjectCap cap \<and> aobj_ref cap = Some r)
-          \<longrightarrow> obj_at (\<lambda>ko. \<not> live ko) r s"
+          \<longrightarrow> obj_at (\<lambda>ko. \<not> live ko) r s"*)
   assumes deleting_irq_handler_slot_not_irq_node:
     "\<And> irq sl.
     \<lbrace>if_unsafe_then_cap and valid_global_refs
@@ -120,7 +122,7 @@ locale Finalise_AI_1 =
           \<and> cte_wp_at (op = cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s)
           \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
           \<and> (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and>
-                                 valid_arch_objs s \<and>
+                                 valid_vspace_objs s \<and>
                                  valid_arch_state s)\<rbrace>
        finalise_cap cap x
      \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
@@ -143,7 +145,6 @@ text {* Properties about empty_slot *}
 
 definition
  "halted_if_tcb \<equiv> \<lambda>t s. tcb_at t s \<longrightarrow> st_tcb_at halted t s"
-
 
 lemma halted_emptyable:
   "\<And>ref. halted_if_tcb t s \<Longrightarrow> emptyable (t, ref) s"
@@ -637,7 +638,7 @@ lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
   apply safe
   defer 3 defer 6
           apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
-                       simp: valid_ntfn_set_bound_None is_ntfn valid_obj_def)[6]
+                       simp: live_def valid_ntfn_set_bound_None is_ntfn valid_obj_def)[6]
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
                    dest!: pred_tcb_at_tcb_at ko_at_state_refs_ofD
@@ -665,7 +666,7 @@ crunch (in Finalise_AI_1) invs[wp]: fast_finalise "invs"
 
 lemma cnode_at_unlive[elim!]:
   "s \<turnstile> cap.CNodeCap ptr bits gd \<Longrightarrow> obj_at (\<lambda>ko. \<not> live ko) ptr s"
-  by (clarsimp simp: valid_cap_def is_cap_table
+  by (clarsimp simp: live_def valid_cap_def is_cap_table
               elim!: obj_at_weakenE)
 
 
@@ -691,12 +692,12 @@ lemma tcb_cap_valid_imp_NullCap:
   apply (clarsimp simp: ran_tcb_cap_cases valid_ipc_buffer_cap_def
                  split: Structures_A.thread_state.split_asm)
   done
-
+(* moved to Invariants_AI
 lemma a_type_arch_live:
-  "a_type ko = AArch tp \<Longrightarrow> \<not> live ko"
+  "a_type ko = AArch tp \<Longrightarrow> \<not> live0 ko"
   by (simp add: a_type_def
          split: Structures_A.kernel_object.split_asm)
-
+*)
 lemma pred_tcb_at_def2:
   "pred_tcb_at proj P t \<equiv> \<lambda>s. \<exists>tcb. ko_at (TCB tcb) t s \<and> P (proj (tcb_to_itcb tcb))"
   by (rule eq_reflection, rule ext) (fastforce simp: pred_tcb_at_def obj_at_def)
@@ -823,16 +824,16 @@ lemma cap_delete_one_cte_wp_at_preserved:
 interpretation delete_one_pre
   by (unfold_locales, wp cap_delete_one_cte_wp_at_preserved)
 
-
 lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
   "\<lbrace>cte_wp_at (op = cap) sl :: 'a state \<Rightarrow> bool\<rbrace>
      finalise_cap cap fin
    \<lbrace>\<lambda>rv. cte_wp_at (op = cap) sl\<rbrace>"
   apply (cases cap, simp_all split del: if_split)
     apply (wp suspend_cte_wp_at_preserved
-                 deleting_irq_handler_cte_preserved
+                 deleting_irq_handler_cte_preserved prepare_thread_delete_cte_wp_at
                  hoare_drop_imp thread_set_cte_wp_at_trivial
-               | clarsimp simp: can_fast_finalise_def unbind_maybe_notification_def unbind_notification_def
+               | clarsimp simp: can_fast_finalise_def unbind_maybe_notification_def
+                                unbind_notification_def
                                 tcb_cap_cases_def
                | wpc )+
   done
@@ -1079,6 +1080,7 @@ lemma (in Finalise_AI_3) finalise_cap_cte_cap_to[wp]:
   "\<lbrace>ex_cte_cap_wp_to P sl :: 'a state \<Rightarrow> bool\<rbrace> finalise_cap cap fin \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P sl\<rbrace>"
   apply (cases cap, simp_all add: ex_cte_cap_wp_to_def split del: if_split)
        apply (wp hoare_vcg_ex_lift hoare_drop_imps
+                 prepare_thread_delete_cte_preserved_irqn
                  deleting_irq_handler_cte_preserved_irqn
                  prepare_thread_delete_cte_preserved_irqn
                  | simp
@@ -1202,7 +1204,7 @@ lemma gbn_wp:
 locale Finalise_AI_4 = Finalise_AI_3 a b _ c
   for a :: "('a :: state_ext) itself"
   and b :: "('b :: state_ext) itself"
-  and c :: "'c itself" 
+  and c :: "'c itself"
 
 value Finalise_AI_4
 

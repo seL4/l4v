@@ -88,8 +88,8 @@ lemma corres_free_return:
   by (clarsimp simp:return_def bind_def corres_underlying_def)
 
 lemma corres_free_set_object:
-  "\<lbrakk> \<forall> s s'. s = transform s' \<and> P s \<and> P' s' \<longrightarrow>  
-             s = transform ((\<lambda>s. s \<lparr>kheap := kheap s (ptr \<mapsto> obj)\<rparr>) s')\<rbrakk> \<Longrightarrow>  
+  "\<lbrakk> \<forall> s s'. s = transform s' \<and> P s \<and> P' s' \<longrightarrow>
+             s = transform ((\<lambda>s. s \<lparr>kheap := kheap s (ptr \<mapsto> obj)\<rparr>) s')\<rbrakk> \<Longrightarrow>
   dcorres dc P P' (return a) (set_object ptr obj )"
   by (clarsimp simp: corres_underlying_def put_def return_def modify_def bind_def get_def set_object_def)
 
@@ -132,7 +132,7 @@ lemma dcorres_free_throw:
   assumes "\<And>s. \<lbrace>op = s\<rbrace> f \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>e. op = s\<rbrace>"
   shows "dcorres (dc \<oplus> r) P P' Monads_D.throw f"
   using assms
-  apply (simp add:corres_underlying_def throwError_def return_def)  
+  apply (simp add:corres_underlying_def throwError_def return_def)
   apply (clarsimp simp:validE_def valid_def)
   apply (drule_tac x = b in meta_spec)
   apply (fastforce split: sum.splits)
@@ -177,7 +177,7 @@ lemma dcorres_absorb_get_l:
 
 lemma dcorres_expand_get_l:
   assumes "dcorres rv P P' (do t\<leftarrow>get; f t od) g"
-  shows "\<lbrakk> P (transform s'); P' s'\<rbrakk> \<Longrightarrow> 
+  shows "\<lbrakk> P (transform s'); P' s'\<rbrakk> \<Longrightarrow>
          dcorres rv (op = (transform s')) (op=s') (f (transform s')) g"
   using assms
   by (simp add:get_def corres_underlying_def bind_def)
@@ -223,7 +223,7 @@ lemma dcorres_get:
   apply clarsimp+
 done
 
-lemma dcorres_gets_the: 
+lemma dcorres_gets_the:
   assumes A: "\<And>s s' obj obj'. \<lbrakk>s = transform s';P s; P' s';  g' s' = Some obj' ;g s = Some obj\<rbrakk>
           \<Longrightarrow> dcorres r (op = s) (op = s') (f obj) (f' obj')"
   assumes B: "\<And>s s'. \<lbrakk>s = transform s'; P s; P' s' ; g' s' \<noteq> None\<rbrakk> \<Longrightarrow> g s \<noteq> None"
@@ -237,7 +237,7 @@ lemma dcorres_gets_the:
     apply (simp add: assert_opt_def)
       apply (case_tac "g' xa = None")
     apply (clarsimp split:option.splits simp:corres_free_fail)
-      apply (subgoal_tac "\<exists>obj. g x \<noteq> None") 
+      apply (subgoal_tac "\<exists>obj. g x \<noteq> None")
       apply (clarsimp split:option.splits)
       apply (rule_tac Q="op=(transform xa)" and Q'="op=xa" in corres_guard_imp)
     apply (simp add:A)+
@@ -478,7 +478,7 @@ lemma dcorres_symb_exec_rE:
   done
 
 lemma throw_handle:
-  "(Monads_D.throw <handle2> (\<lambda>_. m)) = m" 
+  "(Monads_D.throw <handle2> (\<lambda>_. m)) = m"
   by (simp add: handleE'_def throwError_def)
 
 lemma corres_handle2:
@@ -515,7 +515,7 @@ lemma corres_handle2':
   apply (clarsimp simp: handleE'_def bind_def)
   apply (drule (1) bspec, clarsimp)
   apply (fastforce simp: return_def throwError_def split: sum.splits)
-  done 
+  done
 
 lemma corres_alternative_throw_splitE:
   assumes a: "corres_underlying R False z (dc \<oplus> r') P P' (f \<sqinter> Monads_D.throw) f'"
@@ -567,7 +567,7 @@ lemma corres_alternative_throw_splitE:
       apply (drule use_valid, rule f[unfolded validE_def])
        apply assumption
       apply simp
-     apply (drule use_valid, rule f'[unfolded validE_def]) 
+     apply (drule use_valid, rule f'[unfolded validE_def])
       apply assumption
      apply simp
     apply assumption
@@ -606,7 +606,7 @@ lemma corres_throw_skip_r:
    apply (clarsimp simp: lift_def in_throwError split: sum.splits)
     apply (simp add: throwError_def return_def)
    apply (drule (1) bspec, clarsimp)
-  apply clarsimp 
+  apply clarsimp
   apply (clarsimp simp: bind_def)
   apply (erule disjE)
    prefer 2
@@ -670,7 +670,7 @@ lemma dcorres_assert_opt_assume:
   assumes "\<And>x. m = Some x \<Longrightarrow> dcorres R P P' a (c x)"
   shows "dcorres R P P' a (assert_opt m >>= c)"
   using assms
-  by (auto simp: bind_def assert_opt_def assert_def fail_def return_def 
+  by (auto simp: bind_def assert_opt_def assert_def fail_def return_def
                  corres_underlying_def split: option.splits)
 
 end

@@ -1205,7 +1205,7 @@ lemma valid_bitmapQ_lift:
   and     prqL1: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
   and     prqL2: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
   shows   "\<lbrace>Invariants_H.valid_bitmapQ\<rbrace> f \<lbrace>\<lambda>_. Invariants_H.valid_bitmapQ\<rbrace>"
-  unfolding valid_bitmapQ_def bitmapQ_def 
+  unfolding valid_bitmapQ_def bitmapQ_def
   apply (wp hoare_vcg_all_lift)
    apply (wps prq prqL1 prqL2)
   apply (rule hoare_vcg_prop, assumption)
@@ -2836,7 +2836,7 @@ lemma setUntypedCapAsFull_if_live_then_nonz_cap':
   apply (clarsimp simp:if_live_then_nonz_cap'_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)
    apply (clarsimp simp:setUntypedCapAsFull_def split del: if_split)
-   apply (wp hoare_vcg_split_if)
+   apply wpsimp
     apply (clarsimp simp:ex_nonz_cap_to'_def cte_wp_at_ctes_of)
     apply (wp updateCap_ctes_of_wp)+
   apply clarsimp
@@ -3198,7 +3198,7 @@ crunch gsMaxObjectSize[wp]: setUntypedCapAsFull "\<lambda>s. P (gsMaxObjectSize 
 
 lemma setUntypedCapAsFull_sizes[wp]:
   "\<lbrace>\<lambda>s. valid_cap_sizes' sz (ctes_of s) \<and> cte_wp_at' (op = srcCTE) src s\<rbrace>
-    setUntypedCapAsFull (cteCap srcCTE) cap src 
+    setUntypedCapAsFull (cteCap srcCTE) cap src
   \<lbrace>\<lambda>rv s. valid_cap_sizes' sz (ctes_of s)\<rbrace>"
   apply (clarsimp simp:valid_cap_sizes'_def setUntypedCapAsFull_def split del:if_splits)
   apply (rule hoare_pre)
@@ -3265,7 +3265,7 @@ crunch ksMachine[wp]: cteInsert "\<lambda>s. P (ksMachineState s)"
 
 lemma cteInsert_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> cteInsert cap src dest \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
-  apply (simp add: cteInsert_def valid_machine_state'_def pointerInDeviceData_def 
+  apply (simp add: cteInsert_def valid_machine_state'_def pointerInDeviceData_def
                    pointerInUserData_def)
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift)
    apply (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv |
@@ -3504,7 +3504,7 @@ lemma cteInsert_invs:
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wpsimp wp: cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift CSpace_R.valid_queues_lift
-                    valid_irq_node_lift valid_queues_lift' irqs_masked_lift cteInsert_norq 
+                    valid_irq_node_lift valid_queues_lift' irqs_masked_lift cteInsert_norq
               simp: st_tcb_at'_def)
   apply (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: valid_capAligned)
   done
@@ -3519,11 +3519,11 @@ lemma derive_cap_corres:
   apply (case_tac c)
             apply (simp_all add: returnOk_def Let_def is_zombie_def isCap_simps
                           split: sum.splits)
-   apply (rule_tac Q="\<lambda>_ _. True" and Q'="\<lambda>_ _. True" in 
+   apply (rule_tac Q="\<lambda>_ _. True" and Q'="\<lambda>_ _. True" in
                corres_initial_splitE [OF ensure_no_children_corres])
       apply simp
      apply clarsimp
-    apply wp+   
+    apply wp+
   apply clarsimp
   apply (rule corres_rel_imp)
    apply (rule corres_guard_imp)
@@ -3787,7 +3787,7 @@ lemma ghost_relation_of_heap:
     apply (auto simp: ghost_relation_def ups_of_heap_def
                 split: option.splits Structures_A.kernel_object.splits
                        arch_kernel_obj.splits)[1]
-    subgoal for x dev sz  
+    subgoal for x dev sz
      by (drule_tac x = sz in spec,simp)
    apply (rule ext)
    apply (clarsimp simp add: ghost_relation_def cns_of_heap_def)

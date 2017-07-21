@@ -9,8 +9,8 @@
  */
 
 /** FNSPEC swap_spec:
-  "\<forall>x y. \<Gamma> \<turnstile> 
-    \<lbrace>\<sigma>. (\<acute>p \<mapsto> x \<and>\<^sup>* \<acute>q \<mapsto> y)\<^bsup>sep\<^esup> \<rbrace> 
+  "\<forall>x y. \<Gamma> \<turnstile>
+    \<lbrace>\<sigma>. (\<acute>p \<mapsto> x \<and>\<^sup>* \<acute>q \<mapsto> y)\<^bsup>sep\<^esup> \<rbrace>
       PROC swap(\<acute>p,\<acute>q)
     \<lbrace> (\<^bsup>\<sigma>\<^esup>p \<mapsto> y \<and>\<^sup>* \<^bsup>\<sigma>\<^esup>q \<mapsto> x)\<^bsup>sep\<^esup> \<rbrace>"
 */
@@ -25,8 +25,8 @@ void swap(unsigned int *p, unsigned int *q)
 }
 
 /** FNSPEC test_spec:
-  "\<forall>x y. \<Gamma> \<turnstile> 
-    \<lbrace>\<sigma>. (\<acute>a \<mapsto> x \<and>\<^sup>* \<acute>b \<mapsto> y \<and>\<^sup>* \<acute>c \<mapsto> -)\<^bsup>sep\<^esup> \<rbrace> 
+  "\<forall>x y. \<Gamma> \<turnstile>
+    \<lbrace>\<sigma>. (\<acute>a \<mapsto> x \<and>\<^sup>* \<acute>b \<mapsto> y \<and>\<^sup>* \<acute>c \<mapsto> -)\<^bsup>sep\<^esup> \<rbrace>
       PROC test(\<acute>a,\<acute>b,\<acute>c)
     \<lbrace> (\<^bsup>\<sigma>\<^esup>a \<mapsto> (x + y) \<and>\<^sup>* \<^bsup>\<sigma>\<^esup>b \<mapsto> x \<and>\<^sup>* \<^bsup>\<sigma>\<^esup>c \<mapsto> y)\<^bsup>sep\<^esup> \<rbrace>"
 */

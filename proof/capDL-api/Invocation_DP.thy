@@ -343,7 +343,7 @@ lemma liftE_wp_split_r:
    apply assumption
   apply simp
   done
-  
+
 lemma wp_no_exception_seq_r:
   assumes validE_g: "\<And>r. \<lbrace>P' r\<rbrace> g r \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>r s. False\<rbrace>"
       and validE_f: "\<lbrace>P\<rbrace>f\<lbrace>\<lambda>r. P' r\<rbrace>,\<lbrace>\<lambda>r. Inv\<rbrace>"
@@ -359,7 +359,7 @@ lemma wp_no_exception_seq_r:
 
 lemmas
   wp_no_exception_seq = wp_no_exception_seq_r[where Inv = "\<lambda>s. False"]
-  
+
 lemma handle_event_syscall_no_decode_exception:
   assumes set_cap_hold: "\<lbrace>Rm \<rbrace>set_cap (cur_thread, tcb_pending_op_slot) RunningCap \<lbrace>\<lambda>r. Q\<rbrace>"
 
@@ -496,12 +496,12 @@ crunch inv[wp]: thread_has_error P
 crunch inv[wp]: has_restart_cap P
 
 definition
-  "no_pending s \<equiv> \<forall>oid cap. 
+  "no_pending s \<equiv> \<forall>oid cap.
      opt_cap (oid,tcb_pending_op_slot) s = Some cap \<longrightarrow> \<not> is_pending_cap cap"
 
 lemma send_signal_no_pending:
   "\<lbrace>P and no_pending\<rbrace>
-     send_signal thread 
+     send_signal thread
   \<lbrace>\<lambda>r. P\<rbrace>"
   apply (simp add: send_signal_def send_signal_bound_def)
   apply (rule hoare_pre)
@@ -520,18 +520,18 @@ lemma send_signal_no_pending:
   apply (drule_tac x = x in spec)
   apply (clarsimp simp: slots_of_def opt_object_def object_slots_def is_pending_cap_def)
   done
-     
+
 crunch invs[wp]: get_active_irq P
   (wp: crunch_wps alternative_wp select_wp)
 
 lemma handle_pending_interrupts_no_ntf_cap:
   "\<lbrace>P and no_pending\<rbrace>
-     handle_pending_interrupts 
+     handle_pending_interrupts
   \<lbrace>\<lambda>r. P\<rbrace>"
   apply (simp add: handle_pending_interrupts_def)
   apply (rule hoare_pre)
    apply (wp send_signal_no_pending
-           | wpc 
+           | wpc
            | simp add: option_select_def handle_interrupt_def
              split del: if_splits)+
    apply (wp alternative_wp select_wp hoare_drop_imps hoare_vcg_all_lift)
@@ -572,7 +572,7 @@ lemma call_kernel_with_intent_no_fault_helper:
   and  non_ep_cap:
       "\<lbrace> Pd2 \<rbrace> lookup_cap_and_slot root_tcb_id intent_cptr
        \<lbrace> \<lambda>rv s. \<not> ep_related_cap (fst rv) \<rbrace>, -"
-       
+
   and upd_thread:
     "\<lbrace>P\<rbrace> update_thread root_tcb_id  (cdl_tcb_intent_update (\<lambda>x. intent))
      \<lbrace>\<lambda>rv s. Pd2 s\<rbrace>"
@@ -603,14 +603,14 @@ lemma call_kernel_with_intent_no_fault_helper:
                in hoare_strengthen_post)
          apply (rule schedule_no_choice_wp)
         apply fastforce
-       apply (rule whileLoop_wp[where 
+       apply (rule whileLoop_wp[where
                I = "\<lambda>rv s. case rv of Inl _ \<Rightarrow> (tcb_at'
                     (\<lambda>tcb. cdl_intent_op (cdl_tcb_intent tcb) = Some intent_op \<and>
                            cdl_intent_cap (cdl_tcb_intent tcb) = cdl_intent_cap intent \<and>
                            cdl_intent_extras (cdl_tcb_intent tcb) = cdl_intent_extras intent)
                            root_tcb_id s
-                    \<and> cdl_current_thread s = Some root_tcb_id 
-                    \<and> cdl_current_domain s = minBound \<and> Pd2 s) 
+                    \<and> cdl_current_thread s = Some root_tcb_id
+                    \<and> cdl_current_domain s = minBound \<and> Pd2 s)
                | Inr rv \<Rightarrow> Q (Inr rv) s" and Q=Q for Q, rotated])
         apply (case_tac r, simp_all add: isLeft_def)[1]
        apply (simp add: validE_def[symmetric])
@@ -1111,15 +1111,15 @@ lemma call_kernel_with_intent_allow_error_helper:
       \<and> <(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>* (\<lambda>s. True)> a))"
       in hoare_strengthen_post[rotated])
      apply fastforce
-       apply (rule whileLoop_wp[where 
+       apply (rule whileLoop_wp[where
                I = "\<lambda>rv s. case rv of Inl _ \<Rightarrow> (tcb_at'
                     (\<lambda>tcb. cdl_intent_op (cdl_tcb_intent tcb) = Some intent_op \<and>
                            cdl_intent_cap (cdl_tcb_intent tcb) = cdl_intent_cap intent \<and>
                            cdl_intent_extras (cdl_tcb_intent tcb) = cdl_intent_extras intent \<and>
                            cdl_intent_error (cdl_tcb_intent tcb) = False)
                            root_tcb_id s
-                    \<and> cdl_current_thread s = Some root_tcb_id 
-                    \<and> cdl_current_domain s = minBound \<and> Pd2 s) 
+                    \<and> cdl_current_thread s = Some root_tcb_id
+                    \<and> cdl_current_domain s = minBound \<and> Pd2 s)
                | Inr rv \<Rightarrow> Q (Inr rv) s" and Q=Q for Q, rotated])
         apply (case_tac r, simp_all add: isLeft_def)[1]
        apply (simp add: validE_def[symmetric])

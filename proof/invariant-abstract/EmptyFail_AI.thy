@@ -85,7 +85,7 @@ lemma unify_failure_empty_fail[wp]:
   "empty_fail f \<Longrightarrow> empty_fail (unify_failure f)"
   by (simp add: unify_failure_def | wp)+
 
-lemma split_if_empty_fail[wp]:
+lemma if_split_empty_fail[wp]:
   "\<lbrakk>P \<Longrightarrow> empty_fail f; \<not> P \<Longrightarrow> empty_fail g\<rbrakk> \<Longrightarrow> empty_fail (if P then f else g)"
   by simp
 
@@ -222,7 +222,7 @@ lemma use_spec_empty_fail: "(\<And>s. spec_empty_fail f s) \<Longrightarrow> emp
   done
 
 lemma resolve_address_bits_spec_empty_fail:
-  notes spec_empty_fail_bindE'[wp_split]        
+  notes spec_empty_fail_bindE'[wp_split]
   shows "spec_empty_fail (resolve_address_bits slot) s"
   unfolding resolve_address_bits_def
   proof (induct arbitrary: s rule: resolve_address_bits'.induct)
@@ -278,7 +278,7 @@ end
 
 lemma decode_read_registers_empty_fail[wp]:
   "empty_fail (decode_read_registers data (ThreadCap p))"
-  by (simp add: decode_read_registers_def split: list.splits cap.splits | wp | intro allI impI conjI)+ 
+  by (simp add: decode_read_registers_def split: list.splits cap.splits | wp | intro allI impI conjI)+
 
 lemma decode_write_registers_empty_fail[wp]:
   "empty_fail (decode_write_registers data (ThreadCap p))"
@@ -439,7 +439,7 @@ context EmptyFail_AI_schedule_det begin
 lemma schedule_empty_fail'[wp]:
   "empty_fail (schedule :: (unit,det_ext) s_monad)"
   apply (simp add: schedule_def)
-  apply (wp | clarsimp split: scheduler_action.splits| 
+  apply (wp | clarsimp split: scheduler_action.splits|
             intro impI conjI)+
   done
 
@@ -450,7 +450,7 @@ locale EmptyFail_AI_call_kernel = EmptyFail_AI_schedule state_ext_t
   assumes activate_thread_empty_fail[wp]:
     "empty_fail (activate_thread :: (unit, 'state_ext) s_monad)"
   assumes getActiveIRQ_empty_fail[wp]:
-    "empty_fail getActiveIRQ"
+    "empty_fail (getActiveIRQ in_kernel)"
   assumes handle_event_empty_fail[wp]:
     "\<And>event. empty_fail (handle_event event :: (unit, 'state_ext) p_monad)"
   assumes handle_interrupt_empty_fail[wp]:

@@ -53,8 +53,8 @@ where
 
 definition
   ignore_failure :: "('s,unit) nondet_monad \<Rightarrow> ('s,unit) nondet_monad"
-  where 
-  "ignore_failure f \<equiv> 
+  where
+  "ignore_failure f \<equiv>
   \<lambda>s. if fst (f s) = {} then ({((),s)},False) else (fst (f s), False)"
 
 text {* The wrapper doesn't do anything for usual operations: *}
@@ -64,7 +64,7 @@ lemma failure_consistent:
   apply (rule ext)
   apply (auto intro: prod_eqI)
   done
-  
+
 text {* And it has the desired properties *}
 lemma ef_ignore_failure [simp]:
   "empty_fail (ignore_failure f)"
@@ -77,18 +77,18 @@ lemma no_fail_ignore_failure [simp, intro!]:
 
 lemma ef_machine_rest_lift [simp, intro!]:
   "empty_fail f \<Longrightarrow> empty_fail (machine_rest_lift f)"
-  apply (clarsimp simp: empty_fail_def machine_rest_lift_def simpler_gets_def 
+  apply (clarsimp simp: empty_fail_def machine_rest_lift_def simpler_gets_def
                         select_f_def bind_def simpler_modify_def return_def)
   apply force
   done
-    
+
 lemma no_fail_machine_state_rest [intro!]:
   "no_fail P f \<Longrightarrow> no_fail (P o machine_state_rest) (machine_rest_lift f)"
-  apply (simp add: no_fail_def machine_rest_lift_def simpler_gets_def 
+  apply (simp add: no_fail_def machine_rest_lift_def simpler_gets_def
                         select_f_def bind_def simpler_modify_def return_def)
   apply force
   done
- 
+
 lemma no_fail_machine_state_rest_T [simp, intro!]:
   "no_fail \<top> f \<Longrightarrow> no_fail \<top> (machine_rest_lift f)"
   apply (drule no_fail_machine_state_rest)

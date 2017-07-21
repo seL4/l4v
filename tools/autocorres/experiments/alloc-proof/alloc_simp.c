@@ -26,7 +26,7 @@ struct heap {
 	word_t curr;
 };
 
-void 
+void
 init_heap (struct heap* heap, word_t max){
 	heap->curr = (word_t) malloc(max);
 	//printf("%lu\n", heap->curr);
@@ -42,50 +42,50 @@ alloc(struct heap* heap, word_t bytes){
 }
 
 #ifndef VERIFIED
-int 
+int
 main(void){
 	struct heap* h = malloc(sizeof(struct heap));
 	init_heap(h, 1024);
-	
+
 	int i, j;
 	int* ptr;
-	
+
 	for (i = 0; i < 1024; i++) {
 		printf("%p\n", alloc(h, 1));
 	}
-	
+
 	return 0;
-	
-	
+
+
 	int *x = alloc(h, 0x10);
 	printf("%p\n", x);
 	int *y = alloc(h, 0xffffffff);
 	printf("%p\n", y);
 	return 0;
-	
+
 	/* allocate and write 128 ints to the heap */
 	for (i = 0; i < 1024; i += 4){
 		ptr = alloc(h, 4);
 		*ptr = i;
 	}
-	
+
 	/* check written ints correct */
 	for (i = 1020; i > 0; i -= 4){
 		j = *ptr;
 		if(i != j){
 			printf("%d != %d\n",  i, j);
-		}	
-		ptr--;		
+		}
+		ptr--;
 	}
-	
+
 	/* check heap is full */
 	void* null = alloc(h, 1);
 	if(null != NULL){
 		printf("null != NULL\n");
-	}	
-	
-	
-	
-	return 0;	
-}	
+	}
+
+
+
+	return 0;
+}
 #endif

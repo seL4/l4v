@@ -24,7 +24,7 @@ section \<open>Auxiliary functions for the concrete syntax\<close>
 primrec pfilter:: "bool list \<Rightarrow> 'a list \<Rightarrow> 'a list"
 where
 "pfilter c [] = []" |
-"pfilter c (v#vs) = (if hd c then v#pfilter (tl c) vs else pfilter (tl c) vs)" 
+"pfilter c (v#vs) = (if hd c then v#pfilter (tl c) vs else pfilter (tl c) vs)"
 
 
 primrec pmask:: "nat \<Rightarrow> bool list \<Rightarrow> nat list"
@@ -40,7 +40,7 @@ section \<open>Concrete syntax for Contextualization\<close>
 syntax
   "_In":: "[ident,'a,'a] \<Rightarrow> ('s,'p,'f) com"
                  ("(2 IN \<acute>_:/ _ :== _)" [1000,30,30] 21)
-  "_Where":: "['a,ident,('s,'p,'f) com] \<Rightarrow> ('s,'p,'f) com" 
+  "_Where":: "['a,ident,('s,'p,'f) com] \<Rightarrow> ('s,'p,'f) com"
                  ("(0 WHERE (_)/ FOR \<acute>_ DO/ _ EREHW)" [0,0,0] 71)
   "_WhereElse":: "['a,ident,('s,'p,'f) com,('s,'p,'f) com] \<Rightarrow> ('s,'p,'f) com"
                  ("(0 WHERE (_)/ FOR \<acute>_ DO/ _ ELSE _ EREHW)" [0,0,0,0] 71)
@@ -64,14 +64,14 @@ print_translation \<open>
           if c = c' then
             Syntax.const @{syntax_const "_In"} $ c $
               (Syntax.const @{const_syntax list_multsel} $ x $ i) $ y
-          else raise Match 
+          else raise Match
       | in_tr'
           [Const (@{const_syntax list_multsel}, _) $ x $
             (Const (@{const_syntax pmask}, _) $ z $
               (Const (@{syntax_const "_antiquoteCur"}, _) $ c)),
             Const (@{const_syntax pfilter}, _) $ (Const (@{syntax_const "_antiquoteCur"}, _) $ c') $ y] =
        if c = c' then Syntax.const @{syntax_const "_In"} $ c $ x $ y
-       else raise Match 
+       else raise Match
 
     fun where_tr'
           [Const (@{syntax_const "_locinit"}, _) $ Const (c, _) $
@@ -82,7 +82,7 @@ print_translation \<open>
               Syntax.const c $ s
           else raise Match
       | where_tr' ts = raise Match
-  
+
   in
    [(@{syntax_const "_Assign"}, K in_tr'),
     (@{syntax_const "_Loc"}, K where_tr')]
@@ -94,7 +94,7 @@ print_ast_translation \<open>
     fun where_else_tr'
       [Appl [Constant @{syntax_const "_Where"}, m, c, s1],
         Appl [Constant @{syntax_const "_Where"},
-        Appl [Constant @{const_syntax p_not}, m'], c', s2]] = 
+        Appl [Constant @{const_syntax p_not}, m'], c', s2]] =
       if c = c' andalso m = m' then Appl [Constant @{syntax_const "_WhereElse"}, m, c, s1, s2]
       else raise Match
   in [(@{syntax_const "_seq"}, K where_else_tr')] end

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Dummy initial kernel state. Real kernel boot up is more complex.
 *)
 
@@ -20,10 +20,10 @@ begin
 
 context Arch begin global_naming ARM_A
 
-text {* 
+text {*
   This is not a specification of true kernel
   initialisation. This theory describes a dummy initial state only, to
-  show that the invariants and refinement relation are consistent. 
+  show that the invariants and refinement relation are consistent.
 *}
 
 definition
@@ -34,7 +34,7 @@ definition
   init_irq_node_ptr :: word32 where
   "init_irq_node_ptr = kernel_base + 0x8000"
 
-(* FIXME: It is easy to remove a memory slot here, but once if we want to reserve other slots of memory, we have to do the proof of disjoint for example state again. 
+(* FIXME: It is easy to remove a memory slot here, but once if we want to reserve other slots of memory, we have to do the proof of disjoint for example state again.
    Comment is left here so that next time we need 4k memory, we don't need to fix example state and can simply change its name. *)
 definition
   init_globals_frame :: word32 where
@@ -54,7 +54,7 @@ definition
     arm_global_pts = [],
     arm_kernel_vspace = \<lambda>ref.
       if ref \<in> {kernel_base .. kernel_base + mask 20}
-      then ArmVSpaceKernelWindow 
+      then ArmVSpaceKernelWindow
       else ArmVSpaceInvalidRegion
   \<rparr>"
 
@@ -79,7 +79,7 @@ definition
     tcb_bound_notification = None,
     tcb_mcpriority = minBound,
     tcb_arch = init_arch_tcb
-  \<rparr>, 
+  \<rparr>,
   init_globals_frame \<mapsto> ArchObj (DataPage False ARMSmallPage), (* FIXME: same reason as why we kept the definition of init_globals_frame *)
   init_global_pd \<mapsto> ArchObj (PageDirectory global_pd)
   )"
@@ -103,7 +103,7 @@ definition
     interrupt_irq_node = \<lambda>irq. init_irq_node_ptr + (ucast irq << cte_level_bits),
     interrupt_states = \<lambda>_. Structures_A.IRQInactive,
     arch_state = init_arch_state,
-    exst = ext_init 
+    exst = ext_init
   \<rparr>"
 
 end

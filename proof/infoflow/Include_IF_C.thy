@@ -9,7 +9,7 @@
  *)
 
 theory Include_IF_C
-imports    
+imports
     "Noninterference"
     "Noninterference_Base_Refinement"
     "Example_Valid_State"

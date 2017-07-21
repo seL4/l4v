@@ -27,10 +27,10 @@ context begin interpretation Arch .
 requalify_consts
   arch_default_cap
   default_arch_object
-  init_arch_objects 
+  init_arch_objects
 
 end
-                                
+
 
 section "Creating Caps"
 
@@ -99,7 +99,7 @@ Create @{text "numObjects"} objects, starting from
 @{text obj_ref}, return of list pointers to them. For some types, each
 returned pointer points to a group of objects.
 *}
- 
+
 definition
   retype_region :: "obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> apiobject_type \<Rightarrow> bool \<Rightarrow> (obj_ref list,'z::state_ext) s_monad"
 where
@@ -193,7 +193,7 @@ where
 doE
   whenE reset $ reset_untyped_cap src_slot;
   liftE $ do
-  
+
   cap \<leftarrow> get_cap src_slot;
 
   (* Update the untyped cap to track the amount of space used. *)

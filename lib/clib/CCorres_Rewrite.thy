@@ -13,7 +13,7 @@
 *)
 
 theory CCorres_Rewrite
-imports 
+imports
   "Corres_UL_C"
 begin
 
@@ -56,7 +56,7 @@ lemma com_eq_trans:
 
 (* com_eq permits rewriting under ccorres_underlying *)
 lemma ccorres_com_eqI:
-  "\<lbrakk> c \<sim> c'; ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H c' \<rbrakk> \<Longrightarrow> 
+  "\<lbrakk> c \<sim> c'; ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H c' \<rbrakk> \<Longrightarrow>
   ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H c"
   by (erule ccorres_semantic_equivD2, erule com_eq_semantic_equiv)
 
@@ -122,7 +122,7 @@ lemma com_eq_Seq_Skip [C_simp]:
   "c \<sim> c' \<Longrightarrow> c;;Skip \<sim> c'"
   apply (clarsimp simp: com_eq_def)
   apply (rule iffI)
-   apply (fastforce elim!: exec_elim_cases)  
+   apply (fastforce elim!: exec_elim_cases)
   apply (case_tac s; (simp, (erule exec_elim_cases; simp)?))
   apply (rule exec.Seq, simp)
   apply (case_tac s'; (simp, (erule exec_elim_cases; simp)?))
@@ -140,7 +140,7 @@ lemma com_eq_Cond_UNIV [C_simp]:
   by (clarsimp, case_tac s, auto intro: exec.CondTrue  elim!: exec_elim_cases)
 
 lemma exec_Cond_cases:
-  "\<lbrakk>s \<in> b \<Longrightarrow> \<Gamma>\<turnstile> \<langle>c\<^sub>1,Normal s\<rangle> \<Rightarrow> t; s \<notin> b \<Longrightarrow> \<Gamma>\<turnstile> \<langle>c\<^sub>2,Normal s\<rangle> \<Rightarrow> t\<rbrakk> \<Longrightarrow> 
+  "\<lbrakk>s \<in> b \<Longrightarrow> \<Gamma>\<turnstile> \<langle>c\<^sub>1,Normal s\<rangle> \<Rightarrow> t; s \<notin> b \<Longrightarrow> \<Gamma>\<turnstile> \<langle>c\<^sub>2,Normal s\<rangle> \<Rightarrow> t\<rbrakk> \<Longrightarrow>
   \<Gamma>\<turnstile> \<langle>Cond b c\<^sub>1 c\<^sub>2,Normal s\<rangle> \<Rightarrow> t"
   by (cases "s \<in> b") (auto intro: exec.CondTrue exec.CondFalse)
 
@@ -227,9 +227,9 @@ method ccorres_rewrite declares C_simp =
 lemma
   assumes c3: "com_eq \<Gamma> c3 c"
   assumes c: "com_eq \<Gamma> (c;;c) c"
-  shows "ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H 
+  shows "ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H
                             (c;; Guard f UNIV (IF X THEN c ELSE c FI);; Cond {} Skip (Skip;;c2);;
-                             Skip;; 
+                             Skip;;
                              (IF False THEN Skip ELSE SKIP;; TRY THROW CATCH c3 END FI;; SKIP))"
   apply ccorres_rewrite              (* c;; c;; c2;; c3 *)
   apply (match conclusion in "ccorres_underlying sr \<Gamma> r xf r' xf' P P' hs H (c;;c;;c2;;c3)" \<Rightarrow> \<open>-\<close>)

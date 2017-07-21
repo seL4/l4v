@@ -16,7 +16,7 @@ This module is exported to the simulator interface to allow it to access target-
 >         module SEL4.Machine.Hardware.TARGET,
 >         module SEL4.Machine.RegisterSet.TARGET
 >     ) where
-> 
+>
 > import SEL4.Machine.Hardware.TARGET
 > import SEL4.Machine.RegisterSet.TARGET
 

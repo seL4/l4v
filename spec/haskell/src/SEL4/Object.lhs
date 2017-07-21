@@ -29,7 +29,7 @@
 > import SEL4.Object.Instances()
 > import SEL4.Object.Structures(
 >     ThreadState(..), SchedulerAction(..),
->     CTE, Endpoint, Notification, TCB, 
+>     CTE, Endpoint, Notification, TCB,
 >     Capability(..), KernelObject(..), UserData(..),
 >     UserDataDevice(..), isNullCap)
 

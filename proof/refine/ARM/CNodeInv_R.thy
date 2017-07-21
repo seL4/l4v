@@ -83,7 +83,7 @@ where
    Revoke (cte_map cp))"
 | "cnodeinv_relation (DeleteCall cp) x = (x =
    Delete (cte_map cp))"
-| "cnodeinv_relation (RotateCall sc pc src pvt dst) x = (\<exists>sc' pc'. 
+| "cnodeinv_relation (RotateCall sc pc src pvt dst) x = (\<exists>sc' pc'.
    cap_relation sc sc' \<and> cap_relation pc pc' \<and>
    x = Rotate sc' pc' (cte_map src) (cte_map pvt) (cte_map dst))"
 | "cnodeinv_relation (SaveCall p) x = (x = SaveCaller (cte_map p))"
@@ -101,9 +101,9 @@ lemma cap_relation_NullCap:
     apply simp
    apply (clarsimp simp: word_size word_size_def)
   apply (clarsimp simp: ARM_H.updateCapData_def isCap_simps split del: if_split)
-  done 
+  done
 
-(* Sometimes I need something about the state. This is neater (IMHO) and req *)  
+(* Sometimes I need something about the state. This is neater (IMHO) and req *)
 lemma whenE_throwError_corres':
   assumes P: "frel f f'"
   assumes Q: "\<And>s s'. \<lbrakk>(s, s') \<in> state_relation; R s; R' s'\<rbrakk> \<Longrightarrow> P = P'"
@@ -178,9 +178,9 @@ lemma dec_cnode_inv_corres:
   corres
   (ser \<oplus> cnodeinv_relation)
   (invs and cap_table_at n w and K (n \<noteq> 0) and (\<lambda>s. \<forall>x \<in> set cs. s \<turnstile> x)) (invs' and valid_cap' cap' and (\<lambda>s. \<forall>x \<in> set cs'. s \<turnstile>' x))
-  (decode_cnode_invocation (mi_label mi) args 
+  (decode_cnode_invocation (mi_label mi) args
     (cap.CNodeCap w n list) cs)
-  (decodeCNodeInvocation (mi_label mi) args 
+  (decodeCNodeInvocation (mi_label mi) args
     cap' cs')"
   apply (rule decode_cnode_cases2[where args=args and exs=cs and label="mi_label mi"])
         -- "Move / Insert"
@@ -274,7 +274,7 @@ lemma dec_cnode_inv_corres:
       apply (auto elim!: valid_cnode_capI)[1]
      apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
     -- "CancelBadgedSends"
-    apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def 
+    apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
                      isCap_simps Let_def unlessE_whenE del: ser_def split del: if_split)
     apply (rule corres_guard_imp)
       apply (rule corres_splitEE [OF _ lsfc_corres])
@@ -301,15 +301,15 @@ lemma dec_cnode_inv_corres:
          apply (rule corres_splitEE [OF _ lsfc_corres])+
                  apply (rule_tac R = "\<lambda>s. cte_at pivot_slot s \<and> cte_at dest_slot s
                                         \<and> cte_at src_slot s \<and> invs s" in
-                   whenE_throwError_corres' [where R' = \<top>])		   
+                   whenE_throwError_corres' [where R' = \<top>])
                    apply simp
                   apply (elim conjE)
                   apply rule
                    apply fastforce
                   apply (erule disjE)
                    apply (clarsimp simp add: split_def)
-                   apply (drule (2) cte_map_inj_eq, clarsimp+)[1]                 
-                  apply (clarsimp simp add: split_def)                    
+                   apply (drule (2) cte_map_inj_eq, clarsimp+)[1]
+                  apply (clarsimp simp add: split_def)
                   apply (drule (2) cte_map_inj_eq, clarsimp+)[1]
                  apply (rule corres_split_norE)
                     apply (simp add: liftE_bindE del: de_Morgan_conj disj_not1 split del: if_split)
@@ -329,7 +329,7 @@ lemma dec_cnode_inv_corres:
                         apply (intro conjI)
                          apply (erule cap_map_update_data)+
                        apply (wp hoare_drop_imps)+
-                   apply (rule_tac F = "(src_slot \<noteq> dest_slot) = (srcSlot \<noteq> destSlot)" 
+                   apply (rule_tac F = "(src_slot \<noteq> dest_slot) = (srcSlot \<noteq> destSlot)"
                      and P = "\<lambda>s. cte_at src_slot s \<and> cte_at dest_slot s \<and> invs s" and P' = invs' in corres_req)
                     apply simp
                     apply rule
@@ -342,7 +342,7 @@ lemma dec_cnode_inv_corres:
                       apply clarsimp
                      apply simp
                     apply clarsimp
-                   apply clarsimp                 
+                   apply clarsimp
                   apply (wp hoare_whenE_wp)+
                 apply simp
                apply simp
@@ -411,7 +411,7 @@ lemma updateCapData_Zombie:
 lemma cte_wp_valid_cap':
   "\<lbrakk> cte_wp_at' (op = cte) p s; valid_objs' s \<rbrakk> \<Longrightarrow> s \<turnstile>' cteCap cte"
   by (erule(1) ctes_of_valid)
- 
+
 lemma updateCapData_Zombie':
   "isZombie (updateCapData P x c) = isZombie c"
   apply (cases "updateCapData P x c = NullCap")
@@ -488,7 +488,7 @@ lemma decodeCNodeInv_wf[wp]:
    \<lbrace>valid_cnode_inv'\<rbrace>, -"
   apply (rule decode_cnode_cases2[where label=label and args=args and exs=cs])
         -- "Move/Insert"
-        apply (simp add: decodeCNodeInvocation_def isCNodeCap_CNodeCap 
+        apply (simp add: decodeCNodeInvocation_def isCNodeCap_CNodeCap
                          split_def cnode_invok_case_cleanup unlessE_whenE
                    cong: if_cong bool.case_cong list.case_cong)
         apply (rule hoare_pre)
@@ -595,8 +595,8 @@ text {* Various proofs about the two recursive deletion operations.
 
 text {* Proving the termination of rec_del *}
 
-crunch typ_at[wp]: cancel_ipc "\<lambda>s. P (typ_at T p s)" 
-  (wp: crunch_wps hoare_vcg_split_ifE simp: crunch_simps)
+crunch typ_at[wp]: cancel_ipc "\<lambda>s. P (typ_at T p s)"
+  (wp: crunch_wps hoare_vcg_if_splitE simp: crunch_simps)
 
 declare if_split [split]
 
@@ -611,7 +611,7 @@ declare word_unat_power [symmetric, simp del]
 lemma finalise_cap_not_reachable_pg_cap:
   "\<lbrace>pspace_aligned and
        valid_arch_objs and
-       valid_objs and 
+       valid_objs and
        cte_wp_at (op = cap) slot and
        (\<lambda>s. valid_asid_table (arm_asid_table (arch_state s)) s)
        and K (is_pg_cap cap \<longrightarrow> is_final)
@@ -624,7 +624,7 @@ lemma finalise_cap_not_reachable_pg_cap:
       apply (clarsimp simp:reachable_pg_cap_def is_cap_simps|wp|intro conjI)+
     apply (wp arch_finalise_case_no_lookup)
     apply (clarsimp dest!: caps_of_state_valid_cap
-                    simp: cte_wp_at_caps_of_state)
+                    simp: cte_wp_at_caps_of_state valid_vspace_objs_def')
    apply (clarsimp simp:reachable_pg_cap_def is_cap_simps|wp|intro conjI)+
   done
 
@@ -692,13 +692,13 @@ lemma suspend_ctes_of_thread:
 lemma unbindNotification_ctes_of_thread:
   "\<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>
      unbindNotification t
-   \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>" 
+   \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
   by wp
 
 lemma prepareThreadDelete_ctes_of_thread:
   "\<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>
      prepareThreadDelete t
-   \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>" 
+   \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
   by (wpsimp simp: prepareThreadDelete_def)
 
 lemma suspend_not_recursive_ctes:
@@ -736,7 +736,7 @@ where
  "finaliseSlot_recset \<equiv>
     wf_sum (\<lambda>(slot, exposed, state). exposed)
       (inv_image (less_than <*lex*> less_than)
-         (\<lambda>(x, exp, s). case ctes_of s x of 
+         (\<lambda>(x, exp, s). case ctes_of s x of
                       Some (CTE NullCap node) \<Rightarrow> (0, 0)
                     | Some (CTE (Zombie p zb n) node) \<Rightarrow>
                            (if p = x then 1 else 2, n)
@@ -935,10 +935,10 @@ lemma cte_wp_at_ctes_ofI:
   by (rule ctes_of_eq_cte_wp_at')
 
 lemma updateCap_cap_inv_lift:
-  assumes inv: "\<And>ctemap f. 
+  assumes inv: "\<And>ctemap f.
   Q ctemap \<Longrightarrow> P (modify_map ctemap ptr (cteCap_update f)) = P ctemap"
-  shows "\<lbrace>\<lambda>s. P (ctes_of s) \<and> Q (ctes_of s)\<rbrace> 
-  updateCap ptr cap 
+  shows "\<lbrace>\<lambda>s. P (ctes_of s) \<and> Q (ctes_of s)\<rbrace>
+  updateCap ptr cap
   \<lbrace>\<lambda>r s.  P (ctes_of s)\<rbrace>"
   unfolding updateCap_def
   apply (wp getCTE_wp)
@@ -966,9 +966,9 @@ proof (cases "m ptr")
   thus ?thesis using nxt
     by (simp add: modify_map_def) (simp add: None [symmetric] fun_upd_triv)
 next
-  case (Some cte)  
+  case (Some cte)
   let ?m = "m(ptr \<mapsto> f cte)"
-  
+
   from nxt have "?m \<turnstile> x \<leadsto>\<^sup>+ y"
   proof induct
     case (base y)
@@ -997,9 +997,9 @@ proof (cases "m ptr")
   thus ?thesis using nxt
     by (simp add: modify_map_def) (simp add: None [symmetric] fun_upd_triv)
 next
-  case (Some cte)  
+  case (Some cte)
   let ?m = "m(ptr \<mapsto> f cte)"
-  
+
   from nxt have "m \<turnstile> x \<leadsto>\<^sup>+ y"
   proof induct
     case (base y)
@@ -1009,7 +1009,7 @@ next
   next
     case (step q r)
     show ?case
-    proof 
+    proof
       show "m \<turnstile> q \<leadsto> r" using step(2) Some inv
       by (auto simp: modify_map_def mdb_next_update next_unfold' split: if_split_asm)
     qed fact+
@@ -1027,7 +1027,7 @@ lemma modify_map_next_trancl_iff:
 lemma modify_map_next_rtrancl_iff:
   assumes inv: "\<And>cte. mdbNext (cteMDBNode (f cte)) = mdbNext (cteMDBNode cte)"
   shows  "(modify_map m ptr f) \<turnstile> x \<leadsto>\<^sup>* y = m \<turnstile> x \<leadsto>\<^sup>* y"
-  using inv      
+  using inv
   by (auto elim!: next_rtrancl_tranclE intro: modify_map_next_trancl modify_map_next_trancl2 trancl_into_rtrancl)
 
 lemma mdb_chain_0_cap_update:
@@ -1038,7 +1038,7 @@ lemma mdb_chain_0_cap_update:
 
 lemma modify_map_no_0_iff:
   "no_0 (modify_map ctemap ptr f) = no_0 ctemap"
-  unfolding no_0_def 
+  unfolding no_0_def
   by (auto simp: modify_map_def)
 
 lemma modify_map_dlist:
@@ -1050,24 +1050,24 @@ proof (cases "m ptr")
   thus ?thesis using nxt
     by (simp add: modify_map_def) (simp add: None [symmetric] fun_upd_triv)
 next
-  case (Some ptrcte)  
+  case (Some ptrcte)
   let ?m = "m(ptr \<mapsto> f ptrcte)"
-  
+
   have "valid_dlist ?m"
-  proof 
+  proof
     fix p cte
     assume cp: "?m p = Some cte" and n0: "mdbPrev (cteMDBNode cte) \<noteq> 0"
-    let ?thesis = 
+    let ?thesis =
       "\<exists>cte'.(m(ptr \<mapsto> f ptrcte)) (mdbPrev (cteMDBNode cte)) = Some cte' \<and>
       mdbNext (cteMDBNode cte') = p"
-    
-    { 
+
+    {
       assume peq: "p = ptr"
-      
-      hence mdb: "cteMDBNode cte = cteMDBNode ptrcte" using cp Some 
+
+      hence mdb: "cteMDBNode cte = cteMDBNode ptrcte" using cp Some
         by (clarsimp simp: inv)
-            
-      hence "\<exists>cte'. m (mdbPrev (cteMDBNode cte)) = Some cte' \<and> mdbNext (cteMDBNode cte') = p" 
+
+      hence "\<exists>cte'. m (mdbPrev (cteMDBNode cte)) = Some cte' \<and> mdbNext (cteMDBNode cte') = p"
         using nxt Some n0 peq
         by (auto elim: valid_dlistEp)
       hence ?thesis using peq mdb cp Some
@@ -1082,17 +1082,17 @@ next
   next
     fix p cte
     assume cp: "?m p = Some cte" and n0: "mdbNext (cteMDBNode cte) \<noteq> 0"
-    let ?thesis = 
+    let ?thesis =
       "\<exists>cte'.(m(ptr \<mapsto> f ptrcte)) (mdbNext (cteMDBNode cte)) = Some cte' \<and>
       mdbPrev (cteMDBNode cte') = p"
-    
-    { 
+
+    {
       assume peq: "p = ptr"
-      
-      hence mdb: "cteMDBNode cte = cteMDBNode ptrcte" using cp Some 
+
+      hence mdb: "cteMDBNode cte = cteMDBNode ptrcte" using cp Some
         by (clarsimp simp: inv)
-            
-      hence "\<exists>cte'. m (mdbNext (cteMDBNode cte)) = Some cte' \<and> mdbPrev (cteMDBNode cte') = p" 
+
+      hence "\<exists>cte'. m (mdbNext (cteMDBNode cte)) = Some cte' \<and> mdbPrev (cteMDBNode cte') = p"
         using nxt Some n0 peq
         by (auto elim: valid_dlistEn)
       hence ?thesis using peq mdb cp Some
@@ -1118,23 +1118,23 @@ proof (cases "m ptr")
   thus ?thesis using nxt
     by (simp add: modify_map_def) (simp add: None [symmetric] fun_upd_triv)
 next
-  case (Some ptrcte)  
+  case (Some ptrcte)
   let ?m = "modify_map m ptr f"
-  
+
   have "valid_dlist m"
-  proof 
+  proof
     fix p cte
     assume cp: "m p = Some cte" and n0: "mdbPrev (cteMDBNode cte) \<noteq> 0"
-    let ?thesis = 
+    let ?thesis =
       "\<exists>cte'. m (mdbPrev (cteMDBNode cte)) = Some cte' \<and> mdbNext (cteMDBNode cte') = p"
-    
-    { 
+
+    {
       assume peq: "p = ptr"
-      
-      hence mdb: "cteMDBNode cte = cteMDBNode ptrcte" using cp Some 
+
+      hence mdb: "cteMDBNode cte = cteMDBNode ptrcte" using cp Some
         by (clarsimp simp: inv)
-                        
-      hence "\<exists>cte'. ?m (mdbPrev (cteMDBNode cte)) = Some cte' \<and> mdbNext (cteMDBNode cte') = p" 
+
+      hence "\<exists>cte'. ?m (mdbPrev (cteMDBNode cte)) = Some cte' \<and> mdbNext (cteMDBNode cte') = p"
         using nxt Some n0 peq
         by (auto elim: valid_dlistEp [where p = ptr] simp: modify_map_same inv)
       hence ?thesis using peq cp Some
@@ -1149,16 +1149,16 @@ next
   next
     fix p cte
     assume cp: "m p = Some cte" and n0: "mdbNext (cteMDBNode cte) \<noteq> 0"
-    let ?thesis = 
+    let ?thesis =
       "\<exists>cte'. m (mdbNext (cteMDBNode cte)) = Some cte' \<and> mdbPrev (cteMDBNode cte') = p"
-    
-    { 
+
+    {
       assume peq: "p = ptr"
-      
-      hence mdb: "cteMDBNode cte = cteMDBNode ptrcte" using cp Some 
+
+      hence mdb: "cteMDBNode cte = cteMDBNode ptrcte" using cp Some
         by (clarsimp simp: inv)
-                        
-      hence "\<exists>cte'. ?m (mdbNext (cteMDBNode cte)) = Some cte' \<and> mdbPrev (cteMDBNode cte') = p" 
+
+      hence "\<exists>cte'. ?m (mdbNext (cteMDBNode cte)) = Some cte' \<and> mdbPrev (cteMDBNode cte') = p"
         using nxt Some n0 peq
         by (auto elim: valid_dlistEn [where p = ptr] simp: modify_map_same inv)
       hence ?thesis using peq cp Some
@@ -1186,7 +1186,7 @@ lemma updateCap_chain_0:
   updateCap ptr cap
   \<lbrace>\<lambda>r s. mdb_chain_0 (ctes_of s)\<rbrace>"
   by (wp updateCap_ctes_of_wp, subst mdb_chain_0_cap_update)
-    
+
 lemma updateCap_chain_no0:
   "\<lbrace>\<lambda>s. no_0 (ctes_of s)\<rbrace>
   updateCap ptr cap
@@ -1200,9 +1200,9 @@ lemma updateCap_valid_dlist:
   by (wp updateCap_ctes_of_wp | simp add: modify_map_dlist_iff)+
 
 lemma cte_wp_at_conjE':
-  "\<lbrakk>cte_wp_at' (\<lambda>c. P c \<and> Q c) ptr s; \<lbrakk> cte_wp_at' P ptr s; cte_wp_at' Q ptr s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"  
+  "\<lbrakk>cte_wp_at' (\<lambda>c. P c \<and> Q c) ptr s; \<lbrakk> cte_wp_at' P ptr s; cte_wp_at' Q ptr s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   by (auto dest: cte_wp_at_weakenE')
-   
+
 lemma sameRegionAs_not_null:
   "cte_wp_at' (\<lambda>c. sameRegionAs (cteCap c) cap) ptr s \<Longrightarrow> cte_wp_at' (\<lambda>c. cteCap c \<noteq> capability.NullCap) ptr s"
   by (erule cte_wp_at_weakenE') (clarsimp simp:  sameRegionAs_def isCap_simps)
@@ -1223,8 +1223,8 @@ lemma mdb_chain_0_modify_map_replace:
   assumes unf: "mdb_chain_0 (modify_map m p (cteMDBNode_update (mdbNext_update (%_. (mdbNext node)))))"
   shows "mdb_chain_0 (modify_map m p (cteMDBNode_update (\<lambda>m. node)))"
 proof -
-  have "modify_map m p (cteMDBNode_update (\<lambda>m. node)) = 
-    modify_map (modify_map (modify_map (modify_map m p (cteMDBNode_update (mdbNext_update (%_. (mdbNext node))))) p 
+  have "modify_map m p (cteMDBNode_update (\<lambda>m. node)) =
+    modify_map (modify_map (modify_map (modify_map m p (cteMDBNode_update (mdbNext_update (%_. (mdbNext node))))) p
           (cteMDBNode_update (mdbPrev_update (%_. (mdbPrev node))))) p
        (cteMDBNode_update (mdbRevocable_update (%_. (mdbRevocable node))))) p
        (cteMDBNode_update (mdbFirstBadged_update (%_. (mdbFirstBadged node))))"
@@ -1236,21 +1236,21 @@ proof -
     apply (case_tac mdbnode)
     apply (clarsimp simp add: next_update_is_modify [symmetric])
     done
-  
+
   thus ?thesis
     apply simp
-    apply (rule mdb_chain_0_modify_map_inv) 
-     apply (rule mdb_chain_0_modify_map_inv) 
+    apply (rule mdb_chain_0_modify_map_inv)
+     apply (rule mdb_chain_0_modify_map_inv)
       apply (rule mdb_chain_0_modify_map_inv [OF unf])
       apply simp_all
    done
 qed
 
-lemmas mdb_chain_0_mm_rep_next = 
+lemmas mdb_chain_0_mm_rep_next =
   mdb_chain_0_modify_map_replace [OF mdb_chain_0_modify_map_next]
 
 lemma setCTE_cte_wp_at_other:
- "\<lbrace>cte_wp_at' P p and (\<lambda>s. ptr \<noteq> p)\<rbrace> 
+ "\<lbrace>cte_wp_at' P p and (\<lambda>s. ptr \<noteq> p)\<rbrace>
   setCTE ptr cte
   \<lbrace>\<lambda>uu s. cte_wp_at' P p s\<rbrace>"
   apply (simp add: cte_wp_at_ctes_of)
@@ -1258,8 +1258,8 @@ lemma setCTE_cte_wp_at_other:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
-lemma updateMDB_cte_wp_at_other:  
- "\<lbrace>cte_wp_at' P p and (\<lambda>s. m \<noteq> p)\<rbrace> 
+lemma updateMDB_cte_wp_at_other:
+ "\<lbrace>cte_wp_at' P p and (\<lambda>s. m \<noteq> p)\<rbrace>
   updateMDB m f
   \<lbrace>\<lambda>uu. cte_wp_at' P p\<rbrace>"
   unfolding updateMDB_def
@@ -1270,7 +1270,7 @@ lemma updateMDB_cte_wp_at_other:
   apply (wp setCTE_cte_wp_at_other)
   done
 
-(* CLAG from _next *) 
+(* CLAG from _next *)
 lemma mdb_chain_0_modify_map_0:
   assumes chain: "mdb_chain_0 m"
   and      no0:  "no_0 m"
@@ -1284,18 +1284,18 @@ proof
   hence xd: "x \<in> dom m"
     by (clarsimp simp: modify_map_def dom_def split: if_split_asm)
   hence x0: "m \<turnstile> x \<leadsto>\<^sup>+ 0" using chain unfolding mdb_chain_0_def by simp
-  
+
   show "?M \<turnstile> x \<leadsto>\<^sup>+ 0"
   proof (cases "m ptr")
     case None
-    thus ?thesis 
+    thus ?thesis
       by (simp add: modify_map_def, rule subst, subst fun_upd_triv) (rule x0)
   next
     case (Some cte)
-    show ?thesis  
+    show ?thesis
     proof (cases "m \<turnstile> x \<leadsto>\<^sup>* ptr")
       case False
-      thus ?thesis   
+      thus ?thesis
         apply (subst next_update_is_modify [symmetric, OF _ refl])
         apply (rule Some)
         apply (erule mdb_trancl_other_update [OF x0])
@@ -1333,17 +1333,17 @@ lemma no_next_prev_rtrancl:
   and src: "m src = Some (CTE cap src_node)"
   and "mdbPrev src_node \<noteq> 0"
   shows   "\<not> m \<turnstile> mdbNext src_node \<leadsto>\<^sup>* mdbPrev src_node"
-proof 
+proof
   assume asm: "m \<turnstile> mdbNext src_node \<leadsto>\<^sup>* mdbPrev src_node"
-  
+
   from c0 have n0: "no_0 m" ..
   from c0 have chain: "mdb_chain_0 m" ..
-  
+
   have  "m \<turnstile> src \<leadsto>\<^sup>+ mdbPrev src_node"
-    using src 
+    using src
     by - (rule rtrancl_into_trancl2 [OF _ asm], clarsimp simp: next_unfold')
-  
-  moreover 
+
+  moreover
   from c0 have vd: "valid_dlist m" ..
   have "m \<turnstile> mdbPrev src_node \<leadsto> src" by (rule prev_leadstoI [OF _ _ vd]) fact+
   ultimately have "m \<turnstile> src \<leadsto>\<^sup>+ src" ..
@@ -1378,11 +1378,11 @@ proof induct
 next
   case (step y z)
   thus ?case using n0
-    apply -  
+    apply -
     apply (erule next_rtrancl_tranclE)
      apply (simp add: next_unfold')
     apply (drule tranclD [where x = y])
-    apply clarsimp     
+    apply clarsimp
     apply (drule (1) next_single_value)
     apply simp
     done
@@ -1398,19 +1398,19 @@ lemma mdb_chain_0_cases [consumes 3, case_names srcdest destsrc indep]:
   shows "R"
 proof (cases "m \<turnstile> src \<leadsto>\<^sup>+ dest")
   case True
-   
+
   thus ?thesis
   proof (rule srcdest)
     show "\<not> m \<turnstile> dest \<leadsto>\<^sup>* src" by (rule no_loops_tranclE [OF mdb_chain_0_no_loops]) fact+
 
-    show "m \<turnstile> dest \<leadsto>\<^sup>* 0" 
+    show "m \<turnstile> dest \<leadsto>\<^sup>* 0"
       by (rule mdb_chain_0_trancl) fact+
-  qed    
+  qed
 next
   case False
-  
+
   note F = False
-  
+
   show ?thesis
   proof (cases "m \<turnstile> dest \<leadsto>\<^sup>+ src")
     case True
@@ -1418,16 +1418,16 @@ next
     proof (rule destsrc)
       show "\<not> m \<turnstile> src \<leadsto>\<^sup>* dest" using False ds
         by (clarsimp elim!: next_rtrancl_tranclE)
-      show "m \<turnstile> src \<leadsto>\<^sup>* 0" 
+      show "m \<turnstile> src \<leadsto>\<^sup>* 0"
         by (rule mdb_chain_0_trancl) fact+
     qed
   next
     case False
-    with F show ?thesis 
+    with F show ?thesis
       by (rule neither)
   qed
 qed
-  
+
 lemma next_fold:
   "\<lbrakk> m a = Some cte; mdbNext (cteMDBNode cte) = b\<rbrakk> \<Longrightarrow> m \<turnstile> a \<leadsto> b"
   by (clarsimp simp: next_unfold')
@@ -1444,7 +1444,7 @@ lemma modify_map_lhs_trancl:
 
 lemma modify_map_lhs_rtrancl:
   "\<lbrakk> m p = Some cte; \<not> m \<turnstile> mdbNext (cteMDBNode (f cte)) \<leadsto>\<^sup>* p \<rbrakk> \<Longrightarrow>
-  modify_map m p f \<turnstile> p \<leadsto>\<^sup>* x = (x = p \<or> m \<turnstile> mdbNext (cteMDBNode (f cte)) \<leadsto>\<^sup>* x)"  
+  modify_map m p f \<turnstile> p \<leadsto>\<^sup>* x = (x = p \<or> m \<turnstile> mdbNext (cteMDBNode (f cte)) \<leadsto>\<^sup>* x)"
   apply rule
    apply (erule next_rtrancl_tranclE)
     apply simp
@@ -1463,7 +1463,7 @@ lemma next_prev:
   and     nxt: "m \<turnstile> q \<leadsto> p"
   shows   "q = mdbPrev (cteMDBNode cte)"
 proof -
-  from no0 have p0: "p \<noteq> 0" using cte unfolding no_0_def 
+  from no0 have p0: "p \<noteq> 0" using cte unfolding no_0_def
     by - (rule, clarsimp)
 
   thus ?thesis
@@ -1482,8 +1482,8 @@ lemma mdb_trancl_other_update_iff:
   "\<not> m \<turnstile> x \<leadsto>\<^sup>* p \<Longrightarrow> m(p \<mapsto> cte) \<turnstile> x \<leadsto>\<^sup>+ y = m \<turnstile> x \<leadsto>\<^sup>+ y"
   by (auto intro:  mdb_trancl_other_update mdb_trancl_update_other)
 
-  
-  
+
+
 lemma modify_map_trancl_other_iff:
   "\<not> m \<turnstile> x \<leadsto>\<^sup>* p \<Longrightarrow> modify_map m p f \<turnstile> x \<leadsto>\<^sup>+ y = m \<turnstile> x \<leadsto>\<^sup>+ y"
   apply -
@@ -1492,9 +1492,9 @@ lemma modify_map_trancl_other_iff:
   apply (subst next_update_is_modify [symmetric])
     apply assumption
    apply simp
-  apply (erule  mdb_trancl_other_update_iff)  
+  apply (erule  mdb_trancl_other_update_iff)
   done
-  
+
 lemma next_modify_map_trancl_last:
   assumes chain: "mdb_chain_0 m"
   and     no0:   "no_0 m"
@@ -1502,30 +1502,30 @@ lemma next_modify_map_trancl_last:
   shows   "modify_map m p f \<turnstile> x \<leadsto>\<^sup>+ p"
 proof -
   note noloop = mdb_chain_0_no_loops [OF chain no0]
-  
+
   from noloop nxt have xp: "x \<noteq> p"
     by (clarsimp dest!: neg_no_loopsI)
 
   from nxt show ?thesis using xp
   proof (induct rule: converse_trancl_induct')
     case (base y)
-    hence "modify_map m p f \<turnstile> y \<leadsto> p" 
+    hence "modify_map m p f \<turnstile> y \<leadsto> p"
       by (clarsimp simp: next_unfold' modify_map_other)
-    
+
     thus ?case ..
   next
     case (step y z)
 
     from noloop step have xp: "z \<noteq> p"
       by (clarsimp dest!: neg_no_loopsI)
-    
+
     hence "modify_map m p f \<turnstile> y \<leadsto> z" using step
-      by (clarsimp simp: next_unfold' modify_map_other)    
-    moreover from xp have "modify_map m p f \<turnstile> z \<leadsto>\<^sup>+ p" using step.hyps by simp    
+      by (clarsimp simp: next_unfold' modify_map_other)
+    moreover from xp have "modify_map m p f \<turnstile> z \<leadsto>\<^sup>+ p" using step.hyps by simp
     ultimately show ?case by (rule trancl_into_trancl2)
   qed
-qed  
-  
+qed
+
 lemma next_modify_map_trancl_last2:
   assumes chain: "mdb_chain_0 (modify_map m p f)"
   and     no0:   "no_0 m"
@@ -1535,26 +1535,26 @@ proof -
   let ?m = "modify_map m p f"
   have no0': "no_0 ?m" using no0 by simp
   note noloop = mdb_chain_0_no_loops [OF chain no0']
-  
+
   from noloop nxt have xp: "x \<noteq> p"
     by (clarsimp dest!: neg_no_loopsI)
 
   from nxt show ?thesis using xp
   proof (induct rule: converse_trancl_induct')
-    case (base y)   
-    hence "m \<turnstile> y \<leadsto> p" 
+    case (base y)
+    hence "m \<turnstile> y \<leadsto> p"
       by (clarsimp simp: next_unfold' modify_map_other)
-    
+
     thus ?case ..
   next
     case (step y z)
 
     from noloop step have xp: "z \<noteq> p"
       by (clarsimp dest!: neg_no_loopsI)
-    
+
     hence "m \<turnstile> y \<leadsto> z" using step
-      by (clarsimp simp: next_unfold' modify_map_other)    
-    moreover from xp have "m \<turnstile> z \<leadsto>\<^sup>+ p" using step.hyps by simp    
+      by (clarsimp simp: next_unfold' modify_map_other)
+    moreover from xp have "m \<turnstile> z \<leadsto>\<^sup>+ p" using step.hyps by simp
     ultimately show ?case by (rule trancl_into_trancl2)
   qed
 qed
@@ -1578,12 +1578,12 @@ lemma modify_map_rtrancl_last_iff:
 lemma next_modify_map_last:
   shows "x \<noteq> p \<Longrightarrow> modify_map m p f \<turnstile> x \<leadsto> p = m \<turnstile> x \<leadsto> p"
   by (clarsimp simp: next_unfold' modify_map_other)
-  
+
 lemma next_rtrancl_nx:
   assumes node: "m ptr = Some (CTE cap node)"
   and       nl: "m \<turnstile> ptr \<leadsto>\<^sup>+ ptr'"
   shows "m \<turnstile> mdbNext node \<leadsto>\<^sup>* ptr'"
-  using nl node 
+  using nl node
   by (clarsimp dest!: tranclD elim!: next_rtrancl_tranclE simp: next_unfold')
 
 lemma next_trancl_nx:
@@ -1597,10 +1597,10 @@ lemma next_trancl_nx:
 lemma next_rtrancl_xp:
   assumes node: "m ptr' = Some (CTE cap node)"
   and      vd: "valid_dlist m"
-  and     no0: "no_0 m"  
+  and     no0: "no_0 m"
   and       nl: "m \<turnstile> ptr \<leadsto>\<^sup>+ ptr'"
   shows "m \<turnstile> ptr \<leadsto>\<^sup>* mdbPrev node"
-  using nl node 
+  using nl node
   apply -
   apply (drule tranclD2)
   apply clarsimp
@@ -1611,12 +1611,12 @@ lemma next_rtrancl_xp:
 lemma next_trancl_xp:
   assumes node: "m ptr' = Some (CTE cap node)"
   and      vd: "valid_dlist m"
-  and     no0: "no_0 m"  
-  and     neq: "mdbPrev node \<noteq> ptr"  
+  and     no0: "no_0 m"
+  and     neq: "mdbPrev node \<noteq> ptr"
   and       nl: "m \<turnstile> ptr \<leadsto>\<^sup>+ ptr'"
   shows "m \<turnstile> ptr \<leadsto>\<^sup>+ mdbPrev node"
   using neq node nl
-  apply -  
+  apply -
   apply (drule (1) next_rtrancl_xp [OF _ vd no0])
   apply (erule next_rtrancl_tranclE)
    apply simp
@@ -1627,8 +1627,8 @@ lemma next_rtrancl_np:
   assumes node: "m ptr = Some (CTE cap node)"
   and    node': "m ptr' = Some (CTE cap' node')"
   and      vd: "valid_dlist m"
-  and     no0: "no_0 m"  
-  and     neq: "mdbPrev node' \<noteq> ptr"    
+  and     no0: "no_0 m"
+  and     neq: "mdbPrev node' \<noteq> ptr"
   and       nl: "m \<turnstile> ptr \<leadsto>\<^sup>+ ptr'"
   shows "m \<turnstile> mdbNext node \<leadsto>\<^sup>* mdbPrev node'"
   by (rule next_rtrancl_nx [OF _ next_trancl_xp]) fact+
@@ -1637,8 +1637,8 @@ lemma next_trancl_np:
   assumes node: "m ptr = Some (CTE cap node)"
   and    node': "m ptr' = Some (CTE cap' node')"
   and      vd: "valid_dlist m"
-  and     no0: "no_0 m"  
-  and     neq: "mdbPrev node' \<noteq> ptr"    
+  and     no0: "no_0 m"
+  and     neq: "mdbPrev node' \<noteq> ptr"
   and    neq': "mdbNext node \<noteq> mdbPrev node'"
   and       nl: "m \<turnstile> ptr \<leadsto>\<^sup>+ ptr'"
   shows "m \<turnstile> mdbNext node \<leadsto>\<^sup>+ mdbPrev node'"
@@ -1664,7 +1664,7 @@ lemma neg_next_rtrancl_nx:
   using nl
 proof (rule contrapos_nn)
   assume "m \<turnstile> mdbNext node \<leadsto>\<^sup>* ptr'"
-  show "m \<turnstile> ptr \<leadsto>\<^sup>+ ptr'" 
+  show "m \<turnstile> ptr \<leadsto>\<^sup>+ ptr'"
   proof (rule rtrancl_into_trancl2)
     show "m \<turnstile> ptr \<leadsto> mdbNext node" using node by (rule next_fold, simp)
   qed fact+
@@ -1688,14 +1688,14 @@ proof (rule contrapos_nn)
   show "m \<turnstile> ptr \<leadsto>\<^sup>+ ptr'"
   proof (rule trancl_into_trancl)
     have "mdbPrev node \<noteq> 0" using assms by auto
-    thus "m \<turnstile> mdbPrev node \<leadsto> ptr'" using vd node  
+    thus "m \<turnstile> mdbPrev node \<leadsto> ptr'" using vd node
       apply -
       apply (erule (1) valid_dlistEp)
       apply simp
       apply (rule next_fold)
       apply simp
       apply simp
-      done   
+      done
   qed fact+
 qed
 
@@ -1713,14 +1713,14 @@ proof (rule contrapos_nn)
   show "m \<turnstile> ptr \<leadsto>\<^sup>+ ptr'"
   proof (rule rtrancl_into_trancl1)
     have "mdbPrev node \<noteq> 0" using assms by auto
-    thus "m \<turnstile> mdbPrev node \<leadsto> ptr'" using vd node  
+    thus "m \<turnstile> mdbPrev node \<leadsto> ptr'" using vd node
       apply -
       apply (erule (1) valid_dlistEp)
       apply simp
       apply (rule next_fold)
       apply simp
       apply simp
-      done   
+      done
   qed fact+
 qed
 
@@ -1760,7 +1760,7 @@ lemma neg_next_trancl_trancl:
 declare domE[elim?]
 
 lemma ndom_is_0D:
-  "\<lbrakk> mdbNext node \<notin> dom m; mdb_chain_0 m; no_0 m; m ptr = Some (CTE cap node) \<rbrakk> 
+  "\<lbrakk> mdbNext node \<notin> dom m; mdb_chain_0 m; no_0 m; m ptr = Some (CTE cap node) \<rbrakk>
   \<Longrightarrow> mdbNext node = 0"
   apply -
   apply (frule (1) mdb_chain_0_nextD)
@@ -1781,7 +1781,7 @@ lemma (in mdb_swap) cteSwap_chain:
   "mdb_chain_0 n"
 proof -
   have chain: "mdb_chain_0 m" using valid ..
-  
+
   let ?m = "(modify_map
     (modify_map
          (modify_map
@@ -1792,13 +1792,13 @@ proof -
        (mdbPrev dest2_node) (cteMDBNode_update (mdbNext_update (%_. src))))"
 
   let ?n' = "modify_map m src (cteMDBNode_update (mdbNext_update (%_. (mdbNext dest_node))))"
-  
+
   have [simp]: "src \<in> dom m" by (rule domI, rule src)
   have [simp]: "dest \<in> dom m" by (rule domI, rule dest)
-  
+
   have dn: "m \<turnstile> dest \<leadsto> mdbNext dest_node" using dest by (rule next_fold, simp)
-  
-  have dp: "mdbPrev dest_node \<in> dom m 
+
+  have dp: "mdbPrev dest_node \<in> dom m
     \<Longrightarrow> m \<turnstile> mdbPrev dest_node \<leadsto> dest"
   proof -
     assume "mdbPrev dest_node \<in> dom m"
@@ -1809,33 +1809,33 @@ proof -
       apply (erule next_fold)
       apply simp
       done
-  qed  
-  
+  qed
+
   have [simp]: "\<not> m \<turnstile> dest \<leadsto>\<^sup>+ dest"
     using mdb_chain_0_no_loops [OF chain no_0]
     by (simp add: no_loops_trancl_simp)
-  
+
   have [simp]: "\<not> m \<turnstile> src \<leadsto>\<^sup>+ src"
     using mdb_chain_0_no_loops [OF chain no_0]
     by (simp add: no_loops_trancl_simp)
-  
+
   have [simp]: "\<not> m \<turnstile> mdbNext src_node \<leadsto>\<^sup>* src"
     by (rule neg_next_rtrancl_nx, rule src, simp)
 
-  
-  have sn: "mdbPrev src_node \<in> dom m 
+
+  have sn: "mdbPrev src_node \<in> dom m
     \<Longrightarrow> m \<turnstile> mdbPrev src_node \<leadsto> src"
   proof -
     assume "mdbPrev src_node \<in> dom m"
     hence "mdbPrev src_node \<noteq> 0" using no_0 by - (rule, clarsimp)
-    thus ?thesis using src 
+    thus ?thesis using src
       apply -
       apply (clarsimp dest!: src_prev [where p = "mdbPrev src_node", simplified])
       apply (erule next_fold)
       apply simp
       done
   qed
-  
+
   from chain no_0 neq [symmetric]
   have "mdb_chain_0 ?m"
   proof (cases rule: mdb_chain_0_cases)
@@ -1843,19 +1843,19 @@ proof -
 
     note [simp] = neg_rtrancl_into_trancl [OF srcdest(2)]
     note [simp] = srcdest(2)
-    
+
     have dsneq: "dest \<noteq> mdbPrev src_node"
     proof
       assume "dest = mdbPrev src_node"
-      hence "m \<turnstile> dest \<leadsto>\<^sup>* src" 
+      hence "m \<turnstile> dest \<leadsto>\<^sup>* src"
         by - (rule r_into_rtrancl, rule next_fold [where m = m, OF dest], simp)
-      
+
       thus False using srcdest by simp
     qed
-    
+
     from dest have n1 [simp]:"\<not> m \<turnstile> mdbNext dest_node \<leadsto>\<^sup>* src"
       by (rule neg_next_rtrancl_nx [OF _ neg_rtrancl_into_trancl]) fact+
-    
+
     have chain_n': "mdb_chain_0 ?n'"
     proof (cases "mdbNext dest_node \<in> dom m")
       case True
@@ -1866,7 +1866,7 @@ proof -
       thus ?thesis using dest chain no_0
         by - (drule (3) ndom_is_0D, simp, erule (1) mdb_chain_0_modify_map_0)
     qed
-    
+
     from dest src
     have n4: "mdbPrev src_node \<in> dom m \<Longrightarrow> \<not> m \<turnstile> mdbNext dest_node \<leadsto>\<^sup>* mdbPrev src_node"
       using neg_next_rtrancl_np [OF _ _ _ no_0 dlist neg_rtrancl_into_trancl]
@@ -1876,24 +1876,24 @@ proof -
       using dn src
       by (auto dest: rtrancl_into_trancl2 simp: modify_map_lhs_rtrancl)
 
-    hence n3: "mdbPrev src_node \<in> dom m 
+    hence n3: "mdbPrev src_node \<in> dom m
       \<Longrightarrow> \<not> modify_map ?n' dest (cteMDBNode_update (mdbNext_update (%_. src))) \<turnstile> dest \<leadsto>\<^sup>* mdbPrev src_node"
       using dest dsneq src n1
       by (simp add: modify_map_lhs_rtrancl modify_map_app) (rule n4)
-                
+
     from srcdest(1)
     show ?thesis
     proof (cases rule: tranclE2')
       case base
       hence ds: "dest = mdbNext src_node" by (clarsimp simp: next_unfold' src)
-      hence d2: "dest2_node = MDB (mdbNext dest_node) dest (mdbRevocable dest_node) (mdbFirstBadged dest_node)" 
+      hence d2: "dest2_node = MDB (mdbNext dest_node) dest (mdbRevocable dest_node) (mdbFirstBadged dest_node)"
         using dsneq
         unfolding dest2_node_def by clarsimp
-      
+
       let ?m' = "(modify_map
           (modify_map ?n' dest (cteMDBNode_update (mdbNext_update (%_. src))))
            (mdbPrev src_node) (cteMDBNode_update (mdbNext_update (%_. dest))))"
-      
+
       let ?goal = "mdb_chain_0 ?m'"
       {
         assume d1: "mdbPrev src_node \<in> dom m" and d2: "mdbNext dest_node \<in> dom m"
@@ -1906,7 +1906,7 @@ proof -
         assume d1: "mdbPrev src_node \<notin> dom m" and "mdbNext dest_node \<in> dom m"
         hence ?goal
           by simp ((rule mdb_chain_0_modify_map_next)+, simp_all add: no_0 chain n1 n2)
-      } moreover 
+      } moreover
       {
         assume d1: "mdbPrev src_node \<in> dom m" and "mdbNext dest_node \<notin> dom m"
         hence m0: "mdbNext dest_node = 0"
@@ -1923,26 +1923,26 @@ proof -
         assume d1: "mdbPrev src_node \<notin> dom m" and "mdbNext dest_node \<notin> dom m"
         hence m0: "mdbNext dest_node = 0"
           by (clarsimp dest!: dest_next [where p = "mdbNext dest_node", simplified])
-   
+
         have ?goal using d1 chain_n'
           apply simp
           apply (rule mdb_chain_0_modify_map_next)
-          apply (simp_all add: no_0 chain n1 n2)     
+          apply (simp_all add: no_0 chain n1 n2)
           done
       }
-      ultimately have ?goal 
+      ultimately have ?goal
         apply (cases "mdbPrev src_node \<in> dom m")
         apply (cases "mdbNext dest_node \<in> dom m")
         apply (auto)[2]
         apply (cases "mdbNext dest_node \<in> dom m")
         apply auto
         done
-                
+
       thus ?thesis using ds [symmetric] d2 neqs dsneq
         apply simp
         apply (subst modify_map_addr_com [OF neqs(2)])
         apply (subst modify_map_comp [symmetric])
-        apply (subst modify_map_comp [symmetric])  
+        apply (subst modify_map_comp [symmetric])
         apply (simp)
         apply (simp add: o_def)
         apply (rule mdb_chain_0_modify_map_replace)
@@ -1956,7 +1956,7 @@ proof -
         apply assumption
         done
     next
-      case (trancl c)   
+      case (trancl c)
       hence dsneq': "dest \<noteq> mdbNext src_node" using src
         apply -
         apply rule
@@ -1970,102 +1970,102 @@ proof -
       hence d2n: "dest2_node = dest_node"
         unfolding dest2_node_def
         by (cases dest_node, simp add: dsneq)
-      
+
       from trancl obtain d where dnext: "m \<turnstile> d \<leadsto> dest" and ncd: "m \<turnstile> c \<leadsto>\<^sup>* d"
         by (clarsimp dest!: tranclD2)
 
-      have ddest: "d = mdbPrev (cteMDBNode (CTE dest_cap dest_node))" 
+      have ddest: "d = mdbPrev (cteMDBNode (CTE dest_cap dest_node))"
         using dest dlist no_0 dnext
         by (rule next_prev)
-      
+
       hence d2: "mdbPrev dest_node \<in> dom m" using dnext
-        by (clarsimp simp: next_unfold')      
+        by (clarsimp simp: next_unfold')
 
       have dnz: "mdbPrev dest_node \<noteq> 0"
         by (rule dom_into_not0 [OF no_0 d2])
-      
+
       have n5 [simp]: "\<not> ?n' \<turnstile> src \<leadsto>\<^sup>* mdbPrev dest_node"
       proof -
         have "src \<noteq> mdbPrev dest_node"
-          by (simp add: dsneq' [symmetric])       
+          by (simp add: dsneq' [symmetric])
         hence "?n' \<turnstile> mdbPrev dest_node \<leadsto> dest" using dp [OF d2]
-          by (clarsimp simp: next_unfold' modify_map_other)       
+          by (clarsimp simp: next_unfold' modify_map_other)
         thus ?thesis using n2
           by - (erule contrapos_nn, erule (1) rtrancl_into_rtrancl)
       qed
-            
+
       let ?n2 = "modify_map ?n' (mdbPrev dest_node) (cteMDBNode_update (mdbNext_update (%_. src)))"
       have chain_n2: "mdb_chain_0 ?n2"
         by ((rule chain_n' | rule mdb_chain_0_modify_map_next)+, simp_all add: no_0)
-      
+
       have r [simp]: "\<not> m \<turnstile> mdbNext dest_node \<leadsto>\<^sup>* mdbPrev dest_node"
         by (rule neg_next_rtrancl_np [OF _ _ d2 no_0 dlist], rule dest, rule dest, simp)
-      
+
       have r3 [simp]: "\<not> m \<turnstile> mdbNext dest_node \<leadsto>\<^sup>* src"
-        by (rule neg_next_rtrancl_nx, rule dest, simp)  
+        by (rule neg_next_rtrancl_nx, rule dest, simp)
 
       have r4 [simp]: "\<not> m \<turnstile> dest \<leadsto>\<^sup>+ mdbPrev dest_node"
         by (rule neg_next_trancl_xp [OF _ d2 no_0 dlist], rule dest, simp)
-      
-      let ?m'' = 
+
+      let ?m'' =
         "(modify_map (modify_map
-          (modify_map ?n' (mdbPrev dest_node) (cteMDBNode_update (mdbNext_update (%_. src))))      
-           (mdbPrev src_node) (cteMDBNode_update (mdbNext_update (%_. dest))))     
+          (modify_map ?n' (mdbPrev dest_node) (cteMDBNode_update (mdbNext_update (%_. src))))
+           (mdbPrev src_node) (cteMDBNode_update (mdbNext_update (%_. dest))))
           dest (cteMDBNode_update (mdbNext_update (%_. (mdbNext src_node)))))"
-            
-      have n2_2 [simp]: 
+
+      have n2_2 [simp]:
         "?n2 \<turnstile> mdbNext src_node \<leadsto>\<^sup>* mdbPrev dest_node"
         apply (cases "mdbNext src_node = mdbPrev dest_node")
         apply simp
-        apply (rule trancl_into_rtrancl)     
+        apply (rule trancl_into_rtrancl)
         apply (rule next_modify_map_trancl_last [OF chain_n'], simp add: no_0)
         apply (subst modify_map_trancl_other_iff)
         apply simp
         apply (rule next_trancl_np [OF _ _ dlist no_0])
         apply (rule src, rule dest)
         apply (simp add: dsneq' [symmetric])
-        apply assumption          
+        apply assumption
         apply (rule srcdest(1))
         done
-      
+
       hence n2_3 [simp]: "\<not> ?n2 \<turnstile> mdbNext src_node \<leadsto>\<^sup>+ dest"
       proof (rule neg_next_trancl_trancl)
         show "\<not> ?n2 \<turnstile> dest \<leadsto>\<^sup>* mdbPrev dest_node"
           apply (rule neg_rtranclI)
-          apply simp     
+          apply simp
           apply (subst next_modify_map_trancl_last_iff [OF chain_n' chain_n2])
           apply (simp add: no_0)
           apply (simp add: modify_map_trancl_other_iff)
           done
-        
-        show "\<not> ?n2 \<turnstile> mdbPrev dest_node \<leadsto>\<^sup>* dest" using d2 
+
+        show "\<not> ?n2 \<turnstile> mdbPrev dest_node \<leadsto>\<^sup>* dest" using d2
           by (clarsimp simp: modify_map_lhs_rtrancl modify_map_other dsneq' [symmetric])
-      qed                 
+      qed
 
       have r5 [simp]: "mdbPrev src_node \<in> dom m \<Longrightarrow> \<not> m \<turnstile> dest \<leadsto>\<^sup>+ mdbPrev src_node"
-        by (rule neg_next_trancl_xp [OF _ _ no_0 dlist], rule src, simp_all)  
-      
+        by (rule neg_next_trancl_xp [OF _ _ no_0 dlist], rule src, simp_all)
+
       have n2_4 [simp]:
-        "mdbPrev src_node \<in> dom m \<Longrightarrow> \<not> ?n2 \<turnstile> dest \<leadsto>\<^sup>* mdbPrev src_node" 
+        "mdbPrev src_node \<in> dom m \<Longrightarrow> \<not> ?n2 \<turnstile> dest \<leadsto>\<^sup>* mdbPrev src_node"
         apply -
         apply (rule neg_rtranclI [OF dsneq])
-        apply (subst modify_map_trancl_other_iff) 
+        apply (subst modify_map_trancl_other_iff)
         apply (rule neg_rtranclI)
         apply (simp_all add: modify_map_trancl_other_iff)
         done
-      
+
       let ?goal = "mdb_chain_0 ?m''"
       {
         assume d1: "mdbPrev src_node \<in> dom m" and d3: "mdbNext src_node \<in> dom m"
-      
+
         have r2 [simp]: "\<not> m \<turnstile> mdbNext dest_node \<leadsto>\<^sup>* mdbPrev src_node"
           using dest src
           by (rule neg_next_rtrancl_np [OF _ _ _ no_0 dlist neg_rtrancl_into_trancl]) fact+
-        
+
         have ?goal
-        proof ((rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_next)+, 
-            simp_all add: no_0 chain n1 d1)        
-                  
+        proof ((rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_next)+,
+            simp_all add: no_0 chain n1 d1)
+
           have n2_1:
             "\<not> ?n2 \<turnstile> mdbPrev dest_node \<leadsto>\<^sup>* mdbPrev src_node" using d2  dsneq' [symmetric]
             apply -
@@ -2074,14 +2074,14 @@ proof -
               apply (clarsimp simp: modify_map_other)
               apply simp
              apply simp
-            apply (simp add: dom_into_not0 [OF no_0 d2])   
+            apply (simp add: dom_into_not0 [OF no_0 d2])
             apply (subst modify_map_lhs_rtrancl, rule src)
              apply simp
              apply (simp)
             done
-            
+
           have "\<not> ?n' \<turnstile> mdbPrev src_node \<leadsto>\<^sup>+ mdbPrev dest_node"
-            apply (rule neg_next_rtrancl_trancl [where y = src])    
+            apply (rule neg_next_rtrancl_trancl [where y = src])
             apply (subst modify_map_lhs_rtrancl)
             apply (rule src)
             apply simp
@@ -2089,17 +2089,17 @@ proof -
             apply (subst next_modify_map_last)
             apply simp
             apply (rule sn [OF d1])
-            done            
+            done
           hence "mdbPrev src_node \<noteq> 0 \<Longrightarrow> \<not> ?n2 \<turnstile> mdbPrev src_node \<leadsto>\<^sup>* mdbPrev dest_node"
             apply -
             apply (rule neg_rtranclI)
-            apply simp   
+            apply simp
             apply (subst next_modify_map_trancl_last_iff [OF chain_n' chain_n2])
             apply (simp add: no_0)
             apply assumption
             done
           moreover from no_0 have "mdbPrev src_node \<noteq> 0" using d1 by auto
-          ultimately show 
+          ultimately show
             "\<not> modify_map ?n2 (mdbPrev src_node) (cteMDBNode_update (mdbNext_update (%_. dest))) \<turnstile> mdbNext src_node \<leadsto>\<^sup>* dest" using n2_1
             apply -
             apply (rule neg_rtranclI)
@@ -2108,38 +2108,38 @@ proof -
             apply (rule neg_rtranclI)
             apply simp
             apply (rule neg_next_trancl_trancl [OF n2_2])
-            apply auto    
+            apply auto
             done
         qed fact+
-      } moreover 
+      } moreover
       {
         assume d1: "mdbPrev src_node \<notin> dom m" and d3: "mdbNext src_node \<in> dom m"
 
         have ?goal
-        proof (simp add: d1, (rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_next)+, 
+        proof (simp add: d1, (rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_next)+,
             simp_all add: no_0 chain n1)
           show "\<not> ?n2 \<turnstile> mdbNext src_node \<leadsto>\<^sup>* dest"
             by (rule neg_rtranclI [OF _ n2_3], simp add: dsneq' [symmetric])
         qed fact+
       } moreover
-      { 
+      {
         assume d1: "mdbPrev src_node \<in> dom m" and d3: "mdbNext src_node \<notin> dom m"
         hence m0: "mdbNext src_node = 0"
           by (clarsimp dest!: src_next [where p = "mdbNext src_node", simplified])
-        
+
         have ?goal
-          by (simp add: m0, 
+          by (simp add: m0,
           (rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_0 | rule mdb_chain_0_modify_map_next)+,
             simp_all add: no_0 chain n1 d1)
-      } moreover 
+      } moreover
       {
         assume d1: "mdbPrev src_node \<notin> dom m" and d3: "mdbNext src_node \<notin> dom m"
         hence m0: "mdbNext src_node = 0"
           by (clarsimp dest!: src_next [where p = "mdbNext src_node", simplified])
-        
+
         have ?goal
-          by (simp add: m0 d1, 
-          (rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_0 | rule mdb_chain_0_modify_map_next)+, 
+          by (simp add: m0 d1,
+          (rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_0 | rule mdb_chain_0_modify_map_next)+,
             simp_all add: no_0 chain n1 d1)
       } ultimately have ?goal
         apply (cases "mdbPrev src_node \<in> dom m")
@@ -2148,8 +2148,8 @@ proof -
         apply (cases "mdbNext src_node \<in> dom m")
         apply auto
         done
-        
-      thus ?thesis using no_0 d2n       
+
+      thus ?thesis using no_0 d2n
         apply simp
         apply (subst modify_map_addr_com [where y = "mdbPrev dest_node"])
         apply simp
@@ -2170,24 +2170,24 @@ proof -
     qed
   next
     case destsrc (* Dual of srcdest *)
-  
+
     let ?n' = "modify_map m dest (cteMDBNode_update (mdbNext_update (%_. (mdbNext src_node))))"
-   
+
     note [simp] = neg_rtrancl_into_trancl [OF destsrc(2)]
     note [simp] = destsrc(2)
-    
+
     have dsneq: "src \<noteq> mdbPrev dest_node"
     proof
       assume "src = mdbPrev dest_node"
-      hence "m \<turnstile> src \<leadsto>\<^sup>* dest" 
+      hence "m \<turnstile> src \<leadsto>\<^sup>* dest"
         by - (rule r_into_rtrancl, rule next_fold [where m = m, OF src], simp)
-      
+
       thus False using destsrc by simp
     qed
-    
+
     from src have n1 [simp]:"\<not> m \<turnstile> mdbNext src_node \<leadsto>\<^sup>* dest"
       by (rule neg_next_rtrancl_nx [OF _ neg_rtrancl_into_trancl]) fact+
-    
+
     have chain_n': "mdb_chain_0 ?n'"
     proof (cases "mdbNext src_node \<in> dom m")
       case True
@@ -2198,7 +2198,7 @@ proof -
       thus ?thesis using src chain no_0
         by - (drule (3) ndom_is_0D, simp, erule (1) mdb_chain_0_modify_map_0)
     qed
-    
+
     from src dest
     have n4: "mdbPrev dest_node \<in> dom m \<Longrightarrow> \<not> m \<turnstile> mdbNext src_node \<leadsto>\<^sup>* mdbPrev dest_node"
       using neg_next_rtrancl_np [OF _ _ _ no_0 dlist neg_rtrancl_into_trancl]
@@ -2208,24 +2208,24 @@ proof -
       using sn dest
       by (auto dest: rtrancl_into_trancl2 simp: modify_map_lhs_rtrancl)
 
-    hence n3: "mdbPrev dest_node \<in> dom m 
+    hence n3: "mdbPrev dest_node \<in> dom m
       \<Longrightarrow> \<not> modify_map ?n' src (cteMDBNode_update (mdbNext_update (%_. dest))) \<turnstile> src \<leadsto>\<^sup>* mdbPrev dest_node"
       using dest dsneq src n1
       by (simp add: modify_map_lhs_rtrancl modify_map_app) (rule n4)
-                
+
     from destsrc(1)
     show ?thesis
     proof (cases rule: tranclE2')
       case base
-      hence ds: "src = mdbNext dest_node" by (clarsimp simp: next_unfold' dest)      
+      hence ds: "src = mdbNext dest_node" by (clarsimp simp: next_unfold' dest)
       hence d2: "dest2_node =  MDB dest (mdbPrev dest_node) (mdbRevocable dest_node) (mdbFirstBadged dest_node)"
         using dsneq
         unfolding dest2_node_def by simp
-      
+
       let ?m' = "(modify_map
           (modify_map ?n' src (cteMDBNode_update (mdbNext_update (%_. dest))))
            (mdbPrev dest_node) (cteMDBNode_update (mdbNext_update (%_. src))))"
-      
+
       let ?goal = "mdb_chain_0 ?m'"
       {
         assume d1: "mdbPrev dest_node \<in> dom m" and "mdbNext src_node \<in> dom m"
@@ -2238,7 +2238,7 @@ proof -
         assume d1: "mdbPrev dest_node \<notin> dom m" and "mdbNext src_node \<in> dom m"
         hence ?goal
           by simp ((rule mdb_chain_0_modify_map_next)+, simp_all add: no_0 chain n1 n2)
-      } moreover 
+      } moreover
       {
         assume d1: "mdbPrev dest_node \<in> dom m" and "mdbNext src_node \<notin> dom m"
         hence m0: "mdbNext src_node = 0"
@@ -2255,20 +2255,20 @@ proof -
         assume d1: "mdbPrev dest_node \<notin> dom m" and "mdbNext src_node \<notin> dom m"
         hence m0: "mdbNext src_node = 0"
           by (clarsimp dest!: src_next [where p = "mdbNext src_node", simplified])
-   
+
         have ?goal using d1 chain_n'
           apply simp
           apply (rule mdb_chain_0_modify_map_next)
-          apply (simp_all add: no_0 chain n1 n2)     
+          apply (simp_all add: no_0 chain n1 n2)
           done
       }
-      ultimately have ?goal 
+      ultimately have ?goal
         apply (cases "mdbPrev dest_node \<in> dom m")
         apply (cases "mdbNext src_node \<in> dom m")
         apply (auto)[2]
         apply (cases "mdbNext src_node \<in> dom m")
         apply auto
-        done      
+        done
       thus ?thesis using ds [symmetric] d2 neqs dsneq
         apply simp
         apply (subst modify_map_addr_com [where x = "mdbNext src_node"], simp)+
@@ -2284,10 +2284,10 @@ proof -
         apply (rule mdb_chain_0_modify_map_replace)
         apply (subst modify_map_addr_com [where y = src], simp)+
         apply (subst modify_map_addr_com [where y = dest], simp)+
-        apply assumption  
+        apply assumption
         done
     next
-      case (trancl c)   
+      case (trancl c)
       hence dsneq': "src \<noteq> mdbNext dest_node" using dest
         apply -
         apply rule
@@ -2305,101 +2305,101 @@ proof -
       from trancl obtain d where dnext: "m \<turnstile> d \<leadsto> src" and ncd: "m \<turnstile> c \<leadsto>\<^sup>* d"
         by (clarsimp dest!: tranclD2)
 
-      have ddest: "d = mdbPrev (cteMDBNode (CTE src_cap src_node))" 
+      have ddest: "d = mdbPrev (cteMDBNode (CTE src_cap src_node))"
         using src dlist no_0 dnext
         by (rule next_prev)
-      
+
       hence d2: "mdbPrev src_node \<in> dom m" using dnext
-        by (clarsimp simp: next_unfold')      
+        by (clarsimp simp: next_unfold')
 
       have dnz: "mdbPrev src_node \<noteq> 0"
         by (rule dom_into_not0 [OF no_0 d2])
-      
+
       have n5 [simp]: "\<not> ?n' \<turnstile> dest \<leadsto>\<^sup>* mdbPrev src_node"
       proof -
         have "dest \<noteq> mdbPrev src_node"
           by (simp add: dsneq' [simplified, symmetric])
         hence "?n' \<turnstile> mdbPrev src_node \<leadsto> src" using sn [OF d2]
-          by (clarsimp simp: next_unfold' modify_map_other)       
+          by (clarsimp simp: next_unfold' modify_map_other)
         thus ?thesis using n2
           by - (erule contrapos_nn, erule (1) rtrancl_into_rtrancl)
       qed
-            
+
       let ?n2 = "modify_map ?n' (mdbPrev src_node) (cteMDBNode_update (mdbNext_update (%_. dest)))"
       have chain_n2: "mdb_chain_0 ?n2"
         by ((rule chain_n' | rule mdb_chain_0_modify_map_next)+, simp_all add: no_0)
-      
+
       have r [simp]: "\<not> m \<turnstile> mdbNext src_node \<leadsto>\<^sup>* mdbPrev src_node"
         by (rule neg_next_rtrancl_np [OF _ _ d2 no_0 dlist], rule src, rule src, simp)
-      
+
       have r3 [simp]: "\<not> m \<turnstile> mdbNext src_node \<leadsto>\<^sup>* dest"
-        by (rule neg_next_rtrancl_nx, rule src, simp)  
+        by (rule neg_next_rtrancl_nx, rule src, simp)
 
       have r5 [simp]: "\<not> m \<turnstile> mdbNext dest_node \<leadsto>\<^sup>* dest"
         by (rule neg_next_rtrancl_nx, rule dest, simp)
 
       have r4 [simp]: "\<not> m \<turnstile> src \<leadsto>\<^sup>+ mdbPrev src_node"
         by (rule neg_next_trancl_xp [OF _ d2 no_0 dlist], rule src, simp)
-      
-      let ?m'' = 
+
+      let ?m'' =
         "(modify_map (modify_map
-          (modify_map ?n' (mdbPrev src_node) (cteMDBNode_update (mdbNext_update (%_. dest))))      
-           (mdbPrev dest_node) (cteMDBNode_update (mdbNext_update (%_. src))))     
+          (modify_map ?n' (mdbPrev src_node) (cteMDBNode_update (mdbNext_update (%_. dest))))
+           (mdbPrev dest_node) (cteMDBNode_update (mdbNext_update (%_. src))))
           src (cteMDBNode_update (mdbNext_update (%_. (mdbNext dest_node)))))"
-            
-      have n2_2 [simp]: 
+
+      have n2_2 [simp]:
         "?n2 \<turnstile> mdbNext dest_node \<leadsto>\<^sup>* mdbPrev src_node"
         apply (cases "mdbNext dest_node = mdbPrev src_node")
         apply simp
-        apply (rule trancl_into_rtrancl)     
+        apply (rule trancl_into_rtrancl)
         apply (rule next_modify_map_trancl_last [OF chain_n'], simp add: no_0)
         apply (subst modify_map_trancl_other_iff)
         apply simp
         apply (rule next_trancl_np [OF _ _ dlist no_0])
         apply (rule dest, rule src)
         apply (simp add: dsneq' [simplified])
-        apply assumption          
+        apply assumption
         apply (rule destsrc(1))
         done
-      
+
       hence n2_3 [simp]: "\<not> ?n2 \<turnstile> mdbNext dest_node \<leadsto>\<^sup>+ src"
       proof (rule neg_next_trancl_trancl)
         show "\<not> ?n2 \<turnstile> src \<leadsto>\<^sup>* mdbPrev src_node"
           apply (rule neg_rtranclI)
-          apply simp     
+          apply simp
           apply (subst next_modify_map_trancl_last_iff [OF chain_n' chain_n2])
           apply (simp add: no_0)
           apply (simp add: modify_map_trancl_other_iff)
           done
-        
-        show "\<not> ?n2 \<turnstile> mdbPrev src_node \<leadsto>\<^sup>* src" using d2 
+
+        show "\<not> ?n2 \<turnstile> mdbPrev src_node \<leadsto>\<^sup>* src" using d2
           by (clarsimp simp: modify_map_lhs_rtrancl modify_map_other dsneq' [simplified, symmetric])
-      qed                 
+      qed
 
       have r6 [simp]: "mdbPrev dest_node \<in> dom m \<Longrightarrow> \<not> m \<turnstile> src \<leadsto>\<^sup>+ mdbPrev dest_node"
-        by (rule neg_next_trancl_xp [OF _ _ no_0 dlist], rule dest, simp_all)  
-      
+        by (rule neg_next_trancl_xp [OF _ _ no_0 dlist], rule dest, simp_all)
+
       have n2_4 [simp]:
-        "mdbPrev dest_node \<in> dom m \<Longrightarrow> \<not> ?n2 \<turnstile> src \<leadsto>\<^sup>* mdbPrev dest_node" 
+        "mdbPrev dest_node \<in> dom m \<Longrightarrow> \<not> ?n2 \<turnstile> src \<leadsto>\<^sup>* mdbPrev dest_node"
         apply -
         apply (rule neg_rtranclI [OF dsneq])
-        apply (subst modify_map_trancl_other_iff) 
+        apply (subst modify_map_trancl_other_iff)
         apply (rule neg_rtranclI)
         apply (simp_all add: modify_map_trancl_other_iff)
         done
-      
+
       let ?goal = "mdb_chain_0 ?m''"
       {
         assume d1: "mdbPrev dest_node \<in> dom m" and d3: "mdbNext dest_node \<in> dom m"
-      
+
         have r2 [simp]: "\<not> m \<turnstile> mdbNext src_node \<leadsto>\<^sup>* mdbPrev dest_node"
           using src dest
           by (rule neg_next_rtrancl_np [OF _ _ _ no_0 dlist neg_rtrancl_into_trancl]) fact+
-        
+
         have ?goal
-          proof ((rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_next)+, 
-              simp_all add: no_0 chain n1 d1)        
-                  
+          proof ((rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_next)+,
+              simp_all add: no_0 chain n1 d1)
+
           have n2_1:
             "\<not> ?n2 \<turnstile> mdbPrev src_node \<leadsto>\<^sup>* mdbPrev dest_node" using d2  dsneq' [symmetric]
             apply -
@@ -2408,13 +2408,13 @@ proof -
               apply (clarsimp simp: modify_map_other)
               apply simp
              apply simp
-            apply (simp add: dom_into_not0 [OF no_0 d2])   
+            apply (simp add: dom_into_not0 [OF no_0 d2])
             apply (subst modify_map_lhs_rtrancl, rule dest)
              apply simp
              apply (simp)
-            done            
+            done
           have "\<not> ?n' \<turnstile> mdbPrev dest_node \<leadsto>\<^sup>+ mdbPrev src_node"
-            apply (rule neg_next_rtrancl_trancl [where y = dest])    
+            apply (rule neg_next_rtrancl_trancl [where y = dest])
              apply (subst modify_map_lhs_rtrancl)
                apply (rule dest)
               apply simp
@@ -2422,17 +2422,17 @@ proof -
             apply (subst next_modify_map_last)
              apply simp
             apply (rule dp [OF d1])
-            done            
+            done
           hence "mdbPrev dest_node \<noteq> 0 \<Longrightarrow> \<not> ?n2 \<turnstile> mdbPrev dest_node \<leadsto>\<^sup>* mdbPrev src_node"
             apply -
             apply (rule neg_rtranclI)
-             apply simp   
+             apply simp
             apply (subst next_modify_map_trancl_last_iff [OF chain_n' chain_n2])
              apply (simp add: no_0)
             apply assumption
             done
           moreover from no_0 have "mdbPrev dest_node \<noteq> 0" using d1 by auto
-          ultimately show 
+          ultimately show
             "\<not> modify_map ?n2 (mdbPrev dest_node) (cteMDBNode_update (mdbNext_update (%_. src))) \<turnstile> mdbNext dest_node \<leadsto>\<^sup>* src" using n2_1 dsneq' [symmetric]
             apply -
             apply (rule neg_rtranclI)
@@ -2441,38 +2441,38 @@ proof -
             apply (rule neg_rtranclI)
             apply simp
             apply (rule neg_next_trancl_trancl [OF n2_2])
-            apply auto    
+            apply auto
             done
         qed fact+
-      } moreover 
+      } moreover
       {
         assume d1: "mdbPrev dest_node \<notin> dom m" and d3: "mdbNext dest_node \<in> dom m"
 
         have ?goal
-        proof (simp add: d1, (rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_next)+, 
+        proof (simp add: d1, (rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_next)+,
             simp_all add: no_0 chain n1)
           show "\<not> ?n2 \<turnstile> mdbNext dest_node \<leadsto>\<^sup>* src"
             by (rule neg_rtranclI [OF _ n2_3], simp add: dsneq' [simplified])
         qed fact+
       } moreover
-      { 
+      {
         assume d1: "mdbPrev dest_node \<in> dom m" and d3: "mdbNext dest_node \<notin> dom m"
         hence m0: "mdbNext dest_node = 0"
           by (clarsimp dest!: dest_next [where p = "mdbNext dest_node", simplified])
-        
+
         have ?goal
-          by (simp add: m0, 
+          by (simp add: m0,
           (rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_0 | rule mdb_chain_0_modify_map_next)+,
             simp_all add: no_0 chain n1 d1)
-      } moreover 
+      } moreover
       {
         assume d1: "mdbPrev dest_node \<notin> dom m" and d3: "mdbNext dest_node \<notin> dom m"
         hence m0: "mdbNext dest_node = 0"
           by (clarsimp dest!: dest_next [where p = "mdbNext dest_node", simplified])
-        
+
         have ?goal
-          by (simp add: m0 d1, 
-          (rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_0 | rule mdb_chain_0_modify_map_next)+, 
+          by (simp add: m0 d1,
+          (rule chain_n' | rule chain_n2 | rule mdb_chain_0_modify_map_0 | rule mdb_chain_0_modify_map_next)+,
             simp_all add: no_0 chain n1 d1)
       } ultimately have ?goal
         apply (cases "mdbPrev dest_node \<in> dom m")
@@ -2490,43 +2490,43 @@ proof -
         apply (rule mdb_chain_0_modify_map_replace)
         apply simp
         apply (rule mdb_chain_0_modify_map_prev)
-        apply (subst modify_map_addr_com [where y = src], simp)+        
+        apply (subst modify_map_addr_com [where y = src], simp)+
         apply (subst modify_map_addr_com [where y = "mdbPrev dest_node"], simp add: dnz)+
         apply (subst modify_map_addr_com [where y = "mdbPrev src_node"], simp add: dnz)+
         apply (subst modify_map_addr_com [where y = dest], simp add:  dnz)+
         apply assumption
-        done      
+        done
     qed
   next
     case indep
 
     have indep_rt1: "\<not> m \<turnstile> src \<leadsto>\<^sup>* dest"
       by (rule neg_rtranclI, simp) fact+
-    
+
     have indep_rt2: "\<not> m \<turnstile> dest \<leadsto>\<^sup>* src"
       by (rule neg_rtranclI, simp) fact+
-    
+
     have dsneq: "src \<noteq> mdbPrev dest_node"
     proof
       assume "src = mdbPrev dest_node"
-      hence "m \<turnstile> src \<leadsto>\<^sup>+ dest" 
+      hence "m \<turnstile> src \<leadsto>\<^sup>+ dest"
         by - (rule r_into_trancl, rule next_fold [where m = m, OF src], simp)
-      
+
       thus False using indep by simp
     qed
 
-    note [simp] = dsneq [simplified] 
-    
+    note [simp] = dsneq [simplified]
+
     have sdneq: "dest \<noteq> mdbPrev src_node"
     proof
       assume "dest = mdbPrev src_node"
-      hence "m \<turnstile> dest \<leadsto>\<^sup>+ src" 
+      hence "m \<turnstile> dest \<leadsto>\<^sup>+ src"
         by - (rule r_into_trancl, rule next_fold [where m = m, OF dest], simp)
-      
+
       thus False using indep by simp
     qed
-    
-    note [simp] = sdneq [simplified] 
+
+    note [simp] = sdneq [simplified]
 
     have dsneq' [simp]: "dest \<noteq> mdbNext src_node"
     proof
@@ -2540,10 +2540,10 @@ proof -
         done
       thus False using indep by simp
     qed
-    
+
     have dsnp: "mdbPrev src_node \<in> dom m \<Longrightarrow> mdbNext dest_node \<noteq> mdbPrev src_node"
     proof
-      assume "mdbPrev src_node \<in> dom m" and "mdbNext dest_node = mdbPrev src_node" 
+      assume "mdbPrev src_node \<in> dom m" and "mdbNext dest_node = mdbPrev src_node"
       hence "m \<turnstile> mdbNext dest_node \<leadsto>\<^sup>* mdbPrev src_node"
         by simp
       moreover have "m \<turnstile> dest \<leadsto> mdbNext dest_node" using dest by (rule next_fold, simp)
@@ -2551,17 +2551,17 @@ proof -
       ultimately have "m \<turnstile> dest \<leadsto>\<^sup>+ src" by auto
       thus False using indep by simp
     qed
-    
+
     have d2n: "dest2_node = dest_node"
       unfolding dest2_node_def by (cases dest_node, simp)
-    
+
     let ?n' = "modify_map m dest (cteMDBNode_update (mdbNext_update (%_. (mdbNext src_node))))"
-       
-    let ?n2 = "modify_map ?n' (mdbPrev src_node) (cteMDBNode_update (mdbNext_update (%_. dest)))"    
-        
+
+    let ?n2 = "modify_map ?n' (mdbPrev src_node) (cteMDBNode_update (mdbNext_update (%_. dest)))"
+
     from src have n1 [simp]:"\<not> m \<turnstile> mdbNext src_node \<leadsto>\<^sup>* dest"
       by (rule neg_next_rtrancl_nx [OF _ neg_rtrancl_into_trancl]) (rule indep_rt1)
-          
+
     have chain_n': "mdb_chain_0 ?n'"
     proof (cases "mdbNext src_node \<in> dom m")
       case True
@@ -2572,7 +2572,7 @@ proof -
       thus ?thesis using src chain no_0
         by - (drule (3) ndom_is_0D, simp, erule (1) mdb_chain_0_modify_map_0)
     qed
-    
+
     have chain_n2: "mdb_chain_0 ?n2"
       apply (cases "mdbPrev src_node \<in> dom m")
       apply ((rule chain_n' | rule mdb_chain_0_modify_map_next)+, simp_all add: no_0)
@@ -2583,24 +2583,24 @@ proof -
       apply (rule neg_next_rtrancl_np [OF _ _ _ no_0 dlist])
       apply (rule src, rule src)
       apply assumption
-      apply simp 
-      apply (rule chain_n')    
+      apply simp
+      apply (rule chain_n')
       done
 
     let ?m' = "(modify_map
        (modify_map ?n2
          src (cteMDBNode_update (mdbNext_update (%_. (mdbNext dest_node)))))
        (mdbPrev dest_node) (cteMDBNode_update (mdbNext_update (%_. src))))"
-  
+
     have r1 [simp]: "mdbPrev src_node \<in> dom m \<Longrightarrow> \<not> m \<turnstile> src \<leadsto>\<^sup>+ mdbPrev src_node"
       apply (rule neg_next_trancl_xp)
       apply (rule src, assumption, rule no_0, rule dlist)
       apply simp
       done
-  
+
     have r [simp]: "mdbPrev src_node \<in> dom m \<Longrightarrow> \<not> ?n' \<turnstile> src \<leadsto>\<^sup>+ mdbPrev src_node"
       by (simp add: modify_map_trancl_other_iff [OF indep_rt1])
-      
+
     have r2 [simp]: "mdbPrev dest_node \<in> dom m \<Longrightarrow> \<not> m \<turnstile> mdbNext src_node \<leadsto>\<^sup>* mdbPrev dest_node"
       using src dest indep neg_next_rtrancl_np [OF _ _ _ no_0 dlist]
       by auto
@@ -2608,12 +2608,12 @@ proof -
     have n2 [simp]: "\<not> ?n' \<turnstile> dest \<leadsto>\<^sup>* src"
       using sn dest
       by (auto dest: rtrancl_into_trancl2 simp: modify_map_lhs_rtrancl)
-    
+
     have n5 [simp]: "mdbPrev src_node \<in> dom m \<Longrightarrow> \<not> ?n' \<turnstile> dest \<leadsto>\<^sup>* mdbPrev src_node"
     proof -
       assume d2: "mdbPrev src_node \<in> dom m"
       have "?n' \<turnstile> mdbPrev src_node \<leadsto> src" using sn [OF d2]
-        by (clarsimp simp: next_unfold' modify_map_other)         
+        by (clarsimp simp: next_unfold' modify_map_other)
       thus ?thesis using n2
         by - (erule contrapos_nn, erule (1) rtrancl_into_rtrancl)
     qed
@@ -2625,7 +2625,7 @@ proof -
        apply assumption
       apply (rule indep(2))
       done
-    
+
     have r5 [simp]: "\<not> m \<turnstile> mdbNext dest_node \<leadsto>\<^sup>* dest"
       by (rule neg_next_rtrancl_nx, rule dest, simp)
     have r6 [simp]: " \<not> m \<turnstile> mdbNext dest_node \<leadsto>\<^sup>+ src"
@@ -2640,10 +2640,10 @@ proof -
 
     have n6 [simp]: "\<not> ?n' \<turnstile> mdbNext dest_node \<leadsto>\<^sup>+ src"
       by (subst modify_map_trancl_other_iff) simp_all
-    
+
     have n6_r [simp]: "\<not> ?n' \<turnstile> mdbNext dest_node \<leadsto>\<^sup>* src"
       by (rule neg_rtranclI) (simp_all add: sdneq [symmetric])
-  
+
     have n2_3 [simp]: "mdbPrev src_node \<in> dom m \<Longrightarrow> \<not> ?n2 \<turnstile> mdbNext dest_node \<leadsto>\<^sup>+ src"
       apply (subst modify_map_trancl_other_iff)
       apply (rule neg_rtranclI)
@@ -2660,14 +2660,14 @@ proof -
       apply (subst modify_map_trancl_other_iff)
       apply simp_all
       done
-    
+
     have n8 [simp]: "mdbPrev dest_node \<in> dom m
       \<Longrightarrow> \<not> ?n' \<turnstile> mdbNext dest_node \<leadsto>\<^sup>+ mdbPrev dest_node"
       by (simp add: modify_map_trancl_other_iff)
 
     have n2_5 [simp]: "mdbPrev dest_node \<in> dom m \<Longrightarrow> \<not> ?n2 \<turnstile> mdbNext dest_node \<leadsto>\<^sup>+ mdbPrev dest_node"
       by (cases "mdbPrev src_node \<in> dom m", simp_all add: modify_map_trancl_other_iff)
-  
+
     have n2_4 [simp]: "mdbPrev dest_node \<in> dom m \<Longrightarrow> \<not> ?n2 \<turnstile> mdbNext dest_node \<leadsto>\<^sup>* mdbPrev dest_node"
       apply (frule dom_into_not0 [OF no_0])
       apply (cases "mdbPrev src_node \<in> dom m")
@@ -2692,7 +2692,7 @@ proof -
         apply simp
         apply simp
         done
-    
+
     have chain_n3: "mdbPrev src_node \<in> dom m \<Longrightarrow> mdb_chain_0
         (modify_map
           (modify_map (modify_map m dest (cteMDBNode_update (mdbNext_update (%_. (mdbNext src_node)))))
@@ -2712,12 +2712,12 @@ proof -
       apply (rule mdb_chain_0_modify_map_0 [OF chain_n2])
       apply (simp_all add: no_0)
       done
-    
+
     have "mdb_chain_0 ?m'"
     proof (cases rule: cases2 [of "mdbPrev src_node \<in> dom m" "mdbPrev dest_node \<in> dom m"])
       case pos_pos
-      
-      thus ?thesis 
+
+      thus ?thesis
         apply -
         apply (rule mdb_chain_0_modify_map_next [OF chain_n3])
            apply (simp_all add: no_0)
@@ -2733,7 +2733,7 @@ proof -
       case pos_neg
       thus ?thesis
         by simp (rule chain_n3)
-    next    
+    next
       case neg_pos
       thus ?thesis using no_0
         apply -
@@ -2764,13 +2764,13 @@ proof -
            apply simp
           apply simp
          apply simp
-        apply (drule ndom_is_0D [OF _ chain no_0], rule dest)  
+        apply (drule ndom_is_0D [OF _ chain no_0], rule dest)
         apply simp
         apply (rule mdb_chain_0_modify_map_0 [OF chain_n'])
         apply simp
         done
     qed
-  
+
       thus ?thesis using d2n
       apply simp
       apply (subst modify_map_addr_com [where x = dest], simp)+
@@ -2802,7 +2802,7 @@ lemma (in mdb_swap) next_m_n2:
 
 lemma (in mdb_swap) n_src [simp]:
   "n src = Some (CTE dcap dest2_node)"
-  unfolding n_def n'_def 
+  unfolding n_def n'_def
   apply (simp)
   apply (subst modify_map_same | subst modify_map_other, simp add: dest2_node_def)+
   apply (simp add: src)
@@ -2813,7 +2813,7 @@ lemma (in mdb_swap) swap_cases [case_names src_dest dest_src other]:
   "\<lbrakk>mdbNext src_node = dest; mdbPrev dest_node = src; mdbNext dest_node \<noteq> src; mdbPrev src_node \<noteq> dest\<rbrakk> \<Longrightarrow> P"
   and dest_src:
   "\<lbrakk>mdbNext dest_node = src; mdbPrev src_node = dest; mdbNext src_node \<noteq> dest; mdbPrev dest_node \<noteq> src\<rbrakk> \<Longrightarrow> P"
-  and other: 
+  and other:
   "\<lbrakk>mdbNext src_node \<noteq> dest; mdbPrev dest_node \<noteq> src; mdbNext dest_node \<noteq> src; mdbPrev src_node \<noteq> dest \<rbrakk> \<Longrightarrow> P"
   shows "P"
 proof (cases "mdbNext src_node = dest")
@@ -2835,7 +2835,7 @@ proof (cases "mdbNext src_node = dest")
     proof
       assume "mdbPrev src_node = dest"
       hence "mdbNext dest_node = src" using src
-        by (clarsimp elim: dlistEp)  
+        by (clarsimp elim: dlistEp)
       hence "m \<turnstile> dest \<leadsto> src" using dest
         by - (rule next_fold, simp+)
       moreover have "m \<turnstile> src \<leadsto> dest" using src True
@@ -2845,9 +2845,9 @@ proof (cases "mdbNext src_node = dest")
   qed
 next
   case False
-  
+
   note firstFalse = False
-  
+
   show ?thesis
   proof (cases "mdbNext dest_node = src")
     case True
@@ -2858,7 +2858,7 @@ next
       proof
         assume "mdbPrev dest_node = src"
         hence "mdbNext src_node = dest" using dest
-          by (clarsimp elim: dlistEp)  
+          by (clarsimp elim: dlistEp)
         hence "m \<turnstile> src \<leadsto> dest" using src
           by - (rule next_fold, simp+)
         moreover have "m \<turnstile> dest \<leadsto> src" using dest True
@@ -2875,7 +2875,7 @@ next
     qed fact+
   qed
 qed
-   
+
 lemma (in mdb_swap) src_prev_next [intro?]:
   "mdbPrev src_node \<noteq> 0 \<Longrightarrow> m \<turnstile> mdbPrev src_node \<leadsto> src"
   using src
@@ -2915,13 +2915,13 @@ lemma (in mdb_swap) dest_prev_next [intro?]:
 lemma (in mdb_swap) n_dest:
   "n dest = Some (CTE scap (MDB (if mdbNext src_node = dest then src else mdbNext src_node) (if mdbPrev src_node = dest then src else mdbPrev src_node) (mdbRevocable src_node) (mdbFirstBadged src_node)))"
   unfolding n_def n'_def using dest p_0
-  apply (simp only: dest2_next dest2_prev)      
-  apply (cases "mdbPrev src_node = dest")   
+  apply (simp only: dest2_next dest2_prev)
+  apply (cases "mdbPrev src_node = dest")
    apply (subgoal_tac "dest \<noteq> mdbNext src_node")
     apply (simp add: modify_map_same modify_map_other)
     apply (cases src_node, simp)
    apply clarsimp
-  apply (cases "mdbNext src_node = dest")      
+  apply (cases "mdbNext src_node = dest")
    apply (simp add: modify_map_same modify_map_other)
    apply (cases src_node, simp)
   apply (simp add: modify_map_same modify_map_other)
@@ -2930,31 +2930,31 @@ lemma (in mdb_swap) n_dest:
 
 lemma (in mdb_swap) n_dest_prev:
   assumes md: "m (mdbPrev dest_node) = Some cte"
-  shows "\<exists>cte'. n (mdbPrev dest_node) = Some cte' 
+  shows "\<exists>cte'. n (mdbPrev dest_node) = Some cte'
   \<and> mdbNext (cteMDBNode cte') = (if dest = mdbNext src_node then mdbNext dest_node else src)
-  \<and> mdbPrev (cteMDBNode cte') =       
-  (if (mdbNext src_node = mdbPrev dest_node \<or> dest = mdbNext src_node) then dest else 
+  \<and> mdbPrev (cteMDBNode cte') =
+  (if (mdbNext src_node = mdbPrev dest_node \<or> dest = mdbNext src_node) then dest else
   mdbPrev (cteMDBNode cte))"
 proof -
   have nz: "(mdbPrev dest_node) \<noteq> 0" using md
     by (rule dom_into_not0 [OF no_0 domI])
-  
+
   show ?thesis
-  proof (cases rule: cases2 [of "dest = mdbNext src_node"  "mdbNext src_node = mdbPrev dest_node"]) 
+  proof (cases rule: cases2 [of "dest = mdbNext src_node"  "mdbNext src_node = mdbPrev dest_node"])
     case pos_pos thus ?thesis by simp
   next
     case neg_pos
     thus ?thesis using nz md
-      unfolding n_def n'_def  
+      unfolding n_def n'_def
       apply (simp only: dest2_next dest2_prev)
       apply (clarsimp simp add: modify_map_same modify_map_other)
       done
   next
     case pos_neg
-   
+
     hence "(mdbPrev dest_node) = src" by simp
     thus ?thesis using pos_neg md p_0
-      unfolding n_def n'_def  
+      unfolding n_def n'_def
       apply (simp only: dest2_next dest2_prev)
       apply (simp add: modify_map_same modify_map_other del: dest2_parts )
       apply (simp only: next_unfold' dest2_next dest2_prev)
@@ -2964,7 +2964,7 @@ proof -
   next
     case neg_neg
     thus ?thesis using md nz
-      unfolding n_def n'_def  
+      unfolding n_def n'_def
       apply (simp only: dest2_next dest2_prev)
       apply (clarsimp simp add: modify_map_same modify_map_other)
       done
@@ -2974,32 +2974,32 @@ qed
 (* Dual of above *)
 lemma (in mdb_swap) n_dest_next:
   assumes md: "m (mdbNext dest_node) = Some cte"
-  shows "\<exists>cte'. n (mdbNext dest_node) = Some cte' 
-  \<and> mdbNext (cteMDBNode cte') = (if (src = mdbNext dest_node \<or> mdbNext dest_node = mdbPrev src_node) then dest else mdbNext (cteMDBNode cte))   
+  shows "\<exists>cte'. n (mdbNext dest_node) = Some cte'
+  \<and> mdbNext (cteMDBNode cte') = (if (src = mdbNext dest_node \<or> mdbNext dest_node = mdbPrev src_node) then dest else mdbNext (cteMDBNode cte))
   \<and> mdbPrev (cteMDBNode cte') =  (if src = mdbNext dest_node then mdbPrev dest_node else src)"
-proof -  
+proof -
   have nz: "(mdbNext dest_node) \<noteq> 0" using md
     by (rule dom_into_not0 [OF no_0 domI])
-  
-  show ?thesis 
-  proof (cases rule: cases2 [of "src = mdbNext dest_node"  "mdbNext dest_node = mdbPrev src_node"]) 
+
+  show ?thesis
+  proof (cases rule: cases2 [of "src = mdbNext dest_node"  "mdbNext dest_node = mdbPrev src_node"])
     case pos_pos thus ?thesis by simp
   next
     case neg_pos
-    hence "(mdbPrev src_node) \<noteq> dest" 
+    hence "(mdbPrev src_node) \<noteq> dest"
       by - (rule, simp add: next_dest_prev_src_sym)
     thus ?thesis using nz md neg_pos
-      unfolding n_def n'_def  
+      unfolding n_def n'_def
       apply (simp only: dest2_next dest2_prev)
       apply (clarsimp simp add: modify_map_same modify_map_other)
       done
   next
     case pos_neg
     hence pd: "mdbPrev src_node = dest" by simp
-    
+
     have "mdbNext src_node \<noteq> dest"
     proof
-      assume a: "mdbNext src_node = dest"      
+      assume a: "mdbNext src_node = dest"
       from pd have "mdbPrev src_node \<noteq> 0" by simp
       hence "m \<turnstile> mdbPrev src_node \<leadsto> src" ..
       also have "m \<turnstile> src \<leadsto> dest" using src next_fold a
@@ -3007,7 +3007,7 @@ proof -
       finally show False using pd by simp
     qed
     thus ?thesis using md p_0 pd pos_neg nz
-      unfolding n_def n'_def  
+      unfolding n_def n'_def
       apply (simp only: dest2_next dest2_prev)
       apply (simp add: modify_map_same modify_map_other del: dest2_parts )
       apply (simp only: dest2_next dest2_prev)
@@ -3017,7 +3017,7 @@ proof -
   next
     case neg_neg
     thus ?thesis using md nz
-      unfolding n_def n'_def  
+      unfolding n_def n'_def
       apply (simp only: dest2_next dest2_prev)
       apply (clarsimp simp add: modify_map_same modify_map_other)
       done
@@ -3026,38 +3026,38 @@ qed
 
 lemma (in mdb_swap) n_src_prev:
   assumes md: "m (mdbPrev src_node) = Some cte"
-  shows "\<exists>cte'. n (mdbPrev src_node) = Some cte' 
+  shows "\<exists>cte'. n (mdbPrev src_node) = Some cte'
   \<and> mdbNext (cteMDBNode cte') = (if src = mdbNext dest_node then mdbNext src_node else dest)
-  \<and> mdbPrev (cteMDBNode cte') =       
-  (if (mdbNext dest_node = mdbPrev src_node \<or> src = mdbNext dest_node) then src else 
+  \<and> mdbPrev (cteMDBNode cte') =
+  (if (mdbNext dest_node = mdbPrev src_node \<or> src = mdbNext dest_node) then src else
   mdbPrev (cteMDBNode cte))"
 proof -
   have nz: "(mdbPrev src_node) \<noteq> 0" using md
     by (rule dom_into_not0 [OF no_0 domI])
-  
+
   show ?thesis
-  proof (cases rule: cases2 [of "dest = mdbNext src_node"  "mdbNext src_node = mdbPrev dest_node"]) 
+  proof (cases rule: cases2 [of "dest = mdbNext src_node"  "mdbNext src_node = mdbPrev dest_node"])
     case pos_pos thus ?thesis by simp
   next
     case neg_pos
     thus ?thesis using nz md
-      unfolding n_def n'_def  
+      unfolding n_def n'_def
       apply (simp only: dest2_next dest2_prev)
       apply (clarsimp simp add: modify_map_same modify_map_other)
       done
   next
     case pos_neg
-   
+
     hence "(mdbPrev dest_node) = src" by simp
     thus ?thesis using pos_neg md p_0
-      unfolding n_def n'_def  
+      unfolding n_def n'_def
       apply (simp only: dest2_next dest2_prev)
       apply (clarsimp simp add: modify_map_same modify_map_other del: dest2_parts )
       done
   next
     case neg_neg
     thus ?thesis using md nz
-      unfolding n_def n'_def  
+      unfolding n_def n'_def
       apply (simp only: dest2_next dest2_prev)
       by (clarsimp simp add: modify_map_same modify_map_other)
   qed
@@ -3066,44 +3066,44 @@ qed
 (* Dual of above *)
 lemma (in mdb_swap) n_src_next:
   assumes md: "m (mdbNext src_node) = Some cte"
-  shows "\<exists>cte'. n (mdbNext src_node) = Some cte' 
-  \<and> mdbNext (cteMDBNode cte') = (if (dest = mdbNext src_node \<or> mdbNext src_node = mdbPrev dest_node) then src else mdbNext (cteMDBNode cte))   
+  shows "\<exists>cte'. n (mdbNext src_node) = Some cte'
+  \<and> mdbNext (cteMDBNode cte') = (if (dest = mdbNext src_node \<or> mdbNext src_node = mdbPrev dest_node) then src else mdbNext (cteMDBNode cte))
   \<and> mdbPrev (cteMDBNode cte') =  (if dest = mdbNext src_node then mdbPrev src_node else dest)"
-proof -  
+proof -
   have nz: "(mdbNext src_node) \<noteq> 0" using md
     by (rule dom_into_not0 [OF no_0 domI])
-  
-  show ?thesis 
-  proof (cases rule: cases2 [of "src = mdbNext dest_node"  "mdbNext dest_node = mdbPrev src_node"]) 
+
+  show ?thesis
+  proof (cases rule: cases2 [of "src = mdbNext dest_node"  "mdbNext dest_node = mdbPrev src_node"])
     case pos_pos thus ?thesis by simp
   next
     case neg_pos
-    hence "(mdbPrev src_node) \<noteq> dest" 
+    hence "(mdbPrev src_node) \<noteq> dest"
       by - (rule, simp add: next_dest_prev_src_sym)
     thus ?thesis using nz md neg_pos
-      unfolding n_def n'_def  
+      unfolding n_def n'_def
       apply (simp only: dest2_next dest2_prev)
       by (clarsimp simp add: modify_map_same modify_map_other)
   next
     case pos_neg
     hence pd: "mdbPrev src_node = dest" by simp
-    
+
     have "mdbNext src_node \<noteq> dest"
     proof
-      assume a: "mdbNext src_node = dest"      
+      assume a: "mdbNext src_node = dest"
       from pd have "mdbPrev src_node \<noteq> 0" by simp
       hence "m \<turnstile> mdbPrev src_node \<leadsto> src" ..
       also have "m \<turnstile> src \<leadsto> dest" using src using a next_fold by auto
       finally show False using pd by simp
     qed
     thus ?thesis using md p_0 pd pos_neg nz
-      unfolding n_def n'_def  
+      unfolding n_def n'_def
       apply (simp only: dest2_next dest2_prev)
       by (clarsimp simp add: modify_map_same modify_map_other del: dest2_parts )
   next
     case neg_neg
     thus ?thesis using md nz
-      unfolding n_def n'_def  
+      unfolding n_def n'_def
       apply (simp only: dest2_next dest2_prev)
       by (clarsimp simp add: modify_map_same modify_map_other)
   qed
@@ -3144,11 +3144,11 @@ proof -
   also have pn: "m \<turnstile> mdbNext src_node \<leadsto> p" using ps
     by (simp add: next_unfold' p_def)
   finally have sp [intro?]: "m \<turnstile> src \<leadsto>\<^sup>+ p" .
-  
+
   have "m \<turnstile> dest \<leadsto> mdbNext dest_node" ..
   also have "mdbNext dest_node = src" by fact+
   finally have ds [intro?]: "m \<turnstile> dest \<leadsto> src" .
-  
+
   show "p \<noteq> mdbPrev src_node"
   proof
     assume a: "p = mdbPrev src_node"
@@ -3157,7 +3157,7 @@ proof -
     hence "m \<turnstile> p \<leadsto> src" using a by simp
     thus False using sp by - (drule (1) trancl_into_trancl2, simp)
   qed
-  
+
   show "p \<noteq> src"
   proof
     assume "p = src"
@@ -3165,20 +3165,20 @@ proof -
     also have "m \<turnstile> mdbNext src_node \<leadsto> p" by (rule pn)
     finally show False by simp
   qed
-  
+
   show "p \<noteq> mdbNext src_node" using pn
     by clarsimp
 
-  show "p \<noteq> mdbPrev dest_node" 
+  show "p \<noteq> mdbPrev dest_node"
   proof
-    assume a: "p = mdbPrev dest_node"  
+    assume a: "p = mdbPrev dest_node"
     hence "mdbPrev dest_node \<noteq> 0" using p0 by simp
     hence "m \<turnstile> mdbPrev dest_node \<leadsto> dest" ..
     also have "m \<turnstile> dest \<leadsto> src" ..
     also have "m \<turnstile> src \<leadsto>\<^sup>+ p" ..
     finally show False using a by simp
   qed
-    
+
   show "p \<noteq> dest"
   proof
     assume "p = dest"
@@ -3186,10 +3186,10 @@ proof -
     also have "m \<turnstile> src \<leadsto>\<^sup>+ p" ..
     finally show False by simp
   qed
-  
+
   show "p \<noteq> mdbNext dest_node"
   proof
-    assume "p = mdbNext dest_node" 
+    assume "p = mdbNext dest_node"
     also have "mdbNext dest_node = src" by fact+
     also have "m \<turnstile> src \<leadsto>\<^sup>+ p" ..
     finally show False by simp
@@ -3206,25 +3206,25 @@ lemma (in mdb_swap) other_src_prev_src_dest:
   "p \<noteq> mdbPrev dest_node" "p \<noteq> dest" "p \<noteq> mdbNext dest_node"
 proof -
   note really_annoying_simps [simp del] = word_neq_0_conv
-  
+
   have pp: "m \<turnstile> p \<leadsto> mdbPrev src_node"
-    using p0 ps unfolding p_def 
+    using p0 ps unfolding p_def
     by (cases cte, simp) (erule (1) prev_leadstoI [OF _ _ dlist])
   also have "mdbPrev src_node \<noteq> 0" using ps no_0
     by (rule no_0_neq)
   hence "m \<turnstile> mdbPrev src_node \<leadsto> src" ..
-  finally have ps' [intro?]: "m \<turnstile> p \<leadsto>\<^sup>+ src" . 
-  
-  from src_dest src have sd [intro?]: "m \<turnstile> src \<leadsto> dest" 
+  finally have ps' [intro?]: "m \<turnstile> p \<leadsto>\<^sup>+ src" .
+
+  from src_dest src have sd [intro?]: "m \<turnstile> src \<leadsto> dest"
     by (simp add: next_unfold')
 
   from ps' sd have pd [intro?]: "m \<turnstile> p \<leadsto>\<^sup>+ dest" ..
-  
+
   show "p \<noteq> mdbPrev src_node" using pp
     by clarsimp
-  
+
   show "p \<noteq> src" using ps' by clarsimp
-  
+
   show "p \<noteq> mdbNext src_node"
   proof
     assume a: "p = mdbNext src_node"
@@ -3232,14 +3232,14 @@ proof -
     also have "m \<turnstile> p \<leadsto>\<^sup>+ src" ..
     finally show False by simp
   qed
-  
-  from src_dest have "mdbPrev dest_node = src" by simp 
-  hence "mdbPrev dest_node \<noteq> 0" using mdb_ptr_src.p_0 
-    by (rule ssubst)     
-  thus "p \<noteq> mdbPrev dest_node" 
+
+  from src_dest have "mdbPrev dest_node = src" by simp
+  hence "mdbPrev dest_node \<noteq> 0" using mdb_ptr_src.p_0
+    by (rule ssubst)
+  thus "p \<noteq> mdbPrev dest_node"
     unfolding p_def using ps src_dest
     by (cases cte, auto simp add: p_prev_qe)
-  
+
   show "p \<noteq> dest"
   proof
     assume "p = dest"
@@ -3251,12 +3251,12 @@ proof -
 
   show "p \<noteq> mdbNext dest_node"
   proof
-    assume "p = mdbNext dest_node"   
+    assume "p = mdbNext dest_node"
     also have "m \<turnstile> dest \<leadsto> mdbNext dest_node" ..
     also have "m \<turnstile> p \<leadsto>\<^sup>+ src" ..
     also have "m \<turnstile> src \<leadsto> dest" ..
     finally show False by simp
-  qed  
+  qed
 qed
 
 lemma (in mdb_swap) other_dest_next_src_dest:
@@ -3272,11 +3272,11 @@ proof -
   also have pn: "m \<turnstile> mdbNext dest_node \<leadsto> p" using ps
     by (simp add: next_unfold' p_def)
   finally have sp [intro?]: "m \<turnstile> dest \<leadsto>\<^sup>+ p" .
-  
+
   have "m \<turnstile> src \<leadsto> mdbNext src_node" ..
   also have "mdbNext src_node = dest" by fact+
   finally have ds [intro?]: "m \<turnstile> src \<leadsto> dest" .
-  
+
   show "p \<noteq> mdbPrev dest_node"
   proof
     assume a: "p = mdbPrev dest_node"
@@ -3285,7 +3285,7 @@ proof -
     hence "m \<turnstile> p \<leadsto> dest" using a by simp
     thus False using sp by - (drule (1) trancl_into_trancl2, simp)
   qed
-  
+
   show "p \<noteq> dest"
   proof
     assume "p = dest"
@@ -3293,20 +3293,20 @@ proof -
     also have "m \<turnstile> mdbNext dest_node \<leadsto> p" by (rule pn)
     finally show False by simp
   qed
-  
+
   show "p \<noteq> mdbNext dest_node" using pn
     by clarsimp
 
-  show "p \<noteq> mdbPrev src_node" 
+  show "p \<noteq> mdbPrev src_node"
   proof
-    assume a: "p = mdbPrev src_node"  
+    assume a: "p = mdbPrev src_node"
     hence "mdbPrev src_node \<noteq> 0" using p0 by simp
     hence "m \<turnstile> mdbPrev src_node \<leadsto> src" ..
     also have "m \<turnstile> src \<leadsto> dest" ..
     also have "m \<turnstile> dest \<leadsto>\<^sup>+ p" ..
     finally show False using a by simp
   qed
-    
+
   show "p \<noteq> src"
   proof
     assume "p = src"
@@ -3314,10 +3314,10 @@ proof -
     also have "m \<turnstile> dest \<leadsto>\<^sup>+ p" ..
     finally show False by simp
   qed
-  
+
   show "p \<noteq> mdbNext src_node"
   proof
-    assume "p = mdbNext src_node" 
+    assume "p = mdbNext src_node"
     also have "mdbNext src_node = dest" by fact+
     also have "m \<turnstile> dest \<leadsto>\<^sup>+ p" ..
     finally show False by simp
@@ -3334,25 +3334,25 @@ lemma (in mdb_swap) other_dest_prev_dest_src:
   "p \<noteq> mdbPrev dest_node" "p \<noteq> dest" "p \<noteq> mdbNext dest_node"
 proof -
   note really_annoying_simps [simp del] = word_neq_0_conv
-  
+
   have pp: "m \<turnstile> p \<leadsto> mdbPrev dest_node"
-    using p0 ps unfolding p_def 
+    using p0 ps unfolding p_def
     by (cases cte, simp) (erule (1) prev_leadstoI [OF _ _ dlist])
   also have "mdbPrev dest_node \<noteq> 0" using ps no_0
     by (rule no_0_neq)
   hence "m \<turnstile> mdbPrev dest_node \<leadsto> dest" ..
-  finally have ps' [intro?]: "m \<turnstile> p \<leadsto>\<^sup>+ dest" . 
-  
-  from dest_src dest have sd [intro?]: "m \<turnstile> dest \<leadsto> src" 
+  finally have ps' [intro?]: "m \<turnstile> p \<leadsto>\<^sup>+ dest" .
+
+  from dest_src dest have sd [intro?]: "m \<turnstile> dest \<leadsto> src"
     by (simp add: next_unfold')
 
   from ps' sd have pd [intro?]: "m \<turnstile> p \<leadsto>\<^sup>+ src" ..
-  
+
   show "p \<noteq> mdbPrev dest_node" using pp
     by clarsimp
-  
+
   show "p \<noteq> dest" using ps' by clarsimp
-  
+
   show "p \<noteq> mdbNext dest_node"
   proof
     assume a: "p = mdbNext dest_node"
@@ -3360,14 +3360,14 @@ proof -
     also have "m \<turnstile> p \<leadsto>\<^sup>+ dest" ..
     finally show False by simp
   qed
-  
-  from dest_src have "mdbPrev src_node = dest" by simp 
-  hence s0: "mdbPrev src_node \<noteq> 0" using p_0 
-    by (rule ssubst)     
-  have sn: "mdbNext src_node \<noteq> dest" using dest_src 
+
+  from dest_src have "mdbPrev src_node = dest" by simp
+  hence s0: "mdbPrev src_node \<noteq> 0" using p_0
+    by (rule ssubst)
+  have sn: "mdbNext src_node \<noteq> dest" using dest_src
     by (clarsimp simp: s0)
-  show "p \<noteq> mdbPrev src_node" 
-    unfolding p_def using ps dest_src 
+  show "p \<noteq> mdbPrev src_node"
+    unfolding p_def using ps dest_src
     by (cases cte) (clarsimp simp: mdb_ptr_src.p_prev_qe sn s0)
 
   show "p \<noteq> src"
@@ -3381,12 +3381,12 @@ proof -
 
   show "p \<noteq> mdbNext src_node"
   proof
-    assume "p = mdbNext src_node"   
+    assume "p = mdbNext src_node"
     also have "m \<turnstile> src \<leadsto> mdbNext src_node" ..
     also have "m \<turnstile> p \<leadsto>\<^sup>+ dest" ..
     also have "m \<turnstile> dest \<leadsto> src" ..
     finally show False by simp
-  qed  
+  qed
 qed
 
 lemma next_mdbNext_intro [intro?]:
@@ -3406,27 +3406,27 @@ lemma (in mdb_swap) prev_not0_into_dom:
   shows "mdbPrev (cteMDBNode cte) \<in> dom m"
 proof -
   note p_next_qe_src = mdb_ptr_src.p_next_qe
-  
-  note annoying_simps [simp del] 
+
+  note annoying_simps [simp del]
     = next_dest_prev_src  next_dest_prev_src_sym prev_dest_next_src prev_dest_next_src_sym
-  
+
   note really_annoying_simps [simp del] = word_neq_0_conv
-  
+
   from np have "p \<in> dom n" by (rule domI)
   then obtain ctep where mp: "m p = Some ctep"
     by (clarsimp simp add: dom_n_m)
-  
+
   show ?thesis
   proof (cases rule: swap_ptr_cases [where p = p])
     case p_src_prev
-    thus ?thesis using mp np n0 src dest 
+    thus ?thesis using mp np n0 src dest
       apply simp
       apply (frule n_src_prev)
       apply (auto simp: elim: dlistEp)
       done
   next
     case p_src
-    thus ?thesis using mp np n0 src dest 
+    thus ?thesis using mp np n0 src dest
       apply (clarsimp simp add: dest2_node_prev)
       apply safe
        apply simp+
@@ -3435,76 +3435,76 @@ proof -
       done
   next
     case p_src_next
-    thus ?thesis using mp np n0 src dest 
+    thus ?thesis using mp np n0 src dest
       apply simp
       apply (frule n_src_next)
       apply (auto simp: elim: dlistEp)
       done
   next
     case p_dest_prev
-    thus ?thesis using mp np n0 src dest 
+    thus ?thesis using mp np n0 src dest
       apply simp
       apply (frule n_dest_prev)
       apply (auto elim: dlistEp)
       done
   next
     case p_dest
-    thus ?thesis using mp np n0 src dest 
+    thus ?thesis using mp np n0 src dest
       apply (clarsimp simp: n_dest)
       apply (erule dlistEp, fastforce)
       apply simp
       done
   next
     case p_dest_next
-    thus ?thesis using mp np n0 src dest 
+    thus ?thesis using mp np n0 src dest
       apply simp
       apply (frule n_dest_next)
       apply (auto simp: elim: dlistEp)
       done
   next
     case p_other
-    thus ?thesis using mp np n0 src dest 
+    thus ?thesis using mp np n0 src dest
       by (auto simp: n_other elim: dlistEp)
-  qed  
+  qed
 qed
-  
+
 lemma (in mdb_swap) cteSwap_dlist_helper:
   shows "valid_dlist n"
 proof
   fix p cte
   assume np: "n p = Some cte" and n0: "mdbPrev (cteMDBNode cte) \<noteq> 0"
-  let ?thesis = 
-    "\<exists>cte'. n (mdbPrev (cteMDBNode cte)) = Some cte' \<and> mdbNext (cteMDBNode cte') = p"  
+  let ?thesis =
+    "\<exists>cte'. n (mdbPrev (cteMDBNode cte)) = Some cte' \<and> mdbNext (cteMDBNode cte') = p"
   let ?mn = "mdbPrev (cteMDBNode cte)"
-  
+
   note p_prev_qe_src = mdb_ptr_src.p_prev_qe
-  
-  note annoying_simps [simp del] 
+
+  note annoying_simps [simp del]
     = next_dest_prev_src  next_dest_prev_src_sym prev_dest_next_src prev_dest_next_src_sym
-  
+
   note really_annoying_simps [simp del] = word_neq_0_conv
-  
+
   from np have domn: "p \<in> dom n" by (rule domI)
   then obtain ctep where mp: "m p = Some ctep"
     by (clarsimp simp add: dom_n_m)
-  
-  have dd: "mdbPrev (cteMDBNode cte) \<in> dom n" 
+
+  have dd: "mdbPrev (cteMDBNode cte) \<in> dom n"
     by (subst dom_n_m, rule prev_not0_into_dom) fact+
   then obtain cte' where mmn: "m (mdbPrev (cteMDBNode cte)) = Some cte'"
     by (clarsimp simp add: dom_n_m)
-  
+
   have dest_src_pn: "\<lbrakk>mdbPrev src_node \<noteq> 0; mdbNext src_node = dest \<rbrakk>
     \<Longrightarrow> mdbNext dest_node \<noteq> mdbPrev src_node"
   proof (rule not_sym, rule)
     assume "mdbPrev src_node = mdbNext dest_node" and "mdbPrev src_node \<noteq> 0"
       and msd: "mdbNext src_node = dest"
-    hence "m \<turnstile> mdbNext dest_node \<leadsto> src" 
+    hence "m \<turnstile> mdbNext dest_node \<leadsto> src"
       by (auto dest!: src_prev intro: next_fold)
     also have "m \<turnstile> src \<leadsto> dest" using src next_fold msd by auto
     also have "m \<turnstile> dest \<leadsto> mdbNext dest_node" ..
     finally show False by simp
   qed
-  
+
   have src_dest_pn': "\<lbrakk> mdbPrev dest_node \<noteq> 0; mdbNext dest_node = src \<rbrakk>
     \<Longrightarrow> mdbNext src_node \<noteq> mdbPrev dest_node"
   proof (rule not_sym, rule)
@@ -3517,21 +3517,21 @@ proof
       by - (rule next_fold, simp+)
     finally show False by simp
   qed
-  
+
   from domn have domm: "p \<in> dom m" by (simp add: dom_n_m)
-  with no_0 have p0: "p \<noteq> 0" 
+  with no_0 have p0: "p \<noteq> 0"
     by (rule dom_into_not0)
-  
+
   show ?thesis
   proof (cases rule: swap_ptr_cases [where p = p])
     case p_src_prev
-    
+
     hence psrc [intro?]: "m \<turnstile> p \<leadsto> src" using p0
       by (clarsimp intro!: src_prev_next)
-    
+
     show ?thesis
     proof (cases rule: swap_cases)
-      case dest_src      
+      case dest_src
       hence "?mn = src" using p_src_prev dest src np n0
         using [[hypsubst_thin = true]]
         apply clarsimp
@@ -3542,21 +3542,21 @@ proof
         by (simp add: dest2_node_def)
     next
       case src_dest
-      
+
       hence "mdbNext dest_node \<noteq> mdbPrev src_node" using p_src_prev p0
         by - (rule dest_src_pn, simp)
       hence "?mn = mdbPrev (cteMDBNode ctep)" using p_src_prev src np mp p0 dest src_dest
-        by simp (drule n_src_prev, clarsimp)    
+        by simp (drule n_src_prev, clarsimp)
       thus ?thesis using p_src_prev src_dest mmn n0 mp
         apply simp
         apply (subst n_other [OF other_src_prev_src_dest])
         apply simp+
         apply (erule dlistEp [OF mp, simplified])
-        apply simp 
+        apply simp
         done
     next
       case other
-      
+
       show ?thesis
       proof (cases "mdbPrev src_node = mdbNext dest_node")
         case True thus ?thesis using p_src_prev mmn other np mp other
@@ -3566,42 +3566,42 @@ proof
         case False
         hence mnmn: "?mn = ?mn'" using p_src_prev src np mp p0 dest other
           by simp (drule n_src_prev, clarsimp)
-        
+
         have mnp: "m \<turnstile> ?mn' \<leadsto> p" using mp mnmn n0 dlist
           by (cases ctep, auto intro!: prev_leadstoI)
-        
+
         note superFalse = False
-        
+
         show ?thesis
         proof (cases "?mn' = mdbNext dest_node")
           case True
-          thus ?thesis using mmn p_src_prev superFalse n0 mp 
-            by (simp add: mnmn) (frule n_dest_next, auto elim: dlistEp simp: other [symmetric])  
+          thus ?thesis using mmn p_src_prev superFalse n0 mp
+            by (simp add: mnmn) (frule n_dest_next, auto elim: dlistEp simp: other [symmetric])
         next
           case False
-          
+
           have eq: "n ?mn' = m ?mn'"
           proof (rule n_other)
-            
+
             show "?mn' \<noteq> mdbPrev dest_node" using mp other p_src_prev n0 mnmn
               by (cases ctep, simp add: p_prev_qe)
-            
-            show "?mn' \<noteq> dest" 
+
+            show "?mn' \<noteq> dest"
             proof
               assume "?mn' = dest"
               hence "mdbNext dest_node = mdbPrev src_node" using mnp dest p_src_prev
                 by (simp add: next_unfold')
               thus False using superFalse by simp
             qed
-            
+
             show "?mn' \<noteq> mdbNext dest_node" by fact+
-            
+
             show "?mn' \<noteq> mdbPrev src_node" using mp other p_src_prev n0 mnmn
               by (cases ctep, simp add: p_prev_qe_src)
-            
+
             show "?mn' \<noteq> src" using src mnp p_src_prev p0
               by (clarsimp simp add: next_unfold')
-            
+
             show "?mn' \<noteq> mdbNext src_node"
             proof
               assume a: "?mn' = mdbNext src_node"
@@ -3618,7 +3618,7 @@ proof
     qed
   next
     case p_src
-    
+
     show ?thesis
     proof (cases rule: swap_cases)
       case src_dest
@@ -3630,26 +3630,26 @@ proof
       case dest_src
       hence "?mn = mdbPrev dest_node" using p_src src np
         by (clarsimp simp: dest2_node_def)
-      thus ?thesis using p_src mmn dest_src 
+      thus ?thesis using p_src mmn dest_src
         apply (simp add: n_dest dest2_node_prev)
         apply (drule n_dest_prev)
         apply clarsimp
         done
     next
       case other
-      hence "?mn = mdbPrev dest_node" using p_src src np 
+      hence "?mn = mdbPrev dest_node" using p_src src np
         by (clarsimp simp add: dest2_node_def)
-      thus ?thesis using p_src mmn other  
+      thus ?thesis using p_src mmn other
         by simp (drule n_dest_prev, clarsimp)
     qed
   next
     case p_src_next
-    
+
     show ?thesis
     proof (cases rule: swap_cases)
       case src_dest
       hence "?mn = mdbPrev src_node" using p_src_next src dest np mp
-        by (clarsimp simp: n_dest)  
+        by (clarsimp simp: n_dest)
       thus ?thesis using p_src_next mmn src_dest
         by simp (drule n_src_prev, clarsimp)
     next
@@ -3670,10 +3670,10 @@ proof
 
     hence pdest [intro?]: "m \<turnstile> p \<leadsto> dest" using p0
       by (clarsimp intro!: dest_prev_next)
-    
+
     show ?thesis
     proof (cases rule: swap_cases)
-      case src_dest      
+      case src_dest
       hence "?mn = dest" using p_dest_prev src dest np n0
         using [[hypsubst_thin = true]]
         apply clarsimp
@@ -3684,21 +3684,21 @@ proof
         by (simp add: n_dest)
     next
       case dest_src
-      
+
       hence "mdbNext src_node \<noteq> mdbPrev dest_node" using p_dest_prev p0
         by - (rule src_dest_pn', simp)
       hence "?mn = mdbPrev (cteMDBNode ctep)" using p_dest_prev dest np mp p0 src dest_src
-        by simp (drule n_dest_prev, clarsimp)   
+        by simp (drule n_dest_prev, clarsimp)
       thus ?thesis using p_dest_prev dest_src mmn n0 mp
         apply simp
         apply (subst n_other [OF other_dest_prev_dest_src])
         apply simp+
         apply (erule dlistEp [OF mp, simplified])
-        apply simp 
+        apply simp
         done
     next
       case other
-      
+
       show ?thesis
       proof (cases "mdbNext src_node = mdbPrev dest_node")
         case True thus ?thesis using p_dest_prev mmn other np mp other
@@ -3711,38 +3711,38 @@ proof
 
         have mnp: "m \<turnstile> ?mn' \<leadsto> p" using mp mnmn n0 dlist
           by (cases ctep, auto intro!: prev_leadstoI)
-        
+
         note superFalse = False
-        
+
         show ?thesis
         proof (cases "?mn' = mdbNext src_node")
           case True
-          thus ?thesis using mmn p_dest_prev superFalse n0 mp 
+          thus ?thesis using mmn p_dest_prev superFalse n0 mp
             by (simp add: mnmn) (frule n_src_next, auto elim: dlistEp simp: other [symmetric])
         next
           case False
 
           have eq: "n ?mn' = m ?mn'"
-          proof (rule n_other)                      
+          proof (rule n_other)
             show "?mn' \<noteq> mdbPrev src_node" using mp other p_dest_prev n0 mnmn
               by (cases ctep, simp add: p_prev_qe_src)
 
-            show "?mn' \<noteq> src" 
+            show "?mn' \<noteq> src"
             proof
               assume "?mn' = src"
               hence "mdbNext src_node = mdbPrev dest_node" using mnp src p_dest_prev
                 by (simp add: next_unfold')
               thus False using superFalse by simp
             qed
-            
+
             show "?mn' \<noteq> mdbNext src_node" by fact+
-            
+
             show "?mn' \<noteq> mdbPrev dest_node" using mp other p_dest_prev n0 mnmn
               by (cases ctep, simp add: p_prev_qe)
-            
+
             show "?mn' \<noteq> dest" using dest mnp p_dest_prev p0
               by (clarsimp simp add: next_unfold')
-            
+
             show "?mn' \<noteq> mdbNext dest_node"
             proof
               assume a: "?mn' = mdbNext dest_node"
@@ -3759,7 +3759,7 @@ proof
     qed
   next
     case p_dest
-    
+
     show ?thesis
     proof (cases rule: swap_cases)
       case dest_src
@@ -3771,26 +3771,26 @@ proof
       case src_dest
       hence "?mn = mdbPrev src_node" using p_dest dest np
         by (clarsimp simp: n_dest)
-      thus ?thesis using p_dest mmn src_dest 
+      thus ?thesis using p_dest mmn src_dest
         apply (simp add: n_src n_dest)
         apply (drule n_src_prev)
         apply clarsimp
         done
     next
       case other
-      hence "?mn = mdbPrev src_node" using p_dest dest np 
+      hence "?mn = mdbPrev src_node" using p_dest dest np
         by (clarsimp simp add: n_dest)
-      thus ?thesis using p_dest mmn other  
+      thus ?thesis using p_dest mmn other
         by simp (drule n_src_prev, clarsimp)
     qed
   next
     case p_dest_next
-    
+
     show ?thesis
     proof (cases rule: swap_cases)
       case dest_src
       hence "?mn = mdbPrev dest_node" using p_dest_next dest src np mp
-        by (clarsimp simp: dest2_node_def)  
+        by (clarsimp simp: dest2_node_def)
       thus ?thesis using p_dest_next mmn dest_src
         by simp (drule n_dest_prev, clarsimp)
     next
@@ -3810,41 +3810,41 @@ proof
     case p_other
     hence eq: "n p = m p" by (rule n_other)
     hence eq': "cte = ctep" using mp np by simp
-    
-    have mns: "?mn \<noteq> src" 
+
+    have mns: "?mn \<noteq> src"
     proof
-      assume "?mn = src" 
+      assume "?mn = src"
       hence "p = mdbNext src_node" using mp mmn src eq' n0
         by (auto elim: dlistEp)
       thus False using p_other by simp
     qed
-    
-    have mnsn: "?mn \<noteq> mdbPrev src_node" 
+
+    have mnsn: "?mn \<noteq> mdbPrev src_node"
     proof
-      assume "?mn = mdbPrev src_node" 
+      assume "?mn = mdbPrev src_node"
       hence "src = p" using mp eq' n0
         by (cases ctep, clarsimp dest!: p_prev_qe_src)
       thus False using p_other by simp
     qed
-    
+
     have mnd: "?mn \<noteq> dest"
     proof
-      assume "?mn = dest" 
+      assume "?mn = dest"
       hence "p = mdbNext dest_node" using mp mmn dest eq' n0
         by (auto elim: dlistEp)
       thus False using p_other by simp
     qed
-    
-    have mndn: "?mn \<noteq> mdbPrev dest_node" 
+
+    have mndn: "?mn \<noteq> mdbPrev dest_node"
     proof
-      assume "?mn = mdbPrev dest_node" 
+      assume "?mn = mdbPrev dest_node"
       hence "dest = p" using mp eq' n0
         by (cases ctep, clarsimp dest!: p_prev_qe)
       thus False using p_other by simp
     qed
 
     from dd obtain cten where nmn: "n ?mn = Some cten" by auto
-    
+
     have mnext: "mdbNext (cteMDBNode cte') = p" using mp mmn
       by - (erule dlistEp, rule dom_into_not0 [OF no_0], (clarsimp simp: eq')+)
 
@@ -3854,7 +3854,7 @@ proof
       thus ?thesis using n0 by simp
     next
       case pos_neg
-      thus ?thesis using  mmn nmn mnd mndn 
+      thus ?thesis using  mmn nmn mnd mndn
         by simp (drule n_src_next, simp add: mnext eq' next_dest_prev_src_sym)
     next
       case neg_pos
@@ -3869,13 +3869,13 @@ proof
 next
   fix p cte
   assume np: "n p = Some cte" and n0: "mdbNext (cteMDBNode cte) \<noteq> 0"
-  let ?thesis = 
-    "\<exists>cte'. n (mdbNext (cteMDBNode cte)) = Some cte' \<and> mdbPrev (cteMDBNode cte') = p"  
+  let ?thesis =
+    "\<exists>cte'. n (mdbNext (cteMDBNode cte)) = Some cte' \<and> mdbPrev (cteMDBNode cte') = p"
   let ?mn = "mdbNext (cteMDBNode cte)"
 
   note p_next_qe_src = mdb_ptr_src.p_next_qe
 
-  note annoying_simps [simp del] 
+  note annoying_simps [simp del]
     = next_dest_prev_src  next_dest_prev_src_sym prev_dest_next_src prev_dest_next_src_sym
 
   from np have domn: "p \<in> dom n" by (rule domI)
@@ -3885,7 +3885,7 @@ next
   from n0 have dd: "mdbNext (cteMDBNode cte) \<in> dom n" using np
     apply -
     apply (erule contrapos_pp)
-    apply (cases cte)          
+    apply (cases cte)
     apply (drule ndom_is_0D [OF _ cteSwap_chain no_0_n, where ptr = p])
     apply simp+
     done
@@ -3898,7 +3898,7 @@ next
   proof
     assume "mdbPrev src_node = mdbNext dest_node" and "mdbNext dest_node \<noteq> 0"
       and msd: "mdbNext src_node = dest"
-    hence "m \<turnstile> mdbNext dest_node \<leadsto> src" 
+    hence "m \<turnstile> mdbNext dest_node \<leadsto> src"
       by (auto dest!: src_prev intro: next_fold)
     also have "m \<turnstile> src \<leadsto> dest" using src using msd next_fold by auto
     also have "m \<turnstile> dest \<leadsto> mdbNext dest_node" ..
@@ -3919,7 +3919,7 @@ next
   qed
 
   from domn have domm: "p \<in> dom m" by (simp add: dom_n_m)
-  with no_0 have p0: "p \<noteq> 0" 
+  with no_0 have p0: "p \<noteq> 0"
     by (rule dom_into_not0)
 
   from np have npp: "n \<turnstile> p \<leadsto> mdbNext (cteMDBNode cte)"
@@ -3930,10 +3930,10 @@ next
   show ?thesis
   proof (cases rule: swap_ptr_cases [where p = p])
     case p_src_prev
-    
-    hence p0': "mdbPrev src_node \<noteq> 0" using p0 by simp       
+
+    hence p0': "mdbPrev src_node \<noteq> 0" using p0 by simp
     hence stp: "m \<turnstile> mdbPrev src_node \<leadsto> src" ..
-    
+
     show ?thesis
     proof (cases rule: swap_cases)
       case src_dest
@@ -3957,7 +3957,7 @@ next
     qed
   next
     case p_src
-    
+
     show ?thesis
     proof (cases rule: swap_cases)
       case src_dest
@@ -3975,12 +3975,12 @@ next
       case other
       hence "?mn = mdbNext dest_node" using p_src src np
         by (cases cte, clarsimp simp add: dest2_node_def)
-      thus ?thesis using p_src mmn other  
+      thus ?thesis using p_src mmn other
         by simp (drule n_dest_next, clarsimp)
     qed
   next
     case p_src_next
-    
+
     show ?thesis
     proof (cases rule: swap_cases)
       case src_dest
@@ -3990,7 +3990,7 @@ next
         by (simp add: dest2_node_def)
     next
       case dest_src
-      
+
       hence "mdbPrev dest_node \<noteq> mdbNext src_node" using p_src_next p0
         by - (rule src_dest_pn', simp+)
       hence "?mn = mdbNext (cteMDBNode ctep)" using p_src_next src np mp p0 dest dest_src
@@ -4000,11 +4000,11 @@ next
         apply (subst n_other [OF other_src_next_dest_src])
         apply simp+
         apply (erule dlistEn [OF mp, simplified])
-        apply simp 
+        apply simp
         done
     next
       case other
-      
+
       show ?thesis
       proof (cases "mdbNext src_node = mdbPrev dest_node")
         case True thus ?thesis using p_src_next mmn other np mp other
@@ -4014,9 +4014,9 @@ next
         case False
         hence mnmn: "?mn = ?mn'" using p_src_next src np mp p0 dest other
           by simp (drule n_src_next, clarsimp)
-        
+
         note superFalse = False
-        
+
         show ?thesis
         proof (cases "?mn' = mdbPrev dest_node")
           case True
@@ -4032,7 +4032,7 @@ next
             also have mmn'[intro?]: "m \<turnstile> p \<leadsto> ?mn'" using mp by (simp add: next_unfold')
             finally have smn [intro?]: "m \<turnstile> src \<leadsto>\<^sup>+ ?mn'" .
               (* Sigh *)
-            
+
             show "?mn' \<noteq> mdbPrev src_node"
             proof
               assume a: "?mn' = mdbPrev src_node"
@@ -4042,10 +4042,10 @@ next
               also have "m \<turnstile> src \<leadsto>\<^sup>+ ?mn'" ..
               finally show False by simp
             qed
-            
+
             show "?mn' \<noteq> src" using smn
               by clarsimp
-            
+
             show "?mn' \<noteq> mdbNext src_node"
             proof
               assume "?mn' = mdbNext src_node"
@@ -4053,7 +4053,7 @@ next
               also have "m \<turnstile> p \<leadsto> ?mn'" ..
               finally show False by simp
             qed
-            
+
             show "?mn' \<noteq> mdbPrev dest_node" by fact+
             show "?mn' \<noteq> dest" using src mp p_src_next mnmn swp
               by (clarsimp simp add: next_unfold' s_d_swap_def split: if_split_asm)
@@ -4067,9 +4067,9 @@ next
     qed
   next
     case p_dest_prev
-    hence p0': "mdbPrev dest_node \<noteq> 0" using p0 by simp       
+    hence p0': "mdbPrev dest_node \<noteq> 0" using p0 by simp
     hence stp: "m \<turnstile> mdbPrev dest_node \<leadsto> dest" ..
-    
+
     show ?thesis
     proof (cases rule: swap_cases)
       case dest_src
@@ -4092,7 +4092,7 @@ next
     qed
   next
     case p_dest
-         
+
     show ?thesis
     proof (cases rule: swap_cases)
       case dest_src
@@ -4110,12 +4110,12 @@ next
       case other
       hence "?mn = mdbNext src_node" using p_dest dest np
         by (cases cte, clarsimp simp add: n_dest)
-      thus ?thesis using p_dest mmn other  
+      thus ?thesis using p_dest mmn other
         by simp (drule n_src_next, clarsimp)
     qed
   next
     case p_dest_next
-    
+
     show ?thesis
     proof (cases rule: swap_cases)
       case dest_src
@@ -4125,7 +4125,7 @@ next
         by (simp add: dest2_node_def n_dest)
     next
       case src_dest
-      
+
       hence "mdbPrev src_node \<noteq> mdbNext dest_node" using p_dest_next p0
         by - (rule src_dest_pn, simp+)
       hence "?mn = mdbNext (cteMDBNode ctep)" using p_dest_next dest np mp p0 src src_dest
@@ -4135,11 +4135,11 @@ next
         apply (subst n_other [OF other_dest_next_src_dest])
         apply simp+
         apply (erule dlistEn [OF mp, simplified])
-        apply simp 
+        apply simp
         done
     next
       case other
-      
+
       show ?thesis
       proof (cases "mdbNext dest_node = mdbPrev src_node")
         case True thus ?thesis using p_dest_next mmn other np mp other
@@ -4149,9 +4149,9 @@ next
         case False
         hence mnmn: "?mn = ?mn'" using p_dest_next src np mp p0 dest other
           by simp (drule n_dest_next, clarsimp)
-        
+
         note superFalse = False
-        
+
         show ?thesis
         proof (cases "?mn' = mdbPrev src_node")
           case True
@@ -4167,7 +4167,7 @@ next
             also have mmn'[intro?]: "m \<turnstile> p \<leadsto> ?mn'" using mp by (simp add: next_unfold')
             finally have smn [intro?]: "m \<turnstile> dest \<leadsto>\<^sup>+ ?mn'" .
               (* Sigh *)
-            
+
             show "?mn' \<noteq> mdbPrev dest_node"
             proof
               assume a: "?mn' = mdbPrev dest_node"
@@ -4177,10 +4177,10 @@ next
               also have "m \<turnstile> dest \<leadsto>\<^sup>+ ?mn'" ..
               finally show False by simp
             qed
-            
+
             show "?mn' \<noteq> dest" using smn
               by clarsimp
-            
+
             show "?mn' \<noteq> mdbNext dest_node"
             proof
               assume "?mn' = mdbNext dest_node"
@@ -4188,7 +4188,7 @@ next
               also have "m \<turnstile> p \<leadsto> ?mn'" ..
               finally show False by simp
             qed
-            
+
             show "?mn' \<noteq> mdbPrev src_node" by fact+
             show "?mn' \<noteq> src" using dest mp p_dest_next mnmn swp
               by (clarsimp simp add: next_unfold' s_d_swap_def split: if_split_asm)
@@ -4205,41 +4205,41 @@ next
     case p_other
     hence eq: "n p = m p" by (rule n_other)
     hence eq': "cte = ctep" using mp np by simp
-    
-    have mns: "?mn \<noteq> src" 
+
+    have mns: "?mn \<noteq> src"
     proof
-      assume "?mn = src" 
+      assume "?mn = src"
       hence "p = mdbPrev src_node" using mp mmn src eq' n0
         by (auto elim: dlistEn)
       thus False using p_other by simp
     qed
-    
-    have mnsn: "?mn \<noteq> mdbNext src_node" 
+
+    have mnsn: "?mn \<noteq> mdbNext src_node"
     proof
-      assume "?mn = mdbNext src_node" 
+      assume "?mn = mdbNext src_node"
       hence "src = p" using mp eq' n0
         by (cases ctep, clarsimp dest!: p_next_qe_src)
       thus False using p_other by simp
     qed
-    
-    have mnd: "?mn \<noteq> dest" 
+
+    have mnd: "?mn \<noteq> dest"
     proof
-      assume "?mn = dest" 
+      assume "?mn = dest"
       hence "p = mdbPrev dest_node" using mp mmn dest eq' n0
         by (auto elim: dlistEn)
       thus False using p_other by simp
     qed
-    
-    have mndn: "?mn \<noteq> mdbNext dest_node" 
+
+    have mndn: "?mn \<noteq> mdbNext dest_node"
     proof
-      assume "?mn = mdbNext dest_node" 
+      assume "?mn = mdbNext dest_node"
       hence "dest = p" using mp eq' n0
         by (cases ctep, clarsimp dest!: p_next_qe)
       thus False using p_other by simp
     qed
 
     from dd obtain cten where nmn: "n ?mn = Some cten" by auto
-    
+
     have mprev: "mdbPrev (cteMDBNode cte') = p" using mp mmn
       by - (erule dlistEn, rule dom_into_not0 [OF no_0], (clarsimp simp: eq')+)
 
@@ -4249,7 +4249,7 @@ next
       thus ?thesis using n0 by simp
     next
       case pos_neg
-      thus ?thesis using  mmn nmn mnd mndn 
+      thus ?thesis using  mmn nmn mnd mndn
         by simp (drule n_src_prev, simp add: mprev eq' next_dest_prev_src_sym)
     next
       case neg_pos
@@ -4274,7 +4274,7 @@ lemma sameRegionAs_eq_parent:
   by (clarsimp simp: weak_derived'_def sameRegionAs_def2)
 
 lemma sameRegionAs_eq:
-  "\<lbrakk> sameRegionAs c d; 
+  "\<lbrakk> sameRegionAs c d;
      weak_derived' c c';
      weak_derived' d d'  \<rbrakk>
   \<Longrightarrow> sameRegionAs c' d'"
@@ -4313,7 +4313,7 @@ lemma sameRegionAs_scap_child:
   apply (erule sameRegionAs_eq_child, rule src_derived)
   done
 
-lemmas region_simps = 
+lemmas region_simps =
   sameRegionAs_scap_child sameRegionAs_scap_parent
   sameRegionAs_dcap_child sameRegionAs_dcap_parent
 
@@ -4357,7 +4357,7 @@ lemma isNTFNbadge_dest:
   "isNotificationCap dest_cap \<Longrightarrow> capNtfnBadge dcap = capNtfnBadge dest_cap"
   using dest_derived by (auto simp: weak_derived'_def isCap_simps)
 
-lemmas ep_simps = 
+lemmas ep_simps =
   isEPsrc isEPbadge_src isNTFNsrc isNTFNbadge_src
   isEPdest isEPbadge_dest isNTFNdest isNTFNbadge_dest
 
@@ -4376,13 +4376,13 @@ lemma (in mdb_swap) cteSwap_valid_badges:
 proof -
   from valid
   have "valid_badges m" ..
-  thus ?thesis using src dest 
+  thus ?thesis using src dest
     apply (clarsimp simp add: valid_badges_def next_m_n2)
     apply (frule_tac p=p in n_cap)
     apply (frule_tac p=p' in n_cap)
     apply (drule badge_n)+
-    apply (clarsimp simp: s_d_swap_def sameRegion_ntfn sameRegion_ep 
-                          ep_simps region_simps 
+    apply (clarsimp simp: s_d_swap_def sameRegion_ntfn sameRegion_ep
+                          ep_simps region_simps
                     split: if_split_asm)
        apply fastforce
       apply fastforce
@@ -4409,7 +4409,7 @@ proof
   assume "n \<turnstile> p \<leadsto>\<^sup>+ p'"
   thus "m \<turnstile> s_d_swp p \<leadsto>\<^sup>+ s_d_swp p'"
     by induct (auto simp: next_m_n2 elim!: trancl_trans)
-next  
+next
   assume "m \<turnstile> s_d_swp p \<leadsto>\<^sup>+ s_d_swp p'"
   thus "n \<turnstile> p \<leadsto>\<^sup>+ p'"
     by (fastforce dest: m_trancl)
@@ -4420,11 +4420,11 @@ lemma (in mdb_swap) n_rtrancl:
   by (simp add: rtrancl_eq_or_trancl n_trancl)
 
 lemma (in mdb_swap) n_cap_eq':
-  "(\<exists>n'. n p = Some (CTE cap n')) = 
-   (if p = src 
-    then cap = dcap 
-    else if p = dest 
-    then cap = scap 
+  "(\<exists>n'. n p = Some (CTE cap n')) =
+   (if p = src
+    then cap = dcap
+    else if p = dest
+    then cap = scap
     else \<exists>n'. m p = Some (CTE cap n'))"
   using src dest
   apply simp
@@ -4487,11 +4487,11 @@ lemma (in mdb_swap) n_cap_eq':
   apply (cases "mdbPrev src_node = p", simp)
   apply simp
   done
-  
+
 lemma (in mdb_swap) n_cap_eq:
-  "(\<exists>n'. n p = Some (CTE cap n')) = 
-  (\<exists>n'. if p = src then m (s_d_swp p) = Some (CTE dest_cap n') \<and> cap = dcap 
-        else if p = dest then m (s_d_swp p) = Some (CTE src_cap n') \<and> cap = scap 
+  "(\<exists>n'. n p = Some (CTE cap n')) =
+  (\<exists>n'. if p = src then m (s_d_swp p) = Some (CTE dest_cap n') \<and> cap = dcap
+        else if p = dest then m (s_d_swp p) = Some (CTE src_cap n') \<and> cap = scap
         else m (s_d_swp p) = Some (CTE cap n'))"
   apply (simp add: s_d_swp_def n_cap_eq' src dest)
   apply (auto simp: s_d_swap_def)
@@ -4502,7 +4502,7 @@ lemma (in mdb_swap) cteSwap_chunked:
 proof -
   from valid
   have "mdb_chunked m" ..
-  thus ?thesis 
+  thus ?thesis
     apply (clarsimp simp add: mdb_chunked_def is_chunk_def n_trancl n_rtrancl n_cap_eq)
     apply (case_tac "p = dest")
      apply simp
@@ -4553,7 +4553,7 @@ proof -
        apply (case_tac "p''=dest", simp)
        apply clarsimp
        apply (case_tac "p''=src")
-        apply (clarsimp simp: dest)        
+        apply (clarsimp simp: dest)
         apply (clarsimp simp: region_simps)
         apply (erule_tac x=dest in allE)
         apply (clarsimp simp: dest)
@@ -4573,7 +4573,7 @@ proof -
      apply (case_tac "p''=src")
       apply (simp add: dest region_simps)
       apply (erule_tac x=dest in allE)
-      apply (clarsimp simp: dest)      
+      apply (clarsimp simp: dest)
      apply simp
     apply clarsimp
     apply (case_tac "p'=dest")
@@ -4629,7 +4629,7 @@ proof -
      apply (case_tac "p''=src")
       apply (simp add: region_simps dest)
       apply (erule_tac x=dest in allE)
-      apply (clarsimp simp: dest)      
+      apply (clarsimp simp: dest)
      apply simp
     apply clarsimp
     apply (case_tac "p'=src")
@@ -4790,12 +4790,12 @@ lemma distinct_zombies_switchE:
   apply (drule_tac x="(id (x := y, y := x)) ptr" in spec)
   apply (drule_tac x="(id (x := y, y := x)) ptr'" in spec)
   apply (clarsimp split del: if_split)
-  apply (clarsimp simp: isCap_Master 
-                        capBits_Master 
-                        capClass_Master 
-                        capUntyped_Master 
+  apply (clarsimp simp: isCap_Master
+                        capBits_Master
+                        capClass_Master
+                        capUntyped_Master
                   split: if_split_asm )
-  done 
+  done
 
 context mdb_swap
 begin
@@ -4859,7 +4859,7 @@ lemma untyped_mdb_n:
   apply clarsimp
   done
 
-  
+
 lemma untyped_inc_n:
   assumes untyped_eq: "isUntypedCap src_cap \<Longrightarrow> scap = src_cap"
                       "isUntypedCap dest_cap \<Longrightarrow> dcap = dest_cap"
@@ -4905,7 +4905,7 @@ lemma n_prevD:
   apply (cases "p=0")
    apply (clarsimp simp: mdb_prev_def s_d_swap_def)
    apply (rule conjI)
-    apply clarsimp 
+    apply clarsimp
     apply (simp add: n_dest)
     apply (case_tac z)
     apply (clarsimp simp: src split: if_split_asm)
@@ -4922,7 +4922,7 @@ lemma n_prevD:
   apply (simp add: Invariants_H.valid_dlist_prevD [OF cteSwap_dlist_helper, symmetric])
   apply (simp add: Invariants_H.valid_dlist_prevD [OF dlist, symmetric] next_m_n2)
   done
-  
+
 lemma n_prev:
   "n p = Some cte \<Longrightarrow> \<exists>z. m (s_d_swp p) = Some z \<and> s_d_swp (mdbPrev (cteMDBNode cte)) = mdbPrev (cteMDBNode z)"
   apply (drule conjI [THEN exI [THEN n_prevD [unfolded mdb_prev_def]]])
@@ -4958,7 +4958,7 @@ proof -
 
     apply (frule n_cap)
     apply (frule revokable)
-    by (auto simp: weak_derived'_def dest2_node_def 
+    by (auto simp: weak_derived'_def dest2_node_def
             split: if_split_asm)
 qed
 
@@ -5089,7 +5089,7 @@ lemma cteSwap_ifunsafe'[wp]:
   "\<lbrace>if_unsafe_then_cap' and ex_cte_cap_to' c1 and ex_cte_cap_to' c2
         and cte_wp_at' (\<lambda>cte. cte_refs' (cteCap cte) = cte_refs' c) c1
         and cte_wp_at' (\<lambda>cte. cte_refs' (cteCap cte) = cte_refs' c') c2\<rbrace>
-     cteSwap c c1 c' c2 
+     cteSwap c c1 c' c2
   \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   apply (simp add: ifunsafe'_def3 cteSwap_def)
   apply (wp | simp add: o_def | rule getCTE_wp)+
@@ -5110,7 +5110,7 @@ lemma cteSwap_iflive'[wp]:
   "\<lbrace>if_live_then_nonz_cap'
         and cte_wp_at' (\<lambda>cte. zobj_refs' (cteCap cte) = zobj_refs' c) c1
         and cte_wp_at' (\<lambda>cte. zobj_refs' (cteCap cte) = zobj_refs' c') c2\<rbrace>
-     cteSwap c c1 c' c2 
+     cteSwap c c1 c' c2
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: cteSwap_def)
   apply (wp | simp)+
@@ -5125,20 +5125,20 @@ lemma cteSwap_iflive'[wp]:
   apply (rule_tac x="(id (c1 := c2, c2 := c1)) cref" in exI)
   apply auto
   done
-  
-lemmas tcbSlots = 
+
+lemmas tcbSlots =
   tcbCTableSlot_def tcbVTableSlot_def
   tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
 
 lemma cteSwap_valid_pspace'[wp]:
-  "\<lbrace>valid_pspace' and 
-    cte_wp_at' (weak_derived' c o cteCap) c1 and 
+  "\<lbrace>valid_pspace' and
+    cte_wp_at' (weak_derived' c o cteCap) c1 and
     cte_wp_at' (\<lambda>cc. isUntypedCap (cteCap cc) \<longrightarrow> (cteCap cc) = c) c1 and
-    cte_wp_at' (weak_derived' c' o cteCap) c2 and 
+    cte_wp_at' (weak_derived' c' o cteCap) c2 and
     cte_wp_at' (\<lambda>cc. isUntypedCap (cteCap cc) \<longrightarrow> (cteCap cc) = c') c2 and
     valid_cap' c and valid_cap' c' and
-    K (c1 \<noteq> c2)\<rbrace> 
-  cteSwap c c1 c' c2 
+    K (c1 \<noteq> c2)\<rbrace>
+  cteSwap c c1 c' c2
   \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   unfolding cteSwap_def
   apply (simp add: pred_conj_def valid_pspace'_def valid_mdb'_def)
@@ -5204,12 +5204,12 @@ crunch tcbDomain_obj_at'[wp]: cteSwap "obj_at' (\<lambda>tcb. x = tcbDomain tcb)
 
 lemma cteSwap_idle'[wp]:
   "\<lbrace>valid_idle'\<rbrace>
-     cteSwap c c1 c' c2 
+     cteSwap c c1 c' c2
    \<lbrace>\<lambda>rv s. valid_idle' s\<rbrace>"
   apply (simp add: cteSwap_def)
   apply (wp updateCap_idle' | simp)+
   done
-      
+
 lemma weak_derived_zobj:
   "weak_derived' c c' \<Longrightarrow> zobj_refs' c' = zobj_refs' c"
   apply (clarsimp simp: weak_derived'_def)
@@ -5277,11 +5277,11 @@ lemma weak_derived_untypedZeroRange:
 lemma cteSwap_urz[wp]:
   "\<lbrace>untyped_ranges_zero' and valid_pspace'
     and cte_wp_at' (\<lambda>cc. isUntypedCap (cteCap cc) \<longrightarrow> (cteCap cc) = c) c1
-    and cte_wp_at' (weak_derived' c' o cteCap) c2 
+    and cte_wp_at' (weak_derived' c' o cteCap) c2
     and cte_wp_at' (\<lambda>cc. isUntypedCap (cteCap cc) \<longrightarrow> (cteCap cc) = c') c2
     and cte_wp_at' (weak_derived' c \<circ> cteCap) c1
-    and K (c1 \<noteq> c2)\<rbrace> 
-  cteSwap c c1 c' c2 
+    and K (c1 \<noteq> c2)\<rbrace>
+  cteSwap c c1 c' c2
   \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
   apply (simp add: cteSwap_def)
   apply (rule hoare_pre)
@@ -5322,13 +5322,13 @@ crunch ksDomScheduleIdx [wp]: cteSwap "\<lambda>s. P (ksDomScheduleIdx s)"
 
 lemma cteSwap_invs'[wp]:
   "\<lbrace>invs' and valid_cap' c and valid_cap' c' and
-    ex_cte_cap_to' c1 and ex_cte_cap_to' c2 and 
+    ex_cte_cap_to' c1 and ex_cte_cap_to' c2 and
     cte_wp_at' (\<lambda>cc. isUntypedCap (cteCap cc) \<longrightarrow> (cteCap cc) = c) c1 and
-    cte_wp_at' (weak_derived' c' o cteCap) c2 and 
+    cte_wp_at' (weak_derived' c' o cteCap) c2 and
     cte_wp_at' (\<lambda>cc. isUntypedCap (cteCap cc) \<longrightarrow> (cteCap cc) = c') c2 and
-    cte_wp_at' (weak_derived' c \<circ> cteCap) c1 and 
-    K (c1 \<noteq> c2)\<rbrace> 
-  cteSwap c c1 c' c2 
+    cte_wp_at' (weak_derived' c \<circ> cteCap) c1 and
+    K (c1 \<noteq> c2)\<rbrace>
+  cteSwap c c1 c' c2
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def pred_conj_def)
   apply (rule hoare_pre)
@@ -5341,8 +5341,8 @@ lemma cteSwap_invs'[wp]:
   done
 
 lemma capSwap_invs'[wp]:
-  "\<lbrace>invs' and ex_cte_cap_to' c1 and ex_cte_cap_to' c2\<rbrace> 
-  capSwapForDelete c1 c2 
+  "\<lbrace>invs' and ex_cte_cap_to' c1 and ex_cte_cap_to' c2\<rbrace>
+  capSwapForDelete c1 c2
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: capSwapForDelete_def)
   apply (wp getCTE_wp')
@@ -5402,7 +5402,7 @@ lemma no_loops_tranclD:
   done
 
 lemmas mdb_chain_0_tranclD = no_loops_tranclD [OF _ mdb_chain_0_no_loops]
-  
+
 lemma capRange_Zombie:
   "capRange (Zombie r b n) = {r..r + 2 ^ (zBits b) - 1}"
   by (simp add: capRange_def objBits_simps)
@@ -5416,7 +5416,7 @@ lemma caps_contained_subrange:
   apply (erule_tac x=sl in allE)
   apply simp
   apply blast
-  done  
+  done
 lemma ex_cte_cap_to'_cteCap:
   "ex_cte_cap_to' p = (\<lambda>s. \<exists>p' c. cteCaps_of s p' = Some c \<and> p \<in> cte_refs' c (irq_node' s))"
   apply (simp add: ex_cte_cap_to'_def cte_wp_at_ctes_of cteCaps_of_def)
@@ -5600,7 +5600,7 @@ lemma distinct_zombies_seperate_if_zombiedE:
                     isZombie (cteCap cte'); \<not> isZombie (cteCap cte);
                     \<not> isZombie (cteCap cte'');
                     \<not> isUntypedCap (cteCap cte''); \<not> isArchPageCap (cteCap cte'');
-                    capClass (cteCap cte'') = PhysicalClass; 
+                    capClass (cteCap cte'') = PhysicalClass;
                     capUntypedPtr (cteCap cte'') = capUntypedPtr (cteCap cte);
                     capBits (cteCap cte'') = capBits (cteCap cte)
                         \<rbrakk> \<Longrightarrow> False    \<rbrakk>
@@ -5797,7 +5797,7 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
     apply simp
     done
 
-qed   
+qed
 
 lemma updateCap_untyped_ranges_zero_simple:
   "\<lbrace>cte_wp_at' ((\<lambda>cp. untypedZeroRange cp = untypedZeroRange cap) o cteCap) sl and untyped_ranges_zero'\<rbrace>
@@ -5830,7 +5830,7 @@ lemma make_zombie_invs':
                              \<and> bound_tcb_at' (op = None) p s
                              \<and> obj_at' (Not \<circ> tcbQueued) p s
                              \<and> (\<forall>pr. p \<notin> set (ksReadyQueues s pr)))) sl s\<rbrace>
-    updateCap sl cap 
+    updateCap sl cap
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   including no_pre
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
@@ -5961,7 +5961,7 @@ lemma make_zombie_cnode_invs':
                       cap = Zombie (capCNodePtr (cteCap cte))
                                    (ZombieCNode (capCNodeBits (cteCap cte)))
                                    (shiftL 1 (capCNodeBits (cteCap cte)))) sl s\<rbrace>
-    updateCap sl cap 
+    updateCap sl cap
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wp make_zombie_invs')
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
@@ -5976,15 +5976,15 @@ lemma make_zombie_cnode_invs':
   done
 
 lemma make_zombie_tcb_invs':
-  "\<lbrace>\<lambda>s. invs' s \<and> 
+  "\<lbrace>\<lambda>s. invs' s \<and>
         cte_wp_at' (\<lambda>cte. isFinal (cteCap cte) sl (cteCaps_of s)) sl s \<and>
-        cte_wp_at' (\<lambda>cte. isThreadCap (cteCap cte) \<and> 
+        cte_wp_at' (\<lambda>cte. isThreadCap (cteCap cte) \<and>
                           cap = Zombie (capTCBPtr (cteCap cte)) ZombieTCB 5) sl s
          \<and> st_tcb_at' (op = Inactive) (capZombiePtr cap) s
          \<and> bound_tcb_at' (op = None) (capZombiePtr cap) s
          \<and> obj_at' (Not \<circ> tcbQueued) (capZombiePtr cap) s
-         \<and> (\<forall>p. capZombiePtr cap \<notin> set (ksReadyQueues s p))\<rbrace> 
-    updateCap sl cap 
+         \<and> (\<forall>p. capZombiePtr cap \<notin> set (ksReadyQueues s p))\<rbrace>
+    updateCap sl cap
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wp_trace make_zombie_invs')
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
@@ -6030,7 +6030,7 @@ lemma sameObjectAs_capRange:
   by (rule sameObject_capRange, simp add: sameObjectAs_sym)
 
 lemma updateCap_final_zombie:
-  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>c. isFinal (cteCap c) sl (cteCaps_of s)) sl s \<and> 
+  "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>c. isFinal (cteCap c) sl (cteCaps_of s)) sl s \<and>
         cte_wp_at' (\<lambda>c. (isThreadCap (cteCap c) \<or> isCNodeCap (cteCap c) \<or> isZombie (cteCap c)) \<and>
                         isZombie cap \<and> capUntypedPtr cap = capUntypedPtr (cteCap c)) sl s\<rbrace>
    updateCap sl cap
@@ -6127,8 +6127,8 @@ lemma updateCap_final_other:
   done
 
 lemma cteSwap_cte_wp_cteCap:
-  "\<lbrace>\<lambda>s. p \<noteq> sl \<and> 
-       (p = p' \<longrightarrow> cte_at' p' s \<and> P cap') \<and> 
+  "\<lbrace>\<lambda>s. p \<noteq> sl \<and>
+       (p = p' \<longrightarrow> cte_at' p' s \<and> P cap') \<and>
        (p \<noteq> p' \<longrightarrow> cte_wp_at' (\<lambda>c. P (cteCap c)) p s)\<rbrace>
   cteSwap cap p' cap' sl
   \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>c. P (cteCap c)) p\<rbrace>"
@@ -6138,15 +6138,15 @@ lemma cteSwap_cte_wp_cteCap:
              hoare_vcg_all_lift)
        apply simp
        apply (wp hoare_drop_imps)[1]
-       apply (wp updateMDB_weak_cte_wp_at updateCap_cte_wp_at_cases 
+       apply (wp updateMDB_weak_cte_wp_at updateCap_cte_wp_at_cases
                  getCTE_wp' hoare_vcg_all_lift static_imp_wp)+
     apply simp
   apply (clarsimp simp: o_def)
   done
 
 lemma capSwap_cte_wp_cteCap:
-  "\<lbrace>\<lambda>s. p \<noteq> sl \<and> 
-       (p = p' \<longrightarrow> cte_wp_at' (\<lambda>c. P (cteCap c)) sl s) \<and> 
+  "\<lbrace>\<lambda>s. p \<noteq> sl \<and>
+       (p = p' \<longrightarrow> cte_wp_at' (\<lambda>c. P (cteCap c)) sl s) \<and>
        (p \<noteq> p' \<longrightarrow> cte_wp_at' (\<lambda>c. P (cteCap c)) p s)\<rbrace>
   capSwapForDelete p' sl
   \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>c. P (cteCap c)) p\<rbrace>"
@@ -6198,7 +6198,7 @@ lemma cte_wp_final_cteCaps_of:
   by (auto simp add: cteCaps_of_def cte_wp_at_ctes_of)
 
 lemma capSwap_final_cases:
-  "\<lbrace>\<lambda>s. p \<noteq> sl \<and> 
+  "\<lbrace>\<lambda>s. p \<noteq> sl \<and>
       (p = p' \<longrightarrow> cte_wp_at' (\<lambda>c. isFinal (cteCap c) sl (cteCaps_of s)) sl s) \<and>
       (p \<noteq> p' \<longrightarrow> cte_wp_at' (\<lambda>c. isFinal (cteCap c) p (cteCaps_of s)) p s)\<rbrace>
   capSwapForDelete p' sl
@@ -6305,7 +6305,7 @@ proof (induct rule: finalise_spec_induct)
     apply (subst finaliseSlot'_simps_ext)
     apply (simp only: split_def)
     apply (rule hoare_pre_spec_validE)
-     apply (wp | simp)+       
+     apply (wp | simp)+
          apply ((wp "1.hyps" updateCap_cte_wp_at_cases)+,
                  (assumption | rule refl | simp only: split_def fst_conv snd_conv)+)
           apply (wp | simp)+
@@ -6596,7 +6596,7 @@ lemma finaliseSlot_invs':
   and stuff: "finalise_prop_stuff Pr"
   shows
   "st \<turnstile> \<lbrace>\<lambda>s.
-      no_cte_prop Pr s \<and> invs' s \<and> sch_act_simple s 
+      no_cte_prop Pr s \<and> invs' s \<and> sch_act_simple s
               \<and> (exposed \<or> ex_cte_cap_to' slot s)
               \<and> (exposed \<or> p = slot \<or>
                   cte_wp_at' (\<lambda>cte. (P and isZombie) (cteCap cte)
@@ -6923,7 +6923,7 @@ lemma cteDelete_cte_wp_at_invs:
                        cte_wp_at' (\<lambda>cte. P (cteCap cte) \<or>
                                          cteCap cte = NullCap \<or>
                                          (\<exists>zb n. cteCap cte = Zombie slot zb n))
-                                  slot s)" 
+                                  slot s)"
                 and E="\<lambda>rv. \<top>" in hoare_post_impErr)
       apply (wp finaliseSlot_invs finaliseSlot_removeable finaliseSlot_sch_act_simple
                 hoare_drop_imps(2)[OF finaliseSlot_irqs])
@@ -6945,7 +6945,7 @@ lemma cteDelete_cte_wp_at_invs:
                                     cteCap cte = NullCap \<or>
                                     (\<exists>zb n. cteCap cte = Zombie p zb n) \<and>
                                     (\<exists>cp. P cp \<and> capZombiePtr cp \<noteq> p))
-                             p s" 
+                             p s"
                in hoare_post_imp_R)
     apply (wp finaliseSlot_invs finaliseSlot_removeable finaliseSlot_sch_act_simple
               hoare_drop_imps(2)[OF finaliseSlot_irqs])
@@ -7084,7 +7084,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 crunch rvk_prog': finaliseCap
     "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of
-       getObject_inv loadObject_default_inv 
+       getObject_inv loadObject_default_inv
         simp: crunch_simps unless_def setBoundNotification_def
       ignore: getObject setObject setCTE)
 
@@ -7160,7 +7160,7 @@ lemma cteDelete_rvk_prog:
   apply (simp add: cteDelete_def whenE_def split_def)
   apply (wp emptySlot_rvk_prog)
   apply (simp only: cases_simp)
-  apply (simp add: finaliseSlot_def) 
+  apply (simp add: finaliseSlot_def)
   apply (rule use_spec, rule finaliseSlot_rvk_prog)
   done
 
@@ -7309,7 +7309,7 @@ lemma spec_corres_cte_map_inj:
 lemma spec_corres_Zombie_cte_map_inj:
     assumes x: "\<lbrakk> s \<turnstile> cap.Zombie p zb n \<rbrakk> \<Longrightarrow> cte_at t s"
     shows
-    "\<lbrakk> (cte_map t = cte_map sl) = (t = sl) 
+    "\<lbrakk> (cte_map t = cte_map sl) = (t = sl)
         \<Longrightarrow> spec_corres s r
              (\<lambda>s. invs s \<and> cte_wp_at (op = (cap.Zombie p zb n)) sl s \<and> Q s) P'
              f f'
@@ -7646,7 +7646,7 @@ next
   show ?case
     apply simp
     apply (rule drop_spec_corres)
-    apply (simp add: reduceZombie_def case_Zombie_assert_fold) 
+    apply (simp add: reduceZombie_def case_Zombie_assert_fold)
     apply (rule stronger_corres_guard_imp[rotated])
       apply assumption
      apply (rule conjI)
@@ -7748,7 +7748,7 @@ next
         apply (simp add: liftE_bindE del: rec_del.simps)
         apply (rule corres_split [OF _ get_cap_corres])
           apply (rule_tac F="cteCap ourCTE = Zombie ptr (zbits_map bits) (Suc n)
-                               \<or> cteCap ourCTE = NullCap 
+                               \<or> cteCap ourCTE = NullCap
                                \<or> (\<exists>zb n cp. cteCap ourCTE = Zombie (cte_map slot) zb n
                                       \<and> cp = Zombie ptr (zbits_map bits) (Suc n)
                                       \<and> capZombiePtr cp \<noteq> cte_map slot)"
@@ -7893,7 +7893,7 @@ lemma wf_cteRevoke_recset:
 termination cteRevoke
   apply (rule cteRevoke.termination)
    apply (rule wf_cteRevoke_recset)
-  apply (clarsimp simp add: cteRevoke_recset_def in_monad 
+  apply (clarsimp simp add: cteRevoke_recset_def in_monad
                   dest!: in_getCTE in_preempt')
   apply (frule use_validE_R [OF _ cteDelete_rvk_prog])
    apply (rule rpo_sym)
@@ -7985,7 +7985,7 @@ lemma spec_corres_symb_exec_r_All:
   shows      "spec_corres s r P (\<lambda>s. (\<forall>p \<in> fst (g s). snd p = s \<and> Q' (fst p) s) \<and> (\<exists>rv. Q' rv s))
                               f (do rv \<leftarrow> g; h rv od)"
   unfolding spec_corres_def
-  apply (rule corres_guard_imp,         
+  apply (rule corres_guard_imp,
          rule corres_symb_exec_r_All,
          rule nf,
          rule x[unfolded spec_corres_def])
@@ -8323,10 +8323,10 @@ lemma threadSet_st_tcb_at2:
   done
 
 crunch st_tcb_at_simplish[wp]: "cancelBadgedSends" "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
-  (ignore: getObject setObject filterM 
+  (ignore: getObject setObject filterM
        wp: crunch_wps threadSet_st_tcb_at2
      simp: crunch_simps filterM_mapM makeObject_tcb unless_def)
-  
+
 lemma cancelBadgedSends_st_tcb_at':
   assumes x: "\<And>st. simple' st \<Longrightarrow> P st"
   shows      "\<lbrace>st_tcb_at' P t\<rbrace> cancelBadgedSends a b \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
@@ -8334,7 +8334,7 @@ lemma cancelBadgedSends_st_tcb_at':
     apply (rule cancelBadgedSends_st_tcb_at_simplish[where P=P and t=t])
    apply (auto simp: x elim!: pred_tcb'_weakenE)
   done
-  
+
 lemmas cteRevoke_st_tcb_at'
     = cteRevoke_preservation [OF cteDelete_st_tcb_at']
 lemmas cteRevoke_st_tcb_at_simplish
@@ -8383,7 +8383,7 @@ lemma (in mdb_move) [intro!]:
 
 lemma (in mdb_move) m'_badged:
   "m' p = Some (CTE cap node)
-  \<Longrightarrow> if p = dest then mdbFirstBadged node = mdbFirstBadged src_node \<and> cap = cap' 
+  \<Longrightarrow> if p = dest then mdbFirstBadged node = mdbFirstBadged src_node \<and> cap = cap'
      else if p = src then \<not> mdbFirstBadged node \<and> cap = NullCap
      else \<exists>node'. m p = Some (CTE cap node') \<and> mdbFirstBadged node = mdbFirstBadged node'"
   using src dest neq
@@ -8394,7 +8394,7 @@ lemma (in mdb_move) m'_badged:
   done
 
 lemma (in mdb_move) m'_next:
-  "m' \<turnstile> p \<leadsto> p' \<Longrightarrow> 
+  "m' \<turnstile> p \<leadsto> p' \<Longrightarrow>
   if p = src then p' = 0
   else if p = dest then m \<turnstile> src \<leadsto> p'
   else if p' = dest then m \<turnstile> p \<leadsto> src
@@ -8433,7 +8433,7 @@ lemma (in mdb_move) m'_cap:
   if p = src then c = NullCap
   else if p = dest then c = cap'
   else \<exists>node'. m p = Some (CTE c node')"
-  using src dest neq 
+  using src dest neq
   apply (simp add: m'_def n_def)
   apply (auto simp add: modify_map_if split: if_split_asm)
   done
@@ -8457,7 +8457,7 @@ lemma m_to_src:
   apply (erule dlistEp, clarsimp)
   apply clarsimp
   done
-   
+
 lemma m_from_prev_src:
   "m \<turnstile> mdbPrev src_node \<leadsto> p = (mdbPrev src_node \<noteq> 0 \<and> p = src)"
   apply (insert src)
@@ -8472,10 +8472,10 @@ lemma m_from_prev_src:
   done
 
 lemma m'_nextD:
-  "m' \<turnstile> p \<leadsto> p' \<Longrightarrow> 
-  (if p = src then p' = 0 
-  else if p = dest then m \<turnstile> src \<leadsto> p' 
-  else if p = mdbPrev src_node then p' = dest \<and> p \<noteq> 0 
+  "m' \<turnstile> p \<leadsto> p' \<Longrightarrow>
+  (if p = src then p' = 0
+  else if p = dest then m \<turnstile> src \<leadsto> p'
+  else if p = mdbPrev src_node then p' = dest \<and> p \<noteq> 0
   else m \<turnstile> p \<leadsto> p')"
   using src dest src_0 dest_0 dlist neq src_neq_prev
   apply (simp add: m'_def n_def)
@@ -8498,8 +8498,8 @@ lemma m'_next_eq:
   notes if_cong [cong]
   shows
   "m' \<turnstile> p \<leadsto> p' =
-  (if p = src then p' = 0 
-  else if p = dest then m \<turnstile> src \<leadsto> p' 
+  (if p = src then p' = 0
+  else if p = dest then m \<turnstile> src \<leadsto> p'
   else if p = mdbPrev src_node then p' = dest \<and> p \<noteq> 0
   else m \<turnstile> p \<leadsto> p')"
   apply (insert src dest)
@@ -8515,7 +8515,7 @@ lemma m'_next_eq:
    apply (drule prev_src)
    apply (clarsimp simp: mdb_next_unfold)
    apply (case_tac z)
-   apply clarsimp   
+   apply clarsimp
   apply (clarsimp simp: mdb_next_unfold m'_def n_def modify_map_cases)
   apply (cases "mdbNext src_node = p")
    apply (clarsimp)
@@ -8523,7 +8523,7 @@ lemma m'_next_eq:
    apply clarsimp
   apply clarsimp
   done
-   
+
 declare dest_0 [simp]
 
 lemma m'_swp_eq:
@@ -8543,19 +8543,19 @@ lemma m_tranclD:
    apply (fastforce simp: m'_swp_eq)
   apply (fastforce simp: m'_swp_eq intro: trancl_trans)
   done
-      
+
 lemma m'_trancl_eq:
   "m' \<turnstile> p \<leadsto>\<^sup>+ p' = m \<turnstile> s_d_swap p src dest \<leadsto>\<^sup>+ s_d_swap p' src dest"
   by (auto dest: m_tranclD m'_tranclD)
 
 lemma m'_rtrancl_eq:
   "m' \<turnstile> p \<leadsto>\<^sup>* p' = m \<turnstile> s_d_swap p src dest \<leadsto>\<^sup>* s_d_swap p' src dest"
-  by (auto simp: rtrancl_eq_or_trancl m'_trancl_eq s_d_swap_def) 
+  by (auto simp: rtrancl_eq_or_trancl m'_trancl_eq s_d_swap_def)
 
 lemma m_cap:
   "m p = Some (CTE c node) \<Longrightarrow>
   if p = src then \<exists>node'. c = src_cap \<and> m' dest = Some (CTE cap' node')
-  else if p = dest then \<exists>node'. c = NullCap  \<and> m' src = Some (CTE NullCap node') 
+  else if p = dest then \<exists>node'. c = NullCap  \<and> m' src = Some (CTE NullCap node')
   else \<exists>node'. m' p = Some (CTE c node')"
   apply (auto simp: src dest)
   apply (auto simp: m'_def n_def src dest modify_map_if neq)
@@ -8641,7 +8641,7 @@ lemmas ut' = isUntypedCap' capRange' untypedRange'
 
 lemma m'_revocable:
   "m' p = Some (CTE c node) \<Longrightarrow>
-  if p = src then \<not>mdbRevocable node 
+  if p = src then \<not>mdbRevocable node
   else if p = dest then mdbRevocable node = mdbRevocable src_node
   else \<exists>node'. m p = Some (CTE c node') \<and> mdbRevocable node = mdbRevocable node'"
   apply (insert src dest neq)
@@ -8649,9 +8649,9 @@ lemma m'_revocable:
   apply (clarsimp simp: m'_def n_def modify_map_if nullMDBNode_def split: if_split_asm)
   done
 
-lemma cteMove_valid_mdb_helper: 
+lemma cteMove_valid_mdb_helper:
   "(isUntypedCap cap' \<Longrightarrow> cap' = src_cap) \<Longrightarrow>valid_mdb_ctes m'"
-proof  
+proof
   note sameRegion_cap'_src [simp del]
   note dest_0 [simp del] src_0 [simp del]
   note src_next [simp del]
@@ -8660,37 +8660,37 @@ proof
 
   show "valid_dlist m'" by (rule dlist')
   show "no_0 m'" by (rule no_0')
-  
+
   have chain: "mdb_chain_0 m" ..
-    
+
   have mp: "cte_mdb_prop m dest (\<lambda>m. mdbPrev m = nullPointer \<and> mdbNext m = nullPointer)" using dest prev nxt
     unfolding cte_mdb_prop_def
-    by (simp add: nullPointer_def)    
+    by (simp add: nullPointer_def)
   hence nsd: "\<not> m \<turnstile> mdbNext src_node \<leadsto>\<^sup>* dest" using dlist
     by (auto elim: next_rtrancl_tranclE dest: null_mdb_no_trancl [OF _ no_0])
-        
+
   have sd: "mdbNext src_node \<noteq> 0 \<Longrightarrow> mdbNext src_node \<in> dom m"
   proof -
     assume T: "mdbNext src_node \<noteq> 0"
     have "m \<turnstile> src \<leadsto> mdbNext src_node" by (rule m_p_next)
     moreover have "m \<turnstile> src \<leadsto>\<^sup>+ 0" using chain src unfolding mdb_chain_0_def by (clarsimp simp: dom_def)
     ultimately have "m \<turnstile> mdbNext src_node \<leadsto>\<^sup>+ 0" using T
-      by (auto elim: tranclE2' simp: next_unfold')    
+      by (auto elim: tranclE2' simp: next_unfold')
     thus "mdbNext src_node \<in> dom m"
       by - (erule tranclE2', (clarsimp simp: next_unfold')+)
   qed
-  
+
   let ?m = "(modify_map
        (modify_map (modify_map m (mdbPrev src_node) (cteMDBNode_update (mdbNext_update (%_. dest)))) src
          (cteMDBNode_update (mdbNext_update (%_. (mdbNext nullMDBNode)))))
        dest (cteMDBNode_update (mdbNext_update (%_. (mdbNext src_node)))))"
-    
+
   let ?goal =  "mdb_chain_0 ?m"
   {
     assume "mdbPrev src_node = 0" and T: "mdbNext src_node = 0"
     hence ms: "m (mdbPrev src_node) = None" using no_0 by (simp add: no_0_def)
     hence ?goal using T
-      by (auto simp: modify_map_None [where m = m, OF ms] nullPointer_def 
+      by (auto simp: modify_map_None [where m = m, OF ms] nullPointer_def
                intro!: mdb_chain_0_modify_map_0)
   } moreover
   {
@@ -8700,14 +8700,14 @@ proof
       apply (simp add: nullMDBNode_def nullPointer_def)
       apply (subst modify_map_addr_com [where y = dest], simp add: neq)+
       apply (rule mdb_chain_0_modify_map_0)
-       apply (rule mdb_chain_0_modify_map_next)   
+       apply (rule mdb_chain_0_modify_map_next)
           apply (rule mdb_chain_0_modify_map_0 [OF chain no_0])
          apply clarsimp
-        apply (clarsimp simp: dest)    
+        apply (clarsimp simp: dest)
        apply (subst next_update_is_modify [symmetric], rule dest)
         apply simp
        apply (subst next_update_lhs_rtrancl)
-        apply simp  
+        apply simp
         apply (rule no_0_lhs_tranclI [OF no_0 dest_0])
        apply simp
        apply (rule no_0_lhs_tranclI [OF no_0])
@@ -8747,15 +8747,15 @@ proof
        apply clarsimp
        done
    }
-   ultimately have ?goal 
+   ultimately have ?goal
      apply (cases "mdbPrev src_node = 0")
      apply (cases "mdbNext src_node = 0")
      apply auto[2]
      apply (cases "mdbNext src_node = 0")
      apply auto
      done
-  
-  thus "mdb_chain_0 m'"  
+
+  thus "mdb_chain_0 m'"
     unfolding m'_def n_def
     apply -
     apply (rule mdb_chain_0_modify_map_prev)
@@ -8764,10 +8764,10 @@ proof
      apply (rule mdb_chain_0_modify_map_replace)
     apply (subst modify_map_addr_com [OF neq_sym])+
      apply (rule mdb_chain_0_modify_map_replace)
-    apply (subst modify_map_com [ where g = "(cteCap_update (%_. cap'))"], 
+    apply (subst modify_map_com [ where g = "(cteCap_update (%_. cap'))"],
       case_tac x, simp)+
     apply (rule mdb_chain_0_modify_map_inv)
-    apply (subst modify_map_com [ where g = "(cteCap_update (%_. capability.NullCap))"], 
+    apply (subst modify_map_com [ where g = "(cteCap_update (%_. capability.NullCap))"],
       case_tac x, simp)+
     apply (erule mdb_chain_0_modify_map_inv)
     apply simp
@@ -8776,14 +8776,14 @@ proof
 
   from valid
   have "valid_badges m" ..
-  thus "valid_badges m'" using src dest parency 
+  thus "valid_badges m'" using src dest parency
     apply (clarsimp simp: valid_badges_def2)
     apply (drule m'_badged)+
     apply (drule m'_next)
     apply (clarsimp simp add: weak_derived'_def split: if_split_asm)
       apply (erule_tac x=src in allE, erule_tac x=p' in allE,
              erule allE, erule impE, erule exI)
-      apply clarsimp     
+      apply clarsimp
      apply (erule_tac x=p in allE, erule_tac x=src in allE,
              erule allE, erule impE, erule exI)
      apply clarsimp
@@ -8865,7 +8865,7 @@ proof
     apply (frule spec, erule allE, erule (1) impE)
     apply (clarsimp split: if_split_asm)
      apply (simp add: n_def m'_def)
-     apply (simp add: modify_map_if) 
+     apply (simp add: modify_map_if)
     apply (simp add: n_def m'_def)
     apply (simp add: modify_map_if)
     apply (clarsimp split: if_split_asm)
@@ -8882,7 +8882,7 @@ proof
     apply (erule_tac p=src in valid_dlistEp, assumption)
      apply clarsimp
     apply (clarsimp simp: nullMDBNode_def nullPointer_def)
-    done    
+    done
 
   from valid
   have "ut_revocable' m" ..
@@ -8894,7 +8894,7 @@ proof
     apply (subgoal_tac "isUntypedCap src_cap")
      apply simp
     apply (clarsimp simp: weak_derived'_def dest!: capMaster_isUntyped)
-    done 
+    done
 
   from src
   have src': "m' src = Some (CTE NullCap nullMDBNode)"
@@ -8913,16 +8913,16 @@ proof
     apply (case_tac cte)
     apply (case_tac cte')
     apply clarsimp
-    apply (case_tac "p'=src")     
+    apply (case_tac "p'=src")
      apply (simp add: no_prev_of_src')
     apply (drule m'_next)
-    apply (drule m'_cap)+    
+    apply (drule m'_cap)+
     apply (clarsimp split: if_split_asm)
       apply (fastforce dest!: capMaster_capClass)
      apply (fastforce dest!: capMaster_capClass)
     apply fastforce
     done
-  
+
   show "irq_control m'" using src dest parency
     apply (clarsimp simp: irq_control_def)
     apply (frule m'_revocable)
@@ -8991,19 +8991,19 @@ lemma cteMove_iflive'[wp]:
   apply simp
   apply wp
         apply (simp only: if_live_then_nonz_cap'_def imp_conv_disj
-                          ex_nonz_cap_to'_def) 
+                          ex_nonz_cap_to'_def)
         apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
                   hoare_vcg_ex_lift updateCap_cte_wp_at_cases
                   getCTE_wp static_imp_wp)+
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (drule(1) if_live_then_nonz_capE')
   apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
-  apply (drule_tac x="(id (src := dest, dest := src)) cref" in spec)   
+  apply (drule_tac x="(id (src := dest, dest := src)) cref" in spec)
   apply (clarsimp dest!: weak_derived_zobj split: if_split_asm)
   done
 
 lemma cteMove_valid_pspace' [wp]:
-  "\<lbrace>\<lambda>x. valid_pspace' x \<and> 
+  "\<lbrace>\<lambda>x. valid_pspace' x \<and>
             cte_wp_at' (\<lambda>c. weak_derived' (cteCap c) capability) word1 x \<and>
             cte_wp_at' (\<lambda>c. isUntypedCap (cteCap c) \<longrightarrow> capability = cteCap c) word1 x \<and>
             cte_wp_at' (\<lambda>c. cteCap c \<noteq> NullCap) word1 x \<and>
@@ -9013,7 +9013,7 @@ lemma cteMove_valid_pspace' [wp]:
   \<lbrace>\<lambda>y. valid_pspace'\<rbrace>"
   unfolding cteMove_def
   apply (simp add: pred_conj_def valid_pspace'_def valid_mdb'_def)
-  apply (wp sch_act_wf_lift valid_queues_lift 
+  apply (wp sch_act_wf_lift valid_queues_lift
     cur_tcb_lift updateCap_no_0  updateCap_ctes_of_wp getCTE_wp | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)+
   apply (clarsimp dest!: cte_at_cte_wp_atD)
@@ -9151,7 +9151,7 @@ lemma cteMove_invs' [wp]:
   "\<lbrace>\<lambda>x. invs' x \<and> ex_cte_cap_to' word2 x \<and>
             cte_wp_at' (\<lambda>c. weak_derived' (cteCap c) capability) word1 x \<and>
             cte_wp_at' (\<lambda>c. isUntypedCap (cteCap c) \<longrightarrow> capability = cteCap c) word1 x \<and>
-            cte_wp_at' (\<lambda>c. (cteCap c) \<noteq> NullCap) word1 x \<and>  
+            cte_wp_at' (\<lambda>c. (cteCap c) \<noteq> NullCap) word1 x \<and>
             x \<turnstile>' capability \<and>
             cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) word2 x\<rbrace>
      cteMove capability word1 word2
@@ -9177,8 +9177,8 @@ lemma cteMove_cte_wp_at:
   done
 
 lemma cteMove_ex:
-  "\<lbrace>ex_cte_cap_to' ptr and 
-    cte_wp_at' (weak_derived' cap o cteCap) p and 
+  "\<lbrace>ex_cte_cap_to' ptr and
+    cte_wp_at' (weak_derived' cap o cteCap) p and
     cte_wp_at' (op = NullCap o cteCap) p' and
     K (p \<noteq> p') \<rbrace>
   cteMove cap p p'
@@ -9274,7 +9274,7 @@ lemma cap_update_corres':
   "\<lbrakk> cap_relation cap cap' \<rbrakk>
      \<Longrightarrow> corres dc
           (\<lambda>s. invs s
-              \<and> (cte_wp_at (op = cap) slot s 
+              \<and> (cte_wp_at (op = cap) slot s
                   \<or> cte_wp_at (\<lambda>c. (is_zombie cap \<or> is_cnode_cap cap \<or> is_thread_cap cap)
                                  \<and> (is_zombie c \<or> is_cnode_cap c \<or> is_thread_cap c)
                                  \<and> is_final_cap' c s \<and> obj_ref_of c = obj_ref_of cap
@@ -9360,7 +9360,7 @@ lemma inv_cnode_corres:
        apply (wp cap_move_caps_of_state cteMove_cte_wp_at [simplified o_def])+
      apply (simp add: real_cte_tcb_valid invs_def valid_state_def valid_pspace_def)
      apply (elim conjE exE)
-     apply (drule(3) real_cte_weak_derived_not_reply_masterD)+  
+     apply (drule(3) real_cte_weak_derived_not_reply_masterD)+
      apply (clarsimp simp: cte_wp_at_caps_of_state
                            ex_cte_cap_to_cnode_always_appropriate_strg
                            cte_wp_at_conj)
@@ -9386,7 +9386,7 @@ lemma inv_cnode_corres:
          apply (simp add: cte_map_def tcb_cnode_index_def tcbCallerSlot_def)
         apply (rule corres_split [OF _ getSlotCap_corres])
             apply (rule_tac P="\<lambda>s. (is_reply_cap cap \<or> cap = cap.NullCap) \<and>
-          (is_reply_cap cap \<longrightarrow> 
+          (is_reply_cap cap \<longrightarrow>
            (einvs and cte_at (threada, tcb_cnode_index 3) and
             cte_wp_at (\<lambda>c. c = cap.NullCap) prod and
             real_cte_at prod and valid_cap cap and
@@ -9425,8 +9425,8 @@ lemma inv_cnode_corres:
    apply (rule conjI, fastforce)
    apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   apply clarsimp
-  apply (case_tac "has_cancel_send_rights x7", 
-                frule has_cancel_send_rights_ep_cap, 
+  apply (case_tac "has_cancel_send_rights x7",
+                frule has_cancel_send_rights_ep_cap,
                 simp add: is_cap_simps)
    apply (clarsimp simp: when_def unless_def isCap_simps)
    apply (rule corres_guard_imp)
@@ -9485,7 +9485,7 @@ lemma updateCap_noop_invs:
   done
 
 lemmas make_zombie_or_noop_or_arch_invs
-    = hoare_vcg_disj_lift [OF updateCap_noop_invs 
+    = hoare_vcg_disj_lift [OF updateCap_noop_invs
    hoare_vcg_disj_lift [OF make_zombie_invs' arch_update_updateCap_invs],
    simplified]
 
@@ -9512,7 +9512,7 @@ lemma invokeCNode_invs' [wp]:
      apply clarsimp
      apply (erule ctes_of_valid_cap')
      apply fastforce
-    apply (wp cteDelete_invs'|simp)+  
+    apply (wp cteDelete_invs'|simp)+
    apply (intro impI conjI)
     apply (rule hoare_pre)
      apply wp+
@@ -9533,8 +9533,8 @@ crunch irq_states' [wp]: capSwapForDelete valid_irq_states'
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
-       no_irq_invalidateTLB_ASID no_irq_setHardwareASID
-       no_irq_setCurrentPD no_irq_invalidateTLB_VAASID
+       no_irq_invalidateLocalTLB_ASID no_irq_setHardwareASID
+       no_irq_setCurrentPD no_irq_invalidateLocalTLB_VAASID
        no_irq_cleanByVA_PoU
    simp: crunch_simps armv_contextSwitch_HWASID_def ignore: getObject setObject)
 
@@ -9574,7 +9574,7 @@ lemma finaliseSlot_IRQInactive:
 lemma finaliseSlot_irq_states':
   "\<lbrace>valid_irq_states'\<rbrace> finaliseSlot a b \<lbrace>\<lambda>rv. valid_irq_states'\<rbrace>"
   by (wp finaliseSlot_preservation | clarsimp)+
-  
+
 lemma cteDelete_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> cteDelete x y
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
@@ -9606,7 +9606,7 @@ lemma cteRevoke_irq_states':
   by (intro cteRevoke_preservation cteDelete_irq_states' | clarsimp)+
 
 lemma preemptionPoint_IRQInactive_spec:
-  "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> preemptionPoint 
+  "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> preemptionPoint
   \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply wp
   apply (rule hoare_pre, wp preemptionPoint_invR)
@@ -9620,7 +9620,7 @@ proof (induct rule: cteRevoke.induct)
   case (1 p s')
   show ?case
     apply (subst cteRevoke.simps)
-    apply (wp "1.hyps" unlessE_wp hoare_whenE_wp preemptionPoint_IRQInactive_spec 
+    apply (wp "1.hyps" unlessE_wp hoare_whenE_wp preemptionPoint_IRQInactive_spec
               cteDelete_IRQInactive cteDelete_irq_states' getCTE_wp')+
     apply clarsimp
     done
@@ -9635,14 +9635,14 @@ lemma cteRevoke_IRQInactive:
   done
 
 lemma inv_cnode_IRQInactive:
-  "\<lbrace>valid_irq_states'\<rbrace> invokeCNode cnode_inv 
+  "\<lbrace>valid_irq_states'\<rbrace> invokeCNode cnode_inv
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: invokeCNode_def)
   apply (rule hoare_pre)
-   apply (wp cteRevoke_IRQInactive finaliseSlot_IRQInactive 
-             cteRevoke_irq_states' cteDelete_IRQInactive 
+   apply (wp cteRevoke_IRQInactive finaliseSlot_IRQInactive
+             cteRevoke_irq_states' cteDelete_IRQInactive
              hoare_whenE_wp
-           | wpc 
+           | wpc
            | simp add:  split_def)+
   done
 

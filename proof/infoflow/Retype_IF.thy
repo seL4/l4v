@@ -257,8 +257,8 @@ lemma set_pd_reads_respects:
 
 lemma set_pd_reads_respects_g:
   "reads_respects_g aag l (\<lambda> s. is_subject aag ptr \<and> ptr \<noteq> arm_global_pd (arch_state s)) (set_pd ptr pd)"
-  apply(fastforce intro: equiv_valid_guard_imp[OF reads_respects_g] 
-                 intro: doesnt_touch_globalsI 
+  apply(fastforce intro: equiv_valid_guard_imp[OF reads_respects_g]
+                 intro: doesnt_touch_globalsI
                         set_pd_reads_respects set_pd_globals_equiv)
   done
 
@@ -284,7 +284,7 @@ lemma get_object_arm_global_pd_revg:
    apply simp
   apply(auto simp: reads_equiv_g_def globals_equiv_def)
   done
-  
+
 lemma get_pd_rev:
   "reads_equiv_valid_inv A aag (K (is_subject aag ptr)) (get_pd ptr)"
   unfolding get_pd_def
@@ -307,7 +307,7 @@ lemma store_pde_reads_respects:
 
 
 lemma store_pde_globals_equiv:
-  "\<lbrace> globals_equiv s and (\<lambda> s. ptr && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s)) \<rbrace> 
+  "\<lbrace> globals_equiv s and (\<lambda> s. ptr && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s)) \<rbrace>
    (store_pde ptr pde)
    \<lbrace> \<lambda>_. globals_equiv s \<rbrace>"
   unfolding store_pde_def
@@ -317,8 +317,8 @@ lemma store_pde_globals_equiv:
 
 lemma store_pde_reads_respects_g:
   "reads_respects_g aag l (\<lambda> s. is_subject aag (ptr && ~~ mask pd_bits) \<and> ptr && ~~ mask pd_bits \<noteq> arm_global_pd (arch_state s)) (store_pde ptr pde)"
-  apply(fastforce intro: equiv_valid_guard_imp[OF reads_respects_g] 
-                 intro: doesnt_touch_globalsI 
+  apply(fastforce intro: equiv_valid_guard_imp[OF reads_respects_g]
+                 intro: doesnt_touch_globalsI
                         store_pde_reads_respects store_pde_globals_equiv)
   done
 
@@ -335,7 +335,7 @@ lemma get_pde_revg:
   by (wp get_pd_revg)
 
 lemma copy_global_mappings_reads_respects_g:
-  "is_aligned x pd_bits \<Longrightarrow> 
+  "is_aligned x pd_bits \<Longrightarrow>
   reads_respects_g aag l (\<lambda> s. (is_subject aag x \<and> x \<noteq> arm_global_pd (arch_state s)) \<and> pspace_aligned s \<and> valid_arch_state s) (copy_global_mappings x)"
   unfolding copy_global_mappings_def
   apply simp
@@ -378,7 +378,7 @@ lemma dmo_no_mem_globals_equiv:
 
 lemma mol_globals_equiv:
   "\<lbrace>\<lambda>ms. globals_equiv st (s\<lparr>machine_state := ms\<rparr>)\<rbrace> machine_op_lift mop \<lbrace>\<lambda>a b. globals_equiv st (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
-  unfolding machine_op_lift_def 
+  unfolding machine_op_lift_def
   apply (simp add: machine_rest_lift_def split_def)
   apply wp
   apply (clarsimp simp: globals_equiv_def idle_equiv_def)
@@ -459,10 +459,10 @@ lemma ptr_range_subset:
   apply(subgoal_tac "ptr + of_nat xaa * 4 + 2\<^sup>2 - 1 = ptr + (3 + of_nat xaa * 4)")
    apply(subgoal_tac "ptr + 2 ^ bits - 1 = ptr + (2 ^ bits - 1)")
     apply(erule ssubst)+
-    apply(rule word_plus_mono_right)     
+    apply(rule word_plus_mono_right)
      apply(drule is_aligned_addD1)
       apply(erule (1) is_aligned_weaken)
-     prefer 2  
+     prefer 2
      apply(erule is_aligned_no_wrap')
      apply simp
     apply(simp_all)
@@ -501,7 +501,7 @@ lemma dmo_freeMemory_globals_equiv:
    do_machine_op (freeMemory ptr bits)
    \<lbrace> \<lambda>_. globals_equiv s \<rbrace>"
   apply(rule hoare_pre)
-  apply(simp add: do_machine_op_def freeMemory_def split_def)  
+  apply(simp add: do_machine_op_def freeMemory_def split_def)
   apply(wp)
   apply clarsimp
   apply(erule use_valid)
@@ -540,8 +540,8 @@ crunch arm_global_pd: copy_global_mappings "\<lambda> s. P (arm_global_pd (arch_
   (wp: crunch_wps simp: crunch_simps)
 
 lemma init_arch_objects_reads_respects_g:
-  "reads_respects_g aag l 
-         ((\<lambda> s. arm_global_pd (arch_state s) \<notin> set refs \<and> 
+  "reads_respects_g aag l
+         ((\<lambda> s. arm_global_pd (arch_state s) \<notin> set refs \<and>
                  pspace_aligned s \<and> valid_arch_state s) and
           K (\<forall>x\<in>set refs. is_subject aag x) and
           K (\<forall>x\<in>set refs. new_type = ArchObject PageDirectoryObj
@@ -557,7 +557,7 @@ lemma init_arch_objects_reads_respects_g:
   done
 
 lemma copy_global_mappings_globals_equiv:
-  "\<lbrace> globals_equiv s and (\<lambda> s. x \<noteq> arm_global_pd (arch_state s) \<and> is_aligned x pd_bits)\<rbrace> 
+  "\<lbrace> globals_equiv s and (\<lambda> s. x \<noteq> arm_global_pd (arch_state s) \<and> is_aligned x pd_bits)\<rbrace>
    copy_global_mappings x
    \<lbrace> \<lambda>_. globals_equiv s \<rbrace>"
   unfolding copy_global_mappings_def including no_pre
@@ -570,8 +570,8 @@ lemma copy_global_mappings_globals_equiv:
   done
 
 lemma init_arch_objects_globals_equiv:
-  "\<lbrace> globals_equiv s and 
-     (\<lambda> s. arm_global_pd (arch_state s) \<notin> set refs \<and> 
+  "\<lbrace> globals_equiv s and
+     (\<lambda> s. arm_global_pd (arch_state s) \<notin> set refs \<and>
            pspace_aligned s \<and> valid_arch_state s) and
      K (\<forall>x\<in>set refs. is_aligned x (obj_bits_api new_type obj_sz))\<rbrace>
    (init_arch_objects new_type ptr num_objects obj_sz refs)
@@ -590,7 +590,7 @@ lemma init_arch_objects_globals_equiv:
   done
 
 lemma create_cap_reads_respects_g:
-  "reads_respects_g aag l (K (is_subject aag (fst (fst slot))) and valid_global_objs) 
+  "reads_respects_g aag l (K (is_subject aag (fst (fst slot))) and valid_global_objs)
   (create_cap type bits untyped dev slot)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
     apply(rule create_cap_reads_respects)
@@ -600,7 +600,7 @@ lemma create_cap_reads_respects_g:
 lemma default_object_not_asid_pool:
   "\<lbrakk>type \<noteq> ArchObject ASIDPoolObj; type \<noteq> Untyped\<rbrakk> \<Longrightarrow>
         \<not> default_object type o_bits dev = ArchObj (ASIDPool asid_pool)"
-  apply(clarsimp simp: default_object_def split: apiobject_type.splits 
+  apply(clarsimp simp: default_object_def split: apiobject_type.splits
     simp: default_arch_object_def split: aobject_type.splits)
   done
 
@@ -613,7 +613,7 @@ lemma retype_region_ext_def2:
 
 lemma retype_region_reads_respects:
   "reads_respects aag l \<top> (retype_region ptr num_objects o_bits type dev)"
-  apply(simp only: retype_region_def retype_addrs_def 
+  apply(simp only: retype_region_def retype_addrs_def
                    foldr_upd_app_if fun_app_def K_bind_def when_def
                    retype_region_ext_extended.dxo_eq
                    )
@@ -673,7 +673,7 @@ lemma retype_region_globals_equiv:
    apply (rule conjI)
     apply(clarsimp simp: pspace_no_overlap_def)
     apply(drule_tac x="arm_global_pd (arch_state sa)" in spec)
-    apply(clarsimp simp: invs_def valid_state_def valid_global_objs_def valid_ao_at_def obj_at_def ptr_add_def)
+    apply(clarsimp simp: invs_def valid_state_def valid_global_objs_def valid_vso_at_def obj_at_def ptr_add_def)
     apply(frule_tac p=p in range_cover_subset)
       apply(simp add: blah)
      apply simp
@@ -728,7 +728,7 @@ lemma retype_region_globals_equiv:
 
 
 lemma retype_region_reads_respects_g:
-  "reads_respects_g aag l 
+  "reads_respects_g aag l
         ((\<lambda>s. \<exists>idx. cte_wp_at (\<lambda>c. c = UntypedCap dev (ptr && ~~ mask sz) sz idx)
                     slot s \<and>
                     (idx \<le> unat (ptr && mask sz) \<or>
@@ -811,7 +811,7 @@ lemma detype_reads_respects_g:
   done
 
 lemma a_type_small_pageD:
-  "a_type ko = AArch (AUserData ARMSmallPage) \<Longrightarrow> 
+  "a_type ko = AArch (AUserData ARMSmallPage) \<Longrightarrow>
   ko = ArchObj (DataPage False ARMSmallPage)"
   apply (clarsimp simp: a_type_def
                  split: Structures_A.kernel_object.splits
@@ -872,7 +872,7 @@ lemma ptr_range_disjoint_strong:
   apply (drule base_member_set[where sz = sz'],simp)
    apply fastforce
   done
-  
+
 lemma obj_range_page_as_ptr_range_pageBitsForSize:
   "obj_range ptr (ArchObj (DataPage dev vmpage_size)) =
    ptr_range ptr (pageBitsForSize vmpage_size)"
@@ -904,7 +904,7 @@ lemma delete_objects_reads_respects_g:
 
 lemma set_cap_reads_respects_g:
   "reads_respects_g aag l (valid_global_objs and K (is_subject aag (fst slot))) (set_cap cap slot)"
-  apply(rule equiv_valid_guard_imp) 
+  apply(rule equiv_valid_guard_imp)
    apply(rule reads_respects_g[OF set_cap_reads_respects])
    apply(rule doesnt_touch_globalsI[OF set_cap_globals_equiv])
   by simp
@@ -918,24 +918,24 @@ lemma when_ev:
 
 
 lemma delete_objects_caps_no_overlap:
-  "\<lbrace> invs and ct_active and (\<lambda> s. \<exists> slot idx. 
+  "\<lbrace> invs and ct_active and (\<lambda> s. \<exists> slot idx.
     cte_wp_at (op = (UntypedCap dev ptr sz idx)) slot s \<and> descendants_range_in {ptr..ptr + 2 ^ sz - 1} slot s) \<rbrace>
-    delete_objects ptr sz 
+    delete_objects ptr sz
   \<lbrace>\<lambda>_. caps_no_overlap ptr sz\<rbrace>"
   apply(clarsimp simp: valid_def)
   apply(rule descendants_range_caps_no_overlapI)
     apply(erule use_valid | wp | simp add: descendants_range_def2 | blast)+
-   apply(frule untyped_cap_aligned, 
+   apply(frule untyped_cap_aligned,
          (simp add: is_aligned_neg_mask_eq invs_valid_objs)+)
    apply(rule conjI, assumption)
-   apply(drule (2) untyped_slots_not_in_untyped_range, simp+, rule subset_refl) 
+   apply(drule (2) untyped_slots_not_in_untyped_range, simp+, rule subset_refl)
     apply simp
   apply(erule use_valid | wp delete_objects_descendants_range_in | simp | blast)+
   done
 
 lemma get_cap_reads_respects_g:
   "reads_respects_g aag l (K (is_subject aag (fst slot))) (get_cap slot)"
-  apply(rule equiv_valid_guard_imp) 
+  apply(rule equiv_valid_guard_imp)
    apply(rule reads_respects_g[OF get_cap_rev])
    apply(rule doesnt_touch_globalsI)
    apply wp
@@ -1020,7 +1020,7 @@ lemma reset_untyped_cap_reads_respects_g:
               apply (rule preemption_point_reads_respects[where irq=irq and st=st])
              apply ((wp preemption_point_inv set_cap_reads_respects_g
                        set_untyped_cap_invs_simple
-                       only_timer_irq_inv_pres[where Q=\<top>, OF _ set_cap_domain_sep_inv]  
+                       only_timer_irq_inv_pres[where Q=\<top>, OF _ set_cap_domain_sep_inv]
                        dmo_clearMemory_reads_respects_g
                      | simp)+)
          apply (strengthen empty_descendants_range_in)
@@ -1038,7 +1038,7 @@ lemma reset_untyped_cap_reads_respects_g:
        apply (rule hoare_pre)
         apply (wp preemption_point_inv' set_untyped_cap_invs_simple
                   set_cap_cte_wp_at set_cap_no_overlap
-                  only_timer_irq_inv_pres[where Q=\<top>, OF _ set_cap_domain_sep_inv]  
+                  only_timer_irq_inv_pres[where Q=\<top>, OF _ set_cap_domain_sep_inv]
            | simp)+
         apply (strengthen empty_descendants_range_in)
          apply (wp only_timer_irq_inv_pres[where P=\<top> and Q=\<top>]
@@ -1117,6 +1117,13 @@ lemma untyped_cap_refs_in_kernel_window_helper:
   apply blast
   done
 
+crunch valid_global_objs[wp]: create_cap "valid_global_objs"
+  (simp: crunch_simps)
+
+lemma invs_valid_global_objs_strg:
+  "invs s \<longrightarrow> valid_global_objs s"
+  by (clarsimp simp: invs_def valid_state_def)
+
 lemma invoke_untyped_reads_respects_g_wcap:
   notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
@@ -1140,12 +1147,12 @@ lemma invoke_untyped_reads_respects_g_wcap:
             apply(wp init_arch_objects_invs_from_restricted)
            apply(fastforce simp: invs_def)
           apply(wp retype_region_reads_respects_g[where sz=sz and slot="slot_of_untyped_inv ui"])
-         apply(rule_tac Q="\<lambda>rvc s. 
+         apply(rule_tac Q="\<lambda>rvc s.
                                 (\<forall>x\<in>set rvc. is_subject aag x) \<and>
-                                (\<forall>x\<in>set rvc. is_aligned x (obj_bits_api apiobject_type nat)) \<and> 
+                                (\<forall>x\<in>set rvc. is_aligned x (obj_bits_api apiobject_type nat)) \<and>
                                 ((0::word32) < of_nat (length list)) \<and>
                                 post_retype_invs apiobject_type rvc s \<and>
-                                global_refs s \<inter> set rvc = {} \<and> 
+                                global_refs s \<inter> set rvc = {} \<and>
                                 (\<forall>x\<in>set list. is_subject aag (fst x))"
                 for sz in hoare_strengthen_post)
           apply(wp retype_region_ret_is_subject[where sz=sz, simplified]
@@ -1153,11 +1160,11 @@ lemma invoke_untyped_reads_respects_g_wcap:
                    retype_region_ret_pd_aligned[where sz=sz]
                    retype_region_aligned_for_init[where sz=sz]
                    retype_region_post_retype_invs_spec[where sz=sz])
-         apply(fastforce simp: global_refs_def 
-                        intro: post_retype_invs_pspace_alignedI 
-                               post_retype_invs_valid_arch_stateI 
-                        simp: obj_bits_api_def default_arch_object_def 
-                              pd_bits_def pageBits_def 
+         apply(fastforce simp: global_refs_def
+                        intro: post_retype_invs_pspace_alignedI
+                               post_retype_invs_valid_arch_stateI
+                        simp: obj_bits_api_def default_arch_object_def
+                              pd_bits_def pageBits_def
                         elim: in_set_zipE)
         apply(rule set_cap_reads_respects_g)
        apply simp
@@ -1168,7 +1175,7 @@ lemma invoke_untyped_reads_respects_g_wcap:
                  set_cap_caps_no_overlap
                  region_in_kernel_window_preserved)
       apply(wp when_ev delete_objects_reads_respects_g hoare_vcg_disj_lift
-               delete_objects_pspace_no_overlap 
+               delete_objects_pspace_no_overlap
                delete_objects_descendants_range_in
                delete_objects_caps_no_overlap
                region_in_kernel_window_preserved
@@ -1219,7 +1226,7 @@ lemma invoke_untyped_reads_respects_g_wcap:
 
          apply (simp add: Int_commute, erule disjoint_subset2[rotated])
          apply (simp add: atLeastatMost_subset_iff word_and_le2)
- 
+
         apply (clarsimp dest!: invoke_untyped_proofs.idx_le_new_offs)
 
        apply (simp add: ptr_range_def)

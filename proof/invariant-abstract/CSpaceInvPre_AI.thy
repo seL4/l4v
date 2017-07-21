@@ -22,8 +22,8 @@ requalify_facts
   empty_table_def
 
 end
-  
-         
+
+
 lemma set_cap_caps_of_state[wp]:
   "\<lbrace>\<lambda>s. P ((caps_of_state s) (ptr \<mapsto> cap))\<rbrace> set_cap cap ptr \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   apply (cases ptr)
@@ -55,7 +55,7 @@ lemma obj_irq_refs_inD:
   done
 
 lemma objirqrefs_distinct_or_equal:
-  "\<lbrakk> obj_irq_refs cap \<inter> obj_irq_refs cap' \<noteq> {} \<rbrakk> 
+  "\<lbrakk> obj_irq_refs cap \<inter> obj_irq_refs cap' \<noteq> {} \<rbrakk>
      \<Longrightarrow> obj_irq_refs cap = obj_irq_refs cap'"
   by (clarsimp elim!: nonemptyE dest!: obj_irq_refs_inD)
 
@@ -131,12 +131,12 @@ where
  "no_cap_to_obj_with_diff_ref cap S \<equiv>
   \<lambda>s. \<forall>p \<in> UNIV - S. \<not> cte_wp_at (\<lambda>c. obj_refs c = obj_refs cap \<and>
                                      \<not> (table_cap_ref c = table_cap_ref cap)) p s"
-                                                 
+
 lemma empty_table_caps_of:
   "empty_table S ko \<Longrightarrow> caps_of ko = {}"
   by (cases ko, simp_all add: empty_table_def caps_of_def cap_of_def)
 
-context begin interpretation Arch . 
+context begin interpretation Arch .
 lemma free_index_update_test_function_stuff[simp]:
   "cap_asid (src_cap\<lparr>free_index := a\<rparr>) = cap_asid src_cap"
   "obj_irq_refs (src_cap\<lparr>free_index := a\<rparr>) = obj_irq_refs src_cap"

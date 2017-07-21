@@ -6,7 +6,7 @@
  * See "LICENSE_BSD2.txt" for details.
  *
  * @TAG(NICTA_BSD)
- * 
+ *
  * Report generating for autolevity. Computes proof start/end ranges, tracks levity tags
  * and reports on lemma, const, type and theory dependencies.
  *)
@@ -77,7 +77,7 @@ ML_Antiquotation.inline @{binding string_record}
       #> String.implode
 
       fun mk_encode typ =
-      if typ = "string" 
+      if typ = "string"
       then "(fn s => quote (String.translate (fn #\"\\n\" => \"\\\\n\" | x => String.str x) s))"
       else if typ = "int"
       then "Int.toString"
@@ -123,11 +123,11 @@ ML \<open>
 @{string_record levity_tag = "tag : string, location : location"}
 @{string_record apply_dep = "name : string, attribs : string list"}
 
-@{string_record proof_command = 
+@{string_record proof_command =
   "command_name : string, location : location, subgoals : int, depth : int,
    apply_deps : apply_dep list" }
 
-@{string_record lemma_entry = 
+@{string_record lemma_entry =
   "name : string, command_name : string, levity_tag : levity_tag option, location : location,
    proof_commands : proof_command list,
    lemma_deps : string list, deps : deps"}
@@ -151,10 +151,10 @@ val opt_levity_tag_encode = encode_option (levity_tag_encode location_encode);
 
 val proof_command_encode = proof_command_encode (location_encode, encode_list apply_dep_encode);
 
-val lemma_entry_encode = lemma_entry_encode 
+val lemma_entry_encode = lemma_entry_encode
   (opt_levity_tag_encode, location_encode, encode_list proof_command_encode, deps_encode)
 
-val dep_entry_encode = dep_entry_encode 
+val dep_entry_encode = dep_entry_encode
   (opt_levity_tag_encode, location_encode, deps_encode)
 
 val log_entry_encode = log_entry_encode (location_encode)
@@ -165,13 +165,13 @@ ML \<open>
 
 signature AUTOLEVITY_THEORY_REPORT =
 sig
-val get_reports_for_thy: theory -> 
+val get_reports_for_thy: theory ->
   string * log_entry list * theory_entry list * lemma_entry list * dep_entry list * dep_entry list
 
 val string_reports_of:
   string * log_entry list * theory_entry list * lemma_entry list * dep_entry list * dep_entry list
   -> string list
-  
+
 end;
 
 structure AutoLevity_Theory_Report : AUTOLEVITY_THEORY_REPORT =
@@ -185,7 +185,7 @@ let
   val line' = f line;
 
   val _ = if line' < 1 then raise Option else ();
-  
+
 in SOME (Position.line_file_only line' file) end handle Option => NONE
 
 
@@ -193,9 +193,9 @@ in SOME (Position.line_file_only line' file) end handle Option => NONE
    with lists of entries on for each line. This function searches such a table
    for the closest entry, either backwards (LESS) or forwards (GREATER) from
    the given position. *)
- 
+
 (* TODO: If everything is sane then the search depth shouldn't be necessary. In practice
-   entries won't be more than one or two lines apart, but if something has gone wrong in the 
+   entries won't be more than one or two lines apart, but if something has gone wrong in the
    collection phase we might end up wasting a lot of time looking for an entry that doesn't exist. *)
 
 fun search_by_lines depth ord_kind f h pos = if depth = 0 then NONE else
@@ -203,14 +203,14 @@ fun search_by_lines depth ord_kind f h pos = if depth = 0 then NONE else
     val line_change = case ord_kind of LESS => ~1 | GREATER => 1 | _ => raise Fail "Bad relation"
     val idx_change = case ord_kind of GREATER => 1 | _ => 0;
   in
-  case f pos of 
-   SOME x => 
+  case f pos of
+   SOME x =>
     let
       val i = find_index (fn e => h (pos, e) = ord_kind) x;
     in if i > ~1 then SOME (List.nth(x, i + idx_change)) else SOME (hd x) end
-      
-  | NONE => 
-    (case (map_pos_line (fn i => i + line_change) pos) of 
+
+  | NONE =>
+    (case (map_pos_line (fn i => i + line_change) pos) of
       SOME pos' => search_by_lines (depth - 1) ord_kind f h pos'
      | NONE => NONE)
    end
@@ -238,21 +238,21 @@ let
   (* All top-level transactions for the given theory *)
 
   val (transactions, log) =
-          Symtab.lookup (AutoLevity_Base.get_transactions ()) thy_nm 
+          Symtab.lookup (AutoLevity_Base.get_transactions ()) thy_nm
           |> the_default (Postab_strict.empty, Postab_strict.empty)
           ||> Postab_strict.dest
           |>> Postab_strict.dest
 
   (* Line-based position table of all apply statements for the given theory *)
 
-  val applytab = 
+  val applytab =
     Symtab.lookup (AutoLevity_Base.get_applys ()) thy_nm
     |> the_default Postab_strict.empty
     |> Postab_strict.dest
     |> map (fn (pos,e) => (pos, (pos,e)))
     |> Postab.make_list
     |> Postab.map (fn _ => sort (fn ((pos,_),(pos', _)) => pos_ord true (pos, pos')))
-    
+
 
   (* A special "ignored" command lets us find the real end of commands which span
      multiple lines. After finding a real command, we assume the last "ignored" one
@@ -264,7 +264,7 @@ let
     else (last_pos, ((pos', (nm', ext)) :: rest))
     | find_cmd_end last_pos [] = (last_pos, [])
 
-  fun change_level nm level = 
+  fun change_level nm level =
     if Keyword.is_proof_open keywords nm then level + 1
     else if Keyword.is_proof_close keywords nm then level - 1
     else if Keyword.is_qed_global keywords nm then ~1
@@ -276,11 +276,11 @@ let
 
   (* For a given apply statement, search forward in the document for the closest method to retrieve
      its lemma dependencies *)
-   
+
   fun find_apply pos = if Postab.is_empty applytab then [] else
    search_by_lines 5 GREATER (Postab.lookup applytab) (fn (pos, (pos', _)) => pos_ord true (pos, pos')) pos
    |> Option.map snd |> the_default [] |> make_apply_deps
-  
+
   fun find_proof_end level ((pos', (nm', ext)) :: rest) =
     let val level' = change_level nm' level in
      if level' > ~1 then
@@ -300,18 +300,18 @@ let
      | find_proof_end _ _ = (([], Position.none), [])
 
 
-  fun find_ends tab tag ((pos,(nm, ext)) :: rest) = 
+  fun find_ends tab tag ((pos,(nm, ext)) :: rest) =
    let
      val (cmd_end, rest') = find_cmd_end pos rest;
 
-     val ((prf_cmds, pos'), rest'') = 
+     val ((prf_cmds, pos'), rest'') =
        if Keyword.is_theory_goal keywords nm
        then find_proof_end 0 rest'
        else (([],cmd_end),rest');
 
      val tab' = Postab.cons_list (pos, (pos, (nm, pos', tag, prf_cmds))) tab;
 
-     val tag' = 
+     val tag' =
        if is_levity_tag nm then Option.map (rpair (pos,pos')) (#levity_tag ext) else NONE;
 
    in find_ends tab' tag' rest'' end
@@ -324,25 +324,25 @@ in (command_ranges, log) end
 
 
 
-fun base_name_of nm = 
+fun base_name_of nm =
   let
     val (idx, rest) = space_explode "_" nm |> rev |> List.getItem |> the;
     val _ = Int.fromString idx |> the;
   in rest |> rev |> space_implode "_" end handle Option => nm
 
 
-  
-fun make_deps (const_deps, type_deps) = 
+
+fun make_deps (const_deps, type_deps) =
   ({const_deps = distinct (op =) const_deps, type_deps = distinct (op =) type_deps} : deps)
 
-fun make_tag (SOME (tag, range)) = (case location_from_range range 
+fun make_tag (SOME (tag, range)) = (case location_from_range range
   of SOME rng => SOME ({tag = tag, location = rng} : levity_tag)
   | NONE => NONE)
   | make_tag NONE = NONE
 
 
 
-fun add_deps (((Defs.Const, nm), _) :: rest) = 
+fun add_deps (((Defs.Const, nm), _) :: rest) =
   let val (consts, types) = add_deps rest in
     (nm :: consts, types) end
   | add_deps (((Defs.Type, nm), _) :: rest) =
@@ -358,7 +358,7 @@ fun typs_of_typ (Type (nm, Ts)) = nm :: (map typs_of_typ Ts |> flat)
 fun typs_of_term t = Term.fold_types (append o typs_of_typ) t []
 
 fun deps_of_thm thm =
-let                             
+let
   val consts = Term.add_const_names (Thm.prop_of thm) [];
   val types = typs_of_term (Thm.prop_of thm);
 in (consts, types) end
@@ -384,7 +384,7 @@ fun get_reports_for_thy thy =
 
     val parent_facts = map Global_Theory.facts_of (Theory.parents_of thy);
 
-    val search_backwards = search_by_lines 5 LESS (Postab.lookup tab) 
+    val search_backwards = search_by_lines 5 LESS (Postab.lookup tab)
       (fn (pos, (pos', _)) => pos_ord true (pos, pos'))
       #> the
 
@@ -397,29 +397,29 @@ fun get_reports_for_thy thy =
             let
              val thms' = map (Thm.transfer thy) thms;
 
-             val (real_start, (cmd_name, end_pos, tag, prf_cmds)) = search_backwards pos 
+             val (real_start, (cmd_name, end_pos, tag, prf_cmds)) = search_backwards pos
 
              val lemma_deps' = if cmd_name = "datatype" then [] else
                 map used_facts thms'
                 |> flat;
 
              val lemma_deps = map base_name_of lemma_deps' |> distinct (op =)
-              
-             val deps = 
+
+             val deps =
                map deps_of_thm thms' |> ListPair.unzip |> apply2 flat |> make_deps
 
              val location = location_from_range (real_start, end_pos) |> the;
 
-             val (lemma_entry : lemma_entry) =  
-              {name  = xnm, command_name = cmd_name, levity_tag = make_tag tag, 
+             val (lemma_entry : lemma_entry) =
+              {name  = xnm, command_name = cmd_name, levity_tag = make_tag tag,
                location = location, proof_commands = prf_cmds,
                deps = deps, lemma_deps = lemma_deps}
-               
+
             in SOME (pos, lemma_entry) end
             else NONE end handle Option => NONE)
       |> Postab_strict.make_list
-      |> Postab_strict.dest |> map snd |> flat 
-                       
+      |> Postab_strict.dest |> map snd |> flat
+
     val defs = Theory.defs_of thy;
 
     fun get_deps_of kind space xnms = xnms
@@ -430,17 +430,17 @@ fun get_reports_for_thy thy =
             if theory_name = thy_nm then
             let
               val specs = Defs.specifications_of defs (kind, xnm);
-              
+
               val deps =
-                map get_deps specs 
+                map get_deps specs
                |> ListPair.unzip
                |> (apply2 flat #> make_deps);
 
               val (real_start, (cmd_name, end_pos, tag, _)) = search_backwards pos
-              
+
               val loc = location_from_range (real_start, end_pos) |> the;
 
-              val entry = 
+              val entry =
                 ({name = xnm, command_name = cmd_name, levity_tag = make_tag tag,
                   location = loc, deps = deps} : dep_entry)
 
@@ -452,17 +452,17 @@ fun get_reports_for_thy thy =
     val {const_space, constants, ...} = Consts.dest (Sign.consts_of thy);
 
     val consts = get_deps_of Defs.Const const_space (map fst constants);
-    
+
     val {types, ...} = Type.rep_tsig (Sign.tsig_of thy);
 
     val type_space = Name_Space.space_of_table types;
     val type_names = Name_Space.fold_table (fn (xnm, _) => cons xnm) types [];
 
     val types = get_deps_of Defs.Type type_space type_names;
-                                   
+
     val thy_parents = map entry_of_thy (Theory.parents_of thy);
 
-    val logs = log |> 
+    val logs = log |>
      map (fn (pos, errs) => {errors = errs, location = location_from_range (pos, pos) |> the} : log_entry)
 
    in (thy_nm, logs, thy_parents, lemmas, consts, types) end

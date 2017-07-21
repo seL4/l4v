@@ -125,7 +125,7 @@ lemma [simp]: "itcbTimeSlice (tcb_to_itcb' tcb) = tcbTimeSlice tcb"
 
 lemma [simp]: "itcbMCP (tcb_to_itcb' tcb) = tcbMCP tcb"
   by (auto simp: tcb_to_itcb'_def)
-  
+
 definition
   pred_tcb_at' :: "(itcb' \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
@@ -188,9 +188,9 @@ where
   | (WaitingNtfn q)      => set q \<times> {NTFNSignal}
   | (ActiveNtfn b)  => {}"
 
-definition 
+definition
   ntfn_bound_refs' :: "word32 option \<Rightarrow> (word32 \<times> reftype) set"
-where 
+where
   "ntfn_bound_refs' t \<equiv> set_option t \<times> {NTFNBound}"
 
 definition
@@ -343,7 +343,7 @@ where
 definition
   "capAligned c \<equiv>
    is_aligned (capUntypedPtr c) (capBits c) \<and> capBits c < word_bits"
-                       
+
 definition
  "obj_range' (p::word32) ko \<equiv> {p .. p + 2 ^ objBitsKO ko - 1}"
 
@@ -460,7 +460,7 @@ where
 definition
   is_device_page_cap' :: "capability \<Rightarrow> bool"
 where
-  "is_device_page_cap' cap \<equiv> case cap of 
+  "is_device_page_cap' cap \<equiv> case cap of
     capability.ArchObjectCap (arch_capability.PageCap dev _ _ _ _) \<Rightarrow> dev
    | _ \<Rightarrow> False"
 
@@ -494,7 +494,7 @@ where
 definition
   valid_ntfn' :: "Structures_H.notification \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
-  "valid_ntfn' ntfn s \<equiv> (case ntfnObj ntfn of 
+  "valid_ntfn' ntfn s \<equiv> (case ntfnObj ntfn of
     Structures_H.IdleNtfn \<Rightarrow> True
   | Structures_H.WaitingNtfn ts \<Rightarrow>
       (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at' t s) \<and> distinct ts
@@ -566,7 +566,7 @@ definition
   valid_objs' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_objs' s \<equiv> \<forall>obj \<in> ran (ksPSpace s). valid_obj' obj s"
-                                                   
+
 type_synonym cte_heap = "word32 \<Rightarrow> cte option"
 
 definition
@@ -722,7 +722,7 @@ where
   \<exists>cte' cte. s c = Some cte \<and> s c' = Some cte' \<and> isMDBParentOf cte' cte"
 
 
-context 
+context
 notes [[inductive_internals =true]]
 begin
 
@@ -901,7 +901,7 @@ where
 definition
   valid_queues :: "kernel_state \<Rightarrow> bool"
 where
- "valid_queues \<equiv> \<lambda>s. valid_queues_no_bitmap s \<and> valid_bitmapQ s \<and> 
+ "valid_queues \<equiv> \<lambda>s. valid_queues_no_bitmap s \<and> valid_bitmapQ s \<and>
                      bitmapQ_no_L2_orphans s \<and> bitmapQ_no_L1_orphans s"
 
 definition
@@ -1362,7 +1362,7 @@ lemma capability_splits[split]:
            \<not> P (f11 x111 x112 x113 x114)) \<or>
        capability = capability.IRQControlCap \<and> \<not> P f12))"
   by (case_tac capability; simp)+
-  
+
 lemma thread_state_splits[split]:
   " P (case thread_state of
      Structures_H.thread_state.BlockedOnReceive x \<Rightarrow> f1 x
@@ -1425,7 +1425,7 @@ lemma thread_state_splits[split]:
        thread_state = Structures_H.thread_state.Restart \<and>
        \<not> P f8))"
   by (case_tac thread_state; simp)+
-  
+
 lemma ntfn_splits[split]:
   " P (case ntfn of Structures_H.ntfn.IdleNtfn \<Rightarrow> f1
      | Structures_H.ntfn.ActiveNtfn x \<Rightarrow> f2 x
@@ -1698,7 +1698,7 @@ where
 lemma st_tcb_at_state_refs_ofD':
   "st_tcb_at' P t s \<Longrightarrow> \<exists>ts ntfnptr. P ts \<and> obj_at' (tcb_ntfn_is_bound' ntfnptr) t s
           \<and> state_refs_of' s t = (tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr)"
-  by (auto simp: pred_tcb_at'_def tcb_ntfn_is_bound'_def obj_at'_def projectKO_eq 
+  by (auto simp: pred_tcb_at'_def tcb_ntfn_is_bound'_def obj_at'_def projectKO_eq
                  project_inject state_refs_of'_def)
 
 lemma bound_tcb_at_state_refs_ofD':
@@ -3171,7 +3171,7 @@ lemma page_directory_pde_atI':
 
 lemma page_table_pte_atI':
   "\<lbrakk> page_table_at' p s; x < 2^(ptBits - 2) \<rbrakk> \<Longrightarrow> pte_at' (p + (x << 2)) s"
-  by (simp add: page_table_at'_def pageBits_def ptBits_def)
+  by (simp add: page_table_at'_def pageBits_def ptBits_def pteBits_def)
 
 lemma valid_global_refsD':
   "\<lbrakk> ctes_of s p = Some cte; valid_global_refs' s \<rbrakk> \<Longrightarrow>
@@ -3354,13 +3354,14 @@ lemma objBitsT_simps:
   "objBitsT (ArchT PTET) = 2"
   "objBitsT (ArchT ASIDPoolT) = pageBits"
   unfolding objBitsT_def makeObjectT_def
-  by (simp_all add: makeObject_simps objBits_simps archObjSize_def)
+  by (simp_all add: makeObject_simps objBits_simps archObjSize_def pteBits_def pdeBits_def)
 
 lemma objBitsT_koTypeOf :
   "(objBitsT (koTypeOf ko)) = objBitsKO ko"
   apply (cases ko; simp add: objBits_simps objBitsT_simps)
   apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps)
+  apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps
+                                                pteBits_def pdeBits_def)
   done
 
 lemma sane_update [intro!]:
@@ -3520,7 +3521,7 @@ lemma invs'_ksSchedulerAction:
   "\<lbrakk> invs' s; sch_act_wf sa s; sa \<noteq> ResumeCurrentThread \<rbrakk> \<Longrightarrow>
    invs' (s \<lparr>ksSchedulerAction := sa\<rparr>)"
   by (clarsimp simp add: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
-                bitmapQ_defs valid_irq_node'_def valid_queues'_def cur_tcb'_def 
+                bitmapQ_defs valid_irq_node'_def valid_queues'_def cur_tcb'_def
                 ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def)
 
 lemma invs'_gsCNodes_update[simp]:
@@ -3632,4 +3633,4 @@ add_upd_simps "invs' (gsUntypedZeroRanges_update f s)
   (obj_at'_real_def)
 declare upd_simps[simp]
 end
-  
+

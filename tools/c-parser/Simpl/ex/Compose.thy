@@ -7,7 +7,7 @@
 (*  Title:      Compose.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2006-2008 Norbert Schirmer 
+Copyright (C) 2006-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -41,14 +41,14 @@ If we use \<open>statespaces\<close> instead we get this kind of compositionalit
 subsection \<open>Changing the State-Space\<close>
 
 (* Lift a command on statespace 'b to work on statespace 'a *)
- 
+
 definition lift\<^sub>f:: "('S \<Rightarrow> 's) \<Rightarrow> ('S \<Rightarrow> 's \<Rightarrow> 'S) \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> ('S \<Rightarrow> 'S)"
   where "lift\<^sub>f prj inject f = (\<lambda>S. inject S (f (prj S)))"
 
 definition lift\<^sub>s:: "('S \<Rightarrow> 's) \<Rightarrow> 's set \<Rightarrow> 'S set"
   where "lift\<^sub>s prj A = {S. prj S \<in> A}"
 
-definition lift\<^sub>r:: "('S \<Rightarrow> 's) \<Rightarrow> ('S \<Rightarrow> 's \<Rightarrow> 'S) \<Rightarrow> ('s \<times> 's) set 
+definition lift\<^sub>r:: "('S \<Rightarrow> 's) \<Rightarrow> ('S \<Rightarrow> 's \<Rightarrow> 'S) \<Rightarrow> ('s \<times> 's) set
                        \<Rightarrow> ('S \<times> 'S) set"
 where
 "lift\<^sub>r prj inject R = {(S,T). (prj S,prj T) \<in> R \<and> T=inject S (prj T)}"
@@ -59,25 +59,25 @@ where
 "lift\<^sub>c prj inject Skip = Skip" |
 "lift\<^sub>c prj inject (Basic f) = Basic (lift\<^sub>f prj inject f)" |
 "lift\<^sub>c prj inject (Spec r) = Spec (lift\<^sub>r prj inject r)" |
-"lift\<^sub>c prj inject (Seq c\<^sub>1 c\<^sub>2)  = 
+"lift\<^sub>c prj inject (Seq c\<^sub>1 c\<^sub>2)  =
   (Seq (lift\<^sub>c prj inject c\<^sub>1) (lift\<^sub>c prj inject c\<^sub>2))" |
-"lift\<^sub>c prj inject (Cond b c\<^sub>1 c\<^sub>2) = 
+"lift\<^sub>c prj inject (Cond b c\<^sub>1 c\<^sub>2) =
   Cond (lift\<^sub>s prj b) (lift\<^sub>c prj inject c\<^sub>1) (lift\<^sub>c prj inject c\<^sub>2)" |
-"lift\<^sub>c prj inject (While b c) = 
+"lift\<^sub>c prj inject (While b c) =
   While (lift\<^sub>s prj b) (lift\<^sub>c prj inject c)" |
 "lift\<^sub>c prj inject (Call p) = Call p" |
 "lift\<^sub>c prj inject (DynCom c) = DynCom (\<lambda>s. lift\<^sub>c prj inject (c (prj s)))" |
 "lift\<^sub>c prj inject (Guard f g c) = Guard f (lift\<^sub>s prj g) (lift\<^sub>c prj inject c)" |
 "lift\<^sub>c prj inject Throw = Throw" |
-"lift\<^sub>c prj inject (Catch c\<^sub>1 c\<^sub>2) = 
+"lift\<^sub>c prj inject (Catch c\<^sub>1 c\<^sub>2) =
   Catch (lift\<^sub>c prj inject c\<^sub>1) (lift\<^sub>c prj inject c\<^sub>2)"
 
 
 
 lemma lift\<^sub>c_Skip: "(lift\<^sub>c prj inject c = Skip) = (c = Skip)"
-  by (cases c) auto 
+  by (cases c) auto
 
-lemma lift\<^sub>c_Basic: 
+lemma lift\<^sub>c_Basic:
   "(lift\<^sub>c prj inject c = Basic lf) = (\<exists>f. c = Basic f \<and> lf = lift\<^sub>f prj inject f)"
   by (cases c) auto
 
@@ -85,45 +85,45 @@ lemma lift\<^sub>c_Spec:
   "(lift\<^sub>c prj inject c = Spec lr) = (\<exists>r. c = Spec r \<and> lr = lift\<^sub>r prj inject r)"
   by (cases c) auto
 
-lemma lift\<^sub>c_Seq: 
-  "(lift\<^sub>c prj inject c = Seq lc\<^sub>1 lc\<^sub>2) = 
+lemma lift\<^sub>c_Seq:
+  "(lift\<^sub>c prj inject c = Seq lc\<^sub>1 lc\<^sub>2) =
      (\<exists> c\<^sub>1 c\<^sub>2. c = Seq c\<^sub>1 c\<^sub>2 \<and>
                lc\<^sub>1 = lift\<^sub>c prj inject c\<^sub>1 \<and> lc\<^sub>2 = lift\<^sub>c prj inject c\<^sub>2 )"
     by (cases c) auto
 
 lemma lift\<^sub>c_Cond:
-  "(lift\<^sub>c prj inject c = Cond lb lc\<^sub>1 lc\<^sub>2) = 
+  "(lift\<^sub>c prj inject c = Cond lb lc\<^sub>1 lc\<^sub>2) =
      (\<exists>b c\<^sub>1 c\<^sub>2. c = Cond b c\<^sub>1 c\<^sub>2 \<and> lb = lift\<^sub>s prj b \<and>
                 lc\<^sub>1 = lift\<^sub>c prj inject c\<^sub>1 \<and> lc\<^sub>2 = lift\<^sub>c prj inject c\<^sub>2 )"
   by (cases c) auto
 
 lemma lift\<^sub>c_While:
-  "(lift\<^sub>c prj inject c = While lb lc') = 
-     (\<exists>b c'. c = While b c' \<and> lb = lift\<^sub>s prj b \<and> 
+  "(lift\<^sub>c prj inject c = While lb lc') =
+     (\<exists>b c'. c = While b c' \<and> lb = lift\<^sub>s prj b \<and>
                lc' = lift\<^sub>c prj inject c')"
   by (cases c) auto
 
-lemma lift\<^sub>c_Call: 
+lemma lift\<^sub>c_Call:
   "(lift\<^sub>c prj inject c = Call p) = (c = Call p)"
   by (cases c) auto
 
 lemma lift\<^sub>c_DynCom:
-  "(lift\<^sub>c prj inject c = DynCom lc) = 
+  "(lift\<^sub>c prj inject c = DynCom lc) =
      (\<exists>C. c=DynCom C \<and> lc = (\<lambda>s. lift\<^sub>c prj inject (C (prj s))))"
   by (cases c) auto
 
-lemma lift\<^sub>c_Guard: 
+lemma lift\<^sub>c_Guard:
   "(lift\<^sub>c prj inject c = Guard f lg lc') =
-     (\<exists>g c'. c = Guard f g c' \<and> lg = lift\<^sub>s prj g \<and> 
+     (\<exists>g c'. c = Guard f g c' \<and> lg = lift\<^sub>s prj g \<and>
              lc' = lift\<^sub>c prj inject c')"
    by (cases c) auto
 
-lemma lift\<^sub>c_Throw: 
+lemma lift\<^sub>c_Throw:
   "(lift\<^sub>c prj inject c = Throw) = (c = Throw)"
   by (cases c) auto
 
-lemma lift\<^sub>c_Catch: 
-  "(lift\<^sub>c prj inject c = Catch lc\<^sub>1 lc\<^sub>2) = 
+lemma lift\<^sub>c_Catch:
+  "(lift\<^sub>c prj inject c = Catch lc\<^sub>1 lc\<^sub>2) =
      (\<exists> c\<^sub>1 c\<^sub>2. c = Catch c\<^sub>1 c\<^sub>2 \<and>
                lc\<^sub>1 = lift\<^sub>c prj inject c\<^sub>1 \<and> lc\<^sub>2 = lift\<^sub>c prj inject c\<^sub>2 )"
     by (cases c) auto
@@ -145,19 +145,19 @@ lemma xstate_map_simps [simp]:
 "xstate_map g Stuck = Stuck"
   by (auto simp add: xstate_map_def)
 
-lemma xstate_map_Normal_conv: 
+lemma xstate_map_Normal_conv:
   "xstate_map g S = Normal s = (\<exists>s'. S=Normal s' \<and> s = g s')"
   by (cases S) auto
 
-lemma xstate_map_Abrupt_conv: 
+lemma xstate_map_Abrupt_conv:
   "xstate_map g S = Abrupt s = (\<exists>s'. S=Abrupt s' \<and> s = g s')"
   by (cases S) auto
 
-lemma xstate_map_Fault_conv: 
+lemma xstate_map_Fault_conv:
   "xstate_map g S = Fault f = (S=Fault f)"
   by (cases S) auto
 
-lemma xstate_map_Stuck_conv: 
+lemma xstate_map_Stuck_conv:
   "xstate_map g S = Stuck = (S=Stuck)"
   by (cases S) auto
 
@@ -178,7 +178,7 @@ lemma state_simps [simp]:
   by (auto simp add: state_def )
 
 
-locale lift_state_space = 
+locale lift_state_space =
   fixes project::"'S \<Rightarrow> 's"
   fixes "inject"::"'S \<Rightarrow> 's \<Rightarrow> 'S"
   fixes "project\<^sub>x"::"('S,'f) xstate \<Rightarrow> ('s,'f) xstate"
@@ -197,7 +197,7 @@ locale lift_state_space =
 
 
 lemma (in lift_state_space) lift\<^sub>f_simp:
- "lift\<^sub>f f \<equiv> \<lambda>S. inject S (f (project S))" 
+ "lift\<^sub>f f \<equiv> \<lambda>S. inject S (f (project S))"
   by (simp add: lift\<^sub>f_def Compose.lift\<^sub>f_def)
 
 lemma (in lift_state_space) lift\<^sub>s_simp:
@@ -209,11 +209,11 @@ lemma (in lift_state_space) lift\<^sub>r_simp:
   by  (simp add: lift\<^sub>r_def Compose.lift\<^sub>r_def)
 
 (* Causes loop when instantiating locale
-lemmas (in lift_state_space) lift\<^sub>f_simp  = Compose.lift\<^sub>f_def 
+lemmas (in lift_state_space) lift\<^sub>f_simp  = Compose.lift\<^sub>f_def
  [of project "inject", folded lift\<^sub>f_def]
-lemmas (in lift_state_space) lift\<^sub>s_simp  = Compose.lift\<^sub>s_def 
+lemmas (in lift_state_space) lift\<^sub>s_simp  = Compose.lift\<^sub>s_def
  [of project, folded lift\<^sub>s_def]
-lemmas (in lift_state_space) lift\<^sub>r_simp  = Compose.lift\<^sub>r_def 
+lemmas (in lift_state_space) lift\<^sub>r_simp  = Compose.lift\<^sub>r_def
  [of project "inject", folded lift\<^sub>r_def]
 *)
 lemma (in lift_state_space) lift\<^sub>c_Skip_simp [simp]:
@@ -226,15 +226,15 @@ lemma (in lift_state_space) lift\<^sub>c_Spec_simp [simp]:
 "lift\<^sub>c (Spec r) = Spec (lift\<^sub>r r)"
   by (simp add: lift\<^sub>c_def lift\<^sub>r_def)
 lemma (in lift_state_space) lift\<^sub>c_Seq_simp [simp]:
-"lift\<^sub>c (Seq c\<^sub>1 c\<^sub>2)  = 
+"lift\<^sub>c (Seq c\<^sub>1 c\<^sub>2)  =
   (Seq (lift\<^sub>c c\<^sub>1) (lift\<^sub>c c\<^sub>2))"
   by (simp add: lift\<^sub>c_def)
 lemma (in lift_state_space) lift\<^sub>c_Cond_simp [simp]:
-"lift\<^sub>c (Cond b c\<^sub>1 c\<^sub>2) = 
+"lift\<^sub>c (Cond b c\<^sub>1 c\<^sub>2) =
   Cond (lift\<^sub>s b) (lift\<^sub>c c\<^sub>1) (lift\<^sub>c c\<^sub>2)"
   by (simp add: lift\<^sub>c_def lift\<^sub>s_def)
 lemma (in lift_state_space) lift\<^sub>c_While_simp [simp]:
-"lift\<^sub>c (While b c) = 
+"lift\<^sub>c (While b c) =
   While (lift\<^sub>s b) (lift\<^sub>c c)"
   by (simp add: lift\<^sub>c_def lift\<^sub>s_def)
 lemma (in lift_state_space) lift\<^sub>c_Call_simp [simp]:
@@ -250,11 +250,11 @@ lemma (in lift_state_space) lift\<^sub>c_Throw_simp [simp]:
 "lift\<^sub>c Throw = Throw"
   by (simp add: lift\<^sub>c_def)
 lemma (in lift_state_space) lift\<^sub>c_Catch_simp [simp]:
-"lift\<^sub>c (Catch c\<^sub>1 c\<^sub>2) = 
+"lift\<^sub>c (Catch c\<^sub>1 c\<^sub>2) =
   Catch (lift\<^sub>c c\<^sub>1) (lift\<^sub>c c\<^sub>2)"
   by (simp add: lift\<^sub>c_def)
 
-lemma (in lift_state_space) project\<^sub>x_def': 
+lemma (in lift_state_space) project\<^sub>x_def':
 "project\<^sub>x s \<equiv> (case s of
                  Normal s \<Rightarrow> Normal (project s)
                 | Abrupt s \<Rightarrow> Abrupt (project s)
@@ -262,8 +262,8 @@ lemma (in lift_state_space) project\<^sub>x_def':
                 | Stuck \<Rightarrow> Stuck)"
   by (simp add: xstate_map_def project\<^sub>x_def)
 
-lemma (in lift_state_space) lift\<^sub>e_def': 
-  "lift\<^sub>e \<Gamma> p \<equiv> (case \<Gamma> p of Some bdy \<Rightarrow> Some (lift\<^sub>c bdy) | None \<Rightarrow> None)"  
+lemma (in lift_state_space) lift\<^sub>e_def':
+  "lift\<^sub>e \<Gamma> p \<equiv> (case \<Gamma> p of Some bdy \<Rightarrow> Some (lift\<^sub>c bdy) | None \<Rightarrow> None)"
   by (simp add: lift\<^sub>e_def map_option_case)
 
 
@@ -280,7 +280,7 @@ of @{term \<Gamma>} and preserve validity.
 \<close>
 
 
-lemma (in lift_state_space) 
+lemma (in lift_state_space)
 "{(S,T). \<exists>t. (project S,t) \<in> r \<and> T=inject S t}
  \<subseteq> {(S,T). (project S,project T) \<in> r \<and> T=inject S (project T)}"
   apply clarsimp
@@ -288,8 +288,8 @@ lemma (in lift_state_space)
   apply (simp add: proj_inj_commute)
   done
 
-lemma (in lift_state_space) 
-"{(S,T). (project S,project T) \<in> r \<and> T=inject S (project T)} 
+lemma (in lift_state_space)
+"{(S,T). (project S,project T) \<in> r \<and> T=inject S (project T)}
  \<subseteq> {(S,T). \<exists>t. (project S,t) \<in> r \<and> T=inject S t}"
   apply clarsimp
   apply (rename_tac S T)
@@ -298,9 +298,9 @@ lemma (in lift_state_space)
   done
 
 
-lemma (in lift_state_space) lift_exec: 
+lemma (in lift_state_space) lift_exec:
 assumes exec_lc: "(lift\<^sub>e \<Gamma>)\<turnstile>\<langle>lc,s\<rangle> \<Rightarrow> t"
-shows "\<And>c. \<lbrakk> lift\<^sub>c c = lc\<rbrakk> \<Longrightarrow> 
+shows "\<And>c. \<lbrakk> lift\<^sub>c c = lc\<rbrakk> \<Longrightarrow>
               \<Gamma>\<turnstile>\<langle>c,project\<^sub>x s\<rangle> \<Rightarrow>  project\<^sub>x t"
 using exec_lc
 proof (induct)
@@ -320,14 +320,14 @@ next
 next
   case Basic
   thus ?case
-    by (fastforce simp add: project\<^sub>x_def lift\<^sub>c_Basic lift\<^sub>f_def Compose.lift\<^sub>f_def 
+    by (fastforce simp add: project\<^sub>x_def lift\<^sub>c_Basic lift\<^sub>f_def Compose.lift\<^sub>f_def
       lift\<^sub>c_def
         proj_inj_commute
         intro: exec.Basic)
 next
   case Spec
   thus ?case
-    by (fastforce simp add: project\<^sub>x_def lift\<^sub>c_Spec lift\<^sub>f_def Compose.lift\<^sub>f_def  
+    by (fastforce simp add: project\<^sub>x_def lift\<^sub>c_Spec lift\<^sub>f_def Compose.lift\<^sub>f_def
         lift\<^sub>r_def Compose.lift\<^sub>r_def lift\<^sub>c_def
         proj_inj_commute
         intro: exec.Spec)
@@ -344,7 +344,7 @@ next
     apply (simp add: proj_inj_commute)
     done
 next
-  case Seq 
+  case Seq
   thus ?case
     by (fastforce simp add: project\<^sub>x_def lift\<^sub>c_Seq lift\<^sub>c_def intro: exec.intros)
 next
@@ -360,26 +360,26 @@ next
 next
   case WhileTrue
   thus ?case
-     by (fastforce simp add: project\<^sub>x_def lift\<^sub>s_def Compose.lift\<^sub>s_def 
+     by (fastforce simp add: project\<^sub>x_def lift\<^sub>s_def Compose.lift\<^sub>s_def
          lift\<^sub>c_While lift\<^sub>c_def
          intro: exec.WhileTrue)
 next
   case WhileFalse
   thus ?case
-     by (fastforce simp add: project\<^sub>x_def lift\<^sub>s_def Compose.lift\<^sub>s_def 
+     by (fastforce simp add: project\<^sub>x_def lift\<^sub>s_def Compose.lift\<^sub>s_def
          lift\<^sub>c_While lift\<^sub>c_def
          intro: exec.WhileFalse)
 next
-  case Call 
+  case Call
   thus ?case
-    by (fastforce simp add: 
+    by (fastforce simp add:
                project\<^sub>x_def lift\<^sub>c_Call lift\<^sub>f_def Compose.lift\<^sub>f_def lift\<^sub>c_def
                lift\<^sub>e_def
           intro: exec.Call)
 next
   case CallUndefined
   thus ?case
-    by (fastforce simp add: 
+    by (fastforce simp add:
                project\<^sub>x_def lift\<^sub>c_Call lift\<^sub>f_def Compose.lift\<^sub>f_def lift\<^sub>c_def
                lift\<^sub>e_def
           intro: exec.CallUndefined)
@@ -389,7 +389,7 @@ next
 next
   case DynCom
   thus ?case
-    by (fastforce simp add: 
+    by (fastforce simp add:
                project\<^sub>x_def lift\<^sub>c_DynCom lift\<^sub>f_def Compose.lift\<^sub>f_def lift\<^sub>c_def
           intro: exec.DynCom)
 next
@@ -399,17 +399,17 @@ next
   case AbruptProp thus ?case
     by (fastforce simp add: project\<^sub>x_def)
 next
-  case CatchMatch 
+  case CatchMatch
   thus ?case
     by (fastforce simp add: project\<^sub>x_def lift\<^sub>c_Catch lift\<^sub>c_def intro: exec.CatchMatch)
 next
-  case (CatchMiss c\<^sub>1 s t c\<^sub>2 c) 
+  case (CatchMiss c\<^sub>1 s t c\<^sub>2 c)
   thus ?case
     by (cases t)
        (fastforce simp add: project\<^sub>x_def lift\<^sub>c_Catch lift\<^sub>c_def intro: exec.CatchMiss)+
 qed
 
-lemma (in lift_state_space) lift_exec': 
+lemma (in lift_state_space) lift_exec':
 assumes exec_lc: "(lift\<^sub>e \<Gamma>)\<turnstile>\<langle>lift\<^sub>c c,s\<rangle> \<Rightarrow> t"
 shows "\<Gamma>\<turnstile>\<langle>c,project\<^sub>x s\<rangle> \<Rightarrow> project\<^sub>x t"
   using lift_exec [OF exec_lc]
@@ -417,9 +417,9 @@ shows "\<Gamma>\<turnstile>\<langle>c,project\<^sub>x s\<rangle> \<Rightarrow> p
 
 
 
-lemma (in lift_state_space) lift_valid: 
+lemma (in lift_state_space) lift_valid:
   assumes valid: "\<Gamma>\<Turnstile>\<^bsub>/F\<^esub> P c Q,A"
-  shows 
+  shows
    "(lift\<^sub>e \<Gamma>)\<Turnstile>\<^bsub>/F\<^esub> (lift\<^sub>s P) (lift\<^sub>c c) (lift\<^sub>s Q),(lift\<^sub>s A)"
 proof (rule validI)
   fix s t
@@ -435,7 +435,7 @@ proof (rule validI)
     moreover
     from lP have "project s \<in> P"
       by (simp add: lift\<^sub>s_def Compose.lift\<^sub>s_def project\<^sub>x_def)
-    ultimately 
+    ultimately
     have "project\<^sub>x t \<in> Normal ` Q \<union> Abrupt ` A"
       using valid noFault
       apply (clarsimp simp add: valid_def project\<^sub>x_def)
@@ -450,9 +450,9 @@ proof (rule validI)
   qed
 qed
 
-lemma (in lift_state_space) lift_hoarep: 
+lemma (in lift_state_space) lift_hoarep:
   assumes deriv: "\<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
-  shows 
+  shows
    "(lift\<^sub>e \<Gamma>),{}\<turnstile>\<^bsub>/F\<^esub> (lift\<^sub>s P) (lift\<^sub>c c) (lift\<^sub>s Q),(lift\<^sub>s A)"
 apply (rule hoare_complete)
 apply (insert hoare_sound [OF deriv])
@@ -460,9 +460,9 @@ apply (rule lift_valid)
 apply (simp add: cvalid_def)
 done
 
-lemma (in lift_state_space) lift_hoarep': 
+lemma (in lift_state_space) lift_hoarep':
   "\<forall>Z. \<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> (P Z) c (Q Z),(A Z) \<Longrightarrow>
-    \<forall>Z. (lift\<^sub>e \<Gamma>),{}\<turnstile>\<^bsub>/F\<^esub> (lift\<^sub>s (P Z)) (lift\<^sub>c c) 
+    \<forall>Z. (lift\<^sub>e \<Gamma>),{}\<turnstile>\<^bsub>/F\<^esub> (lift\<^sub>s (P Z)) (lift\<^sub>c c)
                                   (lift\<^sub>s (Q Z)),(lift\<^sub>s (A Z))"
 apply (iprover intro: lift_hoarep)
 done
@@ -471,7 +471,7 @@ done
 
 lemma (in lift_state_space) lift_termination:
 assumes termi: "\<Gamma>\<turnstile>c\<down>s"
-shows "\<And>S. project\<^sub>x S = s \<Longrightarrow> 
+shows "\<And>S. project\<^sub>x S = s \<Longrightarrow>
   lift\<^sub>e \<Gamma> \<turnstile>(lift\<^sub>c c)\<down>S"
   using termi
 proof (induct)
@@ -479,17 +479,17 @@ proof (induct)
     by (clarsimp simp add: terminates.Skip project\<^sub>x_def xstate_map_convs)
 next
   case Basic thus ?case
-    by (fastforce simp add: project\<^sub>x_def xstate_map_convs intro: terminates.intros) 
+    by (fastforce simp add: project\<^sub>x_def xstate_map_convs intro: terminates.intros)
 next
   case Spec thus ?case
-    by (fastforce simp add: project\<^sub>x_def xstate_map_convs intro: terminates.intros) 
+    by (fastforce simp add: project\<^sub>x_def xstate_map_convs intro: terminates.intros)
 next
   case Guard thus ?case
-    by (auto simp add: project\<^sub>x_def xstate_map_convs intro: terminates.intros) 
+    by (auto simp add: project\<^sub>x_def xstate_map_convs intro: terminates.intros)
 next
   case GuardFault thus ?case
     by (auto simp add: project\<^sub>x_def xstate_map_convs lift\<^sub>s_def Compose.lift\<^sub>s_def
-           intro: terminates.intros) 
+           intro: terminates.intros)
 next
   case Fault thus ?case by (clarsimp simp add: project\<^sub>x_def xstate_map_convs)
 next
@@ -519,12 +519,12 @@ next
     by (auto intro: terminates.intros)
 next
   case CondTrue thus ?case
-    by (fastforce simp add: project\<^sub>x_def lift\<^sub>s_def Compose.lift\<^sub>s_def xstate_map_convs 
-      intro: terminates.intros) 
+    by (fastforce simp add: project\<^sub>x_def lift\<^sub>s_def Compose.lift\<^sub>s_def xstate_map_convs
+      intro: terminates.intros)
 next
   case CondFalse thus ?case
-    by (fastforce simp add: project\<^sub>x_def lift\<^sub>s_def Compose.lift\<^sub>s_def xstate_map_convs 
-      intro: terminates.intros) 
+    by (fastforce simp add: project\<^sub>x_def lift\<^sub>s_def Compose.lift\<^sub>s_def xstate_map_convs
+      intro: terminates.intros)
 next
   case (WhileTrue s b c)
   have "project\<^sub>x S = Normal s" by fact
@@ -549,36 +549,36 @@ next
   }
   ultimately show ?case
     using S s
-    by (auto intro: terminates.intros)      
+    by (auto intro: terminates.intros)
 next
   case WhileFalse thus ?case
-    by (fastforce simp add: project\<^sub>x_def lift\<^sub>s_def Compose.lift\<^sub>s_def xstate_map_convs 
-      intro: terminates.intros) 
+    by (fastforce simp add: project\<^sub>x_def lift\<^sub>s_def Compose.lift\<^sub>s_def xstate_map_convs
+      intro: terminates.intros)
 next
   case Call thus ?case
     by (fastforce simp add: project\<^sub>x_def xstate_map_convs lift\<^sub>e_def
-      intro: terminates.intros) 
+      intro: terminates.intros)
 next
   case CallUndefined thus ?case
     by (fastforce simp add: project\<^sub>x_def xstate_map_convs lift\<^sub>e_def
-      intro: terminates.intros) 
+      intro: terminates.intros)
 next
   case Stuck thus ?case
     by (fastforce simp add: project\<^sub>x_def xstate_map_convs)
 next
   case DynCom thus ?case
-    by (fastforce simp add: project\<^sub>x_def xstate_map_convs 
+    by (fastforce simp add: project\<^sub>x_def xstate_map_convs
       intro: terminates.intros)
 next
   case Throw thus ?case
-    by (fastforce simp add: project\<^sub>x_def xstate_map_convs 
+    by (fastforce simp add: project\<^sub>x_def xstate_map_convs
       intro: terminates.intros)
 next
   case Abrupt thus ?case
-    by (fastforce simp add: project\<^sub>x_def xstate_map_convs 
+    by (fastforce simp add: project\<^sub>x_def xstate_map_convs
       intro: terminates.intros)
 next
-  case (Catch c1 s c2) 
+  case (Catch c1 s c2)
   have "project\<^sub>x S = Normal s" by fact
   then obtain s' where S: "S=Normal s'" and s: "s = project s'"
     by (auto simp add: project\<^sub>x_def xstate_map_convs)
@@ -593,7 +593,7 @@ next
       from lift_exec [where c=c1, OF exec_lc1] s
       have "\<Gamma>\<turnstile>\<langle>c1,Normal s\<rangle> \<Rightarrow> Abrupt (project w)"
         by (simp add: project\<^sub>x_def)
-      from Catch.hyps (3) [rule_format, OF this] 
+      from Catch.hyps (3) [rule_format, OF this]
       show "lift\<^sub>e \<Gamma>\<turnstile>lift\<^sub>c c2 \<down> Normal w"
         by (auto simp add: project\<^sub>x_def xstate_map_convs)
     qed
@@ -610,7 +610,7 @@ shows "lift\<^sub>e \<Gamma> \<turnstile>(lift\<^sub>c c)\<down>S"
   by iprover
 
 
-lemma (in lift_state_space) lift_validt: 
+lemma (in lift_state_space) lift_validt:
   assumes valid: "\<Gamma>\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
   shows "(lift\<^sub>e \<Gamma>)\<Turnstile>\<^sub>t\<^bsub>/F\<^esub> (lift\<^sub>s P) (lift\<^sub>c c) (lift\<^sub>s Q),(lift\<^sub>s A)"
 proof -
@@ -632,26 +632,26 @@ proof -
     by (simp add: validt_def)
 qed
 
-lemma (in lift_state_space) lift_hoaret: 
+lemma (in lift_state_space) lift_hoaret:
   assumes deriv: "\<Gamma>,{}\<turnstile>\<^sub>t\<^bsub>/F\<^esub> P c Q,A"
-  shows 
+  shows
    "(lift\<^sub>e \<Gamma>),{}\<turnstile>\<^sub>t\<^bsub>/F\<^esub> (lift\<^sub>s P) (lift\<^sub>c c) (lift\<^sub>s Q),(lift\<^sub>s A)"
 apply (rule hoaret_complete)
 apply (insert hoaret_sound [OF deriv])
 apply (rule lift_validt)
 apply (simp add: cvalidt_def)
 done
-    
-  
+
+
 locale lift_state_space_ext = lift_state_space +
   assumes inj_proj_commute: "\<And>S. inject S (project S) = S"
   assumes inject_last: "\<And>S s t. inject (inject S s) t = inject S t"
 
 
 (* \<exists>x. state t = inject (state s) x *)
-lemma (in lift_state_space_ext) lift_exec_inject_same: 
+lemma (in lift_state_space_ext) lift_exec_inject_same:
 assumes exec_lc: "(lift\<^sub>e \<Gamma>)\<turnstile>\<langle>lc,s\<rangle> \<Rightarrow> t"
-shows "\<And>c. \<lbrakk>lift\<^sub>c c = lc; t \<notin> (Fault ` UNIV) \<union> {Stuck}\<rbrakk> \<Longrightarrow> 
+shows "\<And>c. \<lbrakk>lift\<^sub>c c = lc; t \<notin> (Fault ` UNIV) \<union> {Stuck}\<rbrakk> \<Longrightarrow>
               state t = inject (state s) (project (state t))"
 using exec_lc
 proof (induct)
@@ -667,7 +667,7 @@ next
   case FaultProp thus ?case by simp
 next
   case Basic thus ?case
-    by (clarsimp simp add: lift\<^sub>f_def Compose.lift\<^sub>f_def 
+    by (clarsimp simp add: lift\<^sub>f_def Compose.lift\<^sub>f_def
         proj_inj_commute lift\<^sub>c_Basic lift\<^sub>c_def)
 next
   case (Spec r) thus ?case
@@ -676,7 +676,7 @@ next
   case SpecStuck
   thus ?case by simp
 next
-  case (Seq lc1 s s' lc2 t c) 
+  case (Seq lc1 s s' lc2 t c)
   have t: "t \<notin> Fault ` UNIV \<union> {Stuck}" by fact
   have "lift\<^sub>c c = Seq lc1 lc2" by fact
   then obtain c1 c2 where
@@ -690,7 +690,7 @@ next
     from Seq.hyps (2) [OF lc1 [symmetric]] this
     have "s'' = inject s (project s'')"
       by auto
-    moreover from Seq.hyps (4) [OF lc2 [symmetric]] Normal t 
+    moreover from Seq.hyps (4) [OF lc2 [symmetric]] Normal t
     have "state t = inject s'' (project (state t))"
       by auto
     ultimately have "state t = inject (inject s (project s'')) (project (state t))"
@@ -702,7 +702,7 @@ next
     from Seq.hyps (2) [OF lc1 [symmetric]] this
     have "s'' = inject s (project s'')"
       by auto
-    moreover from Seq.hyps (4) [OF lc2 [symmetric]] Abrupt t 
+    moreover from Seq.hyps (4) [OF lc2 [symmetric]] Abrupt t
     have "state t = inject s'' (project (state t))"
       by auto
     ultimately have "state t = inject (inject s (project s'')) (project (state t))"
@@ -734,7 +734,7 @@ next
   case (WhileTrue s lb lc' s' t c)
   have t: "t \<notin> Fault ` UNIV \<union> {Stuck}" by fact
   have lw: "lift\<^sub>c c = While lb lc'" by fact
-  then obtain b c' where 
+  then obtain b c' where
     c: "c = While b c'" and
     lb: "lb = lift\<^sub>s b" and
     lc: "lc' = lift\<^sub>c c'"
@@ -745,7 +745,7 @@ next
     from WhileTrue.hyps (3) [OF lc [symmetric]] this
     have "s'' = inject s (project s'')"
       by auto
-    moreover from WhileTrue.hyps (5) [OF lw] Normal t 
+    moreover from WhileTrue.hyps (5) [OF lw] Normal t
     have "state t = inject s'' (project (state t))"
       by auto
     ultimately have "state t = inject (inject s (project s'')) (project (state t))"
@@ -757,7 +757,7 @@ next
     from WhileTrue.hyps (3) [OF lc [symmetric]] this
     have "s'' = inject s (project s'')"
       by auto
-    moreover from WhileTrue.hyps (5) [OF lw] Abrupt t 
+    moreover from WhileTrue.hyps (5) [OF lw] Abrupt t
     have "state t = inject s'' (project (state t))"
       by auto
     ultimately have "state t = inject (inject s (project s'')) (project (state t))"
@@ -799,7 +799,7 @@ next
 next
   case AbruptProp thus ?case by (simp add: inj_proj_commute)
 next
-  case (CatchMatch lc1 s s' lc2 t c) 
+  case (CatchMatch lc1 s s' lc2 t c)
   have t: "t \<notin> Fault ` UNIV \<union> {Stuck}" by fact
   have "lift\<^sub>c c = Catch lc1 lc2" by fact
   then obtain c1 c2 where
@@ -825,16 +825,16 @@ next
 qed
 
 lemma (in lift_state_space_ext) valid_inject_project:
- assumes noFaultStuck: 
+ assumes noFaultStuck:
   "\<Gamma>\<turnstile>\<langle>c,Normal (project \<sigma>)\<rangle> \<Rightarrow>\<notin>(Fault ` UNIV \<union> {Stuck})"
- shows "lift\<^sub>e \<Gamma>\<Turnstile>\<^bsub>/F\<^esub> {\<sigma>} lift\<^sub>c c 
+ shows "lift\<^sub>e \<Gamma>\<Turnstile>\<^bsub>/F\<^esub> {\<sigma>} lift\<^sub>c c
                 {t. t=inject \<sigma> (project t)}, {t. t=inject \<sigma> (project t)}"
 proof (rule validI)
   fix s t
   assume exec: "lift\<^sub>e \<Gamma>\<turnstile>\<langle>lift\<^sub>c c,Normal s\<rangle> \<Rightarrow> t"
   assume P: "s \<in> {\<sigma>}"
   assume noFault: "t \<notin> Fault ` F"
-  show "t \<in> Normal ` {t. t = inject \<sigma> (project t)} \<union> 
+  show "t \<in> Normal ` {t. t = inject \<sigma> (project t)} \<union>
         Abrupt ` {t. t = inject \<sigma> (project t)}"
   proof -
     from lift_exec [OF exec]
@@ -850,16 +850,16 @@ proof (rule validI)
   qed
 qed
 
-lemma (in lift_state_space_ext) lift_exec_inject_same': 
+lemma (in lift_state_space_ext) lift_exec_inject_same':
 assumes exec_lc: "(lift\<^sub>e \<Gamma>)\<turnstile>\<langle>lift\<^sub>c c,S\<rangle> \<Rightarrow> T"
-shows "\<And>c. \<lbrakk>T \<notin> (Fault ` UNIV) \<union> {Stuck}\<rbrakk> \<Longrightarrow> 
+shows "\<And>c. \<lbrakk>T \<notin> (Fault ` UNIV) \<union> {Stuck}\<rbrakk> \<Longrightarrow>
               state T = inject (state S) (project (state T))"
   using lift_exec_inject_same [OF exec_lc]
   by simp
 
 lemma (in lift_state_space_ext) valid_lift_modifies:
   assumes valid: "\<forall>s. \<Gamma>\<Turnstile>\<^bsub>/F\<^esub> {s} c (Modif s),(ModifAbr s)"
-  shows "(lift\<^sub>e \<Gamma>)\<Turnstile>\<^bsub>/F\<^esub> {S} (lift\<^sub>c c) 
+  shows "(lift\<^sub>e \<Gamma>)\<Turnstile>\<^bsub>/F\<^esub> {S} (lift\<^sub>c c)
            {T. T \<in> lift\<^sub>s (Modif (project S)) \<and> T=inject S (project T)},
            {T. T \<in> lift\<^sub>s (ModifAbr (project S)) \<and> T=inject S (project T)}"
 proof (rule validI)
@@ -880,12 +880,12 @@ proof (rule validI)
     moreover
     from noFault have "project\<^sub>x t \<notin> Fault ` F"
       by (cases "t") (auto simp add: project\<^sub>x_def)
-    ultimately   
-    have "project\<^sub>x t \<in> 
+    ultimately
+    have "project\<^sub>x t \<in>
             Normal ` (Modif (project s)) \<union> Abrupt ` (ModifAbr (project s))"
       using valid [rule_format, of "(project s)"]
       by (auto simp add: valid_def project\<^sub>x_def)
-    hence t: "t \<in> Normal ` lift\<^sub>s (Modif (project s)) \<union> 
+    hence t: "t \<in> Normal ` lift\<^sub>s (Modif (project s)) \<union>
                Abrupt ` lift\<^sub>s (ModifAbr (project s))"
       by (cases t) (auto simp add: project\<^sub>x_def lift\<^sub>s_def Compose.lift\<^sub>s_def)
     then have "t \<notin> Fault ` UNIV \<union> {Stuck}"
@@ -900,7 +900,7 @@ qed
 
 lemma (in lift_state_space_ext) hoare_lift_modifies:
   assumes deriv: "\<forall>\<sigma>. \<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} c (Modif \<sigma>),(ModifAbr \<sigma>)"
-  shows "\<forall>\<sigma>. (lift\<^sub>e \<Gamma>),{}\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} (lift\<^sub>c c) 
+  shows "\<forall>\<sigma>. (lift\<^sub>e \<Gamma>),{}\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} (lift\<^sub>c c)
            {T. T \<in> lift\<^sub>s (Modif (project \<sigma>)) \<and> T=inject \<sigma> (project T)},
            {T. T \<in> lift\<^sub>s (ModifAbr (project \<sigma>)) \<and> T=inject \<sigma> (project T)}"
 apply (rule allI)
@@ -913,10 +913,10 @@ done
 
 lemma (in lift_state_space_ext) hoare_lift_modifies':
   assumes deriv: "\<forall>\<sigma>. \<Gamma>,{}\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} c (Modif \<sigma>),(ModifAbr \<sigma>)"
-  shows "\<forall>\<sigma>. (lift\<^sub>e \<Gamma>),{}\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} (lift\<^sub>c c) 
-           {T. T \<in> lift\<^sub>s (Modif (project \<sigma>)) \<and> 
+  shows "\<forall>\<sigma>. (lift\<^sub>e \<Gamma>),{}\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} (lift\<^sub>c c)
+           {T. T \<in> lift\<^sub>s (Modif (project \<sigma>)) \<and>
                    (\<exists>T'. T=inject \<sigma> T')},
-           {T. T \<in> lift\<^sub>s (ModifAbr (project \<sigma>)) \<and> 
+           {T. T \<in> lift\<^sub>s (ModifAbr (project \<sigma>)) \<and>
                    (\<exists>T'. T=inject \<sigma> T')}"
 apply (rule allI)
 apply (rule HoarePartialDef.conseq [OF hoare_lift_modifies [OF deriv]])
@@ -942,7 +942,7 @@ where
 lemma rename_Skip: "rename h c = Skip = (c=Skip)"
   by (cases c) auto
 
-lemma rename_Basic: 
+lemma rename_Basic:
   "(rename h c = Basic f) = (c=Basic f)"
   by (cases c) auto
 
@@ -950,14 +950,14 @@ lemma rename_Spec:
   "(rename h c = Spec r) = (c=Spec r)"
   by (cases c) auto
 
-lemma rename_Seq: 
-  "(rename h c = Seq rc\<^sub>1 rc\<^sub>2) = 
+lemma rename_Seq:
+  "(rename h c = Seq rc\<^sub>1 rc\<^sub>2) =
      (\<exists> c\<^sub>1 c\<^sub>2. c = Seq c\<^sub>1 c\<^sub>2 \<and>
                rc\<^sub>1 = rename h c\<^sub>1 \<and> rc\<^sub>2 = rename h c\<^sub>2 )"
     by (cases c) auto
 
 lemma rename_Cond:
-  "(rename h c = Cond b rc\<^sub>1 rc\<^sub>2) = 
+  "(rename h c = Cond b rc\<^sub>1 rc\<^sub>2) =
      (\<exists>c\<^sub>1 c\<^sub>2. c = Cond b c\<^sub>1 c\<^sub>2  \<and> rc\<^sub>1 = rename h c\<^sub>1 \<and> rc\<^sub>2 = rename h c\<^sub>2 )"
   by (cases c) auto
 
@@ -965,7 +965,7 @@ lemma rename_While:
   "(rename h c = While b rc') = (\<exists>c'. c = While b c' \<and> rc' = rename h c')"
   by (cases c) auto
 
-lemma rename_Call: 
+lemma rename_Call:
   "(rename h c = Call q) = (\<exists>p. c = Call p \<and> q=h p)"
   by (cases c) auto
 
@@ -973,17 +973,17 @@ lemma rename_DynCom:
   "(rename h c = DynCom rc) = (\<exists>C. c=DynCom C \<and> rc = (\<lambda>s. rename h (C s)))"
   by (cases c) auto
 
-lemma rename_Guard: 
+lemma rename_Guard:
   "(rename h c = Guard f g rc') =
      (\<exists>c'. c = Guard f g c' \<and> rc' = rename h c')"
    by (cases c) auto
 
-lemma rename_Throw: 
+lemma rename_Throw:
   "(rename h c = Throw) = (c = Throw)"
   by (cases c) auto
 
-lemma rename_Catch: 
-  "(rename h c = Catch rc\<^sub>1 rc\<^sub>2) = 
+lemma rename_Catch:
+  "(rename h c = Catch rc\<^sub>1 rc\<^sub>2) =
      (\<exists>c\<^sub>1 c\<^sub>2. c = Catch c\<^sub>1 c\<^sub>2 \<and> rc\<^sub>1 = rename h c\<^sub>1 \<and> rc\<^sub>2 = rename h c\<^sub>2 )"
     by (cases c) auto
 
@@ -1068,19 +1068,19 @@ lemma exec_rename_to_exec':
   by  auto
 
 
-    
+
 lemma valid_to_valid_rename:
   assumes \<Gamma>: "\<forall>p bdy. \<Gamma> p = Some bdy \<longrightarrow> \<Gamma>' (N p) = Some (rename N bdy)"
   assumes valid: "\<Gamma>\<Turnstile>\<^bsub>/F\<^esub> P c Q,A"
   shows "\<Gamma>'\<Turnstile>\<^bsub>/F\<^esub> P (rename N c) Q,A"
 proof (rule validI)
   fix s t
-  assume execr: "\<Gamma>'\<turnstile> \<langle>rename N c,Normal s\<rangle> \<Rightarrow> t" 
-  assume P: "s \<in> P" 
+  assume execr: "\<Gamma>'\<turnstile> \<langle>rename N c,Normal s\<rangle> \<Rightarrow> t"
+  assume P: "s \<in> P"
   assume noFault: "t \<notin> Fault ` F"
   show "t \<in> Normal ` Q \<union> Abrupt ` A"
   proof -
-    from exec_rename_to_exec [OF \<Gamma> execr] 
+    from exec_rename_to_exec [OF \<Gamma> execr]
     obtain t' where
       exec: "\<Gamma>\<turnstile> \<langle>c,Normal s\<rangle> \<Rightarrow> t'"  and t': "(t' = Stuck \<or> t' = t)"
       by auto
@@ -1112,7 +1112,7 @@ done
 lemma terminates_to_terminates_rename:
   assumes \<Gamma>: "\<forall>p bdy. \<Gamma> p = Some bdy \<longrightarrow> \<Gamma>' (N p) = Some (rename N bdy)"
   assumes termi: "\<Gamma>\<turnstile> c \<down> s"
-  assumes noStuck: "\<Gamma>\<turnstile> \<langle>c,s\<rangle> \<Rightarrow>\<notin>{Stuck}" 
+  assumes noStuck: "\<Gamma>\<turnstile> \<langle>c,s\<rangle> \<Rightarrow>\<notin>{Stuck}"
   shows "\<Gamma>'\<turnstile> rename N c \<down> s"
 using termi noStuck
 proof (induct)
@@ -1122,7 +1122,7 @@ next
 next
   case Spec thus ?case by (fastforce intro: terminates.intros)
 next
-  case Guard thus ?case by (fastforce intro: terminates.intros 
+  case Guard thus ?case by (fastforce intro: terminates.intros
     simp add: final_notin_def exec.intros)
 next
   case GuardFault thus ?case by (fastforce intro: terminates.intros)
@@ -1134,10 +1134,10 @@ next
     by (force intro!: terminates.intros exec.intros dest: exec_rename_to_exec [OF \<Gamma>]
          simp add: final_notin_def)
 next
-  case CondTrue thus ?case by (fastforce intro: terminates.intros 
+  case CondTrue thus ?case by (fastforce intro: terminates.intros
     simp add: final_notin_def exec.intros)
 next
-  case CondFalse thus ?case by (fastforce intro: terminates.intros 
+  case CondFalse thus ?case by (fastforce intro: terminates.intros
     simp add: final_notin_def exec.intros)
 next
   case (WhileTrue s b c)
@@ -1186,7 +1186,7 @@ next
 next
   case Stuck thus ?case by (fastforce intro: terminates.intros)
 next
-  case DynCom thus ?case by (fastforce intro: terminates.intros 
+  case DynCom thus ?case by (fastforce intro: terminates.intros
     simp add: final_notin_def exec.intros)
 next
   case Throw thus ?case by (fastforce intro: terminates.intros)
@@ -1208,7 +1208,7 @@ next
       from exec_rename_to_exec [OF \<Gamma> exec_rc1] obtain t'
         where exec_c: "\<Gamma>\<turnstile> \<langle>c1,Normal s\<rangle> \<Rightarrow> t'" and "(t' = Stuck \<or> t' = Abrupt t)"
         by auto
-      with noStuck have t': "t'=Abrupt t" 
+      with noStuck have t': "t'=Abrupt t"
         by (fastforce simp add: final_notin_def intro: exec.intros)
       with exec_c noStuck have "\<Gamma>\<turnstile> \<langle>c2,Normal t\<rangle> \<Rightarrow>\<notin>{Stuck}"
         by (auto simp add: final_notin_def intro: exec.intros)
@@ -1264,26 +1264,26 @@ apply (rule deriv[rule_format])
 done
 
 lemma lift\<^sub>c_whileAnno [simp]: "lift\<^sub>c prj inject (whileAnno b I V c) =
-    whileAnno (lift\<^sub>s prj b) 
+    whileAnno (lift\<^sub>s prj b)
               (lift\<^sub>s prj I) (lift\<^sub>r prj inject V) (lift\<^sub>c prj inject c)"
   by (simp add: whileAnno_def)
 
-lemma lift\<^sub>c_block [simp]: "lift\<^sub>c prj inject (block init bdy return c) = 
-  block (lift\<^sub>f prj inject init) (lift\<^sub>c prj inject bdy) 
+lemma lift\<^sub>c_block [simp]: "lift\<^sub>c prj inject (block init bdy return c) =
+  block (lift\<^sub>f prj inject init) (lift\<^sub>c prj inject bdy)
         (\<lambda>s. (lift\<^sub>f prj inject (return (prj s))))
         (\<lambda>s t. lift\<^sub>c prj inject (c (prj s) (prj t)))"
   by (simp add: block_def)
 
 (*
-lemma lift\<^sub>c_block [simp]: "lift\<^sub>c prj inject (block init bdy return c) = 
-  block (lift\<^sub>f prj inject init) (lift\<^sub>c prj inject bdy) 
+lemma lift\<^sub>c_block [simp]: "lift\<^sub>c prj inject (block init bdy return c) =
+  block (lift\<^sub>f prj inject init) (lift\<^sub>c prj inject bdy)
         (\<lambda>s t. inject s (return (prj s) (prj t)))
         (\<lambda>s t. lift\<^sub>c prj inject (c (prj s) (prj t)))"
   apply (simp add: block_def)
   apply (simp add: lift\<^sub>f_def)
 *)
-lemma lift\<^sub>c_call [simp]: "lift\<^sub>c prj inject (call init p return c) = 
-  call (lift\<^sub>f prj inject init) p 
+lemma lift\<^sub>c_call [simp]: "lift\<^sub>c prj inject (call init p return c) =
+  call (lift\<^sub>f prj inject init) p
         (\<lambda>s. (lift\<^sub>f prj inject (return (prj s))))
         (\<lambda>s t. lift\<^sub>c prj inject (c (prj s) (prj t)))"
   by (simp add: call_def lift\<^sub>c_block)

@@ -124,7 +124,7 @@ lemma obj_bits_data_at:
 
 lemma some_get_page_info_umapsD:
   "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, attr, r);
-    (\<exists>\<rhd> pd_ref) s; p \<notin> kernel_mappings; valid_arch_objs s; pspace_aligned s;
+    (\<exists>\<rhd> pd_ref) s; p \<notin> kernel_mappings; valid_vspace_objs s; pspace_aligned s;
     valid_asid_table (arm_asid_table (arch_state s)) s; valid_objs s\<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a \<and> is_aligned b a \<and>
              data_at sz (ptrFromPAddr b) s)"
@@ -132,9 +132,9 @@ lemma some_get_page_info_umapsD:
                         kernel_mappings_slots_eq
                  split: option.splits Structures_A.kernel_object.splits
                         arch_kernel_obj.splits)
-  apply (frule (1) valid_arch_objsD[rotated 2])
+  apply (frule (1) valid_vspace_objsD[rotated 2])
    apply (simp add: obj_at_def)
-  apply (simp add: valid_arch_obj_def)
+  apply (simp add: valid_vspace_obj_def)
   apply (drule bspec, simp)
   apply (simp split: pde.splits)
     apply (rename_tac rs pd pt_ref rights w)
@@ -148,9 +148,9 @@ lemma some_get_page_info_umapsD:
      apply (simp add: vs_refs_def pde_ref_def image_def graph_of_def)
      apply (rule exI, rule conjI, simp+)
     apply (frule (1) vs_lookup_step)
-    apply (drule (2) stronger_arch_objsD[where ref="x # xs" for x xs])
+    apply (drule (2) stronger_vspace_objsD[where ref="x # xs" for x xs])
     apply clarsimp
-    apply (case_tac ao, simp_all add: a_type_simps obj_at_def)[1]
+    apply (case_tac ao, simp_all add: a_type_simps obj_at_def )[1]
      apply (simp add: get_pt_info_def get_pt_entry_def)
      apply (drule_tac x="(ucast ((p >> 12) && mask 8))" in spec)
      apply (clarsimp simp: obj_at_def valid_arch_obj_def
@@ -241,7 +241,7 @@ lemma (* ptable_rights_imp_frame *)[AInvsPre_asms]:
   done
 end
 
-global_interpretation AInvsPre?: AInvsPre 
+global_interpretation AInvsPre?: AInvsPre
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (intro_locales; (unfold_locales, fact AInvsPre_asms)?)

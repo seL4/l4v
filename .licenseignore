@@ -65,6 +65,7 @@ spec/haskell/src/SEL4/Object/Interrupt.lhs-boot
 spec/haskell/src/SEL4/Object/CNode.lhs-boot
 spec/haskell/src/SEL4/Object/Endpoint.lhs-boot
 spec/haskell/src/SEL4/Object/ObjectType.lhs-boot
+spec/haskell/src/SEL4/Object/Structures.lhs-boot
 spec/haskell/src/SEL4/Object/TCB.lhs-boot
 spec/haskell/src/SEL4/Object/IOPort/X64.lhs-boot
 

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 CSpace invariants
 *)
 
@@ -85,7 +85,7 @@ where
   \<and> no_cap_to_obj_with_diff_ref newcap {sl} s
   \<and> ((is_pt_cap newcap \<or> is_pd_cap newcap) \<longrightarrow> cap_asid newcap = None
       \<longrightarrow> (\<forall> r \<in> obj_refs newcap.
-            obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))
+            obj_at (empty_table (set (second_level_tables (arch_state s)))) r s))
   \<and> ((is_pt_cap newcap \<or> is_pd_cap newcap)
          \<longrightarrow> ((is_pt_cap newcap \<and> is_pt_cap cap \<or> is_pd_cap newcap \<and> is_pd_cap cap)
                   \<longrightarrow> (cap_asid newcap = None \<longrightarrow> cap_asid cap = None)
@@ -113,7 +113,7 @@ lemma unique_table_refsD:
 
 lemma table_cap_ref_vs_cap_ref_Some:
   "table_cap_ref x = Some y \<Longrightarrow> vs_cap_ref x = Some y"
-  by (clarsimp simp: table_cap_ref_def vs_cap_ref_def 
+  by (clarsimp simp: table_cap_ref_def vs_cap_ref_def
                  split: cap.splits arch_cap.splits)
 
 lemma set_cap_valid_vs_lookup:
@@ -160,7 +160,7 @@ crunch arch[wp]: set_cap "\<lambda>s. P (arch_state s)" (simp: split_def)
 lemma set_cap_valid_table_caps:
   "\<lbrace>\<lambda>s. valid_table_caps s
          \<and> ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow> cap_asid cap = None
-            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))\<rbrace>
+            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (second_level_tables (arch_state s)))) r s))\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_table_caps\<rbrace>"
   apply (simp add: valid_table_caps_def)
@@ -230,7 +230,7 @@ lemma set_cap_valid_arch_caps:
                  \<or> (\<forall>oref \<in> obj_refs cap'. \<not> (vref \<unrhd> oref) s))
       \<and> no_cap_to_obj_with_diff_ref cap {ptr} s
       \<and> ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow> cap_asid cap = None
-            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s))
+            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (second_level_tables (arch_state s)))) r s))
       \<and> ((is_pt_cap cap \<or> is_pd_cap cap)
              \<longrightarrow> (\<forall>oldcap. caps_of_state s ptr = Some oldcap \<longrightarrow>
                   (is_pt_cap cap \<and> is_pt_cap oldcap \<or> is_pd_cap cap \<and> is_pd_cap oldcap)
@@ -249,7 +249,7 @@ lemma set_cap_valid_arch_caps:
 lemma valid_table_capsD:
   "\<lbrakk> cte_wp_at (op = cap) ptr s; valid_table_caps s;
         is_pt_cap cap | is_pd_cap cap; cap_asid cap = None \<rbrakk>
-        \<Longrightarrow> \<forall>r \<in> obj_refs cap. obj_at (empty_table (set (arm_global_pts (arch_state s)))) r s"
+        \<Longrightarrow> \<forall>r \<in> obj_refs cap. obj_at (empty_table (set (second_level_tables (arch_state s)))) r s"
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_table_caps_def)
   apply (cases ptr, fastforce)
   done
@@ -296,7 +296,7 @@ lemma acap_rights_update_idem [simp]:
 
 lemma cap_master_arch_cap_rights [simp]:
   "cap_master_arch_cap (acap_rights_update R cap) = cap_master_arch_cap cap"
-  by (simp add: cap_master_arch_cap_def acap_rights_update_def 
+  by (simp add: cap_master_arch_cap_def acap_rights_update_def
            split: arch_cap.splits)
 
 lemma acap_rights_update_id [intro!, simp]:
@@ -308,6 +308,23 @@ lemma obj_ref_none_no_asid:
   "{} = obj_refs new_cap \<longrightarrow> None = table_cap_ref new_cap"
   "obj_refs new_cap = {} \<longrightarrow> table_cap_ref new_cap = None"
   by (simp add: table_cap_ref_def split: cap.split arch_cap.split)+
+
+lemma set_cap_hyp_refs_of [wp]:
+ "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
+  set_cap cp p
+  \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: set_cap_def set_object_def split_def)
+  apply (wp get_object_wp | wpc)+
+  apply (auto elim!: rsubst[where P=P]
+               simp: ARM.state_hyp_refs_of_def obj_at_def
+             intro!: ext
+             split: if_split_asm)
+  done
+
+lemma state_hyp_refs_of_revokable[simp]:
+  "state_hyp_refs_of (s \<lparr> is_original_cap := m \<rparr>) = state_hyp_refs_of s"
+  by (simp add: state_hyp_refs_of_def)
+
 end
 
 end

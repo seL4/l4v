@@ -136,8 +136,8 @@ Define some useful constants.
 
 >         let uiRegion = coverOf $ map (\x -> Region (ptrFromPAddr x, (ptrFromPAddr x) + bit (pageBits))) initFrames
 >         let kePPtr = fst $ fromRegion $ uiRegion
->         let kfEndPAddr = addrFromPPtr kePPtr 
->         (startPPtr,endPPtr) <- return $ fromRegion uiRegion 
+>         let kfEndPAddr = addrFromPPtr kePPtr
+>         (startPPtr,endPPtr) <- return $ fromRegion uiRegion
 
 Determine the available memory regions.
 
@@ -182,14 +182,14 @@ Move into the "KernelInit" monad. Arguments in nopInitData are not correct, BIFr
 >                 rootCNCap <- makeRootCNode
 >                 initInterruptController rootCNCap biCapIRQControl
 >                 let ipcBufferVPtr = vptrEnd
->                 ipcBufferCap <- createIPCBufferFrame rootCNCap ipcBufferVPtr 
+>                 ipcBufferCap <- createIPCBufferFrame rootCNCap ipcBufferVPtr
 >                 let biFrameVPtr = vptrEnd + (1 `shiftL` pageBits)
 >                 createBIFrame rootCNCap biFrameVPtr 0 1
->                 createFramesOfRegion rootCNCap uiRegion True 
->                 itPDCap <- createITPDPTs rootCNCap vptrStart biFrameVPtr 
+>                 createFramesOfRegion rootCNCap uiRegion True
+>                 itPDCap <- createITPDPTs rootCNCap vptrStart biFrameVPtr
 >                 writeITPDPTs rootCNCap itPDCap
 
-Create and Init initial thread's ASID pool 
+Create and Init initial thread's ASID pool
 
 >                 itAPCap <- createITASIDPool rootCNCap
 >                 doKernelOp $ writeITASIDPool itAPCap itPDCap
@@ -210,7 +210,7 @@ Set the NullCaps in BIFrame
 
 >                 finaliseBIFrame
 
-Serialize BIFrame into memory 
+Serialize BIFrame into memory
 
 >                 syncBIFrame
 
@@ -243,12 +243,12 @@ createInitalThread, setup caps in initial thread, set idleThread to be the curre
 > createInitialThread :: Capability -> Capability -> Capability -> VPtr -> VPtr -> VPtr-> KernelInit ()
 > createInitialThread rootCNCap itPDCap ipcBufferCap entry ipcBufferVPtr biFrameVPtr = do
 >       let tcbBits = objBits (makeObject::TCB)
->       tcb' <- allocRegion tcbBits 
+>       tcb' <- allocRegion tcbBits
 >       let tcbPPtr = ptrFromPAddr tcb'
 >       doKernelOp $ do
 >          placeNewObject tcbPPtr initTCB 0
 >          srcSlot <- locateSlotCap rootCNCap biCapITCNode
->          destSlot <- getThreadCSpaceRoot tcbPPtr 
+>          destSlot <- getThreadCSpaceRoot tcbPPtr
 >          cteInsert rootCNCap srcSlot destSlot
 >          srcSlot <- locateSlotCap rootCNCap biCapITPD
 >          destSlot <- getThreadVSpaceRoot tcbPPtr
@@ -256,13 +256,13 @@ createInitalThread, setup caps in initial thread, set idleThread to be the curre
 >          srcSlot <- locateSlotCap rootCNCap biCapITIPCBuf
 >          destSlot <- getThreadBufferSlot tcbPPtr
 >          cteInsert ipcBufferCap srcSlot destSlot
->          threadSet (\t-> t{tcbIPCBuffer = ipcBufferVPtr}) tcbPPtr 
+>          threadSet (\t-> t{tcbIPCBuffer = ipcBufferVPtr}) tcbPPtr
 
->          activateInitialThread tcbPPtr entry biFrameVPtr 
+>          activateInitialThread tcbPPtr entry biFrameVPtr
 
-Insert thread into rootCNodeCap 
+Insert thread into rootCNodeCap
 
->          cap <- return $ ThreadCap tcbPPtr 
+>          cap <- return $ ThreadCap tcbPPtr
 >          slot <- locateSlotCap rootCNCap biCapITTCB
 >          insertInitCap slot cap
 >       return ()
@@ -273,7 +273,7 @@ Create idle thread and set up current thread + scheduler state.
 > createIdleThread = do
 >       paddr <- allocRegion $ objBits (makeObject :: TCB)
 >       let tcbPPtr = ptrFromPAddr paddr
->       doKernelOp $ do 
+>       doKernelOp $ do
 >             placeNewObject tcbPPtr (makeObject::TCB) 0
 >             modify (\s -> s {ksIdleThread = tcbPPtr})
 >             setCurThread tcbPPtr
@@ -288,7 +288,7 @@ Create idle thread and set up current thread + scheduler state.
 >     let regEnd = (snd . fromRegion)
 >     let regEndPAddr = (addrFromPPtr . regEnd)
 >     slotBefore <- noInitFailure $ gets initSlotPosCur
->     mapM_ (\i -> provideUntypedCap rootCNodeCap False i (fromIntegral pageBits) slotBefore) 
+>     mapM_ (\i -> provideUntypedCap rootCNodeCap False i (fromIntegral pageBits) slotBefore)
 >              [regStartPAddr bootMemReuseReg, (regStartPAddr bootMemReuseReg + bit pageBits) .. (regEndPAddr bootMemReuseReg - 1)]
 >     currSlot <- noInitFailure $ gets initSlotPosCur
 >     mapM_ (\_ -> do
@@ -299,10 +299,10 @@ Create idle thread and set up current thread + scheduler state.
 
 >     (flip mapM) (take maxNumFreememRegions freemem)
 >         (\reg -> do
->             (\f -> foldME f reg [4 .. (finiteBitSize (undefined::Word)) - 2]) 
+>             (\f -> foldME f reg [4 .. (finiteBitSize (undefined::Word)) - 2])
 >                 (\reg bits -> do
->                     reg' <- (if not (isAligned (regStartPAddr reg) (bits + 1)) 
->                                 && (regEndPAddr reg) - (regStartPAddr reg) >= bit bits 
+>                     reg' <- (if not (isAligned (regStartPAddr reg) (bits + 1))
+>                                 && (regEndPAddr reg) - (regStartPAddr reg) >= bit bits
 >                         then do
 >                             provideUntypedCap rootCNodeCap False (regStartPAddr reg) (fromIntegral bits) slotBefore
 >                             return $ Region (regStart reg + bit bits, regEnd reg)
@@ -316,8 +316,8 @@ Create idle thread and set up current thread + scheduler state.
 >     let emptyReg = Region (PPtr 0, PPtr 0)
 >     let freemem' = replicate maxNumFreememRegions emptyReg
 >     slotAfter <- noInitFailure $ gets initSlotPosCur
->     noInitFailure $ modify (\s -> s { initFreeMemory = freemem', 
->                       initBootInfo = (initBootInfo s) { 
+>     noInitFailure $ modify (\s -> s { initFreeMemory = freemem',
+>                       initBootInfo = (initBootInfo s) {
 >                            bifUntypedObjCaps = [slotBefore .. slotAfter - 1] }})
 >--   syncBIFrame
 
@@ -343,7 +343,7 @@ Specific allocRegion for convenience, since most allocations are frame-sized.
 >       rootCNCap <- return $ rootCNCap {capCNodeGuardSize = 32 - levelBits}
 >       slot <- doKernelOp $ locateSlotCap rootCNCap biCapITCNode
 >       doKernelOp $ insertInitCap slot rootCNCap
->       return rootCNCap 
+>       return rootCNCap
 
 
 > provideCap :: Capability -> Capability -> KernelInit ()
@@ -353,7 +353,7 @@ Specific allocRegion for convenience, since most allocations are frame-sized.
 >     when (currSlot >= maxSlot) $ throwError $ IFailure
 >     slot <- doKernelOp $ locateSlotCap rootCNodeCap currSlot
 >     doKernelOp $ insertInitCap slot cap
->     noInitFailure $ modify (\st -> st { initSlotPosCur = currSlot + 1 })  
+>     noInitFailure $ modify (\st -> st { initSlotPosCur = currSlot + 1 })
 
 > provideUntypedCap :: Capability -> Bool ->  PAddr -> Word8 -> Word -> KernelInit ()
 > provideUntypedCap rootCNodeCap isDevice pptr sizeBits slotPosBefore = do
@@ -376,7 +376,7 @@ Specific allocRegion for convenience, since most allocations are frame-sized.
 >                                   capPtr = ptrFromPAddr pptr,
 >                                   capBlockSize = size,
 >                                   capFreeIndex = maxFreeIndex size }
- 
+
 \subsection{Helper Functions}
 
 Various functions in this module use "rangesBy" to split a sorted list into contiguous ranges, given a function that determines whether two adjacent items are contiguous. This is similar to "Data.List.groupBy", but does not assume that the comparison function "adj" is transitive; instead, the comparison function's arguments are always adjacent items in the input list.
@@ -391,10 +391,10 @@ Various functions in this module use "rangesBy" to split a sorted list into cont
 >         r = rangesBy adj (y:xs)
 
 > coverOf :: [Region] -> Region
-> coverOf [] = Region (0,0) 
+> coverOf [] = Region (0,0)
 > coverOf [x] = x
 > coverOf (x:xs) = Region (ln, hn)
->     where 
+>     where
 >         (l,h) = fromRegion x;
 >         (ll,hh) = fromRegion $ coverOf xs;
 >         ln = if l <= ll then l else ll;

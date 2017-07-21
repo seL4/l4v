@@ -32,13 +32,13 @@ notation strengthen_implementation.elim ("{elim| _ |}")
 notation strengthen_implementation.oblig ("{oblig| _ |}")
 notation strengthen_implementation.failed ("<strg-failed>")
 
-syntax 
+syntax
   "_ap_strg_bool" :: "['a, 'a] => 'a"  ("_ =strg<--|=> _")
   "_ap_wkn_bool" :: "['a, 'a] => 'a"  ("_ =strg-->|=> _")
   "_ap_ge_bool" :: "['a, 'a] => 'a"  ("_ =strg<=|=> _")
   "_ap_le_bool" :: "['a, 'a] => 'a"  ("_ =strg>=|=> _")
 
-syntax(xsymbols) 
+syntax(xsymbols)
   "_ap_strg_bool" :: "['a, 'a] => 'a"  ("_ =strg\<longleftarrow>|=> _")
   "_ap_wkn_bool" :: "['a, 'a] => 'a"  ("_ =strg\<longrightarrow>|=> _")
   "_ap_ge_bool" :: "['a, 'a] => 'a"  ("_ =strg\<le>|=> _")
@@ -226,12 +226,12 @@ fun map_context_total f (Context.Theory t) = (Context.Theory (f t))
   | map_context_total f (Context.Proof p)
     = (Context.Proof (Context.raw_transfer (f (Proof_Context.theory_of p)) p))
 
-val strg_add = Thm.declaration_attribute 
+val strg_add = Thm.declaration_attribute
         (fn thm => map_context_total (Congs.map (Thm.add_thm thm)));
 
-val strg_del = Thm.declaration_attribute 
+val strg_del = Thm.declaration_attribute
         (fn thm => map_context_total (Congs.map (Thm.del_thm thm)));
-  
+
 val setup =
   Attrib.setup @{binding "strg"} (Attrib.add_del strg_add strg_del)
     "strengthening congruence rules"
@@ -395,7 +395,7 @@ end
 
 text {* Test cases. *}
 
-lemma 
+lemma
   assumes x: "\<And>x. P x \<longrightarrow> Q x"
   shows "{x. x \<noteq> None \<and> P (the x)} \<subseteq> {y. \<forall>x. y = Some x \<longrightarrow> Q x}"
   apply (strengthen x)

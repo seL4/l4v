@@ -33,13 +33,13 @@ lemma nat_to_bl_id [simp]: "nat_to_bl (size (x :: (('a::len) word))) (unat x) = 
 
 subsection {* Purpose *}
 
-text {* 
+text {*
 
 This file defines some example systems using the access control
 definitions. The aim is a sanity check of the AC definitions, to
-ensure they enable to reason about reasonable systems. 
+ensure they enable to reason about reasonable systems.
 
-In particular, we want to make sure that 
+In particular, we want to make sure that
 
   . the function state_objs_to_policy does not connect everything to
   everything (Example 1)
@@ -55,7 +55,7 @@ In particular, we want to make sure that
 subsection {* Generic functions / lemmas *}
 
 
-text {* Defining the authority between labels. 
+text {* Defining the authority between labels.
 
 In addition to the intuitive authority we want, we need to add all the
 authority required to have a wellformed graph. So we define
@@ -69,20 +69,20 @@ the ones not depending on the current label). These are:
     between 2 labels if we can connect them via Control
     edges. Actually we add all authorities because of the second
     clause.
-  
+
 *}
 
 
-definition 
-  complete_AuthGraph :: "'a auth_graph \<Rightarrow> 'a set \<Rightarrow> 'a auth_graph" 
-where 
-  "complete_AuthGraph g ls \<equiv> 
-     g \<union> {(l,a,l) | a l. l \<in> ls}" 
+definition
+  complete_AuthGraph :: "'a auth_graph \<Rightarrow> 'a set \<Rightarrow> 'a auth_graph"
+where
+  "complete_AuthGraph g ls \<equiv>
+     g \<union> {(l,a,l) | a l. l \<in> ls}"
 
 text {* converting a nat to a bool list of size 10 - for the cnodes *}
 
 definition
-  the_nat_to_bl :: "nat \<Rightarrow> nat \<Rightarrow> bool list" 
+  the_nat_to_bl :: "nat \<Rightarrow> nat \<Rightarrow> bool list"
 where
   "the_nat_to_bl sz n \<equiv> the (nat_to_bl sz n)"
 
@@ -114,12 +114,12 @@ object: obj1_9, the endpoint. Both UT1 and T1 contains:
   . one TCB (obj1_3079 and obj1_3080 resp.)
   . one vspace made up of one page directory (obj1_6063 and obj1_3065 resp.)
   . each pd contains a single page table (obj1_3072 and obj1_3077 resp.)
-  . one cspace made up of one cnode (obj1_6 and obj1_7 resp.)  
+  . one cspace made up of one cnode (obj1_6 and obj1_7 resp.)
   . each cspace contains 4 caps:
          one to the tcb
          one to the cnode itself
          one to the vspace
-         one to the ep 
+         one to the ep
 
 UT1 can send to the ep while T1 can receive from it.
 
@@ -141,7 +141,7 @@ obj1_3072(pt)                                                      obj1_3077(pt)
 (the references are derived from the dump of the SAC system)
 
 
-The aim is to be able to prove 
+The aim is to be able to prove
 
   pas_refined Sys1PAS s1
 
@@ -161,17 +161,17 @@ the object is included in the right ASID-label *}
 
 text {* UT1's ASID *}
 
-definition 
-  asid1_3063 :: machine_word 
+definition
+  asid1_3063 :: machine_word
 where
-  "asid1_3063 \<equiv> 1<<asid_low_bits" 
+  "asid1_3063 \<equiv> 1<<asid_low_bits"
 
 text {* T1's ASID *}
 
-definition 
-  asid1_3065 :: machine_word 
+definition
+  asid1_3065 :: machine_word
 where
-  "asid1_3065 \<equiv> 2<<asid_low_bits" 
+  "asid1_3065 \<equiv> 2<<asid_low_bits"
 
 lemma "asid_high_bits_of asid1_3065 \<noteq> asid_high_bits_of asid1_3063"
 by (simp add: asid1_3063_def asid_high_bits_of_def asid1_3065_def asid_low_bits_def)
@@ -179,45 +179,45 @@ by (simp add: asid1_3063_def asid_high_bits_of_def asid1_3065_def asid_low_bits_
 
 text {* UT1's CSpace *}
 
-definition 
-  caps1_6 :: cnode_contents 
+definition
+  caps1_6 :: cnode_contents
 where
-  "caps1_6 \<equiv> 
+  "caps1_6 \<equiv>
    (empty_cnode 10)
-      ( (the_nat_to_bl_10 1)  
-            \<mapsto> ThreadCap 3079, 
+      ( (the_nat_to_bl_10 1)
+            \<mapsto> ThreadCap 3079,
         (the_nat_to_bl_10 2)
-            \<mapsto> CNodeCap 6 undefined undefined, 
+            \<mapsto> CNodeCap 6 undefined undefined,
         (the_nat_to_bl_10 3)
-            \<mapsto> ArchObjectCap (PageDirectoryCap 3063 
+            \<mapsto> ArchObjectCap (PageDirectoryCap 3063
                                              (Some asid1_3063)),
-        (the_nat_to_bl_10 318) 
+        (the_nat_to_bl_10 318)
             \<mapsto> EndpointCap  9 0 {AllowSend} )"
 
 
 definition
-  obj1_6 :: kernel_object 
+  obj1_6 :: kernel_object
 where
   "obj1_6 \<equiv> CNode 10 caps1_6"
 
 text {* T1's Cspace *}
 
 definition
-  caps1_7 :: cnode_contents 
+  caps1_7 :: cnode_contents
 where
-  "caps1_7 \<equiv> 
+  "caps1_7 \<equiv>
    (empty_cnode 10)
-      ( (the_nat_to_bl_10 1)  
-            \<mapsto> ThreadCap 3080, 
+      ( (the_nat_to_bl_10 1)
+            \<mapsto> ThreadCap 3080,
         (the_nat_to_bl_10 2)
             \<mapsto> CNodeCap 7 undefined undefined,
         (the_nat_to_bl_10 3)
-           \<mapsto> ArchObjectCap (PageDirectoryCap 3065 
+           \<mapsto> ArchObjectCap (PageDirectoryCap 3065
                                             (Some asid1_3065)),
         (the_nat_to_bl_10 318)
            \<mapsto> EndpointCap  9 0 {AllowRecv}) "
 
-definition 
+definition
   obj1_7 :: kernel_object
 where
   "obj1_7 \<equiv> CNode 10 caps1_7"
@@ -226,7 +226,7 @@ where
 text {* endpoint between UT1 and T1 *}
 
 definition
-  obj1_9 :: kernel_object 
+  obj1_9 :: kernel_object
 where
   "obj1_9 \<equiv> Endpoint IdleEP"
 
@@ -234,23 +234,23 @@ where
 text {* UT1's VSpace (PageDirectory)*}
 
 definition
-  pt1_3072 :: "word8 \<Rightarrow> pte " 
+  pt1_3072 :: "word8 \<Rightarrow> pte "
 where
-  "pt1_3072 \<equiv> (\<lambda>_. InvalidPTE)" 
+  "pt1_3072 \<equiv> (\<lambda>_. InvalidPTE)"
 
-definition 
-  obj1_3072 :: kernel_object 
+definition
+  obj1_3072 :: kernel_object
 where
   "obj1_3072 \<equiv> ArchObj (PageTable pt1_3072)"
 
 
 definition
-  pd1_3063 :: "12 word \<Rightarrow> pde " 
+  pd1_3063 :: "12 word \<Rightarrow> pde "
 where
-  "pd1_3063 \<equiv> 
+  "pd1_3063 \<equiv>
     (\<lambda>_. InvalidPDE)
-     (0 := PageTablePDE 
-              (addrFromPPtr 3072) 
+     (0 := PageTablePDE
+              (addrFromPPtr 3072)
               undefined
               undefined )"
 
@@ -258,7 +258,7 @@ where
 if it's right *)
 
 definition
-  obj1_3063 :: kernel_object 
+  obj1_3063 :: kernel_object
 where
   "obj1_3063 \<equiv> ArchObj (PageDirectory pd1_3063)"
 
@@ -267,33 +267,33 @@ text {* T1's VSpace (PageDirectory)*}
 
 
 definition
-  pt1_3077 :: "word8 \<Rightarrow> pte " 
+  pt1_3077 :: "word8 \<Rightarrow> pte "
 where
-  "pt1_3077 \<equiv> 
+  "pt1_3077 \<equiv>
     (\<lambda>_. InvalidPTE)"
 
 
 definition
-  obj1_3077 :: kernel_object 
+  obj1_3077 :: kernel_object
 where
   "obj1_3077 \<equiv> ArchObj (PageTable pt1_3077)"
 
 
 definition
-  pd1_3065 :: "12 word \<Rightarrow> pde " 
+  pd1_3065 :: "12 word \<Rightarrow> pde "
 where
   "pd1_3065 \<equiv>
     (\<lambda>_. InvalidPDE)
-     (0 := PageTablePDE  
-             (addrFromPPtr 3077) 
+     (0 := PageTablePDE
+             (addrFromPPtr 3077)
              undefined
-             undefined )" 
+             undefined )"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
 
 definition
-  obj1_3065 :: kernel_object 
+  obj1_3065 :: kernel_object
 where
   "obj1_3065 \<equiv> ArchObj (PageDirectory pd1_3065)"
 
@@ -301,19 +301,19 @@ where
 text {* UT1's tcb *}
 
 definition
-  obj1_3079 :: kernel_object 
+  obj1_3079 :: kernel_object
 where
-  "obj1_3079 \<equiv> 
-   TCB \<lparr> 
+  "obj1_3079 \<equiv>
+   TCB \<lparr>
      tcb_ctable             = CNodeCap 6 undefined undefined,
      tcb_vtable             = ArchObjectCap (PageDirectoryCap 3063 (Some asid1_3063)),
      tcb_reply              = ReplyCap 3079 True, (* master reply cap to itself *)
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
-     tcb_state              = Running, 
-     tcb_fault_handler      = undefined, 
+     tcb_state              = Running,
+     tcb_fault_handler      = undefined,
      tcb_ipc_buffer         = undefined,
-     tcb_fault              = undefined, 
+     tcb_fault              = undefined,
      tcb_bound_notification = None,
      tcb_mcpriority         = undefined,
      tcb_arch               = \<lparr>tcb_context = undefined\<rparr> \<rparr>"
@@ -322,17 +322,17 @@ where
 text {* T1's tcb *}
 
 definition
-  obj1_3080 :: kernel_object 
+  obj1_3080 :: kernel_object
 where
-  "obj1_3080 \<equiv> 
-   TCB \<lparr> 
+  "obj1_3080 \<equiv>
+   TCB \<lparr>
      tcb_ctable             = CNodeCap 7 undefined undefined,
      tcb_vtable             = ArchObjectCap (PageDirectoryCap 3065 (Some asid1_3065)),
      tcb_reply              = ReplyCap 3080 True, (* master reply cap to itself *)
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
      tcb_state              = BlockedOnReceive 9,
-     tcb_fault_handler      = undefined, 
+     tcb_fault_handler      = undefined,
      tcb_ipc_buffer         = undefined,
      tcb_fault              = undefined,
      tcb_bound_notification = None,
@@ -347,8 +347,8 @@ definition
 but Tom says it only matters if the sender can grant - which is not the case of the UT1 - I think *)
 
 definition
-  kh1 :: kheap 
-where 
+  kh1 :: kheap
+where
   "kh1 \<equiv> [ 6 \<mapsto> obj1_6,
           7 \<mapsto> obj1_7,
           9 \<mapsto> obj1_9,
@@ -360,9 +360,9 @@ where
           3079 \<mapsto> obj1_3079,
           3080 \<mapsto> obj1_3080 ]"
 
-lemmas kh1_obj_def = 
-  obj1_6_def obj1_7_def obj1_9_def obj1_10_def obj1_3063_def obj1_3065_def 
-  obj1_3072_def obj1_3077_def obj1_3079_def obj1_3080_def 
+lemmas kh1_obj_def =
+  obj1_6_def obj1_7_def obj1_9_def obj1_10_def obj1_3063_def obj1_3065_def
+  obj1_3072_def obj1_3077_def obj1_3079_def obj1_3080_def
 
 definition exst1 :: "det_ext" where
   "exst1 \<equiv> \<lparr>work_units_completed_internal = undefined,
@@ -380,14 +380,14 @@ definition
 where
   "s1 \<equiv>  \<lparr>
     kheap = kh1,
-    cdt = empty, 
+    cdt = empty,
     is_original_cap = undefined,
     cur_thread = undefined,
     idle_thread = undefined,
     machine_state = undefined,
     interrupt_irq_node = (\<lambda>_. 10),
     interrupt_states = undefined,
-    arch_state = \<lparr> 
+    arch_state = \<lparr>
         arm_asid_table = (\<lambda> x. None),
         arm_hwasid_table = undefined,
         arm_next_asid = undefined,
@@ -403,21 +403,21 @@ where
 subsubsection {* Defining the policy graph *}
 
 
-datatype Sys1Labels = 
+datatype Sys1Labels =
     UT1 | T1 | EP1 | IRQ1
 
 definition
-  Sys1AgentMap :: "Sys1Labels agent_map" 
-where 
-  "Sys1AgentMap \<equiv> 
-   (\<lambda>_. undefined) 
+  Sys1AgentMap :: "Sys1Labels agent_map"
+where
+  "Sys1AgentMap \<equiv>
+   (\<lambda>_. undefined)
      (6 := UT1,
       7 := T1,
       9 := EP1,
       10 := IRQ1,
       3063 := UT1,
       3065 := T1,
-      3072 := UT1, 
+      3072 := UT1,
       3077 := T1,
       3079 := UT1,
       3080 := T1 )"
@@ -429,34 +429,34 @@ lemma Sys1AgentMap_simps:
       "Sys1AgentMap 10 = IRQ1"
       "Sys1AgentMap 3063 = UT1"
       "Sys1AgentMap 3065 = T1"
-      "Sys1AgentMap 3072 = UT1" 
+      "Sys1AgentMap 3072 = UT1"
       "Sys1AgentMap 3077 = T1"
       "Sys1AgentMap 3079 = UT1"
       "Sys1AgentMap 3080 = T1"
   unfolding Sys1AgentMap_def by simp_all
 
 definition
-  Sys1AuthGraph_aux :: "Sys1Labels auth_graph" 
+  Sys1AuthGraph_aux :: "Sys1Labels auth_graph"
 where
     "Sys1AuthGraph_aux \<equiv>
-  { (UT1, auth.SyncSend,    EP1),   
+  { (UT1, auth.SyncSend,    EP1),
     (UT1, auth.Reset,   EP1),
-    (T1,  auth.Receive, EP1), 
+    (T1,  auth.Receive, EP1),
     (T1,  auth.Reset,   EP1) }"
 
 definition
-  Sys1AuthGraph:: "Sys1Labels auth_graph" 
+  Sys1AuthGraph:: "Sys1Labels auth_graph"
 where
     "Sys1AuthGraph \<equiv> complete_AuthGraph Sys1AuthGraph_aux {T1, UT1}"
 
 
 definition
-  Sys1ASIDMap :: "Sys1Labels agent_asid_map" 
-where 
-  "Sys1ASIDMap \<equiv> 
-    (\<lambda>x. if (asid_high_bits_of x = asid_high_bits_of asid1_3063) 
-          then UT1 
-         else if (asid_high_bits_of x = asid_high_bits_of asid1_3065) 
+  Sys1ASIDMap :: "Sys1Labels agent_asid_map"
+where
+  "Sys1ASIDMap \<equiv>
+    (\<lambda>x. if (asid_high_bits_of x = asid_high_bits_of asid1_3063)
+          then UT1
+         else if (asid_high_bits_of x = asid_high_bits_of asid1_3065)
           then T1 else undefined)"
 
 definition Sys1PAS :: "Sys1Labels PAS" where
@@ -466,22 +466,22 @@ definition Sys1PAS :: "Sys1Labels PAS" where
 subsubsection {* Proof of pas_refined for Sys1 *}
 
 lemma caps1_7_well_formed: "well_formed_cnode_n 10 caps1_7"
- apply (clarsimp simp: caps1_7_def well_formed_cnode_n_def) 
+ apply (clarsimp simp: caps1_7_def well_formed_cnode_n_def)
  apply (clarsimp simp: the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
  apply (clarsimp simp: empty_cnode_def dom_def)
  apply (rule set_eqI, clarsimp)
  apply (rule iffI)
-  apply (elim disjE, insert len_bin_to_bl, simp_all)[1] 
+  apply (elim disjE, insert len_bin_to_bl, simp_all)[1]
  apply clarsimp
 done
 
 lemma caps1_6_well_formed: "well_formed_cnode_n 10 caps1_6"
- apply (clarsimp simp: caps1_6_def well_formed_cnode_n_def) 
+ apply (clarsimp simp: caps1_6_def well_formed_cnode_n_def)
  apply (clarsimp simp: the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
  apply (clarsimp simp: empty_cnode_def dom_def)
  apply (rule set_eqI, clarsimp)
  apply (rule iffI)
-  apply (elim disjE, insert len_bin_to_bl, simp_all)[1] 
+  apply (elim disjE, insert len_bin_to_bl, simp_all)[1]
  apply clarsimp
 done
 
@@ -491,21 +491,21 @@ lemma empty_cnode_apply[simp]:
   by (auto simp add: empty_cnode_def)
 
 
-lemma s1_caps_of_state : 
+lemma s1_caps_of_state :
   "caps_of_state s1 p = Some cap \<Longrightarrow>
      cap = NullCap \<or>
-     (p,cap) \<in>  
+     (p,cap) \<in>
        { ((6::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 3079),
          ((6::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 6 undefined undefined),
-         ((6::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3063 (Some asid1_3063))), 
+         ((6::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3063 (Some asid1_3063))),
          ((6::obj_ref,(the_nat_to_bl_10 318)),EndpointCap  9 0 {AllowSend}),
-         ((7::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 3080), 
+         ((7::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 3080),
          ((7::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 7 undefined undefined),
-         ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3065 (Some asid1_3065))), 
+         ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3065 (Some asid1_3065))),
          ((7::obj_ref,(the_nat_to_bl_10 318)),EndpointCap  9 0 {AllowRecv}) ,
          ((3079::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined ),
          ((3079::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3063 (Some asid1_3063))),
-         ((3079::obj_ref, (tcb_cnode_index 2)), ReplyCap 3079 True), 
+         ((3079::obj_ref, (tcb_cnode_index 2)), ReplyCap 3079 True),
          ((3079::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((3079::obj_ref, (tcb_cnode_index 4)), NullCap),
          ((3080::obj_ref, (tcb_cnode_index 0)), CNodeCap 7 undefined undefined ),
@@ -514,22 +514,22 @@ lemma s1_caps_of_state :
          ((3080::obj_ref, (tcb_cnode_index 3)), NullCap),
          ((3080::obj_ref, (tcb_cnode_index 4)), NullCap)} "
   apply (insert caps1_7_well_formed)
-  apply (insert caps1_6_well_formed) 
+  apply (insert caps1_6_well_formed)
   apply (simp add: caps_of_state_cte_wp_at cte_wp_at_cases s1_def kh1_def kh1_obj_def)
   apply (case_tac p, clarsimp)
   apply (clarsimp split: if_splits)
-     apply (clarsimp simp: cte_wp_at_cases tcb_cap_cases_def 
+     apply (clarsimp simp: cte_wp_at_cases tcb_cap_cases_def
                      split: if_split_asm)+
    apply (clarsimp simp: caps1_7_def split: if_splits)
   apply (clarsimp simp: caps1_6_def cte_wp_at_cases  split: if_splits)
 done
 
- 
+
 lemma Sys1_wellformed: "pas_wellformed Sys1PAS"
  apply (clarsimp simp: Sys1PAS_def
-                    policy_wellformed_def 
+                    policy_wellformed_def
                     Sys1AuthGraph_def
-                    Sys1AuthGraph_aux_def 
+                    Sys1AuthGraph_aux_def
                     complete_AuthGraph_def)
  apply blast
  done
@@ -551,7 +551,7 @@ lemma thread_bound_ntfns_1:
   done
 
 declare AllowSend_def[simp] AllowRecv_def[simp]
-  
+
 lemma domains_of_state_s1[simp]:
   "domains_of_state s1 = {}"
   apply(rule equalityI)
@@ -567,7 +567,7 @@ lemma "pas_refined Sys1PAS s1"
   apply (intro conjI)
        apply (simp add: Sys1_wellformed)
       apply (simp add: irq_map_wellformed_aux_def s1_def Sys1AgentMap_simps Sys1PAS_def)
-     apply (clarsimp simp: auth_graph_map_def 
+     apply (clarsimp simp: auth_graph_map_def
                            Sys1PAS_def
                            state_objs_to_policy_def
                            state_bits_to_policy_def tcb_domain_map_wellformed_aux_def
@@ -586,7 +586,7 @@ lemma "pas_refined Sys1PAS s1"
       apply (simp add:  thread_bound_ntfns_1)
      apply (simp add: s1_def) (* this is OK because cdt is empty..*)
 
-    apply (clarsimp simp: state_vrefs_def 
+    apply (clarsimp simp: state_vrefs_def
                            vs_refs_no_global_pts_def
                            s1_def kh1_def  Sys1AgentMap_simps
                            kh1_obj_def comp_def pt1_3072_def pt1_3077_def pte_ref_def pde_ref2_def pd1_3065_def pd1_3063_def
@@ -601,9 +601,9 @@ lemma "pas_refined Sys1PAS s1"
      apply clarsimp
      apply (drule s1_caps_of_state, clarsimp)
      apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def Sys1PAS_def Sys1ASIDMap_def)
-     apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def asid1_3065_def asid1_3063_def 
+     apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def asid1_3065_def asid1_3063_def
        asid_low_bits_def asid_high_bits_of_def )[1]
-    apply (clarsimp simp: state_vrefs_def 
+    apply (clarsimp simp: state_vrefs_def
                            vs_refs_no_global_pts_def
                            s1_def kh1_def  Sys1AgentMap_simps
                            kh1_obj_def comp_def pt1_3072_def pt1_3077_def pte_ref_def pde_ref2_def pd1_3065_def pd1_3063_def
@@ -618,7 +618,7 @@ lemma "pas_refined Sys1PAS s1"
   apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def Sys1PAS_def Sys1ASIDMap_def)
   apply (drule s1_caps_of_state)
   apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def Sys1PAS_def Sys1ASIDMap_def)
-  apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def asid1_3065_def asid1_3063_def 
+  apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def asid1_3065_def asid1_3063_def
     asid_low_bits_def asid_high_bits_of_def )[1]
    done
 
@@ -636,7 +636,7 @@ Both UT2 and T2 contains:
   . one TCB (obj2_3079 and obj2_3080 resp.)
   . one vspace made up of one page directory (obj2_6063 and obj2_3065 resp.)
   . each pd contains a single page table (obj2_3072 and obj2_3077 resp.)
-  . one cspace made up of one cnode (obj2_6 and obj2_7 resp.)  
+  . one cspace made up of one cnode (obj2_6 and obj2_7 resp.)
   . each cspace contains 4 caps:
          one to the tcb
          one to the cnode itself
@@ -662,7 +662,7 @@ obj2_3072(pt)                                                      obj2_3077(pt)
 (the references are derived from the dump of the SAC system)
 
 
-The aim is to be able to prove 
+The aim is to be able to prove
 
   pas_refined Sys2PAS s2
 
@@ -684,17 +684,17 @@ the object is included in the right ASID-label *}
 
 text {* UT2's ASID *}
 
-definition 
-  asid2_3063 :: machine_word 
+definition
+  asid2_3063 :: machine_word
 where
   "asid2_3063 \<equiv> 1<<asid_low_bits"
 
 text {* T2's ASID *}
 
-definition 
-  asid2_3065 :: machine_word 
+definition
+  asid2_3065 :: machine_word
 where
-  "asid2_3065 \<equiv> 2<<asid_low_bits" 
+  "asid2_3065 \<equiv> 2<<asid_low_bits"
 
 lemma "asid_high_bits_of asid2_3065 \<noteq> asid_high_bits_of asid2_3063"
 by (simp add: asid2_3063_def asid_high_bits_of_def asid2_3065_def asid_low_bits_def)
@@ -703,14 +703,14 @@ by (simp add: asid2_3063_def asid_high_bits_of_def asid2_3065_def asid_low_bits_
 
 text {* the intermediaite CSpace *}
 
-definition 
-  caps2_5 :: cnode_contents 
+definition
+  caps2_5 :: cnode_contents
 where
-  "caps2_5 \<equiv> 
+  "caps2_5 \<equiv>
    (empty_cnode 10)"
 
 definition
-  obj2_5 :: kernel_object 
+  obj2_5 :: kernel_object
 where
   "obj2_5 \<equiv> CNode 10 caps2_5"
 
@@ -718,45 +718,45 @@ where
 
 text {* UT2's CSpace *}
 
-definition 
-  caps2_6 :: cnode_contents 
+definition
+  caps2_6 :: cnode_contents
 where
-  "caps2_6 \<equiv> 
+  "caps2_6 \<equiv>
    (empty_cnode 10)
-      ( (the_nat_to_bl_10 1)  
-            \<mapsto> ThreadCap 3079, 
+      ( (the_nat_to_bl_10 1)
+            \<mapsto> ThreadCap 3079,
         (the_nat_to_bl_10 2)
-            \<mapsto> CNodeCap 6 undefined undefined, 
+            \<mapsto> CNodeCap 6 undefined undefined,
         (the_nat_to_bl_10 3)
-            \<mapsto> ArchObjectCap (PageDirectoryCap 3063 
+            \<mapsto> ArchObjectCap (PageDirectoryCap 3063
                                              (Some asid2_3063)),
         (the_nat_to_bl_10 4)
             \<mapsto> CNodeCap 5 undefined undefined )"
 
 
 definition
-  obj2_6 :: kernel_object 
+  obj2_6 :: kernel_object
 where
   "obj2_6 \<equiv> CNode 10 caps2_6"
 
 text {* T2's Cspace *}
 
 definition
-  caps2_7 :: cnode_contents 
+  caps2_7 :: cnode_contents
 where
-  "caps2_7 \<equiv> 
+  "caps2_7 \<equiv>
    (empty_cnode 10)
-      ( (the_nat_to_bl_10 1)  
-            \<mapsto> ThreadCap 3080, 
+      ( (the_nat_to_bl_10 1)
+            \<mapsto> ThreadCap 3080,
         (the_nat_to_bl_10 2)
             \<mapsto> CNodeCap 7 undefined undefined,
         (the_nat_to_bl_10 3)
-           \<mapsto> ArchObjectCap (PageDirectoryCap 3065 
+           \<mapsto> ArchObjectCap (PageDirectoryCap 3065
                                             (Some asid2_3065)),
         (the_nat_to_bl_10 4)
             \<mapsto> CNodeCap 5 undefined undefined) "
 
-definition 
+definition
   obj2_7 :: kernel_object
 where
   "obj2_7 \<equiv> CNode 10 caps2_7"
@@ -765,7 +765,7 @@ where
 text {* endpoint between UT2 and T2 *}
 
 definition
-  obj2_9 :: kernel_object 
+  obj2_9 :: kernel_object
 where
   "obj2_9 \<equiv> Endpoint IdleEP"
 
@@ -773,23 +773,23 @@ where
 text {* UT2's VSpace (PageDirectory)*}
 
 definition
-  pt2_3072 :: "word8 \<Rightarrow> pte " 
+  pt2_3072 :: "word8 \<Rightarrow> pte "
 where
   "pt2_3072 \<equiv> (\<lambda>_. InvalidPTE)"
 
-definition 
-  obj2_3072 :: kernel_object 
+definition
+  obj2_3072 :: kernel_object
 where
   "obj2_3072 \<equiv> ArchObj (PageTable pt2_3072)"
 
 
 definition
-  pd2_3063 :: "12 word \<Rightarrow> pde " 
+  pd2_3063 :: "12 word \<Rightarrow> pde "
 where
-  "pd2_3063 \<equiv> 
+  "pd2_3063 \<equiv>
     (\<lambda>_. InvalidPDE)
-     (0 := PageTablePDE 
-              (addrFromPPtr 3072) 
+     (0 := PageTablePDE
+              (addrFromPPtr 3072)
               undefined
               undefined )"
 
@@ -797,7 +797,7 @@ where
 if it's right *)
 
 definition
-  obj2_3063 :: kernel_object 
+  obj2_3063 :: kernel_object
 where
   "obj2_3063 \<equiv> ArchObj (PageDirectory pd2_3063)"
 
@@ -806,32 +806,32 @@ text {* T1's VSpace (PageDirectory)*}
 
 
 definition
-  pt2_3077 :: "word8 \<Rightarrow> pte " 
+  pt2_3077 :: "word8 \<Rightarrow> pte "
 where
-  "pt2_3077 \<equiv> 
+  "pt2_3077 \<equiv>
     (\<lambda>_. InvalidPTE)"
 
 definition
-  obj2_3077 :: kernel_object 
+  obj2_3077 :: kernel_object
 where
   "obj2_3077 \<equiv> ArchObj (PageTable pt2_3077)"
 
 
 definition
-  pd2_3065 :: "12 word \<Rightarrow> pde " 
+  pd2_3065 :: "12 word \<Rightarrow> pde "
 where
   "pd2_3065 \<equiv>
     (\<lambda>_. InvalidPDE)
-     (0 := PageTablePDE  
-             (addrFromPPtr 3077) 
+     (0 := PageTablePDE
+             (addrFromPPtr 3077)
              undefined
-             undefined )" 
+             undefined )"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
 
 definition
-  obj2_3065 :: kernel_object 
+  obj2_3065 :: kernel_object
 where
   "obj2_3065 \<equiv> ArchObj (PageDirectory pd2_3065)"
 
@@ -839,17 +839,17 @@ where
 text {* UT1's tcb *}
 
 definition
-  obj2_3079 :: kernel_object 
+  obj2_3079 :: kernel_object
 where
-  "obj2_3079 \<equiv> 
-   TCB \<lparr> 
+  "obj2_3079 \<equiv>
+   TCB \<lparr>
      tcb_ctable             = CNodeCap 6 undefined undefined ,
      tcb_vtable             = ArchObjectCap (PageDirectoryCap 3063 (Some asid2_3063)),
      tcb_reply              = ReplyCap 3079 True, (* master reply cap to itself *)
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
-     tcb_state              = Running, 
-     tcb_fault_handler      = undefined, 
+     tcb_state              = Running,
+     tcb_fault_handler      = undefined,
      tcb_ipc_buffer         = undefined,
      tcb_fault              = undefined,
      tcb_bound_notification = None,
@@ -860,17 +860,17 @@ where
 text {* T1's tcb *}
 
 definition
-  obj2_3080 :: kernel_object 
+  obj2_3080 :: kernel_object
 where
-  "obj2_3080 \<equiv> 
-   TCB \<lparr> 
+  "obj2_3080 \<equiv>
+   TCB \<lparr>
      tcb_ctable             = CNodeCap 7 undefined undefined ,
      tcb_vtable             = ArchObjectCap (PageDirectoryCap 3065 (Some asid2_3065)),
      tcb_reply              = ReplyCap 3080 True, (* master reply cap to itself *)
      tcb_caller             = NullCap,
      tcb_ipcframe           = NullCap,
      tcb_state              = BlockedOnReceive 9,
-     tcb_fault_handler      = undefined, 
+     tcb_fault_handler      = undefined,
      tcb_ipc_buffer         = undefined,
      tcb_fault              = undefined,
      tcb_bound_notification = None,
@@ -881,8 +881,8 @@ where
 but Tom says it only matters if the sender can grant - which is not the case of the UT1 - I think *)
 
 definition
-  kh2 :: kheap 
-where 
+  kh2 :: kheap
+where
   "kh2 \<equiv> [ 6 \<mapsto> obj2_6,
           7 \<mapsto> obj2_7,
           9 \<mapsto> obj2_9,
@@ -893,24 +893,24 @@ where
           3079 \<mapsto> obj2_3079,
           3080 \<mapsto> obj2_3080 ]"
 
-lemmas kh2_obj_def = 
-  obj2_6_def obj2_7_def obj2_9_def obj2_3063_def obj2_3065_def 
-  obj2_3072_def obj2_3077_def obj2_3079_def obj2_3080_def 
+lemmas kh2_obj_def =
+  obj2_6_def obj2_7_def obj2_9_def obj2_3063_def obj2_3065_def
+  obj2_3072_def obj2_3077_def obj2_3079_def obj2_3080_def
 
 
 definition
-  s2 :: "det_ext state" 
+  s2 :: "det_ext state"
 where
   "s2 \<equiv>  \<lparr>
     kheap = kh2,
-    cdt = empty, 
+    cdt = empty,
     is_original_cap = undefined,
     cur_thread = undefined,
     idle_thread = undefined,
     machine_state = undefined,
     interrupt_irq_node = (\<lambda>_. 9001),
     interrupt_states = undefined,
-    arch_state = \<lparr> 
+    arch_state = \<lparr>
         arm_asid_table = (\<lambda> x. None),
         arm_hwasid_table = undefined,
         arm_next_asid = undefined,
@@ -926,21 +926,21 @@ where
 subsubsection {* Defining the policy graph *}
 
 
-datatype Sys2Labels = 
+datatype Sys2Labels =
     UT2 | T2 | IRQ2
 
 definition
-  Sys2AgentMap :: "Sys2Labels agent_map" 
-where 
-  "Sys2AgentMap \<equiv> 
-   (\<lambda>_. undefined) 
+  Sys2AgentMap :: "Sys2Labels agent_map"
+where
+  "Sys2AgentMap \<equiv>
+   (\<lambda>_. undefined)
      (5 := UT2,
       6 := UT2,
       7 := T2,
       9 := T2,
       3063 := UT2,
       3065 := T2,
-      3072 := UT2, 
+      3072 := UT2,
       3077 := T2,
       3079 := UT2,
       3080 := T2,
@@ -948,27 +948,27 @@ where
 
 
 definition
-  Sys2AuthGraph_aux :: "Sys2Labels auth_graph" 
+  Sys2AuthGraph_aux :: "Sys2Labels auth_graph"
 where
     "Sys2AuthGraph_aux \<equiv>
        { (T2, Control, UT2) }"
 
 definition
-  Sys2AuthGraph:: "Sys2Labels auth_graph" 
+  Sys2AuthGraph:: "Sys2Labels auth_graph"
 where
     "Sys2AuthGraph \<equiv> complete_AuthGraph Sys2AuthGraph_aux {T2, UT2}"
 
 
 definition
-  Sys2ASIDMap :: "Sys2Labels agent_asid_map" 
-where 
-  "Sys2ASIDMap \<equiv>  
-    (\<lambda>_. undefined) 
+  Sys2ASIDMap :: "Sys2Labels agent_asid_map"
+where
+  "Sys2ASIDMap \<equiv>
+    (\<lambda>_. undefined)
      (asid2_3063 := UT2,
       asid2_3065 := T2 )"
 
 definition Sys2PAS :: "Sys2Labels PAS" where
-  "Sys2PAS \<equiv> \<lparr> pasObjectAbs = Sys2AgentMap, pasASIDAbs = Sys2ASIDMap, 
+  "Sys2PAS \<equiv> \<lparr> pasObjectAbs = Sys2AgentMap, pasASIDAbs = Sys2ASIDMap,
               pasIRQAbs = (\<lambda>_. IRQ2),
               pasPolicy = Sys2AuthGraph, pasSubject = UT2, pasMayActivate = True, pasMayEditReadyQueues = True, pasMaySendIrqs = True, pasDomainAbs = undefined \<rparr>"
 
@@ -977,22 +977,22 @@ definition Sys2PAS :: "Sys2Labels PAS" where
 subsubsection {* Proof of pas_refined for Sys2 *}
 
 lemma caps2_7_well_formed: "well_formed_cnode_n 10 caps2_7"
- apply (clarsimp simp: caps2_7_def well_formed_cnode_n_def) 
+ apply (clarsimp simp: caps2_7_def well_formed_cnode_n_def)
  apply (clarsimp simp: the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
  apply (clarsimp simp: empty_cnode_def dom_def)
  apply (rule set_eqI, clarsimp)
  apply (rule iffI)
-  apply (elim disjE, insert len_bin_to_bl, simp_all)[1] 
+  apply (elim disjE, insert len_bin_to_bl, simp_all)[1]
  apply clarsimp
 done
 
 lemma caps2_6_well_formed: "well_formed_cnode_n 10 caps2_6"
- apply (clarsimp simp: caps2_6_def well_formed_cnode_n_def) 
+ apply (clarsimp simp: caps2_6_def well_formed_cnode_n_def)
  apply (clarsimp simp: the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
  apply (clarsimp simp: empty_cnode_def dom_def)
  apply (rule set_eqI, clarsimp)
  apply (rule iffI)
-  apply (elim disjE, insert len_bin_to_bl, simp_all)[1] 
+  apply (elim disjE, insert len_bin_to_bl, simp_all)[1]
  apply clarsimp
 done
 
@@ -1002,17 +1002,17 @@ done
 
 
 
-lemma s2_caps_of_state : 
+lemma s2_caps_of_state :
   "caps_of_state s2 p = Some cap \<Longrightarrow>
      cap = NullCap \<or>
-     (p,cap) \<in>  
+     (p,cap) \<in>
        { ((6::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 3079),
          ((6::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 6 undefined undefined),
-         ((6::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3063 (Some asid2_3063))), 
+         ((6::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3063 (Some asid2_3063))),
          ((6::obj_ref,(the_nat_to_bl_10 4)),  CNodeCap 5 undefined undefined),
-         ((7::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 3080), 
+         ((7::obj_ref,(the_nat_to_bl_10 1)),  ThreadCap 3080),
          ((7::obj_ref,(the_nat_to_bl_10 2)),  CNodeCap 7 undefined undefined),
-         ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3065 (Some asid2_3065))), 
+         ((7::obj_ref,(the_nat_to_bl_10 3)),  ArchObjectCap (PageDirectoryCap 3065 (Some asid2_3065))),
          ((7::obj_ref,(the_nat_to_bl_10 4)),  CNodeCap 5 undefined undefined),
          ((3079::obj_ref, (tcb_cnode_index 0)), CNodeCap 6 undefined undefined ),
          ((3079::obj_ref, (tcb_cnode_index 1)), ArchObjectCap (PageDirectoryCap 3063 (Some asid2_3063))),
@@ -1033,14 +1033,14 @@ lemma s2_caps_of_state :
    apply (clarsimp simp: caps2_7_def split: if_splits)
   apply (clarsimp simp: caps2_6_def cte_wp_at_cases  split: if_splits)
 done
- 
+
 lemma Sys2_wellformed: "pas_wellformed Sys2PAS"
   apply (clarsimp simp: Sys2PAS_def policy_wellformed_def)
   apply (intro conjI)
   apply (simp_all add: Sys2AuthGraph_def complete_AuthGraph_def
                        Sys2AuthGraph_aux_def)
   done
- 
+
 lemma Sys2AgentMap_simps:
   "Sys2AgentMap 5 = UT2"
   "Sys2AgentMap 6 = UT2"
@@ -1048,7 +1048,7 @@ lemma Sys2AgentMap_simps:
   "Sys2AgentMap 9 = T2"
   "Sys2AgentMap 3063 = UT2"
   "Sys2AgentMap 3065 = T2"
-  "Sys2AgentMap 3072 = UT2" 
+  "Sys2AgentMap 3072 = UT2"
   "Sys2AgentMap 3077 = T2"
   "Sys2AgentMap 3079 = UT2"
   "Sys2AgentMap 3080 = T2"
@@ -1079,7 +1079,7 @@ lemma "pas_refined Sys2PAS s2"
       apply (simp add: Sys2_wellformed)
      apply (simp add: Sys2PAS_def s2_def Sys2AgentMap_def
                       irq_map_wellformed_aux_def)
-    apply (clarsimp simp: auth_graph_map_def 
+    apply (clarsimp simp: auth_graph_map_def
                           Sys2PAS_def
                           state_objs_to_policy_def
                           state_bits_to_policy_def tcb_domain_map_wellformed_aux_def)+
@@ -1092,7 +1092,7 @@ lemma "pas_refined Sys2PAS s2"
                              split: if_split_asm)[1]
        apply (drule s2_caps_of_state, clarsimp)
        apply (elim disjE, simp_all)[1]
-      apply (clarsimp simp: state_refs_of_def s2_def kh2_def kh2_obj_def 
+      apply (clarsimp simp: state_refs_of_def s2_def kh2_def kh2_obj_def
                       split: if_splits)
       apply (clarsimp split:if_splits option.splits
                       simp: thread_states_def tcb_states_of_state_def
@@ -1101,12 +1101,12 @@ lemma "pas_refined Sys2PAS s2"
                      dest!: get_tcb_SomeD)
      apply (simp add: s2_def) (* this is OK because cdt is empty..*)
 
-    apply ((clarsimp simp: state_vrefs_def 
+    apply ((clarsimp simp: state_vrefs_def
                            vs_refs_no_global_pts_def
                            s2_def kh2_def
                            kh2_obj_def
                      split: if_splits,
-           ((clarsimp split: if_splits 
+           ((clarsimp split: if_splits
                      simp: pd2_3065_def pd2_3063_def graph_of_def pde_ref_def
                            Sys2AgentMap_simps Sys2AuthGraph_def
                            complete_AuthGraph_def pt2_3077_def pte_ref_def
@@ -1120,7 +1120,7 @@ lemma "pas_refined Sys2PAS s2"
                       Sys2ASIDMap_def asid2_3063_def asid2_3065_def
                       asid_low_bits_def
                dest!: s2_caps_of_state)[1]
-   apply (clarsimp simp: state_vrefs_def 
+   apply (clarsimp simp: state_vrefs_def
                          vs_refs_no_global_pts_def
                          s2_def kh2_def
                          kh2_obj_def

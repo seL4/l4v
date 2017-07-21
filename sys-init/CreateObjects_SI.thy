@@ -660,7 +660,7 @@ lemma retype_untyped_loop_inv_success:
    type = object_type object;
    object_size = of_nat (object_at_pointer_size_bits spec obj_id)\<rbrakk>
   \<Longrightarrow>
-  \<lbrace>\<lambda>s. \<exists>untyped_caps t all_available_ids. 
+  \<lbrace>\<lambda>s. \<exists>untyped_caps t all_available_ids.
     \<guillemotleft>\<And>* map (\<lambda>(slot, cap). (si_cnode_id, slot) \<mapsto>c cap)
             (zip untyped_slots untyped_caps) \<and>*
      \<And>* map (\<lambda>slot. (si_cnode_id, slot) \<mapsto>c NullCap) (drop obj_id_index free_slots) \<and>*

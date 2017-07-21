@@ -155,10 +155,10 @@ datatype cdl_page_intent =
     (* Unmap: (target) *)
  |  PageUnmapIntent
     (* FlushCaches: (target) *)
- |  PageFlushCachesIntent 
+ |  PageFlushCachesIntent
     (* GetAddress *)
  | PageGetAddressIntent
-  
+
 
 datatype cdl_page_directory_intent =
    PageDirectoryFlushIntent

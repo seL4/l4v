@@ -350,7 +350,7 @@ def wrap_qualify(lines, deep=True):
         asdfextra = ""
 
     if call.current_context:
-        lines.insert(0, 'end\nqualify {} (in Arch) {}'.format(call.current_context[-1], 
+        lines.insert(0, 'end\nqualify {} (in Arch) {}'.format(call.current_context[-1],
                 asdfextra))
         lines.append('end_qualify\ncontext Arch begin global_naming %s' % call.current_context[-1])
     return lines

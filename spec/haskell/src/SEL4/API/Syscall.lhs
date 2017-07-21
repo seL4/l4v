@@ -98,7 +98,7 @@ System call events are dispatched here to the appropriate system call handlers, 
 Interrupt handling is performed by "handleInterrupt", defined in \autoref{sec:object.interrupt.kernel.handling}.
 
 > handleEvent Interrupt = withoutPreemption $ do
->     active <- doMachineOp getActiveIRQ
+>     active <- doMachineOp (getActiveIRQ False)
 >     case active of
 >         Just irq -> handleInterrupt irq
 >         Nothing -> doMachineOp $ debugPrint "spurious interrupt"
@@ -144,7 +144,6 @@ For platforms running in hypervisor mode, many fault handlers are wrapped and re
 > handleEvent (HypervisorEvent hypType) = withoutPreemption $ do
 >     thread <- getCurThread
 >     handleHypervisorFault thread hypType
->     return ()
 
 \subsection{System Calls}
 
@@ -197,7 +196,7 @@ The "Recv" system call blocks waiting to receive a message through a specified e
 >         epCap <- lookupCap thread epCPtr
 >         case epCap of
 >             EndpointCap { capEPCanReceive = True } -> do
->                 withoutFailure $ do 
+>                 withoutFailure $ do
 >                     deleteCallerCap thread
 >                     receiveIPC thread epCap isBlocking
 >             NotificationCap { capNtfnCanReceive = True, capNtfnPtr = ntfnPtr } -> do

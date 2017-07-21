@@ -183,10 +183,10 @@ where
 | "finalise_cap (EndpointCap r b R)      final =
       (liftM (K (NullCap, None)) $ when  final $ cancel_all_ipc r)"
 | "finalise_cap (NotificationCap r b R) final =
-      (liftM (K (NullCap, None)) $ when  final $ 
+      (liftM (K (NullCap, None)) $ when  final $
        do
          unbind_maybe_notification r;
-         cancel_all_ipc r 
+         cancel_all_ipc r
        od)"
 | "finalise_cap (ReplyCap r)             final = return (NullCap, None)"
 | "finalise_cap (MasterReplyCap r)       final = return (NullCap, None)"
@@ -511,7 +511,7 @@ where
 | "reset_mem_mapping (PageDirectoryCap ptr b ma) = PageDirectoryCap ptr b None"
 | "reset_mem_mapping cap = cap"
 
- 
+
 (*
  * Walk a user's CSpace to convert a user's CPTR into a cap slot.
  *)

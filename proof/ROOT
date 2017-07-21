@@ -32,9 +32,19 @@ chapter "Proofs"
 
 session Refine = BaseRefine +
   description {* Refinement between Haskell and Abstract spec. *}
+  theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
+    "refine/$L4V_ARCH/Refine"
   theories
     "refine/$L4V_ARCH/Refine"
-    "refine/$L4V_ARCH/Orphanage"
+
+session BaseRefine2 = BaseRefine +
+  description {* Intermediate point in refinement proof. Useful for machines with small RAM. *}
+  theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
+    "refine/$L4V_ARCH/Untyped_R"
+    "refine/$L4V_ARCH/Schedule_R"
+  theories
+   "refine/$L4V_ARCH/Untyped_R"
+   "refine/$L4V_ARCH/Schedule_R"
 
 session RefineOnly = BaseRefine +
   description {* Refinement between Haskell and Abstract spec. *}
@@ -47,6 +57,8 @@ session RefineQD = BaseRefine +
 
 session BaseRefine = AInvs +
   description {* Background theory and libraries for refinement proof. *}
+  theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
+    "refine/$L4V_ARCH/Include"
   theories
     "refine/$L4V_ARCH/Include"
 
@@ -57,6 +69,12 @@ session BaseRefineQD = AInvsQD +
 session AInvs = ASpec +
   theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
     "invariant-abstract/AInvs"
+    "invariant-abstract/KernelInit_AI"
+    "invariant-abstract/DetSchedSchedule_AI"
+  theories [condition = "INVS_QUICK_AND_DIRTY", quick_and_dirty]
+    "invariant-abstract/AInvs"
+    "invariant-abstract/KernelInit_AI"
+    "invariant-abstract/DetSchedSchedule_AI"
   theories
     "invariant-abstract/AInvs"
     "invariant-abstract/KernelInit_AI"
@@ -79,18 +97,22 @@ session AInvsSP = ASpec +
  *)
 
 session CRefineSyscall = CBaseRefine +
+  theories [condition = "CREFINE_QUICK_AND_DIRTY", quick_and_dirty]
+    "crefine/$L4V_ARCH/Syscall_C"
   theories
-    "crefine/Syscall_C"
+    "crefine/$L4V_ARCH/Syscall_C"
 
 session CRefine = CBaseRefine +
+  theories [condition = "CREFINE_QUICK_AND_DIRTY", quick_and_dirty]
+    "crefine/$L4V_ARCH/Refine_C"
   theories
-    "crefine/Refine_C"
+    "crefine/$L4V_ARCH/Refine_C"
 
 session CBaseRefine = CSpec +
   theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
-    "crefine/Include_C"
+    "crefine/$L4V_ARCH/Include_C"
   theories
-    "crefine/Include_C"
+    "crefine/$L4V_ARCH/Include_C"
 
 
 (*

@@ -6,7 +6,7 @@
 (*  Title:      Heap.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2004-2008 Norbert Schirmer 
+Copyright (C) 2004-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-theory Simpl_Heap 
+theory Simpl_Heap
 imports Main
 begin
 
@@ -37,7 +37,7 @@ typedef ref = ref by (simp add: ref_def)
 
 code_datatype Abs_ref
 
-lemma finite_nat_ex_max: 
+lemma finite_nat_ex_max:
   assumes fin: "finite (N::nat set)"
   shows "\<exists>m. \<forall>n\<in>N. n < m"
 using fin
@@ -54,13 +54,13 @@ next
 qed
 
 lemma infinite_nat: "\<not>finite (UNIV::nat set)"
-proof 
+proof
   assume fin: "finite (UNIV::nat set)"
   then obtain m::nat where "\<forall>n\<in>UNIV. n < m"
     by (rule finite_nat_ex_max [elim_format] ) auto
   moreover have "m\<in>UNIV"..
   ultimately show False by blast
-qed 
+qed
 
 lemma infinite_ref [simp,intro]: "\<not>finite (UNIV::ref set)"
 proof
@@ -87,7 +87,7 @@ proof
     by (simp add: ref_def infinite_nat)
 qed
 
-consts Null :: ref 
+consts Null :: ref
 
 definition new :: "ref set \<Rightarrow> ref" where
   "new A = (SOME a. a \<notin> {Null} \<union> A)"

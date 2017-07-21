@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 The TCB and thread related specifications.
 *)
 
@@ -24,6 +24,7 @@ requalify_consts
   arch_activate_idle_thread
   arch_tcb_set_ipc_buffer
   sanitise_register
+  arch_get_sanitise_register_info
 
 end
 
@@ -151,7 +152,7 @@ other threads. *}
 fun
   invoke_tcb :: "tcb_invocation \<Rightarrow> (data list,'z::state_ext) p_monad"
 where
-  "invoke_tcb (Suspend thread) = liftE (do suspend thread; return [] od)" 
+  "invoke_tcb (Suspend thread) = liftE (do suspend thread; return [] od)"
 | "invoke_tcb (Resume thread) = liftE (do restart thread; return [] od)"
 
 | "invoke_tcb (ThreadControl target slot faultep mcp priority croot vroot buffer)
@@ -184,12 +185,14 @@ where
        | Some (new_cap, src_slot) \<Rightarrow>
             check_cap_at new_cap src_slot
           $ check_cap_at (ThreadCap target) slot
-          $ cap_insert new_cap src_slot (target, tcb_cnode_index 4)
+          $ cap_insert new_cap src_slot (target, tcb_cnode_index 4);
+      cur \<leftarrow> liftE $ gets cur_thread;
+      liftE $ when (target = cur) (do_extended_op reschedule_required)
     odE);
     returnOk []
   odE"
 
-| "invoke_tcb (CopyRegisters dest src suspend_source resume_target transfer_frame transfer_integer transfer_arch) =  
+| "invoke_tcb (CopyRegisters dest src suspend_source resume_target transfer_frame transfer_integer transfer_arch) =
   (liftE $ do
     when suspend_source $ suspend src;
     when resume_target $ restart dest;
@@ -201,11 +204,13 @@ where
         pc \<leftarrow> as_user dest getRestartPC;
         as_user dest $ setNextPC pc
     od;
-    when transfer_integer $ 
+    when transfer_integer $
         mapM_x (\<lambda>r. do
                 v \<leftarrow> as_user src $ getRegister r;
                 as_user dest $ setRegister r v
         od) gpRegisters;
+    cur \<leftarrow> gets cur_thread;
+    when (dest = cur) (do_extended_op reschedule_required);
     return []
   od)"
 
@@ -220,18 +225,19 @@ where
 | "invoke_tcb (WriteRegisters dest resume_target values arch) =
   (liftE $ do
     self \<leftarrow> gets cur_thread;
-    t \<leftarrow> thread_get id dest;
+    b \<leftarrow> arch_get_sanitise_register_info dest;
     as_user dest $ do
-        zipWithM (\<lambda>r v. setRegister r (sanitise_register t r v))
+        zipWithM (\<lambda>r v. setRegister r (sanitise_register b r v))
             (frameRegisters @ gpRegisters) values;
         pc \<leftarrow> getRestartPC;
         setNextPC pc
     od;
     when resume_target $ restart dest;
+    when (dest = self) (do_extended_op reschedule_required);
     return []
   od)"
 
-| "invoke_tcb (NotificationControl tcb (Some ntfnptr)) = 
+| "invoke_tcb (NotificationControl tcb (Some ntfnptr)) =
   (liftE $ do
     bind_notification tcb ntfnptr;
     return []
@@ -265,7 +271,7 @@ definition
 definition invoke_domain:: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad"
 where
   "invoke_domain thread domain \<equiv>
-     liftE (do do_extended_op (set_domain thread domain); return [] od)" 
+     liftE (do do_extended_op (set_domain thread domain); return [] od)"
 
 text {* Get all of the message registers, both from the sending thread's current
 register file and its IPC buffer. *}

@@ -19,15 +19,15 @@ $/ = undef;
 $input = <STDIN>;
 
 # find the module name
-$input =~ /module\s+([A-Z][a-zA-Z0-9.]*)/m or die "no module";
+$input =~ /module\s+([A-Z][a-zA-Z0-9._]*)/m or die "no module";
 $modname = $1;
 
 # find the lists of hs-boot imports and exports
-$input =~ /{-# BOOT-IMPORTS:((\s+#?[A-Z][a-zA-Z0-9.]+(\(.*?\))?(%[a-zA-Z]+)?)*) #-}/
+$input =~ /{-# BOOT-IMPORTS:((\s+#?[A-Z][a-zA-Z0-9._]+(\(.*?\))?(%[a-zA-Z]+)?)*) #-}/
     or die "no imports";
 $imports = $1;
 
-$input =~ /{-# BOOT-EXPORTS:((\s+#?[a-zA-Z][a-zA-Z0-9']+(\(.*?\))?)*) #-}/
+$input =~ /{-# BOOT-EXPORTS:((\s+#?[a-zA-Z][a-zA-Z0-9_']+(\(.*?\))?)*) #-}/
     or die "no exports";
 $exports = $1;
 
@@ -51,13 +51,13 @@ $exports =~ s/\(.*?\)//g;
 # find and print all the type definitions...
 while($exports =~ / ([A-Z][a-zA-Z0-9']*)/g) {
     $name = $1;
-    
-    if (not $literate and 
-        $input =~ /^((type|newtype|data|class)\s+([A-Z][a-zA-Z0-9' ]*=>\s+)?$name\W.*?)^\S/ms)
+
+    if (not $literate and
+        $input =~ /^((type|newtype|data|class)\s+([A-Z][a-zA-Z0-9_' ]*=>\s+)?$name\W.*?)^\S/ms)
     {
         print "$1";
     } elsif ($literate and
-        $input =~ /^(> (type|newtype|data|class)\s+([A-Z][a-zA-Z0-9' ]*=>\s+)?$name\W.*?)^> \S/ms)
+        $input =~ /^(> (type|newtype|data|class)\s+([A-Z][a-zA-Z0-9_' ]*=>\s+)?$name\W.*?)^> \S/ms)
     {
         print "$1";
     }
@@ -66,7 +66,7 @@ while($exports =~ / ([A-Z][a-zA-Z0-9']*)/g) {
 # ...and the type signatures
 while($exports =~ / ([a-z][a-zA-Z0-9']*)/g) {
     $name = $1;
-    
+
     if (not $literate and $input =~ /^($name\s+::.*?)^\S/ms) {
         print "$1";
     } elsif ($literate and $input =~ /^(> $name\s+::.*?)^> \S/ms) {

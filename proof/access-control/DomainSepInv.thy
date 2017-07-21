@@ -26,11 +26,11 @@ text {*
   It always requires that there are no domain caps.
 *}
 
-text {* 
+text {*
   When @{term irqs} is @{term False} we require that non-timer IRQs are off permanently.
 *}
 definition domain_sep_inv where
-  "domain_sep_inv irqs st s \<equiv> 
+  "domain_sep_inv irqs st s \<equiv>
     (\<forall> slot. \<not> cte_wp_at (op = DomainCap) slot s) \<and>
     (irqs \<or> (\<forall> irq slot. \<not> cte_wp_at (op = IRQControlCap) slot s
       \<and> \<not> cte_wp_at (op = (IRQHandlerCap irq)) slot s
@@ -1185,7 +1185,12 @@ lemma checked_cap_insert_domain_sep_inv:
   apply(erule (1) same_object_as_domain_sep_inv_cap)
   done
 
-crunch domain_sep_inv[wp]: bind_notification "domain_sep_inv irqs st"
+crunch domain_sep_inv[wp]: bind_notification,reschedule_required "domain_sep_inv irqs st"
+
+lemma dxo_domain_sep_inv[wp]:
+  "\<lbrace>domain_sep_inv irqs st\<rbrace> do_extended_op eop  \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
+  by (simp | wp dxo_wp_weak)+
+
 
 lemma set_mcpriority_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace> set_mcpriority tcb_ref mcp \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
@@ -1279,7 +1284,7 @@ lemma handle_invocation_domain_sep_inv:
                             valid_objs and
                             sym_refs \<circ> state_refs_of and
                             valid_mdb and
-                            (\<lambda>y. valid_fault (CapFault x False ft))" and R="Q" and Q=Q 
+                            (\<lambda>y. valid_fault (CapFault x False ft))" and R="Q" and Q=Q
                   for Q in hoare_post_impErr)
        apply (wp lcs_ex_cap_to2
              | clarsimp)+
@@ -1330,7 +1335,7 @@ lemma handle_recv_domain_sep_inv:
             receive_ipc_domain_sep_inv delete_caller_cap_domain_sep_inv
             get_cap_wp get_ntfn_wp
         | wpc | simp
-        | rule_tac Q="\<lambda>rv. invs and (\<lambda>s. cur_thread s = thread)" in hoare_strengthen_post, wp, 
+        | rule_tac Q="\<lambda>rv. invs and (\<lambda>s. cur_thread s = thread)" in hoare_strengthen_post, wp,
           clarsimp simp: invs_valid_objs invs_sym_refs)+
     apply (rule_tac Q'="\<lambda>r s. domain_sep_inv irqs st s \<and> invs s \<and> tcb_at thread s \<and> thread = cur_thread s" in hoare_post_imp_R)
       apply wp

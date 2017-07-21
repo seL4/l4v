@@ -13,8 +13,8 @@ imports Main
 begin
 
 
-method_setup tsubst = 
-  {* Scan.lift (Args.mode "asm" -- Scan.optional (Args.parens (Scan.repeat Parse.nat)) [0] -- Parse.term) >> (fn ((asm,occs),t) => (fn ctxt => 
+method_setup tsubst =
+  {* Scan.lift (Args.mode "asm" -- Scan.optional (Args.parens (Scan.repeat Parse.nat)) [0] -- Parse.term) >> (fn ((asm,occs),t) => (fn ctxt =>
   Method.SIMPLE_METHOD (Subgoal.FOCUS_PARAMS (fn focus => (fn thm =>
   let
     val ctxt' = #context focus
@@ -23,7 +23,7 @@ method_setup tsubst =
     val ((_, schematic_terms), ctxt2) =
       Variable.import_inst true [(#concl focus) |> Thm.term_of] ctxt'
       |>> Thm.certify_inst thy
-     
+
     val ctxt3 = fold (fn (t,t') => Variable.bind_term (Thm.term_of t |> Term.dest_Var |> fst,SOME (t' |> Thm.term_of))) schematic_terms ctxt2
 
 
@@ -33,9 +33,9 @@ method_setup tsubst =
           |> Thm.trivial
 
     val thm' = Thm.instantiate ([],schematic_terms) thm
-         
+
   in
-    (if asm then EqSubst.eqsubst_asm_tac else EqSubst.eqsubst_tac) 
+    (if asm then EqSubst.eqsubst_asm_tac else EqSubst.eqsubst_tac)
       ctxt3 occs [athm] 1 thm'
       |> Seq.map (singleton (Variable.export ctxt3 ctxt'))
      end)) ctxt 1))) *}

@@ -225,10 +225,10 @@ primrec
 where
   "pte_relation'  ARM_A.InvalidPTE x = (x = ARM_H.InvalidPTE)"
 | "pte_relation' (ARM_A.LargePagePTE ptr atts rghts) x
-      = (x = ARM_H.LargePagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) 
+      = (x = ARM_H.LargePagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts)
                                          (XNever \<in> atts) (vmrights_map rghts))"
 | "pte_relation' (ARM_A.SmallPagePTE ptr atts rghts) x
-      = (x = ARM_H.SmallPagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) 
+      = (x = ARM_H.SmallPagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts)
                                          (XNever \<in> atts) (vmrights_map rghts))"
 
 
@@ -270,7 +270,7 @@ definition
 primrec
  aobj_relation_cuts :: "ARM_A.arch_kernel_obj \<Rightarrow> word32 \<Rightarrow> obj_relation_cuts"
 where
-  "aobj_relation_cuts (DataPage dev sz) x = 
+  "aobj_relation_cuts (DataPage dev sz) x =
       {(x + n * 2 ^ pageBits, \<lambda>_ obj. obj = (if dev then KOUserDataDevice else KOUserData) ) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }"
 | "aobj_relation_cuts (ARM_A.ASIDPool pool) x =
      {(x, other_obj_relation)}"
@@ -301,7 +301,7 @@ lemma obj_relation_cuts_def2:
                                            ` (UNIV :: word8 set)
              | ArchObj (PageDirectory pd) \<Rightarrow> (\<lambda>y. (x + (ucast y << 2), pde_relation y))
                                            ` (UNIV :: 12 word set)
-             | ArchObj (DataPage dev sz)      \<Rightarrow> 
+             | ArchObj (DataPage dev sz)      \<Rightarrow>
                  {(x + n * 2 ^ pageBits,  \<lambda>_ obj. obj =(if dev then KOUserDataDevice else KOUserData)) | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
              | _ \<Rightarrow> {(x, other_obj_relation)})"
   by (simp split: Structures_A.kernel_object.split
@@ -755,7 +755,7 @@ lemma ghost_relation_typ_at:
   "ghost_relation (kheap s) ups cns \<equiv>
    (\<forall>a sz. data_at sz a s = (ups a = Some sz)) \<and>
    (\<forall>a n. typ_at (ACapTable n) a s = (cns a = Some n))"
-   apply (rule eq_reflection) 
+   apply (rule eq_reflection)
    apply (clarsimp simp: ghost_relation_def typ_at_eq_kheap_obj data_at_def)
    apply (intro conjI impI iffI allI,simp_all)
     apply (auto elim!: allE)

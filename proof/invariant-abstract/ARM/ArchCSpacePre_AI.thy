@@ -34,7 +34,7 @@ definition
        | PageDirectoryCap r mapdata \<Rightarrow> True)"
 
 definition
-  "cap_vptr_arch acap \<equiv> case acap of 
+  "cap_vptr_arch acap \<equiv> case acap of
      (PageCap _ _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
   |  (PageTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
   | _ \<Rightarrow> None"
@@ -44,24 +44,24 @@ definition
 
 declare cap_vptr_arch_def[abs_def, simp]
 
-lemmas cap_vptr_simps [simp] = 
+lemmas cap_vptr_simps [simp] =
   cap_vptr_def [simplified, split_simps cap.split arch_cap.split option.split prod.split]
 
 definition
   "is_derived_arch cap cap' \<equiv>
-    ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow> 
+    ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow>
          cap_asid cap = cap_asid cap' \<and> cap_asid cap \<noteq> None) \<and>
      (vs_cap_ref cap = vs_cap_ref cap' \<or> is_pg_cap cap')"
 
 lemma is_derived_arch_non_arch:
-  "\<not>is_arch_cap cap \<Longrightarrow> \<not> is_arch_cap cap' \<Longrightarrow> 
+  "\<not>is_arch_cap cap \<Longrightarrow> \<not> is_arch_cap cap' \<Longrightarrow>
       is_derived_arch cap cap'"
   unfolding is_derived_arch_def is_pg_cap_def is_pt_cap_def is_pd_cap_def
             vs_cap_ref_def is_arch_cap_def
   by (auto split: cap.splits)
 
 lemma is_derived_cap_arch_asid:
-  "is_derived_arch cap cap' \<Longrightarrow> cap_master_cap cap = cap_master_cap cap' \<Longrightarrow> 
+  "is_derived_arch cap cap' \<Longrightarrow> cap_master_cap cap = cap_master_cap cap' \<Longrightarrow>
       is_pt_cap cap' \<or> is_pd_cap cap' \<Longrightarrow> cap_asid cap = cap_asid cap'"
   unfolding is_derived_arch_def
   apply (cases cap; cases cap'; simp)
@@ -99,9 +99,9 @@ lemma aobj_ref_cases':
 
 
 lemma aobj_ref_cases:
-  "aobj_ref acap = 
-  (case acap of 
-    arch_cap.ASIDPoolCap w1 w2 \<Rightarrow> Some w1 
+  "aobj_ref acap =
+  (case acap of
+    arch_cap.ASIDPoolCap w1 w2 \<Rightarrow> Some w1
   | arch_cap.ASIDControlCap \<Rightarrow> None
   | arch_cap.PageCap _ w s sz opt \<Rightarrow> Some w
   | arch_cap.PageTableCap w opt \<Rightarrow> Some w
@@ -111,7 +111,7 @@ lemma aobj_ref_cases:
   done
 
 definition
-  "cap_asid_base_arch cap \<equiv> case cap of 
+  "cap_asid_base_arch cap \<equiv> case cap of
      (arch_cap.ASIDPoolCap _ asid) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
 
@@ -120,7 +120,7 @@ declare cap_asid_base_arch_def[abs_def, simp]
 definition
   "cap_asid_base cap \<equiv> arch_cap_fun_lift cap_asid_base_arch None cap"
 
-lemmas cap_asid_base_simps [simp] = 
+lemmas cap_asid_base_simps [simp] =
   cap_asid_base_def [simplified, split_simps cap.split arch_cap.split]
 
 definition
@@ -172,10 +172,10 @@ lemma vs_cap_ref_to_table_cap_ref:
          split: cap.splits arch_cap.splits)
 
 
-lemma cap_master_cap_pg_cap: 
+lemma cap_master_cap_pg_cap:
  "\<lbrakk>cap_master_cap cap = cap_master_cap capa\<rbrakk>
   \<Longrightarrow> is_pg_cap cap = is_pg_cap capa"
-  by (clarsimp simp:cap_master_cap_def is_cap_simps 
+  by (clarsimp simp:cap_master_cap_def is_cap_simps
     split:cap.splits arch_cap.splits dest!:cap_master_cap_eqDs)
 
 lemma master_arch_cap_obj_refs:
@@ -207,7 +207,7 @@ lemmas wellformed_cap_simps = wellformed_cap_def
 lemma same_master_cap_same_types:
   "cap_master_cap cap = cap_master_cap cap' \<Longrightarrow>
     (is_pt_cap cap = is_pt_cap cap') \<and> (is_pd_cap cap = is_pd_cap cap')"
-  by (clarsimp simp: cap_master_cap_def is_cap_simps 
+  by (clarsimp simp: cap_master_cap_def is_cap_simps
                   split: cap.splits arch_cap.splits)
 
 lemma is_derived_cap_arch_asid_issues:
@@ -216,7 +216,7 @@ lemma is_derived_cap_arch_asid_issues:
       \<Longrightarrow> ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow> cap_asid cap \<noteq> None)
              \<and> (is_pg_cap cap \<or> (vs_cap_ref cap = vs_cap_ref cap'))"
   apply (simp add: is_derived_arch_def)
-  by (auto simp: cap_master_cap_def is_cap_simps 
+  by (auto simp: cap_master_cap_def is_cap_simps
                   cap_asid_def
                   split: cap.splits arch_cap.splits option.splits)
 
@@ -224,7 +224,7 @@ lemma is_pt_pd_Null[simp]:
   "\<not> is_pt_cap cap.NullCap \<and> \<not> is_pd_cap cap.NullCap"
   by (simp add: is_pt_cap_def is_pd_cap_def)
 
-lemma unique_table_caps_upd_eqD: 
+lemma unique_table_caps_upd_eqD:
   "\<lbrakk>ms a = Some b; cap_asid b = cap_asid b'; obj_refs b = obj_refs b';
     is_pd_cap b = is_pd_cap b'; is_pt_cap b = is_pt_cap b'\<rbrakk>
    \<Longrightarrow> unique_table_caps (ms (a \<mapsto> b')) = unique_table_caps (ms)"
@@ -249,11 +249,11 @@ lemma unique_table_caps_upd_eqD:
   done
 
 lemma set_untyped_cap_as_full_not_final_not_pg_cap:
-  "\<lbrace>\<lambda>s. (\<exists>a b. (a, b) \<noteq> dest \<and> \<not> is_pg_cap cap' 
+  "\<lbrace>\<lambda>s. (\<exists>a b. (a, b) \<noteq> dest \<and> \<not> is_pg_cap cap'
             \<and> cte_wp_at (\<lambda>cap. obj_irq_refs cap = obj_irq_refs cap' \<and> \<not> is_pg_cap cap) (a, b) s)
       \<and> cte_wp_at (op = src_cap) src s\<rbrace>
-  set_untyped_cap_as_full src_cap cap src 
-  \<lbrace>\<lambda>_ s.(\<exists>a b. (a, b) \<noteq> dest \<and> \<not> is_pg_cap cap' 
+  set_untyped_cap_as_full src_cap cap src
+  \<lbrace>\<lambda>_ s.(\<exists>a b. (a, b) \<noteq> dest \<and> \<not> is_pg_cap cap'
             \<and> cte_wp_at (\<lambda>cap. obj_irq_refs cap = obj_irq_refs cap' \<and> \<not> is_pg_cap cap) (a, b) s)\<rbrace>"
   apply (rule hoare_pre)
   apply (wp hoare_vcg_ex_lift)

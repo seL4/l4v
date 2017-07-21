@@ -14,16 +14,16 @@ imports Noninterference_Base
 begin
 
 (* we assume the same initial state for both systems *)
-locale noninterference_refinement = 
+locale noninterference_refinement =
    abs?: complete_unwinding_system A s0 dom uwr policy out schedDomain +
    conc?: noninterference_system C s0 dom uwr policy out schedDomain
    for A :: "('a,'s,'e) data_type"
    and s0 :: "'s"
-   and dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"      
+   and dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"
    and uwr :: "'d \<Rightarrow> ('s \<times> 's) set"
-   and policy :: "('d \<times> 'd) set" 
-   and out :: "'d \<Rightarrow> 's \<Rightarrow> 'p"     
-   and schedDomain :: "'d" 
+   and policy :: "('d \<times> 'd) set"
+   and out :: "'d \<Rightarrow> 's \<Rightarrow> 'p"
+   and schedDomain :: "'d"
    and C :: "('c,'s,'e) data_type" +
    assumes refines: "refines C A"
 
@@ -33,7 +33,7 @@ lemma reachable:
   "conc.reachable s \<Longrightarrow> abs.reachable s"
   apply(simp add: conc.reachable_def abs.reachable_def)
   using refines by (fastforce simp: refines_def)
-  
+
 
 lemma Step:
   "conc.Step a \<subseteq> abs.Step a"
@@ -42,21 +42,21 @@ lemma Step:
 
 lemma confidentiality_u_refinement_closed:
   "abs.confidentiality_u \<Longrightarrow> conc.confidentiality_u"
-  apply(simp add: abs.confidentiality_u_def)  
+  apply(simp add: abs.confidentiality_u_def)
   apply(subst conc.confidentiality_u_def)
   apply(blast intro: subsetD[OF Step] reachable)
   done
 
 lemma confidentiality_u_weak_refinement_closed:
   "abs.confidentiality_u_weak \<Longrightarrow> conc.confidentiality_u_weak"
-  apply(simp add: abs.confidentiality_u_weak_def)  
+  apply(simp add: abs.confidentiality_u_weak_def)
   apply(subst conc.confidentiality_u_weak_def)
   apply(blast intro: subsetD[OF Step] reachable)
   done
 
 lemma integrity_u_refinement_closed:
   "abs.integrity_u \<Longrightarrow> conc.integrity_u"
-  apply(simp add: abs.integrity_u_def)  
+  apply(simp add: abs.integrity_u_def)
   apply(subst conc.integrity_u_def)
   apply(blast intro: subsetD[OF Step] reachable)
   done
@@ -64,7 +64,7 @@ lemma integrity_u_refinement_closed:
 
 lemma xources_subset:
   "abs.confidentiality_u \<Longrightarrow> abs.xources as s u \<subseteq> conc.xources as s u"
-  apply(induct as arbitrary: s u)  
+  apply(induct as arbitrary: s u)
    apply(simp add: abs.xources.xources_Nil conc.xources.xources_Nil)
   apply(simp add: abs.xources.xources_Cons conc.xources.xources_Cons)
   apply(rule conjI)
@@ -86,7 +86,7 @@ lemma uwr_equiv:
 lemma xNonleakage_gen_refinement_closed:
   "abs.xNonleakage_gen \<Longrightarrow> conc.xNonleakage_gen"
   apply(frule abs.xNonleakage_gen_confidentiality_u)
-  apply(frule xources_subset)  
+  apply(frule xources_subset)
   apply(clarsimp simp: abs.xNonleakage_gen_def conc.xNonleakage_gen_def)
   apply(drule (1) sameFor_subset_dom[OF _ xources_subset])
   apply(blast dest: reachable uwr_equiv)
@@ -95,14 +95,14 @@ lemma xNonleakage_gen_refinement_closed:
 end
 
 
-locale complete_noninterference_refinement = noninterference_refinement A s0 dom uwr policy out schedDomain C 
+locale complete_noninterference_refinement = noninterference_refinement A s0 dom uwr policy out schedDomain C
    for A :: "('a,'s,'e) data_type"
    and s0 :: "'s"
-   and dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"      
+   and dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"
    and uwr :: "'d \<Rightarrow> ('s \<times> 's) set"
-   and policy :: "('d \<times> 'd) set" 
-   and out :: "'d \<Rightarrow> 's \<Rightarrow> 'p"     
-   and schedDomain :: "'d" 
+   and policy :: "('d \<times> 'd) set"
+   and out :: "'d \<Rightarrow> 's \<Rightarrow> 'p"
+   and schedDomain :: "'d"
    and C :: "('c,'s,'e) data_type" +
    assumes Step_C: "Step_system C s0"
 
@@ -152,6 +152,6 @@ lemma Noninfluence_strong_uwr_quasi_refinement_closed:
   apply(rule integrity_u_refinement_closed)
   apply(erule abs.Noninfluence_strong_uwr_integrity_u)
   done
-  
+
 end
 end

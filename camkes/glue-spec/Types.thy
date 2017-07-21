@@ -51,7 +51,7 @@ text {*
   is being invoked. The variable list of a call message contains all the input
   parameters, while the variable list of a return message contains the return
   value, if there is one, and the output parameters.
-  
+
   Event and shared memory connections are modelled using an intermediate
   component. This is explained in more detail in \autoref{h:connector}.
 *}

@@ -115,7 +115,7 @@ lemma valid_queues_def2:
 
 definition valid_blocked_2 where
    "valid_blocked_2 queues kh sa ct \<equiv>
-    (\<forall>t st. not_queued_2 queues t \<longrightarrow> st_tcb_at_kh (op = st) t kh \<longrightarrow> 
+    (\<forall>t st. not_queued_2 queues t \<longrightarrow> st_tcb_at_kh (op = st) t kh \<longrightarrow>
             t \<noteq> ct \<longrightarrow> sa \<noteq> switch_thread t \<longrightarrow> (\<not> active st))"
 
 abbreviation valid_blocked :: "det_ext state \<Rightarrow> bool" where
@@ -125,7 +125,7 @@ lemmas valid_blocked_def = valid_blocked_2_def
 
 definition valid_blocked_except_2 where
    "valid_blocked_except_2 thread queues kh sa ct \<equiv>
-    (\<forall>t st. t \<noteq> thread \<longrightarrow> not_queued_2 queues t \<longrightarrow> st_tcb_at_kh (op = st) t kh \<longrightarrow> 
+    (\<forall>t st. t \<noteq> thread \<longrightarrow> not_queued_2 queues t \<longrightarrow> st_tcb_at_kh (op = st) t kh \<longrightarrow>
             t \<noteq> ct \<longrightarrow> sa \<noteq> switch_thread t \<longrightarrow> (\<not> active st))"
 
 abbreviation valid_blocked_except :: "obj_ref \<Rightarrow> det_ext state \<Rightarrow> bool" where
@@ -317,7 +317,7 @@ lemma valid_blocked_lift:
   apply (rule hoare_pre)
    apply (wps c e d)
    apply (simp add: valid_blocked_def)
-   apply (wp_trace hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift static_imp_wp a)
+   apply (wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift static_imp_wp a)
    apply (rule hoare_convert_imp)
     apply (rule typ_at_st_tcb_at_lift)
      apply (wp a t)+

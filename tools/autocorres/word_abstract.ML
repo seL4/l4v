@@ -39,7 +39,7 @@ fun mk_word_abs_rule T =
   atype = @{typ nat},
   abs_fn = @{mk_term "unat :: (?'W::len) word => nat" ('W)} T,
   inv_fn = @{mk_term "of_nat :: nat => (?'W::len) word" ('W)} T,
-  rules = @{thms word_abs_word32}
+  rules = @{thms word_abs_word}
 }
 
 val word_abs : WARules list =
@@ -51,7 +51,7 @@ fun mk_sword_abs_rule T =
   atype = @{typ int},
   abs_fn = @{mk_term "sint :: (?'W::len) signed word => int" ('W)} T,
   inv_fn = @{mk_term "of_int :: int => (?'W::len) signed word" ('W)} T,
-  rules = @{thms word_abs_sword32}
+  rules = @{thms word_abs_sword}
 }
 
 val sword_abs : WARules list =

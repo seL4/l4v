@@ -178,6 +178,50 @@ locale Systemcall_AI_Pre =
        \<lbrace> valid_objs :: 'state_ext state \<Rightarrow> _\<rbrace>
          handle_arch_fault_reply x4 t d dl
        \<lbrace>\<lambda>_ .valid_objs\<rbrace>"
+  assumes arch_get_sanitise_register_info_pred_tcb_at[wp]:
+    "\<And> P t g.
+      \<lbrace> pred_tcb_at proj P t :: 'state_ext state \<Rightarrow> _\<rbrace>
+        arch_get_sanitise_register_info g
+      \<lbrace> \<lambda>_ . pred_tcb_at proj P t \<rbrace>"
+  assumes arch_get_sanitise_register_info_invs[wp]:
+    "\<And> f.
+      \<lbrace> invs :: 'state_ext state \<Rightarrow> _ \<rbrace> arch_get_sanitise_register_info f  \<lbrace> \<lambda>_ . invs \<rbrace>"
+  assumes arch_get_sanitise_register_info_cap_to[wp]:
+    "\<And> f c.
+      \<lbrace> ex_nonz_cap_to c :: 'state_ext state \<Rightarrow> _ \<rbrace>
+        arch_get_sanitise_register_info f
+      \<lbrace> \<lambda>_ . ex_nonz_cap_to c \<rbrace>"
+  assumes arch_get_sanitise_register_info_it[wp]:
+    "\<And> P f .
+      \<lbrace> \<lambda>s :: 'state_ext state. P (idle_thread s) \<rbrace>
+        arch_get_sanitise_register_info f
+      \<lbrace> \<lambda>_ s. P (idle_thread s) \<rbrace>"
+  assumes arch_get_sanitise_register_info_caps[wp]:
+    "\<And> P f .
+      \<lbrace> \<lambda>s  :: 'state_ext state . P (caps_of_state s) \<rbrace>
+        arch_get_sanitise_register_info f
+      \<lbrace> \<lambda>_ s. P (caps_of_state s) \<rbrace>"
+  assumes arch_get_sanitise_register_info_cte_wp_at[wp]:
+     "\<And> P P' p x4.
+       \<lbrace>\<lambda>s ::'state_ext state . P (cte_wp_at P' p s)\<rbrace>
+         arch_get_sanitise_register_info x4
+       \<lbrace>\<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"
+  assumes arch_get_sanitise_register_info_cur_thread[wp]:
+    "\<And> P  x4.
+       \<lbrace>\<lambda>s ::'state_ext state . P (cur_thread s)\<rbrace>
+         arch_get_sanitise_register_info x4
+       \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  assumes arch_get_sanitise_register_info_st_tcb_at_simple[wp]:
+    "\<And> x4 t'.
+       \<lbrace>st_tcb_at simple t' :: 'state_ext state \<Rightarrow> _\<rbrace>
+         arch_get_sanitise_register_info x4
+       \<lbrace>\<lambda>_ .st_tcb_at simple t'\<rbrace>"
+  assumes arch_get_sanitise_register_info_valid_objs[wp]:
+    "\<And> x4.
+       \<lbrace> valid_objs :: 'state_ext state \<Rightarrow> _\<rbrace>
+         arch_get_sanitise_register_info x4
+       \<lbrace>\<lambda>_ .valid_objs\<rbrace>"
+
 begin
 
 crunch pred_tcb_at[wp]: handle_fault_reply "pred_tcb_at proj (P :: 'a \<Rightarrow> _) t :: 'state_ext state \<Rightarrow> _"
@@ -270,16 +314,8 @@ lemma (in Systemcall_AI_Pre) handle_fault_reply_cte_wp_at:
       apply (clarsimp)
       done
     show ?thesis
-      apply (case_tac f)
-         apply (clarsimp)+
-       apply (clarsimp simp add: as_user_def)
-       apply (wp set_object_cte_wp_at2 thread_get_wp' | simp add: split_def)+
-       apply (clarsimp simp add: NC)
-      apply (clarsimp simp add: as_user_def)
-      apply (wp set_object_cte_wp_at2 thread_get_wp' | simp add: split_def)+
-      apply (clarsimp simp add: NC)
-      apply simp
-      apply wp
+      apply (case_tac f; clarsimp simp: as_user_def)
+       apply (wp set_object_cte_wp_at2 thread_get_wp' | simp add: split_def NC | wp_once hoare_drop_imps)+
       done
   qed
 
@@ -353,7 +389,7 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
           apply (clarsimp simp add: invs_def valid_state_def valid_idle_def)
           apply (drule st_tcb_at_eq, erule pred_tcb_weaken_strongerE, simp)
           apply clarsimp
-         apply_trace (wp handle_fault_reply_has_no_reply_cap)
+         apply (wp handle_fault_reply_has_no_reply_cap)
      apply (rule_tac Q = "\<lambda>_. st_tcb_at awaiting_reply t and invs and
                          (\<lambda>s. \<not>has_reply_cap t s)" in hoare_strengthen_post[rotated])
       apply (clarsimp)
@@ -429,6 +465,9 @@ locale Syscall_AI = Systemcall_AI_Pre:Systemcall_AI_Pre _ state_ext_t
     \<lbrace>invs and ct_active and st_tcb_at active thread and ex_nonz_cap_to thread\<rbrace>
       handle_hypervisor_fault thread fault
     \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+  assumes make_fault_msg_cur_thread[wp]:
+    "\<And>ft t. make_fault_msg ft t \<lbrace>\<lambda>s :: 'state_ext state. P (cur_thread s)\<rbrace>"
+
 
 
 
@@ -1186,7 +1225,7 @@ crunch cur_thread[wp]: set_extra_badge "\<lambda>s. P (cur_thread s)"
 crunch (in Syscall_AI) cur_thread[wp]: handle_reply "\<lambda>s :: 'state_ext state. P (cur_thread s)"
   (wp: crunch_wps transfer_caps_loop_pres
         simp: unless_def crunch_simps
-      ignore: transfer_caps_loop)
+      ignore: transfer_caps_loop make_fault_msg)
 
 lemmas cap_delete_one_st_tcb_at_simple[wp] =
     cap_delete_one_st_tcb_at[where P=simple, simplified]

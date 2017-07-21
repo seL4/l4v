@@ -106,7 +106,7 @@ fun tac prog_info fn_info globals ctxt = SUBGOAL (fn (t, i) => let
         globals fn_name (SimplConv.get_body_of_l1corres_thm l1corres)
     val ts = get_ext_type_strengthen_thm ctxt prog_info fn_info
         fn_name (fst l2corres)
-  in rtac @{thm ccorres_underlying_autocorres} 
+  in rtac @{thm ccorres_underlying_autocorres}
     THEN' rtac l1corres THEN' rtac (snd l2corres) THEN' rtac ts end i)
 
 fun method prog_info fn_info globals

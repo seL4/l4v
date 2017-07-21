@@ -20,8 +20,8 @@ are used in proofs related to the abstract cdt_list.*)
         relation R holds between them. *)
 locale partial_sort =
   fixes less :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
-  fixes R :: "'a \<Rightarrow> 'a \<Rightarrow> bool" 
- 
+  fixes R :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
+
   assumes all_comp: "\<And>x y. R x y \<Longrightarrow> (less x y \<or> less y x)"
 
   (*This is only necessary to guarantee the uniqueness of
@@ -29,7 +29,7 @@ locale partial_sort =
   assumes antisym: "\<And>x y. R x y \<Longrightarrow> less x y \<and> less y x \<Longrightarrow> x = y"
 
   assumes trans: "\<And>x y z. less x y \<Longrightarrow>  less y z \<Longrightarrow> less x z"
- 
+
 begin
 
 primrec pinsort :: " 'a \<Rightarrow> 'a list \<Rightarrow> 'a list" where
@@ -105,7 +105,7 @@ lemma pinsort_sorted: "R_set (insert a (set xs)) \<Longrightarrow> psorted xs \<
    apply (simp add: R_set_def)
   apply simp
   done
- 
+
 lemma psort_set: "set (psort xs) = set xs"
   apply (simp add: psort_def)
   apply (induct xs)
@@ -241,7 +241,7 @@ lemma distinct_inj_middle: "distinct list \<Longrightarrow> list = (xa @ x # xb)
    apply simp
   apply clarsimp
   done
- 
+
 
 lemma after_can_split_distinct:
   "distinct list \<Longrightarrow> after_in_list list x = Some y \<Longrightarrow> \<exists>!ys. \<exists>!xs. list = xs @ (x # y # ys)"
@@ -264,7 +264,7 @@ lemma after_ignore_head: "x \<notin> set list \<Longrightarrow> after_in_list (l
    apply simp
    apply (case_tac list',simp+)
   done
- 
+
 
 lemma after_distinct_one_sibling: "distinct list \<Longrightarrow> list = xs @ x # y # ys \<Longrightarrow> after_in_list list x = Some y"
   apply (induct xs)
@@ -429,7 +429,7 @@ lemma list_replace_empty_after_empty:
   apply (case_tac xs,simp+)
   apply (auto dest!: after_in_list_in_list)
   done
-  
+
 lemma list_replace_after_fst_list:
   "\<lbrakk>after_in_list list p = Some slot; distinct list\<rbrakk>
     \<Longrightarrow> after_in_list (list_replace_list list slot (x # xs)) p = Some x"
@@ -488,7 +488,7 @@ lemma list_replace_after_None_notin_new:
   apply(simp)
   apply(case_tac list, simp, simp split: if_split_asm)
   done
- 
+
 lemma list_replace_after_notin_new:
   "\<lbrakk>after_in_list list p = Some a; a \<noteq> slot; p \<notin> set list'; p \<noteq> slot\<rbrakk>
     \<Longrightarrow> after_in_list (list_replace_list list slot list') p = Some a"
@@ -537,7 +537,7 @@ lemma list_replace_after_notin_old:
   apply(simp)
   done
 
-  
+
 lemma list_replace_set: "x \<in> set list \<Longrightarrow> set (list_replace list x y) = insert y (set (list) - {x})"
   apply (induct list)
   apply (simp add: list_replace_def)+
@@ -555,7 +555,7 @@ lemma list_swap_both: "x \<in> set list \<Longrightarrow> y \<in> set list \<Lon
 lemma list_swap_self[simp]: "list_swap list x x = list"
   apply (simp add: list_swap_def)
   done
- 
+
 lemma map_ignore: "x \<notin> set list \<Longrightarrow> (map (\<lambda>xa. if xa = x then y else xa)
              list) = list"
   apply (induct list)
@@ -593,7 +593,7 @@ lemma list_swap_none: "x \<notin> set list \<Longrightarrow> y \<notin> set list
   apply (simp add: list_swap_def)+
   apply blast
   done
-  
+
 lemma list_swap_one: "x \<in> set list \<Longrightarrow> y \<notin> set list \<Longrightarrow> set (list_swap list x y) = insert y (set (list)) - {x}"
   apply (induct list)
   apply (simp add: list_swap_def)+
@@ -628,7 +628,7 @@ lemma distinct_after_in_list_antisym:
   done
 
 
-lemma after_in_listD: "after_in_list list x = Some y \<Longrightarrow> \<exists>xs ys. list = xs @ (x # y # ys) \<and> x \<notin> set xs" 
+lemma after_in_listD: "after_in_list list x = Some y \<Longrightarrow> \<exists>xs ys. list = xs @ (x # y # ys) \<and> x \<notin> set xs"
   apply (induct list x arbitrary: a rule: after_in_list.induct)
     apply (simp split: if_split_asm | elim exE | force)+
   apply (rule_tac x="x # xsa" in exI)
@@ -648,7 +648,7 @@ lemma list_swap_preserve_after:
   apply force
   done
 
-lemma list_swap_preserve_after': 
+lemma list_swap_preserve_after':
  "\<lbrakk>p \<noteq> desta; p \<noteq> srca; after_in_list list p = Some srca\<rbrakk>
 \<Longrightarrow> after_in_list (list_swap list srca desta) p = Some desta"
   apply (induct list p rule: after_in_list.induct)
@@ -679,10 +679,10 @@ lemma list_swap_does_swap':
   apply (case_tac xs)
    apply clarsimp+
 done
-  
+
 lemmas list_swap_preserve_after'' = list_swap_preserve_after'[simplified list_swap_symmetric]
 
-lemma list_swap_preserve_Some_other: 
+lemma list_swap_preserve_Some_other:
  "\<lbrakk>z \<noteq> desta; z \<noteq> srca; after_in_list list srca = Some z\<rbrakk>
 \<Longrightarrow> after_in_list (list_swap list srca desta) desta = Some z"
   apply (induct list srca rule: after_in_list.induct)
@@ -708,7 +708,7 @@ lemma list_swap_preserve_None':
   apply (erule list_swap_preserve_None)
   done
 
-lemma list_swap_preserve_after_None: 
+lemma list_swap_preserve_after_None:
  "\<lbrakk>p \<noteq> desta; p \<noteq> srca; after_in_list list p = None\<rbrakk>
 \<Longrightarrow> after_in_list (list_swap list srca desta) p = None"
   apply (induct list p rule: after_in_list.induct)
@@ -716,7 +716,7 @@ lemma list_swap_preserve_after_None:
   apply force
   done
 
-lemma list_swap_preserve_Some_other_distinct: 
+lemma list_swap_preserve_Some_other_distinct:
  "\<lbrakk>distinct list; z \<noteq> desta; after_in_list list srca = Some z\<rbrakk>
 \<Longrightarrow> after_in_list (list_swap list srca desta) desta = Some z"
   apply (rule list_swap_preserve_Some_other)
@@ -727,7 +727,7 @@ lemma list_swap_preserve_Some_other_distinct:
    apply simp+
   done
 
-lemma list_swap_preserve_separate: 
+lemma list_swap_preserve_separate:
  "\<lbrakk>p \<noteq> desta; p \<noteq> srca; z \<noteq> desta; z \<noteq> srca; after_in_list list p = Some z\<rbrakk>
 \<Longrightarrow> after_in_list (list_swap list srca desta) p = Some z"
   apply (induct list p rule: after_in_list.induct)
@@ -748,8 +748,8 @@ lemma after_in_list_list_in_list:
   apply(case_tac "x=a", simp+)
 done
 
-lemma range_nat_relation_induct: 
-"\<lbrakk> m = Suc (n + k) ; m < cap ; \<forall>n. Suc n < cap \<longrightarrow> P n (Suc n );  
+lemma range_nat_relation_induct:
+"\<lbrakk> m = Suc (n + k) ; m < cap ; \<forall>n. Suc n < cap \<longrightarrow> P n (Suc n );
    \<forall>i j k. i < cap \<and> j < cap \<and> k < cap \<longrightarrow> P i j \<longrightarrow> P j k \<longrightarrow> P i k \<rbrakk> \<Longrightarrow>  P n m"
   apply (clarify)
   apply (thin_tac "m = t" for t)
@@ -757,7 +757,7 @@ lemma range_nat_relation_induct:
    apply (drule_tac x = "n" in spec)
    apply (erule impE, simp, simp)
   apply (frule_tac x = "Suc (n + k)" in spec)
-  apply (erule impE)   
+  apply (erule impE)
    apply (simp only: add_Suc_right)
   apply (rotate_tac 3, frule_tac x = n in spec)
   apply (rotate_tac -1, drule_tac x = "Suc (n + k)" in spec)
@@ -783,9 +783,9 @@ lemma indexed_trancl_as_set_helper : "\<lbrakk>p < q; q < length list; list ! p 
   apply (rule_tac x = "Suc (p + k)" in exI, simp)
   done
 
-lemma indexed_trancl_as_set: "distinct list \<Longrightarrow> {(i, j). \<exists> p q. p < q \<and> q < length list \<and> list ! p = i \<and> list ! q = j } 
+lemma indexed_trancl_as_set: "distinct list \<Longrightarrow> {(i, j). \<exists> p q. p < q \<and> q < length list \<and> list ! p = i \<and> list ! q = j }
       = {(i, j). \<exists> p. Suc p < length list \<and> list ! p = i \<and> list ! Suc p = j }\<^sup>+"
-  apply (rule equalityI)  
+  apply (rule equalityI)
     apply (rule subsetI)
     apply (case_tac x, simp)
     apply (elim exE conjE)
@@ -804,19 +804,19 @@ lemma indexed_trancl_as_set: "distinct list \<Longrightarrow> {(i, j). \<exists>
       apply (rule_tac x = p in exI, rule_tac x = "Suc p" in exI, simp)
       apply (simp)
       apply (rotate_tac 4, erule exE, rule_tac x = p in exI)
-      apply (erule exE, rule_tac x = "Suc pa" in exI) 
+      apply (erule exE, rule_tac x = "Suc pa" in exI)
       apply (intro conjI)
         defer
         apply (simp)
         apply (erule exE, simp)
-        apply (simp) 
+        apply (simp)
         apply (erule exE)
         apply (subgoal_tac "pa = q")
           apply (simp)
           apply (frule_tac xs = list and i = pa and j = q in nth_eq_iff_index_eq)
             apply (simp)+
-done 
-    
+done
+
 lemma indexed_trancl_irrefl: "distinct list \<Longrightarrow> (x,x) \<notin> {(i, j). \<exists> p. Suc p < length list \<and> list ! p = i \<and> list ! Suc p = j }\<^sup>+"
  apply (frule indexed_trancl_as_set [THEN sym])
  apply (simp)
@@ -826,18 +826,18 @@ lemma indexed_trancl_irrefl: "distinct list \<Longrightarrow> (x,x) \<notin> {(i
 done
 
 lemma after_in_list_trancl_indexed_trancl: "distinct list \<Longrightarrow> {(p, q). after_in_list list p = Some q}\<^sup>+ = {(i, j). \<exists> p. Suc p < length list \<and> list ! p = i \<and> list ! Suc p = j }\<^sup>+"
-  apply (rule_tac f = "\<lambda> x. x\<^sup>+" in  arg_cong) 
+  apply (rule_tac f = "\<lambda> x. x\<^sup>+" in  arg_cong)
   apply (intro equalityI subsetI)
 
   apply (case_tac x, simp)
-  apply (induct list)    
+  apply (induct list)
    apply (simp)
    apply (case_tac "a = aa")
      apply (rule_tac x = 0 in exI, case_tac list, simp, simp)
      apply (case_tac list, simp, simp)
      apply (atomize, drule_tac x = x in spec, drule_tac x = aa in spec, drule_tac x = b in spec, simp)
      apply (erule exE, rule_tac x = "Suc p" in exI, simp)
-  
+
   apply (case_tac x, simp)
   apply (induct list)
     apply (simp)
@@ -846,7 +846,7 @@ lemma after_in_list_trancl_indexed_trancl: "distinct list \<Longrightarrow> {(p,
       apply (subgoal_tac "p = 0")
         apply (case_tac list, simp, simp)
         apply (subgoal_tac "distinct (aa # list)")
-          apply (frule_tac i = 0 and j = p and xs = "aa # list" in nth_eq_iff_index_eq)   
+          apply (frule_tac i = 0 and j = p and xs = "aa # list" in nth_eq_iff_index_eq)
           apply (simp, simp, simp, simp)
     apply (atomize, drule_tac x = x in spec, drule_tac x = aa in spec, drule_tac x = b in spec, simp)
     apply (drule mp)
@@ -855,12 +855,12 @@ lemma after_in_list_trancl_indexed_trancl: "distinct list \<Longrightarrow> {(p,
       apply (rule_tac x = nat in exI, simp)
    apply (case_tac list, simp, simp)
 done
-   
+
 lemma distinct_after_in_list_not_self_trancl:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows "distinct list \<Longrightarrow> (x, x) \<notin> {(p, q). after_in_list list p = Some q}\<^sup>+"
   by (simp add: after_in_list_trancl_indexed_trancl indexed_trancl_irrefl)
- 
+
 lemma distinct_after_in_list_in_list_trancl:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows "\<lbrakk>distinct list; (x, y) \<in> {(p, q). after_in_list list q = Some p}\<^sup>+\<rbrakk> \<Longrightarrow> x \<in> set list"
@@ -901,7 +901,7 @@ lemma after_in_list_trancl_prepend:
             apply(drule after_in_list_in_list')
             apply(simp)
             apply(rule_tac b=ya in trancl_into_trancl)
-              apply(simp)              
+              apply(simp)
               apply(drule CollectD)
               apply(rule CollectI)
               apply(case_tac "ya=y")
@@ -945,7 +945,7 @@ lemma prepend_after_in_list_distinct : "distinct (a # list) \<Longrightarrow> {(
      apply (rule disjI1)
      apply (rule_tac b =y in trancl_into_trancl)
       apply (simp, case_tac list, simp, simp)
-              
+
     apply (simp)
     apply (rule disjI2)
     apply (erule conjE)
@@ -975,7 +975,7 @@ lemma prepend_after_in_list_distinct : "distinct (a # list) \<Longrightarrow> {(
      apply (case_tac "aaa = aa")
       apply (rule r_into_trancl)
       apply (rule CollectI, simp)
-   
+
      apply (rule r_into_trancl)
      apply (rule CollectI, simp)
     apply (erule CollectE, simp)
@@ -995,8 +995,8 @@ lemma prepend_after_in_list_distinct : "distinct (a # list) \<Longrightarrow> {(
     apply (case_tac list, simp, simp)
    apply (rotate_tac 3)
    apply (frule after_in_list_in_list')
-   apply (blast)   
-(* not so transitive case *)   
+   apply (blast)
+(* not so transitive case *)
   apply (subgoal_tac "distinct (a # list)")
    apply (frule_tac x = aa in after_in_list_trancl_prepend, simp, simp)
    apply (rule trancl_Collect_rev, simp)
@@ -1013,7 +1013,7 @@ done
 
 lemma after_in_list_list_set:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
-  shows "distinct list \<Longrightarrow> 
+  shows "distinct list \<Longrightarrow>
          set (after_in_list_list list x)
          = {a. (a, x) \<in> {(next, p). after_in_list list p = Some next}\<^sup>+}"
   apply(intro equalityI)
@@ -1067,9 +1067,9 @@ done
 
 lemma list_eq_after_in_list':
   "\<lbrakk> distinct xs; p = xs ! i; i < length xs \<rbrakk>
-    \<Longrightarrow> \<exists>list. xs = list @ p # after_in_list_list xs p"   
+    \<Longrightarrow> \<exists>list. xs = list @ p # after_in_list_list xs p"
    apply (induct xs arbitrary: i)
-     apply (simp)  
+     apply (simp)
   apply (atomize)
   apply (case_tac i)
    apply (simp)
@@ -1077,7 +1077,7 @@ lemma list_eq_after_in_list':
   apply (erule exE, rule impI, rule_tac x = "a # list" in exI)
   apply (simp)
 done
-   
+
 lemma after_in_list_last_None:
   "distinct list \<Longrightarrow> after_in_list list (last list) = None"
   apply(induct list)

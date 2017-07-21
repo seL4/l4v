@@ -17,7 +17,7 @@ context Arch begin global_naming ARM
 named_theorems EmptyFail_AI_assms
 
 crunch_ignore (empty_fail)
-  (add: invalidateTLB_ASID_impl invalidateTLB_VAASID_impl cleanByVA_impl
+  (add: invalidateLocalTLB_ASID_impl invalidateLocalTLB_VAASID_impl cleanByVA_impl
         cleanByVA_PoU_impl invalidateByVA_impl invalidateByVA_I_impl
         invalidate_I_PoU_impl cleanInvalByVA_impl branchFlush_impl
         clean_D_PoU_impl cleanInvalidate_D_PoC_impl cleanInvalidateL2Range_impl
@@ -98,7 +98,7 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (case_tac alabel; simp)
   apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDControlMakePool_empty_fail\<close>\<close>)
   apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDPoolAssign_empty_fail\<close>\<close>)
-  apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]  
+  apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]
   including no_pre
   by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | (wp+) | intro conjI impI allI)+)
 

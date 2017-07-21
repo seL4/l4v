@@ -355,7 +355,7 @@ lemma transform_intent_untyped_cap_None:
   including no_pre
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply wp
-  apply (case_tac "invocation_type label") 
+  apply (case_tac "invocation_type label")
       (* 43 subgoals *)
       apply (clarsimp simp:Decode_A.decode_untyped_invocation_def unlessE_def)
       apply wp+
@@ -419,7 +419,7 @@ lemma transform_intent_thread_cap_None:
     apply wp+
     apply (clarsimp simp: transform_intent_def decode_read_registers_def decode_write_registers_def
                           decode_copy_registers_def decode_tcb_configure_def decode_set_priority_def
-                          decode_set_mcpriority_def decode_set_ipc_buffer_def transform_intent_tcb_defs 
+                          decode_set_mcpriority_def decode_set_ipc_buffer_def transform_intent_tcb_defs
                    split: list.split_asm
           | wp+)+
     apply (clarsimp simp: transform_intent_def decode_set_space_def decode_bind_notification_def
@@ -491,13 +491,13 @@ lemma transform_intent_arch_cap_None:
        apply (clarsimp split:cap.splits | rule conjI | wp)+
        apply (clarsimp split:arch_cap.splits | rule conjI | wp)+
        apply ((clarsimp simp:transform_intent_def | wp) +)[2]
-     apply (case_labels "invocation_type label"; 
+     apply (case_labels "invocation_type label";
              simp add:arch_decode_invocation_def split del: if_split; wp?)
      apply (case_tac "excaps ! 0")
      apply (clarsimp simp:transform_intent_def transform_cnode_index_and_depth_def split:list.split_asm)
       apply wp+
-    apply (case_labels "invocation_type label"; 
-             simp add: arch_decode_invocation_def isPageFlushLabel_def 
+    apply (case_labels "invocation_type label";
+             simp add: arch_decode_invocation_def isPageFlushLabel_def
             split del: if_split, wp?)
            apply (clarsimp simp: transform_intent_def transform_intent_page_map_def
                           split: list.split_asm )
@@ -1426,9 +1426,9 @@ lemma receive_ipc_cur_thread:
 lemma cap_delete_one_st_tcb_at_and_valid_etcbs:
   "\<lbrace>st_tcb_at P t and K (\<forall>st. active st \<longrightarrow> P st) and valid_etcbs\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv s. st_tcb_at P t s \<and> valid_etcbs s\<rbrace>"
  by (wp cap_delete_one_st_tcb_at cap_delete_one_valid_etcbs | simp)+
- 
+
 crunch ct_it[wp]: cap_delete_one "\<lambda>s. P (cur_thread s) (idle_thread s)"
-     (wp: crunch_wps set_thread_state_ext_extended.all_but_exst dxo_wp_weak 
+     (wp: crunch_wps set_thread_state_ext_extended.all_but_exst dxo_wp_weak
     simp: crunch_simps unless_def)
 
 lemma handle_recv_corres:
@@ -1447,7 +1447,7 @@ lemma handle_recv_corres:
        apply (rule corres_guard_imp)
          apply (rule corres_split_catch[where f= dc,OF handle_fault_corres])
            apply (rule dcorres_injection_handler_rhs)
-           apply (rule_tac R' ="\<lambda>rv s. (\<forall>ref badge rights. rv = cap.EndpointCap ref badge rights \<longrightarrow> 
+           apply (rule_tac R' ="\<lambda>rv s. (\<forall>ref badge rights. rv = cap.EndpointCap ref badge rights \<longrightarrow>
                   (ep_at ref s)) \<and> not_idle_thread (cur_thread s') s
                  \<and> not_idle_thread (cur_thread s) s
                  \<and> (st_tcb_at active (cur_thread s') s \<and> invs s \<and> valid_etcbs s) \<and> ko_at (TCB obj') (cur_thread s') s " and R= "\<lambda>r. \<top>"
@@ -1588,7 +1588,7 @@ lemma handle_vm_fault_wp:
   done
 
 lemma get_active_irq_corres:
-  "dcorres (\<lambda>r r'. r' = r) \<top> \<top> get_active_irq (do_machine_op getActiveIRQ)"
+  "dcorres (\<lambda>r r'. r' = r) \<top> \<top> get_active_irq (do_machine_op (getActiveIRQ in_kernel))"
   apply (clarsimp simp: corres_underlying_def do_machine_op_def
                         select_f_def bind_def in_monad getActiveIRQ_def
                         return_def get_active_irq_def select_def
@@ -1685,7 +1685,7 @@ lemma handle_event_corres:
     apply (frule (1) ct_running_not_idle_etc)
     apply (clarsimp simp:invs_def valid_state_def st_tcb_at_def generates_pending_def obj_at_def)
    apply (wp|simp)+
-    apply (rule corres_symb_exec_r[OF handle_hypervisor_fault_corres], wp+)
+    apply (rule corres_symb_exec_r[OF handle_hypervisor_fault_corres[simplified]], wp+)
   done
 
 end

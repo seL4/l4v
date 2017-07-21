@@ -6,7 +6,7 @@
 (*  Title:      Vcg.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2004-2008 Norbert Schirmer 
+Copyright (C) 2004-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -41,19 +41,19 @@ method_setup hoare = "Hoare.hoare"
 method_setup hoare_raw = "Hoare.hoare_raw"
   "even more raw verification condition generator for Hoare Logic"
 
-method_setup vcg = "Hoare.vcg" 
+method_setup vcg = "Hoare.vcg"
   "verification condition generator for Hoare Logic"
 
-method_setup vcg_step = "Hoare.vcg_step" 
+method_setup vcg_step = "Hoare.vcg_step"
   "single verification condition generation step with light simplification"
 
 
-method_setup hoare_rule = "Hoare.hoare_rule" 
+method_setup hoare_rule = "Hoare.hoare_rule"
   "apply single hoare rule and solve certain sideconditions"
 
-text \<open>Variables of the programming language are represented as components 
-of a record. To avoid cluttering up the namespace of Isabelle with lots of 
-typical variable names, we append a unusual suffix at the end of each name by 
+text \<open>Variables of the programming language are represented as components
+of a record. To avoid cluttering up the namespace of Isabelle with lots of
+typical variable names, we append a unusual suffix at the end of each name by
 parsing
 \<close>
 
@@ -115,8 +115,8 @@ syntax
   "_grd"           :: "'s set \<Rightarrow> grd"       ("_" [1000] 1000)
   "_last_grd"      :: "grd \<Rightarrow> grds"         ("_" 1000)
   "_grds"          :: "[grd, grds] \<Rightarrow> grds" ("_,/ _" [999,1000] 1000)
-  "_guards"        :: "grds \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com" 
-                                            ("(_/\<longmapsto> _)" [60, 21] 23)                                                           
+  "_guards"        :: "grds \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com"
+                                            ("(_/\<longmapsto> _)" [60, 21] 23)
   "_quote"       :: "'b => ('a => 'b)"
   "_antiquoteCur0"  :: "('a => 'b) => 'b"       ("\<acute>_" [1000] 1000)
   "_antiquoteCur"  :: "('a => 'b) => 'b"
@@ -125,19 +125,19 @@ syntax
   "_Assert"      :: "'a => 'a set"            ("(\<lbrace>_\<rbrace>)" [0] 1000)
   "_AssertState" :: "idt \<Rightarrow> 'a => 'a set"     ("(\<lbrace>_. _\<rbrace>)" [1000,0] 1000)
   "_Assign"      :: "'b => 'b => ('a,'p,'f) com"    ("(_ :==/ _)" [30, 30] 23)
-  "_Init"        :: "ident \<Rightarrow> 'c \<Rightarrow> 'b \<Rightarrow> ('a,'p,'f) com" 
+  "_Init"        :: "ident \<Rightarrow> 'c \<Rightarrow> 'b \<Rightarrow> ('a,'p,'f) com"
                                              ("(\<acute>_ :==\<^bsub>_\<^esub>/ _)" [30,1000, 30] 23)
   "_GuardedAssign":: "'b => 'b => ('a,'p,'f) com"    ("(_ :==\<^sub>g/ _)" [30, 30] 23)
   "_newinit"      :: "[ident,'a] \<Rightarrow> newinit" ("(2\<acute>_ :==/ _)")
   ""             :: "newinit \<Rightarrow> newinits"    ("_")
   "_newinits"    :: "[newinit, newinits] \<Rightarrow> newinits" ("_,/ _")
-  "_New"         :: "['a, 'b, newinits] \<Rightarrow> ('a,'b,'f) com" 
+  "_New"         :: "['a, 'b, newinits] \<Rightarrow> ('a,'b,'f) com"
                                             ("(_ :==/(2 NEW _/ [_]))" [30, 65, 0] 23)
-  "_GuardedNew"  :: "['a, 'b, newinits] \<Rightarrow> ('a,'b,'f) com" 
+  "_GuardedNew"  :: "['a, 'b, newinits] \<Rightarrow> ('a,'b,'f) com"
                                             ("(_ :==\<^sub>g/(2 NEW _/ [_]))" [30, 65, 0] 23)
-  "_NNew"         :: "['a, 'b, newinits] \<Rightarrow> ('a,'b,'f) com" 
+  "_NNew"         :: "['a, 'b, newinits] \<Rightarrow> ('a,'b,'f) com"
                                             ("(_ :==/(2 NNEW _/ [_]))" [30, 65, 0] 23)
-  "_GuardedNNew"  :: "['a, 'b, newinits] \<Rightarrow> ('a,'b,'f) com" 
+  "_GuardedNNew"  :: "['a, 'b, newinits] \<Rightarrow> ('a,'b,'f) com"
                                             ("(_ :==\<^sub>g/(2 NNEW _/ [_]))" [30, 65, 0] 23)
 
   "_Cond"        :: "'a bexp => ('a,'p,'f) com => ('a,'p,'f) com => ('a,'p,'f) com"
@@ -148,28 +148,28 @@ syntax
         ("(0IF\<^sub>g (_)/ (2THEN _)/ (2ELSE _)/ FI)" [0, 0, 0] 71)
   "_GuardedCond_no_else":: "'a bexp => ('a,'p,'f) com => ('a,'p,'f) com"
         ("(0IF\<^sub>g (_)/ (2THEN _)/ FI)" [0, 0] 71)
-  "_While_inv_var"   :: "'a bexp => 'a assn  \<Rightarrow> ('a \<times> 'a) set \<Rightarrow> bdy 
+  "_While_inv_var"   :: "'a bexp => 'a assn  \<Rightarrow> ('a \<times> 'a) set \<Rightarrow> bdy
                           \<Rightarrow> ('a,'p,'f) com"
         ("(0WHILE (_)/ INV (_)/ VAR (_) /_)"  [25, 0, 0, 81] 71)
-  "_WhileFix_inv_var"   :: "'a bexp => pttrn \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow> 
-                            ('z \<Rightarrow> ('a \<times> 'a) set) \<Rightarrow> bdy 
+  "_WhileFix_inv_var"   :: "'a bexp => pttrn \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow>
+                            ('z \<Rightarrow> ('a \<times> 'a) set) \<Rightarrow> bdy
                           \<Rightarrow> ('a,'p,'f) com"
         ("(0WHILE (_)/ FIX _./ INV (_)/ VAR (_) /_)"  [25, 0, 0, 0, 81] 71)
-  "_WhileFix_inv"   :: "'a bexp => pttrn \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow> bdy 
+  "_WhileFix_inv"   :: "'a bexp => pttrn \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow> bdy
                           \<Rightarrow> ('a,'p,'f) com"
         ("(0WHILE (_)/ FIX _./ INV (_) /_)"  [25, 0, 0, 81] 71)
-  "_GuardedWhileFix_inv_var"   :: "'a bexp => pttrn \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow> 
-                            ('z \<Rightarrow> ('a \<times> 'a) set) \<Rightarrow> bdy 
+  "_GuardedWhileFix_inv_var"   :: "'a bexp => pttrn \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow>
+                            ('z \<Rightarrow> ('a \<times> 'a) set) \<Rightarrow> bdy
                           \<Rightarrow> ('a,'p,'f) com"
         ("(0WHILE\<^sub>g (_)/ FIX _./ INV (_)/ VAR (_) /_)"  [25, 0, 0, 0, 81] 71)
-  "_GuardedWhileFix_inv_var_hook"   :: "'a bexp \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow> 
-                            ('z \<Rightarrow> ('a \<times> 'a) set) \<Rightarrow> bdy 
+  "_GuardedWhileFix_inv_var_hook"   :: "'a bexp \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow>
+                            ('z \<Rightarrow> ('a \<times> 'a) set) \<Rightarrow> bdy
                           \<Rightarrow> ('a,'p,'f) com"
-  "_GuardedWhileFix_inv"   :: "'a bexp => pttrn \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow> bdy 
+  "_GuardedWhileFix_inv"   :: "'a bexp => pttrn \<Rightarrow> ('z \<Rightarrow> 'a assn)  \<Rightarrow> bdy
                           \<Rightarrow> ('a,'p,'f) com"
         ("(0WHILE\<^sub>g (_)/ FIX _./ INV (_)/_)"  [25, 0, 0, 81] 71)
 
-  "_GuardedWhile_inv_var":: 
+  "_GuardedWhile_inv_var"::
        "'a bexp => 'a assn  \<Rightarrow> ('a \<times> 'a) set \<Rightarrow> bdy \<Rightarrow> ('a,'p,'f) com"
         ("(0WHILE\<^sub>g (_)/ INV (_)/ VAR (_) /_)"  [25, 0, 0, 81] 71)
   "_While_inv"   :: "'a bexp => 'a assn => bdy => ('a,'p,'f) com"
@@ -197,7 +197,7 @@ syntax
   "_Try_Catch":: "('a,'p,'f) com \<Rightarrow>('a,'p,'f) com \<Rightarrow> ('a,'p,'f) com"
         ("(0TRY (_)/ (2CATCH _)/ END)"  [0,0] 71)
 
-  "_DoPre" :: "('a,'p,'f) com \<Rightarrow> ('a,'p,'f) com" 
+  "_DoPre" :: "('a,'p,'f) com \<Rightarrow> ('a,'p,'f) com"
   "_Do" :: "('a,'p,'f) com \<Rightarrow> bdy" ("(2DO/ (_)) /OD" [0] 1000)
   "_Lab":: "'a bexp \<Rightarrow> ('a,'p,'f) com \<Rightarrow> bdy"
             ("_\<bullet>/_" [1000,71] 81)
@@ -217,9 +217,9 @@ syntax
   "_Switch":: "('s \<Rightarrow> 'v) \<Rightarrow> switchcases \<Rightarrow> ('s,'p,'f) com"
               ("(0 SWITCH (_)/ _ END)" [22,0] 71)
   "_switchcase":: "'v set \<Rightarrow> ('s,'p,'f) com \<Rightarrow> switchcase" ("_\<Rightarrow>/ _" )
-  "_switchcasesSingle"  :: "switchcase \<Rightarrow> switchcases" ("_")         
+  "_switchcasesSingle"  :: "switchcase \<Rightarrow> switchcases" ("_")
   "_switchcasesCons":: "switchcase \<Rightarrow> switchcases \<Rightarrow> switchcases"
-                       ("_/ | _") 
+                       ("_/ | _")
   "_Basic":: "basicblock \<Rightarrow> ('s,'p,'f) com" ("(0BASIC/ (_)/ END)" [22] 71)
   "_BasicBlock":: "basics \<Rightarrow> basicblock" ("_")
   "_BAssign"   :: "'b => 'b => basic"    ("(_ :==/ _)" [30, 30] 23)
@@ -286,9 +286,9 @@ translations
   "_GuardedWhileFix_inv_var b z I V c" =>
                          "_GuardedWhileFix_inv_var_hook {|b|} (\<lambda>z. I) (\<lambda>z. V) (\<lambda>z. c)"
 
-  "_WhileFix_guard_inv_var gs b z I V c" => 
+  "_WhileFix_guard_inv_var gs b z I V c" =>
                                       "CONST whileAnnoGFix gs {|b|} (\<lambda>z. I) (\<lambda>z. V) (\<lambda>z. c)"
-  "_WhileFix_guard_inv_var gs b z I V (_DoPre c)" <= 
+  "_WhileFix_guard_inv_var gs b z I V (_DoPre c)" <=
                                       "_WhileFix_guard_inv_var gs {|b|} z I V c"
   "_WhileFix_guard_inv gs b z I c" == "_WhileFix_guard_inv_var gs b z I (CONST undefined) c"
   "LEMMA x c END" == "CONST lem x c"
@@ -321,14 +321,14 @@ print_ast_translation \<open>
     fun dest_abs (Ast.Appl [Ast.Constant @{syntax_const "_abs"}, x, t]) = (x, t)
       | dest_abs _ = raise Match;
     fun spec_tr' [P, c, Q, A] =
-      let 
+      let
         val (x',P') = dest_abs P;
         val (_ ,c') = dest_abs c;
         val (_ ,Q') = dest_abs Q;
-        val (_ ,A') = dest_abs A; 
+        val (_ ,A') = dest_abs A;
       in
         if (A' = Ast.Constant @{const_syntax bot})
-        then Ast.mk_appl (Ast.Constant @{syntax_const "_SpecNoAbrupt"}) [x', P', c', Q'] 
+        then Ast.mk_appl (Ast.Constant @{syntax_const "_SpecNoAbrupt"}) [x', P', c', Q']
         else Ast.mk_appl (Ast.Constant @{syntax_const "_Spec"}) [x', P', c', Q', A']
       end;
     fun whileAnnoFix_tr' [b, I, V, c] =
@@ -355,7 +355,7 @@ syntax (ASCII)
   "_faccess"  :: "'ref \<Rightarrow> ('ref \<Rightarrow> 'v) \<Rightarrow> 'v"
    ("_->_" [65,1000] 100)
 
-translations 
+translations
 
  "p\<rightarrow>f"        =>  "f p"
  "g\<rightarrow>(_antiquoteCur f)" <= "_antiquoteCur f g"
@@ -363,7 +363,7 @@ translations
 
 nonterminal par and pars and actuals
 
-syntax 
+syntax
   "_par" :: "'a \<Rightarrow> par"                                ("_")
   ""    :: "par \<Rightarrow> pars"                               ("_")
   "_pars" :: "[par,pars] \<Rightarrow> pars"                      ("_,/_")
@@ -372,25 +372,25 @@ syntax
 
 syntax "_Call" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("CALL __" [1000,1000] 21)
        "_GuardedCall" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("CALL\<^sub>g __" [1000,1000] 21)
-       "_CallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" 
+       "_CallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
              ("_ :== CALL __" [30,1000,1000] 21)
        "_Proc" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("PROC __" 21)
-       "_ProcAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" 
+       "_ProcAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
              ("_ :== PROC __" [30,1000,1000] 21)
-       "_GuardedCallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" 
+       "_GuardedCallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
              ("_ :== CALL\<^sub>g __" [30,1000,1000] 21)
        "_DynCall" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("DYNCALL __" [1000,1000] 21)
        "_GuardedDynCall" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("DYNCALL\<^sub>g __" [1000,1000] 21)
-       "_DynCallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" 
+       "_DynCallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
              ("_ :== DYNCALL __" [30,1000,1000] 21)
-       "_GuardedDynCallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" 
+       "_GuardedDynCallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
              ("_ :== DYNCALL\<^sub>g __" [30,1000,1000] 21)
 
-       "_Bind":: "['s \<Rightarrow> 'v, idt, 'v \<Rightarrow> ('s,'p,'f) com] \<Rightarrow> ('s,'p,'f) com" 
+       "_Bind":: "['s \<Rightarrow> 'v, idt, 'v \<Rightarrow> ('s,'p,'f) com] \<Rightarrow> ('s,'p,'f) com"
                       ("_ \<ggreater> _./ _" [22,1000,21] 21)
-       "_bseq"::"('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com" 
+       "_bseq"::"('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com"
            ("_\<ggreater>/ _" [22, 21] 21)
-       "_FCall" :: "['p,actuals,idt,(('a,string,'f) com)]\<Rightarrow> (('a,string,'f) com)" 
+       "_FCall" :: "['p,actuals,idt,(('a,string,'f) com)]\<Rightarrow> (('a,string,'f) com)"
                       ("CALL __ \<ggreater> _./ _" [1000,1000,1000,21] 21)
 
 
@@ -405,11 +405,11 @@ translations
 nonterminal modifyargs
 
 syntax
-  "_may_modify" :: "['a,'a,modifyargs] \<Rightarrow> bool" 
+  "_may_modify" :: "['a,'a,modifyargs] \<Rightarrow> bool"
         ("_ may'_only'_modify'_globals _ in [_]" [100,100,0] 100)
-  "_may_not_modify" :: "['a,'a] \<Rightarrow> bool"      
+  "_may_not_modify" :: "['a,'a] \<Rightarrow> bool"
         ("_ may'_not'_modify'_globals _" [100,100] 100)
-  "_may_modify_empty" :: "['a,'a] \<Rightarrow> bool"      
+  "_may_modify_empty" :: "['a,'a] \<Rightarrow> bool"
         ("_ may'_only'_modify'_globals _ in []" [100,100] 100)
   "_modifyargs" :: "[id,modifyargs] \<Rightarrow> modifyargs" ("_,/ _")
   ""            :: "id => modifyargs"              ("_")
@@ -439,22 +439,22 @@ parse_translation \<open>
     fun idx [] y = error "idx: element not in list"
      |  idx (x::xs) y = if x=y then 0 else (idx xs y)+1
 
-    fun gen_update ctxt names (name,t) = 
+    fun gen_update ctxt names (name,t) =
         Hoare_Syntax.update_comp ctxt [] false true name (Bound (idx names name)) t
 
-    fun gen_updates ctxt names t = Library.foldr (gen_update ctxt names) (names,t) 
+    fun gen_updates ctxt names t = Library.foldr (gen_update ctxt names) (names,t)
 
     fun gen_ex (name,t) = Syntax.const ex $ Abs (name,dummyT,t)
- 
+
     fun gen_exs names t = Library.foldr gen_ex (names,t)
 
-  
+
     fun tr ctxt s Z names =
       let val upds = gen_updates ctxt (rev names) (Syntax.free globalsN$Z);
           val eq   = Syntax.const eq $ (Syntax.free globalsN$s) $ upds;
       in gen_exs names eq end;
 
-    fun may_modify_tr ctxt [s,Z,names] = tr ctxt s Z 
+    fun may_modify_tr ctxt [s,Z,names] = tr ctxt s Z
                                            (sort_strings (extract_args names))
     fun may_not_modify_tr ctxt [s,Z] = tr ctxt s Z []
   in
@@ -484,11 +484,11 @@ print_translation \<open>
       | mk_args _      = raise Match;
 
     fun tr' names (Abs (n,_,t)) = tr' (n::names) t
-      | tr' names (Const (@{const_syntax mex},_) $ t) = tr' names t  
+      | tr' names (Const (@{const_syntax mex},_) $ t) = tr' names t
       | tr' names (Const (@{const_syntax meq},_) $ (globals$s) $ upd) =
             let val Z = get_state upd;
-                  
-            in (case names of 
+
+            in (case names of
                   [] => Syntax.const @{syntax_const "_may_not_modify"} $ s $ Z
                 | xs => Syntax.const @{syntax_const "_may_modify"} $ s $ Z $ mk_args (rev names))
             end;
@@ -509,7 +509,7 @@ parse_ast_translation {*
   (@{syntax_const "_In"}, K Hoare_Syntax.in_arg_ast_tr),
   (@{syntax_const "_Where"}, K Hoare_Syntax.where_arg_ast_tr @{syntax_const "_Where"}),
   (@{syntax_const "_WhereElse"}, K Hoare_Syntax.where_arg_ast_tr @{syntax_const "_WhereElse"})
-] 
+]
 *}
 *)
 (*
@@ -574,7 +574,7 @@ parse_translation \<open>
 
 parse_translation \<open>
  [(@{syntax_const "_Init"}, Hoare_Syntax.init_tr),
-  (@{syntax_const "_Loc"}, Hoare_Syntax.loc_tr)] 
+  (@{syntax_const "_Loc"}, Hoare_Syntax.loc_tr)]
 \<close>
 
 
@@ -631,7 +631,7 @@ translations
 
 print_translation \<open>
   let
-    fun selector (Const (c,T)) = Hoare.is_state_var c  
+    fun selector (Const (c,T)) = Hoare.is_state_var c
       | selector _ = false;
 
     fun measure_tr' ctxt ((t as (Abs (_,_,p)))::ts) =

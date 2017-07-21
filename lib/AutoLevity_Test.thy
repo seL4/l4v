@@ -6,7 +6,7 @@
  * See "LICENSE_BSD2.txt" for details.
  *
  * @TAG(NICTA_BSD)
- * 
+ *
  *)
 
 theory AutoLevity_Test
@@ -14,13 +14,13 @@ imports AutoLevity_Base AutoLevity_Hooks
 begin
 locale foo = fixes z assumes Z:"z" begin
 ML \<open>Method.finish_text\<close>
-lemma 
+lemma
 X:
 "(z \<and> z) \<and> (z \<and> z)"
 apply (insert mp) apply (insert conjE)
 apply (rule conjI)
 subgoal
-  apply (rule 
+  apply (rule
 conjI)
   by
 (rule
@@ -37,10 +37,10 @@ Z)
    done
    proof -
     show "z"
-      apply 
+      apply
 (rule
  Z)
-      done   
+      done
    qed
 done
 
@@ -48,7 +48,7 @@ end
 
 interpretation foo "True" by (unfold_locales;
 simp)
-        
-  
+
+
 
 end

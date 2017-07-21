@@ -37,7 +37,7 @@ lemma de1:
   "direct_caps_of example_state id1 =
    {\<lparr> target = id2, rights = {Grant}\<rparr>}"
   by (simp add: direct_caps_of_def example_state_def
-                id_defs entity_defs 
+                id_defs entity_defs
          split: option.splits)
 
 lemma de2: "direct_caps_of example_state id2 = {}"

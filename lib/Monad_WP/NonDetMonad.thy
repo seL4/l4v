@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-(* 
+(*
    Nondeterministic state and error monads with failure in Isabelle.
 *)
 
@@ -35,15 +35,15 @@ text {*
   computation. The flag is @{const True} if there is an execution path
   in the computation that may have failed. Conversely, if the flag is
   @{const False}, none of the computations resulting in the returned
-  set can have failed.  *} 
+  set can have failed.  *}
 type_synonym ('s,'a) nondet_monad = "'s \<Rightarrow> ('a \<times> 's) set \<times> bool"
 
 
 text {*
   The definition of fundamental monad functions @{text return} and
-  @{text bind}. The monad function @{text "return x"} does not change 
+  @{text bind}. The monad function @{text "return x"} does not change
   the  state, does not fail, and returns @{text "x"}.
-*} 
+*}
 definition
   return :: "'a \<Rightarrow> ('s,'a) nondet_monad" where
   "return a \<equiv> \<lambda>s. ({(a,s)},False)"
@@ -59,7 +59,7 @@ text {*
   have failed on any of the results of @{text f}.
 *}
 definition
-  bind :: "('s, 'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('s, 'b) nondet_monad) \<Rightarrow> 
+  bind :: "('s, 'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('s, 'b) nondet_monad) \<Rightarrow>
            ('s, 'b) nondet_monad" (infixl ">>=" 60)
   where
   "bind f g \<equiv> \<lambda>s. (\<Union>(fst ` case_prod g ` fst (f s)),
@@ -69,11 +69,11 @@ text {*
   Sometimes it is convenient to write @{text bind} in reverse order.
 *}
 abbreviation(input)
-  bind_rev :: "('c \<Rightarrow> ('a, 'b) nondet_monad) \<Rightarrow> ('a, 'c) nondet_monad \<Rightarrow> 
-               ('a, 'b) nondet_monad" (infixl "=<<" 60) where 
+  bind_rev :: "('c \<Rightarrow> ('a, 'b) nondet_monad) \<Rightarrow> ('a, 'c) nondet_monad \<Rightarrow>
+               ('a, 'b) nondet_monad" (infixl "=<<" 60) where
   "g =<< f \<equiv> f >>= g"
 
-text {* 
+text {*
   The basic accessor functions of the state monad. @{text get} returns
   the current state as result, does not fail, and does not change the state.
   @{text "put s"} returns nothing (@{typ unit}), changes the current state
@@ -91,19 +91,19 @@ definition
 subsection "Nondeterminism"
 
 text {*
-  Basic nondeterministic functions. @{text "select A"} chooses an element 
+  Basic nondeterministic functions. @{text "select A"} chooses an element
   of the set @{text A}, does not change the state, and does not fail
   (even if the set is empty). @{text "f OR g"} executes @{text f} or
   executes @{text g}. It retuns the union of results of @{text f} and
-  @{text g}, and may have failed if either may have failed.  
+  @{text g}, and may have failed if either may have failed.
 *}
 definition
   select :: "'a set \<Rightarrow> ('s,'a) nondet_monad" where
   "select A \<equiv> \<lambda>s. (A \<times> {s}, False)"
 
 definition
-  alternative :: "('s,'a) nondet_monad \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> 
-                  ('s,'a) nondet_monad" 
+  alternative :: "('s,'a) nondet_monad \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow>
+                  ('s,'a) nondet_monad"
   (infixl "OR" 20)
 where
   "f OR g \<equiv> \<lambda>s. (fst (f s) \<union> fst (g s), snd (f s) \<or> snd (g s))"
@@ -143,7 +143,7 @@ definition
   assert :: "bool \<Rightarrow> ('a, unit) nondet_monad" where
  "assert P \<equiv> if P then return () else fail"
 
-text {* Fail if the value is @{const None}, 
+text {* Fail if the value is @{const None},
   return result @{text v} for @{term "Some v"} *}
 definition
   assert_opt :: "'a option \<Rightarrow> ('b, 'a) nondet_monad" where
@@ -177,17 +177,17 @@ lemma simpler_modify_def:
   "modify f = (\<lambda>s. ({((), f s)}, False))"
   by (simp add: modify_def bind_def get_def put_def)
 
-text {* Execute the given monad when the condition is true, 
+text {* Execute the given monad when the condition is true,
   return @{text "()"} otherwise. *}
 definition
-  "when" :: "bool \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow> 
-           ('s, unit) nondet_monad" where 
+  "when" :: "bool \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow>
+           ('s, unit) nondet_monad" where
   "when P m \<equiv> if P then m else return ()"
 
-text {* Execute the given monad unless the condition is true, 
+text {* Execute the given monad unless the condition is true,
   return @{text "()"} otherwise. *}
-definition 
-  unless :: "bool \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow> 
+definition
+  unless :: "bool \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow>
             ('s, unit) nondet_monad" where
   "unless P m \<equiv> when (\<not>P) m"
 
@@ -203,11 +203,11 @@ where
 notation (output)
   condition  ("(condition (_)//  (_)//  (_))" [1000,1000,1000] 1000)
 
-text {* 
-Apply an option valued function to the current state, fail 
-if it returns @{const None}, return @{text v} if it returns 
-@{term "Some v"}.  
-*} 
+text {*
+Apply an option valued function to the current state, fail
+if it returns @{const None}, return @{text v} if it returns
+@{term "Some v"}.
+*}
 definition
   gets_the :: "('s \<Rightarrow> 'a option) \<Rightarrow> ('s, 'a) nondet_monad" where
  "gets_the f \<equiv> gets f >>= assert_opt"
@@ -226,19 +226,19 @@ lemma bind_def':
 
 text {* Each monad satisfies at least the following three laws. *}
 
-text {* @{term return} is absorbed at the left of a @{term bind}, 
-  applying the return value directly: *} 
+text {* @{term return} is absorbed at the left of a @{term bind},
+  applying the return value directly: *}
 lemma return_bind [simp]: "(return x >>= f) = f x"
   by (simp add: return_def bind_def)
 
-text {* @{term return} is absorbed on the right of a @{term bind} *} 
+text {* @{term return} is absorbed on the right of a @{term bind} *}
 lemma bind_return [simp]: "(m >>= return) = m"
   apply (rule ext)
   apply (simp add: bind_def return_def split_def)
   done
- 
+
 text {* @{term bind} is associative *}
-lemma bind_assoc: 
+lemma bind_assoc:
   fixes m :: "('a,'b) nondet_monad"
   fixes f :: "'b \<Rightarrow> ('a,'c) nondet_monad"
   fixes g :: "'c \<Rightarrow> ('a,'d) nondet_monad"
@@ -252,16 +252,16 @@ lemma bind_assoc:
 
 section {* Adding Exceptions *}
 
-text {* 
+text {*
   The type @{typ "('s,'a) nondet_monad"} gives us nondeterminism and
   failure. We now extend this monad with exceptional return values
   that abort normal execution, but can be handled explicitly.
-  We use the sum type to indicate exceptions. 
+  We use the sum type to indicate exceptions.
 
   In @{typ "('s, 'e + 'a) nondet_monad"}, @{typ "'s"} is the state,
   @{typ 'e} is an exception, and @{typ 'a} is a normal return value.
 
-  This new type itself forms a monad again. Since type classes in 
+  This new type itself forms a monad again. Since type classes in
   Isabelle are not powerful enough to express the class of monads,
   we provide new names for the @{term return} and @{term bind} functions
   in this monad. We call them @{text returnOk} (for normal return values)
@@ -281,7 +281,7 @@ text {*
   exception, return that exception; otherwise continue execution.
 *}
 definition
-  lift :: "('a \<Rightarrow> ('s, 'e + 'b) nondet_monad) \<Rightarrow> 
+  lift :: "('a \<Rightarrow> ('s, 'e + 'b) nondet_monad) \<Rightarrow>
            'e +'a \<Rightarrow> ('s, 'e + 'b) nondet_monad"
 where
   "lift f v \<equiv> case v of Inl e \<Rightarrow> throwError e
@@ -289,20 +289,20 @@ where
 
 text {*
   The definition of @{term bind} in the exception monad (new
-  name @{text bindE}): the same as normal @{term bind}, but 
+  name @{text bindE}): the same as normal @{term bind}, but
   the right-hand side is skipped if the left-hand side
   produced an exception.
 *}
 definition
-  bindE :: "('s, 'e + 'a) nondet_monad \<Rightarrow> 
-            ('a \<Rightarrow> ('s, 'e + 'b) nondet_monad) \<Rightarrow> 
+  bindE :: "('s, 'e + 'a) nondet_monad \<Rightarrow>
+            ('a \<Rightarrow> ('s, 'e + 'b) nondet_monad) \<Rightarrow>
             ('s, 'e + 'b) nondet_monad"  (infixl ">>=E" 60)
 where
   "bindE f g \<equiv> bind f (lift g)"
 
 
-text {* 
-  Lifting a normal nondeterministic monad into the 
+text {*
+  Lifting a normal nondeterministic monad into the
   exception monad is achieved by always returning its
   result as normal result and never throwing an exception.
 *}
@@ -313,18 +313,18 @@ where
 
 
 text {*
-  Since the underlying type and @{text return} function changed, 
+  Since the underlying type and @{text return} function changed,
   we need new definitions for when and unless:
 *}
 definition
-  whenE :: "bool \<Rightarrow> ('s, 'e + unit) nondet_monad \<Rightarrow> 
-            ('s, 'e + unit) nondet_monad" 
+  whenE :: "bool \<Rightarrow> ('s, 'e + unit) nondet_monad \<Rightarrow>
+            ('s, 'e + unit) nondet_monad"
   where
   "whenE P f \<equiv> if P then f else returnOk ()"
 
 definition
-  unlessE :: "bool \<Rightarrow> ('s, 'e + unit) nondet_monad \<Rightarrow> 
-            ('s, 'e + unit) nondet_monad" 
+  unlessE :: "bool \<Rightarrow> ('s, 'e + unit) nondet_monad \<Rightarrow>
+            ('s, 'e + unit) nondet_monad"
   where
   "unlessE P f \<equiv> if P then returnOk () else f"
 
@@ -335,7 +335,7 @@ text {*
 *}
 definition
   throw_opt :: "'e \<Rightarrow> 'a option \<Rightarrow> ('s, 'e + 'a) nondet_monad" where
-  "throw_opt ex x \<equiv> 
+  "throw_opt ex x \<equiv>
   case x of None \<Rightarrow> throwError ex | Some v \<Rightarrow> returnOk v"
 
 
@@ -343,7 +343,7 @@ text {*
   Failure in the exception monad is redefined in the same way
   as @{const whenE} and @{const unlessE}, with @{term returnOk}
   instead of @{term return}.
-*} 
+*}
 definition
   assertE :: "bool \<Rightarrow> ('a, 'e + unit) nondet_monad" where
  "assertE P \<equiv> if P then returnOk () else fail"
@@ -392,12 +392,12 @@ lemma throwError_bindE [simp]:
 
 section "Syntax"
 
-text {* This section defines traditional Haskell-like do-syntax 
+text {* This section defines traditional Haskell-like do-syntax
   for the state monad in Isabelle. *}
 
 subsection "Syntax for the Nondeterministic State Monad"
 
-text {* We use @{text K_bind} to syntactically indicate the 
+text {* We use @{text K_bind} to syntactically indicate the
   case where the return argument of the left side of a @{term bind}
   is ignored *}
 definition
@@ -419,22 +419,22 @@ syntax (xsymbols)
 translations
   "_do (_dobinds b bs) e"  == "_do b (_do bs e)"
   "_do (_nobind b) e"      == "b >>= (CONST K_bind e)"
-  "do x <- a; e od"        == "a >>= (\<lambda>x. e)"  
+  "do x <- a; e od"        == "a >>= (\<lambda>x. e)"
 
 text {* Syntax examples: *}
-lemma "do x \<leftarrow> return 1; 
-          return (2::nat); 
-          return x 
-       od = 
-       return 1 >>= 
-       (\<lambda>x. return (2::nat) >>= 
-            K_bind (return x))" 
+lemma "do x \<leftarrow> return 1;
+          return (2::nat);
+          return x
+       od =
+       return 1 >>=
+       (\<lambda>x. return (2::nat) >>=
+            K_bind (return x))"
   by (rule refl)
 
-lemma "do x \<leftarrow> return 1; 
-          return 2; 
-          return x 
-       od = return 1" 
+lemma "do x \<leftarrow> return 1;
+          return 2;
+          return x
+       od = return 1"
   by simp
 
 subsection "Syntax for the Exception Monad"
@@ -456,19 +456,19 @@ translations
   "doE x <- a; e odE"       == "a >>=E (\<lambda>x. e)"
 
 text {* Syntax examples: *}
-lemma "doE x \<leftarrow> returnOk 1; 
-           returnOk (2::nat); 
-           returnOk x 
+lemma "doE x \<leftarrow> returnOk 1;
+           returnOk (2::nat);
+           returnOk x
        odE =
-       returnOk 1 >>=E 
-       (\<lambda>x. returnOk (2::nat) >>=E 
+       returnOk 1 >>=E
+       (\<lambda>x. returnOk (2::nat) >>=E
             K_bind (returnOk x))"
   by (rule refl)
 
-lemma "doE x \<leftarrow> returnOk 1; 
-           returnOk 2; 
-           returnOk x 
-       odE = returnOk 1" 
+lemma "doE x \<leftarrow> returnOk 1;
+           returnOk 2;
+           returnOk x
+       odE = returnOk 1"
   by simp
 
 
@@ -488,10 +488,10 @@ definition
 where
   "liftME f m \<equiv> doE x \<leftarrow> m; returnOk (f x) odE"
 
-text {* 
+text {*
   Run a sequence of monads from left to right, ignoring return values. *}
 definition
-  sequence_x :: "('s, 'a) nondet_monad list \<Rightarrow> ('s, unit) nondet_monad" 
+  sequence_x :: "('s, 'a) nondet_monad list \<Rightarrow> ('s, unit) nondet_monad"
 where
   "sequence_x xs \<equiv> foldr (\<lambda>x y. x >>= (\<lambda>_. y)) xs (return ())"
 
@@ -510,7 +510,7 @@ text {*
   return values.
 *}
 definition
-  zipWithM_x :: "('a \<Rightarrow> 'b \<Rightarrow> ('s,'c) nondet_monad) \<Rightarrow> 
+  zipWithM_x :: "('a \<Rightarrow> 'b \<Rightarrow> ('s,'c) nondet_monad) \<Rightarrow>
                  'a list \<Rightarrow> 'b list \<Rightarrow> ('s, unit) nondet_monad"
 where
   "zipWithM_x f xs ys \<equiv> sequence_x (zipWith f xs ys)"
@@ -519,7 +519,7 @@ where
 text {* The same three functions as above, but returning a list of
 return values instead of @{text unit} *}
 definition
-  sequence :: "('s, 'a) nondet_monad list \<Rightarrow> ('s, 'a list) nondet_monad" 
+  sequence :: "('s, 'a) nondet_monad list \<Rightarrow> ('s, 'a list) nondet_monad"
 where
   "sequence xs \<equiv> let mcons = (\<lambda>p q. p >>= (\<lambda>x. q >>= (\<lambda>y. return (x#y))))
                  in foldr mcons xs (return [])"
@@ -530,41 +530,41 @@ where
   "mapM f xs \<equiv> sequence (map f xs)"
 
 definition
-  zipWithM :: "('a \<Rightarrow> 'b \<Rightarrow> ('s,'c) nondet_monad) \<Rightarrow> 
+  zipWithM :: "('a \<Rightarrow> 'b \<Rightarrow> ('s,'c) nondet_monad) \<Rightarrow>
                  'a list \<Rightarrow> 'b list \<Rightarrow> ('s, 'c list) nondet_monad"
 where
   "zipWithM f xs ys \<equiv> sequence (zipWith f xs ys)"
 
 definition
-  foldM :: "('b \<Rightarrow> 'a \<Rightarrow> ('s, 'a) nondet_monad) \<Rightarrow> 'b list \<Rightarrow> 'a \<Rightarrow> ('s, 'a) nondet_monad" 
+  foldM :: "('b \<Rightarrow> 'a \<Rightarrow> ('s, 'a) nondet_monad) \<Rightarrow> 'b list \<Rightarrow> 'a \<Rightarrow> ('s, 'a) nondet_monad"
 where
   "foldM m xs a \<equiv> foldr (\<lambda>p q. q >>= m p) xs (return a) "
 
-definition 
+definition
   foldME ::"('b \<Rightarrow> 'a \<Rightarrow> ('s,('e + 'b)) nondet_monad) \<Rightarrow> 'b \<Rightarrow> 'a list \<Rightarrow> ('s, ('e + 'b)) nondet_monad"
 where "foldME m a xs \<equiv> foldr (\<lambda>p q. q >>=E swp m p) xs (returnOk a)"
 
 text {* The sequence and map functions above for the exception monad,
 with and without lists of return value *}
 definition
-  sequenceE_x :: "('s, 'e+'a) nondet_monad list \<Rightarrow> ('s, 'e+unit) nondet_monad" 
+  sequenceE_x :: "('s, 'e+'a) nondet_monad list \<Rightarrow> ('s, 'e+unit) nondet_monad"
 where
   "sequenceE_x xs \<equiv> foldr (\<lambda>x y. doE _ <- x; y odE) xs (returnOk ())"
 
 definition
-  mapME_x :: "('a \<Rightarrow> ('s,'e+'b) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> 
+  mapME_x :: "('a \<Rightarrow> ('s,'e+'b) nondet_monad) \<Rightarrow> 'a list \<Rightarrow>
               ('s,'e+unit) nondet_monad"
 where
   "mapME_x f xs \<equiv> sequenceE_x (map f xs)"
 
 definition
-  sequenceE :: "('s, 'e+'a) nondet_monad list \<Rightarrow> ('s, 'e+'a list) nondet_monad" 
+  sequenceE :: "('s, 'e+'a) nondet_monad list \<Rightarrow> ('s, 'e+'a list) nondet_monad"
 where
   "sequenceE xs \<equiv> let mcons = (\<lambda>p q. p >>=E (\<lambda>x. q >>=E (\<lambda>y. returnOk (x#y))))
                  in foldr mcons xs (returnOk [])"
 
 definition
-  mapME :: "('a \<Rightarrow> ('s,'e+'b) nondet_monad) \<Rightarrow> 'a list \<Rightarrow> 
+  mapME :: "('a \<Rightarrow> ('s,'e+'b) nondet_monad) \<Rightarrow> 'a list \<Rightarrow>
               ('s,'e+'b list) nondet_monad"
 where
   "mapME f xs \<equiv> sequenceE (map f xs)"
@@ -577,7 +577,7 @@ where
   "filterM P []       = return []"
 | "filterM P (x # xs) = do
      b  <- P x;
-     ys <- filterM P xs; 
+     ys <- filterM P xs;
      return (if b then (x # ys) else ys)
    od"
 
@@ -624,8 +624,8 @@ text {*
   of the same type as the left-hand side.
 *}
 definition
-  handleE :: "('s, 'x + 'a) nondet_monad \<Rightarrow> 
-              ('x \<Rightarrow> ('s, 'x + 'a) nondet_monad) \<Rightarrow> 
+  handleE :: "('s, 'x + 'a) nondet_monad \<Rightarrow>
+              ('x \<Rightarrow> ('s, 'x + 'a) nondet_monad) \<Rightarrow>
               ('s, 'x + 'a) nondet_monad" (infix "<handle>" 10)
 where
   "handleE \<equiv> handleE'"
@@ -713,18 +713,18 @@ text {* This section defines a Hoare logic for partial correctness for
   validity predicate.
 
   In the nondeterministic state monad, validity is a triple of precondition,
-  monad, and postcondition. The precondition is a function from state to 
+  monad, and postcondition. The precondition is a function from state to
   bool (a state predicate), the postcondition is a function from return value
   to state to bool. A triple is valid if for all states that satisfy the
   precondition, all result values and result states that are returned by
   the monad satisfy the postcondition. Note that if the computation returns
-  the empty set, the triple is trivially valid. This means @{term "assert P"} 
+  the empty set, the triple is trivially valid. This means @{term "assert P"}
   does not require us to prove that @{term P} holds, but rather allows us
   to assume @{term P}! Proving non-failure is done via separate predicate and
   calculus (see below).
 *}
 definition
-  valid :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" 
+  valid :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>")
 where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<forall>(r,s') \<in> fst (f s). Q r s')"
@@ -738,15 +738,15 @@ abbreviation (input)
 where
   "invariant f P \<equiv> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
 
-text {* 
-  Validity for the exception monad is similar and build on the standard 
+text {*
+  Validity for the exception monad is similar and build on the standard
   validity above. Instead of one postcondition, we have two: one for
   normal and one for exceptional results.
 *}
 definition
-  validE :: "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'a + 'b) nondet_monad \<Rightarrow> 
-             ('b \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 
-             ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" 
+  validE :: "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'a + 'b) nondet_monad \<Rightarrow>
+             ('b \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow>
+             ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
 ("\<lbrace>_\<rbrace>/ _ /(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)")
 where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<equiv> \<lbrace>P\<rbrace> f \<lbrace> \<lambda>v s. case v of Inr r \<Rightarrow> Q r s | Inl e \<Rightarrow> E e s \<rbrace>"
@@ -757,14 +757,14 @@ text {*
   for exceptional and normal case.
 *}
 definition
-  validE_R :: "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'e + 'a) nondet_monad \<Rightarrow> 
+  validE_R :: "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'e + 'a) nondet_monad \<Rightarrow>
                ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
    ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>, -")
 where
  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<equiv> validE P f Q (\<lambda>x y. True)"
 
 definition
-  validE_E :: "('s \<Rightarrow> bool) \<Rightarrow>  ('s, 'e + 'a) nondet_monad \<Rightarrow> 
+  validE_E :: "('s \<Rightarrow> bool) \<Rightarrow>  ('s, 'e + 'a) nondet_monad \<Rightarrow>
                ('e \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
    ("\<lbrace>_\<rbrace>/ _ /-, \<lbrace>_\<rbrace>")
 where
@@ -793,19 +793,19 @@ abbreviation(input)
 where
  "\<bottom>\<bottom> \<equiv> \<lambda>_ _. False"
 
-text {* 
-  Lifting @{text "\<and>"} and @{text "\<or>"} over two arguments. 
+text {*
+  Lifting @{text "\<and>"} and @{text "\<or>"} over two arguments.
   Lifting @{text "\<and>"} and @{text "\<or>"} over one argument is already
   defined (written @{text "and"} and @{text "or"}).
 *}
 definition
-  bipred_conj :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool)" 
+  bipred_conj :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool)"
   (infixl "And" 96)
 where
   "bipred_conj P Q \<equiv> \<lambda>x y. P x y \<and> Q x y"
 
 definition
-  bipred_disj :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool)" 
+  bipred_disj :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool)"
   (infixl "Or" 91)
 where
   "bipred_disj P Q \<equiv> \<lambda>x y. P x y \<or> Q x y"
@@ -814,11 +814,11 @@ where
 subsection "Determinism"
 
 text {* A monad of type @{text nondet_monad} is deterministic iff it
-returns exactly one state and result and does not fail *} 
+returns exactly one state and result and does not fail *}
 definition
   det :: "('a,'s) nondet_monad \<Rightarrow> bool"
 where
-  "det f \<equiv> \<forall>s. \<exists>r. f s = ({r},False)" 
+  "det f \<equiv> \<forall>s. \<exists>r. f s = ({r},False)"
 
 text {* A deterministic @{text nondet_monad} can be turned
   into a normal state monad: *}
@@ -830,7 +830,7 @@ where
 
 subsection "Non-Failure"
 
-text {* 
+text {*
   With the failure flag, we can formulate non-failure separately
   from validity. A monad @{text m} does not fail under precondition
   @{text P}, if for no start state in that precondition it sets
@@ -872,7 +872,7 @@ text {*
   empty set of results, they will have the failure flag set.
 *}
 definition
-  empty_fail :: "('s,'a) nondet_monad \<Rightarrow> bool" 
+  empty_fail :: "('s,'a) nondet_monad \<Rightarrow> bool"
 where
   "empty_fail m \<equiv> \<forall>s. fst (m s) = {} \<longrightarrow> snd (m s)"
 

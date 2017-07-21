@@ -14,7 +14,7 @@ This module defines the machine-specific invocations for the ARM.
 
 This module makes use of the GHC extension allowing data types with no constructors.
 
-> {-# LANGUAGE EmptyDataDecls #-}
+> {-# LANGUAGE EmptyDataDecls, CPP #-}
 
 \end{impdetails}
 
@@ -27,6 +27,11 @@ This module makes use of the GHC extension allowing data types with no construct
 > import SEL4.Object.Structures
 > import SEL4.API.InvocationLabels
 > import SEL4.API.InvocationLabels.ARM
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> import SEL4.Machine.RegisterSet.ARM (Register(..), VCPUReg(..))
+#endif
+
+> import Data.Word(Word8,Word16,Word32)
 
 \end{impdetails}
 
@@ -34,12 +39,21 @@ This module makes use of the GHC extension allowing data types with no construct
 
 There are five ARM-specific object types; however, only four of them may be invoked. These are the page table, page, ASID control, and ASID pool objects.
 
+IO pages are invoked using InvokePage (cap contains a bit indicating it is an IO page).
+
 > data Invocation
 >     = InvokePageTable PageTableInvocation
 >     | InvokePageDirectory PageDirectoryInvocation
 >     | InvokePage PageInvocation
 >     | InvokeASIDControl ASIDControlInvocation
 >     | InvokeASIDPool ASIDPoolInvocation
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     | InvokeVCPU VCPUInvocation
+#endif
+#ifdef CONFIG_ARM_SMMU
+>     | InvokeIOSpace IOSpaceInvocation
+>     | InvokeIOPageTable IOPageTableInvocation
+#endif
 >     deriving Show
 
 > data PageTableInvocation
@@ -73,7 +87,7 @@ There are five ARM-specific object types; however, only four of them may be invo
 >         pageFlushEnd :: VPtr,
 >         pageFlushPStart :: PAddr,
 >         pageFlushPD :: PPtr PDE,
->         pageFlushASID :: ASID } 
+>         pageFlushASID :: ASID }
 >     | PageRemap {
 >         pageRemapASID :: ASID,
 >         pageRemapEntries :: Either (PTE, [PPtr PTE]) (PDE, [PPtr PDE]) }
@@ -105,6 +119,61 @@ There are five ARM-specific object types; however, only four of them may be invo
 >         assignASIDPool :: PPtr ASIDPool,
 >         assignASIDCTSlot :: PPtr CTE }
 >     deriving Show
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+
+\subsection{VCPUs}
+
+FIXME ARMHYP move HyperReg definition (to Hardware?)
+
+> type HyperReg = VCPUReg
+> type HyperRegVal = Word
+
+> data VCPUInvocation
+>     = VCPUSetTCB (PPtr VCPU) (PPtr TCB)
+>     | VCPUInjectIRQ (PPtr VCPU) Int VIRQ
+>     | VCPUReadRegister (PPtr VCPU) HyperReg
+>     | VCPUWriteRegister (PPtr VCPU) HyperReg HyperRegVal
+>     deriving (Show, Eq)
+
+#endif
+
+#ifdef CONFIG_ARM_SMMU
+
+\subsection{IO Page Tables}
+
+Note the assymetry: for IO pages, IOPageTableMap handles IOPDEs and PageMapIO
+handles IOPTEs, but on the normal MMU side PageMap handles both. FIXME ARMHYP check this again
+
+> data IOPageTableInvocation
+>     = IOPageTableUnmap {
+>         ioptUnmapCap :: ArchCapability,
+>         ioptUnmapCapSlot :: PPtr CTE }
+>     | IOPageTableMap {
+>         ioptMapASID :: ASID,
+>         ioptMapCap :: ArchCapability,
+>         ioptMapSlot :: PPtr CTE,
+>         ioptMapEntry :: (IOPDE, PPtr IOPDE),
+>         ioptMapAddress :: PAddr}
+>     deriving Show
+
+> data PageInvocationIO
+>     = PageMapIO {
+>         pageMapIOASID :: ASID,
+>         pageMapIOCap :: Capability,
+>         pageMapIOCTSlot :: PPtr CTE,
+>         pageMapIOEntry :: IOPTE,
+>         pageMapIOAddress :: PAddr}
+>     deriving Show
+
+\subsection{IO Spaces}
+
+The ARM platform presently does not support an IO space invocations.
+
+> data IOSpaceInvocation = ARMNoArchIOSpace
+>     deriving Show
+
+#endif
 
 \subsection{Interrupt Control}
 

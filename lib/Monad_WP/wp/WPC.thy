@@ -133,7 +133,7 @@ end;
 fun detect_term ctxt thm tm =
 let
   val foo_thm_tm   = instantiate_concl_pred ctxt tm foo_thm;
-  val matches      = resolve_tac ctxt [foo_thm_tm] 1 thm; 
+  val matches      = resolve_tac ctxt [foo_thm_tm] 1 thm;
   val outcomes     = Seq.list_of matches;
   val get_goalterm = (HOLogic.dest_Trueprop o Logic.strip_assums_concl
                        o Envir.beta_eta_contract o hd o Thm.prems_of);
@@ -214,15 +214,15 @@ fun add_wpc tm thm lthy = let
   val thm' = Proof_Context.get_thm ctxt thm
 in
   Local_Theory.background_theory (WPCPredicateAndFinals.map (fn xs => (tm', thm') :: xs)) lthy
-end; 
-  
-val _ =  
-    Outer_Syntax.command 
+end;
+
+val _ =
+    Outer_Syntax.command
         @{command_keyword "wpc_setup"}
         "Add wpc stuff"
         (P.term -- P.name >> (fn (tm, thm) => Toplevel.local_theory NONE NONE (add_wpc tm thm)))
 
-end;    
+end;
 end;
 
 *}

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Utilities for the machine level which are not machine-dependent.
 *)
 
@@ -21,16 +21,16 @@ begin
 context begin interpretation Arch .
 
 requalify_types
-  user_context 
-  register 
-  data 
+  user_context
+  register
+  data
   obj_ref
   asid_index
   asid_pool_index
   cap_ref
   length_type
   vspace_ref
-  data_offset   
+  data_offset
 
 requalify_consts
   nat_to_cref
@@ -55,7 +55,7 @@ requalify_consts
   data_to_cptr
   data_offset_to_nat
   combine_ntfn_badges
-  
+
 
 end
 

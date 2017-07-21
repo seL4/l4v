@@ -44,17 +44,17 @@ struct
 fun theory_of (e : Spec_Graph.entry) = (Long_Name.explode #> hd) (#name e)
 
 fun filter_contains (spec : Spec_Graph.entry Int_Graph.T) theories =
-  Proof_Graph.map_contains (filter (fn id => (member (op =) theories) (theory_of (Int_Graph.get_node spec id))))   
+  Proof_Graph.map_contains (filter (fn id => (member (op =) theories) (theory_of (Int_Graph.get_node spec id))))
 
 (* Connect child and parent nodes before removing them, preserving connectedness. *)
 
 fun truncate_proof_spec spec_theories proof_theories spec proof_spec = proof_spec
-|> Proof_Graph.restrict_subgraph (fn (nm,e) => 
-  (member (op =) proof_theories ((Long_Name.explode #> hd) nm)) 
+|> Proof_Graph.restrict_subgraph (fn (nm,e) =>
+  (member (op =) proof_theories ((Long_Name.explode #> hd) nm))
   andalso (not (#lines e = (~1,~1))))
 |> String_Graph.map (K(filter_contains spec spec_theories))
 
- 
+
 fun get_proof_metrics (proof_spec : Proof_Graph.proof_entry String_Graph.T) =
 let
 
@@ -64,18 +64,18 @@ let
   fun get_proper_deps i = fold (fn j => let val e = String_Graph.get_node proof_spec j in Symtab.insert_list (op =) (#file e,#lines e) end) (all_sucs i) Symtab.empty
     |> Symtab.dest_list
     |> map (fn (_,(a,b)) => (b - a) + 1)
-  
+
   fun collate_metrics i = (i,{total_size = get_proper_deps i |> Integer.sum})
 
 in map collate_metrics (String_Graph.keys proof_spec) |> Symtab.make end
 
-fun filter_all_deps thy_deps (thys as (_ :: _)) = 
+fun filter_all_deps thy_deps (thys as (_ :: _)) =
   let
     val all_deps = fold (fn thy => union (op =) (Symtab.lookup thy_deps thy |> the |> snd)) thys []
   in
     filter (member (op =) all_deps)
   end
-  | filter_all_deps _ [] = I  
+  | filter_all_deps _ [] = I
 
 fun get_theories_from_range thy_deps (bottom_theories as _ :: _,top_theories) = Proof_Graph.proper_theory_list thy_deps bottom_theories
     |> filter_out (member (op =) (Proof_Graph.proper_theory_list thy_deps top_theories))
@@ -83,7 +83,7 @@ fun get_theories_from_range thy_deps (bottom_theories as _ :: _,top_theories) = 
     |> union (op =) top_theories
   | get_theories_from_range thy_deps ([],_) = Symtab.dest thy_deps |> map fst
 
-fun toplevel_parent g nm = 
+fun toplevel_parent g nm =
 let
   val preds = String_Graph.all_preds g [nm]
   val ppreds = map (fn i => `(String_Graph.immediate_preds g) i) preds
@@ -135,25 +135,25 @@ let
 
 
   val proof_spec = (truncate_proof_spec spec_theories proof_theories full_spec proof_spec')
-  
+
   val all_deps = case toplevel_facts of [] => String_Graph.keys proof_spec
   | _ => String_Graph.all_succs proof_spec toplevel_facts handle String_Graph.UNDEF x =>
     error ("Couldn't find fact " ^ x ^ " in known facts.\n" ^ (@{make_string} proof_theories))
 
   val _ = tracing "Calculating spec metrics..."
 
-  val all_defs = Int_Graph.fold (fn (_,(e,_)) => (case (#def_name e) of SOME d => Symtab.update (d,()) | NONE => I)) full_spec Symtab.empty 
+  val all_defs = Int_Graph.fold (fn (_,(e,_)) => (case (#def_name e) of SOME d => Symtab.update (d,()) | NONE => I)) full_spec Symtab.empty
 
   val _ = tracing "Calculating proof metrics..."
 
   val proof_metrics = get_proof_metrics proof_spec
 
-  val lemma_defs = String_Graph.fold (fn (nm,_) => 
+  val lemma_defs = String_Graph.fold (fn (nm,_) =>
     Symtab.update (nm,String_Graph.all_succs proof_spec' [nm] |> filter (Symtab.defined all_defs))) proof_spec Symtab.empty
 
   val _ = tracing "done"
 
-type metric_entry = { 
+type metric_entry = {
                       spec_size : int,
                       ideal_spec_size : int,
                       fact_size : int,
@@ -162,7 +162,7 @@ type metric_entry = {
                     }
 
 
-fun write_metrics measure_name = 
+fun write_metrics measure_name =
   let
     fun filter_deps (nm,_) = if toplevel_facts = [] then true else member (op =) all_deps nm
 
@@ -170,11 +170,11 @@ fun write_metrics measure_name =
 
     fun filter_size (_,t) = (#total_size t) > (#min_proof_size args)
 
-    fun is_used fact_defs i = 
+    fun is_used fact_defs i =
         let
           val e = (Int_Graph.get_node full_spec i)
         in
-          case (#def_name e) of NONE => true | 
+          case (#def_name e) of NONE => true |
           SOME d => (case (#spec_type e) of
             Spec_Graph.Constructor => true
             | Spec_Graph.Case => true
@@ -187,7 +187,7 @@ fun write_metrics measure_name =
    fun is_locale i = Int_Graph.get_node full_spec i |> #spec_type
     |> (fn Spec_Graph.Locale => true | _ => false)
 
-     fun final_entry (fact_id,metric_entry) = 
+     fun final_entry (fact_id,metric_entry) =
       let
         val proof_entry = String_Graph.get_node proof_spec fact_id
 
@@ -198,7 +198,7 @@ fun write_metrics measure_name =
 
        val consts = #concl proof_entry @ prems
 
-        fun proper_sucs spec consts = consts          
+        fun proper_sucs spec consts = consts
           |> Int_Graph.all_succs spec
           |> filter is_in_theory
 
@@ -213,15 +213,15 @@ fun write_metrics measure_name =
                        fact_size = #total_size metric_entry,
                        consts = all_consts,
                        ideal_consts = all_used_consts
-                     }             
+                     }
       in
         (fact_id,result) end
 
 
-    val filtered =   
+    val filtered =
     let
     in
-      proof_metrics |> Symtab.dest 
+      proof_metrics |> Symtab.dest
       |> filter filter_deps
       |> filter filter_kinds
       |> filter filter_size
@@ -230,9 +230,9 @@ fun write_metrics measure_name =
     val paired = Par_List.map final_entry filtered
 
     fun mk_string (fact_id,{spec_size,ideal_spec_size,fact_size,...}) = fact_id ^ " " ^
-      (Int.toString spec_size) ^ " " ^ 
+      (Int.toString spec_size) ^ " " ^
       (Int.toString ideal_spec_size) ^
-      " " ^ (Int.toString fact_size) ^  "\n" 
+      " " ^ (Int.toString fact_size) ^  "\n"
 
     val buf = Buffer.empty
     |> fold (fn e => Buffer.add (mk_string e)) paired
@@ -253,14 +253,14 @@ let
     |> map (fn i => Int_Graph.get_node full_spec i |> #name)
 in
   buf
-  |> Buffer.add ("Toplevel lemma: " ^ thm ^ " with " ^ (Int.toString fact_size) 
-                  ^ " lines of proof, " ^ Int.toString spec_size ^ " specification size and " 
+  |> Buffer.add ("Toplevel lemma: " ^ thm ^ " with " ^ (Int.toString fact_size)
+                  ^ " lines of proof, " ^ Int.toString spec_size ^ " specification size and "
                   ^ Int.toString ideal_spec_size ^ " ideal specification size\n")
   |> Buffer.add ("Redundant Toplevel Constants: " ^ (String.concatWith "\n" redundant_consts) ^ "\n")
  end
 
-  val (largestp,_) = fold (fn (id,e) => fn (id',e') => if (#total_size e) > (#total_size e') then (id,e) else (id',e')) filtered_num_deps (filtered_num_deps |> hd) 
- 
+  val (largestp,_) = fold (fn (id,e) => fn (id',e') => if (#total_size e) > (#total_size e') then (id,e) else (id',e')) filtered_num_deps (filtered_num_deps |> hd)
+
 fun add_top_reports buf = buf
     |> Buffer.add "Giving largest measured proof.\n"
     |> add_top_report largestp
@@ -291,12 +291,12 @@ fun latex_report thm =
     |> mk_command "Lines" (toString_commas fact_size)
     |> mk_command "AllLines" (toString_commas full_size)
  end
-  
+
 val orphaned = subtract (op =) all_deps (String_Graph.keys proof_spec)
 val parents = map (the_default "" o toplevel_parent proof_spec) orphaned
 
 val buf = fold2 (fn or => fn p => Buffer.add (or ^ " -> " ^ p ^ "\n")) orphaned parents Buffer.empty
- 
+
 val _ = (File.write_buffer (Path.explode (base_path ^ "/" ^ name ^ "_orphans.txt")) buf)
 
 
@@ -319,7 +319,7 @@ val _ = File.write_buffer (Path.explode (base_path ^ "/" ^ name ^ "_report.txt")
 val _ = File.write_buffer (Path.explode (base_path ^ "/" ^ name ^ "_summary.tex")) (latex_report largestp)
 
 val _ = (proof_spec,proof_metrics,filtered_num_deps,paired_num_deps,lemma_defs)
-  
+
 in () end
 
 fun get_root_theories_of thy_deps f =

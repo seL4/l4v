@@ -8,7 +8,7 @@
  * @TAG(NICTA_GPL)
  *)
 
-(* 
+(*
  * Base theory for capDL refinement.
  *
  * Includes relevant parts from capDL spec and abstract -> Haskell refinement.

@@ -7,7 +7,7 @@
 (*  Title:      StateSpace.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2004-2008 Norbert Schirmer 
+Copyright (C) 2004-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -35,7 +35,7 @@ record 'g state = "globals"::'g
 definition
   upd_globals:: "('g \<Rightarrow> 'g) \<Rightarrow> ('g,'z) state_scheme \<Rightarrow> ('g,'z) state_scheme"
 where
-  "upd_globals upd s = s\<lparr>globals := upd (globals s)\<rparr>" 
+  "upd_globals upd s = s\<lparr>globals := upd (globals s)\<rparr>"
 
 record ('g, 'n, 'val) stateSP = "'g state" +
   locals :: "'n \<Rightarrow> 'val"

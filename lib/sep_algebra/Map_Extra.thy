@@ -203,7 +203,7 @@ lemma map_le_dom_restrict_sub_add:
                      split: option.splits; force simp: Some_com)
 
 lemma subset_map_restrict_sub_add:
-  "T \<subseteq> S \<Longrightarrow> m |` (S - T) ++ m |` T = m |` S"  
+  "T \<subseteq> S \<Longrightarrow> m |` (S - T) ++ m |` T = m |` S"
   by (rule ext) (auto simp: restrict_map_def map_add_def split: option.splits)
 
 lemma restrict_map_sub_union:

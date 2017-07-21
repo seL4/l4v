@@ -14,7 +14,7 @@ This module contains the physical memory model's representations of the ARM-spec
 
 This module makes use of the GHC extension allowing declaration of types with no constructors, so GHC language extensions are enabled.
 
-> {-# LANGUAGE EmptyDataDecls, GeneralizedNewtypeDeriving #-}
+> {-# LANGUAGE CPP, EmptyDataDecls, GeneralizedNewtypeDeriving #-}
 
 \end{impdetails}
 
@@ -25,8 +25,13 @@ This module makes use of the GHC extension allowing declaration of types with no
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware.ARM
 > import Data.Array
-> import Data.Word(Word32)
+> import Data.Helpers
+> import Data.Word(Word32,Word16)
 > import Data.Bits
+> import {-# SOURCE #-} SEL4.Object.Structures
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+> import SEL4.Machine.RegisterSet.ARM (VCPUReg(..))
+#endif
 
 \end{impdetails}
 
@@ -44,6 +49,9 @@ There are six ARM-specific capability types: the global ASID control capability,
 >         capVPBasePtr :: PPtr Word,
 >         capVPRights :: VMRights,
 >         capVPSize :: VMPageSize,
+#ifdef CONFIG_ARM_SMMU
+>         capVPisIOSpace :: Bool,
+#endif
 >         capVPMappedAddress :: Maybe (ASID, VPtr) }
 >     | PageTableCap {
 >         capPTBasePtr :: PPtr PTE,
@@ -51,23 +59,49 @@ There are six ARM-specific capability types: the global ASID control capability,
 >     | PageDirectoryCap {
 >         capPDBasePtr :: PPtr PDE,
 >         capPDMappedASID :: Maybe ASID }
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     | VCPUCap {
+>         capVCPUPtr :: PPtr VCPU }
+#endif
+#ifdef CONFIG_ARM_SMMU
+>     | IOSpaceCap {
+>         capIOSpaceModuleID :: Word16,
+>         capIOSpaceClientID :: Word16 }
+>     | IOPageTableCap {
+>         capIOPTBasePtr :: PPtr IOPTE,
+>         capIOPTMappedAddress :: Maybe (ASID, VPtr) }
+#endif
 >     deriving (Eq, Show)
 
 \subsection{Kernel Objects}
 
-The ARM kernel stores one ARM-specific type of object in the PSpace: ASID pools, which are second level nodes in the global ASID table. 
+The ARM kernel stores some ARM-specific types of objects in the PSpace, such as ASID pools, which are second level nodes in the global ASID table.
 
 > data ArchKernelObject
 >     = KOASIDPool ASIDPool
 >     | KOPTE PTE
 >     | KOPDE PDE
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     | KOVCPU VCPU
+#endif
+#ifdef CONFIG_ARM_SMMU
+>     | KOIOPTE IOPTE
+>     | KOIOPDE IOPDE
+#endif
 >     deriving Show
 
 > archObjSize ::  ArchKernelObject -> Int
-> archObjSize a = case a of 
+> archObjSize a = case a of
 >                 KOASIDPool _ -> pageBits
->                 KOPTE _ -> 2 
->                 KOPDE _ -> 2
+>                 KOPTE _ -> pteBits
+>                 KOPDE _ -> pdeBits
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>                 KOVCPU _ -> vcpuBits
+#endif
+#ifdef CONFIG_ARM_SMMU
+>                 KOIOPTE _ -> iopteBits
+>                 KOIOPDE _ -> iopdeBits
+#endif
 
 \subsection{Threads}
 
@@ -76,11 +110,19 @@ this state. The thread's saved user-level context, which is expected to be
 present on all platforms is stored here.
 
 > data ArchTCB = ArchThread {
->         atcbContext :: UserContext }
+>         atcbContext :: UserContext
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>         ,atcbVCPUPtr :: Maybe (PPtr VCPU)
+#endif
+>         }
 >     deriving Show
 
 > newArchTCB = ArchThread {
->     atcbContext = newContext }
+>     atcbContext = newContext
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+>     ,atcbVCPUPtr = Nothing
+#endif
+>     }
 
 > atcbContextSet :: UserContext -> ArchTCB -> ArchTCB
 > atcbContextSet uc atcb = atcb { atcbContext = uc }
@@ -103,7 +145,11 @@ An ASID is an unsigned word. Note that it is a \emph{virtual} address space iden
 ASIDs are mapped to address space roots by a global two-level table. The actual ASID values are opaque to the user, as are the sizes of the levels of the tables; ASID allocation calls will simply return an error once the available ASIDs are exhausted.
 
 > asidHighBits :: Int
+#ifdef CONFIG_ARM_SMMU
+> asidHighBits = 6 -- isIOSpace takes away one bit
+#else
 > asidHighBits = 7
+#endif
 
 > asidLowBits :: Int
 > asidLowBits = 10
@@ -117,4 +163,51 @@ ASIDs are mapped to address space roots by a global two-level table. The actual 
 > asidHighBitsOf :: ASID -> ASID
 > asidHighBitsOf asid = (asid `shiftR` asidLowBits) .&. mask asidHighBits
 
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+\subsection {VCPU}
+
+The SCTLR and ACTLR are contained in a structure of their own in the C code,
+but this structure is never manipulated as a whole.
+
+FIXME ARMHYP move to platform
+
+> type VIRQ = Word
+
+
+> data GICVCPUInterface = VGICInterface {
+>                        vgicHCR :: Word,
+>                        vgicVMCR :: Word, -- FIXME ARMHYP UNUSED?
+>                        vgicAPR :: Word,
+>                        vgicLR :: Array Int VIRQ
+>                        }
+>     deriving Show
+
+> data VCPU = VCPUObj {
+>                 vcpuTCBPtr :: Maybe (PPtr TCB)
+>                 ,vcpuACTLR :: Word
+>                 ,vcpuVGIC :: GICVCPUInterface
+>                 ,vcpuRegs :: Array VCPUReg Word
+>                 }
+>     deriving Show
+
+> vcpuSCTLR vcpu = vcpuRegs vcpu ! VCPURegSCTLR
+
+makeObject specialised to VCPUs.
+
+> makeVCPUObject :: VCPU
+> makeVCPUObject =
+>     let vgicLR = funPartialArray (const (0 :: Word)) (0, gicVCPUMaxNumLR-1) in
+>     VCPUObj {
+>           vcpuTCBPtr = Nothing
+>         , vcpuACTLR = actlrDefault
+>         , vcpuVGIC = VGICInterface {
+>                           vgicHCR = vgicHCREN
+>                         , vgicVMCR = 0
+>                         , vgicAPR = 0
+>                         , vgicLR = vgicLR
+>                         }
+>         , vcpuRegs = funArray (const 0) // [(VCPURegSCTLR, sctlrDefault)]
+>         }
+
+#endif
 

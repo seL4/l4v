@@ -25,9 +25,9 @@ lemma cap_fault_on_failure_rev_g:
   unfolding cap_fault_on_failure_def handleE'_def
   apply (wp | wpc | simp add: o_def)+
 done
-  
+
 definition gets_apply where
-  "gets_apply f x \<equiv> 
+  "gets_apply f x \<equiv>
   do
    s \<leftarrow> get;
    return ((f s) x)
@@ -52,7 +52,7 @@ lemma get_object_rev:
   apply (fastforce elim: reads_equivE equiv_forE intro: aag_can_read_self)
   done
 
-lemma get_cap_rev: 
+lemma get_cap_rev:
   "reads_equiv_valid_inv A aag (K (is_subject aag (fst slot))) (get_cap slot)"
   unfolding get_cap_def
   apply(wp get_object_rev | wpc | simp add: split_def)+
@@ -110,7 +110,7 @@ lemmas lookup_cap_and_slot_reads_respects_g = reads_respects_g_from_inv[OF looku
 lemma set_cap_reads_respects:
   "reads_respects aag l (K (is_subject aag (fst slot))) (set_cap cap slot)"
   apply(simp add: set_cap_def split_def)
-  apply(wp set_object_reads_respects get_object_rev hoare_vcg_all_lift 
+  apply(wp set_object_reads_respects get_object_rev hoare_vcg_all_lift
        | wpc
        | simp )+
   done
@@ -130,8 +130,8 @@ lemma set_original_reads_respects:
    apply(erule affects_equiv_is_original_cap_update)
    apply(erule equiv_for_id_update)
   done
-       
-       
+
+
 lemma set_cdt_reads_respects:
   "reads_respects aag l \<top> (set_cdt c)"
   unfolding set_cdt_def
@@ -142,7 +142,7 @@ lemma set_cdt_reads_respects:
   done
 
 lemma set_cdt_ev2:
-  "equiv_for (((aag_can_read aag) or (aag_can_affect aag l)) \<circ> fst) id c c' \<Longrightarrow> 
+  "equiv_for (((aag_can_read aag) or (aag_can_affect aag l)) \<circ> fst) id c c' \<Longrightarrow>
    equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (op =) \<top> \<top> (set_cdt c) (set_cdt c')"
   unfolding set_cdt_def
   apply(rule get_bind_ev2)
@@ -151,7 +151,7 @@ lemma set_cdt_ev2:
   done
 
 lemma set_cdt_list_ev2:
-  "equiv_for (((aag_can_read aag) or (aag_can_affect aag l)) \<circ> fst) id c c' \<Longrightarrow> 
+  "equiv_for (((aag_can_read aag) or (aag_can_affect aag l)) \<circ> fst) id c c' \<Longrightarrow>
    equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (op =) \<top> \<top> (set_cdt_list c) (set_cdt_list c')"
   unfolding set_cdt_list_def
   apply(rule get_bind_ev2)
@@ -266,7 +266,7 @@ lemma cap_move_reads_respects:
   apply (simp add: bind_assoc cap_move_ext_def)
   apply (rule gen_asm_ev)
   apply (elim conjE)
-  apply(wp set_original_reads_respects gets_apply_ev update_cdt_reads_respects 
+  apply(wp set_original_reads_respects gets_apply_ev update_cdt_reads_respects
            set_cap_reads_respects update_cdt_list_reads_respects
        | simp split del: if_split | fastforce simp: equiv_for_def split: option.splits)+
   apply (intro impI conjI allI)
@@ -329,7 +329,7 @@ lemma set_object_globals_equiv:
   done
 
 lemma set_object_globals_equiv'':
-  "\<lbrace> globals_equiv s and (\<lambda> s. ptr \<noteq> arm_global_pd (arch_state s)) and (\<lambda>t. ptr \<noteq> idle_thread t)\<rbrace> 
+  "\<lbrace> globals_equiv s and (\<lambda> s. ptr \<noteq> arm_global_pd (arch_state s)) and (\<lambda>t. ptr \<noteq> idle_thread t)\<rbrace>
    set_object ptr obj
    \<lbrace> \<lambda>_. globals_equiv s \<rbrace>"
   apply (wp set_object_globals_equiv)
@@ -352,7 +352,7 @@ lemma set_cap_globals_equiv:
   unfolding set_cap_def
   apply(simp only: split_def)
   apply(wp set_object_globals_equiv hoare_vcg_all_lift get_object_wp | wpc | simp)+
-   apply(fastforce simp: valid_global_objs_def valid_ao_at_def obj_at_def is_tcb_def)+
+   apply(fastforce simp: valid_global_objs_def valid_vso_at_def obj_at_def is_tcb_def)+
   done
 
 
@@ -412,7 +412,7 @@ lemma cap_swap_globals_equiv:
    cap_swap cap1 slot1 cap2 slot2
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_swap_def
-  apply(wp set_original_globals_equiv set_cdt_globals_equiv set_cap_globals_equiv 
+  apply(wp set_original_globals_equiv set_cdt_globals_equiv set_cap_globals_equiv
            dxo_wp_weak|simp)+
   done
 
@@ -444,10 +444,10 @@ lemma aag_cap_auth_ASIDPoolCap_asid:
 done
 
 lemma aag_cap_auth_PageCap_asid:
-  "pas_cap_cur_auth aag (ArchObjectCap (PageCap dev word fun vmpage_size (Some (a, b)))) 
+  "pas_cap_cur_auth aag (ArchObjectCap (PageCap dev word fun vmpage_size (Some (a, b))))
   \<Longrightarrow> pas_refined aag s
   \<Longrightarrow> is_subject_asid aag a"
-  apply (auto simp add: aag_cap_auth_def cap_auth_conferred_def 
+  apply (auto simp add: aag_cap_auth_def cap_auth_conferred_def
                         cap_links_asid_slot_def label_owns_asid_slot_def
                  intro: pas_refined_Control_into_is_subject_asid)
 done
@@ -461,7 +461,7 @@ lemma aag_cap_auth_PageTableCap:
 done
 
 lemma aag_cap_auth_PageTableCap_asid: "pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word (Some (a, b)))) \<Longrightarrow> pas_refined aag s \<Longrightarrow> is_subject_asid aag a"
-  apply (auto simp add: aag_cap_auth_def cap_auth_conferred_def 
+  apply (auto simp add: aag_cap_auth_def cap_auth_conferred_def
                    cap_links_asid_slot_def label_owns_asid_slot_def
                    intro: pas_refined_Control_into_is_subject_asid)
 done
@@ -476,7 +476,7 @@ done
 lemma aag_cap_auth_PageDirectoryCap_asid:"pas_cap_cur_auth aag (ArchObjectCap (PageDirectoryCap word (Some a))) \<Longrightarrow> pas_refined aag s \<Longrightarrow>
   is_subject_asid aag a"
   unfolding aag_cap_auth_def
-  apply (auto simp add: aag_cap_auth_def cap_auth_conferred_def 
+  apply (auto simp add: aag_cap_auth_def cap_auth_conferred_def
                    cap_links_asid_slot_def label_owns_asid_slot_def
                    intro: pas_refined_Control_into_is_subject_asid)
 done
@@ -487,9 +487,9 @@ lemma aag_cap_auth_recycle_EndpointCap:"pas_cap_cur_auth aag (EndpointCap word1 
   has_cancel_send_rights (EndpointCap word1 word2 f) \<Longrightarrow>
   is_subject aag word1"
   unfolding aag_cap_auth_def
-  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def   
-                   pas_refined_all_auth_is_owns is_page_cap_def 
-                   has_cancel_send_rights_def cap_rights_to_auth_def 
+  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def
+                   pas_refined_all_auth_is_owns is_page_cap_def
+                   has_cancel_send_rights_def cap_rights_to_auth_def
                    all_rights_def)
   done
 
@@ -497,12 +497,12 @@ lemma aag_cap_auth_Zombie:"pas_cap_cur_auth aag (Zombie word x y) \<Longrightarr
   pas_refined aag s \<Longrightarrow>
  is_subject aag word"
   unfolding aag_cap_auth_def
-  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def   
+  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def
         pas_refined_all_auth_is_owns is_page_cap_def cap_rights_to_auth_def)
   done
 
-lemmas aag_cap_auth_subject = aag_cap_auth_PageTableCap 
-                              aag_cap_auth_PageDirectory 
+lemmas aag_cap_auth_subject = aag_cap_auth_PageTableCap
+                              aag_cap_auth_PageDirectory
                               aag_cap_auth_ASIDPoolCap
                               aag_cap_auth_ASIDPoolCap_asid
                               aag_cap_auth_PageCap_asid
@@ -522,12 +522,12 @@ lemma valid_arch_state_ko_at_arm:
   apply(fastforce simp: valid_arch_state_def valid_ko_at_arm_def obj_at_def dest: a_type_pdD)
   done
 
-lemma invs_valid_ko_at_arm: 
+lemma invs_valid_ko_at_arm:
   "invs s \<Longrightarrow> valid_ko_at_arm s" by (simp add: invs_def valid_state_def valid_arch_state_ko_at_arm)
 
 lemmas invs_imps = invs_valid_vs_lookup invs_sym_refs invs_psp_aligned invs_distinct invs_valid_ko_at_arm invs_valid_global_objs invs_arch_state invs_valid_objs invs_valid_global_refs tcb_at_invs invs_cur invs_kernel_mappings
 
-lemma cte_wp_at_page_cap_aligned : 
+lemma cte_wp_at_page_cap_aligned :
   "\<lbrakk>cte_wp_at
            (op = (ArchObjectCap (PageCap dev word fun vmpage_size option))) slot s ; valid_objs s \<rbrakk>\<Longrightarrow>
   is_aligned word (pageBitsForSize vmpage_size)"
@@ -646,7 +646,7 @@ lemma preemption_point_def2:
            rv \<leftarrow> liftE work_units_limit_reached;
            if rv then doE
              liftE reset_work_units;
-             liftE (do_machine_op getActiveIRQ) >>=E
+             liftE (do_machine_op (getActiveIRQ True)) >>=E
              case_option (returnOk ()) (throwError \<circ> Interrupted)
            odE else returnOk()
        odE"
@@ -659,7 +659,7 @@ lemma preemption_point_def2:
 
 (* moved from ADT_IF *)
 definition irq_at :: "nat \<Rightarrow> (10 word \<Rightarrow> bool) \<Rightarrow> irq option" where
-  "irq_at pos masks \<equiv> 
+  "irq_at pos masks \<equiv>
   let i = irq_oracle pos in
   (if i = 0x3FF \<or> masks i then None else Some i)"
 
@@ -675,13 +675,13 @@ definition irq_is_recurring :: "irq \<Rightarrow> ('z::state_ext) state \<Righta
 
 
 lemma dmo_getActiveIRQ_wp:
-  "\<lbrace>\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s))) (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>)\<rbrace> do_machine_op getActiveIRQ \<lbrace>P\<rbrace>"
-  apply(simp add: do_machine_op_def getActiveIRQ_def)
+  "\<lbrace>\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s))) (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>)\<rbrace> do_machine_op (getActiveIRQ in_kernel) \<lbrace>P\<rbrace>"
+  apply(simp add: do_machine_op_def getActiveIRQ_def non_kernel_IRQs_def)
   apply(wp modify_wp | wpc)+
   apply clarsimp
   apply(erule use_valid)
    apply (wp modify_wp)
-  apply(auto simp: irq_at_def)
+  apply(auto simp: irq_at_def Let_def split: if_splits)
   done
 
 lemma only_timer_irqs:
@@ -696,15 +696,15 @@ lemma only_timer_irqs:
   done
 
 lemma dmo_getActiveIRQ_only_timer:
-  "\<lbrace>domain_sep_inv False st and valid_irq_states\<rbrace> 
-   do_machine_op getActiveIRQ 
+  "\<lbrace>domain_sep_inv False st and valid_irq_states\<rbrace>
+   do_machine_op (getActiveIRQ in_kernel)
    \<lbrace>\<lambda>rv s. (\<forall>x. rv = Some x \<longrightarrow> interrupt_states s x = IRQTimer)\<rbrace>"
   apply(wp dmo_getActiveIRQ_wp)
   apply clarsimp
   apply(erule (1) only_timer_irqs)
   apply(simp add: is_irq_at_def)
   done
-    
+
 text {*
   There is only one interrupt turned on, namely @{term irq}, and it is
   a timer interrupt.
@@ -713,23 +713,23 @@ definition only_timer_irq :: "10 word \<Rightarrow> 'z::state_ext state \<Righta
   "only_timer_irq irq s \<equiv> (\<forall>x. interrupt_states s x = IRQTimer \<longrightarrow> x = irq) \<and> irq_is_recurring irq s"
 
 lemma is_irq_at_triv:
-  assumes a: 
-  "\<And>P. \<lbrace>(\<lambda>s. P (irq_masks (machine_state s))) and Q\<rbrace> 
-        f 
+  assumes a:
+  "\<And>P. \<lbrace>(\<lambda>s. P (irq_masks (machine_state s))) and Q\<rbrace>
+        f
        \<lbrace>\<lambda>rv s. P (irq_masks (machine_state s)) \<rbrace>"
-  shows 
+  shows
   "\<lbrace> (\<lambda>s. P (is_irq_at s)) and Q \<rbrace> f \<lbrace> \<lambda>rv s. P (is_irq_at s) \<rbrace>"
   apply(clarsimp simp: valid_def is_irq_at_def irq_at_def Let_def)
   apply(erule use_valid[OF _ a])
   apply simp
   done
-  
+
 lemma irq_is_recurring_triv:
-  assumes a: 
-  "\<And>P. \<lbrace>(\<lambda>s. P (irq_masks (machine_state s))) and Q\<rbrace> 
-        f 
+  assumes a:
+  "\<And>P. \<lbrace>(\<lambda>s. P (irq_masks (machine_state s))) and Q\<rbrace>
+        f
        \<lbrace>\<lambda>rv s. P (irq_masks (machine_state s))\<rbrace>"
-  shows 
+  shows
   "\<lbrace>irq_is_recurring irq and Q\<rbrace> f \<lbrace>\<lambda>_. irq_is_recurring irq\<rbrace>"
   apply(clarsimp simp: irq_is_recurring_def valid_def)
   apply(rule use_valid[OF _ is_irq_at_triv[OF a]])
@@ -752,15 +752,15 @@ lemma domain_sep_inv_to_interrupt_states_pres:
    apply(fastforce simp: domain_sep_inv_def)
   apply(simp add: domain_sep_inv_refl)
   done
-  
+
 lemma only_timer_irq_pres:
-  assumes a: 
-  "\<And>P. \<lbrace>(\<lambda>s. P (irq_masks (machine_state s))) and Q\<rbrace> 
-        f 
+  assumes a:
+  "\<And>P. \<lbrace>(\<lambda>s. P (irq_masks (machine_state s))) and Q\<rbrace>
+        f
        \<lbrace>\<lambda>rv s. P (irq_masks (machine_state s)) \<rbrace>"
   assumes b:
   "\<And> st::'z::state_ext state. \<lbrace>domain_sep_inv False st and P\<rbrace> f \<lbrace>\<lambda>_. domain_sep_inv False st\<rbrace>"
-  shows 
+  shows
   "\<lbrace>only_timer_irq irq and Q and P and (\<lambda>s. domain_sep_inv False (st::'z::state_ext state) (s::'z::state_ext state))\<rbrace> f \<lbrace>\<lambda>_. only_timer_irq irq\<rbrace>"
   apply(clarsimp simp: only_timer_irq_def valid_def)
   apply(rule conjI)
@@ -770,14 +770,14 @@ lemma only_timer_irq_pres:
    apply(erule contrapos_pp, erule use_valid, rule domain_sep_inv_to_interrupt_states_pres, rule b, fastforce)
   apply(erule use_valid[OF _ irq_is_recurring_triv[OF a]])
   by simp
-   
+
 definition only_timer_irq_inv :: "10 word \<Rightarrow> 'a::state_ext state \<Rightarrow> 'a state \<Rightarrow> bool" where
   "only_timer_irq_inv irq st \<equiv> domain_sep_inv False st and only_timer_irq irq"
 
 lemma only_timer_irq_inv_pres:
-  assumes a: 
-  "\<And>P. \<lbrace>(\<lambda>s. P (irq_masks (machine_state s))) and Q\<rbrace> 
-        f 
+  assumes a:
+  "\<And>P. \<lbrace>(\<lambda>s. P (irq_masks (machine_state s))) and Q\<rbrace>
+        f
        \<lbrace>\<lambda>rv s. P (irq_masks (machine_state s)) \<rbrace>"
   assumes b: "\<And>st::'z::state_ext state. \<lbrace>domain_sep_inv False st and P\<rbrace> f \<lbrace>\<lambda>_. domain_sep_inv False st\<rbrace>"
   shows "\<lbrace>only_timer_irq_inv irq (st::'z::state_ext state) and Q and P\<rbrace> f \<lbrace>\<lambda>_. only_timer_irq_inv irq st\<rbrace>"
@@ -890,7 +890,7 @@ lemma use_equiv_valid_inv:
  apply (drule(1) bspec | clarsimp)+
  done
 
-lemma equiv_valid_inv_conj_lift: 
+lemma equiv_valid_inv_conj_lift:
  assumes P: "equiv_valid_inv I (\<lambda>s s'. P s s') g f"
      and P': "equiv_valid_inv I (\<lambda>s s'. P' s s') g f"
  shows "equiv_valid_inv I (\<lambda>s s'. P s s' \<and> P' s s') g f"
@@ -904,11 +904,11 @@ lemma equiv_valid_inv_conj_lift:
 lemma dmo_getActiveIRQ_reads_respects:
   notes gets_ev[wp del]
   shows
-  "reads_respects aag l (invs and only_timer_irq_inv irq st) (do_machine_op getActiveIRQ)"
+  "reads_respects aag l (invs and only_timer_irq_inv irq st) (do_machine_op (getActiveIRQ in_kernel))"
   apply(rule use_spec_ev)
   apply(rule do_machine_op_spec_reads_respects')
    apply(simp add: getActiveIRQ_def)
-   apply (wp irq_state_increment_reads_respects_memory irq_state_increment_reads_respects_device 
+   apply (wp irq_state_increment_reads_respects_memory irq_state_increment_reads_respects_device
              gets_ev[where f="irq_oracle \<circ> irq_state"] equiv_valid_inv_conj_lift
              gets_irq_masks_equiv_valid modify_wp
          | simp add: no_irq_def)+
@@ -916,13 +916,13 @@ lemma dmo_getActiveIRQ_reads_respects:
   done
 
 lemma dmo_getActiveIRQ_globals_equiv:
-  "\<lbrace>globals_equiv st\<rbrace> do_machine_op getActiveIRQ \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  "\<lbrace>globals_equiv st\<rbrace> do_machine_op (getActiveIRQ in_kernel) \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (wp dmo_getActiveIRQ_wp)
   apply(auto simp: globals_equiv_def idle_equiv_def)
   done
 
 lemma dmo_getActiveIRQ_reads_respects_g :
-  "reads_respects_g aag l (invs and only_timer_irq_inv irq st) (do_machine_op getActiveIRQ)"
+  "reads_respects_g aag l (invs and only_timer_irq_inv irq st) (do_machine_op (getActiveIRQ in_kernel))"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
     apply(rule dmo_getActiveIRQ_reads_respects)
    apply(rule doesnt_touch_globalsI)

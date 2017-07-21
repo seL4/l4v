@@ -50,7 +50,7 @@ definition
   | AddressedGlobalData name m b \<Rightarrow> {})"
 
 definition
-  "global_data_ok symtab gd = 
+  "global_data_ok symtab gd =
     (case gd of GlobalData nm _ ok _ _ \<Rightarrow> ok (symtab nm)
         | ConstGlobalData nm _ ok _ _ \<Rightarrow> ok (symtab nm)
         | AddressedGlobalData nm _ ok \<Rightarrow> ok (symtab nm))"
@@ -433,7 +433,7 @@ lemma globals_swap_absorb_update:
                del: SepCode.inv_p)
   apply (drule meta_mp, simp add: globals_list_valid_def globals_list_distinct_def)+
   apply (rename_tac x xs)
-  apply (subgoal_tac "\<forall>gs. 
+  apply (subgoal_tac "\<forall>gs.
                 globals_swap g_hrs g_hrs_upd symtab (GlobalData nm m ok g s # x # xs) gs
                  = global_swap g_hrs g_hrs_upd symtab x (globals_swap g_hrs g_hrs_upd symtab (GlobalData nm m ok g s # xs) gs)")
    apply (subgoal_tac "\<forall>gs. s v' (global_swap g_hrs g_hrs_upd symtab x gs) = global_swap g_hrs g_hrs_upd symtab x (s v' gs)")
@@ -480,7 +480,7 @@ lemma globals_swap_access_mem_raw:
 lemma globals_swap_access_mem:
   "\<lbrakk> global_data nm g u \<in> set xs;
      global_acc_valid g_hrs g_hrs_upd;
-     globals_list_valid symtab g_hrs g_hrs_upd xs; 
+     globals_list_valid symtab g_hrs g_hrs_upd xs;
      globals_list_distinct D symtab xs \<rbrakk>
     \<Longrightarrow> g (globals_swap g_hrs g_hrs_upd symtab xs gs) = h_val (hrs_mem (g_hrs gs)) (Ptr (symtab nm))"
   by (simp add: global_data_def globals_swap_access_mem_raw)
@@ -488,7 +488,7 @@ lemma globals_swap_access_mem:
 lemma globals_swap_access_mem2:
   "\<lbrakk> global_data nm g u \<in> set xs;
      global_acc_valid g_hrs g_hrs_upd;
-     globals_list_valid symtab g_hrs g_hrs_upd xs; 
+     globals_list_valid symtab g_hrs g_hrs_upd xs;
      globals_list_distinct D symtab xs \<rbrakk>
     \<Longrightarrow> g gs = h_val (hrs_mem (g_hrs (globals_swap g_hrs g_hrs_upd symtab xs gs))) (Ptr (symtab nm))"
   using globals_swap_twice_helper globals_swap_access_mem
@@ -609,7 +609,7 @@ definition
         \<Rightarrow> heap_mem \<Rightarrow> bool"
 where
   "const_globals_in_memory symtab xs hmem =
-    (\<forall>gd \<in> set xs. case gd of 
+    (\<forall>gd \<in> set xs. case gd of
         ConstGlobalData nm l ok v chk \<Rightarrow> chk (heap_list hmem l (symtab nm))
     | _ \<Rightarrow> True)"
 
@@ -735,11 +735,11 @@ fun define_globals_list (mungedb:CalculateState.mungedb) globloc globty thy = le
             $ HOLogic.mk_string (MString.dest nm) $ init end
       | glob (nm, typ, _, NSGlobal) = let
             (* FIXME: _' hackery (or more generally, hackery) *)
-            val acc = (Sign.intern_const thy (global_rcd_name ^ "." ^ 
+            val acc = (Sign.intern_const thy (global_rcd_name ^ "." ^
                                               MString.dest nm ^ "_'"),
                        globty --> typ)
             val upd = (Sign.intern_const thy
-                          (global_rcd_name ^ "." ^ MString.dest nm ^ "_'" ^ 
+                          (global_rcd_name ^ "." ^ MString.dest nm ^ "_'" ^
                            Record.updateN),
                 (typ --> typ) --> globty --> globty)
         in Const (@{const_name "global_data"}, sT

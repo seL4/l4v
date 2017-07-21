@@ -18,8 +18,8 @@ begin
 section "Wrapping and Lifting Machine Operations"
 
 text {*
-  Most of the machine operations below work on the underspecified 
-  part of the machine state @{typ machine_state_rest} and cannot fail. 
+  Most of the machine operations below work on the underspecified
+  part of the machine state @{typ machine_state_rest} and cannot fail.
   We could express the latter by type (leaving out the failure flag),
   but if we later wanted to implement them,
   we'd have to set up a new hoare-logic
@@ -74,19 +74,19 @@ definition
 
 definition
   storeWord :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-  where "storeWord p w \<equiv> do 
+  where "storeWord p w \<equiv> do
                             assert (p && mask 2 = 0);
-                            modify (underlying_memory_update (\<lambda>m. 
-                                      m(p := word_rsplit w ! 3, 
+                            modify (underlying_memory_update (\<lambda>m.
+                                      m(p := word_rsplit w ! 3,
                                         p + 1 := word_rsplit w ! 2,
-                                        p + 2 := word_rsplit w ! 1, 
+                                        p + 2 := word_rsplit w ! 1,
                                         p + 3 := word_rsplit w ! 0)))
                          od"
 
 lemma loadWord_storeWord_is_return:
   "p && mask 2 = 0 \<Longrightarrow> (do w \<leftarrow> loadWord p; storeWord p w od) = return ()"
   apply (rule ext)
-  apply (simp add: loadWord_def storeWord_def bind_def assert_def return_def 
+  apply (simp add: loadWord_def storeWord_def bind_def assert_def return_def
     modify_def gets_def get_def eval_nat_numeral put_def)
   apply (simp add: word_rsplit_rcat_size word_size)
   done
@@ -103,7 +103,7 @@ consts'
 definition
   configureTimer :: "irq machine_monad"
 where
-  "configureTimer \<equiv> do 
+  "configureTimer \<equiv> do
     machine_op_lift configureTimer_impl;
     gets configureTimer_val
   od"
@@ -167,25 +167,25 @@ where "setCurrentPD pd \<equiv> do
           od"
 
 consts'
-  invalidateTLB_impl :: "unit machine_rest_monad"
+  invalidateLocalTLB_impl :: "unit machine_rest_monad"
 definition
-  invalidateTLB :: "unit machine_monad"
-where "invalidateTLB \<equiv> machine_op_lift invalidateTLB_impl"
+  invalidateLocalTLB :: "unit machine_monad"
+where "invalidateLocalTLB \<equiv> machine_op_lift invalidateLocalTLB_impl"
 
 
 consts'
-  invalidateTLB_ASID_impl :: "hardware_asid \<Rightarrow> unit machine_rest_monad"
+  invalidateLocalTLB_ASID_impl :: "hardware_asid \<Rightarrow> unit machine_rest_monad"
 definition
-  invalidateTLB_ASID :: "hardware_asid \<Rightarrow> unit machine_monad"
-where "invalidateTLB_ASID a \<equiv> machine_op_lift (invalidateTLB_ASID_impl a)"
+  invalidateLocalTLB_ASID :: "hardware_asid \<Rightarrow> unit machine_monad"
+where "invalidateLocalTLB_ASID a \<equiv> machine_op_lift (invalidateLocalTLB_ASID_impl a)"
 
 
 (* C implementation takes one argument, which is w || a *)
 consts'
-  invalidateTLB_VAASID_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+  invalidateLocalTLB_VAASID_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 definition
-  invalidateTLB_VAASID :: "machine_word \<Rightarrow> unit machine_monad"
-where "invalidateTLB_VAASID w \<equiv> machine_op_lift (invalidateTLB_VAASID_impl w)"
+  invalidateLocalTLB_VAASID :: "machine_word \<Rightarrow> unit machine_monad"
+where "invalidateLocalTLB_VAASID w \<equiv> machine_op_lift (invalidateLocalTLB_VAASID_impl w)"
 
 consts'
   cleanByVA_impl :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_rest_monad"
@@ -290,12 +290,12 @@ definition
 where "writeContextID \<equiv> machine_op_lift writeContextID_impl"
 
 lemmas cache_machine_op_defs = isb_def dsb_def dmb_def writeContextID_def flushBTAC_def
-                               clearExMonitor_def cleanL2Range_def invalidateL2Range_def 
+                               clearExMonitor_def cleanL2Range_def invalidateL2Range_def
                                cleanInvalidateL2Range_def cleanInvalidate_D_PoC_def
                                clean_D_PoU_def branchFlush_def cleanInvalByVA_def
                                invalidate_I_PoU_def invalidateByVA_I_def invalidateByVA_def
-                               cleanByVA_PoU_def cleanByVA_def invalidateTLB_VAASID_def
-                               invalidateTLB_ASID_def invalidateTLB_def
+                               cleanByVA_PoU_def cleanByVA_def invalidateLocalTLB_VAASID_def
+                               invalidateLocalTLB_ASID_def invalidateLocalTLB_def
 consts'
   IFSR_val :: "machine_state \<Rightarrow> machine_word"
   DFSR_val :: "machine_state \<Rightarrow> machine_word"
@@ -329,20 +329,27 @@ where
 
 -- "Interrupt controller operations"
 
-text {* 
+text {*
+  Interrupts that cannot occur while the kernel is running (e.g. at preemption points),
+  but that can occur from user mode. Empty on plain ARMv7.
+*}
+definition
+  "non_kernel_IRQs = {}"
+
+text {*
   @{term getActiveIRQ} is now derministic.
   It 'updates' the irq state to the reflect the passage of
-  time since last the irq was gotten, then it gets the active 
+  time since last the irq was gotten, then it gets the active
   IRQ (if there is one).
 *}
 definition
-  getActiveIRQ :: "(irq option) machine_monad"
+  getActiveIRQ :: "bool \<Rightarrow> (irq option) machine_monad"
 where
-  "getActiveIRQ \<equiv> do
+  "getActiveIRQ in_kernel \<equiv> do
     is_masked \<leftarrow> gets $ irq_masks;
     modify (\<lambda>s. s \<lparr> irq_state := irq_state s + 1 \<rparr>);
     active_irq \<leftarrow> gets $ irq_oracle \<circ> irq_state;
-    if is_masked active_irq \<or> active_irq = 0x3FF
+    if is_masked active_irq \<or> active_irq = 0x3FF \<or> (in_kernel \<and> active_irq \<in> non_kernel_IRQs)
     then return None
     else return ((Some active_irq) :: irq option)
   od"
@@ -350,7 +357,7 @@ where
 definition
   maskInterrupt :: "bool \<Rightarrow> irq \<Rightarrow> unit machine_monad"
 where
-  "maskInterrupt m irq \<equiv> 
+  "maskInterrupt m irq \<equiv>
   modify (\<lambda>s. s \<lparr> irq_masks := (irq_masks s) (irq := m) \<rparr>)"
 
 definition
@@ -496,17 +503,17 @@ type_synonym user_context = "register \<Rightarrow> machine_word"
 type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
 
 definition
-  getRegister :: "register \<Rightarrow> machine_word user_monad" 
+  getRegister :: "register \<Rightarrow> machine_word user_monad"
 where
   "getRegister r \<equiv> gets (\<lambda>uc. uc r)"
 
 definition
-  setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> unit user_monad" 
+  setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> unit user_monad"
 where
   "setRegister r v \<equiv> modify (\<lambda>uc. uc (r := v))"
 
 definition
-  "getRestartPC \<equiv> getRegister FaultInstruction" 
+  "getRestartPC \<equiv> getRegister FaultInstruction"
 
 definition
   "setNextPC \<equiv> setRegister LR_svc"

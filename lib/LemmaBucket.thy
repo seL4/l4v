@@ -23,7 +23,7 @@ lemma hoare_spec_gen_asm:
   "\<lbrakk> F \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> s \<turnstile> \<lbrace>P and K F\<rbrace> f \<lbrace>Q\<rbrace>"
   "\<lbrakk> F \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> s \<turnstile> \<lbrace>P and K F\<rbrace> f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   unfolding spec_valid_def spec_validE_def validE_def
-  apply (clarsimp simp only: pred_conj_def conj_assoc[symmetric] 
+  apply (clarsimp simp only: pred_conj_def conj_assoc[symmetric]
                intro!: hoare_gen_asm[unfolded pred_conj_def])+
   done
 
@@ -39,7 +39,7 @@ lemma gets_symb_exec_l:
   by (simp add: corres_underlying_def return_def simpler_gets_def split_def)
 
 lemmas mapM_x_wp_inv = mapM_x_wp[where S=UNIV, simplified]
-  
+
 lemma mapM_wp_inv:
   "(\<And>x. \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace> mapM f xs \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule  valid_return_unit)

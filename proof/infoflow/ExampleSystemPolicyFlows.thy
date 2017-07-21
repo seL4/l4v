@@ -30,7 +30,7 @@ where
 
 definition Sys3AuthGraph :: "Sys3Labels subject_label auth_graph"
 where
-  "Sys3AuthGraph \<equiv> complete_AuthGraph Sys3AuthGraph_aux {OrdinaryLabel (T3), 
+  "Sys3AuthGraph \<equiv> complete_AuthGraph Sys3AuthGraph_aux {OrdinaryLabel (T3),
                                                          OrdinaryLabel (UT3)}"
 
 definition Sys3PolicyFlows :: "(Sys3Labels partition \<times> Sys3Labels partition) set"
@@ -212,7 +212,7 @@ lemma IRQ3ReadsAndAffects :
   done
 
 subsubsection {* Policy flows *}
-  
+
 lemma Sys3_policyFlows_correct_fw : "(a,b) \<in> policyFlows Sys3AuthGraph \<Longrightarrow> (a,b) \<in> Sys3PolicyFlows"
   apply (induct a b rule:policyFlows.induct)
    apply (simp add:partsSubjectAffects_def label_can_affect_partition_def)

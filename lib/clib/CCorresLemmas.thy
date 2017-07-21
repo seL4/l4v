@@ -32,14 +32,14 @@ lemma ccorres_nohs:
   done
 
 lemma ccorres_from_vcg_throws:
-  "(\<forall>\<sigma>. \<Gamma> \<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel} 
-  c 
+  "(\<forall>\<sigma>. \<Gamma> \<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel}
+  c
   {}, {s. \<exists>(rv, \<sigma>') \<in> fst (a \<sigma>). (\<sigma>', s) \<in> srel \<and> arrel rv (axf s)})
   \<Longrightarrow> ccorres_underlying srel \<Gamma> r xf arrel axf P P' (SKIP # hs) a c"
   apply (rule ccorresI')
   apply (drule_tac x = s in spec)
   apply (drule hoare_sound)
-  apply (simp add: HoarePartialDef.valid_def cvalid_def)  
+  apply (simp add: HoarePartialDef.valid_def cvalid_def)
   apply (erule exec_handlers.cases)
     apply clarsimp
     apply (drule spec, drule spec, drule (1) mp)
@@ -93,7 +93,7 @@ declare ccorres_can't_happen_both
 
 
 lemma exec_handlers_Hoare_from_vcg_might_fail:
-  "\<lbrakk> \<Gamma> \<turnstile>\<^bsub>/F\<^esub> P c Q, A; UNIV \<subseteq> A' \<rbrakk> 
+  "\<lbrakk> \<Gamma> \<turnstile>\<^bsub>/F\<^esub> P c Q, A; UNIV \<subseteq> A' \<rbrakk>
     \<Longrightarrow> exec_handlers_Hoare \<Gamma> P (c # hs) Q A'"
   apply (clarsimp simp: exec_handlers_Hoare_def
              split del: if_split split: if_split_asm)
@@ -142,12 +142,12 @@ lemma ccorres_if_cond_throws:
   shows  "ccorres_underlying sr \<Gamma> r xf arrel axf
           (Q and (\<lambda>s. P \<longrightarrow> R s) and (\<lambda>s. \<not> P \<longrightarrow> U s))
           (Collect Q' \<inter> {s. (s \<in> P' \<longrightarrow> s \<in> R' \<inter> PT') \<and> (s \<notin> P' \<longrightarrow> s \<in> U')})
-          (SKIP # hs) 
-          (if P then a else b) (Cond P' c SKIP ;; d)"   
+          (SKIP # hs)
+          (if P then a else b) (Cond P' c SKIP ;; d)"
   (is "ccorres_underlying sr \<Gamma> r xf arrel axf ?G ?G' ?hs ?a ?c")
 proof (cases P)
   case True
-  
+
   thus ?thesis
     apply simp
     apply (rule ccorres_guard_imp2)
@@ -161,17 +161,17 @@ proof (cases P)
     done
 next
   case False
-  
+
   thus ?thesis
     apply simp
     apply (rule ccorres_guard_imp2)
     apply (rule ccorres_add_return)
-    apply (rule ccorres_split_nothrow) 
-    apply (rule ccorres_cond_false)       
+    apply (rule ccorres_split_nothrow)
+    apply (rule ccorres_cond_false)
        apply (rule ccorres_return_Skip)
       apply (rule ceqv_refl)
      apply (rule bd [OF False])
-    apply wp   
+    apply wp
    apply simp
    apply (rule Cond_false)
    apply (rule HoarePartial.Skip [OF subset_refl])
@@ -188,10 +188,10 @@ lemma ccorres_if_cond_throws2:
   shows  "ccorres_underlying sr \<Gamma> r xf arrel axf
           (Q and (\<lambda>s. \<not> P \<longrightarrow> R s) and (\<lambda>s. P \<longrightarrow> U s))
           (Collect Q' \<inter> {s. (s \<in> P' \<longrightarrow> s \<in> R' \<inter> PT') \<and> (s \<notin> P' \<longrightarrow> s \<in> U')})
-          (SKIP # hs) 
+          (SKIP # hs)
           (if P then b else a) (Cond P' c SKIP ;; d)"
-  apply (subst if_swap)  
-  apply (rule ccorres_guard_imp2)   
+  apply (subst if_swap)
+  apply (rule ccorres_guard_imp2)
    apply (rule ccorres_if_cond_throws [OF abs ac bd cthrows])
     apply assumption
    apply simp
@@ -205,19 +205,19 @@ lemma ccorres_cond:
   and     c1: "ccorres_underlying sr \<Gamma> r xf arrel axf Pt Rt hs a c"
   and     c2: "ccorres_underlying sr \<Gamma> r xf arrel axf Pf Rf hs b c'"
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf (R and (\<lambda>s. P \<longrightarrow> Pt s) and (\<lambda>s. \<not> P \<longrightarrow> Pf s)) ((Rt \<inter> P') \<union> (Rf \<inter> - P')) hs (if P then a else b) (Cond P' c c')"
-  apply (rule ccorresI') 
+  apply (rule ccorresI')
   apply (erule UnE)
    apply (drule exec_handlers_semantic_equivD1 [where b = c])
-    apply (rule semantic_equivI) 
+    apply (rule semantic_equivI)
     apply (fastforce elim: exec_Normal_elim_cases intro: exec.CondTrue)
 (* the following works but takes a while:
    apply (insert abs)
-   apply (fastforce elim: ccorresE [OF c1] elim!: bexI [rotated]) 
+   apply (fastforce elim: ccorresE [OF c1] elim!: bexI [rotated])
 *)
    apply (rule ccorresE [OF c1])
 	apply assumption
        apply (insert abs)
-       apply fastforce 
+       apply fastforce
       apply fastforce
      apply fastforce
     apply simp
@@ -249,15 +249,15 @@ lemma ccorres_split_when_throwError_cond:
   shows  "ccorres_underlying sr \<Gamma> r xf ar axf
           (Q and (\<lambda>s. P \<longrightarrow> R s) and (\<lambda>s. \<not> P \<longrightarrow> U s))
           (Collect Q' \<inter> {s. (s \<in> P' \<longrightarrow> s \<in> R' \<inter> PT') \<and> (s \<notin> P' \<longrightarrow> s \<in> U')})
-          (SKIP # hs) 
-          (whenE P (throwError e) >>=E (\<lambda>_. b)) (Cond P' c SKIP ;; d)"   
+          (SKIP # hs)
+          (whenE P (throwError e) >>=E (\<lambda>_. b)) (Cond P' c SKIP ;; d)"
   apply (subst whenE_bindE_throwError_to_if)
   apply (rule ccorres_if_cond_throws [OF abs cc bd cthrows])
    apply assumption
-  apply assumption  
+  apply assumption
   done
 
-lemmas ccorres_split_unless_throwError_cond 
+lemmas ccorres_split_unless_throwError_cond
   = ccorres_split_when_throwError_cond
       [where P = "\<not> P" for P, folded unlessE_whenE, simplified not_not]
 declare ccorres_split_unless_throwError_cond
@@ -314,8 +314,8 @@ lemma exec_handlers_Hoare_call_Basic:
                       exec_call_Normal_elim)
   done
 
-lemmas ccorres_seq_simps [simp] = 
-  ccorres_seq_cond_empty ccorres_seq_cond_univ ccorres_seq_skip 
+lemmas ccorres_seq_simps [simp] =
+  ccorres_seq_cond_empty ccorres_seq_cond_univ ccorres_seq_skip
 
 (* FIXME: Move *)
 lemma fg_consD1:
@@ -326,16 +326,16 @@ lemma fg_consD1:
 lemma exec_handlers_BasicD [dest?]:
   assumes eh: "\<Gamma> \<turnstile>\<^sub>h \<langle>Basic g # hs, s\<rangle> \<Rightarrow> (n, s')"
   shows "s' = Normal (g s)"
-  using eh  
+  using eh
   by (auto elim: exec_Normal_elim_cases  exec_handlers.cases)
 
 lemma ccorres_add_True:
   "ccorres_underlying rf_sr \<Gamma> r xf arrel axf P (P' \<inter> {s. True}) hs a c \<Longrightarrow> ccorres_underlying rf_sr \<Gamma> r xf arrel axf P P' hs a c"
   by simp
 
-lemma ccorres_add_UNIV_Int:  
+lemma ccorres_add_UNIV_Int:
   "ccorres_underlying rf_sr \<Gamma> r xf arrel axf G (UNIV \<inter> G') hs a c \<Longrightarrow> ccorres_underlying rf_sr \<Gamma> r xf arrel axf G G' hs a c"
-  by simp 
+  by simp
 
 lemma Collect_const_mem:
   "(x \<in> (if P then UNIV else {})) = P"
@@ -358,8 +358,8 @@ lemma ccorres_cond_empty_iff:
   done
 
 lemmas ccorres_cond_iffs = ccorres_cond_empty_iff ccorres_cond_univ_iff
-  
-lemma vcg_no_global_inv:  
+
+lemma vcg_no_global_inv:
   assumes Pginv: "\<And>x t. x \<in> P \<Longrightarrow> g x t (x\<lparr>globals := globals t\<rparr>) \<in> P"
   and        st: "\<forall>Z. \<Gamma>\<turnstile> UNIV Call f UNIV"
   shows "\<Gamma> \<turnstile> P (call i f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>x y. Basic (g x y))) P"
@@ -375,12 +375,12 @@ lemma vcg_no_global_inv:
 
 lemma liftt_if:
   "lift_t g hdv = (\<lambda>p. if (snd hdv),g \<Turnstile>\<^sub>t p then Some (h_val (fst hdv) p) else None)"
-  apply (cases hdv) 
+  apply (cases hdv)
   apply (simp add: lift_t_if split_def cong: if_cong)
   done
 
 
-(* pspace updates *)  
+(* pspace updates *)
 
 lemma clift_h_t_validD:
   "lift_t g hp p = Some x \<Longrightarrow> snd hp,g \<Turnstile>\<^sub>t p"
@@ -409,7 +409,7 @@ lemma Diff_Diff_Un: "(A - B - C) \<union> B = A - C \<union> B"
   apply (simp add: Diff_eq)
   apply (subst Un_Int_distrib2)
   apply (subst Un_Int_distrib2)
-  apply (simp add: Compl_partition2) 
+  apply (simp add: Compl_partition2)
   apply (rule Un_Int_distrib2 [symmetric])
   done
 
@@ -422,16 +422,16 @@ proof -
   thus ?thesis
     by (simp add: Compl_partition2 Un_assoc [symmetric])
 qed
-  
+
 lemma Diff_Diff_Subset_cancel: "B \<subseteq> B' \<Longrightarrow> (A - B - C) \<union> B' = A - C \<union> B'"
   apply (simp add: Diff_eq)
   apply (subst Un_Int_distrib2)
   apply (subst Un_Int_distrib2)
-  apply (simp add: Diff_Subset_Un_UNIV) 
+  apply (simp add: Diff_Subset_Un_UNIV)
   apply (rule Un_Int_distrib2 [symmetric])
   done
 
-lemma Diff_Diff_Un_Diff: "(A - B - C) \<union> (B - D) = 
+lemma Diff_Diff_Un_Diff: "(A - B - C) \<union> (B - D) =
   ((A - C) \<union> B) \<inter> (A - B - C \<union> - D)" (is "?LHS = ?RHS")
 proof -
   have "?LHS = (A - B - C) \<union> (B \<inter> - D)" by (simp add: Diff_eq)
@@ -441,10 +441,10 @@ proof -
 qed
 
 lemmas lift_t_h_val = lift_t_lift [unfolded CTypesDefs.lift_def, simplified]
-  
+
 (* adjust_ti (typ_info_t TYPE('b)) xf (xfu \<circ> (\<lambda>x _. x)) *)
 lemma lift_t_field_h_val:
-  fixes pa :: "'a :: mem_type ptr" 
+  fixes pa :: "'a :: mem_type ptr"
   assumes fl: "(field_lookup (typ_info_t TYPE('a)) f 0) \<equiv> Some (t, m')"
   and   eu: "export_uinfo t = typ_uinfo_t TYPE('b :: mem_type)"
   shows "clift (h, d) pa = Some v \<Longrightarrow> h_val h (Ptr &(pa\<rightarrow>f) :: 'b :: mem_type ptr) = from_bytes (access_ti\<^sub>0 t v)"
@@ -471,11 +471,11 @@ lemma lift_t_super_update:
   assumes fl: "field_lookup (typ_info_t TYPE('a)) f 0 = Some (s, n)"
   and    eu: "export_uinfo s = typ_uinfo_t TYPE('b)"
   and    lp: "lift_t g (h, d) p = Some v'"
-  shows "lift_t g (heap_update (Ptr &(p\<rightarrow>f)) v h, d) 
-  = lift_t g (h, d)(p \<mapsto> field_update (field_desc s) (to_bytes_p v) v')"  
+  shows "lift_t g (heap_update (Ptr &(p\<rightarrow>f)) v h, d)
+  = lift_t g (h, d)(p \<mapsto> field_update (field_desc s) (to_bytes_p v) v')"
   using fl eu lp
   apply -
-  apply (rule trans [OF lift_t_super_field_update super_field_update_lookup]) 
+  apply (rule trans [OF lift_t_super_field_update super_field_update_lookup])
      apply (erule (1) h_t_valid_mono [OF _ _ guard_mono_True, rule_format])
       apply (erule lift_t_h_t_valid)
      apply (erule (1) fl_sub_typ)
@@ -498,20 +498,20 @@ proof -
   from cl have "c_guard ptr" by (rule lift_t_g)
   hence "?LHS = clift (heap_update ptr (update_ti t (to_bytes_p val) (h_val hp ptr)) hp, d)" using eu
     by (simp add: packed_heap_super_field_update [OF fl])
-  
+
   also have "... = ?RHS" using cl disj
     by (rule typ_rewrs(5))
-  
+
   finally show ?thesis .
 qed
 
 (* FIXME: MOVE *)
 lemma ccorres_Call_call_for_vcg:
-  "ccorres_underlying rf_sr \<Gamma> r xf arrel axf G G' hs a (call id f (\<lambda>s t. t) (\<lambda>s t. Basic id)) \<Longrightarrow> 
-  ccorres_underlying rf_sr \<Gamma> r xf arrel axf G G' hs a (Call f)"  
+  "ccorres_underlying rf_sr \<Gamma> r xf arrel axf G G' hs a (call id f (\<lambda>s t. t) (\<lambda>s t. Basic id)) \<Longrightarrow>
+  ccorres_underlying rf_sr \<Gamma> r xf arrel axf G G' hs a (Call f)"
   apply (erule iffD1 [OF ccorres_semantic_equiv, rotated -1])
-  apply (rule semantic_equivI)  
-  apply (rule iffI)   
+  apply (rule semantic_equivI)
+  apply (rule iffI)
    apply (erule exec_call_Normal_elim)
        apply (erule exec_Normal_elim_cases)+
        apply (simp, erule (1) exec.Call)+
@@ -523,7 +523,7 @@ lemma ccorres_Call_call_for_vcg:
       apply (erule exec_call)
        apply simp
       apply (rule exec.Basic [where f = id, simplified])
-     apply (clarsimp elim!: exec_callAbrupt) 
+     apply (clarsimp elim!: exec_callAbrupt)
     apply (clarsimp elim!: exec_callFault)
    apply (clarsimp elim!: exec_callStuck)
   apply (clarsimp elim!: exec_callUndefined)
@@ -677,7 +677,7 @@ lemma ccorres_sequence_while_genQ':
   and       j: " j > 0"
   shows  "ccorresG rf_sr \<Gamma> (\<lambda>rv (i', rv'). r' rv rv' \<and> i' = of_nat (i + length xs * of_nat j))
                   (\<lambda>s. (xf s, xf' s))
-                  (\<lambda>s. P 0 \<longrightarrow> F 0 s) ({s. xf s = of_nat i \<and> r' [] (xf' s)} \<inter> Q) hs   
+                  (\<lambda>s. P 0 \<longrightarrow> F 0 s) ({s. xf s = of_nat i \<and> r' [] (xf' s)} \<inter> Q) hs
                   (sequence xs)
                   (While {s. P (xf s)}
                      (body ;; Basic (\<lambda>s. xf_update (\<lambda>_. xf s + of_nat j) s)))"
@@ -685,14 +685,14 @@ lemma ccorres_sequence_while_genQ':
 proof -
   def init_xs \<equiv> xs
 
-  have rl: "xs = drop (length init_xs - length xs) init_xs" unfolding init_xs_def 
+  have rl: "xs = drop (length init_xs - length xs) init_xs" unfolding init_xs_def
     by fastforce
-    
+
   note pn' = pn [folded init_xs_def]
   note one' = one [folded init_xs_def]
   note hi'  = hi [folded init_xs_def]
   note lxs' = lxs [folded init_xs_def]
-  
+
   let ?Q  = "\<lambda>xs s. xs \<noteq> [] \<longrightarrow> F ((length init_xs - length xs) * j) s"
   let ?Q' = "\<lambda>xs zs. {s. (xf s) = of_nat (i + (length init_xs - length xs) * j)
                          \<and> r' zs (xf' s)} \<inter> Q"
@@ -718,10 +718,10 @@ proof -
     case (Cons y ys)
 
     from Cons.prems have ly: "length (y # ys) \<le> length init_xs" by simp
-    hence ln: "(length init_xs - length ys) = Suc (length init_xs - length (y # ys))"  by simp      
+    hence ln: "(length init_xs - length ys) = Suc (length init_xs - length (y # ys))"  by simp
     hence yv: "y = init_xs ! (length init_xs - length (y # ys))" using Cons.prems
       by (fastforce simp add: drop_Suc_nth not_le)
-    
+
     have lt0: "0 < length init_xs" using ly by clarsimp
     hence ly': "length init_xs - length (y # ys) < length init_xs" by simp
 
@@ -731,7 +731,7 @@ proof -
       using ln Cons.prems
         by (fastforce simp add: drop_Suc_nth not_le)
     note ih = Cons.hyps [OF ys_eq, rule_format]
-  
+
     note hi'' = hi' [where n="(length init_xs - length (y # ys))", folded yv]
 
     from Cons.prems
@@ -819,22 +819,22 @@ lemma ccorres_cond2:
   assumes abs: "\<forall>s s'. (s, s') \<in> sr \<and> R s \<longrightarrow> P  = (s' \<in> P') "
   and     c1: "ccorres_underlying sr \<Gamma> r xf arrel axf Pt Rt hs a c"
   and     c2: "ccorres_underlying sr \<Gamma> r xf arrel axf Pf Rf hs b c'"
-  shows   "ccorres_underlying sr \<Gamma> r xf arrel axf (R and (\<lambda>s. P \<longrightarrow> Pt s) and (\<lambda>s. \<not> P \<longrightarrow> Pf s)) 
+  shows   "ccorres_underlying sr \<Gamma> r xf arrel axf (R and (\<lambda>s. P \<longrightarrow> Pt s) and (\<lambda>s. \<not> P \<longrightarrow> Pf s))
                     {s. (s \<in> P' \<longrightarrow> s \<in> Rt) \<and> (s \<notin> P' \<longrightarrow> s \<in> Rf)} hs (if P then a else b) (Cond P' c c')"
   apply (rule ccorresI')
   apply clarsimp
   apply (case_tac " s' \<in> P'", clarsimp)
    apply (drule exec_handlers_semantic_equivD1 [where b = c])
-    apply (rule semantic_equivI) 
+    apply (rule semantic_equivI)
     apply (fastforce elim: exec_Normal_elim_cases intro: exec.CondTrue)
 (* the following works but takes a while:
    apply (insert abs)
-   apply (fastforce elim: ccorres_underlyingE [OF c1] elim!: bexI [rotated]) 
+   apply (fastforce elim: ccorres_underlyingE [OF c1] elim!: bexI [rotated])
 *)
    apply (rule ccorresE [OF c1])
        apply assumption
       apply (insert abs)
-      apply fastforce 
+      apply fastforce
      apply fastforce
      apply fastforce
     apply simp

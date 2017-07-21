@@ -69,7 +69,7 @@ instance
   done
 end
 
-definition 
+definition
     "set_val a v  =
         modify (my_state.heap_w32_update (\<lambda>s. s(a := Some v)))"
 
@@ -94,11 +94,11 @@ done
 
 lemma get_val_wp: "\<lbrace>\<lambda>s. ((\<lambda>s. heap_w32 s a = Some x) \<and>* R) s\<rbrace>
      get_val a
-    \<lbrace>\<lambda>rv.  ((\<lambda>s. heap_w32 s a = Some x) \<and>* R)  and K (rv = x) \<rbrace>" 
+    \<lbrace>\<lambda>rv.  ((\<lambda>s. heap_w32 s a = Some x) \<and>* R)  and K (rv = x) \<rbrace>"
   apply(clarsimp simp: get_val_def sep_conj_def)
   apply(rule conjI)
-  apply(rule_tac x=xa in exI)  
-  apply(rule_tac x=y in exI)  
+  apply(rule_tac x=xa in exI)
+  apply(rule_tac x=y in exI)
   apply(simp)
   apply(clarsimp simp: plus_my_state_ext_def)
 done
@@ -106,7 +106,7 @@ done
 lemma fixes a :: "word32 ptr" and b :: "word32 ptr"
   shows "\<lbrace> \<lambda>s. heap_w32 s a = Some x
            \<and> heap_w32 s b = Some y\<rbrace>
-           my_swap a b 
+           my_swap a b
          \<lbrace>\<lambda>r s. heap_w32 s a = Some y \<and> heap_w32 s b = Some x \<rbrace>!"
 sorry
 

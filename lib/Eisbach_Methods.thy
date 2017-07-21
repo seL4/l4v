@@ -23,20 +23,20 @@ section \<open>Debugging methods\<close>
 
 method print_concl = (match conclusion in P for P \<Rightarrow> \<open>print_term P\<close>)
 
-method_setup print_raw_goal = \<open>Scan.succeed (fn ctxt => fn facts => 
-  (fn (ctxt, st) => (Output.writeln (Thm.string_of_thm ctxt st); 
+method_setup print_raw_goal = \<open>Scan.succeed (fn ctxt => fn facts =>
+  (fn (ctxt, st) => (Output.writeln (Thm.string_of_thm ctxt st);
     Seq.make_results (Seq.single (ctxt, st)))))\<close>
 
-ML \<open>fun method_evaluate text ctxt facts = 
+ML \<open>fun method_evaluate text ctxt facts =
   Method.NO_CONTEXT_TACTIC ctxt
     (Method.evaluate_runtime text ctxt facts)\<close>
 
 
-method_setup print_headgoal = 
+method_setup print_headgoal =
   \<open>Scan.succeed (fn ctxt =>
     fn _ => fn (ctxt', thm) =>
     ((SUBGOAL (fn (t,_) =>
-     (Output.writeln 
+     (Output.writeln
      (Pretty.string_of (Syntax.pretty_term ctxt t)); all_tac)) 1 thm);
      (Seq.make_results (Seq.single (ctxt', thm)))))\<close>
 
@@ -72,11 +72,11 @@ method_setup changed =
    in SIMPLE_METHOD (CHANGED tac) facts end)
 \<close>
 
- 
+
 method_setup timeit =
  \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
-   let 
-     fun timed_tac st seq = Seq.make (fn () => Option.map (apsnd (timed_tac st)) 
+   let
+     fun timed_tac st seq = Seq.make (fn () => Option.map (apsnd (timed_tac st))
        (timeit (fn () => (Seq.pull seq))));
 
      fun tac st' =
@@ -84,19 +84,19 @@ method_setup timeit =
 
    in SIMPLE_METHOD tac [] end)
 \<close>
- 
- 
+
+
 method_setup timeout =
  \<open>Scan.lift Parse.int -- Method.text_closure >> (fn (i,m) => fn ctxt => fn facts =>
-   let 
+   let
      fun str_of_goal th = Pretty.string_of (Goal_Display.pretty_goal ctxt th);
-     
+
      fun limit st f x = Timeout.apply (Time.fromSeconds i) f x
        handle Timeout.TIMEOUT _ => error ("Method timed out:\n" ^ (str_of_goal st));
-      
-     fun timed_tac st seq = Seq.make (limit st (fn () => Option.map (apsnd (timed_tac st)) 
+
+     fun timed_tac st seq = Seq.make (limit st (fn () => Option.map (apsnd (timed_tac st))
        (Seq.pull seq)));
-       
+
      fun tac st' =
        timed_tac st' (method_evaluate m ctxt facts st');
 
@@ -112,7 +112,7 @@ text \<open>The following @{text fails} and @{text succeeds} methods protect the
 method_setup fails =
  \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
    let
-     fun fail_tac st' = 
+     fun fail_tac st' =
        (case Seq.pull (method_evaluate m ctxt facts st') of
           SOME _ => Seq.empty
         | NONE => Seq.single st')
@@ -123,7 +123,7 @@ method_setup fails =
 method_setup succeeds =
  \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
    let
-     fun can_tac st' = 
+     fun can_tac st' =
        (case Seq.pull (method_evaluate m ctxt facts st') of
           SOME (st'',_) => Seq.single st'
         | NONE => Seq.empty)
@@ -154,16 +154,16 @@ begin
 private definition "protect_concl x \<equiv> \<not> x"
 private definition "protect_false \<equiv> False"
 
-private lemma protect_start: "(protect_concl P \<Longrightarrow> protect_false) \<Longrightarrow> P" 
+private lemma protect_start: "(protect_concl P \<Longrightarrow> protect_false) \<Longrightarrow> P"
   by (simp add: protect_concl_def protect_false_def) (rule ccontr)
 
-private lemma protect_end: "protect_concl P \<Longrightarrow> P \<Longrightarrow> protect_false" 
+private lemma protect_end: "protect_concl P \<Longrightarrow> P \<Longrightarrow> protect_false"
   by (simp add: protect_concl_def protect_false_def)
 
-method only_asm methods m = 
-  (match premises in H[thin]:_ (multi,cut) \<Rightarrow> 
-    \<open>rule protect_start, 
-     match premises in H'[thin]:"protect_concl _" \<Rightarrow> 
+method only_asm methods m =
+  (match premises in H[thin]:_ (multi,cut) \<Rightarrow>
+    \<open>rule protect_start,
+     match premises in H'[thin]:"protect_concl _" \<Rightarrow>
        \<open>insert H,m;rule protect_end[OF H']\<close>\<close>)
 
 method only_concl methods m = (focus_concl \<open>m\<close>)
@@ -192,7 +192,7 @@ text \<open>Isabelle's goal mechanism wants to aggressively expand meta-conjunct
 context begin
 
 definition
-  conjunction' :: "prop \<Rightarrow> prop \<Rightarrow> prop" (infixr "&^&" 2) where 
+  conjunction' :: "prop \<Rightarrow> prop \<Rightarrow> prop" (infixr "&^&" 2) where
   "conjunction' A B \<equiv> (PROP A &&& PROP B)"
 
 
@@ -201,15 +201,15 @@ text \<open>In general the context antiquotation does not work in method definit
   when anything would do.\<close>
 
 method safe_meta_conjuncts =
-  raw_tactic 
+  raw_tactic
    \<open>REPEAT_DETERM
-     (CHANGED_PROP 
-      (PRIMITIVE 
+     (CHANGED_PROP
+      (PRIMITIVE
         (Conv.gconv_rule ((Conv.top_sweep_conv (K (Conv.rewr_conv @{thm conjunction'_def[symmetric]})) @{context})) 1)))\<close>
 
 method safe_fold_subgoals = (fold_subgoals (prefix), safe_meta_conjuncts)
 
-lemma atomize_conj' [atomize]: "(A &^& B) == Trueprop (A & B)" 
+lemma atomize_conj' [atomize]: "(A &^& B) == Trueprop (A & B)"
   by (simp add: conjunction'_def, rule atomize_conj)
 
 lemma context_conjunction'I:
@@ -238,7 +238,7 @@ end
 
 notepad begin
   fix D C E
-  
+
   assume DC: "D \<and> C"
   have "D" "C \<and> C"
   apply -
@@ -250,7 +250,7 @@ end
 
 
 section \<open>Utility methods\<close>
-  
+
 
 subsection \<open>Finding a goal based on successful application of a method\<close>
 
@@ -259,7 +259,7 @@ context begin
 method_setup find_goal =
  \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
    let
-     fun prefer_first i = SELECT_GOAL 
+     fun prefer_first i = SELECT_GOAL
        (fn st' =>
          (case Seq.pull (method_evaluate m ctxt facts st') of
            SOME (st'',_) => Seq.single st''
@@ -288,7 +288,7 @@ notepad begin
     apply (find_goal \<open>succeeds \<open>simp\<close>\<close>) -- "find the first goal which can be simplified (without doing so)"
     apply (rule conjI)
     by (rule A B)+
- 
+
 end
 
 
@@ -324,14 +324,14 @@ private lemma conjunction'_sym: "PROP P &^& PROP Q \<Longrightarrow> PROP Q &^& 
   by assumption+
 
 
-  
+
 private lemmas context_conjuncts'I =
-  context_conjunction'I_protected 
+  context_conjunction'I_protected
   context_conjunction'I_protected[THEN conjunction'_sym]
 
-method distinct_subgoals_strong methods m = 
+method distinct_subgoals_strong methods m =
   (safe_fold_subgoals,
-   (intro context_conjuncts'I; 
+   (intro context_conjuncts'I;
      (((elim protectE conjunction'E)?, solves \<open>m\<close>)
      | (elim protect_thin)?)))?
 
@@ -371,19 +371,19 @@ notepad begin
   apply (distinct_subgoals_strong \<open>assumption\<close>)
   by (rule A)
 
-  have "B \<Longrightarrow> A" "A" 
+  have "B \<Longrightarrow> A" "A"
   by (distinct_subgoals_strong \<open>assumption\<close>, rule A) -- "backtracking required here"
   }
 
   {
   fix A B C
-  
+
   assume B: "B"
   assume BC: "B \<Longrightarrow> C" "B \<Longrightarrow> A"
   have "A" "B \<longrightarrow> (A \<and> C)" "B"
   apply (distinct_subgoals_strong \<open>simp\<close>, rule B) -- "backtracking required here"
   by (simp add: BC)
-  
+
   }
 end
 

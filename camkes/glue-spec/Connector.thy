@@ -16,12 +16,12 @@ begin
 (*>*)
 
 text {*
-  As mentioned in previous sections, we represent events and shared memory 
+  As mentioned in previous sections, we represent events and shared memory
   as components. These connector components, unlike the component instances in
   the system, \emph{always} have a well-defined, constrained execution because
   they are effectively implemented by the kernel. This section outlines the definition
   of the program text and local state of these components.
-  
+
   The semantics of small steps in the concurrent imperative language
   are such that a request and a response
   can only correspond and allow a global state transition when the question and
@@ -51,7 +51,7 @@ definition
 where
   "event c \<equiv> LOOP
     Response (\<lambda>q s'. case s' of Event s \<Rightarrow>
-      (case q_data q of 
+      (case q_data q of
          Set \<Rightarrow> {(Event True, \<lparr>a_channel = q_channel q, a_data = Void\<rparr>)}
        | Poll \<Rightarrow> {(Event False, \<lparr>a_channel = q_channel q, a_data = Pending s\<rparr>)}
        | _ \<Rightarrow> {}))"
@@ -78,9 +78,9 @@ where
   "memory c \<equiv> LOOP
    Response (\<lambda>q s'. case s' of Memory s \<Rightarrow>
     (case q_data q of
-      Read addr \<Rightarrow> {(Memory s, 
+      Read addr \<Rightarrow> {(Memory s,
                     \<lparr>a_channel = q_channel q, a_data = Value (the (s addr))\<rparr>)}
-    | Write addr val \<Rightarrow> {(Memory (s(addr \<mapsto> val)), 
+    | Write addr val \<Rightarrow> {(Memory (s(addr \<mapsto> val)),
                          \<lparr>a_channel = q_channel q, a_data = Void\<rparr>)})
     | _ \<Rightarrow> {})"
 

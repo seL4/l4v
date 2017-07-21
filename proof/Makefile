@@ -30,7 +30,7 @@ report-regression:
 #
 
 # Refine heaps.
-HEAPS += AInvs BaseRefine Refine RefineOnly
+HEAPS += AInvs BaseRefine BaseRefine2 Refine
 
 # CRefine heaps.
 HEAPS += CKernel CSpec CBaseRefine CRefine
@@ -52,13 +52,20 @@ HEAPS += SepTactics SepTacticsExamples
 
 # Additional dependencies
 
-CKernel CSpec CBaseRefine CRefine: c-kernel
+CKernel CSpec: c-kernel
 SimplExportAndRefine: c-kernel
+BaseRefine Refine: design-spec
+CBaseRefine CRefine: c-kernel design-spec
 
 # Preprocess the kernel's source code and bitfield theory files.
 c-kernel: .FORCE
 	cd ../spec && $(ISABELLE_TOOL) env make c-kernel
 .PHONY: c-kernel
+
+# Run the haskell translator
+design-spec: .FORCE
+	cd ../spec && $(ISABELLE_TOOL) env make design-spec
+.PHONY: design-spec
 
 include ../misc/isa-common.mk
 

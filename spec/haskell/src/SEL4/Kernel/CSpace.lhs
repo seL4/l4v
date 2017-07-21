@@ -57,7 +57,7 @@ it.
 > lookupCap :: PPtr TCB -> CPtr -> KernelF LookupFailure Capability
 > lookupCap thread cPtr = liftM fst $ lookupCapAndSlot thread cPtr
 
-> lookupCapAndSlot :: PPtr TCB -> CPtr -> 
+> lookupCapAndSlot :: PPtr TCB -> CPtr ->
 >                     KernelF LookupFailure (Capability, PPtr CTE)
 > lookupCapAndSlot thread cPtr = do
 >         slot <- lookupSlotForThread thread cPtr
@@ -120,7 +120,7 @@ The "lookupSlotForCNodeOp" function is not exported directly; instead, we export
 The capability table lookup is performed by the function
 "resolveAddressBits".
 
-The arguments to this function are a capability to access a CNode, the capability space address being looked up, and the number of bits remaining to be resolved in the address. 
+The arguments to this function are a capability to access a CNode, the capability space address being looked up, and the number of bits remaining to be resolved in the address.
 
 It returns a pointer to a slot and the number of bits still unresolved in the address when a valid non-CNode capability was found.
 
@@ -131,7 +131,7 @@ The following definition is used when a CNode capability is encountered in the c
 
 > resolveAddressBits nodeCap@(CNodeCap {}) capptr bits = do
 
-Determine the number of bits that this CNode can resolve. 
+Determine the number of bits that this CNode can resolve.
 
 >         let radixBits = capCNodeBits nodeCap
 >         let guardBits = capCNodeGuardSize nodeCap
@@ -145,13 +145,13 @@ This check is performed as soon as possible, so that the correctness conditions
 in locateSlotCap are checked.
 \end{impdetails}
 
->         let offset = (fromCPtr capptr `shiftR` (bits-levelBits)) .&. 
+>         let offset = (fromCPtr capptr `shiftR` (bits-levelBits)) .&.
 >                    (mask radixBits)
 >         slot <- withoutFailure $ locateSlotCap nodeCap offset
 
 Check that the guard does not resolve too many bits, and that it matches the expected value.
 
->         let guard = (fromCPtr capptr `shiftR` (bits-guardBits)) .&. 
+>         let guard = (fromCPtr capptr `shiftR` (bits-guardBits)) .&.
 >                    (mask guardBits)
 >         unless (guardBits <= bits && guard == capCNodeGuard nodeCap)
 >             $ throw $ GuardMismatch {

@@ -72,7 +72,7 @@ crunch gt2: crunch_foo3 "\<lambda>x. x > y"
 crunch (empty_fail) empty_fail2: crunch_foo3
   (ignore: modify bind)
 
-class foo_class = 
+class foo_class =
   fixes stuff :: 'a
 begin
 

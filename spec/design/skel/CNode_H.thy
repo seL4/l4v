@@ -28,7 +28,7 @@ begin
 function
   cteRevoke :: "machine_word \<Rightarrow> unit kernel_p"
 where
- "cteRevoke p s = 
+ "cteRevoke p s =
 
 #INCLUDE_HASKELL SEL4/Object/CNode.lhs BODY cteRevoke
 

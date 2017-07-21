@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 TCB accessor functions
 *)
 
@@ -22,7 +22,6 @@ context begin interpretation Arch .
 
 requalify_consts
   in_user_frame
-  as_user
 
 end
 

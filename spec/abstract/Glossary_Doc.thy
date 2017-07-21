@@ -97,7 +97,7 @@ text {*
   rights. Most seL4 capabilities store additional bits of
   information. Some of this additional information may be
   exposed to the user, but the bulk of it is kernel-internal
-  book-keeping information. Capabilities are stored in CNodes and 
+  book-keeping information. Capabilities are stored in CNodes and
   TCBs.}
   {glos:cap}
 
@@ -114,23 +114,23 @@ text {*
 
 \glossaryentry
   {cnode}
-  {Capability Node. Kernel-controlled storage that holds capabilities. 
-   Capability nodes can be created in different sizes and be shared 
+  {Capability Node. Kernel-controlled storage that holds capabilities.
+   Capability nodes can be created in different sizes and be shared
    between CSpaces. CNodes can be pointed to by capabilities themselves.}
   {glos:cnode}
 
 \glossaryentry
   {cspace}
-  {A directed graph of CNodes. The CSpace of a thread defines the set 
-  of capabilities it has access to. The root of the graph is the CNode 
-  capability in the CSpace slot of the thread. The edges of the graph 
+  {A directed graph of CNodes. The CSpace of a thread defines the set
+  of capabilities it has access to. The root of the graph is the CNode
+  capability in the CSpace slot of the thread. The edges of the graph
   are the CNode capabilities residing in the CNodes spanned by this root.}
   {glos:cspace}
 
 \glossaryentry
   {cptr}
   {Capability Pointer. A user-level reference to a capability,
-  relative to a specified root CNode or the thread's CSpace root. In 
+  relative to a specified root CNode or the thread's CSpace root. In
   this specification, a user-level capability pointer is a sequence of
   bits that define a path in the CSpace graph that should end in a
   capability slot. The kernel resolves user-level capability pointers
@@ -155,7 +155,7 @@ text {*
   {Guard of a CNode capability. From the user's perspetive the CSpace
   of a thread is organised as a guardedage table. The kernel will
   resolve user capability pointers into internal capability slot pointers.
-  The guard of one link/edge in the CSpace graph defines a sequence of bits 
+  The guard of one link/edge in the CSpace graph defines a sequence of bits
   that will be stripped from the user-level capability pointer before
   resolving resumes at the next CNode.}
   {}
@@ -185,7 +185,7 @@ text {*
 
 \glossaryentry
   {pde}
-  {Page Directory Entry. One entry in the page directory. It either 
+  {Page Directory Entry. One entry in the page directory. It either
   is invalid, contains a translation to a frame, or a translation to
   a second level page table.}
   {}
@@ -204,12 +204,12 @@ text {*
 
 \glossaryentry
   {replycap}
-  {Reply Capability. Reply capabilities are created automatically 
+  {Reply Capability. Reply capabilities are created automatically
   in the receiver of a Call IPC. The reply capability points back
   to the sender of the call and can be used to send a reply efficiently
   without having to explicitly set up a return channel. Reply capabilities
   can be invoked only once. Internally, reply capabilities are created
-  as copies of so-called Master Reply Capabilities that are always 
+  as copies of so-called Master Reply Capabilities that are always
   present in the master reply slot of the sender's TCB.}
   {}
 

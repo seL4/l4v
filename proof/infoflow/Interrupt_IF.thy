@@ -72,9 +72,9 @@ lemma invoke_irq_handler_globals_equiv:
     invoke_irq_handler a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct a)
-    by (wp dmo_no_mem_globals_equiv modify_wp cap_insert_globals_equiv'' 
-           cap_delete_one_globals_equiv cap_delete_one_valid_ko_at_arm 
-           cap_delete_one_valid_global_objs 
+    by (wp dmo_no_mem_globals_equiv modify_wp cap_insert_globals_equiv''
+           cap_delete_one_globals_equiv cap_delete_one_valid_ko_at_arm
+           cap_delete_one_valid_global_objs
             | simp add: maskInterrupt_def)+
 
 subsection "reads_respects_g"

@@ -10,7 +10,7 @@
 
 theory SimplExport
 
-imports GraphLang CommonOpsLemmas GlobalsSwap
+imports GraphLang CommonOpsLemmas GlobalsSwap ExtraSpecs
 
 begin
 
@@ -75,6 +75,8 @@ val ops = Symtab.make [
     (@{const_name "shiftl"}, ("ShiftLeft", false)),
     (@{const_name "shiftr"}, ("ShiftRight", false)),
     (@{const_name "sshiftr"}, ("SignedShiftRight", false)),
+    (@{const_name "bv_clz"}, ("CountLeadingZeroes", true)),
+    (@{const_name "bv_ctz"}, ("CountTrailingZeroes", true)),
     (@{const_name "all_htd_updates"}, ("HTDUpdate", false))
   ] |> Symtab.lookup
 
@@ -335,7 +337,7 @@ fun convert_upd_phase1 ctxt params (t as (Const (@{const_name globals_update}, _
 *}
 
 text {* Phase 2 eliminates compound types, so we access and
-update only words from memory and local values. *} 
+update only words from memory and local values. *}
 
 ML {*
 fun ptr_simp ctxt = ctxt addsimps @{thms CTypesDefs.ptr_add_def size_of_def size_td_array
@@ -405,7 +407,7 @@ fun mk_ptr_offs opt_T p offs = let
 
 fun get_acc_type [] T = T
   | get_acc_type accs _ = (List.last accs $ @{term x})
-      |> fastype_of 
+      |> fastype_of
 
 val normalise_ring_ops = let
     fun gather_plus (Const (@{const_name "plus"}, _) $ a $ b)
@@ -480,7 +482,7 @@ fun triv_mem_upd ctxt p v = case dest_mem_acc_addr v of
       val t = @{term "op - :: word32 \<Rightarrow> _"} $ get_ptr_val p $ get_ptr_val p'
       val thm = ptr_simp ctxt (Thm.cterm_of ctxt t)
       val t' = Thm.rhs_of thm |> Thm.term_of
-    in t' = @{term "0 :: word32"} 
+    in t' = @{term "0 :: word32"}
         orelse (Thm.pretty_thm ctxt thm |> Pretty.writeln; false)
     end
 
@@ -736,11 +738,6 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
           in if t1 = t2 then convert_ph3 ctxt params x
             else convert_ph3 ctxt params (Const (@{const_name ucast}, t1 --> t2) $ x)
           end
-  | convert_ph3 ctxt params (t as (Const (@{const_name of_nat}, _) $
-            (Const (@{const_name count_leading_zeroes}, _) $ x)))
-        = convert_op ctxt params "CountLeadingZeroes" (convert_type false ctxt (fastype_of t)) [x]
-(*  | convert_ph3 ctxt params (t as (Const (@{const_name unat}, _) $ _))
-        = convert_ph3 ctxt params (@{term "of_nat :: nat \<Rightarrow> word32"} $ t) *)
   | convert_ph3 ctxt params (t as (Const (@{const_name of_nat}, _) $ _))
         = convert_ph3 ctxt params (ptr_simp_term ctxt "of_nat" t t)
   | convert_ph3 ctxt params (t as (Const (@{const_name power}, _) $ x $ y))
@@ -868,7 +865,7 @@ fun reduce_set_mem ctxt x S = let
 
 fun is_spec_body_const @{const_name Spec} = true
   | is_spec_body_const @{const_name guarded_spec_body} = true
-  | is_spec_body_const c = false
+  | is_spec_body_const _ = false
 
 fun has_reads body = exists_Const (fn (s, T) =>
     snd (strip_type T) = @{typ heap_raw_state}
@@ -1083,13 +1080,18 @@ fun emit_func_body ctxt outfile eparams name = let
     val outputs = (filter (fn p => fst p = HoarePackage.Out) params
       |> maps snd) @ (if no_write then [] else all_c_params)
 
-    val body = Proof_Context.get_thm ctxt (name ^ "_body_def")
-            |> simplify (put_simpset HOL_basic_ss ctxt
+    val body = Get_Body_Refines.get ctxt name
+      |> simplify (put_simpset HOL_basic_ss ctxt
                 addsimps @{thms switch.simps fst_conv snd_conv
                                 insert_iff empty_iff
-                                ptr_add_assertion_def if_True if_False})
-            |> Thm.concl_of |> Logic.dest_equals |> snd
-        handle ERROR _ => @{term "Spec S"}
+                                ptr_add_assertion_def if_True if_False
+                                bv_clz_def[symmetric] bv_ctz_def[symmetric]
+                 })
+      |> Thm.concl_of |> HOLogic.dest_Trueprop
+      |> (fn t => (case t of Const (@{const_name simple_simpl_refines}, _) $ _ $ lhs $ _ => lhs
+            | _ => raise Option))
+        handle Option => @{term "Spec S"}
+         | THM _ => @{term "Spec S"}
 
     val full_nm = read_const ctxt (name ^ "_'proc")
         |> dest_Const |> fst |> unsuffix "_'proc"

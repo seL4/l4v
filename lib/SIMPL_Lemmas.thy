@@ -142,7 +142,7 @@ lemma Stuck_resultE:
 (* This is essentially semantic equivalence, assuming equality of xf and v at s *)
 
 definition
-  "ceqv \<Gamma> xf v s s' a b \<equiv> 
+  "ceqv \<Gamma> xf v s s' a b \<equiv>
   xf s = v \<longrightarrow> (\<Gamma> \<turnstile> \<langle>a, Normal s\<rangle> \<Rightarrow> s') = (\<Gamma> \<turnstile> \<langle>b, Normal s\<rangle> \<Rightarrow> s')"
 
 lemma ceqvI:

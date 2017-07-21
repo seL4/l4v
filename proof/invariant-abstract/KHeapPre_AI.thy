@@ -34,7 +34,7 @@ lemma same_caps_more_simps[simp]:
 
 lemma dmo_return [simp]:
   "do_machine_op (return x) = return x"
-  by (simp add: do_machine_op_def select_f_def return_def gets_def get_def 
+  by (simp add: do_machine_op_def select_f_def return_def gets_def get_def
                 bind_def modify_def put_def)
 
 lemma get_object_sp:
@@ -56,7 +56,7 @@ lemma non_arch_objs[intro]:
 
 definition arch_obj_pred :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool" where
   "arch_obj_pred P \<equiv>
-    \<forall>ko ko'. non_arch_obj ko \<longrightarrow> non_arch_obj ko' \<longrightarrow> 
+    \<forall>ko ko'. non_arch_obj ko \<longrightarrow> non_arch_obj ko' \<longrightarrow>
       P ko = P ko'"
 
 lemma arch_obj_predE:
@@ -73,7 +73,7 @@ lemma arch_obj_pred_a_type[intro, simp]: "arch_obj_pred (\<lambda>ko. a_type ko 
 
 lemma
   arch_obj_pred_arch_obj_l[intro, simp]: "arch_obj_pred (\<lambda>ko. ArchObj ako = ko)" and
-  arch_obj_pred_arch_obj_r[intro, simp]: "arch_obj_pred (\<lambda>ko. ko = ArchObj ako)"
+arch_obj_pred_arch_obj_r[intro, simp]: "arch_obj_pred (\<lambda>ko. ko = ArchObj ako)"
   by (auto simp add: arch_obj_pred_defs)
 
 lemma arch_obj_pred_fun_lift: "arch_obj_pred (\<lambda>ko. F (arch_obj_fun_lift P N ko))"
@@ -109,10 +109,15 @@ declare
 
 locale arch_only_obj_pred =
   fixes P :: "kernel_object \<Rightarrow> bool"
-  assumes arch_only: "arch_obj_pred P" 
+  assumes arch_only: "arch_obj_pred P"
+
+locale vspace_only_obj_pred =
+  fixes P :: "kernel_object \<Rightarrow> bool"
+  fixes vspace_obj_pred :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool"
+  assumes vspace_only: "vspace_obj_pred P"
 
 lemma set_object_typ_at:
-  "\<lbrace>\<lambda>s. typ_at (a_type ko) p s \<and> P (typ_at T p' s)\<rbrace> 
+  "\<lbrace>\<lambda>s. typ_at (a_type ko) p s \<and> P (typ_at T p' s)\<rbrace>
   set_object p ko \<lbrace>\<lambda>rv s. P (typ_at T p' s)\<rbrace>"
   apply (simp add: set_object_def)
   apply wp
@@ -122,8 +127,8 @@ lemma set_object_typ_at:
   done
 
 lemma set_object_neg_ko:
-  "\<lbrace>not ko_at ko' p' and K (p = p' \<longrightarrow> ko \<noteq> ko')\<rbrace> 
-  set_object p ko 
+  "\<lbrace>not ko_at ko' p' and K (p = p' \<longrightarrow> ko \<noteq> ko')\<rbrace>
+  set_object p ko
   \<lbrace>\<lambda>_ s. \<not> ko_at ko' p' s\<rbrace>"
   apply (simp add: set_object_def)
   apply wp

@@ -20,14 +20,14 @@ import qualified SEL4.Machine.Hardware.MPTimerInterface as MPT
 import Foreign.Ptr
 import Data.Bits
 
--- Following harded coded address pair are used in getKernelDevices 
+-- Following harded coded address pair are used in getKernelDevices
 -- and will get mapped into kernel address space via mapKernelFrame
 gicControllerBase = PAddr 0x00A00000
 gicDistributorBase = PAddr 0x00A01000
 l2ccBase = PAddr 0x00A02000
 uartBase = PAddr 0x021E8000
 
-uart = (uartBase, PPtr 0xfff01000) 
+uart = (uartBase, PPtr 0xfff01000)
 l2cc = (l2ccBase, PPtr 0xfff03000)
 gicController = (gicControllerBase, PPtr 0xfff04000)
 gicDistributor = (gicDistributorBase, PPtr 0xfff05000)
@@ -84,7 +84,7 @@ maskInterrupt env mask irq = do
 ackInterrupt :: Ptr CallbackData -> IRQ -> IO ()
 ackInterrupt env irq = do
   callGICApi gic (GIC.ackInterrupt irq)
-      where gic = GicState { env = env, 
+      where gic = GicState { env = env,
         gicDistBase = gicDistributorBase,
         gicIFBase = gicInterfaceBase }
 
@@ -95,30 +95,30 @@ getActiveIRQ :: Ptr CallbackData -> IO (Maybe IRQ)
 getActiveIRQ env = do
     runDevicesCallback
     active <- callGICApi gicdata $ GIC.getActiveIRQ
-    case active of 
+    case active of
         Just 0x3FF -> return Nothing
         _ -> return active
-      where gicdata = GicState { env = env, 
+      where gicdata = GicState { env = env,
         gicDistBase = gicDistributorBase,
         gicIFBase = gicInterfaceBase }
 
 configureTimer :: Ptr CallbackData -> IO IRQ
 configureTimer env = do
-    MPT.callMPTimerApi mptdata $ MPT.mpTimerInit 
+    MPT.callMPTimerApi mptdata $ MPT.mpTimerInit
     return timerIRQ
-      where mptdata = MPT.MPTimerState { MPT.env = env, 
+      where mptdata = MPT.MPTimerState { MPT.env = env,
         MPT.mptBase = mptBase }
 
 initIRQController :: Ptr CallbackData -> IO ()
 initIRQController env = callGICApi gicdata $ GIC.initIRQController
-  where gicdata = GicState { env = env, 
+  where gicdata = GicState { env = env,
     gicDistBase = gicDistributorBase,
     gicIFBase = gicInterfaceBase }
 
 resetTimer :: Ptr CallbackData -> IO ()
 resetTimer env = do
     MPT.callMPTimerApi mptdata $ MPT.resetTimer
-      where mptdata = MPT.MPTimerState { MPT.env = env, 
+      where mptdata = MPT.MPTimerState { MPT.env = env,
         MPT.mptBase = mptBase }
 
 isbCallback :: Ptr CallbackData -> IO ()

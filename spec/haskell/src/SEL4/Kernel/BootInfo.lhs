@@ -81,7 +81,7 @@ Warning: rootCNodeSizeBits should be rootCNodeSize + objBits (undefined::CTE)
 > nopBIFrameData :: BIFrameData
 > nopBIFrameData = BIFrameData {
 >         bifNodeID = 0,        -- Initialized in createIPCBufferFrame
->         bifNumNodes = 0,      -- Initialized in createIPCBufferFrame 
+>         bifNumNodes = 0,      -- Initialized in createIPCBufferFrame
 >         bifNumIOPTLevels = 0, -- Initialized with 0 if fine
 >         bifIPCBufVPtr =0,     -- Initialized in createIPCBufferFrame
 >         bifNullCaps = [],
@@ -95,7 +95,7 @@ Warning: rootCNodeSizeBits should be rootCNodeSize + objBits (undefined::CTE)
 >         bifUntypedObjIsDeviceList = [],
 >         bifITCNodeSizeBits = fromIntegral rootCNodeSize, -- Initialized here is fine
 >         bifNumDeviceRegions = 0,
->         bifDeviceRegions = [] 
+>         bifDeviceRegions = []
 >         }
 
 
@@ -147,7 +147,7 @@ Warning: For little endian system we should use this size instead of intsize - s
 >    serializeStore b 4
 >    return ()
 
-The function syncBIFrame is used as the last step in KernelInit. 
+The function syncBIFrame is used as the last step in KernelInit.
 It will write boot info back into the memory.
 
 > syncBIFrame :: KernelInit ()

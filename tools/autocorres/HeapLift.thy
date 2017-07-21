@@ -1467,7 +1467,7 @@ lemma heap_list_of_disjoint_fold_heap_update_list:
 
 (* remove false dependency *)
 lemma fold_heap_update_list:
-  "n * size_of TYPE('a :: mem_type) < 2^32 \<Longrightarrow>
+  "n * size_of TYPE('a :: mem_type) < 2^addr_bitsize \<Longrightarrow>
    fold (\<lambda>i h. heap_update_list (ptr_val ((p :: 'a ptr) +\<^sub>p int i))
                  (to_bytes (val i :: 'a)
                    (heap_list h (size_of TYPE('a)) (ptr_val (p +\<^sub>p int i)))) h)
@@ -1623,14 +1623,14 @@ lemma fold_update_id:
 lemma array_count_index:
   "\<lbrakk> i < CARD('b::array_max_count); j < CARD('b) \<rbrakk>
    \<Longrightarrow> (i = j) =
-        ((of_nat (i * size_of TYPE('a::array_outer_max_size)) :: word32)
+        ((of_nat (i * size_of TYPE('a::array_outer_max_size)) :: addr)
           = of_nat (j * size_of TYPE('a)))"
   apply (rule_tac t = "i = j" and s = "i * size_of TYPE('a) = j * size_of TYPE('a)" in subst)
    apply clarsimp
    apply (metis sz_nzero less_nat_zero_code)
 
   apply (rule of_nat_inj[symmetric])
-  apply (rule_tac t = "len_of TYPE(32)" and s = 32 in subst,
+  apply (rule_tac t = "len_of TYPE(addr_bitsize)" and s = addr_bitsize in subst,
           simp,
          rule less_trans,
           erule_tac b = "CARD('b)" in mult_strict_right_mono,

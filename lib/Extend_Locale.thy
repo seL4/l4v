@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-(* 
+(*
  * Extend a locale by seamlessly generating sublocales.
  *)
 
@@ -37,7 +37,7 @@ let
        val b = make_binding (extern_nm, pos);
        val (_, lthy') =  Local_Theory.note ((b,[]),thms) lthy;
      in lthy' end
-      
+
 in fold add_entry local_facts lthy end;
 \<close>
 
@@ -45,28 +45,28 @@ ML \<open>
 
 val _ =
   Outer_Syntax.command @{command_keyword extend_locale} "extend current locale"
-    (Parse.opt_target -- (Scan.repeat1 Parse_Spec.context_element) >> (fn (target, (elems)) => 
+    (Parse.opt_target -- (Scan.repeat1 Parse_Spec.context_element) >> (fn (target, (elems)) =>
       (Toplevel.local_theory NONE target (fn lthy =>
       let
         val locale_name = case Named_Target.locale_of lthy of SOME x => x | NONE => error "Not in a locale!"
         val binding = Binding.make (Long_Name.base_name locale_name, Position.none)
 
         val chunkN = "extchunk_"
-        
-        val last_chunk = 
-          case Long_Name.explode locale_name of 
+
+        val last_chunk =
+          case Long_Name.explode locale_name of
             [_, chunk, _] => (unprefix chunkN chunk |> Int.fromString |> the)
             | [_, _] => 0
             | _ => raise Fail ("Unexpected locale naming scheme:" ^ locale_name)
 
         val chunk = Int.toString (last_chunk + 1)
 
-        
+
         val (next_locale_name, lthy') = lthy
-          |> Local_Theory.map_background_naming 
+          |> Local_Theory.map_background_naming
                (Name_Space.parent_path #> Name_Space.add_path (chunkN ^ chunk))
-          |> Local_Theory.background_theory_result 
-               (Expression.add_locale_cmd binding binding 
+          |> Local_Theory.background_theory_result
+               (Expression.add_locale_cmd binding binding
                   ([((locale_name,Position.none), (("#",false), Expression.Positional []))], []) elems
                  ##> Local_Theory.exit_global)
           ||> Local_Theory.restore_background_naming lthy
@@ -91,7 +91,7 @@ begin
 
 definition "generic_const = ((\<forall>x :: nat. x \<noteq> x))"
 
-extend_locale 
+extend_locale
   assumes asm_1: "Internal.internal_const1 = (\<forall>x :: nat. x = x)"
 
 lemma generic_lemma_1: "Internal.internal_const1"
@@ -99,26 +99,26 @@ lemma generic_lemma_1: "Internal.internal_const1"
   apply simp
   done
 
-extend_locale 
+extend_locale
   assumes asm_2: "\<not> Internal.internal_const2"
 
 lemma generic_lemma_2: "generic_const = Internal.internal_const2"
   by (simp add: asm_2 generic_const_def)
 
-extend_locale 
+extend_locale
   fixes param_const_1 :: nat
   assumes asm_3: "param_const_1 > 0"
 
 lemma generic_lemma_3: "param_const_1 \<noteq> 0"
   by (simp add: asm_3)
 
-extend_locale 
+extend_locale
   assumes asm_4: "\<not> generic_const"
 
 lemma generic_lemma_4: "generic_const = Internal.internal_const2"
   by (simp add: asm_4 asm_2 generic_lemma_2)
 
-extend_locale 
+extend_locale
   assumes asm_4: "x = param_const_1 \<Longrightarrow> y > x \<Longrightarrow> y > 1"
 
 
@@ -141,10 +141,10 @@ lemma asm_4: "x = internal_const3 \<Longrightarrow> y > x \<Longrightarrow> y > 
 
 end
 
-interpretation Generic 
+interpretation Generic
  where param_const_1 = Internal.internal_const3
   subgoal
-  proof - 
+  proof -
   interpret Internal .
   show ?thesis by (intro_locales; (unfold_locales, fact)?)
   qed

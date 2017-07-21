@@ -62,22 +62,22 @@ lemma integrity_arm_next_asid [iff]:
 declare dmo_mol_respects [wp]
 
 crunch respects[wp]: arm_context_switch "integrity X aag st"
-  (simp: dmo_bind_valid dsb_def isb_def writeTTBR0_def invalidateTLB_ASID_def 
-         setHardwareASID_def setCurrentPD_def 
+  (simp: dmo_bind_valid dsb_def isb_def writeTTBR0_def invalidateLocalTLB_ASID_def
+         setHardwareASID_def setCurrentPD_def
  ignore: do_machine_op)
 
 crunch respects[wp]: find_pd_for_asid "integrity X aag st"
 
 crunch respects[wp]: set_vm_root "integrity X aag st"
-    (wp: crunch_wps 
-   simp: setCurrentPD_def isb_def dsb_def writeTTBR0_def dmo_bind_valid crunch_simps 
+    (wp: crunch_wps
+   simp: setCurrentPD_def isb_def dsb_def writeTTBR0_def dmo_bind_valid crunch_simps
  ignore: do_machine_op)
 
 crunch respects[wp]: set_vm_root_for_flush "integrity X aag st"
   (wp: crunch_wps simp: setCurrentPD_def crunch_simps ignore: do_machine_op)
 
 crunch respects[wp]: flush_table "integrity X aag st"
-  (wp: crunch_wps simp: invalidateTLB_ASID_def crunch_simps ignore: do_machine_op)
+  (wp: crunch_wps simp: invalidateLocalTLB_ASID_def crunch_simps ignore: do_machine_op)
 
 crunch respects[wp]: page_table_mapped "integrity X aag st"
 
@@ -110,7 +110,7 @@ lemma find_pd_for_asid_authority1:
 
 lemma find_pd_for_asid_authority2:
   "\<lbrace>\<lambda>s. \<forall>pd. (\<forall>aag. pas_refined aag s \<longrightarrow> (pasASIDAbs aag asid, Control, pasObjectAbs aag pd) \<in> pasPolicy aag)
-           \<and> (pspace_aligned s \<and> valid_arch_objs s \<longrightarrow> is_aligned pd pd_bits)
+           \<and> (pspace_aligned s \<and> valid_vspace_objs s \<longrightarrow> is_aligned pd pd_bits)
            \<and> (\<exists>\<rhd> pd) s
            \<longrightarrow> Q pd s\<rbrace> find_pd_for_asid asid \<lbrace>Q\<rbrace>, -"
   (is "\<lbrace>?P\<rbrace> ?f \<lbrace>Q\<rbrace>,-")
@@ -123,7 +123,7 @@ lemma find_pd_for_asid_authority2:
   done
 
 lemma find_pd_for_asid_pd_slot_authorised [wp]:
-  "\<lbrace>pas_refined aag and K (is_subject_asid aag asid) and pspace_aligned and valid_arch_objs\<rbrace>
+  "\<lbrace>pas_refined aag and K (is_subject_asid aag asid) and pspace_aligned and valid_vspace_objs\<rbrace>
   find_pd_for_asid asid
   \<lbrace>\<lambda>rv s. is_subject aag (lookup_pd_slot rv vptr && ~~ mask pd_bits) \<rbrace>, -"
   apply (wp find_pd_for_asid_authority2)
@@ -286,7 +286,7 @@ lemma aag_has_auth_to_Control_eq_owns:
   by (auto simp: pas_refined_refl elim: aag_Control_into_owns)
 
 lemma lookup_pt_slot_authorised:
-  "\<lbrace>\<exists>\<rhd> pd and valid_arch_objs and pspace_aligned and pas_refined aag
+  "\<lbrace>\<exists>\<rhd> pd and valid_vspace_objs and pspace_aligned and pas_refined aag
             and K (is_subject aag pd) and K (is_aligned pd 14 \<and> vptr < kernel_base)\<rbrace>
     lookup_pt_slot pd vptr
   \<lbrace>\<lambda>rv s. is_subject aag (rv && ~~ mask pt_bits)\<rbrace>, -"
@@ -294,7 +294,7 @@ lemma lookup_pt_slot_authorised:
   apply (wp get_pde_wp | wpc)+
   apply (subgoal_tac "is_aligned pd pd_bits")
    apply (clarsimp simp: lookup_pd_slot_pd)
-   apply (drule(2) valid_arch_objsD)
+   apply (drule(2) valid_vspace_objsD)
    apply (clarsimp simp: obj_at_def)
    apply (drule kheap_eq_state_vrefs_pas_refinedD)
      apply (erule vs_refs_no_global_pts_pdI)
@@ -333,7 +333,7 @@ lemma is_aligned_6_masks:
 lemma lookup_pt_slot_authorised2:
   "\<lbrace>\<exists>\<rhd> pd and K (is_subject aag pd) and
     K (is_aligned pd 14 \<and> is_aligned vptr 16 \<and> vptr < kernel_base) and
-    valid_arch_objs and valid_arch_state and equal_kernel_mappings and
+    valid_vspace_objs and valid_arch_state and equal_kernel_mappings and
     valid_global_objs and pspace_aligned and pas_refined aag\<rbrace>
     lookup_pt_slot pd vptr
   \<lbrace>\<lambda>rv s.  \<forall>x\<in>set [0 , 4 .e. 0x3C]. is_subject aag (x + rv && ~~ mask pt_bits)\<rbrace>, -"
@@ -349,7 +349,7 @@ lemma lookup_pt_slot_authorised2:
 lemma lookup_pt_slot_authorised3:
   "\<lbrace>\<exists>\<rhd> pd and K (is_subject aag pd) and
     K (is_aligned pd 14 \<and> is_aligned vptr 16 \<and> vptr < kernel_base) and
-    valid_arch_objs and valid_arch_state and equal_kernel_mappings and
+    valid_vspace_objs and valid_arch_state and equal_kernel_mappings and
     valid_global_objs and pspace_aligned and pas_refined aag\<rbrace>
     lookup_pt_slot pd vptr
   \<lbrace>\<lambda>rv s.  \<forall>x\<in>set [rv , rv + 4 .e. rv + 0x3C]. is_subject aag (x && ~~ mask pt_bits)\<rbrace>, -"
@@ -399,7 +399,7 @@ lemma mapM_set'':
   done
 
 crunch respects [wp]: flush_page "integrity aag X st"
-  (simp: invalidateTLB_VAASID_def ignore: do_machine_op)
+  (simp: invalidateLocalTLB_VAASID_def ignore: do_machine_op)
 
 lemma find_pd_for_asid_pd_owned[wp]:
   "\<lbrace>pas_refined aag and K (is_subject_asid aag asid)\<rbrace>
@@ -419,7 +419,7 @@ crunch pas_refined[wp]: unmap_page "pas_refined aag"
 crunch pspace_aligned[wp]: flush_page "pspace_aligned"
 
 lemma unmap_page_respects:
-  "\<lbrace>integrity aag X st and K (is_subject_asid aag asid) and pas_refined aag and pspace_aligned and valid_arch_objs
+  "\<lbrace>integrity aag X st and K (is_subject_asid aag asid) and pas_refined aag and pspace_aligned and valid_vspace_objs
         and K (vmsz_aligned vptr sz \<and> vptr < kernel_base)\<rbrace>
     unmap_page sz asid vptr pptr
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
@@ -493,12 +493,12 @@ lemma invalidate_tlb_by_asid_respects[wp]:
   "\<lbrace>integrity aag X st\<rbrace> invalidate_tlb_by_asid asid
     \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: invalidate_tlb_by_asid_def)
-  apply (wp dmo_no_mem_respects | wpc | simp add: invalidateTLB_ASID_def )+
+  apply (wp dmo_no_mem_respects | wpc | simp add: invalidateLocalTLB_ASID_def )+
   done
 
 lemma invalidate_tlb_by_asid_pas_refined[wp]:
   "\<lbrace>pas_refined aag\<rbrace> invalidate_tlb_by_asid asid \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  by (wp dmo_no_mem_respects | wpc | simp add: invalidate_tlb_by_asid_def invalidateTLB_ASID_def)+
+  by (wp dmo_no_mem_respects | wpc | simp add: invalidate_tlb_by_asid_def invalidateLocalTLB_ASID_def)+
 
 crunch pas_refined[wp]: set_message_info "pas_refined aag"
 
@@ -553,7 +553,7 @@ lemma set_mrs_pas_refined[wp]:
 crunch integrity_autarch: set_message_info "integrity aag X st"
 
 lemma dmo_storeWord_respects_Write:
-  "\<lbrace>integrity aag X st and K (\<forall>p' \<in> ptr_range p 2. aag_has_auth_to aag Write p')\<rbrace> 
+  "\<lbrace>integrity aag X st and K (\<forall>p' \<in> ptr_range p 2. aag_has_auth_to aag Write p')\<rbrace>
   do_machine_op (storeWord p v)
   \<lbrace>\<lambda>a. integrity aag X st\<rbrace>"
   apply (rule hoare_pre)
@@ -565,11 +565,11 @@ lemma dmo_storeWord_respects_Write:
 definition
   ipc_buffer_has_auth :: "'a PAS \<Rightarrow> word32 \<Rightarrow> word32 option \<Rightarrow> bool"
 where
-   "ipc_buffer_has_auth aag thread \<equiv> 
+   "ipc_buffer_has_auth aag thread \<equiv>
     case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. (pasObjectAbs aag thread, Write, pasObjectAbs aag x) \<in> pasPolicy aag))"
 
 lemma ipc_buffer_has_auth_wordE:
-  "\<lbrakk> ipc_buffer_has_auth aag thread (Some buf); p \<in> ptr_range (buf + off) sz; is_aligned off sz; sz \<le> msg_align_bits; off < 2 ^ msg_align_bits \<rbrakk> 
+  "\<lbrakk> ipc_buffer_has_auth aag thread (Some buf); p \<in> ptr_range (buf + off) sz; is_aligned off sz; sz \<le> msg_align_bits; off < 2 ^ msg_align_bits \<rbrakk>
   \<Longrightarrow> (pasObjectAbs aag thread, Write, pasObjectAbs aag p) \<in> pasPolicy aag"
   unfolding ipc_buffer_has_auth_def
   apply clarsimp
@@ -580,7 +580,7 @@ lemma ipc_buffer_has_auth_wordE:
 
 lemma is_aligned_word_size_2 [simp]:
   "is_aligned (p * of_nat word_size) 2"
-  unfolding word_size_def 
+  unfolding word_size_def
   by (simp add: is_aligned_mult_triv2 [where n = 2, simplified] word_bits_conv)
 
 
@@ -627,7 +627,7 @@ lemma set_mrs_integrity_autarch:
   done
 
 lemma perform_page_invocation_respects:
-  "\<lbrace>integrity aag X st and pas_refined aag and K (authorised_page_inv aag pgi) and valid_page_inv pgi and valid_arch_objs and pspace_aligned and is_subject aag  \<circ> cur_thread\<rbrace>
+  "\<lbrace>integrity aag X st and pas_refined aag and K (authorised_page_inv aag pgi) and valid_page_inv pgi and valid_vspace_objs and pspace_aligned and is_subject aag  \<circ> cur_thread\<rbrace>
      perform_page_invocation pgi
    \<lbrace>\<lambda>s. integrity aag X st\<rbrace>"
 proof -
@@ -640,12 +640,12 @@ proof -
 
   show ?thesis
   apply (simp add: perform_page_invocation_def mapM_discarded swp_def
-                   valid_page_inv_def valid_unmap_def 
-                   authorised_page_inv_def authorised_slots_def 
+                   valid_page_inv_def valid_unmap_def
+                   authorised_page_inv_def authorised_slots_def
             split: page_invocation.split sum.split
                    arch_cap.split option.split,
          safe)
-        apply (wp set_cap_integrity_autarch unmap_page_respects 
+        apply (wp set_cap_integrity_autarch unmap_page_respects
                   mapM_x_and_const_wp[OF store_pte_respects] store_pte_respects
                   mapM_x_and_const_wp[OF store_pde_respects] store_pde_respects
              | elim conjE hd_valid_slots[THEN bspec[rotated]]
@@ -1061,13 +1061,11 @@ lemma create_mapping_entries_authorised_slots [wp]:
      apply (wp lookup_pt_slot_authorised
                  | simp add: pte_ref_simps | fold validE_R_def)+
      apply (auto simp: pd_bits_def pageBits_def)[1]
-    apply (wp lookup_pt_slot_authorised3 | simp add: pte_ref_simps | fold validE_R_def)+
+    apply (wp lookup_pt_slot_authorised2 | simp add: pte_ref_simps largePagePTE_offsets_def | fold validE_R_def)+
     apply (auto simp: pd_bits_def pageBits_def vmsz_aligned_def intro: invs_equal_kernel_mappings)[1]
    apply (wp | simp)+
    apply (auto simp: pde_ref2_def lookup_pd_slot_pd)[1]
-  apply (wp | simp)+
-  apply (subst p_0x3C_shift, rule lookup_pd_slot_aligned_6, simp)
-   apply (simp add: pd_bits_def pageBits_def)
+  apply (wp | simp add: superSectionPDE_offsets_def)+
   apply (auto simp: pde_ref2_def vmsz_aligned_def lookup_pd_slot_add_eq)
   done
 
@@ -1115,7 +1113,7 @@ lemma decode_arch_invocation_authorised:
                   del: hoare_post_taut hoare_True_E_R
                   split del: if_split)+
   apply (clarsimp simp: authorised_asid_pool_inv_def authorised_page_table_inv_def
-                        neq_Nil_conv invs_psp_aligned invs_arch_objs cli_no_irqs)
+                        neq_Nil_conv invs_psp_aligned invs_vspace_objs cli_no_irqs)
   apply (drule diminished_cte_wp_at_valid_cap, clarsimp+)
   apply (cases cap, simp_all)
       -- "asid pool"
@@ -1149,7 +1147,7 @@ lemma decode_arch_invocation_authorised:
                 validate_vm_rights_def vm_read_write_def vm_read_only_def
                 vm_kernel_only_def)
   -- "Remap"
-   apply (clarsimp simp: cap_auth_conferred_def 
+   apply (clarsimp simp: cap_auth_conferred_def
      is_page_cap_def pas_refined_all_auth_is_owns)
    apply (rule conjI, fastforce)
    apply clarsimp
@@ -1227,7 +1225,7 @@ lemma delete_asid_pool_pas_refined [wp]:
 crunch respects[wp]: invalidate_asid_entry "integrity aag X st"
 
 crunch respects[wp]: flush_space "integrity aag X st"
-  (ignore: do_machine_op simp: invalidateTLB_ASID_def cleanCaches_PoU_def dsb_def clean_D_PoU_def invalidate_I_PoU_def do_machine_op_bind)
+  (ignore: do_machine_op simp: invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def clean_D_PoU_def invalidate_I_PoU_def do_machine_op_bind)
 
 lemma delete_asid_pool_respects[wp]:
   "\<lbrace> integrity aag X st and K (\<forall>asid'.

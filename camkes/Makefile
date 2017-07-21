@@ -11,7 +11,7 @@
 ## Targets
 images: Camkes
 default: images test
-test: 
+test:
 all: images test
 report-regression:
 	@echo Camkes

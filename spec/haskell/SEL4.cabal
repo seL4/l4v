@@ -22,7 +22,15 @@ Flag FFI
     default:            True
 
 Flag ArchArm
-    description:        Include ARM modules and platforms (else x64)
+    description:        Include ARM modules and platforms
+    default:            False
+
+Flag ArchArmHyp
+    description:        Include ARM (with Hypervisor Extensions) modules and platforms
+    default:            False
+
+Flag ArchX64
+    description:        Include x86 64-bit modules and platforms
     default:            False
 
 Library
@@ -110,9 +118,34 @@ Library
                             SEL4.Machine.RegisterSet.ARM
                             SEL4.Machine.Hardware.ARM
 
-    else
-        -- FIXME: should be a flag also, or some other way to conditionally compile
-        -- Setup.hs hooks can handle this, but do we want to do that?
+    -- FIXME ideally ARMHYP will share code with the main ARM development,
+    -- but when doing an architecture port we want to make sure we are doing a
+    -- full pass over the Haskell kernel, touching all files
+    -- TODO consolidate later
+    if flag(ArchArmHyp)
+        other-modules:
+                            SEL4.Machine.Hardware.ARM.TK1
+                            SEL4.Machine.Hardware.ARM.Callbacks
+
+                            SEL4.API.Types.ARM
+                            SEL4.API.InvocationLabels.ARM
+                            SEL4.API.Invocation.ARM
+                            SEL4.API.Faults.ARM
+                            SEL4.API.Failures.ARM
+                            SEL4.Kernel.VSpace.ARM
+                            SEL4.Kernel.Thread.ARM
+                            SEL4.Kernel.Hypervisor.ARM
+                            SEL4.Object.ObjectType.ARM
+                            SEL4.Object.Structures.ARM
+                            SEL4.Object.Interrupt.ARM
+                            SEL4.Object.Instances.ARM
+                            SEL4.Object.VCPU.ARM
+                            SEL4.Object.TCB.ARM
+                            SEL4.Model.StateData.ARM
+                            SEL4.Machine.RegisterSet.ARM
+                            SEL4.Machine.Hardware.ARM
+
+    if flag(ArchX64)
         other-modules:
 
                             SEL4.API.Types.X64
@@ -140,6 +173,7 @@ Library
                             -fno-spec-constr -fno-warn-name-shadowing
                             -fno-warn-unrecognised-pragmas
                             -fno-warn-unused-binds
+                            -fno-warn-unused-imports -fno-warn-unused-matches
 
     cpp-options:
                             -- set via Setup.hs hook

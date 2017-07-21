@@ -10,18 +10,18 @@
 
 /*
  * AutoCorres simplification of compound expressions.
- * 
+ *
  * In C, each of the boolean expressions below is simple.
  * However, C-parser needs to generate a guard for some subexpressions,
  * and so it turns each expression into a complicated statement.
- * 
+ *
  * One way to simplify them is by rewriting each expression into the form
  *   guard G; <use expr>
  * where G contains all the necessary guards for the expr.
- * 
+ *
  * This makes it easier, for example, for the user to separate
  * the correctness and definedness qualities of the generated code.
- * 
+ *
  * Currently, AutoCorres can do this simplification in some cases,
  * but cannot simplify any of the expressions below.
  */

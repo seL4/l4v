@@ -114,7 +114,7 @@ lemma opt_cap_tcb:
   "\<lbrakk> get_tcb y s = Some tcb; (\<exists>etcb. get_etcb y s = Some etcb); y \<noteq> idle_thread s \<rbrakk> \<Longrightarrow>
   opt_cap (y, sl) (transform s) =
   (if sl \<in> tcb_abstract_slots then (option_map (\<lambda>(getF, _, _). transform_cap (getF tcb)) (tcb_cap_cases (tcb_cnode_index sl)))
-  else (if sl = tcb_pending_op_slot then (Some (infer_tcb_pending_op y (tcb_state tcb))) 
+  else (if sl = tcb_pending_op_slot then (Some (infer_tcb_pending_op y (tcb_state tcb)))
    else (if sl = tcb_boundntfn_slot then (Some  (infer_tcb_bound_notification (tcb_bound_notification tcb))) else None)))"
   by (fastforce simp add: opt_cap_def KHeap_D.slots_of_def opt_object_tcb object_slots_def transform_tcb_def tcb_slots)
 
@@ -1331,7 +1331,7 @@ lemma valid_tcb_obj_ipc_align_etc:
   apply (frule ipc_frame_ptr_at_frame_at)
     apply simp+
   apply (drule(1) valid_tcb_objs)
-  apply (clarsimp dest!: get_tcb_SomeD simp:valid_tcb_def valid_ipc_buffer_cap_def   
+  apply (clarsimp dest!: get_tcb_SomeD simp:valid_tcb_def valid_ipc_buffer_cap_def
                          ipc_frame_wp_at_def obj_at_def)
   apply (clarsimp split: cap.splits arch_cap.splits bool.split_asm)
   apply (rule conjI)

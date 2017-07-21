@@ -40,7 +40,7 @@ definition
   "diminished cap cap' \<equiv> \<exists>R. cap = mask_cap R cap'"
 
 
-lemma const_on_failure_wp : 
+lemma const_on_failure_wp :
   "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>rv. Q n\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> const_on_failure n m \<lbrace>Q\<rbrace>"
   apply (simp add: const_on_failure_def)
   apply wp
@@ -48,12 +48,12 @@ lemma const_on_failure_wp :
 
 lemma get_cap_id:
   "(v, s') \<in> fst (get_cap p s) \<Longrightarrow> (s' = s)"
-  by (clarsimp simp: get_cap_def get_object_def in_monad 
+  by (clarsimp simp: get_cap_def get_object_def in_monad
                      split_def
               split: Structures_A.kernel_object.splits)
 
 
-lemmas cap_irq_opt_simps[simp] = 
+lemmas cap_irq_opt_simps[simp] =
   cap_irq_opt_def [split_simps cap.split sum.split]
 
 lemmas cap_irqs_simps[simp] =
@@ -68,7 +68,7 @@ declare liftE_wp[wp]
 declare case_sum_True[simp]
 declare select_singleton[simp]
 
-crunch_ignore (add: cap_swap_ext 
+crunch_ignore (add: cap_swap_ext
               cap_move_ext cap_insert_ext empty_slot_ext create_cap_ext
               do_extended_op)
 

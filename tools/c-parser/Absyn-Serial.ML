@@ -11,7 +11,7 @@
 structure Absyn_Serial =
 struct
 
-open Absyn 
+open Absyn
 
 datatype serial = Nm of string * serial list | Q of string
 

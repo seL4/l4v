@@ -171,14 +171,14 @@ fun
 where
   "handle_fault_reply (CapFault cptr rp lf) thread x y = return True"
 | "handle_fault_reply (UnknownSyscallException n) thread label msg = do
-     t \<leftarrow> thread_get id thread;
+     t \<leftarrow> arch_get_sanitise_register_info thread;
      as_user thread $ zipWithM_x
          (\<lambda>r v. set_register r $ sanitise_register t r v)
          syscallMessage msg;
      return (label = 0)
    od"
 | "handle_fault_reply (UserException exception code) thread label msg = do
-     t \<leftarrow> thread_get id thread;
+     t \<leftarrow> arch_get_sanitise_register_info thread;
      as_user thread $ zipWithM_x
          (\<lambda>r v. set_register r $ sanitise_register t r v)
          exceptionMessage msg;

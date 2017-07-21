@@ -1168,16 +1168,16 @@ lemma bound_tcb_at_eq:
   done
 
 lemma unbind_maybe_notification_reads_respects:
-  "reads_respects aag l 
+  "reads_respects aag l
      (pas_refined aag and invs and K (is_subject aag ntfnptr))
      (unbind_maybe_notification ntfnptr)"
   apply (clarsimp simp: unbind_maybe_notification_def)
 apply wp
   apply (case_tac "ntfn_bound_tcb rv")
-   apply (clarsimp, wp)[1] 
+   apply (clarsimp, wp)[1]
   -- "interesting case, ntfn is bound"
   apply (clarsimp)
-   apply ((wp set_bound_notification_none_reads_respects set_notification_reads_respects 
+   apply ((wp set_bound_notification_none_reads_respects set_notification_reads_respects
               get_notification_reads_respects
           | wpc
           | simp)+)
@@ -1187,10 +1187,10 @@ lemma unbind_notification_is_subj_reads_respects:
   "reads_respects aag l (pas_refined aag and invs and K (is_subject aag t))
        (unbind_notification t)"
   apply (clarsimp simp: unbind_notification_def)
-  apply (wp set_bound_notification_owned_reads_respects set_notification_reads_respects 
+  apply (wp set_bound_notification_owned_reads_respects set_notification_reads_respects
             get_notification_reads_respects get_bound_notification_reads_respects
             gbn_wp[unfolded get_bound_notification_def, simplified]
-       | wpc 
+       | wpc
        | simp add: get_bound_notification_def)+
   apply (clarsimp)
   apply (rule bound_tcb_at_implies_read, auto)
@@ -1208,7 +1208,7 @@ lemma fast_finalise_reads_respects:
            unbind_notification_is_subj_reads_respects
            unbind_maybe_notification_reads_respects
            get_notification_reads_respects get_ntfn_wp
-      | simp add: when_def 
+      | simp add: when_def
       | wpc
       | intro conjI impI
       | fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)+
@@ -1288,7 +1288,7 @@ lemma blocked_cancel_ipc_reads_respects:
   done
 
 
-  
+
 
 
 lemma select_singleton_ev:
@@ -1432,7 +1432,7 @@ lemma arch_finalise_cap_reads_respects:
             unmap_page_table_reads_respects
             delete_asid_reads_respects
 
-    | simp add: invs_psp_aligned invs_arch_objs invs_valid_objs valid_cap_def
+    | simp add: invs_psp_aligned invs_vspace_objs invs_valid_objs valid_cap_def
     split: option.splits bool.splits | intro impI conjI allI |
     elim conjE |
     (rule aag_cap_auth_subject,assumption,assumption) |
@@ -1467,7 +1467,7 @@ lemma finalise_cap_reads_respects:
                   | rule aag_Control_into_owns_irq
                   | clarsimp split del: if_split
                   | rule conjI
-                  | wp_once reads_respects_f[where st=st] 
+                  | wp_once reads_respects_f[where st=st]
                   | blast
                   | clarsimp)+)[11]
   apply (rule equiv_valid_guard_imp)
@@ -1566,7 +1566,8 @@ lemma rec_del_spec_reads_respects_f:
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del]
         drop_spec_ev[wp_split del] rec_del.simps[simp del]
   shows
-  "spec_reads_respects_f s aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and pas_refined aag and
+  "spec_reads_respects_f s aag l (silc_inv aag st and only_timer_irq_inv irq st' and
+   einvs and simple_sched_action and pas_refined aag and
    valid_rec_del_call call and
    emptyable (slot_rdcall call) and
    (\<lambda>s. \<not> exposed_rdcall call \<longrightarrow>
@@ -1625,10 +1626,14 @@ next
                                  \<and> emptyable slot s
                                  \<and> simple_sched_action s
                                  \<and> pas_cap_cur_auth aag (fst fin)
-                                 \<and> is_subject aag (fst slot) \<and>
-(case (fst fin) of Zombie ptr bits n \<Rightarrow> is_subject aag (obj_ref_of (fst fin)) | _ \<Rightarrow> True) \<and> (is_zombie (fst fin) \<or> fst fin = NullCap) \<and>
+                                 \<and> is_subject aag (fst slot)
+                                 \<and> (case (fst fin) of Zombie ptr bits n \<Rightarrow> is_subject aag (obj_ref_of (fst fin))
+                                                     | _ \<Rightarrow> True)
+                                 \<and> (is_zombie (fst fin) \<or> fst fin = NullCap) \<and>
                                    (is_zombie (fst fin) \<or> fst fin = NullCap)" in hoare_vcg_conj_lift)
-           apply(wp finalise_cap_invs finalise_cap_replaceable finalise_cap_makes_halted finalise_cap_auth' finalise_cap_ret_is_subject finalise_cap_ret' finalise_cap_silc_inv finalise_cap_ret_is_silc finalise_cap_only_timer_irq_inv)[1]
+           apply(wp finalise_cap_invs finalise_cap_replaceable Finalise_AC.finalise_cap_makes_halted finalise_cap_auth'
+                    finalise_cap_ret_is_subject finalise_cap_ret' finalise_cap_silc_inv
+                    finalise_cap_ret_is_silc finalise_cap_only_timer_irq_inv)[1]
           apply(rule finalise_cap_cases[where slot=slot])
          apply (clarsimp simp: cte_wp_at_caps_of_state)
          apply (erule disjE)
@@ -1645,7 +1650,7 @@ next
           apply(rule conjI)
            apply(fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def
                                                       only_timer_irq_inv_def)
-          
+
           apply(rule conjI[rotated], force)
           apply(clarsimp simp: ex_cte_cap_wp_to_def)+
           apply(rule_tac x="a" in exI, rule_tac x="b" in exI)
@@ -1847,9 +1852,9 @@ lemma unbind_notification_globals_equiv:
    unbind_notification t
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding unbind_notification_def
-  by (wp gbn_wp set_bound_notification_globals_equiv set_notification_valid_ko_at_arm 
-            set_notification_globals_equiv 
-          | wpc 
+  by (wp gbn_wp set_bound_notification_globals_equiv set_notification_valid_ko_at_arm
+            set_notification_globals_equiv
+          | wpc
           | simp)+
 
 lemma unbind_notification_valid_ko_at_arm[wp]:
@@ -1857,9 +1862,9 @@ lemma unbind_notification_valid_ko_at_arm[wp]:
    unbind_notification t
    \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
   unfolding unbind_notification_def
-  by (wp gbn_wp set_bound_notification_valid_ko_at_arm set_notification_valid_ko_at_arm 
-             
-          | wpc 
+  by (wp gbn_wp set_bound_notification_valid_ko_at_arm set_notification_valid_ko_at_arm
+
+          | wpc
           | simp)+
 
 lemma unbind_maybe_notification_globals_equiv:
@@ -1867,9 +1872,9 @@ lemma unbind_maybe_notification_globals_equiv:
    unbind_maybe_notification a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding unbind_maybe_notification_def
-  by (wp gbn_wp set_bound_notification_globals_equiv set_notification_valid_ko_at_arm 
-            set_notification_globals_equiv get_ntfn_wp 
-          | wpc 
+  by (wp gbn_wp set_bound_notification_globals_equiv set_notification_valid_ko_at_arm
+            set_notification_globals_equiv get_ntfn_wp
+          | wpc
           | simp)+
 
 lemma unbind_maybe_notification_valid_ko_at_arm[wp]:
@@ -1877,9 +1882,9 @@ lemma unbind_maybe_notification_valid_ko_at_arm[wp]:
    unbind_maybe_notification a
    \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
   unfolding unbind_maybe_notification_def
-  by (wp gbn_wp set_bound_notification_valid_ko_at_arm set_notification_valid_ko_at_arm 
+  by (wp gbn_wp set_bound_notification_valid_ko_at_arm set_notification_valid_ko_at_arm
          get_ntfn_wp
-          | wpc 
+          | wpc
           | simp)+
 
 crunch valid_global_objs: fast_finalise "valid_global_objs"
@@ -1966,7 +1971,7 @@ lemma pagebitsforsize_ge_2[simp] :
 done
 
 lemma arch_finalise_cap_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_global_objs and valid_arch_state and pspace_aligned and valid_arch_objs and valid_global_refs and valid_vs_lookup\<rbrace>
+  "\<lbrace>globals_equiv st and valid_global_objs and valid_arch_state and pspace_aligned and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
      arch_finalise_cap cap b
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct cap)
@@ -2004,6 +2009,8 @@ lemma mapM_x_swp_store_kernel_base_globals_equiv:
                    not_in_global_not_arm
                    pde_ref_def)+
 done
+
+declare arch_get_sanitise_register_info_def[simp]
 
 end
 

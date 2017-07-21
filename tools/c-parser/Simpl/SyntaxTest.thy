@@ -7,7 +7,7 @@
 (*  Title:      SyntaxTest.thy
     Author:     Norbert Schirmer, TU Muenchen
 
-Copyright (C) 2006-2008 Norbert Schirmer 
+Copyright (C) 2006-2008 Norbert Schirmer
 Some rights reserved, TU Muenchen
 
 This library is free software; you can redistribute it and/or modify
@@ -86,12 +86,12 @@ term "WHILE\<^sub>g \<acute>A!i < \<acute>N INV \<lbrace>foo\<rbrace> VAR bar x 
 term "c;;WHILE\<^sub>g \<acute>A!i < \<acute>N INV \<lbrace>foo\<rbrace> VAR MEASURE \<acute>N + \<acute>M DO c;;c OD;;c"
 context Foo_impl
 begin
-term "\<acute>q :== CALL Foo(\<acute>p,\<acute>M)" 
-term "\<acute>q :== CALL\<^sub>g Foo(\<acute>p,\<acute>M + 1)" 
-term "\<acute>q :== CALL Foo(\<acute>p\<rightarrow>\<acute>next,\<acute>M)" 
-term "\<acute>q \<rightarrow> \<acute>next :== CALL Foo(\<acute>p,\<acute>M)" 
+term "\<acute>q :== CALL Foo(\<acute>p,\<acute>M)"
+term "\<acute>q :== CALL\<^sub>g Foo(\<acute>p,\<acute>M + 1)"
+term "\<acute>q :== CALL Foo(\<acute>p\<rightarrow>\<acute>next,\<acute>M)"
+term "\<acute>q \<rightarrow> \<acute>next :== CALL Foo(\<acute>p,\<acute>M)"
 end
 
 end
 
-(*>*) 
+(*>*)

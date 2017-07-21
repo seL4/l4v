@@ -397,6 +397,8 @@ def main():
             help="emulate legacy (sequential code) status lines")
     parser.add_argument("-x", "--exclude", action="append", metavar="TEST", default=[],
             help="exclude tests (one -x per test)")
+    parser.add_argument("-r", "--remove", action="append", metavar="TEST", default=[],
+                        help="remove tests from the default set (when no implicit goal is given)")
     parser.add_argument("-v", "--verbose", action="store_true",
             help="print test output")
     parser.add_argument("--junit-report", metavar="FILE",
@@ -431,6 +433,7 @@ def main():
     tests_to_run = []
     if len(args.tests) == 0 and not os.environ.get('RUN_TESTS_DEFAULT'):
         tests_to_run = tests
+        args.exclude = args.exclude + args.remove
     else:
         desired_names = set(args.tests) or set(os.environ.get('RUN_TESTS_DEFAULT').split())
         bad_names = desired_names - set([t.name for t in tests])
@@ -452,7 +455,7 @@ def main():
     args.exclude = set(args.exclude)
     bad_names = args.exclude - set(t.name for t in tests)
     if bad_names:
-        parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
+        print("[Warning] Unknown test names: %s" % (", ".join(sorted(bad_names))))
     tests_to_run = [t for t in tests_to_run if t.name not in args.exclude]
 
     # Run the tests.

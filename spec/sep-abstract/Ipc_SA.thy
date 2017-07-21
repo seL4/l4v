@@ -31,7 +31,7 @@ text {*
   the abstract specification \texttt{handle_fault} will call \texttt{handle_double_fault} in all
   cases except when the thread has an \texttt{EndpointCap}. Since \texttt{EndpointCap} is not part
   of the restricted capabilities their behaviour is the same. This means, the system assumes
-  fully static virtual memory and no dynamic paging of any kind. 
+  fully static virtual memory and no dynamic paging of any kind.
   Faulting threads will be disabled by the kernel.
 *}
 

@@ -16,8 +16,8 @@ begin
 definition
   xpres :: "('s \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> ('i \<rightharpoonup> ('s, 'i, 'x) com) \<Rightarrow> ('s, 'i, 'x) com \<Rightarrow> bool"
 where
-  "xpres xf v \<Gamma> c \<equiv> \<forall>s t. \<Gamma> \<turnstile> \<langle>c, s\<rangle> \<Rightarrow> t 
-  \<longrightarrow> s \<in> Normal ` {s. xf s = v} 
+  "xpres xf v \<Gamma> c \<equiv> \<forall>s t. \<Gamma> \<turnstile> \<langle>c, s\<rangle> \<Rightarrow> t
+  \<longrightarrow> s \<in> Normal ` {s. xf s = v}
   \<longrightarrow> (\<forall>t'. t = Normal t' \<or> t = Abrupt t' \<longrightarrow> xf t' = v)"
 
 lemma xpresI:
@@ -58,7 +58,7 @@ lemma xpres_exec0:
   and     xf: "xf s = v"
   shows   "xf s' = v"
   using xp ex xy xf
-  unfolding xpres_def 
+  unfolding xpres_def
   apply -
   apply (drule spec, drule spec, drule (1) mp)
   apply (erule disjE)
@@ -67,7 +67,7 @@ lemma xpres_exec0:
   apply (drule mp, simp)
   apply simp
   done
-     
+
 lemma xpres_exec:
   assumes xp: "xpres xf v \<Gamma> c"
   and     ex: "\<Gamma> \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> Normal s'"
@@ -78,14 +78,14 @@ lemma xpres_exec:
 lemma xpresD:
   assumes xf: "xf s = v"
   and     xp: "xpres xf v \<Gamma> a"
-  and     ex: "\<Gamma> \<turnstile> \<langle>a, Normal s\<rangle> \<Rightarrow> Normal s'"    
+  and     ex: "\<Gamma> \<turnstile> \<langle>a, Normal s\<rangle> \<Rightarrow> Normal s'"
   shows   "xf s' = v"
   by (rule xpres_exec [OF xp ex]) fact+
 
 lemma xpres_abruptD:
   assumes xf: "xf s = v"
   and     xp: "xpres xf v \<Gamma> a"
-  and     ex: "\<Gamma> \<turnstile> \<langle>a, Normal s\<rangle> \<Rightarrow> Abrupt s'"    
+  and     ex: "\<Gamma> \<turnstile> \<langle>a, Normal s\<rangle> \<Rightarrow> Abrupt s'"
   shows   "xf s' = v"
   by (rule xpres_exec0 [OF xp ex], simp) fact+
 
@@ -98,7 +98,7 @@ lemma xpres_seq:
   apply (erule disjE)
    apply simp
    apply (erule Normal_resultE)
-   apply simp   
+   apply simp
    apply (drule (1) xpresD [OF _ xa])
    apply (erule (1) xpresD [OF _ xb])
   apply simp
@@ -123,12 +123,12 @@ lemma xpres_while0:
 proof (induct)
   case (WhileTrue s' b' c' t u)
   hence eqs: "b' = b" "c' = a" and xfs: "xf s' = v" by auto
-  
+
   {
     fix w
     assume tv: "t = Normal w" and "\<Gamma> \<turnstile> \<langle>a, Normal s'\<rangle> \<Rightarrow> Normal w"
 
-    have ?thesis 
+    have ?thesis
     proof (rule WhileTrue.hyps(5))
       have "xf w = v" using xfs xp by (rule xpresD) fact+
       thus "t \<in> Normal ` {s. xf s = v} \<union> Abrupt ` {s. xf s = v}" using tv
@@ -138,7 +138,7 @@ proof (induct)
   {
     fix w
     assume tv: "t = Abrupt w" and "\<Gamma> \<turnstile> \<langle>a, Normal s'\<rangle> \<Rightarrow> Abrupt w"
-    have ?thesis 
+    have ?thesis
     proof (rule WhileTrue.hyps(5))
       have "xf w = v" using xfs xp by (rule xpres_abruptD) fact+
       thus "t \<in> Normal ` {s. xf s = v} \<union> Abrupt ` {s. xf s = v}" using tv
@@ -204,7 +204,7 @@ lemma xpres_guard:
 
 lemma xpres_cond:
   assumes xpa: "xpres xf v \<Gamma> a"
-  and     xpb: "xpres xf v \<Gamma> b"  
+  and     xpb: "xpres xf v \<Gamma> b"
   shows   "xpres xf v \<Gamma> (Cond x a b)"
   apply (rule xpresI)
   apply (erule exec_Normal_elim_cases)
@@ -226,7 +226,7 @@ lemma xpres_creturn:
   unfolding creturn_def
   apply (rule xpresI)
   apply (clarsimp elim!: exec_Normal_elim_cases simp add: xfg xfu)+
-  done  
+  done
 
 lemma xpres_creturn_void:
   assumes xfg: "\<And>s f. xf (exnu f s) = xf s"
@@ -234,7 +234,7 @@ lemma xpres_creturn_void:
   unfolding creturn_void_def
   apply (rule xpresI)
   apply (clarsimp elim!: exec_Normal_elim_cases simp add: xfg)
-  done  
+  done
 
 lemma xpres_cbreak:
   assumes xfg: "\<And>s f. xf (exnu f s) = xf s"
@@ -242,14 +242,14 @@ lemma xpres_cbreak:
   unfolding cbreak_def
   apply (rule xpresI)
   apply (clarsimp elim!: exec_Normal_elim_cases simp add: xfg)
-  done  
+  done
 
 lemma xpres_catchbrk_C:
   shows   "xpres xf v \<Gamma> (ccatchbrk exnu)"
   unfolding ccatchbrk_def
   apply (rule xpresI)
   apply (fastforce elim!: exec_Normal_elim_cases)
-  done  
+  done
 
 lemma xpres_lvar_nondet_init:
   assumes xfg: "\<And>s f. xf (st f s) = xf s"
@@ -261,7 +261,7 @@ lemma xpres_lvar_nondet_init:
 
 (* We ignore DynCom and Call and (for now) Spec.  The first two are covered by xpres_call *)
 lemmas xpres_rules = xpres_skip xpres_basic xpres_seq xpres_while
-  xpres_call xpres_catch xpres_skip xpres_guard xpres_cond xpres_throw 
+  xpres_call xpres_catch xpres_skip xpres_guard xpres_cond xpres_throw
   xpres_creturn xpres_creturn_void xpres_cbreak xpres_catchbrk_C
   xpres_lvar_nondet_init
 

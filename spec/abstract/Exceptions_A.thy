@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Monad instantiations, handling of faults, errors, and interrupts.
 *)
 
@@ -31,7 +31,7 @@ type_synonym ('a,'z) f_monad = "(fault + 'a,'z) s_monad"
 term "a::(unit,'a) s_monad"
 
 text {* The error monad: may throw a @{text syscall_error} exception
-which will usually be reported to the current thread as system call 
+which will usually be reported to the current thread as system call
 result. *}
 type_synonym ('a,'z) se_monad = "(syscall_error + 'a,'z) s_monad"
 
@@ -48,7 +48,7 @@ type_synonym ('a,'z) p_monad = "(interrupt + 'a,'z) s_monad"
 text {*
   Printing abbreviations for the above types.
 *}
-translations 
+translations
   (type) "'a s_monad" <= (type) "state \<Rightarrow> (('a \<times> state) \<Rightarrow> bool) \<times> bool"
   (type) "'a f_monad" <= (type) "(fault + 'a) s_monad"
   (type) "'a se_monad" <= (type) "(syscall_error + 'a) s_monad"
@@ -57,7 +57,7 @@ translations
 
 text {* Perform non-preemptible operations within preemptible blocks. *}
 definition
-  without_preemption :: "('a,'z::state_ext) s_monad \<Rightarrow> ('a,'z::state_ext) p_monad" 
+  without_preemption :: "('a,'z::state_ext) s_monad \<Rightarrow> ('a,'z::state_ext) p_monad"
 where without_preemption_def[simp]:
  "without_preemption \<equiv> liftE"
 
@@ -67,7 +67,7 @@ definition
  "preemption_point \<equiv> doE liftE $ do_extended_op update_work_units;
                          OR_choiceE (work_units_limit_reached)
                            (doE liftE $ do_extended_op reset_work_units;
-                                irq_opt \<leftarrow> liftE $ do_machine_op getActiveIRQ;
+                                irq_opt \<leftarrow> liftE $ do_machine_op (getActiveIRQ True);
                                 case_option (returnOk ()) (throwError \<circ> Interrupted) irq_opt
                            odE) (returnOk ())
                      odE"

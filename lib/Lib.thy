@@ -1956,7 +1956,7 @@ lemma map_comp_restrict_map_Some_iff:
 
 lemma range_subsetD:
   fixes a :: "'a :: order"
-  shows "\<lbrakk> {a..b} \<subseteq> {c..d}; a \<le> b \<rbrakk> \<Longrightarrow> c \<le> a \<and> b \<le> d" 
+  shows "\<lbrakk> {a..b} \<subseteq> {c..d}; a \<le> b \<rbrakk> \<Longrightarrow> c \<le> a \<and> b \<le> d"
   by simp
 
 lemma case_option_dom:

@@ -53,7 +53,7 @@ definition
 definition
   "oassert P \<equiv> if P then oreturn () else ofail"
 
-text {* 
+text {*
   If the result can be an exception.
   Corresponding bindE would be analogous to lifting in NonDetMonad.
 *}
@@ -79,8 +79,8 @@ lemma oreturn_bind [simp]: "(oreturn x |>> f) = f x"
 
 lemma obind_return [simp]: "(m |>> oreturn) = m"
   by (auto simp add: oreturn_def obind_def K_def split: option.splits)
- 
-lemma obind_assoc: 
+
+lemma obind_assoc:
   "(m |>> f) |>> g  =  m |>> (\<lambda>x. f x |>> g)"
   by (auto simp add: oreturn_def obind_def K_def split: option.splits)
 
@@ -183,13 +183,13 @@ lemma in_obind_eq:
   by (simp add: obind_def split: option.splits)
 
 lemma obindE:
-  "\<lbrakk> (f |>> g) s = Some v; 
+  "\<lbrakk> (f |>> g) s = Some v;
      \<And>v'. \<lbrakk>f s = Some v'; g v' s = Some v\<rbrakk> \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by (auto simp: in_obind_eq)
 
 lemma in_othrow_eq [simp]:
   "(othrow e s = Some v) = (v = Inl e)"
-  by (auto simp: othrow_def K_def) 
+  by (auto simp: othrow_def K_def)
 
 lemma othrowE:
   "\<lbrakk>othrow e s = Some v; v = Inl e \<Longrightarrow> P (Inl e)\<rbrakk> \<Longrightarrow> P v"
@@ -197,7 +197,7 @@ lemma othrowE:
 
 lemma in_oreturnOk_eq [simp]:
   "(oreturnOk x s = Some v) = (v = Inr x)"
-  by (auto simp: oreturnOk_def K_def) 
+  by (auto simp: oreturnOk_def K_def)
 
 lemma oreturnOkE:
   "\<lbrakk>oreturnOk x s = Some v; v = Inr x \<Longrightarrow> P (Inr x)\<rbrakk> \<Longrightarrow> P v"
@@ -256,7 +256,7 @@ lemma option_while_rule:
   assumes "option_while C B s = Some s'"
   assumes "I s"
   assumes istep: "\<And>s s'. C s \<Longrightarrow> I s \<Longrightarrow> B s = Some s' \<Longrightarrow> I s'"
-  shows "I s' \<and> \<not> C s'" 
+  shows "I s' \<and> \<not> C s'"
 proof -
   { fix ss ss' assume "(ss, ss') \<in> option_while' C B" "ss = Some s" "ss' = Some s'"
     then have ?thesis using `I s`
@@ -295,7 +295,7 @@ lemma option_while_rule':
   assumes less: "\<And>s s'. C s \<Longrightarrow> I (Some s) \<Longrightarrow> B s = Some s' \<Longrightarrow> (s', s) \<in> M"
   assumes step: "\<And>s s'. C s \<Longrightarrow> I (Some s) \<Longrightarrow> B s = Some s' \<Longrightarrow> I (Some s')"
   assumes final: "\<And>s. C s \<Longrightarrow> I (Some s) \<Longrightarrow> B s = None \<Longrightarrow> I None"
-  shows "I ss' \<and> (case ss' of Some s' \<Rightarrow> \<not> C s' | _ \<Rightarrow> True)" 
+  shows "I ss' \<and> (case ss' of Some s' \<Rightarrow> \<not> C s' | _ \<Rightarrow> True)"
 proof -
   def ss \<equiv> "Some s"
   obtain ss1' where "(Some s, ss1') \<in> option_while' C B"

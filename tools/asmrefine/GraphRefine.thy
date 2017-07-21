@@ -10,8 +10,11 @@
 
 theory GraphRefine
 
-imports TailrecPre GraphLangLemmas "../../lib/LemmaBucket_C"
-
+imports
+  TailrecPre
+  GraphLangLemmas
+  "../../lib/LemmaBucket_C"
+  ExtraSpecs
 begin
 
 type_synonym ('s, 'x, 'e) c_trace = "nat \<Rightarrow> (('s, 'x, 'e) com \<times> ('s, 'e) xstate) option"
@@ -340,6 +343,68 @@ proof -
     done
 qed
 
+lemma extensible_traces_to_infinite_trace_choice:
+  assumes step: "\<forall>x \<in> S. \<exists>y. (trace x, trace y) \<in> extend_rel
+          \<and> y \<in> S \<and> m x < m y"
+    and x: "x \<in> S"
+  shows "\<exists>tr. \<forall>i :: nat. \<exists>y \<in> S. \<exists>j. m y > i \<and> fst (trace y) > i
+    \<and> (trace y, (j, tr)) \<in> extend_rel"
+proof -
+
+  let ?P = "\<lambda>i x. m x \<ge> i \<and> fst (trace x) \<ge> i \<and> x \<in> S"
+  let ?Q = "\<lambda>x y. m y > m x \<and> (trace x, trace y) \<in> extend_rel"
+
+  have induct:
+    "\<And>x n. ?P n x \<Longrightarrow> \<exists>y. ?P (Suc n) y \<and> ?Q x y"
+    apply clarsimp
+    apply (frule step[THEN bspec])
+    apply clarsimp
+    apply (rule_tac x=y in exI)
+    apply simp
+    done
+
+  obtain f where f: "\<forall>n. ?P n (f n) \<and> ?Q (f n) (f (Suc n))"
+    using x dependent_nat_choice[where P="?P" and Q="\<lambda>_. ?Q"]
+    by (simp only: induct, auto)
+
+  have f_induct: "\<And>i. m (f i) \<ge> i \<and> fst (trace (f i)) \<ge> i \<and> f i \<in> S"
+    apply (cut_tac n=i in f[rule_format], simp)
+    done
+
+  have f_eq: "\<forall>i j k. i \<le> fst (trace (f j)) \<longrightarrow> j \<le> k
+     \<longrightarrow> fst (trace (f j)) \<le> fst (trace (f k)) \<and> snd (trace (f k)) i = snd (trace (f j)) i"
+    apply (intro allI, induct_tac k)
+     apply simp
+    apply clarsimp
+    apply (cut_tac i=n in f_induct[rule_format], clarsimp)
+    apply (cut_tac n=n in f[rule_format], simp)
+    apply (clarsimp simp: fun_eq_iff restrict_map_def linorder_not_le split_def
+                   split: if_split_asm)
+    apply (drule_tac x=i in spec)
+    apply (auto simp: le_Suc_eq)
+    done
+
+  have f_norm:
+    "\<forall>i j. j \<le> fst (trace (f i)) \<longrightarrow> snd (trace (f i)) j = snd (trace (f j)) j"
+    apply clarsimp
+    apply (cut_tac i=j and j="min i j" and k="max i j" in f_eq[rule_format])
+      apply (simp add: min_def linorder_not_le f_induct)
+     apply simp
+    apply (simp add: min_def max_def split: if_split_asm)
+    done
+
+  show "?thesis"
+    apply (rule_tac x="\<lambda>i. snd (trace (f i)) i" in exI)
+    apply (clarsimp simp: split_def)
+    apply (rule_tac x="f (Suc i)" in bexI)
+     apply (cut_tac i="Suc i" in f_induct)
+     apply (clarsimp simp: fun_eq_iff restrict_map_def f_norm
+                 simp del: funpow.simps)
+     apply (metis lessI)
+    apply (simp add: f_induct del: funpow.simps)
+    done
+qed
+
 lemma trace_end_None_ge_seq:
   "tr \<in> nat_trace_rel c R
     \<Longrightarrow> \<forall>i. \<exists>j \<ge> i. tr j \<noteq> None
@@ -443,10 +508,6 @@ proof -
     apply simp
     done
 
-  { fix S' Q'
-    note bchoice[where Q="\<lambda>x y. y \<in> S' \<and> Q' x y", folded Bex_def]
-  } note bbchoice = this
-
   have infinite_case:
     "\<And>v' n1 tr1. \<forall>v \<in> M n1 tr1. \<exists>v' \<in> M n1 tr1. fst v' > fst v \<and> (snd v, snd v') \<in> extend_rel
         \<Longrightarrow> tr \<in> exec_trace GGamma gf
@@ -455,11 +516,10 @@ proof -
             \<and> restrict_map tr' {.. n1} = restrict_map tr1 {.. n1}
             \<and> trace_end tr' = None
             \<and> tr' \<in> c_trace SGamma"
-    apply (drule bbchoice)
-    apply (elim exE)
-    apply (frule_tac trace=snd and m=fst and f=f
-          in extensible_traces_to_infinite_trace[rotated])
-     apply simp
+    apply (drule extensible_traces_to_infinite_trace_choice[where
+          trace=snd and m=fst, rotated])
+     apply (rule ballI, drule(1) bspec)
+     apply fastforce
     apply (erule exE, rename_tac tr')
     apply (rule_tac x=tr' in exI)
     apply (rule conjI)
@@ -935,9 +995,10 @@ lemma trace_end_Ret_Err:
          auto simp: exec_graph_invariant_def)
   done
 
-lemma graph_fun_refines_from_simpl_to_graph:
+lemma graph_fun_refines_from_simpl_to_graph_with_refine:
   "\<lbrakk> SGamma proc = Some com; GGamma fname = Some gf;
-    \<And>Q. simpl_to_graph SGamma GGamma fname (NextNode (entry_point gf)) (add_cont com []) 0
+    simple_simpl_refines SGamma com' com;
+    \<And>Q. simpl_to_graph SGamma GGamma fname (NextNode (entry_point gf)) (add_cont com' []) 0
         [Q] UNIV I eqs
         (\<lambda>s s'. map (\<lambda>i. var_acc i s) (function_outputs gf) = map (\<lambda>i. i s') outs);
         eq_impl (NextNode (entry_point gf))
@@ -949,8 +1010,8 @@ lemma graph_fun_refines_from_simpl_to_graph:
   apply (clarsimp simp: graph_fun_refines_def)
   apply (frule exec_trace_def[THEN eqset_imp_iff, THEN iffD1])
   apply clarsimp
-  apply (erule_tac x="UNIV \<times> {[0 \<mapsto> (com, Normal s)]}" in meta_allE)
-  apply (drule_tac tr=tr and tr'="[0 \<mapsto> (com, Normal s)]"
+  apply (erule_tac x="UNIV \<times> {[0 \<mapsto> (com', Normal s)]}" in meta_allE)
+  apply (drule_tac tr=tr and tr'="[0 \<mapsto> (com', Normal s)]"
           and n'=0 and n''=0 and sst=s in simpl_to_graphD)
    apply (rule conjI, assumption)
    apply (simp add: suffix_tuple_closure_inter_def exec_trace_def)
@@ -967,15 +1028,22 @@ lemma graph_fun_refines_from_simpl_to_graph:
     apply clarsimp
     apply (drule step_preserves_termination[rotated])
      apply (erule step.Call)
-    apply (simp add: c_trace_nontermination)
+    apply (drule simple_simpl_refines_no_fault_terminatesD)
+     apply (blast intro: exec.Call)
+    apply (simp add: c_trace_nontermination simple_simpl_refines_def)
    apply (frule(1) trace_end_Ret_Err)
    apply (clarsimp simp: exec_final_step_def acc_vars_def)
    apply metis
   apply clarsimp
-  apply (erule exec.Call)
+  apply (rule exec.Call, assumption)
+  apply (erule simple_simpl_refines_no_fault_execD[rotated])
+   apply (blast intro: exec.Call)
   apply (simp add: exec_via_trace)
   apply metis
   done
+
+lemmas graph_fun_refines_from_simpl_to_graph
+    = graph_fun_refines_from_simpl_to_graph_with_refine[OF _ _ simple_simpl_refines_refl]
 
 lemma simpl_to_graph_name_simpl_state:
   "(\<And>sst. sst \<in> P \<Longrightarrow> simpl_to_graph SGamma GGamma gf nn com n traces {sst} I inp_eqs out_eqs)
@@ -1596,16 +1664,16 @@ definition
   store_word32s_equality :: "word32 \<Rightarrow> (word32 \<times> word32) list
     \<Rightarrow> (word32 \<times> word32) list \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> bool"
 where
-  "store_word32s_equality p xs ys hp hp' \<equiv> 
+  "store_word32s_equality p xs ys hp hp' \<equiv>
     fold (apply_store_word32 p) xs hp = fold (apply_store_word32 p) ys hp'"
 
-lemma store_word32s_equality_fold:                                                                                 
+lemma store_word32s_equality_fold:
   "p' - p AND 3 = 0 \<Longrightarrow>
     (store_word32 p w hp = store_word32 p' w' hp')
     = store_word32s_equality p [(0, w)] [(p' - p, w')] hp hp'"
   "p' - p AND 3 = 0 \<Longrightarrow>
     store_word32s_equality p xs ys (store_word32 p' w' hp) hp'
-        = store_word32s_equality p ((p' - p, w') # xs) ys hp hp'"                                               
+        = store_word32s_equality p ((p' - p, w') # xs) ys hp hp'"
   "p' - p AND 3 = 0 \<Longrightarrow>
     store_word32s_equality p xs ys hp (store_word32 p' w' hp')
         = store_word32s_equality p xs ((p' - p, w') # ys) hp hp'"
@@ -1798,7 +1866,7 @@ datatype hints = Hints of { deps: (string * term) list Inttab.table,
 fun mk_graph_eqs Gamma (Hints hints) nm n = let
     val vs = case (Inttab.lookup (#deps hints) n) of
       SOME vs => vs
-    | NONE => raise TERM ("mk_graph_eqs: " ^ nm ^ " " ^ string_of_int n, []) 
+    | NONE => raise TERM ("mk_graph_eqs: " ^ nm ^ " " ^ string_of_int n, [])
     val sT = gammaT_to_stateT (fastype_of Gamma)
     val sst = Free ("sst", sT)
 
@@ -1981,7 +2049,7 @@ fun simpl_ss ctxt = put_simpset HOL_basic_ss ctxt
 
 val immediates = @{thms
     simpl_to_graph_Skip_immediate simpl_to_graph_Throw_immediate}
-                        
+
 fun except_tac ctxt msg = SUBGOAL (fn (t, _) => let
   in warning msg; Syntax.pretty_term ctxt t |> Pretty.writeln;
     raise TERM (msg, [t]) end)
@@ -2222,7 +2290,7 @@ fun get_var_deps nodes ep outputs = let
       (maps (Inttab.lookup_list preds) [~1, ~2])
   in (preds, deps) end
 
-fun get_loop_var_upd_nodes nodes = 
+fun get_loop_var_upd_nodes nodes =
     nodes
     |> filter (snd #> (fn (@{term Basic} $ _ $ _) => true | _ => false))
     |> filter (snd #> get_lvals_rvals #> fst
@@ -2259,17 +2327,17 @@ fun mk_hints (funs : ParseGraph.funs) ctxt nm = case Symtab.lookup funs nm of
     err_conds = ec} end
 
 fun init_graph_refines_proof funs nm ctxt = let
-    val body_thm = Proof_Context.get_thm ctxt
-            (Long_Name.base_name nm ^ "_body_def")
+    val body_ref_thm = Get_Body_Refines.get ctxt (Long_Name.base_name nm)
     val ct = mk_graph_refines funs ctxt nm |> Thm.cterm_of ctxt
   in Thm.trivial ct
-    |> (resolve0_tac [@{thm graph_fun_refines_from_simpl_to_graph}] 1
+    |> (resolve_tac ctxt [@{thm graph_fun_refines_from_simpl_to_graph_with_refine}] 1
         THEN apply_impl_thm ctxt 1
         THEN graph_gamma_tac ctxt 1
-        THEN ALLGOALS (simp_tac (put_simpset HOL_basic_ss ctxt addsimps [body_thm]
+        THEN resolve_tac ctxt [body_ref_thm] 1
+        THEN ALLGOALS (simp_tac (put_simpset HOL_basic_ss ctxt
             addsimps @{thms entry_point.simps function_inputs.simps
                             function_outputs.simps list.simps}))
-        THEN TRY ((resolve0_tac [@{thm simpl_to_graph_noop_same_eqs}]
+        THEN TRY ((resolve_tac ctxt [@{thm simpl_to_graph_noop_same_eqs}]
             THEN' inst_graph_tac ctxt) 1)
     )
     |> Seq.hd

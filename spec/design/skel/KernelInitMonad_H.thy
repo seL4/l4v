@@ -54,7 +54,7 @@ where
     returnOk r
   odE"
 
-consts 
+consts
   itASID :: asid
   biCapNull :: machine_word
   biCapITTCB :: machine_word

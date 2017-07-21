@@ -8,10 +8,10 @@
  * @TAG(NICTA_GPL)
  *)
 
-(* Collects general lemmas in the capDL refinement proof. 
+(* Collects general lemmas in the capDL refinement proof.
    Those should eventually be moved to Lib.
 
-   Also defines a single entry point for all drefine theories 
+   Also defines a single entry point for all drefine theories
    in which global simpset and notation changes can be made.
 *)
 

@@ -158,7 +158,7 @@ fun build_annotate asm =
       | _ => raise SAME) | _ => raise SAME;
 
 
-val put_Lib_simpset =  put_simpset (Simplifier.simpset_of (Proof_Context.init_global @{theory Lib})) 
+val put_Lib_simpset =  put_simpset (Simplifier.simpset_of (Proof_Context.init_global @{theory Lib}))
 
 
 fun in_mresults_ctxt ctxt = ctxt
@@ -171,7 +171,7 @@ fun prove_qad ctxt term tac = Goal.prove ctxt [] [] term
       then ALLGOALS (Skip_Proof.cheat_tac ctxt)
       else tac));
 
-fun preannotate_ss ctxt = ctxt 
+fun preannotate_ss ctxt = ctxt
   |> put_simpset HOL_basic_ss
   |> (fn ctxt => ctxt addsimps [@{thm K_bind_def}])
   |> simpset_of
@@ -185,7 +185,7 @@ fun in_mresults_ss ctxt = ctxt
 
 val in_mresults_cs = Classical.claset_of (Proof_Context.init_global @{theory Lib});
 
-fun annotate_tac ctxt asm = let 
+fun annotate_tac ctxt asm = let
     val asm' = simplify (put_simpset (preannotate_ss ctxt) ctxt) asm;
     val annotated = build_annotate (Thm.concl_of asm');
     val ctxt' = Classical.put_claset in_mresults_cs (put_simpset (in_mresults_ss ctxt) ctxt)

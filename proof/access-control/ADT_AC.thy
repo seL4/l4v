@@ -67,7 +67,7 @@ lemma ptr_offset_in_ptr_range:
   apply (rule conjI)
    apply (rule_tac b="2 ^ sz - 1" in word_plus_mono_right2)
     apply (frule some_get_page_info_umapsD)
-          apply (clarsimp simp: get_pd_of_thread_reachable invs_arch_objs
+          apply (clarsimp simp: get_pd_of_thread_reachable invs_vspace_objs
                                 invs_psp_aligned invs_valid_asid_table invs_valid_objs)+
     apply (drule is_aligned_ptrFromPAddr_n)
      apply (simp add: pageBitsForSize_def split: vmpage_size.splits)
@@ -77,7 +77,7 @@ lemma ptr_offset_in_ptr_range:
   apply (rule word_plus_mono_right)
    apply (rule word_and_le1)
   apply (frule some_get_page_info_umapsD)
-        apply (clarsimp simp: get_pd_of_thread_reachable invs_arch_objs
+        apply (clarsimp simp: get_pd_of_thread_reachable invs_vspace_objs
                               invs_psp_aligned invs_valid_asid_table invs_valid_objs)+
   apply (drule is_aligned_ptrFromPAddr_n)
    apply (simp add: pageBitsForSize_def split: vmpage_size.splits)
@@ -152,12 +152,12 @@ lemma pt_in_pd_page_table_at:
   apply (clarsimp simp: get_pd_entry_def get_arch_obj_def
                   split: option.splits kernel_object.splits arch_kernel_obj.splits)
   apply (rename_tac "fun")
-  apply (subgoal_tac "valid_arch_obj (PageDirectory fun) s")
+  apply (subgoal_tac "valid_vspace_obj (PageDirectory fun) s")
    apply (simp add: kernel_mappings_slots_eq)
    apply (drule bspec)
     apply simp+
-  apply (drule invs_arch_objs)
-  apply (auto simp: obj_at_def invs_arch_objs valid_arch_objs_def)
+  apply (drule invs_vspace_objs)
+  apply (auto simp: obj_at_def invs_vspace_objs valid_vspace_objs_def)
   done
 
 lemma get_page_info_state_objs_to_policy:

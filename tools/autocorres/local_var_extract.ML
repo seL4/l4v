@@ -1419,7 +1419,7 @@ let
 
   val func_expand = map (fn fn_def => EqSubst.eqsubst_tac lthy [0]
                                         [Utils.abs_def lthy (#definition fn_def)]) fn_defs
-  val tac = 
+  val tac =
     resolve_tac lthy @{thms nat.induct} 1
       THEN EVERY (map (fn expand =>
                           TRY (resolve_tac lthy @{thms conjI} 1)
