@@ -29,7 +29,6 @@ MACHINE_FILES += ${MACHINE_PATH}/ARM/MachineTypes.thy
 design : version
 
 version : ${SKEL_FILES} ${MSKEL_FILES} ${HASKELL_FILES}
-	mkdir -p ${ARCH_DIRS}
 	${HASKELL_TRANS}
 
 clean :

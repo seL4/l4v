@@ -95,6 +95,7 @@ function send_filenames () {
     local arch=${1}
     local archnames=`cd $SKEL/${arch}; ls *.thy`
     local archmnames=`cd $MSKEL/${arch}; ls *.thy`
+    mkdir -p "$SPEC/${arch}"
     mkdir -p "$SPECNONARCH/${arch}"
 
     # Theory files common to all haskell specifications
