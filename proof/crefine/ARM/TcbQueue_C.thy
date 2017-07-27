@@ -599,7 +599,7 @@ next
       have nnull: "tn tcb \<noteq> NULL" using tq
       proof (rule tcb_queue_relation_next_not_NULL)
     	from ind_prems show "\<forall>t\<in>set tcbs. tcb_at' t s"
-	  and "distinct tcbs" by simp_all
+         and "distinct tcbs" by simp_all
 	show "tcbs \<noteq> []" using Cons by simp
       qed
 
