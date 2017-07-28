@@ -146,9 +146,7 @@ You can get away with avoiding a full cross compiler setup form the above,
 but you will need at least these:
 
     sudo apt-get install python-pip python-dev libxml2-utils
-    sudo pip install tempita
-    sudo pip install psutil
-    sudo pip install six
+    sudo pip install sel4-deps
 
 *On MacOS*: here it is harder to get a full cross-compiler setup going. For
 normal proof development, a full setup is not necessary, though. You mostly
@@ -159,7 +157,8 @@ need a gcc-compatible C pre-processor and python. Try the following steps:
     XCode installed, run `gcc --version` in a terminal window. If it reports a
     version, you're set. Otherwise it should pop up a window and prompt for
     installation of the command line tools.
-  * install `Tempita`, for instance using `sudo easy_install tempita`.
+  * install the seL4 Python dependencies, for instance using
+    `sudo easy_install sel4-deps`.
     `easy_install` is part of Python's [`setuptools`][9].
   * install the [`misc/scripts/cpp`](misc/scripts/cpp) wrapper for clang,
     by putting it in `~/bin`, or somewhere else in your `PATH`.
