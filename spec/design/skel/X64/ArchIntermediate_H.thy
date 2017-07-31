@@ -39,7 +39,7 @@ private abbreviation (input)
 defs Arch_createNewCaps_def:
 "Arch_createNewCaps t regionBase numObjects userSize dev \<equiv>
     let pointerCast = PPtr \<circ> fromPPtr
-    in (case t of 
+    in (case t of
           APIObjectType apiObject \<Rightarrow> haskell_fail []
         | SmallPageObject \<Rightarrow>
             createNewPageCaps regionBase numObjects dev 0 X64SmallPage
