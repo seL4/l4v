@@ -45,6 +45,7 @@ creating the "Capability" objects used at higher levels of the kernel.
 
 > import Data.Bits
 > import qualified Data.Set
+> import Data.WordLib
 
 \end{impdetails}
 

@@ -34,6 +34,7 @@ This module contains operations on machine-specific object types for the ARM.
 > import {-# SOURCE #-} SEL4.Object.TCB
 
 > import Data.Bits
+> import Data.WordLib
 
 \end{impdetails}
 
@@ -76,6 +77,14 @@ None of the ARM-specific capabilities have a user writeable data word.
 
 > updateCapData :: Bool -> Word -> ArchCapability -> Capability
 > updateCapData _ _ cap = ArchObjectCap cap
+
+CNodes have differing numbers of guard bits and rights bits
+
+> cteRightsBits :: Int
+> cteRightsBits = 3
+
+> cteGuardBits :: Int
+> cteGuardBits = wordSizeCase 18 48
 
 Page capabilities have read and write permission bits, which are used to restrict virtual memory accesses to their contents. Note that the ability to map objects into a page table or page directory is granted by possession of a capability to it; there is no specific permission bit restricting this ability.
 

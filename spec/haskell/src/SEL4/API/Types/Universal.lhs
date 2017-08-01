@@ -12,6 +12,8 @@ This module defines the set of kernel object types that are available on all imp
 
 > module SEL4.API.Types.Universal where
 
+> import Data.WordLib
+
 \subsection{Types}
 
 \subsubsection{Object Types}
@@ -32,13 +34,13 @@ The following is the definition of the five object types that are always availab
 > tcbBlockSizeBits = 9
 
 > epSizeBits :: Int
-> epSizeBits = 5
+> epSizeBits = wordSizeCase 4 5
 
 > ntfnSizeBits :: Int
-> ntfnSizeBits = 5
+> ntfnSizeBits = wordSizeCase 4 5
 
 > cteSizeBits :: Int
-> cteSizeBits = 5
+> cteSizeBits = wordSizeCase 4 5
 
 > apiGetObjectSize :: APIObjectType -> Int -> Int
 > apiGetObjectSize Untyped size = size

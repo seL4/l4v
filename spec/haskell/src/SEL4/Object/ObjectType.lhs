@@ -41,6 +41,7 @@ We use the C preprocessor to select a target architecture.
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 
 > import Data.Bits
+> import Data.WordLib
 
 \end{impdetails}
 
@@ -255,16 +256,11 @@ The total of the guard size and the radix of the node cannot exceed the number o
 >         capCNodeGuard = guard,
 >         capCNodeGuardSize = guardSize }
 >     where
->         guard = (w `shiftR` (rightsBits + guardSizeBits)) .&.
->             mask guardBits .&. mask guardSize
->         guardSize = fromIntegral $ (w `shiftR` rightsBits) .&.
+>         guard = (w `shiftR` (Arch.cteRightsBits + guardSizeBits)) .&.
+>             mask Arch.cteGuardBits .&. mask guardSize
+>         guardSize = fromIntegral $ (w `shiftR` Arch.cteRightsBits) .&.
 >             mask guardSizeBits
->         rightsBits = 2
->         guardBits = 18
->         guardSizeBits = case finiteBitSize w of
->             32 -> 5
->             64 -> 6
->             _ -> error "Unknown word size"
+>         guardSizeBits = wordSizeCase 5 6
 
 > updateCapData p w (ArchObjectCap { capCap = aoCap }) =
 >     Arch.updateCapData p w aoCap

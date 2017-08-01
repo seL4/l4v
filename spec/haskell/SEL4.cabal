@@ -90,6 +90,7 @@ Library
                             SEL4.Config
                             Data.BinaryTree
                             Data.Helpers
+                            Data.WordLib
 
                             SEL4.Machine.Hardware.GICInterface
                             SEL4.Machine.Hardware.MCTInterface

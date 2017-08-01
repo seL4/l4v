@@ -113,6 +113,14 @@ X64 has two writable user data caps
 >--     else error "first port must be less than last"
 > updateCapData _ _ c = ArchObjectCap c
 
+CNodes have differing numbers of guard bits and rights bits
+
+> cteRightsBits :: Int
+> cteRightsBits = 2
+
+> cteGuardBits :: Int
+> cteGuardBits = 18
+
 Page capabilities have read and write permission bits, which are used to restrict virtual memory accesses to their contents. Note that the ability to map objects into a page table or page directory is granted by possession of a capability to it; there is no specific permission bit restricting this ability.
 
 > maskCapRights :: CapRights -> ArchCapability -> Capability

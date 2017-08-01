@@ -22,6 +22,7 @@ There are presently no x64-specific register subsets defined, but in future this
 > import SEL4.Object.Structures
 > import SEL4.API.Failures
 > import SEL4.API.Invocation.X64
+> import SEL4.Machine.RegisterSet(UserMonad, VPtr(..))
 > import SEL4.Machine.RegisterSet.X64
 > import Data.Bits
 
@@ -42,7 +43,7 @@ There are presently no x64-specific register subsets defined, but in future this
 > sanitiseAndFlags = (bit 12 - 1) .&. (complement (bit 3)) .&. (complement (bit 5)) .&. (complement (bit 8)) -- should be 0x111011010111
 
 > -- FIXME x64: implement from abstract
-> sanitiseRegister :: TCB -> Register -> Word -> Word
+> sanitiseRegister :: Bool -> Register -> Word -> Word
 > sanitiseRegister _ r v =
 >     let val = if r == FaultIP || r == NextIP then
 >                  if v > 0x00007fffffffffff && v < 0xffff800000000000 then 0 else v
@@ -52,4 +53,11 @@ There are presently no x64-specific register subsets defined, but in future this
 >         if r == FLAGS then
 >             (val' .|. sanitiseOrFlags) .&. sanitiseAndFlags
 >         else val'
+
+> getSanitiseRegisterInfo :: PPtr TCB -> Kernel Bool
+> getSanitiseRegisterInfo _ = return False
+
+> setTCBIPCBuffer :: VPtr -> UserMonad ()
+> setTCBIPCBuffer ptr = return ()
+
 

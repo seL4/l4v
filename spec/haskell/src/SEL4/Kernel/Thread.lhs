@@ -37,6 +37,7 @@ We use the C preprocessor to select a target architecture.
 
 > import Data.Bits
 > import Data.Array
+> import Data.WordLib
 
 \end{impdetails}
 

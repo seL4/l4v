@@ -36,6 +36,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > import Data.Array
 > import Data.Bits
+> import Data.WordLib
 
 \end{impdetails}
 
@@ -423,30 +424,6 @@ Each entry in the domain schedule specifies a domain and a length (a number of t
 > dschDomain = fst
 > dschLength :: (Domain, Word) -> Word
 > dschLength = snd
-
-Convenience functions dealing with properties of the machine word:
-\begin{itemize}
-\item Number of bits in a word
-\item Radix $n$ such that $2^n$ is the number of bits in the word
-\item Bytes required to store a word
-\item Selecting one of two alternatives depending on the size of the machine word
-      (32 or 64 bits)
-\end{itemize}
-
-> wordBits :: Int
-> wordBits = finiteBitSize (undefined::Word)
-
-> wordRadix :: Int
-> wordRadix = wordSizeCase 5 6
-
-> wordSize :: Int
-> wordSize = wordBits `div` 8
-
-> wordSizeCase :: a -> a -> a
-> wordSizeCase a b = case wordBits of
->         32 -> a
->         64 -> b
->         _ -> error "Unknown word size"
 
 > isReceive :: ThreadState -> Bool
 > isReceive (BlockedOnReceive _) = True

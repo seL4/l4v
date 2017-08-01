@@ -41,6 +41,7 @@ The architecture-specific definitions are imported qualified with the "Arch" pre
 > import Data.Array
 > import qualified Data.Set
 > import Data.Helpers
+> import Data.WordLib
 > import Control.Monad
 > import Control.Monad.State
 

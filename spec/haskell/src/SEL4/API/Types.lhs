@@ -29,6 +29,7 @@ We use the C preprocessor to select a target architecture. Also, this file makes
 
 > import Data.Bits
 > import Data.Word(Word8 , Word32)
+> import Data.WordLib
 
 \end{impdetails}
 
@@ -186,7 +187,7 @@ The maximum number of capabilities passed as arguments to a method invocation. T
 > msgMaxExtraCaps = bit msgExtraCapBits - 1
 
 > msgAlignBits :: Int
-> msgAlignBits = 10
+> msgAlignBits = wordSizeCase 9 10
 
 \subsection{Capability Transfers}
 

@@ -136,8 +136,8 @@ Every table is one small page in size.
 >     cbptr <- ask
 >     liftIO $ Platform.loadWordCallback cbptr $ addrFromPPtr ptr
 
-> getActiveIRQ :: MachineMonad (Maybe IRQ)
-> getActiveIRQ = do
+> getActiveIRQ :: Bool -> MachineMonad (Maybe IRQ)
+> getActiveIRQ _ = do
 >     cbptr <- ask
 >     liftIO $ Platform.getActiveIRQ cbptr
 

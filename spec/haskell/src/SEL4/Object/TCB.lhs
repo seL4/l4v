@@ -56,6 +56,7 @@ This module uses the C preprocessor to select a target architecture.
 > import Data.Bits
 > import Data.List(genericTake, genericLength)
 > import Data.Maybe()
+> import Data.WordLib
 > import Control.Monad.State(runState)
 
 \end{impdetails}
