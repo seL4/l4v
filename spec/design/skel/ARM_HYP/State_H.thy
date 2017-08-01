@@ -28,6 +28,22 @@ where
   Word_def[simp]:
  "Word \<equiv> id"
 
+#INCLUDE_HASKELL Data/WordLib.lhs all_bits ONLY wordBits
+
+end
+
+context begin interpretation Arch .
+
+requalify_consts
+  wordBits
+
+end
+
+#INCLUDE_HASKELL Data/WordLib.lhs all_bits NOT wordBits
+
+context Arch begin global_naming ARM_HYP_H
+
+
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet.lhs Arch=ARM_HYP CONTEXT ARM_HYP_H all_bits NOT UserContext UserMonad getRegister setRegister newContext mask Word PPtr
 
 definition

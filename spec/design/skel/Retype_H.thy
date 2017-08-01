@@ -25,6 +25,7 @@ requalify_consts
   sameObjectAs updateCapData maskCapRights
   createObject capUntypedPtr capUntypedSize
   performInvocation decodeInvocation prepareThreadDelete
+  cteRightsBits cteGuardBits
 
 context begin global_naming global
 
