@@ -242,9 +242,9 @@ lemma pac_corres:
            updateFreeIndex_caps_overlap_reserved
              | simp add: descendants_of_null_filter' split del: if_split)+
        apply (wp get_cap_wp)+
-     apply (subgoal_tac "word1 && ~~ mask pageBits = word1 \<and> pageBits \<le> word_bits \<and> 2 \<le> pageBits")
+     apply (subgoal_tac "word1 && ~~ mask pageBits = word1 \<and> pageBits \<le> word_bits \<and> word_size_bits \<le> pageBits")
       prefer 2
-      apply (clarsimp simp:pageBits_def word_bits_def is_aligned_neg_mask_eq)
+      apply (clarsimp simp:pageBits_def word_bits_def is_aligned_neg_mask_eq word_size_bits_def)
      apply (simp only:delete_objects_rewrite)
      apply wp+
     apply (clarsimp simp: conj_comms)

@@ -99,7 +99,8 @@ lemma cap_relation_NullCap:
                       split del: if_split)
      apply simp
     apply simp
-   apply (clarsimp simp: word_size word_size_def cnode_padding_bits_def cnode_guard_size_bits_def)
+   apply (clarsimp simp: word_size word_size_def cnode_padding_bits_def cnode_guard_size_bits_def
+                         cteRightsBits_def cteGuardBits_def)
   apply (clarsimp simp: X64_H.updateCapData_def isCap_simps split del: if_split)
   done
 
@@ -596,7 +597,7 @@ text {* Various proofs about the two recursive deletion operations.
 text {* Proving the termination of rec_del *}
 
 crunch typ_at[wp]: cancel_ipc "\<lambda>s. P (typ_at T p s)"
-  (wp: crunch_wps hoare_vcg_split_ifE simp: crunch_simps)
+  (wp: crunch_wps hoare_vcg_if_splitE simp: crunch_simps)
 
 declare if_split [split]
 
@@ -610,7 +611,7 @@ declare word_unat_power [symmetric, simp del]
 (* FIXME: move *)
 lemma finalise_cap_not_reachable_pg_cap:
   "\<lbrace>pspace_aligned and
-       valid_arch_objs and
+       valid_vspace_objs and
        valid_objs and valid_arch_state and
        cte_wp_at (op = cap) slot and
        (\<lambda>s. valid_asid_table (x64_asid_table (arch_state s)) s)

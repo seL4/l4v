@@ -449,7 +449,7 @@ proof -
                              X64_H.updateCapData_def)
   -- CNodeCap
   apply (simp add: simps word_bits_def the_cnode_cap_def andCapRights_def
-                   rightsFromWord_def data_to_rights_def nth_ucast)
+                   rightsFromWord_def data_to_rights_def nth_ucast cteRightsBits_def cteGuardBits_def)
   apply (insert x)
   apply (subgoal_tac "unat ((x >> 2) && mask 6) < unat (2^6::machine_word)")
    prefer 2

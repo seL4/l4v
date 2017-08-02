@@ -43,7 +43,7 @@ lemma irq_state_independent_H_disjI[intro]:
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma dmo_getirq_inv[wp]:
-  "irq_state_independent_H P \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp getActiveIRQ \<lbrace>\<lambda>rv. P\<rbrace>"
+  "irq_state_independent_H P \<Longrightarrow> \<lbrace>P\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: getActiveIRQ_def doMachineOp_def split_def exec_gets
                    select_f_select[simplified liftM_def]
                    select_modify_comm gets_machine_state_modify)
@@ -52,7 +52,7 @@ lemma dmo_getirq_inv[wp]:
   done
 
 lemma getActiveIRQ_masked:
-  "\<lbrace>\<lambda>s. valid_irq_masks' table (irq_masks s)\<rbrace> getActiveIRQ
+  "\<lbrace>\<lambda>s. valid_irq_masks' table (irq_masks s)\<rbrace> getActiveIRQ in_kernel
   \<lbrace>\<lambda>rv s. \<forall>irq. rv = Some irq \<longrightarrow> table irq \<noteq> IRQInactive\<rbrace>"
   apply (simp add: getActiveIRQ_def)
   apply wp
@@ -87,7 +87,7 @@ lemma setIRQState_irq_states':
   done
 
 lemma getActiveIRQ_le_maxIRQ:
-  "\<lbrace>irqs_masked' and valid_irq_states'\<rbrace> doMachineOp getActiveIRQ \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
+  "\<lbrace>irqs_masked' and valid_irq_states'\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
   apply wp
   apply clarsimp
@@ -99,7 +99,7 @@ lemma getActiveIRQ_le_maxIRQ:
 
 (* FIXME: follows already from getActiveIRQ_le_maxIRQ *)
 lemma getActiveIRQ_neq_Some0xFF:
-  "\<lbrace>\<top>\<rbrace> doMachineOp getActiveIRQ \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ in_kernel) \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
   apply wp
   apply clarsimp

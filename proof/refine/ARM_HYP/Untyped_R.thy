@@ -224,7 +224,7 @@ next
      apply (clarsimp simp: cte_map_def)
      apply (subst of_bl_nat_to_cref)
        apply simp
-      apply simp
+      apply (simp add: word_bits_def)
      apply (subst S)
        apply simp
       apply simp

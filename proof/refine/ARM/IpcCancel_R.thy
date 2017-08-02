@@ -697,8 +697,8 @@ lemma cancelSignal_invs':
         apply (clarsimp split: if_split_asm)
           subgoal
           by (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
-                               tcb_bound_refs'_def ntfn_q_refs_of'_def
-                        split: ntfn.splits)
+                               tcb_bound_refs'_def ntfn_q_refs_of'_def obj_at'_def projectKOs
+                        split: ntfn.splits option.splits)
          subgoal
          by (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
                                 tcb_bound_refs'_def)

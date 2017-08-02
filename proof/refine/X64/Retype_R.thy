@@ -5847,12 +5847,12 @@ lemma corres_retype_region_createNewCaps:
   -- "PML4"
   apply (corressimp corres: corres_retype[where ty="Inr PML4Object" and 'a=pml4e and sz=sz,
                                           simplified, folded retype_region2_retype_region_PML4Obj]
-                   corresK: corresK_mapM_x[where S="op =" and F="op ="
-                                             and I="\<lambda>xs s. valid_arch_state s \<and> pspace_aligned s
-                                                             \<and> valid_etcbs s
-                                                             \<and> (\<forall>x \<in> set xs. page_map_l4_at x s)"
-                                             and I'="\<lambda>ys s. valid_arch_state' s
-                                                             \<and> (\<forall>y \<in> set ys. page_map_l4_at' y s)"]
+                   corresK: corresK_mapM_x_list_all2[where I="\<lambda>xs s. valid_arch_state s \<and> pspace_aligned s
+                                                             \<and> valid_etcbs s \<and>
+                                                            (\<forall>x \<in> set xs. page_map_l4_at x s)"
+                                             and I'="\<lambda>xs s. valid_arch_state' s \<and>
+                                                             (\<forall>x \<in> set xs. page_map_l4_at' x s)"
+                                             and S="op ="]
                         wp: copy_global_mappings_typ_at hoare_vcg_ball_lift retype_region_pml4_at
                             retype_region_valid_arch[where sz=sz] retype_region_aligned[where sz=sz]
                             createObjects_valid_arch[where sz=sz] createObjects_pml4_at[where sz=sz]

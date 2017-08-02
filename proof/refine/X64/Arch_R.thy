@@ -571,7 +571,7 @@ lemma userVTop_conv[simp]: "userVTop = user_vtop"
   by (simp add: userVTop_def user_vtop_def)
 
 lemma find_vspace_for_asid_lookup_slot [wp]:
-  "\<lbrace>pspace_aligned and valid_arch_objs\<rbrace>
+  "\<lbrace>pspace_aligned and valid_vspace_objs\<rbrace>
   find_vspace_for_asid asid
   \<lbrace>\<lambda>rv. \<exists>\<rhd> (lookup_pml4_slot rv vptr && ~~ mask pml4_bits)\<rbrace>, -"
   apply (rule hoare_pre)
@@ -619,7 +619,7 @@ lemma decode_page_inv_corres:
      apply (rule corres_splitEE)
         prefer 2
         apply (rule corres_lookup_error)
-        apply (rule_tac P="valid_arch_state and valid_arch_objs and
+        apply (rule_tac P="valid_arch_state and valid_vspace_objs and
                              pspace_aligned and equal_kernel_mappings and valid_global_objs and
                              valid_cap (cap.ArchObjectCap
                                          (arch_cap.PML4Cap wd (Some optv)))"
@@ -629,7 +629,7 @@ lemma decode_page_inv_corres:
          apply (simp add: mask_def)
         apply assumption
        apply (rule whenE_throwError_corres, simp, simp)
-       apply (rule_tac R="\<lambda>_ s. valid_arch_objs s \<and> pspace_aligned s
+       apply (rule_tac R="\<lambda>_ s. valid_vspace_objs s \<and> pspace_aligned s
                                   \<and> (hd args && user_vtop) + (2 ^ pageBitsForSize sz - 1) \<le> user_vtop \<and>
                                   valid_arch_state s \<and> equal_kernel_mappings s \<and> valid_global_objs s \<and>
                                   s \<turnstile> (fst (hd excaps)) \<and> (\<exists>\<rhd> (lookup_pml4_slot (obj_ref_of (fst (hd excaps))) (hd args) && ~~ mask pml4_bits)) s \<and>
@@ -722,7 +722,7 @@ lemma decode_page_inv_corres:
              apply (rule corres_returnOk)
              apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
             apply (wp)+
-          apply (subgoal_tac "valid_arch_objs s \<and> pspace_aligned s \<and>
+          apply (subgoal_tac "valid_vspace_objs s \<and> pspace_aligned s \<and>
                                 (snd v') < pptr_base \<and> canonical_address (snd v') \<and>
                                 equal_kernel_mappings s \<and> valid_global_objs s \<and> valid_arch_state s \<and>
                                 (*(\<exists>\<rhd> (lookup_pml4_slot (fst pa) (snd v') && ~~ mask pml4_bits)) s \<and>*)
@@ -813,7 +813,7 @@ lemma decode_page_table_inv_corres:
                      | wp hoare_whenE_wp hoare_vcg_all_lift_R getPDE_wp get_pde_wp
                      | wp_once hoare_drop_imps)+)[6]
       apply (clarsimp intro!: validE_R_validE)
-      apply (rule_tac Q'="\<lambda>rv s.  pspace_aligned s \<and> valid_arch_objs s \<and> valid_arch_state s \<and>
+      apply (rule_tac Q'="\<lambda>rv s.  pspace_aligned s \<and> valid_vspace_objs s \<and> valid_arch_state s \<and>
                            equal_kernel_mappings s \<and> valid_global_objs s \<and>
                            (\<exists>ref. (ref \<rhd> rv) s) \<and> typ_at (AArch APageMapL4) rv s \<and>
                            is_aligned rv pml4_bits"
@@ -915,7 +915,7 @@ lemma decode_page_directory_inv_corres:
                         | wp hoare_whenE_wp hoare_vcg_all_lift_R getPDPTE_wp get_pdpte_wp
                         | wp_once hoare_drop_imps)+)[6]
       apply (clarsimp intro!: validE_R_validE)
-      apply (rule_tac Q'="\<lambda>rv s.  pspace_aligned s \<and> valid_arch_objs s \<and> valid_arch_state s \<and>
+      apply (rule_tac Q'="\<lambda>rv s.  pspace_aligned s \<and> valid_vspace_objs s \<and> valid_arch_state s \<and>
                            equal_kernel_mappings s \<and> valid_global_objs s \<and>
                            (\<exists>ref. (ref \<rhd> rv) s) \<and> typ_at (AArch APageMapL4) rv s \<and>
                            is_aligned rv pml4_bits"
@@ -1359,22 +1359,29 @@ lemma corresK_machine_op[corresK]: "corres_underlyingK Id False True F r P Q x x
   apply (clarsimp simp add: corres_underlyingK_def)
   by (erule corres_machine_op)
 
-lemma port_in_corres:
+lemma port_in_corres[corres]:
   "no_fail \<top> a \<Longrightarrow> corres dc (einvs and ct_active) (invs' and ct_active') (port_in a) (portIn a)"
   apply (clarsimp simp: port_in_def portIn_def)
-  apply (corressimp corres: gct_corres set_mrs_corres set_mi_corres)
-   apply (rule corresK_drop, rule corres_Id[where r="op ="], simp, simp, simp)
-  apply (corressimp corres: gct_corres set_mrs_corres set_mi_corres)+
-  by (clarsimp simp: invs_def invs'_def cur_tcb_def cur_tcb'_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_eqr[OF _ gct_corres])
+      apply (rule corres_split_eqr)
+         apply (rule corres_split_eqr[OF set_mi_corres set_mrs_corres])
+            apply wpsimp+
+        apply (rule corres_machine_op[OF corres_Id], simp+)
+       apply wpsimp+
+  done
 
-lemma port_out_corres:
+lemma port_out_corres[@lift_corres_args, corres]:
   "no_fail \<top> (a w) \<Longrightarrow> corres dc (einvs and ct_active) (invs' and ct_active')
                        (port_out a w) (portOut a w)"
   apply (clarsimp simp: port_out_def portOut_def)
-  apply (corressimp corres: gct_corres set_mrs_corres set_mi_corres)
-   apply (rule corresK_drop, rule corres_Id[where r="op ="], simp, simp, simp)
-  apply (corressimp corres: gct_corres set_mrs_corres set_mi_corres)+
-  by (clarsimp simp: invs_def invs'_def cur_tcb_def cur_tcb'_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_eqr[OF _ gct_corres])
+      apply (rule corres_split_eqr[OF set_mi_corres])
+         apply wpsimp+
+        apply (rule corres_machine_op[OF corres_Id], simp+)
+       apply wpsimp+
+  done
 
 (* FIXME x64: move *)
 lemma no_fail_in8[wp]:

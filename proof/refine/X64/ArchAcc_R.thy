@@ -1356,7 +1356,7 @@ lemma getPTE_wp:
                      projectKOs in_monad valid_def obj_at'_def objBits_simps)
 
 lemma pdpt_at_lift:
-  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+  "corres_inst_eq ptr ptr' \<Longrightarrow> \<forall>s s'. (s, s') \<in> state_relation \<longrightarrow> True \<longrightarrow>
    (pspace_aligned s \<and> valid_pml4e (X64_A.PDPointerTablePML4E ptr x z) s \<and> (ptrFromPAddr ptr) = ptr') \<longrightarrow>
     pspace_distinct' s' \<longrightarrow> pd_pointer_table_at' ptr' s'"
   by (fastforce intro!: pd_pointer_table_at_state_relation)
@@ -1366,7 +1366,7 @@ lemmas checkPDPTAt_corres[corresK] =
 
 lemma lookup_pdpt_slot_corres:
   "corres (lfr \<oplus> op =)
-          (pspace_aligned and valid_arch_objs and page_map_l4_at pml4
+          (pspace_aligned and valid_vspace_objs and page_map_l4_at pml4
           and (\<exists>\<rhd>pml4) and
           K (is_aligned pml4 pml4_bits \<and> vptr < pptr_base \<and> canonical_address vptr))
           (pspace_aligned' and pspace_distinct')
@@ -1396,7 +1396,7 @@ crunch distict'[wp]: lookupPDPTSlot, lookupPDSlot pspace_distinct'
   (wp: getPML4E_wp getPDPTE_wp hoare_drop_imps ignore: getObject)
 
 lemma pd_at_lift:
-  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+  "corres_inst_eq ptr ptr' \<Longrightarrow> \<forall>s s'. (s, s') \<in> state_relation \<longrightarrow> True \<longrightarrow>
    (pspace_aligned s \<and> valid_pdpte (X64_A.PageDirectoryPDPTE ptr x z) s \<and> (ptrFromPAddr ptr) = ptr') \<longrightarrow>
     pspace_distinct' s' \<longrightarrow> page_directory_at' ptr' s'"
   by (fastforce intro!: page_directory_at_state_relation)
@@ -1405,20 +1405,20 @@ lemmas checkPDAt_corres[corresK] =
   corres_stateAssert_implied_frame[OF pd_at_lift, folded checkPDAt_def]
 
 lemma get_pdpte_valid[wp]:
-  "\<lbrace>valid_arch_objs and \<exists>\<rhd> (x && ~~ mask pdpt_bits)\<rbrace>
+  "\<lbrace>valid_vspace_objs and \<exists>\<rhd> (x && ~~ mask pdpt_bits)\<rbrace>
    get_pdpte x
    \<lbrace>valid_pdpte\<rbrace>"
   apply (simp add: get_pdpte_def)
   apply wp
   apply clarsimp
-  apply (drule (2) valid_arch_objsD)
+  apply (drule (2) valid_vspace_objsD)
   apply simp
   done
 
 
 lemma lookup_pd_slot_corres:
   "corres (lfr \<oplus> op =)
-          (pspace_aligned and valid_arch_objs and valid_arch_state and equal_kernel_mappings
+          (pspace_aligned and valid_vspace_objs and valid_arch_state and equal_kernel_mappings
            and valid_global_objs and (\<exists>\<rhd> pml4) and page_map_l4_at pml4 and
              K (canonical_address vptr \<and> is_aligned pml4 pml4_bits \<and> vptr < pptr_base))
           (pspace_aligned' and pspace_distinct')
@@ -1443,7 +1443,7 @@ lemma lookup_pd_slot_corres:
   done
 
 lemma pt_at_lift:
-  "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+  "corres_inst_eq ptr ptr' \<Longrightarrow> \<forall>s s'. (s, s') \<in> state_relation \<longrightarrow> True \<longrightarrow>
    (pspace_aligned s \<and> valid_pde (X64_A.PageTablePDE ptr x z) s \<and> (ptrFromPAddr ptr) = ptr') \<longrightarrow>
     pspace_distinct' s' \<longrightarrow> page_table_at' ptr' s'"
   by (fastforce intro!: page_table_at_state_relation)
@@ -1452,19 +1452,19 @@ lemmas checkPTAt_corres[corresK] =
   corres_stateAssert_implied_frame[OF pt_at_lift, folded checkPTAt_def]
 
 lemma get_pde_valid[wp]:
-  "\<lbrace>valid_arch_objs and \<exists>\<rhd> (x && ~~ mask pd_bits)\<rbrace>
+  "\<lbrace>valid_vspace_objs and \<exists>\<rhd> (x && ~~ mask pd_bits)\<rbrace>
    get_pde x
    \<lbrace>valid_pde\<rbrace>"
   apply (simp add: get_pde_def)
   apply wp
   apply clarsimp
-  apply (drule (2) valid_arch_objsD)
+  apply (drule (2) valid_vspace_objsD)
   apply simp
   done
 
 lemma lookup_pt_slot_corres:
   "corres (lfr \<oplus> op =)
-          (pspace_aligned and valid_arch_objs and valid_arch_state and equal_kernel_mappings
+          (pspace_aligned and valid_vspace_objs and valid_arch_state and equal_kernel_mappings
            and valid_global_objs and (\<exists>\<rhd> pml4) and page_map_l4_at pml4 and
              K (canonical_address vptr \<and> is_aligned pml4 pml4_bits \<and> vptr < pptr_base))
           (pspace_aligned' and pspace_distinct')
@@ -1538,28 +1538,21 @@ lemma corres_gets_global_pml4 [corres]:
   "corres (op =) \<top> \<top> (gets (x64_global_pml4 \<circ> arch_state)) (gets (x64KSGlobalPML4 \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
 
-lemma copy_global_mappings_corres [corres]:
-  assumes "pm' = pm"
-  notes [corresK] =
-    corresK_mapM_x[where S="op =" and F="op ="
-                     and I="\<lambda>xs s. pspace_aligned s \<and> valid_etcbs s
-                                     \<and> (\<forall>x\<in>set xs. pml4e_at (g_pm + (x << word_size_bits)) s
-                                                     \<and> pml4e_at (pm + (x << word_size_bits)) s)"
-                     and I'="\<lambda>ys s. \<forall>y\<in>set ys. pml4e_at' (g_pm' + (y << word_size_bits)) s
-                                                 \<and> pml4e_at' (pm + (y << word_size_bits)) s"
-                     for g_pm g_pm']
-  shows "corres dc (valid_arch_state and valid_etcbs and pspace_aligned and page_map_l4_at pm)
-                   (valid_arch_state' and page_map_l4_at' pm')
+lemma copy_global_mappings_corres [@lift_corres_args, corres]:
+  "corres dc (valid_arch_state and valid_etcbs and pspace_aligned and page_map_l4_at pm)
+                   (valid_arch_state' and page_map_l4_at' pm)
                 (copy_global_mappings pm)
-                (copyGlobalMappings pm')"
-  apply (simp add: assms copy_global_mappings_def copyGlobalMappings_def
-                   objBits_simps archObjSize_def pptr_base_def)
+                (copyGlobalMappings pm)" (is "corres _ ?apre _ _ _")
+  unfolding copy_global_mappings_def copyGlobalMappings_def objBits_simps archObjSize_def pptr_base_def
   apply (fold word_size_bits_def)
   apply corressimp
-          apply (rule corres_rv_defer_left, fastforce)
-        apply (wpsimp wp: hoare_vcg_ball_lift abs_atyp_at_lifts[OF store_pml4e_typ_at]
-                    simp: list.rel_eq)+
-  apply (subst word64_less_sub_le, fastforce simp: bit_simps word_bits_def)+
+      apply (rule_tac P="page_map_l4_at global_pm and ?apre" and
+                     P'="page_map_l4_at' globalPM and page_map_l4_at' pm"
+                in corresK_mapM_x[OF order_refl])
+        apply (corressimp simp: objBits_def mask_def wp: get_pde_wp getPDE_wp)+
+  apply(rule conjI)
+   subgoal by (auto intro!: page_map_l4_pml4e_atI page_map_l4_pml4e_atI'
+                     simp: page_bits_def le_less_trans ptTranslationBits_def)
   by (auto simp: valid_arch_state_def valid_arch_state'_def
            elim: page_map_l4_pml4e_atI page_map_l4_pml4e_atI')
 
@@ -1643,7 +1636,7 @@ lemma create_mapping_entries_corres:
   "\<lbrakk> vm_rights' = vmrights_map vm_rights;
      attrib' = vmattributes_map attrib \<rbrakk>
   \<Longrightarrow> corres (ser \<oplus> mapping_map)
-          (valid_arch_objs and pspace_aligned and valid_arch_state and valid_global_objs and
+          (valid_vspace_objs and pspace_aligned and valid_arch_state and valid_global_objs and
            equal_kernel_mappings and \<exists>\<rhd> pml4 and page_map_l4_at pml4 and
            K (is_aligned pml4 pml4_bits \<and> vmsz_aligned vptr pgsz \<and> vptr < pptr_base
                 \<and> vm_rights \<in> valid_vm_rights \<and> canonical_address vptr))
@@ -1813,7 +1806,7 @@ lemma find_vspace_for_asid_corres:
   assumes "asid' = asid"
   shows "corres (lfr \<oplus> op =)
                 ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid_ex asid s)
-                    and valid_arch_objs and pspace_aligned
+                    and valid_vspace_objs and pspace_aligned
                     and K (0 < asid \<and> asid \<le> mask asidBits))
                 (pspace_aligned' and pspace_distinct' and no_0_obj')
                 (find_vspace_for_asid asid) (findVSpaceForASID asid')"
@@ -1875,7 +1868,7 @@ lemma find_vspace_for_asid_corres:
                            arch_kernel_obj.splits)
     apply (clarsimp dest!: vs_lookup1D)
      apply (clarsimp dest!: vs_lookup1D)
-   apply (drule(1) valid_arch_objsD[rotated])
+   apply (drule(1) valid_vspace_objsD[rotated])
     apply (rule vs_lookupI)
      apply (rule vs_asid_refsI)
      apply simp
@@ -1888,7 +1881,7 @@ lemma find_vspace_for_asid_corres:
 lemma find_vspace_for_asid_corres':
   assumes "asid' = asid"
   shows "corres (lfr \<oplus> op =)
-                (vspace_at_asid_ex asid and valid_arch_objs
+                (vspace_at_asid_ex asid and valid_vspace_objs
                     and pspace_aligned and  K (0 < asid \<and> asid \<le> mask asidBits))
                 (pspace_aligned' and pspace_distinct' and no_0_obj')
                 (find_vspace_for_asid asid) (findVSpaceForASID asid')"

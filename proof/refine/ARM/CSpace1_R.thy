@@ -452,7 +452,8 @@ proof -
                              ARM_H.updateCapData_def)[5]
   -- CNodeCap
   apply (simp add: simps word_bits_def the_cnode_cap_def andCapRights_def
-                   rightsFromWord_def data_to_rights_def nth_ucast)
+                   rightsFromWord_def data_to_rights_def nth_ucast cteRightsBits_def
+                   cteGuardBits_def)
   apply (insert x)
   apply (subgoal_tac "unat ((x >> 3) && mask 5) < unat (2^5::word32)")
    prefer 2
@@ -624,7 +625,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (simp add: drop_postfix_eq)
         apply clarsimp
         apply (prove "is_aligned ptr (4 + cbits) \<and> cbits \<le> word_bits - cte_level_bits")
-        apply (erule valid_CNodeCapE; fastforce)
+        apply (erule valid_CNodeCapE; fastforce simp: cte_level_bits_def)
         subgoal premises prems for s s' x
           apply (insert prems)
           apply (rule context_conjI)

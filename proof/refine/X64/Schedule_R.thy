@@ -218,7 +218,7 @@ declare objBitsT_koTypeOf [simp]
 
 lemma arch_switch_thread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
-              and valid_arch_objs and pspace_aligned and pspace_distinct
+              and valid_vspace_objs and pspace_aligned and pspace_distinct
               and valid_vs_lookup and valid_global_objs
               and unique_table_refs o caps_of_state
               and st_tcb_at runnable t)
@@ -509,7 +509,7 @@ lemma setQueue_ksReadyQueues_lift:
    setQueue d p ts
    \<lbrace> \<lambda>_ s. P s (ksReadyQueues s (d,p))\<rbrace>"
   unfolding setQueue_def
-  by (wp, clarsimp simp: fun_upd_def)
+  by (wp, clarsimp simp: fun_upd_def cong: if_cong)
 
 lemma tcbSchedDequeue_valid_queues'[wp]:
   "\<lbrace>valid_queues' and tcb_at' t\<rbrace>
@@ -943,7 +943,7 @@ crunch valid_queues[wp]: "Arch.switchToThread" "Invariants_H.valid_queues"
 
 lemma switch_thread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
-                and valid_arch_objs and pspace_aligned and pspace_distinct
+                and valid_vspace_objs and pspace_aligned and pspace_distinct
                 and valid_vs_lookup and valid_global_objs
                 and unique_table_refs o caps_of_state
                 and st_tcb_at runnable t and valid_etcbs)
@@ -2216,7 +2216,7 @@ lemma gts_exs_valid[wp]:
 
 lemma guarded_switch_to_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
-                and valid_arch_objs and pspace_aligned and pspace_distinct
+                and valid_vspace_objs and pspace_aligned and pspace_distinct
                 and valid_vs_lookup and valid_global_objs
                 and unique_table_refs o caps_of_state
                 and st_tcb_at runnable t and valid_etcbs)
@@ -2626,7 +2626,7 @@ lemma schedule_corres:
            apply ((wp thread_get_wp' hoare_vcg_conj_lift hoare_drop_imps | clarsimp)+)
    apply (rule conjI,simp)
    apply (clarsimp split: Deterministic_A.scheduler_action.splits
-                    simp: invs_psp_aligned invs_distinct invs_valid_objs invs_arch_state invs_arch_objs)
+                    simp: invs_psp_aligned invs_distinct invs_valid_objs invs_arch_state invs_vspace_objs)
    apply (intro impI conjI allI tcb_at_invs |
           (fastforce simp: invs_def cur_tcb_def valid_arch_caps_def valid_etcbs_def
                            valid_sched_def valid_sched_action_def is_activatable_def

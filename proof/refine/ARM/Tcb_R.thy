@@ -1110,7 +1110,7 @@ definition valid_tcb_invocation :: "tcbinvocation \<Rightarrow> bool" where
 
 lemma arch_tcb_set_ipc_buffer_corres:
   "corres dc (tcb_at target) (tcb_at' target) (arch_tcb_set_ipc_buffer target ptr) (asUser target $ setTCBIPCBuffer ptr)"
-  apply (simp add: setTCBIPCBuffer_def ARM_H.tpidrurwRegister_def ARM.tpidrurwRegister_def)
+  apply (simp add: setTCBIPCBuffer_def)
   apply (rule user_setreg_corres)
   done
 

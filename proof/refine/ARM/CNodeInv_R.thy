@@ -99,7 +99,7 @@ lemma cap_relation_NullCap:
                       split del: if_split)
      apply simp
     apply simp
-   apply (clarsimp simp: word_size word_size_def)
+   apply (clarsimp simp: word_size word_size_def cteRightsBits_def cteGuardBits_def)
   apply (clarsimp simp: ARM_H.updateCapData_def isCap_simps split del: if_split)
   done
 

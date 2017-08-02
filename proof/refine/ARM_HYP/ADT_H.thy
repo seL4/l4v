@@ -306,7 +306,7 @@ lemma ArchFaultMap_arch_fault_map: "ArchFaultMap (arch_fault_map f) = f"
 lemma FaultMap_fault_map[simp]:
   "valid_fault ft \<Longrightarrow> FaultMap (fault_map ft) = ft"
   apply (case_tac ft, simp_all)
-   apply (simp add: valid_fault_def LookupFailureMap_lookup_failure_map)
+   apply (simp add: valid_fault_def LookupFailureMap_lookup_failure_map word_bits_def)
   apply (rule ArchFaultMap_arch_fault_map)
   done
 

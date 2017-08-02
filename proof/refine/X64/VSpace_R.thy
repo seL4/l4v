@@ -92,11 +92,11 @@ lemma pspace_relation_pml4:
   done
 
 lemma find_vspace_for_asid_eq_helper:
-  "\<lbrakk> vspace_at_asid asid pm s; valid_arch_objs s;
+  "\<lbrakk> vspace_at_asid asid pm s; valid_vspace_objs s;
          asid \<noteq> 0; pspace_aligned s \<rbrakk>
     \<Longrightarrow> find_vspace_for_asid asid s = returnOk pm s
              \<and> page_map_l4_at pm s \<and> is_aligned pm pml4Bits"
-  apply (clarsimp simp: vspace_at_asid_def valid_arch_objs_def)
+  apply (clarsimp simp: vspace_at_asid_def valid_vspace_objs_def)
   apply (frule spec, drule mp, erule exI)
   apply (clarsimp simp: vs_asid_refs_def graph_of_def
                  elim!: vs_lookupE)
@@ -134,7 +134,7 @@ lemma find_vspace_for_asid_eq_helper:
   done
 
 lemma find_vspace_for_asid_assert_eq:
-  "\<lbrakk> vspace_at_asid asid pm s; valid_arch_objs s;
+  "\<lbrakk> vspace_at_asid asid pm s; valid_vspace_objs s;
          asid \<noteq> 0; pspace_aligned s \<rbrakk>
     \<Longrightarrow> find_vspace_for_asid_assert asid s = return pm s"
   apply (drule (3) find_vspace_for_asid_eq_helper)
@@ -152,7 +152,7 @@ lemma find_vspace_for_asid_assert_eq:
   done
 
 lemma find_vspace_for_asid_assert_eq_ex:
-  "\<lbrakk> vspace_at_asid_ex asid s; valid_arch_objs s;
+  "\<lbrakk> vspace_at_asid_ex asid s; valid_vspace_objs s;
          asid \<noteq> 0; pspace_aligned s \<rbrakk>
     \<Longrightarrow> (do _ \<leftarrow> find_vspace_for_asid_assert asid; return () od) s = return () s"
   apply (clarsimp simp: vspace_at_asid_ex_def)
@@ -172,7 +172,7 @@ lemma find_vspace_for_asid_assert_eq_ex:
 
 (* FIXME x64: move to invariants *)
 lemma find_vspace_for_asid_wp:
-  "\<lbrace> valid_arch_objs and pspace_aligned and K (asid \<noteq> 0)
+  "\<lbrace> valid_vspace_objs and pspace_aligned and K (asid \<noteq> 0)
         and (\<lambda>s. \<forall>pm. vspace_at_asid asid pm s \<longrightarrow> Q pm s)
         and (\<lambda>s. (\<forall>pm. \<not> vspace_at_asid asid pm s) \<longrightarrow> E ExceptionTypes_A.lookup_failure.InvalidRoot s) \<rbrace>
     find_vspace_for_asid asid
@@ -203,7 +203,7 @@ lemma find_vspace_for_asid_wp:
 lemma valid_asid_map_inj_map:
   "\<lbrakk> valid_asid_map s; (s, s') \<in> state_relation;
         unique_table_refs (caps_of_state s);
-        valid_vs_lookup s; valid_arch_objs s;
+        valid_vs_lookup s; valid_vspace_objs s;
         valid_arch_state s; valid_global_objs s \<rbrakk>
         \<Longrightarrow> inj_on (x64KSASIDMap (ksArchState s'))
                    (dom (x64KSASIDMap (ksArchState s')))"
@@ -227,7 +227,7 @@ lemma find_vspace_for_asid_assert_corres [corres]:
   assumes "asid' = asid"
   shows "corres (op =)
                 (K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
-                    and pspace_aligned and pspace_distinct and valid_arch_objs and valid_asid_map
+                    and pspace_aligned and pspace_distinct and valid_vspace_objs and valid_asid_map
                     and vspace_at_uniq_ex asid)
                 (pspace_aligned' and pspace_distinct' and no_0_obj')
                 (find_vspace_for_asid_assert asid)
@@ -312,7 +312,7 @@ lemma corres_add_noop_rhs2:
 (* FIXME x64: make intro/elim rules for vspace_at_asid_ex and vspace_at_uniq_ex. *)
 lemma invalidate_asid_corres [corres]:
   assumes "a' = a"
-  shows "corres dc (valid_asid_map and valid_arch_objs
+  shows "corres dc (valid_asid_map and valid_vspace_objs
                         and pspace_aligned and pspace_distinct
                         and vspace_at_uniq_ex a
                         and K (a \<noteq> 0 \<and> a \<le> mask asid_bits))
@@ -338,7 +338,7 @@ lemma invalidate_asid_corres [corres]:
 
 lemma invalidate_asid_ext_corres:
   "corres dc
-          (\<lambda>s. \<exists>pd. valid_asid_map s \<and> valid_arch_objs s
+          (\<lambda>s. \<exists>pd. valid_asid_map s \<and> valid_vspace_objs s
                \<and> pspace_aligned s \<and> pspace_distinct s
                \<and> vspace_at_asid a pd s \<and> vspace_at_uniq a pd s
                \<and> a \<noteq> 0 \<and> a \<le> mask asid_bits)
@@ -417,7 +417,7 @@ lemma update_asid_map_corres [corres]:
   assumes "a' = a"
   shows "corres dc (K (a \<noteq> 0 \<and> a \<le> mask asid_bits) and
                          pspace_aligned and pspace_distinct and
-                         valid_arch_objs and valid_asid_map and
+                         valid_vspace_objs and valid_asid_map and
                          vspace_at_uniq_ex a)
                    (pspace_aligned' and pspace_distinct' and no_0_obj')
                    (update_asid_map a) (updateASIDMap a')"
@@ -425,24 +425,12 @@ lemma update_asid_map_corres [corres]:
   apply (simp add: update_asid_map_def updateASIDMap_def)
   by corressimp
 
-(* FIXME x64: move to Corres_Method *)
-lemma corres_rv_disj_dc: "corres_rv_disj r' r'' dc"
-  unfolding corres_rv_disj_def by simp
-
-(* FIXME x64: move to Corres_Method *)
-lemma corresK_whenE (* [corresK] *):
-  assumes "G \<Longrightarrow> G' \<Longrightarrow> corres_underlyingK sr nf nf' F (f \<oplus> dc) P P' a c"
-  shows "corres_underlyingK sr nf nf' ((G = G') \<and> F) (f \<oplus> dc) ((\<lambda>x. G \<longrightarrow> P x)) (\<lambda>x. G' \<longrightarrow> P' x)
-                            (whenE G a) (whenE G' c)"
-  using assms by (cases G) (auto simp: corres_underlying_def corres_underlyingK_def
-                                       whenE_def returnOk_def return_def)
-
 lemma set_vm_root_corres [corres]:
   assumes "t' = t"
   shows "corres dc (tcb_at t and valid_arch_state and valid_objs and valid_asid_map
                       and unique_table_refs o caps_of_state and valid_vs_lookup
                       and valid_global_objs and pspace_aligned and pspace_distinct
-                      and valid_arch_objs)
+                      and valid_vspace_objs)
                    (pspace_aligned' and pspace_distinct'
                       and valid_arch_state' and tcb_at' t' and no_0_obj')
                    (set_vm_root t) (setVMRoot t')"
@@ -485,7 +473,7 @@ proof -
          apply (simp add: tcbVTableSlot_def cte_map_def objBits_def cte_level_bits_def
                           objBitsKO_def tcb_cnode_index_def to_bl_1 assms)
         apply (rule_tac R="\<lambda>thread_root. valid_arch_state and valid_asid_map and
-                                         valid_arch_objs and valid_vs_lookup and
+                                         valid_vspace_objs and valid_vs_lookup and
                                          unique_table_refs o caps_of_state and
                                          valid_global_objs and valid_objs and
                                          pspace_aligned and pspace_distinct and
@@ -569,7 +557,7 @@ lemma dmo_vspace_at_uniq_ex [wp]:
 
 lemma invalidate_asid_entry_corres:
   assumes "pm' = pm" "asid' = asid"
-  shows "corres dc (valid_arch_objs and valid_asid_map
+  shows "corres dc (valid_vspace_objs and valid_asid_map
                       and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
                       and vspace_at_asid asid pm and valid_vs_lookup
                       and unique_table_refs o caps_of_state
@@ -638,10 +626,10 @@ lemma set_asid_pool_asid_map_unmap:
   by (simp add: restrict_map_def fun_upd_def if_flip)
 
 (* FIXME x64: move *)
-lemma set_asid_pool_arch_objs_unmap_single:
-  "\<lbrace>valid_arch_objs and ko_at (ArchObj (X64_A.ASIDPool ap)) p\<rbrace>
-       set_asid_pool p (ap(x := None)) \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-  using set_asid_pool_arch_objs_unmap[where S="- {x}"]
+lemma set_asid_pool_vspace_objs_unmap_single:
+  "\<lbrace>valid_vspace_objs and ko_at (ArchObj (X64_A.ASIDPool ap)) p\<rbrace>
+       set_asid_pool p (ap(x := None)) \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
+  using set_asid_pool_vspace_objs_unmap[where S="- {x}"]
   by (simp add: restrict_map_def fun_upd_def if_flip)
 
 (* FIXME x64: move *)
@@ -655,7 +643,7 @@ lemma invalidate_asid_entry_valid_arch_state[wp]:
 
 lemma valid_global_objs_asid_map_update_inv[simp]:
   "valid_global_objs s \<Longrightarrow> valid_global_objs (s\<lparr>arch_state := arch_state s \<lparr>x64_asid_map := b\<rparr>\<rparr>)"
-  by (clarsimp simp: valid_global_objs_def)
+  by (clarsimp simp: valid_global_objs_def second_level_tables_def)
 
 crunch valid_global_objs[wp]: invalidate_asid_entry "valid_global_objs"
 
@@ -704,7 +692,7 @@ lemma delete_asid_corres [corres]:
              apply (fold cur_tcb_def)
            apply (wp set_asid_pool_asid_map_unmap
                      set_asid_pool_vs_lookup_unmap'
-                     set_asid_pool_arch_objs_unmap_single)+
+                     set_asid_pool_vspace_objs_unmap_single)+
           apply simp
             apply (fold cur_tcb'_def)
           apply (wp add: invalidate_asid_entry_invalidates | clarsimp simp: o_def)+
@@ -855,7 +843,7 @@ lemma delete_asid_pool_corres:
          apply simp
          apply (fold cur_tcb_def)
          apply (strengthen valid_arch_state_unmap_strg
-                           valid_arch_objs_unmap_strg
+                           valid_vspace_objs_unmap_strg
                            valid_asid_map_unmap
                            valid_vs_lookup_unmap_strg)
          apply (simp add: valid_global_objs_arch_update)
@@ -1005,7 +993,7 @@ lemma flush_table_corres:
   assumes "pm' = pm" "vptr' = vptr" "pt' = pt" "asid' = asid"
   shows "corres dc (pspace_aligned and valid_objs and valid_arch_state
                       and cur_tcb and vspace_at_asid asid pm and valid_asid_map
-                      and valid_arch_objs and pspace_aligned and pspace_distinct
+                      and valid_vspace_objs and pspace_aligned and pspace_distinct
                       and valid_vs_lookup and valid_global_objs
                       and unique_table_refs o caps_of_state and page_table_at pt
                       and K (is_aligned vptr pd_shift_bits \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0))
@@ -1219,7 +1207,7 @@ lemma unmap_page_corres:
           apply (rule_tac F = "vptr < pptr_base" in corres_gen_asm)
           apply (rule_tac P="\<exists>\<rhd> vspace and page_map_l4_at vspace and vspace_at_asid asid vspace
                              and (\<exists>\<rhd> vspace)
-                             and valid_arch_state and valid_arch_objs
+                             and valid_arch_state and valid_vspace_objs
                              and equal_kernel_mappings
                              and pspace_aligned and valid_global_objs and valid_etcbs and
                              K (valid_unmap sz (asid,vptr) \<and> canonical_address vptr )" and
@@ -1267,7 +1255,7 @@ lemma unmap_page_corres:
                             simp_del: dc_simp)+
                          | wp_once hoare_drop_imps)+)
    apply (rule conjI[OF disjI1], clarsimp)
-   apply (clarsimp simp: invs_arch_objs invs_psp_aligned valid_unmap_def invs_arch_state
+   apply (clarsimp simp: invs_vspace_objs invs_psp_aligned valid_unmap_def invs_arch_state
                          invs_equal_kernel_mappings)
   apply (clarsimp)
   done

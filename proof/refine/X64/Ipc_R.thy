@@ -2005,8 +2005,8 @@ crunch nosch[wp]: doIPCTransfer "\<lambda>s. P (ksSchedulerAction s)"
    simp: split_def zipWithM_x_mapM)
 
 lemma sanitise_register_corres:
-  "foldl (\<lambda>s (a, b) c. if c = a then sanitise_register t' a b else s c) s (zip msg_template msg) =
-   foldl (\<lambda>s (a, b) c. if c = a then sanitiseRegister t'a a b else s c) s (zip msg_template msg)"
+  "foldl (\<lambda>s (a, b). s ( a := sanitise_register t' a b)) s (zip msg_template msg) =
+   foldl (\<lambda>s (a, b). s ( a := sanitiseRegister t'a a b)) s (zip msg_template msg)"
   apply (rule foldl_cong)
     apply simp
    apply simp
@@ -2018,7 +2018,7 @@ lemma sanitise_register_corres:
 
 lemma handle_fault_reply_registers_corres:
   "corres (op =) (tcb_at t) (tcb_at' t)
-           (do t' \<leftarrow> thread_get id t;
+           (do t' \<leftarrow> arch_get_sanitise_register_info t;
                y \<leftarrow> as_user t
                 (zipWithM_x
                   (\<lambda>r v. set_register r
@@ -2026,7 +2026,7 @@ lemma handle_fault_reply_registers_corres:
                   msg_template msg);
                return (label = 0)
             od)
-           (do t' \<leftarrow> threadGet id t;
+           (do t' \<leftarrow> getSanitiseRegisterInfo t;
                y \<leftarrow> asUser t
                 (zipWithM_x
                   (\<lambda>r v. setRegister r (sanitiseRegister t' r v))
@@ -2034,14 +2034,14 @@ lemma handle_fault_reply_registers_corres:
                return (label = 0)
             od)"
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ threadget_corres, where r'=tcb_relation])
+    apply (clarsimp simp: arch_get_sanitise_register_info_def getSanitiseRegisterInfo_def)
        apply (rule corres_split)
        apply (rule corres_trivial, simp)
       apply (rule corres_as_user')
       apply(simp add: set_register_def setRegister_def syscallMessage_def)
       apply(subst zipWithM_x_modify)+
       apply(rule corres_modify')
-       apply (simp add: sanitise_register_corres|wp)+
+       apply (clarsimp simp: sanitise_register_corres|wp)+
   done
 
 lemma handle_fault_reply_corres:
@@ -4167,7 +4167,7 @@ lemma ri_invs' [wp]:
   apply (rule hoare_seq_ext [OF _ gbn_sp'])
   apply (rule hoare_seq_ext)
   (* set up precondition for old proof *)
-   apply (rule_tac R="ko_at' ep (capEPPtr cap) and ?pre" in hoare_vcg_split_if)
+   apply (rule_tac R="ko_at' ep (capEPPtr cap) and ?pre" in hoare_vcg_if_split)
     apply (wp completeSignal_invs)
    apply (case_tac ep)
      -- "endpoint = RecvEP"

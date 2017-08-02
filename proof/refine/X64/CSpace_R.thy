@@ -2844,7 +2844,7 @@ lemma setUntypedCapAsFull_if_live_then_nonz_cap':
   apply (clarsimp simp:if_live_then_nonz_cap'_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)
    apply (clarsimp simp:setUntypedCapAsFull_def split del: if_split)
-   apply (wp hoare_vcg_split_if)
+   apply (wp hoare_vcg_if_split)
     apply (clarsimp simp:ex_nonz_cap_to'_def cte_wp_at_ctes_of)
     apply (wp updateCap_ctes_of_wp)+
   apply clarsimp
