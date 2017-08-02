@@ -74,6 +74,8 @@ record
   machine_state =
   irq_masks :: "ARM.irq \<Rightarrow> bool"
   irq_state :: nat
+  time_state :: nat \<comment> \<open>position in the time oracle\<close>
+  last_machine_time :: "64 word" \<comment> \<open>value we read from timer device\<close>
   underlying_memory :: "word32 \<Rightarrow> word8"
   device_state :: "word32 \<Rightarrow> word8 option"
   exclusive_state :: ARM.exclusive_monitors
@@ -83,6 +85,10 @@ axiomatization
   irq_oracle :: "nat \<Rightarrow> 10 word"
 where
   irq_oracle_max_irq: "\<forall> n. (irq_oracle n) <= ARM.maxIRQ"
+
+text {* The values the timer device will return (how much time passed since last query) *}
+axiomatization
+  time_oracle :: "nat \<Rightarrow> 64 word"
 
 end_qualify
 
@@ -129,6 +135,8 @@ definition
   init_machine_state :: machine_state where
  "init_machine_state \<equiv> \<lparr> irq_masks = init_irq_masks,
                          irq_state = 0,
+                         time_state = 0,
+                         last_machine_time = 0,
                          underlying_memory = init_underlying_memory,
                          device_state = Map.empty,
                          exclusive_state = default_exclusive_state,

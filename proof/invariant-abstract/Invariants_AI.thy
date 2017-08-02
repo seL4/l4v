@@ -142,6 +142,10 @@ definition
   "is_cap_table bits ko \<equiv>
    case ko of CNode sz cs \<Rightarrow> bits = sz \<and> well_formed_cnode_n bits cs
             | _ \<Rightarrow> False"
+definition
+  "is_sc ko \<equiv> case ko of SchedContext sc \<Rightarrow> True | _ \<Rightarrow> False"
+definition
+  "is_reply ko \<equiv> case ko of Reply rply \<Rightarrow> True | _ \<Rightarrow> False"
 
 
 
@@ -155,6 +159,10 @@ abbreviation
   "cap_table_at bits \<equiv> obj_at (is_cap_table bits)"
 abbreviation
   "real_cte_at cref \<equiv> cap_table_at (length (snd cref)) (fst cref)"
+abbreviation
+  "sc_at \<equiv> obj_at is_sc"
+abbreviation
+  "reply_at \<equiv> obj_at is_reply"
 
 
 (*
@@ -262,7 +270,9 @@ where
 | "untyped_range (cap.CNodeCap r bits guard)            = {}"
 | "untyped_range (cap.ThreadCap r)                      = {}"
 | "untyped_range (cap.DomainCap)                        = {}"
-| "untyped_range (cap.ReplyCap r master)                = {}"
+| "untyped_range (cap.ReplyCap r)                       = {}"
+| "untyped_range (cap.SchedContextCap r n)              = {}"
+| "untyped_range (cap.SchedControlCap)                  = {}"
 | "untyped_range (cap.IRQControlCap)                    = {}"
 | "untyped_range (cap.IRQHandlerCap irq)                = {}"
 | "untyped_range (cap.Zombie r b n)                     = {}"
@@ -299,10 +309,12 @@ where
 | "cap_bits (CNodeCap r b m) = cte_level_bits + b"
 | "cap_bits (ThreadCap r) = obj_bits (TCB undefined)"
 | "cap_bits (DomainCap) = 0"
-| "cap_bits (ReplyCap r m) = obj_bits (TCB undefined)"
+| "cap_bits (ReplyCap r) = obj_bits (Reply undefined)"
 | "cap_bits (Zombie r zs n) =
     (case zs of None \<Rightarrow> obj_bits (TCB undefined)
             | Some n \<Rightarrow> cte_level_bits + n)"
+| "cap_bits (SchedContextCap r n) = obj_bits (SchedContext undefined)" (* RT needs fix *)
+| "cap_bits (SchedControlCap) = 0"
 | "cap_bits (IRQControlCap) = 0"
 | "cap_bits (IRQHandlerCap irq) = 0"
 | "cap_bits (ArchObjectCap x) = arch_obj_size x"
@@ -355,7 +367,9 @@ where
   | CNodeCap r bits guard \<Rightarrow> cap_table_at bits r s
   | ThreadCap r \<Rightarrow> tcb_at r s
   | DomainCap \<Rightarrow> True
-  | ReplyCap r m \<Rightarrow> tcb_at r s
+  | ReplyCap r \<Rightarrow> reply_at r s
+  | SchedContextCap r n \<Rightarrow> sc_at r s
+  | SchedControlCap \<Rightarrow> True
   | IRQControlCap \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> True
   | Zombie r b n \<Rightarrow>
@@ -376,7 +390,9 @@ where
          cap_table_at bits r s \<and> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | ThreadCap r \<Rightarrow> tcb_at r s
   | DomainCap \<Rightarrow> True
-  | ReplyCap r m \<Rightarrow> tcb_at r s
+  | ReplyCap r \<Rightarrow> reply_at r s
+  | SchedContextCap r n \<Rightarrow> sc_at r s
+  | SchedControlCap \<Rightarrow> True
   | IRQControlCap \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
   | Zombie r b n \<Rightarrow>
@@ -399,14 +415,16 @@ where
   "cap_class (cap.NullCap)                          = NullClass"
 | "cap_class (cap.UntypedCap dev p n f)             = PhysicalClass"
 | "cap_class (cap.EndpointCap ref badge r)          = PhysicalClass"
-| "cap_class (cap.NotificationCap ref badge r)     = PhysicalClass"
+| "cap_class (cap.NotificationCap ref badge r)      = PhysicalClass"
 | "cap_class (cap.CNodeCap ref n bits)              = PhysicalClass"
 | "cap_class (cap.ThreadCap ref)                    = PhysicalClass"
 | "cap_class (cap.DomainCap)                        = DomainClass"
 | "cap_class (cap.Zombie r b n)                     = PhysicalClass"
+| "cap_class (cap.SchedContextCap r n)              = PhysicalClass"
+| "cap_class (cap.SchedControlCap)                  = IRQClass" (* RT need a new one? *)
 | "cap_class (cap.IRQControlCap)                    = IRQClass"
 | "cap_class (cap.IRQHandlerCap irq)                = IRQClass"
-| "cap_class (cap.ReplyCap tcb m)                   = ReplyClass tcb"
+| "cap_class (cap.ReplyCap tcb)                     = PhysicalClass"
 | "cap_class (cap.ArchObjectCap cap)                = acap_class cap"
 
 
@@ -423,7 +441,7 @@ definition
   valid_tcb_state :: "thread_state \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_tcb_state ts s \<equiv> case ts of
-    BlockedOnReceive ref \<Rightarrow> ep_at ref s
+    BlockedOnReceive ref r \<Rightarrow> ep_at ref s
   | BlockedOnSend ref sp \<Rightarrow> ep_at ref s
   | BlockedOnNotification ref \<Rightarrow> ntfn_at ref s
   | _ \<Rightarrow> True"
@@ -446,15 +464,7 @@ where
   "tcb_cap_cases \<equiv>
    [tcb_cnode_index 0 \<mapsto> (tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>)),
     tcb_cnode_index 1 \<mapsto> (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. \<top>)),
-    tcb_cnode_index 2 \<mapsto> (tcb_reply, tcb_reply_update,
-                          (\<lambda>t st c. (is_master_reply_cap c \<and> obj_ref_of c = t)
-                                  \<or> (halted st \<and> (c = NullCap)))),
-    tcb_cnode_index 3 \<mapsto> (tcb_caller, tcb_caller_update,
-                          (\<lambda>_ st. case st of
-                                    BlockedOnReceive e \<Rightarrow>
-                                      ((=) NullCap)
-                                  | _ \<Rightarrow> is_reply_cap or ((=) NullCap))),
-    tcb_cnode_index 4 \<mapsto> (tcb_ipcframe, tcb_ipcframe_update,
+    tcb_cnode_index 2 \<mapsto> (tcb_ipcframe, tcb_ipcframe_update,
                           (\<lambda>_ _. is_nondevice_page_cap or ((=) NullCap)))]"
 
 definition
@@ -609,7 +619,7 @@ where
   | (Restart)               => {}
   | (BlockedOnReply)        => {}
   | (IdleThreadState)       => {}
-  | (BlockedOnReceive x)  => {(x, TCBBlockedRecv)}
+  | (BlockedOnReceive x r)  => {(x, TCBBlockedRecv)}
   | (BlockedOnSend x payl)  => {(x, TCBBlockedSend)}
   | (BlockedOnNotification x) => {(x, TCBSignal)}"
 
@@ -685,6 +695,9 @@ where
                                tcb_state tcb \<noteq> IdleThreadState))"
 | "live0 (Endpoint ep)       = (ep \<noteq> IdleEP)"
 | "live0 (Notification ntfn) = (bound (ntfn_bound_tcb ntfn) \<or> (\<exists>ts. ntfn_obj ntfn = WaitingNtfn ts))"
+(* RT think about liveness conditions
+| "live0 (SchedContext sc)       = (ep \<noteq> IdleEP)"
+| "live0 (Reply reply)       = (ep \<noteq> IdleEP)" *)
 | "live0 (ArchObj ao)        = False"
 
 definition live :: "kernel_object \<Rightarrow> bool"
@@ -738,9 +751,11 @@ where
 | "cte_refs (Zombie r b n) f                     =
      {r} \<times> {xs. length xs = (zombie_cte_bits b) \<and>
                 unat (of_bl xs :: machine_word) < n}"
+| "cte_refs (SchedContextCap r n) f                    = {}"
+| "cte_refs (SchedControlCap) f                    = {}"
 | "cte_refs (IRQControlCap) f                    = {}"
 | "cte_refs (IRQHandlerCap irq) f                = {(f irq, [])}"
-| "cte_refs (ReplyCap tcb master) f              = {}"
+| "cte_refs (ReplyCap tcb) f              = {}"
 | "cte_refs (ArchObjectCap cap) f                = {}"
 
 definition
@@ -834,7 +849,7 @@ definition
    \<forall>p. is_original_cap s p \<longrightarrow> cte_wp_at (\<lambda>x. x \<noteq> NullCap)  p s"
 
 definition
-  "has_reply_cap t s \<equiv> \<exists>p. cte_wp_at ((=) (ReplyCap t False)) p s"
+  "has_reply_cap t s \<equiv> \<exists>p. cte_wp_at ((=) (ReplyCap t)) p s"
 
 definition
   "mdb_cte_at ct_at m \<equiv> \<forall>p c. m c = Some p \<longrightarrow> ct_at p \<and> ct_at c"

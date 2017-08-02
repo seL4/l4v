@@ -56,7 +56,7 @@ crunch_ignore (bcorres)
         select unless mapM catch bindE liftE whenE alternative cap_swap_ext
         cap_insert_ext cap_move_ext liftM create_cap_ext
         possible_switch_to reschedule_required set_priority
-        set_thread_state_ext tcb_sched_action timer_tick
+        tcb_sched_action
         lookup_error_on_failure getActiveIRQ
         gets_the liftME zipWithM_x unlessE mapME_x handleE forM_x)
 
@@ -122,13 +122,14 @@ lemma get_tcb_truncate[simp]: "get_tcb a (truncate_state s) = get_tcb a s"
   by (simp add: get_tcb_def)
 
 crunch (bcorres) bcorres[wp]:
-  cancel_all_ipc, cancel_all_signals, unbind_maybe_notification, unbind_notification, bind_notification
+  cancel_all_ipc, unbind_maybe_notification, unbind_notification, bind_notification
   truncate_state
   (simp: gets_the_def ignore: gets_the)
-
+(*
 lemma fast_finalise_bcorres[wp]:
   "bcorres (fast_finalise a b) (fast_finalise a b)"
   by (cases a; wpsimp)
+*)
 
 crunch (bcorres) bcorres[wp]: get_irq_slot truncate_state (simp: gets_def)
 

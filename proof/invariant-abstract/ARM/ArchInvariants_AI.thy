@@ -2207,6 +2207,8 @@ where
    | TCB tcb           => tcb_hyp_refs (tcb_arch tcb)
    | Endpoint ep       => {}
    | Notification ntfn => {}
+   | SchedContext sc   => {}
+   | Reply reply       => {}
    | ArchObj ao        => refs_of_a ao"
 
 lemma hyp_refs_of_simps[simp]:
@@ -2214,6 +2216,8 @@ lemma hyp_refs_of_simps[simp]:
   "hyp_refs_of (TCB tcb) = tcb_hyp_refs (tcb_arch tcb)"
   "hyp_refs_of (Endpoint ep) = {}"
   "hyp_refs_of (Notification ntfn) = {}"
+  "hyp_refs_of (SchedContext sc) = {}"
+  "hyp_refs_of (Reply reply) = {}"
   "hyp_refs_of (ArchObj ao) = refs_of_a ao"
   by (auto simp: hyp_refs_of_def)
 
@@ -2374,7 +2378,6 @@ lemma hyp_live_tcb_simps[simp]:
 "\<And>tcb f. hyp_live (TCB (tcb_ctable_update f tcb)) = hyp_live (TCB tcb)"
 "\<And>tcb f. hyp_live (TCB (tcb_vtable_update f tcb)) = hyp_live (TCB tcb)"
 "\<And>tcb f. hyp_live (TCB (tcb_reply_update f tcb)) = hyp_live (TCB tcb)"
-"\<And>tcb f. hyp_live (TCB (tcb_caller_update f tcb)) = hyp_live (TCB tcb)"
 "\<And>tcb f. hyp_live (TCB (tcb_ipcframe_update f tcb)) = hyp_live (TCB tcb)"
 "\<And>tcb f. hyp_live (TCB (tcb_state_update f tcb)) = hyp_live (TCB tcb)"
 "\<And>tcb f. hyp_live (TCB (tcb_fault_handler_update f tcb)) = hyp_live (TCB tcb)"
