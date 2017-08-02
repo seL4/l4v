@@ -385,8 +385,8 @@ record tcb =
  tcb_ctable        :: cap
  tcb_vtable        :: cap
  tcb_ipcframe      :: cap
+ tcb_fault_handler :: cap
  tcb_state         :: thread_state
- tcb_fault_handler :: cap_ref
  tcb_ipc_buffer    :: vspace_ref
  tcb_fault         :: "fault option"
  tcb_bound_notification     :: "obj_ref option"
@@ -414,8 +414,8 @@ definition
       tcb_ctable   = NullCap,
       tcb_vtable   = NullCap,
       tcb_ipcframe = NullCap,
+      tcb_fault_handler = NullCap,
       tcb_state    = Inactive,
-      tcb_fault_handler = to_bl (0::machine_word),
       tcb_ipc_buffer = 0,
       tcb_fault      = None,
       tcb_bound_notification  = None,
@@ -688,7 +688,8 @@ definition tcb_cnode_map :: "tcb \<Rightarrow> cnode_index \<Rightarrow> cap opt
   "tcb_cnode_map tcb \<equiv>
    [tcb_cnode_index 0 \<mapsto> tcb_ctable tcb,
     tcb_cnode_index 1 \<mapsto> tcb_vtable tcb,
-    tcb_cnode_index 2 \<mapsto> tcb_ipcframe tcb]"
+    tcb_cnode_index 2 \<mapsto> tcb_ipcframe tcb,
+    tcb_cnode_index 3 \<mapsto> tcb_fault_handler tcb]"
 
 definition cap_of :: "kernel_object \<Rightarrow> cnode_index \<Rightarrow> cap option"
   where

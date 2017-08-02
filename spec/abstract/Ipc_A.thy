@@ -540,41 +540,37 @@ section {* Sending Fault Messages *}
 text {* When a thread encounters a fault, retreive its fault handler capability
 and send a fault message. *}
 definition
-  send_fault_ipc :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit, det_ext) f_monad"
+  send_fault_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> fault \<Rightarrow> (bool, det_ext) f_monad"
 where
-  "send_fault_ipc tptr fault \<equiv> doE
-     handler_cptr \<leftarrow> liftE $ thread_get tcb_fault_handler tptr;
-     handler_cap \<leftarrow> cap_fault_on_failure (of_bl handler_cptr) False $
-         lookup_cap tptr handler_cptr;
-
-     let f = CapFault (of_bl handler_cptr) False (MissingCapability 0)
-     in
+  "send_fault_ipc tptr handler_cap fault \<equiv>
      (case handler_cap
        of EndpointCap ref badge rights \<Rightarrow>
            if AllowSend \<in> rights \<and> AllowGrant \<in> rights
            then liftE $ (do
                thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := Some fault \<rparr>) tptr;
                send_ipc True False (cap_ep_badge handler_cap)
-                        True True tptr (cap_ep_ptr handler_cap)
+                        True True tptr (cap_ep_ptr handler_cap);
+               return True
              od)
-           else throwError f
-        | _ \<Rightarrow> throwError f)
-   odE"
+           else fail
+        | NullCap \<Rightarrow> liftE $ return False
+        | _ \<Rightarrow> fail)"
 
 text {* If a fault message cannot be sent then leave the thread inactive. *}
 definition
-  handle_double_fault :: "obj_ref \<Rightarrow> fault \<Rightarrow> fault \<Rightarrow> (unit,'z::state_ext) s_monad"
+  handle_no_fault :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "handle_double_fault tptr ex1 ex2 \<equiv> set_thread_state tptr Inactive"
+  "handle_no_fault tptr \<equiv> set_thread_state tptr Inactive"
 
 text {* Handle a thread fault by sending a fault message if possible. *}
 definition
   handle_fault :: "obj_ref \<Rightarrow> fault \<Rightarrow> unit det_ext_monad"
 where
   "handle_fault thread ex \<equiv> do
-     _ \<leftarrow> gets_the $ get_tcb thread;
-     send_fault_ipc thread ex
-          <catch> handle_double_fault thread ex;
+     tcb \<leftarrow> gets_the $ get_tcb thread;
+     has_fh \<leftarrow> send_fault_ipc thread (tcb_fault_handler tcb) ex
+                    <catch> K (return False);
+     unless has_fh $ (handle_no_fault thread);
      return ()
    od"
 

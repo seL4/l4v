@@ -136,6 +136,18 @@ where
      set_bound_notification tcbptr $ Some ntfnptr
    od"
 
+definition
+  install_tcb_cap :: "obj_ref \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> nat \<Rightarrow> (cap \<times> cslot_ptr) option \<Rightarrow> (unit,det_ext) p_monad"
+where
+  "install_tcb_cap target tcap slot n slot_opt \<equiv> (* do we need tcap?; tcap = ThreadCap target *)
+     case slot_opt of None \<Rightarrow> returnOk ()
+     | Some (new_cap, src_slot) \<Rightarrow> doE
+      cap_delete (target, tcb_cnode_index n);
+      liftE $ check_cap_at new_cap src_slot
+            $ check_cap_at tcap slot
+            $ cap_insert new_cap src_slot (target, tcb_cnode_index n)
+    odE"
+
 text {* TCB capabilities confer authority to perform seven actions. A thread can
 request to yield its timeslice to another, to suspend or resume another, to
 reconfigure another thread, or to copy register sets into, out of or between
@@ -146,9 +158,8 @@ where
   "invoke_tcb (Suspend thread) = liftE (do suspend thread; return [] od)"
 | "invoke_tcb (Resume thread) = liftE (do restart thread; return [] od)"
 
-| "invoke_tcb (ThreadControl target slot faultep mcp priority croot vroot buffer sc)
+| "invoke_tcb (ThreadControl target slot fault_handler mcp priority croot vroot buffer sc)
    = doE
-    liftE $ option_update_thread target (tcb_fault_handler_update o K) faultep;
     liftE $  case mcp of None \<Rightarrow> return()
      | Some (newmcp, _) \<Rightarrow> set_mcpriority target newmcp;
     liftE $ case priority of None \<Rightarrow> return()
@@ -162,20 +173,9 @@ where
         sc' \<leftarrow> thread_get tcb_sched_context target;
         when (sc' \<noteq> Some sc_ptr) $ sched_context_bind_tcb sc_ptr target
      od;
-    (case croot of None \<Rightarrow> returnOk ()
-     | Some (new_cap, src_slot) \<Rightarrow> doE
-      cap_delete (target, tcb_cnode_index 0);
-      liftE $ check_cap_at new_cap src_slot
-            $ check_cap_at (ThreadCap target) slot
-            $ cap_insert new_cap src_slot (target, tcb_cnode_index 0)
-    odE);
-    (case vroot of None \<Rightarrow> returnOk ()
-     | Some (new_cap, src_slot) \<Rightarrow> doE
-      cap_delete (target, tcb_cnode_index 1);
-      liftE $ check_cap_at new_cap src_slot
-            $ check_cap_at (ThreadCap target) slot
-            $ cap_insert new_cap src_slot (target, tcb_cnode_index 1)
-    odE);
+    install_tcb_cap target (ThreadCap target) slot 0 croot;
+    install_tcb_cap target (ThreadCap target) slot 1 vroot;
+    install_tcb_cap target (ThreadCap target) slot 3 fault_handler;
     (case buffer of None \<Rightarrow> returnOk ()
      | Some (ptr, frame) \<Rightarrow> doE
       cap_delete (target, tcb_cnode_index 2);

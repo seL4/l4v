@@ -207,7 +207,7 @@ definition
 where
   "sort_queue qs = do
      prios \<leftarrow> mapM (ethread_get tcb_priority) qs;
-     return $ map snd $ sort_key fst (zip prios qs)
+     return $ map snd $ sort_key (\<lambda>x.255 - (fst x)) (zip prios qs) (* 0 \<le> priority < 256 *)
    od"
 
 text {* Bring endpoint queue back into priority order *}

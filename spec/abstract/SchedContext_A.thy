@@ -327,8 +327,9 @@ where
   "min_budget_merge _ [] = []"
 | "min_budget_merge _ [r] = [r]"
 | "min_budget_merge full (r0#r1#rs) = (if (r_amount r0 < MIN_BUDGET \<or> full)
-     then min_budget_merge full (r1\<lparr> r_amount := r_amount r1 + r_amount r0 \<rparr> # rs)
-     else (r0#r1#rs))"  (* RT: full is refill_full value for cur_sc *)
+     then min_budget_merge False (r1\<lparr> r_amount := r_amount r1 + r_amount r0 \<rparr> # rs)
+     else (r0#r1#rs))" (* RT: full can be true only at the beginning,
+                              because the refills size decreases by 1 in each call *)
 
 
 definition
@@ -361,11 +362,8 @@ where
     capacity \<leftarrow> refill_capacity sc_ptr usage';
     ready \<leftarrow> refill_ready sc_ptr;
     when (capacity > 0 \<and> ready) $ refill_split_check sc_ptr usage';
-    csc_ptr \<leftarrow> gets cur_sc;
-    csc \<leftarrow> get_sched_context csc_ptr;
-    cur_refills \<leftarrow> return $ sc_refills csc;
-    full \<leftarrow> refill_full csc_ptr;
-    set_refills csc_ptr (min_budget_merge full (sc_refills csc))
+    full \<leftarrow> refill_full sc_ptr;
+    set_refills sc_ptr (min_budget_merge full (sc_refills sc))
   od"
 
 definition

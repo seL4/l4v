@@ -608,9 +608,26 @@ definition
   "is_valid_vtable_root c \<equiv> \<exists>r a. c = ArchObjectCap (PageDirectoryCap r (Some a))"
 
 (* RT: prove the lemma below and move back this definition to the full one
+text {* A thread's IPC buffer capability must be to a page that is capable of
+containing the IPC buffer without the end of the buffer spilling into another
+page. *}
+definition
+  cap_transfer_data_size :: nat where
+  "cap_transfer_data_size \<equiv> 3"
+
+definition
+  msg_max_length :: nat where
+ "msg_max_length \<equiv> 115"
+
+definition
+  msg_max_extra_caps :: nat where
+ "msg_max_extra_caps \<equiv> 7"  (*  100 - 1 = 11 (= 3) \<rightarrow> 1000 - 1 = 111 (= 7) *)
+
+definition
+  msg_align_bits :: nat
+  where
   "msg_align_bits \<equiv> 2 + (LEAST n. (cap_transfer_data_size + msg_max_length + msg_max_extra_caps + 2) \<le> 2 ^ n)"
-*)
-(* RT: prove this!
+
 lemma msg_align_bits:
   "msg_align_bits = 9"
 proof -
@@ -621,11 +638,9 @@ proof -
   next
     fix y
     assume "(cap_transfer_data_size + msg_max_length + msg_max_extra_caps + 2) \<le> 2 ^ y"
-    moreover
-    hence "(2 :: nat) ^ 7 \<le> 2 ^ y"
-      by sorry (*(simp add: cap_transfer_data_size_def msg_max_length_def msg_max_extra_caps_def)*)
     thus "7 \<le> y"
-      by (rule power_le_imp_le_exp [rotated], simp)
+      using power_increasing[where n=y and N=6 and a="(2::nat)"]
+      by (fastforce simp add: cap_transfer_data_size_def msg_max_length_def msg_max_extra_caps_def)
   qed
   thus ?thesis unfolding msg_align_bits_def by simp
 qed

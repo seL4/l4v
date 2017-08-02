@@ -864,6 +864,6 @@ definition
 section "Cap classification used to define invariants"
 
 datatype capclass =
-  PhysicalClass | ReplyClass "obj_ref" | IRQClass | ASIDMasterClass | NullClass | DomainClass | IOPortClass
+  PhysicalClass | IRQClass | ASIDMasterClass | NullClass | DomainClass | IOPortClass
 
 end
