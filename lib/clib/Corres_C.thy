@@ -15,19 +15,19 @@ imports
 begin
 
 abbreviation
-  "return_C \<equiv> CTranslation.creturn global_exn_var_'_update"
+  "return_C \<equiv> CLanguage.creturn global_exn_var_'_update"
 lemmas return_C_def = creturn_def
 
 abbreviation
-  "return_void_C \<equiv> CTranslation.creturn_void global_exn_var_'_update"
+  "return_void_C \<equiv> CLanguage.creturn_void global_exn_var_'_update"
 lemmas return_void_C_def = creturn_void_def
 
 abbreviation
-  "break_C \<equiv> CTranslation.cbreak global_exn_var_'_update"
+  "break_C \<equiv> CLanguage.cbreak global_exn_var_'_update"
 lemmas breakk_C_def = cbreak_def
 
 abbreviation
-  "catchbrk_C \<equiv> CTranslation.ccatchbrk global_exn_var_'"
+  "catchbrk_C \<equiv> CLanguage.ccatchbrk global_exn_var_'"
 lemmas catchbrk_C_def = ccatchbrk_def
 
 (* This is to avoid typing this all the time \<dots> *)
