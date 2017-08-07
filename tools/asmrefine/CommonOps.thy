@@ -95,17 +95,17 @@ where
         else if x = 4 then ptr_arr_retyps (unat z) (Ptr y :: 'a ptr)
         else ptr_arr_retyps (2 ^ unat z) (Ptr y :: 'a ptr))"
 
-type_synonym ghost_assertions = "int \<Rightarrow> addr"
+type_synonym ghost_assertions = "word64 \<Rightarrow> addr"
 
 definition
   ghost_assertion_data_get :: "int \<Rightarrow> ('a \<Rightarrow> ghost_assertions) \<Rightarrow> 'a \<Rightarrow> addr"
 where
-  "ghost_assertion_data_get k acc s = (acc s) k"
+  "ghost_assertion_data_get k acc s = (acc s) (word_of_int k)"
 
 definition
   ghost_assertion_data_set :: "int \<Rightarrow> addr \<Rightarrow> ((ghost_assertions \<Rightarrow> ghost_assertions) \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'a"
 where
-  "ghost_assertion_data_set k v upd = upd (\<lambda>f. f (k := v))"
+  "ghost_assertion_data_set k v upd = upd (\<lambda>f. f (word_of_int k := v))"
 
 definition
   "pvalid htd (v :: ('a :: c_type) itself) x = h_t_valid htd c_guard (Ptr x :: 'a ptr)"
