@@ -19,7 +19,7 @@ imports Ctac_lemmas_C
 begin
 
 (* FIXME: somewhere automation has failed, resulting in virq_C arrays not being in packed_type! *)
-instance virq_C :: twoToSix_packed
+instance virq_C :: array_inner_packed
   apply intro_classes
   by (simp add: size_of_def)
 

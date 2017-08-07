@@ -565,7 +565,7 @@ lemma archSetIPCBuffer_ccorres:
   apply (cinit lift: thread_' bufferAddr_')
    apply (simp add: setTCBIPCBuffer_def)
    apply (ctac add: setRegister_ccorres[simplified dc_def])
-  apply (clarsimp simp: ARM_H.tpidrurwRegister_def ARM.tpidrurwRegister_def)
+  apply (clarsimp simp:)
   done
 
 lemma threadSet_ipcbuffer_invs:
@@ -805,7 +805,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                        | strengthen invs_sch_act_wf' invs_valid_objs'
                           invs_weak_sch_act_wf invs_queues)+
                apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
-                                     option_to_0_def ARM_H.tpidrurwRegister_def ARM.tpidrurwRegister_def
+                                     option_to_0_def
                                split: option.split_asm)
               apply (clarsimp simp: ccap_relation_def cap_thread_cap_lift cap_to_H_def)
               apply (rule ccorres_split_throws)

@@ -3943,7 +3943,7 @@ lemma updateCapData_spec:
    apply (simp add: ARM_H.updateCapData_def)
 
   -- "CNodeCap"
-  apply clarsimp
+  apply (clarsimp simp: cteRightsBits_def cteGuardBits_def)
   apply (frule cap_get_tag_isCap_unfolded_H_cap(10))
   apply (frule (1) iffD1[OF cap_get_tag_CNodeCap])
   apply clarsimp
