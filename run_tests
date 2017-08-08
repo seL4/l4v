@@ -37,16 +37,10 @@ print "Testing for L4V_ARCH=%s:" % L4V_ARCH
 
 # Enable quick_and_dirty mode for various images
 if os.environ.has_key("QUICK_AND_DIRTY"):
-    os.environ["INVS_QUICK_AND_DIRTY"]=1
+    os.environ["AINVS_QUICK_AND_DIRTY"]=1
     os.environ["REFINE_QUICK_AND_DIRTY"]=1
     os.environ["CREFINE_QUICK_AND_DIRTY"]=1
     print "Testing with QUICK_AND_DIRTY"
-
-# Enable skip_proofs mode for various images
-if os.environ.has_key("REFINE_PROOFS"):
-    os.environ["SKIP_REFINE_PROOFS"]=1
-    os.environ["SKIP_INVS_PROOFS"]=1
-    print "Testing with SKIP_PROOFS"
 
 # Lists of excluded tests for diferent archs
 EXCLUDE={}

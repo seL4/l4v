@@ -41,7 +41,7 @@ session Refine = BaseRefine +
 
 session BaseRefine2 = BaseRefine +
   description {* Intermediate point in refinement proof. Useful for machines with small RAM. *}
-  theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
+  theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
     "refine/$L4V_ARCH/Untyped_R"
     "refine/$L4V_ARCH/Schedule_R"
   theories
@@ -50,17 +50,17 @@ session BaseRefine2 = BaseRefine +
 
 session BaseRefine = AInvs +
   description {* Background theory and libraries for refinement proof. *}
-  theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
+  theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
     "refine/$L4V_ARCH/Include"
   theories
     "refine/$L4V_ARCH/Include"
 
 session AInvs = ASpec +
-  theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
+  theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
     "invariant-abstract/AInvs"
     "invariant-abstract/KernelInit_AI"
     "invariant-abstract/DetSchedSchedule_AI"
-  theories [condition = "INVS_QUICK_AND_DIRTY", quick_and_dirty]
+  theories [condition = "AINVS_QUICK_AND_DIRTY", quick_and_dirty]
     "invariant-abstract/AInvs"
     "invariant-abstract/KernelInit_AI"
     "invariant-abstract/DetSchedSchedule_AI"
@@ -87,7 +87,7 @@ session CRefine = CBaseRefine +
     "crefine/$L4V_ARCH/Refine_C"
 
 session CBaseRefine = CSpec +
-  theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
+  theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
     "crefine/$L4V_ARCH/Include_C"
   theories
     "crefine/$L4V_ARCH/Include_C"
@@ -129,7 +129,7 @@ session InfoFlow in "infoflow" = Access +
     "Example_Valid_State"
 
 session InfoFlowCBase = CRefine +
-  theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
+  theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
     "infoflow/Include_IF_C"
   theories
     "infoflow/Include_IF_C"
