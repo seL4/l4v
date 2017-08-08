@@ -1665,7 +1665,7 @@ lemma nat_bl_to_bin_nat_to_cref:
   assumes asms: "x < 2 ^ bits" "bits < word_bits"
   shows "nat (bl_to_bin (nat_to_cref bits x)) = x"
 proof -
-  note of_bl = of_bl_nat_to_cref[OF asms[unfolded word_bits_conv]]
+  note of_bl = of_bl_nat_to_cref[OF asms]
   have lt_bl: "bl_to_bin (nat_to_cref bits x) < 2 ^ 32"
     apply (rule order_less_le_trans, rule bl_to_bin_lt2p)
     apply (rule power_increasing)

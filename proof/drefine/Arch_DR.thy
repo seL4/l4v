@@ -1927,7 +1927,7 @@ proof -
        apply (clarsimp simp:image_def)
       apply (rule_tac P = "is_aligned frame page_bits \<and> page_bits \<le> word_bits \<and>
                            2 \<le> page_bits" in hoare_gen_asm)
-      apply (simp add: delete_objects_rewrite is_aligned_neg_mask_eq)
+      apply (simp add: delete_objects_rewrite[unfolded word_size_bits_def] is_aligned_neg_mask_eq)
       apply (rule_tac Q="\<lambda>_ s.
         invs s \<and> valid_etcbs s \<and> pspace_no_overlap_range_cover frame pageBits s \<and>
         descendants_range_in (untyped_range (cap.UntypedCap False frame pageBits idx)) cref s \<and>
