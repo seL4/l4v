@@ -30,7 +30,7 @@ HEAPS += ASpec ExecSpec DSpec CKernel CSpec TakeGrant ASepSpec
 
 # Additional dependencies
 
-CKernel CSpec: c-kernel
+CKernel CSpec: c-kernel design-spec
 
 # NOTE: The abstract spec imports Events from Haskell hence the dependency
 
