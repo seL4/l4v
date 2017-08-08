@@ -57,15 +57,12 @@ session BaseRefine = AInvs +
 
 session AInvs = ASpec +
   theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
-    "invariant-abstract/AInvs"
     "invariant-abstract/KernelInit_AI"
-    "invariant-abstract/DetSchedSchedule_AI"
+    "invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
   theories [condition = "AINVS_QUICK_AND_DIRTY", quick_and_dirty]
-    "invariant-abstract/AInvs"
     "invariant-abstract/KernelInit_AI"
-    "invariant-abstract/DetSchedSchedule_AI"
+    "invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
   theories
-    "invariant-abstract/AInvs"
     "invariant-abstract/KernelInit_AI"
     "invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
 
@@ -121,7 +118,6 @@ session Access in "access-control" = AInvs +
 session InfoFlow in "infoflow" = Access +
   theories
     "Noninterference"
-  theories
     "Noninterference_Base_Refinement"
     "PolicyExample"
     "PolicySystemSAC"
