@@ -181,10 +181,9 @@ setup {* DefineGlobalsList.define_globals_list_i
   "c/kernel_all.c_pp" @{typ globals} *}
 
 
-(* FIXME: arch-split, shoudl use machine_word equv, but is not defined on this path *)
 locale substitute_pre
-  = fixes symbol_table :: "string \<Rightarrow> word64"
-      and domain :: "word64 set"
+  = fixes symbol_table :: "string \<Rightarrow> addr"
+      and domain :: "addr set"
 
 begin
 

@@ -11,7 +11,7 @@
 theory KernelInc_C
 imports
   Kernel_C
-  "Substitute"
+  "../Substitute"
   "c/arch/object/structures_defs"
   "c/arch/object/structures_proofs"
   "c/64/mode/api/shared_types_defs"
