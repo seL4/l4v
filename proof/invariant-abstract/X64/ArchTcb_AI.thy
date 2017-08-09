@@ -143,6 +143,9 @@ lemma checked_insert_tcb_invs[wp]: (* arch specific *)
   apply (auto simp: is_cnode_or_valid_arch_def is_cap_simps)
   done
 
+crunch tcb_at[wp, Tcb_AI_asms]: arch_get_sanitise_register_info "tcb_at a"
+crunch invs[wp, Tcb_AI_asms]: arch_get_sanitise_register_info "invs"
+crunch ex_nonz_cap_to[wp, Tcb_AI_asms]: arch_get_sanitise_register_info "ex_nonz_cap_to a"
 
 lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
   assumes x: "P cap.NullCap"
@@ -165,12 +168,17 @@ lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_asms]:
   "table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
   by (simp add:free_index_update_def table_cap_ref_def split:cap.splits)
 
+end
 
-interpretation Tcb_AI_1? : Tcb_AI_1 
+global_interpretation Tcb_AI_1?: Tcb_AI_1
   where state_ext_t = state_ext_t
   and is_cnode_or_valid_arch = is_cnode_or_valid_arch
-by (unfold_locales; fact Tcb_AI_asms)
+  proof goal_cases
+    interpret Arch .
+    case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)
+  qed
 
+context Arch begin global_naming X64
 
 lemma use_no_cap_to_obj_asid_strg: (* arch specific *)
   "(cte_at p s \<and> no_cap_to_obj_dr_emp cap s \<and> valid_cap cap s \<and> invs s)
@@ -374,10 +382,9 @@ end
 
 global_interpretation Tcb_AI?: Tcb_AI
   where is_cnode_or_valid_arch = X64.is_cnode_or_valid_arch
- proof goal_cases
-  interpret Arch .
-  case 1 show ?case
-  by (unfold_locales; fact Tcb_AI_asms)
-qed
+  proof goal_cases
+    interpret Arch .
+    case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)
+  qed
 
 end

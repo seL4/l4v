@@ -267,7 +267,7 @@ lemma set_untyped_cap_invs_simple[Untyped_AI_assms]:
     set_cap_idle update_cap_ifunsafe)
   apply (simp add:valid_irq_node_def)
   apply wps
-  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_arch_objs set_cap_valid_arch_caps
+  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_vspace_objs set_cap_valid_arch_caps
     set_cap_valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at
     set_untyped_cap_refs_respects_device_simple)
   apply (clarsimp simp:cte_wp_at_caps_of_state is_cap_simps)
@@ -438,12 +438,12 @@ lemma store_pml4e_weaken:
   done
 
 lemma store_pml4e_nonempty_table:
-  "\<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table (set (x64_global_pdpts (arch_state s)))) r s)
+  "\<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
            \<and> (\<forall>rf. pml4e_ref pml4e = Some rf \<longrightarrow>
-                   rf \<in> set (x64_global_pdpts (arch_state s)))
+                   rf \<in> set (second_level_tables (arch_state s)))
            \<and> ucast (pml4e_ptr && mask pml4_bits >> 3) \<in> kernel_mapping_slots\<rbrace>
      store_pml4e pml4e_ptr pml4e
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (x64_global_pdpts (arch_state s)))) r s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   apply (simp add: store_pml4e_def update_object_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def nonempty_table_def a_type_def word_size_bits_def empty_table_def)
@@ -452,7 +452,7 @@ lemma store_pml4e_nonempty_table:
 lemma store_pml4e_global_global_objs:
   "\<lbrace>\<lambda>s. valid_global_objs s \<and> valid_arch_state s
            \<and> (\<forall>rf. pml4e_ref pml4e = Some rf \<longrightarrow>
-                   rf \<in> set (x64_global_pdpts (arch_state s)))
+                   rf \<in> set (second_level_tables (arch_state s)))
            \<and> ucast (pml4e_ptr && mask pml4_bits >> 3) \<in> kernel_mapping_slots
    \<rbrace>
    store_pml4e pml4e_ptr pml4e
@@ -481,11 +481,11 @@ lemma pml4_bits_ptTranslationBits_diff:
 
 lemma copy_global_mappings_nonempty_table:
   "is_aligned pm pml4_bits \<Longrightarrow>
-   \<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table (set (x64_global_pdpts (arch_state s)))) r s) \<and>
+   \<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s) \<and>
         valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s\<rbrace>
    copy_global_mappings pm
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table
-                        (set (x64_global_pdpts (arch_state s)))) r s) \<and>
+                        (set (second_level_tables (arch_state s)))) r s) \<and>
            valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s\<rbrace>"
   apply (simp add: copy_global_mappings_def)
   apply (rule hoare_seq_ext [OF _ gets_sp])
@@ -530,11 +530,11 @@ lemma copy_global_mappings_nonempty_table:
 
 
 lemma mapM_copy_global_mappings_nonempty_table[wp]:
-  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (x64_global_pdpts (arch_state s)))) r s)
+  "\<lbrace>(\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)
         \<and> valid_global_objs s \<and> valid_arch_state s \<and> pspace_aligned s) and
     K (\<forall>pd\<in>set pds. is_aligned pd pml4_bits)\<rbrace>
    mapM_x copy_global_mappings pds
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (x64_global_pdpts (arch_state s)))) r s)\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_strengthen_post)
    apply (rule mapM_x_wp', rule copy_global_mappings_nonempty_table)

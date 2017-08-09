@@ -103,7 +103,7 @@ where
   \<and> (is_vspace_table_cap newcap
       \<longrightarrow> cap_asid newcap = None
       \<longrightarrow> (\<forall> r \<in> obj_refs newcap.
-            obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) r s))
+            obj_at (empty_table (set (second_level_tables (arch_state s)))) r s))
     (* If newcap is vspace table cap such that either:
          - newcap and cap have different types or different obj_refs, or
          - newcap is unmapped while cap is mapped, *)
@@ -185,7 +185,7 @@ crunch arch[wp]: set_cap "\<lambda>s. P (arch_state s)" (simp: split_def)
 lemma set_cap_valid_table_caps:
   "\<lbrace>\<lambda>s. valid_table_caps s
          \<and> ((is_vspace_table_cap cap) \<longrightarrow> cap_asid cap = None
-            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) r s))\<rbrace>
+            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (second_level_tables (arch_state s)))) r s))\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_table_caps\<rbrace>"
   apply (simp add: valid_table_caps_def)
@@ -255,7 +255,7 @@ lemma set_cap_valid_arch_caps:
                  \<or> (\<forall>oref \<in> obj_refs cap'. \<not> (vref \<unrhd> oref) s))
       \<and> no_cap_to_obj_with_diff_ref cap {ptr} s
       \<and> (is_vspace_table_cap cap \<longrightarrow> cap_asid cap = None
-            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) r s))
+            \<longrightarrow> (\<forall>r \<in> obj_refs cap. obj_at (empty_table (set (second_level_tables (arch_state s)))) r s))
       \<and> (is_vspace_table_cap cap
              \<longrightarrow> (\<forall>oldcap. caps_of_state s ptr = Some oldcap \<longrightarrow>
                   same_vspace_table_cap_type cap oldcap
@@ -274,7 +274,7 @@ lemma set_cap_valid_arch_caps:
 lemma valid_table_capsD:
   "\<lbrakk> cte_wp_at (op = cap) ptr s; valid_table_caps s;
         is_vspace_table_cap cap; cap_asid cap = None \<rbrakk>
-        \<Longrightarrow> \<forall>r \<in> obj_refs cap. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) r s"
+        \<Longrightarrow> \<forall>r \<in> obj_refs cap. obj_at (empty_table (set (second_level_tables (arch_state s)))) r s"
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_table_caps_def)
   apply (cases ptr, fastforce)
   done
@@ -332,6 +332,22 @@ lemma obj_ref_none_no_asid:
   "{} = obj_refs new_cap \<longrightarrow> None = table_cap_ref new_cap"
   "obj_refs new_cap = {} \<longrightarrow> table_cap_ref new_cap = None"
   by (simp add: table_cap_ref_def split: cap.split arch_cap.split)+
+
+lemma set_cap_hyp_refs_of [wp]:
+ "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
+  set_cap cp p
+  \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (simp add: set_cap_def set_object_def split_def)
+  apply (wp get_object_wp | wpc)+
+  apply (auto elim!: rsubst[where P=P]
+               simp: state_hyp_refs_of_def obj_at_def
+             intro!: ext
+             split: if_split_asm)
+  done
+
+lemma state_hyp_refs_of_revokable[simp]:
+  "state_hyp_refs_of (s \<lparr> is_original_cap := m \<rparr>) = state_hyp_refs_of s"
+  by (rule revokable_update.state_hyp_refs_update)
 
 end
 end

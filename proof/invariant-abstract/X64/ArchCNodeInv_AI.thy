@@ -489,21 +489,24 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
    \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
   apply (case_tac cap, simp_all)
             apply (wp unbind_notification_valid_objs
-                 | clarsimp simp: o_def valid_cap_def cap_table_at_typ
-                                  is_tcb obj_at_def
-                 | clarsimp simp: halted_if_tcb_def
-                           split: option.split
-                 | intro impI conjI
-                 | rule hoare_drop_imp)+
-   apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb
-                  dest!: final_zombie_not_live)
+                   | clarsimp simp: o_def valid_cap_def cap_table_at_typ
+                                    is_tcb obj_at_def
+                   | clarsimp simp: halted_if_tcb_def
+                             split: option.split
+                   | intro impI conjI
+                   | rule hoare_drop_imp)+
+  apply (drule_tac final_zombie_not_live; (assumption | simp add: invs_iflive)?)
+   apply (clarsimp simp: pred_tcb_at_def is_tcb obj_at_def live_def, elim disjE)
+    apply (clarsimp; case_tac "tcb_state tcb"; simp)+
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all add: arch_finalise_cap_def)
       apply (wp
-           | clarsimp simp: valid_cap_def split: option.split bool.split
-           | intro impI conjI)+
+             | clarsimp simp: valid_cap_def obj_at_def is_tcb_def is_cap_table_def
+                        split: option.splits bool.split
+             | intro impI conjI)+
   done
 
+lemmas finalise_cap_makes_halted = finalise_cap_makes_halted_proof
 
 crunch emptyable[wp,CNodeInv_AI_assms]: finalise_cap "\<lambda>s. emptyable sl s"
   (simp: crunch_simps rule: emptyable_lift
@@ -952,31 +955,14 @@ lemma cap_move_invs[wp, CNodeInv_AI_assms]:
   unfolding invs_def valid_state_def valid_pspace_def
   apply (simp add: pred_conj_def conj_comms [where Q = "valid_mdb S" for S])
   apply wp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_zombies_final)
-    apply clarsimp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_if_live)
-    apply clarsimp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_if_unsafe)
-    apply clarsimp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_irq_handlers)
-    apply clarsimp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_replies)
-    apply clarsimp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_valid_arch_caps)
-    apply clarsimp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_valid_global_objs)
-    apply clarsimp
-   apply (rule hoare_vcg_mp)
-    apply (rule hoare_pre, rule cap_move_valid_ioc)
-    apply clarsimp
-   apply simp
+   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_zombies_final)
+   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_if_live)
+   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_if_unsafe)
+   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_irq_handlers)
+   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_replies)
+   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_valid_arch_caps)
+   apply (rule hoare_vcg_mp, wpsimp wp: cap_move_valid_ioc)
+   apply clarsimp
    apply (rule hoare_drop_imps)+
    apply (simp add: cap_move_def set_cdt_def)
    apply (rule hoare_pre)

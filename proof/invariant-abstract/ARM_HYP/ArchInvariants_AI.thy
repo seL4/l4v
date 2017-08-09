@@ -281,22 +281,11 @@ where
   "valid_vspace_obj (ASIDPool pool) =
    (\<lambda>s. \<forall>x \<in> ran pool. typ_at (AArch APageDirectory) x s)"
 | "valid_vspace_obj (PageDirectory pd) =
-   (\<lambda>s. \<forall>x. valid_pde (pd x) s)" (* ARMHYP? *)
+   (\<lambda>s. \<forall>x. valid_pde (pd x) s)"
 | "valid_vspace_obj (PageTable pt) = (\<lambda>s. \<forall>x. valid_pte (pt x) s)"
 | "valid_vspace_obj (DataPage dev sz) = \<top>"
 | "valid_vspace_obj (VCPU v) = \<top>"
-(*
-primrec
-  valid_arch_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "valid_arch_obj (ASIDPool pool) =
-   (\<lambda>s. \<forall>x \<in> ran pool. typ_at (AArch APageDirectory) x s)"
-| "valid_arch_obj (PageDirectory pd) =
-   (\<lambda>s. \<forall>x . valid_pde (pd x) s)"
-| "valid_arch_obj (PageTable pt) = (\<lambda>s. \<forall>x. valid_pte (pt x) s)" (* ARMHYP? *)
-| "valid_arch_obj (DataPage dev sz) = \<top>"
-| "valid_arch_obj (VCPU v) = valid_vcpu v"
-*)
+
 definition
   valid_arch_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where

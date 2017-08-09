@@ -515,7 +515,7 @@ lemma arch_thread_set_pspace_respects_device_region[wp]:
      arch_thread_set p v
    \<lbrace>\<lambda>s. pspace_respects_device_region\<rbrace>"
   apply (simp add: arch_thread_set_def)
-  apply (wp get_object_wp set_object_pspace_respect_device_region)
+  apply (wp get_object_wp set_object_pspace_respects_device_region)
   apply clarsimp
   done
 

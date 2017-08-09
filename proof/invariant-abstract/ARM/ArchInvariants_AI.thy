@@ -618,16 +618,10 @@ where
   obj_at (valid_pd_kernel_mappings (arm_kernel_vspace (arch_state s)) s)
     (arm_global_pd (arch_state s)) s"
 
-fun
-  is_vspace_typ :: "a_type \<Rightarrow> bool"
-where
-  "is_vspace_typ (AArch  _)    = True"
-| "is_vspace_typ  _            = False"
-
 definition
   valid_vso_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_vso_at p \<equiv> \<lambda>s. \<exists>ao. ko_at (ArchObj ao) p s \<and> valid_vspace_obj ao s \<and> is_vspace_typ (AArch (aa_type ao))"
+  "valid_vso_at p \<equiv> \<lambda>s. \<exists>ao. ko_at (ArchObj ao) p s \<and> valid_vspace_obj ao s"
 
 definition
   valid_ao_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -1609,7 +1603,7 @@ lemma stronger_vspace_objsD_lemma:
    apply (drule (2) valid_vspace_objsD)
    apply (fastforce simp: valid_arch_obj_def)
   apply clarsimp
-   apply (simp only: valid_arch_obj_def[symmetric])
+  apply (simp only: valid_arch_obj_def[symmetric])
   apply (frule (2) vs_lookup1_ko_at_dest)
   apply (drule (1) vs_lookup_trancl_step)
   apply (drule (1) vs_lookup_step)
@@ -2076,22 +2070,6 @@ lemma valid_pde_lift2:
   shows "\<lbrace>\<lambda>s. Q s \<and> valid_pde pde s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pde pde s\<rbrace>"
   by (cases pde) (simp add: data_at_def | wp hoare_vcg_disj_lift x)+
 
-lemma valid_arch_obj_typ2:
-  assumes P: "\<And>P p T. \<lbrace>\<lambda>s. Q s \<and> P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. Q s \<and> valid_arch_obj ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_obj ob s\<rbrace>"
-  apply (cases ob, simp_all add: valid_arch_obj_def)
-    apply (wp hoare_vcg_const_Ball_lift [OF P], simp)
-   apply (rule hoare_pre, wp hoare_vcg_all_lift valid_pte_lift2 P)
-    apply clarsimp
-    apply assumption
-   apply clarsimp
-  apply (wp hoare_vcg_ball_lift valid_pde_lift2 P)
-    apply clarsimp
-    apply assumption
-   apply clarsimp
-  apply wp
-  done
-
 lemma valid_vspace_obj_typ2:
   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. Q s \<and> P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. Q s \<and> valid_vspace_obj ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_vspace_obj ob s\<rbrace>"
@@ -2107,6 +2085,11 @@ lemma valid_vspace_obj_typ2:
    apply clarsimp
   apply wp
   done
+
+lemma valid_arch_obj_typ2:
+  assumes P: "\<And>P p T. \<lbrace>\<lambda>s. Q s \<and> P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. Q s \<and> valid_arch_obj ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_obj ob s\<rbrace>"
+  using assms unfolding valid_arch_obj_def by (rule valid_vspace_obj_typ2)
 
 lemma valid_arch_objsI [intro?]:
   "(\<And>p ao. \<lbrakk> (\<exists>\<rhd> p) s; ko_at (ArchObj ao) p s \<rbrakk> \<Longrightarrow> valid_arch_obj ao s) \<Longrightarrow> valid_arch_objs s"
@@ -2320,13 +2303,8 @@ where
 lemma refs_of_a_simps[simp]:
   "refs_of_a ao = {}"
  by (auto simp: refs_of_a_def)
-(*
-lemma refs_of_a_rev: (* duplicate? *)
- "(x, y) \<in> refs_of_a ao ==> False"
-  by (auto simp: refs_of_a_def vcpu_tcb_refs_def split: arch_kernel_obj.splits option.split)
-*)
 
-definition (* refs to arch objects from a kernel object: move to generic? *)
+definition
   hyp_refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set"
 where
   "hyp_refs_of x \<equiv> case x of
@@ -2343,22 +2321,11 @@ lemma hyp_refs_of_simps[simp]:
   "hyp_refs_of (Notification ntfn) = {}"
   "hyp_refs_of (ArchObj ao) = refs_of_a ao"
   by (auto simp: hyp_refs_of_def)
-(*
-lemma hyp_refs_of_rev:
- "(x, TCBHypRef) \<in> hyp_refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> (tcb_vcpu (tcb_arch tcb) = Some x))"
- "(x, HypTCBRef) \<in> hyp_refs_of ko =
-    (\<exists>v. ko = ArchObj (VCPU v) \<and> (vcpu_tcb v = Some x))"
-  by (auto simp: hyp_refs_of_def tcb_hyp_refs_def tcb_vcpu_refs_def
-                    vcpu_tcb_refs_def refs_of_a_def
-              split: kernel_object.splits arch_kernel_obj.splits option.split)
-*)
 
 definition
   state_hyp_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set"
 where
  "state_hyp_refs_of s \<equiv> \<lambda>x. case (kheap s x) of Some ko \<Rightarrow> hyp_refs_of ko | None \<Rightarrow> {}"
-
 
 definition
   state_refs_of_a :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -2366,7 +2333,6 @@ where
  "state_refs_of_a s \<equiv> \<lambda>x. case (kheap s x) of
                             Some ko \<Rightarrow> (case ko of ArchObj ao \<Rightarrow> refs_of_a ao | _ \<Rightarrow> {})
                           | None \<Rightarrow> {}"
-
 
 lemma state_hyp_refs_of_elemD:
   "\<lbrakk> ref \<in> state_hyp_refs_of s x \<rbrakk> \<Longrightarrow> obj_at (\<lambda>obj. ref \<in> hyp_refs_of obj) x s"
@@ -2419,13 +2385,7 @@ lemma hyp_refs_of_hyp_live:
   "hyp_refs_of ko \<noteq> {} \<Longrightarrow> hyp_live ko"
   apply (cases ko, simp_all add: hyp_refs_of_def)
   done
-(*
-lemma hyp_refs_of_hyp_live_iff:
-  "hyp_refs_of ko \<noteq> {} = hyp_live ko"
-  apply (rule, clarsimp simp: hyp_refs_of_hyp_live)
-  apply (cases ko; clarsimp simp add: hyp_live_def arch_live_def split: arch_kernel_obj.splits)
-  done
-*)
+
 lemma hyp_refs_of_hyp_live_obj:
   "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; hyp_refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at hyp_live p s"
   by (fastforce simp: obj_at_def hyp_refs_of_hyp_live)

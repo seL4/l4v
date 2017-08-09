@@ -692,7 +692,7 @@ lemma perform_asid_control_invocation_st_tcb_at:
     apply (drule(1) caps_of_state_valid[rotated])+
     apply (simp add:valid_cap_simps cap_aligned_def page_bits_def)
    apply (subst delete_objects_rewrite)
-      apply (simp add:page_bits_def word_bits_def pageBits_def)+
+      apply (simp add:page_bits_def word_bits_def word_size_bits_def pageBits_def)+
     apply (simp add:is_aligned_neg_mask_eq)
    apply wp
   apply (clarsimp simp: valid_aci_def)
@@ -814,21 +814,19 @@ lemma aci_invs':
               retype_region_ap'[simplified]
               retype_region_no_cap_to_obj[where sz = pageBits,simplified]
                | simp del: split_paired_Ex)+
-apply (strengthen invs_valid_objs invs_psp_aligned
-           invs_mdb invs_valid_pspace
-           exI[where x="case aci of MakePool frame slot parent base \<Rightarrow> parent"]
-           exI[where x="case aci of MakePool frame slot parent base \<Rightarrow> parent",
-             simplified]
-           caps_region_kernel_window_imp[where
-             p = "case aci of MakePool frame slot parent base \<Rightarrow> parent"]
-           invs_cap_refs_in_kernel_window)+
+   apply (strengthen invs_valid_objs invs_psp_aligned invs_mdb invs_valid_pspace
+                     exI[where x="case aci of MakePool frame slot parent base \<Rightarrow> parent"]
+                     exI[where x="case aci of MakePool frame slot parent base \<Rightarrow> parent", simplified]
+                     caps_region_kernel_window_imp[where
+                       p = "case aci of MakePool frame slot parent base \<Rightarrow> parent"]
+                     invs_cap_refs_in_kernel_window)+
     apply (wp set_cap_caps_no_overlap set_cap_no_overlap get_cap_wp
       max_index_upd_caps_overlap_reserved max_index_upd_invs_simple
       set_cap_cte_cap_wp_to set_cap_cte_wp_at max_index_upd_no_cap_to
       | simp split del: if_split | wp_once hoare_vcg_ex_lift)+
     apply (rule_tac P = "is_aligned word1 page_bits" in hoare_gen_asm)
     apply (subst delete_objects_rewrite)
-       apply (simp add:page_bits_def pageBits_def)
+       apply (simp add:page_bits_def pageBits_def word_size_bits_def)
       apply (simp add:page_bits_def pageBits_def word_bits_def)
      apply (simp add:is_aligned_neg_mask_eq)
     apply wp

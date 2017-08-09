@@ -20,6 +20,20 @@ lemma set_cap_in_device_frame[wp]:
   "\<lbrace>in_device_frame buffer\<rbrace> set_cap cap ref \<lbrace>\<lambda>_. in_device_frame buffer\<rbrace>"
   by (simp add: in_device_frame_def) (wp hoare_vcg_ex_lift set_cap_typ_at)
 
+lemma valid_cnode_capI:
+  "\<lbrakk>cap_table_at n w s; valid_objs s; pspace_aligned s; n > 0; length g \<le> 32\<rbrakk>
+   \<Longrightarrow> s \<turnstile> cap.CNodeCap w n g"
+  apply (simp add: valid_cap_def cap_aligned_def)
+  apply (rule conjI)
+   apply (clarsimp simp add: pspace_aligned_def obj_at_def)
+   apply (drule bspec, fastforce)
+   apply (clarsimp simp: is_obj_defs wf_obj_bits)
+  apply (clarsimp simp add: obj_at_def is_obj_defs valid_objs_def dom_def)
+  apply (erule allE, erule impE, blast)
+  apply (simp add: valid_obj_def valid_cs_def valid_cs_size_def)
+  apply (simp add: word_bits_def cte_level_bits_def)
+  done
+
 (* unused *)
 lemma derive_cap_objrefs [CNodeInv_AI_assms]:
   "\<lbrace>\<lambda>s. P (obj_refs cap)\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> P (obj_refs rv)\<rbrace>,-"

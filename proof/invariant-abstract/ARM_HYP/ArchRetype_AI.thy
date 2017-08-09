@@ -298,20 +298,6 @@ lemma mapM_x_store_pde_eq_kernel_mappings_restr:
   done
 
 
-(* ARMHYP remove
-lemma equal_kernel_mappings_specific_def:
-  "ko_at (ArchObj (PageDirectory pd)) p s
-    \<Longrightarrow> equal_kernel_mappings s
-          = (\<forall>p' pd'. ko_at (ArchObj (PageDirectory pd')) p' s
-                        \<longrightarrow> (\<forall>w \<in> kernel_mapping_slots. pd' w = pd w))"
-  apply (rule iffI)
-   apply (clarsimp simp: equal_kernel_mappings_def)
-  apply (clarsimp simp: equal_kernel_mappings_def)
-  apply (subgoal_tac "pda w = pd w \<and> pd' w = pd w")
-   apply (erule conjE, erule(1) trans[OF _ sym])
-  apply blast
-  done   *)
-
 lemma copy_global_equal_kernel_mappings_restricted:
   "is_aligned pd pd_bits \<Longrightarrow>
    \<lbrace>\<lambda>s. equal_kernel_mappings (s \<lparr> kheap := restrict_map (kheap s) (- (insert pd S)) \<rparr>)
@@ -932,17 +918,6 @@ lemma valid_vspace_obj_pres:
   apply (erule allEI)
   apply (erule (1) obj_at_valid_pde[OF _ obj_at_pres])
   done
-(*
-lemma valid_arch_obj_pres:
-  "valid_arch_obj ao s \<Longrightarrow> valid_arch_obj ao s'"
-  apply (cases ao, simp_all)
-    apply (simp add: obj_at_pres)
-   apply (erule allEI)
-   apply (erule (1) obj_at_valid_pte[OF _ obj_at_pres])
-  apply (erule allEI)
-  apply (erule (1) obj_at_valid_pde[OF _ obj_at_pres])
-  done
-*)
 
 lemma valid_kernel_mappings:
   "valid_kernel_mappings s \<Longrightarrow> valid_kernel_mappings s'"

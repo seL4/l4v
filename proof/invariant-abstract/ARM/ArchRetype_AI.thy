@@ -853,7 +853,7 @@ end
 context retype_region_proofs begin
 
 interpretation retype_region_proofs_arch ..
-thm valid_arch_objsI
+
 lemma valid_vspace_objs':
   assumes va: "valid_vspace_objs s"
   shows "valid_vspace_objs s'"

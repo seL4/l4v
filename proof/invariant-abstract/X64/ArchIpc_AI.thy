@@ -420,6 +420,15 @@ lemma do_normal_transfer_tcb_caps:
      | simp add:imp)+
   done
 
+lemma set_cap_valid_arch_objs [wp, Ipc_AI_assms]:
+  "\<lbrace>valid_arch_objs\<rbrace> set_cap a b \<lbrace>\<lambda>_. valid_arch_objs \<rbrace>"
+  apply (rule valid_arch_objs_lift)
+  apply (wp set_cap_typ_at)+
+  apply (rule set_cap.aobj_at)
+  apply (fastforce simp: arch_obj_pred_def non_arch_obj_def
+                   split: kernel_object.split arch_kernel_obj.splits)
+  done
+
 lemma do_ipc_transfer_tcb_caps [Ipc_AI_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows
@@ -434,12 +443,28 @@ lemma do_ipc_transfer_tcb_caps [Ipc_AI_assms]:
 
 lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_assms]:
   "\<lbrace>valid_global_objs\<rbrace> setup_caller_cap send recv \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
-  apply (wp valid_global_objs_lift valid_ao_at_lift)
+  apply (wp valid_global_objs_lift valid_vso_at_lift)
   apply (simp_all add: setup_caller_cap_def)
    apply (wp sts_obj_at_impossible | simp add: tcb_not_empty_table)+
   done
 
-crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply "P (typ_at T p s)"
+lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
+  "\<lbrace>valid_vspace_objs\<rbrace>
+      transfer_caps_loop ep buffer n caps slots mi
+    \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
+  apply (induct caps arbitrary: slots n mi, simp)
+  apply (clarsimp simp: Let_def split_def whenE_def
+                  cong: if_cong list.case_cong
+             split del: if_split)
+  apply (rule hoare_pre)
+   apply (wp hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift
+              derive_cap_is_derived_foo
+             hoare_drop_imps
+        | assumption | simp split del: if_split)+
+  done
+
+crunch inv[Ipc_AI_assms]: make_arch_fault_msg "P"
+crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "P (typ_at T p s)"
 
 end
 
@@ -479,12 +504,19 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
   apply auto
   done
 
+lemma set_mrs_state_hyp_refs_of[wp]:
+  "\<lbrace>\<lambda> s. P (state_hyp_refs_of s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
+  by (wp set_mrs_thread_set_dmo thread_set_hyp_refs_trivial | simp)+
+
+crunch state_hyp_refs_of[wp, Ipc_AI_cont_assms]: do_ipc_transfer "\<lambda> s. P (state_hyp_refs_of s)"
+  (wp: crunch_wps simp: zipWithM_x_mapM)
+
 end
 
 interpretation Ipc_AI?: Ipc_AI_cont
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales;(fact Ipc_AI_cont_assms)?)
+  case 1 show ?case by (unfold_locales; (fact Ipc_AI_cont_assms)?)
   qed
 
 end

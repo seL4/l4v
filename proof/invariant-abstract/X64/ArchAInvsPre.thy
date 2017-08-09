@@ -143,7 +143,7 @@ lemma is_aligned_ptrFromPAddrD:
 
 lemma some_get_page_info_umapsD:
   "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pml4_ref p = Some (b, a, attr, r);
-    (\<exists>\<rhd> pml4_ref) s; p \<notin> kernel_mappings; valid_arch_objs s; pspace_aligned s;
+    (\<exists>\<rhd> pml4_ref) s; p \<notin> kernel_mappings; valid_vspace_objs s; pspace_aligned s;
     canonical_address p;
     valid_asid_table (x64_asid_table (arch_state s)) s; valid_objs s\<rbrakk>
    \<Longrightarrow> \<exists>sz. pageBitsForSize sz = a \<and> is_aligned b a \<and> data_at sz (ptrFromPAddr b) s"
@@ -156,14 +156,14 @@ lemma some_get_page_info_umapsD:
     apply (all \<open>drule (2) vs_lookup_step_alt[OF _ _ vs_refs_pml4I],
                 simp add: ucast_ucast_mask9, fastforce\<close>)
     prefer 3 subgoal
-      by (rule exI[of _ X64HugePage]; frule (3) valid_arch_objs_entryD;
+      by (rule exI[of _ X64HugePage]; frule (3) valid_vspace_objs_entryD;
           clarsimp simp: bit_simps vmsz_aligned_def)
    apply (all \<open>drule (2) vs_lookup_step_alt[OF _ _ vs_refs_pdptI], fastforce\<close>)
    prefer 2 subgoal
-     by (rule exI[of _ X64LargePage]; frule (3) valid_arch_objs_entryD;
+     by (rule exI[of _ X64LargePage]; frule (3) valid_vspace_objs_entryD;
          clarsimp simp: bit_simps vmsz_aligned_def)
   apply (drule (2) vs_lookup_step_alt[OF _ _ vs_refs_pdI], fastforce)
-  by (rule exI[of _ X64SmallPage]; frule (3) valid_arch_objs_entryD;
+  by (rule exI[of _ X64SmallPage]; frule (3) valid_vspace_objs_entryD;
       clarsimp simp: bit_simps vmsz_aligned_def)
 
 lemma user_mem_dom_cong:

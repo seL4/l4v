@@ -2536,7 +2536,7 @@ end
 context p_arch_update_eq begin
 
 interpretation Arch_p_arch_update_eq f ..
-(* do we need this?*)
+
 lemma valid_arch_objs_update [iff]:
   "valid_arch_objs (f s) = valid_arch_objs s"
   by (simp add: valid_arch_objs_def valid_vspace_objs_def)

@@ -17,8 +17,8 @@ context Arch begin global_naming ARM
 named_theorems Untyped_AI_assms
 
 lemma of_bl_nat_to_cref[Untyped_AI_assms]:
-    "\<lbrakk> x < 2 ^ bits; bits < 32 \<rbrakk>
-      \<Longrightarrow> (of_bl (nat_to_cref bits x) :: word32) = of_nat x"
+    "\<lbrakk> x < 2 ^ bits; bits < word_bits \<rbrakk>
+      \<Longrightarrow> (of_bl (nat_to_cref bits x) :: machine_word) = of_nat x"
   apply (clarsimp intro!: less_mask_eq
                   simp: nat_to_cref_def of_drop_to_bl
                         word_size word_less_nat_alt word_bits_def)
@@ -43,9 +43,9 @@ lemma cnode_cap_ex_cte[Untyped_AI_assms]:
 
 
 lemma inj_on_nat_to_cref[Untyped_AI_assms]:
-  "bits < 32 \<Longrightarrow> inj_on (nat_to_cref bits) {..< 2 ^ bits}"
+  "bits < word_bits \<Longrightarrow> inj_on (nat_to_cref bits) {..< 2 ^ bits}"
   apply (rule inj_onI)
-  apply (drule arg_cong[where f="\<lambda>x. replicate (32 - bits) False @ x"])
+  apply (drule arg_cong[where f="\<lambda>x. replicate (word_bits - bits) False @ x"])
   apply (subst(asm) word_bl.Abs_inject[where 'a=32, symmetric])
     apply (simp add: nat_to_cref_def word_bits_def)
    apply (simp add: nat_to_cref_def word_bits_def)
@@ -53,7 +53,7 @@ lemma inj_on_nat_to_cref[Untyped_AI_assms]:
   apply (erule word_unat.Abs_eqD)
    apply (simp only: unats_def mem_simps)
    apply (erule order_less_le_trans)
-   apply (rule power_increasing, simp+)
+   apply (rule power_increasing, simp_all add: word_bits_def)
   apply (simp only: unats_def mem_simps)
   apply (erule order_less_le_trans)
   apply (rule power_increasing, simp+)
@@ -302,13 +302,14 @@ lemma pbfs_less_wb':
   "pageBitsForSize sz < word_bits"by (cases sz, simp_all add: word_bits_conv pageBits_def)
 
 lemma delete_objects_rewrite[Untyped_AI_assms]:
-  "\<lbrakk>2\<le> sz; sz\<le> word_bits;ptr && ~~ mask sz = ptr\<rbrakk> \<Longrightarrow> delete_objects ptr sz =
-    do y \<leftarrow> modify (clear_um {ptr + of_nat k |k. k < 2 ^ sz});
-    modify (detype {ptr && ~~ mask sz..ptr + 2 ^ sz - 1})
-    od"
-  apply (clarsimp simp:delete_objects_def freeMemory_def word_size_def)
+  "\<lbrakk>word_size_bits \<le> sz; sz \<le> word_bits; ptr && ~~ mask sz = ptr\<rbrakk>
+    \<Longrightarrow> delete_objects ptr sz =
+          do y \<leftarrow> modify (clear_um {ptr + of_nat k |k. k < 2 ^ sz});
+             modify (detype {ptr && ~~ mask sz..ptr + 2 ^ sz - 1})
+          od"
+  apply (clarsimp simp: delete_objects_def freeMemory_def)
   apply (subgoal_tac "is_aligned (ptr &&~~ mask sz) sz")
-  apply (subst mapM_storeWord_clear_um[simplified word_size_def word_size_bits_def])
+  apply (subst mapM_storeWord_clear_um)
   apply (simp)
   apply simp
   apply (simp add:range_cover_def)
@@ -528,11 +529,10 @@ end
 
 global_interpretation Untyped_AI? : Untyped_AI
   where nonempty_table = ARM.nonempty_table
- proof goal_cases
-  interpret Arch .
-  case 1 show ?case
-  by (unfold_locales; (fact Untyped_AI_assms)?) (* FIXME *)
-qed
-
+  proof goal_cases
+    interpret Arch .
+    case 1 show ?case
+      by (unfold_locales; (fact Untyped_AI_assms)?)
+  qed
 
 end

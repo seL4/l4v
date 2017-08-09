@@ -1957,8 +1957,8 @@ lemma set_asid_pool_table_caps [wp]:
   apply (rule hoare_lift_Pf2 [where f=caps_of_state];wp?)
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
-  by (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
-     (fastforce simp: obj_at_def empty_table_def)
+  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
+  by (fastforce simp: obj_at_def empty_table_def)
 
 
 
@@ -2183,8 +2183,7 @@ lemma set_asid_pool_invs_restrict:
        set_asid_pool p (ap |` S) \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def
                    valid_arch_caps_def)
-  apply (rule hoare_pre,
-         wp valid_irq_node_typ set_asid_pool_typ_at
+  apply (wp valid_irq_node_typ set_asid_pool_typ_at
             set_asid_pool_vspace_objs_unmap  valid_irq_handlers_lift
             set_asid_pool_vs_lookup_unmap set_asid_pool_restrict_asid_map)
   apply simp

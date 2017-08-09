@@ -1049,7 +1049,7 @@ lemmas vs_lookup_pages1_is_wellformed_lookup
   = vs_lookup_pages1_wellformed.wellformed_lookup_axioms
 
 lemma vs_refs_pages_vs_ref_lvl:
-  "\<lbrakk> ko_at (ArchObj aobj) p s; (r, q) \<in> vs_refs_pages (ArchObj aobj); valid_arch_obj aobj s \<rbrakk>
+  "\<lbrakk> ko_at (ArchObj aobj) p s; (r, q) \<in> vs_refs_pages (ArchObj aobj); valid_vspace_obj aobj s \<rbrakk>
      \<Longrightarrow> vs_ref_lvl (kheap s p) < vs_ref_lvl (kheap s q)"
   apply (cases aobj;
          clarsimp simp: vs_refs_pages_def graph_of_def ball_ran_eq obj_at_def
@@ -1064,7 +1064,7 @@ lemma vs_refs_pages_vs_ref_lvl:
 lemmas vs_refs_vs_ref_lvl = vs_refs_pages_vs_ref_lvl[OF _ vs_refs_vs_refs_pages]
 
 lemma vs_lookup1_wellformed_order:
-  "valid_arch_objs s
+  "valid_vspace_objs s
     \<Longrightarrow> wellformed_order_lookup (vs_lookup1 s) (kheap s) vs_lookup1_on_heap_obj
                                 vs_ref_lvl (vs_asid_refs (x64_asid_table (arch_state s)))"
   apply (intro wellformed_order_lookup.intro vs_lookup1_wellformed.wellformed_lookup_axioms
@@ -1072,7 +1072,7 @@ lemma vs_lookup1_wellformed_order:
   apply (simp only: vs_lookup_def2[symmetric])
   apply (clarsimp simp add: vs_lookup1_def)
   apply (case_tac ko; (clarsimp simp: vs_refs_def; fail)?; rename_tac ako; clarsimp)
-  apply (frule (2) valid_arch_objsD)
+  apply (frule (2) valid_vspace_objsD)
   apply (case_tac ako; clarsimp simp: vs_refs_def)
      apply (drule (1) graph_of_in_ranD; clarsimp simp: obj_at_def)
     apply (match premises in "(i,_) \<in> graph_of _" for i \<Rightarrow>
@@ -1084,7 +1084,7 @@ lemma vs_lookup1_wellformed_order:
   done
 
 lemma vs_lookup_pages1_wellformed_order:
-  "\<lbrakk> valid_arch_objs s; valid_asid_table (x64_asid_table (arch_state s)) s \<rbrakk>
+  "\<lbrakk> valid_vspace_objs s; valid_asid_table (x64_asid_table (arch_state s)) s \<rbrakk>
     \<Longrightarrow> wellformed_order_lookup (vs_lookup_pages1 s) (kheap s) vs_lookup_pages1_on_heap_obj
                                 vs_ref_lvl (vs_asid_refs (x64_asid_table (arch_state s)))"
   apply (intro wellformed_order_lookup.intro vs_lookup_pages1_wellformed.wellformed_lookup_axioms

@@ -36,7 +36,7 @@ lemma cte_at_length_limit:
 (* FIXME: move? *)
 lemma getActiveIRQ_wp [CSpace_AI_assms]:
   "irq_state_independent_A P \<Longrightarrow>
-   valid P (do_machine_op getActiveIRQ) (\<lambda>_. P)"
+   valid P (do_machine_op (getActiveIRQ in_kernel)) (\<lambda>_. P)"
   apply (simp add: getActiveIRQ_def do_machine_op_def split_def exec_gets
                    select_f_select[simplified liftM_def]
                    select_modify_comm gets_machine_state_modify)
@@ -108,7 +108,7 @@ lemma set_free_index_invs [CSpace_AI_assms]:
     set_cap_idle update_cap_ifunsafe)
   apply (simp add:valid_irq_node_def)
   apply wps
-  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap.valid_arch_obj set_cap_valid_arch_caps
+  apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap.valid_vspace_obj set_cap_valid_arch_caps
             set_cap.valid_global_objs set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at
             set_cap_cap_refs_respects_device_region_spec[where ptr = cref])
   apply (clarsimp simp:cte_wp_at_caps_of_state)

@@ -2487,7 +2487,7 @@ lemma set_vcpu_pspace_respects_device_region[wp]:
      set_vcpu p vcpu
    \<lbrace>\<lambda>s. pspace_respects_device_region\<rbrace>"
   apply (simp add: set_vcpu_def)
-  apply (wp get_object_wp set_object_pspace_respect_device_region)
+  apply (wp get_object_wp set_object_pspace_respects_device_region)
   including unfold_objects_asm by (clarsimp simp: a_type_def)
 
 lemma set_vcpu_cap_refs_in_kernel_window[wp]:
@@ -4903,11 +4903,11 @@ lemma vcpu_save_register_pspace_respects_device_region[wp]:
 
 crunch pspace_respects_device_region[wp]: vcpu_disable, vcpu_restore, vcpu_enable "pspace_respects_device_region"
   (simp: crunch_simps respects_device_region_vcpu_helper vcpuregs_sets vcpuregs_gets
-     wp: crunch_wps set_object_pspace_respect_device_region pspace_respects_device_region_dmo)
+     wp: crunch_wps set_object_pspace_respects_device_region pspace_respects_device_region_dmo)
 
 crunch pspace_respects_device_region[wp]: perform_page_invocation "pspace_respects_device_region"
   (simp: crunch_simps respects_device_region_vcpu_helper vcpuregs_sets vcpuregs_gets
-     wp: crunch_wps set_object_pspace_respect_device_region pspace_respects_device_region_dmo)
+     wp: crunch_wps set_object_pspace_respects_device_region pspace_respects_device_region_dmo)
 
 (* FIXME move to WordLemma *)
 lemma word_shift_by_3:

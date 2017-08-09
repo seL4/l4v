@@ -249,18 +249,18 @@ lemma invs_A:
                           dom_if_Some cte_level_bits_def)
     apply (rule conjI)
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def
-                           valid_cap_def obj_at_def valid_tcb_state_def
+                           valid_cap_def obj_at_def valid_tcb_state_def valid_arch_tcb_def
                            cap_aligned_def word_bits_def valid_ipc_buffer_cap_simps)+
     apply (clarsimp simp: valid_cs_def word_bits_def cte_level_bits_def
                           init_irq_ptrs_all_ineqs valid_tcb_def
                    split: if_split_asm)
    apply (simp add: pspace_aligned_init_A pspace_distinct_init_A)
    apply (rule conjI)
-    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs)
+    apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs live_def hyp_live_def)
    apply (rule conjI)
     apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs
                           tcb_cap_cases_def is_zombie_def)
-   apply (clarsimp simp: sym_refs_def state_refs_of_def state_defs)
+   apply (clarsimp simp: sym_refs_def state_refs_of_def state_defs state_hyp_refs_of_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_mdb_def init_cdt_def no_mloop_def
                          mdb_cte_at_def)
@@ -311,7 +311,7 @@ lemma invs_A:
    apply (clarsimp simp: valid_machine_state_def state_defs
                          init_machine_state_def init_underlying_memory_def)
   apply (rule conjI)
-   apply (clarsimp simp: valid_arch_objs_def obj_at_def state_defs)
+   apply (clarsimp simp: valid_arch_objs_def obj_at_def state_defs valid_vspace_objs_def)
    apply (clarsimp simp: vs_lookup_def vs_asid_refs_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_arch_caps_def)
@@ -321,13 +321,14 @@ lemma invs_A:
    apply (clarsimp simp: valid_table_caps_def caps_of_state_init_A_st_Null
                          unique_table_caps_def unique_table_refs_def)
   apply (rule conjI)
-   apply (clarsimp simp: valid_global_objs_def state_defs valid_ao_at_def obj_at_def
+   apply (clarsimp simp: valid_global_objs_def state_defs valid_vso_at_def obj_at_def
                          a_type_simps empty_table_def vmsz_aligned_def kernel_mapping_slot
-                         is_aligned_shift bit_simps pdpte_ref_def valid_global_pdpt_def)
+                         is_aligned_shift bit_simps pdpte_ref_def valid_global_pdpt_def
+                         second_level_tables_def)
   apply (rule conjI)
    apply (simp add: valid_kernel_mappings_def state_defs
                     valid_kernel_mappings_if_pm_def pml4e_ref_def
-                    ran_def)
+                    ran_def second_level_tables_def)
    apply (auto simp: kernel_mapping_slot split: if_split_asm)[1]
   apply (rule conjI)
    apply (clarsimp simp: equal_kernel_mappings_def state_defs obj_at_def)

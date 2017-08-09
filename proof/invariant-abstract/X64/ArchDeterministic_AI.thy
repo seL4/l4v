@@ -23,7 +23,8 @@ crunch valid_list[wp]: update_object valid_list
   (wp: get_object_wp)
 
 crunch valid_list[wp, Deterministic_AI_assms]:
-  cap_swap_for_delete,set_cap,finalise_cap,arch_tcb_set_ipc_buffer valid_list
+  cap_swap_for_delete,set_cap,finalise_cap,arch_tcb_set_ipc_buffer,arch_get_sanitise_register_info
+  valid_list
   (wp: crunch_wps simp: unless_def crunch_simps)
 
 end

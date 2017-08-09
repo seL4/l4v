@@ -122,6 +122,20 @@ lemma state_hyp_refs_of_detype:
   "state_hyp_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else state_hyp_refs_of s x)"
   by (rule ext, simp add: state_hyp_refs_of_def detype_def)
 
+lemma of_bl_length2:
+  "length xs < word_bits - cte_level_bits \<Longrightarrow> of_bl xs * 16 < (2 :: machine_word) ^ (length xs + 4)"
+  apply (simp add: power_add cte_level_bits_def)
+  apply (rule word_mult_less_mono1)
+    apply (rule of_bl_length, simp add: word_bits_def)
+   apply simp
+  apply simp
+  apply (simp add: word_bits_def)
+  apply (rule order_less_le_trans)
+   apply (erule power_strict_increasing)
+   apply simp
+  apply simp
+  done
+
 end
 
 interpretation Detype_AI?: Detype_AI
