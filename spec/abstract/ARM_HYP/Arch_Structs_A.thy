@@ -188,11 +188,15 @@ datatype arch_kernel_obj =
  | VCPU vcpu
 
 lemmas arch_kernel_obj_cases =
-  arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P, simplified, rule_format]
+  arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x'" for x P,
+                         simplified, rule_format]
 
 lemmas arch_kernel_obj_cases_asm =
-arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x,
-  simplified, rule_format, rotated -1]
+  arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x,
+                         simplified, rule_format, rotated -1]
+
+definition cte_level_bits :: nat where
+  "cte_level_bits \<equiv> 4"
 
 primrec
   arch_obj_size :: "arch_cap \<Rightarrow> nat"
@@ -206,13 +210,19 @@ where
 
 primrec
   arch_cap_is_device :: "arch_cap \<Rightarrow> bool"
-  where
-    "arch_cap_is_device (PageCap dev x rs sz as4) = dev"
-    | "arch_cap_is_device ASIDControlCap = False"
-    | "arch_cap_is_device (ASIDPoolCap p as) = False"
-    | "arch_cap_is_device (PageTableCap x as3) = False"
-    | "arch_cap_is_device (PageDirectoryCap x as2) = False"
-    | "arch_cap_is_device (VCPUCap _) = False"
+where
+  "arch_cap_is_device (PageCap dev x rs sz as4) = dev"
+| "arch_cap_is_device ASIDControlCap = False"
+| "arch_cap_is_device (ASIDPoolCap p as) = False"
+| "arch_cap_is_device (PageTableCap x as3) = False"
+| "arch_cap_is_device (PageDirectoryCap x as2) = False"
+| "arch_cap_is_device (VCPUCap _) = False"
+
+definition endpoint_bits :: nat where
+  "endpoint_bits \<equiv> 4"
+
+definition ntfn_bits :: nat where
+  "ntfn_bits \<equiv> 4"
 
 primrec
   arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat"
@@ -383,13 +393,13 @@ definition
 text {* accesors for @{text "tcb_context"} inside @{text "arch_tcb"} *}
 definition
   arch_tcb_context_set :: "user_context \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
-  where
-    "arch_tcb_context_set uc a_tcb \<equiv> a_tcb \<lparr> tcb_context := uc \<rparr>"
+where
+  "arch_tcb_context_set uc a_tcb \<equiv> a_tcb \<lparr> tcb_context := uc \<rparr>"
 
 definition
   arch_tcb_context_get :: "arch_tcb \<Rightarrow> user_context"
-  where
-    "arch_tcb_context_get a_tcb \<equiv> tcb_context a_tcb"
+where
+  "arch_tcb_context_get a_tcb \<equiv> tcb_context a_tcb"
 
 end
 

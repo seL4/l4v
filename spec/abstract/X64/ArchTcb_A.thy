@@ -37,7 +37,7 @@ where
 
 (* FIXME x64: this is disgusting *)
 definition
-  sanitise_register :: "tcb \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
+  sanitise_register :: "bool \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 where
   "sanitise_register t r v \<equiv>
     let val = (if (r = FaultIP \<or> r = NextIP) then
@@ -47,6 +47,10 @@ where
     in
       if r = FLAGS then (val' || sanitise_or_flags) && sanitise_and_flags else val'"
 
+definition
+  arch_get_sanitise_register_info :: "obj_ref \<Rightarrow> (bool, 'a::state_ext) s_monad"
+where
+  "arch_get_sanitise_register_info t \<equiv> return False"
 
 end
 end

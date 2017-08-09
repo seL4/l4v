@@ -103,7 +103,7 @@ lemmas arch_kernel_obj_cases =
                          simplified, rule_format]
 
 lemmas arch_kernel_obj_cases_asm =
-  arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x, 
+  arch_kernel_obj.induct[where arch_kernel_obj=x and P="\<lambda>x'. x = x' \<longrightarrow> P x' \<longrightarrow> R" for P R x,
                          simplified, rule_format, rotated -1]
 
 definition cte_level_bits :: nat where

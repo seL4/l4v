@@ -16,9 +16,9 @@ begin
 
 context Arch begin global_naming X64_A
 
-fun handle_hypervisor_fault :: "machine_word \<Rightarrow> hyp_fault_type \<Rightarrow> (unit, 'z::state_ext) f_monad"
+fun handle_hypervisor_fault :: "machine_word \<Rightarrow> hyp_fault_type \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-"handle_hypervisor_fault thread X64NoHypFaults = returnOk ()"
+"handle_hypervisor_fault thread X64NoHypFaults = return ()"
 
 
 end

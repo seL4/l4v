@@ -143,19 +143,26 @@ where
 -- "Interrupt controller operations"
 
 text {*
+  Interrupts that cannot occur while the kernel is running (e.g. at preemption points),
+  but that can occur from user mode. Empty on plain x86-64.
+*}
+definition
+  "non_kernel_IRQs = {}"
+
+text {*
   @{term getActiveIRQ} is now derministic.
   It 'updates' the irq state to the reflect the passage of
   time since last the irq was gotten, then it gets the active
   IRQ (if there is one).
 *}
 definition
-  getActiveIRQ :: "(irq option) machine_monad"
+  getActiveIRQ :: "bool \<Rightarrow> (irq option) machine_monad"
 where
-  "getActiveIRQ \<equiv> do
+  "getActiveIRQ in_kernel \<equiv> do
     is_masked \<leftarrow> gets $ irq_masks;
     modify (\<lambda>s. s \<lparr> irq_state := irq_state s + 1 \<rparr>);
     active_irq \<leftarrow> gets $ irq_oracle \<circ> irq_state;
-    if is_masked active_irq \<or> active_irq = 0xFF
+    if is_masked active_irq \<or> active_irq = 0xFF \<or> (in_kernel \<and> active_irq \<in> non_kernel_IRQs)
     then return None
     else return ((Some active_irq) :: irq option)
   od"
