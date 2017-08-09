@@ -85,7 +85,7 @@ EXCLUDE["ARM_HYP"]=[
 
 EXCLUDE["ARM"]=[]
 
-EXCLUDE[X64]=[
+EXCLUDE["X64"]=[
     "ASepSpec",
     "Access",
     "ArmConfidentiality",
