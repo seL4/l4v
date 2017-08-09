@@ -33,7 +33,7 @@ EXCLUDE_THYS='design/(m-)?skel'
 # instead using the theory import errors that are printed on stderr.
 
 # Available architectures
-L4V_ARCHS=("ARM" "ARM_HYP")
+L4V_ARCHS=("ARM" "ARM_HYP" "X64")
 TEST_SUCCEED=true
 
 for arch in ${L4V_ARCHS[*]}
