@@ -46,11 +46,6 @@ session BaseRefine2 = BaseRefine +
    "refine/$L4V_ARCH/Untyped_R"
    "refine/$L4V_ARCH/Schedule_R"
 
-session RefineOnly = BaseRefine +
-  description {* Refinement between Haskell and Abstract spec. *}
-  theories
-    "refine/$L4V_ARCH/Refine"
-
 session RefineQD = BaseRefine +
   theories [quick_and_dirty]
   "refine/$L4V_ARCH/Refine"
