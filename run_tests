@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env python
 #
 #
-# Copyright 2014, NICTA
+# Copyright 2017, CSIRO
 #
 # This software may be distributed and modified according to the terms of
 # the BSD 2-Clause license. Note that NO WARRANTY is provided.
@@ -10,113 +10,122 @@
 # @TAG(NICTA_BSD)
 #
 
+import os
+import sys
+
+# Settings
+L4V_ARCH_DEFAULT="ARM"
+L4V_ARCH_LIST=["ARM","ARM_HYP","X64"]
+
 # Fetch directory this script is stored in.
-DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
+DIR=os.path.dirname(os.path.realpath(__file__))
 
 # Add repo version of Isabelle to our path.
-export PATH="${DIR}/isabelle/bin:$PATH"
+os.environ["PATH"] += os.pathsep + DIR
 
-# Export L4V_ARCH variable as X64
-export L4V_ARCH="${L4V_ARCH:-X64}"
-echo "Testing for L4V_ARCH=${L4V_ARCH}:"
+# Export L4V_ARCH variable as ARM (Default)
+if not os.environ.has_key("L4V_ARCH"):
+    os.environ["L4V_ARCH"] = L4V_ARCH_DEFAULT
+
+L4V_ARCH=os.environ["L4V_ARCH"]
+
+# Check we are using a known Architecture
+if L4V_ARCH not in L4V_ARCH_LIST:
+    sys.exit("Unknown architecture L4V_ARCH=%s" % L4V_ARCH)
+
+print "Testing for L4V_ARCH=%s:" % L4V_ARCH
 
 # Enable quick_and_dirty mode for various images
-if [ -n "${QUICK_AND_DIRTY}" ]
-   then
-       export INVS_QUICK_AND_DIRTY=1
-       export REFINE_QUICK_AND_DIRTY=1
-       export CREFINE_QUICK_AND_DIRTY=1
-       echo "Testing with QUICK_AND_DIRTY"
-fi
+if os.environ.has_key("QUICK_AND_DIRTY"):
+    os.environ["AINVS_QUICK_AND_DIRTY"]=1
+    os.environ["REFINE_QUICK_AND_DIRTY"]=1
+    os.environ["CREFINE_QUICK_AND_DIRTY"]=1
+    print "Testing with QUICK_AND_DIRTY"
 
-# Enable skip_proofs mode for various images
+# Lists of excluded tests for diferent archs
+EXCLUDE={}
+EXCLUDE["ARM_HYP"]=[
+    "CamkesAdlSpec",
+    "CamkesGlueSpec",
+    "SimpleSystem",
+    "RelyGuarantee",
+    "Sep_Algebra",
+    "tests-xml-correct",
+    "SepTactics",
+    "SepTacticsExamples",
+    "DBaseRefine",
+    "DRefine",
+    "Access",
+    "InfoFlow",
+    "ArmConfidentiality",
+    "DPolicy",
+    "CamkesCdlRefine",
+    "Bisim",
+    "DSpec",
+    "SepDSpec",
+    "DSpecProofs",
+    "TakeGrant",
+    "ASepSpec",
+    "HaskellKernel",
+    "SysInit",
+    "SysInitExamples",
+    "InfoFlowCBase",
+    "InfoFlowC",
+    "SimplExportAndRefine",
+    "CParserTest",
+    "CParserTestX64",
+    "CParserTools",
+    "AutoCorres",
+    "CamkesGlueProofs",
+    "CamkesDarpaReport",
+    "theory_imports",
+    "AutoCorresDoc",
+    "AutoCorresTest",
+    "AutoCorresSEL4"]
 
-if [ -n "${REFINE_PROOFS}" ]
-then
-    export SKIP_REFINE_PROOFS=1
-    export SKIP_INVS_PROOFS=1
-    echo "Testing with SKIP_PROOFS"
-fi
+EXCLUDE["ARM"]=[]
+
+EXCLUDE[X64]=[
+    "ASepSpec",
+    "Access",
+    "ArmConfidentiality",
+    "AutoCorresSEL4",
+    "Bisim",
+    "CamkesAdlSpec",
+    "CamkesCdlRefine",
+    "CamkesDarpaReport",
+    "CamkesGlueProofs",
+    "CamkesGlueSpec",
+    "DBaseRefine",
+    "DPolicy",
+    "DRefine",
+    "DSpec",
+    "DSpecProofs",
+    "InfoFlow",
+    "InfoFlowC",
+    "InfoFlowCBase",
+    "RelyGuarantee",
+    "SepDSpec",
+    "SepTactics",
+    "SepTacticsExamples",
+    "Sep_Algebra",
+    "SimplExportAndRefine",
+    "SimpleSystem",
+    "SysInit",
+    "SysInitExamples",
+    "TakeGrant"]
+
+# Check EXCLUDE is exhaustive over the available architectures
+if not set(L4V_ARCH_LIST) <= set(EXCLUDE.keys()):
+    sys.exit("[INTERNAL ERROR] exclusion lists are non-exhaustive")
 
 # Run the tests from the script directory.
-cd ${DIR}
+os.chdir(DIR)
 
-# Bitfield proofs aren't ready for X64 yet.
-export SORRY_BITFIELD_PROOFS=1
+# Arguments:
+args  = ['./misc/regression/run_tests.py']                 # Script name
+args += [r for t in EXCLUDE[L4V_ARCH] for r in ['-r', t]]  # Exclusion list
+args += sys.argv[1:]                                       # Other arguments
 
-# Default exclusions for ARM_HYP and X64
-
-declare -A EXCLUDE
-
-EXCLUDE[ARM_HYP]="
--r CamkesAdlSpec \
--r CamkesGlueSpec \
--r SimpleSystem \
--r RelyGuarantee \
--r Sep_Algebra \
--r tests-xml-correct \
--r SepTactics \
--r SepTacticsExamples \
--r DBaseRefine \
--r DRefine \
--r Access \
--r InfoFlow \
--r ArmConfidentiality \
--r DPolicy \
--r CamkesCdlRefine \
--r Bisim \
--r DSpec \
--r SepDSpec \
--r DSpecProofs \
--r TakeGrant \
--r ASepSpec \
--r HaskellKernel \
--r SysInit \
--r SysInitExamples \
--r InfoFlowCBase \
--r InfoFlowC \
--r SimplExportAndRefine \
--r CParserTest \
--r CParserTestX64 \
--r CParserTools \
--r AutoCorres \
--r CamkesGlueProofs \
--r CamkesDarpaReport \
--r theory_imports \
--r AutoCorresDoc \
--r AutoCorresTest \
--r AutoCorresSEL4 \
-"
-
-EXCLUDE[X64]="
--r Access \
--r ASepSpec \
--r AutoCorresSEL4 \
--r Bisim \
--r ArmConfidentiality \
--r CamkesAdlSpec \
--r CamkesCdlRefine \
--r CamkesDarpaReport \
--r CamkesGlueProofs \
--r CamkesGlueSpec \
--r DBaseRefine \
--r DPolicy \
--r DSpecProofs \
--r DRefine \
--r DSpec \
--r InfoFlow \
--r InfoFlowC \
--r InfoFlowCBase \
--r RelyGuarantee \
--r Sep_Algebra \
--r SepDSpec \
--r SepTactics \
--r SepTacticsExamples \
--r SimpleSystem \
--r SimplExportAndRefine \
--r SysInit \
--r SysInitExamples \
--r TakeGrant \
-"
-
-python ./misc/regression/run_tests.py ${EXCLUDE[${L4V_ARCH}]} $@
+# Run the thing!!
+os.execvp('./misc/regression/run_tests.py',args)

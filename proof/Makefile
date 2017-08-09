@@ -47,7 +47,7 @@ HEAPS += SepTactics SepTacticsExamples
 
 CKernel CSpec: c-kernel
 SimplExportAndRefine: c-kernel
-BaseRefine Refine: design-spec
+BaseRefine Refine DBaseRefine DRefine: design-spec
 CBaseRefine CRefine: c-kernel design-spec
 
 # Preprocess the kernel's source code and bitfield theory files.

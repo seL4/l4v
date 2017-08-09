@@ -45,6 +45,10 @@ umm_types.txt
 
 /tools/haskell-translator/caseconvs-useful
 
+/tools/c-parser/StrictC.grm.sig
+/tools/c-parser/StrictC.grm.sml
+/tools/c-parser/StrictC.lex.sml
+
 /camkes/adl-spec/camkes.ML
 
 /internal/

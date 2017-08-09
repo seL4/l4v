@@ -82,9 +82,20 @@ ARCHES=("ARM" "X64" "ARM_HYP")
 #       If these are not in sync, expect the unexpected.
 #       spec_check.sh has a copy of these, which should be updated in tandem.
 #       FIXME: move to a common location in haskell-translator (D.R.Y.)
-declare -A cpp_opts
-cpp_opts[ARM]="-DPLATFORM=QEmu -DPLATFORM_QEmu -DTARGET=ARM -DTARGET_ARM"
-cpp_opts[ARM_HYP]="-DPLATFORM=TK1 -DPLATFORM_TK1 -DTARGET=ARM -DTARGET_ARM -DCONFIG_ARM_HYPERVISOR_SUPPORT"
+function cpp_opts () {
+    case ${1} in
+        ARM)
+            L4CPP="-DPLATFORM=QEmu -DPLATFORM_QEmu -DTARGET=ARM -DTARGET_ARM"
+            ;;
+        ARM_HYP)
+            L4CPP="-DPLATFORM=TK1 -DPLATFORM_TK1 -DTARGET=ARM -DTARGET_ARM -DCONFIG_ARM_HYPERVISOR_SUPPORT"
+            ;;
+        *)
+            echo "Warning: No CPP configuration for achitecture ${1}"
+            L4CPP=""
+    esac
+    export L4CPP
+}
 
 NAMES=`cd $SKEL; ls *.thy`
 
@@ -95,6 +106,7 @@ function send_filenames () {
     local arch=${1}
     local archnames=`cd $SKEL/${arch}; ls *.thy`
     local archmnames=`cd $MSKEL/${arch}; ls *.thy`
+    mkdir -p "$SPEC/${arch}"
     mkdir -p "$SPECNONARCH/${arch}"
 
     # Theory files common to all haskell specifications
@@ -120,8 +132,7 @@ function send_filenames () {
 for ARCH in ${ARCHES[@]}
 do
     send_filenames $ARCH > $TMPFILE
-    L4CPP=${cpp_opts[$ARCH]}
-    export L4CPP
+    cpp_opts $ARCH
     cd $TRANSLATOR
     python pars_skl.py $TMPFILE
 done

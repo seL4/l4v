@@ -41,7 +41,7 @@ ExecSpec ASpec : design-spec
 #       depended on.
 
 # Preprocess the kernel's source code and bitfield theory files.
-c-kernel: .FORCE
+c-kernel: c-parser .FORCE
 	cd cspec/$(L4V_ARCH)/c && L4V_REPO_PATH=$(L4V_REPO_PATH) $(MAKE) cspec
 .PHONY: c-kernel
 
@@ -49,6 +49,12 @@ c-kernel: .FORCE
 design-spec: .FORCE
 	cd design/ && L4V_REPO_PATH=$(L4V_REPO_PATH) $(MAKE) design
 .PHONY: design-spec
+
+
+# Sets up the c-parser grammar files
+c-parser: .FORCE
+	cd ../tools/c-parser && make c-parser-deps
+.PHONY: c-parser
 
 # Produce the input data for the binary verification problem at -O1
 binary-verification-input: c-kernel

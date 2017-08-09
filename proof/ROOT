@@ -34,12 +34,14 @@ session Refine = BaseRefine +
   description {* Refinement between Haskell and Abstract spec. *}
   theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
     "refine/$L4V_ARCH/Refine"
+  theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
+    "refine/$L4V_ARCH/Refine"
   theories
     "refine/$L4V_ARCH/Refine"
 
 session BaseRefine2 = BaseRefine +
   description {* Intermediate point in refinement proof. Useful for machines with small RAM. *}
-  theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
+  theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
     "refine/$L4V_ARCH/Untyped_R"
     "refine/$L4V_ARCH/Schedule_R"
   theories
@@ -52,8 +54,6 @@ session RefineQD = BaseRefine +
 
 session BaseRefine = AInvs +
   description {* Background theory and libraries for refinement proof. *}
-  theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
-    "refine/$L4V_ARCH/Include"
   theories
     "refine/$L4V_ARCH/Include"
 
@@ -62,16 +62,13 @@ session BaseRefineQD = AInvsQD +
     "refine/$L4V_ARCH/Include"
 
 session AInvs = ASpec +
-  theories [condition = "SKIP_INVS_PROOFS", quick_and_dirty, skip_proofs]
-    "invariant-abstract/AInvs"
+  theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
     "invariant-abstract/KernelInit_AI"
-    "invariant-abstract/DetSchedSchedule_AI"
-  theories [condition = "INVS_QUICK_AND_DIRTY", quick_and_dirty]
-    "invariant-abstract/AInvs"
+    "invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
+  theories [condition = "AINVS_QUICK_AND_DIRTY", quick_and_dirty]
     "invariant-abstract/KernelInit_AI"
-    "invariant-abstract/DetSchedSchedule_AI"
+    "invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
   theories
-    "invariant-abstract/AInvs"
     "invariant-abstract/KernelInit_AI"
     "invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
 
@@ -104,7 +101,7 @@ session CRefine = CBaseRefine +
     "crefine/$L4V_ARCH/Refine_C"
 
 session CBaseRefine = CSpec +
-  theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
+  theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
     "crefine/$L4V_ARCH/Include_C"
   theories
     "crefine/$L4V_ARCH/Include_C"
@@ -138,7 +135,6 @@ session Access in "access-control" = AInvs +
 session InfoFlow in "infoflow" = Access +
   theories
     "Noninterference"
-  theories
     "Noninterference_Base_Refinement"
     "PolicyExample"
     "PolicySystemSAC"
@@ -146,7 +142,7 @@ session InfoFlow in "infoflow" = Access +
     "Example_Valid_State"
 
 session InfoFlowCBase = CRefine +
-  theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
+  theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
     "infoflow/Include_IF_C"
   theories
     "infoflow/Include_IF_C"
