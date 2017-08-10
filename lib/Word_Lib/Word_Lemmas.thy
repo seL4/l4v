@@ -2816,6 +2816,10 @@ lemma and_eq_0_is_nth:
 lemmas arg_cong_Not = arg_cong [where f=Not]
 lemmas and_neq_0_is_nth = arg_cong_Not [OF and_eq_0_is_nth, simplified]
 
+lemma nth_is_and_neq_0:
+  "(x::'a::len word) !! n = (x && 2 ^ n \<noteq> 0)"
+  by (subst and_neq_0_is_nth; rule refl)
+
 lemma mask_Suc_0 : "mask (Suc 0) = 1"
   by (simp add: mask_def)
 
@@ -5519,5 +5523,18 @@ lemma word_of_nat_inj:
   shows "x = y"
   by (rule contrapos_pp[OF of_nats]; cases "x < y"; cases "y < x")
      (auto dest: bounded[THEN of_nat_mono_maybe])
+
+(* Sign-extend from bit n *)
+
+definition
+  sign_extend :: "nat \<Rightarrow> 'a::len word \<Rightarrow> 'a word"
+where
+  "sign_extend n w \<equiv> if w!!n then w || ~~mask n else w"
+
+lemma sign_extend_def':
+  "sign_extend n w = (if w!!n then w || ~~mask (Suc n) else w)"
+  apply (rule word_eqI)
+  apply (auto dest: less_antisym simp: sign_extend_def word_size word_ops_nth_size)
+  done
 
 end
