@@ -241,25 +241,33 @@ instance num1 :: array_max_count
 (* introduce hackish handling of 8192 type by making a copy of the type
    under a constructor, and then manually showing that it is an instance of
    array_max_count *)
-datatype ty1048576 = ty1048576 "1048576"
+datatype array_max_count_ty = array_max_count_ty "1048576"
 
-lemma univ1048576: "(UNIV::ty1048576 set) = image ty1048576 (UNIV::1048576 set)"
-apply (simp add: set_eq_iff image_iff)
-apply (rule_tac allI)
-apply (rule_tac ty1048576.induct)
-apply simp
-done
+(* ML c-parser code also needs to know at which array size to use this type *)
+ML \<open>
+  structure ArchArrayMaxCount = struct
+    val array_max_count = 1048576
+  end
+\<close>
 
-instance "ty1048576" :: finite
-apply intro_classes
-apply (simp add: univ1048576)
-done
+lemma univ_array_max_count_ty:
+  "(UNIV::array_max_count_ty set) = image array_max_count_ty (UNIV::1048576 set)"
+  apply (simp add: set_eq_iff image_iff)
+  apply (rule_tac allI)
+  apply (rule_tac array_max_count_ty.induct)
+  apply simp
+  done
 
-lemma card8192[simp]: "CARD(ty1048576) = CARD(1048576)"
-apply (simp add: univ1048576 card_image inj_on_def)
-done
+instance "array_max_count_ty" :: finite
+  apply intro_classes
+  apply (simp add: univ_array_max_count_ty)
+  done
 
-instance "ty1048576" :: array_max_count
+lemma card_array_max_count_ty[simp]: "CARD(array_max_count_ty) = CARD(1048576)"
+  apply (simp add: univ_array_max_count_ty card_image inj_on_def)
+  done
+
+instance "array_max_count_ty" :: array_max_count
   by intro_classes simp
 
 end
