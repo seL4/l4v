@@ -8,7 +8,7 @@
 %
 
 This module contains the architecture-specific kernel global data for the X86-64bit architecture.
- 
+
 > module SEL4.Model.StateData.X64 where
 
 \begin{impdetails}

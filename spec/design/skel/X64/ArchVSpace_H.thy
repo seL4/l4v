@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
   VSpace lookup code.
 *)
 

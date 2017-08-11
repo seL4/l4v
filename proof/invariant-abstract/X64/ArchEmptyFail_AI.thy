@@ -38,13 +38,13 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def wp: zipWithM_x_empty_fail)
-  
+
 lemma port_out_empty_fail[simp, intro!]:
   assumes ef: "\<And>a. empty_fail (oper a)"
   shows "empty_fail (port_out oper w)"
   apply (simp add: port_out_def)
   by (wp | simp add: ef)+
-  
+
 lemma port_in_empty_fail[simp, intro!]:
   assumes ef: "empty_fail oper"
   shows "empty_fail (port_in oper)"
@@ -57,17 +57,17 @@ crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notificati
 lemma decode_tcb_invocation_empty_fail[wp]:
   "empty_fail (decode_tcb_invocation a b (ThreadCap p) d e)"
   by (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | intro conjI impI)+
-  
+
 crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment,
                    ensure_safe_mapping, get_asid_pool, lookup_pt_slot,
                    decode_port_invocation
-  (simp: kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits 
+  (simp: kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits
          pdpte.splits pml4e.splits vmpage_size.splits)
 
 lemma create_mapping_entries_empty_fail[wp]:
   "empty_fail (create_mapping_entries a b c d e f)"
   by (case_tac c; simp add: create_mapping_entries_def; wp)
-  
+
 lemma arch_decode_X64ASIDControlMakePool_empty_fail:
   "invocation_type label = ArchInvocationLabel X64ASIDControlMakePool
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
@@ -92,7 +92,7 @@ lemma arch_decode_X64ASIDPoolAssign_empty_fail:
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   apply (simp add: arch_decode_invocation_def Let_def split: arch_cap.splits)
   apply (intro impI allI conjI)
-  apply (simp add: arch_decode_invocation_def split_def Let_def 
+  apply (simp add: arch_decode_invocation_def split_def Let_def
             split: arch_cap.splits cap.splits option.splits | intro impI allI)+
   apply clarsimp
   apply (rule empty_fail_bindE)
@@ -120,7 +120,7 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (case_tac alabel; simp)
   apply (find_goal \<open>succeeds \<open>erule arch_decode_X64ASIDControlMakePool_empty_fail\<close>\<close>)
   apply (find_goal \<open>succeeds \<open>erule arch_decode_X64ASIDPoolAssign_empty_fail\<close>\<close>)
-  apply ((simp add: arch_decode_X64ASIDControlMakePool_empty_fail arch_decode_X64ASIDPoolAssign_empty_fail)+)[2]  
+  apply ((simp add: arch_decode_X64ASIDControlMakePool_empty_fail arch_decode_X64ASIDPoolAssign_empty_fail)+)[2]
   by ((simp add: arch_decode_invocation_def decode_page_invocation_def Let_def decode_page_table_invocation_def
                          decode_page_directory_invocation_def decode_pdpt_invocation_def
              split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)

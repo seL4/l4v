@@ -283,7 +283,7 @@ caches must be done separately.
 
 The x64 architecture defines a four-level hardware-walked page table. The kernel must write entries to this table in the defined format to construct address spaces for user-level tasks.
 
-The following types are Haskell representations of an entry in an x64 page table structures. The "PML4E" (page map level 4 entry) is an entry in the fourth (highest) level of the structure, the "PDPTE" (page directory pointer table entry) is an entry in the third level, the "PDE" (page directory entry) type is an entry in the second level, and the "PTE" (page table entry) type is an entry in the first (lowest) level. 
+The following types are Haskell representations of an entry in an x64 page table structures. The "PML4E" (page map level 4 entry) is an entry in the fourth (highest) level of the structure, the "PDPTE" (page directory pointer table entry) is an entry in the third level, the "PDE" (page directory entry) type is an entry in the second level, and the "PTE" (page table entry) type is an entry in the first (lowest) level.
 
 > data PML4E
 >     = InvalidPML4E
@@ -581,7 +581,7 @@ Page entries -- any of PTEs, PDEs or PDPTEs.
 >     cbptr <- ask
 >     liftIO $ Platform.getFaultAddress cbptr
 
-IO Port interface. 
+IO Port interface.
 
 > in8 :: IOPort -> MachineMonad Word
 > in8 = error "Unimplemented"

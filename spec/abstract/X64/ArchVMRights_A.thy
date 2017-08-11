@@ -27,7 +27,7 @@ type_synonym vm_rights = cap_rights
 
 definition
   vm_kernel_only :: vm_rights where
-  "vm_kernel_only \<equiv> {}" 
+  "vm_kernel_only \<equiv> {}"
 definition
   vm_read_only :: vm_rights where
   "vm_read_only \<equiv> {AllowRead}"

@@ -2229,7 +2229,7 @@ lemma valid_vspace_objs_hugePage:
   apply (auto simp: data_at_def obj_at_def vs_refs_pages_def)
   done
 
-lemma ucast_ucast_get_index_simps[simp]: 
+lemma ucast_ucast_get_index_simps[simp]:
   "(ucast (ucast (get_pml4_index vaddr):: 9 word)) = get_pml4_index vaddr"
   "(ucast (ucast (get_pdpt_index vaddr):: 9 word)) = get_pdpt_index vaddr"
   "(ucast (ucast (get_pd_index vaddr):: 9 word)) = get_pd_index vaddr"
@@ -2509,7 +2509,7 @@ lemma unmap_page_vs_lookup_pages_pre:
    apply (clarsimp simp: image_def pdpte_ref_pages_def[split_simps pte.split] split: pdpte.splits)
    apply (fold get_pdpt_index_def[simplified bit_simps])
    apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
-   apply (clarsimp simp: obj_at_def bit_simps get_pd_index_def ucast_ucast_mask 
+   apply (clarsimp simp: obj_at_def bit_simps get_pd_index_def ucast_ucast_mask
                          get_pml4_index_def get_pdpt_index_def
                    dest!: vs_lookup_pages_vs_lookupI
                    split: pdpte.split_asm)
@@ -2546,8 +2546,8 @@ lemma unmap_page_vs_lookup_pages_pre:
       apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
       apply clarsimp
       apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
-      apply (clarsimp simp: obj_at_def image_def pte_ref_pages_def[split_simps pte.split] 
-                     dest!: graph_ofD wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup] 
+      apply (clarsimp simp: obj_at_def image_def pte_ref_pages_def[split_simps pte.split]
+                     dest!: graph_ofD wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
                      split: if_splits)
       apply (strengthen vs_lookup_pages_vs_lookupI[mk_strg, simplified vs_lookup_pages_def])
       apply (clarsimp simp: check_mapping_pptr_def get_pd_index_def get_pml4_index_def get_pdpt_index_def
@@ -2562,7 +2562,7 @@ lemma unmap_page_vs_lookup_pages_pre:
      apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
      apply (clarsimp simp: check_mapping_pptr_def get_pd_index_def get_pml4_index_def get_pdpt_index_def
                            ucast_ucast_mask bit_simps obj_at_def
-                    dest!: vs_lookup_pages1D graph_ofD wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup] 
+                    dest!: vs_lookup_pages1D graph_ofD wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
                     split: pte.split_asm)
      apply (drule valid_vspace_objs_largePage[OF valid_vspace_objsD])
        apply (simp add: ko_at_def2)+
@@ -2570,7 +2570,7 @@ lemma unmap_page_vs_lookup_pages_pre:
     apply (clarsimp simp: check_mapping_pptr_def get_pd_index_def get_pml4_index_def get_pdpt_index_def
                           ucast_ucast_mask bit_simps obj_at_def
                    dest!: vs_lookup_pages1D graph_ofD wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
-                          wellformed_lookup.lookup_rtrancl_stepsD[where r = "[a]" for a, simplified,OF vs_lookup_pages1_is_wellformed_lookup] 
+                          wellformed_lookup.lookup_rtrancl_stepsD[where r = "[a]" for a, simplified,OF vs_lookup_pages1_is_wellformed_lookup]
                    split: pte.split_asm)
     apply (drule valid_vspace_objs_hugePage[OF valid_vspace_objsD])
       apply (simp add: ko_at_def2)+
@@ -2596,8 +2596,8 @@ lemma unmap_page_vs_lookup_pages_pre:
     apply (drule eq_ucast_ucast_eq[rotated,THEN sym], simp)
     apply clarsimp
       apply (extract_vs_lookup | rewrite_lookup_when_aligned)+
-      apply (clarsimp simp: obj_at_def image_def pte_ref_pages_def[split_simps pte.split] 
-                     dest!: graph_ofD wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup] 
+      apply (clarsimp simp: obj_at_def image_def pte_ref_pages_def[split_simps pte.split]
+                     dest!: graph_ofD wellformed_lookup.lookup_rtrancl_stepD[OF vs_lookup_pages1_is_wellformed_lookup]
                      split: if_splits)
      apply (strengthen vs_lookup_pages_vs_lookupI[mk_strg, simplified vs_lookup_pages_def])
      apply (clarsimp simp: check_mapping_pptr_def get_pd_index_def get_pml4_index_def get_pdpt_index_def

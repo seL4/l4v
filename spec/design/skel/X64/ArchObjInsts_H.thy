@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 	Defines the instances of pspace_storable objects.
 *)
 
@@ -133,8 +133,8 @@ instance
 
 end
 
-lemmas (in Arch) projectKO_opts_defs = 
-  projectKO_opt_pte projectKO_opt_pde 
+lemmas (in Arch) projectKO_opts_defs =
+  projectKO_opt_pte projectKO_opt_pde
   projectKO_opt_pdpte projectKO_opt_pml4e
   projectKO_opt_asidpool
   ObjectInstances_H.projectKO_opts_defs

@@ -24,7 +24,7 @@ type_synonym 't c_xstate = "('t, strictc_errortype) xstate"
 type_synonym cstate = "globals myvars"
 type_synonym rf_com = "cstate c_com"
 
-abbreviation 
+abbreviation
   "cslift (s :: cstate) \<equiv> clift (t_hrs_' (globals s))"
 
 lemma cslift_def: "is_an_abbreviation" by (simp add: is_an_abbreviation_def)

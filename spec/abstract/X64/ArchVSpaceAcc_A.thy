@@ -8,8 +8,8 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
-Accessor functions for architecture specific parts of the specification. 
+(*
+Accessor functions for architecture specific parts of the specification.
 *)
 
 chapter "Accessing the x64 VSpace"
@@ -20,10 +20,10 @@ begin
 
 context Arch begin global_naming X64_A
 
-text {* 
+text {*
   This part of the specification is fairly concrete as the machine architecture
   is visible to the user in seL4 and therefore needs to be described.
-  The abstraction compared to the implementation is in the data types for 
+  The abstraction compared to the implementation is in the data types for
   kernel objects. The interface which is rich in machine details remains the same.
 *}
 
@@ -68,7 +68,7 @@ definition
   "set_pd ptr pd \<equiv> do
      kobj \<leftarrow> get_object ptr;
      assert (case kobj of ArchObj (PageDirectory pd) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (PageDirectory pd)) 
+     set_object ptr (ArchObj (PageDirectory pd))
    od"
 
 text {* The following function takes a pointer to a PDE in kernel memory
@@ -106,7 +106,7 @@ definition
   "set_pt ptr pt \<equiv> do
      kobj \<leftarrow> get_object ptr;
      assert (case kobj of ArchObj (PageTable _) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (PageTable pt)) 
+     set_object ptr (ArchObj (PageTable pt))
    od"
 
 text {* The following function takes a pointer to a PTE in kernel memory
@@ -143,7 +143,7 @@ definition
   "set_pdpt ptr pt \<equiv> do
      kobj \<leftarrow> get_object ptr;
      assert (case kobj of ArchObj (PDPointerTable _) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (PDPointerTable pt)) 
+     set_object ptr (ArchObj (PDPointerTable pt))
    od"
 
 text {* The following function takes a pointer to a PDPTE in kernel memory
@@ -180,7 +180,7 @@ definition
   "set_pml4 ptr pt \<equiv> do
      kobj \<leftarrow> get_object ptr;
      assert (case kobj of ArchObj (PageMapL4 _) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (PageMapL4 pt)) 
+     set_object ptr (ArchObj (PageMapL4 pt))
    od"
 
 text {* The following function takes a pointer to a PML4E in kernel memory
@@ -238,7 +238,7 @@ copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" whe
         offset \<leftarrow> return (index << pme_bits);
         pme \<leftarrow> get_pml4e (global_pm + offset);
         store_pml4e (new_pm + offset) pme
-    od) [base  .e.  pm_size - 1] 
+    od) [base  .e.  pm_size - 1]
   od"
 
 text {* Walk the page directories and tables in software. *}
@@ -262,12 +262,12 @@ lookup_pdpt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z:
           odE)
         | _ \<Rightarrow> throwError $ MissingCapability pml4_shift_bits)
  odE"
- 
+
 text {* A non-failing version of @{const lookup_pdpt_slot} when the pml4 is already known *}
-definition 
+definition
   lookup_pdpt_slot_no_fail :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
 where
-  "lookup_pdpt_slot_no_fail pdpt vptr \<equiv> 
+  "lookup_pdpt_slot_no_fail pdpt vptr \<equiv>
      pdpt + (get_pdpt_index vptr << word_size_bits)"
 
 text {* The following function takes a page-directory reference as well as
@@ -288,12 +288,12 @@ lookup_pd_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z::s
  odE"
 
 text {* A non-failing version of @{const lookup_pd_slot} when the pdpt is already known *}
-definition 
+definition
   lookup_pd_slot_no_fail :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
 where
-  "lookup_pd_slot_no_fail pd vptr \<equiv> 
+  "lookup_pd_slot_no_fail pd vptr \<equiv>
      pd + (get_pd_index vptr << word_size_bits)"
- 
+
 text {* The following function takes a page-directory reference as well as
   a virtual address and then computes a pointer to the PTE in kernel memory.
   Note that the function fails if the virtual address is mapped on a section or
@@ -301,7 +301,7 @@ text {* The following function takes a page-directory reference as well as
 definition
 lookup_pt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z::state_ext) lf_monad" where
 "lookup_pt_slot vspace vptr \<equiv> doE
-    pd_slot \<leftarrow> lookup_pd_slot vspace vptr; 
+    pd_slot \<leftarrow> lookup_pd_slot vspace vptr;
     pde \<leftarrow> liftE $ get_pde pd_slot;
     (case pde of
           PageTablePDE ptab _ _ \<Rightarrow>   (doE
@@ -314,10 +314,10 @@ lookup_pt_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref,'z::s
    odE"
 
 text {* A non-failing version of @{const lookup_pt_slot} when the pd is already known *}
-definition 
+definition
   lookup_pt_slot_no_fail :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
 where
-  "lookup_pt_slot_no_fail pt vptr \<equiv> 
+  "lookup_pt_slot_no_fail pt vptr \<equiv>
      pt + (get_pt_index vptr << word_size_bits)"
 
 (* FIXME x64-vtd:
@@ -335,7 +335,7 @@ definition
   "set_iopt ptr pt \<equiv> do
      kobj \<leftarrow> get_object ptr;
      assert (case kobj of ArchObj (PageTable _) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (IOPageTable pt)) 
+     set_object ptr (ArchObj (IOPageTable pt))
    od"
 
 definition  get_iopte :: "obj_ref \<Rightarrow> (iopte,'z::state_ext) s_monad" where
@@ -369,7 +369,7 @@ definition
   "set_iort ptr pt \<equiv> do
      kobj \<leftarrow> get_object ptr;
      assert (case kobj of ArchObj (IORootTable _) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (IORootTable pt)) 
+     set_object ptr (ArchObj (IORootTable pt))
    od"
 
 definition  get_iorte :: "obj_ref \<Rightarrow> (iorte,'z::state_ext) s_monad" where
@@ -403,7 +403,7 @@ definition
   "set_ioct ptr ct \<equiv> do
      kobj \<leftarrow> get_object ptr;
      assert (case kobj of ArchObj (IOContextTable _) \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (ArchObj (IOContextTable ct)) 
+     set_object ptr (ArchObj (IOContextTable ct))
    od"
 
 definition  get_iocte :: "obj_ref \<Rightarrow> (iocte,'z::state_ext) s_monad" where
@@ -449,19 +449,19 @@ definition lookup_io_context_slot :: "io_asid \<Rightarrow> (obj_ref,'z::state_e
 definition get_vtd_pte_offset ::  "64 word \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 64 word"
 where "get_vtd_pte_offset translation levels_to_resolve levels_remaining \<equiv>
   let lvldiff = levels_to_resolve - levels_remaining
-  in (translation >> (vtd_pt_bits * (x64_num_io_pt_levels - 1 - lvldiff))) 
+  in (translation >> (vtd_pt_bits * (x64_num_io_pt_levels - 1 - lvldiff)))
       && (mask vtd_pt_bits)"
 
 
-fun lookup_io_ptr_resolve_levels :: "obj_ref \<Rightarrow> 64 word\<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 
+fun lookup_io_ptr_resolve_levels :: "obj_ref \<Rightarrow> 64 word\<Rightarrow> nat \<Rightarrow> nat \<Rightarrow>
  ((obj_ref \<times> nat),'z::state_ext) lf_monad"
-where "lookup_io_ptr_resolve_levels iopt_ref translation levels_to_resolve 
+where "lookup_io_ptr_resolve_levels iopt_ref translation levels_to_resolve
   levels_remaining = doE
-    offset <- returnOk $ get_vtd_pte_offset translation 
+    offset <- returnOk $ get_vtd_pte_offset translation
       levels_to_resolve levels_remaining;
     pte_ptr <- returnOk $ iopt_ref + offset;
-    if levels_remaining = 0 
-      then returnOk $ (pte_ptr, 0) 
+    if levels_remaining = 0
+      then returnOk $ (pte_ptr, 0)
       else (doE
         iopte <- liftE $ get_iopte pte_ptr;
         slot <- returnOk $ ptrFromPAddr (frame_ptr iopte);
@@ -478,6 +478,6 @@ where "lookup_io_pt_slot pte_ref ioaddr \<equiv> lookup_io_ptr_resolve_levels pt
 
 *)
 
-   
+
 end
 end

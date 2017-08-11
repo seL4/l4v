@@ -8,8 +8,8 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
-   Types visible in the API. 
+(*
+   Types visible in the API.
 *)
 
 chapter "Arch-dependant Types visible in the API"

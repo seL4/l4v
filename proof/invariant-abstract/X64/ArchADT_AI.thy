@@ -181,25 +181,25 @@ definition
      Some (PageTable pt) \<Rightarrow>
        Some (pt (ucast ((vptr >> 12) && mask ptTranslationBits)))
    | _ \<Rightarrow> None"
-   
+
 definition
   "get_pd_entry ahp pd_ref vptr \<equiv>
    case ahp pd_ref of
-     Some (PageDirectory pd) \<Rightarrow> 
+     Some (PageDirectory pd) \<Rightarrow>
        Some (pd (ucast ((vptr >> pd_shift_bits) && mask ptTranslationBits)))
    | _ \<Rightarrow> None"
 
 definition
   "get_pdpt_entry ahp pdpt_ref vptr \<equiv>
    case ahp pdpt_ref of
-     Some (PDPointerTable pdpt) \<Rightarrow> 
+     Some (PDPointerTable pdpt) \<Rightarrow>
        Some (pdpt (ucast ((vptr >> pdpt_shift_bits) && mask ptTranslationBits)))
-   | _ \<Rightarrow> None" 
-  
+   | _ \<Rightarrow> None"
+
 definition
   "get_pml4_entry ahp pm_ref vptr \<equiv>
    case ahp pm_ref of
-     Some (PageMapL4 pm) \<Rightarrow> 
+     Some (PageMapL4 pm) \<Rightarrow>
        Some (pm (ucast ((vptr >> pml4_shift_bits) && mask ptTranslationBits)))
    | _ \<Rightarrow> None"
 

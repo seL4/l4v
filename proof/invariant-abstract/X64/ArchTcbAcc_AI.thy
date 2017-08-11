@@ -16,7 +16,7 @@ context Arch begin global_naming X64
 
 named_theorems TcbAcc_AI_assms
 
-lemmas cap_master_cap_simps = 
+lemmas cap_master_cap_simps =
   cap_master_cap_def[simplified cap_master_arch_cap_def, split_simps cap.split arch_cap.split]
 
 lemma cap_master_cap_arch_eqDs:
@@ -40,10 +40,10 @@ lemma cap_master_cap_arch_eqDs:
   by (clarsimp simp: cap_master_cap_def
               split: cap.split_asm arch_cap.split_asm)+
 
-lemmas cap_master_cap_eqDs = 
+lemmas cap_master_cap_eqDs =
   cap_master_cap_eqDs1 cap_master_cap_arch_eqDs
   cap_master_cap_eqDs1 [OF sym] cap_master_cap_arch_eqDs[OF sym]
-  
+
 
 lemma vm_sets_diff[simp]:
   "vm_read_only \<noteq> vm_read_write"

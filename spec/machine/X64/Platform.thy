@@ -47,11 +47,11 @@ definition
 definition
   addrFromPPtr :: "word64 \<Rightarrow> paddr" where
   "addrFromPPtr pptr \<equiv> pptr - pptrBase"
-  
+
 definition
   addrFromKPPtr :: "word64 \<Rightarrow> paddr" where
   "addrFromKPPtr pptr \<equiv> undefined"
-  
+
 definition
   pageColourBits :: "nat" where
   "pageColourBits \<equiv> undefined"
@@ -63,7 +63,7 @@ definition
 definition
   maxIRQ :: "irq" where
   "maxIRQ \<equiv> 63"
-  
+
 datatype cr3 = X64CR3 word64 (*pml4*) word64 (*asid*)
 
 primrec CR3BaseAddress where

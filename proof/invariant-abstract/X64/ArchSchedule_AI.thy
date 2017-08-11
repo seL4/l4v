@@ -31,27 +31,27 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
    apply wp
   apply (simp add: upto0_7_def split: if_splits)
   done
-  
-global_naming Arch  
+
+global_naming Arch
 
 lemma arch_stt_invs [wp,Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
   apply wp
-  done  
+  done
 
 lemma arch_stt_tcb [wp,Schedule_AI_asms]:
   "\<lbrace>tcb_at t'\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. tcb_at t'\<rbrace>"
-  apply (simp add: arch_switch_to_thread_def) 
+  apply (simp add: arch_switch_to_thread_def)
   apply (wp)
   done
-  
+
 lemma arch_stt_runnable[Schedule_AI_asms]:
   "\<lbrace>st_tcb_at runnable t\<rbrace> arch_switch_to_thread t \<lbrace>\<lambda>r . st_tcb_at runnable t\<rbrace>"
   apply (simp add: arch_switch_to_thread_def)
   apply wp
-  done  
-  
+  done
+
 lemma stit_invs [wp,Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
@@ -60,14 +60,14 @@ lemma stit_invs [wp,Schedule_AI_asms]:
   apply (clarsimp simp: in_user_frame_def valid_arch_state_def valid_machine_state_def cur_tcb_def)
   apply (clarsimp simp: obj_at_def pred_tcb_at_def is_tcb)
   done
-  
+
 lemma stit_activatable[Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
   apply (wp | simp add: ct_in_state_def)+
   apply (clarsimp simp: invs_def valid_state_def cur_tcb_def valid_idle_def
                  elim!: pred_tcb_weaken_strongerE)
-  done  
+  done
 
 lemma stt_invs [wp,Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -89,15 +89,15 @@ end
 interpretation Schedule_AI_U?: Schedule_AI_U
   proof goal_cases
   interpret Arch .
-  case 1 show ?case 
-  by (intro_locales; (unfold_locales; fact Schedule_AI_asms)?) 
+  case 1 show ?case
+  by (intro_locales; (unfold_locales; fact Schedule_AI_asms)?)
   qed
 
 interpretation Schedule_AI?: Schedule_AI
   proof goal_cases
   interpret Arch .
-  case 1 show ?case 
-  by (intro_locales; (unfold_locales; fact Schedule_AI_asms)?) 
+  case 1 show ?case
+  by (intro_locales; (unfold_locales; fact Schedule_AI_asms)?)
   qed
 
 end

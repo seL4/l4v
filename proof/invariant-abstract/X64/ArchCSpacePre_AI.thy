@@ -49,7 +49,7 @@ definition
 
 declare cap_vptr_arch_def[abs_def, simp]
 
-lemmas cap_vptr_simps [simp] = 
+lemmas cap_vptr_simps [simp] =
   cap_vptr_def [simplified, split_simps cap.split arch_cap.split option.split prod.split]
 
 (* True when cap' is derived from cap. *)
@@ -100,9 +100,9 @@ lemma aobj_ref_cases':
 
 
 lemma aobj_ref_cases:
-  "aobj_ref acap = 
-  (case acap of 
-    ASIDPoolCap w1 w2 \<Rightarrow> Some w1 
+  "aobj_ref acap =
+  (case acap of
+    ASIDPoolCap w1 w2 \<Rightarrow> Some w1
   | ASIDControlCap \<Rightarrow> None
   | IOPortCap _ _ \<Rightarrow> None
   | PageCap dev w s mt sz opt \<Rightarrow> Some w
@@ -115,7 +115,7 @@ lemma aobj_ref_cases:
   done
 
 definition
-  "cap_asid_base_arch cap \<equiv> case cap of 
+  "cap_asid_base_arch cap \<equiv> case cap of
      ASIDPoolCap _ asid \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
 
@@ -124,7 +124,7 @@ declare cap_asid_base_arch_def[abs_def, simp]
 definition cap_asid_base :: "cap \<Rightarrow> asid option" where
   "cap_asid_base cap \<equiv> arch_cap_fun_lift cap_asid_base_arch None cap"
 
-lemmas cap_asid_base_simps [simp] = 
+lemmas cap_asid_base_simps [simp] =
   cap_asid_base_def [simplified, split_simps cap.split arch_cap.split]
 
 definition
@@ -174,10 +174,10 @@ lemma vs_cap_ref_to_table_cap_ref:
          split: cap.splits arch_cap.splits)
 
 
-lemma cap_master_cap_pg_cap: 
+lemma cap_master_cap_pg_cap:
  "\<lbrakk>cap_master_cap cap = cap_master_cap cap'\<rbrakk>
   \<Longrightarrow> is_pg_cap cap = is_pg_cap cap'"
-  by (clarsimp simp:cap_master_cap_def is_cap_simps 
+  by (clarsimp simp:cap_master_cap_def is_cap_simps
     split:cap.splits arch_cap.splits dest!:cap_master_cap_eqDs)
 
 lemma master_arch_cap_obj_refs:
@@ -214,7 +214,7 @@ lemma same_master_cap_same_types:
   "cap_master_cap cap = cap_master_cap cap' \<Longrightarrow>
     (is_pt_cap cap = is_pt_cap cap') \<and> (is_pd_cap cap = is_pd_cap cap') \<and>
     (is_pdpt_cap cap = is_pdpt_cap cap') \<and> (is_pml4_cap cap = is_pml4_cap cap')"
-  by (clarsimp simp: cap_master_cap_def is_cap_simps 
+  by (clarsimp simp: cap_master_cap_def is_cap_simps
                   split: cap.splits arch_cap.splits)
 
 lemma is_derived_cap_arch_asid_issues:
@@ -230,7 +230,7 @@ lemma is_vspace_table_Null[simp]:
   "\<not> is_pt_cap NullCap \<and> \<not> is_pd_cap NullCap \<and> \<not> is_pdpt_cap NullCap \<and> \<not> is_pml4_cap NullCap"
   by (simp add: is_pt_cap_def is_pd_cap_def is_pdpt_cap_def is_pml4_cap_def)
 
-lemma unique_table_caps_upd_eqD: 
+lemma unique_table_caps_upd_eqD:
   "\<lbrakk>ms a = Some b; cap_asid b = cap_asid b'; obj_refs b = obj_refs b';
     is_pd_cap b = is_pd_cap b'; is_pt_cap b = is_pt_cap b';
     is_pdpt_cap b = is_pdpt_cap b'; is_pml4_cap b = is_pml4_cap b'\<rbrakk>

@@ -22,7 +22,7 @@ begin
 context Arch begin global_naming X64
 
 text {*
-  An implementation of the machine's types, defining register set 
+  An implementation of the machine's types, defining register set
   and some observable machine state.
 *}
 
@@ -72,7 +72,7 @@ record
   irq_state :: nat
   underlying_memory :: "word64 \<Rightarrow> word8"
   device_state :: "word64 \<Rightarrow> word8 option"
-  machine_state_rest :: X64.machine_state_rest  
+  machine_state_rest :: X64.machine_state_rest
 
 consts irq_oracle :: "nat \<Rightarrow> word8"
 

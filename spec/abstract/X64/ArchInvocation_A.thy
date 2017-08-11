@@ -52,14 +52,14 @@ datatype page_directory_invocation =
     PageDirectoryMap cap cslot_ptr pdpte obj_ref obj_ref
   | PageDirectoryUnmap cap cslot_ptr
 
-datatype page_table_invocation = 
+datatype page_table_invocation =
     PageTableMap cap cslot_ptr pde obj_ref obj_ref
   | PageTableUnmap cap cslot_ptr
 
-datatype asid_control_invocation = 
+datatype asid_control_invocation =
     MakePool obj_ref cslot_ptr cslot_ptr asid
 
-datatype asid_pool_invocation = 
+datatype asid_pool_invocation =
     Assign asid obj_ref cslot_ptr
 
 datatype page_invocation
@@ -72,10 +72,10 @@ datatype page_invocation
          (page_remap_entries: "vm_page_entry \<times> obj_ref")
          (page_remap_asid: asid)
          (page_remap_vspace: obj_ref)
-     | PageUnmap 
+     | PageUnmap
          (page_unmap_cap: arch_cap)
          (page_unmap_cap_slot: cslot_ptr)
-(*     | PageIOMap 
+(*     | PageIOMap
          (page_iomap_cap: cap)
          (page_iomap_ct_clot: cslot_ptr)
          (page_iomap_asid: iopte)
@@ -90,7 +90,7 @@ datatype io_port_invocation_data
 datatype io_port_invocation = IOPortInvocation io_port io_port_invocation_data
 
 (*
-datatype io_pt_invocation 
+datatype io_pt_invocation
      = IOPageTableMapContext cap cslot_ptr iocte obj_ref
      | IOPageTableMap cap cslot_ptr iopte obj_ref
      | IOPageTableUnmap cap cslot_ptr *)

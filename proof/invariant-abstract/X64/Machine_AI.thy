@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Properties of machine operations.
 *)
 
@@ -80,7 +80,7 @@ lemma det_setRegister: "det (setRegister x w)"
 
 lemma det_getRestartPC: "det getRestartPC"
   by (simp add: getRestartPC_def det_getRegister)
-  
+
 
 lemma det_setNextPC: "det (setNextPC p)"
   by (simp add: setNextPC_def det_setRegister)
@@ -148,7 +148,7 @@ lemma getRestartPC_inv: "\<lbrace>P\<rbrace> getRestartPC \<lbrace>\<lambda>rv. 
 
 
 
-lemma no_fail_clearMemory[simp, wp]: 
+lemma no_fail_clearMemory[simp, wp]:
   "no_fail (\<lambda>_. is_aligned p 3) (clearMemory p b)"
   apply (simp add: clearMemory_def mapM_x_mapM)
   apply (rule no_fail_pre)
@@ -192,7 +192,7 @@ lemma getActiveIRQ_inv [wp]:
 
 lemma no_fail_ackInterrupt[wp]: "no_fail \<top> (ackInterrupt irq)"
   by (simp add: ackInterrupt_def)
-  
+
 
 lemma no_fail_maskInterrupt[wp]: "no_fail \<top> (maskInterrupt irq bool)"
   by (simp add: maskInterrupt_def)
@@ -278,7 +278,7 @@ lemma no_irq_mapM_x:
    apply (rule order_refl)
   apply (wp; simp)
   done
-  
+
 
 lemma no_irq_swp:
   "no_irq (f y x) \<Longrightarrow> no_irq (swp f x y)"
@@ -313,15 +313,15 @@ lemma no_irq_modify:
   apply (rule allI, simp add: valid_def put_def get_def)
   apply (clarsimp simp: in_monad)
   done
-  
+
 lemma no_irq_invalidateTLBEntry: "no_irq (invalidateTLBEntry a)"
   by (clarsimp simp: invalidateTLBEntry_def)
-  
+
 lemma no_irq_resetCR3: "no_irq resetCR3"
   by (clarsimp simp: resetCR3_def)
-  
+
 lemma no_irq_storeWord: "no_irq (storeWord w p)"
-  apply (simp add: storeWord_def)    
+  apply (simp add: storeWord_def)
   apply (wp no_irq_modify)
   apply simp
   done
@@ -390,7 +390,7 @@ lemma dmo_getActiveIRQ_non_kernel[wp]:
 
 lemma empty_fail_invalidateTLB: "empty_fail  invalidateTLB"
   by (simp add: invalidateTLB_def)
-  
+
 lemma empty_fail_initL2Cache: "empty_fail  initL2Cache"
   by (simp add: initL2Cache_def)
 
@@ -404,7 +404,7 @@ lemma getFaultAddress_ef[simp,wp]: "empty_fail getFaultAddress"
 (* FIXME x64: move *)
 lemma ioapicMapPinToVector_ef[simp,wp]: "empty_fail (ioapicMapPinToVector a b c d e)"
   by (simp add: ioapicMapPinToVector_def)
-  
+
 (* FIXME x64: move *)
 lemma invalidateTLBEntry_ef[simp,wp]: "empty_fail (invalidateTLBEntry b)"
   by (simp add: invalidateTLBEntry_def)
@@ -422,7 +422,7 @@ lemma hwASIDInvalidate_ef[simp,wp]: "empty_fail (hwASIDInvalidate b a)"
 (* FIXME x64: move *)
 lemma updateIRQState_ef[simp,wp]: "empty_fail (updateIRQState b c)"
   by (simp add: updateIRQState_def)
-  
+
 (* FIXME x64: move *)
 lemma resetCR3_ef[simp,wp]: "empty_fail (resetCR3)"
   by (simp add: resetCR3_def)
@@ -438,11 +438,11 @@ lemma in8_ef[simp,wp]: "empty_fail (in8 port)"
 (* FIXME x64: move *)
 lemma in16_ef[simp,wp]: "empty_fail (in16 port)"
   by (simp add: in16_def)
-  
+
 (* FIXME x64: move *)
 lemma in32_ef[simp,wp]: "empty_fail (in32 port)"
   by (simp add: in32_def)
-  
+
 (* FIXME x64: move *)
 lemma out8_ef[simp,wp]: "empty_fail (out8 port dat)"
   by (simp add: out8_def)
@@ -450,11 +450,11 @@ lemma out8_ef[simp,wp]: "empty_fail (out8 port dat)"
 (* FIXME x64: move *)
 lemma out16_ef[simp,wp]: "empty_fail (out16 port dat)"
   by (simp add: out16_def)
-  
+
 (* FIXME x64: move *)
 lemma out32_ef[simp,wp]: "empty_fail (out32 port dat)"
   by (simp add: out32_def)
-  
+
 end
 end
 

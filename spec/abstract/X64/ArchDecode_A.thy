@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 Decoding system calls
 *)
 
@@ -32,11 +32,11 @@ to the given page size. *}
 definition
   check_vp_alignment :: "vmpage_size \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) se_monad" where
   "check_vp_alignment sz vptr \<equiv>
-     unlessE (is_aligned vptr (pageBitsForSize sz)) $ 
+     unlessE (is_aligned vptr (pageBitsForSize sz)) $
        throwError AlignmentError"
 
 text {* This definition converts a user-supplied argument into an
-invocation label, used to determine the method to invoke. 
+invocation label, used to determine the method to invoke.
 *}
 
 section "Architecture calls"
@@ -172,20 +172,20 @@ where
   | _ \<Rightarrow> throwError IllegalOperation"
 (*X64STUB*)
 definition
-  decode_io_unmap_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> 
+  decode_io_unmap_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow>
                             (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where
   "decode_io_unmap_invocation label args cte cap extra_caps \<equiv> undefined"
 
- 
+
 definition page_cap_set_vmmap_type :: "arch_cap \<Rightarrow> vmmap_type \<Rightarrow> arch_cap"
 where "page_cap_set_vmmap_type cap t \<equiv> (case cap of
   PageCap dev p R map_type pgsz mapped_address \<Rightarrow> PageCap dev p R t pgsz mapped_address
   | _ \<Rightarrow> undefined)"
 
-definition 
+definition
   get_iovm_rights :: "vm_rights \<Rightarrow> vm_rights \<Rightarrow> vm_rights"
-where "get_iovm_rights cover base \<equiv> 
+where "get_iovm_rights cover base \<equiv>
      (if cover = {AllowRead} then  (if AllowRead \<in> base then {AllowRead} else {}) else
      (if AllowRead \<in> cover then  {AllowRead} \<union> (if AllowWrite \<in> base then {AllowWrite} else {})
      else (if AllowWrite \<in> base then {AllowWrite} else {})))"
@@ -198,16 +198,16 @@ definition
       ArchObjectCap (IOSpaceCap _ (Some deviceid)) \<Rightarrow> return $ ucast deviceid
     | ArchObjectCap (IOPageTableCap _ _ (Some asid)) \<Rightarrow> return $ fst asid
     | _\<Rightarrow> fail"
-                
+
 
 definition
-  decode_io_pt_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> 
+  decode_io_pt_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow>
                             (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where
-  "decode_io_pt_invocation label args cptr cap extra_caps \<equiv> (case cap of 
+  "decode_io_pt_invocation label args cptr cap extra_caps \<equiv> (case cap of
   IOPageTableCap bptr level mapped_address \<Rightarrow>
     if invocation_type label = ArchInvocationLabel  X64IOPageTableMap
-    then 
+    then
       let paddr = addrFromPPtr bptr;
           ioaddr = args ! 0;
           vmrights = args ! 1;
@@ -215,7 +215,7 @@ where
       in doE
       whenE (mapped_address \<noteq> None) $ throwError $ InvalidCapability 0;
       (deviceid,domainid) <- (case iospace_cap of
-             ArchObjectCap (IOSpaceCap domainid (Some deviceid)) 
+             ArchObjectCap (IOSpaceCap domainid (Some deviceid))
                  \<Rightarrow> returnOk $ (deviceid,domainid)
              | _ \<Rightarrow> throwError $ InvalidCapability 0);
       pci_request_id \<leftarrow> liftE $ pci_request_id_from_cap iospace_cap;
@@ -223,44 +223,44 @@ where
       iocte \<leftarrow> liftE $ get_iocte iocteslot;
       case iocte of
         VTDCTE did rmrr aw slptr tt False \<Rightarrow> doE
-          vtdcte <- returnOk $ VTDCTE did False (x64_num_io_pt_levels - 2) 
+          vtdcte <- returnOk $ VTDCTE did False (x64_num_io_pt_levels - 2)
                                           paddr NotTranslated True;
           cap' <- returnOk $ IOPageTableCap bptr 0 (Some (deviceid, ioaddr));
           returnOk $ InvokeIOPT $ IOPageTableMapContext (ArchObjectCap cap')
             cptr vtdcte iocteslot
         odE
       | VTDCTE did rmrr aw slptr tt True \<Rightarrow> doE
-          (slot, level) \<leftarrow> lookup_error_on_failure False $ 
+          (slot, level) \<leftarrow> lookup_error_on_failure False $
               lookup_io_pt_slot (ptrFromPAddr slptr) ioaddr;
            level <- returnOk $ x64_num_io_pt_levels - level;
            pte <- liftE $ get_iopte slot;
            cap' <- returnOk $ IOPageTableCap bptr level (Some (deviceid, ioaddr));
-           case pte of 
+           case pte of
              InvalidIOPTE \<Rightarrow> returnOk $ InvokeIOPT $ IOPageTableMap (ArchObjectCap cap')
              cptr (VTDPTE paddr vm_read_write) slot
            | _ \<Rightarrow> throwError $ InvalidCapability 0
         odE
       odE
     else if invocation_type label = ArchInvocationLabel X64IOPageTableUnmap
-    then 
+    then
       returnOk $ InvokeIOPT $ IOPageTableUnmap (ArchObjectCap cap) cptr
     else throwError $ IllegalOperation
   | _ \<Rightarrow> undefined)"
 
 definition
-  decode_io_frame_map_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> 
+  decode_io_frame_map_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow>
                             (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where
-  "decode_io_frame_map_invocation label args cptr cap extra_caps \<equiv> (case cap of 
-  PageCap p R map_tyhpe pgsz mapped_address \<Rightarrow> 
+  "decode_io_frame_map_invocation label args cptr cap extra_caps \<equiv> (case cap of
+  PageCap p R map_tyhpe pgsz mapped_address \<Rightarrow>
     if invocation_type label = ArchInvocationLabel X64PageMapIO
-    then 
+    then
       let paddr = addrFromPPtr p;
           ioaddr = args ! 0;
           vmrights = args ! 1;
           iospace_cap = fst (extra_caps ! 0);
           vm_right_mask = get_iovm_rights R (data_to_rights vmrights)
-      in doE 
+      in doE
       whenE (pgsz \<noteq> X64SmallPage) $ throwError $ InvalidCapability 0;
       whenE (mapped_address \<noteq> None) $ throwError $ InvalidCapability 0;
       deviceid \<leftarrow> (case iospace_cap of
@@ -286,7 +286,7 @@ where
 
 
 definition
-  decode_io_map_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> 
+  decode_io_map_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow>
                             (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where
   "decode_io_map_invocation label args cte cap extra_caps \<equiv> undefined"
@@ -294,11 +294,11 @@ where
 *)
 
 definition
-decode_page_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap 
+decode_page_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap
                             \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (arch_invocation,'z::state_ext) se_monad"
 where
   "decode_page_invocation label args cte cap extra_caps \<equiv> (case cap of
-  PageCap dev p R map_type pgsz mapped_address \<Rightarrow> 
+  PageCap dev p R map_type pgsz mapped_address \<Rightarrow>
     if invocation_type label = ArchInvocationLabel X64PageMap then
     if length args > 2 \<and> length extra_caps > 0
     then let vaddr = args ! 0 && user_vtop;
@@ -320,7 +320,7 @@ where
              entries \<leftarrow> create_mapping_entries (addrFromPPtr p) vaddr pgsz vm_rights
                                                (attribs_from_word attr) vspace;
              ensure_safe_mapping entries;
-             returnOk $ InvokePage $ PageMap  
+             returnOk $ InvokePage $ PageMap
                        (ArchObjectCap $ PageCap dev p R map_type pgsz (Some (asid,vaddr))) cte entries vspace
           odE
     else throwError TruncatedMessage
@@ -347,7 +347,7 @@ where
              returnOk $ InvokePage $ PageRemap entries asid vspace
          odE
     else throwError TruncatedMessage
-    else if invocation_type label = ArchInvocationLabel X64PageUnmap then 
+    else if invocation_type label = ArchInvocationLabel X64PageUnmap then
              (*case map_type of
                  VMIOSpaceMap \<Rightarrow> decode_io_unmap_invocation label args cte cap extra_caps
                | _ \<Rightarrow>*) returnOk $ InvokePage $ PageUnmap cap cte
@@ -355,9 +355,9 @@ where
     else if invocation_type label = ArchInvocationLabel X64PageMapIO
     then decode_io_map_invocation label args cte cap extra_caps
     *)
-    else if invocation_type label = ArchInvocationLabel X64PageGetAddress 
+    else if invocation_type label = ArchInvocationLabel X64PageGetAddress
     then returnOk $ InvokePage $ PageGetAddr p
-  else throwError IllegalOperation         
+  else throwError IllegalOperation
  | _ \<Rightarrow> fail)"
 
 definition filter_frame_attrs :: "frame_attrs \<Rightarrow> table_attrs"
@@ -423,8 +423,8 @@ where
                whenE (pml4' \<noteq> pml4) $ throwError $ InvalidCapability 1;
                pdpt_slot \<leftarrow> lookup_error_on_failure False $ lookup_pdpt_slot pml4 vaddr';
                old_pdpte \<leftarrow> liftE $ get_pdpte pdpt_slot;
-               unlessE (old_pdpte = InvalidPDPTE) $ throwError DeleteFirst; 
-               pdpte \<leftarrow> returnOk (PageDirectoryPDPTE (addrFromPPtr p) 
+               unlessE (old_pdpte = InvalidPDPTE) $ throwError DeleteFirst;
+               pdpte \<leftarrow> returnOk (PageDirectoryPDPTE (addrFromPPtr p)
                           (filter_frame_attrs $ attribs_from_word attr) vm_read_write);
                cap' <- returnOk $ ArchObjectCap $ PageDirectoryCap p $ Some (asid, vaddr');
                returnOk $ InvokePageDirectory $ PageDirectoryMap cap' cte pdpte pdpt_slot pml4
@@ -435,7 +435,7 @@ where
                unlessE final $ throwError RevokeFirst;
                returnOk $ InvokePageDirectory $ PageDirectoryUnmap (ArchObjectCap cap) cte
             odE
-      else throwError IllegalOperation 
+      else throwError IllegalOperation
   | _ \<Rightarrow> fail)"
 
 definition
@@ -484,7 +484,7 @@ where
     PDPointerTableCap _ _ \<Rightarrow> decode_pdpt_invocation label args cte cap extra_caps
   | PageDirectoryCap _ _ \<Rightarrow> decode_page_directory_invocation label args cte cap extra_caps
   | PageTableCap _ _ \<Rightarrow> decode_page_table_invocation label args cte cap extra_caps
-  | PageCap _ _ _ _ _ _ \<Rightarrow> decode_page_invocation label args cte cap extra_caps 
+  | PageCap _ _ _ _ _ _ \<Rightarrow> decode_page_invocation label args cte cap extra_caps
   | ASIDControlCap \<Rightarrow>
       if invocation_type label = ArchInvocationLabel X64ASIDControlMakePool then
       if length args > 1 \<and> length extra_caps > 1
@@ -530,7 +530,7 @@ where
                   offset \<leftarrow> liftE $ select_ext (\<lambda>_. free_asid_pool_select pool base) free_set;
                   returnOk $ InvokeASIDPool $ Assign (ucast offset + base) p pd_cap_slot
               odE
-            | _ \<Rightarrow> throwError $ InvalidCapability 1  
+            | _ \<Rightarrow> throwError $ InvalidCapability 1
       else throwError TruncatedMessage
       else throwError IllegalOperation
 

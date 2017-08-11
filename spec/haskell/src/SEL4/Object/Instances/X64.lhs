@@ -23,28 +23,28 @@ This module defines instances of "PSpaceStorable" for X64-specific kernel object
 > instance PSpaceStorable PDE where
 >     makeObject = InvalidPDE
 >     injectKO = KOArch . KOPDE
->     projectKO o = case o of 
+>     projectKO o = case o of
 >                   KOArch (KOPDE p) -> return p
 >                   _ -> typeError "PDE" o
 
 > instance PSpaceStorable PTE where
 >     makeObject = InvalidPTE
 >     injectKO = KOArch . KOPTE
->     projectKO o = case o of 
+>     projectKO o = case o of
 >                 KOArch (KOPTE p) -> return p
 >                 _ -> typeError "PTE" o
 
 > instance PSpaceStorable PDPTE where
 >     makeObject = InvalidPDPTE
 >     injectKO = KOArch . KOPDPTE
->     projectKO o = case o of 
+>     projectKO o = case o of
 >                 KOArch (KOPDPTE p) -> return p
 >                 _ -> typeError "PDPTE" o
 
 > instance PSpaceStorable PML4E where
 >     makeObject = InvalidPML4E
 >     injectKO = KOArch . KOPML4E
->     projectKO o = case o of 
+>     projectKO o = case o of
 >                 KOArch (KOPML4E p) -> return p
 >                 _ -> typeError "PML4E" o
 

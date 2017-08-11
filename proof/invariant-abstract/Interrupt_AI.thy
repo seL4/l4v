@@ -53,7 +53,7 @@ where
         and K (irq \<le> maxIRQ))"
 
 
-locale Interrupt_AI =  
+locale Interrupt_AI =
   fixes state_ext_type1 :: "('a :: state_ext) itself"
   assumes decode_irq_control_invocation_inv[wp]:
     "\<And>(P  :: 'a state \<Rightarrow> bool) args slot label caps.

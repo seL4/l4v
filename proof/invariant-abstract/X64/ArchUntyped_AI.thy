@@ -59,7 +59,7 @@ lemma inj_on_nat_to_cref[Untyped_AI_assms]:
   apply (rule power_increasing, simp+)
   done
 
-  
+
 lemma data_to_obj_type_sp[Untyped_AI_assms]:
   "\<lbrace>P\<rbrace> data_to_obj_type x \<lbrace>\<lambda>ts (s::'state_ext::state_ext state). ts \<noteq> ArchObject ASIDPoolObj \<and> P s\<rbrace>, -"
   unfolding data_to_obj_type_def
@@ -77,14 +77,14 @@ lemma dui_inv_wf[wp, Untyped_AI_assms]:
      decode_untyped_invocation label args slot (cap.UntypedCap dev w sz idx) cs
    \<lbrace>valid_untyped_inv\<rbrace>,-"
 proof -
-  have inj: "\<And>node_cap s. \<lbrakk>is_cnode_cap node_cap; 
+  have inj: "\<And>node_cap s. \<lbrakk>is_cnode_cap node_cap;
     unat (args ! 5) \<le> 2 ^ bits_of node_cap - unat (args ! 4);valid_cap node_cap s\<rbrakk> \<Longrightarrow>
     inj_on (Pair (obj_ref_of node_cap) \<circ> nat_to_cref (bits_of node_cap))
                       {unat (args ! 4)..<unat (args ! 4) + unat (args ! 5)}"
     apply (simp add:comp_def)
     apply (rule inj_on_split)
     apply (rule subset_inj_on [OF inj_on_nat_to_cref])
-     apply (clarsimp simp: is_cap_simps bits_of_def valid_cap_def 
+     apply (clarsimp simp: is_cap_simps bits_of_def valid_cap_def
        word_bits_def cap_aligned_def)
      apply clarsimp
      apply (rule less_le_trans)
@@ -157,7 +157,7 @@ proof -
    done
 qed
 
-lemma asid_bits_ge_0: 
+lemma asid_bits_ge_0:
   "(0::word32) < 2 ^ asid_bits" by (simp add: asid_bits_def)
 
 lemma retype_ret_valid_caps_captable[Untyped_AI_assms]:
@@ -167,14 +167,14 @@ lemma retype_ret_valid_caps_captable[Untyped_AI_assms]:
          \<Longrightarrow> \<forall>y\<in>{0..<n}. s
                 \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object CapTableObject dev us)) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api CapTableObject us)) [0..<n])
                            (kheap s)\<rparr> \<turnstile> CNodeCap (ptr_add ptr (y * 2 ^ obj_bits_api CapTableObject us)) us []"
-by ((clarsimp simp:valid_cap_def default_object_def cap_aligned_def 
+by ((clarsimp simp:valid_cap_def default_object_def cap_aligned_def
         cte_level_bits_def is_obj_defs well_formed_cnode_n_def empty_cnode_def
         dom_def arch_default_cap_def ptr_add_def | rule conjI | intro conjI obj_at_foldr_intro imageI
       | rule is_aligned_add_multI[OF _ le_refl],
         (simp add:range_cover_def word_bits_def obj_bits_api_def slot_bits_def)+)+)[1]
 
 lemma retype_ret_valid_caps_aobj[Untyped_AI_assms]:
-  "\<And>ptr sz (s::'state_ext::state_ext state) x6 us n. 
+  "\<And>ptr sz (s::'state_ext::state_ext state) x6 us n.
   \<lbrakk>pspace_no_overlap_range_cover ptr sz s \<and> x6 \<noteq> ASIDPoolObj \<and>
   range_cover ptr sz (obj_bits_api (ArchObject x6) us) n \<and> ptr \<noteq> 0\<rbrakk>
             \<Longrightarrow> \<forall>y\<in>{0..<n}. s

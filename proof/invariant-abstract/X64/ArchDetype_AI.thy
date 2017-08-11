@@ -508,7 +508,7 @@ lemma in_user_frame_eq:
       done
     done
 
-lemma in_device_frame_eq: 
+lemma in_device_frame_eq:
   notes blah[simp del] =  atLeastAtMost_iff
           atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
@@ -607,7 +607,7 @@ lemma delete_objects_invs[wp]:
    apply (rule hoare_pre)
    apply (rule_tac G="is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits"
                 in hoare_grab_asm)
-   apply (simp add: mapM_storeWord_clear_um[unfolded word_size_def] 
+   apply (simp add: mapM_storeWord_clear_um[unfolded word_size_def]
                     intvl_range_conv[where 'a=machine_word_len, folded word_bits_def])
    apply wp
   apply clarsimp

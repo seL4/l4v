@@ -50,7 +50,7 @@ lemma same_object_obj_refs[Tcb_AI_asms]:
   by (cases "the_arch_cap cap"; cases "the_arch_cap cap'"; simp)
 
 
-definition 
+definition
   is_cnode_or_valid_arch :: "cap \<Rightarrow> bool"
 where
  "is_cnode_or_valid_arch cap \<equiv>
@@ -208,7 +208,7 @@ lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
               | rule obj_ref_none_no_asid)+
   done
 
-lemma tc_invs[Tcb_AI_asms]: 
+lemma tc_invs[Tcb_AI_asms]:
   "\<lbrace>invs and tcb_at a
        and (case_option \<top> (valid_cap o fst) e)
        and (case_option \<top> (valid_cap o fst) f)
