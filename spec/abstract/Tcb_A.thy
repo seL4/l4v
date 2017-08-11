@@ -249,14 +249,6 @@ where
     return []
   od)"
 
-context Arch begin
-declare arch_tcb_set_ipc_buffer_def [simp]
-end
-
-context Arch begin
-declare arch_tcb_set_ipc_buffer_def [simp]
-end
-
 definition
   set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> unit det_ext_monad" where
   "set_domain tptr new_dom \<equiv> do

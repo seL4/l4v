@@ -25,6 +25,9 @@ definition
 where
   "arch_tcb_set_ipc_buffer target ptr \<equiv> as_user target $ set_register TPIDRURW ptr"
 
+(* Allow most pre-existing proofs to continue to work. *)
+declare arch_tcb_set_ipc_buffer_def [simp]
+
 definition
   sanitise_register :: "bool \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word"
 where

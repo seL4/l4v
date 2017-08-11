@@ -138,10 +138,6 @@ This list may be empty, though it should contain as many registers as possible. 
 > syscallMessage :: [Register]
 > syscallMessage = map Register Arch.syscallMessage
 
-
-> --tpidrurwRegister :: Register
-> --tpidrurwRegister = Register Arch.tpidrurwRegister
-
 \end{description}
 
 \subsubsection{User-level Context}

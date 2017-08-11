@@ -84,7 +84,7 @@ CNodes have differing numbers of guard bits and rights bits
 > cteRightsBits = 3
 
 > cteGuardBits :: Int
-> cteGuardBits = wordSizeCase 18 48
+> cteGuardBits = 18
 
 Page capabilities have read and write permission bits, which are used to restrict virtual memory accesses to their contents. Note that the ability to map objects into a page table or page directory is granted by possession of a capability to it; there is no specific permission bit restricting this ability.
 

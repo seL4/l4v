@@ -1571,7 +1571,7 @@ lemma image_in_rtrancl_image:
   by auto
 
 definition "set_diff A B \<equiv> A - B \<union> (B - A)"
-thm vs_lookup_def
+
 lemma set_pt_asid_map [wp]:
   "\<lbrace>valid_asid_map  and
     (\<lambda>s. (\<forall>a aobj ptr. aa_type nobj = AASIDPool \<and> ((a, ptr) \<in> graph_of (x64_asid_map (arch_state s)) \<and> ko_at (ArchObj aobj) p s)

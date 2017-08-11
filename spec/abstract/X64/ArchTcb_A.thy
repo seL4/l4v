@@ -25,6 +25,9 @@ definition
 where
   "arch_tcb_set_ipc_buffer target ptr \<equiv> return ()"
 
+(* Allow most pre-existing proofs to continue to work. *)
+declare arch_tcb_set_ipc_buffer_def [simp]
+
 definition
   sanitise_or_flags :: machine_word
 where

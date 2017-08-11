@@ -50,9 +50,7 @@ FIXME ARMHYP this is so that disabling SMMU results in successful compile
 > import Data.List
 > import Data.Array
 > import Data.Word(Word32)
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > import Data.WordLib
-#endif
 
 \end{impdetails}
 
