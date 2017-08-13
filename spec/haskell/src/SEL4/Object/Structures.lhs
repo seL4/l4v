@@ -208,6 +208,8 @@ list of pointers to waiting threads;
 >     scNtfn :: Maybe (PPtr Notification),
 >     scRefills :: [Refill],
 >     scRefillMax :: Int,
+>     scRefillHead :: Int,
+>     scRefillTail :: Int,
 >     scReplies :: [PPtr Reply] }
 
 > data Reply = Reply {
@@ -277,6 +279,8 @@ The TCB is used to store various data about the thread's current state:
 
 >         tcbIPCBufferFrame :: CTE,
 
+>         tcbFaultHandler :: CTE,
+
 \item the security domain and a flag that determines whether the thread can set the security domain of other threads.
 
 >         tcbDomain :: Domain,
@@ -291,10 +295,6 @@ The TCB is used to store various data about the thread's current state:
 \item the thread's current fault state;
 
 >         tcbFault :: Maybe Fault,
-
-\item a capability pointer to the fault handler endpoint, which receives an IPC from the kernel whenever this thread generates a fault;
-
->         tcbFaultHandler :: CPtr,
 
 \item the virtual address of the thread's IPC buffer, which is readable at user level as thread-local data (by an architecture-defined mechanism), and is also used by the kernel to determine the buffer's offset within its frame;
 
@@ -326,14 +326,11 @@ Each TCB contains four CTE entries. The following constants define the slot numb
 > tcbVTableSlot :: Word
 > tcbVTableSlot = 1
 
-> tcbReplySlot :: Word
-> tcbReplySlot = 2
-
-> tcbCallerSlot :: Word
-> tcbCallerSlot = 3
-
 > tcbIPCBufferSlot :: Word
-> tcbIPCBufferSlot = 4
+> tcbIPCBufferSlot = 2
+
+> tcbFaultHandlerSlot :: Word
+> tcbFaultHandlerSlot = 3
 
 > minPriority :: Priority
 > minPriority = 0

@@ -131,7 +131,7 @@ If the notification object is already waiting, the current thread is blocked and
 >                 True -> do
 >                       setThreadState (BlockedOnNotification {
 >                                          waitingOnNotification = ntfnPtr } ) thread
->                       qs' <- sortQueue $ queue ++ [thread]
+>                       qs' <- tcbEPAppend thread queue
 >                       setNotification ntfnPtr $ ntfn {ntfnObj = WaitingNtfn qs' }
 >                       maybeReturnSc ntfnPtr thread
 >                       scheduleTCB thread
@@ -236,14 +236,15 @@ The following functions are specialisations of the "getObject" and "setObject" f
 >     BlockedOnNotification r -> Just r
 >     _ -> Nothing
 
-> reorderNtfn :: PPtr Notification -> Kernel ()
-> reorderNtfn ntfnPtr = do
+> reorderNtfn :: PPtr Notification -> PPtr TCB -> Kernel ()
+> reorderNtfn ntfnPtr tptr = do
 >     ntfn <- getNotification ntfnPtr
 >     qsOpt <- return $ ntfnQueue ntfn
 >     assert (qsOpt /= Nothing) "reorder_ntfn: the notification queue must not be Nothing"
 >     qs <- return $ fromJust qsOpt
->     qs' <- sortQueue qs
->     setNotification ntfnPtr (ntfn { ntfnObj = WaitingNtfn qs' })
+>     qs' <- tcbEPDequeue tptr qs
+>     qs'' <- tcbEPAppend tptr qs'
+>     setNotification ntfnPtr (ntfn { ntfnObj = WaitingNtfn qs'' })
 
 > ntfnQueue :: Notification -> Maybe [PPtr TCB]
 > ntfnQueue ntfn =

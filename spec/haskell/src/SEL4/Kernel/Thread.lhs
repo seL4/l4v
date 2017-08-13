@@ -482,10 +482,10 @@ The following function is used to alter the priority of a thread.
 >         cur <- getCurThread
 >         when (tptr == cur) rescheduleRequired
 >     case (epBlocked ts) of
->         Just ep -> reorderEp ep
+>         Just ep -> reorderEp ep tptr
 >         _ -> return ()
 >     case (ntfnBlocked ts) of
->         Just ntfn -> reorderNtfn ntfn
+>         Just ntfn -> reorderNtfn ntfn tptr
 >         _ -> return ()
 
 \subsubsection{Switching to Woken Threads}

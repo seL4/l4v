@@ -21,9 +21,8 @@ This module contains functions that determine how recoverable faults encountered
 > import SEL4.Machine
 > import SEL4.Model
 > import SEL4.Object
-> import SEL4.Object.Structures(TCB(..))
+> import SEL4.Object.Structures(TCB(..), CTE(..))
 > import SEL4.Kernel.Thread
-> import SEL4.Kernel.CSpace
 
 \end{impdetails}
 
@@ -38,49 +37,34 @@ The parameters of this function are the fault and a pointer to the thread which 
 When a thread faults, the kernel attempts to send a fault IPC to the fault handler endpoint. This has the side-effect of suspending the thread, placing it in the "BlockedOnFault" state until the recipient of the fault IPC replies to it. If the IPC fails, we call "handleDoubleFault" instead.
 
 > handleFault tptr ex = do
->     sendFaultIPC tptr ex `catchFailure` handleDoubleFault tptr ex
+>     tcb <- getObject tptr
+>     hasFh <- (sendFaultIPC tptr (cteCap (tcbFaultHandler tcb)) ex `catchFailure` const (return False))
+>     unless hasFh $ (handleNoFault tptr)
 
 \subsection{Sending Fault IPC}
 
 If a thread causes a fault, then an IPC containing details of the fault is sent to a fault handler endpoint specified in the thread's TCB.
 
-> sendFaultIPC :: PPtr TCB -> Fault -> KernelF Fault ()
-> sendFaultIPC tptr fault = do
-
-The fault handler endpoint capability is fetched from the TCB.
-
->     handlerCPtr <- withoutFailure $ threadGet tcbFaultHandler tptr
->     handlerCap <- capFaultOnFailure handlerCPtr False $
->         lookupCap tptr handlerCPtr
-
+> sendFaultIPC :: PPtr TCB -> Capability -> Fault -> KernelF Fault Bool
+> sendFaultIPC tptr handlerCap fault = do
 >     case handlerCap of
 
 The kernel stores a copy of the fault in the thread's TCB, and performs an IPC send operation to the fault handler endpoint on behalf of the faulting thread. When the IPC completes, the fault will be retrieved from the TCB and sent instead of the message registers.
 
->         EndpointCap { capEPCanSend = True, capEPCanGrant = True } ->
->           withoutFailure $ do
->             threadSet (\tcb -> tcb {tcbFault = Just fault}) tptr
->             sendIPC True False (capEPBadge handlerCap)
->                 True True tptr (capEPPtr handlerCap)
+>         EndpointCap _ _ capEPCanSend _ capEPCanGrant ->
+>           if capEPCanSend && capEPCanGrant
+>               then withoutFailure $ do
+>                        threadSet (\tcb -> tcb {tcbFault = Just fault}) tptr
+>                        sendIPC True False (capEPBadge handlerCap)
+>                            True True tptr (capEPPtr handlerCap)
+>                        return True
+>               else fail "no proper rights"
+>         NullCap -> withoutFailure $ return False
+>         _ -> fail "no proper cap"
 
-If there are insufficient permissions to send to the fault handler, then another fault will be generated.
+\subsection{No Fault}
 
->         _ -> throw $ CapFault handlerCPtr False $
->             MissingCapability { missingCapBitsLeft = 0 }
-
-\subsection{Double Faults}
-
-> handleDoubleFault :: PPtr TCB -> Fault -> Fault -> Kernel ()
-
-If a fault IPC cannot be sent because the fault handler endpoint capability is missing, then we are left with two faults which cannot be reasonably handled. The faults are both printed to the console for debugging purposes. The faulting thread is placed in the "Inactive" state, which will prevent it running until it is explicitly restarted.
-
-> handleDoubleFault tptr ex1 ex2 = do
->         setThreadState Inactive tptr
->         faultPC <- asUser tptr getRestartPC
->         let errmsg = "Caught fault " ++ (show ex2)
->                 ++ "\nwhile trying to handle fault " ++ (show ex1)
->                 ++ "\nin thread " ++ (show tptr)
->                 ++ "\nat address " ++ (show faultPC)
->         doMachineOp $ debugPrint errmsg
+> handleNoFault :: PPtr TCB -> Kernel ()
+> handleNoFault tptr = setThreadState Inactive tptr
 
 

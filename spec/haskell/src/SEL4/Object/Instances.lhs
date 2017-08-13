@@ -22,7 +22,6 @@ This module uses the C preprocessor to select a target architecture.
 
 \begin{impdetails}
 
-> import SEL4.API.Types
 > import SEL4.Machine
 > import SEL4.Object.Structures
 > import SEL4.Model.PSpace
@@ -58,7 +57,7 @@ The following are the instances of "Storable" for the four main types of kernel 
 \subsubsection{SchedContext objects}
 
 > instance PSpaceStorable SchedContext where
->     makeObject = SchedContext 0 Nothing Nothing [Refill 0 0] 0 []
+>     makeObject = SchedContext 0 Nothing Nothing [Refill 0 0] 0 0 0 []
 >     injectKO   = KOSchedContext
 >     projectKO o = case o of
 >         KOSchedContext e -> return e
@@ -139,13 +138,13 @@ By default, new threads are unable to change the security domains of other threa
 >         tcbCTable = makeObject,
 >         tcbVTable = makeObject,
 >         tcbIPCBufferFrame = makeObject,
+>         tcbFaultHandler = makeObject,
 >         tcbDomain = minBound,
 >         tcbState = Inactive,
 >         tcbMCP = minBound,
 >         tcbPriority = minBound,
 >         tcbQueued = False,
 >         tcbFault = Nothing,
->         tcbFaultHandler = CPtr 0,
 >         tcbIPCBuffer = VPtr 0,
 >         tcbBoundNotification = Nothing,
 >         tcbSchedContext = Nothing,
