@@ -86,38 +86,14 @@ EXCLUDE["ARM_HYP"]=[
 EXCLUDE["ARM"]=[]
 
 EXCLUDE["X64"]=[
-    "ASepSpec",
     "Access",
-    "ArmConfidentiality",
-    "AutoCorresSEL4",
     "Bisim",
-    "CBaseRefine",
-    "CKernel",
-    "CRefine",
-    "CSpec",
-    "CamkesAdlSpec",
-    "CamkesCdlRefine",
     "CamkesDarpaReport",
     "CamkesGlueProofs",
-    "CamkesGlueSpec",
+    "CSpec",
     "DBaseRefine",
-    "DPolicy",
-    "DRefine",
     "DSpec",
-    "DSpecProofs",
-    "InfoFlow",
-    "InfoFlowC",
-    "InfoFlowCBase",
-    "RelyGuarantee",
-    "SepDSpec",
-    "SepTactics",
-    "SepTacticsExamples",
-    "Sep_Algebra",
-    "SimplExportAndRefine",
-    "SimpleSystem",
-    "SysInit",
-    "SysInitExamples",
-    "TakeGrant"]
+    "SepTacticsExamples"]
 
 # Check EXCLUDE is exhaustive over the available architectures
 if not set(L4V_ARCH_LIST) <= set(EXCLUDE.keys()):
