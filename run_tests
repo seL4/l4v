@@ -44,44 +44,12 @@ if os.environ.has_key("QUICK_AND_DIRTY"):
 
 # Lists of excluded tests for diferent archs
 EXCLUDE={}
+
 EXCLUDE["ARM_HYP"]=[
-    "CamkesAdlSpec",
-    "CamkesGlueSpec",
-    "SimpleSystem",
-    "RelyGuarantee",
-    "Sep_Algebra",
-    "tests-xml-correct",
-    "SepTactics",
-    "SepTacticsExamples",
-    "DBaseRefine",
-    "DRefine",
     "Access",
-    "InfoFlow",
-    "ArmConfidentiality",
-    "DPolicy",
-    "CamkesCdlRefine",
     "Bisim",
-    "DSpec",
-    "SepDSpec",
-    "DSpecProofs",
-    "TakeGrant",
-    "ASepSpec",
-    "HaskellKernel",
-    "SysInit",
-    "SysInitExamples",
-    "InfoFlowCBase",
-    "InfoFlowC",
-    "SimplExportAndRefine",
-    "CParserTest",
-    "CParserTestX64",
-    "CParserTools",
-    "AutoCorres",
-    "CamkesGlueProofs",
-    "CamkesDarpaReport",
-    "theory_imports",
-    "AutoCorresDoc",
-    "AutoCorresTest",
-    "AutoCorresSEL4"]
+    "DRefine",
+    "SimplExportAndRefine"]
 
 EXCLUDE["ARM"]=[]
 
