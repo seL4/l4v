@@ -12,8 +12,6 @@
 import os
 import copy
 import heapq
-import glob
-import subprocess
 import itertools
 import argparse
 import sys
@@ -26,7 +24,7 @@ REGRESSION_DTD = os.path.join(REGRESSION_DIR, "regression.dtd")
 class TestSpecParseException(Exception):
     pass
 
-class TestEnv():
+class TestEnv:
     def __init__(self, pwd):
         self.pwd = pwd
         self.cwd = "."
@@ -34,31 +32,29 @@ class TestEnv():
         self.cpu_timeout = 0
         self.depends = set()
 
-class Test():
+class Test:
     def __init__(self, name, command, timeout=0, cpu_timeout=0, cwd="", depends=None):
         self.name = name
         self.command = command
         self.timeout = timeout
         self.cpu_timeout = cpu_timeout
         self.cwd = cwd
-
-        if depends == None:
-            depends = set([])
-        self.depends = depends
+        self.depends = depends if depends is not None else set([])
 
 def parse_attributes(tag, env, strict=True):
     """Parse attributes such as "timeout" in the given XML tag,
     updating the given "env" to reflect them."""
+
     if tag.get("timeout"):
         try:
             env.timeout = int(tag.get("timeout"))
-        except:
+        except ValueError:
             if strict:
                 raise
     if tag.get("cpu-timeout"):
         try:
             env.cpu_timeout = float(tag.get("cpu-timeout"))
-        except:
+        except ValueError:
             if strict:
                 raise
     if tag.get("cwd"):
@@ -140,7 +136,7 @@ def find_cycle(keys, depends_on):
             active.add(n)
             for c in depends_on(n):
                 x = do_dfs(c)
-                if x != None:
+                if x is not None:
                     return [n] + x
             active.discard(n)
             safe.add(n)
@@ -148,8 +144,7 @@ def find_cycle(keys, depends_on):
     shortest_cycle = None
     for i in keys:
         x = dfs(i)
-        if x != None and (shortest_cycle == None
-                or len(x) < len(shortest_cycle)):
+        if x is not None and (shortest_cycle is None or len(x) < len(shortest_cycle)):
             shortest_cycle = x
     return shortest_cycle
 
@@ -241,7 +236,7 @@ def process_tests(tests, strict=False):
                 raise TestSpecParseException("Duplicate test name detected: %s" % t.name)
             for x in itertools.count(2):
                 proposed_name = "%s_%d" % (t.name, x)
-                if not proposed_name in seen_names:
+                if proposed_name not in seen_names:
                     t.name = proposed_name
                     break
         seen_names.add(t.name)
@@ -253,13 +248,13 @@ def process_tests(tests, strict=False):
     for test in tests:
         test_depends = sorted(test.depends)
         for dependency_name in test_depends:
-            if not dependency_name in valid_names:
+            if dependency_name not in valid_names:
                 if strict:
                     raise TestSpecParseException(
                             "Dependency '%s' invalid." % dependency_name)
                 test.depends.remove(dependency_name)
 
-   # Toposort.
+    # Toposort.
     test_ordering = {}
     for (n, t) in enumerate(tests):
         test_ordering[t.name] = n
@@ -362,4 +357,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

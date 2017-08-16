@@ -25,7 +25,7 @@ import memusage
 import os
 try:
     import Queue
-except:
+except ImportError:
     import queue
     Queue = queue
 import signal
@@ -38,16 +38,10 @@ import traceback
 import warnings
 import xml.etree.ElementTree as ET
 
-try:
-    import psutil
-    if not hasattr(psutil.Process, "children") and hasattr(psutil.Process, "get_children"):
-        # psutil API change
-        psutil.Process.children = psutil.Process.get_children
-except ImportError:
-    print("Error: failed to import psutil module.\n"
-          "To install psutil, try:\n"
-          "  pip install --user psutil", file=sys.stderr)
-    sys.exit(2)
+import psutil
+if not hasattr(psutil.Process, "children"):
+    # psutil API change
+    psutil.Process.children = getattr(psutil.Process, "get_children")
 
 ANSI_RESET = "\033[0m"
 ANSI_RED = "\033[31;1m"
@@ -63,9 +57,9 @@ def output_color(color, s):
     return s
 
 # Find a command in the PATH.
-def which(file):
+def which(filename):
     for path in os.environ["PATH"].split(os.pathsep):
-        candidate = os.path.join(path, file)
+        candidate = os.path.join(path, filename)
         if os.path.exists(candidate) and os.access(candidate, os.X_OK):
             return candidate
     return None
@@ -161,7 +155,7 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None,
     # If we have a "pidspace" program, use that to ensure that programs
     # that double-fork can't continue running after the parent command
     # dies.
-    if which("pidspace") != None:
+    if which("pidspace") is not None:
         command = [which("pidspace"), "--"] + command
 
     # Print command and path.
@@ -182,7 +176,6 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None,
 
     # Start the command.
     peak_mem_usage = None
-    cpu_usage = None
     try:
         process = subprocess.Popen(command,
                 stdout=output, stderr=subprocess.STDOUT, stdin=subprocess.PIPE,
@@ -236,25 +229,25 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None,
 
     with cpuusage.process_poller(process.pid) as c:
         # Inactivity timeout
-        low_cpu_usage = 0.05 # 5% -- FIXME: hardcoded
+        low_cpu_usage = 0.05 # 5%
         cpu_history = collections.deque() # sliding window
-        last_cpu_usage = 0
         cpu_usage_total = [0] # workaround for variable scope
 
         # Also set a CPU timeout. We poll the cpu usage periodically.
         def cpu_timeout():
+            last_cpu_usage = 0
             interval = min(0.5, test.cpu_timeout / 10.0)
             while test_status[0] is RUNNING:
-                cpu_usage = c.cpu_usage()
+                thread_cpu_usage = c.cpu_usage()
 
                 if stuck_timeout:
                     # append to window
                     now = time.time()
                     if not cpu_history:
-                        cpu_history.append((time.time(), cpu_usage / interval))
+                        cpu_history.append((time.time(), thread_cpu_usage / interval))
                     else:
                         real_interval = now - cpu_history[-1][0]
-                        cpu_increment = cpu_usage - last_cpu_usage
+                        cpu_increment = thread_cpu_usage - last_cpu_usage
                         cpu_history.append((now, cpu_increment / real_interval))
                     cpu_usage_total[0] += cpu_history[-1][1]
 
@@ -264,19 +257,20 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None,
                         cpu_history.popleft()
 
                     if (now - cpu_history[0][0] >= stuck_timeout and
-                        cpu_usage_total[0] / len(cpu_history) < low_cpu_usage):
+                            cpu_usage_total[0] / len(cpu_history) < low_cpu_usage):
                         test_status[0] = STUCK
                         kill_family(grace_period, process.pid)
                         break
 
-                if cpu_usage > test.cpu_timeout:
+                if thread_cpu_usage > test.cpu_timeout:
                     test_status[0] = CPU_TIMEOUT
                     kill_family(grace_period, process.pid)
                     break
 
-                last_cpu_usage = cpu_usage
+                last_cpu_usage = thread_cpu_usage
                 time.sleep(interval)
 
+        cpu_timer = None
         if test.cpu_timeout > 0:
             cpu_timer = threading.Thread(target=cpu_timeout)
             cpu_timer.daemon = True
@@ -294,17 +288,17 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None,
             # No special status, so assume it failed by itself
             test_status[0] = FAILED
 
-        if test.cpu_timeout > 0:
+        if cpu_timer is not None:
             # prevent cpu_timer using c after it goes away
             cpu_timer.join()
 
     # Cancel the timer. Small race here (if the timer fires just after the
-    # process finished), but the returncode of our process should still be 0,
+    # process finished), but the return code of our process should still be 0,
     # and hence we won't interpret the result as a timeout.
     if test_status[0] is not TIMEOUT:
         timer.cancel()
 
-    if output == None:
+    if output is None:
         output = ""
     output = output.decode(encoding='utf8', errors='replace')
 
@@ -430,7 +424,6 @@ def main():
         sys.exit(0)
 
     # Calculate which tests should be run.
-    tests_to_run = []
     if len(args.tests) == 0 and not os.environ.get('RUN_TESTS_DEFAULT'):
         tests_to_run = tests
         args.exclude = args.exclude + args.remove
@@ -440,7 +433,7 @@ def main():
         if len(bad_names) > 0:
             parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
         # Given a list of names return the corresponding set of Test objects.
-        get_tests = lambda x: {t for t in tests if t.name in x}
+        def get_tests(x): return {t for t in tests if t.name in x}
         # Given a list/set of Tests return a superset that includes all dependencies.
         def get_deps(x):
             x.update({t for w in x for t in get_deps(get_tests(w.depends))})
@@ -500,7 +493,7 @@ def main():
                 # Non-blocked but depends on a failed test. Remove it.
                 if (len(real_depends & failed_tests) > 0
                     # --fail-fast triggered, fail all subsequent tests
-                    or kill_switch.is_set()):
+                        or kill_switch.is_set()):
 
                     wipe_tty_status()
                     print_test_line(t.name, ANSI_YELLOW, SKIPPED, legacy=args.legacy_status)
@@ -516,7 +509,6 @@ def main():
                     print_test_line_start(t.name, args.legacy_status)
                     test_thread.start()
                     current_jobs[t.name] = test_thread
-                    popped_test = True
                     del tests_queue[i]
                     break
 
