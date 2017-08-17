@@ -310,14 +310,12 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None,
                       'mem_usage': peak_mem_usage})
 
 # Print a status line.
-def print_test_line_start(test_name, legacy=False):
-    if legacy:
-        return
+def print_test_line_start(test_name):
     if sys.stdout.isatty():
         print("  Started %-25s " % (test_name + " ..."))
         sys.stdout.flush()
 
-def print_test_line(test_name, color, status, real_time=None, cpu_time=None, mem=None, legacy=False):
+def print_test_line(test_name, color, status, real_time=None, cpu_time=None, mem=None):
     if mem is not None:
         # Report memory usage in gigabytes.
         mem = '%5.2fGB' % round(float(mem) / 1024 / 1024 / 1024, 2)
@@ -334,10 +332,7 @@ def print_test_line(test_name, color, status, real_time=None, cpu_time=None, mem
     extras = ', '.join(filter(None, [real_time, cpu_time, mem]))
 
     # Print status line.
-    if legacy:
-        front = '  running %-25s ' % (test_name + " ...")
-    else:
-        front = '  Finished %-25s ' % test_name
+    front = '  Finished %-25s ' % test_name
     status_str = status_name[status]
     if status is not PASSED:
         status_str += " *"
@@ -384,11 +379,6 @@ def main():
             help="list known tests")
     parser.add_argument("--no-dependencies", action="store_true",
             help="don't check for dependencies when running specific tests")
-    parser.add_argument("--legacy", action="store_true",
-            help="use legacy 'IsaMakefile' specs")
-    # --legacy-status used by top-level regression-v2 script
-    parser.add_argument("--legacy-status", action="store_true",
-            help="emulate legacy (sequential code) status lines")
     parser.add_argument("-x", "--exclude", action="append", metavar="TEST", default=[],
             help="exclude tests (one -x per test)")
     parser.add_argument("-r", "--remove", action="append", metavar="TEST", default=[],
@@ -410,12 +400,8 @@ def main():
         parser.error("Number of parallel jobs must be at least 1")
 
     # Search for test files:
-    if not args.legacy:
-        test_xml = sorted(rglob(args.directory, "tests.xml"))
-        tests = testspec.parse_test_files(test_xml, strict=args.strict)
-    else:
-        # Fetch legacy tests.
-        tests = testspec.legacy_testspec(args.directory)
+    test_xml = sorted(rglob(args.directory, "tests.xml"))
+    tests = testspec.parse_test_files(test_xml, strict=args.strict)
 
     # List test names if requested.
     if args.list:
@@ -496,7 +482,7 @@ def main():
                         or kill_switch.is_set()):
 
                     wipe_tty_status()
-                    print_test_line(t.name, ANSI_YELLOW, SKIPPED, legacy=args.legacy_status)
+                    print_test_line(t.name, ANSI_YELLOW, SKIPPED)
                     failed_tests.add(t.name)
                     del tests_queue[i]
                     break
@@ -506,7 +492,7 @@ def main():
                                                    args=(t, status_queue, kill_switch,
                                                          args.verbose, args.stuck_timeout, args.grace_period))
                     wipe_tty_status()
-                    print_test_line_start(t.name, args.legacy_status)
+                    print_test_line_start(t.name)
                     test_thread.start()
                     current_jobs[t.name] = test_thread
                     del tests_queue[i]
@@ -533,8 +519,9 @@ def main():
                     failed_tests.add(name)
                     colour = ANSI_RED
                 print_test_line(name, colour, status,
-                                real_time=info['real_time'], cpu_time=info['cpu_time'], mem=info['mem_usage'],
-                                legacy=args.legacy_status)
+                                real_time=info['real_time'],
+                                cpu_time=info['cpu_time'],
+                                mem=info['mem_usage'])
                 if args.fail_fast and status != PASSED:
                     # Notify current threads and future tests
                     kill_switch.set()

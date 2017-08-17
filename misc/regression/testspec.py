@@ -279,41 +279,6 @@ def process_tests(tests, strict=False):
 
     return tests
 
-def legacy_testspec(root):
-    """Find tests inside makefiles."""
-
-    # Find candidate "IsaMakefile"s
-    candidates = sorted(
-        glob.glob(os.path.join(root, "*", "IsaMakefile"))
-        + glob.glob(os.path.join(root, "*", "*", "IsaMakefile")))
-
-    # Get isabelle binary.
-    isabelle_bin = os.path.abspath(os.path.join(root, "isabelle", "bin", "isabelle"))
-
-    # Run "isabelle make report-regression" on each.
-    def report_regression(filename):
-        filename = os.path.abspath(filename)
-        base_name = os.path.split(os.path.dirname(filename))[1]
-        try:
-            with open(os.devnull, "w") as devnull:
-                results = subprocess.check_output(
-                    [isabelle_bin, "make", "-f", filename, "report-regression"],
-                    cwd=os.path.dirname(filename),
-                    stderr=devnull)
-            return [(base_name + "/" + x, x) for x in results.strip().split()]
-        except subprocess.CalledProcessError:
-            return []
-
-    # Search for tests.
-    tests = []
-    for candidate in candidates:
-        targets = report_regression(os.path.abspath(candidate))
-        for (name, target) in targets:
-            new_test = Test(name, "isabelle make " + target, timeout=4*3600,
-                        cwd=os.path.dirname(os.path.abspath(candidate)))
-            tests.append(new_test)
-    return tests
-
 def parse_test_files(xml_files, strict=False):
     tests = []
     for x in xml_files:
@@ -332,22 +297,14 @@ def main():
             help="a regression XML file to parse")
     parser.add_argument("-r", "--relax", action="store_false", dest="strict",
             help="be less strict when parsing XML files")
-    parser.add_argument("-l", "--legacy", action="store_true",
-            help="use legacy 'IsaMakefile' specs")
     args = parser.parse_args()
 
-    # Ensure we are either in legacy more or we have at least one file.
-    if not args.legacy and len(args.file) == 0:
+    # Ensure we have at least one file.
+    if len(args.file) == 0:
         parser.error("Please provide at least one XML file.")
-    if args.legacy and len(args.file) > 0:
-        parser.error("Can not use both legacy mode and XML files.")
 
-    if args.legacy:
-        # Fetch legacy tests.
-        tests = legacy_testspec(os.getcwd())
-    else:
-        # Fetch XML tests.
-        tests = parse_test_files(args.file, strict=args.strict)
+    # Fetch XML tests.
+    tests = parse_test_files(args.file, strict=args.strict)
 
     # Print results
     for test in tests:
