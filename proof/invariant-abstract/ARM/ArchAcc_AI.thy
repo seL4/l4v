@@ -348,7 +348,7 @@ lemma set_asid_pool_valid_objs [wp]:
   apply (simp add: set_asid_pool_def)
   apply (wp set_object_valid_objs get_object_wp)
   including unfold_objects
-  by (clarsimp simp: a_type_def valid_obj_def wellformed_arch_obj_def)
+  by (clarsimp simp: a_type_def valid_obj_def arch_valid_obj_def)
 
 lemma pde_at_aligned_vptr:
   "\<lbrakk>x \<in> set [0 , 4 .e. 0x3C]; page_directory_at pd s;
@@ -742,11 +742,11 @@ lemma store_pte_valid_objs [wp]:
   apply (rule valid_obj_same_type)
      apply (cases "ptr = p && ~~ mask pt_bits")
       apply (erule allE, erule impE, blast)
-      apply (clarsimp simp: valid_obj_def wellformed_arch_obj_def)
+      apply (clarsimp simp: valid_obj_def arch_valid_obj_def)
      apply clarsimp
      apply fastforce
     apply (erule allE, erule impE, blast)
-    apply (clarsimp simp: valid_obj_def wellformed_arch_obj_def)
+    apply (clarsimp simp: valid_obj_def arch_valid_obj_def)
    apply assumption
   by (simp add: a_type_def)
   done
@@ -796,11 +796,11 @@ lemma store_pde_valid_objs [wp]:
   apply (rule valid_obj_same_type)
      apply (cases "ptr = p && ~~ mask pd_bits")
       apply (erule allE, erule impE, blast)
-      apply (clarsimp simp: valid_obj_def wellformed_arch_obj_def)
+      apply (clarsimp simp: valid_obj_def arch_valid_obj_def)
      apply clarsimp
      apply fastforce
     apply (erule allE, erule impE, blast)
-    apply (clarsimp simp: valid_obj_def wellformed_arch_obj_def)
+    apply (clarsimp simp: valid_obj_def arch_valid_obj_def)
    apply assumption
   by (simp add: a_type_def)
   done
@@ -858,7 +858,7 @@ lemma set_pd_valid_objs:
   apply (simp add: set_pd_def)
   apply (wp get_object_wp set_object_valid_objs)
   including unfold_objects
-  by (clarsimp simp: valid_obj_def wellformed_arch_obj_def a_type_def)
+  by (clarsimp simp: valid_obj_def arch_valid_obj_def a_type_def)
 
 
 lemma set_pd_iflive:
@@ -1027,7 +1027,7 @@ lemma set_pt_valid_objs:
   apply (clarsimp split: kernel_object.splits
                          arch_kernel_obj.splits)
   apply (clarsimp simp: valid_obj_def obj_at_def a_type_def
-                        wellformed_arch_obj_def)
+                        arch_valid_obj_def)
   done
 
 
@@ -1713,7 +1713,7 @@ lemma store_pte_invs [wp]:
   apply clarsimp
   apply (intro conjI)
      apply (drule invs_valid_objs)
-     apply (fastforce simp: valid_objs_def dom_def obj_at_def valid_obj_def wellformed_arch_obj_def)
+     apply (fastforce simp: valid_objs_def dom_def obj_at_def valid_obj_def arch_valid_obj_def)
     apply clarsimp
     apply (drule (1) valid_vspace_objsD, fastforce)
     apply simp

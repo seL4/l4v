@@ -183,11 +183,11 @@ lemma hyp_refsym : "sym_refs (state_hyp_refs_of s)"
 lemma hyp_refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightarrow> hyp_refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
   by (fastforce intro: hyp_refs_of_live dest!: hyp_sym_refs_ko_atD[OF _ hyp_refsym] live_okE)
 
-lemma wellformed_arch_obj[detype_invs_proofs]:
-    "\<And>p ao. \<lbrakk>ko_at (ArchObj ao) p s; wellformed_arch_obj ao s\<rbrakk>
-       \<Longrightarrow> wellformed_arch_obj ao (detype (untyped_range cap) s)"
+lemma arch_valid_obj[detype_invs_proofs]:
+    "\<And>p ao. \<lbrakk>ko_at (ArchObj ao) p s; arch_valid_obj ao s\<rbrakk>
+       \<Longrightarrow> arch_valid_obj ao (detype (untyped_range cap) s)"
   apply (frule hyp_refs_of)
-  apply (auto simp: wellformed_arch_obj_def split: arch_kernel_obj.splits option.splits)
+  apply (auto simp: arch_valid_obj_def split: arch_kernel_obj.splits option.splits)
   done
 
 lemma sym_hyp_refs_detype[detype_invs_proofs]:

@@ -1710,8 +1710,8 @@ locale retype_region_proofs_gen
     "\<And>s :: 'state_ext :: state_ext state. valid_arch_tcb default_arch_tcb s"
   assumes  wellformed_default_obj:
    "\<lbrakk> ptra \<notin> set (retype_addrs ptr ty n us);
-        kheap s ptra = Some (ArchObj x5); wellformed_arch_obj x5 s\<rbrakk> \<Longrightarrow>
-          wellformed_arch_obj x5 s'"
+        kheap s ptra = Some (ArchObj x5); arch_valid_obj x5 s\<rbrakk> \<Longrightarrow>
+          arch_valid_obj x5 s'"
 
 context retype_region_proofs begin
 

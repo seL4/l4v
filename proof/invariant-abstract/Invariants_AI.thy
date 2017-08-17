@@ -34,7 +34,7 @@ requalify_consts
   acap_class
   valid_ipc_buffer_cap
   wellformed_vspace_obj
-  wellformed_arch_obj
+  arch_valid_obj
   valid_asid_map
   valid_vspace_obj
   valid_arch_tcb
@@ -523,7 +523,7 @@ where
   | Notification p \<Rightarrow> valid_ntfn p s
   | TCB t \<Rightarrow> valid_tcb ptr t s
   | CNode sz cs \<Rightarrow> valid_cs sz cs s
-  | ArchObj ao \<Rightarrow> wellformed_arch_obj ao s"
+  | ArchObj ao \<Rightarrow> arch_valid_obj ao s"
 
 definition
   valid_objs :: "'z::state_ext state \<Rightarrow> bool"
@@ -2467,7 +2467,7 @@ lemma valid_space_update [iff]:
   by (fastforce intro: valid_pspace_eqI simp: pspace)
 
 lemmas obj_at_update [iff] = obj_at_update
-lemmas wellformed_arch_obj_update [iff] = wellformed_arch_obj_update
+lemmas arch_valid_obj_update [iff] = arch_valid_obj_update
 
 lemma cte_wp_at_update [iff]:
   "cte_wp_at P p (f s) = cte_wp_at P p s"

@@ -841,9 +841,9 @@ lemma state_hyp_refs_of_tcb_state_update:
   apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
-lemma wellformed_arch_obj_same_type:
-  "\<lbrakk> wellformed_arch_obj ao s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
-   \<Longrightarrow> wellformed_arch_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+lemma arch_valid_obj_same_type:
+  "\<lbrakk> arch_valid_obj ao s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
+   \<Longrightarrow> arch_valid_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
   by (induction ao rule: arch_kernel_obj.induct;
          clarsimp simp: typ_at_same_type)
 

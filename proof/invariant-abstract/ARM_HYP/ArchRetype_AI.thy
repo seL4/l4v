@@ -677,9 +677,9 @@ lemma hyp_refs_eq:
 
 lemma wellformed_default_obj[Retype_AI_assms]:
    "\<lbrakk> ptra \<notin> set (retype_addrs ptr ty n us);
-        kheap s ptra = Some (ArchObj x5); wellformed_arch_obj x5 s\<rbrakk> \<Longrightarrow>
-          wellformed_arch_obj x5 s'"
-  apply (clarsimp simp: wellformed_arch_obj_def valid_vcpu_def
+        kheap s ptra = Some (ArchObj x5); arch_valid_obj x5 s\<rbrakk> \<Longrightarrow>
+          arch_valid_obj x5 s'"
+  apply (clarsimp simp: arch_valid_obj_def valid_vcpu_def
                   elim!:obj_at_pres
                   split: arch_kernel_obj.splits option.splits)
   done

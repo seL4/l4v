@@ -56,7 +56,7 @@ requalify_facts
   state_hyp_refs_of_ntfn_update
   state_hyp_refs_of_tcb_state_update
   state_hyp_refs_of_tcb_bound_ntfn_update
-  wellformed_arch_obj_same_type
+  arch_valid_obj_same_type
   default_arch_object_not_live
   default_tcb_not_live
 
@@ -166,7 +166,7 @@ lemma valid_obj_same_type:
                    simp: tcb_at_typ
                   split: Structures_A.ntfn.splits option.splits)
   apply (clarsimp simp add: valid_obj_def)
-  apply (auto intro: wellformed_arch_obj_same_type)
+  apply (auto intro: arch_valid_obj_same_type)
   done
 
 lemma valid_vspace_obj_same_type:

@@ -450,9 +450,9 @@ locale detype_locale_gen_1 = Detype_AI "TYPE('a)" + detype_locale cap ptr s
     "\<And>cap'. \<lbrakk> s \<turnstile> cap'; obj_reply_refs cap' \<subseteq> (UNIV - untyped_range cap) \<rbrakk>
       \<Longrightarrow> detype (untyped_range cap) s \<turnstile> cap'"
   assumes glob_det: "\<And>r. global_refs (detype r s) = global_refs s"
-  assumes wellformed_arch_obj:
-    "\<And>p ao. \<lbrakk>ko_at (ArchObj ao) p s; wellformed_arch_obj ao s\<rbrakk>
-       \<Longrightarrow> wellformed_arch_obj ao (detype (untyped_range cap) s)"
+  assumes arch_valid_obj:
+    "\<And>p ao. \<lbrakk>ko_at (ArchObj ao) p s; arch_valid_obj ao s\<rbrakk>
+       \<Longrightarrow> arch_valid_obj ao (detype (untyped_range cap) s)"
   assumes sym_hyp_refs_detype:
     "sym_refs (state_hyp_refs_of (detype (untyped_range cap) s))"
   assumes tcb_arch_detype:
@@ -587,7 +587,7 @@ lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbra
      apply (rename_tac notification ntfn_ext)
      apply (case_tac "ntfn_obj ntfn_ext")
        apply (auto simp: valid_ntfn_def ntfn_bound_refs_def split: option.splits)
-    apply (auto intro: wellformed_arch_obj)
+    apply (auto intro: arch_valid_obj)
   done
 
 lemma valid_objs_detype[detype_invs_lemmas] : "valid_objs (detype (untyped_range cap) s)"
