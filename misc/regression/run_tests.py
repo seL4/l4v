@@ -364,8 +364,6 @@ def main():
     # Parse arguments
     parser = argparse.ArgumentParser(description="Parallel Regression Framework",
                                      epilog="RUN_TESTS_DEFAULT can be used to overwrite the default set of tests")
-    parser.add_argument("-s", "--strict", action="store_true",
-            help="be strict when parsing test XML files")
     parser.add_argument("-d", "--directory", action="store",
             metavar="DIR", help="directory to search for test files",
             default=os.getcwd())
@@ -401,7 +399,7 @@ def main():
 
     # Search for test files:
     test_xml = sorted(rglob(args.directory, "tests.xml"))
-    tests = testspec.parse_test_files(test_xml, strict=args.strict)
+    tests = testspec.parse_test_files(test_xml)
 
     # List test names if requested.
     if args.list:
