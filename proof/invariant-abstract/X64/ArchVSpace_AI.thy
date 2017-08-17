@@ -312,15 +312,6 @@ lemma valid_arch_state_unmap_strg:
   apply (clarsimp simp: inj_on_def)
   done
 
-
-lemma valid_arch_objs_unmap_strg:
-  "valid_arch_objs s \<longrightarrow>
-   valid_arch_objs(s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table := (x64_asid_table (arch_state s))(ptr := None)\<rparr>\<rparr>)"
-  apply (clarsimp simp: valid_arch_objs_def)
-  apply (drule vs_lookup_clear_asid_table [rule_format])
-  apply blast
-  done
-
 lemma valid_vspace_objs_unmap_strg:
   "valid_vspace_objs s \<longrightarrow>
    valid_vspace_objs(s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table := (x64_asid_table (arch_state s))(ptr := None)\<rparr>\<rparr>)"
@@ -443,9 +434,6 @@ crunch aligned [wp]: invalidate_asid_entry pspace_aligned
 crunch "distinct" [wp]: invalidate_asid_entry pspace_distinct
 
 crunch caps_of_state[wp]: invalidate_asid_entry "\<lambda>s. P (caps_of_state s)"
-
-crunch arch_objs [wp]: invalidate_asid_entry valid_arch_objs
-  (simp: valid_arch_objs_arch_update)
 
 crunch vspace_objs [wp]: invalidate_asid_entry valid_vspace_objs
   (simp: valid_vspace_objs_arch_update)

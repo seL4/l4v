@@ -1092,7 +1092,7 @@ lemma vs_lookup_pages1_wellformed_order:
   apply (simp only: vs_lookup_pages_def2[symmetric])
   apply (clarsimp simp add: vs_lookup_pages1_def)
   apply (case_tac ko; (clarsimp simp: vs_refs_pages_def; fail)?; rename_tac ako; clarsimp)
-  apply (frule (3) valid_arch_objsD')
+  apply (frule (3) valid_vspace_objsD')
   apply (case_tac ako; clarsimp simp: vs_refs_pages_def)
       apply (drule (1) graph_of_in_ranD; clarsimp simp: obj_at_def)
      apply (match premises in "(x,y) \<in> graph_of f" for f x y \<Rightarrow>

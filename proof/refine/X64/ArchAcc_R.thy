@@ -1856,7 +1856,7 @@ lemma find_vspace_for_asid_corres:
     apply (erule disjE)
      apply (clarsimp simp: valid_arch_state_def valid_asid_table_def)
      apply fastforce
-    apply (clarsimp simp: vspace_at_asid_ex_def vspace_at_asid_def valid_arch_objs_def)
+    apply (clarsimp simp: vspace_at_asid_ex_def vspace_at_asid_def)
     apply (clarsimp simp: vs_asid_refs_def graph_of_def elim!: vs_lookupE)
     apply (erule rtranclE)
      apply simp

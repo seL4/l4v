@@ -751,9 +751,6 @@ lemma valid_vspace_obj_pres: "valid_vspace_obj ao s \<Longrightarrow> valid_vspa
      apply (erule allEI ballEI; rename_tac t i; case_tac "t i"; fastforce simp: data_at_def obj_at_pres)+
   done
 
-lemma valid_arch_obj_pres: "valid_arch_obj ao s \<Longrightarrow> valid_arch_obj ao s'"
-  unfolding valid_arch_obj_def by (rule valid_vspace_obj_pres)
-
 end
 
 
@@ -785,11 +782,6 @@ proof
   ultimately
   show "valid_vspace_obj ao s'" by blast
 qed
-
-lemma valid_arch_objs': "valid_arch_objs s \<Longrightarrow> valid_arch_objs s'"
-  using valid_vspace_objs'
-  unfolding valid_arch_objs_def valid_vspace_objs_def valid_arch_obj_def
-  by auto
 
 (* ML \<open>val pre_ctxt_0 = @{context}\<close> *)
 sublocale retype_region_proofs_gen?: retype_region_proofs_gen
@@ -965,7 +957,7 @@ lemma valid_global_objs:
     apply (erule exEI)
     apply (simp add: obj_at_pres valid_vspace_obj_pres)
    apply (simp add: obj_at_pres)
-  apply (rule exEI, erule(1) bspec, simp add: obj_at_pres valid_arch_obj_pres)+
+  apply (rule exEI, erule(1) bspec, simp add: obj_at_pres)+
   done
 
 lemma valid_kernel_mappings:
@@ -1212,7 +1204,7 @@ lemma invs_irq_state_independent:
       only_idle_def if_unsafe_then_cap_def valid_reply_caps_def
       valid_reply_masters_def valid_global_refs_def valid_arch_state_def
       valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
-      valid_arch_objs_def valid_arch_caps_def valid_global_objs_def
+      valid_arch_caps_def valid_global_objs_def
       valid_kernel_mappings_def equal_kernel_mappings_def
       valid_asid_map_def vspace_at_asid_def
       pspace_in_kernel_window_def cap_refs_in_kernel_window_def

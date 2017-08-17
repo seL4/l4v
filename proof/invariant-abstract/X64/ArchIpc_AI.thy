@@ -420,15 +420,6 @@ lemma do_normal_transfer_tcb_caps:
      | simp add:imp)+
   done
 
-lemma set_cap_valid_arch_objs [wp, Ipc_AI_assms]:
-  "\<lbrace>valid_arch_objs\<rbrace> set_cap a b \<lbrace>\<lambda>_. valid_arch_objs \<rbrace>"
-  apply (rule valid_arch_objs_lift)
-  apply (wp set_cap_typ_at)+
-  apply (rule set_cap.aobj_at)
-  apply (fastforce simp: arch_obj_pred_def non_arch_obj_def
-                   split: kernel_object.split arch_kernel_obj.splits)
-  done
-
 lemma do_ipc_transfer_tcb_caps [Ipc_AI_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
   shows

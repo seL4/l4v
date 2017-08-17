@@ -174,16 +174,6 @@ lemma set_asid_pool_typ_at [wp]:
 
 lemmas set_asid_pool_typ_ats [wp] = abs_typ_at_lifts [OF set_asid_pool_typ_at]
 
-lemma set_asid_pool_arch_objs_unmap':
-  "\<lbrace>valid_arch_objs and (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj (ASIDPool ap) s) and
-        obj_at (\<lambda>ko. \<exists>ap'. ko = ArchObj (ASIDPool ap') \<and> graph_of ap \<subseteq> graph_of ap') p\<rbrace>
-    set_asid_pool p ap
-   \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-  unfolding set_asid_pool_def including unfold_objects
-  apply (wpsimp wp: set_object_arch_objs get_object_wp)
-  apply (fastforce simp: a_type_def vs_refs_def)
-  done
-
 lemma set_asid_pool_vspace_objs_unmap':
   "\<lbrace>valid_vspace_objs and (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_vspace_obj (ASIDPool ap) s) and
     obj_at (\<lambda>ko. \<exists>ap'. ko = ArchObj (ASIDPool ap') \<and> graph_of ap \<subseteq> graph_of ap') p\<rbrace>
@@ -193,16 +183,6 @@ lemma set_asid_pool_vspace_objs_unmap':
   apply (fastforce simp: a_type_def vs_refs_def)
   done
 
-lemma set_asid_pool_arch_objs_unmap:
-  "\<lbrace>valid_arch_objs and ko_at (ArchObj (ASIDPool ap)) p\<rbrace>
-    set_asid_pool p (ap |` S)
-   \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-  apply (wp set_asid_pool_arch_objs_unmap')
-  apply (clarsimp simp: obj_at_def graph_of_restrict_map)
-  apply (drule valid_arch_objsD, simp add: obj_at_def, assumption)
-  apply simp
-  by (auto simp: obj_at_def valid_arch_obj_def dest!: ran_restrictD)
-
 lemma set_asid_pool_vspace_objs_unmap:
   "\<lbrace>valid_vspace_objs and ko_at (ArchObj (ASIDPool ap)) p\<rbrace>
     set_asid_pool p (ap |` S)
@@ -211,7 +191,7 @@ lemma set_asid_pool_vspace_objs_unmap:
   apply (clarsimp simp: obj_at_def graph_of_restrict_map)
   apply (drule valid_vspace_objsD, simp add: obj_at_def, assumption)
   apply simp
-  by (auto simp: obj_at_def valid_arch_obj_def dest!: ran_restrictD)
+  by (auto simp: obj_at_def dest!: ran_restrictD)
 
 lemma set_asid_pool_iflive [wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
@@ -621,19 +601,19 @@ lemma valid_vspace_obj_pre:
                      split: arch_kernel_obj.splits if_splits | drule(1) bspec)+
             apply (drule_tac x = x in spec, case_tac "x2 x",
                    (fastforce simp: data_at_def obj_at_def a_type_simps split: pte.splits)+)+
-     apply (clarsimp simp: valid_arch_obj_def)
+     apply (clarsimp)
      apply (drule_tac x = x in spec, case_tac"x3 x")
        apply ((clarsimp simp: data_at_def obj_at_def a_type_simps aa_type_def
                        split: pte.splits arch_kernel_obj.splits if_splits)+)[3]
-    apply (clarsimp simp: valid_arch_obj_def)
+    apply (clarsimp)
     apply (drule_tac x = x in spec, case_tac"x4 x")
       apply ((clarsimp simp: data_at_def obj_at_def a_type_simps aa_type_def
                       split: pte.splits arch_kernel_obj.splits if_splits)+)[3]
-   apply (clarsimp simp: valid_arch_obj_def)
+   apply (clarsimp)
    apply (drule_tac x = x in bspec, simp, case_tac"x5 x")
     apply ((clarsimp simp: data_at_def obj_at_def a_type_simps aa_type_def
                     split: pte.splits arch_kernel_obj.splits if_splits)+)[2]
-  apply (clarsimp simp: valid_arch_obj_def)
+  apply (clarsimp)
   done
 
 lemma a_type_is_aobj:
@@ -709,7 +689,7 @@ lemma set_pt_global_objs [wp]:
   apply (wp get_object_wp)
   apply clarsimp
   apply (intro impI allI conjI)
-      apply (simp add: valid_vso_at_def valid_arch_obj_def)
+      apply (simp add: valid_vso_at_def)
       apply (clarsimp simp: valid_global_objs_def obj_at_def valid_vspace_obj_pre
                      dest!: a_type_is_aobj)
       apply (clarsimp dest!: a_type_is_aobj aa_type_pml4D
@@ -1438,17 +1418,6 @@ lemma store_pml4e_valid_pml4e [wp]:
   "\<lbrace>valid_pml4e pml4e\<rbrace> store_pml4e slot pml4e' \<lbrace>\<lambda>rv. valid_pml4e pml4e\<rbrace>"
   by (wp valid_pml4e_lift | simp add: store_pml4e_def)+
 
-lemma update_aobjs_unmap:
-  "\<lbrace>valid_arch_objs and (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj obj s) and
-    (\<lambda>s. obj_at \<top> p s \<longrightarrow> obj_at (\<lambda>ko. vs_refs (ArchObj obj) \<subseteq> vs_refs ko) p s)\<rbrace>
-  update_object p (ArchObj obj) \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-  apply (simp add: update_object_def )
-  apply (rule hoare_pre)
-  apply (wp set_object_arch_objs get_object_wp)
-  apply (clarsimp simp add: a_type_def obj_at_def
-      split: kernel_object.split_asm if_split_asm)
-  by (fastforce split: arch_kernel_obj.split_asm)
-
 lemma decrease_predictI:
   assumes decrease: "\<And>A B. A\<subseteq>B \<Longrightarrow> P A \<Longrightarrow> P B"
   shows "\<lbrakk>A \<subseteq> B; P A \<rbrakk> \<Longrightarrow> P B"
@@ -1730,7 +1699,7 @@ lemma vs_ref_lvl_obj_same_type:
 lemma valid_vspace_obj_kheap_upd:
   "\<lbrakk>typ_at (a_type (ArchObj obj)) ptr s; valid_vspace_obj ao s\<rbrakk>
   \<Longrightarrow> valid_vspace_obj ao (s\<lparr>kheap := kheap s(ptr \<mapsto> ArchObj obj)\<rparr>)"
-  apply (cases ao, simp_all add: valid_arch_obj_def)
+  apply (cases ao, simp_all)
       apply (fastforce simp: a_type_simps obj_at_def valid_pte_def)+
      apply (clarsimp)
      apply (drule_tac x = x in spec)
@@ -1755,7 +1724,7 @@ lemma valid_vspace_obj_kheap_upd:
   apply (clarsimp simp: a_type_simps)+
   done
 
-lemma update_object_valid_arch_objs[wp]:
+lemma update_object_valid_vspace_objs[wp]:
   "\<lbrace> \<lambda>s. valid_vspace_objs s
 
     (* Lattice Preserving *)
@@ -2212,20 +2181,6 @@ lemma vs_lookup_pages_asid_map[iff]:
   "vs_lookup_pages (s\<lparr>arch_state := x64_asid_map_update f (arch_state s)\<rparr>) =
    vs_lookup_pages s"
   by (simp add: vs_lookup_pages_arch_update)
-
-lemma valid_arch_objs_arch_update:
-  "x64_asid_table (f (arch_state s)) = x64_asid_table (arch_state s) \<Longrightarrow>
-  valid_arch_objs (arch_state_update f s) = valid_arch_objs s"
-  apply (rule iffI)
-   apply (erule valid_arch_objs_stateI)
-     apply (clarsimp simp: obj_at_def)
-    apply simp
-   apply simp
-  apply (erule valid_arch_objs_stateI)
-    apply (clarsimp simp: obj_at_def)
-   apply simp
-  apply simp
-  done
 
 lemma valid_vspace_objs_arch_update:
   "x64_asid_table (f (arch_state s)) = x64_asid_table (arch_state s) \<Longrightarrow>

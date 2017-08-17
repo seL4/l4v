@@ -389,8 +389,6 @@ where
 | "valid_vspace_obj (PageTable pt) = (\<lambda>s. \<forall>x. valid_pte (pt x) s)"
 | "valid_vspace_obj (DataPage dev sz) = \<top>"
 
-definition "valid_arch_obj \<equiv> valid_vspace_obj"
-
 (* FIXME x64: check hardware to see if any bits are forbidden *)
 definition
   wellformed_pte :: "pte \<Rightarrow> bool"
@@ -592,17 +590,6 @@ definition
   valid_vspace_objs :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_vspace_objs \<equiv> \<lambda>s. \<forall>p rs ao. (rs \<rhd> p) s \<longrightarrow> ko_at (ArchObj ao) p s \<longrightarrow> valid_vspace_obj ao s"
-
-definition
-  valid_arch_objs :: "'z::state_ext state \<Rightarrow> bool"
-where
-  "valid_arch_objs \<equiv> \<lambda>s. \<forall>p rs ao. (rs \<rhd> p) s \<longrightarrow> ko_at (ArchObj ao) p s \<longrightarrow> valid_arch_obj ao s"
-
-lemma valid_arch_imp_valid_vspace_obj: "valid_arch_obj ko s \<Longrightarrow> valid_vspace_obj ko s"
-  by (clarsimp simp: valid_arch_obj_def valid_vspace_obj_def)
-
-lemma valid_arch_imp_valid_vspace_objs: "valid_arch_objs s \<Longrightarrow> valid_vspace_objs s"
-  by (clarsimp simp: valid_arch_objs_def valid_vspace_objs_def valid_arch_imp_valid_vspace_obj)
 
 definition
   pde_ref_pages :: "pde \<Rightarrow> obj_ref option"
@@ -869,7 +856,7 @@ where
 definition
   valid_ao_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_ao_at p \<equiv> \<lambda>s. \<exists>ao. ko_at (ArchObj ao) p s \<and> valid_arch_obj ao s"
+  "valid_ao_at p \<equiv> \<lambda>s. \<exists>ao. ko_at (ArchObj ao) p s \<and> valid_vspace_obj ao s"
 
 definition
   "empty_table_arch S \<equiv> \<lambda> ko.
@@ -1358,31 +1345,9 @@ lemma vs_lookup_stateI:
   shows "(ref \<rhd> p) s'"
   using 1 vs_lookup_sub [OF ko table] by blast
 
-lemma valid_arch_objsD:
-  "\<lbrakk> (ref \<rhd> p) s; ko_at (ArchObj ao) p s; valid_arch_objs s \<rbrakk> \<Longrightarrow> valid_arch_obj ao s"
-  by (fastforce simp add: valid_arch_objs_def)
-
 lemma valid_vspace_objsD:
   "\<lbrakk> (ref \<rhd> p) s; ko_at (ArchObj ao) p s; valid_vspace_objs s \<rbrakk> \<Longrightarrow> valid_vspace_obj ao s"
   by (fastforce simp add: valid_vspace_objs_def)
-
-(* should work for unmap and non-arch ops *)
-lemma valid_arch_objs_stateI:
-  assumes 1: "valid_arch_objs s"
-  assumes ko: "\<And>ko p. ko_at ko p s' \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s"
-  assumes arch: "graph_of (x64_asid_table (arch_state s')) \<subseteq> graph_of (x64_asid_table (arch_state s))"
-  assumes vao: "\<And>p ref ao'.
-                \<lbrakk> (ref \<rhd> p) s; (ref \<rhd> p) s'; \<forall>ao. ko_at (ArchObj ao) p s \<longrightarrow> valid_arch_obj ao s;
-                  ko_at (ArchObj ao') p s' \<rbrakk> \<Longrightarrow> valid_arch_obj ao' s'"
-  shows "valid_arch_objs s'"
-  using 1 unfolding valid_arch_objs_def
-  apply clarsimp
-  apply (frule vs_lookup_stateI)
-    apply (erule ko)
-   apply (rule arch)
-  apply (erule allE, erule impE, fastforce)
-  apply (erule (3) vao)
-  done
 
 lemma valid_vspace_objs_stateI:
   assumes 1: "valid_vspace_objs s"
@@ -1428,13 +1393,6 @@ lemma valid_vspace_obj_typ:
   apply (rename_tac "fun" x)
   apply (case_tac "fun x", simp_all add: hoare_vcg_prop P)
   done
-
-lemma valid_arch_obj_typ:
-  assumes P: "\<And>p T. \<lbrace>\<lambda>s. (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s.  (typ_at (AArch T) p s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_arch_obj ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_obj ob s\<rbrace>"
-  by (wpsimp simp: valid_arch_obj_def wp: valid_vspace_obj_typ P)
-
-lemmas valid_arch_obj_typ_gen = valid_arch_obj_typ
 
 lemma atyp_at_eq_kheap_obj:
   "typ_at (AArch AASIDPool) p s \<longleftrightarrow> (\<exists>f. kheap s p = Some (ArchObj (ASIDPool f)))"
@@ -1498,10 +1456,6 @@ lemma valid_vspace_obj_pspaceI:
             case_tac "fun x",
             simp_all add: obj_at_def data_at_def)+
   done
-
-lemma valid_arch_obj_pspaceI:
-  "\<lbrakk> valid_arch_obj obj s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_obj obj s'"
-  by (auto simp: valid_arch_obj_def elim: valid_vspace_obj_pspaceI)
 
 lemmas  pageBitsForSize_simps[simp] =
         pageBitsForSize_def[split_simps vmpage_size.split]
@@ -1589,10 +1543,6 @@ lemma valid_pml4e_update [iff]:
 lemma valid_vspace_obj_update [iff]:
   "valid_vspace_obj ao (f s) = valid_vspace_obj ao s"
   by (cases ao) auto
-
-lemma valid_arch_obj_update [iff]:
-  "valid_arch_obj ao (f s) = valid_arch_obj ao s"
-  by (auto simp: valid_arch_obj_def)
 
 lemma valid_vso_at_update [iff]:
   "valid_vso_at p (f s) = valid_vso_at p s"
@@ -1896,12 +1846,12 @@ lemma physical_arch_cap_has_ref:
 subsection "vs_lookup"
 
 lemma vs_lookup1_ko_at_dest:
-  "\<lbrakk> ((ref, p) \<rhd>1 (ref', p')) s; ko_at (ArchObj ao) p s; valid_arch_obj ao s \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> ((ref, p) \<rhd>1 (ref', p')) s; ko_at (ArchObj ao) p s; valid_vspace_obj ao s \<rbrakk> \<Longrightarrow>
   \<exists>ao'. ko_at (ArchObj ao') p' s \<and> (\<exists>tp. vs_ref_aatype (hd ref') = Some tp
                                             \<and> aa_type ao = tp)"
   apply (drule vs_lookup1D)
   apply (clarsimp simp: obj_at_def vs_refs_def)
-  apply (cases ao, simp_all add: graph_of_def valid_arch_obj_def)
+  apply (cases ao, simp_all add: graph_of_def)
      apply clarsimp
      apply (drule bspec, fastforce simp: ran_def)
      apply (clarsimp simp: aa_type_def obj_at_def)
@@ -2171,20 +2121,18 @@ lemma stronger_vspace_objsD_lemma:
    apply (cases r)
    apply clarsimp
    apply (frule (2) valid_vspace_objsD)
-   apply (simp only: valid_arch_obj_def[symmetric])
    apply (drule (1) vs_lookup_step)
    apply (drule (2) vs_lookup1_ko_at_dest)
    apply clarsimp
    apply (drule (2) valid_vspace_objsD)
-   apply (fastforce simp: valid_arch_obj_def)
+   apply (fastforce)
   apply clarsimp
-  apply (simp only: valid_arch_obj_def[symmetric])
   apply (frule (2) vs_lookup1_ko_at_dest)
   apply (drule (1) vs_lookup_trancl_step)
   apply (drule (1) vs_lookup_step)
   apply clarsimp
   apply (drule (2) valid_vspace_objsD)
-   apply (fastforce simp: valid_arch_obj_def)
+   apply (fastforce)
   done
 
 lemma stronger_vspace_objsD:
@@ -2206,55 +2154,6 @@ lemma stronger_vspace_objsD:
    apply clarsimp
   apply clarsimp
   apply (simp add: valid_vspace_objs_def)
-  apply (erule_tac x=p in allE)
-  apply (erule impE)
-   apply (rule exI)
-   apply (erule vs_lookup_atI)
-  apply (clarsimp simp: obj_at_def)
-  done
-
-lemma stronger_arch_objsD_lemma:
-  "\<lbrakk>valid_arch_objs s; r \<in> vs_lookup s; (r,r') \<in> (vs_lookup1 s)\<^sup>+ \<rbrakk>
-  \<Longrightarrow> \<exists>ao. ko_at (ArchObj ao) (snd r') s \<and>
-          valid_arch_obj ao s"
-  apply (erule trancl_induct)
-   apply (frule vs_lookup1_is_arch)
-   apply (cases r)
-   apply clarsimp
-   apply (frule (2) valid_arch_objsD)
-   apply (drule (1) vs_lookup_step)
-   apply (drule (2) vs_lookup1_ko_at_dest)
-   apply clarsimp
-   apply (drule (2) valid_arch_objsD)
-   apply fastforce
-  apply clarsimp
-  apply (frule (2) vs_lookup1_ko_at_dest)
-  apply (drule (1) vs_lookup_trancl_step)
-  apply (drule (1) vs_lookup_step)
-  apply clarsimp
-  apply (drule (2) valid_arch_objsD)
-  apply fastforce
-  done
-
-lemma stronger_arch_objsD:
-  "\<lbrakk> (ref \<rhd> p) s;
-     valid_arch_objs s;
-     valid_asid_table (x64_asid_table (arch_state s)) s \<rbrakk> \<Longrightarrow>
-  \<exists>ao. ko_at (ArchObj ao) p s \<and>
-       valid_arch_obj ao s"
-  apply (clarsimp simp: vs_lookup_def vs_asid_refs_def graph_of_def)
-  apply (clarsimp simp: valid_asid_table_def)
-  apply (drule bspec, fastforce simp: ran_def)
-  apply (drule rtranclD)
-  apply (erule disjE)
-   prefer 2
-   apply clarsimp
-   apply (drule stronger_arch_objsD_lemma)
-     apply (erule vs_lookup_atI)
-    apply assumption
-   apply clarsimp
-  apply clarsimp
-  apply (simp add: valid_arch_objs_def)
   apply (erule_tac x=p in allE)
   apply (erule impE)
    apply (rule exI)
@@ -2427,10 +2326,10 @@ context
   assumes asid_table: "\<forall>p\<in>ran (x64_asid_table (arch_state s)). asid_pool_at p s"
 begin
 
-(* Yet another way of breaking down valid_arch_objs. This one makes it easier
-   than valid_arch_objs_alt to maintain a clean context, since it exposes only
+(* Yet another way of breaking down valid_vspace_objs. This one makes it easier
+   than valid_vspace_objs_alt to maintain a clean context, since it exposes only
    a single quantifier at a time. *)
-lemma valid_arch_objs_alt2:
+lemma valid_vspace_objs_alt2:
   "\<forall> i p\<^sub>0. x64_asid_table (arch_state s) i = Some p\<^sub>0 \<longrightarrow>
            (\<exists> ap. ako_at (ASIDPool ap) p\<^sub>0 s
                   \<and> (\<forall> j p\<^sub>1. ap j = Some p\<^sub>1 \<longrightarrow>
@@ -2472,7 +2371,7 @@ private method step =
                split: pml4e.splits pdpte.splits pde.splits pte.splits if_splits; not_data?)
 
 lemma vs_lookup_vs_lookup_pagesI'': "(r \<unrhd> p) s \<Longrightarrow> (r \<rhd> p) s"
-  using valid_arch_objs_alt2
+  using valid_vspace_objs_alt2
   by (clarsimp simp: vs_lookup_pages_def vs_lookup_def vs_asid_refs_def graph_of_def Image_def) step+
 
 end
@@ -2487,7 +2386,7 @@ lemma vs_lookup_vs_lookup_pagesI':
   shows "(r \<rhd> p) s"
   using assms by (simp add: valid_asid_table_def vs_lookup_vs_lookup_pagesI'')
 
-lemma valid_arch_objsD':
+lemma valid_vspace_objsD':
   assumes lkp: "(ref \<unrhd> p) s"
   assumes koa: "ko_at (ArchObj ako) p s"
   assumes vao: "valid_vspace_objs s"
@@ -2936,15 +2835,6 @@ lemma valid_vspace_obj_typ2:
            | assumption
            | rule hoare_pre)+
 
-lemma valid_arch_obj_typ2:
-  assumes P: "\<And>P p T. \<lbrace>\<lambda>s. Q s \<and> P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. Q s \<and> valid_arch_obj ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_obj ob s\<rbrace>"
-  using assms unfolding valid_arch_obj_def by (rule valid_vspace_obj_typ2)
-
-lemma valid_arch_objsI [intro?]:
-  "(\<And>p ao. \<lbrakk> (\<exists>\<rhd> p) s; ko_at (ArchObj ao) p s \<rbrakk> \<Longrightarrow> valid_arch_obj ao s) \<Longrightarrow> valid_arch_objs s"
-  by (simp add: valid_arch_objs_def)
-
 lemma valid_vspace_objsI [intro?]:
   "(\<And>p ao. \<lbrakk> (\<exists>\<rhd> p) s; ko_at (ArchObj ao) p s \<rbrakk> \<Longrightarrow> valid_vspace_obj ao s) \<Longrightarrow> valid_vspace_objs s"
   by (simp add: valid_vspace_objs_def)
@@ -3052,18 +2942,6 @@ lemma vs_cap_ref_eq_imp_table_cap_ref_eq:
           split: cap.splits arch_cap.splits vmpage_size.splits option.splits)
 
 
-lemma valid_arch_objs_lift:
-  assumes x: "\<And>P. \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
-  assumes z: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
-      and y: "\<And>ao p. \<lbrace>\<lambda>s. \<not> ko_at (ArchObj ao) p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> ko_at (ArchObj ao) p s\<rbrace>"
-  shows      "\<lbrace>valid_arch_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_arch_objs\<rbrace>"
-  apply (simp add: valid_arch_objs_def)
-  apply (wp hoare_vcg_all_lift hoare_convert_imp [OF x]
-            hoare_convert_imp [OF y] valid_arch_obj_typ z)
-  done
-
-
-
 lemma valid_validate_vm_rights[simp]:
   "validate_vm_rights rs \<in> valid_vm_rights"
 and validate_vm_rights_subseteq[simp]:
@@ -3134,11 +3012,6 @@ lemma wellformed_arch_default:
   unfolding wellformed_arch_obj_def default_arch_object_def
   by (cases aobject_type; simp)
 
-lemma valid_arch_obj_default':
-  "valid_arch_obj (default_arch_object aobject_type dev us) s"
-  unfolding default_arch_object_def
-  by (cases aobject_type; simp add: valid_arch_obj_def)
-
 lemma valid_vspace_obj_default':
   "valid_vspace_obj (default_arch_object aobject_type dev us) s"
   unfolding default_arch_object_def
@@ -3150,19 +3023,6 @@ lemma valid_vspace_obj_entryD:
     and valid_vspace_obj_pdeD  : "\<lbrakk>valid_vspace_obj (PageDirectory pd) s; pd i = pde\<rbrakk> \<Longrightarrow> valid_pde pde s"
     and valid_vspace_obj_pteD  : "\<lbrakk>valid_vspace_obj (PageTable pt) s; pt i = pte\<rbrakk> \<Longrightarrow> valid_pte pte s"
   by fastforce+
-
-lemma valid_arch_obj_entryD:
-  shows valid_arch_obj_pml4eD: "\<lbrakk>valid_arch_obj (PageMapL4 pm) s; pm i = pml4e; i \<notin> kernel_mapping_slots\<rbrakk> \<Longrightarrow> valid_pml4e pml4e s"
-    and valid_arch_obj_pdpteD: "\<lbrakk>valid_arch_obj (PDPointerTable pdpt) s; pdpt i = pdpte\<rbrakk> \<Longrightarrow> valid_pdpte pdpte s"
-    and valid_arch_obj_pdeD  : "\<lbrakk>valid_arch_obj (PageDirectory pd) s; pd i = pde\<rbrakk> \<Longrightarrow> valid_pde pde s"
-    and valid_arch_obj_pteD  : "\<lbrakk>valid_arch_obj (PageTable pt) s; pt i = pte\<rbrakk> \<Longrightarrow> valid_pte pte s"
-  using valid_vspace_obj_entryD unfolding valid_arch_obj_def by auto
-
-lemmas valid_arch_objsD_alt'
-  = valid_arch_objsD[simplified obj_at_def, simplified]
-
-lemmas valid_arch_objs_entryD
-  = valid_arch_obj_entryD[OF valid_arch_objsD_alt']
 
 lemmas valid_vspace_objsD_alt'
   = valid_vspace_objsD[simplified obj_at_def, simplified]

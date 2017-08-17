@@ -211,16 +211,6 @@ lemma valid_vspace_objs_lift_weak:
     apply (rule obj_at arch_state vspace_pred_imp; simp)+
   done
 
-lemma valid_arch_objs_lift_weak:
-  assumes obj_at: "\<And>P P' p. arch_obj_pred P' \<Longrightarrow>
-                             \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' p s)\<rbrace>"
-  assumes arch_state: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
-  shows "\<lbrace>valid_arch_objs\<rbrace> f \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-  apply (rule valid_arch_objs_lift)
-    apply (rule vs_lookup_arch_obj_at_lift)
-     apply (rule obj_at arch_state; simp)+
-  done
-
 lemma set_object_neg_lookup:
   "\<lbrace>\<lambda>s. \<not> (\<exists>rs. (rs \<rhd> p') s) \<and> obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p s \<rbrace>
   set_object p ko
@@ -333,23 +323,6 @@ lemma set_object_atyp_at:
   apply clarsimp
   apply (erule rsubst [where P=P])
   apply (clarsimp simp: obj_at_def a_type_aa_type)
-  done
-
-lemma set_object_arch_objs:
-  "\<lbrace>valid_arch_objs and typ_at (a_type ko) p and
-    obj_at (\<lambda>ko'. vs_refs ko \<subseteq> vs_refs ko') p  and
-    (\<lambda>s. case ko of ArchObj ao \<Rightarrow>
-             (\<exists>\<rhd>p)s \<longrightarrow> valid_arch_obj ao s
-            | _ \<Rightarrow> True)\<rbrace>
-  set_object p ko
-  \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-  apply (simp add: valid_arch_objs_def)
-  apply (subst imp_conv_disj)+
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift set_object_neg_lookup set_object_neg_ko
-            valid_arch_obj_typ2 [where Q="typ_at (a_type ko) p"] set_object_typ_at
-         | simp)+
-  apply (clarsimp simp: pred_neg_def obj_at_def)
-  apply fastforce
   done
 
 lemma set_object_vspace_objs:
@@ -613,13 +586,13 @@ lemma valid_ao_at_lift:
       and y: "\<And>ao. \<lbrace>\<lambda>s. ko_at (ArchObj ao) p s\<rbrace> f \<lbrace>\<lambda>rv s. ko_at (ArchObj ao) p s\<rbrace>"
   shows      "\<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>rv. valid_ao_at p\<rbrace>"
   unfolding valid_ao_at_def
-  by (wp hoare_vcg_ex_lift y valid_arch_obj_typ z)
+  by (wp hoare_vcg_ex_lift y valid_vspace_obj_typ z)
 
 lemma valid_ao_at_lift_aobj_at:
   assumes aobj_at: "\<And>P' pd. arch_obj_pred P' \<Longrightarrow> \<lbrace>obj_at P' pd\<rbrace> f \<lbrace>\<lambda>r s. obj_at P' pd s\<rbrace>"
   shows      "\<lbrace>valid_ao_at p\<rbrace> f \<lbrace>\<lambda>rv. valid_ao_at p\<rbrace>"
   unfolding valid_ao_at_def
-  by (wp hoare_vcg_ex_lift valid_arch_obj_typ aobj_at | clarsimp)+
+  by (wp hoare_vcg_ex_lift valid_vspace_obj_typ aobj_at | clarsimp)+
 
 lemma valid_vso_at_lift:
   assumes z: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
@@ -794,11 +767,11 @@ lemma set_object_global_vspace_mappings:
 lemma valid_table_caps_ptD:
   "\<lbrakk> (caps_of_state s) p = Some (ArchObjectCap (arch_cap.PageTableCap p' None));
      page_table_at p' s; valid_table_caps s \<rbrakk> \<Longrightarrow>
-    \<exists>pt. ko_at (ArchObj (PageTable pt)) p' s \<and> valid_arch_obj (PageTable pt) s"
+    \<exists>pt. ko_at (ArchObj (PageTable pt)) p' s \<and> valid_vspace_obj (PageTable pt) s"
   apply (clarsimp simp: valid_table_caps_def simp del: split_paired_All)
   apply (erule allE)+
   apply (erule (1) impE)
-  apply (clarsimp simp add: valid_arch_obj_def is_pt_cap_def cap_asid_def)
+  apply (clarsimp simp add: is_pt_cap_def cap_asid_def)
   apply (erule impE, rule refl)
   apply (clarsimp simp: obj_at_def empty_table_def)
   done
@@ -922,23 +895,11 @@ lemma state_hyp_refs_of_tcb_state_update:
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
-lemma valid_arch_obj_same_type:
-  assumes valid_ao: "valid_arch_obj ao s"
-  assumes ko_at: "kheap s p = Some ko"
-  assumes a_type: "a_type ko' = a_type ko"
-  shows "valid_arch_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)"
-  using valid_ao
-  apply (induction ao rule: arch_kernel_obj.induct;
-         clarsimp simp: valid_arch_obj_def typ_at_same_type ko_at a_type)
-  apply (rule valid_table_entry_lifts[THEN hoare_to_pure_kheap_upd[OF _ a_type]];
-         assumption?; simp add: obj_at_def ko_at)+
-  done
-
 lemma wellformed_arch_obj_same_type:
   "\<lbrakk> wellformed_arch_obj ao s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
    \<Longrightarrow> wellformed_arch_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
   by (induction ao rule: arch_kernel_obj.induct;
-         clarsimp simp: valid_arch_obj_def typ_at_same_type)
+         clarsimp simp: typ_at_same_type)
 
 
 lemma default_arch_object_not_live: "\<not> live (ArchObj (default_arch_object aty dev us))"

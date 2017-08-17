@@ -325,11 +325,6 @@ lemma vs_lookup_pages':
   done
 
 
-lemma arch_obj [simp]:
-  "valid_arch_obj ao s' = valid_arch_obj ao s"
-  by (cases ao, simp_all add: s'_def)
-
-
 lemma obj_at [simp]:
   "obj_at P p s' = obj_at P p s"
   by (simp add: s'_def)
@@ -1075,22 +1070,6 @@ lemma create_mapping_entries_parent_for_refs:
         elim exEI,
         clarsimp simp: cte_wp_at_caps_of_state parent_for_refs_def,
         simp)+
-
-(*
-lemma find_vspace_for_asid_shifting_voodoo:
-  "\<lbrace>pspace_aligned and valid_arch_objs\<rbrace>
-     find_vspace_for_asid asid
-   \<lbrace>\<lambda>rv s. v >> pml4_shift_bits = rv + (get_pml4_index v << word_size_bits) && mask pml4_bits >> word_size_bits\<rbrace>,-"
-  apply (rule hoare_post_imp_R,
-         rule find_vspace_for_asid_aligned_pm_bits)
-  apply (subst pml4_shifting(1), simp)
-  apply (rule word_eqI)
-  apply (simp add: nth_shiftr nth_shiftl word_size)
-  apply safe
-  apply (drule test_bit_size)
-  apply (simp add: word_size)
-  done
-*)
 
 lemma find_vspace_for_asid_ref_offset_voodoo:
   "\<lbrace>pspace_aligned and valid_vspace_objs and
