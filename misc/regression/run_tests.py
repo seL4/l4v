@@ -399,7 +399,7 @@ def main():
 
     # Search for test files:
     test_xml = sorted(rglob(args.directory, "tests.xml"))
-    tests = testspec.parse_test_files(test_xml)
+    tests = testspec.process_test_files(test_xml)
 
     # List test names if requested.
     if args.list:

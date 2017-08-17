@@ -10,7 +10,6 @@
 #
 
 import os
-import copy
 import heapq
 import argparse
 import sys
@@ -23,94 +22,131 @@ REGRESSION_DTD = os.path.join(REGRESSION_DIR, "regression.dtd")
 class TestSpecParseException(Exception):
     pass
 
-class TestEnv:
-    def __init__(self, pwd):
-        self.pwd = pwd
-        self.cwd = "."
+class Test(object):
+
+    __slots__ = ('name', 'command', 'cwd', 'timeout', 'cpu_timeout', 'depends')
+
+    def __init__(self, name, command, env):
+        self.name = name
+        self.command = command
+        self.cwd = env.cwd
+        self.timeout = env.timeout
+        self.cpu_timeout = env.cpu_timeout
+        self.depends = set(env.depends)
+
+class TestEnv(object):
+
+    def __init__(self, base_dir):
+        self.base_dir = os.path.normpath(base_dir)
+        self.cwd = self.base_dir
         self.timeout = 0
         self.cpu_timeout = 0
         self.depends = set()
 
-class Test:
-    def __init__(self, name, command, timeout=0, cpu_timeout=0, cwd="", depends=None):
-        self.name = name
-        self.command = command
-        self.timeout = timeout
-        self.cpu_timeout = cpu_timeout
-        self.cwd = cwd
-        self.depends = depends if depends is not None else set([])
+    _update = {
+        'cwd': lambda self, cwd: os.path.normpath(os.path.join(self.base_dir, cwd)),
+        'timeout': lambda self, timeout: timeout,
+        'cpu_timeout': lambda self, cpu_timeout: cpu_timeout,
+        'depends': lambda self, depends: self.depends | set(depends)
+    }
+
+    __slots__ = 'base_dir', 'cwd', 'timeout', 'cpu_timeout', 'depends'
+
+    def update(self, updates):
+        new_env = TestEnv.__new__(TestEnv)
+        new_env.base_dir = self.base_dir
+        for name, upd in TestEnv._update.items():
+            new = upd(self, updates[name]) if name in updates else getattr(self, name)
+            setattr(new_env, name, new)
+        return new_env
 
 def parse_attributes(tag, env):
     """Parse attributes such as "timeout" in the given XML tag,
-    updating the given "env" to reflect them."""
-    if tag.get("timeout"):
-        env.timeout = int(tag.get("timeout"))
-    if tag.get("cpu-timeout"):
-        env.cpu_timeout = float(tag.get("cpu-timeout"))
-    if tag.get("cwd"):
-        env.cwd = tag.get("cwd")
-    if tag.get("depends"):
-        env.depends |= set(tag.get("depends").split())
+    returning an updated env to reflect them."""
+
+    updates = {}
+
+    def parse_attr(name, xml_name, cast):
+        value = tag.get(xml_name)
+        if value is not None: updates[name] = cast(value)
+
+    parse_attr("cwd", "cwd", str)
+    parse_attr("timeout", "timeout", int)
+    parse_attr("cpu_timeout", "cpu-timeout", float)
+    parse_attr("depends", "depends", lambda s: s.split())
+
+    return env.update(updates) if updates else env
 
 def parse_test(doc, env):
-    """Parse a <test> tag."""
-    env = copy.deepcopy(env)
-    parse_attributes(doc, env)
-    return Test(doc.get("name"), doc.text.strip(),
-            timeout=env.timeout,
-            cpu_timeout=env.cpu_timeout,
-            cwd=os.path.normpath(os.path.join(env.pwd, env.cwd)),
-            depends=env.depends)
+    test = Test(doc.get("name"), doc.text.strip(), env)
+    return [test]
 
 def parse_sequence(doc, env):
-    # Create a copy of env so that the scope is restored.
-    env = copy.deepcopy(env)
-
-    # Parse attributes.
-    parse_attributes(doc, env)
-
-    # Parse children.
     tests = []
+
     for child in doc:
-        if child.tag == "set":
-            # Parse set, recording dependencies of the tests inside the set.
-            new_tests = parse_set(child, env)
-            for x in new_tests:
-                env.depends.add(x.name)
-            tests += new_tests
-        elif child.tag == "sequence":
-            # Parse sequence, recording dependencies of the tests inside the set.
-            new_tests = parse_sequence(child, env)
-            for x in new_tests:
-                env.depends.add(x.name)
-            tests += new_tests
-        elif child.tag == "test":
-            tests.append(parse_test(child, env))
-            env.depends.add(tests[-1].name)
-        else:
-            raise TestSpecParseException("Unknown tag '%s'" % child.tag)
+        new_tests = parse_tag(child, env)
+        tests += new_tests
+        env = env.update({"depends": map(lambda t: t.name, new_tests)})
 
     return tests
 
 def parse_set(doc, env):
-    # Create a copy of env so that the scope is restored.
-    env = copy.deepcopy(env)
-
-    # Parse attributes.
-    parse_attributes(doc, env)
-
-    # Parse children.
     tests = []
-    for child in doc:
-        if child.tag == "set":
-            tests += parse_set(child, env)
-        elif child.tag == "sequence":
-            tests += parse_sequence(child, env)
-        elif child.tag == "test":
-            tests.append(parse_test(child, env))
-        else:
-            raise TestSpecParseException("Unknown tag '%s'" % child.tag)
 
+    for child in doc:
+        tests += parse_tag(child, env)
+
+    return tests
+
+parsers = {
+    'testsuite': parse_set,
+    'set': parse_set,
+    'sequence': parse_sequence,
+    'test': parse_test
+}
+
+def parse_tag(doc, env):
+    try: parser = parsers[doc.tag]
+    except KeyError: raise TestSpecParseException("Unknown tag '%s'" % doc.tag)
+    return parser(doc, parse_attributes(doc, env))
+
+def validate_xml(doc, filename):
+    """Ensure the XML matches the regression DTD."""
+
+    # Read in the DTD
+    with open(REGRESSION_DTD) as dtd_file:
+        dtd = etree.DTD(dtd_file)
+
+    # Parse the file, and validate against the DTD.
+    if not dtd.validate(doc):
+        raise Exception(
+                "%s does not validate against DTD:\n\n" % filename
+                + str(dtd.error_log))
+
+def parse_testsuite_xml(filename):
+    # Parse the file.
+    parser = etree.XMLParser(remove_comments=True, recover=False)
+    doc = etree.parse(filename, parser=parser)
+
+    # Validate the XML.
+    validate_xml(doc, filename)
+
+    # Setup an empty environment
+    env = TestEnv(os.path.dirname(filename))
+
+    # Parse this tag as a set of tests.
+    # Returns a list of all tests found in this file.
+    return parse_tag(doc.getroot(), env)
+
+def parse_test_files(xml_files):
+    tests = []
+    for x in xml_files:
+        try:
+            tests += parse_testsuite_xml(x)
+        except:
+            sys.stderr.write("Exception while parsing file: %s.\n" % x)
+            raise
     return tests
 
 def find_cycle(keys, depends_on):
@@ -182,36 +218,6 @@ def toposort(keys, prio, depends_on):
 
     return final_order
 
-def validate_xml(filename):
-    """Ensure the XML matches the regression DTD."""
-
-    # Read in the DTD
-    with open(REGRESSION_DTD) as dtd_file:
-        dtd = etree.DTD(dtd_file)
-
-    # Parse the file, and validate against the DTD.
-    parser = etree.XMLParser(remove_comments=True)
-    doc = etree.parse(filename, parser=parser)
-    if not dtd.validate(doc):
-        raise Exception(
-                "%s does not validate against DTD:\n\n" % filename
-                + str(dtd.error_log))
-
-def parse_testsuite_xml(filename):
-
-    # Validate the XML.
-    validate_xml(filename)
-
-    # Parse the file.
-    parser = etree.XMLParser(remove_comments=True, recover=False)
-    doc = etree.parse(filename, parser=parser).getroot()
-
-    # Setup an empty environment
-    env = TestEnv(os.path.dirname(filename))
-
-    # Parse this tag as a set of tests.
-    return parse_set(doc, env)
-
 def process_tests(tests):
     """Given a list of tests (possibly from multiple XML file), check for
     errors and return a list of tests in dependency-satisfying order."""
@@ -252,15 +258,8 @@ def process_tests(tests):
 
     return tests
 
-def parse_test_files(xml_files):
-    tests = []
-    for x in xml_files:
-        try:
-            tests += parse_testsuite_xml(x)
-        except:
-            sys.stderr.write("Exception while parsing file: %s.\n" % x)
-            raise
-    return process_tests(tests)
+def process_test_files(xml_files):
+    return process_tests(parse_test_files(xml_files))
 
 def main():
     # Parse arguments
@@ -274,7 +273,7 @@ def main():
         parser.error("Please provide at least one XML file.")
 
     # Fetch XML tests.
-    tests = parse_test_files(args.file)
+    tests = process_test_files(args.file)
 
     # Print results
     for test in tests:
