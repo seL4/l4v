@@ -1771,8 +1771,20 @@ in
     in
       (prechaos grs [stmt], e)
     end
-  | AsmStmt _ => ([stmt], fold (add_modification fname) [TheHeap,
-        PhantomState, AllGlobals] e)
+  | AsmStmt {asmblock = {mod1,mod2,...}, ...} =>
+    let
+      fun handle_mod ((_,_,exp) : namedstringexp, (e0, grs0)) =
+        let
+          val (e,newgrs) = pex e0 exp
+        in
+          (e,Binaryset.union(newgrs,grs0))
+        end
+      val (e,grs) = List.foldl handle_mod (e, Binaryset.empty expr_compare) mod1
+      val (e,grs) = List.foldl handle_mod (e, grs) mod2
+    in
+      (prechaos grs [stmt],
+       fold (add_modification fname) [TheHeap, PhantomState, AllGlobals] e)
+    end
   | Ghostupd _ => ([stmt], add_modification fname GhostState e)
   | _ => ([stmt], e)
 end
