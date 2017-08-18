@@ -399,7 +399,8 @@ def main():
 
     # Search for test files:
     test_xml = sorted(rglob(args.directory, "tests.xml"))
-    tests = testspec.process_test_files(test_xml)
+    test_info = testspec.process_test_files(test_xml)
+    tests = test_info.tests
 
     # List test names if requested.
     if args.list:
@@ -407,10 +408,13 @@ def main():
             print(t.name)
         sys.exit(0)
 
+    args.exclude = set(args.exclude)
+
     # Calculate which tests should be run.
     if len(args.tests) == 0 and not os.environ.get('RUN_TESTS_DEFAULT'):
         tests_to_run = tests
-        args.exclude = args.exclude + args.remove
+        remove_trans = [test_info.reverse_deps.rtrans(r) for r in args.remove]
+        args.exclude = args.exclude.union(*remove_trans)
     else:
         desired_names = set(args.tests) or set(os.environ.get('RUN_TESTS_DEFAULT').split())
         bad_names = desired_names - set([t.name for t in tests])
@@ -429,7 +433,6 @@ def main():
         # Preserve the order of the original set of Tests.
         tests_to_run = [t for t in tests if t in tests_to_run_set]
 
-    args.exclude = set(args.exclude)
     bad_names = args.exclude - set(t.name for t in tests)
     if bad_names:
         print("[Warning] Unknown test names: %s" % (", ".join(sorted(bad_names))))

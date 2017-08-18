@@ -22,18 +22,6 @@ REGRESSION_DTD = os.path.join(REGRESSION_DIR, "regression.dtd")
 class TestSpecParseException(Exception):
     pass
 
-class Test(object):
-
-    __slots__ = ('name', 'command', 'cwd', 'timeout', 'cpu_timeout', 'depends')
-
-    def __init__(self, name, command, env):
-        self.name = name
-        self.command = command
-        self.cwd = env.cwd
-        self.timeout = env.timeout
-        self.cpu_timeout = env.cpu_timeout
-        self.depends = set(env.depends)
-
 class TestEnv(object):
 
     def __init__(self, base_dir):
@@ -41,13 +29,13 @@ class TestEnv(object):
         self.cwd = self.base_dir
         self.timeout = 0
         self.cpu_timeout = 0
-        self.depends = set()
+        self.depends = frozenset()
 
     _update = {
         'cwd': lambda self, cwd: os.path.normpath(os.path.join(self.base_dir, cwd)),
         'timeout': lambda self, timeout: timeout,
         'cpu_timeout': lambda self, cpu_timeout: cpu_timeout,
-        'depends': lambda self, depends: self.depends | set(depends)
+        'depends': lambda self, depends: self.depends | frozenset(depends)
     }
 
     __slots__ = 'base_dir', 'cwd', 'timeout', 'cpu_timeout', 'depends'
@@ -77,9 +65,28 @@ def parse_attributes(tag, env):
 
     return env.update(updates) if updates else env
 
+class Test(object):
+
+    __slots__ = (
+        'name', 'command', 'cwd', 'timeout', 'cpu_timeout',
+        'depends', 'depends_trans', 'depends_rtrans',
+        'reverse', 'reverse_trans', 'reverse_rtrans'
+    )
+
+    def __init__(self, name, command, env):
+        self.name = name
+        self.command = command
+        self.cwd = env.cwd
+        self.timeout = env.timeout
+        self.cpu_timeout = env.cpu_timeout
+        self.depends = env.depends
+
 def parse_test(doc, env):
     test = Test(doc.get("name"), doc.text.strip(), env)
     return [test]
+
+def tests_names(tests):
+    return [t.name for t in tests]
 
 def parse_sequence(doc, env):
     tests = []
@@ -87,7 +94,7 @@ def parse_sequence(doc, env):
     for child in doc:
         new_tests = parse_tag(child, env)
         tests += new_tests
-        env = env.update({"depends": map(lambda t: t.name, new_tests)})
+        env = env.update({"depends": tests_names(new_tests)})
 
     return tests
 
@@ -107,8 +114,10 @@ parsers = {
 }
 
 def parse_tag(doc, env):
-    try: parser = parsers[doc.tag]
-    except KeyError: raise TestSpecParseException("Unknown tag '%s'" % doc.tag)
+    try:
+        parser = parsers[doc.tag]
+    except KeyError:
+        raise TestSpecParseException("Unknown tag '%s'" % doc.tag)
     return parser(doc, parse_attributes(doc, env))
 
 def validate_xml(doc, filename):
@@ -149,114 +158,132 @@ def parse_test_files(xml_files):
             raise
     return tests
 
-def find_cycle(keys, depends_on):
-    """Find the shortest cycle in the input graph. Unnecessarily O(n**2)."""
-    def dfs(n):
-        safe = set()
-        active = set()
-        def do_dfs(n):
-            if n in safe:
-                return None
-            if n in active:
-                return [n]
-            active.add(n)
-            for c in depends_on(n):
-                x = do_dfs(c)
-                if x is not None:
-                    return [n] + x
-            active.discard(n)
-            safe.add(n)
-        return do_dfs(n)
-    shortest_cycle = None
-    for i in keys:
-        x = dfs(i)
-        if x is not None and (shortest_cycle is None or len(x) < len(shortest_cycle)):
-            shortest_cycle = x
-    return shortest_cycle
+def show_names(names):
+    return ' '.join(sorted(names))
 
-def toposort(keys, prio, depends_on):
-    """topological sort of keys.
+def check_tests(tests):
+    # Check that test names are unique.
+    names, dups = set(), set()
+    for n in tests_names(tests):
+        if n in names: dups.add(n)
+        else: names.add(n)
+    if dups:
+        raise TestSpecParseException(
+            "Duplicate test names: %s" % show_names(dups))
 
-    Perform a toposort for keys, trying to order elements by the priority
-    returned by function "prio" as closely as possible without breaking
-    dependencies.
+    # Check that dependencies exist.
+    bad_depends = {dep for t in tests for dep in t.depends} - names
+    if bad_depends:
+        raise TestSpecParseException(
+            "Invalid dependencies: %s" % show_names(bad_depends))
+
+def step_rel(rel):
+    # From a one-step relation represented as a dictionary,
+    # generate the corresponding one-or-two-step relation.
+    return dict((s, rel[s].union(*(rel[t] for t in rel[s]))) for s in rel)
+
+def trans_depends(rel):
+    # Repeatedly add dependencies of dependencies until convergence.
+    rel_t = step_rel(rel)
+    while rel_t != rel:
+        rel, rel_t = rel_t, step_rel(rel_t)
+    return rel_t
+
+def refl_depends(rel):
+    rel_r = {}
+    for t in rel: rel_r[t] = rel[t] | {t}
+    return rel_r
+
+class Depends(object):
+    __slots__ = 'step', 'trans', 'rtrans'
+    def __init__(self, step):
+        trans = trans_depends(step)
+        rtrans = refl_depends(trans)
+        self.step = lambda x: step[x]
+        self.trans = lambda x: trans[x]
+        self.rtrans = lambda x: rtrans[x]
+
+def collect_dependencies(tests):
+    forward, reverse = {}, {}
+    for t in tests:
+        forward[t.name] = frozenset(t.depends)
+        reverse[t.name] = frozenset(r.name for r in tests if t.name in r.depends)
+    return Depends(forward), Depends(reverse)
+
+def toposort(keys, forward_depends, reverse_depends):
+    """Topological sort.
+
+    Perform a toposort of keys, retaining the existing ordering as closely
+    as possible, without breaking dependencies.
     """
-    #
-    # We start by creating a dictionary of which tests are dependent on others,
-    # and then how many outstanding dependencies each test has.
-    #
-    # Instead of using "dependents" and "dependencies", we use "parents" and
-    # "children". A parent must be processed before its child.
-    #
-    keys = sorted(keys, key=prio)
-    children = {}
-    num_parents = {}
-    for key in keys:
-        num_parents[key] = len(depends_on(key))
-        for parent in depends_on(key):
-            children.setdefault(parent, set()).add(key)
+
+    # Count number of forward dependencies.
+    fwd_deps = dict((k, len(forward_depends(k))) for k in keys)
+
+    # Enumerate keys so we can retain ordering as much as possible.
+    enum_of_key = dict((k, i) for (i, k) in enumerate(keys))
+
+    if len(enum_of_key) != len(keys):
+        raise Exception("toposort: non-unique keys")
 
     #
     # Generate heap of tests without a parent, and keep popping off
     # the heap and processing the tests.
     #
-    final_order = []
-    parentless = sorted([(prio(k), k) for k in keys if num_parents[k] == 0])
-    while len(parentless) > 0:
-        (p, k) = heapq.heappop(parentless)
-        final_order.append(k)
-        for s in children.get(k, []):
-            num_parents[s] -= 1
-            if num_parents[s] == 0:
-                heapq.heappush(parentless, (prio(s), s))
+    result = []
+    candidates = [(p, k) for (p, k) in enumerate(keys) if fwd_deps[k] == 0]
 
-    # Ensure we saw everybody. If we didn't, there is a cycle.
-    if len(keys) != len(final_order):
-        shortest_cycle = find_cycle(keys, depends_on)
-        raise ValueError("Circular dependency involving: %s" %
-                (" -> ".join(shortest_cycle)))
+    while len(candidates) > 0:
+        (p, k) = heapq.heappop(candidates)
+        result.append(k)
+        for j in reverse_depends(k):
+            fwd_deps[j] -= 1
+            if fwd_deps[j] == 0:
+                heapq.heappush(candidates, (enum_of_key[j], j))
 
-    return final_order
+    if len(result) != len(keys) or set(result) != set(keys):
+        raise Exception("toposort: panic")
+
+    return result
+
+class TestInfo(object):
+    __slots__ = 'tests', 'tests_by_name', 'forward_deps', 'reverse_deps'
+    def __init__(self, tests, tests_by_name, forward_deps, reverse_deps):
+        self.tests = tests
+        self.tests_by_name = tests_by_name
+        self.forward_deps = forward_deps
+        self.reverse_deps = reverse_deps
 
 def process_tests(tests):
     """Given a list of tests (possibly from multiple XML file), check for
     errors and return a list of tests in dependency-satisfying order."""
 
-    # Check for duplicate names.
-    seen_names = set()
+    # Check test names are unique and dependencies exist.
+    check_tests(tests)
+
+    # Collect dependencies.
+    forward_deps, reverse_deps = collect_dependencies(tests)
+
+    # Annotate tests with richer dependencies.
     for t in tests:
-        if t.name in seen_names:
-            raise TestSpecParseException("Duplicate test name detected: %s" % t.name)
-        seen_names.add(t.name)
+        t.reverse = reverse_deps.step(t.name)
+        t.depends_trans = forward_deps.trans(t.name)
+        t.reverse_trans = reverse_deps.trans(t.name)
+        t.depends_rtrans = forward_deps.rtrans(t.name)
+        t.reverse_rtrans = reverse_deps.rtrans(t.name)
 
-    # Check dependencies.
-    valid_names = set()
-    for test in tests:
-        valid_names.add(test.name)
-    for test in tests:
-        test_depends = sorted(test.depends)
-        for dependency_name in test_depends:
-            if dependency_name not in valid_names:
-                raise TestSpecParseException("Dependency '%s' invalid." % dependency_name)
+    tests_by_name = dict((t.name, t) for t in tests)
 
-    # Toposort.
-    test_ordering = {}
-    for (n, t) in enumerate(tests):
-        test_ordering[t.name] = n
-    test_depends = {}
-    for t in tests:
-        test_depends[t.name] = t.depends
-    try:
-        ordering = toposort([t.name for t in tests],
-                lambda x: test_ordering[x],
-                lambda x: test_depends[x])
-    except ValueError as e:
-        raise TestSpecParseException("Cycle in dependencies: %s" % e.message)
+    # Check for cyclic dependencies.
+    cyclic = [t.name for t in tests if t.name in t.depends_trans]
+    if cyclic:
+        raise TestSpecParseException("Tests with cyclic dependencies: %s" % show_names(cyclic))
 
-    ordering = dict((t, n) for (n, t) in enumerate(ordering))
-    tests = sorted(tests, key=lambda k: ordering[k.name])
+    # Sort tests in dependency order.
+    ordered_names = toposort(tests_names(tests), forward_deps.step, reverse_deps.step)
+    tests = [tests_by_name[t] for t in ordered_names]
 
-    return tests
+    return TestInfo(tests, tests_by_name, forward_deps, reverse_deps)
 
 def process_test_files(xml_files):
     return process_tests(parse_test_files(xml_files))
@@ -273,13 +300,12 @@ def main():
         parser.error("Please provide at least one XML file.")
 
     # Fetch XML tests.
-    tests = process_test_files(args.file)
+    test_info = process_test_files(args.file)
 
     # Print results
-    for test in tests:
+    for test in test_info.tests:
         print("\"%s\" [timeout=%d, cpu-timeout=%g, parents=%s, cwd=%s]" % (
             test.command, test.timeout, test.cpu_timeout, ",".join(test.depends), test.cwd))
-
 
 if __name__ == "__main__":
     main()
