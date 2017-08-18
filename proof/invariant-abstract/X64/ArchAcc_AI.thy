@@ -377,7 +377,7 @@ lemma update_object_valid_objs:
   apply (simp add: update_object_def)
   apply (wp get_object_wp set_object_valid_objs)
   including unfold_objects
-  apply (clarsimp simp:  wellformed_arch_obj_def a_type_def valid_obj_def)
+  apply (clarsimp simp:  arch_valid_obj_def a_type_def valid_obj_def)
   done
 
 lemma update_object_iflive[wp]:
@@ -521,12 +521,12 @@ lemma update_aobj_valid_arch [wp]:
   by (wp valid_arch_state_lift)
 
 lemma update_aobj_valid_objs [wp]:
-  "\<lbrace>valid_objs and wellformed_arch_obj obj\<rbrace> update_object ptr (ArchObj obj) \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  "\<lbrace>valid_objs and arch_valid_obj obj\<rbrace> update_object ptr (ArchObj obj) \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (simp add: update_object_def)
   apply (wp set_object_valid_objs get_object_wp)
   apply (clarsimp simp: a_type_def split: kernel_object.split_asm if_split_asm)
   including unfold_objects
-  by (clarsimp simp: a_type_def valid_obj_def wellformed_arch_obj_def)
+  by (clarsimp simp: a_type_def valid_obj_def arch_valid_obj_def)
 
 lemma update_aobj_valid_idle[wp]:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
@@ -1362,7 +1362,7 @@ lemma store_pte_valid_objs [wp]:
    apply (wp|wpc)+
   apply (clarsimp simp: valid_objs_def dom_def simp del: fun_upd_apply)
   apply (erule allE, erule impE, blast)
-  apply (clarsimp simp: valid_obj_def wellformed_arch_obj_def)
+  apply (clarsimp simp: valid_obj_def arch_valid_obj_def)
   done
 
 lemma store_pde_valid_objs [wp]:
@@ -1372,7 +1372,7 @@ lemma store_pde_valid_objs [wp]:
    apply (wp|wpc)+
   apply (clarsimp simp: valid_objs_def dom_def simp del: fun_upd_apply)
   apply (erule allE, erule impE, blast)
-  apply (clarsimp simp: valid_obj_def wellformed_arch_obj_def)
+  apply (clarsimp simp: valid_obj_def arch_valid_obj_def)
   done
 
 lemma store_pdpte_valid_objs [wp]:
@@ -1382,7 +1382,7 @@ lemma store_pdpte_valid_objs [wp]:
    apply (wp|wpc)+
   apply (clarsimp simp: valid_objs_def dom_def simp del: fun_upd_apply)
   apply (erule allE, erule impE, blast)
-  apply (clarsimp simp: valid_obj_def wellformed_arch_obj_def)
+  apply (clarsimp simp: valid_obj_def arch_valid_obj_def)
   done
 
 lemma store_pml4e_arch [wp]:
@@ -1885,7 +1885,7 @@ lemma update_object_invs[wp]:
     \<and> obj_at (\<lambda>ko. case obj of PageMapL4 pm \<Rightarrow> \<exists>pm'. ko = ArchObj (PageMapL4 pm') \<and> (\<forall>x\<in>kernel_mapping_slots. pm x = pm' x) | _ \<Rightarrow> True) ptr s
     \<and> valid_kernel_mappings_if_pm (set (second_level_tables (arch_state s))) (ArchObj obj)
     \<and> valid_global_objs_upd ptr obj (arch_state s)
-    \<and> ((\<exists>\<rhd> ptr) s \<longrightarrow> (valid_vspace_obj obj s)) \<and> (wellformed_arch_obj obj s)
+    \<and> ((\<exists>\<rhd> ptr) s \<longrightarrow> (valid_vspace_obj obj s)) \<and> (arch_valid_obj obj s)
 
     (* Lattice Preserving *)
     \<and> (\<forall>nref np nq stepref. ((nref, np) \<in> (vs_lookup1 s)\<^sup>* `` refs_diff vs_lookup1_on_heap_obj obj ptr s
@@ -2659,7 +2659,7 @@ lemma valid_vspace_obj_from_invs:
   done
 
 lemma valid_obj_from_invs:
-  "\<lbrakk>kheap s p = Some (ArchObj ao); invs s\<rbrakk> \<Longrightarrow> wellformed_arch_obj ao s"
+  "\<lbrakk>kheap s p = Some (ArchObj ao); invs s\<rbrakk> \<Longrightarrow> arch_valid_obj ao s"
   by (auto simp: valid_obj_def valid_objs_def obj_at_def dom_def dest!:invs_valid_objs)
 
 lemmas vs_ref_lvl_obj_simps[simp] = vs_ref_lvl_def[split_simps kernel_object.split option.split]
@@ -2888,7 +2888,7 @@ lemma set_asid_pool_valid_objs [wp]:
   apply (simp add: set_asid_pool_def)
   apply (wp set_object_valid_objs get_object_wp)
   including unfold_objects
-  by (clarsimp simp: a_type_def valid_obj_def wellformed_arch_obj_def)
+  by (clarsimp simp: a_type_def valid_obj_def arch_valid_obj_def)
 
 lemma set_asid_pool_global_objs [wp]:
   "\<lbrace>valid_global_objs and valid_arch_state\<rbrace>

@@ -435,9 +435,9 @@ where
    | _ \<Rightarrow> True"
 
 definition
-  wellformed_arch_obj :: "arch_kernel_obj \<Rightarrow>  'z::state_ext state \<Rightarrow> bool"
+  arch_valid_obj :: "arch_kernel_obj \<Rightarrow>  'z::state_ext state \<Rightarrow> bool"
 where
-  "wellformed_arch_obj ao s \<equiv> wellformed_vspace_obj ao"
+  "arch_valid_obj ao s \<equiv> wellformed_vspace_obj ao"
 
 lemmas
   wellformed_pte_simps[simp] =
@@ -456,15 +456,15 @@ lemmas
   wellformed_pml4e_def[split_simps pml4e.split]
 
 lemmas
-  wellformed_arch_obj_simps[simp] =
-  wellformed_arch_obj_def[split_simps arch_kernel_obj.split]
+  arch_valid_obj_simps[simp] =
+  arch_valid_obj_def[split_simps arch_kernel_obj.split]
 
 lemmas
   wellformed_vspace_obj_simps[simp] =
   wellformed_vspace_obj_def[split_simps arch_kernel_obj.split]
 
-lemma wellformed_arch_pspace: "\<And>ao. \<lbrakk>wellformed_arch_obj ao s; kheap s = kheap s'\<rbrakk>
-          \<Longrightarrow> wellformed_arch_obj ao s'" by simp
+lemma wellformed_arch_pspace: "\<And>ao. \<lbrakk>arch_valid_obj ao s; kheap s = kheap s'\<rbrakk>
+          \<Longrightarrow> arch_valid_obj ao s'" by simp
 
 section "Virtual Memory"
 
@@ -1445,7 +1445,7 @@ lemmas aa_type_elims[elim!] =
 
 lemma wellformed_arch_typ:
    assumes P: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-   shows   "\<lbrace>\<lambda>s. wellformed_arch_obj ao s\<rbrace> f \<lbrace>\<lambda>rv s. wellformed_arch_obj ao s\<rbrace>"
+   shows   "\<lbrace>\<lambda>s. arch_valid_obj ao s\<rbrace> f \<lbrace>\<lambda>rv s. arch_valid_obj ao s\<rbrace>"
   by (cases ao; clarsimp; wp)
 
 lemma valid_vspace_obj_pspaceI:
@@ -1601,8 +1601,8 @@ lemma caps_of_state_update [iff]:
   "caps_of_state (f s) = caps_of_state s"
   by (rule ext) (auto simp: caps_of_state_def)
 
-lemma wellformed_arch_obj_update:
-  "\<And>ao. b = ArchObj ao \<Longrightarrow> wellformed_arch_obj ao (f s) = wellformed_arch_obj ao s"
+lemma arch_valid_obj_update:
+  "\<And>ao. b = ArchObj ao \<Longrightarrow> arch_valid_obj ao (f s) = arch_valid_obj ao s"
   by clarsimp
 
 end
@@ -3008,8 +3008,8 @@ lemma in_user_frame_lift:
  by (wp hoare_vcg_ex_lift typ_at)
 
 lemma wellformed_arch_default:
-  "wellformed_arch_obj (default_arch_object aobject_type dev us) s"
-  unfolding wellformed_arch_obj_def default_arch_object_def
+  "arch_valid_obj (default_arch_object aobject_type dev us) s"
+  unfolding arch_valid_obj_def default_arch_object_def
   by (cases aobject_type; simp)
 
 lemma valid_vspace_obj_default':
