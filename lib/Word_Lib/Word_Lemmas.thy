@@ -104,7 +104,7 @@ proof -
     apply (subst (asm) unat_word_ariths(2))+
     apply (subst (asm) 2)+
     apply (subst (asm) word_unat_power, subst (asm) unat_of_nat)+
-    apply (simp add: mod_mult_right_eq[symmetric])
+    apply (simp add: mod_mult_right_eq)
     done
   with suc_n suc_m
   show ?thesis
@@ -158,15 +158,11 @@ lemma ucast_ucast_eq:
   fixes x :: "'a::len word"
   fixes y :: "'b::len word"
   shows
-  "\<lbrakk> ucast x = (ucast (ucast y::'a::len word)::'c::len word);
-    len_of TYPE('a) \<le> len_of TYPE('b);
-    len_of TYPE('b) \<le> len_of TYPE('c) \<rbrakk> \<Longrightarrow>
-  x = ucast y"
-  apply (rule word_eqI)
-  apply (subst (asm) bang_eq)
-  apply (erule_tac x=n in allE)
-  apply (simp add: nth_ucast word_size)
-  done
+    "\<lbrakk> ucast x = (ucast (ucast y::'a::len word)::'c::len word);
+      len_of TYPE('a) \<le> len_of TYPE('b);
+      len_of TYPE('b) \<le> len_of TYPE('c) \<rbrakk> \<Longrightarrow>
+    x = ucast y"
+  by (fastforce intro: word_eqI simp: bang_eq nth_ucast word_size)
 
 
 text \<open>right-padding a word to a certain length\<close>
@@ -523,9 +519,9 @@ lemma word_upto_Cons_eq:
 lemma distinct_enum_upto:
   "distinct [(0 :: 'a::len word) .e. b]"
 proof -
-  have "\<And>(b::'a word). [0 .e. b] = sublist enum {..< Suc (fromEnum b)}"
+  have "\<And>(b::'a word). [0 .e. b] = nths enum {..< Suc (fromEnum b)}"
     apply (subst upto_enum_red)
-    apply (subst sublist_upt_eq_take)
+    apply (subst nths_upt_eq_take)
     apply (subst enum_word_def)
     apply (subst take_map)
     apply (subst take_upt)
@@ -539,7 +535,7 @@ proof -
     done
 
   then show ?thesis
-    by (rule ssubst) (rule distinct_sublistI, simp)
+    by (rule ssubst) (rule distinct_nthsI, simp)
 qed
 
 lemma upto_enum_set_conv [simp]:
@@ -1152,7 +1148,6 @@ proof cases
     apply (subst iffD1 [OF unat_add_lem], rule ux)
     apply simp
     apply (subst unat_mult_power_lem, assumption+)
-    apply (subst mod_add_left_eq)
     apply (simp)
     apply (rule mod_less[OF less_le_trans[OF unat_mono], OF kv])
     apply (erule eq_imp_le[OF unat_power_lower])
@@ -1319,7 +1314,7 @@ lemma ucast_range_less:
   apply (drule less_mask_eq)
   apply (rule word_eqI)
   apply (drule_tac x=n in word_eqD)
-  apply (simp add: word_size nth_ucast)
+  apply (clarsimp simp: word_size nth_ucast)
   done
 
 lemma word_power_less_diff:
@@ -2107,9 +2102,7 @@ lemma split_word_eq_on_mask:
   apply safe
   apply (rule word_eqI)
   apply (drule_tac x=n in word_eqD)+
-  apply (simp add: word_size word_ops_nth_size)
-  apply auto
-  done
+  by (auto simp: word_size word_ops_nth_size)
 
 lemma map2_Cons_2_3:
   "(map2 f xs (y # ys) = (z # zs)) = (\<exists>x xs'. xs = x # xs' \<and> f x y = z \<and> map2 f xs' ys = zs)"
@@ -2485,10 +2478,10 @@ lemma int_div_sub_1:
   apply (clarsimp simp: dvd_eq_mod_eq_0)
   apply (cases "m = 1")
    apply simp
-  apply (subst mod_diff_eq, simp add: zmod_minus1 mod_pos_pos_trivial)
+  apply (subst mod_diff_eq[symmetric], simp add: zmod_minus1 mod_pos_pos_trivial)
   apply clarsimp
   apply (subst diff_add_cancel[where b=1, symmetric])
-  apply (subst push_mods(1))
+  apply (subst mod_add_eq[symmetric])
   apply (simp add: field_simps mod_pos_pos_trivial)
   apply (rule mod_pos_pos_trivial)
    apply (subst add_0_right[where a=0, symmetric])
@@ -2654,7 +2647,7 @@ lemma shiftr_mask_eq:
   fixes x :: "'a :: len word"
   shows "(x >> n) && mask (size x - n) = x >> n"
   apply (rule word_eqI)
-  apply (simp add: word_size nth_shiftr)
+  apply (clarsimp simp: word_size nth_shiftr)
   apply (rule iffI)
    apply clarsimp
   apply (clarsimp)
@@ -2832,7 +2825,7 @@ lemma ucast_ucast_add:
   apply (rule word_unat.Rep_eqD)
   apply (simp add: unat_ucast unat_word_ariths mod_mod_power
                    min.absorb2 unat_of_nat)
-  apply (subst mod_add_left_eq)
+  apply (subst mod_add_left_eq[symmetric])
   apply (simp add: mod_mod_power min.absorb2)
   apply (subst mod_add_right_eq)
   apply simp
@@ -3514,7 +3507,7 @@ lemma ucast_down_add:
 lemma ucast_down_minus:
     "is_down (ucast:: 'a word \<Rightarrow> 'b word) \<Longrightarrow>  ucast ((a :: 'a::len word) - b) = (ucast a - ucast b :: 'b::len word)"
   apply (rule ucast_distrib [where L="op -"], (clarsimp simp: uint_word_ariths)+)
-  apply (metis zdiff_zmod_left zdiff_zmod_right)
+  apply (metis mod_diff_left_eq mod_diff_right_eq)
   apply simp
   done
 
@@ -3550,7 +3543,7 @@ lemma scast_down_add:
 lemma scast_down_minus:
     "is_down (scast:: 'a word \<Rightarrow> 'b word) \<Longrightarrow>  scast ((a :: 'a::len word) - b) = (scast a - scast b :: 'b::len word)"
   apply (rule scast_distrib [where L="op -"], (clarsimp simp: uint_word_ariths)+)
-  apply (metis zdiff_zmod_left zdiff_zmod_right)
+  apply (metis mod_diff_left_eq mod_diff_right_eq)
   apply simp
   done
 
@@ -3881,7 +3874,7 @@ done
 lemma neg_mask_add_mask:
   "((x:: 'a :: len word) && ~~ mask n) + (2 ^ n - 1) = x || mask n"
   apply (simp add:mask_2pm1[symmetric])
-  apply (rule word_eqI)
+  apply (rule word_eqI[rule_format])
   apply (rule iffI)
     apply (clarsimp simp:word_size not_less)
     apply (cut_tac w = "((x && ~~ mask n) + mask n)" and
@@ -4940,7 +4933,7 @@ proof -
     apply (subst unat_word_ariths(1) unat_word_ariths(2))+
     apply (subst uno_simps)
     apply (subst unat_1)
-    apply (subst mod_add_right_eq [symmetric])
+    apply (subst mod_add_right_eq)
     apply simp
     apply (subst power_mod_div)
     apply (subst div_mult_self1)
