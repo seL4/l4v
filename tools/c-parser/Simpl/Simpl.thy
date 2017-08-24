@@ -39,7 +39,7 @@ imports
   "ex/ProcParExSP"
   "ex/ClosureEx"
   "ex/ComposeEx"
-  "UserGuide"
+  UserGuide
 begin
 end
 (*>*)

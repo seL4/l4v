@@ -27,7 +27,7 @@ USA
 
 section \<open>Facilitating the Hoare Logic\<close>
 theory Vcg
-imports StateSpace "~~/src/HOL/Statespace/StateSpaceLocale" Generalise
+imports StateSpace "HOL-Statespace.StateSpaceLocale" Generalise
 keywords "procedures" "hoarestate" :: thy_decl
 begin
 

@@ -29,7 +29,7 @@ section \<open>User Guide \label{sec:UserGuide}\<close>
 (*<*)
 theory UserGuide
 imports HeapList Vcg
-  "~~/src/HOL/Statespace/StateSpaceSyntax" "~~/src/HOL/Library/LaTeXsugar"
+  "HOL-Statespace.StateSpaceSyntax" "HOL-Library.LaTeXsugar"
 begin
 (*>*)
 

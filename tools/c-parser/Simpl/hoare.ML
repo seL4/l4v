@@ -539,7 +539,7 @@ fun dest_Guard (Const (@{const_name Language.com.Guard},_)$f$g$c) = (f,g,c,false
 
 fun add_declaration name decl thy =
   thy
-  |> Named_Target.init NONE name
+  |> Named_Target.init name
   |> Local_Theory.declaration {syntax = false, pervasive = false} decl
   |> Local_Theory.exit
   |> Proof_Context.theory_of;
@@ -888,7 +888,7 @@ fun apply_in_context thy lexp f t =
 
 fun add_abbrev loc mode name spec thy =
   thy
-  |> Named_Target.init NONE loc
+  |> Named_Target.init loc
   |> (fn lthy => let val t = Syntax.read_term (Local_Theory.target_of lthy) spec;
       in Local_Theory.abbrev mode ((Binding.name name, NoSyn), t) lthy end)
   |> #2
@@ -1060,7 +1060,7 @@ fun procedures_definition locname procs thy =
         fun add_decl_and_def lname ctxt =
             ctxt
             |> Proof_Context.theory_of
-            |> Named_Target.init NONE lname
+            |> Named_Target.init lname
             |> Local_Theory.declaration {syntax = false, pervasive = false} parameter_info_decl
             |> (fn lthy => if has_body name
                            then snd (Local_Theory.define (def lthy) lthy)
@@ -1587,7 +1587,7 @@ fun assertion_simp_tac ctxt state_kind thms i =
 fun string_eq_simp_tac ctxt =
   simp_tac (put_simpset HOL_basic_ss ctxt
     addsimps @{thms list.inject list.distinct Char_eq_Char_iff
-      cut_eq_simps simp_thms});
+      cong_exp_iff_simps simp_thms});
 
 
 fun assertion_string_eq_simp_tac ctxt state_kind thms i =
@@ -2962,7 +2962,7 @@ val ss =
     (put_simpset (simpset_of @{theory_context Fun}) @{context}
       addsimps (@{thm StateFun.lookup_def} :: @{thm StateFun.id_id_cancel}
       :: @{thms list.inject list.distinct Char_eq_Char_iff
-      cut_eq_simps simp_thms})
+      cong_exp_iff_simps simp_thms})
     addsimprocs [Record.simproc, StateFun.lazy_conj_simproc]
     |> fold Simplifier.add_cong @{thms block_conj_cong});
 
@@ -3103,7 +3103,7 @@ val state_fun_update_ss =
   simpset_of (put_simpset HOL_basic_ss @{context}
     addsimps ([@{thm StateFun.update_def}, @{thm id_def}, @{thm fun_upd_apply}, @{thm if_True}, @{thm if_False}]
       @ @{thms list.inject list.distinct Char_eq_Char_iff
-      cut_eq_simps simp_thms} @ K_fun_convs)
+      cong_exp_iff_simps simp_thms} @ K_fun_convs)
     addsimprocs [DistinctTreeProver.distinct_simproc ["distinct_fields", "distinct_fields_globals"]]
     |> Simplifier.add_cong @{thm imp_cong} (* K_fun_congs  FIXME: Stefan fragen*)
     |> Splitter.add_split @{thm if_split});
@@ -3358,8 +3358,8 @@ val argsP = Scan.repeat argP
 val default_args = [("spec","spec"),("strip_guards","false")]
 
 val vcg_simp_modifiers =
-  [Args.add -- Args.colon >> K (Method.modifier vcg_simp_add @{here}),
-   Args.del -- Args.colon >> K (Method.modifier vcg_simp_del @{here})];
+  [Args.add -- Args.colon >> K (Method.modifier vcg_simp_add \<^here>),
+   Args.del -- Args.colon >> K (Method.modifier vcg_simp_del \<^here>)];
 
 fun assocs2 key = map snd o filter (curry (op =) key o fst);
 

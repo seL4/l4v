@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA
 *)
 
-theory Generalise imports "~~/src/HOL/Statespace/DistinctTreeProver"
+theory Generalise imports "HOL-Statespace.DistinctTreeProver"
 begin
 
 lemma protectRefl: "PROP Pure.prop (PROP C) \<Longrightarrow> PROP Pure.prop (PROP C)"
