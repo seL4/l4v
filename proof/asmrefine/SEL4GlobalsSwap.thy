@@ -17,8 +17,6 @@ imports "../../tools/asmrefine/GlobalsSwap"
 
 begin
 
-declare Char_eq_Char_iff [simp del]
-
 lemma globals_update_id:
   "globals_update id = id"
   by (rule ext, simp)

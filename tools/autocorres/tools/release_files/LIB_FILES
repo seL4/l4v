@@ -54,9 +54,6 @@ Monad_WP/wp/WP.thy:
 Monad_WP/wp/WPC.thy:
     "Weakest-precondition" method for operating on Hoare-triples.
 
-String_Compare.thy:
-    Work around slow string comparison in Isabelle2016-1.
-
 StringOrd.thy:
     Ostensibly required by the C parser.
 

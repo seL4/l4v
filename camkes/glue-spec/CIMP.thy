@@ -10,7 +10,7 @@
 chapter {* Concurrent Imperative Syntax and Semantics \label{s:cimp} *}
 (*<*)
 theory CIMP
-imports "../../lib/String_Compare"
+imports Main
 begin
 (*>*)
 text {*

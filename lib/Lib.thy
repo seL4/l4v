@@ -16,7 +16,6 @@ chapter "Library"
 
 theory Lib
 imports
-  String_Compare
   Value_Abbreviation
   Try_Methods
   Eval_Bool
