@@ -193,7 +193,7 @@ fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
       val speclocalename = Binding.name_of speclocalename_b
         (* jump into an lthy corresponding to globloc to parse the tstr; this lthy
            is dropped and not used again *)
-      val lthy = Named_Target.init NONE gloc thy
+      val lthy = Named_Target.init gloc thy
       val tm = Syntax.read_term lthy tstr
       val (vs, body) = strip_forall tm
       val PQopt =
@@ -401,7 +401,7 @@ let
           fninfo
   val name_specs = map (fn {fname,spec,...} => (fname,spec)) fninfo
   val thy = List.foldr (uncurry add_syntax) thy name_pars
-  val lthy = Named_Target.init NONE globloc thy
+  val lthy = Named_Target.init globloc thy
   val name_body = compile_fninfos globloc cse styargs compfn lthy fninfo
   val _ = Feedback.informStr (0, "Translated all functions")
   val globs = extract_fixes globals_elems
@@ -423,7 +423,7 @@ let
   (* set up _impl by defining \<Gamma> *)
   val thy =
       if List.exists (isSome o #body) fninfo then let
-          val lthy = Named_Target.init NONE globloc thy
+          val lthy = Named_Target.init globloc thy
           fun get_body fni = let
             val nm = #fname fni
           in
@@ -456,7 +456,7 @@ let
         val speclocalename = Binding.name_of speclocalename_b
         (* jump into an lthy corresponding to globloc to parse the tstr; this lthy
            is dropped and not used again *)
-        val lthy = Named_Target.init NONE globloc thy
+        val lthy = Named_Target.init globloc thy
         val t = Syntax.read_term lthy tstr
         val _ = Feedback.informStr (0, "Adding spec locale "^speclocalename^
                          (if speclocalename = "" then "" else " ")^

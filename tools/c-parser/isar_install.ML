@@ -215,7 +215,7 @@ end
 
 fun define_global_initializers globloc msgpfx name_munger mungedb cse globs thy = let
   open ProgramAnalysis Absyn
-  val lthy = Named_Target.init NONE globloc thy
+  val lthy = Named_Target.init globloc thy
   val globinits = let
     val inittab = get_globinits cse
     fun foldthis (gnm : MString.t, gty) defs = let

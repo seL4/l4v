@@ -11,6 +11,8 @@
 chapter "C-Parser"
 
 session "Simpl-VCG" = "HOL-Word" +
+  sessions
+    "HOL-Statespace"
   theories
     "Simpl/Vcg"
 

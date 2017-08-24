@@ -402,7 +402,7 @@ end
 fun prove_all_modifies_goals thy csenv includeP tyargs globloc =
   if Config.get_global thy calculate_modifies_proofs then
     let
-      val lthy = Named_Target.init NONE globloc thy
+      val lthy = Named_Target.init globloc thy
     in
       lthy
         |> prove_all_modifies_goals_local csenv includeP tyargs
