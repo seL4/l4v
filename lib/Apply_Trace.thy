@@ -116,12 +116,16 @@ in SOME (fact_from_derivation ctxt local_name |> the) end handle Option =>
 
 fun thms_of (PBody {thms,...}) = thms
 
-fun proof_body_descend' f get_fact (ident,(nm,_ , body)) deptab =
-(if not (f nm) then
-  (Inttab.update_new (ident, SOME (nm, get_fact nm |> the)) deptab handle Inttab.DUP _ => deptab)
-else raise Option) handle Option =>
-  ((fold (proof_body_descend' f get_fact) (thms_of (Future.join body))
-    (Inttab.update_new (ident, NONE) deptab)) handle Inttab.DUP _ => deptab)
+fun proof_body_descend' f get_fact (ident, thm_node) deptab = let
+  val nm = Proofterm.thm_node_name thm_node
+  val body = Proofterm.thm_node_body thm_node
+in
+  (if not (f nm) then
+    (Inttab.update_new (ident, SOME (nm, get_fact nm |> the)) deptab handle Inttab.DUP _ => deptab)
+  else raise Option) handle Option =>
+    ((fold (proof_body_descend' f get_fact) (thms_of (Future.join body))
+      (Inttab.update_new (ident, NONE) deptab)) handle Inttab.DUP _ => deptab)
+end
 
 fun used_facts' f get_fact thm =
   let

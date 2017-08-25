@@ -347,8 +347,8 @@ proof -
   from gtst obtain max where pm: "P max" and g': "\<And>z. P z \<Longrightarrow> z \<le> max"
     by auto
 
-  hence "(GREATEST x. P x) = max" unfolding Greatest_def
-    by (auto intro: GreatestM_equality)
+  hence "(GREATEST x. P x) = max"
+    by (auto intro: Greatest_equality)
 
   moreover have "x \<le> max" using px by (rule g')
 

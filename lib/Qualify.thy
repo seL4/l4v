@@ -119,7 +119,7 @@ fun syntax_alias global_alias local_alias b name =
     let val b' = Morphism.binding phi b
     in Context.mapping (global_alias b' name) (local_alias b' name) end);
 
-val fact_alias = syntax_alias Global_Theory.alias_fact Proof_Context.fact_alias;
+val alias_fact = syntax_alias Global_Theory.alias_fact Proof_Context.alias_fact;
 val const_alias = syntax_alias Sign.const_alias Proof_Context.const_alias;
 val type_alias = syntax_alias Sign.type_alias Proof_Context.type_alias;
 
@@ -149,7 +149,7 @@ fun end_global_qualify thy =
       |> Local_Theory.map_background_naming (Name_Space.parent_path #> Name_Space.mandatory_path nm);
 
     val lthy' = lthy
-      |> fold (uncurry fact_alias) facts
+      |> fold (uncurry alias_fact) facts
       |> fold (uncurry const_alias) consts
       |> fold (uncurry type_alias) types;
 

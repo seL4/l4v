@@ -57,7 +57,7 @@ fun syntax_alias global_alias local_alias b (name : string) =
     let val b' = Morphism.binding phi b
     in Context.mapping (global_alias b' name) (local_alias b' name) end);
 
-val fact_alias = syntax_alias Global_Theory.alias_fact Proof_Context.fact_alias;
+val alias_fact = syntax_alias Global_Theory.alias_fact Proof_Context.alias_fact;
 val const_alias = syntax_alias Sign.const_alias Proof_Context.const_alias;
 val type_alias = syntax_alias Sign.type_alias Proof_Context.type_alias;
 
@@ -102,7 +102,7 @@ val _ =
 
 val _ =
   Outer_Syntax.command @{command_keyword requalify_facts} "alias fact with current naming"
-    (gen_requalify get_fact_nm Parse.thm check_fact fact_alias)
+    (gen_requalify get_fact_nm Parse.thm check_fact alias_fact)
 
 val _ =
   Outer_Syntax.command @{command_keyword global_naming} "change global naming of context block"
