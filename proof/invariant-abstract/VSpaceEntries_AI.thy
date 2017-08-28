@@ -93,7 +93,7 @@ lemma ucast_neg_mask:
 
 lemma shiftr_eq_neg_mask_eq:
   "a >> b = c >> b \<Longrightarrow> a && ~~ mask b = c && ~~ mask b"
-  apply (rule word_eqI)
+  apply (rule word_eqI[rule_format])
    apply (simp add:neg_mask_bang)
   apply (drule_tac f = "\<lambda>x. x !! (n - b)" in arg_cong)
   apply (simp add:nth_shiftr)

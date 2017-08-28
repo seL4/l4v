@@ -359,7 +359,7 @@ lemma ex_asid_high_bits_plus:
 lemma asid_high_bits_shl:
   "\<lbrakk> is_aligned base asid_low_bits; base \<le> mask asid_bits \<rbrakk> \<Longrightarrow> ucast (asid_high_bits_of base) << asid_low_bits = base"
   apply (simp add: mask_def upper_bits_unset_is_l2p_64 [symmetric])
-  apply (rule word_eqI)
+  apply (rule word_eqI[rule_format])
   apply (simp add: is_aligned_nth nth_ucast nth_shiftl nth_shiftr asid_low_bits_def
                    asid_high_bits_of_def word_size asid_bits_def word_bits_def)
   apply (rule iffI, clarsimp)

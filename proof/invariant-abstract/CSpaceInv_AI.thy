@@ -1804,9 +1804,6 @@ lemma cap_insert_zombies:
        apply (clarsimp simp: is_cap_simps)
        apply (wp set_cap_zombies get_cap_wp set_cap_cte_wp_at hoare_allI)+
   apply (clarsimp simp: is_cap_simps free_index_update_def cte_wp_at_caps_of_state | rule conjI)+
-   apply (fastforce)
-  apply (clarsimp simp: is_cap_simps free_index_update_def cte_wp_at_caps_of_state | rule conjI)+
-  apply (fastforce)
   done
 
 

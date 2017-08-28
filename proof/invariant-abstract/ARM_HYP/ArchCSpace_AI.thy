@@ -466,7 +466,6 @@ lemma no_cap_to_obj_with_diff_ref_triv:
                         a_type_def is_cap_simps
                  split: cap.split_asm arch_cap.split_asm
                         if_split_asm option.split_asm)
-        apply auto
   done
 
 

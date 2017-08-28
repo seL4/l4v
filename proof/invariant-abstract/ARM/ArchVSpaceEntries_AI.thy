@@ -122,7 +122,7 @@ lemma shift_0x3C_set:
    apply (drule_tac x="Suc (Suc n)" in spec)
    apply simp
   apply (rule_tac x="ucast x && mask 4" in image_eqI)
-   apply (rule word_eqI)
+   apply (rule word_eqI[rule_format])
    apply (drule_tac x=n in word_eqD)
    apply (simp add: word_ops_nth_size word_size nth_ucast nth_shiftr
                     nth_shiftl)

@@ -526,9 +526,7 @@ lemma valid_vso_at_lift_aobj_at:
    apply (clarsimp simp: aa_type_def)
   apply clarsimp
   apply (rule hoare_vcg_conj_lift aobj_at)+
-   apply (clarsimp simp: vspace_obj_pred_def)
-   apply (rule iffI)
-    apply (case_tac ao, clarsimp+,blast)+
+   apply (case_tac ao; fastforce simp: vspace_obj_pred_def)
   apply (wpsimp wp: valid_vspace_is_vspace_lift)
     apply (case_tac "T = AVCPU", simp)
     apply (wpsimp wp: aobj_at)

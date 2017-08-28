@@ -1206,8 +1206,6 @@ locale Finalise_AI_4 = Finalise_AI_3 a b _ c
   and b :: "('b :: state_ext) itself"
   and c :: "'c itself"
 
-value Finalise_AI_4
-
 locale Finalise_AI_5 = Finalise_AI_4 _ a b c
   for a :: "('a :: state_ext) itself"
   and b :: "('b :: state_ext) itself"
@@ -1307,7 +1305,6 @@ lemma zombie_not_ex_cap_to:
    apply (rule notI, drule_tac a=ptr in equals0D)
    apply (clarsimp simp add: zobj_refs_to_obj_refs)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
-  apply fastforce
   done
 
 lemma is_cap_tableE:

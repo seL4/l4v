@@ -718,7 +718,7 @@ lemma ex_asid_high_bits_plus:
 lemma asid_high_bits_shl:
   "\<lbrakk> is_aligned base asid_low_bits; base \<le> mask asid_bits \<rbrakk> \<Longrightarrow> ucast (asid_high_bits_of base) << asid_low_bits = base"
   apply (simp add: mask_def upper_bits_unset_is_l2p_32 [symmetric])
-  apply (rule word_eqI)
+  apply (rule word_eqI[rule_format])
   apply (simp add: is_aligned_nth nth_ucast nth_shiftl nth_shiftr asid_low_bits_def
                    asid_high_bits_of_def word_size asid_bits_def word_bits_def)
   apply (rule iffI, clarsimp)
@@ -3646,7 +3646,6 @@ lemma perform_page_table_invocation_invs[wp]:
                     pde.splits)
          apply (intro allI impI conjI, fastforce)
          apply (clarsimp simp: caps_of_def cap_of_def)
-         apply (thin_tac "All P" for P)
          apply (frule invs_pd_caps)
          apply (drule (1) empty_table_pt_capI)
          apply (clarsimp simp: obj_at_def empty_table_def pte_ref_pages_def)

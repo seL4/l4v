@@ -806,21 +806,21 @@ definition
 lemma ucast_mask_asid_low_bits [simp]:
   "ucast ((asid::word64) && mask asid_low_bits) = (ucast asid :: 9 word)"
   apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast asid_low_bits_def)
+  apply (clarsimp simp: word_size nth_ucast asid_low_bits_def)
   done
 
 
 lemma ucast_ucast_asid_high_bits [simp]:
   "ucast (ucast (asid_high_bits_of asid)::word64) = asid_high_bits_of asid"
   apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast asid_low_bits_def)
+  apply (clarsimp simp: word_size nth_ucast asid_low_bits_def)
   done
 
 
 lemma mask_asid_low_bits_ucast_ucast:
   "((asid::word64) && mask asid_low_bits) = ucast (ucast asid :: 9 word)"
   apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast asid_low_bits_def)
+  apply (clarsimp simp: word_size nth_ucast asid_low_bits_def)
   done
 
 
@@ -2072,7 +2072,7 @@ lemma shiftr_shiftl_mask_pml4_bits:
 lemma triple_shift_fun:
   "get_pml4_index x << word_size_bits >> word_size_bits = get_pml4_index x"
   apply (rule word_eqI)
-  apply (simp add: word_size nth_shiftr nth_shiftl get_pml4_index_def bit_simps)
+  apply (clarsimp simp: word_size nth_shiftr nth_shiftl get_pml4_index_def bit_simps)
   apply safe
   apply (drule test_bit_size)
   apply (simp add: word_size)
@@ -2098,7 +2098,7 @@ lemma shiftr_eqD:
 
 lemma mask_out_first_mask_some:
   "\<lbrakk> x && ~~ mask n = y; n \<le> m \<rbrakk> \<Longrightarrow> x && ~~ mask m = y && ~~ mask m"
-  apply (rule word_eqI, drule_tac x=na in word_eqD)
+  apply (rule word_eqI[rule_format], drule_tac x=na in word_eqD)
   apply (simp add: word_ops_nth_size word_size)
   apply auto
   done
@@ -2374,9 +2374,8 @@ lemma refs_diff_empty_simps_vslookup_pages1[simp]:
     (refs_diff vs_lookup_pages1_on_heap_obj (PageTable (pt(a := pte))) p s) = {}"
   apply (clarsimp simp: image_def graph_of_def pml4e_ref_pages_def pde_ref_pages_def pde_ref_def
                         refs_diff_def lookup_refs_def vs_lookup_pages1_on_heap_obj_def vs_refs_pages_def
-                 split: if_splits pde.splits)+
-   apply auto
-  done
+                 split: if_splits pde.splits)
+  by auto
 
 lemma empty_table_empty_vs_refs_pages[simp]:
   "empty_table (set (second_level_tables (arch_state s))) ko \<Longrightarrow> vs_refs_pages ko = {}"

@@ -367,7 +367,7 @@ lemma bits_low_high_eq:
   assumes low: "x && mask bits = y && mask bits"
   and    high: "x >> bits = y >> bits"
   shows        "x = y"
-  apply (rule word_eqI)
+  apply (rule word_eqI[rule_format])
   apply (case_tac "n < bits")
    apply (cut_tac x=n in word_eqD[OF low])
    apply (simp add: word_size)
@@ -790,24 +790,22 @@ lemma (in Ipc_AI) tcl_zombies[wp]:
     \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (rule hoare_pre)
    apply (rule transfer_caps_loop_presM[where vo=True and em=False and ex=False])
-     apply (wp cap_insert_zombies)
-     apply clarsimp
-     apply (case_tac "(a, b) = (ab, bb)")
-      apply (clarsimp simp: cte_wp_at_caps_of_state is_derived_def)
-      apply (simp split: if_split_asm)
-      apply (clarsimp simp: is_cap_simps cap_master_cap_def
-                     split: cap.split_asm)+
-      apply fastforce
-     apply (frule(3) zombies_finalD3)
-      apply (clarsimp simp: is_derived_def is_cap_simps cap_master_cap_simps
-                      split: if_split_asm dest!:cap_master_cap_eqDs)
-      apply (drule_tac a=r in equals0D)
-      apply (drule master_cap_obj_refs, simp)
-     apply (clarsimp simp: cte_wp_at_caps_of_state is_derived_def
+    apply (wp cap_insert_zombies)
+    apply clarsimp
+    apply (case_tac "(a, b) = (ab, bb)")
+     apply (clarsimp simp: cte_wp_at_caps_of_state is_derived_def)
+     apply (simp split: if_split_asm)
+      apply ((clarsimp simp: is_cap_simps cap_master_cap_def
+                     split: cap.split_asm)+)[2]
+    apply (frule (3) zombies_finalD3)
+     apply (clarsimp simp: is_derived_def is_cap_simps cap_master_cap_simps
+                     split: if_split_asm dest!:cap_master_cap_eqDs)
+     apply (drule_tac a=r in equals0D)
+     apply (drule master_cap_obj_refs, simp)
+    apply (fastforce simp: cte_wp_at_caps_of_state is_derived_def
                            is_cap_simps cap_master_cap_def
                     split: if_split_asm cap.split_asm)
-     apply fastforce
-    apply wp
+   apply wp
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (drule(1) bspec,clarsimp)
   apply (fastforce dest!:caps_of_state_valid)

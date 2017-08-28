@@ -473,7 +473,7 @@ lemma thread_set_valid_ioc_trivial:
   apply (clarsimp simp: cte_wp_at_cases get_tcb_def cap_of_def null_filter_def
                         split_def tcb_cnode_map_tcb_cap_cases
                  split: option.splits Structures_A.kernel_object.splits)
-  apply (drule_tac x="(get,set,ba)" in bspec)
+  apply (drule_tac x="(get,set,restr)" in bspec)
    apply (fastforce simp: ranI)+
   done
 

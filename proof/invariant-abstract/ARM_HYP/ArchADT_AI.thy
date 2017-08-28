@@ -344,7 +344,7 @@ lemma pd_shifting':
    "is_aligned pd pd_bits \<Longrightarrow>
     (pd + (vptr >> 21 << 3) && ~~ mask pd_bits) = (pd::word32)"
   apply (simp add: pd_bits_def pageBits_def pde_bits_def)
-  apply (rule word_eqI)
+  apply (rule word_eqI[rule_format])
   apply (subst word_plus_and_or_coroll)
    apply (rule word_eqI)
    apply (clarsimp simp: word_size nth_shiftr nth_shiftl is_aligned_nth)

@@ -472,7 +472,7 @@ lemma p_le_0xF_helper:
 lemma pd_shifting:
   "is_aligned (pd::word32) 14 \<Longrightarrow>
   pd + (vptr >> (pageBits + pt_bits - pte_bits) << pde_bits) && ~~ mask pd_bits = pd"
-  apply (rule word_eqI)
+  apply (rule word_eqI[rule_format])
   apply (subst word_plus_and_or_coroll)
    apply (rule word_eqI)
   subgoal for \<dots> na
