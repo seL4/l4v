@@ -13,13 +13,13 @@
  *
  * by Rafal Kolanski (2015)
  *
- * Install by dropping this file (`goto-error.bsh`) into your preferred
- * subdirectory inside ` ~/.isabelle/jedit/macros/`. After restarting jEdit or
- * rescanning macros in jEdit, the macro `goto-error` shoud appear in the
- * `Macros` menu.
+ * Install by dropping this file (`goto-error.bsh`) into the directory
+ * ` ~/.isabelle/jedit/macros/`. After restarting jEdit or rescanning
+ * macros in jEdit, the macro `goto-error` shoud appear in the `Macros`
+ * menu.
  *
- * You can additionally add a key binding the new macro by going to `Plugins ->
- * Plugin Options -> Global Options -> jEdit/Shortcuts`
+ * You can additionally add a key binding the new macro by going to
+ * `Plugins -> Plugin Options -> Global Options -> jEdit/Shortcuts`
  */
 
 import isabelle.*;
@@ -29,8 +29,8 @@ import isabelle.jedit.*;
 msg(s) { Macros.message(view, s); }
 
 // isabelle setup
-model = PIDE.document_model(textArea.buffer).get();
-snapshot = model.snapshot();
+model = Document_Model.get(textArea.getBuffer());
+snapshot = model.get().snapshot();
 
 class FirstError {
     public int first_error_pos = -1;
