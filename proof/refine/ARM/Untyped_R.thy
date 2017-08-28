@@ -937,6 +937,8 @@ lemma corres_list_all2_mapM_':
    apply simp+
   done
 
+lemmas suffix_refl = suffix_order.order.refl
+
 lemmas corres_list_all2_mapM_
      = corres_list_all2_mapM_' [OF suffix_refl suffix_refl]
 

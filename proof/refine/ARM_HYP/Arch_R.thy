@@ -188,7 +188,7 @@ lemma pac_corres:
                    apply (rule ext)
                    apply clarsimp
                    apply (erule_tac P = "x = asid_high_bits_of word2" in notE)
-                   apply (rule word_eqI)
+                   apply (rule word_eqI[rule_format])
                    apply (drule_tac x1="ucast x" in bang_eq [THEN iffD1])
                    apply (erule_tac x=n in allE)
                    apply (simp add: word_size nth_ucast)

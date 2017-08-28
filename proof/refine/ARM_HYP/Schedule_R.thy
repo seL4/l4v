@@ -103,7 +103,7 @@ proof -
     done
 qed
 
-lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_refl]
+lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_order.order.refl]
 
 lemma corres_rhs_disj_division:
   "\<lbrakk> P \<or> Q; P \<Longrightarrow> corres r R S x y; Q \<Longrightarrow> corres r T U x y \<rbrakk>

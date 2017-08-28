@@ -1047,7 +1047,7 @@ lemma delete_asid_pool_corres:
              apply (rule ext)
              apply clarsimp
              apply (erule notE)
-             apply (rule word_eqI)
+             apply (rule word_eqI[rule_format])
              apply (drule_tac x1="ucast xa" in bang_eq [THEN iffD1])
              apply (erule_tac x=n in allE)
              apply (simp add: word_size nth_ucast)
