@@ -28,7 +28,7 @@ definition
 
 lemma partial_prime_ge [simp]:
      "\<lbrakk> p' \<ge> p \<rbrakk> \<Longrightarrow> partial_prime p p' = prime p"
-  by (clarsimp simp: partial_prime_def prime_nat_simp min_def)
+  by (clarsimp simp: partial_prime_def prime_nat_iff' min_def)
 
 lemma divide_self_plus_one [simp]: "(x dvd Suc x) = (x = 1)"
   apply (case_tac "x = 0", simp)
@@ -113,7 +113,7 @@ lemma partial_prime_sqr:
    apply (clarsimp simp: not_le partial_prime_def)
   apply (case_tac "p = 0", simp)
   apply (case_tac "p = 1", simp)
-  apply (auto simp: not_le partial_prime_def min_def prime_nat_simp)
+  apply (auto simp: not_le partial_prime_def min_def prime_nat_iff')
   done
 
 definition "SQRT_UINT_MAX \<equiv> 65536 :: nat"
