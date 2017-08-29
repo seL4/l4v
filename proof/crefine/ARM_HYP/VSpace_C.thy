@@ -597,7 +597,7 @@ lemma ucast_asid_high_bits_is_shift:
   apply (simp add: mask_def upper_bits_unset_is_l2p_32 [symmetric])
   apply (simp add: asid_high_bits_of_def)
   apply (rule word_eqI)
-  apply (simp add: word_size nth_shiftr nth_ucast asid_low_bits_def asid_bits_def word_bits_def)
+  apply (clarsimp simp: word_size nth_shiftr nth_ucast asid_low_bits_def asid_bits_def word_bits_def)
   apply (erule_tac x="n+10" in allE)
   apply simp
   apply (case_tac "n < 7", simp) (*asid_low_bits*)

@@ -179,7 +179,7 @@ lemma shiftr_and_eq_shiftl:
         by (cases "n \<le> i") (auto simp: nth_shiftl nth_shiftr)
     } note bits = this
     show ?thesis
-      by (rule word_eqI, rule bits, simp add: word_size)
+      by (rule word_eqI[rule_format], rule bits, simp add: word_size)
   qed
 
 (* FIXME: move *)

@@ -1682,7 +1682,7 @@ lemma upcast_ucast_id:
     "len_of TYPE('a) \<le> len_of TYPE('b) \<Longrightarrow>
     ((ucast (a :: 'a::len word) :: 'b ::len word) = ucast b) \<Longrightarrow> (a = b)"
   apply (rule word_eqI)
-  apply (simp add:word_size)
+  apply (clarsimp simp: word_size)
   apply (drule_tac f = "%x. (x !! n)" in arg_cong)
     apply (simp add:nth_ucast)
   done
@@ -1702,7 +1702,7 @@ lemma irq_opt_relation_Some_ucast':
   apply (rule_tac P = "%y. irq_opt_relation (Some (ucast x)) y" in subst[rotated])
   apply (rule irq_opt_relation_Some_ucast[rotated])
     apply simp+
-  apply (rule word_eqI)
+  apply (rule word_eqI[rule_format])
   apply (drule_tac f = "%x. (x !! n)" in arg_cong)
   apply (simp add:nth_ucast and_bang word_size)
 done
