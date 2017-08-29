@@ -1355,8 +1355,7 @@ lemma ucast_add:
   " len_of TYPE('a) \<le> len_of TYPE('b)
    \<Longrightarrow> (ucast (a + b) :: (('a::len)word)) = ucast (a :: (('b ::len) word)) + (ucast b)"
   apply (rule word_unat.Rep_eqD)
-  apply (simp add:unat_ucast unat_word_ariths
-    mod_mod_power min_def mod_add_eq[symmetric])
+  apply (simp add:unat_ucast unat_word_ariths mod_mod_power min_def mod_add_eq)
   done
 
 lemma store_pte_page_inv_entries_safe:
