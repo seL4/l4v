@@ -47,7 +47,6 @@ proof -
      apply (simp add: nat_trace_rel_def)
      apply (clarsimp simp: linorder_not_le less_Suc_eq)
      apply (simp add: final_def split: xstate.split_asm)
-     apply blast
     apply (drule(1) trace_end_SomeD)
     apply clarsimp
     apply (subgoal_tac "rtranclp (step Gamma) (the (tr 0)) (the (tr n))")
