@@ -572,8 +572,7 @@ lemma ucast_asid_high_bits_is_shift:
   apply (erule_tac x="n+10" in allE)
   apply simp
   apply (case_tac "n < 7", simp) (*asid_low_bits*)
-  apply (simp add: linorder_not_less)
-  apply (rule notI)
+  apply (clarsimp simp add: linorder_not_less)
   apply (frule test_bit_size)
   apply (simp add: word_size)
   done

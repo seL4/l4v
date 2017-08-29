@@ -789,7 +789,7 @@ proof -
   qed
   thus ?thesis using lxs
     apply (auto simp: init_xs_def dest!: spec[where x=Nil]
-                simp: j pn word_less_nat_alt neq_Nil_conv unat_word_ariths unat_of_nat pull_mods
+                simp: j pn word_less_nat_alt neq_Nil_conv unat_word_ariths unat_of_nat push_mods
             elim!: ccorres_guard_imp2)
     done
 qed

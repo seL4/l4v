@@ -2070,7 +2070,7 @@ lemma upcast_ucast_id:
   apply (rule word_eqI)
   apply (simp add:word_size)
   apply (drule_tac f = "%x. (x !! n)" in arg_cong)
-    apply (simp add:nth_ucast)
+    apply (clarsimp simp add:nth_ucast)
   done
 
 lemma mask_eq_ucast_eq:
@@ -2090,7 +2090,7 @@ lemma irq_opt_relation_Some_ucast':
     apply simp+
   apply (rule word_eqI)
   apply (drule_tac f = "%x. (x !! n)" in arg_cong)
-  apply (simp add:nth_ucast and_bang word_size)
+  apply (clarsimp simp add:nth_ucast and_bang word_size)
 done
 
 lemma ccap_relation_IRQHandler_mask:
