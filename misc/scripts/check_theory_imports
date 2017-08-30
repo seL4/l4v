@@ -59,6 +59,8 @@ do
         grep -Ev "$EXCLUDE_THYS" |
         L4V_ARCH=${arch} xargs '-d\n' misc/scripts/thydeps $BUILTINS -o /dev/null 2>&1 |
         # Ignore imports from Isabelle distribution.
+        grep -Fv 'HOL-Library.' |
+        grep -Fv 'HOL-Statespace.' |
         grep -Fv '~~/' ||
         # Discard grep's return code.
         true
