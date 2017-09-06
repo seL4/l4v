@@ -657,14 +657,73 @@ where
      Some ntfn \<Rightarrow> {(ntfn, TCBBound)}
    | None \<Rightarrow> {}"
 
-definition (* ARMHYP *)
+definition
+  ntfn_sc_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "ntfn_sc_refs t \<equiv> case t of
+     Some sc \<Rightarrow> {(sc, NTFNSchedContext)}
+   | None \<Rightarrow> {}"
+
+definition
+  tcb_sc_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "tcb_sc_refs a \<equiv> case a of
+     Some sc \<Rightarrow> {(sc, TCBSchedContext)}
+   | None \<Rightarrow> {}"
+
+definition
+  tcb_reply_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "tcb_reply_refs a \<equiv> case a of
+     Some r \<Rightarrow> {(r, TCBReply)}
+   | None \<Rightarrow> {}"
+
+definition
+  sc_ntfn_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "sc_ntfn_refs t \<equiv> case t of
+     Some ntfn \<Rightarrow> {(ntfn, SCNtfn)}
+   | None \<Rightarrow> {}"
+
+definition
+  sc_tcb_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "sc_tcb_refs a \<equiv> case a of
+     Some tcb \<Rightarrow> {(tcb, SCTcb)}
+   | None \<Rightarrow> {}"
+
+definition
+  sc_reply_refs :: "obj_ref list \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "sc_reply_refs rs \<equiv> set (map (\<lambda>r. (r, SCReply)) rs)"
+
+definition
+  reply_sc_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "reply_sc_refs a \<equiv> case a of
+     Some sc \<Rightarrow> {(sc, ReplySchedContext)}
+   | None \<Rightarrow> {}"
+
+
+definition
+  reply_caller_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "reply_caller_refs a \<equiv> case a of
+     Some tcb \<Rightarrow> {(tcb, ReplyCaller)}
+   | None \<Rightarrow> {}"
+
+definition
   refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set"
 where
   "refs_of x \<equiv> case x of
      CNode sz fun      => {}
    | TCB tcb           => tcb_st_refs_of (tcb_state tcb) \<union> tcb_bound_refs (tcb_bound_notification tcb)
+                          \<union> tcb_sc_refs (tcb_sched_context tcb) \<union> tcb_reply_refs (tcb_reply tcb)
    | Endpoint ep       => ep_q_refs_of ep
    | Notification ntfn => ntfn_q_refs_of (ntfn_obj ntfn) \<union> ntfn_bound_refs (ntfn_bound_tcb ntfn)
+                          \<union> ntfn_sc_refs (ntfn_sc ntfn)
+   | SchedContext sc   \<Rightarrow> sc_ntfn_refs (sc_ntfn sc) \<union> sc_tcb_refs (sc_tcb sc) \<union> sc_reply_refs (sc_replies sc)
+   | Reply r           \<Rightarrow> reply_sc_refs (reply_sc r) \<union> reply_caller_refs (reply_caller r)
    | ArchObj ao        => {}"
 
 definition
@@ -696,10 +755,10 @@ where
 | "live0 (TCB tcb)           = (bound (tcb_bound_notification tcb) \<or> (tcb_state tcb \<noteq> Inactive \<and>
                                tcb_state tcb \<noteq> IdleThreadState))"
 | "live0 (Endpoint ep)       = (ep \<noteq> IdleEP)"
+(* RT think about liveness conditions *)
+| "live0 (SchedContext sc)   = (bound (sc_tcb sc) \<or> bound (sc_ntfn sc) \<or> (sc_replies sc \<noteq> []))"
+| "live0 (Reply reply)       = (bound (reply_caller reply) \<or> bound (reply_sc reply))"
 | "live0 (Notification ntfn) = (bound (ntfn_bound_tcb ntfn) \<or> (\<exists>ts. ntfn_obj ntfn = WaitingNtfn ts))"
-(* RT think about liveness conditions
-| "live0 (SchedContext sc)       = (ep \<noteq> IdleEP)"
-| "live0 (Reply reply)       = (ep \<noteq> IdleEP)" *)
 | "live0 (ArchObj ao)        = False"
 
 definition live :: "kernel_object \<Rightarrow> bool"
@@ -709,6 +768,8 @@ where
    | TCB tcb           => live0 ko \<or> hyp_live ko
    | Endpoint ep       => live0 ko
    | Notification ntfn => live0 ko
+   | SchedContext sc   => live0 ko
+   | Reply reply       => live0 ko
    | ArchObj ao        => hyp_live ko"
 
 lemma a_type_arch_live:
@@ -753,11 +814,11 @@ where
 | "cte_refs (Zombie r b n) f                     =
      {r} \<times> {xs. length xs = (zombie_cte_bits b) \<and>
                 unat (of_bl xs :: machine_word) < n}"
-| "cte_refs (SchedContextCap r n) f                    = {}"
+| "cte_refs (SchedContextCap r n) f                    = {}" (* ? *)
 | "cte_refs (SchedControlCap) f                    = {}"
 | "cte_refs (IRQControlCap) f                    = {}"
 | "cte_refs (IRQHandlerCap irq) f                = {(f irq, [])}"
-| "cte_refs (ReplyCap tcb) f              = {}"
+| "cte_refs (ReplyCap r) f              = {}"
 | "cte_refs (ArchObjectCap cap) f                = {}"
 
 definition
@@ -865,21 +926,17 @@ definition
 definition
   "irq_revocable r cs \<equiv> \<forall>p. cs p = Some IRQControlCap \<longrightarrow> r p"
 
-definition
-  "reply_master_revocable r cs \<equiv> \<forall>p cap. cs p = Some cap \<longrightarrow>
-                                          is_master_reply_cap cap \<longrightarrow> r p"
-
-definition
+definition (* RT: ? *)
   "reply_caps_mdb m cs \<equiv> \<forall>ptr t.
-     cs ptr = Some (ReplyCap t False) \<longrightarrow>
-     (\<exists>ptr'. m ptr = Some ptr' \<and> cs ptr' = Some (ReplyCap t True))"
+     cs ptr = Some (ReplyCap t) \<longrightarrow>
+     (\<exists>ptr'. m ptr = Some ptr' \<and> cs ptr' = Some (ReplyCap t))"
 
-definition
+definition (* RT: ? *)
   "reply_masters_mdb m cs \<equiv> \<forall>ptr t.
-     cs ptr = Some (ReplyCap t True) \<longrightarrow> m ptr = None \<and>
-     (\<forall>ptr'\<in>descendants_of ptr m. cs ptr' = Some (ReplyCap t False))"
+     cs ptr = Some (ReplyCap t) \<longrightarrow> m ptr = None \<and>
+     (\<forall>ptr'\<in>descendants_of ptr m. cs ptr' = Some (ReplyCap t))"
 
-definition
+definition (* RT: ? *)
   "reply_mdb m cs \<equiv> reply_caps_mdb m cs \<and> reply_masters_mdb m cs"
 
 definition
@@ -888,7 +945,6 @@ definition
                    no_mloop (cdt s) \<and> untyped_inc (cdt s) (caps_of_state s) \<and>
                    ut_revocable (is_original_cap s) (caps_of_state s) \<and>
                    irq_revocable (is_original_cap s) (caps_of_state s) \<and>
-                   reply_master_revocable (is_original_cap s) (caps_of_state s) \<and>
                    reply_mdb (cdt s) (caps_of_state s) \<and>
                    valid_arch_mdb (is_original_cap s) (caps_of_state s)"
 
@@ -900,10 +956,6 @@ definition
 
 definition
   "only_idle \<equiv> \<lambda>s. \<forall>t. st_tcb_at idle t s \<longrightarrow> t = idle_thread s"
-
-definition
-  "valid_reply_masters \<equiv> \<lambda>s. \<forall>p t. cte_wp_at ((=) (ReplyCap t True)) p s \<longrightarrow>
-                                     p = (t, tcb_cnode_index 2)"
 
 definition
   "unique_reply_caps cs \<equiv>
@@ -980,7 +1032,6 @@ where
                   and only_idle
                   and if_unsafe_then_cap
                   and valid_reply_caps
-                  and valid_reply_masters
                   and valid_global_refs
                   and valid_arch_state
                   and valid_irq_node
@@ -1063,7 +1114,7 @@ abbreviation(input)
     \<equiv> valid_objs and pspace_aligned and pspace_distinct and valid_ioc
        and if_live_then_nonz_cap and zombies_final
        and valid_mdb and valid_idle and only_idle and if_unsafe_then_cap
-       and valid_reply_caps and valid_reply_masters and valid_global_refs
+       and valid_reply_caps and valid_global_refs
        and valid_arch_state and valid_machine_state and valid_irq_states
        and valid_irq_node and valid_irq_handlers and valid_vspace_objs
        and valid_arch_caps and valid_global_objs and valid_kernel_mappings
@@ -1112,12 +1163,20 @@ lemma is_tcb:
   "is_tcb ko = (\<exists>tcb. ko = TCB tcb)"
   unfolding is_tcb_def by (cases ko) auto
 
+lemma is_sc:
+  "is_sc ko = (\<exists>sc. ko = SchedContext sc)"
+  unfolding is_sc_def by (cases ko) auto
+
+lemma is_reply:
+  "is_reply ko = (\<exists>reply. ko = Reply reply)"
+  unfolding is_reply_def by (cases ko) auto
+
 lemma is_cap_table:
   "is_cap_table bits ko =
   (\<exists>cs. ko = CNode bits cs \<and> well_formed_cnode_n bits cs)"
   unfolding is_cap_table_def by (cases ko) auto
 
-lemmas is_obj_defs = is_ep is_ntfn is_tcb is_cap_table
+lemmas is_obj_defs = is_ep is_ntfn is_tcb is_sc is_reply is_cap_table
 
 \<comment> \<open>sanity check\<close>
 lemma obj_at_get_object:
@@ -1201,7 +1260,7 @@ lemma valid_capsD:
 
 lemma tcb_cnode_index_distinct[simp]:
   "(tcb_cnode_index n = tcb_cnode_index m)
-       = ((of_nat n :: 3 word) = (of_nat m :: 3 word))"
+       = ((of_nat n :: 2 word) = (of_nat m :: 2 word))"
   by (simp add: tcb_cnode_index_def)
 
 
@@ -1211,31 +1270,19 @@ lemma tcb_cap_cases_simps[simp]:
   "tcb_cap_cases (tcb_cnode_index (Suc 0)) =
    Some (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. \<top>))"
   "tcb_cap_cases (tcb_cnode_index 2) =
-   Some (tcb_reply, tcb_reply_update,
-         (\<lambda>t st c. (is_master_reply_cap c \<and> obj_ref_of c = t) \<or>
-                   (halted st \<and> (c = NullCap))))"
-  "tcb_cap_cases (tcb_cnode_index 3) =
-   Some (tcb_caller, tcb_caller_update,
-         (\<lambda>_ st. case st of
-                   BlockedOnReceive e \<Rightarrow> ((=) NullCap)
-                 | _ \<Rightarrow> is_reply_cap or ((=) NullCap)))"
-  "tcb_cap_cases (tcb_cnode_index 4) =
    Some (tcb_ipcframe, tcb_ipcframe_update,
          (\<lambda>_ _. is_nondevice_page_cap or ((=) cap.NullCap)))"
+  "tcb_cap_cases (tcb_cnode_index 3) =
+   Some (tcb_fault_handler, tcb_fault_handler_update,
+         (\<lambda>_ _. \<top>))"
   by (simp add: tcb_cap_cases_def)+
 
 lemma ran_tcb_cap_cases:
   "ran (tcb_cap_cases) =
     {(tcb_ctable, tcb_ctable_update, (\<lambda>_ _. \<top>)),
      (tcb_vtable, tcb_vtable_update, (\<lambda>_ _. \<top>)),
-     (tcb_reply, tcb_reply_update, (\<lambda>t st c.
-                                       (is_master_reply_cap c \<and> obj_ref_of c = t)
-                                     \<or> (halted st \<and> (c = NullCap)))),
-     (tcb_caller, tcb_caller_update, (\<lambda>_ st. case st of
-                                       Structures_A.BlockedOnReceive e \<Rightarrow>
-                                         ((=) NullCap)
-                                     | _ \<Rightarrow> is_reply_cap or ((=) NullCap))),
-     (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or ((=) NullCap)))}"
+     (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_nondevice_page_cap or ((=) NullCap))),
+     (tcb_fault_handler, tcb_fault_handler_update, (\<lambda>_ _. \<top>))}"
   by (simp add: tcb_cap_cases_def insert_commute)
 
 lemma tcb_cnode_map_tcb_cap_cases:
@@ -1244,7 +1291,7 @@ lemma tcb_cnode_map_tcb_cap_cases:
 
 lemma ran_tcb_cnode_map:
   "ran (tcb_cnode_map t) =
-   {tcb_vtable t, tcb_ctable t, tcb_caller t, tcb_reply t, tcb_ipcframe t}"
+   {tcb_vtable t, tcb_ctable t, tcb_ipcframe t, tcb_fault_handler t}"
   by (fastforce simp: tcb_cnode_map_def)
 
 
@@ -1279,7 +1326,7 @@ lemma tcb_st_refs_of_simps[simp]: (* ARMHYP add TCBHypRef? *)
  "tcb_st_refs_of (Restart)               = {}"
  "tcb_st_refs_of (BlockedOnReply)        = {}"
  "tcb_st_refs_of (IdleThreadState)       = {}"
- "\<And>x. tcb_st_refs_of (BlockedOnReceive x)  = {(x, TCBBlockedRecv)}"
+ "\<And>x. tcb_st_refs_of (BlockedOnReceive x r)  = {(x, TCBBlockedRecv)}"  (* RT: what is the relation with r? *)
  "\<And>x. tcb_st_refs_of (BlockedOnSend x payl)  = {(x, TCBBlockedSend)}"
  "\<And>x. tcb_st_refs_of (BlockedOnNotification x) = {(x, TCBSignal)}"
   by (auto simp: tcb_st_refs_of_def)
@@ -1301,27 +1348,70 @@ lemma ntfn_bound_refs_simps[simp]:
   "ntfn_bound_refs None = {}"
   by (auto simp: ntfn_bound_refs_def)
 
+lemma ntfn_sc_refs_simps[simp]:
+  "ntfn_sc_refs (Some t) = {(t, NTFNSchedContext)}"
+  "ntfn_sc_refs None = {}"
+  by (auto simp: ntfn_sc_refs_def)
+
 lemma tcb_bound_refs_simps[simp]:
   "tcb_bound_refs (Some a) = {(a, TCBBound)}"
   "tcb_bound_refs None = {}"
   by (auto simp: tcb_bound_refs_def)
 
+lemma tcb_sc_refs_simps[simp]:
+  "tcb_sc_refs (Some a) = {(a, TCBSchedContext)}"
+  "tcb_sc_refs None = {}"
+  by (auto simp: tcb_sc_refs_def)
+
+lemma tcb_reply_refs_simps[simp]:
+  "tcb_reply_refs (Some a) = {(a, TCBReply)}"
+  "tcb_reply_refs None = {}"
+  by (auto simp: tcb_reply_refs_def)
+
 lemma tcb_bound_refs_def2:
   "tcb_bound_refs a = set_option a \<times> {TCBBound}"
 by (simp add: tcb_bound_refs_def split: option.splits)
 
+lemma sc_reply_refs_simps[simp]:
+  "sc_reply_refs (r#rs) = set (map (\<lambda>a. (a, SCReply)) (r#rs))"
+  "sc_reply_refs [] = {}"
+  by (auto simp: sc_reply_refs_def)
+
+lemma sc_tcb_refs_simps[simp]:
+  "sc_tcb_refs (Some a) = {(a, SCTcb)}"
+  "sc_tcb_refs None = {}"
+  by (auto simp: sc_tcb_refs_def)
+
+lemma sc_ntfn_refs_simps[simp]:
+  "sc_ntfn_refs (Some a) = {(a, SCNtfn)}"
+  "sc_ntfn_refs None = {}"
+  by (auto simp: sc_ntfn_refs_def)
+
+lemma reply_sc_refs_simps[simp]:
+  "reply_sc_refs (Some a) = {(a, ReplySchedContext)}"
+  "reply_sc_refs None = {}"
+  by (auto simp: reply_sc_refs_def)
+
+lemma reply_caller_refs_simps[simp]:
+  "reply_caller_refs (Some a) = {(a, ReplyCaller)}"
+  "reply_caller_refs None = {}"
+  by (auto simp: reply_caller_refs_def)
+
 lemma refs_of_simps[simp]:
  "refs_of (CNode sz cs)       = {}"
- "refs_of (TCB tcb)           = tcb_st_refs_of (tcb_state tcb) \<union> tcb_bound_refs (tcb_bound_notification tcb)"
+ "refs_of (TCB tcb)           = tcb_st_refs_of (tcb_state tcb) \<union> tcb_bound_refs (tcb_bound_notification tcb)
+                                \<union> tcb_sc_refs (tcb_sched_context tcb) \<union> tcb_reply_refs (tcb_reply tcb)"
  "refs_of (Endpoint ep)       = ep_q_refs_of ep"
- "refs_of (Notification ntfn) = ntfn_q_refs_of (ntfn_obj ntfn) \<union> ntfn_bound_refs (ntfn_bound_tcb ntfn)"
+ "refs_of (Notification ntfn) = ntfn_q_refs_of (ntfn_obj ntfn) \<union> ntfn_bound_refs (ntfn_bound_tcb ntfn)\<union> ntfn_sc_refs (ntfn_sc ntfn)"
+ "refs_of (SchedContext sc)   = sc_ntfn_refs (sc_ntfn sc) \<union> sc_tcb_refs (sc_tcb sc) \<union> sc_reply_refs (sc_replies sc)"
+ "refs_of (Reply r)           = reply_sc_refs (reply_sc r) \<union> reply_caller_refs (reply_caller r)"
  "refs_of (ArchObj ao)        = {}"
   by (auto simp: refs_of_def)
 
 
 lemma refs_of_rev:
  "(x, TCBBlockedRecv) \<in> refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = BlockedOnReceive x))"
+    (\<exists>tcb. ko = TCB tcb \<and> (\<exists>r. tcb_state tcb = BlockedOnReceive x r))"
  "(x, TCBBlockedSend) \<in> refs_of ko =
     (\<exists>tcb. ko = TCB tcb \<and> (\<exists>pl. tcb_state tcb = BlockedOnSend    x pl))"
  "(x, TCBSignal) \<in> refs_of ko =
@@ -1336,26 +1426,51 @@ lemma refs_of_rev:
     (\<exists>tcb. ko = TCB tcb \<and> (tcb_bound_notification tcb = Some x))"
  "(x, NTFNBound) \<in> refs_of ko =
     (\<exists>ntfn. ko = Notification ntfn \<and> (ntfn_bound_tcb ntfn = Some x))"
-  by (auto simp:  refs_of_def
+ "(x, TCBSchedContext) \<in>  refs_of ko =
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_sc tcb = Some x))"
+ "(x, NTFNSchedContext) \<in> refs_of ko =
+    (\<exists>ntfn. ko = Notification ntfn \<and> (ntfn_sc ntfn = Some x))"
+ "(x, TCBReply) \<in>  refs_of ko =
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_reply tcb = Some x))"
+ "(x, SCTcb) \<in>  refs_of ko =
+    (\<exists>sc. ko = SchedContext sc \<and> (sc_tcb sc = Some x))"
+ "(x, SCNtfn) \<in>  refs_of ko =
+    (\<exists>sc. ko = SchedContext sc \<and> (sc_ntfn sc = Some x))"
+ "(x, SCReply) \<in>  refs_of ko =
+    (\<exists>sc. ko = SchedContext sc \<and> (x \<in> set (sc_replies sc)))"
+ "(x, ReplyCaller) \<in>  refs_of ko =
+    (\<exists>reply. ko = Reply reply \<and> (reply_caller reply = Some x))"
+ "(x, ReplySchedContext) \<in>  refs_of ko =
+    (\<exists>reply. ko = Reply reply \<and> (reply_sc reply = Some x))"
+   apply (auto simp:  refs_of_def
                      tcb_st_refs_of_def
                      ep_q_refs_of_def
                      ntfn_q_refs_of_def
                      ntfn_bound_refs_def
                      tcb_bound_refs_def
+                     ntfn_sc_refs_def
+                     tcb_sc_refs_def
+                     tcb_reply_refs_def
+                     sc_tcb_refs_def
+                     sc_ntfn_refs_def
+                     sc_reply_refs_def
+                     reply_caller_refs_def
+                     reply_sc_refs_def
               split: kernel_object.splits
                      thread_state.splits
                      endpoint.splits
                      ntfn.splits
                      option.split)
+sorry
 
 lemma st_tcb_at_refs_of_rev:
   "obj_at (\<lambda>ko. (x, TCBBlockedRecv) \<in> refs_of ko) t s
-     = st_tcb_at (\<lambda>ts. ts = BlockedOnReceive x) t s"
+     = st_tcb_at (\<lambda>ts. ts = BlockedOnReceive x r) t s"
   "obj_at (\<lambda>ko. (x, TCBBlockedSend) \<in> refs_of ko) t s
      = st_tcb_at (\<lambda>ts. \<exists>pl. ts = BlockedOnSend x pl   ) t s"
   "obj_at (\<lambda>ko. (x, TCBSignal) \<in> refs_of ko) t s
      = st_tcb_at (\<lambda>ts.      ts = BlockedOnNotification x) t s"
-  by (simp add: refs_of_rev pred_tcb_at_def)+
+  by (auto simp add: refs_of_rev pred_tcb_at_def)+
 
 lemma state_refs_of_elemD:
   "\<lbrakk> ref \<in> state_refs_of s x \<rbrakk> \<Longrightarrow> obj_at (\<lambda>obj. ref \<in> refs_of obj) x s"
@@ -1541,14 +1656,8 @@ lemma valid_reply_capsD:
   unfolding valid_reply_caps_def
   by simp
 
-lemma reply_master_caps_of_stateD:
-  "\<And>sl. \<lbrakk> valid_reply_masters s; caps_of_state s sl = Some (ReplyCap t True)\<rbrakk>
-   \<Longrightarrow> sl = (t, tcb_cnode_index 2)"
-  by (simp add: valid_reply_masters_def cte_wp_at_caps_of_state
-           del: split_paired_All)
-
 lemma has_reply_cap_cte_wpD:
-  "\<And>t sl. cte_wp_at ((=) (ReplyCap t False)) sl s \<Longrightarrow> has_reply_cap t s"
+  "\<And>t sl. cte_wp_at ((=) (ReplyCap t)) sl s \<Longrightarrow> has_reply_cap t s"
   by (fastforce simp: has_reply_cap_def)
 
 lemma reply_cap_doesnt_exist_strg:
