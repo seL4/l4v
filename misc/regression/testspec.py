@@ -199,9 +199,20 @@ class Depends(object):
     def __init__(self, step):
         trans = trans_depends(step)
         rtrans = refl_depends(trans)
-        self.step = lambda x: step[x]
-        self.trans = lambda x: trans[x]
-        self.rtrans = lambda x: rtrans[x]
+
+        # Provide access to dictionary contents,
+        # without exposing dictionaries to mutation.
+        def lookup(rel):
+            # Allow the user to customise handling of missing keys,
+            # but by default, raise the appropriate KeyError.
+            def result(x, fail=lambda x: rel[x]):
+                if x in rel: return rel[x]
+                else: return fail(x)
+            return result
+
+        self.step = lookup(step)
+        self.trans = lookup(trans)
+        self.rtrans = lookup(rtrans)
 
 def collect_dependencies(tests):
     forward, reverse = {}, {}

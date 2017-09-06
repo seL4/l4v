@@ -413,7 +413,7 @@ def main():
     # Calculate which tests should be run.
     if len(args.tests) == 0 and not os.environ.get('RUN_TESTS_DEFAULT'):
         tests_to_run = tests
-        remove_trans = [test_info.reverse_deps.rtrans(r) for r in args.remove]
+        remove_trans = [test_info.reverse_deps.rtrans(r, lambda x: frozenset()) for r in args.remove]
         args.exclude = args.exclude.union(*remove_trans)
     else:
         desired_names = set(args.tests) or set(os.environ.get('RUN_TESTS_DEFAULT').split())
