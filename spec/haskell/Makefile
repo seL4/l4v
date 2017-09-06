@@ -26,7 +26,7 @@ CABAL=stack exec -- ./stack-path cabal
 # warnings that are useless during large Haskell updates
 GHC_DEV_OPTS=--ghc-options=""
 
-all: build-riscv build-arm build-arm-hyp-nosmmu build-x64
+all: build-arm
 
 sandbox: .stack-work
 	$(CABAL) sandbox init
