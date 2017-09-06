@@ -46,6 +46,8 @@ The procedure for handling faults is defined in \autoref{sec:kernel.faulthandler
 >             capFaultFailure :: LookupFailure }
 >         | UnknownSyscallException {
 >             unknownSyscallNumber :: Word }
+>         | Timeout {
+>             timeoutBadge :: Word }
 >         | ArchFault { archFault :: ArchFault }
 >         deriving Show
 

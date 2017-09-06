@@ -57,14 +57,14 @@ The following are the instances of "Storable" for the four main types of kernel 
 \subsubsection{SchedContext objects}
 
 > instance PSpaceStorable SchedContext where
->     makeObject = SchedContext 0 Nothing Nothing [Refill 0 0] 0 0 0 []
+>     makeObject = SchedContext 0 0 Nothing Nothing [Refill 0 0] 0 Nothing 0 0 0 Nothing
 >     injectKO   = KOSchedContext
 >     projectKO o = case o of
 >         KOSchedContext e -> return e
 >         _ -> typeError "SchedContext" o
 
 > instance PSpaceStorable Reply where
->     makeObject = Reply Nothing Nothing
+>     makeObject = Reply Nothing Nothing Nothing Nothing
 >     injectKO   = KOReply
 >     projectKO o = case o of
 >         KOReply e -> return e
@@ -139,6 +139,7 @@ By default, new threads are unable to change the security domains of other threa
 >         tcbVTable = makeObject,
 >         tcbIPCBufferFrame = makeObject,
 >         tcbFaultHandler = makeObject,
+>         tcbTimeoutHandler = makeObject,
 >         tcbDomain = minBound,
 >         tcbState = Inactive,
 >         tcbMCP = minBound,
@@ -148,6 +149,7 @@ By default, new threads are unable to change the security domains of other threa
 >         tcbIPCBuffer = VPtr 0,
 >         tcbBoundNotification = Nothing,
 >         tcbSchedContext = Nothing,
+>         tcbYieldTo = Nothing,
 >         tcbReply = Nothing,
 >         tcbArch = newArchTCB }
 >     injectKO   = KOTCB

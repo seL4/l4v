@@ -30,44 +30,111 @@ This module specifies the behavior of reply objects.
 
 \end{impdetails}
 
+> replyPop :: PPtr Reply -> Kernel ()
+> replyPop replyPtr = do
+>     reply <- getReply replyPtr
+>     tcbPtrOpt <- return $ replyCaller reply
+>     tcbPtr <- return $ fromJust tcbPtrOpt
+>     assert (tcbPtrOpt /= Nothing) "replyPop: replyCaller must not be Nothing"
+>     setReply replyPtr (reply { replyCaller = Nothing })
+>     threadSet (\tcb -> tcb { tcbReply = Nothing }) tcbPtr
+>     nextReplyPtrOpt <- return $ replyNext reply
+>     prevReplyPtrOpt <- return $ replyPrev reply
+>     when (replySc reply /= Nothing || nextReplyPtrOpt /= Nothing) $ do
+>         assert (nextReplyPtrOpt == Nothing && replySc reply /= Nothing) "replyPop: reply must be the head of the call stack"
+>         nextReplyPtr <- return $ fromJust nextReplyPtrOpt
+>         nextReply <- getReply nextReplyPtr
+>         scPtr <- return $ fromJust $ replySc nextReply
+>         schedContextDonate scPtr tcbPtr
+>         sc <- getSchedContext scPtr
+>         setSchedContext scPtr (sc { scReply = prevReplyPtrOpt })
+>         when (prevReplyPtrOpt /= Nothing) $ do
+>             prevReplyPtr <- return $ fromJust prevReplyPtrOpt
+>             prevReply <- getReply prevReplyPtr
+>             setReply prevReplyPtr (prevReply { replyNext = replyNext reply })
+>         reply' <- getReply replyPtr
+>         setReply replyPtr (reply' { replyPrev = Nothing, replyNext = Nothing, replySc = Nothing })
+
 > replyRemove :: PPtr Reply -> Kernel ()
 > replyRemove replyPtr = do
 >     reply <- getReply replyPtr
->     callerOpt <- return $ replyCaller reply
->     assert (callerOpt /= Nothing) "replyRemove: callerOpt must not be Nothing"
->     caller <- return $ fromJust callerOpt
+>     nextReplyPtrOpt <- return $ replyNext reply
 >     scPtrOpt <- return $ replySc reply
->     assert (scPtrOpt /= Nothing) "replyRemove: scPtrOpt must not be Nothing"
->     scPtr <- return $ fromJust scPtrOpt
->     replies <- liftM scReplies $ getSchedContext scPtr
->     replyUnbindCaller caller replyPtr
->     replyUnbindSc scPtr replyPtr
->     when (head replies == replyPtr) $ schedContextDonate scPtr caller
+>     if scPtrOpt /= Nothing || nextReplyPtrOpt /= Nothing
+>         then if nextReplyPtrOpt == Nothing && scPtrOpt /= Nothing
+>                  then replyPop replyPtr
+>                  else do
+>                      nextReplyPtr <- return $ fromJust nextReplyPtrOpt
+>                      nextReply <- getReply nextReplyPtr
+>                      setReply nextReplyPtr (nextReply { replyPrev = replyPrev reply,
+>                                                         replyCaller = replyCaller reply })
+>                      tcbPtrOpt <- return $ replyCaller reply
+>                      when (tcbPtrOpt /= Nothing) $ do
+>                          tcbPtr <- return $ fromJust tcbPtrOpt
+>                          threadSet (\tcb -> tcb { tcbReply = Just nextReplyPtr }) tcbPtr
+>                          setReply replyPtr (reply { replyCaller = Nothing })
+>                      setPrevReply replyPtr
+>                      cleanReply replyPtr
+>         else do
+>             tcbPtrOpt <- return $ replyCaller reply
+>             when (tcbPtrOpt /= Nothing) $ do
+>                 tcbPtr <- return $ fromJust tcbPtrOpt
+>                 threadSet (\tcb -> tcb { tcbReply = Nothing }) tcbPtr
+>                 setReply replyPtr (reply { replyCaller = Nothing })
+>             setPrevReply replyPtr
+>             cleanReply replyPtr
+
+>     where setPrevReply replyPtr = do
+>               reply <- getReply replyPtr
+>               prevReplyPtrOpt <- return $ replyPrev reply
+>               when (prevReplyPtrOpt /= Nothing) $ do
+>                   prevReplyPtr <- return $ fromJust prevReplyPtrOpt
+>                   prevReply <- getReply prevReplyPtr
+>                   setReply prevReplyPtr (prevReply { replyNext = replyNext reply })
+
+>           cleanReply replyPtr = do
+>             reply <- getReply replyPtr
+>             setReply replyPtr (reply { replyPrev = Nothing, replyNext = Nothing, replySc = Nothing })
 
 > replyPush :: PPtr TCB -> PPtr TCB -> PPtr Reply -> Bool -> Kernel ()
-> replyPush caller callee replyPtr canDonate = do
->     scOpt <- threadGet tcbSchedContext caller
+> replyPush callerPtr calleePtr replyPtr canDonate = do
+>     scPtrOpt <- threadGet tcbSchedContext callerPtr
+>     replyCallerPtrOpt <- getReplyCaller replyPtr
+>     when (replyCallerPtrOpt /= Nothing) $ replyRemove replyPtr
 
->     replyCallerOpt <- getReplyCaller replyPtr
->     when (replyCallerOpt /= Nothing) $ replyRemove replyPtr
-
->     scOpt' <- threadGet tcbSchedContext callee
->     canDonate <- return (if scOpt' == Nothing then canDonate else False)
+>     scPtrOpt' <- threadGet tcbSchedContext calleePtr
+>     canDonate <- return (if scPtrOpt' == Nothing then canDonate else False)
 
 >     reply <- getReply replyPtr
->     assert (replyCaller reply == Nothing) "replyPush: reply caller must be Nothing"
->     tcbReplyOpt <- threadGet tcbReply caller
->     assert (tcbReplyOpt == Nothing) "replyPush: the slot containing the reply capability must be Nothing"
+>     assert (replyPrev reply == Nothing) "replyPush: replyPrev must be Nothing"
+>     assert (replyNext reply == Nothing && replySc reply == Nothing) "replyPush: both replyNext and replySc must be Nothing"
+>     assert (replyCaller reply == Nothing) "replyPush: replyCaller must be Nothing"
 
->     reply' <- return $ reply { replyCaller = Just caller }
->     setReply replyPtr reply'
->     threadSet (\tcb -> tcb { tcbReply = Just replyPtr }) caller
+>     callerReply <- threadGet tcbReply callerPtr
+>     assert (callerReply == Nothing) "replyPush: tcb caller should not be in a existing call stack"
 
->     when (scOpt /= Nothing && canDonate) $ do
->         sc <- getSchedContext (fromJust scOpt)
->         setSchedContext (fromJust scOpt) (sc { scReplies = replyPtr : scReplies sc })
->         setReply replyPtr (reply' { replySc = scOpt })
->         schedContextDonate (fromJust scOpt) callee
+>     setReply replyPtr (reply { replyCaller = Just callerPtr })
+>     threadSet (\tcb -> tcb { tcbReply = Just replyPtr }) callerPtr
+
+>     when (scPtrOpt /= Nothing && canDonate) $ do
+>         scPtrOpt'' <- threadGet tcbSchedContext calleePtr
+>         assert (scPtrOpt'' == Nothing) "replyPush: callee's scheduling context must be Nothing"
+>         sc <- getSchedContext (fromJust scPtrOpt)
+>         oldCallerPtrOpt <- return $ scReply sc
+>         when (oldCallerPtrOpt /= Nothing) $ do
+>             oldCallerPtr <- return $ fromJust oldCallerPtrOpt
+>             oldCaller <- getReply oldCallerPtr
+>             oldCallerNextReply <- getReply $ fromJust $ replyNext oldCaller
+>             assert (replySc oldCallerNextReply == scPtrOpt) "replyPush: stack integrity must be satisfied"
+
+>         reply' <- getReply replyPtr
+>         setReply replyPtr (reply' { replyPrev = oldCallerPtrOpt, replyNext = Nothing, replySc = scPtrOpt })
+>         when (oldCallerPtrOpt /= Nothing) $ do
+>             oldCallerPtr <- return $ fromJust oldCallerPtrOpt
+>             oldCaller <- getReply oldCallerPtr
+>             setReply oldCallerPtr (oldCaller { replyNext = Just replyPtr })
+>         setSchedContext (fromJust scPtrOpt) (sc { scReply = Just replyPtr })
+>         schedContextDonate (fromJust scPtrOpt) calleePtr
 
 > getReply :: PPtr Reply -> Kernel Reply
 > getReply rptr = getObject rptr

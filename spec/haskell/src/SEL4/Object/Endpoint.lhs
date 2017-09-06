@@ -255,7 +255,14 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 >                 setEndpoint epptr IdleEP
 >                 forM_ (epQueue ep) (\t -> do
 >                     setThreadState Restart t
->                     tcbSchedEnqueue t)
+>                     state <- getThreadState t
+>                     case state of
+>                         BlockedOnReceive _ replyOpt ->
+>                             case replyOpt of
+>                                 Nothing -> return ()
+>                                 Just reply -> replyRemove reply
+>                         _ -> return ()
+>                     switchIfRequiredTo t)
 >                 rescheduleRequired
 
 If a badged endpoint is recycled, then cancel every pending send operation using a badge equal to the recycled capability's badge. Receive operations are not affected.

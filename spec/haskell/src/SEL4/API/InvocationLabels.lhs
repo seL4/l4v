@@ -64,9 +64,11 @@ The following type enumerates all the kinds of invocations that clients can requ
 >         | IRQClearIRQHandler
 >         | DomainSetSet
 >         | SchedControlConfigure
+>         | SchedContextConsumed
 >         | SchedContextBind
 >         | SchedContextUnbind
 >         | SchedContextUnbindObject
+>         | SchedContextYieldTo
 >         | ArchInvocationLabel ArchLabels.ArchInvocationLabel
 >         deriving (Show, Eq)
 
@@ -106,12 +108,14 @@ The following type enumerates all the kinds of invocations that clients can requ
 >          IRQClearIRQHandler -> 27
 >          TCBSetSchedContext -> 28
 >          SchedControlConfigure -> 29
->          SchedContextBind -> 30
->          SchedContextUnbind -> 31
->          SchedContextUnbindObject -> 32
+>          SchedContextConsumed -> 30
+>          SchedContextBind -> 31
+>          SchedContextUnbind -> 32
+>          SchedContextUnbindObject -> 33
+>          SchedContextYieldTo -> 34
 >          DomainSetSet -> apiMax
 >          ArchInvocationLabel a -> apiMax + 1 + fromEnum a
->          where apiMax = 33
+>          where apiMax = 35
 >     toEnum n
 >         | n == 0 = InvalidInvocation
 >         | n == 1 = UntypedRetype
@@ -143,13 +147,15 @@ The following type enumerates all the kinds of invocations that clients can requ
 >         | n == 27 = IRQClearIRQHandler
 >         | n == 28 = TCBSetSchedContext
 >         | n == 29 = SchedControlConfigure
->         | n == 30 = SchedContextBind
->         | n == 31 = SchedContextUnbind
->         | n == 32 = SchedContextUnbindObject
->         | n == 33 = DomainSetSet
+>         | n == 30 = SchedContextConsumed
+>         | n == 31 = SchedContextBind
+>         | n == 32 = SchedContextUnbind
+>         | n == 33 = SchedContextUnbindObject
+>         | n == 34 = SchedContextYieldTo
+>         | n == 35 = DomainSetSet
 >         | n > apiMax = ArchInvocationLabel $ toEnum (n - 1 - apiMax)
 >         | otherwise = error "toEnum out of range for InvocationLabel"
->         where apiMax = 33
+>         where apiMax = 35
 
 Decode the invocation type requested by a particular message label.
 

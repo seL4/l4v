@@ -232,9 +232,19 @@ The constant "nullPointer" is a physical pointer guaranteed to be invalid.
 > timerPrecision :: Word64
 > timerPrecision = Arch.timerPrecision
 
-> maxTimerUs :: Word64
-> maxTimerUs = undefined
+> maxUsToTicks :: Word64
+> maxUsToTicks = Arch.maxUsToTicks
+
+> maxTicksToUs :: Word64
+> maxTicksToUs = Arch.maxTicksToUs
 
 > getCurrentTime :: MachineMonad Word64
 > getCurrentTime = Arch.getCurrentTime
+
+> ticksToUs :: Word64 -> Word64
+> ticksToUs = Arch.usToTicks
+
+> usToTicks :: Word64 -> Word64
+> usToTicks = Arch.usToTicks
+
 

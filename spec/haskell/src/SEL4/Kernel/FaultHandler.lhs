@@ -10,12 +10,12 @@
 
 This module contains functions that determine how recoverable faults encountered by user-level threads are propagated to the appropriate fault handlers.
 
-> module SEL4.Kernel.FaultHandler (handleFault) where
+> module SEL4.Kernel.FaultHandler (handleFault, handleTimeout, validTimeoutHandler) where
 
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Failures #-}
-% {-# BOOT-EXPORTS: handleFault #-}
+% {-# BOOT-EXPORTS: handleFault handleTimeout validTimeoutHandler #-}
 
 > import SEL4.API.Failures
 > import SEL4.Machine
@@ -24,7 +24,16 @@ This module contains functions that determine how recoverable faults encountered
 > import SEL4.Object.Structures(TCB(..), CTE(..))
 > import SEL4.Kernel.Thread
 
+> import Data.Maybe(fromJust)
+
 \end{impdetails}
+
+> validTimeoutHandler :: PPtr TCB -> Kernel Bool
+> validTimeoutHandler tptr = do
+>     tcb <- getObject tptr
+>     case cteCap (tcbTimeoutHandler tcb) of
+>         EndpointCap {} -> return True
+>         _ -> return False
 
 \subsection{Handling Faults}
 
@@ -38,15 +47,23 @@ When a thread faults, the kernel attempts to send a fault IPC to the fault handl
 
 > handleFault tptr ex = do
 >     tcb <- getObject tptr
->     hasFh <- (sendFaultIPC tptr (cteCap (tcbFaultHandler tcb)) ex `catchFailure` const (return False))
+>     hasFh <- (sendFaultIPC tptr (cteCap (tcbFaultHandler tcb)) ex True `catchFailure` const (return False))
 >     unless hasFh $ (handleNoFault tptr)
 
 \subsection{Sending Fault IPC}
 
+> handleTimeout :: PPtr TCB -> Kernel ()
+> handleTimeout tptr = do
+>     valid <- validTimeoutHandler tptr
+>     assert valid "no valid timeout handler"
+>     tcb <- getObject tptr
+>     sendFaultIPC tptr (cteCap (tcbFaultHandler tcb)) (fromJust $ tcbFault tcb) False `catchFailure` const (return False)
+>     return ()
+
 If a thread causes a fault, then an IPC containing details of the fault is sent to a fault handler endpoint specified in the thread's TCB.
 
-> sendFaultIPC :: PPtr TCB -> Capability -> Fault -> KernelF Fault Bool
-> sendFaultIPC tptr handlerCap fault = do
+> sendFaultIPC :: PPtr TCB -> Capability -> Fault -> Bool -> KernelF Fault Bool
+> sendFaultIPC tptr handlerCap fault canDonate = do
 >     case handlerCap of
 
 The kernel stores a copy of the fault in the thread's TCB, and performs an IPC send operation to the fault handler endpoint on behalf of the faulting thread. When the IPC completes, the fault will be retrieved from the TCB and sent instead of the message registers.
@@ -56,7 +73,7 @@ The kernel stores a copy of the fault in the thread's TCB, and performs an IPC s
 >               then withoutFailure $ do
 >                        threadSet (\tcb -> tcb {tcbFault = Just fault}) tptr
 >                        sendIPC True False (capEPBadge handlerCap)
->                            True True tptr (capEPPtr handlerCap)
+>                            True canDonate tptr (capEPPtr handlerCap)
 >                        return True
 >               else fail "no proper rights"
 >         NullCap -> withoutFailure $ return False
@@ -66,5 +83,4 @@ The kernel stores a copy of the fault in the thread's TCB, and performs an IPC s
 
 > handleNoFault :: PPtr TCB -> Kernel ()
 > handleNoFault tptr = setThreadState Inactive tptr
-
 

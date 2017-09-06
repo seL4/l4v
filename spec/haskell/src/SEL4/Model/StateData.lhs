@@ -37,7 +37,7 @@ The architecture-specific definitions are imported qualified with the "Arch" pre
 > import {-# SOURCE #-} SEL4.Model.PSpace
 > import SEL4.Object.Structures
 > import SEL4.Machine
-> import SEL4.Machine.Hardware.TARGET (usToTicks, VMPageSize)
+> import SEL4.Machine.Hardware.TARGET (VMPageSize)
 
 > import Data.Array
 > import qualified Data.Set

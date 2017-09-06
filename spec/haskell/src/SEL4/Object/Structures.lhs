@@ -204,16 +204,21 @@ list of pointers to waiting threads;
 
 > data SchedContext = SchedContext {
 >     scPeriod :: Ticks,
+>     scConsumed :: Ticks,
 >     scTCB :: Maybe (PPtr TCB),
 >     scNtfn :: Maybe (PPtr Notification),
 >     scRefills :: [Refill],
+>     scBadge :: Word,
+>     scYieldFrom :: Maybe (PPtr TCB),
 >     scRefillMax :: Int,
 >     scRefillHead :: Int,
 >     scRefillTail :: Int,
->     scReplies :: [PPtr Reply] }
+>     scReply :: Maybe (PPtr Reply) }
 
 > data Reply = Reply {
 >     replyCaller :: Maybe (PPtr TCB),
+>     replyPrev :: Maybe (PPtr Reply),
+>     replyNext :: Maybe (PPtr Reply),
 >     replySc :: Maybe (PPtr SchedContext) }
 
 > minRefills :: Int
@@ -281,6 +286,8 @@ The TCB is used to store various data about the thread's current state:
 
 >         tcbFaultHandler :: CTE,
 
+>         tcbTimeoutHandler :: CTE,
+
 \item the security domain and a flag that determines whether the thread can set the security domain of other threads.
 
 >         tcbDomain :: Domain,
@@ -308,6 +315,8 @@ The TCB is used to store various data about the thread's current state:
 
 >         tcbSchedContext :: Maybe (PPtr SchedContext),
 
+>         tcbYieldTo :: Maybe (PPtr SchedContext),
+
 >         tcbReply :: Maybe (PPtr Reply),
 
 \item any arch-specific TCB contents;
@@ -331,6 +340,9 @@ Each TCB contains four CTE entries. The following constants define the slot numb
 
 > tcbFaultHandlerSlot :: Word
 > tcbFaultHandlerSlot = 3
+
+> tcbTimeoutHandlerSlot :: Word
+> tcbTimeoutHandlerSlot = 4
 
 > minPriority :: Priority
 > minPriority = 0
@@ -419,6 +431,7 @@ A user thread may be in the following states:
 \item ready to start executing at the current instruction (after a fault, an interrupted system call, or an explicitly set program counter);
 
 >     | Restart
+
 >     deriving (Show, Eq)
 
 \end{itemize}
