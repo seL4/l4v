@@ -101,6 +101,7 @@ os.chdir(DIR)
 # Arguments:
 args  = ['./misc/regression/run_tests.py']                 # Script name
 args += [r for t in EXCLUDE[L4V_ARCH] for r in ['-r', t]]  # Exclusion list
+args += ["ASpec", "HaskellKernel"]                         # run these tests only for RT
 args += sys.argv[1:]                                       # Other arguments
 
 # Run the thing!!
