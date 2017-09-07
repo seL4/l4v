@@ -29,6 +29,9 @@ parser.add_option("-s", "--session-name", dest="session_name",
         help="isabelle session name", metavar="NAME")
 parser.add_option("-b", "--base-session", dest="base_session",
         help="isabelle base session", metavar="NAME")
+parser.add_option("-d", "--named-session-dependency", dest="session_dependencies",
+        help="additional named session dependency", action="append", default=[],
+        metavar="NAME")
 parser.add_option("-q", "--quick-and-dirty", dest="quick_and_dirty",
         help="ROOT file should compile with \"quick and dirty\" enabled.",
         action="store_true", default=False)
@@ -75,6 +78,10 @@ with open(options.output, "w") as output:
     else:
         # Write our ROOT file.
         output.write("session \"%s\" = \"%s\" +\n" % (options.session_name, options.base_session))
+        if options.session_dependencies:
+            output.write("  sessions\n")
+            for i in options.session_dependencies:
+                output.write("    \"%s\"\n" % i)
         if options.quick_and_dirty:
             output.write("  theories [quick_and_dirty]\n")
         else:
