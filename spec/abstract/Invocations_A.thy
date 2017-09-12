@@ -46,6 +46,7 @@ datatype tcb_invocation =
   | CopyRegisters machine_word machine_word bool bool bool bool arch_copy_register_sets
   | ThreadControl machine_word cslot_ptr
                   (tc_new_fault_handler: "(cap * cslot_ptr) option")
+                  (tc_new_timeout_handler: "(cap * cslot_ptr) option")
                   (tc_new_mcpriority: "(word8 * obj_ref) option")
                   (tc_new_priority: "(word8 * obj_ref) option")
                   (tc_new_croot: "(cap * cslot_ptr) option")
@@ -58,12 +59,14 @@ datatype tcb_invocation =
   | SetTLSBase obj_ref machine_word
 
 datatype sched_context_invocation =
-    InvokeSchedContextBind obj_ref cap
+    InvokeSchedContextConsumed obj_ref "data list"
+  | InvokeSchedContextBind obj_ref cap
   | InvokeSchedContextUnbindObject obj_ref cap
   | InvokeSchedContextUnbind obj_ref
+  | InvokeSchedContextYieldTo obj_ref "data list"
 
 datatype sched_control_invocation =
-    InvokeSchedControlConfigure obj_ref ticks ticks nat
+    InvokeSchedControlConfigure obj_ref ticks ticks nat badge
 
 datatype irq_control_invocation =
     IRQControl irq cslot_ptr cslot_ptr

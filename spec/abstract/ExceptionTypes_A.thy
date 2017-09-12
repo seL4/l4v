@@ -41,6 +41,7 @@ datatype fault
          = CapFault obj_ref bool lookup_failure
          | UnknownSyscallException data
          | UserException data data
+         | Timeout data
          | ArchFault arch_fault
 
 datatype syscall_error

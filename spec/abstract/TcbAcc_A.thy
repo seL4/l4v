@@ -15,13 +15,16 @@ TCB accessor functions
 chapter "Accessors for Threads and TCBs"
 
 theory TcbAcc_A
-imports CSpace_A
+imports  "./$L4V_ARCH/ArchCSpace_A"
 begin
 
 context begin interpretation Arch .
 
 requalify_consts
   in_user_frame
+  as_user
+  msg_max_length
+  lookup_ipc_buffer
 
 end
 

@@ -127,10 +127,14 @@ definition
   idle_thread_ptr :: vspace_ref where
   "idle_thread_ptr = kernel_base + 0x1000"
 
+definition
+  idle_sc_ptr :: vspace_ref where
+  "idle_sc_ptr = kernel_base + 0x3000"
+
 end
 
 context begin interpretation Arch .
-  requalify_consts kernel_base idle_thread_ptr
+  requalify_consts kernel_base idle_thread_ptr idle_sc_ptr
 end
 
 context Arch begin global_naming ARM_A
@@ -159,6 +163,8 @@ definition
  "exception_message \<equiv> exceptionMessage"
 definition
  "syscall_message \<equiv> syscallMessage"
+definition
+  "timeout_message \<equiv> timeoutMessage"
 
 datatype arch_fault
     = VMFault vspace_ref "machine_word list"

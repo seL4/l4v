@@ -39,6 +39,7 @@ requalify_consts
   initContext
   exceptionMessage
   syscallMessage
+  timeoutMessage
   gpRegisters
   frameRegisters
   replyRegister

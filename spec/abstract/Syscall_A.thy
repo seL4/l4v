@@ -276,7 +276,7 @@ definition
   "handle_yield \<equiv> do
      cur_sc \<leftarrow> gets cur_sc;
      refills \<leftarrow> get_refills cur_sc;
-     charge_budget 0 (r_amount (hd refills))
+     charge_budget 0 (r_amount (hd refills)) False
  od"
 
 definition

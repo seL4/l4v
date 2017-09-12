@@ -15,7 +15,7 @@ The TCB and thread related specifications.
 chapter "Threads and TCBs"
 
 theory Tcb_A
-imports TcbAcc_A Schedule_A "$L4V_ARCH/ArchTcb_A"
+imports Schedule_A "$L4V_ARCH/ArchTcb_A"
 begin
 
 context begin interpretation Arch .
@@ -44,7 +44,7 @@ definition
       do_extended_op (sched_context_resume sc_ptr);
       in_release_q \<leftarrow> gets $ in_release_queue thread;
       schedulable \<leftarrow> is_schedulable thread in_release_q;
-      when schedulable $ switch_if_required_to thread
+      when schedulable $ possible_switch_to thread
     od
   od"
 
@@ -53,12 +53,13 @@ control is restored to a used thread. If it needs to be restarted then its
 program counter is set to the operation it was performing rather than the next
 operation. The idle thread is handled specially. *}
 definition
-  activate_thread :: "(unit,'z::state_ext) s_monad" where
+  activate_thread :: "(unit,det_ext) s_monad" where
   "activate_thread \<equiv> do
      thread \<leftarrow> gets cur_thread;
      state \<leftarrow> get_thread_state thread;
      (case state
        of Running \<Rightarrow> return ()
+        | YieldTo \<Rightarrow> complete_yield_to thread
         | Restart \<Rightarrow> (do
             pc \<leftarrow> as_user thread getRestartPC;
             as_user thread $ setNextPC pc;
@@ -158,7 +159,7 @@ where
   "invoke_tcb (Suspend thread) = liftE (do suspend thread; return [] od)"
 | "invoke_tcb (Resume thread) = liftE (do restart thread; return [] od)"
 
-| "invoke_tcb (ThreadControl target slot fault_handler mcp priority croot vroot buffer sc)
+| "invoke_tcb (ThreadControl target slot fault_handler timeout_handler mcp priority croot vroot buffer sc)
    = doE
     liftE $  case mcp of None \<Rightarrow> return()
      | Some (newmcp, _) \<Rightarrow> set_mcpriority target newmcp;
@@ -176,6 +177,7 @@ where
     install_tcb_cap target (ThreadCap target) slot 0 croot;
     install_tcb_cap target (ThreadCap target) slot 1 vroot;
     install_tcb_cap target (ThreadCap target) slot 3 fault_handler;
+    install_tcb_cap target (ThreadCap target) slot 4 timeout_handler;
     (case buffer of None \<Rightarrow> returnOk ()
      | Some (ptr, frame) \<Rightarrow> doE
       cap_delete (target, tcb_cnode_index 2);

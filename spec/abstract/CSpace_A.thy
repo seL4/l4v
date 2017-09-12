@@ -16,10 +16,8 @@ chapter "CSpace"
 
 theory CSpace_A
 imports
-  "./$L4V_ARCH/ArchVSpace_A"
   SchedContext_A
   IpcCancel_A
-  "./$L4V_ARCH/ArchCSpace_A"
   "Lib.NonDetMonadLemmas"
   "HOL-Library.Prefix_Order"
 begin
@@ -312,6 +310,44 @@ where
    od"
 |  "get_receive_slots x None = return []"
 
+text {* Finalise a capability if the capability is known to be of the kind
+which can be finalised immediately. This is a simplified version of the
+@{text finalise_cap} operation. *}
+fun
+  fast_finalise :: "cap \<Rightarrow> bool \<Rightarrow> unit det_ext_monad"
+where
+  "fast_finalise NullCap                 final = return ()"
+| "fast_finalise (ReplyCap r)            final =
+      (when final $ reply_remove r)"
+| "fast_finalise (EndpointCap r b R)     final =
+      (when final $ cancel_all_ipc r)"
+| "fast_finalise (NotificationCap r b R) final =
+      (when final $ do
+          sched_context_maybe_unbind_ntfn r;
+          unbind_maybe_notification r;
+          cancel_all_signals r
+       od)"
+| "fast_finalise (SchedContextCap sc b)    final =
+      (when final $ do
+          sched_context_unbind_all_tcbs sc;
+          sched_context_unbind_ntfn sc;
+          sched_context_clear_replies sc;
+          sched_context_unbind_yield_from sc
+      od)"
+| "fast_finalise _ _ = fail"
+
+text {* Delete a capability with the assumption that the fast finalisation
+process will be sufficient. *}
+definition
+  cap_delete_one :: "cslot_ptr \<Rightarrow> unit det_ext_monad" where
+ "cap_delete_one slot \<equiv> do
+    cap \<leftarrow> get_cap slot;
+    unless (cap = NullCap) $ do
+      final \<leftarrow> is_final_cap cap;
+      fast_finalise cap final;
+      empty_slot slot NullCap
+    od
+  od"
 
 section {* Revoking and deleting capabilities *}
 
@@ -450,6 +486,7 @@ where
       do
          when final $ unbind_notification r;
          when final $ unbind_from_sc r;
+         when final $ unbind_from_reply r;
          when final $ suspend r;
          when final $ prepare_thread_delete r;
          return (if final then (Zombie r None 5) else NullCap, NullCap)
@@ -460,6 +497,7 @@ where
          when final $ sched_context_unbind_all_tcbs sc;
          when final $ sched_context_unbind_ntfn sc;
          when final $ sched_context_clear_replies sc;
+         when final $ sched_context_unbind_yield_from sc;
          return (NullCap, NullCap)
       od"
 | "finalise_cap SchedControlCap          final = return (NullCap, NullCap)"

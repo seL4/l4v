@@ -31,9 +31,6 @@ definition
   "init_tcb_ptr = kernel_base + 0x2000"
 
 definition
-  "idle_sc_ptr = kernel_base + 0x3000"
-
-definition
   init_irq_node_ptr :: word32 where
   "init_irq_node_ptr = kernel_base + 0x8000"
 
@@ -74,12 +71,14 @@ definition
     tcb_vtable = NullCap,
     tcb_ipcframe = NullCap,
     tcb_fault_handler = NullCap,
+    tcb_timeout_handler = NullCap,
     tcb_state = IdleThreadState,
     tcb_ipc_buffer = 0,
     tcb_fault = None,
     tcb_bound_notification = None,
     tcb_mcpriority = minBound,
     tcb_sched_context = Some idle_sc_ptr,
+    tcb_yield_to   = None,
     tcb_reply = None,
     tcb_arch = init_arch_tcb
   \<rparr>,
