@@ -10,10 +10,9 @@
 
 chapter "Toplevel Refinement Statement"
 
-(* Stub to keep the theory_imports check happy
-   until we're ready to write some proofs here. *)
+(* In progress c refinement *)
 
 theory Refine_C
-imports Main
+imports TcbQueue_C
 begin
 end
