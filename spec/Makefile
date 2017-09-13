@@ -42,7 +42,7 @@ ExecSpec ASpec : design-spec
 
 # Preprocess the kernel's source code and bitfield theory files.
 c-kernel: c-parser .FORCE
-	cd cspec/$(L4V_ARCH)/c && L4V_REPO_PATH=$(L4V_REPO_PATH) $(MAKE) cspec
+	cd cspec/$(L4V_ARCH)/c && L4V_REPO_PATH=$(L4V_REPO_PATH) L4V_ARCH=$(L4V_ARCH) $(MAKE) cspec
 .PHONY: c-kernel
 
 # Run the haskell translator

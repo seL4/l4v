@@ -12,10 +12,10 @@ theory KernelInc_C
 imports
   Kernel_C
   "../Substitute"
-  "c/arch/object/structures_defs"
-  "c/arch/object/structures_proofs"
-  "c/64/mode/api/shared_types_defs"
-  "c/64/mode/api/shared_types_proofs"
+  "c/build/generated/arch/object/structures_defs"
+  "c/build/generated/arch/object/structures_proofs"
+  "c/build/generated/mode/api/shared_types_defs"
+  "c/build/generated/mode/api/shared_types_proofs"
 begin
 
 end

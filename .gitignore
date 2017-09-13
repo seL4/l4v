@@ -17,6 +17,7 @@
 /spec/cspec/*/c/plat/
 /spec/cspec/*/c/sources_list_updated
 /spec/cspec/*/c/autoconf.h
+/spec/cspec/*/c/build
 
 /spec/haskell/doc/**/*.aux
 /spec/haskell/doc/**/*.bbl
