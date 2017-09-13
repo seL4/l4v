@@ -16,8 +16,8 @@ begin
 
 context kernel begin
 
-ML {* val ckernel_fn_info = (FunctionInfo.init_fn_info @{context} "c/kernel_all.c_pp") *}
-ML {* val ckernel_prog_info = ProgramInfo.get_prog_info @{context} "c/kernel_all.c_pp" *}
+ML {* val ckernel_fn_info = (FunctionInfo.init_fn_info @{context} "../c/build/$L4V_ARCH/kernel_all.c_pp") *}
+ML {* val ckernel_prog_info = ProgramInfo.get_prog_info @{context} "../c/build/$L4V_ARCH/kernel_all.c_pp" *}
 
 end
 

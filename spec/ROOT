@@ -87,7 +87,7 @@ session CKernel = CParser +
   theories
     "cspec/$L4V_ARCH/Kernel_C"
   files
-    "cspec/$L4V_ARCH/c/kernel_all.c_pp"
+    "cspec/c/build/$L4V_ARCH/kernel_all.c_pp"
 
 session SimplExport = CSpec +
   theories "cspec/SimplExport"

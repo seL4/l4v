@@ -7,17 +7,7 @@
 *.lev
 *#*#
 
-/spec/cspec/*/c/32/
-/spec/cspec/*/c/64/
-/spec/cspec/*/c/api/
-/spec/cspec/*/c/arch/
-/spec/cspec/*/c/kernel_all.c
-/spec/cspec/*/c/kernel_all.c_pp
-/spec/cspec/*/c/parsetab.py
-/spec/cspec/*/c/plat/
-/spec/cspec/*/c/sources_list_updated
-/spec/cspec/*/c/autoconf.h
-/spec/cspec/*/c/build
+/spec/cspec/c/build
 
 /spec/haskell/doc/**/*.aux
 /spec/haskell/doc/**/*.bbl

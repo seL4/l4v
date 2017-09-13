@@ -20,7 +20,7 @@ declare Char_eq_Char_iff [simp del]
 
 ML {*
 val csenv = let
-    val the_csenv = CalculateState.get_csenv @{theory} "c/kernel_all.c_pp" |> the
+    val the_csenv = CalculateState.get_csenv @{theory} "../c/build/$L4V_ARCH/kernel_all.c_pp" |> the
   in fn () => the_csenv end
 *}
 

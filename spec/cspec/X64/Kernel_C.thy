@@ -77,7 +77,7 @@ context begin interpretation Arch . global_naming vmpage_size
 requalify_consts X64SmallPage X64LargePage X64HugePage
 end
 
-install_C_file "c/kernel_all.c_pp"
+install_C_file "../c/build/$L4V_ARCH/kernel_all.c_pp"
   [machinety=machine_state, ghostty=cghost_state]
 
 hide_const

@@ -26,7 +26,7 @@ autocorres
    scope_depth = 0,
    c_locale = kernel_all_substitute,
    no_c_termination
-  ] "c/kernel_all.c_pp"
+  ] "../c/build/$L4V_ARCH/kernel_all.c_pp"
 
 context kernel_m begin
 
@@ -88,7 +88,7 @@ text \<open>
   The handleYield spec has one less getCurThread, so we need to use the fact
   that tcbSchedDequeue does not modify ksCurThread.
 \<close>
-local_setup \<open>AutoCorresModifiesProofs.new_modifies_rules "c/kernel_all.c_pp"\<close>
+local_setup \<open>AutoCorresModifiesProofs.new_modifies_rules "../c/build/$L4V_ARCH/kernel_all.c_pp"\<close>
 thm tcbSchedDequeue'_modifies
 
 text \<open>Existing ccorres proof, for reference\<close>
@@ -171,10 +171,10 @@ autocorres
    scope_depth = 0,
    c_locale = kernel_all_substitute,
    no_c_termination
-  ] "c/kernel_all.c_pp"
+  ] "../c/build/$L4V_ARCH/kernel_all.c_pp"
 
 context kernel_m begin
-local_setup \<open>AutoCorresModifiesProofs.new_modifies_rules "c/kernel_all.c_pp"\<close>
+local_setup \<open>AutoCorresModifiesProofs.new_modifies_rules "../c/build/$L4V_ARCH/kernel_all.c_pp"\<close>
 
 text \<open>Export corres_underlying rules for handleDoubleFault's callees.\<close>
 thm setThreadState_ccorres[no_vars]
@@ -303,11 +303,11 @@ autocorres
    scope_depth = 0,
    c_locale = kernel_all_substitute,
    no_c_termination
-  ] "c/kernel_all.c_pp"
+  ] "../c/build/$L4V_ARCH/kernel_all.c_pp"
 
 (* Prove and store modifies rules. *)
 context kernel_m begin
-local_setup \<open>AutoCorresModifiesProofs.new_modifies_rules "c/kernel_all.c_pp"\<close>
+local_setup \<open>AutoCorresModifiesProofs.new_modifies_rules "../c/build/$L4V_ARCH/kernel_all.c_pp"\<close>
 
 (* TODO: proof for handleFault' *)
 thm handleFault'_def
@@ -423,7 +423,7 @@ let val clzl_cp = {
     val clzl_info = FunctionInfo.Phasetab.make
           (map (fn info => (#phase info, Symtab.make [("clzl", info)]))
                [clzl_cp, clzl_l1, clzl_l2, clzl_ts]);
-    val file = "c/kernel_all.c_pp";
+    val file = "../c/build/$L4V_ARCH/kernel_all.c_pp";
     val fn_info = the (Symtab.lookup (AutoCorresFunctionInfo.get thy) file);
     val fn_info' = phasetab_merge_with (Symtab.merge (K false)) (fn_info, clzl_info);
 in
@@ -440,7 +440,7 @@ autocorres
    scope_depth = 0,
    c_locale = kernel_all_substitute,
    no_c_termination
-  ] "c/kernel_all.c_pp"
+  ] "../c/build/$L4V_ARCH/kernel_all.c_pp"
 
 context kernel_m begin
 thm clzl'_def
@@ -456,7 +456,7 @@ autocorres
    scope = cap_get_capType,
    scope_depth = 0,
    c_locale = kernel_all_substitute
-  ] "c/kernel_all.c_pp"
+  ] "../c/build/$L4V_ARCH/kernel_all.c_pp"
 
 thm kernel_all_substitute.cap_get_capType'_def
     kernel_all_substitute.cap_get_capType_body_def
@@ -467,7 +467,7 @@ autocorres
    scope = cteDelete finaliseSlot reduceZombie,
    scope_depth = 0,
    c_locale = kernel_all_substitute
-  ] "c/kernel_all.c_pp"
+  ] "../c/build/$L4V_ARCH/kernel_all.c_pp"
 
 context kernel_m begin
 thm cteDelete'.simps finaliseSlot'.simps reduceZombie'.simps
@@ -480,7 +480,7 @@ autocorres
    scope = cteRevoke,
    scope_depth = 0,
    c_locale = kernel_all_substitute
-  ] "c/kernel_all.c_pp"
+  ] "../c/build/$L4V_ARCH/kernel_all.c_pp"
 
 context kernel_m begin
 thm cteRevoke'_def
@@ -503,7 +503,7 @@ autocorres
      cap_cnode_cap_get_capCNodeRadix,
    scope_depth = 0,
    c_locale = kernel_all_substitute
-  ] "c/kernel_all.c_pp"
+  ] "../c/build/$L4V_ARCH/kernel_all.c_pp"
 
 lemma of_bl_from_cond:
   "(if C then 1 else 0) = of_bl [C]"

@@ -178,7 +178,7 @@ fun com_rewrite f t = case fastype_of t of
 *}
 
 setup {* DefineGlobalsList.define_globals_list_i
-  "c/kernel_all.c_pp" @{typ globals} *}
+  "../c/build/$L4V_ARCH/kernel_all.c_pp" @{typ globals} *}
 
 
 locale substitute_pre
@@ -354,7 +354,7 @@ SubstituteSpecs.take_all_actions
     o guard_htd_updates_with_domain
     o guard_acc_ptr_adds)
   @{term kernel_all_global_addresses.\<Gamma>}
-  (CalculateState.get_csenv @{theory} "c/kernel_all.c_pp" |> the)
+  (CalculateState.get_csenv @{theory} "../c/build/$L4V_ARCH/kernel_all.c_pp" |> the)
   [@{typ "globals myvars"}, @{typ int}, @{typ strictc_errortype}]
 *}
 
