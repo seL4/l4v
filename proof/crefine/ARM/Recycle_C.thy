@@ -1347,7 +1347,7 @@ lemma updateFreeIndex_ccorres:
   apply (rule unat_of_nat_eq unat_of_nat_eq[symmetric],
     erule order_le_less_trans,
     rule power_strict_increasing, simp_all)
-  apply (rule unat_less_helper, rule order_le_less_trans[OF word_and_le1], simp)
+  apply (rule unat_less_helper, rule order_le_less_trans[OF word_and_le1], simp add: mask_def)
   done
 
 end

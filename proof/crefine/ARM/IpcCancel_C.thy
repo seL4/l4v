@@ -325,7 +325,7 @@ lemmas rf_sr_tcb_update_no_queue_gen
 
 lemma threadSet_tcbState_simple_corres:
   "ccorres dc xfdc (tcb_at' thread)
-        {s. (\<forall>cl fl. cthread_state_relation_lifted st (cl\<lparr>tsType_CL := v_' s && mask 4\<rparr>, fl)) \<and>
+        {s. (\<forall>cl fl. cthread_state_relation_lifted st (cl\<lparr>tsType_CL := v32_' s && mask 4\<rparr>, fl)) \<and>
            thread_state_ptr_' s = Ptr &(tcb_ptr_to_ctcb_ptr thread\<rightarrow>[''tcbState_C''])} []
         (threadSet (tcbState_update (\<lambda>_. st)) thread)  (Call thread_state_ptr_set_tsType_'proc)"
   apply (rule threadSet_corres_lemma)
@@ -656,7 +656,7 @@ lemma ctcb_relation_unat_dom_eq:
 
 lemma threadSet_queued_ccorres [corres]:
   shows "ccorres dc xfdc (tcb_at' thread)
-        {s. v_' s = from_bool v \<and> thread_state_ptr_' s = Ptr &(tcb_ptr_to_ctcb_ptr thread\<rightarrow>[''tcbState_C''])} []
+        {s. v32_' s = from_bool v \<and> thread_state_ptr_' s = Ptr &(tcb_ptr_to_ctcb_ptr thread\<rightarrow>[''tcbState_C''])} []
         (threadSet (tcbQueued_update (\<lambda>_. v)) thread)
         (Call thread_state_ptr_set_tcbQueued_'proc)"
   apply (rule threadSet_corres_lemma)

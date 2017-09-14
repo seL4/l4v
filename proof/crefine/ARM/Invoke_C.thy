@@ -2774,7 +2774,7 @@ lemma capCNodeRadix_CL_less_32:
   "cap_get_tag ccap = scast cap_cnode_cap \<Longrightarrow> capCNodeRadix_CL (cap_cnode_cap_lift ccap) < 32"
   apply (simp add: cap_cnode_cap_lift_def cap_lift_cnode_cap)
   apply (rule order_le_less_trans, rule word_and_le1)
-  apply simp
+  apply (simp add: mask_def)
   done
 
 lemmas unat_capCNodeRadix_CL_less_32

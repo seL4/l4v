@@ -781,7 +781,7 @@ lemma capFVMRights_range:
   "\<And>cap. cap_get_tag cap = scast cap_small_frame_cap \<Longrightarrow>
    cap_small_frame_cap_CL.capFVMRights_CL (cap_small_frame_cap_lift cap) \<le> 3"
   by (simp add: cap_frame_cap_lift_def cap_small_frame_cap_lift_def
-                cap_lift_def cap_tag_defs word_and_le1)+
+                cap_lift_def cap_tag_defs word_and_le1 mask_def)+
 
 lemma dumb_bool_for_all: "(\<forall>x. x) = False"
   by auto

@@ -913,7 +913,7 @@ lemma decodeARMPageTableInvocation_ccorres:
   apply (subst is_aligned_neg_mask [OF _ order_refl],
         rule is_aligned_addrFromPPtr_n,
         rule is_aligned_andI2,
-        simp add: is_aligned_def,
+        simp add: is_aligned_def mask_def,
         simp)+
   apply (clarsimp simp: attribsFromWord_def split: if_split)
   apply word_bitwise
@@ -4473,7 +4473,7 @@ lemma Arch_decodeInvocation_ccorres:
    apply (clarsimp simp: cap_lift_asid_pool_cap cap_lift_page_directory_cap
                          cap_to_H_def to_bool_def valid_cap'_def
                          cap_page_directory_cap_lift_def
-                         cap_asid_pool_cap_lift_def mask_def[where n=4]
+                         cap_asid_pool_cap_lift_def mask_def
                          asid_shiftr_low_bits_less[unfolded mask_def asid_bits_def] word_and_le1
                   elim!: ccap_relationE split: if_split_asm)
    apply (clarsimp split: list.split)

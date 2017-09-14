@@ -988,7 +988,7 @@ lemma invalidateASIDEntry_ccorres:
         apply (rule unat_less_power[where sz=8, simplified])
          apply (simp add: word_bits_conv)
         apply (rule order_le_less_trans, rule word_and_le1)
-        apply simp
+        apply (simp add: mask_def)
        apply (rule ccorres_return_Skip)
       apply (fold dc_def)
       apply (ctac add: invalidateASID_ccorres)
@@ -996,7 +996,7 @@ lemma invalidateASIDEntry_ccorres:
     apply (simp add: guard_is_UNIV_def)
    apply wp
   apply (clarsimp simp: Collect_const_mem pde_pde_invalid_lift_def pde_lift_def
-                   order_le_less_trans[OF word_and_le1])
+                   order_le_less_trans[OF word_and_le1] mask_def)
   done
 
 end

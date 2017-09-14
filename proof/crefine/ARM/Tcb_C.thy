@@ -1094,7 +1094,7 @@ lemma restart_ccorres:
 lemma setNextPC_ccorres:
   "ccorres dc xfdc \<top>
        (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>
-             \<inter> {s. v___unsigned_long_' s = val}) []
+             \<inter> {s. v_' s = val}) []
        (asUser thread (setNextPC val))
        (Call setNextPC_'proc)"
   apply (cinit')
