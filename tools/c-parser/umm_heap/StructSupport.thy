@@ -9,7 +9,7 @@
  *)
 
 theory StructSupport
-imports SepCode SepInv "../../../lib/String_Compare"
+imports SepCode SepInv "../../../lib/String_Compare" "../../../lib/Apply_Trace_Cmd"
 begin
 
 lemma field_lookup_list_Some2 [rule_format]:
@@ -576,6 +576,10 @@ lemma td_names_word8 [simp]:
 
 lemma td_names_word32 [simp]:
   "td_names (typ_info_t TYPE(32 word)) = {''word0000010''}"
+  by (simp add: pad_typ_name_def nat_to_bin_string.simps)
+
+lemma td_names_word64 [simp]:
+  "td_names (typ_info_t TYPE(64 word)) = {''word00000010''}"
   by (simp add: pad_typ_name_def nat_to_bin_string.simps)
 
 lemma td_names_export_uinfo [simp]:
