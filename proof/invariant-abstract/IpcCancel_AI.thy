@@ -356,8 +356,8 @@ lemma blocked_cancel_ipc_invs:
    apply (subgoal_tac "epptr \<notin> set (remove1 t queue)")
     apply (case_tac ep, simp_all add: valid_ep_def)[1]
      apply (auto elim!: delta_sym_refs pred_tcb_weaken_strongerE
-                 simp: obj_at_def is_ep_def2 idle_not_queued refs_in_tcb_bound_refs
-                 dest: idle_no_refs
+                 simp: obj_at_def is_ep idle_not_queued refs_in_tcb_bound_refs
+                 dest: idle_only_sc_refs
                  split: if_split_asm)[2]
    apply (case_tac ep, simp_all add: valid_ep_def)[1]
     apply (clarsimp, drule(1) bspec, clarsimp simp: obj_at_def is_tcb_def)+
@@ -397,7 +397,7 @@ lemma cancel_signal_invs:
     apply (clarsimp split: if_split_asm)+
    apply (fastforce dest: refs_in_tcb_bound_refs refs_in_ntfn_bound_refs symreftype_inverse')
   apply (fastforce simp: obj_at_def is_ntfn idle_not_queued
-                   dest: idle_no_refs elim: pred_tcb_weakenE)
+                   dest: idle_only_sc_refs elim: pred_tcb_weakenE)
   done
 
 lemma reply_mdb_cte_at_master_None:

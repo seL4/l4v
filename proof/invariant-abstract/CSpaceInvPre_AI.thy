@@ -20,7 +20,7 @@ requalify_consts
 
 requalify_facts
   empty_table_def
-
+  cur_tcb_more_update
 end
 
 

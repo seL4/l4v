@@ -58,10 +58,9 @@ lemma is_cap_free_index_update[simp]:
   "is_ep_cap (src_cap\<lparr>free_index := f \<rparr>) = is_ep_cap src_cap"
   "is_untyped_cap (src_cap\<lparr>free_index := f \<rparr>) = is_untyped_cap src_cap"
   "is_arch_cap (src_cap\<lparr>free_index := f \<rparr>) = is_arch_cap src_cap"
-  "is_zombie (src_cap\<lparr>free_index := f \<rparr>) = is_zombie src_cap"
   "is_ntfn_cap (src_cap\<lparr>free_index := f \<rparr>) = is_ntfn_cap src_cap"
+  "is_sched_context_cap (src_cap\<lparr>free_index := f \<rparr>) = is_sched_context_cap src_cap"
   "is_reply_cap (src_cap\<lparr>free_index := f \<rparr>) = is_reply_cap src_cap"
-  "is_master_reply_cap (src_cap\<lparr>free_index := f \<rparr>) = is_master_reply_cap src_cap"
   by (simp add:is_cap_simps free_index_update_def split:cap.splits)+
 
 
@@ -70,7 +69,8 @@ lemma masked_as_full_simps[simp]:
   "masked_as_full (cap.Zombie r bits n) cap = (cap.Zombie r bits n)"
   "masked_as_full (cap.ArchObjectCap x) cap = (cap.ArchObjectCap x)"
   "masked_as_full (cap.CNodeCap r n g) cap = (cap.CNodeCap r n g)"
-  "masked_as_full (cap.ReplyCap r m) cap = (cap.ReplyCap r m)"
+  "masked_as_full (cap.SchedContextCap r m) cap = (cap.SchedContextCap r m)"
+  "masked_as_full (cap.ReplyCap r) cap = (cap.ReplyCap r)"
   "masked_as_full cap.NullCap cap = cap.NullCap"
   "masked_as_full cap.DomainCap cap = cap.DomainCap"
   "masked_as_full (cap.ThreadCap r) cap = cap.ThreadCap r"
@@ -78,7 +78,8 @@ lemma masked_as_full_simps[simp]:
   "masked_as_full cap (cap.Zombie r bits n) = cap"
   "masked_as_full cap (cap.ArchObjectCap x) = cap"
   "masked_as_full cap (cap.CNodeCap r n g) = cap"
-  "masked_as_full cap (cap.ReplyCap r m) = cap"
+  "masked_as_full cap (cap.SchedContextCap r m) = cap"
+  "masked_as_full cap (cap.ReplyCap r) = cap"
   "masked_as_full cap cap.NullCap = cap"
   "masked_as_full cap cap.DomainCap = cap"
   "masked_as_full cap (cap.ThreadCap r) = cap"
@@ -97,8 +98,8 @@ lemma maksed_as_full_test_function_stuff[simp]:
   "is_arch_cap (masked_as_full a cap ) = is_arch_cap a"
   "is_zombie (masked_as_full a cap ) = is_zombie a"
   "is_ntfn_cap (masked_as_full a cap ) = is_ntfn_cap a"
+  "is_sched_context_cap (masked_as_full a cap ) = is_sched_context_cap a"
   "is_reply_cap (masked_as_full a cap ) = is_reply_cap a"
-  "is_master_reply_cap (masked_as_full a cap ) = is_master_reply_cap a"
   by (auto simp:masked_as_full_def)
 
 lemma set_untyped_cap_as_full_cte_wp_at_neg:

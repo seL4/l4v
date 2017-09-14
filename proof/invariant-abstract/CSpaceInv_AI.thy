@@ -100,7 +100,7 @@ proof (induct slot rule: resolve_address_bits'.induct)
   apply (cases cap)
             apply (auto simp: in_monad)[5]
        defer
-       apply (auto simp: in_monad)[6]
+       apply (auto simp: in_monad)[8]
   apply (rename_tac obj_ref nat list)
   apply (simp only: cap.simps)
   apply (case_tac "nat + length list = 0")
@@ -181,7 +181,8 @@ lemma valid_thread_state_tcb_update:
   valid_tcb_state ts (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = valid_tcb_state ts s"
   apply (unfold valid_tcb_state_def)
   apply (case_tac ts)
-  apply (simp_all add: obj_at_tcb_update is_ep_def is_tcb_def is_ntfn_def)
+  apply (auto simp: obj_at_tcb_update is_ep_def is_tcb_def is_ntfn_def is_reply_def
+              split: option.splits)
   done
 
 
@@ -251,7 +252,8 @@ lemma tcb_state_same_refs:
 lemma valid_idle_tcb_update:
   "\<lbrakk>valid_idle s; ko_at (TCB t) p s;
     tcb_state t = tcb_state t'; tcb_bound_notification t = tcb_bound_notification t';
-    valid_tcb p t' s \<rbrakk>
+    tcb_sched_context t = tcb_sched_context t'; tcb_yield_to t = tcb_yield_to t';
+    tcb_reply t = tcb_reply t'; valid_tcb p t' s \<rbrakk>
    \<Longrightarrow> valid_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
   by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
 
@@ -267,13 +269,6 @@ lemma valid_reply_caps_tcb_update:
   done
 
 
-lemma valid_reply_masters_tcb_update:
-  "\<lbrakk>valid_reply_masters s; ko_at (TCB t) p s; tcb_state t = tcb_state t';
-    same_caps (TCB t) (TCB t') \<rbrakk>
-   \<Longrightarrow> valid_reply_masters (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
-  by (clarsimp simp: valid_reply_masters_def fun_upd_def is_tcb
-                     cte_wp_at_after_update obj_at_def)
-
 lemma tcb_state_same_cte_wp_at:
   "\<lbrakk> ko_at (TCB t) p s; \<forall>(getF, v) \<in> ran tcb_cap_cases. getF t = getF t' \<rbrakk>
      \<Longrightarrow> \<forall>P p'. cte_wp_at P p' (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)
@@ -286,16 +281,15 @@ lemma tcb_state_same_cte_wp_at:
   done
 
 
-lemma valid_tcb_state_update:
+lemma valid_tcb_state_update: (* RT: FIXME? *)
   "\<lbrakk> valid_tcb p t s; valid_tcb_state st s;
      case st of
                 Structures_A.Inactive \<Rightarrow> True
-              | Structures_A.BlockedOnReceive e \<Rightarrow>
-                     tcb_caller t = cap.NullCap
-                   \<and> is_master_reply_cap (tcb_reply t)
-                   \<and> obj_ref_of (tcb_reply t) = p
-              | _ \<Rightarrow> is_master_reply_cap (tcb_reply t)
-                   \<and> obj_ref_of (tcb_reply t) = p  \<rbrakk> \<Longrightarrow>
+              | Structures_A.BlockedOnReceive e r \<Rightarrow>
+                     (case r of None \<Rightarrow> True
+                      | Some r' \<Rightarrow> reply_at r' s)
+                   \<and> tcb_reply t = r
+              | _ \<Rightarrow> True \<rbrakk> \<Longrightarrow>
    valid_tcb p (t\<lparr>tcb_state := st\<rparr>) s"
   by (simp add: valid_tcb_def valid_tcb_state_def ran_tcb_cap_cases
          split: Structures_A.thread_state.splits)
@@ -349,7 +343,7 @@ lemma allActiveTCBs_valid_state:
   apply (simp add: allActiveTCBs_def, wp)
   apply (simp add: getActiveTCB_def pred_tcb_at_def obj_at_def get_tcb_def
               split: option.splits if_split_asm Structures_A.kernel_object.splits)
-  done
+  sorry
 
 
 definition
@@ -361,7 +355,8 @@ where
  | cap.CNodeCap ref bits gd \<Rightarrow> cap.CNodeCap ref bits []
  | cap.ThreadCap ref \<Rightarrow> cap.ThreadCap ref
  | cap.DomainCap \<Rightarrow> cap.DomainCap
- | cap.ReplyCap ref master \<Rightarrow> cap.ReplyCap ref True
+ | cap.SchedContextCap ref n \<Rightarrow> cap.SchedContextCap ref n (*? *)
+ | cap.ReplyCap ref \<Rightarrow> cap.ReplyCap ref
  | cap.UntypedCap dev ref n f \<Rightarrow> cap.UntypedCap dev ref n 0
  | cap.ArchObjectCap acap \<Rightarrow> cap.ArchObjectCap (cap_master_arch_cap acap)
  | _ \<Rightarrow> cap"
@@ -390,9 +385,12 @@ lemma cap_master_cap_eqDs1:
      \<Longrightarrow> cap = cap.Zombie ref tp n"
   "cap_master_cap cap = cap.UntypedCap dev ref bits 0
      \<Longrightarrow> \<exists>f. cap = cap.UntypedCap dev ref bits f"
-  "cap_master_cap cap = cap.ReplyCap ref master
-     \<Longrightarrow> master = True
-          \<and> (\<exists>master. cap = cap.ReplyCap ref master)"
+  "cap_master_cap cap = cap.SchedContextCap ref n
+     \<Longrightarrow> cap = cap.SchedContextCap ref n"
+  "cap_master_cap cap = cap.SchedControlCap
+     \<Longrightarrow> cap = cap.SchedControlCap"
+  "cap_master_cap cap = cap.ReplyCap ref
+     \<Longrightarrow> cap = cap.ReplyCap ref"
   by (clarsimp simp: cap_master_cap_def
               split: cap.split_asm)+
 
@@ -424,8 +422,10 @@ lemma cap_badge_simps [simp]:
  "cap_badge (cap.CNodeCap r bits guard)            = None"
  "cap_badge (cap.ThreadCap r)                      = None"
  "cap_badge (cap.DomainCap)                        = None"
- "cap_badge (cap.ReplyCap r master)                = None"
+ "cap_badge (cap.ReplyCap r)                       = None"
  "cap_badge (cap.IRQControlCap)                    = None"
+ "cap_badge (cap.SchedContextCap sc n)             = None"
+ "cap_badge (cap.SchedControlCap)                  = None"
  "cap_badge (cap.IRQHandlerCap irq)                = None"
  "cap_badge (cap.Zombie r b n)                     = None"
  "cap_badge (cap.ArchObjectCap cap)                = None"
@@ -570,7 +570,7 @@ lemma set_cap_valid_objs:
   apply (erule(1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_tcb_def
                         ran_tcb_cap_cases)
-  apply (intro conjI impI, simp_all add: pred_tcb_at_def obj_at_def)
+  apply (simp_all add: pred_tcb_at_def obj_at_def)
   done
 
 
@@ -1099,11 +1099,9 @@ where
                \<and> (p' = sl \<longrightarrow> newcap = cap.NullCap))
       \<and> (gen_obj_refs newcap \<subseteq> gen_obj_refs cap)
       \<and> (newcap \<noteq> cap.NullCap \<longrightarrow> cap_range newcap = cap_range cap)
-      \<and> (is_master_reply_cap cap \<longrightarrow> newcap = cap.NullCap)
       \<and> (is_reply_cap cap \<longrightarrow> newcap = cap.NullCap)
-      \<and> (\<not> is_master_reply_cap cap \<longrightarrow>
-         tcb_cap_valid cap sl s \<longrightarrow> tcb_cap_valid newcap sl s)
-      \<and> \<not> is_untyped_cap newcap \<and> \<not> is_master_reply_cap newcap
+      \<and> (tcb_cap_valid cap sl s \<longrightarrow> tcb_cap_valid newcap sl s) (* ? *)
+      \<and> \<not> is_untyped_cap newcap
       \<and> \<not> is_reply_cap newcap
       \<and> newcap \<noteq> cap.IRQControlCap
       \<and> (newcap \<noteq> cap.NullCap \<longrightarrow> cap_class newcap = cap_class cap \<and> cap_is_device newcap = cap_is_device cap)
@@ -1275,7 +1273,9 @@ lemma set_object_idle [wp]:
   "\<lbrace>valid_idle and
      (\<lambda>s. ko_at ko p s \<and> (\<not>is_tcb ko \<or>
                    (ko = (TCB t) \<and> ko' = (TCB t') \<and>
-                    tcb_state t = tcb_state t' \<and> tcb_bound_notification t = tcb_bound_notification t')))\<rbrace>
+                    tcb_state t = tcb_state t' \<and> tcb_bound_notification t = tcb_bound_notification t'
+                    \<and> tcb_sched_context t = tcb_sched_context t' \<and> tcb_yield_to t = tcb_yield_to t'
+                    \<and> tcb_reply t = tcb_reply t')))\<rbrace>
    set_object p ko'
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: set_object_def)
@@ -1308,10 +1308,10 @@ lemma set_cap_cte_wp_at_neg:
 
 lemma set_cap_reply [wp]:
   "\<lbrace>valid_reply_caps and cte_at dest and
-      (\<lambda>s. \<forall>t. cap = cap.ReplyCap t False \<longrightarrow>
+      (\<lambda>s. \<forall>t. cap = cap.ReplyCap t \<longrightarrow>
                st_tcb_at awaiting_reply t s \<and>
                (\<not> has_reply_cap t s \<or>
-                cte_wp_at ((=) (cap.ReplyCap t False)) dest s))\<rbrace>
+                cte_wp_at ((=) (cap.ReplyCap t)) dest s))\<rbrace>
    set_cap cap dest \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
   apply (simp add: valid_reply_caps_def has_reply_cap_def)
   apply (rule hoare_pre)
@@ -1322,16 +1322,6 @@ lemma set_cap_reply [wp]:
                         cte_wp_at_caps_of_state)
   done
 
-
-lemma set_cap_reply_masters [wp]:
-  "\<lbrace>valid_reply_masters and cte_at ptr and
-       (\<lambda>s. \<forall>x. cap = cap.ReplyCap x True \<longrightarrow>
-                fst ptr = x \<and> snd ptr = tcb_cnode_index 2) \<rbrace>
-   set_cap cap ptr \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
-  apply (simp add: valid_reply_masters_def cte_wp_at_caps_of_state)
-  apply wpx
-  apply clarsimp
-  done
 
 crunch interrupt_states[wp]: cap_insert "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -1732,11 +1722,7 @@ lemma cur_mdb [simp]:
   "cur_tcb (cdt_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
-lemma cur_tcb_more_update[iff]:
-  "cur_tcb (trans_state f s) = cur_tcb s"
-  by (simp add: cur_tcb_def)
-
-crunch cur[wp]: cap_insert cur_tcb (wp: hoare_drop_imps)
+crunch cur[wp]: cap_insert cur_tcb (wp: hoare_drop_imps simp: cur_tcb_more_update)
 
 
 lemma update_cdt_ifunsafe[wp]:

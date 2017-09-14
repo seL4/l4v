@@ -2686,7 +2686,7 @@ end
 lemma idle_not_queued'':
   "\<lbrakk>valid_idle s; sym_refs (state_refs_of s); queue \<times> {rt} \<subseteq> state_refs_of s ptr\<rbrakk> \<Longrightarrow>
      idle_thread s \<notin> queue"
-  by (frule idle_no_refs, fastforce simp: valid_idle_def sym_refs_def)
+  by (frule idle_only_sc_refs, fastforce simp: valid_idle_def sym_refs_def)
 
 context DetSchedSchedule_AI begin
 

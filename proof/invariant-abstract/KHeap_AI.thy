@@ -140,7 +140,7 @@ lemma valid_cap_same_type:
   \<Longrightarrow> s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr> \<turnstile> cap"
   apply (simp add: valid_cap_def split: cap.split)
   apply (auto elim!: typ_at_same_type untyped_same_type
-               simp: ntfn_at_typ ep_at_typ tcb_at_typ cap_table_at_typ
+               simp: ntfn_at_typ ep_at_typ sc_at_typ reply_at_typ tcb_at_typ cap_table_at_typ
               split: option.split sum.split)
   by (intro hoare_to_pure_kheap_upd[OF valid_arch_cap_typ, simplified obj_at_def],
       assumption, auto)
@@ -153,22 +153,31 @@ lemma valid_obj_same_type:
       apply (clarsimp simp add: valid_obj_def valid_cs_def)
       apply (drule (1) bspec)
       apply (erule (2) valid_cap_same_type)
-     apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_ntfn_def valid_arch_tcb_same_type)
+     apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_obj_def valid_arch_tcb_same_type)
      apply (fastforce elim: valid_cap_same_type typ_at_same_type
                       simp: valid_tcb_state_def ep_at_typ
-                            ntfn_at_typ tcb_at_typ
+                            ntfn_at_typ tcb_at_typ sc_at_typ reply_at_typ
                      split: Structures_A.thread_state.splits option.splits)
     apply (clarsimp simp add: valid_obj_def valid_ep_def)
     apply (fastforce elim: typ_at_same_type
                     simp: tcb_at_typ
                     split: Structures_A.endpoint.splits)
-   apply (clarsimp simp add: valid_obj_def valid_ntfn_def valid_bound_tcb_def)
+   apply (clarsimp simp add: valid_obj_def valid_ntfn_def valid_bound_obj_def)
    apply (auto elim: typ_at_same_type
-                   simp: tcb_at_typ
+                   simp: tcb_at_typ sc_at_typ
+                  split: Structures_A.ntfn.splits option.splits)
+defer
+(*   apply (clarsimp simp add: valid_obj_def valid_sched_context_def valid_bound_obj_def)
+   apply (auto elim: typ_at_same_type
+                   simp: tcb_at_typ reply_at_typ sc_at_typ ntfn_at_typ
+                  split: Structures_A.ntfn.splits option.splits list.splits)*)
+   apply (clarsimp simp add: valid_obj_def valid_reply_def valid_bound_obj_def)
+   apply (auto elim: typ_at_same_type
+                   simp: tcb_at_typ reply_at_typ sc_at_typ
                   split: Structures_A.ntfn.splits option.splits)
   apply (clarsimp simp add: valid_obj_def)
   apply (auto intro: arch_valid_obj_same_type)
-  done
+  sorry (* prove the sched_context case, reply queue simplification *)
 
 lemma valid_vspace_obj_same_type:
   "\<lbrakk>valid_vspace_obj ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
@@ -218,7 +227,14 @@ shows
   apply (simp add: xopv[simplified trans_state_update'])
 done
 
-crunch ct[wp]: set_thread_state "\<lambda>s. P (cur_thread s)"
+(* RT: check if we can do crunch instead of the following lemma
+crunch ct[wp]: set_thread_state "\<lambda>s. P (cur_thread s)" *)
+lemma set_thread_state_ct[wp]:
+  " \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_thread_state param_a param_b
+             \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  apply (simp add: set_thread_state_def)
+  apply (wp | simp add: set_object_def)+
+  done
 
 lemma sts_ep_at_inv[wp]:
   "\<lbrace> ep_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
@@ -927,9 +943,9 @@ lemma ep_redux_simps:
         = (set xs \<times> {EPRecv})"
   "ntfn_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleNtfn | y # ys \<Rightarrow> Structures_A.WaitingNtfn (y # ys))
         = (set xs \<times> {NTFNSignal})"
-  by (fastforce split: list.splits option.splits
-                 simp: valid_ep_def valid_ntfn_def valid_bound_tcb_def
-               intro!: ext)+
+sorry (*  by (fastforce split: list.splits option.splits
+                 simp: valid_ep_def valid_ntfn_def valid_bound_obj_def
+               intro!: ext)+*)
 
 
 crunch arch[wp]: set_simple_ko "\<lambda>s. P (arch_state s)"
@@ -948,10 +964,6 @@ lemma set_simple_ko_reply[wp]:
    set_simple_ko f p ep
    \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
   by (wp valid_reply_caps_st_cte_lift)
-
-lemma set_simple_ko_reply_masters[wp]:
-  "\<lbrace>valid_reply_masters\<rbrace> set_simple_ko f p ep \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
-  by (wp valid_reply_masters_cte_lift)
 
 lemma obj_at_ko_atE:
   "\<lbrakk> obj_at P ptr s; ko_at k ptr s; P k \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
@@ -1289,12 +1301,24 @@ crunch valid_irq_states[wp]: set_cap "valid_irq_states"
 crunch valid_irq_states[wp]: thread_set "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch valid_irq_states[wp]: set_thread_state, set_bound_notification "valid_irq_states"
+(* RT: crunch?
+crunch valid_irq_states[wp]: set_thread_state "valid_irq_states"
+  (wp: crunch_wps simp: crunch_simps) *)
+lemma set_thread_state_valid_irq_states: "\<lbrace>valid_irq_states and valid_irq_states\<rbrace>
+            set_thread_state param_a param_b 
+            \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
+  apply (simp add: set_thread_state_def)
+  apply (wp | simp add: set_object_def)+
+  done
+
+crunch valid_irq_states[wp]: set_bound_notification "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_ntfn_minor_invs:
   "\<lbrace>invs and ntfn_at ptr
-         and obj_at (\<lambda>ko. refs_of ko = ntfn_q_refs_of (ntfn_obj val) \<union> ntfn_bound_refs (ntfn_bound_tcb val)) ptr
+         and obj_at (\<lambda>ko. refs_of ko = ntfn_q_refs_of (ntfn_obj val)
+                                       \<union> get_refs NTFNBound (ntfn_bound_tcb val)
+                                       \<union> get_refs NTFNSchedContext (ntfn_sc val)) ptr
          and valid_ntfn val
          and (\<lambda>s. \<forall>typ. (idle_thread s, typ) \<notin> ntfn_q_refs_of (ntfn_obj val))
          and (\<lambda>s. live (Notification val) \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
@@ -1386,8 +1410,6 @@ crunch valid_idle[wp]: do_machine_op "valid_idle"
 
 
 crunch reply[wp]: do_machine_op "valid_reply_caps"
-
-crunch reply_masters[wp]: do_machine_op "valid_reply_masters"
 
 crunch valid_irq_handlers[wp]: do_machine_op "valid_irq_handlers"
 

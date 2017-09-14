@@ -3066,7 +3066,7 @@ lemma si_invs':
   apply (clarsimp simp: tcb_bound_refs_def2)
   apply (rule conjI, clarsimp dest!: st_tcb_at_state_refs_ofD, (auto simp: set_eq_iff)[1])
   apply (rule conjI, clarsimp, (auto simp: set_eq_iff)[1])
-  apply (rule conjI, clarsimp simp: idle_no_ex_cap idle_not_queued' idle_no_refs)
+  apply (rule conjI, clarsimp simp: idle_no_ex_cap idle_not_queued' idle_only_sc_refs)
   apply (rule conjI, clarsimp dest!: st_tcb_at_tcb_at simp: obj_at_def is_tcb)
   apply (auto dest!: st_tcb_at_state_refs_ofD simp: idle_no_ex_cap idle_not_queued' idle_no_refs)
   done
