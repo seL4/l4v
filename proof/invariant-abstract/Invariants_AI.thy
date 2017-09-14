@@ -477,6 +477,26 @@ where
                      (ExceptionTypes_A.GuardMismatch n g)) \<longrightarrow> length g\<le>word_bits"
 
 definition
+  valid_bound_obj :: "(machine_word \<Rightarrow> 'z state \<Rightarrow> bool) \<Rightarrow> machine_word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_bound_obj f reply_opt s \<equiv> case reply_opt of
+                                 None \<Rightarrow> True
+                               | Some t \<Rightarrow> f t s"
+
+abbreviation
+  "valid_bound_ntfn \<equiv> valid_bound_obj ntfn_at"
+
+abbreviation
+  "valid_bound_tcb \<equiv> valid_bound_obj tcb_at"
+
+abbreviation
+  "valid_bound_sc \<equiv> valid_bound_obj sc_at"
+
+abbreviation
+  "valid_bound_reply \<equiv> valid_bound_obj reply_at"
+
+(* 
+definition
   valid_bound_ntfn :: "machine_word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_bound_ntfn ntfn_opt s \<equiv> case ntfn_opt of
@@ -490,6 +510,21 @@ where
                                  None \<Rightarrow> True
                                | Some t \<Rightarrow> tcb_at t s"
 
+definition
+  valid_bound_sc :: "machine_word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_bound_sc sc_opt s \<equiv> case sc_opt of
+                                 None \<Rightarrow> True
+                               | Some t \<Rightarrow> sc_at t s"
+
+definition
+  valid_bound_reply :: "machine_word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_bound_reply reply_opt s \<equiv> case reply_opt of
+                                 None \<Rightarrow> True
+                               | Some t \<Rightarrow> reply_at t s"
+*)
+
 
 definition
   valid_ntfn :: "notification \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -501,7 +536,8 @@ where
        \<and> distinct ts
        \<and> (case ntfn_bound_tcb ntfn of Some tcb \<Rightarrow> ts = [tcb] | _ \<Rightarrow> True))
   | ActiveNtfn b \<Rightarrow> True)
- \<and> valid_bound_tcb (ntfn_bound_tcb ntfn) s"
+ \<and> valid_bound_tcb (ntfn_bound_tcb ntfn) s
+ \<and> valid_bound_sc (ntfn_sc ntfn) s"
 
 definition
   valid_tcb :: "obj_ref \<Rightarrow> tcb \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -512,8 +548,11 @@ where
      \<and> valid_ipc_buffer_cap (tcb_ipcframe t) (tcb_ipc_buffer t)
      \<and> valid_tcb_state (tcb_state t) s
      \<and> (case tcb_fault t of Some f \<Rightarrow> valid_fault f | _ \<Rightarrow> True)
-     \<and> length (tcb_fault_handler t) = word_bits
+(*     \<and> length (tcb_fault_handler t) = word_bits *)
      \<and> valid_bound_ntfn (tcb_bound_notification t) s
+     \<and> valid_bound_sc (tcb_sched_context t) s
+     \<and> valid_bound_sc (tcb_yield_to t) s
+     \<and> valid_bound_reply (tcb_reply t) s
      \<and> valid_arch_tcb (tcb_arch t) s"
 
 definition
@@ -539,6 +578,23 @@ where
       (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) \<and> distinct ts)"
 
 definition
+  valid_sched_context :: "sched_context \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_sched_context sc s \<equiv> (* RT FIXME: add conditions for period consumed refills refill_max *)
+     valid_bound_ntfn (sc_ntfn sc) s
+     \<and> valid_bound_tcb (sc_tcb sc) s
+     \<and> valid_bound_tcb (sc_yield_from sc) s
+     \<and> (foldl conj True (map (\<lambda>r. reply_at r s) (sc_replies sc)))"
+
+definition
+  valid_reply :: "reply \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_reply reply s \<equiv> 
+     valid_bound_tcb (reply_caller reply) s
+     \<and> valid_bound_sc (reply_sc reply) s"
+
+
+definition
   valid_obj :: "obj_ref \<Rightarrow> kernel_object \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_obj ptr ko s \<equiv> case ko of
@@ -546,6 +602,8 @@ where
   | Notification p \<Rightarrow> valid_ntfn p s
   | TCB t \<Rightarrow> valid_tcb ptr t s
   | CNode sz cs \<Rightarrow> valid_cs sz cs s
+  | SchedContext sc \<Rightarrow> valid_sched_context sc s
+  | Reply reply \<Rightarrow> valid_reply reply s
   | ArchObj ao \<Rightarrow> arch_valid_obj ao s"
 
 definition
