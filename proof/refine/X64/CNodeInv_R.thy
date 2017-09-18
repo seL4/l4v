@@ -5489,7 +5489,7 @@ lemma descendants_of_subset_untyped:
 proof
   have P: "\<And>x cte. \<lbrakk> m' x = Some cte; isUntypedCap (cteCap cte) \<rbrakk>
                        \<Longrightarrow> \<exists>node. m x = Some (CTE (cteCap cte) node) \<and> m' x = Some cte"
-    apply (cut_tac x1=x in adj)
+    apply (cut_tac x=x in adj)
     apply clarsimp
     apply (case_tac y, simp)
     done
@@ -5500,8 +5500,8 @@ proof
     apply clarsimp
     apply (drule P | simp)+
     apply clarsimp
-    apply (cut_tac x1=p in desc)
-    apply (cut_tac x1=p' in desc)
+    apply (cut_tac x=p in desc)
+    apply (cut_tac x=p' in desc)
     apply blast
     done
 
@@ -5509,7 +5509,7 @@ proof
              \<Longrightarrow> \<exists>cap node. m x = Some (CTE cap node)
                     \<and> isUntypedCap cap = isUntypedCap (cteCap cte)
                     \<and> capRange cap = capRange (cteCap cte)"
-    apply (cut_tac x1=x in adj)
+    apply (cut_tac x=x in adj)
     apply clarsimp
     apply (case_tac y, simp)
     done
@@ -5518,10 +5518,10 @@ proof
     unfolding untyped_mdb'_def
     apply (rule impI, erule allEI, erule allEI)
     apply clarsimp
-    apply (drule_tac x1=p in P, simp)
-    apply (drule_tac x1=p' in Q, simp)
+    apply (drule_tac x=p in P, simp)
+    apply (drule_tac x=p' in Q, simp)
     apply clarsimp
-    apply (cut_tac x1=p in desc)
+    apply (cut_tac x=p in desc)
     apply blast
     done
 
@@ -6673,7 +6673,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
          apply (rule hoare_pre_spec_validE,
                 rule spec_strengthen_postE)
           apply (unfold finaliseSlot_def)[1]
-           apply (rule hyps[where P1="\<top>" and p1=sl], (assumption | rule refl)+)
+           apply (rule hyps[where P="\<top>" and p=sl], (assumption | rule refl)+)
           apply clarsimp
          apply (clarsimp simp: cte_wp_at_ctes_of)
         apply (wp, simp)

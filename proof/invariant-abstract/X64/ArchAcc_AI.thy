@@ -1080,15 +1080,15 @@ private lemma vtable_index_mask:
    exists; so we parameterise over the vs_lookup. *)
 
 private abbreviation (input)
-  "pre pm_lookup \<equiv> pspace_aligned and valid_vspace_objs and valid_arch_state
+  "pre pm_lookup pm' vptr' \<equiv> pspace_aligned and valid_vspace_objs and valid_arch_state
                       and equal_kernel_mappings and valid_global_objs and pm_lookup
-                      and K (is_aligned pm pml4_bits \<and> vptr < pptr_base \<and> canonical_address vptr)"
+                      and K (is_aligned (pm'::64 word) pml4_bits \<and> vptr' < pptr_base \<and> canonical_address vptr')"
 
 private abbreviation (input)
-  "pdpt_ref pm_ref \<equiv> VSRef (get_pml4_index vptr) (Some APageMapL4) # pm_ref"
+  "pdpt_ref pm_ref \<equiv> VSRef (get_pml4_index vptr) (Some APageMapL4) # pm_ref "
 
 lemma lookup_pdpt_slot_wp:
-  "\<lbrace> \<lambda>s. \<forall>rv. (\<forall>pm_ref. pre (pm_ref \<rhd> pm) s \<longrightarrow>
+  "\<lbrace> \<lambda>s. \<forall>rv. (\<forall>pm_ref. pre (pm_ref \<rhd> pm) pm vptr s \<longrightarrow>
                           pdpte_at rv s
                             \<and> (pdpt_ref pm_ref \<rhd> (rv && ~~ mask pdpt_bits)) s
                             \<and> get_pdpt_index vptr = rv && mask pdpt_bits >> word_size_bits)
@@ -1118,7 +1118,7 @@ private abbreviation (input)
   "pd_ref pm_ref \<equiv> VSRef (get_pdpt_index vptr) (Some APDPointerTable) # pdpt_ref pm_ref"
 
 lemma lookup_pd_slot_wp:
-  "\<lbrace> \<lambda>s. \<forall>rv. (\<forall>pm_ref. pre (pm_ref \<rhd> pm) s \<longrightarrow>
+  "\<lbrace> \<lambda>s. \<forall>rv. (\<forall>pm_ref. pre (pm_ref \<rhd> pm) pm vptr s \<longrightarrow>
                           pde_at rv s
                             \<and> (pd_ref pm_ref \<rhd> (rv && ~~ mask pd_bits)) s
                             \<and> get_pd_index vptr = rv && mask pd_bits >> word_size_bits)
@@ -1145,7 +1145,7 @@ private abbreviation (input)
   "pt_ref pm_ref \<equiv> VSRef (get_pd_index vptr) (Some APageDirectory) # pd_ref pm_ref"
 
 lemma lookup_pt_slot_wp:
-  "\<lbrace> \<lambda>s. \<forall>rv. (\<forall>pm_ref. pre (pm_ref \<rhd> pm) s \<longrightarrow>
+  "\<lbrace> \<lambda>s. \<forall>rv. (\<forall>pm_ref. pre (pm_ref \<rhd> pm) pm vptr s \<longrightarrow>
                           pte_at rv s
                             \<and> (pt_ref pm_ref \<rhd> (rv && ~~ mask pt_bits)) s
                             \<and> get_pt_index vptr = rv && mask pt_bits >> word_size_bits)
@@ -1174,7 +1174,7 @@ lemma lookup_pt_slot_wp:
 
 private lemma lookup_pd_slot_rv:
   "\<And>pm_ref.
-    \<lbrace> pre (pm_ref \<rhd> pm) \<rbrace>
+    \<lbrace> pre (pm_ref \<rhd> pm) pm vptr \<rbrace>
       lookup_pd_slot pm vptr
     \<lbrace> \<lambda>rv s. pde_at rv s
               \<and> (pd_ref pm_ref \<rhd> (rv && ~~ mask pd_bits)) s
@@ -1183,7 +1183,7 @@ private lemma lookup_pd_slot_rv:
 
 private lemma lookup_pdpt_slot_rv:
   "\<And>pm_ref.
-    \<lbrace> pre (pm_ref \<rhd> pm) \<rbrace>
+    \<lbrace> pre (pm_ref \<rhd> pm) pm vptr \<rbrace>
       lookup_pdpt_slot pm vptr
     \<lbrace> \<lambda>rv s. pdpte_at rv s
               \<and> (pdpt_ref pm_ref \<rhd> (rv && ~~ mask pdpt_bits)) s
@@ -1192,7 +1192,7 @@ private lemma lookup_pdpt_slot_rv:
 
 private lemma lookup_pt_slot_rv:
   "\<And>pm_ref.
-    \<lbrace> pre (pm_ref \<rhd> pm) \<rbrace>
+    \<lbrace> pre (pm_ref \<rhd> pm) pm vptr \<rbrace>
       lookup_pt_slot pm vptr
     \<lbrace>\<lambda>rv s. pte_at rv s
              \<and> (pt_ref pm_ref \<rhd> (rv && ~~ mask pt_bits)) s
@@ -1203,13 +1203,13 @@ private lemma lookup_pt_slot_rv:
    when the vs_lookups are only under conjunctions. *)
 
 private lemma vs_lookup_all_ex_convert_pre:
-  assumes "\<And>ref. \<lbrace> pre (ref \<rhd> p) \<rbrace> f \<lbrace> R \<rbrace>,-"
-  shows "\<lbrace> pre (\<exists>\<rhd> p) \<rbrace> f \<lbrace> R \<rbrace>,-"
+  assumes "\<And>ref. \<lbrace> pre (ref \<rhd> p) pm vptr \<rbrace> f \<lbrace> R \<rbrace>,-"
+  shows "\<lbrace> pre (\<exists>\<rhd> p) pm vptr \<rbrace> f \<lbrace> R \<rbrace>,-"
   using assms by (simp add: validE_R_def validE_def valid_def) blast
 
 private lemma vs_lookup_all_ex_convert_post:
-  assumes "\<And>ref. \<lbrace> pre (ref \<rhd> p) \<rbrace> f \<lbrace> \<lambda>rv. g ref \<rhd> h rv \<rbrace>,-"
-  shows "\<lbrace> pre (\<exists>\<rhd> p) \<rbrace> f \<lbrace> \<lambda>rv. \<exists>\<rhd> h rv \<rbrace>,-"
+  assumes "\<And>ref. \<lbrace> pre (ref \<rhd> p) pm vptr \<rbrace> f \<lbrace> \<lambda>rv. g ref \<rhd> h rv \<rbrace>,-"
+  shows "\<lbrace> pre (\<exists>\<rhd> p) pm vptr \<rbrace> f \<lbrace> \<lambda>rv. \<exists>\<rhd> h rv \<rbrace>,-"
   using assms by (simp add: validE_R_def validE_def valid_def) blast
 
 (* We now break the lookup lemmas apart, to get access to the post-condition conjuncts
@@ -1233,7 +1233,7 @@ lemmas lookup_pt_slot_vs_lookup      [wp] = get_lookup[OF lookup_pt_slot_rv]
 lemmas lookup_pt_slot_vs_lookup_ex   [wp] = get_lkp_ex[OF lookup_pt_slot_rv]
 
 lemma create_mapping_entries_valid [wp]:
-  "\<lbrace> pre (\<exists>\<rhd> pm) \<rbrace>
+  "\<lbrace> pre (\<exists>\<rhd> pm) pm vptr \<rbrace>
      create_mapping_entries base vptr sz vm_rights attrib pm
    \<lbrace>valid_mapping_entries\<rbrace>,-"
   apply (cases sz)

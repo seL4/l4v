@@ -151,7 +151,7 @@ lemma doMachineOp_irq_states':
   apply wp
   apply clarsimp
   apply (drule use_valid)
-    apply (rule_tac P1="\<lambda>m. m = irq_masks (ksMachineState s)" in masks)
+    apply (rule_tac P="\<lambda>m. m = irq_masks (ksMachineState s)" in masks)
    apply simp
   apply simp
   done
@@ -167,7 +167,7 @@ lemma dmo_invs':
   apply clarsimp
   apply (subst invs'_machine)
     apply (drule use_valid)
-      apply (rule_tac P1="\<lambda>m. m = irq_masks (ksMachineState s)" in masks, simp+)
+      apply (rule_tac P="\<lambda>m. m = irq_masks (ksMachineState s)" in masks, simp+)
    apply (fastforce simp add: valid_machine_state'_def)
   apply assumption
   done
@@ -183,7 +183,7 @@ lemma dmo_invs_no_cicd':
   apply clarsimp
   apply (subst invs_no_cicd'_machine)
     apply (drule use_valid)
-      apply (rule_tac P1="\<lambda>m. m = irq_masks (ksMachineState s)" in masks, simp+)
+      apply (rule_tac P="\<lambda>m. m = irq_masks (ksMachineState s)" in masks, simp+)
    apply (fastforce simp add: valid_machine_state'_def)
   apply assumption
   done

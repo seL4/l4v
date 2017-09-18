@@ -1380,7 +1380,7 @@ lemma setObject_eq:
   apply (clarsimp simp: updateObject_default_def in_monad return_def lookupAround2_char1
                         split_def x P lookupAround2_char1 projectKOs
                         objBits_def[symmetric] in_magnitude_check project_inject)
-  apply (frule ssubst [OF ob, where P = "is_aligned p" and v2 = ko])
+  apply (frule ssubst [OF ob, where P = "is_aligned p" and v1 = ko])
   apply (simp add: P in_magnitude_check)
   apply (rule conjI)
    apply (rule_tac x = obj in exI)

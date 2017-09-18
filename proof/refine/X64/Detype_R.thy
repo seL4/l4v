@@ -1936,7 +1936,7 @@ proof -
      apply (clarsimp dest!:objBits_type)
     apply (rule ccontr)
     apply clarsimp
-    apply (frule_tac slot2 = x and Q2 = "koTypeOf ko" and P2 = "\<lambda>a. \<not> a" in use_valid[OF _ typ_at])
+    apply (frule_tac slot1 = x and Q1 = "koTypeOf ko" and P1 = "\<lambda>a. \<not> a" in use_valid[OF _ typ_at])
     apply (clarsimp simp:typ_at'_def ko_wp_at'_def)+
     apply (frule(1) use_valid[OF _ ps])
     apply (clarsimp simp:valid_pspace'_def)
@@ -1972,12 +1972,12 @@ lemma getCTE_commute:
    apply (rule iffI)
     apply clarsimp
     apply (rule bexI[rotated], assumption)
-    apply (drule_tac Q2 ="op = cte" in use_valid[OF _ cte_at_modify])
+    apply (drule_tac Q1 ="op = cte" in use_valid[OF _ cte_at_modify])
      apply (simp add:cte_wp_at'_def)
     apply (simp add:cte_wp_at'_def)
    apply clarsimp
    apply (rule conjI)
-    apply (frule_tac Q2 = "op = cte" in use_valid[OF _ cte_at_modify])
+    apply (frule_tac Q1 = "op = cte" in use_valid[OF _ cte_at_modify])
      apply (clarsimp simp:cte_wp_at'_def ko_wp_at'_def)
     apply (clarsimp simp:cte_wp_at'_def)
    apply (rule bexI[rotated], assumption)
@@ -1992,7 +1992,7 @@ lemma getCTE_commute:
   apply (cut_tac s = b in no_failD[OF no_fail_getCTE[unfolded getCTE_def]])
    prefer 2
    apply fastforce
-  apply (drule_tac Q2 = "op = cte" in use_valid[OF _ cte_at_modify])
+  apply (drule_tac Q1 = "op = cte" in use_valid[OF _ cte_at_modify])
    apply (simp add:cte_wp_at'_def)
   apply (simp add:cte_wp_at_ctes_of)
   done
@@ -2233,13 +2233,13 @@ proof -
   apply (clarsimp simp: locateCTE_def gets_def split_def
                         get_def bind_def return_def assert_opt_def fail_def assert_def
                   split: option.splits if_split_asm)
-  apply (frule_tac dest2 = src in use_valid[OF _ cte_wp_at])
+  apply (frule_tac dest1 = src in use_valid[OF _ cte_wp_at])
    apply simp
    apply (subst cte_wp_at_top)
    apply simp
   apply (clarsimp simp add:cte_wp_at_top)
   apply (clarsimp simp:lookupAround2_char1)
-  apply (frule_tac dest2 = ptr and  Q2 = "\<lambda>x. x = objBitsKO b" in use_valid[OF _ ko_wp_at])
+  apply (frule_tac dest1 = ptr and  Q1 = "\<lambda>x. x = objBitsKO b" in use_valid[OF _ ko_wp_at])
    apply (frule(1) pspace_alignedD')
    apply (frule(1) pspace_distinctD')
    apply (auto simp add:ko_wp_at'_def)[1]
@@ -2327,8 +2327,8 @@ proof -
     apply clarsimp
     apply (rule bexI[rotated],assumption)
     apply (clarsimp)
-    apply (frule_tac s1 = bb in same)
-    apply (frule_tac s1 = s in same)
+    apply (frule_tac s = bb in same)
+    apply (frule_tac s = s in same)
     apply clarsimp
     apply (frule_tac s1 = s in singleton_locateCTE[THEN iffD1])
     apply (frule locateCTE_monad [OF ko_wp_at cte_wp_at psp_distinct psp_aligned])
@@ -3947,12 +3947,12 @@ lemma curDomain_commute:
     apply clarsimp
     apply (rule bexI[rotated], assumption)
     apply clarsimp
-    apply (frule_tac P2 = "\<lambda>x. x = ksCurDomain s" in use_valid[OF _ cur])
+    apply (frule_tac P1 = "\<lambda>x. x = ksCurDomain s" in use_valid[OF _ cur])
       apply simp+
    apply clarsimp
    apply (rule bexI[rotated], assumption)
    apply clarsimp
-   apply (frule_tac P2 = "\<lambda>x. x = ksCurDomain s" in use_valid[OF _ cur])
+   apply (frule_tac P1 = "\<lambda>x. x = ksCurDomain s" in use_valid[OF _ cur])
     apply simp+
   apply auto
   done

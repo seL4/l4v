@@ -2483,7 +2483,7 @@ proof (simp add: descendants_of'_def subset_iff,
                                \<Longrightarrow> \<not> isMDBParentOf cte cte'"
     using t utp
     apply clarsimp
-    apply (drule_tac cte'1=cte' in F, simp+)
+    apply (drule_tac cte'=cte' in F, simp+)
     apply (simp add: cap'_def)
     apply (cases cte, case_tac cte', clarsimp)
     apply (frule(1) ztc_parent, clarsimp)
@@ -2493,7 +2493,7 @@ proof (simp add: descendants_of'_def subset_iff,
                                \<Longrightarrow> \<not> isMDBParentOf (cteCap_update (\<lambda>_. cap) cte) cte'"
     using z utp
     apply clarsimp
-    apply (drule_tac cte'1=cte' in F, simp+)
+    apply (drule_tac cte'=cte' in F, simp+)
     apply (cases cte, case_tac cte', clarsimp)
     apply (frule(1) ztc_parent)
     apply (clarsimp simp: pu)
@@ -2590,7 +2590,7 @@ proof (simp add: descendants_of'_def subset_iff,
                                          x \<noteq> slot \<rbrakk>
                                 \<Longrightarrow> isMDBParentOf cte' cte"
       using t z pu P
-      apply (drule_tac cte'1=cte' in F, simp, simp)
+      apply (drule_tac cte'=cte' in F, simp, simp)
       apply (simp add: cap'_def)
       apply (cases cte)
       apply (case_tac cte')
@@ -4199,7 +4199,7 @@ lemma mdb_None:
   apply (insert R)
   apply (simp add: cdt_relation_def)
   apply (erule allE, erule allE, erule (1) impE)
-  apply (rule_tac p'1="cte_map (a,b)" in F)
+  apply (rule_tac p'="cte_map (a,b)" in F)
   apply (drule sym)
   apply simp
   done
@@ -4323,17 +4323,17 @@ lemma parentOf_preserve_oneway:
   shows "(m  \<turnstile> p parentOf x) \<Longrightarrow> (m'  \<turnstile> p parentOf x)"
   apply (clarsimp simp:parentOf_def)
     apply (frule iffD1[OF dom,OF domI])
-    apply (frule iffD1[OF dom[where x1 = p],OF domI])
+    apply (frule iffD1[OF dom[where x = p],OF domI])
     apply clarsimp
-    apply (frule_tac x2 = p in conjunct1[OF sameRegion])
+    apply (frule_tac x1 = p in conjunct1[OF sameRegion])
       apply assumption
-    apply (frule_tac x2 = x in conjunct2[OF sameRegion])
+    apply (frule_tac x1 = x in conjunct2[OF sameRegion])
       apply assumption
     apply (drule_tac x = "cteCap y" in fun_cong)
     apply (drule_tac x = "cteCap cte'" in fun_cong)
-    apply (drule_tac x1 = p in misc)
+    apply (drule_tac x = p in misc)
       apply assumption
-    apply (drule_tac x1 = x in misc)
+    apply (drule_tac x = x in misc)
       apply assumption
     apply ((simp only: isMDBParentOf_def split_def split: cte.splits if_split_asm); clarsimp)
     by (clarsimp simp: sameRegionAs_def isCap_simps Let_def split: if_split_asm)+ (* long *)
@@ -4739,14 +4739,14 @@ lemma caps_contained'_preserve_oneway:
   shows "caps_contained' m \<Longrightarrow> caps_contained' m'"
   apply (clarsimp simp:caps_contained'_def)
     apply (frule iffD2[OF dom,OF domI])
-    apply (frule_tac x2 = p' in iffD2[OF dom,OF domI])
+    apply (frule_tac x1 = p' in iffD2[OF dom,OF domI])
     apply clarsimp
     apply (case_tac y,case_tac ya)
     apply (drule_tac x= p in spec)
     apply (drule_tac x= p' in spec)
-    apply (frule_tac x1 = p in misc)
+    apply (frule_tac x = p in misc)
       apply assumption
-    apply (frule_tac x1 = p' in misc)
+    apply (frule_tac x = p' in misc)
       apply assumption
     apply (elim allE impE)
       apply fastforce+
@@ -4780,11 +4780,11 @@ lemma is_chunk_preserve_oneway:
      apply (subgoal_tac "m \<turnstile> p'' \<leadsto>\<^sup>* p' = m' \<turnstile> p'' \<leadsto>\<^sup>* p'")
      apply (frule iffD1[OF dom,OF domI])
      apply (clarsimp)
-     apply (frule_tac x2 = p'' in iffD1[OF dom,OF domI])
+     apply (frule_tac x1 = p'' in iffD1[OF dom,OF domI])
      apply clarsimp
-     apply (frule_tac x1 = p'' in sameRegion,assumption)
+     apply (frule_tac x = p'' in sameRegion,assumption)
      apply clarsimp
-     apply (frule_tac x1 = x in sameRegion,assumption)
+     apply (frule_tac x = x in sameRegion,assumption)
      apply clarsimp
      apply (case_tac y)
      apply (drule_tac fun_cong)+
@@ -4825,8 +4825,8 @@ lemma mdb_chunked_preserve_oneway:
   apply clarsimp
   apply (case_tac ya)
   apply (case_tac y)
-  apply (frule_tac x1 = p in sameRegion,assumption)
-  apply (frule_tac x1 = p' in sameRegion,assumption)
+  apply (frule_tac x = p in sameRegion,assumption)
+  apply (frule_tac x = p' in sameRegion,assumption)
   apply clarsimp
   apply (erule impE)
    apply (drule fun_cong)+
@@ -4951,9 +4951,9 @@ lemma mdb_untyped'_preserve_oneway:
   apply (frule misc)
     apply fastforce
   apply clarsimp
-  apply (frule_tac x1 = p' in misc)
+  apply (frule_tac x = p' in misc)
     apply fastforce
-  apply (frule_tac x1 = p in misc)
+  apply (frule_tac x = p in misc)
     apply assumption
   apply clarsimp
   apply (clarsimp simp: descendants_of'_def Invariants_H.subtree_def)
@@ -5024,9 +5024,9 @@ lemma mdb_inc'_preserve_oneway:
   apply (case_tac cte')
   apply (drule_tac x = cap in spec)
   apply clarsimp
-  apply (frule_tac x1 = p' in misc)
+  apply (frule_tac x = p' in misc)
     apply assumption
-  apply (frule_tac x1 = p in misc)
+  apply (frule_tac x = p in misc)
     apply assumption
   apply clarsimp
   apply (subgoal_tac  "\<And>p p'. (p' \<in>descendants_of' p m) = (p' \<in> descendants_of' p m')")
@@ -5070,7 +5070,7 @@ lemma irq_control_preserve_oneway:
     apply clarsimp
     apply (drule_tac x = p' in spec)
     apply (erule impE)
-    apply (frule_tac x2 = p' in iffD2[OF dom,OF domI])
+    apply (frule_tac x1 = p' in iffD2[OF dom,OF domI])
     apply clarsimp
     apply (drule(1) misc)+
     apply (case_tac y)

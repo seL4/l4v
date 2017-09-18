@@ -2631,7 +2631,7 @@ lemma typ_at_lift_valid_untyped':
   apply (clarsimp simp: valid_def split del:if_split)
   apply (frule ko_wp_typ_at')
   apply clarsimp
-  apply (cut_tac T1=T and p1=ptr' in P)
+  apply (cut_tac T=T and p=ptr' in P)
   apply (simp add: valid_def)
   apply (erule_tac x=s in allE)
   apply (erule impE)
@@ -2660,7 +2660,7 @@ lemma typ_at_lift_valid_cap':
   apply (simp add: valid_cap'_def)
   apply wp
   apply (case_tac cap;
-         simp add: valid_cap'_def P[where P1=id, simplified] typ_at_lift_tcb'
+         simp add: valid_cap'_def P[where P=id, simplified] typ_at_lift_tcb'
                    hoare_vcg_prop typ_at_lift_ep'
                    typ_at_lift_ntfn' typ_at_lift_cte_at'
                    hoare_vcg_conj_lift [OF typ_at_lift_cte_at'])
@@ -2669,7 +2669,7 @@ lemma typ_at_lift_valid_cap':
       apply (wp typ_at_lift_tcb' P hoare_vcg_all_lift typ_at_lift_cte')+
     apply (rename_tac arch_capability)
     apply (case_tac arch_capability,
-           simp_all add: P[where P1=id, simplified] vspace_table_at'_defs
+           simp_all add: P[where P=id, simplified] vspace_table_at'_defs
                          hoare_vcg_prop All_less_Ball
                     split del: if_splits)
        apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped'

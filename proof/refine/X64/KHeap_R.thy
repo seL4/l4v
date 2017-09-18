@@ -743,9 +743,9 @@ lemma ctes_of_from_cte_wp_at:
                  elim!: rsubst[where P=P]
                 intro!: ext)
   apply (case_tac "ctes_of s x", simp_all)
-   apply (drule_tac P2=Not and P'2="\<top>" and p2=x in use_valid [OF _ x],
+   apply (drule_tac P1=Not and P'1="\<top>" and p1=x in use_valid [OF _ x],
            simp_all add: cte_wp_at_ctes_of)
-  apply (drule_tac P2=id and P'2="op = aa" and p2=x in use_valid [OF _ x],
+  apply (drule_tac P1=id and P'1="op = aa" and p1=x in use_valid [OF _ x],
           simp_all add: cte_wp_at_ctes_of)
   done
 

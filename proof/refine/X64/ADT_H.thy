@@ -795,7 +795,7 @@ proof -
            apply (clarsimp simp add: pdpte_relation_def)
           apply (clarsimp simp add: pml4e_relation_def)
          apply (rename_tac vmpage_size)
-         apply (cut_tac a1=y and sz1=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
+         apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
          apply (case_tac "n=0", simp)
          apply (case_tac "kheap s (y + n * 2 ^ pageBits)")
           apply (rule ccontr)
@@ -823,7 +823,7 @@ proof -
           apply (clarsimp simp add: pdpte_relation_def)
          apply (clarsimp simp add: pml4e_relation_def)
         apply (rename_tac vmpage_size)
-        apply (cut_tac a1=y and sz1=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
+        apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
         apply (case_tac "n=0", simp)
         apply (case_tac "kheap s (y + n * 2 ^ pageBits)")
          apply (rule ccontr)
@@ -884,7 +884,7 @@ proof -
        apply (clarsimp split: if_split_asm)
       apply (simp add: cte_map_def)
       apply (clarsimp simp add: cte_relation_def)
-      apply (cut_tac a1=y and n1=sz in gsCNodes, clarsimp)
+      apply (cut_tac a=y and n=sz in gsCNodes, clarsimp)
       using pspace_aligned[simplified pspace_aligned_def]
       apply (drule_tac x=y in bspec, clarsimp)
       apply (clarsimp simp: cte_level_bits_def)
@@ -936,7 +936,7 @@ proof -
        apply (simp add: word_bits_conv cte_level_bits_def)
        apply (drule_tac a="2::nat" in power_strict_increasing, simp+)
       apply (rule ccontr, clarsimp)
-      apply (cut_tac a1="y + of_bl ya * 0x20" and n1=yc in gsCNodes)
+      apply (cut_tac a="y + of_bl ya * 0x20" and n=yc in gsCNodes)
       apply clarsimp
 
     (* mapping architecture-specific objects *)

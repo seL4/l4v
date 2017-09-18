@@ -329,7 +329,7 @@ next
                 apply (rule power_strict_increasing, simp add: word_bits_conv)
                 apply simp
                apply (rule_tac P'="valid_cap rva" in corres_stateAssert_implied)
-                apply (frule_tac bits3 = "bits_of rva" in YUCK)
+                apply (frule_tac bits2 = "bits_of rva" in YUCK)
                     apply (simp)
                    apply (simp add: word_bits_conv)
                   apply (simp add: word_le_nat_alt)
@@ -6255,7 +6255,7 @@ lemma invokeUntyped_invs'':
          apply (intro impI)
          apply (erule impE)
           apply (erule(1) snd_set_zip_in_set)
-        apply (simp add: conj_comms, wp createNew_Q[where sz1=sz])
+        apply (simp add: conj_comms, wp createNew_Q[where sz=sz])
         apply (wp hoare_strengthen_post[OF createNewCaps_range_helper[where sz = sz]])
         apply (clarsimp simp: slots)
        apply (clarsimp simp:conj_comms ball_conj_distrib pred_conj_def
