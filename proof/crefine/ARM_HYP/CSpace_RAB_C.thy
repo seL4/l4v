@@ -316,7 +316,7 @@ next
        apply (simp add: cap_cnode_cap_lift_def cap_lift_cnode_cap)
        apply (rule order_le_less_trans, rule word_le_nat_alt[THEN iffD1],
               rule word_and_le1)
-       apply simp
+       apply (simp add: mask_def)
        done
 
     have cgD: "\<And>capGuard cap cap'. \<lbrakk> capGuard = capCNodeGuard_CL (cap_cnode_cap_lift cap');
@@ -335,7 +335,7 @@ next
        apply (simp add: cap_cnode_cap_lift_def cap_lift_cnode_cap)
        apply (rule order_le_less_trans, rule word_le_nat_alt[THEN iffD1],
               rule word_and_le1)
-       apply simp
+       apply (simp add: mask_def)
        done
 
     have rxgd:
@@ -350,7 +350,7 @@ next
        apply (subst unat_plus_simple[symmetric], subst no_olen_add_nat)
        apply (rule order_le_less_trans, rule add_le_mono)
          apply (rule word_le_nat_alt[THEN iffD1], rule word_and_le1)+
-       apply simp
+       apply (simp add: mask_def)
        done
 
     (* Move outside this context? *)
@@ -434,7 +434,7 @@ next
                            cap_lift_cnode_cap)
         apply (rule less_mask_eq
                  | rule order_le_less_trans, (rule word_and_le1)+
-                 | simp)+
+                 | simp add: mask_def)+
       apply (simp add: word_less_nat_alt)
       apply (rule order_le_less_trans, rule add_le_mono)
         apply (rule word_le_nat_alt[THEN iffD1], rule word_and_le1)+
@@ -452,7 +452,7 @@ next
       apply (subst unat_plus_simple[THEN iffD1])
        apply (subst no_olen_add_nat)
        apply (simp add: cap_lift_cnode_cap cap_cnode_cap_lift_def
-                        cap_get_tag_isCap[symmetric])
+                        cap_get_tag_isCap[symmetric] mask_def)
        apply (rule order_le_less_trans, rule add_le_mono)
          apply (rule word_le_nat_alt[THEN iffD1], rule word_and_le1)+
        apply simp

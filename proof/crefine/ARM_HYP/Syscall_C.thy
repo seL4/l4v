@@ -1852,7 +1852,7 @@ lemma virq_to_H_arrayp[simp]:
 lemma virq_virq_active_set_virqEOIIRQEN_spec':
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. virq_get_tag \<acute>virq = scast virq_virq_active\<rbrace>
        Call virq_virq_active_set_virqEOIIRQEN_'proc
-       \<lbrace> \<acute>ret__struct_virq_C = virq_C (ARRAY _. virqSetEOIIRQEN (virq_to_H \<^bsup>s\<^esup>virq) \<^bsup>s\<^esup>v) \<rbrace>"
+       \<lbrace> \<acute>ret__struct_virq_C = virq_C (ARRAY _. virqSetEOIIRQEN (virq_to_H \<^bsup>s\<^esup>virq) \<^bsup>s\<^esup>v32) \<rbrace>"
   apply (hoare_rule HoarePartial.ProcNoRec1) (* force vcg to unfold non-recursive procedure *)
   apply vcg
   apply (clarsimp simp: virq_to_H_def virqSetEOIIRQEN_def o_def)
@@ -1865,7 +1865,7 @@ lemma virq_virq_active_set_virqEOIIRQEN_spec':
 lemma virq_virq_invalid_set_virqEOIIRQEN_spec':
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. virq_get_tag \<acute>virq = scast virq_virq_invalid\<rbrace>
        Call virq_virq_invalid_set_virqEOIIRQEN_'proc
-       \<lbrace> \<acute>ret__struct_virq_C = virq_C (ARRAY _. virqSetEOIIRQEN (virq_to_H \<^bsup>s\<^esup>virq) \<^bsup>s\<^esup>v) \<rbrace>"
+       \<lbrace> \<acute>ret__struct_virq_C = virq_C (ARRAY _. virqSetEOIIRQEN (virq_to_H \<^bsup>s\<^esup>virq) \<^bsup>s\<^esup>v32) \<rbrace>"
   apply (hoare_rule HoarePartial.ProcNoRec1) (* force vcg to unfold non-recursive procedure *)
   apply vcg
   apply (clarsimp simp: virq_to_H_def virqSetEOIIRQEN_def o_def)
@@ -1878,7 +1878,7 @@ lemma virq_virq_invalid_set_virqEOIIRQEN_spec':
 lemma virq_virq_pending_set_virqEOIIRQEN_spec':
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. virq_get_tag \<acute>virq = scast virq_virq_pending\<rbrace>
        Call virq_virq_pending_set_virqEOIIRQEN_'proc
-       \<lbrace> \<acute>ret__struct_virq_C = virq_C (ARRAY _. virqSetEOIIRQEN (virq_to_H \<^bsup>s\<^esup>virq) \<^bsup>s\<^esup>v) \<rbrace>"
+       \<lbrace> \<acute>ret__struct_virq_C = virq_C (ARRAY _. virqSetEOIIRQEN (virq_to_H \<^bsup>s\<^esup>virq) \<^bsup>s\<^esup>v32) \<rbrace>"
   apply (hoare_rule HoarePartial.ProcNoRec1) (* force vcg to unfold non-recursive procedure *)
   apply vcg
   apply (clarsimp simp: virq_to_H_def virqSetEOIIRQEN_def o_def)

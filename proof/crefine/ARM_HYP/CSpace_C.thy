@@ -609,7 +609,7 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
   "src=src' \<Longrightarrow>
    ccorres dc xfdc ((\<lambda>_. src \<noteq> 0 \<and> (dest\<noteq>0 \<longrightarrow> is_aligned dest 3)))
   ({s. mdb_node_ptr_' s = Ptr &((Ptr src' :: cte_C ptr)\<rightarrow>[''cteMDBNode_C''])} \<inter>
-   {s. v_' s = dest}) []
+   {s. v32_' s = dest}) []
   (updateMDB src (mdbNext_update (\<lambda>_. dest)))
   (Call mdb_node_ptr_set_mdbNext_'proc)"
   unfolding updateMDB_def
@@ -619,7 +619,7 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
   apply simp
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_pre_getCTE [where P = "\<lambda>cte s. ctes_of s src' = Some cte" and
-     P' = "\<lambda>_. (\<lbrace>\<acute>mdb_node_ptr = Ptr &((Ptr src' :: cte_C ptr)\<rightarrow>[''cteMDBNode_C''])\<rbrace> \<inter> \<lbrace>\<acute>v = dest\<rbrace>)"])
+     P' = "\<lambda>_. (\<lbrace>\<acute>mdb_node_ptr = Ptr &((Ptr src' :: cte_C ptr)\<rightarrow>[''cteMDBNode_C''])\<rbrace> \<inter> \<lbrace>\<acute>v32 = dest\<rbrace>)"])
    apply (rule ccorres_from_spec_modifies_heap)
         apply (rule mdb_node_ptr_set_mdbNext_spec)
        apply (rule mdb_node_ptr_set_mdbNext_modifies)
@@ -642,7 +642,7 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
      apply (erule (2) cspace_cte_relation_upd_mdbI)
      apply (simp add: cmdbnode_relation_def)
 
-     subgoal for _ s' by (cases "v_' s' = 0"; simp)
+     subgoal for _ s' by (cases "v32_' s' = 0"; simp)
 
     apply (erule_tac t = s'a in ssubst)
     apply simp
@@ -657,7 +657,7 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
   "src=src' \<Longrightarrow>
   ccorres dc xfdc ((\<lambda>_. src \<noteq> 0 \<and> (dest\<noteq>0 \<longrightarrow>is_aligned dest 3)) )
   ({s. mdb_node_ptr_' s = Ptr &((Ptr src' :: cte_C ptr)\<rightarrow>[''cteMDBNode_C''])} \<inter>
-   {s. v_' s = dest}) []
+   {s. v32_' s = dest}) []
   (updateMDB src (mdbPrev_update (\<lambda>_. dest)))
   (Call mdb_node_ptr_set_mdbPrev_'proc)"
   unfolding updateMDB_def
@@ -667,7 +667,7 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
   apply simp
   apply (rule ccorres_guard_imp2)
   apply (rule ccorres_pre_getCTE [where P = "\<lambda>cte s. ctes_of s src' = Some cte" and
-    P' = "\<lambda>_. (\<lbrace>\<acute>mdb_node_ptr = Ptr &((Ptr src' :: cte_C ptr)\<rightarrow>[''cteMDBNode_C''])\<rbrace> \<inter> \<lbrace>\<acute>v = dest\<rbrace>)"])
+    P' = "\<lambda>_. (\<lbrace>\<acute>mdb_node_ptr = Ptr &((Ptr src' :: cte_C ptr)\<rightarrow>[''cteMDBNode_C''])\<rbrace> \<inter> \<lbrace>\<acute>v32 = dest\<rbrace>)"])
   apply (rule ccorres_from_spec_modifies_heap)
        apply (rule mdb_node_ptr_set_mdbPrev_spec)
       apply (rule mdb_node_ptr_set_mdbPrev_modifies)
@@ -690,7 +690,7 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
     apply (erule (2) cspace_cte_relation_upd_mdbI)
     apply (simp add: cmdbnode_relation_def)
 
-    subgoal for _ s' by (cases "v_' s' = 0"; simp)
+    subgoal for _ s' by (cases "v32_' s' = 0"; simp)
    apply (erule_tac t = s'a in ssubst)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
                     h_t_valid_clift_Some_iff typ_heap_simps')
@@ -839,7 +839,7 @@ lemma update_freeIndex:
   "ccorres dc xfdc
            (valid_objs' and cte_wp_at' (\<lambda>cte. \<exists>i. cteCap cte = UntypedCap d p sz i) srcSlot
            and (\<lambda>_. is_aligned (of_nat i' :: word32) 4 \<and> i' \<le> 2 ^ sz))
-           (UNIV \<inter> {s. cap_ptr_' s = Ptr &(cte_Ptr srcSlot\<rightarrow>[''cap_C''])} \<inter> {s.  v_' s = (of_nat (i') :: word32)>> 4})
+           (UNIV \<inter> {s. cap_ptr_' s = Ptr &(cte_Ptr srcSlot\<rightarrow>[''cap_C''])} \<inter> {s.  v32_' s = (of_nat (i') :: word32)>> 4})
            [] (updateCap srcSlot (UntypedCap d p sz i'))
            (Call cap_untyped_cap_ptr_set_capFreeIndex_'proc)"
   apply (rule ccorres_gen_asm)
@@ -882,10 +882,10 @@ proof -
               (of_nat i' >> 4 << 6) && ~~ mask 6 >>
               5) &&
              1) \<and>
-           cap_C.words_C x1.[Suc 0] && 0x1F =
+           cap_C.words_C x1.[Suc 0] && mask 5 =
            (cap_C.words_C x1.[Suc 0] && 0x3F ||
-            (of_nat i' >> 4 << 6) && ~~ mask 6) &&
-           0x1F \<and>
+            (of_nat i' >> 4 << 6) && ~~ mask 6) && mask 5
+           \<and>
            i' =
            unat
             ((cap_C.words_C x1.[Suc 0] && 0x3F ||
@@ -913,11 +913,12 @@ proof -
     done
 
   note option.case_cong_weak [cong]
+  note mask_def [of "Suc 0", simp]
 
 show "ccorresG rf_sr \<Gamma> dc xfdc (cte_wp_at' (\<lambda>cte. \<exists>i. cteCap cte = capability.UntypedCap d p sz i) srcSlot)
-        (UNIV \<inter> \<lbrace>\<acute>cap_ptr = cap_Ptr &(cte_Ptr srcSlot\<rightarrow>[''cap_C''])\<rbrace> \<inter> \<lbrace>\<acute>v = (of_nat i' :: word32) >> 4\<rbrace>) []
+        (UNIV \<inter> \<lbrace>\<acute>cap_ptr = cap_Ptr &(cte_Ptr srcSlot\<rightarrow>[''cap_C''])\<rbrace> \<inter> \<lbrace>\<acute>v32 = (of_nat i' :: word32) >> 4\<rbrace>) []
         (updateCap srcSlot (capability.UntypedCap d p sz i')) (Call cap_untyped_cap_ptr_set_capFreeIndex_'proc)"
-  apply (cinit lift: cap_ptr_' v_')
+  apply (cinit lift: cap_ptr_' v32_')
    apply (rule ccorres_pre_getCTE)
    apply (rule_tac P = "\<lambda>s. ctes_of s srcSlot = Some rv \<and> (\<exists>i. cteCap rv = UntypedCap d p sz i)" in
     ccorres_from_vcg[where P' = UNIV])
@@ -986,7 +987,7 @@ lemma capBlockSize_CL_maxSize:
   apply (clarsimp simp: cap_lift_def)
   apply (clarsimp simp: cap_untyped_cap_def cap_null_cap_def)
   apply (rule word_and_less')
-  apply simp
+  apply (simp add: mask_def)
   done
 
 lemma t2p_shiftr:
@@ -1274,7 +1275,7 @@ lemma updateMDB_mdbNext_set_mdbPrev:
           Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t (Ptr (mdbNext_CL (mdb_node_lift mdbc)) :: cte_C ptr)\<rbrace>
                (call (\<lambda>ta. ta(| mdb_node_ptr_' := Ptr &(Ptr (mdbNext_CL (mdb_node_lift mdbc)):: cte_C ptr
                                                           \<rightarrow>[''cteMDBNode_C'']),
-                                 v_' := ptr_val slotc |))
+                                 v32_' := ptr_val slotc |))
                 mdb_node_ptr_set_mdbPrev_'proc (\<lambda>s t. s\<lparr> globals := globals t \<rparr>) (\<lambda>ta s'. Basic (\<lambda>a. a)))
       FI)"
   apply (rule ccorres_guard_imp2) -- "replace preconditions by schematics"
@@ -1310,7 +1311,7 @@ lemma updateMDB_mdbPrev_set_mdbNext:
           Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t (Ptr (mdbPrev_CL (mdb_node_lift mdbc)):: cte_C ptr)\<rbrace>
                (call (\<lambda>ta. ta(| mdb_node_ptr_' := Ptr &(Ptr (mdbPrev_CL (mdb_node_lift mdbc)):: cte_C ptr
                                                            \<rightarrow>[''cteMDBNode_C'']),
-                                 v_' := ptr_val slotc |))
+                                 v32_' := ptr_val slotc |))
                 mdb_node_ptr_set_mdbNext_'proc (\<lambda>s t. s\<lparr> globals := globals t \<rparr>) (\<lambda>ta s'. Basic (\<lambda>a. a)))
       FI)"
   apply (rule ccorres_guard_imp2) -- "replace preconditions by schematics"
@@ -2767,11 +2768,7 @@ lemma is_aligned_small_frame_cap_lift:
    "cap_get_tag cap = scast cap_small_frame_cap \<Longrightarrow>
     is_aligned (cap_small_frame_cap_CL.capFBasePtr_CL
                         (cap_small_frame_cap_lift cap)) 12"
-  apply (simp add: cap_small_frame_cap_lift_def
-                   cap_lift_small_frame_cap)
-  apply (rule is_aligned_andI2)
-  apply (simp add: is_aligned_def)
-  done
+  by (simp add: cap_small_frame_cap_lift_def cap_lift_small_frame_cap)
 
 lemma fff_is_pageBits:
   "(0xFFF :: word32) = 2 ^ pageBits - 1"
@@ -3288,7 +3285,7 @@ lemma get_capSizeBits_valid_shift:
       apply (clarsimp split: vmpage_size.split)+
    (* untyped *)
    apply (frule cap_get_tag_isCap_unfolded_H_cap)
-   apply (clarsimp simp: cap_lift_def cap_tag_defs)
+   apply (clarsimp simp: cap_lift_def cap_tag_defs mask_def)
    apply (subgoal_tac "index (cap_C.words_C ccap) 1 && 0x1F \<le> 0x1F")
     apply (simp add: unat_arith_simps)
    apply (simp add: word_and_le1)
@@ -3641,7 +3638,7 @@ lemma sameRegionAs_spec:
        apply (subgoal_tac "capBlockSize_CL (cap_untyped_cap_lift cap_a) \<le> 0x1F")
         apply (simp add: word_le_make_less)
        apply (simp add: cap_untyped_cap_lift_def cap_lift_def
-                        cap_tag_defs word_and_le1)
+                        cap_tag_defs word_and_le1 mask_def)
       apply (clarsimp simp: get_capSizeBits_valid_shift_word)
      apply (clarsimp simp: from_bool_def Let_def split: if_split bool.splits)
      apply (subst unat_of_nat32,
@@ -3698,7 +3695,7 @@ lemma capFSize_range:
   "\<And>cap. cap_get_tag cap = scast cap_frame_cap \<Longrightarrow>
    capFSize_CL (cap_frame_cap_lift cap) \<le> 3"
   apply (simp add: cap_frame_cap_lift_def)
-  apply (simp add: cap_lift_def cap_tag_defs word_and_le1)
+  apply (simp add: cap_lift_def cap_tag_defs word_and_le1 mask_def)
   done
 
 lemma Arch_sameObjectAs_spec:
@@ -3992,7 +3989,7 @@ lemma updateCapData_spec:
     apply (simp add: cap_cnode_cap_lift_def cap_lift_cnode_cap)
     apply (rule word_le_nat_alt[THEN iffD1])
     apply (rule word_and_le1)
-   apply simp
+   apply (simp add: mask_def)
 
   apply (simp add: word_sle_def)
   apply (rule conjI, clarsimp simp:  ccap_relation_NullCap_iff cap_tag_defs)
@@ -4357,7 +4354,7 @@ lemma (in kernel_m) updateMDB_set_mdbPrev:
           Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t (Ptr ptr:: cte_C ptr)\<rbrace>
                (call (\<lambda>ta. ta(| mdb_node_ptr_' := Ptr &(Ptr ptr:: cte_C ptr
                                                           \<rightarrow>[''cteMDBNode_C'']),
-                                 v_' := slotc |))
+                                 v32_' := slotc |))
                 mdb_node_ptr_set_mdbPrev_'proc (\<lambda>s t. s\<lparr> globals := globals t \<rparr>) (\<lambda>ta s'. Basic (\<lambda>a. a)))
       FI)"
   apply (rule ccorres_guard_imp2) -- "replace preconditions by schematics"
@@ -4366,7 +4363,7 @@ lemma (in kernel_m) updateMDB_set_mdbPrev:
     apply (rule ccorres_updateMDB_cte_at)
     apply (ctac add: ccorres_updateMDB_set_mdbPrev)
    apply (ctac ccorres: ccorres_updateMDB_skip)
-  apply (simp  add: Collect_const_mem)
+  apply (simp)
   done
 
 lemma (in kernel_m) updateMDB_set_mdbNext:
@@ -4379,7 +4376,7 @@ lemma (in kernel_m) updateMDB_set_mdbNext:
           Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t (Ptr ptr:: cte_C ptr)\<rbrace>
                (call (\<lambda>ta. ta(| mdb_node_ptr_' := Ptr &(Ptr ptr:: cte_C ptr
                                                           \<rightarrow>[''cteMDBNode_C'']),
-                                 v_' := slotc |))
+                                 v32_' := slotc |))
                 mdb_node_ptr_set_mdbNext_'proc (\<lambda>s t. s\<lparr> globals := globals t \<rparr>) (\<lambda>ta s'. Basic (\<lambda>a. a)))
       FI)"
   apply (rule ccorres_guard_imp2) -- "replace preconditions by schematics"

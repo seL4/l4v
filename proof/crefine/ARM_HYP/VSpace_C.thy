@@ -3555,7 +3555,7 @@ lemma ccap_relation_mapped_asid_0:
    apply (drule word_shift_zero [where m=8])
      apply (rule order_trans)
       apply (rule word_and_le1)
-     apply simp
+     apply (simp add: mask_def)
     apply (simp add: asid_low_bits_def word_bits_def)
    apply simp
   apply (rule ccontr)
@@ -3571,7 +3571,7 @@ lemma ccap_relation_mapped_asid_0:
   apply (drule word_shift_zero [where m=8])
     apply (rule order_trans)
      apply (rule word_and_le1)
-    apply simp
+    apply (simp add: mask_def)
    apply (simp add: asid_low_bits_def word_bits_def)
   apply simp
   done
@@ -3619,7 +3619,7 @@ lemma ccap_relation_PageCap_generics:
                          generic_frame_cap_get_capFIsDevice_CL_def
                   elim!: ccap_relationE)
    apply (simp add: gen_framesize_to_H_def)
-   apply (simp add: vm_page_size_defs order_le_less_trans [OF word_and_le1]
+   apply (simp add: vm_page_size_defs order_le_less_trans [OF word_and_le1] mask_def
              split: if_split)
    apply (clarsimp split: if_split_asm)
   apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
@@ -3634,7 +3634,7 @@ lemma ccap_relation_PageCap_generics:
                         option_to_0_def
                  elim!: ccap_relationE)
   apply (simp add: gen_framesize_to_H_is_framesize_to_H_if_not_ARMSmallPage)
-  apply (simp add: vm_page_size_defs order_le_less_trans [OF word_and_le1]
+  apply (simp add: vm_page_size_defs order_le_less_trans [OF word_and_le1] mask_def
             split: if_split)
   apply (clarsimp split: if_split_asm)
   done
@@ -3845,7 +3845,7 @@ lemma vmAttributesFromWord_spec:
       \<lparr>  armExecuteNever_CL =  (\<^bsup>s\<^esup>w >> 2) && 1,
         armParityEnabled_CL = (\<^bsup>s\<^esup>w >> 1) && 1,
         armPageCacheable_CL = \<^bsup>s\<^esup>w && 1 \<rparr>  \<rbrace>"
-  by (vcg, simp add: vm_attributes_lift_def word_sless_def word_sle_def)
+  by (vcg, simp add: vm_attributes_lift_def word_sless_def word_sle_def mask_def)
 
 lemma cap_to_H_PDCap_tag:
   "\<lbrakk> cap_to_H cap = ArchObjectCap (PageDirectoryCap p A);

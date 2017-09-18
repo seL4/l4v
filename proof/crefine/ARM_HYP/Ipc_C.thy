@@ -3269,7 +3269,6 @@ next
                   subst shiftl_shiftr2, simp, simp)
              apply (simp add: seL4_MessageInfo_lift_def word_bw_assocs
                               word_sle_def t2n_mask_eq_if)
-             apply (simp add: mask_def)
             apply (rule conjI)
              apply (clarsimp simp: ccap_rights_relation_def cap_rights_to_H_def
                                  false_def true_def to_bool_def allRights_def

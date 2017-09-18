@@ -456,7 +456,7 @@ lemma lookup_fp_ccorres':
      apply (subst unat_plus_simple[symmetric], subst no_olen_add_nat)
      apply (rule order_le_less_trans, rule add_le_mono)
        apply (rule word_le_nat_alt[THEN iffD1], rule word_and_le1)+
-     apply simp
+     apply (simp add: mask_def)
     apply (rule ccorres_guard_imp2)
      apply csymbr+
      apply (rule ccorres_Guard_Seq, csymbr)
@@ -1139,7 +1139,7 @@ lemma thread_state_ptr_set_tsType_np_spec:
   apply (clarsimp simp: typ_heap_simps')
   apply (rule exI, rule conjI[OF _ conjI [OF _ refl]])
   apply (simp_all add: thread_state_lift_def)
-  apply (auto simp: "StrictC'_thread_state_defs")
+  apply (auto simp: "StrictC'_thread_state_defs" mask_def)
   done
 
 lemma thread_state_ptr_mset_blockingObject_tsType_spec:
@@ -1199,7 +1199,7 @@ lemma mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_spec:
   apply (rule exI, rule conjI[OF _ refl])
   apply (simp add: mdb_node_lift_def word_ao_dist shiftr_over_or_dist ucast_id)
   apply (fold limited_and_def)
-  apply (simp add: limited_and_simps)
+  apply (simp add: limited_and_simps mask_def)
   done
 
 
@@ -1225,7 +1225,7 @@ lemma mdb_node_ptr_set_mdbPrev_np_spec:
   apply (subst parent_update_child, erule typ_heap_simps', simp+)
   apply (clarsimp simp: typ_heap_simps' word_sle_def word_sless_def)
   apply (rule exI, rule conjI [OF _ refl])
-  apply (simp add: mdb_node_lift_def limited_and_simps)
+  apply (simp add: mdb_node_lift_def limited_and_simps mask_def)
   done
 
 lemma cap_reply_cap_ptr_new_np_spec2:
@@ -1458,7 +1458,7 @@ lemma mi_check_messageInfo_raw:
         = mi_from_H (messageInfoFromWord mi)"
   apply (simp add: messageInfoFromWord_def Let_def mi_from_H_def
                    seL4_MessageInfo_lift_def fcp_beta msgLengthBits_def msgExtraCapBits_def
-                   msgMaxExtraCaps_def shiftL_nat)
+                   msgMaxExtraCaps_def shiftL_nat mask_def)
   apply (subst if_not_P)
    apply (simp add: linorder_not_less msgMaxLength_def n_msgRegisters_def)
    apply (erule order_trans, simp)
@@ -1987,7 +1987,7 @@ lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
   apply (simp add: cap_to_H_simps word_ao_dist cl_valid_cap_def
                    limited_and_simps cap_reply_cap_def
                    limited_and_simps1[OF lshift_limited_and, OF limited_and_from_bool]
-                   shiftr_over_or_dist word_bw_assocs)
+                   shiftr_over_or_dist word_bw_assocs mask_def)
   done
 
 lemma fastpath_copy_mrs_ccorres:
@@ -2023,8 +2023,7 @@ shows
        apply (simp add: min.absorb2)
       apply (rule allI, rule conseqPre, vcg)
       apply (simp)
-     apply (simp add: length_msgRegisters n_msgRegisters_def
-       word_bits_def hoare_TrueI)+
+     apply (simp add: length_msgRegisters n_msgRegisters_def word_bits_def hoare_TrueI)+
   done
 
 lemma switchToThread_ksCurThread:
@@ -2063,7 +2062,7 @@ lemma cap_page_directory_cap_get_capPDBasePtr_spec2:
   apply vcg
   apply (clarsimp simp: word_sle_def word_sless_def
                         cap_page_directory_cap_lift_def
-                        cap_lift_page_directory_cap)
+                        cap_lift_page_directory_cap mask_def)
   done
 
 lemma ccorres_flip_Guard2:

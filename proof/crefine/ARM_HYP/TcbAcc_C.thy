@@ -280,7 +280,7 @@ lemma valid_tcb'_vcpuE [elim_format]:
     by auto
 
 lemma sanitiseRegister_spec:
-  "\<forall>s t v r. \<Gamma> \<turnstile> ({s} \<inter> \<lbrace>\<acute>v___unsigned_long = v\<rbrace> \<inter> \<lbrace>\<acute>reg = register_from_H r\<rbrace> \<inter> \<lbrace>\<acute>archInfo = from_bool t\<rbrace>)
+  "\<forall>s t v r. \<Gamma> \<turnstile> ({s} \<inter> \<lbrace>\<acute>v = v\<rbrace> \<inter> \<lbrace>\<acute>reg = register_from_H r\<rbrace> \<inter> \<lbrace>\<acute>archInfo = from_bool t\<rbrace>)
                    Call sanitiseRegister_'proc
                  \<lbrace>\<acute>ret__unsigned_long = sanitiseRegister t r v\<rbrace>"
   apply vcg
