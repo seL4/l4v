@@ -78,7 +78,6 @@ definition
     tcb_bound_notification = None,
     tcb_mcpriority = minBound,
     tcb_sched_context = Some idle_sc_ptr,
-    tcb_yield_to   = None,
     tcb_reply = None,
     tcb_arch = init_arch_tcb
   \<rparr>,

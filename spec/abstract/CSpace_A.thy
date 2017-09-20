@@ -723,8 +723,8 @@ where
 | "same_region_as (ReplyCap n) c' = (c' = ReplyCap n)"
 | "same_region_as (ThreadCap r) c' =
     (is_thread_cap c' \<and> obj_ref_of c' = r)"
-| "same_region_as (SchedContextCap sc b) c' =
-    (is_sched_context_cap c' \<and> obj_ref_of c' = sc)"
+| "same_region_as (SchedContextCap sc n) c' =
+    (is_sched_context_cap c' \<and> obj_ref_of c' = sc \<and> bits_of c' = n)"
 | "same_region_as SchedControlCap c' =
     (c' = SchedControlCap)"
 | "same_region_as (Zombie r b n) c' = False"

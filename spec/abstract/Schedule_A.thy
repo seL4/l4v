@@ -328,10 +328,9 @@ where
       od
       else do
         flag \<leftarrow> return False;
-        thread_set (\<lambda>t. t\<lparr> tcb_yield_to := Some sc_ptr \<rparr> ) ct_ptr;
         set_sched_context sc_ptr (sc\<lparr> sc_yield_from := Some ct_ptr \<rparr>);
         possible_switch_to ct_ptr;
-        set_thread_state ct_ptr YieldTo
+        set_thread_state ct_ptr (YieldTo sc_ptr)
       od
     od;
     when flag $ set_consumed sc_ptr args

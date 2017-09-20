@@ -261,7 +261,7 @@ fun
 where
   "refills_merge_prefix [] = []"
 | "refills_merge_prefix [r] = [r]"
-| "refills_merge_prefix (r1 # r2 # rs) = 
+| "refills_merge_prefix (r1 # r2 # rs) =
      (if can_merge_refill r1 r2
       then refills_merge_prefix (merge_refill r1 r2 # rs)
       else r1 # r2 # rs)"
@@ -430,33 +430,20 @@ where
 text {* yield\_to related functions *}
 
 definition
-  cancel_yield_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "cancel_yield_to tcb_ptr \<equiv> do
-     yieldto \<leftarrow> thread_get tcb_yield_to tcb_ptr;
-     case yieldto of
-       None \<Rightarrow> return  ()
-     | Some sc_ptr \<Rightarrow> do
-         sc \<leftarrow> get_sched_context sc_ptr;
-         set_sched_context sc_ptr (sc \<lparr> sc_yield_from := None \<rparr> );
-         thread_set (\<lambda>t. t \<lparr> tcb_yield_to := None\<rparr> ) tcb_ptr
-       od
-  od"
-
-definition
   complete_yield_to :: "obj_ref \<Rightarrow> (unit, det_ext) s_monad"
 where
   "complete_yield_to tcb_ptr \<equiv> do
-     yieldto \<leftarrow> thread_get tcb_yield_to tcb_ptr;
-     case yieldto of
-       None \<Rightarrow> return  ()
-     | Some sc_ptr \<Rightarrow> do
+     st \<leftarrow> get_thread_state tcb_ptr;
+     case st of
+       YieldTo sc_ptr \<Rightarrow> do
          args \<leftarrow> lookup_ipc_buffer True tcb_ptr;
          buf \<leftarrow> assert_opt args;
          set_consumed sc_ptr [buf];
-         cancel_yield_to tcb_ptr;
+         sc \<leftarrow> get_sched_context sc_ptr;
+         set_sched_context sc_ptr (sc \<lparr> sc_yield_from := None \<rparr> );
          set_thread_state tcb_ptr Running
-      od
+       od
+      | _ \<Rightarrow> return ()
     od"
 
 definition
@@ -487,11 +474,10 @@ definition
 where
   "unbind_from_sc tcb_ptr = do
     sc_ptr_opt \<leftarrow> thread_get tcb_sched_context tcb_ptr;
-    maybeM (\<lambda>s. do
-                  sc \<leftarrow> get_sched_context s;
-                  maybeM complete_yield_to (sc_yield_from sc)
-                od) sc_ptr_opt;
-    maybeM sched_context_unbind_tcb sc_ptr_opt
+    maybeM sched_context_unbind_tcb sc_ptr_opt;
+    maybeM (\<lambda>scptr. do
+              sc \<leftarrow> get_sched_context scptr;
+              maybeM complete_yield_to (sc_yield_from sc) od) sc_ptr_opt
   od"
 
 definition
@@ -499,7 +485,7 @@ definition
 where
   "maybe_donate_sc tcb_ptr ntfn_ptr = do
      sc_opt \<leftarrow> thread_get tcb_sched_context tcb_ptr;
-     when (sc_opt = None) $ 
+     when (sc_opt = None) $
        liftM ntfn_sc (get_notification ntfn_ptr) >>= maybeM (\<lambda>sc_ptr. do
          sc_tcb \<leftarrow> liftM sc_tcb $ get_sched_context sc_ptr;
          when (sc_tcb = None) $ sched_context_donate sc_ptr tcb_ptr
@@ -575,9 +561,14 @@ definition
 where
   "suspend thread \<equiv> do
      cancel_ipc thread;
+     st \<leftarrow> get_thread_state thread;
+     case st of YieldTo sc_ptr \<Rightarrow> do
+       sc \<leftarrow> get_sched_context sc_ptr;
+       set_sched_context sc_ptr (sc \<lparr> sc_yield_from := None \<rparr> )
+     od
+    | _ \<Rightarrow> return ();
      set_thread_state thread Inactive;
-     do_extended_op (tcb_sched_action (tcb_sched_dequeue) thread);
-     cancel_yield_to thread
+     do_extended_op (tcb_sched_action (tcb_sched_dequeue) thread)
    od"
 
 

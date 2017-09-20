@@ -59,7 +59,7 @@ definition
      state \<leftarrow> get_thread_state thread;
      (case state
        of Running \<Rightarrow> return ()
-        | YieldTo \<Rightarrow> complete_yield_to thread
+        | YieldTo _ \<Rightarrow> complete_yield_to thread
         | Restart \<Rightarrow> (do
             pc \<leftarrow> as_user thread getRestartPC;
             as_user thread $ setNextPC pc;
