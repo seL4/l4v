@@ -890,8 +890,8 @@ abbreviation(input)
  "all_invs_but_equal_kernel_mappings_restricted S
     \<equiv> (\<lambda>s. equal_kernel_mappings (s \<lparr> kheap := restrict_map (kheap s) (- S) \<rparr>))
        and valid_pspace and valid_mdb and valid_idle and only_idle
-       and if_unsafe_then_cap and valid_reply_caps
-       and valid_reply_masters and valid_global_refs and valid_arch_state
+       and if_unsafe_then_cap
+       and valid_global_refs and valid_arch_state
        and valid_irq_node and valid_irq_handlers and valid_vspace_objs
        and valid_irq_states and valid_global_objs
        and valid_arch_caps and valid_kernel_mappings
@@ -1078,7 +1078,7 @@ where
                \<longrightarrow> obj_refs c' \<inter> untyped_range c \<noteq> {} \<longrightarrow> p' \<in> descendants_of p m)
    \<and> descendants_inc m cps
    \<and> (\<forall>p. \<not> m \<Turnstile> p \<rightarrow> p) \<and> untyped_inc m cps \<and> ut_revocable r cps
-   \<and> irq_revocable r cps \<and> reply_master_revocable r cps \<and> reply_mdb m cps \<and> valid_arch_mdb r cps"
+   \<and> irq_revocable r cps \<and> valid_arch_mdb r cps"
 
 
 lemma conj_cong2: "\<lbrakk>P = P'; P \<Longrightarrow> Q = Q'\<rbrakk> \<Longrightarrow> (P \<and> Q) = (P' \<and> Q')" by auto
@@ -1106,9 +1106,9 @@ lemma valid_mdb_rep2:
    apply (rule arg_cong2 [where f="(\<and>)"])
     apply (simp add: ut_revocable_def null_filter_def del: split_paired_All)
     apply (auto simp: is_cap_simps)[1]
-   apply (rule arg_cong2 [where f="(\<and>)"])
     apply (simp add: irq_revocable_def null_filter_def del: split_paired_All)
     apply auto[1]
+(*
    apply (rule arg_cong2 [where f="(\<and>)"])
     apply (simp add: reply_master_revocable_def null_filter_def del: split_paired_All)
     apply (auto simp: is_cap_simps)[1]
@@ -1122,6 +1122,7 @@ lemma valid_mdb_rep2:
     apply (fastforce simp: reply_masters_mdb_def intro!: iffI elim!: allEI
                  simp del: split_paired_All split: if_split_asm)
    apply (fastforce simp: valid_arch_mdb_null_filter[simplified null_filter_def])
+*)
   apply (rule arg_cong[where f=All, OF ext])+
   apply ((clarsimp simp: cte_wp_at_caps_of_state null_filter_def
                | rule conjI iffI
@@ -1384,21 +1385,23 @@ lemma valid_obj_default_object:
   shows "valid_obj ptr (default_object ty dev us) s"
   unfolding valid_obj_def default_object_def
   apply (cases ty)
-       apply (simp add: tyunt)
-      apply (simp add: valid_tcb_def default_tcb_def valid_tcb_state_def
-                       tcb_cap_cases_def valid_ipc_buffer_cap_def
-                       word_bits_def arch)
-     apply (simp add: valid_ep_def default_ep_def)
-    apply (simp add: valid_ntfn_def default_notification_def default_ntfn_def valid_bound_tcb_def)
-   apply (frule tyct)
-   apply (clarsimp simp: valid_cs_def empty_cnode_def well_formed_cnode_n_def)
-   apply safe
-    apply (erule ranE)
-    apply (simp split: if_split_asm)
-   apply (simp add: valid_cs_size_def well_formed_cnode_n_def)
-   apply safe
-    apply (simp split: if_split_asm)
-   apply (clarsimp split: if_split_asm)
+         apply (simp add: tyunt)
+        apply (simp add: valid_tcb_def default_tcb_def valid_tcb_state_def
+                         tcb_cap_cases_def valid_ipc_buffer_cap_def
+                         word_bits_def arch)
+       apply (simp add: valid_ep_def default_ep_def)
+      apply (simp add: valid_ntfn_def default_notification_def default_ntfn_def valid_bound_obj_def)
+     apply (frule tyct)
+     apply (clarsimp simp: valid_cs_def empty_cnode_def well_formed_cnode_n_def)
+     apply safe
+      apply (erule ranE)
+      apply (simp split: if_split_asm)
+     apply (simp add: valid_cs_size_def well_formed_cnode_n_def)
+     apply safe
+      apply (simp split: if_split_asm)
+     apply (clarsimp split: if_split_asm)
+    apply (simp add: valid_sched_context_def valid_bound_obj_def default_sched_context_def)
+   apply (simp add: valid_reply_def valid_bound_obj_def default_reply_def)
   apply (clarsimp simp add: wellformed_arch_default)
   done
 
@@ -1648,28 +1651,35 @@ lemma valid_objs: "valid_objs s'"
   apply (drule bspec)
    apply (erule domI)
   apply (clarsimp simp:valid_obj_def split:Structures_A.kernel_object.splits)
-     apply (clarsimp simp: valid_cs_def)
-     apply (drule (1) bspec)
-     apply (clarsimp simp: ran_def)
-     apply (erule valid_cap_pres[unfolded s'_def ps_def])
-     apply (clarsimp simp add: cte_wp_at_cases valid_cs_size_def s'_def ps_def)
-     apply fastforce
-    apply (clarsimp simp: valid_tcb_def)
-    apply (rule conjI)
-     apply (rule ballI, drule(1) bspec, clarsimp elim!: ranE)
-     apply (erule valid_cap_pres[unfolded s'_def ps_def])
-     apply (rule cte_wp_at_tcbI, fastforce+)[1]
-     apply (fastforce simp: valid_tcb_state_def valid_bound_ntfn_def
-                   elim!: obj_at_pres[unfolded s'_def ps_def] valid_arch_tcb_typ_at
-                   split: Structures_A.thread_state.splits option.splits)
-    apply (fastforce simp: valid_ep_def
+        apply (clarsimp simp: valid_cs_def)
+        apply (drule (1) bspec)
+        apply (clarsimp simp: ran_def)
+        apply (erule valid_cap_pres[unfolded s'_def ps_def])
+        apply (clarsimp simp add: cte_wp_at_cases valid_cs_size_def s'_def ps_def)
+        apply fastforce
+       apply (clarsimp simp: valid_tcb_def)
+       apply (rule conjI)
+        apply (rule ballI, drule(1) bspec, clarsimp elim!: ranE)
+        apply (erule valid_cap_pres[unfolded s'_def ps_def])
+        apply (rule cte_wp_at_tcbI, fastforce+)[1]
+       apply (fastforce simp: valid_tcb_state_def valid_bound_obj_def
+                       elim!: obj_at_pres[unfolded s'_def ps_def] valid_arch_tcb_typ_at
+                       split: Structures_A.thread_state.splits option.splits)
+      apply (fastforce simp: valid_ep_def
+                      elim!: obj_at_pres[unfolded s'_def ps_def]
+                      split: Structures_A.endpoint.splits)
+     apply (fastforce simp: valid_ntfn_def valid_bound_obj_def
+                     elim!: obj_at_pres[unfolded s'_def ps_def]
+                     split: Structures_A.ntfn.splits option.splits)
+sorry
+(*    apply (fastforce simp: valid_sched_context_def valid_bound_obj_def
+                    elim!: obj_at_pres[unfolded s'_def ps_def]
+                    split: list.splits option.splits)
+  apply (fastforce simp: valid_reply_def valid_bound_obj_def
                   elim!: obj_at_pres[unfolded s'_def ps_def]
-                  split: Structures_A.endpoint.splits)
-  apply (fastforce simp: valid_ntfn_def valid_bound_tcb_def
-                  elim!: obj_at_pres[unfolded s'_def ps_def]
-                 split: Structures_A.ntfn.splits option.splits)
+                  split: option.splits)
   apply (clarsimp simp: wellformed_default_obj[unfolded s'_def ps_def])
-  done
+  done*)
 
 end
 
@@ -1684,6 +1694,7 @@ lemma refs_eq:
                    split: option.splits)
   apply (cases ty, simp_all add: tyunt default_object_def
                                  default_tcb_def default_ep_def
+                                 default_sched_context_def default_reply_def
                                  default_notification_def default_ntfn_def)
   done
 
@@ -1706,7 +1717,8 @@ lemma iflive_s: "if_live_then_nonz_cap s" by (rule valid_pspaceE [OF vp])
 
 lemma default_object_not_live: "\<not> live (default_object ty dev us)"
   apply (cases ty, simp_all add: tyunt default_object_def default_tcb_not_live default_arch_object_not_live)
-  apply (simp add: live_def default_ep_def default_notification_def default_ntfn_def)+
+  apply (simp add: live_def default_ep_def default_notification_def
+                   default_ntfn_def default_sched_context_def default_reply_def)+
   done
 
 lemma iflive:
@@ -1809,22 +1821,6 @@ proof -
   thus ?thesis
     by (simp add: cte_wp_at_caps_of_state)
 qed
-
-lemma unique_reply_caps:
-  "unique_reply_caps (caps_of_state s) \<Longrightarrow> unique_reply_caps (caps_of_state s')"
-  using caps_retype
-  by (fastforce simp add: is_cap_simps unique_reply_caps_def
-               simp del: split_paired_All
-                  elim!: allEI)
-
-lemma valid_reply_caps:
-  "valid_reply_caps s \<Longrightarrow> valid_reply_caps s'"
-  by (clarsimp simp: valid_reply_caps_def unique_reply_caps has_reply_cap_def
-                     pred_tcb_at_pres cte_retype)
-
-lemma valid_reply_masters:
-  "valid_reply_masters s \<Longrightarrow> valid_reply_masters s'"
-  by (clarsimp simp: valid_reply_masters_def cte_retype is_cap_simps obj_at_pres)
 
 end
 
@@ -2057,18 +2053,6 @@ lemmas retype_region_valid_globals = use_retype_region_proofs
          simplified]
 
 
-lemmas retype_region_valid_reply_caps = use_retype_region_proofs
-  [where Q=valid_reply_caps,
-         OF retype_region_proofs.valid_reply_caps,
-         simplified]
-
-
-lemmas retype_region_valid_reply_masters = use_retype_region_proofs
-  [where Q=valid_reply_masters,
-         OF retype_region_proofs.valid_reply_masters,
-         simplified]
-
-
 lemmas retype_region_arch_objs = use_retype_region_proofs
   [where Q=valid_vspace_objs,
          OF retype_region_proofs_invs.valid_vspace_objs'[OF retype_region_proofs_assms],
@@ -2084,14 +2068,14 @@ crunch interrupt_states[wp]: retype_region "\<lambda>s. P (interrupt_states s)"
 
 lemma invs_trans_state[simp]:
   "invs (trans_state f s) = invs s"
-  apply (simp add: invs_def valid_state_def)
+  apply (simp add: invs_def valid_state_def cur_tcb_more_update)
   done
 
 
 lemma post_retype_invs_trans_state[simp]:
   "post_retype_invs ty refs (trans_state f s) = post_retype_invs ty refs s"
   apply (simp add: post_retype_invs_def')
-  apply (simp add: trans_state_update[symmetric] del: trans_state_update)
+  apply (simp add: trans_state_update[symmetric] cur_tcb_more_update del: trans_state_update)
   done
 
 

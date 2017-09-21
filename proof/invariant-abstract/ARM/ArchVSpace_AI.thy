@@ -2091,9 +2091,9 @@ lemma set_pd_invs_map:
   apply (rule hoare_pre)
    apply (wp set_pd_valid_objs set_pd_iflive set_pd_zombies
              set_pd_zombies_state_refs set_pd_valid_mdb set_pd_zombies_state_hyp_refs
-             set_pd_valid_idle set_pd_ifunsafe set_pd_reply_caps
+             set_pd_valid_idle set_pd_ifunsafe
              set_pd_valid_arch set_pd_valid_global set_pd_cur
-             set_pd_reply_masters valid_irq_node_typ
+             valid_irq_node_typ
              set_pd_vspace_objs_map[where S=S and T="{}"]
              set_pd_valid_arch_caps[where S=S and T="{}" and S'=S' and T'=T']
              valid_irq_handlers_lift
@@ -2499,7 +2499,7 @@ lemma valid_cap_obj_ref_pt_pd:
          \<and> (is_pd_cap cap \<longrightarrow> is_pd_cap cap')"
   by (auto simp: is_cap_simps valid_cap_def
                  obj_at_def is_ep is_ntfn is_cap_table
-                 is_tcb a_type_def
+                 is_tcb a_type_def is_sc is_reply
           split: cap.split_asm if_split_asm
                  arch_cap.split_asm option.split_asm)
 
@@ -2642,9 +2642,9 @@ lemma set_pd_invs_unmap':
    apply (wp set_pd_valid_objs set_pd_iflive set_pd_zombies
              set_pd_zombies_state_refs set_pd_valid_mdb
              set_pd_zombies_state_hyp_refs
-             set_pd_valid_idle set_pd_ifunsafe set_pd_reply_caps
+             set_pd_valid_idle set_pd_ifunsafe
              set_pd_valid_arch set_pd_valid_global set_pd_cur
-             set_pd_reply_masters valid_irq_node_typ
+             valid_irq_node_typ
              set_pd_vspace_objs_unmap set_pd_valid_vs_lookup_map[where T=T and S="{}" and T'=T' and S'=S']
              valid_irq_handlers_lift
              set_pd_unmap_mappings set_pd_equal_kernel_mappings_triv)
@@ -4538,13 +4538,13 @@ lemma set_mi_invs[wp]: "\<lbrace>invs\<rbrace> set_message_info t a \<lbrace>\<l
   by (simp add: set_message_info_def, wp)
 
 lemma data_at_orth:
-  "data_at a p s \<Longrightarrow> \<not> ep_at p s
+  "data_at a p s \<Longrightarrow> \<not> ep_at p s \<and> \<not> reply_at p s \<and> \<not> sc_at p s
   \<and> \<not> ntfn_at p s \<and>\<not> cap_table_at sz p s \<and> \<not> tcb_at p s \<and> \<not> asid_pool_at p s
   \<and> \<not> page_table_at p s \<and> \<not> page_directory_at p s \<and> \<not> asid_pool_at p s"
   apply (clarsimp simp: data_at_def obj_at_def a_type_def)
   apply (case_tac "kheap s p",simp)
   subgoal for ko
-   by (case_tac ko,auto simp add: is_ep_def is_ntfn_def is_cap_table_def is_tcb_def)
+   by (case_tac ko,auto simp add: is_ep_def is_ntfn_def is_reply_def is_sc_def is_cap_table_def is_tcb_def)
   done
 
 lemma data_at_pg_cap:

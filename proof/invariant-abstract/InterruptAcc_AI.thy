@@ -40,8 +40,6 @@ definition all_invs_but_valid_irq_states_for where
   "all_invs_but_valid_irq_states_for irq \<equiv> valid_pspace and valid_mdb and
   valid_ioc and valid_idle and only_idle and
   if_unsafe_then_cap and
-  valid_reply_caps and
-  valid_reply_masters and
   valid_global_refs and
   valid_arch_state and
   valid_irq_node and

@@ -84,7 +84,7 @@ definition
   obj_reply_refs :: "cap \<Rightarrow> machine_word set"
 where
  "obj_reply_refs cap \<equiv> obj_refs cap \<union>
-   (case cap of cap.ReplyCap t m \<Rightarrow> {t} | _ \<Rightarrow> {})"
+   (case cap of cap.ReplyCap t \<Rightarrow> {t} | _ \<Rightarrow> {})"
 
 
 lemma ex_cte_cap_to_obj_ref_disj:
@@ -524,12 +524,6 @@ lemma non_null_caps:
      \<Longrightarrow> fst p \<notin> untyped_range cap"
     by (clarsimp simp: cte_wp_at_caps_of_state non_null_present)
 
-lemma vreply: "valid_reply_caps s"
-  using invs by (simp add: invs_def valid_state_def)
-
-lemma vmaster: "valid_reply_masters s"
-  using invs by (simp add: invs_def valid_state_def)
-
 lemma valid_cap2:
     "\<And>cap'. \<lbrakk> \<exists>p. cte_wp_at ((=) cap') p s \<rbrakk>
     \<Longrightarrow> obj_reply_refs cap' \<subseteq> (UNIV - untyped_range cap)"
@@ -541,15 +535,12 @@ lemma valid_cap2:
       apply (simp add:cte_wp_at_caps_of_state)
      apply (simp add:untyped)
     apply (clarsimp split: cap.split_asm bool.split_asm)
-    apply (rename_tac bool)
-    apply (case_tac bool, simp_all)
-     apply (frule valid_reply_mastersD [OF _ vmaster])
-     apply (fastforce simp: cte_wp_at_caps_of_state dest: non_null_caps)
     apply (drule has_reply_cap_cte_wpD)
-    apply (drule valid_reply_capsD [OF _ vreply])
+  sorry
+(*    apply (drule valid_reply_capsD [OF _ vreply])
     apply (simp add: pred_tcb_at_def)
     apply (fastforce simp: live_def dest: live_okE)
-    done
+    done*) (* RT do we need this? *)
 
 (* invariants BEGIN *)
 
@@ -586,7 +577,7 @@ lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbra
         apply (clarsimp elim!: ranE)
         apply (erule valid_cap [OF _ valid_cap2])
         apply (fastforce intro!: cte_wp_at_tcbI)
-       apply (clarsimp simp: valid_tcb_state_def valid_bound_ntfn_def
+       apply (clarsimp simp: valid_tcb_state_def valid_bound_obj_def
                       split: Structures_A.thread_state.split_asm option.splits)
       apply (frule refs_of)
       apply (rename_tac endpoint)
@@ -652,35 +643,11 @@ lemma untyped_inc : "\<And>m. untyped_inc m (caps_of_state s)
   apply clarsimp
   done
 
-lemma reply_caps_mdb : "\<And>m. reply_caps_mdb m (caps_of_state s)
-                       \<Longrightarrow> reply_caps_mdb m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
-  apply (simp only: reply_caps_mdb_def)
-  apply (elim allEI)
-  apply (clarsimp elim!: exEI)
-  apply (fastforce dest: non_null_caps)
-  done
-
-lemma reply_masters_mdb : "\<And>m. reply_masters_mdb m (caps_of_state s)
-                          \<Longrightarrow> reply_masters_mdb m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
-  apply (simp only: reply_masters_mdb_def)
-  apply (elim allEI)
-  apply clarsimp
-  apply (drule(1) bspec)
-  apply (fastforce dest: non_null_caps)
-  done
-
-lemma reply_mdb : "\<And>m. reply_mdb m (caps_of_state s)
-                  \<Longrightarrow> reply_mdb m (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
-  by (simp add: reply_mdb_def reply_caps_mdb reply_masters_mdb)
-
-end
-
-context detype_locale_gen_1 begin
-
 lemma valid_mdb_detype[detype_invs_lemmas]: "valid_mdb (detype (untyped_range cap) s)"
   apply (insert invs, drule invs_mdb)
   apply (simp add: valid_mdb_def)
   apply (rule context_conjI)
+(*
    apply (safe intro!: mdb_cte_atI elim!: untyped_mdb untyped_inc reply_mdb)
         apply (drule(1) mdb_cte_atD)
         apply (clarsimp dest!: non_null_present)
@@ -693,6 +660,17 @@ lemma valid_mdb_detype[detype_invs_lemmas]: "valid_mdb (detype (untyped_range ca
     apply (simp add: irq_revocable_def detype_def del: split_paired_All)
    apply (simp add: reply_master_revocable_def detype_def del: split_paired_All)
   apply (simp add: valid_arch_mdb_detype)
+*)
+   apply (safe intro!: mdb_cte_atI elim!: untyped_mdb untyped_inc)
+      apply (drule(1) mdb_cte_atD)
+      apply (clarsimp dest!: non_null_present)
+     apply (drule(1) mdb_cte_atD)
+     apply (clarsimp dest!: non_null_present)
+    apply (erule descendants_inc_empty_slot)
+     apply (clarsimp simp:cte_wp_at_caps_of_state swp_def)
+    apply clarsimp
+   apply (simp add: ut_revocable_def detype_def del: split_paired_All)
+  apply (simp add: irq_revocable_def detype_def del: split_paired_All)
   done
 
 lemma valid_ioports_detype[detype_invs_lemmas]:
@@ -751,26 +729,9 @@ lemma valid_refs_detype[detype_invs_lemmas]: "valid_global_refs (detype (untyped
   using globals
   by (simp add: valid_global_refs_def valid_refs_def glob_det)
 
-lemma valid_reply_caps_detype[detype_invs_lemmas]:
-  "valid_reply_caps (detype (untyped_range cap) s)"
-    using vreply
-    apply (clarsimp simp: valid_reply_caps_def has_reply_cap_def)
-    apply (rule conjI)
-     apply (erule allEI)
-     apply (rule impI)
-     apply (elim impE exE conjE, intro exI, assumption)
-     apply (simp add: pred_tcb_at_def)
-     apply (fastforce simp: live_def dest: live_okE)
-    apply (clarsimp simp: unique_reply_caps_def)
-    done
-
 lemma valid_irq_detype[detype_invs_lemmas]: "valid_irq_node (detype (untyped_range cap) s)"
   using invs valid_globals_irq_node [OF globals cap]
   by (simp add: valid_irq_node_def invs_def valid_state_def cap_range_def)
-
-lemma valid_reply_masters_detype[detype_invs_lemmas]:
-  "valid_reply_masters (detype (untyped_range cap) s)"
-  using vmaster by (clarsimp simp: valid_reply_masters_def)
 
 lemma valid_irq_handlers_detype[detype_invs_lemmas]:
   "valid_irq_handlers (detype (untyped_range cap) s)"

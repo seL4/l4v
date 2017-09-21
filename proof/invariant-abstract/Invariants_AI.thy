@@ -188,7 +188,6 @@ record itcb =
   itcb_fault         :: "fault option"
   itcb_bound_notification     :: "obj_ref option"
   itcb_sched_context :: "obj_ref option"
-  itcb_yield_to      :: "obj_ref option"
   itcb_reply         :: "obj_ref option"
   itcb_mcpriority    :: priority
   itcb_arch          :: iarch_tcb
@@ -201,7 +200,6 @@ where
                                 itcb_fault              = tcb_fault tcb,
                                 itcb_bound_notification = tcb_bound_notification tcb,
                                 itcb_sched_context      = tcb_sched_context tcb,
-                                itcb_yield_to           = tcb_yield_to tcb,
                                 itcb_reply              = tcb_reply tcb,
                                 itcb_mcpriority         = tcb_mcpriority tcb,
                                 itcb_arch               = arch_tcb_to_iarch_tcb (tcb_arch tcb) \<rparr>"
@@ -356,6 +354,7 @@ where
   | NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
   | CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> word_bits
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
+  | SchedContextCap r n \<Rightarrow> n > 0  (* RT FIXME *)
   | Zombie r b n \<Rightarrow> (case b of None \<Rightarrow> n \<le> 5
                                           | Some b \<Rightarrow> n \<le> 2 ^ b \<and> b \<noteq> 0)
   | ArchObjectCap ac \<Rightarrow> wellformed_acap ac
@@ -396,7 +395,7 @@ where
   | ThreadCap r \<Rightarrow> tcb_at r s
   | DomainCap \<Rightarrow> True
   | ReplyCap r \<Rightarrow> reply_at r s
-  | SchedContextCap r n \<Rightarrow> sc_at r s
+  | SchedContextCap r n \<Rightarrow> sc_at r s \<and> n > 0 (* RT FIXME *)
   | SchedControlCap \<Rightarrow> True
   | IRQControlCap \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
@@ -449,6 +448,7 @@ where
     BlockedOnReceive ref r \<Rightarrow> ep_at ref s \<and> (case r of Some r' \<Rightarrow> reply_at r' s | _ \<Rightarrow> True)
   | BlockedOnSend ref sp \<Rightarrow> ep_at ref s
   | BlockedOnNotification ref \<Rightarrow> ntfn_at ref s
+  | YieldTo t \<Rightarrow> tcb_at t s
   | _ \<Rightarrow> True"
 
 abbreviation
@@ -525,7 +525,6 @@ where
      \<and> (case tcb_fault t of Some f \<Rightarrow> valid_fault f | _ \<Rightarrow> True)
      \<and> valid_bound_ntfn (tcb_bound_notification t) s
      \<and> valid_bound_sc (tcb_sched_context t) s
-     \<and> valid_bound_sc (tcb_yield_to t) s
      \<and> valid_bound_reply (tcb_reply t) s
      \<and> valid_arch_tcb (tcb_arch t) s"
 
@@ -651,7 +650,7 @@ where
   "tcb_st_refs_of z \<equiv> case z of (Running)               => {}
   | (Inactive)              => {}
   | (Restart)               => {}
-  | (YieldTo)               => {} (* does this need a reference? maybe not *)
+  | (YieldTo t)             => {(t, TCBYieldTo)} (* does this need a reference? maybe not *)
   | (BlockedOnReply)        => {} (* does this need a reference? maybe not *)
   | (IdleThreadState)       => {}
   | (BlockedOnReceive x r)  => {(x, TCBBlockedRecv)}
@@ -691,7 +690,6 @@ where
    | TCB tcb           => tcb_st_refs_of (tcb_state tcb)
                           \<union> get_refs TCBBound (tcb_bound_notification tcb)
                           \<union> get_refs TCBSchedContext (tcb_sched_context tcb)
-                          \<union> get_refs TCBYieldTo (tcb_yield_to tcb)
                           \<union> get_refs TCBReply (tcb_reply tcb)
    | Endpoint ep       => ep_q_refs_of ep
    | Notification ntfn => ntfn_q_refs_of (ntfn_obj ntfn)
@@ -732,7 +730,7 @@ primrec
 where
   "live0 (CNode sz fun)      = False"
 | "live0 (TCB tcb)           = (bound (tcb_bound_notification tcb) \<or> bound (tcb_sched_context tcb)
-                                \<or> bound (tcb_yield_to tcb) \<or> bound (tcb_reply tcb)
+                                \<or> bound (tcb_reply tcb)
                                 \<or> tcb_state tcb \<noteq> Inactive \<and> tcb_state tcb \<noteq> IdleThreadState)"
 | "live0 (Endpoint ep)       = (ep \<noteq> IdleEP)"
 | "live0 (SchedContext sc)   = (bound (sc_tcb sc) \<or> bound (sc_yield_from sc) \<or> bound (sc_ntfn sc)
@@ -906,51 +904,26 @@ definition
 
 definition
   "irq_revocable r cs \<equiv> \<forall>p. cs p = Some IRQControlCap \<longrightarrow> r p"
-(*
-definition (* RT: ? *)
-  "reply_caps_mdb m cs \<equiv> \<forall>ptr t.
-     cs ptr = Some (ReplyCap t) \<longrightarrow>
-     (\<exists>ptr'. m ptr = Some ptr' \<and> cs ptr' = Some (ReplyCap t))"
 
-definition (* RT: ? *)
-  "reply_masters_mdb m cs \<equiv> \<forall>ptr t.
-     cs ptr = Some (ReplyCap t) \<longrightarrow> m ptr = None \<and>
-     (\<forall>ptr'\<in>descendants_of ptr m. cs ptr' = Some (ReplyCap t))"
-
-definition (* RT: ? *)
-  "reply_mdb m cs \<equiv> reply_caps_mdb m cs \<and> reply_masters_mdb m cs"
-*)
 definition
   "valid_mdb \<equiv> \<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) NullCap)) s) (cdt s) \<and>
                    untyped_mdb (cdt s) (caps_of_state s) \<and> descendants_inc (cdt s) (caps_of_state s) \<and>
                    no_mloop (cdt s) \<and> untyped_inc (cdt s) (caps_of_state s) \<and>
                    ut_revocable (is_original_cap s) (caps_of_state s) \<and>
-                   irq_revocable (is_original_cap s) (caps_of_state s) (*\<and>
-                   reply_mdb (cdt s) (caps_of_state s)*) \<and>
+                   irq_revocable (is_original_cap s) (caps_of_state s) \<and>
                    valid_arch_mdb (is_original_cap s) (caps_of_state s)"
 
 abbreviation
   "idle_tcb_at \<equiv> pred_tcb_at (\<lambda>t. (itcb_state t, itcb_bound_notification t,
-                                    itcb_sched_context t, itcb_yield_to t, itcb_reply t))"
+                                    itcb_sched_context t, itcb_reply t))"
 
 definition
-  "valid_idle \<equiv> \<lambda>s. idle_tcb_at (\<lambda>(st, ntfn, sc, yt, r).
-       (idle st) \<and> (ntfn  = None) \<and> (sc = Some idle_sc_ptr) \<and> (yt = None) \<and> (r = None)) (idle_thread s) s
+  "valid_idle \<equiv> \<lambda>s. idle_tcb_at (\<lambda>(st, ntfn, sc, r).
+       (idle st) \<and> (ntfn  = None) \<and> (sc = Some idle_sc_ptr) \<and> (r = None)) (idle_thread s) s
          \<and> idle_thread s = idle_thread_ptr"
 
 definition
   "only_idle \<equiv> \<lambda>s. \<forall>t. st_tcb_at idle t s \<longrightarrow> t = idle_thread s"
-
-definition
-  "unique_reply_caps cs \<equiv>
-   \<forall>ptr ptr' cap cap'.
-       cs ptr = Some cap \<longrightarrow> is_reply_cap cap \<longrightarrow>
-       cs ptr' = Some cap' \<longrightarrow> cap = cap' \<longrightarrow> ptr = ptr'"
-
-definition
-  "valid_reply_caps \<equiv> \<lambda>s.
-       (\<forall>t. has_reply_cap t s \<longrightarrow> st_tcb_at awaiting_reply t s) \<and>
-       unique_reply_caps (caps_of_state s)"
 
 definition
   valid_refs :: "obj_ref set \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -1015,7 +988,6 @@ where
                   and valid_idle
                   and only_idle
                   and if_unsafe_then_cap
-                  and valid_reply_caps
                   and valid_global_refs
                   and valid_arch_state
                   and valid_irq_node
@@ -1100,7 +1072,7 @@ abbreviation(input)
     \<equiv> valid_objs and pspace_aligned and pspace_distinct and valid_ioc
        and if_live_then_nonz_cap and zombies_final
        and valid_mdb and valid_idle and only_idle and if_unsafe_then_cap
-       and valid_reply_caps and valid_global_refs
+       and valid_global_refs
        and valid_arch_state and valid_machine_state and valid_irq_states
        and valid_irq_node and valid_irq_handlers and valid_vspace_objs
        and valid_arch_caps and valid_global_objs and valid_kernel_mappings
@@ -1242,7 +1214,7 @@ lemma valid_cap_def2:
           apply (simp_all add: valid_cap_simps wellformed_cap_simps
                                valid_cap_ref_simps
                         split: option.splits)
-    apply (fastforce+)[4]
+    apply (fastforce+)[5]
   by (simp add: valid_arch_cap_def2)
 
 lemma valid_capsD:
@@ -1315,7 +1287,7 @@ lemma tcb_st_refs_of_simps[simp]:
  "tcb_st_refs_of (Running)               = {}"
  "tcb_st_refs_of (Inactive)              = {}"
  "tcb_st_refs_of (Restart)               = {}"
- "tcb_st_refs_of (YieldTo)               = {}"
+ "tcb_st_refs_of (YieldTo t)             = {(t, TCBYieldTo)}"
  "tcb_st_refs_of (BlockedOnReply)        = {}"
  "tcb_st_refs_of (IdleThreadState)       = {}"
  "\<And>x. tcb_st_refs_of (BlockedOnReceive x r)  = {(x, TCBBlockedRecv)}"  (* RT: what is the relation with r? *)
@@ -1349,7 +1321,6 @@ lemma refs_of_simps[simp]:
  "refs_of (TCB tcb)           = tcb_st_refs_of (tcb_state tcb)
                                 \<union> get_refs TCBBound (tcb_bound_notification tcb)
                                 \<union> get_refs TCBSchedContext (tcb_sched_context tcb)
-                                \<union> get_refs TCBYieldTo (tcb_yield_to tcb)
                                 \<union> get_refs TCBReply (tcb_reply tcb)"
  "refs_of (Endpoint ep)       = ep_q_refs_of ep"
  "refs_of (Notification ntfn) = ntfn_q_refs_of (ntfn_obj ntfn)
@@ -1398,6 +1369,10 @@ lemma refs_of_rev:
     (\<exists>reply. ko = Reply reply \<and> (reply_caller reply = Some x))"
  "(x, ReplySchedContext) \<in>  refs_of ko =
     (\<exists>reply. ko = Reply reply \<and> (reply_sc reply = Some x))"
+ "(x, TCBYieldTo) \<in>  refs_of ko =
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = YieldTo x))"
+ "(x, SCYieldFrom) \<in>  refs_of ko =
+    (\<exists>sc. ko = SchedContext sc \<and> (sc_yield_from sc = Some x))"
    by (auto simp:  refs_of_def
                      tcb_st_refs_of_def
                      ep_q_refs_of_def
@@ -1416,6 +1391,8 @@ lemma st_tcb_at_refs_of_rev:
      = st_tcb_at (\<lambda>ts. \<exists>pl. ts = BlockedOnSend x pl   ) t s"
   "obj_at (\<lambda>ko. (x, TCBSignal) \<in> refs_of ko) t s
      = st_tcb_at (\<lambda>ts.      ts = BlockedOnNotification x) t s"
+  "obj_at (\<lambda>ko. (x, TCBYieldTo) \<in> refs_of ko) t s
+     = st_tcb_at (\<lambda>ts.      ts = YieldTo x) t s"
   by (auto simp add: refs_of_rev pred_tcb_at_def)
 
 
@@ -1449,28 +1426,25 @@ definition
 definition
   "tcb_reply_is_bound reply ko = (case ko of TCB tcb \<Rightarrow> tcb_reply tcb = reply | _ \<Rightarrow> False)"
 
-definition
-  "tcb_yield_to_is_bound sc ko = (case ko of TCB tcb \<Rightarrow> tcb_yield_to tcb = sc | _ \<Rightarrow> False)"
-
 lemma st_tcb_at_state_refs_ofD:
-  "st_tcb_at P t s \<Longrightarrow> \<exists>ts ntfnptr scptr1 scptr2 rptr. P ts
+  "st_tcb_at P t s \<Longrightarrow> \<exists>ts ntfnptr scptr1 rptr. P ts
           \<and> obj_at (tcb_ntfn_is_bound ntfnptr) t s \<and> obj_at (tcb_sc_is_bound scptr1) t s
-          \<and> obj_at (tcb_yield_to_is_bound scptr2) t s \<and> obj_at (tcb_reply_is_bound rptr) t s
+          \<and> obj_at (tcb_reply_is_bound rptr) t s
           \<and> state_refs_of s t
      = (tcb_st_refs_of ts \<union> get_refs TCBBound ntfnptr \<union> get_refs TCBSchedContext scptr1
-         \<union> get_refs TCBYieldTo scptr2 \<union> get_refs TCBReply rptr)"
+         \<union> get_refs TCBReply rptr)"
   by (auto simp: pred_tcb_at_def obj_at_def tcb_ntfn_is_bound_def tcb_sc_is_bound_def
-                 tcb_reply_is_bound_def tcb_yield_to_is_bound_def state_refs_of_def)
+                 tcb_reply_is_bound_def state_refs_of_def)
 
 lemma bound_tcb_at_state_refs_ofD:
-  "bound_tcb_at P t s \<Longrightarrow> \<exists>ts ntfnptr scptr1 scptr2 rptr. P ntfnptr
+  "bound_tcb_at P t s \<Longrightarrow> \<exists>ts ntfnptr scptr1 rptr. P ntfnptr
           \<and> obj_at (tcb_ntfn_is_bound ntfnptr) t s \<and> obj_at (tcb_sc_is_bound scptr1) t s
-          \<and> obj_at (tcb_yield_to_is_bound scptr2) t s \<and> obj_at (tcb_reply_is_bound rptr) t s
+          \<and> obj_at (tcb_reply_is_bound rptr) t s
           \<and> state_refs_of s t = (tcb_st_refs_of ts \<union> get_refs TCBBound ntfnptr
          \<union> get_refs TCBSchedContext scptr1
-         \<union> get_refs TCBYieldTo scptr2 \<union> get_refs TCBReply rptr)"
+         \<union> get_refs TCBReply rptr)"
   by (auto simp: pred_tcb_at_def obj_at_def tcb_ntfn_is_bound_def tcb_sc_is_bound_def
-                 tcb_reply_is_bound_def tcb_yield_to_is_bound_def
+                 tcb_reply_is_bound_def
                  state_refs_of_def)
 (* do we need other versions? *)
 
@@ -1493,21 +1467,20 @@ lemma sym_refs_ko_atD:
 
 lemma sym_refs_st_tcb_atD: (* RT: other versions? *)
   "\<lbrakk> st_tcb_at P t s; sym_refs (state_refs_of s) \<rbrakk> \<Longrightarrow>
-     \<exists>ts ntfn scptr1 scptr2 rptr. P ts \<and> obj_at (tcb_ntfn_is_bound ntfn) t s
+     \<exists>ts ntfn scptr1 rptr. P ts \<and> obj_at (tcb_ntfn_is_bound ntfn) t s
         \<and> obj_at (tcb_sc_is_bound scptr1) t s
-        \<and> obj_at (tcb_yield_to_is_bound scptr2) t s \<and> obj_at (tcb_reply_is_bound rptr) t s
+        \<and> obj_at (tcb_reply_is_bound rptr) t s
         \<and> state_refs_of s t = tcb_st_refs_of ts \<union> get_refs TCBBound ntfn
          \<union> get_refs TCBSchedContext scptr1
-         \<union> get_refs TCBYieldTo scptr2 \<union> get_refs TCBReply rptr
+         \<union> get_refs TCBReply rptr
         \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of ts \<union> get_refs TCBBound ntfn
          \<union> get_refs TCBSchedContext scptr1
-         \<union> get_refs TCBYieldTo scptr2 \<union> get_refs TCBReply rptr. obj_at (\<lambda>ko. (t, symreftype tp) \<in> refs_of ko) x s)"
+         \<union> get_refs TCBReply rptr. obj_at (\<lambda>ko. (t, symreftype tp) \<in> refs_of ko) x s)"
   apply (drule st_tcb_at_state_refs_ofD)
   apply (erule exE)+
   apply (rule_tac x=ts in exI)
   apply (rule_tac x=ntfnptr in exI)
   apply (rule_tac x=scptr1 in exI)
-  apply (rule_tac x=scptr2 in exI)
   apply (rule_tac x=rptr in exI)
   apply clarsimp
   apply (frule obj_at_state_refs_ofD)
@@ -1625,21 +1598,9 @@ lemma valid_ioc_def2:
   apply fastforce
   done
 
-lemma valid_reply_capsD:
-  "\<lbrakk> has_reply_cap t s; valid_reply_caps s \<rbrakk>
-    \<Longrightarrow> st_tcb_at awaiting_reply t s"
-  unfolding valid_reply_caps_def
-  by simp
-
 lemma has_reply_cap_cte_wpD:
   "\<And>t sl. cte_wp_at ((=) (ReplyCap t)) sl s \<Longrightarrow> has_reply_cap t s"
   by (fastforce simp: has_reply_cap_def)
-
-lemma reply_cap_doesnt_exist_strg:
-  "(valid_reply_caps s \<and> st_tcb_at (Not \<circ> awaiting_reply) t s)
-      \<longrightarrow> \<not> has_reply_cap t s"
-  by (clarsimp dest!: valid_reply_capsD
-                simp: st_tcb_def2)
 
 lemma mdb_cte_atD:
   "\<lbrakk> m c = Some p; mdb_cte_at ct_at m \<rbrakk>
@@ -2494,6 +2455,7 @@ lemma is_cap_simps:
   "is_untyped_cap cap = (\<exists>dev r bits f. cap = UntypedCap dev r bits f)"
   "is_ep_cap cap = (\<exists>r b R. cap = EndpointCap r b R)"
   "is_ntfn_cap cap = (\<exists>r b R. cap = NotificationCap r b R)"
+  "is_sched_context_cap cap = (\<exists>r n. cap = SchedContextCap r n)"
   "is_zombie cap = (\<exists>r b n. cap = Zombie r b n)"
   "is_arch_cap cap = (\<exists>a. cap = ArchObjectCap a)"
   "is_reply_cap cap = (\<exists>x. cap = ReplyCap x)"
@@ -2728,10 +2690,6 @@ lemma has_reply_cap_update [iff]:
   "has_reply_cap t (f s) = has_reply_cap t s"
   by (simp add: has_reply_cap_def)
 
-lemma valid_reply_caps_update [iff]:
-  "valid_reply_caps (f s) = valid_reply_caps s"
-  by (simp add: valid_reply_caps_def)
-
 lemmas in_user_frame_update[iff] = in_user_frame_update
 lemmas in_device_frame_update[iff] = in_device_frame_update
 lemmas equal_kernel_mappings_update[iff] = equal_kernel_mappings_update
@@ -2940,21 +2898,6 @@ lemma has_reply_cap_cte_lift:
   shows "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> f \<lbrace>\<lambda>_ s. P (has_reply_cap t s)\<rbrace>"
   unfolding has_reply_cap_def
   by (simp add: cte_wp_at_caps_of_state, rule ctes)
-
-lemma valid_reply_caps_st_cte_lift:
-  assumes ctes: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  assumes tcbs: "\<And>P t. \<lbrace>st_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
-  shows "\<lbrace>valid_reply_caps\<rbrace> f \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
-  unfolding valid_reply_caps_def
-  apply (rule hoare_vcg_conj_lift)
-   apply (rule hoare_vcg_all_lift)
-   apply (subst disj_not1 [THEN sym])+
-   apply (rule hoare_vcg_disj_lift)
-    apply (rule has_reply_cap_cte_lift)
-    apply (rule ctes)
-   apply (rule tcbs)
-  apply (rule ctes)
-  done
 
 lemma pred_tcb_at_disj:
   "(pred_tcb_at proj P t s \<or> pred_tcb_at proj Q t s) = pred_tcb_at proj (\<lambda>a. P a \<or> Q a) t s"
@@ -3313,10 +3256,6 @@ lemma invs_hyp_sym_refs [elim!]: (* ARMHYP move and requalify *)
   "invs s \<Longrightarrow> sym_refs (state_hyp_refs_of s)"
   by (simp add: invs_def valid_state_def valid_pspace_def)
 
-lemma invs_valid_reply_caps [elim!]:
-  "invs s \<Longrightarrow> valid_reply_caps s"
-  by (simp add: invs_def valid_state_def)
-
 lemma invs_vobjs_strgs:
   "invs s \<longrightarrow> valid_objs s"
   by auto
@@ -3482,24 +3421,23 @@ lemma in_dxo_archD:
 
 lemma sym_refs_bound_tcb_atD: (* RT: other versions? *)
   "\<lbrakk>bound_tcb_at P t s; sym_refs (state_refs_of s)\<rbrakk>
-    \<Longrightarrow> \<exists>ts ntfnptr scptr1 scptr2 rptr.
+    \<Longrightarrow> \<exists>ts ntfnptr scptr1 rptr.
         P ntfnptr \<and>
         obj_at (tcb_ntfn_is_bound ntfnptr) t s
         \<and> obj_at (tcb_sc_is_bound scptr1) t s
-        \<and> obj_at (tcb_yield_to_is_bound scptr2) t s \<and> obj_at (tcb_reply_is_bound rptr) t s
+        \<and> obj_at (tcb_reply_is_bound rptr) t s
         \<and> state_refs_of s t = tcb_st_refs_of ts \<union> get_refs TCBBound ntfnptr
          \<union> get_refs TCBSchedContext scptr1
-         \<union> get_refs TCBYieldTo scptr2 \<union> get_refs TCBReply rptr
+         \<union> get_refs TCBReply rptr
         \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of ts \<union> get_refs TCBBound ntfnptr
          \<union> get_refs TCBSchedContext scptr1
-         \<union> get_refs TCBYieldTo scptr2 \<union> get_refs TCBReply rptr.
+         \<union> get_refs TCBReply rptr.
             obj_at (\<lambda>ko. (t, symreftype tp) \<in> refs_of ko) x s)"
   apply (drule bound_tcb_at_state_refs_ofD)
   apply (erule exE)+
   apply (rule_tac x=ts in exI)
   apply (rule_tac x=ntfnptr in exI)
   apply (rule_tac x=scptr1 in exI)
-  apply (rule_tac x=scptr2 in exI)
   apply (rule_tac x=rptr in exI)
   apply clarsimp
   apply (frule obj_at_state_refs_ofD)

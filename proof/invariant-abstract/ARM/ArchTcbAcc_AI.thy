@@ -121,7 +121,7 @@ lemma mab_wb [simp]:
 
 lemma get_cap_valid_ipc [TcbAcc_AI_assms]:
   "\<lbrace>valid_objs and obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_ipc_buffer tcb = v) t\<rbrace>
-     get_cap (t, tcb_cnode_index 4)
+     get_cap (t, tcb_cnode_index 2)
    \<lbrace>\<lambda>rv s. valid_ipc_buffer_cap rv v\<rbrace>"
   apply (wp get_cap_wp)
   apply clarsimp

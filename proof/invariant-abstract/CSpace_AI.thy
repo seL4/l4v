@@ -3629,8 +3629,6 @@ lemma cap_insert_idle [wp]:
   "\<lbrace>valid_idle\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   by (rule valid_idle_lift; wp)
 
-crunch reply[wp]: set_cdt "valid_reply_caps"
-
 lemma set_untyped_cap_as_full_has_reply_cap:
   "\<lbrace>\<lambda>s. (has_reply_cap t s) \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
@@ -3664,35 +3662,6 @@ lemma caps_of_state_cte_wp_at_neq:
   by (clarsimp simp:cte_wp_at_caps_of_state)
 
 
-lemma set_untyped_cap_as_full_unique_reply_caps:
-  "\<lbrace>\<lambda>s. unique_reply_caps (caps_of_state s) \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
-   set_untyped_cap_as_full src_cap cap src
-   \<lbrace>\<lambda>rv s. unique_reply_caps (caps_of_state s)\<rbrace>"
-  apply (simp add:unique_reply_caps_def)
-  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)
-    apply (clarsimp simp:caps_of_state_cte_wp_at_neq)
-    apply (wp set_untyped_cap_as_full_cte_wp_at_neg)+
-   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)+
-    apply (clarsimp simp:caps_of_state_cte_wp_at_neq)
-    apply (wp set_untyped_cap_as_full_cte_wp_at_neg)+
-  apply clarsimp
-  apply (clarsimp simp:cte_wp_at_caps_of_state)
-  apply (drule_tac x = x in spec,drule_tac x = xa in spec)
-  apply (drule_tac x = xb in spec,drule_tac x = xc in spec)
-  apply (case_tac "(x,xa) = src")
-   apply simp
-   apply (erule disjE)
-    apply (clarsimp simp:masked_as_full_def if_distrib split:if_splits)
-   apply (clarsimp simp:is_cap_simps masked_as_full_def free_index_update_def
-                  split:if_splits)
-  apply clarsimp
-  apply (case_tac "(xb,xc) = src")
-   apply (clarsimp simp:is_cap_simps masked_as_full_def free_index_update_def
-                  split:if_splits)
-  apply clarsimp
-  done
-
-
 crunch global_refs[wp]: set_untyped_cap_as_full "\<lambda>s. P (global_refs s)"
 
 
@@ -3705,21 +3674,6 @@ lemma set_untyped_cap_as_full_valid_global_refs[wp]:
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   done
 
-
-lemma cap_insert_reply [wp]:
-  "\<lbrace>valid_reply_caps and cte_at dest and
-      (\<lambda>s. \<forall>t. cap = cap.ReplyCap t \<longrightarrow>
-           st_tcb_at awaiting_reply t s \<and> \<not> has_reply_cap t s)\<rbrace>
-   cap_insert cap src dest \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
-  apply (simp add: cap_insert_def update_cdt_def)
-  apply (wp
-         | simp split del: if_split
-         | rule hoare_drop_imp
-         | clarsimp simp: valid_reply_caps_def)+
-      apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift set_untyped_cap_as_full_has_reply_cap_neg
-                set_untyped_cap_as_full_unique_reply_caps set_untyped_cap_as_full_cte_wp_at get_cap_wp)+
-  apply (clarsimp simp:cte_wp_at_caps_of_state valid_reply_caps_def)+
-  done
 
 lemma cap_insert_aobj_at:
   "arch_obj_pred P' \<Longrightarrow> \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> cap_insert cap src dest \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
@@ -4421,22 +4375,10 @@ lemma of_nat_ucast:
   apply (simp add: is_down_def target_size_def source_size_def word_size)
   done
 
-lemma no_reply_caps_for_thread:
-  "\<lbrakk> invs s; tcb_at t s; cte_wp_at (\<lambda>c. c = cap.NullCap) (t, tcb_cnode_index 2) s \<rbrakk>
-   \<Longrightarrow> \<forall>sl. \<not> cte_wp_at (\<lambda>c. c = cap.ReplyCap t) sl s"
-  apply clarsimp
-  apply (subgoal_tac "st_tcb_at halted t s")
-   apply (fastforce simp: invs_def valid_state_def valid_reply_caps_def
-                         has_reply_cap_def cte_wp_at_caps_of_state st_tcb_def2)
-  apply (thin_tac "cte_wp_at _ (a, b) s")
-sorry
-(*  apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb valid_obj_def
-                        valid_tcb_def cte_wp_at_cases tcb_cap_cases_def
-                  dest: invs_valid_objs
-                  elim: valid_objsE)
-  done*)
 
-(* ?
+crunch idle[wp]: set_cap "valid_idle"
+
+
 lemma tcb_at_st_tcb_at: "tcb_at = st_tcb_at \<top>"
   apply (rule ext)+
   apply (simp add: tcb_at_def pred_tcb_at_def obj_at_def is_tcb_def)

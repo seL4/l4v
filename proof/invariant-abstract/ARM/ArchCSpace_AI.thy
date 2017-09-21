@@ -461,35 +461,9 @@ lemma no_cap_to_obj_with_diff_ref_triv:
   apply (drule(1) cte_wp_at_valid_objs_valid_cap)
   apply (clarsimp simp: table_cap_ref_def valid_cap_def
                         obj_at_def is_ep is_ntfn is_tcb is_cap_table
-                        a_type_def is_cap_simps
+                        a_type_def is_cap_simps is_sc is_reply
                  split: cap.split_asm arch_cap.split_asm
                         if_split_asm option.split_asm)
-  done
-
-
-lemma setup_reply_master_arch_caps[wp, CSpace_AI_assms]:
-  "\<lbrace>valid_arch_caps and tcb_at t and valid_objs and pspace_aligned\<rbrace>
-     setup_reply_master t
-   \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-  apply (simp add: setup_reply_master_def)
-  apply (wp set_cap_valid_arch_caps get_cap_wp)
-  apply (clarsimp simp: cte_wp_at_caps_of_state is_pd_cap_def
-                        is_pt_cap_def vs_cap_ref_def)
-  apply (rule no_cap_to_obj_with_diff_ref_triv,
-         simp_all add: is_cap_simps table_cap_ref_def)
-  apply (simp add: valid_cap_def cap_aligned_def word_bits_def)
-  apply (clarsimp simp: obj_at_def is_tcb dest!: pspace_alignedD)
-  done
-
-
-lemma setup_reply_master_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
-  "\<lbrace>cap_refs_in_kernel_window and tcb_at t and pspace_in_kernel_window\<rbrace>
-      setup_reply_master t
-   \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
-  apply (simp add: setup_reply_master_def)
-  apply (wp get_cap_wp)
-  apply (clarsimp simp: pspace_in_kernel_window_def obj_at_def
-                        cap_range_def)
   done
 
 
@@ -561,11 +535,11 @@ lemma is_cap_simps':
   "is_ntfn_cap cap = (\<exists>r b R. cap = cap.NotificationCap r b R)"
   "is_zombie cap = (\<exists>r b n. cap = cap.Zombie r b n)"
   "is_arch_cap cap = (\<exists>a. cap = cap.ArchObjectCap a)"
-  "is_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x False)"
-  "is_master_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x True)"
+  "is_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x)"
+  "is_sched_context_cap cap = (\<exists>x n. cap = cap.SchedContextCap x n)"
   "is_nondevice_page_cap cap = (\<exists> u v w x. cap = ArchObjectCap (PageCap False u v w x))"
   by (cases cap,  (auto simp: is_zombie_def is_arch_cap_def is_nondevice_page_cap_def
-                              is_reply_cap_def is_master_reply_cap_def is_nondevice_page_cap_arch_def
+                              is_reply_cap_def is_nondevice_page_cap_arch_def
                        split: cap.splits arch_cap.splits )+)+
 
 lemma cap_insert_simple_invs:

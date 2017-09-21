@@ -258,17 +258,6 @@ lemma valid_idle_tcb_update:
   by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
 
 
-lemma valid_reply_caps_tcb_update:
-  "\<lbrakk>valid_reply_caps s; ko_at (TCB t) p s; tcb_state t = tcb_state t';
-    same_caps (TCB t) (TCB t') \<rbrakk>
-   \<Longrightarrow> valid_reply_caps (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
-  apply (frule_tac P'="same_caps (TCB t')" in obj_at_weakenE, simp)
-  apply (fastforce simp: valid_reply_caps_def has_reply_cap_def
-                        pred_tcb_at_def obj_at_def fun_upd_def
-                        cte_wp_at_after_update caps_of_state_after_update)
-  done
-
-
 lemma tcb_state_same_cte_wp_at:
   "\<lbrakk> ko_at (TCB t) p s; \<forall>(getF, v) \<in> ran tcb_cap_cases. getF t = getF t' \<rbrakk>
      \<Longrightarrow> \<forall>P p'. cte_wp_at P p' (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)
@@ -1305,23 +1294,6 @@ lemma set_cap_cte_wp_at_neg:
   apply (simp add: cte_wp_at_caps_of_state)
   apply wpsimp
   done
-
-lemma set_cap_reply [wp]:
-  "\<lbrace>valid_reply_caps and cte_at dest and
-      (\<lambda>s. \<forall>t. cap = cap.ReplyCap t \<longrightarrow>
-               st_tcb_at awaiting_reply t s \<and>
-               (\<not> has_reply_cap t s \<or>
-                cte_wp_at ((=) (cap.ReplyCap t)) dest s))\<rbrace>
-   set_cap cap dest \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
-  apply (simp add: valid_reply_caps_def has_reply_cap_def)
-  apply (rule hoare_pre)
-   apply (subst imp_conv_disj)
-   apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift set_cap_cte_wp_at_neg
-        | simp)+
-  apply (fastforce simp: unique_reply_caps_def is_cap_simps
-                        cte_wp_at_caps_of_state)
-  done
-
 
 crunch interrupt_states[wp]: cap_insert "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps simp: crunch_simps)

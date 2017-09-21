@@ -317,14 +317,15 @@ lemma mask_asid_low_bits_ucast_ucast:
 
 
 lemma set_asid_pool_cur [wp]:
-  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> do_extended_op (set_asid_pool p a) \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
-  unfolding set_asid_pool_def by (wpsimp wp: get_object_wp)
+  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> (set_asid_pool p a) \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  unfolding set_asid_pool_def
+  by (wpsimp wp: get_object_wp simp: set_object_def)
 
 
 lemma set_asid_pool_cur_tcb [wp]:
-  "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> do_extended_op (set_asid_pool p a) \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
+  "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> (set_asid_pool p a) \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
   unfolding cur_tcb_def
-  by (rule hoare_lift_Pf [where f=cur_thread]; wpsimp)
+  by (rule hoare_lift_Pf [where f=cur_thread]; wpsimp simp: set_object_def)
 
 crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
   (wp: get_object_wp)
@@ -918,13 +919,6 @@ lemma set_pd_ifunsafe:
   by (wpsimp wp: get_object_wp set_object_ifunsafe)
 
 
-lemma set_pd_reply_caps:
-  "\<lbrace>\<lambda>s. valid_reply_caps s\<rbrace>
-  set_pd p pd
-  \<lbrace>\<lambda>_ s. valid_reply_caps s\<rbrace>"
-  by (wp valid_reply_caps_st_cte_lift)
-
-
 lemma global_refs_kheap [simp]:
   "global_refs (kheap_update f s) = global_refs s"
   by (simp add: global_refs_def)
@@ -1067,10 +1061,6 @@ lemma set_pt_valid_idle:
 lemma set_pt_ifunsafe:
   "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
   including unfold_objects by (wpsimp simp: set_pt_def)
-
-lemma set_pt_reply_caps:
-  "\<lbrace>\<lambda>s. valid_reply_caps s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. valid_reply_caps s\<rbrace>"
-  by (wp valid_reply_caps_st_cte_lift)
 
 
 crunch global_ref [wp]: set_pt "\<lambda>s. P (global_refs s)"
@@ -1614,7 +1604,7 @@ lemma set_pt_invs:
   apply (rule hoare_pre)
    apply (wp set_pt_valid_objs set_pt_iflive set_pt_zombies
              set_pt_zombies_state_refs set_pt_zombies_state_hyp_refs set_pt_valid_mdb
-             set_pt_valid_idle set_pt_ifunsafe set_pt_reply_caps
+             set_pt_valid_idle set_pt_ifunsafe
              set_pt_valid_arch_state set_pt_valid_global set_pt_cur
              valid_irq_node_typ
              valid_irq_handlers_lift
@@ -1820,13 +1810,6 @@ lemma set_asid_pool_ifunsafe [wp]:
   \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
   including unfold_objects
   by (wpsimp simp: set_asid_pool_def)
-
-
-lemma set_asid_pool_reply_caps [wp]:
-  "\<lbrace>\<lambda>s. valid_reply_caps s\<rbrace>
-  set_asid_pool p ap
-  \<lbrace>\<lambda>_ s. valid_reply_caps s\<rbrace>"
-  by (wp valid_reply_caps_st_cte_lift)
 
 
 crunch global_ref [wp]: set_asid_pool "\<lambda>s. P (global_refs s)"
@@ -3232,7 +3215,7 @@ lemma set_pd_invs_unmap:
   apply (rule hoare_pre)
    apply (wp set_pd_valid_objs set_pd_iflive set_pd_zombies
              set_pd_zombies_state_refs set_pd_valid_mdb
-             set_pd_valid_idle set_pd_ifunsafe set_pd_reply_caps
+             set_pd_valid_idle set_pd_ifunsafe
              set_pd_valid_arch set_pd_valid_global set_pd_cur
              valid_irq_node_typ set_pd_zombies_state_hyp_refs
              set_pd_vspace_objs_unmap set_pd_vs_lookup_unmap

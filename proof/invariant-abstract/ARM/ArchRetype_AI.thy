@@ -172,12 +172,6 @@ crunch only_idle[wp]: copy_global_mappings "only_idle"
 crunch ifunsafe[wp]: copy_global_mappings "if_unsafe_then_cap"
   (wp: crunch_wps)
 
-crunch reply_caps[wp]: copy_global_mappings "valid_reply_caps"
-  (wp: crunch_wps)
-
-crunch reply_masters[wp]: copy_global_mappings "valid_reply_masters"
-  (wp: crunch_wps)
-
 crunch valid_global[wp]: copy_global_mappings "valid_global_refs"
   (wp: crunch_wps)
 
@@ -1194,7 +1188,6 @@ lemma post_retype_invs:
   using equal_kernel_mappings
   by (clarsimp simp: invs_def post_retype_invs_def valid_state_def
                      unsafe_rep2 null_filter valid_idle
-                     valid_reply_caps valid_reply_masters
                      valid_global_refs valid_arch_state
                      valid_irq_node_def obj_at_pres
                      valid_arch_caps valid_global_objs
@@ -1302,8 +1295,8 @@ lemma invs_irq_state_independent:
    = invs s"
   by (clarsimp simp: irq_state_independent_A_def invs_def
       valid_state_def valid_pspace_def valid_mdb_def valid_ioc_def valid_idle_def
-      only_idle_def if_unsafe_then_cap_def valid_reply_caps_def
-      valid_reply_masters_def valid_global_refs_def valid_arch_state_def
+      only_idle_def if_unsafe_then_cap_def
+      valid_global_refs_def valid_arch_state_def
       valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
       valid_arch_caps_def valid_global_objs_def
       valid_kernel_mappings_def equal_kernel_mappings_def

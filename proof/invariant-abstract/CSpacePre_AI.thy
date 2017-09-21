@@ -184,9 +184,8 @@ where
   else
     (cap_master_cap cap = cap_master_cap cap') \<and>
     (cap_badge cap, cap_badge cap') \<in> capBadge_ordering False) \<and>
-    (is_master_reply_cap cap = is_reply_cap cap') \<and>
     is_derived_arch cap' cap \<and>
-    \<not> is_reply_cap cap \<and> \<not> is_master_reply_cap cap'"
+    \<not> is_reply_cap cap" (* RT: FIXME *)
 
 
 (* FIXME: remove copy_of and use cap_master_cap with weak_derived directly *)
