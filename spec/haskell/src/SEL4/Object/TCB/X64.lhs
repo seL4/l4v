@@ -42,22 +42,19 @@ There are presently no x64-specific register subsets defined, but in future this
 > sanitiseAndFlags :: Word
 > sanitiseAndFlags = (bit 12 - 1) .&. (complement (bit 3)) .&. (complement (bit 5)) .&. (complement (bit 8)) -- should be 0x111011010111
 
-> -- FIXME x64: implement from abstract
 > sanitiseRegister :: Bool -> Register -> Word -> Word
 > sanitiseRegister _ r v =
 >     let val = if r == FaultIP || r == NextIP then
 >                  if v > 0x00007fffffffffff && v < 0xffff800000000000 then 0 else v
->               else v;
->         val' = if r == TLS_BASE then if val > 0x00007fffffffffff then 0x00007fffffffffff else val else val
+>               else v
 >     in
 >         if r == FLAGS then
->             (val' .|. sanitiseOrFlags) .&. sanitiseAndFlags
->         else val'
+>             (val .|. sanitiseOrFlags) .&. sanitiseAndFlags
+>         else val
 
 > getSanitiseRegisterInfo :: PPtr TCB -> Kernel Bool
 > getSanitiseRegisterInfo _ = return False
 
 > setTCBIPCBuffer :: VPtr -> UserMonad ()
 > setTCBIPCBuffer ptr = return ()
-
 

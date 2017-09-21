@@ -21,9 +21,9 @@ This module defines the x86 64-bit register set.
 
 > data Register =
 >     RAX | RBX | RCX | RDX | RSI | RDI | RBP |
->     R8 | R9 | R10 | R11 | R12 | R13 | R14 | R15 | DS | ES | FS | GS |
+>     R8 | R9 | R10 | R11 | R12 | R13 | R14 | R15 |
 >     FaultIP | -- "FaultIP"
->     TLS_BASE | PADDING_REGISTER |
+>     TLS_BASE |
 >     ErrorRegister | NextIP | CS | FLAGS | RSP | SS
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
@@ -34,7 +34,7 @@ This module defines the x86 64-bit register set.
 > msgRegisters = [RDI, RBP]
 > badgeRegister = capRegister
 > frameRegisters = FaultIP : RSP : FLAGS : [RAX .. R15]
-> gpRegisters = [TLS_BASE, FS, GS]
+> gpRegisters = [TLS_BASE]
 > exceptionMessage = [FaultIP, RSP, FLAGS]
 
 > syscallMessage = [RAX .. RBP] ++ [NextIP, RSP, FLAGS]
@@ -70,14 +70,4 @@ This module defines the x86 64-bit register set.
 >               , (SS, selDS3)
 >               , (FLAGS, bit 9 .|. bit 1) -- User mode
 >               ]
-
-%FIXME x64: add FPU context
-
-> sanitiseRegister :: Register -> Word -> Word
-> sanitiseRegister FLAGS v =
->     v .|. bit 1 .&. (complement (bit 3)) .&. (complement (bit 5))  .|. bit 9
->     .&. (bit 12 - 1)
-> sanitiseRegister FS v = if v /= selTLS && v /= selIPCBUF then 0 else v
-> sanitiseRegister GS v = if v /= selTLS && v /= selIPCBUF then 0 else v
-> sanitiseRegister _ v = v
 
