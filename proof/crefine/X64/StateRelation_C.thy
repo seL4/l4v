@@ -219,7 +219,7 @@ definition
   \<and> tcb_queue_relation getNext getPrev hp queue NULL qhead"
 
 fun
-  register_from_H :: "register \<Rightarrow> machine_word"
+  register_from_H :: "register \<Rightarrow> 32 word"
   where
     "register_from_H X64.RAX = scast Kernel_C.RAX"
   | "register_from_H X64.RBX = scast Kernel_C.RBX"
