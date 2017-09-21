@@ -13,6 +13,6 @@ chapter "Toplevel Refinement Statement"
 (* In progress c refinement *)
 
 theory Refine_C
-imports TcbQueue_C PSpace_C
+imports TcbQueue_C PSpace_C TcbAcc_C
 begin
 end
