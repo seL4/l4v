@@ -81,13 +81,13 @@ where
   "set_next_interrupt = do
      cur_tm \<leftarrow> gets cur_time;
      cur_th \<leftarrow> gets cur_thread;
-     sc_opt \<leftarrow> thread_get tcb_sched_context cur_th;
+     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context cur_th;
      sc_ptr \<leftarrow> assert_opt sc_opt;
      sc \<leftarrow> get_sched_context sc_ptr;
      new_thread_time \<leftarrow> return $ cur_tm + r_amount (refill_hd sc);
      rq \<leftarrow> gets release_queue;
      new_thread_time \<leftarrow> if rq = [] then return new_thread_time else do
-       sc_opt \<leftarrow> thread_get tcb_sched_context (hd rq);
+       sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context (hd rq);
        sc_ptr \<leftarrow> assert_opt sc_opt;
        sc \<leftarrow> get_sched_context sc_ptr;
        return $ min (r_time (refill_hd sc)) new_thread_time
@@ -101,7 +101,7 @@ where
   "switch_sched_context = do
     cur_sc \<leftarrow> gets cur_sc;
     cur_th \<leftarrow> gets cur_thread;
-    sc_opt \<leftarrow> thread_get tcb_sched_context cur_th;
+    sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context cur_th;
     sc \<leftarrow> assert_opt sc_opt;
     when (sc \<noteq> cur_sc) $ do
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
@@ -139,7 +139,7 @@ definition
   refill_ready_tcb :: "obj_ref \<Rightarrow> bool det_ext_monad"
 where
   "refill_ready_tcb t = do
-     sc_opt \<leftarrow> thread_get tcb_sched_context t;
+     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
      sc_ptr \<leftarrow> assert_opt sc_opt;
      refill_ready sc_ptr
    od"
@@ -311,8 +311,8 @@ where
   "sched_context_yield_to sc_ptr args \<equiv> do
     flag \<leftarrow> return True;
     refill_unblock_check sc_ptr;
-    sc \<leftarrow> get_sched_context sc_ptr;
-    tcb_ptr \<leftarrow> assert_opt (sc_tcb sc);
+    sc_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
+    tcb_ptr \<leftarrow> assert_opt sc_opt;
     schedulable \<leftarrow> is_schedulable tcb_ptr False;
     when (schedulable) $ do
       sufficient \<leftarrow> refill_sufficient sc_ptr 0;
@@ -328,7 +328,7 @@ where
       od
       else do
         flag \<leftarrow> return False;
-        set_sched_context sc_ptr (sc\<lparr> sc_yield_from := Some ct_ptr \<rparr>);
+        set_sc_obj_ref sc_yield_from_update sc_ptr (Some ct_ptr);
         possible_switch_to ct_ptr;
         set_thread_state ct_ptr (YieldTo sc_ptr)
       od

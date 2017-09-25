@@ -343,7 +343,7 @@ where
       tcb_ptr \<leftarrow> returnOk $ obj_ref_of cap;
       unlessE (is_sched_context_cap sc_cap) $ throwError (InvalidCapability 0);
       sc_ptr \<leftarrow> returnOk $ obj_ref_of sc_cap;
-      sc_ptr' \<leftarrow> liftE $ thread_get tcb_sched_context tcb_ptr;
+      sc_ptr' \<leftarrow> liftE $ get_tcb_obj_ref tcb_sched_context tcb_ptr;
       whenE (sc_ptr' \<noteq> None \<and> sc_ptr' \<noteq> Some sc_ptr) $ throwError IllegalOperation;
       sc \<leftarrow> liftE $ get_sched_context sc_ptr;
       whenE (sc_tcb sc \<noteq> None \<and> sc_tcb sc \<noteq> Some tcb_ptr) $ throwError IllegalOperation;
@@ -383,7 +383,7 @@ where
   "decode_bind_notification cap extra_caps \<equiv> case cap of
     ThreadCap tcb \<Rightarrow> doE
      whenE (length extra_caps = 0) $ throwError TruncatedMessage;
-     nTFN \<leftarrow> liftE $ get_bound_notification tcb;
+     nTFN \<leftarrow> liftE $ get_tcb_obj_ref tcb_bound_notification tcb;
      case nTFN of
          Some _ \<Rightarrow> throwError IllegalOperation
        | None \<Rightarrow> returnOk ();
@@ -406,7 +406,7 @@ definition
 where
   "decode_unbind_notification cap \<equiv> case cap of
      ThreadCap tcb \<Rightarrow> doE
-       nTFN \<leftarrow> liftE $ get_bound_notification tcb;
+       nTFN \<leftarrow> liftE $ get_tcb_obj_ref tcb_bound_notification tcb;
        case nTFN of
            None \<Rightarrow> throwError IllegalOperation
          | Some _ \<Rightarrow> returnOk ();
@@ -482,11 +482,11 @@ where
       whenE (sc_tcb sc \<noteq> None \<or> sc_ntfn sc \<noteq> None) $ throwError IllegalOperation;
       case cap of
         ThreadCap tcb_ptr \<Rightarrow> doE
-          sc_ptr_opt \<leftarrow> liftE $ thread_get tcb_sched_context tcb_ptr;
+          sc_ptr_opt \<leftarrow> liftE $ get_tcb_obj_ref tcb_sched_context tcb_ptr;
           whenE (sc_ptr_opt \<noteq> None) $ throwError IllegalOperation
         odE
       | NotificationCap ntfn_ptr _ _ \<Rightarrow> doE
-          sc_ptr_opt \<leftarrow> liftE $ liftM ntfn_sc $ get_notification ntfn_ptr;
+          sc_ptr_opt \<leftarrow> liftE $ get_ntfn_obj_ref ntfn_sc ntfn_ptr;
           whenE (sc_ptr_opt \<noteq> None) $ throwError IllegalOperation
         odE
       | _ \<Rightarrow> throwError (InvalidCapability 1);
@@ -497,11 +497,11 @@ where
       cap \<leftarrow> returnOk $ hd excaps;
       case cap of
         ThreadCap tcb_ptr \<Rightarrow> doE
-          sc_ptr_opt \<leftarrow> liftE $ thread_get tcb_sched_context tcb_ptr;
+          sc_ptr_opt \<leftarrow> liftE $ get_tcb_obj_ref tcb_sched_context tcb_ptr;
           whenE (sc_ptr_opt \<noteq> Some sc_ptr) $ throwError IllegalOperation
         odE
       | NotificationCap ntfn_ptr _ _ \<Rightarrow> doE
-          sc_ptr_opt \<leftarrow> liftE $ liftM ntfn_sc $ get_notification ntfn_ptr;
+          sc_ptr_opt \<leftarrow> liftE $ get_ntfn_obj_ref ntfn_sc ntfn_ptr;
           whenE (sc_ptr_opt \<noteq> Some sc_ptr) $ throwError IllegalOperation
         odE
       | _ \<Rightarrow> throwError (InvalidCapability 1);

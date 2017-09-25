@@ -327,8 +327,7 @@ definition
            | NotificationCap ref badge rights \<Rightarrow> 
              (if AllowRecv \<in> rights
               then doE
-                ntfn \<leftarrow> liftE $ get_notification ref;
-                boundTCB \<leftarrow> returnOk $ ntfn_bound_tcb ntfn;
+                boundTCB \<leftarrow> liftE $ get_ntfn_obj_ref ntfn_bound_tcb ref;
                 if boundTCB = Some thread \<or> boundTCB = None
                 then liftE $ receive_signal thread ep_cap is_blocking
                 else flt

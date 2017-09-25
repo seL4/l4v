@@ -82,16 +82,16 @@ where
   "get_thread_state ref \<equiv> thread_get tcb_state ref"
 
 definition
-  get_bound_notification :: "obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
+  get_tcb_obj_ref :: "(tcb => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
 where
-  "get_bound_notification ref \<equiv> thread_get tcb_bound_notification ref"
+  "get_tcb_obj_ref f ref \<equiv> thread_get f ref"
 
 definition
-  set_bound_notification :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  set_tcb_obj_ref :: "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> tcb \<Rightarrow> tcb) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "set_bound_notification ref ntfn \<equiv> do
+  "set_tcb_obj_ref f ref new \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb ref;
-     set_object ref (TCB (tcb \<lparr> tcb_bound_notification := ntfn \<rparr>))
+     set_object ref (TCB (f (K new) tcb))
    od"
 
 section {* Scheduling Contexts *}
@@ -114,7 +114,21 @@ where
      set_object ptr (SchedContext sc)
    od"
 
+definition
+  get_sc_obj_ref :: "(sched_context => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
+where
+  "get_sc_obj_ref f ref \<equiv> do
+     sc \<leftarrow> get_sched_context ref;
+     return $ f sc
+   od"
 
+definition
+  set_sc_obj_ref :: "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> sched_context \<Rightarrow> sched_context) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "set_sc_obj_ref f ref new \<equiv> do
+     sc \<leftarrow> get_sched_context ref;
+     set_object ref (SchedContext (f (K new) sc))
+   od"
 
 (****)
 

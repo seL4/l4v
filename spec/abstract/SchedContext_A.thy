@@ -41,7 +41,7 @@ definition
   get_tcb_sc :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad"
 where
   "get_tcb_sc tcb_ptr = do
-    sc_opt \<leftarrow> thread_get tcb_sched_context tcb_ptr;
+    sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb_ptr;
     sc_ptr \<leftarrow> assert_opt sc_opt;
     get_sched_context sc_ptr
   od"
@@ -378,8 +378,8 @@ definition
   postpone :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "postpone sc_ptr = do
-    sc \<leftarrow> get_sched_context sc_ptr;
-    tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
+    tcb_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
+    tcb_ptr \<leftarrow> assert_opt tcb_opt;
     do_extended_op $ tcb_sched_action tcb_sched_dequeue tcb_ptr;
     do_extended_op $ tcb_release_enqueue tcb_ptr;
     modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>)
@@ -440,7 +440,7 @@ where
          buf \<leftarrow> assert_opt args;
          set_consumed sc_ptr [buf];
          sc \<leftarrow> get_sched_context sc_ptr;
-         set_sched_context sc_ptr (sc \<lparr> sc_yield_from := None \<rparr> );
+         set_sc_obj_ref sc_yield_from_update sc_ptr None;
          set_thread_state tcb_ptr Running
        od
       | _ \<Rightarrow> return ()
@@ -459,9 +459,8 @@ definition
   sched_context_bind_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> unit det_ext_monad"
 where
   "sched_context_bind_tcb sc_ptr tcb_ptr = do
-    sc \<leftarrow> get_sched_context sc_ptr;
-    set_sched_context sc_ptr (sc\<lparr>sc_tcb := Some tcb_ptr\<rparr>);
-    thread_set (\<lambda>tcb. tcb\<lparr>tcb_sched_context := Some sc_ptr\<rparr>) tcb_ptr; 
+    set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
+    set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr);
     sched_context_resume sc_ptr;
     inq \<leftarrow> gets $ in_release_queue tcb_ptr;
     sched \<leftarrow> is_schedulable tcb_ptr inq;
@@ -473,7 +472,7 @@ definition
   unbind_from_sc :: "obj_ref \<Rightarrow> (unit, det_ext) s_monad"
 where
   "unbind_from_sc tcb_ptr = do
-    sc_ptr_opt \<leftarrow> thread_get tcb_sched_context tcb_ptr;
+    sc_ptr_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb_ptr;
     maybeM sched_context_unbind_tcb sc_ptr_opt;
     maybeM (\<lambda>scptr. do
               sc \<leftarrow> get_sched_context scptr;
@@ -484,10 +483,10 @@ definition
   maybe_donate_sc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> unit det_ext_monad"
 where
   "maybe_donate_sc tcb_ptr ntfn_ptr = do
-     sc_opt \<leftarrow> thread_get tcb_sched_context tcb_ptr;
+     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb_ptr;
      when (sc_opt = None) $
-       liftM ntfn_sc (get_notification ntfn_ptr) >>= maybeM (\<lambda>sc_ptr. do
-         sc_tcb \<leftarrow> liftM sc_tcb $ get_sched_context sc_ptr;
+       get_ntfn_obj_ref ntfn_sc ntfn_ptr >>= maybeM (\<lambda>sc_ptr. do
+         sc_tcb \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
          when (sc_tcb = None) $ sched_context_donate sc_ptr tcb_ptr
        od)
    od"
@@ -496,13 +495,12 @@ definition
   maybe_return_sc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> unit det_ext_monad"
 where
   "maybe_return_sc ntfn_ptr tcb_ptr = do
-    nsc_opt \<leftarrow> liftM ntfn_sc $ get_notification ntfn_ptr;
-    tsc_opt \<leftarrow> thread_get tcb_sched_context tcb_ptr;
+    nsc_opt \<leftarrow> get_ntfn_obj_ref ntfn_sc ntfn_ptr;
+    tsc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb_ptr;
     when (nsc_opt = tsc_opt \<and> nsc_opt \<noteq> None) $ do
       sc_ptr \<leftarrow> assert_opt nsc_opt;
-      thread_set (tcb_sched_context_update $ K None) tcb_ptr;
-      sc \<leftarrow> get_sched_context sc_ptr;
-      set_sched_context sc_ptr (sc\<lparr>sc_tcb:= None\<rparr>)
+      set_tcb_obj_ref tcb_sched_context_update tcb_ptr None;
+      set_sc_obj_ref sc_tcb_update sc_ptr None
     od
   od"
 
@@ -564,7 +562,7 @@ where
      st \<leftarrow> get_thread_state thread;
      case st of YieldTo sc_ptr \<Rightarrow> do
        sc \<leftarrow> get_sched_context sc_ptr;
-       set_sched_context sc_ptr (sc \<lparr> sc_yield_from := None \<rparr> )
+       set_sc_obj_ref sc_yield_from_update sc_ptr None
      od
     | _ \<Rightarrow> return ();
      set_thread_state thread Inactive;

@@ -36,7 +36,7 @@ definition
   restart :: "obj_ref \<Rightarrow> unit det_ext_monad" where
  "restart thread \<equiv> do
     state \<leftarrow> get_thread_state thread;
-    sc_opt \<leftarrow> thread_get tcb_sched_context thread;
+    sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context thread;
     when (\<not> runnable state \<and> \<not> idle state) $ do
       cancel_ipc thread;
       set_thread_state thread Restart;
@@ -131,10 +131,8 @@ definition
   bind_notification :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "bind_notification tcbptr ntfnptr \<equiv> do
-     ntfn \<leftarrow> get_notification ntfnptr;
-     ntfn' \<leftarrow> return $ ntfn_set_bound_tcb ntfn (Some tcbptr);
-     set_notification ntfnptr ntfn';
-     set_bound_notification tcbptr $ Some ntfnptr
+     set_ntfn_obj_ref ntfn_bound_tcb_update ntfnptr $ Some tcbptr;
+     set_tcb_obj_ref tcb_bound_notification_update tcbptr $ Some ntfnptr
    od"
 
 definition
@@ -167,11 +165,11 @@ where
      | Some (prio, _) \<Rightarrow> do_extended_op (set_priority target prio);
     liftE $ case sc of None \<Rightarrow> return ()
      | Some None \<Rightarrow> do
-       sc_ptr_opt \<leftarrow> thread_get tcb_sched_context target;
+       sc_ptr_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
        maybeM sched_context_unbind_tcb sc_ptr_opt
      od
      | Some (Some sc_ptr) \<Rightarrow> do
-        sc' \<leftarrow> thread_get tcb_sched_context target;
+        sc' \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
         when (sc' \<noteq> Some sc_ptr) $ sched_context_bind_tcb sc_ptr target
      od;
     install_tcb_cap target (ThreadCap target) slot 0 croot;

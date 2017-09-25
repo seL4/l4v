@@ -31,34 +31,53 @@ requalify_types
 
 end
 
+text {* Notification accessors. *}
+definition
+  get_ntfn_obj_ref :: "(notification => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
+where
+  "get_ntfn_obj_ref f ref \<equiv> do
+     ntfn \<leftarrow> get_notification ref;
+     return $ f ntfn
+   od"
+
+definition
+  set_ntfn_obj_ref :: "((obj_ref option \<Rightarrow> obj_ref option) \<Rightarrow> notification \<Rightarrow> notification) \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "set_ntfn_obj_ref f ref new \<equiv> do
+     ntfn \<leftarrow> get_notification ref;
+     set_object ref (Notification (f (K new) ntfn))
+   od"
+
+abbreviation
+  ntfn_set_obj :: "notification \<Rightarrow> ntfn \<Rightarrow> notification"
+where
+  "ntfn_set_obj ntfn a \<equiv> ntfn \<lparr> ntfn_obj := a \<rparr>"
+
+
 definition
   sched_context_bind_ntfn :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_bind_ntfn sc ntfn = do
-    n \<leftarrow> get_notification ntfn;
-    set_notification ntfn (n\<lparr>ntfn_sc:= Some sc\<rparr>);
-    s \<leftarrow> get_sched_context sc;
-    set_sched_context sc (s\<lparr>sc_ntfn:= Some ntfn\<rparr>)
+    set_ntfn_obj_ref ntfn_sc_update ntfn (Some sc);
+    set_sc_obj_ref sc_ntfn_update sc (Some ntfn)
   od"
 
 definition
   sched_context_unbind_ntfn :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_unbind_ntfn sc_ptr = do
-    sc \<leftarrow> get_sched_context sc_ptr;
-    return (sc_ntfn sc) >>=
+    ntfn_opt \<leftarrow> get_sc_obj_ref sc_ntfn sc_ptr;
     maybeM (\<lambda>ntfn. do
-      set_sched_context sc_ptr (sc\<lparr>sc_ntfn:= None\<rparr>);
-      n \<leftarrow> get_notification ntfn;
-      set_notification ntfn (n\<lparr>ntfn_sc:= None\<rparr>)
-    od)
+      set_sc_obj_ref sc_ntfn_update sc_ptr None;
+      set_ntfn_obj_ref ntfn_sc_update ntfn None
+    od) ntfn_opt
   od"
 
 definition
   sched_context_maybe_unbind_ntfn :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_maybe_unbind_ntfn ntfn_ptr = do
-    sc_opt \<leftarrow> liftM ntfn_sc $ get_notification ntfn_ptr;
+    sc_opt \<leftarrow> get_ntfn_obj_ref ntfn_sc ntfn_ptr;
     maybeM sched_context_unbind_ntfn sc_opt
   od"
 
@@ -74,7 +93,7 @@ where
      tptr \<leftarrow> assert_opt $ sc_tcb sc;
      do_extended_op $ tcb_sched_action tcb_sched_dequeue tptr;
      do_extended_op $ tcb_release_remove tptr;
-     thread_set (\<lambda>tcb. tcb \<lparr> tcb_sched_context := None \<rparr>) tptr;
+     set_tcb_obj_ref tcb_sched_context_update tptr None;
      cur \<leftarrow> gets $ cur_thread;
      when (tptr = cur) $ do_extended_op reschedule_required
   od"
@@ -84,11 +103,10 @@ definition
   sched_context_donate :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> unit det_ext_monad"
 where
   "sched_context_donate sc_ptr tcb_ptr = do
-    sc \<leftarrow> get_sched_context sc_ptr;
-    from_opt \<leftarrow> return $ sc_tcb sc;
+    from_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
     when (from_opt \<noteq> None) $ sched_context_unbind_tcb sc_ptr;
-    set_sched_context sc_ptr (sc\<lparr>sc_tcb := Some tcb_ptr\<rparr>);
-    thread_set (\<lambda>tcb. tcb\<lparr>tcb_sched_context := Some sc_ptr\<rparr>) tcb_ptr
+    set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
+    set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr)
   od"
 
 text \<open>Unbind a reply from the corresponding scheduling context.\<close>
@@ -148,8 +166,8 @@ definition
   reply_push :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> unit det_ext_monad"
 where
   "reply_push caller callee reply_ptr can_donate = do
-    sc_opt \<leftarrow> thread_get tcb_sched_context caller;
-    sc_callee \<leftarrow> thread_get tcb_sched_context callee;
+    sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context caller;
+    sc_callee \<leftarrow> get_tcb_obj_ref tcb_sched_context callee;
 
     reply_caller_opt \<leftarrow> get_reply_caller reply_ptr;
     when (reply_caller_opt \<noteq> None) $ reply_remove reply_ptr;
@@ -267,7 +285,7 @@ definition
 definition
   possible_switch_to :: "obj_ref \<Rightarrow> unit det_ext_monad" where
   "possible_switch_to target \<equiv> do
-     sc_opt \<leftarrow> thread_get tcb_sched_context target;
+     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
      inq \<leftarrow> gets $ in_release_queue target;
      when (sc_opt \<noteq> None \<and> \<not>inq) $ do
      cur_dom \<leftarrow> gets cur_domain;
@@ -340,29 +358,14 @@ where
         od
   od"
 
-text {* Cancel all message operations on threads queued in a notification
-endpoint. *}
-
-text {* Notification accessors. *}
-abbreviation 
-  ntfn_set_bound_tcb :: "notification \<Rightarrow> obj_ref option \<Rightarrow> notification"
-where
-  "ntfn_set_bound_tcb ntfn t \<equiv> ntfn \<lparr> ntfn_bound_tcb := t \<rparr>"
-
-abbreviation
-  ntfn_set_obj :: "notification \<Rightarrow> ntfn \<Rightarrow> notification"
-where
-  "ntfn_set_obj ntfn a \<equiv> ntfn \<lparr> ntfn_obj := a \<rparr>"
-
-
+oo many now)
 text {* Remove the binding between a notification and a TCB. *}
 abbreviation
-  do_unbind_notification :: "obj_ref \<Rightarrow> notification \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  do_unbind_notification :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "do_unbind_notification ntfnptr ntfn tcbptr \<equiv> do
-      ntfn' \<leftarrow> return $ ntfn_set_bound_tcb ntfn None;
-      set_notification ntfnptr ntfn';
-      set_bound_notification tcbptr None
+  "do_unbind_notification ntfnptr tcbptr \<equiv> do
+      set_ntfn_obj_ref ntfn_bound_tcb_update ntfnptr None;
+      set_tcb_obj_ref tcb_bound_notification_update tcbptr None
     od"
 
 
@@ -371,13 +374,8 @@ definition
   unbind_notification :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "unbind_notification tcb \<equiv> do
-     ntfnptr \<leftarrow> get_bound_notification tcb;
-     case ntfnptr of
-         Some ntfnptr' \<Rightarrow> do
-             ntfn \<leftarrow> get_notification ntfnptr';
-             do_unbind_notification ntfnptr' ntfn tcb
-          od
-       | None \<Rightarrow> return ()
+     ntfnptr \<leftarrow> get_tcb_obj_ref tcb_bound_notification tcb;
+     maybeM (\<lambda>nptr. do_unbind_notification nptr tcb) ntfnptr
    od"
 
 text {* Remove bound notification from a TCB if such notification exists. *}
@@ -385,12 +383,9 @@ definition
   unbind_maybe_notification :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "unbind_maybe_notification ntfnptr \<equiv> do
-     ntfn \<leftarrow> get_notification ntfnptr;
-     (case ntfn_bound_tcb ntfn of
-       Some t \<Rightarrow> do_unbind_notification ntfnptr ntfn t
-     | None \<Rightarrow> return ())
+     tptr \<leftarrow> get_ntfn_obj_ref ntfn_bound_tcb ntfnptr;
+     maybeM (\<lambda>t. do_unbind_notification ntfnptr t) tptr
    od"
-
 
 
 text {* Cancel all message operations on threads queued in a notification endpoint. *}

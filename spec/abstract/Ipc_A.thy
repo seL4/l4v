@@ -297,7 +297,7 @@ where
                       return reply
                     od
                   | _ \<Rightarrow> fail;
-                sc_opt \<leftarrow> thread_get tcb_sched_context dest;
+                sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
 
                 fault \<leftarrow> thread_get tcb_fault thread;
                 if call \<or> fault \<noteq> None then
@@ -358,7 +358,7 @@ where
                | NullCap \<Rightarrow> return None
                | _ \<Rightarrow> fail);
      ep \<leftarrow> get_endpoint epptr;
-     ntfnptr \<leftarrow> get_bound_notification thread;
+     ntfnptr \<leftarrow> get_tcb_obj_ref tcb_bound_notification thread;
      ntfn \<leftarrow> case_option (return default_notification) get_notification ntfnptr;
      if (ntfnptr \<noteq> None \<and> isActive ntfn)
      then
@@ -396,7 +396,7 @@ where
               then
                 if sender_can_grant data \<and> reply \<noteq> None
                 then do
-                  sender_sc \<leftarrow> thread_get tcb_sched_context sender;
+                  sender_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context sender;
                   donate \<leftarrow> return (sender_sc \<noteq> None);
                   reply_push sender thread (the reply) donate;
                   set_thread_state sender BlockedOnReply
@@ -584,7 +584,7 @@ where
            thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) receiver;
            set_thread_state receiver (if restart then Restart else Inactive);
 
-          sc_opt \<leftarrow> thread_get tcb_sched_context receiver;
+          sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
           when (sc_opt \<noteq> None \<and> runnable state) $ do
             sc_ptr \<leftarrow> assert_opt sc_opt;
             refill_unblock_check sc_ptr;
