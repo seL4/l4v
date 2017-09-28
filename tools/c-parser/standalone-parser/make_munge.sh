@@ -67,8 +67,8 @@ export L4V_ARCH=${L4V_ARCH:="ARM"}
 export CONFIG_KERNEL_EXTRA_CPPFLAGS=${CONFIG_KERNEL_EXTRA_CPPFLAGS:="-P"}
 
 # Useful refs
-CKERNEL_DIR=${L4V}/spec/cspec/${L4V_ARCH}/c
-CKERNEL=${CKERNEL_DIR}/kernel_all.c_pp
+CKERNEL_DIR=${L4V}/spec/cspec/c
+CKERNEL=${CKERNEL_DIR}/build/${L4V_ARCH}/kernel_all.c_pp
 NAMES_FILE=${MUN_TMP}/ckernel_names.txt
 AST_FILE=${MUN_TMP}/ckernel_ast.txt
 SEL4_CLONE=${MUN_TMP}/sel4-clone
@@ -96,7 +96,7 @@ set +e
 set -e
 
 # build kernel_all.c_pp
-make -C ${CKERNEL_DIR} SOURCE_ROOT=${SEL4_CLONE} kernel_all.c_pp
+make -C ${CKERNEL_DIR} SOURCE_ROOT=${SEL4_CLONE} ${CKERNEL}
 
 # does the c-parser exist?
 CPARSER="${CPARSER_DIR}/${L4V_ARCH}/c-parser"
