@@ -108,9 +108,9 @@ ${CPARSER} ${CPARSER_FLAGS} --munge_info_fname=${NAMES_FILE} ${CKERNEL}
 [ -z ${BUILD_AST+x} ] || ${CPARSER} ${CPARSER_FLAGS} --ast ${CKERNEL} > ${AST_FILE}
 
 # move back kernel_all.c_pp
+mv ${CKERNEL} ${OUT_DIR}/kernel_all.txt
 if [ -f ${CKERNEL}.orig ]
 then
-    mv ${CKERNEL} ${OUT_DIR}/kernel_all.txt
     mv ${CKERNEL}.orig ${CKERNEL}
 fi
 
