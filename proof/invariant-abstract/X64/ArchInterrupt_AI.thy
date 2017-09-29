@@ -94,8 +94,7 @@ lemma (* decode_irq_control_valid *)[Interrupt_AI_asms]:
                  | wp_once hoare_drop_imps)+
   apply (clarsimp simp: linorder_not_less word_le_nat_alt unat_ucast
                         maxIRQ_def)
-  apply (cut_tac mod_le[where b = "2^10" and c = "2^16" and a = "unat (args ! 0)" ,simplified])
-  apply (cases caps, auto simp:unat_mask_32_16_is_mod)
+  apply (cases caps, auto)
   done
 
 lemma get_irq_slot_different_ARCH[Interrupt_AI_asms]:

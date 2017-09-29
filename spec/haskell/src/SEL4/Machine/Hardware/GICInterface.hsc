@@ -15,7 +15,7 @@ module SEL4.Machine.Hardware.GICInterface where
 import Foreign.Ptr (Ptr)
 import Data.Array
 import Data.Bits
-import Data.Word(Word32)
+import Data.Word (Word16)
 
 #include "gic.h"
 
@@ -57,7 +57,7 @@ gicpokeArray :: PAddr -> [Int] -> Word -> GicMonad ()
 gicpokeArray paddr offsets value = (flip mapM_) offsets $
 	(\offset -> gicpokeOffset paddr offset value)
 
-newtype IRQ = IRQ Word32
+newtype IRQ = IRQ Word16
     deriving (Num, Integral, Real, FiniteBits, Bits, Enum, Ord, Eq, Ix, Show)
 
 instance Bounded IRQ where

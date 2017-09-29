@@ -392,9 +392,9 @@ lemma decodeIRQ_arch_helper: "x \<noteq> invocation_label.IRQIssueIRQHandler \<L
 lemma Arch_checkIRQ_ccorres:
   "ccorres (syscall_error_rel \<currency> (\<lambda>r r'. irq \<le> scast Kernel_C.maxIRQ))
            (liftxf errstate id undefined ret__unsigned_long_')
-   \<top> (UNIV \<inter> \<lbrace>irq = \<acute>irq___unsigned_long\<rbrace>) []
+   \<top> (UNIV \<inter> \<lbrace>irq = \<acute>irq_w\<rbrace>) []
    (checkIRQ irq) (Call Arch_checkIRQ_'proc)"
-  apply (cinit lift: irq___unsigned_long_' )
+  apply (cinit lift: irq_w_' )
    apply (simp add: rangeCheck_def unlessE_def ARM_HYP.minIRQ_def checkIRQ_def
                     ucast_nat_def word_le_nat_alt[symmetric]
                     linorder_not_le[symmetric] Platform_maxIRQ
@@ -608,12 +608,9 @@ lemma decodeIRQControlInvocation_ccorres:
                         rightsFromWord_wordFromRights)
   apply (simp cong: conj_cong)
 
-  apply (clarsimp simp add: Kernel_C.maxIRQ_def toEnum_of_nat word_le_nat_alt
-                   ucast_nat_def ucast_ucast_mask mask_eq_ucast_eq unat_ucast_mask
-                   less_mask_eq[unfolded word_less_nat_alt])
-
-  apply (subst ucast_mask_drop)
-  apply (simp add:mask_def)+
+  apply (clarsimp simp: Kernel_C.maxIRQ_def word_le_nat_alt
+                        ucast_nat_def ucast_ucast_mask mask_eq_ucast_eq unat_ucast_mask
+                        less_mask_eq[unfolded word_less_nat_alt])
   done
 end
 end

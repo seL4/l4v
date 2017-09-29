@@ -142,10 +142,6 @@ lemma decode_irq_handler_valid[wp]:
 
 crunch inv[wp]: is_irq_active "P"
 
-lemma unat_mask_32_16_is_mod:
-  "unat ((a::word32) && mask 16) = (unat a) mod (2^16)"
-  by (simp add:word_mod_2p_is_mask[symmetric] unat_word_ariths)
-
 lemma mod_le:
   "\<lbrakk>b < c;b dvd c\<rbrakk>  \<Longrightarrow> (a mod b \<le> a mod (c::nat))"
   apply (subst mod_mod_cancel[symmetric],simp)

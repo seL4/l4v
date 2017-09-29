@@ -24,12 +24,12 @@ begin
 context begin interpretation Arch .
 
 requalify_consts
- ArchDefaultExtraRegisters
- check_valid_ipc_buffer
- is_valid_vtable_root
- arch_decode_irq_control_invocation
- arch_data_to_obj_type
- arch_decode_invocation
+  ArchDefaultExtraRegisters
+  check_valid_ipc_buffer
+  is_valid_vtable_root
+  arch_decode_irq_control_invocation
+  arch_data_to_obj_type
+  arch_decode_invocation
 
 end
 
@@ -416,8 +416,7 @@ interrupt controller and interrupt handlers *}
 definition
   arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
 where
-  "arch_check_irq irq \<equiv> whenE (irq && mask 16 > ucast maxIRQ) $
-              throwError (RangeError 0 (ucast maxIRQ))"
+  "arch_check_irq irq \<equiv> whenE (irq > ucast maxIRQ) $ throwError (RangeError 0 (ucast maxIRQ))"
 
 definition
   decode_irq_control_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list
@@ -425,17 +424,21 @@ definition
  "decode_irq_control_invocation label args src_slot cps \<equiv>
   (if invocation_type label = IRQIssueIRQHandler
     then if length args \<ge> 3 \<and> length cps \<ge> 1
-      then let x = args ! 0; index = args ! 1; depth = args ! 2;
-               cnode = cps ! 0; irqv = ucast (x && mask 16) in doE
-        arch_check_irq x;
-        irq_active \<leftarrow> liftE $ is_irq_active irqv;
+      then let irq_word = args ! 0;
+               index = args ! 1;
+               depth = args ! 2;
+               cnode = cps ! 0;
+               irq = ucast irq_word
+      in doE
+        arch_check_irq irq_word;
+        irq_active \<leftarrow> liftE $ is_irq_active irq;
         whenE irq_active $ throwError RevokeFirst;
 
         dest_slot \<leftarrow> lookup_target_slot
                cnode (data_to_cptr index) (unat depth);
         ensure_empty dest_slot;
 
-        returnOk $ IRQControl irqv dest_slot src_slot
+        returnOk $ IRQControl irq dest_slot src_slot
       odE
     else throwError TruncatedMessage
   else liftME ArchIRQControl $ arch_decode_irq_control_invocation label args src_slot cps)"
