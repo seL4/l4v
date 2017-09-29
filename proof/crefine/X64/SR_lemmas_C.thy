@@ -88,7 +88,8 @@ lemma cap_get_tag_isCap0:
   \<and> (cap_get_tag cap' = scast cap_cnode_cap) = isCNodeCap cap
   \<and> isArchCap_tag (cap_get_tag cap') = isArchCap \<top> cap
   \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isArchPageCap cap)
-  \<and> (cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap"
+  \<and> (cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap
+  \<and> (cap_get_tag cap' = scast cap_io_port_cap) = isArchIOPortCap cap"
   using cr
   apply -
   apply (erule ccap_relationE)
@@ -113,6 +114,7 @@ lemma cap_get_tag_isCap:
   and "isArchCap_tag (cap_get_tag cap') = isArchCap \<top> cap"
   and "(cap_get_tag cap' = scast cap_frame_cap) = (isArchPageCap cap)"
   and "(cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap"
+  and "(cap_get_tag cap' = scast cap_io_port_cap) = (isArchIOPortCap cap)"
   using cap_get_tag_isCap0 [OF cr] by auto
 
 lemma cap_get_tag_NullCap:
