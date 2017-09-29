@@ -83,12 +83,12 @@ lemma wfhandlersD:
   unfolding wfhandlers_def by auto
 
 record 'b exxf =
-  exflag :: word32
+  exflag :: machine_word
   exstate :: errtype
   exvalue :: 'b
 
 definition
-  liftxf :: "(cstate \<Rightarrow> errtype) \<Rightarrow> ('a \<Rightarrow> word32) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> (cstate \<Rightarrow> 'a) \<Rightarrow> cstate \<Rightarrow> 'b exxf"
+  liftxf :: "(cstate \<Rightarrow> errtype) \<Rightarrow> ('a \<Rightarrow> machine_word) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> (cstate \<Rightarrow> 'a) \<Rightarrow> cstate \<Rightarrow> 'b exxf"
   where
   "liftxf et ef vf xf \<equiv> \<lambda>s. \<lparr> exflag = ef (xf s), exstate = et s, exvalue = vf (xf s) \<rparr>"
 
@@ -108,7 +108,7 @@ lemma exvalue_liftxf [simp]:
 (* This is more or less ccorres specific, so it goes here *)
 
 primrec
-  crel_sum_comb :: "('a \<Rightarrow> word32 \<Rightarrow> errtype \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 'b \<Rightarrow> bool)
+  crel_sum_comb :: "('a \<Rightarrow> machine_word \<Rightarrow> errtype \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 'b \<Rightarrow> bool)
                         \<Rightarrow> ('a + 'c \<Rightarrow> 'b exxf \<Rightarrow> bool)" (infixl "\<currency>" 95)
 where
   "(f \<currency> g) (Inr x) y = (exflag y = scast EXCEPTION_NONE \<and> g x (exvalue y))"
