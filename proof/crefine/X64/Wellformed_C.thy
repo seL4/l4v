@@ -197,9 +197,9 @@ definition
 definition
 vmrights_to_H :: "word64 \<Rightarrow> vmrights" where
 "vmrights_to_H c \<equiv>
-  if c = scast Kernel_C.VMKernelOnly then VMKernelOnly
+  if c = scast Kernel_C.VMReadWrite then VMReadWrite
   else if c = scast Kernel_C.VMReadOnly then VMReadOnly
-  else VMReadWrite"
+  else VMKernelOnly"
 
 (* Force clarity over name collisions *)
 abbreviation
