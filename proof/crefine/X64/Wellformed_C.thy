@@ -384,7 +384,8 @@ where
 "cl_valid_cap c \<equiv>
    case c of
      Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask 10 = capIRQ_CL fc) (* FIXME x64: don't know if this should stay as 10 *)
-     | x \<Rightarrow> True"
+   | Cap_frame_cap fc \<Rightarrow> ((capFSize_CL fc) < 3)
+   | x \<Rightarrow> True"
 
 definition
 c_valid_cap :: "cap_C \<Rightarrow> bool"
@@ -403,8 +404,8 @@ c_valid_cte :: "cte_C \<Rightarrow> bool"
 where
 "c_valid_cte c \<equiv>  c_valid_cap (cte_C.cap_C c)"
 
+(* all uninteresting cases can be deduced from the cap tag *)
 lemma  c_valid_cap_simps [simp]:
-  "cap_get_tag c = scast cap_frame_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_thread_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_notification_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_endpoint_cap \<Longrightarrow> c_valid_cap c"
