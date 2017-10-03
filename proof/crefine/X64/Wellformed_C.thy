@@ -383,7 +383,7 @@ cl_valid_cap :: "cap_CL \<Rightarrow> bool"
 where
 "cl_valid_cap c \<equiv>
    case c of
-     Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask 10 = capIRQ_CL fc) (* FIXME x64: don't know if this should stay as 10 *)
+     Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask 8 = capIRQ_CL fc)
    | Cap_frame_cap fc \<Rightarrow> ((capFSize_CL fc) < 3)
    | x \<Rightarrow> True"
 
