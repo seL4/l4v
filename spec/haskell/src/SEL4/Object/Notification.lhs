@@ -70,7 +70,7 @@ mark the notification object as active.
 >                         maybeDonateSc tcb ntfnPtr
 >                         setThreadState Running tcb
 >                         asUser tcb $ setRegister badgeRegister badge
->                         switchIfRequiredTo tcb
+>                         possibleSwitchTo tcb
 >                       else
 >                         setNotification ntfnPtr $ nTFN { ntfnObj = ActiveNtfn badge }
 >             (IdleNtfn, Nothing) -> setNotification ntfnPtr $ nTFN { ntfnObj = ActiveNtfn badge }
@@ -156,7 +156,7 @@ If a notification object is deleted, then pending receive operations must be can
 >                 setNotification ntfnPtr (ntfn { ntfnObj = IdleNtfn })
 >                 mapM_ (\t -> do
 >                     setThreadState Restart t
->                     switchIfRequiredTo t) queue
+>                     possibleSwitchTo t) queue
 >                 rescheduleRequired
 >             _ -> return ()
 

@@ -98,12 +98,12 @@ This module specifies the behavior of reply objects.
 
 > replyPush :: PPtr TCB -> PPtr TCB -> PPtr Reply -> Bool -> Kernel ()
 > replyPush callerPtr calleePtr replyPtr canDonate = do
->     scPtrOpt <- threadGet tcbSchedContext callerPtr
+>     scPtrOptDonated <- threadGet tcbSchedContext callerPtr
 >     replyCallerPtrOpt <- getReplyCaller replyPtr
 >     when (replyCallerPtrOpt /= Nothing) $ replyRemove replyPtr
 
->     scPtrOpt' <- threadGet tcbSchedContext calleePtr
->     canDonate <- return (if scPtrOpt' == Nothing then canDonate else False)
+>     scPtrOptCallee <- threadGet tcbSchedContext calleePtr
+>     canDonate <- return (if scPtrOptCallee /= Nothing then False else canDonate)
 
 >     reply <- getReply replyPtr
 >     assert (replyPrev reply == Nothing) "replyPush: replyPrev must be Nothing"
@@ -111,30 +111,28 @@ This module specifies the behavior of reply objects.
 >     assert (replyCaller reply == Nothing) "replyPush: replyCaller must be Nothing"
 
 >     callerReply <- threadGet tcbReply callerPtr
->     assert (callerReply == Nothing) "replyPush: tcb caller should not be in a existing call stack"
+>     assert (callerReply == Nothing) "replyPush: tcb caller must not have a reply associated"
 
 >     setReply replyPtr (reply { replyCaller = Just callerPtr })
 >     threadSet (\tcb -> tcb { tcbReply = Just replyPtr }) callerPtr
 
->     when (scPtrOpt /= Nothing && canDonate) $ do
->         scPtrOpt'' <- threadGet tcbSchedContext calleePtr
->         assert (scPtrOpt'' == Nothing) "replyPush: callee's scheduling context must be Nothing"
->         sc <- getSchedContext (fromJust scPtrOpt)
->         oldCallerPtrOpt <- return $ scReply sc
->         when (oldCallerPtrOpt /= Nothing) $ do
->             oldCallerPtr <- return $ fromJust oldCallerPtrOpt
->             oldCaller <- getReply oldCallerPtr
->             oldCallerNextReply <- getReply $ fromJust $ replyNext oldCaller
->             assert (replySc oldCallerNextReply == scPtrOpt) "replyPush: stack integrity must be satisfied"
+>     when (scPtrOptDonated /= Nothing && canDonate) $ do
+>         assert (scPtrOptCallee == Nothing) "replyPush: callee must not have a scheduling context"
+>         scDonated <- getSchedContext (fromJust scPtrOptDonated)
+>         oldReplyPtrOpt <- return $ scReply scDonated
+>         when (oldReplyPtrOpt /= Nothing) $ do
+>             oldReplyPtr <- return $ fromJust oldReplyPtrOpt
+>             oldReply <- getReply oldReplyPtr
+>             assert (replySc oldReply == scPtrOptDonated) "replyPush: scheduling context and reply must have reference to each other"
 
 >         reply' <- getReply replyPtr
->         setReply replyPtr (reply' { replyPrev = oldCallerPtrOpt, replyNext = Nothing, replySc = scPtrOpt })
->         when (oldCallerPtrOpt /= Nothing) $ do
->             oldCallerPtr <- return $ fromJust oldCallerPtrOpt
->             oldCaller <- getReply oldCallerPtr
->             setReply oldCallerPtr (oldCaller { replyNext = Just replyPtr })
->         setSchedContext (fromJust scPtrOpt) (sc { scReply = Just replyPtr })
->         schedContextDonate (fromJust scPtrOpt) calleePtr
+>         setReply replyPtr (reply' { replyPrev = oldReplyPtrOpt, replyNext = Nothing, replySc = scPtrOptDonated })
+>         when (oldReplyPtrOpt /= Nothing) $ do
+>             oldReplyPtr <- return $ fromJust oldReplyPtrOpt
+>             oldReply <- getReply oldReplyPtr
+>             setReply oldReplyPtr (oldReply { replyNext = Just replyPtr, replySc = Nothing })
+>         setSchedContext (fromJust scPtrOptDonated) (scDonated { scReply = Just replyPtr })
+>         schedContextDonate (fromJust scPtrOptDonated) calleePtr
 
 > getReply :: PPtr Reply -> Kernel Reply
 > getReply rptr = getObject rptr

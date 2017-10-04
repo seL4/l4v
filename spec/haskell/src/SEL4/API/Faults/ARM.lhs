@@ -41,7 +41,7 @@ in handleVMFault?
 > makeArchFaultMessage (VMFault vptr archData) thread = do
 >     pc <- asUser thread getRestartPC
 #ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
->     return (5, pc:fromVPtr vptr:archData)
+>     return (6, pc:fromVPtr vptr:archData)
 #else
 >     upc <- doMachineOp (addressTranslateS1CPR $ VPtr pc)
 >     let faddr = (upc .&. complement (mask pageBits)) .|.

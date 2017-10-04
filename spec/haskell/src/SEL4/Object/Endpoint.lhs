@@ -85,27 +85,20 @@ If the endpoint is receiving, then a thread is removed from its queue, and an IP
 >                     [] -> IdleEP
 >                     _ -> RecvEP queue
 >                 recvState <- getThreadState dest
->                 reply <- case recvState of
->                     (BlockedOnReceive _ reply) -> do
->                         doIPCTransfer thread (Just epptr) badge canGrant dest
->                         return reply
->                     _ -> fail "TCB in receive endpoint queue must be blocked on send"
+>                 assert (isReceive recvState)
+>                        "TCB in receive endpoint queue must be blocked on send"
+>                 doIPCTransfer thread (Just epptr) badge canGrant dest
 >                 scOpt <- threadGet tcbSchedContext dest
 >                 fault <- threadGet tcbFault thread
->                 flag <- return $
->                     (case fault of
->                          Nothing -> (if call
->                                          then True
->                                          else False)
->                          _ -> True)
->                 if flag
->                     then
->                         if canGrant && reply /= Nothing
->                             then do
->                                 replyPush thread dest (fromJust reply) canDonate
->                                 setThreadState BlockedOnReply thread
->                             else setThreadState Inactive thread
->                     else when (canDonate && scOpt == Nothing) $ schedContextDonate (fromJust scOpt) dest
+>                 let replyOpt = replyObject recvState
+>                 case (call, fault, canGrant, replyOpt) of
+>                     (False, Nothing, _, _) -> do
+>                         when (canDonate && scOpt == Nothing) $
+>                             schedContextDonate (fromJust scOpt) dest
+>                     (_, _, True, Just reply) -> do
+>                         replyPush thread dest reply canDonate
+>                         setThreadState BlockedOnReply thread
+>                     _ -> setThreadState Inactive thread
 
 The receiving thread has now completed its blocking operation and can run. If the receiving thread has higher priority than the current thread, the scheduler is instructed to switch to it immediately.
 
@@ -126,7 +119,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 
 > receiveIPC :: PPtr TCB -> Capability -> Bool -> Capability -> Kernel ()
 > receiveIPC thread cap@(EndpointCap {}) isBlocking replyCap = do
->         reply <- (case replyCap of
+>         replyOpt <- (case replyCap of
 >             ReplyCap r -> return (Just r)
 >             NullCap -> return Nothing
 >             _ -> fail "receiveIPC: replyCap must be ReplyCap or NullCap")
@@ -141,16 +134,16 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >             IdleEP -> case isBlocking of
 >               True -> do
 >                   setThreadState (BlockedOnReceive {
->                       blockingObject = epptr, replyObject = reply }) thread
+>                       blockingObject = epptr, replyObject = replyOpt }) thread
 >                   setEndpoint epptr $ RecvEP [thread]
 >               False -> doNBRecvFailedTransfer thread
 >             RecvEP queue -> case isBlocking of
 >               True -> do
 >                   setThreadState (BlockedOnReceive {
->                       blockingObject = epptr, replyObject = reply }) thread
+>                       blockingObject = epptr, replyObject = replyOpt }) thread
 >                   qs' <- tcbEPAppend thread queue
 >                   setEndpoint epptr $ RecvEP $ qs'
->               False -> doNBRecvFailedTransfer thread 
+>               False -> doNBRecvFailedTransfer thread
 >             SendEP (sender:queue) -> do
 >                 setEndpoint epptr $ case queue of
 >                     [] -> IdleEP
@@ -160,17 +153,16 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                        "TCB in send endpoint queue must be blocked on send"
 >                 let badge = blockingIPCBadge senderState
 >                 let canGrant = blockingIPCCanGrant senderState
->                 doIPCTransfer sender (Just epptr) badge canGrant
->                     thread
+>                 doIPCTransfer sender (Just epptr) badge canGrant thread
 >                 let call = blockingIPCIsCall senderState
 >                 fault <- threadGet tcbFault sender
->                 case (call, fault, canGrant, reply) of
+>                 case (call, fault, canGrant, replyOpt) of
 >                     (False, Nothing, _, _) -> do
 >                         setThreadState Running sender
 >                         possibleSwitchTo sender
->                     (_, _, True, Just _) -> do
+>                     (_, _, True, Just reply) -> do
 >                         senderSc <- threadGet tcbSchedContext sender
->                         replyPush sender thread (fromJust reply) (senderSc /= Nothing)
+>                         replyPush sender thread reply (senderSc /= Nothing)
 >                         setThreadState BlockedOnReply sender
 >                     _ -> setThreadState Inactive sender
 >             SendEP [] -> fail "Send endpoint queue must not be empty"
@@ -262,7 +254,7 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 >                                 Nothing -> return ()
 >                                 Just reply -> replyRemove reply
 >                         _ -> return ()
->                     switchIfRequiredTo t)
+>                     possibleSwitchTo t)
 >                 rescheduleRequired
 
 If a badged endpoint is recycled, then cancel every pending send operation using a badge equal to the recycled capability's badge. Receive operations are not affected.
@@ -280,7 +272,7 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 >                 if blockingIPCBadge st == badge
 >                     then do
 >                         setThreadState Restart t
->                         switchIfRequiredTo t
+>                         possibleSwitchTo t
 >                         return False
 >                     else return True
 >             ep' <- case queue' of

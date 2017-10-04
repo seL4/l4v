@@ -53,8 +53,7 @@ When a user-level task causes a fault or exception, represented in this model by
 >     return (3, msg ++ [exception, code])
 
 > makeFaultMessage (Timeout badge) thread = do
->     tcb <- getObject thread
->     scPtrOpt <- return $ tcbSchedContext tcb
+>     scPtrOpt <- threadGet tcbSchedContext thread
 >     case scPtrOpt of
 >         Nothing -> return (5, [badge])
 >         Just scPtr -> do

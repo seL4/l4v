@@ -234,8 +234,8 @@ TODO use this where update is restricted to arch state instead of fiddling in pl
 
 These functions access and modify the current domain and the number of ticks remaining until the current domain changes.
 
-> curDomain :: Kernel Domain
-> curDomain = gets ksCurDomain
+> getCurDomain :: Kernel Domain
+> getCurDomain = gets ksCurDomain
 
 > usToMs :: Word64
 > usToMs = 1000

@@ -241,10 +241,10 @@ The following functions are used within this module to access the global interru
 >     newThreadTime <- return $ curTm + rAmount (refillHd sc)
 >     rq <- getReleaseQueue
 >     newThreadTime <- if rq == [] then return newThreadTime else do
->         scOpt <- threadGet tcbSchedContext (head rq)
->         assert (scOpt /= Nothing) "setNextInterrupt: scOpt must not be Nothing"
->         scPtr <- return $ fromJust scOpt
->         sc <- getSchedContext scPtr
->         return $ min (rTime (refillHd sc)) newThreadTime
+>         rqSCOpt <- threadGet tcbSchedContext (head rq)
+>         assert (rqSCOpt /= Nothing) "setNextInterrupt: rqSCOpt must not be Nothing"
+>         rqSCPtr <- return $ fromJust rqSCOpt
+>         rqSC <- getSchedContext rqSCPtr
+>         return $ min (rTime (refillHd rqSC)) newThreadTime
 >     setNextTimerInterrupt newThreadTime
 
