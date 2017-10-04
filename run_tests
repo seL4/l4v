@@ -55,13 +55,14 @@ EXCLUDE["ARM"]=[]
 
 EXCLUDE["X64"]=[
     "Access",
+    "AutoCorresSEL4",
     "Bisim",
     "CamkesDarpaReport",
     "CamkesGlueProofs",
-    "CSpec",
     "DBaseRefine",
     "DSpec",
-    "SepTacticsExamples"]
+    "SepTacticsExamples",
+    "SimplExportAndRefine"]
 
 # Check EXCLUDE is exhaustive over the available architectures
 if not set(L4V_ARCH_LIST) <= set(EXCLUDE.keys()):
