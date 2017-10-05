@@ -3209,7 +3209,7 @@ lemma cap_get_capSizeBits_spec:
 
 lemma ccap_relation_get_capSizeBits_physical:
   notes unfolds = ccap_relation_def get_capSizeBits_CL_def cap_lift_def
-                  cap_tag_defs cap_to_H_def objBits_def objBitsKO_simps
+                  cap_tag_defs cap_to_H_def objBits_simps'
                   Let_def field_simps mask_def asid_low_bits_def ARM_HYP_H.capUntypedSize_def
                   machine_bits_defs
   shows
@@ -3270,7 +3270,7 @@ lemma get_capSizeBits_valid_shift:
      apply (frule cap_get_tag_isCap_unfolded_H_cap)
      apply (clarsimp simp: ccap_relation_def map_option_Some_eq2
                            cap_lift_zombie_cap cap_to_H_def
-                           Let_def capAligned_def objBits_simps
+                           Let_def capAligned_def objBits_simps'
                            word_bits_conv)
      apply (subst less_mask_eq, simp add: word_less_nat_alt, assumption)
     (* arch *)
@@ -3293,7 +3293,7 @@ lemma get_capSizeBits_valid_shift:
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply (clarsimp simp: ccap_relation_def map_option_Some_eq2
                         cap_lift_cnode_cap cap_to_H_def
-                        Let_def capAligned_def objBits_simps
+                        Let_def capAligned_def objBits_simps'
                         word_bits_conv)
   done
 
@@ -3370,7 +3370,7 @@ lemma cap_get_capPtr_spec:
                     apply (clarsimp simp: cap_lifts pageBitsForSize_def
                                           cap_lift_asid_control_cap word_sle_def
                                           cap_lift_irq_control_cap cap_lift_null_cap
-                                          mask_def objBits_simps cap_lift_domain_cap
+                                          mask_def objBits_simps' cap_lift_domain_cap
                                           ptr_add_assertion_positive
                                    dest!: sym [where t = "cap_get_tag cap" for cap]
                                    split: vmpage_size.splits)+
@@ -3451,7 +3451,7 @@ lemma ctcb_ptr_to_tcb_ptr_mask':
      ctcb_ptr_to_tcb_ptr (tcb_Ptr x) = x && ~~ mask (objBits (undefined :: tcb))"
   apply (simp add: ctcb_ptr_to_tcb_ptr_def)
   apply (drule_tac d=ctcb_offset in is_aligned_add_helper)
-   apply (simp add: objBits_simps ctcb_offset_def)
+   apply (simp add: objBits_simps' ctcb_offset_defs)
   apply simp
   done
 
@@ -3631,7 +3631,7 @@ lemma sameRegionAs_spec:
      apply (rule impI, intro conjI)
         apply (rule impI, drule(1) cap_get_tag_to_H)+
         apply (clarsimp simp: capAligned_def word_bits_conv
-                              objBits_simps get_capZombieBits_CL_def
+                              objBits_simps' get_capZombieBits_CL_def
                               Let_def word_less_nat_alt
                               less_mask_eq true_def
                        split: if_split_asm)
@@ -3978,7 +3978,7 @@ lemma updateCapData_spec:
   apply (thin_tac "ccap_relation x y" for x y)
   apply (thin_tac "ret__unsigned_long_' t = v" for t v)+
 
-  apply (simp add: cnode_capdata_lift_def fupdate_def word_size word_less_nat_alt mask_def
+  apply (simp add: seL4_CNode_CapData_lift_def fupdate_def word_size word_less_nat_alt mask_def
              cong: if_cong)
   apply (simp only: unat_word_ariths(1))
   apply (rule ssubst [OF nat_mod_eq' [where n = "2 ^ len_of TYPE(32)"]])

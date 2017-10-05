@@ -1292,6 +1292,7 @@ lemma map_to_ctes_kh0H:
           option_update_range High_tcb_cte \<circ>
           option_update_range idle_tcb_cte
           ) Map.empty"
+  supply objBits_defs[simp]
   apply (rule ext)
   apply (case_tac "kh0H x")
    apply (clarsimp simp add: map_to_ctes_def Let_def objBitsKO_def)
@@ -1930,7 +1931,7 @@ lemma pspace_distinct'_split:
   done
 
 lemma s0H_pspace_distinct':
-  notes pdeBits_def[simp] pteBits_def[simp]
+  notes pdeBits_def[simp] pteBits_def[simp] objBits_defs[simp]
   shows
   "pspace_distinct' s0H_internal"
   apply (clarsimp simp: pspace_distinct'_def ps_clear_def)
@@ -2093,7 +2094,7 @@ lemma pd_offs_aligned:
   by (rule is_aligned_add[OF _ is_aligned_shift], simp add: s0_ptr_defs is_aligned_def)+
 
 lemma valid_caps_s0H[simp]:
-  notes pdeBits_def[simp]
+  notes pdeBits_def[simp] objBits_defs[simp]
   shows
   "valid_cap' NullCap s0H_internal"
   "valid_cap' (ThreadCap Low_tcb_ptr) s0H_internal"
@@ -2168,6 +2169,7 @@ lemma valid_caps_s0H[simp]:
 
 lemma s0H_valid_objs':
   "valid_objs' s0H_internal"
+  supply objBits_defs[simp]
   apply (clarsimp simp: valid_objs'_def ran_def)
   apply (drule kh0H_SomeD)
   apply (elim disjE)
@@ -2640,7 +2642,7 @@ lemma mdb_nextI:
   by (simp add: mdb_next_unfold)
 
 lemma s0H_valid_pspace':
-  notes pdeBits_def[simp] pteBits_def[simp]
+  notes pdeBits_def[simp] pteBits_def[simp] objBits_defs[simp]
   shows
   "valid_pspace' s0H_internal"
   apply (clarsimp simp: valid_pspace'_def s0H_pspace_distinct' s0H_valid_objs')
@@ -2815,7 +2817,7 @@ axiomatization kernel_data_refs_valid where
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma s0H_invs:
-  notes pdeBits_def[simp] pteBits_def[simp]
+  notes pdeBits_def[simp] pteBits_def[simp] objBits_defs[simp]
   shows
   "invs' s0H_internal"
   apply (clarsimp simp: invs'_def valid_state'_def s0H_valid_pspace')
@@ -3070,7 +3072,10 @@ lemma kh0_pspace_dom:
   apply (rule equalityI)
    apply (simp add: dom_def pspace_dom_def)
    apply clarsimp
-   apply (clarsimp simp: kh0_def obj_relation_cuts_def pd_offs_in_range pt_offs_in_range cnode_offs_in_range irq_node_offs_in_range s0_ptrs_aligned pageBits_def kh0_obj_def cte_map_def caps_dom_length_10 split: if_split_asm)
+   apply (clarsimp simp: kh0_def obj_relation_cuts_def pd_offs_in_range pt_offs_in_range
+                         cnode_offs_in_range irq_node_offs_in_range s0_ptrs_aligned pageBits_def
+                         kh0_obj_def cte_map_def' caps_dom_length_10
+                  split: if_split_asm)
   apply (clarsimp simp: pspace_dom_def dom_def)
   apply (rule conjI)
    apply (rule_tac x=init_globals_frame in exI)
@@ -3097,22 +3102,22 @@ lemma kh0_pspace_dom:
    apply (rule_tac x=x in exI)
    apply (drule offs_range_correct)
    apply clarsimp
-   apply (force simp: kh0_def kh0_obj_def image_def cte_map_def)
+   apply (force simp: kh0_def kh0_obj_def image_def cte_map_def')
   apply (rule conjI)
    apply clarsimp
    apply (rule_tac x=Silc_cnode_ptr in exI)
    apply (drule offs_range_correct)
-   apply (force simp: kh0_def kh0_obj_def image_def s0_ptr_defs cte_map_def dom_caps)
+   apply (force simp: kh0_def kh0_obj_def image_def s0_ptr_defs cte_map_def' dom_caps)
   apply (rule conjI)
    apply clarsimp
    apply (rule_tac x=High_cnode_ptr in exI)
    apply (drule offs_range_correct)
-   apply (force simp: kh0_def kh0_obj_def image_def s0_ptr_defs cte_map_def dom_caps)
+   apply (force simp: kh0_def kh0_obj_def image_def s0_ptr_defs cte_map_def' dom_caps)
   apply (rule conjI)
    apply clarsimp
    apply (rule_tac x=Low_cnode_ptr in exI)
    apply (drule offs_range_correct)
-   apply (force simp: kh0_def kh0_obj_def image_def s0_ptr_defs cte_map_def dom_caps)
+   apply (force simp: kh0_def kh0_obj_def image_def s0_ptr_defs cte_map_def' dom_caps)
   apply (rule conjI)
    apply clarsimp
    apply (rule_tac x=init_global_pd in exI)
@@ -3344,7 +3349,7 @@ lemma s0_srel: "(s0_internal, s0H_internal) \<in> state_relation"
             apply (elim disjE)
                            apply (clarsimp simp: cte_map_def s0H_internal_def s0_internal_def kh0H_all_obj_def' cte_level_bits_def split: if_split_asm)+
                 apply (clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)
-               apply ((clarsimp simp: cte_map_def s0H_internal_def s0_internal_def,
+               apply ((clarsimp simp: cte_map_def' s0H_internal_def s0_internal_def,
                       clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)+)[5]
            apply (clarsimp simp: s0_internal_def s0H_internal_def arch_state_relation_def arch_state0_def arch_state0H_def)
           apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def interrupt_state_relation_def irq_state_relation_def)
@@ -3388,9 +3393,10 @@ lemma step_restrict_s0:
      apply (clarsimp simp: Low_pd'H_def split: if_split_asm)
     apply (clarsimp simp: High_pt'H_def split: if_split_asm)
    apply (clarsimp simp: Low_pt'H_def split: if_split_asm)
-  apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def obj_at'_def projectKO_eq project_inject s0H_internal_def objBitsKO_def s0_ptrs_aligned Low_tcbH_def)
+  apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def obj_at'_def projectKO_eq project_inject
+                        s0H_internal_def objBits_simps' s0_ptrs_aligned Low_tcbH_def)
   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
-  apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])
+  apply (simp add: objBits_simps')
   done
 
 lemma Sys1_valid_initial_state_noenabled:

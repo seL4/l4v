@@ -218,6 +218,9 @@ where
 | "arch_cap_is_device (PageDirectoryCap x as2) = False"
 | "arch_cap_is_device (VCPUCap _) = False"
 
+definition tcb_bits :: nat where
+  "tcb_bits \<equiv> 9"
+
 definition endpoint_bits :: nat where
   "endpoint_bits \<equiv> 4"
 

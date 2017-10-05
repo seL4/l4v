@@ -199,8 +199,11 @@ where
 | "arch_cap_is_device (PDPointerTableCap _ _) = False"
 | "arch_cap_is_device (PML4Cap _ _) = False"
 
+definition tcb_bits :: nat where
+  "tcb_bits \<equiv> 11"
+
 definition endpoint_bits :: nat where
-  "endpoint_bits \<equiv> 5"
+  "endpoint_bits \<equiv> 4"
 
 definition ntfn_bits :: nat where
   "ntfn_bits \<equiv> 5"

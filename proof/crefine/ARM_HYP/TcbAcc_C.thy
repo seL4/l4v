@@ -97,7 +97,7 @@ lemma threadGet_eq:
   apply simp
   apply (subst getObject_eq)
      apply simp
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply assumption
   apply simp
   done
@@ -110,7 +110,7 @@ lemma archThreadGet_eq:
   apply simp
   apply (subst getObject_eq)
      apply simp
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply assumption
   apply simp
   done
@@ -267,9 +267,9 @@ lemma ctcb_relation_tcbVCPU:
 
 lemma is_aligned_tcb_ptr_to_ctcb_ptr:
   "obj_at' (P :: tcb \<Rightarrow> bool) p s
-     \<Longrightarrow> is_aligned (ptr_val (tcb_ptr_to_ctcb_ptr p)) 8"
-  apply (clarsimp simp: obj_at'_def objBits_simps projectKOs
-                        tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
+     \<Longrightarrow> is_aligned (ptr_val (tcb_ptr_to_ctcb_ptr p)) ctcb_size_bits"
+  apply (clarsimp simp: obj_at'_def objBits_simps' projectKOs
+                        tcb_ptr_to_ctcb_ptr_def ctcb_offset_defs)
   apply (erule aligned_add_aligned, simp_all add: word_bits_conv)
   apply (simp add: is_aligned_def)
   done
@@ -320,7 +320,7 @@ lemma ccorres_pre_getCurVCPU:
 lemma getObject_tcb_wp':
   "\<lbrace>\<lambda>s. \<forall>t. ko_at' (t :: tcb) p s \<longrightarrow> Q t s\<rbrace> getObject p \<lbrace>Q\<rbrace>"
   by (clarsimp simp: getObject_def valid_def in_monad
-                     split_def objBits_simps loadObject_default_def
+                     split_def objBits_simps' loadObject_default_def
                      projectKOs obj_at'_def in_magnitude_check)
 
 lemma ccorres_pre_getObject_tcb:

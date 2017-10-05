@@ -335,7 +335,7 @@ lemma cancelAllIPC_ccorres:
              apply (erule ko_at_projectKO_opt)
             apply (clarsimp simp: typ_heap_simps setEndpoint_def)
             apply (rule rev_bexI)
-             apply (rule setObject_eq; simp add: objBits_simps)[1]
+             apply (rule setObject_eq; simp add: objBits_simps')[1]
             apply (clarsimp simp: rf_sr_def cstate_relation_def
                                   Let_def carch_state_relation_def carch_globals_def
                                   cmachine_state_relation_def)
@@ -385,7 +385,7 @@ lemma cancelAllIPC_ccorres:
            apply (erule ko_at_projectKO_opt)
           apply (clarsimp simp: typ_heap_simps setEndpoint_def)
           apply (rule rev_bexI)
-           apply (rule setObject_eq, simp_all add: objBits_simps)[1]
+           apply (rule setObject_eq, simp_all add: objBits_simps')[1]
           apply (clarsimp simp: rf_sr_def cstate_relation_def
                                 Let_def carch_state_relation_def carch_globals_def
                                 cmachine_state_relation_def)
@@ -472,7 +472,7 @@ lemma cancelAllSignals_ccorres:
            apply (erule ko_at_projectKO_opt)
           apply (clarsimp simp: typ_heap_simps setNotification_def)
           apply (rule rev_bexI)
-           apply (rule setObject_eq, simp_all add: objBits_simps)[1]
+           apply (rule setObject_eq, simp_all add: objBits_simps')[1]
           apply (clarsimp simp: rf_sr_def cstate_relation_def
                                 Let_def carch_state_relation_def carch_globals_def
                                 cmachine_state_relation_def)
@@ -524,7 +524,7 @@ lemma tcb_fields_ineq_helper:
      &(x\<rightarrow>[''tcbSchedPrev_C'']) \<noteq> &(y\<rightarrow>[''tcbSchedNext_C''])"
   apply (clarsimp dest!: tcb_aligned'[OF obj_at'_weakenE, OF _ TrueI]
                          ctcb_ptr_to_tcb_ptr_aligned)
-  apply (clarsimp simp: field_lvalue_def)
+  apply (clarsimp simp: field_lvalue_def ctcb_size_bits_def)
   apply (subgoal_tac "is_aligned (ptr_val y - ptr_val x) 8")
    apply (drule sym, fastforce simp: is_aligned_def dvd_def)
   apply (erule(1) aligned_sub_aligned)
@@ -680,7 +680,7 @@ lemma doUnbindNotification_ccorres:
              subgoal by (simp add: carch_state_relation_def typ_heap_simps')
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
-          subgoal by (simp add: objBits_simps)
+          subgoal by (simp add: objBits_simps')
          subgoal by (simp add: objBits_simps)
         apply assumption
        apply ceqv
@@ -730,7 +730,7 @@ lemma doUnbindNotification_ccorres':
              subgoal by (simp add: carch_state_relation_def typ_heap_simps')
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
-          subgoal by (simp add: objBits_simps)
+          subgoal by (simp add: objBits_simps')
          subgoal by (simp add: objBits_simps)
         apply assumption
        apply ceqv
@@ -1722,8 +1722,8 @@ lemma option_to_ctcb_ptr_not_0:
   apply (clarsimp simp: option_to_ctcb_ptr_def tcb_ptr_to_ctcb_ptr_def
                   split: option.splits)
   apply (frule tcb_aligned')
-  apply (frule_tac y=ctcb_offset and n=9 in aligned_offset_non_zero)
-    apply (clarsimp simp: ctcb_offset_def)+
+  apply (frule_tac y=ctcb_offset and n=tcbBlockSizeBits in aligned_offset_non_zero)
+    apply (clarsimp simp: ctcb_offset_defs objBits_defs)+
   done
 
 lemma update_tcb_map_to_tcb:
@@ -1795,7 +1795,7 @@ lemma archThreadSet_tcbVCPU_Basic_ccorres:
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_pre_getObject_tcb)
    apply (rule_tac P="tcb_at' tptr and ko_at' tcb tptr" and P'=UNIV in setObject_ccorres_helper)
-     apply (simp_all add: objBits_simps archObjSize_def pageBits_def obj_tcb_at')
+     apply (simp_all add: objBits_simps' archObjSize_def pageBits_def obj_tcb_at')
   apply (rule conseqPre, vcg, clarsimp)
   apply (rule cmap_relationE1[OF cmap_relation_tcb], assumption, erule ko_at_projectKO_opt)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def update_tcb_map_tos
@@ -2137,7 +2137,7 @@ lemma associateVCPUTCB_ccorres:
          apply (clarsimp simp add: ctcb_relation_def carch_tcb_relation_def)
          apply(frule valid_objs_valid_tcb', simp)
          apply (clarsimp simp: valid_tcb'_def valid_arch_tcb'_def)
-         apply (clarsimp simp: ctcb_relation_def carch_tcb_relation_def)
+        apply (clarsimp simp: ctcb_relation_def carch_tcb_relation_def)
        apply (wpc ; clarsimp ; ccorres_rewrite)
         apply (rule ccorres_return_Skip)
        apply (ctac add: dissociateVCPUTCB_tcb_ccorres)
@@ -2164,8 +2164,8 @@ lemma associateVCPUTCB_ccorres:
                                      typ_at_tcb'
                                      valid_vcpu'_def)
            apply (frule tcb_aligned')
-           apply (frule_tac y=ctcb_offset and n=9 in aligned_offset_non_zero
-                 ; clarsimp simp: ctcb_offset_def)
+           apply (frule_tac y=ctcb_offset and n=tcbBlockSizeBits in aligned_offset_non_zero
+                 ; clarsimp simp: ctcb_offset_defs objBits_defs)
           apply (clarsimp simp: cvcpu_relation_def option_to_ctcb_ptr_def)
          apply (wpc ; clarsimp ; ccorres_rewrite)
           apply (rule ccorres_return_Skip)
@@ -2235,8 +2235,8 @@ lemma vcpuFinalise_ccorres:
                                typ_at_tcb'
                                valid_vcpu'_def)
      apply (frule tcb_aligned')
-     apply (frule_tac y=ctcb_offset and n=9 in aligned_offset_non_zero
-           ; clarsimp simp: ctcb_offset_def)
+     apply (frule_tac y=ctcb_offset and n=tcbBlockSizeBits in aligned_offset_non_zero
+           ; clarsimp simp: ctcb_offset_defs objBits_defs)
     apply (clarsimp simp: cvcpu_relation_def option_to_ctcb_ptr_def)
    apply (wpc ; clarsimp ; ccorres_rewrite)
     apply (rule ccorres_return_Skip)
@@ -2745,7 +2745,7 @@ lemma finaliseCap_ccorres:
                           less_imp_neq [OF word_mod_less_divisor])
     apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
     apply (clarsimp simp: isCap_simps capAligned_def
-                          objBits_simps word_bits_conv
+                          objBits_simps' word_bits_conv
                           signed_shift_guard_simpler_32)
     apply (rule conjI)
      apply (simp add: word_less_nat_alt)
@@ -2802,8 +2802,8 @@ lemma finaliseCap_ccorres:
                         word_bw_assocs)
        apply (simp add: objBits_simps ctcb_ptr_to_tcb_ptr_def)
        apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset for tcbptr])
-        apply (simp add: ctcb_offset_def)
-       apply (simp add: mask_def irq_opt_relation_def)
+        apply (simp add: ctcb_offset_defs objBits_defs)
+       apply (simp add: mask_def irq_opt_relation_def objBits_defs)
       apply (simp add: cap_get_tag_isCap)
      apply wp+
    apply (rule ccorres_if_lhs)

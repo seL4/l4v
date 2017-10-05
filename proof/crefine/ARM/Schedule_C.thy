@@ -882,7 +882,8 @@ lemma schedule_ccorres:
      apply (frule_tac t=word in tcb_at_not_NULL)
      apply (frule_tac p=word in is_aligned_tcb_ptr_to_ctcb_ptr)
      apply (drule obj_at_cslift_tcb[OF tcb_at_invs'], simp)
-     apply (clarsimp simp: rf_sr_ksCurThread max_word_def is_aligned_def NULL_ptr_val bintr_Min)
+     apply (clarsimp simp: rf_sr_ksCurThread max_word_def is_aligned_def NULL_ptr_val bintr_Min
+                           ctcb_size_bits_def)
     apply wp
    apply vcg
   apply (clarsimp simp: tcb_at_invs' st_tcb_at'_def o_def)

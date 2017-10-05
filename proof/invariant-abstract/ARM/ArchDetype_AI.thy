@@ -16,31 +16,6 @@ context Arch begin global_naming ARM
 
 named_theorems Detype_AI_asms
 
-lemma pre_helper2':
-  "\<And>base x n. \<lbrakk> is_aligned (base :: machine_word) n; n < word_bits; word_size_bits \<le> n; x < 2 ^ (n - word_size_bits) \<rbrakk>
-             \<Longrightarrow> base + x * word_size \<in> {base .. base + 2 ^ n  - 1}"
-  apply (subgoal_tac "x * word_size < 2 ^ n")
-   apply simp
-   apply (rule context_conjI)
-    apply (erule(1) is_aligned_no_wrap')
-   apply (subst add_diff_eq[symmetric])
-   apply (rule word_plus_mono_right)
-    apply simp
-   apply (erule is_aligned_no_wrap')
-   apply simp
-  apply (drule word_mult_less_mono1[where k="2 ^ word_size_bits"])
-    apply (simp add: word_size_bits_def)
-   apply (subst unat_power_lower, simp add: word_bits_def word_size_bits_def)+
-   apply (simp only: power_add[symmetric])
-   apply (rule power_strict_increasing)
-    apply (simp add: word_bits_def)
-   apply simp
-  apply (simp only: power_add[symmetric] le_add_diff_inverse2)
-  apply (simp add: word_size_def word_size_bits_def)
-  done
-
-lemmas pre_helper2 = pre_helper2'[unfolded word_size_bits_def word_size_def]
-
 lemma valid_globals_irq_node[Detype_AI_asms]:
     "\<lbrakk> valid_global_refs s; cte_wp_at (op = cap) ptr s \<rbrakk>
           \<Longrightarrow> interrupt_irq_node s irq \<notin> cap_range cap"
@@ -142,20 +117,6 @@ lemma region_in_kernel_window_delete_objects[wp]:
 lemma state_hyp_refs_of_detype:
   "state_hyp_refs_of (detype S s) = (\<lambda>x. if x \<in> S then {} else state_hyp_refs_of s x)"
   by (rule ext, simp add: state_hyp_refs_of_def detype_def)
-
-lemma of_bl_length2:
-  "length xs < word_bits - cte_level_bits \<Longrightarrow> of_bl xs * 16 < (2 :: machine_word) ^ (length xs + 4)"
-  apply (simp add: power_add cte_level_bits_def)
-  apply (rule word_mult_less_mono1)
-    apply (rule of_bl_length, simp add: word_bits_def)
-   apply simp
-  apply simp
-  apply (simp add: word_bits_def)
-  apply (rule order_less_le_trans)
-   apply (erule power_strict_increasing)
-   apply simp
-  apply simp
-  done
 
 end
 

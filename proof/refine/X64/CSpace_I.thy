@@ -777,7 +777,7 @@ lemma isCap_Master:
 
 lemma capUntypedSize_capBits:
   "capClass cap = PhysicalClass \<Longrightarrow> capUntypedSize cap = 2 ^ (capBits cap)"
-  apply (simp add: capUntypedSize_def objBits_simps
+  apply (simp add: capUntypedSize_def objBits_simps'
                    X64_H.capUntypedSize_def bit_simps
             split: capability.splits arch_capability.splits
                    zombie_type.splits)
@@ -937,7 +937,7 @@ lemma capUntypedSize_simps [simp]:
   "capUntypedSize (ReplyCap r m) = 1 << objBits (undefined :: tcb)"
   "capUntypedSize IRQControlCap = 1"
   "capUntypedSize (IRQHandlerCap irq) = 1"
-  by (auto simp add: capUntypedSize_def isCap_simps objBits_simps
+  by (auto simp add: capUntypedSize_def isCap_simps objBits_simps'
               split: zombie_type.splits)
 
 lemma sameRegionAs_classes:
@@ -1030,7 +1030,7 @@ lemma cte_wp_at_obj_cases':
   apply (simp add: cte_wp_at_cases' obj_at'_def)
   apply (rule iffI)
    apply (erule disjEI
-           | clarsimp simp: objBits_simps cte_level_bits_def projectKOs
+           | clarsimp simp: objBits_simps' cte_level_bits_def projectKOs
            | rule rev_bexI, erule domI)+
   apply fastforce
   done
@@ -1082,7 +1082,7 @@ lemma capUntypedSize_range:
    apply simp
   apply (clarsimp simp add: capAligned_def)
   apply (erule is_aligned_get_word_bits)
-   apply (simp add: capUntypedSize_def X64_H.capUntypedSize_def objBits_simps
+   apply (simp add: capUntypedSize_def X64_H.capUntypedSize_def objBits_simps'
                  isCap_simps
           split: capability.splits arch_capability.split
                  zombie_type.splits)
@@ -1314,20 +1314,20 @@ lemma cte_refs_capRange:
   "\<lbrakk> s \<turnstile>' c; \<forall>irq. c \<noteq> IRQHandlerCap irq \<rbrakk> \<Longrightarrow> cte_refs' c x \<subseteq> capRange c"
   apply (cases c; simp add: capRange_def isCap_simps)
     apply (clarsimp dest!: valid_capAligned
-                    simp: capAligned_def objBits_simps
-                          field_simps)
+                    simp: capAligned_def objBits_simps field_simps)
     apply (frule tcb_cte_cases_small)
     apply (intro conjI)
      apply (erule(1) is_aligned_no_wrap')
-    apply (rule word_plus_mono_right)
+    apply (rule word_plus_mono_right[where z="2^tcbBlockSizeBits - 1", simplified field_simps])
      apply (drule minus_one_helper3, simp)
-    apply (erule is_aligned_no_wrap')
+    apply (erule is_aligned_no_wrap'[where off="2^tcbBlockSizeBits - 1", simplified field_simps])
+    apply (drule minus_one_helper3)
     apply simp
    defer
    -- "CNodeCap"
-   apply (rename_tac word1 nat1 word2 nat2)
    apply (clarsimp simp: objBits_simps capAligned_def dest!: valid_capAligned)
-   apply (subgoal_tac "xa * 0x20 < 2 ^ (5 + nat1)") (* cte_level_bits *)
+   apply (rename_tac word1 nat1 word2 nat2 x)
+   apply (subgoal_tac "x * 2^cteSizeBits < 2 ^ (cteSizeBits + nat1)")
     apply (intro conjI)
      apply (erule(1) is_aligned_no_wrap')
     apply (simp add: add_diff_eq[symmetric])
@@ -1337,7 +1337,7 @@ lemma cte_refs_capRange:
     apply simp
    apply (simp add: power_add field_simps)
    apply (erule word_mult_less_mono1)
-    apply simp
+    apply (simp add: objBits_defs)
    apply (frule power_strict_increasing [where a="2 :: nat" and n="y + z" for y z])
     apply simp
    apply (simp only: power_add)
@@ -1345,7 +1345,7 @@ lemma cte_refs_capRange:
   -- "Zombie"
   apply (rename_tac word zombie_type nat)
   apply (clarsimp simp: capAligned_def valid_cap'_def objBits_simps)
-  apply (subgoal_tac "xa * 0x20 < 2 ^ zBits zombie_type")
+  apply (subgoal_tac "xa * 2^cteSizeBits < 2 ^ zBits zombie_type")
    apply (intro conjI)
     apply (erule(1) is_aligned_no_wrap')
    apply (simp add: add_diff_eq[symmetric])
@@ -1356,14 +1356,14 @@ lemma cte_refs_capRange:
   apply (case_tac zombie_type)
    apply simp
    apply (rule div_lt_mult)
-    apply simp
+    apply (simp add: objBits_defs)
     apply (erule order_less_le_trans)
     apply (simp add: word_le_nat_alt)
     apply (subst le_unat_uoi[where z=5])
      apply simp
     apply simp
-   apply simp
-  apply (simp add: objBits_simps power_add mult.commute)
+   apply (simp add: objBits_defs)
+  apply (simp add: objBits_simps' power_add mult.commute)
   apply (rule word_mult_less_mono1)
     apply (erule order_less_le_trans)
     apply (simp add: word_le_nat_alt)

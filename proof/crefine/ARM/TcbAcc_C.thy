@@ -48,7 +48,7 @@ lemma threadGet_eq:
   apply simp
   apply (subst getObject_eq)
      apply simp
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply assumption
   apply simp
   done
@@ -200,9 +200,9 @@ lemmas threadSet_ccorres_lemma2
 
 lemma is_aligned_tcb_ptr_to_ctcb_ptr:
   "obj_at' (P :: tcb \<Rightarrow> bool) p s
-     \<Longrightarrow> is_aligned (ptr_val (tcb_ptr_to_ctcb_ptr p)) 8"
-  apply (clarsimp simp: obj_at'_def objBits_simps projectKOs
-                        tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
+     \<Longrightarrow> is_aligned (ptr_val (tcb_ptr_to_ctcb_ptr p)) ctcb_size_bits"
+  apply (clarsimp simp: obj_at'_def objBits_simps' projectKOs
+                        tcb_ptr_to_ctcb_ptr_def ctcb_offset_defs)
   apply (erule aligned_add_aligned, simp_all add: word_bits_conv)
   apply (simp add: is_aligned_def)
   done

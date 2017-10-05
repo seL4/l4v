@@ -278,11 +278,11 @@ where
 | "cte_refs' (EndpointCap ref badge s r g) x      = {}"
 | "cte_refs' (NotificationCap ref badge s r) x   = {}"
 | "cte_refs' (CNodeCap ref bits g gs) x           =
-     (\<lambda>x. ref + (x * 32)) ` {0 .. 2 ^ bits - 1}"
+     (\<lambda>x. ref + (x * 2^cteSizeBits)) ` {0 .. 2 ^ bits - 1}"
 | "cte_refs' (ThreadCap ref) x                    =
      (\<lambda>x. ref + x) ` (dom tcb_cte_cases)"
 | "cte_refs' (Zombie r b n) x                     =
-     (\<lambda>x. r + (x * 32)) ` {0 ..< of_nat n}"
+     (\<lambda>x. r + (x * 2^cteSizeBits)) ` {0 ..< of_nat n}"
 | "cte_refs' (ArchObjectCap cap) x                = {}"
 | "cte_refs' (IRQControlCap) x                    = {}"
 | "cte_refs' (IRQHandlerCap irq) x                = {x + (ucast irq) * 32}"
@@ -330,7 +330,7 @@ primrec
   zBits :: "zombie_type \<Rightarrow> nat"
 where
   "zBits (ZombieCNode n) = objBits (undefined::cte) + n"
-| "zBits (ZombieTCB) = 9"
+| "zBits (ZombieTCB) = tcbBlockSizeBits"
 
 primrec
  capBits :: "capability \<Rightarrow> nat"
@@ -418,20 +418,20 @@ where valid_cap'_def:
     Structures_H.NullCap \<Rightarrow> True
   | Structures_H.DomainCap \<Rightarrow> True
   | Structures_H.UntypedCap d r n f \<Rightarrow>
-      valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> 4\<le> n \<and> n \<le> 61 \<and> f \<le> 2^n \<and>  is_aligned (of_nat f :: machine_word) 4
+      valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> 4 \<le> n \<and> n \<le> 61 \<and> f \<le> 2^n \<and> is_aligned (of_nat f :: machine_word) 4
   | Structures_H.EndpointCap r badge x y z \<Rightarrow> ep_at' r s
   | Structures_H.NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | Structures_H.CNodeCap r bits guard guard_sz \<Rightarrow>
     bits \<noteq> 0 \<and> bits + guard_sz \<le> word_bits \<and>
     guard && mask guard_sz = guard \<and>
-    (\<forall>addr. real_cte_at' (r + 32 * (addr && mask bits)) s)
+    (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask bits)) s)
   | Structures_H.ThreadCap r \<Rightarrow> tcb_at' r s
   | Structures_H.ReplyCap r m \<Rightarrow> tcb_at' r s
   | Structures_H.IRQControlCap \<Rightarrow> True
   | Structures_H.IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
   | Structures_H.Zombie r b n \<Rightarrow> n \<le> zombieCTEs b \<and> zBits b < word_bits
             \<and> (case b of ZombieTCB \<Rightarrow> tcb_at' r s | ZombieCNode n \<Rightarrow> n \<noteq> 0
-                    \<and> (\<forall>addr. real_cte_at' (r + 32 * (addr && mask n)) s))
+                    \<and> (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask n)) s))
   | Structures_H.ArchObjectCap ac \<Rightarrow> (case ac of
     ASIDPoolCap pool asid \<Rightarrow>
     typ_at' (ArchT ASIDPoolT) pool s \<and> is_aligned asid asid_low_bits \<and> asid \<le> 2^asid_bits - 1
@@ -447,10 +447,10 @@ where valid_cap'_def:
             0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < pptrBase)
   | PageDirectoryCap ref mapdata \<Rightarrow>
     page_directory_at' ref s \<and>
-    (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le>2^asid_bits-1 \<and> ref < pptrBase)
+    (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le> 2^asid_bits-1 \<and> ref < pptrBase)
   | PDPointerTableCap ref mapdata \<Rightarrow>
     pd_pointer_table_at' ref s \<and>
-    (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le>2^asid_bits-1 \<and> ref < pptrBase)
+    (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le> 2^asid_bits-1 \<and> ref < pptrBase)
   | PML4Cap ref mapdata \<Rightarrow>
     page_map_l4_at' ref s \<and>
     case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
@@ -1486,8 +1486,11 @@ lemma valid_bound_tcb'_Some[simp]:
   "valid_bound_tcb' (Some x) = tcb_at' x"
   by (auto simp: valid_bound_tcb'_def)
 
+lemmas objBits_defs = tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
+
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def
 lemmas objBitsKO_simps = objBits_simps
+lemmas objBits_simps' = objBits_simps objBits_defs
 
 lemmas wordRadix_def' = wordRadix_def[simplified]
 
@@ -1862,9 +1865,8 @@ lemma sch_act_sane_not:
   "sch_act_sane s = sch_act_not (ksCurThread s) s"
   by (auto simp: sch_act_sane_def)
 
-lemma objBits_cte_conv:
-  "objBits (cte :: cte) = 5"
-  by (simp add: objBits_def objBitsKO_def wordSizeCase_def word_size)
+lemma objBits_cte_conv: "objBits (cte :: cte) = cteSizeBits"
+  by (simp add: objBits_simps word_size)
 
 lemmas valid_irq_states'_def = valid_irq_masks'_def
 
@@ -1933,7 +1935,7 @@ lemma cte_wp_at'_pspaceI:
   apply (clarsimp simp: in_monad return_def alignError_def fail_def assert_opt_def
                         alignCheck_def bind_def when_def
                         objBits_cte_conv tcbCTableSlot_def tcbVTableSlot_def
-                        tcbReplySlot_def
+                        tcbReplySlot_def objBits_defs
                  split: if_split_asm
                  dest!: singleton_in_magnitude_check)
   done
@@ -2311,7 +2313,7 @@ lemma in_alignCheck[simp]:
 
 lemma tcb_space_clear:
   "\<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
-     is_aligned x 9; ps_clear x 9 s;
+     is_aligned x tcbBlockSizeBits; ps_clear x tcbBlockSizeBits s;
      ksPSpace s x = Some (KOTCB tcb); ksPSpace s y = Some v;
      \<lbrakk> x = y; getF = tcbCTable; setF = tcbCTable_update \<rbrakk> \<Longrightarrow> P
     \<rbrakk> \<Longrightarrow> P"
@@ -2320,21 +2322,21 @@ lemma tcb_space_clear:
   apply (clarsimp simp: ps_clear_def)
   apply (drule_tac a=y in equals0D)
   apply (simp add: domI)
-  apply (subgoal_tac "\<exists>z. y = x + z \<and> z < 2 ^ 9")
+  apply (subgoal_tac "\<exists>z. y = x + z \<and> z < 2 ^ tcbBlockSizeBits")
    apply (elim exE conjE)
    apply (frule(1) is_aligned_no_wrap'[rotated, rotated])
-   apply (simp add: word_bits_conv)
+   apply (simp add: word_bits_conv objBits_defs)
    apply (erule notE, subst field_simps, rule word_plus_mono_right)
     apply (drule minus_one_helper3,simp,erule is_aligned_no_wrap')
    apply (simp add: word_bits_conv)
-  apply simp
+  apply (simp add: objBits_defs)
   apply (rule_tac x="y - x" in exI)
   apply (simp add: tcb_cte_cases_def split: if_split_asm)
   done
 
 lemma tcb_ctes_clear:
   "\<lbrakk> tcb_cte_cases (y - x) = Some (getF, setF);
-     is_aligned x 9; ps_clear x 9 s;
+     is_aligned x tcbBlockSizeBits; ps_clear x tcbBlockSizeBits s;
      ksPSpace s x = Some (KOTCB tcb) \<rbrakk>
      \<Longrightarrow> \<not> ksPSpace s y = Some (KOCTE cte)"
   apply clarsimp
@@ -2345,9 +2347,9 @@ lemma tcb_ctes_clear:
 lemma cte_wp_at_cases':
   shows "cte_wp_at' P p s =
   ((\<exists>cte. ksPSpace s p = Some (KOCTE cte) \<and> is_aligned p cte_level_bits
-             \<and> P cte \<and> ps_clear p 5 s) \<or>
-   (\<exists>n tcb getF setF. ksPSpace s (p - n) = Some (KOTCB tcb) \<and> is_aligned (p - n) 9
-             \<and> tcb_cte_cases n = Some (getF, setF) \<and> P (getF tcb) \<and> ps_clear (p - n) 9 s))"
+             \<and> P cte \<and> ps_clear p cteSizeBits s) \<or>
+   (\<exists>n tcb getF setF. ksPSpace s (p - n) = Some (KOTCB tcb) \<and> is_aligned (p - n) tcbBlockSizeBits
+             \<and> tcb_cte_cases n = Some (getF, setF) \<and> P (getF tcb) \<and> ps_clear (p - n) tcbBlockSizeBits s))"
   (is "?LHS = ?RHS")
   apply (rule iffI)
    apply (clarsimp simp: cte_wp_at'_def split_def
@@ -2356,7 +2358,7 @@ lemma cte_wp_at_cases':
                   split: option.splits
                     del: disjCI)
    apply (clarsimp simp: loadObject_cte typeError_def alignError_def
-                         fail_def return_def objBits_simps
+                         fail_def return_def objBits_simps'
                          is_aligned_mask[symmetric] alignCheck_def
                          tcbVTableSlot_def field_simps tcbCTableSlot_def
                          tcbReplySlot_def tcbCallerSlot_def
@@ -2375,7 +2377,7 @@ lemma cte_wp_at_cases':
                 add: )
   apply (simp add: cte_wp_at'_def getObject_def split_def
                    bind_def simpler_gets_def return_def
-                   assert_opt_def fail_def
+                   assert_opt_def fail_def objBits_defs
             split: option.splits)
   apply (elim disjE conjE exE)
    apply (erule(1) ps_clear_lookupAround2)
@@ -2385,7 +2387,7 @@ lemma cte_wp_at_cases':
      apply (simp add: cte_level_bits_def word_bits_conv)
     apply (simp add: cte_level_bits_def)
    apply (simp add: loadObject_cte unless_def alignCheck_def
-                    is_aligned_mask[symmetric] objBits_simps
+                    is_aligned_mask[symmetric] objBits_simps'
                     cte_level_bits_def magnitudeCheck_def
                     return_def fail_def)
    apply (clarsimp simp: bind_def return_def when_def fail_def
@@ -2394,11 +2396,11 @@ lemma cte_wp_at_cases':
   apply (erule(1) ps_clear_lookupAround2)
     prefer 3
     apply (simp add: loadObject_cte unless_def alignCheck_def
-                    is_aligned_mask[symmetric] objBits_simps
-                    cte_level_bits_def magnitudeCheck_def
-                    return_def fail_def tcbCTableSlot_def tcbVTableSlot_def
-                    tcbIPCBufferSlot_def tcbReplySlot_def tcbCallerSlot_def
-                split: option.split_asm)
+                     is_aligned_mask[symmetric] objBits_simps'
+                     cte_level_bits_def magnitudeCheck_def
+                     return_def fail_def tcbCTableSlot_def tcbVTableSlot_def
+                     tcbIPCBufferSlot_def tcbReplySlot_def tcbCallerSlot_def
+              split: option.split_asm)
      apply (clarsimp simp: bind_def tcb_cte_cases_def split: if_split_asm)
     apply (clarsimp simp: bind_def tcb_cte_cases_def iffD2[OF linorder_not_less]
                           when_False return_def
@@ -2407,7 +2409,7 @@ lemma cte_wp_at_cases':
    apply (erule is_aligned_no_wrap')
     apply (simp add: word_bits_conv)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
-  apply (subgoal_tac "(p - n) + n \<le> (p - n) + 511")
+  apply (subgoal_tac "(p - n) + n \<le> (p - n) + 0x7FF")
    apply (simp add: field_simps)
   apply (rule word_plus_mono_right)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
@@ -2431,10 +2433,10 @@ lemma cte_wp_atE' [consumes 1, case_names CTE TCB]:
     \<lbrakk> ksPSpace s ptr = Some (KOCTE cte); ps_clear ptr cte_level_bits s;
       is_aligned ptr cte_level_bits; P cte \<rbrakk> \<Longrightarrow> R"
   and   r2: "\<And> tcb ptr' getF setF.
-  \<lbrakk> ksPSpace s ptr' = Some (KOTCB tcb); ps_clear ptr' 9 s; is_aligned ptr' 9;
+  \<lbrakk> ksPSpace s ptr' = Some (KOTCB tcb); ps_clear ptr' tcbBlockSizeBits s; is_aligned ptr' tcbBlockSizeBits;
      tcb_cte_cases (ptr - ptr') = Some (getF, setF); P (getF tcb) \<rbrakk> \<Longrightarrow> R"
   shows "R"
-  by (rule disjE [OF iffD1 [OF cte_wp_at_cases' cte]]) (auto intro: r1 r2 simp: cte_level_bits_def)
+  by (rule disjE [OF iffD1 [OF cte_wp_at_cases' cte]]) (auto intro: r1 r2 simp: cte_level_bits_def objBits_defs)
 
 lemma cte_wp_at_cteI':
   assumes "ksPSpace s ptr = Some (KOCTE cte)"
@@ -2442,12 +2444,12 @@ lemma cte_wp_at_cteI':
   assumes "ps_clear ptr cte_level_bits s"
   assumes "P cte"
   shows "cte_wp_at' P ptr s"
-  using assms by (simp add: cte_wp_at_cases' cte_level_bits_def)
+  using assms by (simp add: cte_wp_at_cases' cte_level_bits_def objBits_defs)
 
 lemma cte_wp_at_tcbI':
   assumes "ksPSpace s ptr' = Some (KOTCB tcb)"
-  assumes "is_aligned ptr' 9"
-  assumes "ps_clear ptr' 9 s"
+  assumes "is_aligned ptr' tcbBlockSizeBits"
+  assumes "ps_clear ptr' tcbBlockSizeBits s"
   and     "tcb_cte_cases (ptr - ptr') = Some (getF, setF)"
   and     "P (getF tcb)"
   shows "cte_wp_at' P ptr s"
@@ -2489,7 +2491,7 @@ lemma locateSlot_conv:
         \<or> isThreadCap c \<or> (isZombie c \<and> capZombieType c = ZombieTCB)) [];
     locateSlotBasic (capUntypedPtr c) B od)"
   apply (simp_all add: locateSlotCap_def locateSlotTCB_def fun_eq_iff)
-    apply (simp add: locateSlotBasic_def objBits_simps cte_level_bits_def)
+    apply (simp add: locateSlotBasic_def objBits_simps cte_level_bits_def objBits_defs)
    apply (simp add: locateSlotCNode_def stateAssert_def)
   apply (cases c, simp_all add: locateSlotCNode_def isZombie_def isThreadCap_def
                                 isCNodeCap_def capUntypedPtr_def stateAssert_def
@@ -2562,7 +2564,7 @@ proof -
     by fastforce
   show ?thesis
     by (fastforce simp: cte_wp_at_cases' obj_at'_real_def typ_at'_def
-                        ko_wp_at'_def objBits_simps P Q conj_comms cte_level_bits_def)
+                        ko_wp_at'_def objBits_simps' P Q conj_comms cte_level_bits_def)
 qed
 
 lemma typ_at_lift_tcb':
@@ -3397,10 +3399,10 @@ lemma vms_sch_act_update'[iff]:
   by (simp add: valid_machine_state'_def )
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma objBitsT_simps:
-  "objBitsT EndpointT = 5"
-  "objBitsT NotificationT = 5"
-  "objBitsT CTET = 5"
-  "objBitsT TCBT = 9"
+  "objBitsT EndpointT = epSizeBits"
+  "objBitsT NotificationT = ntfnSizeBits"
+  "objBitsT CTET = cteSizeBits"
+  "objBitsT TCBT = tcbBlockSizeBits"
   "objBitsT UserDataT = pageBits"
   "objBitsT UserDataDeviceT = pageBits"
   "objBitsT KernelDataT = pageBits"

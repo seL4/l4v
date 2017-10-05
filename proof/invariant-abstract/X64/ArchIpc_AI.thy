@@ -31,7 +31,9 @@ lemma update_cap_data_closedform:
    | CNodeCap r bits guard \<Rightarrow>
        if word_bits < unat ((w >> cnode_padding_bits) && mask cnode_guard_size_bits) + bits
        then NullCap
-       else CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> cnode_padding_bits) && mask cnode_guard_size_bits)) (to_bl g'')) ((w >> 8) && mask 18))
+       else CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> cnode_padding_bits) && mask cnode_guard_size_bits))
+                                         (to_bl g''))
+                             ((w >> 8) && mask 58))
    | ThreadCap r \<Rightarrow> ThreadCap r
    | DomainCap \<Rightarrow> DomainCap
    | UntypedCap d p n idx \<Rightarrow> UntypedCap d p n idx

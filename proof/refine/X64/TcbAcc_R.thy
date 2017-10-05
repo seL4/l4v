@@ -260,13 +260,13 @@ lemma tcb_update_corres':
            apply simp
           defer
           apply (simp add: is_other_obj_relation_type_def a_type_def
-                           projectKOs objBits_simps
+                           projectKOs objBits_simps'
                            other_obj_relation_def tcbs r)+
     apply (fastforce elim!: obj_at_weakenE dest: bspec[OF tables])
    apply (subst(asm) eq_commute, assumption)
   apply (clarsimp simp: projectKOs obj_at'_def objBits_simps)
   apply (subst map_to_ctes_upd_tcb, assumption+)
-   apply (simp add: ps_clear_def3 field_simps)
+   apply (simp add: ps_clear_def3 field_simps objBits_defs mask_def)
   apply (subst if_not_P)
    apply (fastforce dest: bspec [OF tables', OF ranI])
   apply simp
@@ -284,7 +284,7 @@ lemma tcb_update_corres:
     apply (erule (3) tcb_update_corres', force)
    apply fastforce
   apply (clarsimp simp: getObject_def in_monad split_def obj_at'_def
-                        loadObject_default_def projectKOs objBits_simps
+                        loadObject_default_def projectKOs objBits_simps'
                         in_magnitude_check)
   done
 
@@ -494,7 +494,7 @@ lemma setObject_tcb_ctes_of[wp]:
    \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   apply (rule setObject_ctes_of)
    apply (clarsimp simp: updateObject_default_def in_monad prod_eq_iff
-                         obj_at'_def objBits_simps in_magnitude_check
+                         obj_at'_def objBits_simps' in_magnitude_check
                          projectKOs)
    apply fastforce
   apply (clarsimp simp: updateObject_default_def in_monad prod_eq_iff
@@ -515,7 +515,7 @@ lemma setObject_tcb_state_refs_of'[wp]:
                                   \<union> tcb_bound_refs' (tcbBoundNotification v)))\<rbrace>
      setObject t (v :: tcb) \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   by (wp setObject_state_refs_of',
-      simp_all add: objBits_simps fun_upd_def)
+      simp_all add: objBits_simps' fun_upd_def)
 
 lemma setObject_tcb_iflive':
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and>
@@ -524,9 +524,9 @@ lemma setObject_tcb_iflive':
      setObject t (v :: tcb)
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   apply (rule setObject_iflive')
-      apply (simp add: objBits_simps)+
+      apply (simp add: objBits_simps')+
    apply (clarsimp simp: updateObject_default_def in_monad projectKOs
-                         in_magnitude_check objBits_simps prod_eq_iff
+                         in_magnitude_check objBits_simps' prod_eq_iff
                          obj_at'_def)
    apply fastforce
   apply (clarsimp simp: updateObject_default_def bind_def projectKOs)
@@ -538,7 +538,7 @@ lemma setObject_tcb_idle':
      setObject t (v :: tcb) \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (rule hoare_pre)
   apply (rule_tac P="\<top>" in setObject_idle')
-      apply (simp add: objBits_simps)+
+      apply (simp add: objBits_simps')+
    apply (simp add: updateObject_default_inv)
   apply (simp add: projectKOs)
   done
@@ -555,7 +555,7 @@ lemma setObject_tcb_ifunsafe':
   unfolding pred_conj_def
   apply (rule setObject_ifunsafe')
     apply (clarsimp simp: updateObject_default_def in_monad projectKOs
-                          in_magnitude_check objBits_simps prod_eq_iff
+                          in_magnitude_check objBits_simps' prod_eq_iff
                           obj_at'_def)
     apply fastforce
    apply (clarsimp simp: updateObject_default_def bind_def projectKOs)
@@ -590,7 +590,7 @@ lemma setObject_tcb_valid_globals' [wp]:
    apply (rule hoare_lift_Pf2 [where f="gsMaxObjectSize"])
     apply (rule setObject_ctes_of)
      apply (clarsimp simp: updateObject_default_def in_monad projectKOs
-                           in_magnitude_check objBits_simps prod_eq_iff
+                           in_magnitude_check objBits_simps' prod_eq_iff
                            obj_at'_def)
      apply fastforce
     apply (clarsimp simp: updateObject_default_def in_monad prod_eq_iff
@@ -628,13 +628,13 @@ lemma getObject_valid_obj2:
   apply (rule hoare_pre_imp [OF _ getObject_valid_obj])
     apply clarsimp
    apply simp
-  apply (simp add: objBits_simps)
+  apply (simp add: objBits_simps')
   done
 
 lemma getObject_tcb_wp:
   "\<lbrace>\<lambda>s. tcb_at' p s \<longrightarrow> (\<exists>t::tcb. ko_at' t p s \<and> Q t s)\<rbrace> getObject p \<lbrace>Q\<rbrace>"
   by (clarsimp simp: getObject_def valid_def in_monad
-                     split_def objBits_simps loadObject_default_def
+                     split_def objBits_simps' loadObject_default_def
                      projectKOs obj_at'_def in_magnitude_check)
 
 lemma setObject_tcb_pspace_no_overlap':
@@ -804,7 +804,7 @@ lemma threadSet_cte_wp_at'T:
   apply (simp add: threadSet_def)
   apply (rule hoare_seq_ext [where B="\<lambda>rv s. P' (cte_wp_at' P p s) \<and> obj_at' (op = rv) t s"])
    apply (rule setObject_cte_wp_at2')
-    apply (clarsimp simp: updateObject_default_def projectKOs in_monad objBits_simps
+    apply (clarsimp simp: updateObject_default_def projectKOs in_monad objBits_simps'
                           obj_at'_def objBits_simps in_magnitude_check prod_eq_iff)
     apply (case_tac tcba, clarsimp simp: bspec_split [OF spec [OF x]])
    apply (clarsimp simp: updateObject_default_def in_monad bind_def
@@ -950,7 +950,7 @@ lemma threadSet_valid_queues_addToQs:
                 split del: if_split)
   apply (simp only: imp_conv_disj)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-     apply (wp setObject_ko_wp_at | simp add: objBits_simps)+
+     apply (wp setObject_ko_wp_at | simp add: objBits_simps')+
     apply (wp getObject_tcb_wp updateObject_default_inv
                | simp split del: if_split)+
   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs
@@ -1033,7 +1033,7 @@ lemma threadSet_obj_at'_really_strongest:
     apply (rule getObject_inv_tcb)
    apply (rule hoare_strengthen_post [OF getObject_ko_at])
      apply simp
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply (erule obj_at'_weakenE)
    apply simp
   apply (cases "t = t'", simp_all)
@@ -1455,7 +1455,7 @@ proof -
     apply (simp add: asUser_def split_def threadGet_def threadSet_def
                      liftM_def bind_assoc)
     apply (clarsimp simp: valid_def in_monad getObject_def setObject_def
-                          loadObject_default_def projectKOs objBits_simps
+                          loadObject_default_def projectKOs objBits_simps'
                           modify_def split_def updateObject_default_def
                           in_magnitude_check select_f_def
                    dest!: P)
@@ -1685,7 +1685,7 @@ lemma gbn_wf'[wp]: "\<lbrace>tcb_at' t and invs'\<rbrace> getBoundNotification t
    apply (rule hoare_strengthen_post)
     apply (rule getObject_valid_obj)
      apply simp
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply (simp add: valid_obj'_def valid_tcb'_def)
   apply clarsimp
   done
@@ -4963,7 +4963,7 @@ lemma set_eobject_corres':
   apply (unfold set_eobject_def setObject_def)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
                         put_def return_def modify_def get_object_def projectKOs
-                        updateObject_default_def in_magnitude_check objBits_def objBitsKO_def)
+                        updateObject_default_def in_magnitude_check objBits_simps')
   apply (clarsimp simp add: state_relation_def z)
   apply (clarsimp simp add: obj_at_def is_etcb_at_def)
   apply (simp only: pspace_relation_def dom_fun_upd2 simp_thms)
@@ -5019,7 +5019,7 @@ lemma set_eobject_corres:
    apply (clarsimp simp: obj_at'_def)
   apply (clarsimp simp: projectKOs obj_at'_def objBits_simps)
   apply (subst map_to_ctes_upd_tcb, assumption+)
-   apply (simp add: ps_clear_def3 field_simps)
+   apply (simp add: ps_clear_def3 field_simps objBits_defs mask_def)
   apply (subst if_not_P)
    apply (fastforce dest: bspec [OF tables', OF ranI])
   apply simp

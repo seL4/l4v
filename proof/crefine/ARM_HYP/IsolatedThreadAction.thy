@@ -205,11 +205,11 @@ end
 
 lemmas getObject_return_tcb
     = getObject_return[OF meta_eq_to_obj_eq, OF loadObject_tcb,
-                       unfolded objBits_simps, simplified]
+                       unfolded objBits_simps', simplified]
 
 lemmas setObject_modify_tcb
     = setObject_modify[OF _ meta_eq_to_obj_eq, OF _ updateObject_tcb,
-                       unfolded objBits_simps, simplified]
+                       unfolded objBits_simps', simplified]
 
 lemma partial_overwrite_fun_upd:
   "inj idx \<Longrightarrow>
@@ -271,7 +271,7 @@ lemma isolate_thread_actions_asUser:
   apply (clarsimp simp: monadic_rewrite_def)
   apply (frule_tac x=t' in spec)
   apply (drule obj_at_ko_at', clarsimp)
-  apply (simp add: exec_gets getSchedulerAction_def exec_modify
+  apply (simp add: exec_gets getSchedulerAction_def exec_modify objBits_defs
                    getObject_return_tcb setObject_modify_tcb o_def
              cong: bind_apply_cong)+
   apply (simp add: partial_overwrite_fun_upd return_def get_tcb_state_regs_ko_at')
@@ -342,7 +342,7 @@ lemma map_to_ctes_partial_overwrite:
    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
                    cong: if_cong)
    apply (simp add: put_tcb_state_regs_def put_tcb_state_regs_tcb_def
-                    objBits_simps
+                    objBits_simps'
               cong: if_cong option.case_cong)
    apply (case_tac obj, simp split: tcb_state_regs.split if_split)
    apply (intro impI allI)
@@ -1377,27 +1377,27 @@ lemma setEndpoint_isolatable:
 
 lemma setCTE_assert_modify:
   "setCTE p v = do c \<leftarrow> gets (real_cte_at' p);
-                   t \<leftarrow> gets (tcb_at' (p && ~~ mask 9)
-                                 and K ((p && mask 9) \<in> dom tcb_cte_cases));
+                   t \<leftarrow> gets (tcb_at' (p && ~~ mask tcbBlockSizeBits)
+                                 and K ((p && mask tcbBlockSizeBits) \<in> dom tcb_cte_cases));
                    if c then modify (ksPSpace_update (\<lambda>ps. ps(p \<mapsto> KOCTE v)))
                    else if t then
                      modify (ksPSpace_update
-                               (\<lambda>ps. ps (p && ~~ mask 9 \<mapsto>
-                                           KOTCB (snd (the (tcb_cte_cases (p && mask 9))) (K v)
-                                                (the (projectKO_opt (the (ps (p && ~~ mask 9)))))))))
+                               (\<lambda>ps. ps (p && ~~ mask tcbBlockSizeBits \<mapsto>
+                                           KOTCB (snd (the (tcb_cte_cases (p && mask tcbBlockSizeBits))) (K v)
+                                                (the (projectKO_opt (the (ps (p && ~~ mask tcbBlockSizeBits)))))))))
                    else fail od"
   apply (clarsimp simp: setCTE_def setObject_def split_def
                         fun_eq_iff exec_gets)
   apply (case_tac "real_cte_at' p x")
    apply (clarsimp simp: obj_at'_def projectKOs lookupAround2_known1
-                         assert_opt_def alignCheck_assert objBits_simps
+                         assert_opt_def alignCheck_assert objBits_simps'
                          magnitudeCheck_assert2 updateObject_cte)
    apply (simp add: simpler_modify_def)
   apply (simp split: if_split, intro conjI impI)
    apply (clarsimp simp: obj_at'_def projectKOs)
-   apply (subgoal_tac "p \<le> (p && ~~ mask 9) + 2 ^ 9 - 1")
+   apply (subgoal_tac "p \<le> (p && ~~ mask tcbBlockSizeBits) + 2 ^ tcbBlockSizeBits - 1")
     apply (subgoal_tac "fst (lookupAround2 p (ksPSpace x))
-                          = Some (p && ~~ mask 9, KOTCB obj)")
+                          = Some (p && ~~ mask tcbBlockSizeBits, KOTCB obj)")
      apply (simp add: assert_opt_def)
      apply (subst updateObject_cte_tcb)
       apply (fastforce simp add: subtract_mask)
@@ -1426,11 +1426,11 @@ lemma setCTE_assert_modify:
    apply (erule disjE)
     apply clarsimp
     apply (frule(1) tcb_cte_cases_aligned_helpers)
-    apply (clarsimp simp: domI[where m = cte_cte_cases] field_simps)
+    apply (clarsimp simp: field_simps)
     apply (clarsimp simp: lookupAround2_char1 obj_at'_def projectKOs
                           objBits_simps)
    apply (clarsimp simp: obj_at'_def lookupAround2_char1
-                         objBits_simps projectKOs cte_level_bits_def)
+                         objBits_simps' projectKOs cte_level_bits_def)
   apply (erule empty_failD[OF empty_fail_updateObject_cte])
   done
 
@@ -1453,7 +1453,7 @@ lemma setCTE_isolatable:
                         obj_at_partial_overwrite_If
                         obj_at_partial_overwrite_id2
                   cong: if_cong)
-  apply (case_tac "p && ~~ mask 9 \<in> range idx \<and> p && mask 9 \<in> dom tcb_cte_cases")
+  apply (case_tac "p && ~~ mask tcbBlockSizeBits \<in> range idx \<and> p && mask tcbBlockSizeBits \<in> dom tcb_cte_cases")
    apply clarsimp
    apply (frule_tac x=x in spec, erule obj_atE')
    apply (subgoal_tac "\<not> real_cte_at' p s")

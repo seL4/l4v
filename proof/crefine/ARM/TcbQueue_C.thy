@@ -209,7 +209,7 @@ qed
 
 (* MOVE *)
 lemma tcb_aligned':
-  "tcb_at' t s \<Longrightarrow> is_aligned t 9"
+  "tcb_at' t s \<Longrightarrow> is_aligned t tcbBlockSizeBits"
   apply (drule obj_at_aligned')
    apply (simp add: objBits_simps)
   apply (simp add: objBits_simps)
@@ -226,13 +226,13 @@ proof
     apply simp
     done
 
-  hence "is_aligned (ctcb_ptr_to_tcb_ptr NULL) 9"
+  hence "is_aligned (ctcb_ptr_to_tcb_ptr NULL) tcbBlockSizeBits"
     by (rule tcb_aligned')
 
-  moreover have "ctcb_ptr_to_tcb_ptr NULL !! 8"
-    unfolding ctcb_ptr_to_tcb_ptr_def ctcb_offset_def
+  moreover have "ctcb_ptr_to_tcb_ptr NULL !! ctcb_size_bits"
+    unfolding ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs
     by simp
-  ultimately show False by (simp add: is_aligned_nth)
+  ultimately show False by (simp add: is_aligned_nth ctcb_offset_defs objBits_defs)
 qed
 
 lemma tcb_queue_relation_not_NULL:
@@ -818,15 +818,15 @@ lemma tcb_queue_head_empty_iff:
   done
 
 lemma ctcb_ptr_to_tcb_ptr_aligned:
-  assumes al: "is_aligned (ctcb_ptr_to_tcb_ptr ptr) 9"
-  shows   "is_aligned (ptr_val ptr) 8"
+  assumes al: "is_aligned (ctcb_ptr_to_tcb_ptr ptr) tcbBlockSizeBits"
+  shows   "is_aligned (ptr_val ptr) ctcb_size_bits"
 proof -
-  have "is_aligned (ptr_val (tcb_ptr_to_ctcb_ptr (ctcb_ptr_to_tcb_ptr ptr))) 8"
+  have "is_aligned (ptr_val (tcb_ptr_to_ctcb_ptr (ctcb_ptr_to_tcb_ptr ptr))) ctcb_size_bits"
     unfolding tcb_ptr_to_ctcb_ptr_def using al
     apply simp
     apply (erule aligned_add_aligned)
-    apply (unfold ctcb_offset_def, rule is_aligned_triv)
-    apply (simp add: word_bits_conv)+
+    apply (unfold ctcb_offset_defs, rule is_aligned_triv)
+    apply (simp add: word_bits_conv objBits_defs)+
     done
   thus ?thesis by simp
 qed
@@ -837,12 +837,16 @@ lemma is_aligned_neg_mask:
   "\<lbrakk> is_aligned p n; m \<le> n \<rbrakk> \<Longrightarrow> p && ~~ mask m = p"
   by (simp add: is_aligned_nth)
 
-lemma tcb_queue_relation_next_mask_4:
+lemma ctcb_size_bits_ge_4: "4 \<le> ctcb_size_bits"
+  by (simp add: ctcb_size_bits_def)
+
+lemma tcb_queue_relation_next_mask:
   assumes   tq: "tcb_queue_relation getNext getPrev mp queue NULL qhead"
   and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and   cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   and in_queue: "tcbp \<in> set queue"
-  shows "ptr_val (getNext tcb) && ~~ mask 4 = ptr_val (getNext tcb)"
+  and     bits: "bits \<le> ctcb_size_bits"
+  shows "ptr_val (getNext tcb) && ~~ mask bits = ptr_val (getNext tcb)"
 proof (cases "(getNext tcb) = NULL")
   case True
   thus ?thesis by simp
@@ -856,18 +860,18 @@ next
     done
 
   with valid_ep(1) have "tcb_at' (ctcb_ptr_to_tcb_ptr (getNext tcb)) s" ..
-  hence "is_aligned (ctcb_ptr_to_tcb_ptr (getNext tcb)) 9" by (rule tcb_aligned')
-  hence "is_aligned (ptr_val (getNext tcb)) 8" by (rule ctcb_ptr_to_tcb_ptr_aligned)
-  thus ?thesis by (simp add: is_aligned_neg_mask)
+  hence "is_aligned (ctcb_ptr_to_tcb_ptr (getNext tcb)) tcbBlockSizeBits" by (rule tcb_aligned')
+  hence "is_aligned (ptr_val (getNext tcb)) ctcb_size_bits" by (rule ctcb_ptr_to_tcb_ptr_aligned)
+  thus ?thesis using bits by (simp add: is_aligned_neg_mask)
 qed
 
-
-lemma tcb_queue_relation_prev_mask_4:
+lemma tcb_queue_relation_prev_mask:
   assumes   tq: "tcb_queue_relation getNext getPrev mp queue NULL qhead"
   and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and   cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   and in_queue: "tcbp \<in> set queue"
-  shows "ptr_val (getPrev tcb) && ~~ mask 4 = ptr_val (getPrev tcb)"
+  and     bits: "bits \<le> ctcb_size_bits"
+  shows "ptr_val (getPrev tcb) && ~~ mask bits = ptr_val (getPrev tcb)"
 proof (cases "(getPrev tcb) = NULL")
   case True
   thus ?thesis by simp
@@ -881,26 +885,28 @@ next
     done
 
   with valid_ep(1) have "tcb_at' (ctcb_ptr_to_tcb_ptr (getPrev tcb)) s" ..
-  hence "is_aligned (ctcb_ptr_to_tcb_ptr (getPrev tcb)) 9" by (rule tcb_aligned')
-  hence "is_aligned (ptr_val (getPrev tcb)) 8" by (rule ctcb_ptr_to_tcb_ptr_aligned)
-  thus ?thesis by (simp add: is_aligned_neg_mask)
+  hence "is_aligned (ctcb_ptr_to_tcb_ptr (getPrev tcb)) tcbBlockSizeBits" by (rule tcb_aligned')
+  hence "is_aligned (ptr_val (getPrev tcb)) ctcb_size_bits" by (rule ctcb_ptr_to_tcb_ptr_aligned)
+  thus ?thesis using bits by (simp add: is_aligned_neg_mask)
 qed
 
-lemma tcb_queue_relation'_next_mask_4:
+lemma tcb_queue_relation'_next_mask:
   assumes   tq: "tcb_queue_relation' getNext getPrev mp queue qhead qend"
   and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and   cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   and in_queue: "tcbp \<in> set queue"
-  shows "ptr_val (getNext tcb) && ~~ mask 4 = ptr_val (getNext tcb)"
-  by (rule tcb_queue_relation_next_mask_4 [OF tcb_queue_relation'_queue_rel], fact+)
+  and     bits: "bits \<le> ctcb_size_bits"
+  shows "ptr_val (getNext tcb) && ~~ mask bits = ptr_val (getNext tcb)"
+  by (rule tcb_queue_relation_next_mask [OF tcb_queue_relation'_queue_rel], fact+)
 
-lemma tcb_queue_relation'_prev_mask_4:
+lemma tcb_queue_relation'_prev_mask:
   assumes   tq: "tcb_queue_relation' getNext getPrev mp queue qhead qend"
   and valid_ep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and   cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   and in_queue: "tcbp \<in> set queue"
-  shows "ptr_val (getPrev tcb) && ~~ mask 4 = ptr_val (getPrev tcb)"
-  by (rule tcb_queue_relation_prev_mask_4 [OF tcb_queue_relation'_queue_rel], fact+)
+  and     bits: "bits \<le> ctcb_size_bits"
+  shows "ptr_val (getPrev tcb) && ~~ mask bits = ptr_val (getPrev tcb)"
+  by (rule tcb_queue_relation_prev_mask [OF tcb_queue_relation'_queue_rel], fact+)
 
 
 lemma cready_queues_relation_null_queue_ptrs:

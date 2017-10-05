@@ -446,7 +446,7 @@ lemma mapM_x_storePTE_update_helper:
     apply (drule_tac p' = x in page_table_at_pte_atD')
       apply (drule pspace_alignedD')
        apply simp
-      apply (simp add:objBits_simps archObjSize_def pteBits_def
+      apply (simp add:objBits_simps' archObjSize_def pteBits_def
         is_aligned_weaken[where y = 2] pageBits_def pdeBits_def
         split:kernel_object.splits arch_kernel_object.splits)
      apply (simp add:mask_lower_twice)
@@ -561,7 +561,7 @@ lemma mapM_x_storePDE_update_helper:
     apply (drule_tac p' = x in page_directory_at_pde_atD')
       apply (drule pspace_alignedD')
        apply simp
-      apply (simp add:objBits_simps archObjSize_def pteBits_def
+      apply (simp add:objBits_simps' archObjSize_def pteBits_def
         is_aligned_weaken[where y = 2] pageBits_def pdeBits_def
         split:kernel_object.splits arch_kernel_object.splits)
      apply (simp add:mask_lower_twice)
@@ -684,7 +684,7 @@ lemma copyGlobalMappings_ksPSpace_stable:
       apply clarsimp
       apply (drule(1) pspace_alignedD')
       apply (drule is_aligned_weaken[where y = 2])
-       apply (case_tac y, simp_all add:objBits_simps pageBits_def)
+       apply (case_tac y, simp_all add: objBits_simps' pageBits_def)
       apply (simp add: archObjSize_def pageBits_def
                        pteBits_def pdeBits_def
                   split: arch_kernel_object.splits)
@@ -1066,7 +1066,7 @@ lemma in_new_cap_addrs_aligned:
   apply (clarsimp simp:new_cap_addrs_def image_def)
   apply (erule aligned_add_aligned)
     apply (rule is_aligned_weaken[OF is_aligned_shiftl_self])
-    apply (case_tac ko,simp_all add: objBits_simps word_bits_def pdeBits_def
+    apply (case_tac ko,simp_all add: objBits_simps' word_bits_def pdeBits_def
                                      pageBits_def archObjSize_def pteBits_def
                                 split:arch_kernel_object.splits)
   done
@@ -1271,10 +1271,10 @@ lemma createObject_valid_duplicates'[wp]:
                        ARM_H.toAPIType_def ARM_H.toAPIType_def
                 split: ARM_H.object_type.splits)
      apply (simp add: vs_entry_align_def)
-   apply (simp add: objBits_simps)
+   apply (simp add: objBits_simps')
    apply (rule none_in_new_cap_addrs
-     ,(simp add: objBits_simps pageBits_def APIType_capBits_def
-                 ARM_H.toAPIType_def ARM_H.toAPIType_def
+     ,(simp add: objBits_simps' pageBits_def APIType_capBits_def
+                 ARM_H.toAPIType_def
                  word_bits_conv archObjSize_def is_aligned_mask
           split: ARM_H.object_type.splits)+)[1]
   apply (clarsimp simp: word_bits_def)
@@ -1467,7 +1467,7 @@ lemma new_CapTable_bound:
     \<Longrightarrow> tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> us < 28"
   apply (frule range_cover.sz)
   apply (drule range_cover.sz(2))
-  apply (clarsimp simp:APIType_capBits_def objBits_simps word_bits_def)
+  apply (clarsimp simp: APIType_capBits_def objBits_simps' word_bits_def)
   done
 
 lemma invokeUntyped_valid_duplicates[wp]:
@@ -1973,10 +1973,11 @@ proof -
     apply (rule aligned_add_aligned[where n = 2])
       apply (rule is_aligned_andI1)
       apply (drule(1) pspace_alignedD')
-      apply (case_tac x2,simp_all add:objBits_simps
-        pageBits_def archObjSize_def pteBits_def
-        is_aligned_weaken[where y = 2] pdeBits_def
-        split:arch_kernel_object.splits)
+      apply (case_tac x2,
+             simp_all add: objBits_simps'
+                           pageBits_def archObjSize_def pteBits_def
+                           is_aligned_weaken[where y = 2] pdeBits_def
+                    split: arch_kernel_object.splits)
     apply (simp add:is_aligned_neg_mask)
    apply (simp add:mask_out_sub_mask field_simps)
   apply (clarsimp split:option.splits)
@@ -2385,7 +2386,7 @@ lemma tc_valid_duplicates':
          | wp hoare_vcg_conj_liftE1 cteDelete_invs' cteDelete_deletes
               hoare_vcg_const_imp_lift
          )+)
-  apply (clarsimp simp: tcb_cte_cases_def cte_level_bits_def
+  apply (clarsimp simp: tcb_cte_cases_def cte_level_bits_def objBits_defs
                         tcbIPCBufferSlot_def)
   apply (auto dest!: isCapDs isReplyCapD isValidVTableRootD
                simp: isCap_simps)

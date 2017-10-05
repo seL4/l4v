@@ -332,11 +332,14 @@ lemma acc_CNodeCap_repr:
 
 lemma valid_cnode_cap_cte_at':
   "\<lbrakk> s \<turnstile>' c; isCNodeCap c; ptr = capCNodePtr c; v < 2 ^ capCNodeBits c \<rbrakk>
-      \<Longrightarrow> cte_at' (ptr + v * 0x10) s"
+      \<Longrightarrow> cte_at' (ptr + v * 2^cteSizeBits) s"
   apply (drule less_mask_eq)
   apply (drule(1) valid_cap_cte_at'[where addr=v])
   apply (simp add: mult.commute mult.left_commute)
   done
+
+lemmas valid_cnode_cap_cte_at''
+  = valid_cnode_cap_cte_at'[simplified objBits_defs, simplified]
 
 lemma ccorres_abstract_all:
   "\<lbrakk>\<And>rv' t t'. ceqv Gamm xf' rv' t t' d (d' rv');
@@ -641,13 +644,13 @@ lemma lookup_fp_ccorres':
     apply (frule(1) valid_cnode_bits_0, clarsimp)
     apply (intro conjI impI)
                      apply (simp add: size_of_def)
-                     apply (erule (1) valid_cnode_cap_cte_at')
+                     apply (erule (1) valid_cnode_cap_cte_at'')
                       apply simp
                      apply (rule shiftr_less_t2n')
                       apply simp
                      apply simp
                     apply (simp add:size_of_def)
-                    apply (erule (1) valid_cnode_cap_cte_at')
+                    apply (erule (1) valid_cnode_cap_cte_at'')
                      apply simp
                     apply (rule shiftr_less_t2n')
                      apply simp
@@ -1573,7 +1576,7 @@ lemma fastpath_dequeue_ccorres:
   unfolding setEndpoint_def
   apply (rule setObject_ccorres_helper[rotated])
     apply simp
-   apply (simp add: objBits_simps)
+   apply (simp add: objBits_simps')
   apply (rule conseqPre, vcg)
   apply clarsimp
   apply (drule(1) ko_at_obj_congD')
@@ -1753,7 +1756,7 @@ lemma fastpath_enqueue_ccorres:
   apply clarsimp
   apply (rule setObject_ccorres_helper[rotated])
     apply simp
-   apply (simp add: objBits_simps)
+   apply (simp add: objBits_simps')
   apply (rule conseqPre, vcg)
   apply clarsimp
   apply (drule(1) ko_at_obj_congD')
@@ -1980,11 +1983,11 @@ lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
                         ccap_relation_def c_valid_cap_def)
   apply (frule is_aligned_tcb_ptr_to_ctcb_ptr)
   apply (rule ssubst[OF cap_lift_reply_cap])
-   apply (simp add: cap_get_tag_def cap_reply_cap_def
+   apply (simp add: cap_get_tag_def cap_reply_cap_def ctcb_size_bits_def
                     mask_def word_ao_dist
                     limited_and_simps
                     limited_and_simps1[OF lshift_limited_and, OF limited_and_from_bool])
-  apply (simp add: cap_to_H_simps word_ao_dist cl_valid_cap_def
+  apply (simp add: cap_to_H_simps word_ao_dist cl_valid_cap_def ctcb_size_bits_def
                    limited_and_simps cap_reply_cap_def
                    limited_and_simps1[OF lshift_limited_and, OF limited_and_from_bool]
                    shiftr_over_or_dist word_bw_assocs mask_def)
@@ -2201,7 +2204,7 @@ proof -
     done
 
   have tcbs_of_aligned':
-    "\<And>s ptr tcb. \<lbrakk>tcbs_of s ptr = Some tcb;pspace_aligned' s\<rbrakk> \<Longrightarrow> is_aligned ptr 9"
+    "\<And>s ptr tcb. \<lbrakk>tcbs_of s ptr = Some tcb;pspace_aligned' s\<rbrakk> \<Longrightarrow> is_aligned ptr tcbBlockSizeBits"
     apply (clarsimp simp:tcbs_of_def obj_at'_def split:if_splits)
     apply (drule pspace_alignedD')
     apply simp+
@@ -2514,7 +2517,7 @@ proof -
                                                       tcbReplySlot_def cte_level_bits_def
                                                       valid_mdb'_def valid_mdb_ctes_def)
                                 apply (subst aligned_add_aligned, erule tcb_aligned',
-                                       simp add: is_aligned_def, simp add: word_bits_def, simp)
+                                       simp add: is_aligned_def, simp add: objBits_defs, simp)
                                 apply (rule_tac x="hd (epQueue send_ep) + v" for v
                                           in cmap_relationE1[OF cmap_relation_cte], assumption+)
                                 apply (clarsimp simp: typ_heap_simps' updateMDB_def Let_def)
@@ -2541,7 +2544,7 @@ proof -
                                                         tcb_cnode_index_defs tcbCallerSlot_def
                                                         tcbReplySlot_def cte_level_bits_def)
                                   apply (subst aligned_add_aligned, erule tcb_aligned',
-                                         simp add: is_aligned_def, simp add: word_bits_def, simp)
+                                         simp add: is_aligned_def, simp add: objBits_defs, simp)
                                   apply (rule_tac x="curThread + 0x20" in cmap_relationE1[OF cmap_relation_cte],
                                          assumption+)
                                   apply (clarsimp simp: typ_heap_simps' updateMDB_def Let_def)
@@ -2709,7 +2712,7 @@ proof -
     apply (simp add:invs_pspace_aligned')
    apply (frule_tac ptr2 = x in tcbs_of_cte_wp_at_vtable)
    apply (clarsimp simp:size_of_def field_simps word_sless_def word_sle_def
-      dest!:ptr_val_tcb_ptr_mask2[unfolded mask_def, simplified])
+      dest!:ptr_val_tcb_ptr_mask2[unfolded mask_def])
    apply (frule_tac p="x + offs" for offs in ctes_of_valid', clarsimp)
    apply (clarsimp simp: isCap_simps valid_cap'_def invs_valid_pde_mappings'
                   dest!: isValidVTableRootD)
@@ -2726,14 +2729,14 @@ proof -
    apply (clarsimp simp: pde_stored_asid_def to_bool_def
                          length_msgRegisters word_le_nat_alt[symmetric])
    apply (frule tcb_aligned'[OF obj_at_tcbs_of[THEN iffD2], OF exI, simplified])
-   apply clarsimp
+   apply (clarsimp simp:objBits_defs)
    apply (safe del: notI)[1]
      apply (rule not_sym, clarsimp)
      apply (drule aligned_sub_aligned[where x="x + 0x10" and y=x for x])
        apply (erule tcbs_of_aligned')
        apply (simp add:invs_pspace_aligned')
-      apply simp
-     apply (simp add:is_aligned_def dvd_def)
+      apply (simp add: objBits_defs)
+     apply (simp add: objBits_defs is_aligned_def dvd_def)
     apply (clarsimp simp:tcbs_of_def obj_at'_def projectKO_opt_tcb
       split:if_splits Structures_H.kernel_object.splits)
     apply (drule pspace_distinctD')
@@ -2887,7 +2890,7 @@ lemma fastpath_reply_recv_ccorres:
     done
 
   have tcbs_of_aligned':
-    "\<And>s ptr tcb. \<lbrakk>tcbs_of s ptr = Some tcb;pspace_aligned' s\<rbrakk> \<Longrightarrow> is_aligned ptr 9"
+    "\<And>s ptr tcb. \<lbrakk>tcbs_of s ptr = Some tcb;pspace_aligned' s\<rbrakk> \<Longrightarrow> is_aligned ptr tcbBlockSizeBits"
     apply (clarsimp simp:tcbs_of_def obj_at'_def split:if_splits)
     apply (drule pspace_alignedD')
     apply simp+
@@ -2993,7 +2996,7 @@ lemma fastpath_reply_recv_ccorres:
                apply (rule allI, rule conseqPre, vcg)
                apply (clarsimp simp: rf_sr_ksCurThread pred_tcb_at'_def)
                apply (drule(3) obj_at_bound_tcb_grandD, clarsimp simp: typ_heap_simps if_1_0_0 return_def)
-               apply (simp add: in_liftM Bex_def getNotification_def getObject_return objBits_simps
+               apply (simp add: in_liftM Bex_def getNotification_def getObject_return objBits_simps'
                                 return_def cnotification_relation_isActive
                                 trans [OF eq_commute from_bool_eq_if])
               apply ceqv
@@ -3207,7 +3210,7 @@ lemma fastpath_reply_recv_ccorres:
                         apply (clarsimp simp: capAligned_def isCap_simps objBits_simps
                                               "StrictC'_thread_state_defs" mask_def)
                         apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                                              typ_heap_simps')
+                                              typ_heap_simps' objBits_defs)
                         apply (rule conjI)
                          apply (clarsimp simp: cpspace_relation_def typ_heap_simps'
                                                update_tcb_map_tos map_to_tcbs_upd)
@@ -3428,7 +3431,7 @@ lemma fastpath_reply_recv_ccorres:
      apply (frule_tac p = a in ctes_of_valid',clarsimp)
      apply (simp add:valid_cap_simps')
      apply (clarsimp simp:cte_level_bits_def)
-     apply (frule_tac p="p + tcbCallerSlot * 0x10"for p in ctes_of_valid',clarsimp)
+     apply (frule_tac p="p + tcbCallerSlot * cte_size"for p cte_size in ctes_of_valid',clarsimp)
      apply (clarsimp simp: valid_capAligned)
      apply (frule_tac ptr2 = v0a in tcbs_of_cte_wp_at_vtable)
      apply (frule_tac ptr2 = v0a in tcbs_of_aligned')
@@ -3437,7 +3440,7 @@ lemma fastpath_reply_recv_ccorres:
        word_sle_def word_sless_def
        dest!:ptr_val_tcb_ptr_mask2[unfolded mask_def])
      apply (clarsimp simp: valid_cap_simps' obj_at_tcbs_of)
-     apply (frule_tac p="p + tcbVTableSlot * 0x10" for p in ctes_of_valid', clarsimp)
+     apply (frule_tac p="p + tcbVTableSlot * cte_size" for p cte_size in ctes_of_valid', clarsimp)
      apply (clarsimp simp: isCap_simps valid_cap_simps' capAligned_def
                            invs_valid_pde_mappings' obj_at_tcbs_of
                     dest!: isValidVTableRootD)
@@ -3475,10 +3478,11 @@ lemma fastpath_reply_recv_ccorres:
                           isRight_case_sum typ_heap_simps'
                         pdBits_def pageBits_def
                           cap_get_tag_isCap mi_from_H_def)
-    apply (auto simp: isCap_simps capAligned_def objBits_simps table_bits_defs
+    apply (auto simp: isCap_simps capAligned_def objBits_simps' table_bits_defs
                       ccap_relation_pd_helper
                       cap_get_tag_isCap_ArchObject2
-               dest!: ptr_val_tcb_ptr_mask2[unfolded mask_def] isValidVTableRootD)
+               dest!: ptr_val_tcb_ptr_mask2[unfolded objBits_defs mask_def, simplified]
+                      isValidVTableRootD)
   done
 qed
 
@@ -3840,10 +3844,10 @@ lemma in_getCTE_slot:
      apply simp
     apply clarsimp
     apply (drule(1) tcb_cte_cases_aligned[where cte=rv])
-    apply (simp add: objBits_simps cte_level_bits_def)
+    apply (simp add: objBits_simps' cte_level_bits_def)
    apply (simp add: cte_wp_at_ctes_of)
   apply (rule_tac x="undefined \<lparr> ksPSpace := empty (slot \<mapsto> KOCTE rv) \<rparr>" in exI)
-  apply (simp add: map_to_ctes_def Let_def objBits_simps cte_level_bits_def)
+  apply (simp add: map_to_ctes_def Let_def objBits_simps' cte_level_bits_def)
   done
 
 end
@@ -4244,10 +4248,10 @@ lemma setEndpoint_setCTE_pivot[unfolded K_bind_def]:
       apply (simp add: setEndpoint_def setObject_modify_assert bind_assoc
                        exec_gets assert_def exec_modify
                 split: if_split)
-      apply (auto split: if_split simp: obj_at'_def projectKOs
+      apply (auto split: if_split simp: obj_at'_def projectKOs objBits_defs
                  intro!: arg_cong[where f=f] ext kernel_state.fold_congs)[1]
      apply wp+
-  apply simp
+  apply (simp add: objBits_defs)
   done
 
 lemma setEndpoint_updateMDB_pivot[unfolded K_bind_def]:
@@ -4357,11 +4361,11 @@ lemma set_setCTE[unfolded K_bind_def]:
                    in monadic_rewrite_gen_asm)
        apply (rule monadic_rewrite_refl2)
        apply (simp add: exec_modify split: if_split)
-       apply (auto simp: simpler_modify_def projectKO_opt_tcb
+       apply (auto simp: simpler_modify_def projectKO_opt_tcb objBits_defs
                  intro!: kernel_state.fold_congs ext
                   split: if_split)[1]
       apply wp+
-  apply (clarsimp intro!: all_tcbI)
+  apply (clarsimp simp: objBits_defs intro!: all_tcbI)
   apply (auto simp: tcb_cte_cases_def split: if_split_asm)
   done
 

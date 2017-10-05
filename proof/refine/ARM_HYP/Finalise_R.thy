@@ -2470,7 +2470,7 @@ lemma archThreadSet_inQ[wp]:
   "archThreadSet f t' \<lbrace>\<lambda>s. P (obj_at' (inQ d p) t s)\<rbrace>"
   unfolding obj_at'_real_def archThreadSet_def
   apply (wpsimp wp: setObject_ko_wp_at getObject_tcb_wp
-              simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def
+              simp: objBits_simps' archObjSize_def vcpu_bits_def pageBits_def
          | simp)+
   apply (auto simp: obj_at'_def ko_wp_at'_def projectKOs)
   done
@@ -2527,7 +2527,7 @@ lemma archThreadSet_state_hyp_refs_of'[wp]:
   "\<lbrace>\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> P ((state_hyp_refs_of' s)(t := tcb_hyp_refs' (f (tcbArch tcb))))\<rbrace>
   archThreadSet f t \<lbrace>\<lambda>_ s. P (state_hyp_refs_of' s)\<rbrace>"
   unfolding archThreadSet_def
-  apply (wpsimp wp: setObject_state_hyp_refs_of' getObject_tcb_wp simp: objBits_simps)
+  apply (wpsimp wp: setObject_state_hyp_refs_of' getObject_tcb_wp simp: objBits_simps')
   apply normalise_obj_at'
   apply (erule rsubst[where P=P])
   apply auto
@@ -2566,7 +2566,7 @@ lemma archThreadSet_valid_idle'[wp]:
 lemma archThreadSet_ko_wp_at_no_vcpu[wp]:
   "archThreadSet f t \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') p\<rbrace>"
   unfolding archThreadSet_def
-  apply (wpsimp wp: getObject_tcb_wp setObject_ko_wp_at simp: objBits_simps|rule refl)+
+  apply (wpsimp wp: getObject_tcb_wp setObject_ko_wp_at simp: objBits_simps' | rule refl)+
   apply normalise_obj_at'
   apply (auto simp: ko_wp_at'_def obj_at'_real_def projectKOs is_vcpu'_def)
   done
@@ -2706,7 +2706,7 @@ lemma setObject_tcb_unlive[wp]:
         setObject t (tcbArch_update (\<lambda>_. atcbVCPUPtr_update Map.empty (tcbArch tcb)) tcb)
            \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') vr\<rbrace>"
   apply (rule wp_pre)
-  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_def objBitsKO_def, simp+)
+  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps', simp+)
   apply (clarsimp simp: tcb_at_typ_at' typ_at'_def ko_wp_at'_def )
   done
 
@@ -2727,8 +2727,8 @@ lemma archThreadSet_unlive_other:
 lemma asUser_unlive[wp]:
   "\<lbrace>ko_wp_at' (Not \<circ> live') vr\<rbrace> asUser t f \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') vr\<rbrace>"
   unfolding asUser_def
-  apply (wpsimp simp: threadSet_def atcbContextSet_def objBits_def objBitsKO_def split_def
-                wp: setObject_ko_wp_at)
+  apply (wpsimp simp: threadSet_def atcbContextSet_def objBits_simps' split_def
+                  wp: setObject_ko_wp_at)
   apply (rule refl, simp)
   apply (wpsimp simp: atcbContextGet_def wp: getObject_tcb_wp threadGet_wp)+
   apply (clarsimp simp: tcb_at_typ_at' typ_at'_def ko_wp_at'_def[where p=t])
@@ -2920,7 +2920,7 @@ lemma finaliseCap_cte_refs:
    apply (wp | wpc | simp only: o_def)+
   apply (frule valid_capAligned)
   apply (cases cap, simp_all add: isCap_simps)
-   apply (clarsimp simp: tcb_cte_cases_def word_count_from_top)
+   apply (clarsimp simp: tcb_cte_cases_def word_count_from_top objBits_defs)
   apply clarsimp
   apply (rule ext, simp)
   apply (rule image_cong [OF _ refl])
@@ -3045,7 +3045,7 @@ lemma unbindNotification_obj_at'_boundedness:
     apply (clarsimp simp: updateObject_default_def in_monad)
    apply wp
   apply (simp add: obj_at'_real_def cong: valid_cong)
-  apply (wp setObject_ko_wp_at, (simp add: objBits_simps)+)
+  apply (wp setObject_ko_wp_at, (simp add: objBits_simps')+)
   apply clarsimp
   apply (frule sym_refs_ntfn_bound_eq[where t=t and x=x])
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs)
@@ -3062,7 +3062,7 @@ lemma unbindMaybeNotification_obj_at'_bound:
         | wpc
         | simp add: setBoundNotification_def threadSet_def updateObject_default_def in_monad projectKOs)+
   apply (simp add: setNotification_def obj_at'_real_def cong: valid_cong)
-   apply (wp setObject_ko_wp_at, (simp add: objBits_simps)+)
+   apply (wp setObject_ko_wp_at, (simp add: objBits_simps')+)
   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
   done
 
@@ -3185,7 +3185,7 @@ crunch invs[wp]: prepareThreadDelete "invs'"
 lemma unset_vcpu_hyp_unlive[wp]:
   "\<lbrace>\<top>\<rbrace> archThreadSet (atcbVCPUPtr_update Map.empty) t \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') t\<rbrace>"
   unfolding archThreadSet_def
-  apply (wpsimp wp: setObject_ko_wp_at' getObject_tcb_wp; (simp add: objBits_simps)?)+
+  apply (wpsimp wp: setObject_ko_wp_at' getObject_tcb_wp; (simp add: objBits_simps')?)+
   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs hyp_live'_def)
   done
 
@@ -4471,13 +4471,13 @@ lemma tcb_update_all_corres':
            apply simp
           defer
           apply (simp add: is_other_obj_relation_type_def a_type_def
-                           projectKOs objBits_simps
+                           projectKOs objBits_simps'
                            other_obj_relation_def tcbs r)+
     apply (fastforce simp: is_etcb_at_def elim!: obj_at_weakenE dest: bspec[OF tables])
    apply (subst(asm) eq_commute, assumption)
   apply (clarsimp simp: projectKOs obj_at'_def objBits_simps)
   apply (subst map_to_ctes_upd_tcb, assumption+)
-   apply (simp add: ps_clear_def3 field_simps)
+   apply (simp add: ps_clear_def3 field_simps mask_def objBits_defs)
   apply (subst if_not_P)
    apply (fastforce dest: bspec [OF tables', OF ranI])
   apply simp

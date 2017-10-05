@@ -97,7 +97,7 @@ lemma threadGet_eq:
   apply simp
   apply (subst getObject_eq)
      apply simp
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply assumption
   apply simp
   done
@@ -110,7 +110,7 @@ lemma archThreadGet_eq:
   apply simp
   apply (subst getObject_eq)
      apply simp
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply assumption
   apply simp
   done
@@ -262,9 +262,9 @@ lemmas threadSet_ccorres_lemma2
 
 lemma is_aligned_tcb_ptr_to_ctcb_ptr:
   "obj_at' (P :: tcb \<Rightarrow> bool) p s
-     \<Longrightarrow> is_aligned (ptr_val (tcb_ptr_to_ctcb_ptr p)) 8"
-  apply (clarsimp simp: obj_at'_def objBits_simps projectKOs
-                        tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
+     \<Longrightarrow> is_aligned (ptr_val (tcb_ptr_to_ctcb_ptr p)) ctcb_size_bits"
+  apply (clarsimp simp: obj_at'_def objBits_simps' projectKOs
+                        tcb_ptr_to_ctcb_ptr_def ctcb_offset_defs)
   apply (erule aligned_add_aligned, simp_all add: word_bits_conv)
   apply (simp add: is_aligned_def)
   done
@@ -280,7 +280,7 @@ lemma sanitiseRegister_spec:
 lemma getObject_tcb_wp':
   "\<lbrace>\<lambda>s. \<forall>t. ko_at' (t :: tcb) p s \<longrightarrow> Q t s\<rbrace> getObject p \<lbrace>Q\<rbrace>"
   by (clarsimp simp: getObject_def valid_def in_monad
-                     split_def objBits_simps loadObject_default_def
+                     split_def objBits_simps' loadObject_default_def
                      projectKOs obj_at'_def in_magnitude_check)
 
 lemma ccorres_pre_getObject_tcb:
@@ -341,11 +341,11 @@ lemma cap_case_TCBCap2:
          split: capability.split arch_capability.split)
 
 lemma length_of_msgRegisters:
-  "length X64_H.msgRegisters = 2"
+  "length X64_H.msgRegisters = 4"
   by (auto simp: msgRegisters_unfold)
-
+thm setMRs_def X64.msgRegisters_def
 lemma setMRs_single:
-  "setMRs thread buffer [val] = do y \<leftarrow> asUser thread (setRegister register.RDI val);
+  "setMRs thread buffer [val] = do y \<leftarrow> asUser thread (setRegister register.R10 val);
        return 1
     od"
   apply (clarsimp simp: setMRs_def length_of_msgRegisters zipWithM_x_def zipWith_def split: option.splits)

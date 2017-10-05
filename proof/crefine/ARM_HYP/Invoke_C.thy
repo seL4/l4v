@@ -417,7 +417,7 @@ lemma invokeCNodeSaveCaller_ccorres:
 
    apply (simp only: getThreadCallerSlot_def locateSlot_conv)
 
-   apply (rule_tac P="\<lambda>s. rv=ksCurThread s \<and> is_aligned rv 9" and r'="\<lambda> a c. c = Ptr a"
+   apply (rule_tac P="\<lambda>s. rv=ksCurThread s \<and> is_aligned rv tcbBlockSizeBits" and r'="\<lambda> a c. c = Ptr a"
                    and xf'="srcSlot_'" and P'=UNIV in ccorres_split_nothrow)
 
        apply (rule ccorres_return)
@@ -425,8 +425,8 @@ lemma invokeCNodeSaveCaller_ccorres:
        apply clarsimp
        apply (simp add: cte_level_bits_def size_of_def of_nat_def)
        apply (simp add: rf_sr_def cstate_relation_def Kernel_C.tcbCaller_def tcbCallerSlot_def)
-       apply (clarsimp simp: Let_def)
-       apply (subst ptr_val_tcb_ptr_mask2 [simplified mask_def, simplified])
+       apply (clarsimp simp: Let_def objBits_defs)
+       apply (subst ptr_val_tcb_ptr_mask2[simplified mask_def objBits_defs, simplified])
         apply assumption
        apply simp
       apply ceqv
@@ -1502,7 +1502,7 @@ lemma getObjectSize_spec:
            \<lbrace>\<acute>ret__unsigned_long = of_nat (getObjectSize (object_type_to_H (t_' s)) (unat (userObjSize_' s)))\<rbrace>"
   apply vcg
   apply (clarsimp simp: ARMSmallPageBits_def ARMLargePageBits_def ARMSectionBits_def
-                        ARMSuperSectionBits_def machine_bits_defs objBits_simps
+                        ARMSuperSectionBits_def machine_bits_defs objBits_simps'
                         object_type_to_H_def Kernel_C_defs APIType_capBits_def
     )
   apply (simp add:nAPIObjects_def)
@@ -1530,7 +1530,7 @@ lemma APIType_capBits_low:
      newType = APIObjectType apiobject_type.Untyped \<longrightarrow> 4 \<le> us \<and> us \<le> 29\<rbrakk>
            \<Longrightarrow> 4 \<le> APIType_capBits newType us"
   apply (case_tac newType)
-  apply (clarsimp simp:invokeUntyped_proofs_def APIType_capBits_def objBits_simps machine_bits_defs
+  apply (clarsimp simp:invokeUntyped_proofs_def APIType_capBits_def objBits_simps' machine_bits_defs
                   split: apiobject_type.splits)+
   done
 
@@ -1539,7 +1539,7 @@ lemma APIType_capBits_high:
      newType = APIObjectType apiobject_type.Untyped \<longrightarrow> us \<le> 29\<rbrakk>
            \<Longrightarrow> APIType_capBits newType us < 32"
   apply (case_tac newType)
-  apply (clarsimp simp: invokeUntyped_proofs_def APIType_capBits_def objBits_simps machine_bits_defs
+  apply (clarsimp simp: invokeUntyped_proofs_def APIType_capBits_def objBits_simps' machine_bits_defs
                  split: apiobject_type.splits)+
   done
 
@@ -1548,7 +1548,7 @@ notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessTh
   Int_atLeastAtMost atLeastatMost_empty_iff
 shows
  "\<lbrakk>ctes_of (s::kernel_state) (ptr_val p) = Some cte; is_aligned ptr bits; bits < word_bits;
-  {ptr..ptr + 2 ^ bits - 1} \<inter> {ptr_val p..ptr_val p + 0xF} = {}; ((clift hp) :: (cte_C ptr \<rightharpoonup> cte_C)) p = Some to\<rbrakk> \<Longrightarrow>
+  {ptr..ptr + 2 ^ bits - 1} \<inter> {ptr_val p..ptr_val p + mask cteSizeBits} = {}; ((clift hp) :: (cte_C ptr \<rightharpoonup> cte_C)) p = Some to\<rbrakk> \<Longrightarrow>
   (clift (hrs_htd_update (typ_clear_region ptr bits) hp) :: (cte_C ptr \<rightharpoonup> cte_C)) p = Some to"
    apply (clarsimp simp:lift_t_def lift_typ_heap_def Fun.comp_def restrict_map_def split:if_splits)
    apply (intro conjI impI)
@@ -1571,29 +1571,29 @@ shows
     apply (clarsimp simp:proj_d_def)
     apply (clarsimp simp:hrs_htd_update_def typ_clear_region_def
      split:if_splits option.splits)
-    apply (simp add:intvl_range_conv[where 'a=32, folded word_bits_def])
-    apply (subgoal_tac "ptr_val p + of_nat y \<in> {ptr_val p..ptr_val p + 0xF}")
+    apply (simp add:intvl_range_conv[where 'a=machine_word_len, folded word_bits_def])
+    apply (subgoal_tac "ptr_val p + of_nat y \<in> {ptr_val p..ptr_val p + mask cteSizeBits}")
      apply blast
     apply (clarsimp simp:blah)
      apply (rule context_conjI)
       apply (rule is_aligned_no_wrap')
       apply (rule ctes_of_is_aligned[where cte = cte and s = s])
        apply simp
-      apply (simp add:objBits_simps of_nat_power[where x = 4,simplified])
+      apply (rule of_nat_power; simp add: objBits_simps')
      apply (rule word_plus_mono_right)
-      apply (simp add:word_of_nat_le)
+      apply (simp add: word_of_nat_le objBits_defs mask_def)
      apply (rule is_aligned_no_wrap')
       apply (rule ctes_of_is_aligned[where cte = cte and s = s])
        apply simp
-    apply (clarsimp simp:objBits_simps)
-   apply (clarsimp simp:proj_d_def)
+    apply (clarsimp simp: objBits_simps' mask_def)
+   apply (clarsimp simp: proj_d_def)
    done
 
 lemma cte_size_inter_empty:
 notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
   Int_atLeastAtMost atLeastatMost_empty_iff
 shows "\<lbrakk>invs' s;ctes_of s p = Some cte;isUntypedCap (cteCap cte);p\<notin> capRange (cteCap cte) \<rbrakk>
-  \<Longrightarrow> {p .. p + 0xF} \<inter> capRange (cteCap cte) = {}"
+  \<Longrightarrow> {p .. p + mask cteSizeBits} \<inter> capRange (cteCap cte) = {}"
   apply (frule ctes_of_valid')
    apply fastforce
   apply (clarsimp simp:isCap_simps valid_cap'_def valid_untyped'_def)
@@ -1610,23 +1610,19 @@ shows "\<lbrakk>invs' s;ctes_of s p = Some cte;isUntypedCap (cteCap cte);p\<noti
   apply (clarsimp simp:capAligned_def)
   apply (drule_tac p = v0 and p' = ptr in aligned_ranges_subset_or_disjoint)
    apply (erule pspace_alignedD',fastforce)
-  apply (subst (asm) intvl_range_conv[where bits = 4,simplified])
+  apply (subst (asm) intvl_range_conv[where bits = cteSizeBits])
     apply (erule is_aligned_weaken[OF ctes_of_is_aligned])
-    apply (simp add:objBits_simps)
-   apply (simp add:word_bits_def)
+    apply (simp add: objBits_simps)
+   apply (simp add: word_bits_def objBits_defs)
   apply (erule disjE)
-   apply (simp add:obj_range'_def field_simps)
+   apply (simp add: obj_range'_def field_simps objBits_defs mask_def)
    apply blast
-  apply (subgoal_tac "p \<in> {p..p+0xF}")
+  apply (subgoal_tac "p \<in> {p .. p + mask cteSizeBits}")
    prefer 2
    apply (clarsimp simp:blah)
-   apply (rule is_aligned_no_wrap'[where sz = 4])
+   apply (rule is_aligned_no_wrap'[where sz=cteSizeBits])
     apply (erule is_aligned_weaken[OF ctes_of_is_aligned])
-    apply (simp add:objBits_simps)
-   apply simp
-  apply (simp add:obj_range'_def field_simps)
-  apply blast
-  done
+    by (auto simp: obj_range'_def field_simps objBits_simps' mask_def)
 
 lemma region_is_typelessI:
   "\<lbrakk>hrs_htd (t_hrs_' (globals t)) = hrs_htd (hrs_htd_update (typ_clear_region ptr sz) h) \<rbrakk>
@@ -2390,7 +2386,7 @@ lemma invokeUntyped_Retype_ccorres:
            \<inter>  \<lbrace>\<acute>destSlots = slot_range_C (cte_Ptr cnodeptr) start
                                           (of_nat (length destSlots)) \<and>
                 (\<forall>n<length destSlots.
-                    destSlots ! n = cnodeptr + (start + of_nat n) * 0x10)\<rbrace>
+                    destSlots ! n = cnodeptr + (start + of_nat n) * 2^cteSizeBits)\<rbrace>
             )
      []
      (invokeUntyped (Retype cref reset ptr_base ptr newType us destSlots isdev))
@@ -2451,7 +2447,7 @@ lemma invokeUntyped_Retype_ccorres:
       using cover
       apply -
       apply (drule range_cover_sz')
-      apply (clarsimp simp:APIType_capBits_def objBits_simps word_bits_conv)
+      apply (clarsimp simp:APIType_capBits_def objBits_simps' word_bits_conv)
       done
 
     have ptr_base_eq:
@@ -2656,7 +2652,7 @@ lemma invokeUntyped_Retype_ccorres:
         apply (clarsimp simp: cap_get_tag_isCap getFreeIndex_def
                               cte_wp_at_ctes_of shiftL_nat
                        split: if_split)
-        apply (simp add: mask_out_sub_mask field_simps region_is_bytes'_def)
+        apply (simp add: mask_out_sub_mask field_simps region_is_bytes'_def objBits_defs)
         apply (clarsimp elim!: region_actually_is_bytes_subset)
        apply (rule order_refl)
 
@@ -2893,7 +2889,7 @@ lemma unat_of_nat_APIType_capBits:
   \<Longrightarrow> unat (of_nat (APIType_capBits z b) ::word32) = APIType_capBits z b"
   apply (rule unat_of_nat32)
   apply (case_tac z)
-  apply (clarsimp simp: invokeUntyped_proofs_def word_bits_conv APIType_capBits_def objBits_simps
+  apply (clarsimp simp: invokeUntyped_proofs_def word_bits_conv APIType_capBits_def objBits_simps'
                         machine_bits_defs
                  split: apiobject_type.splits)+
   done
@@ -3416,7 +3412,7 @@ shows
                                apply (subst upto_enum_word)
                                apply (subst nth_map_upt)
                                 apply (clarsimp simp: field_simps Suc_unat_diff_1 unat_plus_simple[THEN iffD1])
-                               apply (clarsimp simp: cte_level_bits_def)
+                               apply (clarsimp simp: cte_level_bits_def objBits_defs)
                               apply simp
                              apply wp
                              apply simp
@@ -3594,14 +3590,14 @@ shows
                   elim!: inl_inrE)
    apply (drule(1) cap_get_tag_to_H)+
    apply (clarsimp simp: isCap_simps capAligned_def[unfolded capUntypedPtr_def, split_simps capability.split]
-                         objBits_simps word_bits_def)
+                         objBits_simps' word_bits_def)
 
   apply (clarsimp simp: cap_get_tag_isCap[symmetric]
     capCNodeRadix_CL_less_32s rf_sr_ksCurThread not_le
                  elim!: inl_inrE)
   apply (drule(1) cap_get_tag_to_H)+
   apply (clarsimp simp: isCap_simps capAligned_def[unfolded capUntypedPtr_def, split_simps capability.split]
-                        objBits_simps word_bits_def)
+                        objBits_simps' word_bits_def)
 
   done
 

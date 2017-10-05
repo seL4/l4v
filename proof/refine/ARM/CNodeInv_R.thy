@@ -5549,7 +5549,7 @@ lemma Final_notUntyped_capRange_disjoint:
   apply (drule(1) ctes_of_valid')
   apply (elim disjE isCapDs[elim_format])
    apply (clarsimp simp: valid_cap'_def
-                         obj_at'_def projectKOs objBits_simps
+                         obj_at'_def projectKOs objBits_simps'
                          typ_at'_def ko_wp_at'_def
                   split: capability.split_asm zombie_type.split_asm
                          arch_capability.split_asm
@@ -5988,7 +5988,7 @@ lemma make_zombie_tcb_invs':
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wp_trace make_zombie_invs')
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
-  apply (simp add: capRange_def objBits_simps final_matters'_def)
+  apply (simp add: capRange_def objBits_simps' final_matters'_def)
   apply (rule context_conjI)
    apply (drule ctes_of_valid', clarsimp)
    apply (clarsimp simp: valid_cap'_def capAligned_def objBits_simps)
@@ -6003,7 +6003,7 @@ lemma isFinal_Zombie:
 lemma shrink_zombie_invs':
   "\<lbrace>invs' and (K (isZombie cap))
     and cte_wp_at' (\<lambda>cte. cteCap cte = Zombie (capZombiePtr cap) (capZombieType cap) (capZombieNumber cap + 1)) sl
-    and cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) (capZombiePtr cap + 16 * (of_nat (capZombieNumber cap)))\<rbrace>
+    and cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) (capZombiePtr cap + 2^cteSizeBits * (of_nat (capZombieNumber cap)))\<rbrace>
       updateCap sl cap
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wp make_zombie_invs')
@@ -6041,7 +6041,7 @@ lemma updateCap_final_zombie:
   apply (clarsimp simp add: isFinal_def)
   apply (case_tac cte)
   apply simp
-  apply (erule_tac x=p' in allE)
+  apply (erule allE)
   apply (clarsimp simp: isCap_simps)
   apply (case_tac z)
   apply (rename_tac c n)
@@ -6090,16 +6090,16 @@ crunch typ_at' [wp]: doMachineOp "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp simp: crunch_simps)
 
 lemma valid_Zombie_cte_at':
-  "\<lbrakk> s \<turnstile>' Zombie p zt m; n < zombieCTEs zt \<rbrakk> \<Longrightarrow> cte_at' (p + (of_nat n * 16)) s"
+  "\<lbrakk> s \<turnstile>' Zombie p zt m; n < zombieCTEs zt \<rbrakk> \<Longrightarrow> cte_at' (p + (of_nat n * 2^cteSizeBits)) s"
   apply (clarsimp simp: valid_cap'_def split: zombie_type.split_asm)
    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
-   apply (subgoal_tac "tcb_cte_cases (of_nat n * 16) \<noteq> None")
+   apply (subgoal_tac "tcb_cte_cases (of_nat n * 2^cteSizeBits) \<noteq> None")
     apply clarsimp
     apply (erule(2) cte_wp_at_tcbI')
      apply fastforce
     apply simp
    apply (thin_tac "a < word_bits" for a)
-   apply ((clarsimp | erule less_handy_casesE | fastforce)+)[1]
+   apply ((clarsimp | erule less_handy_casesE | fastforce simp: objBits_defs)+)[1]
   apply (drule spec[where x="of_nat n"])
   apply (subst(asm) less_mask_eq)
    apply (rule order_less_le_trans)
@@ -6359,7 +6359,7 @@ lemma cteSwap_cap_to'[wp]:
 
 lemma zombieCTEs_le:
   "zombieCTEs zb \<le> 2 ^ zBits zb"
-  by (cases zb, simp_all)
+  by (cases zb, simp_all add: objBits_defs)
 
 lemma valid_cap'_handy_bits:
   "s \<turnstile>' Zombie r zb n \<Longrightarrow> n \<le> 2 ^ (zBits zb)"
@@ -6414,12 +6414,12 @@ lemma handy_mixer:
 lemma ex_Zombie_to2:
   "\<lbrakk> ctes_of s p = Some cte; cteCap cte = Zombie p' b n;
        n \<noteq> 0; valid_objs' s \<rbrakk>
-      \<Longrightarrow> ex_cte_cap_to' (p' + (16 * of_nat n - 16)) s"
+      \<Longrightarrow> ex_cte_cap_to' (p' + (2^cteSizeBits * of_nat n - 2^cteSizeBits)) s"
   apply (simp add: ex_cte_cap_to'_def cte_wp_at_ctes_of)
   apply (intro exI, rule conjI, assumption)
   apply (simp add: image_def)
   apply (rule bexI[where x="of_nat n - 1"])
-   apply simp
+   apply (fastforce simp: objBits_defs)
   apply (subgoal_tac "n \<in> unats (len_of TYPE(32))")
    apply (simp add: word_less_nat_alt)
    apply (subst unat_minus_one)
@@ -6536,7 +6536,7 @@ lemma reduceZombie_invs'':
          apply (rule getCTE_wp)
         apply (wp | simp)+
       apply (rule_tac Q="\<lambda>cte s. rv = capZombiePtr cap +
-                                      of_nat (capZombieNumber cap) * 16 - 16
+                                      of_nat (capZombieNumber cap) * 2^cteSizeBits - 2^cteSizeBits
                               \<and> cte_wp_at' (\<lambda>c. c = cte) slot s \<and> invs' s
                               \<and> no_cte_prop Q s \<and> sch_act_simple s"
                   in hoare_post_imp)
@@ -6544,10 +6544,10 @@ lemma reduceZombie_invs'':
        apply (simp add: field_simps)
       apply (wp getCTE_cte_wp_at)+
       apply simp
-apply wp
+      apply wp
      apply (rule spec_strengthen_postE)
       apply (rule_tac Q="\<lambda>fc s. rv = capZombiePtr cap +
-                                      of_nat (capZombieNumber cap) * 16 - 16"
+                                      of_nat (capZombieNumber cap) * 2^cteSizeBits - 2^cteSizeBits"
                  in spec_valid_conj_liftE1)
        apply wp[1]
       apply (rule fin, assumption+)
@@ -6562,8 +6562,8 @@ apply wp
      apply clarsimp
     apply clarsimp
    apply clarsimp
-  apply (clarsimp simp: cte_level_bits_def dest!: isCapDs)
-  apply (auto elim: ex_Zombie_to2)
+  apply (clarsimp dest!: isCapDs)
+  apply (fastforce dest!: ex_Zombie_to2 simp: cte_level_bits_def objBits_defs)
   done
 
 lemma preemptionPoint_no_cte_prop [wp]:
@@ -6618,16 +6618,16 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
                      \<or> (\<exists>zb n cp. cteCap cte = Zombie q zb n
                           \<and> Q cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> q))"
   note hyps = "1.hyps"[folded reduceZombie_def[unfolded cteDelete_def finaliseSlot_def]]
-  have Q: "\<And>x y n. {x :: word32} = (\<lambda>x. y + x * 0x10) ` {0 ..< n} \<Longrightarrow> n = 1"
+  have Q: "\<And>x y n. {x :: word32} = (\<lambda>x. y + x * 2^cteSizeBits) ` {0 ..< n} \<Longrightarrow> n = 1"
     apply (drule sym)
     apply (case_tac "1 < n")
-     apply (frule_tac x = "y + 0 * 0x10" in eqset_imp_iff)
-     apply (frule_tac x = "y + 1 * 0x10" in eqset_imp_iff)
+     apply (frule_tac x = "y + 0 * 2^cteSizeBits" in eqset_imp_iff)
+     apply (frule_tac x = "y + 1 * 2^cteSizeBits" in eqset_imp_iff)
      apply (subst(asm) imageI, simp)
       apply (erule order_less_trans[rotated], simp)
      apply (subst(asm) imageI, simp)
      apply simp
-    apply (simp add: linorder_not_less)
+    apply (simp add: linorder_not_less objBits_defs)
     apply (case_tac "n < 1")
      apply simp
     apply simp
@@ -6728,7 +6728,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
               simp_all add: isCap_simps final_matters'_def)[1]
       apply (wp isFinalCapability_inv static_imp_wp | simp | wp_once isFinal[where x=sl])+
      apply (wp getCTE_wp')
-    apply (clarsimp simp: cte_wp_at_ctes_of disj_ac)
+    apply (clarsimp simp: cte_wp_at_ctes_of)
     apply (rule conjI, clarsimp simp: removeable'_def)
     apply (clarsimp simp: conj_comms)
     apply (rule conjI, erule ctes_of_valid', clarsimp)
@@ -7842,13 +7842,14 @@ next
     apply (frule ctes_of_valid', clarsimp+)
     apply (frule valid_Zombie_cte_at'[where n=n])
      apply (clarsimp simp: valid_cap'_def)
-    apply (clarsimp simp: cte_wp_at_ctes_of cte_level_bits_def
-                          mult.commute mult.left_commute)
+    apply (intro conjI)
+     apply (fastforce simp: cte_wp_at_ctes_of cte_level_bits_def objBits_defs
+                            mult.commute mult.left_commute)
     apply (clarsimp simp: ex_cte_cap_to'_def cte_wp_at_ctes_of)
     apply (rule_tac x="cte_map slot" in exI)
     apply (clarsimp simp: image_def)
     apply (rule_tac x="of_nat n" in bexI)
-     apply (simp add: cte_level_bits_def mult.commute mult.left_commute)
+     apply (fastforce simp: cte_level_bits_def objBits_defs mult.commute mult.left_commute)
     apply simp
     apply (subst field_simps, rule plus_one_helper2)
      apply simp
@@ -9378,12 +9379,12 @@ lemma inv_cnode_corres:
     apply clarsimp
    apply clarsimp
    apply (rename_tac prod)
-   apply (simp add: getThreadCallerSlot_def locateSlot_conv objBits_simps cte_level_bits_def)
+   apply (simp add: getThreadCallerSlot_def locateSlot_conv objBits_simps)
    apply (rule corres_guard_imp)
      apply (rule corres_split [OF _ gct_corres])
-        apply (subgoal_tac "thread + 0x10 * tcbCallerSlot = cte_map (thread, tcb_cnode_index 3)")
+        apply (subgoal_tac "thread + 2^cte_level_bits * tcbCallerSlot = cte_map (thread, tcb_cnode_index 3)")
          prefer 2
-         apply (simp add: cte_map_def tcb_cnode_index_def tcbCallerSlot_def)
+         apply (simp add: cte_map_def tcb_cnode_index_def tcbCallerSlot_def cte_level_bits_def objBits_defs)
         apply (rule corres_split [OF _ getSlotCap_corres])
             apply (rule_tac P="\<lambda>s. (is_reply_cap cap \<or> cap = cap.NullCap) \<and>
           (is_reply_cap cap \<longrightarrow>

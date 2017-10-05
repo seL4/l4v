@@ -18,11 +18,12 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-(* FIXME x64: should this be 32 bc cte_level_bits is 5 not 4 *)
 definition
   cte_map :: "cslot_ptr \<Rightarrow> machine_word"
 where
- "cte_map \<equiv> \<lambda>(oref, cref). oref + (of_bl cref * 32)"
+ "cte_map \<equiv> \<lambda>(oref, cref). oref + (of_bl cref * 2 ^ cte_level_bits)"
+
+lemmas cte_map_def' = cte_map_def[simplified cte_level_bits_def, simplified]
 
 definition
   lookup_failure_map :: "ExceptionTypes_A.lookup_failure \<Rightarrow> Fault_H.lookup_failure"
@@ -705,7 +706,7 @@ lemma objBits_obj_bits:
   assumes rel: "other_obj_relation obj obj'"
   shows   "obj_bits obj = objBitsKO obj'"
   using rel
-  by (simp add: other_obj_relation_def objBitsKO_simps pageBits_def
+  by (simp add: other_obj_relation_def objBits_simps' pageBits_def
                 archObjSize_def
          split: Structures_A.kernel_object.split_asm
                 X64_A.arch_kernel_obj.split_asm

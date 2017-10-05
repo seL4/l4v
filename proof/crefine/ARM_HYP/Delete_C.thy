@@ -65,7 +65,7 @@ lemma ccap_zombie_radix_less1:
             \<longrightarrow> capZombieType_CL (cap_zombie_cap_lift ccap) < 28"
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap[THEN iffD2])
   apply (clarsimp simp: Let_def capAligned_def
-                        objBits_simps word_bits_conv word_less_nat_alt
+                        objBits_simps' word_bits_conv word_less_nat_alt
                         word_le_nat_alt less_mask_eq
                  split: if_split_asm)
   done
@@ -277,7 +277,7 @@ lemma case_zombie_type_map_inj:
     \<Longrightarrow> isZombie cap \<Longrightarrow> isZombie cap' \<Longrightarrow>
        capZombieType cap = capZombieType cap'"
   apply (clarsimp simp: capAligned_def word_bits_conv
-                        objBits_simps isCap_simps
+                        objBits_simps' isCap_simps
                         of_nat_ZombieTCB_C
                         not_sym [OF of_nat_ZombieTCB_C]
                  split: zombie_type.split_asm)
@@ -658,7 +658,7 @@ lemma reduceZombie_ccorres1:
    apply (fastforce simp add: valid_cap'_def)
   apply (frule_tac n=0 in valid_Zombie_cte_at')
    apply (fastforce simp: valid_cap'_def)
-  apply (clarsimp simp: cte_wp_at_ctes_of size_of_def)
+  apply (clarsimp simp: cte_wp_at_ctes_of size_of_def objBits_defs)
   apply auto
   done
 

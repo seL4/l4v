@@ -31,7 +31,7 @@ This module defines the x86 64-bit register set.
 
 > capRegister = RBX
 > msgInfoRegister = RSI
-> msgRegisters = [RDI, RBP]
+> msgRegisters = [R10, R8, R9, R15]
 > badgeRegister = capRegister
 > frameRegisters = FaultIP : RSP : FLAGS : [RAX .. R15]
 > gpRegisters = [TLS_BASE]

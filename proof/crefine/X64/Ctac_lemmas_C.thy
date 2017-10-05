@@ -47,9 +47,9 @@ lemma cte_array_relation_array_assertion:
   apply simp
   done
 
-lemma rf_sr_tcb_ctes_array_assertion:
+lemma rf_sr_tcb_ctes_array_assertion':
   "\<lbrakk> (s, s') \<in> rf_sr; tcb_at' (ctcb_ptr_to_tcb_ptr tcb) s \<rbrakk>
-    \<Longrightarrow> array_assertion (cte_Ptr (ptr_val tcb && 0xFFFFFFFFFFFFFE00))
+    \<Longrightarrow> array_assertion (cte_Ptr (ptr_val tcb && ~~mask tcbBlockSizeBits))
         (unat tcbCNodeEntries) (hrs_htd (t_hrs_' (globals s')))"
   apply (rule h_t_array_valid_array_assertion, simp_all add: tcbCNodeEntries_def)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
@@ -61,35 +61,44 @@ lemma rf_sr_tcb_ctes_array_assertion:
   apply (simp add: mask_def)
   done
 
+lemmas rf_sr_tcb_ctes_array_assertion
+  = rf_sr_tcb_ctes_array_assertion'[simplified objBits_defs mask_def, simplified]
+
 lemma rf_sr_tcb_ctes_array_assertion2:
   "\<lbrakk> (s, s') \<in> rf_sr; tcb_at' tcb s \<rbrakk>
     \<Longrightarrow> array_assertion (cte_Ptr tcb)
         (unat tcbCNodeEntries) (hrs_htd (t_hrs_' (globals s')))"
   apply (frule(1) rf_sr_tcb_ctes_array_assertion[where
       tcb="tcb_ptr_to_ctcb_ptr t" for t, simplified])
-  apply (simp add: ptr_val_tcb_ptr_mask')
+  apply (simp add: ptr_val_tcb_ptr_mask)
   done
 
-lemma array_assertion_abs_tcb_ctes:
+lemma array_assertion_abs_tcb_ctes':
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> tcb_at' (ctcb_ptr_to_tcb_ptr (tcb s')) s \<and> (n s' \<le> unat tcbCNodeEntries)
-    \<longrightarrow> (x s' = 0 \<or> array_assertion (cte_Ptr (ptr_val (tcb s') && 0xFFFFFFFFFFFFFE00)) (n s') (hrs_htd (t_hrs_' (globals s'))))"
+    \<longrightarrow> (x s' = 0 \<or> array_assertion (cte_Ptr (ptr_val (tcb s') && ~~mask tcbBlockSizeBits)) (n s') (hrs_htd (t_hrs_' (globals s'))))"
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> tcb_at' tcb' s \<and> (n s' \<le> unat tcbCNodeEntries)
     \<longrightarrow> (x s' = 0 \<or> array_assertion (cte_Ptr tcb') (n s') (hrs_htd (t_hrs_' (globals s'))))"
   apply (safe intro!: disjCI2)
-   apply (drule(1) rf_sr_tcb_ctes_array_assertion rf_sr_tcb_ctes_array_assertion2
+   apply (drule(1) rf_sr_tcb_ctes_array_assertion' rf_sr_tcb_ctes_array_assertion2
      | erule array_assertion_shrink_right | simp)+
   done
 
-lemma array_assertion_abs_tcb_ctes_add:
+lemmas array_assertion_abs_tcb_ctes
+  = array_assertion_abs_tcb_ctes'[simplified objBits_defs mask_def, simplified]
+
+lemma array_assertion_abs_tcb_ctes_add':
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> tcb_at' (ctcb_ptr_to_tcb_ptr (tcb s')) s
         \<and> (n s' \<ge> 0 \<and> (case strong of True \<Rightarrow> n s' + 1 | False \<Rightarrow> n s') \<le> uint tcbCNodeEntries)
-    \<longrightarrow> ptr_add_assertion (cte_Ptr (ptr_val (tcb s') && 0xFFFFFFFFFFFFFE00)) (n s')
+    \<longrightarrow> ptr_add_assertion (cte_Ptr (ptr_val (tcb s') && ~~mask tcbBlockSizeBits)) (n s')
                 strong (hrs_htd (t_hrs_' (globals s')))"
-  apply (clarsimp, drule(1) rf_sr_tcb_ctes_array_assertion)
+  apply (clarsimp, drule(1) rf_sr_tcb_ctes_array_assertion')
   apply (simp add: ptr_add_assertion_positive, rule disjCI2)
   apply (erule array_assertion_shrink_right)
   apply (cases strong, simp_all add: unat_def)
   done
+
+lemmas array_assertion_abs_tcb_ctes_add
+  = array_assertion_abs_tcb_ctes_add'[simplified objBits_defs mask_def, simplified]
 
 lemmas ccorres_move_array_assertion_tcb_ctes [corres_pre]
     = ccorres_move_array_assertions [OF array_assertion_abs_tcb_ctes(1)]
@@ -97,22 +106,23 @@ lemmas ccorres_move_array_assertion_tcb_ctes [corres_pre]
       ccorres_move_Guard_Seq[OF array_assertion_abs_tcb_ctes_add]
       ccorres_move_Guard[OF array_assertion_abs_tcb_ctes_add]
 
-lemma c_guard_abs_tcb_ctes:
+lemma c_guard_abs_tcb_ctes':
   fixes p :: "cte_C ptr"
   shows "\<forall>s s'. (s, s') \<in> rf_sr \<and> tcb_at' (ctcb_ptr_to_tcb_ptr (tcb s')) s
-    \<and> (n < ucast tcbCNodeEntries) \<longrightarrow> s' \<Turnstile>\<^sub>c cte_Ptr (((ptr_val (tcb s') && 0xFFFFFFFFFFFFFE00)
-        + n * 0x20))"
+    \<and> (n < ucast tcbCNodeEntries) \<longrightarrow> s' \<Turnstile>\<^sub>c cte_Ptr (((ptr_val (tcb s') && ~~mask tcbBlockSizeBits)
+        + n * 2^cteSizeBits))"
   apply (clarsimp)
   apply (rule c_guard_abs_cte[rule_format], intro conjI, simp_all)
   apply (simp add: cte_at'_obj_at', rule disjI2)
   apply (frule ptr_val_tcb_ptr_mask)
-  apply (rule_tac x="n * 0x20" in bexI)
+  apply (rule_tac x="n * 2^cteSizeBits" in bexI)
    apply (simp add: mask_def)
-  apply (simp add: word_less_nat_alt tcbCNodeEntries_def tcb_cte_cases_def)
+  apply (simp add: word_less_nat_alt tcbCNodeEntries_def tcb_cte_cases_def objBits_defs)
   apply (case_tac "unat n", simp_all add: unat_eq_of_nat, rename_tac n_rem)
   apply (case_tac "n_rem", simp_all add: unat_eq_of_nat, (rename_tac n_rem)?)+
   done
 
+lemmas c_guard_abs_tcb_ctes = c_guard_abs_tcb_ctes'[simplified objBits_defs mask_def, simplified]
 lemmas ccorres_move_c_guard_tcb_ctes [corres_pre] = ccorres_move_c_guards  [OF c_guard_abs_tcb_ctes]
 
 lemma c_guard_abs_pte:

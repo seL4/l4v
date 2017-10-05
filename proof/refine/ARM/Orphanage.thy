@@ -1827,23 +1827,23 @@ lemma tc_no_orphans:
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp hoare_vcg_all_lift static_imp_wp setP_invs' | clarsimp)+)[2]
-   apply (rule hoare_pre)
-    apply ((simp only: simp_thms cong: conj_cong
-          | wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
-               checkCap_inv[where P="valid_cap' c" for c]
-               checkCap_inv[where P=sch_act_simple]
-               checkCap_inv[where P=no_orphans]
-               checkCap_inv[where P="tcb_at' a"]
-               threadSet_cte_wp_at'
-               hoare_vcg_all_lift_R hoare_vcg_all_lift
-               threadSet_no_orphans hoare_vcg_const_imp_lift_R
-               static_imp_wp hoare_drop_imp threadSet_ipcbuffer_invs
-          | strengthen invs_valid_queues'
-          | (simp add: locateSlotTCB_def locateSlotBasic_def objBits_def
-                       objBitsKO_def tcbIPCBufferSlot_def tcb_cte_cases_def,
-              wp hoare_return_sp)
-          | wpc | clarsimp)+)
-  apply (fastforce simp: isCap_simps dest!: isValidVTableRootD)
+  apply (rule hoare_pre)
+   apply ((simp only: simp_thms cong: conj_cong
+         | wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
+              checkCap_inv[where P="valid_cap' c" for c]
+              checkCap_inv[where P=sch_act_simple]
+              checkCap_inv[where P=no_orphans]
+              checkCap_inv[where P="tcb_at' a"]
+              threadSet_cte_wp_at'
+              hoare_vcg_all_lift_R hoare_vcg_all_lift
+              threadSet_no_orphans hoare_vcg_const_imp_lift_R
+              static_imp_wp hoare_drop_imp threadSet_ipcbuffer_invs
+         | strengthen invs_valid_queues'
+         | (simp add: locateSlotTCB_def locateSlotBasic_def objBits_def
+                      objBitsKO_def tcbIPCBufferSlot_def tcb_cte_cases_def,
+             wp hoare_return_sp)
+         | wpc | clarsimp)+)
+  apply (fastforce simp: objBits_defs isCap_simps dest!: isValidVTableRootD)
   done
 
 lemma bindNotification_no_orphans[wp]:

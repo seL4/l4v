@@ -336,7 +336,7 @@ definition
 definition
  "absCNode sz h a \<equiv> CNode sz (%bl.
   if length bl = sz
-    then Some (CapabilityMap (case (h (a + of_bl bl * 16)) of
+    then Some (CapabilityMap (case (h (a + of_bl bl * 2^cteSizeBits)) of
                                 Some (KOCTE cte) \<Rightarrow> cteCap cte))
   else None)"
 
@@ -643,8 +643,8 @@ proof -
      apply (cut_tac a=y and n=sz in gsCNodes, clarsimp)
     using pspace_aligned[simplified pspace_aligned_def]
      apply (drule_tac x=y in bspec, clarsimp)
-     apply (clarsimp simp: cte_level_bits_def)
-     apply (case_tac "(of_bl ya::word32) * 0x10 = 0", simp)
+     apply clarsimp
+     apply (case_tac "(of_bl ya::word32) * 2^cte_level_bits = 0", simp)
       apply (rule ext)
       apply simp
       apply (rule conjI)
@@ -658,7 +658,7 @@ proof -
        apply clarsimp+
       apply (frule pspace_relation_absD[OF _ pspace_relation])
       apply (simp add: cte_map_def)
-      apply (drule_tac x="y + of_bl bl * 0x10" in spec)
+      apply (drule_tac x="y + of_bl bl * 2^cte_level_bits" in spec)
       apply clarsimp
       apply (erule_tac x="cte_relation bl" in allE)
       apply (erule impE)
@@ -669,14 +669,14 @@ proof -
     using valid_objs[simplified valid_objs_def Ball_def dom_def fun_app_def]
        apply (erule_tac x=y in allE)
        apply (clarsimp simp: valid_obj_def valid_cs_def valid_cap_def2 ran_def)
-       apply fastforce+
-     apply (subgoal_tac "kheap s (y + of_bl ya * 0x10) = None")
+       apply (fastforce simp: cte_level_bits_def cteSizeBits_def)+
+     apply (subgoal_tac "kheap s (y + of_bl ya * 2^cte_level_bits) = None")
       prefer 2
     using valid_objs[simplified valid_objs_def Ball_def dom_def fun_app_def]
       apply (erule_tac x=y in allE)
       apply (clarsimp simp add: valid_obj_def valid_cs_def valid_cs_size_def)
       apply (rule pspace_aligned_distinct_None'[OF pspace_aligned pspace_distinct], assumption)
-      apply (clarsimp simp: cte_level_bits_def dom_def word_neq_0_conv power_add mult.commute[of 16])
+      apply (clarsimp simp: word_neq_0_conv power_add cte_index_repair)
       apply (simp add: well_formed_cnode_n_def dom_def Collect_eq)
       apply (erule_tac x=ya in allE)+
       apply (rule word_mult_less_mono1)
@@ -684,11 +684,11 @@ proof -
          apply simp
          apply (rule of_bl_length, (simp add: word_bits_def)+)[1]
         apply fastforce
-       apply simp
+       apply (simp add: cte_level_bits_def)
       apply (simp add: word_bits_conv cte_level_bits_def)
       apply (drule_tac a="2::nat" in power_strict_increasing, simp+)
      apply (rule ccontr, clarsimp)
-     apply (cut_tac a="y + of_bl ya * 0x10" and n=yc in gsCNodes)
+     apply (cut_tac a="y + of_bl ya * 2^cte_level_bits" and n=yc in gsCNodes)
      apply clarsimp
 
     (* mapping architecture-specific objects *)
@@ -853,7 +853,7 @@ definition
   "cteMap cns \<equiv> \<lambda>p.
    let P = (%(a,bl). cte_map (a,bl) = p \<and> cns a = Some (length bl))
    in if \<exists>x. P x then (SOME x. P x)
-      else (p && ~~ mask 9, bin_to_bl 3 (uint (p>>4)))"
+      else (p && ~~ mask tcbBlockSizeBits, bin_to_bl 3 (uint (p >> cte_level_bits)))"
 
 lemma wf_unique':
    "P (THE x. \<forall>y\<in>dom fun. length y = x) \<Longrightarrow>
@@ -888,30 +888,31 @@ lemma of_bl_mult_and_not_mask_eq:
   apply (drule (2) less_le_trans)
 done
 
+(* FIXME: move to generic theory. *)
 lemma bin_to_bl_of_bl_eq:
-  "\<lbrakk>is_aligned (a :: word32) n; length b + 4 \<le> n; length b + 4 < 32\<rbrakk>
-  \<Longrightarrow> bin_to_bl (length b) (uint ((a + of_bl b * 0x10) >> 4)) = b"
-apply (subst word_plus_and_or_coroll)
- apply (erule is_aligned_get_word_bits)
-  apply (rule is_aligned_AND_less_0)
-   apply (simp add: is_aligned_mask)
-  apply (rule order_less_le_trans)
-   apply (rule of_bl_length2)
-   apply (simp add: word_bits_conv cte_level_bits_def)
-  apply (simp add: two_power_increasing)
- apply simp
-apply (rule nth_equalityI)
- apply (simp only: len_bin_to_bl)
-apply (clarsimp simp only: len_bin_to_bl nth_bin_to_bl
-                           word_test_bit_def[symmetric])
-apply (simp add: nth_shiftr nth_shiftl
-                 shiftl_t2n[where n=4, simplified mult.commute,
-                            simplified, symmetric])
-apply (simp add: is_aligned_nth[THEN iffD1, rule_format]
-                 test_bit_of_bl nth_rev)
-apply (case_tac "b ! i", simp_all)
-apply arith
-done
+  "\<lbrakk>is_aligned (a::'a::len word) n; length b + c \<le> n; length b + c < LENGTH('a)\<rbrakk>
+  \<Longrightarrow> bin_to_bl (length b) (uint ((a + of_bl b * 2^c) >> c)) = b"
+  apply (subst word_plus_and_or_coroll)
+   apply (erule is_aligned_get_word_bits)
+    apply (rule is_aligned_AND_less_0)
+     apply (simp add: is_aligned_mask)
+    apply (rule order_less_le_trans)
+     apply (rule of_bl_length2)
+     apply (simp add: word_bits_conv cte_level_bits_def)
+    apply (simp add: two_power_increasing)
+   apply simp
+  apply (rule nth_equalityI)
+   apply (simp only: len_bin_to_bl)
+  apply (clarsimp simp only: len_bin_to_bl nth_bin_to_bl
+                             word_test_bit_def[symmetric])
+  apply (simp add: nth_shiftr nth_shiftl
+                   shiftl_t2n[where n=c, simplified mult.commute,
+                              simplified, symmetric])
+  apply (simp add: is_aligned_nth[THEN iffD1, rule_format]
+                   test_bit_of_bl nth_rev)
+  apply (case_tac "b ! i", simp_all)
+  apply arith
+  done
 
 lemma CNode_implies_KOCTE:
   "\<lbrakk>pspace_relation (kheap s) (ksPSpace s');
@@ -1011,10 +1012,12 @@ proof -
   apply (simp add: objBitsKO_def cte_map_def)
   apply (rule conjI[rotated])
   apply (drule tcb_cap_cases_length)
-  apply (frule_tac b=b in bin_to_bl_of_bl_eq, simp+)
+  apply (frule_tac b=b and c=cte_level_bits in bin_to_bl_of_bl_eq)
+    apply (fastforce simp: cte_level_bits_def objBits_defs)+
   apply (case_tac "b = [False, False, False]")
    apply (simp add: is_aligned_neg_mask_eq)
-  apply (frule_tac b=b in bin_to_bl_of_bl_eq, (simp add: tcb_cap_cases_length)+)
+  apply (frule_tac b=b in bin_to_bl_of_bl_eq)
+    apply (fastforce simp: tcb_cap_cases_length cte_level_bits_def objBits_defs)+
   apply (subgoal_tac "ksPSpace s' (cte_map (a, b)) = None")
    prefer 2
    apply (rule ccontr)
@@ -1029,33 +1032,36 @@ proof -
    apply (erule impE)
     apply (rule word_plus_mono_right)
      apply (cut_tac 'a=32 and xs=b in of_bl_length, simp add: word_bits_conv)
-     apply (drule_tac k=16 in word_mult_less_mono1, simp+)
+     apply (drule_tac k="2^cte_level_bits" in word_mult_less_mono1)
+       apply (fastforce simp: cte_level_bits_def objBits_defs)+
      apply (simp add: mask_def)
      apply (rule ccontr)
      apply (simp add: not_le)
-     apply (drule (1) less_trans, simp)
+     apply (drule (1) less_trans, fastforce simp: cte_level_bits_def objBits_defs)
     apply (drule is_aligned_no_overflow'[simplified mask_2pm1[symmetric]])
     apply (simp add: word_bits_conv)
    apply simp
    apply (erule impE)
     apply (drule is_aligned_no_overflow'[simplified mask_2pm1[symmetric]])
     apply (cut_tac 'a=32 and xs=b in of_bl_length, simp add: word_bits_conv)
-    apply (drule_tac k=16 in word_mult_less_mono1, simp+)
-    apply (subgoal_tac "(0x80::word32) < mask 9")
+    apply (drule_tac k="2^cte_level_bits" in word_mult_less_mono1)
+      apply (fastforce simp: cte_level_bits_def objBits_defs)+
+    apply (subgoal_tac "(0x80::word32) < mask tcbBlockSizeBits")
      prefer 2
-     apply (simp add: mask_def)
-    apply (rule_tac word_random, simp+)
-   apply (simp add: mult.commute[of _ 16]
-                    shiftl_t2n[of _ 4, simplified,symmetric])
+     apply (simp add: mask_def objBits_defs)
+    apply (rule_tac word_random, (fastforce simp: cte_level_bits_def objBits_defs)+)
+   apply (simp add: mult.commute[of _ "2^cte_level_bits"]
+                    shiftl_t2n[of _ cte_level_bits, simplified, symmetric])
    apply word_bitwise
    apply simp
    apply (case_tac b, simp)
    apply (rename_tac b, case_tac b, simp)
    apply (rename_tac b, case_tac b, simp)
-   apply (clarsimp simp add: test_bit_of_bl eval_nat_numeral)
+   apply (clarsimp simp add: test_bit_of_bl eval_nat_numeral cte_level_bits_def)
   apply (simp add: cte_map_def split: option.splits)
   apply (drule tcb_cap_cases_length)
-  apply (rule of_bl_mult_and_not_mask_eq[where m=4, simplified], simp+)
+  apply (rule of_bl_mult_and_not_mask_eq[where m=cte_level_bits, simplified])
+   apply (fastforce simp: cte_level_bits_def objBits_defs)+
   done
 qed
 

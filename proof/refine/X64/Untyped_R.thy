@@ -471,14 +471,16 @@ lemma ctes_of_ko:
     apply (case_tac zombie_type)
      apply (clarsimp simp: valid_cap'_def obj_at'_def)
      apply (intro exI conjI, assumption)
-     apply (clarsimp simp: projectKO_eq objBits_def obj_range'_def dest!:projectKO_opt_tcbD simp: objBitsKO_def)
+     apply (clarsimp simp: projectKO_eq objBits_simps' obj_range'_def dest!: projectKO_opt_tcbD)
     apply (clarsimp simp: valid_cap'_def obj_at'_def capAligned_def
-                          objBits_simps projectKOs)
-    apply (frule_tac ptr=ptr and sz=5 in nasty_range [where 'a=machine_word_len, folded word_bits_def], simp+)
+                          objBits_simps' projectKOs)
+    apply (frule_tac ptr=ptr and sz=cte_level_bits
+             in nasty_range [where 'a=machine_word_len, folded word_bits_def])
+     apply (simp add: cte_level_bits_def)+
     apply clarsimp
     apply (drule_tac x=idx in spec)
     apply (clarsimp simp: less_mask_eq)
-    apply (fastforce simp: obj_range'_def projectKOs objBits_simps field_simps)[1]
+    apply (fastforce simp: obj_range'_def projectKOs objBits_simps' field_simps)[1]
    -- "Arch cases"
    apply (rename_tac arch_capability)
    apply (case_tac arch_capability)
@@ -576,11 +578,13 @@ lemma ctes_of_ko:
   -- "CNode case"
   apply (clarsimp simp: valid_cap'_def obj_at'_def capAligned_def
                         objBits_simps projectKOs)
-  apply (frule_tac ptr=ptr and sz=5 in nasty_range [where 'a=machine_word_len, folded word_bits_def], simp+)
+  apply (frule_tac ptr=ptr and sz=cte_level_bits
+           in nasty_range [where 'a=machine_word_len, folded word_bits_def])
+    apply (simp add: cte_level_bits_def objBits_defs)+
   apply clarsimp
   apply (drule_tac x=idx in spec)
   apply (clarsimp simp: less_mask_eq)
-  apply (fastforce simp: obj_range'_def projectKOs objBits_simps field_simps)[1]
+  apply (fastforce simp: obj_range'_def projectKOs objBits_simps' field_simps)[1]
   done
 
 lemma untypedCap_descendants_range':
@@ -861,7 +865,7 @@ lemma decodeUntyped_wf[wp]:
    apply (rule less_imp_le)
    apply simp
   apply (subgoal_tac
-    "distinct (map (\<lambda>y. capCNodePtr dimNode + y * 0x20) [args ! 4 .e. args ! 4 + args ! 5 - 1])")
+    "distinct (map (\<lambda>y. capCNodePtr dimNode + y * 2^cte_level_bits) [args ! 4 .e. args ! 4 + args ! 5 - 1])")
    prefer 2
    apply (simp add: distinct_map upto_enum_def del: upt_Suc)
    apply (rule comp_inj_on)
@@ -873,7 +877,7 @@ lemma decodeUntyped_wf[wp]:
    apply (rule inj_onI)
    apply (clarsimp simp: toEnum_of_nat[OF less_Suc_unat_less_bound]
                          ucast_id isCap_simps)
-   apply (erule(2) inj_32)
+   apply (erule(2) inj_bits, simp add: cte_level_bits_def word_bits_def)
    apply (subst Suc_unat_diff_1)
     apply (rule word_le_plus_either,simp)
     apply (subst olen_add_eqv)
@@ -882,13 +886,13 @@ lemma decodeUntyped_wf[wp]:
    apply (drule(1) le_plus)
    apply (rule unat_le_helper)
    apply (erule order_trans)
-   apply (subst unat_power_lower64[symmetric], simp add: word_bits_def)
+   apply (subst unat_power_lower64[symmetric], simp add: word_bits_def cte_level_bits_def)
    apply (simp add: word_less_nat_alt[symmetric])
    apply (rule two_power_increasing)
     apply (clarsimp dest!:valid_capAligned
                      simp:capAligned_def objBits_def objBitsKO_def)
-    apply (simp_all add: word_bits_def)[2]
-  apply (clarsimp simp:  X64_H.fromAPIType_def)
+    apply (simp_all add: word_bits_def cte_level_bits_def objBits_defs)[2]
+  apply (clarsimp simp: X64_H.fromAPIType_def)
   apply (subgoal_tac "Suc (unat (args ! 4 + args ! 5 - 1))
       = unat (args ! 4) + unat (args ! 5)")
    prefer 2
@@ -898,13 +902,13 @@ lemma decodeUntyped_wf[wp]:
     apply (subst olen_add_eqv)
     apply (subst add.commute)
     apply (erule(1) plus_minus_no_overflow_ab)
-    apply (rule unat_plus_simple[THEN iffD1])
-    apply (subst olen_add_eqv)
-    apply (subst add.commute)
-    apply (erule(1) plus_minus_no_overflow_ab)
+   apply (rule unat_plus_simple[THEN iffD1])
+   apply (subst olen_add_eqv)
+   apply (subst add.commute)
+   apply (erule(1) plus_minus_no_overflow_ab)
   apply clarsimp
   apply (subgoal_tac "(\<forall>x. (args ! 4) \<le> x \<and> x \<le> (args ! 4) + (args ! 5) - 1 \<longrightarrow>
-    ex_cte_cap_wp_to' (\<lambda>_. True) (capCNodePtr dimNode + x * 0x20) s)")
+    ex_cte_cap_wp_to' (\<lambda>_. True) (capCNodePtr dimNode + x * 2^cteSizeBits) s)")
    prefer 2
    apply clarsimp
    apply (erule disjE)
@@ -934,8 +938,9 @@ lemma decodeUntyped_wf[wp]:
    apply (subst add.commute)
    apply (erule(1) plus_minus_no_overflow_ab)
   apply (intro conjI)
-   apply (clarsimp simp:of_nat_shiftR fromIntegral_def toInteger_nat
-     fromInteger_nat word_le_nat_alt of_nat_shiftR)
+   apply (simp add: objBits_defs cte_level_bits_def)
+   apply (clarsimp simp: of_nat_shiftR fromIntegral_def toInteger_nat
+                         fromInteger_nat word_le_nat_alt)
    apply (frule_tac n = "unat (args ! 5)"
         and bits = "(APIType_capBits (toEnum (unat (args ! 0))) (unat (args ! 1)))"
        in range_cover_stuff[where rv = 0,rotated -1])
@@ -948,26 +953,22 @@ lemma decodeUntyped_wf[wp]:
      apply (erule range_cover.sz)
     apply (simp add:range_cover_def)
    apply (simp add:empty_descendants_range_in')
-   apply (clarsimp simp:image_def isCap_simps nullPointer_def word_size
-                        cte_level_bits_def field_simps)
-
-   apply (rule conjI[rotated], clarsimp simp: isFrameType_def) (* peel of device goal *)
+   apply (clarsimp simp: image_def isCap_simps nullPointer_def word_size field_simps)
+   apply (rule conjI[rotated], clarsimp) (* peel of device goal *)
    apply (clarsimp simp: image_def isCap_simps nullPointer_def
-                         word_size cte_level_bits_def field_simps)
-   apply (drule_tac x = x in spec)+
+                         word_size field_simps)
+   apply (drule_tac x=x in spec)+
    apply simp
   apply (clarsimp simp: of_nat_shiftR fromIntegral_def toInteger_nat
-                        fromInteger_nat word_le_nat_alt of_nat_shiftR)
+                        fromInteger_nat word_le_nat_alt)
   apply (frule_tac n = "unat (args ! 5)"
         and bits = "(APIType_capBits (toEnum (unat (args ! 0))) (unat (args ! 1)))"
        in range_cover_stuff[rotated -1])
    apply (simp add:unat_1_0)+
-  apply (clarsimp simp:getFreeRef_def
-                        cte_level_bits_def field_simps)
-  apply (intro conjI; clarsimp)
-   apply (drule_tac x=x in spec)+
-   apply clarsimp
-  apply (clarsimp simp add:nullPointer_def word_size)
+  apply (clarsimp simp: getFreeRef_def objBits_simps' cte_level_bits_def field_simps)
+  apply (intro conjI; clarsimp simp: image_def word_size)
+  apply (drule_tac x=x in spec)+
+  apply clarsimp
   done
 
 lemma getCTE_known_cap:
@@ -5260,18 +5261,16 @@ lemma inv_untyped_corres':
   proof -
     fix cref reset ptr ptr_base us slots dev ao' sz sz' idx idx' s s'
 
-let ?ui = "Invocations_A.Retype cref reset ptr_base ptr (APIType_map2 (Inr ao')) us slots dev"
-let ?ui' = "Invocations_H.untyped_invocation.Retype (cte_map cref) reset
-  ptr_base ptr ao' us (map cte_map slots) dev"
+  let ?ui = "Invocations_A.Retype cref reset ptr_base ptr (APIType_map2 (Inr ao')) us slots dev"
+  let ?ui' = "Invocations_H.untyped_invocation.Retype
+                (cte_map cref) reset ptr_base ptr ao' us (map cte_map slots) dev"
 
-    assume       invs: "invs (s :: det_state)" "ct_active s" "valid_list s" "valid_sched s"
-    and         invs': "invs' s'" "ct_active' s'"
-    and            sr: "(s, s') \<in> state_relation"
-    and           vui: "valid_untyped_inv_wcap ?ui
-         (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)) s"
-        (is "valid_untyped_inv_wcap _ (Some ?cap) s")
-    and          vui': "valid_untyped_inv_wcap' ?ui'
-         (Some (UntypedCap dev (ptr && ~~ mask sz') sz' idx')) s'"
+    assume invs: "invs (s :: det_state)" "ct_active s" "valid_list s" "valid_sched s"
+    and   invs': "invs' s'" "ct_active' s'"
+    and      sr: "(s, s') \<in> state_relation"
+    and     vui: "valid_untyped_inv_wcap ?ui (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)) s"
+                 (is "valid_untyped_inv_wcap _ (Some ?cap) s")
+    and    vui': "valid_untyped_inv_wcap' ?ui' (Some (UntypedCap dev (ptr && ~~ mask sz') sz' idx')) s'"
     assume ui: "ui = ?ui" and ui': "ui' = ?ui'"
 
     have cte_at: "cte_wp_at (op = ?cap) cref s" (is "?cte_cond s")
@@ -5362,8 +5361,8 @@ let ?ui' = "Invocations_H.untyped_invocation.Retype (cte_map cref) reset
       apply (case_tac ao')
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type)
-        apply (clarsimp simp: APIType_capBits_def objBits_def arch_kobj_size_def default_arch_object_def
-          obj_bits_api_def APIType_map2_def objBitsKO_def slot_bits_def pageBitsForSize_def bit_simps)+
+        apply (clarsimp simp: APIType_capBits_def objBits_simps' arch_kobj_size_def default_arch_object_def
+                              obj_bits_api_def APIType_map2_def slot_bits_def pageBitsForSize_def bit_simps)+
       done
 
     have non_reset_idx_le[simp]: "\<not> reset \<Longrightarrow> idx < 2^sz"
@@ -6078,8 +6077,8 @@ lemma size_eq: "APIType_capBits ao' us = obj_bits_api (APIType_map2 (Inr ao')) u
     apply (case_tac ao')
       apply (rename_tac apiobject_type)
       apply (case_tac apiobject_type)
-      apply (clarsimp simp: APIType_capBits_def objBits_def arch_kobj_size_def default_arch_object_def
-        obj_bits_api_def APIType_map2_def objBitsKO_def slot_bits_def bit_simps pageBitsForSize_def)+
+      apply (clarsimp simp: APIType_capBits_def objBits_simps' arch_kobj_size_def default_arch_object_def
+                            obj_bits_api_def APIType_map2_def slot_bits_def bit_simps pageBitsForSize_def)+
     done
 
 lemma obj_at_in_obj_range':
@@ -6288,7 +6287,7 @@ lemma invokeUntyped_invs'':
     apply simp
     apply (intro conjI; assumption?)
           apply (erule is_aligned_weaken[OF range_cover.funky_aligned])
-          apply (simp add: APIType_capBits_def objBits_simps bit_simps
+          apply (simp add: APIType_capBits_def objBits_simps' bit_simps
                     split: object_type.split apiobject_type.split)[1]
          apply (cases reset)
           apply (clarsimp simp: bit_simps)

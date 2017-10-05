@@ -541,7 +541,7 @@ lemma threadSet_valid_queues'_no_state:
                 split del: if_split)
   apply (simp only: imp_conv_disj)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-     apply (wp setObject_ko_wp_at | simp add: objBits_simps)+
+     apply (wp setObject_ko_wp_at | simp add: objBits_simps')+
     apply (wp getObject_tcb_wp updateObject_default_inv
                | simp split del: if_split)+
   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs
@@ -847,8 +847,8 @@ lemma cte_map_tcb_0:
   by (simp add: cte_map_def tcb_cnode_index_def)
 
 lemma cte_map_tcb_1:
-  "cte_map (t, tcb_cnode_index 1) = t + 16"
-  by (simp add: cte_map_def tcb_cnode_index_def to_bl_1)
+  "cte_map (t, tcb_cnode_index 1) = t + 2^cteSizeBits"
+  by (simp add: cte_map_def tcb_cnode_index_def to_bl_1 objBits_defs cte_level_bits_def)
 
 lemma sameRegion_corres2:
   "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk>
@@ -1158,8 +1158,9 @@ lemma threadcontrol_corres_helper4:
        | strengthen  invs_valid_queues' invs_queues invs_weak_sch_act_wf
        | clarsimp simp: )+
   by (case_tac ac;
-      fastforce simp: capBadge_def isArchObjectCap_def isNotificationCap_def isEndpointCap_def
-                      isReplyCap_def isIRQControlCap_def tcb_cnode_index_def cte_map_def cte_wp_at'_def )+
+      clarsimp simp: capBadge_def isArchObjectCap_def isNotificationCap_def isEndpointCap_def
+                     isReplyCap_def isIRQControlCap_def tcb_cnode_index_def cte_map_def cte_wp_at'_def
+                     cte_level_bits_def)
 
 crunch valid_etcbs[wp]: arch_tcb_set_ipc_buffer valid_etcbs
 crunch weak_valid_sched_action[wp]: arch_tcb_set_ipc_buffer weak_valid_sched_action
@@ -1405,7 +1406,7 @@ proof -
      apply (rule cte_wp_at_tcbI, simp, fastforce, simp)
     apply (clarsimp simp: cte_map_def tcb_cnode_index_def obj_at'_def
                           projectKOs objBits_simps)
-    apply (erule(2) cte_wp_at_tcbI', fastforce, simp)
+    apply (erule(2) cte_wp_at_tcbI', fastforce simp: objBits_defs cte_level_bits_def, simp)
     done
   have U: "getThreadCSpaceRoot a = return (cte_map (a, tcb_cnode_index 0))"
     apply (clarsimp simp add: getThreadCSpaceRoot)
@@ -1414,7 +1415,7 @@ proof -
     done
   have V: "getThreadVSpaceRoot a = return (cte_map (a, tcb_cnode_index 1))"
     apply (clarsimp simp add: getThreadVSpaceRoot)
-    apply (simp add: cte_map_def tcb_cnode_index_def to_bl_1
+    apply (simp add: cte_map_def tcb_cnode_index_def to_bl_1 objBits_defs
                      cte_level_bits_def word_bits_def)
     done
   have X: "\<And>x P Q R M. (\<And>y. x = Some y \<Longrightarrow> \<lbrace>P y\<rbrace> M y \<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace>)
@@ -1485,11 +1486,12 @@ proof -
                            cap_asid_def vs_cap_ref_def
                     split: option.split_asm)
     by (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
-                          cte_map_tcb_0 cte_map_tcb_1[simplified]
-                          tcb_at_cte_at' cte_at_tcb_at_16' isCap_simps
-                          domIff valid_tcb'_def tcb_cte_cases_def
-                   split: option.split_asm
-                   dest!: isValidVTableRootD) (* long *)
+                       cte_map_tcb_0 cte_map_tcb_1[simplified]
+                       tcb_at_cte_at' cte_at_tcb_at_16' isCap_simps
+                       domIff valid_tcb'_def tcb_cte_cases_def
+                       objBits_defs
+                split: option.split_asm
+                dest!: isValidVTableRootD) (* long *)
 qed
 
 lemma isReplyCapD:
@@ -1557,7 +1559,7 @@ lemma tc_invs':
          | wp hoare_vcg_conj_liftE1 cteDelete_invs' cteDelete_deletes
               hoare_vcg_const_imp_lift
          )+)
-  apply (clarsimp simp: tcb_cte_cases_def cte_level_bits_def
+  apply (clarsimp simp: tcb_cte_cases_def cte_level_bits_def objBits_defs
                         tcbIPCBufferSlot_def)
   apply (auto dest!: isCapDs isReplyCapD isValidVTableRootD
                simp: isCap_simps)
@@ -2283,7 +2285,7 @@ lemma decode_set_space_corres:
               apply (rule corres_trivial, simp)
              apply simp
             apply (unfold whenE_def, wp+)[2]
-          apply (clarsimp simp: is_cap_simps get_tcb_vtable_ptr_def cte_map_tcb_1[simplified])
+          apply (clarsimp simp: is_cap_simps get_tcb_vtable_ptr_def cte_map_tcb_1[simplified] objBits_defs)
          apply simp
          apply (wp hoare_drop_imps)+
        apply (clarsimp simp: is_cap_simps get_tcb_ctable_ptr_def cte_map_tcb_0)
@@ -2427,7 +2429,7 @@ lemma decodeSetMCPriority_vop[wp]:
 
 lemma decodeTCBConf_wf[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t and cte_at' slot
-      and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile>' fst x \<and> cte_at' (snd x) s \<and> t \<noteq> snd x \<and> t + 16 \<noteq> snd x)\<rbrace>
+      and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile>' fst x \<and> cte_at' (snd x) s \<and> t \<noteq> snd x \<and> t + 2^cteSizeBits \<noteq> snd x)\<rbrace>
      decodeTCBConfigure args (ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
   apply (clarsimp simp add: decodeTCBConfigure_def Let_def
@@ -2455,7 +2457,7 @@ lemma decodeTCBConf_wf[wp]:
     apply wp
     apply (rule hoare_post_imp_R)
      apply (rule decodeSetPriority_wf_isThreadControl)
-    apply (fastforce simp: isThreadControl_def2)+
+    apply (fastforce simp: isThreadControl_def2 objBits_defs)+
   done
 
 lemma decodeTCBConf_inv[wp]:
@@ -2488,9 +2490,8 @@ lemma lsft_real_cte:
   done
 
 lemma tcb_real_cte_16:
-  "\<lbrakk> real_cte_at' (t+16) s; tcb_at' t s \<rbrakk> \<Longrightarrow> False"
-  by (clarsimp simp: obj_at'_def projectKOs objBits_simps
-                     ps_clear_16)
+  "\<lbrakk> real_cte_at' (t+2^cteSizeBits) s; tcb_at' t s \<rbrakk> \<Longrightarrow> False"
+  by (clarsimp simp: obj_at'_def projectKOs objBitsKO_def ps_clear_16)
 
 lemma isValidVTableRoot:
   "isValidVTableRoot c = (\<exists>p asid. c = ArchObjectCap (PageDirectoryCap p (Some asid)))"
@@ -2585,7 +2586,7 @@ lemma decode_tcb_inv_corres:
          (decodeTCBInvocation label args c' (cte_map slot) extras')"
   apply (rule_tac F="cap_aligned c \<and> capAligned c'" in corres_req)
    apply (clarsimp simp: cap_aligned_def capAligned_def objBits_simps word_bits_def)
-   apply (drule obj_at_aligned', simp_all add: objBits_simps)
+   apply (drule obj_at_aligned', simp_all add: objBits_simps')
   apply (clarsimp simp: decode_tcb_invocation_def
                         decodeTCBInvocation_def
              split del: if_split split: invocation_label.split)
@@ -2611,7 +2612,7 @@ crunch inv[wp]: decodeTCBInvocation P
 
 lemma real_cte_at_not_tcb_at':
   "real_cte_at' x s \<Longrightarrow> \<not> tcb_at' x s"
-  "real_cte_at' (x + 16) s \<Longrightarrow> \<not> tcb_at' x s"
+  "real_cte_at' (x + 2^cteSizeBits) s \<Longrightarrow> \<not> tcb_at' x s"
   apply (clarsimp simp: obj_at'_def projectKOs)
   apply (clarsimp elim!: tcb_real_cte_16)
   done
@@ -2654,7 +2655,7 @@ lemma decodeTCBInv_wf:
    apply (wpc, (wp decodeTCBConf_wf decodeReadReg_wf decodeWriteReg_wf
              decodeCopyReg_wf decodeBindNotification_wf decodeUnbindNotification_wf)+)
   apply (clarsimp simp: real_cte_at')
-  apply (fastforce simp: real_cte_at_not_tcb_at')
+  apply (fastforce simp: real_cte_at_not_tcb_at' objBits_defs)
   done
 
 lemma restart_makes_simple':

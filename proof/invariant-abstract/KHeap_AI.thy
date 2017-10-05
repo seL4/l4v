@@ -310,7 +310,7 @@ lemma set_object_ko:
   by (clarsimp simp add: valid_def set_object_def in_monad obj_at_def)
 
 
-lemma tcb_aligned: "\<lbrakk> invs s; tcb_at t s \<rbrakk> \<Longrightarrow> is_aligned t 9"
+lemma tcb_aligned: "\<lbrakk> invs s; tcb_at t s \<rbrakk> \<Longrightarrow> is_aligned t tcb_bits"
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                         pspace_aligned_def)
   apply (clarsimp simp: tcb_at_def, drule get_tcb_SomeD)

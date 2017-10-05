@@ -343,7 +343,7 @@ lemma pde_relation_alignedD:
 
 lemma objBits_2n:
   "(1 :: word32) < 2 ^ objBits obj"
-  by (simp add: objBits_def objBitsKO_def archObjSize_def vspace_bits_defs vcpu_bits_def
+  by (simp add: objBits_simps' archObjSize_def vspace_bits_defs vcpu_bits_def
          split: kernel_object.split arch_kernel_object.split)
 
 lemma magnitudeCheck_assert2:

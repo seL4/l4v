@@ -92,7 +92,7 @@ lemma resolveAddressBitsFn_eq:
   (is "monadic_rewrite F E (?P cap) (?f cap bits) (?g cap capptr bits)")
 proof (induct cap capptr bits rule: resolveAddressBits.induct)
   case (1 cap cref depth)
-  note resolveAddressBits.simps[simp del] resolveAddressBitsFn.simps[simp del]
+  note objBits_defs[simp]
 
   show ?case
     apply (subst resolveAddressBits.simps, subst resolveAddressBitsFn.simps)

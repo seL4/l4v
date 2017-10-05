@@ -981,7 +981,7 @@ lemma cancelBadgedSends_ccorres:
           apply (erule ko_at_projectKO_opt)
          apply (clarsimp simp: typ_heap_simps setEndpoint_def)
          apply (rule rev_bexI)
-          apply (rule setObject_eq; simp add: objBits_simps)[1]
+          apply (rule setObject_eq; simp add: objBits_simps')[1]
          apply (clarsimp simp: rf_sr_def cstate_relation_def
                                Let_def carch_state_relation_def
                                cmachine_state_relation_def
@@ -1022,7 +1022,7 @@ lemma cancelBadgedSends_ccorres:
               apply (case_tac x)
                apply (clarsimp simp: setEndpoint_def)
                apply (rule rev_bexI, rule setObject_eq,
-                      (simp add: objBits_simps)+)
+                      (simp add: objBits_simps')+)
                apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                  carch_state_relation_def
                  cmachine_state_relation_def
@@ -1034,7 +1034,7 @@ lemma cancelBadgedSends_ccorres:
               apply (clarsimp simp: tcb_at_not_NULL[OF pred_tcb_at']
                                     setEndpoint_def)
               apply (rule rev_bexI, rule setObject_eq,
-                      (simp add: objBits_simps)+)
+                      (simp add: objBits_simps')+)
               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                      carch_state_relation_def
                                      cmachine_state_relation_def
@@ -1198,7 +1198,7 @@ lemma cancelBadgedSends_ccorres:
         apply clarsimp
        apply (wp hoare_vcg_const_Ball_lift)
        apply (wp obj_at_setObject3[where 'a=endpoint, folded setEndpoint_def])
-         apply (simp add: objBits_simps)+
+         apply (simp add: objBits_simps')+
        apply (wp set_ep_valid_objs')
       apply vcg
      apply vcg
@@ -1227,7 +1227,7 @@ lemma cancelBadgedSends_ccorres:
 
 
 lemma tcb_ptr_to_ctcb_ptr_force_fold:
-  "x + 0x100 = ptr_val (tcb_ptr_to_ctcb_ptr x)"
+  "x + 2 ^ ctcb_size_bits = ptr_val (tcb_ptr_to_ctcb_ptr x)"
   by (simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
 
 

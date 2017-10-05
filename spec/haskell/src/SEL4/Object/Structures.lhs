@@ -30,6 +30,7 @@ This module uses the C preprocessor to select a target architecture.
 > import SEL4.Config (numPriorities, numDomains)
 > import SEL4.Machine
 > import SEL4.API.Types
+> import SEL4.API.Types.Universal
 > import SEL4.API.Failures
 
 > import SEL4.Object.Structures.TARGET
@@ -136,10 +137,10 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 >         KOArch       _ -> "Arch Specific"
 
 > objBitsKO :: KernelObject -> Int
-> objBitsKO (KOEndpoint _) = wordSizeCase 4 5
-> objBitsKO (KONotification _) = wordSizeCase 4 5
-> objBitsKO (KOCTE _) = wordSizeCase 4 5
-> objBitsKO (KOTCB _) = 9
+> objBitsKO (KOEndpoint _) = epSizeBits
+> objBitsKO (KONotification _) = ntfnSizeBits
+> objBitsKO (KOCTE _) = cteSizeBits
+> objBitsKO (KOTCB _) = tcbBlockSizeBits
 > objBitsKO (KOUserData) = pageBits
 > objBitsKO (KOUserDataDevice) = pageBits
 > objBitsKO (KOKernelData) = pageBits

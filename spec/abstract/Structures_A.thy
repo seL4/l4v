@@ -46,6 +46,7 @@ requalify_consts
   arch_tcb_context_get
   arch_tcb_context_set
   cte_level_bits
+  tcb_bits
   endpoint_bits
   ntfn_bits
 end
@@ -438,7 +439,7 @@ primrec
   obj_bits :: "kernel_object \<Rightarrow> nat"
 where
   "obj_bits (CNode sz cs) = cte_level_bits + sz"
-| "obj_bits (TCB t) = 9"
+| "obj_bits (TCB t) = tcb_bits"
 | "obj_bits (Endpoint ep) = endpoint_bits"
 | "obj_bits (Notification ntfn) = ntfn_bits"
 | "obj_bits (ArchObj ao) = arch_kobj_size ao"

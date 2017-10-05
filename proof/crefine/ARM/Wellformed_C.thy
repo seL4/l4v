@@ -117,9 +117,16 @@ definition
   "cte_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: cte_C typ_heap)"
 
 definition
+  ctcb_size_bits :: nat
+  where
+  "ctcb_size_bits \<equiv> 8"
+
+definition
   ctcb_offset :: word32
   where
-  "ctcb_offset \<equiv> 2 ^ 8"
+  "ctcb_offset \<equiv> 2 ^ ctcb_size_bits"
+
+lemmas ctcb_offset_defs = ctcb_offset_def ctcb_size_bits_def
 
 definition
   ctcb_ptr_to_tcb_ptr :: "tcb_C ptr \<Rightarrow> word32"
@@ -426,11 +433,11 @@ lemma  c_valid_cap_simps [simp]:
   by (simp add: cl_valid_cap_def)+
 
 lemma ptr_val_tcb_ptr_mask2:
-  "is_aligned thread 9
-      \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr thread) && (~~ mask 9)
+  "is_aligned thread tcbBlockSizeBits
+      \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr thread) && (~~ mask tcbBlockSizeBits)
                   = thread"
   apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def projectKOs)
-  apply (simp add: is_aligned_add_helper ctcb_offset_def objBits_simps)
+  apply (simp add: is_aligned_add_helper ctcb_offset_defs objBits_simps')
   done
 
 lemma maxDom_to_H:

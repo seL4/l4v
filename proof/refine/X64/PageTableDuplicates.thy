@@ -140,7 +140,7 @@ lemma in_new_cap_addrs_aligned:
   apply (clarsimp simp:new_cap_addrs_def image_def)
   apply (erule aligned_add_aligned)
     apply (rule is_aligned_weaken[OF is_aligned_shiftl_self])
-    apply (case_tac ko,simp_all add:objBits_simps word_bits_def
+    apply (case_tac ko,simp_all add:objBits_simps' word_bits_def
        pageBits_def archObjSize_def split:arch_kernel_object.splits)
   done
 
@@ -173,7 +173,7 @@ lemma new_CapTable_bound:
     \<Longrightarrow> tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> us < 61"
   apply (frule range_cover.sz)
   apply (drule range_cover.sz(2))
-  apply (clarsimp simp:APIType_capBits_def objBits_simps word_bits_def)
+  apply (clarsimp simp:APIType_capBits_def objBits_simps' word_bits_def)
   done
 
 lemma mapM_x_mapM_valid:

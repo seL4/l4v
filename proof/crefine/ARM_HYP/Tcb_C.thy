@@ -121,7 +121,7 @@ lemma getObject_state:
   apply (rule conjI)
    apply clarsimp
    apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad
-                         Corres_C.in_magnitude_check' projectKOs objBits_simps)
+                         Corres_C.in_magnitude_check' projectKOs objBits_simps')
    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs objBits_simps)
    apply (simp add: magnitudeCheck_def in_monad split: option.splits)
    apply clarsimp
@@ -139,7 +139,7 @@ lemma getObject_state:
    apply (drule is_aligned_no_overflow, simp add: word_bits_def)
   apply clarsimp
   apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad
-                        Corres_C.in_magnitude_check' projectKOs objBits_simps)
+                        Corres_C.in_magnitude_check' projectKOs objBits_simps')
   apply (simp add: magnitudeCheck_def in_monad split: option.splits)
   apply clarsimp
   apply (simp add: lookupAround2_char2)
@@ -207,7 +207,7 @@ lemma asUser_state:
   apply (erule conjI)
   apply (clarsimp simp: setObject_def split_def updateObject_default_def threadGet_def
                         in_magnitude_check' getObject_def loadObject_default_def liftM_def
-                        objBits_simps projectKOs in_monad)
+                        objBits_simps' projectKOs in_monad)
   apply (simp split: if_split)
   apply (rule conjI)
    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
@@ -837,7 +837,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                             cte_level_bits_def from_bool_def true_def size_of_def)
            apply (clarsimp simp: case_option_If2 if_n_0_0)
            apply (simp add: valid_cap'_def capAligned_def)
-           apply (clarsimp simp: objBits_simps word_bits_conv
+           apply (clarsimp simp: objBits_simps' word_bits_conv
                                  obj_at'_def projectKOs)
           apply (rule ccorres_Cond_rhs_Seq)
            apply (rule ccorres_rhs_assoc)+
@@ -999,8 +999,8 @@ lemma invokeTCB_ThreadControl_ccorres:
   apply (subst is_aligned_neg_mask [OF _ order_refl])
    apply (simp add: tcb_ptr_to_ctcb_ptr_def)
    apply (rule aligned_add_aligned)
-     apply (fastforce simp add: obj_at'_def projectKOs objBits_simps)
-    apply (simp add: ctcb_offset_def is_aligned_def)
+     apply (fastforce simp add: obj_at'_def projectKOs objBits_simps')
+    apply (simp add: ctcb_offset_defs is_aligned_def)
    apply (simp add: word_bits_conv)
   apply simp
   apply (subgoal_tac "s \<turnstile>' capability.ThreadCap target")
@@ -1009,8 +1009,8 @@ lemma invokeTCB_ThreadControl_ccorres:
                          tcb_cte_cases_def isCap_simps
                   split: option.split_asm
                   dest!: isValidVTableRootD)
-  apply (clarsimp simp: valid_cap'_def capAligned_def  word_bits_conv
-                        obj_at'_def objBits_simps projectKOs)
+  apply (clarsimp simp: valid_cap'_def capAligned_def word_bits_conv
+                        obj_at'_def objBits_simps' projectKOs)
   done
 
 lemma setupReplyMaster_ccorres:
@@ -1060,7 +1060,7 @@ lemma setupReplyMaster_ccorres:
           apply (simp add: cap_reply_cap_lift)
           apply (subst is_aligned_neg_mask)
             apply (erule is_aligned_tcb_ptr_to_ctcb_ptr)
-           apply simp
+           apply (simp add: ctcb_size_bits_def)
           apply (simp add: true_def mask_def to_bool_def)
          apply simp
         apply (simp add: cmachine_state_relation_def
@@ -1305,7 +1305,7 @@ lemma getObject_context:
   apply (rule conjI)
    apply clarsimp
    apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad
-                         Corres_C.in_magnitude_check' projectKOs objBits_simps)
+                         Corres_C.in_magnitude_check' projectKOs objBits_simps')
    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs objBits_simps)
    apply (simp add: magnitudeCheck_def in_monad split: option.splits)
    apply clarsimp
@@ -1324,7 +1324,7 @@ lemma getObject_context:
    apply simp
   apply clarsimp
   apply (clarsimp simp: getObject_def split_def loadObject_default_def in_monad
-                        Corres_C.in_magnitude_check' projectKOs objBits_simps)
+                        Corres_C.in_magnitude_check' projectKOs objBits_simps')
   apply (simp add: magnitudeCheck_def in_monad split: option.splits)
   apply clarsimp
   apply (simp add: lookupAround2_char2)
@@ -1394,7 +1394,7 @@ lemma asUser_context:
   apply (erule conjI)
   apply (clarsimp simp: setObject_def split_def updateObject_default_def threadGet_def
                         Corres_C.in_magnitude_check' getObject_def loadObject_default_def liftM_def
-                        objBits_simps projectKOs in_monad)
+                        objBits_simps' projectKOs in_monad)
 
   apply (clarsimp simp: magnitudeCheck_def in_monad split: option.splits)
   apply (rule conjI)
@@ -2832,11 +2832,11 @@ lemma tcb_at_capTCBPtr_CL:
   "ccap_relation cp cap \<Longrightarrow> valid_cap' cp s
     \<Longrightarrow> isThreadCap cp
     \<Longrightarrow> tcb_at' (cap_thread_cap_CL.capTCBPtr_CL
-        (cap_thread_cap_lift cap) && 0xFFFFFE00) s"
+        (cap_thread_cap_lift cap) && ~~mask tcbBlockSizeBits) s"
   apply (clarsimp simp: cap_get_tag_isCap[symmetric]
                         valid_cap_simps'
                  dest!: cap_get_tag_to_H)
-  apply (frule ctcb_ptr_to_tcb_ptr_mask[OF tcb_aligned'], simp add: mask_def)
+  apply (frule ctcb_ptr_to_tcb_ptr_mask[OF tcb_aligned'], simp)
   done
 
 lemma prioPropsFromWord_spec:
@@ -3225,7 +3225,7 @@ lemma decodeTCBConfigure_ccorres:
                          apply (rule_tac P="{s. cRootCap_' s = cRootCap \<and> vRootCap_' s = vRootCap
                                                 \<and> bufferAddr_' s = args ! 4
                                                 \<and> ccap_relation cp cap' \<and> isThreadCap cp
-                                                \<and> is_aligned (capTCBPtr cp) 9
+                                                \<and> is_aligned (capTCBPtr cp) tcbBlockSizeBits
                                                 \<and> ksCurThread_' (globals s) = tcb_ptr_to_ctcb_ptr thread}"
                                   in conseqPre)
                           apply (simp add: cong: option.case_cong)
@@ -3238,12 +3238,13 @@ lemma decodeTCBConfigure_ccorres:
                          apply (frule interpret_excaps_eq[rule_format, where n=2], clarsimp)
                          apply (clarsimp simp: mask_def[where n=4] ccap_rights_relation_def
                                                rightsFromWord_wordFromRights capTCBPtr_eq
-                                               ptr_val_tcb_ptr_mask2[unfolded mask_def, simplified]
+                                               ptr_val_tcb_ptr_mask2[unfolded mask_def objBits_defs, simplified]
                                                tcb_cnode_index_defs size_of_def
                                                option_to_0_def rf_sr_ksCurThread
                                                StrictC'_thread_state_defs mask_eq_iff_w2p word_size
                                                thread_control_update_all_or
-                                               from_bool_all_helper all_ex_eq_helper)
+                                               from_bool_all_helper all_ex_eq_helper
+                                               ucast_ucast_mask objBits_defs)
                          apply (subgoal_tac "args \<noteq> [] \<and> extraCaps \<noteq> []")
                           apply (simp add: word_sle_def cap_get_tag_isCap numeral_eqs
                                            hd_conv_nth hd_drop_conv_nth2 ucast_ucast_mask8
@@ -3251,10 +3252,9 @@ lemma decodeTCBConfigure_ccorres:
                                            thread_control_update_priority_def
                                            thread_control_update_mcp_def
                                            thread_control_update_space_def
-                                           thread_control_update_ipc_buffer_def
-                                           cast_simps)
-                          apply (auto split: option.split elim!: inl_inrE, fastforce?)[1]
-                         apply fastforce
+                                           thread_control_update_ipc_buffer_def)
+                          apply (auto split: option.split elim!: inl_inrE)[1]
+                          apply fastforce+
                         apply simp
                         apply (rule_tac P'="{s. err' = errstate s}"
                                  in  ccorres_from_vcg_split_throws[where P=\<top>])
@@ -3313,7 +3313,7 @@ lemma decodeTCBConfigure_ccorres:
    apply (clarsimp simp: cte_wp_at_ctes_of valid_tcb_state'_def numeral_eqs le_ucast_ucast_le
                          tcb_at_invs' invs_valid_objs' invs_queues invs_sch_act_wf'
                          ct_in_state'_def pred_tcb_at'_def obj_at'_def tcb_st_refs_of'_def)
-   apply (erule disjE; simp)
+   apply (erule disjE; simp add: objBits_defs mask_def)
   apply (clarsimp simp: idButNot_def interpret_excaps_test_null
                         excaps_map_def neq_Nil_conv word_sle_def word_sless_def)
   apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
@@ -3642,12 +3642,13 @@ lemma decodeSetIPCBuffer_ccorres:
   done
 
 lemma bindNTFN_alignment_junk:
-  "is_aligned t 9 \<Longrightarrow> (t + 0x100) && ~~ mask 4 = (t + 0x100 :: word32)"
+  "\<lbrakk> is_aligned tcb tcbBlockSizeBits; bits \<le> ctcb_size_bits \<rbrakk>
+    \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr tcb) && ~~ mask bits = ptr_val (tcb_ptr_to_ctcb_ptr tcb)"
+  apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def projectKOs)
   apply (rule aligned_neg_mask)
   apply (erule aligned_add_aligned)
-   apply (simp add: is_aligned_def)
-  apply simp
-  done
+   apply (erule is_aligned_weaken[rotated])
+   by (auto simp add: is_aligned_def objBits_defs ctcb_offset_defs)
 
 lemma bindNotification_ccorres:
   "ccorres dc xfdc (invs' and tcb_at' tcb)
@@ -3678,13 +3679,12 @@ lemma bindNotification_ccorres:
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
                apply (case_tac "ntfnObj rv")
-                 apply ((clarsimp simp: option_to_ctcb_ptr_def
-                                  tcb_ptr_to_ctcb_ptr_def ctcb_offset_def obj_at'_def projectKOs
-                                  objBitsKO_def bindNTFN_alignment_junk)+)[4]
+                 apply (auto simp: option_to_ctcb_ptr_def obj_at'_def objBits_simps projectKOs
+                                   bindNTFN_alignment_junk)[4]
              apply (simp add: carch_state_relation_def typ_heap_simps')
             apply (simp add: cmachine_state_relation_def)
            apply (simp add: h_t_valid_clift_Some_iff)
-          apply (simp add: objBits_simps)
+          apply (simp add: objBits_simps')
          apply (simp add: objBits_simps)
         apply assumption
        apply ceqv
@@ -4266,7 +4266,7 @@ lemma decodeSetSpace_ccorres:
    apply (rule conjI, clarsimp simp: sysargs_rel_n_def n_msgRegisters_def)
    apply (rule conjI, clarsimp simp: sysargs_rel_n_def n_msgRegisters_def)
    apply (frule(2) tcb_at_capTCBPtr_CL)
-   apply (auto simp: isCap_simps valid_tcb_state'_def
+   apply (auto simp: isCap_simps valid_tcb_state'_def objBits_defs mask_def
               elim!: pred_tcb'_weakenE
               dest!: st_tcb_at_idle_thread' interpret_excaps_eq)[1]
   apply (clarsimp simp: linorder_not_le interpret_excaps_test_null
@@ -4283,7 +4283,7 @@ lemma decodeSetSpace_ccorres:
   apply (subgoal_tac "args \<noteq> []")
    apply (clarsimp simp: hd_conv_nth)
    apply (drule sym, simp, simp add: true_def from_bool_0)
-   apply clarsimp
+   apply (clarsimp simp: objBits_defs)
    apply fastforce
   apply clarsimp
   done

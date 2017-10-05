@@ -99,7 +99,7 @@ lemma ccorres_req:
   done
 
 lemma valid_cap_cte_at':
-  "\<lbrakk>isCNodeCap cap; valid_cap' cap s'\<rbrakk> \<Longrightarrow> cte_at' (capCNodePtr cap + 0x10 * (addr && mask (capCNodeBits cap))) s'"
+  "\<lbrakk>isCNodeCap cap; valid_cap' cap s'\<rbrakk> \<Longrightarrow> cte_at' (capCNodePtr cap + 2^cteSizeBits * (addr && mask (capCNodeBits cap))) s'"
   apply (clarsimp simp: isCap_simps valid_cap'_def)
   apply (rule real_cte_at')
   apply (erule spec)
@@ -559,7 +559,7 @@ next
           apply arith
          apply (clarsimp simp: isCap_simps cte_level_bits_def
                                option.split[where P="\<lambda>x. x"])
-        apply (clarsimp simp: isCap_simps valid_cap_simps' cte_level_bits_def
+        apply (clarsimp simp: isCap_simps valid_cap_simps' cte_level_bits_def objBits_defs
                               real_cte_at')
        apply (clarsimp simp: isCap_simps valid_cap'_def)
        -- "C guard"
@@ -568,10 +568,10 @@ next
         n_bits_guard mask6_eqs word_le_nat_alt word_less_nat_alt gm)
       apply (elim conjE)
       apply (frule rf_sr_cte_at_valid [where p =
-        "cte_Ptr (capCNodePtr cap + 0x10 * ((cptr >> guard - (capCNodeBits cap + capCNodeGuardSize cap)) && mask (capCNodeBits cap)))", rotated])
+        "cte_Ptr (capCNodePtr cap + 2^cteSizeBits * ((cptr >> guard - (capCNodeBits cap + capCNodeGuardSize cap)) && mask (capCNodeBits cap)))", rotated])
        apply simp
        apply (erule (1) valid_cap_cte_at')
-      apply simp
+      apply (simp add: objBits_defs)
       apply (frule(2) gm)
       apply (simp add: word_less_nat_alt word_le_nat_alt less_mask_eq)
       apply (intro impI conjI allI, simp_all)
@@ -633,7 +633,7 @@ lemma to_bool_false [simp]:
 
 (* MOVE *)
 lemma tcb_aligned':
-  "tcb_at' t s \<Longrightarrow> is_aligned t 9"
+  "tcb_at' t s \<Longrightarrow> is_aligned t tcbBlockSizeBits"
   apply (drule obj_at_aligned')
    apply (simp add: objBits_simps)
   apply (simp add: objBits_simps)
@@ -641,14 +641,15 @@ lemma tcb_aligned':
 
 (* FIXME: FROM ArchAcc.thy *)
 lemma add_mask_lower_bits:
-  "\<lbrakk> is_aligned (x :: 'a :: len word) n; \<forall>n' \<ge> n. n' < len_of TYPE('a) \<longrightarrow> \<not> p !! n' \<rbrakk> \<Longrightarrow> x + p && ~~mask n = x"
+  "\<lbrakk> len = len_of TYPE('a); is_aligned (x :: 'a :: len word) n; \<forall>n' \<ge> n. n' < len \<longrightarrow> \<not> p !! n' \<rbrakk>
+    \<Longrightarrow> x + p && ~~mask n = x"
   apply (subst word_plus_and_or_coroll)
    apply (rule word_eqI)
    apply (clarsimp simp: word_size is_aligned_nth)
    apply (erule_tac x=na in allE)+
    apply simp
   apply (rule word_eqI)
-  apply (clarsimp simp: word_size is_aligned_nth nth_mask word_ops_nth_size)
+  apply (clarsimp simp: word_size is_aligned_nth word_ops_nth_size)
   apply (erule_tac x=na in allE)+
   apply (case_tac "na < n")
    apply simp
@@ -657,13 +658,12 @@ lemma add_mask_lower_bits:
 
 lemma tcb_ptr_to_ctcb_ptr_mask [simp]:
   assumes tcbat: "tcb_at' thread s"
-  shows   "ptr_val (tcb_ptr_to_ctcb_ptr thread) && 0xFFFFFE00 = thread"
+  shows   "ptr_val (tcb_ptr_to_ctcb_ptr thread) && ~~mask tcbBlockSizeBits = thread"
 proof -
-  have "thread + 2 ^ 8 && ~~ mask 9 = thread"
+  have "thread + ctcb_offset && ~~ mask tcbBlockSizeBits = thread"
   proof (rule add_mask_lower_bits)
-    show "is_aligned thread 9" using tcbat by (rule tcb_aligned')
-    show "\<forall>n'\<ge>9. n' < len_of TYPE(32) \<longrightarrow> \<not> ((2 :: word32) ^ 8) !! n'"  by simp
-  qed
+    show "is_aligned thread tcbBlockSizeBits" using tcbat by (rule tcb_aligned')
+  qed (auto simp: word_bits_def ctcb_offset_defs objBits_defs)
   thus ?thesis
     unfolding tcb_ptr_to_ctcb_ptr_def ctcb_offset_def
     by (simp add: mask_def)

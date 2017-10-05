@@ -101,6 +101,7 @@ requalify_facts
   cte_level_bits_def
 
 lemmas [simp] =
+  tcb_bits_def
   endpoint_bits_def
   ntfn_bits_def
 

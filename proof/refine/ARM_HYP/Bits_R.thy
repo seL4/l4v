@@ -12,10 +12,6 @@ theory Bits_R
 imports Corres
 begin
 
-
-
-
-
 crunch_ignore (add:
   bind return "when" get gets fail
   assert put modify unless select
@@ -164,7 +160,7 @@ lemma capAligned_epI:
   apply (drule ko_wp_at_norm)
   apply clarsimp
   apply (drule ko_wp_at_aligned)
-  apply (simp add: objBits_simps projectKOs capUntypedPtr_def isCap_simps)
+  apply (simp add: objBits_simps' projectKOs capUntypedPtr_def isCap_simps)
   done
 
 lemma capAligned_ntfnI:
@@ -172,7 +168,7 @@ lemma capAligned_ntfnI:
   apply (clarsimp simp: obj_at'_real_def capAligned_def
                         objBits_simps word_bits_def capUntypedPtr_def isCap_simps)
   apply (fastforce dest: ko_wp_at_norm
-                  dest!: ko_wp_at_aligned simp: objBits_simps projectKOs)
+                  dest!: ko_wp_at_aligned simp: objBits_simps' projectKOs)
   done
 
 lemma capAligned_tcbI:
@@ -180,7 +176,7 @@ lemma capAligned_tcbI:
   apply (clarsimp simp: obj_at'_real_def capAligned_def
                         objBits_simps word_bits_def capUntypedPtr_def isCap_simps)
   apply (fastforce dest: ko_wp_at_norm
-                  dest!: ko_wp_at_aligned simp: objBits_simps projectKOs)
+                  dest!: ko_wp_at_aligned simp: objBits_simps' projectKOs)
   done
 
 lemma capAligned_reply_tcbI:
@@ -188,7 +184,7 @@ lemma capAligned_reply_tcbI:
   apply (clarsimp simp: obj_at'_real_def capAligned_def
                         objBits_simps word_bits_def capUntypedPtr_def isCap_simps)
   apply (fastforce dest: ko_wp_at_norm
-                  dest!: ko_wp_at_aligned simp: objBits_simps projectKOs)
+                  dest!: ko_wp_at_aligned simp: objBits_simps' projectKOs)
   done
 
 lemma ko_at_valid_objs':
@@ -406,7 +402,7 @@ lemma ko_at_imp_cte_wp_at':
   fixes x :: cte
   shows "\<lbrakk> ko_at' x ptr s \<rbrakk> \<Longrightarrow> cte_wp_at' (\<lambda>cte. cte = x) ptr s"
   apply (erule obj_atE')
-  apply (clarsimp simp: projectKOs objBits_simps)
+  apply (clarsimp simp: projectKOs objBits_simps')
   apply (erule cte_wp_at_cteI')
     apply (simp add: cte_level_bits_def)+
   done
@@ -533,12 +529,12 @@ proof (rule iffI)
   hence "is_aligned (t + x - y) 9" using pal
     apply -
     apply (erule obj_atE')
-    apply (simp add: projectKOs objBits_simps)
+    apply (simp add: projectKOs objBits_simps')
     done
   moreover from tat pal have "is_aligned t 9"
     apply -
     apply (erule obj_atE')
-    apply (simp add: projectKOs objBits_simps)
+    apply (simp add: projectKOs objBits_simps')
     done
   ultimately show "x = y" using csx csy
     apply -

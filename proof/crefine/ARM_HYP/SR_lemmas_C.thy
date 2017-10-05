@@ -315,14 +315,16 @@ lemma cmdbnode_relation_mdb_node_to_H [simp]:
 (* MOVE --- here down doesn't really belong here, maybe in a haskell specific file?*)
 lemma tcb_cte_cases_in_range1:
   assumes tc:"tcb_cte_cases (y - x) = Some v"
-  and     al: "is_aligned x 9"
+  and     al: "is_aligned x tcbBlockSizeBits"
   shows   "x \<le> y"
 proof -
-  from tc obtain q where yq: "y = x + q" and qv: "q < 2 ^ 9"
+  note objBits_defs[simp]
+
+  from tc obtain q where yq: "y = x + q" and qv: "q < 2 ^ tcbBlockSizeBits"
     unfolding tcb_cte_cases_def
     by (simp add: diff_eq_eq split: if_split_asm)
 
-  have "x \<le> x + 2 ^ 9 - 1" using al
+  have "x \<le> x + 2 ^ tcbBlockSizeBits - 1" using al
     by (rule is_aligned_no_overflow)
 
   hence "x \<le> x + q" using qv
@@ -336,14 +338,16 @@ qed
 
 lemma tcb_cte_cases_in_range2:
   assumes tc: "tcb_cte_cases (y - x) = Some v"
-  and     al: "is_aligned x 9"
-  shows   "y \<le> x + 2 ^ 9 - 1"
+  and     al: "is_aligned x tcbBlockSizeBits"
+  shows   "y \<le> x + 2 ^ tcbBlockSizeBits - 1"
 proof -
-  from tc obtain q where yq: "y = x + q" and qv: "q \<le> 2 ^ 9 - 1"
+  note objBits_defs[simp]
+
+  from tc obtain q where yq: "y = x + q" and qv: "q \<le> 2 ^ tcbBlockSizeBits - 1"
     unfolding tcb_cte_cases_def
     by (simp add: diff_eq_eq split: if_split_asm)
 
-  have "x + q \<le> x + (2 ^ 9 - 1)" using qv
+  have "x + q \<le> x + (2 ^ tcbBlockSizeBits - 1)" using qv
     apply (rule word_plus_mono_right)
     apply (rule is_aligned_no_overflow' [OF al])
     done
@@ -365,7 +369,7 @@ lemma updateObject_cte_tcb:
   using tc unfolding tcb_cte_cases_def
   apply -
   apply (clarsimp simp add: updateObject_cte Let_def
-    tcb_cte_cases_def objBits_simps tcbSlots shiftl_t2n
+    tcb_cte_cases_def objBits_simps' tcbSlots shiftl_t2n
     split: if_split_asm cong: if_cong)
   done
 
@@ -382,15 +386,15 @@ lemma tcb_cte_cases_proj_eq [simp]:
   by (auto split: if_split_asm)
 
 lemma map_to_ctes_upd_cte':
-  "\<lbrakk> ksPSpace s p = Some (KOCTE cte'); is_aligned p 4; ps_clear p 4 s \<rbrakk>
+  "\<lbrakk> ksPSpace s p = Some (KOCTE cte'); is_aligned p cte_level_bits; ps_clear p cte_level_bits s \<rbrakk>
   \<Longrightarrow> map_to_ctes (ksPSpace s(p |-> KOCTE cte)) = (map_to_ctes (ksPSpace s))(p |-> cte)"
   apply (erule (1) map_to_ctes_upd_cte)
-  apply (simp add: field_simps ps_clear_def3)
+  apply (simp add: field_simps ps_clear_def3 cte_level_bits_def mask_def)
   done
 
 lemma map_to_ctes_upd_tcb':
-  "[| ksPSpace s p = Some (KOTCB tcb'); is_aligned p 9;
-   ps_clear p 9 s |]
+  "[| ksPSpace s p = Some (KOTCB tcb'); is_aligned p tcbBlockSizeBits;
+   ps_clear p tcbBlockSizeBits s |]
 ==> map_to_ctes (ksPSpace s(p |-> KOTCB tcb)) =
     (%x. if EX getF setF.
                tcb_cte_cases (x - p) = Some (getF, setF) &
@@ -399,7 +403,7 @@ lemma map_to_ctes_upd_tcb':
               Some (getF, setF) => Some (getF tcb)
          else ctes_of s x)"
   apply (erule (1) map_to_ctes_upd_tcb)
-  apply (simp add: field_simps ps_clear_def3)
+  apply (simp add: field_simps ps_clear_def3 mask_def objBits_defs)
   done
 
 
@@ -444,19 +448,19 @@ lemma fst_setCTE0:
    apply (simp add: return_def updateObject_cte
      bind_def assert_opt_def gets_def split_beta get_def
      modify_def put_def unless_def when_def
-     cte_level_bits_def objBits_simps
+     objBits_simps
      cong: bex_cong)
    apply (rule bexI [where x = "((), s)"])
     apply (frule_tac s' = s in in_magnitude_check [where v = "()"])
-      apply simp
+      apply (simp add: cte_level_bits_def)
      apply assumption
-    apply simp
+    apply (simp add: cte_level_bits_def objBits_defs)
     apply (erule bexI [rotated])
     apply (simp  cong: if_cong)
     apply rule
     apply (simp split: kernel_object.splits)
     apply (fastforce simp: tcb_no_ctes_proj_def)
-   apply (simp add: in_alignCheck)
+   apply (simp add: cte_level_bits_def objBits_defs)
   (* clag *)
   apply (rule ps_clear_lookupAround2, assumption+)
     apply (erule (1) tcb_cte_cases_in_range1)
@@ -505,11 +509,11 @@ proof (rule ctes_of_eq_cte_wp_at')
   proof (rule cte_wp_at_cteI' [OF _ _ _ refl])
     from ks pa have "is_aligned x (objBitsKO (KOCTE cte))" ..
     thus "is_aligned x cte_level_bits"
-      unfolding cte_level_bits_def by (simp add: objBits_simps)
+      unfolding cte_level_bits_def by (simp add: objBits_simps')
 
     from ks pd have "ps_clear x (objBitsKO (KOCTE cte)) s" ..
     thus "ps_clear x cte_level_bits s"
-      unfolding cte_level_bits_def by (simp add: objBits_simps)
+      unfolding cte_level_bits_def by (simp add: objBits_simps')
   qed
 qed
 
@@ -955,20 +959,30 @@ lemma mdbPrev_to_H [simp]:
 lemmas ctes_of_not_0 [simp] = valid_mdbD3' [of s, rotated] for s
 
 (* For getting rid of the generated guards -- will probably break with c_guard*)
-lemma ctes_of_aligned_3 [simp]:
+lemma cte_bits_le_3 [simp]: "3 \<le> cte_level_bits"
+  by (simp add: objBits_defs cte_level_bits_def)
+
+lemma cte_bits_le_tcb_bits: "cte_level_bits \<le> tcbBlockSizeBits"
+  by (simp add: cte_level_bits_def objBits_defs)
+
+lemma ctes_of_aligned_bits [simp]:
   assumes pa: "pspace_aligned' s"
   and    cof: "ctes_of s p = Some cte"
-  shows  "is_aligned p 3"
+  and   bits: "bits \<le> cte_level_bits"
+  shows  "is_aligned p bits"
 proof -
   from cof have "cte_wp_at' (op = cte) p s"
     by (simp add: cte_wp_at_ctes_of)
   thus ?thesis
-    apply (rule cte_wp_atE')
-    apply (simp add: cte_level_bits_def is_aligned_weaken)
-  apply (simp add: tcb_cte_cases_def field_simps split: if_split_asm )
-      apply ((erule aligned_add_aligned, simp_all add: is_aligned_def word_bits_conv)[1])+
-  apply (simp add: is_aligned_weaken)
-  done
+    apply -
+    apply (rule is_aligned_weaken[OF _ bits])
+    apply (erule cte_wp_atE')
+     apply assumption
+    apply (simp add: tcb_cte_cases_def field_simps split: if_split_asm)
+        apply (fastforce elim: aligned_add_aligned[OF _ _ cte_bits_le_tcb_bits]
+                         simp: is_aligned_def cte_level_bits_def)+
+    apply (erule is_aligned_weaken[OF _  cte_bits_le_tcb_bits])
+    done
 qed
 
 lemma mdbNext_not_zero_eq:
@@ -1428,11 +1442,11 @@ lemma threadSet_eq:
   apply (rule conjI)
    apply (rule getObject_eq)
      apply simp
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply assumption
   apply (drule setObject_eq [rotated -1])
      apply simp
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply (simp add: objBits_simps)
   apply simp
   done
@@ -2225,14 +2239,14 @@ lemma update_typ_at:
 
 lemma ptr_val_tcb_ptr_mask:
   "obj_at' (P :: tcb \<Rightarrow> bool) thread s
-      \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr thread) && (~~ mask 9)
+      \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr thread) && (~~ mask tcbBlockSizeBits)
                   = thread"
   apply (clarsimp simp: obj_at'_def tcb_ptr_to_ctcb_ptr_def projectKOs)
-  apply (simp add: is_aligned_add_helper ctcb_offset_def objBits_simps)
+  apply (simp add: is_aligned_add_helper ctcb_offset_defs objBits_simps')
   done
 
-lemmas ptr_val_tcb_ptr_mask'
-    = ptr_val_tcb_ptr_mask[unfolded mask_def, simplified]
+lemmas ptr_val_tcb_ptr_mask'[simp]
+    = ptr_val_tcb_ptr_mask[unfolded mask_def tcbBlockSizeBits_def, simplified]
 
 lemma typ_uinfo_t_diff_from_typ_name:
   "typ_name (typ_info_t TYPE ('a :: c_type)) \<noteq> typ_name (typ_info_t TYPE('b :: c_type))

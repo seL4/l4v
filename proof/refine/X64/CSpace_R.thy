@@ -4080,11 +4080,11 @@ lemma create_reply_master_corres:
   done
 
 lemma cte_map_nat_to_cref:
-  "\<lbrakk> n < 2 ^ b; b < 64 \<rbrakk> \<Longrightarrow>
-   cte_map (p, nat_to_cref b n) = p + (of_nat n * 32)"
+  "\<lbrakk> n < 2 ^ b; b < word_bits \<rbrakk> \<Longrightarrow>
+   cte_map (p, nat_to_cref b n) = p + (of_nat n * 2^cte_level_bits)"
   apply (clarsimp simp: cte_map_def nat_to_cref_def
                  dest!: less_is_drop_replicate)
-  apply (rule arg_cong [where f="\<lambda>x. x * 32"])
+  apply (rule arg_cong [where f="\<lambda>x. x * 2^cte_level_bits"])
   apply (subst of_drop_to_bl)
   apply (simp add: word_bits_def)
   apply (subst mask_eq_iff_w2p)
@@ -4172,9 +4172,8 @@ lemma setup_reply_master_corres:
   apply (simp add: setupReplyMaster_def setup_reply_master_def)
   apply (simp add: locateSlot_conv tcbReplySlot_def objBits_def objBitsKO_def)
   apply (simp add: nullMDBNode_def, fold initMDBNode_def)
-  apply (rule_tac F="t + 0x40 = cte_map (t, tcb_cnode_index 2)"
-               in corres_req)
-   apply (clarsimp simp: tcb_cnode_index_def2 cte_map_nat_to_cref)
+  apply (rule_tac F="t + 2*2^cte_level_bits = cte_map (t, tcb_cnode_index 2)" in corres_req)
+   apply (clarsimp simp: tcb_cnode_index_def2 cte_map_nat_to_cref word_bits_def cte_level_bits_def)
   apply (clarsimp simp: cte_level_bits_def)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split [OF _ get_cap_corres])
@@ -4229,7 +4228,7 @@ lemma setupReplyMaster_valid_mdb:
                       elim: valid_nullcapsE)
      apply (frule obj_at_aligned')
       apply (simp add: valid_cap'_def capAligned_def
-                       objBits_def objBitsKO_def word_bits_def)+
+                       objBits_simps' word_bits_def)+
     apply (clarsimp simp: valid_pspace'_def)
    apply (clarsimp simp: caps_no_overlap'_def capRange_def)
   apply (clarsimp simp: fresh_virt_cap_class_def
@@ -4252,7 +4251,7 @@ lemma setupReplyMaster_valid_objs [wp]:
   apply (clarsimp)
   apply (frule obj_at_aligned')
    apply (simp add: valid_cap'_def capAligned_def
-                         objBits_def objBitsKO_def word_bits_def)+
+                    objBits_simps' word_bits_def)+
   done
 
 lemma setupReplyMaster_wps[wp]:
@@ -4266,7 +4265,7 @@ lemma setupReplyMaster_wps[wp]:
     apply (wp getCTE_wp | simp add: o_def cte_wp_at_ctes_of)+
   apply clarsimp
   apply (rule_tac x=cte in exI)
-  apply (clarsimp simp: tcbReplySlot_def objBits_def objBitsKO_def fun_upd_def
+  apply (clarsimp simp: tcbReplySlot_def objBits_simps' fun_upd_def word_bits_def
                         tcb_cnode_index_def2 cte_map_nat_to_cref cte_level_bits_def)
   done
 
@@ -4290,7 +4289,7 @@ lemma setupReplyMaster_ifunsafe'[wp]:
   apply (simp add: ifunsafe'_def3 setupReplyMaster_def locateSlot_conv)
   apply (wp getCTE_wp')
   apply (clarsimp simp: ex_cte_cap_to'_def cte_wp_at_ctes_of cteCaps_of_def
-                        cte_level_bits_def objBits_simps)
+                        cte_level_bits_def objBits_simps')
   apply (drule_tac x=crefa in spec)
   apply (rule conjI)
    apply clarsimp
@@ -4424,7 +4423,7 @@ lemma setupReplyMaster_invs'[wp]:
              valid_queues_lift cur_tcb_lift valid_queues_lift' hoare_vcg_disj_lift
              valid_irq_node_lift | simp)+
   apply (clarsimp simp: ex_nonz_tcb_cte_caps' valid_pspace'_def
-                        objBits_def objBitsKO_def tcbReplySlot_def
+                        objBits_simps' tcbReplySlot_def
                         ex_nonz_cap_not_global' dom_def)
   done
 
@@ -6222,7 +6221,7 @@ lemma locateSlot_cap_to'[wp]:
   apply (simp add: locateSlot_conv)
   apply wp
   apply (clarsimp dest!: isCapDs valid_capAligned
-                   simp: objBits_simps mult.commute capAligned_def cte_level_bits_def)
+                   simp: objBits_simps' mult.commute capAligned_def cte_level_bits_def)
   apply (erule bspec)
   apply (case_tac "bits < word_bits")
    apply simp

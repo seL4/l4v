@@ -2546,7 +2546,7 @@ lemma finaliseCap_cte_refs:
    apply (wp | wpc | simp only: o_def)+
   apply (frule valid_capAligned)
   apply (cases cap, simp_all add: isCap_simps)
-   apply (clarsimp simp: tcb_cte_cases_def word_count_from_top)
+   apply (clarsimp simp: tcb_cte_cases_def word_count_from_top objBits_defs)
   apply clarsimp
   apply (rule ext, simp)
   apply (rule image_cong [OF _ refl])
@@ -2669,7 +2669,7 @@ lemma unbindNotification_obj_at'_boundedness:
     apply (clarsimp simp: updateObject_default_def in_monad)
    apply wp
   apply (simp add: obj_at'_real_def cong: valid_cong)
-  apply (wp setObject_ko_wp_at, (simp add: objBits_simps)+)
+  apply (wp setObject_ko_wp_at, (simp add: objBits_simps')+)
   apply clarsimp
   apply (frule sym_refs_ntfn_bound_eq[where t=t and x=x])
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs)
@@ -2686,7 +2686,7 @@ lemma unbindMaybeNotification_obj_at'_bound:
         | wpc
         | simp add: setBoundNotification_def threadSet_def updateObject_default_def in_monad projectKOs)+
   apply (simp add: setNotification_def obj_at'_real_def cong: valid_cong)
-   apply (wp setObject_ko_wp_at, (simp add: objBits_simps)+)
+   apply (wp setObject_ko_wp_at, (simp add: objBits_simps')+)
   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
   done
 
@@ -3965,13 +3965,13 @@ lemma tcb_update_all_corres':
            apply simp
           defer
           apply (simp add: is_other_obj_relation_type_def a_type_def
-                           projectKOs objBits_simps
+                           projectKOs objBits_simps'
                            other_obj_relation_def tcbs r)+
     apply (fastforce simp: is_etcb_at_def elim!: obj_at_weakenE dest: bspec[OF tables])
    apply (subst(asm) eq_commute, assumption)
   apply (clarsimp simp: projectKOs obj_at'_def objBits_simps)
   apply (subst map_to_ctes_upd_tcb, assumption+)
-   apply (simp add: ps_clear_def3 field_simps)
+   apply (simp add: ps_clear_def3 field_simps objBits_defs mask_def)
   apply (subst if_not_P)
    apply (fastforce dest: bspec [OF tables', OF ranI])
   apply simp

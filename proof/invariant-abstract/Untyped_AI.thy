@@ -678,11 +678,12 @@ lemma cases_imp_eq:
   "((P \<longrightarrow> Q \<longrightarrow> R) \<and> (\<not> P \<longrightarrow> Q \<longrightarrow> S)) = (Q \<longrightarrow> (P \<longrightarrow> R) \<and> (\<not> P \<longrightarrow> S))"
   by blast
 
-lemma inj_16:
-  "\<lbrakk> of_nat x * 16 = of_nat y * (16 :: machine_word);
-     x < bnd; y < bnd; bnd \<le> 2 ^ (word_bits - 4) \<rbrakk>
+lemma inj_bits:
+  "\<lbrakk> of_nat x * 2^bits = of_nat y * (2^bits :: machine_word);
+     x < bnd; y < bnd; bits \<le> word_bits; bnd \<le> 2 ^ (word_bits - bits) \<rbrakk>
      \<Longrightarrow> of_nat x = (of_nat y :: machine_word)"
-  apply (fold shiftl_t2n [where n=4, simplified, simplified mult.commute])
+  apply (cases "bits = 0", simp)
+  apply (fold shiftl_t2n [where n=bits, simplified, simplified mult.commute])
   apply (simp only: word_bl.Rep_inject[symmetric]
                     bl_shiftl)
   apply (drule(1) order_less_le_trans)+
@@ -1537,31 +1538,30 @@ lemma retype_region_ranges':
   apply (simp add:valid_def)
   apply clarify
   apply (drule use_valid[OF _ retype_region_ret])
-  apply simp
-  apply (clarsimp simp del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-        Int_atLeastAtMost atLeastatMost_empty_iff)
-    apply (rule subsetD[OF subset_trans])
-      apply (rule range_cover_subset,assumption)
-      apply clarsimp
-       apply assumption
-      apply fastforce
-    apply simp
+   apply simp
+  apply (clarsimp simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+                            Int_atLeastAtMost atLeastatMost_empty_iff)
+  apply (rule subsetD[OF subset_trans])
+    apply (rule range_cover_subset,assumption)
+     apply clarsimp
+     apply assumption
+    apply fastforce
+   apply simp
   apply (case_tac tp)
-      apply (simp_all add: cap_range_def obj_bits_api_def ptr_add_def)+
-      apply (subst add.commute[where a = "0x1FF"])
-      apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
-       apply (fastforce simp: range_cover_def)
-       apply (simp_all add: word_bits_def is_aligned_mult_triv2[where n=9, simplified])[2]
+       apply (simp_all add: cap_range_def obj_bits_api_def ptr_add_def)
       apply (subst add.commute, rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
-      apply (fastforce simp: range_cover_def)
+        apply (fastforce simp: range_cover_def)
+       apply (simp_all add: word_bits_def is_aligned_mult_triv2[where n=tcb_bits, simplified])[2]
+     apply (subst add.commute, rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
+       apply (fastforce simp: range_cover_def)
       apply (simp add: word_bits_def is_aligned_mult_triv2[where n=endpoint_bits, simplified])+
     apply (subst add.commute, rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
-     apply (fastforce simp: range_cover_def)
+      apply (fastforce simp: range_cover_def)
      apply (simp add: word_bits_def is_aligned_mult_triv2[where n=ntfn_bits, simplified])+
-     apply (clarsimp simp: is_aligned_def)
-    apply (simp add: p_assoc_help)
-    apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
-    apply (fastforce simp: range_cover_def)
+   apply (clarsimp simp: is_aligned_def)
+   apply (simp add: p_assoc_help)
+   apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
+     apply (fastforce simp: range_cover_def)
     apply (rule is_aligned_mult_triv2)
    apply (simp add: range_cover_def)
   apply (simp add: p_assoc_help)

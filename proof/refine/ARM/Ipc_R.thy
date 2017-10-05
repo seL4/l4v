@@ -2535,9 +2535,10 @@ lemma setup_caller_corres:
   apply (drule pspace_relation_cte_wp_at[rotated, OF caps_of_state_cteD],
          erule valid_pspace'_splits, clarsimp+)+
   apply (clarsimp simp: cte_wp_at_ctes_of cte_map_def tcbReplySlot_def
-                        tcbCallerSlot_def cte_level_bits_def tcb_cnode_index_def
+                        tcbCallerSlot_def tcb_cnode_index_def
                         is_cap_simps)
-  apply (auto intro: reply_no_descendants_mdbNext_null[OF not_waiting_reply_slot_no_descendants])
+  apply (auto intro: reply_no_descendants_mdbNext_null[OF not_waiting_reply_slot_no_descendants]
+               simp: cte_index_repair)
   done
 
 crunch tcb_at'[wp]: getThreadCallerSlot "tcb_at' t"
@@ -3851,7 +3852,7 @@ lemma setupCallerCap_valid_objs[wp]:
    apply (wp sts_valid_objs' hoare_drop_imps hoare_vcg_all_lift)+
   apply (clarsimp simp: valid_cap'_def valid_tcb_state'_def)
   apply (drule obj_at_aligned')
-   apply (simp add: objBits_simps capAligned_def word_bits_conv isCap_simps)+
+   apply (simp add: objBits_simps' capAligned_def word_bits_conv isCap_simps)+
   done
 
 lemma setupCallerCap_state_refs_of[wp]:

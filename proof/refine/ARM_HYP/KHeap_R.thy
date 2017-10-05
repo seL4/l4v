@@ -83,14 +83,14 @@ lemma no_fail_getObject_tcb [wp]:
   apply (simp add: getObject_def split_def)
   apply (rule no_fail_pre)
    apply wp
-  apply (clarsimp simp add: obj_at'_def projectKOs objBits_simps
+  apply (clarsimp simp add: obj_at'_def projectKOs objBits_simps'
                       cong: conj_cong)
   apply (rule ps_clear_lookupAround2, assumption+)
     apply simp
    apply (simp add: field_simps)
    apply (erule is_aligned_no_wrap')
    apply simp
-  apply (fastforce split: option.split_asm simp: objBits_simps archObjSize_def)
+  apply (fastforce split: option.split_asm simp: objBits_simps' archObjSize_def)
   done
 
 lemma typ_at_to_obj_at':
@@ -220,7 +220,7 @@ lemma getObject_tcb_at':
   "\<lbrace> \<top> \<rbrace> getObject t \<lbrace>\<lambda>r::tcb. tcb_at' t\<rbrace>"
   by (clarsimp simp: valid_def getObject_def in_monad
                      loadObject_default_def obj_at'_def projectKOs split_def
-                     in_magnitude_check objBits_simps)
+                     in_magnitude_check objBits_simps')
 
 text {* updateObject_cte lemmas *}
 
@@ -241,7 +241,7 @@ lemma objBitsKO_bounded:
   "objBitsKO ko \<le> word_bits"
   apply (cases ko)
   apply (simp_all add: word_bits_def vspace_bits_defs
-                       objBitsKO_simps archObjSize_def vcpu_bits_def
+                       objBits_simps' archObjSize_def vcpu_bits_def
                 split: ARM_HYP_H.arch_kernel_object.splits)
   done
 
@@ -251,11 +251,11 @@ lemma updateObject_cte_is_tcb_or_cte:
            snd (lookupAround2 p (ksPSpace s)) = n;
            (ko', s') \<in> fst (updateObject cte ko p q n s) \<rbrakk> \<Longrightarrow>
   (\<exists>tcb getF setF. ko = KOTCB tcb \<and> s' = s \<and> tcb_cte_cases (p - q) = Some (getF, setF)
-    \<and> ko' = KOTCB (setF (\<lambda>x. cte) tcb) \<and> is_aligned q 9 \<and> ps_clear q 9 s) \<or>
+    \<and> ko' = KOTCB (setF (\<lambda>x. cte) tcb) \<and> is_aligned q tcbBlockSizeBits \<and> ps_clear q tcbBlockSizeBits s) \<or>
   (\<exists>cte'. ko = KOCTE cte' \<and> ko' = KOCTE cte \<and> s' = s
         \<and> p = q \<and> is_aligned p cte_level_bits \<and> ps_clear p cte_level_bits s)"
   apply (clarsimp simp: updateObject_cte typeError_def alignError_def
-               tcbVTableSlot_def tcbCTableSlot_def to_bl_0 to_bl_1 rev_take  objBitsKO_simps
+               tcbVTableSlot_def tcbCTableSlot_def to_bl_1 rev_take  objBits_simps'
                in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check field_simps
                lookupAround2_char1
          split: kernel_object.splits)
@@ -450,9 +450,9 @@ lemma setObject_ep_pre:
   shows "\<lbrace>P\<rbrace> setObject p (e::endpoint) \<lbrace>Q\<rbrace>" using assms
   apply (clarsimp simp: valid_def setObject_def in_monad
                         split_def updateObject_default_def
-                        projectKOs in_magnitude_check objBits_simps)
+                        projectKOs in_magnitude_check objBits_simps')
   apply (drule spec, drule mp, erule conjI)
-   apply (simp add: obj_at'_def projectKOs objBits_simps)
+   apply (simp add: obj_at'_def projectKOs objBits_simps')
   apply (simp add: split_paired_Ball)
   apply (drule spec, erule mp)
   apply (clarsimp simp: in_monad projectKOs in_magnitude_check)
@@ -463,9 +463,9 @@ lemma setObject_ntfn_pre:
   shows "\<lbrace>P\<rbrace> setObject p (e::Structures_H.notification) \<lbrace>Q\<rbrace>" using assms
   apply (clarsimp simp: valid_def setObject_def in_monad
                         split_def updateObject_default_def
-                        projectKOs in_magnitude_check objBits_simps)
+                        projectKOs in_magnitude_check objBits_simps')
   apply (drule spec, drule mp, erule conjI)
-   apply (simp add: obj_at'_def projectKOs objBits_simps)
+   apply (simp add: obj_at'_def projectKOs objBits_simps')
   apply (simp add: split_paired_Ball)
   apply (drule spec, erule mp)
   apply (clarsimp simp: in_monad projectKOs in_magnitude_check)
@@ -476,9 +476,9 @@ lemma setObject_tcb_pre:
   shows "\<lbrace>P\<rbrace> setObject p (t::tcb) \<lbrace>Q\<rbrace>" using assms
   apply (clarsimp simp: valid_def setObject_def in_monad
                         split_def updateObject_default_def
-                        projectKOs in_magnitude_check objBits_simps)
+                        projectKOs in_magnitude_check objBits_simps')
   apply (drule spec, drule mp, erule conjI)
-   apply (simp add: obj_at'_def projectKOs objBits_simps)
+   apply (simp add: obj_at'_def projectKOs objBits_simps')
   apply (simp add: split_paired_Ball)
   apply (drule spec, erule mp)
   apply (clarsimp simp: in_monad projectKOs in_magnitude_check)
@@ -521,7 +521,7 @@ lemma setObject_tcb_strongest:
    apply (rule hoare_weaken_pre)
     apply (rule obj_at_setObject3)
      apply simp
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply simp
   apply (simp add: setObject_def split_def)
   apply (clarsimp simp: valid_def obj_at'_def split_def in_monad
@@ -544,7 +544,7 @@ lemma getObject_ep_at':
   apply (rule hoare_strengthen_post)
    apply (rule getObject_obj_at')
     apply simp
-   apply (simp add: objBits_simps)
+   apply (simp add: objBits_simps')
   apply (clarsimp elim!: obj_at'_weakenE)
   done
 
@@ -589,7 +589,7 @@ lemma getObject_ko_at:
 
 lemma getObject_ko_at_tcb [wp]:
   "\<lbrace>\<top>\<rbrace> getObject p \<lbrace>\<lambda>rv::tcb. ko_at' rv p\<rbrace>"
-  by (rule getObject_ko_at | simp add: objBits_simps)+
+  by (rule getObject_ko_at | simp add: objBits_simps')+
 
 lemma OMG_getObject_tcb:
   "\<lbrace>obj_at' P t\<rbrace> getObject t \<lbrace>\<lambda>(tcb :: tcb) s. P tcb\<rbrace>"
@@ -627,7 +627,7 @@ lemma get_ep'_valid_ep[wp]:
   apply (rule hoare_chain)
   apply (rule getObject_valid_obj)
      apply simp
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply clarsimp
   apply (simp add: valid_obj'_def)
   done
@@ -638,7 +638,7 @@ lemma get_ntfn'_valid_ntfn[wp]:
   apply (rule hoare_chain)
   apply (rule getObject_valid_obj)
      apply simp
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply clarsimp
   apply (simp add: valid_obj'_def)
   done
@@ -695,7 +695,7 @@ lemma get_ntfn_ko':
   apply (simp add: getNotification_def)
   apply (rule getObject_ko_at)
    apply simp
-  apply (simp add: objBits_simps)
+  apply (simp add: objBits_simps')
   done
 
 lemma set_ntfn_aligned'[wp]:
@@ -753,7 +753,7 @@ declare diff_neg_mask[simp del]
 lemma cte_wp_at_ctes_of:
   "cte_wp_at' P p s = (\<exists>cte. ctes_of s p = Some cte \<and> P cte)"
   apply (simp add: cte_wp_at_cases' map_to_ctes_def Let_def
-                   cte_level_bits_def objBits_simps
+                   cte_level_bits_def objBits_simps'
           split del: if_split)
   apply (safe del: disjCI)
     apply (clarsimp simp: ps_clear_def3 field_simps)
@@ -784,8 +784,8 @@ lemma cte_wp_at_ctes_of:
 
 lemma tcb_cte_cases_small:
   "\<lbrakk> tcb_cte_cases v = Some (getF, setF) \<rbrakk>
-      \<Longrightarrow> v < 2 ^ 9"
-  by (simp add: tcb_cte_cases_def split: if_split_asm)
+      \<Longrightarrow> v < 2 ^ tcbBlockSizeBits"
+  by (simp add: tcb_cte_cases_def objBits_defs split: if_split_asm)
 
 lemmas tcb_cte_cases_aligned_helpers =
     is_aligned_add_helper [OF _ tcb_cte_cases_small]
@@ -807,13 +807,14 @@ lemma ctes_of_from_cte_wp_at:
 lemmas setObject_ctes_of = ctes_of_from_cte_wp_at [OF setObject_cte_wp_at2']
 
 lemma map_to_ctes_upd_cte:
-  "\<lbrakk> s p = Some (KOCTE cte'); is_aligned p 4; {p + 1..p + 15} \<inter> dom s = {} \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> s p = Some (KOCTE cte'); is_aligned p cte_level_bits;
+     {p + 1..p + mask cte_level_bits} \<inter> dom s = {} \<rbrakk> \<Longrightarrow>
      map_to_ctes (s (p \<mapsto> (KOCTE cte))) = ((map_to_ctes s) (p \<mapsto> cte))"
   apply (rule ext)
   apply (simp    add: map_to_ctes_def Let_def dom_fun_upd2
            split del: if_split del: dom_fun_upd)
   apply (case_tac "x = p")
-   apply (simp add: objBits_simps field_simps)
+   apply (simp add: objBits_simps' cte_level_bits_def mask_def field_simps)
   apply (case_tac "(x && ~~ mask (objBitsKO (KOTCB undefined))) = p")
    apply clarsimp
   apply (simp del: dom_fun_upd split del: if_split cong: if_cong
@@ -823,30 +824,31 @@ lemma map_to_ctes_upd_cte:
 declare overflow_plus_one_self[simp]
 
 lemma map_to_ctes_upd_tcb:
-  "\<lbrakk> s p = Some (KOTCB tcb'); is_aligned p 9; {p + 1..p + 511} \<inter> dom s = {} \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> s p = Some (KOTCB tcb'); is_aligned p tcbBlockSizeBits;
+    {p + 1..p + mask tcbBlockSizeBits} \<inter> dom s = {} \<rbrakk> \<Longrightarrow>
      map_to_ctes (s (p \<mapsto> (KOTCB tcb))) =
       (\<lambda>x. if \<exists>getF setF. tcb_cte_cases (x - p) = Some (getF, setF)
                   \<and> getF tcb \<noteq> getF tcb'
            then (case tcb_cte_cases (x - p) of Some (getF, setF) \<Rightarrow> Some (getF tcb))
            else map_to_ctes s x)"
-  apply (subgoal_tac "p && ~~ (mask 9) = p")
+  apply (subgoal_tac "p && ~~ (mask tcbBlockSizeBits) = p")
    apply (rule ext)
    apply (simp    add: map_to_ctes_def Let_def dom_fun_upd2
             split del: if_split del: dom_fun_upd
                  cong: option.case_cong if_cong)
    apply (case_tac "x = p")
-    apply (simp add: objBits_simps field_simps map_to_ctes_def)
+    apply (simp add: objBits_simps' field_simps map_to_ctes_def mask_def)
    apply (case_tac "x && ~~ mask (objBitsKO (KOTCB undefined)) = p")
     apply (case_tac "tcb_cte_cases (x - p)")
      apply (simp split del: if_split cong: if_cong option.case_cong)
     apply (subgoal_tac "s x = None")
-     apply (simp add: field_simps objBits_simps split del: if_split
+     apply (simp add: field_simps objBits_simps' split del: if_split
                 cong: if_cong option.case_cong)
-     apply clarsimp
+     apply (clarsimp simp: mask_def)
     apply (subst(asm) mask_in_range[where bits="objBitsKO v" for v])
      apply (simp add: objBitsKO_def)
     apply (drule_tac a=x in equals0D)
-    apply (simp add: dom_def objBits_simps field_simps)
+    apply (simp add: dom_def objBits_simps' mask_def field_simps)
     apply (erule mp)
     apply (rule ccontr, simp add: linorder_not_le)
     apply (drule minus_one_helper3, simp)
@@ -855,14 +857,14 @@ lemma map_to_ctes_upd_tcb:
    apply (rule FalseE)
    apply (subst(asm) mask_in_range[where bits="objBitsKO v" for v])
     apply (simp add: objBitsKO_def)
-   apply (subgoal_tac "x - p < 2 ^ 9")
+   apply (subgoal_tac "x - p < 2 ^ tcbBlockSizeBits")
     apply (frule minus_one_helper3)
     apply (frule(1) is_aligned_no_wrap')
     apply (drule word_plus_mono_right[where x=p])
      apply (simp only: field_simps)
      apply (erule is_aligned_no_overflow)
     apply (simp add: objBits_simps field_simps)
-   apply (clarsimp simp: tcb_cte_cases_def objBits_simps field_simps
+   apply (clarsimp simp: tcb_cte_cases_def objBits_simps' field_simps
      split: if_split_asm)
   apply (subst mask_in_range, assumption)
   apply (simp only: atLeastAtMost_iff order_refl simp_thms)
@@ -901,13 +903,18 @@ lemma tcb_cte_cases_change:
   apply (clarsimp simp: tcb_cte_cases_def split: if_split_asm)
   done
 
+lemma cte_level_bits_nonzero [simp]: "0 < cte_level_bits"
+  by (simp add: cte_level_bits_def)
+
 lemma ctes_of_setObject_cte:
   "\<lbrace>\<lambda>s. P ((ctes_of s) (p \<mapsto> cte))\<rbrace> setObject p (cte :: cte) \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad)
   apply (drule(1) updateObject_cte_is_tcb_or_cte[OF _ refl, rotated])
   apply (elim exE conjE disjE rsubst[where P=P])
-   apply (clarsimp simp: map_to_ctes_upd_tcb field_simps ps_clear_def3
-                         lookupAround2_char1 tcb_cte_cases_change)
+   apply (clarsimp simp: lookupAround2_char1)
+   apply (subst map_to_ctes_upd_tcb; assumption?)
+    apply (clarsimp simp: mask_def objBits_defs field_simps ps_clear_def3)
+   apply (clarsimp simp: tcb_cte_cases_change)
    apply (rule ext, clarsimp)
    apply (intro conjI impI)
     apply (clarsimp simp: tcb_cte_cases_def split: if_split_asm)
@@ -915,8 +922,7 @@ lemma ctes_of_setObject_cte:
       apply (simp add: ps_clear_def3 field_simps)
      apply assumption+
    apply (simp add: cte_wp_at_ctes_of)
-  apply (clarsimp simp: map_to_ctes_upd_cte ps_clear_def3 field_simps
-                        cte_level_bits_def)
+  apply (clarsimp simp: map_to_ctes_upd_cte ps_clear_def3 field_simps mask_def)
   done
 
 declare foldl_True[simp]
@@ -924,7 +930,7 @@ declare foldl_True[simp]
 lemma real_cte_at':
   "real_cte_at' p s \<Longrightarrow> cte_at' p s"
   by (clarsimp simp add: cte_wp_at_cases' obj_at'_def projectKOs
-                         objBits_simps cte_level_bits_def
+                         objBits_simps' cte_level_bits_def
                     del: disjCI)
 
 lemma no_fail_getEndpoint [wp]:
@@ -933,14 +939,14 @@ lemma no_fail_getEndpoint [wp]:
                    split_def)
   apply (rule no_fail_pre)
    apply wp
-  apply (clarsimp simp add: obj_at'_def projectKOs objBits_simps
+  apply (clarsimp simp add: obj_at'_def projectKOs objBits_simps'
                             lookupAround2_known1)
   apply (erule(1) ps_clear_lookupAround2)
     apply simp
    apply (simp add: field_simps)
    apply (erule is_aligned_no_wrap')
     apply (simp add: word_bits_conv)
-   apply (clarsimp split: option.split_asm simp: objBits_simps archObjSize_def)
+   apply (clarsimp split: option.split_asm simp: objBits_simps' archObjSize_def)
   done
 
 lemma get_ep_corres [corres]:
@@ -953,7 +959,7 @@ lemma get_ep_corres [corres]:
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
   apply (clarsimp simp add: assert_def fail_def obj_at_def return_def is_ep)
   apply (clarsimp simp: loadObject_default_def in_monad projectKOs
-                        in_magnitude_check objBits_simps)
+                        in_magnitude_check objBits_simps')
   apply (clarsimp simp add: state_relation_def pspace_relation_def)
   apply (drule bspec)
    apply blast
@@ -1143,7 +1149,7 @@ lemma set_ep_corres [corres]:
   apply (simp add: set_endpoint_def setEndpoint_def is_ep_def[symmetric])
     apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
   apply (corressimp wp: get_object_ret get_object_wp)+
-  by (clarsimp simp: is_ep obj_at_simps)
+  by (clarsimp simp: is_ep obj_at_simps objBits_defs)
 
 lemma set_ntfn_corres [corres]:
   "ntfn_relation ae ae' \<Longrightarrow>
@@ -1152,7 +1158,7 @@ lemma set_ntfn_corres [corres]:
   apply (simp add: set_notification_def setNotification_def is_ntfn_def[symmetric])
        apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
   apply (corressimp wp: get_object_ret get_object_wp)+
-  by (clarsimp simp: is_ntfn obj_at_simps)
+  by (clarsimp simp: is_ntfn obj_at_simps objBits_defs)
 
 lemma no_fail_getNotification [wp]:
   "no_fail (ntfn_at' ptr) (getNotification ptr)"
@@ -1160,14 +1166,14 @@ lemma no_fail_getNotification [wp]:
                    split_def)
   apply (rule no_fail_pre)
    apply wp
-  apply (clarsimp simp add: obj_at'_def projectKOs objBits_simps
+  apply (clarsimp simp add: obj_at'_def projectKOs objBits_simps'
                             lookupAround2_known1)
   apply (erule(1) ps_clear_lookupAround2)
     apply simp
    apply (simp add: field_simps)
    apply (erule is_aligned_no_wrap')
     apply (simp add: word_bits_conv)
-   apply (clarsimp split: option.split_asm simp: objBits_simps archObjSize_def)
+   apply (clarsimp split: option.split_asm simp: objBits_simps' archObjSize_def)
   done
 
 lemma get_ntfn_corres:
@@ -1180,7 +1186,7 @@ lemma get_ntfn_corres:
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
   apply (clarsimp simp add: assert_def fail_def obj_at_def return_def is_ntfn)
   apply (clarsimp simp: loadObject_default_def in_monad projectKOs
-                        in_magnitude_check objBits_simps)
+                        in_magnitude_check objBits_simps')
   apply (clarsimp simp add: state_relation_def pspace_relation_def)
   apply (drule bspec)
    apply blast
@@ -1542,7 +1548,7 @@ lemma set_ep_valid_queues'[wp]:
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
     apply (rule setObject_ko_wp_at)
       apply simp
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply simp
    apply (wp updateObject_default_inv | simp)+
   apply (clarsimp simp: projectKOs ko_wp_at'_def)
@@ -1683,7 +1689,7 @@ lemma set_ep_state_refs_of'[wp]:
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   unfolding setEndpoint_def
   by (wp setObject_state_refs_of',
-      simp_all add: objBits_simps fun_upd_def[symmetric])
+      simp_all add: objBits_simps' fun_upd_def[symmetric])
 
 lemma setObject_state_hyp_refs_of':
   assumes x: "updateObject val = updateObject_default val"
@@ -1747,8 +1753,8 @@ lemma state_hyp_refs_of'_ep:
 lemma set_ep_state_hyp_refs_of'[wp]:
   "setEndpoint epptr ep \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
   unfolding setEndpoint_def
-  apply (rule setObject_gen_obj_at, simp, simp add: objBits_simps, simp)
-  apply (wp setObject_state_hyp_refs_of'; simp add: objBits_simps state_hyp_refs_of'_ep)
+  apply (rule setObject_gen_obj_at, simp, simp add: objBits_simps', simp)
+  apply (wp setObject_state_hyp_refs_of'; simp add: objBits_simps' state_hyp_refs_of'_ep)
   done
 
 lemma set_ntfn_ctes_of[wp]:
@@ -1835,7 +1841,7 @@ lemma set_ntfn_valid_queues'[wp]:
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
     apply (rule setObject_ko_wp_at)
       apply simp
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply simp
    apply (wp updateObject_default_inv | simp)+
   apply (clarsimp simp: projectKOs ko_wp_at'_def)
@@ -1848,7 +1854,7 @@ lemma set_ntfn_state_refs_of'[wp]:
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   unfolding setNotification_def
   by (wp setObject_state_refs_of',
-      simp_all add: objBits_simps fun_upd_def)
+      simp_all add: objBits_simps' fun_upd_def)
 
 lemma state_hyp_refs_of'_ntfn:
   "ntfn_at' ntfn s \<Longrightarrow> (state_hyp_refs_of' s) (ntfn := {}) = state_hyp_refs_of' s"
@@ -1857,8 +1863,8 @@ lemma state_hyp_refs_of'_ntfn:
 lemma set_ntfn_state_hyp_refs_of'[wp]:
   "setNotification epptr ntfn \<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>"
   unfolding setNotification_def
-  apply (rule setObject_gen_obj_at, simp, simp add: objBits_simps, simp)
-  apply (wp setObject_state_hyp_refs_of'; simp add: objBits_simps state_hyp_refs_of'_ntfn)
+  apply (rule setObject_gen_obj_at, simp, simp add: objBits_simps', simp)
+  apply (wp setObject_state_hyp_refs_of'; simp add: objBits_simps' state_hyp_refs_of'_ntfn)
   done
 
 lemma setNotification_pred_tcb_at'[wp]:
@@ -1922,7 +1928,7 @@ lemmas setEndpoint_typ_ats[wp] = typ_at_lifts [OF setEndpoint_typ_at']
 lemma get_ep_sp':
   "\<lbrace>P\<rbrace> getEndpoint r \<lbrace>\<lambda>t. P and ko_at' t r\<rbrace>"
   by (clarsimp simp: getEndpoint_def getObject_def loadObject_default_def
-                     projectKOs in_monad valid_def obj_at'_def objBits_simps
+                     projectKOs in_monad valid_def obj_at'_def objBits_simps'
                      in_magnitude_check split_def)
 
 lemma setEndpoint_cur_tcb'[wp]:
@@ -1940,7 +1946,7 @@ lemma setEndpoint_iflive'[wp]:
   unfolding setEndpoint_def
   apply (wp setObject_iflive'[where P="\<top>"])
        apply simp
-      apply (simp add: objBits_simps)
+      apply (simp add: objBits_simps')
      apply simp
     apply (clarsimp simp: updateObject_default_def in_monad projectKOs)
    apply (clarsimp simp: updateObject_default_def in_monad
@@ -1978,7 +1984,7 @@ lemma setEndpoint_idle'[wp]:
    \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
   unfolding setEndpoint_def
   apply (wp setObject_idle'[where P="\<top>"])
-       apply (simp add: objBits_simps updateObject_default_inv)+
+       apply (simp add: objBits_simps' updateObject_default_inv)+
   apply (clarsimp simp: projectKOs)
   done
 
@@ -2069,7 +2075,7 @@ lemma set_ep_valid_arch' [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   apply (rule valid_arch_state_lift'; wp?)
   apply (simp add: setEndpoint_def)
-  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps, rule refl, simp)
+  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps', rule refl, simp)
   apply (clarsimp; rule conjI)
    prefer 2
    apply (clarsimp simp: pred_conj_def)
@@ -2092,7 +2098,7 @@ lemma setObject_ntfn_ct:
 lemma get_ntfn_sp':
   "\<lbrace>P\<rbrace> getNotification r \<lbrace>\<lambda>t. P and ko_at' t r\<rbrace>"
   by (clarsimp simp: getNotification_def getObject_def loadObject_default_def
-                     projectKOs in_monad valid_def obj_at'_def objBits_simps
+                     projectKOs in_monad valid_def obj_at'_def objBits_simps'
                      in_magnitude_check split_def)
 
 lemma set_ntfn_pred_tcb_at' [wp]:
@@ -2113,7 +2119,7 @@ lemma set_ntfn_iflive'[wp]:
   apply (wp setObject_iflive'[where P="\<top>"])
        apply simp
       apply (simp add: objBits_simps)
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (clarsimp simp: updateObject_default_def in_monad projectKOs)
    apply (clarsimp simp: updateObject_default_def
                          projectKOs bind_def)
@@ -2140,7 +2146,7 @@ lemma setNotification_idle'[wp]:
   "\<lbrace>\<lambda>s. valid_idle' s\<rbrace> setNotification p v \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   unfolding setNotification_def
   apply (wp setObject_idle'[where P="\<top>"])
-        apply (simp add: objBits_simps updateObject_default_inv)+
+        apply (simp add: objBits_simps' updateObject_default_inv)+
   apply (clarsimp simp: projectKOs)
   done
 
@@ -2179,7 +2185,7 @@ lemma set_ntfn_valid_arch' [wp]:
   "\<lbrace>valid_arch_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   apply (rule valid_arch_state_lift'; wp?)
   apply (simp add: setNotification_def)
-  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps, rule refl, simp)
+  apply (wpsimp wp: setObject_ko_wp_at simp: objBits_simps', rule refl, simp)
   apply (clarsimp; rule conjI)
    prefer 2
    apply (clarsimp simp: pred_conj_def)

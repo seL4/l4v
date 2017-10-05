@@ -241,7 +241,7 @@ lemma threadGet_stateAssert_gets:
    apply (simp add: threadGet_def liftM_def, (wp getObject_tcb_at')+)
   apply (simp add: threadGet_def liftM_def, wp+)
   apply (rule hoare_strengthen_post, (wp getObject_obj_at')+)
-     apply (simp add: objBits_def objBitsKO_def)+
+     apply (simp add: objBits_simps')+
   apply (clarsimp simp: obj_at'_def thread_fetch_def projectKOs)
   done
 
@@ -375,7 +375,7 @@ lemma threadGet_again:
    (threadGet ext t >>= n) s' = n rv s'"
   apply (clarsimp simp add: threadGet_def liftM_def in_monad)
   apply (frule use_valid [OF _ getObject_obj_at'])
-     apply (simp add: objBits_def objBitsKO_def)+
+     apply (simp add: objBits_simps')+
   apply (frule getObject_tcb_det)
   apply (clarsimp simp: bind_def split_def)
   apply (insert no_fail_getObject_tcb)
@@ -2616,7 +2616,9 @@ lemma loadCapTransfer_ctReceiveDepth:
 lemma cte_at_0' [dest!]:
   "\<lbrakk> cte_at' 0 s; no_0_obj' s \<rbrakk> \<Longrightarrow> False"
   apply (clarsimp simp: cte_wp_at_obj_cases')
-  by (auto simp: tcb_cte_cases_def is_aligned_def dest!:tcb_aligned' split: if_split_asm)
+  by (auto simp: tcb_cte_cases_def is_aligned_def objBits_defs
+          dest!: tcb_aligned'
+          split: if_split_asm)
 
 lemma getReceiveSlots_ccorres:
   "ccorres (\<lambda>a c. (a = [] \<or> (\<exists>slot. a = [slot])) \<and>
@@ -3679,7 +3681,7 @@ proof -
                        apply (clarsimp simp: is_cap_fault_def to_bool_def false_def)
                       apply wp
                       apply (rule hoare_post_imp_R, rule lsft_real_cte)
-                      apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
+                      apply (clarsimp simp: obj_at'_def projectKOs objBits_simps')
                      apply (vcg exspec=lookupSlot_modifies)
                     apply vcg
                    apply (rule conseqPre, vcg)
@@ -4906,7 +4908,7 @@ lemma setupCallerCap_ccorres [corres]:
        apply (clarsimp simp: ccap_relation_def cap_lift_reply_cap
                              cap_to_H_simps cap_reply_cap_lift_def
                              false_def tcbSlots Kernel_C.tcbCaller_def
-                             size_of_def cte_level_bits_def)
+                             size_of_def cte_level_bits_def ctcb_size_bits_def)
         apply (simp add: is_aligned_neg_mask)
        apply (wp getCTE_wp')
       apply (simp add: tcbSlots Kernel_C.tcbCaller_def
@@ -5015,7 +5017,7 @@ lemma sendIPC_dequeue_ccorres_helper:
          apply (simp add: carch_state_relation_def typ_heap_simps')
         apply (simp add: cmachine_state_relation_def)
        apply (simp add: h_t_valid_clift_Some_iff)
-      apply (simp add: objBits_simps)
+      apply (simp add: objBits_simps')
      apply (simp add: objBits_simps)
     apply assumption
    apply (clarsimp simp: cendpoint_relation_def Let_def tcb_queue_relation'_def)
@@ -5063,7 +5065,7 @@ lemma sendIPC_dequeue_ccorres_helper:
         apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (simp add: objBits_simps)
    apply assumption
   apply (clarsimp simp: cendpoint_relation_def Let_def tcb_queue_relation'_def)
@@ -5416,7 +5418,7 @@ lemma sendIPC_enqueue_ccorres_helper:
         apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: typ_heap_simps')
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (simp add: objBits_simps)
    apply assumption
   -- "SendEP case"
@@ -5457,7 +5459,7 @@ lemma sendIPC_enqueue_ccorres_helper:
        apply (simp add: carch_state_relation_def typ_heap_simps')
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: h_t_valid_clift_Some_iff)
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply (simp add: objBits_simps)
   apply assumption
   done
@@ -5685,7 +5687,7 @@ lemma sendIPC_ccorres [corres]:
        apply (clarsimp simp: st_tcb_at_refs_of_rev' isBlockedOnReceive_def)
        apply (auto split: list.splits elim!: pred_tcb'_weakenE)[1]
       apply (subgoal_tac "state_refs_of' s epptr = {}")
-       apply (clarsimp simp: obj_at'_def is_aligned_neg_mask objBitsKO_def
+       apply (clarsimp simp: obj_at'_def is_aligned_neg_mask objBits_simps'
                              projectKOs invs'_def valid_state'_def
                              st_tcb_at'_def valid_tcb_state'_def ko_wp_at'_def
                              isBlockedOnSend_def projectKO_opt_tcb
@@ -5709,7 +5711,7 @@ lemma sendIPC_ccorres [corres]:
                             projectKOs valid_tcb_state'_def)
      apply (rule conjI[rotated])
       apply (clarsimp simp: isBlockedOnSend_def ko_wp_at'_def obj_at'_def
-                            projectKOs projectKO_opt_tcb objBits_simps)
+                            projectKOs projectKO_opt_tcb objBits_simps')
      apply (fastforce split: if_split_asm
                        elim: delta_sym_refs
                        simp: pred_tcb_at'_def obj_at'_def projectKOs
@@ -5853,7 +5855,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
         apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (simp add: objBits_simps)
    apply assumption
   -- "IdleEP case"
@@ -5891,7 +5893,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
        apply (simp add: carch_state_relation_def typ_heap_simps')
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: typ_heap_simps')
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply (simp add: objBits_simps)
   apply assumption
   done
@@ -5975,7 +5977,7 @@ lemma receiveIPC_dequeue_ccorres_helper:
          apply (simp add: carch_state_relation_def typ_heap_simps')
         apply (simp add: cmachine_state_relation_def)
        apply (simp add: typ_heap_simps')
-      apply (simp add: objBits_simps)
+      apply (simp add: objBits_simps')
      apply (simp add: objBits_simps)
     apply assumption
    apply (clarsimp simp: cendpoint_relation_def Let_def tcb_queue_relation'_def)
@@ -6023,7 +6025,7 @@ lemma receiveIPC_dequeue_ccorres_helper:
         apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: typ_heap_simps')
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (simp add: objBits_simps)
    apply assumption
   apply (clarsimp simp: cendpoint_relation_def Let_def tcb_queue_relation'_def)
@@ -6047,7 +6049,7 @@ lemma completeSignal_ccorres:
     apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                           tcb_ptr_to_ctcb_ptr_def)
     apply (drule sum_to_zero)
-    apply (clarsimp simp: obj_at'_def ctcb_offset_def projectKOs objBitsKO_def
+    apply (clarsimp simp: obj_at'_def ctcb_offset_defs projectKOs objBits_simps'
                           is_aligned_def)
    apply clarsimp
    apply csymbr
@@ -6099,7 +6101,7 @@ lemma completeSignal_ccorres:
             apply (simp add: carch_state_relation_def typ_heap_simps')
            apply (simp add: cmachine_state_relation_def)
           apply (simp add: h_t_valid_clift_Some_iff)
-         apply (simp add: objBits_simps)
+         apply (simp add: objBits_simps')
         apply (simp add: objBits_simps)
        apply assumption
       apply wp
@@ -6421,26 +6423,26 @@ lemma receiveIPC_ccorres [corres]:
              apply (rename_tac list)
              apply (subgoal_tac "state_refs_of' s (capEPPtr cap) = (set list) \<times> {EPRecv}
                                  \<and> thread \<notin> (set list)")
-              subgoal by (fastforce simp: obj_at'_def is_aligned_neg_mask objBitsKO_def
-                                    projectKOs invs'_def valid_state'_def st_tcb_at'_def
-                                valid_tcb_state'_def ko_wp_at'_def invs_valid_objs'
-                                    isBlockedOnReceive_def projectKO_opt_tcb
-                                    from_bool_def to_bool_def
-                              elim!: delta_sym_refs
-                             split: if_split_asm bool.splits) (*very long*)
+              subgoal by (fastforce simp: obj_at'_def is_aligned_neg_mask objBits_simps'
+                                          projectKOs invs'_def valid_state'_def st_tcb_at'_def
+                                          valid_tcb_state'_def ko_wp_at'_def invs_valid_objs'
+                                          isBlockedOnReceive_def projectKO_opt_tcb
+                                          from_bool_def to_bool_def
+                                   elim!: delta_sym_refs
+                                   split: if_split_asm bool.splits) (*very long*)
              apply (frule(1) sym_refs_obj_atD' [OF _ invs_sym'])
              apply (clarsimp simp: st_tcb_at'_def ko_wp_at'_def obj_at'_def projectKOs
                             split: if_split_asm)
              apply (drule(1) bspec)+
              apply (case_tac "tcbState obj", simp_all add: tcb_bound_refs'_def)[1]
             apply (subgoal_tac "state_refs_of' s (capEPPtr cap) = {}")
-             subgoal by (fastforce simp: obj_at'_def is_aligned_neg_mask objBitsKO_def
-                                   projectKOs invs'_def valid_state'_def st_tcb_at'_def
-                               valid_tcb_state'_def ko_wp_at'_def invs_valid_objs'
-                                   isBlockedOnReceive_def projectKO_opt_tcb
-                                   from_bool_def to_bool_def
-                             elim: delta_sym_refs
-                            split: if_split_asm bool.splits) (*very long *)
+             subgoal by (fastforce simp: obj_at'_def is_aligned_neg_mask objBits_simps'
+                                         projectKOs invs'_def valid_state'_def st_tcb_at'_def
+                                         valid_tcb_state'_def ko_wp_at'_def invs_valid_objs'
+                                         isBlockedOnReceive_def projectKO_opt_tcb
+                                         from_bool_def to_bool_def
+                                   elim: delta_sym_refs
+                                  split: if_split_asm bool.splits) (*very long *)
             apply (clarsimp simp: obj_at'_def state_refs_of'_def projectKOs)
            apply (frule(1) sym_refs_ko_atD' [OF _ invs_sym'])
            apply (frule invs_queues)
@@ -6549,7 +6551,7 @@ lemma sendSignal_dequeue_ccorres_helper:
          apply (simp add: carch_state_relation_def typ_heap_simps')
         apply (simp add: cmachine_state_relation_def)
        apply (simp add: h_t_valid_clift_Some_iff)
-      apply (simp add: objBits_simps)
+      apply (simp add: objBits_simps')
      apply (simp add: objBits_simps)
     apply assumption
    apply (clarsimp simp: cnotification_relation_def Let_def
@@ -6599,7 +6601,7 @@ lemma sendSignal_dequeue_ccorres_helper:
         apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (simp add: objBits_simps)
    apply assumption
   apply (clarsimp simp: cnotification_relation_def Let_def
@@ -6630,7 +6632,7 @@ lemma ntfn_set_active_ccorres:
      apply (simp add: cnotification_relation_def Let_def NtfnState_Active_def
                       isWaitingNtfn_def mask_def
                split: Structures_H.ntfn.split_asm)
-    apply (simp add: objBits_simps)+
+    apply (simp add: objBits_simps')+
   done
 
 lemma sts_runnable:
@@ -6743,7 +6745,7 @@ lemma sendSignal_ccorres [corres]:
           apply (simp add: carch_state_relation_def typ_heap_simps')
          apply (simp add: cmachine_state_relation_def)
         apply (simp add: h_t_valid_clift_Some_iff)
-       apply (simp add: objBits_simps)
+       apply (simp add: objBits_simps')
       apply (simp add: objBits_simps)
      apply assumption
     -- "WaitingNtfn case"
@@ -6788,11 +6790,11 @@ lemma sendSignal_ccorres [corres]:
                 elim: pred_tcb'_weakenE
                split: list.splits option.splits)[1]
   apply (clarsimp simp: option_to_ctcb_ptr_def tcb_ptr_to_ctcb_ptr_def
-                        ctcb_offset_def
+                        ctcb_offset_defs
                  dest!: sum_to_zero)
   apply (frule (1) ko_at_valid_ntfn'[OF _ invs_valid_objs'])
   apply (auto simp: valid_ntfn'_def valid_bound_tcb'_def obj_at'_def projectKOs
-                    objBitsKO_def is_aligned_def)
+                    objBits_simps' is_aligned_def)
   done
 
 lemma receiveSignal_block_ccorres_helper:
@@ -6979,7 +6981,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
         apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (simp add: objBits_simps)
    apply assumption
   -- "WaitingNtfn case"
@@ -7019,7 +7021,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
        apply (simp add: carch_state_relation_def typ_heap_simps')
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: h_t_valid_clift_Some_iff)
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply (simp add: objBits_simps)
   apply assumption
   done
@@ -7121,7 +7123,7 @@ lemma receiveSignal_ccorres [corres]:
              apply (simp add: carch_state_relation_def typ_heap_simps')
             apply (simp add: cmachine_state_relation_def)
            apply (simp add: h_t_valid_clift_Some_iff)
-          apply (simp add: objBits_simps)
+          apply (simp add: objBits_simps')
          apply (simp add: objBits_simps)
         apply assumption
        apply wp
@@ -7171,23 +7173,23 @@ lemma receiveSignal_ccorres [corres]:
                   split: ntfn.splits)
     apply (subgoal_tac "state_refs_of' s (capNtfnPtr cap) =
                              {r \<in> state_refs_of' s (capNtfnPtr cap). snd r = NTFNBound}")
-     subgoal by (fastforce simp: obj_at'_def is_aligned_neg_mask objBitsKO_def
-                           projectKOs invs'_def valid_state'_def st_tcb_at'_def
-                           valid_tcb_state'_def ko_wp_at'_def
-                           isBlockedOnNotification_def projectKO_opt_tcb
-                     elim: delta_sym_refs
-                    split: if_split_asm if_split)
+     subgoal by (fastforce simp: obj_at'_def is_aligned_neg_mask objBits_simps'
+                                 projectKOs invs'_def valid_state'_def st_tcb_at'_def
+                                 valid_tcb_state'_def ko_wp_at'_def
+                                 isBlockedOnNotification_def projectKO_opt_tcb
+                           elim: delta_sym_refs
+                          split: if_split_asm if_split)
     apply (auto simp: obj_at'_def state_refs_of'_def projectKOs ntfn_bound_refs'_def)[1]
    apply (rename_tac list)
    apply (subgoal_tac "state_refs_of' s (capNtfnPtr cap) = (set list) \<times> {NTFNSignal}
                                        \<union> {r \<in> state_refs_of' s (capNtfnPtr cap). snd r = NTFNBound}
                               \<and> thread \<notin> (set list)")
-    subgoal by (fastforce simp: obj_at'_def is_aligned_neg_mask objBitsKO_def
-                          projectKOs invs'_def valid_state'_def st_tcb_at'_def
-                          valid_tcb_state'_def ko_wp_at'_def
-                          isBlockedOnNotification_def projectKO_opt_tcb
-                    elim: delta_sym_refs
-                   split: if_split_asm if_split)
+    subgoal by (fastforce simp: obj_at'_def is_aligned_neg_mask objBits_simps'
+                                projectKOs invs'_def valid_state'_def st_tcb_at'_def
+                                valid_tcb_state'_def ko_wp_at'_def
+                                isBlockedOnNotification_def projectKO_opt_tcb
+                          elim: delta_sym_refs
+                         split: if_split_asm if_split)
    apply (frule(1) sym_refs_obj_atD' [OF _ invs_sym'])
    apply (rule conjI, clarsimp simp: ko_wp_at'_def dest!: ntfnBound_state_refs_equivalence)
    apply (clarsimp simp: st_tcb_at'_def ko_wp_at'_def obj_at'_def projectKOs

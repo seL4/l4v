@@ -140,7 +140,7 @@ lemma obj_ref_of_relation:
 lemma obj_size_relation:
   "\<lbrakk> cap_relation c c'; capClass c' = PhysicalClass \<rbrakk> \<Longrightarrow>
   obj_size c = capUntypedSize c'"
-  apply (cases c, simp_all add: objBits_def objBitsKO_def zbits_map_def
+  apply (cases c, simp_all add: objBits_simps' zbits_map_def
                                 cte_level_bits_def
                          split: option.splits sum.splits)
   apply (rename_tac arch_cap)
@@ -219,7 +219,7 @@ lemma tcb_cases_related:
     \<exists>getF' setF'. (\<forall>x. tcb_cte_cases (cte_map (x, ref) - x) = Some (getF', setF'))
                \<and> (\<forall>tcb tcb'. tcb_relation tcb tcb' \<longrightarrow> cap_relation (getF tcb) (cteCap (getF' tcb')))"
   by (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1
-                cte_map_def tcb_relation_def
+                cte_map_def' tcb_relation_def
          split: if_split_asm)
 
 lemma pspace_relation_cte_wp_at:
@@ -384,7 +384,7 @@ proof (induct rule: resolveAddressBits.induct)
      apply (clarsimp simp: in_monad locateSlot_conv stateAssert_def)
      apply (cases cap)
        apply (simp_all add: isCap_defs)[12]
-     apply (clarsimp simp add: valid_cap'_def objBits_simps cte_level_bits_def
+     apply (clarsimp simp add: valid_cap'_def objBits_simps' cte_level_bits_def
                         split: option.split_asm)
     apply (simp only: in_bindE_R K_bind_def)
     apply (elim exE conjE)
@@ -406,7 +406,7 @@ proof (induct rule: resolveAddressBits.induct)
     apply (cases cap)
      apply (simp_all add: isCap_defs)[12]
     apply (frule in_inv_by_hoareD [OF getSlotCap_inv])
-    apply (clarsimp simp: valid_cap'_def cte_level_bits_def)
+    apply (clarsimp simp: valid_cap'_def cte_level_bits_def objBits_defs)
     done
 qed
 
@@ -508,7 +508,7 @@ proof -
 
   finally
     show ?thesis
-      by (simp add: cte_map_def)
+      by (simp add: cte_map_def')
 qed
 
 lemma cte_map_shift':
@@ -695,8 +695,8 @@ lemma getThreadCSpaceRoot:
                 tcbCTableSlot_def)
 
 lemma getThreadVSpaceRoot:
-  "getThreadVSpaceRoot t = return (t+16)"
-  by (simp add: getThreadVSpaceRoot_def locateSlot_conv objBits_simps
+  "getThreadVSpaceRoot t = return (t + 2^cteSizeBits)"
+  by (simp add: getThreadVSpaceRoot_def locateSlot_conv objBits_simps'
                 tcbVTableSlot_def shiftl_t2n cte_level_bits_def)
 
 lemma getSlotCap_tcb_corres:
@@ -1732,10 +1732,11 @@ corollary descendants_of_Null_update':
   by (simp add: descendants_of'_def subtree_Null_update [symmetric])
 
 lemma ps_clear_16:
-  "\<lbrakk> ps_clear p 9 s; is_aligned p 9 \<rbrakk> \<Longrightarrow> ksPSpace s (p + 16) = None"
+  "\<lbrakk> ps_clear p tcbBlockSizeBits s; is_aligned p tcbBlockSizeBits \<rbrakk>
+     \<Longrightarrow> ksPSpace s (p + 2^cteSizeBits) = None"
   apply (simp add: ps_clear_def)
-  apply (drule equals0D[where a="p + 16"])
-  apply (simp add: dom_def field_simps)
+  apply (drule equals0D[where a="p + 2^cteSizeBits"])
+  apply (simp add: dom_def field_simps objBits_defs)
   apply (drule mp)
    apply (rule word_plus_mono_right)
     apply simp
@@ -1748,7 +1749,7 @@ lemma ps_clear_16:
 
 lemma ps_clear_16':
   "\<lbrakk> ksPSpace s p = Some (KOTCB tcb); pspace_aligned' s; pspace_distinct' s \<rbrakk>
-      \<Longrightarrow> ksPSpace s (p + 16) = None"
+      \<Longrightarrow> ksPSpace s (p + 2^cteSizeBits) = None"
   by (clarsimp simp: pspace_aligned'_def pspace_distinct'_def
                      objBits_simps ps_clear_16
         | drule(1) bspec[OF _ domI])+
@@ -1786,7 +1787,7 @@ lemma cte_at_cte_map_in_obj_bits:
    apply (drule power_strict_increasing [where a="2 :: nat"])
     apply simp
    apply simp
-  apply (clarsimp simp: cte_map_def split_def field_simps)
+  apply (clarsimp simp: cte_map_def' split_def field_simps)
   apply (subgoal_tac "of_bl (snd p) * 16 < (512 :: word32)")
    apply (drule(1) pspace_alignedD[rotated])
    apply (rule conjI)
@@ -1860,15 +1861,15 @@ lemma cte_map_inj_eq:
 
 lemma tcb_cases_related2:
   "tcb_cte_cases (v - x) = Some (getF, setF) \<Longrightarrow>
-   \<exists>getF' setF' restr. tcb_cap_cases (tcb_cnode_index (unat ((v - x) >> 4))) = Some (getF', setF', restr)
-          \<and> cte_map (x, tcb_cnode_index (unat ((v - x) >> 4))) = v
+   \<exists>getF' setF' restr. tcb_cap_cases (tcb_cnode_index (unat ((v - x) >> cte_level_bits))) = Some (getF', setF', restr)
+          \<and> cte_map (x, tcb_cnode_index (unat ((v - x) >> cte_level_bits))) = v
           \<and> (\<forall>tcb tcb'. tcb_relation tcb tcb' \<longrightarrow> cap_relation (getF' tcb) (cteCap (getF tcb')))
           \<and> (\<forall>tcb tcb' cap cte. tcb_relation tcb tcb' \<longrightarrow> cap_relation cap (cteCap cte)
                         \<longrightarrow> tcb_relation (setF' (\<lambda>x. cap) tcb) (setF (\<lambda>x. cte) tcb'))"
-  apply (clarsimp simp: tcb_cte_cases_def tcb_relation_def
+  apply (clarsimp simp: tcb_cte_cases_def tcb_relation_def cte_level_bits_def
                         tcb_cap_cases_simps[simplified]
                  split: if_split_asm)
-  apply (simp_all add: tcb_cnode_index_def cte_map_def field_simps to_bl_1)
+  apply (simp_all add: tcb_cnode_index_def cte_level_bits_def cte_map_def field_simps to_bl_1)
   done
 
 lemma other_obj_relation_KOCTE[simp]:
@@ -1883,7 +1884,7 @@ lemma cte_map_pulls_tcb_to_abstract:
      pspace_aligned s; pspace_distinct s; valid_objs s;
      cte_at z s; (y - x) \<in> dom tcb_cte_cases \<rbrakk>
      \<Longrightarrow> \<exists>tcb'. kheap s x = Some (TCB tcb') \<and> tcb_relation tcb' tcb
-                  \<and> (z = (x, tcb_cnode_index (unat ((y - x) >> 4))))"
+                  \<and> (z = (x, tcb_cnode_index (unat ((y - x) >> cte_level_bits))))"
   apply (rule pspace_dom_relatedE, assumption+)
   apply (erule(1) obj_relation_cutsE, simp_all split: if_split_asm)
   apply (clarsimp simp: other_obj_relation_def
@@ -2676,7 +2677,7 @@ lemma caps_contained_srel:
   apply clarsimp
   apply (case_tac ca, simp_all)
    apply (clarsimp simp: valid_cap'_def)
-   apply (case_tac cb, simp_all add: isCap_simps objBits_simps
+   apply (case_tac cb, simp_all add: isCap_simps objBits_simps'
                                      cte_level_bits_def)[1]
    apply clarsimp
   apply clarsimp
@@ -2711,7 +2712,7 @@ lemma no_fail_updateCap [wp]:
 lemma capRange_cap_relation:
   "\<lbrakk> cap_relation cap cap'; cap_relation cap cap' \<Longrightarrow> capClass cap' = PhysicalClass \<rbrakk>
     \<Longrightarrow> capRange cap' = {obj_ref_of cap .. obj_ref_of cap + obj_size cap - 1}"
-  by (simp add: capRange_def objBits_simps cte_level_bits_def
+  by (simp add: capRange_def objBits_simps' cte_level_bits_def
                 asid_low_bits_def zbits_map_def vspace_bits_defs vcpu_bits_def
          split: cap_relation_split_asm arch_cap.split_asm
                 option.split sum.split)
@@ -2880,7 +2881,7 @@ lemma updateMDB_pspace_relation:
   apply (elim disjE conjE exE)
    apply (clarsimp simp: cte_wp_at_cases' lookupAround2_char1)
    apply (erule disjE)
-    apply (clarsimp simp: tcb_ctes_clear)
+    apply (clarsimp simp: tcb_ctes_clear cte_level_bits_def objBits_defs)
    apply clarsimp
    apply (rule pspace_dom_relatedE, assumption+)
    apply (rule obj_relation_cutsE, assumption+, simp_all split: if_split_asm)[1]

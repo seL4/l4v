@@ -86,14 +86,14 @@ lemma setArchTCB_C_corres:
   apply (drule (1) obj_at_cslift_tcb)
   apply clarsimp
   apply (frule getObject_eq [rotated -1], simp)
-   apply (simp add: objBits_simps)
+   apply (simp add: objBits_simps')
   apply (simp add: NonDetMonad.bind_def split_def)
   apply (rule bexI)
    prefer 2
    apply assumption
   apply simp
   apply (frule setObject_eq [rotated -1], simp)
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply (simp add: objBits_simps)
   apply clarsimp
   apply (rule bexI)
@@ -281,14 +281,15 @@ lemma max_word_neq_0[simp]: "max_word \<noteq> 0"
   done
 
 lemma csch_act_rel_to_H:
-  "(\<forall>t. a = SwitchToThread t \<longrightarrow> is_aligned t 9) \<Longrightarrow>
+  "(\<forall>t. a = SwitchToThread t \<longrightarrow> is_aligned t tcbBlockSizeBits) \<Longrightarrow>
    cscheduler_action_relation a p \<longleftrightarrow> cscheduler_action_to_H p = a"
   apply (cases a)
     apply (simp_all add: cscheduler_action_relation_def
                          cscheduler_action_to_H_def)
   apply safe
      apply (simp_all add: tcb_ptr_to_ctcb_ptr_def ctcb_ptr_to_tcb_ptr_def
-                          ctcb_offset_def is_aligned_mask mask_def max_word_def)
+                          ctcb_offset_defs is_aligned_mask mask_def max_word_def
+                          objBits_defs)
   apply (word_bitwise, simp)
   done
 
@@ -857,15 +858,14 @@ lemma ps_clear_is_aligned_ksPSpace_None:
   by assumption
 
 (* FIXME: move *)
-lemma ps_clear_32:
-  "\<lbrakk>ps_clear p 9 s; is_aligned p 9\<rbrakk> \<Longrightarrow> ksPSpace s (p + 0x20) = None"
-by (rule ps_clear_is_aligned_ksPSpace_None) (simp add: mask_2pm1)+
-lemma ps_clear_64:
-  "\<lbrakk>ps_clear p 9 s; is_aligned p 9\<rbrakk> \<Longrightarrow> ksPSpace s (p + 0x30) = None"
-by (rule ps_clear_is_aligned_ksPSpace_None) (simp add: mask_2pm1)+
-lemma ps_clear_128:
-  "\<lbrakk>ps_clear p 9 s; is_aligned p 9\<rbrakk> \<Longrightarrow> ksPSpace s (p + 0x40) = None"
-by (rule ps_clear_is_aligned_ksPSpace_None) (simp add: mask_2pm1)+
+lemma ps_clear_is_aligned_ctes_None:
+  assumes "ps_clear p tcbBlockSizeBits s"
+      and "is_aligned p tcbBlockSizeBits"
+  shows "ksPSpace s (p + 2*2^cteSizeBits) = None"
+    and "ksPSpace s (p + 3*2^cteSizeBits) = None"
+    and "ksPSpace s (p + 4*2^cteSizeBits) = None"
+  by (auto intro: assms ps_clear_is_aligned_ksPSpace_None
+            simp: objBits_defs mask_def)+
 
 lemma map_to_ctes_tcb_ctes:
   notes if_cong[cong]
@@ -881,48 +881,48 @@ lemma map_to_ctes_tcb_ctes:
                         objBits_type[of "KOTCB tcb'" "KOTCB undefined"])
   apply (rule conjI)
    apply (drule ps_clear_def3[THEN iffD1,rotated 2],
-          assumption, simp add: objBitsKO_def)+
+          assumption, simp add: objBits_simps')+
    apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
    apply (drule_tac x=p in spec, simp)
   apply (rule conjI)
    apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
    apply (drule_tac x="p+0x10" in spec, simp add: objBitsKO_def)
    apply (frule_tac s1=s in ps_clear_def3[THEN iffD1,rotated 2],
-          assumption, simp add: objBitsKO_def)
+          assumption, simp add: objBits_simps')
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
-          assumption, simp add: objBitsKO_def)
+          assumption, simp add: objBits_simps')
    apply (drule (1) ps_clear_16)+
-   apply (simp add: is_aligned_add_helper[of _ 9 "0x10", simplified] split_def
-                    objBitsKO_def)
+   apply (simp add: is_aligned_add_helper[of _ 9 "0x10", simplified]
+                    split_def objBits_simps')
   apply (rule conjI)
    apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
    apply (drule_tac x="p+0x20" in spec, simp add: objBitsKO_def)
    apply (frule_tac s1=s in ps_clear_def3[THEN iffD1,rotated 2],
-          assumption, simp add: objBitsKO_def)
+          assumption, simp add: objBits_simps')
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
-          assumption, simp add: objBitsKO_def)
-   apply (drule (1) ps_clear_32)+
-   apply (simp add: is_aligned_add_helper[of _ 9 "0x20", simplified] split_def
-                    objBitsKO_def)
+          assumption, simp add: objBits_simps')
+   apply (drule (1) ps_clear_is_aligned_ctes_None(1))+
+   apply (simp add: is_aligned_add_helper[of _ 9 "0x20", simplified]
+                    split_def objBits_simps')
   apply (rule conjI)
    apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
    apply (drule_tac x="p+0x30" in spec, simp add: objBitsKO_def)
    apply (frule_tac s1=s in ps_clear_def3[THEN iffD1,rotated 2],
-          assumption, simp add: objBitsKO_def)
+          assumption, simp add: objBits_simps')
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
-          assumption, simp add: objBitsKO_def)
-   apply (drule (1) ps_clear_64)+
-   apply (simp add: is_aligned_add_helper[of _ 9 "0x30", simplified] split_def
-                    objBitsKO_def)
+          assumption, simp add: objBits_simps')
+   apply (drule (1) ps_clear_is_aligned_ctes_None(2))+
+   apply (simp add: is_aligned_add_helper[of _ 9 "0x30", simplified]
+                    split_def objBits_simps')
   apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
   apply (drule_tac x="p+0x40" in spec, simp add: objBitsKO_def)
   apply (frule_tac s1=s in ps_clear_def3[THEN iffD1,rotated 2],
-         assumption, simp add: objBitsKO_def)
+         assumption, simp add: objBits_simps')
   apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
-         assumption, simp add: objBitsKO_def)
-  apply (drule (1) ps_clear_128)+
-  apply (simp add: is_aligned_add_helper[of _ 9 "0x40", simplified] split_def
-                   objBitsKO_def)
+         assumption, simp add: objBits_simps')
+  apply (drule (1) ps_clear_is_aligned_ctes_None(3))+
+  apply (simp add: is_aligned_add_helper[of _ 9 "0x40", simplified]
+                   split_def objBits_simps')
   done
 
 lemma cfault_rel_imp_eq:
@@ -976,7 +976,7 @@ lemma cpspace_tcb_relation_unique:
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
    apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
    apply (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq carch_tcb_relation_imp_eq
-                     ccontext_relation_imp_eq up_ucast_inj_eq)
+                     ccontext_relation_imp_eq up_ucast_inj_eq ctcb_size_bits_def)
   done
 
 lemma tcb_queue_rel_clift_unique:

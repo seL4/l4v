@@ -34,7 +34,7 @@ definition
   update_cnode_cap_data :: "data \<Rightarrow> nat \<times> data" where
  "update_cnode_cap_data w \<equiv>
     let
-      guard_bits = 18;
+      guard_bits = 58;
       guard_size' = unat ((w >> cnode_padding_bits) && mask cnode_guard_size_bits);
       guard'' = (w >> (cnode_padding_bits + cnode_guard_size_bits)) && mask guard_bits
     in (guard_size', guard'')"

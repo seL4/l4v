@@ -622,7 +622,7 @@ lemma in_new_cap_addrs_aligned:
   apply (clarsimp simp:new_cap_addrs_def image_def)
   apply (erule aligned_add_aligned)
     apply (rule is_aligned_weaken[OF is_aligned_shiftl_self])
-    apply (case_tac ko,simp_all add:objBits_simps word_bits_def
+    apply (case_tac ko,simp_all add:objBits_simps' word_bits_def
        vspace_bits_defs vcpu_bits_def archObjSize_def split:arch_kernel_object.splits)
   done
 
@@ -811,11 +811,11 @@ lemma createObject_valid_duplicates'[wp]:
                    valid_duplicates'_insert_ko[where us = us,simplified])
       apply (simp add: APIType_capBits_def is_aligned_mask ARM_HYP_H.toAPIType_def
                 split: ARM_HYP_H.object_type.splits)
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (simp add: nondup_obj_def)
    apply simp
    apply (rule none_in_new_cap_addrs
-     ,(simp add: objBits_simps pageBits_def APIType_capBits_def
+     ,(simp add: objBits_simps' pageBits_def APIType_capBits_def
                  ARM_HYP_H.toAPIType_def word_bits_conv archObjSize_def is_aligned_mask
           split: ARM_HYP_H.object_type.splits)+)[1]
   apply (clarsimp simp: word_bits_def)
@@ -960,7 +960,7 @@ lemma new_CapTable_bound:
     \<Longrightarrow> tp = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> us < 28"
   apply (frule range_cover.sz)
   apply (drule range_cover.sz(2))
-  apply (clarsimp simp:APIType_capBits_def objBits_simps word_bits_def)
+  apply (clarsimp simp: APIType_capBits_def objBits_simps' word_bits_def)
   done
 
 lemma invokeUntyped_valid_duplicates[wp]:
@@ -2175,7 +2175,7 @@ lemma tc_valid_duplicates':
          | wp hoare_vcg_conj_liftE1 cteDelete_invs' cteDelete_deletes
               hoare_vcg_const_imp_lift
          )+)
-  apply (clarsimp simp: tcb_cte_cases_def cte_level_bits_def
+  apply (clarsimp simp: tcb_cte_cases_def cte_level_bits_def objBits_defs
                         tcbIPCBufferSlot_def)
   apply (auto dest!: isCapDs isReplyCapD isValidVTableRootD
                simp: isCap_simps)

@@ -1075,7 +1075,7 @@ lemma ccorres_return_void_catchbrk:
 
 lemma real_cte_tcbCallerSlot:
   "tcb_at' t s \<Longrightarrow> \<not> real_cte_at' (t + 2 ^ cte_level_bits * tcbCallerSlot) s"
-  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
+  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps'
                         cte_level_bits_def tcbCallerSlot_def)
   apply (drule_tac x=t and y="t + a" for a in ps_clearD, assumption)
     apply (rule le_neq_trans, simp_all)[1]
@@ -1098,7 +1098,7 @@ lemma handleReply_ccorres:
    apply (simp only: getThreadCallerSlot_def locateSlot_conv)
 
 
-   apply (rule_tac P="\<lambda>s. thread=ksCurThread s \<and> invs' s \<and> is_aligned thread 9"
+   apply (rule_tac P="\<lambda>s. thread=ksCurThread s \<and> invs' s \<and> is_aligned thread tcbBlockSizeBits"
                    and r'="\<lambda> a c. c = cte_Ptr a"
                    and xf'="callerSlot_'" and P'=UNIV in ccorres_split_nothrow)
        apply (rule ccorres_from_vcg)
@@ -1192,7 +1192,7 @@ lemma deleteCallerCap_ccorres [corres]:
   apply (cinit lift: receiver_')
    apply (simp only: getThreadCallerSlot_def locateSlot_conv)
    apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq)+
-   apply (rule_tac P="\<lambda>_. is_aligned receiver 9" and r'="\<lambda> a c. cte_Ptr a = c"
+   apply (rule_tac P="\<lambda>_. is_aligned receiver tcbBlockSizeBits" and r'="\<lambda> a c. cte_Ptr a = c"
                    and xf'="callerSlot_'" and P'=UNIV in ccorres_split_nothrow_novcg)
        apply (rule ccorres_from_vcg)
        apply (rule allI, rule conseqPre, vcg)
@@ -1201,7 +1201,7 @@ lemma deleteCallerCap_ccorres [corres]:
        apply (simp add: mask_def tcbCallerSlot_def Kernel_C.tcbCaller_def
               cte_level_bits_def size_of_def)
        apply (drule ptr_val_tcb_ptr_mask2)
-       apply (simp add: mask_def)
+       apply (simp add: mask_def objBits_defs)
       apply ceqv
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_symb_exec_l)

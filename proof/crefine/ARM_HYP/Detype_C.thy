@@ -429,41 +429,42 @@ lemma tcb_ptr_to_ctcb_ptr_in_range:
   assumes tat: "ko_at' tcb x s"
   shows "ptr_val (tcb_ptr_to_ctcb_ptr x) \<in> {x..x + 2 ^ objBits tcb - 1}"
 proof -
-  from tat have al: "is_aligned x 9" by (clarsimp elim!: obj_atE' simp: projectKOs objBits_simps)
-  hence "x \<le> x + 2 ^ 9 - 1"
+  from tat have al: "is_aligned x tcbBlockSizeBits"
+    by (clarsimp elim!: obj_atE' simp: projectKOs objBits_simps)
+  hence "x \<le> x + 2 ^ tcbBlockSizeBits - 1"
     by (rule is_aligned_no_overflow)
 
-  moreover from al have "x \<le> x + 2 ^ 8"
-    by (rule is_aligned_no_wrap') simp
+  moreover from al have "x \<le> x + 2 ^ ctcb_size_bits"
+    by (rule is_aligned_no_wrap') (simp add: ctcb_size_bits_def objBits_defs)
 
   ultimately show ?thesis
     unfolding tcb_ptr_to_ctcb_ptr_def
-    by (simp add: ctcb_offset_def objBits_simps field_simps word_plus_mono_right)
+    by (simp add: ctcb_offset_defs objBits_simps' field_simps word_plus_mono_right)
 qed
 
 lemma tcb_ptr_to_ctcb_ptr_in_range':
   fixes tcb :: tcb
-  assumes al: "is_aligned (ctcb_ptr_to_tcb_ptr x) 9"
+  assumes al: "is_aligned (ctcb_ptr_to_tcb_ptr x) tcbBlockSizeBits"
   shows "{ptr_val x ..+ size_of TYPE (tcb_C)}
           \<subseteq> {ctcb_ptr_to_tcb_ptr x..+2 ^ objBits tcb}"
 proof -
-  from al have "ctcb_ptr_to_tcb_ptr x \<le> ctcb_ptr_to_tcb_ptr x + 2 ^ 9 - 1"
+  from al have "ctcb_ptr_to_tcb_ptr x \<le> ctcb_ptr_to_tcb_ptr x + 2 ^ tcbBlockSizeBits - 1"
     by (rule is_aligned_no_overflow)
 
-  moreover from al have "ctcb_ptr_to_tcb_ptr x \<le> ctcb_ptr_to_tcb_ptr x + 2 ^ 8"
-    by (rule is_aligned_no_wrap') simp
+  moreover from al have "ctcb_ptr_to_tcb_ptr x \<le> ctcb_ptr_to_tcb_ptr x + 2 ^ ctcb_size_bits"
+    by (rule is_aligned_no_wrap') (simp add: ctcb_size_bits_def objBits_defs)
 
-  moreover from al have "is_aligned (ptr_val x) 8" by (rule ctcb_ptr_to_tcb_ptr_aligned)
+  moreover from al have "is_aligned (ptr_val x) ctcb_size_bits" by (rule ctcb_ptr_to_tcb_ptr_aligned)
   moreover from al have "{ctcb_ptr_to_tcb_ptr x..+2 ^ objBits tcb} = {ctcb_ptr_to_tcb_ptr x.. ctcb_ptr_to_tcb_ptr x + 2 ^ objBits tcb - 1}"
     apply -
     apply (rule upto_intvl_eq)
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     done
 
   ultimately show ?thesis
-    unfolding ctcb_ptr_to_tcb_ptr_def ctcb_offset_def
+    unfolding ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs
     apply -
-    apply (clarsimp simp: field_simps objBits_simps size_of_def)
+    apply (clarsimp simp: field_simps objBits_simps' size_of_def)
     apply (drule intvlD)
     apply clarsimp
     apply (rule conjI)
@@ -503,7 +504,7 @@ proof -
     from koat have "is_aligned x (objBits tcb)"  by (clarsimp elim!: obj_atE' simp: objBits_simps projectKOs)
     thus "x \<in> {x..x + 2 ^ objBits tcb - 1}"
       apply (rule base_member_set [simplified field_simps])
-      apply (simp add: objBits_simps word_bits_conv)
+      apply (simp add: objBits_simps' word_bits_conv)
       done
   qed
 qed
@@ -577,7 +578,7 @@ lemma ctes_of_is_aligned:
 proof -
   have "cte_wp_at' (op = cte) p s" using ks by (clarsimp simp: cte_wp_at_ctes_of)
   thus ?thesis
-    apply (simp add: cte_wp_at_cases' objBits_simps cte_level_bits_def)
+    apply (simp add: cte_wp_at_cases' objBits_simps' cte_level_bits_def)
     apply (erule disjE)
      apply simp
     apply clarsimp
@@ -590,29 +591,30 @@ qed
 
 lemma cte_wp_at_casesE' [consumes 1, case_names cte tcb]:
   "\<lbrakk>cte_wp_at' P p s;
-  \<And>cte. \<lbrakk> ksPSpace s p = Some (KOCTE cte); is_aligned p cte_level_bits; P cte; ps_clear p 4 s \<rbrakk> \<Longrightarrow> R;
+  \<And>cte. \<lbrakk> ksPSpace s p = Some (KOCTE cte); is_aligned p cte_level_bits; P cte; ps_clear p cteSizeBits s \<rbrakk> \<Longrightarrow> R;
   \<And>n tcb getF setF. \<lbrakk>
      ksPSpace s (p - n) = Some (KOTCB tcb);
-     is_aligned (p - n) 9;
+     is_aligned (p - n) tcbBlockSizeBits;
      tcb_cte_cases n = Some (getF, setF);
-     P (getF tcb); ps_clear (p - n) 9 s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+     P (getF tcb); ps_clear (p - n) tcbBlockSizeBits s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   by (fastforce simp: cte_wp_at_cases')
 
 
 (* FIXME: MOVE *)
 lemma tcb_cte_cases_in_range3:
   assumes tc: "tcb_cte_cases (y - x) = Some v"
-  and     al: "is_aligned x 9"
-  shows   "y + 2 ^ 4 - 1 \<le> x + 2 ^ 9 - 1"
+  and     al: "is_aligned x tcbBlockSizeBits"
+  shows   "y + 2 ^ cteSizeBits - 1 \<le> x + 2 ^ tcbBlockSizeBits - 1"
 proof -
-  from tc obtain q where yq: "y = x + q" and qv: "q \<le> 2 ^ 7 - 1"
+  note [simp] = objBits_defs ctcb_size_bits_def
+  from tc obtain q where yq: "y = x + q" and qv: "q \<le> 2 ^ ctcb_size_bits - 1"
     unfolding tcb_cte_cases_def
     by (simp add: diff_eq_eq split: if_split_asm)
 
-  have "q + (2 ^ 4 - 1) \<le> (2 ^ 7 - 1) + (2 ^ 4 - 1)" using qv
+  have "q + (2 ^ cteSizeBits - 1) \<le> (2 ^ ctcb_size_bits - 1) + (2 ^ cteSizeBits - 1)" using qv
     by (rule word_plus_mcs_3) simp
-  also have "\<dots> \<le> 2 ^ 9 - 1" by simp
-  finally have "x + (q + (2 ^ 4 - 1)) \<le> x + (2 ^ 9 - 1)"
+  also have "\<dots> \<le> 2 ^ tcbBlockSizeBits - 1" by simp
+  finally have "x + (q + (2 ^ cteSizeBits - 1)) \<le> x + (2 ^ tcbBlockSizeBits - 1)"
     apply (rule word_plus_mono_right)
     apply (rule is_aligned_no_overflow' [OF al])
     done
@@ -622,34 +624,32 @@ qed
 
 
 lemma tcb_cte_in_range:
-  "\<lbrakk> ksPSpace s p = Some (KOTCB tcb); is_aligned p 9;
+  "\<lbrakk> ksPSpace s p = Some (KOTCB tcb); is_aligned p tcbBlockSizeBits;
   tcb_cte_cases n = Some (getF, setF) \<rbrakk>
   \<Longrightarrow> {p + n.. (p + n) + 2 ^ objBits (cte :: cte) - 1} \<subseteq> {p .. p + 2 ^ objBits tcb - 1}"
   apply (rule range_subsetI)
   apply (erule (1) tcb_cte_cases_in_range1 [where y = "p + n" and x = p, simplified])
   apply (frule (1) tcb_cte_cases_in_range3 [where y = "p + n" and x = p, simplified])
-  apply (simp add: objBits_simps)
+  apply (simp add: objBits_simps')
   done
 
 lemma tcb_cte_cases_aligned:
-  "\<lbrakk>is_aligned p 9; tcb_cte_cases n = Some (getF, setF)\<rbrakk>
+  "\<lbrakk>is_aligned p tcbBlockSizeBits; tcb_cte_cases n = Some (getF, setF)\<rbrakk>
   \<Longrightarrow> is_aligned (p + n) (objBits (cte :: cte))"
   apply (erule aligned_add_aligned)
-   apply (simp add: tcb_cte_cases_def is_aligned_def objBits_simps split: if_split_asm)
-  apply (simp add: objBits_simps)
+   apply (simp add: tcb_cte_cases_def is_aligned_def objBits_simps' split: if_split_asm)
+  apply (simp add: objBits_simps')
   done
 
 lemma tcb_cte_in_range':
-  "\<lbrakk> ksPSpace s p = Some (KOTCB tcb); is_aligned p 9;
+  "\<lbrakk> ksPSpace s p = Some (KOTCB tcb); is_aligned p tcbBlockSizeBits;
   tcb_cte_cases n = Some (getF, setF) \<rbrakk>
   \<Longrightarrow> {p + n..+2 ^ objBits (cte :: cte)} \<subseteq> {p ..+ 2 ^ objBits tcb}"
   apply (subst upto_intvl_eq)
-    apply (erule (1) tcb_cte_cases_aligned)
-   apply (simp add: objBits_def)
+   apply (erule (1) tcb_cte_cases_aligned)
   apply (subst upto_intvl_eq)
-   apply (simp add: objBits_simps)
-  apply (simp add: objBits_def)
-  apply (erule (2) tcb_cte_in_range[unfolded objBits_def, simplified])
+   apply (simp add: objBits_simps')
+  apply (erule (2) tcb_cte_in_range)
   done
 
 (* clagged from above :( Were I smarter or if I cared more I could probably factor out more \<dots>*)
@@ -708,7 +708,7 @@ proof -
       with vu al show "pspace_no_overlap' ptr bits ?s" by (rule valid_untyped_no_overlap)
     qed
     hence "?oran' \<inter> ?ran' = {}" by simp
-    thus ?thesis by (simp add: objBits_simps size_of_def)
+    thus ?thesis by (simp add: objBits_simps' size_of_def)
   next
     case (tcb n tcb _ _)
 
@@ -752,7 +752,7 @@ proof -
     finally have "{ptr_val x..+2 ^ objBits cte} \<inter> ?ran' = {}"
       using ot unfolding oran'
       by blast
-    thus ?thesis by (simp add: objBits_simps size_of_def)
+    thus ?thesis by (simp add: objBits_simps' size_of_def)
   qed
 qed
 
@@ -1217,7 +1217,7 @@ proof (rule cmap_relation_cong)
       done
 
     show "unat ctcb_offset < 2 ^ objBits tcb"
-      by (fastforce simp add: ctcb_offset_def objBits_simps project_inject)
+      by (fastforce simp add: ctcb_offset_defs objBits_simps' project_inject)
 
     show "x \<in> {ptr..+2 ^ bits}" by fact
   qed
@@ -1762,7 +1762,7 @@ proof -
     apply ((subst lift_t_typ_region_bytes,
             rule cm_disj cm_disj_tcb cm_disj_cte cm_disj_user cm_disj_device
             , assumption +,
-            simp_all add: objBits_simps archObjSize_def projectKOs
+            simp_all add: objBits_simps' archObjSize_def projectKOs
                           machine_bits_defs
                           heap_to_user_data_restrict heap_to_device_data_restrict)[1])+ -- "waiting ..."
     apply (simp add: map_to_ctes_delete' cmap_relation_restrict_both_proj
@@ -2043,7 +2043,7 @@ proof -
       apply (drule(1) tcb_no_overlap)
       apply (erule disjoint_subset[rotated])
       apply (rule intvl_start_le)
-      apply (simp add: objBitsT_simps)
+      apply (simp add: objBitsT_simps objBits_defs)
       done
   }
 

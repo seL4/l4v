@@ -1356,4 +1356,32 @@ lemma not_emptyI:
   "\<And>x A B. \<lbrakk>x\<in>A; x\<in>B\<rbrakk> \<Longrightarrow> A \<inter> B\<noteq> {}"
   by auto
 
+lemma pre_helper2:
+  "\<And>base n bits x. \<lbrakk> is_aligned (base :: machine_word) n; n < word_bits; bits \<le> n; x < 2 ^ (n - bits) \<rbrakk>
+             \<Longrightarrow> base + x * 2^bits \<in> {base .. base + 2 ^ n  - 1}"
+  apply (subgoal_tac "x * 2^bits < 2 ^ n")
+   apply simp
+   apply (rule context_conjI)
+    apply (erule(1) is_aligned_no_wrap')
+   apply (subst add_diff_eq[symmetric])
+   apply (rule word_plus_mono_right)
+    apply simp
+   apply (erule is_aligned_no_wrap')
+   apply simp
+  apply (drule_tac k="2^bits" in word_mult_less_mono1)
+    apply (simp add: p2_gt_0 word_bits_def)
+   apply (subst unat_power_lower, simp add: word_bits_def)+
+   apply (simp only: power_add[symmetric])
+   apply (rule power_strict_increasing)
+    apply (simp add: word_bits_def)
+   apply simp
+  apply (simp add: power_add[symmetric])
+  done
+
+lemma of_bl_length2:
+  "length xs + c < LENGTH('a) \<Longrightarrow> of_bl xs * 2^c < (2::'a::len word) ^ (length xs + c)"
+  apply (simp add: power_add)
+  apply (rule word_mult_less_mono1[OF of_bl_length])
+  by (auto simp add: p2_gt_0 power_add[symmetric])
+
 end

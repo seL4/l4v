@@ -349,8 +349,12 @@ lemma ac_corres:
   done
 
 lemma cte_map_tcb_2:
-  "cte_map (t, tcb_cnode_index 2) = t + 0x40"
+  "cte_map (t, tcb_cnode_index 2) = t + 2*2^cte_level_bits"
   by (simp add: cte_map_def tcb_cnode_index_def to_bl_1)
+
+(* FIXME: Use one of these forms everywhere, rather than choosing at random. *)
+lemmas cte_index_repair = mult.commute[where a="(2::'a::len word) ^ cte_level_bits"]
+lemmas cte_index_repair_sym = cte_index_repair[symmetric]
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -361,7 +365,7 @@ lemma reply_no_descendants_mdbNext_null:
                  "valid_objs s" "valid_mdb s" "valid_mdb' s'" "pspace_aligned' s'"
                  "pspace_distinct' s'"
   and       tcb: "st_tcb_at (Not \<circ> halted) t s"
-  and       cte: "ctes_of s' (t + 0x40) = Some cte"
+  and       cte: "ctes_of s' (t + 2*2^cte_level_bits) = Some cte"
   shows          "mdbNext (cteMDBNode cte) = nullPointer"
 proof -
   from invs st_tcb_at_reply_cap_valid[OF tcb]
@@ -370,7 +374,7 @@ proof -
   hence "cteCap cte = capability.ReplyCap t True"
     using invs sr
     by (fastforce simp: cte_wp_at_ctes_of cte cte_map_def tcb_cnode_index_def
-                 dest: pspace_relation_cte_wp_at state_relation_pspace_relation)
+                  dest: pspace_relation_cte_wp_at state_relation_pspace_relation)
   hence class_link:
     "\<forall>cte'. ctes_of s' (mdbNext (cteMDBNode cte)) = Some cte' \<longrightarrow>
             capClass (cteCap cte') = ReplyClass t"
@@ -391,7 +395,7 @@ proof -
                     dest: st_tcb_at_tcb_at reply_master_no_descendants_no_reply)
     done
   hence "\<forall>ptr m mdb.
-      ctes_of s' ptr = Some (CTE (capability.ReplyCap t m) mdb) \<longrightarrow> ptr = t + 0x40"
+      ctes_of s' ptr = Some (CTE (capability.ReplyCap t m) mdb) \<longrightarrow> ptr = t + 2*2^cte_level_bits"
     using sr invs
     apply (intro allI impI)
     apply (drule(2) pspace_relation_cte_wp_atI
@@ -403,7 +407,7 @@ proof -
   hence class_unique:
     "\<forall>ptr cte'. ctes_of s' ptr = Some cte' \<longrightarrow>
                 capClass (cteCap cte') = ReplyClass t \<longrightarrow>
-                ptr = t + 0x40"
+                ptr = t + 2*2^cte_level_bits"
     apply (intro allI impI)
     apply (case_tac cte', rename_tac cap node, case_tac cap, simp_all)
     apply (rename_tac arch_capability)
@@ -413,7 +417,7 @@ proof -
   from invs have no_null: "ctes_of s' nullPointer = None"
     by (clarsimp simp: no_0_def nullPointer_def valid_mdb'_def valid_mdb_ctes_def)
 
-  from invs cte have no_loop: "mdbNext (cteMDBNode cte) \<noteq> t + 0x40"
+  from invs cte have no_loop: "mdbNext (cteMDBNode cte) \<noteq> t + 2*2^cte_level_bits"
     by (fastforce simp: mdb_next_rel_def mdb_next_def
                        valid_mdb'_def
                  dest: valid_mdb_no_loops no_loops_direct_simp)
@@ -425,7 +429,7 @@ proof -
                  elim: valid_dlistEn)
   hence
     "mdbNext (cteMDBNode cte) \<noteq> nullPointer \<longrightarrow>
-     mdbNext (cteMDBNode cte) = t + 0x40"
+     mdbNext (cteMDBNode cte) = t + 2*2^cte_level_bits"
     using class_link class_unique
     by clarsimp
   thus ?thesis
@@ -436,12 +440,12 @@ lemma reply_descendants_mdbNext_nonnull:
   assumes descs: "descendants_of (t, tcb_cnode_index 2) (cdt s) \<noteq> {}"
   and        sr: "(s, s') \<in> state_relation"
   and       tcb: "st_tcb_at (Not \<circ> halted) t s"
-  and       cte: "ctes_of s' (t + 0x40) = Some cte"
+  and       cte: "ctes_of s' (t + 2*2^cte_level_bits) = Some cte"
   shows          "mdbNext (cteMDBNode cte) \<noteq> nullPointer"
 proof -
   from tcb have "cte_at (t, tcb_cnode_index 2) s"
     by (simp add: st_tcb_at_tcb_at tcb_at_cte_at dom_tcb_cap_cases)
-  hence "descendants_of' (t + 0x40) (ctes_of s') \<noteq> {}"
+  hence "descendants_of' (t + 2*2^cte_level_bits) (ctes_of s') \<noteq> {}"
     using sr descs
     by (fastforce simp: state_relation_def cdt_relation_def cte_map_def tcb_cnode_index_def)
   thus ?thesis
@@ -453,7 +457,7 @@ lemma reply_descendants_of_mdbNext:
   "\<lbrakk> (s, s') \<in> state_relation; valid_reply_caps s; valid_reply_masters s;
      valid_objs s; valid_mdb s; valid_mdb' s'; pspace_aligned' s';
      pspace_distinct' s'; st_tcb_at (Not \<circ> halted) t s;
-     ctes_of s' (t + 0x40) = Some cte \<rbrakk> \<Longrightarrow>
+     ctes_of s' (t + 2*2^cte_level_bits) = Some cte \<rbrakk> \<Longrightarrow>
    (descendants_of (t, tcb_cnode_index 2) (cdt s) = {}) =
        (mdbNext (cteMDBNode cte) = nullPointer)"
   apply (case_tac "descendants_of (t, tcb_cnode_index 2) (cdt s) = {}")
@@ -465,13 +469,13 @@ lemma reply_mdbNext_is_descendantD:
   assumes sr: "(s, s') \<in> state_relation"
   and   invs: "invs' s'"
   and    tcb: "tcb_at t s"
-  and    cte: "ctes_of s' (t + 0x40) = Some cte"
+  and    cte: "ctes_of s' (t + 2*2^cte_level_bits) = Some cte"
   and   desc: "descendants_of (t, tcb_cnode_index 2) (cdt s) = {sl}"
   shows       "mdbNext (cteMDBNode cte) = cte_map sl"
 proof -
   from tcb have "cte_at (t, tcb_cnode_index 2) s"
     by (simp add: tcb_at_cte_at dom_tcb_cap_cases)
-  hence "descendants_of' (t + 0x40) (ctes_of s') = {cte_map sl}"
+  hence "descendants_of' (t + 2*2^cte_level_bits) (ctes_of s') = {cte_map sl}"
     using sr desc
     by (fastforce simp: state_relation_def cdt_relation_def cte_map_def tcb_cnode_index_def)
   thus ?thesis
@@ -515,8 +519,7 @@ lemma (in delete_one) reply_cancel_ipc_corres:
   interpret Arch . (*FIXME: arch_split*)
   show ?thesis
   apply (simp add: reply_cancel_ipc_def getThreadReplySlot_def
-                   locateSlot_conv liftM_def cte_level_bits_def
-                   tcbReplySlot_def
+                   locateSlot_conv liftM_def tcbReplySlot_def
               del: split_paired_Ex)
   apply (rule_tac Q="\<lambda>_. invs and valid_list and valid_sched and st_tcb_at awaiting_reply t"
               and Q'="\<lambda>_. invs' and st_tcb_at' awaiting_reply' t"
@@ -537,7 +540,7 @@ lemma (in delete_one) reply_cancel_ipc_corres:
   apply (rule corres_split')
      apply (rule corres_guard_imp)
        apply (rule get_cap_corres [where cslot_ptr="(t, tcb_cnode_index 2)",
-                                          simplified cte_map_tcb_2])
+                                          simplified cte_map_tcb_2 cte_index_repair_sym])
       apply (clarsimp dest!: st_tcb_at_tcb_at
                              tcb_at_cte_at [where ref="tcb_cnode_index 2"])
      apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
@@ -552,7 +555,7 @@ lemma (in delete_one) reply_cancel_ipc_corres:
                      dest: st_tcb_at_reply_cap_valid)
     apply (rule_tac F="(descs = {}) = (mdbNext (cteMDBNode cte) = nullPointer)"
                  in corres_req)
-     apply (fastforce simp: st_tcb_at_tcb_at cte_wp_at_ctes_of st_tcb_def2
+     apply (fastforce simp: st_tcb_at_tcb_at cte_wp_at_ctes_of st_tcb_def2 cte_index_repair
                      dest: reply_descendants_of_mdbNext)
     apply (case_tac "descs = {}", simp add: when_def)
     apply (rule_tac F="\<exists>sl. descs = {sl}" in corres_req)
@@ -560,7 +563,7 @@ lemma (in delete_one) reply_cancel_ipc_corres:
     apply (erule exE, frule singleton_eqD)
     apply (rule_tac F="mdbNext (cteMDBNode cte) = cte_map sl" in corres_req)
      apply (clarsimp dest!: st_tcb_at_tcb_at)
-     apply (fastforce simp: cte_wp_at_ctes_of
+     apply (fastforce simp: cte_wp_at_ctes_of cte_level_bits_def
                     elim!: reply_mdbNext_is_descendantD)
     apply (simp add: when_def getSlotCap_def capHasProperty_def
                 del: split_paired_Ex)
@@ -2457,7 +2460,7 @@ lemma threadSet_not_tcb[wp]:
   by (clarsimp simp: threadSet_def valid_def getObject_def
                      setObject_def in_monad loadObject_default_def
                      ko_wp_at'_def projectKOs split_def in_magnitude_check
-                     objBits_simps updateObject_default_def
+                     objBits_simps' updateObject_default_def
                      ps_clear_upd' projectKO_opt_tcb)
 
 lemma ko_wp_at_q[simp]:
@@ -2523,7 +2526,7 @@ lemma rescheduleRequired_unlive:
    apply (simp add: tcbSchedEnqueue_def unless_def
                     threadSet_def setQueue_def threadGet_def)
    apply (wp setObject_ko_wp_at getObject_tcb_wp
-            | simp add: objBits_simps bitmap_fun_defs split del: if_split)+
+            | simp add: objBits_simps' bitmap_fun_defs split del: if_split)+
   apply (clarsimp simp: o_def)
   apply (drule obj_at_ko_at')
   apply clarsimp
@@ -2541,7 +2544,7 @@ lemma cancelAllIPC_unlive:
    apply (wp_trace cancelAll_unlive_helper setEndpoint_ko_wp_at'
              hoare_vcg_const_Ball_lift rescheduleRequired_unlive
              mapM_x_wp'
-        | simp add: objBits_simps)+
+        | simp add: objBits_simps')+
   apply (clarsimp simp: projectKO_opt_tcb)
   apply (frule(1) obj_at_valid_objs')
   apply (intro conjI impI)
@@ -2569,7 +2572,7 @@ lemma cancelAllSignals_unlive:
   apply (wp rescheduleRequired_unlive)
    apply (wp cancelAll_unlive_helper)
    apply ((wp mapM_x_wp' setObject_ko_wp_at' hoare_vcg_const_Ball_lift)+,
-          simp_all add: objBits_simps, simp_all)
+          simp_all add: objBits_simps', simp_all)
     apply (fold setNotification_def, wp)
     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
    apply (simp add: projectKOs projectKO_opt_tcb)
