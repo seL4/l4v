@@ -20,6 +20,11 @@ begin
 
 (* FIXME x64: add all machine operations as required *)
 locale kernel_m = kernel +
+assumes getFaultAddr_ccorres:
+  "ccorres (op =) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp getFaultAddress)
+           (Call getFaultAddr_'proc)"
+
 assumes resetTimer_ccorres:
   "ccorres dc xfdc \<top> UNIV []
            (doMachineOp resetTimer)
