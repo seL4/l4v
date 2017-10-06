@@ -198,11 +198,15 @@ lemma (in Schedule_AI_U) schedule_ct_activateable[wp]:
   proof -
   have P: "\<And>t s. ct_in_state activatable (cur_thread_update (\<lambda>_. t) s) = st_tcb_at activatable t s"
     by (fastforce simp: ct_in_state_def pred_tcb_at_def intro: obj_at_pspaceI)
+  have Q: "\<And>s. invs s \<longrightarrow> idle_thread s = cur_thread s \<longrightarrow> ct_in_state activatable s"
+    apply (clarsimp simp: ct_in_state_def dest!: invs_valid_idle)
+    apply (clarsimp simp: valid_idle_def pred_tcb_def2)
+    done
   show ?thesis
     apply (simp add: Schedule_A.schedule_def allActiveTCBs_def)
     apply (wp alternative_wp
               select_ext_weak_wp select_wp stt_activatable stit_activatable
-               | simp add: P)+
+               | simp add: P Q)+
     apply (clarsimp simp: getActiveTCB_def ct_in_state_def)
     apply (rule conjI)
      apply clarsimp

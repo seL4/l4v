@@ -124,19 +124,27 @@ text {*
   The scheduler is heavily underspecified.
   It is allowed to pick any active thread or the idle thread.
   If the thread the scheduler picked is the current thread, it
-  may omit the call to @{const switch_to_thread}.
+  may omit the call to @{const switch_to_thread}. Likewise it
+  may omit the call to @{const switch_to_idle_thread} if the
+  idle thread is the current thread.
 *}
 definition schedule_unit :: "(unit,unit) s_monad" where
-"schedule_unit \<equiv> do
+"schedule_unit \<equiv> (do
    cur \<leftarrow> gets cur_thread;
    threads \<leftarrow> allActiveTCBs;
    thread \<leftarrow> select threads;
-     if thread = cur then
-     return () OR switch_to_thread thread
+   (if thread = cur then
+     return () \<sqinter> switch_to_thread thread
    else
-     switch_to_thread thread
- od OR
- switch_to_idle_thread"
+     switch_to_thread thread)
+ od) \<sqinter>
+ (do
+   cur \<leftarrow> gets cur_thread;
+   idl \<leftarrow> gets idle_thread;
+   if idl = cur then
+     return () \<sqinter> switch_to_idle_thread
+   else switch_to_idle_thread
+  od)"
 
 instance ..
 end

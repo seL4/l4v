@@ -2687,7 +2687,7 @@ lemma send_sync_ipc_corres:
       apply (rule corres_split[OF corres_dummy_set_sync_ep set_thread_state_block_on_send_corres])
        apply wp
      apply simp
-    apply (wp|clarsimp simp: split del:if_splits)+
+    apply (wp TrueI |clarsimp simp: split del:if_splits)+
 (* SendEP *)
    apply (subst ep_waiting_set_recv_lift)
     apply (simp add:valid_state_def)
@@ -2698,7 +2698,7 @@ lemma send_sync_ipc_corres:
       apply (rule corres_split[OF corres_dummy_set_sync_ep set_thread_state_block_on_send_corres])
        apply wp
      apply simp
-    apply (wp|clarsimp simp: split del:if_splits)+
+    apply (wp TrueI|clarsimp simp: split del:if_splits)+
 (* RecvEP *)
   apply (subst ep_waiting_set_recv_lift,simp add:valid_state_def)
   apply simp

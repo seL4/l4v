@@ -448,113 +448,99 @@ lemma truncate_state_updates[simp]:
   "truncate_state (ready_queues_update g s) = truncate_state s"
   by (rule trans_state_update'')+
 
-(* the old schedule unit def no longer is a refinement of the det_ext def.
-
-   if sched_act = resume_cur_thread and cur_thread = idle_thread,
-     then there should be a path through schedule_unit which corresponds to a return().
-   This used to be via switch_to_idle_thread, but now switch_to_idle_thread updates
-     arm_globals_frame, so is no longer a return in this case. *)
-
-(*The only nontrivial bcorres result. Since we don't have
-  a proper calculus we just unfold everything. The refinement
-  is made guard-less by asserting that we only switch to
-  runnable threads inside of the deterministic scheduler
-  (guaranteed by valid_sched) *)
-(*
-lemma schedule_bcorres[wp]: "bcorres (schedule :: (unit,det_ext) s_monad) schedule"
-
-  apply (simp add: schedule_def)
-  apply (clarsimp simp add: schedule_def gets_def bind_def get_def
-                            return_def s_bcorres_underlying_def
-                            allActiveTCBs_def bcorres_underlying_def
-                            select_def getActiveTCB_def
-                            get_thread_state_def thread_get_def
-                            gets_the_def assert_opt_def fail_def
-                            )
-  apply (case_tac "get_tcb (cur_thread s) s",simp_all)
-  apply (case_tac "scheduler_action bb",simp_all add: in_monad)
-  apply (case_tac "runnable (tcb_state aa)")
-    apply (rule alternative_first)
-    apply (clarsimp)
-    apply (rule_tac x="cur_thread s" in exI)
-    apply clarsimp
-    apply (rule alternative_first)
-    apply clarsimp+
-   apply (rule alternative_second)
-   apply (simp add: switch_to_idle_thread_def bind_def
-                    gets_def get_def return_def arch_switch_to_idle_thread_def
-                    in_monad)
-   apply (case_tac "runnable (tcb_state aa)")
-    apply clarsimp
-    apply (drule tcb_sched_action_extended.ex_st set_scheduler_action_extended.ex_st)+
-    apply clarsimp
-    apply (drule bcorres_underlying_dest[OF guarded_switch_to_bcorres])
-    apply (drule guarded_sub_switch,clarsimp)
-    apply (rule alternative_first)
-    apply clarsimp
-    apply (rule_tac x=word in exI)
-    apply (intro conjI impI)
-      apply (rule alternative_second)
-
-      apply simp
-     apply (rule_tac x=y in exI)
-     apply clarsimp
-    apply simp
-   apply clarsimp
-   apply (drule set_scheduler_action_extended.ex_st)+
-   apply clarsimp
-   apply (drule bcorres_underlying_dest[OF guarded_switch_to_bcorres])
-   apply (drule guarded_sub_switch,clarsimp)
-   apply (rule alternative_first)
-   apply clarsimp
-   apply (rule_tac x=word in exI)
-   apply clarsimp
-  apply clarsimp
-  apply (case_tac "runnable (tcb_state aa)")
-   apply clarsimp
-   apply (subgoal_tac "\<exists>e. s''a = trans_state (\<lambda>_. e) s''")
-    prefer 2
-    apply (erule impCE)
-     apply (rule_tac x="exst s''" in exI)
-     apply simp
-    apply (erule next_domain_extended.ex_st)
-   apply (drule tcb_sched_action_extended.ex_st set_scheduler_action_extended.ex_st)+
-   apply clarsimp
-   apply (drule choose_switch_or_idle)
-   apply (elim exE disjE)
-    apply (drule bcorres_underlying_dest[OF guarded_switch_to_bcorres])
-    apply (drule guarded_sub_switch,clarsimp)
-    apply (rule alternative_first)
-    apply simp
-    apply (rule_tac x=word in exI)
-    apply clarsimp
-    apply (rule alternative_second)
-    apply clarsimp
-   apply (drule bcorres_underlying_dest[OF switch_to_idle_thread_bcorres])
-   apply simp
-   apply (rule alternative_second)
-   apply simp
-  apply clarsimp
-  apply (drule set_scheduler_action_extended.ex_st)+
-  apply (subgoal_tac "\<exists>e. s''a = trans_state (\<lambda>_. e) s")
-   prefer 2
-   apply (erule impCE)
-    apply (rule_tac x="exst s" in exI)
-    apply simp
-   apply (erule next_domain_extended.ex_st)
-  apply clarsimp
-  apply (drule choose_switch_or_idle)
-  apply (elim exE disjE)
-   apply (drule bcorres_underlying_dest[OF guarded_switch_to_bcorres])
-   apply (drule guarded_sub_switch,clarsimp)
-   apply (rule alternative_first)
-   apply clarsimp
-   apply (rule_tac x="word" in exI)
-   apply clarsimp
-  apply (rule alternative_second)
-  apply (drule bcorres_underlying_dest[OF switch_to_idle_thread_bcorres])
-  apply simp
+lemma get_before_assert_opt:
+  "do s \<leftarrow> assert_opt x; s' \<leftarrow> get; f s s' od
+    = do s' \<leftarrow> get; s \<leftarrow> assert_opt x; f s s' od"
+  apply (cases x, simp_all add: assert_opt_def)
+  apply (simp add: ext exec_get)
   done
-*)
+
+lemma s_bcorres_get_left:
+  "(s_bcorres_underlying t (get >>= f) g s)
+    = (s_bcorres_underlying t (f s) g s)"
+  by (simp add: s_bcorres_underlying_def exec_get)
+
+lemma get_outside_alternative:
+  "alternative (get >>= f) g
+    = do s \<leftarrow> get; alternative (f s) g od"
+  by (simp add: alternative_def exec_get fun_eq_iff)
+
+(* FIXME: is this acceptable arch split? *)
+context Arch begin
+crunch (bcorres)bcorres[wp]: switch_to_thread,switch_to_idle_thread truncate_state
+end
+lemmas switch_to_thread_bcorres
+    = Arch.switch_to_thread_bcorres Arch.switch_to_idle_thread_bcorres
+
+lemmas schedule_unfold_all = schedule_def allActiveTCBs_def
+                        get_thread_state_def thread_get_def getActiveTCB_def
+
+lemma guarded_switch_bcorres: "s_bcorres (guarded_switch_to t) schedule s"
+  using switch_to_thread_bcorres(1)[where param_a=t]
+  apply (clarsimp simp: schedule_unfold_all s_bcorres_underlying_def
+                        in_monad in_select
+            split del: if_split)
+  apply (drule guarded_sub_switch)
+  apply (rule_tac x=t in exI, clarsimp split del: if_split)
+  apply (drule_tac s=s in drop_sbcorres_underlying)
+  apply (clarsimp simp: s_bcorres_underlying_def)
+  apply (auto intro!: alternative_second)
+  done
+
+lemma choose_thread_bcorres: "s_bcorres choose_thread schedule s"
+  using switch_to_thread_bcorres(2)
+  apply (simp add: choose_thread_def gets_def s_bcorres_get_left
+                   guarded_switch_bcorres)
+  apply (clarsimp simp: schedule_def s_bcorres_underlying_def)
+  apply (drule_tac s=s in drop_sbcorres_underlying)
+  apply (clarsimp simp: s_bcorres_underlying_def)
+  apply (auto intro!: alternative_second simp: exec_gets)
+  done
+
+lemma tcb_sched_action_bcorres:
+  "bcorres (tcb_sched_action a b) (return ())"
+  by (clarsimp simp: bcorres_underlying_def s_bcorres_underlying_def return_def
+              dest!: tcb_sched_action_extended.ex_st)
+
+lemma schedule_bcorres[wp]: "bcorres (schedule :: (unit,det_ext) s_monad) schedule"
+  apply (clarsimp simp: bcorres_underlying_def)
+  apply (simp add: schedule_det_ext_ext_def s_bcorres_get_left
+                   gets_def get_thread_state_def thread_get_def gets_the_def
+                   bind_assoc get_before_assert_opt)
+  apply (simp add: assert_opt_def)
+  apply (split option.split, simp, intro conjI impI)
+   apply (simp add: s_bcorres_underlying_def fail_def)
+  apply clarsimp
+  apply (split scheduler_action.split, intro conjI impI)
+    (* resume current *)
+    apply (clarsimp simp: s_bcorres_underlying_def schedule_def allActiveTCBs_def
+                          in_monad in_select getActiveTCB_def)
+    apply (erule disjE)
+     apply fastforce
+    apply (simp add: switch_to_idle_thread_def in_monad in_select
+                     ex_bool_eq)
+   (* switch to *)
+   apply clarsimp
+   apply (rule s_bcorres_underlying_split[where g'="\<lambda>_. return ()",
+                OF _ guarded_switch_bcorres, simplified]
+      s_bcorres_underlying_split[where f'="return ()", simplified])+
+    apply (simp add: s_bcorres_underlying_def set_scheduler_action_def
+                     simpler_modify_def return_def)
+   apply (clarsimp simp: when_def return_s_bcorres_underlying
+                         tcb_sched_action_bcorres drop_sbcorres_underlying)
+
+  (* choose *)
+  apply simp
+  apply (rule s_bcorres_underlying_split[where g'="\<lambda>_. return ()",
+                OF _ choose_thread_bcorres, simplified]
+     s_bcorres_underlying_split[where f'="return ()", simplified]
+    | subst bind_assoc[symmetric])+
+    apply (simp add: s_bcorres_underlying_def set_scheduler_action_def
+                     simpler_modify_def return_def)
+   apply (simp add: s_bcorres_underlying_def when_def exec_gets
+                    next_domain_def Let_def simpler_modify_def return_def)
+  apply (clarsimp simp: when_def return_s_bcorres_underlying
+                        tcb_sched_action_bcorres drop_sbcorres_underlying)
+  done
 
 end
