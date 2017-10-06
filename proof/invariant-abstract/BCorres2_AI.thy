@@ -27,7 +27,12 @@ locale BCorres2_AI =
     "\<And> a b.
       bcorres (make_arch_fault_msg a b :: 'a state \<Rightarrow> _)
               (make_arch_fault_msg a b)"
-
+  assumes arch_switch_to_thread_bcorres[wp]:
+    "\<And>t. bcorres (arch_switch_to_thread t :: 'a state \<Rightarrow> _)
+        (arch_switch_to_thread t)"
+  assumes arch_switch_to_idle_thread_bcorres[wp]:
+    "bcorres (arch_switch_to_idle_thread :: 'a state \<Rightarrow> _)
+        arch_switch_to_idle_thread"
 
 definition all_but_exst where
 "all_but_exst P \<equiv> (\<lambda>s. P (kheap s) (cdt s) (is_original_cap s)
@@ -465,18 +470,20 @@ lemma get_outside_alternative:
     = do s \<leftarrow> get; alternative (f s) g od"
   by (simp add: alternative_def exec_get fun_eq_iff)
 
-(* FIXME: is this acceptable arch split? *)
-context Arch begin
-crunch (bcorres)bcorres[wp]: switch_to_thread,switch_to_idle_thread truncate_state
-end
-lemmas switch_to_thread_bcorres
-    = Arch.switch_to_thread_bcorres Arch.switch_to_idle_thread_bcorres
-
 lemmas schedule_unfold_all = schedule_def allActiveTCBs_def
                         get_thread_state_def thread_get_def getActiveTCB_def
 
-lemma guarded_switch_bcorres: "s_bcorres (guarded_switch_to t) schedule s"
-  using switch_to_thread_bcorres(1)[where param_a=t]
+context BCorres2_AI begin
+
+lemma switch_thread_bcorreses:
+  "bcorres (switch_to_idle_thread :: 'a state \<Rightarrow> _) switch_to_idle_thread"
+  "bcorres (switch_to_thread t :: 'a state \<Rightarrow> _) (switch_to_thread t)"
+  apply (simp_all add: switch_to_idle_thread_def switch_to_thread_def)
+  apply (wp | simp)+
+  done
+
+lemma guarded_switch_bcorres: "s_bcorres (guarded_switch_to t :: 'a state \<Rightarrow> _) schedule s"
+  using switch_thread_bcorreses(2)[where t=t]
   apply (clarsimp simp: schedule_unfold_all s_bcorres_underlying_def
                         in_monad in_select
             split del: if_split)
@@ -487,10 +494,13 @@ lemma guarded_switch_bcorres: "s_bcorres (guarded_switch_to t) schedule s"
   apply (auto intro!: alternative_second)
   done
 
-lemma choose_thread_bcorres: "s_bcorres choose_thread schedule s"
-  using switch_to_thread_bcorres(2)
+end
+
+lemma choose_thread_bcorres: "BCorres2_AI TYPE(det_ext)
+    \<Longrightarrow> s_bcorres choose_thread schedule s"
+  apply (frule BCorres2_AI.switch_thread_bcorreses(1))
   apply (simp add: choose_thread_def gets_def s_bcorres_get_left
-                   guarded_switch_bcorres)
+                   BCorres2_AI.guarded_switch_bcorres)
   apply (clarsimp simp: schedule_def s_bcorres_underlying_def)
   apply (drule_tac s=s in drop_sbcorres_underlying)
   apply (clarsimp simp: s_bcorres_underlying_def)
@@ -502,7 +512,8 @@ lemma tcb_sched_action_bcorres:
   by (clarsimp simp: bcorres_underlying_def s_bcorres_underlying_def return_def
               dest!: tcb_sched_action_extended.ex_st)
 
-lemma schedule_bcorres[wp]: "bcorres (schedule :: (unit,det_ext) s_monad) schedule"
+lemma schedule_bcorres1: "BCorres2_AI TYPE(det_ext)
+    \<Longrightarrow> bcorres (schedule :: (unit,det_ext) s_monad) schedule"
   apply (clarsimp simp: bcorres_underlying_def)
   apply (simp add: schedule_det_ext_ext_def s_bcorres_get_left
                    gets_def get_thread_state_def thread_get_def gets_the_def
@@ -522,10 +533,11 @@ lemma schedule_bcorres[wp]: "bcorres (schedule :: (unit,det_ext) s_monad) schedu
    (* switch to *)
    apply clarsimp
    apply (rule s_bcorres_underlying_split[where g'="\<lambda>_. return ()",
-                OF _ guarded_switch_bcorres, simplified]
+                OF _ BCorres2_AI.guarded_switch_bcorres, simplified]
       s_bcorres_underlying_split[where f'="return ()", simplified])+
-    apply (simp add: s_bcorres_underlying_def set_scheduler_action_def
-                     simpler_modify_def return_def)
+     apply (simp add: s_bcorres_underlying_def set_scheduler_action_def
+                      simpler_modify_def return_def)
+    apply assumption
    apply (clarsimp simp: when_def return_s_bcorres_underlying
                          tcb_sched_action_bcorres drop_sbcorres_underlying)
 
@@ -535,8 +547,9 @@ lemma schedule_bcorres[wp]: "bcorres (schedule :: (unit,det_ext) s_monad) schedu
                 OF _ choose_thread_bcorres, simplified]
      s_bcorres_underlying_split[where f'="return ()", simplified]
     | subst bind_assoc[symmetric])+
-    apply (simp add: s_bcorres_underlying_def set_scheduler_action_def
-                     simpler_modify_def return_def)
+     apply (simp add: s_bcorres_underlying_def set_scheduler_action_def
+                      simpler_modify_def return_def)
+    apply assumption
    apply (simp add: s_bcorres_underlying_def when_def exec_gets
                     next_domain_def Let_def simpler_modify_def return_def)
   apply (clarsimp simp: when_def return_s_bcorres_underlying

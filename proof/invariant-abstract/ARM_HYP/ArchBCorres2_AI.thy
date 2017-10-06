@@ -69,6 +69,9 @@ lemma  handle_arch_fault_reply_bcorres[wp,BCorres2_AI_assms]:
   "bcorres ( handle_arch_fault_reply a b c d) (handle_arch_fault_reply a b c d)"
   by (cases a; wpsimp simp: handle_arch_fault_reply_def)
 
+crunch (bcorres)bcorres[wp, BCorres2_AI_assms]:
+    arch_switch_to_thread,arch_switch_to_idle_thread truncate_state
+
 end
 
 interpretation BCorres2_AI?: BCorres2_AI
@@ -76,6 +79,8 @@ interpretation BCorres2_AI?: BCorres2_AI
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact BCorres2_AI_assms)?)
   qed
+
+lemmas schedule_bcorres[wp] = schedule_bcorres1[OF BCorres2_AI_axioms]
 
 context Arch begin global_naming ARM
 
