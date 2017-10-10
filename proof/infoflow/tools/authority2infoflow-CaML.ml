@@ -63,7 +63,7 @@ let rec unite = function
 (* fixpoint f x does a fixpoint computation on x *)
 (* Simplification is necessary on (f x) for the step. We do it on x to ensure termination *)
 
-let rec fixpoint f x = 
+let rec fixpoint f x =
 let a = simp_list x and b = simp_list (f x) in match (a=b) with
 |true -> a
 |false -> fixpoint f b;;
@@ -117,7 +117,7 @@ let rec nodes g =
 
 (* add_selfedges g adds the self-edges to autority graph g *)
 
-let rec add_selfedges g = 
+let rec add_selfedges g =
   let rec add_selfedge l x = match l with
     |[] -> []
     |a::l -> (x,a,x)::(add_selfedge l x)
@@ -147,14 +147,14 @@ let subjectReadsp g l x acc =
      let f = (fun ep -> is_in g (x,SyncSend,ep)) in
      is_in_such acc f
       &&
-     (let ep_list = those_is_in_such2 acc f in let h = (fun a -> (is_in_list2 g (a,Receive,ep_list) || is_in_list2 g (a,Reset,ep_list))) in 
+     (let ep_list = those_is_in_such2 acc f in let h = (fun a -> (is_in_list2 g (a,Receive,ep_list) || is_in_list2 g (a,Reset,ep_list))) in
      is_in_such (nodes g) h)
    )||
    (
      let f = (fun ep -> is_in g (x,Receive,ep)) in
      is_in_such acc f
       &&
-     (let ep_list = those_is_in_such2 acc f in let h = (fun a -> is_in_list2 g (a,SyncSend,ep_list)) in 
+     (let ep_list = those_is_in_such2 acc f in let h = (fun a -> is_in_list2 g (a,SyncSend,ep_list)) in
      is_in_such (nodes g) h)
    )||
   is_in g (x,Receive,l)||is_in g (x,SyncSend,l)||is_in g (x,Write,l)
@@ -164,7 +164,7 @@ let subjectReadsp g l x acc =
 
 (* subjectReads g l computes the list containing the elements of the set "subjectReads g l", via a fixpoint computation *)
 
-let subjectReads g l = 
+let subjectReads g l =
   let subjectReadsq g l ac=
     let rec subjectReads_aux g l node_list acc= match (node_list) with
       |[] -> acc
@@ -205,15 +205,15 @@ let subjectAffectsp g l x =
     in is_in_such (nodes g) h
     )
   )||
-  inter_non_empty 
+  inter_non_empty
      (those_is_in_such2 (nodes g) (fun ep -> is_in g (l,Receive,ep)) )
      (those_is_in_such2 (nodes g) (fun ep -> is_in g (x,SyncSend,ep)) ) ||
-  inter_non_empty 
+  inter_non_empty
      (those_is_in_such2 (nodes g) (fun ep -> is_in g (l,SyncSend,ep)||is_in g (l,ASyncSend,ep)||is_in g (l,Reset,ep)) )
      (those_is_in_such2 (nodes g) (fun ep -> is_in g (x,Receive,ep)) ) ||
   is_in g (x,SyncSend,l)||
   is_in g (x,Receive,l)||
-  inter_non_empty 
+  inter_non_empty
      (those_is_in_such2 (nodes g) (fun lp -> is_in g (lp,Receive,l)||is_in g (lp,SyncSend,l)) )
      (those_is_in_such2 (nodes g) (fun lp -> is_in g (lp,Write,x)) );;
 
@@ -221,7 +221,7 @@ let subjectAffectsp g l x =
 
 (* subjectAffects g l computes the list containing the elements of the set "subjectAffects g l", via a fixpoint computation *)
 
-let subjectAffects g l = 
+let subjectAffects g l =
   let subjectAffectsq g l ac=
     let rec subjectAffects_aux g l node_list acc= match (node_list) with
       |[] -> []
@@ -250,7 +250,7 @@ let rec clear_infoflow =function
 let infoflow g =
   let rec aux g list l = match list with
     |[] -> []
-    |x::li -> let b = inter_non_empty (subjectAffects g l) (subjectReads g x) in 
+    |x::li -> let b = inter_non_empty (subjectAffects g l) (subjectReads g x) in
                 if b then (l,x)::(aux g li l)
                      else aux g li l
   in let res = map (aux g (nodes g)) (nodes g)
@@ -340,7 +340,7 @@ let find_index x t=
 
 (* successors g x returns the successors of x in g in an infoflow graph *)
 
-let successors g x = 
+let successors g x =
   let rec aux g x h = match g with
     |[] -> simp_list h
     |(a,c)::l -> if (a=x) then aux l x (c::h) else aux l x h
@@ -472,7 +472,7 @@ let rec exists_edge_infoflow g u v = match g with
 
 (* simp_infoflow g computes the reduced (or simplified) infoflow graph, where the new nodes are the strongly connected components from the original infoflow policy *)
 
-let simp_infoflow g = 
+let simp_infoflow g =
   let rec search_edges g u v = match u with
     |[] -> []
     |a::l -> if (exists_edge_infoflow g a v) then (a,v)::(search_edges g l v) else (search_edges g l v)

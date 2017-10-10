@@ -17,7 +17,7 @@ import Data.Graph
 import Data.Graph.SCC (scc)
 import Data.Array
 
-data Auth = Read 
+data Auth = Read
           | Write
           | Receive
           | ASyncSend
@@ -45,7 +45,7 @@ fixpoint :: ([String] -> [String]) -> [String] -> [String]
 fixpoint f x = y
   where
   a = x
-  b = f x 
+  b = f x
   y = if a==b then b else fixpoint f b
 
 -- 'elem_authority_edge g (a,auth,l)' returns True if there is an edge with label 'auth' from 'a' to an element of 'l' in the authority graph 'g', and False otherwise
@@ -59,16 +59,16 @@ inter_non_empty l1 l2 = not (null (l1 `intersect` l2))
 -- 'nodes_authority g' returns the list of nodes in authority graph 'g'
 nodes_authority :: Authority_graph -> [String]
 nodes_authority g = nub (aux g)
-  where 
+  where
     aux :: Authority_graph -> [String]
     aux []             = []
     aux ((a,auth,b):l) = a:b:(aux l)
-                     
+
 -- 'add_selfedges_auth g' adds all selfedges to 'g'
 add_selfedges_auth :: Authority_graph -> Authority_graph
 add_selfedges_auth g = let aux :: [Auth] -> String -> Authority_graph
                            aux [] x    = []
-                           aux (a:l) x = (x,a,x):(aux l x) in 
+                           aux (a:l) x = (x,a,x):(aux l x) in
                        let authorities = [Read, Write, Receive, ASyncSend, SyncSend, Control, Reset, ASIDPoolMapsASID , Grant] in
                        g ++ (concatMap (aux authorities) (nodes_authority g))
 
@@ -81,8 +81,8 @@ add_selfedges_auth g = let aux :: [Auth] -> String -> Authority_graph
 subjectReadsp :: Authority_graph -> String -> String -> [String] -> [String] -> Bool
 subjectReadsp g l x nodes_g acc =
    or [ l == x
-      , any (\(l',auth,x') -> (l == l' && x == x' && (auth `elem` [Read, Receive, SyncSend]))) g 
-      , any (\t -> (t,Read,x) `elem` g) acc 
+      , any (\(l',auth,x') -> (l == l' && x == x' && (auth `elem` [Read, Receive, SyncSend]))) g
+      , any (\t -> (t,Read,x) `elem` g) acc
       , (
                 any (\t -> elem_authority_edge g t [SyncSend,Receive] [x]) acc
           &&
@@ -105,11 +105,11 @@ subjectReadsp g l x nodes_g acc =
 -- 'subjectReads g l nodes_g' returns the 'subjectReads g l' nub, as a list
 subjectReads :: Authority_graph -> String -> [String] -> [String]
 subjectReads g l nodes_g = fixpoint (nub . aux nodes_g) []
-  where 
+  where
     aux :: [String] -> [String] -> [String]
     aux [] acc       = acc
     aux (x:list) acc = aux list (if subjectReadsp g l x nodes_g acc then x:acc else acc)
-                           
+
 
 {- 'subjectAffectsp g l x nodes_g', where 'g' is the authority graph,
                                             'l' the current node,
@@ -118,7 +118,7 @@ subjectReads g l nodes_g = fixpoint (nub . aux nodes_g) []
    returns True if there is a rule including 'x' in 'subjectAffects g l', and False otherwise -}
 
 subjectAffectsp :: Authority_graph -> String -> String -> [String] -> Bool
-subjectAffectsp g l x nodes_g = 
+subjectAffectsp g l x nodes_g =
   or [ l == x
      , elem_authority_edge g l [Write, Receive, ASyncSend, SyncSend, Control, Reset, ASIDPoolMapsASID] [x]
      , (
@@ -131,9 +131,9 @@ subjectAffectsp g l x nodes_g =
              h = (\lp -> elem_authority_edge g lp [Receive,SyncSend] ep_list && (lp,Write,x) `elem` g )
          in not (null ep_list) && any h nodes_g
        )
-     , inter_non_empty 
+     , inter_non_empty
           (filter (\ep -> elem (l,Receive,ep) g) nodes_g)
-          (filter (\ep -> elem (x,SyncSend,ep) g) nodes_g) 
+          (filter (\ep -> elem (x,SyncSend,ep) g) nodes_g)
           ]
 
 -- 'subjectAffects g l nodes_g' returns the 'subjectAffects g l' nub, as a list
@@ -153,7 +153,7 @@ infoflow g = let nodes_g = nodes_authority g in
                                      if b then (l,x):(aux g list l)
                                           else aux g list l
              in concatMap (aux g nodes_g) nodes_g
-             
+
 -- 'del_selfedges_infoflow g' deletes the selfedges in an infoflow-type graph g, simplified or not
 del_selfedges_infoflow :: (Eq a) => [(a,a)] -> [(a,a)]
 del_selfedges_infoflow = filter (\(p,q) -> p/=q)
@@ -163,7 +163,7 @@ nodes_infoflow :: Infoflow_graph -> [String]
 nodes_infoflow g = let aux :: Infoflow_graph -> [String]
                          aux [] = []
                               aux ((a,b):l) = a:b:(aux l)
-                          in 
+                          in
                    nub (aux g)
 
 -- add_scheduler_infoflow g' adds all edges from a new node ('Scheduler') to every node in g
@@ -176,14 +176,14 @@ add_scheduler_infoflow g = ("Scheduler","Scheduler") : g ++ (map (\a -> ("Schedu
 
 --THIS PART DEALS WITH SIMPLIFYING THE INFOFLOW GRAPH, BY GATHERING NODES IN THE SAME STRONGLY CONNECTED COMPONENT TOGETHER
 
--- ##not commented part : begin## 
+-- ##not commented part : begin##
 list_index :: (Eq a) => a -> [a] -> Int
 list_index x [] = -1
 list_index x (y:l) = if (y==x) then 1 else (1 + list_index x l)
 
 
 stringToIntMap :: [String] -> (String -> [String] -> Int,[String] -> Int -> String)
-stringToIntMap l = (f,g) 
+stringToIntMap l = (f,g)
   where f s l = list_index s l
         g l n = l!!(n-1)
 
@@ -248,16 +248,16 @@ simp_infoflow g = y
 simplified_infoflow_nodeToString :: [String] -> String
 simplified_infoflow_nodeToString = concat . intersperse ","
 
--- 'graphviz_input_simplified_infoflow g' returns a String containing the graphviz code to display the simplified infoflo graph 
+-- 'graphviz_input_simplified_infoflow g' returns a String containing the graphviz code to display the simplified infoflo graph
 graphviz_input_simplified_infoflow :: Simp_infoflow -> String
 graphviz_input_simplified_infoflow g = let aux []        = ""
-                                           aux ((a,b):l) = "<"++ (simplified_infoflow_nodeToString a)++"> -> <"++(simplified_infoflow_nodeToString b)++">;"++ "\n"++(aux l) in 
+                                           aux ((a,b):l) = "<"++ (simplified_infoflow_nodeToString a)++"> -> <"++(simplified_infoflow_nodeToString b)++">;"++ "\n"++(aux l) in
                                        "digraph G {"++"\n"++(aux g)++"}"++"\n"
 
 -- 'acces_to_infoflow g b' computes the simplified infoflow graph from authority graph 'g'
 -- if b == True, then the Scheduler is added
 authority_to_infoflow :: Authority_graph -> Bool -> Simp_infoflow
-authority_to_infoflow g b = let g_complete = add_selfedges_auth g in 
+authority_to_infoflow g b = let g_complete = add_selfedges_auth g in
                             if b
                             then let g_infoflow = add_scheduler_infoflow (infoflow g_complete) in simp_infoflow g_infoflow
                             else simp_infoflow (infoflow g_complete)
@@ -277,7 +277,7 @@ condition2 aag agent = all (\a -> elem (agent,a,agent) aag)
 
 -- 'condition3 aag' checks that '(s,Grant,ep) in aag & (r,Receive,ep) in aag --> (r,Control,s) & (s,Control,r)' for every r,s,ep in aag
 condition3 :: Authority_graph -> Bool
-condition3 aag = res 
+condition3 aag = res
   where
     aux aag r s= all (\ep -> or [ notElem (s,Grant,ep) aag
                                 , notElem (r,Receive,ep) aag
@@ -306,7 +306,7 @@ wellformed aag = res
 
 condition1_debug :: Authority_graph -> String -> [String] -> Bool
 condition1_debug aag agent []    = True
-condition1_debug aag agent (a:l) = if not (elem (agent, Control,a) agg) then 
+condition1_debug aag agent (a:l) = if not (elem (agent, Control,a) agg) then
 --(not (elem (agent,Control,a) aag) || agent==a) && condition1_debug aag agent l
 
 
@@ -350,7 +350,7 @@ wellformed_debug aag = let nodes = nodes_authority aag in
 
 
 main = do
-        
+
 -- We treat example 1 in infoflow/PolicyExample.thy
 
         let g1 = [("T",ASyncSend,"AEP1"),("T",ASyncSend,"AEP2"),("CTR",Receive,"AEP1"),("CTR",Read,"C"),("CTR",Write,"C"),("C",Read,"CTR"),("C",Write,"CTR"),("CTR",SyncSend,"EP"),("RM",Receive,"EP"),("RM",Receive,"AEP2")]
@@ -365,8 +365,8 @@ main = do
         print ("**********************")
         putStr (graphviz_input_simplified_infoflow (authority_to_infoflow g1 True))
         print ("##############################")
-       
-        
+
+
 -- We treat example 1 in infoflow/PolicyExample.thy and we add the Scheduler
 
         let g1' = [("T",ASyncSend,"AEP1"),("T",ASyncSend,"AEP2"),("CTR",Receive,"AEP1"),("CTR",Read,"C"),("CTR",Write,"C"),("C",Read,"CTR"),("C",Write,"CTR"),("CTR",SyncSend,"EP"),("RM",Receive,"EP"),("RM",Receive,"AEP2")]
@@ -428,11 +428,11 @@ main = do
         putStr (graphviz_input_simplified_infoflow (authority_to_infoflow g4 False))
         print ("##############################")
 
-        
+
         let authorities = [Read, Write, Receive, ASyncSend, SyncSend, Control, Reset, ASIDPoolMapsASID, Grant]
         print (condition1 g2_complete "Low" (nodes_authority g2))
         print (condition2 g2_complete "Low" authorities)
-        print (condition3 g2_complete)        
+        print (condition3 g2_complete)
         print (wellformed g2_complete)
 
 
