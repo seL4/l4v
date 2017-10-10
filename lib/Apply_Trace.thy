@@ -185,7 +185,7 @@ let
 in
  if (can_clear (Proof.theory_of state)) then
    Proof.refine (Method.Combinator (Method.no_combinator_info,Method.Then, [raw_primitive_text (clear_deps),text,
-	raw_primitive_text (fn thm' => (save_deps (used_facts ctxt thm');join_deps thm thm'))])) state
+        raw_primitive_text (fn thm' => (save_deps (used_facts ctxt thm');join_deps thm thm'))])) state
  else
    (if (#silent_fail args) then (save_deps [];Proof.refine text state) else error "Apply_Trace theory must be imported to trace applies")
 end

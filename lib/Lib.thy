@@ -581,7 +581,7 @@ proof -
     next
       case (insert x F)
       thus ?case
-	by (cases "F = {}") (auto dest: Min_in intro: minf)
+        by (cases "F = {}") (auto dest: Min_in intro: minf)
     qed
   qed
 
@@ -2427,8 +2427,8 @@ next
       case True
       show ?thesis
       proof (intro c2)
-     	show "\<not> as \<le> xs" using pfx c Cons True
-	  by simp
+        show "\<not> as \<le> xs" using pfx c Cons True
+          by simp
       qed fact+
     next
       case False

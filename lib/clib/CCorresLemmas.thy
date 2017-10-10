@@ -215,7 +215,7 @@ lemma ccorres_cond:
    apply (fastforce elim: ccorresE [OF c1] elim!: bexI [rotated])
 *)
    apply (rule ccorresE [OF c1])
-	apply assumption
+        apply assumption
        apply (insert abs)
        apply fastforce
       apply fastforce

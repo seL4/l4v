@@ -28,7 +28,7 @@
 %   nictaonly:  use NICTA logo but no UNSW
 %
 % COMMANDS:
-%   \AuthorEmail	Author's email address (default: disy@cse)
+%   \AuthorEmail        Author's email address (default: disy@cse)
 
 \ProvidesPackage{disy}
 \RequirePackage{graphicx}
@@ -41,10 +41,10 @@
 \DeclareOption{nicta}{\NICTAtrue}
 \DeclareOption{nictaonly}{\NICTAtrue\UNSWfalse}
 
-\newif\ifColor	\Colorfalse
+\newif\ifColor        \Colorfalse
 \newif\ifNICTA  \NICTAfalse
 \newif\ifCMYK   \CMYKfalse
-\newif\ifUNSW   \UNSWtrue	% for historic reasons
+\newif\ifUNSW   \UNSWtrue        % for historic reasons
 
 \ProcessOptions
 
@@ -96,42 +96,42 @@
       %\newcommand{\NICTAlogo}{\includegraphics[width=\LogoW]{imgs/\LogoFileName}}%
       \noindent\sf%
       \begin{minipage}[b]{\textwidth}\sf\large%
-	\hspace*{-10mm}%
-	\ifNICTA%
-	  \color{nictablue}%
+        \hspace*{-10mm}%
+        \ifNICTA%
+          \color{nictablue}%
           \begin{minipage}[b]{1.1\ERTOSw}\urlstyle{sf}%
             Trustworthy Systems\\
- 	  \url{http://ssrg.nicta.com.au/}\\~
-	  \end{minipage}
-	  \hfill
-%	  \ifx\undefined\hyperref%
-%	    \NICTAlogo%
-% 	  \else%
-%	    \raisebox{2mm}{\href{http://nicta.com.au}{\NICTAlogo}}%
-%	  \fi%
-%	\else~
-	\fi%
+           \url{http://ssrg.nicta.com.au/}\\~
+          \end{minipage}
+          \hfill
+%          \ifx\undefined\hyperref%
+%            \NICTAlogo%
+%           \else%
+%            \raisebox{2mm}{\href{http://nicta.com.au}{\NICTAlogo}}%
+%          \fi%
+%        \else~
+        \fi%
       \end{minipage}%
       \hspace*{-4mm}%
     }%
     %
     \flushright
-	{\Huge\bfseries
-	  \@title\\}
-	\vspace*{\stretch{2}}
-	\noindent\rule[-1ex]{\textwidth}{5pt}\\[2.5ex]
-		      {\Large \bfseries \@author}\\
-		      \ifUNSW
-		        \vspace{2ex}
-		      \else
-		        \urlstyle{sf}
-			\ifHave@HyperRef
-			  \url{\AuthorEmailString}\\[2ex]
-			\else
-			  \AuthorEmailString\\[2ex]
-			\fi
-		      \fi
-		      {\sf \hfill{\Large \@date}}\\[2ex]
+        {\Huge\bfseries
+          \@title\\}
+        \vspace*{\stretch{2}}
+        \noindent\rule[-1ex]{\textwidth}{5pt}\\[2.5ex]
+                      {\Large \bfseries \@author}\\
+                      \ifUNSW
+                        \vspace{2ex}
+                      \else
+                        \urlstyle{sf}
+                        \ifHave@HyperRef
+                          \url{\AuthorEmailString}\\[2ex]
+                        \else
+                          \AuthorEmailString\\[2ex]
+                        \fi
+                      \fi
+                      {\sf \hfill{\Large \@date}}\\[2ex]
   \end{minipage}
 
   \vspace{\stretch{1}}
@@ -145,31 +145,31 @@
 
   \begin{minipage}{\textwidth}
     \flushright
-	{\noindent\sf%
-	  \ifUNSW
-	    \newcommand{\DiSyCrest}
-		       {\includegraphics[height=25mm,clip]{imgs/\CrestFileName}}%
-	    \newlength{\DiSyCrestwdth}\settowidth{~\DiSyCrestwdth}{\DiSyCrest}%
-	    \newlength{\DiSyFtwdth}%
-	    \setlength{\DiSyFtwdth}{\textwidth}%
-	    \addtolength{\DiSyFtwdth}{-\DiSyCrestwdth}%
-	    \addtolength{\DiSyFtwdth}{-1em}%
-	    \begin{minipage}[b]{0.7\textwidth}\flushright
-	      \urlstyle{sf}
-	      \ifHave@HyperRef
-	      \url{\AuthorEmailString}\\
-	      \else
-	      \AuthorEmailString\\
-	      \fi
-	      \url{http://www.cse.unsw.edu.au/~disy/}\\
-	      Operating Systems and Distributed Systems Group\\
-	      School of Computer Science and Engineering\\
-	      The University of New South Wales\\
-	      UNSW Sydney 2052, Australia%\vspace*{0.6ex}%
-	    \end{minipage}%
-	    \hspace{1em}\DiSyCrest%
-	  \fi
-	}
+        {\noindent\sf%
+          \ifUNSW
+            \newcommand{\DiSyCrest}
+                       {\includegraphics[height=25mm,clip]{imgs/\CrestFileName}}%
+            \newlength{\DiSyCrestwdth}\settowidth{~\DiSyCrestwdth}{\DiSyCrest}%
+            \newlength{\DiSyFtwdth}%
+            \setlength{\DiSyFtwdth}{\textwidth}%
+            \addtolength{\DiSyFtwdth}{-\DiSyCrestwdth}%
+            \addtolength{\DiSyFtwdth}{-1em}%
+            \begin{minipage}[b]{0.7\textwidth}\flushright
+              \urlstyle{sf}
+              \ifHave@HyperRef
+              \url{\AuthorEmailString}\\
+              \else
+              \AuthorEmailString\\
+              \fi
+              \url{http://www.cse.unsw.edu.au/~disy/}\\
+              Operating Systems and Distributed Systems Group\\
+              School of Computer Science and Engineering\\
+              The University of New South Wales\\
+              UNSW Sydney 2052, Australia%\vspace*{0.6ex}%
+            \end{minipage}%
+            \hspace{1em}\DiSyCrest%
+          \fi
+        }
   \end{minipage}
 
   \clearpage

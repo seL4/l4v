@@ -167,10 +167,10 @@ next
     proof (rule mdb_next_update_other)
       show "p \<noteq> y"
       proof (cases "x = p")
-	case True thus ?thesis using step.prems by simp
+        case True thus ?thesis using step.prems by simp
       next
-	case False thus ?thesis using step.prems ih
-	  by - (erule contrapos_nn, rule trancl_into_rtrancl, simp)
+        case False thus ?thesis using step.prems ih
+          by - (erule contrapos_nn, rule trancl_into_rtrancl, simp)
       qed
     qed fact+
   qed
@@ -245,9 +245,9 @@ next
     have "m \<turnstile> y \<leadsto>\<^sup>* q"
     proof (rule step.hyps)
       have "\<not> m \<turnstile> q \<leadsto>\<^sup>+ y"
-	by (rule neg_next_rtrancl_trancl) fact+
+        by (rule neg_next_rtrancl_trancl) fact+
       thus "\<not> m \<turnstile> q \<leadsto>\<^sup>* y" using False
-	by (clarsimp dest!: rtranclD)
+        by (clarsimp dest!: rtranclD)
     qed fact+
     thus ?thesis by (rule rtrancl_into_rtrancl) fact+
   qed
@@ -269,7 +269,7 @@ proof (cases "m \<turnstile> p \<leadsto>\<^sup>* y")
       assume "m \<turnstile> y \<leadsto>\<^sup>+ p"
       hence "m \<turnstile> p \<leadsto>\<^sup>+ p" using True by simp
       thus "\<not> no_loops m"
-	by (rule neg_no_loopsI)
+        by (rule neg_no_loopsI)
     qed
   qed
 next
@@ -435,7 +435,7 @@ proof rule
     show ?thesis
     proof (rule rtrancl_into_trancl2 [OF _ cnxt])
       show "m(p \<mapsto> cte) \<turnstile> x \<leadsto> mdbNext (cteMDBNode cte)" using xp
-	by (simp add: mdb_next_update)
+        by (simp add: mdb_next_update)
     qed
   next
     assume x: "x \<in> dom m"
@@ -444,21 +444,21 @@ proof rule
     proof (cases "m \<turnstile> x \<leadsto>\<^sup>* p")
       case False
       from n have "m \<turnstile> x \<leadsto>\<^sup>+ 0"
-	      unfolding mdb_chain_0_def
+              unfolding mdb_chain_0_def
         using x by auto
 
       thus ?thesis
-	      by (rule mdb_trancl_other_update) fact+
+              by (rule mdb_trancl_other_update) fact+
     next
       case True
       hence "m(p \<mapsto> cte) \<turnstile> x \<leadsto>\<^sup>* p"
       proof (cases rule: next_rtrancl_tranclE)
-	      case eq thus ?thesis by simp
+              case eq thus ?thesis by simp
       next
-	      case trancl
-	      have "no_loops m" by (rule mdb_chain_0_no_loops) fact+
-	      thus ?thesis
-	        by (rule trancl_into_rtrancl [OF no_loops_upd_last]) fact+
+              case trancl
+              have "no_loops m" by (rule mdb_chain_0_no_loops) fact+
+              thus ?thesis
+                by (rule trancl_into_rtrancl [OF no_loops_upd_last]) fact+
       qed
       moreover
       have "m(p \<mapsto> cte) \<turnstile> p \<leadsto> mdbNext (cteMDBNode cte)" by (simp add: mdb_next_update)
@@ -2184,10 +2184,10 @@ lemma setCTE_valid_objs'[wp]:
   apply (rule setObject_valid_objs')
    apply (clarsimp simp: prod_eq_iff lookupAround2_char1 updateObject_cte objBits_simps)
    apply (clarsimp simp: prod_eq_iff lookupAround2_char1
-			updateObject_cte in_monad typeError_def
-			valid_obj'_def valid_tcb'_def valid_cte'_def
-			tcb_cte_cases_def
-		 split: kernel_object.split_asm if_split_asm)
+                        updateObject_cte in_monad typeError_def
+                        valid_obj'_def valid_tcb'_def valid_cte'_def
+                        tcb_cte_cases_def
+                 split: kernel_object.split_asm if_split_asm)
   done
 
 lemma setCTE_valid_pspace:

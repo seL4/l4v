@@ -710,17 +710,17 @@ let
 
   val _ = tracing "Saving function info to AutoCorresFunctionInfo."
   val lthy = Local_Theory.background_theory (
-	  AutoCorresFunctionInfo.map (fn tbl =>
-	    Symtab.update (filename, new_results) tbl)) lthy
+          AutoCorresFunctionInfo.map (fn tbl =>
+            Symtab.update (filename, new_results) tbl)) lthy
   (* All traces should be available at this point. Archive them. *)
 
   val traces = Synchronized.value trace_db;
   val _ = if Symtab.is_empty traces then () else
             tracing "Saving translation traces to AutoCorresData.Traces."
   val lthy = lthy |> Local_Theory.background_theory (
-	  AutoCorresData.Traces.map
-	    (Symtab.map_default (filename, Symtab.empty)
-	       (fn old_traces => Utils.symtab_merge_with snd (old_traces, traces))));
+          AutoCorresData.Traces.map
+            (Symtab.map_default (filename, Symtab.empty)
+               (fn old_traces => Utils.symtab_merge_with snd (old_traces, traces))));
 
 in
   (* Exit context. *)

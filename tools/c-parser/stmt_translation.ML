@@ -398,8 +398,8 @@ in
           handle Empty =>
                  error ("No return parameter for function "^fname)
       val retvar = Const (Sign.intern_const sg (suffix Record.updateN
-						       (Hoare.varname retvar_name)), (* ??? *)
-			  (retvar_ty --> retvar_ty) --> statetype --> statetype)
+                                                       (Hoare.varname retvar_name)), (* ??? *)
+                          (retvar_ty --> retvar_ty) --> statetype --> statetype)
       val e'     = implicit_cast_rval retvar_cty e
       val value  = mk_abs (svar, rval_of e' svar) (* Is svar safe? *)
     in
@@ -525,10 +525,10 @@ in
       val formal_fs = map param_to_lval informals
       val _ = if length formal_fs <> length actuals then
                 error("Number of arguments ("
-		      ^Int.toString (length actuals)^
+                      ^Int.toString (length actuals)^
                       ") in call to "^callname^
                       " doesn't match declarations ("
-		      ^Int.toString (length formal_fs)^")")
+                      ^Int.toString (length formal_fs)^")")
               else ()
       fun mkinit formals actuals =
           case (formals, actuals) of

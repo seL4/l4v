@@ -140,7 +140,7 @@ fun mk_fninfo thy csenv includeP decllist : fninfo list = let
                          raise Fail ("mk_fninfo: No function information for "^
                                      fname)
               val rettype = valOf (get_rettype fname csenv)
-	      val _ = Feedback.informStr (0, "Added external decl for " ^
+              val _ = Feedback.informStr (0, "Added external decl for " ^
                                fname ^ " with " ^ Int.toString (length params) ^
                                " args.")
               val spec = parse_specs fname specs

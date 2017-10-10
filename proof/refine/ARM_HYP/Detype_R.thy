@@ -4286,7 +4286,7 @@ lemma createNewCaps_ret_len:
           erule hoare_strengthen_post[OF createObjects_ret],clarsimp+ | intro conjI impI)+
        apply (rule hoare_pre,
           ((wp+)
-		      | simp add: Arch_createNewCaps_def toAPIType_def
+                      | simp add: Arch_createNewCaps_def toAPIType_def
                           ARM_HYP_H.toAPIType_def unat_of_nat_minus_1
               | erule hoare_strengthen_post[OF createObjects_ret],clarsimp+
               | intro conjI impI)+)+

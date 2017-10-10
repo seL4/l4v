@@ -9,7 +9,7 @@
  *)
 
 (*
-	Hypervisor code.
+        Hypervisor code.
 *)
 
 theory Hypervisor_H

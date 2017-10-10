@@ -94,7 +94,7 @@ next
   show "\<Gamma>\<turnstile> ?G' ?c {s. \<forall>uu. dc uu (xf' s) \<longrightarrow> s \<in> G' (xf' s) \<inter> {sa. P' (xf' s) (i sa)}}"
     apply (rule HoarePartial.ProcModifyReturnNoAbr
       [where return' = "\<lambda>s t. s",
-	OF _ _ f_modifies])
+        OF _ _ f_modifies])
     apply (rule HoarePartial.ProcSpecNoAbrupt [OF _ _ f_spec])
     defer
     apply vcg
@@ -177,7 +177,7 @@ next
     (\<forall>uu. dc uu ((xfr \<circ> xf') s) \<longrightarrow> s \<in> G' ((xfr \<circ> xf') s) \<inter> {sa. P' ((xfr \<circ> xf') s) (i sa)})}"
     apply (rule HoarePartial.ProcModifyReturnNoAbr
       [where return' = "\<lambda>s t. s",
-	OF _ _ f_modifies])
+        OF _ _ f_modifies])
     apply (rule HoarePartial.ProcSpecNoAbrupt [OF _ _ f_spec])
     defer
     apply vcg
@@ -732,13 +732,13 @@ proof (induct)
     show "\<Gamma>\<turnstile> \<langle>While b' a',t\<rangle> \<Rightarrow> u"
     proof (subst d' [symmetric], rule WhileTrue.hyps(5))
       obtain z where "u = Normal z \<or> u = Abrupt z"
-	using WhileTrue.prems by (cases u, auto)
+        using WhileTrue.prems by (cases u, auto)
       then obtain z' where "t = Normal z' \<or> t = Abrupt z'"
-    	using WhileTrue.prems WhileTrue.hyps(2) WhileTrue.hyps(4)
-	by (auto elim: Normal_resultE Abrupt_resultE)
+            using WhileTrue.prems WhileTrue.hyps(2) WhileTrue.hyps(4)
+        by (auto elim: Normal_resultE Abrupt_resultE)
 
       thus "t \<in> Normal ` {s. xf s = v} \<union> Abrupt ` {s. xf s = v}" using xp ae xfs
-	by (auto dest: xpres_exec0)
+        by (auto dest: xpres_exec0)
     qed fact+
   qed
   thus ?case using WhileTrue.prems by simp
@@ -794,14 +794,14 @@ proof (induct)
 
       have "\<Gamma>\<turnstile> \<langle>d',t\<rangle> \<Rightarrow> u"
       proof (rule WhileTrue.hyps(5))
-	show "isFault u \<or> u = Stuck" using uv by simp
-	have "xf z = v" using xfs ae
-	  apply -
-	  apply (erule xpresD [OF _ xp])
-	  apply (simp add: tv)
-	  done
+        show "isFault u \<or> u = Stuck" using uv by simp
+        have "xf z = v" using xfs ae
+          apply -
+          apply (erule xpresD [OF _ xp])
+          apply (simp add: tv)
+          done
 
-	thus "t \<in> Normal ` {s. xf s = v}" by (simp add: tv)
+        thus "t \<in> Normal ` {s. xf s = v}" by (simp add: tv)
       qed fact+
       hence "\<Gamma>\<turnstile> \<langle>While b' a',t\<rangle> \<Rightarrow> u" using d' by simp
     } moreover
@@ -815,14 +815,14 @@ proof (induct)
       (* clag *)
       have "\<Gamma>\<turnstile> \<langle>d',t\<rangle> \<Rightarrow> u"
       proof (rule WhileTrue.hyps(5))
-	show "isFault u \<or> u = Stuck" using uv by simp
-	have "xf z = v" using xfs ae
-	  apply -
-	  apply (erule xpresD [OF _ xp])
-	  apply (simp add: tv)
-	  done
+        show "isFault u \<or> u = Stuck" using uv by simp
+        have "xf z = v" using xfs ae
+          apply -
+          apply (erule xpresD [OF _ xp])
+          apply (simp add: tv)
+          done
 
-	thus "t \<in> Normal ` {s. xf s = v}" by (simp add: tv)
+        thus "t \<in> Normal ` {s. xf s = v}" by (simp add: tv)
       qed fact+
       hence "\<Gamma>\<turnstile> \<langle>While b' a',t\<rangle> \<Rightarrow> u" using d' by simp
     }
@@ -845,27 +845,27 @@ lemma While_ceqv:
   apply (cases t')
      apply rule
       apply (erule (1) While_ceqv_na [OF ra])
-	 apply (rule beq)
-	apply simp
+         apply (rule beq)
+        apply simp
        apply simp
       apply simp
      apply (rule While_ceqv_na [OF ceqv_sym [OF ra]])
-	  apply (erule (1) xpres_ceqv [OF _ ra])
-	apply (rule impI)
-	apply (erule beq [rule_format, symmetric])
+          apply (erule (1) xpres_ceqv [OF _ ra])
+        apply (rule impI)
+        apply (erule beq [rule_format, symmetric])
        apply simp
       apply simp
      apply simp
     (* clag *)
     apply rule
      apply (erule (1) While_ceqv_na [OF ra])
-	apply (rule beq)
+        apply (rule beq)
        apply simp
       apply simp
      apply simp
     apply simp
     apply (rule While_ceqv_na [OF ceqv_sym [OF ra]])
-	 apply (erule (1) xpres_ceqv [OF _ ra])
+         apply (erule (1) xpres_ceqv [OF _ ra])
        apply (rule impI)
        apply (erule beq [rule_format, symmetric])
       apply simp
@@ -906,9 +906,9 @@ lemma call_ceqv':
   apply (rule iffI)
    apply (erule exec_call_Normal_elim)
        apply (drule ceqvD1 [OF _ _ ceqv])
-	apply (simp add: xf)
+        apply (simp add: xf)
        apply (erule exec_call)
-	apply (simp add: rewrite_xfD [OF ieq])
+        apply (simp add: rewrite_xfD [OF ieq])
        apply assumption
       apply (clarsimp simp: rewrite_xfD [OF ieq] elim!: exec_callAbrupt exec_callFault exec_callStuck exec_callUndefined)
      apply (clarsimp simp: rewrite_xfD [OF ieq] elim!: exec_callAbrupt exec_callFault exec_callStuck exec_callUndefined)
@@ -917,12 +917,12 @@ lemma call_ceqv':
   (* clag *)
    apply (erule exec_call_Normal_elim)
        apply (drule ceqvD2 [OF _ _ ceqv])
-	apply (simp add: xf)
+        apply (simp add: xf)
        apply (erule exec_call)
-	apply (simp add: rewrite_xfD [OF ieq])
+        apply (simp add: rewrite_xfD [OF ieq])
        apply assumption
       apply (clarsimp simp: rewrite_xfD [OF ieq, symmetric]
-	elim!: exec_callAbrupt exec_callFault exec_callStuck exec_callUndefined)+
+        elim!: exec_callAbrupt exec_callFault exec_callStuck exec_callUndefined)+
   done
 
 lemma call_ceqv:

@@ -25,7 +25,7 @@ SML_COMPILER ?= mlton
 
 ifndef ML_HOME
 ML_HOME := $(shell $(GLOB_PFX)/../../isabelle/bin/isabelle getenv ML_HOME | \
-	           perl -ne 'print (substr($$_,8))')
+                   perl -ne 'print (substr($$_,8))')
 endif
 
 ifndef LIBPOLY_DIR

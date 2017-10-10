@@ -32,7 +32,7 @@ lemma rab_failure_case_ccorres:
    (throwError e)
    (call_part ;;
    \<acute>ret___struct_resolveAddressBits_ret_C :==
-		       resolveAddressBits_ret_C.status_C_update (\<lambda>_. v) \<acute>ret___struct_resolveAddressBits_ret_C;;
+                       resolveAddressBits_ret_C.status_C_update (\<lambda>_. v) \<acute>ret___struct_resolveAddressBits_ret_C;;
     return_C ret__struct_resolveAddressBits_ret_C_'_update ret___struct_resolveAddressBits_ret_C_')"
   apply (rule ccorres_rhs_assoc)+
   apply (rule ccorres_symb_exec_r [where R=\<top>, OF _ spec])

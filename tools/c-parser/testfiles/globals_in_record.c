@@ -26,13 +26,13 @@ int incp(void) {
 
 /*
     This gives a global record:
-	[|
-	   global_exn_var_';
-	   t_hrs_';
-	   phantom_machine_state_';
-	   zuzu_';
-	   ...
-	|]
+        [|
+           global_exn_var_';
+           t_hrs_';
+           phantom_machine_state_';
+           zuzu_';
+           ...
+        |]
     Note:
     * The program reads and writes zuzu but does not take its address.
       ==> There is an explicit field for zuzu.

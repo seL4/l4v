@@ -11,7 +11,7 @@
 theory CToCRefine
 
 imports
-	"../../spec/cspec/Substitute"
+    "../../spec/cspec/Substitute"
     "../SimplRewrite"
     "../TypHeapLib"
 begin

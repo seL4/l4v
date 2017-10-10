@@ -341,7 +341,7 @@ next
     proof (rule ra)
       show "((\<not> isAbr (Abrupt z) \<or> hs = []) \<and> n = length hs \<and> Abrupt z = t)
                \<or> (\<exists>q. Abrupt z = Abrupt q \<and> \<Gamma>\<turnstile>\<^sub>h \<langle>hs,q\<rangle> \<Rightarrow> (n, t))" using EHAbrupt(2)
-	by (simp add: hs)
+        by (simp add: hs)
 
       show "\<not> isAbr (Normal s'')" by simp
     qed
@@ -1169,7 +1169,7 @@ lemma ccorres_trim_redundant_throw':
     -- "Non-abrupt case"
     apply clarsimp
     apply (erule_tac x = "t'" in ccorresE [OF cc])
-	apply assumption
+        apply assumption
        apply assumption
       apply assumption
      apply (erule (1) EHOther)

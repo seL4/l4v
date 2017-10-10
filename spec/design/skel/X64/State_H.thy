@@ -9,7 +9,7 @@
  *)
 
 (*
-	Machine and kernel state.
+        Machine and kernel state.
 *)
 
 chapter "Machine State"

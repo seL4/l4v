@@ -67,16 +67,16 @@ nodes_authority g = nub (aux g)
 -- 'add_selfedges_auth g' adds all selfedges to 'g'
 add_selfedges_auth :: Authority_graph -> Authority_graph
 add_selfedges_auth g = let aux :: [Auth] -> String -> Authority_graph
-		           aux [] x    = []
-			   aux (a:l) x = (x,a,x):(aux l x) in 
+                           aux [] x    = []
+                           aux (a:l) x = (x,a,x):(aux l x) in 
                        let authorities = [Read, Write, Receive, ASyncSend, SyncSend, Control, Reset, ASIDPoolMapsASID , Grant] in
-	               g ++ (concatMap (aux authorities) (nodes_authority g))
+                       g ++ (concatMap (aux authorities) (nodes_authority g))
 
 {- 'subjectReadsp g l x nodes_g acc', where 'g' is the authority graph,
-					    'l' the current node,
-					    'x' the node we test,
-					    'nodes_g' the list of nodes in 'g',
-					    'acc' the current version of the 'subjectReads g l' nub (as a list), used for the fixed poInt computation,
+                                            'l' the current node,
+                                            'x' the node we test,
+                                            'nodes_g' the list of nodes in 'g',
+                                            'acc' the current version of the 'subjectReads g l' nub (as a list), used for the fixed poInt computation,
    returns True if there is a rule including 'x' in 'subjectReads g l', and False otherwise -}
 subjectReadsp :: Authority_graph -> String -> String -> [String] -> [String] -> Bool
 subjectReadsp g l x nodes_g acc =
@@ -84,21 +84,21 @@ subjectReadsp g l x nodes_g acc =
       , any (\(l',auth,x') -> (l == l' && x == x' && (auth `elem` [Read, Receive, SyncSend]))) g 
       , any (\t -> (t,Read,x) `elem` g) acc 
       , (
-      	  any (\t -> elem_authority_edge g t [SyncSend,Receive] [x]) acc
-	  &&
-	  any (\a -> elem_authority_edge g a [ASyncSend,SyncSend,Reset] [x]) nodes_g
-	)
+                any (\t -> elem_authority_edge g t [SyncSend,Receive] [x]) acc
+          &&
+          any (\a -> elem_authority_edge g a [ASyncSend,SyncSend,Reset] [x]) nodes_g
+        )
       , any (\b -> (x,Write,b) `elem` g) acc
       , (
-	  let ep_list = filter (\ep -> elem (x,SyncSend,ep) g) acc
-	      h a = elem_authority_edge g a [Receive,Reset] ep_list
+          let ep_list = filter (\ep -> elem (x,SyncSend,ep) g) acc
+              h a = elem_authority_edge g a [Receive,Reset] ep_list
           in not (null ep_list) && any h nodes_g
-	)
+        )
       , (
-	  let ep_list = filter (\ep -> elem (x,Receive,ep) g) acc
-	      h = (\a -> elem_authority_edge g a [SyncSend] ep_list )
-	  in not (null ep_list) && any h nodes_g
-	)
+          let ep_list = filter (\ep -> elem (x,Receive,ep) g) acc
+              h = (\a -> elem_authority_edge g a [SyncSend] ep_list )
+          in not (null ep_list) && any h nodes_g
+        )
       ]
 
 
@@ -112,9 +112,9 @@ subjectReads g l nodes_g = fixpoint (nub . aux nodes_g) []
                            
 
 {- 'subjectAffectsp g l x nodes_g', where 'g' is the authority graph,
-					    'l' the current node,
-					    'x' the node we test,
-					    'nodes_g' the list of nodes in 'g',on,
+                                            'l' the current node,
+                                            'x' the node we test,
+                                            'nodes_g' the list of nodes in 'g',on,
    returns True if there is a rule including 'x' in 'subjectAffects g l', and False otherwise -}
 
 subjectAffectsp :: Authority_graph -> String -> String -> [String] -> Bool
@@ -147,11 +147,11 @@ subjectAffects g l nodes_g = fixpoint (nub . aux nodes_g) []
 -- 'infoflow g' computes the infoflow graph from authority graph 'g'
 infoflow :: Authority_graph -> Infoflow_graph
 infoflow g = let nodes_g = nodes_authority g in
-	     let aux :: Authority_graph -> [String] -> String -> [Infoflow_edge]
+             let aux :: Authority_graph -> [String] -> String -> [Infoflow_edge]
                  aux g [] l = []
                  aux g (x:list) l = let b = inter_non_empty (subjectAffects g l nodes_g) (subjectReads g x nodes_g) in
-                 		    if b then (l,x):(aux g list l)
-                 		         else aux g list l
+                                     if b then (l,x):(aux g list l)
+                                          else aux g list l
              in concatMap (aux g nodes_g) nodes_g
              
 -- 'del_selfedges_infoflow g' deletes the selfedges in an infoflow-type graph g, simplified or not
@@ -161,9 +161,9 @@ del_selfedges_infoflow = filter (\(p,q) -> p/=q)
 -- 'nodes_infoflow g' returns the list of nodes in the infoflow graph 'g'
 nodes_infoflow :: Infoflow_graph -> [String]
 nodes_infoflow g = let aux :: Infoflow_graph -> [String]
-  		       aux [] = []
-       		       aux ((a,b):l) = a:b:(aux l)
-       	           in 
+                         aux [] = []
+                              aux ((a,b):l) = a:b:(aux l)
+                          in 
                    nub (aux g)
 
 -- add_scheduler_infoflow g' adds all edges from a new node ('Scheduler') to every node in g
@@ -350,89 +350,89 @@ wellformed_debug aag = let nodes = nodes_authority aag in
 
 
 main = do
-	
+        
 -- We treat example 1 in infoflow/PolicyExample.thy
 
         let g1 = [("T",ASyncSend,"AEP1"),("T",ASyncSend,"AEP2"),("CTR",Receive,"AEP1"),("CTR",Read,"C"),("CTR",Write,"C"),("C",Read,"CTR"),("C",Write,"CTR"),("CTR",SyncSend,"EP"),("RM",Receive,"EP"),("RM",Receive,"AEP2")]
         let g1_complete = add_selfedges_auth g1
         print g1
-	print ("**********************")
-	print (infoflow g1_complete)
-	print ("**********************")
-	print (simp_infoflow (infoflow g1_complete))
-	print ("**********************")
-	print (authority_to_infoflow g1 True)
-	print ("**********************")
-	putStr (graphviz_input_simplified_infoflow (authority_to_infoflow g1 True))
-	print ("##############################")
+        print ("**********************")
+        print (infoflow g1_complete)
+        print ("**********************")
+        print (simp_infoflow (infoflow g1_complete))
+        print ("**********************")
+        print (authority_to_infoflow g1 True)
+        print ("**********************")
+        putStr (graphviz_input_simplified_infoflow (authority_to_infoflow g1 True))
+        print ("##############################")
        
-	
+        
 -- We treat example 1 in infoflow/PolicyExample.thy and we add the Scheduler
 
         let g1' = [("T",ASyncSend,"AEP1"),("T",ASyncSend,"AEP2"),("CTR",Receive,"AEP1"),("CTR",Read,"C"),("CTR",Write,"C"),("C",Read,"CTR"),("C",Write,"CTR"),("CTR",SyncSend,"EP"),("RM",Receive,"EP"),("RM",Receive,"AEP2")]
         let g1_complete' = add_selfedges_auth g1'
         print g1'
-	print ("**********************")
-	print (infoflow g1_complete')
-	print ("**********************")
-	print (simp_infoflow (infoflow g1_complete'))
-	print ("**********************")
-	print (authority_to_infoflow g1' False)
-	print ("**********************")
-	putStr (graphviz_input_simplified_infoflow (authority_to_infoflow g1' False))
-	print ("##############################")
+        print ("**********************")
+        print (infoflow g1_complete')
+        print ("**********************")
+        print (simp_infoflow (infoflow g1_complete'))
+        print ("**********************")
+        print (authority_to_infoflow g1' False)
+        print ("**********************")
+        putStr (graphviz_input_simplified_infoflow (authority_to_infoflow g1' False))
+        print ("##############################")
 
 
 -- We treat example 2 in infoflow/PolicyExample.thy
 
-	let g2 = [("Low",Read,"SharedPage"),("Low",Write,"SharedPage"),("Low",ASyncSend,"AEP"),("High",Read,"SharedPage"),("High",Receive,"AEP")]
-	let g2_complete = add_selfedges_auth g2
+        let g2 = [("Low",Read,"SharedPage"),("Low",Write,"SharedPage"),("Low",ASyncSend,"AEP"),("High",Read,"SharedPage"),("High",Receive,"AEP")]
+        let g2_complete = add_selfedges_auth g2
         print g2
-	print ("**********************")
-	print (infoflow g2_complete)
-	print ("**********************")
-	print (simp_infoflow (infoflow g2_complete))
-	print ("**********************")
-	print (authority_to_infoflow g2 False)
-	print ("**********************")
-	putStr (graphviz_input_simplified_infoflow (authority_to_infoflow g2 False))
-	print ("##############################")
+        print ("**********************")
+        print (infoflow g2_complete)
+        print ("**********************")
+        print (simp_infoflow (infoflow g2_complete))
+        print ("**********************")
+        print (authority_to_infoflow g2 False)
+        print ("**********************")
+        putStr (graphviz_input_simplified_infoflow (authority_to_infoflow g2 False))
+        print ("##############################")
 
 
 -- We treat the example in infoflow/ExampleSystemPolicyFlows
 
-	let g3 = [("UT3",SyncSend,"EP3"),("UT3",Reset,"EP3"),("T3",Receive,"EP3"),("T3",Reset,"EP3"),("IRQ",Read,"IRQ")]
-	let g3_complete = add_selfedges_auth g3
+        let g3 = [("UT3",SyncSend,"EP3"),("UT3",Reset,"EP3"),("T3",Receive,"EP3"),("T3",Reset,"EP3"),("IRQ",Read,"IRQ")]
+        let g3_complete = add_selfedges_auth g3
         print g3
-	print ("**********************")
-	print (infoflow g3_complete)
-	print ("**********************")
-	print (simp_infoflow (infoflow g3_complete))
-	print ("**********************")
-	print (authority_to_infoflow g3 True)
-	print ("**********************")
-	putStr (graphviz_input_simplified_infoflow (authority_to_infoflow g3 True))
-	print ("##############################")
+        print ("**********************")
+        print (infoflow g3_complete)
+        print ("**********************")
+        print (simp_infoflow (infoflow g3_complete))
+        print ("**********************")
+        print (authority_to_infoflow g3 True)
+        print ("**********************")
+        putStr (graphviz_input_simplified_infoflow (authority_to_infoflow g3 True))
+        print ("##############################")
 
 
-	let g4 = [("A",Read,"X"),("B",ASIDPoolMapsASID,"X"),("B",Read,"Y"),("C",ASIDPoolMapsASID,"Y"),("C",Read,"Z"),("A",ASIDPoolMapsASID,"Z")]
-	let g4_complete = add_selfedges_auth g4
+        let g4 = [("A",Read,"X"),("B",ASIDPoolMapsASID,"X"),("B",Read,"Y"),("C",ASIDPoolMapsASID,"Y"),("C",Read,"Z"),("A",ASIDPoolMapsASID,"Z")]
+        let g4_complete = add_selfedges_auth g4
         print g4
-	print ("**********************")
-	print (infoflow g4_complete)
-	print ("**********************")
-	print (simp_infoflow (infoflow g4_complete))
-	print ("**********************")
-	print (authority_to_infoflow g4 False)
-	print ("**********************")
-	putStr (graphviz_input_simplified_infoflow (authority_to_infoflow g4 False))
-	print ("##############################")
+        print ("**********************")
+        print (infoflow g4_complete)
+        print ("**********************")
+        print (simp_infoflow (infoflow g4_complete))
+        print ("**********************")
+        print (authority_to_infoflow g4 False)
+        print ("**********************")
+        putStr (graphviz_input_simplified_infoflow (authority_to_infoflow g4 False))
+        print ("##############################")
 
-	
-	let authorities = [Read, Write, Receive, ASyncSend, SyncSend, Control, Reset, ASIDPoolMapsASID, Grant]
-	print (condition1 g2_complete "Low" (nodes_authority g2))
-	print (condition2 g2_complete "Low" authorities)
-	print (condition3 g2_complete)	
-	print (wellformed g2_complete)
+        
+        let authorities = [Read, Write, Receive, ASyncSend, SyncSend, Control, Reset, ASIDPoolMapsASID, Grant]
+        print (condition1 g2_complete "Low" (nodes_authority g2))
+        print (condition2 g2_complete "Low" authorities)
+        print (condition3 g2_complete)        
+        print (wellformed g2_complete)
 
 

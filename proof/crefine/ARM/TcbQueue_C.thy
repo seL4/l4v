@@ -48,12 +48,12 @@ next
       case False
       hence "tcbp \<noteq> last tcbs" using tcbp Cons.prems by clarsimp
       thus ?thesis using False tcbp Cons.prems cs_tcb
-	apply clarsimp
-	apply (rule exI [where x = 0])
-	apply simp
-	apply (cases tcbs)
-	apply simp_all
-	done
+        apply clarsimp
+        apply (rule exI [where x = 0])
+        apply simp
+        apply (cases tcbs)
+        apply simp_all
+        done
     qed
     ultimately show ?thesis ..
   next
@@ -66,7 +66,7 @@ next
     have ih: "?prev tcb tcbs (tcb_ptr_to_ctcb_ptr tcb') \<and> ?next tcb tcbs"
     proof (rule Cons.hyps)
       from Cons.prems show (* "\<forall>t\<in>set tcbs. tcb_at' t s"
-	and *) "distinct tcbs" by simp_all
+        and *) "distinct tcbs" by simp_all
     qed fact+
 
     from tcbp Cons.prems have tcbp_not_tcb': "tcbp \<noteq> tcb'" by clarsimp
@@ -76,19 +76,19 @@ next
     show ?case
     proof (rule conjI)
       show "?prev tcb (tcb' # tcbs) qprev'"
-	using ih [THEN conjunct1] tcbp_not_tcb' hd_tcbs tcbsnz
-	apply (clarsimp split: if_split_asm)
-	apply fastforce
-	apply (rule_tac x = "Suc n" in exI)
-	apply simp
-	done
+        using ih [THEN conjunct1] tcbp_not_tcb' hd_tcbs tcbsnz
+        apply (clarsimp split: if_split_asm)
+        apply fastforce
+        apply (rule_tac x = "Suc n" in exI)
+        apply simp
+        done
     next
       show "?next tcb (tcb' # tcbs)"
-	using ih [THEN conjunct2] tcbp_not_tcb' hd_tcbs tcbsnz
-	apply (clarsimp split: if_split_asm)
-	apply (rule_tac x = "Suc n" in exI)
-	apply simp
-	done
+        using ih [THEN conjunct2] tcbp_not_tcb' hd_tcbs tcbsnz
+        apply (clarsimp split: if_split_asm)
+        apply (rule_tac x = "Suc n" in exI)
+        apply simp
+        done
     qed
   qed
 qed
@@ -438,13 +438,13 @@ lemma tcb_queue_next_prev:
   apply (cut_tac bspec [OF tcb_queue_relation_not_NULL, OF qr valid_ep(1) tq(1)])
   apply (cut_tac bspec [OF tcb_queue_relation_not_NULL, OF qr valid_ep(1) tq(2)])
   apply (simp add: inj_eq split: if_split_asm)
-	   apply clarsimp
-	  apply clarsimp
-	 subgoal by (clarsimp simp: last_conv_nth  distinct_nth distinct_nth_cons)
-	apply (clarsimp simp: last_conv_nth distinct_nth distinct_nth_cons)
-	apply (subgoal_tac "list ! Suc na \<noteq> tcbp'")
-	 apply clarsimp
-	apply clarsimp
+           apply clarsimp
+          apply clarsimp
+         subgoal by (clarsimp simp: last_conv_nth  distinct_nth distinct_nth_cons)
+        apply (clarsimp simp: last_conv_nth distinct_nth distinct_nth_cons)
+        apply (subgoal_tac "list ! Suc na \<noteq> tcbp'")
+         apply clarsimp
+        apply clarsimp
        subgoal by (clarsimp  simp: last_conv_nth distinct_nth distinct_nth_cons nth_first_not_member)
       subgoal by (fastforce  simp: last_conv_nth distinct_nth distinct_nth_cons nth_first_not_member)
      subgoal by (clarsimp  simp: last_conv_nth distinct_nth distinct_nth_cons distinct_nth_cons' nth_first_not_member)
@@ -598,36 +598,36 @@ next
 
       have nnull: "tn tcb \<noteq> NULL" using tq
       proof (rule tcb_queue_relation_next_not_NULL)
-    	from ind_prems show "\<forall>t\<in>set tcbs. tcb_at' t s"
+        from ind_prems show "\<forall>t\<in>set tcbs. tcb_at' t s"
          and "distinct tcbs" by simp_all
-	show "tcbs \<noteq> []" using Cons by simp
+        show "tcbs \<noteq> []" using Cons by simp
       qed
 
       from Cons ind_prems have "tcbs_hd \<notin> set tcbss" by simp
       hence mpeq: "\<And>p. p \<in> tcb_ptr_to_ctcb_ptr ` set tcbss \<Longrightarrow> ?mp p = mp p"
-	using tq cs_tcb tcbp Cons nnull ind_prems
-	apply -
-	apply (subst upd_unless_null_cong_helper, assumption, clarsimp)+
-	apply simp
-	done
+        using tq cs_tcb tcbp Cons nnull ind_prems
+        apply -
+        apply (subst upd_unless_null_cong_helper, assumption, clarsimp)+
+        apply simp
+        done
 
       have "tcb_ptr_to_ctcb_ptr tcbp \<noteq> tn tcb \<and> tcb_ptr_to_ctcb_ptr tcbp \<noteq> tp tcb
          \<and> tn tcb \<noteq> tp tcb" using tq cs_tcb ind_prems nnull
-	apply -
-	apply (drule (5) tcb_queue_relation_ptr_rel)
-	apply clarsimp
-	done
+        apply -
+        apply (drule (5) tcb_queue_relation_ptr_rel)
+        apply clarsimp
+        done
 
       hence "?mp (tcb_ptr_to_ctcb_ptr tcbs_hd) = Some (tp_update (\<lambda>_. tp tcb) (the (mp (tn tcb))))"
-	using qp qh tq cs_tcb tcbp Cons nnull
-	by (simp add: upd_unless_null_def)
+        using qp qh tq cs_tcb tcbp Cons nnull
+        by (simp add: upd_unless_null_def)
 
       thus ?thesis using qp qh tq cs_tcb tcbp Cons nnull
-	apply (simp (no_asm) add: tcbp Cons split del: if_split)
-	apply (subst tcb_queue_relation_cong [OF refl refl refl mpeq])
-	apply assumption
-	apply (clarsimp simp: f)
-	done
+        apply (simp (no_asm) add: tcbp Cons split del: if_split)
+        apply (subst tcb_queue_relation_cong [OF refl refl refl mpeq])
+        apply assumption
+        apply (clarsimp simp: f)
+        done
     qed
   next
     assume inset: "tcbp \<in> set tcbs"
@@ -651,8 +651,8 @@ next
                                      (?qhead (tn tcb2))" using rel2
     proof (rule Cons.hyps)
       from Cons.prems show "\<forall>t\<in>set tcbs. tcb_at' t s"
-	and "distinct tcbs"
-	and "ctcb_ptr_to_tcb_ptr (tcb_ptr_to_ctcb_ptr tcb') \<notin> set tcbs" by simp_all
+        and "distinct tcbs"
+        and "ctcb_ptr_to_tcb_ptr (tcb_ptr_to_ctcb_ptr tcb') \<notin> set tcbs" by simp_all
     qed fact
 
     have tcb_next: "tn tcb \<noteq> tcb_ptr_to_ctcb_ptr tcb'"
@@ -664,37 +664,37 @@ next
     proof (cases "tn tcb2 = tcb_ptr_to_ctcb_ptr tcbp")
       case True
       hence tcb_prev: "tp tcb = tcb_ptr_to_ctcb_ptr tcb'" using Cons.prems cs_tcb2 cs_tcb not_sym [OF tcbp]
-	apply -
-	apply (subst tcb_queue_next_prev [symmetric], assumption+)
-      	 apply simp
+        apply -
+        apply (subst tcb_queue_next_prev [symmetric], assumption+)
+               apply simp
          apply simp
          apply simp
          apply (rule not_sym [OF tcbp])
         apply simp
-	done
+        done
 
       hence "?mp (tcb_ptr_to_ctcb_ptr tcb') = Some (tn_update (\<lambda>_. tn tcb) tcb2)"
-	using tcb_next nnull cs_tcb2 unfolding upd_unless_null_def by simp
+        using tcb_next nnull cs_tcb2 unfolding upd_unless_null_def by simp
 
       thus ?thesis using tcbp cs_tcb qh qp True ih tcb_prev
-	by (simp add: inj_eq f)
+        by (simp add: inj_eq f)
     next
       case False
       hence tcb_prev: "tp tcb \<noteq> tcb_ptr_to_ctcb_ptr tcb'"
-	using Cons.prems cs_tcb2 cs_tcb not_sym [OF tcbp]
-	apply -
-	apply (subst tcb_queue_next_prev [symmetric], assumption+)
-      	 apply simp
+        using Cons.prems cs_tcb2 cs_tcb not_sym [OF tcbp]
+        apply -
+        apply (subst tcb_queue_next_prev [symmetric], assumption+)
+               apply simp
          apply simp
          apply simp
          apply (rule not_sym [OF tcbp])
         apply simp
-	done
+        done
       hence "?mp (tcb_ptr_to_ctcb_ptr tcb') = Some tcb2"
-	using tcb_next nnull cs_tcb2 unfolding upd_unless_null_def by simp
+        using tcb_next nnull cs_tcb2 unfolding upd_unless_null_def by simp
 
       thus ?thesis using tcbp cs_tcb qh qp False ih tcb_prev
-	by (simp add: inj_eq)
+        by (simp add: inj_eq)
     qed
   qed
 qed
@@ -765,7 +765,7 @@ proof -
     thus "(if tn tcb = NULL then tp tcb else qend) =
           (if remove1 tcbp queue = [] then NULL else tcb_ptr_to_ctcb_ptr (last (remove1 tcbp queue)))"
       using queue_rel in_queue cs_tcb valid_ntfn
-	tcb_queue_relation_not_NULL [OF tcb_queue_relation'_queue_rel [OF queue_rel] valid_ntfn(1)]
+        tcb_queue_relation_not_NULL [OF tcb_queue_relation'_queue_rel [OF queue_rel] valid_ntfn(1)]
       apply -
       apply (erule tcb_queue_relationE')
       apply (frule (3) tcb_queueD)
@@ -773,15 +773,15 @@ proof -
       apply simp
       apply (intro impI conjI)
        apply (subgoal_tac "tcbp = last queue")
-	apply simp
-	apply (subgoal_tac "(remove1 (last queue) queue) \<noteq> []")
-	 apply (clarsimp simp: inj_eq last_conv_nth nth_eq_iff_index_eq length_remove1
-	   distinct_remove1_take_drop split: if_split_asm)
-	 apply arith
-	apply (clarsimp simp: remove1_empty last_conv_nth hd_conv_nth nth_eq_iff_index_eq not_le split: if_split_asm)
-	apply (cases queue)
-	 apply simp
-	apply simp
+        apply simp
+        apply (subgoal_tac "(remove1 (last queue) queue) \<noteq> []")
+         apply (clarsimp simp: inj_eq last_conv_nth nth_eq_iff_index_eq length_remove1
+           distinct_remove1_take_drop split: if_split_asm)
+         apply arith
+        apply (clarsimp simp: remove1_empty last_conv_nth hd_conv_nth nth_eq_iff_index_eq not_le split: if_split_asm)
+        apply (cases queue)
+         apply simp
+        apply simp
        apply (fastforce simp: inj_eq split: if_split_asm)
       apply (clarsimp simp: last_conv_nth distinct_remove1_take_drop nth_eq_iff_index_eq inj_eq split: if_split_asm)
        apply arith

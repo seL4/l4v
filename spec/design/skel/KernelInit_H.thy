@@ -79,7 +79,7 @@ newKernelState_def:
         ksWorkUnitsCompleted= 0,
         ksArchState= fst (Arch.newKernelState data_start),
         ksMachineState= init_machine_state
-	\<rparr>"
+        \<rparr>"
 
 context Arch begin
 requalify_facts

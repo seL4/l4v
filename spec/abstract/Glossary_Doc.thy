@@ -48,25 +48,25 @@ begin
 text {*
 \newcommand{\glossaryentry}[4][\null]
     {\begin{list}{\null}{\setlength{\leftmargin}{0pt}
-			 \setlength{\rightmargin}{0pt}
-			 \setlength{\labelwidth}{0pt}
-			 \setlength{\itemindent}{0pt}
-			 \setlength{\topsep}{1.0em}}
+                         \setlength{\rightmargin}{0pt}
+                         \setlength{\labelwidth}{0pt}
+                         \setlength{\itemindent}{0pt}
+                         \setlength{\topsep}{1.0em}}
      \item  \parbox[t]{.18\textwidth}{\raggedright{\bf #2}}%
-	    \hfill\parbox[t]{.75\textwidth}{\raggedright{#3}}%
-	    \hfill\parbox[t]{.05\textwidth}{\raggedright{%\autoref{#4}
+            \hfill\parbox[t]{.75\textwidth}{\raggedright{#3}}%
+            \hfill\parbox[t]{.05\textwidth}{\raggedright{%\autoref{#4}
 }}%
      \ifx#1\null\relax\else%
-	\item\nopagebreak\hfill
-	     \begin{minipage}[t]{.775\textwidth}{\it #1}\end{minipage}
+        \item\nopagebreak\hfill
+             \begin{minipage}[t]{.775\textwidth}{\it #1}\end{minipage}
      \fi
      \end{list}}
 
 \glossaryentry
   {ntfn, Notification}
   {A \emph{notification} object. A kernel object in seL4 consisting
-	of a set of binary semaphores, used for sending (signalling)
-	notifications to other threads.}
+        of a set of binary semaphores, used for sending (signalling)
+        notifications to other threads.}
   {glos:ntfn}
 
 \glossaryentry

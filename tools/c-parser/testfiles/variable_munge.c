@@ -46,7 +46,7 @@ int qux(int bbb)
     struct b *d, *baz;
     for(baz = (struct b *) 0; baz; baz = d)
     {
-	d = baz->x;
+        d = baz->x;
     }
     return 1;
 }

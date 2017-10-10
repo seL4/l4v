@@ -15,11 +15,11 @@ unsigned max(unsigned a, unsigned b) {
 }
 
 unsigned gcd(unsigned a, unsigned b) {
-	unsigned c;
-	while (a != 0) {
-		c = a;
-		a = b % a;
-		b = c;
-	}
-	return b;
+        unsigned c;
+        while (a != 0) {
+                c = a;
+                a = b % a;
+                b = c;
+        }
+        return b;
 }

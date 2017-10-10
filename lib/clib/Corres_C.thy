@@ -10,8 +10,8 @@
 
 theory Corres_C
 imports
-	CCorresLemmas
-	"../../proof/crefine/$L4V_ARCH/SR_lemmas_C"
+        CCorresLemmas
+        "../../proof/crefine/$L4V_ARCH/SR_lemmas_C"
 begin
 
 abbreviation
@@ -429,9 +429,9 @@ lemma ccorres_split_nothrow_call_novcgE:
              and R'="\<lambda>rv. {s. s \<in> case_sum QE' QR' rv (xf' s)}" for QE' QR'
                in ccorres_master_split_nohs)
      apply (rule ccorres_callE [OF ac])
-	apply (rule gg)
+        apply (rule gg)
        apply (rule errstate_state_update)
-	 apply (simp add: gg)+
+         apply (simp add: gg)+
       apply (rule xfxf)
      apply (rule gi)
     apply (rule ccorres_abstract[OF ceqv])

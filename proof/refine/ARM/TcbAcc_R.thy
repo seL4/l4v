@@ -3813,10 +3813,10 @@ proof -
            apply (rule corres_trivial, simp)
           apply (rule_tac S="{(x, y). y = of_nat x \<and> x < unat max_ipc_words}" in corres_mapM, simp+)
               apply (rule corres_split_eqr)
-	       apply (rule store_word_offs_corres)
-	       apply simp
-	       apply (rule load_word_offs_corres)
-	       apply simp
+               apply (rule store_word_offs_corres)
+               apply simp
+               apply (rule load_word_offs_corres)
+               apply simp
               apply (wp hoare_vcg_all_lift | simp)+
            apply (clarsimp simp: upto_enum_def)
            apply arith

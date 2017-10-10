@@ -45,24 +45,24 @@ foreach $source (@lhsfiles) {
     $moduledepth++ while($module =~ /\./g);
 
     while($code =~ /> import (qualified )?({-# SOURCE #-} )?(SEL4[a-zA-Z0-9.]*)/g) {
-	$import = $3;
-	$is_source = defined $2;
-	@options = ();
+        $import = $3;
+        $is_source = defined $2;
+        @options = ();
 
-	if($is_source) { @options = (@options, "style=dotted", "dir=back"); }
+        if($is_source) { @options = (@options, "style=dotted", "dir=back"); }
 
-	$importdepth = 0;
+        $importdepth = 0;
         $importdepth++ while($import =~ /\./g);
-	if($moduledepth == $importdepth) {
-	    @options = (@options, "constraint=false");
-	}
+        if($moduledepth == $importdepth) {
+            @options = (@options, "constraint=false");
+        }
 
-	$options = join ",", @options;
-	if($is_source) {
-	    print qq(\t"$import" -> "$module" [$options];\n);
-	} else {
-	    print qq(\t"$module" -> "$import" [$options];\n);
-	}
+        $options = join ",", @options;
+        if($is_source) {
+            print qq(\t"$import" -> "$module" [$options];\n);
+        } else {
+            print qq(\t"$module" -> "$import" [$options];\n);
+        }
     }
 }
 

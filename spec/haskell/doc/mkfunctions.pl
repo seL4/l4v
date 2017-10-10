@@ -51,10 +51,10 @@ foreach $source (@lhsfiles) {
     $code =~ s/^> //mg;
     print OUT "\\functions ( ";
     while ($code =~ /(\n|{)\s*(([a-z][A-Za-z0-9']*(,\s+)?)*)\s+::/sg) {
-	$names = $2;
-	$names =~ s/\n//g;
-	$names =~ s/[0-9]//g;
-	print OUT "$names, ";
+        $names = $2;
+        $names =~ s/\n//g;
+        $names =~ s/[0-9]//g;
+        print OUT "$names, ";
     }
     print OUT ")\n\n";
 }

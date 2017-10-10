@@ -9,7 +9,7 @@
  *)
 
 (*
-	Defines the instances of pspace_storable objects.
+        Defines the instances of pspace_storable objects.
 *)
 
 chapter "Storable Arch Object Instances"

@@ -239,7 +239,7 @@ fun deep_search_thms ctxt defn const nmspce =
       fun search [] = error("not found: const: " ^ @{make_string} const ^ " defn: " ^ @{make_string} defn)
         | search (t::ts) = (case (filt (thy_maybe_thms t defn)) of
               [] => search ts
-	    | thms => thms);
+            | thms => thms);
     in
       case filt (maybe_thms ctxt defn) of
           [] => search thys

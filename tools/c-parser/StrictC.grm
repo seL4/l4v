@@ -684,8 +684,8 @@ end
 %change -> YSEMI
 
 %nonterm  begin of ext_decl list
-	| translation_unit of ext_decl list
-	| external_declaration of ext_decl list
+        | translation_unit of ext_decl list
+        | external_declaration of ext_decl list
         | optfnspec of string option wrap
         | optvolatile of bool
 
@@ -713,23 +713,23 @@ end
         | designator_list of designator list
         | designator of designator
 
-	| declaration of declaration wrap list
+        | declaration of declaration wrap list
         | struct_declaration_list of
             struct_fields wrap * struct_id_decl wrap list
         | struct_declaration of struct_fields wrap * struct_id_decl wrap list
-	| type_definition  of declaration
+        | type_definition  of declaration
         | elementary_type of expr ctype
         | integral_type of inttype wrap
         | type_name of expr ctype wrap
         | block_item_list of block_item list
         | block_item of block_item list
 
-	| parameter_declaration of (expr ctype * string wrap option) wrap
-	| parameter_list of (expr ctype * string wrap option) wrap list wrap
+        | parameter_declaration of (expr ctype * string wrap option) wrap
+        | parameter_list of (expr ctype * string wrap option) wrap list wrap
         | parameter_list1 of (expr ctype  * string wrap option) wrap list wrap
-	| function_definition of ext_decl
-	| compound_statement of block_item list wrap
-	| statement  of statement
+        | function_definition of ext_decl
+        | compound_statement of block_item list wrap
+        | statement  of statement
         | statement_list of statement list
         | statement_list1 of statement list
         | switchcase_list of (expr option wrap list wrap * block_item list) list
@@ -747,7 +747,7 @@ end
         | assignop of binoptype option
 
         | pointer of adecl
-	| declarator  of addecl wrap
+        | declarator  of addecl wrap
         | abstract_declarator of adecl
         | direct_abstract_declarator of adecl
         | struct_declarator of (addecl wrap * expr option) wrap
@@ -756,30 +756,30 @@ end
         | init_declarator_list of (addecl wrap * initializer option) wrap list
         | direct_declarator of addecl wrap
         | asm_declarator_mod of unit
-	| type_specifier of type_specifier
+        | type_specifier of type_specifier
         | struct_or_union_specifier of struct_or_union_specifier
         | struct_id of string wrap
 
 
-	| lexpression  of expr
-	| rexpression  of expr
-	| rexpr_list   of expr list wrap
-	| opt_rexpr_list   of expr list wrap
-	| logical_AND_expression   of expr
-	| logical_OR_expression   of expr
+        | lexpression  of expr
+        | rexpression  of expr
+        | rexpr_list   of expr list wrap
+        | opt_rexpr_list   of expr list wrap
+        | logical_AND_expression   of expr
+        | logical_OR_expression   of expr
         | inclusive_OR_expression of expr
         | exclusive_OR_expression of expr
-	| AND_expression   of expr
-	| equality_expression  of expr
-	| relational_expression  of expr
-	| additive_expression  of expr
-	| shift_expression  of expr
-	| multiplicative_expression of expr
-	| unary_expression    of expr
+        | AND_expression   of expr
+        | equality_expression  of expr
+        | relational_expression  of expr
+        | additive_expression  of expr
+        | shift_expression  of expr
+        | multiplicative_expression of expr
+        | unary_expression    of expr
         | cast_expression of expr
-	| postfix_expression of expr
+        | postfix_expression of expr
         | primary_expression of expr
-	| constant   of literalconstant
+        | constant   of literalconstant
         | idlist of string wrap list
 
         | attribute of gcc_attribute option

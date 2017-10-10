@@ -55,7 +55,7 @@ gicpokeOffset paddr idx value =
 
 gicpokeArray :: PAddr -> [Int] -> Word -> GicMonad ()
 gicpokeArray paddr offsets value = (flip mapM_) offsets $
-	(\offset -> gicpokeOffset paddr offset value)
+        (\offset -> gicpokeOffset paddr offset value)
 
 newtype IRQ = IRQ Word16
     deriving (Num, Integral, Real, FiniteBits, Bits, Enum, Ord, Eq, Ix, Show)

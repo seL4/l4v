@@ -222,11 +222,11 @@ next
     hence ?case using wf lbs lbs'
     proof (simp add: nth_append length_fa_ti access_ti_pair_dt_fst size_td_pair_dt_fst)
       from fl have fl': "field_lookup_list ts' f 0 = Some (s, n - size_td (dt_fst p'))"
-	by (rule field_lookup_offset2_list [where m = 0, simplified])
+        by (rule field_lookup_offset2_list [where m = 0, simplified])
 
       show "access_ti_list ts' (update_ti s bs v) (drop (size_td (dt_fst p')) bs') ! (x - size_td (dt_fst p')) = bs ! (x - n)"
-	using mlt nlex xln lbs lbs' wf wfts `td_fafu_idem s` `wf_fd s`
-	by (simp add: Cons_typ_desc.hyps(2) [OF fl'] size_td_pair_dt_fst)
+        using mlt nlex xln lbs lbs' wf wfts `td_fafu_idem s` `wf_fd s`
+        by (simp add: Cons_typ_desc.hyps(2) [OF fl'] size_td_pair_dt_fst)
     qed
   }
   moreover
@@ -827,13 +827,13 @@ proof -
     show "unat (-x) \<le> n"
     proof (subst unat_minus')
       from wraps show "x \<noteq> 0"
-	by (rule contrapos_pn, simp add: not_le)
+        by (rule contrapos_pn, simp add: not_le)
     next
       show "2 ^ len_of TYPE('a) - unat x \<le> n" using wraps
-	apply (simp add: no_olen_add_nat le_diff_conv not_less)
-	apply (erule order_trans)
-	apply (simp add: unat_of_nat)
-	done
+        apply (simp add: no_olen_add_nat le_diff_conv not_less)
+        apply (erule order_trans)
+        apply (simp add: unat_of_nat)
+        done
     qed
   qed
 qed
@@ -905,90 +905,90 @@ proof (simp add: packed_type_access_ti, rule ext)
     proof (simp add: to_bytes_p_def to_bytes_def, subst field_access_update_nth_inner(1)[OF fl, simplified])
 
       have "c_guard (Ptr &(p\<rightarrow>f) :: 'a ptr)" using cgrd fl eu
-	by (rule c_guard_field_lvalue)
+        by (rule c_guard_field_lvalue)
       hence pft: "&(p\<rightarrow>f) \<le> &(p\<rightarrow>f) + of_nat (size_td t - 1)"
-	apply -
-	apply (drule c_guard_no_wrap)
-	apply (simp add: std)
-	done
+        apply -
+        apply (drule c_guard_no_wrap)
+        apply (simp add: std)
+        done
 
       have szt': "size_td t < 2 ^ len_of TYPE(addr_bitsize)"
-	apply (subst std)
-	apply (fold card_word)
-	apply (fold addr_card_def)
-	apply (rule max_size)
-	done
+        apply (subst std)
+        apply (fold card_word)
+        apply (fold addr_card_def)
+        apply (rule max_size)
+        done
 
       have ofn: "of_nat n \<le> x - ptr_val p"
       proof (rule le_minus')
-	from xin show "ptr_val p + of_nat n \<le> x" using pft szt'
-	  unfolding field_lvalue_def field_lookup_offset_eq [OF fl]
-	  by (rule intvl_le_lower)
+        from xin show "ptr_val p + of_nat n \<le> x" using pft szt'
+          unfolding field_lvalue_def field_lookup_offset_eq [OF fl]
+          by (rule intvl_le_lower)
       next
-	from szb szn have "of_nat n \<le> (of_nat (size_of TYPE('b) - 1) :: addr_bitsize word)"
-	  apply -
-	  apply (rule of_nat_mono_maybe_le)
-	  apply simp_all
-	  done
-	with al show "ptr_val p \<le> ptr_val p + of_nat n"
-	  by (rule word_plus_mono_right2)
+        from szb szn have "of_nat n \<le> (of_nat (size_of TYPE('b) - 1) :: addr_bitsize word)"
+          apply -
+          apply (rule of_nat_mono_maybe_le)
+          apply simp_all
+          done
+        with al show "ptr_val p \<le> ptr_val p + of_nat n"
+          by (rule word_plus_mono_right2)
       qed
 
       thus nlt: "n \<le> unat (x - ptr_val p)"
-	by (simp add: word_le_nat_alt uofn)
+        by (simp add: word_le_nat_alt uofn)
       have "x \<le> ptr_val p + (of_nat n + of_nat (size_td t - 1))" using xin pft szt' t0
-	unfolding field_lvalue_def field_lookup_offset_eq [OF fl]
-	apply -
-	apply (drule (2) intvl_less_upper)
-	apply (simp add: add.assoc)
-	done
+        unfolding field_lvalue_def field_lookup_offset_eq [OF fl]
+        apply -
+        apply (drule (2) intvl_less_upper)
+        apply (simp add: add.assoc)
+        done
       moreover have "x \<in> {ptr_val p..+size_of TYPE('b)}" using fl xin
-	by (rule subsetD [OF field_tag_sub])
+        by (rule subsetD [OF field_tag_sub])
       ultimately have "x - ptr_val p \<le> (of_nat n + of_nat (size_td t - 1))" using al szb
-	apply -
-	apply (rule word_diff_ls(4)[where xa=x and x=x for x, simplified])
+        apply -
+        apply (rule word_diff_ls(4)[where xa=x and x=x for x, simplified])
      apply (metis (hide_lams, mono_tags) add.commute of_nat_add)
-	apply (erule (2) intvl_le_lower)
-	done
+        apply (erule (2) intvl_le_lower)
+        done
       moreover have "unat (of_nat n + of_nat (size_td t - 1) :: addr_bitsize word) = n + size_td t - 1"
-	using t0 order_le_less_trans [OF szt1 szb]
-	apply (subst Abs_fnat_homs(1))
-	apply (subst unat_of_nat)
-	apply simp
-	done
+        using t0 order_le_less_trans [OF szt1 szb]
+        apply (subst Abs_fnat_homs(1))
+        apply (subst unat_of_nat)
+        apply simp
+        done
       ultimately have "unat (x - ptr_val p) \<le> n + size_td t - 1"
-	by (simp add: word_le_nat_alt)
+        by (simp add: word_le_nat_alt)
       thus "unat (x - ptr_val p) < n + size_td t" using t0
-	by simp
+        by simp
 
       show "td_fafu_idem t"
-	by (rule field_lookup_td_fafu_idem(1)[OF fl td_fafu_idem])
+        by (rule field_lookup_td_fafu_idem(1)[OF fl td_fafu_idem])
 
       show "wf_fd t"
-	by (rule wf_fd_field_lookupD [OF fl wf_fd])
+        by (rule wf_fd_field_lookupD [OF fl wf_fd])
 
       show "length (access_ti (typ_info_t TYPE('a)) v (replicate (size_of TYPE('a)) 0)) = size_td t"
-	using wf_fd [where 'a = 'a]
-	by (simp add: length_fa_ti size_of_def std)
+        using wf_fd [where 'a = 'a]
+        by (simp add: length_fa_ti size_of_def std)
 
       show "length (replicate (size_of TYPE('b)) 0) = size_td (typ_info_t TYPE('b))"
-	by (simp add: size_of_def)
+        by (simp add: size_of_def)
 
       have "unat (x - &(p\<rightarrow>f)) = unat ((x - ptr_val p) - of_nat n)"
-  	by (simp add: field_lvalue_def field_lookup_offset_eq [OF fl])
+          by (simp add: field_lvalue_def field_lookup_offset_eq [OF fl])
       also have "\<dots> = unat (x - ptr_val p) - n"
-	by (simp add: unat_sub [OF ofn] uofn)
+        by (simp add: unat_sub [OF ofn] uofn)
       finally have "unat (x - &(p\<rightarrow>f)) = unat (x - ptr_val p) - n" .
 
       thus "access_ti (typ_info_t TYPE('a)) v (replicate (size_of TYPE('a)) 0) ! unat (x - &(p\<rightarrow>f)) =
-	access_ti (typ_info_t TYPE('a)) v (replicate (size_of TYPE('a)) 0) ! (unat (x - ptr_val p) - n)"
-	by simp
+        access_ti (typ_info_t TYPE('a)) v (replicate (size_of TYPE('a)) 0) ! (unat (x - ptr_val p) - n)"
+        by simp
     qed
 
     thus "to_bytes_p v ! unat (x - &(p\<rightarrow>f)) = ?RHS"
     proof (subst heap_update_mem_same_point, simp_all)
       show "x \<in> {ptr_val p..+size_of TYPE('b)}" using fl xin
-	by (rule subsetD [OF field_tag_sub])
+        by (rule subsetD [OF field_tag_sub])
     qed
   next
     assume xni: "x \<notin> {&(p\<rightarrow>f)..+size_td t}"
@@ -1001,45 +1001,45 @@ proof (simp add: packed_type_access_ti, rule ext)
       assume xin: "x \<in> {ptr_val p..+size_of TYPE('b)}"
 
       hence "access_ti (typ_info_t TYPE('b))
-	(update_ti_t t (access_ti (typ_info_t TYPE('a)) v (replicate (size_of TYPE('a)) 0)) (h_val hp p))
-	(replicate (size_of TYPE('b)) 0) ! unat (x - ptr_val p) = hp x"
+        (update_ti_t t (access_ti (typ_info_t TYPE('a)) v (replicate (size_of TYPE('a)) 0)) (h_val hp p))
+        (replicate (size_of TYPE('b)) 0) ! unat (x - ptr_val p) = hp x"
       proof (subst field_access_update_nth_disjD [OF fl])
-	have "x - ptr_val p \<le> of_nat (size_of TYPE('b) - 1)"
-	proof (rule word_diff_ls(4)[where xa=x and x=x for x, simplified])
-      	  from xin show "x \<le> of_nat (size_of TYPE('b) - 1) + ptr_val p" using al szb
-	    by (subst add.commute, rule intvl_less_upper)
-	  show "ptr_val p \<le> x" using xin al szb
-	    by (rule intvl_le_lower)
-	qed
-	thus unx: "unat (x - ptr_val p) < size_td (typ_info_t TYPE('b))" using szb b0
-	  by (simp add: word_le_nat_alt size_of_def unat_of_nat)
+        have "x - ptr_val p \<le> of_nat (size_of TYPE('b) - 1)"
+        proof (rule word_diff_ls(4)[where xa=x and x=x for x, simplified])
+                from xin show "x \<le> of_nat (size_of TYPE('b) - 1) + ptr_val p" using al szb
+            by (subst add.commute, rule intvl_less_upper)
+          show "ptr_val p \<le> x" using xin al szb
+            by (rule intvl_le_lower)
+        qed
+        thus unx: "unat (x - ptr_val p) < size_td (typ_info_t TYPE('b))" using szb b0
+          by (simp add: word_le_nat_alt size_of_def unat_of_nat)
 
-	show "unat (x - ptr_val p) < n - 0 \<or> n - 0 + size_td t \<le> unat (x - ptr_val p)" using xin xni
-  	  unfolding field_lvalue_def field_lookup_offset_eq [OF fl]
-	  apply -
-	  apply (erule intvl_cut)
-	  apply simp
-	  apply (rule max_size)
-	  done
+        show "unat (x - ptr_val p) < n - 0 \<or> n - 0 + size_td t \<le> unat (x - ptr_val p)" using xin xni
+            unfolding field_lvalue_def field_lookup_offset_eq [OF fl]
+          apply -
+          apply (erule intvl_cut)
+          apply simp
+          apply (rule max_size)
+          done
 
-	show "wf_fd (typ_info_t TYPE('b))" by (rule wf_fd)
-	(* clag *)
-	show "length (access_ti (typ_info_t TYPE('a)) v (replicate (size_of TYPE('a)) 0)) = size_td t"
-	  using wf_fd [where 'a = 'a]
-	  by (simp add: length_fa_ti size_of_def std)
+        show "wf_fd (typ_info_t TYPE('b))" by (rule wf_fd)
+        (* clag *)
+        show "length (access_ti (typ_info_t TYPE('a)) v (replicate (size_of TYPE('a)) 0)) = size_td t"
+          using wf_fd [where 'a = 'a]
+          by (simp add: length_fa_ti size_of_def std)
 
-	show "length (replicate (size_of TYPE('b)) 0) = size_td (typ_info_t TYPE('b))"
-	  by (simp add: size_of_def)
+        show "length (replicate (size_of TYPE('b)) 0) = size_td (typ_info_t TYPE('b))"
+          by (simp add: size_of_def)
 
-	have "heap_list hp (size_td (typ_info_t TYPE('b))) (ptr_val p) ! unat (x - ptr_val p) = hp x"
-	  apply (subst heap_list_nth)
-	  apply (rule unx)
-	  apply simp
-	  done
+        have "heap_list hp (size_td (typ_info_t TYPE('b))) (ptr_val p) ! unat (x - ptr_val p) = hp x"
+          apply (subst heap_list_nth)
+          apply (rule unx)
+          apply simp
+          done
 
-	thus "access_ti (typ_info_t TYPE('b)) (h_val hp p) (replicate (size_of TYPE('b)) 0) ! unat (x - ptr_val p) = hp x"
-	  unfolding h_val_def
-	  by (simp add: from_bytes_def update_ti_t_def size_of_def field_access_update_same(1)[OF td_fafu_idem wf_fd])
+        thus "access_ti (typ_info_t TYPE('b)) (h_val hp p) (replicate (size_of TYPE('b)) 0) ! unat (x - ptr_val p) = hp x"
+          unfolding h_val_def
+          by (simp add: from_bytes_def update_ti_t_def size_of_def field_access_update_same(1)[OF td_fafu_idem wf_fd])
       qed
      }
     hence "\<dots> = hp x"

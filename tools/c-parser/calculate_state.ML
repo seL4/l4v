@@ -548,13 +548,13 @@ fun mk_thy_types cse install thy = let
 
   fun arraytype_phase1 ((cty, n), (thy, st, rcdacc)) = let
       val (st', thy') =
-	  if install then
-	      array_type cse
+          if install then
+              array_type cse
                          {element_type = ctype_to_typ(thy,cty), array_size =  n,
                           state = st}
                          thy
-	  else
-	      (st, thy)
+          else
+              (st, thy)
   in
       (thy', st', rcdacc)
   end

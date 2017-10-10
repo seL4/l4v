@@ -132,7 +132,7 @@ proof (induct)
     proof (rule WhileTrue.hyps(5))
       have "xf w = v" using xfs xp by (rule xpresD) fact+
       thus "t \<in> Normal ` {s. xf s = v} \<union> Abrupt ` {s. xf s = v}" using tv
-	by simp
+        by simp
     qed fact+
   } moreover
   {
@@ -142,7 +142,7 @@ proof (induct)
     proof (rule WhileTrue.hyps(5))
       have "xf w = v" using xfs xp by (rule xpres_abruptD) fact+
       thus "t \<in> Normal ` {s. xf s = v} \<union> Abrupt ` {s. xf s = v}" using tv
-	by simp
+        by simp
     qed fact+
   } ultimately
   show ?thesis using WhileTrue.prems(3) WhileTrue.hyps(2) WhileTrue.hyps(4) eqs

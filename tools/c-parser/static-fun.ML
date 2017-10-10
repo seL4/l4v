@@ -22,7 +22,7 @@ end;
 signature STATIC_FUN =
 sig
     val define_tree_and_thms : string -> ((term option * thm) * string) list
-			       -> local_theory -> (bstring * thm list) list * local_theory
+                               -> local_theory -> (bstring * thm list) list * local_theory
 
     val prove_tree_lemmata : Proof.context -> thm -> thm list
 
@@ -42,37 +42,37 @@ val intname_to_term  = KeyVal.intname_to_term
 
 (* Actually build the tree -- theta (n lg(n)) *)
 fun build_tree' mk_node mk_leaf xs n = if n = 0
-		       then mk_leaf
-		       else (let
-				 val n' = n div 2
-				 val xs' = List.drop (xs, n' + 1)
-				 val (a, b) = nth xs n'
-			     in (* The second term accounts for floor in div *)
-				 mk_node a b (build_tree' mk_node mk_leaf xs n')
-					 (build_tree' mk_node mk_leaf xs' (n - n' - 1))
-			     end)
+                       then mk_leaf
+                       else (let
+                                 val n' = n div 2
+                                 val xs' = List.drop (xs, n' + 1)
+                                 val (a, b) = nth xs n'
+                             in (* The second term accounts for floor in div *)
+                                 mk_node a b (build_tree' mk_node mk_leaf xs n')
+                                         (build_tree' mk_node mk_leaf xs' (n - n' - 1))
+                             end)
 
 fun build_tree xs =
     let
-	val val_ty = type_of (snd (hd xs)) (* PARTIAL!! *)
-	val ty_substs =
-	    [(alpha, KeyVal.name_ty), (beta, val_ty),
+        val val_ty = type_of (snd (hd xs)) (* PARTIAL!! *)
+        val ty_substs =
+            [(alpha, KeyVal.name_ty), (beta, val_ty),
              (gamma, KeyVal.ord_ty)
-	    ]
-	val subst  = subst_atomic_types ty_substs
-	val node   = subst @{term "StaticFun.Node"}
-	val mk_leaf = subst @{term "StaticFun.Leaf"}
-	val lookup_tree = subst @{term "StaticFun.lookup_tree"}
-	fun mk_node a b l r = node $ a $ b $ l $ r
+            ]
+        val subst  = subst_atomic_types ty_substs
+        val node   = subst @{term "StaticFun.Node"}
+        val mk_leaf = subst @{term "StaticFun.Leaf"}
+        val lookup_tree = subst @{term "StaticFun.lookup_tree"}
+        fun mk_node a b l r = node $ a $ b $ l $ r
     in
-	lookup_tree $ (build_tree' mk_node mk_leaf xs (length xs)) $ KeyVal.ord_term
+        lookup_tree $ (build_tree' mk_node mk_leaf xs (length xs)) $ KeyVal.ord_term
     end
 
 fun add_defs defs lthy : thm list * local_theory = let
   fun mk1 ((name, rhs), (xs, lthy)) = let
     val b = Binding.make(name, Position.none)
     val ((_, (_, d)), lthy') =
-	Local_Theory.define ((b, NoSyn), ((Thm.def_binding b, []), rhs)) lthy
+        Local_Theory.define ((b, NoSyn), ((Thm.def_binding b, []), rhs)) lthy
   in
     (d :: xs, lthy')
   end
@@ -85,9 +85,9 @@ fun add_def def = add_defs [def] #>> hd
 
 fun define_tree name xs thy : thm * local_theory =
     let
-	val tree        = build_tree xs
+        val tree        = build_tree xs
     in
-	add_def (name, tree) thy
+        add_def (name, tree) thy
     end
 
 val mydk   = nth @{thms tree_gives_valsD} 0
@@ -122,7 +122,7 @@ val zip = curry (op ~~)
 fun make_lemmas tree_def defs (ctxt : Proof.context) =
     let
     in
-	prove_tree_lemmata ctxt tree_def
+        prove_tree_lemmata ctxt tree_def
                 |> zip defs
                 |> map (fn (d, t) => Local_Defs.fold ctxt [d] t)
     end
@@ -137,8 +137,8 @@ fun map_option f [] = []
   | map_option f (x :: xs) =
     let val rest = map_option f xs
     in (case f x of
-	   NONE    => rest
-	 | SOME x' => x' :: rest)
+           NONE    => rest
+         | SOME x' => x' :: rest)
     end
 
 
@@ -148,7 +148,7 @@ fun define_tree_and_thms name defs thy = let
     | is_Some_filter (n, ((SOME x, y), z)) = SOME (n, x, y, z)
   val defs' =
       map_option is_Some_filter
-		 (List.tabulate (length defs,
+                 (List.tabulate (length defs,
                                  intname_to_term o (fn n => n + 1)) ~~
                   defs)
   val vals      = map (fn (n, v, _, _) => (n, v)) defs'
@@ -179,22 +179,22 @@ open StaticFun;
 
 fun define_test_tree name sz thy =
     let
-	fun tab f             = List.tabulate (sz, f)
-	fun mk_proc n         = ("name" ^ Int.toString n ^ "_'proc", intname_to_term n)
-	val gen_entry         = SOME o StaticFun.intname_to_term
-	fun gen_names n       = "name" ^ Int.toString n ^ "_impl"
-	val (proc_defs, thy') = add_defs (tab mk_proc) thy
+        fun tab f             = List.tabulate (sz, f)
+        fun mk_proc n         = ("name" ^ Int.toString n ^ "_'proc", intname_to_term n)
+        val gen_entry         = SOME o StaticFun.intname_to_term
+        fun gen_names n       = "name" ^ Int.toString n ^ "_impl"
+        val (proc_defs, thy') = add_defs (tab mk_proc) thy
     in
-	define_tree_and_thms name (tab gen_entry ~~ proc_defs ~~ tab gen_names) thy'
+        define_tree_and_thms name (tab gen_entry ~~ proc_defs ~~ tab gen_names) thy'
     end
 
 fun define_test_tree2 name sz thy =
     let
-	fun tab f        = List.tabulate (sz, f)
-	fun mk_proc n    = ("name" ^ Int.toString n ^ "_'proc", intname_to_term n)
-	val (proc_defs, thy') = add_defs (tab mk_proc) thy
+        fun tab f        = List.tabulate (sz, f)
+        fun mk_proc n    = ("name" ^ Int.toString n ^ "_'proc", intname_to_term n)
+        val (proc_defs, thy') = add_defs (tab mk_proc) thy
     in
-	([], thy')
+        ([], thy')
     end
 
 local structure P = Parse and K = Keyword in
@@ -204,16 +204,16 @@ val treeP =
         @{command_keyword "test_tree"}
         "Create an example tree with associated lemmas"
         (P.name -- P.nat
-		>> (fn (name, sz) => Toplevel.local_theory NONE
-							   (fn thy => define_test_tree name sz thy |> #2 )))
+                >> (fn (name, sz) => Toplevel.local_theory NONE
+                                                           (fn thy => define_test_tree name sz thy |> #2 )))
 
 val treeP =
     Outer_Syntax.command
         @{command_keyword "test_tree2"}
         "Create an example tree with associated lemmas"
         (P.name -- P.nat
-		>> (fn (name, sz) => Toplevel.local_theory NONE
-							   (fn thy => define_test_tree2 name sz thy |> #2 )))
+                >> (fn (name, sz) => Toplevel.local_theory NONE
+                                                           (fn thy => define_test_tree2 name sz thy |> #2 )))
 
 end
 end

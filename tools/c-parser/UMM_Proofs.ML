@@ -439,8 +439,8 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
 
   val size_td_thm =
       Simplifier.asm_full_rewrite
-	  ((thy2ctxt thy) addsimps (size_td_simps_arr @ [tag_def_thm, typtag_thm]))
-	  (Thm.cterm_of (thy2ctxt thy) (mk_sizetd typ_info_TYPE))
+          ((thy2ctxt thy) addsimps (size_td_simps_arr @ [tag_def_thm, typtag_thm]))
+          (Thm.cterm_of (thy2ctxt thy) (mk_sizetd typ_info_TYPE))
   val (st,thy) = calculate_record_size recname (st,thy) [size_td_thm] recty
 
 

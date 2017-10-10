@@ -551,30 +551,30 @@ lemma revokable_ccorres:
   unfolding revokable'_fold
   apply (rule ccorres_gen_asm [where G = \<top>, simplified])
   apply (cases cap)
-	     apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
-	      rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
-	    apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
-	     rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
-	   apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
-	   apply (rule ccorres_return, vcg)
-	   apply (frule cap_get_tag_NotificationCap [where cap' = srcCap, THEN iffD1])
-	    apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
-	   apply (frule cap_get_tag_NotificationCap [where cap' = newCap, THEN iffD1])
-	    apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
-	   apply (fastforce simp: cap_get_tag_isCap isCap_simps)
+             apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
+              rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
+            apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
+             rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
+           apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
+           apply (rule ccorres_return, vcg)
+           apply (frule cap_get_tag_NotificationCap [where cap' = srcCap, THEN iffD1])
+            apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
+           apply (frule cap_get_tag_NotificationCap [where cap' = newCap, THEN iffD1])
+            apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
+           apply (fastforce simp: cap_get_tag_isCap isCap_simps)
 
           apply (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
-	  rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
-	 apply (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
-	 apply (rule ccorres_return, vcg)
-	 apply (frule cap_get_tag_EndpointCap [where cap' = srcCap, THEN iffD1])
-	  apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
-	 apply (frule cap_get_tag_EndpointCap [where cap' = newCap, THEN iffD1])
-	  apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
-	 subgoal by (fastforce simp: cap_get_tag_isCap isCap_simps)
+          rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
+         apply (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
+         apply (rule ccorres_return, vcg)
+         apply (frule cap_get_tag_EndpointCap [where cap' = srcCap, THEN iffD1])
+          apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
+         apply (frule cap_get_tag_EndpointCap [where cap' = newCap, THEN iffD1])
+          apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
+         subgoal by (fastforce simp: cap_get_tag_isCap isCap_simps)
 
-	by (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
-	  rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)+
+        by (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
+          rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)+
 
 lemma from_bool_mask_simp [simp]:
   "((from_bool r) :: word32) && mask (Suc 0) = from_bool r"
@@ -767,7 +767,7 @@ lemma cteInsert_if_helper:
                   cong: if_cong)
   apply (simp add: cap_tag_defs)
   apply (intro allI conjI impI)
-		      apply (clarsimp simp: rul)+
+                      apply (clarsimp simp: rul)+
   done
 
 lemma forget_Q':
@@ -1445,10 +1445,10 @@ lemma cteMove_ccorres_verbose:
         -- "***Main Goal of return***"
         -- "--- instruction: y \<leftarrow> updateCap dest cap ---"
           apply ctac
-	                             -- "implicit symbolic execution \<Rightarrow> 2 new subgoals for 1st updateCap"
+                                     -- "implicit symbolic execution \<Rightarrow> 2 new subgoals for 1st updateCap"
 
           -- "***Main Goal***"
-	  -- "--- instruction: y \<leftarrow> updateCap src capability.NullCap; (but with CALL on C side)"
+          -- "--- instruction: y \<leftarrow> updateCap src capability.NullCap; (but with CALL on C side)"
             apply csymbr           -- "symb exec of C instruction CALL to create Null Cap"
             -- "--- instruction: y \<leftarrow> updateCap src capability.NullCap; (no CALL on C side)"
             apply ctac
@@ -1480,8 +1480,8 @@ lemma cteMove_ccorres_verbose:
 
                    apply (erule_tac t = next_ptr in ssubst)
                    apply (rule updateMDB_mdbNext_set_mdbPrev)
-		    apply simp
-		   apply simp
+                    apply simp
+                   apply simp
 
 
                  -- "***the pre/post for Haskell side"
@@ -1749,23 +1749,23 @@ lemma cteSwap_ccorres:
    -- "***Main Goal***"
    -- "--- instruction: y <- updateMDB (mdbPrev rvc) (mdbNext_update (%_. slot')) ---"
          apply csymbr
-	 -- "added by sjw \<dots>"
+         -- "added by sjw \<dots>"
          apply (erule_tac t = prev_ptr in ssubst)
-	 apply (ctac (no_vcg) add: updateMDB_mdbPrev_set_mdbNext)
-	 apply csymbr
+         apply (ctac (no_vcg) add: updateMDB_mdbPrev_set_mdbNext)
+         apply csymbr
          apply (erule_tac t = next_ptr in ssubst)
-	 apply (ctac (no_vcg) add: updateMDB_mdbNext_set_mdbPrev)
+         apply (ctac (no_vcg) add: updateMDB_mdbNext_set_mdbPrev)
              apply (rule ccorres_move_c_guard_cte)
-	     apply (ctac (no_vcg) pre: ccorres_getCTE
+             apply (ctac (no_vcg) pre: ccorres_getCTE
                ccorres_move_guard_ptr_safe
                add: ccorres_return_cte_mdbnode [where ptr = slot']
                ccorres_move_guard_ptr_safe )+
-	     apply csymbr
-	     apply (erule_tac t = prev_ptr in ssubst)
-	     apply (ctac (no_vcg) add: updateMDB_mdbPrev_set_mdbNext)
-	     apply csymbr
+             apply csymbr
+             apply (erule_tac t = prev_ptr in ssubst)
+             apply (ctac (no_vcg) add: updateMDB_mdbPrev_set_mdbNext)
+             apply csymbr
              apply (erule_tac t = next_ptr in ssubst)
-	     apply (ctac (no_vcg) add: updateMDB_mdbNext_set_mdbPrev)
+             apply (ctac (no_vcg) add: updateMDB_mdbNext_set_mdbPrev)
 (*
          apply (rule ccorres_split_nothrow [where xf'=xfdc])
          -- "***the correspondance proof for 1st instruction***"
@@ -1773,7 +1773,7 @@ lemma cteSwap_ccorres:
              apply (rule updateMDB_mdbPrev_set_mdbNext, rule refl, assumption)
 
          -- "***the ceqv proof***"
-	     apply ceqv
+             apply ceqv
 
          -- "***the correspondance proof for the rest***"
          -- "--- instruction: updateMDB (mdbNext rvc) (mdbPrev_update (%_. slot'))  ---"
@@ -1784,7 +1784,7 @@ lemma cteSwap_ccorres:
                apply (rule updateMDB_mdbNext_set_mdbPrev, rule refl, assumption)
 
            -- "***the ceqv proof***"
-	       apply ceqv
+               apply ceqv
 
            -- "***the correspondance proof for the rest***"
            -- "--- instruction: cte2 \<leftarrow> getCTE slot';              ---"
@@ -1802,7 +1802,7 @@ lemma cteSwap_ccorres:
                        apply (rule updateMDB_mdbPrev_set_mdbNext, rule refl, assumption)
 
                    -- "***the ceqv proof***"
-		      apply ceqv
+                      apply ceqv
 
                    -- "***the correspondance proof for the rest***"
                    -- "--- instruction: updateMDB (mdbNext rvg) (mdbPrev_update (%_. slot)) ---"
@@ -1873,11 +1873,11 @@ lemma cteSwap_ccorres:
 
   --  "\<exists>cte'. modify_map (\<dots>) slot = Some cte' \<and> cteMDBNode ctea = cteMDBNode cte'"
              apply (simp add: modify_map_if)
-	     apply (case_tac ctea)
-	     apply simp
-	     apply (cases "(slot'=slot)", simp+)
+             apply (case_tac ctea)
+             apply simp
+             apply (cases "(slot'=slot)", simp+)
     -- "no_0 (ctes_of s)"
-	   apply (simp add: valid_mdb'_def) -- "yuck"
+           apply (simp add: valid_mdb'_def) -- "yuck"
       apply (erule valid_mdb_ctesE)
       apply assumption
 

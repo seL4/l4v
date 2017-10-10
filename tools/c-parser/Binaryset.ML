@@ -162,9 +162,9 @@ datatype 'item set = SET of ('item * 'item -> order) * 'item tree
 and 'item tree =
     E
   | T of {elt   : 'item,
-	  cnt   : int,
-	  left  : 'item tree,
-	  right : 'item tree}
+          cnt   : int,
+          left  : 'item tree,
+          right : 'item tree}
 
 fun treeSize E = 0
   | treeSize (T{cnt,...}) = cnt
@@ -235,18 +235,18 @@ fun T' (v,E,E) = mkT(v,1,E,E)
 
 fun addt cmpKey t x =
     let fun h E = mkT(x,1,E,E)
-	  | h (T{elt=v,left=l,right=r,cnt}) =
-	    case cmpKey(x,v) of
-		LESS    => T'(v, h l, r)
-	      | GREATER => T'(v, l, h r)
-	      | EQUAL   => mkT(x,cnt,l,r)
+          | h (T{elt=v,left=l,right=r,cnt}) =
+            case cmpKey(x,v) of
+                LESS    => T'(v, h l, r)
+              | GREATER => T'(v, l, h r)
+              | EQUAL   => mkT(x,cnt,l,r)
     in h t end
 
 fun concat3 cmpKey E v r = addt cmpKey r v
   | concat3 cmpKey l v E = addt cmpKey l v
   | concat3 cmpKey (l as T{elt=v1,cnt=n1,left=l1,right=r1})
                    v
-		   (r as T{elt=v2,cnt=n2,left=l2,right=r2}) =
+                   (r as T{elt=v2,cnt=n2,left=l2,right=r2}) =
     if wt n1 < n2 then T'(v2, concat3 cmpKey l v l2, r2)
     else if wt n2 < n1 then T'(v1, l1, concat3 cmpKey r1 v r)
     else N(v,l,r)
@@ -281,27 +281,27 @@ fun concat E s = s
   | concat s E = s
   | concat (t1 as T{elt=v1,cnt=n1,left=l1,right=r1})
            (t2 as T{elt=v2,cnt=n2,left=l2,right=r2}) =
-	   if wt n1 < n2 then T'(v2, concat t1 l2, r2)
-	   else if wt n2 < n1 then T'(v1, l1, concat r1 t2)
-  	   else T'(min t2,t1, delmin t2)
+           if wt n1 < n2 then T'(v2, concat t1 l2, r2)
+           else if wt n2 < n1 then T'(v1, l1, concat r1 t2)
+             else T'(min t2,t1, delmin t2)
 
 fun hedge_union cmpKey s E = s
   | hedge_union cmpKey E s = s
   | hedge_union cmpKey (T{elt=v,left=l1,right=r1,...})
                        (s2 as T{elt=v2,left=l2,right=r2,...}) =
     let fun trim lo hi E = E
-	  | trim lo hi (s as T{elt=v,left=l,right=r,...}) =
-	    if cmpKey(v,lo) = GREATER
-		then if cmpKey(v,hi) = LESS then s else trim lo hi l
-	    else trim lo hi r
+          | trim lo hi (s as T{elt=v,left=l,right=r,...}) =
+            if cmpKey(v,lo) = GREATER
+                then if cmpKey(v,hi) = LESS then s else trim lo hi l
+            else trim lo hi r
 
-	fun uni_bd s E _ _ = s
-	  | uni_bd E (T{elt=v,left=l,right=r,...}) lo hi =
-	    concat3 cmpKey (split_gt cmpKey l lo) v (split_lt cmpKey r hi)
-	  | uni_bd (T{elt=v,left=l1,right=r1,...})
-		   (s2 as T{elt=v2,left=l2,right=r2,...}) lo hi =
-	    concat3 cmpKey (uni_bd l1 (trim lo v s2) lo v)
-	                   v (uni_bd r1 (trim v hi s2) v hi)
+        fun uni_bd s E _ _ = s
+          | uni_bd E (T{elt=v,left=l,right=r,...}) lo hi =
+            concat3 cmpKey (split_gt cmpKey l lo) v (split_lt cmpKey r hi)
+          | uni_bd (T{elt=v,left=l1,right=r1,...})
+                   (s2 as T{elt=v2,left=l2,right=r2,...}) lo hi =
+            concat3 cmpKey (uni_bd l1 (trim lo v s2) lo v)
+                           v (uni_bd r1 (trim v hi s2) v hi)
           (* inv:  lo < v < hi *)
 
     (* all the other versions of uni and trim are
@@ -309,35 +309,35 @@ fun hedge_union cmpKey s E = s
      *     lo=-infinity and/or hi=+infinity
      *)
 
-	fun trim_lo _ E = E
-	  | trim_lo lo (s as T{elt=v,right=r,...}) =
-	    case cmpKey(v,lo) of
-		GREATER => s
-	      | _       => trim_lo lo r
+        fun trim_lo _ E = E
+          | trim_lo lo (s as T{elt=v,right=r,...}) =
+            case cmpKey(v,lo) of
+                GREATER => s
+              | _       => trim_lo lo r
 
-	fun trim_hi _ E = E
-	  | trim_hi hi (s as T{elt=v,left=l,...}) =
-	    case cmpKey(v,hi) of
-		LESS => s
-	      | _    => trim_hi hi l
+        fun trim_hi _ E = E
+          | trim_hi hi (s as T{elt=v,left=l,...}) =
+            case cmpKey(v,hi) of
+                LESS => s
+              | _    => trim_hi hi l
 
-	fun uni_hi s E _ = s
-	  | uni_hi E (T{elt=v,left=l,right=r,...}) hi =
-	    concat3 cmpKey l v (split_lt cmpKey r hi)
-	  | uni_hi (T{elt=v,left=l1,right=r1,...})
-		   (s2 as T{elt=v2,left=l2,right=r2,...}) hi =
-	    concat3 cmpKey (uni_hi l1 (trim_hi v s2) v)
-	                   v (uni_bd r1 (trim v hi s2) v hi)
+        fun uni_hi s E _ = s
+          | uni_hi E (T{elt=v,left=l,right=r,...}) hi =
+            concat3 cmpKey l v (split_lt cmpKey r hi)
+          | uni_hi (T{elt=v,left=l1,right=r1,...})
+                   (s2 as T{elt=v2,left=l2,right=r2,...}) hi =
+            concat3 cmpKey (uni_hi l1 (trim_hi v s2) v)
+                           v (uni_bd r1 (trim v hi s2) v hi)
 
-	fun uni_lo s E _ = s
-	  | uni_lo E (T{elt=v,left=l,right=r,...}) lo =
-	    concat3 cmpKey (split_gt cmpKey l lo) v r
-	  | uni_lo (T{elt=v,left=l1,right=r1,...})
-		   (s2 as T{elt=v2,left=l2,right=r2,...}) lo =
-	    concat3 cmpKey (uni_bd l1 (trim lo v s2) lo v)
-	                   v (uni_lo r1 (trim_lo v s2) v)
+        fun uni_lo s E _ = s
+          | uni_lo E (T{elt=v,left=l,right=r,...}) lo =
+            concat3 cmpKey (split_gt cmpKey l lo) v r
+          | uni_lo (T{elt=v,left=l1,right=r1,...})
+                   (s2 as T{elt=v2,left=l2,right=r2,...}) lo =
+            concat3 cmpKey (uni_bd l1 (trim lo v s2) lo v)
+                           v (uni_lo r1 (trim_lo v s2) v)
     in
-	concat3 cmpKey (uni_hi l1 (trim_hi v s2) v)
+        concat3 cmpKey (uni_hi l1 (trim_hi v s2) v)
                      v (uni_lo r1 (trim_lo v s2) v)
     end
 
@@ -350,7 +350,7 @@ fun old_union _ E s2 = s2
       let val l2 = split_lt cmpKey s2 v
           val r2 = split_gt cmpKey s2 v
       in
-	  concat3 cmpKey (old_union cmpKey l l2) v (old_union cmpKey r r2)
+          concat3 cmpKey (old_union cmpKey l l2) v (old_union cmpKey r r2)
       end
 
 exception NotFound
@@ -366,11 +366,11 @@ fun add (SET(cmpKey, t), x) = SET(cmpKey, addt cmpKey t x)
 
 fun peekt cmpKey t x =
     let fun pk E = NONE
-	  | pk (T{elt=v,left=l,right=r,...}) =
-	    case cmpKey(x,v) of
-		LESS    => pk l
-	      | GREATER => pk r
-	      | _       => SOME v
+          | pk (T{elt=v,left=l,right=r,...}) =
+            case cmpKey(x,v) of
+                LESS    => pk l
+              | GREATER => pk r
+              | _       => SOME v
     in pk t end;
 
 fun membert cmpKey t x =
@@ -383,25 +383,25 @@ local
     (* true if every item in t is in t' *)
   fun treeIn cmpKey (t,t') =
       let fun isIn E = true
-	    | isIn (T{elt,left=E,right=E,...}) =
-	      membert cmpKey t' elt
-	    | isIn (T{elt,left,right=E,...}) =
+            | isIn (T{elt,left=E,right=E,...}) =
+              membert cmpKey t' elt
+            | isIn (T{elt,left,right=E,...}) =
               membert cmpKey t' elt andalso isIn left
-	    | isIn (T{elt,left=E,right,...}) =
+            | isIn (T{elt,left=E,right,...}) =
               membert cmpKey t' elt  andalso isIn right
-	    | isIn (T{elt,left,right,...}) =
+            | isIn (T{elt,left,right,...}) =
               membert cmpKey t' elt andalso isIn left andalso isIn right
       in isIn t end
 in
 fun isSubset (SET(_, E),_) = true
   | isSubset (_,SET(_, E)) = false
   | isSubset (SET(cmpKey, t as T{cnt=n,...}),
-	      SET(_,      t' as T{cnt=n',...})) =
+              SET(_,      t' as T{cnt=n',...})) =
     (n<=n') andalso treeIn cmpKey (t,t')
 
 fun equal (SET(_,E), SET(_, E)) = true
   | equal (SET(cmpKey, t as T{cnt=n,...}),
-	   SET(_,      t' as T{cnt=n',...})) =
+           SET(_,      t' as T{cnt=n',...})) =
     (n=n') andalso treeIn cmpKey (t,t')
   | equal _ = false
 end
@@ -411,11 +411,11 @@ fun retrieve arg =
 
 fun delete (SET(cmpKey, t), x) =
     let fun delt E = raise NotFound
-	  | delt (t as T{elt=v,left=l,right=r,...}) =
-	    case cmpKey(x,v) of
-		LESS    => T'(v, delt l, r)
-	      | GREATER => T'(v, l, delt r)
-	      | _       => delete'(l,r)
+          | delt (t as T{elt=v,left=l,right=r,...}) =
+            case cmpKey(x,v) of
+                LESS    => T'(v, delt l, r)
+              | GREATER => T'(v, l, delt r)
+              | _       => delete'(l,r)
     in SET(cmpKey, delt t) end;
 
 fun union (SET(cmpKey, t1), SET(_, t2)) =
@@ -423,61 +423,61 @@ fun union (SET(cmpKey, t1), SET(_, t2)) =
 
 fun intersection (SET(cmpKey, t1), SET(_, t2)) =
     let fun intert E _ = E
-	  | intert _ E = E
-	  | intert t (T{elt=v,left=l,right=r,...}) =
-	    let val l2 = split_lt cmpKey t v
-		val r2 = split_gt cmpKey t v
-	    in
-		case peekt cmpKey t v of
-		    NONE => concat (intert l2 l) (intert r2 r)
-		  | _    => concat3 cmpKey (intert l2 l) v (intert r2 r)
-	    end
+          | intert _ E = E
+          | intert t (T{elt=v,left=l,right=r,...}) =
+            let val l2 = split_lt cmpKey t v
+                val r2 = split_gt cmpKey t v
+            in
+                case peekt cmpKey t v of
+                    NONE => concat (intert l2 l) (intert r2 r)
+                  | _    => concat3 cmpKey (intert l2 l) v (intert r2 r)
+            end
     in SET(cmpKey, intert t1 t2) end
 
 fun difference (SET(cmpKey, t1), SET(_, t2)) =
     let fun difft E s = E
-	  | difft s E  = s
-	  | difft s (T{elt=v,left=l,right=r,...}) =
-	    let val l2 = split_lt cmpKey s v
-		val r2 = split_gt cmpKey s v
-	    in
-		concat (difft l2 l) (difft r2 r)
-	    end
+          | difft s E  = s
+          | difft s (T{elt=v,left=l,right=r,...}) =
+            let val l2 = split_lt cmpKey s v
+                val r2 = split_gt cmpKey s v
+            in
+                concat (difft l2 l) (difft r2 r)
+            end
     in SET(cmpKey, difft t1 t2) end
 
 fun foldr f b (SET(_, t)) =
     let fun foldf E b = b
-	  | foldf (T{elt,left,right,...}) b =
-	    foldf left (f(elt, foldf right b))
+          | foldf (T{elt,left,right,...}) b =
+            foldf left (f(elt, foldf right b))
     in foldf t b end
 
 fun foldl f b (SET(_, t)) =
     let fun foldf E b = b
-	  | foldf (T{elt,left,right,...}) b =
-	    foldf right (f(elt, foldf left b))
+          | foldf (T{elt,left,right,...}) b =
+            foldf right (f(elt, foldf left b))
     in foldf t b end
 
 fun listItems set = foldr (op::) [] set
 
 fun revapp f (SET(_, t)) =
     let fun apply E = ()
-	  | apply (T{elt,left,right,...}) =
-	    (apply right; ignore (f elt); apply left)
+          | apply (T{elt,left,right,...}) =
+            (apply right; ignore (f elt); apply left)
     in apply t end
 
 fun app f (SET(_, t)) =
     let fun apply E = ()
-	  | apply (T{elt,left,right,...}) =
-	    (apply left; ignore (f elt); apply right)
+          | apply (T{elt,left,right,...}) =
+            (apply left; ignore (f elt); apply right)
     in apply t end
 
 fun find p (SET(_, t)) =
     let fun findt E = NONE
-	  | findt (T{elt,left,right,...}) =
-	    if p elt then SOME elt
-	    else case findt left of
-		NONE => findt right
-	      | a    => a
+          | findt (T{elt,left,right,...}) =
+            if p elt then SOME elt
+            else case findt left of
+                NONE => findt right
+              | a    => a
     in findt t end
 
 end;

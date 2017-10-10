@@ -2654,18 +2654,18 @@ lemma setVCPU_vgic_invs'[wp]:
             valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
   supply fun_upd_apply[simp del]
   apply (wpsimp wp: setObject_vcpu_no_tcb_update
-		                   [where f="\<lambda>vcpu. vcpuVGIC_update f' vcpu"]
-		                sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
-		                setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
-		                valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
-		                cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
-		                valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
-		                valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-		          simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def
-		                state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
-	apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
-	apply (fastforce simp: ko_wp_at'_def projectKOs)
-	done
+                                   [where f="\<lambda>vcpu. vcpuVGIC_update f' vcpu"]
+                                sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
+                                setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
+                                valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
+                                cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
+                                valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
+                                valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
+                          simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def
+                                state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
+        apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
+        apply (fastforce simp: ko_wp_at'_def projectKOs)
+        done
 
 lemma invokeVCPUInjectIRQ_invs'[wp]:
   "invokeVCPUInjectIRQ v ir idx \<lbrace>invs'\<rbrace>"
@@ -2702,18 +2702,18 @@ lemma setVCPU_regs_invs'[wp]:
             valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
   supply fun_upd_apply[simp del]
   apply (wpsimp wp: setObject_vcpu_no_tcb_update
-		                   [where f="\<lambda>vcpu. vcpuRegs_update f' vcpu"]
-		                sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
-		                setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
-		                valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
-		                cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
-		                valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
-		                valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
-		          simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def
-		                state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
-	apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
-	apply (fastforce simp: ko_wp_at'_def projectKOs)
-	done
+                                   [where f="\<lambda>vcpu. vcpuRegs_update f' vcpu"]
+                                sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
+                                setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
+                                valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
+                                cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
+                                valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
+                                valid_pde_mappings_lift' setObject_typ_at' cur_tcb_lift
+                          simp: objBits_simps archObjSize_def vcpu_bits_def pageBits_def
+                                state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
+        apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
+        apply (fastforce simp: ko_wp_at'_def projectKOs)
+        done
 
 lemma invokeVCPUWriteReg_invs'[wp]:
   "invokeVCPUWriteReg vcpu r v \<lbrace>invs'\<rbrace>"

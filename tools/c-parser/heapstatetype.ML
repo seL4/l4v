@@ -25,23 +25,23 @@ open UMM_TermsTypes
 fun hst_mem_lhs_t ty = Const(@{const_name "hst_mem"}, ty --> heap_ty)
 fun hst_mem_rhs_t hrs ty =
     mk_comp_t (ty, heap_raw_ty, heap_ty) $ mk_hrs_mem_t $
-	      Const(hrs, ty --> heap_raw_ty)
+              Const(hrs, ty --> heap_raw_ty)
 fun hst_mem_update_lhs_t ty = Const(@{const_name "hst_mem_update"},
     (heap_ty --> heap_ty) --> ty --> ty)
 fun hst_mem_update_rhs_t hrs ty =
     mk_comp_t (heap_ty --> heap_ty, heap_raw_ty --> heap_raw_ty, ty --> ty) $
-	      Const(hrs^"_update", (heap_raw_ty --> heap_raw_ty) --> ty --> ty) $ mk_hrs_mem_update_t
+              Const(hrs^"_update", (heap_raw_ty --> heap_raw_ty) --> ty --> ty) $ mk_hrs_mem_update_t
 
 
 fun hst_htd_lhs_t ty = Const(@{const_name "hst_htd"}, ty --> heap_desc_ty)
 fun hst_htd_rhs_t hrs ty =
     mk_comp_t (ty, heap_raw_ty, heap_desc_ty) $ mk_hrs_htd_t $
-	      Const(hrs, ty --> heap_raw_ty)
+              Const(hrs, ty --> heap_raw_ty)
 fun hst_htd_update_lhs_t ty = Const(@{const_name "hst_htd_update"},
     (heap_desc_ty --> heap_desc_ty) --> ty --> ty)
 fun hst_htd_update_rhs_t hrs ty =
     mk_comp_t (heap_desc_ty --> heap_desc_ty, heap_raw_ty --> heap_raw_ty, ty --> ty) $
-	      Const(hrs^"_update", (heap_raw_ty --> heap_raw_ty) --> ty --> ty) $ mk_hrs_htd_update_t
+              Const(hrs^"_update", (heap_raw_ty --> heap_raw_ty) --> ty --> ty) $ mk_hrs_htd_update_t
 
 
 fun hst_prove_globals fullrecname thy = let
@@ -62,8 +62,8 @@ fun hst_prove_globals fullrecname thy = let
        ("hst_htd_update",hst_htd_update_lhs_t,hst_htd_update_rhs_t)]
   val defs = map (fn (n,l,r) =>
                      ((Binding.name (n ^ NameGeneration.global_rcd_name),
-		       mk_defeqn(l recty', r hrs recty')),
-		      []))
+                       mk_defeqn(l recty', r hrs recty')),
+                      []))
                  triples
   val (hst_thms, thy) = Global_Theory.add_defs true defs thy
   val thy' = thy |> Context.theory_map (Simplifier.map_ss (fn ss => ss addsimps hst_thms))

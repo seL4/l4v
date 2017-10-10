@@ -184,20 +184,20 @@ in
 end
 
 fun mk_creturn (thy : theory)
-	       (tyargs : Term.typ list)
-	       (statety : Term.typ)
-	       (updf : Term.term)
-	       (v : Term.term) : Term.term = let
+               (tyargs : Term.typ list)
+               (statety : Term.typ)
+               (updf : Term.term)
+               (v : Term.term) : Term.term = let
     val exnvar = mk_global_exn_var_update thy statety
 in
     Const (@{const_name "CLanguage.creturn"},
-	   (type_of exnvar) --> (type_of updf) --> (type_of v) --> mk_com_ty tyargs
-	  ) $ exnvar $ updf $ v
+           (type_of exnvar) --> (type_of updf) --> (type_of v) --> mk_com_ty tyargs
+          ) $ exnvar $ updf $ v
 end
 
 fun mk_creturn_void (thy : theory)
-		    (tyargs : Term.typ list)
-		    (statety : Term.typ) = let
+                    (tyargs : Term.typ list)
+                    (statety : Term.typ) = let
     val exnvar      = mk_global_exn_var_update thy statety
 in
     Const (@{const_name "CLanguage.creturn_void"},
@@ -205,16 +205,16 @@ in
 end
 
 fun mk_cbreak_const (thy : theory)
-	      (tyargs : Term.typ list)
-	      (statety : Term.typ) = let
+              (tyargs : Term.typ list)
+              (statety : Term.typ) = let
     val exnvar  = mk_global_exn_var_update thy statety
 in
     Const (@{const_name "CLanguage.cbreak"}, (type_of exnvar) --> mk_com_ty tyargs)
 end
 
 fun mk_cbreak (thy : theory)
-	      (tyargs : Term.typ list)
-	      (statety : Term.typ) = let
+              (tyargs : Term.typ list)
+              (statety : Term.typ) = let
     val exnvar  = mk_global_exn_var_update thy statety
 in
     mk_cbreak_const thy tyargs statety $ exnvar
@@ -228,8 +228,8 @@ in
 end
 
 fun mk_ccatchbrk (thy : theory)
-		 (tyargs : Term.typ list)
-		 (statety : Term.typ) = let
+                 (tyargs : Term.typ list)
+                 (statety : Term.typ) = let
     val exnvar  = mk_global_exn_var thy statety
 in
     Const (@{const_name "CLanguage.ccatchbrk"}, (type_of exnvar) --> mk_com_ty tyargs) $ exnvar
