@@ -45,7 +45,7 @@ session ASpec in "abstract" = Word_Lib +
   theories
     "Syscall_A"
     "Glossary_Doc"
-        (* "KernelInit_A" *)
+    (* "KernelInit_A" *)
   document_files
     "VERSION"
     "root.tex"

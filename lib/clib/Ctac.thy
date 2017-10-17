@@ -92,9 +92,7 @@ next
   show "\<lbrace>G\<rbrace> return () \<lbrace>\<lambda>_. G\<rbrace>" by wp
 next
   show "\<Gamma>\<turnstile> ?G' ?c {s. \<forall>uu. dc uu (xf' s) \<longrightarrow> s \<in> G' (xf' s) \<inter> {sa. P' (xf' s) (i sa)}}"
-    apply (rule HoarePartial.ProcModifyReturnNoAbr
-      [where return' = "\<lambda>s t. s",
-        OF _ _ f_modifies])
+    apply (rule HoarePartial.ProcModifyReturnNoAbr [where return' = "\<lambda>s t. s", OF _ _ f_modifies])
     apply (rule HoarePartial.ProcSpecNoAbrupt [OF _ _ f_spec])
     defer
     apply vcg
@@ -175,9 +173,7 @@ next
 next
   show "\<Gamma>\<turnstile> ?G' ?c {s. xf' s = xfru (\<lambda>_. (xfr \<circ> xf') s) oldv \<and>
     (\<forall>uu. dc uu ((xfr \<circ> xf') s) \<longrightarrow> s \<in> G' ((xfr \<circ> xf') s) \<inter> {sa. P' ((xfr \<circ> xf') s) (i sa)})}"
-    apply (rule HoarePartial.ProcModifyReturnNoAbr
-      [where return' = "\<lambda>s t. s",
-        OF _ _ f_modifies])
+    apply (rule HoarePartial.ProcModifyReturnNoAbr [where return' = "\<lambda>s t. s", OF _ _ f_modifies])
     apply (rule HoarePartial.ProcSpecNoAbrupt [OF _ _ f_spec])
     defer
     apply vcg
@@ -734,7 +730,7 @@ proof (induct)
       obtain z where "u = Normal z \<or> u = Abrupt z"
         using WhileTrue.prems by (cases u, auto)
       then obtain z' where "t = Normal z' \<or> t = Abrupt z'"
-            using WhileTrue.prems WhileTrue.hyps(2) WhileTrue.hyps(4)
+        using WhileTrue.prems WhileTrue.hyps(2) WhileTrue.hyps(4)
         by (auto elim: Normal_resultE Abrupt_resultE)
 
       thus "t \<in> Normal ` {s. xf s = v} \<union> Abrupt ` {s. xf s = v}" using xp ae xfs

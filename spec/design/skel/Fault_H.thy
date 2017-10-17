@@ -9,7 +9,7 @@
  *)
 
 (*
-         The fault datatype.
+    The fault datatype.
 *)
 
 chapter "Fault Structures"

@@ -9,7 +9,7 @@
  *)
 
 (*
-        Declarations from SEL4.Kernel.Thread.
+    Declarations from SEL4.Kernel.Thread.
 *)
 
 chapter "Function Declarations for Threads"

@@ -65,8 +65,8 @@ text {*
 \glossaryentry
   {ntfn, Notification}
   {A \emph{notification} object. A kernel object in seL4 consisting
-        of a set of binary semaphores, used for sending (signalling)
-        notifications to other threads.}
+  of a set of binary semaphores, used for sending (signalling)
+  notifications to other threads.}
   {glos:ntfn}
 
 \glossaryentry

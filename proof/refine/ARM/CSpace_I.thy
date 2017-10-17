@@ -442,21 +442,21 @@ proof rule
     proof (cases "m \<turnstile> x \<leadsto>\<^sup>* p")
       case False
       from n have "m \<turnstile> x \<leadsto>\<^sup>+ 0"
-              unfolding mdb_chain_0_def
+        unfolding mdb_chain_0_def
         using x by auto
 
       thus ?thesis
-              by (rule mdb_trancl_other_update) fact+
+        by (rule mdb_trancl_other_update) fact+
     next
       case True
       hence "m(p \<mapsto> cte) \<turnstile> x \<leadsto>\<^sup>* p"
       proof (cases rule: next_rtrancl_tranclE)
-              case eq thus ?thesis by simp
+        case eq thus ?thesis by simp
       next
-              case trancl
-              have "no_loops m" by (rule mdb_chain_0_no_loops) fact+
-              thus ?thesis
-                by (rule trancl_into_rtrancl [OF no_loops_upd_last]) fact+
+        case trancl
+        have "no_loops m" by (rule mdb_chain_0_no_loops) fact+
+        thus ?thesis
+          by (rule trancl_into_rtrancl [OF no_loops_upd_last]) fact+
       qed
       moreover
       have "m(p \<mapsto> cte) \<turnstile> p \<leadsto> mdbNext (cteMDBNode cte)" by (simp add: mdb_next_update)
@@ -2148,10 +2148,10 @@ lemma setCTE_valid_objs'[wp]:
   apply (rule setObject_valid_objs')
    apply (clarsimp simp: prod_eq_iff lookupAround2_char1 updateObject_cte objBits_simps)
    apply (clarsimp simp: prod_eq_iff lookupAround2_char1
-                        updateObject_cte in_monad typeError_def
-                        valid_obj'_def valid_tcb'_def valid_cte'_def
-                        tcb_cte_cases_def
-                 split: kernel_object.split_asm if_split_asm)
+                         updateObject_cte in_monad typeError_def
+                         valid_obj'_def valid_tcb'_def valid_cte'_def
+                         tcb_cte_cases_def
+                  split: kernel_object.split_asm if_split_asm)
   done
 
 lemma setCTE_valid_pspace:

@@ -60,26 +60,26 @@ consts
 defs
 newKernelState_def:
 "newKernelState data_start \<equiv> \<lparr>
-        ksPSpace= newPSpace,
-        gsUserPages= (\<lambda>x. None),
-        gsCNodes= (\<lambda>x. None),
-        gsUntypedZeroRanges= {},
+        ksPSpace = newPSpace,
+        gsUserPages = (\<lambda>x. None),
+        gsCNodes = (\<lambda>x. None),
+        gsUntypedZeroRanges = {},
         gsMaxObjectSize = card (UNIV :: machine_word set),
         ksDomScheduleIdx = newKSDomScheduleIdx,
         ksDomSchedule = newKSDomSchedule,
         ksCurDomain = newKSCurDomain,
         ksDomainTime = newKSDomainTime,
-        ksReadyQueues= const [],
+        ksReadyQueues = const [],
         ksReadyQueuesL1Bitmap = const 0,
         ksReadyQueuesL2Bitmap = const 0,
-        ksCurThread= error [],
-        ksIdleThread= error [],
-        ksSchedulerAction= ResumeCurrentThread,
-        ksInterruptState= error [],
-        ksWorkUnitsCompleted= 0,
-        ksArchState= fst (Arch.newKernelState data_start),
-        ksMachineState= init_machine_state
-        \<rparr>"
+        ksCurThread = error [],
+        ksIdleThread = error [],
+        ksSchedulerAction = ResumeCurrentThread,
+        ksInterruptState = error [],
+        ksWorkUnitsCompleted = 0,
+        ksArchState = fst (Arch.newKernelState data_start),
+        ksMachineState = init_machine_state
+\<rparr>"
 
 context Arch begin
 requalify_facts

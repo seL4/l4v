@@ -421,7 +421,7 @@ proof -
     apply (subst typ_rewrs(5))
       apply (rule lift_t_mono)
        apply assumption
-        apply (rule cl')
+      apply (rule cl')
        apply (rule eui [symmetric])
       apply (rule guard_mono_True)
      apply (rule disj)

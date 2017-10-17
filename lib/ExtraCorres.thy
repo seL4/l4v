@@ -113,15 +113,15 @@ next
       apply (rule corres_underlying_split [OF z [OF P]])
         prefer 3
         apply clarify
-        apply (simp add: lift_def)
+       apply (simp add: lift_def)
       apply (case_tac rv)
        apply (clarsimp simp: throwError_def)
        apply clarsimp
         apply (rule corres_underlying_split [OF Q])
           prefer 3
-        apply clarsimp
-        apply (case_tac rv)
-        apply (clarsimp simp add: lift_def throwError_def)
+          apply clarsimp
+         apply (case_tac rv)
+         apply (clarsimp simp add: lift_def throwError_def)
         apply (clarsimp simp add: y lift_def returnOk_def throwError_def)
        apply (rule w P | simp | wp_once)+
   done

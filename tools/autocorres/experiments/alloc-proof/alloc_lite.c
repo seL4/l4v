@@ -71,17 +71,17 @@ align_up(word_t val, word_t align_bits)
 void*
 ualloc(struct heap* heap, word_t size)
 {
-        assert(size > 0);
+    assert(size > 0);
 
-        void* chunk = alloc(heap, size + 8);
-        if(chunk == NULL){
-                return NULL;
-        }
+    void* chunk = alloc(heap, size + 8);
+    if(chunk == NULL){
+        return NULL;
+    }
 
-        word_t* store = chunk;
-        *store = size;
+    word_t* store = chunk;
+    *store = size;
 
-        return chunk + 8;
+    return chunk + 8;
 }
 
 /* Allocate a chunk of memory. */
@@ -145,12 +145,12 @@ alloc(struct heap* heap, word_t size)
 void
 udealloc(struct heap* heap, void* ptr)
 {
-        assert(ptr != NULL);
+    assert(ptr != NULL);
 
-        word_t* store = ptr - 8;
-        word_t  size  = *store + 8;
+    word_t* store = ptr - 8;
+    word_t  size  = *store + 8;
 
-        dealloc(heap, store, size);
+    dealloc(heap, store, size);
 }
 
 

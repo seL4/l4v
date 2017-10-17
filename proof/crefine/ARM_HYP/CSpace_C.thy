@@ -552,9 +552,9 @@ lemma revokable_ccorres:
   apply (rule ccorres_gen_asm [where G = \<top>, simplified])
   apply (cases cap)
              apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
-              rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
+               rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
             apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
-             rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
+              rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
            apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
            apply (rule ccorres_return, vcg)
            apply (frule cap_get_tag_NotificationCap [where cap' = srcCap, THEN iffD1])
@@ -564,7 +564,7 @@ lemma revokable_ccorres:
            apply (fastforce simp: cap_get_tag_isCap isCap_simps)
 
           apply (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
-          rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
+            rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
          apply (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
          apply (rule ccorres_return, vcg)
          apply (frule cap_get_tag_EndpointCap [where cap' = srcCap, THEN iffD1])
@@ -1877,7 +1877,7 @@ lemma cteSwap_ccorres:
              apply simp
              apply (cases "(slot'=slot)", simp+)
     -- "no_0 (ctes_of s)"
-           apply (simp add: valid_mdb'_def) -- "yuck"
+       apply (simp add: valid_mdb'_def) -- "yuck"
       apply (erule valid_mdb_ctesE)
       apply assumption
 

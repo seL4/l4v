@@ -947,7 +947,7 @@ proof (simp add: packed_type_access_ti, rule ext)
       ultimately have "x - ptr_val p \<le> (of_nat n + of_nat (size_td t - 1))" using al szb
         apply -
         apply (rule word_diff_ls(4)[where xa=x and x=x for x, simplified])
-     apply (metis (hide_lams, mono_tags) add.commute of_nat_add)
+        apply (metis (hide_lams, mono_tags) add.commute of_nat_add)
         apply (erule (2) intvl_le_lower)
         done
       moreover have "unat (of_nat n + of_nat (size_td t - 1) :: addr_bitsize word) = n + size_td t - 1"
@@ -975,7 +975,7 @@ proof (simp add: packed_type_access_ti, rule ext)
         by (simp add: size_of_def)
 
       have "unat (x - &(p\<rightarrow>f)) = unat ((x - ptr_val p) - of_nat n)"
-          by (simp add: field_lvalue_def field_lookup_offset_eq [OF fl])
+        by (simp add: field_lvalue_def field_lookup_offset_eq [OF fl])
       also have "\<dots> = unat (x - ptr_val p) - n"
         by (simp add: unat_sub [OF ofn] uofn)
       finally have "unat (x - &(p\<rightarrow>f)) = unat (x - ptr_val p) - n" .
@@ -1006,7 +1006,7 @@ proof (simp add: packed_type_access_ti, rule ext)
       proof (subst field_access_update_nth_disjD [OF fl])
         have "x - ptr_val p \<le> of_nat (size_of TYPE('b) - 1)"
         proof (rule word_diff_ls(4)[where xa=x and x=x for x, simplified])
-                from xin show "x \<le> of_nat (size_of TYPE('b) - 1) + ptr_val p" using al szb
+          from xin show "x \<le> of_nat (size_of TYPE('b) - 1) + ptr_val p" using al szb
             by (subst add.commute, rule intvl_less_upper)
           show "ptr_val p \<le> x" using xin al szb
             by (rule intvl_le_lower)

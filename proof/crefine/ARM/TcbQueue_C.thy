@@ -599,7 +599,7 @@ next
       have nnull: "tn tcb \<noteq> NULL" using tq
       proof (rule tcb_queue_relation_next_not_NULL)
         from ind_prems show "\<forall>t\<in>set tcbs. tcb_at' t s"
-         and "distinct tcbs" by simp_all
+          and "distinct tcbs" by simp_all
         show "tcbs \<noteq> []" using Cons by simp
       qed
 
@@ -612,7 +612,7 @@ next
         done
 
       have "tcb_ptr_to_ctcb_ptr tcbp \<noteq> tn tcb \<and> tcb_ptr_to_ctcb_ptr tcbp \<noteq> tp tcb
-         \<and> tn tcb \<noteq> tp tcb" using tq cs_tcb ind_prems nnull
+        \<and> tn tcb \<noteq> tp tcb" using tq cs_tcb ind_prems nnull
         apply -
         apply (drule (5) tcb_queue_relation_ptr_rel)
         apply clarsimp
@@ -666,7 +666,7 @@ next
       hence tcb_prev: "tp tcb = tcb_ptr_to_ctcb_ptr tcb'" using Cons.prems cs_tcb2 cs_tcb not_sym [OF tcbp]
         apply -
         apply (subst tcb_queue_next_prev [symmetric], assumption+)
-               apply simp
+         apply simp
          apply simp
          apply simp
          apply (rule not_sym [OF tcbp])

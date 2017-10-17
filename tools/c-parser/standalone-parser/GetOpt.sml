@@ -119,28 +119,28 @@ structure GetOpt :> GetOpt =
                       errAmbig optStr; (NonOpt, rest'))
                   | long ([NoArg a], x, rest') =
                       if (SS.isEmpty x)
-                        then (Opt(a()),rest')
+                      then (Opt(a()),rest')
                       else if (SS.isPrefix "=" x)
-                        then (errNoArg optStr; (NonOpt, rest'))
-                        else raise Fail "long: impossible"
+                           then (errNoArg optStr; (NonOpt, rest'))
+                           else raise Fail "long: impossible"
                   | long ([ReqArg(f,d)], x, []) =
                       if (SS.isEmpty x)
-                        then (errReq(d, optStr); (NonOpt, []))
+                      then (errReq(d, optStr); (NonOpt, []))
                       else if (SS.isPrefix "=" x)
-                        then (Opt(f (SS.string (SS.triml 1 x))), [])
-                        else raise Fail "long: impossible"
+                           then (Opt(f (SS.string (SS.triml 1 x))), [])
+                           else raise Fail "long: impossible"
                   | long ([ReqArg(f,d)], x, rest' as (r::rs)) =
                       if (SS.isEmpty x)
-                        then (Opt(f r), rs)
+                      then (Opt(f r), rs)
                       else if (SS.isPrefix "=" x)
-                        then (Opt(f (SS.string (SS.triml 1 x))), rest')
-                        else raise Fail "long: impossible"
+                           then (Opt(f (SS.string (SS.triml 1 x))), rest')
+                           else raise Fail "long: impossible"
                   | long ([OptArg(f,_)], x, rest') =
                       if (SS.isEmpty x)
-                        then (Opt(f NONE), rest')
+                      then (Opt(f NONE), rest')
                       else if (SS.isPrefix "=" x)
-                        then (Opt(f (SOME (SS.string (SS.triml 1 x)))), rest')
-                        else raise Fail "long: impossible"
+                           then (Opt(f (SOME (SS.string (SS.triml 1 x)))), rest')
+                           else raise Fail "long: impossible"
                   | long ([], _, rest') = (
                       errUnrec optStr; (NonOpt, rest'))
                 in
@@ -192,7 +192,7 @@ structure GetOpt :> GetOpt =
                   | addOpt (NonOpt, rest) = get(rest, opts, arg::nonOpts)
                 in
                   if (SS.isPrefix "--" arg')
-                    then addOpt(longOpt (SS.triml 2 arg', rest))
+                  then addOpt(longOpt (SS.triml 2 arg', rest))
                   else if (SS.isPrefix "-" arg') then
                     if SS.size arg' = 1 then
                       (errFn "Malformed option (-)"; get(rest, opts, nonOpts))

@@ -9,7 +9,7 @@
  *)
 
 (*
-        VSpace lookup code.
+    VSpace lookup code.
 *)
 
 theory VSpace_H

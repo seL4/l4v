@@ -9,7 +9,7 @@
  *)
 
 (*
-        Declarations from SEL4.Kernel.FaultHandler
+    Declarations from SEL4.Kernel.FaultHandler
 *)
 
 chapter "Function Declarations for Fault Handlers"

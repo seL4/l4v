@@ -2187,7 +2187,7 @@ lemma valid_dlist_no_0_prev:
 
 lemma distinct_zombies_nonCTE_modify_map:
   "\<And>m x f. \<lbrakk> \<And>cte. cteCap (f cte) = cteCap cte \<rbrakk>
-           \<Longrightarrow> distinct_zombies (modify_map m x f) = distinct_zombies m"
+     \<Longrightarrow> distinct_zombies (modify_map m x f) = distinct_zombies m"
   apply (simp add: distinct_zombies_def modify_map_def o_def)
   apply (rule_tac f=distinct_zombie_caps in arg_cong)
   apply (rule ext)

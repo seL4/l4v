@@ -536,9 +536,9 @@ proof -
       then obtain ko where ko: "ksPSpace s x = Some ko" by (clarsimp simp: thms(3)[symmetric])
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
       ultimately have "(projectKO_opt ko' :: endpoint option) = projectKO_opt ko" using xin thms(4) ceq
-              by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_ep)
+        by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_ep)
       thus "(projectKO_opt (the (ksPSpace s' x)) :: endpoint option) = projectKO_opt (the (ksPSpace s x))"  using ko ko'
-              by simp
+        by simp
     qed fact
 
     (* clag \<dots> *)
@@ -549,9 +549,9 @@ proof -
       then obtain ko where ko: "ksPSpace s x = Some ko" by (clarsimp simp: thms(3)[symmetric])
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
       ultimately have "(projectKO_opt ko' :: Structures_H.notification option) = projectKO_opt ko" using xin thms(4) ceq
-              by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_ntfn)
+        by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_ntfn)
       thus "(projectKO_opt (the (ksPSpace s' x)) :: Structures_H.notification option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
-              by simp
+        by simp
     qed fact
 
     show "map_to_pdes (ksPSpace s) = map_to_pdes (ksPSpace s')"
@@ -561,9 +561,9 @@ proof -
       then obtain ko where ko: "ksPSpace s x = Some ko" by (clarsimp simp: thms(3)[symmetric])
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
       ultimately have "(projectKO_opt ko' :: pde option) = projectKO_opt ko" using xin thms(4) ceq
-              by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_pde)
+        by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_pde)
       thus "(projectKO_opt (the (ksPSpace s' x)) :: pde option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
-              by simp
+        by simp
     qed fact
 
     show "map_to_ptes (ksPSpace s) = map_to_ptes (ksPSpace s')"
@@ -573,9 +573,9 @@ proof -
       then obtain ko where ko: "ksPSpace s x = Some ko" by (clarsimp simp: thms(3)[symmetric])
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
       ultimately have "(projectKO_opt ko' :: pte option) = projectKO_opt ko" using xin thms(4) ceq
-              by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_pte)
+        by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_pte)
       thus "(projectKO_opt (the (ksPSpace s' x)) :: pte option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
-              by simp
+        by simp
     qed fact
 
     show "map_to_asidpools (ksPSpace s) = map_to_asidpools (ksPSpace s')"
@@ -585,9 +585,9 @@ proof -
       then obtain ko where ko: "ksPSpace s x = Some ko" by (clarsimp simp: thms(3)[symmetric])
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
       ultimately have "(projectKO_opt ko' :: asidpool option) = projectKO_opt ko" using xin thms(4) ceq
-              by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_asidpool)
+        by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_asidpool)
       thus "(projectKO_opt (the (ksPSpace s' x)) :: asidpool option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
-              by simp
+        by simp
     qed fact
 
     show "map_to_user_data (ksPSpace s) = map_to_user_data (ksPSpace s')"
@@ -597,9 +597,9 @@ proof -
       then obtain ko where ko: "ksPSpace s x = Some ko" by (clarsimp simp: thms(3)[symmetric])
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
       ultimately have "(projectKO_opt ko' :: user_data option) = projectKO_opt ko" using xin thms(4) ceq
-              by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_user_data)
+        by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_user_data)
       thus "(projectKO_opt (the (ksPSpace s' x)) :: user_data option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
-              by simp
+        by simp
     qed fact
 
     show "map_to_user_data_device (ksPSpace s) = map_to_user_data_device (ksPSpace s')"
@@ -665,7 +665,7 @@ proof -
           done
       } ultimately show "(map_option tcb_no_ctes_proj \<circ> (map_to_tcbs (ksPSpace s))) x
           = (map_option tcb_no_ctes_proj \<circ> (map_to_tcbs (ksPSpace s'))) x"
-        by auto
+          by auto
     qed
   qed fact+
 qed

@@ -169,15 +169,15 @@ as our token, when we should have "a" as our token.
 *)
 
 functor RedBlack(B : sig type key
-                         val > : key*key->bool
-                     end):
-            sig type tree
-                type key
-                val empty : tree
-                val insert : key * tree -> tree
-                val lookup : key * tree -> key
-                 exception notfound of key
-            end =
+             val > : key*key->bool
+             end):
+        sig type tree
+        type key
+        val empty : tree
+        val insert : key * tree -> tree
+        val lookup : key * tree -> key
+        exception notfound of key
+        end =
 struct
  open B
  datatype color = RED | BLACK
@@ -292,10 +292,10 @@ structure LexGen: LEXGEN =
    val ResetFlags = fn () => (CountNewLines := false; HaveReject := false;
                               PosArg := false;
                               UsesTrailingContext := false;
-                               CharSetSize := 129; StrName := "Mlex";
-                                HeaderCode := ""; HeaderDecl:= false;
-                                ArgCode := NONE;
-                                StrDecl := false)
+                              CharSetSize := 129; StrName := "Mlex";
+                              HeaderCode := ""; HeaderDecl:= false;
+                              ArgCode := NONE;
+                              StrDecl := false)
 
    val LexOut = ref(TextIO.stdOut)
    fun say x = TextIO.output(!LexOut, x)
@@ -357,7 +357,7 @@ structure dict =
     struct
         type 'a relation = 'a * 'a -> bool
         abstype ('b,'a) dictionary = DATA of { Table : ('b * 'a) list,
-                                          Leq : 'b * 'b -> bool }
+                                               Leq : 'b * 'b -> bool }
         with
                 exception LOOKUP
             fun create Leqfunc = DATA { Table = nil, Leq = Leqfunc }
@@ -485,7 +485,7 @@ fun AdvanceTok () : unit = let
                           in
                             if isDigit ch
                               then f(n*10+(cvt ch), c+1, ch::t)
-                                else err t
+                              else err t
                           end
                   in
                     if isDigit x then f(cvt x, 1, [x]) else x
@@ -505,8 +505,8 @@ fun AdvanceTok () : unit = let
                         | a => let fun f s =
                                     let val a = nextch()
                                     in if isLetter a then f(a::s)
-                                        else (ungetch(!LexBuf);
-                                              implode(rev s))
+                                       else (ungetch(!LexBuf);
+                                             implode(rev s))
                                     end
                                 in case f [a]
                                  of "reject" => REJECT

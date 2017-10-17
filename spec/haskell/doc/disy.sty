@@ -28,7 +28,7 @@
 %   nictaonly:  use NICTA logo but no UNSW
 %
 % COMMANDS:
-%   \AuthorEmail        Author's email address (default: disy@cse)
+%   \AuthorEmail    Author's email address (default: disy@cse)
 
 \ProvidesPackage{disy}
 \RequirePackage{graphicx}
@@ -41,10 +41,10 @@
 \DeclareOption{nicta}{\NICTAtrue}
 \DeclareOption{nictaonly}{\NICTAtrue\UNSWfalse}
 
-\newif\ifColor        \Colorfalse
+\newif\ifColor  \Colorfalse
 \newif\ifNICTA  \NICTAfalse
 \newif\ifCMYK   \CMYKfalse
-\newif\ifUNSW   \UNSWtrue        % for historic reasons
+\newif\ifUNSW   \UNSWtrue  % for historic reasons
 
 \ProcessOptions
 

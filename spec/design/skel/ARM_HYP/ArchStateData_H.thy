@@ -9,7 +9,7 @@
  *)
 
 (*
-        Kernel state and kernel monads, imports everything that SEL4.Model needs.
+    Kernel state and kernel monads, imports everything that SEL4.Model needs.
 *)
 
 chapter "Architecture Specific Kernel State and Monads"

@@ -109,7 +109,7 @@ let rec nodes g =
   let rec nodes_aux g = match g with
     |[] -> []
     |(a,auth,b)::l->a::b::(nodes_aux l)
-   in simp_list (nodes_aux g);;
+  in simp_list (nodes_aux g);;
 
 
 (*********************************************************************************************************************)
@@ -361,7 +361,7 @@ let rec nodes_infoflow g =
   let rec nodes_aux g = match g with
     |[] -> []
     |(a,b)::l->a::b::(nodes_aux l)
-   in simp_list (nodes_aux g);;
+  in simp_list (nodes_aux g);;
 
 
 

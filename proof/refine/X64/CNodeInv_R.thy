@@ -9368,7 +9368,7 @@ lemma inv_cnode_corres:
     apply simp
     apply (rule corres_guard_imp)
       apply (rule corres_split [OF cap_move_corres])
-               apply assumption
+         apply assumption
         apply (erule cap_move_corres)
        apply wp
        apply (simp add: cte_wp_at_caps_of_state)
@@ -9382,7 +9382,7 @@ lemma inv_cnode_corres:
     apply (simp add: cte_wp_at_ctes_of)
     apply (elim conjE exE)
     apply (intro impI conjI)
-                apply fastforce
+            apply fastforce
            apply (fastforce simp: weak_derived'_def)
           apply simp
          apply (erule weak_derived_sym')

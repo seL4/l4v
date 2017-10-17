@@ -373,7 +373,7 @@ lemma transfer_caps_non_null_cte_wp_at:
      | wpc | clarsimp simp:imp)+
    apply (rule hoare_strengthen_post
             [where Q="\<lambda>rv s'. (cte_wp_at (op \<noteq> cap.NullCap) ptr) s'
-                           \<and> (\<forall>x\<in>set rv. cte_wp_at (op = cap.NullCap) x s')",
+                      \<and> (\<forall>x\<in>set rv. cte_wp_at (op = cap.NullCap) x s')",
              rotated])
     apply (clarsimp)
     apply  (rule conjI)
