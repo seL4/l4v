@@ -38,6 +38,8 @@ session Refine = BaseRefine +
     "refine/$L4V_ARCH/Refine"
   theories
     "refine/$L4V_ARCH/Refine"
+  theories [condition = "L4V_ARCH_IS_ARM"]
+    "refine/$L4V_ARCH/Orphanage"
 
 session BaseRefine2 = BaseRefine +
   description {* Intermediate point in refinement proof. Useful for machines with small RAM. *}

@@ -29,6 +29,13 @@ if not os.environ.has_key("L4V_ARCH"):
 
 L4V_ARCH=os.environ["L4V_ARCH"]
 
+# Test Orphanage when L4V_ARCH=ARM;
+# we need to set this flag here to test the above equality in the ROOT file.
+# To be removed when we finish proving Orphanage for ARM_HYP and X64
+if L4V_ARCH == "ARM":
+   os.environ["L4V_ARCH_IS_ARM"]= L4V_ARCH
+   print "Testing Orphanage for ARM"
+
 # Check we are using a known Architecture
 if L4V_ARCH not in L4V_ARCH_LIST:
     sys.exit("Unknown architecture L4V_ARCH=%s" % L4V_ARCH)
