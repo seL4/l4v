@@ -18,6 +18,7 @@ theory Lib
 imports
   String_Compare
   Value_Abbreviation
+  Try_Methods
   NICTATools
   "~~/src/HOL/Library/Prefix_Order"
 begin
