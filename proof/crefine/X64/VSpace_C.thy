@@ -763,18 +763,18 @@ term rf_sr
                  split: X64_H.pde.split_asm)
   done *)
 
-(*
-lemma cap_case_isPageDirectoryCap:
-  "(case cap of capability.ArchObjectCap (arch_capability.PageDirectoryCap pd ( Some asid))  \<Rightarrow> fn pd asid
+
+lemma cap_case_isPML4Cap:
+  "(case cap of capability.ArchObjectCap (arch_capability.PML4Cap pm ( Some asid))  \<Rightarrow> fn pm asid
                 | _ => g)
-    = (if ( if (isArchObjectCap cap) then if (isPageDirectoryCap (capCap cap)) then capPDMappedASID (capCap cap) \<noteq> None else False else False)
-                then fn (capPDBasePtr (capCap cap)) (the ( capPDMappedASID (capCap cap))) else g)"
+    = (if ( if (isArchObjectCap cap) then if (isPML4Cap (capCap cap)) then capPML4MappedASID (capCap cap) \<noteq> None else False else False)
+                then fn (capPML4BasePtr (capCap cap)) (the ( capPML4MappedASID (capCap cap))) else g)"
   apply (cases cap; simp add: isArchObjectCap_def)
   apply (rename_tac arch_capability)
-  apply (case_tac arch_capability, simp_all add: isPageDirectoryCap_def)
+  apply (case_tac arch_capability, simp_all add: isPML4Cap_def)
   apply (rename_tac option)
   apply (case_tac option; simp)
-  done *)
+  done
 
 (* FIXME: MOVE to CSpaceAcc_C *)
 lemma ccorres_pre_gets_x86KSASIDTable_ksArchState:
