@@ -11,7 +11,7 @@
 
 theory Eval_Bool
 
-imports Main
+imports Try_Methods
 
 begin
 
@@ -46,6 +46,8 @@ method_setup eval_bool = \<open>Scan.succeed (fn ctxt => SIMPLE_METHOD'
     (CHANGED o simp_tac (clear_simpset ctxt
         addsimprocs [Eval_Bool.simproc])))\<close>
     "use code generator setup to simplify booleans in goals to True or False"
+
+add_try_method eval_bool
 
 text {* Testing. *}
 definition

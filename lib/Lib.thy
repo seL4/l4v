@@ -19,6 +19,7 @@ imports
   String_Compare
   Value_Abbreviation
   Try_Methods
+  Eval_Bool
   NICTATools
   "~~/src/HOL/Library/Prefix_Order"
 begin

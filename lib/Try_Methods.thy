@@ -11,7 +11,7 @@
 
 theory Try_Methods
 
-imports Main
+imports Eisbach_Methods
 
 keywords "trym" :: diag
   and "add_try_method" :: thy_decl
@@ -106,11 +106,21 @@ val _ = Outer_Syntax.command @{command_keyword trym}
   (Scan.option Parse.int >> (fn opt_n =>
     Toplevel.keep_proof (try_methods_command opt_n o Toplevel.proof_of)))
 
+fun local_check_add_method nm ctxt =
+    (mk_method ctxt nm; Local_Theory.background_theory (add_method nm) ctxt)
+
 val _ = Outer_Syntax.command @{command_keyword add_try_method}
   "add a method to a library of strategies tried by trym"
-  (Parse.name >> (Toplevel.theory o add_method))
+  (Parse.name >> (Toplevel.local_theory NONE NONE o local_check_add_method))
 
 end
 *}
+
+add_try_method fastforce
+add_try_method blast
+add_try_method metis
+
+method auto_metis = solves \<open>auto; metis\<close>
+add_try_method auto_metis
 
 end
