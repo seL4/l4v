@@ -237,8 +237,21 @@ val setup =
     "strengthening congruence rules"
     #> snd tracing;
 
-val do_elim = SUBGOAL (fn (t, i) => case (head_of (Logic.strip_assums_concl t)) of
-    @{term elim} => eresolve0_tac @{thms do_elim} i
+fun goal_predicate t = let
+    val gl = Logic.strip_assums_concl t
+    val cn = head_of #> dest_Const #> fst
+  in if cn gl = @{const_name oblig} then "oblig"
+    else if cn gl = @{const_name elim} then "elim"
+    else if cn (HOLogic.dest_Trueprop gl) = @{const_name st} then "st"
+    else ""
+  end handle TERM _ => ""
+
+fun do_elim ctxt = SUBGOAL (fn (t, i) => if goal_predicate t = "elim"
+    then eresolve_tac ctxt @{thms do_elim} i else all_tac)
+
+fun final_oblig_strengthen ctxt = SUBGOAL (fn (t, i) => case goal_predicate t of
+    "oblig" => resolve_tac ctxt @{thms intro_oblig} i
+  | "st" => resolve_tac ctxt @{thms strengthen_refl} i
   | _ => all_tac)
 
 infix 1 THEN_TRY_ALL_NEW;
@@ -262,14 +275,14 @@ fun maybe_trace_tac false _ _ = K all_tac
 fun apply_strg ctxt trace congs rules = EVERY' [
     maybe_trace_tac trace ctxt "apply_strg",
     DETERM o TRY o resolve_tac ctxt @{thms strengthen_Not},
-    DETERM o ((resolve_tac ctxt rules THEN_ALL_NEW do_elim)
+    DETERM o ((resolve_tac ctxt rules THEN_ALL_NEW do_elim ctxt)
         ORELSE' (resolve_tac ctxt congs THEN_TRY_ALL_NEW
             (fn i => apply_strg ctxt trace congs rules i)))
 ]
 
 fun do_strg ctxt congs rules
     = apply_strg ctxt (Config.get ctxt (fst tracing)) congs rules
-        THEN_ALL_NEW (TRY o resolve_tac ctxt @{thms strengthen_refl intro_oblig})
+        THEN_ALL_NEW final_oblig_strengthen ctxt
 
 fun strengthen ctxt thms i st = let
     val congs = Congs.get (Proof_Context.theory_of ctxt)
@@ -385,8 +398,17 @@ lemma strengthen_Un[strg]:
   "st_ord F A A' \<Longrightarrow> st_ord F B B' \<Longrightarrow> st_ord F (A \<union> B) (A' \<union> B')"
   by (cases F, auto)
 
-(* FIXME: add all variants
-   of big set UN/INT syntax, maps, all relevant order stuff, etc. *)
+lemma strengthen_UN[strg]:
+  "st_ord F A A' \<Longrightarrow> (\<And>x. x \<in> A \<Longrightarrow> st_ord F (B x) (B' x))
+    \<Longrightarrow> st_ord F (\<Union>x \<in> A. B x) (\<Union>x \<in> A'. B' x)"
+  by (cases F, auto)
+
+lemma strengthen_INT[strg]:
+  "st_ord (\<not> F) A A' \<Longrightarrow> (\<And>x. x \<in> A \<Longrightarrow> st_ord F (B x) (B' x))
+    \<Longrightarrow> st_ord F (\<Inter>x \<in> A. B x) (\<Inter>x \<in> A'. B' x)"
+  by (cases F, auto)
+
+(* to think about, what more monotonic constructions can we find? *)
 
 lemma imp_consequent:
   "P \<longrightarrow> Q \<longrightarrow> P" by simp
