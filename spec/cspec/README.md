@@ -53,5 +53,5 @@ Remarks
 To speed up interactive development, the bitfield code generator can be
 configured to skip the corresponding proofs and produce sorried
 (unproven) property statements only. To achieve this, set the
-environment variable `SORRY_BITFIELD_PROOFS` to `1`.
+environment variable `SORRY_BITFIELD_PROOFS` to `TRUE`.
 
