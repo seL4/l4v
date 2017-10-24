@@ -24,6 +24,8 @@ ifeq ($(findstring ARM, ${L4V_ARCH}),ARM)
     TOOLPREFIX ?= arm-none-eabi-
 endif
 
+SORRY_BITFIELD_PROOFS?=FALSE
+
 ifeq ($(shell which ${TOOLPREFIX}cpp),)
   ifeq ($(shell which cpp),)
     $(error C Preprocessor '${TOOLPREFIX}cpp' not found)
@@ -61,6 +63,7 @@ ${BUILDROOT}/CMakeCache.txt: ${SOURCE_ROOT}/gcc.cmake ${SOURCE_ROOT}/configs/${C
 		-DCSPEC_DIR=${CSPEC_DIR} \
 		-DSKIP_MODIFIES=${SKIP_MODIFIES} \
 		-DUMM_TYPES=${UMM_TYPES} \
+		-DSORRY_BITFIELD_PROOFS=${SORRY_BITFIELD_PROOFS} \
 		-DKernelDomainSchedule=${CONFIG_DOMAIN_SCHEDULE} -G Ninja ${SOURCE_ROOT}
 
 # called by ../spec/Makefile
