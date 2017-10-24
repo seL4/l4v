@@ -42,16 +42,17 @@ CSPEC_DIR=${PWD}/..
 # for working out when we should rebuild the kernel
 KERNEL_DEPS = $(shell find ${SOURCE_ROOT} -type f)
 
-# Top level rule for rebuilding kernel_all.c_pp. Depend upon all the kernel sources, this
-# largely allows us to not use a phony target, whilst still hopefully capture all the times
-# we need to rebuild
-${BUILDROOT}/kernel_all.c_pp: ${BUILDROOT}/CMakeCache.txt ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE}
+# Top level rule for rebuilding kernel_all.c_pp
+${BUILDROOT}/kernel_all.c_pp: ${BUILDROOT}/CMakeCache.txt
 	cd ${BUILDROOT} && ninja kernel_all_pp_wrapper
 	cp -a ${BUILDROOT}/kernel_all_pp.c $@
 
-# Rule for initializing the CMake build. In order to pick up changes to the configuration files
-# we have to purge everything and start again
-${BUILDROOT}/CMakeCache.txt: ${SOURCE_ROOT}/gcc.cmake ${SOURCE_ROOT}/configs/${CONFIG}
+# Rule for initializing the CMake build. In order to pick up changes to the configuration
+# we have to purge everything and start again, so for simplicity we just make the cache
+# depend upon all the kernel sources. This is mostly needed as the usage of this 'hides' the
+# fact there is a configured build going on, so we accept increased rebuild times to not
+# confuse users by not rebuilding when we should
+${BUILDROOT}/CMakeCache.txt: ${SOURCE_ROOT}/gcc.cmake ${SOURCE_ROOT}/configs/${CONFIG} ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE}
 	rm -rf ${BUILDROOT}
 	mkdir -p ${BUILDROOT}
 	cd ${BUILDROOT} && \
