@@ -136,7 +136,7 @@ where
                     else None"
 
 definition
-  refill_ready_tcb :: "obj_ref \<Rightarrow> bool det_ext_monad"
+  refill_ready_tcb :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
 where
   "refill_ready_tcb t = do
      sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
@@ -338,12 +338,12 @@ where
 
 
 definition
-  invoke_sched_context :: "sched_context_invocation \<Rightarrow> (unit, det_ext) se_monad"
+  invoke_sched_context :: "sched_context_invocation \<Rightarrow> (unit, 'z::state_ext) se_monad"
 where
   "invoke_sched_context iv \<equiv> liftE $ case iv of
     InvokeSchedContextConsumed sc_ptr args \<Rightarrow> set_consumed sc_ptr args
   | InvokeSchedContextBind sc_ptr cap \<Rightarrow> (case cap of
-      ThreadCap tcb_ptr \<Rightarrow> sched_context_bind_tcb sc_ptr tcb_ptr
+      ThreadCap tcb_ptr \<Rightarrow> do_extended_op $ sched_context_bind_tcb sc_ptr tcb_ptr
     | NotificationCap ntfn _ _ \<Rightarrow> sched_context_bind_ntfn sc_ptr ntfn
     | _ \<Rightarrow> fail)
   | InvokeSchedContextUnbindObject sc_ptr cap \<Rightarrow> (case cap of
@@ -355,7 +355,7 @@ where
       sched_context_unbind_ntfn sc_ptr
     od
   | InvokeSchedContextYieldTo sc_ptr args \<Rightarrow>
-      sched_context_yield_to sc_ptr args"
+      do_extended_op $ sched_context_yield_to sc_ptr args"
 
 
 

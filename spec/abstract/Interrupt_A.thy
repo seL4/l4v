@@ -49,7 +49,7 @@ delivered when Notification capabilities are installed in the relevant per-IRQ
 slot. The IRQHandler operations load or clear those capabilities. *}
 
 fun
-  invoke_irq_handler :: "irq_handler_invocation \<Rightarrow> unit det_ext_monad"
+  invoke_irq_handler :: "irq_handler_invocation \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "invoke_irq_handler (ACKIrq irq) = (do_machine_op $ maskInterrupt False irq)"
 | "invoke_irq_handler (SetIRQHandler irq cap slot) = (do
@@ -68,7 +68,7 @@ ticks. If the IRQ has a valid Notification cap loaded a message is
 delivered. *}
 
 definition
-  handle_interrupt :: "irq \<Rightarrow> unit det_ext_monad" where
+  handle_interrupt :: "irq \<Rightarrow> (unit, 'z::state_ext) s_monad" where
  "handle_interrupt irq \<equiv> 
    if (irq > maxIRQ) then do_machine_op $ do
     maskInterrupt True irq;

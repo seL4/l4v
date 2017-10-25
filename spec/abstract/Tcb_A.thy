@@ -53,7 +53,7 @@ control is restored to a used thread. If it needs to be restarted then its
 program counter is set to the operation it was performing rather than the next
 operation. The idle thread is handled specially. *}
 definition
-  activate_thread :: "(unit,det_ext) s_monad" where
+  activate_thread :: "(unit, 'z::state_ext) s_monad" where
   "activate_thread \<equiv> do
      thread \<leftarrow> gets cur_thread;
      state \<leftarrow> get_thread_state thread;
@@ -136,7 +136,7 @@ where
    od"
 
 definition
-  install_tcb_cap :: "obj_ref \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> nat \<Rightarrow> (cap \<times> cslot_ptr) option \<Rightarrow> (unit,det_ext) p_monad"
+  install_tcb_cap :: "obj_ref \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> nat \<Rightarrow> (cap \<times> cslot_ptr) option \<Rightarrow> (unit, 'z::state_ext) p_monad"
 where
   "install_tcb_cap target tcap slot n slot_opt \<equiv> (* do we need tcap?; tcap = ThreadCap target *)
      case slot_opt of None \<Rightarrow> returnOk ()
@@ -152,10 +152,10 @@ request to yield its timeslice to another, to suspend or resume another, to
 reconfigure another thread, or to copy register sets into, out of or between
 other threads. *}
 fun
-  invoke_tcb :: "tcb_invocation \<Rightarrow> (data list,det_ext) p_monad"
+  invoke_tcb :: "tcb_invocation \<Rightarrow> (data list, 'z::state_ext) p_monad"
 where
   "invoke_tcb (Suspend thread) = liftE (do suspend thread; return [] od)"
-| "invoke_tcb (Resume thread) = liftE (do restart thread; return [] od)"
+| "invoke_tcb (Resume thread) = liftE (do do_extended_op $ restart thread; return [] od)"
 
 | "invoke_tcb (ThreadControl target slot fault_handler timeout_handler mcp priority croot vroot buffer sc)
    = doE
@@ -170,7 +170,7 @@ where
      od
      | Some (Some sc_ptr) \<Rightarrow> do
         sc' \<leftarrow> get_tcb_obj_ref tcb_sched_context target;
-        when (sc' \<noteq> Some sc_ptr) $ sched_context_bind_tcb sc_ptr target
+        when (sc' \<noteq> Some sc_ptr) $ do_extended_op $ sched_context_bind_tcb sc_ptr target
      od;
     install_tcb_cap target (ThreadCap target) slot 0 croot;
     install_tcb_cap target (ThreadCap target) slot 1 vroot;
@@ -195,7 +195,7 @@ where
 | "invoke_tcb (CopyRegisters dest src suspend_source resume_target transfer_frame transfer_integer transfer_arch) =
   (liftE $ do
     when suspend_source $ suspend src;
-    when resume_target $ restart dest;
+    when resume_target $ do_extended_op $ restart dest;
     when transfer_frame $ do
         mapM_x (\<lambda>r. do
                 v \<leftarrow> as_user src $ getRegister r;
@@ -234,7 +234,7 @@ where
         setNextPC pc
     od;
     arch_post_modify_registers self dest;
-    when resume_target $ restart dest;
+    when resume_target $ do_extended_op $ restart dest;
     when (dest = self) (do_extended_op reschedule_required);
     return []
   od)"
@@ -260,14 +260,14 @@ where
   od)"
 
 definition
-  set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> unit det_ext_monad" where
+  set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "set_domain tptr new_dom \<equiv> do
      cur \<leftarrow> gets cur_thread;
-     tcb_sched_action tcb_sched_dequeue tptr;
-     thread_set_domain tptr new_dom;
+     do_extended_op $ tcb_sched_action tcb_sched_dequeue tptr;
+     do_extended_op $ thread_set_domain tptr new_dom;
      ts \<leftarrow> get_thread_state tptr;
-     when (runnable ts) (tcb_sched_action tcb_sched_enqueue tptr);
-     when (tptr = cur) reschedule_required
+     when (runnable ts) $ do_extended_op $ (tcb_sched_action tcb_sched_enqueue tptr);
+     when (tptr = cur) $ do_extended_op $ reschedule_required
    od"
 
 definition invoke_domain:: "obj_ref \<Rightarrow> domain \<Rightarrow> (data list,'z::state_ext) p_monad"

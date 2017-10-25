@@ -314,11 +314,23 @@ text {* Finalise a capability if the capability is known to be of the kind
 which can be finalised immediately. This is a simplified version of the
 @{text finalise_cap} operation. *}
 fun
-  fast_finalise :: "cap \<Rightarrow> bool \<Rightarrow> unit det_ext_monad"
+  fast_finalise :: "cap \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "fast_finalise NullCap                 final = return ()"
 | "fast_finalise (ReplyCap r)            final =
-      (when final $ reply_remove r)"
+      (when final $ do
+          reply \<leftarrow> get_reply r;
+          tptr \<leftarrow> return (reply_tcb reply);
+          when (tptr \<noteq> None) $ do
+             ts \<leftarrow> get_thread_state (the tptr);
+             case ts of BlockedOnReply _ \<Rightarrow> reply_remove r
+                  | BlockedOnReceive n _ \<Rightarrow> do
+                         set_reply r (reply\<lparr> reply_tcb := None \<rparr>);
+                         set_thread_state (the tptr) (BlockedOnReceive n None)
+                    od
+                   | _ \<Rightarrow> return ()
+              od
+           od)"   (* case distinction on thread state *)
 | "fast_finalise (EndpointCap r b R)     final =
       (when final $ cancel_all_ipc r)"
 | "fast_finalise (NotificationCap r b R) final =
@@ -339,7 +351,7 @@ where
 text {* Delete a capability with the assumption that the fast finalisation
 process will be sufficient. *}
 definition
-  cap_delete_one :: "cslot_ptr \<Rightarrow> unit det_ext_monad" where
+  cap_delete_one :: "cslot_ptr \<Rightarrow> (unit, 'z::state_ext) s_monad" where
  "cap_delete_one slot \<equiv> do
     cap \<leftarrow> get_cap slot;
     unless (cap = NullCap) $ do
@@ -449,7 +461,7 @@ definition
 
 text {* Actions to be taken after deleting an IRQ Handler capability. *}
 definition
-  deleting_irq_handler :: "irq \<Rightarrow> unit det_ext_monad"
+  deleting_irq_handler :: "irq \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
  "deleting_irq_handler irq \<equiv> do
     slot \<leftarrow> get_irq_slot irq;
@@ -466,12 +478,27 @@ associated with arch-specific post-deletion actions. For most cases, however,
 NullCap is used to indicate that no post-deletion action is required. *}
 
 fun
-  finalise_cap :: "cap \<Rightarrow> bool \<Rightarrow> (cap \<times> cap,det_ext) s_monad"
+  finalise_cap :: "cap \<Rightarrow> bool \<Rightarrow> (cap \<times> cap,'z::state_ext) s_monad"
 where
   "finalise_cap NullCap                  final = return (NullCap, NullCap)"
 | "finalise_cap (UntypedCap dev r bits f)    final = return (NullCap, NullCap)"
 | "finalise_cap (ReplyCap r)             final =
-      (liftM (K (NullCap, NullCap)) $ when final $ reply_remove r)"
+      (liftM (K (NullCap, NullCap)) $ when final $ do
+         reply \<leftarrow> get_reply r;
+         tptr \<leftarrow> return (reply_tcb reply);
+         when (tptr \<noteq> None) $ do
+           ts \<leftarrow> get_thread_state (the tptr);
+           case ts of BlockedOnReply rp \<Rightarrow> reply_remove r (* (r = Some reply) should hold *)
+                    | BlockedOnReceive n rp \<Rightarrow> do
+                         set_reply r (reply\<lparr> reply_tcb := None \<rparr>);
+                         set_thread_state (the tptr) (BlockedOnReceive n None)
+                        od 
+                    | _ \<Rightarrow> return ()
+         od
+           (* current PR#916 doesn't change the TS of the caller/callee thread
+              what is the TS of the caller/callee thread when its reply object is removed?
+              Or just setting it to None would do? *) (* FIXME *)
+       od)"
 | "finalise_cap (EndpointCap r b R)      final =
       (liftM (K (NullCap, NullCap)) $ when final $ cancel_all_ipc r)"
 | "finalise_cap (NotificationCap r b R) final =
@@ -483,11 +510,11 @@ where
 | "finalise_cap (CNodeCap r bits g)  final =
       return (if final then Zombie r (Some bits) (2 ^ bits) else NullCap, NullCap)"
 | "finalise_cap (ThreadCap r)            final =
-      do
+      do (* can be in any thread state *)
          when final $ unbind_notification r;
          when final $ unbind_from_sc r;
-         when final $ unbind_from_reply r;
-         when final $ suspend r;
+         when final $ unbind_from_reply r; (* this line is not in the current PR #916 *)
+         when final $ suspend r; (* suspend sets the TS to Inactive *)
          when final $ prepare_thread_delete r;
          return (if final then (Zombie r None 5) else NullCap, NullCap)
       od"
@@ -559,7 +586,7 @@ definition
 
 text {* The complete recursive delete operation. *}
 function (sequential)
-  rec_del :: "rec_del_call \<Rightarrow> (bool * cap,det_ext) p_monad"
+  rec_del :: "rec_del_call \<Rightarrow> (bool * cap,'z::state_ext) p_monad"
 where
   "rec_del (CTEDeleteCall slot exposed) s =
  (doE
@@ -633,12 +660,12 @@ where
 
 text {* Delete a capability by calling the recursive delete operation. *}
 definition
-  cap_delete :: "cslot_ptr \<Rightarrow> (unit, det_ext) p_monad" where
+  cap_delete :: "cslot_ptr \<Rightarrow> (unit, 'z::state_ext) p_monad" where
  "cap_delete slot \<equiv> doE rec_del (CTEDeleteCall slot True); returnOk () odE"
 
 text {* Prepare the capability in a slot for deletion but do not delete it. *}
 definition
-  finalise_slot :: "cslot_ptr \<Rightarrow> bool \<Rightarrow> (bool * cap,det_ext) p_monad"
+  finalise_slot :: "cslot_ptr \<Rightarrow> bool \<Rightarrow> (bool * cap,'z::state_ext) p_monad"
 where
   "finalise_slot p e \<equiv> rec_del (FinaliseSlotCall p e)"
 
@@ -667,7 +694,7 @@ where
 text {* Revoke the derived capabilities of a given capability, deleting them
 all. *}
 
-function cap_revoke :: "cslot_ptr \<Rightarrow> (unit, det_ext) p_monad"
+function cap_revoke :: "cslot_ptr \<Rightarrow> (unit, 'z::state_ext) p_monad"
 where
 "cap_revoke slot s = (doE
     cap \<leftarrow> without_preemption $ get_cap slot;
@@ -880,7 +907,7 @@ with Save.  The Revoke, Delete and Recycle methods may also be
 invoked on the capabilities stored in the CNode. *}
 
 definition
-  invoke_cnode :: "cnode_invocation \<Rightarrow> (unit, det_ext) p_monad" where
+  invoke_cnode :: "cnode_invocation \<Rightarrow> (unit, 'z::state_ext) p_monad" where
   "invoke_cnode i \<equiv> case i of
     RevokeCall dest_slot \<Rightarrow> cap_revoke dest_slot
   | DeleteCall dest_slot \<Rightarrow> cap_delete dest_slot

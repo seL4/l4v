@@ -715,7 +715,7 @@ invocation is allowed.
 *}
 
 definition
-  decode_invocation :: 
+  decode_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (invocation, det_ext) se_monad"
 where
   "decode_invocation label args cap_index slot cap excaps \<equiv>

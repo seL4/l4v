@@ -53,7 +53,7 @@ abbreviation
   "refill_tl sc \<equiv> last (sc_refills sc)" (** condition? **)
 
 definition
-  get_sc_time :: "obj_ref \<Rightarrow> time det_ext_monad"
+  get_sc_time :: "obj_ref \<Rightarrow> (time, 'z::state_ext) s_monad"
 where
   "get_sc_time tcb_ptr = do
     sc \<leftarrow> get_tcb_sc tcb_ptr;
@@ -417,7 +417,7 @@ definition
    od"
 
 definition
-  set_consumed :: "obj_ref \<Rightarrow> data list \<Rightarrow> (unit, det_ext) s_monad"
+  set_consumed :: "obj_ref \<Rightarrow> data list \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "set_consumed sc_ptr args \<equiv>do
       consumed \<leftarrow> sched_context_update_consumed sc_ptr;
@@ -430,7 +430,7 @@ where
 text {* yield\_to related functions *}
 
 definition
-  complete_yield_to :: "obj_ref \<Rightarrow> (unit, det_ext) s_monad"
+  complete_yield_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "complete_yield_to tcb_ptr \<equiv> do
      st \<leftarrow> get_thread_state tcb_ptr;
@@ -447,7 +447,7 @@ where
     od"
 
 definition
-  sched_context_unbind_yield_from :: "obj_ref \<Rightarrow> (unit, det_ext) s_monad"
+  sched_context_unbind_yield_from :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_unbind_yield_from sc_ptr \<equiv> do
     sc \<leftarrow> get_sched_context sc_ptr;
@@ -469,7 +469,7 @@ where
 
 text \<open> Unbind TCB from its scheduling context, if there is one bound. \<close>
 definition
-  unbind_from_sc :: "obj_ref \<Rightarrow> (unit, det_ext) s_monad"
+  unbind_from_sc :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "unbind_from_sc tcb_ptr = do
     sc_ptr_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb_ptr;
@@ -480,7 +480,7 @@ where
   od"
 
 definition
-  maybe_donate_sc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> unit det_ext_monad"
+  maybe_donate_sc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "maybe_donate_sc tcb_ptr ntfn_ptr = do
      sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb_ptr;
@@ -492,7 +492,7 @@ where
    od"
 
 definition
-  maybe_return_sc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> unit det_ext_monad"
+  maybe_return_sc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "maybe_return_sc ntfn_ptr tcb_ptr = do
     nsc_opt \<leftarrow> get_ntfn_obj_ref ntfn_sc ntfn_ptr;
@@ -555,7 +555,7 @@ where
 text {* Suspend a thread, cancelling any pending operations and preventing it
 from further execution by setting it to the Inactive state. *}
 definition
-  suspend :: "obj_ref \<Rightarrow> unit det_ext_monad"
+  suspend :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "suspend thread \<equiv> do
      cancel_ipc thread;

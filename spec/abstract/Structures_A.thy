@@ -377,7 +377,7 @@ datatype thread_state
   | YieldTo obj_ref (* sc ref *)
   | BlockedOnReceive obj_ref "obj_ref option"
   | BlockedOnSend obj_ref sender_payload
-  | BlockedOnReply
+  | BlockedOnReply "obj_ref option"
   | BlockedOnNotification obj_ref
   | IdleThreadState
 
@@ -395,7 +395,6 @@ record tcb =
  tcb_bound_notification     :: "obj_ref option"
  tcb_mcpriority    :: priority
  tcb_sched_context :: "obj_ref option"
- tcb_reply         :: "obj_ref option"
  tcb_arch          :: arch_tcb
 
 text {* Determines whether a thread in a given state may be scheduled. *}
@@ -410,7 +409,7 @@ where
 | "runnable (BlockedOnSend x y)     = False"
 | "runnable (BlockedOnNotification x) = False"
 | "runnable (IdleThreadState)       = False"
-| "runnable (BlockedOnReply)        = False"
+| "runnable (BlockedOnReply _)        = False"
 
 definition
   default_tcb :: tcb where
@@ -426,7 +425,6 @@ definition
       tcb_bound_notification  = None,
       tcb_mcpriority = minBound,
       tcb_sched_context = None,
-      tcb_reply      = None,
       tcb_arch       = default_arch_tcb\<rparr>"
 
 type_synonym ticks = "64 word"
@@ -465,11 +463,13 @@ definition
   \<rparr>"
 
 record reply =
-  reply_caller :: "obj_ref option"
+  reply_tcb :: "obj_ref option"
+(*  reply_caller :: "obj_ref option"
+  reply_callee :: "obj_ref option"*)
   reply_sc     :: "obj_ref option"
 
 definition
-  "default_reply = \<lparr> reply_caller = None, reply_sc = None \<rparr>"
+  "default_reply = \<lparr> reply_tcb = None, (*reply_caller = None, reply_callee = None,*) reply_sc = None \<rparr>"
 
 text {*
 All kernel objects are CNodes, TCBs, Endpoints, Notifications or architecture

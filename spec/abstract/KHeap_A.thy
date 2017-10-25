@@ -250,7 +250,7 @@ where
 section {* Reply Objects *}
 
 definition
-  get_reply :: "obj_ref \<Rightarrow> reply det_ext_monad"
+  get_reply :: "obj_ref \<Rightarrow> (reply, 'z::state_ext) s_monad"
 where
   "get_reply ptr \<equiv> do
      kobj \<leftarrow> get_object ptr;
@@ -267,6 +267,9 @@ where
      set_object ptr (Reply r)
    od"
 
+abbreviation
+  "get_reply_tcb r \<equiv> liftM reply_tcb (get_reply r)"
+(*
 abbreviation
   "get_reply_caller r \<equiv> liftM reply_caller (get_reply r)"
 

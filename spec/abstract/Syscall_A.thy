@@ -158,7 +158,7 @@ preemptable.
 *}
 
 fun
-  perform_invocation :: "bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> invocation \<Rightarrow> (data list, det_ext) p_monad"
+  perform_invocation :: "bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> invocation \<Rightarrow> (data list, 'z::state_ext) p_monad"
 where
   "perform_invocation _ _ _ (InvokeUntyped i) =
     doE
@@ -169,7 +169,7 @@ where
 | "perform_invocation block call can_donate (InvokeEndpoint ep badge can_grant) =
     (without_preemption $ do
        thread \<leftarrow> gets cur_thread;
-       send_ipc block call badge can_grant can_donate thread ep;
+       do_extended_op $ send_ipc block call badge can_grant can_donate thread ep;
        return []
      od)"
 
@@ -224,7 +224,7 @@ where
     arch_perform_invocation i"
 
 definition
-  get_cap_reg :: "register \<Rightarrow> cap_ref det_ext_monad"
+  get_cap_reg :: "register \<Rightarrow> (cap_ref, 'z::state_ext) s_monad"
 where
   "get_cap_reg reg = do
     ct \<leftarrow> gets cur_thread;
@@ -272,7 +272,7 @@ where
 
 
 definition
-  handle_yield :: "unit det_ext_monad" where
+  handle_yield :: "(unit, 'z::state_ext) s_monad" where
   "handle_yield \<equiv> do
      cur_sc \<leftarrow> gets cur_sc;
      refills \<leftarrow> get_refills cur_sc;
@@ -294,7 +294,7 @@ definition
   od"
 
 definition
-  lookup_reply :: "(cap, det_ext) f_monad"
+  lookup_reply :: "(cap, 'z::state_ext) f_monad"
 where
   "lookup_reply = doE
     cref \<leftarrow> liftE $ get_cap_reg replyRegister;
@@ -306,7 +306,7 @@ where
   odE"
 
 definition
-  handle_recv :: "bool \<Rightarrow> bool \<Rightarrow> (unit, det_ext) s_monad" where
+  handle_recv :: "bool \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "handle_recv is_blocking can_reply \<equiv> do
      thread \<leftarrow> gets cur_thread;
 
@@ -322,14 +322,14 @@ definition
           of EndpointCap ref badge rights \<Rightarrow> doE
                whenE (AllowRecv \<notin> rights) flt;
                reply_cap \<leftarrow> if can_reply then lookup_reply else returnOk NullCap;
-               liftE $ receive_ipc thread ep_cap is_blocking reply_cap
+               liftE $ do_extended_op $ receive_ipc thread ep_cap is_blocking reply_cap
              odE
            | NotificationCap ref badge rights \<Rightarrow> 
              (if AllowRecv \<in> rights
               then doE
                 boundTCB \<leftarrow> liftE $ get_ntfn_obj_ref ntfn_bound_tcb ref;
                 if boundTCB = Some thread \<or> boundTCB = None
-                then liftE $ receive_signal thread ep_cap is_blocking
+                then liftE $ do_extended_op $ receive_signal thread ep_cap is_blocking
                 else flt
                odE
               else flt)
