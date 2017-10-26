@@ -29,7 +29,7 @@ This module defines the x86 64-bit register set.
 
 > type Word = Data.Word.Word64
 
-> capRegister = RBX
+> capRegister = RDI
 > msgInfoRegister = RSI
 > msgRegisters = [R10, R8, R9, R15]
 > badgeRegister = capRegister
