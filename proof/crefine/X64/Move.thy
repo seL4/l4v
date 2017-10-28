@@ -101,9 +101,8 @@ lemma shiftr_and_eq_shiftl:
       hence "test_bit (w && (x << n)) i \<longleftrightarrow> test_bit (y << n) i"
         using word_eqD[where x="i-n", OF r]
         by (cases "n \<le> i") (auto simp: nth_shiftl nth_shiftr)
-    } note bits = this
-    show ?thesis
-      by (rule word_eqI, rule bits, simp add: word_size)
+    }
+    thus ?thesis using word_eq_iff by blast
   qed
 
 (* FIXME: move *)
