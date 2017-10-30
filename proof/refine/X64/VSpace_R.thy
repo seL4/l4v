@@ -1182,10 +1182,6 @@ lemmas liftE_get_pde_corres = get_pde_corres'[THEN corres_liftE_rel_sum[THEN iff
 lemmas liftE_get_pte_corres = get_pte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
 lemmas liftE_get_pdpte_corres = get_pdpte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
 
-(* Wrap up the standard usage pattern of wp/wpc/simp into its own command: *)
-method wpsimp' uses wp wp_del simp simp_del split split_del cong =
-  ((determ \<open>wp add: wp del: wp_del |wpc|clarsimp simp add: simp simp del: simp_del split: split split del: split_del cong: cong\<close>)+)[1]
-
 lemma unmap_page_corres:
   assumes "sz' = sz" "asid' = asid" "vptr' = vptr" "pptr' = pptr"
   shows "corres dc (invs and valid_etcbs and
@@ -1224,7 +1220,7 @@ lemma unmap_page_corres:
                    apply (rule corres_split_norE[OF _ check_mapping_corres, where r=dc, simplified])
                    apply simp
                    apply (rule store_pte_corres')
-                   apply (((wpsimp' wp: hoare_vcg_all_lift_R get_pte_wp getPTE_wp lookup_pt_slot_wp
+                   apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pte_wp getPTE_wp lookup_pt_slot_wp
                                   simp: page_entry_map_def unlessE_def is_aligned_pml4
                              split_del: if_split
                               simp_del: dc_simp)+
@@ -1236,7 +1232,7 @@ lemma unmap_page_corres:
                apply (rule corres_split_norE[OF _ check_mapping_corres, where r=dc, simplified])
                   apply simp
                   apply (rule store_pde_corres')
-                  apply (((wpsimp' wp: hoare_vcg_all_lift_R get_pde_wp getPDE_wp lookup_pd_slot_wp
+                  apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pde_wp getPDE_wp lookup_pd_slot_wp
                                  simp: page_entry_map_def unlessE_def is_aligned_pml4
                             split_del: if_split
                              simp_del: dc_simp)+
@@ -1248,7 +1244,7 @@ lemma unmap_page_corres:
               apply (rule corres_split_norE[OF _ check_mapping_corres, where r=dc, simplified])
                  apply simp
                  apply (rule store_pdpte_corres')
-                 apply (((wpsimp' wp: hoare_vcg_all_lift_R get_pdpte_wp getPDPTE_wp
+                 apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pdpte_wp getPDPTE_wp
                                       lookup_pdpt_slot_wp
                                 simp: page_entry_map_def unlessE_def is_aligned_pml4
                            split_del: if_split
@@ -3360,10 +3356,7 @@ lemma isPML4Cap'_PML4 :
 
 lemma diminished_valid':
   "diminished' cap cap' \<Longrightarrow> valid_cap' cap = valid_cap' cap'"
-  apply (clarsimp simp add: diminished'_def)
-  apply (rule ext)
-  apply (simp add: maskCapRights_def Let_def split del: if_split)
-  done
+  by (rule ext) (clarsimp simp add: diminished'_def)
 
 lemma diminished_isPML4Cap':
   "diminished' cap cap' \<Longrightarrow> isPML4Cap' cap' = isPML4Cap' cap"
