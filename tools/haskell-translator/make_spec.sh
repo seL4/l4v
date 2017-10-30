@@ -9,6 +9,7 @@
 # @TAG(NICTA_BSD)
 #
 
+set -e
 
 ORIG_PWD="$PWD"
 
@@ -62,18 +63,6 @@ then
     exit
 fi
 
-echo Built from git repo at $L4CAP by $USER > $SPEC/version
-echo >> $SPEC/version
-echo Generated from changeset: >> $SPEC/version
-(cd $L4CAP && git show --oneline | head -1) >> $SPEC/version
-echo >> $SPEC/version
-if [ "$(cd $L4CAP && git status --short)" != "" ]
-then
-    echo >> $SPEC/version
-    echo Warning - uncomitted changes used: >> $SPEC/version
-    (cd $L4CAP && git status --short) >> $SPEC/version
-fi
-
 # which architectures to process
 ARCHES=("ARM" "X64" "ARM_HYP")
 
@@ -101,6 +90,9 @@ NAMES=`cd $SKEL; ls *.thy`
 
 SPECNONARCH="/tmp/make_spec_temp_nonarch_$$"
 TMPFILE="/tmp/make_spec_temp_$$"
+
+# Delete on exit
+trap "rm -fr $SPECNONARCH $TMPFILE" EXIT
 
 function send_filenames () {
     local arch=${1}
@@ -149,5 +141,15 @@ done
 
 for thy in $SPECNONARCH/${ARCHES[0]}/*.thy; do rsync -c "$thy" "$SPEC/"; done
 
-rm -r $SPECNONARCH
-rm -r $TMPFILE
+echo Built from git repo at $L4CAP by $USER > $SPEC/version
+echo >> $SPEC/version
+echo Generated from changeset: >> $SPEC/version
+(cd $L4CAP && git show --oneline | head -1) >> $SPEC/version
+echo >> $SPEC/version
+if [ "$(cd $L4CAP && git status --short)" != "" ]
+then
+    echo >> $SPEC/version
+    echo Warning - uncomitted changes used: >> $SPEC/version
+    (cd $L4CAP && git status --short) >> $SPEC/version
+fi
+
