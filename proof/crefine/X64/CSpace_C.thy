@@ -3026,7 +3026,7 @@ definition
     | Some (Cap_endpoint_cap c) \<Rightarrow> 4
     | Some (Cap_notification_cap c) \<Rightarrow> 5
     | Some (Cap_cnode_cap c) \<Rightarrow> unat (capCNodeRadix_CL c) + 5
-    | Some (Cap_thread_cap c) \<Rightarrow> 11
+    | Some (Cap_thread_cap c) \<Rightarrow> 11 (*tcbBlockSizeBits*)
     | Some (Cap_frame_cap c) \<Rightarrow> pageBitsForSize (framesize_to_H $ cap_frame_cap_CL.capFSize_CL c)
     | Some (Cap_page_table_cap c) \<Rightarrow> 12
     | Some (Cap_page_directory_cap c) \<Rightarrow> 12
@@ -3035,7 +3035,8 @@ definition
     | Some (Cap_asid_pool_cap c) \<Rightarrow> 12
     | Some (Cap_zombie_cap c) \<Rightarrow>
         let type = cap_zombie_cap_CL.capZombieType_CL c in
-        if isZombieTCB_C type then 11 else unat (type && mask 5) + 5
+        if isZombieTCB_C type then 11 (*tcbBlockSizeBits*)
+         else unat (type && mask 6(* wordRadix *)) + 5 (*cte_size_bits*)
     | _ \<Rightarrow> 0"
 
 lemma frame_cap_size [simp]:
@@ -3134,7 +3135,7 @@ definition
   get_capZombieBits_CL :: "cap_zombie_cap_CL \<Rightarrow> machine_word" where
   "get_capZombieBits_CL \<equiv> \<lambda>cap.
       let type = cap_zombie_cap_CL.capZombieType_CL cap in
-      if isZombieTCB_C type then 4 else type && mask 5"
+      if isZombieTCB_C type then 4 else type && mask 6"
 
 lemma get_capSizeBits_valid_shift:
   "\<lbrakk> ccap_relation hcap ccap; capAligned hcap \<rbrakk> \<Longrightarrow>
@@ -3170,7 +3171,7 @@ lemma get_capSizeBits_valid_shift:
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply (clarsimp simp: ccap_relation_def map_option_Some_eq2
                         cap_lift_cnode_cap cap_to_H_def
-                        Let_def capAligned_def objBits_simps
+                        Let_def capAligned_def objBits_simps'
                         word_bits_conv)
   done
 
@@ -3211,8 +3212,8 @@ lemma cap_zombie_cap_get_capZombiePtr_spec:
   apply (clarsimp split: if_split)
   apply (clarsimp simp: get_capZombieBits_CL_def Let_def word_size
                  split: if_split if_split_asm)
-  apply (subgoal_tac "unat (capZombieType_CL (cap_zombie_cap_lift cap) && mask 5)
-                      < unat ((2::machine_word) ^ 5)")
+  apply (subgoal_tac "unat (capZombieType_CL (cap_zombie_cap_lift cap) && mask 6)
+                      < unat ((2::machine_word) ^ 6)")
    apply clarsimp
   apply (rule unat_mono)
   apply (rule and_mask_less_size)
@@ -3336,7 +3337,7 @@ lemma ctcb_ptr_to_tcb_ptr_mask':
      ctcb_ptr_to_tcb_ptr (tcb_Ptr x) = x && ~~ mask (objBits (undefined :: tcb))"
   apply (simp add: ctcb_ptr_to_tcb_ptr_def)
   apply (drule_tac d=ctcb_offset in is_aligned_add_helper)
-   apply (simp add: objBits_simps ctcb_offset_def)
+   apply (simp add: objBits_simps' ctcb_offset_defs)
   apply simp
   done
 

@@ -278,7 +278,7 @@ lemma cancelSignal_ccorres_helper:
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
 
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (simp add: objBits_simps)
    apply assumption
 
@@ -2030,7 +2030,7 @@ lemma scheduler_action_case_switch_to_if:
 lemma tcb_at_max_word:
   "tcb_at' t s \<Longrightarrow> tcb_ptr_to_ctcb_ptr t \<noteq> tcb_Ptr max_word"
   apply (drule is_aligned_tcb_ptr_to_ctcb_ptr)
-  apply (clarsimp simp add: is_aligned_def max_word_def)
+  apply (clarsimp simp add: is_aligned_def max_word_def ctcb_size_bits_def)
   done
 
 lemma scast_max_word [simp]:
@@ -2510,7 +2510,7 @@ lemma ccorres_pre_getEndpoint [corres_pre]:
      apply assumption
     apply clarsimp
     prefer 3
-    apply (clarsimp simp add: getEndpoint_def exs_getObject objBits_simps)
+    apply (clarsimp simp add: getEndpoint_def exs_getObject objBits_simps')
    defer
    apply (rule ccorres_guard_imp)
      apply (rule cc)
@@ -2813,7 +2813,7 @@ lemma cancelIPC_ccorres_helper:
                               typ_heap_simps')
        subgoal by (simp add: cmachine_state_relation_def)
       subgoal by (simp add: h_t_valid_clift_Some_iff)
-     subgoal by (simp add: objBits_simps)
+     subgoal by (simp add: objBits_simps')
     subgoal by (simp add: objBits_simps)
    apply assumption
   -- "non empty case"
@@ -2837,11 +2837,11 @@ lemma cancelIPC_ccorres_helper:
            apply (simp add: cendpoint_relation_def Let_def isSendEP_def isRecvEP_def split: endpoint.splits split del: if_split)
            -- "recv case"
             apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff
-              tcb_queue_relation'_next_mask_4 tcb_queue_relation'_prev_mask_4 cong: tcb_queue_relation'_cong)
+              tcb_queue_relation'_next_mask tcb_queue_relation'_prev_mask cong: tcb_queue_relation'_cong)
             subgoal sorry (*by (intro impI conjI; simp)*)
            -- "send case"
            apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff
-             tcb_queue_relation'_next_mask_4 tcb_queue_relation'_prev_mask_4 cong: tcb_queue_relation'_cong)
+             tcb_queue_relation'_next_mask tcb_queue_relation'_prev_mask cong: tcb_queue_relation'_cong)
            subgoal sorry (*by (intro impI conjI; simp)*)
           subgoal by simp
                 -- "ntfn relation"
@@ -2857,7 +2857,7 @@ lemma cancelIPC_ccorres_helper:
                              typ_heap_simps')
       subgoal by (simp add: cmachine_state_relation_def)
      subgoal by (simp add: h_t_valid_clift_Some_iff)
-    subgoal by (simp add: objBits_simps)
+    subgoal by (simp add: objBits_simps')
    subgoal by (simp add: objBits_simps)
   apply assumption
    done

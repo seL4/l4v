@@ -188,7 +188,7 @@ capUntypedPtr_C :: "cap_CL \<Rightarrow> word64" where
  | _ \<Rightarrow> error []"
 
 definition ZombieTCB_C_def:
-"ZombieTCB_C \<equiv> bit 5"
+"ZombieTCB_C \<equiv> bit 6" (*wordRadix*)
 
 definition
   isZombieTCB_C :: "word64 \<Rightarrow> bool" where

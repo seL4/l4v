@@ -335,7 +335,7 @@ lemma cancelAllIPC_ccorres:
              apply (erule ko_at_projectKO_opt)
             apply (clarsimp simp: typ_heap_simps setEndpoint_def)
             apply (rule rev_bexI)
-             apply (rule setObject_eq; simp add: objBits_simps)[1]
+             apply (rule setObject_eq; simp add: objBits_simps')[1]
             apply (clarsimp simp: rf_sr_def cstate_relation_def
                                   Let_def carch_state_relation_def carch_globals_def
                                   cmachine_state_relation_def)
@@ -385,7 +385,7 @@ lemma cancelAllIPC_ccorres:
            apply (erule ko_at_projectKO_opt)
           apply (clarsimp simp: typ_heap_simps setEndpoint_def)
           apply (rule rev_bexI)
-           apply (rule setObject_eq, simp_all add: objBits_simps)[1]
+           apply (rule setObject_eq, simp_all add: objBits_simps')[1]
           apply (clarsimp simp: rf_sr_def cstate_relation_def
                                 Let_def carch_state_relation_def carch_globals_def
                                 cmachine_state_relation_def)
@@ -472,7 +472,7 @@ lemma cancelAllSignals_ccorres:
            apply (erule ko_at_projectKO_opt)
           apply (clarsimp simp: typ_heap_simps setNotification_def)
           apply (rule rev_bexI)
-           apply (rule setObject_eq, simp_all add: objBits_simps)[1]
+           apply (rule setObject_eq, simp_all add: objBits_simps')[1]
           apply (clarsimp simp: rf_sr_def cstate_relation_def
                                 Let_def carch_state_relation_def carch_globals_def
                                 cmachine_state_relation_def)
@@ -524,8 +524,8 @@ lemma tcb_fields_ineq_helper:
      &(x\<rightarrow>[''tcbSchedPrev_C'']) \<noteq> &(y\<rightarrow>[''tcbSchedNext_C''])"
   apply (clarsimp dest!: tcb_aligned'[OF obj_at'_weakenE, OF _ TrueI]
                          ctcb_ptr_to_tcb_ptr_aligned)
-  apply (clarsimp simp: field_lvalue_def)
-  apply (subgoal_tac "is_aligned (ptr_val y - ptr_val x) 8")
+  apply (clarsimp simp: field_lvalue_def ctcb_size_bits_def)
+  apply (subgoal_tac "is_aligned (ptr_val y - ptr_val x) 10" (*ctcb_size_bits*))
    apply (drule sym, fastforce simp: is_aligned_def dvd_def)
   apply (erule(1) aligned_sub_aligned)
    apply (simp add: word_bits_conv)
@@ -680,7 +680,7 @@ lemma doUnbindNotification_ccorres:
              subgoal by (simp add: carch_state_relation_def typ_heap_simps')
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
-          subgoal by (simp add: objBits_simps)
+          subgoal by (simp add: objBits_simps')
          subgoal by (simp add: objBits_simps)
         apply assumption
        apply ceqv
@@ -730,7 +730,7 @@ lemma doUnbindNotification_ccorres':
              subgoal by (simp add: carch_state_relation_def typ_heap_simps')
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
-          subgoal by (simp add: objBits_simps)
+          subgoal by (simp add: objBits_simps')
          subgoal by (simp add: objBits_simps)
         apply assumption
        apply ceqv
@@ -1559,20 +1559,22 @@ lemma deletingIRQHandler_ccorres:
   apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
   done
 
+(* 6 = wordRadix,
+   5 = tcb_cnode_radix + 1,
+   7 = wordRadix+1*)
 lemma Zombie_new_spec:
   "\<forall>s. \<Gamma>\<turnstile> ({s} \<inter> {s. type_' s = 64 \<or> type_' s < 63}) Call Zombie_new_'proc
           {s'. cap_zombie_cap_lift (ret__struct_cap_C_' s') =
-                \<lparr> capZombieID_CL = \<^bsup>s\<^esup>ptr && ~~ mask (if \<^bsup>s\<^esup>type = (1 << 5) then 5 else unat (\<^bsup>s\<^esup>type + 1))
-                                    || \<^bsup>s\<^esup>number___unsigned_long && mask (if \<^bsup>s\<^esup>type = (1 << 5) then 5 else unat (\<^bsup>s\<^esup>type + 1)),
-                  capZombieType_CL = \<^bsup>s\<^esup>type && mask 6 \<rparr>
+                \<lparr> capZombieID_CL = \<^bsup>s\<^esup>ptr && ~~ mask (if \<^bsup>s\<^esup>type = (1 << 6) then 5 else unat (\<^bsup>s\<^esup>type + 1))
+                                    || \<^bsup>s\<^esup>number___unsigned_long && mask (if \<^bsup>s\<^esup>type = (1 << 6) then 5 else unat (\<^bsup>s\<^esup>type + 1)),
+                  capZombieType_CL = \<^bsup>s\<^esup>type && mask 7 \<rparr>
                \<and> cap_get_tag (ret__struct_cap_C_' s') = scast cap_zombie_cap}"
   apply vcg
   apply (clarsimp simp: word_sle_def)
   apply (simp add: mask_def word_log_esimps[where 'a=machine_word_len, simplified])
   apply clarsimp thm Zombie_new_body_def
-  oops (*
   apply (simp add: word_add_less_mono1[where k=1 and j="0x3F", simplified])
-  done *)
+  done
 
 lemma mod_mask_drop:
   "\<lbrakk> m = 2 ^ n; 0 < m; mask n && msk = mask n \<rbrakk> \<Longrightarrow>
@@ -1631,8 +1633,8 @@ lemma option_to_ctcb_ptr_not_0:
   apply (clarsimp simp: option_to_ctcb_ptr_def tcb_ptr_to_ctcb_ptr_def
                   split: option.splits)
   apply (frule tcb_aligned')
-  apply (frule_tac y=ctcb_offset and n=9 in aligned_offset_non_zero)
-    apply (clarsimp simp: ctcb_offset_def)+
+  apply (frule_tac y=ctcb_offset and n=tcbBlockSizeBits in aligned_offset_non_zero)
+    apply (clarsimp simp: ctcb_offset_defs objBits_defs)+
   done
 
 lemma update_tcb_map_to_tcb:
