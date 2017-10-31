@@ -241,7 +241,7 @@ lemma threadGet_stateAssert_gets:
    apply (simp add: threadGet_def liftM_def, (wp getObject_tcb_at')+)
   apply (simp add: threadGet_def liftM_def, wp+)
   apply (rule hoare_strengthen_post, (wp getObject_obj_at')+)
-     apply (simp add: objBits_def objBitsKO_def)+
+     apply (simp add: objBits_simps')+
   apply (clarsimp simp: obj_at'_def thread_fetch_def projectKOs)
   done
 
@@ -375,7 +375,7 @@ lemma threadGet_again:
    (threadGet ext t >>= n) s' = n rv s'"
   apply (clarsimp simp add: threadGet_def liftM_def in_monad)
   apply (frule use_valid [OF _ getObject_obj_at'])
-     apply (simp add: objBits_def objBitsKO_def)+
+     apply (simp add: objBits_simps')+
   apply (frule getObject_tcb_det)
   apply (clarsimp simp: bind_def split_def)
   apply (insert no_fail_getObject_tcb)
@@ -467,7 +467,9 @@ lemma asUser_storeWordUser_comm:
   apply assumption
   done
 
-(* FIXME x64: msgRegisters *)
+typ X64.register
+(* FIXME x64: msgRegisters - need to recheck syscallMessage registers et al
+   X64.syscallMessage should be [RAX .e. R15] @ [FaultIP, RSP, FLAGS] *)
 lemma length_syscallMessage:
   "length X64_H.syscallMessage = unat n_syscallMessage"
   apply (simp add: syscallMessage_def X64.syscallMessage_def
@@ -609,7 +611,7 @@ lemma handleArchFaultReply':
     apply (rule bind_apply_cong [OF refl], rename_tac sb s'')
     apply (rule bind_apply_cong [OF refl], rename_tac rv r'')
     apply (case_tac sb, simp_all add: word_size n_msgRegisters_def)[1]
-  sorry (* FIXME x64: msgRegisters *)
+  done
 
 lemmas lookup_uset_getreg_swap = bind_inv_inv_comm[OF lookupIPCBuffer_inv'
                                  user_getreg_inv'
@@ -2440,15 +2442,15 @@ lemma doFaultTransfer_ccorres [corres]:
      apply (ctac (no_vcg, c_lines 2) add: setMessageInfo_ccorres)
        apply (ctac add: setRegister_ccorres[unfolded dc_def])
       apply wp
-  sorry (*
      apply (simp add: badgeRegister_def X64.badgeRegister_def X64.capRegister_def
                       Kernel_C.badgeRegister_def "StrictC'_register_defs")
     apply (clarsimp simp: message_info_to_H_def guard_is_UNIVI
                           mask_def msgLengthBits_def
                    split: fault.split arch_fault.split)
    apply (wpsimp simp: setMRs_to_setMR zipWithM_mapM split_def wp: mapM_wp' setMR_tcbFault_obj_at)+
+   apply assumption
   apply (clarsimp simp: obj_at'_def projectKOs)
-  done *)
+  done
 
 lemma ccorres_emptyOnFailure:
   assumes corr_ac: "ccorres (\<lambda>f c. case f of Inl _ \<Rightarrow> r [] c | Inr xs \<Rightarrow> r xs c)
@@ -2609,7 +2611,7 @@ lemma loadCapTransfer_ctReceiveDepth:
 lemma cte_at_0' [dest!]:
   "\<lbrakk> cte_at' 0 s; no_0_obj' s \<rbrakk> \<Longrightarrow> False"
   apply (clarsimp simp: cte_wp_at_obj_cases')
-  by (auto simp: tcb_cte_cases_def is_aligned_def dest!:tcb_aligned' split: if_split_asm)
+  by (auto simp: tcb_cte_cases_def is_aligned_def objBits_simps' dest!:tcb_aligned' split: if_split_asm)
 
 lemma getReceiveSlots_ccorres:
   "ccorres (\<lambda>a c. (a = [] \<or> (\<exists>slot. a = [slot])) \<and>
@@ -3674,7 +3676,7 @@ proof -
                        apply (clarsimp simp: is_cap_fault_def to_bool_def false_def)
                       apply wp
                       apply (rule hoare_post_imp_R, rule lsft_real_cte)
-                      apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
+                      apply (clarsimp simp: obj_at'_def projectKOs objBits_simps')
                      apply (vcg exspec=lookupSlot_modifies)
                     apply vcg
                    apply (rule conseqPre, vcg)
@@ -5389,7 +5391,7 @@ subgoal sorry (* FIXME x64: bitfield *)
         apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: typ_heap_simps')
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (simp add: objBits_simps)
    apply assumption
   -- "SendEP case"
@@ -5430,7 +5432,7 @@ subgoal sorry (* FIXME x64: bitfield *)
        apply (simp add: carch_state_relation_def typ_heap_simps')
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: h_t_valid_clift_Some_iff)
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply (simp add: objBits_simps)
   apply assumption
   done
@@ -5659,7 +5661,7 @@ lemma sendIPC_ccorres [corres]:
        apply (auto split: list.splits elim!: pred_tcb'_weakenE)[1]
       apply (subgoal_tac "state_refs_of' s epptr = {}")
        apply (clarsimp simp: obj_at'_def is_aligned_neg_mask objBitsKO_def
-                             projectKOs invs'_def valid_state'_def
+                             projectKOs invs'_def valid_state'_def objBits_simps'
                              st_tcb_at'_def valid_tcb_state'_def ko_wp_at'_def
                              isBlockedOnSend_def projectKO_opt_tcb
                       split: if_split_asm if_split)
@@ -5830,7 +5832,7 @@ subgoal sorry (* FIXME x64: bitfield
         apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (simp add: objBits_simps)
    apply assumption
   -- "IdleEP case"
@@ -5869,7 +5871,7 @@ subgoal sorry
        apply (simp add: carch_state_relation_def typ_heap_simps')
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: typ_heap_simps')
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply (simp add: objBits_simps)
   apply assumption
   done
@@ -5954,7 +5956,7 @@ lemma receiveIPC_dequeue_ccorres_helper:
          apply (simp add: carch_state_relation_def typ_heap_simps')
         apply (simp add: cmachine_state_relation_def)
        apply (simp add: typ_heap_simps')
-      apply (simp add: objBits_simps)
+      apply (simp add: objBits_simps')
      apply (simp add: objBits_simps)
     apply assumption
    apply (clarsimp simp: cendpoint_relation_def Let_def tcb_queue_relation'_def)
@@ -6003,7 +6005,7 @@ subgoal sorry (* FIXME x64: bitfield *)
         apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: typ_heap_simps')
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (simp add: objBits_simps)
    apply assumption
   apply (clarsimp simp: cendpoint_relation_def Let_def tcb_queue_relation'_def)
@@ -6025,10 +6027,10 @@ lemma completeSignal_ccorres:
    apply (subgoal_tac "tcb_ptr_to_ctcb_ptr thread \<noteq> NULL")
     prefer 2
     apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
-                          tcb_ptr_to_ctcb_ptr_def)
+                          tcb_ptr_to_ctcb_ptr_def objBits_simps')
     apply (drule sum_to_zero)
-    apply (clarsimp simp: obj_at'_def ctcb_offset_def projectKOs objBitsKO_def
-                          is_aligned_def)
+    apply (clarsimp simp: obj_at'_def ctcb_offset_defs projectKOs objBitsKO_def
+                          is_aligned_def objBits_simps')
    apply clarsimp
    apply csymbr
    apply simp
@@ -6079,14 +6081,13 @@ lemma completeSignal_ccorres:
             apply (simp add: carch_state_relation_def typ_heap_simps')
            apply (simp add: cmachine_state_relation_def)
           apply (simp add: h_t_valid_clift_Some_iff)
-         apply (simp add: objBits_simps)
+         apply (simp add: objBits_simps')
         apply (simp add: objBits_simps)
        apply assumption
       apply wp
      apply (clarsimp simp: guard_is_UNIV_def X64_H.badgeRegister_def
                            X64.badgeRegister_def Kernel_C.badgeRegister_def
-                           )
-  subgoal sorry (* FIXME x64: capRegister *)
+                           X64.capRegister_def Kernel_C.RDI_def)
     -- "WaitingNtfn case"
     apply (clarsimp simp: NtfnState_Active_def NtfnState_Waiting_def)
     apply csymbr
@@ -6104,9 +6105,8 @@ lemma doNBRecvFailedTransfer_ccorres[corres]:
             (Call doNBRecvFailedTransfer_'proc)"
   apply (cinit lift: thread_')
    apply (ctac add: setRegister_ccorres)
-  sorry (* FIXME x64: capRegister
   by (clarsimp simp: Kernel_C.badgeRegister_def X64_H.badgeRegister_def
-                        X64.badgeRegister_def ) *)
+                        X64.badgeRegister_def X64.capRegister_def Kernel_C.RDI_def )
 
 lemma receiveIPC_ccorres [corres]:
   notes option.case_cong_weak [cong]
@@ -6407,7 +6407,7 @@ lemma receiveIPC_ccorres [corres]:
                                     projectKOs invs'_def valid_state'_def st_tcb_at'_def
                                 valid_tcb_state'_def ko_wp_at'_def invs_valid_objs'
                                     isBlockedOnReceive_def projectKO_opt_tcb
-                                    from_bool_def to_bool_def
+                                    from_bool_def to_bool_def objBits_simps'
                               elim!: delta_sym_refs
                              split: if_split_asm bool.splits) (*very long*)
              apply (frule(1) sym_refs_obj_atD' [OF _ invs_sym'])
@@ -6419,7 +6419,7 @@ lemma receiveIPC_ccorres [corres]:
              subgoal by (fastforce simp: obj_at'_def is_aligned_neg_mask objBitsKO_def
                                    projectKOs invs'_def valid_state'_def st_tcb_at'_def
                                valid_tcb_state'_def ko_wp_at'_def invs_valid_objs'
-                                   isBlockedOnReceive_def projectKO_opt_tcb
+                                   isBlockedOnReceive_def projectKO_opt_tcb objBits_simps'
                                    from_bool_def to_bool_def
                              elim: delta_sym_refs
                             split: if_split_asm bool.splits) (*very long *)
@@ -6532,7 +6532,7 @@ lemma sendSignal_dequeue_ccorres_helper:
          apply (simp add: carch_state_relation_def typ_heap_simps')
         apply (simp add: cmachine_state_relation_def)
        apply (simp add: h_t_valid_clift_Some_iff)
-      apply (simp add: objBits_simps)
+      apply (simp add: objBits_simps')
      apply (simp add: objBits_simps)
     apply assumption
    apply (clarsimp simp: cnotification_relation_def Let_def
@@ -6583,7 +6583,7 @@ subgoal sorry (* FIXME x64: bitfield *)
         apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (simp add: objBits_simps)
    apply assumption
   apply (clarsimp simp: cnotification_relation_def Let_def
@@ -6614,7 +6614,7 @@ lemma ntfn_set_active_ccorres:
      apply (simp add: cnotification_relation_def Let_def NtfnState_Active_def
                       isWaitingNtfn_def mask_def
                split: Structures_H.ntfn.split_asm)
-    apply (simp add: objBits_simps)+
+    apply (simp add: objBits_simps')+
   done
 
 lemma sts_runnable:
@@ -6695,12 +6695,12 @@ lemma sendSignal_ccorres [corres]:
        apply (ctac add: ntfn_set_active_ccorres[unfolded dc_def])
       apply (clarsimp simp: guard_is_UNIV_def option_to_ctcb_ptr_def
                             X64_H.badgeRegister_def Kernel_C.badgeRegister_def
-                            X64.badgeRegister_def
+                            X64.badgeRegister_def X64.capRegister_def
+                            Kernel_C.RDI_def
                             "StrictC'_thread_state_defs"less_mask_eq
                             Collect_const_mem)
       apply (case_tac ts, simp_all add: receiveBlocked_def typ_heap_simps
                        cthread_state_relation_def "StrictC'_thread_state_defs")[1]
-      subgoal sorry (* FIXME x64: capRegister *)
       -- "ActiveNtfn case"
      apply (rename_tac old_badge)
      apply (rule ccorres_cond_false)
@@ -6728,7 +6728,7 @@ lemma sendSignal_ccorres [corres]:
           apply (simp add: carch_state_relation_def typ_heap_simps')
          apply (simp add: cmachine_state_relation_def)
         apply (simp add: h_t_valid_clift_Some_iff)
-       apply (simp add: objBits_simps)
+       apply (simp add: objBits_simps')
       apply (simp add: objBits_simps)
      apply assumption
     -- "WaitingNtfn case"
@@ -6760,8 +6760,7 @@ lemma sendSignal_ccorres [corres]:
      apply (wp setThreadState_st_tcb set_ntfn_valid_objs' | clarsimp)+
     apply (clarsimp simp: guard_is_UNIV_def ThreadState_Running_def mask_def
                           badgeRegister_def Kernel_C.badgeRegister_def
-                          X64.badgeRegister_def)
-  subgoal sorry (* FIXME x64: capRegister *)
+                          X64.badgeRegister_def X64.capRegister_def Kernel_C.RDI_def)
    apply (clarsimp simp: guard_is_UNIV_def NtfnState_Idle_def
                          NtfnState_Active_def NtfnState_Waiting_def)
   apply clarsimp
@@ -6774,11 +6773,11 @@ lemma sendSignal_ccorres [corres]:
                 elim: pred_tcb'_weakenE
                split: list.splits option.splits)[1]
   apply (clarsimp simp: option_to_ctcb_ptr_def tcb_ptr_to_ctcb_ptr_def
-                        ctcb_offset_def
+                        ctcb_offset_defs
                  dest!: sum_to_zero)
   apply (frule (1) ko_at_valid_ntfn'[OF _ invs_valid_objs'])
   apply (auto simp: valid_ntfn'_def valid_bound_tcb'_def obj_at'_def projectKOs
-                    objBitsKO_def is_aligned_def)
+                    objBitsKO_def is_aligned_def objBits_simps')
   done
 
 lemma receiveSignal_block_ccorres_helper:
@@ -6967,7 +6966,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
         apply (simp add: carch_state_relation_def typ_heap_simps')
        apply (simp add: cmachine_state_relation_def)
       apply (simp add: h_t_valid_clift_Some_iff)
-     apply (simp add: objBits_simps)
+     apply (simp add: objBits_simps')
     apply (simp add: objBits_simps)
    apply assumption
   -- "WaitingNtfn case"
@@ -7007,7 +7006,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
        apply (simp add: carch_state_relation_def typ_heap_simps')
       apply (simp add: cmachine_state_relation_def)
      apply (simp add: h_t_valid_clift_Some_iff)
-    apply (simp add: objBits_simps)
+    apply (simp add: objBits_simps')
    apply (simp add: objBits_simps)
   apply assumption
   done

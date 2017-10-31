@@ -99,7 +99,7 @@ lemma ccorres_req:
   done
 
 lemma valid_cap_cte_at':
-  "\<lbrakk>isCNodeCap cap; valid_cap' cap s'\<rbrakk> \<Longrightarrow> cte_at' (capCNodePtr cap + 0x20 * (addr && mask (capCNodeBits cap))) s'"
+  "\<lbrakk>isCNodeCap cap; valid_cap' cap s'\<rbrakk> \<Longrightarrow> cte_at' (capCNodePtr cap + 2^cteSizeBits * (addr && mask (capCNodeBits cap))) s'"
   apply (clarsimp simp: isCap_simps valid_cap'_def)
   apply (rule real_cte_at')
   apply (erule spec)
@@ -637,7 +637,7 @@ lemma to_bool_false [simp]:
 
 (* MOVE *)
 lemma tcb_aligned':
-  "tcb_at' t s \<Longrightarrow> is_aligned t 9"
+  "tcb_at' t s \<Longrightarrow> is_aligned t tcbBlockSizeBits"
   apply (drule obj_at_aligned')
    apply (simp add: objBits_simps)
   apply (simp add: objBits_simps)
@@ -659,19 +659,17 @@ lemma add_mask_lower_bits:
   apply simp
   done
 
-(* FIXME x64: fix after tcb bits change *)
 lemma tcb_ptr_to_ctcb_ptr_mask [simp]:
   assumes tcbat: "tcb_at' thread s"
-  shows   "ptr_val (tcb_ptr_to_ctcb_ptr thread) && 0xFFFFFFFFFFFFF800 = thread"
+  shows   "ptr_val (tcb_ptr_to_ctcb_ptr thread) && ~~ mask tcbBlockSizeBits = thread"
 proof -
-  have "thread + 2 ^ 10 && ~~ mask 11 = thread"
+  have "thread + ctcb_offset && ~~ mask tcbBlockSizeBits = thread"
   proof (rule add_mask_lower_bits)
-    show "is_aligned thread 11" using tcbat sorry
-    show "\<forall>n'\<ge>11. n' < len_of TYPE(64) \<longrightarrow> \<not> ((2 :: machine_word) ^ 10) !! n'"  by simp
-  qed
+    show "is_aligned thread tcbBlockSizeBits" using tcbat by (rule tcb_aligned')
+    qed (auto simp: word_bits_def ctcb_offset_defs objBits_defs)
   thus ?thesis
     unfolding tcb_ptr_to_ctcb_ptr_def ctcb_offset_def
-    sorry
+    by (simp add: mask_def)
 qed
 
 abbreviation
@@ -710,7 +708,7 @@ lemma lookupSlotForThread_ccorres':
                             Kernel_C.tcbCTable_def word_size lookupSlot_raw_rel_def
                             word_sle_def
                  split del: if_split)
-  sorry
+  done
 
 lemma lookupSlotForThread_ccorres[corres]:
   "ccorres (lookup_failure_rel \<currency> lookupSlot_raw_rel) lookupSlot_raw_xf
