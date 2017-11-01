@@ -1595,7 +1595,7 @@ lemma irq_opt_relation_Some_ucast:
 lemma upcast_ucast_id:
     "len_of TYPE('a) \<le> len_of TYPE('b) \<Longrightarrow>
     ((ucast (a :: 'a::len word) :: 'b ::len word) = ucast b) \<Longrightarrow> (a = b)"
-  apply (rule word_eqI)
+  apply (rule word_eqI[rule_format])
   apply (simp add:word_size)
   apply (drule_tac f = "%x. (x !! n)" in arg_cong)
     apply (simp add:nth_ucast)
