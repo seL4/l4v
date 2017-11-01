@@ -441,7 +441,7 @@ lemma ucast_asid_high_bits_is_shift:
   "asid \<le> mask asid_bits \<Longrightarrow> ucast (asid_high_bits_of asid) = (asid >> asid_low_bits)"
   apply (simp add: mask_def upper_bits_unset_is_l2p_64 [symmetric])
   apply (simp add: asid_high_bits_of_def)
-  apply (rule word_eqI)
+  apply (rule word_eqI[rule_format])
   apply (simp add: word_size nth_shiftr nth_ucast asid_low_bits_def asid_bits_def word_bits_def)
   apply (erule_tac x="n+9" in allE)(*asid_low_bits*)
   apply simp
