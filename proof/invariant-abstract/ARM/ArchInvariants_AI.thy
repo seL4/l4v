@@ -2373,4 +2373,8 @@ lemma valid_arch_tcb_lift:
   by (wp hoare_vcg_all_lift hoare_vcg_imp_lift; simp)
 
 end
+
+setup {* Add_Locale_Code_Defs.setup "ARM" *}
+setup {* Add_Locale_Code_Defs.setup "ARM_A" *}
+
 end

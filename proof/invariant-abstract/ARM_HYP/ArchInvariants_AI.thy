@@ -2490,4 +2490,7 @@ lemma valid_arch_tcb_lift:
 
 end
 
+setup {* Add_Locale_Code_Defs.setup "ARM" *}
+setup {* Add_Locale_Code_Defs.setup "ARM_A" *}
+
 end

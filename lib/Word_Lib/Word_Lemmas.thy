@@ -2157,6 +2157,10 @@ lemma word_FF_is_mask:
   "0xFF = mask 8"
   by (simp add: mask_def)
 
+lemma word_1FF_is_mask:
+  "0x1FF = mask 9"
+  by (simp add: mask_def)
+
 lemma ucast_of_nat_small:
   "x < 2 ^ len_of TYPE('a) \<Longrightarrow> ucast (of_nat x :: 'a :: len word) = (of_nat x :: 'b :: len word)"
   apply (rule sym, subst word_unat.inverse_norm)
@@ -4725,6 +4729,14 @@ lemma upper_bits_unset_is_l2p:
   apply (drule bang_is_le)
   apply (drule_tac y=p in order_le_less_trans, assumption)
   apply (drule word_power_increasing; simp add: word_len_min_2[simplified])
+  done
+
+lemma less_2p_is_upper_bits_unset:
+  "((p::'a::len word) < 2 ^ n)
+    = (n < len_of TYPE('a) \<and> (\<forall>n' \<ge> n. n' < len_of TYPE('a) \<longrightarrow> \<not> p !! n'))"
+  apply (cases "n < len_of TYPE('a)")
+   apply (simp add: upper_bits_unset_is_l2p)
+  apply (simp add: power_overflow)
   done
 
 lemma le_2p_upper_bits:

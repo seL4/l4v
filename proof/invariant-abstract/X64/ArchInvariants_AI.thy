@@ -3252,4 +3252,7 @@ lemma valid_arch_tcb_lift:
 
 end
 
+setup {* Add_Locale_Code_Defs.setup "X64" *}
+setup {* Add_Locale_Code_Defs.setup "X64_A" *}
+
 end

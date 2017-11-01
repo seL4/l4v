@@ -17,7 +17,6 @@ imports "../SubMonad_AI"
  "../../../lib/Crunch"
 begin
 
-
 context Arch begin global_naming ARM
 
 
@@ -306,21 +305,17 @@ crunch inv[wp]: get_master_pde P
 
 lemma ucast_mask_asid_low_bits [simp]:
   "ucast ((asid::word32) && mask asid_low_bits) = (ucast asid :: 10 word)"
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast asid_low_bits_def)
-  done
+  by word_eqI_solve
 
 
 lemma ucast_ucast_asid_high_bits [simp]:
   "ucast (ucast (asid_high_bits_of asid)::word32) = asid_high_bits_of asid"
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast asid_low_bits_def)
-  done
+  by word_eqI_solve
 
 
 lemma mask_asid_low_bits_ucast_ucast:
   "((asid::word32) && mask asid_low_bits) = ucast (ucast asid :: 10 word)"
-  by (rule word_eqI) (simp add: word_size nth_ucast asid_low_bits_def)
+  by word_eqI_solve
 
 
 lemma set_asid_pool_cur [wp]:
@@ -391,8 +386,7 @@ lemma pde_at_aligned_vptr:
     apply (rule shiftl_less_t2n)
      apply (rule shiftr_less_t2n')
       apply (simp add: pd_bits_def pageBits_def)
-      apply (rule word_eqI)
-      apply (simp add: word_size)
+      apply word_eqI_solve
      by (simp add: pd_bits_def pageBits_def)+
   apply simp
   done

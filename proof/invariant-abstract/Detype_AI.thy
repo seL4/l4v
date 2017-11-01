@@ -1162,11 +1162,9 @@ lemma range_cover_plus_us:
 lemma mask_sub: "n \<le> m \<Longrightarrow> mask m - mask n = mask m && ~~ mask n"
   apply (simp add: field_simps)
   apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI,simp add:word_ops_nth_size)
-  apply (rule word_eqI, simp add: word_ops_nth_size word_size)
-  apply auto
+   apply word_eqI_solve
+  apply word_eqI_solve
   done
-
 
 lemma  neg_mask_diff_bound:
   "sz'\<le> sz \<Longrightarrow>(ptr && ~~ mask sz') - (ptr && ~~ mask sz) \<le> 2 ^ sz - 2 ^ sz'"
@@ -1177,9 +1175,8 @@ proof -
     apply (simp add: mask_out_sub_mask field_simps mask_and_mask min.absorb2)
     apply (simp add: mask_sub)
     apply (subst word_plus_and_or_coroll)
-     apply (rule word_eqI, simp add: word_size word_ops_nth_size)
-    apply (rule word_eqI, simp add: word_size word_ops_nth_size)
-    apply auto
+     apply word_eqI_solve
+    apply word_eqI_solve
     done
   also have "\<dots> \<le> ?rhs" using lt
     apply (simp add: mask_sub[symmetric])

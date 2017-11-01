@@ -24,7 +24,7 @@ definition
   word_size :: "'a :: numeral" where
   "word_size \<equiv> 8"
 
-lemma word_bits_conv:
+lemma word_bits_conv[code]:
   "word_bits = 64" unfolding word_bits_def by simp
 
 lemma word_bits_word_size_conv:
