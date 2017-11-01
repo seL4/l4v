@@ -267,7 +267,7 @@ lemma valid_idle_tcb_update:
   "\<lbrakk>valid_idle s; ko_at (TCB t) p s;
     tcb_state t = tcb_state t'; tcb_bound_notification t = tcb_bound_notification t';
     tcb_sched_context t = tcb_sched_context t';
-    tcb_reply t = tcb_reply t'; valid_tcb p t' s \<rbrakk>
+    valid_tcb p t' s \<rbrakk>
    \<Longrightarrow> valid_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
   by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
 
@@ -291,7 +291,6 @@ lemma valid_tcb_state_update: (* RT: FIXME? *)
               | Structures_A.BlockedOnReceive e r \<Rightarrow>
                      (case r of None \<Rightarrow> True
                       | Some r' \<Rightarrow> reply_at r' s)
-                   \<and> tcb_reply t = r
               | _ \<Rightarrow> True \<rbrakk> \<Longrightarrow>
    valid_tcb p (t\<lparr>tcb_state := st\<rparr>) s"
   by (simp add: valid_tcb_def valid_tcb_state_def ran_tcb_cap_cases
@@ -1284,8 +1283,7 @@ lemma set_object_idle [wp]:
      (\<lambda>s. ko_at ko p s \<and> (\<not>is_tcb ko \<or>
                    (ko = (TCB t) \<and> ko' = (TCB t') \<and>
                     tcb_state t = tcb_state t' \<and> tcb_bound_notification t = tcb_bound_notification t'
-                    \<and> tcb_sched_context t = tcb_sched_context t'
-                    \<and> tcb_reply t = tcb_reply t')))\<rbrace>
+                    \<and> tcb_sched_context t = tcb_sched_context t')))\<rbrace>
    set_object p ko'
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: set_object_def)

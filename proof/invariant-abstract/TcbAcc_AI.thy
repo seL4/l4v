@@ -165,9 +165,6 @@ lemmas thread_set_no_change_tcb_bound_notification_converse =
 lemmas thread_set_no_change_tcb_sched_context_converse =
   thread_set_no_change_tcb_pred_converse[where proj="itcb_sched_context", simplified]
 
-lemmas thread_set_no_change_tcb_reply_converse =
-  thread_set_no_change_tcb_pred_converse[where proj="itcb_reply", simplified]
-
 lemma pspace_valid_objsE:
   assumes p: "kheap s p = Some ko"
   assumes v: "valid_objs s"
@@ -244,8 +241,6 @@ lemma thread_set_valid_objs_triv:
                        \<longrightarrow> tcb_bound_notification (f tcb) = None"
   assumes b': "\<And>tcb. tcb_sched_context (f tcb) \<noteq> tcb_sched_context tcb
                        \<longrightarrow> tcb_sched_context (f tcb) = None"
-  assumes b'': "\<And>tcb. tcb_reply (f tcb) \<noteq> tcb_reply tcb
-                       \<longrightarrow> tcb_reply (f tcb) = None"
   assumes c: "\<And>tcb s::'z::state_ext state.
                      valid_arch_tcb (tcb_arch (f tcb)) s = valid_arch_tcb (tcb_arch tcb) s"
   shows "\<lbrace>valid_objs\<rbrace> thread_set f t \<lbrace>\<lambda>rv. valid_objs :: 'z::state_ext state \<Rightarrow> bool\<rbrace>"
@@ -269,7 +264,6 @@ lemma thread_set_valid_objs_triv:
   apply (cut_tac tcb=y in a)
   apply (cut_tac tcb=y in b)
   apply (cut_tac tcb=y in b')
-  apply (cut_tac tcb=y in b'')
   by auto[1]
 
 end
@@ -305,7 +299,6 @@ lemma thread_set_iflive_trivial:
   assumes z: "\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb"
   assumes y: "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
   assumes w: "\<And>tcb. tcb_sched_context (f tcb) = tcb_sched_context tcb"
-  assumes v: "\<And>tcb. tcb_reply (f tcb) = tcb_reply tcb"
   assumes a: "\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb"
   shows      "\<lbrace>if_live_then_nonz_cap\<rbrace> thread_set f t \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: thread_set_def)
@@ -316,7 +309,7 @@ lemma thread_set_iflive_trivial:
                         bspec_split [OF x])
   apply (subgoal_tac "live (TCB y)")
    apply (fastforce elim: if_live_then_nonz_capD2)
-  apply (clarsimp simp: live_def hyp_live_tcb_def z y w v a)
+  apply (clarsimp simp: live_def hyp_live_tcb_def z y w a)
   done
 
 
@@ -345,12 +338,11 @@ lemma thread_set_refs_trivial:
   assumes x: "\<And>tcb. tcb_state  (f tcb) = tcb_state  tcb"
   assumes y: "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
   assumes w: "\<And>tcb. tcb_sched_context (f tcb) = tcb_sched_context tcb"
-  assumes v: "\<And>tcb. tcb_reply (f tcb) = tcb_reply tcb"
   shows      "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (simp add: thread_set_def set_object_def)
   apply wp
   apply (clarsimp dest!: get_tcb_SomeD)
-  apply (clarsimp simp: state_refs_of_def get_tcb_def x y w v
+  apply (clarsimp simp: state_refs_of_def get_tcb_def x y w
                  elim!: rsubst[where P=P]
                 intro!: ext)
   done
@@ -360,7 +352,6 @@ lemma thread_set_valid_idle_trivial:
   assumes "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
   assumes "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
   assumes "\<And>tcb. tcb_sched_context (f tcb) = tcb_sched_context tcb"
-  assumes "\<And>tcb. tcb_reply (f tcb) = tcb_reply tcb"
   shows      "\<lbrace>valid_idle\<rbrace> thread_set f t \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (simp add: thread_set_def set_object_def valid_idle_def)
   apply wp
@@ -506,7 +497,6 @@ lemma thread_set_invs_trivial:
   assumes z:  "\<And>tcb. tcb_state     (f tcb) = tcb_state tcb"
   assumes z': "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
   assumes y: "\<And>tcb. tcb_sched_context (f tcb) = tcb_sched_context tcb"
-  assumes v: "\<And>tcb. tcb_reply (f tcb) = tcb_reply tcb"
   assumes w: "\<And>tcb. tcb_ipc_buffer (f tcb) = tcb_ipc_buffer tcb
                         \<or> (tcb_ipc_buffer (f tcb) = 0)"
   assumes a: "\<And>tcb. tcb_fault (f tcb) \<noteq> tcb_fault tcb
@@ -533,8 +523,8 @@ lemma thread_set_invs_trivial:
              thread_set_cap_refs_in_kernel_window
              thread_set_cap_refs_respects_device_region
              thread_set_aligned
-             | rule x z z' y v w a arch valid_tcb_arch_ref_lift [THEN fun_cong]
-             | erule bspec_split [OF x] | simp add: z' y v)+
+             | rule x z z' y w a arch valid_tcb_arch_ref_lift [THEN fun_cong]
+             | erule bspec_split [OF x] | simp add: z' y)+
   apply (simp add: z)
   done
 
@@ -1192,20 +1182,19 @@ lemma sbsc_zombies[wp]:
 lemma sts_refs_of_helper: "
           {r. (r \<in> tcb_st_refs_of ts \<or>
                r \<in> get_refs TCBBound ntfnptr \<or>
-               r \<in> get_refs TCBSchedContext sc \<or>
-               r \<in> get_refs TCBReply reply) \<and>
-              (snd r = TCBBound \<or> snd r = TCBSchedContext \<or> snd r = TCBReply)} =
+               r \<in> get_refs TCBSchedContext sc) \<and>
+              (snd r = TCBBound \<or> snd r = TCBSchedContext)} =
           get_refs TCBBound ntfnptr \<union>
-          get_refs TCBSchedContext sc \<union>
-          get_refs TCBReply reply"
-  by (fastforce simp add: tcb_st_refs_of_def get_refs_def
+          get_refs TCBSchedContext sc"
+sorry
+(*  by (fastforce simp add: tcb_st_refs_of_def get_refs_def
               split: thread_state.splits option.splits)
-
+*)
 
 lemma sts_refs_of[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s) (t := tcb_st_refs_of st
                          \<union> {r. r \<in> state_refs_of s t \<and>
-                 (snd r = TCBBound \<or> snd r = TCBSchedContext \<or> snd r = TCBReply)}))\<rbrace>
+                 (snd r = TCBBound \<or> snd r = TCBSchedContext)}))\<rbrace>
     set_thread_state t st
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def)
@@ -1447,22 +1436,7 @@ locale TcbAcc_AI_st_tcb_at_cap_wp_at = TcbAcc_AI_pred_tcb_cap_wp_at itcb_state s
 
 
 context TcbAcc_AI_st_tcb_at_cap_wp_at begin
-(*
-lemma st_tcb_reply_cap_valid:
-  "\<And>P t (s::'state_ext state).
-    \<not> P (Structures_A.Inactive) \<and> \<not> P (Structures_A.IdleThreadState) \<Longrightarrow>
-    \<forall>cap. (st_tcb_at P t s \<and> tcb_cap_valid cap (t, tcb_cnode_index 2) s) \<longrightarrow>
-            is_master_reply_cap cap \<and> obj_ref_of cap = t"
-  by (clarsimp simp: tcb_cap_valid_def st_tcb_at_tcb_at st_tcb_def2
-                  split: Structures_A.thread_state.split_asm)
 
-lemma st_tcb_caller_cap_null:
-  "\<And>ep t (s::'state_ext state).
-    \<forall>cap. (st_tcb_at (\<lambda>st. st = Structures_A.BlockedOnReceive ep) t s \<and>
-            tcb_cap_valid cap (t, tcb_cnode_index 3) s) \<longrightarrow>
-            cap = cap.NullCap"
-  by (clarsimp simp: tcb_cap_valid_def st_tcb_at_tcb_at st_tcb_def2)
-*)
 lemma dom_tcb_cap_cases:
   "tcb_cnode_index 0 \<in> dom tcb_cap_cases"
   "tcb_cnode_index 1 \<in> dom tcb_cap_cases"
@@ -1470,15 +1444,7 @@ lemma dom_tcb_cap_cases:
   "tcb_cnode_index 3 \<in> dom tcb_cap_cases"
   "tcb_cnode_index 4 \<in> dom tcb_cap_cases"
   by clarsimp+
-(*
-lemmas st_tcb_at_reply_cap_valid =
-       pred_tcb_cap_wp_at [OF _ _ _ st_tcb_reply_cap_valid,
-                         simplified dom_tcb_cap_cases]
 
-lemmas st_tcb_at_caller_cap_null =
-       pred_tcb_cap_wp_at [OF _ _ _ st_tcb_caller_cap_null,
-                         simplified dom_tcb_cap_cases]
-*)
 end
 
 lemma set_thread_state_interrupt_irq_node[wp]: "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace>
@@ -1742,10 +1708,10 @@ lemma sbn_invs_minor:
   apply (clarsimp elim!: rsubst[where P=sym_refs]
                  intro!: ext
                   dest!: bound_tcb_at_state_refs_ofD)
-  apply (fastforce simp: tcb_ntfn_is_bound_def get_refs_def tcb_st_refs_of_def
+(*  apply (fastforce simp: tcb_ntfn_is_bound_def get_refs_def tcb_st_refs_of_def
                    elim: obj_at_valid_objsE
                   split: option.splits thread_state.splits)
-  done
+  done*) sorry
 
 lemma sbsc_invs_minor:
   "\<lbrace>bound_sc_tcb_at (\<lambda>sc'. get_refs TCBSchedContext sc' = get_refs TCBSchedContext sc) t

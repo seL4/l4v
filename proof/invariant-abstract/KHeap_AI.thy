@@ -250,6 +250,20 @@ lemma sts_ntfn_at_inv[wp]:
   apply (clarsimp simp: obj_at_def is_ntfn is_tcb get_tcb_def)
   done
 
+lemma sts_sc_at_inv[wp]:
+  "\<lbrace> sc_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. sc_at ep \<rbrace>"
+  apply (simp add: set_thread_state_def)
+  apply (wp | simp add: set_object_def)+
+  apply (clarsimp simp: obj_at_def is_sc is_tcb get_tcb_def)
+  done
+
+lemma sts_reply_at_inv[wp]:
+  "\<lbrace> reply_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. reply_at ep \<rbrace>"
+  apply (simp add: set_thread_state_def)
+  apply (wp | simp add: set_object_def)+
+  apply (clarsimp simp: obj_at_def is_reply is_tcb get_tcb_def)
+  done
+
 lemma set_tcb_obj_ref_ep_at_inv[wp]:
   "\<lbrace> ep_at ep \<rbrace> set_tcb_obj_ref f t ntfn \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
@@ -262,6 +276,20 @@ lemma set_tcb_obj_ref_ntfn_at_inv[wp]:
   apply (simp add: set_tcb_obj_ref_def)
   apply (wp | simp add: set_object_def)+
   apply (clarsimp simp: obj_at_def is_ntfn is_tcb get_tcb_def)
+  done
+
+lemma set_tcb_obj_ref_sc_at_inv[wp]:
+  "\<lbrace> sc_at ep \<rbrace> set_tcb_obj_ref f t ntfn \<lbrace> \<lambda>rv. sc_at ep \<rbrace>"
+  apply (simp add: set_tcb_obj_ref_def)
+  apply (wp | simp add: set_object_def)+
+  apply (clarsimp simp: obj_at_def is_sc is_tcb get_tcb_def)
+  done
+
+lemma set_tcb_obj_ref_reply_at_inv[wp]:
+  "\<lbrace> reply_at ep \<rbrace> set_tcb_obj_ref f t ntfn \<lbrace> \<lambda>rv. reply_at ep \<rbrace>"
+  apply (simp add: set_tcb_obj_ref_def)
+  apply (wp | simp add: set_object_def)+
+  apply (clarsimp simp: obj_at_def is_reply is_tcb get_tcb_def)
   done
 
 lemma prefix_to_eq:
@@ -1114,8 +1142,6 @@ lemma shows
     "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_bound_notification_update t e \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
   set_tcb_sc_caps_of_state[wp]:
     "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_sched_context_update t sc \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
-  set_tcb_reply_caps_of_state[wp]:
-    "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_tcb_obj_ref tcb_reply_update t sc \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>" and
   as_user_caps_of_state[wp]:
     "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> as_user p f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
 
@@ -1145,7 +1171,6 @@ interpretation
   as_user: non_aobj_non_cap_non_mem_op "as_user p g" +
   thread_set: non_aobj_non_mem_op "thread_set f p" +
   set_sched_context: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_sched_context_update p sc" +
-  set_reply: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_reply_update p reply" +
   set_cap: non_aobj_non_mem_op "set_cap cap p'"
   apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
   unfolding set_endpoint_def set_notification_def set_thread_state_def

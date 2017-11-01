@@ -199,7 +199,7 @@ datatype reftype
      | TCBSignal | TCBBound | EPSend | EPRecv | NTFNSignal | NTFNBound
      | TCBHypRef | HypTCBRef
      | TCBSchedContext | SCTcb | NTFNSchedContext | SCNtfn
-     | TCBReply | ReplyCaller | SCReply | ReplySchedContext
+     | TCBReply | ReplyTCB | SCReply | ReplySchedContext
      | TCBYieldTo | SCYieldFrom
 
 primrec
@@ -219,8 +219,8 @@ where
 | "symreftype SCTcb       = TCBSchedContext"
 | "symreftype NTFNSchedContext = SCNtfn"
 | "symreftype SCNtfn       = NTFNSchedContext"
-| "symreftype TCBReply        = ReplyCaller"
-| "symreftype ReplyCaller     = TCBReply"
+| "symreftype TCBReply        = ReplyTCB"
+| "symreftype ReplyTCB     = TCBReply"
 | "symreftype SCReply         = ReplySchedContext"
 | "symreftype ReplySchedContext = SCReply"
 | "symreftype TCBYieldTo      = SCYieldFrom"
