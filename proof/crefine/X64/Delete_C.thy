@@ -61,9 +61,6 @@ lemma ccorres_cutMon:
 
 value_abbreviation zombie_magic "word_bits - cte_level_bits"
 
-schematic_goal[simp]: "zombie_magic = ?P"
-  by ( simp add: cte_level_bits_def word_bits_def)
-
 lemma unat_of_nat_zombie_magic[simp]: "unat ((of_nat zombie_magic) :: machine_word) = zombie_magic"
   by (clarsimp simp: unat_of_nat64)
 
