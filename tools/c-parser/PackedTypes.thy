@@ -956,4 +956,91 @@ proof (simp add: packed_type_access_ti, rule ext)
   finally show "?LHS = ?RHS" .
 qed
 
+subsection \<open>Proof automation for packed types\<close>
+
+definition td_packed :: "'a field_desc typ_desc \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool"
+  where "td_packed t sz al \<longleftrightarrow>
+    td_fafu_idem t \<and> td_fa_hi t \<and> aggregate t \<and> size_td t = sz \<and> align_td t = al"
+
+lemma packed_type_class_intro:
+  "td_packed (typ_info_t TYPE('a::mem_type)) s a
+    \<Longrightarrow> OFCLASS('a::mem_type, packed_type_class)"
+  by standard (simp_all add: td_packed_def)
+
+lemma td_packed_final_pad:
+  "\<lbrakk>td_packed t s a; 2 ^ a dvd s\<rbrakk> \<Longrightarrow> td_packed (final_pad t) s a"
+  by (simp add: padup_dvd [symmetric] td_packed_def final_pad_def)
+
+lemma td_packed_ti_typ_combine:
+  "\<lbrakk> td_packed (td::'a::c_type field_desc typ_desc) s a;
+     align_of TYPE('b::packed_type) dvd s; fg_cons xf xfu \<rbrakk>
+    \<Longrightarrow> td_packed (ti_typ_combine TYPE('b) xf xfu nm td)
+                  (s + size_td (typ_info_t TYPE('b)))
+                  (max a (align_td (typ_info_t TYPE('b))))"
+  unfolding td_packed_def
+  apply safe
+      apply (rule td_fafu_idem_ti_typ_combine; assumption?)
+      apply (rule td_fafu_idem)
+     apply (rule td_fa_hi_ti_typ_combine; assumption?)
+     apply (rule td_fa_hi)
+    apply simp
+   apply (simp only: size_td_lt_ti_typ_combine)
+  apply (simp only: align_of_ti_typ_combine)
+  done
+
+lemma td_packed_ti_typ_pad_combine:
+  "\<lbrakk> td_packed (td::'a::c_type field_desc typ_desc) s a;
+     align_of TYPE('b::packed_type) dvd s; fg_cons xf xfu \<rbrakk>
+    \<Longrightarrow> td_packed (ti_typ_pad_combine TYPE('b) xf xfu nm td)
+                  (s + size_td (typ_info_t TYPE('b)))
+                  (max a (align_td (typ_info_t TYPE('b))))"
+  apply (subgoal_tac "padup (align_of TYPE('b)) (size_td td) = 0")
+   apply (simp add: ti_typ_pad_combine_def Let_def td_packed_ti_typ_combine)
+  apply (simp add: align_of_def padup_dvd td_packed_def)
+  done
+
+lemma td_packed_ti_typ_combine_array:
+  "\<lbrakk>td_packed (td::'a::c_type field_desc typ_desc) s a;
+    align_of TYPE('b::packed_type) dvd s; fg_cons xf xfu\<rbrakk>
+    \<Longrightarrow> td_packed
+      (ti_typ_combine TYPE('b ['n :: finite]) xf xfu nm td)
+      (s + size_td (typ_info_t TYPE('b)) * CARD('n))
+      (max a (align_td (typ_info_t TYPE('b))))"
+  by (clarsimp simp: ti_typ_combine_def td_packed_def
+                     packed_type_intro_simps td_fafu_idem_extend_ti
+                     td_fa_hi_extend_ti td_fa_hi_adjust_ti
+                     size_td_extend_ti size_of_def
+                     td_fafu_idem_adjust_ti)
+
+lemma td_packed_ti_typ_pad_combine_array:
+  "\<lbrakk> td_packed (td::'a::c_type field_desc typ_desc) s a;
+     align_of TYPE('b::packed_type) dvd s; fg_cons xf xfu \<rbrakk>
+    \<Longrightarrow> td_packed (ti_typ_pad_combine TYPE('b ['n :: finite]) xf xfu nm td)
+                  (s + size_td (typ_info_t TYPE('b)) * CARD('n))
+                  (max a (align_td (typ_info_t TYPE('b))))"
+  apply (subgoal_tac "padup (align_of TYPE('b['n])) (size_td td) = 0")
+   apply (simp add: ti_typ_pad_combine_def Let_def)
+   apply (simp add: td_packed_ti_typ_combine_array)
+  apply (simp add: align_of_def padup_dvd td_packed_def align_td_array)
+  done
+
+lemma td_packed_empty_typ_info:
+  "td_packed (empty_typ_info fn) 0 0"
+  apply (unfold td_packed_def, safe)
+      apply (rule td_fafu_idem_empty_typ_info)
+     apply (rule td_fa_hi_empty_typ_info)
+    apply (rule aggregate_empty_typ_info)
+   apply (rule size_td_empty_typ_info)
+  apply (rule align_of_empty_typ_info)
+  done
+
+lemmas td_packed_intros =
+  td_packed_final_pad
+  td_packed_empty_typ_info
+  td_packed_ti_typ_combine
+  td_packed_ti_typ_pad_combine
+  td_packed_ti_typ_combine_array
+  td_packed_ti_typ_pad_combine_array
+
+
 end
