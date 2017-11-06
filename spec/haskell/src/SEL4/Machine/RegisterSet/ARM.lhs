@@ -29,7 +29,7 @@ This module defines the ARM register set.
 
 > data Register =
 >     R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | SL | FP | IP | SP |
->     LR | LR_svc | FaultInstruction | CPSR | TPIDRURW
+>     LR | LR_svc | FaultInstruction | CPSR | TLS_BASE | TPIDRURW
 >     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
 > type Word = Data.Word.Word32
@@ -42,6 +42,7 @@ This module defines the ARM register set.
 > gpRegisters = [R2, R3, R4, R5, R6, R7, LR]
 > exceptionMessage = [FaultInstruction, SP, CPSR]
 > syscallMessage = [R0 .. R7] ++ [FaultInstruction, SP, LR, CPSR]
+> tlsBaseRegister = TLS_BASE
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > elr_hyp = LR_svc

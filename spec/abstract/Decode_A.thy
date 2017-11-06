@@ -382,6 +382,14 @@ where
  | _ \<Rightarrow> throwError IllegalOperation"
 
 definition
+  decode_set_tls_base :: "data list \<Rightarrow> cap \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
+where
+  "decode_set_tls_base args cap \<equiv> doE
+     whenE (length args = 0) $ throwError TruncatedMessage;
+     returnOk (SetTLSBase (obj_ref_of cap) (ucast (args ! 0)))
+   odE"
+
+definition
   decode_tcb_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
   (tcb_invocation,'z::state_ext) se_monad"
@@ -401,6 +409,7 @@ where
     | TCBSetSpace \<Rightarrow> decode_set_space args cap slot excs
     | TCBBindNotification \<Rightarrow> decode_bind_notification cap excs
     | TCBUnbindNotification \<Rightarrow> decode_unbind_notification cap
+    | TCBSetTLSBase \<Rightarrow> decode_set_tls_base args cap
     | _ \<Rightarrow> throwError IllegalOperation"
 
 definition

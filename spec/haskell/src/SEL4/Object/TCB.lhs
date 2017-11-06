@@ -87,6 +87,7 @@ There are eleven types of invocation for a thread control block. All require wri
 >         TCBSetSpace -> decodeSetSpace args cap slot extraCaps
 >         TCBBindNotification -> decodeBindNotification cap extraCaps
 >         TCBUnbindNotification -> decodeUnbindNotification cap
+>         TCBSetTLSBase -> decodeSetTLSBase args cap
 >         _ -> throw IllegalOperation
 
 \subsubsection{Reading, Writing and Copying Registers}
@@ -371,6 +372,14 @@ This is to ensure that the source capability is not made invalid by the deletion
 >         notificationTCB = tcb,
 >         notificationPtr = Nothing }
 
+> decodeSetTLSBase :: [Word] -> Capability ->
+>         KernelF SyscallError TCBInvocation
+> decodeSetTLSBase (tls_base:_) cap = do
+>     return $ SetTLSBase {
+>         setTLSBaseTCB = capTCBPtr cap,
+>         setTLSBaseNewBase = tls_base }
+> decodeSetTLSBase _ _ = throw TruncatedMessage
+
 
 \subsection[invoke]{Performing TCB Invocations}
 
@@ -531,6 +540,13 @@ Modifying the current thread may require rescheduling because modified registers
 > invokeTCB (NotificationControl tcb Nothing) =
 >   withoutPreemption $ do
 >     unbindNotification tcb
+>     return []
+
+> invokeTCB (SetTLSBase tcb tls_base) =
+>   withoutPreemption $ do
+>     asUser tcb $ setRegister tlsBaseRegister tls_base
+>     cur <- getCurThread
+>     when (tcb == cur) rescheduleRequired
 >     return []
 
 \subsection{Decoding Domain Invocations}

@@ -36,6 +36,7 @@ requalify_consts
   fromVPtr
   setTCBIPCBuffer
   postModifyRegisters
+  tlsBaseRegister
 end
 
 abbreviation "mapMaybe \<equiv> option_map"

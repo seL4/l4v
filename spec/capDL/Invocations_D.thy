@@ -37,6 +37,7 @@ datatype cdl_tcb_invocation =
   | Suspend cdl_object_id
   | Resume cdl_object_id
   | NotificationControl cdl_object_id "cdl_object_id option"
+  | SetTLSBase cdl_object_id
 
 datatype cdl_irq_control_invocation =
     IssueIrqHandler cdl_irq cdl_cap_ref cdl_cap_ref
