@@ -132,6 +132,9 @@ This list may be empty, though it should contain as many registers as possible. 
 > syscallMessage :: [Register]
 > syscallMessage = map Register Arch.syscallMessage
 
+> tlsBaseRegister :: Register
+> tlsBaseRegister = Register Arch.tlsBaseRegister
+
 \end{description}
 
 

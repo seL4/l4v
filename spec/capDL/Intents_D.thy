@@ -119,6 +119,8 @@ datatype cdl_tcb_intent =
  |  TcbBindNTFNIntent
     (* UnbindNTFN: (target) *)
  |  TcbUnbindNTFNIntent
+    (* SetTLSBase: (target) *)
+ |  TcbSetTLSBaseIntent
 
 datatype cdl_untyped_intent =
     (* Retype: (target), (do_reset), type, size_bits, (root), node_index, node_depth, node_offset, node_window, has_children *)

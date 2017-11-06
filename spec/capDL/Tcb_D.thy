@@ -135,6 +135,7 @@ where
            returnOk (NotificationControl (cap_object target) (Some (cap_object ntfn_cap)))
          odE \<sqinter> throw
      | TcbUnbindNTFNIntent \<Rightarrow> returnOk (NotificationControl (cap_object target) None) \<sqinter> throw
+     | TCBSetTLSBaseIntent \<Rightarrow> returnOk (SetTLSBase (cap_object target)) \<sqinter> throw
   "
 
 
@@ -298,7 +299,8 @@ where
     | NotificationControl tcb ntfn \<Rightarrow>
           liftE $ (case ntfn of
              Some ntfn_id \<Rightarrow> bind_notification tcb ntfn_id
-           | None \<Rightarrow> unbind_notification tcb)"
+           | None \<Rightarrow> unbind_notification tcb)
+    | SetTLSBase tcb \<Rightarrow> liftE $ corrupt_tcb_intent tcb"
 
 
 definition

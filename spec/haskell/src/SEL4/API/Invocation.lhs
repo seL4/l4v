@@ -83,6 +83,9 @@ The following data type defines the set of possible TCB invocation operations. T
 >             copyRegsSuspendSource, copyRegsResumeTarget :: Bool,
 >             copyRegsTransferFrame, copyRegsTransferInteger :: Bool,
 >             copyRegsTransferArch :: Arch.CopyRegisterSets }
+>         | SetTLSBase {
+>             setTLSBaseTCB :: PPtr TCB,
+>             setTLSBaseNewBase :: Word }
 >         deriving Show
 
 \subsubsection{CNode Invocations}

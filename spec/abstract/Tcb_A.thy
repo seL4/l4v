@@ -252,6 +252,14 @@ where
     return []
   od)"
 
+| "invoke_tcb (SetTLSBase tcb tls_base) =
+  (liftE $ do
+    as_user tcb $ setRegister tlsBaseRegister tls_base;
+    cur \<leftarrow> gets cur_thread;
+    when (tcb = cur) (do_extended_op reschedule_required);
+    return []
+  od)"
+
 definition
   set_domain :: "obj_ref \<Rightarrow> domain \<Rightarrow> unit det_ext_monad" where
   "set_domain tptr new_dom \<equiv> do

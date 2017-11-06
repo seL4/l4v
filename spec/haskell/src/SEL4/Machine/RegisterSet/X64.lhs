@@ -39,6 +39,7 @@ This module defines the x86 64-bit register set.
 > frameRegisters = FaultIP : RSP : FLAGS : [RAX .. R15]
 > gpRegisters = [TLS_BASE]
 > exceptionMessage = [FaultIP, RSP, FLAGS]
+> tlsBaseRegister = TLS_BASE
 
 > syscallMessage = [RAX .. R15] ++ [FaultIP, RSP, FLAGS]
 
