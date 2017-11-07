@@ -46,10 +46,7 @@ lemma autocorres_modifies_transfer:
   apply (simp add: liftM_def bind_assoc)
   apply wpsimp
   apply (clarsimp simp: in_monad select_def split: xstate.splits)
-  apply (case_tac xa; clarsimp)
-    apply (drule exec_normal[OF singletonI _ f_modifies[rule_format]])
-    apply (clarsimp simp: mex_def meq_def)
-   by auto
+  by (case_tac xa; clarsimp dest!: exec_normal[OF singletonI _ f_modifies[rule_format]])
 
 text \<open>
   A monadic Hoare triple for a modifies spec looks like
