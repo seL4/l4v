@@ -84,8 +84,11 @@ session CRefine = CBaseRefine +
 
 session CBaseRefine = CSpec +
   theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
+    (* ../lib/clib/AutoCorres_C explains why L4VerifiedLinks is included here. *)
+    "../tools/autocorres/L4VerifiedLinks"
     "crefine/$L4V_ARCH/Include_C"
   theories
+    "../tools/autocorres/L4VerifiedLinks"
     "crefine/$L4V_ARCH/Include_C"
 
 

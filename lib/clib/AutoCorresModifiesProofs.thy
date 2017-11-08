@@ -9,10 +9,8 @@
  *)
 
 theory AutoCorresModifiesProofs imports
-  "../../lib/ml-helpers/TermPatternAntiquote"
-  "../../tools/autocorres/AutoCorres"
+  "../../tools/autocorres/L4VerifiedLinks"
   "../../lib/SIMPL_Lemmas"
-  "../../lib/Monad_WP/NonDetMonadVCG"
 begin
 
 text \<open>

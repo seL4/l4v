@@ -12,11 +12,10 @@
 
 chapter \<open>Extending C refinement proofs using AutoCorres\<close>
 
-theory AutoCorres_C imports
-  "../../tools/autocorres/AutoCorres"
-  "../../tools/autocorres/L4VerifiedLinks"
-  AutoCorresModifiesProofs
+theory AutoCorres_C
+imports
   Corres_C
+  AutoCorresModifiesProofs
 begin
 
 text \<open>

@@ -12,7 +12,7 @@
 
 theory Ctac
 imports
-  Corres_C
+  AutoCorres_C
   "../XPres"
 begin
 
