@@ -91,6 +91,9 @@ session CBaseRefine = CSpec +
     "../tools/autocorres/L4VerifiedLinks"
     "crefine/$L4V_ARCH/Include_C"
 
+session AutoCorresCRefine = CRefine +
+  theories
+    "crefine/$L4V_ARCH/AutoCorresTest"
 
 (*
  * CapDL Refinement
