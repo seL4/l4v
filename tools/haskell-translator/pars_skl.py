@@ -109,8 +109,8 @@ for line in instructions:
     except IOError as e:
         print("IOError:\n{}".format(e))
         changed = 1
-    except as e:
-        print("An exception occured!\n{}".format(e))
+    except:
+        print("Unexpected exception:{}".format(sys.exc_info()[0]))
         changed = 1
 
     if changed:
