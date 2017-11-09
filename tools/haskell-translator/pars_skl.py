@@ -106,8 +106,13 @@ for line in instructions:
         lines2 = [line for line in open(output)]
 
         changed = not (lines1 == lines2)
-    except:
+    except IOError as e:
+        print("IOError:\n{}".format(e))
         changed = 1
+    except as e:
+        print("An exception occured!\n{}".format(e))
+        changed = 1
+
     if changed:
         if not quiet:
             print(instruct)
@@ -115,7 +120,11 @@ for line in instructions:
             os.unlink(output)
         except:
             pass
-        os.rename(output_tmp, output)
+        try:
+            os.rename(output_tmp, output)
+        except IOError as e:
+            print("IOError:\n{}".format(e))
+            sys.exit(1)
     else:
         os.unlink(output_tmp)
 
