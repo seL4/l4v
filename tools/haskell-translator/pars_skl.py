@@ -101,16 +101,21 @@ for line in instructions:
 
     output_f.close()
 
-    try:
-        lines1 = [line for line in open(output_tmp)]
-        lines2 = [line for line in open(output)]
+    # at this point, output_tmp should exist, but output might not exist
+    if not os.path.exists(output_tmp):
+        print('Error: {} did not generate correctly'.format(output_tmp))
+        sys.exit(1)
 
-        changed = not (lines1 == lines2)
-    except IOError as e:
-        print("IOError:\n{}".format(e))
-        changed = 1
-    except:
-        print("Unexpected exception:{}".format(sys.exc_info()[0]))
+    if os.path.exists(output):
+        try:
+            lines1 = [line for line in open(output_tmp)]
+            lines2 = [line for line in open(output)]
+            changed = not (lines1 == lines2)
+        except IOError as e:
+            print("IOError comparing {} and {}:\n{}".format(output_tmp, output, e))
+            sys.exit(1)
+    else:
+        #print('Warning: {} does not exist, assuming changed'.format(output))
         changed = 1
 
     if changed:
@@ -123,7 +128,7 @@ for line in instructions:
         try:
             os.rename(output_tmp, output)
         except IOError as e:
-            print("IOError:\n{}".format(e))
+            print("IOError moving {} -> {}:\n{}".format(output_tmp, output, e))
             sys.exit(1)
     else:
         os.unlink(output_tmp)
