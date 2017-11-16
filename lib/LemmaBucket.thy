@@ -478,4 +478,8 @@ lemma foldl_fun_or_alt:
   apply clarsimp
   by (simp add: foldl_map)
 
+lemma foldl_conj_Cons:
+  "foldl (\<and>) s (x # xs) = (x \<and> foldl (\<and>) s xs)"
+  by (induct xs arbitrary: x, auto)
+
 end

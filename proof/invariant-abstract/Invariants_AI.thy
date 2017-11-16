@@ -1609,16 +1609,16 @@ lemma idle_only_sc_refs:
 
 lemma idle_not_queued:
   "\<lbrakk>valid_idle s; sym_refs (state_refs_of s);
-   state_refs_of s ptr = queue \<times> {rt}\<rbrakk> \<Longrightarrow>
-   idle_thread s \<notin> queue"
-  apply (frule idle_only_sc_refs, clarsimp simp: valid_idle_def sym_refs_def)
-  sorry
+   state_refs_of s ptr = queue \<times> {rt}; idle_thread s \<in> queue\<rbrakk> \<Longrightarrow>
+   ptr = idle_sc_ptr"
+  by (frule idle_only_sc_refs, fastforce simp: valid_idle_def sym_refs_def)
+
 lemma idle_not_queued':
   "\<lbrakk>valid_idle s; sym_refs (state_refs_of s);
-   state_refs_of s ptr = insert t queue \<times> {rt}\<rbrakk> \<Longrightarrow>
-   idle_thread s \<notin> queue"
-  apply (frule idle_only_sc_refs, clarsimp simp: valid_idle_def sym_refs_def)
-  sorry
+   state_refs_of s ptr = insert t queue \<times> {rt}; idle_thread s \<in> queue\<rbrakk> \<Longrightarrow>
+   ptr = idle_sc_ptr"
+  by (frule idle_only_sc_refs, fastforce simp: valid_idle_def sym_refs_def)
+
 lemma mdb_cte_atI:
   "\<lbrakk> \<And>c p. m c = Some p \<Longrightarrow> ct_at p \<and> ct_at c \<rbrakk>
      \<Longrightarrow> mdb_cte_at ct_at m"
@@ -2312,14 +2312,6 @@ lemma valid_cap_typ:
   apply (wp valid_arch_cap_typ P)
   done
 
-lemma valid_tcb_state_typ:
-  assumes P: "\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_tcb_state st s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb_state st s\<rbrace>"
-  apply (case_tac st;
-      wpsimp simp: valid_tcb_state_def hoare_post_taut reply_at_typ
-                    ep_at_typ P tcb_at_typ ntfn_at_typ)
-  sorry
-
 lemma ntfn_at_typ_at:
   "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>ntfn_at c\<rbrace> f \<lbrace>\<lambda>rv. ntfn_at c\<rbrace>"
   by (simp add: ntfn_at_typ)
@@ -2331,6 +2323,16 @@ lemma sc_at_typ_at:
 lemma reply_at_typ_at:
   "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>reply_at c\<rbrace> f \<lbrace>\<lambda>rv. reply_at c\<rbrace>"
   by (simp add: reply_at_typ)
+
+lemma valid_tcb_state_typ:
+  assumes P: "\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. valid_tcb_state st s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb_state st s\<rbrace>"
+  apply (case_tac st; wpsimp simp: valid_tcb_state_def hoare_post_taut reply_at_typ
+                                   ep_at_typ P tcb_at_typ ntfn_at_typ)
+   apply (rule hoare_vcg_conj_lift)
+    apply (rename_tac obj_ref; case_tac obj_ref;
+           simp add: reply_at_typ_at assms wp_post_taut)+
+  done
 
 lemma valid_tcb_typ:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
@@ -2384,18 +2386,45 @@ lemma valid_ntfn_typ:
   apply (rule hoare_vcg_conj_lift; simp add: P Q)
   done
 
+lemma valid_sc_typ_foldl_reply:
+  assumes r: "\<And>p. \<lbrace>typ_at AReply p\<rbrace> f \<lbrace>\<lambda>rv. typ_at AReply p\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. foldl conj True (map (\<lambda>r. reply_at r s) xs)\<rbrace> f
+              \<lbrace>\<lambda>rv s. foldl conj True (map (\<lambda>r. reply_at r s) xs)\<rbrace>"
+  by (induct xs)
+     (auto intro: hoare_vcg_conj_lift
+            simp: r[simplified reply_at_typ[symmetric]] foldl_conj_Cons wp_post_taut
+        simp del: foldl_Cons)
+
 lemma valid_sc_typ:
-  assumes P: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
-  assumes Q: "\<And>p. \<lbrace>typ_at ANTFN p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ANTFN p\<rbrace>"
-  assumes R: "\<And>p. \<lbrace>typ_at AReply p\<rbrace> f \<lbrace>\<lambda>rv. typ_at AReply p\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_sched_context sc s\<rbrace> f \<lbrace>\<lambda>rv s. valid_sched_context c s\<rbrace>"
-sorry
+  (* typ_at or tcb_at, latter is more common due to being an obj_at *)
+  assumes t: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
+  assumes n: "\<And>p. \<lbrace>typ_at ANTFN p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ANTFN p\<rbrace>"
+  assumes r: "\<And>p. \<lbrace>typ_at AReply p\<rbrace> f \<lbrace>\<lambda>rv. typ_at AReply p\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. valid_sched_context sc s\<rbrace> f \<lbrace>\<lambda>rv s. valid_sched_context sc s\<rbrace>"
+  apply (simp add: valid_sched_context_def)
+  apply (rule hoare_vcg_conj_lift)
+   apply (case_tac "sc_ntfn sc";
+          simp add: wp_post_taut n[simplified ntfn_at_typ[symmetric]])
+  apply (rule hoare_vcg_conj_lift)
+   apply (case_tac "sc_tcb sc";
+          simp add: wp_post_taut t[simplified tcb_at_typ[symmetric]])
+  apply (rule hoare_vcg_conj_lift)
+  apply (case_tac "sc_yield_from sc";
+         simp add: wp_post_taut t[simplified tcb_at_typ[symmetric]])
+  apply (auto simp: valid_sc_typ_foldl_reply r)
+  done
 
 lemma valid_reply_typ:
-  assumes P: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
-  assumes Q: "\<And>p. \<lbrace>typ_at ASchedContext p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ASchedContext p\<rbrace>"
+  assumes t: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
+  assumes s: "\<And>p. \<lbrace>typ_at ASchedContext p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ASchedContext p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_reply reply s\<rbrace> f \<lbrace>\<lambda>rv s. valid_reply reply s\<rbrace>"
-sorry
+  apply (simp add: valid_reply_def)
+  apply (rule hoare_vcg_conj_lift)
+   apply (case_tac "reply_tcb reply";
+          simp add: wp_post_taut t[simplified tcb_at_typ[symmetric]])
+  apply (case_tac "reply_sc reply";
+         simp add: wp_post_taut s[simplified sc_at_typ[symmetric]])
+  done
 
 lemma valid_obj_typ:
   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
