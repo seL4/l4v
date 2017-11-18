@@ -36,9 +36,9 @@ Important Theories
 ------------------
 
 The top-level theory where the refinement statement is established over
-the entire kernel is [`Refine_C`](Refine_C.thy); the state-relation that
+the entire kernel is [`Refine_C`](ARM/Refine_C.thy); the state-relation that
 relates the state-spaces of the two specifications is defined in
-[`StateRelation_C`](StateRelation_C.thy).
+[`StateRelation_C`](ARM/StateRelation_C.thy).
 
 Note that this proof deals with two C-level semantics of seL4: one
 produced directly by the C parser from the kernel's C code, and another
@@ -46,6 +46,6 @@ produced by the C spec's [`Substitute`](../../spec/cspec/Substitute.thy)
 theory. These proofs largely operate on the latter, proving that it
 corresponds to the design spec. Refinement between the two C-level specs
 is proved in the [`CToCRefine`](../../lib/clib/CToCRefine.thy) theory.
-The top-level [`Refine_C`](Refine_C.thy) theory quotes both refinement
+The top-level [`Refine_C`](ARM/Refine_C.thy) theory quotes both refinement
 properties.
 
