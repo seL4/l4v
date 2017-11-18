@@ -25,10 +25,10 @@ Important Theories
 ------------------
 
 The top-level theory where the refinement statement is established over
-the entire kernel is [`Refine`](Refine.thy); the state-relation that
+the entire kernel is [`Refine`](ARM/Refine.thy); the state-relation that
 relates the state-spaces of the two specifications is defined in
-[`StateRelation`](StateRelation.thy) and the basic correspondence
+[`StateRelation`](ARM/StateRelation.thy) and the basic correspondence
 property proved over each kernel function is defined in
-[`Corres`](Corres.thy).
+[`Corres`](ARM/Corres.thy).
 
 
