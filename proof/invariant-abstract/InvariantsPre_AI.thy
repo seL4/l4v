@@ -90,15 +90,14 @@ lemma ko_at_weakenE:
   "\<lbrakk> ko_at k ptr s; P k \<rbrakk> \<Longrightarrow> obj_at P ptr s"
   by (erule obj_at_weakenE, simp)
 
-
-text {* An alternative formulation that allows abstraction over type: *}
-
 lemmas a_type_simps =
   a_type_def[split_simps kernel_object.split]
 
 lemma [simp]:
   "a_type (Endpoint x) = AEndpoint"
   "a_type (Notification v) = ANTFN"
+  "a_type (SchedContext sc) = ASchedContext"
+  "a_type (Reply r) = AReply"
   by (simp_all add: a_type_def)
 
 lemma a_type_aa_type: "(a_type (ArchObj ako) = AArch T) = (aa_type ako = T)"

@@ -56,6 +56,8 @@ requalify_facts
 
   state_hyp_refs_of_ep_update
   state_hyp_refs_of_ntfn_update
+  state_hyp_refs_of_sc_update
+  state_hyp_refs_of_reply_update
   state_hyp_refs_of_tcb_state_update
   state_hyp_refs_of_tcb_bound_ntfn_update
   arch_valid_obj_same_type
@@ -391,7 +393,6 @@ lemma get_object_valid [wp]:
   apply fastforce
   done
 
-
 lemma get_object_valid_obj_simple [wp]:
   notes valid_simple_obj_def[simp del]
   shows
@@ -461,13 +462,25 @@ lemma get_ep_valid_ep[wp]:
    \<lbrace> valid_ep \<rbrace>"
   by (wpsimp simp: ep_at_def2 valid_ep_def2 simp_del: valid_simple_obj_def)
 
+lemma get_sc_valid_sc[wp]:
+  "\<lbrace> invs and sc_at sc \<rbrace>
+   get_sched_context sc
+   \<lbrace> valid_sched_context \<rbrace>"
+  by (wpsimp simp: sc_at_def2 valid_sc_def2 simp_del: valid_simple_obj_def)
+
+lemma get_reply_valid_reply[wp]:
+  "\<lbrace> invs and reply_at reply \<rbrace>
+   get_reply reply
+   \<lbrace> valid_reply \<rbrace>"
+  by (wpsimp simp: reply_at_def2 valid_reply_def2 simp_del: valid_simple_obj_def)
 
 lemma set_simple_ko_valid_objs[wp]:
   "\<lbrace> valid_objs
      and valid_simple_obj (f v) and K (is_simple_type (f v))\<rbrace> set_simple_ko f ptr v \<lbrace>\<lambda>rv s. valid_objs s\<rbrace>"
    unfolding set_simple_ko_def
    by (wpsimp wp: set_object_valid_objs
-                 simp: valid_obj_def obj_at_def a_type_def partial_inv_def valid_ntfn_def2 valid_ep_def2
+                 simp: valid_obj_def obj_at_def a_type_def partial_inv_def
+                       valid_ntfn_def2 valid_ep_def2 valid_sc_def2 valid_reply_def2
                  split: kernel_object.splits simp_del: valid_simple_obj_def)
 
 method set_simple_ko_method uses wp_thm simp_thm =
@@ -485,11 +498,9 @@ lemma set_simple_ko_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_simple_ko f p' ep \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   by (set_simple_ko_method wp_thm: set_object_typ_at)
 
-
 lemma set_simple_ko_cte_wp_at [wp]:
   "\<lbrace>cte_wp_at P p\<rbrace> set_simple_ko f p' ep \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
   by (set_simple_ko_method simp_thm: set_object_def cte_wp_at_cases; fastforce)
-
 
 lemma get_simple_ko_ko_at:
   "\<lbrace>\<top>\<rbrace> get_simple_ko f ep \<lbrace>\<lambda>rv. ko_at (f rv) ep\<rbrace>"
@@ -525,20 +536,12 @@ lemma set_simple_ko_hyp_refs_of[wp]:
     set_simple_ko f ep val
   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (set_simple_ko_method simp_thm: set_object_def)
-  apply (rule conjI; clarsimp elim!: rsubst[where P=P]; simp only:)
-   apply (subst state_hyp_refs_of_ep_update[of ep, symmetric])
-    apply (clarsimp simp: obj_at_def)
-   apply (simp add: fun_upd_def)
-  apply (subst state_hyp_refs_of_ntfn_update[of ep, symmetric])
-   apply (clarsimp simp: obj_at_def)
-  apply (simp add: fun_upd_def)
-  done
-
-lemma set_ntfn_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of s) (ntfnptr := ntfn_q_refs_of (ntfn_obj ntfn) \<union> ntfn_bound_refs (ntfn_bound_tcb ntfn)))\<rbrace>
-     set_notification ntfnptr ntfn
-   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  by (wp; fastforce simp: state_refs_of_def elim!: rsubst[where P=P])
+  by (intro conjI; clarsimp elim!: rsubst[where P=P]; simp only:;
+      subst state_hyp_refs_of_ep_update[of ep, symmetric]
+            state_hyp_refs_of_ntfn_update[of ep, symmetric]
+            state_hyp_refs_of_sc_update[of ep, symmetric]
+            state_hyp_refs_of_reply_update[of ep, symmetric],
+      clarsimp simp: obj_at_def, simp add: fun_upd_def)+
 
 lemma pspace_distinct_same_type:
   "\<lbrakk> kheap s t = Some ko; a_type ko = a_type ko';  pspace_distinct s\<rbrakk>
@@ -547,6 +550,13 @@ lemma pspace_distinct_same_type:
   apply fastforce
   done
 
+lemma set_ntfn_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of s) (ntfnptr := ntfn_q_refs_of (ntfn_obj ntfn)
+                                         \<union> get_refs NTFNBound (ntfn_bound_tcb ntfn)
+                                         \<union> get_refs NTFNSchedContext (ntfn_sc ntfn)))\<rbrace>
+     set_notification ntfnptr ntfn
+   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  by (wp; fastforce simp: state_refs_of_def elim!: rsubst[where P=P])
 
 lemma set_object_distinct:
   "\<lbrace>obj_at (\<lambda>ko. a_type ko = a_type ko') p and pspace_distinct\<rbrace>
@@ -642,7 +652,7 @@ crunch no_cdt[wp]: set_simple_ko "\<lambda>s. P (cdt s)"
 lemma set_simple_ko_caps_of_state [wp]:
   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_simple_ko f p ep \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
   apply (set_simple_ko_method simp_thm: get_object_def bind_assoc set_object_def)
-  apply (rule conjI; clarsimp split: if_splits; subst cte_wp_caps_of_lift; assumption?)
+  apply (intro conjI; clarsimp split: if_splits; subst cte_wp_caps_of_lift; assumption?)
    apply (auto simp: cte_wp_at_cases)
   done
 
@@ -650,7 +660,7 @@ lemma set_simple_ko_revokable [wp]:
   "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> set_simple_ko f p ep \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
   by (set_simple_ko_method simp_thm: set_object_def)
 
-lemma set_ep_mdb [wp]:
+lemma set_simple_ko_mdb [wp]:
   "\<lbrace>valid_mdb\<rbrace> set_simple_ko f p ep \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
   by (wp valid_mdb_lift)
 
@@ -709,22 +719,20 @@ lemma set_simple_ko_iflive[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (live (f ep) \<longrightarrow> ex_nonz_cap_to p s)\<rbrace>
      set_simple_ko f p ep \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (set_simple_ko_method wp_thm: set_object_iflive)
-  apply (rule conjI; clarsimp elim!: obj_at_weakenE
+  apply (intro conjI; clarsimp elim!: obj_at_weakenE
                   split: Structures_A.kernel_object.splits
-                  simp: is_ep_def is_ntfn_def)
+                  simp: is_simple_ko_defs)
   done
-
 
 lemma set_simple_ko_ifunsafe[wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> set_simple_ko f p val \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
   apply (set_simple_ko_method wp_thm: )
-  by (clarsimp elim!: obj_at_weakenE simp: is_ep_def is_ntfn_def)
-
+  by (clarsimp elim!: obj_at_weakenE simp: is_simple_ko_defs)
 
 lemma set_simple_ko_zombies[wp]:
   "\<lbrace>zombies_final\<rbrace> set_simple_ko f p val \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (set_simple_ko_method wp_thm: )
-  by (clarsimp elim!: obj_at_weakenE simp: is_ep_def is_ntfn_def)
+  by (clarsimp elim!: obj_at_weakenE simp: is_simple_ko_defs)
 
 lemma set_object_cap_refs_in_kernel_window:
   "\<lbrace>cap_refs_in_kernel_window and obj_at (same_caps ko) p\<rbrace>
@@ -986,13 +994,6 @@ lemma set_simple_ko_global_refs [wp]:
   "\<lbrace>valid_global_refs\<rbrace> set_simple_ko f ntfn p \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
   by (rule valid_global_refs_cte_lift; wpsimp)
 
-
-lemma set_simple_ko_reply[wp]:
-  "\<lbrace>valid_reply_caps\<rbrace>
-   set_simple_ko f p ep
-   \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
-  by (wp valid_reply_caps_st_cte_lift)
-
 lemma obj_at_ko_atE:
   "\<lbrakk> obj_at P ptr s; ko_at k ptr s; P k \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
   by (clarsimp simp: obj_at_def)
@@ -1173,7 +1174,7 @@ interpretation
   set_sched_context: non_aobj_non_cap_non_mem_op "set_tcb_obj_ref tcb_sched_context_update p sc" +
   set_cap: non_aobj_non_mem_op "set_cap cap p'"
   apply (all \<open>unfold_locales; (wp ; fail)?\<close>)
-  unfolding set_endpoint_def set_notification_def set_thread_state_def
+  unfolding set_simple_ko_def set_thread_state_def
             set_tcb_obj_ref_def thread_set_def set_cap_def[simplified split_def]
             as_user_def set_mrs_def
   apply -
@@ -1244,12 +1245,12 @@ lemma set_simple_ko_only_idle [wp]:
 lemma set_simple_ko_cap_refs_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_simple_ko f p ep \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   by (set_simple_ko_method wp_thm: set_object_cap_refs_in_kernel_window get_object_wp
-           simp_thm: is_ep_def is_ntfn_def)
+           simp_thm: is_simple_ko_defs)
 
 lemma set_simple_ko_cap_refs_respects_device_region[wp]:
   "\<lbrace>cap_refs_respects_device_region\<rbrace> set_simple_ko f p ep \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
   by (set_simple_ko_method wp_thm: set_object_cap_refs_respects_device_region get_object_wp
-           simp_thm: is_ep_def is_ntfn_def)
+           simp_thm: is_simple_ko_defs)
 
 
 crunch v_ker_map[wp]: set_simple_ko "valid_kernel_mappings"

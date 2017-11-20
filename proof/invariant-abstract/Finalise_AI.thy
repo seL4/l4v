@@ -221,6 +221,8 @@ lemma empty_slot_valid_objs[wp]:
                  | wp_once hoare_drop_imps)+
   done
 
+crunch typ_at[wp]: empty_slot "\<lambda>s. P (typ_at T p s)"
+
 lemmas empty_slot_valid_cap[wp] = valid_cap_typ [OF empty_slot_typ_at]
 
 locale mdb_empty_abs = vmdb_abs +
@@ -358,6 +360,7 @@ lemma post_cap_deletion_invs:
   apply (clarsimp simp: post_cap_delete_pre_def split: cap.splits)
   done
 
+(*
 lemma emptyable_no_reply_cap:
   assumes e: "emptyable sl s"
   and   mdb: "reply_caps_mdb (mdb s) (caps_of_state s)"
@@ -389,7 +392,7 @@ proof -
   show ?thesis
     using tcb_halted tcb_not_halted
     by (clarsimp simp: st_tcb_def2)
-qed
+qed *)
 
 lemmas (in Finalise_AI_1) obj_ref_ofI' = obj_ref_ofI[OF obj_ref_elemD]
 
@@ -462,9 +465,21 @@ lemma empty_slot_caps_of_state:
 crunch caps_of_state[wp]: cancel_all_ipc "\<lambda>s. P (caps_of_state s)"
   (wp: mapM_x_wp' crunch_wps)
 
-crunch caps_of_state[wp]: fast_finalise, unbind_notification "\<lambda>s. P (caps_of_state s)"
-  (wp: mapM_x_wp' crunch_wps thread_set_caps_of_state_trivial
-   simp: tcb_cap_cases_def)
+crunch caps_of_state[wp]: set_tcb_obj_ref, set_ntfn_obj_ref, set_sc_obj_ref "\<lambda>s. P (caps_of_state s)"
+  (wp:
+   simp: set_object_def gets_the_def ignore: set_object get_simple_ko)
+
+crunch caps_of_state[wp]: unbind_notification, sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn, unbind_maybe_notification "\<lambda>s. P (caps_of_state s)"
+  (wp: mapM_x_wp' crunch_wps thread_set_caps_of_state_trivial maybeM_inv
+   simp: tcb_cap_cases_def ignore: set_object)
+
+crunch caps_of_state[wp]: sched_context_unbind_tcb, sched_context_unbind_yield_from "\<lambda>s. P (caps_of_state (s::det_ext state))"
+  (wp: mapM_x_wp' crunch_wps thread_set_caps_of_state_trivial maybeM_inv
+   simp: tcb_cap_cases_def ignore: set_object)
+
+crunch caps_of_state[wp]: fast_finalise "\<lambda>s. P (caps_of_state s)"
+  (wp: maybeM_wp mapM_x_wp
+   simp: tcb_cap_cases_def ignore: set_object)
 
 
 lemma cap_delete_one_caps_of_state:
@@ -519,7 +534,8 @@ lemma suspend_caps_of_state:
      suspend t
    \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   unfolding suspend_def
-  by (wpsimp wp: cancel_ipc_caps_of_state simp: fun_upd_def[symmetric])
+  by (wpsimp wp: cancel_ipc_caps_of_state hoare_drop_imp
+           simp: fun_upd_def[symmetric])
 
 
 lemma suspend_final_cap:

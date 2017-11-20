@@ -604,6 +604,18 @@ lemma is_ntfn_def2: "(is_ntfn ko) = bound (partial_inv Notification ko)"
 lemma ntfn_at_def2: "ntfn_at = (obj_at (\<lambda>ko. bound (partial_inv Notification ko)))"
   by (rule obj_at_eq_helper, simp add: is_ntfn_def2)
 
+lemma is_sc_def2: "(is_sc ko) = bound (partial_inv SchedContext ko)"
+  by (auto simp: is_sc_def split: kernel_object.splits)
+
+lemma sc_at_def2: "sc_at = (obj_at (\<lambda>ko. bound (partial_inv SchedContext ko)))"
+  by (rule obj_at_eq_helper, simp add: is_sc_def2)
+
+lemma is_reply_def2: "(is_reply ko) = bound (partial_inv Reply ko)"
+  by (auto simp: is_reply_def split: kernel_object.splits)
+
+lemma reply_at_def2: "reply_at = (obj_at (\<lambda>ko. bound (partial_inv Reply ko)))"
+  by (rule obj_at_eq_helper, simp add: is_reply_def2)
+
 definition
   valid_simple_obj :: "kernel_object \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -612,6 +624,8 @@ where
   | Notification p \<Rightarrow> valid_ntfn p s
   | TCB t \<Rightarrow> True
   | CNode sz cs \<Rightarrow> True
+  | SchedContext sc \<Rightarrow> valid_sched_context sc s
+  | Reply reply \<Rightarrow> valid_reply reply s
   | ArchObj ao \<Rightarrow> arch_valid_obj ao s"
 
 definition
@@ -634,13 +648,21 @@ lemma valid_ep_def2: "valid_ep = (\<lambda>x s. valid_simple_obj (Endpoint x) s)
 lemma valid_ntfn_def2: "valid_ntfn = (\<lambda>x s. valid_simple_obj (Notification x) s)"
   by simp
 
+lemma valid_sc_def2: "valid_sched_context = (\<lambda>x s. valid_simple_obj (SchedContext x) s)"
+  by simp
+
+lemma valid_reply_def2: "valid_reply = (\<lambda>x s. valid_simple_obj (Reply x) s)"
+  by simp
+
 lemma valid_simple_kheap:"\<lbrakk>kheap s p = Some v ;
                  a_type v \<in> {AEndpoint, ANTFN} \<rbrakk>\<Longrightarrow> valid_obj p v s = valid_simple_obj v s"
   by (auto simp: valid_obj_imp_valid_simple valid_obj_def a_type_def
            split: kernel_object.splits if_splits)
 
 abbreviation
-  "simple_typ_at \<equiv> obj_at (\<lambda>ob. a_type ob \<in> {AEndpoint, ANTFN})"
+  "simple_typ_at \<equiv> obj_at (\<lambda>ob. a_type ob \<in> {AEndpoint, ANTFN, ASchedContext, AReply})"
+
+lemmas is_simple_ko_defs = is_ep_def is_ntfn_def is_sc_def is_reply_def
 
 text {* symref related definitions *}
 

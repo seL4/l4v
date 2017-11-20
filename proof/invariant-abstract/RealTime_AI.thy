@@ -140,13 +140,13 @@ lemma reply_remove_[wp]:
 lemma set_sched_context_invs[wp]:
   "\<lbrace> invs and sc_at sc_ptr \<rbrace>
       set_sched_context sc_ptr sc \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (wpsimp simp: set_object_def set_sched_context_def)
+  apply (wpsimp simp: set_object_def set_simple_ko_def)
   sorry
 
 lemma set_reply_invs[wp]:
-  "\<lbrace> invs and reply_at sc_ptr \<rbrace>
+  "\<lbrace> invs and reply_at rptr \<rbrace>
       set_reply rptr reply \<lbrace> \<lambda>_. invs \<rbrace>"
-  apply (simp add: set_reply_def)
+  apply (simp add: set_simple_ko_def)
   sorry
 
 

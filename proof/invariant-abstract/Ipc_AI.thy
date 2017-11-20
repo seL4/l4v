@@ -3051,7 +3051,7 @@ lemma si_invs':
    apply (subgoal_tac "state_refs_of s t = {r \<in> state_refs_of s t. snd r = TCBBound}")
     apply (subst fun_upd_idem[where x=t], force simp: conj_commute)
     apply (subgoal_tac "sym_refs ((state_refs_of s)(ep := set lista \<times> {EPRecv}, a := {r \<in> state_refs_of s a. snd r = TCBBound}))")
-     apply (fastforce elim!: pred_tcb_weakenE st_tcb_at_reply_cap_valid simp: conj_commute)
+     apply (fastforce elim!: pred_tcb_weakenE st_tcb_at_reply_cap_valid simp: conj_commute simp del: ntfn_at_def2)
 
     apply (erule delta_sym_refs)
      apply (clarsimp simp: fun_upd_def split: if_split_asm)

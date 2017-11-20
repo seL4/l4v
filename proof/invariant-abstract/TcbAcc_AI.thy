@@ -1380,7 +1380,7 @@ lemma sbsc_st_tcb_at[wp]:
 lemma set_thread_state_mdb [wp]:
   "\<lbrace>valid_mdb\<rbrace> set_thread_state p st \<lbrace>\<lambda>_. valid_mdb\<rbrace>"
   apply (rule valid_mdb_lift)
-    apply (wpsimp simp: set_thread_state_def)+
+    apply (wpsimp simp: set_thread_state_def set_object_def)+
   done
 
 lemma set_bound_notification_mdb [wp]:
