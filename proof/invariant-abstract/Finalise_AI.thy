@@ -10,7 +10,7 @@
 
 theory Finalise_AI
 imports
-  "./$L4V_ARCH/ArchIpcCancel_AI"
+  "./IpcCancel_AI"
   "./$L4V_ARCH/ArchInterruptAcc_AI"
   "./$L4V_ARCH/ArchRetype_AI"
 begin
@@ -632,13 +632,14 @@ lemma tcb_st_refs_no_TCBBound:
 lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
   "\<lbrace>invs\<rbrace> unbind_maybe_notification ntfnptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: unbind_maybe_notification_def invs_def valid_state_def valid_pspace_def)
-  apply (rule hoare_seq_ext [OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
-   apply (wp valid_irq_node_typ set_ntfn_valid_objs | wpc | simp)+
+   apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs)
+  apply simp
   apply safe
   defer 3 defer 6
-          apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
-                       simp: live_def valid_ntfn_set_bound_None is_ntfn valid_obj_def)[6]
+       apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
+                   simp: live_def valid_ntfn_set_bound_None is_ntfn valid_obj_def)[6]
   apply (rule delta_sym_refs, assumption)
    apply (fastforce simp: obj_at_def is_tcb
                    dest!: pred_tcb_at_tcb_at ko_at_state_refs_ofD
@@ -748,7 +749,7 @@ lemma unbind_notification_not_bound:
   apply (rule hoare_pre)
    apply (rule hoare_seq_ext[OF _ gbn_wp[where P="\<lambda>ptr _. ptr = (Some ntfnptr)"]])
    apply (rule hoare_gen_asm[where P'=\<top>, simplified])
-   apply (wp sbn_obj_at_impossible set_notification_obj_at | wpc | simp)+
+   apply (wp sbn_obj_at_impossible simple_obj_set_prop_at | wpc | simp)+
   apply (clarsimp simp: obj_at_def)
   apply (rule valid_objsE, simp+)
   apply (drule_tac P="op = (Some ntfnptr)" in ntfn_bound_tcb_at, simp+)
@@ -761,7 +762,7 @@ lemma unbind_notification_not_bound:
     \<lbrace>\<lambda>_. obj_at (\<lambda>ko. \<exists>ntfn. ko = Notification ntfn \<and> ntfn_bound_tcb ntfn = None) ntfnptr\<rbrace>"
   apply (simp add: unbind_maybe_notification_def)
   apply (rule hoare_pre)
-   apply (wp get_ntfn_wp sbn_obj_at_impossible set_notification_obj_at | wpc | simp)+
+   apply (wp get_simple_ko_wp sbn_obj_at_impossible simple_obj_set_prop_at | wpc | simp)+
   apply (clarsimp simp: obj_at_def)
   done
 
@@ -846,7 +847,7 @@ lemma emptyable_lift:
   done
 
 
-crunch emptyable[wp]: set_endpoint, set_notification "emptyable sl"
+crunch emptyable[wp]: set_simple_ko "emptyable sl"
   (wp: emptyable_lift)
 
 
@@ -887,7 +888,7 @@ lemma unbind_maybe_notification_emptyable[wp]:
 lemma cancel_all_signals_emptyable[wp]:
   "\<lbrace>invs and emptyable sl\<rbrace> cancel_all_signals ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
   unfolding cancel_all_signals_def unbind_maybe_notification_def
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
   apply (wp cancel_all_emptyable_helper
             hoare_vcg_const_Ball_lift
@@ -899,7 +900,7 @@ lemma cancel_all_signals_emptyable[wp]:
 lemma cancel_all_ipc_emptyable[wp]:
   "\<lbrace>invs and emptyable sl\<rbrace> cancel_all_ipc ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
   apply (simp add: cancel_all_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_endpoint_sp])
+  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (case_tac ep, simp_all)
     apply (wp, simp)
    apply (wp cancel_all_emptyable_helper hoare_vcg_const_Ball_lift

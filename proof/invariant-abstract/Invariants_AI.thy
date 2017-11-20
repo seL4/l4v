@@ -531,6 +531,64 @@ definition
 where
   "valid_objs s \<equiv> \<forall>ptr \<in> dom $ kheap s. \<exists>obj. kheap s ptr = Some obj \<and> valid_obj ptr obj s"
 
+text {* simple kernel objects *}
+
+lemma obj_at_eq_helper:
+  "\<lbrakk> \<And>obj. P obj = P' obj \<rbrakk> \<Longrightarrow> obj_at P = obj_at P'"
+  apply (rule ext)+
+  apply (simp add: obj_at_def)
+  done
+
+lemma is_ep_def2: "(is_ep ko) = bound (partial_inv Endpoint ko)"
+  by (auto simp: is_ep_def split: kernel_object.splits)
+
+lemma ep_at_def2: "ep_at = (obj_at (\<lambda>ko. bound (partial_inv Endpoint ko)))"
+  by (rule obj_at_eq_helper, simp add: is_ep_def2)
+
+lemma is_ntfn_def2: "(is_ntfn ko) = bound (partial_inv Notification ko)"
+  by (auto simp: is_ntfn_def split: kernel_object.splits)
+
+lemma ntfn_at_def2: "ntfn_at = (obj_at (\<lambda>ko. bound (partial_inv Notification ko)))"
+  by (rule obj_at_eq_helper, simp add: is_ntfn_def2)
+
+definition
+  valid_simple_obj :: "kernel_object \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_simple_obj ko s \<equiv> case ko of
+    Endpoint p \<Rightarrow> valid_ep p s
+  | Notification p \<Rightarrow> valid_ntfn p s
+  | TCB t \<Rightarrow> True
+  | CNode sz cs \<Rightarrow> True
+  | ArchObj ao \<Rightarrow> arch_valid_obj ao s"
+
+definition
+  valid_simple_objs :: "'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_simple_objs s \<equiv> \<forall>ptr \<in> dom $ kheap s. \<exists>obj. kheap s ptr = Some obj \<and> valid_simple_obj obj s"
+
+lemma valid_obj_imp_valid_simple: "valid_obj p ko s \<Longrightarrow> valid_simple_obj ko s"
+  by (clarsimp simp: valid_obj_def valid_simple_obj_def split: kernel_object.splits)
+
+lemma valid_objs_imp_valid_simple_objs: "valid_objs s \<Longrightarrow> valid_simple_objs s"
+  by (fastforce simp: valid_obj_imp_valid_simple valid_objs_def valid_simple_objs_def
+                split: kernel_object.splits)
+
+declare valid_simple_obj_def[simp]
+
+lemma valid_ep_def2: "valid_ep = (\<lambda>x s. valid_simple_obj (Endpoint x) s)"
+  by simp
+
+lemma valid_ntfn_def2: "valid_ntfn = (\<lambda>x s. valid_simple_obj (Notification x) s)"
+  by simp
+
+lemma valid_simple_kheap:"\<lbrakk>kheap s p = Some v ;
+                 a_type v \<in> {AEndpoint, ANTFN} \<rbrakk>\<Longrightarrow> valid_obj p v s = valid_simple_obj v s"
+  by (auto simp: valid_obj_imp_valid_simple valid_obj_def a_type_def
+           split: kernel_object.splits if_splits)
+
+abbreviation
+  "simple_typ_at \<equiv> obj_at (\<lambda>ob. a_type ob \<in> {AEndpoint, ANTFN})"
+
 text {* symref related definitions *}
 
 definition
@@ -1060,12 +1118,6 @@ lemma pred_tcb_def2:
 
 (* sseefried: 'st_tcb_def2' only exists to make existing proofs go through. Can use 'pred_tcb_at_def2' instead *)
 lemmas st_tcb_def2 = pred_tcb_def2[where proj=itcb_state,simplified]
-
-lemma obj_at_eq_helper:
-  "\<lbrakk> \<And>obj. P obj = P' obj \<rbrakk> \<Longrightarrow> obj_at P = obj_at P'"
-  apply (rule ext)+
-  apply (simp add: obj_at_def)
-  done
 
 lemma tcb_at_typ:
   "tcb_at = typ_at ATCB"

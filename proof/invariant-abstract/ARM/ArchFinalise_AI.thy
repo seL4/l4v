@@ -553,7 +553,7 @@ lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
             apply ((wp suspend_unlive'[unfolded o_def]
                       suspend_final_cap[where sl=sl]
                       unbind_maybe_notification_not_bound
-                      get_ntfn_ko hoare_vcg_conj_lift
+                      get_simple_ko_ko_at hoare_vcg_conj_lift
                       unbind_notification_valid_objs
                    | clarsimp simp: o_def dom_tcb_cap_cases_lt_ARCH
                                      ran_tcb_cap_cases is_cap_simps

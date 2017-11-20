@@ -908,11 +908,7 @@ lemma set_pd_valid_mdb:
   set_pd p pd
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
   apply (rule valid_mdb_lift)
-    apply (wp set_pd_cdt)+
-  apply (clarsimp simp: set_pd_def)
-  apply (wpsimp wp: get_object_wp)
-  done
-
+    by (wpsimp wp: set_pd_cdt get_object_wp simp: set_pd_def set_object_def)+
 
 lemma set_pd_valid_idle:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace> set_pd p pd \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
@@ -1072,7 +1068,7 @@ lemma set_pt_cdt:
 lemma set_pt_valid_mdb:
   "\<lbrace>\<lambda>s. valid_mdb s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
   including unfold_objects
-  by (wpsimp wp: set_pt_cdt valid_mdb_lift simp: set_pt_def)
+  by (wpsimp wp: set_pt_cdt valid_mdb_lift simp: set_pt_def set_object_def)
 
 lemma set_pt_valid_idle:
   "\<lbrace>\<lambda>s. valid_idle s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
@@ -1822,7 +1818,7 @@ lemma set_asid_pool_valid_mdb [wp]:
   set_asid_pool p ap
   \<lbrace>\<lambda>_ s. valid_mdb s\<rbrace>"
   including unfold_objects
-  by (wpsimp wp: valid_mdb_lift simp: set_asid_pool_def)
+  by (wpsimp wp: valid_mdb_lift simp: set_asid_pool_def set_object_def)
 
 
 lemma set_asid_pool_valid_idle [wp]:

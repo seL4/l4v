@@ -733,22 +733,6 @@ lemma cte_wp_and:
   by (auto simp: cte_wp_at_def)
 
 
-lemma set_ep_cte_wp_at [wp]:
-  "\<lbrace>cte_wp_at P c\<rbrace> set_endpoint e p \<lbrace>\<lambda>_. cte_wp_at P c\<rbrace>"
-  apply (simp add: set_endpoint_def set_object_def get_object_def)
-  apply wp
-  apply (auto simp: cte_wp_at_cases split: if_split)
-  done
-
-
-lemma set_ntfn_cte_wp_at [wp]:
-  "\<lbrace>cte_wp_at P c\<rbrace> set_notification e p \<lbrace>\<lambda>_. cte_wp_at P c\<rbrace>"
-  apply (simp add: set_notification_def set_object_def get_object_def)
-  apply wp
-  apply (auto simp: cte_wp_at_cases)
-  done
-
-
 crunch cte_wp_at[wp]: get_mrs "cte_wp_at P c"
   (wp: crunch_wps simp: crunch_simps)
 

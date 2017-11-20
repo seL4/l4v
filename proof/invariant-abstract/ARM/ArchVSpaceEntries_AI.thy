@@ -403,6 +403,11 @@ lemma unmap_page_table_valid_pdpt_objs[wp]:
          rule find_pd_for_asid_inv, simp_all)
   done
 
+lemma set_simple_ko_valid_pdpt_objs[wp]:
+   "\<lbrace>\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace>
+       set_simple_ko param_a param_b param_c \<lbrace>\<lambda>_ s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x\<rbrace> "
+  by (set_simple_ko_method wp_thm: set_object_valid_pdpt simp_thm: get_object_def)
+
 crunch valid_pdpt_objs[wp]: finalise_cap, cap_swap_for_delete, empty_slot "valid_pdpt_objs"
   (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
 

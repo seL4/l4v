@@ -1166,8 +1166,8 @@ lemma invs_valid_tcb_ctable_strengthen:
 lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_recv is_blocking \<lbrace>\<lambda>r. invs\<rbrace>"
   apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
     cong: if_cong)
-  apply (wp get_ntfn_wp | clarsimp)+
-  apply (wp delete_caller_cap_nonz_cap get_ntfn_wp hoare_vcg_ball_lift | simp)+
+  apply (wp get_simple_ko_wp | clarsimp)+
+  apply (wp delete_caller_cap_nonz_cap get_simple_ko_wp hoare_vcg_ball_lift | simp)+
      apply (rule hoare_vcg_E_elim)
       apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
       apply wp
@@ -1405,7 +1405,7 @@ lemma complete_signal_state_refs_of:
   "\<lbrace>\<lambda>s. P (state_refs_of s) \<rbrace> complete_signal ntfnc t \<lbrace>\<lambda>rv s. P (state_refs_of s) \<rbrace>"
   unfolding complete_signal_def
   apply (rule hoare_pre)
-   apply (wp get_ntfn_wp | wpc | simp)+
+   apply (wp get_simple_ko_wp | wpc | simp)+
   apply clarsimp
   apply (subgoal_tac " ntfn_bound_refs (ntfn_bound_tcb ntfn) = state_refs_of s ntfnc")
    apply (clarsimp simp: if_apply_def2 split: if_splits if_split_asm)
@@ -1417,7 +1417,7 @@ lemma do_nbrecv_failed_transfer_state_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of s) \<rbrace> do_nbrecv_failed_transfer t \<lbrace>\<lambda>rv s. P (state_refs_of s) \<rbrace>"
   unfolding do_nbrecv_failed_transfer_def
   apply (rule hoare_pre)
-   apply (wp get_ntfn_wp | wpc | simp)+
+   apply (wp get_simple_ko_wp | wpc | simp)+
   done
 
 crunch st_tcb_at_runnable[wp]: do_nbrecv_failed_transfer "st_tcb_at runnable t"
@@ -1452,8 +1452,8 @@ lemma send_ipc_st_tcb_at_runnable:
           apply (simp add: setup_caller_cap_def)
           apply (wpc | wp sts_st_tcb_at_other dxo_wp_weak | clarsimp simp: if_cancel)+
     apply (wp hoare_drop_imps)[1]
-   apply (wp set_ep_pred_tcb_at)[1]
-  apply (wp get_endpoint_wp)
+   apply (wp set_simple_ko_pred_tcb_at)[1]
+  apply (wp get_simple_ko_wp)
   apply clarsimp
   apply (drule st_tcb_at_state_refs_ofD)
   apply (drule (1) sym_refs_ko_atD)
@@ -1477,7 +1477,7 @@ lemma receive_ipc_st_tcb_at_runnable:
                            | simp add: do_nbrecv_failed_transfer_def | wp_once hoare_drop_imps)+)[8]
            apply (wp gts_wp)
           apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
-         apply ((wp sts_st_tcb_at_other get_ntfn_wp gbn_wp get_endpoint_wp | wpc)+)[8]
+         apply ((wp sts_st_tcb_at_other get_simple_ko_wp gbn_wp get_simple_ko_wp | wpc)+)[8]
   apply clarsimp
   apply (rule conjI)
    apply clarsimp
@@ -1536,7 +1536,7 @@ lemma handle_recv_st_tcb_at:
   apply (rule hoare_pre)
    apply (wp handle_fault_st_tcb_at_runnable receive_ipc_st_tcb_at_runnable
              delete_caller_cap_sym_refs rai_pred_tcb_neq
-             get_ntfn_wp hoare_drop_imps hoare_vcg_all_lift_R)
+             get_simple_ko_wp hoare_drop_imps hoare_vcg_all_lift_R)
     apply clarsimp
     apply wp+
   apply fastforce

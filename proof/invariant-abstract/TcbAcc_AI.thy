@@ -1691,8 +1691,8 @@ lemma as_user_mdb [wp]:
     apply wp
     apply simp
    prefer 2
-   apply wp
-   apply simp
+   apply (simp add: set_object_def)
+   apply wpsimp
   apply (simp add: set_object_def)
   apply wp
   apply clarsimp

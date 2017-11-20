@@ -238,14 +238,9 @@ lemma inQ_residue[simp]:
   "(P \<and> Q \<and> (P \<longrightarrow> R)) = (P \<and> Q \<and> R)"
   by fastforce
 
-lemma set_endpoint_valid_cap:
-  "\<lbrace>valid_cap c\<rbrace> set_endpoint e ep \<lbrace>\<lambda>_. valid_cap c\<rbrace>"
+lemma set_simple_ko_valid_cap:
+  "\<lbrace>valid_cap c\<rbrace> set_simple_ko f e ep \<lbrace>\<lambda>_. valid_cap c\<rbrace>"
   by (wp valid_cap_typ)
-
-
-lemma set_endpoint_cte_at[wp]:
-  "\<lbrace>cte_at p\<rbrace> set_endpoint ptr val \<lbrace>\<lambda>_. cte_at p\<rbrace>"
-  by (wp valid_cte_at_typ)
 
 
 lemma sts_cte_at[wp]:
@@ -278,12 +273,6 @@ lemma ri_cte_at[wp]:
   by (wp valid_cte_at_typ)
 
 
-lemma set_ntfn_cte_at[wp]:
-  "\<lbrace>\<lambda>s. cte_at p s\<rbrace> set_notification p' ntfn \<lbrace>\<lambda>_ s. cte_at p s\<rbrace>"
-  by (wp valid_cte_at_typ)
-
-
-
 lemma rai_cte_at[wp]:
   "\<lbrace>cte_at p\<rbrace> receive_signal t cap is_blocking \<lbrace>\<lambda>_. cte_at p\<rbrace>"
   by (wp valid_cte_at_typ)
@@ -297,8 +286,6 @@ lemma hf_cte_at[wp]:
 lemma cancel_all_ipc_tcb:
   "\<lbrace>tcb_at t\<rbrace> cancel_all_ipc ptr \<lbrace>\<lambda>_. tcb_at t\<rbrace>"
   by (simp add: tcb_at_typ, wp cancel_all_ipc_typ_at)
-
-lemmas get_notification_sp = get_ntfn_sp
 
 lemma thread_set_valid_objs':
   "\<lbrace>valid_objs and (\<lambda>s. \<forall>p t. valid_tcb p t s \<longrightarrow> valid_tcb p (f t) s)\<rbrace>
@@ -778,8 +765,8 @@ lemma sbn_has_reply[wp]:
   done
 
 
-lemma set_ntfn_has_reply[wp]:
-  "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> set_notification ntfnptr ntfn \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
+lemma set_set_simple_ko_has_reply[wp]:
+  "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> set_simple_ko f ntfnptr ntfn \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
   by (simp add: has_reply_cap_def cte_wp_at_caps_of_state, wp)
 
 lemma unbind_notification_has_reply[wp]:
@@ -788,7 +775,7 @@ lemma unbind_notification_has_reply[wp]:
   apply (rule hoare_seq_ext[OF _ gbn_sp])
   apply (case_tac ntfnptr, simp, wp, simp)
   apply (clarsimp)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (wp, clarsimp)
   done
 
@@ -805,8 +792,8 @@ lemma bind_notification_invs:
      bind_notification tcbptr ntfnptr
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: bind_notification_def invs_def valid_state_def valid_pspace_def)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
-  apply (wp valid_irq_node_typ set_ntfn_valid_objs set_notification_obj_at
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
+  apply (wp valid_irq_node_typ set_simple_ko_valid_objs simple_obj_set_prop_at
          | clarsimp simp:idle_no_ex_cap)+
             apply (clarsimp simp: obj_at_def is_ntfn)
            apply (wp | clarsimp)+
@@ -841,7 +828,7 @@ lemma (in Tcb_AI) tcbinv_invs:
   apply (rename_tac option)
   apply (case_tac option, simp_all)
    apply (rule hoare_pre)
-    apply ((wp unbind_notification_invs get_ntfn_wp | simp)+)[2]
+    apply ((wp unbind_notification_invs get_simple_ko_wp | simp)+)[2]
   apply (wp bind_notification_invs)
   apply clarsimp
   done
@@ -1201,7 +1188,7 @@ lemma decode_bind_notification_inv[wp]:
   "\<lbrace>P\<rbrace> decode_bind_notification cap excaps \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding decode_bind_notification_def
   by (rule hoare_pre)
-     (wp get_ntfn_wp gbn_wp
+     (wp get_simple_ko_wp gbn_wp
        | wpc
        | clarsimp simp: whenE_def split del: if_split)+
 
@@ -1232,7 +1219,7 @@ lemma decode_bind_notification_wf:
   apply (simp add: decode_bind_notification_def whenE_def
              cong: list.case_cong split del: if_split)
   apply (rule hoare_pre)
-   apply (wp get_ntfn_wp gbn_wp | wpc)+
+   apply (wp get_simple_ko_wp gbn_wp | wpc)+
   apply (fastforce simp: valid_cap_def[where c="cap.ThreadCap t" for t] is_ntfn invs_def
                     valid_state_def valid_pspace_def
              elim!: obj_at_weakenE
@@ -1348,7 +1335,7 @@ lemma unbind_notification_sym_refs[wp]:
   apply (rule hoare_seq_ext [OF _ gbn_sp])
   apply (case_tac ntfnptr, simp_all)
    apply (wp, simp)
-  apply (rule hoare_seq_ext [OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (wp | wpc | simp)+
   apply (rule conjI)
    apply (fastforce simp: obj_at_def pred_tcb_at_def)

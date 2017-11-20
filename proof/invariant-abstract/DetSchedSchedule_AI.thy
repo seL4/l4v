@@ -1341,63 +1341,35 @@ crunch ct_not_in_q[wp]: finalise_cap ct_not_in_q
 
 end
 
-lemma set_endpoint_valid_etcbs[wp]:
-  "\<lbrace>valid_etcbs\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
-  by (wp hoare_drop_imps valid_etcbs_lift | simp add: set_endpoint_def)+
+lemma set_simple_ko_valid_etcbs[wp]:
+  "\<lbrace>valid_etcbs\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
+  by (wp hoare_drop_imps valid_etcbs_lift | simp add: set_simple_ko_def)+
 
-lemma set_endpoint_valid_queues[wp]:
-  "\<lbrace>valid_queues\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
-  by (wp hoare_drop_imps valid_queues_lift | simp add: set_endpoint_def)+
+lemma set_simple_ko_valid_queues[wp]:
+  "\<lbrace>valid_queues\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
+  by (wp hoare_drop_imps valid_queues_lift | simp add: set_simple_ko_def)+
 
-lemma set_endpoint_weak_valid_sched_action[wp]:
-  "\<lbrace>weak_valid_sched_action\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv. weak_valid_sched_action\<rbrace>"
-  by (wp hoare_drop_imps weak_valid_sched_action_lift | simp add: set_endpoint_def)+
+lemma set_simple_ko_weak_valid_sched_action[wp]:
+  "\<lbrace>weak_valid_sched_action\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>rv. weak_valid_sched_action\<rbrace>"
+  by (wp hoare_drop_imps weak_valid_sched_action_lift | simp add: set_simple_ko_def)+
 
-lemma set_endpoint_switch_in_cur_domain[wp]:
-  "\<lbrace>switch_in_cur_domain\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv. switch_in_cur_domain\<rbrace>"
-  by (wp hoare_drop_imps switch_in_cur_domain_lift | simp add: set_endpoint_def)+
+lemma set_simple_ko_switch_in_cur_domain[wp]:
+  "\<lbrace>switch_in_cur_domain\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>rv. switch_in_cur_domain\<rbrace>"
+  by (wp hoare_drop_imps switch_in_cur_domain_lift | simp add: set_simple_ko_def)+
 
-lemma set_endpoint_ct_in_cur_domain[wp]:
-  "\<lbrace>ct_in_cur_domain\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>"
-  by (wp hoare_drop_imps ct_in_cur_domain_lift | simp add: set_endpoint_def)+
+lemma set_simple_ko_ct_in_cur_domain[wp]:
+  "\<lbrace>ct_in_cur_domain\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>"
+  by (wp hoare_drop_imps ct_in_cur_domain_lift | simp add: set_simple_ko_def)+
 
-lemma set_endpoint_valid_sched[wp]:
-  "\<lbrace>valid_sched\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  by (wp hoare_drop_imps valid_sched_lift | simp add: set_endpoint_def)+
+lemma set_simple_ko_valid_sched[wp]:
+  "\<lbrace>valid_sched\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  by (wp hoare_drop_imps valid_sched_lift | simp add: set_simple_ko_def)+
 
-lemma set_endpoint_valid_blocked[wp]:
-  "\<lbrace>valid_blocked\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
-  by (wp hoare_drop_imps valid_blocked_lift | simp add: set_endpoint_def)+
+lemma set_simple_ko_valid_blocked[wp]:
+  "\<lbrace>valid_blocked\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
+  by (wp hoare_drop_imps valid_blocked_lift | simp add: set_simple_ko_def)+
 
-lemma set_notification_valid_etcbs[wp]:
-  "\<lbrace>valid_etcbs\<rbrace> set_notification ptr ntfn \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
-  by (wp hoare_drop_imps valid_etcbs_lift | simp add: set_notification_def)+
-
-lemma set_notification_valid_queues[wp]:
-  "\<lbrace>valid_queues\<rbrace> set_notification ptr aeep \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
-  by (wp hoare_drop_imps valid_queues_lift | simp add: set_notification_def)+
-
-lemma set_notification_weak_valid_sched_action[wp]:
-  "\<lbrace>weak_valid_sched_action\<rbrace> set_notification ptr ntfn \<lbrace>\<lambda>rv. weak_valid_sched_action\<rbrace>"
-  by (wp hoare_drop_imps weak_valid_sched_action_lift | simp add: set_notification_def)+
-
-lemma set_notification_switch_in_cur_domain[wp]:
-  "\<lbrace>switch_in_cur_domain\<rbrace> set_notification ptr ntfn \<lbrace>\<lambda>rv. switch_in_cur_domain\<rbrace>"
-  by (wp hoare_drop_imps switch_in_cur_domain_lift | simp add: set_notification_def)+
-
-lemma set_notification_ct_in_cur_domain[wp]:
-  "\<lbrace>ct_in_cur_domain\<rbrace> set_notification ptr ntfn \<lbrace>\<lambda>rv. ct_in_cur_domain\<rbrace>"
-  by (wp hoare_drop_imps ct_in_cur_domain_lift | simp add: set_notification_def)+
-
-lemma set_notification_valid_sched[wp]:
-  "\<lbrace>valid_sched\<rbrace> set_notification ptr ntfn \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  by (wp hoare_drop_imps valid_sched_lift | simp add: set_notification_def)+
-
-lemma set_notification_valid_blocked[wp]:
-  "\<lbrace>valid_blocked\<rbrace> set_notification ptr ntfn \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
-  by (wp hoare_drop_imps valid_blocked_lift | simp add: set_notification_def)+
-
-crunch etcb_at[wp]: set_endpoint "etcb_at P t"
+crunch etcb_at[wp]: set_simple_ko "etcb_at P t"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma cancel_all_ipc_valid_sched[wp]:
@@ -1457,7 +1429,7 @@ lemma unbind_notification_valid_sched[wp]:
   apply (rule hoare_seq_ext[OF _ gbn_sp])
   apply (case_tac ntfnptra, simp, wp, simp)
   apply (clarsimp)
-  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (wp set_bound_notification_valid_sched, clarsimp)
   done
 
@@ -2084,9 +2056,9 @@ crunch valid_blocked_except[wp]: as_user "valid_blocked_except thread"
 
 
 (* FIXME: Move *)
-lemma set_notification_valid_sched_action[wp]:
-  "\<lbrace>valid_sched_action\<rbrace> set_notification ptr ntfn \<lbrace>\<lambda>rv. valid_sched_action\<rbrace>"
-  by (wp hoare_drop_imps valid_sched_action_lift | simp add: set_notification_def)+
+lemma set_simple_ko_valid_sched_action[wp]:
+  "\<lbrace>valid_sched_action\<rbrace> set_simple_ko f ptr ntfn \<lbrace>\<lambda>rv. valid_sched_action\<rbrace>"
+  by (wp hoare_drop_imps valid_sched_action_lift | simp add: set_simple_ko_def)+
 
 crunch not_cur_thread[wp]: cap_insert_ext "not_cur_thread t"
 
@@ -2553,7 +2525,7 @@ crunch scheduler_act[wp]: do_ipc_transfer "\<lambda>s :: det_state. P (scheduler
 
 crunch ready_queues[wp]: cap_insert_ext "\<lambda>s :: det_ext state. P (ready_queues s)"
 
-crunch ready_queues[wp]: cap_insert,set_extra_badge,do_ipc_transfer, set_endpoint, thread_set, setup_caller_cap "\<lambda>s :: det_state. P (ready_queues s)"
+crunch ready_queues[wp]: cap_insert,set_extra_badge,do_ipc_transfer, set_simple_ko, thread_set, setup_caller_cap "\<lambda>s :: det_state. P (ready_queues s)"
   (wp: crunch_wps transfer_caps_loop_pres ignore: const_on_failure)
 
 end
@@ -2563,7 +2535,7 @@ crunch sched_act_not[wp]: set_thread_state_ext "scheduler_act_not t"
    simp: set_scheduler_action_def if_fun_split scheduler_act_not_def
    wp: gts_wp)
 
-crunch sched_act_not[wp]: set_thread_state, set_endpoint "scheduler_act_not t"
+crunch sched_act_not[wp]: set_thread_state, set_simple_ko "scheduler_act_not t"
   (wp: hoare_drop_imps)
 
 context DetSchedSchedule_AI begin
@@ -2589,24 +2561,25 @@ lemma send_ipc_valid_sched:
        apply ((wp thread_set_ct_active_wp|wpc)+)[1]
       apply (clarsimp simp: valid_sched_def)
       apply (clarsimp simp: ct_in_state_def cte_wp_at_caps_of_state not_cur_thread_def)
-    apply (simp | wp gts_wp hoare_vcg_all_lift)+
+     apply (simp | wp gts_wp hoare_vcg_all_lift)+
    apply (rename_tac recvr q recv_state)
-   apply (wp hoare_vcg_imp_lift)
-    apply ((simp add: set_endpoint_def set_object_def | wp hoare_drop_imps | wpc)+)[1]
-   apply (wp hoare_vcg_imp_lift get_object_wp | simp add: get_endpoint_def | wpc |
-          wp_once hoare_vcg_all_lift)+
-   apply (subst st_tcb_at_kh_simp[symmetric])
-   apply (clarsimp simp: st_tcb_at_kh_if_split pred_tcb_at_def2
-                         valid_sched_def valid_sched_action_def
-                         weak_valid_sched_action_def scheduler_act_not_def)+
+    apply (wp hoare_vcg_imp_lift)
+     apply ((simp add: set_simple_ko_def set_object_def | wp hoare_drop_imps | wpc)+)[1]
+    apply (wpsimp wp: hoare_vcg_imp_lift get_object_wp
+          | simp add: get_simple_ko_def
+          | wpc |
+           wp_once hoare_vcg_all_lift)+
+  apply (subst st_tcb_at_kh_simp[symmetric])
+  apply (clarsimp simp: st_tcb_at_kh_if_split pred_tcb_at_def2 obj_at_def a_type_def
+                        valid_sched_def valid_sched_action_def
+                        weak_valid_sched_action_def scheduler_act_not_def
+                  split: kernel_object.splits)+
     apply (rename_tac tcb recvr q rtcb ep)
     apply (case_tac "recvr = idle_thread s")
      subgoal by (fastforce dest: invs_valid_idle simp: valid_idle_def pred_tcb_at_def obj_at_def)
     apply (case_tac "recvr = cur_thread s")
      subgoal by (fastforce simp: ct_in_state_def st_tcb_at_def2 obj_at_def)
     apply (clarsimp simp: is_activatable_def)
-    subgoal by (fastforce simp: valid_sched_def ct_in_state_def st_tcb_at_def not_cur_thread_def
-                                obj_at_def)
   done
 end
 
@@ -2706,12 +2679,12 @@ context DetSchedSchedule_AI begin
 lemma send_signal_valid_sched[wp]:
   "\<lbrace> valid_sched and invs \<rbrace> send_signal ntfnptr badge \<lbrace> \<lambda>_. valid_sched \<rbrace>"
   apply (simp add: send_signal_def)
-  apply (wp get_ntfn_wp possible_switch_to_valid_sched'
+  apply (wp get_simple_ko_wp possible_switch_to_valid_sched'
             set_thread_state_runnable_valid_queues set_thread_state_runnable_valid_sched_action
             set_thread_state_valid_blocked_except sts_st_tcb_at' gts_wp  | wpc | clarsimp)+
        apply (rename_tac ntfn a st)
        apply (rule_tac Q="\<lambda>rv s. valid_sched s \<and> a \<noteq> idle_thread s \<and> not_cur_thread a s" in hoare_strengthen_post)
-        apply (wp gts_wp get_ntfn_wp | simp add: valid_sched_def)+
+        apply (wp gts_wp get_simple_ko_wp | simp add: valid_sched_def)+
   apply (clarsimp)
   apply (rule conjI, clarsimp, rule conjI)
     apply (frule invs_valid_idle)
@@ -2766,15 +2739,17 @@ lemma receive_ipc_valid_sched:
             apply ((wp | wpc)+)[1]
            apply (simp | wp gts_wp hoare_vcg_all_lift)+
           apply (wp hoare_vcg_imp_lift)
-           apply ((simp add: set_endpoint_def set_object_def |
+           apply ((simp add: set_simple_ko_def set_object_def |
                    wp hoare_drop_imps | wpc)+)[1]
           apply (wp hoare_vcg_imp_lift get_object_wp
                     set_thread_state_sched_act_not_valid_sched gbn_wp
-               | simp add: get_endpoint_def get_notification_def do_nbrecv_failed_transfer_def
+               | simp add: get_simple_ko_def do_nbrecv_failed_transfer_def a_type_def
+                    split: kernel_object.splits
                | wpc
                | wp_once hoare_vcg_all_lift hoare_vcg_ex_lift)+
   apply (subst st_tcb_at_kh_simp[symmetric])+
   apply (clarsimp simp: st_tcb_at_kh_if_split default_notification_def default_ntfn_def isActive_def)
+  apply (rename_tac xh xi xj)
   apply (drule_tac t="hd xh" and P'="\<lambda>ts. \<not> active ts" in st_tcb_weakenE)
    apply clarsimp
   apply (simp only: st_tcb_at_not)
@@ -2848,20 +2823,24 @@ lemma cancel_all_ipc_not_queued:
      apply (rule_tac S="set queue - {t}" in mapM_x_wp)
       apply (wp tcb_sched_action_enqueue_not_queued | clarsimp)+
      apply (erule notE, assumption)
-    apply (wp hoare_vcg_imp_lift | simp add: get_ep_queue_def get_endpoint_def
-              get_object_def | wpc | wp_once hoare_vcg_all_lift)+
+    apply (wp hoare_vcg_imp_lift
+         | simp add: get_ep_queue_def get_simple_ko_def a_type_def get_object_def
+              split: kernel_object.splits
+         | wpc | wp_once hoare_vcg_all_lift)+
    apply safe
+   apply (rename_tac xa)
    apply (drule_tac P="\<lambda>ts. \<not> active ts" and ep="SendEP xa" in
           ep_queued_st_tcb_at[rotated, rotated])
        apply (simp_all only: st_tcb_at_not)
       apply (simp add: obj_at_def)+
+  apply (rename_tac xa)
   apply (drule_tac P="\<lambda>ts. \<not> active ts" and ep="RecvEP xa" in ep_queued_st_tcb_at[rotated, rotated])
       apply (simp_all only: st_tcb_at_not)
      apply (fastforce simp: obj_at_def)+
   done
 end
 
-crunch not_queued[wp]: set_notification "not_queued t"
+crunch not_queued[wp]: set_simple_ko "not_queued t"
   (wp: hoare_drop_imps)
 
 lemma cancel_all_signals_not_queued:
@@ -2875,10 +2854,12 @@ lemma cancel_all_signals_not_queued:
      apply (rule_tac P="(t \<notin> set list)" in hoare_gen_asm)
      apply (rule_tac S="set list - {t}" in mapM_x_wp)
       apply (wp tcb_sched_action_enqueue_not_queued | clarsimp)+
-  apply (wp hoare_vcg_imp_lift | simp add: get_notification_def get_object_def |
-         wpc | wp_once hoare_vcg_all_lift)+
+  apply (wp hoare_vcg_imp_lift
+         | simp add: get_simple_ko_def get_object_def a_type_def split: kernel_object.splits
+         | wpc | wp_once hoare_vcg_all_lift)+
    apply safe
-  apply (drule_tac P="\<lambda>ts. \<not> active ts" and ep=x in
+  apply (rename_tac ep x y)
+  apply (drule_tac P="\<lambda>ts. \<not> active ts" and ep=ep in
          ntfn_queued_st_tcb_at[rotated, rotated])
   apply (simp_all only: st_tcb_at_not)
   apply (fastforce simp: obj_at_def)+
@@ -2888,7 +2869,8 @@ lemma unbind_maybe_notification_valid_objs:
   "\<lbrace>valid_objs\<rbrace>
    unbind_maybe_notification ptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   unfolding unbind_maybe_notification_def
-  apply (wp thread_set_valid_objs_triv set_ntfn_valid_objs hoare_drop_imp get_ntfn_wp | wpc | simp add: tcb_cap_cases_def
+  apply (wp thread_set_valid_objs_triv set_simple_ko_valid_objs hoare_drop_imp
+            get_simple_ko_wp | wpc | simp add: tcb_cap_cases_def
          | strengthen unbind_notification_valid_objs_helper)+
    apply (clarsimp)
    apply (erule (1) obj_at_valid_objsE)
@@ -2900,7 +2882,7 @@ lemma unbind_maybe_notification_sym_refs[wp]:
      unbind_maybe_notification a
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: unbind_maybe_notification_def)
-  apply (rule hoare_seq_ext [OF _ get_ntfn_sp])
+  apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp | wpc | clarsimp)+
   apply (rule conjI)
@@ -2933,7 +2915,7 @@ lemma fast_finalise_not_queued:
    \<lbrace>\<lambda>_. not_queued t\<rbrace>"
   apply (cases cap, simp_all)
      apply (wp cancel_all_ipc_not_queued cancel_all_signals_not_queued
-               get_ntfn_wp unbind_maybe_notification_valid_objs | simp)+
+            get_simple_ko_wp unbind_maybe_notification_valid_objs | simp)+
   done
 
 crunch not_queued: delete_caller_cap "not_queued t"
@@ -2941,9 +2923,9 @@ crunch not_queued: delete_caller_cap "not_queued t"
 
 end
 
-lemma set_endpoint_ct_active:
-  "\<lbrace>ct_active\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv. ct_active\<rbrace>"
-  apply (simp add: set_endpoint_def set_object_def | wp get_object_wp)+
+lemma set_simple_ko_ct_active:
+  "\<lbrace>ct_active\<rbrace> set_simple_ko f ptr ep \<lbrace>\<lambda>rv. ct_active\<rbrace>"
+  apply (simp add: set_simple_ko_def set_object_def | wp get_object_wp)+
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def
                   split: kernel_object.splits)
   done
@@ -3011,8 +2993,8 @@ lemma handle_recv_valid_sched:
    handle_recv is_blocking \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
               cong: if_cong)
-  apply (wp get_ntfn_wp handle_fault_valid_sched delete_caller_cap_not_queued
-             receive_ipc_valid_sched receive_signal_valid_sched | simp)+
+  apply (wp get_simple_ko_wp handle_fault_valid_sched delete_caller_cap_not_queued
+            receive_ipc_valid_sched receive_signal_valid_sched | simp)+
      apply (rule hoare_vcg_E_elim)
       apply (wpsimp simp: lookup_cap_def lookup_slot_for_thread_def)
        apply (wp resolve_address_bits_valid_fault2)+
