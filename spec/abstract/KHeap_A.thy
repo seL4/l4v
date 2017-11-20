@@ -136,43 +136,75 @@ definition
   set_mcpriority :: "obj_ref \<Rightarrow> priority \<Rightarrow> (unit, 'z::state_ext) s_monad"  where
   "set_mcpriority ref mcp \<equiv> thread_set (\<lambda>tcb. tcb\<lparr>tcb_mcpriority:=mcp\<rparr>) ref "
 
+
+section "simple kernel objects"
+(* to be used for abstraction unifying kernel objects other than TCB and CNode *)
+
+definition
+  partial_inv :: "('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> 'a option)"
+where
+  "partial_inv f x = (if \<exists>!y. f y = x then Some (THE y. f y = x) else None)"
+
+lemma proj_inj: "inj f \<Longrightarrow> (partial_inv f ko = Some v) = (f v = ko)"
+  by (auto simp: partial_inv_def the_equality injD)
+
+lemma inj_Endpoint: "inj Endpoint" by (auto intro: injI)
+lemma inj_Notification: "inj Notification"  by (auto intro: injI)
+
+lemmas proj_inj_ep[simp] = proj_inj[OF inj_Endpoint]
+lemma proj_ko_type_ep[simp]: "(\<exists>v. partial_inv Endpoint  ko = Some (v::endpoint)) = (a_type ko = AEndpoint)"
+  by (cases ko; auto simp: partial_inv_def a_type_def)
+
+lemmas proj_inj_ntfn[simp] = proj_inj[OF inj_Notification]
+lemma proj_ko_type_ntfn[simp]:
+  "(\<exists>v. partial_inv Notification  ko = Some (v::notification)) = (a_type ko = ANTFN)"
+  by (cases ko; auto simp: partial_inv_def a_type_def)
+
+
+abbreviation
+  "is_simple_type \<equiv> (\<lambda>ob. a_type ob \<in> {AEndpoint, ANTFN})"
+
+
+definition
+  get_simple_ko :: "('a \<Rightarrow> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) s_monad"
+where
+  "get_simple_ko f ptr \<equiv> do
+     kobj \<leftarrow> get_object ptr;
+     assert (is_simple_type kobj);
+     (case partial_inv f kobj of Some e \<Rightarrow> return e | _ \<Rightarrow> fail)
+   od"
+
+
+definition
+  set_simple_ko :: "('a \<Rightarrow> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> 'a \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_simple_ko f ptr ep \<equiv> do
+     obj \<leftarrow> get_object ptr;
+     assert (is_simple_type obj);
+     assert (case partial_inv f obj of Some e \<Rightarrow> a_type obj = a_type (f ep) | _ \<Rightarrow> False);
+     set_object ptr (f ep)
+   od"
+
+
+
 section {* Synchronous and Asyncronous Endpoints *}
 
-definition
-  get_endpoint :: "obj_ref \<Rightarrow> (endpoint,'z::state_ext) s_monad"
-where
-  "get_endpoint ptr \<equiv> do
-     kobj \<leftarrow> get_object ptr;
-     (case kobj of Endpoint e \<Rightarrow> return e
-                 | _ \<Rightarrow> fail)
-   od"
 
-definition
-  set_endpoint :: "obj_ref \<Rightarrow> endpoint \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "set_endpoint ptr ep \<equiv> do
-     obj \<leftarrow> get_object ptr;
-     assert (case obj of Endpoint ep \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (Endpoint ep)
-   od"
+abbreviation
+  get_endpoint :: "obj_ref \<Rightarrow> (endpoint,'z::state_ext) s_monad" where
+  "get_endpoint \<equiv> get_simple_ko Endpoint"
 
-definition
-  get_notification :: "obj_ref \<Rightarrow> (notification,'z::state_ext) s_monad"
-where
-  "get_notification ptr \<equiv> do
-     kobj \<leftarrow> get_object ptr;
-     case kobj of Notification e \<Rightarrow> return e
-                 | _ \<Rightarrow> fail
-   od"
+abbreviation
+  set_endpoint :: "obj_ref \<Rightarrow> endpoint \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "set_endpoint \<equiv> set_simple_ko Endpoint"
 
-definition
-  set_notification :: "obj_ref \<Rightarrow> notification \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "set_notification ptr ntfn \<equiv> do
-     obj \<leftarrow> get_object ptr;
-     assert (case obj of Notification ntfn \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (Notification ntfn)
-   od"
+abbreviation
+  get_notification :: "obj_ref \<Rightarrow> (notification,'z::state_ext) s_monad" where
+  "get_notification \<equiv> get_simple_ko Notification"
+
+abbreviation
+  set_notification :: "obj_ref \<Rightarrow> notification \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "set_notification \<equiv> set_simple_ko Notification"
 
 
 section {* IRQ State and Slot *}
