@@ -94,25 +94,134 @@ where
      set_object ref (TCB (f (K new) tcb))
    od"
 
+
+section "simple kernel objects"
+(* to be used for abstraction unifying kernel objects other than TCB and CNode *)
+
+definition
+  partial_inv :: "('a \<Rightarrow> 'b) \<Rightarrow> ('b \<Rightarrow> 'a option)"
+where
+  "partial_inv f x = (if \<exists>!y. f y = x then Some (THE y. f y = x) else None)"
+
+lemma proj_inj: "inj f \<Longrightarrow> (partial_inv f ko = Some v) = (f v = ko)"
+  by (auto simp: partial_inv_def the_equality injD)
+
+lemma inj_Endpoint: "inj Endpoint" by (auto intro: injI)
+lemma inj_Notification: "inj Notification"  by (auto intro: injI)
+
+lemmas proj_inj_ep[simp] = proj_inj[OF inj_Endpoint]
+lemma proj_ko_type_ep[simp]: "(\<exists>v. partial_inv Endpoint  ko = Some (v::endpoint)) = (a_type ko = AEndpoint)"
+  by (cases ko; auto simp: partial_inv_def a_type_def)
+
+lemmas proj_inj_ntfn[simp] = proj_inj[OF inj_Notification]
+lemma proj_ko_type_ntfn[simp]:
+  "(\<exists>v. partial_inv Notification  ko = Some (v::notification)) = (a_type ko = ANTFN)"
+  by (cases ko; auto simp: partial_inv_def a_type_def)
+
+
+lemma proj_inj_sc[simp]: "(partial_inv SchedContext ko = Some v) = (SchedContext v = ko)"
+  by (auto simp: partial_inv_def)
+lemma proj_ko_type_sc[simp]: "(\<exists>v. partial_inv SchedContext  ko = Some (v::sched_context)) = (a_type ko = ASchedContext)"
+  by (cases ko; auto simp: partial_inv_def a_type_def)
+
+lemma proj_inj_reply[simp]: "(partial_inv Reply ko = Some v) = (Reply v = ko)"
+  by (auto simp: partial_inv_def)
+lemma proj_ko_type_reply[simp]: "(\<exists>v. partial_inv Reply  ko = Some (v::reply)) = (a_type ko = AReply)"
+  by (cases ko; auto simp: partial_inv_def a_type_def)
+
+abbreviation
+  "is_simple_type \<equiv> (\<lambda>ob. a_type ob \<in> {AEndpoint, ANTFN, ASchedContext, AReply})"
+
+
+definition
+  get_simple_ko :: "('a \<Rightarrow> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) s_monad"
+where
+  "get_simple_ko f ptr \<equiv> do
+     kobj \<leftarrow> get_object ptr;
+     assert (is_simple_type kobj);
+     (case partial_inv f kobj of Some e \<Rightarrow> return e | _ \<Rightarrow> fail)
+   od"
+
+
+definition
+  set_simple_ko :: "('a \<Rightarrow> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> 'a \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_simple_ko f ptr ep \<equiv> do
+     obj \<leftarrow> get_object ptr;
+     assert (is_simple_type obj);
+     assert (case partial_inv f obj of Some e \<Rightarrow> a_type obj = a_type (f ep) | _ \<Rightarrow> False);
+     set_object ptr (f ep)
+   od"
+
+
+section {* Synchronous and Asyncronous Endpoints *}
+
+
+abbreviation
+  get_endpoint :: "obj_ref \<Rightarrow> (endpoint,'z::state_ext) s_monad" where
+  "get_endpoint \<equiv> get_simple_ko Endpoint"
+
+abbreviation
+  set_endpoint :: "obj_ref \<Rightarrow> endpoint \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "set_endpoint \<equiv> set_simple_ko Endpoint"
+
+abbreviation
+  get_notification :: "obj_ref \<Rightarrow> (notification,'z::state_ext) s_monad" where
+  "get_notification \<equiv> get_simple_ko Notification"
+
+abbreviation
+  set_notification :: "obj_ref \<Rightarrow> notification \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "set_notification \<equiv> set_simple_ko Notification"
+
+
+section {* IRQ State and Slot *}
+
+definition
+  get_irq_state :: "irq \<Rightarrow> (irq_state,'z::state_ext) s_monad" where
+ "get_irq_state irq \<equiv> gets (\<lambda>s. interrupt_states s irq)"
+
+definition
+  set_irq_state :: "irq_state \<Rightarrow> irq \<Rightarrow> (unit,'z::state_ext) s_monad" where
+ "set_irq_state state irq \<equiv> do
+    modify (\<lambda>s. s \<lparr> interrupt_states := (interrupt_states s) (irq := state)\<rparr>);
+    do_machine_op $ maskInterrupt (state = IRQInactive) irq
+  od"
+
+definition
+  get_irq_slot :: "irq \<Rightarrow> (cslot_ptr,'z::state_ext) s_monad" where
+ "get_irq_slot irq \<equiv> gets (\<lambda>st. (interrupt_irq_node st irq, []))"
+
+section {* Reply Objects *}
+
+abbreviation
+  get_reply :: "obj_ref \<Rightarrow> (reply,'z::state_ext) s_monad" where
+  "get_reply \<equiv> get_simple_ko Reply"
+
+abbreviation
+  set_reply :: "obj_ref \<Rightarrow> reply \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "set_reply \<equiv> set_simple_ko Reply"
+
+
+abbreviation
+  "get_reply_tcb r \<equiv> liftM reply_tcb (get_reply r)"
+(*
+abbreviation
+  "get_reply_caller r \<equiv> liftM reply_caller (get_reply r)"
+
+abbreviation
+  "get_reply_callee r \<equiv> liftM reply_callee (get_reply r)"
+*)
+
 section {* Scheduling Contexts *}
 
-definition
-  get_sched_context :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad"
-where
-  "get_sched_context ptr \<equiv> do
-     kobj \<leftarrow> get_object ptr;
-     case kobj of SchedContext sc \<Rightarrow> return sc
-                 | _ \<Rightarrow> fail
-   od"
+abbreviation
+  get_sched_context :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad" where
+  "get_sched_context \<equiv> get_simple_ko SchedContext"
 
-definition
-  set_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "set_sched_context ptr sc \<equiv> do
-     obj \<leftarrow> get_object ptr;
-     assert (case obj of SchedContext sc \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (SchedContext sc)
-   od"
+abbreviation
+  set_sched_context :: "obj_ref \<Rightarrow> sched_context \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "set_sched_context \<equiv> set_simple_ko SchedContext"
+
 
 definition
   get_sc_obj_ref :: "(sched_context => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
@@ -280,6 +389,27 @@ abbreviation
 abbreviation
   ntfn_set_obj :: "notification \<Rightarrow> ntfn \<Rightarrow> notification" where
   "ntfn_set_obj ntfn a \<equiv> ntfn \<lparr> ntfn_obj := a \<rparr>"
+
+
+
+section {* Synchronous and Asyncronous Endpoints *}
+
+
+abbreviation
+  get_endpoint :: "obj_ref \<Rightarrow> (endpoint,'z::state_ext) s_monad" where
+  "get_endpoint \<equiv> get_simple_ko Endpoint"
+
+abbreviation
+  set_endpoint :: "obj_ref \<Rightarrow> endpoint \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "set_endpoint \<equiv> set_simple_ko Endpoint"
+
+abbreviation
+  get_notification :: "obj_ref \<Rightarrow> (notification,'z::state_ext) s_monad" where
+  "get_notification \<equiv> get_simple_ko Notification"
+
+abbreviation
+  set_notification :: "obj_ref \<Rightarrow> notification \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "set_notification \<equiv> set_simple_ko Notification"
 
 
 section {* IRQ State and Slot *}

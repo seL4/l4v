@@ -529,27 +529,6 @@ where
 
 
 text {* Object types: *}
-
-datatype a_type =
-    ATCB
-  | AEndpoint
-  | ANTFN
-  | ACapTable nat
-  | AGarbage nat \<comment> \<open>number of bytes of garbage\<close>
-  | AArch aa_type
-
-definition
-  a_type :: "kernel_object \<Rightarrow> a_type"
-where
- "a_type ob \<equiv> case ob of
-           CNode sz cspace           \<Rightarrow> if well_formed_cnode_n sz cspace
-                                        then ACapTable sz else AGarbage (cte_level_bits + sz)
-         | TCB tcb                   \<Rightarrow> ATCB
-         | Endpoint endpoint         \<Rightarrow> AEndpoint
-         | Notification notification \<Rightarrow> ANTFN
-         | ArchObj ao                \<Rightarrow> AArch (aa_type ao)"
-
-
 section {* Kernel State *}
 
 text {* The kernel's heap is a partial function containing kernel objects. *}
