@@ -39,6 +39,25 @@ text {*
 type_synonym ('s,'a) nondet_monad = "'s \<Rightarrow> ('a \<times> 's) set \<times> bool"
 
 
+text \<open>
+  Print the type @{typ "('s,'a) nondet_monad"} instead of its unwieldy expansion.
+  Needs an AST translation in code, because it needs to check that the state variable
+  @{typ 's} occurs twice. This comparison is not guaranteed to always work as expected
+  (AST instances might have different decoration), but it does seem to work here.
+\<close>
+print_ast_translation \<open>
+  let
+    fun monad_tr _ [t1, Ast.Appl [Ast.Constant @{type_syntax prod},
+                          Ast.Appl [Ast.Constant @{type_syntax set},
+                            Ast.Appl [Ast.Constant @{type_syntax prod}, t2, t3]],
+                          Ast.Constant @{type_syntax bool}]] =
+      if t3 = t1
+      then Ast.Appl [Ast.Constant @{type_syntax "nondet_monad"}, t1, t2]
+      else raise Match
+  in [(@{type_syntax "fun"}, monad_tr)] end
+\<close>
+
+
 text {*
   The definition of fundamental monad functions @{text return} and
   @{text bind}. The monad function @{text "return x"} does not change
