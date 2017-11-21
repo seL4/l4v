@@ -471,7 +471,6 @@ shows
                           del: fun_upd_apply)
               apply (erule array_relation_update)
                 apply (simp add: unat_ucast)
-                apply (subst mod_less)
                  apply (drule leq_asid_bits_shift)
                  apply (simp add: asid_high_bits_def mask_def word_le_nat_alt)
                 apply simp
@@ -3474,7 +3473,7 @@ lemma injection_handler_stateAssert_relocate:
   by (simp add: injection_handler_def handleE'_def bind_bindE_assoc bind_assoc)
 
 lemma decodeARMPageDirectoryInvocation_ccorres:
-  notes if_cong[cong] tl_drop_1[simp]
+  notes if_cong[cong]
   shows
   "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps;
           isPageDirectoryCap cp \<rbrakk>
@@ -3504,8 +3503,8 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
       del: Collect_const
       cong: StateSpace.state.fold_congs globals.fold_congs
       if_cong list.case_cong)
-    apply (simp add: if_1_0_0 split_def if_to_top_of_bind
-                  del: Collect_const cong: if_cong)
+    apply (simp add: split_def if_to_top_of_bind
+                del: Collect_const cong: if_cong)
     apply (rule ccorres_rhs_assoc)+
     apply csymbr+
     apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])

@@ -17,12 +17,8 @@ lemma asUser_obj_at' :
   including no_pre
   apply (simp add: asUser_def)
   apply wp
-    apply (simp add: split_def)
-    apply (wp threadSet_obj_at'_strongish)+
-  apply (case_tac "t=t'")
-   apply clarsimp
-  apply clarsimp
-  apply (rule hoare_drop_imps)+
+  apply (case_tac "t=t'"; clarsimp)
+  apply (rule hoare_drop_imps)
   apply wp
   done
 
@@ -679,7 +675,6 @@ lemma invokeTCB_ThreadControl_ccorres:
                   apply csymbr
                   apply (simp add: ccorres_cond_iffs Collect_False split_def
                               del: Collect_const)
-                  apply (simp only: if_1_0_0 simp_thms)
                   apply (rule ccorres_Cond_rhs_Seq)
                   (* P *)
                    apply (rule ccorres_rhs_assoc)+
@@ -688,13 +683,13 @@ lemma invokeTCB_ThreadControl_ccorres:
                    apply (rule checkCapAt_ccorres)
                       apply ceqv
                      apply csymbr
-                     apply (simp add: if_1_0_0 true_def Collect_True
+                     apply (simp add: true_def Collect_True
                                  del: Collect_const)
                      apply (rule ccorres_rhs_assoc)+
                      apply (rule checkCapAt_ccorres)
                         apply ceqv
                        apply csymbr
-                       apply (simp add: if_1_0_0 true_def Collect_True
+                       apply (simp add: true_def Collect_True
                                    del: Collect_const)
                        apply (simp add: assertDerived_def bind_assoc del: Collect_const)
                        apply (rule ccorres_symb_exec_l)
@@ -716,7 +711,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                           apply (strengthen sch_act_wf_weak, wp)
                          apply (wp empty_fail_stateAssert hoare_case_option_wp | simp del: Collect_const)+
                       apply csymbr
-                      apply (simp add: if_1_0_0 false_def Collect_False ccorres_cond_iffs
+                      apply (simp add: false_def Collect_False ccorres_cond_iffs
                                   del: Collect_const)
                       apply (rule ccorres_pre_getCurThread)
                       apply (simp add: when_def to_bool_def)
@@ -731,11 +726,10 @@ lemma invokeTCB_ThreadControl_ccorres:
                        apply wp
                       apply (clarsimp simp: guard_is_UNIV_def)
                      apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
-                                           tcb_ptr_to_ctcb_ptr_mask tcbBuffer_def
-                                           size_of_def cte_level_bits_def
+                                           tcbBuffer_def size_of_def cte_level_bits_def
                                            tcbIPCBufferSlot_def)
                     apply csymbr
-                    apply (simp add: if_1_0_0 Collect_False false_def
+                    apply (simp add: Collect_False false_def
                                 del: Collect_const)
                    apply (rule ccorres_cond_false_seq, simp)
                    apply (rule ccorres_pre_getCurThread)
@@ -749,8 +743,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                     apply (rule ccorres_return_CE, simp+)
                    apply wp
                   apply (clarsimp simp: guard_is_UNIV_def)
-                 apply (simp add: guard_is_UNIV_def if_1_0_0 false_def
-                                  Collect_const_mem)
+                 apply (simp add: guard_is_UNIV_def false_def Collect_const_mem)
                  apply (clarsimp simp: ccap_relation_def cap_thread_cap_lift cap_to_H_def)
                 (* \<not>P *)
                 apply simp
@@ -852,13 +845,13 @@ lemma invokeTCB_ThreadControl_ccorres:
              apply (rule checkCapAt_ccorres2)
                 apply ceqv
                apply csymbr
-               apply (simp add: if_1_0_0 true_def Collect_True
+               apply (simp add: true_def Collect_True
                            del: Collect_const)
                apply (rule ccorres_rhs_assoc)+
                apply (rule checkCapAt_ccorres2)
                   apply ceqv
                  apply csymbr
-                 apply (simp add: if_1_0_0 true_def Collect_True
+                 apply (simp add: true_def Collect_True
                                   assertDerived_def bind_assoc
                                   ccorres_cond_iffs dc_def[symmetric]
                              del: Collect_const)
@@ -867,14 +860,14 @@ lemma invokeTCB_ThreadControl_ccorres:
                    apply (wp empty_fail_stateAssert
                              hoare_case_option_wp | simp del: Collect_const)+
                 apply csymbr
-                apply (simp add: if_1_0_0 false_def Collect_False ccorres_cond_iffs
+                apply (simp add: false_def Collect_False ccorres_cond_iffs
                             del: Collect_const)
                 apply (rule ccorres_return_Skip[unfolded dc_def])
                apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
                                      tcbVTable_def tcbVTableSlot_def
                                      cte_level_bits_def size_of_def option_to_0_def)
               apply csymbr
-              apply (simp add: if_1_0_0 false_def Collect_False
+              apply (simp add: false_def Collect_False
                           del: Collect_const)
               apply (rule ccorres_cond_false)
               apply (rule ccorres_return_Skip[unfolded dc_def])
@@ -916,7 +909,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                         checkCap_inv [where P="sch_act_simple"]
                      | simp)+
              apply (clarsimp simp: guard_is_UNIV_def from_bool_def true_def
-                                   word_sle_def if_1_0_0 Collect_const_mem
+                                   word_sle_def Collect_const_mem
                                    option_to_0_def Kernel_C.tcbVTable_def tcbVTableSlot_def
                                    cte_level_bits_def size_of_def cintr_def
                                    tcb_cnode_index_defs)
@@ -925,13 +918,13 @@ lemma invokeTCB_ThreadControl_ccorres:
             apply (rule checkCapAt_ccorres2)
                apply ceqv
               apply csymbr
-              apply (simp add: if_1_0_0 true_def Collect_True
+              apply (simp add: true_def Collect_True
                           del: Collect_const)
               apply (rule ccorres_rhs_assoc)+
               apply (rule checkCapAt_ccorres2)
                  apply ceqv
                 apply csymbr
-                apply (simp add: if_1_0_0 true_def Collect_True
+                apply (simp add: true_def Collect_True
                                  assertDerived_def bind_assoc
                                  ccorres_cond_iffs dc_def[symmetric]
                             del: Collect_const)
@@ -941,14 +934,14 @@ lemma invokeTCB_ThreadControl_ccorres:
                             hoare_case_option_wp
                        | simp del: Collect_const)+
                apply csymbr
-               apply (simp add: if_1_0_0 false_def Collect_False ccorres_cond_iffs
+               apply (simp add: false_def Collect_False ccorres_cond_iffs
                            del: Collect_const)
                apply (rule ccorres_return_Skip[unfolded dc_def])
               apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
                                     Kernel_C.tcbCTable_def tcbCTableSlot_def
                                     cte_level_bits_def size_of_def option_to_0_def)
              apply csymbr
-             apply (simp add: if_1_0_0 false_def Collect_False
+             apply (simp add: false_def Collect_False
                          del: Collect_const)
              apply (rule ccorres_cond_false)
              apply (rule ccorres_return_Skip[unfolded dc_def])

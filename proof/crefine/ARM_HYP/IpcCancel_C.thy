@@ -48,7 +48,7 @@ proof -
     using prems
     by (simp add: numDomains_def maxDom_def Suc_le_lessD unat_le_helper)
   show ?thesis
-    using mod_lemma[OF _ P, where q="unat qdom" and c=numDomains] mod_less[OF Q]
+    using mod_lemma[OF _ P, where q="unat qdom" and c=numDomains] Q
     by (clarsimp simp: cready_queues_index_to_C_def field_simps numDomains_def)
 qed
 

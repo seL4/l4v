@@ -108,7 +108,6 @@ crunch valid_queues'[wp]: "Arch.switchToThread" valid_queues'
     (ignore: clearExMonitor)
 crunch ksCurDomain[wp]: switchToIdleThread "\<lambda>s. P (ksCurDomain s)"
 crunch valid_pspace'[wp]: switchToIdleThread, switchToThread valid_pspace'
-(simp: whenE_def)
 crunch valid_arch_state'[wp]: switchToThread valid_arch_state'
 
 end
@@ -516,9 +515,8 @@ proof -
 
   have b[simp]:
     "\<And>w. unat (of_nat (word_log2 (w :: machine_word)) :: machine_word) = word_log2 w"
-    by (fastforce simp add: unat_of_nat
-                  intro: mod_less order_less_le_trans[OF word_log2_max_word32])
-
+    by (fastforce simp: unat_of_nat
+                 intro: Divides.mod_less order_less_le_trans[OF word_log2_max_word32])
   have unat_ucast_d[simp]:
     "\<And>d. d \<le> maxDomain \<Longrightarrow> unat (ucast d * 0x100 :: machine_word) = unat d * 256"
     by (subst unat_mult_simple)
@@ -536,7 +534,7 @@ proof -
      apply (simp add: word_size)
     apply (subst uint_nat)
     apply (simp add: unat_of_nat)
-    apply (subst mod_less)
+    apply (subst Divides.mod_less)
      apply (rule order_le_less_trans[OF word_clz_max])
      apply (simp add: word_size)
     apply (rule iffD2 [OF le_nat_iff[symmetric]])

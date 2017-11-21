@@ -146,14 +146,13 @@ lemma capRemovable_spec:
   apply (clarsimp simp: cap_get_tag_isCap(1-8)[THEN trans[OF eq_commute]])
   apply (simp add: capRemovable_def from_bool_def[where b=True] true_def)
   apply (clarsimp simp: ccap_zombie_radix_less4)
-  apply (clarsimp simp: if_distrib [where f=scast])
   apply (subst eq_commute, subst from_bool_eq_if)
   apply (rule exI, rule conjI, assumption)
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap[THEN iffD2])
   apply (case_tac slot)
   apply (clarsimp simp: get_capZombiePtr_CL_def Let_def get_capZombieBits_CL_def
-                        isCap_simps unat_eq_0 unat_eq_1
+                        isCap_simps unat_eq_1
                         less_mask_eq ccap_zombie_radix_less2
              split: if_split_asm)
   done
@@ -163,9 +162,8 @@ lemma capCyclicZombie_spec:
      Call capCyclicZombie_'proc
       {s'. ret__unsigned_long_' s' = from_bool (capCyclicZombie cap (ptr_val (slot_' s)))}"
   apply vcg
-  apply (clarsimp simp: if_1_0_0 from_bool_0)
+  apply (clarsimp simp: from_bool_0)
   apply (frule(1) cap_get_tag_isCap [THEN iffD2], simp)
-  apply (clarsimp simp: if_distrib [where f=scast])
   apply (subst eq_commute, subst from_bool_eq_if)
   apply (simp add: ccap_zombie_radix_less4)
   apply (case_tac slot, simp)

@@ -11,10 +11,7 @@
 (* Experimental AutoCorres proofs over CRefine: work in progress *)
 
 theory AutoCorresTest
-imports (* Frameworks and tactics *)
-        AutoCorres_C
-        (* import Refine_C last to minimise change to global context *)
-        Refine_C
+imports Refine_C
 begin
 
 section \<open>Simple test case: handleYield\<close>
@@ -22,7 +19,7 @@ section \<open>Simple test case: handleYield\<close>
 autocorres
   [
    skip_heap_abs, skip_word_abs, (* for compatibility *)
-   scope = handleYield,
+   scope = handleYield doReplyTransfer,
    scope_depth = 0,
    c_locale = kernel_all_substitute,
    no_c_termination
@@ -31,15 +28,10 @@ autocorres
 context kernel_m begin
 
 text \<open>Export corres_underlying rules for handleYield's callees.\<close>
-thm getCurThread_ccorres
-lemma getCurThread_wrapper_corres:
-  "corres_underlying {(x, y). cstate_relation x y} True True (\<lambda>ct ct'. tcb_ptr_to_ctcb_ptr ct = ct') invs' (\<lambda>_. True) getCurThread (gets ksCurThread_')"
-  by (simp add: getCurThread_def cstate_relation_def Let_def)
 
-thm ccorres_pre_getCurThread
 lemma corres_pre_getCurThread_wrapper:
-  assumes cc: "\<And>rv rv'. rv' = tcb_ptr_to_ctcb_ptr rv \<Longrightarrow>
-                  corres_underlying {(x, y). cstate_relation x y} True True R (P rv) (P' rv) (f rv) (f' rv')"
+  assumes cc: "\<And>rv. corres_underlying {(x, y). cstate_relation x y} True True R (P rv) (P' rv)
+                        (f rv) (f' (tcb_ptr_to_ctcb_ptr rv))"
   shows   "corres_underlying {(x, y). cstate_relation x y} True True R
                   (\<lambda>s. \<forall>rv. ksCurThread s = rv \<longrightarrow> P rv s)
                   (\<lambda>s. \<forall>rv. ksCurThread_' s = tcb_ptr_to_ctcb_ptr rv \<longrightarrow> P' rv s)
@@ -49,38 +41,6 @@ lemma corres_pre_getCurThread_wrapper:
   apply (clarsimp simp: corres_underlying_def getCurThread_def)
   apply monad_eq
   apply (clarsimp simp: cstate_relation_def Let_def)
-  done
-
-thm tcbSchedDequeue_ccorres
-lemma tcbSchedDequeue_wrapper_corres:
-  "tcb_ptr_to_ctcb_ptr ct = ct' \<Longrightarrow>
-   corres_underlying {(x, y). cstate_relation x y} True True (op=)
-     (Invariants_H.valid_queues and valid_queues' and tcb_at' ct and valid_objs') \<top>
-     (tcbSchedDequeue ct) (tcbSchedDequeue' ct')"
-  apply (rule ccorres_to_corres_no_termination)
-   apply (simp add: tcbSchedDequeue'_def)
-  apply (clarsimp simp: ccorres_rrel_nat_unit tcbSchedDequeue_ccorres[simplified])
-  done
-
-thm tcbSchedAppend_ccorres
-lemma tcbSchedAppend_wrapper_corres:
-  "tcb_ptr_to_ctcb_ptr ct = ct' \<Longrightarrow>
-   corres_underlying {(x, y). cstate_relation x y} True True (op=)
-     (Invariants_H.valid_queues and tcb_at' ct and valid_objs') \<top>
-     (tcbSchedAppend ct) (tcbSchedAppend' ct')"
-  apply (rule ccorres_to_corres_no_termination)
-   apply (simp add: tcbSchedAppend'_def)
-  apply (clarsimp simp: ccorres_rrel_nat_unit tcbSchedAppend_ccorres[simplified])
-  done
-
-thm rescheduleRequired_ccorres
-lemma rescheduleRequired_wrapper_corres:
-  "corres_underlying {(x, y). cstate_relation x y} True True (op=)
-     (Invariants_H.valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs') \<top>
-     rescheduleRequired rescheduleRequired'"
-  apply (rule ccorres_to_corres_no_termination)
-   apply (simp add: rescheduleRequired'_def)
-  apply (clarsimp simp: ccorres_rrel_nat_unit rescheduleRequired_ccorres[simplified])
   done
 
 text \<open>
@@ -102,7 +62,7 @@ lemma (* handleYield_ccorres: *)
   apply cinit
    apply (rule ccorres_pre_getCurThread)
    apply (ctac add: tcbSchedDequeue_ccorres)
-     apply (ctac  add: tcbSchedAppend_ccorres)
+     apply (ctac add: tcbSchedAppend_ccorres)
        apply (ctac add: rescheduleRequired_ccorres)
       apply (wp weak_sch_act_wf_lift_linear tcbSchedAppend_valid_objs')
      apply (vcg exspec= tcbSchedAppend_modifies)
@@ -110,7 +70,7 @@ lemma (* handleYield_ccorres: *)
    apply (vcg exspec= tcbSchedDequeue_modifies)
   apply (clarsimp simp: tcb_at_invs' invs_valid_objs'
                         valid_objs'_maxPriority valid_objs'_maxDomain)
-  apply (auto simp: obj_at'_def st_tcb_at'_def ct_in_state'_def valid_objs'_maxDomain)
+  apply (auto simp: obj_at'_def st_tcb_at'_def ct_in_state'_def)
   done
 
 lemma reorder_gets:
@@ -121,7 +81,15 @@ lemma reorder_gets:
    (do g;
        x \<leftarrow> gets f;
        h x od)"
-  by (fastforce simp: bind_def' valid_def gets_def get_def return_def)
+  by (fastforce simp: bind_def' NonDetMonad.valid_def gets_def get_def return_def)
+
+thm
+  (* no arguments, no precondition, dc return *)
+  rescheduleRequired_ccorres rescheduleRequired_ccorres[ac]
+  (* one argument, simple precondition, dc return *)
+  tcbSchedDequeue_ccorres tcbSchedDequeue_ccorres[ac]
+  (* multiple arguments, complex precondition, non-dc return *)
+  handleFaultReply_ccorres handleFaultReply_ccorres[ac]
 
 text \<open>Now the proof.\<close>
 lemma (* handleYield_ccorres: *)
@@ -131,33 +99,23 @@ lemma (* handleYield_ccorres: *)
        []
        (handleYield)
        (Call handleYield_'proc)"
-  apply (rule ac_corres_to_ccorres)
-    apply (rule kernel_all_substitute.handleYield'_ac_corres)
-   apply simp
-  apply (simp add: handleYield_def handleYield'_def)
-
-  apply (rule corres_guard_imp)
-    (* Show that current thread is unmodified.
-     * FIXME: proper way to do this? *)
-    apply (subst reorder_gets[symmetric, unfolded K_bind_def])
-     using tcbSchedDequeue'_modifies apply (fastforce simp: valid_def)
-    apply (subst gets_gets)
-
-    apply (rule corres_pre_getCurThread_wrapper)
-    apply (rule corres_split[OF _ tcbSchedDequeue_wrapper_corres])
-       apply (rule corres_split[OF _ tcbSchedAppend_wrapper_corres])
-          apply (rule rescheduleRequired_wrapper_corres)
-         apply (solves simp)
-        apply (solves \<open>wp tcbSchedAppend_valid_objs' weak_sch_act_wf_lift_linear | simp\<close>)+
-     apply (solves \<open>wp tcbSchedDequeue_invs' tcbSchedDequeue_typ_at'
-                       tcbSchedDequeue_valid_queues tcbSchedDequeue_valid_objs'
-                       weak_sch_act_wf_lift_linear\<close>)
-    apply (solves wp)
-   apply (clarsimp simp: invs_valid_objs' invs_queues invs_valid_queues' tcb_at_invs'
-                         valid_objs'_maxPriority valid_objs'_maxDomain)
-   apply (fastforce simp: obj_at'_def st_tcb_at'_def ct_in_state'_def dest: ct_active_runnable')
-  apply fastforce
-  done
+  apply (ac_init)
+   apply (simp add: handleYield_def handleYield'_def)
+   (* Show that current thread is unmodified.
+    * FIXME: proper way to do this? *)
+   apply (subst reorder_gets[symmetric, unfolded K_bind_def])
+    using tcbSchedDequeue'_modifies apply (fastforce simp: NonDetMonad.valid_def)
+   apply (subst gets_gets)
+   apply (rule corres_pre_getCurThread_wrapper)
+   apply (rule corres_split[OF _ tcbSchedDequeue_ccorres[ac]])
+      apply (rule corres_split[OF _ tcbSchedAppend_ccorres[ac]])
+         apply (rule rescheduleRequired_ccorres[ac])
+          apply (solves \<open>wp tcbSchedAppend_valid_objs' weak_sch_act_wf_lift
+                            tcbSchedDequeue_valid_queues
+                          | simp\<close>)+
+    apply (clarsimp simp: invs_valid_objs' tcb_at_invs'
+                          valid_objs'_maxPriority valid_objs'_maxDomain)
+    by (auto simp: obj_at'_def st_tcb_at'_def ct_in_state'_def)
 
 end
 
@@ -176,30 +134,7 @@ autocorres
 context kernel_m begin
 local_setup \<open>AutoCorresModifiesProofs.new_modifies_rules "../c/build/$L4V_ARCH/kernel_all.c_pp"\<close>
 
-text \<open>Export corres_underlying rules for handleDoubleFault's callees.\<close>
-thm setThreadState_ccorres[no_vars]
-lemma setThreadState_wrapper_corres:
-  "(\<forall>cl fl. cthread_state_relation_lifted st (cl\<lparr>tsType_CL := ts && mask 4\<rparr>, fl)) \<and>
-   tptr = tcb_ptr_to_ctcb_ptr thread \<Longrightarrow>
-   corres_underlying {(x, y). cstate_relation x y} True True (op=)
-     (\<lambda>s. tcb_at' thread s \<and>
-       Invariants_H.valid_queues s \<and>
-       valid_objs' s \<and>
-       valid_tcb_state' st s \<and>
-       (ksSchedulerAction s = SwitchToThread thread \<longrightarrow> runnable' st) \<and> (\<forall>p. thread \<in> set (ksReadyQueues s p) \<longrightarrow> runnable' st) \<and> sch_act_wf (ksSchedulerAction s) s) \<top>
-     (setThreadState st thread) (setThreadState' tptr ts)"
-  apply (rule ccorres_to_corres_no_termination)
-   apply (simp add: setThreadState'_def)
-  apply (clarsimp simp: ccorres_rrel_nat_unit)
-  using setThreadState_ccorres
-  apply (fastforce simp: ccorres_underlying_def Ball_def)
-  done
-
 text \<open>Extra corres_underlying rules.\<close>
-lemma corres_gen_asm':
-  "\<lbrakk> corres_underlying sr nf nf' r Q P' f g; \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s; P' s' \<rbrakk> \<Longrightarrow> Q s\<rbrakk> \<Longrightarrow>
-   corres_underlying sr nf nf' r P P' f g"
-  by (fastforce simp: corres_underlying_def)
 
 lemma corres_add_noop_rhs2:
   "corres_underlying sr nf nf' r P P' f (do _ \<leftarrow> g; return () od)
@@ -215,7 +150,7 @@ lemma corres_noop2_no_exs:
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
    apply (drule x, drule y)
-   apply (clarsimp simp: valid_def empty_fail_def Ball_def Bex_def)
+   apply (clarsimp simp: NonDetMonad.valid_def empty_fail_def Ball_def Bex_def)
    apply fast
   apply (insert z)
   apply (clarsimp simp: no_fail_def)
@@ -252,7 +187,7 @@ lemma (* handleDoubleFault_ccorres: *)
    apply (ctac (no_vcg))
     apply (rule ccorres_symb_exec_l)
        apply (rule ccorres_return_Skip)
-      apply (wp asUser_inv getRestartPC_inv)
+      apply (wp asUser_inv getRestartPC_inv)+
     apply (rule empty_fail_asUser)
     apply (simp add: getRestartPC_def)
    apply wp
@@ -261,6 +196,7 @@ lemma (* handleDoubleFault_ccorres: *)
   apply (fastforce simp: valid_tcb_state'_def)
   done
 
+
 text \<open>New proof of handleDoubleFault\<close>
 lemma (* handleDoubleFault_ccorres: *)
   "ccorres dc xfdc (invs' and tcb_at' tptr and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and
@@ -268,31 +204,23 @@ lemma (* handleDoubleFault_ccorres: *)
       (UNIV \<inter> {s. ex1_' s = ex1' \<and> tptr_' s = tcb_ptr_to_ctcb_ptr tptr})
       [] (handleDoubleFault tptr ex1 ex2)
          (Call handleDoubleFault_'proc)"
-  apply (rule ac_corres_to_ccorres[where R="op="])
-    apply (rule handleDoubleFault'_ac_corres)
-   apply (simp add: pred_conj_def)
-  apply (unfold handleDoubleFault_def handleDoubleFault'_def)
-  apply (simp only: K_bind_def) -- "normalise"
-  apply (rule corres_add_noop_rhs2) -- "split out extra haskell code"
-  apply (rule corres_split')
-     (* call setThreadState *)
-     apply (rule corres_gen_asm')
-      apply (rule setThreadState_wrapper_corres)
-      apply (simp add: ThreadState_Inactive_def)
-     apply (fastforce simp: valid_tcb_state'_def ThreadState_Inactive_def)
-    (* extra haskell code *)
-    apply simp
-    apply (rule corres_symb_exec_l_no_exs)
-       apply simp
-      apply (rule conjI)
-       apply (wp asUser_inv getRestartPC_inv)
-      apply (wp empty_fail_asUser)[1]
-     apply (rule hoare_TrueI)
-    apply (simp add: getRestartPC_def)
+  apply ac_init
+    prefer 3 apply simp
+   apply (unfold handleDoubleFault_def handleDoubleFault'_def K_bind_def)
+   apply (rule corres_add_noop_rhs2) -- "split out extra haskell code"
+   apply (rule corres_split[OF _ setThreadState_ccorres[ac]])
+       apply (rule corres_symb_exec_l_no_exs)
+          apply simp
+         apply (rule conjI)
+          apply (wp asUser_inv getRestartPC_inv)
+         apply (wp empty_fail_asUser)
+        apply (rule hoare_TrueI)
+       apply (wpsimp simp: getRestartPC_def)
+      apply simp
+     apply (simp add: ThreadState_Inactive_def)
     apply wp
-   apply simp
-  apply (rule hoare_TrueI)
-  done
+   apply (rule hoare_TrueI)
+  by (fastforce simp: valid_tcb_state'_def)
 
 end
 
@@ -518,7 +446,8 @@ lemma "\<lbrace>\<lambda>_. cap_get_tag cap = scast cap_cnode_cap\<rbrace>
        \<lbrace>\<lambda>r _. r = capCNodePtr_CL (cap_cnode_cap_lift cap)\<rbrace>!"
   apply (unfold cap_cnode_cap_get_capCNodePtr'_def)
   apply wp
-  apply (simp add: cap_get_tag_def cap_cnode_cap_lift_def cap_lift_def cap_tag_values shiftr_over_and_dist)
+  apply (simp add: cap_get_tag_def cap_cnode_cap_lift_def cap_lift_def cap_tag_values
+                   shiftr_over_and_dist mask_def)
   done
 
 lemma "\<lbrace>\<lambda>_. cap_get_tag cap = scast cap_cnode_cap\<rbrace>
@@ -526,7 +455,8 @@ lemma "\<lbrace>\<lambda>_. cap_get_tag cap = scast cap_cnode_cap\<rbrace>
        \<lbrace>\<lambda>r _. r = capCNodeGuard_CL (cap_cnode_cap_lift cap)\<rbrace>!"
   apply (unfold cap_cnode_cap_get_capCNodeGuard'_def)
   apply wp
-  apply (simp add: cap_get_tag_def cap_cnode_cap_lift_def cap_lift_def cap_tag_values shiftr_over_and_dist)
+  apply (simp add: cap_get_tag_def cap_cnode_cap_lift_def cap_lift_def cap_tag_values
+                   shiftr_over_and_dist mask_def)
   done
 
 lemma "\<lbrace>\<lambda>_. cap_get_tag cap = scast cap_cnode_cap\<rbrace>
@@ -534,7 +464,8 @@ lemma "\<lbrace>\<lambda>_. cap_get_tag cap = scast cap_cnode_cap\<rbrace>
        \<lbrace>\<lambda>r _. r = capCNodeRadix_CL (cap_cnode_cap_lift cap)\<rbrace>!"
   apply (unfold cap_cnode_cap_get_capCNodeRadix'_def)
   apply wp
-  apply (simp add: cap_get_tag_def cap_cnode_cap_lift_def cap_lift_def cap_tag_values shiftr_over_and_dist)
+  apply (simp add: cap_get_tag_def cap_cnode_cap_lift_def cap_lift_def cap_tag_values
+                   shiftr_over_and_dist mask_def)
   done
 
 end

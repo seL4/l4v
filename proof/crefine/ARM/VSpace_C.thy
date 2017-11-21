@@ -2934,8 +2934,8 @@ lemma performPageInvocationUnmap_ccorres:
     apply (drule ccap_relation_mapped_asid_0)
     apply (frule ctes_of_valid', clarsimp)
     apply (drule valid_global_refsD_with_objSize, clarsimp)
-    apply (clarsimp simp: mask_def valid_cap'_def
-                          vmsz_aligned_aligned_pageBits)
+    apply (fastforce simp: mask_def valid_cap'_def
+                           vmsz_aligned_aligned_pageBits)
    apply assumption
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps split: if_split)
   apply (drule diminished_PageCap)

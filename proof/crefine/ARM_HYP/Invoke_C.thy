@@ -3346,12 +3346,6 @@ shows
                               valid_untyped_capBlockSize_misc
                               valid_untyped_capBlockSize_misc[where z=0, simplified]
                               of_nat_shiftR)
-                             apply (clarsimp simp:toEnum_object_type_to_H
-                               unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
-                               split:if_splits)
-                            apply (clarsimp simp:toEnum_object_type_to_H
-                              unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
-                              split:if_splits)
                           apply (rule syscall_error_throwError_ccorres_n)
                           apply (case_tac reset; clarsimp simp: syscall_error_rel_def
                             ccap_relation_untyped_CL_simps shiftL_nat

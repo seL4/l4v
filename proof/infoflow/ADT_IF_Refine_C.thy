@@ -141,7 +141,7 @@ lemma handleInterrupt_ccorres:
            (handleInterruptEntry_C_body_if)"
 proof -
   have ucast_not_helper_cheating_unsigned:
-    "\<And>a. ucast (a::10 word) \<noteq> (0xFFFF :: word16) \<Longrightarrow> ucast (ucast a :: word16) \<noteq> (0xFFFF::32 word)"
+    "\<And>a. ucast (a::10 word) \<noteq> (0xFFFF :: word16) \<Longrightarrow> ucast a \<noteq> (0xFFFF::32 word)"
     by (word_bitwise)
   show ?thesis
   apply (rule ccorres_guard_imp2)
@@ -597,7 +597,6 @@ lemma check_active_irq_corres_C:
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r'="\<lambda>a c. case a of None \<Rightarrow> c = 0xFFFF | Some x \<Rightarrow> c = ucast x \<and> c \<noteq> 0xFFFF", OF _ ccorres_corres_u_xf])
         apply (clarsimp split: if_split option.splits)
-        apply (rule ucast_ucast_id[symmetric], simp)
        apply (rule ccorres_guard_imp)
          apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
          apply (rule getActiveIRQ_ccorres)

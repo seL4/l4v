@@ -36,9 +36,7 @@ lemma getIRQSlot_ccorres:
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                         cinterrupt_relation_def size_of_def
                         sint_ucast_eq_uint is_down of_int_uint_ucast
-                        cte_level_bits_def mult.commute mult.left_commute ucast_nat_def
-                        )
-  apply (simp add:ucast_up_ucast is_up)
+                        cte_level_bits_def mult.commute mult.left_commute ucast_nat_def)
   done
 
 lemma ptr_add_assertion_irq_guard:
@@ -325,7 +323,7 @@ lemma invokeIRQControl_ccorres:
 lemma unat_ucast_16_32:
   "unat (ucast (x::(16 word))::32 signed word) = unat x"
   apply (subst unat_ucast)
-  apply (rule mod_less)
+  apply (rule Divides.mod_less)
   apply (rule less_le_trans[OF unat_lt2p])
   apply simp
   done

@@ -1917,10 +1917,10 @@ proof -
      apply (rule ccorres_return_Skip[simplified dc_def])
     apply (clarsimp)
     apply (rule hoare_impI)
-    apply (wp mapM_x_wp_inv setMR_atcbContext_obj_at[simplified atcbContextGet_def, simplified]
-              | clarsimp
-              | wpc)+
-    apply (cases recvBuffer; simp add: option_to_0_def )
+    apply (rule mapM_x_wp_inv)
+    apply (cases recvBuffer; simp add: option_to_0_def split_def)
+    apply (erule hoare_vcg_conj_lift
+                   [OF setMR_atcbContext_obj_at[simplified atcbContextGet_def, simplified]])
     apply wp
    apply (clarsimp simp: guard_is_UNIV_def n_msgRegisters_def msgLengthBits_def
                          mask_def)+
@@ -3014,13 +3014,8 @@ proof (rule ccorres_gen_asm, induct caps arbitrary: n slots mi)
       apply vcg
      apply (rule conseqPre, vcg, clarsimp)
      apply (simp add: seL4_MsgExtraCapBits_def)
-    apply (clarsimp simp: excaps_map_def seL4_MsgExtraCapBits_def word_sle_def
-                          precond_def)
-    apply (subst (asm) interpret_excaps_test_null)
-      apply (simp add: unat_of_nat)
-     apply (simp add: unat_of_nat)
-     apply (erule le_neq_trans, clarsimp)
-    apply (simp add: unat_of_nat)
+    apply (clarsimp simp: excaps_map_def seL4_MsgExtraCapBits_def word_sle_def precond_def)
+    apply (subst interpret_excaps_test_null; clarsimp simp: unat_of_nat elim!: le_neq_trans)
     done
 next
   note if_split[split]
@@ -3114,6 +3109,7 @@ next
   note if_split[split del]
   note if_cong[cong]
   note extra_sle_sless_unfolds [simp del]
+  note sle_positive[simp del]
   from Cons.prems
   show ?case
     apply (clarsimp simp: Let_def word_sle_def[where b=5] split_def
@@ -3378,6 +3374,7 @@ lemma lookupExtraCaps_srcs2:
 lemma transferCaps_ccorres [corres]:
   notes if_cong[cong]
   notes extra_sle_sless_unfolds[simp del]
+  notes sle_positive[simp del]
   shows
   "ccorres (\<lambda>r r'. r = message_info_to_H r') ret__struct_seL4_MessageInfo_C_'
     (valid_pspace' and tcb_at' receiver
@@ -3403,7 +3400,6 @@ lemma transferCaps_ccorres [corres]:
     apply (clarsimp simp: option_to_0_def getReceiveSlots_def
                 simp del: Collect_const)
     apply (rule ccorres_guard_imp2)
-     apply (rule ccorres_move_const_guards)+
      apply (simp (no_asm))
      apply (rule_tac R'=UNIV in ccorres_split_throws [OF ccorres_return_C], simp_all)[1]
      apply vcg
@@ -3413,7 +3409,6 @@ lemma transferCaps_ccorres [corres]:
     apply (clarsimp simp: interpret_excaps_test_null excaps_map_def
                 simp del: Collect_const not_None_eq)
     apply (erule notE, rule ccorres_guard_imp2)
-     apply (rule ccorres_move_const_guards)+
      apply (simp (no_asm))
      apply (rule ccorres_symb_exec_l)
         apply (rule_tac R'=UNIV in ccorres_split_throws [OF ccorres_return_C], simp_all)[1]
@@ -3431,8 +3426,6 @@ lemma transferCaps_ccorres [corres]:
                simp del: Collect_const
                    cong: call_ignore_cong)
    apply (rule ccorres_guard_imp2)
-    apply (rule ccorres_move_const_guards)+
-    apply (simp (no_asm) only: ccorres_seq_cond_empty ccorres_seq_skip)
     apply (ctac add: getReceiveSlots_ccorres)
       apply (elim conjE)
       apply (rule ccorres_symb_exec_r)
@@ -4650,11 +4643,7 @@ proof (rule hoare_gen_asm, induct caps arbitrary: x mi destSlots)
 next
   case (Cons cp cps)
   show ?case using Cons.prems
-    apply (clarsimp simp: Let_def split del: if_split)
-    apply (rule hoare_pre)
-     apply (wp Cons.hyps cteInsert_weak_cte_wp_at2
-         | wpc | simp add: weak whenE_def split del: if_split)+
-    done
+    by (wpsimp wp: Cons.hyps cteInsert_weak_cte_wp_at2 simp: Let_def split_def weak)
 qed
 
 lemma transferCaps_local_slots:

@@ -1080,31 +1080,26 @@ lemma setUntypedCapAsFull_ccorres [corres]:
   apply (frule(1) cte_wp_at_valid_objs_valid_cap')
   apply clarsimp
   apply (intro conjI impI allI)
-              apply (erule cte_wp_at_weakenE')
-              apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_UntypedCap split: if_split_asm)
-             apply clarsimp
-             apply (drule valid_cap_untyped_inv,clarsimp simp:max_free_index_def)
-             apply (rule is_aligned_weaken)
-              apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
-             apply assumption
-            apply (clarsimp simp: max_free_index_def shiftL_nat valid_cap'_def capAligned_def)
-            apply (simp add:power_minus_is_div unat_power_lower unat_sub word_le_nat_alt t2p_shiftr)
-           apply clarsimp
-          apply (erule cte_wp_at_weakenE', simp)
-         apply clarsimp
-         apply (drule valid_cap_untyped_inv)
-         apply (clarsimp simp:max_free_index_def t2p_shiftr unat_sub word_le_nat_alt)
-        apply (clarsimp simp:field_simps)
-        apply (rule word_less_imp_diff_less)
-        apply (subst (asm) eq_commute, fastforce simp: unat_sub word_le_nat_alt)
-        apply (rule capBlockSize_CL_maxSize)
-        apply (clarsimp simp: cap_get_tag_UntypedCap)
-       apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap)
-      apply (clarsimp split: if_split_asm)
-     apply (clarsimp split: if_split_asm)
-    apply (clarsimp split: if_split_asm)
-   apply (clarsimp split: if_split_asm)
-  apply (clarsimp split: if_split_asm)
+        apply (erule cte_wp_at_weakenE')
+        apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_UntypedCap split: if_split_asm)
+       apply clarsimp
+       apply (drule valid_cap_untyped_inv,clarsimp simp:max_free_index_def)
+       apply (rule is_aligned_weaken)
+        apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
+       apply assumption
+      apply (clarsimp simp: max_free_index_def shiftL_nat valid_cap'_def capAligned_def)
+     apply (simp add:power_minus_is_div unat_sub word_le_nat_alt t2p_shiftr)
+     apply clarsimp
+     apply (erule cte_wp_at_weakenE', simp)
+    apply clarsimp
+    apply (drule valid_cap_untyped_inv)
+    apply (clarsimp simp:max_free_index_def t2p_shiftr unat_sub word_le_nat_alt)
+   apply (clarsimp simp:field_simps)
+   apply (rule word_less_imp_diff_less)
+    apply (subst (asm) eq_commute, fastforce simp: unat_sub word_le_nat_alt)
+   apply (rule capBlockSize_CL_maxSize)
+   apply (clarsimp simp: cap_get_tag_UntypedCap)
+  apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap)
   done
 
 lemma ccte_lift:
@@ -1176,16 +1171,15 @@ lemma cteInsert_ccorres:
                 \<inter> {s. destSlot_' s = Ptr dest} \<inter> {s. srcSlot_' s = Ptr src} \<inter> {s. ccap_relation cap (newCap_' s)}) []
              (cteInsert cap src dest)
              (Call cteInsert_'proc)"
-thm cteInsert_body_def
   apply (cinit (no_ignore_call) lift: destSlot_' srcSlot_' newCap_'
-    simp del: return_bind simp add: Collect_const)
+                            simp del: return_bind
+                            simp add: Collect_const)
    apply (rule ccorres_move_c_guard_cte)
    apply (ctac pre: ccorres_pre_getCTE)
      apply (rule ccorres_move_c_guard_cte)
      apply (ctac pre: ccorres_pre_getCTE)
        apply csymbr
        apply (fold revokable'_fold)
-       apply (simp (no_asm) only: if_distrib [where f="scast"] scast_1_32 scast_0)
        apply (ctac add: revokable_ccorres)
          apply (ctac (c_lines 3) add: cteInsert_ccorres_mdb_helper)
            apply (simp del: Collect_const)
@@ -2235,11 +2229,6 @@ show ?thesis
           apply (clarsimp simp:  word_sless_msb_less order_le_less_trans
                             unat_ucast_no_overflow_le word_le_nat_alt ucast_ucast_b
                          split: if_split )
-          apply (rule word_0_sle_from_less)
-
-          apply (rule order_less_le_trans[where y = 192])
-           apply (simp add: unat_ucast_no_overflow_le)
-          apply simp
          apply ceqv
 
         apply (ctac add:  maskInterrupt_ccorres)
@@ -2861,7 +2850,6 @@ lemma Arch_sameRegionAs_spec:
        apply (simp add: gen_framesize_to_H_def)
 
       apply (simp add: Let_def)
-      apply (clarsimp simp: if_distrib [where f="scast"])
       apply (simp add: cap_get_tag_PageCap_small_frame [unfolded cap_tag_defs, simplified])
       apply (thin_tac "ccap_relation x cap_b" for x)
       apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(16)[simplified], simp)
@@ -2891,7 +2879,6 @@ lemma Arch_sameRegionAs_spec:
        apply (simp add: c_valid_cap_def cl_valid_cap_def)
 
      apply (simp add: Let_def)
-     apply (clarsimp simp: if_distrib [where f=scast])
      apply (simp add: cap_get_tag_PageCap_frame [unfolded cap_tag_defs, simplified])
      apply (thin_tac "ccap_relation x cap_b" for x)
      apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[simplified, where cap'=cap_a], simp)
@@ -3759,7 +3746,6 @@ lemma sameObjectAs_spec:
      -- "capa is an arch cap"
      apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
      apply (simp add: isArchCap_tag_def2)
-     apply (simp add: if_1_0_0)
      apply (rule conjI, rule impI, clarsimp, rule impI)+
      apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                                          isCap_simps cap_tag_defs)[1]
@@ -3769,7 +3755,7 @@ lemma sameObjectAs_spec:
          apply (fastforce simp: isArchCap_tag_def2 linorder_not_less [symmetric])+
   -- "capa is an irq handler cap"
   apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
-                                      isCap_simps cap_tag_defs if_1_0_0)
+                                      isCap_simps cap_tag_defs)
            apply fastforce+
       -- "capb is an arch cap"
       apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
@@ -3896,7 +3882,7 @@ lemma isMDBParentOf_spec:
    apply clarsimp
    apply (simp add: Let_def case_bool_If)
    apply (frule_tac cap="(cap_to_H x2c)" in cap_get_tag_NotificationCap)
-   apply (simp add: if_1_0_0 if_distrib [where f=scast])
+   apply clarsimp
 
   -- " main goal"
   apply clarsimp

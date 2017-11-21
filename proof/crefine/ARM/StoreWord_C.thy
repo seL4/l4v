@@ -512,7 +512,6 @@ proof (intro allI impI)
     "unat offset = unat (ptr && mask pageBits >> 2)"
     apply (simp add: offset_def)
     apply (simp add: unat_ucast)
-    apply (rule mod_less)
     apply (simp add: word_less_nat_alt)
     done
 
@@ -821,7 +820,6 @@ proof (intro allI impI)
     "unat offset = unat (ptr && mask pageBits >> 2)"
     apply (simp add: offset_def)
     apply (simp add: unat_ucast)
-    apply (rule mod_less)
     apply (simp add: word_less_nat_alt)
     done
 

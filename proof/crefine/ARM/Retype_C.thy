@@ -846,12 +846,7 @@ lemma ptr_add_orth:
   apply (drule unat_cong)
   apply (simp only: unat_of_nat)
   apply (unfold word_bits_len_of)
-  apply (subst (asm) mod_less)
-   apply (erule order_less_trans)
-   apply (simp add: addr_card_wb [symmetric])
-  apply (subst (asm) mod_less)
-   apply simp
-  apply simp
+  apply (simp add: addr_card_wb [symmetric])
   done
 
 lemma dom_lift_t_heap_update:
