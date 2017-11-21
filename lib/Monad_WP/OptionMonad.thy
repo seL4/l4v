@@ -159,7 +159,7 @@ lemma in_oreturn [simp]:
   by (auto simp: oreturn_def K_def)
 
 lemma oreturnE:
-  "\<lbrakk>oreturn x s = Some v; v = x \<Longrightarrow> P x\<rbrakk> \<Longrightarrow> P v"
+  "\<lbrakk>oreturn x s = Some v; v = x \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by simp
 
 lemma in_ofail [simp]:
@@ -192,7 +192,7 @@ lemma in_othrow_eq [simp]:
   by (auto simp: othrow_def K_def)
 
 lemma othrowE:
-  "\<lbrakk>othrow e s = Some v; v = Inl e \<Longrightarrow> P (Inl e)\<rbrakk> \<Longrightarrow> P v"
+  "\<lbrakk>othrow e s = Some v; v = Inl e \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by simp
 
 lemma in_oreturnOk_eq [simp]:
@@ -200,7 +200,7 @@ lemma in_oreturnOk_eq [simp]:
   by (auto simp: oreturnOk_def K_def)
 
 lemma oreturnOkE:
-  "\<lbrakk>oreturnOk x s = Some v; v = Inr x \<Longrightarrow> P (Inr x)\<rbrakk> \<Longrightarrow> P v"
+  "\<lbrakk>oreturnOk x s = Some v; v = Inr x \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by simp
 
 lemmas omonadE [elim!] =
