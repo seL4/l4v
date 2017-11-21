@@ -26,6 +26,60 @@ which use the @{term ccorresG} framework, with new proofs using the higher-level
 See AutoCorresTest for examples.
 \<close>
 
+section \<open>Setup\<close>
+
+text \<open>
+The imports for this theory cause a merge between AutoCorres and the preamble for CRefine.
+AutoCorres both adds to and deletes from various rule sets, such that the merge produces
+an entirely new theory context, which is unfamiliar to any previous CRefine or AutoCorres
+development. In particular, rules which were deleted in AutoCorres may reappear in this
+theory, but in a different place in the rule set than they appeared in Corres_C.
+
+The following setup restores the ordering from @{theory Corres_C} for the crucial
+@{attribute wp_comb} rule set, and places new rules introduced by @{theory AutoCorres} at
+the end of the @{attribute wp_comb} set.
+
+To ensure that we only have to do this once, we are careful to ensure that there is only
+one theory merge between AutoCorres and CRefine. We import @{theory L4VerifiedLinks} into
+@{theory AutoCorresModifiesProofs}, and import the latter here. This satisfies the
+dependencies from @{theory AutoCorresModifiesProofs} to @{theory AutoCorres}, and from
+this theory to @{theory L4VerifiedLinks} and @{theory Corres_C}, without duplicating
+theory merges. Finally, we list @{theory L4VerifiedLinks} as a top-level theory in the
+CBaseRefine session, so that @{theory AutoCorres} need not be processed in a CRefine
+session, but do not import @{theory AutoCorres} into @{text Include_C}, since that would
+cause a redundant theory merge.
+\<close>
+
+setup \<open>
+  fn thy => let
+    fun get_combs thy = #combs (WeakestPre.get_rules (Proof_Context.init_global thy) [])
+    val corres_c_combs = get_combs (Context.get_theory thy "Corres_C")
+    val accorres_combs = get_combs thy
+    val subtract_thms = subtract (fn (a,b) => Thm.prop_of a = Thm.prop_of b)
+    val accorres_extra = subtract_thms corres_c_combs accorres_combs
+    fun upd attr = fold_rev (snd oo Thm.apply_attribute attr)
+    val add = upd WeakestPre.combs_add
+    val del = upd WeakestPre.combs_del
+    val upd_gen = add corres_c_combs o add accorres_extra o del accorres_combs
+  in Context.theory_of (upd_gen (Context.Theory thy)) end
+\<close>
+
+text \<open>
+AutoCorres adds some rules about @{term whenE} to the @{attribute wp} set, which don't always
+behave nicely. They introduce @{term If} expressions into pre and post conditions, where they
+don't always simplify as one might expect. We replace them with a rule that does allow the
+conditional to simplify away more often.
+
+FIXME: Move this change into AutoCorres itself, or the underlying VCG library.
+\<close>
+
+lemmas [wp del] =
+  NonDetMonadEx.validE_whenE
+  NonDetMonadLemmaBucket.hoare_whenE_wp
+
+lemmas hoare_whenE_wp2 [wp] =
+  NonDetMonadLemmaBucket.hoare_whenE_wp[simplified if_apply_def2]
+
 section \<open>Rules for proving @{term ccorres_underlying} goals\<close>
 
 text \<open>
@@ -512,10 +566,15 @@ text \<open>Here, we instantiate the proof automation for the C kernel.\<close>
 
 context kernel begin
 
-abbreviation "corres_ac \<equiv> corres_underlying {(s, s'). cstate_relation s s'} True True"
-
 method_setup ac_init = \<open>AutoCorresCRefine.setup_ac_init @{thm rf_sr_def}\<close>
 attribute_setup ac = \<open>AutoCorresCRefine.setup_ac_attr @{thm rf_sr_def}\<close>
+
+text \<open>
+FIXME: It would be nice to have an abbreviation for the @{term corres_underlying} relation
+that comes out of @{method ac_init}. Unfortunately, this causes renumbering of metavariables
+produced in resolution, breaking many proofs, so we avoid this for now.
+\<close>
+(* abbreviation "corres_ac \<equiv> corres_underlying {(s, s'). cstate_relation s s'} True True" *)
 
 end
 
