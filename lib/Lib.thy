@@ -18,6 +18,7 @@ theory Lib
 imports
   Value_Abbreviation
   Try_Methods
+  Extract_Conjunct
   Eval_Bool
   NICTATools
   "~~/src/HOL/Library/Prefix_Order"
