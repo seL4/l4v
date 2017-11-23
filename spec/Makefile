@@ -34,7 +34,7 @@ CKernel CSpec: c-kernel design-spec
 
 # NOTE: The abstract spec imports Events from Haskell hence the dependency
 
-ExecSpec ASpec : design-spec
+ExecSpec ASpec DSpec : design-spec
 
 # NOTE: the install_C_file in Kernel_C.thy invocation generates a spurious
 #       umm_types.txt file in this folder. This file is never used nor

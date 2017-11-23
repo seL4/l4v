@@ -28,7 +28,7 @@
         <!-- Various seL4 specifications. -->
         <test name="ASpec" depends="haskell-translator">make ASpec</test>
         <test name="ExecSpec" depends="haskell-translator">make ExecSpec</test>
-        <test name="DSpec">make DSpec</test>
+        <test name="DSpec" depends="haskell-translator">make DSpec</test>
         <test name="TakeGrant">make TakeGrant</test>
         <test name="ASepSpec" depends="ASpec">make ASepSpec</test>
     </set>
