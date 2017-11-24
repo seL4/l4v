@@ -122,12 +122,7 @@ session Access in "access-control" = AInvs +
 
 session InfoFlow in "infoflow" = Access +
   theories
-    "Noninterference"
-    "Noninterference_Base_Refinement"
-    "PolicyExample"
-    "PolicySystemSAC"
-    "ExampleSystemPolicyFlows"
-    "Example_Valid_State"
+    "InfoFlow_Image_Toplevel"
 
 session InfoFlowCBase = CRefine +
   theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
